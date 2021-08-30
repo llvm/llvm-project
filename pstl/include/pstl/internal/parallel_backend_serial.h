@@ -59,10 +59,17 @@ __parallel_for(_ExecutionPolicy&&, _Index __first, _Index __last, _Fp __f)
     __f(__first, __last);
 }
 
+template <class _ExecutionPolicy, class _Index, class _Fp>
+void
+__parallel_for(__pstl::__internal::__serial_backend, _ExecutionPolicy&&, _Index __first, _Index __last, _Fp __f)
+{
+    __f(__first, __last);
+}
+
 template <class _ExecutionPolicy, class _Value, class _Index, typename _RealBody, typename _Reduction>
 _Value
-__parallel_reduce(_ExecutionPolicy&&, _Index __first, _Index __last, const _Value& __identity,
-                  const _RealBody& __real_body, const _Reduction&)
+__parallel_reduce(__pstl::__internal::__serial_backend, _ExecutionPolicy&&, _Index __first, _Index __last,
+                  const _Value& __identity, const _RealBody& __real_body, const _Reduction&)
 {
     if (__first == __last)
     {

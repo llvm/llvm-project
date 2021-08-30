@@ -153,6 +153,12 @@ template <class ExecPolicy, class T>
 using __enable_if_execution_policy =
     typename std::enable_if<__pstl::execution::is_execution_policy<typename std::decay<ExecPolicy>::type>::value,
                             T>::type;
+
+template <class _IsVector>
+struct __serial_tag;
+template <class _IsVector>
+struct __parallel_tag;
+
 } // namespace __internal
 
 } // namespace __pstl

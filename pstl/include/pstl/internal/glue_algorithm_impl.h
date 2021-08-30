@@ -84,10 +84,10 @@ template <class _ExecutionPolicy, class _ForwardIterator, class _Predicate>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator>
 find_if(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred)
 {
-    return __pstl::__internal::__pattern_find_if(
-        std::forward<_ExecutionPolicy>(__exec), __first, __last, __pred,
-        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+    auto __dispatch_tag = __pstl::__internal::__select_backend(__exec, __first);
+
+    return __pstl::__internal::__pattern_find_if(__dispatch_tag, std::forward<_ExecutionPolicy>(__exec), __first,
+                                                 __last, __pred);
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _Predicate>
@@ -156,23 +156,20 @@ template <class _ExecutionPolicy, class _ForwardIterator>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator>
 adjacent_find(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last)
 {
+    auto __dispatch_tag = __pstl::__internal::__select_backend(__exec, __first);
+
     typedef typename iterator_traits<_ForwardIterator>::value_type _ValueType;
-    return __pstl::__internal::__pattern_adjacent_find(
-        std::forward<_ExecutionPolicy>(__exec), __first, __last, std::equal_to<_ValueType>(),
-        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        /*first_semantic*/ false);
+    return __pstl::__internal::__pattern_adjacent_find(__dispatch_tag, std::forward<_ExecutionPolicy>(__exec), __first,
+                                                       __last, std::equal_to<_ValueType>(), /*first_semantic*/ false);
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _BinaryPredicate>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator>
 adjacent_find(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _BinaryPredicate __pred)
 {
-    return __pstl::__internal::__pattern_adjacent_find(
-        std::forward<_ExecutionPolicy>(__exec), __first, __last, __pred,
-        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        /*first_semantic*/ false);
+    auto __dispatch_tag = __pstl::__internal::__select_backend(__exec, __first);
+    return __pstl::__internal::__pattern_adjacent_find(__dispatch_tag, std::forward<_ExecutionPolicy>(__exec), __first,
+                                                       __last, __pred, /*first_semantic*/ false);
 }
 
 // [alg.count]
@@ -185,12 +182,11 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy,
                                                  typename iterator_traits<_ForwardIterator>::difference_type>
 count(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, const _Tp& __value)
 {
+    auto __dispatch_tag = __pstl::__internal::__select_backend(__exec, __first);
+
     typedef typename iterator_traits<_ForwardIterator>::value_type _ValueType;
-    return __pstl::__internal::__pattern_count(
-        std::forward<_ExecutionPolicy>(__exec), __first, __last,
-        [&__value](const _ValueType& __x) { return __value == __x; },
-        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+    return __pstl::__internal::__pattern_count(__dispatch_tag, std::forward<_ExecutionPolicy>(__exec), __first, __last,
+                                               [&__value](const _ValueType& __x) { return __value == __x; });
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _Predicate>
@@ -198,10 +194,9 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy,
                                                  typename iterator_traits<_ForwardIterator>::difference_type>
 count_if(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred)
 {
-    return __pstl::__internal::__pattern_count(
-        std::forward<_ExecutionPolicy>(__exec), __first, __last, __pred,
-        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+    auto __dispatch_tag = __pstl::__internal::__select_backend(__exec, __first);
+    return __pstl::__internal::__pattern_count(__dispatch_tag, std::forward<_ExecutionPolicy>(__exec), __first, __last,
+                                               __pred);
 }
 
 // [alg.search]
@@ -499,10 +494,9 @@ template <class _ExecutionPolicy, class _ForwardIterator, class _BinaryPredicate
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator>
 unique(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _BinaryPredicate __pred)
 {
-    return __pstl::__internal::__pattern_unique(
-        std::forward<_ExecutionPolicy>(__exec), __first, __last, __pred,
-        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+    auto __dispatch_tag = __pstl::__internal::__select_backend(__exec, __first);
+    return __pstl::__internal::__pattern_unique(__dispatch_tag, std::forward<_ExecutionPolicy>(__exec), __first, __last,
+                                                __pred);
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator>
@@ -588,20 +582,18 @@ template <class _ExecutionPolicy, class _ForwardIterator, class _UnaryPredicate>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, bool>
 is_partitioned(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _UnaryPredicate __pred)
 {
-    return __pstl::__internal::__pattern_is_partitioned(
-        std::forward<_ExecutionPolicy>(__exec), __first, __last, __pred,
-        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+    auto __dispatch_tag = __pstl::__internal::__select_backend(__exec, __first);
+    return __pstl::__internal::__pattern_is_partitioned(__dispatch_tag, std::forward<_ExecutionPolicy>(__exec), __first,
+                                                        __last, __pred);
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _UnaryPredicate>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator>
 partition(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _UnaryPredicate __pred)
 {
-    return __pstl::__internal::__pattern_partition(
-        std::forward<_ExecutionPolicy>(__exec), __first, __last, __pred,
-        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+    auto __dispatch_tag = __pstl::__internal::__select_backend(__exec, __first);
+    return __pstl::__internal::__pattern_partition(__dispatch_tag, std::forward<_ExecutionPolicy>(__exec), __first,
+                                                   __last, __pred);
 }
 
 template <class _ExecutionPolicy, class _BidirectionalIterator, class _UnaryPredicate>
@@ -609,10 +601,9 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _Bidirectiona
 stable_partition(_ExecutionPolicy&& __exec, _BidirectionalIterator __first, _BidirectionalIterator __last,
                  _UnaryPredicate __pred)
 {
-    return __pstl::__internal::__pattern_stable_partition(
-        std::forward<_ExecutionPolicy>(__exec), __first, __last, __pred,
-        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _BidirectionalIterator>(__exec),
-        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _BidirectionalIterator>(__exec));
+    auto __dispatch_tag = __pstl::__internal::__select_backend(__exec, __first);
+    return __pstl::__internal::__pattern_stable_partition(__dispatch_tag, std::forward<_ExecutionPolicy>(__exec),
+                                                          __first, __last, __pred);
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _ForwardIterator1, class _ForwardIterator2,
@@ -821,11 +812,11 @@ template <class _ExecutionPolicy, class _ForwardIterator, class _Compare>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator>
 is_sorted_until(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Compare __comp)
 {
-    const _ForwardIterator __res = __pstl::__internal::__pattern_adjacent_find(
-        std::forward<_ExecutionPolicy>(__exec), __first, __last, __pstl::__internal::__reorder_pred<_Compare>(__comp),
-        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        /*first_semantic*/ false);
+    auto __dispatch_tag = __pstl::__internal::__select_backend(__exec, __first);
+    const _ForwardIterator __res =
+        __pstl::__internal::__pattern_adjacent_find(__dispatch_tag, std::forward<_ExecutionPolicy>(__exec), __first,
+                                                    __last, __pstl::__internal::__reorder_pred<_Compare>(__comp),
+                                                    /*first_semantic*/ false);
     return __res == __last ? __last : std::next(__res);
 }
 
@@ -841,12 +832,10 @@ template <class _ExecutionPolicy, class _ForwardIterator, class _Compare>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, bool>
 is_sorted(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Compare __comp)
 {
-    return __pstl::__internal::__pattern_adjacent_find(
-               std::forward<_ExecutionPolicy>(__exec), __first, __last,
-               __pstl::__internal::__reorder_pred<_Compare>(__comp),
-               __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-               __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-               /*or_semantic*/ true) == __last;
+    auto __dispatch_tag = __pstl::__internal::__select_backend(__exec, __first);
+    return __pstl::__internal::__pattern_adjacent_find(__dispatch_tag, std::forward<_ExecutionPolicy>(__exec), __first,
+                                                       __last, __pstl::__internal::__reorder_pred<_Compare>(__comp),
+                                                       /*or_semantic*/ true) == __last;
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator>
@@ -1065,10 +1054,9 @@ template <class _ExecutionPolicy, class _ForwardIterator, class _Compare>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator>
 min_element(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Compare __comp)
 {
-    return __pstl::__internal::__pattern_min_element(
-        std::forward<_ExecutionPolicy>(__exec), __first, __last, __comp,
-        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+    auto __dispatch_tag = __pstl::__internal::__select_backend(__exec, __first);
+    return __pstl::__internal::__pattern_min_element(__dispatch_tag, std::forward<_ExecutionPolicy>(__exec), __first,
+                                                     __last, __comp);
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator>
@@ -1100,10 +1088,9 @@ template <class _ExecutionPolicy, class _ForwardIterator, class _Compare>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, std::pair<_ForwardIterator, _ForwardIterator>>
 minmax_element(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Compare __comp)
 {
-    return __pstl::__internal::__pattern_minmax_element(
-        std::forward<_ExecutionPolicy>(__exec), __first, __last, __comp,
-        __pstl::__internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec),
-        __pstl::__internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator>(__exec));
+    auto __dispatch_tag = __pstl::__internal::__select_backend(__exec, __first);
+    return __pstl::__internal::__pattern_minmax_element(__dispatch_tag, std::forward<_ExecutionPolicy>(__exec), __first,
+                                                        __last, __comp);
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator>
