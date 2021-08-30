@@ -3,14 +3,18 @@
 // RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=0,3" -cse -split-input-file | \
 // RUN: FileCheck %s -check-prefix=TILE1
 
-// TILE2-LABEL: func @dynamic_pad_tensor(
+//  TILE2-DAG:  #[[MAP0:.*]] = affine_map<()[s0] -> (s0 + 8)>
+//  TILE2-DAG:  #[[MAP1:.*]] = affine_map<()[s0] -> (s0 + 7)>
+//       TILE2: func @dynamic_pad_tensor(
 //  TILE2-SAME:     %[[IN:.*]]: tensor<?x?xf32>, %[[OUT:.*]]: tensor<?x?xf32>
 //   TILE2-DAG:   %[[C0:.*]] = constant 0 : index
 //   TILE2-DAG:   %[[C1:.*]] = constant 1 : index
 //   TILE2-DAG:   %[[C2:.*]] = constant 2 : index
 //   TILE2-DAG:   %[[C3:.*]] = constant 3 : index
-//       TILE2:   %[[DIM0:.*]] = tensor.dim %[[OUT]], %[[C0]]
-//       TILE2:   %[[DIM1:.*]] = tensor.dim %[[OUT]], %[[C1]]
+//       TILE2:   %[[DIM_IN0:.*]] = tensor.dim %[[IN]], %[[C0]]
+//       TILE2:   %[[DIM0:.*]] = affine.apply #[[MAP0]]()[%[[DIM_IN0]]]
+//       TILE2:   %[[DIM_IN1:.*]] = tensor.dim %[[IN]], %[[C1]]
+//       TILE2:   %[[DIM1:.*]] = affine.apply #[[MAP1]]()[%[[DIM_IN1]]]
 //       TILE2:   %[[RESULT:.*]] = scf.for {{.*}} = %[[C0]] to %[[DIM0]] step %[[C2]]
 //       TILE2:     scf.for {{.*}} = %[[C0]] to %[[DIM1]] step %[[C3]] iter_args(%[[INNER_OUT:.*]] =
 //       TILE2:       %[[SWAP_RESULT:.*]] = scf.if
@@ -21,12 +25,14 @@
 //       TILE2:       tensor.insert_slice %[[SWAP_RESULT]] into %[[INNER_OUT]][{{.*}}, {{.*}}] [{{.*}}, {{.*}}] [1, 1]
 //       TILE2:   return %[[RESULT]]
 
-// TILE1-LABEL: func @dynamic_pad_tensor(
+//   TILE1-DAG: #[[MAP:.*]] = affine_map<()[s0] -> (s0 + 7)>
+//       TILE1: func @dynamic_pad_tensor(
 //  TILE1-SAME:     %[[IN:.*]]: tensor<?x?xf32>, %[[OUT:.*]]: tensor<?x?xf32>
 //   TILE1-DAG:   %[[C0:.*]] = constant 0 : index
 //   TILE1-DAG:   %[[C1:.*]] = constant 1 : index
 //   TILE1-DAG:   %[[C3:.*]] = constant 3 : index
-//       TILE1:   %[[DIM1:.*]] = tensor.dim %[[OUT]], %[[C1]]
+//       TILE1:   %[[DIM_IN1:.*]] = tensor.dim %[[IN]], %[[C1]]
+//       TILE1:   %[[DIM1:.*]] = affine.apply #[[MAP]]()[%[[DIM_IN1]]]
 //       TILE1:   %[[RESULT:.*]] = scf.for {{.*}} = %[[C0]] to %[[DIM1]] step %[[C3]] iter_args(%[[INNER_OUT:.*]] =
 //       TILE1:     %[[DIM0:.*]] = tensor.dim %[[OUT]], %[[C0]]
 //       TILE1:     %[[SWAP_RESULT:.*]] = scf.if

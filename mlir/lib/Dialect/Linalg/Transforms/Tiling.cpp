@@ -373,11 +373,12 @@ static LogicalResult tilePadTensorOp(OpBuilder &builder, PadTensorOp op,
       options.tileSizeComputationFunction(builder, op);
   assert(static_cast<int64_t>(tileSizes.size()) == rank);
   // Compute lower and upper bounds of the loop nest.
+  SmallVector<Range> ranges = op.getLoopBounds(builder);
   SmallVector<Value> lbs, dims, steps;
   for (int64_t i = 0; i < rank; ++i) {
     if (!isZero(tileSizes[i])) {
-      lbs.push_back(builder.create<ConstantIndexOp>(loc, 0));
-      dims.push_back(builder.create<tensor::DimOp>(loc, op.output(), i));
+      lbs.push_back(ranges[i].offset);
+      dims.push_back(ranges[i].size);
       steps.push_back(tileSizes[i]);
     }
   }
