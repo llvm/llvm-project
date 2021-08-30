@@ -130,14 +130,14 @@ public:
 
 /// Reader for the raw coverage mapping data.
 class RawCoverageMappingReader : public RawCoverageReader {
-  ArrayRef<std::string> &TranslationUnitFilenames;
+  ArrayRef<StringRef> TranslationUnitFilenames;
   std::vector<StringRef> &Filenames;
   std::vector<CounterExpression> &Expressions;
   std::vector<CounterMappingRegion> &MappingRegions;
 
 public:
   RawCoverageMappingReader(StringRef MappingData,
-                           ArrayRef<std::string> &TranslationUnitFilenames,
+                           ArrayRef<StringRef> TranslationUnitFilenames,
                            std::vector<StringRef> &Filenames,
                            std::vector<CounterExpression> &Expressions,
                            std::vector<CounterMappingRegion> &MappingRegions)
@@ -179,10 +179,12 @@ public:
           FilenamesBegin(FilenamesBegin), FilenamesSize(FilenamesSize) {}
   };
 
+  using DecompressedData = std::vector<std::unique_ptr<SmallVector<char, 0>>>;
+
   using FuncRecordsStorage = std::unique_ptr<MemoryBuffer>;
 
 private:
-  std::vector<std::string> Filenames;
+  std::vector<StringRef> Filenames;
   std::vector<ProfileMappingRecord> MappingRecords;
   InstrProfSymtab ProfileNames;
   size_t CurrentRecord = 0;
@@ -194,6 +196,10 @@ private:
   // this BinaryCoverageReader instance. Needed to support the format change in
   // D69471, which can split up function records into multiple sections on ELF.
   FuncRecordsStorage FuncRecords;
+
+  // Used to tie the lifetimes of decompressed strings to the lifetime of this
+  // BinaryCoverageReader instance.
+  DecompressedData Decompressed;
 
   BinaryCoverageReader(FuncRecordsStorage &&FuncRecords)
       : FuncRecords(std::move(FuncRecords)) {}
@@ -220,23 +226,20 @@ public:
 
 /// Reader for the raw coverage filenames.
 class RawCoverageFilenamesReader : public RawCoverageReader {
-  std::vector<std::string> &Filenames;
-  StringRef CompilationDir;
+  std::vector<StringRef> &Filenames;
 
   // Read an uncompressed sequence of filenames.
-  Error readUncompressed(CovMapVersion Version, uint64_t NumFilenames);
+  Error readUncompressed(uint64_t NumFilenames);
 
 public:
-  RawCoverageFilenamesReader(StringRef Data,
-                             std::vector<std::string> &Filenames,
-                             StringRef CompilationDir = "")
-      : RawCoverageReader(Data), Filenames(Filenames),
-        CompilationDir(CompilationDir) {}
+  RawCoverageFilenamesReader(StringRef Data, std::vector<StringRef> &Filenames)
+      : RawCoverageReader(Data), Filenames(Filenames) {}
   RawCoverageFilenamesReader(const RawCoverageFilenamesReader &) = delete;
   RawCoverageFilenamesReader &
   operator=(const RawCoverageFilenamesReader &) = delete;
 
-  Error read(CovMapVersion Version);
+  Error read(CovMapVersion Version,
+             BinaryCoverageReader::DecompressedData &Decompressed);
 };
 
 } // end namespace coverage

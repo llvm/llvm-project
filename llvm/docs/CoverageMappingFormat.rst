@@ -266,16 +266,7 @@ too deeply).
    [32 x i8] c"..." ; Encoded data (dissected later)
   }, section "__llvm_covmap", align 8
 
-The current version of the format is version 6.
-
-There is one difference between versions 6 and 5:
-
-* The first entry in the filename list is the compilation directory. When the
-  filename is relative, the compilation directory is combined with the relative
-  path to get an absolute path. This can reduce size by omitting the duplicate
-  prefix in filenames.
-
-There is one difference between versions 5 and 4:
+The current version of the format is version 5. There is one difference from version 4:
 
 * The notion of branch region has been introduced along with a corresponding
   region kind.  Branch regions encode two counters, one to track how many
