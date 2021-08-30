@@ -2355,3 +2355,195 @@
 // CHECK: vfnmsub231sh xmm6 {k7} {z}, xmm5, word ptr [edx - 256]
 // CHECK: encoding: [0x62,0xf6,0x55,0x8f,0xbf,0x72,0x80]
           vfnmsub231sh xmm6 {k7} {z}, xmm5, word ptr [edx - 256]
+
+// CHECK: vfcmaddcph zmm6, zmm5, zmm4
+// CHECK: encoding: [0x62,0xf6,0x57,0x48,0x56,0xf4]
+          vfcmaddcph zmm6, zmm5, zmm4
+
+// CHECK: vfcmaddcph zmm6, zmm5, zmm4, {rn-sae}
+// CHECK: encoding: [0x62,0xf6,0x57,0x18,0x56,0xf4]
+          vfcmaddcph zmm6, zmm5, zmm4, {rn-sae}
+
+// CHECK: vfcmaddcph zmm6 {k7}, zmm5, zmmword ptr [esp + 8*esi + 268435456]
+// CHECK: encoding: [0x62,0xf6,0x57,0x4f,0x56,0xb4,0xf4,0x00,0x00,0x00,0x10]
+          vfcmaddcph zmm6 {k7}, zmm5, zmmword ptr [esp + 8*esi + 268435456]
+
+// CHECK: vfcmaddcph zmm6, zmm5, dword ptr [ecx]{1to16}
+// CHECK: encoding: [0x62,0xf6,0x57,0x58,0x56,0x31]
+          vfcmaddcph zmm6, zmm5, dword ptr [ecx]{1to16}
+
+// CHECK: vfcmaddcph zmm6, zmm5, zmmword ptr [ecx + 8128]
+// CHECK: encoding: [0x62,0xf6,0x57,0x48,0x56,0x71,0x7f]
+          vfcmaddcph zmm6, zmm5, zmmword ptr [ecx + 8128]
+
+// CHECK: vfcmaddcph zmm6 {k7} {z}, zmm5, dword ptr [edx - 512]{1to16}
+// CHECK: encoding: [0x62,0xf6,0x57,0xdf,0x56,0x72,0x80]
+          vfcmaddcph zmm6 {k7} {z}, zmm5, dword ptr [edx - 512]{1to16}
+
+// CHECK: vfcmaddcsh xmm6, xmm5, xmm4
+// CHECK: encoding: [0x62,0xf6,0x57,0x08,0x57,0xf4]
+          vfcmaddcsh xmm6, xmm5, xmm4
+
+// CHECK: vfcmaddcsh xmm6, xmm5, xmm4, {rn-sae}
+// CHECK: encoding: [0x62,0xf6,0x57,0x18,0x57,0xf4]
+          vfcmaddcsh xmm6, xmm5, xmm4, {rn-sae}
+
+// CHECK: vfcmaddcsh xmm6 {k7}, xmm5, dword ptr [esp + 8*esi + 268435456]
+// CHECK: encoding: [0x62,0xf6,0x57,0x0f,0x57,0xb4,0xf4,0x00,0x00,0x00,0x10]
+          vfcmaddcsh xmm6 {k7}, xmm5, dword ptr [esp + 8*esi + 268435456]
+
+// CHECK: vfcmaddcsh xmm6, xmm5, dword ptr [ecx]
+// CHECK: encoding: [0x62,0xf6,0x57,0x08,0x57,0x31]
+          vfcmaddcsh xmm6, xmm5, dword ptr [ecx]
+
+// CHECK: vfcmaddcsh xmm6, xmm5, dword ptr [ecx + 508]
+// CHECK: encoding: [0x62,0xf6,0x57,0x08,0x57,0x71,0x7f]
+          vfcmaddcsh xmm6, xmm5, dword ptr [ecx + 508]
+
+// CHECK: vfcmaddcsh xmm6 {k7} {z}, xmm5, dword ptr [edx - 512]
+// CHECK: encoding: [0x62,0xf6,0x57,0x8f,0x57,0x72,0x80]
+          vfcmaddcsh xmm6 {k7} {z}, xmm5, dword ptr [edx - 512]
+
+// CHECK: vfcmulcph zmm6, zmm5, zmm4
+// CHECK: encoding: [0x62,0xf6,0x57,0x48,0xd6,0xf4]
+          vfcmulcph zmm6, zmm5, zmm4
+
+// CHECK: vfcmulcph zmm6, zmm5, zmm4, {rn-sae}
+// CHECK: encoding: [0x62,0xf6,0x57,0x18,0xd6,0xf4]
+          vfcmulcph zmm6, zmm5, zmm4, {rn-sae}
+
+// CHECK: vfcmulcph zmm6 {k7}, zmm5, zmmword ptr [esp + 8*esi + 268435456]
+// CHECK: encoding: [0x62,0xf6,0x57,0x4f,0xd6,0xb4,0xf4,0x00,0x00,0x00,0x10]
+          vfcmulcph zmm6 {k7}, zmm5, zmmword ptr [esp + 8*esi + 268435456]
+
+// CHECK: vfcmulcph zmm6, zmm5, dword ptr [ecx]{1to16}
+// CHECK: encoding: [0x62,0xf6,0x57,0x58,0xd6,0x31]
+          vfcmulcph zmm6, zmm5, dword ptr [ecx]{1to16}
+
+// CHECK: vfcmulcph zmm6, zmm5, zmmword ptr [ecx + 8128]
+// CHECK: encoding: [0x62,0xf6,0x57,0x48,0xd6,0x71,0x7f]
+          vfcmulcph zmm6, zmm5, zmmword ptr [ecx + 8128]
+
+// CHECK: vfcmulcph zmm6 {k7} {z}, zmm5, dword ptr [edx - 512]{1to16}
+// CHECK: encoding: [0x62,0xf6,0x57,0xdf,0xd6,0x72,0x80]
+          vfcmulcph zmm6 {k7} {z}, zmm5, dword ptr [edx - 512]{1to16}
+
+// CHECK: vfcmulcsh xmm6, xmm5, xmm4
+// CHECK: encoding: [0x62,0xf6,0x57,0x08,0xd7,0xf4]
+          vfcmulcsh xmm6, xmm5, xmm4
+
+// CHECK: vfcmulcsh xmm6, xmm5, xmm4, {rn-sae}
+// CHECK: encoding: [0x62,0xf6,0x57,0x18,0xd7,0xf4]
+          vfcmulcsh xmm6, xmm5, xmm4, {rn-sae}
+
+// CHECK: vfcmulcsh xmm6 {k7}, xmm5, dword ptr [esp + 8*esi + 268435456]
+// CHECK: encoding: [0x62,0xf6,0x57,0x0f,0xd7,0xb4,0xf4,0x00,0x00,0x00,0x10]
+          vfcmulcsh xmm6 {k7}, xmm5, dword ptr [esp + 8*esi + 268435456]
+
+// CHECK: vfcmulcsh xmm6, xmm5, dword ptr [ecx]
+// CHECK: encoding: [0x62,0xf6,0x57,0x08,0xd7,0x31]
+          vfcmulcsh xmm6, xmm5, dword ptr [ecx]
+
+// CHECK: vfcmulcsh xmm6, xmm5, dword ptr [ecx + 508]
+// CHECK: encoding: [0x62,0xf6,0x57,0x08,0xd7,0x71,0x7f]
+          vfcmulcsh xmm6, xmm5, dword ptr [ecx + 508]
+
+// CHECK: vfcmulcsh xmm6 {k7} {z}, xmm5, dword ptr [edx - 512]
+// CHECK: encoding: [0x62,0xf6,0x57,0x8f,0xd7,0x72,0x80]
+          vfcmulcsh xmm6 {k7} {z}, xmm5, dword ptr [edx - 512]
+
+// CHECK: vfmaddcph zmm6, zmm5, zmm4
+// CHECK: encoding: [0x62,0xf6,0x56,0x48,0x56,0xf4]
+          vfmaddcph zmm6, zmm5, zmm4
+
+// CHECK: vfmaddcph zmm6, zmm5, zmm4, {rn-sae}
+// CHECK: encoding: [0x62,0xf6,0x56,0x18,0x56,0xf4]
+          vfmaddcph zmm6, zmm5, zmm4, {rn-sae}
+
+// CHECK: vfmaddcph zmm6 {k7}, zmm5, zmmword ptr [esp + 8*esi + 268435456]
+// CHECK: encoding: [0x62,0xf6,0x56,0x4f,0x56,0xb4,0xf4,0x00,0x00,0x00,0x10]
+          vfmaddcph zmm6 {k7}, zmm5, zmmword ptr [esp + 8*esi + 268435456]
+
+// CHECK: vfmaddcph zmm6, zmm5, dword ptr [ecx]{1to16}
+// CHECK: encoding: [0x62,0xf6,0x56,0x58,0x56,0x31]
+          vfmaddcph zmm6, zmm5, dword ptr [ecx]{1to16}
+
+// CHECK: vfmaddcph zmm6, zmm5, zmmword ptr [ecx + 8128]
+// CHECK: encoding: [0x62,0xf6,0x56,0x48,0x56,0x71,0x7f]
+          vfmaddcph zmm6, zmm5, zmmword ptr [ecx + 8128]
+
+// CHECK: vfmaddcph zmm6 {k7} {z}, zmm5, dword ptr [edx - 512]{1to16}
+// CHECK: encoding: [0x62,0xf6,0x56,0xdf,0x56,0x72,0x80]
+          vfmaddcph zmm6 {k7} {z}, zmm5, dword ptr [edx - 512]{1to16}
+
+// CHECK: vfmaddcsh xmm6, xmm5, xmm4
+// CHECK: encoding: [0x62,0xf6,0x56,0x08,0x57,0xf4]
+          vfmaddcsh xmm6, xmm5, xmm4
+
+// CHECK: vfmaddcsh xmm6, xmm5, xmm4, {rn-sae}
+// CHECK: encoding: [0x62,0xf6,0x56,0x18,0x57,0xf4]
+          vfmaddcsh xmm6, xmm5, xmm4, {rn-sae}
+
+// CHECK: vfmaddcsh xmm6 {k7}, xmm5, dword ptr [esp + 8*esi + 268435456]
+// CHECK: encoding: [0x62,0xf6,0x56,0x0f,0x57,0xb4,0xf4,0x00,0x00,0x00,0x10]
+          vfmaddcsh xmm6 {k7}, xmm5, dword ptr [esp + 8*esi + 268435456]
+
+// CHECK: vfmaddcsh xmm6, xmm5, dword ptr [ecx]
+// CHECK: encoding: [0x62,0xf6,0x56,0x08,0x57,0x31]
+          vfmaddcsh xmm6, xmm5, dword ptr [ecx]
+
+// CHECK: vfmaddcsh xmm6, xmm5, dword ptr [ecx + 508]
+// CHECK: encoding: [0x62,0xf6,0x56,0x08,0x57,0x71,0x7f]
+          vfmaddcsh xmm6, xmm5, dword ptr [ecx + 508]
+
+// CHECK: vfmaddcsh xmm6 {k7} {z}, xmm5, dword ptr [edx - 512]
+// CHECK: encoding: [0x62,0xf6,0x56,0x8f,0x57,0x72,0x80]
+          vfmaddcsh xmm6 {k7} {z}, xmm5, dword ptr [edx - 512]
+
+// CHECK: vfmulcph zmm6, zmm5, zmm4
+// CHECK: encoding: [0x62,0xf6,0x56,0x48,0xd6,0xf4]
+          vfmulcph zmm6, zmm5, zmm4
+
+// CHECK: vfmulcph zmm6, zmm5, zmm4, {rn-sae}
+// CHECK: encoding: [0x62,0xf6,0x56,0x18,0xd6,0xf4]
+          vfmulcph zmm6, zmm5, zmm4, {rn-sae}
+
+// CHECK: vfmulcph zmm6 {k7}, zmm5, zmmword ptr [esp + 8*esi + 268435456]
+// CHECK: encoding: [0x62,0xf6,0x56,0x4f,0xd6,0xb4,0xf4,0x00,0x00,0x00,0x10]
+          vfmulcph zmm6 {k7}, zmm5, zmmword ptr [esp + 8*esi + 268435456]
+
+// CHECK: vfmulcph zmm6, zmm5, dword ptr [ecx]{1to16}
+// CHECK: encoding: [0x62,0xf6,0x56,0x58,0xd6,0x31]
+          vfmulcph zmm6, zmm5, dword ptr [ecx]{1to16}
+
+// CHECK: vfmulcph zmm6, zmm5, zmmword ptr [ecx + 8128]
+// CHECK: encoding: [0x62,0xf6,0x56,0x48,0xd6,0x71,0x7f]
+          vfmulcph zmm6, zmm5, zmmword ptr [ecx + 8128]
+
+// CHECK: vfmulcph zmm6 {k7} {z}, zmm5, dword ptr [edx - 512]{1to16}
+// CHECK: encoding: [0x62,0xf6,0x56,0xdf,0xd6,0x72,0x80]
+          vfmulcph zmm6 {k7} {z}, zmm5, dword ptr [edx - 512]{1to16}
+
+// CHECK: vfmulcsh xmm6, xmm5, xmm4
+// CHECK: encoding: [0x62,0xf6,0x56,0x08,0xd7,0xf4]
+          vfmulcsh xmm6, xmm5, xmm4
+
+// CHECK: vfmulcsh xmm6, xmm5, xmm4, {rn-sae}
+// CHECK: encoding: [0x62,0xf6,0x56,0x18,0xd7,0xf4]
+          vfmulcsh xmm6, xmm5, xmm4, {rn-sae}
+
+// CHECK: vfmulcsh xmm6 {k7}, xmm5, dword ptr [esp + 8*esi + 268435456]
+// CHECK: encoding: [0x62,0xf6,0x56,0x0f,0xd7,0xb4,0xf4,0x00,0x00,0x00,0x10]
+          vfmulcsh xmm6 {k7}, xmm5, dword ptr [esp + 8*esi + 268435456]
+
+// CHECK: vfmulcsh xmm6, xmm5, dword ptr [ecx]
+// CHECK: encoding: [0x62,0xf6,0x56,0x08,0xd7,0x31]
+          vfmulcsh xmm6, xmm5, dword ptr [ecx]
+
+// CHECK: vfmulcsh xmm6, xmm5, dword ptr [ecx + 508]
+// CHECK: encoding: [0x62,0xf6,0x56,0x08,0xd7,0x71,0x7f]
+          vfmulcsh xmm6, xmm5, dword ptr [ecx + 508]
+
+// CHECK: vfmulcsh xmm6 {k7} {z}, xmm5, dword ptr [edx - 512]
+// CHECK: encoding: [0x62,0xf6,0x56,0x8f,0xd7,0x72,0x80]
+          vfmulcsh xmm6 {k7} {z}, xmm5, dword ptr [edx - 512]
