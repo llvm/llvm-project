@@ -418,6 +418,56 @@ __amd_fillBuffer(
 }
 
 __attribute__((always_inline)) void
+__amd_fillBufferAligned(
+    __global uchar* bufUChar,
+    __global ushort* bufUShort,
+    __global uint* bufUInt,
+    __global ulong* bufULong,
+    __constant uchar* pattern,
+    uint patternSize,
+    ulong offset,
+    ulong size)
+{
+    ulong id = get_global_id(0);
+
+    if (id >= size) {
+        return;
+    }
+
+    if (bufULong) {
+        __global ulong* element = &bufULong[offset + id * patternSize];
+        __constant ulong*  pt = (__constant ulong*)pattern;
+
+        for (uint i = 0; i < patternSize; ++i) {
+            element[i] = pt[i];
+        }
+    }
+    else if (bufUInt) {
+        __global uint* element = &bufUInt[offset + id * patternSize];
+        __constant uint*  pt = (__constant uint*)pattern;
+
+        for (uint i = 0; i < patternSize; ++i) {
+            element[i] = pt[i];
+        }
+    }
+    else if (bufUShort) {
+        __global ushort* element = &bufUShort[offset + id * patternSize];
+        __constant ushort*  pt = (__constant ushort*)pattern;
+
+        for (uint i = 0; i < patternSize; ++i) {
+            element[i] = pt[i];
+        }
+    }
+    else {
+        __global uchar* element = &bufUChar[offset + id * patternSize];
+
+        for (uint i = 0; i < patternSize; ++i) {
+            element[i] = pattern[i];
+        }
+    }
+}
+
+__attribute__((always_inline)) void
 __amd_fillImage(
     __write_only image2d_array_t image,
     float4 patternFLOAT4,
