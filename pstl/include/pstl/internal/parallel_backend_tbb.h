@@ -113,8 +113,8 @@ __parallel_for(__tbb_backend, _ExecutionPolicy&&, _Index __first, _Index __last,
 // wrapper over tbb::parallel_reduce
 template <class _ExecutionPolicy, class _Value, class _Index, typename _RealBody, typename _Reduction>
 _Value
-__parallel_reduce(_ExecutionPolicy&&, _Index __first, _Index __last, const _Value& __identity,
-                  const _RealBody& __real_body, const _Reduction& __reduction)
+__parallel_reduce(__pstl::__internal::__tbb_backend, _ExecutionPolicy&&, _Index __first, _Index __last,
+                  const _Value& __identity, const _RealBody& __real_body, const _Reduction& __reduction)
 {
     return tbb::this_task_arena::isolate([__first, __last, &__identity, &__real_body, &__reduction]() -> _Value {
         return tbb::parallel_reduce(
@@ -194,8 +194,8 @@ struct __par_trans_red_body
 
 template <class _ExecutionPolicy, class _Index, class _Up, class _Tp, class _Cp, class _Rp>
 _Tp
-__parallel_transform_reduce(_ExecutionPolicy&&, _Index __first, _Index __last, _Up __u, _Tp __init, _Cp __combine,
-                            _Rp __brick_reduce)
+__parallel_transform_reduce(__pstl::__internal::__tbb_backend, _ExecutionPolicy&&, _Index __first, _Index __last,
+                            _Up __u, _Tp __init, _Cp __combine, _Rp __brick_reduce)
 {
     __tbb_backend::__par_trans_red_body<_Index, _Up, _Tp, _Cp, _Rp> __body(__u, __init, __combine, __brick_reduce);
     // The grain size of 3 is used in order to provide mininum 2 elements for each body
@@ -734,7 +734,7 @@ class __merge_func
     bool _root;   //means a task is merging root task
     bool _x_orig; //"true" means X(or left ) subrange is in the original container; false - in the buffer
     bool _y_orig; //"true" means Y(or right) subrange is in the original container; false - in the buffer
-    bool _split; //"true" means a merge task is a split task for parallel merging, the execution logic differs
+    bool _split;  //"true" means a merge task is a split task for parallel merging, the execution logic differs
 
     bool
     is_partial() const
@@ -828,8 +828,8 @@ class __merge_func
                  _Cleanup, _LeafMerge __leaf_merge, _SizeType __nsort, _RandomAccessIterator1 __x_beg,
                  _RandomAccessIterator2 __z_beg, bool __x_orig, bool __y_orig, bool __root)
         : _M_xs(__xs), _M_xe(__xe), _M_ys(__ys), _M_ye(__ye), _M_zs(__zs), _M_x_beg(__x_beg), _M_z_beg(__z_beg),
-          _M_comp(__comp), _M_leaf_merge(__leaf_merge), _M_nsort(__nsort), _root(__root),
-          _x_orig(__x_orig), _y_orig(__y_orig), _split(false)
+          _M_comp(__comp), _M_leaf_merge(__leaf_merge), _M_nsort(__nsort), _root(__root), _x_orig(__x_orig),
+          _y_orig(__y_orig), _split(false)
     {
     }
 

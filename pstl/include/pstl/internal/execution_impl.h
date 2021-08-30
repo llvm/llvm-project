@@ -95,16 +95,14 @@ using __allow_parallel =
     typename __internal::__policy_traits<typename std::decay<_ExecutionPolicy>::type>::__allow_parallel;
 
 template <typename _ExecutionPolicy, typename... _IteratorTypes>
-typename std::conjunction<__allow_vector<_ExecutionPolicy>,
-                          __is_random_access_iterator<_IteratorTypes>...>::type
+typename std::conjunction<__allow_vector<_ExecutionPolicy>, __is_random_access_iterator<_IteratorTypes>...>::type
 __is_vectorization_preferred(_ExecutionPolicy&&)
 {
     return {};
 }
 
 template <typename _ExecutionPolicy, typename... _IteratorTypes>
-typename std::conjunction<__allow_parallel<_ExecutionPolicy>,
-                          __is_random_access_iterator<_IteratorTypes>...>::type
+typename std::conjunction<__allow_parallel<_ExecutionPolicy>, __is_random_access_iterator<_IteratorTypes>...>::type
 __is_parallelization_preferred(_ExecutionPolicy&&)
 {
     return {};
