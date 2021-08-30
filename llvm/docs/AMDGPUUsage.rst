@@ -1631,7 +1631,7 @@ Loaded Code Object Path Uniform Resource Identifier (URI)
 ---------------------------------------------------------
 
 The AMD GPU code object loader represents the path of the ELF shared object from
-which the code object was loaded as a textual Unifom Resource Identifier (URI).
+which the code object was loaded as a textual Uniform Resource Identifier (URI).
 Note that the code object is the in memory loaded relocated form of the ELF
 shared object.  Multiple code objects may be loaded at different memory
 addresses in the same process from the same ELF shared object.
