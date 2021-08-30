@@ -237,7 +237,7 @@ struct TestLinalgGreedyFusion
     RewritePatternSet patterns =
         linalg::getLinalgTilingCanonicalizationPatterns(context);
     patterns.add<ExtractSliceOfPadTensorSwapPattern>(context);
-    scf::populateSCFLoopBodyCanonicalizationPatterns(patterns);
+    scf::populateSCFForLoopCanonicalizationPatterns(patterns);
     FrozenRewritePatternSet frozenPatterns(std::move(patterns));
     do {
       (void)applyPatternsAndFoldGreedily(getFunction(), frozenPatterns);

@@ -1968,6 +1968,19 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
     }
   }
 
+  // When used as part of a typedef, or together with a 'packed' attribute, the
+  // 'aligned' attribute can be used to decrease alignment. In that case, it
+  // overrides any computed alignment we have, and there is no need to upgrade
+  // the alignment.
+  auto alignedAttrCanDecreaseAIXAlignment = [AlignRequirement, FieldPacked] {
+    // Enum alignment sources can be safely ignored here, because this only
+    // helps decide whether we need the AIX alignment upgrade, which only
+    // applies to floating-point types.
+    return AlignRequirement == AlignRequirementKind::RequiredByTypedef ||
+           (AlignRequirement == AlignRequirementKind::RequiredByRecord &&
+            FieldPacked);
+  };
+
   // The AIX `power` alignment rules apply the natural alignment of the
   // "first member" if it is of a floating-point data type (or is an aggregate
   // whose recursively "first" member or element is such a type). The alignment
@@ -1978,8 +1991,7 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
   // and zero-width bit-fields count as prior members; members of empty class
   // types marked `no_unique_address` are not considered to be prior members.
   CharUnits PreferredAlign = FieldAlign;
-  if (DefaultsToAIXPowerAlignment &&
-      AlignRequirement == AlignRequirementKind::None &&
+  if (DefaultsToAIXPowerAlignment && !alignedAttrCanDecreaseAIXAlignment() &&
       (FoundFirstNonOverlappingEmptyFieldForAIX || IsNaturalAlign)) {
     auto performBuiltinTypeAlignmentUpgrade = [&](const BuiltinType *BTy) {
       if (BTy->getKind() == BuiltinType::Double ||
@@ -1990,12 +2002,13 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
       }
     };
 
-    const Type *Ty = D->getType()->getBaseElementTypeUnsafe();
-    if (const ComplexType *CTy = Ty->getAs<ComplexType>()) {
-      performBuiltinTypeAlignmentUpgrade(CTy->getElementType()->castAs<BuiltinType>());
-    } else if (const BuiltinType *BTy = Ty->getAs<BuiltinType>()) {
+    const Type *BaseTy = D->getType()->getBaseElementTypeUnsafe();
+    if (const ComplexType *CTy = BaseTy->getAs<ComplexType>()) {
+      performBuiltinTypeAlignmentUpgrade(
+          CTy->getElementType()->castAs<BuiltinType>());
+    } else if (const BuiltinType *BTy = BaseTy->getAs<BuiltinType>()) {
       performBuiltinTypeAlignmentUpgrade(BTy);
-    } else if (const RecordType *RT = Ty->getAs<RecordType>()) {
+    } else if (const RecordType *RT = BaseTy->getAs<RecordType>()) {
       const RecordDecl *RD = RT->getDecl();
       assert(RD && "Expected non-null RecordDecl.");
       const ASTRecordLayout &FieldRecord = Context.getASTRecordLayout(RD);
