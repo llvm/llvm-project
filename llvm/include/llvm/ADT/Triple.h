@@ -100,6 +100,7 @@ public:
     renderscript32, // 32-bit RenderScript
     renderscript64, // 64-bit RenderScript
     ve,             // NEC SX-Aurora Vector Engine
+    cahpv4,
     LastArchType = ve
   };
   enum SubArchType {
@@ -800,6 +801,10 @@ public:
   bool isArm64e() const {
     return getArch() == Triple::aarch64 &&
            getSubArch() == Triple::AArch64SubArch_arm64e;
+  }
+
+  bool isCAHPV4() const {
+    return getArch() == Triple::cahpv4;
   }
 
   /// Tests whether the target supports comdat
