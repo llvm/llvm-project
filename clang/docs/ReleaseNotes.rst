@@ -395,7 +395,53 @@ libclang
 Static Analyzer
 ---------------
 
-- ...
+.. 2407eb08a574 [analyzer] Update static analyzer to be support sarif-html
+
+- Add a new analyzer output type, ``sarif-html``, that outputs both HTML and
+  Sarif files.
+
+.. 90377308de6c [analyzer] Support allocClassWithName in OSObjectCStyleCast checker
+
+- Add support for ``allocClassWithName`` in OSObjectCStyleCast checker.
+
+.. cad9b7f708e2b2d19d7890494980c5e427d6d4ea: Print time taken to analyze each function
+
+- The option ``-analyzer-display-progress`` now also outputs analysis time for
+  each function.
+
+.. 9e02f58780ab8734e5d27a0138bd477d18ae64a1 [analyzer] Highlight arrows for currently selected event
+
+- For bug reports in HTML format, arrows are now highlighted for the currently
+  selected event.
+
+.. Deep Majumder's GSoC'21
+.. 80068ca6232b [analyzer] Fix for faulty namespace test in SmartPtrModelling
+.. d825309352b4 [analyzer] Handle std::make_unique
+.. 0cd98bef1b6f [analyzer] Handle std::swap for std::unique_ptr
+.. 13fe78212fe7 [analyzer] Handle << operator for std::unique_ptr
+.. 48688257c52d [analyzer] Model comparision methods of std::unique_ptr
+.. f8d3f47e1fd0 [analyzer] Updated comments to reflect D85817
+.. 21daada95079 [analyzer] Fix static_cast on pointer-to-member handling
+
+- While still in alpha, ``alpha.cplusplus.SmartPtr`` received numerous
+  improvements and nears production quality.
+
+.. 21daada95079 [analyzer] Fix static_cast on pointer-to-member handling
+.. 170c67d5b8cc [analyzer] Use the MacroExpansionContext for macro expansions in plists
+.. 02b51e5316cd [analyzer][solver] Redesign constraint ranges data structure
+.. 3085bda2b348 [analyzer][solver] Fix infeasible constraints (PR49642)
+.. 015c39882ebc [Analyzer] Infer 0 value when the divisible is 0 (bug fix)
+.. 90377308de6c [analyzer] Support allocClassWithName in OSObjectCStyleCast checker
+.. df64f471d1e2 [analyzer] DynamicSize: Store the dynamic size
+.. e273918038a7 [analyzer] Track leaking object through stores
+.. 61ae2db2d7a9 [analyzer] Adjust the reported variable name in retain count checker
+.. 50f17e9d3139 [analyzer] RetainCountChecker: Disable reference counting for OSMetaClass.
+
+- Various fixes and improvements, including modeling of casts (such as 
+  ``std::bit_cast<>``), constraint solving, explaining bug-causing variable
+  values, macro expansion notes, modeling the size of dynamic objects and the
+  modeling and reporting of Objective C/C++ retain count related bugs. These
+  should reduce false positives and make the remaining reports more readable.
 
 .. _release-notes-ubsan:
 
