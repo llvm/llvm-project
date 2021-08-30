@@ -814,8 +814,8 @@ LogicalResult ModuleTranslation::createAliasScopeMetadata() {
 llvm::MDNode *
 ModuleTranslation::getAliasScope(Operation &opInst,
                                  SymbolRefAttr aliasScopeRef) const {
-  StringRef metadataName = aliasScopeRef.getRootReference();
-  StringRef scopeName = aliasScopeRef.getLeafReference();
+  StringAttr metadataName = aliasScopeRef.getRootReference();
+  StringAttr scopeName = aliasScopeRef.getLeafReference();
   auto metadataOp = SymbolTable::lookupNearestSymbolFrom<LLVM::MetadataOp>(
       opInst.getParentOp(), metadataName);
   Operation *aliasScopeOp =

@@ -31,7 +31,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
 
   let methods = [
     InterfaceMethod<"Returns the name of this symbol.",
-      "StringRef", "getName", (ins), [{
+      "StringAttr", "getNameAttr", (ins), [{
         // Don't rely on the trait implementation as optional symbol operations
         // may override this.
         return mlir::SymbolTable::getSymbolName($_op);
@@ -40,11 +40,10 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
       }]
     >,
     InterfaceMethod<"Sets the name of this symbol.",
-      "void", "setName", (ins "StringRef":$name), [{}],
+      "void", "setName", (ins "StringAttr":$name), [{}],
       /*defaultImplementation=*/[{
         this->getOperation()->setAttr(
-            mlir::SymbolTable::getSymbolAttrName(),
-            StringAttr::get(this->getOperation()->getContext(), name));
+            mlir::SymbolTable::getSymbolAttrName(), name);
       }]
     >,
     InterfaceMethod<"Gets the visibility of this symbol.",
@@ -122,7 +121,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
         symbol 'newSymbol' that are nested within the given operation 'from'.
         Note: See mlir::SymbolTable::replaceAllSymbolUses for more details.
       }],
-      "LogicalResult", "replaceAllSymbolUses", (ins "StringRef":$newSymbol,
+      "LogicalResult", "replaceAllSymbolUses", (ins "StringAttr":$newSymbol,
                                                     "Operation *":$from), [{}],
       /*defaultImplementation=*/[{
         return ::mlir::SymbolTable::replaceAllSymbolUses(this->getOperation(),
@@ -176,6 +175,16 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
   }];
 
   let extraClassDeclaration = [{
+    /// Convenience version of `getNameAttr` that returns a StringRef.
+    StringRef getName() {
+      return getNameAttr().getValue();
+    }
+
+    /// Convenience version of `setName` that take a StringRef.
+    void setName(StringRef name) {
+      setName(StringAttr::get(this->getContext(), name));
+    }
+
     /// Custom classof that handles the case where the symbol is optional.
     static bool classof(Operation *op) {
       auto *opConcept = getInterfaceFor(op);
@@ -188,6 +197,16 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
 
   let extraTraitClassDeclaration = [{
     using Visibility = mlir::SymbolTable::Visibility;
+
+    /// Convenience version of `getNameAttr` that returns a StringRef.
+    StringRef getName() {
+      return getNameAttr().getValue();
+    }
+
+    /// Convenience version of `setName` that take a StringRef.
+    void setName(StringRef name) {
+      setName(StringAttr::get(this->getContext(), name));
+    }
   }];
 }
 

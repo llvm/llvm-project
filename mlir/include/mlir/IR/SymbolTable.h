@@ -30,7 +30,16 @@ public:
   /// Look up a symbol with the specified name, returning null if no such
   /// name exists. Names never include the @ on them.
   Operation *lookup(StringRef name) const;
-  template <typename T> T lookup(StringRef name) const {
+  template <typename T>
+  T lookup(StringRef name) const {
+    return dyn_cast_or_null<T>(lookup(name));
+  }
+
+  /// Look up a symbol with the specified name, returning null if no such
+  /// name exists. Names never include the @ on them.
+  Operation *lookup(StringAttr name) const;
+  template <typename T>
+  T lookup(StringAttr name) const {
     return dyn_cast_or_null<T>(lookup(name));
   }
 
@@ -74,10 +83,15 @@ public:
     Nested,
   };
 
-  /// Returns the name of the given symbol operation.
-  static StringRef getSymbolName(Operation *symbol);
+  /// Returns the name of the given symbol operation, aborting if no symbol is
+  /// present.
+  static StringAttr getSymbolName(Operation *symbol);
+
   /// Sets the name of the given symbol operation.
-  static void setSymbolName(Operation *symbol, StringRef name);
+  static void setSymbolName(Operation *symbol, StringAttr name);
+  static void setSymbolName(Operation *symbol, StringRef name) {
+    setSymbolName(symbol, StringAttr::get(symbol->getContext(), name));
+  }
 
   /// Returns the visibility of the given symbol operation.
   static Visibility getSymbolVisibility(Operation *symbol);
@@ -100,7 +114,10 @@ public:
   /// Returns the operation registered with the given symbol name with the
   /// regions of 'symbolTableOp'. 'symbolTableOp' is required to be an operation
   /// with the 'OpTrait::SymbolTable' trait.
-  static Operation *lookupSymbolIn(Operation *op, StringRef symbol);
+  static Operation *lookupSymbolIn(Operation *op, StringAttr symbol);
+  static Operation *lookupSymbolIn(Operation *op, StringRef symbol) {
+    return lookupSymbolIn(op, StringAttr::get(op->getContext(), symbol));
+  }
   static Operation *lookupSymbolIn(Operation *op, SymbolRefAttr symbol);
   /// A variant of 'lookupSymbolIn' that returns all of the symbols referenced
   /// by a given SymbolRefAttr. Returns failure if any of the nested references
@@ -112,11 +129,11 @@ public:
   /// closest parent operation of, or including, 'from' with the
   /// 'OpTrait::SymbolTable' trait. Returns nullptr if no valid symbol was
   /// found.
-  static Operation *lookupNearestSymbolFrom(Operation *from, StringRef symbol);
+  static Operation *lookupNearestSymbolFrom(Operation *from, StringAttr symbol);
   static Operation *lookupNearestSymbolFrom(Operation *from,
                                             SymbolRefAttr symbol);
   template <typename T>
-  static T lookupNearestSymbolFrom(Operation *from, StringRef symbol) {
+  static T lookupNearestSymbolFrom(Operation *from, StringAttr symbol) {
     return dyn_cast_or_null<T>(lookupNearestSymbolFrom(from, symbol));
   }
   template <typename T>
@@ -169,9 +186,9 @@ public:
   /// operation 'from'. This does not traverse into any nested symbol tables.
   /// This function returns None if there are any unknown operations that may
   /// potentially be symbol tables.
-  static Optional<UseRange> getSymbolUses(StringRef symbol, Operation *from);
+  static Optional<UseRange> getSymbolUses(StringAttr symbol, Operation *from);
   static Optional<UseRange> getSymbolUses(Operation *symbol, Operation *from);
-  static Optional<UseRange> getSymbolUses(StringRef symbol, Region *from);
+  static Optional<UseRange> getSymbolUses(StringAttr symbol, Region *from);
   static Optional<UseRange> getSymbolUses(Operation *symbol, Region *from);
 
   /// Return if the given symbol is known to have no uses that are nested
@@ -180,9 +197,9 @@ public:
   /// unknown operations that may potentially be symbol tables. This doesn't
   /// necessarily mean that there are no uses, we just can't conservatively
   /// prove it.
-  static bool symbolKnownUseEmpty(StringRef symbol, Operation *from);
+  static bool symbolKnownUseEmpty(StringAttr symbol, Operation *from);
   static bool symbolKnownUseEmpty(Operation *symbol, Operation *from);
-  static bool symbolKnownUseEmpty(StringRef symbol, Region *from);
+  static bool symbolKnownUseEmpty(StringAttr symbol, Region *from);
   static bool symbolKnownUseEmpty(Operation *symbol, Region *from);
 
   /// Attempt to replace all uses of the given symbol 'oldSymbol' with the
@@ -190,23 +207,24 @@ public:
   /// 'from'. This does not traverse into any nested symbol tables. If there are
   /// any unknown operations that may potentially be symbol tables, no uses are
   /// replaced and failure is returned.
-  static LogicalResult replaceAllSymbolUses(StringRef oldSymbol,
-                                            StringRef newSymbol,
+  static LogicalResult replaceAllSymbolUses(StringAttr oldSymbol,
+                                            StringAttr newSymbol,
                                             Operation *from);
   static LogicalResult replaceAllSymbolUses(Operation *oldSymbol,
-                                            StringRef newSymbolName,
+                                            StringAttr newSymbolName,
                                             Operation *from);
-  static LogicalResult replaceAllSymbolUses(StringRef oldSymbol,
-                                            StringRef newSymbol, Region *from);
+  static LogicalResult replaceAllSymbolUses(StringAttr oldSymbol,
+                                            StringAttr newSymbol, Region *from);
   static LogicalResult replaceAllSymbolUses(Operation *oldSymbol,
-                                            StringRef newSymbolName,
+                                            StringAttr newSymbolName,
                                             Region *from);
 
 private:
   Operation *symbolTableOp;
 
-  /// This is a mapping from a name to the symbol with that name.
-  llvm::StringMap<Operation *> symbolTable;
+  /// This is a mapping from a name to the symbol with that name.  They key is
+  /// always known to be a StringAttr.
+  DenseMap<Attribute, Operation *> symbolTable;
 
   /// This is used when name conflicts are detected.
   unsigned uniquingCounter = 0;
@@ -226,7 +244,7 @@ class SymbolTableCollection {
 public:
   /// Look up a symbol with the specified name within the specified symbol table
   /// operation, returning null if no such name exists.
-  Operation *lookupSymbolIn(Operation *symbolTableOp, StringRef symbol);
+  Operation *lookupSymbolIn(Operation *symbolTableOp, StringAttr symbol);
   Operation *lookupSymbolIn(Operation *symbolTableOp, SymbolRefAttr name);
   template <typename T, typename NameT>
   T lookupSymbolIn(Operation *symbolTableOp, NameT &&name) const {
@@ -244,10 +262,10 @@ public:
   /// closest parent operation of, or including, 'from' with the
   /// 'OpTrait::SymbolTable' trait. Returns nullptr if no valid symbol was
   /// found.
-  Operation *lookupNearestSymbolFrom(Operation *from, StringRef symbol);
+  Operation *lookupNearestSymbolFrom(Operation *from, StringAttr symbol);
   Operation *lookupNearestSymbolFrom(Operation *from, SymbolRefAttr symbol);
   template <typename T>
-  T lookupNearestSymbolFrom(Operation *from, StringRef symbol) {
+  T lookupNearestSymbolFrom(Operation *from, StringAttr symbol) {
     return dyn_cast_or_null<T>(lookupNearestSymbolFrom(from, symbol));
   }
   template <typename T>
@@ -290,7 +308,7 @@ public:
   }
 
   /// Replace all of the uses of the given symbol with `newSymbolName`.
-  void replaceAllUsesWith(Operation *symbol, StringRef newSymbolName);
+  void replaceAllUsesWith(Operation *symbol, StringAttr newSymbolName);
 
 private:
   /// A reference to the symbol table used to construct this map.
@@ -327,17 +345,27 @@ public:
   /// Look up a symbol with the specified name, returning null if no such
   /// name exists. Symbol names never include the @ on them. Note: This
   /// performs a linear scan of held symbols.
-  Operation *lookupSymbol(StringRef name) {
+  Operation *lookupSymbol(StringAttr name) {
     return mlir::SymbolTable::lookupSymbolIn(this->getOperation(), name);
   }
-  template <typename T> T lookupSymbol(StringRef name) {
+  template <typename T>
+  T lookupSymbol(StringAttr name) {
     return dyn_cast_or_null<T>(lookupSymbol(name));
   }
   Operation *lookupSymbol(SymbolRefAttr symbol) {
     return mlir::SymbolTable::lookupSymbolIn(this->getOperation(), symbol);
   }
-  template <typename T> T lookupSymbol(SymbolRefAttr symbol) {
+  template <typename T>
+  T lookupSymbol(SymbolRefAttr symbol) {
     return dyn_cast_or_null<T>(lookupSymbol(symbol));
+  }
+
+  Operation *lookupSymbol(StringRef name) {
+    return mlir::SymbolTable::lookupSymbolIn(this->getOperation(), name);
+  }
+  template <typename T>
+  T lookupSymbol(StringRef name) {
+    return dyn_cast_or_null<T>(lookupSymbol(name));
   }
 };
 
