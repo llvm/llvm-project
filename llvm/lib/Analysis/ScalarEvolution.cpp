@@ -4154,17 +4154,16 @@ const SCEV *ScalarEvolution::getNotSCEV(const SCEV *V) {
   return getMinusSCEV(getMinusOne(Ty), V);
 }
 
-/// Compute an expression equivalent to S - getPointerBase(S).
-static const SCEV *removePointerBase(ScalarEvolution *SE, const SCEV *P) {
+const SCEV *ScalarEvolution::removePointerBase(const SCEV *P) {
   assert(P->getType()->isPointerTy());
 
   if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(P)) {
     // The base of an AddRec is the first operand.
     SmallVector<const SCEV *> Ops{AddRec->operands()};
-    Ops[0] = removePointerBase(SE, Ops[0]);
+    Ops[0] = removePointerBase(Ops[0]);
     // Don't try to transfer nowrap flags for now. We could in some cases
     // (for example, if pointer operand of the AddRec is a SCEVUnknown).
-    return SE->getAddRecExpr(Ops, AddRec->getLoop(), SCEV::FlagAnyWrap);
+    return getAddRecExpr(Ops, AddRec->getLoop(), SCEV::FlagAnyWrap);
   }
   if (auto *Add = dyn_cast<SCEVAddExpr>(P)) {
     // The base of an Add is the pointer operand.
@@ -4176,13 +4175,13 @@ static const SCEV *removePointerBase(ScalarEvolution *SE, const SCEV *P) {
         PtrOp = &AddOp;
       }
     }
-    *PtrOp = removePointerBase(SE, *PtrOp);
+    *PtrOp = removePointerBase(*PtrOp);
     // Don't try to transfer nowrap flags for now. We could in some cases
     // (for example, if the pointer operand of the Add is a SCEVUnknown).
-    return SE->getAddExpr(Ops);
+    return getAddExpr(Ops);
   }
   // Any other expression must be a pointer base.
-  return SE->getZero(P->getType());
+  return getZero(P->getType());
 }
 
 const SCEV *ScalarEvolution::getMinusSCEV(const SCEV *LHS, const SCEV *RHS,
@@ -4199,8 +4198,8 @@ const SCEV *ScalarEvolution::getMinusSCEV(const SCEV *LHS, const SCEV *RHS,
     if (!LHS->getType()->isPointerTy() ||
         getPointerBase(LHS) != getPointerBase(RHS))
       return getCouldNotCompute();
-    LHS = removePointerBase(this, LHS);
-    RHS = removePointerBase(this, RHS);
+    LHS = removePointerBase(LHS);
+    RHS = removePointerBase(RHS);
   }
 
   // We represent LHS - RHS as LHS + (-1)*RHS. This transformation

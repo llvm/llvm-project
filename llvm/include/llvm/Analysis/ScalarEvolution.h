@@ -704,6 +704,9 @@ public:
   /// cases do exist.
   const SCEV *getPointerBase(const SCEV *V);
 
+  /// Compute an expression equivalent to S - getPointerBase(S).
+  const SCEV *removePointerBase(const SCEV *S);
+
   /// Return a SCEV expression for the specified value at the specified scope
   /// in the program.  The L value specifies a loop nest to evaluate the
   /// expression at, where null is the top-level or a specified loop is
