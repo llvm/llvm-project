@@ -2052,20 +2052,21 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
 
     // If the last character of our string is '>', add another space to
     // keep the two '>''s separate tokens.
-    NeedSpace = Policy.SplitTemplateClosers && !ArgString.empty() &&
-                ArgString.back() == '>';
-    FirstArg = false;
+    if (!ArgString.empty()) {
+      NeedSpace = Policy.SplitTemplateClosers && ArgString.back() == '>';
+      FirstArg = false;
+    }
 
     // Use same template parameter for all elements of Pack
     if (!IsPack)
       ParmIndex++;
   }
 
-  if (NeedSpace)
-    OS << ' ';
-
-  if (!IsPack)
+  if (!IsPack) {
+    if (NeedSpace)
+      OS << ' ';
     OS << '>';
+  }
 }
 
 void clang::printTemplateArgumentList(raw_ostream &OS,

@@ -196,4 +196,22 @@ void f1() {
 }
 template void f1<t1<int>>();
 // CHECK: !DISubprogram(name: "f1<IndirectDefaultArgument::t1<int, int> >",
+} // namespace IndirectDefaultArgument
+
+namespace EmptyTrailingPack {
+template<typename T>
+struct t1 { };
+template<typename T, typename ...Ts>
+void f1() {
 }
+template void f1<t1<int>>();
+// CHECK: !DISubprogram(name: "f1<EmptyTrailingPack::t1<int> >",
+} // namespace EmptyTrailingPack
+
+namespace EmptyInnerPack {
+template<typename ...Ts, typename T = int>
+void f1() {
+}
+template void f1<>();
+// CHECK: !DISubprogram(name: "f1<int>",
+} // namespace EmptyInnerPack
