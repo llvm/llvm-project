@@ -10,10 +10,6 @@
 
 // is_trivially_copyable
 
-// GCC has not implemented Core 2094 which makes volatile
-// qualified types trivially copyable.
-// XFAIL: gcc
-
 #include <type_traits>
 #include <cassert>
 #include "test_macros.h"
