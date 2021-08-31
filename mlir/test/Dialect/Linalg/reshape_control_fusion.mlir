@@ -20,7 +20,7 @@ func @control_producer_reshape_fusion(%arg0 : tensor<?x?x?xf32>, %arg1 : tensor<
 }
 //  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1) -> (d0, d1)>
 //  CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1) -> (d1)>
-//      CHECK: builtin.func @control_producer_reshape_fusion
+//      CHECK: func @control_producer_reshape_fusion
 // CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?x?xf32>
 // CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: tensor<?xf32>
 //  CHECK-DAG:   %[[C0:.+]] = constant 0 : index
@@ -54,7 +54,7 @@ func @control_consumer_reshape_fusion(%arg0 : tensor<1x?x?xf32>, %arg1 : tensor<
   return %1 : tensor<1x?x?xf32>
 }
 //  CHECK-DAG: #[[MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)
-//      CHECK: builtin.func @control_consumer_reshape_fusion
+//      CHECK: func @control_consumer_reshape_fusion
 //      CHECK:   %[[FILL:.+]] = linalg.generic
 // CHECK-SAME:       indexing_maps = [#[[MAP]]]
 // CHECK-SAME:       outs(%{{.+}} : tensor<1x?x?xf32>)

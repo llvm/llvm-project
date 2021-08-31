@@ -27,6 +27,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
@@ -371,7 +372,7 @@ public:
       // Check to see if this is a known operation.  If so, use the registered
       // custom printer hook.
       if (auto *opInfo = op->getAbstractOperation()) {
-        opInfo->printAssembly(op, *this);
+        opInfo->printAssembly(op, *this, /*defaultDialect=*/"");
         return;
       }
     }
@@ -2424,6 +2425,13 @@ public:
   }
 
 private:
+  // Contains the stack of default dialects to use when printing regions.
+  // A new dialect is pushed to the stack before parsing regions nested under an
+  // operation implementing `OpAsmOpInterface`, and popped when done. At the
+  // top-level we start with "builtin" as the default, so that the top-level
+  // `module` operation prints as-is.
+  SmallVector<StringRef> defaultDialectStack{"builtin"};
+
   /// The number of spaces used for indenting nested operations.
   const static unsigned indentWidth = 2;
 
@@ -2503,7 +2511,7 @@ void OperationPrinter::printOperation(Operation *op) {
     // Check to see if this is a known operation.  If so, use the registered
     // custom printer hook.
     if (auto *opInfo = op->getAbstractOperation()) {
-      opInfo->printAssembly(op, *this);
+      opInfo->printAssembly(op, *this, defaultDialectStack.back());
       return;
     }
     // Otherwise try to dispatch to the dialect, if available.
@@ -2511,6 +2519,7 @@ void OperationPrinter::printOperation(Operation *op) {
       if (auto opPrinter = dialect->getOperationPrinter(op)) {
         // Print the op name first.
         StringRef name = op->getName().getStringRef();
+        name.consume_front((defaultDialectStack.back() + ".").str());
         printEscapedString(name, os);
         // Print the rest of the op now.
         opPrinter(op, *this);
@@ -2657,6 +2666,13 @@ void OperationPrinter::printRegion(Region &region, bool printEntryBlockArgs,
                                    bool printEmptyBlock) {
   os << " {" << newLine;
   if (!region.empty()) {
+    auto restoreDefaultDialect =
+        llvm::make_scope_exit([&]() { defaultDialectStack.pop_back(); });
+    if (auto iface = dyn_cast<OpAsmOpInterface>(region.getParentOp()))
+      defaultDialectStack.push_back(iface.getDefaultDialect());
+    else
+      defaultDialectStack.push_back("");
+
     auto *entryBlock = &region.front();
     // Force printing the block header if printEmptyBlock is set and the block
     // is empty or if printEntryBlockArgs is set and there are arguments to

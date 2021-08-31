@@ -506,7 +506,7 @@ func @failedHasDominanceScopeOutsideDominanceFreeScope() -> () {
 // checked for dominance
 func @illegalInsideDominanceFreeScope() -> () {
   test.graph_region {
-    func @test() -> i1 {
+    builtin.func @test() -> i1 {
     ^bb1:
       // expected-error @+1 {{operand #0 does not dominate this use}}
       %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1)
@@ -525,7 +525,7 @@ func @illegalInsideDominanceFreeScope() -> () {
 // checked for dominance
 func @illegalCDFGInsideDominanceFreeScope() -> () {
   test.graph_region {
-    func @test() -> i1 {
+    builtin.func @test() -> i1 {
     ^bb1:
       // expected-error @+1 {{operand #0 does not dominate this use}}
       %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1)

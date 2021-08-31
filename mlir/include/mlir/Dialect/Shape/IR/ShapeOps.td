@@ -135,7 +135,7 @@ def Shape_ConstShapeOp : Shape_Op<"const_shape",
 def Shape_ConstSizeOp : Shape_Op<"const_size", [
     ConstantLike,
     NoSideEffect,
-    DeclareOpInterfaceMethods<OpAsmOpInterface>
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>
   ]> {
   let summary = "Creates a constant of type `shape.size`";
   let description = [{

@@ -1307,6 +1307,28 @@ func @pretty_names() {
   return
 }
 
+
+// This tests the behavior of "default dialect":
+// operations like `test.default_dialect` can define a default dialect
+// used in nested region.
+// CHECK-LABEL: func @default_dialect
+func @default_dialect() {
+  test.default_dialect {
+    // The test dialect is the default in this region, the following two
+    // operations are parsed identically.
+    // CHECK-NOT: test.parse_integer_literal
+    parse_integer_literal : 5
+    // CHECK: parse_integer_literal : 6
+    test.parse_integer_literal : 6
+    // Verify that only an op prefix is stripped, not an attribute value for
+    // example.
+    // CHECK:  "test.op_with_attr"() {test.attr = "test.value"} : () -> ()
+    "test.op_with_attr"() {test.attr = "test.value"} : () -> ()
+    "test.terminator"() : ()->()
+  }
+  return
+}
+
 // CHECK-LABEL: func @unreachable_dominance_violation_ok
 func @unreachable_dominance_violation_ok() -> i1 {
 // CHECK:   [[VAL:%.*]] = constant false

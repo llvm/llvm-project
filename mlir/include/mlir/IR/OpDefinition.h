@@ -180,7 +180,8 @@ protected:
 
   // The fallback for the printer is to print it the generic assembly form.
   static void print(Operation *op, OpAsmPrinter &p);
-  static void printOpName(Operation *op, OpAsmPrinter &p);
+  static void printOpName(Operation *op, OpAsmPrinter &p,
+                          StringRef defaultDialect);
 
   /// Mutability management is handled by the OpWrapper/OpConstWrapper classes,
   /// so we can cast it away here.
@@ -1777,7 +1778,7 @@ private:
   static std::enable_if_t<!detect_has_print<ConcreteOpT>::value,
                           AbstractOperation::PrintAssemblyFn>
   getPrintAssemblyFnImpl() {
-    return [](Operation *op, OpAsmPrinter &printer) {
+    return [](Operation *op, OpAsmPrinter &printer, StringRef defaultDialect) {
       return OpState::print(op, printer);
     };
   }
@@ -1789,8 +1790,9 @@ private:
   getPrintAssemblyFnImpl() {
     return &printAssembly;
   }
-  static void printAssembly(Operation *op, OpAsmPrinter &p) {
-    OpState::printOpName(op, p);
+  static void printAssembly(Operation *op, OpAsmPrinter &p,
+                            StringRef defaultDialect) {
+    OpState::printOpName(op, p, defaultDialect);
     return cast<ConcreteType>(op).print(p);
   }
   /// Implementation of `VerifyInvariantsFn` AbstractOperation hook.
