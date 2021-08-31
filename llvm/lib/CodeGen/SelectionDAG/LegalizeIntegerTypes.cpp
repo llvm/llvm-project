@@ -3093,6 +3093,9 @@ void DAGTypeLegalizer::ExpandIntRes_FP_TO_SINT(SDNode *N, SDValue &Lo,
     EVT NFPVT = TLI.getTypeToTransformTo(*DAG.getContext(), Op.getValueType());
     Op = GetSoftPromotedHalf(Op);
     Op = DAG.getNode(ISD::FP16_TO_FP, dl, NFPVT, Op);
+    Op = DAG.getNode(ISD::FP_TO_SINT, dl, VT, Op);
+    SplitInteger(Op, Lo, Hi);
+    return;
   }
 
   RTLIB::Libcall LC = RTLIB::getFPTOSINT(Op.getValueType(), VT);
@@ -3122,6 +3125,9 @@ void DAGTypeLegalizer::ExpandIntRes_FP_TO_UINT(SDNode *N, SDValue &Lo,
     EVT NFPVT = TLI.getTypeToTransformTo(*DAG.getContext(), Op.getValueType());
     Op = GetSoftPromotedHalf(Op);
     Op = DAG.getNode(ISD::FP16_TO_FP, dl, NFPVT, Op);
+    Op = DAG.getNode(ISD::FP_TO_UINT, dl, VT, Op);
+    SplitInteger(Op, Lo, Hi);
+    return;
   }
 
   RTLIB::Libcall LC = RTLIB::getFPTOUINT(Op.getValueType(), VT);
