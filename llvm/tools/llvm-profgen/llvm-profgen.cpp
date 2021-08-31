@@ -35,6 +35,7 @@ static cl::opt<std::string> BinaryPath(
 
 extern cl::opt<bool> ShowDisassemblyOnly;
 extern cl::opt<bool> ShowSourceLocations;
+extern cl::opt<bool> SkipSymbolization;
 
 using namespace llvm;
 using namespace sampleprof;
@@ -88,6 +89,15 @@ int main(int argc, const char *argv[]) {
   std::unique_ptr<PerfReaderBase> Reader =
       PerfReaderBase::create(Binary.get(), PerfTraceFilenames);
   Reader->parsePerfTraces(PerfTraceFilenames);
+
+  if (SkipSymbolization)
+    return EXIT_SUCCESS;
+
+  // TBD
+  if (Reader->getPerfScriptType() == PERF_LBR) {
+    WithColor::warning() << "Currently LBR only perf script is not supported!";
+    return EXIT_SUCCESS;
+  }
 
   std::unique_ptr<ProfileGenerator> Generator = ProfileGenerator::create(
       Binary.get(), Reader->getSampleCounters(), Reader->getPerfScriptType());
