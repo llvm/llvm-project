@@ -357,10 +357,6 @@ mlir::linalg::tileLinalgOp(OpBuilder &b, LinalgOp op,
 static LogicalResult tilePadTensorOp(OpBuilder &builder, PadTensorOp op,
                                      PadTensorOp &newPadOp, LoopNest &loopNest,
                                      const LinalgTilingOptions &options) {
-  // Can tile only PadTensorOp that have an output operand.
-  if (!op.output())
-    return failure();
-
   Location loc = op.getLoc();
   OpBuilder::InsertionGuard g(builder);
   builder.setInsertionPoint(op);
@@ -383,8 +379,9 @@ static LogicalResult tilePadTensorOp(OpBuilder &builder, PadTensorOp op,
     }
   }
   // Generate loop nest: One loop per dimension.
+  SmallVector<Value> destOperand = op.getDestinationOperands(builder);
   loopNest = mlir::scf::buildLoopNest(
-      builder, loc, lbs, /*ubs=*/dims, steps, ValueRange(op.output()),
+      builder, loc, lbs, /*ubs=*/dims, steps, ValueRange(destOperand),
       [&](OpBuilder &b, Location loc, ValueRange localIvs,
           ValueRange iterArgs) -> scf::ValueVector {
         // Compute offsets and sizes of ExtractSliceOp.
