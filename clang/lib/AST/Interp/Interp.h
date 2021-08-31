@@ -38,7 +38,7 @@ namespace interp {
 using APInt = llvm::APInt;
 using APSInt = llvm::APSInt;
 
-/// Convers a value to an APValue.
+/// Convert a value to an APValue.
 template <typename T> bool ReturnValue(const T &V, APValue &R) {
   R = V.toAPValue();
   return true;
@@ -50,7 +50,7 @@ bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 /// Checks if the array is offsetable.
 bool CheckArray(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
-/// Checks if a pointer is live and accesible.
+/// Checks if a pointer is live and accessible.
 bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK);
 /// Checks if a pointer is null.
