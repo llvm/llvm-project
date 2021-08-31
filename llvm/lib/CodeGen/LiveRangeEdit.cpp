@@ -305,6 +305,8 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink,
       isOrigDef = SlotIndex::isSameInstr(OrigVNI->def, Idx);
   }
 
+  bool HasLiveVRegUses = false;
+
   // Check for live intervals that may shrink
   for (MachineInstr::mop_iterator MOI = MI->operands_begin(),
          MOE = MI->operands_end(); MOI != MOE; ++MOI) {
@@ -328,6 +330,8 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink,
     if ((MI->readsVirtualRegister(Reg) && (MI->isCopy() || MOI->isDef())) ||
         (MOI->readsReg() && (MRI.hasOneNonDBGUse(Reg) || useIsKill(LI, *MOI))))
       ToShrink.insert(&LI);
+    else if (MOI->readsReg())
+      HasLiveVRegUses = true;
 
     // Remove defined value.
     if (MOI->isDef()) {
@@ -362,7 +366,11 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink,
     // the inst for remat of other siblings. The inst is saved in
     // LiveRangeEdit::DeadRemats and will be deleted after all the
     // allocations of the func are done.
-    if (isOrigDef && DeadRemats && TII.isTriviallyReMaterializable(*MI, AA)) {
+    // However, immediately delete instructions which have unshrunk virtual
+    // register uses. That may provoke RA to split an interval at the KILL
+    // and later result in an invalid live segment end.
+    if (isOrigDef && DeadRemats && !HasLiveVRegUses &&
+        TII.isTriviallyReMaterializable(*MI, AA)) {
       LiveInterval &NewLI = createEmptyIntervalFrom(Dest, false);
       VNInfo *VNI = NewLI.getNextValue(Idx, LIS.getVNInfoAllocator());
       NewLI.addSegment(LiveInterval::Segment(Idx, Idx.getDeadSlot(), VNI));
