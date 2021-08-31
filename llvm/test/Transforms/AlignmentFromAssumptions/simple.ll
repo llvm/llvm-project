@@ -252,6 +252,19 @@ entry:
 ; CHECK: ret i32 undef
 }
 
+
+; Variable alignments appear to be legal, don't crash
+define i32 @pr51680(i32* nocapture %a, i32 %align) nounwind uwtable readonly {
+entry:
+  tail call void @llvm.assume(i1 true) ["align"(i32* %a, i32 %align)]
+  %0 = load i32, i32* %a, align 4
+  ret i32 %0
+
+; CHECK-LABEL: @pr51680
+; CHECK: load i32, i32* {{[^,]+}}, align 4
+; CHECK: ret i32
+}
+
 declare void @llvm.assume(i1) nounwind
 
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
