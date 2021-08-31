@@ -5,8 +5,8 @@ declare void @llvm.sideeffect()
 
 ; SLP vectorization across a @llvm.sideeffect.
 
-define void @test(float* %p) {
-; CHECK-LABEL: @test(
+define void @test_sideeffect(float* %p) {
+; CHECK-LABEL: @test_sideeffect(
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr float, float* [[P:%.*]], i64 0
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr float, float* [[P]], i64 1
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, float* [[P]], i64 2
@@ -30,6 +30,43 @@ define void @test(float* %p) {
   %l3 = load float, float* %p3
   store float %l0, float* %p0
   call void @llvm.sideeffect()
+  store float %l1, float* %p1
+  store float %l2, float* %p2
+  store float %l3, float* %p3
+  ret void
+}
+
+declare void @foo()
+
+define void @test_inaccessiblememonly(float* %p) {
+; CHECK-LABEL: @test_inaccessiblememonly(
+; CHECK-NEXT:    [[P0:%.*]] = getelementptr float, float* [[P:%.*]], i64 0
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr float, float* [[P]], i64 1
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, float* [[P]], i64 2
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr float, float* [[P]], i64 3
+; CHECK-NEXT:    [[L0:%.*]] = load float, float* [[P0]], align 4
+; CHECK-NEXT:    [[L1:%.*]] = load float, float* [[P1]], align 4
+; CHECK-NEXT:    [[L2:%.*]] = load float, float* [[P2]], align 4
+; CHECK-NEXT:    call void @foo() #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[L3:%.*]] = load float, float* [[P3]], align 4
+; CHECK-NEXT:    store float [[L0]], float* [[P0]], align 4
+; CHECK-NEXT:    call void @foo() #[[ATTR1]]
+; CHECK-NEXT:    store float [[L1]], float* [[P1]], align 4
+; CHECK-NEXT:    store float [[L2]], float* [[P2]], align 4
+; CHECK-NEXT:    store float [[L3]], float* [[P3]], align 4
+; CHECK-NEXT:    ret void
+;
+  %p0 = getelementptr float, float* %p, i64 0
+  %p1 = getelementptr float, float* %p, i64 1
+  %p2 = getelementptr float, float* %p, i64 2
+  %p3 = getelementptr float, float* %p, i64 3
+  %l0 = load float, float* %p0
+  %l1 = load float, float* %p1
+  %l2 = load float, float* %p2
+  call void @foo() inaccessiblememonly
+  %l3 = load float, float* %p3
+  store float %l0, float* %p0
+  call void @foo() inaccessiblememonly
   store float %l1, float* %p1
   store float %l2, float* %p2
   store float %l3, float* %p3
