@@ -106,7 +106,8 @@ EXTERN int omp_target_is_present(const void *ptr, int device_num) {
   bool IsLast; // not used
   bool IsHostPtr;
   void *TgtPtr = Device.getTgtPtrBegin(const_cast<void *>(ptr), 0, IsLast,
-                                       false, IsHostPtr);
+                                       /*UpdateRefCount=*/false,
+                                       /*UseHoldRefCount=*/false, IsHostPtr);
   int rc = (TgtPtr != NULL);
   // Under unified memory the host pointer can be returned by the
   // getTgtPtrBegin() function which means that there is no device
