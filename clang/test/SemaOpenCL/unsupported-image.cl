@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple spir-unknown-unknown -verify -cl-std=CL3.0 -cl-ext=-__opencl_c_images,-__opencl_c_read_write_images,-cl_khr_3d_image_writes,-__opencl_c_3d_image_writes %s
 // RUN: %clang_cc1 -triple spir-unknown-unknown -verify -cl-std=CL3.0 -cl-ext=+__opencl_c_images,+__opencl_c_read_write_images,+cl_khr_3d_image_writes,+__opencl_c_3d_image_writes %s
 // RUN: %clang_cc1 -triple spir-unknown-unknown -verify -cl-std=CL3.0 -cl-ext=+__opencl_c_images,+__opencl_c_read_write_images,-cl_khr_3d_image_writes,-__opencl_c_3d_image_writes %s
+// RUN: %clang_cc1 -triple spir-unknown-unknown -verify -cl-std=clc++2021 -cl-ext=-__opencl_c_images,-__opencl_c_read_write_images,-cl_khr_3d_image_writes,-__opencl_c_3d_image_writes %s
+// RUN: %clang_cc1 -triple spir-unknown-unknown -verify -cl-std=clc++2021 -cl-ext=+__opencl_c_images %s
 
 #if defined(__opencl_c_images) && defined(__opencl_c_3d_image_writes)
 //expected-no-diagnostics
