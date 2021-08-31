@@ -706,49 +706,48 @@ public:
     iterator       find(const key_type& __k)       {return __table_.find(__k);}
     _LIBCPP_INLINE_VISIBILITY
     const_iterator find(const key_type& __k) const {return __table_.find(__k);}
-    #if _LIBCPP_STD_VER > 17
-        template <typename _K2>
-        _LIBCPP_INLINE_VISIBILITY
-        enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value, iterator>
-        find(const _K2& __k)       {return __table_.find(__k);}
-        template <typename _K2>
-        _LIBCPP_INLINE_VISIBILITY
-        enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value, const_iterator>
-        find(const _K2& __k) const {return __table_.find(__k);}
-    #endif // _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER > 17
+    template <class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
+    _LIBCPP_INLINE_VISIBILITY
+    iterator       find(const _K2& __k)            {return __table_.find(__k);}
+    template <class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
+    _LIBCPP_INLINE_VISIBILITY
+    const_iterator find(const _K2& __k) const      {return __table_.find(__k);}
+#endif // _LIBCPP_STD_VER > 17
+
     _LIBCPP_INLINE_VISIBILITY
     size_type count(const key_type& __k) const {return __table_.__count_unique(__k);}
-    #if _LIBCPP_STD_VER > 17
-        template <typename _K2>
-        _LIBCPP_INLINE_VISIBILITY
-        enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value, size_type>
-        count(const _K2& __k) const {return __table_.__count_unique(__k);}
-    #endif // _LIBCPP_STD_VER > 17
-    #if _LIBCPP_STD_VER > 17
-        _LIBCPP_INLINE_VISIBILITY
-        bool contains(const key_type& __k) const {return find(__k) != end();}
+#if _LIBCPP_STD_VER > 17
+    template <class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
+    _LIBCPP_INLINE_VISIBILITY
+    size_type count(const _K2& __k) const      {return __table_.__count_unique(__k);}
+#endif // _LIBCPP_STD_VER > 17
 
-        template <typename _K2>
-        _LIBCPP_INLINE_VISIBILITY
-        enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value, bool>
-        contains(const _K2& __k) const {return find(__k) != end();}
-    #endif // _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER > 17
+    _LIBCPP_INLINE_VISIBILITY
+    bool contains(const key_type& __k) const {return find(__k) != end();}
+
+    template <class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
+    _LIBCPP_INLINE_VISIBILITY
+    bool contains(const _K2& __k) const      {return find(__k) != end();}
+#endif // _LIBCPP_STD_VER > 17
+
     _LIBCPP_INLINE_VISIBILITY
     pair<iterator, iterator>             equal_range(const key_type& __k)
         {return __table_.__equal_range_unique(__k);}
     _LIBCPP_INLINE_VISIBILITY
     pair<const_iterator, const_iterator> equal_range(const key_type& __k) const
         {return __table_.__equal_range_unique(__k);}
-    #if _LIBCPP_STD_VER > 17
-        template <typename _K2>
-        _LIBCPP_INLINE_VISIBILITY
-        enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value, pair<iterator, iterator>>
-        equal_range(const _K2& __k)       {return __table_.__equal_range_unique(__k);}
-        template <typename _K2>
-        _LIBCPP_INLINE_VISIBILITY
-        enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value, pair<const_iterator, const_iterator>>
-        equal_range(const _K2& __k) const {return __table_.__equal_range_unique(__k);}
-    #endif // _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER > 17
+    template <class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
+    _LIBCPP_INLINE_VISIBILITY
+    pair<iterator, iterator>             equal_range(const _K2& __k)
+        {return __table_.__equal_range_unique(__k);}
+    template <class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
+    _LIBCPP_INLINE_VISIBILITY
+    pair<const_iterator, const_iterator> equal_range(const _K2& __k) const
+        {return __table_.__equal_range_unique(__k);}
+#endif // _LIBCPP_STD_VER > 17
 
     _LIBCPP_INLINE_VISIBILITY
     size_type bucket_count() const _NOEXCEPT {return __table_.bucket_count();}
@@ -1372,49 +1371,48 @@ public:
     iterator       find(const key_type& __k)       {return __table_.find(__k);}
     _LIBCPP_INLINE_VISIBILITY
     const_iterator find(const key_type& __k) const {return __table_.find(__k);}
-    #if _LIBCPP_STD_VER > 17
-        template <typename _K2>
-        _LIBCPP_INLINE_VISIBILITY
-        enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value, iterator>
-        find(const _K2& __k)       {return __table_.find(__k);}
-        template <typename _K2>
-        _LIBCPP_INLINE_VISIBILITY
-        enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value, const_iterator>
-        find(const _K2& __k) const {return __table_.find(__k);}
-    #endif // _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER > 17
+    template<class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
+    _LIBCPP_INLINE_VISIBILITY
+    iterator       find(const _K2& __k)            {return __table_.find(__k);}
+    template<class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
+    _LIBCPP_INLINE_VISIBILITY
+    const_iterator find(const _K2& __k) const      {return __table_.find(__k);}
+#endif // _LIBCPP_STD_VER > 17
+
     _LIBCPP_INLINE_VISIBILITY
     size_type count(const key_type& __k) const {return __table_.__count_multi(__k);}
-    #if _LIBCPP_STD_VER > 17
-        template <typename _K2>
-        _LIBCPP_INLINE_VISIBILITY
-        enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value, size_type>
-        count(const _K2& __k) const {return __table_.__count_multi(__k);}
-    #endif // _LIBCPP_STD_VER > 17
-    #if _LIBCPP_STD_VER > 17
-        _LIBCPP_INLINE_VISIBILITY
-        bool contains(const key_type& __k) const {return find(__k) != end();}
+#if _LIBCPP_STD_VER > 17
+    template<class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
+    _LIBCPP_INLINE_VISIBILITY
+    size_type count(const _K2& __k) const      {return __table_.__count_multi(__k);}
+#endif // _LIBCPP_STD_VER > 17
 
-        template <typename _K2>
-        _LIBCPP_INLINE_VISIBILITY
-        enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value, bool>
-        contains(const _K2& __k) const {return find(__k) != end();}
-    #endif // _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER > 17
+    _LIBCPP_INLINE_VISIBILITY
+    bool contains(const key_type& __k) const {return find(__k) != end();}
+
+    template<class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
+    _LIBCPP_INLINE_VISIBILITY
+    bool contains(const _K2& __k) const      {return find(__k) != end();}
+#endif // _LIBCPP_STD_VER > 17
+
     _LIBCPP_INLINE_VISIBILITY
     pair<iterator, iterator>             equal_range(const key_type& __k)
         {return __table_.__equal_range_multi(__k);}
     _LIBCPP_INLINE_VISIBILITY
     pair<const_iterator, const_iterator> equal_range(const key_type& __k) const
         {return __table_.__equal_range_multi(__k);}
-    #if _LIBCPP_STD_VER > 17
-        template <typename _K2>
-        _LIBCPP_INLINE_VISIBILITY
-        enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value, pair<iterator, iterator>>
-        equal_range(const _K2& __k)       {return __table_.__equal_range_multi(__k);}
-        template <typename _K2>
-        _LIBCPP_INLINE_VISIBILITY
-        enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value, pair<const_iterator, const_iterator>>
-        equal_range(const _K2& __k) const {return __table_.__equal_range_multi(__k);}
-    #endif // _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER > 17
+    template<class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
+    _LIBCPP_INLINE_VISIBILITY
+    pair<iterator, iterator>             equal_range(const _K2& __k)
+        {return __table_.__equal_range_multi(__k);}
+    template<class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
+    _LIBCPP_INLINE_VISIBILITY
+    pair<const_iterator, const_iterator> equal_range(const _K2& __k) const
+        {return __table_.__equal_range_multi(__k);}
+#endif // _LIBCPP_STD_VER > 17
 
     _LIBCPP_INLINE_VISIBILITY
     size_type bucket_count() const _NOEXCEPT {return __table_.bucket_count();}

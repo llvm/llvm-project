@@ -545,15 +545,13 @@ public:
 #if _LIBCPP_STD_VER > 11
     template <typename _K2>
     _LIBCPP_INLINE_VISIBILITY
-    typename enable_if<__is_transparent<_Compare, _K2>::value, bool>::type
-    operator () ( const _K2& __x, const _CP& __y ) const
-        {return static_cast<const _Compare&>(*this) (__x, __y.__get_value().first);}
+    bool operator()(const _K2& __x, const _CP& __y) const
+        {return static_cast<const _Compare&>(*this)(__x, __y.__get_value().first);}
 
     template <typename _K2>
     _LIBCPP_INLINE_VISIBILITY
-    typename enable_if<__is_transparent<_Compare, _K2>::value, bool>::type
-    operator () (const _CP& __x, const _K2& __y) const
-        {return static_cast<const _Compare&>(*this) (__x.__get_value().first, __y);}
+    bool operator()(const _CP& __x, const _K2& __y) const
+        {return static_cast<const _Compare&>(*this)(__x.__get_value().first, __y);}
 #endif
 };
 
@@ -593,15 +591,13 @@ public:
 #if _LIBCPP_STD_VER > 11
     template <typename _K2>
     _LIBCPP_INLINE_VISIBILITY
-    typename enable_if<__is_transparent<_Compare, _K2>::value, bool>::type
-    operator () ( const _K2& __x, const _CP& __y ) const
-        {return comp (__x, __y.__get_value().first);}
+    bool operator()(const _K2& __x, const _CP& __y) const
+        {return comp(__x, __y.__get_value().first);}
 
     template <typename _K2>
     _LIBCPP_INLINE_VISIBILITY
-    typename enable_if<__is_transparent<_Compare, _K2>::value, bool>::type
-    operator () (const _CP& __x, const _K2& __y) const
-        {return comp (__x.__get_value().first, __y);}
+    bool operator()(const _CP& __x, const _K2& __y) const
+        {return comp(__x.__get_value().first, __y);}
 #endif
 };
 
