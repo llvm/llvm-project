@@ -39,15 +39,17 @@ def Test_Dialect : Dialect {
     void registerTypes();
 
     ::mlir::Attribute parseAttribute(::mlir::DialectAsmParser &parser,
-                             ::mlir::Type type) const override;
+                                     ::mlir::Type type) const override;
     void printAttribute(::mlir::Attribute attr,
                         ::mlir::DialectAsmPrinter &printer) const override;
 
     // Provides a custom printing/parsing for some operations.
     ::llvm::Optional<ParseOpHook>
       getParseOperationHook(::llvm::StringRef opName) const override;
-    ::mlir::LogicalResult printOperation(::mlir::Operation *op,
-                                 ::mlir::OpAsmPrinter &printer) const override;
+    ::llvm::unique_function<void(::mlir::Operation *,
+                                 ::mlir::OpAsmPrinter &printer)>
+     getOperationPrinter(::mlir::Operation *op) const override;
+
   private:
     // Storage for a custom fallback interface.
     void *fallbackEffectOpInterfaces;

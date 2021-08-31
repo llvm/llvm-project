@@ -2508,8 +2508,10 @@ void OperationPrinter::printOperation(Operation *op) {
     }
     // Otherwise try to dispatch to the dialect, if available.
     if (Dialect *dialect = op->getDialect()) {
-      if (succeeded(dialect->printOperation(op, *this)))
+      if (auto opPrinter = dialect->getOperationPrinter(op)) {
+        opPrinter(op, *this);
         return;
+      }
     }
   }
 

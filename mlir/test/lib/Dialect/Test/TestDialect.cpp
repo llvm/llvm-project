@@ -313,14 +313,15 @@ TestDialect::getParseOperationHook(StringRef opName) const {
   return None;
 }
 
-LogicalResult TestDialect::printOperation(Operation *op,
-                                          OpAsmPrinter &printer) const {
+llvm::unique_function<void(Operation *, OpAsmPrinter &)>
+TestDialect::getOperationPrinter(Operation *op) const {
   StringRef opName = op->getName().getStringRef();
   if (opName == "test.dialect_custom_printer") {
-    printer.getStream() << opName << " custom_format";
-    return success();
+    return [](Operation *op, OpAsmPrinter &printer) {
+      printer.getStream() << op->getName().getStringRef() << " custom_format";
+    };
   }
-  return failure();
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
