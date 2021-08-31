@@ -458,7 +458,7 @@ loop.exit:
 
 define void @max_overflow_se(i8 %n) mustprogress {
 ; CHECK-LABEL: Determining loop execution counts for: @max_overflow_se
-; CHECK: Loop %loop: backedge-taken count is (-126 + (126 smax %n))<nsw>
+; CHECK: Loop %loop: backedge-taken count is 0
 ; CHECK: Loop %loop: max backedge-taken count is 0
 entry:
   br label %loop
