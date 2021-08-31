@@ -133,9 +133,18 @@ static void moveBBContents(BasicBlock &SourceBB, BasicBlock &TargetBB) {
 void OutlinableRegion::splitCandidate() {
   assert(!CandidateSplit && "Candidate already split!");
 
-  Instruction *StartInst = (*Candidate->begin()).Inst;
   Instruction *EndInst = (*Candidate->end()).Inst;
-  assert(StartInst && EndInst && "Expected a start and end instruction?");
+  assert(EndInst && "Expected an end instruction?");
+
+  // We check if the current instruction following the last instruction in the
+  // region is the same as the recorded instruction following the last
+  // instruction. If they do not match, there could be problems in rewriting
+  // the program after outlining, so we ignore it.
+  if (EndInst != Candidate->backInstruction()->getNextNonDebugInstruction())
+    return;
+
+  Instruction *StartInst = (*Candidate->begin()).Inst;
+  assert(StartInst && "Expected a start instruction?");
   StartBB = StartInst->getParent();
   PrevBB = StartBB;
 
@@ -1687,6 +1696,13 @@ unsigned IROutliner::doOutline(Module &M) {
       // Break the outlinable region out of its parent BasicBlock into its own
       // BasicBlocks (see function implementation).
       OS->splitCandidate();
+
+      // There's a chance that when the region is split, extra instructions are
+      // added to the region. This makes the region no longer viable
+      // to be split, so we ignore it for outlining.
+      if (!OS->CandidateSplit)
+        continue;
+
       std::vector<BasicBlock *> BE = {OS->StartBB};
       OS->CE = new (ExtractorAllocator.Allocate())
           CodeExtractor(BE, nullptr, false, nullptr, nullptr, nullptr, false,
