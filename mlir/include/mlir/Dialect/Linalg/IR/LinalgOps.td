@@ -147,12 +147,11 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
            dimension, i.e `low`.
     * high: A list contains the padding along the end of each
            dimension, i.e. `high`.
-    * output: An optional output operand.
 
     The result tensor dimensions are `low` + `dim` + `high` along that
     dimension. The number of elements of `low` and `high` must match
-    the rank of the input tensor (which is also the rank of the output
-    tensor). They can be either a constant or a dynamic value.
+    the rank of the input tensor. They can be either a constant or a
+    dynamic value.
 
     The region of the `pad_tensor` operation returns the value to use
     for the padding. The arguments of the region represent the index
@@ -196,8 +195,7 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     Variadic<Index>:$low,
     Variadic<Index>:$high,
     I64ArrayAttr:$static_low,
-    I64ArrayAttr:$static_high,
-    Optional<AnyTensor>:$output);
+    I64ArrayAttr:$static_high);
 
   let regions = (region SizedRegion<1>:$region);
 
@@ -208,9 +206,7 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     $source
     `low` `` custom<OperandsOrIntegersSizesList>($low, $static_low)
     `high` `` custom<OperandsOrIntegersSizesList>($high, $static_high)
-    (`into` $output^ )?
     $region attr-dict `:` type($source) `to` type($result)
-    custom<InferType>(ref($output), type($output), ref(type($result)))
   }];
 
   let extraClassDeclaration = [{
@@ -300,11 +296,6 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     OpBuilder<(ins "Type":$resultType, "Value":$source,
       "ArrayRef<OpFoldResult>":$low, "ArrayRef<OpFoldResult>":$high,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
-    // Build a PadTensorOp with mixed static and dynamic entries and custom
-    // result type.
-    OpBuilder<(ins "Type":$resultType, "Value":$source,
-      "ArrayRef<Value>":$low, "ArrayRef<Value>":$high, "ArrayAttr":$staticLow,
-      "ArrayAttr":$staticHigh)>
   ];
 
   let hasCanonicalizer = 1;
