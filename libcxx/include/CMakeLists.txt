@@ -250,7 +250,6 @@ set(files
   __support/ibm/xlocale.h
   __support/musl/xlocale.h
   __support/newlib/xlocale.h
-  __support/nuttx/xlocale.h
   __support/openbsd/xlocale.h
   __support/solaris/floatingpoint.h
   __support/solaris/wchar.h
