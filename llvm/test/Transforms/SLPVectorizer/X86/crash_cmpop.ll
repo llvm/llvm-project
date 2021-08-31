@@ -61,12 +61,12 @@ define void @testfunc(float* nocapture %dest, float* nocapture readonly %src) {
 ; AVX-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; AVX-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[DEST:%.*]], i64 [[INDVARS_IV]]
 ; AVX-NEXT:    store float [[ACC1_056]], float* [[ARRAYIDX2]], align 4
+; AVX-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP0]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
 ; AVX-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[TMP1]], i32 0
 ; AVX-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[TMP1]], i32 1
-; AVX-NEXT:    [[TMP4:%.*]] = fadd <2 x float> [[TMP0]], [[TMP3]]
-; AVX-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
+; AVX-NEXT:    [[TMP4:%.*]] = fadd <2 x float> [[SHUFFLE]], [[TMP3]]
 ; AVX-NEXT:    [[TMP5:%.*]] = fmul <2 x float> [[TMP0]], zeroinitializer
-; AVX-NEXT:    [[TMP6:%.*]] = fadd <2 x float> [[TMP5]], [[SHUFFLE]]
+; AVX-NEXT:    [[TMP6:%.*]] = fadd <2 x float> [[TMP5]], [[TMP4]]
 ; AVX-NEXT:    [[TMP7:%.*]] = fcmp olt <2 x float> [[TMP6]], <float 1.000000e+00, float 1.000000e+00>
 ; AVX-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP7]], <2 x float> [[TMP6]], <2 x float> <float 1.000000e+00, float 1.000000e+00>
 ; AVX-NEXT:    [[TMP9:%.*]] = fcmp olt <2 x float> [[TMP8]], <float -1.000000e+00, float -1.000000e+00>
