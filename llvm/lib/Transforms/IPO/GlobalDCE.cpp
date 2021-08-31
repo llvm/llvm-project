@@ -210,7 +210,7 @@ void GlobalDCEPass::ScanVTableLoad(Function *Caller, Metadata *TypeId,
 
     Constant *Ptr =
         getPointerAtOffset(VTable->getInitializer(), VTableOffset + CallOffset,
-                           *Caller->getParent());
+                           *Caller->getParent(), VTable);
     if (!Ptr) {
       LLVM_DEBUG(dbgs() << "can't find pointer in vtable!\n");
       VFESafeVTables.erase(VTable);
