@@ -736,10 +736,8 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   check_cxx_compiler_flag("-Wnoexcept-type" CXX_SUPPORTS_NOEXCEPT_TYPE_FLAG)
   append_if(CXX_SUPPORTS_NOEXCEPT_TYPE_FLAG "-Wno-noexcept-type" CMAKE_CXX_FLAGS)
 
-  append("-Wnon-virtual-dtor" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-
-  # Enable -Wdelete-non-virtual-dtor if available.
-  add_flag_if_supported("-Wdelete-non-virtual-dtor" DELETE_NON_VIRTUAL_DTOR_FLAG)
+  append("-Wnon-virtual-dtor" CMAKE_CXX_FLAGS)
+  append("-Wdelete-non-virtual-dtor" CMAKE_CXX_FLAGS)
 
   # Enable -Wsuggest-override if it's available, and only if it doesn't
   # suggest adding 'override' to functions that are already marked 'final'
