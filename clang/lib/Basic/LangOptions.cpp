@@ -52,6 +52,16 @@ VersionTuple LangOptions::getOpenCLVersionTuple() const {
   return VersionTuple(Ver / 100, (Ver % 100) / 10);
 }
 
+unsigned LangOptions::getOpenCLCompatibleVersion() const {
+  if (!OpenCLCPlusPlus)
+    return OpenCLVersion;
+  if (OpenCLCPlusPlusVersion == 100)
+    return 200;
+  if (OpenCLCPlusPlusVersion == 202100)
+    return 300;
+  llvm_unreachable("Unknown OpenCL version");
+}
+
 void LangOptions::remapPathPrefix(SmallString<256> &Path) const {
   for (const auto &Entry : MacroPrefixMap)
     if (llvm::sys::path::replace_path_prefix(Path, Entry.first, Entry.second))
