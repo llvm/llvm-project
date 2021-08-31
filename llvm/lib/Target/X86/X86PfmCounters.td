@@ -142,8 +142,24 @@ def SkylakeServerPfmCounters : ProcPfmCounters {
 def : PfmCountersBinding<"skylake-avx512", SkylakeServerPfmCounters>;
 def : PfmCountersBinding<"cascadelake", SkylakeServerPfmCounters>;
 def : PfmCountersBinding<"cannonlake", SkylakeServerPfmCounters>;
-def : PfmCountersBinding<"icelake-client", SkylakeServerPfmCounters>;
-def : PfmCountersBinding<"icelake-server", SkylakeServerPfmCounters>;
+
+def IceLakePfmCounters : ProcPfmCounters {
+  let CycleCounter = UnhaltedCoreCyclesPfmCounter;
+  let UopsCounter = UopsIssuedPfmCounter;
+  let IssueCounters = [
+    PfmIssueCounter<"ICXPort0",  "uops_dispatched_port:port_0">,
+    PfmIssueCounter<"ICXPort1",  "uops_dispatched_port:port_1">,
+    PfmIssueCounter<"ICXPort23", "uops_dispatched_port:port_2_3">,
+    PfmIssueCounter<"ICXPort49", "uops_dispatched_port:port_4_9">,
+    PfmIssueCounter<"ICXPort5",  "uops_dispatched_port:port_5">,
+    PfmIssueCounter<"ICXPort6",  "uops_dispatched_port:port_6">,
+    PfmIssueCounter<"ICXPort78", "uops_dispatched_port:port_7_8">
+  ];
+}
+def : PfmCountersBinding<"icelake-client", IceLakePfmCounters>;
+def : PfmCountersBinding<"icelake-server", IceLakePfmCounters>;
+def : PfmCountersBinding<"rocketlake", IceLakePfmCounters>;
+def : PfmCountersBinding<"tigerlake", IceLakePfmCounters>;
 
 // AMD X86 Counters.
 // Set basic counters for AMD cpus that we know libpfm4 supports.
