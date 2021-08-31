@@ -263,7 +263,10 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
   Value *wrapInvoke(CallBase *CI);
   void wrapTestSetjmp(BasicBlock *BB, DebugLoc DL, Value *Threw,
                       Value *SetjmpTable, Value *SetjmpTableSize, Value *&Label,
-                      Value *&LongjmpResult, BasicBlock *&EndBB);
+                      Value *&LongjmpResult, BasicBlock *&CallEmLongjmpBB,
+                      PHINode *&CallEmLongjmpBBThrewPHI,
+                      PHINode *&CallEmLongjmpBBThrewValuePHI,
+                      BasicBlock *&EndBB);
   Function *getInvokeWrapper(CallBase *CI);
 
   bool areAllExceptionsAllowed() const { return EHAllowlistSet.empty(); }
@@ -585,7 +588,8 @@ static bool isEmAsmCall(const Value *Callee) {
 void WebAssemblyLowerEmscriptenEHSjLj::wrapTestSetjmp(
     BasicBlock *BB, DebugLoc DL, Value *Threw, Value *SetjmpTable,
     Value *SetjmpTableSize, Value *&Label, Value *&LongjmpResult,
-    BasicBlock *&EndBB) {
+    BasicBlock *&CallEmLongjmpBB, PHINode *&CallEmLongjmpBBThrewPHI,
+    PHINode *&CallEmLongjmpBBThrewValuePHI, BasicBlock *&EndBB) {
   Function *F = BB->getParent();
   Module *M = F->getParent();
   LLVMContext &C = M->getContext();
@@ -604,10 +608,27 @@ void WebAssemblyLowerEmscriptenEHSjLj::wrapTestSetjmp(
   Value *Cmp1 = IRB.CreateAnd(ThrewCmp, ThrewValueCmp, "cmp1");
   IRB.CreateCondBr(Cmp1, ThenBB1, ElseBB1);
 
+  // Generate call.em.longjmp BB once and share it within the function
+  if (!CallEmLongjmpBB) {
+    // emscripten_longjmp(%__THREW__.val, %__threwValue.val);
+    CallEmLongjmpBB = BasicBlock::Create(C, "call.em.longjmp", F);
+    IRB.SetInsertPoint(CallEmLongjmpBB);
+    CallEmLongjmpBBThrewPHI = IRB.CreatePHI(getAddrIntType(M), 4, "threw.phi");
+    CallEmLongjmpBBThrewValuePHI =
+        IRB.CreatePHI(IRB.getInt32Ty(), 4, "threwvalue.phi");
+    CallEmLongjmpBBThrewPHI->addIncoming(Threw, ThenBB1);
+    CallEmLongjmpBBThrewValuePHI->addIncoming(ThrewValue, ThenBB1);
+    IRB.CreateCall(EmLongjmpF,
+                   {CallEmLongjmpBBThrewPHI, CallEmLongjmpBBThrewValuePHI});
+    IRB.CreateUnreachable();
+  } else {
+    CallEmLongjmpBBThrewPHI->addIncoming(Threw, ThenBB1);
+    CallEmLongjmpBBThrewValuePHI->addIncoming(ThrewValue, ThenBB1);
+  }
+
   // %label = testSetjmp(mem[%__THREW__.val], setjmpTable, setjmpTableSize);
   // if (%label == 0)
   IRB.SetInsertPoint(ThenBB1);
-  BasicBlock *ThenBB2 = BasicBlock::Create(C, "if.then2", F);
   BasicBlock *EndBB2 = BasicBlock::Create(C, "if.end2", F);
   Value *ThrewPtr =
       IRB.CreateIntToPtr(Threw, getAddrPtrType(M), Threw->getName() + ".p");
@@ -616,12 +637,7 @@ void WebAssemblyLowerEmscriptenEHSjLj::wrapTestSetjmp(
   Value *ThenLabel = IRB.CreateCall(
       TestSetjmpF, {LoadedThrew, SetjmpTable, SetjmpTableSize}, "label");
   Value *Cmp2 = IRB.CreateICmpEQ(ThenLabel, IRB.getInt32(0));
-  IRB.CreateCondBr(Cmp2, ThenBB2, EndBB2);
-
-  // emscripten_longjmp(%__THREW__.val, %__threwValue.val);
-  IRB.SetInsertPoint(ThenBB2);
-  IRB.CreateCall(EmLongjmpF, {Threw, ThrewValue});
-  IRB.CreateUnreachable();
+  IRB.CreateCondBr(Cmp2, CallEmLongjmpBB, EndBB2);
 
   // setTempRet0(%__threwValue.val);
   IRB.SetInsertPoint(EndBB2);
@@ -840,6 +856,12 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runEHOnFunction(Function &F) {
   SmallVector<Instruction *, 64> ToErase;
   SmallPtrSet<LandingPadInst *, 32> LandingPads;
 
+  // rethrow.longjmp BB that will be shared within the function.
+  BasicBlock *RethrowLongjmpBB = nullptr;
+  // PHI node for the loaded value of __THREW__ global variable in
+  // rethrow.longjmp BB
+  PHINode *RethrowLongjmpBBThrewPHI = nullptr;
+
   for (BasicBlock &BB : F) {
     auto *II = dyn_cast<InvokeInst>(BB.getTerminator());
     if (!II)
@@ -869,27 +891,36 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runEHOnFunction(Function &F) {
       // else
       //   goto %longjmp.rethrow
       //
-      // longjmp.rethrow: ;; This is longjmp. Rethrow it
+      // rethrow.longjmp: ;; This is longjmp. Rethrow it
       //   %__threwValue.val = __threwValue
       //   emscripten_longjmp(%__THREW__.val, %__threwValue.val);
       //
       // tail: ;; Nothing happened or an exception is thrown
       //   ... Continue exception handling ...
       if (DoSjLj && !SetjmpUsers.count(&F) && canLongjmp(Callee)) {
+        // Create longjmp.rethrow BB once and share it within the function
+        if (!RethrowLongjmpBB) {
+          RethrowLongjmpBB = BasicBlock::Create(C, "rethrow.longjmp", &F);
+          IRB.SetInsertPoint(RethrowLongjmpBB);
+          RethrowLongjmpBBThrewPHI =
+              IRB.CreatePHI(getAddrIntType(&M), 4, "threw.phi");
+          RethrowLongjmpBBThrewPHI->addIncoming(Threw, &BB);
+          Value *ThrewValue = IRB.CreateLoad(IRB.getInt32Ty(), ThrewValueGV,
+                                             ThrewValueGV->getName() + ".val");
+          IRB.CreateCall(EmLongjmpF, {RethrowLongjmpBBThrewPHI, ThrewValue});
+          IRB.CreateUnreachable();
+        } else {
+          RethrowLongjmpBBThrewPHI->addIncoming(Threw, &BB);
+        }
+
+        IRB.SetInsertPoint(II); // Restore the insert point back
         BasicBlock *Tail = BasicBlock::Create(C, "tail", &F);
-        BasicBlock *RethrowBB = BasicBlock::Create(C, "longjmp.rethrow", &F);
         Value *CmpEqOne =
             IRB.CreateICmpEQ(Threw, getAddrSizeInt(&M, 1), "cmp.eq.one");
         Value *CmpEqZero =
             IRB.CreateICmpEQ(Threw, getAddrSizeInt(&M, 0), "cmp.eq.zero");
         Value *Or = IRB.CreateOr(CmpEqZero, CmpEqOne, "or");
-        IRB.CreateCondBr(Or, Tail, RethrowBB);
-        IRB.SetInsertPoint(RethrowBB);
-        Value *ThrewValue = IRB.CreateLoad(IRB.getInt32Ty(), ThrewValueGV,
-                                           ThrewValueGV->getName() + ".val");
-        IRB.CreateCall(EmLongjmpF, {Threw, ThrewValue});
-
-        IRB.CreateUnreachable();
+        IRB.CreateCondBr(Or, Tail, RethrowLongjmpBB);
         IRB.SetInsertPoint(Tail);
         BB.replaceSuccessorsPhiUsesWith(&BB, Tail);
       }
@@ -1204,6 +1235,17 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForEmscriptenSjLj(
   Instruction *SetjmpTable = *SetjmpTableInsts.begin();
   Instruction *SetjmpTableSize = *SetjmpTableSizeInsts.begin();
 
+  // call.em.longjmp BB that will be shared within the function.
+  BasicBlock *CallEmLongjmpBB = nullptr;
+  // PHI node for the loaded value of __THREW__ global variable in
+  // call.em.longjmp BB
+  PHINode *CallEmLongjmpBBThrewPHI = nullptr;
+  // PHI node for the loaded value of __threwValue global variable in
+  // call.em.longjmp BB
+  PHINode *CallEmLongjmpBBThrewValuePHI = nullptr;
+  // rethrow.exn BB that will be shared within the function.
+  BasicBlock *RethrowExnBB = nullptr;
+
   // Because we are creating new BBs while processing and don't want to make
   // all these newly created BBs candidates again for longjmp processing, we
   // first make the vector of candidate BBs.
@@ -1297,19 +1339,26 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForEmscriptenSjLj(
         // tail:
         //   ...
         if (supportsException(&F) && canThrow(Callee)) {
-          IRB.SetInsertPoint(CI);
           // We will add a new conditional branch. So remove the branch created
           // when we split the BB
           ToErase.push_back(BB->getTerminator());
+
+          // Generate rethrow.exn BB once and share it within the function
+          if (!RethrowExnBB) {
+            RethrowExnBB = BasicBlock::Create(C, "rethrow.exn", &F);
+            IRB.SetInsertPoint(RethrowExnBB);
+            CallInst *Exn =
+                IRB.CreateCall(getFindMatchingCatch(M, 0), {}, "exn");
+            IRB.CreateCall(ResumeF, {Exn});
+            IRB.CreateUnreachable();
+          }
+
+          IRB.SetInsertPoint(CI);
           BasicBlock *NormalBB = BasicBlock::Create(C, "normal", &F);
-          BasicBlock *RethrowBB = BasicBlock::Create(C, "eh.rethrow", &F);
           Value *CmpEqOne =
               IRB.CreateICmpEQ(Threw, getAddrSizeInt(&M, 1), "cmp.eq.one");
-          IRB.CreateCondBr(CmpEqOne, RethrowBB, NormalBB);
-          IRB.SetInsertPoint(RethrowBB);
-          CallInst *Exn = IRB.CreateCall(getFindMatchingCatch(M, 0), {}, "exn");
-          IRB.CreateCall(ResumeF, {Exn});
-          IRB.CreateUnreachable();
+          IRB.CreateCondBr(CmpEqOne, RethrowExnBB, NormalBB);
+
           IRB.SetInsertPoint(NormalBB);
           IRB.CreateBr(Tail);
           BB = NormalBB; // New insertion point to insert testSetjmp()
@@ -1328,7 +1377,9 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForEmscriptenSjLj(
       Value *LongjmpResult = nullptr;
       BasicBlock *EndBB = nullptr;
       wrapTestSetjmp(BB, CI->getDebugLoc(), Threw, SetjmpTable, SetjmpTableSize,
-                     Label, LongjmpResult, EndBB);
+                     Label, LongjmpResult, CallEmLongjmpBB,
+                     CallEmLongjmpBBThrewPHI, CallEmLongjmpBBThrewValuePHI,
+                     EndBB);
       assert(Label && LongjmpResult && EndBB);
 
       // Create switch instruction
