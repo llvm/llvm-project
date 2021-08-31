@@ -135,9 +135,9 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
   } else if (name == "tiny") {
     return Expr<T>{Scalar<T>::TINY()};
   }
-  // TODO: cshift, dim, dot_product, eoshift, fraction, matmul,
-  // maxloc, minloc, modulo, nearest, norm2, pack, rrspacing, scale,
-  // set_exponent, spacing, spread, transfer, transpose, unpack,
+  // TODO: dim, dot_product, fraction, matmul,
+  // maxloc, minloc, modulo, nearest, norm2, rrspacing, scale,
+  // set_exponent, spacing, transfer,
   // bessel_jn (transformational) and bessel_yn (transformational)
   return Expr<T>{std::move(funcRef)};
 }
