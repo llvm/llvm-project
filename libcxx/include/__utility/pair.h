@@ -104,7 +104,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
     };
 
     template <bool _MaybeEnable>
-    using _CheckArgsDep _LIBCPP_NODEBUG_TYPE = typename conditional<
+    using _CheckArgsDep _LIBCPP_NODEBUG = typename conditional<
       _MaybeEnable, _CheckArgs, __check_tuple_constructor_fail>::type;
 
     struct _CheckTupleLikeConstructor {
@@ -126,7 +126,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
     };
 
     template <class _Tuple>
-    using _CheckTLC _LIBCPP_NODEBUG_TYPE = typename conditional<
+    using _CheckTLC _LIBCPP_NODEBUG = typename conditional<
         __tuple_like_with_size<_Tuple, 2>::value
             && !is_same<typename decay<_Tuple>::type, pair>::value,
         _CheckTupleLikeConstructor,
@@ -408,13 +408,13 @@ struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, pair<_T1, _T2> >
 template <class _T1, class _T2>
 struct _LIBCPP_TEMPLATE_VIS tuple_element<0, pair<_T1, _T2> >
 {
-    typedef _LIBCPP_NODEBUG_TYPE _T1 type;
+    typedef _LIBCPP_NODEBUG _T1 type;
 };
 
 template <class _T1, class _T2>
 struct _LIBCPP_TEMPLATE_VIS tuple_element<1, pair<_T1, _T2> >
 {
-    typedef _LIBCPP_NODEBUG_TYPE _T2 type;
+    typedef _LIBCPP_NODEBUG _T2 type;
 };
 
 template <size_t _Ip> struct __get_pair;

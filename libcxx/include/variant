@@ -1196,11 +1196,11 @@ struct __narrowing_check {
   template <class _Dest>
   static auto __test_impl(_Dest (&&)[1]) -> __identity<_Dest>;
   template <class _Dest, class _Source>
-  using _Apply _LIBCPP_NODEBUG_TYPE = decltype(__test_impl<_Dest>({declval<_Source>()}));
+  using _Apply _LIBCPP_NODEBUG = decltype(__test_impl<_Dest>({declval<_Source>()}));
 };
 
 template <class _Dest, class _Source>
-using __check_for_narrowing _LIBCPP_NODEBUG_TYPE =
+using __check_for_narrowing _LIBCPP_NODEBUG =
   typename _If<
 #ifdef _LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT
     false &&
@@ -1244,11 +1244,11 @@ struct __make_overloads_imp;
 template <size_t ..._Idx>
 struct __make_overloads_imp<__tuple_indices<_Idx...> > {
   template <class ..._Types>
-  using _Apply _LIBCPP_NODEBUG_TYPE = __all_overloads<__overload<_Types, _Idx>...>;
+  using _Apply _LIBCPP_NODEBUG = __all_overloads<__overload<_Types, _Idx>...>;
 };
 
 template <class ..._Types>
-using _MakeOverloads _LIBCPP_NODEBUG_TYPE = typename __make_overloads_imp<
+using _MakeOverloads _LIBCPP_NODEBUG = typename __make_overloads_imp<
     __make_indices_imp<sizeof...(_Types), 0> >::template _Apply<_Types...>;
 
 template <class _Tp, class... _Types>
