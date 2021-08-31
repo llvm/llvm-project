@@ -7,7 +7,7 @@ set( LLVM_LINK_COMPONENTS
   Support
   )
 
-add_clang_executable(clang-repl
+add_clang_tool(clang-repl
   ClangRepl.cpp
   )
 
