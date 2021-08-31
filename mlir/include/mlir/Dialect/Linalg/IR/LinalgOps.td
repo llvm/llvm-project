@@ -18,6 +18,7 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/TilingInterface.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 
 // Base class for Linalg dialect ops that do not correspond to library calls.
@@ -130,7 +131,10 @@ def Linalg_InitTensorOp : Linalg_Op<"init_tensor",
 
 def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     [AttrSizedOperandSegments, NoSideEffect,
-     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+     DeclareOpInterfaceMethods<TilingInterface,
+         ["getDestinationOperands", "getLoopIteratorTypes", "getLoopBounds",
+          "getTiledImplementation"]>]> {
   let summary = "tensor pad operation";
   let description = [{
     `linalg.pad_tensor` is an operation that pads the `source` tensor
