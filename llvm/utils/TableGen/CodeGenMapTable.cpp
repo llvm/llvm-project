@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// CodeGenMapTable provides functionality for the TabelGen to create
+// CodeGenMapTable provides functionality for the TableGen to create
 // relation mapping between instructions. Relation models are defined using
 // InstrMapping as a base class. This file implements the functionality which
 // parses these definitions and generates relation maps using the information
