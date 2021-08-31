@@ -308,7 +308,8 @@ clang-format
 libclang
 --------
 
-- ...
+- Make libclang SONAME independent from LLVM version. It will be updated only when
+  needed.
 
 Static Analyzer
 ---------------
