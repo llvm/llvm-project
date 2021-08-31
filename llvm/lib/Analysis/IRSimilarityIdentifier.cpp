@@ -759,14 +759,19 @@ void IRSimilarityCandidate::createCanonicalRelationFrom(
   assert(NumberToCanonNum.size() == 0 && "Canonical Relationship is non-empty");
 
   DenseSet<unsigned> UsedGVNs;
-  // Iterate over the mappings provided from this candidate to A.
+  // Iterate over the mappings provided from this candidate to SourceCand.  We
+  // are then able to map the GVN in this candidate to the same canonical number
+  // given to the corresponding GVN in SourceCand.
   for (std::pair<unsigned, DenseSet<unsigned>> &GVNMapping : ToSourceMapping) {
     unsigned SourceGVN = GVNMapping.first;
 
     assert(GVNMapping.second.size() != 0 && "Possible GVNs is 0!");
 
     unsigned ResultGVN;
-    // We need special handling if we have more than one potential value.
+    // We need special handling if we have more than one potential value.  This
+    // means that there are at least two GVNs that could correspond to this GVN.
+    // This could lead to potential swapping later on, so we make a decision
+    // here to ensure a one-to-one mapping.
     if (GVNMapping.second.size() > 1) {
       bool Found = false;
       for (unsigned Val : GVNMapping.second) {
