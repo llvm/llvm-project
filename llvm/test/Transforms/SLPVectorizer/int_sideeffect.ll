@@ -44,16 +44,12 @@ define void @test_inaccessiblememonly(float* %p) {
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr float, float* [[P]], i64 1
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, float* [[P]], i64 2
 ; CHECK-NEXT:    [[P3:%.*]] = getelementptr float, float* [[P]], i64 3
-; CHECK-NEXT:    [[L0:%.*]] = load float, float* [[P0]], align 4
-; CHECK-NEXT:    [[L1:%.*]] = load float, float* [[P1]], align 4
-; CHECK-NEXT:    [[L2:%.*]] = load float, float* [[P2]], align 4
 ; CHECK-NEXT:    call void @foo() #[[ATTR1:[0-9]+]]
-; CHECK-NEXT:    [[L3:%.*]] = load float, float* [[P3]], align 4
-; CHECK-NEXT:    store float [[L0]], float* [[P0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P0]] to <4 x float>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
 ; CHECK-NEXT:    call void @foo() #[[ATTR1]]
-; CHECK-NEXT:    store float [[L1]], float* [[P1]], align 4
-; CHECK-NEXT:    store float [[L2]], float* [[P2]], align 4
-; CHECK-NEXT:    store float [[L3]], float* [[P3]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[P0]] to <4 x float>*
+; CHECK-NEXT:    store <4 x float> [[TMP2]], <4 x float>* [[TMP3]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %p0 = getelementptr float, float* %p, i64 0
