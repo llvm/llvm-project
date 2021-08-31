@@ -270,7 +270,8 @@ public:
   /// compares against in CmpValue. Return true if the comparison instruction
   /// can be analyzed.
   bool analyzeCompare(const MachineInstr &MI, Register &SrcReg,
-                      Register &SrcReg2, int &Mask, int &Value) const override;
+                      Register &SrcReg2, int64_t &Mask,
+                      int64_t &Value) const override;
 
   /// Compute the instruction latency of a given instruction.
   /// If the instruction has higher cost when predicated, it's returned via
