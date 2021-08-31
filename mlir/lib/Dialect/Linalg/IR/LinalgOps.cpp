@@ -1214,9 +1214,8 @@ static Value getAsValue(OpBuilder &builder, Location loc, OpFoldResult ofr) {
   if (auto val = ofr.dyn_cast<Value>())
     return val;
   auto intVal = getConstantIntValue(ofr);
-  auto intAttr = ofr.dyn_cast<Attribute>().dyn_cast_or_null<IntegerAttr>();
   assert(intVal && "expected Value or IntegerAttr");
-  return builder.create<ConstantIndexOp>(loc, intAttr.getInt());
+  return builder.create<ConstantIndexOp>(loc, *intVal);
 }
 
 SmallVector<Value> PadTensorOp::getDestinationOperands(OpBuilder &b) {
