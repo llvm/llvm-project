@@ -3049,135 +3049,10 @@ struct __member_pointer_class_type<_Ret _ClassType::*> {
 
 // template <class T, class... Args> struct is_constructible;
 
-#if defined(_LIBCPP_COMPILER_GCC) && _GNUC_VER_NEW >= 10000
-# define _LIBCPP_GCC_SUPPORTS_IS_CONSTRUCTIBLE
-#endif
-
-#if !defined(_LIBCPP_CXX03_LANG) && !__has_feature(is_constructible) && !defined(_LIBCPP_GCC_SUPPORTS_IS_CONSTRUCTIBLE)
-
-template <class _Tp, class... _Args>
-struct __libcpp_is_constructible;
-
-template <class _To, class _From>
-struct __is_invalid_base_to_derived_cast {
-  static_assert(is_reference<_To>::value, "Wrong specialization");
-  using _RawFrom = __uncvref_t<_From>;
-  using _RawTo = __uncvref_t<_To>;
-  static const bool value = _And<
-        _IsNotSame<_RawFrom, _RawTo>,
-        is_base_of<_RawFrom, _RawTo>,
-        _Not<__libcpp_is_constructible<_RawTo, _From>>
-  >::value;
-};
-
-template <class _To, class _From>
-struct __is_invalid_lvalue_to_rvalue_cast : false_type {
-  static_assert(is_reference<_To>::value, "Wrong specialization");
-};
-
-template <class _ToRef, class _FromRef>
-struct __is_invalid_lvalue_to_rvalue_cast<_ToRef&&, _FromRef&> {
-  using _RawFrom = __uncvref_t<_FromRef>;
-  using _RawTo = __uncvref_t<_ToRef>;
-  static const bool value = _And<
-      _Not<is_function<_RawTo>>,
-      _Or<
-        _IsSame<_RawFrom, _RawTo>,
-        is_base_of<_RawTo, _RawFrom>>
-    >::value;
-};
-
-struct __is_constructible_helper
-{
-    template <class _To>
-    static void __eat(_To);
-
-    // This overload is needed to work around a Clang bug that disallows
-    // static_cast<T&&>(e) for non-reference-compatible types.
-    // Example: static_cast<int&&>(declval<double>());
-    // NOTE: The static_cast implementation below is required to support
-    //  classes with explicit conversion operators.
-    template <class _To, class _From,
-              class = decltype(__eat<_To>(declval<_From>()))>
-    static true_type __test_cast(int);
-
-    template <class _To, class _From,
-              class = decltype(static_cast<_To>(declval<_From>()))>
-    static integral_constant<bool,
-        !__is_invalid_base_to_derived_cast<_To, _From>::value &&
-        !__is_invalid_lvalue_to_rvalue_cast<_To, _From>::value
-    > __test_cast(long);
-
-    template <class, class>
-    static false_type __test_cast(...);
-
-    template <class _Tp, class ..._Args,
-        class = decltype(_Tp(declval<_Args>()...))>
-    static true_type __test_nary(int);
-    template <class _Tp, class...>
-    static false_type __test_nary(...);
-
-    template <class _Tp, class _A0, class = decltype(::new _Tp(declval<_A0>()))>
-    static is_destructible<_Tp> __test_unary(int);
-    template <class, class>
-    static false_type __test_unary(...);
-};
-
-template <class _Tp, bool = is_void<_Tp>::value>
-struct __is_default_constructible
-    : decltype(__is_constructible_helper::__test_nary<_Tp>(0))
-{};
-
-template <class _Tp>
-struct __is_default_constructible<_Tp, true> : false_type {};
-
-template <class _Tp>
-struct __is_default_constructible<_Tp[], false> : false_type {};
-
-template <class _Tp, size_t _Nx>
-struct __is_default_constructible<_Tp[_Nx], false>
-    : __is_default_constructible<typename remove_all_extents<_Tp>::type>  {};
-
-template <class _Tp, class... _Args>
-struct __libcpp_is_constructible
-{
-  static_assert(sizeof...(_Args) > 1, "Wrong specialization");
-  typedef decltype(__is_constructible_helper::__test_nary<_Tp, _Args...>(0))
-      type;
-};
-
-template <class _Tp>
-struct __libcpp_is_constructible<_Tp> : __is_default_constructible<_Tp> {};
-
-template <class _Tp, class _A0>
-struct __libcpp_is_constructible<_Tp, _A0>
-    : public decltype(__is_constructible_helper::__test_unary<_Tp, _A0>(0))
-{};
-
-template <class _Tp, class _A0>
-struct __libcpp_is_constructible<_Tp&, _A0>
-    : public decltype(__is_constructible_helper::
-    __test_cast<_Tp&, _A0>(0))
-{};
-
-template <class _Tp, class _A0>
-struct __libcpp_is_constructible<_Tp&&, _A0>
-    : public decltype(__is_constructible_helper::
-    __test_cast<_Tp&&, _A0>(0))
-{};
-
-#endif
-
-#if __has_feature(is_constructible) || defined(_LIBCPP_GCC_SUPPORTS_IS_CONSTRUCTIBLE)
 template <class _Tp, class ..._Args>
 struct _LIBCPP_TEMPLATE_VIS is_constructible
     : public integral_constant<bool, __is_constructible(_Tp, _Args...)>
-    {};
-#else
-template <class _Tp, class... _Args>
-struct _LIBCPP_TEMPLATE_VIS is_constructible
-    : public __libcpp_is_constructible<_Tp, _Args...>::type {};
-#endif
+{ };
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
 template <class _Tp, class ..._Args>
@@ -3250,52 +3125,11 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_move_constructible_v
 
 // is_trivially_constructible
 
-#if __has_feature(is_trivially_constructible) || _GNUC_VER >= 501
-
 template <class _Tp, class... _Args>
 struct _LIBCPP_TEMPLATE_VIS is_trivially_constructible
     : integral_constant<bool, __is_trivially_constructible(_Tp, _Args...)>
 {
 };
-
-#else  // !__has_feature(is_trivially_constructible)
-
-template <class _Tp, class... _Args>
-struct _LIBCPP_TEMPLATE_VIS is_trivially_constructible
-    : false_type
-{
-};
-
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_trivially_constructible<_Tp>
-#if __has_feature(has_trivial_constructor) || defined(_LIBCPP_COMPILER_GCC)
-    : integral_constant<bool, __has_trivial_constructor(_Tp)>
-#else
-    : integral_constant<bool, is_scalar<_Tp>::value>
-#endif
-{
-};
-
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_trivially_constructible<_Tp, _Tp&&>
-    : integral_constant<bool, is_scalar<_Tp>::value>
-{
-};
-
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_trivially_constructible<_Tp, const _Tp&>
-    : integral_constant<bool, is_scalar<_Tp>::value>
-{
-};
-
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_trivially_constructible<_Tp, _Tp&>
-    : integral_constant<bool, is_scalar<_Tp>::value>
-{
-};
-
-#endif // !__has_feature(is_trivially_constructible)
-
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
 template <class _Tp, class... _Args>
@@ -3341,37 +3175,10 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_trivially_move_constructible_v
 
 // is_trivially_assignable
 
-#if __has_feature(is_trivially_assignable) || _GNUC_VER >= 501
-
 template <class _Tp, class _Arg>
 struct is_trivially_assignable
     : integral_constant<bool, __is_trivially_assignable(_Tp, _Arg)>
-{
-};
-
-#else  // !__has_feature(is_trivially_assignable)
-
-template <class _Tp, class _Arg>
-struct is_trivially_assignable
-    : public false_type {};
-
-template <class _Tp>
-struct is_trivially_assignable<_Tp&, _Tp>
-    : integral_constant<bool, is_scalar<_Tp>::value> {};
-
-template <class _Tp>
-struct is_trivially_assignable<_Tp&, _Tp&>
-    : integral_constant<bool, is_scalar<_Tp>::value> {};
-
-template <class _Tp>
-struct is_trivially_assignable<_Tp&, const _Tp&>
-    : integral_constant<bool, is_scalar<_Tp>::value> {};
-
-template <class _Tp>
-struct is_trivially_assignable<_Tp&, _Tp&&>
-    : integral_constant<bool, is_scalar<_Tp>::value> {};
-
-#endif // !__has_feature(is_trivially_assignable)
+{ };
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
 template <class _Tp, class _Arg>
