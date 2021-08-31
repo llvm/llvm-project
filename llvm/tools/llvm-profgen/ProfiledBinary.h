@@ -110,7 +110,7 @@ struct PrologEpilogTracker {
 class BinarySizeContextTracker {
 public:
   // Add instruction with given size to a context
-  void addInstructionForContext(const FrameLocationStack &Context,
+  void addInstructionForContext(const SampleContextFrameVector &Context,
                                 uint32_t InstrSize);
 
   // Get function size with a specific context. When there's no exact match
@@ -164,7 +164,7 @@ class ProfiledBinary {
   // Function offset to name mapping.
   std::unordered_map<uint64_t, std::string> FuncStartAddrMap;
   // Offset to context location map. Used to expand the context.
-  std::unordered_map<uint64_t, FrameLocationStack> Offset2LocStackMap;
+  std::unordered_map<uint64_t, SampleContextFrameVector> Offset2LocStackMap;
   // An array of offsets of all instructions sorted in increasing order. The
   // sorting is needed to fast advance to the next forward/backward instruction.
   std::vector<uint64_t> CodeAddrs;
@@ -181,6 +181,9 @@ class ProfiledBinary {
 
   // The symbolizer used to get inline context for an instruction.
   std::unique_ptr<symbolize::LLVMSymbolizer> Symbolizer;
+
+  // String table owning function name strings created from the symbolizer.
+  std::unordered_set<std::string> NameStrings;
 
   // Pseudo probe decoder
   MCPseudoProbeDecoder ProbeDecoder;
@@ -214,9 +217,9 @@ class ProfiledBinary {
   bool dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
                           SectionSymbolsTy &Symbols, const SectionRef &Section);
   /// Symbolize a given instruction pointer and return a full call context.
-  FrameLocationStack symbolize(const InstructionPointer &IP,
-                               bool UseCanonicalFnName = false,
-                               bool UseProbeDiscriminator = false);
+  SampleContextFrameVector symbolize(const InstructionPointer &IP,
+                                     bool UseCanonicalFnName = false,
+                                     bool UseProbeDiscriminator = false);
 
   /// Decode the interesting parts of the binary and build internal data
   /// structures. On high level, the parts of interest are:
@@ -226,7 +229,7 @@ class ProfiledBinary {
   ///   3. Pseudo probe related sections, used by probe-based profile
   ///   generation.
   void load();
-  const FrameLocationStack &getFrameLocationStack(uint64_t Offset) const {
+  const SampleContextFrameVector &getFrameLocationStack(uint64_t Offset) const {
     auto I = Offset2LocStackMap.find(Offset);
     assert(I != Offset2LocStackMap.end() &&
            "Can't find location for offset in the binary");
@@ -307,7 +310,7 @@ public:
     return FuncSizeTracker.getFuncSizeForContext(Context);
   }
 
-  Optional<FrameLocation> getInlineLeafFrameLoc(uint64_t Offset) {
+  Optional<SampleContextFrame> getInlineLeafFrameLoc(uint64_t Offset) {
     const auto &Stack = getFrameLocationStack(Offset);
     if (Stack.empty())
       return {};
@@ -317,22 +320,27 @@ public:
   // Compare two addresses' inline context
   bool inlineContextEqual(uint64_t Add1, uint64_t Add2) const;
 
-  // Get the context string of the current stack with inline context filled in.
+  // Get the full context of the current stack with inline context filled in.
   // It will search the disassembling info stored in Offset2LocStackMap. This is
   // used as the key of function sample map
-  std::string getExpandedContextStr(const SmallVectorImpl<uint64_t> &Stack,
-                                    bool &WasLeafInlined) const;
+  SampleContextFrameVector
+  getExpandedContext(const SmallVectorImpl<uint64_t> &Stack,
+                     bool &WasLeafInlined) const;
 
   const MCDecodedPseudoProbe *getCallProbeForAddr(uint64_t Address) const {
     return ProbeDecoder.getCallProbeForAddr(Address);
   }
 
-  void
-  getInlineContextForProbe(const MCDecodedPseudoProbe *Probe,
-                           SmallVectorImpl<std::string> &InlineContextStack,
-                           bool IncludeLeaf = false) const {
-    return ProbeDecoder.getInlineContextForProbe(Probe, InlineContextStack,
-                                                 IncludeLeaf);
+  void getInlineContextForProbe(const MCDecodedPseudoProbe *Probe,
+                                SampleContextFrameVector &InlineContextStack,
+                                bool IncludeLeaf = false) const {
+    SmallVector<MCPseduoProbeFrameLocation, 16> ProbeInlineContext;
+    ProbeDecoder.getInlineContextForProbe(Probe, ProbeInlineContext,
+                                          IncludeLeaf);
+    for (auto &Callsite : ProbeInlineContext) {
+      InlineContextStack.emplace_back(Callsite.first,
+                                      LineLocation(Callsite.second, 0));
+    }
   }
   const AddressProbesMap &getAddress2ProbesMap() const {
     return ProbeDecoder.getAddress2ProbesMap();

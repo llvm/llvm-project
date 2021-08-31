@@ -53,12 +53,12 @@ static const Target *getTarget(const ObjectFile *Obj) {
 }
 
 void BinarySizeContextTracker::addInstructionForContext(
-    const FrameLocationStack &Context, uint32_t InstrSize) {
+    const SampleContextFrameVector &Context, uint32_t InstrSize) {
   ContextTrieNode *CurNode = &RootContext;
   bool IsLeaf = true;
   for (const auto &Callsite : reverse(Context)) {
-    StringRef CallerName = Callsite.first;
-    LineLocation CallsiteLoc = IsLeaf ? LineLocation(0, 0) : Callsite.second;
+    StringRef CallerName = Callsite.CallerName;
+    LineLocation CallsiteLoc = IsLeaf ? LineLocation(0, 0) : Callsite.Callsite;
     CurNode = CurNode->getOrCreateChildContext(CallsiteLoc, CallerName);
     IsLeaf = false;
   }
@@ -70,23 +70,20 @@ uint32_t
 BinarySizeContextTracker::getFuncSizeForContext(const SampleContext &Context) {
   ContextTrieNode *CurrNode = &RootContext;
   ContextTrieNode *PrevNode = nullptr;
-  StringRef ContextRemain = Context;
-  StringRef ChildContext;
-  StringRef CallerName;
+  SampleContextFrames Frames = Context.getContextFrames();
+  int32_t I = Frames.size() - 1;
   Optional<uint32_t> Size;
 
-  // Start from top-level context-less function, travese down the reverse
+  // Start from top-level context-less function, traverse down the reverse
   // context trie to find the best/longest match for given context, then
   // retrieve the size.
-  while (CurrNode && !ContextRemain.empty()) {
-    // rsplit so we process from leaf function to callers (added to context).
-    auto ContextSplit = SampleContext::rsplitContextString(ContextRemain);
-    ChildContext = ContextSplit.second;
-    ContextRemain = ContextSplit.first;
-    LineLocation CallSiteLoc(0, 0);
-    SampleContext::decodeContextString(ChildContext, CallerName, CallSiteLoc);
+
+  while (CurrNode && I >= 0) {
+    // Process from leaf function to callers (added to context).
+    const auto &ChildFrame = Frames[I--];
     PrevNode = CurrNode;
-    CurrNode = CurrNode->getChildContext(CallSiteLoc, CallerName);
+    CurrNode =
+        CurrNode->getChildContext(ChildFrame.Callsite, ChildFrame.CallerName);
     if (CurrNode && CurrNode->getFunctionSize().hasValue())
       Size = CurrNode->getFunctionSize().getValue();
   }
@@ -186,8 +183,8 @@ bool ProfiledBinary::inlineContextEqual(uint64_t Address1,
                                         uint64_t Address2) const {
   uint64_t Offset1 = virtualAddrToOffset(Address1);
   uint64_t Offset2 = virtualAddrToOffset(Address2);
-  const FrameLocationStack &Context1 = getFrameLocationStack(Offset1);
-  const FrameLocationStack &Context2 = getFrameLocationStack(Offset2);
+  const SampleContextFrameVector &Context1 = getFrameLocationStack(Offset1);
+  const SampleContextFrameVector &Context2 = getFrameLocationStack(Offset2);
   if (Context1.size() != Context2.size())
     return false;
   if (Context1.empty())
@@ -198,46 +195,34 @@ bool ProfiledBinary::inlineContextEqual(uint64_t Address1,
                     Context2.begin(), Context2.begin() + Context2.size() - 1);
 }
 
-std::string
-ProfiledBinary::getExpandedContextStr(const SmallVectorImpl<uint64_t> &Stack,
-                                      bool &WasLeafInlined) const {
-  std::string ContextStr;
-  SmallVector<std::string, 16> ContextVec;
+SampleContextFrameVector
+ProfiledBinary::getExpandedContext(const SmallVectorImpl<uint64_t> &Stack,
+                                   bool &WasLeafInlined) const {
+  SampleContextFrameVector ContextVec;
   // Process from frame root to leaf
   for (auto Address : Stack) {
     uint64_t Offset = virtualAddrToOffset(Address);
-    const FrameLocationStack &ExpandedContext = getFrameLocationStack(Offset);
+    const SampleContextFrameVector &ExpandedContext =
+        getFrameLocationStack(Offset);
     // An instruction without a valid debug line will be ignored by sample
     // processing
     if (ExpandedContext.empty())
-      return std::string();
+      return SampleContextFrameVector();
     // Set WasLeafInlined to the size of inlined frame count for the last
     // address which is leaf
     WasLeafInlined = (ExpandedContext.size() > 1);
-    for (const auto &Loc : ExpandedContext) {
-      ContextVec.push_back(getCallSite(Loc));
-    }
+    ContextVec.append(ExpandedContext);
   }
 
-  assert(ContextVec.size() && "Context length should be at least 1");
   // Compress the context string except for the leaf frame
-  std::string LeafFrame = ContextVec.back();
+  auto LeafFrame = ContextVec.back();
+  LeafFrame.Callsite = LineLocation(0, 0);
   ContextVec.pop_back();
-  CSProfileGenerator::compressRecursionContext<std::string>(ContextVec);
-  CSProfileGenerator::trimContext<std::string>(ContextVec);
-
-  std::ostringstream OContextStr;
-  for (uint32_t I = 0; I < (uint32_t)ContextVec.size(); I++) {
-    if (OContextStr.str().size()) {
-      OContextStr << " @ ";
-    }
-    OContextStr << ContextVec[I];
-  }
-  // Only keep the function name for the leaf frame
-  if (OContextStr.str().size())
-    OContextStr << " @ ";
-  OContextStr << StringRef(LeafFrame).split(":").first.str();
-  return OContextStr.str();
+  assert(ContextVec.size() && "Context length should be at least 1");
+  CSProfileGenerator::compressRecursionContext(ContextVec);
+  CSProfileGenerator::trimContext(ContextVec);
+  ContextVec.push_back(LeafFrame);
+  return ContextVec;
 }
 
 template <class ELFT>
@@ -363,19 +348,20 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
       // Populate a vector of the symbolized callsite at this location
       // We don't need symbolized info for probe-based profile, just use an
       // empty stack as an entry to indicate a valid binary offset
-
+      SampleContextFrameVector SymbolizedCallStack;
       if (!UsePseudoProbes || TrackFuncContextSize) {
         InstructionPointer IP(this, Offset);
         // TODO: reallocation of Offset2LocStackMap will lead to dangling
         // strings We need ProfiledBinary to owned these string.
         Offset2LocStackMap[Offset] = symbolize(IP, true, UsePseudoProbes);
-        FrameLocationStack &SymbolizedCallStack = Offset2LocStackMap[Offset];
+        SampleContextFrameVector &SymbolizedCallStack =
+            Offset2LocStackMap[Offset];
         // Record instruction size for the corresponding context
         if (TrackFuncContextSize && !SymbolizedCallStack.empty())
           FuncSizeTracker.addInstructionForContext(Offset2LocStackMap[Offset],
                                                    Size);
       } else {
-        Offset2LocStackMap[Offset] = FrameLocationStack();
+        Offset2LocStackMap[Offset] = SampleContextFrameVector();
       }
 
       // Populate address maps.
@@ -519,9 +505,9 @@ void ProfiledBinary::setupSymbolizer() {
   Symbolizer = std::make_unique<symbolize::LLVMSymbolizer>(SymbolizerOpts);
 }
 
-FrameLocationStack ProfiledBinary::symbolize(const InstructionPointer &IP,
-                                             bool UseCanonicalFnName,
-                                             bool UseProbeDiscriminator) {
+SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
+                                                   bool UseCanonicalFnName,
+                                                   bool UseProbeDiscriminator) {
   assert(this == IP.Binary &&
          "Binary should only symbolize its own instruction");
   auto Addr = object::SectionedAddress{IP.Offset + getPreferredBaseAddress(),
@@ -529,7 +515,7 @@ FrameLocationStack ProfiledBinary::symbolize(const InstructionPointer &IP,
   DIInliningInfo InlineStack =
       unwrapOrError(Symbolizer->symbolizeInlinedCode(Path, Addr), getName());
 
-  FrameLocationStack CallStack;
+  SampleContextFrameVector CallStack;
   for (int32_t I = InlineStack.getNumberOfFrames() - 1; I >= 0; I--) {
     const auto &CallerFrame = InlineStack.getFrame(I);
     if (CallerFrame.FunctionName == "<invalid>")
@@ -552,8 +538,8 @@ FrameLocationStack ProfiledBinary::symbolize(const InstructionPointer &IP,
     }
 
     LineLocation Line(LineOffset, Discriminator);
-    FrameLocation Callsite(FunctionName.str(), Line);
-    CallStack.push_back(Callsite);
+    auto It = NameStrings.insert(FunctionName.str());
+    CallStack.emplace_back(*It.first, Line);
   }
 
   return CallStack;

@@ -92,8 +92,7 @@ void VirtualUnwinder::unwindBranchWithinFrame(UnwindState &State) {
 std::shared_ptr<StringBasedCtxKey> FrameStack::getContextKey() {
   std::shared_ptr<StringBasedCtxKey> KeyStr =
       std::make_shared<StringBasedCtxKey>();
-  KeyStr->Context =
-      Binary->getExpandedContextStr(Stack, KeyStr->WasLeafInlined);
+  KeyStr->Context = Binary->getExpandedContext(Stack, KeyStr->WasLeafInlined);
   if (KeyStr->Context.empty())
     return nullptr;
   KeyStr->genHashCode();
@@ -321,21 +320,19 @@ static void printSampleCounter(OrderedCounterForPrint &OrderedCounter) {
 
 static std::string getContextKeyStr(ContextKey *K,
                                     const ProfiledBinary *Binary) {
-  std::string ContextStr;
   if (const auto *CtxKey = dyn_cast<StringBasedCtxKey>(K)) {
-    return CtxKey->Context;
+    return SampleContext::getContextString(CtxKey->Context);
   } else if (const auto *CtxKey = dyn_cast<ProbeBasedCtxKey>(K)) {
-    SmallVector<std::string, 16> ContextStack;
+    SampleContextFrameVector ContextStack;
     for (const auto *Probe : CtxKey->Probes) {
       Binary->getInlineContextForProbe(Probe, ContextStack, true);
     }
-    for (const auto &Context : ContextStack) {
-      if (ContextStr.size())
-        ContextStr += " @ ";
-      ContextStr += Context;
-    }
+    // Probe context key at this point does not have leaf probe, so do not
+    // include the leaf inline location.
+    return SampleContext::getContextString(ContextStack, true);
+  } else {
+    llvm_unreachable("unexpected key type");
   }
-  return ContextStr;
 }
 
 static void printRangeCounter(ContextSampleCounterMap &Counter,

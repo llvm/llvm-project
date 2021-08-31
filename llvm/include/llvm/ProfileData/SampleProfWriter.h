@@ -52,7 +52,7 @@ public:
   /// Write all the sample profiles in the given map of samples.
   ///
   /// \returns status code of the file update operation.
-  virtual std::error_code write(const StringMap<FunctionSamples> &ProfileMap);
+  virtual std::error_code write(const SampleProfileMap &ProfileMap);
 
   raw_ostream &getOutputStream() { return *OutputStream; }
 
@@ -78,12 +78,10 @@ protected:
       : OutputStream(std::move(OS)) {}
 
   /// Write a file header for the profile file.
-  virtual std::error_code
-  writeHeader(const StringMap<FunctionSamples> &ProfileMap) = 0;
+  virtual std::error_code writeHeader(const SampleProfileMap &ProfileMap) = 0;
 
   // Write function profiles to the profile file.
-  virtual std::error_code
-  writeFuncProfiles(const StringMap<FunctionSamples> &ProfileMap);
+  virtual std::error_code writeFuncProfiles(const SampleProfileMap &ProfileMap);
 
   /// Output stream where to emit the profile to.
   std::unique_ptr<raw_ostream> OutputStream;
@@ -92,7 +90,7 @@ protected:
   std::unique_ptr<ProfileSummary> Summary;
 
   /// Compute summary for this profile.
-  void computeSummary(const StringMap<FunctionSamples> &ProfileMap);
+  void computeSummary(const SampleProfileMap &ProfileMap);
 
   /// Profile format.
   SampleProfileFormat Format = SPF_None;
@@ -107,8 +105,7 @@ protected:
   SampleProfileWriterText(std::unique_ptr<raw_ostream> &OS)
       : SampleProfileWriter(OS), Indent(0) {}
 
-  std::error_code
-  writeHeader(const StringMap<FunctionSamples> &ProfileMap) override {
+  std::error_code writeHeader(const SampleProfileMap &ProfileMap) override {
     return sampleprof_error::success;
   }
 
@@ -132,19 +129,22 @@ public:
   virtual std::error_code writeSample(const FunctionSamples &S) override;
 
 protected:
+  virtual MapVector<StringRef, uint32_t> &getNameTable() { return NameTable; }
   virtual std::error_code writeMagicIdent(SampleProfileFormat Format);
   virtual std::error_code writeNameTable();
   virtual std::error_code
-  writeHeader(const StringMap<FunctionSamples> &ProfileMap) override;
+  writeHeader(const SampleProfileMap &ProfileMap) override;
   std::error_code writeSummary();
-  std::error_code writeNameIdx(StringRef FName, bool IsContextName = false);
+  virtual std::error_code writeContextIdx(const SampleContext &Context);
+  std::error_code writeNameIdx(StringRef FName);
   std::error_code writeBody(const FunctionSamples &S);
-  inline void stablizeNameTable(std::set<StringRef> &V);
+  inline void stablizeNameTable(MapVector<StringRef, uint32_t> &NameTable,
+                                std::set<StringRef> &V);
 
   MapVector<StringRef, uint32_t> NameTable;
-  std::unordered_set<std::string> BracketedContextStr;
 
-  void addName(StringRef FName, bool IsContextName = false);
+  void addName(StringRef FName);
+  virtual void addContext(const SampleContext &Context);
   void addNames(const FunctionSamples &S);
 
 private:
@@ -168,6 +168,7 @@ const std::array<SmallVector<SecHdrTableEntry, 8>, NumOfLayout>
         // DefaultLayout
         SmallVector<SecHdrTableEntry, 8>({{SecProfSummary, 0, 0, 0, 0},
                                           {SecNameTable, 0, 0, 0, 0},
+                                          {SecCSNameTable, 0, 0, 0, 0},
                                           {SecFuncOffsetTable, 0, 0, 0, 0},
                                           {SecLBRProfile, 0, 0, 0, 0},
                                           {SecProfileSymbolList, 0, 0, 0, 0},
@@ -190,8 +191,7 @@ const std::array<SmallVector<SecHdrTableEntry, 8>, NumOfLayout>
 class SampleProfileWriterExtBinaryBase : public SampleProfileWriterBinary {
   using SampleProfileWriterBinary::SampleProfileWriterBinary;
 public:
-  virtual std::error_code
-  write(const StringMap<FunctionSamples> &ProfileMap) override;
+  virtual std::error_code write(const SampleProfileMap &ProfileMap) override;
 
   virtual void setToCompressAllSections() override;
   void setToCompressSection(SecType Type);
@@ -246,29 +246,32 @@ protected:
     addSecFlag(SectionHdrLayout[SectionIdx], Flag);
   }
 
+  virtual void addContext(const SampleContext &Context) override;
+
   // placeholder for subclasses to dispatch their own section writers.
   virtual std::error_code writeCustomSection(SecType Type) = 0;
   // Verify the SecLayout is supported by the format.
   virtual void verifySecLayout(SectionLayout SL) = 0;
 
   // specify the order to write sections.
-  virtual std::error_code
-  writeSections(const StringMap<FunctionSamples> &ProfileMap) = 0;
+  virtual std::error_code writeSections(const SampleProfileMap &ProfileMap) = 0;
 
   // Dispatch section writer for each section. \p LayoutIdx is the sequence
   // number indicating where the section is located in SectionHdrLayout.
-  virtual std::error_code
-  writeOneSection(SecType Type, uint32_t LayoutIdx,
-                  const StringMap<FunctionSamples> &ProfileMap);
+  virtual std::error_code writeOneSection(SecType Type, uint32_t LayoutIdx,
+                                          const SampleProfileMap &ProfileMap);
 
   // Helper function to write name table.
   virtual std::error_code writeNameTable() override;
+  virtual std::error_code
+  writeContextIdx(const SampleContext &Context) override;
+  std::error_code writeCSNameIdx(const SampleContext &Context);
+  std::error_code writeCSNameTableSection();
 
-  std::error_code writeFuncMetadata(const StringMap<FunctionSamples> &Profiles);
+  std::error_code writeFuncMetadata(const SampleProfileMap &Profiles);
 
   // Functions to write various kinds of sections.
-  std::error_code
-  writeNameTableSection(const StringMap<FunctionSamples> &ProfileMap);
+  std::error_code writeNameTableSection(const SampleProfileMap &ProfileMap);
   std::error_code writeFuncOffsetTable();
   std::error_code writeProfileSymbolListSection();
 
@@ -289,7 +292,7 @@ private:
   void allocSecHdrTable();
   std::error_code writeSecHdrTable();
   virtual std::error_code
-  writeHeader(const StringMap<FunctionSamples> &ProfileMap) override;
+  writeHeader(const SampleProfileMap &ProfileMap) override;
   std::error_code compressAndOutput();
 
   // We will swap the raw_ostream held by LocalBufStream and that
@@ -312,11 +315,15 @@ private:
   // be read.
   std::vector<SecHdrTableEntry> SecHdrTable;
 
-  // FuncOffsetTable maps function name to its profile offset in SecLBRProfile
-  // section. It is used to load function profile on demand.
-  MapVector<StringRef, uint64_t> FuncOffsetTable;
+  // FuncOffsetTable maps function context to its profile offset in
+  // SecLBRProfile section. It is used to load function profile on demand.
+  MapVector<SampleContext, uint64_t> FuncOffsetTable;
   // Whether to use MD5 to represent string.
   bool UseMD5 = false;
+
+  /// CSNameTable maps function context to its offset in SecCSNameTable section.
+  /// The offset will be used everywhere where the context is referenced.
+  MapVector<SampleContext, uint32_t> CSNameTable;
 
   ProfileSymbolList *ProfSymList = nullptr;
 };
@@ -327,13 +334,11 @@ public:
       : SampleProfileWriterExtBinaryBase(OS) {}
 
 private:
-  std::error_code
-  writeDefaultLayout(const StringMap<FunctionSamples> &ProfileMap);
-  std::error_code
-  writeCtxSplitLayout(const StringMap<FunctionSamples> &ProfileMap);
+  std::error_code writeDefaultLayout(const SampleProfileMap &ProfileMap);
+  std::error_code writeCtxSplitLayout(const SampleProfileMap &ProfileMap);
 
   virtual std::error_code
-  writeSections(const StringMap<FunctionSamples> &ProfileMap) override;
+  writeSections(const SampleProfileMap &ProfileMap) override;
 
   virtual std::error_code writeCustomSection(SecType Type) override {
     return sampleprof_error::success;
@@ -380,8 +385,7 @@ class SampleProfileWriterCompactBinary : public SampleProfileWriterBinary {
 
 public:
   virtual std::error_code writeSample(const FunctionSamples &S) override;
-  virtual std::error_code
-  write(const StringMap<FunctionSamples> &ProfileMap) override;
+  virtual std::error_code write(const SampleProfileMap &ProfileMap) override;
 
 protected:
   /// The table mapping from function name to the offset of its FunctionSample
@@ -392,7 +396,7 @@ protected:
   uint64_t TableOffset;
   virtual std::error_code writeNameTable() override;
   virtual std::error_code
-  writeHeader(const StringMap<FunctionSamples> &ProfileMap) override;
+  writeHeader(const SampleProfileMap &ProfileMap) override;
   std::error_code writeFuncOffsetTable();
 };
 

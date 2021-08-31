@@ -42,7 +42,7 @@ public:
   using iterator = std::set<ProfiledCallGraphNode *>::iterator;
 
   // Constructor for non-CS profile.
-  ProfiledCallGraph(StringMap<FunctionSamples> &ProfileMap) {
+  ProfiledCallGraph(SampleProfileMap &ProfileMap) {
     assert(!FunctionSamples::ProfileIsCS && "CS profile is not handled here");
     for (const auto &Samples : ProfileMap) {
       addProfiledCalls(Samples.second);
