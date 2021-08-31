@@ -478,7 +478,7 @@ public:
     size_t operator()(const _K2& __x) const
         {return static_cast<const _Hash&>(*this)(__x);}
 #endif
-    void swap(__unordered_map_hasher&__y)
+    void swap(__unordered_map_hasher& __y)
         _NOEXCEPT_(__is_nothrow_swappable<_Hash>::value)
     {
         using _VSTD::swap;
@@ -513,7 +513,7 @@ public:
     size_t operator()(const _K2& __x) const
         {return __hash_(__x);}
 #endif
-    void swap(__unordered_map_hasher&__y)
+    void swap(__unordered_map_hasher& __y)
         _NOEXCEPT_(__is_nothrow_swappable<_Hash>::value)
     {
         using _VSTD::swap;
@@ -574,7 +574,7 @@ public:
     bool operator()(const _K2& __x, const _Key& __y) const
         {return static_cast<const _Pred&>(*this)(__x, __y);}
 #endif
-    void swap(__unordered_map_equal&__y)
+    void swap(__unordered_map_equal& __y)
         _NOEXCEPT_(__is_nothrow_swappable<_Pred>::value)
     {
         using _VSTD::swap;
@@ -624,7 +624,7 @@ public:
     bool operator()(const _K2& __x, const _Key& __y) const
         {return __pred_(__x, __y);}
 #endif
-    void swap(__unordered_map_equal&__y)
+    void swap(__unordered_map_equal& __y)
         _NOEXCEPT_(__is_nothrow_swappable<_Pred>::value)
     {
         using _VSTD::swap;
