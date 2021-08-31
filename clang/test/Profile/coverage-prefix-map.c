@@ -1,3 +1,6 @@
+// XFAIL: *
+// See rdar://82543962.
+//
 // %s expands to an absolute path, so to test relative paths we need to create a
 // clean directory, put the source there, and cd into it.
 // RUN: rm -rf %t

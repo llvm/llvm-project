@@ -1176,10 +1176,6 @@ def fdebug_compilation_dir_EQ : Joined<["-"], "fdebug-compilation-dir=">,
 def fdebug_compilation_dir : Separate<["-"], "fdebug-compilation-dir">,
     Group<f_Group>, Flags<[CC1Option, CC1AsOption, CoreOption]>,
     Alias<fdebug_compilation_dir_EQ>;
-def fcoverage_compilation_dir_EQ : Joined<["-"], "fcoverage-compilation-dir=">,
-    Group<f_Group>, Flags<[CC1Option, CC1AsOption, CoreOption]>,
-    HelpText<"The compilation directory to embed in the coverage mapping.">,
-    MarshallingInfoString<CodeGenOpts<"CoverageCompilationDir">>;
 def ffile_compilation_dir_EQ : Joined<["-"], "ffile-compilation-dir=">, Group<f_Group>,
     Flags<[CoreOption]>,
     HelpText<"The compilation directory to embed in the debug info and coverage mapping.">;
