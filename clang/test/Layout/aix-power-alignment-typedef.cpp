@@ -37,3 +37,39 @@ int x = sizeof(U);
 // CHECK-NEXT:       |  nvsize=2, nvalign=2, preferrednvalign=2]
 
 } // namespace test2
+
+namespace test3 {
+typedef double DblArr[] __attribute__((__aligned__(2)));
+
+union U {
+  DblArr da;
+  char x;
+};
+
+int x = sizeof(U);
+
+// CHECK:          0 | union test3::U
+// CHECK-NEXT:     0 |   test3::DblArr da
+// CHECK-NEXT:     0 |   char x
+// CHECK-NEXT:       | [sizeof=2, dsize=2, align=2, preferredalign=2,
+// CHECK-NEXT:       |  nvsize=2, nvalign=2, preferrednvalign=2]
+
+} // namespace test3
+
+namespace test4 {
+typedef double Dbl __attribute__((__aligned__(2)));
+
+union U {
+  Dbl DblArr[];
+  char x;
+};
+
+int x = sizeof(U);
+
+// CHECK:          0 | union test4::U
+// CHECK-NEXT:     0 |   test4::Dbl [] DblArr
+// CHECK-NEXT:     0 |   char x
+// CHECK-NEXT:       | [sizeof=2, dsize=2, align=2, preferredalign=2,
+// CHECK-NEXT:       |  nvsize=2, nvalign=2, preferrednvalign=2]
+
+} // namespace test4

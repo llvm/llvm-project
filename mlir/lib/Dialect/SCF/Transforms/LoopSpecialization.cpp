@@ -186,7 +186,7 @@ static LogicalResult alignAndAddBound(FlatAffineValueConstraints &constraints,
   AffineMap alignedMap =
       alignAffineMapWithValues(map, operands, dims, syms, &newSyms);
   for (unsigned i = syms.size(); i < newSyms.size(); ++i)
-    constraints.addSymbolId(constraints.getNumSymbolIds(), newSyms[i]);
+    constraints.appendSymbolId(newSyms[i]);
   return constraints.addBound(type, pos, alignedMap);
 }
 
@@ -236,11 +236,9 @@ canonicalizeMinMaxOp(RewriterBase &rewriter, Operation *op, AffineMap map,
   unsigned numResults = map.getNumResults();
 
   // Add a few extra dimensions.
-  unsigned dimOp = constraints.addDimId();      // `op`
-  unsigned dimOpBound = constraints.addDimId(); // `op` lower/upper bound
-  unsigned resultDimStart = constraints.getNumDimIds();
-  for (unsigned i = 0; i < numResults; ++i)
-    constraints.addDimId();
+  unsigned dimOp = constraints.appendDimId();      // `op`
+  unsigned dimOpBound = constraints.appendDimId(); // `op` lower/upper bound
+  unsigned resultDimStart = constraints.appendDimId(/*num=*/numResults);
 
   // Add an inequality for each result expr_i of map:
   // isMin: op <= expr_i, !isMin: op >= expr_i
@@ -346,9 +344,7 @@ static LogicalResult rewritePeeledMinMaxOp(RewriterBase &rewriter,
                                            Value iv, Value ub, Value step,
                                            bool insideLoop) {
   FlatAffineValueConstraints constraints;
-  constraints.addDimId(0, iv);
-  constraints.addDimId(1, ub);
-  constraints.addDimId(2, step);
+  constraints.appendDimId({iv, ub, step});
   if (auto constUb = getConstantIntValue(ub))
     constraints.addBound(FlatAffineConstraints::EQ, 1, *constUb);
   if (auto constStep = getConstantIntValue(step))
@@ -443,9 +439,9 @@ mlir::scf::canonicalizeMinMaxOpInLoop(RewriterBase &rewriter, Operation *op,
     if (!stepInt)
       continue;
 
-    unsigned dimIv = constraints.addDimId(iv);
-    unsigned dimLb = constraints.addDimId(lb);
-    unsigned dimUb = constraints.addDimId(ub);
+    unsigned dimIv = constraints.appendDimId(iv);
+    unsigned dimLb = constraints.appendDimId(lb);
+    unsigned dimUb = constraints.appendDimId(ub);
 
     // If loop lower/upper bounds are constant: Add EQ constraint.
     Optional<int64_t> lbInt = getConstantIntValue(lb);
@@ -520,40 +516,6 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
   /// the direct parent.
   bool skipPartial;
 };
-
-/// Canonicalize AffineMinOp/AffineMaxOp operations in the context of scf.for
-/// and scf.parallel loops with a known range.
-template <typename OpTy, bool IsMin>
-struct AffineOpSCFCanonicalizationPattern : public OpRewritePattern<OpTy> {
-  using OpRewritePattern<OpTy>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(OpTy op,
-                                PatternRewriter &rewriter) const override {
-    auto loopMatcher = [](Value iv, Value &lb, Value &ub, Value &step) {
-      if (scf::ForOp forOp = scf::getForInductionVarOwner(iv)) {
-        lb = forOp.lowerBound();
-        ub = forOp.upperBound();
-        step = forOp.step();
-        return success();
-      }
-      if (scf::ParallelOp parOp = scf::getParallelForInductionVarOwner(iv)) {
-        for (unsigned idx = 0; idx < parOp.getNumLoops(); ++idx) {
-          if (parOp.getInductionVars()[idx] == iv) {
-            lb = parOp.lowerBound()[idx];
-            ub = parOp.upperBound()[idx];
-            step = parOp.step()[idx];
-            return success();
-          }
-        }
-        return failure();
-      }
-      return failure();
-    };
-
-    return scf::canonicalizeMinMaxOpInLoop(rewriter, op, op.getAffineMap(),
-                                           op.operands(), IsMin, loopMatcher);
-  }
-};
 } // namespace
 
 namespace {
@@ -587,23 +549,7 @@ struct ForLoopPeeling : public SCFForLoopPeelingBase<ForLoopPeeling> {
     });
   }
 };
-
-struct SCFAffineOpCanonicalization
-    : public SCFAffineOpCanonicalizationBase<SCFAffineOpCanonicalization> {
-  void runOnFunction() override {
-    FuncOp funcOp = getFunction();
-    MLIRContext *ctx = funcOp.getContext();
-    RewritePatternSet patterns(ctx);
-    scf::populateSCFLoopBodyCanonicalizationPatterns(patterns);
-    if (failed(applyPatternsAndFoldGreedily(funcOp, std::move(patterns))))
-      signalPassFailure();
-  }
-};
 } // namespace
-
-std::unique_ptr<Pass> mlir::createSCFAffineOpCanonicalizationPass() {
-  return std::make_unique<SCFAffineOpCanonicalization>();
-}
 
 std::unique_ptr<Pass> mlir::createParallelLoopSpecializationPass() {
   return std::make_unique<ParallelLoopSpecialization>();
@@ -615,13 +561,4 @@ std::unique_ptr<Pass> mlir::createForLoopSpecializationPass() {
 
 std::unique_ptr<Pass> mlir::createForLoopPeelingPass() {
   return std::make_unique<ForLoopPeeling>();
-}
-
-void mlir::scf::populateSCFLoopBodyCanonicalizationPatterns(
-    RewritePatternSet &patterns) {
-  MLIRContext *ctx = patterns.getContext();
-  patterns
-      .insert<AffineOpSCFCanonicalizationPattern<AffineMinOp, /*IsMin=*/true>,
-              AffineOpSCFCanonicalizationPattern<AffineMaxOp, /*IsMin=*/false>>(
-          ctx);
 }

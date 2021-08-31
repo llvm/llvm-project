@@ -3,7 +3,7 @@
 // RUN: | %fcheck-generic
 
 // CHECK: Libomptarget message: explicit extension not allowed: host address specified is 0x{{.*}} (8 bytes), but device allocation maps to host at 0x{{.*}} (8 bytes)
-// CHECK: Libomptarget error: Call to getOrAllocTgtPtr returned null pointer (device failure or illegal mapping).
+// CHECK: Libomptarget error: Call to getTargetPointer returned null pointer (device failure or illegal mapping).
 // CHECK: Libomptarget fatal error 1: failure of target construct while offloading is mandatory
 
 int main() {

@@ -981,6 +981,8 @@ void MCObjectFileInfo::initXCOFFMCObjectFileInfo(const Triple &T) {
       /* MultiSymbolsAllowed */ true, ".dwmac", XCOFF::SSUBTYP_DWMAC);
 }
 
+MCObjectFileInfo::~MCObjectFileInfo() {}
+
 void MCObjectFileInfo::initMCObjectFileInfo(MCContext &MCCtx, bool PIC,
                                             bool LargeCodeModel) {
   PositionIndependent = PIC;

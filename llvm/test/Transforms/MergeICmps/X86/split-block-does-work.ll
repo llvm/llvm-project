@@ -141,28 +141,20 @@ opeq1.exit:
   ret i1 %8
 }
 
-; TODO: The call happen before the loads, so it cannot clobber them.
+; The call happens before the loads, so it cannot clobber them.
 define zeroext i1 @opeq1_call_before_loads(
 ; X86-LABEL: @opeq1_call_before_loads(
-; X86-NEXT:  entry:
+; X86-NEXT:  "entry+land.rhs.i+land.rhs.i.2+land.rhs.i.3":
 ; X86-NEXT:    call void (...) @foo()
-; X86-NEXT:    [[FIRST_I:%.*]] = getelementptr inbounds [[S:%.*]], %S* [[A:%.*]], i64 0, i32 0
-; X86-NEXT:    [[TMP0:%.*]] = load i32, i32* [[FIRST_I]], align 4
-; X86-NEXT:    [[FIRST1_I:%.*]] = getelementptr inbounds [[S]], %S* [[B:%.*]], i64 0, i32 0
-; X86-NEXT:    [[TMP1:%.*]] = load i32, i32* [[FIRST1_I]], align 4
-; X86-NEXT:    [[CMP_I:%.*]] = icmp eq i32 [[TMP0]], [[TMP1]]
-; X86-NEXT:    br i1 [[CMP_I]], label %"land.rhs.i+land.rhs.i.2+land.rhs.i.3", label [[OPEQ1_EXIT:%.*]]
-; X86:       "land.rhs.i+land.rhs.i.2+land.rhs.i.3":
-; X86-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[S]], %S* [[A]], i64 0, i32 1
-; X86-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[S]], %S* [[B]], i64 0, i32 1
-; X86-NEXT:    [[CSTR:%.*]] = bitcast i32* [[TMP2]] to i8*
-; X86-NEXT:    [[CSTR1:%.*]] = bitcast i32* [[TMP3]] to i8*
-; X86-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* [[CSTR]], i8* [[CSTR1]], i64 12)
-; X86-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[MEMCMP]], 0
-; X86-NEXT:    br label [[OPEQ1_EXIT]]
+; X86-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[S:%.*]], %S* [[A:%.*]], i64 0, i32 0
+; X86-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[S]], %S* [[B:%.*]], i64 0, i32 0
+; X86-NEXT:    [[CSTR:%.*]] = bitcast i32* [[TMP0]] to i8*
+; X86-NEXT:    [[CSTR1:%.*]] = bitcast i32* [[TMP1]] to i8*
+; X86-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* [[CSTR]], i8* [[CSTR1]], i64 16)
+; X86-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[MEMCMP]], 0
+; X86-NEXT:    br label [[OPEQ1_EXIT:%.*]]
 ; X86:       opeq1.exit:
-; X86-NEXT:    [[TMP5:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[TMP4]], %"land.rhs.i+land.rhs.i.2+land.rhs.i.3" ]
-; X86-NEXT:    ret i1 [[TMP5]]
+; X86-NEXT:    ret i1 [[TMP2]]
 ;
 ; Make sure this call is moved to the beginning of the entry block.
   %S* nocapture readonly dereferenceable(16) %a,

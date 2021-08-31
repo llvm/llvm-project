@@ -234,7 +234,6 @@ set(files
   __ranges/size.h
   __ranges/subrange.h
   __ranges/take_view.h
-  __ranges/take_view.h
   __ranges/transform_view.h
   __ranges/view_interface.h
   __split_buffer
@@ -265,9 +264,9 @@ set(files
   __tree
   __tuple
   __undef_macros
-  __utility/__decay_copy.h
   __utility/as_const.h
   __utility/cmp.h
+  __utility/decay_copy.h
   __utility/declval.h
   __utility/exchange.h
   __utility/forward.h

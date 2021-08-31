@@ -700,7 +700,10 @@ static spirv::PointerType getPushConstantStorageType(unsigned elementCount,
 static spirv::GlobalVariableOp getPushConstantVariable(Block &body,
                                                        unsigned elementCount) {
   for (auto varOp : body.getOps<spirv::GlobalVariableOp>()) {
-    auto ptrType = varOp.type().cast<spirv::PointerType>();
+    auto ptrType = varOp.type().dyn_cast<spirv::PointerType>();
+    if (!ptrType)
+      continue;
+
     // Note that Vulkan requires "There must be no more than one push constant
     // block statically used per shader entry point." So we should always reuse
     // the existing one.

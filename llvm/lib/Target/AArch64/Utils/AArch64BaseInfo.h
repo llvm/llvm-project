@@ -454,6 +454,60 @@ namespace AArch64SVEPredPattern {
 #include "AArch64GenSystemOperands.inc"
 }
 
+/// Return the number of active elements for VL1 to VL256 predicate pattern,
+/// zero for all other patterns.
+inline unsigned getNumElementsFromSVEPredPattern(unsigned Pattern) {
+  switch (Pattern) {
+  default:
+    return 0;
+  case AArch64SVEPredPattern::vl1:
+  case AArch64SVEPredPattern::vl2:
+  case AArch64SVEPredPattern::vl3:
+  case AArch64SVEPredPattern::vl4:
+  case AArch64SVEPredPattern::vl5:
+  case AArch64SVEPredPattern::vl6:
+  case AArch64SVEPredPattern::vl7:
+  case AArch64SVEPredPattern::vl8:
+    return Pattern;
+  case AArch64SVEPredPattern::vl16:
+    return 16;
+  case AArch64SVEPredPattern::vl32:
+    return 32;
+  case AArch64SVEPredPattern::vl64:
+    return 64;
+  case AArch64SVEPredPattern::vl128:
+    return 128;
+  case AArch64SVEPredPattern::vl256:
+    return 256;
+  }
+}
+
+/// Return specific VL predicate pattern based on the number of elements.
+inline unsigned getSVEPredPatternFromNumElements(unsigned MinNumElts) {
+  switch (MinNumElts) {
+  default:
+    llvm_unreachable("unexpected element count for SVE predicate");
+  case 1:
+    return AArch64SVEPredPattern::vl1;
+  case 2:
+    return AArch64SVEPredPattern::vl2;
+  case 4:
+    return AArch64SVEPredPattern::vl4;
+  case 8:
+    return AArch64SVEPredPattern::vl8;
+  case 16:
+    return AArch64SVEPredPattern::vl16;
+  case 32:
+    return AArch64SVEPredPattern::vl32;
+  case 64:
+    return AArch64SVEPredPattern::vl64;
+  case 128:
+    return AArch64SVEPredPattern::vl128;
+  case 256:
+    return AArch64SVEPredPattern::vl256;
+  }
+}
+
 namespace AArch64ExactFPImm {
   struct ExactFPImm {
     const char *Name;

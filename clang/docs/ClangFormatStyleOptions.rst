@@ -646,22 +646,8 @@ the configuration (without a prefix: ``Auto``).
                  d);
 
 **AllowAllConstructorInitializersOnNextLine** (``bool``)
-  If a constructor definition with a member initializer list doesn't
-  fit on a single line, allow putting all member initializers onto the next
-  line, if ```ConstructorInitializerAllOnOneLineOrOnePerLine``` is true.
-  Note that this parameter has no effect if
-  ```ConstructorInitializerAllOnOneLineOrOnePerLine``` is false.
-
-  .. code-block:: c++
-
-    true:
-    MyClass::MyClass() :
-        member0(0), member1(2) {}
-
-    false:
-    MyClass::MyClass() :
-        member0(0),
-        member1(2) {}
+  This option is **deprecated**. See ``NextLine`` of
+  ``PackConstructorInitializers``.
 
 **AllowAllParametersOfDeclarationOnNextLine** (``bool``)
   If the function declaration doesn't fit on a line,
@@ -2002,7 +1988,7 @@ the configuration (without a prefix: ``Auto``).
          SecondValueVeryVeryVeryVeryLong;
 
 **BreakConstructorInitializers** (``BreakConstructorInitializersStyle``)
-  The constructor initializers style to use.
+  The break constructor initializers style to use.
 
   Possible values:
 
@@ -2140,23 +2126,8 @@ the configuration (without a prefix: ``Auto``).
     }}}
 
 **ConstructorInitializerAllOnOneLineOrOnePerLine** (``bool``)
-  If the constructor initializers don't fit on a line, put each
-  initializer on its own line.
-
-  .. code-block:: c++
-
-    true:
-    SomeClass::Constructor()
-        : aaaaaaaa(aaaaaaaa), aaaaaaaa(aaaaaaaa), aaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaa) {
-      return 0;
-    }
-
-    false:
-    SomeClass::Constructor()
-        : aaaaaaaa(aaaaaaaa), aaaaaaaa(aaaaaaaa),
-          aaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaa) {
-      return 0;
-    }
+  This option is **deprecated**. See ``CurrentLine`` of
+  ``PackConstructorInitializers``.
 
 **ConstructorInitializerIndentWidth** (``unsigned``)
   The number of characters to use for indentation of constructor
@@ -3142,6 +3113,60 @@ the configuration (without a prefix: ``Auto``).
      #else
      # define BAR
      #endif
+
+**PackConstructorInitializers** (``PackConstructorInitializersStyle``)
+  The pack constructor initializers style to use.
+
+  Possible values:
+
+  * ``PCIS_Never`` (in configuration: ``Never``)
+    Always put each constructor initializer on its own line.
+
+    .. code-block:: c++
+
+       Constructor()
+           : a(),
+             b()
+
+  * ``PCIS_BinPack`` (in configuration: ``BinPack``)
+    Bin-pack constructor initializers.
+
+    .. code-block:: c++
+
+       Constructor()
+           : aaaaaaaaaaaaaaaaaaaa(), bbbbbbbbbbbbbbbbbbbb(),
+             cccccccccccccccccccc()
+
+  * ``PCIS_CurrentLine`` (in configuration: ``CurrentLine``)
+    Put all constructor initializers on the current line if they fit.
+    Otherwise, put each one on its own line.
+
+    .. code-block:: c++
+
+       Constructor() : a(), b()
+
+       Constructor()
+           : aaaaaaaaaaaaaaaaaaaa(),
+             bbbbbbbbbbbbbbbbbbbb(),
+             ddddddddddddd()
+
+  * ``PCIS_NextLine`` (in configuration: ``NextLine``)
+    Same as ``PCIS_CurrentLine`` except that if all constructor initializers
+    do not fit on the current line, try to fit them on the next line.
+
+    .. code-block:: c++
+
+       Constructor() : a(), b()
+
+       Constructor()
+           : aaaaaaaaaaaaaaaaaaaa(), bbbbbbbbbbbbbbbbbbbb(), ddddddddddddd()
+
+       Constructor()
+           : aaaaaaaaaaaaaaaaaaaa(),
+             bbbbbbbbbbbbbbbbbbbb(),
+             cccccccccccccccccccc()
+
+
 
 **PenaltyBreakAssignment** (``unsigned``)
   The penalty for breaking around an assignment operator.

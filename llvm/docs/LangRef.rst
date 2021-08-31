@@ -22412,7 +22412,7 @@ Overview:
 """""""""
 
 The purpose of the ``llvm.arithmetic.fence`` intrinsic
-is to prevent the optimizer from performaing fast-math optimizations,
+is to prevent the optimizer from performing fast-math optimizations,
 particularly reassociation,
 between the argument and the expression that contains the argument.
 It can be used to preserve the parentheses in the source language.

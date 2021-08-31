@@ -5,9 +5,9 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid8_opt:
+.. _amdgpu_synid_gfx8_opt:
 
 opt
-===========================
+===
 
 This is an optional operand. It must be used if and only if :ref:`glc<amdgpu_synid_glc>` is specified.

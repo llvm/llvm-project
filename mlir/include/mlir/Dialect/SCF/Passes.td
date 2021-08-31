@@ -17,14 +17,14 @@ def SCFBufferize : FunctionPass<"scf-bufferize"> {
   let dependentDialects = ["memref::MemRefDialect"];
 }
 
-// Note: Making this a canonicalization pattern would require a dependency
-// of the SCF dialect on the Affine dialect or vice versa.
-def SCFAffineOpCanonicalization
-    : FunctionPass<"canonicalize-scf-affine-op"> {
-  let summary = "Canonicalize affine.min and affine.max ops in the context of "
-                "SCF loops with known bounds";
-  let constructor = "mlir::createSCFAffineOpCanonicalizationPass()";
-  let dependentDialects = ["AffineDialect"];
+// Note: Making these canonicalization patterns would require a dependency
+// of the SCF dialect on the Affine/Tensor/MemRef dialects or vice versa.
+def SCFForLoopCanonicalization
+    : FunctionPass<"for-loop-canonicalization"> {
+  let summary = "Canonicalize operations within scf.for loop bodies";
+  let constructor = "mlir::createSCFForLoopCanonicalizationPass()";
+  let dependentDialects = ["AffineDialect", "tensor::TensorDialect",
+                           "memref::MemRefDialect"];
 }
 
 def SCFForLoopPeeling

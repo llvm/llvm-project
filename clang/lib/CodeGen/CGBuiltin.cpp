@@ -12404,24 +12404,8 @@ Value *CodeGenFunction::EmitX86CpuSupports(const CallExpr *E) {
   return EmitX86CpuSupports(FeatureStr);
 }
 
-uint64_t
-CodeGenFunction::GetX86CpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
-  // Processor features and mapping to processor feature value.
-  uint64_t FeaturesMask = 0;
-  for (const StringRef &FeatureStr : FeatureStrs) {
-    unsigned Feature =
-        StringSwitch<unsigned>(FeatureStr)
-#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY)                                \
-  .Case(STR, llvm::X86::FEATURE_##ENUM)
-#include "llvm/Support/X86TargetParser.def"
-        ;
-    FeaturesMask |= (1ULL << Feature);
-  }
-  return FeaturesMask;
-}
-
 Value *CodeGenFunction::EmitX86CpuSupports(ArrayRef<StringRef> FeatureStrs) {
-  return EmitX86CpuSupports(GetX86CpuSupportsMask(FeatureStrs));
+  return EmitX86CpuSupports(llvm::X86::getCpuSupportsMask(FeatureStrs));
 }
 
 llvm::Value *CodeGenFunction::EmitX86CpuSupports(uint64_t FeaturesMask) {

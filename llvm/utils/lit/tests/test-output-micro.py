@@ -1,4 +1,4 @@
-# RUN: %{lit} -j 1 -v %{inputs}/test-data-micro --output %t.results.out
+# RUN: %{lit} -v %{inputs}/test-data-micro --output %t.results.out
 # RUN: FileCheck < %t.results.out %s
 # RUN: rm %t.results.out
 

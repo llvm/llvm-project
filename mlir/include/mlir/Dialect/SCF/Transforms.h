@@ -179,7 +179,7 @@ void populateSCFLoopPipeliningPatterns(RewritePatternSet &patterns,
 /// Populate patterns for canonicalizing operations inside SCF loop bodies.
 /// At the moment, only affine.min/max computations with iteration variables,
 /// loop bounds and loop steps are canonicalized.
-void populateSCFLoopBodyCanonicalizationPatterns(RewritePatternSet &patterns);
+void populateSCFForLoopCanonicalizationPatterns(RewritePatternSet &patterns);
 
 } // namespace scf
 } // namespace mlir

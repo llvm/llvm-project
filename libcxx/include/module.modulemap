@@ -789,9 +789,9 @@ module std [system] {
     export *
 
     module __utility {
-      module __decay_copy        { private header "__utility/__decay_copy.h"        }
       module as_const            { private header "__utility/as_const.h"            }
       module cmp                 { private header "__utility/cmp.h"                 }
+      module decay_copy          { private header "__utility/decay_copy.h"          }
       module declval             { private header "__utility/declval.h"             }
       module exchange            { private header "__utility/exchange.h"            }
       module forward             { private header "__utility/forward.h"             }

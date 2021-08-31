@@ -52,7 +52,7 @@ using namespace clang::CodeGen;
 
 static uint32_t getTypeAlignIfRequired(const Type *Ty, const ASTContext &Ctx) {
   auto TI = Ctx.getTypeInfo(Ty);
-  return TI.AlignIsRequired ? TI.Align : 0;
+  return TI.isAlignRequired() ? TI.Align : 0;
 }
 
 static uint32_t getTypeAlignIfRequired(QualType Ty, const ASTContext &Ctx) {
@@ -4676,7 +4676,7 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
     llvm::DIType *fieldType;
     if (capture->isByRef()) {
       TypeInfo PtrInfo = C.getTypeInfo(C.VoidPtrTy);
-      auto Align = PtrInfo.AlignIsRequired ? PtrInfo.Align : 0;
+      auto Align = PtrInfo.isAlignRequired() ? PtrInfo.Align : 0;
       // FIXME: This recomputes the layout of the BlockByRefWrapper.
       uint64_t xoffset;
       fieldType =

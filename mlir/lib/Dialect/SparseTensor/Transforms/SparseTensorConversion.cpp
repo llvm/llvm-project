@@ -96,19 +96,21 @@ static Value getTensor(ConversionPatternRewriter &rewriter, unsigned width,
 }
 
 /// Returns function reference (first hit also inserts into module).
-static FlatSymbolRefAttr getFunc(Operation *op, StringRef name, Type result,
+static FlatSymbolRefAttr getFunc(Operation *op, StringRef name, Type resultType,
                                  ValueRange operands) {
   MLIRContext *context = op->getContext();
   auto module = op->getParentOfType<ModuleOp>();
-  auto func = module.lookupSymbol<FuncOp>(name);
+  auto result = SymbolRefAttr::get(context, name);
+  auto func = module.lookupSymbol<FuncOp>(result.getAttr());
   if (!func) {
     OpBuilder moduleBuilder(module.getBodyRegion());
     moduleBuilder
-        .create<FuncOp>(op->getLoc(), name,
-                        FunctionType::get(context, operands.getTypes(), result))
+        .create<FuncOp>(
+            op->getLoc(), name,
+            FunctionType::get(context, operands.getTypes(), resultType))
         .setPrivate();
   }
-  return SymbolRefAttr::get(context, name);
+  return result;
 }
 
 /// Generates a call into the "swiss army knife" method of the sparse runtime
@@ -283,11 +285,23 @@ class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
     Type resType = op.getType();
     auto encDst = getSparseTensorEncoding(resType);
     auto encSrc = getSparseTensorEncoding(op.source().getType());
-    // TODO: implement sparse => sparse
-    //             and sparse => dense
-    if (!encDst || encSrc)
+    if (encDst && encSrc) {
+      // This is a sparse => sparse conversion, which is handled as follows:
+      //   t = src->asCOO();         ; src to COO in dst order
+      //   dst = newSparseTensor(t)
+      // Using the coordinate scheme as an intermediate does not always
+      // yield the fastest conversion but avoids the need for a full
+      // O(N^2) conversion matrix.
+      Value perm;
+      Value coo = genNewCall(rewriter, op, encDst, 3, perm, operands[0]);
+      rewriter.replaceOp(op, genNewCall(rewriter, op, encDst, 1, perm, coo));
+      return success();
+    }
+    if (!encDst || encSrc) {
+      // TODO: sparse => dense
       return failure();
-    // This is a dense => sparse conversion, that is handled as follows:
+    }
+    // This is a dense => sparse conversion, which is handled as follows:
     //   t = newSparseCOO()
     //   for i1 in dim1
     //    ..

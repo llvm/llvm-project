@@ -50,6 +50,7 @@ add_entrypoint_object(
     libc.src.errno.__errno_location
     libc.src.sys.mman.mmap
   COMPILE_OPTIONS
+    -O3
     -fno-omit-frame-pointer # This allows us to sniff out the thread args from
                             # the new thread's stack reliably.
 )

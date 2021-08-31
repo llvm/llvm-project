@@ -901,6 +901,10 @@ if (LLVM_USE_SPLIT_DWARF AND
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
       CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     add_compile_options(-gsplit-dwarf)
+  include(LLVMCheckLinkerFlag)
+  llvm_check_linker_flag(CXX "-Wl,--gdb-index" LINKER_SUPPORTS_GDB_INDEX)
+  append_if(LINKER_SUPPORTS_GDB_INDEX "-Wl,--gdb-index"
+    CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
   endif()
 endif()
 

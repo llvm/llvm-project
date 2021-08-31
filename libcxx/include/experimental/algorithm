@@ -41,10 +41,6 @@ ForwardIterator search(ForwardIterator first, ForwardIterator last,
 #pragma GCC system_header
 #endif
 
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
-
-
 _LIBCPP_BEGIN_NAMESPACE_LFTS
 
 template <class _ForwardIterator, class _Searcher>
@@ -53,7 +49,5 @@ _ForwardIterator search(_ForwardIterator __f, _ForwardIterator __l, const _Searc
 { return __s(__f, __l).first; }
 
 _LIBCPP_END_NAMESPACE_LFTS
-
-_LIBCPP_POP_MACROS
 
 #endif /* _LIBCPP_EXPERIMENTAL_ALGORITHM */

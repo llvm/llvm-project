@@ -2353,7 +2353,11 @@ DynamicType IntrinsicProcTable::Implementation::GetSpecificType(
   const CategorySet &set{pattern.categorySet};
   CHECK(set.count() == 1);
   TypeCategory category{set.LeastElement().value()};
-  return DynamicType{category, defaults_.GetDefaultKind(category)};
+  if (pattern.kindCode == KindCode::doublePrecision) {
+    return DynamicType{category, defaults_.doublePrecisionKind()};
+  } else {
+    return DynamicType{category, defaults_.GetDefaultKind(category)};
+  }
 }
 
 IntrinsicProcTable::~IntrinsicProcTable() = default;

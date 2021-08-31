@@ -265,6 +265,17 @@ struct ScalarEnumerationTraits<FormatStyle::BreakInheritanceListStyle> {
 };
 
 template <>
+struct ScalarEnumerationTraits<FormatStyle::PackConstructorInitializersStyle> {
+  static void
+  enumeration(IO &IO, FormatStyle::PackConstructorInitializersStyle &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::PCIS_Never);
+    IO.enumCase(Value, "BinPack", FormatStyle::PCIS_BinPack);
+    IO.enumCase(Value, "CurrentLine", FormatStyle::PCIS_CurrentLine);
+    IO.enumCase(Value, "NextLine", FormatStyle::PCIS_NextLine);
+  }
+};
+
+template <>
 struct ScalarEnumerationTraits<FormatStyle::EmptyLineAfterAccessModifierStyle> {
   static void
   enumeration(IO &IO, FormatStyle::EmptyLineAfterAccessModifierStyle &Value) {
@@ -552,8 +563,6 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("AlignTrailingComments", Style.AlignTrailingComments);
     IO.mapOptional("AllowAllArgumentsOnNextLine",
                    Style.AllowAllArgumentsOnNextLine);
-    IO.mapOptional("AllowAllConstructorInitializersOnNextLine",
-                   Style.AllowAllConstructorInitializersOnNextLine);
     IO.mapOptional("AllowAllParametersOfDeclarationOnNextLine",
                    Style.AllowAllParametersOfDeclarationOnNextLine);
     IO.mapOptional("AllowShortEnumsOnASingleLine",
@@ -633,8 +642,6 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("ColumnLimit", Style.ColumnLimit);
     IO.mapOptional("CommentPragmas", Style.CommentPragmas);
     IO.mapOptional("CompactNamespaces", Style.CompactNamespaces);
-    IO.mapOptional("ConstructorInitializerAllOnOneLineOrOnePerLine",
-                   Style.ConstructorInitializerAllOnOneLineOrOnePerLine);
     IO.mapOptional("ConstructorInitializerIndentWidth",
                    Style.ConstructorInitializerIndentWidth);
     IO.mapOptional("ContinuationIndentWidth", Style.ContinuationIndentWidth);
@@ -648,6 +655,41 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.EmptyLineBeforeAccessModifier);
     IO.mapOptional("ExperimentalAutoDetectBinPacking",
                    Style.ExperimentalAutoDetectBinPacking);
+
+    IO.mapOptional("PackConstructorInitializers",
+                   Style.PackConstructorInitializers);
+    // For backward compatibility:
+    // The default value of ConstructorInitializerAllOnOneLineOrOnePerLine was
+    // false unless BasedOnStyle was Google or Chromium whereas that of
+    // AllowAllConstructorInitializersOnNextLine was always true, so the
+    // equivalent default value of PackConstructorInitializers is PCIS_NextLine
+    // for Google/Chromium or PCIS_BinPack otherwise. If the deprecated options
+    // had a non-default value while PackConstructorInitializers has a default
+    // value, set the latter to an equivalent non-default value if needed.
+    StringRef BasedOn;
+    IO.mapOptional("BasedOnStyle", BasedOn);
+    const bool IsGoogleOrChromium = BasedOn.equals_insensitive("google") ||
+                                    BasedOn.equals_insensitive("chromium");
+    bool OnCurrentLine = IsGoogleOrChromium;
+    bool OnNextLine = true;
+    IO.mapOptional("ConstructorInitializerAllOnOneLineOrOnePerLine",
+                   OnCurrentLine);
+    IO.mapOptional("AllowAllConstructorInitializersOnNextLine", OnNextLine);
+    if (!IsGoogleOrChromium) {
+      if (Style.PackConstructorInitializers == FormatStyle::PCIS_BinPack &&
+          OnCurrentLine) {
+        Style.PackConstructorInitializers = OnNextLine
+                                                ? FormatStyle::PCIS_NextLine
+                                                : FormatStyle::PCIS_CurrentLine;
+      }
+    } else if (Style.PackConstructorInitializers ==
+               FormatStyle::PCIS_NextLine) {
+      if (!OnCurrentLine)
+        Style.PackConstructorInitializers = FormatStyle::PCIS_BinPack;
+      else if (!OnNextLine)
+        Style.PackConstructorInitializers = FormatStyle::PCIS_CurrentLine;
+    }
+
     IO.mapOptional("FixNamespaceComments", Style.FixNamespaceComments);
     IO.mapOptional("ForEachMacros", Style.ForEachMacros);
     IO.mapOptional("IfMacros", Style.IfMacros);
@@ -988,7 +1030,6 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AlignConsecutiveDeclarations = FormatStyle::ACS_None;
   LLVMStyle.AlignConsecutiveMacros = FormatStyle::ACS_None;
   LLVMStyle.AllowAllArgumentsOnNextLine = true;
-  LLVMStyle.AllowAllConstructorInitializersOnNextLine = true;
   LLVMStyle.AllowAllParametersOfDeclarationOnNextLine = true;
   LLVMStyle.AllowShortEnumsOnASingleLine = true;
   LLVMStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_All;
@@ -1034,7 +1075,6 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.ColumnLimit = 80;
   LLVMStyle.CommentPragmas = "^ IWYU pragma:";
   LLVMStyle.CompactNamespaces = false;
-  LLVMStyle.ConstructorInitializerAllOnOneLineOrOnePerLine = false;
   LLVMStyle.ConstructorInitializerIndentWidth = 4;
   LLVMStyle.ContinuationIndentWidth = 4;
   LLVMStyle.Cpp11BracedListStyle = true;
@@ -1043,6 +1083,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.EmptyLineAfterAccessModifier = FormatStyle::ELAAMS_Never;
   LLVMStyle.EmptyLineBeforeAccessModifier = FormatStyle::ELBAMS_LogicalBlock;
   LLVMStyle.ExperimentalAutoDetectBinPacking = false;
+  LLVMStyle.PackConstructorInitializers = FormatStyle::PCIS_BinPack;
   LLVMStyle.FixNamespaceComments = true;
   LLVMStyle.ForEachMacros.push_back("foreach");
   LLVMStyle.ForEachMacros.push_back("Q_FOREACH");
@@ -1158,7 +1199,6 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   GoogleStyle.AllowShortLoopsOnASingleLine = true;
   GoogleStyle.AlwaysBreakBeforeMultilineStrings = true;
   GoogleStyle.AlwaysBreakTemplateDeclarations = FormatStyle::BTDS_Yes;
-  GoogleStyle.ConstructorInitializerAllOnOneLineOrOnePerLine = true;
   GoogleStyle.DerivePointerAlignment = true;
   GoogleStyle.IncludeStyle.IncludeCategories = {{"^<ext/.*\\.h>", 2, 0, false},
                                                 {"^<.*\\.h>", 1, 0, false},
@@ -1171,6 +1211,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   GoogleStyle.ObjCBinPackProtocolList = FormatStyle::BPS_Never;
   GoogleStyle.ObjCSpaceAfterProperty = false;
   GoogleStyle.ObjCSpaceBeforeProtocolList = true;
+  GoogleStyle.PackConstructorInitializers = FormatStyle::PCIS_NextLine;
   GoogleStyle.PointerAlignment = FormatStyle::PAS_Left;
   GoogleStyle.RawStringFormats = {
       {

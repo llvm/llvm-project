@@ -5,10 +5,10 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid8_label:
+.. _amdgpu_synid_gfx8_label:
 
 label
-===========================
+=====
 
 A branch target which is a 16-bit signed integer treated as a PC-relative dword offset.
 

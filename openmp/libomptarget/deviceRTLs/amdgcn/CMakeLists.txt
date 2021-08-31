@@ -107,7 +107,7 @@ else()
 endif()
 
 # create libraries
-set(mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx902 gfx906 gfx908)
+set(mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx902 gfx906 gfx908 gfx1010 gfx1030 gfx1031)
 if (DEFINED LIBOMPTARGET_AMDGCN_GFXLIST)
   set(mcpus ${LIBOMPTARGET_AMDGCN_GFXLIST})
 endif()
@@ -163,6 +163,14 @@ endmacro()
 
 set(libname "omptarget-amdgcn")
 
+set(toolchain_deps "")
+if(TARGET llvm-link)
+  list(APPEND toolchain_deps llvm-link)
+endif()
+if(TARGET opt)
+  list(APPEND toolchain_deps opt)
+endif()
+
 foreach(mcpu ${mcpus})
   set(bc_files)
   add_cuda_bc_library(${cuda_sources})
@@ -171,7 +179,7 @@ foreach(mcpu ${mcpus})
   add_custom_command(
     OUTPUT ${bc_libname}
     COMMAND ${LINK_TOOL} ${bc_files} | ${OPT_TOOL} --always-inline -o ${OUTPUTDIR}/${bc_libname}
-    DEPENDS ${bc_files} llvm-link opt)
+    DEPENDS ${bc_files} ${toolchain_deps})
 
   add_custom_target(lib${libname}-${mcpu} ALL DEPENDS ${bc_libname})
 

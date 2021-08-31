@@ -129,6 +129,62 @@ int memcpyDtoD(const void *SrcPtr, void *DstPtr, int64_t Size,
   return OFFLOAD_SUCCESS;
 }
 
+int createEvent(void **P) {
+  CUevent Event = nullptr;
+
+  CUresult Err = cuEventCreate(&Event, CU_EVENT_DEFAULT);
+  if (Err != CUDA_SUCCESS) {
+    DP("Error when creating event event = " DPxMOD "\n", DPxPTR(Event));
+    CUDA_ERR_STRING(Err);
+    return OFFLOAD_FAIL;
+  }
+
+  *P = Event;
+
+  return OFFLOAD_SUCCESS;
+}
+
+int recordEvent(void *EventPtr, __tgt_async_info *AsyncInfo) {
+  CUstream Stream = reinterpret_cast<CUstream>(AsyncInfo->Queue);
+  CUevent Event = reinterpret_cast<CUevent>(EventPtr);
+
+  CUresult Err = cuEventRecord(Event, Stream);
+  if (Err != CUDA_SUCCESS) {
+    DP("Error when recording event. stream = " DPxMOD ", event = " DPxMOD "\n",
+       DPxPTR(Stream), DPxPTR(Event));
+    CUDA_ERR_STRING(Err);
+    return OFFLOAD_FAIL;
+  }
+
+  return OFFLOAD_SUCCESS;
+}
+
+int syncEvent(void *EventPtr) {
+  CUevent Event = reinterpret_cast<CUevent>(EventPtr);
+
+  CUresult Err = cuEventSynchronize(Event);
+  if (Err != CUDA_SUCCESS) {
+    DP("Error when syncing event = " DPxMOD "\n", DPxPTR(Event));
+    CUDA_ERR_STRING(Err);
+    return OFFLOAD_FAIL;
+  }
+
+  return OFFLOAD_SUCCESS;
+}
+
+int destroyEvent(void *EventPtr) {
+  CUevent Event = reinterpret_cast<CUevent>(EventPtr);
+
+  CUresult Err = cuEventDestroy(Event);
+  if (Err != CUDA_SUCCESS) {
+    DP("Error when destroying event = " DPxMOD "\n", DPxPTR(Event));
+    CUDA_ERR_STRING(Err);
+    return OFFLOAD_FAIL;
+  }
+
+  return OFFLOAD_SUCCESS;
+}
+
 // Structure contains per-device data
 struct DeviceDataTy {
   /// List that contains all the kernels.
@@ -1332,6 +1388,25 @@ public:
         "Error returned from cuDeviceGetAttribute\n");
     printf("    Compute Capabilities: \t\t%d%d \n", TmpInt, TmpInt2);
   }
+
+  int waitEvent(const int DeviceId, __tgt_async_info *AsyncInfo,
+                void *EventPtr) const {
+    CUstream Stream = getStream(DeviceId, AsyncInfo);
+    CUevent Event = reinterpret_cast<CUevent>(EventPtr);
+
+    // We don't use CU_EVENT_WAIT_DEFAULT here as it is only available from
+    // specific CUDA version, and defined as 0x0. In previous version, per CUDA
+    // API document, that argument has to be 0x0.
+    CUresult Err = cuStreamWaitEvent(Stream, Event, 0);
+    if (Err != CUDA_SUCCESS) {
+      DP("Error when waiting event. stream = " DPxMOD ", event = " DPxMOD "\n",
+         DPxPTR(Stream), DPxPTR(Event));
+      CUDA_ERR_STRING(Err);
+      return OFFLOAD_FAIL;
+    }
+
+    return OFFLOAD_SUCCESS;
+  }
 };
 
 DeviceRTLTy DeviceRTL;
@@ -1535,6 +1610,41 @@ void __tgt_rtl_set_info_flag(uint32_t NewInfoLevel) {
 void __tgt_rtl_print_device_info(int32_t device_id) {
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
   DeviceRTL.printDeviceInfo(device_id);
+}
+
+int32_t __tgt_rtl_create_event(int32_t device_id, void **event) {
+  assert(event && "event is nullptr");
+  return createEvent(event);
+}
+
+int32_t __tgt_rtl_record_event(int32_t device_id, void *event_ptr,
+                               __tgt_async_info *async_info_ptr) {
+  assert(async_info_ptr && "async_info_ptr is nullptr");
+  assert(async_info_ptr->Queue && "async_info_ptr->Queue is nullptr");
+  assert(event_ptr && "event_ptr is nullptr");
+
+  return recordEvent(event_ptr, async_info_ptr);
+}
+
+int32_t __tgt_rtl_wait_event(int32_t device_id, void *event_ptr,
+                             __tgt_async_info *async_info_ptr) {
+  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+  assert(async_info_ptr && "async_info_ptr is nullptr");
+  assert(event_ptr && "event is nullptr");
+
+  return DeviceRTL.waitEvent(device_id, async_info_ptr, event_ptr);
+}
+
+int32_t __tgt_rtl_sync_event(int32_t device_id, void *event_ptr) {
+  assert(event_ptr && "event is nullptr");
+
+  return syncEvent(event_ptr);
+}
+
+int32_t __tgt_rtl_destroy_event(int32_t device_id, void *event_ptr) {
+  assert(event_ptr && "event is nullptr");
+
+  return destroyEvent(event_ptr);
 }
 
 #ifdef __cplusplus
