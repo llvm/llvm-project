@@ -332,7 +332,7 @@ void __libcpp_aligned_free(void* __ptr) {
 
 
 template <class _Tp>
-_LIBCPP_NODISCARD_AFTER_CXX17 inline
+_LIBCPP_NODISCARD_AFTER_CXX17 inline _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR _Tp* __launder(_Tp* __p) _NOEXCEPT
 {
     static_assert (!(is_function<_Tp>::value), "can't launder functions" );
@@ -344,10 +344,9 @@ _LIBCPP_CONSTEXPR _Tp* __launder(_Tp* __p) _NOEXCEPT
 #endif
 }
 
-
 #if _LIBCPP_STD_VER > 14
 template <class _Tp>
-_LIBCPP_NODISCARD_AFTER_CXX17 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_NODISCARD_AFTER_CXX17 inline _LIBCPP_HIDE_FROM_ABI
 constexpr _Tp* launder(_Tp* __p) noexcept
 {
     return _VSTD::__launder(__p);
