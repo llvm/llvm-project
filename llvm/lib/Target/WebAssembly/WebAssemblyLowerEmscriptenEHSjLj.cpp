@@ -434,15 +434,6 @@ Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallBase *CI) {
   Module *M = CI->getModule();
   LLVMContext &C = M->getContext();
 
-  // If we are calling a function that is noreturn, we must remove that
-  // attribute. The code we insert here does expect it to return, after we
-  // catch the exception.
-  if (CI->doesNotReturn()) {
-    if (auto *F = CI->getCalledFunction())
-      F->removeFnAttr(Attribute::NoReturn);
-    CI->removeFnAttr(Attribute::NoReturn);
-  }
-
   IRBuilder<> IRB(C);
   IRB.SetInsertPoint(CI);
 
@@ -760,6 +751,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
     FunctionType *ResumeFTy =
         FunctionType::get(IRB.getVoidTy(), IRB.getInt8PtrTy(), false);
     ResumeF = getEmscriptenFunction(ResumeFTy, "__resumeException", &M);
+    ResumeF->addFnAttr(Attribute::NoReturn);
 
     // Register llvm_eh_typeid_for function
     FunctionType *EHTypeIDTy =
@@ -790,6 +782,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
     FunctionType *FTy = FunctionType::get(
         IRB.getVoidTy(), {getAddrIntType(&M), IRB.getInt32Ty()}, false);
     EmLongjmpF = getEmscriptenFunction(FTy, "emscripten_longjmp", &M);
+    EmLongjmpF->addFnAttr(Attribute::NoReturn);
 
     if (SetjmpF) {
       // Register saveSetjmp function
@@ -1152,11 +1145,16 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
     Instruction *TI = BB.getTerminator();
     if (isa<ReturnInst>(TI))
       ExitingInsts.push_back(TI);
+    // Any 'call' instruction with 'noreturn' attribute exits the function at
+    // this point. If this throws but unwinds to another EH pad within this
+    // function instead of exiting, this would have been an 'invoke', which
+    // happens if we use Wasm EH or Wasm SjLJ.
     for (auto &I : BB) {
-      if (auto *CB = dyn_cast<CallBase>(&I)) {
-        StringRef CalleeName = CB->getCalledOperand()->getName();
-        if (CalleeName == "__resumeException" ||
-            CalleeName == "emscripten_longjmp" || CalleeName == "__cxa_throw")
+      if (auto *CI = dyn_cast<CallInst>(&I)) {
+        bool IsNoReturn = CI->hasFnAttr(Attribute::NoReturn);
+        if (auto *CalleeF = dyn_cast<Function>(CI->getCalledOperand()))
+          IsNoReturn |= CalleeF->hasFnAttribute(Attribute::NoReturn);
+        if (IsNoReturn)
           ExitingInsts.push_back(&I);
       }
     }
