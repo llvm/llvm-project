@@ -846,7 +846,7 @@ their parent classes. So the ``let`` acts to override inherited field
 values. A ``let`` cannot override the value of a template argument.
 
 Top-level ``let`` statements are often useful when a few fields need to be
-overriden in several records. Here are two examples. Note that ``let``
+overridden in several records. Here are two examples. Note that ``let``
 statements can be nested.
 
 .. code-block:: text
