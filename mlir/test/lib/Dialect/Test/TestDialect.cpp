@@ -318,7 +318,7 @@ TestDialect::getOperationPrinter(Operation *op) const {
   StringRef opName = op->getName().getStringRef();
   if (opName == "test.dialect_custom_printer") {
     return [](Operation *op, OpAsmPrinter &printer) {
-      printer.getStream() << op->getName().getStringRef() << " custom_format";
+      printer.getStream() << " custom_format";
     };
   }
   return {};
@@ -656,7 +656,6 @@ static ParseResult parseParseIntegerLiteralOp(OpAsmParser &parser,
 }
 
 static void print(OpAsmPrinter &p, ParseIntegerLiteralOp op) {
-  p << ParseIntegerLiteralOp::getOperationName();
   if (unsigned numResults = op->getNumResults())
     p << " : " << numResults;
 }
@@ -671,7 +670,7 @@ static ParseResult parseParseWrappedKeywordOp(OpAsmParser &parser,
 }
 
 static void print(OpAsmPrinter &p, ParseWrappedKeywordOp op) {
-  p << ParseWrappedKeywordOp::getOperationName() << " " << op.keyword();
+  p << " " << op.keyword();
 }
 
 //===----------------------------------------------------------------------===//
@@ -709,7 +708,7 @@ static ParseResult parseWrappingRegionOp(OpAsmParser &parser,
 }
 
 static void print(OpAsmPrinter &p, WrappingRegionOp op) {
-  p << op.getOperationName() << " wraps ";
+  p << " wraps ";
   p.printGenericOp(&op.region().front().front());
 }
 
@@ -961,8 +960,6 @@ static ParseResult parseStringAttrPrettyNameOp(OpAsmParser &parser,
 }
 
 static void print(OpAsmPrinter &p, StringAttrPrettyNameOp op) {
-  p << "test.string_attr_pretty_name";
-
   // Note that we only need to print the "name" attribute if the asmprinter
   // result name disagrees with it.  This can happen in strange cases, e.g.
   // when there are conflicts.
@@ -1004,7 +1001,7 @@ void StringAttrPrettyNameOp::getAsmResultNames(
 //===----------------------------------------------------------------------===//
 
 static void print(OpAsmPrinter &p, RegionIfOp op) {
-  p << RegionIfOp::getOperationName() << " ";
+  p << " ";
   p.printOperands(op.getOperands());
   p << ": " << op.getOperandTypes();
   p.printArrowTypeList(op.getResultTypes());
@@ -1083,7 +1080,6 @@ static ParseResult parseSingleNoTerminatorCustomAsmOp(OpAsmParser &parser,
 }
 
 static void print(SingleNoTerminatorCustomAsmOp op, OpAsmPrinter &printer) {
-  printer << op.getOperationName();
   printer.printRegion(
       op.getRegion(), /*printEntryBlockArgs=*/false,
       // This op has a single block without terminators. But explicitly mark

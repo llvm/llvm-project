@@ -688,7 +688,7 @@ static ParseResult parseAtomicUpdateOp(OpAsmParser &parser,
 
 // Prints an atomic update op.
 static void printAtomicUpdateOp(Operation *op, OpAsmPrinter &printer) {
-  printer << op->getName() << " \"";
+  printer << " \"";
   auto scopeAttr = op->getAttrOfType<IntegerAttr>(kMemoryScopeAttrName);
   printer << spirv::stringifyScope(
                  static_cast<spirv::Scope>(scopeAttr.getInt()))
@@ -757,7 +757,7 @@ static ParseResult parseGroupNonUniformArithmeticOp(OpAsmParser &parser,
 
 static void printGroupNonUniformArithmeticOp(Operation *groupOp,
                                              OpAsmPrinter &printer) {
-  printer << groupOp->getName() << " \""
+  printer << " \""
           << stringifyScope(static_cast<spirv::Scope>(
                  groupOp->getAttrOfType<IntegerAttr>(kExecutionScopeAttrName)
                      .getInt()))
@@ -813,7 +813,7 @@ static ParseResult parseUnaryOp(OpAsmParser &parser, OperationState &state) {
 }
 
 static void printUnaryOp(Operation *unaryOp, OpAsmPrinter &printer) {
-  printer << unaryOp->getName() << ' ' << unaryOp->getOperand(0) << " : "
+  printer << ' ' << unaryOp->getOperand(0) << " : "
           << unaryOp->getOperand(0).getType();
 }
 
@@ -851,7 +851,7 @@ static ParseResult parseLogicalBinaryOp(OpAsmParser &parser,
 }
 
 static void printLogicalOp(Operation *logicalOp, OpAsmPrinter &printer) {
-  printer << logicalOp->getName() << ' ' << logicalOp->getOperands() << " : "
+  printer << ' ' << logicalOp->getOperands() << " : "
           << logicalOp->getOperand(0).getType();
 }
 
@@ -875,8 +875,8 @@ static ParseResult parseShiftOp(OpAsmParser &parser, OperationState &state) {
 static void printShiftOp(Operation *op, OpAsmPrinter &printer) {
   Value base = op->getOperand(0);
   Value shift = op->getOperand(1);
-  printer << op->getName() << ' ' << base << ", " << shift << " : "
-          << base.getType() << ", " << shift.getType();
+  printer << ' ' << base << ", " << shift << " : " << base.getType() << ", "
+          << shift.getType();
 }
 
 static LogicalResult verifyShiftOp(Operation *op) {
@@ -1021,7 +1021,7 @@ static ParseResult parseAccessChainOp(OpAsmParser &parser,
 
 template <typename Op>
 static void printAccessChain(Op op, ValueRange indices, OpAsmPrinter &printer) {
-  printer << Op::getOperationName() << ' ' << op.base_ptr() << '[' << indices
+  printer << ' ' << op.base_ptr() << '[' << indices
           << "] : " << op.base_ptr().getType() << ", " << indices.getTypes();
 }
 
@@ -1114,8 +1114,7 @@ static ParseResult parseAtomicCompareExchangeWeakOp(OpAsmParser &parser,
 
 static void print(spirv::AtomicCompareExchangeWeakOp atomOp,
                   OpAsmPrinter &printer) {
-  printer << spirv::AtomicCompareExchangeWeakOp::getOperationName() << " \""
-          << stringifyScope(atomOp.memory_scope()) << "\" \""
+  printer << " \"" << stringifyScope(atomOp.memory_scope()) << "\" \""
           << stringifyMemorySemantics(atomOp.equal_semantics()) << "\" \""
           << stringifyMemorySemantics(atomOp.unequal_semantics()) << "\" "
           << atomOp.getOperands() << " : " << atomOp.pointer().getType();
@@ -1257,8 +1256,7 @@ static ParseResult parseBranchConditionalOp(OpAsmParser &parser,
 }
 
 static void print(spirv::BranchConditionalOp branchOp, OpAsmPrinter &printer) {
-  printer << spirv::BranchConditionalOp::getOperationName() << ' '
-          << branchOp.condition();
+  printer << ' ' << branchOp.condition();
 
   if (auto weights = branchOp.branch_weights()) {
     printer << " [";
@@ -1330,8 +1328,7 @@ static ParseResult parseCompositeConstructOp(OpAsmParser &parser,
 
 static void print(spirv::CompositeConstructOp compositeConstructOp,
                   OpAsmPrinter &printer) {
-  printer << spirv::CompositeConstructOp::getOperationName() << " "
-          << compositeConstructOp.constituents() << " : "
+  printer << " " << compositeConstructOp.constituents() << " : "
           << compositeConstructOp.getResult().getType();
 }
 
@@ -1405,9 +1402,9 @@ static ParseResult parseCompositeExtractOp(OpAsmParser &parser,
 
 static void print(spirv::CompositeExtractOp compositeExtractOp,
                   OpAsmPrinter &printer) {
-  printer << spirv::CompositeExtractOp::getOperationName() << ' '
-          << compositeExtractOp.composite() << compositeExtractOp.indices()
-          << " : " << compositeExtractOp.composite().getType();
+  printer << ' ' << compositeExtractOp.composite()
+          << compositeExtractOp.indices() << " : "
+          << compositeExtractOp.composite().getType();
 }
 
 static LogicalResult verify(spirv::CompositeExtractOp compExOp) {
@@ -1479,10 +1476,9 @@ static LogicalResult verify(spirv::CompositeInsertOp compositeInsertOp) {
 
 static void print(spirv::CompositeInsertOp compositeInsertOp,
                   OpAsmPrinter &printer) {
-  printer << spirv::CompositeInsertOp::getOperationName() << " "
-          << compositeInsertOp.object() << ", " << compositeInsertOp.composite()
-          << compositeInsertOp.indices() << " : "
-          << compositeInsertOp.object().getType() << " into "
+  printer << " " << compositeInsertOp.object() << ", "
+          << compositeInsertOp.composite() << compositeInsertOp.indices()
+          << " : " << compositeInsertOp.object().getType() << " into "
           << compositeInsertOp.composite().getType();
 }
 
@@ -1505,7 +1501,7 @@ static ParseResult parseConstantOp(OpAsmParser &parser, OperationState &state) {
 }
 
 static void print(spirv::ConstantOp constOp, OpAsmPrinter &printer) {
-  printer << spirv::ConstantOp::getOperationName() << ' ' << constOp.value();
+  printer << ' ' << constOp.value();
   if (constOp.getType().isa<spirv::ArrayType>())
     printer << " : " << constOp.getType();
 }
@@ -1747,8 +1743,8 @@ static ParseResult parseEntryPointOp(OpAsmParser &parser,
 }
 
 static void print(spirv::EntryPointOp entryPointOp, OpAsmPrinter &printer) {
-  printer << spirv::EntryPointOp::getOperationName() << " \""
-          << stringifyExecutionModel(entryPointOp.execution_model()) << "\" ";
+  printer << " \"" << stringifyExecutionModel(entryPointOp.execution_model())
+          << "\" ";
   printer.printSymbolName(entryPointOp.fn());
   auto interfaceVars = entryPointOp.interface().getValue();
   if (!interfaceVars.empty()) {
@@ -1801,7 +1797,7 @@ static ParseResult parseExecutionModeOp(OpAsmParser &parser,
 }
 
 static void print(spirv::ExecutionModeOp execModeOp, OpAsmPrinter &printer) {
-  printer << spirv::ExecutionModeOp::getOperationName() << " ";
+  printer << " ";
   printer.printSymbolName(execModeOp.fn());
   printer << " \"" << stringifyExecutionMode(execModeOp.execution_mode())
           << "\"";
@@ -1867,7 +1863,7 @@ static ParseResult parseFuncOp(OpAsmParser &parser, OperationState &state) {
 
 static void print(spirv::FuncOp fnOp, OpAsmPrinter &printer) {
   // Print function name, signature, and control.
-  printer << spirv::FuncOp::getOperationName() << " ";
+  printer << " ";
   printer.printSymbolName(fnOp.sym_name());
   auto fnType = fnOp.getType();
   function_like_impl::printFunctionSignature(printer, fnOp, fnType.getInputs(),
@@ -2079,7 +2075,6 @@ static void print(spirv::GlobalVariableOp varOp, OpAsmPrinter &printer) {
   auto *op = varOp.getOperation();
   SmallVector<StringRef, 4> elidedAttrs{
       spirv::attributeName<spirv::StorageClass>()};
-  printer << spirv::GlobalVariableOp::getOperationName();
 
   // Print variable name.
   printer << ' ';
@@ -2216,8 +2211,7 @@ static ParseResult parseSubgroupBlockReadINTELOp(OpAsmParser &parser,
 static void print(spirv::SubgroupBlockReadINTELOp blockReadOp,
                   OpAsmPrinter &printer) {
   SmallVector<StringRef, 4> elidedAttrs;
-  printer << spirv::SubgroupBlockReadINTELOp::getOperationName() << " "
-          << blockReadOp.ptr();
+  printer << " " << blockReadOp.ptr();
   printer << " : " << blockReadOp.getType();
 }
 
@@ -2260,8 +2254,7 @@ static ParseResult parseSubgroupBlockWriteINTELOp(OpAsmParser &parser,
 static void print(spirv::SubgroupBlockWriteINTELOp blockWriteOp,
                   OpAsmPrinter &printer) {
   SmallVector<StringRef, 4> elidedAttrs;
-  printer << spirv::SubgroupBlockWriteINTELOp::getOperationName() << " "
-          << blockWriteOp.ptr() << ", " << blockWriteOp.value();
+  printer << " " << blockWriteOp.ptr() << ", " << blockWriteOp.value();
   printer << " : " << blockWriteOp.value().getType();
 }
 
@@ -2330,8 +2323,7 @@ static void print(spirv::LoadOp loadOp, OpAsmPrinter &printer) {
   SmallVector<StringRef, 4> elidedAttrs;
   StringRef sc = stringifyStorageClass(
       loadOp.ptr().getType().cast<spirv::PointerType>().getStorageClass());
-  printer << spirv::LoadOp::getOperationName() << " \"" << sc << "\" "
-          << loadOp.ptr();
+  printer << " \"" << sc << "\" " << loadOp.ptr();
 
   printMemoryAccessAttribute(loadOp, printer, elidedAttrs);
 
@@ -2371,7 +2363,6 @@ static ParseResult parseLoopOp(OpAsmParser &parser, OperationState &state) {
 static void print(spirv::LoopOp loopOp, OpAsmPrinter &printer) {
   auto *op = loopOp.getOperation();
 
-  printer << spirv::LoopOp::getOperationName();
   auto control = loopOp.loop_control();
   if (control != spirv::LoopControl::None)
     printer << " control(" << spirv::stringifyLoopControl(control) << ")";
@@ -2596,8 +2587,6 @@ static ParseResult parseModuleOp(OpAsmParser &parser, OperationState &state) {
 }
 
 static void print(spirv::ModuleOp moduleOp, OpAsmPrinter &printer) {
-  printer << spirv::ModuleOp::getOperationName();
-
   if (Optional<StringRef> name = moduleOp.getName()) {
     printer << ' ';
     printer.printSymbolName(*name);
@@ -2769,8 +2758,6 @@ static ParseResult parseSelectionOp(OpAsmParser &parser,
 
 static void print(spirv::SelectionOp selectionOp, OpAsmPrinter &printer) {
   auto *op = selectionOp.getOperation();
-
-  printer << spirv::SelectionOp::getOperationName();
   auto control = selectionOp.selection_control();
   if (control != spirv::SelectionControl::None)
     printer << " control(" << spirv::stringifySelectionControl(control) << ")";
@@ -2902,7 +2889,7 @@ static ParseResult parseSpecConstantOp(OpAsmParser &parser,
 }
 
 static void print(spirv::SpecConstantOp constOp, OpAsmPrinter &printer) {
-  printer << spirv::SpecConstantOp::getOperationName() << ' ';
+  printer << ' ';
   printer.printSymbolName(constOp.sym_name());
   if (auto specID = constOp->getAttrOfType<IntegerAttr>(kSpecIdAttrName))
     printer << ' ' << kSpecIdAttrName << '(' << specID.getInt() << ')';
@@ -2955,8 +2942,7 @@ static void print(spirv::StoreOp storeOp, OpAsmPrinter &printer) {
   SmallVector<StringRef, 4> elidedAttrs;
   StringRef sc = stringifyStorageClass(
       storeOp.ptr().getType().cast<spirv::PointerType>().getStorageClass());
-  printer << spirv::StoreOp::getOperationName() << " \"" << sc << "\" "
-          << storeOp.ptr() << ", " << storeOp.value();
+  printer << " \"" << sc << "\" " << storeOp.ptr() << ", " << storeOp.value();
 
   printMemoryAccessAttribute(storeOp, printer, elidedAttrs);
 
@@ -3042,8 +3028,6 @@ static ParseResult parseVariableOp(OpAsmParser &parser, OperationState &state) {
 static void print(spirv::VariableOp varOp, OpAsmPrinter &printer) {
   SmallVector<StringRef, 4> elidedAttrs{
       spirv::attributeName<spirv::StorageClass>()};
-  printer << spirv::VariableOp::getOperationName();
-
   // Print optional initializer
   if (varOp.getNumOperands() != 0)
     printer << " init(" << varOp.initializer() << ")";
@@ -3153,8 +3137,8 @@ static ParseResult parseCooperativeMatrixLoadNVOp(OpAsmParser &parser,
 }
 
 static void print(spirv::CooperativeMatrixLoadNVOp M, OpAsmPrinter &printer) {
-  printer << spirv::CooperativeMatrixLoadNVOp::getOperationName() << " "
-          << M.pointer() << ", " << M.stride() << ", " << M.columnmajor();
+  printer << " " << M.pointer() << ", " << M.stride() << ", "
+          << M.columnmajor();
   // Print optional memory access attribute.
   if (auto memAccess = M.memory_access())
     printer << " [\"" << stringifyMemoryAccess(*memAccess) << "\"]";
@@ -3208,8 +3192,7 @@ static ParseResult parseCooperativeMatrixStoreNVOp(OpAsmParser &parser,
 
 static void print(spirv::CooperativeMatrixStoreNVOp coopMatrix,
                   OpAsmPrinter &printer) {
-  printer << spirv::CooperativeMatrixStoreNVOp::getOperationName() << " "
-          << coopMatrix.pointer() << ", " << coopMatrix.object() << ", "
+  printer << " " << coopMatrix.pointer() << ", " << coopMatrix.object() << ", "
           << coopMatrix.stride() << ", " << coopMatrix.columnmajor();
   // Print optional memory access attribute.
   if (auto memAccess = coopMatrix.memory_access())
@@ -3287,7 +3270,7 @@ static LogicalResult verifyMatrixTimesScalar(spirv::MatrixTimesScalarOp op) {
 
 static void print(spirv::CopyMemoryOp copyMemory, OpAsmPrinter &printer) {
   auto *op = copyMemory.getOperation();
-  printer << spirv::CopyMemoryOp::getOperationName() << ' ';
+  printer << ' ';
 
   StringRef targetStorageClass =
       stringifyStorageClass(copyMemory.target()
@@ -3493,7 +3476,7 @@ static ParseResult parseSpecConstantCompositeOp(OpAsmParser &parser,
 }
 
 static void print(spirv::SpecConstantCompositeOp op, OpAsmPrinter &printer) {
-  printer << spirv::SpecConstantCompositeOp::getOperationName() << " ";
+  printer << " ";
   printer.printSymbolName(op.sym_name());
   printer << " (";
   auto constituents = op.constituents().getValue();
@@ -3569,7 +3552,7 @@ static ParseResult parseSpecConstantOperationOp(OpAsmParser &parser,
 }
 
 static void print(spirv::SpecConstantOperationOp op, OpAsmPrinter &printer) {
-  printer << op.getOperationName() << " wraps ";
+  printer << " wraps ";
   printer.printGenericOp(&op.body().front().front());
 }
 

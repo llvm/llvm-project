@@ -537,8 +537,7 @@ def GPU_ReturnOp : GPU_Op<"return", [HasParent<"GPUFuncOp">, NoSideEffect,
 
   let builders = [OpBuilder<(ins), [{ // empty}]>];
 
-  let parser = [{ return parseReturnOp(parser, result); }];
-  let printer = [{ p << getOperationName(); }];
+  let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
   let verifier = [{ return ::verify(*this); }];
 }
 
@@ -552,8 +551,7 @@ def GPU_TerminatorOp : GPU_Op<"terminator", [HasParent<"LaunchOp">,
     terminator takes no operands.
   }];
 
-  let parser = [{ return success(); }];
-  let printer = [{ p << getOperationName(); }];
+  let assemblyFormat = "attr-dict";
 }
 
 def GPU_YieldOp : GPU_Op<"yield", [NoSideEffect, Terminator]>,
@@ -681,8 +679,7 @@ def GPU_BarrierOp : GPU_Op<"barrier"> {
     Either none or all work items of a workgroup need to execute this op
     in convergence.
   }];
-  let parser = [{ return success(); }];
-  let printer = [{ p << getOperationName(); }];
+  let assemblyFormat = "attr-dict";
 }
 
 def GPU_GPUModuleOp : GPU_Op<"module", [
@@ -733,8 +730,7 @@ def GPU_ModuleEndOp : GPU_Op<"module_end", [
     This op terminates the only block inside the only region of a `gpu.module`.
   }];
 
-  let parser = [{ return success(); }];
-  let printer = [{ p << getOperationName(); }];
+  let assemblyFormat = "attr-dict";
 }
 
 def GPU_HostRegisterOp : GPU_Op<"host_register">,

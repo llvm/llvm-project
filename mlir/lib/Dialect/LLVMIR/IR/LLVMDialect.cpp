@@ -73,15 +73,15 @@ static void printLLVMOpAttrs(OpAsmPrinter &printer, Operation *op,
 // Printing/parsing for LLVM::CmpOp.
 //===----------------------------------------------------------------------===//
 static void printICmpOp(OpAsmPrinter &p, ICmpOp &op) {
-  p << op.getOperationName() << " \"" << stringifyICmpPredicate(op.predicate())
-    << "\" " << op.getOperand(0) << ", " << op.getOperand(1);
+  p << " \"" << stringifyICmpPredicate(op.predicate()) << "\" "
+    << op.getOperand(0) << ", " << op.getOperand(1);
   p.printOptionalAttrDict(op->getAttrs(), {"predicate"});
   p << " : " << op.lhs().getType();
 }
 
 static void printFCmpOp(OpAsmPrinter &p, FCmpOp &op) {
-  p << op.getOperationName() << " \"" << stringifyFCmpPredicate(op.predicate())
-    << "\" " << op.getOperand(0) << ", " << op.getOperand(1);
+  p << " \"" << stringifyFCmpPredicate(op.predicate()) << "\" "
+    << op.getOperand(0) << ", " << op.getOperand(1);
   p.printOptionalAttrDict(processFMFAttr(op->getAttrs()), {"predicate"});
   p << " : " << op.lhs().getType();
 }
@@ -161,7 +161,7 @@ static void printAllocaOp(OpAsmPrinter &p, AllocaOp &op) {
   auto funcTy = FunctionType::get(op.getContext(), {op.arraySize().getType()},
                                   {op.getType()});
 
-  p << op.getOperationName() << ' ' << op.arraySize() << " x " << elemTy;
+  p << ' ' << op.arraySize() << " x " << elemTy;
   if (op.alignment().hasValue() && *op.alignment() != 0)
     p.printOptionalAttrDict(op->getAttrs());
   else
@@ -421,7 +421,7 @@ void LoadOp::build(OpBuilder &builder, OperationState &result, Type t,
 }
 
 static void printLoadOp(OpAsmPrinter &p, LoadOp &op) {
-  p << op.getOperationName() << ' ';
+  p << ' ';
   if (op.volatile_())
     p << "volatile ";
   p << op.addr();
@@ -483,7 +483,7 @@ void StoreOp::build(OpBuilder &builder, OperationState &result, Value value,
 }
 
 static void printStoreOp(OpAsmPrinter &p, StoreOp &op) {
-  p << op.getOperationName() << ' ';
+  p << ' ';
   if (op.volatile_())
     p << "volatile ";
   p << op.value() << ", " << op.addr();
@@ -549,7 +549,7 @@ static void printInvokeOp(OpAsmPrinter &p, InvokeOp op) {
   auto callee = op.callee();
   bool isDirect = callee.hasValue();
 
-  p << op.getOperationName() << ' ';
+  p << ' ';
 
   // Either function name or pointer
   if (isDirect)
@@ -710,7 +710,7 @@ static LogicalResult verify(LandingpadOp op) {
 }
 
 static void printLandingpadOp(OpAsmPrinter &p, LandingpadOp &op) {
-  p << op.getOperationName() << (op.cleanup() ? " cleanup " : " ");
+  p << (op.cleanup() ? " cleanup " : " ");
 
   // Clauses
   for (auto value : op.getOperands()) {
@@ -849,7 +849,7 @@ static void printCallOp(OpAsmPrinter &p, CallOp &op) {
 
   // Print the direct callee if present as a function attribute, or an indirect
   // callee (first operand) otherwise.
-  p << op.getOperationName() << ' ';
+  p << ' ';
   if (isDirect)
     p.printSymbolName(callee.getValue());
   else
@@ -961,8 +961,8 @@ void LLVM::ExtractElementOp::build(OpBuilder &b, OperationState &result,
 }
 
 static void printExtractElementOp(OpAsmPrinter &p, ExtractElementOp &op) {
-  p << op.getOperationName() << ' ' << op.vector() << "[" << op.position()
-    << " : " << op.position().getType() << "]";
+  p << ' ' << op.vector() << "[" << op.position() << " : "
+    << op.position().getType() << "]";
   p.printOptionalAttrDict(op->getAttrs());
   p << " : " << op.vector().getType();
 }
@@ -1008,7 +1008,7 @@ static LogicalResult verify(ExtractElementOp op) {
 //===----------------------------------------------------------------------===//
 
 static void printExtractValueOp(OpAsmPrinter &p, ExtractValueOp &op) {
-  p << op.getOperationName() << ' ' << op.container() << op.position();
+  p << ' ' << op.container() << op.position();
   p.printOptionalAttrDict(op->getAttrs(), {"position"});
   p << " : " << op.container().getType();
 }
@@ -1160,8 +1160,8 @@ static LogicalResult verify(ExtractValueOp op) {
 //===----------------------------------------------------------------------===//
 
 static void printInsertElementOp(OpAsmPrinter &p, InsertElementOp &op) {
-  p << op.getOperationName() << ' ' << op.value() << ", " << op.vector() << "["
-    << op.position() << " : " << op.position().getType() << "]";
+  p << ' ' << op.value() << ", " << op.vector() << "[" << op.position() << " : "
+    << op.position().getType() << "]";
   p.printOptionalAttrDict(op->getAttrs());
   p << " : " << op.vector().getType();
 }
@@ -1210,8 +1210,7 @@ static LogicalResult verify(InsertElementOp op) {
 //===----------------------------------------------------------------------===//
 
 static void printInsertValueOp(OpAsmPrinter &p, InsertValueOp &op) {
-  p << op.getOperationName() << ' ' << op.value() << ", " << op.container()
-    << op.position();
+  p << ' ' << op.value() << ", " << op.container() << op.position();
   p.printOptionalAttrDict(op->getAttrs(), {"position"});
   p << " : " << op.container().getType();
 }
@@ -1267,7 +1266,6 @@ static LogicalResult verify(InsertValueOp op) {
 //===----------------------------------------------------------------------===//
 
 static void printReturnOp(OpAsmPrinter &p, ReturnOp op) {
-  p << op.getOperationName();
   p.printOptionalAttrDict(op->getAttrs());
   assert(op.getNumOperands() <= 1);
 
@@ -1410,7 +1408,7 @@ void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
 }
 
 static void printGlobalOp(OpAsmPrinter &p, GlobalOp op) {
-  p << op.getOperationName() << ' ' << stringifyLinkage(op.linkage()) << ' ';
+  p << ' ' << stringifyLinkage(op.linkage()) << ' ';
   if (op.unnamed_addr())
     p << stringifyUnnamedAddr(*op.unnamed_addr()) << ' ';
   if (op.constant())
@@ -1635,8 +1633,7 @@ void LLVM::ShuffleVectorOp::build(OpBuilder &b, OperationState &result,
 }
 
 static void printShuffleVectorOp(OpAsmPrinter &p, ShuffleVectorOp &op) {
-  p << op.getOperationName() << ' ' << op.v1() << ", " << op.v2() << " "
-    << op.mask();
+  p << ' ' << op.v1() << ", " << op.v2() << " " << op.mask();
   p.printOptionalAttrDict(op->getAttrs(), {"mask"});
   p << " : " << op.v1().getType() << ", " << op.v2().getType();
 }
@@ -1799,7 +1796,7 @@ static ParseResult parseLLVMFuncOp(OpAsmParser &parser,
 // helper functions. Drops "void" result since it cannot be parsed back. Skips
 // the external linkage since it is the default value.
 static void printLLVMFuncOp(OpAsmPrinter &p, LLVMFuncOp op) {
-  p << op.getOperationName() << ' ';
+  p << ' ';
   if (op.linkage() != LLVM::Linkage::External)
     p << stringifyLinkage(op.linkage()) << ' ';
   p.printSymbolName(op.getName());
@@ -2001,9 +1998,8 @@ static ParseResult parseAtomicOrdering(OpAsmParser &parser,
 //===----------------------------------------------------------------------===//
 
 static void printAtomicRMWOp(OpAsmPrinter &p, AtomicRMWOp &op) {
-  p << op.getOperationName() << ' ' << stringifyAtomicBinOp(op.bin_op()) << ' '
-    << op.ptr() << ", " << op.val() << ' '
-    << stringifyAtomicOrdering(op.ordering()) << ' ';
+  p << ' ' << stringifyAtomicBinOp(op.bin_op()) << ' ' << op.ptr() << ", "
+    << op.val() << ' ' << stringifyAtomicOrdering(op.ordering()) << ' ';
   p.printOptionalAttrDict(op->getAttrs(), {"bin_op", "ordering"});
   p << " : " << op.res().getType();
 }
@@ -2072,8 +2068,8 @@ static LogicalResult verify(AtomicRMWOp op) {
 //===----------------------------------------------------------------------===//
 
 static void printAtomicCmpXchgOp(OpAsmPrinter &p, AtomicCmpXchgOp &op) {
-  p << op.getOperationName() << ' ' << op.ptr() << ", " << op.cmp() << ", "
-    << op.val() << ' ' << stringifyAtomicOrdering(op.success_ordering()) << ' '
+  p << ' ' << op.ptr() << ", " << op.cmp() << ", " << op.val() << ' '
+    << stringifyAtomicOrdering(op.success_ordering()) << ' '
     << stringifyAtomicOrdering(op.failure_ordering());
   p.printOptionalAttrDict(op->getAttrs(),
                           {"success_ordering", "failure_ordering"});
@@ -2159,7 +2155,7 @@ static ParseResult parseFenceOp(OpAsmParser &parser, OperationState &result) {
 
 static void printFenceOp(OpAsmPrinter &p, FenceOp &op) {
   StringRef syncscopeKeyword = "syncscope";
-  p << op.getOperationName() << ' ';
+  p << ' ';
   if (!op->getAttr(syncscopeKeyword).cast<StringAttr>().getValue().empty())
     p << "syncscope(" << op->getAttr(syncscopeKeyword) << ") ";
   p << stringifyAtomicOrdering(op.ordering());

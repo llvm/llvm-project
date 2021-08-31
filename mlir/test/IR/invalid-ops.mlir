@@ -159,7 +159,7 @@ func @func_with_ops(f32) {
 
 func @func_with_ops(f32) {
 ^bb0(%a : f32):
-  %sf = addf(%a, %a) : f32  // expected-error {{expected ':'}}
+  %sf = addf(%a, %a) : f32  // expected-error {{'std.addf' expected function type}}
 }
 
 // -----

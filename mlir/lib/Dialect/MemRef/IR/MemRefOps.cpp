@@ -208,7 +208,7 @@ void AllocaOp::getCanonicalizationPatterns(RewritePatternSet &results,
 static void print(OpAsmPrinter &p, AllocaScopeOp &op) {
   bool printBlockTerminators = false;
 
-  p << AllocaScopeOp::getOperationName() << " ";
+  p << " ";
   if (!op.results().empty()) {
     p << " -> (" << op.getResultTypes() << ")";
     printBlockTerminators = true;
@@ -805,10 +805,9 @@ void DmaStartOp::build(OpBuilder &builder, OperationState &result,
 }
 
 void DmaStartOp::print(OpAsmPrinter &p) {
-  p << getOperationName() << " " << getSrcMemRef() << '[' << getSrcIndices()
-    << "], " << getDstMemRef() << '[' << getDstIndices() << "], "
-    << getNumElements() << ", " << getTagMemRef() << '[' << getTagIndices()
-    << ']';
+  p << " " << getSrcMemRef() << '[' << getSrcIndices() << "], "
+    << getDstMemRef() << '[' << getDstIndices() << "], " << getNumElements()
+    << ", " << getTagMemRef() << '[' << getTagIndices() << ']';
   if (isStrided())
     p << ", " << getStride() << ", " << getNumElementsPerStride();
 
@@ -970,8 +969,8 @@ void DmaWaitOp::build(OpBuilder &builder, OperationState &result,
 }
 
 void DmaWaitOp::print(OpAsmPrinter &p) {
-  p << getOperationName() << " " << getTagMemRef() << '[' << getTagIndices()
-    << "], " << getNumElements();
+  p << " " << getTagMemRef() << '[' << getTagIndices() << "], "
+    << getNumElements();
   p.printOptionalAttrDict((*this)->getAttrs());
   p << " : " << getTagMemRef().getType();
 }
@@ -1177,7 +1176,7 @@ void LoadOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 static void print(OpAsmPrinter &p, PrefetchOp op) {
-  p << PrefetchOp::getOperationName() << " " << op.memref() << '[';
+  p << " " << op.memref() << '[';
   p.printOperands(op.indices());
   p << ']' << ", " << (op.isWrite() ? "write" : "read");
   p << ", locality<" << op.localityHint();
@@ -2242,7 +2241,7 @@ void TransposeOp::build(OpBuilder &b, OperationState &result, Value in,
 
 // transpose $in $permutation attr-dict : type($in) `to` type(results)
 static void print(OpAsmPrinter &p, TransposeOp op) {
-  p << "memref.transpose " << op.in() << " " << op.permutation();
+  p << " " << op.in() << " " << op.permutation();
   p.printOptionalAttrDict(op->getAttrs(),
                           {TransposeOp::getPermutationAttrName()});
   p << " : " << op.in().getType() << " to " << op.getType();
@@ -2319,7 +2318,7 @@ static ParseResult parseViewOp(OpAsmParser &parser, OperationState &result) {
 }
 
 static void print(OpAsmPrinter &p, ViewOp op) {
-  p << op.getOperationName() << ' ' << op.getOperand(0) << '[';
+  p << ' ' << op.getOperand(0) << '[';
   p.printOperand(op.byte_shift());
   p << "][" << op.sizes() << ']';
   p.printOptionalAttrDict(op->getAttrs());

@@ -300,8 +300,8 @@ static LogicalResult verifyShuffleOp(gpu::ShuffleOp shuffleOp) {
 }
 
 static void printShuffleOp(OpAsmPrinter &p, ShuffleOp op) {
-  p << ShuffleOp::getOperationName() << ' ' << op.getOperands() << ' '
-    << op.mode() << " : " << op.value().getType();
+  p << ' ' << op.getOperands() << ' ' << op.mode() << " : "
+    << op.value().getType();
 }
 
 static ParseResult parseShuffleOp(OpAsmParser &parser, OperationState &state) {
@@ -442,7 +442,7 @@ static void printSizeAssignment(OpAsmPrinter &p, KernelDim3 size,
 
 static void printLaunchOp(OpAsmPrinter &p, LaunchOp op) {
   // Print the launch configuration.
-  p << LaunchOp::getOperationName() << ' ' << op.getBlocksKeyword();
+  p << ' ' << op.getBlocksKeyword();
   printSizeAssignment(p, op.getGridSize(), op.getGridSizeOperandValues(),
                       op.getBlockIds());
   p << ' ' << op.getThreadsKeyword();
@@ -783,7 +783,7 @@ static void printAttributions(OpAsmPrinter &p, StringRef keyword,
 
 /// Prints a GPU Func op.
 static void printGPUFuncOp(OpAsmPrinter &p, GPUFuncOp op) {
-  p << GPUFuncOp::getOperationName() << ' ';
+  p << ' ';
   p.printSymbolName(op.getName());
 
   FunctionType type = op.getType();
@@ -864,18 +864,6 @@ LogicalResult GPUFuncOp::verifyBody() {
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseReturnOp(OpAsmParser &parser, OperationState &result) {
-  llvm::SmallVector<OpAsmParser::OperandType, 4> operands;
-  llvm::SmallVector<Type, 4> types;
-  if (parser.parseOperandList(operands) ||
-      parser.parseOptionalColonTypeList(types) ||
-      parser.resolveOperands(operands, types, parser.getCurrentLocation(),
-                             result.operands))
-    return failure();
-
-  return success();
-}
-
 static LogicalResult verify(gpu::ReturnOp returnOp) {
   GPUFuncOp function = returnOp->getParentOfType<GPUFuncOp>();
 
@@ -932,7 +920,7 @@ static ParseResult parseGPUModuleOp(OpAsmParser &parser,
 }
 
 static void print(OpAsmPrinter &p, GPUModuleOp op) {
-  p << op.getOperationName() << ' ';
+  p << ' ';
   p.printSymbolName(op.getName());
   p.printOptionalAttrDictWithKeyword(op->getAttrs(),
                                      {SymbolTable::getSymbolAttrName()});
