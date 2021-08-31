@@ -12,6 +12,10 @@
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=knl -resource-pressure=false -instruction-info=false < %s | FileCheck --check-prefixes=ALL,KNL %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=skylake -resource-pressure=false -instruction-info=false < %s | FileCheck --check-prefixes=ALL,SKX %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=skylake-avx512 -resource-pressure=false -instruction-info=false < %s | FileCheck --check-prefixes=ALL,SKX-AVX512 %s
+# RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=icelake-client -resource-pressure=false -instruction-info=false < %s | FileCheck --check-prefixes=ALL,ICX %s
+# RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=icelake-server -resource-pressure=false -instruction-info=false < %s | FileCheck --check-prefixes=ALL,ICX %s
+# RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=rocketlake -resource-pressure=false -instruction-info=false < %s | FileCheck --check-prefixes=ALL,ICX %s
+# RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=tigerlake -resource-pressure=false -instruction-info=false < %s | FileCheck --check-prefixes=ALL,ICX %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=slm -resource-pressure=false -instruction-info=false < %s | FileCheck --check-prefixes=ALL,SLM %s
 
 add %edi, %eax
@@ -45,6 +49,11 @@ add %edi, %eax
 # HASWELL-NEXT:     uOps Per Cycle:    0.97
 # HASWELL-NEXT:     IPC:               0.97
 # HASWELL-NEXT:     Block RThroughput: 0.3
+
+# ICX:              Dispatch Width:    6
+# ICX-NEXT:         uOps Per Cycle:    0.97
+# ICX-NEXT:         IPC:               0.97
+# ICX-NEXT:         Block RThroughput: 0.3
 
 # IVYBRIDGE:        Dispatch Width:    4
 # IVYBRIDGE-NEXT:   uOps Per Cycle:    0.97
