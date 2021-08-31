@@ -2043,8 +2043,11 @@ private:
   /// permitted by Start, End, and Stride. This is for loops of the form
   /// {Start, +, Stride} LT End.
   ///
-  /// Precondition: the induction variable is known to be positive.  We *don't*
-  /// assert these preconditions so please be careful.
+  /// Preconditions:
+  /// * the induction variable is known to be positive.
+  /// * the induction variable is assumed not to overflow (i.e. either it
+  ///   actually doesn't, or we'd have to immediately execute UB)
+  /// We *don't* assert these preconditions so please be careful.
   const SCEV *computeMaxBECountForLT(const SCEV *Start, const SCEV *Stride,
                                      const SCEV *End, unsigned BitWidth,
                                      bool IsSigned);
