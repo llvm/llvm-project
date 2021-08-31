@@ -7,6 +7,10 @@
 
 #if !defined NO_BLIT
 
+#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
+#pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
+
+
 static const uint SplitCount = 3;
 
 __attribute__((always_inline)) void
@@ -512,6 +516,50 @@ __amd_fillImage(
         if (coords.x >= AdjustedSizeX) return;
     }
 }
+
+
+__attribute__((always_inline)) void
+__amd_streamOpsWrite(__global atomic_ulong* ptr, ulong value) {
+
+  // The launch parameters for this shader is a 1 grid work-item
+
+  atomic_store_explicit((__global atomic_ulong*)ptr, (ulong)value, memory_order_relaxed, memory_scope_all_svm_devices);
+
+}
+
+
+__attribute__((always_inline)) void
+__amd_streamOpsWait(__global atomic_ulong* ptr, ulong value, ulong flags, ulong mask) {
+
+    // The launch parameters for this shader is a 1 grid work-item
+
+    switch (flags) {
+    case 0: //GEQ
+      while (!((((atomic_load_explicit(ptr, memory_order_relaxed, memory_scope_all_svm_devices)) & mask) - value) >= 0)) {
+        __builtin_amdgcn_s_sleep(1);
+      }
+      break;
+
+    case 1: // EQ
+      while (!(((atomic_load_explicit(ptr, memory_order_relaxed, memory_scope_all_svm_devices)) & mask ) == value)) {
+        __builtin_amdgcn_s_sleep(1);
+      }
+      break;
+
+    case 2: //AND
+      while (!(((atomic_load_explicit(ptr, memory_order_relaxed, memory_scope_all_svm_devices)) & mask) & value)) {
+        __builtin_amdgcn_s_sleep(1);
+      }
+      break;
+
+    case 3: //NOR
+      while (!(~(((atomic_load_explicit(ptr, memory_order_relaxed, memory_scope_all_svm_devices)) & mask) | value))) {
+        __builtin_amdgcn_s_sleep(1);
+      }
+      break;
+    }
+}
+
 
 #endif
 
