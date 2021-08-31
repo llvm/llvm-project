@@ -1180,13 +1180,12 @@ static constexpr OptionEnumValues SaveCoreStyles() {
 class CommandObjectProcessSaveCore : public CommandObjectParsed {
 public:
   CommandObjectProcessSaveCore(CommandInterpreter &interpreter)
-      : CommandObjectParsed(
-            interpreter, "process save-core",
-            "Save the current process as a core file using an "
-            "appropriate file type.",
-            "process save-core [-s corefile-style -p plugin-name] FILE",
-            eCommandRequiresProcess | eCommandTryTargetAPILock |
-                eCommandProcessMustBeLaunched) {}
+      : CommandObjectParsed(interpreter, "process save-core",
+                            "Save the current process as a core file using an "
+                            "appropriate file type.",
+                            "process save-core [-s corefile-style] FILE",
+                            eCommandRequiresProcess | eCommandTryTargetAPILock |
+                                eCommandProcessMustBeLaunched) {}
 
   ~CommandObjectProcessSaveCore() override = default;
 
@@ -1209,9 +1208,6 @@ public:
       Status error;
 
       switch (short_option) {
-      case 'p':
-        m_requested_plugin_name.SetString(option_arg);
-        break;
       case 's':
         m_requested_save_core_style =
             (lldb::SaveCoreStyle)OptionArgParser::ToOptionEnum(
@@ -1227,12 +1223,10 @@ public:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_requested_save_core_style = eSaveCoreUnspecified;
-      m_requested_plugin_name.Clear();
     }
 
     // Instance variables to hold the values for command options.
     SaveCoreStyle m_requested_save_core_style;
-    ConstString m_requested_plugin_name;
   };
 
 protected:
@@ -1243,8 +1237,7 @@ protected:
         FileSpec output_file(command.GetArgumentAtIndex(0));
         SaveCoreStyle corefile_style = m_options.m_requested_save_core_style;
         Status error =
-            PluginManager::SaveCore(process_sp, output_file, corefile_style,
-                                    m_options.m_requested_plugin_name);
+            PluginManager::SaveCore(process_sp, output_file, corefile_style);
         if (error.Success()) {
           if (corefile_style == SaveCoreStyle::eSaveCoreDirtyOnly ||
               corefile_style == SaveCoreStyle::eSaveCoreStackOnly) {
