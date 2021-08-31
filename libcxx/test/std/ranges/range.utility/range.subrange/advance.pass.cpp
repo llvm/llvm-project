@@ -17,7 +17,7 @@
 #include <cassert>
 #include "test_macros.h"
 #include "test_iterators.h"
-#include "../subrange_test_types.h"
+#include "types.h"
 
 constexpr bool test() {
   std::ranges::subrange<int*> a(globalBuff, globalBuff + 8, 8);

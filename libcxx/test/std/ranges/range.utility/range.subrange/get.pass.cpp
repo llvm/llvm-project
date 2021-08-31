@@ -17,7 +17,7 @@
 #include <cassert>
 #include "test_macros.h"
 #include "test_iterators.h"
-#include "../subrange_test_types.h"
+#include "types.h"
 
 template<size_t I, class S>
 concept GetInvocable = requires {
