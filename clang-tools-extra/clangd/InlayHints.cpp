@@ -331,8 +331,9 @@ private:
     if (!T.getTypePtrOrNull())
       return;
 
-    addInlayHint(R, InlayHintKind::TypeHint,
-                 std::string(Prefix) + T.getAsString(TypeHintPolicy));
+    std::string TypeName = T.getAsString(TypeHintPolicy);
+    if (TypeName.length() < TypeNameLimit)
+      addInlayHint(R, InlayHintKind::TypeHint, std::string(Prefix) + TypeName);
   }
 
   std::vector<InlayHint> &Results;
@@ -341,6 +342,8 @@ private:
   StringRef MainFileBuf;
   const HeuristicResolver *Resolver;
   PrintingPolicy TypeHintPolicy;
+
+  static const size_t TypeNameLimit = 32;
 };
 
 std::vector<InlayHint> inlayHints(ParsedAST &AST) {
