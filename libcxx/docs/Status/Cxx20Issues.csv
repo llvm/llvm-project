@@ -125,7 +125,7 @@
 "`3145 <https://wg21.link/LWG3145>`__","``file_clock``\  breaks ABI for C++17 implementations","San Diego","|Complete|",""
 "`3147 <https://wg21.link/LWG3147>`__","Definitions of ""likely"" and ""unlikely"" are likely to cause problems","San Diego","",""
 "`3148 <https://wg21.link/LWG3148>`__","``<concepts>``\  should be freestanding","San Diego","",""
-"`3153 <https://wg21.link/LWG3153>`__","``Common``\  and ``common_type``\  have too little in common","San Diego","",""
+"`3153 <https://wg21.link/LWG3153>`__","``Common``\  and ``common_type``\  have too little in common","San Diego","|Complete|","13.0"
 "`3154 <https://wg21.link/LWG3154>`__","``Common``\  and ``CommonReference``\  have a common defect","San Diego","",""
 "","","","",""
 "`3012 <https://wg21.link/LWG3012>`__","``atomic<T>``\  is unimplementable for non-``is_trivially_copy_constructible T``\ ","Kona","",""
