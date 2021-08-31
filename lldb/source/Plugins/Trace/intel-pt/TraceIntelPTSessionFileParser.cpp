@@ -9,10 +9,7 @@
 #include "TraceIntelPTSessionFileParser.h"
 
 #include "../common/ThreadPostMortemTrace.h"
-#include "lldb/Core/Debugger.h"
-#include "lldb/Target/Process.h"
-#include "lldb/Target/Target.h"
-#include "lldb/Target/ThreadList.h"
+#include "TraceIntelPT.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -59,7 +56,7 @@ TraceSP TraceIntelPTSessionFileParser::CreateTraceIntelPTInstance(
 
 Expected<TraceSP> TraceIntelPTSessionFileParser::Parse() {
   json::Path::Root root("traceSession");
-  TraceSessionFileParser::JSONTraceSession<JSONTraceIntelPTSettings> session;
+  JSONTraceSession<JSONTraceIntelPTSettings> session;
   if (!json::fromJSON(m_trace_session_file, session, root))
     return CreateJSONError(root, m_trace_session_file);
 
@@ -70,38 +67,3 @@ Expected<TraceSP> TraceIntelPTSessionFileParser::Parse() {
   else
     return parsed_processes.takeError();
 }
-
-namespace llvm {
-namespace json {
-
-bool fromJSON(
-    const Value &value,
-    TraceIntelPTSessionFileParser::JSONTraceIntelPTSettings &plugin_settings,
-    Path path) {
-  ObjectMapper o(value, path);
-  return o && o.map("cpuInfo", plugin_settings.cpuInfo) &&
-         fromJSON(
-             value,
-             (TraceSessionFileParser::JSONTracePluginSettings &)plugin_settings,
-             path);
-}
-
-bool fromJSON(const json::Value &value,
-              TraceIntelPTSessionFileParser::JSONTraceIntelPTCPUInfo &cpu_info,
-              Path path) {
-  ObjectMapper o(value, path);
-  return o && o.map("vendor", cpu_info.vendor) &&
-         o.map("family", cpu_info.family) && o.map("model", cpu_info.model) &&
-         o.map("stepping", cpu_info.stepping);
-}
-
-Value toJSON(
-    const TraceIntelPTSessionFileParser::JSONTraceIntelPTCPUInfo &cpu_info) {
-  return Value(Object{{"family", cpu_info.family},
-                      {"model", cpu_info.model},
-                      {"stepping", cpu_info.stepping},
-                      {"vendor", cpu_info.vendor}});
-}
-
-} // namespace json
-} // namespace llvm

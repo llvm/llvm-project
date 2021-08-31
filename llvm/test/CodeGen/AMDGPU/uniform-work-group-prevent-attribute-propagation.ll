@@ -22,15 +22,10 @@ define void @func() #0 {
 }
 
 define amdgpu_kernel void @kernel1() #1 {
-; AKF_CHECK-LABEL: define {{[^@]+}}@kernel1
-; AKF_CHECK-SAME: () #[[ATTR1:[0-9]+]] {
-; AKF_CHECK-NEXT:    call void @func()
-; AKF_CHECK-NEXT:    ret void
-;
-; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@kernel1
-; ATTRIBUTOR_CHECK-SAME: () #[[ATTR1:[0-9]+]] {
-; ATTRIBUTOR_CHECK-NEXT:    call void @func() #[[ATTR3:[0-9]+]]
-; ATTRIBUTOR_CHECK-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@kernel1
+; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:    call void @func()
+; CHECK-NEXT:    ret void
 ;
   call void @func()
   ret void
@@ -43,8 +38,8 @@ define amdgpu_kernel void @kernel2() #2 {
 ; AKF_CHECK-NEXT:    ret void
 ;
 ; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@kernel2
-; ATTRIBUTOR_CHECK-SAME: () #[[ATTR2:[0-9]+]] {
-; ATTRIBUTOR_CHECK-NEXT:    call void @func() #[[ATTR3]]
+; ATTRIBUTOR_CHECK-SAME: () #[[ATTR0]] {
+; ATTRIBUTOR_CHECK-NEXT:    call void @func()
 ; ATTRIBUTOR_CHECK-NEXT:    ret void
 ;
   call void @func()
@@ -58,8 +53,6 @@ attributes #1 = { "uniform-work-group-size"="true" }
 ; AKF_CHECK: attributes #[[ATTR1]] = { "amdgpu-calls" "uniform-work-group-size"="true" }
 ; AKF_CHECK: attributes #[[ATTR2]] = { "amdgpu-calls" "uniform-work-group-size"="false" }
 ;.
-; ATTRIBUTOR_CHECK: attributes #[[ATTR0]] = { nounwind writeonly "uniform-work-group-size"="false" }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR1]] = { "amdgpu-calls" "uniform-work-group-size"="true" }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR2]] = { "amdgpu-calls" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR3]] = { nounwind writeonly }
+; ATTRIBUTOR_CHECK: attributes #[[ATTR0]] = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_CHECK: attributes #[[ATTR1]] = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="true" }
 ;.

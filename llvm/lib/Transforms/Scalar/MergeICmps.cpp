@@ -66,15 +66,6 @@ namespace {
 
 #define DEBUG_TYPE "mergeicmps"
 
-// Returns true if the instruction is a simple load or a simple store
-static bool isSimpleLoadOrStore(const Instruction *I) {
-  if (const LoadInst *LI = dyn_cast<LoadInst>(I))
-    return LI->isSimple();
-  if (const StoreInst *SI = dyn_cast<StoreInst>(I))
-    return SI->isSimple();
-  return false;
-}
-
 // A BCE atom "Binary Compare Expression Atom" represents an integer load
 // that is a constant offset from a base value, e.g. `a` or `o.c` in the example
 // at the top.
@@ -154,6 +145,10 @@ BCEAtom visitICmpLoadOperand(Value *const Val, BaseIdentifier &BaseId) {
     return {};
   }
   Value *const Addr = LoadI->getOperand(0);
+  if (Addr->getType()->getPointerAddressSpace() != 0) {
+    LLVM_DEBUG(dbgs() << "from non-zero AddressSpace\n");
+    return {};
+  }
   auto *const GEP = dyn_cast<GetElementPtrInst>(Addr);
   if (!GEP)
     return {};
@@ -244,14 +239,13 @@ bool BCECmpBlock::canSinkBCECmpInst(const Instruction *Inst,
   // If this instruction may clobber the loads and is in middle of the BCE cmp
   // block instructions, then bail for now.
   if (Inst->mayWriteToMemory()) {
-    // Bail if this is not a simple load or store
-    if (!isSimpleLoadOrStore(Inst))
-      return false;
-    // Disallow stores that might alias the BCE operands
-    MemoryLocation LLoc = MemoryLocation::get(Cmp.Lhs.LoadI);
-    MemoryLocation RLoc = MemoryLocation::get(Cmp.Rhs.LoadI);
-    if (isModSet(AA.getModRefInfo(Inst, LLoc)) ||
-        isModSet(AA.getModRefInfo(Inst, RLoc)))
+    auto MayClobber = [&](LoadInst *LI) {
+      // If a potentially clobbering instruction comes before the load,
+      // we can still safely sink the load.
+      return !Inst->comesBefore(LI) &&
+             isModSet(AA.getModRefInfo(Inst, MemoryLocation::get(LI)));
+    };
+    if (MayClobber(Cmp.Lhs.LoadI) || MayClobber(Cmp.Rhs.LoadI))
       return false;
   }
   // Make sure this instruction does not use any of the BCE cmp block

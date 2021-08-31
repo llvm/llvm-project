@@ -242,6 +242,14 @@ void RTLsTy::LoadRTLs() {
         dlsym(dynlib_handle, "__tgt_rtl_set_info_flag");
     *((void **)&R.print_device_info) =
         dlsym(dynlib_handle, "__tgt_rtl_print_device_info");
+    *((void **)&R.create_event) =
+        dlsym(dynlib_handle, "__tgt_rtl_create_event");
+    *((void **)&R.record_event) =
+        dlsym(dynlib_handle, "__tgt_rtl_record_event");
+    *((void **)&R.wait_event) = dlsym(dynlib_handle, "__tgt_rtl_wait_event");
+    *((void **)&R.sync_event) = dlsym(dynlib_handle, "__tgt_rtl_sync_event");
+    *((void **)&R.destroy_event) =
+        dlsym(dynlib_handle, "__tgt_rtl_destroy_event");
   }
   delete[] libomptarget_dir_name;
 

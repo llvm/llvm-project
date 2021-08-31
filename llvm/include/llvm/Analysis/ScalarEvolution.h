@@ -472,6 +472,10 @@ public:
   clearFlags(SCEV::NoWrapFlags Flags, SCEV::NoWrapFlags OffFlags) {
     return (SCEV::NoWrapFlags)(Flags & ~OffFlags);
   }
+  LLVM_NODISCARD static bool hasFlags(SCEV::NoWrapFlags Flags,
+                                      SCEV::NoWrapFlags TestFlags) {
+    return TestFlags == maskFlags(Flags, TestFlags);
+  };
 
   ScalarEvolution(Function &F, TargetLibraryInfo &TLI, AssumptionCache &AC,
                   DominatorTree &DT, LoopInfo &LI);
@@ -699,6 +703,9 @@ public:
   /// SCEVUnknown pointer for well-formed pointer-type expressions, but corner
   /// cases do exist.
   const SCEV *getPointerBase(const SCEV *V);
+
+  /// Compute an expression equivalent to S - getPointerBase(S).
+  const SCEV *removePointerBase(const SCEV *S);
 
   /// Return a SCEV expression for the specified value at the specified scope
   /// in the program.  The L value specifies a loop nest to evaluate the
@@ -2036,8 +2043,11 @@ private:
   /// permitted by Start, End, and Stride. This is for loops of the form
   /// {Start, +, Stride} LT End.
   ///
-  /// Precondition: the induction variable is known to be positive.  We *don't*
-  /// assert these preconditions so please be careful.
+  /// Preconditions:
+  /// * the induction variable is known to be positive.
+  /// * the induction variable is assumed not to overflow (i.e. either it
+  ///   actually doesn't, or we'd have to immediately execute UB)
+  /// We *don't* assert these preconditions so please be careful.
   const SCEV *computeMaxBECountForLT(const SCEV *Start, const SCEV *Stride,
                                      const SCEV *End, unsigned BitWidth,
                                      bool IsSigned);

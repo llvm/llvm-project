@@ -1661,6 +1661,14 @@ def FormatVariadicOperand : TEST_Op<"format_variadic_operand"> {
   let arguments = (ins Variadic<I64>:$operand);
   let assemblyFormat = [{ $operand `:` type($operand) attr-dict}];
 }
+def FormatVariadicOfVariadicOperand
+   : TEST_Op<"format_variadic_of_variadic_operand"> {
+  let arguments = (ins
+    VariadicOfVariadic<I64, "operand_segments">:$operand,
+    I32ElementsAttr:$operand_segments
+  );
+  let assemblyFormat = [{ $operand `:` type($operand) attr-dict}];
+}
 
 def FormatMultipleVariadicOperands :
     TEST_Op<"format_multiple_variadic_operands", [AttrSizedOperandSegments]> {

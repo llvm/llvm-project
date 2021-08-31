@@ -55,11 +55,11 @@
 // INT-HOST-DAG: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x\00"
 
 // Test externalized static device variables
-// EXT-DEV-DAG: @_ZL1x.static.[[HASH:.*]] = addrspace(1) externally_initialized global i32 0
-// EXT-HOST-DAG: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x.static.[[HASH:.*]]\00"
+// EXT-DEV-DAG: @_ZL1x__static__[[HASH:.*]] = addrspace(1) externally_initialized global i32 0
+// EXT-HOST-DAG: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x__static__[[HASH:.*]]\00"
 
-// POSTFIX: @_ZL1x.static.[[HASH:.*]] = addrspace(1) externally_initialized global i32 0
-// POSTFIX: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x.static.[[HASH]]\00"
+// POSTFIX: @_ZL1x__static__[[HASH:.*]] = addrspace(1) externally_initialized global i32 0
+// POSTFIX: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x__static__[[HASH]]\00"
 
 static __device__ int x;
 
@@ -73,8 +73,8 @@ static __device__ int x2;
 // INT-HOST-DAG: @[[DEVNAMEY:[0-9]+]] = {{.*}}c"_ZL1y\00"
 
 // Test externalized static device variables
-// EXT-DEV-DAG: @_ZL1y.static.[[HASH]] = addrspace(4) externally_initialized global i32 0
-// EXT-HOST-DAG: @[[DEVNAMEY:[0-9]+]] = {{.*}}c"_ZL1y.static.[[HASH]]\00"
+// EXT-DEV-DAG: @_ZL1y__static__[[HASH]] = addrspace(4) externally_initialized global i32 0
+// EXT-HOST-DAG: @[[DEVNAMEY:[0-9]+]] = {{.*}}c"_ZL1y__static__[[HASH]]\00"
 
 static __constant__ int y;
 

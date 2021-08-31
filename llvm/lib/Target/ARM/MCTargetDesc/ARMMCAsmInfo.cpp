@@ -91,7 +91,7 @@ ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft() {
   ExceptionsType = ExceptionHandling::WinEH;
   PrivateGlobalPrefix = "$M";
   PrivateLabelPrefix = "$M";
-  CommentString = ";";
+  CommentString = "@";
 
   // Conditional Thumb 4-byte instructions can have an implicit IT.
   MaxInstLength = 6;

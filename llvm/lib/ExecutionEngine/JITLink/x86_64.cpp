@@ -24,6 +24,8 @@ const char *getEdgeKindName(Edge::Kind K) {
     return "Pointer64";
   case Pointer32:
     return "Pointer32";
+  case Pointer32Signed:
+    return "Pointer32Signed";
   case Delta64:
     return "Delta64";
   case Delta32:
@@ -78,7 +80,7 @@ Error optimize_x86_64_GOTAndStubs(LinkGraph &G) {
           E.getKind() == x86_64::PCRel32GOTLoadREXRelaxable) {
 #ifndef NDEBUG
         bool REXPrefix = E.getKind() == x86_64::PCRel32GOTLoadREXRelaxable;
-        assert(E.getOffset() >= (REXPrefix ? 3 : 2) &&
+        assert(E.getOffset() >= (REXPrefix ? 3u : 2u) &&
                "GOT edge occurs too early in block");
 #endif
         auto *FixupData = reinterpret_cast<uint8_t *>(

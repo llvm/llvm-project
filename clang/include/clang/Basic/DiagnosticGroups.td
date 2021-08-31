@@ -643,6 +643,7 @@ def AmbiguousMacro : DiagGroup<"ambiguous-macro">;
 def KeywordAsMacro : DiagGroup<"keyword-macro">;
 def ReservedIdAsMacro : DiagGroup<"reserved-macro-identifier">;
 def ReservedIdAsMacroAlias : DiagGroup<"reserved-id-macro", [ReservedIdAsMacro]>;
+def RestrictExpansionMacro : DiagGroup<"restrict-expansion">;
 
 // Just silence warnings about -Wstrict-aliasing for now.
 def : DiagGroup<"strict-aliasing=0">;
@@ -1189,6 +1190,9 @@ def ASM : DiagGroup<"asm", [
     ASMOperandWidths
   ]>;
 
+// Linker warnings.
+def LinkerWarnings : DiagGroup<"linker-warnings">;
+
 // OpenMP warnings.
 def SourceUsesOpenMP : DiagGroup<"source-uses-openmp">;
 def OpenMPClauses : DiagGroup<"openmp-clauses">;
@@ -1214,6 +1218,7 @@ def BackendOptimizationRemark : DiagGroup<"pass">;
 def BackendOptimizationRemarkMissed : DiagGroup<"pass-missed">;
 def BackendOptimizationRemarkAnalysis : DiagGroup<"pass-analysis">;
 def BackendOptimizationFailure : DiagGroup<"pass-failed">;
+def BackendWarningAttributes : DiagGroup<"attribute-warning">;
 
 // Instrumentation based profiling warnings.
 def ProfileInstrMissing : DiagGroup<"profile-instr-missing">;
@@ -1307,3 +1312,10 @@ def WebAssemblyExceptionSpec : DiagGroup<"wasm-exception-spec">;
 def RTTI : DiagGroup<"rtti">;
 
 def OpenCLCoreFeaturesDiagGroup : DiagGroup<"pedantic-core-features">;
+
+// Warnings and extensions to make preprocessor macro usage pedantic.
+def PedanticMacros : DiagGroup<"pedantic-macros",
+                    [DeprecatedPragma,
+                     MacroRedefined,
+                     BuiltinMacroRedefined,
+                     RestrictExpansionMacro]>;

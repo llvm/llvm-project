@@ -258,13 +258,20 @@ bool ExternalFileUnit::Emit(const char *data, std::size_t bytes,
     std::size_t elementBytes, IoErrorHandler &handler) {
   auto furthestAfter{std::max(furthestPositionInRecord,
       positionInRecord + static_cast<std::int64_t>(bytes))};
-  if (furthestAfter > recordLength.value_or(furthestAfter)) {
-    handler.SignalError(IostatRecordWriteOverrun,
-        "Attempt to write %zd bytes to position %jd in a fixed-size record of "
-        "%jd bytes",
-        bytes, static_cast<std::intmax_t>(positionInRecord),
-        static_cast<std::intmax_t>(*recordLength));
-    return false;
+  if (recordLength) {
+    // It is possible for recordLength to have a value now for a
+    // variable-length output record if the previous operation
+    // was a BACKSPACE.
+    if (!isFixedRecordLength) {
+      recordLength.reset();
+    } else if (furthestAfter > *recordLength) {
+      handler.SignalError(IostatRecordWriteOverrun,
+          "Attempt to write %zd bytes to position %jd in a fixed-size record "
+          "of %jd bytes",
+          bytes, static_cast<std::intmax_t>(positionInRecord),
+          static_cast<std::intmax_t>(*recordLength));
+      return false;
+    }
   }
   WriteFrame(frameOffsetInFile_, recordOffsetInFrame_ + furthestAfter, handler);
   if (positionInRecord > furthestPositionInRecord) {

@@ -2,7 +2,7 @@
 ; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -force-ordered-reductions=false -hints-allow-reordering=true  -S 2>%t | FileCheck %s --check-prefix=CHECK-UNORDERED
 ; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -force-ordered-reductions=true  -hints-allow-reordering=false -S 2>%t | FileCheck %s --check-prefix=CHECK-ORDERED
 ; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -force-ordered-reductions=true  -hints-allow-reordering=true  -S 2>%t | FileCheck %s --check-prefix=CHECK-UNORDERED
-; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -hints-allow-reordering=false -S 2>%t | FileCheck %s --check-prefix=CHECK-NOT-VECTORIZED
+; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -hints-allow-reordering=false -S 2>%t | FileCheck %s --check-prefix=CHECK-ORDERED
 
 define float @fadd_strict(float* noalias nocapture readonly %a, i64 %n) {
 ; CHECK-ORDERED-LABEL: @fadd_strict
@@ -767,6 +767,51 @@ for.end:
   ret float %add
 }
 
+; Test case where the reduction step is a first-order recurrence.
+define double @reduction_increment_by_first_order_recurrence() {
+; CHECK-ORDERED-LABEL: @reduction_increment_by_first_order_recurrence(
+; CHECK-ORDERED:  vector.body:
+; CHECK-ORDERED:    [[RED:%.*]] = phi double [ 0.000000e+00, %vector.ph ], [ [[RED_NEXT:%.*]], %vector.body ]
+; CHECK-ORDERED:    [[VECTOR_RECUR:%.*]] = phi <4 x double> [ <double poison, double poison, double poison, double 0.000000e+00>, %vector.ph ], [ [[FOR_NEXT:%.*]], %vector.body ]
+; CHECK-ORDERED:    [[FOR_NEXT]] = sitofp <4 x i32> %vec.ind to <4 x double>
+; CHECK-ORDERED:    [[TMP1:%.*]] = shufflevector <4 x double> [[VECTOR_RECUR]], <4 x double> [[FOR_NEXT]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-ORDERED:    [[RED_NEXT]] = call double @llvm.vector.reduce.fadd.v4f64(double [[RED]], <4 x double> [[TMP1]])
+; CHECK-ORDERED:  scalar.ph:
+; CHECK-ORDERED:    = phi double [ 0.000000e+00, %entry ], [ [[RED_NEXT]], %middle.block ]
+;
+; CHECK-UNORDERED-LABEL: @reduction_increment_by_first_order_recurrence(
+; CHECK-UNORDERED:  vector.body:
+; CHECK-UNORDERED:    [[RED:%.*]] = phi <4 x double> [ <double 0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %vector.ph ], [ [[RED_NEXT:%.*]], %vector.body ]
+; CHECK-UNORDERED:    [[VECTOR_RECUR:%.*]] = phi <4 x double> [ <double poison, double poison, double poison, double 0.000000e+00>, %vector.ph ], [ [[FOR_NEXT:%.*]], %vector.body ]
+; CHECK-UNORDERED:    [[FOR_NEXT]] = sitofp <4 x i32> %vec.ind to <4 x double>
+; CHECK-UNORDERED:    [[TMP1:%.*]] = shufflevector <4 x double> [[VECTOR_RECUR]], <4 x double> [[FOR_NEXT]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-UNORDERED:    [[RED_NEXT]] = fadd <4 x double> [[TMP1]], [[RED]]
+; CHECK-UNORDERED:  middle.block:
+; CHECK-UNORDERED:    [[RDX:%.*]] = call double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[RED_NEXT]])
+; CHECK-UNORDERED:  scalar.ph:
+; CHECK-UNORDERED:    [[BC_MERGE_RDX:%.*]] = phi double [ 0.000000e+00, %entry ], [ [[RDX]], %middle.block ]
+;
+; CHECK-NOT-VECTORIZED-LABEL: @reduction_increment_by_first_order_recurrence(
+; CHECK-NOT-VECTORIZED-NOT: vector.body
+;
+entry:
+  br label %loop
+
+loop:
+  %red = phi double [ 0.0, %entry ], [ %red.next, %loop ]
+  %for = phi double [ 0.0, %entry ], [ %for.next, %loop ]
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %red.next = fadd double %for, %red
+  %for.next = sitofp i32 %iv to double
+  %iv.next = add nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, 0
+  br i1 %ec, label %exit, label %loop, !llvm.loop !13
+
+exit:
+  %res = phi double [ %red.next, %loop ]
+  ret double %res
+}
+
 !0 = distinct !{!0, !5, !9, !11}
 !1 = distinct !{!1, !5, !10, !11}
 !2 = distinct !{!2, !6, !9, !11}
@@ -780,3 +825,4 @@ for.end:
 !10 = !{!"llvm.loop.interleave.count", i32 4}
 !11 = !{!"llvm.loop.vectorize.enable", i1 true}
 !12 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+!13 = distinct !{!13, !6, !9, !11}

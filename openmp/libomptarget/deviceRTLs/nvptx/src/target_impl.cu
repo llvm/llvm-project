@@ -181,6 +181,11 @@ EXTERN int __kmpc_impl_test_lock(omp_lock_t *lock) {
   return __kmpc_atomic_add(lock, 0u);
 }
 
+extern "C" {
+void *malloc(size_t);
+void free(void *);
+}
+
 EXTERN void *__kmpc_impl_malloc(size_t x) { return malloc(x); }
 EXTERN void __kmpc_impl_free(void *x) { free(x); }
 

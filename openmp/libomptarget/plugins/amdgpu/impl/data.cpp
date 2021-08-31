@@ -19,6 +19,10 @@ using core::TaskImpl;
 extern ATLMachine g_atl_machine;
 
 namespace core {
+extern __attribute__((weak)) hsa_status_t fort_ptr_assign_i8(void *arg0, void *arg1, void *arg2, void *arg3, void *arg4);
+hsa_status_t Runtime::FtnAssignWrapper(void *arg0, void *arg1, void *arg2, void *arg3, void *arg4) {
+  return fort_ptr_assign_i8(arg0, arg1, arg2, arg3, arg4);
+}
 
 namespace {
 ATLProcessor &get_processor_by_mem_place(int DeviceId,
@@ -37,11 +41,6 @@ hsa_amd_memory_pool_t get_memory_pool_by_mem_place(int DeviceId,
   return get_memory_pool(proc, 0 /*Memory Type (always zero) */);
 }
 } // namespace
-
-extern __attribute__((weak)) hsa_status_t fort_ptr_assign_i8(void *arg0, void *arg1, void *arg2, void *arg3, void *arg4);
-hsa_status_t Runtime::FtnAssignWrapper(void *arg0, void *arg1, void *arg2, void *arg3, void *arg4) {
-  return fort_ptr_assign_i8(arg0, arg1, arg2, arg3, arg4);
-}
 
 hsa_status_t Runtime::DeviceMalloc(void **ptr, size_t size, int DeviceId) {
   return Runtime::Malloc(ptr, size, DeviceId, ATMI_DEVTYPE_GPU);

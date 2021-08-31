@@ -25,6 +25,8 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_jumpto)
 #  + return address        +
 #  +-----------------------+   <-- SP
 #  +                       +
+
+  _LIBUNWIND_CET_ENDBR
   movl   4(%esp), %eax
   # set up eax and ret on new stack location
   movl  28(%eax), %edx # edx holds new stack pointer
@@ -46,7 +48,8 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_jumpto)
   # skip ss
   # skip eflags
   pop    %eax  # eax was already pushed on new stack
-  ret        # eip was already pushed on new stack
+  pop    %ecx
+  jmp    *%ecx
   # skip cs
   # skip ds
   # skip es
@@ -70,6 +73,7 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_64_jumpto)
 # On entry, thread_state pointer is in rdi
 #endif
 
+  _LIBUNWIND_CET_ENDBR
   movq  56(%rdi), %rax # rax holds new stack pointer
   subq  $16, %rax
   movq  %rax, 56(%rdi)
@@ -119,7 +123,8 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_64_jumpto)
 #endif
   movq  56(%rdi), %rsp  # cut back rsp to new location
   pop    %rdi      # rdi was saved here earlier
-  ret            # rip was saved here
+  pop    %rcx
+  jmpq   *%rcx
 
 
 #elif defined(__powerpc64__)

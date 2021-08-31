@@ -18,6 +18,7 @@
 
 #include "RISCVSubtarget.h"
 #include "RISCVTargetMachine.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/IR/Function.h"
@@ -104,6 +105,12 @@ public:
     if (isa<FixedVectorType>(DataType) && ST->getMinRVVVectorSizeInBits() == 0)
       return false;
 
+    // Don't allow elements larger than the ELEN.
+    // FIXME: How to limit for scalable vectors?
+    if (isa<FixedVectorType>(DataType) &&
+        DataType->getScalarSizeInBits() > ST->getMaxELENForFixedLengthVectors())
+      return false;
+
     if (Alignment <
         DL.getTypeStoreSize(DataType->getScalarType()).getFixedSize())
       return false;
@@ -124,6 +131,12 @@ public:
 
     // Only support fixed vectors if we know the minimum vector size.
     if (isa<FixedVectorType>(DataType) && ST->getMinRVVVectorSizeInBits() == 0)
+      return false;
+
+    // Don't allow elements larger than the ELEN.
+    // FIXME: How to limit for scalable vectors?
+    if (isa<FixedVectorType>(DataType) &&
+        DataType->getScalarSizeInBits() > ST->getMaxELENForFixedLengthVectors())
       return false;
 
     if (Alignment <

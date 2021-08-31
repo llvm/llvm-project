@@ -647,7 +647,11 @@ module std [system] {
 
     module __ranges {
       module access                 { private header "__ranges/access.h"                }
-      module all                    { private header "__ranges/all.h"                   }
+      module all                    {
+        private header "__ranges/all.h"
+        export functional.__functional.compose
+        export functional.__functional.perfect_forward
+      }
       module common_view            { private header "__ranges/common_view.h"           }
       module concepts               { private header "__ranges/concepts.h"              }
       module copyable_box           { private header "__ranges/copyable_box.h"          }
@@ -662,13 +666,18 @@ module std [system] {
       module iota_view              { private header "__ranges/iota_view.h"             }
       module join_view              { private header "__ranges/join_view.h"             }
       module non_propagating_cache  { private header "__ranges/non_propagating_cache.h" }
+      module range_adaptor          { private header "__ranges/range_adaptor.h"         }
       module ref_view               { private header "__ranges/ref_view.h"              }
       module reverse_view           { private header "__ranges/reverse_view.h"          }
       module size                   { private header "__ranges/size.h"                  }
       module single_view            { private header "__ranges/single_view.h"           }
       module subrange               { private header "__ranges/subrange.h"              }
       module take_view              { private header "__ranges/take_view.h"             }
-      module transform_view         { private header "__ranges/transform_view.h"        }
+      module transform_view         {
+        private header "__ranges/transform_view.h"
+        export functional.__functional.bind_back
+        export functional.__functional.perfect_forward
+      }
       module view_interface         { private header "__ranges/view_interface.h"        }
     }
   }
@@ -780,9 +789,9 @@ module std [system] {
     export *
 
     module __utility {
-      module __decay_copy        { private header "__utility/__decay_copy.h"        }
       module as_const            { private header "__utility/as_const.h"            }
       module cmp                 { private header "__utility/cmp.h"                 }
+      module decay_copy          { private header "__utility/decay_copy.h"          }
       module declval             { private header "__utility/declval.h"             }
       module exchange            { private header "__utility/exchange.h"            }
       module forward             { private header "__utility/forward.h"             }

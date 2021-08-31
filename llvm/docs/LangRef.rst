@@ -1594,7 +1594,12 @@ example:
     ``disable_sanitizer_instrumentation`` disables all kinds of instrumentation,
     taking precedence over the ``sanitize_<name>`` attributes and other compiler
     flags.
-
+``"dontcall"``
+    This attribute denotes that a diagnostic should be emitted when a call of a
+    function with this attribute is not eliminated via optimization. Front ends
+    can provide optional ``srcloc`` metadata nodes on call sites of such
+    callees to attach information about where in the source language such a
+    call came from.
 ``"frame-pointer"``
     This attribute tells the code generator whether the function
     should keep the frame pointer. The code generator may emit the frame pointer
@@ -22407,7 +22412,7 @@ Overview:
 """""""""
 
 The purpose of the ``llvm.arithmetic.fence`` intrinsic
-is to prevent the optimizer from performaing fast-math optimizations,
+is to prevent the optimizer from performing fast-math optimizations,
 particularly reassociation,
 between the argument and the expression that contains the argument.
 It can be used to preserve the parentheses in the source language.

@@ -126,7 +126,7 @@ static std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo) {
     case 5:
       if (isa<ConstantInt>(II->getArgOperand(2)))
         Row = Builder.getInt16(
-            (dyn_cast<ConstantInt>(II->getOperand(2))->getSExtValue()) / 4);
+            (cast<ConstantInt>(II->getOperand(2))->getSExtValue()) / 4);
       else if (isa<Instruction>(II->getArgOperand(2))) {
         // When it is not a const value and it is not a function argument, we
         // create Row after the definition of II->getOperand(2) instead of
@@ -175,24 +175,7 @@ public:
   void combineLoadBitcast(LoadInst *LD, BitCastInst *Bitcast);
   void combineBitcastStore(BitCastInst *Bitcast, StoreInst *ST);
   bool transformBitcast(BitCastInst *Bitcast);
-  Value *getRowFromCol(Instruction *II, Value *V, unsigned Granularity);
 };
-
-Value *X86LowerAMXType::getRowFromCol(Instruction *II, Value *V,
-                                      unsigned Granularity) {
-  if (Col2Row.count(V))
-    return Col2Row[V];
-  IRBuilder<> Builder(&*II->getParent()->getFirstInsertionPt());
-  if (auto *I = dyn_cast<Instruction>(V)) {
-    BasicBlock::iterator Iter = I->getIterator();
-    ++Iter;
-    Builder.SetInsertPoint(&*Iter);
-  }
-  ConstantInt *Gran = Builder.getInt16(Granularity);
-  Value *RealRow = Builder.CreateUDiv(V, Gran);
-  Col2Row[V] = RealRow;
-  return RealRow;
-}
 
 // %src = load <256 x i32>, <256 x i32>* %addr, align 64
 // %2 = bitcast <256 x i32> %src to x86_amx

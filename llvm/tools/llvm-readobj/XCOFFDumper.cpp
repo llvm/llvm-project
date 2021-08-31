@@ -13,6 +13,7 @@
 #include "ObjDumper.h"
 #include "llvm-readobj.h"
 #include "llvm/Object/XCOFFObjectFile.h"
+#include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm;
@@ -494,7 +495,43 @@ void XCOFFDumper::printStackMap() const {
 }
 
 void XCOFFDumper::printNeededLibraries() {
-  llvm_unreachable("Unimplemented functionality for XCOFFDumper");
+  ListScope D(W, "NeededLibraries");
+  auto ImportFilesOrError = Obj.getImportFileTable();
+  if (!ImportFilesOrError) {
+    reportUniqueWarning(ImportFilesOrError.takeError());
+    return;
+  }
+
+  StringRef ImportFileTable = ImportFilesOrError.get();
+  const char *CurrentStr = ImportFileTable.data();
+  const char *TableEnd = ImportFileTable.end();
+  // Default column width for names is 13 even if no names are that long.
+  size_t BaseWidth = 13;
+
+  // Get the max width of BASE columns.
+  for (size_t StrIndex = 0; CurrentStr < TableEnd; ++StrIndex) {
+    size_t CurrentLen = strlen(CurrentStr);
+    CurrentStr += strlen(CurrentStr) + 1;
+    if (StrIndex % 3 == 1)
+      BaseWidth = std::max(BaseWidth, CurrentLen);
+  }
+
+  auto &OS = static_cast<formatted_raw_ostream &>(W.startLine());
+  // Each entry consists of 3 strings: the path_name, base_name and
+  // archive_member_name. The first entry is a default LIBPATH value and other
+  // entries have no path_name. We just dump the base_name and
+  // archive_member_name here.
+  OS << left_justify("BASE", BaseWidth)  << " MEMBER\n";
+  CurrentStr = ImportFileTable.data();
+  for (size_t StrIndex = 0; CurrentStr < TableEnd;
+       ++StrIndex, CurrentStr += strlen(CurrentStr) + 1) {
+    if (StrIndex >= 3 && StrIndex % 3 != 0) {
+      if (StrIndex % 3 == 1)
+        OS << "  " << left_justify(CurrentStr, BaseWidth) << " ";
+      else
+        OS << CurrentStr << "\n";
+    }
+  }
 }
 
 static const EnumEntry<XCOFF::SectionTypeFlags> SectionTypeFlagsNames[] = {

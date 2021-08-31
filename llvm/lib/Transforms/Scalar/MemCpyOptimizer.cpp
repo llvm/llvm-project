@@ -68,6 +68,7 @@ using namespace llvm;
 
 static cl::opt<bool> EnableMemCpyOptWithoutLibcalls(
     "enable-memcpyopt-without-libcalls", cl::init(false), cl::Hidden,
+    cl::ZeroOrMore,
     cl::desc("Enable memcpyopt even when libcalls are disabled"));
 
 STATISTIC(NumMemCpyInstr, "Number of memcpy instructions deleted");

@@ -32,6 +32,8 @@ def LLVM_Dialect : Dialect {
     static StringRef getDataLayoutAttrName() { return "llvm.data_layout"; }
     static StringRef getAlignAttrName() { return "llvm.align"; }
     static StringRef getNoAliasAttrName() { return "llvm.noalias"; }
+    static StringRef getNoAliasScopesAttrName() { return "noalias_scopes"; }
+    static StringRef getAliasScopesAttrName() { return "alias_scopes"; }
     static StringRef getLoopAttrName() { return "llvm.loop"; }
     static StringRef getParallelAccessAttrName() { return "parallel_access"; }
     static StringRef getLoopOptionsAttrName() { return "options"; }

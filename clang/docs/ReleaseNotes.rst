@@ -97,12 +97,20 @@ Attribute Changes in Clang
 Windows Support
 ---------------
 
+- An MSVC compatibility workaround for C++ operator names was removed. As a
+  result, the ``<query.h>`` Windows SDK header may not compile out of the box.
+  Users should use a recent SDK and pass ``-DQUERY_H_RESTRICTION_PERMISSIVE``
+  or pass ``/permissive`` to disable C++ operator names altogether. See
+  `PR42427 <https://llvm.org/pr42427>` for more info.
+
 C Language Changes in Clang
 ---------------------------
 
 - Wide multi-characters literals such as ``L'ab'`` that would previously be interpreted as ``L'b'``
   are now ill-formed in all language modes. The motivation for this change is outlined in
   `P2362 <wg21.link/P2362>`_.
+- Support for ``__attribute__((error("")))`` and
+  ``__attribute__((warning("")))`` function attributes have been added.
 
 C++ Language Changes in Clang
 -----------------------------
@@ -116,6 +124,12 @@ C++20 Feature Support
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 ...
+
+CUDA Language Changes in Clang
+------------------------------
+
+- Clang now supports CUDA versions up to 11.4.
+- Default GPU architecture has been changed from sm_20 to sm_35.
 
 Objective-C Language Changes in Clang
 -------------------------------------

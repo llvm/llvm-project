@@ -488,6 +488,12 @@ private:
   DenseMap<Value *, unsigned> ValueToNumber;
   /// Stores the mapping of the number to the value assigned this number.
   DenseMap<unsigned, Value *> NumberToValue;
+  /// Stores the mapping of a value's number to canonical numbering in the
+  /// candidate's respective similarity group.
+  DenseMap<unsigned, unsigned> NumberToCanonNum;
+  /// Stores the mapping of canonical number in the candidate's respective
+  /// similarity group to a value number.
+  DenseMap<unsigned, unsigned> CanonNumToNumber;
   /// @}
 
 public:
@@ -506,12 +512,26 @@ public:
   static bool isSimilar(const IRSimilarityCandidate &A,
                         const IRSimilarityCandidate &B);
 
-  /// \param A - The first IRInstructionCandidate to compare.
-  /// \param B - The second IRInstructionCandidate to compare.
+  /// \param [in] A - The first IRInstructionCandidate to compare.
+  /// \param [in] B - The second IRInstructionCandidate to compare.
   /// \returns True when every IRInstructionData in \p A is structurally similar
   /// to \p B.
   static bool compareStructure(const IRSimilarityCandidate &A,
                                const IRSimilarityCandidate &B);
+
+  /// \param [in] A - The first IRInstructionCandidate to compare.
+  /// \param [in] B - The second IRInstructionCandidate to compare.
+  /// \param [in,out] ValueNumberMappingA - A mapping of value numbers from
+  /// candidate \p A to candidate \B.
+  /// \param [in,out] ValueNumberMappingB - A mapping of value numbers from
+  /// candidate \p B to candidate \A.
+  /// \returns True when every IRInstructionData in \p A is structurally similar
+  /// to \p B.
+  static bool
+  compareStructure(const IRSimilarityCandidate &A,
+                   const IRSimilarityCandidate &B,
+                   DenseMap<unsigned, DenseSet<unsigned>> &ValueNumberMappingA,
+                   DenseMap<unsigned, DenseSet<unsigned>> &ValueNumberMappingB);
 
   struct OperandMapping {
     /// The IRSimilarityCandidate that holds the instruction the OperVals were
@@ -548,6 +568,33 @@ public:
   /// \returns true if the IRSimilarityCandidates operands are compatible.
   static bool compareCommutativeOperandMapping(OperandMapping A,
                                                OperandMapping B);
+
+  /// Create a mapping from the value numbering to a different separate set of
+  /// numbers. This will serve as a guide for relating one candidate to another.
+  /// The canonical number gives use the ability identify which global value
+  /// number in one candidate relates to the global value number in the other.
+  ///
+  /// \param [in, out] CurrCand - The IRSimilarityCandidate to create a
+  /// canonical numbering for.
+  static void createCanonicalMappingFor(IRSimilarityCandidate &CurrCand);
+
+  /// Create a mapping for the value numbering of the calling
+  /// IRSimilarityCandidate, to a different separate set of numbers, based on
+  /// the canonical ordering in \p SourceCand. These are defined based on the
+  /// found mappings in \p ToSourceMapping and \p FromSourceMapping.  Both of
+  /// these relationships should have the same information, just in opposite
+  /// directions.
+  ///
+  /// \param [in, out] SourceCand - The IRSimilarityCandidate to create a
+  /// canonical numbering from.
+  /// \param ToSourceMapping - The mapping of value numbers from this candidate
+  /// to \p SourceCand.
+  /// \param FromSourceMapping - The mapping of value numbers from \p SoureCand
+  /// to this candidate.
+  void createCanonicalRelationFrom(
+      IRSimilarityCandidate &SourceCand,
+      DenseMap<unsigned, DenseSet<unsigned>> &ToSourceMapping,
+      DenseMap<unsigned, DenseSet<unsigned>> &FromSourceMapping);
 
   /// Compare the start and end indices of the two IRSimilarityCandidates for
   /// whether they overlap. If the start instruction of one
@@ -611,6 +658,32 @@ public:
     return VNIt->second;
   }
 
+  /// Find the canonical number from the global value number \p N stored in the
+  /// candidate.
+  ///
+  /// \param N - The global value number to find the canonical number for.
+  /// \returns An optional containing the value, and None if it could not be
+  /// found.
+  Optional<unsigned> getCanonicalNum(unsigned N) {
+    DenseMap<unsigned, unsigned>::iterator NCIt = NumberToCanonNum.find(N);
+    if (NCIt == NumberToCanonNum.end())
+      return None;
+    return NCIt->second;
+  }
+
+  /// Find the global value number from the canonical number \p N stored in the
+  /// candidate.
+  ///
+  /// \param N - The canonical number to find the global vlaue number for.
+  /// \returns An optional containing the value, and None if it could not be
+  /// found.
+  Optional<unsigned> fromCanonicalNum(unsigned N) {
+    DenseMap<unsigned, unsigned>::iterator CNIt = CanonNumToNumber.find(N);
+    if (CNIt == CanonNumToNumber.end())
+      return None;
+    return CNIt->second;
+  }
+
   /// \param RHS -The IRSimilarityCandidate to compare against
   /// \returns true if the IRSimilarityCandidate is occurs after the
   /// IRSimilarityCandidate in the program.
@@ -623,6 +696,9 @@ public:
   iterator end() const { return std::next(iterator(back())); }
 };
 
+typedef DenseMap<IRSimilarityCandidate *,
+                 DenseMap<unsigned, DenseSet<unsigned>>>
+    CandidateGVNMapping;
 typedef std::vector<IRSimilarityCandidate> SimilarityGroup;
 typedef std::vector<SimilarityGroup> SimilarityGroupList;
 

@@ -54,3 +54,7 @@ define amdgpu_kernel void @kern_call() {
 define spir_kernel void @kern_empty() {
   ret void
 }
+
+; Make sure we don't crash trying to insert code into a kernel
+; declaration.
+declare amdgpu_kernel void @kernel_declaration()

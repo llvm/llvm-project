@@ -753,8 +753,6 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    store i32 [[TMP0]], i32* [[TID_ADDR_LOCAL]], align 4
 // CHECK3-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 // CHECK3-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-// CHECK3:       omp.par.outlined.exit.exitStub:
-// CHECK3-NEXT:    ret void
 // CHECK3:       omp.par.region:
 // CHECK3-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[VLA]], i64 1
 // CHECK3-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
@@ -765,6 +763,8 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK3:       omp.par.pre_finalize:
 // CHECK3-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
+// CHECK3:       omp.par.outlined.exit.exitStub:
+// CHECK3-NEXT:    ret void
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_Z3fooIiEvT_
@@ -809,8 +809,6 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP1:%.*]] = load i64, i64* [[DOTRELOADED]], align 8
 // CHECK3-NEXT:    [[VAR:%.*]] = alloca double*, align 8
 // CHECK3-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-// CHECK3:       omp.par.outlined.exit.exitStub:
-// CHECK3-NEXT:    ret void
 // CHECK3:       omp.par.region:
 // CHECK3-NEXT:    [[TMP2:%.*]] = load i8**, i8*** [[ARGC_ADDR]], align 8
 // CHECK3-NEXT:    call void @_Z3fooIPPcEvT_(i8** [[TMP2]])
@@ -821,6 +819,8 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK3:       omp.par.pre_finalize:
 // CHECK3-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
+// CHECK3:       omp.par.outlined.exit.exitStub:
+// CHECK3-NEXT:    ret void
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_Z3fooIPPcEvT_
@@ -877,8 +877,6 @@ int main (int argc, char **argv) {
 // CHECK4-NEXT:    store i32 [[TMP0]], i32* [[TID_ADDR_LOCAL]], align 4
 // CHECK4-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 // CHECK4-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-// CHECK4:       omp.par.outlined.exit.exitStub:
-// CHECK4-NEXT:    ret void
 // CHECK4:       omp.par.region:
 // CHECK4-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[VLA]], i64 1, !dbg [[DBG34:![0-9]+]]
 // CHECK4-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX]], align 4, !dbg [[DBG34]]
@@ -889,6 +887,8 @@ int main (int argc, char **argv) {
 // CHECK4-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]], !dbg [[DBG34]]
 // CHECK4:       omp.par.pre_finalize:
 // CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]], !dbg [[DBG34]]
+// CHECK4:       omp.par.outlined.exit.exitStub:
+// CHECK4-NEXT:    ret void
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@_Z3fooIiEvT_
@@ -935,8 +935,6 @@ int main (int argc, char **argv) {
 // CHECK4-NEXT:    [[TMP1:%.*]] = load i64, i64* [[DOTRELOADED]], align 8
 // CHECK4-NEXT:    [[VAR:%.*]] = alloca double*, align 8
 // CHECK4-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-// CHECK4:       omp.par.outlined.exit.exitStub:
-// CHECK4-NEXT:    ret void
 // CHECK4:       omp.par.region:
 // CHECK4-NEXT:    [[TMP2:%.*]] = load i8**, i8*** [[ARGC_ADDR]], align 8, !dbg [[DBG57:![0-9]+]]
 // CHECK4-NEXT:    call void @_Z3fooIPPcEvT_(i8** [[TMP2]]), !dbg [[DBG57]]
@@ -948,6 +946,8 @@ int main (int argc, char **argv) {
 // CHECK4-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]], !dbg [[DBG66:![0-9]+]]
 // CHECK4:       omp.par.pre_finalize:
 // CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]], !dbg [[DBG66]]
+// CHECK4:       omp.par.outlined.exit.exitStub:
+// CHECK4-NEXT:    ret void
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@_Z3fooIPPcEvT_

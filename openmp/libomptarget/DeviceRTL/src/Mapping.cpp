@@ -16,6 +16,8 @@
 
 #pragma omp declare target
 
+#include "llvm/Frontend/OpenMP/OMPGridValues.h"
+
 using namespace _OMP;
 
 namespace _OMP {
@@ -25,6 +27,10 @@ namespace impl {
 ///
 ///{
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
+
+constexpr const llvm::omp::GV &getGridValue() {
+  return llvm::omp::AMDGPUGridValues;
+}
 
 uint32_t getGridDim(uint32_t n, uint16_t d) {
   uint32_t q = n / d;
@@ -86,8 +92,6 @@ uint32_t getWarpId() {
   return mapping::getThreadIdInBlock() / mapping::getWarpSize();
 }
 
-uint32_t getWarpSize() { return 64; }
-
 uint32_t getNumberOfWarpsInBlock() {
   return mapping::getBlockSize() / mapping::getWarpSize();
 }
@@ -100,6 +104,10 @@ uint32_t getNumberOfWarpsInBlock() {
 ///{
 #pragma omp begin declare variant match(                                       \
     device = {arch(nvptx, nvptx64)}, implementation = {extension(match_any)})
+
+constexpr const llvm::omp::GV &getGridValue() {
+  return llvm::omp::NVPTXGridValues;
+}
 
 LaneMaskTy activemask() {
   unsigned int Mask;
@@ -144,8 +152,6 @@ uint32_t getWarpId() {
   return mapping::getThreadIdInBlock() / mapping::getWarpSize();
 }
 
-uint32_t getWarpSize() { return 32; }
-
 uint32_t getNumberOfWarpsInBlock() {
   return (mapping::getBlockSize() + mapping::getWarpSize() - 1) /
          mapping::getWarpSize();
@@ -153,6 +159,8 @@ uint32_t getNumberOfWarpsInBlock() {
 
 #pragma omp end declare variant
 ///}
+
+uint32_t getWarpSize() { return getGridValue().GV_Warp_Size; }
 
 } // namespace impl
 } // namespace _OMP

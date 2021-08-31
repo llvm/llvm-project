@@ -69,6 +69,12 @@ DLWRAP(cuMemcpyPeerAsync, 6);
 DLWRAP(cuCtxGetLimit, 2);
 DLWRAP(cuCtxSetLimit, 2);
 
+DLWRAP(cuEventCreate, 2);
+DLWRAP(cuEventRecord, 2);
+DLWRAP(cuStreamWaitEvent, 3);
+DLWRAP(cuEventSynchronize, 1);
+DLWRAP(cuEventDestroy, 1);
+
 DLWRAP_FINALIZE();
 
 #ifndef DYNAMIC_CUDA_PATH

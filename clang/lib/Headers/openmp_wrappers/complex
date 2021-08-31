@@ -21,7 +21,7 @@
 #define __OPENMP_NVPTX__
 #include <__clang_cuda_complex_builtins.h>
 #undef __OPENMP_NVPTX__
-#endif
+#endif // __NVPTX__
 
 #ifdef __AMDGCN__
 #include <__clang_hip_libdevice_declares.h>
@@ -57,4 +57,3 @@
 
 #endif // _GLIBCXX_COMPLEX
 #endif // _LIBCPP_STD_VER
-

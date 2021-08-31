@@ -260,17 +260,15 @@ static void convertFunctionLineTable(raw_ostream &Log, CUInfo &CUI,
   if (!CUI.LineTable->lookupAddressRange(SecAddress, RangeSize, RowVector)) {
     // If we have a DW_TAG_subprogram but no line entries, fall back to using
     // the DW_AT_decl_file an d DW_AT_decl_line if we have both attributes.
-    if (auto FileIdx =
-            dwarf::toUnsigned(Die.findRecursively({dwarf::DW_AT_decl_file}))) {
-      if (auto Line =
-              dwarf::toUnsigned(Die.findRecursively({dwarf::DW_AT_decl_line}))) {
-        LineEntry LE(StartAddress, CUI.DWARFToGSYMFileIndex(Gsym, *FileIdx),
-                     *Line);
-        FI.OptLineTable = LineTable();
-        FI.OptLineTable->push(LE);
-        // LE.Addr = EndAddress;
-        // FI.OptLineTable->push(LE);
-      }
+    std::string FilePath = Die.getDeclFile(
+        DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath);
+    if (FilePath.empty())
+      return;
+    if (auto Line =
+            dwarf::toUnsigned(Die.findRecursively({dwarf::DW_AT_decl_line}))) {
+      LineEntry LE(StartAddress, Gsym.insertFile(FilePath), *Line);
+      FI.OptLineTable = LineTable();
+      FI.OptLineTable->push(LE);
     }
     return;
   }

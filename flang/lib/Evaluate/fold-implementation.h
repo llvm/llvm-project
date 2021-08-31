@@ -60,7 +60,9 @@ public:
   std::optional<Constant<T>> Folding(ArrayRef &);
   Expr<T> Folding(Designator<T> &&);
   Constant<T> *Folding(std::optional<ActualArgument> &);
-  Expr<T> Reshape(FunctionRef<T> &&);
+
+  Expr<T> CSHIFT(FunctionRef<T> &&);
+  Expr<T> RESHAPE(FunctionRef<T> &&);
 
 private:
   FoldingContext &context_;
@@ -546,7 +548,78 @@ template <typename T> Expr<T> MakeInvalidIntrinsic(FunctionRef<T> &&funcRef) {
       ActualArguments{std::move(funcRef.arguments())}}};
 }
 
-template <typename T> Expr<T> Folder<T>::Reshape(FunctionRef<T> &&funcRef) {
+template <typename T> Expr<T> Folder<T>::CSHIFT(FunctionRef<T> &&funcRef) {
+  auto args{funcRef.arguments()};
+  CHECK(args.size() == 3);
+  const auto *array{UnwrapConstantValue<T>(args[0])};
+  const auto *shiftExpr{UnwrapExpr<Expr<SomeInteger>>(args[1])};
+  auto dim{GetInt64ArgOr(args[2], 1)};
+  if (!array || !shiftExpr || !dim) {
+    return Expr<T>{std::move(funcRef)};
+  }
+  auto convertedShift{Fold(context_,
+      ConvertToType<SubscriptInteger>(Expr<SomeInteger>{*shiftExpr}))};
+  const auto *shift{UnwrapConstantValue<SubscriptInteger>(convertedShift)};
+  if (!shift) {
+    return Expr<T>{std::move(funcRef)};
+  }
+  // Arguments are constant
+  if (*dim < 1 || *dim > array->Rank()) {
+    context_.messages().Say("Invalid 'dim=' argument (%jd) in CSHIFT"_err_en_US,
+        static_cast<std::intmax_t>(*dim));
+  } else if (shift->Rank() > 0 && shift->Rank() != array->Rank() - 1) {
+    // message already emitted from intrinsic look-up
+  } else {
+    int rank{array->Rank()};
+    int zbDim{static_cast<int>(*dim) - 1};
+    bool ok{true};
+    if (shift->Rank() > 0) {
+      int k{0};
+      for (int j{0}; j < rank; ++j) {
+        if (j != zbDim) {
+          if (array->shape()[j] != shift->shape()[k]) {
+            context_.messages().Say(
+                "Invalid 'shift=' argument in CSHIFT; extent on dimension %d is %jd but must be %jd"_err_en_US,
+                k + 1, static_cast<std::intmax_t>(shift->shape()[k]),
+                static_cast<std::intmax_t>(array->shape()[j]));
+            ok = false;
+          }
+          ++k;
+        }
+      }
+    }
+    if (ok) {
+      std::vector<Scalar<T>> resultElements;
+      ConstantSubscripts arrayAt{array->lbounds()};
+      ConstantSubscript dimLB{arrayAt[zbDim]};
+      ConstantSubscript dimExtent{array->shape()[zbDim]};
+      ConstantSubscripts shiftAt{shift->lbounds()};
+      for (auto n{GetSize(array->shape())}; n > 0; n -= dimExtent) {
+        ConstantSubscript shiftCount{shift->At(shiftAt).ToInt64()};
+        ConstantSubscript zbDimIndex{shiftCount % dimExtent};
+        if (zbDimIndex < 0) {
+          zbDimIndex += dimExtent;
+        }
+        for (ConstantSubscript j{0}; j < dimExtent; ++j) {
+          arrayAt[zbDim] = dimLB + zbDimIndex;
+          resultElements.push_back(array->At(arrayAt));
+          if (++zbDimIndex == dimExtent) {
+            zbDimIndex = 0;
+          }
+        }
+        arrayAt[zbDim] = dimLB + dimExtent - 1;
+        array->IncrementSubscripts(arrayAt);
+        shift->IncrementSubscripts(shiftAt);
+      }
+      return Expr<T>{PackageConstant<T>(
+          std::move(resultElements), *array, array->shape())};
+    }
+  }
+  // Invalid, prevent re-folding
+  return MakeInvalidIntrinsic(std::move(funcRef));
+}
+
+template <typename T> Expr<T> Folder<T>::RESHAPE(FunctionRef<T> &&funcRef) {
   auto args{funcRef.arguments()};
   CHECK(args.size() == 4);
   const auto *source{UnwrapConstantValue<T>(args[0])};
@@ -679,10 +752,13 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
   }
   if (auto *intrinsic{std::get_if<SpecificIntrinsic>(&funcRef.proc().u)}) {
     const std::string name{intrinsic->name};
-    if (name == "reshape") {
-      return Folder<T>{context}.Reshape(std::move(funcRef));
+    if (name == "cshift") {
+      return Folder<T>{context}.CSHIFT(std::move(funcRef));
+    } else if (name == "reshape") {
+      return Folder<T>{context}.RESHAPE(std::move(funcRef));
     }
-    // TODO: other type independent transformationals
+    // TODO: eoshift, pack, spread, unpack, transpose
+    // TODO: extends_type_of, same_type_as
     if constexpr (!std::is_same_v<T, SomeDerived>) {
       return FoldIntrinsicFunction(context, std::move(funcRef));
     }
@@ -898,12 +974,24 @@ Expr<RESULT> MapOperation(FoldingContext &context,
       context, std::move(result), AsConstantExtents(context, shape));
 }
 
+template <typename RESULT, typename A>
+ArrayConstructor<RESULT> ArrayConstructorFromMold(
+    const A &prototype, std::optional<Expr<SubscriptInteger>> &&length) {
+  if constexpr (RESULT::category == TypeCategory::Character) {
+    return ArrayConstructor<RESULT>{
+        std::move(length.value()), ArrayConstructorValues<RESULT>{}};
+  } else {
+    return ArrayConstructor<RESULT>{prototype};
+  }
+}
+
 // array * array case
 template <typename RESULT, typename LEFT, typename RIGHT>
 Expr<RESULT> MapOperation(FoldingContext &context,
     std::function<Expr<RESULT>(Expr<LEFT> &&, Expr<RIGHT> &&)> &&f,
-    const Shape &shape, Expr<LEFT> &&leftValues, Expr<RIGHT> &&rightValues) {
-  ArrayConstructor<RESULT> result{leftValues};
+    const Shape &shape, std::optional<Expr<SubscriptInteger>> &&length,
+    Expr<LEFT> &&leftValues, Expr<RIGHT> &&rightValues) {
+  auto result{ArrayConstructorFromMold<RESULT>(leftValues, std::move(length))};
   auto &leftArrConst{std::get<ArrayConstructor<LEFT>>(leftValues.u)};
   if constexpr (common::HasMember<RIGHT, AllIntrinsicCategoryTypes>) {
     std::visit(
@@ -942,9 +1030,9 @@ Expr<RESULT> MapOperation(FoldingContext &context,
 template <typename RESULT, typename LEFT, typename RIGHT>
 Expr<RESULT> MapOperation(FoldingContext &context,
     std::function<Expr<RESULT>(Expr<LEFT> &&, Expr<RIGHT> &&)> &&f,
-    const Shape &shape, Expr<LEFT> &&leftValues,
-    const Expr<RIGHT> &rightScalar) {
-  ArrayConstructor<RESULT> result{leftValues};
+    const Shape &shape, std::optional<Expr<SubscriptInteger>> &&length,
+    Expr<LEFT> &&leftValues, const Expr<RIGHT> &rightScalar) {
+  auto result{ArrayConstructorFromMold<RESULT>(leftValues, std::move(length))};
   auto &leftArrConst{std::get<ArrayConstructor<LEFT>>(leftValues.u)};
   for (auto &leftValue : leftArrConst) {
     auto &leftScalar{std::get<Expr<LEFT>>(leftValue.u)};
@@ -959,9 +1047,9 @@ Expr<RESULT> MapOperation(FoldingContext &context,
 template <typename RESULT, typename LEFT, typename RIGHT>
 Expr<RESULT> MapOperation(FoldingContext &context,
     std::function<Expr<RESULT>(Expr<LEFT> &&, Expr<RIGHT> &&)> &&f,
-    const Shape &shape, const Expr<LEFT> &leftScalar,
-    Expr<RIGHT> &&rightValues) {
-  ArrayConstructor<RESULT> result{leftScalar};
+    const Shape &shape, std::optional<Expr<SubscriptInteger>> &&length,
+    const Expr<LEFT> &leftScalar, Expr<RIGHT> &&rightValues) {
+  auto result{ArrayConstructorFromMold<RESULT>(leftScalar, std::move(length))};
   if constexpr (common::HasMember<RIGHT, AllIntrinsicCategoryTypes>) {
     std::visit(
         [&](auto &&kindExpr) {
@@ -985,6 +1073,15 @@ Expr<RESULT> MapOperation(FoldingContext &context,
   }
   return FromArrayConstructor(
       context, std::move(result), AsConstantExtents(context, shape));
+}
+
+template <typename DERIVED, typename RESULT, typename LEFT, typename RIGHT>
+std::optional<Expr<SubscriptInteger>> ComputeResultLength(
+    Operation<DERIVED, RESULT, LEFT, RIGHT> &operation) {
+  if constexpr (RESULT::category == TypeCategory::Character) {
+    return Expr<RESULT>{operation.derived()}.LEN();
+  }
+  return std::nullopt;
 }
 
 // ApplyElementwise() recursively folds the operand expression(s) of an
@@ -1024,6 +1121,7 @@ auto ApplyElementwise(FoldingContext &context,
     Operation<DERIVED, RESULT, LEFT, RIGHT> &operation,
     std::function<Expr<RESULT>(Expr<LEFT> &&, Expr<RIGHT> &&)> &&f)
     -> std::optional<Expr<RESULT>> {
+  auto resultLength{ComputeResultLength(operation)};
   auto &leftExpr{operation.left()};
   leftExpr = Fold(context, std::move(leftExpr));
   auto &rightExpr{operation.right()};
@@ -1038,25 +1136,26 @@ auto ApplyElementwise(FoldingContext &context,
                       CheckConformanceFlags::EitherScalarExpandable)
                       .value_or(false /*fail if not known now to conform*/)) {
                 return MapOperation(context, std::move(f), *leftShape,
-                    std::move(*left), std::move(*right));
+                    std::move(resultLength), std::move(*left),
+                    std::move(*right));
               } else {
                 return std::nullopt;
               }
               return MapOperation(context, std::move(f), *leftShape,
-                  std::move(*left), std::move(*right));
+                  std::move(resultLength), std::move(*left), std::move(*right));
             }
           }
         } else if (IsExpandableScalar(rightExpr)) {
-          return MapOperation(
-              context, std::move(f), *leftShape, std::move(*left), rightExpr);
+          return MapOperation(context, std::move(f), *leftShape,
+              std::move(resultLength), std::move(*left), rightExpr);
         }
       }
     }
   } else if (rightExpr.Rank() > 0 && IsExpandableScalar(leftExpr)) {
     if (std::optional<Shape> shape{GetShape(context, rightExpr)}) {
       if (auto right{AsFlatArrayConstructor(rightExpr)}) {
-        return MapOperation(
-            context, std::move(f), *shape, leftExpr, std::move(*right));
+        return MapOperation(context, std::move(f), *shape,
+            std::move(resultLength), leftExpr, std::move(*right));
       }
     }
   }

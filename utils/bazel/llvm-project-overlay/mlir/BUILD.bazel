@@ -1475,7 +1475,10 @@ cc_library(
         "lib/Dialect/SCF/Transforms/*.cpp",
         "lib/Dialect/SCF/Transforms/*.h",
     ]),
-    hdrs = ["include/mlir/Dialect/SCF/Passes.h"],
+    hdrs = [
+        "include/mlir/Dialect/SCF/Passes.h",
+        "include/mlir/Dialect/SCF/Transforms.h",
+    ],
     includes = ["include"],
     deps = [
         ":Affine",
@@ -1488,6 +1491,7 @@ cc_library(
         ":SCFPassIncGen",
         ":StandardOps",
         ":Support",
+        ":TensorDialect",
         ":Transforms",
         "//llvm:Support",
     ],

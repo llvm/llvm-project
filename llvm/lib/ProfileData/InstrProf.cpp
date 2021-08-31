@@ -1098,9 +1098,13 @@ bool needsComdatForCounter(const Function &F, const Module &M) {
 bool isIRPGOFlagSet(const Module *M) {
   auto IRInstrVar =
       M->getNamedGlobal(INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR));
-  if (!IRInstrVar || IRInstrVar->isDeclaration() ||
-      IRInstrVar->hasLocalLinkage())
+  if (!IRInstrVar || IRInstrVar->hasLocalLinkage())
     return false;
+
+  // For CSPGO+LTO, this variable might be marked as non-prevailing and we only
+  // have the decl.
+  if (IRInstrVar->isDeclaration())
+    return true;
 
   // Check if the flag is set.
   if (!IRInstrVar->hasInitializer())
@@ -1137,8 +1141,8 @@ bool canRenameComdatFunc(const Function &F, bool CheckAddressTaken) {
 
 // Create a COMDAT variable INSTR_PROF_RAW_VERSION_VAR to make the runtime
 // aware this is an ir_level profile so it can set the version flag.
-void createIRLevelProfileFlagVar(Module &M, bool IsCS,
-                                 bool InstrEntryBBEnabled) {
+GlobalVariable *createIRLevelProfileFlagVar(Module &M, bool IsCS,
+                                            bool InstrEntryBBEnabled) {
   const StringRef VarName(INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR));
   Type *IntTy64 = Type::getInt64Ty(M.getContext());
   uint64_t ProfileVersion = (INSTR_PROF_RAW_VERSION | VARIANT_MASK_IR_PROF);
@@ -1155,6 +1159,7 @@ void createIRLevelProfileFlagVar(Module &M, bool IsCS,
     IRLevelVersionVariable->setLinkage(GlobalValue::ExternalLinkage);
     IRLevelVersionVariable->setComdat(M.getOrInsertComdat(VarName));
   }
+  return IRLevelVersionVariable;
 }
 
 // Create the variable for the profile file name.

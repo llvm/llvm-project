@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -303,21 +303,53 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
   class CallBack : public StoreManager::BindingsHandler {
   private:
     CheckerContext &Ctx;
-    const StackFrameContext *CurSFC;
+    const StackFrameContext *PoppedFrame;
+
+    /// Look for stack variables referring to popped stack variables.
+    /// Returns true only if it found some dangling stack variables
+    /// referred by an other stack variable from different stack frame.
+    bool checkForDanglingStackVariable(const MemRegion *Referrer,
+                                       const MemRegion *Referred) {
+      const auto *ReferrerMemSpace =
+          Referrer->getMemorySpace()->getAs<StackSpaceRegion>();
+      const auto *ReferredMemSpace =
+          Referred->getMemorySpace()->getAs<StackSpaceRegion>();
+
+      if (!ReferrerMemSpace || !ReferredMemSpace)
+        return false;
+
+      const auto *ReferrerFrame = ReferrerMemSpace->getStackFrame();
+      const auto *ReferredFrame = ReferredMemSpace->getStackFrame();
+
+      if (ReferrerMemSpace && ReferredMemSpace) {
+        if (ReferredFrame == PoppedFrame &&
+            ReferrerFrame->isParentOf(PoppedFrame)) {
+          V.emplace_back(Referrer, Referred);
+          return true;
+        }
+      }
+      return false;
+    }
 
   public:
     SmallVector<std::pair<const MemRegion *, const MemRegion *>, 10> V;
 
-    CallBack(CheckerContext &CC) : Ctx(CC), CurSFC(CC.getStackFrame()) {}
+    CallBack(CheckerContext &CC) : Ctx(CC), PoppedFrame(CC.getStackFrame()) {}
 
     bool HandleBinding(StoreManager &SMgr, Store S, const MemRegion *Region,
                        SVal Val) override {
+      const MemRegion *VR = Val.getAsRegion();
+      if (!VR)
+        return true;
 
+      if (checkForDanglingStackVariable(Region, VR))
+        return true;
+
+      // Check the globals for the same.
       if (!isa<GlobalsSpaceRegion>(Region->getMemorySpace()))
         return true;
-      const MemRegion *VR = Val.getAsRegion();
-      if (VR && isa<StackSpaceRegion>(VR->getMemorySpace()) &&
-          !isArcManagedBlock(VR, Ctx) && !isNotInCurrentFrame(VR, Ctx))
+      if (VR && VR->hasStackStorage() && !isArcManagedBlock(VR, Ctx) &&
+          !isNotInCurrentFrame(VR, Ctx))
         V.emplace_back(Region, VR);
       return true;
     }
@@ -344,19 +376,41 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
         "invalid after returning from the function");
 
   for (const auto &P : Cb.V) {
+    const MemRegion *Referrer = P.first;
+    const MemRegion *Referred = P.second;
+
     // Generate a report for this bug.
+    const StringRef CommonSuffix =
+        "upon returning to the caller.  This will be a dangling reference";
     SmallString<128> Buf;
     llvm::raw_svector_ostream Out(Buf);
-    SourceRange Range = genName(Out, P.second, Ctx.getASTContext());
-    Out << " is still referred to by the ";
-    if (isa<StaticGlobalSpaceRegion>(P.first->getMemorySpace()))
-      Out << "static";
-    else
-      Out << "global";
-    Out << " variable '";
-    const VarRegion *VR = cast<VarRegion>(P.first->getBaseRegion());
-    Out << *VR->getDecl()
-        << "' upon returning to the caller.  This will be a dangling reference";
+    const SourceRange Range = genName(Out, Referred, Ctx.getASTContext());
+
+    if (isa<CXXTempObjectRegion>(Referrer)) {
+      Out << " is still referred to by a temporary object on the stack "
+          << CommonSuffix;
+      auto Report =
+          std::make_unique<PathSensitiveBugReport>(*BT_stackleak, Out.str(), N);
+      Ctx.emitReport(std::move(Report));
+      return;
+    }
+
+    const StringRef ReferrerMemorySpace = [](const MemSpaceRegion *Space) {
+      if (isa<StaticGlobalSpaceRegion>(Space))
+        return "static";
+      if (isa<GlobalsSpaceRegion>(Space))
+        return "global";
+      assert(isa<StackSpaceRegion>(Space));
+      return "stack";
+    }(Referrer->getMemorySpace());
+
+    // This cast supposed to succeed.
+    const VarRegion *ReferrerVar = cast<VarRegion>(Referrer->getBaseRegion());
+    const std::string ReferrerVarName =
+        ReferrerVar->getDecl()->getDeclName().getAsString();
+
+    Out << " is still referred to by the " << ReferrerMemorySpace
+        << " variable '" << ReferrerVarName << "' " << CommonSuffix;
     auto Report =
         std::make_unique<PathSensitiveBugReport>(*BT_stackleak, Out.str(), N);
     if (Range.isValid())

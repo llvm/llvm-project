@@ -1314,12 +1314,7 @@ bool LiveDebugVariables::runOnMachineFunction(MachineFunction &mf) {
 
   // Have we been asked to track variable locations using instruction
   // referencing?
-  bool InstrRef = false;
-  auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
-  if (TPC) {
-    auto &TM = TPC->getTM<TargetMachine>();
-    InstrRef = TM.Options.ValueTrackingVariableLocations;
-  }
+  bool InstrRef = mf.useDebugInstrRef();
 
   if (!pImpl)
     pImpl = new LDVImpl(this);

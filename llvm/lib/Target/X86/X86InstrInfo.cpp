@@ -3922,8 +3922,8 @@ void X86InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 }
 
 bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
-                                  Register &SrcReg2, int &CmpMask,
-                                  int &CmpValue) const {
+                                  Register &SrcReg2, int64_t &CmpMask,
+                                  int64_t &CmpValue) const {
   switch (MI.getOpcode()) {
   default: break;
   case X86::CMP64ri32:
@@ -4010,7 +4010,7 @@ bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
 /// ImmValue: immediate for FlagI if it takes an immediate.
 inline static bool isRedundantFlagInstr(const MachineInstr &FlagI,
                                         Register SrcReg, Register SrcReg2,
-                                        int ImmMask, int ImmValue,
+                                        int64_t ImmMask, int64_t ImmValue,
                                         const MachineInstr &OI) {
   if (((FlagI.getOpcode() == X86::CMP64rr && OI.getOpcode() == X86::SUB64rr) ||
        (FlagI.getOpcode() == X86::CMP32rr && OI.getOpcode() == X86::SUB32rr) ||
@@ -4207,8 +4207,8 @@ static X86::CondCode isUseDefConvertible(const MachineInstr &MI) {
 /// operates on the same source operands and sets flags in the same way as
 /// Compare; remove Compare if possible.
 bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
-                                        Register SrcReg2, int CmpMask,
-                                        int CmpValue,
+                                        Register SrcReg2, int64_t CmpMask,
+                                        int64_t CmpValue,
                                         const MachineRegisterInfo *MRI) const {
   // Check whether we can replace SUB with CMP.
   switch (CmpInstr.getOpcode()) {
@@ -5269,6 +5269,29 @@ static bool hasUndefRegUpdate(unsigned Opcode, unsigned OpNum,
   case X86::VRCP14SDZrm:
   case X86::VRCP14SSZrr:
   case X86::VRCP14SSZrm:
+  case X86::VRCPSHZrr:
+  case X86::VRCPSHZrm:
+  case X86::VRSQRTSHZrr:
+  case X86::VRSQRTSHZrm:
+  case X86::VREDUCESHZrmi:
+  case X86::VREDUCESHZrri:
+  case X86::VREDUCESHZrrib:
+  case X86::VGETEXPSHZr:
+  case X86::VGETEXPSHZrb:
+  case X86::VGETEXPSHZm:
+  case X86::VGETMANTSHZrri:
+  case X86::VGETMANTSHZrrib:
+  case X86::VGETMANTSHZrmi:
+  case X86::VRNDSCALESHZr:
+  case X86::VRNDSCALESHZr_Int:
+  case X86::VRNDSCALESHZrb_Int:
+  case X86::VRNDSCALESHZm:
+  case X86::VRNDSCALESHZm_Int:
+  case X86::VSQRTSHZr:
+  case X86::VSQRTSHZr_Int:
+  case X86::VSQRTSHZrb_Int:
+  case X86::VSQRTSHZm:
+  case X86::VSQRTSHZm_Int:
   case X86::VRCP28SDZr:
   case X86::VRCP28SDZrb:
   case X86::VRCP28SDZm:
@@ -6114,6 +6137,24 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VMINSHZrr_Intk: case X86::VMINSHZrr_Intkz:
     case X86::VMULSHZrr_Intk: case X86::VMULSHZrr_Intkz:
     case X86::VSUBSHZrr_Intk: case X86::VSUBSHZrr_Intkz:
+    case X86::VFMADD132SHZr_Int: case X86::VFNMADD132SHZr_Int:
+    case X86::VFMADD213SHZr_Int: case X86::VFNMADD213SHZr_Int:
+    case X86::VFMADD231SHZr_Int: case X86::VFNMADD231SHZr_Int:
+    case X86::VFMSUB132SHZr_Int: case X86::VFNMSUB132SHZr_Int:
+    case X86::VFMSUB213SHZr_Int: case X86::VFNMSUB213SHZr_Int:
+    case X86::VFMSUB231SHZr_Int: case X86::VFNMSUB231SHZr_Int:
+    case X86::VFMADD132SHZr_Intk: case X86::VFNMADD132SHZr_Intk:
+    case X86::VFMADD213SHZr_Intk: case X86::VFNMADD213SHZr_Intk:
+    case X86::VFMADD231SHZr_Intk: case X86::VFNMADD231SHZr_Intk:
+    case X86::VFMSUB132SHZr_Intk: case X86::VFNMSUB132SHZr_Intk:
+    case X86::VFMSUB213SHZr_Intk: case X86::VFNMSUB213SHZr_Intk:
+    case X86::VFMSUB231SHZr_Intk: case X86::VFNMSUB231SHZr_Intk:
+    case X86::VFMADD132SHZr_Intkz: case X86::VFNMADD132SHZr_Intkz:
+    case X86::VFMADD213SHZr_Intkz: case X86::VFNMADD213SHZr_Intkz:
+    case X86::VFMADD231SHZr_Intkz: case X86::VFNMADD231SHZr_Intkz:
+    case X86::VFMSUB132SHZr_Intkz: case X86::VFNMSUB132SHZr_Intkz:
+    case X86::VFMSUB213SHZr_Intkz: case X86::VFNMSUB213SHZr_Intkz:
+    case X86::VFMSUB231SHZr_Intkz: case X86::VFNMSUB231SHZr_Intkz:
       return false;
     default:
       return true;

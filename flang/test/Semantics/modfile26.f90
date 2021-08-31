@@ -66,12 +66,15 @@ end module m1
 !Expect: m1.mod
 !module m1
 !integer(4),parameter::iranges(1_8:*)=[INTEGER(4)::2_4,4_4,9_4,18_4,38_4]
+!intrinsic::range
 !logical(4),parameter::ircheck=.true._4
 !intrinsic::all
 !integer(4),parameter::intpvals(1_8:*)=[INTEGER(4)::0_4,2_4,3_4,4_4,5_4,9_4,10_4,18_4,19_4,38_4,39_4]
 !integer(4),parameter::intpkinds(1_8:*)=[INTEGER(4)::1_4,1_4,2_4,2_4,4_4,4_4,8_4,8_4,16_4,16_4,-1_4]
+!intrinsic::size
 !logical(4),parameter::ipcheck=.true._4
 !integer(4),parameter::realprecs(1_8:*)=[INTEGER(4)::3_4,2_4,6_4,15_4,18_4,33_4]
+!intrinsic::precision
 !logical(4),parameter::rpreccheck=.true._4
 !integer(4),parameter::realpvals(1_8:*)=[INTEGER(4)::0_4,3_4,4_4,6_4,7_4,15_4,16_4,18_4,19_4,33_4,34_4]
 !integer(4),parameter::realpkinds(1_8:*)=[INTEGER(4)::2_4,2_4,4_4,4_4,8_4,8_4,10_4,10_4,16_4,16_4,-1_4]
@@ -82,7 +85,9 @@ end module m1
 !integer(4),parameter::realrkinds(1_8:*)=[INTEGER(4)::2_4,2_4,3_4,3_4,8_4,8_4,10_4,10_4,-2_4]
 !logical(4),parameter::realrcheck=.true._4
 !logical(4),parameter::radixcheck=.true._4
+!intrinsic::radix
 !integer(4),parameter::intdigits(1_8:*)=[INTEGER(4)::7_4,15_4,31_4,63_4,127_4]
+!intrinsic::digits
 !logical(4),parameter::intdigitscheck=.true._4
 !integer(4),parameter::realdigits(1_8:*)=[INTEGER(4)::11_4,8_4,24_4,53_4,64_4,113_4]
 !logical(4),parameter::realdigitscheck=.true._4

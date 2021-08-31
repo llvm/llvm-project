@@ -1,0 +1,114 @@
+# RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -verify-machineinstrs -start-before=machine-scheduler -stop-after=virtregrewriter,1 -o - %s | FileCheck -check-prefix=GCN %s
+
+# Check that %3 was not rematerialized before the last store since its operand %1
+# is killed by that store.
+
+# GCN-LABEL: name: global_sextload_v32i32_to_v32i64
+# GCN: renamable $vgpr0 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+# GCN: GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr27, killed renamable $vgpr19_vgpr20_vgpr21_vgpr22, killed renamable $sgpr0_sgpr1, 16, 0, implicit $exec, implicit killed renamable $vgpr0
+
+---
+name:            global_sextload_v32i32_to_v32i64
+tracksRegLiveness: true
+machineFunctionInfo:
+  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  bb.0:
+    liveins: $sgpr4_sgpr5
+
+    %0:sgpr_64(p4) = COPY $sgpr4_sgpr5
+    %1:vgpr_32 = COPY $m0
+    %2:sgpr_128 = S_LOAD_DWORDX4_IMM %0(p4), 0, 0
+    %3:vgpr_32 = V_MOV_B32_e32 %1, implicit $exec
+    %4:vreg_128 = GLOBAL_LOAD_DWORDX4_SADDR %2.sub2_sub3, %3, 112, 0, implicit $exec :: (load (s128))
+    %5:vreg_128 = GLOBAL_LOAD_DWORDX4_SADDR %2.sub2_sub3, %3, 96, 0, implicit $exec, implicit %1 :: (load (s128))
+    %6:vreg_128 = GLOBAL_LOAD_DWORDX4_SADDR %2.sub2_sub3, %3, 80, 0, implicit $exec :: (load (s128))
+    %7:vreg_128 = GLOBAL_LOAD_DWORDX4_SADDR %2.sub2_sub3, %3, 64, 0, implicit $exec :: (load (s128))
+    %8:vreg_128 = GLOBAL_LOAD_DWORDX4_SADDR %2.sub2_sub3, %3, 48, 0, implicit $exec :: (load (s128))
+    %9:vreg_128 = GLOBAL_LOAD_DWORDX4_SADDR %2.sub2_sub3, %3, 32, 0, implicit $exec :: (load (s128))
+    %10:vreg_128 = GLOBAL_LOAD_DWORDX4_SADDR %2.sub2_sub3, %3, 16, 0, implicit $exec :: (load (s128))
+    %11:vreg_128 = GLOBAL_LOAD_DWORDX4_SADDR %2.sub2_sub3, %3, 0, 0, implicit $exec :: (load (s128))
+    undef %12.sub3:vreg_128 = V_ASHRREV_I32_e32 31, %11.sub3, implicit $exec
+    %12.sub1:vreg_128 = V_ASHRREV_I32_e32 31, %11.sub2, implicit $exec
+    undef %13.sub3:vreg_128 = V_ASHRREV_I32_e32 31, %11.sub1, implicit $exec
+    %13.sub1:vreg_128 = V_ASHRREV_I32_e32 31, %11.sub0, implicit $exec
+    undef %14.sub3:vreg_128 = V_ASHRREV_I32_e32 31, %10.sub3, implicit $exec
+    %14.sub1:vreg_128 = V_ASHRREV_I32_e32 31, %10.sub2, implicit $exec
+    undef %15.sub3:vreg_128 = V_ASHRREV_I32_e32 31, %10.sub1, implicit $exec
+    %15.sub1:vreg_128 = V_ASHRREV_I32_e32 31, %10.sub0, implicit $exec
+    undef %16.sub3:vreg_128 = V_ASHRREV_I32_e32 31, %9.sub3, implicit $exec
+    %16.sub1:vreg_128 = V_ASHRREV_I32_e32 31, %9.sub2, implicit $exec
+    undef %17.sub3:vreg_128 = V_ASHRREV_I32_e32 31, %9.sub1, implicit $exec
+    %17.sub1:vreg_128 = V_ASHRREV_I32_e32 31, %9.sub0, implicit $exec
+    undef %18.sub3:vreg_128 = V_ASHRREV_I32_e32 31, %8.sub3, implicit $exec
+    %18.sub1:vreg_128 = V_ASHRREV_I32_e32 31, %8.sub2, implicit $exec
+    undef %19.sub3:vreg_128 = V_ASHRREV_I32_e32 31, %8.sub1, implicit $exec
+    %19.sub1:vreg_128 = V_ASHRREV_I32_e32 31, %8.sub0, implicit $exec
+    undef %20.sub3:vreg_128 = V_ASHRREV_I32_e32 31, %7.sub3, implicit $exec
+    %20.sub1:vreg_128 = V_ASHRREV_I32_e32 31, %7.sub2, implicit $exec
+    undef %21.sub3:vreg_128 = V_ASHRREV_I32_e32 31, %7.sub1, implicit $exec
+    %21.sub1:vreg_128 = V_ASHRREV_I32_e32 31, %7.sub0, implicit $exec
+    undef %22.sub3:vreg_128 = V_ASHRREV_I32_e32 31, %6.sub3, implicit $exec
+    %22.sub1:vreg_128 = V_ASHRREV_I32_e32 31, %6.sub2, implicit $exec
+    undef %23.sub3:vreg_128 = V_ASHRREV_I32_e32 31, %6.sub1, implicit $exec
+    %23.sub1:vreg_128 = V_ASHRREV_I32_e32 31, %6.sub0, implicit $exec
+    undef %24.sub3:vreg_128 = V_ASHRREV_I32_e32 31, %5.sub3, implicit $exec
+    %24.sub1:vreg_128 = V_ASHRREV_I32_e32 31, %5.sub2, implicit $exec
+    undef %25.sub3:vreg_128 = V_ASHRREV_I32_e32 31, %5.sub1, implicit $exec
+    %25.sub1:vreg_128 = V_ASHRREV_I32_e32 31, %5.sub0, implicit $exec
+    undef %26.sub3:vreg_128 = V_ASHRREV_I32_e32 31, %4.sub3, implicit $exec
+    %26.sub1:vreg_128 = V_ASHRREV_I32_e32 31, %4.sub2, implicit $exec
+    undef %27.sub3:vreg_128 = V_ASHRREV_I32_e32 31, %4.sub1, implicit $exec
+    %27.sub1:vreg_128 = V_ASHRREV_I32_e32 31, %4.sub0, implicit $exec
+    %27.sub0:vreg_128 = COPY %4.sub0
+    %27.sub2:vreg_128 = COPY %4.sub1
+    GLOBAL_STORE_DWORDX4_SADDR %3, %27, %2.sub0_sub1, 224, 0, implicit $exec
+    %26.sub0:vreg_128 = COPY %4.sub2
+    %26.sub2:vreg_128 = COPY %4.sub3
+    GLOBAL_STORE_DWORDX4_SADDR %3, %26, %2.sub0_sub1, 240, 0, implicit $exec
+    %25.sub0:vreg_128 = COPY %5.sub0
+    %25.sub2:vreg_128 = COPY %5.sub1
+    GLOBAL_STORE_DWORDX4_SADDR %3, %25, %2.sub0_sub1, 192, 0, implicit $exec
+    %24.sub0:vreg_128 = COPY %5.sub2
+    %24.sub2:vreg_128 = COPY %5.sub3
+    GLOBAL_STORE_DWORDX4_SADDR %3, %24, %2.sub0_sub1, 208, 0, implicit $exec
+    %23.sub0:vreg_128 = COPY %6.sub0
+    %23.sub2:vreg_128 = COPY %6.sub1
+    GLOBAL_STORE_DWORDX4_SADDR %3, %23, %2.sub0_sub1, 160, 0, implicit $exec
+    %22.sub0:vreg_128 = COPY %6.sub2
+    %22.sub2:vreg_128 = COPY %6.sub3
+    GLOBAL_STORE_DWORDX4_SADDR %3, %22, %2.sub0_sub1, 176, 0, implicit $exec
+    %21.sub0:vreg_128 = COPY %7.sub0
+    %21.sub2:vreg_128 = COPY %7.sub1
+    GLOBAL_STORE_DWORDX4_SADDR %3, %21, %2.sub0_sub1, 128, 0, implicit $exec
+    %20.sub0:vreg_128 = COPY %7.sub2
+    %20.sub2:vreg_128 = COPY %7.sub3
+    GLOBAL_STORE_DWORDX4_SADDR %3, %20, %2.sub0_sub1, 144, 0, implicit $exec
+    %19.sub0:vreg_128 = COPY %8.sub0
+    %19.sub2:vreg_128 = COPY %8.sub1
+    GLOBAL_STORE_DWORDX4_SADDR %3, %19, %2.sub0_sub1, 96, 0, implicit $exec
+    %18.sub0:vreg_128 = COPY %8.sub2
+    %18.sub2:vreg_128 = COPY %8.sub3
+    GLOBAL_STORE_DWORDX4_SADDR %3, %18, %2.sub0_sub1, 112, 0, implicit $exec
+    %17.sub0:vreg_128 = COPY %9.sub0
+    %17.sub2:vreg_128 = COPY %9.sub1
+    GLOBAL_STORE_DWORDX4_SADDR %3, %17, %2.sub0_sub1, 64, 0, implicit $exec
+    %16.sub0:vreg_128 = COPY %9.sub2
+    %16.sub2:vreg_128 = COPY %9.sub3
+    GLOBAL_STORE_DWORDX4_SADDR %3, %16, %2.sub0_sub1, 80, 0, implicit $exec
+    %15.sub0:vreg_128 = COPY %10.sub0
+    %15.sub2:vreg_128 = COPY %10.sub1
+    GLOBAL_STORE_DWORDX4_SADDR %3, %15, %2.sub0_sub1, 32, 0, implicit $exec
+    %14.sub0:vreg_128 = COPY %10.sub2
+    %14.sub2:vreg_128 = COPY %10.sub3
+    GLOBAL_STORE_DWORDX4_SADDR %3, %14, %2.sub0_sub1, 48, 0, implicit $exec
+    %13.sub0:vreg_128 = COPY %11.sub0
+    %13.sub2:vreg_128 = COPY %11.sub1
+    GLOBAL_STORE_DWORDX4_SADDR %3, %13, %2.sub0_sub1, 0, 0, implicit $exec
+    %12.sub0:vreg_128 = COPY %11.sub2
+    %12.sub2:vreg_128 = COPY %11.sub3
+    GLOBAL_STORE_DWORDX4_SADDR %3, %12, %2.sub0_sub1, 16, 0, implicit $exec, implicit killed %1
+    S_ENDPGM 0
+
+...

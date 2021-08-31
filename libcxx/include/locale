@@ -230,7 +230,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if defined(__APPLE__) || defined(__FreeBSD__)
 #  define _LIBCPP_GET_C_LOCALE 0
-#elif defined(__CloudABI__) || defined(__NetBSD__)
+#elif defined(__NetBSD__)
 #  define _LIBCPP_GET_C_LOCALE LC_C_LOCALE
 #else
 #  define _LIBCPP_GET_C_LOCALE __cloc()

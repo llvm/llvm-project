@@ -30,21 +30,20 @@ static constexpr unsigned maxFreeID = 1 << 20;
 
 /// Returns an unsed symbol in `module` for `oldSymbolName` by trying numeric
 /// suffix in `lastUsedID`.
-static SmallString<64> renameSymbol(StringRef oldSymName, unsigned &lastUsedID,
-                                    spirv::ModuleOp module) {
+static StringAttr renameSymbol(StringRef oldSymName, unsigned &lastUsedID,
+                               spirv::ModuleOp module) {
   SmallString<64> newSymName(oldSymName);
   newSymName.push_back('_');
 
-  while (lastUsedID < maxFreeID) {
-    std::string possible = (newSymName + llvm::utostr(++lastUsedID)).str();
+  MLIRContext *ctx = module->getContext();
 
-    if (!SymbolTable::lookupSymbolIn(module, possible)) {
-      newSymName += llvm::utostr(lastUsedID);
-      break;
-    }
+  while (lastUsedID < maxFreeID) {
+    auto possible = StringAttr::get(ctx, newSymName + Twine(++lastUsedID));
+    if (!SymbolTable::lookupSymbolIn(module, possible))
+      return possible;
   }
 
-  return newSymName;
+  return StringAttr::get(ctx, newSymName);
 }
 
 /// Checks if a symbol with the same name as `op` already exists in `source`.
@@ -57,7 +56,7 @@ static LogicalResult updateSymbolAndAllUses(SymbolOpInterface op,
     return success();
 
   StringRef oldSymName = op.getName();
-  SmallString<64> newSymName = renameSymbol(oldSymName, lastUsedID, target);
+  StringAttr newSymName = renameSymbol(oldSymName, lastUsedID, target);
 
   if (failed(SymbolTable::replaceAllSymbolUses(op, newSymName, target)))
     return op.emitError("unable to update all symbol uses for ")
@@ -234,7 +233,7 @@ OwningOpRef<spirv::ModuleOp> combine(ArrayRef<spirv::ModuleOp> inputModules,
     SymbolOpInterface replacementSymOp = result.first->second;
 
     if (failed(SymbolTable::replaceAllSymbolUses(
-            symbolOp, replacementSymOp.getName(), combinedModule))) {
+            symbolOp, replacementSymOp.getNameAttr(), combinedModule))) {
       symbolOp.emitError("unable to update all symbol uses for ")
           << symbolOp.getName() << " to " << replacementSymOp.getName();
       return nullptr;

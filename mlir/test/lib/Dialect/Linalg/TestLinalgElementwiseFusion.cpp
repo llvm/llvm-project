@@ -73,6 +73,52 @@ struct TestLinalgElementwiseFusion
   }
 };
 
+struct TestLinalgControlFuseByExpansion
+    : public PassWrapper<TestLinalgControlFuseByExpansion, FunctionPass> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry
+        .insert<AffineDialect, linalg::LinalgDialect, tensor::TensorDialect>();
+  }
+  StringRef getArgument() const final {
+    return "test-linalg-control-fusion-by-expansion";
+  }
+  StringRef getDescription() const final {
+    return "Test controlling of fusion of elementwise ops with reshape by "
+           "expansion";
+  }
+
+  void runOnFunction() override {
+    MLIRContext *context = &this->getContext();
+    FuncOp funcOp = this->getFunction();
+    RewritePatternSet fusionPatterns(context);
+
+    linalg::ControlElementwiseOpsFusionFn controlReshapeFusionFn =
+        [](const OpResult &producer, OpOperand &consumer) {
+          if (auto collapseOp =
+                  producer.getDefiningOp<linalg::TensorCollapseShapeOp>()) {
+            if (!collapseOp.src().getDefiningOp<linalg::LinalgOp>()) {
+              return false;
+            }
+          }
+          if (auto expandOp =
+                  dyn_cast<linalg::TensorExpandShapeOp>(consumer.getOwner())) {
+            if (expandOp->hasOneUse()) {
+              OpOperand &use = *expandOp->getUses().begin();
+              auto linalgOp = dyn_cast<linalg::LinalgOp>(use.getOwner());
+              if (linalgOp && linalgOp.isOutputTensor(&use))
+                return true;
+            }
+          }
+          return linalg::skipUnitDimReshape(producer, consumer);
+        };
+
+    linalg::populateFoldReshapeOpsByExpansionPatterns(fusionPatterns,
+                                                      controlReshapeFusionFn);
+    (void)applyPatternsAndFoldGreedily(funcOp.getBody(),
+                                       std::move(fusionPatterns));
+  }
+};
+
 struct TestPushExpandingReshape
     : public PassWrapper<TestPushExpandingReshape, FunctionPass> {
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -97,6 +143,10 @@ struct TestPushExpandingReshape
 namespace test {
 void registerTestLinalgElementwiseFusion() {
   PassRegistration<TestLinalgElementwiseFusion>();
+}
+
+void registerTestLinalgControlFuseByExpansion() {
+  PassRegistration<TestLinalgControlFuseByExpansion>();
 }
 
 void registerTestPushExpandingReshape() {

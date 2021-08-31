@@ -15,17 +15,7 @@
 
 namespace llvm {
 
-class FunctionPass;
-class GCNTargetMachine;
-class ImmutablePass;
-class MachineFunctionPass;
-class ModulePass;
-class Pass;
-class Target;
 class TargetMachine;
-class TargetOptions;
-class PassRegistry;
-class Module;
 
 // GlobalISel passes
 void initializeAMDGPUPreLegalizerCombinerPass(PassRegistry &);
@@ -34,16 +24,6 @@ void initializeAMDGPUPostLegalizerCombinerPass(PassRegistry &);
 FunctionPass *createAMDGPUPostLegalizeCombiner(bool IsOptNone);
 FunctionPass *createAMDGPURegBankCombiner(bool IsOptNone);
 void initializeAMDGPURegBankCombinerPass(PassRegistry &);
-
-// R600 Passes
-FunctionPass *createR600VectorRegMerger();
-FunctionPass *createR600ExpandSpecialInstrsPass();
-FunctionPass *createR600EmitClauseMarkers();
-FunctionPass *createR600ClauseMergePass();
-FunctionPass *createR600Packetizer();
-FunctionPass *createR600ControlFlowFinalizer();
-FunctionPass *createAMDGPUCFGStructurizerPass();
-FunctionPass *createR600ISelDag(TargetMachine *TM, CodeGenOpt::Level OptLevel);
 
 // SI Passes
 FunctionPass *createGCNDPPCombinePass();
@@ -176,21 +156,6 @@ extern char &AMDGPURewriteOutArgumentsID;
 void initializeGCNDPPCombinePass(PassRegistry &);
 extern char &GCNDPPCombineID;
 
-void initializeR600ClauseMergePassPass(PassRegistry &);
-extern char &R600ClauseMergePassID;
-
-void initializeR600ControlFlowFinalizerPass(PassRegistry &);
-extern char &R600ControlFlowFinalizerID;
-
-void initializeR600ExpandSpecialInstrsPassPass(PassRegistry &);
-extern char &R600ExpandSpecialInstrsPassID;
-
-void initializeR600VectorRegMergerPass(PassRegistry &);
-extern char &R600VectorRegMergerID;
-
-void initializeR600PacketizerPass(PassRegistry &);
-extern char &R600PacketizerID;
-
 void initializeSIFoldOperandsPass(PassRegistry &);
 extern char &SIFoldOperandsID;
 
@@ -282,7 +247,6 @@ private:
   bool GlobalOpt;
 };
 
-ModulePass *createR600OpenCLImageTypeLoweringPass();
 FunctionPass *createAMDGPUAnnotateUniformValues();
 
 ModulePass *createAMDGPULowerKernelCallsPass();

@@ -10,14 +10,10 @@
 #define _LIBCPP___ALGORITHM_COMP_REF_TYPE_H
 
 #include <__config>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
-
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -73,15 +69,12 @@ struct __comp_ref_type {
   // Pass the comparator by lvalue reference. Or in debug mode, using a
   // debugging wrapper that stores a reference.
 #ifndef _LIBCPP_DEBUG
-  typedef typename add_lvalue_reference<_Comp>::type type;
+  typedef _Comp& type;
 #else
   typedef __debug_less<_Comp> type;
 #endif
 };
 
-
 _LIBCPP_END_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_COMP_REF_TYPE_H

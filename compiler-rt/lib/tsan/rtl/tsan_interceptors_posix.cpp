@@ -1989,8 +1989,12 @@ static void CallUserSignalHandler(ThreadState *thr, bool sync, bool acquire,
   volatile uptr pc = (sigactions[sig].sa_flags & SA_SIGINFO)
                          ? (uptr)sigactions[sig].sigaction
                          : (uptr)sigactions[sig].handler;
-  if (pc != sig_dfl && pc != sig_ign)
+  if (pc != sig_dfl && pc != sig_ign) {
+    // The callback can be either sa_handler or sa_sigaction.
+    // They have different signatures, but we assume that passing
+    // additional arguments to sa_handler works and is harmless.
     ((__sanitizer_sigactionhandler_ptr)pc)(sig, info, uctx);
+  }
   if (!ctx->after_multithreaded_fork) {
     thr->ignore_reads_and_writes = ignore_reads_and_writes;
     if (ignore_reads_and_writes)
@@ -2459,9 +2463,11 @@ int sigaction_impl(int sig, const __sanitizer_sigaction *act,
 #endif
     internal_memcpy(&newact, act, sizeof(newact));
     internal_sigfillset(&newact.sa_mask);
-    newact.sa_flags |= SA_SIGINFO;
-    if ((uptr)act->handler != sig_ign && (uptr)act->handler != sig_dfl)
+    if ((act->sa_flags & SA_SIGINFO) ||
+        ((uptr)act->handler != sig_ign && (uptr)act->handler != sig_dfl)) {
+      newact.sa_flags |= SA_SIGINFO;
       newact.sigaction = sighandler;
+    }
     ReleaseStore(thr, pc, (uptr)&sigactions[sig]);
     act = &newact;
   }

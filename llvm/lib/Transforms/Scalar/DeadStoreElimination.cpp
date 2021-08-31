@@ -1846,7 +1846,7 @@ struct DSEState {
               Func != LibFunc_malloc)
             return false;
           if (Malloc->getOperand(0) == MemSet->getLength()) {
-            if (DT.dominates(Malloc, MemSet) &&
+            if (DT.dominates(Malloc, MemSet) && PDT.dominates(MemSet, Malloc) &&
                 memoryIsNotModifiedBetween(Malloc, MemSet, BatchAA, DL, &DT)) {
               IRBuilder<> IRB(Malloc);
               const auto &DL = Malloc->getModule()->getDataLayout();

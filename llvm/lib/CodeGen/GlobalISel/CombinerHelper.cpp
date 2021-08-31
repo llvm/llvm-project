@@ -722,6 +722,18 @@ bool CombinerHelper::matchSextInRegOfLoad(
   // anyway for most targets.
   if (!isPowerOf2_32(NewSizeBits))
     return false;
+
+  const MachineMemOperand &MMO = LoadDef->getMMO();
+  LegalityQuery::MemDesc MMDesc;
+  MMDesc.MemoryTy = LLT::scalar(NewSizeBits);
+  MMDesc.AlignInBits = MMO.getAlign().value() * 8;
+  MMDesc.Ordering = MMO.getSuccessOrdering();
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SEXTLOAD,
+                                 {MRI.getType(LoadDef->getDstReg()),
+                                  MRI.getType(LoadDef->getPointerReg())},
+                                 {MMDesc}}))
+    return false;
+
   MatchInfo = std::make_tuple(LoadDef->getDstReg(), NewSizeBits);
   return true;
 }

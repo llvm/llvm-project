@@ -2088,7 +2088,8 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
 
   // Non-Solaris is much simpler - most systems just go with "/usr".
   if (SysRoot.empty() && TargetTriple.getOS() == llvm::Triple::Linux) {
-    // Yet, still look for RHEL devtoolsets.
+    // Yet, still look for RHEL/CentOS devtoolsets and gcc-toolsets.
+    Prefixes.push_back("/opt/rh/gcc-toolset-10/root/usr");
     Prefixes.push_back("/opt/rh/devtoolset-10/root/usr");
     Prefixes.push_back("/opt/rh/devtoolset-9/root/usr");
     Prefixes.push_back("/opt/rh/devtoolset-8/root/usr");

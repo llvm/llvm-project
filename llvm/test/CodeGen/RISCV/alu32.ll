@@ -106,7 +106,7 @@ define i32 @slli(i32 %a) nounwind {
 ;
 ; RV64I-LABEL: slli:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 7
+; RV64I-NEXT:    slliw a0, a0, 7
 ; RV64I-NEXT:    ret
   %1 = shl i32 %a, 7
   ret i32 %1

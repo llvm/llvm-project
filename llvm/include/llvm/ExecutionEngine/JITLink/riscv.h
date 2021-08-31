@@ -70,7 +70,19 @@ enum EdgeKind_riscv : Edge::Kind {
   ///
   /// Fixup expression:
   ///   Fixup <- (Target - Fixup + Addend)
-  R_RISCV_CALL
+  R_RISCV_CALL,
+
+  /// PC relative GOT offset
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (GOT - Fixup + Addend) >> 12
+  R_RISCV_GOT_HI20,
+
+  /// PC relative call by PLT
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (Target - Fixup + Addend)
+  R_RISCV_CALL_PLT
 
 };
 

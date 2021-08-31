@@ -27,9 +27,10 @@ def AttrSizedOperandsOp : TestOp<"attr_sized_operands",
   // CHECK:   operands.append(variadic1)
   // CHECK:   operands.append(non_variadic)
   // CHECK:   if variadic2 is not None: operands.append(variadic2)
+  // CHECK:   _ods_successors = None
   // CHECK:   super().__init__(self.build_generic(
   // CHECK:     attributes=attributes, results=results, operands=operands,
-  // CHECK:     loc=loc, ip=ip))
+  // CHECK:     successors=_ods_successors, loc=loc, ip=ip))
 
   // CHECK: @builtins.property
   // CHECK: def variadic1(self):
@@ -68,9 +69,10 @@ def AttrSizedResultsOp : TestOp<"attr_sized_results",
   // CHECK:   if variadic1 is not None: results.append(variadic1)
   // CHECK:   results.append(non_variadic)
   // CHECK:   if variadic2 is not None: results.append(variadic2)
+  // CHECK:   _ods_successors = None
   // CHECK:   super().__init__(self.build_generic(
   // CHECK:     attributes=attributes, results=results, operands=operands,
-  // CHECK:     loc=loc, ip=ip))
+  // CHECK:     successors=_ods_successors, loc=loc, ip=ip))
 
   // CHECK: @builtins.property
   // CHECK: def variadic1(self):
@@ -112,9 +114,10 @@ def AttributedOp : TestOp<"attributed_op"> {
   // CHECK:   if bool(unitAttr): attributes["unitAttr"] = _ods_ir.UnitAttr.get(
   // CHECK:     _ods_get_default_loc_context(loc))
   // CHECK:   attributes["in"] = in_
+  // CHECK:   _ods_successors = None
   // CHECK:   super().__init__(self.build_generic(
   // CHECK:     attributes=attributes, results=results, operands=operands,
-  // CHECK:     loc=loc, ip=ip))
+  // CHECK:     successors=_ods_successors, loc=loc, ip=ip))
 
   // CHECK: @builtins.property
   // CHECK: def i32attr(self):
@@ -152,9 +155,10 @@ def AttributedOpWithOperands : TestOp<"attributed_op_with_operands"> {
   // CHECK:   if bool(in_): attributes["in"] = _ods_ir.UnitAttr.get(
   // CHECK:     _ods_get_default_loc_context(loc))
   // CHECK:   if is_ is not None: attributes["is"] = is_
+  // CHECK:   _ods_successors = None
   // CHECK:   super().__init__(self.build_generic(
   // CHECK:     attributes=attributes, results=results, operands=operands,
-  // CHECK:     loc=loc, ip=ip))
+  // CHECK:     successors=_ods_successors, loc=loc, ip=ip))
 
   // CHECK: @builtins.property
   // CHECK: def in_(self):
@@ -177,9 +181,10 @@ def EmptyOp : TestOp<"empty">;
   // CHECK:   operands = []
   // CHECK:   results = []
   // CHECK:   attributes = {}
+  // CHECK:   _ods_successors = None
   // CHECK:   super().__init__(self.build_generic(
   // CHECK:     attributes=attributes, results=results, operands=operands,
-  // CHECK:     loc=loc, ip=ip))
+  // CHECK:     successors=_ods_successors, loc=loc, ip=ip))
 
 // CHECK: @_ods_cext.register_operation(_Dialect)
 // CHECK: class MissingNamesOp(_ods_ir.OpView):
@@ -195,9 +200,10 @@ def MissingNamesOp : TestOp<"missing_names"> {
   // CHECK:   operands.append(_gen_arg_0)
   // CHECK:   operands.append(f32)
   // CHECK:   operands.append(_gen_arg_2)
+  // CHECK:   _ods_successors = None
   // CHECK:   super().__init__(self.build_generic(
   // CHECK:     attributes=attributes, results=results, operands=operands,
-  // CHECK:     loc=loc, ip=ip))
+  // CHECK:     successors=_ods_successors, loc=loc, ip=ip))
 
   // CHECK: @builtins.property
   // CHECK: def f32(self):
@@ -226,9 +232,10 @@ def OneVariadicOperandOp : TestOp<"one_variadic_operand"> {
   // CHECK:   attributes = {}
   // CHECK:   operands.append(non_variadic)
   // CHECK:   operands.extend(variadic)
+  // CHECK:   _ods_successors = None
   // CHECK:   super().__init__(self.build_generic(
   // CHECK:     attributes=attributes, results=results, operands=operands,
-  // CHECK:     loc=loc, ip=ip))
+  // CHECK:     successors=_ods_successors, loc=loc, ip=ip))
 
   // CHECK: @builtins.property
   // CHECK: def non_variadic(self):
@@ -253,9 +260,10 @@ def OneVariadicResultOp : TestOp<"one_variadic_result"> {
   // CHECK:   attributes = {}
   // CHECK:   results.extend(variadic)
   // CHECK:   results.append(non_variadic)
+  // CHECK:   _ods_successors = None
   // CHECK:   super().__init__(self.build_generic(
   // CHECK:     attributes=attributes, results=results, operands=operands,
-  // CHECK:     loc=loc, ip=ip))
+  // CHECK:     successors=_ods_successors, loc=loc, ip=ip))
 
   // CHECK: @builtins.property
   // CHECK: def variadic(self):
@@ -278,9 +286,10 @@ def PythonKeywordOp : TestOp<"python_keyword"> {
   // CHECK:   results = []
   // CHECK:   attributes = {}
   // CHECK:   operands.append(in_)
+  // CHECK:   _ods_successors = None
   // CHECK:   super().__init__(self.build_generic(
   // CHECK:     attributes=attributes, results=results, operands=operands,
-  // CHECK:     loc=loc, ip=ip))
+  // CHECK:     successors=_ods_successors, loc=loc, ip=ip))
 
   // CHECK: @builtins.property
   // CHECK: def in_(self):
@@ -346,9 +355,10 @@ def SimpleOp : TestOp<"simple"> {
   // CHECK:   results.append(f64)
   // CHECK:   operands.append(i32)
   // CHECK:   operands.append(f32)
+  // CHECK:   _ods_successors = None
   // CHECK:   super().__init__(self.build_generic(
   // CHECK:     attributes=attributes, results=results, operands=operands,
-  // CHECK:     loc=loc, ip=ip))
+  // CHECK:     successors=_ods_successors, loc=loc, ip=ip))
 
   // CHECK: @builtins.property
   // CHECK: def i32(self):
@@ -367,4 +377,16 @@ def SimpleOp : TestOp<"simple"> {
   // CHECK: def f64(self):
   // CHECK:   return self.operation.results[1]
   let results = (outs I64:$i64, F64:$f64);
+}
+
+// CHECK: @_ods_cext.register_operation(_Dialect)
+// CHECK: class WithSuccessorsOp(_ods_ir.OpView):
+// CHECK-LABEL: OPERATION_NAME = "test.with_successors"
+def WithSuccessorsOp : TestOp<"with_successors"> {
+  // CHECK-NOT:  _ods_successors = None
+  // CHECK:      _ods_successors = []
+  // CHECK-NEXT: _ods_successors.append(successor)
+  // CHECK-NEXT: _ods_successors.extend(successors)
+  let successors = (successor AnySuccessor:$successor,
+                              VariadicSuccessor<AnySuccessor>:$successors);
 }

@@ -15,8 +15,9 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "libunwind.h"
+#include "cet_unwind.h"
 #include "config.h"
+#include "libunwind.h"
 
 namespace libunwind {
 
@@ -42,6 +43,13 @@ enum {
 #if defined(_LIBUNWIND_TARGET_I386)
 class _LIBUNWIND_HIDDEN Registers_x86;
 extern "C" void __libunwind_Registers_x86_jumpto(Registers_x86 *);
+
+#if defined(_LIBUNWIND_USE_CET)
+extern "C" void *__libunwind_cet_get_jump_target() {
+  return reinterpret_cast<void *>(&__libunwind_Registers_x86_jumpto);
+}
+#endif
+
 /// Registers_x86 holds the register state of a thread in a 32-bit intel
 /// process.
 class _LIBUNWIND_HIDDEN Registers_x86 {
@@ -253,6 +261,13 @@ inline void Registers_x86::setVectorRegister(int, v128) {
 /// process.
 class _LIBUNWIND_HIDDEN Registers_x86_64;
 extern "C" void __libunwind_Registers_x86_64_jumpto(Registers_x86_64 *);
+
+#if defined(_LIBUNWIND_USE_CET)
+extern "C" void *__libunwind_cet_get_jump_target() {
+  return reinterpret_cast<void *>(&__libunwind_Registers_x86_64_jumpto);
+}
+#endif
+
 class _LIBUNWIND_HIDDEN Registers_x86_64 {
 public:
   Registers_x86_64();

@@ -63,12 +63,12 @@ def int_wasm_get_exception : Intrinsic<[llvm_ptr_ty], [llvm_token_ty],
 def int_wasm_get_ehselector : Intrinsic<[llvm_i32_ty], [llvm_token_ty],
                                         [IntrHasSideEffects]>;
 
-// wasm.catch.exn returns the pointer to the exception object caught by wasm
-// 'catch' instruction. This returns a single pointer, which is the case for C++
+// wasm.catch returns the pointer to the exception object caught by wasm 'catch'
+// instruction. This returns a single pointer, which is the case for C++
 // exceptions. The immediate argument is an index to for a tag, which is 0 for
 // C++ exceptions.
-def int_wasm_catch_exn : Intrinsic<[llvm_ptr_ty], [llvm_i32_ty],
-                                   [IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
+def int_wasm_catch : Intrinsic<[llvm_ptr_ty], [llvm_i32_ty],
+                               [IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
 
 // WebAssembly EH must maintain the landingpads in the order assigned to them
 // by WasmEHPrepare pass to generate landingpad table in EHStreamer. This is

@@ -2445,11 +2445,6 @@ void ItaniumCXXABI::EmitGuardedInit(CodeGenFunction &CGF,
         (CGM.getTarget().getTriple().isOSBinFormatELF() ||
          CGM.getTarget().getTriple().isOSBinFormatWasm())) {
       guard->setComdat(C);
-      // An inline variable's guard function is run from the per-TU
-      // initialization function, not via a dedicated global ctor function, so
-      // we can't put it in a comdat.
-      if (!NonTemplateInline)
-        CGF.CurFn->setComdat(C);
     } else if (CGM.supportsCOMDAT() && guard->isWeakForLinker()) {
       guard->setComdat(CGM.getModule().getOrInsertComdat(guard->getName()));
     }

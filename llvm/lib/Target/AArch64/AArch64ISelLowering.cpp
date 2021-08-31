@@ -998,6 +998,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::UINT_TO_FP, MVT::v1i64, Expand);
     setOperationAction(ISD::FP_ROUND, MVT::v1f64, Expand);
 
+    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v1i64, Expand);
+    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v1i64, Expand);
+
     setOperationAction(ISD::MUL, MVT::v1i64, Expand);
 
     // AArch64 doesn't have a direct vector ->f32 conversion instructions for
@@ -1461,6 +1464,8 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
 
   setOperationAction(ISD::FP_TO_SINT, VT, Custom);
   setOperationAction(ISD::FP_TO_UINT, VT, Custom);
+  setOperationAction(ISD::FP_TO_SINT_SAT, VT, Custom);
+  setOperationAction(ISD::FP_TO_UINT_SAT, VT, Custom);
 
   if (!VT.isFloatingPoint())
     setOperationAction(ISD::ABS, VT, Legal);
@@ -3382,31 +3387,77 @@ SDValue AArch64TargetLowering::LowerFP_TO_INT(SDValue Op,
   return SDValue();
 }
 
+SDValue
+AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  // AArch64 FP-to-int conversions saturate to the destination element size, so
+  // we can lower common saturating conversions to simple instructions.
+  SDValue SrcVal = Op.getOperand(0);
+  EVT SrcVT = SrcVal.getValueType();
+  EVT DstVT = Op.getValueType();
+  EVT SatVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
+
+  uint64_t SrcElementWidth = SrcVT.getScalarSizeInBits();
+  uint64_t DstElementWidth = DstVT.getScalarSizeInBits();
+  uint64_t SatWidth = SatVT.getScalarSizeInBits();
+  assert(SatWidth <= DstElementWidth &&
+         "Saturation width cannot exceed result width");
+
+  // TODO: Consider lowering to SVE operations, as in LowerVectorFP_TO_INT.
+  // Currently, the `llvm.fpto[su]i.sat.*` instrinsics don't accept scalable
+  // types, so this is hard to reach.
+  if (DstVT.isScalableVector())
+    return SDValue();
+
+  // TODO: Saturate to SatWidth explicitly.
+  if (SatWidth != DstElementWidth)
+    return SDValue();
+
+  EVT SrcElementVT = SrcVT.getVectorElementType();
+
+  // In the absence of FP16 support, promote f16 to f32, like
+  // LowerVectorFP_TO_INT().
+  if (SrcElementVT == MVT::f16 && !Subtarget->hasFullFP16()) {
+    MVT F32VT = MVT::getVectorVT(MVT::f32, SrcVT.getVectorNumElements());
+    return DAG.getNode(Op.getOpcode(), SDLoc(Op), DstVT,
+                       DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), F32VT, SrcVal),
+                       Op.getOperand(1));
+  }
+
+  // Cases that we can emit directly.
+  if ((SrcElementWidth == DstElementWidth) &&
+      (SrcElementVT == MVT::f64 || SrcElementVT == MVT::f32 ||
+       (SrcElementVT == MVT::f16 && Subtarget->hasFullFP16()))) {
+    return Op;
+  }
+
+  // For all other cases, fall back on the expanded form.
+  return SDValue();
+}
+
 SDValue AArch64TargetLowering::LowerFP_TO_INT_SAT(SDValue Op,
                                                   SelectionDAG &DAG) const {
   // AArch64 FP-to-int conversions saturate to the destination register size, so
   // we can lower common saturating conversions to simple instructions.
   SDValue SrcVal = Op.getOperand(0);
-
   EVT SrcVT = SrcVal.getValueType();
-  EVT DstVT = Op.getValueType();
 
+  if (SrcVT.isVector())
+    return LowerVectorFP_TO_INT_SAT(Op, DAG);
+
+  EVT DstVT = Op.getValueType();
   EVT SatVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
   uint64_t SatWidth = SatVT.getScalarSizeInBits();
   uint64_t DstWidth = DstVT.getScalarSizeInBits();
   assert(SatWidth <= DstWidth && "Saturation width cannot exceed result width");
 
-  // TODO: Support lowering of NEON and SVE conversions.
-  if (SrcVT.isVector())
-    return SDValue();
-
   // TODO: Saturate to SatWidth explicitly.
   if (SatWidth != DstWidth)
     return SDValue();
 
-  // In the absence of FP16 support, promote f32 to f16, like LowerFP_TO_INT().
+  // In the absence of FP16 support, promote f16 to f32, like LowerFP_TO_INT().
   if (SrcVT == MVT::f16 && !Subtarget->hasFullFP16())
-    return DAG.getNode(Op.getOpcode(), SDLoc(Op), Op.getValueType(),
+    return DAG.getNode(Op.getOpcode(), SDLoc(Op), DstVT,
                        DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), MVT::f32, SrcVal),
                        Op.getOperand(1));
 
@@ -3956,8 +4007,8 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(AArch64ISD::SPLICE, dl, Op.getValueType(),
                        Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
   case Intrinsic::aarch64_sve_ptrue:
-    return DAG.getNode(AArch64ISD::PTRUE, dl, Op.getValueType(),
-                       Op.getOperand(1));
+    return getPTrue(DAG, dl, Op.getValueType(),
+                    cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue());
   case Intrinsic::aarch64_sve_clz:
     return DAG.getNode(AArch64ISD::CTLZ_MERGE_PASSTHRU, dl, Op.getValueType(),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
@@ -17971,42 +18022,20 @@ static SDValue getPredicateForFixedLengthVector(SelectionDAG &DAG, SDLoc &DL,
          DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
          "Expected legal fixed length vector!");
 
-  int PgPattern;
-  switch (VT.getVectorNumElements()) {
-  default:
-    llvm_unreachable("unexpected element count for SVE predicate");
-  case 1:
-    PgPattern = AArch64SVEPredPattern::vl1;
-    break;
-  case 2:
-    PgPattern = AArch64SVEPredPattern::vl2;
-    break;
-  case 4:
-    PgPattern = AArch64SVEPredPattern::vl4;
-    break;
-  case 8:
-    PgPattern = AArch64SVEPredPattern::vl8;
-    break;
-  case 16:
-    PgPattern = AArch64SVEPredPattern::vl16;
-    break;
-  case 32:
-    PgPattern = AArch64SVEPredPattern::vl32;
-    break;
-  case 64:
-    PgPattern = AArch64SVEPredPattern::vl64;
-    break;
-  case 128:
-    PgPattern = AArch64SVEPredPattern::vl128;
-    break;
-  case 256:
-    PgPattern = AArch64SVEPredPattern::vl256;
-    break;
-  }
+  unsigned PgPattern =
+      getSVEPredPatternFromNumElements(VT.getVectorNumElements());
+  assert(PgPattern && "Unexpected element count for SVE predicate");
 
-  // TODO: For vectors that are exactly getMaxSVEVectorSizeInBits big, we can
-  // use AArch64SVEPredPattern::all, which can enable the use of unpredicated
+  // For vectors that are exactly getMaxSVEVectorSizeInBits big, we can use
+  // AArch64SVEPredPattern::all, which can enable the use of unpredicated
   // variants of instructions when available.
+  const auto &Subtarget =
+      static_cast<const AArch64Subtarget &>(DAG.getSubtarget());
+  unsigned MinSVESize = Subtarget.getMinSVEVectorSizeInBits();
+  unsigned MaxSVESize = Subtarget.getMaxSVEVectorSizeInBits();
+  if (MaxSVESize && MinSVESize == MaxSVESize &&
+      MaxSVESize == VT.getSizeInBits())
+    PgPattern = AArch64SVEPredPattern::all;
 
   MVT MaskVT;
   switch (VT.getVectorElementType().getSimpleVT().SimpleTy) {
@@ -18029,8 +18058,7 @@ static SDValue getPredicateForFixedLengthVector(SelectionDAG &DAG, SDLoc &DL,
     break;
   }
 
-  return DAG.getNode(AArch64ISD::PTRUE, DL, MaskVT,
-                     DAG.getTargetConstant(PgPattern, DL, MVT::i64));
+  return getPTrue(DAG, DL, MaskVT, PgPattern);
 }
 
 static SDValue getPredicateForScalableVector(SelectionDAG &DAG, SDLoc &DL,

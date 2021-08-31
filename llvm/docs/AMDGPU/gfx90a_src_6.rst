@@ -14,4 +14,4 @@ Instruction input.
 
 *Size:* 1 dword.
 
-*Operands:* :ref:`v<amdgpu_synid_v>`, :ref:`constant<amdgpu_synid_constant>`
+*Operands:* :ref:`v<amdgpu_synid_v>`, :ref:`iconst<amdgpu_synid_iconst>`, :ref:`fconst<amdgpu_synid_fconst>`

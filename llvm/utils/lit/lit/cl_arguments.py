@@ -8,9 +8,11 @@ import lit.reports
 import lit.util
 
 
+@enum.unique
 class TestOrder(enum.Enum):
-    DEFAULT = enum.auto()
-    RANDOM = enum.auto()
+    LEXICAL = 'lexical'
+    RANDOM = 'random'
+    SMART = 'smart'
 
 
 def parse_args():
@@ -115,6 +117,9 @@ def parse_args():
     execution_group.add_argument("--xunit-xml-output",
             type=lit.reports.XunitReport,
             help="Write XUnit-compatible XML test reports to the specified file")
+    execution_group.add_argument("--resultdb-output",
+            type=lit.reports.ResultDBReport,
+            help="Write LuCI ResuldDB compatible JSON to the specified file")
     execution_group.add_argument("--time-trace-output",
             type=lit.reports.TimeTraceReport,
             help="Write Chrome tracing compatible JSON to the specified file")
@@ -150,11 +155,17 @@ def parse_args():
             metavar="N",
             help="Maximum time to spend testing (in seconds)",
             type=_positive_int)
+    selection_group.add_argument("--order",
+            choices=[x.value for x in TestOrder],
+            default=TestOrder.SMART,
+            help="Test order to use (default: smart)")
     selection_group.add_argument("--shuffle",
-            help="Run tests in random order",
-            action="store_true")
+            dest="order",
+            help="Run tests in random order (DEPRECATED: use --order=random)",
+            action="store_const",
+            const=TestOrder.RANDOM)
     selection_group.add_argument("-i", "--incremental",
-            help="Run failed tests first (DEPRECATED: now always enabled)",
+            help="Run failed tests first (DEPRECATED: use --order=smart)",
             action="store_true")
     selection_group.add_argument("--filter",
             metavar="REGEX",
@@ -215,11 +226,6 @@ def parse_args():
     if opts.incremental:
         print('WARNING: --incremental is deprecated. Failing tests now always run first.')
 
-    if opts.shuffle:
-        opts.order = TestOrder.RANDOM
-    else:
-        opts.order = TestOrder.DEFAULT
-
     if opts.numShards or opts.runShard:
         if not opts.numShards or not opts.runShard:
             parser.error("--num-shards and --run-shard must be used together")
@@ -229,7 +235,7 @@ def parse_args():
     else:
         opts.shard = None
 
-    opts.reports = filter(None, [opts.output, opts.xunit_xml_output, opts.time_trace_output])
+    opts.reports = filter(None, [opts.output, opts.xunit_xml_output, opts.resultdb_output, opts.time_trace_output])
 
     return opts
 

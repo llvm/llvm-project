@@ -120,8 +120,7 @@ body:             |
     ; CHECK: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
     ; CHECK: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlv), [[CTPOP]](<8 x s8>)
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[INT]](s32)
-    ; CHECK: %ext:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: $w0 = COPY %ext(s32)
+    ; CHECK: $w0 = COPY [[COPY]](s32)
     ; CHECK: RET_ReallyLR implicit $w0
     %copy:_(s32) = COPY $w0
     %trunc:_(s16) = G_TRUNC %copy(s32)
@@ -148,8 +147,7 @@ body:             |
     ; CHECK: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
     ; CHECK: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlv), [[CTPOP]](<8 x s8>)
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[INT]](s32)
-    ; CHECK: %ext:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: $w0 = COPY %ext(s32)
+    ; CHECK: $w0 = COPY [[COPY]](s32)
     ; CHECK: RET_ReallyLR implicit $w0
     %copy:_(s32) = COPY $w0
     %trunc:_(s8) = G_TRUNC %copy(s32)
@@ -176,8 +174,7 @@ body:             |
     ; CHECK: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
     ; CHECK: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlv), [[CTPOP]](<8 x s8>)
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[INT]](s32)
-    ; CHECK: %ext:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: $w0 = COPY %ext(s32)
+    ; CHECK: $w0 = COPY [[COPY]](s32)
     ; CHECK: RET_ReallyLR implicit $w0
     %copy:_(s32) = COPY $w0
     %trunc:_(s3) = G_TRUNC %copy(s32)
@@ -203,8 +200,7 @@ body:             |
     ; CHECK: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
     ; CHECK: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlv), [[CTPOP]](<8 x s8>)
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[INT]](s32)
-    ; CHECK: %ext:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: $w0 = COPY %ext(s32)
+    ; CHECK: $w0 = COPY [[COPY]](s32)
     ; CHECK: RET_ReallyLR implicit $w0
     %copy:_(s32) = COPY $w0
     %trunc:_(s8) = G_TRUNC %copy(s32)

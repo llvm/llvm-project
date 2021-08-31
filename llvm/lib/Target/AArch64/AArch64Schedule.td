@@ -47,6 +47,7 @@ def WriteAdr       : SchedWrite; // Address pre/post increment.
 
 def WriteLDIdx : SchedWrite; // Load from a register index (maybe scaled).
 def WriteSTIdx : SchedWrite; // Store to a register index (maybe scaled).
+def ReadST     : SchedRead;  // Read the stored value.
 def ReadAdrBase : SchedRead; // Read the base resister of a reg-offset LD/ST.
 
 // Serialized two-level address load.

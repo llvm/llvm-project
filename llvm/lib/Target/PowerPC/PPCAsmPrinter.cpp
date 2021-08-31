@@ -2023,9 +2023,10 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
   // Set the 4th byte of the mandatory field.
   FirstHalfOfMandatoryField |= TracebackTable::IsFunctionNamePresentMask;
 
-  static_assert(XCOFF::AllocRegNo == 31, "Unexpected register usage!");
-  if (MRI.isPhysRegUsed(Subtarget->isPPC64() ? PPC::X31 : PPC::R31,
-                        /* SkipRegMaskTest */ true))
+  const PPCRegisterInfo *RegInfo =
+      static_cast<const PPCRegisterInfo *>(Subtarget->getRegisterInfo());
+  Register FrameReg = RegInfo->getFrameRegister(*MF);
+  if (FrameReg == (Subtarget->isPPC64() ? PPC::X31 : PPC::R31))
     FirstHalfOfMandatoryField |= TracebackTable::IsAllocaUsedMask;
 
   const SmallVectorImpl<Register> &MustSaveCRs = FI->getMustSaveCRs();

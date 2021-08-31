@@ -4,7 +4,7 @@
 declare void @use(i1)
 
 
-define void @test_uge_temporary_indices_decompose(i8 %start, i8 %n, i8 %idx) {
+define i1 @test_uge_temporary_indices_decompose(i8 %start, i8 %n, i8 %idx) {
 ; CHECK-LABEL: @test_uge_temporary_indices_decompose(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_PRE:%.*]] = icmp ult i8 [[IDX:%.*]], [[N:%.*]]
@@ -14,24 +14,22 @@ define void @test_uge_temporary_indices_decompose(i8 %start, i8 %n, i8 %idx) {
 ; CHECK-NEXT:    br i1 [[CMP_PRE]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[T_0:%.*]] = icmp ult i8 [[START_ADD_IDX]], [[START_ADD_N]]
-; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[F_0:%.*]] = icmp uge i8 [[START_ADD_IDX]], [[START_ADD_N]]
-; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    [[R_1:%.*]] = xor i1 true, false
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[START_ADD_1]], [[START_ADD_N]]
-; CHECK-NEXT:    call void @use(i1 [[C_1]])
+; CHECK-NEXT:    [[R_2:%.*]] = xor i1 [[R_1]], [[C_1]]
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i8 [[START_ADD_IDX]], [[START_ADD_1]]
-; CHECK-NEXT:    call void @use(i1 [[C_2]])
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], [[C_2]]
+; CHECK-NEXT:    ret i1 [[R_3]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp ult i8 [[START_ADD_IDX]], [[START_ADD_N]]
-; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[START_ADD_IDX]], [[START_ADD_N]]
-; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[R_4:%.*]] = xor i1 false, true
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i8 [[START_ADD_1]], [[START_ADD_N]]
-; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    [[R_5:%.*]] = xor i1 [[R_4]], [[C_3]]
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp ult i8 [[START_ADD_IDX]], [[START_ADD_1]]
-; CHECK-NEXT:    call void @use(i1 [[C_4]])
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[R_6:%.*]] = xor i1 [[R_5]], [[C_4]]
+; CHECK-NEXT:    ret i1 [[R_6]]
 ;
 entry:
   %cmp.pre = icmp ult i8 %idx, %n
@@ -42,32 +40,27 @@ entry:
 
 if.then:                                          ; preds = %entry
   %t.0 = icmp ult i8 %start.add.idx, %start.add.n
-  call void @use(i1 %t.0)
-
   %f.0 = icmp uge i8 %start.add.idx, %start.add.n
-  call void @use(i1 %f.0)
+  %r.1 = xor i1 %t.0, %f.0
 
   %c.1 = icmp ult i8 %start.add.1, %start.add.n
-  call void @use(i1 %c.1)
+  %r.2 = xor i1 %r.1, %c.1
 
   %c.2 = icmp ult i8 %start.add.idx, %start.add.1
-  call void @use(i1 %c.2)
-
-  ret void
+  %r.3 = xor i1 %r.2, %c.2
+  ret i1 %r.3
 
 
 if.end:                                           ; preds = %entry
   %f.1 = icmp ult i8 %start.add.idx, %start.add.n
-  call void @use(i1 %f.1)
-
   %t.1 = icmp uge i8 %start.add.idx, %start.add.n
-  call void @use(i1 %t.1)
+  %r.4 = xor i1 %f.1, %t.1
 
   %c.3 = icmp ult i8 %start.add.1, %start.add.n
-  call void @use(i1 %c.3)
+  %r.5 = xor i1 %r.4, %c.3
 
   %c.4 = icmp ult i8 %start.add.idx, %start.add.1
-  call void @use(i1 %c.4)
+  %r.6 = xor i1 %r.5, %c.4
 
-  ret void
+  ret i1 %r.6
 }

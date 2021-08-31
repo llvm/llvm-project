@@ -235,7 +235,7 @@ public:
 
   bool DeallocateMemory(lldb::addr_t addr);
 
-  Status Detach(bool keep_stopped);
+  Status Detach(bool keep_stopped, lldb::pid_t pid = LLDB_INVALID_PROCESS_ID);
 
   Status GetMemoryRegionInfo(lldb::addr_t addr, MemoryRegionInfo &range_info);
 

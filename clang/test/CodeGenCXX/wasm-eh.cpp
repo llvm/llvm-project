@@ -1,6 +1,6 @@
 // REQUIRES: webassembly-registered-target
-// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 | FileCheck %s
-// RUN: %clang_cc1 %s -triple wasm64-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 | FileCheck %s
+// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -mllvm -wasm-enable-eh -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 | FileCheck %s
+// RUN: %clang_cc1 %s -triple wasm64-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -mllvm -wasm-enable-eh -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 | FileCheck %s
 
 void may_throw();
 void dont_throw() noexcept;
@@ -405,7 +405,7 @@ void test10() throw() {
 // Here we only check if the command enables wasm exception handling in the
 // backend so that exception handling instructions can be generated in .s file.
 
-// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -S -o - -std=c++11 | FileCheck %s --check-prefix=ASSEMBLY
+// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -mllvm -wasm-enable-eh -exception-model=wasm -target-feature +exception-handling -S -o - -std=c++11 | FileCheck %s --check-prefix=ASSEMBLY
 
 // ASSEMBLY: try
 // ASSEMBLY: catch

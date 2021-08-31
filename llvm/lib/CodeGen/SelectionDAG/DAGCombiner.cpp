@@ -12566,18 +12566,15 @@ SDValue DAGCombiner::CombineConsecutiveLoads(SDNode *N, EVT VT) {
       LD1->getAddressSpace() != LD2->getAddressSpace())
     return SDValue();
 
+  bool LD1Fast = false;
   EVT LD1VT = LD1->getValueType(0);
   unsigned LD1Bytes = LD1VT.getStoreSize();
-  if (DAG.areNonVolatileConsecutiveLoads(LD2, LD1, LD1Bytes, 1)) {
-    Align Alignment = LD1->getAlign();
-    Align NewAlign = DAG.getDataLayout().getABITypeAlign(
-        VT.getTypeForEVT(*DAG.getContext()));
-
-    if (NewAlign <= Alignment &&
-        (!LegalOperations || TLI.isOperationLegal(ISD::LOAD, VT)))
-      return DAG.getLoad(VT, SDLoc(N), LD1->getChain(), LD1->getBasePtr(),
-                         LD1->getPointerInfo(), Alignment);
-  }
+  if ((!LegalOperations || TLI.isOperationLegal(ISD::LOAD, VT)) &&
+      DAG.areNonVolatileConsecutiveLoads(LD2, LD1, LD1Bytes, 1) &&
+      TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), VT,
+                             *LD1->getMemOperand(), &LD1Fast) && LD1Fast)
+    return DAG.getLoad(VT, SDLoc(N), LD1->getChain(), LD1->getBasePtr(),
+                       LD1->getPointerInfo(), LD1->getAlign());
 
   return SDValue();
 }
@@ -13054,6 +13051,11 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   unsigned PreferredFusedOpcode = HasFMAD ? ISD::FMAD : ISD::FMA;
   bool Aggressive = TLI.enableAggressiveFMAFusion(VT);
 
+  auto isFusedOp = [&](SDValue N) {
+    unsigned Opcode = N.getOpcode();
+    return Opcode == ISD::FMA || Opcode == ISD::FMAD;
+  };
+
   // Is the node an FMUL and contractable either due to global flags or
   // SDNodeFlags.
   auto isContractableFMUL = [AllowFusionGlobally](SDValue N) {
@@ -13085,12 +13087,12 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   // fadd E, (fma A, B, (fmul C, D)) --> fma A, B, (fma C, D, E)
   // This requires reassociation because it changes the order of operations.
   SDValue FMA, E;
-  if (CanReassociate && N0.getOpcode() == PreferredFusedOpcode &&
+  if (CanReassociate && isFusedOp(N0) &&
       N0.getOperand(2).getOpcode() == ISD::FMUL && N0.hasOneUse() &&
       N0.getOperand(2).hasOneUse()) {
     FMA = N0;
     E = N1;
-  } else if (CanReassociate && N1.getOpcode() == PreferredFusedOpcode &&
+  } else if (CanReassociate && isFusedOp(N1) &&
              N1.getOperand(2).getOpcode() == ISD::FMUL && N1.hasOneUse() &&
              N1.getOperand(2).hasOneUse()) {
     FMA = N1;
@@ -13146,7 +13148,7 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
                                      DAG.getNode(ISD::FP_EXTEND, SL, VT, V),
                                      Z));
     };
-    if (N0.getOpcode() == PreferredFusedOpcode) {
+    if (isFusedOp(N0)) {
       SDValue N02 = N0.getOperand(2);
       if (N02.getOpcode() == ISD::FP_EXTEND) {
         SDValue N020 = N02.getOperand(0);
@@ -13176,7 +13178,7 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
     };
     if (N0.getOpcode() == ISD::FP_EXTEND) {
       SDValue N00 = N0.getOperand(0);
-      if (N00.getOpcode() == PreferredFusedOpcode) {
+      if (isFusedOp(N00)) {
         SDValue N002 = N00.getOperand(2);
         if (isContractableFMUL(N002) &&
             TLI.isFPExtFoldable(DAG, PreferredFusedOpcode, VT,
@@ -13190,7 +13192,7 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
 
     // fold (fadd x, (fma y, z, (fpext (fmul u, v)))
     //   -> (fma y, z, (fma (fpext u), (fpext v), x))
-    if (N1.getOpcode() == PreferredFusedOpcode) {
+    if (isFusedOp(N1)) {
       SDValue N12 = N1.getOperand(2);
       if (N12.getOpcode() == ISD::FP_EXTEND) {
         SDValue N120 = N12.getOperand(0);
@@ -13211,7 +13213,7 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
     // interesting for all targets, especially GPUs.
     if (N1.getOpcode() == ISD::FP_EXTEND) {
       SDValue N10 = N1.getOperand(0);
-      if (N10.getOpcode() == PreferredFusedOpcode) {
+      if (isFusedOp(N10)) {
         SDValue N102 = N10.getOperand(2);
         if (isContractableFMUL(N102) &&
             TLI.isFPExtFoldable(DAG, PreferredFusedOpcode, VT,
@@ -13407,12 +13409,17 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
     return isContractableFMUL(N) && isReassociable(N.getNode());
   };
 
+  auto isFusedOp = [&](SDValue N) {
+    unsigned Opcode = N.getOpcode();
+    return Opcode == ISD::FMA || Opcode == ISD::FMAD;
+  };
+
   // More folding opportunities when target permits.
   if (Aggressive && isReassociable(N)) {
     bool CanFuse = Options.UnsafeFPMath || N->getFlags().hasAllowContract();
     // fold (fsub (fma x, y, (fmul u, v)), z)
     //   -> (fma x, y (fma u, v, (fneg z)))
-    if (CanFuse && N0.getOpcode() == PreferredFusedOpcode &&
+    if (CanFuse && isFusedOp(N0) &&
         isContractableAndReassociableFMUL(N0.getOperand(2)) &&
         N0->hasOneUse() && N0.getOperand(2)->hasOneUse()) {
       return DAG.getNode(PreferredFusedOpcode, SL, VT, N0.getOperand(0),
@@ -13425,7 +13432,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
 
     // fold (fsub x, (fma y, z, (fmul u, v)))
     //   -> (fma (fneg y), z, (fma (fneg u), v, x))
-    if (CanFuse && N1.getOpcode() == PreferredFusedOpcode &&
+    if (CanFuse && isFusedOp(N1) &&
         isContractableAndReassociableFMUL(N1.getOperand(2)) &&
         N1->hasOneUse() && NoSignedZero) {
       SDValue N20 = N1.getOperand(2).getOperand(0);
@@ -13439,8 +13446,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
 
     // fold (fsub (fma x, y, (fpext (fmul u, v))), z)
     //   -> (fma x, y (fma (fpext u), (fpext v), (fneg z)))
-    if (N0.getOpcode() == PreferredFusedOpcode &&
-        N0->hasOneUse()) {
+    if (isFusedOp(N0) && N0->hasOneUse()) {
       SDValue N02 = N0.getOperand(2);
       if (N02.getOpcode() == ISD::FP_EXTEND) {
         SDValue N020 = N02.getOperand(0);
@@ -13466,7 +13472,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
     // interesting for all targets, especially GPUs.
     if (N0.getOpcode() == ISD::FP_EXTEND) {
       SDValue N00 = N0.getOperand(0);
-      if (N00.getOpcode() == PreferredFusedOpcode) {
+      if (isFusedOp(N00)) {
         SDValue N002 = N00.getOperand(2);
         if (isContractableAndReassociableFMUL(N002) &&
             TLI.isFPExtFoldable(DAG, PreferredFusedOpcode, VT,
@@ -13486,8 +13492,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
 
     // fold (fsub x, (fma y, z, (fpext (fmul u, v))))
     //   -> (fma (fneg y), z, (fma (fneg (fpext u)), (fpext v), x))
-    if (N1.getOpcode() == PreferredFusedOpcode &&
-        N1.getOperand(2).getOpcode() == ISD::FP_EXTEND &&
+    if (isFusedOp(N1) && N1.getOperand(2).getOpcode() == ISD::FP_EXTEND &&
         N1->hasOneUse()) {
       SDValue N120 = N1.getOperand(2).getOperand(0);
       if (isContractableAndReassociableFMUL(N120) &&
@@ -13511,8 +13516,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
     // FIXME: This turns two single-precision and one double-precision
     // operation into two double-precision operations, which might not be
     // interesting for all targets, especially GPUs.
-    if (N1.getOpcode() == ISD::FP_EXTEND &&
-        N1.getOperand(0).getOpcode() == PreferredFusedOpcode) {
+    if (N1.getOpcode() == ISD::FP_EXTEND && isFusedOp(N1.getOperand(0))) {
       SDValue CvtSrc = N1.getOperand(0);
       SDValue N100 = CvtSrc.getOperand(0);
       SDValue N101 = CvtSrc.getOperand(1);
@@ -16260,11 +16264,12 @@ struct LoadedSlice {
       return false;
 
     // Check if it will be merged with the load.
-    // 1. Check the alignment constraint.
-    Align RequiredAlignment = DAG->getDataLayout().getABITypeAlign(
-        ResVT.getTypeForEVT(*DAG->getContext()));
-
-    if (RequiredAlignment > getAlign())
+    // 1. Check the alignment / fast memory access constraint.
+    bool IsFast = false;
+    if (!TLI.allowsMemoryAccess(*DAG->getContext(), DAG->getDataLayout(), ResVT,
+                                Origin->getAddressSpace(), getAlign(),
+                                Origin->getMemOperand()->getFlags(), &IsFast) ||
+        !IsFast)
       return false;
 
     // 2. Check that the load is a legal operation for that type.
@@ -16803,27 +16808,26 @@ SDValue DAGCombiner::TransformFPLoadStorePair(SDNode *N) {
     if (VTSize.isScalable())
       return SDValue();
 
+    bool FastLD = false, FastST = false;
     EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), VTSize.getFixedSize());
     if (!TLI.isOperationLegal(ISD::LOAD, IntVT) ||
         !TLI.isOperationLegal(ISD::STORE, IntVT) ||
         !TLI.isDesirableToTransformToIntegerOp(ISD::LOAD, VT) ||
-        !TLI.isDesirableToTransformToIntegerOp(ISD::STORE, VT))
-      return SDValue();
-
-    Align LDAlign = LD->getAlign();
-    Align STAlign = ST->getAlign();
-    Type *IntVTTy = IntVT.getTypeForEVT(*DAG.getContext());
-    Align ABIAlign = DAG.getDataLayout().getABITypeAlign(IntVTTy);
-    if (LDAlign < ABIAlign || STAlign < ABIAlign)
+        !TLI.isDesirableToTransformToIntegerOp(ISD::STORE, VT) ||
+        !TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), IntVT,
+                                *LD->getMemOperand(), &FastLD) ||
+        !TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), IntVT,
+                                *ST->getMemOperand(), &FastST) ||
+        !FastLD || !FastST)
       return SDValue();
 
     SDValue NewLD =
         DAG.getLoad(IntVT, SDLoc(Value), LD->getChain(), LD->getBasePtr(),
-                    LD->getPointerInfo(), LDAlign);
+                    LD->getPointerInfo(), LD->getAlign());
 
     SDValue NewST =
         DAG.getStore(ST->getChain(), SDLoc(N), NewLD, ST->getBasePtr(),
-                     ST->getPointerInfo(), STAlign);
+                     ST->getPointerInfo(), ST->getAlign());
 
     AddToWorklist(NewLD.getNode());
     AddToWorklist(NewST.getNode());
@@ -16854,8 +16858,10 @@ bool DAGCombiner::isMulAddWithConstProfitable(SDNode *MulNode,
                                               SDValue &ConstNode) {
   APInt Val;
 
-  // If the add only has one use, this would be OK to do.
-  if (AddNode.getNode()->hasOneUse())
+  // If the add only has one use, and the target thinks the folding is
+  // profitable or does not lead to worse code, this would be OK to do.
+  if (AddNode.getNode()->hasOneUse() &&
+      TLI.isMulAddWithConstProfitable(AddNode, ConstNode))
     return true;
 
   // Walk all the users of the constant with which we're multiplying.
@@ -17652,7 +17658,11 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
 
       bool IsFastSt = false;
       bool IsFastLd = false;
-      if (TLI.isTypeLegal(StoreTy) &&
+      // Don't try vector types if we need a rotate. We may still fail the
+      // legality checks for the integer type, but we can't handle the rotate
+      // case with vectors.
+      // FIXME: We could use a shuffle in place of the rotate.
+      if (!NeedRotate && TLI.isTypeLegal(StoreTy) &&
           TLI.canMergeStoresTo(FirstStoreAS, StoreTy,
                                DAG.getMachineFunction()) &&
           TLI.allowsMemoryAccess(Context, DL, StoreTy,
@@ -19693,8 +19703,10 @@ SDValue DAGCombiner::convertBuildVecZextToZext(SDNode *N) {
 
   // Make sure the first element matches
   // (zext (extract_vector_elt X, C))
+  // Offset must be a constant multiple of the
+  // known-minimum vector length of the result type.
   int64_t Offset = checkElem(Op0);
-  if (Offset < 0)
+  if (Offset < 0 || (Offset % VT.getVectorNumElements()) != 0)
     return SDValue();
 
   unsigned NumElems = N->getNumOperands();
@@ -22564,15 +22576,23 @@ SDValue DAGCombiner::foldSelectOfBinops(SDNode *N) {
   if (!TLI.isBinOp(BinOpc) || (N2.getOpcode() != BinOpc))
     return SDValue();
 
-  if (!N->isOnlyUserOf(N0.getNode()) || !N->isOnlyUserOf(N1.getNode()))
+  // The use checks are intentionally on SDNode because we may be dealing
+  // with opcodes that produce more than one SDValue.
+  // TODO: Do we really need to check N0 (the condition operand of the select)?
+  //       But removing that clause could cause an infinite loop...
+  if (!N0->hasOneUse() || !N1->hasOneUse() || !N2->hasOneUse())
     return SDValue();
+
+  // Binops may include opcodes that return multiple values, so all values
+  // must be created/propagated from the newly created binops below.
+  SDVTList OpVTs = N1->getVTList();
 
   // Fold select(cond, binop(x, y), binop(z, y))
   //  --> binop(select(cond, x, z), y)
   if (N1.getOperand(1) == N2.getOperand(1)) {
     SDValue NewSel =
         DAG.getSelect(DL, VT, N0, N1.getOperand(0), N2.getOperand(0));
-    SDValue NewBinOp = DAG.getNode(BinOpc, DL, VT, NewSel, N1.getOperand(1));
+    SDValue NewBinOp = DAG.getNode(BinOpc, DL, OpVTs, NewSel, N1.getOperand(1));
     NewBinOp->setFlags(N1->getFlags());
     NewBinOp->intersectFlagsWith(N2->getFlags());
     return NewBinOp;
@@ -22586,7 +22606,7 @@ SDValue DAGCombiner::foldSelectOfBinops(SDNode *N) {
       VT == N2.getOperand(1).getValueType()) {
     SDValue NewSel =
         DAG.getSelect(DL, VT, N0, N1.getOperand(1), N2.getOperand(1));
-    SDValue NewBinOp = DAG.getNode(BinOpc, DL, VT, N1.getOperand(0), NewSel);
+    SDValue NewBinOp = DAG.getNode(BinOpc, DL, OpVTs, N1.getOperand(0), NewSel);
     NewBinOp->setFlags(N1->getFlags());
     NewBinOp->intersectFlagsWith(N2->getFlags());
     return NewBinOp;

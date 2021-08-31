@@ -1,6 +1,7 @@
+#include "../plugins/amdgpu/impl/rt.h"
+#include "../plugins/amdgpu/src/utils.h"
 #include "hostrpc_internal.h"
 #include "hsa.h"
-#include "../plugins/amdgpu/impl/rt.h"
 
 #include <assert.h>
 #include <atomic>
@@ -388,23 +389,4 @@ const char *amd_hostcall_error_string(amd_hostcall_error_t error) {
   default:
     return "AMD_HOSTCALL_ERROR_UNKNOWN";
   }
-}
-
-extern "C" {
-  hsa_status_t host_malloc(void **mem, size_t size) {
-    return core::Runtime::HostMalloc(mem, size);
-  }
-
-  hsa_status_t device_malloc(void **mem, size_t size, int device_id) {
-    return core::Runtime::DeviceMalloc(mem, size, device_id);
-  }
-  
-  hsa_status_t atmi_free(void *mem) {
-    return core::Runtime::Memfree(mem);
-  }
-
-  hsa_status_t ftn_assign_wrapper(void *arg0, void *arg1, void *arg2, void *arg3, void *arg4) {
-    return core::Runtime::FtnAssignWrapper(arg0, arg1, arg2, arg3, arg4);
-  }
-
 }

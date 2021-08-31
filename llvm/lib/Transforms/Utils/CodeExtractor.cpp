@@ -1389,12 +1389,17 @@ void CodeExtractor::moveCodeToFunction(Function *newFunction) {
   Function::BasicBlockListType &oldBlocks = oldFunc->getBasicBlockList();
   Function::BasicBlockListType &newBlocks = newFunction->getBasicBlockList();
 
+  auto newFuncIt = newFunction->front().getIterator();
   for (BasicBlock *Block : Blocks) {
     // Delete the basic block from the old function, and the list of blocks
     oldBlocks.remove(Block);
 
     // Insert this basic block into the new function
-    newBlocks.push_back(Block);
+    // Insert the original blocks after the entry block created
+    // for the new function. The entry block may be followed
+    // by a set of exit blocks at this point, but these exit
+    // blocks better be placed at the end of the new function.
+    newFuncIt = newBlocks.insertAfter(newFuncIt, Block);
   }
 }
 
@@ -1570,6 +1575,13 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
 
 Function *
 CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC) {
+  ValueSet Inputs, Outputs;
+  return extractCodeRegion(CEAC, Inputs, Outputs);
+}
+
+Function *
+CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
+                                 ValueSet &inputs, ValueSet &outputs) {
   if (!isEligible())
     return nullptr;
 
@@ -1658,7 +1670,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC) {
   }
   newFuncRoot->getInstList().push_back(BranchI);
 
-  ValueSet inputs, outputs, SinkingCands, HoistingCands;
+  ValueSet SinkingCands, HoistingCands;
   BasicBlock *CommonExit = nullptr;
   findAllocas(CEAC, SinkingCands, HoistingCands, CommonExit);
   assert(HoistingCands.empty() || CommonExit);

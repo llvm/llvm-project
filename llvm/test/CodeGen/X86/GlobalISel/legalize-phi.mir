@@ -158,8 +158,7 @@ body:             |
   ; ALL:   [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[COPY2]](s32)
   ; ALL: bb.2.cond.end:
   ; ALL:   [[PHI:%[0-9]+]]:_(s8) = G_PHI [[TRUNC2]](s8), %bb.1, [[TRUNC1]](s8), %bb.0
-  ; ALL:   [[COPY3:%[0-9]+]]:_(s8) = COPY [[PHI]](s8)
-  ; ALL:   $al = COPY [[COPY3]](s8)
+  ; ALL:   $al = COPY [[PHI]](s8)
   ; ALL:   RET 0, implicit $al
   bb.1.entry:
     successors: %bb.3(0x40000000), %bb.2(0x40000000)

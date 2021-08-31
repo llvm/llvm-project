@@ -400,9 +400,12 @@ define amdgpu_kernel void @combine_to_mad_fsub_2_f32_2uses_mul(float addrspace(1
 ; SI-DAG: buffer_load_dword [[D:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:12 glc{{$}}
 ; SI-DAG: buffer_load_dword [[E:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16 glc{{$}}
 
-; SI-STD: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[D]], [[E]]
-; SI-STD: v_fma_f32 [[TMP1:v[0-9]+]], [[A]], [[B]], [[TMP0]]
-; SI-STD: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[TMP1]], [[C]]
+; SI-STD-SAFE: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[D]], [[E]]
+; SI-STD-SAFE: v_fma_f32 [[TMP1:v[0-9]+]], [[A]], [[B]], [[TMP0]]
+; SI-STD-SAFE: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[TMP1]], [[C]]
+
+; SI-STD-UNSAFE: v_mad_f32 [[RESULT:v[0-9]+]], [[D]], [[E]], -[[C]]
+; SI-STD-UNSAFE: v_mac_f32_e32 [[RESULT]], [[A]], [[B]]
 
 ; SI-DENORM: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[D]], [[E]]
 ; SI-DENORM: v_fma_f32 [[TMP1:v[0-9]+]], [[A]], [[B]], [[TMP0]]

@@ -882,7 +882,6 @@ class AVX512FMA3S<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag>pattern>
       : I<o, F, outs, ins, asm, pattern>, T8PD,
         EVEX_4V, Requires<[HasAVX512]>;
-class AVX512FMA3Base : T8PD, EVEX_4V;
 
 class AVX512<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag>pattern>

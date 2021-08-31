@@ -24,7 +24,6 @@ class LiveIntervals;
 class LivePhysRegs;
 class RegisterBank;
 struct SGPRSpillBuilder;
-class SIMachineFunctionInfo;
 
 class SIRegisterInfo final : public AMDGPUGenRegisterInfo {
 private:
@@ -109,6 +108,13 @@ public:
 
   const TargetRegisterClass *getPointerRegClass(
     const MachineFunction &MF, unsigned Kind = 0) const override;
+
+  /// Returns a legal register class to copy a register in the specified class
+  /// to or from. If it is possible to copy the register directly without using
+  /// a cross register class copy, return the specified RC. Returns NULL if it
+  /// is not possible to copy between two registers of the specified class.
+  const TargetRegisterClass *
+  getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
 
   void buildVGPRSpillLoadStore(SGPRSpillBuilder &SB, int Index, int Offset,
                                bool IsLoad, bool IsKill = true) const;

@@ -28,9 +28,9 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_SUMMARYVIEW_H
 #define LLVM_TOOLS_LLVM_MCA_SUMMARYVIEW_H
 
-#include "Views/View.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/MC/MCSchedule.h"
+#include "llvm/MCA/View.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -70,12 +70,6 @@ class SummaryView : public View {
 
   // Used to map resource indices to actual processor resource IDs.
   llvm::SmallVector<unsigned, 8> ResIdx2ProcResID;
-
-  // Compute the reciprocal throughput for the analyzed code block.
-  // The reciprocal block throughput is computed as the MAX between:
-  //   - NumMicroOps / DispatchWidth
-  //   - Total Resource Cycles / #Units   (for every resource consumed).
-  double getBlockRThroughput() const;
 
   /// Compute the data we want to print out in the object DV.
   void collectData(DisplayValues &DV) const;

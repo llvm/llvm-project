@@ -83,10 +83,6 @@ struct TestLinalgTransforms
       llvm::cl::desc("Test a set of patterns that rewrite a linalg contraction "
                      "in vector.contract form"),
       llvm::cl::init(false)};
-  Option<bool> testAffineMinSCFCanonicalizationPatterns{
-      *this, "test-affine-min-scf-canonicalization-patterns",
-      llvm::cl::desc("Test affine-min + scf canonicalization patterns."),
-      llvm::cl::init(false)};
   Option<bool> testTileAndPadPattern{
       *this, "test-tile-and-pad-pattern",
       llvm::cl::desc("Test tile and pad pattern"), llvm::cl::init(false)};
@@ -546,18 +542,6 @@ static void applyExtractSliceOfPadTensorSwapPattern(FuncOp funcOp) {
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
-static void applyAffineMinSCFCanonicalizationPatterns(FuncOp funcOp) {
-  RewritePatternSet foldPattern(funcOp.getContext());
-  foldPattern.add<AffineMinSCFCanonicalizationPattern>(funcOp.getContext());
-  FrozenRewritePatternSet frozenPatterns(std::move(foldPattern));
-
-  // Explicitly apply the pattern on affected ops to avoid more general folding
-  // on the rest of the IR.
-  SmallVector<Operation *, 4> minOps;
-  funcOp.walk([&](AffineMinOp minOp) { minOps.push_back(minOp); });
-  (void)applyOpPatternsAndFold(minOps, frozenPatterns, /*strict=*/false);
-}
-
 // For now, just assume it is the zero of type.
 // In the future, it should be the zero of type + op.
 static Value getNeutralOfLinalgOp(OpBuilder &b, OpOperand &op) {
@@ -628,8 +612,6 @@ void TestLinalgTransforms::runOnFunction() {
     return applyGeneralizePadTensorPatterns(getFunction());
   if (testSwapSubTensorPadTensor)
     return applyExtractSliceOfPadTensorSwapPattern(getFunction());
-  if (testAffineMinSCFCanonicalizationPatterns)
-    return applyAffineMinSCFCanonicalizationPatterns(getFunction());
   if (testTileAndPadPattern)
     return applyTileAndPadPattern(getFunction(), tileSizesForPadding);
   if (testHoistPadding) {

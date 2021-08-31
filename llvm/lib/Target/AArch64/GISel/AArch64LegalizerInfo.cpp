@@ -194,7 +194,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .widenScalarToNextPow2(0);
 
   getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FNEG})
-      .legalFor({s32, s64, v2s64, v4s32, v2s32})
+      .legalFor({MinFPScalar, s32, s64, v2s64, v4s32, v2s32})
+      .clampScalar(0, MinFPScalar, s64)
       .clampNumElements(0, v2s32, v4s32)
       .clampNumElements(0, v2s64, v2s64);
 
@@ -487,6 +488,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_PTRTOINT)
       .legalForCartesianProduct({s1, s8, s16, s32, s64}, {p0})
+      .legalFor({{v2s64, v2p0}})
       .maxScalar(0, s64)
       .widenScalarToNextPow2(0, /*Min*/ 8);
 
@@ -767,7 +769,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .minScalar(0, MinFPScalar);
 
   // TODO: Libcall support for s128.
-  getActionDefinitionsBuilder(G_LROUND).legalFor({{s64, s32}, {s64, s64}});
+  // TODO: s16 should be legal with full FP16 support.
+  getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
+      .legalFor({{s64, s32}, {s64, s64}});
 
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());

@@ -176,6 +176,8 @@ private:
   static Expected<ELF_x86_64_Edges::ELFX86RelocationKind>
   getRelocationKind(const uint32_t Type) {
     switch (Type) {
+    case ELF::R_X86_64_32S:
+      return ELF_x86_64_Edges::ELFX86RelocationKind::Pointer32Signed;
     case ELF::R_X86_64_PC32:
       return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel32;
     case ELF::R_X86_64_PC64:
@@ -297,6 +299,9 @@ private:
           break;
         case Delta64:
           Kind = x86_64::Delta64;
+          break;
+        case Pointer32Signed:
+          Kind = x86_64::Pointer32Signed;
           break;
         case Pointer64:
           Kind = x86_64::Pointer64;
@@ -497,6 +502,8 @@ const char *getELFX86RelocationKindName(Edge::Kind R) {
   switch (R) {
   case Branch32:
     return "Branch32";
+  case Pointer32Signed:
+    return "Pointer32Signed";
   case Pointer64:
     return "Pointer64";
   case PCRel32:

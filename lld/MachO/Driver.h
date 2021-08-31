@@ -68,11 +68,6 @@ findPathCombination(const llvm::Twine &name,
 // rerooted.
 llvm::StringRef rerootPath(llvm::StringRef path);
 
-llvm::Optional<InputFile *> loadArchiveMember(MemoryBufferRef, uint32_t modTime,
-                                              StringRef archiveName,
-                                              bool objCOnly,
-                                              uint64_t offsetInArchive);
-
 uint32_t getModTime(llvm::StringRef path);
 
 void printArchiveMemberLoad(StringRef reason, const InputFile *);

@@ -701,6 +701,67 @@ TEST_F(FormatTestJS, FormatsFreestandingFunctions) {
                    getGoogleJSStyleWithColumns(20)));
 }
 
+TEST_F(FormatTestJS, FormatsDecorators) {
+  // No line break after argument decorators.
+  verifyFormat("class A {\n"
+               "  constructor(@arg(DECOR) private arg: Type) {}\n"
+               "}");
+  // Ensure that there is a break before functions, getters and setters.
+  EXPECT_EQ("class A {\n"
+            "  private p = () => {}\n"
+            "\n"
+            "  @decorated('a')\n"
+            "  get f() {\n"
+            "    return result;\n"
+            "  }\n"
+            "}\n"
+            "\n"
+            "class B {\n"
+            "  private p = () => {}\n"
+            "\n"
+            "  @decorated('a')\n"
+            "  set f() {\n"
+            "    return result;\n"
+            "  }\n"
+            "}\n"
+            "\n"
+            "class C {\n"
+            "  private p = () => {}\n"
+            "\n"
+            "  @decorated('a')\n"
+            "  function f() {\n"
+            "    return result;\n"
+            "  }\n"
+            "}",
+            format("class A {\n"
+                   "  private p = () => {}\n"
+                   "\n"
+                   "  @decorated('a')\n"
+                   "  get f() {\n"
+                   "    return result;\n"
+                   "  }\n"
+                   "}\n"
+                   "\n"
+                   "class B {\n"
+                   "  private p = () => {}\n"
+                   "\n"
+                   "  @decorated('a')\n"
+                   "  set f() {\n"
+                   "    return result;\n"
+                   "  }\n"
+                   "}\n"
+                   "\n"
+                   "class C {\n"
+                   "  private p = () => {}\n"
+                   "\n"
+                   "  @decorated('a')\n"
+                   "  function f() {\n"
+                   "    return result;\n"
+                   "  }\n"
+                   "}",
+                   getGoogleJSStyleWithColumns(50)));
+}
+
 TEST_F(FormatTestJS, GeneratorFunctions) {
   verifyFormat("function* f() {\n"
                "  let x = 1;\n"
@@ -790,6 +851,26 @@ TEST_F(FormatTestJS, AsyncFunctions) {
                "  for await (const x of y) {\n"
                "    console.log(x);\n"
                "  }\n"
+               "}\n");
+}
+
+TEST_F(FormatTestJS, OverriddenMembers) {
+  verifyFormat(
+      "class C extends P {\n"
+      "  protected override "
+      "anOverlyLongPropertyNameSoLongItHasToGoInASeparateLineWhenOverriden:\n"
+      "      undefined;\n"
+      "}\n");
+  verifyFormat(
+      "class C extends P {\n"
+      "  protected override "
+      "anOverlyLongMethodNameSoLongItHasToGoInASeparateLineWhenOverriden() {\n"
+      "  }\n"
+      "}\n");
+  verifyFormat("class C extends P {\n"
+               "  protected override aMethodName<ATypeParam extends {},\n"
+               "                                                    BTypeParam "
+               "extends {}>() {}\n"
                "}\n");
 }
 

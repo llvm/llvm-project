@@ -141,7 +141,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
     if (Function *Fn = dyn_cast<Function>(V)) {
       AttributeList AS = Fn->getAttributes();
       AttrBuilder FnAttrs(AS.getFnAttrs());
-      AS = AS.removeAttributes(Context, AttributeList::FunctionIndex);
+      AS = AS.removeFnAttributes(Context);
 
       FnAttrs.merge(B);
 
@@ -157,21 +157,21 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
     } else if (CallInst *CI = dyn_cast<CallInst>(V)) {
       AttributeList AS = CI->getAttributes();
       AttrBuilder FnAttrs(AS.getFnAttrs());
-      AS = AS.removeAttributes(Context, AttributeList::FunctionIndex);
+      AS = AS.removeFnAttributes(Context);
       FnAttrs.merge(B);
       AS = AS.addFnAttributes(Context, AttributeSet::get(Context, FnAttrs));
       CI->setAttributes(AS);
     } else if (InvokeInst *II = dyn_cast<InvokeInst>(V)) {
       AttributeList AS = II->getAttributes();
       AttrBuilder FnAttrs(AS.getFnAttrs());
-      AS = AS.removeAttributes(Context, AttributeList::FunctionIndex);
+      AS = AS.removeFnAttributes(Context);
       FnAttrs.merge(B);
       AS = AS.addFnAttributes(Context, AttributeSet::get(Context, FnAttrs));
       II->setAttributes(AS);
     } else if (CallBrInst *CBI = dyn_cast<CallBrInst>(V)) {
       AttributeList AS = CBI->getAttributes();
       AttrBuilder FnAttrs(AS.getFnAttrs());
-      AS = AS.removeAttributes(Context, AttributeList::FunctionIndex);
+      AS = AS.removeFnAttributes(Context);
       FnAttrs.merge(B);
       AS = AS.addFnAttributes(Context, AttributeSet::get(Context, FnAttrs));
       CBI->setAttributes(AS);
@@ -2217,6 +2217,26 @@ bool LLParser::parseType(Type *&Result, const Twine &Msg, bool AllowVoid) {
     // Type ::= 'float' | 'void' (etc)
     Result = Lex.getTyVal();
     Lex.Lex();
+
+    // Handle (explicit) opaque pointer types (not --force-opaque-pointers).
+    //
+    // Type ::= ptr ('addrspace' '(' uint32 ')')?
+    if (Result->isOpaquePointerTy()) {
+      unsigned AddrSpace;
+      if (parseOptionalAddrSpace(AddrSpace))
+        return true;
+      Result = PointerType::get(getContext(), AddrSpace);
+
+      // Give a nice error for 'ptr*'.
+      if (Lex.getKind() == lltok::star)
+        return tokError("ptr* is invalid - use ptr instead");
+
+      // Fall through to parsing the type suffixes only if this 'ptr' is a
+      // function return. Otherwise, return success, implicitly rejecting other
+      // suffixes.
+      if (Lex.getKind() != lltok::lparen)
+        return false;
+    }
     break;
   case lltok::lbrace:
     // Type ::= StructType
@@ -2268,26 +2288,6 @@ bool LLParser::parseType(Type *&Result, const Twine &Msg, bool AllowVoid) {
     Lex.Lex();
     break;
   }
-  }
-
-  // Handle (explicit) opaque pointer types (not --force-opaque-pointers).
-  //
-  // Type ::= ptr ('addrspace' '(' uint32 ')')?
-  if (Result->isOpaquePointerTy()) {
-    unsigned AddrSpace;
-    if (parseOptionalAddrSpace(AddrSpace))
-      return true;
-    Result = PointerType::get(getContext(), AddrSpace);
-
-    // Give a nice error for 'ptr*'.
-    if (Lex.getKind() == lltok::star)
-      return tokError("ptr* is invalid - use ptr instead");
-
-    // Fall through to parsing the type suffixes only if this 'ptr' is a
-    // function return. Otherwise, return success, implicitly rejecting other
-    // suffixes.
-    if (Lex.getKind() != lltok::lparen)
-      return false;
   }
 
   // parse the type suffixes.
@@ -4724,7 +4724,8 @@ bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
 ///                     virtuality: DW_VIRTUALTIY_pure_virtual,
 ///                     virtualIndex: 10, thisAdjustment: 4, flags: 11,
 ///                     spFlags: 10, isOptimized: false, templateParams: !4,
-///                     declaration: !5, retainedNodes: !6, thrownTypes: !7)
+///                     declaration: !5, retainedNodes: !6, thrownTypes: !7,
+///                     annotations: !8)
 bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
   auto Loc = Lex.getLoc();
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
@@ -4748,7 +4749,8 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(templateParams, MDField, );                                         \
   OPTIONAL(declaration, MDField, );                                            \
   OPTIONAL(retainedNodes, MDField, );                                          \
-  OPTIONAL(thrownTypes, MDField, );
+  OPTIONAL(thrownTypes, MDField, );                                            \
+  OPTIONAL(annotations, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -4767,7 +4769,7 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
       (Context, scope.Val, name.Val, linkageName.Val, file.Val, line.Val,
        type.Val, scopeLine.Val, containingType.Val, virtualIndex.Val,
        thisAdjustment.Val, flags.Val, SPFlags, unit.Val, templateParams.Val,
-       declaration.Val, retainedNodes.Val, thrownTypes.Val));
+       declaration.Val, retainedNodes.Val, thrownTypes.Val, annotations.Val));
   return false;
 }
 
@@ -4944,7 +4946,8 @@ bool LLParser::parseDIGlobalVariable(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(isDefinition, MDBoolField, (true));                                 \
   OPTIONAL(templateParams, MDField, );                                         \
   OPTIONAL(declaration, MDField, );                                            \
-  OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));
+  OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
+  OPTIONAL(annotations, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -4952,7 +4955,8 @@ bool LLParser::parseDIGlobalVariable(MDNode *&Result, bool IsDistinct) {
       GET_OR_DISTINCT(DIGlobalVariable,
                       (Context, scope.Val, name.Val, linkageName.Val, file.Val,
                        line.Val, type.Val, isLocal.Val, isDefinition.Val,
-                       declaration.Val, templateParams.Val, align.Val));
+                       declaration.Val, templateParams.Val, align.Val,
+                       annotations.Val));
   return false;
 }
 
@@ -4972,13 +4976,15 @@ bool LLParser::parseDILocalVariable(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(line, LineField, );                                                 \
   OPTIONAL(type, MDField, );                                                   \
   OPTIONAL(flags, DIFlagField, );                                              \
-  OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));
+  OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
+  OPTIONAL(annotations, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
   Result = GET_OR_DISTINCT(DILocalVariable,
                            (Context, scope.Val, name.Val, file.Val, line.Val,
-                            type.Val, arg.Val, flags.Val, align.Val));
+                            type.Val, arg.Val, flags.Val, align.Val,
+                            annotations.Val));
   return false;
 }
 

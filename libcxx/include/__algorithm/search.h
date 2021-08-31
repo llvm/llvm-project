@@ -13,15 +13,11 @@
 #include <__algorithm/comp.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
-#include <type_traits>
 #include <utility>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
-
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -101,7 +97,7 @@ template <class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredica
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 _ForwardIterator1
 search(_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2, _ForwardIterator2 __last2,
        _BinaryPredicate __pred) {
-  return _VSTD::__search<typename add_lvalue_reference<_BinaryPredicate>::type>(
+  return _VSTD::__search<_BinaryPredicate&>(
              __first1, __last1, __first2, __last2, __pred,
              typename iterator_traits<_ForwardIterator1>::iterator_category(),
              typename iterator_traits<_ForwardIterator2>::iterator_category()).first;
@@ -125,7 +121,5 @@ search(_ForwardIterator __f, _ForwardIterator __l, const _Searcher& __s) {
 #endif
 
 _LIBCPP_END_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_SEARCH_H
