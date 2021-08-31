@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: llc -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 ;
 ; CHECK: [[SYM:[a-z0-9]+]]:  DW_TAG_formal_parameter
