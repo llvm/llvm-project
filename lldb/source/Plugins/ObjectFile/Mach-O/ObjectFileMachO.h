@@ -84,6 +84,8 @@ public:
 
   bool IsDynamicLoader() const;
 
+  bool IsSharedCacheBinary() const;
+
   uint32_t GetAddressByteSize() const override;
 
   lldb_private::AddressClass GetAddressClass(lldb::addr_t file_addr) override;
