@@ -1440,6 +1440,7 @@ class MVE_VMINMAXNM<string iname, string suffix, bit sz, bit bit_21,
   let Inst{4} = 0b1;
 
   let Predicates = [HasMVEFloat];
+  let validForTailPredication = 1;
 }
 
 multiclass MVE_VMINMAXNM_m<string iname, bit bit_4, MVEVectorVTInfo VTI, SDNode Op, Intrinsic PredInt> {
@@ -4111,6 +4112,7 @@ class MVE_VMAXMINNMA<string iname, string suffix, bit size, bit bit_12,
   let Inst{0} = 0b1;
 
   let isCommutable = 1;
+  let validForTailPredication = 1;
 }
 
 multiclass MVE_VMAXMINNMA_m<string iname, MVEVectorVTInfo VTI,
