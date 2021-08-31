@@ -24,9 +24,8 @@
 #include <unordered_map>
 #include <vector>
 
-// Header from ATMI interface
-#include "atmi_interop_hsa.h"
-#include "atmi_runtime.h"
+#include "interop_hsa.h"
+#include "impl_runtime.h"
 
 #include "internal.h"
 
@@ -140,7 +139,7 @@ public:
   std::queue<int> free_kernarg_segments;
 
   uint32_t kernarg_size_including_implicit() {
-    return kernarg_segment_size + sizeof(atmi_implicit_args_t);
+    return kernarg_segment_size + sizeof(impl_implicit_args_t);
   }
 
   ~KernelArgPool() {
@@ -161,7 +160,7 @@ public:
                 hsa_amd_memory_pool_t &memory_pool)
       : kernarg_segment_size(kernarg_segment_size) {
 
-    // atmi uses one pool per kernel for all gpus, with a fixed upper size
+    // impl uses one pool per kernel for all gpus, with a fixed upper size
     // preserving that exact scheme here, including the queue<int>
 
     hsa_status_t err = hsa_amd_memory_pool_allocate(
@@ -436,8 +435,9 @@ struct EnvironmentVariables {
   int MaxTeamsDefault;
 };
 
+template <uint32_t wavesize>
 static constexpr const llvm::omp::GV &getGridValue() {
-  return llvm::omp::AMDGPUGridValues;
+  return llvm::omp::getAMDGPUGridValues<wavesize>();
 }
 
 /// Class containing all the device information
@@ -495,23 +495,37 @@ public:
   std::vector<hsa_amd_memory_pool_t> DeviceFineGrainedMemoryPools;
   std::vector<hsa_amd_memory_pool_t> DeviceCoarseGrainedMemoryPools;
 
-  struct atmiFreePtrDeletor {
+  struct implFreePtrDeletor {
     void operator()(void *p) {
       core::Runtime::Memfree(p); // ignore failure to free
     }
   };
 
   // device_State shared across loaded binaries, error if inconsistent size
-  std::vector<std::pair<std::unique_ptr<void, atmiFreePtrDeletor>, uint64_t>>
+  std::vector<std::pair<std::unique_ptr<void, implFreePtrDeletor>, uint64_t>>
       deviceStateStore;
 
   static const unsigned HardTeamLimit =
       (1 << 16) - 1; // 64K needed to fit in uint16
   static const int DefaultNumTeams = 128;
-  static const int Max_Teams = getGridValue().GV_Max_Teams;
-  static const int Warp_Size = getGridValue().GV_Warp_Size;
-  static const int Max_WG_Size = getGridValue().GV_Max_WG_Size;
-  static const int Default_WG_Size = getGridValue().GV_Default_WG_Size;
+
+  // These need to be per-device since different devices can have different
+  // wave sizes, but are currently the same number for each so that refactor
+  // can be postponed.
+  static_assert(getGridValue<32>().GV_Max_Teams ==
+                    getGridValue<64>().GV_Max_Teams,
+                "");
+  static const int Max_Teams = getGridValue<64>().GV_Max_Teams;
+
+  static_assert(getGridValue<32>().GV_Max_WG_Size ==
+                    getGridValue<64>().GV_Max_WG_Size,
+                "");
+  static const int Max_WG_Size = getGridValue<64>().GV_Max_WG_Size;
+
+  static_assert(getGridValue<32>().GV_Default_WG_Size ==
+                    getGridValue<64>().GV_Default_WG_Size,
+                "");
+  static const int Default_WG_Size = getGridValue<64>().GV_Default_WG_Size;
 
   using MemcpyFunc = hsa_status_t (*)(hsa_signal_t, void *, const void *,
                                       size_t size, hsa_agent_t,
@@ -530,12 +544,12 @@ public:
 
   hsa_status_t freesignalpool_memcpy_d2h(void *dest, const void *src,
                                          size_t size, int32_t deviceId) {
-    return freesignalpool_memcpy(dest, src, size, atmi_memcpy_d2h, deviceId);
+    return freesignalpool_memcpy(dest, src, size, impl_memcpy_d2h, deviceId);
   }
 
   hsa_status_t freesignalpool_memcpy_h2d(void *dest, const void *src,
                                          size_t size, int32_t deviceId) {
-    return freesignalpool_memcpy(dest, src, size, atmi_memcpy_h2d, deviceId);
+    return freesignalpool_memcpy(dest, src, size, impl_memcpy_h2d, deviceId);
   }
 
   // Record entry point associated with device
@@ -802,7 +816,7 @@ public:
       return;
     }
     // Run destructors on types that use HSA before
-    // atmi_finalize removes access to it
+    // impl_finalize removes access to it
     deviceStateStore.clear();
     KernelArgPoolMap.clear();
     // Terminate hostrpc before finalizing ATMI
@@ -1060,8 +1074,9 @@ int32_t __tgt_rtl_init_device(int device_id) {
     DP("Queried wavefront size: %d\n", wavefront_size);
     DeviceInfo.WarpSize[device_id] = wavefront_size;
   } else {
-    DP("Default wavefront size: %d\n", getGridValue().GV_Warp_Size);
-    DeviceInfo.WarpSize[device_id] = getGridValue().GV_Warp_Size;
+    // TODO: Burn the wavefront size into the code object
+    DP("Warning: Unknown wavefront size, assuming 64\n");
+    DeviceInfo.WarpSize[device_id] = 64;
   }
 
   // Adjust teams to the env variables
@@ -1394,7 +1409,7 @@ struct device_environment {
         auto &SymbolInfo = DeviceInfo.SymbolInfoTable[device_id];
         void *state_ptr;
         uint32_t state_ptr_size;
-        hsa_status_t err = atmi_interop_hsa_get_symbol_info(
+        hsa_status_t err = interop_hsa_get_symbol_info(
             SymbolInfo, device_id, sym(), &state_ptr, &state_ptr_size);
         if (err != HSA_STATUS_SUCCESS) {
           DP("failed to find %s in loaded image\n", sym());
@@ -1415,7 +1430,7 @@ struct device_environment {
   }
 };
 
-static hsa_status_t atmi_calloc(void **ret_ptr, size_t size, int DeviceId) {
+static hsa_status_t impl_calloc(void **ret_ptr, size_t size, int DeviceId) {
   uint64_t rounded = 4 * ((size + 3) / 4);
   void *ptr;
   hsa_amd_memory_pool_t MemoryPool = DeviceInfo.getDeviceMemoryPool(DeviceId);
@@ -1525,7 +1540,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
     void *state_ptr;
     uint32_t state_ptr_size;
     auto &SymbolInfoMap = DeviceInfo.SymbolInfoTable[device_id];
-    hsa_status_t err = atmi_interop_hsa_get_symbol_info(
+    hsa_status_t err = interop_hsa_get_symbol_info(
         SymbolInfoMap, device_id, "omptarget_nvptx_device_State", &state_ptr,
         &state_ptr_size);
 
@@ -1553,13 +1568,13 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
         if (dss.first.get() == nullptr) {
           assert(dss.second == 0);
           void *ptr = NULL;
-          hsa_status_t err = atmi_calloc(&ptr, device_State_bytes, device_id);
+          hsa_status_t err = impl_calloc(&ptr, device_State_bytes, device_id);
           if (err != HSA_STATUS_SUCCESS) {
             DP("Failed to allocate device_state array\n");
             return NULL;
           }
           dss = {
-              std::unique_ptr<void, RTLDeviceInfoTy::atmiFreePtrDeletor>{ptr},
+              std::unique_ptr<void, RTLDeviceInfoTy::implFreePtrDeletor>{ptr},
               device_State_bytes,
           };
         }
@@ -1609,7 +1624,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
       uint32_t varsize;
 
       auto &SymbolInfoMap = DeviceInfo.SymbolInfoTable[device_id];
-      hsa_status_t err = atmi_interop_hsa_get_symbol_info(
+      hsa_status_t err = interop_hsa_get_symbol_info(
           SymbolInfoMap, device_id, e->name, &varptr, &varsize);
 
       if (err != HSA_STATUS_SUCCESS) {
@@ -1651,7 +1666,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
 
     uint32_t kernarg_segment_size;
     auto &KernelInfoMap = DeviceInfo.KernelInfoTable[device_id];
-    hsa_status_t err = atmi_interop_hsa_get_kernel_info(
+    hsa_status_t err = interop_hsa_get_kernel_info(
         KernelInfoMap, device_id, e->name,
         HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE,
         &kernarg_segment_size);
@@ -1886,9 +1901,10 @@ struct launchVals {
   int WorkgroupSize;
   int GridSize;
 };
-launchVals getLaunchVals(EnvironmentVariables Env, int ConstWGSize,
-                         int ExecutionMode, int num_teams, int thread_limit,
-                         uint64_t loop_tripcount, int DeviceNumTeams) {
+launchVals getLaunchVals(int WarpSize, EnvironmentVariables Env,
+                         int ConstWGSize, int ExecutionMode, int num_teams,
+                         int thread_limit, uint64_t loop_tripcount,
+                         int DeviceNumTeams) {
 
   int threadsPerGroup = RTLDeviceInfoTy::Default_WG_Size;
   int num_groups = 0;
@@ -1901,7 +1917,7 @@ launchVals getLaunchVals(EnvironmentVariables Env, int ConstWGSize,
   if (print_kernel_trace & STARTUP_DETAILS) {
     DP("RTLDeviceInfoTy::Max_Teams: %d\n", RTLDeviceInfoTy::Max_Teams);
     DP("Max_Teams: %d\n", Max_Teams);
-    DP("RTLDeviceInfoTy::Warp_Size: %d\n", RTLDeviceInfoTy::Warp_Size);
+    DP("RTLDeviceInfoTy::Warp_Size: %d\n", WarpSize);
     DP("RTLDeviceInfoTy::Max_WG_Size: %d\n", RTLDeviceInfoTy::Max_WG_Size);
     DP("RTLDeviceInfoTy::Default_WG_Size: %d\n",
        RTLDeviceInfoTy::Default_WG_Size);
@@ -1914,8 +1930,8 @@ launchVals getLaunchVals(EnvironmentVariables Env, int ConstWGSize,
     threadsPerGroup = thread_limit;
     DP("Setting threads per block to requested %d\n", thread_limit);
     if (ExecutionMode == GENERIC) { // Add master warp for GENERIC
-      threadsPerGroup += RTLDeviceInfoTy::Warp_Size;
-      DP("Adding master wavefront: +%d threads\n", RTLDeviceInfoTy::Warp_Size);
+      threadsPerGroup += WarpSize;
+      DP("Adding master wavefront: +%d threads\n", WarpSize);
     }
     if (threadsPerGroup > RTLDeviceInfoTy::Max_WG_Size) { // limit to max
       threadsPerGroup = RTLDeviceInfoTy::Max_WG_Size;
@@ -1951,7 +1967,7 @@ launchVals getLaunchVals(EnvironmentVariables Env, int ConstWGSize,
   // So we only handle constant thread_limits.
   if (threadsPerGroup >
       RTLDeviceInfoTy::Default_WG_Size) //  256 < threadsPerGroup <= 1024
-    // Should we round threadsPerGroup up to nearest RTLDeviceInfoTy::Warp_Size
+    // Should we round threadsPerGroup up to nearest WarpSize
     // here?
     num_groups = (Max_Teams * RTLDeviceInfoTy::Max_WG_Size) / threadsPerGroup;
 
@@ -2100,12 +2116,13 @@ int32_t __tgt_rtl_run_target_team_region_locked(
   /*
    * Set limit based on ThreadsPerGroup and GroupsPerDevice
    */
-  launchVals LV = getLaunchVals(DeviceInfo.Env, KernelInfo->ConstWGSize,
-                                KernelInfo->ExecutionMode,
-                                num_teams,      // From run_region arg
-                                thread_limit,   // From run_region arg
-                                loop_tripcount, // From run_region arg
-                                DeviceInfo.NumTeams[KernelInfo->device_id]);
+  launchVals LV =
+      getLaunchVals(DeviceInfo.WarpSize[device_id], DeviceInfo.Env,
+                    KernelInfo->ConstWGSize, KernelInfo->ExecutionMode,
+                    num_teams,      // From run_region arg
+                    thread_limit,   // From run_region arg
+                    loop_tripcount, // From run_region arg
+                    DeviceInfo.NumTeams[KernelInfo->device_id]);
   const int GridSize = LV.GridSize;
   const int WorkgroupSize = LV.WorkgroupSize;
 
@@ -2150,7 +2167,7 @@ int32_t __tgt_rtl_run_target_team_region_locked(
     packet->group_segment_size = KernelInfoEntry.group_segment_size;
     packet->kernel_object = KernelInfoEntry.kernel_object;
     packet->kernarg_address = 0;     // use the block allocator
-    packet->reserved2 = 0;           // atmi writes id_ here
+    packet->reserved2 = 0;           // impl writes id_ here
     packet->completion_signal = {0}; // may want a pool of signals
 
     KernelArgPool *ArgPool = nullptr;
@@ -2182,11 +2199,11 @@ int32_t __tgt_rtl_run_target_team_region_locked(
 
       // Initialize implicit arguments. ATMI seems to leave most fields
       // uninitialized
-      atmi_implicit_args_t *impl_args =
-          reinterpret_cast<atmi_implicit_args_t *>(
+      impl_implicit_args_t *impl_args =
+          reinterpret_cast<impl_implicit_args_t *>(
               static_cast<char *>(kernarg) + ArgPool->kernarg_segment_size);
       memset(impl_args, 0,
-             sizeof(atmi_implicit_args_t)); // may not be necessary
+             sizeof(impl_implicit_args_t)); // may not be necessary
       impl_args->offset_x = 0;
       impl_args->offset_y = 0;
       impl_args->offset_z = 0;

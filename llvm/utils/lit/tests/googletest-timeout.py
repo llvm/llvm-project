@@ -6,14 +6,14 @@
 
 # Check that the per test timeout is enforced when running GTest tests.
 #
-# RUN: not %{lit} -j 1 -v %{inputs}/googletest-timeout \
+# RUN: not %{lit} -v %{inputs}/googletest-timeout \
 # RUN:   --filter=InfiniteLoopSubTest --timeout=1 > %t.cmd.out
 # RUN: FileCheck --check-prefix=CHECK-INF < %t.cmd.out %s
 
 # Check that the per test timeout is enforced when running GTest tests via
 # the configuration file
 #
-# RUN: not %{lit} -j 1 -v %{inputs}/googletest-timeout \
+# RUN: not %{lit} -v %{inputs}/googletest-timeout \
 # RUN:  --filter=InfiniteLoopSubTest  --param set_timeout=1 \
 # RUN:  > %t.cfgset.out
 # RUN: FileCheck --check-prefix=CHECK-INF < %t.cfgset.out %s
@@ -34,7 +34,7 @@
 # 3600 second timeout.
 ###############################################################################
 
-# RUN: %{lit} -j 1 -v %{inputs}/googletest-timeout \
+# RUN: %{lit} -v %{inputs}/googletest-timeout \
 # RUN:   --filter=QuickSubTest --timeout=3600 > %t.cmd.out
 # RUN: FileCheck --check-prefix=CHECK-QUICK < %t.cmd.out %s
 
@@ -43,7 +43,7 @@
 
 # Test per test timeout via a config file and on the command line.
 # The value set on the command line should override the config file.
-# RUN: %{lit} -j 1 -v %{inputs}/googletest-timeout --filter=QuickSubTest \
+# RUN: %{lit} -v %{inputs}/googletest-timeout --filter=QuickSubTest \
 # RUN:   --param set_timeout=1 --timeout=3600 \
 # RUN:   > %t.cmdover.out 2> %t.cmdover.err
 # RUN: FileCheck --check-prefix=CHECK-QUICK < %t.cmdover.out %s

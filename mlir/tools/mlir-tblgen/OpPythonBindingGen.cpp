@@ -475,7 +475,8 @@ static void emitAttributeAccessors(const Operator &op,
 /// Template for the default auto-generated builder.
 ///   {0} is a comma-separated list of builder arguments, including the trailing
 ///       `loc` and `ip`;
-///   {1} is the code populating `operands`, `results` and `attributes` fields.
+///   {1} is the code populating `operands`, `results` and `attributes`,
+///       `successors` fields.
 constexpr const char *initTemplate = R"Py(
   def __init__(self, {0}):
     operands = []
@@ -484,7 +485,7 @@ constexpr const char *initTemplate = R"Py(
     {1}
     super().__init__(self.build_generic(
       attributes=attributes, results=results, operands=operands,
-      loc=loc, ip=ip))
+      successors=_ods_successors, loc=loc, ip=ip))
 )Py";
 
 /// Template for appending a single element to the operand/result list.
@@ -518,6 +519,16 @@ constexpr const char *initUnitAttributeTemplate =
     R"Py(if bool({1}): attributes["{0}"] = _ods_ir.UnitAttr.get(
       _ods_get_default_loc_context(loc)))Py";
 
+/// Template to initialize the successors list in the builder if there are any
+/// successors.
+///   {0} is the value to initialize the successors list to.
+constexpr const char *initSuccessorsTemplate = R"Py(_ods_successors = {0})Py";
+
+/// Template to append or extend the list of successors in the builder.
+///   {0} is the list method ('append' or 'extend');
+///   {1} is the value to add.
+constexpr const char *addSuccessorTemplate = R"Py(_ods_successors.{0}({1}))Py";
+
 /// Populates `builderArgs` with the Python-compatible names of builder function
 /// arguments, first the results, then the intermixed attributes and operands in
 /// the same order as they appear in the `arguments` field of the op definition.
@@ -526,7 +537,8 @@ constexpr const char *initUnitAttributeTemplate =
 static void
 populateBuilderArgs(const Operator &op,
                     llvm::SmallVectorImpl<std::string> &builderArgs,
-                    llvm::SmallVectorImpl<std::string> &operandNames) {
+                    llvm::SmallVectorImpl<std::string> &operandNames,
+                    llvm::SmallVectorImpl<std::string> &successorArgNames) {
   for (int i = 0, e = op.getNumResults(); i < e; ++i) {
     std::string name = op.getResultName(i).str();
     if (name.empty()) {
@@ -549,6 +561,16 @@ populateBuilderArgs(const Operator &op,
     builderArgs.push_back(name);
     if (!op.getArg(i).is<NamedAttribute *>())
       operandNames.push_back(name);
+  }
+
+  for (int i = 0, e = op.getNumSuccessors(); i < e; ++i) {
+    NamedSuccessor successor = op.getSuccessor(i);
+    std::string name = std::string(successor.name);
+    if (name.empty())
+      name = llvm::formatv("_gen_successor_{0}", i);
+    name = sanitizeName(name);
+    builderArgs.push_back(name);
+    successorArgNames.push_back(name);
   }
 }
 
@@ -578,6 +600,27 @@ populateBuilderLinesAttr(const Operator &op,
                                              ? initOptionalAttributeTemplate
                                              : initAttributeTemplate,
                                          attribute->name, argNames[i]));
+  }
+}
+
+/// Populates `builderLines` with additional lines that are required in the
+/// builder to set up successors. successorArgNames is expected to correspond
+/// to the Python argument name for each successor on the op.
+static void populateBuilderLinesSuccessors(
+    const Operator &op, llvm::ArrayRef<std::string> successorArgNames,
+    llvm::SmallVectorImpl<std::string> &builderLines) {
+  if (successorArgNames.empty()) {
+    builderLines.push_back(llvm::formatv(initSuccessorsTemplate, "None"));
+    return;
+  }
+
+  builderLines.push_back(llvm::formatv(initSuccessorsTemplate, "[]"));
+  for (int i = 0, e = successorArgNames.size(); i < e; ++i) {
+    auto &argName = successorArgNames[i];
+    const NamedSuccessor &successor = op.getSuccessor(i);
+    builderLines.push_back(
+        llvm::formatv(addSuccessorTemplate,
+                      successor.isVariadic() ? "extend" : "append", argName));
   }
 }
 
@@ -629,12 +672,14 @@ static void emitDefaultOpBuilder(const Operator &op, raw_ostream &os) {
   if (op.skipDefaultBuilders())
     return;
 
-  llvm::SmallVector<std::string, 8> builderArgs;
-  llvm::SmallVector<std::string, 8> builderLines;
-  llvm::SmallVector<std::string, 4> operandArgNames;
+  llvm::SmallVector<std::string> builderArgs;
+  llvm::SmallVector<std::string> builderLines;
+  llvm::SmallVector<std::string> operandArgNames;
+  llvm::SmallVector<std::string> successorArgNames;
   builderArgs.reserve(op.getNumOperands() + op.getNumResults() +
-                      op.getNumNativeAttributes());
-  populateBuilderArgs(op, builderArgs, operandArgNames);
+                      op.getNumNativeAttributes() + op.getNumSuccessors());
+  populateBuilderArgs(op, builderArgs, operandArgNames, successorArgNames);
+
   populateBuilderLines(
       op, "result",
       llvm::makeArrayRef(builderArgs).take_front(op.getNumResults()),
@@ -644,6 +689,7 @@ static void emitDefaultOpBuilder(const Operator &op, raw_ostream &os) {
   populateBuilderLinesAttr(
       op, llvm::makeArrayRef(builderArgs).drop_front(op.getNumResults()),
       builderLines);
+  populateBuilderLinesSuccessors(op, successorArgNames, builderLines);
 
   builderArgs.push_back("*");
   builderArgs.push_back("loc=None");

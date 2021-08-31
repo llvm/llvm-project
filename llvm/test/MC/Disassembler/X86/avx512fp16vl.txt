@@ -2212,3 +2212,163 @@
 # ATT:   vfnmsub231ph  -256(%edx){1to8}, %xmm5, %xmm6 {%k7} {z}
 # INTEL: vfnmsub231ph xmm6 {k7} {z}, xmm5, word ptr [edx - 256]{1to8}
 0x62,0xf6,0x55,0x9f,0xbe,0x72,0x80
+
+# ATT:   vfcmaddcph %ymm4, %ymm5, %ymm6
+# INTEL: vfcmaddcph ymm6, ymm5, ymm4
+0x62,0xf6,0x57,0x28,0x56,0xf4
+
+# ATT:   vfcmaddcph %xmm4, %xmm5, %xmm6
+# INTEL: vfcmaddcph xmm6, xmm5, xmm4
+0x62,0xf6,0x57,0x08,0x56,0xf4
+
+# ATT:   vfcmaddcph  268435456(%esp,%esi,8), %ymm5, %ymm6 {%k7}
+# INTEL: vfcmaddcph ymm6 {k7}, ymm5, ymmword ptr [esp + 8*esi + 268435456]
+0x62,0xf6,0x57,0x2f,0x56,0xb4,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vfcmaddcph  (%ecx){1to8}, %ymm5, %ymm6
+# INTEL: vfcmaddcph ymm6, ymm5, dword ptr [ecx]{1to8}
+0x62,0xf6,0x57,0x38,0x56,0x31
+
+# ATT:   vfcmaddcph  4064(%ecx), %ymm5, %ymm6
+# INTEL: vfcmaddcph ymm6, ymm5, ymmword ptr [ecx + 4064]
+0x62,0xf6,0x57,0x28,0x56,0x71,0x7f
+
+# ATT:   vfcmaddcph  -512(%edx){1to8}, %ymm5, %ymm6 {%k7} {z}
+# INTEL: vfcmaddcph ymm6 {k7} {z}, ymm5, dword ptr [edx - 512]{1to8}
+0x62,0xf6,0x57,0xbf,0x56,0x72,0x80
+
+# ATT:   vfcmaddcph  268435456(%esp,%esi,8), %xmm5, %xmm6 {%k7}
+# INTEL: vfcmaddcph xmm6 {k7}, xmm5, xmmword ptr [esp + 8*esi + 268435456]
+0x62,0xf6,0x57,0x0f,0x56,0xb4,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vfcmaddcph  (%ecx){1to4}, %xmm5, %xmm6
+# INTEL: vfcmaddcph xmm6, xmm5, dword ptr [ecx]{1to4}
+0x62,0xf6,0x57,0x18,0x56,0x31
+
+# ATT:   vfcmaddcph  2032(%ecx), %xmm5, %xmm6
+# INTEL: vfcmaddcph xmm6, xmm5, xmmword ptr [ecx + 2032]
+0x62,0xf6,0x57,0x08,0x56,0x71,0x7f
+
+# ATT:   vfcmaddcph  -512(%edx){1to4}, %xmm5, %xmm6 {%k7} {z}
+# INTEL: vfcmaddcph xmm6 {k7} {z}, xmm5, dword ptr [edx - 512]{1to4}
+0x62,0xf6,0x57,0x9f,0x56,0x72,0x80
+
+# ATT:   vfcmulcph %ymm4, %ymm5, %ymm6
+# INTEL: vfcmulcph ymm6, ymm5, ymm4
+0x62,0xf6,0x57,0x28,0xd6,0xf4
+
+# ATT:   vfcmulcph %xmm4, %xmm5, %xmm6
+# INTEL: vfcmulcph xmm6, xmm5, xmm4
+0x62,0xf6,0x57,0x08,0xd6,0xf4
+
+# ATT:   vfcmulcph  268435456(%esp,%esi,8), %ymm5, %ymm6 {%k7}
+# INTEL: vfcmulcph ymm6 {k7}, ymm5, ymmword ptr [esp + 8*esi + 268435456]
+0x62,0xf6,0x57,0x2f,0xd6,0xb4,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vfcmulcph  (%ecx){1to8}, %ymm5, %ymm6
+# INTEL: vfcmulcph ymm6, ymm5, dword ptr [ecx]{1to8}
+0x62,0xf6,0x57,0x38,0xd6,0x31
+
+# ATT:   vfcmulcph  4064(%ecx), %ymm5, %ymm6
+# INTEL: vfcmulcph ymm6, ymm5, ymmword ptr [ecx + 4064]
+0x62,0xf6,0x57,0x28,0xd6,0x71,0x7f
+
+# ATT:   vfcmulcph  -512(%edx){1to8}, %ymm5, %ymm6 {%k7} {z}
+# INTEL: vfcmulcph ymm6 {k7} {z}, ymm5, dword ptr [edx - 512]{1to8}
+0x62,0xf6,0x57,0xbf,0xd6,0x72,0x80
+
+# ATT:   vfcmulcph  268435456(%esp,%esi,8), %xmm5, %xmm6 {%k7}
+# INTEL: vfcmulcph xmm6 {k7}, xmm5, xmmword ptr [esp + 8*esi + 268435456]
+0x62,0xf6,0x57,0x0f,0xd6,0xb4,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vfcmulcph  (%ecx){1to4}, %xmm5, %xmm6
+# INTEL: vfcmulcph xmm6, xmm5, dword ptr [ecx]{1to4}
+0x62,0xf6,0x57,0x18,0xd6,0x31
+
+# ATT:   vfcmulcph  2032(%ecx), %xmm5, %xmm6
+# INTEL: vfcmulcph xmm6, xmm5, xmmword ptr [ecx + 2032]
+0x62,0xf6,0x57,0x08,0xd6,0x71,0x7f
+
+# ATT:   vfcmulcph  -512(%edx){1to4}, %xmm5, %xmm6 {%k7} {z}
+# INTEL: vfcmulcph xmm6 {k7} {z}, xmm5, dword ptr [edx - 512]{1to4}
+0x62,0xf6,0x57,0x9f,0xd6,0x72,0x80
+
+# ATT:   vfmaddcph %ymm4, %ymm5, %ymm6
+# INTEL: vfmaddcph ymm6, ymm5, ymm4
+0x62,0xf6,0x56,0x28,0x56,0xf4
+
+# ATT:   vfmaddcph %xmm4, %xmm5, %xmm6
+# INTEL: vfmaddcph xmm6, xmm5, xmm4
+0x62,0xf6,0x56,0x08,0x56,0xf4
+
+# ATT:   vfmaddcph  268435456(%esp,%esi,8), %ymm5, %ymm6 {%k7}
+# INTEL: vfmaddcph ymm6 {k7}, ymm5, ymmword ptr [esp + 8*esi + 268435456]
+0x62,0xf6,0x56,0x2f,0x56,0xb4,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vfmaddcph  (%ecx){1to8}, %ymm5, %ymm6
+# INTEL: vfmaddcph ymm6, ymm5, dword ptr [ecx]{1to8}
+0x62,0xf6,0x56,0x38,0x56,0x31
+
+# ATT:   vfmaddcph  4064(%ecx), %ymm5, %ymm6
+# INTEL: vfmaddcph ymm6, ymm5, ymmword ptr [ecx + 4064]
+0x62,0xf6,0x56,0x28,0x56,0x71,0x7f
+
+# ATT:   vfmaddcph  -512(%edx){1to8}, %ymm5, %ymm6 {%k7} {z}
+# INTEL: vfmaddcph ymm6 {k7} {z}, ymm5, dword ptr [edx - 512]{1to8}
+0x62,0xf6,0x56,0xbf,0x56,0x72,0x80
+
+# ATT:   vfmaddcph  268435456(%esp,%esi,8), %xmm5, %xmm6 {%k7}
+# INTEL: vfmaddcph xmm6 {k7}, xmm5, xmmword ptr [esp + 8*esi + 268435456]
+0x62,0xf6,0x56,0x0f,0x56,0xb4,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vfmaddcph  (%ecx){1to4}, %xmm5, %xmm6
+# INTEL: vfmaddcph xmm6, xmm5, dword ptr [ecx]{1to4}
+0x62,0xf6,0x56,0x18,0x56,0x31
+
+# ATT:   vfmaddcph  2032(%ecx), %xmm5, %xmm6
+# INTEL: vfmaddcph xmm6, xmm5, xmmword ptr [ecx + 2032]
+0x62,0xf6,0x56,0x08,0x56,0x71,0x7f
+
+# ATT:   vfmaddcph  -512(%edx){1to4}, %xmm5, %xmm6 {%k7} {z}
+# INTEL: vfmaddcph xmm6 {k7} {z}, xmm5, dword ptr [edx - 512]{1to4}
+0x62,0xf6,0x56,0x9f,0x56,0x72,0x80
+
+# ATT:   vfmulcph %ymm4, %ymm5, %ymm6
+# INTEL: vfmulcph ymm6, ymm5, ymm4
+0x62,0xf6,0x56,0x28,0xd6,0xf4
+
+# ATT:   vfmulcph %xmm4, %xmm5, %xmm6
+# INTEL: vfmulcph xmm6, xmm5, xmm4
+0x62,0xf6,0x56,0x08,0xd6,0xf4
+
+# ATT:   vfmulcph  268435456(%esp,%esi,8), %ymm5, %ymm6 {%k7}
+# INTEL: vfmulcph ymm6 {k7}, ymm5, ymmword ptr [esp + 8*esi + 268435456]
+0x62,0xf6,0x56,0x2f,0xd6,0xb4,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vfmulcph  (%ecx){1to8}, %ymm5, %ymm6
+# INTEL: vfmulcph ymm6, ymm5, dword ptr [ecx]{1to8}
+0x62,0xf6,0x56,0x38,0xd6,0x31
+
+# ATT:   vfmulcph  4064(%ecx), %ymm5, %ymm6
+# INTEL: vfmulcph ymm6, ymm5, ymmword ptr [ecx + 4064]
+0x62,0xf6,0x56,0x28,0xd6,0x71,0x7f
+
+# ATT:   vfmulcph  -512(%edx){1to8}, %ymm5, %ymm6 {%k7} {z}
+# INTEL: vfmulcph ymm6 {k7} {z}, ymm5, dword ptr [edx - 512]{1to8}
+0x62,0xf6,0x56,0xbf,0xd6,0x72,0x80
+
+# ATT:   vfmulcph  268435456(%esp,%esi,8), %xmm5, %xmm6 {%k7}
+# INTEL: vfmulcph xmm6 {k7}, xmm5, xmmword ptr [esp + 8*esi + 268435456]
+0x62,0xf6,0x56,0x0f,0xd6,0xb4,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   vfmulcph  (%ecx){1to4}, %xmm5, %xmm6
+# INTEL: vfmulcph xmm6, xmm5, dword ptr [ecx]{1to4}
+0x62,0xf6,0x56,0x18,0xd6,0x31
+
+# ATT:   vfmulcph  2032(%ecx), %xmm5, %xmm6
+# INTEL: vfmulcph xmm6, xmm5, xmmword ptr [ecx + 2032]
+0x62,0xf6,0x56,0x08,0xd6,0x71,0x7f
+
+# ATT:   vfmulcph  -512(%edx){1to4}, %xmm5, %xmm6 {%k7} {z}
+# INTEL: vfmulcph xmm6 {k7} {z}, xmm5, dword ptr [edx - 512]{1to4}
+0x62,0xf6,0x56,0x9f,0xd6,0x72,0x80

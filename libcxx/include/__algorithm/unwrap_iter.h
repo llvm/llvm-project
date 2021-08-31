@@ -18,9 +18,6 @@
 #pragma GCC system_header
 #endif
 
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // The job of __unwrap_iter is to lower contiguous iterators (such as
@@ -81,7 +78,5 @@ _OrigIter __rewrap_iter(_OrigIter __first, _UnwrappedIter __result)
 }
 
 _LIBCPP_END_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_UNWRAP_ITER_H

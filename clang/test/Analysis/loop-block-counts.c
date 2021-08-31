@@ -5,6 +5,9 @@ void clang_analyzer_eval(int);
 void callee(void **p) {
   int x;
   *p = &x;
+  // expected-warning@-1 {{Address of stack memory associated with local \
+variable 'x' is still referred to by the stack variable 'arr' upon \
+returning to the caller}}
 }
 
 void loop() {

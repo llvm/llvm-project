@@ -140,7 +140,7 @@ struct LookupResult {
   LookupResult() : Flags({0, 0, 0}), Entry() {}
 };
 
-/// This struct will be returned by \p DeviceTy::getOrAllocTgtPtr which provides
+/// This struct will be returned by \p DeviceTy::getTargetPointer which provides
 /// more data than just a target pointer.
 struct TargetPointerResultTy {
   struct {
@@ -275,9 +275,31 @@ struct DeviceTy {
   /// OFFLOAD_SUCCESS/OFFLOAD_FAIL when succeeds/fails.
   int32_t synchronize(AsyncInfoTy &AsyncInfo);
 
-  /// Calls the corresponding print in the \p RTLDEVID 
+  /// Calls the corresponding print in the \p RTLDEVID
   /// device RTL to obtain the information of the specific device.
   bool printDeviceInfo(int32_t RTLDevID);
+
+  /// Event related interfaces.
+  /// {
+  /// Create an event.
+  int32_t createEvent(void **Event);
+
+  /// Record the event based on status in AsyncInfo->Queue at the moment the
+  /// function is called.
+  int32_t recordEvent(void *Event, AsyncInfoTy &AsyncInfo);
+
+  /// Wait for an event. This function can be blocking or non-blocking,
+  /// depending on the implmentation. It is expected to set a dependence on the
+  /// event such that corresponding operations shall only start once the event
+  /// is fulfilled.
+  int32_t waitEvent(void *Event, AsyncInfoTy &AsyncInfo);
+
+  /// Synchronize the event. It is expected to block the thread.
+  int32_t syncEvent(void *Event);
+
+  /// Destroy the event.
+  int32_t destroyEvent(void *Event);
+  /// }
 
 private:
   // Call to RTL

@@ -13,9 +13,11 @@
 #include "DecodedThread.h"
 #include "TraceIntelPTConstants.h"
 #include "TraceIntelPTSessionFileParser.h"
+#include "TraceIntelPTSessionSaver.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "llvm/ADT/None.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -66,6 +68,11 @@ uint32_t TraceIntelPT::GetPluginVersion() { return 1; }
 
 void TraceIntelPT::Dump(Stream *s) const {}
 
+llvm::Error TraceIntelPT::SaveLiveTraceToDisk(FileSpec directory) {
+  RefreshLiveProcessState();
+  return TraceIntelPTSessionSaver().SaveToDisk(*this, directory);
+}
+
 Expected<TraceSP> TraceIntelPT::CreateInstanceForSessionFile(
     const json::Value &trace_session_file, StringRef session_file_dir,
     Debugger &debugger) {
@@ -86,7 +93,8 @@ TraceIntelPT::TraceIntelPT(
     : m_cpu_info(cpu_info) {
   for (const ThreadPostMortemTraceSP &thread : traced_threads)
     m_thread_decoders.emplace(
-        thread.get(), std::make_unique<PostMortemThreadDecoder>(thread, *this));
+        thread->GetID(),
+        std::make_unique<PostMortemThreadDecoder>(thread, *this));
 }
 
 DecodedThreadSP TraceIntelPT::Decode(Thread &thread) {
@@ -96,7 +104,7 @@ DecodedThreadSP TraceIntelPT::Decode(Thread &thread) {
         thread.shared_from_this(),
         createStringError(inconvertibleErrorCode(), *m_live_refresh_error));
 
-  auto it = m_thread_decoders.find(&thread);
+  auto it = m_thread_decoders.find(thread.GetID());
   if (it == m_thread_decoders.end())
     return std::make_shared<DecodedThread>(
         thread.shared_from_this(),
@@ -120,7 +128,7 @@ void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
 }
 
 Optional<size_t> TraceIntelPT::GetRawTraceSize(Thread &thread) {
-  if (IsTraced(thread))
+  if (IsTraced(thread.GetID()))
     return Decode(thread)->GetRawTraceSize();
   else
     return None;
@@ -188,6 +196,8 @@ Expected<pt_cpu> TraceIntelPT::GetCPUInfo() {
   return *m_cpu_info;
 }
 
+Process *TraceIntelPT::GetLiveProcess() { return m_live_process; }
+
 void TraceIntelPT::DoRefreshLiveProcessState(
     Expected<TraceGetStateResponse> state) {
   m_thread_decoders.clear();
@@ -201,13 +211,13 @@ void TraceIntelPT::DoRefreshLiveProcessState(
     Thread &thread =
         *m_live_process->GetThreadList().FindThreadByID(thread_state.tid);
     m_thread_decoders.emplace(
-        &thread, std::make_unique<LiveThreadDecoder>(thread, *this));
+        thread_state.tid, std::make_unique<LiveThreadDecoder>(thread, *this));
   }
 }
 
-bool TraceIntelPT::IsTraced(const Thread &thread) {
+bool TraceIntelPT::IsTraced(lldb::tid_t tid) {
   RefreshLiveProcessState();
-  return m_thread_decoders.count(&thread);
+  return m_thread_decoders.count(tid);
 }
 
 // The information here should match the description of the intel-pt section

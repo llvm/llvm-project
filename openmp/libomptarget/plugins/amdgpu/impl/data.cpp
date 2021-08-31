@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "atmi_runtime.h"
+#include "impl_runtime.h"
 #include "hsa_api.h"
 #include "internal.h"
 #include "rt.h"

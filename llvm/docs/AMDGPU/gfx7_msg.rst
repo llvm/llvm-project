@@ -5,10 +5,10 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid7_msg:
+.. _amdgpu_synid_gfx7_msg:
 
 msg
-===========================
+===
 
 A 16-bit message code. The bits of this operand have the following meaning:
 
@@ -91,4 +91,3 @@ Examples:
     stream = 1
     s_sendmsg sendmsg(msg, op, stream)
     s_sendmsg sendmsg(2, GS_OP_CUT)
-

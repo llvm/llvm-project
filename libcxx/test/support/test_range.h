@@ -14,7 +14,7 @@
 #include "test_iterators.h"
 
 #ifdef _LIBCPP_HAS_NO_RANGES
-#error "test/suppoort/test_range.h" can only be included in builds supporting ranges
+#error "test/support/test_range.h" can only be included in builds supporting ranges
 #endif
 
 struct sentinel {
@@ -61,11 +61,5 @@ struct test_view : std::ranges::view_base {
   sentinel end();
   sentinel end() const;
 };
-
-template<template<class...> class I, class R>
-constexpr auto make_archetype_range(R&& r) {
-  return std::ranges::subrange(I(std::ranges::begin(r)), sentinel_wrapper(std::ranges::end(r)));
-}
-
 
 #endif // LIBCXX_TEST_SUPPORT_TEST_RANGE_H

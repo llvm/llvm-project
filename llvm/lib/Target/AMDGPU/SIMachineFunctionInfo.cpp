@@ -69,7 +69,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
                            (!isEntryFunction() || HasCalls);
 
   if (CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL) {
-    if (!F.arg_empty())
+    if (!F.arg_empty() || ST.getImplicitArgNumBytes(F) != 0)
       KernargSegmentPtr = true;
     WorkGroupIDX = true;
     WorkItemIDX = true;
@@ -155,9 +155,6 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     PrivateSegmentBuffer = true;
   else if (ST.isMesaGfxShader(F))
     ImplicitBufferPtr = true;
-
-  if (UseFixedABI || F.hasFnAttribute("amdgpu-kernarg-segment-ptr"))
-    KernargSegmentPtr = true;
 
   if (!AMDGPU::isGraphics(CC)) {
     if (UseFixedABI) {
@@ -426,7 +423,7 @@ bool SIMachineFunctionInfo::allocateVGPRSpillToAGPR(MachineFunction &MF,
     OtherUsedRegs.set(Reg);
 
   SmallVectorImpl<MCPhysReg>::const_iterator NextSpillReg = Regs.begin();
-  for (unsigned I = 0; I < NumLanes; ++I) {
+  for (int I = NumLanes - 1; I >= 0; --I) {
     NextSpillReg = std::find_if(
         NextSpillReg, Regs.end(), [&MRI, &OtherUsedRegs](MCPhysReg Reg) {
           return MRI.isAllocatable(Reg) && !MRI.isPhysRegUsed(Reg) &&

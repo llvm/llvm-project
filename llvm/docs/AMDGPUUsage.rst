@@ -896,6 +896,46 @@ The AMDGPU backend supports the following LLVM IR attributes.
      "amdgpu-dx10-clamp" true/false.         Specify whether the function expects the DX10_CLAMP field of
                                              the mode register to be set on entry. Overrides the default
                                              for the calling convention.
+
+     "amdgpu-no-workitem-id-x"               Indicates the function does not depend on the value of the
+                                             llvm.amdgcn.workitem.id.x intrinsic. If a function is marked with this
+                                             attribute, or reached through a call site marked with this attribute,
+                                             the value returned by the intrinsic is undefined. The backend can
+                                             generally infer this during code generation, so typically there is no
+                                             benefit to frontends marking functions with this.
+
+     "amdgpu-no-workitem-id-y"               The same as amdgpu-no-workitem-id-x, except for the
+                                             llvm.amdgcn.workitem.id.y intrinsic.
+
+     "amdgpu-no-workitem-id-z"               The same as amdgpu-no-workitem-id-x, except for the
+                                             llvm.amdgcn.workitem.id.z intrinsic.
+
+     "amdgpu-no-workgroup-id-x"              The same as amdgpu-no-workitem-id-x, except for the
+                                             llvm.amdgcn.workgroup.id.x intrinsic.
+
+     "amdgpu-no-workgroup-id-y"              The same as amdgpu-no-workitem-id-x, except for the
+                                             llvm.amdgcn.workgroup.id.y intrinsic.
+
+     "amdgpu-no-workgroup-id-z"              The same as amdgpu-no-workitem-id-x, except for the
+                                             llvm.amdgcn.workgroup.id.z intrinsic.
+
+     "amdgpu-no-dispatch-ptr"                The same as amdgpu-no-workitem-id-x, except for the
+                                             llvm.amdgcn.dispatch.ptr intrinsic.
+
+     "amdgpu-no-implicitarg-ptr"             The same as amdgpu-no-workitem-id-x, except for the
+                                             llvm.amdgcn.implicitarg.ptr intrinsic.
+
+     "amdgpu-no-dispatch-id"                 The same as amdgpu-no-workitem-id-x, except for the
+                                             llvm.amdgcn.dispatch.id intrinsic.
+
+     "amdgpu-no-queue-ptr"                   Similar to amdgpu-no-workitem-id-x, except for the
+                                             llvm.amdgcn.queue.ptr intrinsic. Note that unlike the other ABI hint
+                                             attributes, the queue pointer may be required in situations where the
+                                             intrinsic call does not directly appear in the program. Some subtargets
+                                             require the queue pointer for to handle some addrspacecasts, as well
+                                             as the llvm.amdgcn.is.shared, llvm.amdgcn.is.private, llvm.trap, and
+                                             llvm.debug intrinsics.
+
      ======================================= ==========================================================
 
 .. _amdgpu-elf-code-object:
@@ -1616,7 +1656,7 @@ Loaded Code Object Path Uniform Resource Identifier (URI)
 ---------------------------------------------------------
 
 The AMD GPU code object loader represents the path of the ELF shared object from
-which the code object was loaded as a textual Unifom Resource Identifier (URI).
+which the code object was loaded as a textual Uniform Resource Identifier (URI).
 Note that the code object is the in memory loaded relocated form of the ELF
 shared object.  Multiple code objects may be loaded at different memory
 addresses in the same process from the same ELF shared object.
@@ -1744,7 +1784,7 @@ mapping.
    512            VCC_32            32       Vector Condition Code Register
                                              when executing in wavefront 32
                                              mode.
-   513-1023       *Reserved*                 *Reserved for future Vector
+   513-767        *Reserved*                 *Reserved for future Vector
                                              Architectural Registers when
                                              executing in wavefront 32 mode.*
    768            VCC_64            64       Vector Condition Code Register
@@ -12140,7 +12180,9 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                               Feature                          :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
                                                               Specific
                                                               (wavefrontsize64)
-     ``.amdhsa_system_sgpr_private_segment_wavefront_offset`` 0                   GFX6-GFX11   Controls ENABLE_PRIVATE_SEGMENT in
+     ``.amdhsa_system_sgpr_private_segment_wavefront_offset`` 0                   GFX6-GFX10   Controls ENABLE_PRIVATE_SEGMENT in
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
+     ``.amdhsa_enable_private_segment``                       0                   GFX11        Controls ENABLE_PRIVATE_SEGMENT in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
      ``.amdhsa_system_sgpr_workgroup_id_x``                   1                   GFX6-GFX11   Controls ENABLE_SGPR_WORKGROUP_ID_X in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
@@ -12200,7 +12242,7 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                               Feature                          :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx90a-table`.
                                                               Specific
                                                               (tgsplit)
-     ``.amdhsa_workgroup_processor_mode``                     Target              GFX10-FX11   Controls ENABLE_WGP_MODE in
+     ``.amdhsa_workgroup_processor_mode``                     Target              GFX10-GFX11  Controls ENABLE_WGP_MODE in
                                                               Feature                          :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
                                                               Specific
                                                               (cumode)

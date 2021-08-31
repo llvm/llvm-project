@@ -14,7 +14,6 @@
 use strict;
 use warnings;
 use FindBin qw($RealBin);
-use Digest::MD5;
 use File::Basename;
 use File::Find;
 use File::Copy qw(copy);
@@ -269,27 +268,6 @@ sub SetHtmlEnv {
 }
 
 ##----------------------------------------------------------------------------##
-# ComputeDigest - Compute a digest of the specified file.
-##----------------------------------------------------------------------------##
-
-sub ComputeDigest {
-  my $FName = shift;
-  DieDiag("Cannot read $FName to compute Digest.\n") if (! -r $FName);
-
-  # Use Digest::MD5.  We don't have to be cryptographically secure.  We're
-  # just looking for duplicate files that come from a non-malicious source.
-  # We use Digest::MD5 because it is a standard Perl module that should
-  # come bundled on most systems.
-  open(FILE, $FName) or DieDiag("Cannot open $FName when computing Digest.\n");
-  binmode FILE;
-  my $Result = Digest::MD5->new->addfile(*FILE)->hexdigest;
-  close(FILE);
-
-  # Return the digest.
-  return $Result;
-}
-
-##----------------------------------------------------------------------------##
 #  UpdatePrefix - Compute the common prefix of files.
 ##----------------------------------------------------------------------------##
 
@@ -374,27 +352,12 @@ sub AddStatLine {
 # Sometimes a source file is scanned more than once, and thus produces
 # multiple error reports.  We use a cache to solve this problem.
 
-my %AlreadyScanned;
-
 sub ScanFile {
 
   my $Index = shift;
   my $Dir = shift;
   my $FName = shift;
   my $Stats = shift;
-
-  # Compute a digest for the report file.  Determine if we have already
-  # scanned a file that looks just like it.
-
-  my $digest = ComputeDigest("$Dir/$FName");
-
-  if (defined $AlreadyScanned{$digest}) {
-    # Redundant file.  Remove it.
-    unlink("$Dir/$FName");
-    return;
-  }
-
-  $AlreadyScanned{$digest} = 1;
 
   # At this point the report file is not world readable.  Make it happen.
   chmod(0644, "$Dir/$FName");

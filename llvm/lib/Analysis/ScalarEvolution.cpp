@@ -4154,17 +4154,16 @@ const SCEV *ScalarEvolution::getNotSCEV(const SCEV *V) {
   return getMinusSCEV(getMinusOne(Ty), V);
 }
 
-/// Compute an expression equivalent to S - getPointerBase(S).
-static const SCEV *removePointerBase(ScalarEvolution *SE, const SCEV *P) {
+const SCEV *ScalarEvolution::removePointerBase(const SCEV *P) {
   assert(P->getType()->isPointerTy());
 
   if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(P)) {
     // The base of an AddRec is the first operand.
     SmallVector<const SCEV *> Ops{AddRec->operands()};
-    Ops[0] = removePointerBase(SE, Ops[0]);
+    Ops[0] = removePointerBase(Ops[0]);
     // Don't try to transfer nowrap flags for now. We could in some cases
     // (for example, if pointer operand of the AddRec is a SCEVUnknown).
-    return SE->getAddRecExpr(Ops, AddRec->getLoop(), SCEV::FlagAnyWrap);
+    return getAddRecExpr(Ops, AddRec->getLoop(), SCEV::FlagAnyWrap);
   }
   if (auto *Add = dyn_cast<SCEVAddExpr>(P)) {
     // The base of an Add is the pointer operand.
@@ -4172,21 +4171,17 @@ static const SCEV *removePointerBase(ScalarEvolution *SE, const SCEV *P) {
     const SCEV **PtrOp = nullptr;
     for (const SCEV *&AddOp : Ops) {
       if (AddOp->getType()->isPointerTy()) {
-        // If we find an Add with multiple pointer operands, treat it as a
-        // pointer base to be consistent with getPointerBase.  Eventually
-        // we should be able to assert this is impossible.
-        if (PtrOp)
-          return SE->getZero(P->getType());
+        assert(!PtrOp && "Cannot have multiple pointer ops");
         PtrOp = &AddOp;
       }
     }
-    *PtrOp = removePointerBase(SE, *PtrOp);
+    *PtrOp = removePointerBase(*PtrOp);
     // Don't try to transfer nowrap flags for now. We could in some cases
     // (for example, if the pointer operand of the Add is a SCEVUnknown).
-    return SE->getAddExpr(Ops);
+    return getAddExpr(Ops);
   }
   // Any other expression must be a pointer base.
-  return SE->getZero(P->getType());
+  return getZero(P->getType());
 }
 
 const SCEV *ScalarEvolution::getMinusSCEV(const SCEV *LHS, const SCEV *RHS,
@@ -4203,8 +4198,8 @@ const SCEV *ScalarEvolution::getMinusSCEV(const SCEV *LHS, const SCEV *RHS,
     if (!LHS->getType()->isPointerTy() ||
         getPointerBase(LHS) != getPointerBase(RHS))
       return getCouldNotCompute();
-    LHS = removePointerBase(this, LHS);
-    RHS = removePointerBase(this, RHS);
+    LHS = removePointerBase(LHS);
+    RHS = removePointerBase(RHS);
   }
 
   // We represent LHS - RHS as LHS + (-1)*RHS. This transformation
@@ -4367,14 +4362,11 @@ const SCEV *ScalarEvolution::getPointerBase(const SCEV *V) {
       const SCEV *PtrOp = nullptr;
       for (const SCEV *AddOp : Add->operands()) {
         if (AddOp->getType()->isPointerTy()) {
-          // Cannot find the base of an expression with multiple pointer ops.
-          if (PtrOp)
-            return V;
+          assert(!PtrOp && "Cannot have multiple pointer ops");
           PtrOp = AddOp;
         }
       }
-      if (!PtrOp) // All operands were non-pointer.
-        return V;
+      assert(PtrOp && "Must have pointer op");
       V = PtrOp;
     } else // Not something we can look further into.
       return V;

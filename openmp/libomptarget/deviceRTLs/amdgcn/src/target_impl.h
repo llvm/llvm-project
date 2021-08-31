@@ -30,11 +30,15 @@ typedef uint64_t __kmpc_impl_lanemask_t;
 #define INLINE inline
 #define NOINLINE __attribute__((noinline))
 #define ALIGN(N) __attribute__((aligned(N)))
+#define PLUGIN_ACCESSIBLE                                                      \
+  __attribute__((used)) /* Don't discard values the plugin reads */            \
+  __attribute__((visibility("default"))) /* Access via SHT_HASH */             \
+  __attribute__((section(".data")))      /* Not .bss, can write before load */
 
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
 INLINE constexpr const llvm::omp::GV &getGridValue() {
-  return llvm::omp::AMDGPUGridValues;
+  return llvm::omp::getAMDGPUGridValues<__AMDGCN_WAVEFRONT_SIZE>();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

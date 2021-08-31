@@ -8,11 +8,11 @@
 
 #include "src/stdlib/strtoull.h"
 
-#include "utils/UnitTest/Test.h"
-
 #include <errno.h>
 #include <limits.h>
 #include <stddef.h>
+
+#include "utils/UnitTest/Test.h"
 
 TEST(LlvmLibcStrToULLTest, InvalidBase) {
   const char *ten = "10";
@@ -149,19 +149,19 @@ static char int_to_b36_char(int input) {
   if (input < 0 || input > 36)
     return '0';
   if (input < 10)
-    return '0' + input;
-  return 'A' + input - 10;
+    return static_cast<char>('0' + input);
+  return static_cast<char>('A' + input - 10);
 }
 
 TEST(LlvmLibcStrToULLTest, DecodeInOtherBases) {
   char small_string[4] = {'\0', '\0', '\0', '\0'};
-  for (unsigned long long base = 2; base <= 36; ++base) {
-    for (unsigned long long first_digit = 0; first_digit <= 36; ++first_digit) {
+  for (int base = 2; base <= 36; ++base) {
+    for (int first_digit = 0; first_digit <= 36; ++first_digit) {
       small_string[0] = int_to_b36_char(first_digit);
       if (first_digit < base) {
         errno = 0;
         ASSERT_EQ(__llvm_libc::strtoull(small_string, nullptr, base),
-                  first_digit);
+                  static_cast<unsigned long long int>(first_digit));
         ASSERT_EQ(errno, 0);
       } else {
         errno = 0;
@@ -171,21 +171,21 @@ TEST(LlvmLibcStrToULLTest, DecodeInOtherBases) {
     }
   }
 
-  for (unsigned long long base = 2; base <= 36; ++base) {
-    for (unsigned long long first_digit = 0; first_digit <= 36; ++first_digit) {
+  for (int base = 2; base <= 36; ++base) {
+    for (int first_digit = 0; first_digit <= 36; ++first_digit) {
       small_string[0] = int_to_b36_char(first_digit);
-      for (unsigned long long second_digit = 0; second_digit <= 36;
-           ++second_digit) {
+      for (int second_digit = 0; second_digit <= 36; ++second_digit) {
         small_string[1] = int_to_b36_char(second_digit);
         if (first_digit < base && second_digit < base) {
           errno = 0;
           ASSERT_EQ(__llvm_libc::strtoull(small_string, nullptr, base),
-                    second_digit + (first_digit * base));
+                    static_cast<unsigned long long int>(second_digit +
+                                                        (first_digit * base)));
           ASSERT_EQ(errno, 0);
         } else if (first_digit < base) {
           errno = 0;
           ASSERT_EQ(__llvm_libc::strtoull(small_string, nullptr, base),
-                    first_digit);
+                    static_cast<unsigned long long int>(first_digit));
           ASSERT_EQ(errno, 0);
         } else {
           errno = 0;
@@ -196,26 +196,26 @@ TEST(LlvmLibcStrToULLTest, DecodeInOtherBases) {
     }
   }
 
-  for (unsigned long long base = 2; base <= 36; ++base) {
-    for (unsigned long long first_digit = 0; first_digit <= 36; ++first_digit) {
+  for (int base = 2; base <= 36; ++base) {
+    for (int first_digit = 0; first_digit <= 36; ++first_digit) {
       small_string[0] = int_to_b36_char(first_digit);
-      for (unsigned long long second_digit = 0; second_digit <= 36;
-           ++second_digit) {
+      for (int second_digit = 0; second_digit <= 36; ++second_digit) {
         small_string[1] = int_to_b36_char(second_digit);
-        for (unsigned long long third_digit = 0; third_digit <= 36;
-             ++third_digit) {
+        for (int third_digit = 0; third_digit <= 36; ++third_digit) {
           small_string[2] = int_to_b36_char(third_digit);
 
           if (first_digit < base && second_digit < base && third_digit < base) {
             errno = 0;
             ASSERT_EQ(__llvm_libc::strtoull(small_string, nullptr, base),
-                      third_digit + (second_digit * base) +
-                          (first_digit * base * base));
+                      static_cast<unsigned long long int>(
+                          third_digit + (second_digit * base) +
+                          (first_digit * base * base)));
             ASSERT_EQ(errno, 0);
           } else if (first_digit < base && second_digit < base) {
             errno = 0;
             ASSERT_EQ(__llvm_libc::strtoull(small_string, nullptr, base),
-                      second_digit + (first_digit * base));
+                      static_cast<unsigned long long int>(
+                          second_digit + (first_digit * base)));
             ASSERT_EQ(errno, 0);
           } else if (first_digit < base) {
             // if the base is 16 there is a special case for the prefix 0X.
@@ -224,7 +224,7 @@ TEST(LlvmLibcStrToULLTest, DecodeInOtherBases) {
               if (third_digit < base) {
                 errno = 0;
                 ASSERT_EQ(__llvm_libc::strtoull(small_string, nullptr, base),
-                          third_digit);
+                          static_cast<unsigned long long int>(third_digit));
                 ASSERT_EQ(errno, 0);
               } else {
                 errno = 0;
@@ -235,7 +235,7 @@ TEST(LlvmLibcStrToULLTest, DecodeInOtherBases) {
             } else {
               errno = 0;
               ASSERT_EQ(__llvm_libc::strtoull(small_string, nullptr, base),
-                        first_digit);
+                        static_cast<unsigned long long int>(first_digit));
               ASSERT_EQ(errno, 0);
             }
           } else {

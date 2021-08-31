@@ -54,6 +54,9 @@ def ConstVoidPtr : ConstType<VoidPtr>;
 def SizeTType : NamedType<"size_t">;
 def LongDoublePtr : PtrType<LongDoubleType>;
 
+def IntMaxTType : NamedType<"intmax_t">;
+def UIntMaxTType : NamedType<"uintmax_t">;
+
 // _Noreturn is really not a type, but it is convenient to treat it as a type.
 def NoReturn : NamedType<"_Noreturn void">;
 

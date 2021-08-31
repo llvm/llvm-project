@@ -585,29 +585,9 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
       case AMDGPU::SOFT_WQM:
       case AMDGPU::STRICT_WWM: {
         Register DstReg = MI.getOperand(0).getReg();
+
         const TargetRegisterClass *SrcRC, *DstRC;
         std::tie(SrcRC, DstRC) = getCopyRegClasses(MI, *TRI, *MRI);
-
-        if (MI.isCopy()) {
-          Register SrcReg = MI.getOperand(1).getReg();
-          if (SrcReg == AMDGPU::SCC) {
-            Register SCCCopy = MRI->createVirtualRegister(
-                TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID));
-            I = BuildMI(*MI.getParent(),
-                        std::next(MachineBasicBlock::iterator(MI)),
-                        MI.getDebugLoc(),
-                        TII->get(ST.isWave32() ? AMDGPU::S_CSELECT_B32
-                                               : AMDGPU::S_CSELECT_B64),
-                        SCCCopy)
-                    .addImm(-1)
-                    .addImm(0);
-            BuildMI(*MI.getParent(), std::next(I), I->getDebugLoc(),
-                    TII->get(AMDGPU::COPY), DstReg)
-                .addReg(SCCCopy);
-            MI.eraseFromParent();
-            continue;
-          }
-        }
 
         if (!DstReg.isVirtual()) {
           // If the destination register is a physical register there isn't

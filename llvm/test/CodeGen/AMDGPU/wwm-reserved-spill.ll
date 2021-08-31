@@ -317,7 +317,7 @@ merge:
   ret void
 }
 
-define hidden i32 @strict_wwm_called(i32 %a) noinline {
+define hidden amdgpu_gfx i32 @strict_wwm_called(i32 %a) noinline {
 ; GFX9-O0-LABEL: strict_wwm_called:
 ; GFX9-O0:       ; %bb.0:
 ; GFX9-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -438,7 +438,7 @@ define amdgpu_gfx void @strict_wwm_call(<4 x i32> inreg %tmp14, i32 inreg %arg) 
 ; GFX9-O3-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-O3-NEXT:    s_setpc_b64 s[10:11]
   %tmp107 = tail call i32 @llvm.amdgcn.set.inactive.i32(i32 %arg, i32 0)
-  %tmp134 = call i32 @strict_wwm_called(i32 %tmp107)
+  %tmp134 = call amdgpu_gfx i32 @strict_wwm_called(i32 %tmp107)
   %tmp136 = add i32 %tmp134, %tmp107
   %tmp137 = tail call i32 @llvm.amdgcn.strict.wwm.i32(i32 %tmp136)
   call void @llvm.amdgcn.raw.buffer.store.i32(i32 %tmp137, <4 x i32> %tmp14, i32 4, i32 0, i32 0)
@@ -703,7 +703,7 @@ define amdgpu_gfx void @strict_wwm_call_i64(<4 x i32> inreg %tmp14, i64 inreg %a
 ; GFX9-O3-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-O3-NEXT:    s_setpc_b64 s[10:11]
   %tmp107 = tail call i64 @llvm.amdgcn.set.inactive.i64(i64 %arg, i64 0)
-  %tmp134 = call i64 @strict_wwm_called_i64(i64 %tmp107)
+  %tmp134 = call amdgpu_gfx i64 @strict_wwm_called_i64(i64 %tmp107)
   %tmp136 = add i64 %tmp134, %tmp107
   %tmp137 = tail call i64 @llvm.amdgcn.strict.wwm.i64(i64 %tmp136)
   %tmp138 = bitcast i64 %tmp137 to <2 x i32>

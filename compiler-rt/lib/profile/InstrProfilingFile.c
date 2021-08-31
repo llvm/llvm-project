@@ -92,15 +92,71 @@ static lprofFilename lprofCurFilename = {0,   0, 0, {0}, NULL,
                                          {0}, 0, 0, 0,   PNS_unknown};
 
 static int ProfileMergeRequested = 0;
+static int getProfileFileSizeForMerging(FILE *ProfileFile,
+                                        uint64_t *ProfileFileSize);
 
 #if defined(__APPLE__)
 static const int ContinuousModeSupported = 1;
 static const int UseBiasVar = 0;
 static const char *FileOpenMode = "a+b";
-static intptr_t INSTR_PROF_PROFILE_COUNTER_BIAS_VAR;
 static void *BiasAddr = NULL;
 static void *BiasDefaultAddr = NULL;
-static int MmapFlags = MAP_FIXED | MAP_SHARED;
+static int mmapForContinuousMode(uint64_t CurrentFileOffset, FILE *File) {
+  /* Get the sizes of various profile data sections. Taken from
+   * __llvm_profile_get_size_for_buffer(). */
+  const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
+  const __llvm_profile_data *DataEnd = __llvm_profile_end_data();
+  const uint64_t *CountersBegin = __llvm_profile_begin_counters();
+  const uint64_t *CountersEnd = __llvm_profile_end_counters();
+  const char *NamesBegin = __llvm_profile_begin_names();
+  const char *NamesEnd = __llvm_profile_end_names();
+  const uint64_t NamesSize = (NamesEnd - NamesBegin) * sizeof(char);
+  uint64_t DataSize = __llvm_profile_get_data_size(DataBegin, DataEnd);
+  uint64_t CountersSize = CountersEnd - CountersBegin;
+
+  /* Check that the counter and data sections in this image are
+   * page-aligned. */
+  unsigned PageSize = getpagesize();
+  if ((intptr_t)CountersBegin % PageSize != 0) {
+    PROF_ERR("Counters section not page-aligned (start = %p, pagesz = %u).\n",
+             CountersBegin, PageSize);
+    return 1;
+  }
+  if ((intptr_t)DataBegin % PageSize != 0) {
+    PROF_ERR("Data section not page-aligned (start = %p, pagesz = %u).\n",
+             DataBegin, PageSize);
+    return 1;
+  }
+  int Fileno = fileno(File);
+  /* Determine how much padding is needed before/after the counters and
+   * after the names. */
+  uint64_t PaddingBytesBeforeCounters, PaddingBytesAfterCounters,
+      PaddingBytesAfterNames;
+  __llvm_profile_get_padding_sizes_for_counters(
+      DataSize, CountersSize, NamesSize, &PaddingBytesBeforeCounters,
+      &PaddingBytesAfterCounters, &PaddingBytesAfterNames);
+
+  uint64_t PageAlignedCountersLength =
+      (CountersSize * sizeof(uint64_t)) + PaddingBytesAfterCounters;
+  uint64_t FileOffsetToCounters =
+      CurrentFileOffset + sizeof(__llvm_profile_header) +
+      (DataSize * sizeof(__llvm_profile_data)) + PaddingBytesBeforeCounters;
+  uint64_t *CounterMmap = (uint64_t *)mmap(
+      (void *)CountersBegin, PageAlignedCountersLength, PROT_READ | PROT_WRITE,
+      MAP_FIXED | MAP_SHARED, Fileno, FileOffsetToCounters);
+  if (CounterMmap != CountersBegin) {
+    PROF_ERR(
+        "Continuous counter sync mode is enabled, but mmap() failed (%s).\n"
+        "  - CountersBegin: %p\n"
+        "  - PageAlignedCountersLength: %" PRIu64 "\n"
+        "  - Fileno: %d\n"
+        "  - FileOffsetToCounters: %" PRIu64 "\n",
+        strerror(errno), CountersBegin, PageAlignedCountersLength, Fileno,
+        FileOffsetToCounters);
+    return 1;
+  }
+  return 0;
+}
 #elif defined(__ELF__) || defined(_WIN32)
 
 #define INSTR_PROF_PROFILE_COUNTER_BIAS_DEFAULT_VAR                            \
@@ -134,15 +190,46 @@ static const char *FileOpenMode = "w+b";
  * used and runtime provides a weak alias so we can check if it's defined. */
 static void *BiasAddr = &INSTR_PROF_PROFILE_COUNTER_BIAS_VAR;
 static void *BiasDefaultAddr = &INSTR_PROF_PROFILE_COUNTER_BIAS_DEFAULT_VAR;
-static int MmapFlags = MAP_SHARED;
+static int mmapForContinuousMode(uint64_t CurrentFileOffset, FILE *File) {
+  /* Get the sizes of various profile data sections. Taken from
+   * __llvm_profile_get_size_for_buffer(). */
+  const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
+  const __llvm_profile_data *DataEnd = __llvm_profile_end_data();
+  const uint64_t *CountersBegin = __llvm_profile_begin_counters();
+  const uint64_t *CountersEnd = __llvm_profile_end_counters();
+  uint64_t DataSize = __llvm_profile_get_data_size(DataBegin, DataEnd);
+  /* Get the file size. */
+  uint64_t FileSize = 0;
+  if (getProfileFileSizeForMerging(File, &FileSize))
+    return 1;
+
+  /* Map the profile. */
+  char *Profile = (char *)mmap(NULL, FileSize, PROT_READ | PROT_WRITE,
+                               MAP_SHARED, fileno(File), 0);
+  if (Profile == MAP_FAILED) {
+    PROF_ERR("Unable to mmap profile: %s\n", strerror(errno));
+    return 1;
+  }
+  const uint64_t CountersOffsetInBiasMode =
+      sizeof(__llvm_profile_header) + __llvm_write_binary_ids(NULL) +
+      (DataSize * sizeof(__llvm_profile_data));
+  /* Update the profile fields based on the current mapping. */
+  INSTR_PROF_PROFILE_COUNTER_BIAS_VAR =
+      (intptr_t)Profile - (uintptr_t)CountersBegin + CountersOffsetInBiasMode;
+
+  /* Return the memory allocated for counters to OS. */
+  lprofReleaseMemoryPagesToOS((uintptr_t)CountersBegin, (uintptr_t)CountersEnd);
+  return 0;
+}
 #else
 static const int ContinuousModeSupported = 0;
 static const int UseBiasVar = 0;
 static const char *FileOpenMode = "a+b";
-static intptr_t INSTR_PROF_PROFILE_COUNTER_BIAS_VAR;
 static void *BiasAddr = NULL;
 static void *BiasDefaultAddr = NULL;
-static int MmapFlags = MAP_SHARED;
+static int mmapForContinuousMode(uint64_t CurrentFileOffset, FILE *File) {
+  return 0;
+}
 #endif
 
 static int isProfileMergeRequested() { return ProfileMergeRequested; }
@@ -153,18 +240,6 @@ static void setProfileMergeRequested(int EnableMerge) {
 static FILE *ProfileFile = NULL;
 static FILE *getProfileFile() { return ProfileFile; }
 static void setProfileFile(FILE *File) { ProfileFile = File; }
-
-COMPILER_RT_VISIBILITY void __llvm_profile_set_file_object(FILE *File,
-                                                           int EnableMerge) {
-  if (__llvm_profile_is_continuous_mode_enabled()) {
-    PROF_WARN("__llvm_profile_set_file_object(fd=%d) not supported, because "
-              "continuous sync mode (%%c) is enabled",
-              fileno(File));
-    return;
-  }
-  setProfileFile(File);
-  setProfileMergeRequested(EnableMerge);
-}
 
 static int getCurFilenameLength();
 static const char *getCurFilename(char *FilenameBuf, int ForceUseBuf);
@@ -502,16 +577,9 @@ static void initializeProfileForContinuousMode(void) {
     return;
   }
 
-  /* Get the sizes of various profile data sections. Taken from
-   * __llvm_profile_get_size_for_buffer(). */
-  const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
-  const __llvm_profile_data *DataEnd = __llvm_profile_end_data();
+  /* Get the sizes of counter section. */
   const uint64_t *CountersBegin = __llvm_profile_begin_counters();
   const uint64_t *CountersEnd = __llvm_profile_end_counters();
-  const char *NamesBegin = __llvm_profile_begin_names();
-  const char *NamesEnd = __llvm_profile_end_names();
-  const uint64_t NamesSize = (NamesEnd - NamesBegin) * sizeof(char);
-  uint64_t DataSize = __llvm_profile_get_data_size(DataBegin, DataEnd);
   uint64_t CountersSize = CountersEnd - CountersBegin;
 
   int Length = getCurFilenameLength();
@@ -577,75 +645,8 @@ static void initializeProfileForContinuousMode(void) {
 
   /* mmap() the profile counters so long as there is at least one counter.
    * If there aren't any counters, mmap() would fail with EINVAL. */
-  if (CountersSize > 0) {
-    int Fileno = fileno(File);
-    if (UseBiasVar) {
-      /* Get the file size. */
-      uint64_t FileSize = ftell(File);
-
-      /* Map the profile. */
-      char *Profile = (char *)mmap(NULL, FileSize, PROT_READ | PROT_WRITE,
-                                   MmapFlags, Fileno, 0);
-      if (Profile == MAP_FAILED) {
-        PROF_ERR("Unable to mmap profile: %s\n", strerror(errno));
-        return;
-      }
-      const uint64_t CountersOffsetInBiasMode =
-          sizeof(__llvm_profile_header) + __llvm_write_binary_ids(NULL) +
-          (DataSize * sizeof(__llvm_profile_data));
-      /* Update the profile fields based on the current mapping. */
-      INSTR_PROF_PROFILE_COUNTER_BIAS_VAR = (intptr_t)Profile -
-                                            (uintptr_t)CountersBegin +
-                                            CountersOffsetInBiasMode;
-
-      /* Return the memory allocated for counters to OS. */
-      lprofReleaseMemoryPagesToOS((uintptr_t)CountersBegin,
-                                  (uintptr_t)CountersEnd);
-    } else {
-      /* Check that the counter and data sections in this image are
-       * page-aligned. */
-      unsigned PageSize = getpagesize();
-      if ((intptr_t)CountersBegin % PageSize != 0) {
-        PROF_ERR(
-            "Counters section not page-aligned (start = %p, pagesz = %u).\n",
-            CountersBegin, PageSize);
-        return;
-      }
-      if ((intptr_t)DataBegin % PageSize != 0) {
-        PROF_ERR("Data section not page-aligned (start = %p, pagesz = %u).\n",
-                 DataBegin, PageSize);
-        return;
-      }
-      /* Determine how much padding is needed before/after the counters and
-       * after the names. */
-      uint64_t PaddingBytesBeforeCounters, PaddingBytesAfterCounters,
-          PaddingBytesAfterNames;
-      __llvm_profile_get_padding_sizes_for_counters(
-          DataSize, CountersSize, NamesSize, &PaddingBytesBeforeCounters,
-          &PaddingBytesAfterCounters, &PaddingBytesAfterNames);
-
-      uint64_t PageAlignedCountersLength =
-          (CountersSize * sizeof(uint64_t)) + PaddingBytesAfterCounters;
-      uint64_t FileOffsetToCounters =
-          CurrentFileOffset + sizeof(__llvm_profile_header) +
-          (DataSize * sizeof(__llvm_profile_data)) + PaddingBytesBeforeCounters;
-
-      uint64_t *CounterMmap =
-          (uint64_t *)mmap((void *)CountersBegin, PageAlignedCountersLength,
-                           PROT_READ | PROT_WRITE, MmapFlags,
-                           Fileno, FileOffsetToCounters);
-      if (CounterMmap != CountersBegin) {
-        PROF_ERR(
-            "Continuous counter sync mode is enabled, but mmap() failed (%s).\n"
-            "  - CountersBegin: %p\n"
-            "  - PageAlignedCountersLength: %" PRIu64 "\n"
-            "  - Fileno: %d\n"
-            "  - FileOffsetToCounters: %" PRIu64 "\n",
-            strerror(errno), CountersBegin, PageAlignedCountersLength, Fileno,
-            FileOffsetToCounters);
-      }
-    }
-  }
+  if (CountersSize > 0)
+    mmapForContinuousMode(CurrentFileOffset, File);
 
   if (doMerging()) {
     lprofUnlockFileHandle(File);
@@ -1141,6 +1142,51 @@ int __llvm_profile_register_write_file_atexit(void) {
 
   HasBeenRegistered = 1;
   return atexit(writeFileWithoutReturn);
+}
+
+COMPILER_RT_VISIBILITY int __llvm_profile_set_file_object(FILE *File,
+                                                          int EnableMerge) {
+  if (__llvm_profile_is_continuous_mode_enabled()) {
+    if (!EnableMerge) {
+      PROF_WARN("__llvm_profile_set_file_object(fd=%d) not supported in "
+                "continuous sync mode when merging is disabled\n",
+                fileno(File));
+      return 1;
+    }
+    lprofLockFileHandle(File);
+    uint64_t ProfileFileSize = 0;
+    if (getProfileFileSizeForMerging(File, &ProfileFileSize) == -1) {
+      lprofUnlockFileHandle(File);
+      return 1;
+    }
+    if (ProfileFileSize == 0) {
+      FreeHook = &free;
+      setupIOBuffer();
+      ProfDataWriter fileWriter;
+      initFileWriter(&fileWriter, File);
+      if (lprofWriteData(&fileWriter, 0, 0)) {
+        lprofUnlockFileHandle(File);
+        PROF_ERR("Failed to write file \"%d\": %s\n", fileno(File),
+                 strerror(errno));
+        return 1;
+      }
+    } else {
+      /* The merged profile has a non-zero length. Check that it is compatible
+       * with the data in this process. */
+      char *ProfileBuffer;
+      if (mmapProfileForMerging(File, ProfileFileSize, &ProfileBuffer) == -1) {
+        lprofUnlockFileHandle(File);
+        return 1;
+      }
+      (void)munmap(ProfileBuffer, ProfileFileSize);
+    }
+    mmapForContinuousMode(0, File);
+    lprofUnlockFileHandle(File);
+  } else {
+    setProfileFile(File);
+    setProfileMergeRequested(EnableMerge);
+  }
+  return 0;
 }
 
 #endif

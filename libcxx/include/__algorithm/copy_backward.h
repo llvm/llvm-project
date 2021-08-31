@@ -19,9 +19,6 @@
 #pragma GCC system_header
 #endif
 
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _BidirectionalIterator, class _OutputIterator>
@@ -78,7 +75,5 @@ copy_backward(_BidirectionalIterator1 __first, _BidirectionalIterator1 __last,
 }
 
 _LIBCPP_END_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_COPY_BACKWARD_H

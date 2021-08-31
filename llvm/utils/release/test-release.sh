@@ -19,9 +19,6 @@ else
 fi
 generator="Unix Makefiles"
 
-# Base SVN URL for the sources.
-Base_url="http://llvm.org/svn/llvm-project"
-
 Release=""
 Release_no_dot=""
 RC=""
