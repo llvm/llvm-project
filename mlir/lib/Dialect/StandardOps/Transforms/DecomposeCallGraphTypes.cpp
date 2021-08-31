@@ -156,7 +156,7 @@ struct DecomposeCallGraphTypesForCallOp
         resultMapping.push_back(i);
     }
 
-    CallOp newCallOp = rewriter.create<CallOp>(op.getLoc(), op.getCallee(),
+    CallOp newCallOp = rewriter.create<CallOp>(op.getLoc(), op.getCalleeAttr(),
                                                newResultTypes, newOperands);
 
     // Build a replacement value for each result to replace its uses. If a

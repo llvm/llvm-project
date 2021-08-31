@@ -2545,7 +2545,7 @@ def fir_CallOp : fir_Op<"call", [CallOpInterface]> {
     [{
       $_state.addOperands(operands);
       $_state.addAttribute(calleeAttrName($_state.name),
-        $_builder.getSymbolRefAttr(callee));
+                           SymbolRefAttr::get(callee));
       $_state.addTypes(callee.getType().getResults());
     }]>,
     OpBuilder<(ins "mlir::SymbolRefAttr":$callee,
@@ -2560,7 +2560,8 @@ def fir_CallOp : fir_Op<"call", [CallOpInterface]> {
         "llvm::ArrayRef<mlir::Type>":$results,
         CArg<"mlir::ValueRange", "{}">:$operands),
     [{
-      build($_builder, $_state, $_builder.getSymbolRefAttr(callee), results,
+      build($_builder, $_state,
+            SymbolRefAttr::get($_builder.getContext(), callee), results,
             operands);
     }]>];
 

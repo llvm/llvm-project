@@ -542,8 +542,9 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
                       blockSize.y, blockSize.z});
   result.addOperands(kernelOperands);
   auto kernelModule = kernelFunc->getParentOfType<GPUModuleOp>();
-  auto kernelSymbol = builder.getSymbolRefAttr(
-      kernelModule.getName(), {builder.getSymbolRefAttr(kernelFunc.getName())});
+  auto kernelSymbol =
+      SymbolRefAttr::get(kernelModule.getNameAttr(),
+                         {SymbolRefAttr::get(kernelFunc.getNameAttr())});
   result.addAttribute(getKernelAttrName(), kernelSymbol);
   SmallVector<int32_t, 8> segmentSizes(8, 1);
   segmentSizes.front() = 0; // Initially no async dependencies.

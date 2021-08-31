@@ -893,8 +893,16 @@ def Builtin_SymbolRefAttr : Builtin_Attr<"SymbolRef"> {
     }]>,
   ];
   let extraClassDeclaration = [{
-    static FlatSymbolRefAttr get(MLIRContext *ctx, StringRef value);
+    static SymbolRefAttr get(MLIRContext *ctx, StringRef value,
+                             ArrayRef<FlatSymbolRefAttr> nestedRefs);
+    /// Convenience getters for building a SymbolRefAttr with no path, which is
+    /// known to produce a FlatSymbolRefAttr.
     static FlatSymbolRefAttr get(StringAttr value);
+    static FlatSymbolRefAttr get(MLIRContext *ctx, StringRef value);
+
+    /// Convenience getter for buliding a SymbolRefAttr based on an operation
+    /// that implements the SymbolTrait.
+    static FlatSymbolRefAttr get(Operation *symbol);
 
     /// Returns the name of the fully resolved symbol, i.e. the leaf of the
     /// reference path.
