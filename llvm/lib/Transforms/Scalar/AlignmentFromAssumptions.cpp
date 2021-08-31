@@ -221,6 +221,10 @@ bool AlignmentFromAssumptionsPass::extractAlignmentInfo(CallInst *I,
   AAPtr = AAPtr->stripPointerCastsSameRepresentation();
   AlignSCEV = SE->getSCEV(AlignOB.Inputs[1].get());
   AlignSCEV = SE->getTruncateOrZeroExtend(AlignSCEV, Int64Ty);
+  if (!isa<SCEVConstant>(AlignSCEV))
+    // Added to suppress a crash because consumer doesn't expect non-constant
+    // alignments in the assume bundle.  TODO: Consider generalizing caller.
+    return false;
   if (AlignOB.Inputs.size() == 3)
     OffSCEV = SE->getSCEV(AlignOB.Inputs[2].get());
   else
