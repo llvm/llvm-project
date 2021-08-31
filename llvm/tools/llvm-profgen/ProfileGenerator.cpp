@@ -11,9 +11,9 @@
 #include "llvm/ProfileData/ProfileCommon.h"
 #include <unordered_set>
 
-static cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
-                                           cl::Required,
-                                           cl::desc("Output profile file"));
+cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
+                                    cl::Required,
+                                    cl::desc("Output profile file"));
 static cl::alias OutputA("o", cl::desc("Alias for --output"),
                          cl::aliasopt(OutputFilename));
 
