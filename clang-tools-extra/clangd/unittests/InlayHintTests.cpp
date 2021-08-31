@@ -602,6 +602,16 @@ TEST(TypeHints, LongTypeName) {
   )cpp");
 }
 
+TEST(TypeHints, DefaultTemplateArgs) {
+  assertTypeHints(R"cpp(
+    template <typename, typename = int>
+    struct A {};
+    A<float> foo();
+    auto $var[[var]] = foo();
+  )cpp",
+                  ExpectedHint{": A<float>", "var"});
+}
+
 // FIXME: Low-hanging fruit where we could omit a type hint:
 //  - auto x = TypeName(...);
 //  - auto x = (TypeName) (...);
