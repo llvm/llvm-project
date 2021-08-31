@@ -376,21 +376,12 @@ Arg *OptTable::parseOneArgGrouped(InputArgList &Args, unsigned &Index) const {
   if (Fallback) {
     Option Opt(Fallback, this);
     if (Arg *A = Opt.accept(Args, Str.substr(0, 2), true, Index)) {
-      // Check that the last option isn't a flag wrongly given an argument.
-      if (Str[2] == '=')
-        return new Arg(getOption(TheUnknownOptionID), Str, Index++, CStr);
-
-      Args.replaceArgString(Index, Twine('-') + Str.substr(2));
+      if (Str.size() == 2)
+        ++Index;
+      else
+        Args.replaceArgString(Index, Twine('-') + Str.substr(2));
       return A;
     }
-  }
-
-  // In the case of an incorrect short option extract the character and move to
-  // the next one.
-  if (Str[1] != '-') {
-    CStr = Args.MakeArgString(Str.substr(0, 2));
-    Args.replaceArgString(Index, Twine('-') + Str.substr(2));
-    return new Arg(getOption(TheUnknownOptionID), CStr, Index, CStr);
   }
 
   return new Arg(getOption(TheUnknownOptionID), Str, Index++, CStr);

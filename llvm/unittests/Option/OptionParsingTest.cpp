@@ -376,29 +376,3 @@ TEST(Option, UnknownOptions) {
     EXPECT_EQ("--long", Unknown[1]);
   }
 }
-
-TEST(Option, FlagsWithoutValues) {
-  TestOptTable T;
-  T.setGroupedShortOptions(true);
-  unsigned MAI, MAC;
-  const char *Args[] = {"-A=1", "-A="};
-  InputArgList AL = T.ParseArgs(Args, MAI, MAC);
-  const std::vector<std::string> Unknown = AL.getAllArgValues(OPT_UNKNOWN);
-  ASSERT_EQ((size_t)2, Unknown.size());
-  EXPECT_EQ("-A=1", Unknown[0]);
-  EXPECT_EQ("-A=", Unknown[1]);
-}
-
-TEST(Option, UnknownGroupedShortOptions) {
-  TestOptTable T;
-  T.setGroupedShortOptions(true);
-  unsigned MAI, MAC;
-  const char *Args[] = {"-AuzK", "-AuzK"};
-  InputArgList AL = T.ParseArgs(Args, MAI, MAC);
-  const std::vector<std::string> Unknown = AL.getAllArgValues(OPT_UNKNOWN);
-  ASSERT_EQ((size_t)4, Unknown.size());
-  EXPECT_EQ("-u", Unknown[0]);
-  EXPECT_EQ("-z", Unknown[1]);
-  EXPECT_EQ("-u", Unknown[2]);
-  EXPECT_EQ("-z", Unknown[3]);
-}
