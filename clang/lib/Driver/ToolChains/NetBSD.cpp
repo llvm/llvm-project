@@ -261,8 +261,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs();
   if (SanArgs.needsSharedRt()) {
     CmdArgs.push_back("-rpath");
-    CmdArgs.push_back(Args.MakeArgString(
-        ToolChain.getCompilerRTPath().c_str()));
+    CmdArgs.push_back(Args.MakeArgString(ToolChain.getCompilerRTPath()));
   }
 
   unsigned Major, Minor, Micro;

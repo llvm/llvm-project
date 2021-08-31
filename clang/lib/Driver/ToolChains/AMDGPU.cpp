@@ -754,7 +754,7 @@ AMDGPUToolChain::detectSystemGPUs(const ArgList &Args,
 
   std::string ErrorMessage;
   if (int Result = llvm::sys::ExecuteAndWait(
-          Program.c_str(), {}, {}, Redirects, /* SecondsToWait */ 0,
+          Program, {}, {}, Redirects, /* SecondsToWait */ 0,
           /*MemoryLimit*/ 0, &ErrorMessage)) {
     if (Result > 0) {
       ErrorMessage = "Exited with error code " + std::to_string(Result);
