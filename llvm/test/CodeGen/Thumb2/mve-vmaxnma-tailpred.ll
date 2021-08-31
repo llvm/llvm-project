@@ -10,24 +10,15 @@ define float @minf32(float* noalias nocapture readonly %s1, float* noalias nocap
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB0_1: @ %vector.ph
-; CHECK-NEXT:    add.w r12, r3, #3
-; CHECK-NEXT:    mov.w lr, #1
-; CHECK-NEXT:    bic r12, r12, #3
-; CHECK-NEXT:    sub.w r12, r12, #4
-; CHECK-NEXT:    add.w r12, lr, r12, lsr #2
-; CHECK-NEXT:    dls lr, r12
+; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:  .LBB0_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vctp.32 r3
-; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vldrwt.u32 q0, [r0], #16
-; CHECK-NEXT:    vldrwt.u32 q1, [r1], #16
-; CHECK-NEXT:    subs r3, #4
+; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
 ; CHECK-NEXT:    vabs.f32 q0, q0
 ; CHECK-NEXT:    vminnm.f32 q0, q0, q1
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrwt.32 q0, [r2], #16
-; CHECK-NEXT:    le lr, .LBB0_2
+; CHECK-NEXT:    vstrw.32 q0, [r2], #16
+; CHECK-NEXT:    letp lr, .LBB0_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
@@ -70,23 +61,14 @@ define float @maxaf32(float* noalias nocapture readonly %s1, float* noalias noca
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB1_1: @ %vector.ph
-; CHECK-NEXT:    add.w r12, r3, #3
-; CHECK-NEXT:    mov.w lr, #1
-; CHECK-NEXT:    bic r12, r12, #3
-; CHECK-NEXT:    sub.w r12, r12, #4
-; CHECK-NEXT:    add.w r12, lr, r12, lsr #2
-; CHECK-NEXT:    dls lr, r12
+; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:  .LBB1_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vctp.32 r3
-; CHECK-NEXT:    subs r3, #4
-; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vldrwt.u32 q0, [r1], #16
-; CHECK-NEXT:    vldrwt.u32 q1, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
+; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
 ; CHECK-NEXT:    vmaxnma.f32 q1, q0
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrwt.32 q1, [r2], #16
-; CHECK-NEXT:    le lr, .LBB1_2
+; CHECK-NEXT:    vstrw.32 q1, [r2], #16
+; CHECK-NEXT:    letp lr, .LBB1_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
@@ -131,25 +113,15 @@ define half @maxf16(half* noalias nocapture readonly %s1, half* noalias nocaptur
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB2_1: @ %vector.ph
-; CHECK-NEXT:    add.w r12, r3, #7
-; CHECK-NEXT:    mov.w lr, #1
-; CHECK-NEXT:    bic r12, r12, #7
-; CHECK-NEXT:    sub.w r12, r12, #8
-; CHECK-NEXT:    add.w r12, lr, r12, lsr #3
-; CHECK-NEXT:    dls lr, r12
+; CHECK-NEXT:    dlstp.16 lr, r3
 ; CHECK-NEXT:  .LBB2_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vctp.16 r3
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vldrht.u16 q0, [r0], #16
-; CHECK-NEXT:    subs r3, #8
+; CHECK-NEXT:    vldrh.u16 q0, [r0], #16
 ; CHECK-NEXT:    vabs.f16 q0, q0
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vldrht.u16 q1, [r1], #16
+; CHECK-NEXT:    vldrh.u16 q1, [r1], #16
 ; CHECK-NEXT:    vmaxnm.f16 q0, q0, q1
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrht.16 q0, [r2], #16
-; CHECK-NEXT:    le lr, .LBB2_2
+; CHECK-NEXT:    vstrh.16 q0, [r2], #16
+; CHECK-NEXT:    letp lr, .LBB2_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
@@ -192,23 +164,14 @@ define half @minaf16(half* noalias nocapture readonly %s1, half* noalias nocaptu
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB3_1: @ %vector.ph
-; CHECK-NEXT:    add.w r12, r3, #7
-; CHECK-NEXT:    mov.w lr, #1
-; CHECK-NEXT:    bic r12, r12, #7
-; CHECK-NEXT:    sub.w r12, r12, #8
-; CHECK-NEXT:    add.w r12, lr, r12, lsr #3
-; CHECK-NEXT:    dls lr, r12
+; CHECK-NEXT:    dlstp.16 lr, r3
 ; CHECK-NEXT:  .LBB3_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vctp.16 r3
-; CHECK-NEXT:    subs r3, #8
-; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vldrht.u16 q0, [r1], #16
-; CHECK-NEXT:    vldrht.u16 q1, [r0], #16
+; CHECK-NEXT:    vldrh.u16 q0, [r1], #16
+; CHECK-NEXT:    vldrh.u16 q1, [r0], #16
 ; CHECK-NEXT:    vminnma.f16 q1, q0
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrht.16 q1, [r2], #16
-; CHECK-NEXT:    le lr, .LBB3_2
+; CHECK-NEXT:    vstrh.16 q1, [r2], #16
+; CHECK-NEXT:    letp lr, .LBB3_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
