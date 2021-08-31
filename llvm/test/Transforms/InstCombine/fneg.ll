@@ -441,7 +441,7 @@ define float @fneg_fneg_sel_extra_use3(float %x, float %y, i1 %cond) {
 define double @fneg_fneg_sel_fmf1(double %x, double %y, i1 %cond) {
 ; CHECK-LABEL: @fneg_fneg_sel_fmf1(
 ; CHECK-NEXT:    [[SEL_V:%.*]] = select i1 [[COND:%.*]], double [[X:%.*]], double [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = fneg nnan double [[SEL_V]]
+; CHECK-NEXT:    [[SEL:%.*]] = fneg double [[SEL_V]]
 ; CHECK-NEXT:    ret double [[SEL]]
 ;
   %n1 = fneg nnan double %x
@@ -452,8 +452,8 @@ define double @fneg_fneg_sel_fmf1(double %x, double %y, i1 %cond) {
 
 define double @fneg_fneg_sel_fmf2(double %x, double %y, i1 %cond) {
 ; CHECK-LABEL: @fneg_fneg_sel_fmf2(
-; CHECK-NEXT:    [[SEL_V:%.*]] = select i1 [[COND:%.*]], double [[X:%.*]], double [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = fneg nnan ninf double [[SEL_V]]
+; CHECK-NEXT:    [[SEL_V:%.*]] = select ninf i1 [[COND:%.*]], double [[X:%.*]], double [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = fneg ninf double [[SEL_V]]
 ; CHECK-NEXT:    ret double [[SEL]]
 ;
   %n1 = fneg nnan ninf double %x
@@ -464,8 +464,8 @@ define double @fneg_fneg_sel_fmf2(double %x, double %y, i1 %cond) {
 
 define double @fneg_fneg_sel_fmf3(double %x, double %y, i1 %cond) {
 ; CHECK-LABEL: @fneg_fneg_sel_fmf3(
-; CHECK-NEXT:    [[SEL_V:%.*]] = select i1 [[COND:%.*]], double [[X:%.*]], double [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = fneg nnan ninf double [[SEL_V]]
+; CHECK-NEXT:    [[SEL_V:%.*]] = select ninf i1 [[COND:%.*]], double [[X:%.*]], double [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = fneg ninf double [[SEL_V]]
 ; CHECK-NEXT:    ret double [[SEL]]
 ;
   %n1 = fneg nnan ninf double %x
@@ -476,8 +476,8 @@ define double @fneg_fneg_sel_fmf3(double %x, double %y, i1 %cond) {
 
 define double @fneg_fneg_sel_fmf4(double %x, double %y, i1 %cond) {
 ; CHECK-LABEL: @fneg_fneg_sel_fmf4(
-; CHECK-NEXT:    [[SEL_V:%.*]] = select i1 [[COND:%.*]], double [[X:%.*]], double [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = fneg nnan double [[SEL_V]]
+; CHECK-NEXT:    [[SEL_V:%.*]] = select nnan ninf nsz i1 [[COND:%.*]], double [[X:%.*]], double [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = fneg nnan ninf nsz double [[SEL_V]]
 ; CHECK-NEXT:    ret double [[SEL]]
 ;
   %n1 = fneg nnan double %x
