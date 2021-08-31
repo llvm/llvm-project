@@ -47,19 +47,20 @@ declare void @foo()
 define void @test_inaccessiblememonly(float* %p) {
 ; CHECK-LABEL: @test_inaccessiblememonly(
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr float, float* [[P:%.*]], i64 0
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr float, float* [[P]], i64 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, float* [[P]], i64 2
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr float, float* [[P]], i64 3
-; CHECK-NEXT:    [[L0:%.*]] = load float, float* [[P0]], align 16
-; CHECK-NEXT:    [[L1:%.*]] = load float, float* [[P1]], align 4
-; CHECK-NEXT:    [[L2:%.*]] = load float, float* [[P2]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P0]] to <4 x float>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 16
+; CHECK-NEXT:    [[L01:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
+; CHECK-NEXT:    [[L12:%.*]] = extractelement <4 x float> [[TMP2]], i32 1
+; CHECK-NEXT:    [[L23:%.*]] = extractelement <4 x float> [[TMP2]], i32 2
+; CHECK-NEXT:    [[L34:%.*]] = extractelement <4 x float> [[TMP2]], i32 3
 ; CHECK-NEXT:    call void @foo() #[[ATTR1:[0-9]+]]
-; CHECK-NEXT:    [[L3:%.*]] = load float, float* [[P3]], align 4
-; CHECK-NEXT:    store float [[L0]], float* [[P0]], align 16
 ; CHECK-NEXT:    call void @foo() #[[ATTR1]]
-; CHECK-NEXT:    store float [[L1]], float* [[P1]], align 4
-; CHECK-NEXT:    store float [[L2]], float* [[P2]], align 4
-; CHECK-NEXT:    store float [[L3]], float* [[P3]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> undef, float [[L01]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[L12]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[L23]], i32 2
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP5]], float [[L34]], i32 3
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast float* [[P0]] to <4 x float>*
+; CHECK-NEXT:    store <4 x float> [[TMP6]], <4 x float>* [[TMP7]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %p0 = getelementptr float, float* %p, i64 0
