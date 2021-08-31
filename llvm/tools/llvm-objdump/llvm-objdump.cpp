@@ -1286,6 +1286,10 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
     if (shouldAdjustVA(Section))
       VMAAdjustment = AdjustVMA;
 
+    // In executable and shared objects, r_offset holds a virtual address.
+    // Subtract SectionAddr from the r_offset field of a relocation to get
+    // the section offset.
+    uint64_t RelAdjustment = Obj->isRelocatableObject() ? 0 : SectionAddr;
     uint64_t Size;
     uint64_t Index;
     bool PrintedSection = false;
@@ -1432,7 +1436,8 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
             // For --reloc: print zero blocks patched by relocations, so that
             // relocations can be shown in the dump.
             if (RelCur != RelEnd)
-              MaxOffset = RelCur->getOffset() - Index;
+              MaxOffset = std::min(RelCur->getOffset() - RelAdjustment - Index,
+                                   MaxOffset);
 
             if (size_t N =
                     countSkippableZeroBytes(Bytes.slice(Index, MaxOffset))) {
@@ -1581,7 +1586,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
         if (Obj->getArch() != Triple::hexagon) {
           // Print relocation for instruction and data.
           while (RelCur != RelEnd) {
-            uint64_t Offset = RelCur->getOffset();
+            uint64_t Offset = RelCur->getOffset() - RelAdjustment;
             // If this relocation is hidden, skip it.
             if (getHidden(*RelCur) || SectionAddr + Offset < StartAddress) {
               ++RelCur;
