@@ -5485,16 +5485,49 @@ CommandObject *ProcessGDBRemote::GetPluginCommandObject() {
   return m_command_sp.get();
 }
 
+void ProcessGDBRemote::DidForkSwitchSoftwareBreakpoints(bool enable) {
+  GetBreakpointSiteList().ForEach([this, enable](BreakpointSite *bp_site) {
+    if (bp_site->IsEnabled() &&
+        (bp_site->GetType() == BreakpointSite::eSoftware ||
+         bp_site->GetType() == BreakpointSite::eExternal)) {
+      m_gdb_comm.SendGDBStoppointTypePacket(
+          eBreakpointSoftware, enable, bp_site->GetLoadAddress(),
+          bp_site->GetTrapOpcodeMaxByteSize(), GetInterruptTimeout());
+    }
+  });
+}
+
 void ProcessGDBRemote::DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
+
+  lldb::pid_t parent_pid = m_gdb_comm.GetCurrentProcessID();
+  // Any valid TID will suffice, thread-relevant actions will set a proper TID
+  // anyway.
+  lldb::tid_t parent_tid = m_thread_ids.front();
+
+  if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware)) {
+    // Switch to the new process to clear breakpoints there.
+    if (!m_gdb_comm.SetCurrentThread(child_tid, child_pid)) {
+      LLDB_LOG(log, "ProcessGDBRemote::DidFork() unable to set pid/tid");
+      return;
+    }
+
+    // Disable all software breakpoints in the forked process.
+    DidForkSwitchSoftwareBreakpoints(false);
+
+    // Reset gdb-remote to the original process.
+    if (!m_gdb_comm.SetCurrentThread(parent_tid, parent_pid)) {
+      LLDB_LOG(log, "ProcessGDBRemote::DidFork() unable to reset pid/tid");
+      return;
+    }
+  }
 
   LLDB_LOG(log, "Detaching forked child {0}", child_pid);
   Status error = m_gdb_comm.Detach(false, child_pid);
   if (error.Fail()) {
-      LLDB_LOG(log,
-               "ProcessGDBRemote::DidFork() detach packet send failed: {0}",
-                error.AsCString() ? error.AsCString() : "<unknown error>");
-      return;
+    LLDB_LOG(log, "ProcessGDBRemote::DidFork() detach packet send failed: {0}",
+             error.AsCString() ? error.AsCString() : "<unknown error>");
+    return;
   }
 }
 
