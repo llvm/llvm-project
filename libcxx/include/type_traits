@@ -3708,13 +3708,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_standard_layout_v
 // is_trivially_copyable;
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_trivially_copyable
-#if __has_feature(is_trivially_copyable)
     : public integral_constant<bool, __is_trivially_copyable(_Tp)>
-#elif _GNUC_VER >= 501
-    : public integral_constant<bool, !is_volatile<_Tp>::value && __is_trivially_copyable(_Tp)>
-#else
-    : integral_constant<bool, is_scalar<typename remove_all_extents<_Tp>::type>::value>
-#endif
     {};
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
