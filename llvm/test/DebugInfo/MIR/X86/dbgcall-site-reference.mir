@@ -109,7 +109,6 @@ body:             |
     frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 16
     $rsi = MOV64rr $rsp
-    DBG_VALUE $rdi, $noreg, !32, !DIExpression(), debug-location !35
     CALL64pcrel32 @_ZN1CC2E1B, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit-def $rsp, implicit-def $ssp, debug-location !36
     $rax = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !36
     CFI_INSTRUCTION def_cfa_offset 8, debug-location !36
