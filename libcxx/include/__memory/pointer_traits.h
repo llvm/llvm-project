@@ -184,7 +184,7 @@ template <class _Pointer, class>
 struct __to_address_helper {
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
     static decltype(_VSTD::__to_address(declval<const _Pointer&>().operator->()))
-    __call(const _Pointer&__p) _NOEXCEPT {
+    __call(const _Pointer& __p) _NOEXCEPT {
         return _VSTD::__to_address(__p.operator->());
     }
 };
@@ -193,7 +193,7 @@ template <class _Pointer>
 struct __to_address_helper<_Pointer, decltype((void)pointer_traits<_Pointer>::to_address(declval<const _Pointer&>()))> {
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
     static decltype(pointer_traits<_Pointer>::to_address(declval<const _Pointer&>()))
-    __call(const _Pointer&__p) _NOEXCEPT {
+    __call(const _Pointer& __p) _NOEXCEPT {
         return pointer_traits<_Pointer>::to_address(__p);
     }
 };
