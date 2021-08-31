@@ -108,10 +108,21 @@ void Language::ForEach(std::function<bool(Language *)> callback) {
     }
   });
 
-  std::lock_guard<std::mutex> guard(GetLanguagesMutex());
-  LanguagesMap &map(GetLanguagesMap());
-  for (const auto &entry : map) {
-    if (!callback(entry.second.get()))
+  // callback may call a method in Language that attempts to acquire the same
+  // lock (such as Language::ForEach or Language::FindPlugin). To avoid a
+  // deadlock, we do not use callback while holding the lock.
+  std::vector<Language *> loaded_plugins;
+  {
+    std::lock_guard<std::mutex> guard(GetLanguagesMutex());
+    LanguagesMap &map(GetLanguagesMap());
+    for (const auto &entry : map) {
+      if (entry.second)
+        loaded_plugins.push_back(entry.second.get());
+    }
+  }
+
+  for (auto *lang : loaded_plugins) {
+    if (!callback(lang))
       break;
   }
 }
