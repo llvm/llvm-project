@@ -30,7 +30,7 @@ macro(archive_aix_libatomic name)
     ""
     "ARCHS;PARENT_TARGET"
     ${ARGN})
-  set(shared_libraries_to_archive "")
+  set(objects_to_archive "")
   foreach (arch ${LIB_ARCHS})
     if(CAN_TARGET_${arch})
       set(output_dir "${CMAKE_CURRENT_BINARY_DIR}/libatomic-${arch}.dir")
@@ -50,11 +50,11 @@ macro(archive_aix_libatomic name)
                            COMMAND ${CMAKE_STRIP} -X32_64 -E
                                 "${output_dir}/libatomic.so.1"
                            DEPENDS ${target})
-        list(APPEND shared_libraries_to_archive "${output_dir}/libatomic.so.1")
+        list(APPEND objects_to_archive "${output_dir}/libatomic.so.1")
       endif()
     endif()
   endforeach()
-  if(shared_libraries_to_archive)
+  if(objects_to_archive)
     set(output_dir "")
     set(install_dir "")
     # If LLVM defines top level library directory, we want to deliver
@@ -69,8 +69,8 @@ macro(archive_aix_libatomic name)
     endif()
     add_custom_command(OUTPUT "${output_dir}/libatomic.a"
                        COMMAND ${CMAKE_AR} -X32_64 r "${output_dir}/libatomic.a"
-                       ${shared_libraries_to_archive}
-                       DEPENDS ${shared_libraries_to_archive})
+                       ${objects_to_archive}
+                       DEPENDS ${objects_to_archive})
     install(FILES "${output_dir}/libatomic.a"
             DESTINATION ${install_dir})
     add_custom_target(aix-libatomic
