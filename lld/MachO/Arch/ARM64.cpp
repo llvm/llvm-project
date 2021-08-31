@@ -134,7 +134,13 @@ ARM64::ARM64() : ARM64Common(LP64()) {
 
   stubSize = sizeof(stubCode);
   thunkSize = sizeof(thunkCode);
-  branchRange = maxIntN(28) - thunkSize;
+
+  // Branch immediate is two's complement 26 bits, which is implicitly
+  // multiplied by 4 (since all functions are 4-aligned: The branch range
+  // is -4*(2**(26-1))..4*(2**(26-1) - 1).
+  backwardBranchRange = 128 * 1024 * 1024;
+  forwardBranchRange = backwardBranchRange - 4;
+
   stubHelperHeaderSize = sizeof(stubHelperHeaderCode);
   stubHelperEntrySize = sizeof(stubHelperEntryCode);
 }
