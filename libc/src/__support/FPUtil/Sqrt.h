@@ -121,7 +121,7 @@ static inline T sqrt(T x) {
     int xExp = bits.getExponent();
     UIntType xMant = bits.getMantissa();
 
-    // Step 1a: Normalize denormal input and append hiddent bit to the mantissa
+    // Step 1a: Normalize denormal input and append hidden bit to the mantissa
     if (bits.getUnbiasedExponent() == 0) {
       ++xExp; // let xExp be the correct exponent of One bit.
       internal::normalize<T>(xExp, xMant);
