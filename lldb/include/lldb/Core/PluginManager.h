@@ -192,7 +192,8 @@ public:
 
   static Status SaveCore(const lldb::ProcessSP &process_sp,
                          const FileSpec &outfile,
-                         lldb::SaveCoreStyle &core_style);
+                         lldb::SaveCoreStyle &core_style,
+                         const ConstString plugin_name);
 
   // ObjectContainer
   static bool
