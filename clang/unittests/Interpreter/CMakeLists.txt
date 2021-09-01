@@ -12,8 +12,3 @@ target_link_libraries(ClangReplInterpreterTests PUBLIC
   clangInterpreter
   clangFrontend
   )
-
-# Exceptions on Windows are not yet supported.
-if(NOT WIN32)
-  add_subdirectory(ExceptionTests)
-endif()
