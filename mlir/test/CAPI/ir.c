@@ -19,6 +19,7 @@
 #include "mlir-c/Dialect/Standard.h"
 #include "mlir-c/IntegerSet.h"
 #include "mlir-c/Registration.h"
+#include "mlir-c/Support.h"
 
 #include <assert.h>
 #include <inttypes.h>
@@ -1703,6 +1704,10 @@ void testDiagnostics() {
           ctx, mlirStringRefCreateFromCString("other-file.c"), 2, 3),
       fileLineColLoc);
   mlirEmitError(callSiteLoc, "test diagnostics");
+  MlirLocation null = {0};
+  MlirLocation nameLoc =
+      mlirLocationNameGet(ctx, mlirStringRefCreateFromCString("named"), null);
+  mlirEmitError(nameLoc, "test diagnostics");
   mlirContextDetachDiagnosticHandler(ctx, id);
   mlirEmitError(unknownLoc, "more test diagnostics");
   // CHECK-LABEL: @test_diagnostics
@@ -1717,6 +1722,10 @@ void testDiagnostics() {
   // CHECK: processing diagnostic (userData: 42) <<
   // CHECK:   test diagnostics
   // CHECK:   loc(callsite("other-file.c":2:3 at "file.c":1:2))
+  // CHECK: >> end of diagnostic (userData: 42)
+  // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   test diagnostics
+  // CHECK:   loc("named")
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: deleting user data (userData: 42)
   // CHECK-NOT: processing diagnostic
