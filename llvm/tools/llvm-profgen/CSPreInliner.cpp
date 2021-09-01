@@ -9,6 +9,7 @@
 #include "CSPreInliner.h"
 #include "ProfiledBinary.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/ADT/Statistic.h"
 #include <cstdint>
 #include <queue>
 
@@ -16,6 +17,18 @@
 
 using namespace llvm;
 using namespace sampleprof;
+
+STATISTIC(PreInlNumCSInlined,
+          "Number of functions inlined with context sensitive profile");
+STATISTIC(PreInlNumCSNotInlined,
+          "Number of functions not inlined with context sensitive profile");
+STATISTIC(PreInlNumCSInlinedHitMinLimit,
+          "Number of functions with FDO inline stopped due to min size limit");
+STATISTIC(PreInlNumCSInlinedHitMaxLimit,
+          "Number of functions with FDO inline stopped due to max size limit");
+STATISTIC(
+    PreInlNumCSInlinedHitGrowthLimit,
+    "Number of functions with FDO inline stopped due to growth size limit");
 
 // The switches specify inline thresholds used in SampleProfileLoader inlining.
 // TODO: the actual threshold to be tuned here because the size here is based
@@ -163,17 +176,29 @@ void CSPreInliner::processFunction(const StringRef Name) {
     if ((ShouldInline = shouldInline(Candidate))) {
       // We mark context as inlined as the corresponding context profile
       // won't be merged into that function's base profile.
+      ++PreInlNumCSInlined;
       ContextTracker.markContextSamplesInlined(Candidate.CalleeSamples);
       Candidate.CalleeSamples->getContext().setAttribute(
           ContextShouldBeInlined);
       FuncFinalSize += Candidate.SizeCost;
       getInlineCandidates(CQueue, Candidate.CalleeSamples);
+    } else {
+      ++PreInlNumCSNotInlined;
     }
     LLVM_DEBUG(dbgs() << (ShouldInline ? "  Inlined" : "  Outlined")
                       << " context profile for: "
                       << Candidate.CalleeSamples->getContext().toString()
                       << " (callee size: " << Candidate.SizeCost
                       << ", call count:" << Candidate.CallsiteCount << ")\n");
+  }
+
+  if (!CQueue.empty()) {
+    if (SizeLimit == (unsigned)ProfileInlineLimitMax)
+      ++PreInlNumCSInlinedHitMaxLimit;
+    else if (SizeLimit == (unsigned)ProfileInlineLimitMin)
+      ++PreInlNumCSInlinedHitMinLimit;
+    else
+      ++PreInlNumCSInlinedHitGrowthLimit;
   }
 
   LLVM_DEBUG({
