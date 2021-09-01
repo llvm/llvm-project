@@ -276,6 +276,18 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
   } else {
     // Name mismatch. We need a redirect. First grab the actual entry we want
     // to return.
+    //
+    // This redirection logic intentionally leaks the external name of a
+    // redirected file that uses 'use-external-name' in \a
+    // vfs::RedirectionFileSystem. This allows clang to report the external
+    // name to users (in diagnostics) and to tools that don't have access to
+    // the VFS (in debug info and dependency '.d' files).
+    //
+    // FIXME: This is pretty complicated. It's also inconsistent with how
+    // "real" filesystems behave and confuses parts of clang expect to see the
+    // name-as-accessed on the \a FileEntryRef. Maybe the returned \a
+    // FileEntryRef::getName() could return the accessed name unmodified, but
+    // make the external name available via a separate API.
     auto &Redirection =
         *SeenFileEntries
              .insert({Status.getName(), FileEntryRef::MapValue(UFE, DirInfo)})

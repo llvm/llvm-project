@@ -596,6 +596,17 @@ class RedirectingFileSystemParser;
 /// contain multiple path components (e.g. /path/to/file). However, any
 /// directory in such a path that contains more than one child must be uniquely
 /// represented by a 'directory' entry.
+///
+/// When the 'use-external-name' field is set, calls to \a vfs::File::status()
+/// give the external (remapped) filesystem name instead of the name the file
+/// was accessed by. This is an intentional leak through the \a
+/// RedirectingFileSystem abstraction layer. It enables clients to discover
+/// (and use) the external file location when communicating with users or tools
+/// that don't use the same VFS overlay.
+///
+/// FIXME: 'use-external-name' causes behaviour that's inconsistent with how
+/// "real" filesystems behave. Maybe there should be a separate channel for
+/// this information.
 class RedirectingFileSystem : public vfs::FileSystem {
 public:
   enum EntryKind { EK_Directory, EK_DirectoryRemap, EK_File };
