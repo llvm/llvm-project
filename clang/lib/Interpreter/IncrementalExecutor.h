@@ -41,8 +41,6 @@ public:
 
   llvm::Error addModule(std::unique_ptr<llvm::Module> M);
   llvm::Error runCtors() const;
-  llvm::Expected<llvm::JITTargetAddress>
-  getSymbolAddress(llvm::StringRef UnmangledName) const;
 };
 
 } // end namespace clang
