@@ -977,7 +977,14 @@ void SampleProfileLoader::findExternalInlineCandidate(
     // For CSSPGO profile, retrieve candidate profile by walking over the
     // trie built for context profile. Note that also take call targets
     // even if callee doesn't have a corresponding context profile.
-    if (!CalleeSample || CalleeSample->getEntrySamples() < Threshold)
+    if (!CalleeSample)
+      continue;
+
+    // If pre-inliner decision is used, honor that for importing as well.
+    bool PreInline =
+        UsePreInlinerDecision &&
+        CalleeSample->getContext().hasAttribute(ContextShouldBeInlined);
+    if (!PreInline && CalleeSample->getEntrySamples() < Threshold)
       continue;
 
     StringRef Name = CalleeSample->getFuncName();
@@ -1299,10 +1306,13 @@ SampleProfileLoader::shouldInlineCandidate(InlineCandidate &Candidate) {
   // we replay that inline decision under `sample-profile-use-preinliner`.
   // Note that we don't need to handle negative decision from preinliner as
   // context profile for not inlined calls are merged by preinliner already.
-  if (UsePreInlinerDecision &&
-      Candidate.CalleeSamples->getContext().hasAttribute(
-          ContextShouldBeInlined))
-    return InlineCost::getAlways("preinliner");
+  SampleContext &Context = Candidate.CalleeSamples->getContext();
+  if (UsePreInlinerDecision && Context.hasAttribute(ContextShouldBeInlined))
+    // Once two node are merged due to promotion, we're losing some context
+    // so the original context-sensitive preinliner decision should be ignored
+    // for SyntheticContext.
+    if (!Context.hasState(SyntheticContext))
+      return InlineCost::getAlways("preinliner");
 
   // For old FDO inliner, we inline the call site as long as cost is not
   // "Never". The cost-benefit check is done earlier.
