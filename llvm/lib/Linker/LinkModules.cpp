@@ -177,9 +177,25 @@ bool ModuleLinker::computeResultingSelectionKind(StringRef ComdatName,
     // Go with Dst.
     LinkFromSrc = false;
     break;
-  case Comdat::SelectionKind::NoDeduplicate:
-    return emitError("Linking COMDATs named '" + ComdatName +
-                     "': nodeduplicate has been violated!");
+  case Comdat::SelectionKind::NoDeduplicate: {
+    const GlobalVariable *DstGV;
+    const GlobalVariable *SrcGV;
+    if (getComdatLeader(DstM, ComdatName, DstGV) ||
+        getComdatLeader(*SrcM, ComdatName, SrcGV))
+      return true;
+
+    if (SrcGV->isWeakForLinker()) {
+      // Go with Dst.
+      LinkFromSrc = false;
+    } else if (DstGV->isWeakForLinker()) {
+      // Go with Src.
+      LinkFromSrc = true;
+    } else {
+      return emitError("Linking COMDATs named '" + ComdatName +
+                       "': nodeduplicate has been violated!");
+    }
+    break;
+  }
   case Comdat::SelectionKind::ExactMatch:
   case Comdat::SelectionKind::Largest:
   case Comdat::SelectionKind::SameSize: {
