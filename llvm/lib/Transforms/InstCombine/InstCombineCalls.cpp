@@ -1076,21 +1076,30 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
-    if (match(I0, m_Not(m_Value(X)))) {
-      // max (not X), (not Y) --> not (min X, Y)
-      Intrinsic::ID InvID = getInverseMinMaxIntrinsic(IID);
-      if (match(I1, m_Not(m_Value(Y))) &&
-          (I0->hasOneUse() || I1->hasOneUse())) {
-        Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, X, Y);
+    // If we can eliminate ~A and Y is free to invert:
+    // max ~A, Y --> ~(min A, ~Y)
+    //
+    // Examples:
+    // max ~A, ~Y --> ~(min A, Y)
+    // max ~A, C --> ~(min A, ~C)
+    // max ~A, (max ~Y, ~Z) --> ~min( A, (min Y, Z))
+    auto moveNotAfterMinMax = [&](Value *X, Value *Y) -> Instruction * {
+      Value *A;
+      if (match(X, m_OneUse(m_Not(m_Value(A)))) &&
+          !isFreeToInvert(A, A->hasOneUse()) &&
+          isFreeToInvert(Y, Y->hasOneUse())) {
+        Value *NotY = Builder.CreateNot(Y);
+        Intrinsic::ID InvID = getInverseMinMaxIntrinsic(IID);
+        Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, A, NotY);
         return BinaryOperator::CreateNot(InvMaxMin);
       }
-      // max (not X), C --> not(min X, ~C)
-      if (match(I1, m_Constant(C)) && I0->hasOneUse()) {
-        Constant *NotC = ConstantExpr::getNot(C);
-        Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, X, NotC);
-        return BinaryOperator::CreateNot(InvMaxMin);
-      }
-    }
+      return nullptr;
+    };
+
+    if (Instruction *I = moveNotAfterMinMax(I0, I1))
+      return I;
+    if (Instruction *I = moveNotAfterMinMax(I1, I0))
+      return I;
 
     // smax(X, -X) --> abs(X)
     // smin(X, -X) --> -abs(X)

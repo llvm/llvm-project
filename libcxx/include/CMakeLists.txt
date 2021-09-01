@@ -128,7 +128,11 @@ set(files
   __config
   __debug
   __errc
+  __format/format_arg.h
+  __format/format_args.h
+  __format/format_context.h
   __format/format_error.h
+  __format/format_fwd.h
   __format/format_parse_context.h
   __function_like.h
   __functional_base

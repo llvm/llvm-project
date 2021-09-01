@@ -675,6 +675,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
       return EC;
     break;
   case SecFuncOffsetTable:
+    FuncOffsetsOrdered = hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagOrdered);
     if (std::error_code EC = readFuncOffsetTable())
       return EC;
     break;
@@ -720,17 +721,27 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncOffsetTable() {
     return EC;
 
   FuncOffsetTable.reserve(*Size);
+
+  if (FuncOffsetsOrdered) {
+    OrderedFuncOffsets =
+        std::make_unique<std::vector<std::pair<SampleContext, uint64_t>>>();
+    OrderedFuncOffsets->reserve(*Size);
+  }
+
   for (uint32_t I = 0; I < *Size; ++I) {
-    auto FName(readSampleContextFromTable());
-    if (std::error_code EC = FName.getError())
+    auto FContext(readSampleContextFromTable());
+    if (std::error_code EC = FContext.getError())
       return EC;
 
     auto Offset = readNumber<uint64_t>();
     if (std::error_code EC = Offset.getError())
       return EC;
 
-    FuncOffsetTable[*FName] = *Offset;
+    FuncOffsetTable[*FContext] = *Offset;
+    if (FuncOffsetsOrdered)
+      OrderedFuncOffsets->emplace_back(*FContext, *Offset);
   }
+
   return sampleprof_error::success;
 }
 
@@ -760,42 +771,43 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
     }
 
     if (ProfileIsCS) {
-      // Compute the ordered set of names, so we can
-      // get all context profiles under a subtree by
-      // iterating through the ordered names.
-      std::set<SampleContext> OrderedContexts;
-      for (auto Name : FuncOffsetTable) {
-        OrderedContexts.insert(Name.first);
-      }
-
       DenseSet<uint64_t> FuncGuidsToUse;
       if (useMD5()) {
         for (auto Name : FuncsToUse)
           FuncGuidsToUse.insert(Function::getGUID(Name));
       }
 
-      // For each function in current module, load all
-      // context profiles for the function.
-      for (auto NameOffset : FuncOffsetTable) {
-        SampleContext FContext = NameOffset.first;
-        auto FuncName = FContext.getName();
-        if ((useMD5() && !FuncGuidsToUse.count(std::stoull(FuncName.data()))) ||
-            (!useMD5() && !FuncsToUse.count(FuncName) &&
-             (!Remapper || !Remapper->exist(FuncName))))
-          continue;
+      // For each function in current module, load all context profiles for
+      // the function as well as their callee contexts which can help profile
+      // guided importing for ThinLTO. This can be achieved by walking
+      // through an ordered context container, where contexts are laid out
+      // as if they were walked in preorder of a context trie. While
+      // traversing the trie, a link to the highest common ancestor node is
+      // kept so that all of its decendants will be loaded.
+      assert(OrderedFuncOffsets.get() &&
+             "func offset table should always be sorted in CS profile");
+      const SampleContext *CommonContext = nullptr;
+      for (const auto &NameOffset : *OrderedFuncOffsets) {
+        const auto &FContext = NameOffset.first;
+        auto FName = FContext.getName();
+        // For function in the current module, keep its farthest ancestor
+        // context. This can be used to load itself and its child and
+        // sibling contexts.
+        if ((useMD5() && FuncGuidsToUse.count(std::stoull(FName.data()))) ||
+            (!useMD5() && (FuncsToUse.count(FName) ||
+                           (Remapper && Remapper->exist(FName))))) {
+          if (!CommonContext || !CommonContext->IsPrefixOf(FContext))
+            CommonContext = &FContext;
+        }
 
-        // For each context profile we need, try to load
-        // all context profile in the subtree. This can
-        // help profile guided importing for ThinLTO.
-        auto It = OrderedContexts.find(FContext);
-        while (It != OrderedContexts.end() && FContext.IsPrefixOf(*It)) {
-          const uint8_t *FuncProfileAddr = Start + FuncOffsetTable[*It];
+        if (CommonContext == &FContext ||
+            (CommonContext && CommonContext->IsPrefixOf(FContext))) {
+          // Load profile for the current context which originated from
+          // the common ancestor.
+          const uint8_t *FuncProfileAddr = Start + NameOffset.second;
           assert(FuncProfileAddr < End && "out of LBRProfile section");
           if (std::error_code EC = readFuncProfile(FuncProfileAddr))
             return EC;
-          // Remove loaded context profile so we won't
-          // load it repeatedly.
-          It = OrderedContexts.erase(It);
         }
       }
     } else {
@@ -1211,6 +1223,10 @@ static std::string getSecFlagsStr(const SecHdrTableEntry &Entry) {
       Flags.append("context,");
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFSDiscriminator))
       Flags.append("fs-discriminator,");
+    break;
+  case SecFuncOffsetTable:
+    if (hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagOrdered))
+      Flags.append("ordered,");
     break;
   default:
     break;

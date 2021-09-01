@@ -526,7 +526,7 @@ void CheckHelper::CheckObjectEntity(
     messages_.Say("OPTIONAL attribute may apply only to a dummy "
                   "argument"_err_en_US); // C849
   }
-  if (IsStaticallyInitialized(symbol, true /* ignore DATA inits */)) { // C808
+  if (HasDeclarationInitializer(symbol)) { // C808; ignore DATA initialization
     CheckPointerInitialization(symbol);
     if (IsAutomatic(symbol)) {
       messages_.Say(

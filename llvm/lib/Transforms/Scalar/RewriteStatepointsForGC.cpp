@@ -2667,7 +2667,7 @@ static void RemoveNonValidAttrAtIndex(LLVMContext &Ctx, AttrHolder &AH,
       R.addAttribute(Attr);
 
   if (!R.empty())
-    AH.setAttributes(AH.getAttributes().removeAttributes(Ctx, Index, R));
+    AH.setAttributes(AH.getAttributes().removeAttributesAtIndex(Ctx, Index, R));
 }
 
 static void stripNonValidAttributesFromPrototype(Function &F) {

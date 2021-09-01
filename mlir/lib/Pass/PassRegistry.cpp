@@ -107,30 +107,25 @@ PassInfo::PassInfo(StringRef arg, StringRef description,
             optHandler(allocator()->passOptions);
           }) {}
 
-void mlir::registerPass(StringRef arg, StringRef description,
-                        const PassAllocatorFunction &function) {
+void mlir::registerPass(const PassAllocatorFunction &function) {
+  std::unique_ptr<Pass> pass = function();
+  StringRef arg = pass->getArgument();
+  if (arg.empty())
+    llvm::report_fatal_error(
+        "Trying to register a pass that does not override `getArgument()`");
+  StringRef description = pass->getDescription();
   PassInfo passInfo(arg, description, function);
   passRegistry->try_emplace(arg, passInfo);
 
   // Verify that the registered pass has the same ID as any registered to this
   // arg before it.
-  TypeID entryTypeID = function()->getTypeID();
+  TypeID entryTypeID = pass->getTypeID();
   auto it = passRegistryTypeIDs->try_emplace(arg, entryTypeID).first;
   if (it->second != entryTypeID)
     llvm::report_fatal_error(
         "pass allocator creates a different pass than previously "
         "registered for pass " +
         arg);
-}
-
-void mlir::registerPass(const PassAllocatorFunction &function) {
-  std::unique_ptr<Pass> pass = function();
-  StringRef arg = pass->getArgument();
-  if (arg.empty())
-    llvm::report_fatal_error(
-        "Trying to register a pass that does not override `getArgument()`: " +
-        pass->getName());
-  registerPass(arg, pass->getDescription(), function);
 }
 
 /// Returns the pass info for the specified pass argument or null if unknown.

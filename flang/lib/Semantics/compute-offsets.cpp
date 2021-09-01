@@ -38,9 +38,9 @@ private:
   };
   struct SymbolAndOffset {
     SymbolAndOffset(Symbol &s, std::size_t off, const EquivalenceObject &obj)
-        : symbol{&s}, offset{off}, object{&obj} {}
+        : symbol{s}, offset{off}, object{&obj} {}
     SymbolAndOffset(const SymbolAndOffset &) = default;
-    Symbol *symbol;
+    MutableSymbolRef symbol;
     std::size_t offset;
     const EquivalenceObject *object;
   };

@@ -963,8 +963,10 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
 
 InductionDescriptor::InductionDescriptor(Value *Start, InductionKind K,
                                          const SCEV *Step, BinaryOperator *BOp,
+                                         Type *ElementType,
                                          SmallVectorImpl<Instruction *> *Casts)
-    : StartValue(Start), IK(K), Step(Step), InductionBinOp(BOp) {
+    : StartValue(Start), IK(K), Step(Step), InductionBinOp(BOp),
+      ElementType(ElementType) {
   assert(IK != IK_NoInduction && "Not an induction");
 
   // Start value type should match the induction kind and the value
@@ -991,6 +993,11 @@ InductionDescriptor::InductionDescriptor(Value *Start, InductionKind K,
            (InductionBinOp->getOpcode() == Instruction::FAdd ||
             InductionBinOp->getOpcode() == Instruction::FSub))) &&
          "Binary opcode should be specified for FP induction");
+
+  if (IK == IK_PtrInduction)
+    assert(ElementType && "Pointer induction must have element type");
+  else
+    assert(!ElementType && "Non-pointer induction cannot have element type");
 
   if (Casts) {
     for (auto &Inst : *Casts) {
@@ -1239,8 +1246,6 @@ bool InductionDescriptor::isInductionPHI(
   BasicBlock *Latch = AR->getLoop()->getLoopLatch();
   if (!Latch)
     return false;
-  BinaryOperator *BOp =
-      dyn_cast<BinaryOperator>(Phi->getIncomingValueForBlock(Latch));
 
   const SCEV *Step = AR->getStepRecurrence(*SE);
   // Calculate the pointer stride and check if it is consecutive.
@@ -1250,8 +1255,10 @@ bool InductionDescriptor::isInductionPHI(
     return false;
 
   if (PhiTy->isIntegerTy()) {
+    BinaryOperator *BOp =
+        dyn_cast<BinaryOperator>(Phi->getIncomingValueForBlock(Latch));
     D = InductionDescriptor(StartValue, IK_IntInduction, Step, BOp,
-                            CastsToIgnore);
+                            /* ElementType */ nullptr, CastsToIgnore);
     return true;
   }
 
@@ -1260,15 +1267,16 @@ bool InductionDescriptor::isInductionPHI(
   if (!ConstStep)
     return false;
 
-  ConstantInt *CV = ConstStep->getValue();
-  Type *PointerElementType = PhiTy->getPointerElementType();
-  // The pointer stride cannot be determined if the pointer element type is not
-  // sized.
-  if (!PointerElementType->isSized())
+  // Always use i8 element type for opaque pointer inductions.
+  PointerType *PtrTy = cast<PointerType>(PhiTy);
+  Type *ElementType = PtrTy->isOpaque() ? Type::getInt8Ty(PtrTy->getContext())
+                                        : PtrTy->getElementType();
+  if (!ElementType->isSized())
     return false;
 
+  ConstantInt *CV = ConstStep->getValue();
   const DataLayout &DL = Phi->getModule()->getDataLayout();
-  int64_t Size = static_cast<int64_t>(DL.getTypeAllocSize(PointerElementType));
+  int64_t Size = static_cast<int64_t>(DL.getTypeAllocSize(ElementType));
   if (!Size)
     return false;
 
@@ -1277,6 +1285,7 @@ bool InductionDescriptor::isInductionPHI(
     return false;
   auto *StepValue =
       SE->getConstant(CV->getType(), CVSize / Size, true /* signed */);
-  D = InductionDescriptor(StartValue, IK_PtrInduction, StepValue, BOp);
+  D = InductionDescriptor(StartValue, IK_PtrInduction, StepValue,
+                          /* BinOp */ nullptr, ElementType);
   return true;
 }

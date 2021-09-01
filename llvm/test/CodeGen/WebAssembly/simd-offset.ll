@@ -2957,6 +2957,19 @@ define <2 x double> @load_splat_v2f64(double* %p) {
   ret <2 x double> %v2
 }
 
+define <2 x double> @load_promote_v2f64(<2 x float>* %p) {
+; CHECK-LABEL: load_promote_v2f64:
+; CHECK:         .functype load_promote_v2f64 (i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    f64x2.promote_low_f32x4
+; CHECK-NEXT:    # fallthrough-return
+  %e = load <2 x float>, <2 x float>* %p
+  %v = fpext <2 x float> %e to <2 x double>
+  ret <2 x double> %v
+}
+
 define <2 x double> @load_v2f64_with_folded_offset(<2 x double>* %p) {
 ; CHECK-LABEL: load_v2f64_with_folded_offset:
 ; CHECK:         .functype load_v2f64_with_folded_offset (i32) -> (v128)
@@ -2987,6 +3000,24 @@ define <2 x double> @load_splat_v2f64_with_folded_offset(double* %p) {
   ret <2 x double> %v2
 }
 
+define <2 x double> @load_promote_v2f64_with_folded_offset(<2 x float>* %p) {
+; CHECK-LABEL: load_promote_v2f64_with_folded_offset:
+; CHECK:         .functype load_promote_v2f64_with_folded_offset (i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32.const 16
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    f64x2.promote_low_f32x4
+; CHECK-NEXT:    # fallthrough-return
+  %q = ptrtoint <2 x float>* %p to i32
+  %r = add nuw i32 %q, 16
+  %s = inttoptr i32 %r to <2 x float>*
+  %e = load <2 x float>, <2 x float>* %s
+  %v = fpext <2 x float> %e to <2 x double>
+  ret <2 x double> %v
+}
+
 define <2 x double> @load_v2f64_with_folded_gep_offset(<2 x double>* %p) {
 ; CHECK-LABEL: load_v2f64_with_folded_gep_offset:
 ; CHECK:         .functype load_v2f64_with_folded_gep_offset (i32) -> (v128)
@@ -3011,6 +3042,22 @@ define <2 x double> @load_splat_v2f64_with_folded_gep_offset(double* %p) {
   %v1 = insertelement <2 x double> undef, double %e, i32 0
   %v2 = shufflevector <2 x double> %v1, <2 x double> undef, <2 x i32> zeroinitializer
   ret <2 x double> %v2
+}
+
+define <2 x double> @load_promote_v2f64_with_folded_gep_offset(<2 x float>* %p) {
+; CHECK-LABEL: load_promote_v2f64_with_folded_gep_offset:
+; CHECK:         .functype load_promote_v2f64_with_folded_gep_offset (i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32.const 8
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    f64x2.promote_low_f32x4
+; CHECK-NEXT:    # fallthrough-return
+  %s = getelementptr inbounds <2 x float>, <2 x float>* %p, i32 1
+  %e = load <2 x float>, <2 x float>* %s
+  %v = fpext <2 x float> %e to <2 x double>
+  ret <2 x double> %v
 }
 
 define <2 x double> @load_v2f64_with_unfolded_gep_negative_offset(<2 x double>* %p) {
@@ -3041,6 +3088,22 @@ define <2 x double> @load_splat_v2f64_with_unfolded_gep_negative_offset(double* 
   %v1 = insertelement <2 x double> undef, double %e, i32 0
   %v2 = shufflevector <2 x double> %v1, <2 x double> undef, <2 x i32> zeroinitializer
   ret <2 x double> %v2
+}
+
+define <2 x double> @load_promote_v2f64_with_unfolded_gep_negative_offset(<2 x float>* %p) {
+; CHECK-LABEL: load_promote_v2f64_with_unfolded_gep_negative_offset:
+; CHECK:         .functype load_promote_v2f64_with_unfolded_gep_negative_offset (i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32.const -8
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    f64x2.promote_low_f32x4
+; CHECK-NEXT:    # fallthrough-return
+  %s = getelementptr inbounds <2 x float>, <2 x float>* %p, i32 -1
+  %e = load <2 x float>, <2 x float>* %s
+  %v = fpext <2 x float> %e to <2 x double>
+  ret <2 x double> %v
 }
 
 define <2 x double> @load_v2f64_with_unfolded_offset(<2 x double>* %p) {
@@ -3077,6 +3140,24 @@ define <2 x double> @load_splat_v2f64_with_unfolded_offset(double* %p) {
   ret <2 x double> %v2
 }
 
+define <2 x double> @load_promote_v2f64_with_unfolded_offset(<2 x float>* %p) {
+; CHECK-LABEL: load_promote_v2f64_with_unfolded_offset:
+; CHECK:         .functype load_promote_v2f64_with_unfolded_offset (i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32.const 16
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    f64x2.promote_low_f32x4
+; CHECK-NEXT:    # fallthrough-return
+  %q = ptrtoint <2 x float>* %p to i32
+  %r = add nsw i32 %q, 16
+  %s = inttoptr i32 %r to <2 x float>*
+  %e = load <2 x float>, <2 x float>* %s
+  %v = fpext <2 x float> %e to <2 x double>
+  ret <2 x double> %v
+}
+
 define <2 x double> @load_v2f64_with_unfolded_gep_offset(<2 x double>* %p) {
 ; CHECK-LABEL: load_v2f64_with_unfolded_gep_offset:
 ; CHECK:         .functype load_v2f64_with_unfolded_gep_offset (i32) -> (v128)
@@ -3107,6 +3188,22 @@ define <2 x double> @load_splat_v2f64_with_unfolded_gep_offset(double* %p) {
   ret <2 x double> %v2
 }
 
+define <2 x double> @load_promote_v2f64_with_unfolded_gep_offset(<2 x float>* %p) {
+; CHECK-LABEL: load_promote_v2f64_with_unfolded_gep_offset:
+; CHECK:         .functype load_promote_v2f64_with_unfolded_gep_offset (i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32.const 8
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    f64x2.promote_low_f32x4
+; CHECK-NEXT:    # fallthrough-return
+  %s = getelementptr <2 x float>, <2 x float>* %p, i32 1
+  %e = load <2 x float>, <2 x float>* %s
+  %v = fpext <2 x float> %e to <2 x double>
+  ret <2 x double> %v
+}
+
 define <2 x double> @load_v2f64_from_numeric_address() {
 ; CHECK-LABEL: load_v2f64_from_numeric_address:
 ; CHECK:         .functype load_v2f64_from_numeric_address () -> (v128)
@@ -3133,6 +3230,20 @@ define <2 x double> @load_splat_v2f64_from_numeric_address() {
   ret <2 x double> %v2
 }
 
+define <2 x double> @load_promote_v2f64_from_numeric_address() {
+; CHECK-LABEL: load_promote_v2f64_from_numeric_address:
+; CHECK:         .functype load_promote_v2f64_from_numeric_address () -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    i32.const 32
+; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    f64x2.promote_low_f32x4
+; CHECK-NEXT:    # fallthrough-return
+  %s = inttoptr i32 32 to <2 x float>*
+  %e = load <2 x float>, <2 x float>* %s
+  %v = fpext <2 x float> %e to <2 x double>
+  ret <2 x double> %v
+}
+
 @gv_v2f64 = global <2 x double> <double 42., double 42.>
 define <2 x double> @load_v2f64_from_global_address() {
 ; CHECK-LABEL: load_v2f64_from_global_address:
@@ -3157,6 +3268,20 @@ define <2 x double> @load_splat_v2f64_from_global_address() {
   %v1 = insertelement <2 x double> undef, double %e, i32 0
   %v2 = shufflevector <2 x double> %v1, <2 x double> undef, <2 x i32> zeroinitializer
   ret <2 x double> %v2
+}
+
+@gv_v2f32 = global <2 x float> <float 42., float 42.>
+define <2 x double> @load_promote_v2f64_from_global_address() {
+; CHECK-LABEL: load_promote_v2f64_from_global_address:
+; CHECK:         .functype load_promote_v2f64_from_global_address () -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    i32.const gv_v2f32
+; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    f64x2.promote_low_f32x4
+; CHECK-NEXT:    # fallthrough-return
+  %e = load <2 x float>, <2 x float>* @gv_v2f32
+  %v = fpext <2 x float> %e to <2 x double>
+  ret <2 x double> %v
 }
 
 define void @store_v2f64(<2 x double> %v, <2 x double>* %p) {

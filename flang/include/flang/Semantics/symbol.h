@@ -497,6 +497,7 @@ public:
       LocalityShared, // named in SHARED locality-spec
       InDataStmt, // initialized in a DATA statement
       InNamelist, // flag is set if the symbol is in Namelist statement
+      CompilerCreated,
       // OpenACC data-sharing attribute
       AccPrivate, AccFirstPrivate, AccShared,
       // OpenACC data-mapping attribute
@@ -779,7 +780,7 @@ struct SymbolAddressCompare {
   }
 };
 
-// Symbol comparison is based on the order of cooked source
+// Symbol comparison is usually based on the order of cooked source
 // stream creation and, when both are from the same cooked source,
 // their positions in that cooked source stream.
 // Don't use this comparator or OrderedSymbolSet to hold
@@ -791,12 +792,17 @@ struct SymbolSourcePositionCompare {
   bool operator()(const MutableSymbolRef &, const MutableSymbolRef &) const;
 };
 
+struct SymbolOffsetCompare {
+  bool operator()(const SymbolRef &, const SymbolRef &) const;
+  bool operator()(const MutableSymbolRef &, const MutableSymbolRef &) const;
+};
+
 using UnorderedSymbolSet = std::set<SymbolRef, SymbolAddressCompare>;
-using OrderedSymbolSet = std::set<SymbolRef, SymbolSourcePositionCompare>;
+using SourceOrderedSymbolSet = std::set<SymbolRef, SymbolSourcePositionCompare>;
 
 template <typename A>
-OrderedSymbolSet OrderBySourcePosition(const A &container) {
-  OrderedSymbolSet result;
+SourceOrderedSymbolSet OrderBySourcePosition(const A &container) {
+  SourceOrderedSymbolSet result;
   for (SymbolRef x : container) {
     result.emplace(x);
   }
