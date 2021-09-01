@@ -270,6 +270,8 @@ class isFloatType<ValueType SrcVT> {
                 !eq(SrcVT.Value, v2f16.Value),
                 !eq(SrcVT.Value, v4f16.Value),
                 !eq(SrcVT.Value, v2f32.Value),
+                !eq(SrcVT.Value, v4f32.Value),
+                !eq(SrcVT.Value, v8f32.Value),
                 !eq(SrcVT.Value, v2f64.Value),
                 !eq(SrcVT.Value, v4f64.Value));
 }
@@ -278,14 +280,20 @@ class isIntType<ValueType SrcVT> {
   bit ret = !or(!eq(SrcVT.Value, i16.Value),
                 !eq(SrcVT.Value, i32.Value),
                 !eq(SrcVT.Value, i64.Value),
-                !eq(SrcVT.Value, v2i32.Value));
+                !eq(SrcVT.Value, v2i32.Value),
+                !eq(SrcVT.Value, v4i32.Value),
+                !eq(SrcVT.Value, v8i32.Value));
 }
 
 class isPackedType<ValueType SrcVT> {
   bit ret = !or(!eq(SrcVT.Value, v2i16.Value),
                 !eq(SrcVT.Value, v2f16.Value),
                 !eq(SrcVT.Value, v4f16.Value),
-                !eq(SrcVT.Value, v2f32.Value));
+                !eq(SrcVT.Value, v2f32.Value),
+                !eq(SrcVT.Value, v4i32.Value),
+                !eq(SrcVT.Value, v4f32.Value),
+                !eq(SrcVT.Value, v8i32.Value),
+                !eq(SrcVT.Value, v8f32.Value));
 }
 
 class is16BitType<ValueType SrcVT> {
@@ -1611,7 +1619,11 @@ class isModifierType<ValueType SrcVT> {
                 !eq(SrcVT.Value, v2f16.Value),
                 !eq(SrcVT.Value, v2i16.Value),
                 !eq(SrcVT.Value, v2f32.Value),
-                !eq(SrcVT.Value, v2i32.Value));
+                !eq(SrcVT.Value, v2i32.Value),
+                !eq(SrcVT.Value, v4f32.Value),
+                !eq(SrcVT.Value, v4i32.Value),
+                !eq(SrcVT.Value, v8f32.Value),
+                !eq(SrcVT.Value, v8i32.Value));
 }
 
 // Return type of input modifiers operand for specified input operand
@@ -1966,7 +1978,7 @@ class getAsm64 <bit HasDst, int NumSrcArgs, bit HasIntClamp, bit HasModifiers,
 // Returns the assembly string for the inputs and outputs of a VOP3P
 // instruction.
 class getAsmVOP3P <int NumSrcArgs, bit HasModifiers,
-                   bit HasClamp> {
+                   bit HasClamp, bit HasOpSel> {
   string dst = "$vdst";
   string src0 = !if(!eq(NumSrcArgs, 1), "$src0", "$src0,");
   string src1 = !if(!eq(NumSrcArgs, 1), "",
@@ -1976,10 +1988,11 @@ class getAsmVOP3P <int NumSrcArgs, bit HasModifiers,
 
   string mods = !if(HasModifiers, "$neg_lo$neg_hi", "");
   string clamp = !if(HasClamp, "$clamp", "");
+  string opsel = !if(HasOpSel, "$op_sel$op_sel_hi", "");
 
   // Each modifier is printed as an array of bits for each operand, so
   // all operands are printed as part of src0_modifiers.
-  string ret = dst#", "#src0#src1#src2#"$op_sel$op_sel_hi"#mods#clamp;
+  string ret = dst#", "#src0#src1#src2#opsel#mods#clamp;
 }
 
 class getAsmVOP3OpSel <int NumSrcArgs,
@@ -2396,7 +2409,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
 
   field string Asm32 = getAsm32<HasDst, NumSrcArgs, DstVT>.ret;
   field string Asm64 = getAsm64<HasDst, NumSrcArgs, HasIntClamp, HasModifiers, HasOMod, DstVT>.ret;
-  field string AsmVOP3P = getAsmVOP3P<NumSrcArgs, HasModifiers, HasClamp>.ret;
+  field string AsmVOP3P = getAsmVOP3P<NumSrcArgs, HasModifiers, HasClamp, HasOpSel>.ret;
   field string AsmVOP3OpSel = getAsmVOP3OpSel<NumSrcArgs,
                                               HasClamp,
                                               HasSrc0FloatMods,
