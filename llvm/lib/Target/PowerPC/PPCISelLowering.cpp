@@ -10535,8 +10535,8 @@ SDValue PPCTargetLowering::LowerATOMIC_LOAD_STORE(SDValue Op,
                                                   SelectionDAG &DAG) const {
   AtomicSDNode *N = cast<AtomicSDNode>(Op.getNode());
   EVT MemVT = N->getMemoryVT();
-  MVT VT = MemVT.getSimpleVT();
-  assert(VT == MVT::i128 && "Expect quadword atomic operations");
+  assert(MemVT.getSimpleVT() == MVT::i128 &&
+         "Expect quadword atomic operations");
   SDLoc dl(N);
   unsigned Opc = N->getOpcode();
   switch (Opc) {
