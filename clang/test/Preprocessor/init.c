@@ -323,6 +323,7 @@
 // MSP430:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // MSP430:#define __FLT_DIG__ 6
 // MSP430:#define __FLT_EPSILON__ 1.19209290e-7F
+// MSP430:#define __FLT_EVAL_METHOD__ 0
 // MSP430:#define __FLT_HAS_DENORM__ 1
 // MSP430:#define __FLT_HAS_INFINITY__ 1
 // MSP430:#define __FLT_HAS_QUIET_NAN__ 1
@@ -510,6 +511,7 @@
 // NVPTX32:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // NVPTX32:#define __FLT_DIG__ 6
 // NVPTX32:#define __FLT_EPSILON__ 1.19209290e-7F
+// NVPTX32:#define __FLT_EVAL_METHOD__ 0
 // NVPTX32:#define __FLT_HAS_DENORM__ 1
 // NVPTX32:#define __FLT_HAS_INFINITY__ 1
 // NVPTX32:#define __FLT_HAS_QUIET_NAN__ 1
@@ -698,6 +700,7 @@
 // NVPTX64:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // NVPTX64:#define __FLT_DIG__ 6
 // NVPTX64:#define __FLT_EPSILON__ 1.19209290e-7F
+// NVPTX64:#define __FLT_EVAL_METHOD__ 0
 // NVPTX64:#define __FLT_HAS_DENORM__ 1
 // NVPTX64:#define __FLT_HAS_INFINITY__ 1
 // NVPTX64:#define __FLT_HAS_QUIET_NAN__ 1
@@ -901,6 +904,7 @@
 // SPARC:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // SPARC:#define __FLT_DIG__ 6
 // SPARC:#define __FLT_EPSILON__ 1.19209290e-7F
+// SPARC:#define __FLT_EVAL_METHOD__ 0
 // SPARC:#define __FLT_HAS_DENORM__ 1
 // SPARC:#define __FLT_HAS_INFINITY__ 1
 // SPARC:#define __FLT_HAS_QUIET_NAN__ 1
@@ -1101,6 +1105,7 @@
 // TCE:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // TCE:#define __FLT_DIG__ 6
 // TCE:#define __FLT_EPSILON__ 1.19209290e-7F
+// TCE:#define __FLT_EVAL_METHOD__ 0
 // TCE:#define __FLT_HAS_DENORM__ 1
 // TCE:#define __FLT_HAS_INFINITY__ 1
 // TCE:#define __FLT_HAS_QUIET_NAN__ 1
@@ -1267,6 +1272,7 @@
 // PS4:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // PS4:#define __FLT_DIG__ 6
 // PS4:#define __FLT_EPSILON__ 1.19209290e-7F
+// PS4:#define __FLT_EVAL_METHOD__ 0
 // PS4:#define __FLT_HAS_DENORM__ 1
 // PS4:#define __FLT_HAS_INFINITY__ 1
 // PS4:#define __FLT_HAS_QUIET_NAN__ 1
@@ -1558,6 +1564,7 @@
 // WEBASSEMBLY-NEXT:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // WEBASSEMBLY-NEXT:#define __FLT_DIG__ 6
 // WEBASSEMBLY-NEXT:#define __FLT_EPSILON__ 1.19209290e-7F
+// WEBASSEMBLY-NEXT:#define __FLT_EVAL_METHOD__ 0
 // WEBASSEMBLY-NEXT:#define __FLT_HAS_DENORM__ 1
 // WEBASSEMBLY-NEXT:#define __FLT_HAS_INFINITY__ 1
 // WEBASSEMBLY-NEXT:#define __FLT_HAS_QUIET_NAN__ 1
@@ -1913,6 +1920,7 @@
 // AVR:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // AVR:#define __FLT_DIG__ 6
 // AVR:#define __FLT_EPSILON__ 1.19209290e-7F
+// AVR:#define __FLT_EVAL_METHOD__ 0
 // AVR:#define __FLT_HAS_DENORM__ 1
 // AVR:#define __FLT_HAS_INFINITY__ 1
 // AVR:#define __FLT_HAS_QUIET_NAN__ 1
@@ -2195,6 +2203,7 @@
 // RISCV32: #define __FLT_DENORM_MIN__ 1.40129846e-45F
 // RISCV32: #define __FLT_DIG__ 6
 // RISCV32: #define __FLT_EPSILON__ 1.19209290e-7F
+// RISCV32: #define __FLT_EVAL_METHOD__ 0
 // RISCV32: #define __FLT_HAS_DENORM__ 1
 // RISCV32: #define __FLT_HAS_INFINITY__ 1
 // RISCV32: #define __FLT_HAS_QUIET_NAN__ 1
@@ -2402,6 +2411,7 @@
 // RISCV64: #define __FLT_DENORM_MIN__ 1.40129846e-45F
 // RISCV64: #define __FLT_DIG__ 6
 // RISCV64: #define __FLT_EPSILON__ 1.19209290e-7F
+// RISCV64: #define __FLT_EVAL_METHOD__ 0
 // RISCV64: #define __FLT_HAS_DENORM__ 1
 // RISCV64: #define __FLT_HAS_INFINITY__ 1
 // RISCV64: #define __FLT_HAS_QUIET_NAN__ 1
