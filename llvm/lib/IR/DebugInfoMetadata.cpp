@@ -1643,6 +1643,12 @@ void DIArgList::handleChangedOperand(void *Ref, Metadata *New) {
   assert((!New || isa<ValueAsMetadata>(New)) &&
          "DIArgList must be passed a ValueAsMetadata");
   untrack();
+  bool Uniq = isUniqued();
+  if (Uniq) {
+    // We need to update the uniqueness once the Args are updated since they
+    // form the key to the DIArgLists store.
+    eraseFromStore();
+  }
   ValueAsMetadata *NewVM = cast_or_null<ValueAsMetadata>(New);
   for (ValueAsMetadata *&VM : Args) {
     if (&VM == OldVMPtr) {
@@ -1651,6 +1657,10 @@ void DIArgList::handleChangedOperand(void *Ref, Metadata *New) {
       else
         VM = ValueAsMetadata::get(UndefValue::get(VM->getValue()->getType()));
     }
+  }
+  if (Uniq) {
+    if (uniquify() != this)
+      storeDistinctInContext();
   }
   track();
 }
