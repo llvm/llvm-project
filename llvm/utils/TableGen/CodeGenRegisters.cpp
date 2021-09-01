@@ -734,7 +734,7 @@ static void sortAndUniqueRegisters(CodeGenRegister::Vec &M) {
 
 CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank, Record *R)
     : TheDef(R), Name(std::string(R->getName())),
-      TopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1) {
+      TopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1), TSFlags(0) {
   GeneratePressureSet = R->getValueAsBit("GeneratePressureSet");
   std::vector<Record*> TypeList = R->getValueAsListOfDefs("RegTypes");
   if (TypeList.empty())
@@ -802,6 +802,12 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank, Record *R)
   if (AllocationPriority < 0 || AllocationPriority > 63)
     PrintFatalError(R->getLoc(), "AllocationPriority out of range [0,63]");
   this->AllocationPriority = AllocationPriority;
+
+  BitsInit *TSF = R->getValueAsBitsInit("TSFlags");
+  for (unsigned I = 0, E = TSF->getNumBits(); I != E; ++I) {
+    BitInit *Bit = cast<BitInit>(TSF->getBit(I));
+    TSFlags |= uint8_t(Bit->getValue()) << I;
+  }
 }
 
 // Create an inferred register class that was missing from the .td files.
@@ -811,7 +817,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
                                            StringRef Name, Key Props)
     : Members(*Props.Members), TheDef(nullptr), Name(std::string(Name)),
       TopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1), RSI(Props.RSI),
-      CopyCost(0), Allocatable(true), AllocationPriority(0) {
+      CopyCost(0), Allocatable(true), AllocationPriority(0), TSFlags(0) {
   Artificial = true;
   GeneratePressureSet = false;
   for (const auto R : Members) {
@@ -839,6 +845,7 @@ void CodeGenRegisterClass::inheritProperties(CodeGenRegBank &RegBank) {
   });
   AltOrderSelect = Super.AltOrderSelect;
   AllocationPriority = Super.AllocationPriority;
+  TSFlags = Super.TSFlags;
   GeneratePressureSet |= Super.GeneratePressureSet;
 
   // Copy all allocation orders, filter out foreign registers from the larger

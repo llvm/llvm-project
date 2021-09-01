@@ -38,7 +38,7 @@ entry:
 ; CHECK: if.end:
   ; CHECK: call i32 @getTempRet0{{.*}}, !dbg ![[DL2]]
 
-; CHECK: if.then2:
+; CHECK: call.em.longjmp:
   ; CHECK: call void @emscripten_longjmp{{.*}}, !dbg ![[DL2]]
 
 ; CHECK: if.end2:

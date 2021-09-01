@@ -10,14 +10,14 @@
 #include "AttributeDetail.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinDialect.h"
-#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/IntegerSet.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DecodeAttributesInterfaces.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/Sequence.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Endian.h"
 
 using namespace mlir;
@@ -272,12 +272,24 @@ LogicalResult FloatAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 // SymbolRefAttr
 //===----------------------------------------------------------------------===//
 
+SymbolRefAttr SymbolRefAttr::get(MLIRContext *ctx, StringRef value,
+                                 ArrayRef<FlatSymbolRefAttr> nestedRefs) {
+  return get(StringAttr::get(ctx, value), nestedRefs);
+}
+
 FlatSymbolRefAttr SymbolRefAttr::get(MLIRContext *ctx, StringRef value) {
-  return get(StringAttr::get(ctx, value));
+  return get(ctx, value, {}).cast<FlatSymbolRefAttr>();
 }
 
 FlatSymbolRefAttr SymbolRefAttr::get(StringAttr value) {
   return get(value, {}).cast<FlatSymbolRefAttr>();
+}
+
+FlatSymbolRefAttr SymbolRefAttr::get(Operation *symbol) {
+  auto symName =
+      symbol->getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName());
+  assert(symName && "value does not have a valid symbol name");
+  return SymbolRefAttr::get(symName);
 }
 
 StringAttr SymbolRefAttr::getLeafReference() const {

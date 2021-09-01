@@ -40,9 +40,8 @@ static cl::opt<bool> SamplePreInlineReplay(
     cl::desc(
         "Replay previous inlining and adjust context profile accordingly"));
 
-CSPreInliner::CSPreInliner(StringMap<FunctionSamples> &Profiles,
-                           ProfiledBinary &Binary, uint64_t HotThreshold,
-                           uint64_t ColdThreshold)
+CSPreInliner::CSPreInliner(SampleProfileMap &Profiles, ProfiledBinary &Binary,
+                           uint64_t HotThreshold, uint64_t ColdThreshold)
     : UseContextCost(UseContextCostForPreInliner), ContextTracker(Profiles),
       ProfileMap(Profiles), Binary(Binary), HotCountThreshold(HotThreshold),
       ColdCountThreshold(ColdThreshold) {}
@@ -169,7 +168,7 @@ void CSPreInliner::processFunction(const StringRef Name) {
     }
     LLVM_DEBUG(dbgs() << (ShouldInline ? "  Inlined" : "  Outlined")
                       << " context profile for: "
-                      << Candidate.CalleeSamples->getNameWithContext()
+                      << Candidate.CalleeSamples->getContext().toString()
                       << " (callee size: " << Candidate.SizeCost
                       << ", call count:" << Candidate.CallsiteCount << ")\n");
   }
@@ -186,7 +185,7 @@ void CSPreInliner::processFunction(const StringRef Name) {
       CQueue.pop();
       bool WasInlined =
           Candidate.CalleeSamples->getContext().hasAttribute(ContextWasInlined);
-      dbgs() << "    " << Candidate.CalleeSamples->getNameWithContext()
+      dbgs() << "    " << Candidate.CalleeSamples->getContext().toString()
              << " (candidate size:" << Candidate.SizeCost
              << ", call count: " << Candidate.CallsiteCount << ", previously "
              << (WasInlined ? "inlined)\n" : "not inlined)\n");
@@ -196,13 +195,12 @@ void CSPreInliner::processFunction(const StringRef Name) {
 
 void CSPreInliner::run() {
 #ifndef NDEBUG
-  auto printProfileNames = [](StringMap<FunctionSamples> &Profiles,
-                              bool IsInput) {
+  auto printProfileNames = [](SampleProfileMap &Profiles, bool IsInput) {
     dbgs() << (IsInput ? "Input" : "Output") << " context-sensitive profiles ("
            << Profiles.size() << " total):\n";
     for (auto &It : Profiles) {
       const FunctionSamples &Samples = It.second;
-      dbgs() << "  [" << Samples.getNameWithContext() << "] "
+      dbgs() << "  [" << Samples.getContext().toString() << "] "
              << Samples.getTotalSamples() << ":" << Samples.getHeadSamples()
              << "\n";
     }
@@ -224,17 +222,17 @@ void CSPreInliner::run() {
 
   // Not inlined context profiles are merged into its base, so we can
   // trim out such profiles from the output.
-  std::vector<StringRef> ProfilesToBeRemoved;
+  std::vector<SampleContext> ProfilesToBeRemoved;
   for (auto &It : ProfileMap) {
     SampleContext Context = It.second.getContext();
     if (!Context.isBaseContext() && !Context.hasState(InlinedContext)) {
       assert(Context.hasState(MergedContext) &&
              "Not inlined context profile should be merged already");
-      ProfilesToBeRemoved.push_back(It.first());
+      ProfilesToBeRemoved.push_back(It.first);
     }
   }
 
-  for (StringRef ContextName : ProfilesToBeRemoved) {
+  for (auto &ContextName : ProfilesToBeRemoved) {
     ProfileMap.erase(ContextName);
   }
 

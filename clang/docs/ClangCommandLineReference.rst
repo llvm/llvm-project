@@ -2039,6 +2039,11 @@ Emit OpenMP code only for SIMD-based constructs.
 
 .. option:: -fopenmp-version=<arg>
 
+.. option:: -fopenmp-extensions, -fno-openmp-extensions
+
+Enable or disable all Clang extensions for OpenMP directives and clauses.  By
+default, they are enabled.
+
 .. program:: clang1
 .. option:: -fopenmp=<arg>
 .. program:: clang

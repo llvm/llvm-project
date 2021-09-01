@@ -1369,8 +1369,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
         // value being declared, poison it as invalid so we don't get chains of
         // errors.
         declarator.setInvalidType(true);
-      } else if ((S.getLangOpts().OpenCLVersion >= 200 ||
-                  S.getLangOpts().OpenCLCPlusPlus) &&
+      } else if (S.getLangOpts().getOpenCLCompatibleVersion() >= 200 &&
                  DS.isTypeSpecPipe()) {
         S.Diag(DeclLoc, diag::err_missing_actual_pipe_type)
           << DS.getSourceRange();
@@ -5093,7 +5092,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                 "__cl_clang_variadic_functions", S.getLangOpts()) &&
             !(D.getIdentifier() &&
               ((D.getIdentifier()->getName() == "printf" &&
-                (LangOpts.OpenCLCPlusPlus || LangOpts.OpenCLVersion >= 120)) ||
+                LangOpts.getOpenCLCompatibleVersion() >= 120) ||
                D.getIdentifier()->getName().startswith("__")))) {
           S.Diag(D.getIdentifierLoc(), diag::err_opencl_variadic_function);
           D.setInvalidType(true);

@@ -71,7 +71,7 @@ static mlir::ParseResult parseBinaryOp(mlir::OpAsmParser &parser,
 /// A generalized printer for binary operations. It prints in two different
 /// forms depending on if all of the types match.
 static void printBinaryOp(mlir::OpAsmPrinter &printer, mlir::Operation *op) {
-  printer << op->getName() << " " << op->getOperands();
+  printer << " " << op->getOperands();
   printer.printOptionalAttrDict(op->getAttrs());
   printer << " : ";
 
@@ -121,7 +121,7 @@ static mlir::ParseResult parseConstantOp(mlir::OpAsmParser &parser,
 /// The 'OpAsmPrinter' class is a stream that allows for formatting
 /// strings, attributes, operands, types, etc.
 static void print(mlir::OpAsmPrinter &printer, ConstantOp op) {
-  printer << "toy.constant ";
+  printer << " ";
   printer.printOptionalAttrDict(op->getAttrs(), /*elidedAttrs=*/{"value"});
   printer << op.value();
 }
@@ -174,7 +174,8 @@ void GenericCallOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   // Generic call always returns an unranked Tensor initially.
   state.addTypes(UnrankedTensorType::get(builder.getF64Type()));
   state.addOperands(arguments);
-  state.addAttribute("callee", builder.getSymbolRefAttr(callee));
+  state.addAttribute("callee",
+                     mlir::SymbolRefAttr::get(builder.getContext(), callee));
 }
 
 //===----------------------------------------------------------------------===//

@@ -67,12 +67,6 @@ public:
     bool
     operator==(const istream_iterator<_Up, _CharU, _TraitsU, _DistanceU>& __x,
                const istream_iterator<_Up, _CharU, _TraitsU, _DistanceU>& __y);
-
-    template <class _Up, class _CharU, class _TraitsU, class _DistanceU>
-    friend _LIBCPP_INLINE_VISIBILITY
-    bool
-    operator==(const istream_iterator<_Up, _CharU, _TraitsU, _DistanceU>& __x,
-               const istream_iterator<_Up, _CharU, _TraitsU, _DistanceU>& __y);
 };
 
 template <class _Tp, class _CharT, class _Traits, class _Distance>

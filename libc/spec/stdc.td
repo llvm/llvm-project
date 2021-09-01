@@ -581,6 +581,13 @@ def StdC : StandardSpec<"stdc"> {
               ]
           >,
           FunctionSpec<
+              "mtx_destroy",
+              RetValSpec<IntType>,
+              [
+                  ArgSpec<VoidType>,
+              ]
+          >,
+          FunctionSpec<
               "mtx_lock",
               RetValSpec<IntType>,
               [

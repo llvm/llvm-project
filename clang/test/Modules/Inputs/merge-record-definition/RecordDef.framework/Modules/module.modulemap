@@ -1,0 +1,4 @@
+framework module RecordDef {
+  header "RecordDef.h"
+  export *
+}

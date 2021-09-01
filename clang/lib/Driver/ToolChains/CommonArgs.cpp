@@ -661,7 +661,7 @@ void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
   std::string CandidateRPath = TC.getArchSpecificLibPath();
   if (TC.getVFS().exists(CandidateRPath)) {
     CmdArgs.push_back("-rpath");
-    CmdArgs.push_back(Args.MakeArgString(CandidateRPath.c_str()));
+    CmdArgs.push_back(Args.MakeArgString(CandidateRPath));
   }
 }
 

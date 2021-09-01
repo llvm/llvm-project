@@ -243,6 +243,10 @@ int OpenStatementState::EndIoStatement() {
     }
     unit().isUnformatted = *isUnformatted_;
   }
+  if (!unit().isUnformatted) {
+    // Set default format (C.7.4 point 2).
+    unit().isUnformatted = unit().access != Access::Sequential;
+  }
   return ExternalIoStatementBase::EndIoStatement();
 }
 
@@ -969,7 +973,7 @@ bool InquireUnitState::Inquire(
                                               : "ASCII";
     break;
   case HashInquiryKeyword("FORM"):
-    str = !unit().isUnformatted ? "UNKNOWN"
+    str = !unit().isUnformatted ? "UNDEFINED"
         : *unit().isUnformatted ? "UNFORMATTED"
                                 : "FORMATTED";
     break;

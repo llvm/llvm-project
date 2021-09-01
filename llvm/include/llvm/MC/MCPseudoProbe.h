@@ -168,6 +168,9 @@ public:
   void emit(MCObjectStreamer *MCOS, const MCPseudoProbe *LastProbe) const;
 };
 
+// Represents a callsite with caller function name and probe id
+using MCPseduoProbeFrameLocation = std::pair<StringRef, uint32_t>;
+
 class MCDecodedPseudoProbe : public MCPseudoProbeBase {
   uint64_t Address;
   MCDecodedPseudoProbeInlineTree *InlineTree;
@@ -189,13 +192,13 @@ public:
   // Get the inlined context by traversing current inline tree backwards,
   // each tree node has its InlineSite which is taken as the context.
   // \p ContextStack is populated in root to leaf order
-  void getInlineContext(SmallVectorImpl<std::string> &ContextStack,
-                        const GUIDProbeFunctionMap &GUID2FuncMAP,
-                        bool ShowName) const;
+  void
+  getInlineContext(SmallVectorImpl<MCPseduoProbeFrameLocation> &ContextStack,
+                   const GUIDProbeFunctionMap &GUID2FuncMAP) const;
 
   // Helper function to get the string from context stack
-  std::string getInlineContextStr(const GUIDProbeFunctionMap &GUID2FuncMAP,
-                                  bool ShowName) const;
+  std::string
+  getInlineContextStr(const GUIDProbeFunctionMap &GUID2FuncMAP) const;
 
   // Print pseudo probe while disassembling
   void print(raw_ostream &OS, const GUIDProbeFunctionMap &GUID2FuncMAP,
@@ -381,10 +384,10 @@ public:
   //  Current probe(bar:3) inlined at foo:2 then inlined at main:1
   //  IncludeLeaf = true,  Output: [main:1, foo:2, bar:3]
   //  IncludeLeaf = false, Output: [main:1, foo:2]
-  void
-  getInlineContextForProbe(const MCDecodedPseudoProbe *Probe,
-                           SmallVectorImpl<std::string> &InlineContextStack,
-                           bool IncludeLeaf) const;
+  void getInlineContextForProbe(
+      const MCDecodedPseudoProbe *Probe,
+      SmallVectorImpl<MCPseduoProbeFrameLocation> &InlineContextStack,
+      bool IncludeLeaf) const;
 
   const AddressProbesMap &getAddress2ProbesMap() const {
     return Address2ProbesMap;

@@ -13,6 +13,10 @@
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=knl -iterations=1 -all-stats=false -all-views=false -register-file-stats < %s | FileCheck --check-prefixes=ALL %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=skylake -iterations=1 -all-stats=false -all-views=false -register-file-stats < %s | FileCheck --check-prefixes=ALL %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=skylake-avx512 -iterations=1 -all-stats=false -all-views=false -register-file-stats < %s | FileCheck --check-prefixes=ALL %s
+# RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=icelake-client -iterations=1 -all-stats=false -all-views=false -register-file-stats < %s | FileCheck --check-prefixes=ALL %s
+# RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=icelake-server -iterations=1 -all-stats=false -all-views=false -register-file-stats < %s | FileCheck --check-prefixes=ALL %s
+# RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=rocketlake -iterations=1 -all-stats=false -all-views=false -register-file-stats < %s | FileCheck --check-prefixes=ALL %s
+# RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=tigerlake -iterations=1 -all-stats=false -all-views=false -register-file-stats < %s | FileCheck --check-prefixes=ALL %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=slm -iterations=1 -all-stats=false -all-views=false -register-file-stats < %s | FileCheck --check-prefixes=ALL %s
 
 xor %eax, %ebx

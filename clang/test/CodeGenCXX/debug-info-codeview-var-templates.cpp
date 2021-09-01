@@ -10,10 +10,7 @@ struct TestImplicit {
 int instantiate_test1() { return TestImplicit::size_var<int> + TestImplicit::size_var<TestImplicit>; }
 TestImplicit gv1;
 
-// CHECK: ![[empty:[0-9]+]] = !{}
-
 // CHECK: ![[A:[^ ]*]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "TestImplicit",
-// CHECK-SAME: elements: ![[empty]]
 
 template <typename T> bool vtpl;
 struct TestSpecialization {
@@ -22,7 +19,6 @@ struct TestSpecialization {
 } gv2;
 
 // CHECK: ![[A:[^ ]*]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "TestSpecialization",
-// CHECK-SAME: elements: ![[empty]]
 
 template <class> bool a;
 template <typename> struct b;
@@ -32,4 +28,3 @@ struct TestPartial {
 } c;
 
 // CHECK: ![[A:[^ ]*]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "TestPartial",
-// CHECK-SAME: elements: ![[empty]]

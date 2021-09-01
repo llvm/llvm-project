@@ -51,7 +51,7 @@ suffices.
 
 You will also need the `CMake <http://www.cmake.org/>`_ build system since it
 generates the project files you will use to build with. CMake is bundled with
-Visual Studio 2019 so seperate installation is not required.
+Visual Studio 2019 so separate installation is not required.
 
 If you would like to run the LLVM tests you will need `Python
 <http://www.python.org/>`_. Version 3.6 and newer are known to work. You can

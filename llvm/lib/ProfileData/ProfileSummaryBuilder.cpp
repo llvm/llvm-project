@@ -181,17 +181,17 @@ std::unique_ptr<ProfileSummary> SampleProfileSummaryBuilder::getSummary() {
 
 std::unique_ptr<ProfileSummary>
 SampleProfileSummaryBuilder::computeSummaryForProfiles(
-    const StringMap<sampleprof::FunctionSamples> &Profiles) {
+    const SampleProfileMap &Profiles) {
   assert(NumFunctions == 0 &&
          "This can only be called on an empty summary builder");
-  StringMap<sampleprof::FunctionSamples> ContextLessProfiles;
-  const StringMap<sampleprof::FunctionSamples> *ProfilesToUse = &Profiles;
+  sampleprof::SampleProfileMap ContextLessProfiles;
+  const sampleprof::SampleProfileMap *ProfilesToUse = &Profiles;
   // For CSSPGO, context-sensitive profile effectively split a function profile
   // into many copies each representing the CFG profile of a particular calling
   // context. That makes the count distribution looks more flat as we now have
   // more function profiles each with lower counts, which in turn leads to lower
   // hot thresholds. To compensate for that, by defauly we merge context
-  // profiles before coumputing profile summary.
+  // profiles before computing profile summary.
   if (UseContextLessSummary || (sampleprof::FunctionSamples::ProfileIsCS &&
                                 !UseContextLessSummary.getNumOccurrences())) {
     for (const auto &I : Profiles) {

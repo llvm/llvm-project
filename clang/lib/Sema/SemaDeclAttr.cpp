@@ -7519,7 +7519,7 @@ static void handleInternalLinkageAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static void handleOpenCLNoSVMAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  if (S.LangOpts.OpenCLVersion < 200 && !S.LangOpts.OpenCLCPlusPlusVersion)
+  if (S.LangOpts.getOpenCLCompatibleVersion() < 200)
     S.Diag(AL.getLoc(), diag::err_attribute_requires_opencl_version)
         << AL << "2.0" << 1;
   else

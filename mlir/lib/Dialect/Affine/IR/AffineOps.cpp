@@ -516,7 +516,7 @@ static ParseResult parseAffineApplyOp(OpAsmParser &parser,
 }
 
 static void print(OpAsmPrinter &p, AffineApplyOp op) {
-  p << AffineApplyOp::getOperationName() << " " << op.mapAttr();
+  p << " " << op.mapAttr();
   printDimAndSymbolList(op.operand_begin(), op.operand_end(),
                         op.getAffineMap().getNumDims(), p);
   p.printOptionalAttrDict(op->getAttrs(), /*elidedAttrs=*/{"map"});
@@ -997,7 +997,7 @@ void AffineDmaStartOp::build(OpBuilder &builder, OperationState &result,
 }
 
 void AffineDmaStartOp::print(OpAsmPrinter &p) {
-  p << "affine.dma_start " << getSrcMemRef() << '[';
+  p << " " << getSrcMemRef() << '[';
   p.printAffineMapOfSSAIds(getSrcMapAttr(), getSrcIndices());
   p << "], " << getDstMemRef() << '[';
   p.printAffineMapOfSSAIds(getDstMapAttr(), getDstIndices());
@@ -1150,7 +1150,7 @@ void AffineDmaWaitOp::build(OpBuilder &builder, OperationState &result,
 }
 
 void AffineDmaWaitOp::print(OpAsmPrinter &p) {
-  p << "affine.dma_wait " << getTagMemRef() << '[';
+  p << " " << getTagMemRef() << '[';
   SmallVector<Value, 2> operands(getTagIndices());
   p.printAffineMapOfSSAIds(getTagMapAttr(), operands);
   p << "], ";
@@ -1527,7 +1527,7 @@ unsigned AffineForOp::getNumIterOperands() {
 }
 
 static void print(OpAsmPrinter &p, AffineForOp op) {
-  p << op.getOperationName() << ' ';
+  p << ' ';
   p.printOperand(op.getBody()->getArgument(0));
   p << " = ";
   printBound(op.getLowerBoundMapAttr(), op.getLowerBoundOperands(), "max", p);
@@ -2103,7 +2103,7 @@ static ParseResult parseAffineIfOp(OpAsmParser &parser,
 static void print(OpAsmPrinter &p, AffineIfOp op) {
   auto conditionAttr =
       op->getAttrOfType<IntegerSetAttr>(op.getConditionAttrName());
-  p << "affine.if " << conditionAttr;
+  p << " " << conditionAttr;
   printDimAndSymbolList(op.operand_begin(), op.operand_end(),
                         conditionAttr.getValue().getNumDims(), p);
   p.printOptionalArrowTypeList(op.getResultTypes());
@@ -2248,7 +2248,7 @@ static ParseResult parseAffineLoadOp(OpAsmParser &parser,
 }
 
 static void print(OpAsmPrinter &p, AffineLoadOp op) {
-  p << "affine.load " << op.getMemRef() << '[';
+  p << " " << op.getMemRef() << '[';
   if (AffineMapAttr mapAttr =
           op->getAttrOfType<AffineMapAttr>(op.getMapAttrName()))
     p.printAffineMapOfSSAIds(mapAttr, op.getMapOperands());
@@ -2364,7 +2364,7 @@ static ParseResult parseAffineStoreOp(OpAsmParser &parser,
 }
 
 static void print(OpAsmPrinter &p, AffineStoreOp op) {
-  p << "affine.store " << op.getValueToStore();
+  p << " " << op.getValueToStore();
   p << ", " << op.getMemRef() << '[';
   if (AffineMapAttr mapAttr =
           op->getAttrOfType<AffineMapAttr>(op.getMapAttrName()))
@@ -2418,7 +2418,7 @@ static LogicalResult verifyAffineMinMaxOp(T op) {
 
 template <typename T>
 static void printAffineMinMaxOp(OpAsmPrinter &p, T op) {
-  p << op.getOperationName() << ' ' << op->getAttr(T::getMapAttrName());
+  p << ' ' << op->getAttr(T::getMapAttrName());
   auto operands = op.getOperands();
   unsigned numDims = op.map().getNumDims();
   p << '(' << operands.take_front(numDims) << ')';
@@ -2713,7 +2713,7 @@ static ParseResult parseAffinePrefetchOp(OpAsmParser &parser,
 }
 
 static void print(OpAsmPrinter &p, AffinePrefetchOp op) {
-  p << AffinePrefetchOp::getOperationName() << " " << op.memref() << '[';
+  p << " " << op.memref() << '[';
   AffineMapAttr mapAttr = op->getAttrOfType<AffineMapAttr>(op.getMapAttrName());
   if (mapAttr) {
     SmallVector<Value, 2> operands(op.getMapOperands());
@@ -3101,7 +3101,7 @@ static void printMinMaxBound(OpAsmPrinter &p, AffineMapAttr mapAttr,
 }
 
 static void print(OpAsmPrinter &p, AffineParallelOp op) {
-  p << op.getOperationName() << " (" << op.getBody()->getArguments() << ") = (";
+  p << " (" << op.getBody()->getArguments() << ") = (";
   printMinMaxBound(p, op.lowerBoundsMapAttr(), op.lowerBoundsGroupsAttr(),
                    op.getLowerBoundsOperands(), "max");
   p << ") to (";
@@ -3460,7 +3460,7 @@ static ParseResult parseAffineVectorLoadOp(OpAsmParser &parser,
 }
 
 static void print(OpAsmPrinter &p, AffineVectorLoadOp op) {
-  p << "affine.vector_load " << op.getMemRef() << '[';
+  p << " " << op.getMemRef() << '[';
   if (AffineMapAttr mapAttr =
           op->getAttrOfType<AffineMapAttr>(op.getMapAttrName()))
     p.printAffineMapOfSSAIds(mapAttr, op.getMapOperands());
@@ -3552,7 +3552,7 @@ static ParseResult parseAffineVectorStoreOp(OpAsmParser &parser,
 }
 
 static void print(OpAsmPrinter &p, AffineVectorStoreOp op) {
-  p << "affine.vector_store " << op.getValueToStore();
+  p << " " << op.getValueToStore();
   p << ", " << op.getMemRef() << '[';
   if (AffineMapAttr mapAttr =
           op->getAttrOfType<AffineMapAttr>(op.getMapAttrName()))

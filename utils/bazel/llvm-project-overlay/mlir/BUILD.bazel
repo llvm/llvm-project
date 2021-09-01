@@ -758,6 +758,13 @@ alias(
 )
 
 td_library(
+    name = "TilingInterfaceTdFiles",
+    srcs = ["include/mlir/Interfaces/TilingInterface.td"],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"],
+)
+
+td_library(
     name = "VectorInterfacesTdFiles",
     srcs = ["include/mlir/Interfaces/VectorInterfaces.td"],
     includes = ["include"],
@@ -4603,6 +4610,24 @@ alias(
     actual = "SideEffectInterfaces",
 )
 
+gentbl_cc_library(
+    name = "TilingInterfaceIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Interfaces/TilingInterface.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Interfaces/TilingInterface.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Interfaces/TilingInterface.td",
+    deps = [":TilingInterfaceTdFiles"],
+)
+
 cc_library(
     name = "Analysis",
     srcs = glob(
@@ -5790,6 +5815,7 @@ td_library(
         ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
+        ":TilingInterfaceTdFiles",
         ":ViewLikeInterfaceTdFiles",
     ],
 )
@@ -6045,10 +6071,12 @@ cc_library(
         ":MathDialect",
         ":MemRefDialect",
         ":Parser",
+        ":SCFDialect",
         ":SideEffectInterfaces",
         ":StandardOps",
         ":Support",
         ":TensorDialect",
+        ":TilingInterface",
         ":ViewLikeInterface",
         "//llvm:Support",
     ],
@@ -6125,6 +6153,21 @@ cc_library(
         ":TransformUtils",
         ":VectorOps",
         ":VectorToSCF",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "TilingInterface",
+    srcs = ["lib/Interfaces/TilingInterface.cpp"],
+    hdrs = ["include/mlir/Interfaces/TilingInterface.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":Support",
+        ":TensorDialect",
+        ":TilingInterfaceIncGen",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )

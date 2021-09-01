@@ -98,7 +98,9 @@ public:
                                    ArrayRef<StringRef> elidedAttrs = {}) = 0;
 
   /// Print the entire operation with the default generic assembly form.
-  virtual void printGenericOp(Operation *op) = 0;
+  /// If `printOpName` is true, then the operation name is printed (the default)
+  /// otherwise it is omitted and the print will start with the operand list.
+  virtual void printGenericOp(Operation *op, bool printOpName = true) = 0;
 
   /// Prints a region.
   /// If 'printEntryBlockArgs' is false, the arguments of the

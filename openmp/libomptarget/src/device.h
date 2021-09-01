@@ -50,9 +50,30 @@ struct HostDataToTargetTy {
   uintptr_t TgtPtrBegin; // target info.
 
 private:
-  /// use mutable to allow modification via std::set iterator which is const.
-  mutable uint64_t RefCount;
+  /// The dynamic reference count is the standard reference count as of OpenMP
+  /// 4.5.  The hold reference count is an OpenMP extension for the sake of
+  /// OpenACC support.
+  ///
+  /// The 'ompx_hold' map type modifier is permitted only on "omp target" and
+  /// "omp target data", and "delete" is permitted only on "omp target exit
+  /// data" and associated runtime library routines.  As a result, we really
+  /// need to implement "reset" functionality only for the dynamic reference
+  /// counter.  Likewise, only the dynamic reference count can be infinite
+  /// because, for example, omp_target_associate_ptr and "omp declare target
+  /// link" operate only on it.  Nevertheless, it's actually easier to follow
+  /// the code (and requires less assertions for special cases) when we just
+  /// implement these features generally across both reference counters here.
+  /// Thus, it's the users of this class that impose those restrictions.
+  ///
+  /// Use mutable to allow modification via std::set iterator which is const.
+  ///@{
+  mutable uint64_t DynRefCount;
+  mutable uint64_t HoldRefCount;
+  ///@}
   static const uint64_t INFRefCount = ~(uint64_t)0;
+  static std::string refCountToStr(uint64_t RefCount) {
+    return RefCount == INFRefCount ? "INF" : std::to_string(RefCount);
+  }
   /// This mutex will be locked when data movement is issued. For targets that
   /// doesn't support async data movement, this mutex can guarantee that after
   /// it is released, memory region on the target is update to date. For targets
@@ -63,50 +84,82 @@ private:
 
 public:
   HostDataToTargetTy(uintptr_t BP, uintptr_t B, uintptr_t E, uintptr_t TB,
-                     map_var_info_t Name = nullptr, bool IsINF = false)
+                     bool UseHoldRefCount, map_var_info_t Name = nullptr,
+                     bool IsINF = false)
       : HstPtrBase(BP), HstPtrBegin(B), HstPtrEnd(E), HstPtrName(Name),
-        TgtPtrBegin(TB), RefCount(IsINF ? INFRefCount : 1),
+        TgtPtrBegin(TB), DynRefCount(UseHoldRefCount ? 0
+                                     : IsINF         ? INFRefCount
+                                                     : 1),
+        HoldRefCount(!UseHoldRefCount ? 0
+                     : IsINF          ? INFRefCount
+                                      : 1),
         UpdateMtx(std::make_shared<std::mutex>()) {}
 
-  uint64_t getRefCount() const { return RefCount; }
-
-  uint64_t resetRefCount() const {
-    if (RefCount != INFRefCount)
-      RefCount = 1;
-
-    return RefCount;
+  /// Get the total reference count.  This is smarter than just getDynRefCount()
+  /// + getHoldRefCount() because it handles the case where at least one is
+  /// infinity and the other is non-zero.
+  uint64_t getTotalRefCount() const {
+    if (DynRefCount == INFRefCount || HoldRefCount == INFRefCount)
+      return INFRefCount;
+    return DynRefCount + HoldRefCount;
   }
 
-  uint64_t incRefCount() const {
-    if (RefCount != INFRefCount) {
-      ++RefCount;
-      assert(RefCount < INFRefCount && "refcount overflow");
+  /// Get the dynamic reference count.
+  uint64_t getDynRefCount() const { return DynRefCount; }
+
+  /// Get the hold reference count.
+  uint64_t getHoldRefCount() const { return HoldRefCount; }
+
+  /// Reset the specified reference count unless it's infinity.  Reset to 1
+  /// (even if currently 0) so it can be followed by a decrement.
+  void resetRefCount(bool UseHoldRefCount) const {
+    uint64_t &ThisRefCount = UseHoldRefCount ? HoldRefCount : DynRefCount;
+    if (ThisRefCount != INFRefCount)
+      ThisRefCount = 1;
+  }
+
+  /// Increment the specified reference count unless it's infinity.
+  void incRefCount(bool UseHoldRefCount) const {
+    uint64_t &ThisRefCount = UseHoldRefCount ? HoldRefCount : DynRefCount;
+    if (ThisRefCount != INFRefCount) {
+      ++ThisRefCount;
+      assert(ThisRefCount < INFRefCount && "refcount overflow");
     }
-
-    return RefCount;
   }
 
-  uint64_t decRefCount() const {
-    if (RefCount != INFRefCount) {
-      assert(RefCount > 0 && "refcount underflow");
-      --RefCount;
+  /// Decrement the specified reference count unless it's infinity or zero, and
+  /// return the total reference count.
+  uint64_t decRefCount(bool UseHoldRefCount) const {
+    uint64_t &ThisRefCount = UseHoldRefCount ? HoldRefCount : DynRefCount;
+    uint64_t OtherRefCount = UseHoldRefCount ? DynRefCount : HoldRefCount;
+    if (ThisRefCount != INFRefCount) {
+      if (ThisRefCount > 0)
+        --ThisRefCount;
+      else
+        assert(OtherRefCount > 0 && "total refcount underflow");
     }
-
-    return RefCount;
+    return getTotalRefCount();
   }
 
-  bool isRefCountInf() const { return RefCount == INFRefCount; }
+  /// Is the dynamic (and thus the total) reference count infinite?
+  bool isDynRefCountInf() const { return DynRefCount == INFRefCount; }
 
-  std::string refCountToStr() const {
-    return isRefCountInf() ? "INF" : std::to_string(getRefCount());
-  }
+  /// Convert the dynamic reference count to a debug string.
+  std::string dynRefCountToStr() const { return refCountToStr(DynRefCount); }
 
-  /// Should one decrement of the reference count (after resetting it if
-  /// \c AfterReset) remove this mapping?
-  bool decShouldRemove(bool AfterReset = false) const {
+  /// Convert the hold reference count to a debug string.
+  std::string holdRefCountToStr() const { return refCountToStr(HoldRefCount); }
+
+  /// Should one decrement of the specified reference count (after resetting it
+  /// if \c AfterReset) remove this mapping?
+  bool decShouldRemove(bool UseHoldRefCount, bool AfterReset = false) const {
+    uint64_t ThisRefCount = UseHoldRefCount ? HoldRefCount : DynRefCount;
+    uint64_t OtherRefCount = UseHoldRefCount ? DynRefCount : HoldRefCount;
+    if (OtherRefCount > 0)
+      return false;
     if (AfterReset)
-      return !isRefCountInf();
-    return getRefCount() == 1;
+      return ThisRefCount != INFRefCount;
+    return ThisRefCount == 1;
   }
 
   void lock() const { UpdateMtx->lock(); }
@@ -223,13 +276,15 @@ struct DeviceTy {
   getTargetPointer(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
                    map_var_info_t HstPtrName, MoveDataStateTy MoveData,
                    bool IsImplicit, bool UpdateRefCount, bool HasCloseModifier,
-                   bool HasPresentModifier, AsyncInfoTy &AsyncInfo);
+                   bool HasPresentModifier, bool HasHoldModifier,
+                   AsyncInfoTy &AsyncInfo);
   void *getTgtPtrBegin(void *HstPtrBegin, int64_t Size);
   void *getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
-                       bool UpdateRefCount, bool &IsHostPtr,
-                       bool MustContain = false, bool ForceDelete = false);
-  int deallocTgtPtr(void *TgtPtrBegin, int64_t Size,
-                    bool HasCloseModifier = false);
+                       bool UpdateRefCount, bool UseHoldRefCount,
+                       bool &IsHostPtr, bool MustContain = false,
+                       bool ForceDelete = false);
+  int deallocTgtPtr(void *TgtPtrBegin, int64_t Size, bool HasCloseModifier,
+                    bool HasHoldModifier);
   int associatePtr(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size);
   int disassociatePtr(void *HstPtrBegin);
 

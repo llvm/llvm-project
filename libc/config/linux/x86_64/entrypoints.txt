@@ -189,6 +189,7 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # threads.h entrypoints
     libc.src.threads.call_once
+    libc.src.threads.mtx_destroy
     libc.src.threads.mtx_init
     libc.src.threads.mtx_lock
     libc.src.threads.mtx_unlock

@@ -199,6 +199,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::USUBO, MVT::i32, Custom);
     setOperationAction(ISD::UADDSAT, MVT::i32, Custom);
     setOperationAction(ISD::USUBSAT, MVT::i32, Custom);
+  } else {
+    setLibcallName(RTLIB::MUL_I128, nullptr);
+    setLibcallName(RTLIB::MULO_I64, nullptr);
   }
 
   if (!Subtarget.hasStdExtM()) {

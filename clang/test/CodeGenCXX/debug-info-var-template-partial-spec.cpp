@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 %s -std=c++14 -debug-info-kind=limited -emit-llvm -o - | FileCheck %s
 
-// CHECK: ![[empty:[0-9]+]] = !{}
 
 // CHECK: distinct !DICompositeType(tag: DW_TAG_structure_type, name: "B",
-// CHECK-SAME: elements: ![[empty]]
+// CHECK-SAME: elements: ![[empty:[0-9]+]]
+// CHECK: ![[empty]] = !{}
 
 struct B {
   template <typename... e>

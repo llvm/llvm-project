@@ -65,7 +65,8 @@ public:
     }
 
     static void bind(py::module &m) {
-      py::class_<PyArrayAttributeIterator>(m, "ArrayAttributeIterator")
+      py::class_<PyArrayAttributeIterator>(m, "ArrayAttributeIterator",
+                                           py::module_local())
           .def("__iter__", &PyArrayAttributeIterator::dunderIter)
           .def("__next__", &PyArrayAttributeIterator::dunderNext);
     }

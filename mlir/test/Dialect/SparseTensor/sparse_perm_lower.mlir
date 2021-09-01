@@ -16,7 +16,7 @@
   iterator_types = ["reduction", "reduction", "reduction"]
 }
 
-// CHECK-HIR-LABEL:   builtin.func @sparse_dynamic_dims(
+// CHECK-HIR-LABEL:   func @sparse_dynamic_dims(
 // CHECK-HIR-SAME:                                      %[[VAL_0:.*]]: tensor<?x?x?xf32,  #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-HIR-SAME:                                      %[[VAL_1:.*]]: tensor<f32>) -> tensor<f32> {
 // CHECK-HIR-DAG:       %[[C0:.*]] = constant 0 : index
@@ -48,7 +48,7 @@
 // CHECK-HIR:           return %[[VAL_24]] : tensor<f32>
 // CHECK-HIR:         }
 //
-// CHECK-MIR-LABEL:   builtin.func @sparse_dynamic_dims(
+// CHECK-MIR-LABEL:   func @sparse_dynamic_dims(
 // CHECK-MIR-SAME:                                      %[[VAL_0:.*]]: !llvm.ptr<i8>,
 // CHECK-MIR-SAME:                                      %[[VAL_1:.*]]: tensor<f32>) -> tensor<f32> {
 // CHECK-MIR-DAG:       %[[C0:.*]] = constant 0 : index

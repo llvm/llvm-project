@@ -61,7 +61,7 @@ define i32 @boom() {
 ; CHECK-DAG: !llvm.debugify = !{![[NUM_INSTS:.*]], ![[NUM_VARS:.*]]}
 ; CHECK-DAG: "Debug Info Version"
 
-; CHECK-DAG: ![[CU]] = distinct !DICompileUnit(language: DW_LANG_C, file: {{.*}}, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: {{.*}})
+; CHECK-DAG: ![[CU]] = distinct !DICompileUnit(language: DW_LANG_C, file: {{.*}}, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
 ; CHECK-DAG: !DIFile(filename: "<stdin>", directory: "/")
 ; CHECK-DAG: distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: {{.*}}, line: 1, type: {{.*}}, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: {{.*}}, retainedNodes: {{.*}})
 ; CHECK-DAG: distinct !DISubprogram(name: "bar", linkageName: "bar", scope: null, file: {{.*}}, line: 2, type: {{.*}}, scopeLine: 2, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: {{.*}}, retainedNodes: {{.*}})

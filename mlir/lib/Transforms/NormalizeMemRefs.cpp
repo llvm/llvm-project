@@ -129,10 +129,10 @@ void NormalizeMemRefs::setCalleesAndCallersNonNormalizable(
 
   // Functions called by this function.
   funcOp.walk([&](CallOp callOp) {
-    StringRef callee = callOp.getCallee();
+    StringAttr callee = callOp.getCalleeAttr();
     for (FuncOp &funcOp : normalizableFuncs) {
       // We compare FuncOp and callee's name.
-      if (callee == funcOp.getName()) {
+      if (callee == funcOp.getNameAttr()) {
         setCalleesAndCallersNonNormalizable(funcOp, moduleOp,
                                             normalizableFuncs);
         break;
@@ -255,10 +255,9 @@ void NormalizeMemRefs::updateFunctionSignature(FuncOp funcOp,
     auto callOp = dyn_cast<CallOp>(userOp);
     if (!callOp)
       continue;
-    StringRef callee = callOp.getCallee();
-    Operation *newCallOp = builder.create<CallOp>(
-        userOp->getLoc(), resultTypes, builder.getSymbolRefAttr(callee),
-        userOp->getOperands());
+    Operation *newCallOp =
+        builder.create<CallOp>(userOp->getLoc(), callOp.getCalleeAttr(),
+                               resultTypes, userOp->getOperands());
     bool replacingMemRefUsesFailed = false;
     bool returnTypeChanged = false;
     for (unsigned resIndex : llvm::seq<unsigned>(0, userOp->getNumResults())) {

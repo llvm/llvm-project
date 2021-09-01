@@ -924,7 +924,7 @@ calls, or transforming sets of stores into ``memset``\ s.
 ``-mergefunc``: Merge Functions
 -------------------------------
 
-This pass looks for equivalent functions that are mergable and folds them.
+This pass looks for equivalent functions that are mergeable and folds them.
 
 Total-ordering is introduced among the functions set: we define comparison
 that answers for every two functions which of them is greater. It allows to

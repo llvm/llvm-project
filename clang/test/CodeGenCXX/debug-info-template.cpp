@@ -5,7 +5,6 @@
 // CHECK: @nn = dso_local global %struct.NN zeroinitializer, align 1, !dbg [[NN:![0-9]+]]
 
 // CHECK: !DICompileUnit(
-// CHECK: [[EMPTY:![0-9]*]] = !{}
 
 struct foo {
   char pad[8]; // make the member pointer to 'e' a bit more interesting (nonzero)
@@ -34,6 +33,7 @@ void func();
 // CHECK: ![[TC]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "TC<unsigned int, 2, &glb, &foo::e, &foo::f, &foo::g, 1, 2, 3>"
 // CHECK-SAME:                              templateParams: [[TCARGS:![0-9]*]]
 TC
+// CHECK: [[EMPTY:![0-9]*]] = !{}
 // CHECK: [[TCARGS]] = !{[[TCARG1:![0-9]*]], [[TCARG2:![0-9]*]], [[TCARG3:![0-9]*]], [[TCARG4:![0-9]*]], [[TCARG5:![0-9]*]], [[TCARG6:![0-9]*]], [[TCARG7:![0-9]*]]}
 // CHECK: [[TCARG1]] = !DITemplateTypeParameter(name: "T", type: [[UINT:![0-9]*]])
 // CHECK: [[UINT:![0-9]*]] = !DIBasicType(name: "unsigned int"

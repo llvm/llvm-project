@@ -9,6 +9,8 @@
 
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=skylake -iterations=1 -timeline -instruction-info=false -resource-pressure=false < %s | FileCheck %s -check-prefixes=ALL,SKYLAKE
 
+# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=icelake-server -iterations=1 -timeline -instruction-info=false -resource-pressure=false < %s | FileCheck %s -check-prefixes=ALL,SKYLAKE
+
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=bdver2 -iterations=1 -timeline -instruction-info=false -resource-pressure=false < %s | FileCheck %s -check-prefixes=ALL,BDVER2
 
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 -iterations=1 -timeline -instruction-info=false -resource-pressure=false < %s | FileCheck %s -check-prefixes=ALL,BTVER2

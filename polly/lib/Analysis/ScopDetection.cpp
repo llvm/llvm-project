@@ -1751,7 +1751,7 @@ bool ScopDetection::isValidRegion(DetectionContext &Context) {
   if (!OnlyRegion.empty() &&
       !CurRegion.getEntry()->getName().count(OnlyRegion)) {
     LLVM_DEBUG({
-      dbgs() << "Region entry does not match -polly-region-only";
+      dbgs() << "Region entry does not match -polly-only-region";
       dbgs() << "\n";
     });
     return false;

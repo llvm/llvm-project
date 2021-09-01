@@ -92,8 +92,8 @@ public:
 
   void addRecord(const sampleprof::FunctionSamples &FS,
                  bool isCallsiteSample = false);
-  std::unique_ptr<ProfileSummary> computeSummaryForProfiles(
-      const StringMap<sampleprof::FunctionSamples> &Profiles);
+  std::unique_ptr<ProfileSummary>
+  computeSummaryForProfiles(const sampleprof::SampleProfileMap &Profiles);
   std::unique_ptr<ProfileSummary> getSummary();
 };
 

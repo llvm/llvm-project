@@ -22,6 +22,7 @@
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/BasicBlock.h"
@@ -35,6 +36,7 @@
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
@@ -299,17 +301,15 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
                          PreserveLCSSA);
 }
 
-/// Create a clone of the blocks in a loop and connect them together.
-/// If CreateRemainderLoop is false, loop structure will not be cloned,
-/// otherwise a new loop will be created including all cloned blocks, and the
-/// iterator of it switches to count NewIter down to 0.
+/// Create a clone of the blocks in a loop and connect them together. A new
+/// loop will be created including all cloned blocks, and the iterator of the
+/// new loop switched to count NewIter down to 0.
 /// The cloned blocks should be inserted between InsertTop and InsertBot.
-/// If loop structure is cloned InsertTop should be new preheader, InsertBot
-/// new loop exit.
-/// Return the new cloned loop that is created when CreateRemainderLoop is true.
+/// InsertTop should be new preheader, InsertBot new loop exit.
+/// Returns the new cloned loop that is created.
 static Loop *
-CloneLoopBlocks(Loop *L, Value *NewIter, const bool CreateRemainderLoop,
-                const bool UseEpilogRemainder, const bool UnrollRemainder,
+CloneLoopBlocks(Loop *L, Value *NewIter, const bool UseEpilogRemainder,
+                const bool UnrollRemainder,
                 BasicBlock *InsertTop,
                 BasicBlock *InsertBot, BasicBlock *Preheader,
                 std::vector<BasicBlock *> &NewBlocks, LoopBlocksDFS &LoopBlocks,
@@ -323,8 +323,6 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool CreateRemainderLoop,
   Loop *ParentLoop = L->getParentLoop();
   NewLoopsMap NewLoops;
   NewLoops[ParentLoop] = ParentLoop;
-  if (!CreateRemainderLoop)
-    NewLoops[L] = ParentLoop;
 
   // For each block in the original loop, create a new copy,
   // and update the value map with the newly created values.
@@ -332,11 +330,7 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool CreateRemainderLoop,
     BasicBlock *NewBB = CloneBasicBlock(*BB, VMap, "." + suffix, F);
     NewBlocks.push_back(NewBB);
 
-    // If we're unrolling the outermost loop, there's no remainder loop,
-    // and this block isn't in a nested loop, then the new block is not
-    // in any loop. Otherwise, add it to loopinfo.
-    if (CreateRemainderLoop || LI->getLoopFor(*BB) != L || ParentLoop)
-      addClonedBlockToLoopInfo(*BB, NewBB, LI, NewLoops);
+    addClonedBlockToLoopInfo(*BB, NewBB, LI, NewLoops);
 
     VMap[*BB] = NewBB;
     if (Header == *BB) {
@@ -357,27 +351,22 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool CreateRemainderLoop,
     }
 
     if (Latch == *BB) {
-      // For the last block, if CreateRemainderLoop is false, create a direct
-      // jump to InsertBot. If not, create a loop back to cloned head.
+      // For the last block, create a loop back to cloned head.
       VMap.erase((*BB)->getTerminator());
       BasicBlock *FirstLoopBB = cast<BasicBlock>(VMap[Header]);
       BranchInst *LatchBR = cast<BranchInst>(NewBB->getTerminator());
       IRBuilder<> Builder(LatchBR);
-      if (!CreateRemainderLoop) {
-        Builder.CreateBr(InsertBot);
-      } else {
-        PHINode *NewIdx = PHINode::Create(NewIter->getType(), 2,
-                                          suffix + ".iter",
-                                          FirstLoopBB->getFirstNonPHI());
-        Value *IdxSub =
-            Builder.CreateSub(NewIdx, ConstantInt::get(NewIdx->getType(), 1),
-                              NewIdx->getName() + ".sub");
-        Value *IdxCmp =
-            Builder.CreateIsNotNull(IdxSub, NewIdx->getName() + ".cmp");
-        Builder.CreateCondBr(IdxCmp, FirstLoopBB, InsertBot);
-        NewIdx->addIncoming(NewIter, InsertTop);
-        NewIdx->addIncoming(IdxSub, NewBB);
-      }
+      PHINode *NewIdx = PHINode::Create(NewIter->getType(), 2,
+                                        suffix + ".iter",
+                                        FirstLoopBB->getFirstNonPHI());
+      Value *IdxSub =
+        Builder.CreateSub(NewIdx, ConstantInt::get(NewIdx->getType(), 1),
+                          NewIdx->getName() + ".sub");
+      Value *IdxCmp =
+        Builder.CreateIsNotNull(IdxSub, NewIdx->getName() + ".cmp");
+      Builder.CreateCondBr(IdxCmp, FirstLoopBB, InsertBot);
+      NewIdx->addIncoming(NewIter, InsertTop);
+      NewIdx->addIncoming(IdxSub, NewBB);
       LatchBR->eraseFromParent();
     }
   }
@@ -386,28 +375,15 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool CreateRemainderLoop,
   // cloned loop.
   for (BasicBlock::iterator I = Header->begin(); isa<PHINode>(I); ++I) {
     PHINode *NewPHI = cast<PHINode>(VMap[&*I]);
-    if (!CreateRemainderLoop) {
-      if (UseEpilogRemainder) {
-        unsigned idx = NewPHI->getBasicBlockIndex(Preheader);
-        NewPHI->setIncomingBlock(idx, InsertTop);
-        NewPHI->removeIncomingValue(Latch, false);
-      } else {
-        VMap[&*I] = NewPHI->getIncomingValueForBlock(Preheader);
-        cast<BasicBlock>(VMap[Header])->getInstList().erase(NewPHI);
-      }
-    } else {
-      unsigned idx = NewPHI->getBasicBlockIndex(Preheader);
-      NewPHI->setIncomingBlock(idx, InsertTop);
-      BasicBlock *NewLatch = cast<BasicBlock>(VMap[Latch]);
-      idx = NewPHI->getBasicBlockIndex(Latch);
-      Value *InVal = NewPHI->getIncomingValue(idx);
-      NewPHI->setIncomingBlock(idx, NewLatch);
-      if (Value *V = VMap.lookup(InVal))
-        NewPHI->setIncomingValue(idx, V);
-    }
+    unsigned idx = NewPHI->getBasicBlockIndex(Preheader);
+    NewPHI->setIncomingBlock(idx, InsertTop);
+    BasicBlock *NewLatch = cast<BasicBlock>(VMap[Latch]);
+    idx = NewPHI->getBasicBlockIndex(Latch);
+    Value *InVal = NewPHI->getIncomingValue(idx);
+    NewPHI->setIncomingBlock(idx, NewLatch);
+    if (Value *V = VMap.lookup(InVal))
+      NewPHI->setIncomingValue(idx, V);
   }
-  if (!CreateRemainderLoop)
-    return nullptr;
 
   Loop *NewLoop = NewLoops[L];
   assert(NewLoop && "L should have been cloned");
@@ -819,18 +795,13 @@ bool llvm::UnrollRuntimeLoopRemainder(
   std::vector<BasicBlock *> NewBlocks;
   ValueToValueMapTy VMap;
 
-  // For unroll factor 2 remainder loop will have 1 iterations.
-  // Do not create 1 iteration loop.
-  bool CreateRemainderLoop = (Count != 2);
-
   // Clone all the basic blocks in the loop. If Count is 2, we don't clone
   // the loop, otherwise we create a cloned loop to execute the extra
   // iterations. This function adds the appropriate CFG connections.
   BasicBlock *InsertBot = UseEpilogRemainder ? LatchExit : PrologExit;
   BasicBlock *InsertTop = UseEpilogRemainder ? EpilogPreHeader : PrologPreHeader;
   Loop *remainderLoop = CloneLoopBlocks(
-      L, ModVal, CreateRemainderLoop, UseEpilogRemainder, UnrollRemainder,
-      InsertTop, InsertBot,
+      L, ModVal, UseEpilogRemainder, UnrollRemainder, InsertTop, InsertBot,
       NewPreHeader, NewBlocks, LoopBlocks, VMap, DT, LI);
 
   // Assign the maximum possible trip count as the back edge weight for the
@@ -973,6 +944,42 @@ bool llvm::UnrollRuntimeLoopRemainder(
   if (DT)
     assert(DT->verify(DominatorTree::VerificationLevel::Full));
 #endif
+
+  // For unroll factor 2 remainder loop will have 1 iteration.
+  if (Count == 2 && DT && LI && SE) {
+    // TODO: This code could probably be pulled out into a helper function
+    // (e.g. breakLoopBackedgeAndSimplify) and reused in loop-deletion.
+    BasicBlock *RemainderLatch = remainderLoop->getLoopLatch();
+    assert(RemainderLatch);
+    SmallVector<BasicBlock*> RemainderBlocks(remainderLoop->getBlocks().begin(),
+                                             remainderLoop->getBlocks().end());
+    breakLoopBackedge(remainderLoop, *DT, *SE, *LI, nullptr);
+    remainderLoop = nullptr;
+
+    // Simplify loop values after breaking the backedge
+    const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
+    SmallVector<WeakTrackingVH, 16> DeadInsts;
+    for (BasicBlock *BB : RemainderBlocks) {
+      for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E;) {
+        Instruction *Inst = &*I++;
+        if (Value *V = SimplifyInstruction(Inst, {DL, nullptr, DT, AC}))
+          if (LI->replacementPreservesLCSSAForm(Inst, V))
+            Inst->replaceAllUsesWith(V);
+        if (isInstructionTriviallyDead(Inst))
+          DeadInsts.emplace_back(Inst);
+      }
+      // We can't do recursive deletion until we're done iterating, as we might
+      // have a phi which (potentially indirectly) uses instructions later in
+      // the block we're iterating through.
+      RecursivelyDeleteTriviallyDeadInstructions(DeadInsts);
+    }
+
+    // Merge latch into exit block.
+    auto *ExitBB = RemainderLatch->getSingleSuccessor();
+    assert(ExitBB && "required after breaking cond br backedge");
+    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+    MergeBlockIntoPredecessor(ExitBB, &DTU, LI);
+  }
 
   // Canonicalize to LoopSimplifyForm both original and remainder loops. We
   // cannot rely on the LoopUnrollPass to do this because it only does
