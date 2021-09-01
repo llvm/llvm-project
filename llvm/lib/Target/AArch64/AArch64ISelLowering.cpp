@@ -18163,9 +18163,6 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorMLoadToSVE(
     SDValue Op, SelectionDAG &DAG) const {
   auto Load = cast<MaskedLoadSDNode>(Op);
 
-  if (Load->getExtensionType() != ISD::LoadExtType::NON_EXTLOAD)
-    return SDValue();
-
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
   EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
