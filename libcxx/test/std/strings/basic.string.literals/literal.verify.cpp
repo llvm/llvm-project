@@ -9,19 +9,14 @@
 
 // UNSUPPORTED: c++03, c++11
 
-// Note: libc++ supports string_view before C++17, but literals were introduced in C++14
+#include <string>
 
-#include <string_view>
-#include <cassert>
-
-#include "test_macros.h"
-
-int main(int, char**)
-{
-    using namespace std::literals::string_view_literals;
-
-    std::string_view foo  =   ""sv;
-    assert(foo.length() == 0);
-
-  return 0;
+void f() {
+  {
+    using std::string;
+    string foo = ""s; // expected-error {{no matching literal operator}}
+  }
+  {
+    std::string foo = ""s; // expected-error {{no matching literal operator}}
+  }
 }
