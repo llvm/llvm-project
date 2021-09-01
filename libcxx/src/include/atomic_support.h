@@ -24,7 +24,7 @@
                        && defined(__ATOMIC_ACQ_REL)                  \
                        && defined(__ATOMIC_SEQ_CST)
 #   define _LIBCPP_HAS_ATOMIC_BUILTINS
-#elif !defined(__clang__) && defined(_GNUC_VER) && _GNUC_VER >= 407
+#elif defined(_LIBCPP_COMPILER_GCC)
 #   define _LIBCPP_HAS_ATOMIC_BUILTINS
 #endif
 

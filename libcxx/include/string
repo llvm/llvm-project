@@ -2373,7 +2373,7 @@ basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::assign(const value_type* __s, size_type __n)
 {
     _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string::assign received nullptr");
-    return (_LIBCPP_BUILTIN_CONSTANT_P(__n) && __n < __min_cap)
+    return (__builtin_constant_p(__n) && __n < __min_cap)
                ? __assign_short(__s, __n)
                : __assign_external(__s, __n);
 }
@@ -2578,7 +2578,7 @@ basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::assign(const value_type* __s)
 {
     _LIBCPP_ASSERT(__s != nullptr, "string::assign received nullptr");
-    return _LIBCPP_BUILTIN_CONSTANT_P(*__s)
+    return __builtin_constant_p(*__s)
                ? (traits_type::length(__s) < __min_cap
                       ? __assign_short(__s, traits_type::length(__s))
                       : __assign_external(__s, traits_type::length(__s)))
