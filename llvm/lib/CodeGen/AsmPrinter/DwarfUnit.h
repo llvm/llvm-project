@@ -294,6 +294,9 @@ public:
   void addSectionLabel(DIE &Die, dwarf::Attribute Attribute,
                        const MCSymbol *Label, const MCSymbol *Sec);
 
+  /// Add DW_TAG_LLVM_annotation.
+  void addAnnotation(DIE &Buffer, DINodeArray Annotations);
+
   /// Get context owner's DIE.
   DIE *createTypeDIE(const DICompositeType *Ty);
 
