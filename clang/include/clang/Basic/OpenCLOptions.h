@@ -80,7 +80,7 @@ public:
   // C++ for OpenCL inherits rule from OpenCL C v2.0.
   bool areProgramScopeVariablesSupported(const LangOptions &Opts) const {
     return Opts.getOpenCLCompatibleVersion() == 200 ||
-           (Opts.OpenCLVersion == 300 &&
+           (Opts.getOpenCLCompatibleVersion() == 300 &&
             isSupported("__opencl_c_program_scope_global_variables", Opts));
   }
 
