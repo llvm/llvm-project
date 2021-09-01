@@ -219,6 +219,11 @@ static cl::opt<bool> UsePreInlinerDecision(
     cl::init(false),
     cl::desc("Use the preinliner decisions stored in profile context."));
 
+static cl::opt<bool> AllowRecursiveInline(
+    "sample-profile-recursive-inline", cl::Hidden, cl::ZeroOrMore,
+    cl::init(false),
+    cl::desc("Allow sample loader inliner to inline recursive calls."));
+
 static cl::opt<std::string> ProfileInlineReplayFile(
     "sample-profile-inline-replay", cl::init(""), cl::value_desc("filename"),
     cl::desc(
@@ -1283,7 +1288,9 @@ SampleProfileLoader::shouldInlineCandidate(InlineCandidate &Candidate) {
   assert(Callee && "Expect a definition for inline candidate of direct call");
 
   InlineParams Params = getInlineParams();
+  // We will ignore the threshold from inline cost, so always get full cost.
   Params.ComputeFullInlineCost = true;
+  Params.AllowRecursiveCall = AllowRecursiveInline;
   // Checks if there is anything in the reachable portion of the callee at
   // this callsite that makes this inlining potentially illegal. Need to
   // set ComputeFullInlineCost, otherwise getInlineCost may return early
@@ -1839,6 +1846,10 @@ bool SampleProfileLoader::doInitialization(Module &M,
     // For CSSPGO, use preinliner decision by default when available.
     if (!UsePreInlinerDecision.getNumOccurrences())
       UsePreInlinerDecision = true;
+
+    // For CSSPGO, we also allow recursive inline to best use context profile.
+    if (!AllowRecursiveInline.getNumOccurrences())
+      AllowRecursiveInline = true;
 
     // Enable iterative-BFI by default for CSSPGO.
     if (!UseIterativeBFIInference.getNumOccurrences())
