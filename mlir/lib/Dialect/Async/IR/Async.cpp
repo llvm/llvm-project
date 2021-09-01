@@ -131,8 +131,6 @@ void ExecuteOp::build(OpBuilder &builder, OperationState &result,
 }
 
 static void print(OpAsmPrinter &p, ExecuteOp op) {
-  p << op.getOperationName();
-
   // [%tokens,...]
   if (!op.dependencies().empty())
     p << " [" << op.dependencies() << "]";

@@ -7,6 +7,7 @@
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=haswell -iterations=1 -all-views=false -timeline < %s | FileCheck %s -check-prefixes=ALL,HASWELL
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=broadwell -iterations=1 -all-views=false -timeline < %s | FileCheck %s -check-prefixes=ALL,BROADWELL
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=skylake -iterations=1 -all-views=false -timeline < %s | FileCheck %s -check-prefixes=ALL,SKYLAKE
+# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=icelake-server -iterations=1 -all-views=false -timeline < %s | FileCheck %s -check-prefixes=ALL,SKYLAKE
 
 #LLVM-MCA-BEGIN  test_sqrtss
 leaq 8(%rsp, %rdi, 2), %rax

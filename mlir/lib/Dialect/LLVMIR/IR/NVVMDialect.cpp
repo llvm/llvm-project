@@ -37,7 +37,7 @@ using namespace NVVM;
 //===----------------------------------------------------------------------===//
 
 static void printNVVMIntrinsicOp(OpAsmPrinter &p, Operation *op) {
-  p << op->getName() << " " << op->getOperands();
+  p << " " << op->getOperands();
   if (op->getNumResults() > 0)
     p << " : " << op->getResultTypes();
 }
@@ -285,7 +285,6 @@ static LogicalResult parseWMMAMmaF16F16M16N16K16Op(OpAsmParser &parser,
 
 static void printWMMAMmaF16F16M16N16K16Op(OpAsmPrinter &p,
                                           WMMAMmaF16F16M16N16K16Op &op) {
-  p << op.getOperationName();
   p << ' ';
   p << op.args();
   p.printOptionalAttrDict(op->getAttrs(), {});

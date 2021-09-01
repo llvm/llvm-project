@@ -412,7 +412,7 @@ func @write_only_alloca_fold(%v: f32) {
 // CHECK-LABEL: func @dead_block_elim
 func @dead_block_elim() {
   // CHECK-NOT: ^bb
-  func @nested() {
+  builtin.func @nested() {
     return
 
   ^bb1:

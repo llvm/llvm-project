@@ -248,9 +248,7 @@ void VulkanLaunchFuncToVulkanCallsPass::createBindMemRefCalls(
     }
     // Create call to `bindMemRef`.
     builder.create<LLVM::CallOp>(
-        loc, TypeRange(),
-        builder.getSymbolRefAttr(
-            StringRef(symbolName.data(), symbolName.size())),
+        loc, TypeRange(), StringRef(symbolName.data(), symbolName.size()),
         ValueRange{vulkanRuntime, descriptorSet, descriptorBinding,
                    ptrToMemRefDescriptor});
   }
@@ -373,8 +371,7 @@ void VulkanLaunchFuncToVulkanCallsPass::translateVulkanLaunchCall(
   Location loc = cInterfaceVulkanLaunchCallOp.getLoc();
   // Create call to `initVulkan`.
   auto initVulkanCall = builder.create<LLVM::CallOp>(
-      loc, TypeRange{getPointerType()}, builder.getSymbolRefAttr(kInitVulkan),
-      ValueRange{});
+      loc, TypeRange{getPointerType()}, kInitVulkan);
   // The result of `initVulkan` function is a pointer to Vulkan runtime, we
   // need to pass that pointer to each Vulkan runtime call.
   auto vulkanRuntime = initVulkanCall.getResult(0);
@@ -396,32 +393,29 @@ void VulkanLaunchFuncToVulkanCallsPass::translateVulkanLaunchCall(
   // Create call to `setBinaryShader` runtime function with the given pointer to
   // SPIR-V binary and binary size.
   builder.create<LLVM::CallOp>(
-      loc, TypeRange(), builder.getSymbolRefAttr(kSetBinaryShader),
+      loc, TypeRange(), kSetBinaryShader,
       ValueRange{vulkanRuntime, ptrToSPIRVBinary, binarySize});
   // Create LLVM global with entry point name.
   Value entryPointName = createEntryPointNameConstant(
       spirvAttributes.second.getValue(), loc, builder);
   // Create call to `setEntryPoint` runtime function with the given pointer to
   // entry point name.
-  builder.create<LLVM::CallOp>(loc, TypeRange(),
-                               builder.getSymbolRefAttr(kSetEntryPoint),
+  builder.create<LLVM::CallOp>(loc, TypeRange(), kSetEntryPoint,
                                ValueRange{vulkanRuntime, entryPointName});
 
   // Create number of local workgroup for each dimension.
   builder.create<LLVM::CallOp>(
-      loc, TypeRange(), builder.getSymbolRefAttr(kSetNumWorkGroups),
+      loc, TypeRange(), kSetNumWorkGroups,
       ValueRange{vulkanRuntime, cInterfaceVulkanLaunchCallOp.getOperand(0),
                  cInterfaceVulkanLaunchCallOp.getOperand(1),
                  cInterfaceVulkanLaunchCallOp.getOperand(2)});
 
   // Create call to `runOnVulkan` runtime function.
-  builder.create<LLVM::CallOp>(loc, TypeRange(),
-                               builder.getSymbolRefAttr(kRunOnVulkan),
+  builder.create<LLVM::CallOp>(loc, TypeRange(), kRunOnVulkan,
                                ValueRange{vulkanRuntime});
 
   // Create call to 'deinitVulkan' runtime function.
-  builder.create<LLVM::CallOp>(loc, TypeRange(),
-                               builder.getSymbolRefAttr(kDeinitVulkan),
+  builder.create<LLVM::CallOp>(loc, TypeRange(), kDeinitVulkan,
                                ValueRange{vulkanRuntime});
 
   // Declare runtime functions.

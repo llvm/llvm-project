@@ -50,7 +50,7 @@ public:
 
   ContextTrieNode &moveToChildContext(const LineLocation &CallSite,
                                       ContextTrieNode &&NodeToMove,
-                                      StringRef ContextStrToRemove,
+                                      uint32_t ContextFramesToRemove,
                                       bool DeleteNode = true);
   void removeChildContext(const LineLocation &CallSite, StringRef ChildName);
   std::map<uint32_t, ContextTrieNode> &getAllChildContext();
@@ -96,9 +96,21 @@ private:
 // calling context and the context is identified by path from root to the node.
 class SampleContextTracker {
 public:
-  using ContextSamplesTy = SmallVector<FunctionSamples *, 16>;
+  struct ProfileComparer {
+    bool operator()(FunctionSamples *A, FunctionSamples *B) const {
+      // Sort function profiles by the number of total samples and their
+      // contexts.
+      if (A->getTotalSamples() == B->getTotalSamples())
+        return A->getContext() < B->getContext();
+      return A->getTotalSamples() > B->getTotalSamples();
+    }
+  };
 
-  SampleContextTracker(StringMap<FunctionSamples> &Profiles);
+  // Keep profiles of a function sorted so that they will be processed/promoted
+  // deterministically.
+  using ContextSamplesTy = std::set<FunctionSamples *, ProfileComparer>;
+
+  SampleContextTracker(SampleProfileMap &Profiles);
   // Query context profile for a specific callee with given name at a given
   // call-site. The full context is identified by location of call instruction.
   FunctionSamples *getCalleeContextSamplesFor(const CallBase &Inst,
@@ -142,10 +154,11 @@ private:
   ContextTrieNode &addTopLevelContextNode(StringRef FName);
   ContextTrieNode &promoteMergeContextSamplesTree(ContextTrieNode &NodeToPromo);
   void mergeContextNode(ContextTrieNode &FromNode, ContextTrieNode &ToNode,
-                        StringRef ContextStrToRemove);
-  ContextTrieNode &promoteMergeContextSamplesTree(ContextTrieNode &FromNode,
-                                                  ContextTrieNode &ToNodeParent,
-                                                  StringRef ContextStrToRemove);
+                        uint32_t ContextFramesToRemove);
+  ContextTrieNode &
+  promoteMergeContextSamplesTree(ContextTrieNode &FromNode,
+                                 ContextTrieNode &ToNodeParent,
+                                 uint32_t ContextFramesToRemove);
 
   // Map from function name to context profiles (excluding base profile)
   StringMap<ContextSamplesTy> FuncToCtxtProfiles;

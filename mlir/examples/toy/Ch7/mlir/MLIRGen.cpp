@@ -522,7 +522,7 @@ private:
     mlir::FuncOp calledFunc = calledFuncIt->second;
     return builder.create<GenericCallOp>(
         location, calledFunc.getType().getResult(0),
-        builder.getSymbolRefAttr(callee), operands);
+        mlir::SymbolRefAttr::get(builder.getContext(), callee), operands);
   }
 
   /// Emit a print expression. It emits specific operations for two builtins:

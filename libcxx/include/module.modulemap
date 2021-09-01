@@ -346,6 +346,13 @@ module std [system] {
   module charconv {
     header "charconv"
     export *
+
+    module __charconv {
+      module chars_format      { private header "__charconv/chars_format.h"      }
+      module from_chars_result { private header "__charconv/from_chars_result.h" }
+      module to_chars_result   { private header "__charconv/to_chars_result.h"   }
+    }
+
   }
   module chrono {
     header "chrono"

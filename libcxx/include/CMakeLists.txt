@@ -97,6 +97,9 @@ set(files
   __bits
   __bsd_locale_defaults.h
   __bsd_locale_fallbacks.h
+  __charconv/chars_format.h
+  __charconv/from_chars_result.h
+  __charconv/to_chars_result.h
   __compare/common_comparison_category.h
   __compare/compare_three_way_result.h
   __compare/ordering.h
@@ -250,7 +253,6 @@ set(files
   __support/ibm/xlocale.h
   __support/musl/xlocale.h
   __support/newlib/xlocale.h
-  __support/nuttx/xlocale.h
   __support/openbsd/xlocale.h
   __support/solaris/floatingpoint.h
   __support/solaris/wchar.h

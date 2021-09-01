@@ -20,4 +20,3 @@ character(*), parameter :: zero_sized(*) = input(2:1:1) // 'abcde'
 logical, parameter :: test_zero_sized = len(zero_sized).eq.6
 
 end
- 

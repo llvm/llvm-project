@@ -53,7 +53,7 @@ void ConcatOutputSection::addInput(ConcatInputSection *input) {
 //     multiple thunks to the same destination distributed throughout a large
 //     program so that all call sites can have one within range.
 //
-// The optimal approach is to mix islands for distinations within two hops,
+// The optimal approach is to mix islands for destinations within two hops,
 // and use thunks for destinations at greater distance. For now, we only
 // implement thunks. TODO: Adding support for branch islands!
 //
@@ -141,7 +141,7 @@ bool ConcatOutputSection::needsThunks() const {
       ThunkInfo &thunkInfo = thunkMap[sym];
       // Knowing ThunkInfo call site count will help us know whether or not we
       // might need to create more for this referent at the time we are
-      // estimating distance to __stubs in .
+      // estimating distance to __stubs in estimateStubsInRangeVA().
       ++thunkInfo.callSiteCount;
       // Knowing InputSection call site count will help us avoid work on those
       // that have no BRANCH relocs.
@@ -153,28 +153,34 @@ bool ConcatOutputSection::needsThunks() const {
 
 // Since __stubs is placed after __text, we must estimate the address
 // beyond which stubs are within range of a simple forward branch.
+// This is called exactly once, when the last input section has been finalized.
 uint64_t ConcatOutputSection::estimateStubsInRangeVA(size_t callIdx) const {
-  size_t endIdx = inputs.size();
-  ConcatInputSection *isec = inputs[callIdx];
-  uint64_t isecVA = isec->getVA();
-  // Tally the non-stub functions which still have call sites
-  // remaining to process, which yields the maximum number
-  // of thunks we might yet place.
+  // Tally the functions which still have call sites remaining to process,
+  // which yields the maximum number of thunks we might yet place.
   size_t maxPotentialThunks = 0;
   for (auto &tp : thunkMap) {
     ThunkInfo &ti = tp.second;
-    maxPotentialThunks +=
-        !tp.first->isInStubs() && ti.callSitesUsed < ti.callSiteCount;
+    // This overcounts: Only sections that are in forward jump range from the
+    // currently-active section get finalized, and all input sections are
+    // finalized when estimateStubsInRangeVA() is called. So only backward
+    // jumps will need thunks, but we count all jumps.
+    if (ti.callSitesUsed < ti.callSiteCount)
+      maxPotentialThunks += 1;
   }
   // Tally the total size of input sections remaining to process.
-  uint64_t isecEnd = isec->getVA();
-  for (size_t i = callIdx; i < endIdx; i++) {
+  uint64_t isecVA = inputs[callIdx]->getVA();
+  uint64_t isecEnd = isecVA;
+  for (size_t i = callIdx; i < inputs.size(); i++) {
     InputSection *isec = inputs[i];
     isecEnd = alignTo(isecEnd, isec->align) + isec->getSize();
   }
   // Estimate the address after which call sites can safely call stubs
   // directly rather than through intermediary thunks.
   uint64_t forwardBranchRange = target->forwardBranchRange;
+  assert(isecEnd > forwardBranchRange &&
+         "should not run thunk insertion if all code fits in jump range");
+  assert(isecEnd - isecVA <= forwardBranchRange &&
+         "should only finalize sections in jump range");
   uint64_t stubsInRangeVA = isecEnd + maxPotentialThunks * target->thunkSize +
                             in.stubs->getSize() - forwardBranchRange;
   log("thunks = " + std::to_string(thunkMap.size()) +
@@ -216,6 +222,11 @@ void ConcatOutputSection::finalize() {
   size_t thunkCallCount = 0;
   size_t thunkCount = 0;
 
+  // Walk all sections in order. Finalize all sections that are less than
+  // forwardBranchRange in front of it.
+  // isecVA is the address of the current section.
+  // isecAddr is the start address of the first non-finalized section.
+
   // inputs[finalIdx] is for finalization (address-assignment)
   size_t finalIdx = 0;
   // Kick-off by ensuring that the first input section has an address
@@ -226,12 +237,22 @@ void ConcatOutputSection::finalize() {
     ConcatInputSection *isec = inputs[callIdx];
     assert(isec->isFinal);
     uint64_t isecVA = isec->getVA();
-    // Assign addresses up-to the forward branch-range limit
+
+    // Assign addresses up-to the forward branch-range limit.
+    // Every call instruction needs a small number of bytes (on Arm64: 4),
+    // and each inserted thunk needs a slighly larger number of bytes
+    // (on Arm64: 12). If a section starts with a branch instruction and
+    // contains several branch instructions in succession, then the distance
+    // from the current position to the position where the thunks are inserted
+    // grows. So leave room for a bunch of thunks.
+    unsigned slop = 100 * thunkSize;
     while (finalIdx < endIdx && isecAddr + inputs[finalIdx]->getSize() <
-                                    isecVA + forwardBranchRange - thunkSize)
+                                    isecVA + forwardBranchRange - slop)
       finalizeOne(inputs[finalIdx++]);
+
     if (isec->callSiteCount == 0)
       continue;
+
     if (finalIdx == endIdx && stubsInRangeVA == TargetInfo::outOfRangeVA) {
       // When we have finalized all input sections, __stubs (destined
       // to follow __text) comes within range of forward branches and
@@ -264,6 +285,7 @@ void ConcatOutputSection::finalize() {
       ThunkInfo &thunkInfo = thunkMap[funcSym];
       // The referent is not reachable, so we need to use a thunk ...
       if (funcSym->isInStubs() && callVA >= stubsInRangeVA) {
+        assert(callVA != TargetInfo::outOfRangeVA);
         // ... Oh, wait! We are close enough to the end that __stubs
         // are now within range of a simple forward branch.
         continue;
@@ -284,15 +306,12 @@ void ConcatOutputSection::finalize() {
           continue;
         }
       }
-      // ... otherwise, create a new thunk
+      // ... otherwise, create a new thunk.
       if (isecAddr > highVA) {
-        // When there is small-to-no margin between highVA and
-        // isecAddr and the distance between subsequent call sites is
-        // smaller than thunkSize, then a new thunk can go out of
-        // range.  Fix by unfinalizing inputs[finalIdx] to reduce the
-        // distance between callVA and highVA, then shift some thunks
-        // to occupy address-space formerly occupied by the
-        // unfinalized inputs[finalIdx].
+        // There were too many consecutive branch instructions for `slop`
+        // above. If you hit this: For the current algorithm, just bumping up
+        // slop above and trying again is probably simplest. (See also PR51578
+        // comment 5).
         fatal(Twine(__FUNCTION__) + ": FIXME: thunk range overrun");
       }
       thunkInfo.isec =

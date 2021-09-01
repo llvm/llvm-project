@@ -919,7 +919,7 @@ mlir::SymbolRefAttr IntrinsicLibrary::getUnrestrictedIntrinsicSymbolRefAttr(
     funcOp = getWrapper(rtCallGenerator, name, signature, loadRefArguments);
   }
 
-  return builder.getSymbolRefAttr(funcOp.getName());
+  return SymbolRefAttr::get(funcOp);
 }
 
 //===----------------------------------------------------------------------===//

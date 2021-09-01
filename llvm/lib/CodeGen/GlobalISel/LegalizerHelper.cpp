@@ -7420,10 +7420,9 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerIsNaN(MachineInstr &MI) {
 
   // NaN has all exp bits set and a non zero significand. Therefore:
   // isnan(V) == exp mask < abs(V)
-  auto FPToSI = MIRBuilder.buildFPTOSI(SrcTy, Src);
   auto Mask = APInt::getSignedMaxValue(SrcTy.getScalarSizeInBits());
   auto MaskCst = MIRBuilder.buildConstant(SrcTy, Mask);
-  auto AbsV = MIRBuilder.buildAnd(SrcTy, FPToSI, MaskCst);
+  auto AbsV = MIRBuilder.buildAnd(SrcTy, Src, MaskCst);
   auto *FloatTy = getFloatTypeForLLT(MI.getMF()->getFunction().getContext(),
                                      SrcTy.getScalarType());
   if (!FloatTy)

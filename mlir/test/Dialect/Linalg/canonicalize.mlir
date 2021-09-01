@@ -904,24 +904,6 @@ func @rank_reducing_init_extract(%sz : index, %idx : index) -> tensor<2xf32> {
 
 // -----
 
-// CHECK-LABEL: func @dim_of_pad_tensor(
-//  CHECK-SAME:     %[[ARG0:.*]]: tensor<?x?xf32>, %[[ARG1:.*]]: tensor<?x?xf32>
-//       CHECK:     %[[C0:.*]] = constant 0 : index
-//       CHECK:     %[[RESULT:.*]] = tensor.dim %[[ARG1]], %[[C0]]
-//       CHECK:     return %[[RESULT]]
-func @dim_of_pad_tensor(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>,
-                        %pad_value: f32) -> index {
-  %c0 = constant 0 : index
-  %0 = linalg.pad_tensor %arg0 low[2, 3] high[4, 5] into %arg1 {
-    ^bb0(%arg2: index, %arg3: index):
-      linalg.yield %pad_value : f32
-    } : tensor<?x?xf32> to tensor<?x?xf32>
-  %r = tensor.dim %0, %c0 : tensor<?x?xf32>
-  return %r : index
-}
-
-// -----
-
 // CHECK-LABEL: func @dim_of_tiled_loop_input(
 //  CHECK-SAME:     %[[arg0:.*]]: tensor<?x?xf32>, %[[arg1:.*]]: tensor<?x?xf32>, %[[arg2:.*]]: tensor<?x?xf32>
 //       CHECK:   %[[c0:.*]] = constant 0 : index

@@ -7,8 +7,8 @@
 // RUN: llvm-profdata show --all-functions %t.profdata | FileCheck %s -check-prefix=PROF
 // RUN: llvm-cov show %t -instr-profile %t.profdata | FileCheck %s -check-prefix=COV
 // RUN: nm %t | FileCheck %s -check-prefix=NM
-// RUN: otool -s __DATA __llvm_prf_names %t | FileCheck %s -check-prefix=PRF_NAMES
-// RUN: otool -s __DATA __llvm_prf_cnts %t | FileCheck %s -check-prefix=PRF_CNTS
+// RUN: otool -V -s __DATA __llvm_prf_names %t | FileCheck %s -check-prefix=PRF_NAMES
+// RUN: otool -V -s __DATA __llvm_prf_cnts %t | FileCheck %s -check-prefix=PRF_CNTS
 
 // RUN: %clang_lto_profgen=%t.lto.profraw -fcoverage-mapping -mllvm -enable-name-compression=false -DCODE=1 -Wl,-dead_strip -flto -o %t.lto %s
 // RUN: %run %t.lto
@@ -16,8 +16,8 @@
 // RUN: llvm-profdata show --all-functions %t.lto.profdata | FileCheck %s -check-prefix=PROF
 // RUN: llvm-cov show %t.lto -instr-profile %t.lto.profdata | FileCheck %s -check-prefix=COV
 // RUN: nm %t.lto | FileCheck %s -check-prefix=NM
-// RUN: otool -s __DATA __llvm_prf_names %t.lto | FileCheck %s -check-prefix=PRF_NAMES
-// RUN: otool -s __DATA __llvm_prf_cnts %t.lto | FileCheck %s -check-prefix=PRF_CNTS
+// RUN: otool -V -s __DATA __llvm_prf_names %t.lto | FileCheck %s -check-prefix=PRF_NAMES
+// RUN: otool -V -s __DATA __llvm_prf_cnts %t.lto | FileCheck %s -check-prefix=PRF_CNTS
 
 // Note: We expect foo() and some of the profiling data associated with it to
 // be dead-stripped.
@@ -58,7 +58,7 @@ int main() { return 0; }
 // together.
 
 // PRF_NAMES: Contents of (__DATA,__llvm_prf_names) section
-// PRF_NAMES-NEXT: {{.*}} 08 00 66 6f 6f 01 6d 61 69 6e{{ +$}}
+// PRF_NAMES-NEXT: {{.*}} 08 00 66 6f 6f 01 6d 61 69 6e
 //                        |  |  f  o  o  #  m  a  i  n
 //                        |  |___________|
 //                        |              |
@@ -70,4 +70,4 @@ int main() { return 0; }
 // dead-stripped.
 
 // PRF_CNTS: Contents of (__DATA,__llvm_prf_cnts) section
-// PRF_CNTS-NEXT: {{.*}} 00 00 00 00 00 00 00 00{{ +$}}
+// PRF_CNTS-NEXT: {{.*}} 00 00 00 00 00 00 00 00

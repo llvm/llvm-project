@@ -736,28 +736,8 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   check_cxx_compiler_flag("-Wnoexcept-type" CXX_SUPPORTS_NOEXCEPT_TYPE_FLAG)
   append_if(CXX_SUPPORTS_NOEXCEPT_TYPE_FLAG "-Wno-noexcept-type" CMAKE_CXX_FLAGS)
 
-  # Check if -Wnon-virtual-dtor warns even though the class is marked final.
-  # If it does, don't add it. So it won't be added on clang 3.4 and older.
-  # This also catches cases when -Wnon-virtual-dtor isn't supported by
-  # the compiler at all.  This flag is not activated for gcc since it will
-  # incorrectly identify a protected non-virtual base when there is a friend
-  # declaration. Don't activate this in general on Windows as this warning has
-  # too many false positives on COM-style classes, which are destroyed with
-  # Release() (PR32286).
-  if (NOT CMAKE_COMPILER_IS_GNUCXX AND NOT WIN32)
-    set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
-    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -std=c++11 -Werror=non-virtual-dtor")
-    CHECK_CXX_SOURCE_COMPILES("class base {public: virtual void anchor();protected: ~base();};
-                               class derived final : public base { public: ~derived();};
-                               int main() { return 0; }"
-                              CXX_WONT_WARN_ON_FINAL_NONVIRTUALDTOR)
-    set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
-    append_if(CXX_WONT_WARN_ON_FINAL_NONVIRTUALDTOR
-              "-Wnon-virtual-dtor" CMAKE_CXX_FLAGS)
-  endif()
-
-  # Enable -Wdelete-non-virtual-dtor if available.
-  add_flag_if_supported("-Wdelete-non-virtual-dtor" DELETE_NON_VIRTUAL_DTOR_FLAG)
+  append("-Wnon-virtual-dtor" CMAKE_CXX_FLAGS)
+  append("-Wdelete-non-virtual-dtor" CMAKE_CXX_FLAGS)
 
   # Enable -Wsuggest-override if it's available, and only if it doesn't
   # suggest adding 'override' to functions that are already marked 'final'

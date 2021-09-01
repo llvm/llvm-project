@@ -229,7 +229,7 @@ func @nested_isolated() -> i32 {
   %0 = constant 1 : i32
 
   // CHECK-NEXT: @nested_func
-  func @nested_func() {
+  builtin.func @nested_func() {
     // CHECK-NEXT: constant 1
     %foo = constant 1 : i32
     "foo.yield"(%foo) : (i32) -> ()

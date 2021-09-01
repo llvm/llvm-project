@@ -31,6 +31,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  mtx_destroy
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mtx_destroy
+)
+
+add_entrypoint_object(
   mtx_lock
   ALIAS
   DEPENDS

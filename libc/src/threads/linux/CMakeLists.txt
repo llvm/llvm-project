@@ -82,6 +82,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  mtx_destroy
+  SRCS
+    mtx_destroy.cpp
+  HDRS
+    ../mtx_destroy.h
+  DEPENDS
+    .threads_utils
+    libc.include.threads
+)
+
+add_entrypoint_object(
   mtx_lock
   SRCS
     mtx_lock.cpp

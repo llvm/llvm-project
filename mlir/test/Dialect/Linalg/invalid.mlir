@@ -459,18 +459,6 @@ func @pad_result_type(%arg0: tensor<?x2x3x4xi32>, %arg1: index, %arg2: i32) -> t
 
 // -----
 
-// expected-note@+1 {{prior use here}}
-func @pad_output_type(%arg0: tensor<?x2x3x4xi32>, %arg1: index, %arg2: i32, %output: tensor<?x6x6x7xf32>) -> tensor<?x?x?x8xf32> {
-  // expected-error @+1 {{use of value '%output' expects different type than prior uses: 'tensor<?x5x6x7xf32>' vs 'tensor<?x6x6x7xf32>'}}
-  %0 = linalg.pad_tensor %arg0 low[1, 1, 1, 1] high[2, 2, 2, 2] into %output {
-  ^bb0(%arg3: index, %arg4: index):  // no predecessors
-    linalg.yield %arg2 : i32
-  } : tensor<?x2x3x4xi32> to tensor<?x5x6x7xf32>
-  return %0 : tensor<?x5x6x7xf32>
-}
-
-// -----
-
 func @pad_number_of_block_args(%arg0: tensor<?x4xi32>, %arg1: i32) -> tensor<?x9xi32> {
   // expected-error @+1 {{expected the block to have 2 arguments}}
   %0 = linalg.pad_tensor %arg0 low[1, 2] high[2, 3] {

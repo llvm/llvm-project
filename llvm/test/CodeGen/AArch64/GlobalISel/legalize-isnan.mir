@@ -61,10 +61,9 @@ body:             |
     ; CHECK-LABEL: name: scalar_no_flags
     ; CHECK: liveins: $h0
     ; CHECK: %val:_(s16) = COPY $h0
-    ; CHECK: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT %val(s16)
-    ; CHECK: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[FPEXT]](s32)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT %val(s16)
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32767
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[FPTOSI]], [[C]]
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C]]
     ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 31744
     ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[AND]], 16
     ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(slt), [[C1]](s32), [[SEXT_INREG]]
@@ -89,16 +88,13 @@ body:             |
     ; CHECK-LABEL: name: vector_no_flags
     ; CHECK: liveins: $d0
     ; CHECK: %val:_(<4 x s16>) = COPY $d0
-    ; CHECK: [[FPTOSI:%[0-9]+]]:_(<4 x s16>) = G_FPTOSI %val(<4 x s16>)
     ; CHECK: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 32767
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16)
-    ; CHECK: [[AND:%[0-9]+]]:_(<4 x s16>) = G_AND [[FPTOSI]], [[BUILD_VECTOR]]
+    ; CHECK: [[AND:%[0-9]+]]:_(<4 x s16>) = G_AND %val, [[BUILD_VECTOR]]
     ; CHECK: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 31744
     ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[C1]](s16), [[C1]](s16), [[C1]](s16), [[C1]](s16)
     ; CHECK: [[ICMP:%[0-9]+]]:_(<4 x s16>) = G_ICMP intpred(slt), [[BUILD_VECTOR1]](<4 x s16>), [[AND]]
-    ; CHECK: %isnan:_(<4 x s1>) = G_TRUNC [[ICMP]](<4 x s16>)
-    ; CHECK: %ext:_(<4 x s16>) = G_ANYEXT %isnan(<4 x s1>)
-    ; CHECK: $d0 = COPY %ext(<4 x s16>)
+    ; CHECK: $d0 = COPY [[ICMP]](<4 x s16>)
     ; CHECK: RET_ReallyLR implicit $d0
     %val:_(<4 x s16>) = COPY $d0
     %isnan:_(<4 x s1>) = G_ISNAN %val(<4 x s16>)

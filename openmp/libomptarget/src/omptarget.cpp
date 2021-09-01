@@ -157,7 +157,8 @@ static int InitLibrary(DeviceTy &Device) {
             (uintptr_t)CurrHostEntry->addr /*HstPtrBase*/,
             (uintptr_t)CurrHostEntry->addr /*HstPtrBegin*/,
             (uintptr_t)CurrHostEntry->addr + CurrHostEntry->size /*HstPtrEnd*/,
-            (uintptr_t)CurrDeviceEntry->addr /*TgtPtrBegin*/, nullptr,
+            (uintptr_t)CurrDeviceEntry->addr /*TgtPtrBegin*/,
+            false /*UseHoldRefCount*/, nullptr /*Name*/,
             true /*IsRefCountINF*/);
       }
     }
@@ -465,6 +466,7 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
     // a close map modifier was associated with a map that contained a to.
     bool HasCloseModifier = arg_types[i] & OMP_TGT_MAPTYPE_CLOSE;
     bool HasPresentModifier = arg_types[i] & OMP_TGT_MAPTYPE_PRESENT;
+    bool HasHoldModifier = arg_types[i] & OMP_TGT_MAPTYPE_OMPX_HOLD;
     // UpdateRef is based on MEMBER_OF instead of TARGET_PARAM because if we
     // have reached this point via __tgt_target_data_begin and not __tgt_target
     // then no argument is marked as TARGET_PARAM ("omp target data map" is not
@@ -490,7 +492,7 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
       Pointer_TPR = Device.getTargetPointer(
           HstPtrBase, HstPtrBase, sizeof(void *), nullptr,
           MoveDataStateTy::NONE, IsImplicit, UpdateRef, HasCloseModifier,
-          HasPresentModifier, AsyncInfo);
+          HasPresentModifier, HasHoldModifier, AsyncInfo);
       PointerTgtPtrBegin = Pointer_TPR.TargetPointer;
       IsHostPtr = Pointer_TPR.Flags.IsHostPointer;
       if (!PointerTgtPtrBegin) {
@@ -522,7 +524,8 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
 
     auto TPR = Device.getTargetPointer(
         HstPtrBegin, HstPtrBase, data_size, HstPtrName, MoveData, IsImplicit,
-        UpdateRef, HasCloseModifier, HasPresentModifier, AsyncInfo);
+        UpdateRef, HasCloseModifier, HasPresentModifier, HasHoldModifier,
+        AsyncInfo);
     void *TgtPtrBegin = TPR.TargetPointer;
     IsHostPtr = TPR.Flags.IsHostPointer;
     // If data_size==0, then the argument could be a zero-length pointer to
@@ -608,10 +611,13 @@ struct DeallocTgtPtrInfo {
   int64_t DataSize;
   /// Whether it has \p close modifier
   bool HasCloseModifier;
+  /// Whether it has \p ompx_hold modifier
+  bool HasHoldModifier;
 
-  DeallocTgtPtrInfo(void *HstPtr, int64_t Size, bool HasCloseModifier)
-      : HstPtrBegin(HstPtr), DataSize(Size),
-        HasCloseModifier(HasCloseModifier) {}
+  DeallocTgtPtrInfo(void *HstPtr, int64_t Size, bool HasCloseModifier,
+                    bool HasHoldModifier)
+      : HstPtrBegin(HstPtr), DataSize(Size), HasCloseModifier(HasCloseModifier),
+        HasHoldModifier(HasHoldModifier) {}
 };
 } // namespace
 
@@ -678,11 +684,12 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
     bool ForceDelete = ArgTypes[I] & OMP_TGT_MAPTYPE_DELETE;
     bool HasCloseModifier = ArgTypes[I] & OMP_TGT_MAPTYPE_CLOSE;
     bool HasPresentModifier = ArgTypes[I] & OMP_TGT_MAPTYPE_PRESENT;
+    bool HasHoldModifier = ArgTypes[I] & OMP_TGT_MAPTYPE_OMPX_HOLD;
 
     // If PTR_AND_OBJ, HstPtrBegin is address of pointee
-    void *TgtPtrBegin =
-        Device.getTgtPtrBegin(HstPtrBegin, DataSize, IsLast, UpdateRef,
-                              IsHostPtr, !IsImplicit, ForceDelete);
+    void *TgtPtrBegin = Device.getTgtPtrBegin(
+        HstPtrBegin, DataSize, IsLast, UpdateRef, HasHoldModifier, IsHostPtr,
+        !IsImplicit, ForceDelete);
     if (!TgtPtrBegin && (DataSize || HasPresentModifier)) {
       DP("Mapping does not exist (%s)\n",
          (HasPresentModifier ? "'present' map type modifier" : "ignored"));
@@ -799,7 +806,8 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
 
       // Add pointer to the buffer for later deallocation
       if (DelEntry)
-        DeallocTgtPtrs.emplace_back(HstPtrBegin, DataSize, HasCloseModifier);
+        DeallocTgtPtrs.emplace_back(HstPtrBegin, DataSize, HasCloseModifier,
+                                    HasHoldModifier);
     }
   }
 
@@ -816,7 +824,7 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
     if (FromMapperBase && FromMapperBase == Info.HstPtrBegin)
       continue;
     Ret = Device.deallocTgtPtr(Info.HstPtrBegin, Info.DataSize,
-                               Info.HasCloseModifier);
+                               Info.HasCloseModifier, Info.HasHoldModifier);
     if (Ret != OFFLOAD_SUCCESS) {
       REPORT("Deallocating data from device failed.\n");
       return OFFLOAD_FAIL;
@@ -831,8 +839,9 @@ static int targetDataContiguous(ident_t *loc, DeviceTy &Device, void *ArgsBase,
                                 int64_t ArgType, AsyncInfoTy &AsyncInfo) {
   TIMESCOPE_WITH_IDENT(loc);
   bool IsLast, IsHostPtr;
-  void *TgtPtrBegin = Device.getTgtPtrBegin(HstPtrBegin, ArgSize, IsLast, false,
-                                            IsHostPtr, /*MustContain=*/true);
+  void *TgtPtrBegin = Device.getTgtPtrBegin(
+      HstPtrBegin, ArgSize, IsLast, /*UpdateRefCount=*/false,
+      /*UseHoldRefCount=*/false, IsHostPtr, /*MustContain=*/true);
   if (!TgtPtrBegin) {
     DP("hst data:" DPxMOD " not found, becomes a noop\n", DPxPTR(HstPtrBegin));
     if (ArgType & OMP_TGT_MAPTYPE_PRESENT) {
@@ -1291,8 +1300,9 @@ static int processDataBefore(ident_t *loc, int64_t DeviceId, void *HostPtr,
         uint64_t Delta = (uint64_t)HstPtrBegin - (uint64_t)HstPtrBase;
         void *TgtPtrBegin = (void *)((uintptr_t)TgtPtrBase + Delta);
         void *&PointerTgtPtrBegin = AsyncInfo.getVoidPtrLocation();
-        PointerTgtPtrBegin = Device.getTgtPtrBegin(HstPtrVal, ArgSizes[I],
-                                                   IsLast, false, IsHostPtr);
+        PointerTgtPtrBegin = Device.getTgtPtrBegin(
+            HstPtrVal, ArgSizes[I], IsLast, /*UpdateRefCount=*/false,
+            /*UseHoldRefCount=*/false, IsHostPtr);
         if (!PointerTgtPtrBegin) {
           DP("No lambda captured variable mapped (" DPxMOD ") - ignored\n",
              DPxPTR(HstPtrVal));
@@ -1348,7 +1358,8 @@ static int processDataBefore(ident_t *loc, int64_t DeviceId, void *HostPtr,
       if (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)
         HstPtrBase = *reinterpret_cast<void **>(HstPtrBase);
       TgtPtrBegin = Device.getTgtPtrBegin(HstPtrBegin, ArgSizes[I], IsLast,
-                                          false, IsHostPtr);
+                                          /*UpdateRefCount=*/false,
+                                          /*UseHoldRefCount=*/false, IsHostPtr);
       TgtBaseOffset = (intptr_t)HstPtrBase - (intptr_t)HstPtrBegin;
 #ifdef OMPTARGET_DEBUG
       void *TgtPtrBase = (void *)((intptr_t)TgtPtrBegin + TgtBaseOffset);
