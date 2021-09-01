@@ -506,6 +506,48 @@ define i8 @umin_of_not_and_const(i8 %x) {
   ret i8 %m
 }
 
+define i8 @umin_of_not_and_smax(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @umin_of_not_and_smax(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[NOTY:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOTY]])
+; CHECK-NEXT:    [[NOTZ:%.*]] = xor i8 [[Z:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOTZ]])
+; CHECK-NEXT:    [[M1:%.*]] = call i8 @llvm.smax.i8(i8 [[NOTY]], i8 [[NOTZ]])
+; CHECK-NEXT:    [[M2:%.*]] = call i8 @llvm.umin.i8(i8 [[M1]], i8 [[NOTX]])
+; CHECK-NEXT:    ret i8 [[M2]]
+;
+  %notx = xor i8 %x, -1
+  %noty = xor i8 %y, -1
+  call void @use(i8 %noty)
+  %notz = xor i8 %z, -1
+  call void @use(i8 %notz)
+  %m1 = call i8 @llvm.smax.i8(i8 %noty, i8 %notz)
+  %m2 = call i8 @llvm.umin.i8(i8 %m1, i8 %notx)
+  ret i8 %m2
+}
+
+define i8 @smin_of_umax_and_not(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @smin_of_umax_and_not(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[NOTY:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOTY]])
+; CHECK-NEXT:    [[NOTZ:%.*]] = xor i8 [[Z:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOTZ]])
+; CHECK-NEXT:    [[M1:%.*]] = call i8 @llvm.umax.i8(i8 [[NOTY]], i8 [[NOTZ]])
+; CHECK-NEXT:    [[M2:%.*]] = call i8 @llvm.smin.i8(i8 [[NOTX]], i8 [[M1]])
+; CHECK-NEXT:    ret i8 [[M2]]
+;
+  %notx = xor i8 %x, -1
+  %noty = xor i8 %y, -1
+  call void @use(i8 %noty)
+  %notz = xor i8 %z, -1
+  call void @use(i8 %notz)
+  %m1 = call i8 @llvm.umax.i8(i8 %noty, i8 %notz)
+  %m2 = call i8 @llvm.smin.i8(i8 %notx, i8 %m1)
+  ret i8 %m2
+}
+
 ; Negative test - too many uses
 
 define i8 @umin_of_not_and_const_uses(i8 %x) {
@@ -1435,6 +1477,81 @@ define i8 @freeToInvert_two_minmax_ops_use3(i8 %x, i8 %y, i8 %z, i8 %w) {
   ret i8 %not
 }
 
+define i8 @sub_not_min_max(i8 %r, i8 %g, i8 %b) {
+; CHECK-LABEL: @sub_not_min_max(
+; CHECK-NEXT:    [[NOTR:%.*]] = xor i8 [[R:%.*]], -1
+; CHECK-NEXT:    [[NOTG:%.*]] = xor i8 [[G:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOTG]])
+; CHECK-NEXT:    [[NOTB:%.*]] = xor i8 [[B:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOTB]])
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[NOTR]], i8 [[NOTG]])
+; CHECK-NEXT:    [[K:%.*]] = call i8 @llvm.smin.i8(i8 [[M]], i8 [[NOTB]])
+; CHECK-NEXT:    [[CK:%.*]] = sub i8 [[NOTR]], [[K]]
+; CHECK-NEXT:    ret i8 [[CK]]
+;
+  %notr = xor i8 %r, -1
+  %notg = xor i8 %g, -1
+  call void @use(i8 %notg)
+  %notb = xor i8 %b, -1
+  call void @use(i8 %notb)
+  %m = call i8 @llvm.smin.i8(i8 %notr, i8 %notg)
+  %k = call i8 @llvm.smin.i8(i8 %m, i8 %notb)
+  %ck = sub i8 %notr, %k
+  ret i8 %ck
+}
+
+define i8 @sub_not_min_max_uses1(i8 %r, i8 %g, i8 %b) {
+; CHECK-LABEL: @sub_not_min_max_uses1(
+; CHECK-NEXT:    [[NOTR:%.*]] = xor i8 [[R:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOTR]])
+; CHECK-NEXT:    [[NOTG:%.*]] = xor i8 [[G:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOTG]])
+; CHECK-NEXT:    [[NOTB:%.*]] = xor i8 [[B:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOTB]])
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[NOTR]], i8 [[NOTG]])
+; CHECK-NEXT:    [[K:%.*]] = call i8 @llvm.smin.i8(i8 [[M]], i8 [[NOTB]])
+; CHECK-NEXT:    [[CK:%.*]] = sub i8 [[NOTR]], [[K]]
+; CHECK-NEXT:    ret i8 [[CK]]
+;
+  %notr = xor i8 %r, -1
+  call void @use(i8 %notr)
+  %notg = xor i8 %g, -1
+  call void @use(i8 %notg)
+  %notb = xor i8 %b, -1
+  call void @use(i8 %notb)
+  %m = call i8 @llvm.smin.i8(i8 %notr, i8 %notg)
+  %k = call i8 @llvm.smin.i8(i8 %m, i8 %notb)
+  %ck = sub i8 %notr, %k
+  ret i8 %ck
+}
+
+define i8 @sub_not_min_max_uses2(i8 %r, i8 %g, i8 %b) {
+; CHECK-LABEL: @sub_not_min_max_uses2(
+; CHECK-NEXT:    [[NOTR:%.*]] = xor i8 [[R:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOTR]])
+; CHECK-NEXT:    [[NOTG:%.*]] = xor i8 [[G:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOTG]])
+; CHECK-NEXT:    [[NOTB:%.*]] = xor i8 [[B:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOTB]])
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[NOTR]], i8 [[NOTG]])
+; CHECK-NEXT:    call void @use(i8 [[M]])
+; CHECK-NEXT:    [[K:%.*]] = call i8 @llvm.smin.i8(i8 [[M]], i8 [[NOTB]])
+; CHECK-NEXT:    [[CK:%.*]] = sub i8 [[NOTR]], [[K]]
+; CHECK-NEXT:    ret i8 [[CK]]
+;
+  %notr = xor i8 %r, -1
+  call void @use(i8 %notr)
+  %notg = xor i8 %g, -1
+  call void @use(i8 %notg)
+  %notb = xor i8 %b, -1
+  call void @use(i8 %notb)
+  %m = call i8 @llvm.smin.i8(i8 %notr, i8 %notg)
+  call void @use(i8 %m)
+  %k = call i8 @llvm.smin.i8(i8 %m, i8 %notb)
+  %ck = sub i8 %notr, %k
+  ret i8 %ck
+}
+
 declare void @use4(i8, i8, i8, i8)
 
 define void @cmyk(i8 %r, i8 %g, i8 %b) {
@@ -1458,6 +1575,305 @@ define void @cmyk(i8 %r, i8 %g, i8 %b) {
   %ck = sub i8 %notr, %k
   %mk = sub i8 %notg, %k
   %yk = sub i8 %notb, %k
+  call void @use4(i8 %ck, i8 %mk, i8 %yk, i8 %k)
+  ret void
+}
+
+; Same as above, but flip the operands of %k.
+
+define void @cmyk_commute1(i8 %r, i8 %g, i8 %b) {
+; CHECK-LABEL: @cmyk_commute1(
+; CHECK-NEXT:    [[NOTR:%.*]] = xor i8 [[R:%.*]], -1
+; CHECK-NEXT:    [[NOTG:%.*]] = xor i8 [[G:%.*]], -1
+; CHECK-NEXT:    [[NOTB:%.*]] = xor i8 [[B:%.*]], -1
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[NOTR]], i8 [[NOTG]])
+; CHECK-NEXT:    [[K:%.*]] = call i8 @llvm.smin.i8(i8 [[NOTB]], i8 [[M]])
+; CHECK-NEXT:    [[CK:%.*]] = sub i8 [[NOTR]], [[K]]
+; CHECK-NEXT:    [[MK:%.*]] = sub i8 [[NOTG]], [[K]]
+; CHECK-NEXT:    [[YK:%.*]] = sub i8 [[NOTB]], [[K]]
+; CHECK-NEXT:    call void @use4(i8 [[CK]], i8 [[MK]], i8 [[YK]], i8 [[K]])
+; CHECK-NEXT:    ret void
+;
+  %notr = xor i8 %r, -1
+  %notg = xor i8 %g, -1
+  %notb = xor i8 %b, -1
+  %m = call i8 @llvm.smin.i8(i8 %notr, i8 %notg)
+  %k = call i8 @llvm.smin.i8(i8 %notb, i8 %m)
+  %ck = sub i8 %notr, %k
+  %mk = sub i8 %notg, %k
+  %yk = sub i8 %notb, %k
+  call void @use4(i8 %ck, i8 %mk, i8 %yk, i8 %k)
+  ret void
+}
+
+; Same as above, but also flip the operands of %m.
+
+define void @cmyk_commute2(i8 %r, i8 %g, i8 %b) {
+; CHECK-LABEL: @cmyk_commute2(
+; CHECK-NEXT:    [[NOTR:%.*]] = xor i8 [[R:%.*]], -1
+; CHECK-NEXT:    [[NOTG:%.*]] = xor i8 [[G:%.*]], -1
+; CHECK-NEXT:    [[NOTB:%.*]] = xor i8 [[B:%.*]], -1
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[NOTG]], i8 [[NOTR]])
+; CHECK-NEXT:    [[K:%.*]] = call i8 @llvm.smin.i8(i8 [[NOTB]], i8 [[M]])
+; CHECK-NEXT:    [[CK:%.*]] = sub i8 [[NOTR]], [[K]]
+; CHECK-NEXT:    [[MK:%.*]] = sub i8 [[NOTG]], [[K]]
+; CHECK-NEXT:    [[YK:%.*]] = sub i8 [[NOTB]], [[K]]
+; CHECK-NEXT:    call void @use4(i8 [[CK]], i8 [[MK]], i8 [[YK]], i8 [[K]])
+; CHECK-NEXT:    ret void
+;
+  %notr = xor i8 %r, -1
+  %notg = xor i8 %g, -1
+  %notb = xor i8 %b, -1
+  %m = call i8 @llvm.smin.i8(i8 %notg, i8 %notr)
+  %k = call i8 @llvm.smin.i8(i8 %notb, i8 %m)
+  %ck = sub i8 %notr, %k
+  %mk = sub i8 %notg, %k
+  %yk = sub i8 %notb, %k
+  call void @use4(i8 %ck, i8 %mk, i8 %yk, i8 %k)
+  ret void
+}
+
+; Same as original, but only flip the operands of %m.
+
+define void @cmyk_commute3(i8 %r, i8 %g, i8 %b) {
+; CHECK-LABEL: @cmyk_commute3(
+; CHECK-NEXT:    [[NOTR:%.*]] = xor i8 [[R:%.*]], -1
+; CHECK-NEXT:    [[NOTG:%.*]] = xor i8 [[G:%.*]], -1
+; CHECK-NEXT:    [[NOTB:%.*]] = xor i8 [[B:%.*]], -1
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[NOTG]], i8 [[NOTR]])
+; CHECK-NEXT:    [[K:%.*]] = call i8 @llvm.smin.i8(i8 [[M]], i8 [[NOTB]])
+; CHECK-NEXT:    [[CK:%.*]] = sub i8 [[NOTR]], [[K]]
+; CHECK-NEXT:    [[MK:%.*]] = sub i8 [[NOTG]], [[K]]
+; CHECK-NEXT:    [[YK:%.*]] = sub i8 [[NOTB]], [[K]]
+; CHECK-NEXT:    call void @use4(i8 [[CK]], i8 [[MK]], i8 [[YK]], i8 [[K]])
+; CHECK-NEXT:    ret void
+;
+  %notr = xor i8 %r, -1
+  %notg = xor i8 %g, -1
+  %notb = xor i8 %b, -1
+  %m = call i8 @llvm.smin.i8(i8 %notg, i8 %notr)
+  %k = call i8 @llvm.smin.i8(i8 %m, i8 %notb)
+  %ck = sub i8 %notr, %k
+  %mk = sub i8 %notg, %k
+  %yk = sub i8 %notb, %k
+  call void @use4(i8 %ck, i8 %mk, i8 %yk, i8 %k)
+  ret void
+}
+
+; Not exactly a commute, but make sure order of folds doesn't change anything.
+; Also verify that we don't need matching min/max ops.
+
+define void @cmyk_commute4(i8 %r, i8 %g, i8 %b) {
+; CHECK-LABEL: @cmyk_commute4(
+; CHECK-NEXT:    [[NOTR:%.*]] = xor i8 [[R:%.*]], -1
+; CHECK-NEXT:    [[NOTG:%.*]] = xor i8 [[G:%.*]], -1
+; CHECK-NEXT:    [[NOTB:%.*]] = xor i8 [[B:%.*]], -1
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[NOTG]], i8 [[NOTR]])
+; CHECK-NEXT:    [[K:%.*]] = call i8 @llvm.umin.i8(i8 [[M]], i8 [[NOTB]])
+; CHECK-NEXT:    [[YK:%.*]] = sub i8 [[NOTB]], [[K]]
+; CHECK-NEXT:    [[CK:%.*]] = sub i8 [[NOTR]], [[K]]
+; CHECK-NEXT:    [[MK:%.*]] = sub i8 [[NOTG]], [[K]]
+; CHECK-NEXT:    call void @use4(i8 [[CK]], i8 [[MK]], i8 [[YK]], i8 [[K]])
+; CHECK-NEXT:    ret void
+;
+  %notr = xor i8 %r, -1
+  %notg = xor i8 %g, -1
+  %notb = xor i8 %b, -1
+  %m = call i8 @llvm.smin.i8(i8 %notg, i8 %notr)
+  %k = call i8 @llvm.umin.i8(i8 %m, i8 %notb)
+  %yk = sub i8 %notb, %k
+  %ck = sub i8 %notr, %k
+  %mk = sub i8 %notg, %k
+  call void @use4(i8 %ck, i8 %mk, i8 %yk, i8 %k)
+  ret void
+}
+
+; Not exactly a commute, but make sure order of folds doesn't change anything.
+; Also verify that we don't need matching min/max ops.
+
+define void @cmyk_commute5(i8 %r, i8 %g, i8 %b) {
+; CHECK-LABEL: @cmyk_commute5(
+; CHECK-NEXT:    [[NOTR:%.*]] = xor i8 [[R:%.*]], -1
+; CHECK-NEXT:    [[NOTG:%.*]] = xor i8 [[G:%.*]], -1
+; CHECK-NEXT:    [[NOTB:%.*]] = xor i8 [[B:%.*]], -1
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[NOTG]], i8 [[NOTR]])
+; CHECK-NEXT:    [[K:%.*]] = call i8 @llvm.smin.i8(i8 [[M]], i8 [[NOTB]])
+; CHECK-NEXT:    [[CK:%.*]] = sub i8 [[NOTR]], [[K]]
+; CHECK-NEXT:    [[YK:%.*]] = sub i8 [[NOTB]], [[K]]
+; CHECK-NEXT:    [[MK:%.*]] = sub i8 [[NOTG]], [[K]]
+; CHECK-NEXT:    call void @use4(i8 [[CK]], i8 [[MK]], i8 [[YK]], i8 [[K]])
+; CHECK-NEXT:    ret void
+;
+  %notr = xor i8 %r, -1
+  %notg = xor i8 %g, -1
+  %notb = xor i8 %b, -1
+  %m = call i8 @llvm.smax.i8(i8 %notg, i8 %notr)
+  %k = call i8 @llvm.smin.i8(i8 %m, i8 %notb)
+  %ck = sub i8 %notr, %k
+  %yk = sub i8 %notb, %k
+  %mk = sub i8 %notg, %k
+  call void @use4(i8 %ck, i8 %mk, i8 %yk, i8 %k)
+  ret void
+}
+
+define void @cmyk_commute6(i8 %r, i8 %g, i8 %b) {
+; CHECK-LABEL: @cmyk_commute6(
+; CHECK-NEXT:    [[NOTR:%.*]] = xor i8 [[R:%.*]], -1
+; CHECK-NEXT:    [[NOTG:%.*]] = xor i8 [[G:%.*]], -1
+; CHECK-NEXT:    [[NOTB:%.*]] = xor i8 [[B:%.*]], -1
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[NOTR]], i8 [[NOTG]])
+; CHECK-NEXT:    [[K:%.*]] = call i8 @llvm.smin.i8(i8 [[M]], i8 [[NOTB]])
+; CHECK-NEXT:    [[CK:%.*]] = sub i8 [[K]], [[NOTR]]
+; CHECK-NEXT:    [[MK:%.*]] = sub i8 [[K]], [[NOTG]]
+; CHECK-NEXT:    [[YK:%.*]] = sub i8 [[K]], [[NOTB]]
+; CHECK-NEXT:    call void @use4(i8 [[CK]], i8 [[MK]], i8 [[YK]], i8 [[K]])
+; CHECK-NEXT:    ret void
+;
+  %notr = xor i8 %r, -1
+  %notg = xor i8 %g, -1
+  %notb = xor i8 %b, -1
+  %m = call i8 @llvm.smin.i8(i8 %notr, i8 %notg)
+  %k = call i8 @llvm.smin.i8(i8 %m, i8 %notb)
+  %ck = sub i8 %k, %notr
+  %mk = sub i8 %k, %notg
+  %yk = sub i8 %k, %notb
+  call void @use4(i8 %ck, i8 %mk, i8 %yk, i8 %k)
+  ret void
+}
+
+; Same as above, but flip the operands of %k.
+
+define void @cmyk_commute7(i8 %r, i8 %g, i8 %b) {
+; CHECK-LABEL: @cmyk_commute7(
+; CHECK-NEXT:    [[NOTR:%.*]] = xor i8 [[R:%.*]], -1
+; CHECK-NEXT:    [[NOTG:%.*]] = xor i8 [[G:%.*]], -1
+; CHECK-NEXT:    [[NOTB:%.*]] = xor i8 [[B:%.*]], -1
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[NOTR]], i8 [[NOTG]])
+; CHECK-NEXT:    [[K:%.*]] = call i8 @llvm.smin.i8(i8 [[NOTB]], i8 [[M]])
+; CHECK-NEXT:    [[CK:%.*]] = sub i8 [[K]], [[NOTR]]
+; CHECK-NEXT:    [[MK:%.*]] = sub i8 [[K]], [[NOTG]]
+; CHECK-NEXT:    [[YK:%.*]] = sub i8 [[K]], [[NOTB]]
+; CHECK-NEXT:    call void @use4(i8 [[CK]], i8 [[MK]], i8 [[YK]], i8 [[K]])
+; CHECK-NEXT:    ret void
+;
+  %notr = xor i8 %r, -1
+  %notg = xor i8 %g, -1
+  %notb = xor i8 %b, -1
+  %m = call i8 @llvm.smin.i8(i8 %notr, i8 %notg)
+  %k = call i8 @llvm.smin.i8(i8 %notb, i8 %m)
+  %ck = sub i8 %k, %notr
+  %mk = sub i8 %k, %notg
+  %yk = sub i8 %k, %notb
+  call void @use4(i8 %ck, i8 %mk, i8 %yk, i8 %k)
+  ret void
+}
+
+; Same as above, but also flip the operands of %m.
+
+define void @cmyk_commute8(i8 %r, i8 %g, i8 %b) {
+; CHECK-LABEL: @cmyk_commute8(
+; CHECK-NEXT:    [[NOTR:%.*]] = xor i8 [[R:%.*]], -1
+; CHECK-NEXT:    [[NOTG:%.*]] = xor i8 [[G:%.*]], -1
+; CHECK-NEXT:    [[NOTB:%.*]] = xor i8 [[B:%.*]], -1
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[NOTG]], i8 [[NOTR]])
+; CHECK-NEXT:    [[K:%.*]] = call i8 @llvm.smin.i8(i8 [[NOTB]], i8 [[M]])
+; CHECK-NEXT:    [[CK:%.*]] = sub i8 [[K]], [[NOTR]]
+; CHECK-NEXT:    [[MK:%.*]] = sub i8 [[K]], [[NOTG]]
+; CHECK-NEXT:    [[YK:%.*]] = sub i8 [[K]], [[NOTB]]
+; CHECK-NEXT:    call void @use4(i8 [[CK]], i8 [[MK]], i8 [[YK]], i8 [[K]])
+; CHECK-NEXT:    ret void
+;
+  %notr = xor i8 %r, -1
+  %notg = xor i8 %g, -1
+  %notb = xor i8 %b, -1
+  %m = call i8 @llvm.smin.i8(i8 %notg, i8 %notr)
+  %k = call i8 @llvm.smin.i8(i8 %notb, i8 %m)
+  %ck = sub i8 %k, %notr
+  %mk = sub i8 %k, %notg
+  %yk = sub i8 %k, %notb
+  call void @use4(i8 %ck, i8 %mk, i8 %yk, i8 %k)
+  ret void
+}
+
+; Same as original, but only flip the operands of %m.
+
+define void @cmyk_commute9(i8 %r, i8 %g, i8 %b) {
+; CHECK-LABEL: @cmyk_commute9(
+; CHECK-NEXT:    [[NOTR:%.*]] = xor i8 [[R:%.*]], -1
+; CHECK-NEXT:    [[NOTG:%.*]] = xor i8 [[G:%.*]], -1
+; CHECK-NEXT:    [[NOTB:%.*]] = xor i8 [[B:%.*]], -1
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[NOTG]], i8 [[NOTR]])
+; CHECK-NEXT:    [[K:%.*]] = call i8 @llvm.smin.i8(i8 [[M]], i8 [[NOTB]])
+; CHECK-NEXT:    [[CK:%.*]] = sub i8 [[K]], [[NOTR]]
+; CHECK-NEXT:    [[MK:%.*]] = sub i8 [[K]], [[NOTG]]
+; CHECK-NEXT:    [[YK:%.*]] = sub i8 [[K]], [[NOTB]]
+; CHECK-NEXT:    call void @use4(i8 [[CK]], i8 [[MK]], i8 [[YK]], i8 [[K]])
+; CHECK-NEXT:    ret void
+;
+  %notr = xor i8 %r, -1
+  %notg = xor i8 %g, -1
+  %notb = xor i8 %b, -1
+  %m = call i8 @llvm.smin.i8(i8 %notg, i8 %notr)
+  %k = call i8 @llvm.smin.i8(i8 %m, i8 %notb)
+  %ck = sub i8 %k, %notr
+  %mk = sub i8 %k, %notg
+  %yk = sub i8 %k, %notb
+  call void @use4(i8 %ck, i8 %mk, i8 %yk, i8 %k)
+  ret void
+}
+
+; Not exactly a commute, but make sure order of folds doesn't change anything.
+; Also verify that we don't need matching min/max ops.
+
+define void @cmyk_commute10(i8 %r, i8 %g, i8 %b) {
+; CHECK-LABEL: @cmyk_commute10(
+; CHECK-NEXT:    [[NOTR:%.*]] = xor i8 [[R:%.*]], -1
+; CHECK-NEXT:    [[NOTG:%.*]] = xor i8 [[G:%.*]], -1
+; CHECK-NEXT:    [[NOTB:%.*]] = xor i8 [[B:%.*]], -1
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[NOTG]], i8 [[NOTR]])
+; CHECK-NEXT:    [[K:%.*]] = call i8 @llvm.umin.i8(i8 [[M]], i8 [[NOTB]])
+; CHECK-NEXT:    [[YK:%.*]] = sub i8 [[NOTB]], [[K]]
+; CHECK-NEXT:    [[CK:%.*]] = sub i8 [[K]], [[NOTR]]
+; CHECK-NEXT:    [[MK:%.*]] = sub i8 [[NOTG]], [[K]]
+; CHECK-NEXT:    call void @use4(i8 [[CK]], i8 [[MK]], i8 [[YK]], i8 [[K]])
+; CHECK-NEXT:    ret void
+;
+  %notr = xor i8 %r, -1
+  %notg = xor i8 %g, -1
+  %notb = xor i8 %b, -1
+  %m = call i8 @llvm.smin.i8(i8 %notg, i8 %notr)
+  %k = call i8 @llvm.umin.i8(i8 %m, i8 %notb)
+  %yk = sub i8 %notb, %k
+  %ck = sub i8 %k, %notr
+  %mk = sub i8 %notg, %k
+  call void @use4(i8 %ck, i8 %mk, i8 %yk, i8 %k)
+  ret void
+}
+
+; Not exactly a commute, but make sure order of folds doesn't change anything.
+; Also verify that we don't need matching min/max ops.
+
+define void @cmyk_commute11(i8 %r, i8 %g, i8 %b) {
+; CHECK-LABEL: @cmyk_commute11(
+; CHECK-NEXT:    [[NOTR:%.*]] = xor i8 [[R:%.*]], -1
+; CHECK-NEXT:    [[NOTG:%.*]] = xor i8 [[G:%.*]], -1
+; CHECK-NEXT:    [[NOTB:%.*]] = xor i8 [[B:%.*]], -1
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[NOTG]], i8 [[NOTR]])
+; CHECK-NEXT:    [[K:%.*]] = call i8 @llvm.smin.i8(i8 [[M]], i8 [[NOTB]])
+; CHECK-NEXT:    [[CK:%.*]] = sub i8 [[NOTR]], [[K]]
+; CHECK-NEXT:    [[YK:%.*]] = sub i8 [[K]], [[NOTB]]
+; CHECK-NEXT:    [[MK:%.*]] = sub i8 [[K]], [[NOTG]]
+; CHECK-NEXT:    call void @use4(i8 [[CK]], i8 [[MK]], i8 [[YK]], i8 [[K]])
+; CHECK-NEXT:    ret void
+;
+  %notr = xor i8 %r, -1
+  %notg = xor i8 %g, -1
+  %notb = xor i8 %b, -1
+  %m = call i8 @llvm.smax.i8(i8 %notg, i8 %notr)
+  %k = call i8 @llvm.smin.i8(i8 %m, i8 %notb)
+  %ck = sub i8 %notr, %k
+  %yk = sub i8 %k, %notb
+  %mk = sub i8 %k, %notg
   call void @use4(i8 %ck, i8 %mk, i8 %yk, i8 %k)
   ret void
 }
