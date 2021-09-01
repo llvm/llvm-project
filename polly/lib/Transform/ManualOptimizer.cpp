@@ -108,7 +108,7 @@ public:
     return Transformer.Result;
   }
 
-  void visitBand(const isl::schedule_node &Band) {
+  void visitBand(isl::schedule_node_band Band) {
     // Transform inner loops first (depth-first search).
     getBase().visitBand(Band);
     if (!Result.is_null())
@@ -153,7 +153,7 @@ public:
     }
   }
 
-  void visitNode(const isl::schedule_node &Other) {
+  void visitNode(isl::schedule_node Other) {
     if (!Result.is_null())
       return;
     getBase().visitNode(Other);
