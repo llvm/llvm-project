@@ -57,6 +57,8 @@ public:
   /// Classes with a higher priority value are assigned first by register
   /// allocators using a greedy heuristic. The value is in the range [0,63].
   const uint8_t AllocationPriority;
+  /// Configurable target specific flags.
+  const uint8_t TSFlags;
   /// Whether the class supports two (or more) disjunct subregister indices.
   const bool HasDisjunctSubRegs;
   /// Whether a combination of subregisters can cover every register in the

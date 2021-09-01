@@ -1411,6 +1411,7 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
          << SuperRegIdxSeqs.get(SuperRegIdxLists[RC.EnumValue]) << ",\n    ";
       printMask(OS, RC.LaneMask);
       OS << ",\n    " << (unsigned)RC.AllocationPriority << ",\n    "
+         << format("0x%02x", RC.TSFlags) << ", /* TSFlags */\n    "
          << (RC.HasDisjunctSubRegs?"true":"false")
          << ", /* HasDisjunctSubRegs */\n    "
          << (RC.CoveredBySubRegs?"true":"false")
