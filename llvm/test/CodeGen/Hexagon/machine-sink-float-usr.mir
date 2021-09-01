@@ -1,0 +1,325 @@
+# RUN: llc -march=hexagon -run-pass machine-sink -o - %s | FileCheck %s
+
+# Test that MachineSink does not sink F2_conv_w2sf.
+# CHECK: name:{{.*}} main
+# CHECK: J2_call @feclearexcept
+# CHECK: F2_conv_w2sf
+# CHECK: J2_call @fetestexcept
+--- |
+  target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
+  target triple = "hexagon"
+
+  @.str = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
+
+  ; Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
+  define dso_local i32 @syst_int32_to_float32(i32 %a) local_unnamed_addr #0 {
+  entry:
+    %conv = sitofp i32 %a to float
+    %0 = bitcast float %conv to i32
+    ret i32 %0
+  }
+
+  ; Function Attrs: argmemonly mustprogress nofree nosync nounwind willreturn
+  declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
+
+  ; Function Attrs: argmemonly mustprogress nofree nosync nounwind willreturn
+  declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
+
+  ; Function Attrs: nounwind
+  define dso_local i32 @main() local_unnamed_addr #2 {
+  entry:
+    %a = alloca i32, align 4
+    %b = alloca i32, align 4
+    %c = alloca i32, align 4
+    %a.0.a.0.a.0.a.0..sroa_cast = bitcast i32* %a to i8*
+    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %a.0.a.0.a.0.a.0..sroa_cast)
+    store volatile i32 -16777235, i32* %a, align 4, !tbaa !3
+    %b.0.b.0.b.0.b.0..sroa_cast = bitcast i32* %b to i8*
+    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %b.0.b.0.b.0.b.0..sroa_cast)
+    store volatile i32 34, i32* %b, align 4, !tbaa !3
+    %c.0.c.0.c.0.c.0..sroa_cast = bitcast i32* %c to i8*
+    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %c.0.c.0.c.0.c.0..sroa_cast)
+    store volatile i32 34, i32* %c, align 4, !tbaa !3
+    %b.0.b.0.b.0.b.0.29 = load volatile i32, i32* %b, align 4, !tbaa !3
+    %cmp30 = icmp sgt i32 %b.0.b.0.b.0.b.0.29, 0
+    br i1 %cmp30, label %for.body, label %if.end
+
+  for.cond.for.cond.cleanup_crit_edge:              ; preds = %for.body
+    %conv.i.le = sitofp i32 %a.0.a.0.a.0.a.0. to float
+    %0 = bitcast float %conv.i.le to i32
+    %phi.cmp = icmp ugt i32 %0, 100
+    br i1 %phi.cmp, label %if.then, label %if.end
+
+  for.body:                                         ; preds = %entry, %for.body
+    %i.031 = phi i32 [ %inc4, %for.body ], [ 0, %entry ]
+    %c.0.c.0.c.0.c.0. = load volatile i32, i32* %c, align 4, !tbaa !3
+    %inc = add nsw i32 %c.0.c.0.c.0.c.0., 1
+    store volatile i32 %inc, i32* %c, align 4, !tbaa !3
+    %call = tail call i32 @feclearexcept(i32 31) #5
+    %a.0.a.0.a.0.a.0. = load volatile i32, i32* %a, align 4, !tbaa !3
+    %call2 = tail call i32 @fetestexcept(i32 31) #5
+    %call3 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i32 %call2) #5
+    %inc4 = add nuw nsw i32 %i.031, 1
+    %b.0.b.0.b.0.b.0. = load volatile i32, i32* %b, align 4, !tbaa !3
+    %cmp = icmp slt i32 %inc4, %b.0.b.0.b.0.b.0.
+    br i1 %cmp, label %for.body, label %for.cond.for.cond.cleanup_crit_edge, !llvm.loop !7
+
+  if.then:                                          ; preds = %for.cond.for.cond.cleanup_crit_edge
+    %a.0.a.0.a.0.a.0.23 = load volatile i32, i32* %a, align 4, !tbaa !3
+    %b.0.b.0.b.0.b.0.20 = load volatile i32, i32* %b, align 4, !tbaa !3
+    %add = add nsw i32 %b.0.b.0.b.0.b.0.20, %a.0.a.0.a.0.a.0.23
+    %c.0.c.0.c.0.c.0.17 = load volatile i32, i32* %c, align 4, !tbaa !3
+    %add7 = add nsw i32 %add, %c.0.c.0.c.0.c.0.17
+    br label %cleanup
+
+  if.end:                                           ; preds = %entry, %for.cond.for.cond.cleanup_crit_edge
+    %a.0.a.0.a.0.a.0.24 = load volatile i32, i32* %a, align 4, !tbaa !3
+    %b.0.b.0.b.0.b.0.21 = load volatile i32, i32* %b, align 4, !tbaa !3
+    %mul.neg = mul i32 %b.0.b.0.b.0.b.0.21, -6
+    %sub = add i32 %mul.neg, %a.0.a.0.a.0.a.0.24
+    %c.0.c.0.c.0.c.0.18 = load volatile i32, i32* %c, align 4, !tbaa !3
+    %mul8 = mul nsw i32 %c.0.c.0.c.0.c.0.18, 3
+    %add9 = add nsw i32 %sub, %mul8
+    br label %cleanup
+
+  cleanup:                                          ; preds = %if.end, %if.then
+    %retval.0 = phi i32 [ %add7, %if.then ], [ %add9, %if.end ]
+    %1 = bitcast i32* %c to i8*
+    %2 = bitcast i32* %b to i8*
+    %3 = bitcast i32* %a to i8*
+    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %1)
+    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %2)
+    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %3)
+    ret i32 %retval.0
+  }
+
+  declare dso_local i32 @feclearexcept(i32) local_unnamed_addr #3
+
+  declare dso_local i32 @fetestexcept(i32) local_unnamed_addr #3
+
+  ; Function Attrs: nofree nounwind
+  declare dso_local noundef i32 @printf(i8* nocapture noundef readonly, ...) local_unnamed_addr #4
+
+  attributes #0 = { mustprogress nofree norecurse nosync nounwind readnone willreturn "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv68" "target-features"="+v68,-long-calls" }
+  attributes #1 = { argmemonly mustprogress nofree nosync nounwind willreturn }
+  attributes #2 = { nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv68" "target-features"="+v68,-long-calls" }
+  attributes #3 = { "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv68" "target-features"="+v68,-long-calls" }
+  attributes #4 = { nofree nounwind "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv68" "target-features"="+v68,-long-calls" }
+  attributes #5 = { nounwind }
+
+  !llvm.module.flags = !{!0, !1}
+
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !1 = !{i32 7, !"frame-pointer", i32 2}
+  !3 = !{!4, !4, i64 0}
+  !4 = !{!"int", !5, i64 0}
+  !5 = !{!"omnipotent char", !6, i64 0}
+  !6 = !{!"Simple C/C++ TBAA"}
+  !7 = distinct !{!7, !8}
+  !8 = !{!"llvm.loop.mustprogress"}
+
+...
+---
+name:            syst_int32_to_float32
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: intregs, preferred-register: '' }
+  - { id: 1, class: intregs, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $r0
+
+    %0:intregs = COPY $r0
+    %1:intregs = F2_conv_w2sf %0, implicit $usr
+    $r0 = COPY %1
+    PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+
+...
+---
+name:            main
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: intregs, preferred-register: '' }
+  - { id: 1, class: intregs, preferred-register: '' }
+  - { id: 2, class: intregs, preferred-register: '' }
+  - { id: 3, class: intregs, preferred-register: '' }
+  - { id: 4, class: intregs, preferred-register: '' }
+  - { id: 5, class: intregs, preferred-register: '' }
+  - { id: 6, class: intregs, preferred-register: '' }
+  - { id: 7, class: intregs, preferred-register: '' }
+  - { id: 8, class: predregs, preferred-register: '' }
+  - { id: 9, class: intregs, preferred-register: '' }
+  - { id: 10, class: intregs, preferred-register: '' }
+  - { id: 11, class: intregs, preferred-register: '' }
+  - { id: 12, class: intregs, preferred-register: '' }
+  - { id: 13, class: intregs, preferred-register: '' }
+  - { id: 14, class: intregs, preferred-register: '' }
+  - { id: 15, class: intregs, preferred-register: '' }
+  - { id: 16, class: predregs, preferred-register: '' }
+  - { id: 17, class: intregs, preferred-register: '' }
+  - { id: 18, class: predregs, preferred-register: '' }
+  - { id: 19, class: intregs, preferred-register: '' }
+  - { id: 20, class: intregs, preferred-register: '' }
+  - { id: 21, class: intregs, preferred-register: '' }
+  - { id: 22, class: intregs, preferred-register: '' }
+  - { id: 23, class: intregs, preferred-register: '' }
+  - { id: 24, class: intregs, preferred-register: '' }
+  - { id: 25, class: intregs, preferred-register: '' }
+  - { id: 26, class: intregs, preferred-register: '' }
+  - { id: 27, class: intregs, preferred-register: '' }
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: a, type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: b, type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: c, type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.6(0x50000000), %bb.4(0x30000000)
+
+    S4_storeiri_io %stack.0.a, 0, -16777235 :: (volatile store (s32) into %ir.a, !tbaa !3)
+    S4_storeiri_io %stack.1.b, 0, 34 :: (volatile store (s32) into %ir.b, !tbaa !3)
+    S4_storeiri_io %stack.2.c, 0, 34 :: (volatile store (s32) into %ir.c, !tbaa !3)
+    %7:intregs = L2_loadri_io %stack.1.b, 0 :: (volatile dereferenceable load (s32) from %ir.b, !tbaa !3)
+    %8:predregs = C2_cmpgti %7, 0
+    %6:intregs = A2_tfrsi 0
+    J2_jumpf %8, %bb.4, implicit-def $pc
+
+  bb.6:
+    successors: %bb.2(0x80000000)
+
+    %9:intregs = A2_tfrsi 31
+    %13:intregs = A2_tfrsi @.str
+    J2_jump %bb.2, implicit-def $pc
+
+  bb.1.for.cond.for.cond.cleanup_crit_edge:
+    successors: %bb.4(0x40000000)
+
+    J2_jump %bb.4, implicit-def dead $pc
+
+  bb.2.for.body:
+    successors: %bb.2(0x7c000000), %bb.1(0x04000000)
+
+    %0:intregs = PHI %6, %bb.6, %2, %bb.2
+    L4_iadd_memopw_io %stack.2.c, 0, 1 :: (volatile store (s32) into %ir.c, !tbaa !3), (volatile dereferenceable load (s32) from %ir.c, !tbaa !3)
+    ADJCALLSTACKDOWN 0, 0, implicit-def $r29, implicit-def dead $r30, implicit $r31, implicit $r30, implicit $r29
+    $r0 = COPY %9
+    J2_call @feclearexcept, hexagoncsr, implicit-def dead $pc, implicit-def dead $r31, implicit $r29, implicit $r0, implicit-def $r29, implicit-def $r0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit-def dead $r30, implicit-def dead $r31, implicit $r29
+    %1:intregs = L2_loadri_io %stack.0.a, 0 :: (volatile dereferenceable load (s32) from %ir.a, !tbaa !3)
+    ADJCALLSTACKDOWN 0, 0, implicit-def $r29, implicit-def dead $r30, implicit $r31, implicit $r30, implicit $r29
+    %17:intregs = F2_conv_w2sf %1, implicit $usr
+    $r0 = COPY %9
+    J2_call @fetestexcept, hexagoncsr, implicit-def dead $pc, implicit-def dead $r31, implicit $r29, implicit $r0, implicit-def $r29, implicit-def $r0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit-def dead $r30, implicit-def dead $r31, implicit $r29
+    %11:intregs = COPY $r0
+    %12:intregs = COPY $r29
+    S2_storeri_io %12, 0, %11 :: (store (s32) into stack)
+    ADJCALLSTACKDOWN 4, 0, implicit-def $r29, implicit-def dead $r30, implicit $r31, implicit $r30, implicit $r29
+    $r0 = COPY %13
+    J2_call @printf, hexagoncsr, implicit-def dead $pc, implicit-def dead $r31, implicit $r29, implicit $r0, implicit-def $r29, implicit-def $r0
+    ADJCALLSTACKUP 4, 0, implicit-def dead $r29, implicit-def dead $r30, implicit-def dead $r31, implicit $r29
+    %2:intregs = nuw nsw A2_addi %0, 1
+    %15:intregs = L2_loadri_io %stack.1.b, 0 :: (volatile dereferenceable load (s32) from %ir.b, !tbaa !3)
+    %16:predregs = C2_cmpgt %15, %2
+    J2_jumpt %16, %bb.2, implicit-def dead $pc
+    J2_jump %bb.1, implicit-def dead $pc
+
+  bb.3.if.then:
+    successors: %bb.5(0x80000000)
+
+    %18:predregs = C2_cmpgtui %17, 100
+    %24:intregs = L2_loadri_io %stack.0.a, 0 :: (volatile dereferenceable load (s32) from %ir.a, !tbaa !3)
+    %25:intregs = L2_loadri_io %stack.1.b, 0 :: (volatile dereferenceable load (s32) from %ir.b, !tbaa !3)
+    %26:intregs = L2_loadri_io %stack.2.c, 0 :: (volatile dereferenceable load (s32) from %ir.c, !tbaa !3)
+    %3:intregs = nsw M2_acci %26, %25, %24
+    J2_jumpf %18, %bb.5, implicit-def dead $pc
+    J2_jump %bb.5, implicit-def dead $pc
+
+  bb.4.if.end:
+    successors: %bb.5(0x80000000)
+
+    %19:intregs = L2_loadri_io %stack.0.a, 0 :: (volatile dereferenceable load (s32) from %ir.a, !tbaa !3)
+    %20:intregs = L2_loadri_io %stack.1.b, 0 :: (volatile dereferenceable load (s32) from %ir.b, !tbaa !3)
+    %27:intregs = M2_macsin %19, %20, 6
+    %23:intregs = L2_loadri_io %stack.2.c, 0 :: (volatile dereferenceable load (s32) from %ir.c, !tbaa !3)
+    %4:intregs = nsw M2_macsip %27, %23, 3
+
+  bb.5.cleanup:
+    %5:intregs = PHI %4, %bb.4, %3, %bb.3
+    $r0 = COPY %5
+    PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+
+...

@@ -171,6 +171,23 @@ bool HexagonInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
   return MI.isAsCheapAsAMove();
 }
 
+// Do not sink floating point instructions that updates USR register.
+// Example:
+//    feclearexcept
+//    F2_conv_w2sf
+//    fetestexcept
+// MachineSink sinks F2_conv_w2sf and we are not able to catch exceptions.
+// TODO: On some of these floating point instructions, USR is marked as Use.
+// In reality, these instructions also Def the USR. If USR is marked as Def,
+// some of the assumptions in assembler packetization are broken.
+bool HexagonInstrInfo::shouldSink(const MachineInstr &MI) const {
+  // Assumption: A floating point instruction that reads the USR will write
+  // the USR as well.
+  if (isFloat(MI) && MI.hasRegisterImplicitUseOperand(Hexagon::USR))
+    return false;
+  return true;
+}
+
 /// Find the hardware loop instruction used to set-up the specified loop.
 /// On Hexagon, we have two instructions used to set-up the hardware loop
 /// (LOOP0, LOOP1) with corresponding endloop (ENDLOOP0, ENDLOOP1) instructions
