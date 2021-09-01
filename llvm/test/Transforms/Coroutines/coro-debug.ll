@@ -35,6 +35,7 @@ sw.bb:                                            ; preds = %entry
   call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !12, metadata !13), !dbg !14
   call void @llvm.dbg.declare(metadata i8** %coro_hdl, metadata !15, metadata !13), !dbg !16
   call void @llvm.dbg.declare(metadata i32* %late_local, metadata !29, metadata !13), !dbg !16
+  call void @llvm.dbg.value(metadata i32 %direct, metadata !30, metadata !13), !dbg !14
   ; don't crash when encountering nonsensical debug info, verfifier doesn't yet reject these
   call void @llvm.dbg.declare(metadata i8* null, metadata !28, metadata !13), !dbg !16
   call void @llvm.dbg.declare(metadata !{}, metadata !28, metadata !13), !dbg !16
@@ -67,6 +68,9 @@ coro_Suspend:                                     ; preds = %coro_Cleanup, %sw.d
   store i32 0, i32* %late_local, !dbg !24
   ret i8* %8, !dbg !24
 }
+
+; Function Attrs: nounwind readnone speculatable
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
@@ -146,6 +150,7 @@ attributes #7 = { noduplicate }
 !27 = !DILocalVariable(name: "undefined", scope: !6, file: !7, line: 55, type: !11)
 !28 = !DILocalVariable(name: "null", scope: !6, file: !7, line: 55, type: !11)
 !29 = !DILocalVariable(name: "partial_dead", scope: !6, file: !7, line: 55, type: !11)
+!30 = !DILocalVariable(name: "direct_value", scope: !6, file: !7, line: 55, type: !11)
 
 ; CHECK: define i8* @f(i32 %x) #0 !dbg ![[ORIG:[0-9]+]]
 ; CHECK: define internal fastcc void @f.resume(%f.Frame* noalias nonnull align 8 dereferenceable(32) %FramePtr) #0 !dbg ![[RESUME:[0-9]+]]
@@ -160,6 +165,7 @@ attributes #7 = { noduplicate }
 ; Note that keeping the undef value here could be acceptable, too.
 ; CHECK-NOT: call void @llvm.dbg.declare(metadata i32* undef, metadata !{{[0-9]+}}, metadata !DIExpression())
 ; CHECK: call void @coro.devirt.trigger(i8* null)
+; CHECK: call void @llvm.dbg.value(metadata %f.Frame** {{.*}}, metadata ![[RESUME_DIRECT_VALUE:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, {{[0-9]+}}, DW_OP_deref))
 ; CHECK: define internal fastcc void @f.destroy(%f.Frame* noalias nonnull align 8 dereferenceable(32) %FramePtr) #0 !dbg ![[DESTROY:[0-9]+]]
 ; CHECK: define internal fastcc void @f.cleanup(%f.Frame* noalias nonnull align 8 dereferenceable(32) %FramePtr) #0 !dbg ![[CLEANUP:[0-9]+]]
 
@@ -170,6 +176,7 @@ attributes #7 = { noduplicate }
 ; CHECK: ![[RESUME_X]] = !DILocalVariable(name: "x", arg: 1, scope: ![[RESUME]]
 ; CHECK: ![[RESUME_DIRECT]] = !DILocalVariable(name: "direct_mem", scope: ![[RESUME]]
 ; CHECK: ![[RESUME_CONST]] = !DILocalVariable(name: "direct_const", scope: ![[RESUME]]
+; CHECK: ![[RESUME_DIRECT_VALUE]] = !DILocalVariable(name: "direct_value", scope: ![[RESUME]]
 
 ; CHECK: ![[DESTROY]] = distinct !DISubprogram(name: "f", linkageName: "flink"
 
