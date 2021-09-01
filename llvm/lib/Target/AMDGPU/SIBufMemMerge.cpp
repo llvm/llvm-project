@@ -468,6 +468,11 @@ bool SIBufMemMerge::optimizeBlock(MachineBasicBlock &MBB) {
     case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
     case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
       SimpleMI SMI(&MI, Phase);
+      // Ignore instruction with too large an element size
+      unsigned eltSize = SMI.getSize(TII);
+      if (eltSize > getMaxSize(eltSize))
+        continue;
+
       auto CandidateIdx = CandidateMap.find(SMI);
       if (CandidateIdx == CandidateMap.end()) {
         // Generate a new list and add to the map
