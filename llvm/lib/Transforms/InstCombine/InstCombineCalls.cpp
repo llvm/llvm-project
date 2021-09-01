@@ -1082,13 +1082,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // Examples:
     // max ~A, ~Y --> ~(min A, Y)
     // max ~A, C --> ~(min A, ~C)
+    // max ~A, (max ~Y, ~Z) --> ~min( A, (min Y, Z))
     auto moveNotAfterMinMax = [&](Value *X, Value *Y) -> Instruction * {
       Value *A;
       if (match(X, m_OneUse(m_Not(m_Value(A)))) &&
           !isFreeToInvert(A, A->hasOneUse()) &&
-          // Passing false to only consider m_Not and constants.
-          // TODO: Allow Y to match other patterns by checking use count.
-          isFreeToInvert(Y, false)) {
+          isFreeToInvert(Y, Y->hasOneUse())) {
         Value *NotY = Builder.CreateNot(Y);
         Intrinsic::ID InvID = getInverseMinMaxIntrinsic(IID);
         Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, A, NotY);
