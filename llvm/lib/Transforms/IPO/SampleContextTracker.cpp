@@ -479,7 +479,7 @@ ContextTrieNode *SampleContextTracker::getContextFor(const DILocation *DIL) {
 
   // Convert real function names to MD5 names, if the input profile is
   // MD5-based.
-  std::vector<std::string> MD5Names;
+  std::list<std::string> MD5Names;
   if (FunctionSamples::UseMD5) {
     for (auto &Location : S) {
       MD5Names.emplace_back();
@@ -492,7 +492,7 @@ ContextTrieNode *SampleContextTracker::getContextFor(const DILocation *DIL) {
   int I = S.size();
   while (--I >= 0 && ContextNode) {
     LineLocation &CallSite = S[I].first;
-    StringRef &CalleeName = S[I].second;
+    StringRef CalleeName = S[I].second;
     ContextNode = ContextNode->getChildContext(CallSite, CalleeName);
   }
 
