@@ -33,7 +33,7 @@ a larger user input.
   Upper limit for the magnitude bits of the loop variable. If it's set the check
   filters out those catches in which the loop variable's type has more magnitude
   bits as the specified upper limit. The default value is 16.
-  For example, if the user sets this option to 31 (bits), then a 32-bit ``unsigend int``
+  For example, if the user sets this option to 31 (bits), then a 32-bit ``unsigned int``
   is ignored by the check, however a 32-bit ``int`` is not (A 32-bit ``signed int``
   has 31 magnitude bits).
 

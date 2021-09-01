@@ -42,9 +42,12 @@ static cl::opt<bool> SamplePreInlineReplay(
 
 CSPreInliner::CSPreInliner(SampleProfileMap &Profiles, ProfiledBinary &Binary,
                            uint64_t HotThreshold, uint64_t ColdThreshold)
-    : UseContextCost(UseContextCostForPreInliner), ContextTracker(Profiles),
-      ProfileMap(Profiles), Binary(Binary), HotCountThreshold(HotThreshold),
-      ColdCountThreshold(ColdThreshold) {}
+    : UseContextCost(UseContextCostForPreInliner),
+      // TODO: Pass in a guid-to-name map in order for
+      // ContextTracker.getFuncNameFor to work, if `Profiles` can have md5 codes
+      // as their profile context.
+      ContextTracker(Profiles, nullptr), ProfileMap(Profiles), Binary(Binary),
+      HotCountThreshold(HotThreshold), ColdCountThreshold(ColdThreshold) {}
 
 std::vector<StringRef> CSPreInliner::buildTopDownOrder() {
   std::vector<StringRef> Order;

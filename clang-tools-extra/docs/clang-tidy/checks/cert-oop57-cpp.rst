@@ -11,7 +11,7 @@ Options
 
 .. option:: MemSetNames
 
-   Specify extra functions to flag that act similarily to ``memset``.
+   Specify extra functions to flag that act similarly to ``memset``.
    Specify names in a semicolon delimited list.
    Default is an empty string.
    The check will detect the following functions:
@@ -19,7 +19,7 @@ Options
 
 .. option:: MemCpyNames
 
-   Specify extra functions to flag that act similarily to ``memcpy``.
+   Specify extra functions to flag that act similarly to ``memcpy``.
    Specify names in a semicolon delimited list.
    Default is an empty string.
    The check will detect the following functions:
@@ -28,7 +28,7 @@ Options
 
 .. option:: MemCmpNames
 
-   Specify extra functions to flag that act similarily to ``memcmp``.
+   Specify extra functions to flag that act similarly to ``memcmp``.
    Specify names in a semicolon delimited list.
    Default is an empty string.
    The check will detect the following functions:

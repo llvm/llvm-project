@@ -419,7 +419,7 @@ public:
   /// outer structure. SCCs do not support mutation of the call graph, that
   /// must be done through the containing \c RefSCC in order to fully reason
   /// about the ordering and connections of the graph.
-  class SCC {
+  class LLVM_EXTERNAL_VISIBILITY SCC {
     friend class LazyCallGraph;
     friend class LazyCallGraph::Node;
 

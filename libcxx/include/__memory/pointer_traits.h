@@ -33,19 +33,19 @@ struct __pointer_traits_element_type;
 template <class _Ptr>
 struct __pointer_traits_element_type<_Ptr, true>
 {
-    typedef _LIBCPP_NODEBUG_TYPE typename _Ptr::element_type type;
+    typedef _LIBCPP_NODEBUG typename _Ptr::element_type type;
 };
 
 template <template <class, class...> class _Sp, class _Tp, class ..._Args>
 struct __pointer_traits_element_type<_Sp<_Tp, _Args...>, true>
 {
-    typedef _LIBCPP_NODEBUG_TYPE typename _Sp<_Tp, _Args...>::element_type type;
+    typedef _LIBCPP_NODEBUG typename _Sp<_Tp, _Args...>::element_type type;
 };
 
 template <template <class, class...> class _Sp, class _Tp, class ..._Args>
 struct __pointer_traits_element_type<_Sp<_Tp, _Args...>, false>
 {
-    typedef _LIBCPP_NODEBUG_TYPE _Tp type;
+    typedef _LIBCPP_NODEBUG _Tp type;
 };
 
 template <class _Tp, class = void>
@@ -58,13 +58,13 @@ struct __has_difference_type<_Tp,
 template <class _Ptr, bool = __has_difference_type<_Ptr>::value>
 struct __pointer_traits_difference_type
 {
-    typedef _LIBCPP_NODEBUG_TYPE ptrdiff_t type;
+    typedef _LIBCPP_NODEBUG ptrdiff_t type;
 };
 
 template <class _Ptr>
 struct __pointer_traits_difference_type<_Ptr, true>
 {
-    typedef _LIBCPP_NODEBUG_TYPE typename _Ptr::difference_type type;
+    typedef _LIBCPP_NODEBUG typename _Ptr::difference_type type;
 };
 
 template <class _Tp, class _Up>
@@ -84,9 +84,9 @@ template <class _Tp, class _Up, bool = __has_rebind<_Tp, _Up>::value>
 struct __pointer_traits_rebind
 {
 #ifndef _LIBCPP_CXX03_LANG
-    typedef _LIBCPP_NODEBUG_TYPE typename _Tp::template rebind<_Up> type;
+    typedef _LIBCPP_NODEBUG typename _Tp::template rebind<_Up> type;
 #else
-    typedef _LIBCPP_NODEBUG_TYPE typename _Tp::template rebind<_Up>::other type;
+    typedef _LIBCPP_NODEBUG typename _Tp::template rebind<_Up>::other type;
 #endif
 };
 
@@ -94,9 +94,9 @@ template <template <class, class...> class _Sp, class _Tp, class ..._Args, class
 struct __pointer_traits_rebind<_Sp<_Tp, _Args...>, _Up, true>
 {
 #ifndef _LIBCPP_CXX03_LANG
-    typedef _LIBCPP_NODEBUG_TYPE typename _Sp<_Tp, _Args...>::template rebind<_Up> type;
+    typedef _LIBCPP_NODEBUG typename _Sp<_Tp, _Args...>::template rebind<_Up> type;
 #else
-    typedef _LIBCPP_NODEBUG_TYPE typename _Sp<_Tp, _Args...>::template rebind<_Up>::other type;
+    typedef _LIBCPP_NODEBUG typename _Sp<_Tp, _Args...>::template rebind<_Up>::other type;
 #endif
 };
 

@@ -759,18 +759,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
       }
     }
 
-    if (useMD5()) {
-      for (auto Name : FuncsToUse) {
-        auto GUID = std::to_string(MD5Hash(Name));
-        auto iter = FuncOffsetTable.find(StringRef(GUID));
-        if (iter == FuncOffsetTable.end())
-          continue;
-        const uint8_t *FuncProfileAddr = Start + iter->second;
-        assert(FuncProfileAddr < End && "out of LBRProfile section");
-        if (std::error_code EC = readFuncProfile(FuncProfileAddr))
-          return EC;
-      }
-    } else if (ProfileIsCS) {
+    if (ProfileIsCS) {
       // Compute the ordered set of names, so we can
       // get all context profiles under a subtree by
       // iterating through the ordered names.
@@ -779,13 +768,20 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
         OrderedContexts.insert(Name.first);
       }
 
+      DenseSet<uint64_t> FuncGuidsToUse;
+      if (useMD5()) {
+        for (auto Name : FuncsToUse)
+          FuncGuidsToUse.insert(Function::getGUID(Name));
+      }
+
       // For each function in current module, load all
       // context profiles for the function.
       for (auto NameOffset : FuncOffsetTable) {
         SampleContext FContext = NameOffset.first;
         auto FuncName = FContext.getName();
-        if (!FuncsToUse.count(FuncName) &&
-            (!Remapper || !Remapper->exist(FuncName)))
+        if ((useMD5() && !FuncGuidsToUse.count(std::stoull(FuncName.data()))) ||
+            (!useMD5() && !FuncsToUse.count(FuncName) &&
+             (!Remapper || !Remapper->exist(FuncName))))
           continue;
 
         // For each context profile we need, try to load
@@ -803,16 +799,29 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
         }
       }
     } else {
-      for (auto NameOffset : FuncOffsetTable) {
-        SampleContext FContext(NameOffset.first);
-        auto FuncName = FContext.getName();
-        if (!FuncsToUse.count(FuncName) &&
-            (!Remapper || !Remapper->exist(FuncName)))
-          continue;
-        const uint8_t *FuncProfileAddr = Start + NameOffset.second;
-        assert(FuncProfileAddr < End && "out of LBRProfile section");
-        if (std::error_code EC = readFuncProfile(FuncProfileAddr))
-          return EC;
+      if (useMD5()) {
+        for (auto Name : FuncsToUse) {
+          auto GUID = std::to_string(MD5Hash(Name));
+          auto iter = FuncOffsetTable.find(StringRef(GUID));
+          if (iter == FuncOffsetTable.end())
+            continue;
+          const uint8_t *FuncProfileAddr = Start + iter->second;
+          assert(FuncProfileAddr < End && "out of LBRProfile section");
+          if (std::error_code EC = readFuncProfile(FuncProfileAddr))
+            return EC;
+        }
+      } else {
+        for (auto NameOffset : FuncOffsetTable) {
+          SampleContext FContext(NameOffset.first);
+          auto FuncName = FContext.getName();
+          if (!FuncsToUse.count(FuncName) &&
+              (!Remapper || !Remapper->exist(FuncName)))
+            continue;
+          const uint8_t *FuncProfileAddr = Start + NameOffset.second;
+          assert(FuncProfileAddr < End && "out of LBRProfile section");
+          if (std::error_code EC = readFuncProfile(FuncProfileAddr))
+            return EC;
+        }
       }
     }
     Data = End;

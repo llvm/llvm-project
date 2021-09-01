@@ -44,7 +44,7 @@ Options
 .. option:: WarnWithinTemplateInstantiation
 
     When `true`, the check will warn on narrowing conversions within template
-    instantations. `false` by default.
+    instantiations. `false` by default.
 
 .. option:: WarnOnEquivalentBitWidth
 

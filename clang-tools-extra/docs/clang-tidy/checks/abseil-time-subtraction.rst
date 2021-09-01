@@ -25,7 +25,7 @@ Examples:
   int x;
   absl::Time t;
 
-  // Original - absl::Duration result and first operand is a absl::Time.
+  // Original - absl::Duration result and first operand is an absl::Time.
   absl::Duration d = absl::Seconds(absl::ToUnixSeconds(t) - x);
 
   // Suggestion - Perform subtraction in the Time domain instead.

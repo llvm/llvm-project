@@ -2,6 +2,8 @@
 ; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%S/Inputs/csspgo-import-list.prof -S | FileCheck %s
 ; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/csspgo-import-list.prof -o %t.prof
 ; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%t.prof -S | FileCheck %s
+; RUN: llvm-profdata merge --sample --extbinary --use-md5 %S/Inputs/csspgo-import-list.prof -o %t.md5
+; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%t.md5 -S | FileCheck %s
 
 declare i32 @_Z5funcBi(i32 %x)
 declare i32 @_Z5funcAi(i32 %x)
