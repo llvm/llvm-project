@@ -287,6 +287,39 @@ TEST(LlvmLibcStrToLLTest, CleanBaseSixteenDecode) {
   ASSERT_EQ(__llvm_libc::strtoll(yes_prefix, &str_end, 16), 0x456defll);
   ASSERT_EQ(errno, 0);
   EXPECT_EQ(str_end - yes_prefix, ptrdiff_t(8));
+
+  const char *letter_after_prefix = "0xabc123";
+  errno = 0;
+  ASSERT_EQ(__llvm_libc::strtoll(letter_after_prefix, &str_end, 16),
+            0xabc123ll);
+  ASSERT_EQ(errno, 0);
+  EXPECT_EQ(str_end - letter_after_prefix, ptrdiff_t(8));
+}
+
+TEST(LlvmLibcStrToLLTest, MessyBaseSixteenDecode) {
+  char *str_end = nullptr;
+
+  const char *just_prefix = "0x";
+  errno = 0;
+  ASSERT_EQ(__llvm_libc::strtoll(just_prefix, &str_end, 16), 0ll);
+  ASSERT_EQ(errno, 0);
+  EXPECT_EQ(str_end - just_prefix, ptrdiff_t(1));
+
+  errno = 0;
+  ASSERT_EQ(__llvm_libc::strtoll(just_prefix, &str_end, 0), 0ll);
+  ASSERT_EQ(errno, 0);
+  EXPECT_EQ(str_end - just_prefix, ptrdiff_t(1));
+
+  const char *prefix_with_x_after = "0xx";
+  errno = 0;
+  ASSERT_EQ(__llvm_libc::strtoll(prefix_with_x_after, &str_end, 16), 0ll);
+  ASSERT_EQ(errno, 0);
+  EXPECT_EQ(str_end - prefix_with_x_after, ptrdiff_t(1));
+
+  errno = 0;
+  ASSERT_EQ(__llvm_libc::strtoll(prefix_with_x_after, &str_end, 0), 0ll);
+  ASSERT_EQ(errno, 0);
+  EXPECT_EQ(str_end - prefix_with_x_after, ptrdiff_t(1));
 }
 
 TEST(LlvmLibcStrToLLTest, AutomaticBaseSelection) {
