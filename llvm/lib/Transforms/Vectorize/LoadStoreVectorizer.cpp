@@ -694,31 +694,16 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
   });
 
   for (Instruction &I : make_range(getBoundaryInstrs(Chain))) {
-    if (isa<LoadInst>(I) || isa<StoreInst>(I)) {
-      if (!is_contained(Chain, &I))
-        MemoryInstrs.push_back(&I);
-      else
-        ChainInstrs.push_back(&I);
-    } else if (isa<IntrinsicInst>(&I) &&
-               cast<IntrinsicInst>(&I)->getIntrinsicID() ==
-                   Intrinsic::sideeffect) {
-      // Ignore llvm.sideeffect calls.
-    } else if (isa<IntrinsicInst>(&I) &&
-               cast<IntrinsicInst>(&I)->getIntrinsicID() ==
-                   Intrinsic::pseudoprobe) {
-      // Ignore llvm.pseudoprobe calls.
-    } else if (isa<IntrinsicInst>(&I) &&
-               cast<IntrinsicInst>(&I)->getIntrinsicID() == Intrinsic::assume) {
-      // Ignore llvm.assume calls.
-    } else if (IsLoadChain && (I.mayWriteToMemory() || I.mayThrow())) {
-      LLVM_DEBUG(dbgs() << "LSV: Found may-write/throw operation: " << I
-                        << '\n');
-      break;
-    } else if (!IsLoadChain && (I.mayReadOrWriteMemory() || I.mayThrow())) {
-      LLVM_DEBUG(dbgs() << "LSV: Found may-read/write/throw operation: " << I
-                        << '\n');
+    if ((isa<LoadInst>(I) || isa<StoreInst>(I)) && is_contained(Chain, &I)) {
+      ChainInstrs.push_back(&I);
+      continue;
+    }
+    if (I.mayThrow()) {
+      LLVM_DEBUG(dbgs() << "LSV: Found may-throw operation: " << I << '\n');
       break;
     }
+    if (I.mayReadOrWriteMemory())
+      MemoryInstrs.push_back(&I);
   }
 
   // Loop until we find an instruction in ChainInstrs that we can't vectorize.
@@ -751,26 +736,28 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
         return LI->hasMetadata(LLVMContext::MD_invariant_load);
       };
 
-      // We can ignore the alias as long as the load comes before the store,
-      // because that means we won't be moving the load past the store to
-      // vectorize it (the vectorized load is inserted at the location of the
-      // first load in the chain).
-      if (isa<StoreInst>(MemInstr) && ChainLoad &&
-          (IsInvariantLoad(ChainLoad) || ChainLoad->comesBefore(MemInstr)))
-        continue;
+      if (IsLoadChain) {
+        // We can ignore the alias as long as the load comes before the store,
+        // because that means we won't be moving the load past the store to
+        // vectorize it (the vectorized load is inserted at the location of the
+        // first load in the chain).
+        if (ChainInstr->comesBefore(MemInstr) ||
+            (ChainLoad && IsInvariantLoad(ChainLoad)))
+          continue;
+      } else {
+        // Same case, but in reverse.
+        if (MemInstr->comesBefore(ChainInstr) ||
+            (MemLoad && IsInvariantLoad(MemLoad)))
+          continue;
+      }
 
-      // Same case, but in reverse.
-      if (MemLoad && isa<StoreInst>(ChainInstr) &&
-          (IsInvariantLoad(MemLoad) || MemLoad->comesBefore(ChainInstr)))
-        continue;
-
-      if (!AA.isNoAlias(MemoryLocation::get(MemInstr),
-                        MemoryLocation::get(ChainInstr))) {
+      ModRefInfo MR =
+          AA.getModRefInfo(MemInstr, MemoryLocation::get(ChainInstr));
+      if (IsLoadChain ? isModSet(MR) : isModOrRefSet(MR)) {
         LLVM_DEBUG({
           dbgs() << "LSV: Found alias:\n"
-                    "  Aliasing instruction and pointer:\n"
+                    "  Aliasing instruction:\n"
                  << "  " << *MemInstr << '\n'
-                 << "  " << *getLoadStorePointerOperand(MemInstr) << '\n'
                  << "  Aliased instruction and pointer:\n"
                  << "  " << *ChainInstr << '\n'
                  << "  " << *getLoadStorePointerOperand(ChainInstr) << '\n';
