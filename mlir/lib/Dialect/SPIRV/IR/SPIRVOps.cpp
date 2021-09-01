@@ -311,6 +311,58 @@ static void printSourceMemoryAccessAttribute(
   elidedAttrs.push_back(spirv::attributeName<spirv::StorageClass>());
 }
 
+static ParseResult parseImageOperands(OpAsmParser &parser,
+                                      spirv::ImageOperandsAttr &attr) {
+  // Expect image operands
+  if (parser.parseOptionalLSquare())
+    return success();
+
+  spirv::ImageOperands imageOperands;
+  if (parseEnumStrAttr(imageOperands, parser))
+    return failure();
+
+  attr = spirv::ImageOperandsAttr::get(parser.getBuilder().getContext(),
+                                       imageOperands);
+
+  return parser.parseRSquare();
+}
+
+static void printImageOperands(OpAsmPrinter &printer, Operation *imageOp,
+                               spirv::ImageOperandsAttr attr) {
+  if (attr) {
+    auto strImageOperands = stringifyImageOperands(attr.getValue());
+    printer << "[\"" << strImageOperands << "\"]";
+  }
+}
+
+template <typename Op>
+static LogicalResult verifyImageOperands(Op imageOp,
+                                         spirv::ImageOperandsAttr attr,
+                                         Operation::operand_range operands) {
+  if (!attr) {
+    if (operands.empty())
+      return success();
+
+    return imageOp.emitError("the Image Operands should encode what operands "
+                             "follow, as per Image Operands");
+  }
+
+  // TODO: Add the validation rules for the following Image Operands.
+  spirv::ImageOperands noSupportOperands =
+      spirv::ImageOperands::Bias | spirv::ImageOperands::Lod |
+      spirv::ImageOperands::Grad | spirv::ImageOperands::ConstOffset |
+      spirv::ImageOperands::Offset | spirv::ImageOperands::ConstOffsets |
+      spirv::ImageOperands::Sample | spirv::ImageOperands::MinLod |
+      spirv::ImageOperands::MakeTexelAvailable |
+      spirv::ImageOperands::MakeTexelVisible |
+      spirv::ImageOperands::SignExtend | spirv::ImageOperands::ZeroExtend;
+
+  if (spirv::bitEnumContains(attr.getValue(), noSupportOperands))
+    llvm_unreachable("unimplemented operands of Image Operands");
+
+  return success();
+}
+
 static LogicalResult verifyCastOp(Operation *op,
                                   bool requireSameBitWidth = true,
                                   bool skipBitWidthCheck = false) {
@@ -3656,7 +3708,6 @@ static LogicalResult verify(spirv::GLSLLdexpOp ldexpOp) {
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(spirv::ImageDrefGatherOp imageDrefGatherOp) {
-  // TODO: Support optional operands.
   VectorType resultType =
       imageDrefGatherOp.result().getType().cast<VectorType>();
   auto sampledImageType = imageDrefGatherOp.sampledimage()
@@ -3688,7 +3739,10 @@ static LogicalResult verify(spirv::ImageDrefGatherOp imageDrefGatherOp) {
     return imageDrefGatherOp.emitOpError(
         "the MS operand of the underlying image type must be 0");
 
-  return success();
+  spirv::ImageOperandsAttr attr = imageDrefGatherOp.imageoperandsAttr();
+  auto operandArguments = imageDrefGatherOp.operand_arguments();
+
+  return verifyImageOperands(imageDrefGatherOp, attr, operandArguments);
 }
 
 //===----------------------------------------------------------------------===//
