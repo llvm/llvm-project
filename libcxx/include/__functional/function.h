@@ -127,8 +127,8 @@ class __alloc_func<_Fp, _Ap, _Rp(_ArgTypes...)>
     __compressed_pair<_Fp, _Ap> __f_;
 
   public:
-    typedef _LIBCPP_NODEBUG_TYPE _Fp _Target;
-    typedef _LIBCPP_NODEBUG_TYPE _Ap _Alloc;
+    typedef _LIBCPP_NODEBUG _Fp _Target;
+    typedef _LIBCPP_NODEBUG _Ap _Alloc;
 
     _LIBCPP_INLINE_VISIBILITY
     const _Target& __target() const { return __f_.first(); }
@@ -205,7 +205,7 @@ class __default_alloc_func<_Fp, _Rp(_ArgTypes...)> {
   _Fp __f_;
 
 public:
-  typedef _LIBCPP_NODEBUG_TYPE _Fp _Target;
+  typedef _LIBCPP_NODEBUG _Fp _Target;
 
   _LIBCPP_INLINE_VISIBILITY
   const _Target& __target() const { return __f_; }

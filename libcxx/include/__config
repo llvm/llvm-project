@@ -1287,12 +1287,6 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_NODEBUG
 #endif
 
-#if __has_attribute(__nodebug__) && (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 900)
-#   define _LIBCPP_NODEBUG_TYPE __attribute__((nodebug))
-#else
-#   define _LIBCPP_NODEBUG_TYPE
-#endif
-
 #if __has_attribute(__standalone_debug__)
 #define _LIBCPP_STANDALONE_DEBUG __attribute__((__standalone_debug__))
 #else
