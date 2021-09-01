@@ -529,8 +529,8 @@ void Function::dropAllReferences() {
   clearMetadata();
 }
 
-void Function::addAttribute(unsigned i, Attribute Attr) {
-  AttributeSets = AttributeSets.addAttribute(getContext(), i, Attr);
+void Function::addAttributeAtIndex(unsigned i, Attribute Attr) {
+  AttributeSets = AttributeSets.addAttributeAtIndex(getContext(), i, Attr);
 }
 
 void Function::addFnAttr(Attribute::AttrKind Kind) {
@@ -565,12 +565,12 @@ void Function::addParamAttrs(unsigned ArgNo, const AttrBuilder &Attrs) {
   AttributeSets = AttributeSets.addParamAttributes(getContext(), ArgNo, Attrs);
 }
 
-void Function::removeAttribute(unsigned i, Attribute::AttrKind Kind) {
-  AttributeSets = AttributeSets.removeAttribute(getContext(), i, Kind);
+void Function::removeAttributeAtIndex(unsigned i, Attribute::AttrKind Kind) {
+  AttributeSets = AttributeSets.removeAttributeAtIndex(getContext(), i, Kind);
 }
 
-void Function::removeAttribute(unsigned i, StringRef Kind) {
-  AttributeSets = AttributeSets.removeAttribute(getContext(), i, Kind);
+void Function::removeAttributeAtIndex(unsigned i, StringRef Kind) {
+  AttributeSets = AttributeSets.removeAttributeAtIndex(getContext(), i, Kind);
 }
 
 void Function::removeFnAttr(Attribute::AttrKind Kind) {
@@ -632,12 +632,13 @@ bool Function::hasParamAttribute(unsigned ArgNo,
   return AttributeSets.hasParamAttr(ArgNo, Kind);
 }
 
-Attribute Function::getAttribute(unsigned i, Attribute::AttrKind Kind) const {
-  return AttributeSets.getAttribute(i, Kind);
+Attribute Function::getAttributeAtIndex(unsigned i,
+                                        Attribute::AttrKind Kind) const {
+  return AttributeSets.getAttributeAtIndex(i, Kind);
 }
 
-Attribute Function::getAttribute(unsigned i, StringRef Kind) const {
-  return AttributeSets.getAttribute(i, Kind);
+Attribute Function::getAttributeAtIndex(unsigned i, StringRef Kind) const {
+  return AttributeSets.getAttributeAtIndex(i, Kind);
 }
 
 Attribute Function::getFnAttribute(Attribute::AttrKind Kind) const {
