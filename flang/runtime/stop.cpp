@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "stop.h"
+#include "flang/Runtime/stop.h"
 #include "file.h"
 #include "io-error.h"
 #include "terminator.h"

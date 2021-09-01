@@ -1,4 +1,4 @@
-//===-- runtime/main.h ------------------------------------------*- C++ -*-===//
+//===-- include/flang/Runtime/main.h ----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,8 +9,8 @@
 #ifndef FORTRAN_RUNTIME_MAIN_H_
 #define FORTRAN_RUNTIME_MAIN_H_
 
-#include "c-or-cpp.h"
-#include "entry-names.h"
+#include "flang/Runtime/c-or-cpp.h"
+#include "flang/Runtime/entry-names.h"
 
 FORTRAN_EXTERN_C_BEGIN
 void RTNAME(ProgramStart)(int, const char *[], const char *[]);

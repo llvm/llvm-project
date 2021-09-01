@@ -1,4 +1,4 @@
-//===-- runtime/random.h --------------------------------------------------===//
+//===-- include/flang/Runtime/random.h --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,7 @@
 
 // Intrinsic subroutines RANDOM_INIT, RANDOM_NUMBER, and RANDOM_SEED.
 
-#include "entry-names.h"
+#include "flang/Runtime/entry-names.h"
 #include <cstdint>
 
 namespace Fortran::runtime {

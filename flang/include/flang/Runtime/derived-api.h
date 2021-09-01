@@ -1,4 +1,4 @@
-//===-- runtime/derived-api.h ---------------------------------------------===//
+//===-- include/flang/Runtime/derived-api.h ---------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,10 +12,10 @@
 // local variables.  Whole allocatable assignment should use AllocatableAssign()
 // instead of this Assign().
 
-#ifndef FLANG_RUNTIME_DERIVED_API_H_
-#define FLANG_RUNTIME_DERIVED_API_H_
+#ifndef FORTRAN_RUNTIME_DERIVED_API_H_
+#define FORTRAN_RUNTIME_DERIVED_API_H_
 
-#include "entry-names.h"
+#include "flang/Runtime/entry-names.h"
 
 namespace Fortran::runtime {
 class Descriptor;
@@ -40,4 +40,4 @@ void RTNAME(Assign)(const Descriptor &, const Descriptor &,
 
 } // extern "C"
 } // namespace Fortran::runtime
-#endif // FLANG_RUNTIME_DERIVED_API_H_
+#endif // FORTRAN_RUNTIME_DERIVED_API_H_

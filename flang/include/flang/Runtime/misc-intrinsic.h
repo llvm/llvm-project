@@ -1,4 +1,4 @@
-//===-- runtime/misc-intrinsic.h --------------------------------*- C++ -*-===//
+//===-- include/flang/Runtime/misc-intrinsic.h ------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +11,7 @@
 #ifndef FORTRAN_RUNTIME_MISC_INTRINSIC_H_
 #define FORTRAN_RUNTIME_MISC_INTRINSIC_H_
 
-#include "entry-names.h"
+#include "flang/Runtime/entry-names.h"
 #include <cstdint>
 
 namespace Fortran::runtime {

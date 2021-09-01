@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "command.h"
+#include "flang/Runtime/command.h"
 #include "environment.h"
 
 namespace Fortran::runtime {

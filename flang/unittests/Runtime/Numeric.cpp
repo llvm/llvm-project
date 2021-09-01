@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../../runtime/numeric.h"
+#include "flang/Runtime/numeric.h"
 #include "gtest/gtest.h"
 #include <cmath>
 #include <limits>

@@ -9,7 +9,7 @@
 ! See Fortran 2018, clause 16.10.2
 ! TODO: These are placeholder values so that some tests can be run.
 
-include '../runtime/magic-numbers.h' ! for IOSTAT= error/end code values
+include '../include/flang/Runtime/magic-numbers.h' ! for IOSTAT= error/end code values
 
 module iso_fortran_env
 

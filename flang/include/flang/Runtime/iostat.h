@@ -1,4 +1,4 @@
-//===-- runtime/iostat.h ----------------------------------------*- C++ -*-===//
+//===-- include/flang/Runtime/iostat.h --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +11,7 @@
 
 #ifndef FORTRAN_RUNTIME_IOSTAT_H_
 #define FORTRAN_RUNTIME_IOSTAT_H_
-#include "magic-numbers.h"
+#include "flang/Runtime/magic-numbers.h"
 namespace Fortran::runtime::io {
 
 // The value of IOSTAT= is zero when no error, end-of-record,

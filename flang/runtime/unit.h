@@ -18,8 +18,8 @@
 #include "io-error.h"
 #include "io-stmt.h"
 #include "lock.h"
-#include "memory.h"
 #include "terminator.h"
+#include "flang/Runtime/memory.h"
 #include <cstdlib>
 #include <cstring>
 #include <optional>

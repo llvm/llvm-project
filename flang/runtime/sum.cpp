@@ -13,8 +13,8 @@
 // (basically the same as manual "double-double").
 
 #include "reduction-templates.h"
-#include "reduction.h"
 #include "flang/Common/long-double.h"
+#include "flang/Runtime/reduction.h"
 #include <cinttypes>
 #include <complex>
 

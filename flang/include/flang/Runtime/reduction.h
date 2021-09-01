@@ -1,4 +1,4 @@
-//===-- runtime/reduction.h -------------------------------------*- C++ -*-===//
+//===-- include/flang/Runtime/reduction.h -----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,9 +11,9 @@
 #ifndef FORTRAN_RUNTIME_REDUCTION_H_
 #define FORTRAN_RUNTIME_REDUCTION_H_
 
-#include "descriptor.h"
-#include "entry-names.h"
 #include "flang/Common/uint128.h"
+#include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/entry-names.h"
 #include <complex>
 #include <cstdint>
 

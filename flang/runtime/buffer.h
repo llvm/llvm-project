@@ -12,7 +12,7 @@
 #define FORTRAN_RUNTIME_BUFFER_H_
 
 #include "io-error.h"
-#include "memory.h"
+#include "flang/Runtime/memory.h"
 #include <algorithm>
 #include <cinttypes>
 #include <cstring>

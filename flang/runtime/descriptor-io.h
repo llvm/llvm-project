@@ -14,8 +14,6 @@
 // some scalar I/O data transfer APIs could be changed to bypass their use
 // of descriptors in the future for better efficiency.)
 
-#include "cpp-type.h"
-#include "descriptor.h"
 #include "edit-input.h"
 #include "edit-output.h"
 #include "io-stmt.h"
@@ -23,6 +21,8 @@
 #include "type-info.h"
 #include "unit.h"
 #include "flang/Common/uint128.h"
+#include "flang/Runtime/cpp-type.h"
+#include "flang/Runtime/descriptor.h"
 
 namespace Fortran::runtime::io::descr {
 template <typename A>

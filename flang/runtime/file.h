@@ -12,7 +12,7 @@
 #define FORTRAN_RUNTIME_FILE_H_
 
 #include "io-error.h"
-#include "memory.h"
+#include "flang/Runtime/memory.h"
 #include <cinttypes>
 #include <optional>
 

@@ -1,4 +1,4 @@
-//===-- runtime/assign.h --------------------------------------------------===//
+//===-- include/flang/Runtime/assign.h --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,10 +20,10 @@
 // need not be handled here in the runtime; ditto for type conversions on
 // intrinsic assignments.
 
-#ifndef FLANG_RUNTIME_ASSIGN_H_
-#define FLANG_RUNTIME_ASSIGN_H_
+#ifndef FORTRAN_RUNTIME_ASSIGN_H_
+#define FORTRAN_RUNTIME_ASSIGN_H_
 
-#include "entry-names.h"
+#include "flang/Runtime/entry-names.h"
 
 namespace Fortran::runtime {
 class Descriptor;
@@ -42,4 +42,4 @@ void RTNAME(Assign)(Descriptor &to, const Descriptor &from,
     const char *sourceFile = nullptr, int sourceLine = 0);
 } // extern "C"
 } // namespace Fortran::runtime
-#endif // FLANG_RUNTIME_ASSIGN_H_
+#endif // FORTRAN_RUNTIME_ASSIGN_H_

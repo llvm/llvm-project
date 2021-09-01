@@ -12,12 +12,12 @@
 #define FORTRAN_RUNTIME_IO_STMT_H_
 
 #include "connection.h"
-#include "descriptor.h"
 #include "file.h"
 #include "format.h"
 #include "internal-unit.h"
-#include "io-api.h"
 #include "io-error.h"
+#include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/io-api.h"
 #include <functional>
 #include <type_traits>
 #include <variant>

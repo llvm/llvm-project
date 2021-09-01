@@ -1,4 +1,4 @@
-//===-- runtime/stop.h ------------------------------------------*- C++ -*-===//
+//===-- include/flang/Runtime/stop.h ----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,8 +9,8 @@
 #ifndef FORTRAN_RUNTIME_STOP_H_
 #define FORTRAN_RUNTIME_STOP_H_
 
-#include "c-or-cpp.h"
-#include "entry-names.h"
+#include "flang/Runtime/c-or-cpp.h"
+#include "flang/Runtime/entry-names.h"
 #include <stdlib.h>
 
 FORTRAN_EXTERN_C_BEGIN

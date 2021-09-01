@@ -1,4 +1,4 @@
-//===-- runtime/matmul.h ----------------------------------------*- C++ -*-===//
+//===-- include/flang/Runtime/matmul.h --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,7 @@
 
 #ifndef FORTRAN_RUNTIME_MATMUL_H_
 #define FORTRAN_RUNTIME_MATMUL_H_
-#include "entry-names.h"
+#include "flang/Runtime/entry-names.h"
 namespace Fortran::runtime {
 class Descriptor;
 extern "C" {

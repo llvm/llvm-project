@@ -1,4 +1,4 @@
-//===-- runtime/io-api.h ----------------------------------------*- C++ -*-===//
+//===-- include/flang/Runtime/io-api.h --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,8 @@
 #ifndef FORTRAN_RUNTIME_IO_API_H_
 #define FORTRAN_RUNTIME_IO_API_H_
 
-#include "entry-names.h"
-#include "iostat.h"
+#include "flang/Runtime/entry-names.h"
+#include "flang/Runtime/iostat.h"
 #include <cinttypes>
 #include <cstddef>
 
