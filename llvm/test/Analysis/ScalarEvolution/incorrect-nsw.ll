@@ -1,4 +1,3 @@
-; RUN: opt -analyze -enable-new-pm=0 -scalar-evolution -scalar-evolution < %s | FileCheck %s
 ; RUN: opt -disable-output "-passes=print<scalar-evolution>,print<scalar-evolution>" < %s 2>&1 | FileCheck %s
 
 define void @bad.nsw() {
