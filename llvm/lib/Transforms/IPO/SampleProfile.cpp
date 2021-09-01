@@ -984,7 +984,7 @@ void SampleProfileLoader::findExternalInlineCandidate(
     Function *Func = SymbolMap.lookup(Name);
     // Add to the import list only when it's defined out of module.
     if (!Func || Func->isDeclaration())
-      InlinedGUIDs.insert(FunctionSamples::getGUID(Name));
+      InlinedGUIDs.insert(FunctionSamples::getGUID(CalleeSample->getName()));
 
     // Import hot CallTargets, which may not be available in IR because full
     // profile annotation cannot be done until backend compilation in ThinLTO.
@@ -994,7 +994,7 @@ void SampleProfileLoader::findExternalInlineCandidate(
           StringRef CalleeName = CalleeSample->getFuncName(TS.getKey());
           const Function *Callee = SymbolMap.lookup(CalleeName);
           if (!Callee || Callee->isDeclaration())
-            InlinedGUIDs.insert(FunctionSamples::getGUID(CalleeName));
+            InlinedGUIDs.insert(FunctionSamples::getGUID(TS.getKey()));
         }
 
     // Import hot child context profile associted with callees. Note that this
@@ -1832,8 +1832,8 @@ bool SampleProfileLoader::doInitialization(Module &M,
       UseIterativeBFIInference = true;
 
     // Tracker for profiles under different context
-    ContextTracker =
-        std::make_unique<SampleContextTracker>(Reader->getProfiles());
+    ContextTracker = std::make_unique<SampleContextTracker>(
+        Reader->getProfiles(), &GUIDToFuncNameMap);
   }
 
   // Load pseudo probe descriptors for probe-based function samples.
