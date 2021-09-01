@@ -459,9 +459,8 @@ public:
   Scope &currScope() { return DEREF(currScope_); }
   // The enclosing host procedure if current scope is in an internal procedure
   Scope *GetHostProcedure();
-  // The enclosing scope, skipping blocks and derived types.
-  // TODO: Will return the scope of a FORALL or implied DO loop; is this ok?
-  // If not, should call FindProgramUnitContaining() instead.
+  // The innermost enclosing program unit scope, ignoring BLOCK and other
+  // construct scopes.
   Scope &InclusiveScope();
   // The enclosing scope, skipping derived types.
   Scope &NonDerivedTypeScope();
@@ -2015,12 +2014,21 @@ void ScopeHandler::Say2(const parser::Name &name, MessageFixedText &&msg1,
   context().SetError(symbol, msg1.isFatal());
 }
 
-// T may be `Scope` or `const Scope`
+// This is essentially GetProgramUnitContaining(), but it can return
+// a mutable Scope &, it ignores statement functions, and it fails
+// gracefully for error recovery (returning the original Scope).
 template <typename T> static T &GetInclusiveScope(T &scope) {
   for (T *s{&scope}; !s->IsGlobal(); s = &s->parent()) {
-    if (s->kind() != Scope::Kind::Block && !s->IsDerivedType() &&
-        !s->IsStmtFunction()) {
-      return *s;
+    switch (s->kind()) {
+    case Scope::Kind::Module:
+    case Scope::Kind::MainProgram:
+    case Scope::Kind::Subprogram:
+    case Scope::Kind::BlockData:
+      if (!s->IsStmtFunction()) {
+        return *s;
+      }
+      break;
+    default:;
     }
   }
   return scope;
