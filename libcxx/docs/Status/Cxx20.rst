@@ -55,5 +55,3 @@ Library Working Group Issues Status
    :file: Cxx20Issues.csv
    :header-rows: 1
    :widths: auto
-
-Last Updated: 24-May-2021
