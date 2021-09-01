@@ -1783,6 +1783,14 @@ TEST(DWARFDebugInfo, TestImplicitConstAbbrevs) {
     auto A = it->getAttrByIndex(0);
     EXPECT_EQ(A, Attr);
 
+    Optional<uint32_t> AttrIndex = it->findAttributeIndex(A);
+    EXPECT_TRUE((bool)AttrIndex);
+    EXPECT_EQ(*AttrIndex, 0u);
+    uint64_t OffsetVal =
+        it->getAttributeOffsetFromIndex(*AttrIndex, /* offset */ 0, *U);
+    EXPECT_TRUE(
+        it->getAttributeValueFromOffset(*AttrIndex, OffsetVal, *U).hasValue());
+
     auto FormValue = it->getAttributeValue(/* offset */ 0, A, *U);
     EXPECT_TRUE((bool)FormValue);
     EXPECT_EQ(FormValue->getForm(), dwarf::DW_FORM_implicit_const);
