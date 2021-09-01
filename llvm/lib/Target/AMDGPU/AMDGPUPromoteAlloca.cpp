@@ -258,8 +258,6 @@ AMDGPUPromoteAllocaImpl::getLocalSizeYZ(IRBuilder<> &Builder) {
   CallInst *DispatchPtr = Builder.CreateCall(DispatchPtrFn, {});
   DispatchPtr->addRetAttr(Attribute::NoAlias);
   DispatchPtr->addRetAttr(Attribute::NonNull);
-  DispatchPtr->addAttribute(AttributeList::ReturnIndex, Attribute::NoAlias);
-  DispatchPtr->addAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
   F.removeFnAttr("amdgpu-no-dispatch-ptr");
 
   // Size of the dispatch packet struct.
