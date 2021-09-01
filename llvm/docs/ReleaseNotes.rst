@@ -64,6 +64,10 @@ Changes to the LLVM IR
 * The opaque pointer type ``ptr`` has been introduced. It is still in the
   process of being worked on and should not be used yet.
 
+* Using the legacy pass manager for the optimization pipeline is deprecated and
+  will be removed after LLVM 14. In the meantime, only minimal effort will be
+  made to maintain the legacy pass manager for the optimization pipeline.
+
 Changes to building LLVM
 ------------------------
 
