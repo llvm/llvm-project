@@ -387,10 +387,7 @@ void *DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size) {
 }
 
 int DeviceTy::deallocTgtPtr(void *HstPtrBegin, int64_t Size,
-                            bool HasCloseModifier, bool HasHoldModifier) {
-  if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
-      !HasCloseModifier)
-    return OFFLOAD_SUCCESS;
+                            bool HasHoldModifier) {
   // Check if the pointer is contained in any sub-nodes.
   int rc;
   DataMapMtx.lock();

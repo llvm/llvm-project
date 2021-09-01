@@ -609,15 +609,11 @@ struct DeallocTgtPtrInfo {
   void *HstPtrBegin;
   /// Size of the data
   int64_t DataSize;
-  /// Whether it has \p close modifier
-  bool HasCloseModifier;
   /// Whether it has \p ompx_hold modifier
   bool HasHoldModifier;
 
-  DeallocTgtPtrInfo(void *HstPtr, int64_t Size, bool HasCloseModifier,
-                    bool HasHoldModifier)
-      : HstPtrBegin(HstPtr), DataSize(Size), HasCloseModifier(HasCloseModifier),
-        HasHoldModifier(HasHoldModifier) {}
+  DeallocTgtPtrInfo(void *HstPtr, int64_t Size, bool HasHoldModifier)
+      : HstPtrBegin(HstPtr), DataSize(Size), HasHoldModifier(HasHoldModifier) {}
 };
 } // namespace
 
@@ -682,7 +678,6 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
                       (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)) &&
                      !(FromMapper && I == 0);
     bool ForceDelete = ArgTypes[I] & OMP_TGT_MAPTYPE_DELETE;
-    bool HasCloseModifier = ArgTypes[I] & OMP_TGT_MAPTYPE_CLOSE;
     bool HasPresentModifier = ArgTypes[I] & OMP_TGT_MAPTYPE_PRESENT;
     bool HasHoldModifier = ArgTypes[I] & OMP_TGT_MAPTYPE_OMPX_HOLD;
 
@@ -743,15 +738,12 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
       if (ArgTypes[I] & OMP_TGT_MAPTYPE_FROM) {
         bool Always = ArgTypes[I] & OMP_TGT_MAPTYPE_ALWAYS;
         bool CopyMember = false;
-        if (!(PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
-            HasCloseModifier) {
+        if (!IsHostPtr) {
           if (IsLast)
             CopyMember = true;
         }
 
-        if ((DelEntry || Always || CopyMember) &&
-            !(PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
-              TgtPtrBegin == HstPtrBegin)) {
+        if ((DelEntry || Always || CopyMember) && !IsHostPtr) {
           DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
              DataSize, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
           Ret = Device.retrieveData(HstPtrBegin, TgtPtrBegin, DataSize,
@@ -805,9 +797,8 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
       Device.ShadowMtx.unlock();
 
       // Add pointer to the buffer for later deallocation
-      if (DelEntry)
-        DeallocTgtPtrs.emplace_back(HstPtrBegin, DataSize, HasCloseModifier,
-                                    HasHoldModifier);
+      if (DelEntry && !IsHostPtr)
+        DeallocTgtPtrs.emplace_back(HstPtrBegin, DataSize, HasHoldModifier);
     }
   }
 
@@ -824,7 +815,7 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
     if (FromMapperBase && FromMapperBase == Info.HstPtrBegin)
       continue;
     Ret = Device.deallocTgtPtr(Info.HstPtrBegin, Info.DataSize,
-                               Info.HasCloseModifier, Info.HasHoldModifier);
+                               Info.HasHoldModifier);
     if (Ret != OFFLOAD_SUCCESS) {
       REPORT("Deallocating data from device failed.\n");
       return OFFLOAD_FAIL;

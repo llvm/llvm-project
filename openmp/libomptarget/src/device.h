@@ -283,8 +283,14 @@ struct DeviceTy {
                        bool UpdateRefCount, bool UseHoldRefCount,
                        bool &IsHostPtr, bool MustContain = false,
                        bool ForceDelete = false);
-  int deallocTgtPtr(void *TgtPtrBegin, int64_t Size, bool HasCloseModifier,
-                    bool HasHoldModifier);
+  /// For the map entry for \p HstPtrBegin, decrement the reference count
+  /// specified by \p HasHoldModifier and, if the the total reference count is
+  /// then zero, deallocate the corresponding device storage and remove the map
+  /// entry.  Return \c OFFLOAD_SUCCESS if the map entry existed, and return
+  /// \c OFFLOAD_FAIL if not.  It is the caller's responsibility to skip calling
+  /// this function if the map entry is not expected to exist because
+  /// \p HstPtrBegin uses shared memory.
+  int deallocTgtPtr(void *HstPtrBegin, int64_t Size, bool HasHoldModifier);
   int associatePtr(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size);
   int disassociatePtr(void *HstPtrBegin);
 
