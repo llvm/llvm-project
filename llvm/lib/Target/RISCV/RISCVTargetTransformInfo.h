@@ -73,6 +73,10 @@ public:
     llvm_unreachable("Unsupported register kind");
   }
 
+  unsigned getMinVectorRegisterBitWidth() const {
+    return ST->hasStdExtV() ? ST->getMinRVVVectorSizeInBits() : 0;
+  }
+
   InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
                                          const Value *Ptr, bool VariableMask,
                                          Align Alignment,
