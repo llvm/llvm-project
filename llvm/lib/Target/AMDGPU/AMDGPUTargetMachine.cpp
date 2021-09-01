@@ -293,7 +293,7 @@ static cl::opt<bool> EnableStructurizerWorkarounds(
 
 static cl::opt<bool> EnableLDSReplaceWithPointer(
     "amdgpu-enable-lds-replace-with-pointer",
-    cl::desc("Enable LDS replace with pointer pass"), cl::init(false),
+    cl::desc("Enable LDS replace with pointer pass"), cl::init(true),
     cl::Hidden);
 
 static cl::opt<bool, true> EnableLowerModuleLDS(
