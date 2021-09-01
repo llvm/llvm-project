@@ -16,7 +16,6 @@
 
 #include "clang/Interpreter/PartialTranslationUnit.h"
 
-#include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/Support/Error.h"
 
 #include <memory>
@@ -66,8 +65,6 @@ public:
       return Execute(*PTU);
     return llvm::Error::success();
   }
-  llvm::Expected<llvm::JITTargetAddress>
-  getSymbolAddress(llvm::StringRef UnmangledName) const;
 };
 } // namespace clang
 
