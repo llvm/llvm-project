@@ -1,6 +1,16 @@
 add_libc_testsuite(libc_stdlib_unittests)
 
 add_libc_unittest(
+  atof_test
+  SUITE
+    libc_stdlib_unittests
+  SRCS
+    atof_test.cpp
+  DEPENDS
+    libc.src.stdlib.atof
+)
+
+add_libc_unittest(
   atoi_test
   SUITE
     libc_stdlib_unittests
@@ -28,6 +38,26 @@ add_libc_unittest(
     atoll_test.cpp
   DEPENDS
     libc.src.stdlib.atoll
+)
+
+add_libc_unittest(
+  strtod_test
+  SUITE
+    libc_stdlib_unittests
+  SRCS
+    strtod_test.cpp
+  DEPENDS
+    libc.src.stdlib.strtod
+)
+
+add_libc_unittest(
+  strtof_test
+  SUITE
+    libc_stdlib_unittests
+  SRCS
+    strtof_test.cpp
+  DEPENDS
+    libc.src.stdlib.strtof
 )
 
 add_libc_unittest(

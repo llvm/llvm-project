@@ -6,3 +6,13 @@ add_libc_fuzzer(
     libc.src.stdlib.qsort
 )
 
+add_libc_fuzzer(
+  atof_fuzz
+  SRCS
+    atof_fuzz.cpp
+  HDRS
+    StringParserOutputDiff.h
+  DEPENDS
+    libc.src.stdlib.atof
+)
+
