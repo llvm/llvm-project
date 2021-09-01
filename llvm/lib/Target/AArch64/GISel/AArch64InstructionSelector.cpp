@@ -2764,6 +2764,30 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
                       .getReg(0);
       RBI.constrainGenericRegister(Copy, *RC, MRI);
       LdSt.getOperand(0).setReg(Copy);
+    } else if (isa<GLoad>(LdSt) && ValTy.getSizeInBits() > MemSizeInBits) {
+      // If this is an any-extending load from the FPR bank, split it into a regular
+      // load + extend.
+      if (RB.getID() == AArch64::FPRRegBankID) {
+        unsigned SubReg;
+        LLT MemTy = LdSt.getMMO().getMemoryType();
+        auto *RC = getRegClassForTypeOnBank(MemTy, RB, RBI);
+        if (!getSubRegForClass(RC, TRI, SubReg))
+          return false;
+        Register OldDst = LdSt.getReg(0);
+        Register NewDst =
+            MRI.createGenericVirtualRegister(LdSt.getMMO().getMemoryType());
+        LdSt.getOperand(0).setReg(NewDst);
+        MRI.setRegBank(NewDst, RB);
+        // Generate a SUBREG_TO_REG to extend it.
+        MIB.setInsertPt(MIB.getMBB(), std::next(LdSt.getIterator()));
+        MIB.buildInstr(AArch64::SUBREG_TO_REG, {OldDst}, {})
+            .addImm(0)
+            .addUse(NewDst)
+            .addImm(SubReg);
+        auto SubRegRC = getRegClassForTypeOnBank(MRI.getType(OldDst), RB, RBI);
+        RBI.constrainGenericRegister(OldDst, *SubRegRC, MRI);
+        MIB.setInstr(LdSt);
+      }
     }
 
     // Helper lambda for partially selecting I. Either returns the original
