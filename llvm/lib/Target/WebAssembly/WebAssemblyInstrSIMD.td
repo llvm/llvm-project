@@ -1288,6 +1288,19 @@ def promote_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
 def promote_low : SDNode<"WebAssemblyISD::PROMOTE_LOW", promote_t>;
 defm "" : SIMDConvert<F64x2, F32x4, promote_low, "promote_low_f32x4", 0x5f>;
 
+// Lower extending loads to load64_zero + promote_low
+def extloadv2f32 : PatFrag<(ops node:$ptr), (extload node:$ptr)> {
+  let MemoryVT = v2f32;
+}
+// Adapted from the body of LoadPatNoOffset
+// TODO: other addressing patterns
+def : Pat<(v2f64 (extloadv2f32 (i32 I32:$addr))),
+          (promote_low_F64x2 (LOAD_ZERO_I64x2_A32 0, 0, I32:$addr))>,
+      Requires<[HasAddr32]>;
+def : Pat<(v2f64 (extloadv2f32 (i64 I64:$addr))),
+          (promote_low_F64x2 (LOAD_ZERO_I64x2_A64 0, 0, I64:$addr))>,
+      Requires<[HasAddr64]>;
+
 //===----------------------------------------------------------------------===//
 // Saturating Rounding Q-Format Multiplication
 //===----------------------------------------------------------------------===//
