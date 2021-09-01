@@ -412,6 +412,28 @@ bool ISD::isVPOpcode(unsigned Opcode) {
   }
 }
 
+bool ISD::isVPBinaryOp(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return false;
+#define PROPERTY_VP_BINARYOP_SDNODE(SDOPC)                                     \
+  case ISD::SDOPC:                                                             \
+    return true;
+#include "llvm/IR/VPIntrinsics.def"
+  }
+}
+
+bool ISD::isVPReduction(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return false;
+#define PROPERTY_VP_REDUCTION_SDNODE(SDOPC)                                    \
+  case ISD::SDOPC:                                                             \
+    return true;
+#include "llvm/IR/VPIntrinsics.def"
+  }
+}
+
 /// The operand position of the vector mask.
 Optional<unsigned> ISD::getVPMaskIdx(unsigned Opcode) {
   switch (Opcode) {

@@ -515,6 +515,7 @@ namespace {
     SDValue visitFP_TO_FP16(SDNode *N);
     SDValue visitFP16_TO_FP(SDNode *N);
     SDValue visitVECREDUCE(SDNode *N);
+    SDValue visitVPOp(SDNode *N);
 
     SDValue visitFADDForFMACombine(SDNode *N);
     SDValue visitFSUBForFMACombine(SDNode *N);
@@ -1738,6 +1739,9 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::VECREDUCE_UMIN:
   case ISD::VECREDUCE_FMAX:
   case ISD::VECREDUCE_FMIN:     return visitVECREDUCE(N);
+#define BEGIN_REGISTER_VP_SDNODE(SDOPC, ...) case ISD::SDOPC:
+#include "llvm/IR/VPIntrinsics.def"
+    return visitVPOp(N);
   }
   return SDValue();
 }
@@ -22034,6 +22038,40 @@ SDValue DAGCombiner::visitVECREDUCE(SDNode *N) {
         DAG.ComputeNumSignBits(N0) == VT.getScalarSizeInBits())
       return DAG.getNode(NewOpcode, SDLoc(N), N->getValueType(0), N0);
   }
+
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitVPOp(SDNode *N) {
+  // VP operations in which all vector elements are disabled - either by
+  // determining that the mask is all false or that the EVL is 0 - can be
+  // eliminated.
+  bool AreAllEltsDisabled = false;
+  if (auto EVLIdx = ISD::getVPExplicitVectorLengthIdx(N->getOpcode()))
+    AreAllEltsDisabled |= isNullConstant(N->getOperand(*EVLIdx));
+  if (auto MaskIdx = ISD::getVPMaskIdx(N->getOpcode()))
+    AreAllEltsDisabled |=
+        ISD::isConstantSplatVectorAllZeros(N->getOperand(*MaskIdx).getNode());
+
+  // This is the only generic VP combine we support for now.
+  if (!AreAllEltsDisabled)
+    return SDValue();
+
+  // Binary operations can be replaced by UNDEF.
+  if (ISD::isVPBinaryOp(N->getOpcode()))
+    return DAG.getUNDEF(N->getValueType(0));
+
+  // VP Memory operations can be replaced by either the chain (stores) or the
+  // chain + undef (loads).
+  if (const auto *MemSD = dyn_cast<MemSDNode>(N)) {
+    if (MemSD->writeMem())
+      return MemSD->getChain();
+    return CombineTo(N, DAG.getUNDEF(N->getValueType(0)), MemSD->getChain());
+  }
+
+  // Reduction operations return the start operand when no elements are active.
+  if (ISD::isVPReduction(N->getOpcode()))
+    return N->getOperand(0);
 
   return SDValue();
 }
