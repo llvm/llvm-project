@@ -365,7 +365,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSILowerControlFlowPass(*PR);
   initializeSIPreEmitPeepholePass(*PR);
   initializeSILateBranchLoweringPass(*PR);
-  initializeSIBufMemMergePass(*PR);
   initializeSIMemoryLegalizerPass(*PR);
   initializeSIOptimizeExecMaskingPass(*PR);
   initializeSIPreAllocateWWMRegsPass(*PR);
@@ -1089,7 +1088,6 @@ void GCNPassConfig::addMachineSSAOptimization() {
   if (EnableDPPCombine)
     addPass(&GCNDPPCombineID);
   addPass(&SILoadStoreOptimizerID);
-  addPass(&SIBufMemMergeID);
   if (isPassEnabled(EnableSDWAPeephole)) {
     addPass(&SIPeepholeSDWAID);
     addPass(&EarlyMachineLICMID);

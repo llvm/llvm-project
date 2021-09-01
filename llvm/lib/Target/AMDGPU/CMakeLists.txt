@@ -120,7 +120,6 @@ add_llvm_target(AMDGPUCodeGen
   R600TargetMachine.cpp
   R600TargetTransformInfo.cpp
   SIAnnotateControlFlow.cpp
-  SIBufMemMerge.cpp
   SIFixScratchSize.cpp
   SIFixSGPRCopies.cpp
   SIFixVGPRCopies.cpp
