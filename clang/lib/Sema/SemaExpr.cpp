@@ -772,37 +772,6 @@ ExprResult Sema::UsualUnaryConversions(Expr *E) {
   QualType Ty = E->getType();
   assert(!Ty.isNull() && "UsualUnaryConversions - missing type");
 
-  LangOptions::FPEvalMethodKind EvalMethod = CurFPFeatures.getFPEvalMethod();
-  if (EvalMethod != LangOptions::FEM_Source && Ty->isFloatingType()) {
-    switch (EvalMethod) {
-    default:
-      llvm_unreachable("Unrecognized float evaluation method");
-      break;
-    case LangOptions::FEM_TargetDefault:
-      // Float evaluation method not defined, use FEM_Source.
-      break;
-    case LangOptions::FEM_Double:
-      if (Context.getFloatingTypeOrder(Context.DoubleTy, Ty) > 0)
-        // Widen the expression to double.
-        return Ty->isComplexType()
-                   ? ImpCastExprToType(E,
-                                       Context.getComplexType(Context.DoubleTy),
-                                       CK_FloatingComplexCast)
-                   : ImpCastExprToType(E, Context.DoubleTy, CK_FloatingCast);
-      break;
-    case LangOptions::FEM_Extended:
-      if (Context.getFloatingTypeOrder(Context.LongDoubleTy, Ty) > 0)
-        // Widen the expression to long double.
-        return Ty->isComplexType()
-                   ? ImpCastExprToType(
-                         E, Context.getComplexType(Context.LongDoubleTy),
-                         CK_FloatingComplexCast)
-                   : ImpCastExprToType(E, Context.LongDoubleTy,
-                                       CK_FloatingCast);
-      break;
-    }
-  }
-
   // Half FP have to be promoted to float unless it is natively supported
   if (Ty->isHalfType() && !getLangOpts().NativeHalfType)
     return ImpCastExprToType(Res.get(), Context.FloatTy, CK_FloatingCast);
