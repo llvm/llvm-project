@@ -82,7 +82,7 @@ declare void @llvm.instrprof.increment(i8*, i64, i32, i32)
 
 ; ELF:         @llvm.compiler.used = appending global {{.*}} @__profd_foo {{.*}}
 ; ELF_GENERIC: @llvm.compiler.used = appending global {{.*}} @__llvm_profile_runtime {{.*}} @__profd_foo {{.*}}
-; MACHO:       @llvm.used = appending global {{.*}} @__llvm_profile_runtime_user {{.*}} @__profd_foo {{.*}}
+; MACHO:       @llvm.compiler.used = appending global {{.*}} @__llvm_profile_runtime_user {{.*}} @__profd_foo {{.*}}
 ; COFF:        @llvm.compiler.used = appending global {{.*}} @__llvm_profile_runtime_user {{.*}} @__profd_foo {{.*}}
 
 ; MACHO: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} {
