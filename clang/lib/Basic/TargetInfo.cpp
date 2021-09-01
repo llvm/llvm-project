@@ -413,9 +413,8 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
       const auto &OpenCLFeaturesMap = getSupportedOpenCLOpts();
       Opts.OpenCLGenericAddressSpace = hasFeatureEnabled(
           OpenCLFeaturesMap, "__opencl_c_generic_address_space");
-      if (Opts.OpenCLVersion == 300)
-        Opts.OpenCLPipes =
-            hasFeatureEnabled(OpenCLFeaturesMap, "__opencl_c_pipes");
+      Opts.OpenCLPipes =
+          hasFeatureEnabled(OpenCLFeaturesMap, "__opencl_c_pipes");
     }
   }
 

@@ -1,7 +1,9 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -O0 -cl-std=clc++ -o - %s | FileCheck %s --check-prefixes=LINUX
-// RUN: %clang_cc1 -triple x86_64-unknown-windows-pc -emit-llvm -O0 -cl-std=clc++ -o - %s -DWIN| FileCheck %s --check-prefixes=WINDOWS
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -O0 -cl-std=clc++1.0 -o - %s | FileCheck %s --check-prefixes=LINUX
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-pc -emit-llvm -O0 -cl-std=clc++1.0 -o - %s -DWIN| FileCheck %s --check-prefixes=WINDOWS
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -O0 -cl-std=CL2.0 -o - %s | FileCheck %s --check-prefixes=LINUX
 // RUN: %clang_cc1 -triple x86_64-unknown-windows-pc -emit-llvm -O0 -cl-std=CL2.0 -o - %s -DWIN| FileCheck %s --check-prefixes=OCLWINDOWS
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -O0 -cl-std=clc++2021 -cl-ext=+__opencl_c_pipes,+__opencl_c_generic_address_space -o - %s | FileCheck %s --check-prefixes=LINUX
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -O0 -cl-std=clc++2021 -cl-ext=+__opencl_c_pipes,+__opencl_c_generic_address_space,+__opencl_c_program_scope_global_variables -o - %s | FileCheck %s --check-prefixes=LINUX
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -O0 -cl-std=CL3.0 -cl-ext=+__opencl_c_pipes,+__opencl_c_generic_address_space -o - %s | FileCheck %s --check-prefixes=LINUX
 // RUN: %clang_cc1 -triple x86_64-unknown-windows-pc -emit-llvm -O0 -cl-std=CL3.0 -cl-ext=+__opencl_c_pipes,+__opencl_c_generic_address_space -o - %s -DWIN | FileCheck %s --check-prefixes=OCLWINDOWS
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -O0 -cl-std=CL3.0 -cl-ext=+__opencl_c_pipes,+__opencl_c_generic_address_space,+__opencl_c_program_scope_global_variables -o - %s | FileCheck %s --check-prefixes=LINUX
