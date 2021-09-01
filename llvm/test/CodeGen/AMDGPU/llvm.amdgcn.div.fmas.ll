@@ -16,7 +16,7 @@ declare double @llvm.amdgcn.div.fmas.f64(double, double, double, i1) nounwind re
 ; VI-DAG: s_load_dword [[SB:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x70
 ; VI-DAG: s_load_dword [[SC:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x94
 
-; GCN-DAG: s_and_b32 [[AND_I1:s[0-9]+]], 1, s{{[0-9]+}}
+; GCN-DAG: s_bitcmp1_b32 s{{[0-9]+}}, 0
 
 ; GCN-DAG: v_mov_b32_e32 [[VC:v[0-9]+]], [[SC]]
 ; GCN-DAG: v_mov_b32_e32 [[VB:v[0-9]+]], [[SB]]
