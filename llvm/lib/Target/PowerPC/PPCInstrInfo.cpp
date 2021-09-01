@@ -3104,6 +3104,7 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return true;
   }
 
+    // FIXME: Maybe we can expand it in 'PowerPC Expand Atomic' pass.
   case PPC::CFENCE8: {
     auto Val = MI.getOperand(0).getReg();
     BuildMI(MBB, MI, DL, get(PPC::CMPD), PPC::CR7).addReg(Val).addReg(Val);
