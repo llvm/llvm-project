@@ -63,7 +63,7 @@ Non-comprehensive list of changes in this release
 -------------------------------------------------
 
 - The default value of _MSC_VER was raised from 1911 to 1914. MSVC 19.14 has the
-  support to overaligned objects on x86_32 which is required for some LLVM 
+  support to overaligned objects on x86_32 which is required for some LLVM
   passes.
 
 New Compiler Flags
@@ -309,7 +309,8 @@ libclang
 --------
 
 - Make libclang SONAME independent from LLVM version. It will be updated only when
-  needed.
+  needed. Defined in CLANG_SONAME (clang/tools/libclang/CMakeLists.txt).
+  `More details <https://lists.llvm.org/pipermail/cfe-dev/2021-June/068423.html>`_
 
 Static Analyzer
 ---------------
