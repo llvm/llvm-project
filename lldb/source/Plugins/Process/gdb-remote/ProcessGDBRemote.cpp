@@ -265,7 +265,8 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
       m_waiting_for_attach(false), m_destroy_tried_resuming(false),
       m_command_sp(), m_breakpoint_pc_offset(0),
       m_initial_tid(LLDB_INVALID_THREAD_ID), m_replay_mode(false),
-      m_allow_flash_writes(false), m_erased_flash_ranges() {
+      m_allow_flash_writes(false), m_erased_flash_ranges(),
+      m_vfork_in_progress(false) {
   m_async_broadcaster.SetEventName(eBroadcastBitAsyncThreadShouldExit,
                                    "async thread should exit");
   m_async_broadcaster.SetEventName(eBroadcastBitAsyncContinue,
@@ -5534,6 +5535,13 @@ void ProcessGDBRemote::DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
 void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
 
+  assert(!m_vfork_in_progress);
+  m_vfork_in_progress = true;
+
+  // Disable all software breakpoints for the duration of vfork.
+  if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware))
+    DidForkSwitchSoftwareBreakpoints(false);
+
   LLDB_LOG(log, "Detaching forked child {0}", child_pid);
   Status error = m_gdb_comm.Detach(false, child_pid);
   if (error.Fail()) {
@@ -5542,4 +5550,13 @@ void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
                 error.AsCString() ? error.AsCString() : "<unknown error>");
       return;
   }
+}
+
+void ProcessGDBRemote::DidVForkDone() {
+  assert(m_vfork_in_progress);
+  m_vfork_in_progress = false;
+
+  // Reenable all software breakpoints that were enabled before vfork.
+  if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware))
+    DidForkSwitchSoftwareBreakpoints(true);
 }
