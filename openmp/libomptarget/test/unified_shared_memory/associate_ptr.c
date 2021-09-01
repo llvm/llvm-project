@@ -25,9 +25,9 @@ int main(int argc, char *argv[]) {
   // specified.  It must check whether x was previously placed in device memory
   // by, for example, omp_target_associate_ptr.
   #pragma omp target map(always, tofrom: x)
-  x = 20;
+  x += 1;
 
-  // CHECK: x=20
+  // CHECK: x=11
   printf("x=%d\n", x);
   // CHECK: present: 1
   printf("present: %d\n", omp_target_is_present(&x, dev));

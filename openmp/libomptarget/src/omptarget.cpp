@@ -490,9 +490,9 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
       // PTR_AND_OBJ entry is handled below, and so the allocation might fail
       // when HasPresentModifier.
       Pointer_TPR = Device.getTargetPointer(
-          HstPtrBase, HstPtrBase, sizeof(void *), nullptr,
-          MoveDataStateTy::NONE, IsImplicit, UpdateRef, HasCloseModifier,
-          HasPresentModifier, HasHoldModifier, AsyncInfo);
+          HstPtrBase, HstPtrBase, sizeof(void *), /*HstPtrName=*/nullptr,
+          /*HasFlagTo=*/false, /*HasFlagAlways=*/false, IsImplicit, UpdateRef,
+          HasCloseModifier, HasPresentModifier, HasHoldModifier, AsyncInfo);
       PointerTgtPtrBegin = Pointer_TPR.TargetPointer;
       IsHostPtr = Pointer_TPR.Flags.IsHostPointer;
       if (!PointerTgtPtrBegin) {
@@ -514,18 +514,13 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
           (!FromMapper || i != 0); // subsequently update ref count of pointee
     }
 
-    MoveDataStateTy MoveData = MoveDataStateTy::NONE;
-    const bool UseUSM = PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY;
     const bool HasFlagTo = arg_types[i] & OMP_TGT_MAPTYPE_TO;
     const bool HasFlagAlways = arg_types[i] & OMP_TGT_MAPTYPE_ALWAYS;
-    if (HasFlagTo && (!UseUSM || HasCloseModifier))
-      MoveData = HasFlagAlways ? MoveDataStateTy::REQUIRED
-                               : MoveDataStateTy::UNKNOWN;
-
-    auto TPR = Device.getTargetPointer(
-        HstPtrBegin, HstPtrBase, data_size, HstPtrName, MoveData, IsImplicit,
-        UpdateRef, HasCloseModifier, HasPresentModifier, HasHoldModifier,
-        AsyncInfo);
+    auto TPR = Device.getTargetPointer(HstPtrBegin, HstPtrBase, data_size,
+                                       HstPtrName, HasFlagTo, HasFlagAlways,
+                                       IsImplicit, UpdateRef, HasCloseModifier,
+                                       HasPresentModifier, HasHoldModifier,
+                                       AsyncInfo);
     void *TgtPtrBegin = TPR.TargetPointer;
     IsHostPtr = TPR.Flags.IsHostPointer;
     // If data_size==0, then the argument could be a zero-length pointer to
