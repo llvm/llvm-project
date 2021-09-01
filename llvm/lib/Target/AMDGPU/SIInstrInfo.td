@@ -270,6 +270,8 @@ class isFloatType<ValueType SrcVT> {
                 !eq(SrcVT.Value, v2f16.Value),
                 !eq(SrcVT.Value, v4f16.Value),
                 !eq(SrcVT.Value, v2f32.Value),
+                !eq(SrcVT.Value, v4f32.Value),
+                !eq(SrcVT.Value, v8f32.Value),
                 !eq(SrcVT.Value, v2f64.Value),
                 !eq(SrcVT.Value, v4f64.Value));
 }
@@ -278,14 +280,20 @@ class isIntType<ValueType SrcVT> {
   bit ret = !or(!eq(SrcVT.Value, i16.Value),
                 !eq(SrcVT.Value, i32.Value),
                 !eq(SrcVT.Value, i64.Value),
-                !eq(SrcVT.Value, v2i32.Value));
+                !eq(SrcVT.Value, v2i32.Value),
+                !eq(SrcVT.Value, v4i32.Value),
+                !eq(SrcVT.Value, v8i32.Value));
 }
 
 class isPackedType<ValueType SrcVT> {
   bit ret = !or(!eq(SrcVT.Value, v2i16.Value),
                 !eq(SrcVT.Value, v2f16.Value),
                 !eq(SrcVT.Value, v4f16.Value),
-                !eq(SrcVT.Value, v2f32.Value));
+                !eq(SrcVT.Value, v2f32.Value),
+                !eq(SrcVT.Value, v4i32.Value),
+                !eq(SrcVT.Value, v4f32.Value),
+                !eq(SrcVT.Value, v8i32.Value),
+                !eq(SrcVT.Value, v8f32.Value));
 }
 
 class is16BitType<ValueType SrcVT> {
@@ -1611,7 +1619,11 @@ class isModifierType<ValueType SrcVT> {
                 !eq(SrcVT.Value, v2f16.Value),
                 !eq(SrcVT.Value, v2i16.Value),
                 !eq(SrcVT.Value, v2f32.Value),
-                !eq(SrcVT.Value, v2i32.Value));
+                !eq(SrcVT.Value, v2i32.Value),
+                !eq(SrcVT.Value, v4f32.Value),
+                !eq(SrcVT.Value, v4i32.Value),
+                !eq(SrcVT.Value, v8f32.Value),
+                !eq(SrcVT.Value, v8i32.Value));
 }
 
 // Return type of input modifiers operand for specified input operand

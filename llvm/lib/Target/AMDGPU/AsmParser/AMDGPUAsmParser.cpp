@@ -7929,7 +7929,9 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
 
     int ModIdx = AMDGPU::getNamedOperandIdx(Opc, ModOps[J]);
 
-    Inst.getOperand(ModIdx).setImm(Inst.getOperand(ModIdx).getImm() | ModVal);
+    if (ModIdx != -1) {
+      Inst.getOperand(ModIdx).setImm(Inst.getOperand(ModIdx).getImm() | ModVal);
+    }
   }
 }
 

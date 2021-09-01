@@ -1060,6 +1060,10 @@ def VRegSrc_32 : RegisterOperand<VGPR_32> {
   let DecoderMethod = "DecodeVS_32RegisterClass";
 }
 
+def VRegSrc_256 : RegisterOperand<VReg_256> {
+  let DecoderMethod = "decodeOperand_VReg_256";
+}
+
 //===----------------------------------------------------------------------===//
 // VGPRSrc_*
 //===----------------------------------------------------------------------===//
