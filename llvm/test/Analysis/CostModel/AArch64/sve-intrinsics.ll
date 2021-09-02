@@ -42,7 +42,7 @@ define void @reductions(<vscale x 4 x i32> %v0, <vscale x 4 x i64> %v1, <vscale 
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %smax_nxv4i32 = call i32 @llvm.vector.reduce.smax.nxv4i32(<vscale x 4 x i32> %v0)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %smax_nxv4i64 = call i64 @llvm.vector.reduce.smax.nxv4i64(<vscale x 4 x i64> %v1)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %fadd_nxv4f32 = call fast float @llvm.vector.reduce.fadd.nxv4f32(float 0.000000e+00, <vscale x 4 x float> %v2)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %fadd_nxv4f64 = call fast double @llvm.vector.reduce.fadd.nxv4f64(double 0.000000e+00, <vscale x 4 x double> %v3)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %fadd_nxv4f64 = call fast double @llvm.vector.reduce.fadd.nxv4f64(double 0.000000e+00, <vscale x 4 x double> %v3)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %fmin_nxv4f32 = call fast float @llvm.vector.reduce.fmin.nxv4f32(<vscale x 4 x float> %v2)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %fmin_nxv4f64 = call fast double @llvm.vector.reduce.fmin.nxv4f64(<vscale x 4 x double> %v3)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %fmax_nxv4f32 = call fast float @llvm.vector.reduce.fmax.nxv4f32(<vscale x 4 x float> %v2)
