@@ -147,39 +147,55 @@ DWARFAbbreviationDeclaration::findAttributeIndex(dwarf::Attribute Attr) const {
   return None;
 }
 
-Optional<DWARFFormValue> DWARFAbbreviationDeclaration::getAttributeValue(
-    const uint64_t DIEOffset, const dwarf::Attribute Attr,
-    const DWARFUnit &U) const {
-  // Check if this abbreviation has this attribute without needing to skip
-  // any data so we can return quickly if it doesn't.
-  Optional<uint32_t> MatchAttrIndex = findAttributeIndex(Attr);
-  if (!MatchAttrIndex)
-    return None;
-
-  auto DebugInfoData = U.getDebugInfoExtractor();
+uint64_t DWARFAbbreviationDeclaration::getAttributeOffsetFromIndex(
+    uint32_t AttrIndex, uint64_t DIEOffset, const DWARFUnit &U) const {
+  DWARFDataExtractor DebugInfoData = U.getDebugInfoExtractor();
 
   // Add the byte size of ULEB that for the abbrev Code so we can start
   // skipping the attribute data.
   uint64_t Offset = DIEOffset + CodeByteSize;
-  for (uint32_t CurAttrIdx = 0; CurAttrIdx != *MatchAttrIndex; ++CurAttrIdx)
+  for (uint32_t CurAttrIdx = 0; CurAttrIdx != AttrIndex; ++CurAttrIdx)
     // Match Offset along until we get to the attribute we want.
     if (auto FixedSize = AttributeSpecs[CurAttrIdx].getByteSize(U))
       Offset += *FixedSize;
     else
       DWARFFormValue::skipValue(AttributeSpecs[CurAttrIdx].Form, DebugInfoData,
                                 &Offset, U.getFormParams());
+  return Offset;
+}
+
+Optional<DWARFFormValue>
+DWARFAbbreviationDeclaration::getAttributeValueFromOffset(
+    uint32_t AttrIndex, uint64_t Offset, const DWARFUnit &U) const {
+  assert(AttributeSpecs.size() > AttrIndex &&
+         "Attribute Index is out of bounds.");
 
   // We have arrived at the attribute to extract, extract if from Offset.
-  const AttributeSpec &Spec = AttributeSpecs[*MatchAttrIndex];
+  const AttributeSpec &Spec = AttributeSpecs[AttrIndex];
   if (Spec.isImplicitConst())
     return DWARFFormValue::createFromSValue(Spec.Form,
                                             Spec.getImplicitConstValue());
 
   DWARFFormValue FormValue(Spec.Form);
+  DWARFDataExtractor DebugInfoData = U.getDebugInfoExtractor();
   if (FormValue.extractValue(DebugInfoData, &Offset, U.getFormParams(), &U))
     return FormValue;
-
   return None;
+}
+
+Optional<DWARFFormValue>
+DWARFAbbreviationDeclaration::getAttributeValue(const uint64_t DIEOffset,
+                                                const dwarf::Attribute Attr,
+                                                const DWARFUnit &U) const {
+  // Check if this abbreviation has this attribute without needing to skip
+  // any data so we can return quickly if it doesn't.
+  Optional<uint32_t> MatchAttrIndex = findAttributeIndex(Attr);
+  if (!MatchAttrIndex)
+    return None;
+
+  uint64_t Offset = getAttributeOffsetFromIndex(*MatchAttrIndex, DIEOffset, U);
+
+  return getAttributeValueFromOffset(*MatchAttrIndex, Offset, U);
 }
 
 size_t DWARFAbbreviationDeclaration::FixedSizeInfo::getByteSize(
