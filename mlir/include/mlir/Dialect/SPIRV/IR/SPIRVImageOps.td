@@ -42,11 +42,18 @@ def SPV_ImageDrefGatherOp : SPV_Op<"ImageDrefGather", [NoSideEffect]> {
     Image Operands encodes what operands follow, as per Image Operands.
 
     <!-- End of AutoGen section -->
-
+    ```
+    image-operands ::= `"None"` | `"Bias"` | `"Lod"` | `"Grad"`
+                      | `"ConstOffset"` | `"Offser"` | `"ConstOffsets"`
+                      | `"Sample"` | `"MinLod"` | `"MakeTexelAvailable"`
+                      | `"MakeTexelVisible"` | `"NonPrivateTexel"`
+                      | `"VolatileTexel"` | `"SignExtend"` | `"ZeroExtend"`
     #### Example:
+    ```
 
     ```mlir
     %0 = spv.ImageDrefGather %1 : !spv.sampled_image<!spv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>, %2 : vector<4xf32>, %3 : f32 -> vector<4xi32>
+    %0 = spv.ImageDrefGather %1 : !spv.sampled_image<!spv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>, %2 : vector<4xf32>, %3 : f32 ["NonPrivateTexel"] : f32, f32 -> vector<4xi32>
     ```
   }];
 
@@ -60,14 +67,21 @@ def SPV_ImageDrefGatherOp : SPV_Op<"ImageDrefGather", [NoSideEffect]> {
   let arguments = (ins
     SPV_AnySampledImage:$sampledimage,
     SPV_ScalarOrVectorOf<SPV_Float>:$coordinate,
-    SPV_Float:$dref
+    SPV_Float:$dref,
+    OptionalAttr<SPV_ImageOperandAttr>:$imageoperands,
+    Variadic<SPV_Type>:$operand_arguments
   );
 
   let results = (outs
     SPV_Vector:$result
   );
 
-  let assemblyFormat = "attr-dict $sampledimage `:` type($sampledimage) `,` $coordinate `:` type($coordinate) `,` $dref `:` type($dref) `->` type($result)";
+  let assemblyFormat = [{$sampledimage `:` type($sampledimage) `,`
+                         $coordinate `:` type($coordinate) `,` $dref `:` type($dref)
+                         custom<ImageOperands>($imageoperands)
+                         ( `(` $operand_arguments^ `:` type($operand_arguments) `)`)?
+                         attr-dict
+                         `->` type($result)}];
 
   let verifier = [{ return ::verify(*this); }];
 }
