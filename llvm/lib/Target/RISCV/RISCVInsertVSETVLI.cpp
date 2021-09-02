@@ -931,7 +931,11 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
     if (RISCVII::hasSEWOp(TSFlags)) {
       VSETVLIInfo NewInfo = computeInfoForInstr(MI, TSFlags, MRI);
       if (RISCVII::hasVLOp(TSFlags)) {
-        MachineOperand &VLOp = MI.getOperand(MI.getNumExplicitOperands() - 2);
+        unsigned Offset = 2;
+        if (RISCVII::hasVecPolicyOp(TSFlags))
+          Offset = 3;
+        MachineOperand &VLOp =
+            MI.getOperand(MI.getNumExplicitOperands() - Offset);
         if (VLOp.isReg()) {
           // Erase the AVL operand from the instruction.
           VLOp.setReg(RISCV::NoRegister);

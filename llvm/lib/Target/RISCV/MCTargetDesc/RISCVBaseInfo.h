@@ -103,6 +103,11 @@ enum VLMUL : uint8_t {
   LMUL_F2
 };
 
+enum {
+  TAIL_UNDISTURBED = 0,
+  TAIL_AGNOSTIC = 1,
+};
+
 // Helper functions to read TSFlags.
 /// \returns the format of the instruction.
 static inline unsigned getFormat(uint64_t TSFlags) {
