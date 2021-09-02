@@ -1842,6 +1842,16 @@ static coro::Shape splitCoroutine(Function &F,
   // This invalidates SwiftErrorOps in the Shape.
   replaceSwiftErrorOps(F, Shape, nullptr);
 
+  // Salvage debug info that points into the coroutine frame.
+  SmallVector<DbgDeclareInst *, 8> Worklist;
+  SmallDenseMap<llvm::Value *, llvm::AllocaInst *, 4> DbgPtrAllocaCache;
+  for (auto &BB : F)
+    for (auto &I : BB)
+      if (auto *DDI = dyn_cast<DbgDeclareInst>(&I))
+        Worklist.push_back(DDI);
+  for (DbgDeclareInst *DDI : Worklist)
+    coro::salvageDebugInfo(DbgPtrAllocaCache, DDI, Shape.ReuseFrameSlot);
+
   return Shape;
 }
 
