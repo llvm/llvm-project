@@ -175,7 +175,7 @@
 // CHK-BCLIB: clang{{.*}}-triple{{.*}}nvptx64-nvidia-cuda{{.*}}-mlink-builtin-bitcode{{.*}}libomptarget-nvptx-sm_35.bc
 // CHK-BCLIB-NEW: clang{{.*}}-triple{{.*}}nvptx64-nvidia-cuda{{.*}}-mlink-builtin-bitcode{{.*}}libomptarget-new-nvptx-sm_35.bc
 // CHK-BCLIB-USER: clang{{.*}}-triple{{.*}}nvptx64-nvidia-cuda{{.*}}-mlink-builtin-bitcode{{.*}}libomptarget-nvptx-test.bc
-// CHK-BCLIB-USER-DIR: clang{{.*}}-triple{{.*}}nvptx64-nvidia-cuda{{.*}}-mlink-builtin-bitcode{{.*}}libomptarget/libomptarget-nvptx-sm_35.bc
+// CHK-BCLIB-USER-DIR: clang{{.*}}-triple{{.*}}nvptx64-nvidia-cuda{{.*}}-mlink-builtin-bitcode{{.*}}libomptarget-nvptx-sm_35.bc
 // CHK-BCLIB-NOT: {{error:|warning:}}
 
 /// ###########################################################################
