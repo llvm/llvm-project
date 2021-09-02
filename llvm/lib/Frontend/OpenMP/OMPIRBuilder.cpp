@@ -16,15 +16,23 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Analysis/CodeMetrics.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/TargetRegistry.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/CodeExtractor.h"
+#include "llvm/Transforms/Utils/LoopPeel.h"
+#include "llvm/Transforms/Utils/UnrollLoop.h"
 
 #include <sstream>
 
@@ -38,6 +46,12 @@ static cl::opt<bool>
                          cl::desc("Use optimistic attributes describing "
                                   "'as-if' properties of runtime calls."),
                          cl::init(false));
+
+static cl::opt<double> UnrollThresholdFactor(
+    "openmp-ir-builder-unroll-threshold-factor", cl::Hidden,
+    cl::desc("Factor for the unroll threshold to account for code "
+             "simplifications still taking place"),
+    cl::init(1.5));
 
 void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {
   LLVMContext &Ctx = Fn.getContext();
@@ -2054,6 +2068,281 @@ OpenMPIRBuilder::tileLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
     GenL->assertOK();
 #endif
   return Result;
+}
+
+/// Attach loop metadata \p Properties to the loop described by \p Loop. If the
+/// loop already has metadata, the loop properties are appended.
+static void addLoopMetadata(CanonicalLoopInfo *Loop,
+                            ArrayRef<Metadata *> Properties) {
+  assert(Loop->isValid() && "Expecting a valid CanonicalLoopInfo");
+
+  // Nothing to do if no property to attach.
+  if (Properties.empty())
+    return;
+
+  LLVMContext &Ctx = Loop->getFunction()->getContext();
+  SmallVector<Metadata *> NewLoopProperties;
+  NewLoopProperties.push_back(nullptr);
+
+  // If the loop already has metadata, prepend it to the new metadata.
+  BasicBlock *Latch = Loop->getLatch();
+  assert(Latch && "A valid CanonicalLoopInfo must have a unique latch");
+  MDNode *Existing = Latch->getTerminator()->getMetadata(LLVMContext::MD_loop);
+  if (Existing)
+    append_range(NewLoopProperties, drop_begin(Existing->operands(), 1));
+
+  append_range(NewLoopProperties, Properties);
+  MDNode *LoopID = MDNode::getDistinct(Ctx, NewLoopProperties);
+  LoopID->replaceOperandWith(0, LoopID);
+
+  Latch->getTerminator()->setMetadata(LLVMContext::MD_loop, LoopID);
+}
+
+void OpenMPIRBuilder::unrollLoopFull(DebugLoc, CanonicalLoopInfo *Loop) {
+  LLVMContext &Ctx = Builder.getContext();
+  addLoopMetadata(
+      Loop, {MDNode::get(Ctx, MDString::get(Ctx, "llvm.loop.unroll.enable")),
+             MDNode::get(Ctx, MDString::get(Ctx, "llvm.loop.unroll.full"))});
+}
+
+void OpenMPIRBuilder::unrollLoopHeuristic(DebugLoc, CanonicalLoopInfo *Loop) {
+  LLVMContext &Ctx = Builder.getContext();
+  addLoopMetadata(
+      Loop, {
+                MDNode::get(Ctx, MDString::get(Ctx, "llvm.loop.unroll.enable")),
+            });
+}
+
+/// Create the TargetMachine object to query the backend for optimization
+/// preferences.
+///
+/// Ideally, this would be passed from the front-end to the OpenMPBuilder, but
+/// e.g. Clang does not pass it to its CodeGen layer and creates it only when
+/// needed for the LLVM pass pipline. We use some default options to avoid
+/// having to pass too many settings from the frontend that probably do not
+/// matter.
+///
+/// Currently, TargetMachine is only used sometimes by the unrollLoopPartial
+/// method. If we are going to use TargetMachine for more purposes, especially
+/// those that are sensitive to TargetOptions, RelocModel and CodeModel, it
+/// might become be worth requiring front-ends to pass on their TargetMachine,
+/// or at least cache it between methods. Note that while fontends such as Clang
+/// have just a single main TargetMachine per translation unit, "target-cpu" and
+/// "target-features" that determine the TargetMachine are per-function and can
+/// be overrided using __attribute__((target("OPTIONS"))).
+static std::unique_ptr<TargetMachine>
+createTargetMachine(Function *F, CodeGenOpt::Level OptLevel) {
+  Module *M = F->getParent();
+
+  StringRef CPU = F->getFnAttribute("target-cpu").getValueAsString();
+  StringRef Features = F->getFnAttribute("target-features").getValueAsString();
+  const std::string &Triple = M->getTargetTriple();
+
+  std::string Error;
+  const llvm::Target *TheTarget = TargetRegistry::lookupTarget(Triple, Error);
+  if (!TheTarget)
+    return {};
+
+  llvm::TargetOptions Options;
+  return std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
+      Triple, CPU, Features, Options, /*RelocModel=*/None, /*CodeModel=*/None,
+      OptLevel));
+}
+
+/// Heuristically determine the best-performant unroll factor for \p CLI. This
+/// depends on the target processor. We are re-using the same heuristics as the
+/// LoopUnrollPass.
+static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
+  Function *F = CLI->getFunction();
+
+  // Assume the user requests the most aggressive unrolling, even if the rest of
+  // the code is optimized using a lower setting.
+  CodeGenOpt::Level OptLevel = CodeGenOpt::Aggressive;
+  std::unique_ptr<TargetMachine> TM = createTargetMachine(F, OptLevel);
+
+  llvm::PassBuilder PB;
+  FunctionAnalysisManager FAM;
+  PB.registerFunctionAnalyses(FAM);
+  TargetIRAnalysis TIRA;
+  if (TM)
+    TIRA = TargetIRAnalysis(
+        [&](const Function &F) { return TM->getTargetTransformInfo(F); });
+  TargetIRAnalysis::Result &&TTI = TIRA.run(*F, FAM);
+  ScalarEvolutionAnalysis SEA;
+  ScalarEvolution &&SE = SEA.run(*F, FAM);
+  DominatorTreeAnalysis DTA;
+  DominatorTree &&DT = DTA.run(*F, FAM);
+  LoopAnalysis LIA;
+  LoopInfo &&LI = LIA.run(*F, FAM);
+  AssumptionAnalysis ACT;
+  AssumptionCache &&AC = ACT.run(*F, FAM);
+  OptimizationRemarkEmitter ORE{F};
+
+  Loop *L = LI.getLoopFor(CLI->getHeader());
+  assert(L && "Expecting CanonicalLoopInfo to be recognized as a loop");
+
+  TargetTransformInfo::UnrollingPreferences UP =
+      gatherUnrollingPreferences(L, SE, TTI,
+                                 /*BlockFrequencyInfo=*/nullptr,
+                                 /*ProfileSummaryInfo=*/nullptr, ORE, OptLevel,
+                                 /*UserThreshold=*/None,
+                                 /*UserCount=*/None,
+                                 /*UserAllowPartial=*/true,
+                                 /*UserAllowRuntime=*/true,
+                                 /*UserUpperBound=*/None,
+                                 /*UserFullUnrollMaxCount=*/None);
+
+  UP.Force = true;
+
+  // Account for additional optimizations taking place before the LoopUnrollPass
+  // would unroll the loop.
+  UP.Threshold *= UnrollThresholdFactor;
+  UP.PartialThreshold *= UnrollThresholdFactor;
+
+  // Use normal unroll factors even if the rest of the code is optimized for
+  // size.
+  UP.OptSizeThreshold = UP.Threshold;
+  UP.PartialOptSizeThreshold = UP.PartialThreshold;
+
+  LLVM_DEBUG(dbgs() << "Unroll heuristic thresholds:\n"
+                    << "  Threshold=" << UP.Threshold << "\n"
+                    << "  PartialThreshold=" << UP.PartialThreshold << "\n"
+                    << "  OptSizeThreshold=" << UP.OptSizeThreshold << "\n"
+                    << "  PartialOptSizeThreshold="
+                    << UP.PartialOptSizeThreshold << "\n");
+
+  // Disable peeling.
+  TargetTransformInfo::PeelingPreferences PP =
+      gatherPeelingPreferences(L, SE, TTI,
+                               /*UserAllowPeeling=*/false,
+                               /*UserAllowProfileBasedPeeling=*/false,
+                               /*UserUnrollingSpecficValues=*/false);
+
+  SmallPtrSet<const Value *, 32> EphValues;
+  CodeMetrics::collectEphemeralValues(L, &AC, EphValues);
+
+  // Assume that reads and writes to stack variables can be eliminated by
+  // Mem2Reg, SROA or LICM. That is, don't count them towards the loop body's
+  // size.
+  for (BasicBlock *BB : L->blocks()) {
+    for (Instruction &I : *BB) {
+      Value *Ptr;
+      if (auto *Load = dyn_cast<LoadInst>(&I)) {
+        Ptr = Load->getPointerOperand();
+      } else if (auto *Store = dyn_cast<StoreInst>(&I)) {
+        Ptr = Store->getPointerOperand();
+      } else
+        continue;
+
+      Ptr = Ptr->stripPointerCasts();
+
+      if (auto *Alloca = dyn_cast<AllocaInst>(Ptr)) {
+        if (Alloca->getParent() == &F->getEntryBlock())
+          EphValues.insert(&I);
+      }
+    }
+  }
+
+  unsigned NumInlineCandidates;
+  bool NotDuplicatable;
+  bool Convergent;
+  unsigned LoopSize =
+      ApproximateLoopSize(L, NumInlineCandidates, NotDuplicatable, Convergent,
+                          TTI, EphValues, UP.BEInsns);
+  LLVM_DEBUG(dbgs() << "Estimated loop size is " << LoopSize << "\n");
+
+  // Loop is not unrollable if the loop contains certain instructions.
+  if (NotDuplicatable || Convergent) {
+    LLVM_DEBUG(dbgs() << "Loop not considered unrollable\n");
+    return 1;
+  }
+
+  // TODO: Determine trip count of \p CLI if constant, computeUnrollCount might
+  // be able to use it.
+  int TripCount = 0;
+  int MaxTripCount = 0;
+  bool MaxOrZero = false;
+  unsigned TripMultiple = 0;
+
+  bool UseUpperBound = false;
+  computeUnrollCount(L, TTI, DT, &LI, SE, EphValues, &ORE, TripCount,
+                     MaxTripCount, MaxOrZero, TripMultiple, LoopSize, UP, PP,
+                     UseUpperBound);
+  unsigned Factor = UP.Count;
+  LLVM_DEBUG(dbgs() << "Suggesting unroll factor of " << Factor << "\n");
+
+  // This function returns 1 to signal to not unroll a loop.
+  if (Factor == 0)
+    return 1;
+  return Factor;
+}
+
+void OpenMPIRBuilder::unrollLoopPartial(DebugLoc DL, CanonicalLoopInfo *Loop,
+                                        int32_t Factor,
+                                        CanonicalLoopInfo **UnrolledCLI) {
+  assert(Factor >= 0 && "Unroll factor must not be negative");
+
+  Function *F = Loop->getFunction();
+  LLVMContext &Ctx = F->getContext();
+
+  // If the unrolled loop is not used for another loop-associated directive, it
+  // is sufficient to add metadata for the LoopUnrollPass.
+  if (!UnrolledCLI) {
+    SmallVector<Metadata *, 2> LoopMetadata;
+    LoopMetadata.push_back(
+        MDNode::get(Ctx, MDString::get(Ctx, "llvm.loop.unroll.enable")));
+
+    if (Factor >= 1) {
+      ConstantAsMetadata *FactorConst = ConstantAsMetadata::get(
+          ConstantInt::get(Type::getInt32Ty(Ctx), APInt(32, Factor)));
+      LoopMetadata.push_back(MDNode::get(
+          Ctx, {MDString::get(Ctx, "llvm.loop.unroll.count"), FactorConst}));
+    }
+
+    addLoopMetadata(Loop, LoopMetadata);
+    return;
+  }
+
+  // Heuristically determine the unroll factor.
+  if (Factor == 0)
+    Factor = computeHeuristicUnrollFactor(Loop);
+
+  // No change required with unroll factor 1.
+  if (Factor == 1) {
+    *UnrolledCLI = Loop;
+    return;
+  }
+
+  assert(Factor >= 2 &&
+         "unrolling only makes sense with a factor of 2 or larger");
+
+  Type *IndVarTy = Loop->getIndVarType();
+
+  // Apply partial unrolling by tiling the loop by the unroll-factor, then fully
+  // unroll the inner loop.
+  Value *FactorVal =
+      ConstantInt::get(IndVarTy, APInt(IndVarTy->getIntegerBitWidth(), Factor,
+                                       /*isSigned=*/false));
+  std::vector<CanonicalLoopInfo *> LoopNest =
+      tileLoops(DL, {Loop}, {FactorVal});
+  assert(LoopNest.size() == 2 && "Expect 2 loops after tiling");
+  *UnrolledCLI = LoopNest[0];
+  CanonicalLoopInfo *InnerLoop = LoopNest[1];
+
+  // LoopUnrollPass can only fully unroll loops with constant trip count.
+  // Unroll by the unroll factor with a fallback epilog for the remainder
+  // iterations if necessary.
+  ConstantAsMetadata *FactorConst = ConstantAsMetadata::get(
+      ConstantInt::get(Type::getInt32Ty(Ctx), APInt(32, Factor)));
+  addLoopMetadata(
+      InnerLoop,
+      {MDNode::get(Ctx, MDString::get(Ctx, "llvm.loop.unroll.enable")),
+       MDNode::get(
+           Ctx, {MDString::get(Ctx, "llvm.loop.unroll.count"), FactorConst})});
+
+#ifndef NDEBUG
+  (*UnrolledCLI)->assertOK();
+#endif
 }
 
 OpenMPIRBuilder::InsertPointTy
