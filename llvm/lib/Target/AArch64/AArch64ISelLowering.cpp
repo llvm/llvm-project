@@ -4161,7 +4161,8 @@ bool AArch64TargetLowering::shouldExtendGSIndex(EVT VT, EVT &EltTy) const {
 
 bool AArch64TargetLowering::shouldRemoveExtendFromGSIndex(EVT VT) const {
   if (VT.getVectorElementType() == MVT::i32 &&
-      VT.getVectorElementCount().getKnownMinValue() >= 4)
+      VT.getVectorElementCount().getKnownMinValue() >= 4 &&
+      !VT.isFixedLengthVector())
     return true;
 
   return false;
