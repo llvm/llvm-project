@@ -40,7 +40,7 @@ namespace __format {
 /** The type stored in @ref basic_format_arg. */
 enum class _LIBCPP_ENUM_VIS __arg_t : uint8_t {
   __none,
-  __bool,
+  __boolean,
   __char_type,
   __int,
   __long_long,
@@ -67,8 +67,8 @@ visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
   switch (__arg.__type_) {
   case __format::__arg_t::__none:
     return _VSTD::invoke(_VSTD::forward<_Visitor>(__vis), monostate{});
-  case __format::__arg_t::__bool:
-    return _VSTD::invoke(_VSTD::forward<_Visitor>(__vis), __arg.__bool);
+  case __format::__arg_t::__boolean:
+    return _VSTD::invoke(_VSTD::forward<_Visitor>(__vis), __arg.__boolean);
   case __format::__arg_t::__char_type:
     return _VSTD::invoke(_VSTD::forward<_Visitor>(__vis), __arg.__char_type);
   case __format::__arg_t::__int:
@@ -142,7 +142,7 @@ private:
   _VSTD::visit_format_arg(_Visitor&& __vis, basic_format_arg<_Ctx> __arg);
 
   union {
-    bool __bool;
+    bool __boolean;
     char_type __char_type;
     int __int;
     unsigned __unsigned;
@@ -163,7 +163,7 @@ private:
   __format::__arg_t __type_;
 
   _LIBCPP_HIDE_FROM_ABI explicit basic_format_arg(bool __v) noexcept
-      : __bool(__v), __type_(__format::__arg_t::__bool) {}
+      : __boolean(__v), __type_(__format::__arg_t::__boolean) {}
 
   template <class _Tp>
   _LIBCPP_HIDE_FROM_ABI explicit basic_format_arg(_Tp __v) noexcept
