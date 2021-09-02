@@ -7940,3 +7940,143 @@ unsigned SIInstrInfo::getDSShaderTypeValue(const MachineFunction &MF) {
     return 0;
   }
 }
+
+bool SIInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
+                                 Register &SrcReg2, int64_t &CmpMask,
+                                 int64_t &CmpValue) const {
+  if (!MI.getOperand(0).isReg() || MI.getOperand(0).getSubReg())
+    return false;
+
+  switch (MI.getOpcode()) {
+  default:
+    break;
+  case AMDGPU::S_CMP_EQ_U32:
+  case AMDGPU::S_CMP_EQ_I32:
+  case AMDGPU::S_CMP_LG_U32:
+  case AMDGPU::S_CMP_LG_I32:
+  case AMDGPU::S_CMP_LT_U32:
+  case AMDGPU::S_CMP_LT_I32:
+  case AMDGPU::S_CMP_GT_U32:
+  case AMDGPU::S_CMP_GT_I32:
+  case AMDGPU::S_CMP_LE_U32:
+  case AMDGPU::S_CMP_LE_I32:
+  case AMDGPU::S_CMP_GE_U32:
+  case AMDGPU::S_CMP_GE_I32:
+  case AMDGPU::S_CMP_EQ_U64:
+  case AMDGPU::S_CMP_LG_U64:
+    SrcReg = MI.getOperand(0).getReg();
+    if (MI.getOperand(1).isReg()) {
+      if (MI.getOperand(1).getSubReg())
+        return false;
+      SrcReg2 = MI.getOperand(1).getReg();
+      CmpValue = 0;
+    } else if (MI.getOperand(1).isImm()) {
+      SrcReg2 = Register();
+      CmpValue = MI.getOperand(1).getImm();
+    } else {
+      return false;
+    }
+    CmpMask = ~0;
+    return true;
+  case AMDGPU::S_CMPK_EQ_U32:
+  case AMDGPU::S_CMPK_EQ_I32:
+  case AMDGPU::S_CMPK_LG_U32:
+  case AMDGPU::S_CMPK_LG_I32:
+  case AMDGPU::S_CMPK_LT_U32:
+  case AMDGPU::S_CMPK_LT_I32:
+  case AMDGPU::S_CMPK_GT_U32:
+  case AMDGPU::S_CMPK_GT_I32:
+  case AMDGPU::S_CMPK_LE_U32:
+  case AMDGPU::S_CMPK_LE_I32:
+  case AMDGPU::S_CMPK_GE_U32:
+  case AMDGPU::S_CMPK_GE_I32:
+    SrcReg = MI.getOperand(0).getReg();
+    SrcReg2 = Register();
+    CmpValue = MI.getOperand(1).getImm();
+    CmpMask = ~0;
+    return true;
+  }
+
+  return false;
+}
+
+bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
+                                       Register SrcReg2, int64_t CmpMask,
+                                       int64_t CmpValue,
+                                       const MachineRegisterInfo *MRI) const {
+  if (SrcReg2 || SrcReg.isPhysical())
+    return false;
+
+  const auto optimizeCmpAnd = [&CmpInstr, SrcReg, CmpValue, MRI,
+                               this](int64_t ExpectedValue) -> bool {
+    // s_cmp_eq_u32 (s_and_b32 $src, 1), 1 => s_and_b32 $src, 1
+    // s_cmp_eq_i32 (s_and_b32 $src, 1), 1 => s_and_b32 $src, 1
+    // s_cmp_ge_u32 (s_and_b32 $src, 1), 1 => s_and_b32 $src, 1
+    // s_cmp_ge_i32 (s_and_b32 $src, 1), 1 => s_and_b32 $src, 1
+    // s_cmp_eq_u64 (s_and_b64 $src, 1), 1 => s_and_b64 $src, 1
+    // s_cmp_lg_u32 (s_and_b32 $src, 1), 0 => s_and_b32 $src, 1
+    // s_cmp_lg_i32 (s_and_b32 $src, 1), 0 => s_and_b32 $src, 1
+    // s_cmp_gt_u32 (s_and_b32 $src, 1), 0 => s_and_b32 $src, 1
+    // s_cmp_gt_i32 (s_and_b32 $src, 1), 0 => s_and_b32 $src, 1
+    // s_cmp_lg_u64 (s_and_b64 $src, 1), 0 => s_and_b64 $src, 1
+
+    // TODO: Fold this into s_bitcmp* if result of an AND is unused.
+    // TODO: If s_bitcmp can be used we are not limited to 1 and 0 but can
+    //       process any power of 2.
+
+    if (CmpValue != ExpectedValue)
+      return false;
+
+    MachineInstr *Def = MRI->getUniqueVRegDef(SrcReg);
+    if (!Def || Def->getParent() != CmpInstr.getParent())
+      return false;
+
+    if (Def->getOpcode() != AMDGPU::S_AND_B32 &&
+        Def->getOpcode() != AMDGPU::S_AND_B64)
+      return false;
+
+    if ((!Def->getOperand(1).isImm() || Def->getOperand(1).getImm() != 1) &&
+        (!Def->getOperand(2).isImm() || Def->getOperand(2).getImm() != 1))
+      return false;
+
+    for (auto I = std::next(Def->getIterator()), E = CmpInstr.getIterator();
+         I != E; ++I) {
+      if (I->modifiesRegister(AMDGPU::SCC, &RI) ||
+          I->killsRegister(AMDGPU::SCC, &RI))
+        return false;
+    }
+
+    MachineOperand *SccDef = Def->findRegisterDefOperand(AMDGPU::SCC);
+    SccDef->setIsDead(false);
+    CmpInstr.eraseFromParent();
+
+    return true;
+  };
+
+  switch (CmpInstr.getOpcode()) {
+  default:
+    break;
+  case AMDGPU::S_CMP_EQ_U32:
+  case AMDGPU::S_CMP_EQ_I32:
+  case AMDGPU::S_CMP_GE_U32:
+  case AMDGPU::S_CMP_GE_I32:
+  case AMDGPU::S_CMP_EQ_U64:
+  case AMDGPU::S_CMPK_EQ_U32:
+  case AMDGPU::S_CMPK_EQ_I32:
+  case AMDGPU::S_CMPK_GE_U32:
+  case AMDGPU::S_CMPK_GE_I32:
+    return optimizeCmpAnd(1);
+  case AMDGPU::S_CMP_LG_U32:
+  case AMDGPU::S_CMP_LG_I32:
+  case AMDGPU::S_CMP_GT_U32:
+  case AMDGPU::S_CMP_GT_I32:
+  case AMDGPU::S_CMP_LG_U64:
+  case AMDGPU::S_CMPK_LG_U32:
+  case AMDGPU::S_CMPK_LG_I32:
+  case AMDGPU::S_CMPK_GT_U32:
+  case AMDGPU::S_CMPK_GT_I32:
+    return optimizeCmpAnd(0);
+  }
+
+  return false;
+}
