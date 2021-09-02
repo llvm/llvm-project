@@ -13680,6 +13680,8 @@ static bool isEssentiallyExtractHighSubvector(SDValue N) {
     N = N.getOperand(0);
   if (N.getOpcode() != ISD::EXTRACT_SUBVECTOR)
     return false;
+  if (N.getOperand(0).getValueType().isScalableVector())
+    return false;
   return cast<ConstantSDNode>(N.getOperand(1))->getAPIntValue() ==
          N.getOperand(0).getValueType().getVectorNumElements() / 2;
 }
