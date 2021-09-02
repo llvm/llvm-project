@@ -1688,8 +1688,18 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
                                StringRef BitcodeSuffix,
                                const llvm::Triple &Triple) {
   SmallVector<StringRef, 8> LibraryPaths;
+  // Add user defined library paths from LIBRARY_PATH.
+  llvm::Optional<std::string> LibPath =
+      llvm::sys::Process::GetEnv("LIBRARY_PATH");
+  if (LibPath) {
+    SmallVector<StringRef, 8> Frags;
+    const char EnvPathSeparatorStr[] = {llvm::sys::EnvPathSeparator, '\0'};
+    llvm::SplitString(*LibPath, Frags, EnvPathSeparatorStr);
+    for (StringRef Path : Frags)
+      LibraryPaths.emplace_back(Path.trim());
+  }
 
-  // Add path to clang lib / lib64 folder.
+  // Add path to lib / lib64 folder.
   SmallString<256> DefaultLibPath = llvm::sys::path::parent_path(D.Dir);
   llvm::sys::path::append(DefaultLibPath, Twine("lib") + CLANG_LIBDIR_SUFFIX);
   LibraryPaths.emplace_back(DefaultLibPath.c_str());
