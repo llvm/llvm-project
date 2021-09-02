@@ -162,6 +162,28 @@ RelExpr Hexagon::getRelExpr(RelType type, const Symbol &s,
   }
 }
 
+// There are (arguably too) many relocation masks for the DSP's
+// R_HEX_6_X type.  The table below is used to select the correct mask
+// for the given instruction.
+struct InstructionMask {
+  uint32_t cmpMask;
+  uint32_t relocMask;
+};
+static const InstructionMask r6[] = {
+    {0x38000000, 0x0000201f}, {0x39000000, 0x0000201f},
+    {0x3e000000, 0x00001f80}, {0x3f000000, 0x00001f80},
+    {0x40000000, 0x000020f8}, {0x41000000, 0x000007e0},
+    {0x42000000, 0x000020f8}, {0x43000000, 0x000007e0},
+    {0x44000000, 0x000020f8}, {0x45000000, 0x000007e0},
+    {0x46000000, 0x000020f8}, {0x47000000, 0x000007e0},
+    {0x6a000000, 0x00001f80}, {0x7c000000, 0x001f2000},
+    {0x9a000000, 0x00000f60}, {0x9b000000, 0x00000f60},
+    {0x9c000000, 0x00000f60}, {0x9d000000, 0x00000f60},
+    {0x9f000000, 0x001f0100}, {0xab000000, 0x0000003f},
+    {0xad000000, 0x0000003f}, {0xaf000000, 0x00030078},
+    {0xd7000000, 0x006020e0}, {0xd8000000, 0x006020e0},
+    {0xdb000000, 0x006020e0}, {0xdf000000, 0x006020e0}};
+
 static bool isDuplex(uint32_t insn) {
   // Duplex forms have a fixed mask and parse bits 15:14 are always
   // zero.  Non-duplex insns will always have at least one bit set in the
@@ -170,29 +192,6 @@ static bool isDuplex(uint32_t insn) {
 }
 
 static uint32_t findMaskR6(uint32_t insn) {
-  // There are (arguably too) many relocation masks for the DSP's
-  // R_HEX_6_X type.  The table below is used to select the correct mask
-  // for the given instruction.
-  struct InstructionMask {
-    uint32_t cmpMask;
-    uint32_t relocMask;
-  };
-
-  static const InstructionMask r6[] = {
-      {0x38000000, 0x0000201f}, {0x39000000, 0x0000201f},
-      {0x3e000000, 0x00001f80}, {0x3f000000, 0x00001f80},
-      {0x40000000, 0x000020f8}, {0x41000000, 0x000007e0},
-      {0x42000000, 0x000020f8}, {0x43000000, 0x000007e0},
-      {0x44000000, 0x000020f8}, {0x45000000, 0x000007e0},
-      {0x46000000, 0x000020f8}, {0x47000000, 0x000007e0},
-      {0x6a000000, 0x00001f80}, {0x7c000000, 0x001f2000},
-      {0x9a000000, 0x00000f60}, {0x9b000000, 0x00000f60},
-      {0x9c000000, 0x00000f60}, {0x9d000000, 0x00000f60},
-      {0x9f000000, 0x001f0100}, {0xab000000, 0x0000003f},
-      {0xad000000, 0x0000003f}, {0xaf000000, 0x00030078},
-      {0xd7000000, 0x006020e0}, {0xd8000000, 0x006020e0},
-      {0xdb000000, 0x006020e0}, {0xdf000000, 0x006020e0}};
-
   if (isDuplex(insn))
     return 0x03f00000;
 
@@ -200,7 +199,7 @@ static uint32_t findMaskR6(uint32_t insn) {
     if ((0xff000000 & insn) == i.cmpMask)
       return i.relocMask;
 
-  error("unrecognized instruction for R_HEX_6 relocation: 0x" +
+  error("unrecognized instruction for 6_X relocation: 0x" +
         utohexstr(insn));
   return 0;
 }
@@ -232,7 +231,11 @@ static uint32_t findMaskR16(uint32_t insn) {
   if (isDuplex(insn))
     return 0x03f00000;
 
-  error("unrecognized instruction for R_HEX_16_X relocation: 0x" +
+  for (InstructionMask i : r6)
+    if ((0xff000000 & insn) == i.cmpMask)
+      return i.relocMask;
+
+  error("unrecognized instruction for 16_X type: 0x" +
         utohexstr(insn));
   return 0;
 }
