@@ -77,8 +77,6 @@ def SDT_WebAssemblyLocalSet   : SDTypeProfile<0, 2, [SDTCisVT<0, i32>]>;
 def SDT_WebAssemblyReturn     : SDTypeProfile<0, -1, []>;
 def SDT_WebAssemblyWrapper    : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
                                                      SDTCisPtrTy<0>]>;
-def SDT_WebAssemblyWrapperPIC : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
-                                                     SDTCisPtrTy<0>]>;
 def SDT_WebAssemblyGlobalGet  : SDTypeProfile<1, 1, [SDTCisPtrTy<1>]>;
 def SDT_WebAssemblyGlobalSet  : SDTypeProfile<0, 2, [SDTCisPtrTy<1>]>;
 
@@ -103,7 +101,7 @@ def WebAssemblyreturn   : SDNode<"WebAssemblyISD::RETURN",
 def WebAssemblyWrapper  : SDNode<"WebAssemblyISD::Wrapper",
                                  SDT_WebAssemblyWrapper>;
 def WebAssemblyWrapperPIC  : SDNode<"WebAssemblyISD::WrapperPIC",
-                                     SDT_WebAssemblyWrapperPIC>;
+                                     SDT_WebAssemblyWrapper>;
 def WebAssemblyglobal_get :
     SDNode<"WebAssemblyISD::GLOBAL_GET", SDT_WebAssemblyGlobalGet,
            [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
