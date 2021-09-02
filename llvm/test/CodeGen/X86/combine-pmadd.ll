@@ -9,14 +9,12 @@ declare <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8>, <16 x i8>) nounwind
 define <4 x i32> @combine_pmaddwd_zero(<8 x i16> %a0, <8 x i16> %a1) {
 ; SSE-LABEL: combine_pmaddwd_zero:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    pmaddwd %xmm1, %xmm0
+; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_pmaddwd_zero:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpmaddwd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %a0, <8 x i16> zeroinitializer)
   ret <4 x i32> %1
@@ -25,14 +23,12 @@ define <4 x i32> @combine_pmaddwd_zero(<8 x i16> %a0, <8 x i16> %a1) {
 define <4 x i32> @combine_pmaddwd_zero_commute(<8 x i16> %a0, <8 x i16> %a1) {
 ; SSE-LABEL: combine_pmaddwd_zero_commute:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    pmaddwd %xmm1, %xmm0
+; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_pmaddwd_zero_commute:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpmaddwd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> zeroinitializer, <8 x i16> %a0)
   ret <4 x i32> %1
@@ -41,14 +37,12 @@ define <4 x i32> @combine_pmaddwd_zero_commute(<8 x i16> %a0, <8 x i16> %a1) {
 define <8 x i16> @combine_pmaddubsw_zero(<16 x i8> %a0, <16 x i8> %a1) {
 ; SSE-LABEL: combine_pmaddubsw_zero:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    pmaddubsw %xmm1, %xmm0
+; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_pmaddubsw_zero:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = call <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8> %a0, <16 x i8> zeroinitializer)
   ret <8 x i16> %1
@@ -57,15 +51,12 @@ define <8 x i16> @combine_pmaddubsw_zero(<16 x i8> %a0, <16 x i8> %a1) {
 define <8 x i16> @combine_pmaddubsw_zero_commute(<16 x i8> %a0, <16 x i8> %a1) {
 ; SSE-LABEL: combine_pmaddubsw_zero_commute:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    pmaddubsw %xmm0, %xmm1
-; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_pmaddubsw_zero_commute:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpmaddubsw %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = call <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8> zeroinitializer, <16 x i8> %a0)
   ret <8 x i16> %1

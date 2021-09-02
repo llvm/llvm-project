@@ -51824,6 +51824,21 @@ static SDValue combinePMULDQ(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Simplify VPMADDUBSW/VPMADDWD operations.
+static SDValue combineVPMADD(SDNode *N, SelectionDAG &DAG,
+                             TargetLowering::DAGCombinerInfo &DCI) {
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  // Multiply by zero.
+  // Don't return LHS/RHS as it may contain UNDEFs.
+  if (ISD::isBuildVectorAllZeros(LHS.getNode()) ||
+      ISD::isBuildVectorAllZeros(RHS.getNode()))
+    return DAG.getConstant(0, SDLoc(N), N->getValueType(0));
+
+  return SDValue();
+}
+
 static SDValue combineEXTEND_VECTOR_INREG(SDNode *N, SelectionDAG &DAG,
                                           TargetLowering::DAGCombinerInfo &DCI,
                                           const X86Subtarget &Subtarget) {
@@ -52274,6 +52289,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::PCMPGT:      return combineVectorCompare(N, DAG, Subtarget);
   case X86ISD::PMULDQ:
   case X86ISD::PMULUDQ:     return combinePMULDQ(N, DAG, DCI, Subtarget);
+  case X86ISD::VPMADDUBSW:
+  case X86ISD::VPMADDWD:    return combineVPMADD(N, DAG, DCI);
   case X86ISD::KSHIFTL:
   case X86ISD::KSHIFTR:     return combineKSHIFT(N, DAG, DCI);
   case ISD::FP16_TO_FP:     return combineFP16_TO_FP(N, DAG, Subtarget);
