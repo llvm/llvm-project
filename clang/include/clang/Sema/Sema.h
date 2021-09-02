@@ -10572,6 +10572,11 @@ public:
   /// an OpenMP loop directive.
   StmtResult ActOnOpenMPCanonicalLoop(Stmt *AStmt);
 
+  /// Process a canonical OpenMP loop nest that can either be a canonical
+  /// literal loop (ForStmt or CXXForRangeStmt), or the generated loop of an
+  /// OpenMP loop transformation construct.
+  StmtResult ActOnOpenMPLoopnest(Stmt *AStmt);
+
   /// End of OpenMP region.
   ///
   /// \param S Statement associated with the current OpenMP region.
