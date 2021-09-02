@@ -62,7 +62,7 @@ def : ReadAdvance<ReadInt2Fpu, 0>;
 multiclass SLMWriteResPair<X86FoldableSchedWrite SchedRW,
                            list<ProcResourceKind> ExePorts,
                            int Lat, list<int> Res = [1], int UOps = 1,
-                           int LoadLat = 3> {
+                           int LoadLat = 3, int LoadUOps = 0> {
   // Register variant is using a single cycle on ExePort.
   def : WriteRes<SchedRW, ExePorts> {
     let Latency = Lat;
@@ -75,7 +75,7 @@ multiclass SLMWriteResPair<X86FoldableSchedWrite SchedRW,
   def : WriteRes<SchedRW.Folded, !listconcat([SLM_MEC_RSV], ExePorts)> {
     let Latency = !add(Lat, LoadLat);
     let ResourceCycles = !listconcat([1], Res);
-    let NumMicroOps = UOps;
+    let NumMicroOps = !add(UOps, LoadUOps);
   }
 }
 
@@ -280,7 +280,7 @@ defm : X86WriteResPairUnsupported<WriteFVarShuffleZ>;
 defm : SLMWriteResPair<WriteFBlend,  [SLM_FPC_RSV0],  1>;
 defm : X86WriteResPairUnsupported<WriteFBlendY>;
 defm : X86WriteResPairUnsupported<WriteFBlendZ>;
-defm : SLMWriteResPair<WriteFVarBlend, [SLM_FPC_RSV0], 4, [4], 3>;
+defm : SLMWriteResPair<WriteFVarBlend, [SLM_FPC_RSV0], 4, [4], 2, 3, 1>;
 defm : X86WriteResPairUnsupported<WriteFVarBlendY>;
 defm : X86WriteResPairUnsupported<WriteFVarBlendZ>;
 defm : X86WriteResPairUnsupported<WriteFShuffle256>;
@@ -391,7 +391,7 @@ defm : X86WriteResPairUnsupported<WriteVarShuffleZ>;
 defm : SLMWriteResPair<WriteBlend,  [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteBlendY, [SLM_FPC_RSV0],  1>;
 defm : X86WriteResPairUnsupported<WriteBlendZ>;
-defm : SLMWriteResPair<WriteVarBlend, [SLM_FPC_RSV0], 1>;
+defm : SLMWriteResPair<WriteVarBlend, [SLM_FPC_RSV0], 4, [4], 2, 3, 1>;
 defm : X86WriteResPairUnsupported<WriteVarBlendY>;
 defm : X86WriteResPairUnsupported<WriteVarBlendZ>;
 defm : SLMWriteResPair<WriteMPSAD,  [SLM_FPC_RSV0],  7>;
