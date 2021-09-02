@@ -472,7 +472,7 @@ public:
   LLVM_NODISCARD AttributeList
   addAttribute(LLVMContext &C, unsigned Index, StringRef Kind,
                StringRef Value = StringRef()) const {
-    return addAttributeAtIndex(C, Index, Kind);
+    return addAttributeAtIndex(C, Index, Kind, Value);
   }
 
   /// Add an attribute to the attribute set at the given index.
