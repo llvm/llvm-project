@@ -1297,13 +1297,12 @@ SampleProfileLoader::shouldInlineCandidate(InlineCandidate &Candidate) {
   // aiming at better context-sensitive post-inline profile quality, assuming
   // all inline decision estimates are going to be honored by compiler. Here
   // we replay that inline decision under `sample-profile-use-preinliner`.
-  if (UsePreInlinerDecision) {
-    if (Candidate.CalleeSamples->getContext().hasAttribute(
-            ContextShouldBeInlined))
-      return InlineCost::getAlways("preinliner");
-    else
-      return InlineCost::getNever("preinliner");
-  }
+  // Note that we don't need to handle negative decision from preinliner as
+  // context profile for not inlined calls are merged by preinliner already.
+  if (UsePreInlinerDecision &&
+      Candidate.CalleeSamples->getContext().hasAttribute(
+          ContextShouldBeInlined))
+    return InlineCost::getAlways("preinliner");
 
   // For old FDO inliner, we inline the call site as long as cost is not
   // "Never". The cost-benefit check is done earlier.
@@ -1826,6 +1825,10 @@ bool SampleProfileLoader::doInitialization(Module &M,
       ProfileSizeInline = true;
     if (!CallsitePrioritizedInline.getNumOccurrences())
       CallsitePrioritizedInline = true;
+
+    // For CSSPGO, use preinliner decision by default when available.
+    if (!UsePreInlinerDecision.getNumOccurrences())
+      UsePreInlinerDecision = true;
 
     // Enable iterative-BFI by default for CSSPGO.
     if (!UseIterativeBFIInference.getNumOccurrences())
