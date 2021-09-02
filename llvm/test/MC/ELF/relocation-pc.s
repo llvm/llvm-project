@@ -11,6 +11,7 @@
 // CHECK:          Name: .rela.text
 // CHECK-NEXT:     Type: SHT_RELA
 // CHECK-NEXT:     Flags [
+// CHECK-NEXT:       SHF_INFO_LINK
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address: 0x0
 // CHECK-NEXT:     Offset:
