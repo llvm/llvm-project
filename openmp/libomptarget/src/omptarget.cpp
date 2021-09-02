@@ -737,13 +737,7 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
       // Move data back to the host
       if (ArgTypes[I] & OMP_TGT_MAPTYPE_FROM) {
         bool Always = ArgTypes[I] & OMP_TGT_MAPTYPE_ALWAYS;
-        bool CopyMember = false;
-        if (!IsHostPtr) {
-          if (IsLast)
-            CopyMember = true;
-        }
-
-        if ((DelEntry || Always || CopyMember) && !IsHostPtr) {
+        if ((Always || IsLast) && !IsHostPtr) {
           DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
              DataSize, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
           Ret = Device.retrieveData(HstPtrBegin, TgtPtrBegin, DataSize,
