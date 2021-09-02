@@ -114,13 +114,13 @@ def NotifyPatOffsetOnly_A64 :
   Requires<[HasAddr64, HasAtomics]>;
 
 def NotifyPatGlobalAddrOffOnly_A32 :
-  Pat<(i32 (int_wasm_memory_atomic_notify (WebAssemblywrapper tglobaladdr:$off),
+  Pat<(i32 (int_wasm_memory_atomic_notify (WebAssemblyWrapper tglobaladdr:$off),
                                           I32:$count)),
       (MEMORY_ATOMIC_NOTIFY_A32 0, tglobaladdr:$off, (CONST_I32 0), I32:$count)
      >,
   Requires<[HasAddr32, HasAtomics, IsNotPIC]>;
 def NotifyPatGlobalAddrOffOnly_A64 :
-  Pat<(i32 (int_wasm_memory_atomic_notify (WebAssemblywrapper tglobaladdr:$off),
+  Pat<(i32 (int_wasm_memory_atomic_notify (WebAssemblyWrapper tglobaladdr:$off),
                                           I32:$count)),
       (MEMORY_ATOMIC_NOTIFY_A64 0, tglobaladdr:$off, (CONST_I64 0), I32:$count)
      >,
@@ -185,12 +185,12 @@ defm : WaitPatOffsetOnly<i64, int_wasm_memory_atomic_wait64,
                          "MEMORY_ATOMIC_WAIT64">;
 
 multiclass WaitPatGlobalAddrOffOnly<ValueType ty, Intrinsic kind, string inst> {
-  def : Pat<(i32 (kind (WebAssemblywrapper tglobaladdr:$off), ty:$exp,
+  def : Pat<(i32 (kind (WebAssemblyWrapper tglobaladdr:$off), ty:$exp,
                   I64:$timeout)),
             (!cast<NI>(inst#_A32) 0, tglobaladdr:$off, (CONST_I32 0), ty:$exp,
                I64:$timeout)>,
         Requires<[HasAddr32, HasAtomics, IsNotPIC]>;
-  def : Pat<(i32 (kind (WebAssemblywrapper tglobaladdr:$off), ty:$exp,
+  def : Pat<(i32 (kind (WebAssemblyWrapper tglobaladdr:$off), ty:$exp,
                   I64:$timeout)),
             (!cast<NI>(inst#_A64) 0, tglobaladdr:$off, (CONST_I64 0), ty:$exp,
                I64:$timeout)>,
@@ -390,10 +390,10 @@ defm : AStorePatOffsetOnly<i32, atomic_store_32, "ATOMIC_STORE_I32">;
 defm : AStorePatOffsetOnly<i64, atomic_store_64, "ATOMIC_STORE_I64">;
 
 multiclass AStorePatGlobalAddrOffOnly<ValueType ty, PatFrag kind, string inst> {
-  def : Pat<(kind (WebAssemblywrapper tglobaladdr:$off), ty:$val),
+  def : Pat<(kind (WebAssemblyWrapper tglobaladdr:$off), ty:$val),
             (!cast<NI>(inst#_A32) 0, tglobaladdr:$off, (CONST_I32 0), ty:$val)>,
         Requires<[HasAddr32, HasAtomics, IsNotPIC]>;
-  def : Pat<(kind (WebAssemblywrapper tglobaladdr:$off), ty:$val),
+  def : Pat<(kind (WebAssemblyWrapper tglobaladdr:$off), ty:$val),
             (!cast<NI>(inst#_A64) 0, tglobaladdr:$off, (CONST_I64 0), ty:$val)>,
         Requires<[HasAddr64, HasAtomics, IsNotPIC]>;
 }
@@ -592,10 +592,10 @@ multiclass BinRMWPatOffsetOnly<ValueType ty, PatFrag kind, string inst> {
 }
 
 multiclass BinRMWPatGlobalAddrOffOnly<ValueType ty, PatFrag kind, string inst> {
-  def : Pat<(ty (kind (WebAssemblywrapper tglobaladdr:$off), ty:$val)),
+  def : Pat<(ty (kind (WebAssemblyWrapper tglobaladdr:$off), ty:$val)),
             (!cast<NI>(inst#_A32) 0, tglobaladdr:$off, (CONST_I32 0), ty:$val)>,
         Requires<[HasAddr32, HasAtomics, IsNotPIC]>;
-  def : Pat<(ty (kind (WebAssemblywrapper tglobaladdr:$off), ty:$val)),
+  def : Pat<(ty (kind (WebAssemblyWrapper tglobaladdr:$off), ty:$val)),
             (!cast<NI>(inst#_A64) 0, tglobaladdr:$off, (CONST_I64 0), ty:$val)>,
         Requires<[HasAddr64, HasAtomics, IsNotPIC]>;
 }
@@ -826,11 +826,11 @@ multiclass TerRMWPatOffsetOnly<ValueType ty, PatFrag kind, string inst> {
 }
 
 multiclass TerRMWPatGlobalAddrOffOnly<ValueType ty, PatFrag kind, string inst> {
-  def : Pat<(ty (kind (WebAssemblywrapper tglobaladdr:$off), ty:$exp, ty:$new)),
+  def : Pat<(ty (kind (WebAssemblyWrapper tglobaladdr:$off), ty:$exp, ty:$new)),
             (!cast<NI>(inst#_A32) 0, tglobaladdr:$off, (CONST_I32 0), ty:$exp,
               ty:$new)>,
         Requires<[HasAddr32, HasAtomics, IsNotPIC]>;
-  def : Pat<(ty (kind (WebAssemblywrapper tglobaladdr:$off), ty:$exp, ty:$new)),
+  def : Pat<(ty (kind (WebAssemblyWrapper tglobaladdr:$off), ty:$exp, ty:$new)),
             (!cast<NI>(inst#_A64) 0, tglobaladdr:$off, (CONST_I64 0), ty:$exp,
               ty:$new)>,
         Requires<[HasAddr64, HasAtomics, IsNotPIC]>;
