@@ -92,6 +92,7 @@ static void display_usage(const char *progname, const char *subcommand) {
                   "log-channel-list] [--port-file port-file-path] --server "
                   "--listen port\n",
           progname, subcommand);
+  exit(0);
 }
 
 static Status save_socket_id_to_file(const std::string &socket_id,
@@ -164,6 +165,7 @@ int main_platform(int argc, char *argv[]) {
   FileSpec socket_file;
   bool show_usage = false;
   int option_error = 0;
+  int socket_error = -1;
 
   std::string short_options(OptionParser::GetShortOptionString(g_long_options));
 
@@ -247,7 +249,7 @@ int main_platform(int argc, char *argv[]) {
   }
 
   if (!LLDBServerUtilities::SetupLogging(log_file, log_channels, 0))
-    return 1;
+    return -1;
 
   // Make a port map for a port range that was specified.
   if (min_gdbserver_port && min_gdbserver_port < max_gdbserver_port) {
@@ -267,7 +269,7 @@ int main_platform(int argc, char *argv[]) {
 
   if (show_usage || option_error) {
     display_usage(progname, subcommand);
-    return option_error;
+    exit(option_error);
   }
 
   // Skip any options we consumed with getopt_long_only.
@@ -286,13 +288,13 @@ int main_platform(int argc, char *argv[]) {
       listen_host_port, children_inherit_listen_socket, error));
   if (error.Fail()) {
     fprintf(stderr, "failed to create acceptor: %s", error.AsCString());
-    return 1;
+    exit(socket_error);
   }
 
   error = acceptor_up->Listen(backlog);
   if (error.Fail()) {
     printf("failed to listen: %s\n", error.AsCString());
-    return 1;
+    exit(socket_error);
   }
   if (socket_file) {
     error =
@@ -320,7 +322,7 @@ int main_platform(int argc, char *argv[]) {
     error = acceptor_up->Accept(children_inherit_accept_socket, conn);
     if (error.Fail()) {
       WithColor::error() << error.AsCString() << '\n';
-      return 1;
+      exit(socket_error);
     }
     printf("Connection established.\n");
     if (g_server) {
