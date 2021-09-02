@@ -418,7 +418,7 @@ define i64 @test_mad_u64_u32(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 }
 
 ; GCN-LABEL: {{^}}test_div_fmas_f32:
-; GCN:     s_and_b32 s{{[0-9]+}}, 1
+; GCN:     s_bitcmp1_b32 s{{[0-9]+}}, 0
 ; GFX1032: s_cselect_b32 vcc_lo, -1, 0
 ; GFX1064: s_cselect_b64 vcc, -1, 0
 ; GCN:     v_div_fmas_f32 v{{[0-9]+}}, {{[vs][0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
@@ -429,7 +429,7 @@ define amdgpu_kernel void @test_div_fmas_f32(float addrspace(1)* %out, float %a,
 }
 
 ; GCN-LABEL: {{^}}test_div_fmas_f64:
-; GCN: s_and_b32 s{{[0-9]+}}, 1
+; GCN:     s_bitcmp1_b32 s{{[0-9]+}}, 0
 ; GFX1032: s_cselect_b32 vcc_lo, -1, 0
 ; GFX1064: s_cselect_b64 vcc, -1, 0
 ; GCN-DAG: v_div_fmas_f64 v[{{[0-9:]+}}], {{[vs]}}[{{[0-9:]+}}], v[{{[0-9:]+}}], v[{{[0-9:]+}}]

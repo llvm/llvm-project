@@ -15,7 +15,7 @@ define amdgpu_kernel void @select_i1(i1 addrspace(1)* %out, i32 %cond, i1 %a, i1
 
 ; GCN-LABEL: {{^}}s_minmax_i1:
 ; GCN: s_load_dword [[LOAD:s[0-9]+]],
-; GCN: s_and_b32 [[COND:s[0-9]+]], 1, [[LOAD]]
+; GCN: s_bitcmp1_b32 [[LOAD]], 0
 ; GCN: s_cselect_b64 vcc, -1, 0
 ; GCN-DAG: s_lshr_b32 [[A:s[0-9]+]], [[LOAD]], 8
 ; GCN-DAG: s_lshr_b32 [[B:s[0-9]+]], [[LOAD]], 16
