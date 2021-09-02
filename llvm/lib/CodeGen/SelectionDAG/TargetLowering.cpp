@@ -6978,36 +6978,6 @@ SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
   return SDValue();
 }
 
-SDValue TargetLowering::expandISNAN(EVT ResultVT, SDValue Op, SDNodeFlags Flags,
-                                    const SDLoc &DL, SelectionDAG &DAG) const {
-  EVT OperandVT = Op.getValueType();
-  assert(OperandVT.isFloatingPoint());
-
-  // If floating point exceptions are ignored, expand to unordered comparison.
-  if ((Flags.hasNoFPExcept() &&
-       isOperationLegalOrCustom(ISD::SETCC, OperandVT.getScalarType())) ||
-      OperandVT == MVT::ppcf128)
-    return DAG.getSetCC(DL, ResultVT, Op, DAG.getConstantFP(0.0, DL, OperandVT),
-                        ISD::SETUO);
-
-  // In general case use integer operations to avoid traps if argument is SNaN.
-
-  // NaN has all exp bits set and a non zero significand. Therefore:
-  // isnan(V) == exp mask < abs(V)
-  unsigned BitSize = OperandVT.getScalarSizeInBits();
-  EVT IntVT = OperandVT.changeTypeToInteger();
-  SDValue ArgV = DAG.getBitcast(IntVT, Op);
-  APInt AndMask = APInt::getSignedMaxValue(BitSize);
-  SDValue AndMaskV = DAG.getConstant(AndMask, DL, IntVT);
-  SDValue AbsV = DAG.getNode(ISD::AND, DL, IntVT, ArgV, AndMaskV);
-  EVT ScalarFloatVT = OperandVT.getScalarType();
-  const Type *FloatTy = ScalarFloatVT.getTypeForEVT(*DAG.getContext());
-  const llvm::fltSemantics &Semantics = FloatTy->getFltSemantics();
-  APInt ExpMask = APFloat::getInf(Semantics).bitcastToAPInt();
-  SDValue ExpMaskV = DAG.getConstant(ExpMask, DL, IntVT);
-  return DAG.getSetCC(DL, ResultVT, ExpMaskV, AbsV, ISD::SETLT);
-}
-
 bool TargetLowering::expandCTPOP(SDNode *Node, SDValue &Result,
                                  SelectionDAG &DAG) const {
   SDLoc dl(Node);

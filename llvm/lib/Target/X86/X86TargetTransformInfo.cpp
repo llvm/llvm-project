@@ -2721,8 +2721,6 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::FMAXNUM,    MVT::v2f64,   2 },
     { ISD::FMAXNUM,    MVT::v4f64,   2 },
     { ISD::FMAXNUM,    MVT::v8f64,   2 },
-    { ISD::ISNAN,      MVT::v8f64,   1 },
-    { ISD::ISNAN,      MVT::v16f32,  1 },
   };
   static const CostTblEntry XOPCostTbl[] = {
     { ISD::BITREVERSE, MVT::v4i64,   4 },
@@ -2851,8 +2849,6 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::FSQRT,      MVT::f64,    21 }, // SNB from http://www.agner.org/
     { ISD::FSQRT,      MVT::v2f64,  21 }, // SNB from http://www.agner.org/
     { ISD::FSQRT,      MVT::v4f64,  43 }, // SNB from http://www.agner.org/
-    { ISD::ISNAN,      MVT::v4f64,   1 },
-    { ISD::ISNAN,      MVT::v8f32,   1 },
   };
   static const CostTblEntry GLMCostTbl[] = {
     { ISD::FSQRT, MVT::f32,   19 }, // sqrtss
@@ -2949,16 +2945,12 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::FMAXNUM,    MVT::v2f64,   4 },
     { ISD::FSQRT,      MVT::f64,    32 }, // Nehalem from http://www.agner.org/
     { ISD::FSQRT,      MVT::v2f64,  32 }, // Nehalem from http://www.agner.org/
-    { ISD::ISNAN,      MVT::f64,    1 },
-    { ISD::ISNAN,      MVT::v2f64,  1 },
   };
   static const CostTblEntry SSE1CostTbl[] = {
     { ISD::FMAXNUM,    MVT::f32,     4 },
     { ISD::FMAXNUM,    MVT::v4f32,   4 },
     { ISD::FSQRT,      MVT::f32,    28 }, // Pentium III from http://www.agner.org/
     { ISD::FSQRT,      MVT::v4f32,  56 }, // Pentium III from http://www.agner.org/
-    { ISD::ISNAN,      MVT::f32,     1 },
-    { ISD::ISNAN,      MVT::v4f32,   1 },
   };
   static const CostTblEntry BMI64CostTbl[] = { // 64-bit targets
     { ISD::CTTZ,       MVT::i64,     1 },
@@ -3047,10 +3039,6 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   case Intrinsic::cttz:
     ISD = ISD::CTTZ;
-    break;
-  case Intrinsic::isnan:
-    ISD = ISD::ISNAN;
-    OpTy = ICA.getArgTypes()[0];
     break;
   case Intrinsic::maxnum:
   case Intrinsic::minnum:
