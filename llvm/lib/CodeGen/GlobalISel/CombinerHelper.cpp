@@ -497,10 +497,7 @@ bool CombinerHelper::matchCombineExtendingLoads(MachineInstr &MI,
         continue;
       // Check for legality.
       if (LI) {
-        LegalityQuery::MemDesc MMDesc;
-        MMDesc.MemoryTy = MMO.getMemoryType();
-        MMDesc.AlignInBits = MMO.getAlign().value() * 8;
-        MMDesc.Ordering = MMO.getSuccessOrdering();
+        LegalityQuery::MemDesc MMDesc(MMO);
         LLT UseTy = MRI.getType(UseMI.getOperand(0).getReg());
         LLT SrcTy = MRI.getType(LoadMI->getPointerReg());
         if (LI->getAction({LoadMI->getOpcode(), {UseTy, SrcTy}, {MMDesc}})
@@ -724,10 +721,8 @@ bool CombinerHelper::matchSextInRegOfLoad(
     return false;
 
   const MachineMemOperand &MMO = LoadDef->getMMO();
-  LegalityQuery::MemDesc MMDesc;
+  LegalityQuery::MemDesc MMDesc(MMO);
   MMDesc.MemoryTy = LLT::scalar(NewSizeBits);
-  MMDesc.AlignInBits = MMO.getAlign().value() * 8;
-  MMDesc.Ordering = MMO.getSuccessOrdering();
   if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SEXTLOAD,
                                  {MRI.getType(LoadDef->getDstReg()),
                                   MRI.getType(LoadDef->getPointerReg())},
@@ -3758,10 +3753,8 @@ bool CombinerHelper::matchLoadOrCombine(
   // may not use index 0.
   Register Ptr = LowestIdxLoad->getPointerReg();
   const MachineMemOperand &MMO = LowestIdxLoad->getMMO();
-  LegalityQuery::MemDesc MMDesc;
+  LegalityQuery::MemDesc MMDesc(MMO);
   MMDesc.MemoryTy = Ty;
-  MMDesc.AlignInBits = MMO.getAlign().value() * 8;
-  MMDesc.Ordering = MMO.getSuccessOrdering();
   if (!isLegalOrBeforeLegalizer(
           {TargetOpcode::G_LOAD, {Ty, MRI.getType(Ptr)}, {MMDesc}}))
     return false;
