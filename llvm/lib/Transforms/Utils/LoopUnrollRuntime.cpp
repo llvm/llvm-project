@@ -939,10 +939,12 @@ bool llvm::UnrollRuntimeLoopRemainder(
   // of its parent loops, so the Scalar Evolution pass needs to be run again.
   SE->forgetTopmostLoop(L);
 
-  // Verify that the Dom Tree is correct.
+  // Verify that the Dom Tree and Loop Info are correct.
 #if defined(EXPENSIVE_CHECKS) && !defined(NDEBUG)
-  if (DT)
+  if (DT) {
     assert(DT->verify(DominatorTree::VerificationLevel::Full));
+    LI->verify(*DT);
+  }
 #endif
 
   // For unroll factor 2 remainder loop will have 1 iteration.
