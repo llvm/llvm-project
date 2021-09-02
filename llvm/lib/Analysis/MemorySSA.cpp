@@ -95,11 +95,13 @@ static cl::opt<bool, true>
     VerifyMemorySSAX("verify-memoryssa", cl::location(VerifyMemorySSA),
                      cl::Hidden, cl::desc("Enable verification of MemorySSA."));
 
-namespace {
+namespace llvm {
 
 /// An assembly annotator class to print Memory SSA information in
 /// comments.
 class MemorySSAAnnotatedWriter : public AssemblyAnnotationWriter {
+  friend class MemorySSA;
+
   const MemorySSA *MSSA;
 
 public:
@@ -118,29 +120,7 @@ public:
   }
 };
 
-/// An assembly annotator class to print Memory SSA information in
-/// comments.
-class MemorySSAWalkerAnnotatedWriter : public AssemblyAnnotationWriter {
-  MemorySSA *MSSA;
-  MemorySSAWalker *Walker;
-
-public:
-  MemorySSAWalkerAnnotatedWriter(MemorySSA *M)
-      : MSSA(M), Walker(M->getWalker()) {}
-
-  void emitInstructionAnnot(const Instruction *I,
-                            formatted_raw_ostream &OS) override {
-    if (MemoryAccess *MA = MSSA->getMemoryAccess(I)) {
-      MemoryAccess *Clobber = Walker->getClobberingMemoryAccess(MA);
-      OS << "; " << *MA;
-      if (Clobber)
-        OS << " - clobbered by " << *Clobber;
-      OS << "\n";
-    }
-  }
-};
-
-} // namespace
+} // end namespace llvm
 
 namespace {
 
@@ -2367,16 +2347,6 @@ PreservedAnalyses MemorySSAPrinterPass::run(Function &F,
     OS << "MemorySSA for function: " << F.getName() << "\n";
     MSSA.print(OS);
   }
-
-  return PreservedAnalyses::all();
-}
-
-PreservedAnalyses MemorySSAWalkerPrinterPass::run(Function &F,
-                                                  FunctionAnalysisManager &AM) {
-  auto &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
-  OS << "MemorySSA (walker) for function: " << F.getName() << "\n";
-  MemorySSAWalkerAnnotatedWriter Writer(&MSSA);
-  F.print(OS, &Writer);
 
   return PreservedAnalyses::all();
 }
