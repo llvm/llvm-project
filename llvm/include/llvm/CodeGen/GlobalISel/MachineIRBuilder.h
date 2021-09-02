@@ -1865,12 +1865,6 @@ public:
     return buildInstr(TargetOpcode::G_BITREVERSE, {Dst}, {Src});
   }
 
-  /// Build and insert \p Dst = G_ISNAN \p Src
-  MachineInstrBuilder buildIsNaN(const DstOp &Dst, const SrcOp &Src,
-                                 Optional<unsigned> Flags = None) {
-    return buildInstr(TargetOpcode::G_ISNAN, {Dst}, {Src}, Flags);
-  }
-
   virtual MachineInstrBuilder buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
                                          ArrayRef<SrcOp> SrcOps,
                                          Optional<unsigned> Flags = None);

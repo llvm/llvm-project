@@ -19,7 +19,6 @@
 #include "llvm/CodeGen/GlobalISel/LostDebugLocObserver.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -3487,8 +3486,6 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case G_ROTL:
   case G_ROTR:
     return lowerRotate(MI);
-  case G_ISNAN:
-    return lowerIsNaN(MI);
   GISEL_VECREDUCE_CASES_NONSEQ
     return lowerVectorReduction(MI);
   }
@@ -7400,36 +7397,6 @@ LegalizerHelper::lowerAbsToMaxNeg(MachineInstr &MI) {
   auto Zero = MIRBuilder.buildConstant(Ty, 0).getReg(0);
   auto Sub = MIRBuilder.buildSub(Ty, Zero, SrcReg).getReg(0);
   MIRBuilder.buildSMax(MI.getOperand(0), SrcReg, Sub);
-  MI.eraseFromParent();
-  return Legalized;
-}
-
-LegalizerHelper::LegalizeResult LegalizerHelper::lowerIsNaN(MachineInstr &MI) {
-  Register Dst = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
-  LLT SrcTy = MRI.getType(Src);
-  if (MI.getFlags() & MachineInstr::NoFPExcept) {
-    // Lower to an unordered comparison.
-    auto Zero = MIRBuilder.buildFConstant(SrcTy, 0.0);
-    MIRBuilder.buildFCmp(CmpInst::Predicate::FCMP_UNO, Dst, Src, Zero);
-    MI.eraseFromParent();
-    return Legalized;
-  }
-
-  // Use integer operations to avoid traps if the argument is SNaN.
-
-  // NaN has all exp bits set and a non zero significand. Therefore:
-  // isnan(V) == exp mask < abs(V)
-  auto Mask = APInt::getSignedMaxValue(SrcTy.getScalarSizeInBits());
-  auto MaskCst = MIRBuilder.buildConstant(SrcTy, Mask);
-  auto AbsV = MIRBuilder.buildAnd(SrcTy, Src, MaskCst);
-  auto *FloatTy = getFloatTypeForLLT(MI.getMF()->getFunction().getContext(),
-                                     SrcTy.getScalarType());
-  if (!FloatTy)
-    return UnableToLegalize;
-  auto ExpMask = APFloat::getInf(FloatTy->getFltSemantics()).bitcastToAPInt();
-  auto ExpMaskCst = MIRBuilder.buildConstant(SrcTy, ExpMask);
-  MIRBuilder.buildICmp(CmpInst::Predicate::ICMP_SLT, Dst, ExpMaskCst, AbsV);
   MI.eraseFromParent();
   return Legalized;
 }
