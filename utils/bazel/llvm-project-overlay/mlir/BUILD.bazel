@@ -931,6 +931,23 @@ gentbl_cc_library(
     deps = [":EmitCTdFiles"],
 )
 
+cc_library(
+    name = "TargetCpp",
+    srcs = glob([
+        "lib/Target/Cpp/*.cpp",
+        "lib/Target/Cpp/*.h",
+    ]),
+    hdrs = glob(["include/mlir/Target/Cpp/*.h"]),
+    deps = [
+        ":EmitC",
+        ":IR",
+        ":SCFDialect",
+        ":StandardOps",
+        ":Support",
+        ":Translation",
+    ],
+)
+
 ##---------------------------------------------------------------------------##
 # Async dialect.
 ##---------------------------------------------------------------------------##
@@ -4995,6 +5012,7 @@ cc_library(
     deps = [
         ":FromLLVMIRTranslation",
         ":SPIRVTranslateRegistration",
+        ":TargetCpp",
         ":ToLLVMIRTranslationRegistration",
     ],
 )
