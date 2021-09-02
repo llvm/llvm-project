@@ -7635,6 +7635,12 @@ ScalarEvolution::ExitLimit::ExitLimit(
     const SCEV *E, const SCEV *M, bool MaxOrZero,
     ArrayRef<const SmallPtrSetImpl<const SCEVPredicate *> *> PredSetList)
     : ExactNotTaken(E), MaxNotTaken(M), MaxOrZero(MaxOrZero) {
+  // If we prove the max count is zero, so is the symbolic bound.  This happens
+  // in practice due to differences in a) how context sensitive we've chosen
+  // to be and b) how we reason about bounds impied by UB.
+  if (MaxNotTaken->isZero())
+    ExactNotTaken = MaxNotTaken;
+
   assert((isa<SCEVCouldNotCompute>(ExactNotTaken) ||
           !isa<SCEVCouldNotCompute>(MaxNotTaken)) &&
          "Exact is not allowed to be less precise than Max");
@@ -11939,10 +11945,6 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   } else {
     MaxBECount = computeMaxBECountForLT(
         Start, Stride, RHS, getTypeSizeInBits(LHS->getType()), IsSigned);
-    // If we prove the max count is zero, so is the symbolic bound.  This can
-    // happen due to differences in how we reason about bounds impied by UB.
-    if (MaxBECount->isZero())
-      BECount = MaxBECount;
   }
 
   if (isa<SCEVCouldNotCompute>(MaxBECount) &&
