@@ -1399,3 +1399,165 @@ define i64 @add8208(i64 %a) {
   %c = add i64 %a, 8208
   ret i64 %c
 }
+
+define signext i32 @addshl32_5_6(i32 signext %a, i32 signext %b) {
+; RV64I-LABEL: addshl32_5_6:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slliw a0, a0, 5
+; RV64I-NEXT:    slliw a1, a1, 6
+; RV64I-NEXT:    addw a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64B-LABEL: addshl32_5_6:
+; RV64B:       # %bb.0:
+; RV64B-NEXT:    slliw a0, a0, 5
+; RV64B-NEXT:    slliw a1, a1, 6
+; RV64B-NEXT:    addw a0, a0, a1
+; RV64B-NEXT:    ret
+;
+; RV64ZBA-LABEL: addshl32_5_6:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slliw a0, a0, 5
+; RV64ZBA-NEXT:    slliw a1, a1, 6
+; RV64ZBA-NEXT:    addw a0, a0, a1
+; RV64ZBA-NEXT:    ret
+  %c = shl i32 %a, 5
+  %d = shl i32 %b, 6
+  %e = add i32 %c, %d
+  ret i32 %e
+}
+
+define i64 @addshl64_5_6(i64 %a, i64 %b) {
+; RV64I-LABEL: addshl64_5_6:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 5
+; RV64I-NEXT:    slli a1, a1, 6
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64B-LABEL: addshl64_5_6:
+; RV64B:       # %bb.0:
+; RV64B-NEXT:    slli a0, a0, 5
+; RV64B-NEXT:    slli a1, a1, 6
+; RV64B-NEXT:    add a0, a0, a1
+; RV64B-NEXT:    ret
+;
+; RV64ZBA-LABEL: addshl64_5_6:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli a0, a0, 5
+; RV64ZBA-NEXT:    slli a1, a1, 6
+; RV64ZBA-NEXT:    add a0, a0, a1
+; RV64ZBA-NEXT:    ret
+  %c = shl i64 %a, 5
+  %d = shl i64 %b, 6
+  %e = add i64 %c, %d
+  ret i64 %e
+}
+
+define signext i32 @addshl32_5_7(i32 signext %a, i32 signext %b) {
+; RV64I-LABEL: addshl32_5_7:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slliw a0, a0, 5
+; RV64I-NEXT:    slliw a1, a1, 7
+; RV64I-NEXT:    addw a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64B-LABEL: addshl32_5_7:
+; RV64B:       # %bb.0:
+; RV64B-NEXT:    slliw a0, a0, 5
+; RV64B-NEXT:    slliw a1, a1, 7
+; RV64B-NEXT:    addw a0, a0, a1
+; RV64B-NEXT:    ret
+;
+; RV64ZBA-LABEL: addshl32_5_7:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slliw a0, a0, 5
+; RV64ZBA-NEXT:    slliw a1, a1, 7
+; RV64ZBA-NEXT:    addw a0, a0, a1
+; RV64ZBA-NEXT:    ret
+  %c = shl i32 %a, 5
+  %d = shl i32 %b, 7
+  %e = add i32 %c, %d
+  ret i32 %e
+}
+
+define i64 @addshl64_5_7(i64 %a, i64 %b) {
+; RV64I-LABEL: addshl64_5_7:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 5
+; RV64I-NEXT:    slli a1, a1, 7
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64B-LABEL: addshl64_5_7:
+; RV64B:       # %bb.0:
+; RV64B-NEXT:    slli a0, a0, 5
+; RV64B-NEXT:    slli a1, a1, 7
+; RV64B-NEXT:    add a0, a0, a1
+; RV64B-NEXT:    ret
+;
+; RV64ZBA-LABEL: addshl64_5_7:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli a0, a0, 5
+; RV64ZBA-NEXT:    slli a1, a1, 7
+; RV64ZBA-NEXT:    add a0, a0, a1
+; RV64ZBA-NEXT:    ret
+  %c = shl i64 %a, 5
+  %d = shl i64 %b, 7
+  %e = add i64 %c, %d
+  ret i64 %e
+}
+
+define signext i32 @addshl32_5_8(i32 signext %a, i32 signext %b) {
+; RV64I-LABEL: addshl32_5_8:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slliw a0, a0, 5
+; RV64I-NEXT:    slliw a1, a1, 8
+; RV64I-NEXT:    addw a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64B-LABEL: addshl32_5_8:
+; RV64B:       # %bb.0:
+; RV64B-NEXT:    slliw a0, a0, 5
+; RV64B-NEXT:    slliw a1, a1, 8
+; RV64B-NEXT:    addw a0, a0, a1
+; RV64B-NEXT:    ret
+;
+; RV64ZBA-LABEL: addshl32_5_8:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slliw a0, a0, 5
+; RV64ZBA-NEXT:    slliw a1, a1, 8
+; RV64ZBA-NEXT:    addw a0, a0, a1
+; RV64ZBA-NEXT:    ret
+  %c = shl i32 %a, 5
+  %d = shl i32 %b, 8
+  %e = add i32 %c, %d
+  ret i32 %e
+}
+
+define i64 @addshl64_5_8(i64 %a, i64 %b) {
+; RV64I-LABEL: addshl64_5_8:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 5
+; RV64I-NEXT:    slli a1, a1, 8
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64B-LABEL: addshl64_5_8:
+; RV64B:       # %bb.0:
+; RV64B-NEXT:    slli a0, a0, 5
+; RV64B-NEXT:    slli a1, a1, 8
+; RV64B-NEXT:    add a0, a0, a1
+; RV64B-NEXT:    ret
+;
+; RV64ZBA-LABEL: addshl64_5_8:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli a0, a0, 5
+; RV64ZBA-NEXT:    slli a1, a1, 8
+; RV64ZBA-NEXT:    add a0, a0, a1
+; RV64ZBA-NEXT:    ret
+  %c = shl i64 %a, 5
+  %d = shl i64 %b, 8
+  %e = add i64 %c, %d
+  ret i64 %e
+}
