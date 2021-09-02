@@ -1069,7 +1069,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::USHLSAT:
   case ISD::ROTL:
   case ISD::ROTR:
-    SplitVecRes_BinOp(N, Lo, Hi);
+    SplitVecRes_BinOp(N, Lo, Hi, /*IsVP*/ false);
     break;
   case ISD::FMA:
   case ISD::FSHL:
@@ -1106,6 +1106,26 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::UDIVFIXSAT:
     SplitVecRes_FIX(N, Lo, Hi);
     break;
+  case ISD::VP_ADD:
+  case ISD::VP_AND:
+  case ISD::VP_MUL:
+  case ISD::VP_OR:
+  case ISD::VP_SUB:
+  case ISD::VP_XOR:
+  case ISD::VP_SHL:
+  case ISD::VP_LSHR:
+  case ISD::VP_ASHR:
+  case ISD::VP_SDIV:
+  case ISD::VP_UDIV:
+  case ISD::VP_SREM:
+  case ISD::VP_UREM:
+  case ISD::VP_FADD:
+  case ISD::VP_FSUB:
+  case ISD::VP_FMUL:
+  case ISD::VP_FDIV:
+  case ISD::VP_FREM:
+    SplitVecRes_BinOp(N, Lo, Hi, /*IsVP*/ true);
+    break;
   }
 
   // If Lo/Hi is null, the sub-method took care of registering results etc.
@@ -1137,8 +1157,8 @@ void DAGTypeLegalizer::IncrementPointer(MemSDNode *N, EVT MemVT,
   }
 }
 
-void DAGTypeLegalizer::SplitVecRes_BinOp(SDNode *N, SDValue &Lo,
-                                         SDValue &Hi) {
+void DAGTypeLegalizer::SplitVecRes_BinOp(SDNode *N, SDValue &Lo, SDValue &Hi,
+                                         bool IsVP) {
   SDValue LHSLo, LHSHi;
   GetSplitVector(N->getOperand(0), LHSLo, LHSHi);
   SDValue RHSLo, RHSHi;
@@ -1147,8 +1167,41 @@ void DAGTypeLegalizer::SplitVecRes_BinOp(SDNode *N, SDValue &Lo,
 
   const SDNodeFlags Flags = N->getFlags();
   unsigned Opcode = N->getOpcode();
-  Lo = DAG.getNode(Opcode, dl, LHSLo.getValueType(), LHSLo, RHSLo, Flags);
-  Hi = DAG.getNode(Opcode, dl, LHSHi.getValueType(), LHSHi, RHSHi, Flags);
+  if (!IsVP) {
+    Lo = DAG.getNode(Opcode, dl, LHSLo.getValueType(), LHSLo, RHSLo, Flags);
+    Hi = DAG.getNode(Opcode, dl, LHSHi.getValueType(), LHSHi, RHSHi, Flags);
+    return;
+  }
+
+  // Split the mask.
+  SDValue MaskLo, MaskHi;
+  SDValue Mask = N->getOperand(2);
+  EVT MaskVT = Mask.getValueType();
+  if (getTypeAction(MaskVT) == TargetLowering::TypeSplitVector)
+    GetSplitVector(Mask, MaskLo, MaskHi);
+  else
+    std::tie(MaskLo, MaskHi) = DAG.SplitVector(Mask, SDLoc(Mask));
+
+  // Split the vector length parameter.
+  // %evl -> umin(%evl, %halfnumelts) and usubsat(%evl - %halfnumelts).
+  SDValue EVL = N->getOperand(3);
+  EVT VecVT = N->getValueType(0);
+  EVT EVLVT = EVL.getValueType();
+  assert(VecVT.getVectorElementCount().isKnownEven() &&
+         "Expecting the mask to be an evenly-sized vector");
+  unsigned HalfMinNumElts = VecVT.getVectorMinNumElements() / 2;
+  SDValue HalfNumElts =
+      VecVT.isFixedLengthVector()
+          ? DAG.getConstant(HalfMinNumElts, dl, EVLVT)
+          : DAG.getVScale(dl, EVLVT,
+                          APInt(EVLVT.getScalarSizeInBits(), HalfMinNumElts));
+  SDValue EVLLo = DAG.getNode(ISD::UMIN, dl, EVLVT, EVL, HalfNumElts);
+  SDValue EVLHi = DAG.getNode(ISD::USUBSAT, dl, EVLVT, EVL, HalfNumElts);
+
+  Lo = DAG.getNode(Opcode, dl, LHSLo.getValueType(),
+                   {LHSLo, RHSLo, MaskLo, EVLLo}, Flags);
+  Hi = DAG.getNode(Opcode, dl, LHSHi.getValueType(),
+                   {LHSHi, RHSHi, MaskHi, EVLHi}, Flags);
 }
 
 void DAGTypeLegalizer::SplitVecRes_TernaryOp(SDNode *N, SDValue &Lo,
