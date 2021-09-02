@@ -15,7 +15,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
-#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "gtest/gtest.h"
 
@@ -141,40 +140,6 @@ protected:
   void TearDown() override {
     BB = nullptr;
     M.reset();
-  }
-
-  /// Create a function with a simple loop that calls printf using the logical
-  /// loop counter for use with tests that need a CanonicalLoopInfo object.
-  CanonicalLoopInfo *buildSingleLoopFunction(DebugLoc DL,
-                                             OpenMPIRBuilder &OMPBuilder,
-                                             Instruction **Call = nullptr,
-                                             BasicBlock **BodyCode = nullptr) {
-    OMPBuilder.initialize();
-    F->setName("func");
-
-    IRBuilder<> Builder(BB);
-    OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
-    Value *TripCount = F->getArg(0);
-
-    auto LoopBodyGenCB = [&](OpenMPIRBuilder::InsertPointTy CodeGenIP,
-                             llvm::Value *LC) {
-      Builder.restoreIP(CodeGenIP);
-      if (BodyCode)
-        *BodyCode = Builder.GetInsertBlock();
-
-      // Add something that consumes the induction variable to the body.
-      CallInst *CallInst = createPrintfCall(Builder, "%d\\n", {LC});
-      if (Call)
-        *Call = CallInst;
-    };
-    CanonicalLoopInfo *Loop =
-        OMPBuilder.createCanonicalLoop(Loc, LoopBodyGenCB, TripCount);
-
-    // Finalize the function.
-    Builder.restoreIP(Loop->getAfterIP());
-    Builder.CreateRetVoid();
-
-    return Loop;
   }
 
   LLVMContext Ctx;
@@ -1323,11 +1288,30 @@ TEST_F(OpenMPIRBuilderTest, CollapseNestedLoops) {
 }
 
 TEST_F(OpenMPIRBuilderTest, TileSingleLoop) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
-  Instruction *Call;
-  BasicBlock *BodyCode;
+  OMPBuilder.initialize();
+  F->setName("func");
+
+  IRBuilder<> Builder(BB);
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  Value *TripCount = F->getArg(0);
+
+  BasicBlock *BodyCode = nullptr;
+  Instruction *Call = nullptr;
+  auto LoopBodyGenCB = [&](InsertPointTy CodeGenIP, llvm::Value *LC) {
+    Builder.restoreIP(CodeGenIP);
+    BodyCode = Builder.GetInsertBlock();
+
+    // Add something that consumes the induction variable to the body.
+    Call = createPrintfCall(Builder, "%d\\n", {LC});
+  };
   CanonicalLoopInfo *Loop =
-      buildSingleLoopFunction(DL, OMPBuilder, &Call, &BodyCode);
+      OMPBuilder.createCanonicalLoop(Loc, LoopBodyGenCB, TripCount);
+
+  // Finalize the function.
+  Builder.restoreIP(Loop->getAfterIP());
+  Builder.CreateRetVoid();
 
   Instruction *OrigIndVar = Loop->getIndVar();
   EXPECT_EQ(Call->getOperand(1), OrigIndVar);
@@ -1662,86 +1646,6 @@ TEST_F(OpenMPIRBuilderTest, TileSingleLoopCounts) {
   OMPBuilder.finalize();
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
-}
-
-TEST_F(OpenMPIRBuilderTest, UnrollLoopFull) {
-  OpenMPIRBuilder OMPBuilder(*M);
-
-  CanonicalLoopInfo *CLI = buildSingleLoopFunction(DL, OMPBuilder);
-
-  // Unroll the loop.
-  OMPBuilder.unrollLoopFull(DL, CLI);
-
-  OMPBuilder.finalize();
-  EXPECT_FALSE(verifyModule(*M, &errs()));
-
-  PassBuilder PB;
-  FunctionAnalysisManager FAM;
-  PB.registerFunctionAnalyses(FAM);
-  LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
-
-  const std::vector<Loop *> &TopLvl = LI.getTopLevelLoops();
-  EXPECT_EQ(TopLvl.size(), 1u);
-
-  Loop *L = TopLvl.front();
-  EXPECT_TRUE(getBooleanLoopAttribute(L, "llvm.loop.unroll.enable"));
-  EXPECT_TRUE(getBooleanLoopAttribute(L, "llvm.loop.unroll.full"));
-}
-
-TEST_F(OpenMPIRBuilderTest, UnrollLoopPartial) {
-  OpenMPIRBuilder OMPBuilder(*M);
-  CanonicalLoopInfo *CLI = buildSingleLoopFunction(DL, OMPBuilder);
-
-  // Unroll the loop.
-  CanonicalLoopInfo *UnrolledLoop = nullptr;
-  OMPBuilder.unrollLoopPartial(DL, CLI, 5, &UnrolledLoop);
-  ASSERT_NE(UnrolledLoop, nullptr);
-
-  OMPBuilder.finalize();
-  EXPECT_FALSE(verifyModule(*M, &errs()));
-  UnrolledLoop->assertOK();
-
-  PassBuilder PB;
-  FunctionAnalysisManager FAM;
-  PB.registerFunctionAnalyses(FAM);
-  LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
-
-  const std::vector<Loop *> &TopLvl = LI.getTopLevelLoops();
-  EXPECT_EQ(TopLvl.size(), 1u);
-  Loop *Outer = TopLvl.front();
-  EXPECT_EQ(Outer->getHeader(), UnrolledLoop->getHeader());
-  EXPECT_EQ(Outer->getLoopLatch(), UnrolledLoop->getLatch());
-  EXPECT_EQ(Outer->getExitingBlock(), UnrolledLoop->getCond());
-  EXPECT_EQ(Outer->getExitBlock(), UnrolledLoop->getExit());
-
-  EXPECT_EQ(Outer->getSubLoops().size(), 1u);
-  Loop *Inner = Outer->getSubLoops().front();
-
-  EXPECT_TRUE(getBooleanLoopAttribute(Inner, "llvm.loop.unroll.enable"));
-  EXPECT_EQ(getIntLoopAttribute(Inner, "llvm.loop.unroll.count"), 5);
-}
-
-TEST_F(OpenMPIRBuilderTest, UnrollLoopHeuristic) {
-  OpenMPIRBuilder OMPBuilder(*M);
-
-  CanonicalLoopInfo *CLI = buildSingleLoopFunction(DL, OMPBuilder);
-
-  // Unroll the loop.
-  OMPBuilder.unrollLoopHeuristic(DL, CLI);
-
-  OMPBuilder.finalize();
-  EXPECT_FALSE(verifyModule(*M, &errs()));
-
-  PassBuilder PB;
-  FunctionAnalysisManager FAM;
-  PB.registerFunctionAnalyses(FAM);
-  LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
-
-  const std::vector<Loop *> &TopLvl = LI.getTopLevelLoops();
-  EXPECT_EQ(TopLvl.size(), 1u);
-
-  Loop *L = TopLvl.front();
-  EXPECT_TRUE(getBooleanLoopAttribute(L, "llvm.loop.unroll.enable"));
 }
 
 TEST_F(OpenMPIRBuilderTest, StaticWorkShareLoop) {
