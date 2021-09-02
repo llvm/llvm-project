@@ -276,9 +276,9 @@ TEST_F(FileManagerTest, getFileReturnsSameFileEntryForAliasedRealFiles) {
 
 TEST_F(FileManagerTest, getFileRefReturnsCorrectNameForDifferentStatPath) {
   // Inject files with the same inode, but where some files have a stat that
-  // gives a different name. This is adding coverage for weird stat behaviour
-  // triggered by the RedirectingFileSystem that FileManager::getFileRef has
-  // special logic for.
+  // gives a different name. This is adding coverage for stat behaviour
+  // triggered by the RedirectingFileSystem for 'use-external-name' that
+  // FileManager::getFileRef has special logic for.
   auto StatCache = std::make_unique<FakeStatCache>();
   StatCache->InjectDirectory("dir", 40);
   StatCache->InjectFile("dir/f1.cpp", 41);
