@@ -10,4 +10,6 @@ static_library("JIT") {
     "//llvm/lib/Support",
   ]
   sources = [ "ObjectFileJIT.cpp" ]
+  # For Utility/UuidCompatibility.h.
+  include_dirs = [ "//lldb/source" ]
 }
