@@ -1,15 +1,15 @@
 ; RUN: opt -passes='print<memoryssa-walker>' -disable-output < %s 2>&1 | FileCheck %s
 
 ; CHECK: define void @test
-; CHECK: 1 = MemoryDef(liveOnEntry)->liveOnEntry - clobbered by 0 = MemoryDef(liveOnEntry)
+; CHECK: 1 = MemoryDef(liveOnEntry)->liveOnEntry - clobbered by liveOnEntry
 ; CHECK: store i8 42, i8* %a1
-; CHECK: 2 = MemoryDef(1)->liveOnEntry - clobbered by 0 = MemoryDef(liveOnEntry)
+; CHECK: 2 = MemoryDef(1)->liveOnEntry - clobbered by liveOnEntry
 ; CHECK: store i8 42, i8* %a2
 ; CHECK: MemoryUse(1) MustAlias - clobbered by 1 = MemoryDef(liveOnEntry)->liveOnEntry
 ; CHECK: %l1 = load i8, i8* %a1
 ; CHECK: MemoryUse(2) MustAlias - clobbered by 2 = MemoryDef(1)->liveOnEntry
 ; CHECK: %l2 = load i8, i8* %a2
-; CHECK: 3 = MemoryDef(2)->liveOnEntry - clobbered by 0 = MemoryDef(liveOnEntry)
+; CHECK: 3 = MemoryDef(2)->liveOnEntry - clobbered by liveOnEntry
 ; CHECK: store i8 42, i8* %p
 ; CHECK: 4 = MemoryDef(3)->3 MustAlias - clobbered by 3 = MemoryDef(2)->liveOnEntry
 ; CHECK: store i8 42, i8* %p
