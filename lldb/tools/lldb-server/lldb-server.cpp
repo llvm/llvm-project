@@ -11,6 +11,7 @@
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -52,29 +53,30 @@ int main(int argc, char *argv[]) {
   llvm::InitLLVM IL(argc, argv, /*InstallPipeSignalExitHandler=*/false);
   llvm::PrettyStackTraceProgram X(argc, argv);
 
-  int option_error = 0;
   const char *progname = argv[0];
   if (argc < 2) {
     display_usage(progname);
-    exit(option_error);
+    return 1;
   }
 
   switch (argv[1][0]) {
-  case 'g':
+  case 'g': {
     llgs::initialize();
-    main_gdbserver(argc, argv);
-    llgs::terminate_debugger();
-    break;
-  case 'p':
+    auto deinit = llvm::make_scope_exit([]() { llgs::terminate_debugger(); });
+    return main_gdbserver(argc, argv);
+  }
+  case 'p': {
     llgs::initialize();
-    main_platform(argc, argv);
-    llgs::terminate_debugger();
-    break;
-  case 'v':
+    auto deinit = llvm::make_scope_exit([]() { llgs::terminate_debugger(); });
+    return main_platform(argc, argv);
+  }
+  case 'v': {
     fprintf(stderr, "%s\n", lldb_private::GetVersion());
-    break;
-  default:
+    return 0;
+  }
+  default: {
     display_usage(progname);
-    exit(option_error);
+    return 1;
+  }
   }
 }
