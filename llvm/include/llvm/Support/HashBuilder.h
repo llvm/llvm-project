@@ -26,6 +26,15 @@
 
 namespace llvm {
 
+namespace hashbuilder_detail {
+/// Trait to indicate whether a type's bits can be hashed directly (after
+/// endianness correction).
+template <typename U>
+struct IsHashableData
+    : std::integral_constant<bool, is_integral_or_enum<U>::value> {};
+
+} // namespace hashbuilder_detail
+
 /// Declares the hasher member, and functions forwarding directly to the hasher.
 template <typename HasherT> class HashBuilderBase {
 public:
@@ -80,11 +89,6 @@ template <typename HasherT, support::endianness Endianness>
 class HashBuilderImpl : public HashBuilderBase<HasherT> {
   static_assert(Endianness != support::endianness::native,
                 "HashBuilder should canonicalize endianness");
-  /// Trait to indicate whether a type's bits can be hashed directly (after
-  /// endianness correction).
-  template <typename U>
-  struct IsHashableData
-      : std::integral_constant<bool, is_integral_or_enum<U>::value> {};
 
 public:
   explicit HashBuilderImpl(HasherT &Hasher)
@@ -95,7 +99,9 @@ public:
 
   /// Implement hashing for hashable data types, e.g. integral or enum values.
   template <typename T>
-  std::enable_if_t<IsHashableData<T>::value, HashBuilderImpl &> add(T Value) {
+  std::enable_if_t<hashbuilder_detail::IsHashableData<T>::value,
+                   HashBuilderImpl &>
+  add(T Value) {
     return adjustForEndiannessAndAdd(Value);
   }
 
@@ -118,7 +124,7 @@ public:
     // details of `ArrayRef::begin()` and `ArrayRef::end()`. Explicitly call
     // `update` to guarantee the fast path.
     add(Value.size());
-    if (IsHashableData<T>::value &&
+    if (hashbuilder_detail::IsHashableData<T>::value &&
         Endianness == support::endian::system_endianness()) {
       this->update(
           makeArrayRef(reinterpret_cast<const uint8_t *>(Value.begin()),
@@ -242,7 +248,7 @@ public:
   /// ```
   template <typename T>
   std::enable_if_t<is_detected<HasAddHashT, T>::value &&
-                       !IsHashableData<T>::value,
+                       !hashbuilder_detail::IsHashableData<T>::value,
                    HashBuilderImpl &>
   add(const T &Value) {
     addHash(*this, Value);
@@ -334,7 +340,7 @@ private:
   }
 
   template <typename T>
-  std::enable_if_t<IsHashableData<T>::value &&
+  std::enable_if_t<hashbuilder_detail::IsHashableData<T>::value &&
                        Endianness == support::endian::system_endianness(),
                    HashBuilderImpl &>
   addRangeElementsImpl(T *First, T *Last, std::forward_iterator_tag) {
