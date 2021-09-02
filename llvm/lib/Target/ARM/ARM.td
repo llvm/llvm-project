@@ -569,6 +569,10 @@ def HasV9_2aOps   : SubtargetFeature<"v9.2a", "HasV9_2aOps", "true",
                                    "Support ARM v9.2a instructions",
                                    [HasV8_7aOps, HasV9_1aOps]>;
 
+def HasV9_3aOps   : SubtargetFeature<"v9.3a", "HasV9_3aOps", "true",
+                                   "Support ARM v9.3a instructions",
+                                   [HasV8_8aOps, HasV9_2aOps]>;
+
 def HasV8_1MMainlineOps : SubtargetFeature<
                "v8.1m.main", "HasV8_1MMainlineOps", "true",
                "Support ARM v8-1M Mainline instructions",
@@ -945,6 +949,19 @@ def ARMv92a   : Architecture<"armv9.2-a", "ARMv92a",  [HasV9_2aOps,
                                                        FeatureTrustZone,
                                                        FeatureMP,
                                                        FeatureVirtualization,
+                                                       FeatureCRC,
+                                                       FeatureRAS,
+                                                       FeatureDotProd]>;
+def ARMv93a   : Architecture<"armv9.3-a", "ARMv93a",  [HasV9_3aOps,
+                                                       FeatureAClass,
+                                                       FeatureDB,
+                                                       FeatureFPARMv8,
+                                                       FeatureNEON,
+                                                       FeatureDSP,
+                                                       FeatureTrustZone,
+                                                       FeatureMP,
+                                                       FeatureVirtualization,
+                                                       FeatureCrypto,
                                                        FeatureCRC,
                                                        FeatureRAS,
                                                        FeatureDotProd]>;

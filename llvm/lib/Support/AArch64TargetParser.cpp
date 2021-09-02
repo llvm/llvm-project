@@ -144,6 +144,8 @@ bool AArch64::getArchFeatures(AArch64::ArchKind AK,
     Features.push_back("+v9.1a");
   if (AK == AArch64::ArchKind::ARMV9_2A)
     Features.push_back("+v9.2a");
+  if (AK == AArch64::ArchKind::ARMV9_3A)
+    Features.push_back("+v9.3a");
   if(AK == AArch64::ArchKind::ARMV8R)
     Features.push_back("+v8r");
 

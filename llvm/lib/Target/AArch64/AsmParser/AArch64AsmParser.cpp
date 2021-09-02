@@ -3315,6 +3315,8 @@ static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
     Str += "ARMv9.1a";
   else if (FBS[AArch64::HasV9_2aOps])
     Str += "ARMv9.2a";
+  else if (FBS[AArch64::HasV9_3aOps])
+    Str += "ARMv9.3a";
   else if (FBS[AArch64::HasV8_0rOps])
     Str += "ARMv8r";
   else {
@@ -5937,6 +5939,7 @@ static void ExpandCryptoAEK(AArch64::ArchKind ArchKind,
     case AArch64::ArchKind::ARMV9A:
     case AArch64::ArchKind::ARMV9_1A:
     case AArch64::ArchKind::ARMV9_2A:
+    case AArch64::ArchKind::ARMV9_3A:
     case AArch64::ArchKind::ARMV8R:
       RequestedExtensions.push_back("sm4");
       RequestedExtensions.push_back("sha3");
