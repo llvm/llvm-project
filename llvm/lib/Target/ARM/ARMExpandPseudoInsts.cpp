@@ -1333,7 +1333,7 @@ void ARMExpandPseudo::CMSESaveClearFPRegs(
     const LivePhysRegs &LiveRegs, SmallVectorImpl<unsigned> &ScratchRegs) {
   if (STI->hasV8_1MMainlineOps())
     CMSESaveClearFPRegsV81(MBB, MBBI, DL, LiveRegs);
-  else
+  else if (STI->hasV8MMainlineOps())
     CMSESaveClearFPRegsV8(MBB, MBBI, DL, LiveRegs, ScratchRegs);
 }
 
@@ -1341,8 +1341,6 @@ void ARMExpandPseudo::CMSESaveClearFPRegs(
 void ARMExpandPseudo::CMSESaveClearFPRegsV8(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, DebugLoc &DL,
     const LivePhysRegs &LiveRegs, SmallVectorImpl<unsigned> &ScratchRegs) {
-  if (!STI->hasFPRegs())
-    return;
 
   // Store an available register for FPSCR clearing
   assert(!ScratchRegs.empty());
@@ -1396,7 +1394,11 @@ void ARMExpandPseudo::CMSESaveClearFPRegsV8(
 
   bool passesFPReg = (!NonclearedFPRegs.empty() || !ClearedFPRegs.empty());
 
-  // Lazy store all fp registers to the stack
+  if (passesFPReg)
+    assert(STI->hasFPRegs() && "Subtarget needs fpregs");
+
+  // Lazy store all fp registers to the stack.
+  // This executes as NOP in the absence of floating-point support.
   MachineInstrBuilder VLSTM = BuildMI(MBB, MBBI, DL, TII->get(ARM::VLSTM))
                                   .addReg(ARM::SP)
                                   .add(predOps(ARMCC::AL));
@@ -1524,15 +1526,13 @@ void ARMExpandPseudo::CMSERestoreFPRegs(
     SmallVectorImpl<unsigned> &AvailableRegs) {
   if (STI->hasV8_1MMainlineOps())
     CMSERestoreFPRegsV81(MBB, MBBI, DL, AvailableRegs);
-  else
+  else if (STI->hasV8MMainlineOps())
     CMSERestoreFPRegsV8(MBB, MBBI, DL, AvailableRegs);
 }
 
 void ARMExpandPseudo::CMSERestoreFPRegsV8(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, DebugLoc &DL,
     SmallVectorImpl<unsigned> &AvailableRegs) {
-  if (!STI->hasFPRegs())
-    return;
 
   // Use AvailableRegs to store the fp regs
   std::vector<std::tuple<unsigned, unsigned, unsigned>> ClearedFPRegs;
@@ -1574,6 +1574,11 @@ void ARMExpandPseudo::CMSERestoreFPRegsV8(
     }
   }
 
+  bool returnsFPReg = (!NonclearedFPRegs.empty() || !ClearedFPRegs.empty());
+
+  if (returnsFPReg)
+    assert(STI->hasFPRegs() && "Subtarget needs fpregs");
+
   // Push FP regs that cannot be restored via normal registers on the stack
   for (unsigned Reg : NonclearedFPRegs) {
     if (ARM::DPR_VFP2RegClass.contains(Reg))
@@ -1588,7 +1593,8 @@ void ARMExpandPseudo::CMSERestoreFPRegsV8(
           .add(predOps(ARMCC::AL));
   }
 
-  // Lazy load fp regs from stack
+  // Lazy load fp regs from stack.
+  // This executes as NOP in the absence of floating-point support.
   BuildMI(MBB, MBBI, DL, TII->get(ARM::VLLDM))
       .addReg(ARM::SP)
       .add(predOps(ARMCC::AL));

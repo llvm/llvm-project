@@ -61,7 +61,8 @@ define void @func1(void ()* nocapture %fptr) #0 {
 ; CHECK-8M-NEXT:    push {r7, lr}
 ; CHECK-8M-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11}
 ; CHECK-8M-NEXT:    bic r0, r0, #1
-; CHECK-8M-NEXT:    msr apsr_nzcvq, r0
+; CHECK-8M-NEXT:    sub sp, #136
+; CHECK-8M-NEXT:    vlstm sp
 ; CHECK-8M-NEXT:    mov r1, r0
 ; CHECK-8M-NEXT:    mov r2, r0
 ; CHECK-8M-NEXT:    mov r3, r0
@@ -74,7 +75,10 @@ define void @func1(void ()* nocapture %fptr) #0 {
 ; CHECK-8M-NEXT:    mov r10, r0
 ; CHECK-8M-NEXT:    mov r11, r0
 ; CHECK-8M-NEXT:    mov r12, r0
+; CHECK-8M-NEXT:    msr apsr_nzcvq, r0
 ; CHECK-8M-NEXT:    blxns r0
+; CHECK-8M-NEXT:    vlldm sp
+; CHECK-8M-NEXT:    add sp, #136
 ; CHECK-8M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
 ; CHECK-8M-NEXT:    pop.w {r7, lr}
 ; CHECK-8M-NEXT:    mov r0, lr
@@ -152,7 +156,8 @@ define void @func2(void ()* nocapture %fptr) #2 {
 ; CHECK-8M-NEXT:    push {r7, lr}
 ; CHECK-8M-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11}
 ; CHECK-8M-NEXT:    bic r0, r0, #1
-; CHECK-8M-NEXT:    msr apsr_nzcvq, r0
+; CHECK-8M-NEXT:    sub sp, #136
+; CHECK-8M-NEXT:    vlstm sp
 ; CHECK-8M-NEXT:    mov r1, r0
 ; CHECK-8M-NEXT:    mov r2, r0
 ; CHECK-8M-NEXT:    mov r3, r0
@@ -165,7 +170,10 @@ define void @func2(void ()* nocapture %fptr) #2 {
 ; CHECK-8M-NEXT:    mov r10, r0
 ; CHECK-8M-NEXT:    mov r11, r0
 ; CHECK-8M-NEXT:    mov r12, r0
+; CHECK-8M-NEXT:    msr apsr_nzcvq, r0
 ; CHECK-8M-NEXT:    blxns r0
+; CHECK-8M-NEXT:    vlldm sp
+; CHECK-8M-NEXT:    add sp, #136
 ; CHECK-8M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
 ; CHECK-8M-NEXT:    pop {r7, pc}
 ;
