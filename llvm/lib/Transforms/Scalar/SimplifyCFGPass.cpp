@@ -319,6 +319,21 @@ SimplifyCFGPass::SimplifyCFGPass(const SimplifyCFGOptions &Opts)
   applyCommandLineOverridesToOptions(Options);
 }
 
+void SimplifyCFGPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<SimplifyCFGPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << "<";
+  OS << "bonus-inst-threshold=" << Options.BonusInstThreshold << ";";
+  OS << (Options.ForwardSwitchCondToPhi ? "" : "no-") << "forward-switch-cond;";
+  OS << (Options.ConvertSwitchToLookupTable ? "" : "no-")
+     << "switch-to-lookup;";
+  OS << (Options.NeedCanonicalLoop ? "" : "no-") << "keep-loops;";
+  OS << (Options.HoistCommonInsts ? "" : "no-") << "hoist-common-insts;";
+  OS << (Options.SinkCommonInsts ? "" : "no-") << "sink-common-insts";
+  OS << ">";
+}
+
 PreservedAnalyses SimplifyCFGPass::run(Function &F,
                                        FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
