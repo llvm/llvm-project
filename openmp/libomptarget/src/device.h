@@ -132,6 +132,7 @@ public:
   uint64_t decRefCount(bool UseHoldRefCount) const {
     uint64_t &ThisRefCount = UseHoldRefCount ? HoldRefCount : DynRefCount;
     uint64_t OtherRefCount = UseHoldRefCount ? DynRefCount : HoldRefCount;
+    (void)OtherRefCount;
     if (ThisRefCount != INFRefCount) {
       if (ThisRefCount > 0)
         --ThisRefCount;
