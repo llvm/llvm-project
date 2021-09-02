@@ -411,7 +411,7 @@ define i8 @umax_of_nots(i8 %x, i8 %y) {
 ; CHECK-LABEL: @umax_of_nots(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    call void @use(i8 [[NOTX]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[Y:%.*]], i8 [[X]])
 ; CHECK-NEXT:    [[M:%.*]] = xor i8 [[TMP1]], -1
 ; CHECK-NEXT:    ret i8 [[M]]
 ;
@@ -546,6 +546,19 @@ define i8 @smin_of_umax_and_not(i8 %x, i8 %y, i8 %z) {
   %m1 = call i8 @llvm.umax.i8(i8 %noty, i8 %notz)
   %m2 = call i8 @llvm.smin.i8(i8 %notx, i8 %m1)
   ret i8 %m2
+}
+
+; Negative test - don't infinite loop on constant expression
+
+define i8 @umin_of_not_and_nontrivial_const(i8 %x) {
+; CHECK-LABEL: @umin_of_not_and_nontrivial_const(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[NOTX]], i8 ptrtoint (i8 (i8)* @umin_of_not_and_nontrivial_const to i8))
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %notx = xor i8 %x, -1
+  %m = call i8 @llvm.umin.i8(i8 ptrtoint (i8(i8)* @umin_of_not_and_nontrivial_const to i8), i8 %notx)
+  ret i8 %m
 }
 
 ; Negative test - too many uses
