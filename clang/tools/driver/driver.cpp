@@ -416,10 +416,10 @@ int main(int Argc, const char **Argv) {
     // Skip end-of-line response file markers
     if (Args[i] == nullptr)
       continue;
-    if (StringRef(Args[i]) == "-no-canonical-prefixes") {
+    if (StringRef(Args[i]) == "-canonical-prefixes")
+      CanonicalPrefixes = true;
+    else if (StringRef(Args[i]) == "-no-canonical-prefixes")
       CanonicalPrefixes = false;
-      break;
-    }
   }
 
   // Handle CL and _CL_ which permits additional command line options to be
