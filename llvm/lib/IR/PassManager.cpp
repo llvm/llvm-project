@@ -91,13 +91,6 @@ bool FunctionAnalysisManagerModuleProxy::Result::invalidate(
 }
 } // namespace llvm
 
-void ModuleToFunctionPassAdaptor::printPipeline(
-    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
-  OS << "function(";
-  Pass->printPipeline(OS, MapClassName2PassName);
-  OS << ")";
-}
-
 PreservedAnalyses ModuleToFunctionPassAdaptor::run(Module &M,
                                                    ModuleAnalysisManager &AM) {
   FunctionAnalysisManager &FAM =
