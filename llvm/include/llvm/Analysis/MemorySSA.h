@@ -953,17 +953,6 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// Printer pass for \c MemorySSA via the walker.
-class MemorySSAWalkerPrinterPass
-    : public PassInfoMixin<MemorySSAWalkerPrinterPass> {
-  raw_ostream &OS;
-
-public:
-  explicit MemorySSAWalkerPrinterPass(raw_ostream &OS) : OS(OS) {}
-
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-};
-
 /// Verifier pass for \c MemorySSA.
 struct MemorySSAVerifierPass : PassInfoMixin<MemorySSAVerifierPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
