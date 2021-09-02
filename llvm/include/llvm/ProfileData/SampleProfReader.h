@@ -720,6 +720,11 @@ protected:
   /// The table mapping from function context to the offset of its
   /// FunctionSample towards file start.
   DenseMap<SampleContext, uint64_t> FuncOffsetTable;
+
+  /// Function offset mapping ordered by contexts.
+  std::unique_ptr<std::vector<std::pair<SampleContext, uint64_t>>>
+      OrderedFuncOffsets;
+
   /// The set containing the functions to use when compiling a module.
   DenseSet<StringRef> FuncsToUse;
 
@@ -745,6 +750,8 @@ protected:
   /// If SkipFlatProf is true, skip the sections with
   /// SecFlagFlat flag.
   bool SkipFlatProf = false;
+
+  bool FuncOffsetsOrdered = false;
 
 public:
   SampleProfileReaderExtBinaryBase(std::unique_ptr<MemoryBuffer> B,
