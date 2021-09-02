@@ -8842,7 +8842,7 @@ static __inline__ vector long long __ATTRS_o_ai
 vec_sl(vector long long __a, vector unsigned long long __b) {
   return (vector long long)vec_sl((vector unsigned long long)__a, __b);
 }
-#else
+#elif defined(__VSX__)
 static __inline__ vector unsigned char __ATTRS_o_ai
 vec_vspltb(vector unsigned char __a, unsigned char __b);
 static __inline__ vector unsigned long long __ATTRS_o_ai
@@ -8888,7 +8888,7 @@ static __inline__ vector long long __ATTRS_o_ai
 vec_sl(vector long long __a, vector unsigned long long __b) {
   return (vector long long)vec_sl((vector unsigned long long)__a, __b);
 }
-#endif
+#endif /* __VSX__ */
 
 /* vec_vslb */
 
@@ -10353,7 +10353,7 @@ static __inline__ vector long long __ATTRS_o_ai
 vec_sr(vector long long __a, vector unsigned long long __b) {
   return (vector long long)vec_sr((vector unsigned long long)__a, __b);
 }
-#else
+#elif defined(__VSX__)
 static __inline__ vector unsigned long long __ATTRS_o_ai
 vec_sr(vector unsigned long long __a, vector unsigned long long __b) {
   __b %= (vector unsigned long long)(sizeof(unsigned long long) * __CHAR_BIT__);
@@ -10397,7 +10397,7 @@ static __inline__ vector long long __ATTRS_o_ai
 vec_sr(vector long long __a, vector unsigned long long __b) {
   return (vector long long)vec_sr((vector unsigned long long)__a, __b);
 }
-#endif
+#endif /* __VSX__ */
 
 /* vec_vsrb */
 
@@ -10483,7 +10483,7 @@ static __inline__ vector unsigned long long __ATTRS_o_ai
 vec_sra(vector unsigned long long __a, vector unsigned long long __b) {
   return (vector unsigned long long)((vector signed long long)__a >> __b);
 }
-#else
+#elif defined(__VSX__)
 static __inline__ vector signed long long __ATTRS_o_ai
 vec_sra(vector signed long long __a, vector unsigned long long __b) {
   __b %= (vector unsigned long long)(sizeof(unsigned long long) * __CHAR_BIT__);
@@ -10495,7 +10495,7 @@ vec_sra(vector unsigned long long __a, vector unsigned long long __b) {
   __b %= (vector unsigned long long)(sizeof(unsigned long long) * __CHAR_BIT__);
   return (vector unsigned long long)((vector signed long long)__a >> __b);
 }
-#endif
+#endif /* __VSX__ */
 
 /* vec_vsrab */
 
@@ -17227,6 +17227,7 @@ provided.
 #define vec_ncipher_be __builtin_altivec_crypto_vncipher
 #define vec_ncipherlast_be __builtin_altivec_crypto_vncipherlast
 
+#ifdef __VSX__
 static __inline__ vector unsigned long long __attribute__((__always_inline__))
 __builtin_crypto_vsbox(vector unsigned long long __a) {
   return __builtin_altivec_crypto_vsbox(__a);
@@ -17255,6 +17256,7 @@ __builtin_crypto_vncipherlast(vector unsigned long long __a,
                               vector unsigned long long __b) {
   return __builtin_altivec_crypto_vncipherlast(__a, __b);
 }
+#endif /* __VSX__ */
 
 #define __builtin_crypto_vshasigmad __builtin_altivec_crypto_vshasigmad
 #define __builtin_crypto_vshasigmaw __builtin_altivec_crypto_vshasigmaw

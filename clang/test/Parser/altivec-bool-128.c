@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple=powerpc64-unknown-linux-gnu \
+// RUN: %clang_cc1 -triple=powerpc64-unknown-linux-gnu -target-cpu pwr8\
 // RUN:            -target-feature +altivec -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple=powerpc64le-unknown-linux-gnu \
+// RUN: %clang_cc1 -triple=powerpc64le-unknown-linux-gnu -target-cpu pwr8\
 // RUN:            -target-feature +altivec -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple=powerpc64le-unknown-linux-gnu -target-cpu pwr10 \
 // RUN:            -target-feature +vsx -target-feature -power10-vector \
