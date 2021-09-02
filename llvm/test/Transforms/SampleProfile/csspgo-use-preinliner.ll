@@ -8,8 +8,9 @@
 ; DEFAULT-NOT: inlined into
 
 ; PREINLINE-NOT: inlined into
+; PREINLINE: '_Z5funcAi' inlined into 'main'
+; PREINLINE: '_Z8funcLeafi' inlined into 'main'
 ; PREINLINE: '_Z8funcLeafi' inlined into '_Z5funcBi'
-; PREINLINE: '_Z8funcLeafi' inlined into '_Z5funcAi'
 ; PREINLINE-NOT: inlined into
 
 @factor = dso_local global i32 3, align 4, !dbg !0
