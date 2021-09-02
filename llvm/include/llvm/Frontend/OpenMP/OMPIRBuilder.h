@@ -1005,14 +1005,16 @@ public:
   /// \param Loc The insert and source location description.
   /// \param IsSPMD Flag to indicate if the kernel is an SPMD kernel or not.
   /// \param RequiresFullRuntime Indicate if a full device runtime is necessary.
-  InsertPointTy createTargetInit(const LocationDescription &Loc, bool IsSPMD, bool RequiresFullRuntime);
+  InsertPointTy createTargetInit(const LocationDescription &Loc, bool IsSPMD,
+                                 bool RequiresFullRuntime);
 
   /// Create a runtime call for kmpc_target_deinit
   ///
   /// \param Loc The insert and source location description.
   /// \param IsSPMD Flag to indicate if the kernel is an SPMD kernel or not.
   /// \param RequiresFullRuntime Indicate if a full device runtime is necessary.
-  void createTargetDeinit(const LocationDescription &Loc, bool IsSPMD, bool RequiresFullRuntime);
+  void createTargetDeinit(const LocationDescription &Loc, bool IsSPMD,
+                          bool RequiresFullRuntime);
 
   ///}
 
