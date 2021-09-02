@@ -10835,6 +10835,7 @@ On exit from a function:
           registers are intermixed at regular intervals in order to keep a
           similar ratio independent of the number of allocated VGPRs.
 
+    * GFX90A: All AGPR registers except the clobbered registers AGPR0-31.
     * Lanes of all VGPRs that are inactive at the call site.
 
       For the AMDGPU backend, an inter-procedural register allocation (IPRA)
@@ -10849,8 +10850,6 @@ On exit from a function:
     function is available to the caller.
 
 .. TODO::
-
-  - On gfx908 are all ACC registers clobbered?
 
   - How are function results returned? The address of structured types is passed
     by reference, but what about other types?

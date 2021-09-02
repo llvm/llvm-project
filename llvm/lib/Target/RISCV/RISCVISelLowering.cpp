@@ -6206,6 +6206,13 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // Transform
     SDValue LHS = N->getOperand(0);
     SDValue RHS = N->getOperand(1);
+    SDValue TrueV = N->getOperand(3);
+    SDValue FalseV = N->getOperand(4);
+
+    // If the True and False values are the same, we don't need a select_cc.
+    if (TrueV == FalseV)
+      return TrueV;
+
     ISD::CondCode CCVal = cast<CondCodeSDNode>(N->getOperand(2))->get();
     if (!ISD::isIntEqualitySetCC(CCVal))
       break;
@@ -6228,9 +6235,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       translateSetCCForBranch(DL, LHS, RHS, CCVal, DAG);
 
       SDValue TargetCC = DAG.getCondCode(CCVal);
-      return DAG.getNode(
-          RISCVISD::SELECT_CC, DL, N->getValueType(0),
-          {LHS, RHS, TargetCC, N->getOperand(3), N->getOperand(4)});
+      return DAG.getNode(RISCVISD::SELECT_CC, DL, N->getValueType(0),
+                         {LHS, RHS, TargetCC, TrueV, FalseV});
     }
 
     // Fold (select_cc (xor X, Y), 0, eq/ne, trueV, falseV) ->
@@ -6238,8 +6244,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (LHS.getOpcode() == ISD::XOR && isNullConstant(RHS))
       return DAG.getNode(RISCVISD::SELECT_CC, SDLoc(N), N->getValueType(0),
                          {LHS.getOperand(0), LHS.getOperand(1),
-                          N->getOperand(2), N->getOperand(3),
-                          N->getOperand(4)});
+                          N->getOperand(2), TrueV, FalseV});
     // (select_cc X, 1, setne, trueV, falseV) ->
     // (select_cc X, 0, seteq, trueV, falseV) if we can prove X is 0/1.
     // This can occur when legalizing some floating point comparisons.
@@ -6249,9 +6254,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       CCVal = ISD::getSetCCInverse(CCVal, LHS.getValueType());
       SDValue TargetCC = DAG.getCondCode(CCVal);
       RHS = DAG.getConstant(0, DL, LHS.getValueType());
-      return DAG.getNode(
-          RISCVISD::SELECT_CC, DL, N->getValueType(0),
-          {LHS, RHS, TargetCC, N->getOperand(3), N->getOperand(4)});
+      return DAG.getNode(RISCVISD::SELECT_CC, DL, N->getValueType(0),
+                         {LHS, RHS, TargetCC, TrueV, FalseV});
     }
 
     break;

@@ -51,7 +51,7 @@ class TargetInfo;
 /// The preprocessor keeps track of this information for each
 /// file that is \#included.
 struct HeaderFileInfo {
-  /// True if this is a \#import'd or \#pragma once file.
+  /// True if this is a \#import'd file.
   unsigned isImport : 1;
 
   /// True if this is a \#pragma once file.
@@ -450,11 +450,10 @@ public:
     return (SrcMgr::CharacteristicKind)getFileInfo(File).DirInfo;
   }
 
-  /// Mark the specified file as a "once only" file, e.g. due to
+  /// Mark the specified file as a "once only" file due to
   /// \#pragma once.
   void MarkFileIncludeOnce(const FileEntry *File) {
     HeaderFileInfo &FI = getFileInfo(File);
-    FI.isImport = true;
     FI.isPragmaOnce = true;
   }
 
@@ -500,8 +499,7 @@ public:
   /// This routine does not consider the effect of \#import
   bool isFileMultipleIncludeGuarded(const FileEntry *File);
 
-  /// Determine whether the given file is known to have ever been \#imported
-  /// (or if it has been \#included and we've encountered a \#pragma once).
+  /// Determine whether the given file is known to have ever been \#imported.
   bool hasFileBeenImported(const FileEntry *File) {
     const HeaderFileInfo *FI = getExistingFileInfo(File);
     return FI && FI->isImport;

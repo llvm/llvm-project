@@ -1633,6 +1633,7 @@ void SampleOverlapAggregator::computeSampleProfileOverlap(raw_fd_ostream &OS) {
            "except inlinees");
     FuncOverlap.TestSample = TestStats[FuncOverlap.TestName].SampleSum;
 
+    bool Matched = false;
     const auto Match = BaseFuncProf.find(FuncOverlap.TestName);
     if (Match == BaseFuncProf.end()) {
       const FuncSampleStats &FuncStats = TestStats[FuncOverlap.TestName];
@@ -1677,6 +1678,7 @@ void SampleOverlapAggregator::computeSampleProfileOverlap(raw_fd_ostream &OS) {
       // Remove matched base functions for later reporting functions not found
       // in test profile.
       BaseFuncProf.erase(Match);
+      Matched = true;
     }
 
     // Print function-level similarity information if specified by options.
@@ -1684,9 +1686,8 @@ void SampleOverlapAggregator::computeSampleProfileOverlap(raw_fd_ostream &OS) {
            "TestStats should have records for all functions in test profile "
            "except inlinees");
     if (TestStats[FuncOverlap.TestName].MaxSample >= FuncFilter.ValueCutoff ||
-        (Match != BaseFuncProf.end() &&
-         FuncOverlap.Similarity < LowSimilarityThreshold) ||
-        (Match != BaseFuncProf.end() && !FuncFilter.NameFilter.empty() &&
+        (Matched && FuncOverlap.Similarity < LowSimilarityThreshold) ||
+        (Matched && !FuncFilter.NameFilter.empty() &&
          FuncOverlap.BaseName.toString().find(FuncFilter.NameFilter) !=
              std::string::npos)) {
       assert(ProfOverlap.BaseSample > 0 &&

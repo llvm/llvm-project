@@ -1,4 +1,5 @@
 ; RUN: llc < %s -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -force-opaque-pointers | FileCheck %s
 
 ; Test main functions with alternate signatures.
 

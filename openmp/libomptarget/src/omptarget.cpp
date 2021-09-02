@@ -490,9 +490,9 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
       // PTR_AND_OBJ entry is handled below, and so the allocation might fail
       // when HasPresentModifier.
       Pointer_TPR = Device.getTargetPointer(
-          HstPtrBase, HstPtrBase, sizeof(void *), nullptr,
-          MoveDataStateTy::NONE, IsImplicit, UpdateRef, HasCloseModifier,
-          HasPresentModifier, HasHoldModifier, AsyncInfo);
+          HstPtrBase, HstPtrBase, sizeof(void *), /*HstPtrName=*/nullptr,
+          /*HasFlagTo=*/false, /*HasFlagAlways=*/false, IsImplicit, UpdateRef,
+          HasCloseModifier, HasPresentModifier, HasHoldModifier, AsyncInfo);
       PointerTgtPtrBegin = Pointer_TPR.TargetPointer;
       IsHostPtr = Pointer_TPR.Flags.IsHostPointer;
       if (!PointerTgtPtrBegin) {
@@ -514,18 +514,13 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
           (!FromMapper || i != 0); // subsequently update ref count of pointee
     }
 
-    MoveDataStateTy MoveData = MoveDataStateTy::NONE;
-    const bool UseUSM = PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY;
     const bool HasFlagTo = arg_types[i] & OMP_TGT_MAPTYPE_TO;
     const bool HasFlagAlways = arg_types[i] & OMP_TGT_MAPTYPE_ALWAYS;
-    if (HasFlagTo && (!UseUSM || HasCloseModifier))
-      MoveData = HasFlagAlways ? MoveDataStateTy::REQUIRED
-                               : MoveDataStateTy::UNKNOWN;
-
-    auto TPR = Device.getTargetPointer(
-        HstPtrBegin, HstPtrBase, data_size, HstPtrName, MoveData, IsImplicit,
-        UpdateRef, HasCloseModifier, HasPresentModifier, HasHoldModifier,
-        AsyncInfo);
+    auto TPR = Device.getTargetPointer(HstPtrBegin, HstPtrBase, data_size,
+                                       HstPtrName, HasFlagTo, HasFlagAlways,
+                                       IsImplicit, UpdateRef, HasCloseModifier,
+                                       HasPresentModifier, HasHoldModifier,
+                                       AsyncInfo);
     void *TgtPtrBegin = TPR.TargetPointer;
     IsHostPtr = TPR.Flags.IsHostPointer;
     // If data_size==0, then the argument could be a zero-length pointer to
@@ -609,15 +604,11 @@ struct DeallocTgtPtrInfo {
   void *HstPtrBegin;
   /// Size of the data
   int64_t DataSize;
-  /// Whether it has \p close modifier
-  bool HasCloseModifier;
   /// Whether it has \p ompx_hold modifier
   bool HasHoldModifier;
 
-  DeallocTgtPtrInfo(void *HstPtr, int64_t Size, bool HasCloseModifier,
-                    bool HasHoldModifier)
-      : HstPtrBegin(HstPtr), DataSize(Size), HasCloseModifier(HasCloseModifier),
-        HasHoldModifier(HasHoldModifier) {}
+  DeallocTgtPtrInfo(void *HstPtr, int64_t Size, bool HasHoldModifier)
+      : HstPtrBegin(HstPtr), DataSize(Size), HasHoldModifier(HasHoldModifier) {}
 };
 } // namespace
 
@@ -682,7 +673,6 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
                       (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)) &&
                      !(FromMapper && I == 0);
     bool ForceDelete = ArgTypes[I] & OMP_TGT_MAPTYPE_DELETE;
-    bool HasCloseModifier = ArgTypes[I] & OMP_TGT_MAPTYPE_CLOSE;
     bool HasPresentModifier = ArgTypes[I] & OMP_TGT_MAPTYPE_PRESENT;
     bool HasHoldModifier = ArgTypes[I] & OMP_TGT_MAPTYPE_OMPX_HOLD;
 
@@ -742,16 +732,7 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
       // Move data back to the host
       if (ArgTypes[I] & OMP_TGT_MAPTYPE_FROM) {
         bool Always = ArgTypes[I] & OMP_TGT_MAPTYPE_ALWAYS;
-        bool CopyMember = false;
-        if (!(PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
-            HasCloseModifier) {
-          if (IsLast)
-            CopyMember = true;
-        }
-
-        if ((DelEntry || Always || CopyMember) &&
-            !(PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
-              TgtPtrBegin == HstPtrBegin)) {
+        if ((Always || IsLast) && !IsHostPtr) {
           DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
              DataSize, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
           Ret = Device.retrieveData(HstPtrBegin, TgtPtrBegin, DataSize,
@@ -805,9 +786,8 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
       Device.ShadowMtx.unlock();
 
       // Add pointer to the buffer for later deallocation
-      if (DelEntry)
-        DeallocTgtPtrs.emplace_back(HstPtrBegin, DataSize, HasCloseModifier,
-                                    HasHoldModifier);
+      if (DelEntry && !IsHostPtr)
+        DeallocTgtPtrs.emplace_back(HstPtrBegin, DataSize, HasHoldModifier);
     }
   }
 
@@ -824,7 +804,7 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
     if (FromMapperBase && FromMapperBase == Info.HstPtrBegin)
       continue;
     Ret = Device.deallocTgtPtr(Info.HstPtrBegin, Info.DataSize,
-                               Info.HasCloseModifier, Info.HasHoldModifier);
+                               Info.HasHoldModifier);
     if (Ret != OFFLOAD_SUCCESS) {
       REPORT("Deallocating data from device failed.\n");
       return OFFLOAD_FAIL;
@@ -853,8 +833,7 @@ static int targetDataContiguous(ident_t *loc, DeviceTy &Device, void *ArgsBase,
     return OFFLOAD_SUCCESS;
   }
 
-  if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
-      TgtPtrBegin == HstPtrBegin) {
+  if (IsHostPtr) {
     DP("hst data:" DPxMOD " unified and shared, becomes a noop\n",
        DPxPTR(HstPtrBegin));
     return OFFLOAD_SUCCESS;
@@ -1293,7 +1272,7 @@ static int processDataBefore(ident_t *loc, int64_t DeviceId, void *HostPtr,
         void *HstPtrVal = Args[I];
         void *HstPtrBegin = ArgBases[I];
         void *HstPtrBase = Args[Idx];
-        bool IsLast, IsHostPtr; // unused.
+        bool IsLast, IsHostPtr; // IsLast is unused.
         void *TgtPtrBase =
             (void *)((intptr_t)TgtArgs[TgtIdx] + TgtOffsets[TgtIdx]);
         DP("Parent lambda base " DPxMOD "\n", DPxPTR(TgtPtrBase));
@@ -1308,8 +1287,7 @@ static int processDataBefore(ident_t *loc, int64_t DeviceId, void *HostPtr,
              DPxPTR(HstPtrVal));
           continue;
         }
-        if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
-            TgtPtrBegin == HstPtrBegin) {
+        if (IsHostPtr) {
           DP("Unified memory is active, no need to map lambda captured"
              "variable (" DPxMOD ")\n",
              DPxPTR(HstPtrVal));
