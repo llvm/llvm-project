@@ -585,8 +585,8 @@ void TailRecursionEliminator::insertAccumulator(Instruction *AccRecInstr) {
 // call instruction into the newly created temporarily variable.
 void TailRecursionEliminator::copyByValueOperandIntoLocalTemp(CallInst *CI,
                                                               int OpndIdx) {
-  PointerType *ArgTy = cast<PointerType>(CI->getArgOperand(OpndIdx)->getType());
-  Type *AggTy = ArgTy->getElementType();
+  Type *AggTy = CI->getParamByValType(OpndIdx);
+  assert(AggTy);
   const DataLayout &DL = F.getParent()->getDataLayout();
 
   // Get alignment of byVal operand.
@@ -612,8 +612,8 @@ void TailRecursionEliminator::copyByValueOperandIntoLocalTemp(CallInst *CI,
 // into the corresponding function argument location.
 void TailRecursionEliminator::copyLocalTempOfByValueOperandIntoArguments(
     CallInst *CI, int OpndIdx) {
-  PointerType *ArgTy = cast<PointerType>(CI->getArgOperand(OpndIdx)->getType());
-  Type *AggTy = ArgTy->getElementType();
+  Type *AggTy = CI->getParamByValType(OpndIdx);
+  assert(AggTy);
   const DataLayout &DL = F.getParent()->getDataLayout();
 
   // Get alignment of byVal operand.
