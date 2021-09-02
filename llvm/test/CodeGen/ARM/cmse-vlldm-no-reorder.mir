@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=thumbv8m.main -mcpu=cortex-m33 --float-abi=hard --run-pass=arm-pseudo %s -o - | \
+# RUN: llc -mtriple=thumbv8m.main -mcpu=cortex-m33 -mattr=-fix-cmse-cve-2021-35465 --float-abi=hard --run-pass=arm-pseudo %s -o - | \
 # RUN: FileCheck %s
 --- |
   ; ModuleID = 'cmse-vlldm-no-reorder.ll'

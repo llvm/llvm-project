@@ -705,6 +705,18 @@ fp16_fml_fallthrough:
   if (Args.getLastArg(options::OPT_mcmse))
     Features.push_back("+8msecext");
 
+  if (Arg *A = Args.getLastArg(options::OPT_mfix_cmse_cve_2021_35465,
+                               options::OPT_mno_fix_cmse_cve_2021_35465)) {
+    if (!Args.getLastArg(options::OPT_mcmse))
+      D.Diag(diag::err_opt_not_valid_without_opt)
+          << A->getOption().getName() << "-mcmse";
+
+    if (A->getOption().matches(options::OPT_mfix_cmse_cve_2021_35465))
+      Features.push_back("+fix-cmse-cve-2021-35465");
+    else
+      Features.push_back("-fix-cmse-cve-2021-35465");
+  }
+
   // Look for the last occurrence of -mlong-calls or -mno-long-calls. If
   // neither options are specified, see if we are compiling for kernel/kext and
   // decide whether to pass "+long-calls" based on the OS and its version.
