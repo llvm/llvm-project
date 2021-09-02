@@ -469,6 +469,8 @@ llvm.func @test_omp_wsloop_guided(%lb : i64, %ub : i64, %step : i64) -> () {
 
 // -----
 
+omp.critical.declare @mutex
+
 // CHECK-LABEL: @omp_critical
 llvm.func @omp_critical(%x : !llvm.ptr<i32>, %xval : i32) -> () {
   // CHECK: call void @__kmpc_critical_with_hint({{.*}}critical_user_.var{{.*}}, i32 0)
