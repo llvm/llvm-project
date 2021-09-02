@@ -177,10 +177,11 @@ LookupResult DeviceTy::lookupMapping(void *HstPtrBegin, int64_t Size) {
 
 TargetPointerResultTy
 DeviceTy::getTargetPointer(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
-                           map_var_info_t HstPtrName, MoveDataStateTy MoveData,
-                           bool IsImplicit, bool UpdateRefCount,
-                           bool HasCloseModifier, bool HasPresentModifier,
-                           bool HasHoldModifier, AsyncInfoTy &AsyncInfo) {
+                           map_var_info_t HstPtrName, bool HasFlagTo,
+                           bool HasFlagAlways, bool IsImplicit,
+                           bool UpdateRefCount, bool HasCloseModifier,
+                           bool HasPresentModifier, bool HasHoldModifier,
+                           AsyncInfoTy &AsyncInfo) {
   void *TargetPointer = nullptr;
   bool IsHostPtr = false;
   bool IsNew = false;
@@ -272,12 +273,9 @@ DeviceTy::getTargetPointer(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
     TargetPointer = (void *)Ptr;
   }
 
-  if (IsNew && MoveData == MoveDataStateTy::UNKNOWN)
-    MoveData = MoveDataStateTy::REQUIRED;
-
   // If the target pointer is valid, and we need to transfer data, issue the
   // data transfer.
-  if (TargetPointer && (MoveData == MoveDataStateTy::REQUIRED)) {
+  if (TargetPointer && !IsHostPtr && HasFlagTo && (IsNew || HasFlagAlways)) {
     // Lock the entry before releasing the mapping table lock such that another
     // thread that could issue data movement will get the right result.
     Entry->lock();
