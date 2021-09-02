@@ -4470,6 +4470,11 @@ void Verifier::visitInstruction(Instruction &I) {
     visitRangeMetadata(I, Range, I.getType());
   }
 
+  if (I.hasMetadata(LLVMContext::MD_invariant_group)) {
+    Assert(isa<LoadInst>(I) || isa<StoreInst>(I),
+           "invariant.group metadata is only for loads and stores", &I);
+  }
+
   if (I.getMetadata(LLVMContext::MD_nonnull)) {
     Assert(I.getType()->isPointerTy(), "nonnull applies only to pointer types",
            &I);
