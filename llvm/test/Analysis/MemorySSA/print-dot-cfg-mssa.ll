@@ -1,6 +1,5 @@
-;RUN: FileCheck %s -input-file=out.dot
 ; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa>' -dot-cfg-mssa=out.dot < %s 2>&1 > /dev/null
-;RUN: FileCheck %s -input-file=out.dot
+; RUN: FileCheck %s -input-file=out.dot
 
 ; Test -dot-cfg-mssa option for -print-memoryssa.
 ; Test is based on following C code with some forwarding basic blocks
