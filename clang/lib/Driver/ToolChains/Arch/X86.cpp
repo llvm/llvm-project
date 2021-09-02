@@ -59,9 +59,8 @@ std::string x86::getX86TargetCPU(const Driver &D, const ArgList &Args,
     }
     StringRef CPU = ArchMap.lookup(A->getValue());
     if (CPU.empty()) {
-      std::vector<StringRef> ValidArchs;
-      for (StringRef Key : ArchMap.keys())
-        ValidArchs.push_back(Key);
+      std::vector<StringRef> ValidArchs{ArchMap.keys().begin(),
+                                        ArchMap.keys().end()};
       sort(ValidArchs);
       D.Diag(diag::warn_drv_invalid_arch_name_with_suggestion)
           << A->getValue() << (Triple.getArch() == llvm::Triple::x86)
