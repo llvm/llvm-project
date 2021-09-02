@@ -482,6 +482,9 @@ Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
     VPFunc = Intrinsic::getDeclaration(M, VPID, OverloadTy);
     break;
   }
+  case Intrinsic::vp_select:
+    VPFunc = Intrinsic::getDeclaration(M, VPID, {Params[1]->getType()});
+    break;
   case Intrinsic::vp_load:
     VPFunc = Intrinsic::getDeclaration(
         M, VPID,
