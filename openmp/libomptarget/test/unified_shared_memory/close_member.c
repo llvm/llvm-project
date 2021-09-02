@@ -3,9 +3,6 @@
 // REQUIRES: unified_shared_memory
 // UNSUPPORTED: clang-6, clang-7, clang-8, clang-9
 
-// Fails on amdgcn with error: GPU Memory Error
-// XFAIL: amdgcn-amd-amdhsa
-
 #include <omp.h>
 #include <stdio.h>
 
