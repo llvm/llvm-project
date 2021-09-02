@@ -29,7 +29,7 @@ Options
 
     When `true`, the check will ignore unnecessary base class initializations
     within copy constructors, since some compilers issue warnings/errors when
-    base classes are not explicitly intialized in copy constructors. For example,
+    base classes are not explicitly initialized in copy constructors. For example,
     ``gcc`` with ``-Wextra`` or ``-Werror=extra`` issues warning or error
     ``base class 'Bar' should be explicitly initialized in the copy constructor``
     if ``Bar()`` were removed in the following example:

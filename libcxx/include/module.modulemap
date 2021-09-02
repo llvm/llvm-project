@@ -431,7 +431,15 @@ module std [system] {
     export *
 
     module __format {
+      module format_arg           { private header "__format/format_arg.h"           }
+      module format_args          { private header "__format/format_args.h"          }
+      module format_context {
+        private header "__format/format_context.h"
+        export optional
+        export locale
+      }
       module format_error         { private header "__format/format_error.h"         }
+      module format_fwd           { private header "__format/format_fwd.h"           }
       module format_parse_context { private header "__format/format_parse_context.h" }
     }
   }

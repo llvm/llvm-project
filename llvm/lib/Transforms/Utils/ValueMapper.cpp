@@ -947,9 +947,10 @@ void Mapper::remapInstruction(Instruction *I) {
       for (Attribute::AttrKind TypedAttr :
              {Attribute::ByVal, Attribute::StructRet, Attribute::ByRef,
               Attribute::InAlloca}) {
-        if (Type *Ty = Attrs.getAttribute(i, TypedAttr).getValueAsType()) {
-          Attrs = Attrs.replaceAttributeType(C, i, TypedAttr,
-                                             TypeMapper->remapType(Ty));
+        if (Type *Ty =
+                Attrs.getAttributeAtIndex(i, TypedAttr).getValueAsType()) {
+          Attrs = Attrs.replaceAttributeTypeAtIndex(C, i, TypedAttr,
+                                                    TypeMapper->remapType(Ty));
           break;
         }
       }

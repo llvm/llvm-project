@@ -822,25 +822,30 @@ void MemorySSAUpdater::applyUpdates(ArrayRef<CFGUpdate> Updates,
   }
 
   if (!DeleteUpdates.empty()) {
-    if (!UpdateDT) {
-      SmallVector<CFGUpdate, 0> Empty;
-      // Deletes are reversed applied, because this CFGView is pretending the
-      // deletes did not happen yet, hence the edges still exist.
-      DT.applyUpdates(Empty, RevDeleteUpdates);
-    } else {
-      // Apply all updates, with the RevDeleteUpdates as PostCFGView.
-      DT.applyUpdates(Updates, RevDeleteUpdates);
-    }
+    if (!InsertUpdates.empty()) {
+      if (!UpdateDT) {
+        SmallVector<CFGUpdate, 0> Empty;
+        // Deletes are reversed applied, because this CFGView is pretending the
+        // deletes did not happen yet, hence the edges still exist.
+        DT.applyUpdates(Empty, RevDeleteUpdates);
+      } else {
+        // Apply all updates, with the RevDeleteUpdates as PostCFGView.
+        DT.applyUpdates(Updates, RevDeleteUpdates);
+      }
 
-    // Note: the MSSA update below doesn't distinguish between a GD with
-    // (RevDelete,false) and (Delete, true), but this matters for the DT
-    // updates above; for "children" purposes they are equivalent; but the
-    // updates themselves convey the desired update, used inside DT only.
-    GraphDiff<BasicBlock *> GD(RevDeleteUpdates);
-    applyInsertUpdates(InsertUpdates, DT, &GD);
-    // Update DT to redelete edges; this matches the real CFG so we can perform
-    // the standard update without a postview of the CFG.
-    DT.applyUpdates(DeleteUpdates);
+      // Note: the MSSA update below doesn't distinguish between a GD with
+      // (RevDelete,false) and (Delete, true), but this matters for the DT
+      // updates above; for "children" purposes they are equivalent; but the
+      // updates themselves convey the desired update, used inside DT only.
+      GraphDiff<BasicBlock *> GD(RevDeleteUpdates);
+      applyInsertUpdates(InsertUpdates, DT, &GD);
+      // Update DT to redelete edges; this matches the real CFG so we can
+      // perform the standard update without a postview of the CFG.
+      DT.applyUpdates(DeleteUpdates);
+    } else {
+      if (UpdateDT)
+        DT.applyUpdates(DeleteUpdates);
+    }
   } else {
     if (UpdateDT)
       DT.applyUpdates(Updates);

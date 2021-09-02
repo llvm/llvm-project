@@ -234,12 +234,6 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
   SemaPPCallbackHandler = Callbacks.get();
   PP.addPPCallbacks(std::move(Callbacks));
   SemaPPCallbackHandler->set(*this);
-  if (getLangOpts().getFPEvalMethod() == LangOptions::FEM_TargetDefault)
-    // Use setting from TargetInfo.
-    PP.setCurrentFPEvalMethod(ctxt.getTargetInfo().getFPEvalMethod());
-  else
-    // Set initial value of __FLT_EVAL_METHOD__ from the command line.
-    PP.setCurrentFPEvalMethod(getLangOpts().getFPEvalMethod());
 }
 
 // Anchor Sema's type info to this TU.
@@ -2541,15 +2535,4 @@ CapturedRegionScopeInfo *Sema::getCurCapturedRegion() {
 const llvm::MapVector<FieldDecl *, Sema::DeleteLocs> &
 Sema::getMismatchingDeleteExpressions() const {
   return DeleteExprs;
-}
-
-Sema::FPFeaturesStateRAII::FPFeaturesStateRAII(Sema &S)
-    : S(S), OldFPFeaturesState(S.CurFPFeatures),
-      OldOverrides(S.FpPragmaStack.CurrentValue),
-      OldEvalMethod(S.PP.getCurrentFPEvalMethod()) {}
-
-Sema::FPFeaturesStateRAII::~FPFeaturesStateRAII() {
-  S.CurFPFeatures = OldFPFeaturesState;
-  S.FpPragmaStack.CurrentValue = OldOverrides;
-  S.PP.setCurrentFPEvalMethod(OldEvalMethod);
 }

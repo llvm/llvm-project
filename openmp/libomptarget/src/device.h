@@ -132,6 +132,7 @@ public:
   uint64_t decRefCount(bool UseHoldRefCount) const {
     uint64_t &ThisRefCount = UseHoldRefCount ? HoldRefCount : DynRefCount;
     uint64_t OtherRefCount = UseHoldRefCount ? DynRefCount : HoldRefCount;
+    (void)OtherRefCount;
     if (ThisRefCount != INFRefCount) {
       if (ThisRefCount > 0)
         --ThisRefCount;
@@ -226,8 +227,6 @@ struct PendingCtorDtorListsTy {
 typedef std::map<__tgt_bin_desc *, PendingCtorDtorListsTy>
     PendingCtorsDtorsPerLibrary;
 
-enum class MoveDataStateTy : uint32_t { REQUIRED, NONE, UNKNOWN };
-
 struct DeviceTy {
   int32_t DeviceID;
   RTLInfoTy *RTL;
@@ -264,27 +263,33 @@ struct DeviceTy {
   LookupResult lookupMapping(void *HstPtrBegin, int64_t Size);
   /// Get the target pointer based on host pointer begin and base. If the
   /// mapping already exists, the target pointer will be returned directly. In
-  /// addition, if \p MoveData is true, the memory region pointed by \p
-  /// HstPtrBegin of size \p Size will also be transferred to the device. If the
-  /// mapping doesn't exist, and if unified memory is not enabled, a new mapping
-  /// will be created and the data will also be transferred accordingly. nullptr
-  /// will be returned because of any of following reasons:
+  /// addition, if required, the memory region pointed by \p HstPtrBegin of size
+  /// \p Size will also be transferred to the device. If the mapping doesn't
+  /// exist, and if unified shared memory is not enabled, a new mapping will be
+  /// created and the data will also be transferred accordingly. nullptr will be
+  /// returned because of any of following reasons:
   /// - Data allocation failed;
   /// - The user tried to do an illegal mapping;
   /// - Data transfer issue fails.
   TargetPointerResultTy
   getTargetPointer(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
-                   map_var_info_t HstPtrName, MoveDataStateTy MoveData,
-                   bool IsImplicit, bool UpdateRefCount, bool HasCloseModifier,
-                   bool HasPresentModifier, bool HasHoldModifier,
-                   AsyncInfoTy &AsyncInfo);
+                   map_var_info_t HstPtrName, bool HasFlagTo,
+                   bool HasFlagAlways, bool IsImplicit, bool UpdateRefCount,
+                   bool HasCloseModifier, bool HasPresentModifier,
+                   bool HasHoldModifier, AsyncInfoTy &AsyncInfo);
   void *getTgtPtrBegin(void *HstPtrBegin, int64_t Size);
   void *getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
                        bool UpdateRefCount, bool UseHoldRefCount,
                        bool &IsHostPtr, bool MustContain = false,
                        bool ForceDelete = false);
-  int deallocTgtPtr(void *TgtPtrBegin, int64_t Size, bool HasCloseModifier,
-                    bool HasHoldModifier);
+  /// For the map entry for \p HstPtrBegin, decrement the reference count
+  /// specified by \p HasHoldModifier and, if the the total reference count is
+  /// then zero, deallocate the corresponding device storage and remove the map
+  /// entry.  Return \c OFFLOAD_SUCCESS if the map entry existed, and return
+  /// \c OFFLOAD_FAIL if not.  It is the caller's responsibility to skip calling
+  /// this function if the map entry is not expected to exist because
+  /// \p HstPtrBegin uses shared memory.
+  int deallocTgtPtr(void *HstPtrBegin, int64_t Size, bool HasHoldModifier);
   int associatePtr(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size);
   int disassociatePtr(void *HstPtrBegin);
 

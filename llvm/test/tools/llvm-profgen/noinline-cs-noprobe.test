@@ -9,6 +9,13 @@
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noinline-cs-noprobe.aggperfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t --profile-summary-cold-count=0
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-AGG
 
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noinline-cs-noprobe.perfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t1 --profile-summary-cold-count=0
+; RUN: llvm-profgen --format=extbinary --perfscript=%S/Inputs/noinline-cs-noprobe.perfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t2 --profile-summary-cold-count=0 -use-md5
+; RUN: llvm-profdata show --sample -show-sec-info-only %t2 | FileCheck %s --check-prefix=CHECK-MD5
+; RUN: llvm-profdata show --sample -detailed-summary --function=dummy %t1 > %t.summary
+; RUN: llvm-profdata show --sample -detailed-summary --function=dummy %t2 > %t2.summary
+; RUN: diff -b %t.summary %t2.summary
+
 
 ; CHECK-AGG:[main:1 @ foo]:108:0
 ; CHECK-AGG: 2: 6
@@ -74,6 +81,7 @@
 ; CHECK-UNWINDER:   (5d7, 5e5): 2
 ; CHECK-UNWINDER:   (5e9, 634): 3
 
+; CHECK-MD5: NameTableSection {{.*}} {fixlenmd5}
 
 
 

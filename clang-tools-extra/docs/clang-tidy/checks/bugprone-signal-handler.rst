@@ -20,7 +20,7 @@ and has an alias name ``cert-sig30-c``.
 
 .. option:: AsyncSafeFunctionSet
 
-  Selects wich set of functions is considered as asynchronous-safe
+  Selects which set of functions is considered as asynchronous-safe
   (and therefore allowed in signal handlers). Value ``minimal`` selects
   a minimal set that is defined in the CERT SIG30-C rule and includes functions
   ``abort()``, ``_Exit()``, ``quick_exit()`` and ``signal()``. Value ``POSIX``

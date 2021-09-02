@@ -2461,15 +2461,11 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
 
   IntegerType *Ty =
       IntegerType::get(Loc->getContext(), SE.getTypeSizeInBits(ARTy));
-  Type *ARExpandTy = DL.isNonIntegralPointerType(ARTy) ? ARTy : Ty;
 
   Value *StepValue = expandCodeForImpl(Step, Ty, Loc, false);
   Value *NegStepValue =
       expandCodeForImpl(SE.getNegativeSCEV(Step), Ty, Loc, false);
-  Value *StartValue = expandCodeForImpl(
-      isa<PointerType>(ARExpandTy) ? Start
-                                   : SE.getPtrToIntExpr(Start, ARExpandTy),
-      ARExpandTy, Loc, false);
+  Value *StartValue = expandCodeForImpl(Start, ARTy, Loc, false);
 
   ConstantInt *Zero =
       ConstantInt::get(Loc->getContext(), APInt::getNullValue(DstBits));
@@ -2493,7 +2489,7 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
   //   Start + |Step| * Backedge < Start
   //   Start - |Step| * Backedge > Start
   Value *Add = nullptr, *Sub = nullptr;
-  if (PointerType *ARPtrTy = dyn_cast<PointerType>(ARExpandTy)) {
+  if (PointerType *ARPtrTy = dyn_cast<PointerType>(ARTy)) {
     const SCEV *MulS = SE.getSCEV(MulV);
     const SCEV *NegMulS = SE.getNegativeSCEV(MulS);
     Add = Builder.CreateBitCast(expandAddToGEP(MulS, ARPtrTy, Ty, StartValue),

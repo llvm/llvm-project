@@ -523,7 +523,7 @@ exit:
 ; of context sensativity.
 define void @ne_zero_max_btc(i32 %a) {
 ; CHECK-LABEL: Determining loop execution counts for: @ne_zero_max_btc
-; CHECK: Loop %for.body: backedge-taken count is (-1 + (zext i32 (1 umax (1 smin %a)) to i64))<nsw>
+; CHECK: Loop %for.body: backedge-taken count is 0
 ; CHECK: Loop %for.body: max backedge-taken count is 0
 entry:
   %cmp = icmp slt i32 %a, 1

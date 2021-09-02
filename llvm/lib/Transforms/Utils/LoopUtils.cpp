@@ -729,8 +729,9 @@ void llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
       // and outer loop so the other target doesn't need to an exit
       if (L->isLoopExiting(Latch)) {
         // TODO: Generalize ConstantFoldTerminator so that it can be used
-        // here without invalidating LCSSA.  (Tricky case: header is an exit
-        // block of a preceeding sibling loop w/o dedicated exits.)
+        // here without invalidating LCSSA or MemorySSA.  (Tricky case for
+        // LCSSA: header is an exit block of a preceeding sibling loop w/o
+        // dedicated exits.)
         const unsigned ExitIdx = L->contains(BI->getSuccessor(0)) ? 1 : 0;
         BasicBlock *ExitBB = BI->getSuccessor(ExitIdx);
 
@@ -746,6 +747,8 @@ void llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
 
         BI->eraseFromParent();
         DTU.applyUpdates({{DominatorTree::Delete, Latch, Header}});
+        if (MSSA)
+          MSSAU->applyUpdates({{DominatorTree::Delete, Latch, Header}}, DT);
         return;
       }
     }

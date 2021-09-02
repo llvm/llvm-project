@@ -23,5 +23,4 @@ OPTION(NoHonorInfs, bool, 1, NoHonorNaNs)
 OPTION(NoSignedZero, bool, 1, NoHonorInfs)
 OPTION(AllowReciprocal, bool, 1, NoSignedZero)
 OPTION(AllowApproxFunc, bool, 1, AllowReciprocal)
-OPTION(FPEvalMethod, LangOptions::FPEvalMethodKind, 2, AllowApproxFunc)
 #undef OPTION

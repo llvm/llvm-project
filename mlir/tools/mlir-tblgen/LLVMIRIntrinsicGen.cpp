@@ -44,6 +44,12 @@ static llvm::cl::opt<std::string> accessGroupRegexp(
                    "regexp as taking an access group metadata"),
     llvm::cl::cat(IntrinsicGenCat));
 
+static llvm::cl::opt<std::string> aliasScopesRegexp(
+    "llvmir-intrinsics-alias-scopes-regexp",
+    llvm::cl::desc("Mark intrinsics that match the specified "
+                   "regexp as taking alias.scopes and noalias metadata"),
+    llvm::cl::cat(IntrinsicGenCat));
+
 // Used to represent the indices of overloadable operands/results.
 using IndicesTy = llvm::SmallBitVector;
 
@@ -196,6 +202,10 @@ static bool emitIntrinsic(const llvm::Record &record, llvm::raw_ostream &os) {
   bool requiresAccessGroup =
       !accessGroupRegexp.empty() && accessGroupMatcher.match(record.getName());
 
+  llvm::Regex aliasScopesMatcher(aliasScopesRegexp);
+  bool requiresAliasScopes =
+      !aliasScopesRegexp.empty() && aliasScopesMatcher.match(record.getName());
+
   // Prepare strings for traits, if any.
   llvm::SmallVector<llvm::StringRef, 2> traits;
   if (intr.isCommutative())
@@ -208,6 +218,10 @@ static bool emitIntrinsic(const llvm::Record &record, llvm::raw_ostream &os) {
                                                  "LLVM_Type");
   if (requiresAccessGroup)
     operands.push_back("OptionalAttr<SymbolRefArrayAttr>:$access_groups");
+  if (requiresAliasScopes) {
+    operands.push_back("OptionalAttr<SymbolRefArrayAttr>:$alias_scopes");
+    operands.push_back("OptionalAttr<SymbolRefArrayAttr>:$noalias_scopes");
+  }
 
   // Emit the definition.
   os << "def LLVM_" << intr.getProperRecordName() << " : " << opBaseClass
@@ -218,7 +232,8 @@ static bool emitIntrinsic(const llvm::Record &record, llvm::raw_ostream &os) {
   os << ", ";
   printBracketedRange(traits, os);
   os << ", " << intr.getNumResults() << ", "
-     << (requiresAccessGroup ? "1" : "0") << ">, Arguments<(ins"
+     << (requiresAccessGroup ? "1" : "0") << ", "
+     << (requiresAliasScopes ? "1" : "0") << ">, Arguments<(ins"
      << (operands.empty() ? "" : " ");
   llvm::interleaveComma(operands, os);
   os << ")>;\n\n";

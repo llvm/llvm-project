@@ -2676,27 +2676,21 @@ void PragmaFloatControlHandler::HandlePragma(Preprocessor &PP,
 
   // Read the identifier.
   PP.Lex(Tok);
-  PragmaFloatControlKind Kind;
-  if (Tok.is(tok::kw_double)) {
-    Kind = PFC_Double;
-  } else {
-    if (Tok.isNot(tok::identifier)) {
-      PP.Diag(Tok.getLocation(), diag::err_pragma_float_control_malformed);
-      return;
-    }
-
-    // Verify that this is one of the float control options.
-    IdentifierInfo *II = Tok.getIdentifierInfo();
-    Kind = llvm::StringSwitch<PragmaFloatControlKind>(II->getName())
-               .Case("precise", PFC_Precise)
-               .Case("except", PFC_Except)
-               .Case("push", PFC_Push)
-               .Case("pop", PFC_Pop)
-               .Case("source", PFC_Source)
-               .Case("extended", PFC_Extended)
-               .Default(PFC_Unknown);
+  if (Tok.isNot(tok::identifier)) {
+    PP.Diag(Tok.getLocation(), diag::err_pragma_float_control_malformed);
+    return;
   }
-  PP.Lex(Tok); // the first pragma token
+
+  // Verify that this is one of the float control options.
+  IdentifierInfo *II = Tok.getIdentifierInfo();
+  PragmaFloatControlKind Kind =
+      llvm::StringSwitch<PragmaFloatControlKind>(II->getName())
+          .Case("precise", PFC_Precise)
+          .Case("except", PFC_Except)
+          .Case("push", PFC_Push)
+          .Case("pop", PFC_Pop)
+          .Default(PFC_Unknown);
+  PP.Lex(Tok); // the identifier
   if (Kind == PFC_Unknown) {
     PP.Diag(Tok.getLocation(), diag::err_pragma_float_control_malformed);
     return;
@@ -2725,21 +2719,10 @@ void PragmaFloatControlHandler::HandlePragma(Preprocessor &PP,
         // Kind is set correctly
         ;
       else if (PushOnOff == "off") {
-        switch (Kind) {
-        default:
-          break;
-        case PFC_Precise:
+        if (Kind == PFC_Precise)
           Kind = PFC_NoPrecise;
-          break;
-        case PFC_Except:
+        if (Kind == PFC_Except)
           Kind = PFC_NoExcept;
-          break;
-        case PFC_Double:
-        case PFC_Extended:
-          // Reset eval mode to 'source'
-          Kind = PFC_Source;
-          break;
-        }
       } else if (PushOnOff == "push") {
         Action = Sema::PSK_Push_Set;
       } else {
