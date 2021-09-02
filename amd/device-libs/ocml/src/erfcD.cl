@@ -7,6 +7,25 @@
 
 #include "mathD.h"
 
+#if !defined EXTRA_ACCURACY
+CONSTATTR extern double MATH_PRIVATE(erfcx)(double);
+
+CONSTATTR double
+MATH_MANGLE(erfc)(double x)
+{
+    double ax = BUILTIN_ABS_F64(x);
+    double x2h = -x*x;
+    double x2l = MATH_MAD(-x, x, -x2h);
+    double e = MATH_MANGLE(exp)(x2h);
+    e = MATH_MAD(e, x2l, e);
+    double ret = e * MATH_PRIVATE(erfcx)(ax);
+    ret = ax > 0x1.b39dc41e48bfcp+4 ? 0.0f : ret;
+    double nret = 2.0 - ret;
+    return x < 0.0 ? nret : ret;
+}
+
+#else
+
 // Partially based on ideas from the Sun implementation
 /*
  * ====================================================
@@ -241,3 +260,4 @@ MATH_MANGLE(erfc)(double x)
     return ret;
 }
 
+#endif

@@ -7,6 +7,28 @@
 
 #include "mathD.h"
 
+#if !defined EXTRA_ACCURACY
+
+CONSTATTR double
+MATH_MANGLE(ncdf)(double x)
+{
+    const double chi = -0x1.6a09e667f3bcdp-1;
+    const double clo = 0x1.bdd3413b26456p-55;
+    const double b = 0x1.34d4edce2b7d6p+5;
+    x = BUILTIN_ABS_F64(x) > b ? BUILTIN_COPYSIGN_F64(b, x) : x;
+    double thi = chi * x;
+    double tlo = MATH_MAD(clo, x, MATH_MAD(chi, x, -thi));
+    double yhi = thi + tlo;
+    double ylo = tlo - (yhi - thi);
+    double r = MATH_MANGLE(erfc)(yhi);
+    double dr = -2.0 * yhi * r;
+    dr = x >= -1.0 ? 0.0f : dr;
+    r = MATH_MAD(ylo, dr, r);
+    return 0.5 * r;
+}
+
+#else
+
 CONSTATTR double
 MATH_MANGLE(ncdf)(double x)
 {
@@ -126,3 +148,4 @@ MATH_MANGLE(ncdf)(double x)
     return ret;
 }
 
+#endif
