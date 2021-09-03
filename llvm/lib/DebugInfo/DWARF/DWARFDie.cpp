@@ -180,16 +180,14 @@ static void dumpPointerLikeTypeBefore(raw_ostream &OS, DWARFDie D, DWARFDie Inne
 }
 
 static DWARFDie dumpTypeNameBefore(raw_ostream &OS, DWARFDie D, bool *Word) {
+  if (Word)
+    *Word = true;
   if (!D) {
     OS << "void";
-    if (Word)
-      *Word = true;
     return DWARFDie();
   }
   if (const char *Name = D.getName(DINameKind::LinkageName)) {
     OS << Name;
-    if (Word)
-      *Word = true;
     return DWARFDie();
   }
 
