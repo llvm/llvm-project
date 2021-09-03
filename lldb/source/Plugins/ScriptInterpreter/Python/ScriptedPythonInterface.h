@@ -33,33 +33,6 @@ protected:
     return p.CreateStructuredObject();
   }
 
-  template <>
-  Status ExtractValueFromPythonObject<Status>(python::PythonObject &p,
-                                              Status &error) {
-    if (lldb::SBError *sb_error = reinterpret_cast<lldb::SBError *>(
-            LLDBSWIGPython_CastPyObjectToSBError(p.get())))
-      error = m_interpreter.GetStatusFromSBError(*sb_error);
-    else
-      error.SetErrorString("Couldn't cast lldb::SBError to lldb::Status.");
-
-    return error;
-  }
-
-  template <>
-  lldb::DataExtractorSP
-  ExtractValueFromPythonObject<lldb::DataExtractorSP>(python::PythonObject &p,
-                                                      Status &error) {
-    lldb::SBData *sb_data = reinterpret_cast<lldb::SBData *>(
-        LLDBSWIGPython_CastPyObjectToSBData(p.get()));
-
-    if (!sb_data) {
-      error.SetErrorString("Couldn't cast lldb::SBError to lldb::Status.");
-      return nullptr;
-    }
-
-    return m_interpreter.GetDataExtractorFromSBData(*sb_data);
-  }
-
   template <typename T = StructuredData::ObjectSP, typename... Args>
   T Dispatch(llvm::StringRef method_name, Status &error, Args... args) {
     using namespace python;
@@ -149,6 +122,16 @@ protected:
   // The lifetime is managed by the ScriptInterpreter
   ScriptInterpreterPythonImpl &m_interpreter;
 };
+
+template <>
+Status ScriptedPythonInterface::ExtractValueFromPythonObject<Status>(
+    python::PythonObject &p, Status &error);
+
+template <>
+lldb::DataExtractorSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DataExtractorSP>(
+    python::PythonObject &p, Status &error);
+
 } // namespace lldb_private
 
 #endif // LLDB_ENABLE_PYTHON
