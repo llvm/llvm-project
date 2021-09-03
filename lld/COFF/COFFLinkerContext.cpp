@@ -1,0 +1,53 @@
+//===- COFFContext.cpp ----------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Description
+//
+//===----------------------------------------------------------------------===//
+
+#include "COFFLinkerContext.h"
+#include "lld/Common/Memory.h"
+#include "llvm/DebugInfo/CodeView/TypeHashing.h"
+
+namespace lld {
+namespace coff {
+
+COFFLinkerContext::COFFLinkerContext()
+    : symtab(*this), rootTimer("Total Linking Time"),
+      inputFileTimer("Input File Reading", rootTimer),
+      ltoTimer("LTO", rootTimer), gcTimer("GC", rootTimer),
+      icfTimer("ICF", rootTimer), codeLayoutTimer("Code Layout", rootTimer),
+      outputCommitTimer("Commit Output File", rootTimer),
+      totalMapTimer("MAP Emission (Cumulative)", rootTimer),
+      symbolGatherTimer("Gather Symbols", totalMapTimer),
+      symbolStringsTimer("Build Symbol strings", totalMapTimer),
+      writeTimer("Write to File", totalMapTimer),
+      totalPdbLinkTimer("PDB Emission (Cumulative)", rootTimer),
+      addObjectsTimer("Add Objects", totalPdbLinkTimer),
+      symbolMergingTimer("Symbol Merging", addObjectsTimer),
+      typeMergingTimer("Type Merging", addObjectsTimer),
+      tpiStreamLayoutTimer("TPI Stream Layout", totalPdbLinkTimer),
+      publicsLayoutTimer("Publics Stream Layout", totalPdbLinkTimer),
+      diskCommitTimer("Commit to Disk", totalPdbLinkTimer),
+      loadGHashTimer("Global Type Hashing", addObjectsTimer),
+      mergeGHashTimer("GHash Type Merging", addObjectsTimer) {}
+
+COFFLinkerContext::~COFFLinkerContext() { clearGHashes(); }
+
+void COFFLinkerContext::clearGHashes() {
+  for (TpiSource *src : tpiSourceList) {
+    if (src->ownedGHashes)
+      delete[] src->ghashes.data();
+    src->ghashes = {};
+    src->isItemIndex.clear();
+    src->uniqueTypes.clear();
+  }
+}
+
+} // namespace coff
+} // namespace lld

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SymbolTable.h"
+#include "COFFLinkerContext.h"
 #include "Config.h"
 #include "Driver.h"
 #include "LTO.h"
@@ -34,10 +35,6 @@ StringRef ltrim1(StringRef s, const char *chars) {
   return s;
 }
 
-static Timer ltoTimer("LTO", Timer::root());
-
-SymbolTable *symtab;
-
 void SymbolTable::addFile(InputFile *file) {
   log("Reading " + toString(file));
   file->parse();
@@ -52,11 +49,11 @@ void SymbolTable::addFile(InputFile *file) {
   }
 
   if (auto *f = dyn_cast<ObjFile>(file)) {
-    ObjFile::instances.push_back(f);
+    ctx.objFileInstances.push_back(f);
   } else if (auto *f = dyn_cast<BitcodeFile>(file)) {
-    BitcodeFile::instances.push_back(f);
+    ctx.bitcodeFileInstances.push_back(f);
   } else if (auto *f = dyn_cast<ImportFile>(file)) {
-    ImportFile::instances.push_back(f);
+    ctx.importFileInstances.push_back(f);
   }
 
   driver->parseDirectives(file);
@@ -372,12 +369,9 @@ bool SymbolTable::handleMinGWAutomaticImport(Symbol *sym, StringRef name) {
 /// defined symbol imported" diagnostic for symbols in localImports.
 /// objFiles and bitcodeFiles (if not nullptr) are used to report where
 /// undefined symbols are referenced.
-static void
-reportProblemSymbols(const SmallPtrSetImpl<Symbol *> &undefs,
-                     const DenseMap<Symbol *, Symbol *> *localImports,
-                     const std::vector<ObjFile *> objFiles,
-                     const std::vector<BitcodeFile *> *bitcodeFiles) {
-
+static void reportProblemSymbols(
+    const COFFLinkerContext &ctx, const SmallPtrSetImpl<Symbol *> &undefs,
+    const DenseMap<Symbol *, Symbol *> *localImports, bool needBitcodeFiles) {
   // Return early if there is nothing to report (which should be
   // the common case).
   if (undefs.empty() && (!localImports || localImports->empty()))
@@ -418,11 +412,11 @@ reportProblemSymbols(const SmallPtrSetImpl<Symbol *> &undefs,
     }
   };
 
-  for (ObjFile *file : objFiles)
+  for (ObjFile *file : ctx.objFileInstances)
     processFile(file, file->getSymbols());
 
-  if (bitcodeFiles)
-    for (BitcodeFile *file : *bitcodeFiles)
+  if (needBitcodeFiles)
+    for (BitcodeFile *file : ctx.bitcodeFileInstances)
       processFile(file, file->getSymbols());
 
   for (const UndefinedDiag &undefDiag : undefDiags)
@@ -451,9 +445,8 @@ void SymbolTable::reportUnresolvable() {
     undefs.insert(sym);
   }
 
-  reportProblemSymbols(undefs,
-                       /* localImports */ nullptr, ObjFile::instances,
-                       &BitcodeFile::instances);
+  reportProblemSymbols(ctx, undefs,
+                       /* localImports */ nullptr, true);
 }
 
 void SymbolTable::resolveRemainingUndefines() {
@@ -515,8 +508,8 @@ void SymbolTable::resolveRemainingUndefines() {
   }
 
   reportProblemSymbols(
-      undefs, config->warnLocallyDefinedImported ? &localImports : nullptr,
-      ObjFile::instances, /* bitcode files no longer needed */ nullptr);
+      ctx, undefs, config->warnLocallyDefinedImported ? &localImports : nullptr,
+      false);
 }
 
 std::pair<Symbol *, bool> SymbolTable::insert(StringRef name) {
@@ -797,20 +790,20 @@ void SymbolTable::addLibcall(StringRef name) {
   }
 }
 
-std::vector<Chunk *> SymbolTable::getChunks() {
+std::vector<Chunk *> SymbolTable::getChunks() const {
   std::vector<Chunk *> res;
-  for (ObjFile *file : ObjFile::instances) {
+  for (ObjFile *file : ctx.objFileInstances) {
     ArrayRef<Chunk *> v = file->getChunks();
     res.insert(res.end(), v.begin(), v.end());
   }
   return res;
 }
 
-Symbol *SymbolTable::find(StringRef name) {
+Symbol *SymbolTable::find(StringRef name) const {
   return symMap.lookup(CachedHashStringRef(name));
 }
 
-Symbol *SymbolTable::findUnderscore(StringRef name) {
+Symbol *SymbolTable::findUnderscore(StringRef name) const {
   if (config->machine == I386)
     return find(("_" + name).str());
   return find(name);
@@ -873,17 +866,17 @@ Symbol *SymbolTable::addUndefined(StringRef name) {
 }
 
 void SymbolTable::addCombinedLTOObjects() {
-  if (BitcodeFile::instances.empty())
+  if (ctx.bitcodeFileInstances.empty())
     return;
 
-  ScopedTimer t(ltoTimer);
-  lto.reset(new BitcodeCompiler);
-  for (BitcodeFile *f : BitcodeFile::instances)
+  ScopedTimer t(ctx.ltoTimer);
+  lto.reset(new BitcodeCompiler());
+  for (BitcodeFile *f : ctx.bitcodeFileInstances)
     lto->add(*f);
-  for (InputFile *newObj : lto->compile()) {
+  for (InputFile *newObj : lto->compile(ctx)) {
     ObjFile *obj = cast<ObjFile>(newObj);
     obj->parse();
-    ObjFile::instances.push_back(obj);
+    ctx.objFileInstances.push_back(obj);
   }
 }
 

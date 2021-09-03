@@ -5,6 +5,7 @@ add_public_tablegen_target(COFFOptionsTableGen)
 add_lld_library(lldCOFF
   CallGraphSort.cpp
   Chunks.cpp
+  COFFLinkerContext.cpp
   DebugTypes.cpp
   DLL.cpp
   Driver.cpp

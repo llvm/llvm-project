@@ -29,6 +29,7 @@ static_library("COFF") {
   sources = [
     "CallGraphSort.cpp",
     "Chunks.cpp",
+    "COFFLinkerContext.cpp",
     "DLL.cpp",
     "DebugTypes.cpp",
     "Driver.cpp",
