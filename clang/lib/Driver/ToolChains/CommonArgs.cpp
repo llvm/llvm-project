@@ -775,7 +775,8 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
     CmdArgs.push_back("-ldl");
   // Required for backtrace on some OSes
   if (TC.getTriple().isOSFreeBSD() ||
-      TC.getTriple().isOSNetBSD())
+      TC.getTriple().isOSNetBSD() ||
+      TC.getTriple().isOSOpenBSD())
     CmdArgs.push_back("-lexecinfo");
 }
 
