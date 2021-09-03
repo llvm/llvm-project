@@ -10957,20 +10957,19 @@ def err_coroutine_invalid_func_context : Error<
   "|a function with a deduced return type|a varargs function"
   "|a consteval function}0">;
 def err_implied_coroutine_type_not_found : Error<
-  "%0 type was not found; include <coroutine> before defining "
-  "a coroutine; include <experimental/coroutine> if your version "
-  "of libcxx is less than 14.0">;
+  "%0 type was not found; include <experimental/coroutine> before defining "
+  "a coroutine">;
 def err_implicit_coroutine_std_nothrow_type_not_found : Error<
   "std::nothrow was not found; include <new> before defining a coroutine which "
   "uses get_return_object_on_allocation_failure()">;
 def err_malformed_std_nothrow : Error<
   "std::nothrow must be a valid variable declaration">;
 def err_malformed_std_coroutine_handle : Error<
-  "std::coroutine_handle must be a class template">;
+  "std::experimental::coroutine_handle must be a class template">;
 def err_coroutine_handle_missing_member : Error<
-  "std::coroutine_handle missing a member named '%0'">;
+  "std::experimental::coroutine_handle missing a member named '%0'">;
 def err_malformed_std_coroutine_traits : Error<
-  "'std::coroutine_traits' must be a class template">;
+  "'std::experimental::coroutine_traits' must be a class template">;
 def err_implied_std_coroutine_traits_promise_type_not_found : Error<
   "this function cannot be a coroutine: %q0 has no member named 'promise_type'">;
 def err_implied_std_coroutine_traits_promise_type_not_class : Error<
@@ -11011,10 +11010,6 @@ def note_await_ready_no_bool_conversion : Note<
 >;
 def warn_coroutine_handle_address_invalid_return_type : Warning <
   "return type of 'coroutine_handle<>::address should be 'void*' (have %0) in order to get capability with existing async C API.">,
-  InGroup<Coroutine>;
-def warn_coroutine_in_legacy_experimental_space : Warning <
-  "coroutine_traits defined in std::experimental namespace is deprecated. "
-  "Consider updating libcxx and include <coroutine> instead of <experimental/coroutine>.">,
   InGroup<Coroutine>;
 def err_coroutine_promise_final_suspend_requires_nothrow : Error<
   "the expression 'co_await __promise.final_suspend()' is required to be non-throwing"

@@ -13,8 +13,8 @@
 
 #include "Inputs/std-coroutine.h"
 
-using std::suspend_always;
-using std::suspend_never;
+using std::experimental::suspend_always;
+using std::experimental::suspend_never;
 
 #ifndef DISABLE_WARNING
 struct promise_void { // expected-note {{defined here}}
@@ -28,7 +28,7 @@ struct promise_void {
 };
 
 template <typename... T>
-struct std::coroutine_traits<void, T...> { using promise_type = promise_void; };
+struct std::experimental::coroutine_traits<void, T...> { using promise_type = promise_void; };
 
 #ifndef DISABLE_WARNING
 void test0() { // expected-warning {{'promise_void' is required to declare the member 'unhandled_exception()' when exceptions are enabled}}

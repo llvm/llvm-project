@@ -16,6 +16,7 @@
 // CHECK-ALL: Running pass:{{.*}}CoroCleanupPass
 
 namespace std {
+namespace experimental {
 
 struct handle {};
 
@@ -38,6 +39,7 @@ template <typename T = void> struct coroutine_traits {
     void unhandled_exception() {}
   };
 };
+} // namespace experimental
 } // namespace std
 
 void foo() { co_return; }

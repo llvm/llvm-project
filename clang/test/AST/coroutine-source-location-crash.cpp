@@ -11,7 +11,7 @@
 
 #include "Inputs/std-coroutine.h"
 
-using namespace std;
+using namespace std::experimental;
 
 struct A {
   bool await_ready();
