@@ -151,16 +151,12 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
   for (auto &object : details.objects()) {
     Symbol &symbol{*object};
     DoSymbol(symbol);
+    auto eqIter{equivalenceBlock_.end()};
     auto iter{dependents_.find(symbol)};
     if (iter == dependents_.end()) {
-      // Get full extent of any EQUIVALENCE block into size of COMMON
-      auto eqIter{equivalenceBlock_.find(symbol)};
+      auto eqIter = equivalenceBlock_.find(symbol);
       if (eqIter != equivalenceBlock_.end()) {
-        SizeAndAlignment &blockInfo{eqIter->second};
-        DoEquivalenceBlockBase(symbol, blockInfo);
-        minSize = std::max(
-            minSize, std::max(offset_, symbol.offset() + blockInfo.size));
-        minAlignment = std::max(minAlignment, blockInfo.alignment);
+        DoEquivalenceBlockBase(symbol, eqIter->second);
       }
     } else {
       SymbolAndOffset &dep{iter->second};
@@ -183,9 +179,18 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
             "'%s' cannot backward-extend COMMON block /%s/ via EQUIVALENCE with '%s'"_err_en_US,
             symbol.name(), commonBlock.name(), base.name());
       } else {
+        eqIter = equivalenceBlock_.find(base);
         base.get<ObjectEntityDetails>().set_commonBlock(commonBlock);
         base.set_offset(symbol.offset() - dep.offset);
       }
+    }
+    // Get full extent of any EQUIVALENCE block into size of COMMON ( see
+    // 8.10.2.2 point 1 (2))
+    if (eqIter != equivalenceBlock_.end()) {
+      SizeAndAlignment &blockInfo{eqIter->second};
+      minSize = std::max(
+          minSize, std::max(offset_, eqIter->first->offset() + blockInfo.size));
+      minAlignment = std::max(minAlignment, blockInfo.alignment);
     }
   }
   commonBlock.set_size(std::max(minSize, offset_));
