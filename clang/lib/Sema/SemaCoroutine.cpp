@@ -53,10 +53,15 @@ static QualType lookupPromiseType(Sema &S, const FunctionDecl *FD,
                                   SourceLocation KwLoc) {
   const FunctionProtoType *FnType = FD->getType()->castAs<FunctionProtoType>();
   const SourceLocation FuncLoc = FD->getLocation();
+  // FIXME: Cache std::coroutine_traits once we've found it.
+  NamespaceDecl *StdExp = S.lookupStdExperimentalNamespace();
+  if (!StdExp) {
+    S.Diag(KwLoc, diag::err_implied_coroutine_type_not_found)
+        << "std::experimental::coroutine_traits";
+    return QualType();
+  }
 
-  NamespaceDecl *CoroNamespace = nullptr;
-  ClassTemplateDecl *CoroTraits =
-      S.lookupCoroutineTraits(KwLoc, FuncLoc, CoroNamespace);
+  ClassTemplateDecl *CoroTraits = S.lookupCoroutineTraits(KwLoc, FuncLoc);
   if (!CoroTraits) {
     return QualType();
   }
@@ -117,7 +122,7 @@ static QualType lookupPromiseType(Sema &S, const FunctionDecl *FD,
   QualType PromiseType = S.Context.getTypeDeclType(Promise);
 
   auto buildElaboratedType = [&]() {
-    auto *NNS = NestedNameSpecifier::Create(S.Context, nullptr, CoroNamespace);
+    auto *NNS = NestedNameSpecifier::Create(S.Context, nullptr, StdExp);
     NNS = NestedNameSpecifier::Create(S.Context, NNS, false,
                                       CoroTrait.getTypePtr());
     return S.Context.getElaboratedType(ETK_None, NNS, PromiseType);
@@ -136,20 +141,20 @@ static QualType lookupPromiseType(Sema &S, const FunctionDecl *FD,
   return PromiseType;
 }
 
-/// Look up the std::coroutine_handle<PromiseType>.
+/// Look up the std::experimental::coroutine_handle<PromiseType>.
 static QualType lookupCoroutineHandleType(Sema &S, QualType PromiseType,
                                           SourceLocation Loc) {
   if (PromiseType.isNull())
     return QualType();
 
-  NamespaceDecl *CoroNamespace = S.getCachedCoroNamespace();
-  assert(CoroNamespace && "Should already be diagnosed");
+  NamespaceDecl *StdExp = S.lookupStdExperimentalNamespace();
+  assert(StdExp && "Should already be diagnosed");
 
   LookupResult Result(S, &S.PP.getIdentifierTable().get("coroutine_handle"),
                       Loc, Sema::LookupOrdinaryName);
-  if (!S.LookupQualifiedName(Result, CoroNamespace)) {
+  if (!S.LookupQualifiedName(Result, StdExp)) {
     S.Diag(Loc, diag::err_implied_coroutine_type_not_found)
-        << "std::coroutine_handle";
+        << "std::experimental::coroutine_handle";
     return QualType();
   }
 
@@ -995,7 +1000,7 @@ static Expr *buildStdNoThrowDeclRef(Sema &S, SourceLocation Loc) {
   LookupResult Result(S, &S.PP.getIdentifierTable().get("nothrow"), Loc,
                       Sema::LookupOrdinaryName);
   if (!S.LookupQualifiedName(Result, Std)) {
-    // FIXME: <coroutine> should have been included already.
+    // FIXME: <experimental/coroutine> should have been included already.
     // If we require it to include <new> then this diagnostic is no longer
     // needed.
     S.Diag(Loc, diag::err_implicit_coroutine_std_nothrow_type_not_found);
@@ -1658,32 +1663,25 @@ StmtResult Sema::BuildCoroutineBodyStmt(CoroutineBodyStmt::CtorArgs Args) {
 }
 
 ClassTemplateDecl *Sema::lookupCoroutineTraits(SourceLocation KwLoc,
-                                               SourceLocation FuncLoc,
-                                               NamespaceDecl *&Namespace) {
+                                               SourceLocation FuncLoc) {
   if (!StdCoroutineTraitsCache) {
-    NamespaceDecl *CoroNamespace = getStdNamespace();
-    LookupResult Result(*this, &PP.getIdentifierTable().get("coroutine_traits"),
-                        FuncLoc, LookupOrdinaryName);
-    if (!CoroNamespace || !LookupQualifiedName(Result, CoroNamespace)) {
-      /// TODO: lookup in std::expeirmental namespace for compability.
-      /// Remove this once users get familiar with coroutine under std
-      /// namespace.
-      CoroNamespace = lookupStdExperimentalNamespace();
-      if (!CoroNamespace || !LookupQualifiedName(Result, CoroNamespace)) {
+    if (auto StdExp = lookupStdExperimentalNamespace()) {
+      LookupResult Result(*this,
+                          &PP.getIdentifierTable().get("coroutine_traits"),
+                          FuncLoc, LookupOrdinaryName);
+      if (!LookupQualifiedName(Result, StdExp)) {
         Diag(KwLoc, diag::err_implied_coroutine_type_not_found)
-            << "std::coroutine_traits";
+            << "std::experimental::coroutine_traits";
         return nullptr;
       }
-      Diag(KwLoc, diag::warn_coroutine_in_legacy_experimental_space);
+      if (!(StdCoroutineTraitsCache =
+                Result.getAsSingle<ClassTemplateDecl>())) {
+        Result.suppressDiagnostics();
+        NamedDecl *Found = *Result.begin();
+        Diag(Found->getLocation(), diag::err_malformed_std_coroutine_traits);
+        return nullptr;
+      }
     }
-    if (!(StdCoroutineTraitsCache = Result.getAsSingle<ClassTemplateDecl>())) {
-      Result.suppressDiagnostics();
-      NamedDecl *Found = *Result.begin();
-      Diag(Found->getLocation(), diag::err_malformed_std_coroutine_traits);
-      return nullptr;
-    }
-    CoroTraitsNamespaceCache = CoroNamespace;
   }
-  Namespace = CoroTraitsNamespaceCache;
   return StdCoroutineTraitsCache;
 }

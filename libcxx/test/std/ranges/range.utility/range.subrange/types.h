@@ -9,6 +9,11 @@
 #ifndef LIBCXX_TEST_STD_RANGES_RANGE_UTILITY_RANGE_SUBRANGE_TYPES_H
 #define LIBCXX_TEST_STD_RANGES_RANGE_UTILITY_RANGE_SUBRANGE_TYPES_H
 
+#include <cstddef>
+#include <iterator>
+#include <ranges>
+#include <type_traits>
+
 #include "test_macros.h"
 #include "test_iterators.h"
 
@@ -61,12 +66,12 @@ struct SizedSentinelForwardIter {
     typedef std::make_unsigned_t<std::ptrdiff_t> udifference_type;
     typedef SizedSentinelForwardIter             self;
 
-    int *base;
-
     SizedSentinelForwardIter() = default;
-    constexpr SizedSentinelForwardIter(int *ptr) : base(ptr) { }
+    constexpr explicit SizedSentinelForwardIter(int *ptr, bool *minusWasCalled)
+      : base_(ptr), minusWasCalled_(minusWasCalled)
+    { }
 
-    friend constexpr bool operator==(const self& lhs, const self& rhs) { return lhs.base == rhs.base; }
+    friend constexpr bool operator==(const self& lhs, const self& rhs) { return lhs.base_ == rhs.base_; }
 
     reference operator*() const;
     pointer operator->() const;
@@ -75,16 +80,20 @@ struct SizedSentinelForwardIter {
     self& operator--();
     self operator--(int);
 
-    static int minusCount;
-    friend constexpr difference_type operator-(SizedSentinelForwardIter const&a,
-                                               SizedSentinelForwardIter const&b) {
-      if (!std::is_constant_evaluated())
-        minusCount++;
-      return a.base - b.base;
+    friend constexpr difference_type operator-(SizedSentinelForwardIter const& a,
+                                               SizedSentinelForwardIter const& b) {
+      if (a.minusWasCalled_)
+        *a.minusWasCalled_ = true;
+      if (b.minusWasCalled_)
+        *b.minusWasCalled_ = true;
+      return a.base_ - b.base_;
     }
-};
 
-int SizedSentinelForwardIter::minusCount = 0;
+private:
+    int *base_ = nullptr;
+    bool *minusWasCalled_ = nullptr;
+};
+static_assert(std::sized_sentinel_for<SizedSentinelForwardIter, SizedSentinelForwardIter>);
 
 struct ConvertibleForwardIter {
     typedef std::forward_iterator_tag       iterator_category;

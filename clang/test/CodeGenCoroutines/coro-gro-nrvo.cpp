@@ -2,7 +2,7 @@
 
 #include "Inputs/coroutine.h"
 
-using namespace std;
+using namespace std::experimental;
 
 namespace std {
 

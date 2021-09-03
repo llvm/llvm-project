@@ -10,9 +10,11 @@
 
 #include "Inputs/coroutine.h"
 
+namespace coro = std::experimental::coroutines_v1;
+
 struct throwing_awaitable {
   bool await_ready() { return true; }
-  void await_suspend(std::coroutine_handle<>) {}
+  void await_suspend(coro::coroutine_handle<>) {}
   void await_resume() { throw 42; }
 };
 
@@ -20,7 +22,7 @@ struct throwing_task {
   struct promise_type {
     auto get_return_object() { return throwing_task{}; }
     auto initial_suspend() { return throwing_awaitable{}; }
-    auto final_suspend() noexcept { return std::suspend_never{}; }
+    auto final_suspend() noexcept { return coro::suspend_never{}; }
     void return_void() {}
     void unhandled_exception() {}
   };
@@ -86,7 +88,7 @@ throwing_task f() {
 
 struct noexcept_awaitable {
   bool await_ready() { return true; }
-  void await_suspend(std::coroutine_handle<>) {}
+  void await_suspend(coro::coroutine_handle<>) {}
   void await_resume() noexcept {}
 };
 
@@ -94,7 +96,7 @@ struct noexcept_task {
   struct promise_type {
     auto get_return_object() { return noexcept_task{}; }
     auto initial_suspend() { return noexcept_awaitable{}; }
-    auto final_suspend() noexcept { return std::suspend_never{}; }
+    auto final_suspend() noexcept { return coro::suspend_never{}; }
     void return_void() {}
     void unhandled_exception() {}
   };

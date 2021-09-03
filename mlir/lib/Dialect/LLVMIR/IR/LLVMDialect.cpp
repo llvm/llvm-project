@@ -36,6 +36,7 @@
 
 using namespace mlir;
 using namespace mlir::LLVM;
+using mlir::LLVM::linkage::getMaxEnumValForLinkage;
 
 #include "mlir/Dialect/LLVMIR/LLVMOpsDialect.cpp.inc"
 
@@ -1400,7 +1401,7 @@ void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
     result.addAttribute("alignment", builder.getI64IntegerAttr(alignment));
 
   result.addAttribute(getLinkageAttrName(),
-                      builder.getI64IntegerAttr(static_cast<int64_t>(linkage)));
+                      LinkageAttr::get(builder.getContext(), linkage));
   if (addrSpace != 0)
     result.addAttribute("addr_space", builder.getI32IntegerAttr(addrSpace));
   result.attributes.append(attrs.begin(), attrs.end());
@@ -1463,19 +1464,21 @@ REGISTER_ENUM_TYPE(Linkage);
 REGISTER_ENUM_TYPE(UnnamedAddr);
 } // end namespace
 
-template <typename EnumTy>
-static ParseResult parseOptionalLLVMKeyword(OpAsmParser &parser,
-                                            OperationState &result,
-                                            StringRef name) {
+/// Parse an enum from the keyword, or default to the provided default value.
+/// The return type is the enum type by default, unless overriden with the
+/// second template argument.
+template <typename EnumTy, typename RetTy = EnumTy>
+static RetTy parseOptionalLLVMKeyword(OpAsmParser &parser,
+                                      OperationState &result,
+                                      EnumTy defaultValue) {
   SmallVector<StringRef, 10> names;
-  for (unsigned i = 0, e = getMaxEnumValForLinkage(); i <= e; ++i)
+  for (unsigned i = 0, e = EnumTraits<EnumTy>::getMaxEnumVal(); i <= e; ++i)
     names.push_back(EnumTraits<EnumTy>::stringify(static_cast<EnumTy>(i)));
 
   int index = parseOptionalKeywordAlternative(parser, names);
   if (index == -1)
-    return failure();
-  result.addAttribute(name, parser.getBuilder().getI64IntegerAttr(index));
-  return success();
+    return static_cast<RetTy>(defaultValue);
+  return static_cast<RetTy>(index);
 }
 
 // operation ::= `llvm.mlir.global` linkage? `constant`? `@` identifier
@@ -1485,17 +1488,17 @@ static ParseResult parseOptionalLLVMKeyword(OpAsmParser &parser,
 // The type can be omitted for string attributes, in which case it will be
 // inferred from the value of the string as [strlen(value) x i8].
 static ParseResult parseGlobalOp(OpAsmParser &parser, OperationState &result) {
-  if (failed(parseOptionalLLVMKeyword<Linkage>(parser, result,
-                                               getLinkageAttrName())))
-    result.addAttribute(getLinkageAttrName(),
-                        parser.getBuilder().getI64IntegerAttr(
-                            static_cast<int64_t>(LLVM::Linkage::External)));
-
-  if (failed(parseOptionalLLVMKeyword<UnnamedAddr>(parser, result,
-                                                   getUnnamedAddrAttrName())))
-    result.addAttribute(getUnnamedAddrAttrName(),
-                        parser.getBuilder().getI64IntegerAttr(
-                            static_cast<int64_t>(LLVM::UnnamedAddr::None)));
+  MLIRContext *ctx = parser.getBuilder().getContext();
+  // Parse optional linkage, default to External.
+  result.addAttribute(getLinkageAttrName(),
+                      LLVM::LinkageAttr::get(
+                          ctx, parseOptionalLLVMKeyword<Linkage>(
+                                   parser, result, LLVM::Linkage::External)));
+  // Parse optional UnnamedAddr, default to None.
+  result.addAttribute(getUnnamedAddrAttrName(),
+                      parser.getBuilder().getI64IntegerAttr(
+                          parseOptionalLLVMKeyword<UnnamedAddr, int64_t>(
+                              parser, result, LLVM::UnnamedAddr::None)));
 
   if (succeeded(parser.parseOptionalKeyword("constant")))
     result.addAttribute("constant", parser.getBuilder().getUnitAttr());
@@ -1692,7 +1695,7 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
                       builder.getStringAttr(name));
   result.addAttribute("type", TypeAttr::get(type));
   result.addAttribute(getLinkageAttrName(),
-                      builder.getI64IntegerAttr(static_cast<int64_t>(linkage)));
+                      LinkageAttr::get(builder.getContext(), linkage));
   result.attributes.append(attrs.begin(), attrs.end());
   if (dsoLocal)
     result.addAttribute("dso_local", builder.getUnitAttr());
@@ -1751,11 +1754,11 @@ buildLLVMFunctionType(OpAsmParser &parser, llvm::SMLoc loc,
 static ParseResult parseLLVMFuncOp(OpAsmParser &parser,
                                    OperationState &result) {
   // Default to external linkage if no keyword is provided.
-  if (failed(parseOptionalLLVMKeyword<Linkage>(parser, result,
-                                               getLinkageAttrName())))
-    result.addAttribute(getLinkageAttrName(),
-                        parser.getBuilder().getI64IntegerAttr(
-                            static_cast<int64_t>(LLVM::Linkage::External)));
+  result.addAttribute(
+      getLinkageAttrName(),
+      LinkageAttr::get(parser.getBuilder().getContext(),
+                       parseOptionalLLVMKeyword<Linkage>(
+                           parser, result, LLVM::Linkage::External)));
 
   StringAttr nameAttr;
   SmallVector<OpAsmParser::OperandType, 8> entryArgs;
@@ -2175,7 +2178,7 @@ static LogicalResult verify(FenceOp &op) {
 //===----------------------------------------------------------------------===//
 
 void LLVMDialect::initialize() {
-  addAttributes<FMFAttr, LoopOptionsAttr>();
+  addAttributes<FMFAttr, LinkageAttr, LoopOptionsAttr>();
 
   // clang-format off
   addTypes<LLVMVoidType,
@@ -2395,6 +2398,30 @@ Attribute FMFAttr::parse(MLIRContext *context, DialectAsmParser &parser,
   }
 
   return FMFAttr::get(parser.getBuilder().getContext(), flags);
+}
+
+void LinkageAttr::print(DialectAsmPrinter &printer) const {
+  printer << "linkage<";
+  if (static_cast<uint64_t>(getLinkage()) <= getMaxEnumValForLinkage())
+    printer << stringifyEnum(getLinkage());
+  else
+    printer << static_cast<uint64_t>(getLinkage());
+  printer << ">";
+}
+
+Attribute LinkageAttr::parse(MLIRContext *context, DialectAsmParser &parser,
+                             Type type) {
+  StringRef elemName;
+  if (parser.parseLess() || parser.parseKeyword(&elemName) ||
+      parser.parseGreater())
+    return {};
+  auto elem = linkage::symbolizeLinkage(elemName);
+  if (!elem) {
+    parser.emitError(parser.getNameLoc(), "Unknown linkage: ") << elemName;
+    return {};
+  }
+  Linkage linkage = *elem;
+  return LinkageAttr::get(context, linkage);
 }
 
 LoopOptionsAttrBuilder::LoopOptionsAttrBuilder(LoopOptionsAttr attr)

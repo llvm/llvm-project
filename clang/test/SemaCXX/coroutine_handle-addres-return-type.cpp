@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -verify %s -stdlib=libc++ -std=c++1z -fcoroutines-ts -fsyntax-only
 
-namespace std {
+namespace std::experimental {
 template <class Promise = void>
 struct coroutine_handle;
 
@@ -32,11 +32,11 @@ struct traits_sfinae_base<T, void_t<typename T::promise_type>> {
 
 template <class Ret, class... Args>
 struct coroutine_traits : public traits_sfinae_base<Ret> {};
-} // namespace std
+} // namespace std::experimental
 
 struct suspend_never {
   bool await_ready() noexcept;
-  void await_suspend(std::coroutine_handle<>) noexcept;
+  void await_suspend(std::experimental::coroutine_handle<>) noexcept;
   void await_resume() noexcept;
 };
 
@@ -50,18 +50,18 @@ struct task {
   };
 };
 
-namespace std {
+namespace std::experimental {
 template <>
 struct coroutine_handle<task::promise_type> : public coroutine_handle<> {
   coroutine_handle<task::promise_type> *address() const; // expected-warning {{return type of 'coroutine_handle<>::address should be 'void*'}}
 };
-} // namespace std
+} // namespace std::experimental
 
 struct awaitable {
   bool await_ready();
 
-  std::coroutine_handle<task::promise_type>
-  await_suspend(std::coroutine_handle<> handle);
+  std::experimental::coroutine_handle<task::promise_type>
+  await_suspend(std::experimental::coroutine_handle<> handle);
   void await_resume();
 } a;
 

@@ -95,7 +95,7 @@
 # DWARF32-NEXT:                    DW_AT_name    ("__func__")
 # DWARF32-NEXT:                    DW_AT_decl_file       ("/basic.c")
 # DWARF32-NEXT:                    DW_AT_decl_line       (0)
-# DWARF32-NEXT:                    DW_AT_type    (0x0000005a "const char[5]")
+# DWARF32-NEXT:                    DW_AT_type    (0x0000005a "const char [5]")
 # DWARF32:       0x00000096:     NULL
 # DWARF32:       0x00000097:   NULL
 # DWARF32:       .debug_line contents:
