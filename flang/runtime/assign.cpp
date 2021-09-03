@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "assign.h"
+#include "flang/Runtime/assign.h"
 #include "derived.h"
-#include "descriptor.h"
 #include "stat.h"
 #include "terminator.h"
 #include "type-info.h"
+#include "flang/Runtime/descriptor.h"
 
 namespace Fortran::runtime {
 

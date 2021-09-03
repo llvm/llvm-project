@@ -25,7 +25,7 @@
 #include <functional>
 
 // List the runtime headers we want to be able to dissect
-#include "../../runtime/io-api.h"
+#include "flang/Runtime/io-api.h"
 
 namespace Fortran::lower {
 

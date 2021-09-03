@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "numeric.h"
+#include "flang/Runtime/numeric.h"
 #include "flang/Common/long-double.h"
 #include <climits>
 #include <cmath>

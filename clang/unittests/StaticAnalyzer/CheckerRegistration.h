@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -27,23 +26,8 @@ public:
   DiagConsumer(llvm::raw_ostream &Output) : Output(Output) {}
   void FlushDiagnosticsImpl(std::vector<const PathDiagnostic *> &Diags,
                             FilesMade *filesMade) override {
-    for (const auto *PD : Diags) {
-      Output << PD->getCheckerName() << ": ";
-
-      for (PathDiagnosticPieceRef Piece :
-           PD->path.flatten(/*ShouldFlattenMacros*/ true)) {
-        if (Piece->getKind() != PathDiagnosticPiece::Event)
-          continue;
-        if (Piece->getString().empty())
-          continue;
-        // The last event is usually the same as the warning message, skip.
-        if (Piece->getString() == PD->getShortDescription())
-          continue;
-
-        Output << Piece->getString() << " | ";
-      }
-      Output << PD->getShortDescription() << '\n';
-    }
+    for (const auto *PD : Diags)
+      Output << PD->getCheckerName() << ":" << PD->getShortDescription() << '\n';
   }
 
   StringRef getName() const override { return "Test"; }

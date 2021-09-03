@@ -12,9 +12,9 @@
 
 #include "CrashHandlerFixture.h"
 #include "gtest/gtest.h"
-#include "../../runtime/io-api.h"
-#include "../../runtime/main.h"
-#include "../../runtime/stop.h"
+#include "flang/Runtime/io-api.h"
+#include "flang/Runtime/main.h"
+#include "flang/Runtime/stop.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstring>
 

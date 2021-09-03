@@ -1,4 +1,4 @@
-//===-- runtime/copy.h -----------------------------------------*- C++ -*-===//
+//===-- runtime/copy.h ------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,7 +12,7 @@
 #ifndef FORTRAN_RUNTIME_COPY_H_
 #define FORTRAN_RUNTIME_COPY_H_
 
-#include "descriptor.h"
+#include "flang/Runtime/descriptor.h"
 
 namespace Fortran::runtime {
 

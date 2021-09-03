@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "main.h"
+#include "flang/Runtime/main.h"
 #include "environment.h"
 #include "terminator.h"
 #include <cfenv>

@@ -13,9 +13,9 @@
 
 #include "format.h"
 #include "io-stmt.h"
-#include "main.h"
 #include "flang/Common/format.h"
 #include "flang/Decimal/decimal.h"
+#include "flang/Runtime/main.h"
 #include <algorithm>
 #include <limits>
 

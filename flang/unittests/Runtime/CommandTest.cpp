@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../../runtime/command.h"
+#include "flang/Runtime/command.h"
 #include "gtest/gtest.h"
-#include "../../runtime/descriptor.h"
-#include "../../runtime/main.h"
+#include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/main.h"
 
 using namespace Fortran::runtime;
 

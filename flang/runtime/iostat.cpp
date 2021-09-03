@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "iostat.h"
+#include "flang/Runtime/iostat.h"
 
 namespace Fortran::runtime::io {
 const char *IostatErrorString(int iostat) {

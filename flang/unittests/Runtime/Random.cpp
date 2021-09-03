@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../../runtime/random.h"
+#include "flang/Runtime//random.h"
 #include "gtest/gtest.h"
-#include "../../runtime/descriptor.h"
-#include "../../runtime/type-code.h"
+#include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/type-code.h"
 #include <cmath>
 
 using namespace Fortran::runtime;

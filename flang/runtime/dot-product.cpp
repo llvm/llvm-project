@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "cpp-type.h"
-#include "descriptor.h"
-#include "reduction.h"
 #include "terminator.h"
 #include "tools.h"
+#include "flang/Runtime/cpp-type.h"
+#include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/reduction.h"
 #include <cinttypes>
 
 namespace Fortran::runtime {

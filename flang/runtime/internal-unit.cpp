@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "internal-unit.h"
-#include "descriptor.h"
 #include "io-error.h"
+#include "flang/Runtime/descriptor.h"
 #include <algorithm>
 #include <type_traits>
 

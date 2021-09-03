@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "CrashHandlerFixture.h"
-#include "../../runtime/descriptor.h"
-#include "../../runtime/io-api.h"
+#include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/io-api.h"
 #include <algorithm>
 #include <array>
 #include <cstring>

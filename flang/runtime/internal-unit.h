@@ -12,7 +12,7 @@
 #define FORTRAN_RUNTIME_IO_INTERNAL_UNIT_H_
 
 #include "connection.h"
-#include "descriptor.h"
+#include "flang/Runtime/descriptor.h"
 #include <cinttypes>
 #include <type_traits>
 

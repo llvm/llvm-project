@@ -9,8 +9,8 @@
 // Implements PRODUCT for all required operand types and shapes.
 
 #include "reduction-templates.h"
-#include "reduction.h"
 #include "flang/Common/long-double.h"
+#include "flang/Runtime/reduction.h"
 #include <cinttypes>
 #include <complex>
 

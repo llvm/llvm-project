@@ -1,6 +1,6 @@
 #include "testing.h"
-#include "../../include/flang/ISO_Fortran_binding.h"
-#include "../../runtime/descriptor.h"
+#include "flang/ISO_Fortran_binding.h"
+#include "flang/Runtime/descriptor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <type_traits>
 

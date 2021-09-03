@@ -19,11 +19,11 @@
 //
 // Places where BLAS routines could be called are marked as TODO items.
 
-#include "matmul.h"
-#include "cpp-type.h"
-#include "descriptor.h"
+#include "flang/Runtime/matmul.h"
 #include "terminator.h"
 #include "tools.h"
+#include "flang/Runtime/cpp-type.h"
+#include "flang/Runtime/descriptor.h"
 
 namespace Fortran::runtime {
 
