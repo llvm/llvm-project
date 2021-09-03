@@ -13,6 +13,8 @@
 #include "llvm/Support/Memory.h"
 #include "llvm/Testing/Support/Error.h"
 
+#include <limits>
+
 using namespace llvm;
 using namespace llvm::orc;
 using namespace llvm::orc::shared;
@@ -44,8 +46,9 @@ testFinalize(const char *ArgData, size_t ArgSize) {
                  memcpy(Mem, Seg.Content.data(), Seg.Content.size());
                  memset(Mem + Seg.Content.size(), 0,
                         Seg.Size - Seg.Content.size());
+                 assert(Seg.Size <= std::numeric_limits<size_t>::max());
                  if (auto EC = sys::Memory::protectMappedMemory(
-                         {Mem, Seg.Size},
+                         {Mem, static_cast<size_t>(Seg.Size)},
                          tpctypes::fromWireProtectionFlags(Seg.Prot)))
                    return errorCodeToError(EC);
                  if (Seg.Prot & tpctypes::WPF_Exec)
