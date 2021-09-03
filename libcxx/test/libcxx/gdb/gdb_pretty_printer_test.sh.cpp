@@ -92,24 +92,28 @@ void MarkAsLive(Type &&) {}
 template <typename TypeToPrint> void ComparePrettyPrintToChars(
     TypeToPrint value,
     const char *expectation) {
+  MarkAsLive(value);
   StopForDebugger(&value, &expectation);
 }
 
 template <typename TypeToPrint> void ComparePrettyPrintToRegex(
     TypeToPrint value,
     const char *expectation) {
+  MarkAsLive(value);
   StopForDebugger(&value, &expectation);
 }
 
 void CompareExpressionPrettyPrintToChars(
     std::string value,
     const char *expectation) {
+  MarkAsLive(value);
   StopForDebugger(&value, &expectation);
 }
 
 void CompareExpressionPrettyPrintToRegex(
     std::string value,
     const char *expectation) {
+  MarkAsLive(value);
   StopForDebugger(&value, &expectation);
 }
 
