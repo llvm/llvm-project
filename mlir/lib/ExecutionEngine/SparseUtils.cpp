@@ -25,6 +25,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <numeric>
 #include <vector>
 
 //===----------------------------------------------------------------------===//
@@ -302,7 +303,7 @@ private:
     } else {
       // For dense storage we must fill in all the zero values after
       // the last element.
-      for (uint64_t sz = tensor->getSizes()[d]; full < sz; full++)
+      for (uint64_t sz = sizes[d]; full < sz; full++)
         fromCOO(tensor, sparsity, 0, 0, d + 1); // pass empty
     }
   }
@@ -315,9 +316,9 @@ private:
       tensor->add(idx, values[pos]);
     } else if (pointers[d].empty()) {
       // Dense dimension.
-      for (uint64_t i = 0; i < sizes[d]; i++) {
+      for (uint64_t i = 0, sz = sizes[d], off = pos * sz; i < sz; i++) {
         idx[reord[d]] = i;
-        toCOO(tensor, reord, idx, pos * sizes[d] + i, d + 1);
+        toCOO(tensor, reord, idx, off + i, d + 1);
       }
     } else {
       // Sparse dimension.
@@ -506,14 +507,14 @@ char *getTensorFilename(uint64_t id) {
 
 #define CASE(p, i, v, P, I, V)                                                 \
   if (ptrTp == (p) && indTp == (i) && valTp == (v)) {                          \
-    SparseTensorCOO<V> *tensor;                                                \
+    SparseTensorCOO<V> *tensor = nullptr;                                      \
     if (action == 0)                                                           \
-      tensor = openSparseTensorCOO<V>(static_cast<char *>(ptr), asize, sizes,  \
-                                      perm);                                   \
+      tensor =                                                                 \
+          openSparseTensorCOO<V>(static_cast<char *>(ptr), size, sizes, perm); \
     else if (action == 1)                                                      \
       tensor = static_cast<SparseTensorCOO<V> *>(ptr);                         \
     else if (action == 2)                                                      \
-      return SparseTensorCOO<V>::newSparseTensorCOO(asize, sizes, perm);       \
+      return SparseTensorCOO<V>::newSparseTensorCOO(size, sizes, perm);        \
     else                                                                       \
       return static_cast<SparseTensorStorage<P, I, V> *>(ptr)->toCOO(perm);    \
     return SparseTensorStorage<P, I, V>::newSparseTensor(tensor, sparsity,     \
@@ -592,6 +593,7 @@ void *newSparseTensor(uint8_t *abase, uint8_t *adata, uint64_t aoff,
   uint8_t *sparsity = adata + aoff;
   uint64_t *sizes = sdata + soff;
   uint64_t *perm = pdata + poff;
+  uint64_t size = asize;
 
   // Double matrices with all combinations of overhead storage.
   CASE(kU64, kU64, kF64, uint64_t, uint64_t, double);
@@ -685,12 +687,10 @@ IMPL3(addEltI8, int8_t)
 //
 // Public API with methods that accept C-style data structures to interact
 // with sparse tensors, which are only visible as opaque pointers externally.
-// These methods can be used by any external runtime that wants to interact
-// with MLIR compiler-generated code.
+// These methods can be used both by MLIR compiler-generated code as well as by
+// an external runtime that wants to interact with MLIR compiler-generated code.
 //
 //===----------------------------------------------------------------------===//
-
-// TODO: setup sparse tensor from C style format
 
 /// Returns size of sparse tensor in given dimension.
 uint64_t sparseDimSize(void *tensor, uint64_t d) {
@@ -700,6 +700,48 @@ uint64_t sparseDimSize(void *tensor, uint64_t d) {
 /// Releases sparse tensor storage.
 void delSparseTensor(void *tensor) {
   delete static_cast<SparseTensorStorageBase *>(tensor);
+}
+
+/// Initializes sparse tensor from a COO-flavored format expressed using C-style
+/// data structures. The expected parameters are:
+///
+///   rank:    rank of tensor
+///   nse:     number of specified elements (usually the nonzeros)
+///   shape:   array with dimension size for each rank
+///   values:  a "nse" array with values for all specified elements
+///   indices: a flat "nse x rank" array with indices for all specified elements
+///
+/// For example, the sparse matrix
+///     | 1.0 0.0 0.0 |
+///     | 0.0 5.0 3.0 |
+/// can be passed as
+///      rank    = 2
+///      nse     = 3
+///      shape   = [2, 3]
+///      values  = [1.0, 5.0, 3.0]
+///      indices = [ 0, 0,  1, 1,  1, 2]
+//
+// TODO: for now f64 tensors only, no dim ordering, all dimensions compressed
+//
+void *convertToMLIRSparseTensor(uint64_t rank, uint64_t nse, uint64_t *shape,
+                                double *values, uint64_t *indices) {
+  // Setup all-dims compressed and default ordering.
+  std::vector<uint8_t> sparse(rank, SparseTensorStorageBase::kCompressed);
+  std::vector<uint64_t> perm(rank);
+  std::iota(perm.begin(), perm.end(), 0);
+  // Convert external format to internal COO.
+  SparseTensorCOO<double> *tensor = SparseTensorCOO<double>::newSparseTensorCOO(
+      rank, shape, perm.data(), nse);
+  std::vector<uint64_t> idx(rank);
+  for (uint64_t i = 0, base = 0; i < nse; i++) {
+    for (uint64_t j = 0; j < rank; j++)
+      idx[j] = indices[base + j];
+    tensor->add(idx, values[i]);
+    base += rank;
+  }
+  // Return sparse tensor storage format as opague pointer.
+  return SparseTensorStorage<uint64_t, uint64_t, double>::newSparseTensor(
+      tensor, sparse.data(), perm.data());
 }
 
 } // extern "C"
