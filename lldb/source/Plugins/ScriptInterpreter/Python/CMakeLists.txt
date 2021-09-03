@@ -11,6 +11,7 @@ add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
   PythonDataObjects.cpp
   PythonReadline.cpp
   ScriptInterpreterPython.cpp
+  ScriptedPythonInterface.cpp
   ScriptedProcessPythonInterface.cpp
   SWIGPythonBridge.cpp
 
