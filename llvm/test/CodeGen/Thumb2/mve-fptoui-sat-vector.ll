@@ -133,20 +133,19 @@ define arm_aapcs_vfpcc <4 x i32> @test_unsigned_v4f32_v4i32(<4 x float> %f) {
 define arm_aapcs_vfpcc <5 x i32> @test_unsigned_v5f32_v5i32(<5 x float> %f) {
 ; CHECK-MVE-LABEL: test_unsigned_v5f32_v5i32:
 ; CHECK-MVE:       @ %bb.0:
-; CHECK-MVE-NEXT:    vcvt.u32.f32 s4, s4
-; CHECK-MVE-NEXT:    vcvt.u32.f32 s0, s0
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s2, s2
+; CHECK-MVE-NEXT:    vcvt.u32.f32 s0, s0
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s6, s3
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s8, s1
-; CHECK-MVE-NEXT:    vmov r1, s4
-; CHECK-MVE-NEXT:    vmov r2, s0
-; CHECK-MVE-NEXT:    str r1, [r0, #16]
+; CHECK-MVE-NEXT:    vcvt.u32.f32 s4, s4
 ; CHECK-MVE-NEXT:    vmov r1, s2
+; CHECK-MVE-NEXT:    vmov r2, s0
 ; CHECK-MVE-NEXT:    vmov q0[2], q0[0], r2, r1
 ; CHECK-MVE-NEXT:    vmov r1, s6
 ; CHECK-MVE-NEXT:    vmov r2, s8
 ; CHECK-MVE-NEXT:    vmov q0[3], q0[1], r2, r1
 ; CHECK-MVE-NEXT:    vstrw.32 q0, [r0]
+; CHECK-MVE-NEXT:    vstr s4, [r0, #16]
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-MVEFP-LABEL: test_unsigned_v5f32_v5i32:
@@ -164,22 +163,21 @@ define arm_aapcs_vfpcc <5 x i32> @test_unsigned_v5f32_v5i32(<5 x float> %f) {
 define arm_aapcs_vfpcc <6 x i32> @test_unsigned_v6f32_v6i32(<6 x float> %f) {
 ; CHECK-MVE-LABEL: test_unsigned_v6f32_v6i32:
 ; CHECK-MVE:       @ %bb.0:
-; CHECK-MVE-NEXT:    vcvt.u32.f32 s6, s5
-; CHECK-MVE-NEXT:    vcvt.u32.f32 s4, s4
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s2, s2
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s0, s0
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s8, s3
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s10, s1
-; CHECK-MVE-NEXT:    vmov r1, s6
-; CHECK-MVE-NEXT:    vmov r2, s4
-; CHECK-MVE-NEXT:    strd r2, r1, [r0, #16]
+; CHECK-MVE-NEXT:    vcvt.u32.f32 s6, s5
+; CHECK-MVE-NEXT:    vcvt.u32.f32 s4, s4
 ; CHECK-MVE-NEXT:    vmov r1, s2
 ; CHECK-MVE-NEXT:    vmov r2, s0
 ; CHECK-MVE-NEXT:    vmov q0[2], q0[0], r2, r1
 ; CHECK-MVE-NEXT:    vmov r1, s8
 ; CHECK-MVE-NEXT:    vmov r2, s10
 ; CHECK-MVE-NEXT:    vmov q0[3], q0[1], r2, r1
+; CHECK-MVE-NEXT:    vstr s6, [r0, #20]
 ; CHECK-MVE-NEXT:    vstrw.32 q0, [r0]
+; CHECK-MVE-NEXT:    vstr s4, [r0, #16]
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-MVEFP-LABEL: test_unsigned_v6f32_v6i32:
@@ -199,25 +197,23 @@ define arm_aapcs_vfpcc <6 x i32> @test_unsigned_v6f32_v6i32(<6 x float> %f) {
 define arm_aapcs_vfpcc <7 x i32> @test_unsigned_v7f32_v7i32(<7 x float> %f) {
 ; CHECK-MVE-LABEL: test_unsigned_v7f32_v7i32:
 ; CHECK-MVE:       @ %bb.0:
-; CHECK-MVE-NEXT:    vcvt.u32.f32 s8, s5
-; CHECK-MVE-NEXT:    vcvt.u32.f32 s4, s4
-; CHECK-MVE-NEXT:    vcvt.u32.f32 s6, s6
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s2, s2
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s0, s0
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s10, s3
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s12, s1
-; CHECK-MVE-NEXT:    vmov r1, s8
-; CHECK-MVE-NEXT:    vmov r2, s4
-; CHECK-MVE-NEXT:    vmov r3, s6
-; CHECK-MVE-NEXT:    strd r2, r1, [r0, #16]
+; CHECK-MVE-NEXT:    vcvt.u32.f32 s8, s5
+; CHECK-MVE-NEXT:    vcvt.u32.f32 s4, s4
+; CHECK-MVE-NEXT:    vcvt.u32.f32 s6, s6
 ; CHECK-MVE-NEXT:    vmov r1, s2
 ; CHECK-MVE-NEXT:    vmov r2, s0
-; CHECK-MVE-NEXT:    str r3, [r0, #24]
 ; CHECK-MVE-NEXT:    vmov q0[2], q0[0], r2, r1
 ; CHECK-MVE-NEXT:    vmov r1, s10
 ; CHECK-MVE-NEXT:    vmov r2, s12
 ; CHECK-MVE-NEXT:    vmov q0[3], q0[1], r2, r1
+; CHECK-MVE-NEXT:    vstr s8, [r0, #20]
+; CHECK-MVE-NEXT:    vstr s4, [r0, #16]
 ; CHECK-MVE-NEXT:    vstrw.32 q0, [r0]
+; CHECK-MVE-NEXT:    vstr s6, [r0, #24]
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-MVEFP-LABEL: test_unsigned_v7f32_v7i32:

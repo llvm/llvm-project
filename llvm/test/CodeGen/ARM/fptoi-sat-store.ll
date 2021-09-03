@@ -63,8 +63,7 @@ define void @test_signed_i32_f32(i32* %d, float %f) nounwind {
 ; VFP:       @ %bb.0:
 ; VFP-NEXT:    vmov s0, r1
 ; VFP-NEXT:    vcvt.s32.f32 s0, s0
-; VFP-NEXT:    vmov r1, s0
-; VFP-NEXT:    str r1, [r0]
+; VFP-NEXT:    vstr s0, [r0]
 ; VFP-NEXT:    bx lr
     %r = call i32 @llvm.fptosi.sat.i32.f32(float %f)
     store i32 %r, i32* %d, align 4
@@ -141,16 +140,14 @@ define void @test_signed_i32_f64(i32* %d, double %f) nounwind {
 ; VFP2:       @ %bb.0:
 ; VFP2-NEXT:    vmov d16, r2, r3
 ; VFP2-NEXT:    vcvt.s32.f64 s0, d16
-; VFP2-NEXT:    vmov r1, s0
-; VFP2-NEXT:    str r1, [r0]
+; VFP2-NEXT:    vstr s0, [r0]
 ; VFP2-NEXT:    bx lr
 ;
 ; FP16-LABEL: test_signed_i32_f64:
 ; FP16:       @ %bb.0:
 ; FP16-NEXT:    vmov d0, r2, r3
 ; FP16-NEXT:    vcvt.s32.f64 s0, d0
-; FP16-NEXT:    vmov r1, s0
-; FP16-NEXT:    str r1, [r0]
+; FP16-NEXT:    vstr s0, [r0]
 ; FP16-NEXT:    bx lr
     %r = call i32 @llvm.fptosi.sat.i32.f64(double %f)
     store i32 %r, i32* %d, align 4
@@ -200,8 +197,7 @@ define void @test_unsigned_i32_f32(i32* %d, float %f) nounwind {
 ; VFP:       @ %bb.0:
 ; VFP-NEXT:    vmov s0, r1
 ; VFP-NEXT:    vcvt.u32.f32 s0, s0
-; VFP-NEXT:    vmov r1, s0
-; VFP-NEXT:    str r1, [r0]
+; VFP-NEXT:    vstr s0, [r0]
 ; VFP-NEXT:    bx lr
     %r = call i32 @llvm.fptoui.sat.i32.f32(float %f)
     store i32 %r, i32* %d, align 4
@@ -260,16 +256,14 @@ define void @test_unsigned_i32_f64(i32* %d, double %f) nounwind {
 ; VFP2:       @ %bb.0:
 ; VFP2-NEXT:    vmov d16, r2, r3
 ; VFP2-NEXT:    vcvt.u32.f64 s0, d16
-; VFP2-NEXT:    vmov r1, s0
-; VFP2-NEXT:    str r1, [r0]
+; VFP2-NEXT:    vstr s0, [r0]
 ; VFP2-NEXT:    bx lr
 ;
 ; FP16-LABEL: test_unsigned_i32_f64:
 ; FP16:       @ %bb.0:
 ; FP16-NEXT:    vmov d0, r2, r3
 ; FP16-NEXT:    vcvt.u32.f64 s0, d0
-; FP16-NEXT:    vmov r1, s0
-; FP16-NEXT:    str r1, [r0]
+; FP16-NEXT:    vstr s0, [r0]
 ; FP16-NEXT:    bx lr
     %r = call i32 @llvm.fptoui.sat.i32.f64(double %f)
     store i32 %r, i32* %d, align 4
