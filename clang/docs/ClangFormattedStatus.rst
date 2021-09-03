@@ -59,11 +59,6 @@ tree in terms of conformance to :doc:`ClangFormat` as of: June 04, 2021 13:01:37
      - `1`
      - `0`
      - :good:`100%`
-   * - clang/examples/clang-interpreter
-     - `1`
-     - `0`
-     - `1`
-     - :none:`0%`
    * - clang/examples/PrintFunctionNames
      - `1`
      - `0`
