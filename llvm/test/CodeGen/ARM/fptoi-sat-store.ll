@@ -62,30 +62,10 @@ define void @test_signed_i32_f32(i32* %d, float %f) nounwind {
 ; VFP-LABEL: test_signed_i32_f32:
 ; VFP:       @ %bb.0:
 ; VFP-NEXT:    vmov s0, r1
-; VFP-NEXT:    vldr s2, .LCPI0_0
-; VFP-NEXT:    vldr s6, .LCPI0_1
-; VFP-NEXT:    vcvt.s32.f32 s4, s0
-; VFP-NEXT:    vcmp.f32 s0, s2
-; VFP-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP-NEXT:    vcmp.f32 s0, s6
-; VFP-NEXT:    vmov r1, s4
-; VFP-NEXT:    it lt
-; VFP-NEXT:    movlt.w r1, #-2147483648
-; VFP-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP-NEXT:    it gt
-; VFP-NEXT:    mvngt r1, #-2147483648
-; VFP-NEXT:    vcmp.f32 s0, s0
-; VFP-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP-NEXT:    it vs
-; VFP-NEXT:    movvs r1, #0
+; VFP-NEXT:    vcvt.s32.f32 s0, s0
+; VFP-NEXT:    vmov r1, s0
 ; VFP-NEXT:    str r1, [r0]
 ; VFP-NEXT:    bx lr
-; VFP-NEXT:    .p2align 2
-; VFP-NEXT:  @ %bb.1:
-; VFP-NEXT:  .LCPI0_0:
-; VFP-NEXT:    .long 0xcf000000 @ float -2.14748365E+9
-; VFP-NEXT:  .LCPI0_1:
-; VFP-NEXT:    .long 0x4effffff @ float 2.14748352E+9
     %r = call i32 @llvm.fptosi.sat.i32.f32(float %f)
     store i32 %r, i32* %d, align 4
     ret void
@@ -160,56 +140,18 @@ define void @test_signed_i32_f64(i32* %d, double %f) nounwind {
 ; VFP2-LABEL: test_signed_i32_f64:
 ; VFP2:       @ %bb.0:
 ; VFP2-NEXT:    vmov d16, r2, r3
-; VFP2-NEXT:    vldr d17, .LCPI1_0
-; VFP2-NEXT:    vldr d18, .LCPI1_1
 ; VFP2-NEXT:    vcvt.s32.f64 s0, d16
-; VFP2-NEXT:    vcmp.f64 d16, d17
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
 ; VFP2-NEXT:    vmov r1, s0
-; VFP2-NEXT:    vcmp.f64 d16, d18
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt.w r1, #-2147483648
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    it gt
-; VFP2-NEXT:    mvngt r1, #-2147483648
-; VFP2-NEXT:    vcmp.f64 d16, d16
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    it vs
-; VFP2-NEXT:    movvs r1, #0
 ; VFP2-NEXT:    str r1, [r0]
 ; VFP2-NEXT:    bx lr
-; VFP2-NEXT:    .p2align 3
-; VFP2-NEXT:  @ %bb.1:
-; VFP2-NEXT:  .LCPI1_0:
-; VFP2-NEXT:    .long 0 @ double -2147483648
-; VFP2-NEXT:    .long 3252682752
-; VFP2-NEXT:  .LCPI1_1:
-; VFP2-NEXT:    .long 4290772992 @ double 2147483647
-; VFP2-NEXT:    .long 1105199103
 ;
 ; FP16-LABEL: test_signed_i32_f64:
 ; FP16:       @ %bb.0:
-; FP16-NEXT:    vldr d0, .LCPI1_0
-; FP16-NEXT:    vmov d1, r2, r3
-; FP16-NEXT:    vldr d2, .LCPI1_1
-; FP16-NEXT:    vmaxnm.f64 d0, d1, d0
-; FP16-NEXT:    vcmp.f64 d1, d1
-; FP16-NEXT:    vminnm.f64 d0, d0, d2
+; FP16-NEXT:    vmov d0, r2, r3
 ; FP16-NEXT:    vcvt.s32.f64 s0, d0
 ; FP16-NEXT:    vmov r1, s0
-; FP16-NEXT:    vmrs APSR_nzcv, fpscr
-; FP16-NEXT:    it vs
-; FP16-NEXT:    movvs r1, #0
 ; FP16-NEXT:    str r1, [r0]
 ; FP16-NEXT:    bx lr
-; FP16-NEXT:    .p2align 3
-; FP16-NEXT:  @ %bb.1:
-; FP16-NEXT:  .LCPI1_0:
-; FP16-NEXT:    .long 0 @ double -2147483648
-; FP16-NEXT:    .long 3252682752
-; FP16-NEXT:  .LCPI1_1:
-; FP16-NEXT:    .long 4290772992 @ double 2147483647
-; FP16-NEXT:    .long 1105199103
     %r = call i32 @llvm.fptosi.sat.i32.f64(double %f)
     store i32 %r, i32* %d, align 4
     ret void
@@ -257,23 +199,10 @@ define void @test_unsigned_i32_f32(i32* %d, float %f) nounwind {
 ; VFP-LABEL: test_unsigned_i32_f32:
 ; VFP:       @ %bb.0:
 ; VFP-NEXT:    vmov s0, r1
-; VFP-NEXT:    vldr s4, .LCPI2_0
-; VFP-NEXT:    vcvt.u32.f32 s2, s0
-; VFP-NEXT:    vcmp.f32 s0, #0
-; VFP-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP-NEXT:    vcmp.f32 s0, s4
-; VFP-NEXT:    vmov r1, s2
-; VFP-NEXT:    it lt
-; VFP-NEXT:    movlt r1, #0
-; VFP-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP-NEXT:    it gt
-; VFP-NEXT:    movgt.w r1, #-1
+; VFP-NEXT:    vcvt.u32.f32 s0, s0
+; VFP-NEXT:    vmov r1, s0
 ; VFP-NEXT:    str r1, [r0]
 ; VFP-NEXT:    bx lr
-; VFP-NEXT:    .p2align 2
-; VFP-NEXT:  @ %bb.1:
-; VFP-NEXT:  .LCPI2_0:
-; VFP-NEXT:    .long 0x4f7fffff @ float 4.29496704E+9
     %r = call i32 @llvm.fptoui.sat.i32.f32(float %f)
     store i32 %r, i32* %d, align 4
     ret void
@@ -330,43 +259,18 @@ define void @test_unsigned_i32_f64(i32* %d, double %f) nounwind {
 ; VFP2-LABEL: test_unsigned_i32_f64:
 ; VFP2:       @ %bb.0:
 ; VFP2-NEXT:    vmov d16, r2, r3
-; VFP2-NEXT:    vldr d17, .LCPI3_0
-; VFP2-NEXT:    vcmp.f64 d16, #0
 ; VFP2-NEXT:    vcvt.u32.f64 s0, d16
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
 ; VFP2-NEXT:    vmov r1, s0
-; VFP2-NEXT:    vcmp.f64 d16, d17
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt r1, #0
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    it gt
-; VFP2-NEXT:    movgt.w r1, #-1
 ; VFP2-NEXT:    str r1, [r0]
 ; VFP2-NEXT:    bx lr
-; VFP2-NEXT:    .p2align 3
-; VFP2-NEXT:  @ %bb.1:
-; VFP2-NEXT:  .LCPI3_0:
-; VFP2-NEXT:    .long 4292870144 @ double 4294967295
-; VFP2-NEXT:    .long 1106247679
 ;
 ; FP16-LABEL: test_unsigned_i32_f64:
 ; FP16:       @ %bb.0:
-; FP16-NEXT:    vldr d0, .LCPI3_0
-; FP16-NEXT:    vmov d1, r2, r3
-; FP16-NEXT:    vldr d2, .LCPI3_1
-; FP16-NEXT:    vmaxnm.f64 d0, d1, d0
-; FP16-NEXT:    vminnm.f64 d0, d0, d2
+; FP16-NEXT:    vmov d0, r2, r3
 ; FP16-NEXT:    vcvt.u32.f64 s0, d0
-; FP16-NEXT:    vstr s0, [r0]
+; FP16-NEXT:    vmov r1, s0
+; FP16-NEXT:    str r1, [r0]
 ; FP16-NEXT:    bx lr
-; FP16-NEXT:    .p2align 3
-; FP16-NEXT:  @ %bb.1:
-; FP16-NEXT:  .LCPI3_0:
-; FP16-NEXT:    .long 0 @ double 0
-; FP16-NEXT:    .long 0
-; FP16-NEXT:  .LCPI3_1:
-; FP16-NEXT:    .long 4292870144 @ double 4294967295
-; FP16-NEXT:    .long 1106247679
     %r = call i32 @llvm.fptoui.sat.i32.f64(double %f)
     store i32 %r, i32* %d, align 4
     ret void
