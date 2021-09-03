@@ -3226,6 +3226,16 @@ Instruction *InstCombinerImpl::foldICmpEqIntrinsicWithConstant(
     break;
   }
 
+  case Intrinsic::fshl:
+  case Intrinsic::fshr:
+    // (rot X, ?) == 0/-1 --> X == 0/-1
+    // TODO: This transform is safe to re-use undef elts in a vector, but
+    //       the constant value passed in by the caller doesn't allow that.
+    if (C.isNullValue() || C.isAllOnesValue())
+      if (II->getArgOperand(0) == II->getArgOperand(1))
+        return new ICmpInst(Pred, II->getArgOperand(0), Cmp.getOperand(1));
+    break;
+
   case Intrinsic::uadd_sat: {
     // uadd.sat(a, b) == 0  ->  (a | b) == 0
     if (C.isNullValue()) {
