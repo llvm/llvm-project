@@ -13,17 +13,18 @@
 
 #if LLDB_ENABLE_PYTHON
 
+#include "ScriptedPythonInterface.h"
 #include "lldb/Interpreter/ScriptedProcessInterface.h"
 
 namespace lldb_private {
-class ScriptInterpreterPythonImpl;
-class ScriptedProcessPythonInterface : public ScriptedProcessInterface {
+class ScriptedProcessPythonInterface : public ScriptedProcessInterface,
+                                       public ScriptedPythonInterface {
 public:
-  ScriptedProcessPythonInterface(ScriptInterpreterPythonImpl &interpreter)
-      : ScriptedProcessInterface(), m_interpreter(interpreter) {}
+  ScriptedProcessPythonInterface(ScriptInterpreterPythonImpl &interpreter);
 
   StructuredData::GenericSP
-  CreatePluginObject(const llvm::StringRef class_name, lldb::TargetSP target_sp,
+  CreatePluginObject(const llvm::StringRef class_name,
+                     ExecutionContext &exe_ctx,
                      StructuredData::DictionarySP args_sp) override;
 
   Status Launch() override;
@@ -49,16 +50,6 @@ public:
   lldb::pid_t GetProcessID() override;
 
   bool IsAlive() override;
-
-protected:
-  llvm::Optional<unsigned long long>
-  GetGenericInteger(llvm::StringRef method_name);
-  Status GetStatusFromMethod(llvm::StringRef method_name);
-
-private:
-  // The lifetime is managed by the ScriptInterpreter
-  ScriptInterpreterPythonImpl &m_interpreter;
-  StructuredData::GenericSP m_object_instance_sp;
 };
 } // namespace lldb_private
 
