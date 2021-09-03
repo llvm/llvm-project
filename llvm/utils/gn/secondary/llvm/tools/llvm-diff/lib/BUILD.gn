@@ -7,9 +7,9 @@ static_library("lib") {
   sources = [
     "DiffConsumer.cpp",
     "DiffConsumer.h",
-    "DifferenceEngine.cpp",
-    "DifferenceEngine.h",
     "DiffLog.cpp",
     "DiffLog.h",
+    "DifferenceEngine.cpp",
+    "DifferenceEngine.h",
   ]
 }
