@@ -1,31 +1,32 @@
-// This file contains references to sections of the Coroutines TS, which can be
-// found at http://wg21.link/coroutines.
+// This file is the same with coroutines.cpp except the coroutine components are defined in std::experimental namespace.
+// This intention of this test is to make sure the legacy imeplementation in std::experimental namespace could work.
+// TODO: Remove this test once we didn't support
 
 // RUN: %clang_cc1 -std=c++2b                 -fsyntax-only -verify=expected,cxx20_2b,cxx2b    %s -fcxx-exceptions -fexceptions -Wunused-result
 // RUN: %clang_cc1 -std=c++20                 -fsyntax-only -verify=expected,cxx14_20,cxx20_2b %s -fcxx-exceptions -fexceptions -Wunused-result
 // RUN: %clang_cc1 -std=c++14 -fcoroutines-ts -fsyntax-only -verify=expected,cxx14_20          %s -fcxx-exceptions -fexceptions -Wunused-result
 
 void no_coroutine_traits_bad_arg_await() {
-  co_await a; // expected-error {{include <coroutine>}}
+  co_await a; // expected-error {{include <experimental/coroutine>}}
   // expected-error@-1 {{use of undeclared identifier 'a'}}
 }
 
 void no_coroutine_traits_bad_arg_yield() {
-  co_yield a; // expected-error {{include <coroutine>}}
+  co_yield a; // expected-error {{include <experimental/coroutine>}}
   // expected-error@-1 {{use of undeclared identifier 'a'}}
 }
 
-
 void no_coroutine_traits_bad_arg_return() {
-  co_return a; // expected-error {{include <coroutine>}}
+  co_return a; // expected-error {{include <experimental/coroutine>}}
   // expected-error@-1 {{use of undeclared identifier 'a'}}
 }
 
 void no_coroutine_traits() {
-  co_await 4; // expected-error {{std::coroutine_traits type was not found; include <coroutine>}}
+  co_await 4; // expected-error {{std::coroutine_traits type was not found; include <coroutine> before defining a coroutine; include <experimental/coroutine> if your version of libcxx is less than 14.0}}
 }
 
 namespace std {
+namespace experimental {
 
 template <class... Args>
 struct void_t_imp {
@@ -44,11 +45,12 @@ struct traits_sfinae_base<T, void_t<typename T::promise_type>> {
 
 template <class Ret, class... Args>
 struct coroutine_traits : public traits_sfinae_base<Ret> {};
-} // end of namespace std
+} // namespace experimental
+} // namespace std
 
-template<typename Promise> struct coro {};
+template <typename Promise> struct coro {};
 template <typename Promise, typename... Ps>
-struct std::coroutine_traits<coro<Promise>, Ps...> {
+struct std::experimental::coroutine_traits<coro<Promise>, Ps...> {
   using promise_type = Promise;
 };
 
@@ -80,50 +82,53 @@ struct auto_await_suspend {
 };
 
 struct DummyVoidTag {};
-DummyVoidTag no_specialization() { // expected-error {{this function cannot be a coroutine: 'std::coroutine_traits<DummyVoidTag>' has no member named 'promise_type'}}
-  co_await a;
+DummyVoidTag no_specialization() { // expected-error {{this function cannot be a coroutine: 'std::experimental::coroutine_traits<DummyVoidTag>' has no member named 'promise_type'}}
+  co_await a;                      // expected-warning {{coroutine_traits defined in std::experimental namespace is deprecated. Consider updating libcxx and include <coroutine> instead of <experimental/coroutine>}}
 }
 
 template <typename... T>
-struct std::coroutine_traits<int, T...> {};
+struct std::experimental::coroutine_traits<int, T...> {};
 
-int no_promise_type() { // expected-error {{this function cannot be a coroutine: 'std::coroutine_traits<int>' has no member named 'promise_type'}}
+int no_promise_type() { // expected-error {{this function cannot be a coroutine: 'std::experimental::coroutine_traits<int>' has no member named 'promise_type'}}
   co_await a;
 }
 
-int no_promise_type_multiple_awaits(int) { // expected-error {{this function cannot be a coroutine: 'std::coroutine_traits<int, int>' has no member named 'promise_type'}}
+int no_promise_type_multiple_awaits(int) { // expected-error {{this function cannot be a coroutine: 'std::experimental::coroutine_traits<int, int>' has no member named 'promise_type'}}
   co_await a;
-  co_await a;
-}
-
-template <>
-struct std::coroutine_traits<double, double> { typedef int promise_type; };
-double bad_promise_type(double) { // expected-error {{this function cannot be a coroutine: 'std::coroutine_traits<double, double>::promise_type' (aka 'int') is not a class}}
   co_await a;
 }
 
 template <>
-struct std::coroutine_traits<double, int> {
+struct std::experimental::coroutine_traits<double, double> { typedef int promise_type; };
+double bad_promise_type(double) { // expected-error {{this function cannot be a coroutine: 'experimental::coroutine_traits<double, double>::promise_type' (aka 'int') is not a class}}
+  co_await a;
+}
+
+template <>
+struct std::experimental::coroutine_traits<double, int> {
   struct promise_type {};
 };
 double bad_promise_type_2(int) { // expected-error {{no member named 'initial_suspend'}}
-  co_yield 0;                    // expected-error {{no member named 'yield_value' in 'std::coroutine_traits<double, int>::promise_type'}}
+  co_yield 0;                    // expected-error {{no member named 'yield_value' in 'std::experimental::coroutine_traits<double, int>::promise_type'}}
 }
 
 struct promise; // expected-note {{forward declaration}}
 struct promise_void;
 struct void_tag {};
 template <typename... T>
-struct std::coroutine_traits<void, T...> { using promise_type = promise; };
+struct std::experimental::coroutine_traits<void, T...> { using promise_type = promise; };
 template <typename... T>
-struct std::coroutine_traits<void, void_tag, T...> { using promise_type = promise_void; };
+struct std::experimental::coroutine_traits<void, void_tag, T...> { using promise_type = promise_void; };
 
 // FIXME: This diagnostic is terrible.
-void undefined_promise() { // expected-error {{this function cannot be a coroutine: 'std::coroutine_traits<void>::promise_type' (aka 'promise') is an incomplete type}}
+void undefined_promise() { // expected-error {{this function cannot be a coroutine: 'experimental::coroutine_traits<void>::promise_type' (aka 'promise') is an incomplete type}}
   co_await a;
 }
 
-struct yielded_thing { const char *p; short a, b; };
+struct yielded_thing {
+  const char *p;
+  short a, b;
+};
 
 struct not_awaitable {};
 
@@ -131,10 +136,10 @@ struct promise {
   void get_return_object();
   suspend_always initial_suspend();
   suspend_always final_suspend() noexcept;
-  awaitable yield_value(int); // expected-note 2{{candidate}}
+  awaitable yield_value(int);           // expected-note 2{{candidate}}
   awaitable yield_value(yielded_thing); // expected-note 2{{candidate}}
-  not_awaitable yield_value(void()); // expected-note 2{{candidate}}
-  void return_value(int); // expected-note 2{{here}}
+  not_awaitable yield_value(void());    // expected-note 2{{candidate}}
+  void return_value(int);               // expected-note 2{{here}}
   void unhandled_exception();
 };
 
@@ -146,12 +151,13 @@ struct promise_void {
   void unhandled_exception();
 };
 
-void no_coroutine_handle() { // expected-error {{std::coroutine_handle type was not found; include <coroutine> before defining a coroutine}}
+void no_coroutine_handle() { // expected-error {{std::coroutine_handle type was not found; include <coroutine> before defining a coroutine; include <experimental/coroutine> if your version of libcxx is less than 14.0}}
   //expected-note@-1 {{call to 'initial_suspend' implicitly required by the initial suspend point}}
   co_return 5; //expected-note {{function is a coroutine due to use of 'co_return' here}}
 }
 
 namespace std {
+namespace experimental {
 template <class PromiseType = void>
 struct coroutine_handle {
   static coroutine_handle from_address(void *) noexcept;
@@ -162,12 +168,13 @@ struct coroutine_handle<void> {
   coroutine_handle(coroutine_handle<PromiseType>) noexcept;
   static coroutine_handle from_address(void *) noexcept;
 };
+} // namespace experimental
 } // namespace std
 
 void yield() {
   co_yield 0;
   co_yield {"foo", 1, 2};
-  co_yield {1e100}; // expected-error {{cannot be narrowed}} expected-note {{explicit cast}} expected-warning {{implicit conversion}} expected-warning {{braces around scalar}}
+  co_yield {1e100};                    // expected-error {{cannot be narrowed}} expected-note {{explicit cast}} expected-warning {{implicit conversion}} expected-warning {{braces around scalar}}
   co_yield {"foo", __LONG_LONG_MAX__}; // expected-error {{cannot be narrowed}} expected-note {{explicit cast}} expected-warning {{changes value}}
   co_yield {"foo"};
   co_yield "foo"; // expected-error {{no matching}}
@@ -198,7 +205,7 @@ template void co_await_non_dependent_arg(int);
 
 void mixed_yield() {
   co_yield 0; // expected-note {{use of 'co_yield'}}
-  return; // expected-error {{not allowed in coroutine}}
+  return;     // expected-error {{not allowed in coroutine}}
 }
 
 void mixed_yield_invalid() {
@@ -230,7 +237,7 @@ void mixed_yield_template3(T v) {
 
 void mixed_await() {
   co_await a; // expected-note {{use of 'co_await'}}
-  return; // expected-error {{not allowed in coroutine}}
+  return;     // expected-error {{not allowed in coroutine}}
 }
 
 void mixed_await_invalid() {
@@ -268,7 +275,7 @@ void mixed_coreturn(void_tag, bool b) {
 void mixed_coreturn_invalid(bool b) {
   if (b)
     co_return; // expected-note {{use of 'co_return'}}
-    // expected-error@-1 {{no member named 'return_void' in 'promise'}}
+  // expected-error@-1 {{no member named 'return_void' in 'promise'}}
   else
     return; // expected-error {{not allowed in coroutine}}
 }
@@ -277,7 +284,7 @@ template <class T>
 void mixed_coreturn_template(void_tag, bool b, T v) {
   if (b)
     co_return v; // expected-note {{use of 'co_return'}}
-    // expected-error@-1 {{no member named 'return_value' in 'promise_void'}}
+  // expected-error@-1 {{no member named 'return_value' in 'promise_void'}}
   else
     return; // expected-error {{not allowed in coroutine}}
 }
@@ -287,7 +294,7 @@ template <class T>
 void mixed_coreturn_template2(bool b, T) {
   if (b)
     co_return v; // expected-note {{use of 'co_return'}}
-    // expected-error@-1 {{use of undeclared identifier 'v'}}
+  // expected-error@-1 {{use of undeclared identifier 'v'}}
   else
     return; // expected-error {{not allowed in coroutine}}
 }
@@ -303,7 +310,7 @@ struct CtorDtor {
   ~CtorDtor() {
     co_return 0; // expected-error {{'co_return' cannot be used in a destructor}}
   }
-  void operator=(CtorDtor&) {
+  void operator=(CtorDtor &) {
     co_yield 0; // OK.
   }
   void operator=(CtorDtor const &) {
@@ -320,25 +327,27 @@ struct CtorDtor {
   }
 };
 
-namespace std { class type_info; }
+namespace std {
+class type_info;
+}
 
 void unevaluated() {
   decltype(co_await a); // expected-error {{'co_await' cannot be used in an unevaluated context}}
                         // expected-warning@-1 {{declaration does not declare anything}}
-  sizeof(co_await a); // expected-error {{'co_await' cannot be used in an unevaluated context}}
-                      // expected-error@-1 {{invalid application of 'sizeof' to an incomplete type 'void'}}
-                      // expected-warning@-2 {{expression with side effects has no effect in an unevaluated context}}
-  typeid(co_await a); // expected-error {{'co_await' cannot be used in an unevaluated context}}
-                      // expected-warning@-1 {{expression with side effects has no effect in an unevaluated context}}
-                      // expected-warning@-2 {{expression result unused}}
+  sizeof(co_await a);   // expected-error {{'co_await' cannot be used in an unevaluated context}}
+                        // expected-error@-1 {{invalid application of 'sizeof' to an incomplete type 'void'}}
+                        // expected-warning@-2 {{expression with side effects has no effect in an unevaluated context}}
+  typeid(co_await a);   // expected-error {{'co_await' cannot be used in an unevaluated context}}
+                        // expected-warning@-1 {{expression with side effects has no effect in an unevaluated context}}
+                        // expected-warning@-2 {{expression result unused}}
   decltype(co_yield 1); // expected-error {{'co_yield' cannot be used in an unevaluated context}}
                         // expected-warning@-1 {{declaration does not declare anything}}
-  sizeof(co_yield 2); // expected-error {{'co_yield' cannot be used in an unevaluated context}}
-                      // expected-error@-1 {{invalid application of 'sizeof' to an incomplete type 'void'}}
-                      // expected-warning@-2 {{expression with side effects has no effect in an unevaluated context}}
-  typeid(co_yield 3); // expected-error {{'co_yield' cannot be used in an unevaluated context}}
-                      // expected-warning@-1 {{expression with side effects has no effect in an unevaluated context}}
-                      // expected-warning@-2 {{expression result unused}}
+  sizeof(co_yield 2);   // expected-error {{'co_yield' cannot be used in an unevaluated context}}
+                        // expected-error@-1 {{invalid application of 'sizeof' to an incomplete type 'void'}}
+                        // expected-warning@-2 {{expression with side effects has no effect in an unevaluated context}}
+  typeid(co_yield 3);   // expected-error {{'co_yield' cannot be used in an unevaluated context}}
+                        // expected-warning@-1 {{expression with side effects has no effect in an unevaluated context}}
+                        // expected-warning@-2 {{expression result unused}}
 }
 
 // [expr.await]p2: "An await-expression shall not appear in a default argument."
@@ -348,9 +357,9 @@ void default_argument(int arg = co_await 0) {} // expected-error {{'co_await' ca
 
 void await_in_catch_coroutine() {
   try {
-  } catch (...) { // FIXME: Emit a note diagnostic pointing out the try handler on this line.
+  } catch (...) {                   // FIXME: Emit a note diagnostic pointing out the try handler on this line.
     []() -> void { co_await a; }(); // OK
-    co_await a; // expected-error {{'co_await' cannot be used in the handler of a try block}}
+    co_await a;                     // expected-error {{'co_await' cannot be used in the handler of a try block}}
   }
 }
 
@@ -358,7 +367,7 @@ void await_nested_in_catch_coroutine() {
   try {
   } catch (...) { // FIXME: Emit a note diagnostic pointing out the try handler on this line.
     try {
-      co_await a; // expected-error {{'co_await' cannot be used in the handler of a try block}}
+      co_await a;                     // expected-error {{'co_await' cannot be used in the handler of a try block}}
       []() -> void { co_await a; }(); // OK
     } catch (...) {
       co_return 123;
@@ -407,126 +416,128 @@ struct await_arg_2 {};
 namespace adl_ns {
 struct coawait_arg_type {};
 awaitable operator co_await(coawait_arg_type) noexcept;
-}
+} // namespace adl_ns
 
 namespace dependent_operator_co_await_lookup {
-  template<typename T> void await_template(T t) {
-    // no unqualified lookup results
-    co_await t; // expected-error {{no member named 'await_ready' in 'dependent_operator_co_await_lookup::not_awaitable'}}
-    // expected-error@-1 {{call to function 'operator co_await' that is neither visible in the template definition nor found by argument-dependent lookup}}
-  };
-  template void await_template(awaitable);
+template <typename T> void await_template(T t) {
+  // no unqualified lookup results
+  co_await t; // expected-error {{no member named 'await_ready' in 'dependent_operator_co_await_lookup::not_awaitable'}}
+  // expected-error@-1 {{call to function 'operator co_await' that is neither visible in the template definition nor found by argument-dependent lookup}}
+};
+template void await_template(awaitable);
 
-  struct indirectly_awaitable { indirectly_awaitable(outer); };
-  awaitable operator co_await(indirectly_awaitable); // expected-note {{should be declared prior to}}
-  template void await_template(indirectly_awaitable);
+struct indirectly_awaitable {
+  indirectly_awaitable(outer);
+};
+awaitable operator co_await(indirectly_awaitable); // expected-note {{should be declared prior to}}
+template void await_template(indirectly_awaitable);
 
-  struct not_awaitable {};
-  template void await_template(not_awaitable); // expected-note {{instantiation}}
+struct not_awaitable {};
+template void await_template(not_awaitable); // expected-note {{instantiation}}
 
-  template<typename T> void await_template_2(T t) {
-    // one unqualified lookup result
-    co_await t;
-  };
-  template void await_template(outer); // expected-note {{instantiation}}
-  template void await_template_2(outer);
+template <typename T> void await_template_2(T t) {
+  // one unqualified lookup result
+  co_await t;
+};
+template void await_template(outer); // expected-note {{instantiation}}
+template void await_template_2(outer);
 
-  struct transform_awaitable {};
-  struct transformed {};
+struct transform_awaitable {};
+struct transformed {};
 
-  struct transform_promise {
-    typedef transform_awaitable await_arg;
-    coro<transform_promise> get_return_object();
-    transformed initial_suspend();
-    ::adl_ns::coawait_arg_type final_suspend() noexcept;
-    transformed await_transform(transform_awaitable);
-    void unhandled_exception();
-    void return_void();
-  };
-  template <class AwaitArg>
-  struct basic_promise {
-    typedef AwaitArg await_arg;
-    coro<basic_promise> get_return_object();
-    awaitable initial_suspend();
-    awaitable final_suspend() noexcept;
-    void unhandled_exception();
-    void return_void();
-  };
+struct transform_promise {
+  typedef transform_awaitable await_arg;
+  coro<transform_promise> get_return_object();
+  transformed initial_suspend();
+  ::adl_ns::coawait_arg_type final_suspend() noexcept;
+  transformed await_transform(transform_awaitable);
+  void unhandled_exception();
+  void return_void();
+};
+template <class AwaitArg>
+struct basic_promise {
+  typedef AwaitArg await_arg;
+  coro<basic_promise> get_return_object();
+  awaitable initial_suspend();
+  awaitable final_suspend() noexcept;
+  void unhandled_exception();
+  void return_void();
+};
 
-  awaitable operator co_await(await_arg_1);
+awaitable operator co_await(await_arg_1);
 
-  template <typename T, typename U>
-  coro<T> await_template_3(U t) {
+template <typename T, typename U>
+coro<T> await_template_3(U t) {
+  co_await t;
+}
+
+template coro<basic_promise<await_arg_1>> await_template_3<basic_promise<await_arg_1>>(await_arg_1);
+
+template <class T, int I = 0>
+struct dependent_member {
+  coro<T> mem_fn() const {
+    co_await typename T::await_arg{}; // expected-error {{call to function 'operator co_await'}}}
+  }
+  template <class U>
+  coro<T> dep_mem_fn(U t) {
     co_await t;
   }
+};
 
-  template coro<basic_promise<await_arg_1>> await_template_3<basic_promise<await_arg_1>>(await_arg_1);
-
-  template <class T, int I = 0>
-  struct dependent_member {
-    coro<T> mem_fn() const {
-      co_await typename T::await_arg{}; // expected-error {{call to function 'operator co_await'}}}
-    }
-    template <class U>
-    coro<T> dep_mem_fn(U t) {
-      co_await t;
-    }
-  };
-
-  template <>
-  struct dependent_member<long> {
-    // FIXME this diagnostic is terrible
-    coro<transform_promise> mem_fn() const { // expected-error {{no member named 'await_ready' in 'dependent_operator_co_await_lookup::transformed'}}
-      // expected-note@-1 {{call to 'initial_suspend' implicitly required by the initial suspend point}}
-      // expected-note@+1 {{function is a coroutine due to use of 'co_await' here}}
-      co_await transform_awaitable{};
-      // expected-error@-1 {{no member named 'await_ready'}}
-    }
-    template <class R, class U>
-    coro<R> dep_mem_fn(U u) { co_await u; }
-  };
-
-  awaitable operator co_await(await_arg_2); // expected-note {{'operator co_await' should be declared prior to the call site}}
-
-  template struct dependent_member<basic_promise<await_arg_1>, 0>;
-  template struct dependent_member<basic_promise<await_arg_2>, 0>; // expected-note {{in instantiation}}
-
-  template <>
-  coro<transform_promise>
-      // FIXME this diagnostic is terrible
-      dependent_member<long>::dep_mem_fn<transform_promise>(int) { // expected-error {{no member named 'await_ready' in 'dependent_operator_co_await_lookup::transformed'}}
-    //expected-note@-1 {{call to 'initial_suspend' implicitly required by the initial suspend point}}
-    //expected-note@+1 {{function is a coroutine due to use of 'co_await' here}}
+template <>
+struct dependent_member<long> {
+  // FIXME this diagnostic is terrible
+  coro<transform_promise> mem_fn() const { // expected-error {{no member named 'await_ready' in 'dependent_operator_co_await_lookup::transformed'}}
+    // expected-note@-1 {{call to 'initial_suspend' implicitly required by the initial suspend point}}
+    // expected-note@+1 {{function is a coroutine due to use of 'co_await' here}}
     co_await transform_awaitable{};
     // expected-error@-1 {{no member named 'await_ready'}}
   }
+  template <class R, class U>
+  coro<R> dep_mem_fn(U u) { co_await u; }
+};
 
-  void operator co_await(transform_awaitable) = delete;
-  awaitable operator co_await(transformed);
+awaitable operator co_await(await_arg_2); // expected-note {{'operator co_await' should be declared prior to the call site}}
 
-  template coro<transform_promise>
-      dependent_member<long>::dep_mem_fn<transform_promise>(transform_awaitable);
+template struct dependent_member<basic_promise<await_arg_1>, 0>;
+template struct dependent_member<basic_promise<await_arg_2>, 0>; // expected-note {{in instantiation}}
 
-  template <>
-  coro<transform_promise> dependent_member<long>::dep_mem_fn<transform_promise>(long) {
+template <>
+coro<transform_promise>
+// FIXME this diagnostic is terrible
+dependent_member<long>::dep_mem_fn<transform_promise>(int) { // expected-error {{no member named 'await_ready' in 'dependent_operator_co_await_lookup::transformed'}}
+  //expected-note@-1 {{call to 'initial_suspend' implicitly required by the initial suspend point}}
+  //expected-note@+1 {{function is a coroutine due to use of 'co_await' here}}
+  co_await transform_awaitable{};
+  // expected-error@-1 {{no member named 'await_ready'}}
+}
+
+void operator co_await(transform_awaitable) = delete;
+awaitable operator co_await(transformed);
+
+template coro<transform_promise>
+    dependent_member<long>::dep_mem_fn<transform_promise>(transform_awaitable);
+
+template <>
+coro<transform_promise> dependent_member<long>::dep_mem_fn<transform_promise>(long) {
+  co_await transform_awaitable{};
+}
+
+template <>
+struct dependent_member<int> {
+  coro<transform_promise> mem_fn() const {
     co_await transform_awaitable{};
   }
+};
 
-  template <>
-  struct dependent_member<int> {
-    coro<transform_promise> mem_fn() const {
-      co_await transform_awaitable{};
-    }
-  };
-
-  template coro<transform_promise> await_template_3<transform_promise>(transform_awaitable);
-  template struct dependent_member<transform_promise>;
-  template coro<transform_promise> dependent_member<transform_promise>::dep_mem_fn(transform_awaitable);
-}
+template coro<transform_promise> await_template_3<transform_promise>(transform_awaitable);
+template struct dependent_member<transform_promise>;
+template coro<transform_promise> dependent_member<transform_promise>::dep_mem_fn(transform_awaitable);
+} // namespace dependent_operator_co_await_lookup
 
 struct yield_fn_tag {};
 template <>
-struct std::coroutine_traits<void, yield_fn_tag> {
+struct std::experimental::coroutine_traits<void, yield_fn_tag> {
   struct promise_type {
     // FIXME: add an await_transform overload for functions
     awaitable yield_value(int());
@@ -540,30 +551,30 @@ struct std::coroutine_traits<void, yield_fn_tag> {
 };
 
 namespace placeholder {
-  awaitable f(), f(int); // expected-note 4{{possible target}}
-  int g(), g(int); // expected-note 2{{candidate}}
-  void x() {
-    co_await f; // expected-error {{reference to overloaded function}}
-  }
-  void y() {
-    co_yield g; // expected-error {{no matching member function for call to 'yield_value'}}
-  }
-  void z() {
-    co_await a;
-    co_return g; // expected-error {{address of overloaded function 'g' does not match required type 'int'}}
-  }
-
-  void x(yield_fn_tag) {
-    co_await f; // expected-error {{reference to overloaded function}}
-  }
-  void y(yield_fn_tag) {
-    co_yield g;
-  }
-  void z(yield_fn_tag) {
-    co_await a;
-    co_return g;
-  }
+awaitable f(), f(int); // expected-note 4{{possible target}}
+int g(), g(int);       // expected-note 2{{candidate}}
+void x() {
+  co_await f; // expected-error {{reference to overloaded function}}
 }
+void y() {
+  co_yield g; // expected-error {{no matching member function for call to 'yield_value'}}
+}
+void z() {
+  co_await a;
+  co_return g; // expected-error {{address of overloaded function 'g' does not match required type 'int'}}
+}
+
+void x(yield_fn_tag) {
+  co_await f; // expected-error {{reference to overloaded function}}
+}
+void y(yield_fn_tag) {
+  co_yield g;
+}
+void z(yield_fn_tag) {
+  co_await a;
+  co_return g;
+}
+} // namespace placeholder
 
 struct bad_promise_1 {
   suspend_always initial_suspend();
@@ -728,14 +739,14 @@ coro<good_promise_1> ok_static_coawait() {
   co_await 42;
 }
 
-template<typename T> void ok_generic_lambda_coawait_PR41909() {
-  [](auto& arg) -> coro<good_promise_1> { // expected-warning {{expression result unused}}
+template <typename T> void ok_generic_lambda_coawait_PR41909() {
+  [](auto &arg) -> coro<good_promise_1> { // expected-warning {{expression result unused}}
     co_await 12;
   };
   [](auto &arg) -> coro<good_promise_1> {
     co_await 24;
   }("argument");
-  [](auto &arg) ->coro<good_promise_1> { // expected-warning {{expression result unused}}
+  [](auto &arg) -> coro<good_promise_1> { // expected-warning {{expression result unused}}
     []() -> coro<good_promise_1> {
       co_await 36;
     };
@@ -744,9 +755,9 @@ template<typename T> void ok_generic_lambda_coawait_PR41909() {
 }
 template void ok_generic_lambda_coawait_PR41909<int>(); // expected-note {{in instantiation of function template specialization 'ok_generic_lambda_coawait_PR41909<int>' requested here}}
 
-template <> struct std::coroutine_traits<int, int, const char **> { using promise_type = promise; };
+template <> struct std::experimental::coroutine_traits<int, int, const char **> { using promise_type = promise; };
 
-int main(int, const char**) {
+int main(int, const char **) {
   co_await a; // expected-error {{'co_await' cannot be used in the 'main' function}}
 }
 
@@ -757,9 +768,9 @@ struct good_promise_2 {
   void return_void();
   void unhandled_exception();
 };
-template <> struct std::coroutine_handle<good_promise_2> {};
+template <> struct std::experimental::coroutine_handle<good_promise_2> {};
 
-template <> struct std::coroutine_traits<float> { using promise_type = good_promise_2; };
+template <> struct std::experimental::coroutine_traits<float> { using promise_type = good_promise_2; };
 
 float badly_specialized_coro_handle() { // expected-error {{std::coroutine_handle missing a member named 'from_address'}}
   //expected-note@-1 {{call to 'initial_suspend' implicitly required by the initial suspend point}}
@@ -767,21 +778,19 @@ float badly_specialized_coro_handle() { // expected-error {{std::coroutine_handl
 }
 
 namespace std {
-  struct nothrow_t {};
-  constexpr nothrow_t nothrow = {};
-}
+struct nothrow_t {};
+constexpr nothrow_t nothrow = {};
+} // namespace std
 
 using SizeT = decltype(sizeof(int));
 
-void* operator new(SizeT __sz, const std::nothrow_t&) noexcept;
-void  operator delete(void* __p, const std::nothrow_t&) noexcept;
-
-
+void *operator new(SizeT __sz, const std::nothrow_t &) noexcept;
+void operator delete(void *__p, const std::nothrow_t &)noexcept;
 
 struct promise_on_alloc_failure_tag {};
 
 template <>
-struct std::coroutine_traits<int, promise_on_alloc_failure_tag> {
+struct std::experimental::coroutine_traits<int, promise_on_alloc_failure_tag> {
   struct promise_type {
     int get_return_object() {}
     suspend_always initial_suspend() { return {}; }
@@ -827,7 +836,7 @@ struct bad_promise_12 {
   void return_void();
   static coro<bad_promise_12> get_return_object_on_allocation_failure();
 
-  static void* operator new(SizeT);
+  static void *operator new(SizeT);
   // expected-error@-1 2 {{'operator new' is required to have a non-throwing noexcept specification when the promise type declares 'get_return_object_on_allocation_failure()'}}
 };
 coro<bad_promise_12> throwing_in_class_new() { // expected-note {{call to 'operator new' implicitly required by coroutine function here}}
@@ -836,10 +845,9 @@ coro<bad_promise_12> throwing_in_class_new() { // expected-note {{call to 'opera
 
 template <class T>
 coro<T> dependent_throwing_in_class_new(T) { // expected-note {{call to 'operator new' implicitly required by coroutine function here}}
-   co_return;
+  co_return;
 }
 template coro<bad_promise_12> dependent_throwing_in_class_new(bad_promise_12); // expected-note {{requested here}}
-
 
 struct good_promise_13 {
   coro<good_promise_13> get_return_object();
@@ -855,7 +863,7 @@ coro<good_promise_13> uses_nothrow_new() {
 
 template <class T>
 coro<T> dependent_uses_nothrow_new(T) {
-   co_return;
+  co_return;
 }
 template coro<good_promise_13> dependent_uses_nothrow_new(good_promise_13);
 
@@ -901,7 +909,7 @@ good_coroutine_calls_noexcept_custom_new_operator(double, float, int) {
 
 struct mismatch_gro_type_tag1 {};
 template <>
-struct std::coroutine_traits<int, mismatch_gro_type_tag1> {
+struct std::experimental::coroutine_traits<int, mismatch_gro_type_tag1> {
   struct promise_type {
     void get_return_object() {} //expected-note {{member 'get_return_object' declared here}}
     suspend_always initial_suspend() { return {}; }
@@ -918,7 +926,7 @@ extern "C" int f(mismatch_gro_type_tag1) {
 
 struct mismatch_gro_type_tag2 {};
 template <>
-struct std::coroutine_traits<int, mismatch_gro_type_tag2> {
+struct std::experimental::coroutine_traits<int, mismatch_gro_type_tag2> {
   struct promise_type {
     void *get_return_object() {} //expected-note {{member 'get_return_object' declared here}}
     suspend_always initial_suspend() { return {}; }
@@ -936,7 +944,7 @@ extern "C" int f(mismatch_gro_type_tag2) {
 
 struct mismatch_gro_type_tag3 {};
 template <>
-struct std::coroutine_traits<int, mismatch_gro_type_tag3> {
+struct std::experimental::coroutine_traits<int, mismatch_gro_type_tag3> {
   struct promise_type {
     int get_return_object() {}
     static void get_return_object_on_allocation_failure() {} //expected-note {{member 'get_return_object_on_allocation_failure' declared here}}
@@ -952,10 +960,9 @@ extern "C" int f(mismatch_gro_type_tag3) {
   co_return; //expected-note {{function is a coroutine due to use of 'co_return' here}}
 }
 
-
 struct mismatch_gro_type_tag4 {};
 template <>
-struct std::coroutine_traits<int, mismatch_gro_type_tag4> {
+struct std::experimental::coroutine_traits<int, mismatch_gro_type_tag4> {
   struct promise_type {
     int get_return_object() {}
     static char *get_return_object_on_allocation_failure() {} //expected-note {{member 'get_return_object_on_allocation_failure' declared}}
@@ -987,13 +994,13 @@ coro<bad_promise_no_return_func> no_return_value_or_return_void() {
 struct bad_await_suspend_return {
   bool await_ready();
   // expected-error@+1 {{return type of 'await_suspend' is required to be 'void' or 'bool' (have 'char')}}
-  char await_suspend(std::coroutine_handle<>);
+  char await_suspend(std::experimental::coroutine_handle<>);
   void await_resume();
 };
 struct bad_await_ready_return {
   // expected-note@+1 {{return type of 'await_ready' is required to be contextually convertible to 'bool'}}
   void await_ready();
-  bool await_suspend(std::coroutine_handle<>);
+  bool await_suspend(std::experimental::coroutine_handle<>);
   void await_resume();
 };
 struct await_ready_explicit_bool {
@@ -1001,7 +1008,7 @@ struct await_ready_explicit_bool {
     explicit operator bool() const;
   };
   BoolT await_ready();
-  void await_suspend(std::coroutine_handle<>);
+  void await_suspend(std::experimental::coroutine_handle<>);
   void await_resume();
 };
 template <class SuspendTy>
@@ -1009,7 +1016,7 @@ struct await_suspend_type_test {
   bool await_ready();
   // expected-error@+2 {{return type of 'await_suspend' is required to be 'void' or 'bool' (have 'bool &')}}
   // expected-error@+1 {{return type of 'await_suspend' is required to be 'void' or 'bool' (have 'bool &&')}}
-  SuspendTy await_suspend(std::coroutine_handle<>);
+  SuspendTy await_suspend(std::experimental::coroutine_handle<>);
   // cxx20_2b-warning@-1 {{volatile-qualified return type 'const volatile bool' is deprecated}}
   void await_resume();
 };
@@ -1033,16 +1040,16 @@ void test_bad_suspend() {
     await_suspend_type_test<bool &> b;
     await_suspend_type_test<const void> c;
     await_suspend_type_test<const volatile bool> d; // cxx20_2b-note {{in instantiation of template class}}
-    co_await a; // expected-note {{call to 'await_suspend' implicitly required by coroutine function here}}
-    co_await b; // expected-note {{call to 'await_suspend' implicitly required by coroutine function here}}
-    co_await c; // OK
-    co_await d; // OK
+    co_await a;                                     // expected-note {{call to 'await_suspend' implicitly required by coroutine function here}}
+    co_await b;                                     // expected-note {{call to 'await_suspend' implicitly required by coroutine function here}}
+    co_await c;                                     // OK
+    co_await d;                                     // OK
   }
 }
 
 template <int ID = 0>
 struct NoCopy {
-  NoCopy(NoCopy const&) = delete; // expected-note 2 {{deleted here}}
+  NoCopy(NoCopy const &) = delete; // expected-note 2 {{deleted here}}
 };
 template <class T, class U>
 void test_dependent_param(T t, U) {
@@ -1069,7 +1076,7 @@ struct TypeTest {
 
   template <class... Args>
   static constexpr bool MatchesArgs = IsSameV<T,
-                                              std::coroutine_traits<CoroMemberTag, Args...>>;
+                                              std::experimental::coroutine_traits<CoroMemberTag, Args...>>;
 };
 
 template <class T>
@@ -1081,7 +1088,7 @@ struct AwaitReturnsType {
 
 template <class... CoroTraitsArgs>
 struct CoroMemberPromise {
-  using TraitsT = std::coroutine_traits<CoroTraitsArgs...>;
+  using TraitsT = std::experimental::coroutine_traits<CoroTraitsArgs...>;
   using TypeTestT = TypeTest<TraitsT>;
   using AwaitTestT = AwaitReturnsType<TypeTestT>;
 
@@ -1098,7 +1105,7 @@ struct CoroMemberPromise {
 } // namespace CoroHandleMemberFunctionTest
 
 template <class... Args>
-struct ::std::coroutine_traits<CoroHandleMemberFunctionTest::CoroMemberTag, Args...> {
+struct ::std::experimental::coroutine_traits<CoroHandleMemberFunctionTest::CoroMemberTag, Args...> {
   using promise_type = CoroHandleMemberFunctionTest::CoroMemberPromise<CoroHandleMemberFunctionTest::CoroMemberTag, Args...>;
 };
 
@@ -1184,16 +1191,16 @@ struct TestType {
   }
 
   BadCoroMemberTag test_diagnostics() {
-    // expected-error@-1 {{this function cannot be a coroutine: 'std::coroutine_traits<CoroHandleMemberFunctionTest::BadCoroMemberTag, CoroHandleMemberFunctionTest::TestType &>' has no member named 'promise_type'}}
+    // expected-error@-1 {{this function cannot be a coroutine: 'std::experimental::coroutine_traits<CoroHandleMemberFunctionTest::BadCoroMemberTag, CoroHandleMemberFunctionTest::TestType &>' has no member named 'promise_type'}}
     co_return;
   }
   BadCoroMemberTag test_diagnostics(int) const && {
-    // expected-error@-1 {{this function cannot be a coroutine: 'std::coroutine_traits<CoroHandleMemberFunctionTest::BadCoroMemberTag, const CoroHandleMemberFunctionTest::TestType &&, int>' has no member named 'promise_type'}}
+    // expected-error@-1 {{this function cannot be a coroutine: 'std::experimental::coroutine_traits<CoroHandleMemberFunctionTest::BadCoroMemberTag, const CoroHandleMemberFunctionTest::TestType &&, int>' has no member named 'promise_type'}}
     co_return;
   }
 
   static BadCoroMemberTag test_static_diagnostics(long *) {
-    // expected-error@-1 {{this function cannot be a coroutine: 'std::coroutine_traits<CoroHandleMemberFunctionTest::BadCoroMemberTag, long *>' has no member named 'promise_type'}}
+    // expected-error@-1 {{this function cannot be a coroutine: 'std::experimental::coroutine_traits<CoroHandleMemberFunctionTest::BadCoroMemberTag, long *>' has no member named 'promise_type'}}
     co_return;
   }
 };
@@ -1207,7 +1214,7 @@ struct DepTestType {
   CoroMemberTag test_sanity(int *) const {
     auto TC = co_yield 0;
     static_assert(TC.template MatchesArgs<const DepTestType &>, ""); // expected-error {{static_assert failed}}
-    static_assert(TC.template MatchesArgs<>, ""); // expected-error {{static_assert failed}}
+    static_assert(TC.template MatchesArgs<>, "");                    // expected-error {{static_assert failed}}
     static_assert(TC.template MatchesArgs<const DepTestType &, int *>, "");
   }
 
@@ -1305,7 +1312,7 @@ struct bad_promise_deleted_constructor {
 
 coro<bad_promise_deleted_constructor>
 bad_coroutine_calls_deleted_promise_constructor() {
-  // expected-error@-1 {{call to deleted constructor of 'std::coroutine_traits<coro<CoroHandleMemberFunctionTest::bad_promise_deleted_constructor>>::promise_type' (aka 'CoroHandleMemberFunctionTest::bad_promise_deleted_constructor')}}
+  // expected-error@-1 {{call to deleted constructor of 'std::experimental::coroutine_traits<coro<CoroHandleMemberFunctionTest::bad_promise_deleted_constructor>>::promise_type' (aka 'CoroHandleMemberFunctionTest::bad_promise_deleted_constructor')}}
   co_return;
 }
 
@@ -1333,7 +1340,7 @@ good_coroutine_calls_default_constructor() {
 struct some_class;
 
 struct good_promise_custom_constructor {
-  good_promise_custom_constructor(some_class&, float, int);
+  good_promise_custom_constructor(some_class &, float, int);
   good_promise_custom_constructor(double, float, int);
   good_promise_custom_constructor() = delete;
   coro<good_promise_custom_constructor> get_return_object();
@@ -1353,8 +1360,7 @@ struct some_class {
   good_coroutine_calls_custom_constructor(float, int) {
     co_return;
   }
-  coro<good_promise_custom_constructor>
-  static good_coroutine_calls_custom_constructor(double, float, int) {
+  coro<good_promise_custom_constructor> static good_coroutine_calls_custom_constructor(double, float, int) {
     co_return;
   }
 };
@@ -1372,32 +1378,31 @@ struct bad_promise_no_matching_constructor {
 
 coro<bad_promise_no_matching_constructor>
 bad_coroutine_calls_with_no_matching_constructor(int, int) {
-  // expected-error@-1 {{call to deleted constructor of 'std::coroutine_traits<coro<CoroHandleMemberFunctionTest::bad_promise_no_matching_constructor>, int, int>::promise_type' (aka 'CoroHandleMemberFunctionTest::bad_promise_no_matching_constructor')}}
+  // expected-error@-1 {{call to deleted constructor of 'std::experimental::coroutine_traits<coro<CoroHandleMemberFunctionTest::bad_promise_no_matching_constructor>, int, int>::promise_type' (aka 'CoroHandleMemberFunctionTest::bad_promise_no_matching_constructor')}}
   co_return;
 }
 
 struct some_class2 {
-coro<bad_promise_no_matching_constructor>
-bad_coroutine_calls_with_no_matching_constructor(int, int, int) {
-  // expected-error@-1 {{call to deleted constructor}}
-  co_return;
-}
+  coro<bad_promise_no_matching_constructor>
+  bad_coroutine_calls_with_no_matching_constructor(int, int, int) {
+    // expected-error@-1 {{call to deleted constructor}}
+    co_return;
+  }
 };
 
 } // namespace CoroHandleMemberFunctionTest
 
 class awaitable_no_unused_warn {
 public:
-  using handle_type = std::coroutine_handle<>;
+  using handle_type = std::experimental::coroutine_handle<>;
   constexpr bool await_ready() noexcept { return false; }
   void await_suspend(handle_type) noexcept {}
   int await_resume() noexcept { return 1; }
 };
 
-
 class awaitable_unused_warn {
 public:
-  using handle_type = std::coroutine_handle<>;
+  using handle_type = std::experimental::coroutine_handle<>;
   constexpr bool await_ready() noexcept { return false; }
   void await_suspend(handle_type) noexcept {}
   [[nodiscard]] int await_resume() noexcept { return 1; }
@@ -1413,7 +1418,6 @@ struct check_warning_promise {
   void unhandled_exception();
 };
 
-
 coro<check_warning_promise<awaitable_no_unused_warn>>
 test_no_unused_warning() {
   co_await awaitable_no_unused_warn();
@@ -1423,11 +1427,11 @@ test_no_unused_warning() {
 coro<check_warning_promise<awaitable_unused_warn>>
 test_unused_warning() {
   co_await awaitable_unused_warn(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  co_yield 42; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  co_yield 42;                      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }
 
 struct missing_await_ready {
-  void await_suspend(std::coroutine_handle<>);
+  void await_suspend(std::experimental::coroutine_handle<>);
   void await_resume();
 };
 struct missing_await_suspend {
@@ -1436,11 +1440,11 @@ struct missing_await_suspend {
 };
 struct missing_await_resume {
   bool await_ready();
-  void await_suspend(std::coroutine_handle<>);
+  void await_suspend(std::experimental::coroutine_handle<>);
 };
 
 void test_missing_awaitable_members() {
-  co_await missing_await_ready{}; // expected-error {{no member named 'await_ready' in 'missing_await_ready'}}
+  co_await missing_await_ready{};   // expected-error {{no member named 'await_ready' in 'missing_await_ready'}}
   co_await missing_await_suspend{}; // expected-error {{no member named 'await_suspend' in 'missing_await_suspend'}}
-  co_await missing_await_resume{}; // expected-error {{no member named 'await_resume' in 'missing_await_resume'}}
+  co_await missing_await_resume{};  // expected-error {{no member named 'await_resume' in 'missing_await_resume'}}
 }

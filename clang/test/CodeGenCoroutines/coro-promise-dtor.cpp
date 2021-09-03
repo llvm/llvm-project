@@ -3,15 +3,13 @@
 
 #include "Inputs/coroutine.h"
 
-namespace coro = std::experimental::coroutines_v1;
-
 struct coro_t {
   void* p;
   ~coro_t();
   struct promise_type {
     coro_t get_return_object();
-    coro::suspend_never initial_suspend();
-    coro::suspend_never final_suspend() noexcept;
+    std::suspend_never initial_suspend();
+    std::suspend_never final_suspend() noexcept;
     void return_void();
     promise_type();
     ~promise_type();
