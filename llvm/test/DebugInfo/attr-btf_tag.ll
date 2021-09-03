@@ -1,5 +1,5 @@
 ; REQUIRES: x86-registered-target
-; RUN: llc -filetype=obj -o %t %s
+; RUN: llc -filetype=obj -mtriple=x86_64-unknown-linux-gnu -o %t %s
 ; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
 ; Source:
 ;   #define __tag1 __attribute__((btf_tag("tag1")))
