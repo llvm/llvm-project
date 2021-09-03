@@ -430,10 +430,16 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
 
   if (RISCVII::hasVLOp(TSFlags)) {
     const MachineOperand &VLOp = MI.getOperand(NumOperands - 2);
-    if (VLOp.isImm())
-      InstrInfo.setAVLImm(VLOp.getImm());
-    else
+    if (VLOp.isImm()) {
+      int64_t Imm = VLOp.getImm();
+      // Conver the VLMax sentintel to X0 register.
+      if (Imm == RISCV::VLMaxSentinel)
+        InstrInfo.setAVLReg(RISCV::X0);
+      else
+        InstrInfo.setAVLImm(Imm);
+    } else {
       InstrInfo.setAVLReg(VLOp.getReg());
+    }
   } else
     InstrInfo.setAVLReg(RISCV::NoRegister);
   InstrInfo.setVTYPE(VLMul, SEW, /*TailAgnostic*/ TailAgnostic,

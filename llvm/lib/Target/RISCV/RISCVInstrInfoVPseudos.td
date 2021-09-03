@@ -23,7 +23,7 @@ def riscv_read_vlenb : SDNode<"RISCVISD::READ_VLENB",
 // Operand that is allowed to be a register or a 5 bit immediate.
 // This allows us to pick between VSETIVLI and VSETVLI opcodes using the same
 // pseudo instructions.
-def AVL : RegisterOperand<GPR> {
+def AVL : RegisterOperand<GPRNoX0> {
   let OperandNamespace = "RISCVOp";
   let OperandType = "OPERAND_AVL";
 }
@@ -140,7 +140,9 @@ class octuple_to_str<int octuple> {
 def VLOpFrag : PatFrag<(ops), (XLenVT (VLOp (XLenVT AVL:$vl)))>;
 
 // Output pattern for X0 used to represent VLMAX in the pseudo instructions.
-def VLMax : OutPatFrag<(ops), (XLenVT X0)>;
+// We can't use X0 register becuase the AVL operands use GPRNoX0.
+// This must be kept in sync with RISCV::VLMaxSentinel.
+def VLMax : OutPatFrag<(ops), (XLenVT -1)>;
 
 // List of EEW.
 defvar EEWList = [8, 16, 32, 64];

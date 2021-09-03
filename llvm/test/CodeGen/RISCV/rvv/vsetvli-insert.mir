@@ -98,7 +98,7 @@ tracksRegLiveness: true
 registers:
   - { id: 0, class: vr }
   - { id: 1, class: vr }
-  - { id: 2, class: gpr }
+  - { id: 2, class: gprnox0 }
   - { id: 3, class: vr }
 liveins:
   - { reg: '$v8', virtual-reg: '%0' }
@@ -120,7 +120,7 @@ body:             |
     ; CHECK: [[PseudoVADD_VV_M1_:%[0-9]+]]:vr = PseudoVADD_VV_M1 [[COPY2]], [[COPY1]], $noreg, 6, implicit $vl, implicit $vtype
     ; CHECK: $v8 = COPY [[PseudoVADD_VV_M1_]]
     ; CHECK: PseudoRET implicit $v8
-    %2:gpr = COPY $x10
+    %2:gprnox0 = COPY $x10
     %1:vr = COPY $v9
     %0:vr = COPY $v8
     %3:vr = PseudoVADD_VV_M1 %0, %1, %2, 6
@@ -135,7 +135,7 @@ tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: vr }
-  - { id: 2, class: gpr }
+  - { id: 2, class: gprnox0 }
   - { id: 3, class: vr }
   - { id: 4, class: vr }
 liveins:
@@ -159,7 +159,7 @@ body:             |
     ; CHECK: [[PseudoVADD_VV_M1_:%[0-9]+]]:vr = PseudoVADD_VV_M1 killed [[PseudoVLE64_V_M1_]], [[COPY1]], $noreg, 6, implicit $vl, implicit $vtype
     ; CHECK: $v8 = COPY [[PseudoVADD_VV_M1_]]
     ; CHECK: PseudoRET implicit $v8
-    %2:gpr = COPY $x11
+    %2:gprnox0 = COPY $x11
     %1:vr = COPY $v8
     %0:gpr = COPY $x10
     %3:vr = PseudoVLE64_V_M1 %0, %2, 6
@@ -174,7 +174,7 @@ alignment:       4
 tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
+  - { id: 1, class: gprnox0 }
   - { id: 2, class: vr }
   - { id: 3, class: vr }
 liveins:
@@ -197,7 +197,7 @@ body:             |
     ; CHECK: early-clobber %3:vr = PseudoVZEXT_VF2_M1 killed [[PseudoVLE32_V_MF2_]], $noreg, 6, implicit $vl, implicit $vtype
     ; CHECK: $v8 = COPY %3
     ; CHECK: PseudoRET implicit $v8
-    %1:gpr = COPY $x11
+    %1:gprnox0 = COPY $x11
     %0:gpr = COPY $x10
     %2:vr = PseudoVLE32_V_MF2 %0, %1, 5
     early-clobber %3:vr = PseudoVZEXT_VF2_M1 killed %2, %1, 6
@@ -299,7 +299,7 @@ body:             |
     ; CHECK: dead $x0 = PseudoVSETIVLI 2, 88, implicit-def $vl, implicit-def $vtype
     ; CHECK: [[PseudoVLE64_V_M1_:%[0-9]+]]:vr = PseudoVLE64_V_M1 [[COPY]], 2, 6, implicit $vl, implicit $vtype :: (load (s128) from %ir.x)
     ; CHECK: dead %6:gpr = PseudoVSETVLIX0 $x0, 88, implicit-def $vl, implicit-def $vtype
-    ; CHECK: [[PseudoVMV_V_I_M1_:%[0-9]+]]:vr = PseudoVMV_V_I_M1 0, $noreg, 6, implicit $vl, implicit $vtype
+    ; CHECK: [[PseudoVMV_V_I_M1_:%[0-9]+]]:vr = PseudoVMV_V_I_M1 0, -1, 6, implicit $vl, implicit $vtype
     ; CHECK: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
     ; CHECK: dead $x0 = PseudoVSETIVLI 2, 88, implicit-def $vl, implicit-def $vtype
     ; CHECK: [[PseudoVREDSUM_VS_M1_:%[0-9]+]]:vr = PseudoVREDSUM_VS_M1 [[DEF]], killed [[PseudoVLE64_V_M1_]], killed [[PseudoVMV_V_I_M1_]], 2, 6, implicit $vl, implicit $vtype
@@ -308,7 +308,7 @@ body:             |
     ; CHECK: PseudoRET implicit $x10
     %0:gpr = COPY $x10
     %1:vr = PseudoVLE64_V_M1 %0, 2, 6 :: (load (s128) from %ir.x)
-    %2:vr = PseudoVMV_V_I_M1 0, $x0, 6
+    %2:vr = PseudoVMV_V_I_M1 0, -1, 6
     %4:vr = IMPLICIT_DEF
     %3:vr = PseudoVREDSUM_VS_M1 %4, killed %1, killed %2, 2, 6
     %5:gpr = PseudoVMV_X_S_M1 killed %3, 6
@@ -324,7 +324,7 @@ registers:
   - { id: 0, class: vr }
   - { id: 1, class: vr }
   - { id: 2, class: gprnox0 }
-  - { id: 3, class: gpr }
+  - { id: 3, class: gprnox0 }
   - { id: 4, class: vr }
 liveins:
   - { reg: '$v8', virtual-reg: '%0' }
@@ -342,14 +342,14 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gprnox0 = COPY $x10
     ; CHECK: [[COPY1:%[0-9]+]]:vr = COPY $v9
     ; CHECK: [[COPY2:%[0-9]+]]:vr = COPY $v8
-    ; CHECK: [[PseudoVSETVLI:%[0-9]+]]:gpr = PseudoVSETVLI [[COPY]], 88, implicit-def $vl, implicit-def $vtype
+    ; CHECK: [[PseudoVSETVLI:%[0-9]+]]:gprnox0 = PseudoVSETVLI [[COPY]], 88, implicit-def $vl, implicit-def $vtype
     ; CHECK: [[PseudoVADD_VV_M1_:%[0-9]+]]:vr = PseudoVADD_VV_M1 [[COPY2]], [[COPY1]], $noreg, 6, implicit $vl, implicit $vtype
     ; CHECK: $v8 = COPY [[PseudoVADD_VV_M1_]]
     ; CHECK: PseudoRET implicit $v8
     %2:gprnox0 = COPY $x10
     %1:vr = COPY $v9
     %0:vr = COPY $v8
-    %3:gpr = PseudoVSETVLI %2, 88, implicit-def dead $vl, implicit-def dead $vtype
+    %3:gprnox0 = PseudoVSETVLI %2, 88, implicit-def dead $vl, implicit-def dead $vtype
     %4:vr = PseudoVADD_VV_M1 %0, %1, killed %3, 6
     $v8 = COPY %4
     PseudoRET implicit $v8
@@ -362,7 +362,7 @@ tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: vr }
-  - { id: 2, class: gpr }
+  - { id: 2, class: gprnox0 }
   - { id: 3, class: vr }
   - { id: 4, class: vr }
 liveins:
@@ -388,7 +388,7 @@ body:             |
     ; CHECK: [[PseudoVADD_VV_M1_:%[0-9]+]]:vr = PseudoVADD_VV_M1 killed [[PseudoVLE64_V_M1_]], [[COPY1]], $noreg, 6, implicit $vl, implicit $vtype
     ; CHECK: $v8 = COPY [[PseudoVADD_VV_M1_]]
     ; CHECK: PseudoRET implicit $v8
-    %2:gpr = COPY $x11
+    %2:gprnox0 = COPY $x11
     %1:vr = COPY $v8
     %0:gpr = COPY $x10
     %3:vr = PseudoVLE64_V_M1 %0, %2, 6
