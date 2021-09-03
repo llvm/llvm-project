@@ -16,6 +16,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/HashBuilder.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 #include <cassert>
 #include <cstdint>
@@ -71,6 +72,12 @@ public:
   }
 
   llvm::hash_code hash_value() const;
+
+  template <typename HasherT, llvm::support::endianness Endianness>
+  friend void addHash(llvm::HashBuilderImpl<HasherT, Endianness> &HBuilder,
+                      const SanitizerMask &SM) {
+    HBuilder.addRange(&SM.maskLoToHigh[0], &SM.maskLoToHigh[kNumElem]);
+  }
 
   constexpr explicit operator bool() const {
     return maskLoToHigh[0] || maskLoToHigh[1];
