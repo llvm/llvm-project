@@ -171,6 +171,27 @@ bool MipsDAGToDAGISel::selectIntAddrUImm12(SDValue Addr, SDValue &Base,
   return false;
 }
 
+bool MipsDAGToDAGISel::selectIntAddrIndexed(SDValue Addr, SDValue &Base,
+                                            SDValue &Offset) const
+{
+  llvm_unreachable("Unimplemented function");
+  return false;
+}
+
+bool MipsDAGToDAGISel::selectIntAddrIndexedLsl1(SDValue Addr, SDValue &Base,
+                                                SDValue &Offset) const
+{
+  llvm_unreachable("Unimplemented function");
+  return false;
+}
+
+bool MipsDAGToDAGISel::selectIntAddrIndexedLsl2(SDValue Addr, SDValue &Base,
+                                                SDValue &Offset) const
+{
+  llvm_unreachable("Unimplemented function");
+  return false;
+}
+
 bool MipsDAGToDAGISel::selectVSplat(SDNode *N, APInt &Imm,
                                     unsigned MinSizeInBits) const {
   llvm_unreachable("Unimplemented function.");

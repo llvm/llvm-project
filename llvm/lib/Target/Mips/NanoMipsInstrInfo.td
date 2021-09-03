@@ -54,6 +54,9 @@ def uimm16_simm12 : Operand<i32>;
 
 def addrsimm9 : ComplexPattern<iPTR, 2, "selectIntAddrSImm9", [frameindex]>;
 def addruimm12 : ComplexPattern<iPTR, 2, "selectIntAddrUImm12", [frameindex]>;
+def addrindexed : ComplexPattern<iPTR, 2, "selectIntAddrIndexed", [frameindex]>;
+def addrindexedlsl1 : ComplexPattern<iPTR, 2, "selectIntAddrIndexedLsl1", [frameindex]>;
+def addrindexedlsl2 : ComplexPattern<iPTR, 2, "selectIntAddrIndexedLsl2", []>;
 
 //===----------------------------------------------------------------------===//
 //
@@ -444,24 +447,37 @@ let isCodeGenOnly = 1 in {
 //       addruimm12 needs to come before addrsimm9, because addrsimm9 handles
 //       loads/store that do not fit the offset. If we put the same handling in
 //       addruimm12, this will cause addrsimm9 to never get selected.
-def LW_NM : LoadMemoryNM<"lw", GPR32NMOpnd, mem, load, addruimm12, II_LW>, InstSize32;
 def LWs9_NM : LoadMemoryNM<"lw", GPR32NMOpnd, mem, load, addrsimm9, II_LW>, InstSize32;
+def LWXS_NM : LoadMemoryNM<"lwxs", GPR32NMOpnd, mem, load, addrindexedlsl2, II_LW>, InstSize32;
+def LWX_NM : LoadMemoryNM<"lwx", GPR32NMOpnd, mem, load, addrindexed, II_LW>, InstSize32;
+def LW_NM : LoadMemoryNM<"lw", GPR32NMOpnd, mem, load, addruimm12, II_LW>, InstSize32;
 def SW_NM : StoreMemoryNM<"sw", GPR32NMOpnd, mem, store, addruimm12, II_SW>, InstSize32;
 def SWs9_NM : StoreMemoryNM<"sw", GPR32NMOpnd, mem, store, addrsimm9, II_SW>, InstSize32;
+def SWXS_NM : StoreMemoryNM<"swxs", GPR32NMOpnd, mem, store, addrindexedlsl2, II_SW>, InstSize32;
+def SWX_NM : StoreMemoryNM<"swx", GPR32NMOpnd, mem, store, addrindexed, II_SW>, InstSize32;
 
 def LHU_NM : LoadMemoryNM<"lhu", GPR32NMOpnd, mem, zextloadi16, addruimm12, II_LHU>, InstSize32;
 def LHUs9_NM : LoadMemoryNM<"lhu", GPR32NMOpnd, mem, zextloadi16, addrsimm9, II_LHU>, InstSize32;
+def LHUXS_NM : LoadMemoryNM<"lhuxs", GPR32NMOpnd, mem, zextloadi16, addrindexedlsl1, II_LHU>, InstSize32;
+def LHUX_NM : LoadMemoryNM<"lhux", GPR32NMOpnd, mem, zextloadi16, addrindexed, II_LHU>, InstSize32;
 def LH_NM : LoadMemoryNM<"lh", GPR32NMOpnd, mem, sextloadi16, addruimm12, II_LH>, InstSize32;
 def LHs9_NM : LoadMemoryNM<"lh", GPR32NMOpnd, mem, sextloadi16, addrsimm9, II_LH>, InstSize32;
+def LHXS_NM : LoadMemoryNM<"lhxs", GPR32NMOpnd, mem, sextloadi16, addrindexedlsl1, II_LH>, InstSize32;
+def LHX_NM : LoadMemoryNM<"lhx", GPR32NMOpnd, mem, sextloadi16, addrindexed, II_LH>, InstSize32;
 def SH_NM : StoreMemoryNM<"sh", GPR32NMOpnd, mem, truncstorei16, addruimm12, II_SH>, InstSize32;
 def SHs9_NM : StoreMemoryNM<"sh", GPR32NMOpnd, mem, truncstorei16, addrsimm9, II_SH>, InstSize32;
+def SHXS_NM : StoreMemoryNM<"shxs", GPR32NMOpnd, mem, truncstorei16, addrindexedlsl1, II_SH>, InstSize32;
+def SHX_NM : StoreMemoryNM<"shx", GPR32NMOpnd, mem, truncstorei16, addrindexed, II_SH>, InstSize32;
 
 def LBU_NM : LoadMemoryNM<"lbu", GPR32NMOpnd, mem, zextloadi8, addruimm12, II_LBU>, InstSize32;
 def LBUs9_NM : LoadMemoryNM<"lbu", GPR32NMOpnd, mem, zextloadi8, addrsimm9, II_LBU>, InstSize32;
+def LBUX_NM : LoadMemoryNM<"lbux", GPR32NMOpnd, mem, zextloadi8, addrindexed, II_LBU>, InstSize32;
 def LB_NM : LoadMemoryNM<"lb", GPR32NMOpnd, mem, sextloadi8, addruimm12, II_LB>, InstSize32;
 def LBs9_NM : LoadMemoryNM<"lb", GPR32NMOpnd, mem, sextloadi8, addrsimm9, II_LB>, InstSize32;
+def LBX_NM : LoadMemoryNM<"lbx", GPR32NMOpnd, mem, sextloadi8, addrindexed, II_LB>, InstSize32;
 def SB_NM : StoreMemoryNM<"sb", GPR32NMOpnd, mem, truncstorei8, addruimm12, II_SB>, InstSize32;
 def SBs9_NM : StoreMemoryNM<"sb", GPR32NMOpnd, mem, truncstorei8, addrsimm9, II_SB>, InstSize32;
+def SBX_NM : StoreMemoryNM<"sbx", GPR32NMOpnd, mem, truncstorei8, addrindexed, II_SB>, InstSize32;
 
 // TODO: Halfword load/store is never selected, this needs to be looked into.
 def UALH_NM : UnalignedLoad<"ualh", NMUnalignedLH>;
@@ -471,7 +487,6 @@ def UASW_NM : UnalignedStore<"uasw", NMUnalignedSW>;
 
 def LWGP_NM : LoadMemoryNM<"lw", GPR32NMOpnd, mem>, InstSize32;
 
-// TODO: 'X' load/stores reg+reg
 }
 
 // Catching out-of-range immediate loads/stores.

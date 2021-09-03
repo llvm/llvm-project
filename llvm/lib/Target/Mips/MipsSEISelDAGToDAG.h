@@ -102,6 +102,12 @@ private:
   bool selectIntAddrUImm12(SDValue Addr, SDValue &Base,
                            SDValue &Offset) const override;
 
+  bool selectIntAddrIndexed(SDValue Addr, SDValue &Base, SDValue &Offset) const override;
+
+  bool selectIntAddrIndexedLsl1(SDValue Addr, SDValue &Base, SDValue &Offset) const override;
+
+  bool selectIntAddrIndexedLsl2(SDValue Addr, SDValue &Base, SDValue &Offset) const override;
+
   /// Select constant vector splats.
   bool selectVSplat(SDNode *N, APInt &Imm,
                     unsigned MinSizeInBits) const override;

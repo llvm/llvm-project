@@ -544,6 +544,65 @@ bool MipsSEDAGToDAGISel::selectIntAddrUImm12(SDValue Addr, SDValue &Base,
   return selectAddrFrameIndexUOffset(Addr, Base, Offset, 12, 0);
 }
 
+// A load/store 'x' indexed (reg + reg)
+bool MipsSEDAGToDAGISel::selectIntAddrIndexed(SDValue Addr, SDValue &Base,
+                                              SDValue &Offset) const {
+  if (Addr.getOpcode() == ISD::ADD) {
+    // Register + register
+    SDValue Op0 = Addr.getOperand(0), Op1 = Addr.getOperand(1);
+    // Avoid absorbing a GPRel with an indexed addressing mode.
+    if (Op0.getOpcode() != ISD::TargetExternalSymbol &&
+        Op0.getOpcode() != ISD::TargetGlobalAddress &&
+        Op1.getOpcode() != ISD::TargetExternalSymbol &&
+        Op1.getOpcode() != ISD::TargetGlobalAddress &&
+        Op0.getOpcode() != MipsISD::GPRel &&
+        Op1.getOpcode() != MipsISD::GPRel) {
+      Base = Op0;
+      Offset = Op1;
+      return true;
+    }
+  }
+  return false;
+}
+
+// A load/store 'x' indexed (reg + reg)
+static bool selectIntAddrIndexedScaled(SDValue Addr, SDValue &Base,
+                                       SDValue &Offset,
+                                       int64_t Scale) {
+  if (Addr.getOpcode() == ISD::ADD) {
+    SDValue Op0 = Addr.getOperand(0), Op1 = Addr.getOperand(1);
+    ConstantSDNode *CN;
+
+    if (Op0.getOpcode() == ISD::SHL &&
+        (CN = dyn_cast<ConstantSDNode>(Op0.getOperand(1))) &&
+        CN->getSExtValue() == Scale) {
+      Base = Op1;
+      Offset = Op0.getOperand(0);
+    } else if (Op1.getOpcode() == ISD::SHL &&
+        (CN = dyn_cast<ConstantSDNode>(Op1.getOperand(1))) &&
+        CN->getSExtValue() == Scale) {
+      Base = Op0;
+      Offset = Op1.getOperand(0);
+    } else {
+      return false;
+    }
+
+    return true;
+  }
+  return false;
+}
+
+bool MipsSEDAGToDAGISel::selectIntAddrIndexedLsl1(SDValue Addr, SDValue &Base,
+                                                  SDValue &Offset) const {
+  return selectIntAddrIndexedScaled(Addr, Base, Offset, 1);
+}
+
+bool MipsSEDAGToDAGISel::selectIntAddrIndexedLsl2(SDValue Addr, SDValue &Base,
+                                                  SDValue &Offset) const {
+  return selectIntAddrIndexedScaled(Addr, Base, Offset, 2);
+}
+
+
 // Select constant vector splats.
 //
 // Returns true and sets Imm if:
@@ -1390,7 +1449,6 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
   }
 
   }
-
   return false;
 }
 
