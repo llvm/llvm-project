@@ -419,7 +419,7 @@ class DeviceRTLTy {
       return MemAlloc;
     }
 
-    int free(void *TgtPtr) override {
+    int alloc_free(void *TgtPtr) override {
       CUresult Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
       if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n"))
         return OFFLOAD_FAIL;
@@ -1081,7 +1081,7 @@ public:
     if (UseMemoryManager)
       return MemoryManagers[DeviceId]->free(TgtPtr);
 
-    return DeviceAllocators[DeviceId].free(TgtPtr);
+    return DeviceAllocators[DeviceId].alloc_free(TgtPtr);
   }
 
   int runTargetTeamRegion(const int DeviceId, const void *TgtEntryPtr,

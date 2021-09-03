@@ -219,6 +219,19 @@ DeviceTy::getTargetPointer(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
     // In addition to the mapping rules above, the close map modifier forces the
     // mapping of the variable to the device.
     if (Size) {
+      if (!PM->RTLs.NoMaps) {
+	// When allocating under unified_shared_memory, amdgpu plugin
+	// can optimize memory access latency by registering allocated
+	// memory as coarse_grain
+	if (HstPtrBegin && RTL->set_coarse_grain_mem_region)
+	  RTL->set_coarse_grain_mem_region(HstPtrBegin, Size);
+
+	// even under unified_shared_memory need to check for correctness of
+	// use of map clauses. device pointer is same as host ptr in this case
+	HostDataToTargetMap.emplace(
+            (uintptr_t)HstPtrBase, (uintptr_t)HstPtrBegin,
+            (uintptr_t)HstPtrBegin + Size, (uintptr_t)HstPtrBegin, HstPtrName);
+      }
       DP("Return HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
          "memory\n",
          DPxPTR((uintptr_t)HstPtrBegin), Size);
@@ -373,14 +386,17 @@ int DeviceTy::deallocTgtPtr(void *HstPtrBegin, int64_t Size,
     if (HT.decRefCount(HasHoldModifier) == 0) {
       DP("Deleting tgt data " DPxMOD " of size %" PRId64 "\n",
          DPxPTR(HT.TgtPtrBegin), Size);
-      deleteData((void *)HT.TgtPtrBegin);
+      if (!(PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
+	    !HasHoldModifier))
+	deleteData((void *)HT.TgtPtrBegin);
       INFO(OMP_INFOTYPE_MAPPING_CHANGED, DeviceID,
            "Removing map entry with HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD
            ", Size=%" PRId64 ", Name=%s\n",
            DPxPTR(HT.HstPtrBegin), DPxPTR(HT.TgtPtrBegin), Size,
            (HT.HstPtrName) ? getNameFromMapping(HT.HstPtrName).c_str()
                            : "unknown");
-      HostDataToTargetMap.erase(lr.Entry);
+      if (!PM->RTLs.NoMaps)
+	HostDataToTargetMap.erase(lr.Entry);
     }
     rc = OFFLOAD_SUCCESS;
   } else {

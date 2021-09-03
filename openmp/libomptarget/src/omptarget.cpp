@@ -354,6 +354,11 @@ void *targetAllocExplicit(size_t size, int device_num, int kind,
 
   DeviceTy &Device = *PM->Devices[device_num];
   rc = Device.allocData(size, nullptr, kind);
+
+  if (rc && !PM->RTLs.NoMaps && Device.RTL->set_coarse_grain_mem_region &&
+      (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY))
+    Device.RTL->set_coarse_grain_mem_region(rc, size);
+
   DP("%s returns device ptr " DPxMOD "\n", name, DPxPTR(rc));
   return rc;
 }

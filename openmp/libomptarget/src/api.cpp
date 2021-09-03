@@ -43,6 +43,8 @@ EXTERN int omp_get_device_num(void) {
 }
 
 EXTERN void *omp_target_alloc(size_t size, int device_num) {
+  if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY)
+    return targetAllocExplicit(size, device_num, TARGET_ALLOC_SHARED, __func__);
   return targetAllocExplicit(size, device_num, TARGET_ALLOC_DEFAULT, __func__);
 }
 
@@ -320,4 +322,11 @@ EXTERN int omp_target_disassociate_ptr(const void *host_ptr, int device_num) {
   int rc = Device.disassociatePtr(const_cast<void *>(host_ptr));
   DP("omp_target_disassociate_ptr returns %d\n", rc);
   return rc;
+}
+
+EXTERN int omp_is_coarse_grain_mem_region(void *ptr, size_t size) {
+  DeviceTy &Device = *PM->Devices[omp_get_default_device()];
+  if (!Device.RTL->query_coarse_grain_mem_region)
+    return 0;
+  return Device.RTL->query_coarse_grain_mem_region(ptr, size);
 }

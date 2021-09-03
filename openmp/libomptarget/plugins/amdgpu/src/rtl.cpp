@@ -33,9 +33,12 @@
 #include "omptargetplugin.h"
 #include "print_tracing.h"
 #include "trace.h"
+#include "memtype.h"
 
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
+
+#include "MemoryManager.h"
 
 // hostrpc interface, FIXME: consider moving to its own include these are
 // statically linked into amdgpu/plugin if present from hostrpc_services.a,
@@ -63,6 +66,9 @@ hostrpc_assign_buffer(hsa_agent_t, hsa_queue_t *, uint32_t device_id) {
 // Heuristic parameters used for kernel launch
 // Number of teams per CU to allow scheduling flexibility
 static const unsigned DefaultTeamsPerCU = 4;
+
+// Data structure used to keep track of coarse grain memory regions
+AMDGPUMemTypeBitFieldTable *coarse_grain_mem_tab = nullptr;
 
 int print_kernel_trace;
 
@@ -688,6 +694,70 @@ public:
     return res;
   }
 
+  /// Tracker of memory allocation types.
+  // tgt_rtl_data_free is not passed memory type (host or device)
+  // but it is saved in this data structure
+  class AMDGPUDeviceAllocatorTy : public DeviceAllocatorTy {
+    int device_id;
+    std::unordered_map<void *, TargetAllocTy> HostAllocations;
+
+  public:
+    AMDGPUDeviceAllocatorTy(int device_id) : device_id(device_id) {}
+
+    void *allocate(size_t size, void *, TargetAllocTy kind) override {
+      if (size == 0)
+        return nullptr;
+      void *ptr = nullptr;
+      switch (kind) {
+      case TARGET_ALLOC_DEFAULT:
+      case TARGET_ALLOC_DEVICE: {
+	void *devPtr;
+	hsa_status_t err = core::Runtime::DeviceMalloc(&devPtr, size, device_id);
+	ptr = (err == HSA_STATUS_SUCCESS) ? devPtr : nullptr;
+	if (!ptr)
+	  REPORT("Error allocating device memory");
+        break;
+      }
+      case TARGET_ALLOC_HOST:
+      case TARGET_ALLOC_SHARED:
+        ptr = malloc(size);
+	if (!ptr)
+	  REPORT("Error allocating host memory");
+	HostAllocations[ptr] = kind;
+        break;
+      }
+
+      return ptr;
+    }
+
+    int alloc_free(void *ptr) override {
+      TargetAllocTy kind =
+          (HostAllocations.find(ptr) == HostAllocations.end())
+              ? TARGET_ALLOC_DEFAULT
+              : TARGET_ALLOC_HOST;
+      switch (kind) {
+      case TARGET_ALLOC_DEFAULT:
+      case TARGET_ALLOC_DEVICE: {
+	hsa_status_t err;
+	err = core::Runtime::Memfree(ptr);
+	if (err != HSA_STATUS_SUCCESS) {
+	  DP("Error when freeing device memory\n");
+	  return OFFLOAD_FAIL;
+	}
+        break;
+      }
+      case TARGET_ALLOC_HOST:
+      case TARGET_ALLOC_SHARED:
+	free(ptr);
+        break;
+      }
+      return OFFLOAD_SUCCESS;
+    }
+  };
+
+  // One device allocator per device
+  std::vector<AMDGPUDeviceAllocatorTy> DeviceAllocators;
+
   RTLDeviceInfoTy() {
     // LIBOMPTARGET_KERNEL_TRACE provides a kernel launch trace to stderr
     // anytime. You do not need a debug library build.
@@ -796,6 +866,9 @@ public:
 
     // Default state.
     RequiresFlags = OMP_REQ_UNDEFINED;
+
+    for (int I = 0; I < NumberOfDevices; ++I)
+      DeviceAllocators.emplace_back(I);
   }
 
   ~RTLDeviceInfoTy() {
@@ -1122,6 +1195,14 @@ int32_t __tgt_rtl_init_device(int device_id) {
      DeviceInfo.GroupsPerDevice[device_id] *
          DeviceInfo.ThreadsPerGroup[device_id]);
 
+  // Initialize memspace table to keep track of coarse grain memory regions
+  // in USM mode
+  if (DeviceInfo.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) {
+    // TODO: add framework for multiple systems supporting unified_shared_memory
+    coarse_grain_mem_tab = new AMDGPUMemTypeBitFieldTable(
+        AMDGPU_X86_64_SystemConfiguration::max_addressable_byte,
+        AMDGPU_X86_64_SystemConfiguration::page_size);
+  }
   return OFFLOAD_SUCCESS;
 }
 
@@ -1806,19 +1887,16 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
 }
 
 void *__tgt_rtl_data_alloc(int device_id, int64_t size, void *, int32_t kind) {
-  void *ptr = NULL;
+  void *ptr = nullptr;
   assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
 
-  if (kind != TARGET_ALLOC_DEFAULT) {
-    REPORT("Invalid target data allocation kind or requested allocator not "
-           "implemented yet\n");
-    return NULL;
+  ptr = DeviceInfo.DeviceAllocators[device_id].allocate(size, nullptr, (TargetAllocTy) kind);
+  if (kind == TARGET_ALLOC_SHARED) {
+    __tgt_rtl_set_coarse_grain_mem_region(ptr, size);
   }
 
-  hsa_status_t err = core::Runtime::DeviceMalloc(&ptr, size, device_id);
   DP("Tgt alloc data %ld bytes, (tgt:%016llx).\n", size,
      (long long unsigned)(Elf64_Addr)ptr);
-  ptr = (err == HSA_STATUS_SUCCESS) ? ptr : NULL;
   return ptr;
 }
 
@@ -1866,14 +1944,7 @@ int32_t __tgt_rtl_data_retrieve_async(int device_id, void *hst_ptr,
 
 int32_t __tgt_rtl_data_delete(int device_id, void *tgt_ptr) {
   assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
-  hsa_status_t err;
-  DP("Tgt free data (tgt:%016llx).\n", (long long unsigned)(Elf64_Addr)tgt_ptr);
-  err = core::Runtime::Memfree(tgt_ptr);
-  if (err != HSA_STATUS_SUCCESS) {
-    DP("Error when freeing CUDA memory\n");
-    return OFFLOAD_FAIL;
-  }
-  return OFFLOAD_SUCCESS;
+  return DeviceInfo.DeviceAllocators[device_id].alloc_free(tgt_ptr);
 }
 
 // Determine launch values for threadsPerGroup and num_groups.
@@ -2332,4 +2403,35 @@ hsa_status_t impl_memcpy_no_signal(void *dest, const void *src, size_t size,
 
   return HSA_STATUS_SUCCESS;
 }
+}
+
+// Register mapped or allocated memory (with omp_target_alloc or omp_alloc)
+// as coarse grain
+// \arg ptr is the base pointer of the region to be registered as coarse grain
+// \arg size is the size of the memory region to be registered as coarse grain
+int __tgt_rtl_set_coarse_grain_mem_region(void *ptr, int64_t size) {
+  // track coarse grain memory pages in local table
+  coarse_grain_mem_tab->insert((const uintptr_t)ptr, size);
+
+  // Instruct ROCr that the [ptr, ptr+size-1] pages are
+  // coarse grain
+  hsa_amd_svm_attribute_pair_t tt;
+  tt.attribute = HSA_AMD_SVM_ATTRIB_GLOBAL_FLAG;
+  tt.value = HSA_AMD_SVM_GLOBAL_FLAG_COARSE_GRAINED;
+  hsa_status_t err = hsa_amd_svm_attributes_set(ptr, size, &tt, 1);
+  if (err != HSA_STATUS_SUCCESS) {
+    return OFFLOAD_FAIL;
+  }
+
+  return OFFLOAD_SUCCESS;
+}
+
+// Query if [ptr, ptr+size] belongs to coarse grain memory region
+int32_t __tgt_rtl_query_coarse_grain_mem_region(const void *ptr, int64_t size) {
+  // if the table is not yet allocated, it means we have not yet gone through
+  // an OpenMP pragma or API that would provoke intialization of the RTL
+  if (!coarse_grain_mem_tab)
+    return 0;
+
+  return coarse_grain_mem_tab->contains((const uintptr_t)ptr, size);
 }

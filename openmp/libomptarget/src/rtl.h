@@ -62,6 +62,8 @@ struct RTLInfoTy {
   typedef int32_t(wait_event_ty)(int32_t, void *, __tgt_async_info *);
   typedef int32_t(sync_event_ty)(int32_t, void *);
   typedef int32_t(destroy_event_ty)(int32_t, void *);
+  typedef int(set_coarse_grain_mem_region_ty)(void *, int64_t);
+  typedef int32_t(query_coarse_grain_mem_region_ty)(void *, int64_t);
 
   int32_t Idx = -1;             // RTL index, index is the number of devices
                                 // of other RTLs that were registered before,
@@ -105,6 +107,8 @@ struct RTLInfoTy {
   wait_event_ty *wait_event = nullptr;
   sync_event_ty *sync_event = nullptr;
   destroy_event_ty *destroy_event = nullptr;
+  set_coarse_grain_mem_region_ty *set_coarse_grain_mem_region = nullptr;
+  query_coarse_grain_mem_region_ty *query_coarse_grain_mem_region = nullptr;
 
   // Are there images associated with this RTL.
   bool isUsed = false;
@@ -125,6 +129,10 @@ struct RTLsTy {
   std::vector<RTLInfoTy *> UsedRTLs;
 
   int64_t RequiresFlags = OMP_REQ_UNDEFINED;
+
+  // Set by OMPX_DISABLE_MAPS environment variable.
+  // When active, maps are ignored by the runtime
+  bool NoMaps = false;
 
   explicit RTLsTy() = default;
 

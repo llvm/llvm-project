@@ -93,6 +93,7 @@ target_link_libraries(
   -Wl,--whole-archive hostrpc_services -Wl,--no-whole-archive
   PRIVATE
   elf_common
+  MemoryManager
   ${LIBOMPTARGET_DEP_LIBRARIES}
   ${CMAKE_DL_LIBS}
   ${LIBOMPTARGET_DEP_LIBELF_LIBRARIES}

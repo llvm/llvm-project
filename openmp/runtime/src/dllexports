@@ -507,6 +507,7 @@ kmp_set_warnings_off                        780
         omp_target_memcpy_rect              887
         omp_target_associate_ptr            888
         omp_target_disassociate_ptr         889
+	omp_is_coarse_grain_mem_region      899
     %endif
 
 kmp_set_disp_num_buffers                    890

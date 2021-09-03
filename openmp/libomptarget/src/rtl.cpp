@@ -113,6 +113,11 @@ void RTLsTy::LoadRTLs() {
     return;
   }
 
+  // Parse environment variable OMPX_DISABLE_MAPS (if set)
+  if (const char *NoMapsStr = getenv("OMPX_DISABLE_MAPS"))
+    if (NoMapsStr)
+      NoMaps = std::stoi(NoMapsStr);
+
   // Plugins should be loaded from same directory as libomptarget.so
   void *handle = dlopen("libomptarget.so", RTLD_NOW);
   if (!handle)
@@ -250,6 +255,10 @@ void RTLsTy::LoadRTLs() {
     *((void **)&R.sync_event) = dlsym(dynlib_handle, "__tgt_rtl_sync_event");
     *((void **)&R.destroy_event) =
         dlsym(dynlib_handle, "__tgt_rtl_destroy_event");
+    *((void **)&R.set_coarse_grain_mem_region) =
+      dlsym(dynlib_handle, "__tgt_rtl_set_coarse_grain_mem_region");
+    *((void **)&R.query_coarse_grain_mem_region) =
+      dlsym(dynlib_handle, "__tgt_rtl_query_coarse_grain_mem_region");
   }
   delete[] libomptarget_dir_name;
 
