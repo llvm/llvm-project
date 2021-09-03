@@ -3175,25 +3175,26 @@ Instruction *InstCombinerImpl::foldICmpEqIntrinsicWithConstant(
     ICmpInst &Cmp, IntrinsicInst *II, const APInt &C) {
   Type *Ty = II->getType();
   unsigned BitWidth = C.getBitWidth();
+  const ICmpInst::Predicate Pred = Cmp.getPredicate();
+
   switch (II->getIntrinsicID()) {
   case Intrinsic::abs:
     // abs(A) == 0  ->  A == 0
     // abs(A) == INT_MIN  ->  A == INT_MIN
     if (C.isNullValue() || C.isMinSignedValue())
-      return new ICmpInst(Cmp.getPredicate(), II->getArgOperand(0),
-                          ConstantInt::get(Ty, C));
+      return new ICmpInst(Pred, II->getArgOperand(0), ConstantInt::get(Ty, C));
     break;
 
   case Intrinsic::bswap:
     // bswap(A) == C  ->  A == bswap(C)
-    return new ICmpInst(Cmp.getPredicate(), II->getArgOperand(0),
+    return new ICmpInst(Pred, II->getArgOperand(0),
                         ConstantInt::get(Ty, C.byteSwap()));
 
   case Intrinsic::ctlz:
   case Intrinsic::cttz: {
     // ctz(A) == bitwidth(A)  ->  A == 0 and likewise for !=
     if (C == BitWidth)
-      return new ICmpInst(Cmp.getPredicate(), II->getArgOperand(0),
+      return new ICmpInst(Pred, II->getArgOperand(0),
                           ConstantInt::getNullValue(Ty));
 
     // ctz(A) == C -> A & Mask1 == Mask2, where Mask2 only has bit C set
@@ -3207,9 +3208,8 @@ Instruction *InstCombinerImpl::foldICmpEqIntrinsicWithConstant(
       APInt Mask2 = IsTrailing
         ? APInt::getOneBitSet(BitWidth, Num)
         : APInt::getOneBitSet(BitWidth, BitWidth - Num - 1);
-      return new ICmpInst(Cmp.getPredicate(),
-          Builder.CreateAnd(II->getArgOperand(0), Mask1),
-          ConstantInt::get(Ty, Mask2));
+      return new ICmpInst(Pred, Builder.CreateAnd(II->getArgOperand(0), Mask1),
+                          ConstantInt::get(Ty, Mask2));
     }
     break;
   }
@@ -3219,8 +3219,9 @@ Instruction *InstCombinerImpl::foldICmpEqIntrinsicWithConstant(
     // popcount(A) == bitwidth(A)  ->  A == -1 and likewise for !=
     bool IsZero = C.isNullValue();
     if (IsZero || C == BitWidth)
-      return new ICmpInst(Cmp.getPredicate(), II->getArgOperand(0),
-          IsZero ? Constant::getNullValue(Ty) : Constant::getAllOnesValue(Ty));
+      return new ICmpInst(Pred, II->getArgOperand(0),
+                          IsZero ? Constant::getNullValue(Ty)
+                                 : Constant::getAllOnesValue(Ty));
 
     break;
   }
@@ -3229,7 +3230,7 @@ Instruction *InstCombinerImpl::foldICmpEqIntrinsicWithConstant(
     // uadd.sat(a, b) == 0  ->  (a | b) == 0
     if (C.isNullValue()) {
       Value *Or = Builder.CreateOr(II->getArgOperand(0), II->getArgOperand(1));
-      return new ICmpInst(Cmp.getPredicate(), Or, Constant::getNullValue(Ty));
+      return new ICmpInst(Pred, Or, Constant::getNullValue(Ty));
     }
     break;
   }
@@ -3237,8 +3238,8 @@ Instruction *InstCombinerImpl::foldICmpEqIntrinsicWithConstant(
   case Intrinsic::usub_sat: {
     // usub.sat(a, b) == 0  ->  a <= b
     if (C.isNullValue()) {
-      ICmpInst::Predicate NewPred = Cmp.getPredicate() == ICmpInst::ICMP_EQ
-          ? ICmpInst::ICMP_ULE : ICmpInst::ICMP_UGT;
+      ICmpInst::Predicate NewPred =
+          Pred == ICmpInst::ICMP_EQ ? ICmpInst::ICMP_ULE : ICmpInst::ICMP_UGT;
       return new ICmpInst(NewPred, II->getArgOperand(0), II->getArgOperand(1));
     }
     break;
