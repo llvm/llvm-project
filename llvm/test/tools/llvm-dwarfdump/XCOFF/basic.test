@@ -225,7 +225,7 @@
 # DWARF64-NEXT:                    DW_AT_name    ("__func__")
 # DWARF64-NEXT:                    DW_AT_decl_file       ("/basic.c")
 # DWARF64-NEXT:                    DW_AT_decl_line       (0)
-# DWARF64-NEXT:                    DW_AT_type    (0x00000076 "const char[5]")
+# DWARF64-NEXT:                    DW_AT_type    (0x00000076 "const char [5]")
 # DWARF64:       0x000000ce:     NULL
 # DWARF64:       0x000000cf:   NULL
 # DWARF64:       .debug_line contents:

@@ -154,11 +154,10 @@ define i1 @t32_6_3(i32 %X) nounwind {
 define i1 @t32_6_4(i32 %X) nounwind {
 ; CHECK-LABEL: t32_6_4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #43691
-; CHECK-NEXT:    mov w9, #21844
-; CHECK-NEXT:    movk w8, #43690, lsl #16
-; CHECK-NEXT:    movk w9, #21845, lsl #16
-; CHECK-NEXT:    madd w8, w0, w8, w9
+; CHECK-NEXT:    mov w9, #43691
+; CHECK-NEXT:    sub w8, w0, #4
+; CHECK-NEXT:    movk w9, #43690, lsl #16
+; CHECK-NEXT:    mul w8, w8, w9
 ; CHECK-NEXT:    mov w9, #43690
 ; CHECK-NEXT:    ror w8, w8, #1
 ; CHECK-NEXT:    movk w9, #10922, lsl #16
@@ -173,11 +172,10 @@ define i1 @t32_6_4(i32 %X) nounwind {
 define i1 @t32_6_5(i32 %X) nounwind {
 ; CHECK-LABEL: t32_6_5:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #43691
-; CHECK-NEXT:    mov w9, #43689
-; CHECK-NEXT:    movk w8, #43690, lsl #16
+; CHECK-NEXT:    mov w9, #43691
+; CHECK-NEXT:    sub w8, w0, #5
 ; CHECK-NEXT:    movk w9, #43690, lsl #16
-; CHECK-NEXT:    madd w8, w0, w8, w9
+; CHECK-NEXT:    mul w8, w8, w9
 ; CHECK-NEXT:    mov w9, #43690
 ; CHECK-NEXT:    ror w8, w8, #1
 ; CHECK-NEXT:    movk w9, #10922, lsl #16
