@@ -155,6 +155,25 @@ entry:
   ret i32 0
 }
 
+; Check whether we see through the returns attribute of functions.
+define i32 @test_retptr(i32* %a) sanitize_hwaddress {
+entry:
+  ; CHECK-LABEL: @test_retptr
+  ; NOSAFETY: call {{.*}}__hwasan_generate_tag
+  ; NOSAFETY: call {{.*}}__hwasan_store
+  ; SAFETY: call {{.*}}__hwasan_generate_tag
+  ; SAFETY-NOT: call {{.*}}__hwasan_store
+  ; NOSTACK-NOT: call {{.*}}__hwasan_generate_tag
+  ; TODO: Do not emit this store.
+  ; NOSTACK: call {{.*}}__hwasan_store
+  %buf.sroa.0 = alloca i8, align 4
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull %buf.sroa.0)
+  %ptr = call i8* @retptr(i8* %buf.sroa.0)
+  store volatile i8 0, i8* %ptr, align 4, !tbaa !8
+  call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull %buf.sroa.0)
+  ret i32 0
+}
+
 ; Function Attrs: argmemonly mustprogress nofree nosync nounwind willreturn
 declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
 
@@ -165,6 +184,7 @@ declare i1 @cond()
 declare void @use(i8* nocapture)
 declare i32 @getoffset()
 declare i8* @getptr(i8* nocapture)
+declare i8* @retptr(i8* returned)
 
 !8 = !{!9, !9, i64 0}
 !9 = !{!"omnipotent char", !10, i64 0}
