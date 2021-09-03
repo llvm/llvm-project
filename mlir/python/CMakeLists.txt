@@ -20,8 +20,6 @@ declare_mlir_python_sources(MLIRPythonSources.Core
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   ADD_TO_PARENT MLIRPythonSources
   SOURCES
-    _cext_loader.py
-    _dlloader.py
     _mlir_libs/__init__.py
     ir.py
     passmanager.py
