@@ -2256,6 +2256,19 @@ void CompilerInvocation::GenerateDiagnosticArgs(
   }
 }
 
+std::unique_ptr<DiagnosticOptions>
+clang::CreateAndPopulateDiagOpts(ArrayRef<const char *> Argv) {
+  auto DiagOpts = std::make_unique<DiagnosticOptions>();
+  unsigned MissingArgIndex, MissingArgCount;
+  InputArgList Args = getDriverOptTable().ParseArgs(
+      Argv.slice(1), MissingArgIndex, MissingArgCount);
+  // We ignore MissingArgCount and the return value of ParseDiagnosticArgs.
+  // Any errors that would be diagnosed here will also be diagnosed later,
+  // when the DiagnosticsEngine actually exists.
+  (void)ParseDiagnosticArgs(*DiagOpts, Args);
+  return DiagOpts;
+}
+
 bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
                                 DiagnosticsEngine *Diags,
                                 bool DefaultDiagColor) {

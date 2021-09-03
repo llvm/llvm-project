@@ -131,6 +131,13 @@ std::string printDefinition(const Decl *D, const PrintingPolicy &PP) {
   return Definition;
 }
 
+const char *getMarkdownLanguage(const ASTContext &Ctx) {
+  const auto &LangOpts = Ctx.getLangOpts();
+  if (LangOpts.ObjC && LangOpts.CPlusPlus)
+    return "objective-cpp";
+  return LangOpts.ObjC ? "objective-c" : "cpp";
+}
+
 std::string printType(QualType QT, const PrintingPolicy &PP) {
   // TypePrinter doesn't resolve decltypes, so resolve them here.
   // FIXME: This doesn't handle composite types that contain a decltype in them.
@@ -1007,6 +1014,7 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
   if (auto Formatted =
           tooling::applyAllReplacements(HI->Definition, Replacements))
     HI->Definition = *Formatted;
+  HI->DefinitionLanguage = getMarkdownLanguage(AST.getASTContext());
   HI->SymRange = halfOpenToRange(SM, HighlightRange);
 
   return HI;

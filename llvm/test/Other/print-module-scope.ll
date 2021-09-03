@@ -3,17 +3,14 @@
 ;   - all the function attributes are shown, including those of declarations
 ;   - works on top of -print-after and -filter-print-funcs
 ;
-; RUN: opt -enable-new-pm=0 < %s 2>&1 -disable-output \
-; RUN: 	   -simplifycfg -print-after=simplifycfg -print-module-scope \
-; RUN:	   | FileCheck %s -check-prefix=CFG
 ; RUN: opt < %s 2>&1 -disable-output \
 ; RUN: 	   -passes=simplifycfg -print-after-all -print-module-scope \
 ; RUN:	   | FileCheck %s -check-prefix=CFG
-; RUN: opt -enable-new-pm=0 < %s 2>&1 -disable-output \
-; RUN: 	   -simplifycfg -print-after=simplifycfg -filter-print-funcs=foo -print-module-scope \
-; RUN:	   | FileCheck %s -check-prefix=FOO
 ; RUN: opt < %s 2>&1 -disable-output \
-; RUN: 	   -passes=simplifycfg -print-after-all -filter-print-funcs=foo -print-module-scope \
+; RUN: 	   -passes=simplifycfg -print-after=simplifycfg -print-module-scope \
+; RUN:	   | FileCheck %s -check-prefix=CFG
+; RUN: opt < %s 2>&1 -disable-output \
+; RUN: 	   -passes=simplifycfg -print-after=simplifycfg -filter-print-funcs=foo -print-module-scope \
 ; RUN:	   | FileCheck %s -check-prefix=FOO
 
 ; CFG:      IR Dump After {{Simplify the CFG|SimplifyCFGPass}} {{.*}}foo

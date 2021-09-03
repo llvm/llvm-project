@@ -22,6 +22,12 @@ include "mlir/IR/OpBase.td"
 def EmitC_Dialect : Dialect {
   let name = "emitc";
   let cppNamespace = "::mlir::emitc";
+
+  let summary = "Dialect to generate C/C++ from MLIR.";
+  let description = [{
+    [include "Dialects/emitc.md"]
+  }];
+
   let hasConstantMaterializer = 1;
 }
 

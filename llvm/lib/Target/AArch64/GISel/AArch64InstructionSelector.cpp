@@ -379,18 +379,15 @@ private:
     return selectAddrModeWRO(Root, Width / 8);
   }
 
-  ComplexRendererFns selectShiftedRegister(MachineOperand &Root) const;
+  ComplexRendererFns selectShiftedRegister(MachineOperand &Root,
+                                           bool AllowROR = false) const;
 
   ComplexRendererFns selectArithShiftedRegister(MachineOperand &Root) const {
     return selectShiftedRegister(Root);
   }
 
   ComplexRendererFns selectLogicalShiftedRegister(MachineOperand &Root) const {
-    // TODO: selectShiftedRegister should allow for rotates on logical shifts.
-    // For now, make them the same. The only difference between the two is that
-    // logical shifts are allowed to fold in rotates. Otherwise, these are
-    // functionally the same.
-    return selectShiftedRegister(Root);
+    return selectShiftedRegister(Root, true);
   }
 
   /// Given an extend instruction, determine the correct shift-extend type for
@@ -6014,7 +6011,6 @@ AArch64InstructionSelector::selectAddrModeIndexed(MachineOperand &Root,
 /// Given a shift instruction, return the correct shift type for that
 /// instruction.
 static AArch64_AM::ShiftExtendType getShiftTypeForInst(MachineInstr &MI) {
-  // TODO: Handle AArch64_AM::ROR
   switch (MI.getOpcode()) {
   default:
     return AArch64_AM::InvalidShiftExtend;
@@ -6024,15 +6020,16 @@ static AArch64_AM::ShiftExtendType getShiftTypeForInst(MachineInstr &MI) {
     return AArch64_AM::LSR;
   case TargetOpcode::G_ASHR:
     return AArch64_AM::ASR;
+  case TargetOpcode::G_ROTR:
+    return AArch64_AM::ROR;
   }
 }
 
 /// Select a "shifted register" operand. If the value is not shifted, set the
 /// shift operand to a default value of "lsl 0".
-///
-/// TODO: Allow shifted register to be rotated in logical instructions.
 InstructionSelector::ComplexRendererFns
-AArch64InstructionSelector::selectShiftedRegister(MachineOperand &Root) const {
+AArch64InstructionSelector::selectShiftedRegister(MachineOperand &Root,
+                                                  bool AllowROR) const {
   if (!Root.isReg())
     return None;
   MachineRegisterInfo &MRI =
@@ -6040,13 +6037,13 @@ AArch64InstructionSelector::selectShiftedRegister(MachineOperand &Root) const {
 
   // Check if the operand is defined by an instruction which corresponds to
   // a ShiftExtendType. E.g. a G_SHL, G_LSHR, etc.
-  //
-  // TODO: Handle AArch64_AM::ROR for logical instructions.
   MachineInstr *ShiftInst = MRI.getVRegDef(Root.getReg());
   if (!ShiftInst)
     return None;
   AArch64_AM::ShiftExtendType ShType = getShiftTypeForInst(*ShiftInst);
   if (ShType == AArch64_AM::InvalidShiftExtend)
+    return None;
+  if (ShType == AArch64_AM::ROR && !AllowROR)
     return None;
   if (!isWorthFoldingIntoExtendedReg(*ShiftInst, MRI))
     return None;

@@ -77,8 +77,6 @@ def SDT_WebAssemblyLocalSet   : SDTypeProfile<0, 2, [SDTCisVT<0, i32>]>;
 def SDT_WebAssemblyReturn     : SDTypeProfile<0, -1, []>;
 def SDT_WebAssemblyWrapper    : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
                                                      SDTCisPtrTy<0>]>;
-def SDT_WebAssemblyWrapperPIC : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
-                                                     SDTCisPtrTy<0>]>;
 def SDT_WebAssemblyGlobalGet  : SDTypeProfile<1, 1, [SDTCisPtrTy<1>]>;
 def SDT_WebAssemblyGlobalSet  : SDTypeProfile<0, 2, [SDTCisPtrTy<1>]>;
 
@@ -100,10 +98,10 @@ def WebAssemblyargument : SDNode<"WebAssemblyISD::ARGUMENT",
 def WebAssemblyreturn   : SDNode<"WebAssemblyISD::RETURN",
                                  SDT_WebAssemblyReturn,
                                  [SDNPHasChain, SDNPVariadic]>;
-def WebAssemblywrapper  : SDNode<"WebAssemblyISD::Wrapper",
+def WebAssemblyWrapper  : SDNode<"WebAssemblyISD::Wrapper",
                                  SDT_WebAssemblyWrapper>;
-def WebAssemblywrapperPIC  : SDNode<"WebAssemblyISD::WrapperPIC",
-                                     SDT_WebAssemblyWrapperPIC>;
+def WebAssemblyWrapperREL  : SDNode<"WebAssemblyISD::WrapperREL",
+                                     SDT_WebAssemblyWrapper>;
 def WebAssemblyglobal_get :
     SDNode<"WebAssemblyISD::GLOBAL_GET", SDT_WebAssemblyGlobalGet,
            [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
@@ -342,10 +340,10 @@ multiclass LOCAL<WebAssemblyRegClass rc, Operand global_op> {
   } // hasSideEffects = 0
   foreach vt = rc.RegTypes in {
     def : Pat<(vt (WebAssemblyglobal_get
-                   (WebAssemblywrapper tglobaladdr:$addr))),
+                   (WebAssemblyWrapper tglobaladdr:$addr))),
               (!cast<NI>("GLOBAL_GET_" # rc) tglobaladdr:$addr)>;
     def : Pat<(WebAssemblyglobal_set
-               vt:$src, (WebAssemblywrapper tglobaladdr:$addr)),
+               vt:$src, (WebAssemblyWrapper tglobaladdr:$addr)),
               (!cast<NI>("GLOBAL_SET_" # rc) tglobaladdr:$addr, vt:$src)>;
     def : Pat<(vt (WebAssemblylocal_get (i32 timm:$local))),
               (!cast<NI>("LOCAL_GET_" # rc) timm:$local)>;
@@ -380,38 +378,38 @@ defm CONST_F64 : I<(outs F64:$res), (ins f64imm_op:$imm),
                    "f64.const\t$res, $imm", "f64.const\t$imm", 0x44>;
 } // isMoveImm = 1, isAsCheapAsAMove = 1, isReMaterializable = 1
 
-def : Pat<(i32 (WebAssemblywrapper tglobaladdr:$addr)),
+def : Pat<(i32 (WebAssemblyWrapper tglobaladdr:$addr)),
           (CONST_I32 tglobaladdr:$addr)>, Requires<[IsNotPIC, HasAddr32]>;
-def : Pat<(i64 (WebAssemblywrapper tglobaladdr:$addr)),
+def : Pat<(i64 (WebAssemblyWrapper tglobaladdr:$addr)),
           (CONST_I64 tglobaladdr:$addr)>, Requires<[IsNotPIC, HasAddr64]>;
 
-def : Pat<(i32 (WebAssemblywrapper tglobaladdr:$addr)),
+def : Pat<(i32 (WebAssemblyWrapper tglobaladdr:$addr)),
           (GLOBAL_GET_I32 tglobaladdr:$addr)>, Requires<[IsPIC, HasAddr32]>;
-def : Pat<(i64 (WebAssemblywrapper tglobaladdr:$addr)),
+def : Pat<(i64 (WebAssemblyWrapper tglobaladdr:$addr)),
           (GLOBAL_GET_I64 tglobaladdr:$addr)>, Requires<[IsPIC, HasAddr64]>;
 
-def : Pat<(i32 (WebAssemblywrapperPIC tglobaladdr:$addr)),
+def : Pat<(i32 (WebAssemblyWrapperREL tglobaladdr:$addr)),
           (CONST_I32 tglobaladdr:$addr)>, Requires<[IsPIC, HasAddr32]>;
-def : Pat<(i64 (WebAssemblywrapperPIC tglobaladdr:$addr)),
+def : Pat<(i64 (WebAssemblyWrapperREL tglobaladdr:$addr)),
           (CONST_I64 tglobaladdr:$addr)>, Requires<[IsPIC, HasAddr64]>;
 
-def : Pat<(i32 (WebAssemblywrapper tglobaltlsaddr:$addr)),
+def : Pat<(i32 (WebAssemblyWrapperREL tglobaltlsaddr:$addr)),
           (CONST_I32 tglobaltlsaddr:$addr)>, Requires<[HasAddr32]>;
-def : Pat<(i64 (WebAssemblywrapper tglobaltlsaddr:$addr)),
+def : Pat<(i64 (WebAssemblyWrapperREL tglobaltlsaddr:$addr)),
           (CONST_I64 tglobaltlsaddr:$addr)>, Requires<[HasAddr64]>;
 
-def : Pat<(i32 (WebAssemblywrapper texternalsym:$addr)),
+def : Pat<(i32 (WebAssemblyWrapper texternalsym:$addr)),
           (GLOBAL_GET_I32 texternalsym:$addr)>, Requires<[IsPIC, HasAddr32]>;
-def : Pat<(i64 (WebAssemblywrapper texternalsym:$addr)),
+def : Pat<(i64 (WebAssemblyWrapper texternalsym:$addr)),
           (GLOBAL_GET_I64 texternalsym:$addr)>, Requires<[IsPIC, HasAddr64]>;
 
-def : Pat<(i32 (WebAssemblywrapper texternalsym:$addr)),
+def : Pat<(i32 (WebAssemblyWrapper texternalsym:$addr)),
           (CONST_I32 texternalsym:$addr)>, Requires<[IsNotPIC, HasAddr32]>;
-def : Pat<(i64 (WebAssemblywrapper texternalsym:$addr)),
+def : Pat<(i64 (WebAssemblyWrapper texternalsym:$addr)),
           (CONST_I64 texternalsym:$addr)>, Requires<[IsNotPIC, HasAddr64]>;
 
-def : Pat<(i32 (WebAssemblywrapper mcsym:$sym)), (CONST_I32 mcsym:$sym)>;
-def : Pat<(i64 (WebAssemblywrapper mcsym:$sym)), (CONST_I64 mcsym:$sym)>;
+def : Pat<(i32 (WebAssemblyWrapper mcsym:$sym)), (CONST_I32 mcsym:$sym)>;
+def : Pat<(i64 (WebAssemblyWrapper mcsym:$sym)), (CONST_I64 mcsym:$sym)>;
 
 //===----------------------------------------------------------------------===//
 // Additional sets of instructions.

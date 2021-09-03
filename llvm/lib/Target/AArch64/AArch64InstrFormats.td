@@ -1241,12 +1241,15 @@ multiclass VectorIndex<ValueType ty, AsmOperandClass mc, code pred> {
   def _timm : AsmVectorIndexOpnd<ty, mc>, TImmLeaf<ty, pred>;
 }
 
+def VectorIndex0Operand : AsmVectorIndex<0, 0>;
 def VectorIndex1Operand : AsmVectorIndex<1, 1>;
 def VectorIndexBOperand : AsmVectorIndex<0, 15>;
 def VectorIndexHOperand : AsmVectorIndex<0, 7>;
 def VectorIndexSOperand : AsmVectorIndex<0, 3>;
 def VectorIndexDOperand : AsmVectorIndex<0, 1>;
 
+defm VectorIndex0 : VectorIndex<i64, VectorIndex0Operand,
+                                [{ return ((uint64_t)Imm) == 0; }]>;
 defm VectorIndex1 : VectorIndex<i64, VectorIndex1Operand,
                                 [{ return ((uint64_t)Imm) == 1; }]>;
 defm VectorIndexB : VectorIndex<i64, VectorIndexBOperand,
@@ -7303,6 +7306,25 @@ class SIMDMovAlias<string asm, string size, Instruction inst,
                 (inst regtype:$dst, V128:$src, idxtype:$idx)>;
 
 multiclass SMov {
+  // SMOV with vector index of 0 are legal in Scalable Matrix Extension (SME)
+  // streaming mode.
+  let Predicates = [HasNEONorStreamingSVE] in {
+    def vi8to32_idx0 : SIMDSMov<0, ".b", GPR32, VectorIndex0> {
+      let Inst{20-16} = 0b00001;
+    }
+    def vi8to64_idx0 : SIMDSMov<1, ".b", GPR64, VectorIndex0> {
+      let Inst{20-16} = 0b00001;
+    }
+    def vi16to32_idx0 : SIMDSMov<0, ".h", GPR32, VectorIndex0> {
+      let Inst{20-16} = 0b00010;
+    }
+    def vi16to64_idx0 : SIMDSMov<1, ".h", GPR64, VectorIndex0> {
+      let Inst{20-16} = 0b00010;
+    }
+    def vi32to64_idx0 : SIMDSMov<1, ".s", GPR64, VectorIndex0> {
+      let Inst{20-16} = 0b00100;
+    }
+  }
   def vi8to32 : SIMDSMov<0, ".b", GPR32, VectorIndexB> {
     bits<4> idx;
     let Inst{20-17} = idx;
@@ -7331,6 +7353,28 @@ multiclass SMov {
 }
 
 multiclass UMov {
+  // UMOV with vector index of 0 are legal in Scalable Matrix Extension (SME)
+  // streaming mode.
+  let Predicates = [HasNEONorStreamingSVE] in {
+    def vi8_idx0 : SIMDUMov<0, ".b", v16i8, GPR32, VectorIndex0> {
+      let Inst{20-16} = 0b00001;
+    }
+    def vi16_idx0 : SIMDUMov<0, ".h", v8i16, GPR32, VectorIndex0> {
+      let Inst{20-16} = 0b00010;
+    }
+    def vi32_idx0 : SIMDUMov<0, ".s", v4i32, GPR32, VectorIndex0> {
+      let Inst{20-16} = 0b00100;
+    }
+    def vi64_idx0 : SIMDUMov<1, ".d", v2i64, GPR64, VectorIndex0> {
+      let Inst{20-16} = 0b01000;
+    }
+    def : SIMDMovAlias<"mov", ".s",
+                       !cast<Instruction>(NAME # vi32_idx0),
+                       GPR32, VectorIndex0>;
+    def : SIMDMovAlias<"mov", ".d",
+                       !cast<Instruction>(NAME # vi64_idx0),
+                       GPR64, VectorIndex0>;
+  }
   def vi8 : SIMDUMov<0, ".b", v16i8, GPR32, VectorIndexB> {
     bits<4> idx;
     let Inst{20-17} = idx;

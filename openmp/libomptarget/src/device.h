@@ -42,85 +42,102 @@ typedef enum kmp_target_offload_kind kmp_target_offload_kind_t;
 
 /// Map between host data and target data.
 struct HostDataToTargetTy {
-  uintptr_t HstPtrBase; // host info.
-  uintptr_t HstPtrBegin;
-  uintptr_t HstPtrEnd;       // non-inclusive.
-  map_var_info_t HstPtrName; // Optional source name of mapped variable.
+  const uintptr_t HstPtrBase; // host info.
+  const uintptr_t HstPtrBegin;
+  const uintptr_t HstPtrEnd;       // non-inclusive.
+  const map_var_info_t HstPtrName; // Optional source name of mapped variable.
 
-  uintptr_t TgtPtrBegin; // target info.
+  const uintptr_t TgtPtrBegin; // target info.
 
 private:
-  /// The dynamic reference count is the standard reference count as of OpenMP
-  /// 4.5.  The hold reference count is an OpenMP extension for the sake of
-  /// OpenACC support.
-  ///
-  /// The 'ompx_hold' map type modifier is permitted only on "omp target" and
-  /// "omp target data", and "delete" is permitted only on "omp target exit
-  /// data" and associated runtime library routines.  As a result, we really
-  /// need to implement "reset" functionality only for the dynamic reference
-  /// counter.  Likewise, only the dynamic reference count can be infinite
-  /// because, for example, omp_target_associate_ptr and "omp declare target
-  /// link" operate only on it.  Nevertheless, it's actually easier to follow
-  /// the code (and requires less assertions for special cases) when we just
-  /// implement these features generally across both reference counters here.
-  /// Thus, it's the users of this class that impose those restrictions.
-  ///
-  /// Use mutable to allow modification via std::set iterator which is const.
-  ///@{
-  mutable uint64_t DynRefCount;
-  mutable uint64_t HoldRefCount;
-  ///@}
   static const uint64_t INFRefCount = ~(uint64_t)0;
   static std::string refCountToStr(uint64_t RefCount) {
     return RefCount == INFRefCount ? "INF" : std::to_string(RefCount);
   }
-  /// This mutex will be locked when data movement is issued. For targets that
-  /// doesn't support async data movement, this mutex can guarantee that after
-  /// it is released, memory region on the target is update to date. For targets
-  /// that support async data movement, this can guarantee that data movement
-  /// has been issued. This mutex *must* be locked right before releasing the
-  /// mapping table lock.
-  std::shared_ptr<std::mutex> UpdateMtx;
+
+  struct StatesTy {
+    StatesTy(uint64_t DRC, uint64_t HRC)
+        : DynRefCount(DRC), HoldRefCount(HRC) {}
+    /// this copy constructor is added to make HostDataToTargetTy copiable
+    /// when it is used by std::set copy constructor
+    StatesTy(const StatesTy &S)
+        : DynRefCount(S.DynRefCount), HoldRefCount(S.HoldRefCount) {}
+    /// The dynamic reference count is the standard reference count as of OpenMP
+    /// 4.5.  The hold reference count is an OpenMP extension for the sake of
+    /// OpenACC support.
+    ///
+    /// The 'ompx_hold' map type modifier is permitted only on "omp target" and
+    /// "omp target data", and "delete" is permitted only on "omp target exit
+    /// data" and associated runtime library routines.  As a result, we really
+    /// need to implement "reset" functionality only for the dynamic reference
+    /// counter.  Likewise, only the dynamic reference count can be infinite
+    /// because, for example, omp_target_associate_ptr and "omp declare target
+    /// link" operate only on it.  Nevertheless, it's actually easier to follow
+    /// the code (and requires less assertions for special cases) when we just
+    /// implement these features generally across both reference counters here.
+    /// Thus, it's the users of this class that impose those restrictions.
+    ///
+    uint64_t DynRefCount;
+    uint64_t HoldRefCount;
+    /// This mutex will be locked when data movement is issued. For targets that
+    /// doesn't support async data movement, this mutex can guarantee that after
+    /// it is released, memory region on the target is update to date. For
+    /// targets that support async data movement, this can guarantee that data
+    /// movement has been issued. This mutex *must* be locked right before
+    /// releasing the mapping table lock.
+    std::mutex UpdateMtx;
+  };
+  // When HostDataToTargetTy is used by std::set, std::set::iterator is const
+  // use unique_ptr to make States mutable.
+  const std::unique_ptr<StatesTy> States;
 
 public:
   HostDataToTargetTy(uintptr_t BP, uintptr_t B, uintptr_t E, uintptr_t TB,
                      bool UseHoldRefCount, map_var_info_t Name = nullptr,
                      bool IsINF = false)
       : HstPtrBase(BP), HstPtrBegin(B), HstPtrEnd(E), HstPtrName(Name),
-        TgtPtrBegin(TB), DynRefCount(UseHoldRefCount ? 0
-                                     : IsINF         ? INFRefCount
-                                                     : 1),
-        HoldRefCount(!UseHoldRefCount ? 0
-                     : IsINF          ? INFRefCount
-                                      : 1),
-        UpdateMtx(std::make_shared<std::mutex>()) {}
+        TgtPtrBegin(TB), States(std::make_unique<StatesTy>(UseHoldRefCount ? 0
+                                                           : IsINF ? INFRefCount
+                                                                   : 1,
+                                                           !UseHoldRefCount ? 0
+                                                           : IsINF ? INFRefCount
+                                                                   : 1)) {}
+
+  HostDataToTargetTy(const HostDataToTargetTy &Entry)
+      : HstPtrBase(Entry.HstPtrBase), HstPtrBegin(Entry.HstPtrBegin),
+        HstPtrEnd(Entry.HstPtrEnd), HstPtrName(Entry.HstPtrName),
+        TgtPtrBegin(Entry.TgtPtrBegin),
+        States(std::make_unique<StatesTy>(*Entry.States)) {}
 
   /// Get the total reference count.  This is smarter than just getDynRefCount()
   /// + getHoldRefCount() because it handles the case where at least one is
   /// infinity and the other is non-zero.
   uint64_t getTotalRefCount() const {
-    if (DynRefCount == INFRefCount || HoldRefCount == INFRefCount)
+    if (States->DynRefCount == INFRefCount ||
+        States->HoldRefCount == INFRefCount)
       return INFRefCount;
-    return DynRefCount + HoldRefCount;
+    return States->DynRefCount + States->HoldRefCount;
   }
 
   /// Get the dynamic reference count.
-  uint64_t getDynRefCount() const { return DynRefCount; }
+  uint64_t getDynRefCount() const { return States->DynRefCount; }
 
   /// Get the hold reference count.
-  uint64_t getHoldRefCount() const { return HoldRefCount; }
+  uint64_t getHoldRefCount() const { return States->HoldRefCount; }
 
   /// Reset the specified reference count unless it's infinity.  Reset to 1
   /// (even if currently 0) so it can be followed by a decrement.
   void resetRefCount(bool UseHoldRefCount) const {
-    uint64_t &ThisRefCount = UseHoldRefCount ? HoldRefCount : DynRefCount;
+    uint64_t &ThisRefCount =
+        UseHoldRefCount ? States->HoldRefCount : States->DynRefCount;
     if (ThisRefCount != INFRefCount)
       ThisRefCount = 1;
   }
 
   /// Increment the specified reference count unless it's infinity.
   void incRefCount(bool UseHoldRefCount) const {
-    uint64_t &ThisRefCount = UseHoldRefCount ? HoldRefCount : DynRefCount;
+    uint64_t &ThisRefCount =
+        UseHoldRefCount ? States->HoldRefCount : States->DynRefCount;
     if (ThisRefCount != INFRefCount) {
       ++ThisRefCount;
       assert(ThisRefCount < INFRefCount && "refcount overflow");
@@ -130,8 +147,10 @@ public:
   /// Decrement the specified reference count unless it's infinity or zero, and
   /// return the total reference count.
   uint64_t decRefCount(bool UseHoldRefCount) const {
-    uint64_t &ThisRefCount = UseHoldRefCount ? HoldRefCount : DynRefCount;
-    uint64_t OtherRefCount = UseHoldRefCount ? DynRefCount : HoldRefCount;
+    uint64_t &ThisRefCount =
+        UseHoldRefCount ? States->HoldRefCount : States->DynRefCount;
+    uint64_t OtherRefCount =
+        UseHoldRefCount ? States->DynRefCount : States->HoldRefCount;
     (void)OtherRefCount;
     if (ThisRefCount != INFRefCount) {
       if (ThisRefCount > 0)
@@ -143,19 +162,25 @@ public:
   }
 
   /// Is the dynamic (and thus the total) reference count infinite?
-  bool isDynRefCountInf() const { return DynRefCount == INFRefCount; }
+  bool isDynRefCountInf() const { return States->DynRefCount == INFRefCount; }
 
   /// Convert the dynamic reference count to a debug string.
-  std::string dynRefCountToStr() const { return refCountToStr(DynRefCount); }
+  std::string dynRefCountToStr() const {
+    return refCountToStr(States->DynRefCount);
+  }
 
   /// Convert the hold reference count to a debug string.
-  std::string holdRefCountToStr() const { return refCountToStr(HoldRefCount); }
+  std::string holdRefCountToStr() const {
+    return refCountToStr(States->HoldRefCount);
+  }
 
   /// Should one decrement of the specified reference count (after resetting it
   /// if \c AfterReset) remove this mapping?
   bool decShouldRemove(bool UseHoldRefCount, bool AfterReset = false) const {
-    uint64_t ThisRefCount = UseHoldRefCount ? HoldRefCount : DynRefCount;
-    uint64_t OtherRefCount = UseHoldRefCount ? DynRefCount : HoldRefCount;
+    uint64_t ThisRefCount =
+        UseHoldRefCount ? States->HoldRefCount : States->DynRefCount;
+    uint64_t OtherRefCount =
+        UseHoldRefCount ? States->DynRefCount : States->HoldRefCount;
     if (OtherRefCount > 0)
       return false;
     if (AfterReset)
@@ -163,9 +188,9 @@ public:
     return ThisRefCount == 1;
   }
 
-  void lock() const { UpdateMtx->lock(); }
+  void lock() const { States->UpdateMtx.lock(); }
 
-  void unlock() const { UpdateMtx->unlock(); }
+  void unlock() const { States->UpdateMtx.unlock(); }
 };
 
 typedef uintptr_t HstPtrBeginTy;

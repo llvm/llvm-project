@@ -3,7 +3,6 @@
 // RUN:   | FileCheck %s
 
 namespace std {
-namespace experimental {
 template <typename... T>
 struct coroutine_traits; // expected-note {{declared here}}
 
@@ -21,8 +20,6 @@ struct coroutine_handle<void> {
   coroutine_handle(coroutine_handle<PromiseType>) noexcept {}
 };
 
-} // end namespace experimental
-
 struct nothrow_t {};
 constexpr nothrow_t nothrow = {};
 
@@ -37,14 +34,14 @@ void  operator delete(void* __p, const std::nothrow_t&) noexcept;
 
 struct suspend_always {
   bool await_ready() noexcept { return false; }
-  void await_suspend(std::experimental::coroutine_handle<>) noexcept {}
+  void await_suspend(std::coroutine_handle<>) noexcept {}
   void await_resume() noexcept {}
 };
 
 struct global_new_delete_tag {};
 
-template<>
-struct std::experimental::coroutine_traits<void, global_new_delete_tag> {
+template <>
+struct std::coroutine_traits<void, global_new_delete_tag> {
   struct promise_type {
     void get_return_object() {}
     suspend_always initial_suspend() { return {}; }
@@ -83,8 +80,8 @@ extern "C" void f0(global_new_delete_tag) {
 
 struct promise_new_tag {};
 
-template<>
-struct std::experimental::coroutine_traits<void, promise_new_tag> {
+template <>
+struct std::coroutine_traits<void, promise_new_tag> {
   struct promise_type {
     void *operator new(unsigned long);
     void get_return_object() {}
@@ -98,7 +95,7 @@ struct std::experimental::coroutine_traits<void, promise_new_tag> {
 extern "C" void f1(promise_new_tag ) {
   // CHECK: %[[ID:.+]] = call token @llvm.coro.id(i32 16
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK: call i8* @_ZNSt12experimental16coroutine_traitsIJv15promise_new_tagEE12promise_typenwEm(i64 %[[SIZE]])
+  // CHECK: call i8* @_ZNSt16coroutine_traitsIJv15promise_new_tagEE12promise_typenwEm(i64 %[[SIZE]])
 
   // CHECK: %[[FRAME:.+]] = call i8* @llvm.coro.begin(
   // CHECK: %[[MEM:.+]] = call i8* @llvm.coro.free(token %[[ID]], i8* %[[FRAME]])
@@ -108,8 +105,8 @@ extern "C" void f1(promise_new_tag ) {
 
 struct promise_matching_placement_new_tag {};
 
-template<>
-struct std::experimental::coroutine_traits<void, promise_matching_placement_new_tag, int, float, double> {
+template <>
+struct std::coroutine_traits<void, promise_matching_placement_new_tag, int, float, double> {
   struct promise_type {
     void *operator new(unsigned long, promise_matching_placement_new_tag,
                        int, float, double);
@@ -130,7 +127,7 @@ extern "C" void f1a(promise_matching_placement_new_tag, int x, float y , double 
   // CHECK: %[[INT:.+]] = load i32, i32* %x.addr, align 4
   // CHECK: %[[FLOAT:.+]] = load float, float* %y.addr, align 4
   // CHECK: %[[DOUBLE:.+]] = load double, double* %z.addr, align 8
-  // CHECK: call i8* @_ZNSt12experimental16coroutine_traitsIJv34promise_matching_placement_new_tagifdEE12promise_typenwEmS1_ifd(i64 %[[SIZE]], i32 %[[INT]], float %[[FLOAT]], double %[[DOUBLE]])
+  // CHECK: call i8* @_ZNSt16coroutine_traitsIJv34promise_matching_placement_new_tagifdEE12promise_typenwEmS0_ifd(i64 %[[SIZE]], i32 %[[INT]], float %[[FLOAT]], double %[[DOUBLE]])
   co_return;
 }
 
@@ -140,8 +137,8 @@ void* operator new(SizeT __sz, void *__p) noexcept;
 
 struct promise_matching_global_placement_new_tag {};
 struct dummy {};
-template<>
-struct std::experimental::coroutine_traits<void, promise_matching_global_placement_new_tag, dummy*> {
+template <>
+struct std::coroutine_traits<void, promise_matching_global_placement_new_tag, dummy *> {
   struct promise_type {
     void get_return_object() {}
     suspend_always initial_suspend() { return {}; }
@@ -162,8 +159,8 @@ extern "C" void f1b(promise_matching_global_placement_new_tag, dummy *) {
 
 struct promise_delete_tag {};
 
-template<>
-struct std::experimental::coroutine_traits<void, promise_delete_tag> {
+template <>
+struct std::coroutine_traits<void, promise_delete_tag> {
   struct promise_type {
     void operator delete(void*);
     void get_return_object() {}
@@ -181,14 +178,14 @@ extern "C" void f2(promise_delete_tag) {
 
   // CHECK: %[[FRAME:.+]] = call i8* @llvm.coro.begin(
   // CHECK: %[[MEM:.+]] = call i8* @llvm.coro.free(token %[[ID]], i8* %[[FRAME]])
-  // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJv18promise_delete_tagEE12promise_typedlEPv(i8* %[[MEM]])
+  // CHECK: call void @_ZNSt16coroutine_traitsIJv18promise_delete_tagEE12promise_typedlEPv(i8* %[[MEM]])
   co_return;
 }
 
 struct promise_sized_delete_tag {};
 
-template<>
-struct std::experimental::coroutine_traits<void, promise_sized_delete_tag> {
+template <>
+struct std::coroutine_traits<void, promise_sized_delete_tag> {
   struct promise_type {
     void operator delete(void*, unsigned long);
     void get_return_object() {}
@@ -207,14 +204,14 @@ extern "C" void f3(promise_sized_delete_tag) {
   // CHECK: %[[FRAME:.+]] = call i8* @llvm.coro.begin(
   // CHECK: %[[MEM:.+]] = call i8* @llvm.coro.free(token %[[ID]], i8* %[[FRAME]])
   // CHECK: %[[SIZE2:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJv24promise_sized_delete_tagEE12promise_typedlEPvm(i8* %[[MEM]], i64 %[[SIZE2]])
+  // CHECK: call void @_ZNSt16coroutine_traitsIJv24promise_sized_delete_tagEE12promise_typedlEPvm(i8* %[[MEM]], i64 %[[SIZE2]])
   co_return;
 }
 
 struct promise_on_alloc_failure_tag {};
 
-template<>
-struct std::experimental::coroutine_traits<int, promise_on_alloc_failure_tag> {
+template <>
+struct std::coroutine_traits<int, promise_on_alloc_failure_tag> {
   struct promise_type {
     int get_return_object() { return 0; }
     suspend_always initial_suspend() { return {}; }
@@ -235,12 +232,12 @@ extern "C" int f4(promise_on_alloc_failure_tag) {
   // CHECK: br i1 %[[OK]], label %[[OKBB:.+]], label %[[ERRBB:.+]]
 
   // CHECK: [[ERRBB]]:
-  // CHECK:   %[[FailRet:.+]] = call i32 @_ZNSt12experimental16coroutine_traitsIJi28promise_on_alloc_failure_tagEE12promise_type39get_return_object_on_allocation_failureEv(
+  // CHECK:   %[[FailRet:.+]] = call i32 @_ZNSt16coroutine_traitsIJi28promise_on_alloc_failure_tagEE12promise_type39get_return_object_on_allocation_failureEv(
   // CHECK:   store i32 %[[FailRet]], i32* %[[RetVal]]
   // CHECK:   br label %[[RetBB:.+]]
 
   // CHECK: [[OKBB]]:
-  // CHECK:   %[[OkRet:.+]] = call i32 @_ZNSt12experimental16coroutine_traitsIJi28promise_on_alloc_failure_tagEE12promise_type17get_return_objectEv(
+  // CHECK:   %[[OkRet:.+]] = call i32 @_ZNSt16coroutine_traitsIJi28promise_on_alloc_failure_tagEE12promise_type17get_return_objectEv(
   // CHECK:   store i32 %[[OkRet]], i32* %[[Gro]]
 
   // CHECK: %[[Tmp1:.*]] = load i32, i32* %[[Gro]]

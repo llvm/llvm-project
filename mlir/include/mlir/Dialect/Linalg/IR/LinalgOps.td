@@ -732,6 +732,22 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
       if (it == outputs().end()) return nullptr;
       return it.getBase();
     }
+
+    /// Return whether the op has only MemRef input and outputs.
+    bool hasBufferSemantics() {
+      Operation* op = this->getOperation();
+      return op->getNumResults() == 0 &&
+             llvm::all_of(op->getOpOperands(), [&](OpOperand & operand) {
+               return !operand.get().getType().template isa<ShapedType>() ||
+                      operand.get().getType().template isa<MemRefType>();
+             });
+    }
+
+    /// Return whether the loop dimension is parallel or not.
+    bool isParallelDimension(unsigned dim) {
+      StringAttr attr = this->iterator_types()[dim].cast<StringAttr>();
+      return attr.getValue() == getParallelIteratorTypeName();
+    }
   }];
 
   let hasCanonicalizer = 1;

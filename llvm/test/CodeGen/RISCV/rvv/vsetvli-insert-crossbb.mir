@@ -131,7 +131,7 @@ registers:
   - { id: 4, class: gpr }
   - { id: 5, class: gpr }
   - { id: 6, class: vr }
-  - { id: 7, class: gpr }
+  - { id: 7, class: gprnox0 }
   - { id: 8, class: gpr }
 liveins:
   - { reg: '$x10', virtual-reg: '%4' }
@@ -146,7 +146,7 @@ body:             |
   ; CHECK: bb.0.entry:
   ; CHECK:   successors: %bb.2(0x30000000), %bb.1(0x50000000)
   ; CHECK:   liveins: $x10, $x11, $v8, $x12
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr = COPY $x12
+  ; CHECK:   [[COPY:%[0-9]+]]:gprnox0 = COPY $x12
   ; CHECK:   [[COPY1:%[0-9]+]]:vr = COPY $v8
   ; CHECK:   [[COPY2:%[0-9]+]]:gpr = COPY $x11
   ; CHECK:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
@@ -170,7 +170,7 @@ body:             |
     successors: %bb.2(0x30000000), %bb.1(0x50000000)
     liveins: $x10, $x11, $v8, $x12
 
-    %7:gpr = COPY $x12
+    %7:gprnox0 = COPY $x12
     %6:vr = COPY $v8
     %5:gpr = COPY $x11
     %4:gpr = COPY $x10
@@ -204,7 +204,7 @@ registers:
   - { id: 4, class: gpr }
   - { id: 5, class: gpr }
   - { id: 6, class: gpr }
-  - { id: 7, class: gpr }
+  - { id: 7, class: gprnox0 }
   - { id: 8, class: gpr }
 liveins:
   - { reg: '$x10', virtual-reg: '%4' }
@@ -219,7 +219,7 @@ body:             |
   ; CHECK: bb.0.entry:
   ; CHECK:   successors: %bb.2(0x30000000), %bb.1(0x50000000)
   ; CHECK:   liveins: $x10, $x11, $x12, $x13
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr = COPY $x13
+  ; CHECK:   [[COPY:%[0-9]+]]:gprnox0 = COPY $x13
   ; CHECK:   [[COPY1:%[0-9]+]]:gpr = COPY $x12
   ; CHECK:   [[COPY2:%[0-9]+]]:gpr = COPY $x11
   ; CHECK:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
@@ -230,12 +230,12 @@ body:             |
   ; CHECK:   PseudoBR %bb.1
   ; CHECK: bb.1.if.then:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   dead $x0 = PseudoVSETVLI killed $x0, 88, implicit-def $vl, implicit-def $vtype, implicit $vl
+  ; CHECK:   dead $x0 = PseudoVSETVLIX0 killed $x0, 88, implicit-def $vl, implicit-def $vtype, implicit $vl
   ; CHECK:   early-clobber %1:vr = PseudoVZEXT_VF2_M1 [[PseudoVLE32_V_MF2_]], $noreg, 6, implicit $vl, implicit $vtype
   ; CHECK:   PseudoBR %bb.3
   ; CHECK: bb.2.if.else:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   dead $x0 = PseudoVSETVLI killed $x0, 88, implicit-def $vl, implicit-def $vtype, implicit $vl
+  ; CHECK:   dead $x0 = PseudoVSETVLIX0 killed $x0, 88, implicit-def $vl, implicit-def $vtype, implicit $vl
   ; CHECK:   early-clobber %2:vr = PseudoVSEXT_VF2_M1 [[PseudoVLE32_V_MF2_]], $noreg, 6, implicit $vl, implicit $vtype
   ; CHECK: bb.3.if.end:
   ; CHECK:   [[PHI:%[0-9]+]]:vr = PHI %1, %bb.1, %2, %bb.2
@@ -245,7 +245,7 @@ body:             |
     successors: %bb.2(0x30000000), %bb.1(0x50000000)
     liveins: $x10, $x11, $x12, $x13
 
-    %7:gpr = COPY $x13
+    %7:gprnox0 = COPY $x13
     %6:gpr = COPY $x12
     %5:gpr = COPY $x11
     %4:gpr = COPY $x10
@@ -278,7 +278,7 @@ registers:
   - { id: 3, class: gpr }
   - { id: 4, class: vr }
   - { id: 5, class: vr }
-  - { id: 6, class: gpr }
+  - { id: 6, class: gprnox0 }
   - { id: 7, class: gpr }
   - { id: 8, class: gpr }
 liveins:
@@ -294,7 +294,7 @@ body:             |
   ; CHECK: bb.0.entry:
   ; CHECK:   successors: %bb.2(0x30000000), %bb.1(0x50000000)
   ; CHECK:   liveins: $x10, $v8, $v9, $x11
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr = COPY $x11
+  ; CHECK:   [[COPY:%[0-9]+]]:gprnox0 = COPY $x11
   ; CHECK:   [[COPY1:%[0-9]+]]:vr = COPY $v9
   ; CHECK:   [[COPY2:%[0-9]+]]:vr = COPY $v8
   ; CHECK:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
@@ -319,7 +319,7 @@ body:             |
     successors: %bb.2(0x30000000), %bb.1(0x50000000)
     liveins: $x10, $v8, $v9, $x11
 
-    %6:gpr = COPY $x11
+    %6:gprnox0 = COPY $x11
     %5:vr = COPY $v9
     %4:vr = COPY $v8
     %3:gpr = COPY $x10
@@ -346,14 +346,14 @@ name:            vsetvli_add_or_sub
 alignment:       4
 tracksRegLiveness: true
 registers:
-  - { id: 0, class: gpr }
+  - { id: 0, class: gprnox0 }
   - { id: 1, class: vr }
   - { id: 2, class: vr }
   - { id: 3, class: vr }
   - { id: 4, class: gpr }
   - { id: 5, class: vr }
   - { id: 6, class: vr }
-  - { id: 7, class: gpr }
+  - { id: 7, class: gprnox0 }
   - { id: 8, class: gpr }
 liveins:
   - { reg: '$x10', virtual-reg: '%4' }
@@ -368,11 +368,11 @@ body:             |
   ; CHECK: bb.0.entry:
   ; CHECK:   successors: %bb.2(0x30000000), %bb.1(0x50000000)
   ; CHECK:   liveins: $x10, $v8, $v9, $x11
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr = COPY $x11
+  ; CHECK:   [[COPY:%[0-9]+]]:gprnox0 = COPY $x11
   ; CHECK:   [[COPY1:%[0-9]+]]:vr = COPY $v9
   ; CHECK:   [[COPY2:%[0-9]+]]:vr = COPY $v8
   ; CHECK:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
-  ; CHECK:   [[PseudoVSETVLI:%[0-9]+]]:gpr = PseudoVSETVLI [[COPY]], 88, implicit-def $vl, implicit-def $vtype
+  ; CHECK:   [[PseudoVSETVLI:%[0-9]+]]:gprnox0 = PseudoVSETVLI [[COPY]], 88, implicit-def $vl, implicit-def $vtype
   ; CHECK:   [[COPY4:%[0-9]+]]:gpr = COPY $x0
   ; CHECK:   BEQ [[COPY3]], [[COPY4]], %bb.2
   ; CHECK:   PseudoBR %bb.1
@@ -391,11 +391,11 @@ body:             |
     successors: %bb.2(0x30000000), %bb.1(0x50000000)
     liveins: $x10, $v8, $v9, $x11
 
-    %7:gpr = COPY $x11
+    %7:gprnox0 = COPY $x11
     %6:vr = COPY $v9
     %5:vr = COPY $v8
     %4:gpr = COPY $x10
-    %0:gpr = PseudoVSETVLI %7, 88, implicit-def dead $vl, implicit-def dead $vtype
+    %0:gprnox0 = PseudoVSETVLI %7, 88, implicit-def dead $vl, implicit-def dead $vtype
     %8:gpr = COPY $x0
     BEQ %4, %8, %bb.2
     PseudoBR %bb.1

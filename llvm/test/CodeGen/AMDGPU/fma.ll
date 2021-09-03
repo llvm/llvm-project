@@ -144,3 +144,13 @@ bb:
   store float %tmp10, float addrspace(1)* %gep.out
   ret void
 }
+
+; Fold (fmul (fadd x, 1.0), y) -> (fma x, y, y) without FP specific command-line
+; options.
+; FUNC-LABEL: {{^}}fold_fmul_distributive:
+; GFX906: v_fmac_f32_e32 v0, v1, v0
+define float @fold_fmul_distributive(float %x, float %y) {
+  %fadd = fadd ninf float %y, 1.0
+  %fmul = fmul contract float %fadd, %x
+  ret float %fmul
+}

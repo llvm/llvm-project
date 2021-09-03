@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "impl_runtime.h"
 #include "hsa_api.h"
+#include "impl_runtime.h"
 #include "internal.h"
 #include "rt.h"
 #include <memory>
@@ -32,7 +32,7 @@ static hsa_status_t invoke_hsa_copy(hsa_signal_t sig, void *dest,
   hsa_signal_value_t got = init;
   while (got == init) {
     got = hsa_signal_wait_scacquire(sig, HSA_SIGNAL_CONDITION_NE, init,
-                                    UINT64_MAX, ATMI_WAIT_STATE);
+                                    UINT64_MAX, HSA_WAIT_STATE_BLOCKED);
   }
 
   if (got != success) {
@@ -64,8 +64,7 @@ hsa_status_t impl_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
   void *tempHostPtr;
   hsa_status_t ret = core::Runtime::HostMalloc(&tempHostPtr, size, MemoryPool);
   if (ret != HSA_STATUS_SUCCESS) {
-    DEBUG_PRINT("HostMalloc: Unable to alloc %zu bytes for temp scratch\n",
-                size);
+    DP("HostMalloc: Unable to alloc %zu bytes for temp scratch\n", size);
     return ret;
   }
   std::unique_ptr<void, implFreePtrDeletor> del(tempHostPtr);
@@ -94,8 +93,7 @@ hsa_status_t impl_memcpy_d2h(hsa_signal_t signal, void *dest,
   void *tempHostPtr;
   hsa_status_t ret = core::Runtime::HostMalloc(&tempHostPtr, size, MemoryPool);
   if (ret != HSA_STATUS_SUCCESS) {
-    DEBUG_PRINT("HostMalloc: Unable to alloc %zu bytes for temp scratch\n",
-                size);
+    DP("HostMalloc: Unable to alloc %zu bytes for temp scratch\n", size);
     return ret;
   }
   std::unique_ptr<void, implFreePtrDeletor> del(tempHostPtr);

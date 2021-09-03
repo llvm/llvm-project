@@ -1152,6 +1152,12 @@ bool CheckHelper::CheckDefinedOperator(SourceName opName, GenericKind kind,
     return false;
   }
   std::optional<parser::MessageFixedText> msg;
+  auto checkDefinedOperatorArgs{
+      [&](SourceName opName, const Symbol &specific, const Procedure &proc) {
+        bool arg0Defined{CheckDefinedOperatorArg(opName, specific, proc, 0)};
+        bool arg1Defined{CheckDefinedOperatorArg(opName, specific, proc, 1)};
+        return arg0Defined && arg1Defined;
+      }};
   if (specific.attrs().test(Attr::NOPASS)) { // C774
     msg = "%s procedure '%s' may not have NOPASS attribute"_err_en_US;
   } else if (!proc.functionResult.has_value()) {
@@ -1161,8 +1167,7 @@ bool CheckHelper::CheckDefinedOperator(SourceName opName, GenericKind kind,
           " result"_err_en_US;
   } else if (auto m{CheckNumberOfArgs(kind, proc.dummyArguments.size())}) {
     msg = std::move(m);
-  } else if (!CheckDefinedOperatorArg(opName, specific, proc, 0) |
-      !CheckDefinedOperatorArg(opName, specific, proc, 1)) {
+  } else if (!checkDefinedOperatorArgs(opName, specific, proc)) {
     return false; // error was reported
   } else if (ConflictsWithIntrinsicOperator(kind, proc)) {
     msg = "%s function '%s' conflicts with intrinsic operator"_err_en_US;

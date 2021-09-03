@@ -250,7 +250,7 @@ public:
 
   /// Returns true if the current token corresponds to a keyword.
   bool isCurrentTokenAKeyword() const {
-    return parser.getToken().is(Token::bare_identifier) ||
+    return parser.getToken().isAny(Token::bare_identifier, Token::inttype) ||
            parser.getToken().isKeyword();
   }
 

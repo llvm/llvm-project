@@ -1,4 +1,3 @@
-; RUN: opt -regions -analyze -enable-new-pm=0 < %s | FileCheck %s
 ; RUN: opt < %s -passes='print<regions>' 2>&1 | FileCheck %s
 
 ; We should not crash if there are some bbs that are not reachable.

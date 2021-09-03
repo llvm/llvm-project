@@ -3,7 +3,6 @@
 #define STD_COROUTINE_H
 
 namespace std {
-namespace experimental {
 
 template <class Ret, typename... T>
 struct coroutine_traits { using promise_type = typename Ret::promise_type; };
@@ -31,7 +30,6 @@ struct suspend_never {
   void await_resume() noexcept {}
 };
 
-} // namespace experimental
 } // namespace std
 
 #endif // STD_COROUTINE_H

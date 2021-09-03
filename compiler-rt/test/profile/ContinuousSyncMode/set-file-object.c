@@ -1,5 +1,8 @@
 // REQUIRES: darwin || linux
 
+// Disabled due to flaky results
+// UNSUPPORTED: arm-linux,armhf-linux,aarch64-linux
+
 // Test using __llvm_profile_set_file_object in continuous mode (%c).
 // Create & cd into a temporary directory.
 // RUN: rm -rf %t.dir && mkdir -p %t.dir && cd %t.dir

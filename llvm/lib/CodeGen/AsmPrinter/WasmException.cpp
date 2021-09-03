@@ -18,16 +18,18 @@
 using namespace llvm;
 
 void WasmException::endModule() {
-  // This is the symbol used in 'throw' and 'catch' instruction to denote this
-  // is a C++ exception. This symbol has to be emitted somewhere once in the
-  // module.  Check if the symbol has already been created, i.e., we have at
-  // least one 'throw' or 'catch' instruction in the module, and emit the symbol
-  // only if so.
-  SmallString<60> NameStr;
-  Mangler::getNameWithPrefix(NameStr, "__cpp_exception", Asm->getDataLayout());
-  if (Asm->OutContext.lookupSymbol(NameStr)) {
-    MCSymbol *ExceptionSym = Asm->GetExternalSymbolSymbol("__cpp_exception");
-    Asm->OutStreamer->emitLabel(ExceptionSym);
+  // These are symbols used to throw/catch C++ exceptions and C longjmps. These
+  // symbols have to be emitted somewhere once in the module. Check if each of
+  // the symbols has already been created, i.e., we have at least one 'throw' or
+  // 'catch' instruction with the symbol in the module, and emit the symbol only
+  // if so.
+  for (const char *SymName : {"__cpp_exception", "__c_longjmp"}) {
+    SmallString<60> NameStr;
+    Mangler::getNameWithPrefix(NameStr, SymName, Asm->getDataLayout());
+    if (Asm->OutContext.lookupSymbol(NameStr)) {
+      MCSymbol *ExceptionSym = Asm->GetExternalSymbolSymbol(SymName);
+      Asm->OutStreamer->emitLabel(ExceptionSym);
+    }
   }
 }
 

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -verify -std=c++17 -fcoroutines-ts -fsyntax-only %s
 
-namespace std::experimental {
+namespace std {
 template <class Promise = void> struct coroutine_handle {
   coroutine_handle() = default;
   static coroutine_handle from_address(void *) noexcept;
@@ -30,11 +30,11 @@ struct traits_sfinae_base<T, void_t<typename T::promise_type>> {
 
 template <class Ret, class... Args>
 struct coroutine_traits : public traits_sfinae_base<Ret> {};
-}
+} // namespace std
 
 struct suspend_never {
   bool await_ready() noexcept;
-  void await_suspend(std::experimental::coroutine_handle<>) noexcept;
+  void await_suspend(std::coroutine_handle<>) noexcept;
   void await_resume() noexcept;
 };
 

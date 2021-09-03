@@ -52,6 +52,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ParentMap.h"
+#include "clang/Analysis/ProgramPoint.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
@@ -76,8 +77,10 @@
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 #include <climits>
 #include <functional>
 #include <utility>
@@ -755,6 +758,17 @@ class NoOwnershipChangeVisitor final : public NoStateChangeFuncVisitor {
         Owners.insert(Region);
       return true;
     }
+
+    LLVM_DUMP_METHOD void dump() const { dumpToStream(llvm::errs()); }
+    LLVM_DUMP_METHOD void dumpToStream(llvm::raw_ostream &out) const {
+      out << "Owners: {\n";
+      for (const MemRegion *Owner : Owners) {
+        out << "  ";
+        Owner->dumpToStream(out);
+        out << ",\n";
+      }
+      out << "}\n";
+    }
   };
 
 protected:
@@ -768,31 +782,24 @@ protected:
     return Ret;
   }
 
-  static const ExplodedNode *getCallExitEnd(const ExplodedNode *N) {
-    while (N && !N->getLocationAs<CallExitEnd>())
-      N = N->getFirstSucc();
-    return N;
+  LLVM_DUMP_METHOD static std::string
+  getFunctionName(const ExplodedNode *CallEnterN) {
+    if (const CallExpr *CE = llvm::dyn_cast_or_null<CallExpr>(
+            CallEnterN->getLocationAs<CallEnter>()->getCallExpr()))
+      if (const FunctionDecl *FD = CE->getDirectCallee())
+        return FD->getQualifiedNameAsString();
+    return "";
   }
 
   virtual bool
-  wasModifiedBeforeCallExit(const ExplodedNode *CurrN,
-                            const ExplodedNode *CallExitN) override {
-    if (CurrN->getLocationAs<CallEnter>())
+  wasModifiedInFunction(const ExplodedNode *CallEnterN,
+                        const ExplodedNode *CallExitEndN) override {
+    if (CallEnterN->getState()->get<RegionState>(Sym) !=
+        CallExitEndN->getState()->get<RegionState>(Sym))
       return true;
 
-    // Its the state right *after* the call that is interesting. Any pointers
-    // inside the call that pointed to the allocated memory are of little
-    // consequence if their lifetime ends within the function.
-    CallExitN = getCallExitEnd(CallExitN);
-    if (!CallExitN)
-      return true;
-
-    if (CurrN->getState()->get<RegionState>(Sym) !=
-        CallExitN->getState()->get<RegionState>(Sym))
-      return true;
-
-    OwnerSet CurrOwners = getOwnersAtNode(CurrN);
-    OwnerSet ExitOwners = getOwnersAtNode(CallExitN);
+    OwnerSet CurrOwners = getOwnersAtNode(CallEnterN);
+    OwnerSet ExitOwners = getOwnersAtNode(CallExitEndN);
 
     // Owners in the current set may be purged from the analyzer later on.
     // If a variable is dead (is not referenced directly or indirectly after

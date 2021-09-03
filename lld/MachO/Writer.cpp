@@ -1102,10 +1102,16 @@ template <class LP> void Writer::run() {
   if (config->entry && !isa<Undefined>(config->entry))
     prepareBranchTarget(config->entry);
   scanRelocations();
+
+  // Do not proceed if there was an undefined symbol.
+  if (errorCount())
+    return;
+
   if (in.stubHelper->isNeeded())
     in.stubHelper->setup();
   scanSymbols();
   createOutputSections<LP>();
+
   // After this point, we create no new segments; HOWEVER, we might
   // yet create branch-range extension thunks for architectures whose
   // hardware call instructions have limited range, e.g., ARM(64).

@@ -633,6 +633,9 @@ class CXXConstructorCall;
 /// Descendants can define what a "state change is", like a change of value
 /// to a memory region, liveness, etc. For function calls where the state did
 /// not change as defined, a custom note may be constructed.
+///
+/// For a minimal example, check out
+/// clang/unittests/StaticAnalyzer/NoStateChangeFuncVisitorTest.cpp.
 class NoStateChangeFuncVisitor : public BugReporterVisitor {
 private:
   /// Frames modifying the state as defined in \c wasModifiedBeforeCallExit.
@@ -643,6 +646,8 @@ private:
   /// many times (going up the path for each node and checking whether the
   /// region was written into) we instead lazily compute the stack frames
   /// along the path.
+  // TODO: Can't we just use a map instead? This is likely not as cheap as it
+  // makes the code difficult to read.
   llvm::SmallPtrSet<const StackFrameContext *, 32> FramesModifying;
   llvm::SmallPtrSet<const StackFrameContext *, 32> FramesModifyingCalculated;
 
@@ -651,6 +656,8 @@ private:
   /// The calculation is cached in FramesModifying.
   bool isModifiedInFrame(const ExplodedNode *CallExitBeginN);
 
+  void markFrameAsModifying(const StackFrameContext *SCtx);
+
   /// Write to \c FramesModifying all stack frames along the path in the current
   /// stack frame which modifies the state.
   void findModifyingFrames(const ExplodedNode *const CallExitBeginN);
@@ -658,11 +665,37 @@ private:
 protected:
   bugreporter::TrackingKind TKind;
 
-  /// \return Whether the state was modified from the current node, \CurrN, to
-  /// the end of the stack fram, at \p CallExitBeginN.
-  virtual bool
-  wasModifiedBeforeCallExit(const ExplodedNode *CurrN,
-                            const ExplodedNode *CallExitBeginN) = 0;
+  /// \return Whether the state was modified from the current node, \p CurrN, to
+  /// the end of the stack frame, at \p CallExitBeginN. \p CurrN and
+  /// \p CallExitBeginN are always in the same stack frame.
+  /// Clients should override this callback when a state change is important
+  /// not only on the entire function call, but inside of it as well.
+  /// Example: we may want to leave a note about the lack of locking/unlocking
+  /// on a particular mutex, but not if inside the function its state was
+  /// changed, but also restored. wasModifiedInFunction() wouldn't know of this
+  /// change.
+  virtual bool wasModifiedBeforeCallExit(const ExplodedNode *CurrN,
+                                         const ExplodedNode *CallExitBeginN) {
+    return false;
+  }
+
+  /// \return Whether the state was modified in the inlined function call in
+  /// between \p CallEnterN and \p CallExitEndN. Mind that the stack frame
+  /// retrieved from a CallEnterN and CallExitEndN is the *caller's* stack
+  /// frame! The inlined function's stack should be retrieved from either the
+  /// immediate successor to \p CallEnterN or immediate predecessor to
+  /// \p CallExitEndN.
+  /// Clients should override this function if a state changes local to the
+  /// inlined function are not interesting, only the change occuring as a
+  /// result of it.
+  /// Example: we want to leave a not about a leaked resource object not being
+  /// deallocated / its ownership changed inside a function, and we don't care
+  /// if it was assigned to a local variable (its change in ownership is
+  /// inconsequential).
+  virtual bool wasModifiedInFunction(const ExplodedNode *CallEnterN,
+                                     const ExplodedNode *CallExitEndN) {
+    return false;
+  }
 
   /// Consume the information on the non-modifying stack frame in order to
   /// either emit a note or not. May suppress the report entirely.
@@ -702,7 +735,6 @@ public:
 };
 
 } // namespace ento
-
 } // namespace clang
 
 #endif // LLVM_CLANG_STATICANALYZER_CORE_BUGREPORTER_BUGREPORTERVISITORS_H

@@ -504,3 +504,27 @@ func @elements_attr_not_index() {
   "test.indexElementsAttr"() {attr = dense<[1, 2]>:tensor<2xi32>} : () -> ()
   return
 }
+
+// -----
+
+// CHECK-LABEL: @struct_success
+func @struct_success() {
+  "test.simple_struct"() : () -> (!test.struct<{a, i32}, {b, f64}>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @struct_with_field_names_like_types
+func @struct_with_field_names_like_types() {
+  "test.struct_with_field_names_like_types"() : () -> (!test.struct<{i32, i32}, {f64, f64}>)
+  return
+}
+
+// -----
+
+func @struct_bad_keywords() {
+  // expected-error@+1 {{expected valid keyword}}
+  "test.struct_bad_keywords"() : () -> (!test.struct<{42, i32}>)
+  return
+}
