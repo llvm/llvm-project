@@ -525,10 +525,6 @@ void AsyncRuntimePolicyBasedRefCountingPass::initializeDefaultPolicy() {
     bool isGroup = type.isa<GroupType>();
     bool isValue = type.isa<ValueType>();
 
-    // Drop reference after async token or group await (sync await)
-    if (auto await = dyn_cast<RuntimeAwaitOp>(op))
-      return (isToken || isGroup) ? -1 : 0;
-
     // Drop reference after async token or group error check (coro await).
     if (auto await = dyn_cast<RuntimeIsErrorOp>(op))
       return (isToken || isGroup) ? -1 : 0;
