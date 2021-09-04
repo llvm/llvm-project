@@ -336,6 +336,7 @@ COMPILER_RT_VISIBILITY int lprofSuspendSigKill() {
   if (procctl(P_PID, 0, PROC_PDEATHSIG_STATUS, &PDeachSig) == 0 &&
       PDeachSig == SIGKILL)
     procctl(P_PID, 0, PROC_PDEATHSIG_CTL, &PDisableSig);
+  return (PDeachSig == SIGKILL);
 #else
   return 0;
 #endif

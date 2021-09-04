@@ -42,6 +42,9 @@ New Features
   is incomplete. Some functions are known to be inefficient; both in memory
   usage and performance. The implementation is considered experimental and isn't
   considered ABI stable.
+- There's a new CMake option ``LIBCXX_ENABLE_UNICODE`` to disable Unicode
+  support in the ``<format>`` header. This only affects the estimation of the
+  output width of the format functions.
 
 API Changes
 -----------
