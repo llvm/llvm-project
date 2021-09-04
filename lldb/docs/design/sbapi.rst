@@ -68,7 +68,7 @@ Like other clang-based tools it requires a compilation database
 
 ::
 
-    ./bin/lldb-instr /path/to/lldb/source/API/SBDebugger.cpp
+   $ ./bin/lldb-instr /path/to/lldb/source/API/SBDebugger.cpp
 
 
 The tool will automatically insert ``LLDB_RECORD`` macros inline, however you
