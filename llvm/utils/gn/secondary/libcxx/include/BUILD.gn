@@ -192,6 +192,8 @@ if (current_toolchain == default_toolchain) {
       "__format/format_error.h",
       "__format/format_fwd.h",
       "__format/format_parse_context.h",
+      "__format/format_string.h",
+      "__format/formatter.h",
       "__function_like.h",
       "__functional/binary_function.h",
       "__functional/binary_negate.h",
