@@ -37,6 +37,7 @@ static lto::Config createConfig() {
   c.CodeModel = getCodeModelFromCMModel();
   c.CPU = getCPUStr();
   c.MAttrs = getMAttrs();
+  c.DiagHandler = diagnosticHandler;
   c.UseNewPM = config->ltoNewPassManager;
   c.PreCodeGenPassesHook = [](legacy::PassManager &pm) {
     pm.add(createObjCARCContractPass());
