@@ -37,6 +37,7 @@
 #define COMGR_TEST_COMMON_H
 
 #include "amd_comgr.h"
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -125,7 +126,8 @@ amd_comgr_status_t printSymbol(amd_comgr_symbol_t symbol, void *userData) {
                                      (void *)&value);
   checkError(status, "amd_comgr_symbol_get_info_6");
 
-  printf("%d:  name=%s, type=%d, size=%lu, undef:%d, value:%lu\n",
+  printf("%d:  name=%s, type=%d, size=%" PRIu64 ", undef:%d, value:%" PRIu64
+         "I64u\n",
          *(int *)userData, name, type, size, undefined ? 1 : 0, value);
   *(int *)userData += 1;
 
@@ -180,7 +182,7 @@ amd_comgr_status_t printEntry(amd_comgr_metadata_node_t key,
     *indent += 1;
     status = amd_comgr_get_metadata_list_size(value, &size);
     checkError(status, "amd_comgr_get_metadata_list_size");
-    printf("LIST %s %ld entries = \n", keybuf, size);
+    printf("LIST %s %zd entries = \n", keybuf, size);
     for (size_t i = 0; i < size; i++) {
       status = amd_comgr_index_list_metadata(value, i, &son);
       checkError(status, "amd_comgr_index_list_metadata");
@@ -196,7 +198,7 @@ amd_comgr_status_t printEntry(amd_comgr_metadata_node_t key,
     *indent += 1;
     status = amd_comgr_get_metadata_map_size(value, &size);
     checkError(status, "amd_comgr_get_metadata_map_size");
-    printf("MAP %ld entries = \n", size);
+    printf("MAP %zd entries = \n", size);
     status = amd_comgr_iterate_map_metadata(value, printEntry, data);
     checkError(status, "amd_comgr_iterate_map_metadata");
     *indent = *indent > 0 ? *indent - 1 : 0;

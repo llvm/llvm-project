@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
     if (Count == 2) {
       printf("Passed, output data object returned = 2\n");
     } else {
-      printf("Failed, Output data object returned = %ld\n", Count);
+      printf("Failed, Output data object returned = %zd\n", Count);
     }
 
     // Retrieve the result data object 1 from dataSetOut

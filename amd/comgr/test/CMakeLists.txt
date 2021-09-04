@@ -81,6 +81,11 @@ macro(add_comgr_test name)
     C_EXTENSIONS No)
   target_compile_definitions("${name}"
     PRIVATE -DTEST_OBJ_DIR=\"${CMAKE_CURRENT_BINARY_DIR}\")
+if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+  target_compile_definitions("${name}"
+    PRIVATE -D_CRT_SECURE_NO_WARNINGS)
+endif()
+
   target_link_libraries("${name}"
     amd_comgr)
   add_dependencies("${name}"

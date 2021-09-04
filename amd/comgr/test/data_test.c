@@ -73,8 +73,8 @@ int main(int argc, char *argv[]) {
     checkError(Status, "amd_comgr_get_data_name");
     if (Size != strlen("DO1") + 1) {
       printf("FAILED_2a:\n");
-      printf("  amd_comgr_get_data_name size = %ld\n", Size);
-      printf("  expected size = %ld\n", strlen("DO1"));
+      printf("  amd_comgr_get_data_name size = %zd\n", Size);
+      printf("  expected size = %zd\n", strlen("DO1"));
     }
     Status = amd_comgr_get_data_name(DataObject, &Size, &Name[0]);
     checkError(Status, "amd_comgr_get_data_name");
@@ -123,7 +123,7 @@ int main(int argc, char *argv[]) {
     checkError(Status, "amd_comgr_action_data_count");
     if (Count != 3) {
       printf("FAILED_3a:\n");
-      printf("   amd_comgr_action_data_count = %ld\n", Count);
+      printf("   amd_comgr_action_data_count = %zd\n", Count);
       printf("   expected count = 3\n");
     }
 
@@ -158,7 +158,7 @@ int main(int argc, char *argv[]) {
     checkError(Status, "amd_comgr_action_data_count");
     if (Count != 3) {
       printf("FAILED_4a:\n");
-      printf("   amd_comgr_action_data_count = %ld\n", Count);
+      printf("   amd_comgr_action_data_count = %zd\n", Count);
       printf("   expected count = 3\n");
     }
 
@@ -170,7 +170,7 @@ int main(int argc, char *argv[]) {
     checkError(Status, "amd_comgr_action_data_count");
     if (Count != 0) {
       printf("FAILED_4b:\n");
-      printf("   amd_comgr_action_data_count = %ld\n", Count);
+      printf("   amd_comgr_action_data_count = %zd\n", Count);
       printf("   expected count = 1\n");
     }
 

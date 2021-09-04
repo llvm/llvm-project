@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
                                        AMD_COMGR_DATA_KIND_RELOCATABLE, &Count);
   checkError(Status, "amd_comgr_action_data_count");
   if (Count != 1) {
-    printf("Failed, output %ld relocatable objects (should output 1)\n", Count);
+    printf("Failed, output %zd relocatable objects (should output 1)\n", Count);
     exit(1);
   }
 
@@ -107,7 +107,7 @@ int main(int argc, char *argv[]) {
                                        AMD_COMGR_DATA_KIND_EXECUTABLE, &Count);
   checkError(Status, "amd_comgr_action_data_count");
   if (Count != 1) {
-    printf("Failed, output %ld executable objects (should output 1)\n", Count);
+    printf("Failed, output %zd executable objects (should output 1)\n", Count);
     exit(1);
   }
 

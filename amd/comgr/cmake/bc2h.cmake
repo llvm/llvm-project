@@ -37,3 +37,6 @@ file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/bc2h.c
 )
 
 add_executable(bc2h ${CMAKE_CURRENT_BINARY_DIR}/bc2h.c)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+  target_compile_definitions(bc2h PRIVATE -D_CRT_SECURE_NO_WARNINGS)
+endif()
