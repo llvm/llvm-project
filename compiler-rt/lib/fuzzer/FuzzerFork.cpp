@@ -358,7 +358,7 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
 
     Env.RunOneMergeJob(Job.get());
 
-    // Continue if our crash is one of the ignorred ones.
+    // Continue if our crash is one of the ignored ones.
     if (Options.IgnoreTimeouts && ExitCode == Options.TimeoutExitCode)
       Env.NumTimeouts++;
     else if (Options.IgnoreOOMs && ExitCode == Options.OOMExitCode)

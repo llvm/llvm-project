@@ -581,7 +581,7 @@ INTERCEPTOR(int, atexit, void (*func)()) {
 #if CAN_SANITIZE_LEAKS
   __lsan::ScopedInterceptorDisabler disabler;
 #endif
-  // Avoid calling real atexit as it is unrechable on at least on Linux.
+  // Avoid calling real atexit as it is unreachable on at least on Linux.
   int res = REAL(__cxa_atexit)((void (*)(void *a))func, nullptr, nullptr);
   REAL(__cxa_atexit)(AtCxaAtexit, nullptr, nullptr);
   return res;

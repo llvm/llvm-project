@@ -77,7 +77,7 @@ endif()
 
 if(MSVC)
   # Silence warnings by turning off exceptions in MSVC headers and avoid an
-  # error by unecessarily defining thread_local when it isn't even used on
+  # error by unnecessarily defining thread_local when it isn't even used on
   # Windows.
   list(APPEND LIBFUZZER_CFLAGS -D_HAS_EXCEPTIONS=0)
 else()

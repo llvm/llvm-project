@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file is a part of XRay, a dynamic runtime instruementation system.
+// This file is a part of XRay, a dynamic runtime instrumentation system.
 //
 // XRay Basic Mode runtime flags.
 //===----------------------------------------------------------------------===//

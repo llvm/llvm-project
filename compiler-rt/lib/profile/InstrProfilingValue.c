@@ -253,7 +253,7 @@ __llvm_profile_instrument_memop(uint64_t TargetValue, void *Data,
 /*
  * A wrapper struct that represents value profile runtime data.
  * Like InstrProfRecord class which is used by profiling host tools,
- * ValueProfRuntimeRecord also implements the abstract intefaces defined in
+ * ValueProfRuntimeRecord also implements the abstract interfaces defined in
  * ValueProfRecordClosure so that the runtime data can be serialized using
  * shared C implementation.
  */

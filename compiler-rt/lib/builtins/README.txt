@@ -271,8 +271,8 @@ switchu8
 
 // There is no C interface to the *_vfp_d8_d15_regs functions.  There are
 // called in the prolog and epilog of Thumb1 functions.  When the C++ ABI use
-// SJLJ for exceptions, each function with a catch clause or destuctors needs
-// to save and restore all registers in it prolog and epliog.  But there is 
+// SJLJ for exceptions, each function with a catch clause or destructors needs
+// to save and restore all registers in it prolog and epilog.  But there is
 // no way to access vector and high float registers from thumb1 code, so the 
 // compiler must add call outs to these helper functions in the prolog and 
 // epilog.
@@ -311,9 +311,9 @@ double __floatsidfvfp(int a);           // Appears to convert from
 float __floatsisfvfp(int a);            // Appears to convert from
                                         //     int to float.
 double __floatunssidfvfp(unsigned int a); // Appears to convert from
-                                        //     unisgned int to double.
+                                        //     unsigned int to double.
 float __floatunssisfvfp(unsigned int a); // Appears to convert from
-                                        //     unisgned int to float.
+                                        //     unsigned int to float.
 int __gedf2vfp(double a, double b);     // Appears to return __gedf2
                                         //     (a >= b)
 int __gesf2vfp(float a, float b);       // Appears to return __gesf2

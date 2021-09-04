@@ -213,7 +213,7 @@ class ThreadClock {
   // We reuse it for subsequent store-release operations without intervening
   // acquire operations. Since it is shared (and thus constant), clock value
   // for the current thread is then stored in dirty entries in the SyncClock.
-  // We host a refernece to the table while it is cached here.
+  // We host a reference to the table while it is cached here.
   u32 cached_idx_;
   u16 cached_size_;
   u16 cached_blocks_;
