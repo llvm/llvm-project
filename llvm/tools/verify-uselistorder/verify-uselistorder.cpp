@@ -540,11 +540,10 @@ int main(int argc, char **argv) {
   // Enable debug stream buffering.
   EnableDebugBuffering = true;
 
-  LLVMContext Context;
-
   cl::ParseCommandLineOptions(argc, argv,
                               "llvm tool to verify use-list order\n");
 
+  LLVMContext Context;
   SMDiagnostic Err;
 
   // Load the input module...
