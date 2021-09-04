@@ -16,8 +16,7 @@ body:             |
     ; X32: [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p0) :: (load (s32))
     ; X32: [[LOAD4:%[0-9]+]]:_(p0) = G_LOAD [[DEF]](p0) :: (load (p0))
     ; X32: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
-    ; X32: [[COPY:%[0-9]+]]:_(s8) = COPY [[LOAD]](s8)
-    ; X32: [[AND:%[0-9]+]]:_(s8) = G_AND [[COPY]], [[C]]
+    ; X32: [[AND:%[0-9]+]]:_(s8) = G_AND [[LOAD]], [[C]]
     ; X32: G_STORE [[AND]](s8), [[DEF]](p0) :: (store (s1))
     ; X32: G_STORE [[LOAD1]](s8), [[DEF]](p0) :: (store (s8))
     ; X32: G_STORE [[LOAD2]](s16), [[DEF]](p0) :: (store (s16))

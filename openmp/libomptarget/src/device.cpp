@@ -553,6 +553,41 @@ int32_t DeviceTy::synchronize(AsyncInfoTy &AsyncInfo) {
   return OFFLOAD_SUCCESS;
 }
 
+int32_t DeviceTy::createEvent(void **Event) {
+  if (RTL->create_event)
+    return RTL->create_event(RTLDeviceID, Event);
+
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t DeviceTy::recordEvent(void *Event, AsyncInfoTy &AsyncInfo) {
+  if (RTL->record_event)
+    return RTL->record_event(RTLDeviceID, Event, AsyncInfo);
+
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t DeviceTy::waitEvent(void *Event, AsyncInfoTy &AsyncInfo) {
+  if (RTL->wait_event)
+    return RTL->wait_event(RTLDeviceID, Event, AsyncInfo);
+
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t DeviceTy::syncEvent(void *Event) {
+  if (RTL->sync_event)
+    return RTL->sync_event(RTLDeviceID, Event);
+
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t DeviceTy::destroyEvent(void *Event) {
+  if (RTL->create_event)
+    return RTL->destroy_event(RTLDeviceID, Event);
+
+  return OFFLOAD_SUCCESS;
+}
+
 /// Check whether a device has an associated RTL and initialize it if it's not
 /// already initialized.
 bool device_is_ready(int device_num) {

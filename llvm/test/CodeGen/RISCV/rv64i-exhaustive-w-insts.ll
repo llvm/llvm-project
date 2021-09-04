@@ -1422,7 +1422,7 @@ define zeroext i32 @zext_addiw_zext(i32 zeroext %a) nounwind {
 define i32 @aext_slliw_aext(i32 %a) nounwind {
 ; RV64I-LABEL: aext_slliw_aext:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 1
+; RV64I-NEXT:    slliw a0, a0, 1
 ; RV64I-NEXT:    ret
   %1 = shl i32 %a, 1
   ret i32 %1
@@ -1431,7 +1431,7 @@ define i32 @aext_slliw_aext(i32 %a) nounwind {
 define i32 @aext_slliw_sext(i32 signext %a) nounwind {
 ; RV64I-LABEL: aext_slliw_sext:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 2
+; RV64I-NEXT:    slliw a0, a0, 2
 ; RV64I-NEXT:    ret
   %1 = shl i32 %a, 2
   ret i32 %1
@@ -1440,7 +1440,7 @@ define i32 @aext_slliw_sext(i32 signext %a) nounwind {
 define i32 @aext_slliw_zext(i32 zeroext %a) nounwind {
 ; RV64I-LABEL: aext_slliw_zext:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    ret
   %1 = shl i32 %a, 3
   ret i32 %1

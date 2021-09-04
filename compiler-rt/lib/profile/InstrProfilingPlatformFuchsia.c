@@ -120,7 +120,8 @@ void __llvm_profile_initialize(void) {
   const uint64_t *CountersEnd = __llvm_profile_end_counters();
   const uint64_t DataSize = __llvm_profile_get_data_size(DataBegin, DataEnd);
   const uint64_t CountersOffset =
-      sizeof(__llvm_profile_header) + (DataSize * sizeof(__llvm_profile_data));
+      sizeof(__llvm_profile_header) + __llvm_write_binary_ids(NULL) +
+      (DataSize * sizeof(__llvm_profile_data));
   uint64_t CountersSize = CountersEnd - CountersBegin;
 
   /* Don't publish a VMO if there are no counters. */

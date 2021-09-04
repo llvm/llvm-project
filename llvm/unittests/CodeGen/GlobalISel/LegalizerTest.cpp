@@ -78,9 +78,7 @@ TEST_F(AArch64GISelMITest, BasicLegalizerTest) {
     CHECK-NEXT: [[OFFSET_1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     CHECK-NEXT: [[VPTR_1:%[0-9]+]]:_(p0) = G_PTR_ADD %vptr:_, [[OFFSET_1]]:_(s64)
     CHECK-NEXT: [[LOAD_1:%[0-9]+]]:_(s16) = G_LOAD [[VPTR_1]]:_(p0) :: (load (s8) from unknown-address + 1)
-    CHECK-NEXT: [[V0:%[0-9]+]]:_(s16) = COPY [[LOAD_0]]:_(s16)
-    CHECK-NEXT: [[V1:%[0-9]+]]:_(s16) = COPY [[LOAD_1]]:_(s16)
-    CHECK-NEXT: %v:_(<2 x s8>) = G_BUILD_VECTOR_TRUNC [[V0]]:_(s16), [[V1]]:_(s16)
+    CHECK-NEXT: %v:_(<2 x s8>) = G_BUILD_VECTOR_TRUNC [[LOAD_0]]:_(s16), [[LOAD_1]]:_(s16)
     CHECK-NEXT: $h4 = COPY %v:_(<2 x s8>)
   )";
 
@@ -168,8 +166,7 @@ TEST_F(AArch64GISelMITest, UnorderedArtifactCombiningTest) {
   StringRef CheckString = R"(
     CHECK:      %vptr:_(p0) = COPY $x4
     CHECK-NEXT: [[LOAD_0:%[0-9]+]]:_(s16) = G_LOAD %vptr:_(p0) :: (load (s8))
-    CHECK:      %v0_ext:_(s16) = COPY [[LOAD_0]]:_(s16)
-    CHECK-NEXT: $h4 = COPY %v0_ext:_(s16)
+    CHECK:      $h4 = COPY [[LOAD_0]]:_(s16)
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckString)) << *MF;

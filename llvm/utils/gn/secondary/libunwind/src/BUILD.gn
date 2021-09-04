@@ -39,6 +39,7 @@ unwind_sources = [
   "UnwindRegistersRestore.S",
   "UnwindRegistersSave.S",
   "assembly.h",
+  "cet_unwind.h",
   "config.h",
   "dwarf2.h",
   "libunwind.cpp",

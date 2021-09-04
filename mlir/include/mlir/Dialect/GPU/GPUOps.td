@@ -378,10 +378,10 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func",
     unsigned getNumKernelOperands();
 
     /// The name of the kernel's containing module.
-    StringRef getKernelModuleName();
+    StringAttr getKernelModuleName();
 
     /// The name of the kernel.
-    StringRef getKernelName();
+    StringAttr getKernelName();
 
     /// The i-th operand passed to the kernel function.
     Value getKernelOperand(unsigned i);

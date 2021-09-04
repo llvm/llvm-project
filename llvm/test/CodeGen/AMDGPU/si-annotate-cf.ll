@@ -76,7 +76,8 @@ define amdgpu_kernel void @phi_cond_outside_loop(i32 %b) {
 ; SI-NEXT:  ; %bb.1: ; %else
 ; SI-NEXT:    s_load_dword s0, s[0:1], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_cmp_eq_u32_e64 s[0:1], s0, 0
+; SI-NEXT:    s_cmp_eq_u32 s0, 0
+; SI-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; SI-NEXT:    s_and_b64 s[4:5], s[0:1], exec
 ; SI-NEXT:  BB1_2: ; %endif
 ; SI-NEXT:    s_or_b64 exec, exec, s[6:7]
@@ -100,7 +101,8 @@ define amdgpu_kernel void @phi_cond_outside_loop(i32 %b) {
 ; FLAT-NEXT:  ; %bb.1: ; %else
 ; FLAT-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; FLAT-NEXT:    s_waitcnt lgkmcnt(0)
-; FLAT-NEXT:    v_cmp_eq_u32_e64 s[0:1], s0, 0
+; FLAT-NEXT:    s_cmp_eq_u32 s0, 0
+; FLAT-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; FLAT-NEXT:    s_and_b64 s[4:5], s[0:1], exec
 ; FLAT-NEXT:  BB1_2: ; %endif
 ; FLAT-NEXT:    s_or_b64 exec, exec, s[6:7]
@@ -169,11 +171,14 @@ define amdgpu_kernel void @loop_land_info_assert(i32 %c0, i32 %c1, i32 %c2, i32 
 ; SI-NEXT:    s_load_dword s14, s[0:1], 0xc
 ; SI-NEXT:    s_brev_b32 s8, 44
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_cmp_lt_i32_e64 s[0:1], s2, 1
-; SI-NEXT:    v_cmp_lt_i32_e64 s[4:5], s3, 4
-; SI-NEXT:    v_cmp_gt_i32_e64 s[2:3], s3, 3
-; SI-NEXT:    s_and_b64 s[2:3], s[0:1], s[2:3]
-; SI-NEXT:    s_and_b64 s[0:1], exec, s[4:5]
+; SI-NEXT:    s_cmp_lt_i32 s2, 1
+; SI-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; SI-NEXT:    s_cmp_lt_i32 s3, 4
+; SI-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; SI-NEXT:    s_cmp_gt_i32 s3, 3
+; SI-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; SI-NEXT:    s_and_b64 s[2:3], s[4:5], s[2:3]
+; SI-NEXT:    s_and_b64 s[0:1], exec, s[0:1]
 ; SI-NEXT:    s_and_b64 s[2:3], exec, s[2:3]
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s8
@@ -242,11 +247,14 @@ define amdgpu_kernel void @loop_land_info_assert(i32 %c0, i32 %c1, i32 %c2, i32 
 ; FLAT-NEXT:    s_load_dword s14, s[0:1], 0x30
 ; FLAT-NEXT:    s_brev_b32 s8, 44
 ; FLAT-NEXT:    s_waitcnt lgkmcnt(0)
-; FLAT-NEXT:    v_cmp_lt_i32_e64 s[0:1], s2, 1
-; FLAT-NEXT:    v_cmp_lt_i32_e64 s[4:5], s3, 4
-; FLAT-NEXT:    v_cmp_gt_i32_e64 s[2:3], s3, 3
-; FLAT-NEXT:    s_and_b64 s[2:3], s[0:1], s[2:3]
-; FLAT-NEXT:    s_and_b64 s[0:1], exec, s[4:5]
+; FLAT-NEXT:    s_cmp_lt_i32 s2, 1
+; FLAT-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; FLAT-NEXT:    s_cmp_lt_i32 s3, 4
+; FLAT-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; FLAT-NEXT:    s_cmp_gt_i32 s3, 3
+; FLAT-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; FLAT-NEXT:    s_and_b64 s[2:3], s[4:5], s[2:3]
+; FLAT-NEXT:    s_and_b64 s[0:1], exec, s[0:1]
 ; FLAT-NEXT:    s_and_b64 s[2:3], exec, s[2:3]
 ; FLAT-NEXT:    s_waitcnt vmcnt(0)
 ; FLAT-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s8

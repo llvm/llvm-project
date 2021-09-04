@@ -1065,8 +1065,7 @@ ReturnTypeRequirement(TemplateParameterList *TPL) :
   assert(TC &&
          "TPL must have a template type parameter with a type constraint");
   auto *Constraint =
-      cast_or_null<ConceptSpecializationExpr>(
-          TC->getImmediatelyDeclaredConstraint());
+      cast<ConceptSpecializationExpr>(TC->getImmediatelyDeclaredConstraint());
   bool Dependent =
       Constraint->getTemplateArgsAsWritten() &&
       TemplateSpecializationType::anyInstantiationDependentTemplateArguments(

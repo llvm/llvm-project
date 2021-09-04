@@ -70,6 +70,7 @@ static_library("LLVMX86CodeGen") {
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Transforms/CFGuard",
+    "//llvm/lib/Transforms/Instrumentation",
   ]
   if (x86_gen_fold_tables) {
     deps += [ ":X86GenFoldTables" ]

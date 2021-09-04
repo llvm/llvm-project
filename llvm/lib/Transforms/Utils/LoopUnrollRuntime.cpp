@@ -406,32 +406,31 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool CreateRemainderLoop,
         NewPHI->setIncomingValue(idx, V);
     }
   }
-  if (CreateRemainderLoop) {
-    Loop *NewLoop = NewLoops[L];  
-    assert(NewLoop && "L should have been cloned");
-    MDNode *LoopID = NewLoop->getLoopID();
+  if (!CreateRemainderLoop)
+    return nullptr;
 
-    // Only add loop metadata if the loop is not going to be completely
-    // unrolled.
-    if (UnrollRemainder)
-      return NewLoop;
+  Loop *NewLoop = NewLoops[L];
+  assert(NewLoop && "L should have been cloned");
+  MDNode *LoopID = NewLoop->getLoopID();
 
-    Optional<MDNode *> NewLoopID = makeFollowupLoopID(
-        LoopID, {LLVMLoopUnrollFollowupAll, LLVMLoopUnrollFollowupRemainder});
-    if (NewLoopID.hasValue()) {
-      NewLoop->setLoopID(NewLoopID.getValue());
+  // Only add loop metadata if the loop is not going to be completely
+  // unrolled.
+  if (UnrollRemainder)
+    return NewLoop;
 
-      // Do not setLoopAlreadyUnrolled if loop attributes have been defined
-      // explicitly.
-      return NewLoop;
-    }
+  Optional<MDNode *> NewLoopID = makeFollowupLoopID(
+      LoopID, {LLVMLoopUnrollFollowupAll, LLVMLoopUnrollFollowupRemainder});
+  if (NewLoopID.hasValue()) {
+    NewLoop->setLoopID(NewLoopID.getValue());
 
-    // Add unroll disable metadata to disable future unrolling for this loop.
-    NewLoop->setLoopAlreadyUnrolled();
+    // Do not setLoopAlreadyUnrolled if loop attributes have been defined
+    // explicitly.
     return NewLoop;
   }
-  else
-    return nullptr;
+
+  // Add unroll disable metadata to disable future unrolling for this loop.
+  NewLoop->setLoopAlreadyUnrolled();
+  return NewLoop;
 }
 
 /// Returns true if we can safely unroll a multi-exit/exiting loop. OtherExits
@@ -528,22 +527,22 @@ static void updateLatchBranchWeightsForRemainderLoop(Loop *OrigLoop,
   uint64_t TrueWeight, FalseWeight;
   BranchInst *LatchBR =
       cast<BranchInst>(OrigLoop->getLoopLatch()->getTerminator());
-  if (LatchBR->extractProfMetadata(TrueWeight, FalseWeight)) {
-    uint64_t ExitWeight = LatchBR->getSuccessor(0) == OrigLoop->getHeader()
-                              ? FalseWeight
-                              : TrueWeight;
-    assert(UnrollFactor > 1);
-    uint64_t BackEdgeWeight = (UnrollFactor - 1) * ExitWeight;
-    BasicBlock *Header = RemainderLoop->getHeader();
-    BasicBlock *Latch = RemainderLoop->getLoopLatch();
-    auto *RemainderLatchBR = cast<BranchInst>(Latch->getTerminator());
-    unsigned HeaderIdx = (RemainderLatchBR->getSuccessor(0) == Header ? 0 : 1);
-    MDBuilder MDB(RemainderLatchBR->getContext());
-    MDNode *WeightNode =
-        HeaderIdx ? MDB.createBranchWeights(ExitWeight, BackEdgeWeight)
-                  : MDB.createBranchWeights(BackEdgeWeight, ExitWeight);
-    RemainderLatchBR->setMetadata(LLVMContext::MD_prof, WeightNode);
-  }
+  if (!LatchBR->extractProfMetadata(TrueWeight, FalseWeight))
+    return;
+  uint64_t ExitWeight = LatchBR->getSuccessor(0) == OrigLoop->getHeader()
+                            ? FalseWeight
+                            : TrueWeight;
+  assert(UnrollFactor > 1);
+  uint64_t BackEdgeWeight = (UnrollFactor - 1) * ExitWeight;
+  BasicBlock *Header = RemainderLoop->getHeader();
+  BasicBlock *Latch = RemainderLoop->getLoopLatch();
+  auto *RemainderLatchBR = cast<BranchInst>(Latch->getTerminator());
+  unsigned HeaderIdx = (RemainderLatchBR->getSuccessor(0) == Header ? 0 : 1);
+  MDBuilder MDB(RemainderLatchBR->getContext());
+  MDNode *WeightNode =
+    HeaderIdx ? MDB.createBranchWeights(ExitWeight, BackEdgeWeight)
+                : MDB.createBranchWeights(BackEdgeWeight, ExitWeight);
+  RemainderLatchBR->setMetadata(LLVMContext::MD_prof, WeightNode);
 }
 
 /// Calculate ModVal = (BECount + 1) % Count on the abstract integer domain

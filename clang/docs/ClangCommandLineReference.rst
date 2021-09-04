@@ -887,7 +887,7 @@ Inline functions which are (explicitly or implicitly) marked inline
 
 .. option:: -flegacy-pass-manager, -fno-experimental-new-pass-manager, -fno-legacy-pass-manager
 
-Use the legacy pass manager in LLVM
+Use the legacy pass manager in LLVM (deprecated, to be removed in a future release)
 
 .. option:: -fno-crash-diagnostics
 
@@ -1717,7 +1717,7 @@ Enable support for int128\_t type
 
 .. option:: -ffp-contract=<arg>
 
-Form fused FP ops (e.g. FMAs): fast (fuses across statements disregarding pragmas) \| on (only fuses in the same statement unless dictated by pragmas) \| off (never fuses) \| fast-honor-pragmas (fuses across statements unless diectated by pragmas). Default is 'fast' for CUDA, 'fast-honor-pragmas' for HIP, and 'on' otherwise.
+Form fused FP ops (e.g. FMAs): fast (fuses across statements disregarding pragmas) \| on (only fuses in the same statement unless dictated by pragmas) \| off (never fuses) \| fast-honor-pragmas (fuses across statements unless dictated by pragmas). Default is 'fast' for CUDA, 'fast-honor-pragmas' for HIP, and 'on' otherwise.
 
 .. option:: -ffp-exception-behavior=<arg>
 
@@ -2561,7 +2561,7 @@ Give global types 'default' visibility and global functions and variables 'hidde
 
 .. option:: -fvisibility-nodllstorageclass=<arg>
 
-The visibility for defintiions without an explicit DLL export class \[-fvisibility-from-dllstorageclass\]
+The visibility for definitions without an explicit DLL export class \[-fvisibility-from-dllstorageclass\]
 
 .. option:: -fvisibility=<arg>
 

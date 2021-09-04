@@ -581,7 +581,7 @@ static ParseResult parseGlobalOp(OpAsmParser &parser, OperationState &result) {
                             result.attributes))
     return mlir::failure();
   result.addAttribute(mlir::SymbolTable::getSymbolAttrName(),
-                      builder.getStringAttr(nameAttr.getRootReference()));
+                      nameAttr.getRootReference());
 
   bool simpleInitializer = false;
   if (mlir::succeeded(parser.parseOptionalLParen())) {

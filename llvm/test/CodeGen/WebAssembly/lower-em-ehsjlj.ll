@@ -1,5 +1,5 @@
-; RUN: opt < %s -wasm-lower-em-ehsjlj -S | FileCheck %s
-; RUN: llc < %s -verify-machineinstrs
+; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-cxx-exceptions -enable-emscripten-sjlj -S | FileCheck %s
+; RUN: llc < %s -enable-emscripten-cxx-exceptions -enable-emscripten-sjlj -verify-machineinstrs
 
 ; Tests for cases when exception handling and setjmp/longjmp handling are mixed.
 
@@ -21,7 +21,7 @@ entry:
   invoke void @foo()
           to label %try.cont unwind label %lpad
 
-; CHECK:    entry.split:
+; CHECK:    entry.split.split:
 ; CHECK:      %[[CMP0:.*]] = icmp ne i32 %__THREW__.val, 0
 ; CHECK-NEXT: %__threwValue.val = load i32, i32* @__threwValue
 ; CHECK-NEXT: %[[CMP1:.*]] = icmp ne i32 %__threwValue.val, 0
@@ -29,7 +29,7 @@ entry:
 ; CHECK-NEXT: br i1 %[[CMP]], label %if.then1, label %if.else1
 
 ; This is exception checking part. %if.else1 leads here
-; CHECK:    entry.split.split:
+; CHECK:    entry.split.split.split:
 ; CHECK-NEXT: %[[CMP:.*]] = icmp eq i32 %__THREW__.val, 1
 ; CHECK-NEXT: br i1 %[[CMP]], label %lpad, label %try.cont
 
@@ -65,6 +65,10 @@ entry:
 ; CHECK-NEXT: %or = or i1 %cmp.eq.zero, %cmp.eq.one
 ; CHECK-NEXT: br i1 %or, label %tail, label %longjmp.rethrow
 
+; CHECK: try.cont:
+; CHECK-NEXT:  %phi = phi i32 [ undef, %tail ], [ undef, %lpad ]
+; CHECK-NEXT:  ret void
+
 ; CHECK:    tail:
 ; CHECK-NEXT: %cmp = icmp eq i32 %__THREW__.val, 1
 ; CHECK-NEXT: br i1 %cmp, label %lpad, label %try.cont
@@ -84,6 +88,7 @@ lpad:                                             ; preds = %entry
   br label %try.cont
 
 try.cont:                                         ; preds = %entry, %lpad
+ %phi = phi i32 [ undef, %entry ], [ undef, %lpad ]
   ret void
 }
 

@@ -704,7 +704,8 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
   // Get the function from the module. The name corresponds to the name of
   // the kernel function.
   auto kernelName = generateKernelNameConstant(
-      launchOp.getKernelModuleName(), launchOp.getKernelName(), loc, rewriter);
+      launchOp.getKernelModuleName().getValue(),
+      launchOp.getKernelName().getValue(), loc, rewriter);
   auto function = moduleGetFunctionCallBuilder.create(
       loc, rewriter, {module.getResult(0), kernelName});
   auto zero = rewriter.create<LLVM::ConstantOp>(loc, llvmInt32Type,

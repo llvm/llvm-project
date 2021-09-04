@@ -3878,7 +3878,8 @@ static Align CalculateStackSlotAlignment(EVT ArgVT, EVT OrigVT,
 /// stack slot (instead of being passed in registers).  ArgOffset,
 /// AvailableFPRs, and AvailableVRs must hold the current argument
 /// position, and will be updated to account for this argument.
-static bool CalculateStackSlotUsed(EVT ArgVT, EVT OrigVT, ISD::ArgFlagsTy Flags,
+static bool CalculateStackSlotUsed(const PPCSubtarget &Subtarget, EVT ArgVT,
+                                   EVT OrigVT, ISD::ArgFlagsTy Flags,
                                    unsigned PtrByteSize, unsigned LinkageSize,
                                    unsigned ParamAreaSize, unsigned &ArgOffset,
                                    unsigned &AvailableFPRs,
@@ -3919,7 +3920,13 @@ static bool CalculateStackSlotUsed(EVT ArgVT, EVT OrigVT, ISD::ArgFlagsTy Flags,
         --AvailableVRs;
         return false;
       }
-  }
+  } else if (Subtarget.isPPC64() && Subtarget.isELFv2ABI() &&
+             Flags.getByValSize() >= 8)
+    // For 64-bit ELF v2, passing by value object whose size is no less than 8
+    // bytes will be copied to parameter save area. This is for compatibility
+    // for other compiler which requires byval parameters to be stored in
+    // caller's parameter save area.
+    return true;
 
   return UseMemory;
 }
@@ -4262,7 +4269,7 @@ SDValue PPCTargetLowering::LowerFormalArguments_64SVR4(
     if (Ins[i].Flags.isNest())
       continue;
 
-    if (CalculateStackSlotUsed(Ins[i].VT, Ins[i].ArgVT, Ins[i].Flags,
+    if (CalculateStackSlotUsed(Subtarget, Ins[i].VT, Ins[i].ArgVT, Ins[i].Flags,
                                PtrByteSize, LinkageSize, ParamAreaSize,
                                NumBytes, AvailableFPRs, AvailableVRs))
       HasParameterArea = true;
@@ -4723,9 +4730,9 @@ needStackSlotPassParameters(const PPCSubtarget &Subtarget,
   for (const ISD::OutputArg& Param : Outs) {
     if (Param.Flags.isNest()) continue;
 
-    if (CalculateStackSlotUsed(Param.VT, Param.ArgVT, Param.Flags, PtrByteSize,
-                               LinkageSize, ParamAreaSize, NumBytes,
-                               AvailableFPRs, AvailableVRs))
+    if (CalculateStackSlotUsed(Subtarget, Param.VT, Param.ArgVT, Param.Flags,
+                               PtrByteSize, LinkageSize, ParamAreaSize,
+                               NumBytes, AvailableFPRs, AvailableVRs))
       return true;
   }
   return false;
@@ -5961,9 +5968,10 @@ SDValue PPCTargetLowering::LowerCall_64SVR4(
     unsigned NumBytesTmp = NumBytes;
     for (unsigned i = 0; i != NumOps; ++i) {
       if (Outs[i].Flags.isNest()) continue;
-      if (CalculateStackSlotUsed(Outs[i].VT, Outs[i].ArgVT, Outs[i].Flags,
-                                 PtrByteSize, LinkageSize, ParamAreaSize,
-                                 NumBytesTmp, AvailableFPRs, AvailableVRs))
+      if (CalculateStackSlotUsed(Subtarget, Outs[i].VT, Outs[i].ArgVT,
+                                 Outs[i].Flags, PtrByteSize, LinkageSize,
+                                 ParamAreaSize, NumBytesTmp, AvailableFPRs,
+                                 AvailableVRs))
         HasParameterArea = true;
     }
   }

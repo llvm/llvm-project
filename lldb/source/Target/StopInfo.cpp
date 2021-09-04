@@ -1154,6 +1154,103 @@ protected:
   bool m_performed_action;
 };
 
+// StopInfoFork
+
+class StopInfoFork : public StopInfo {
+public:
+  StopInfoFork(Thread &thread, lldb::pid_t child_pid, lldb::tid_t child_tid)
+      : StopInfo(thread, child_pid), m_performed_action(false),
+        m_child_pid(child_pid), m_child_tid(child_tid) {}
+
+  ~StopInfoFork() override = default;
+
+  bool ShouldStop(Event *event_ptr) override { return false; }
+
+  StopReason GetStopReason() const override { return eStopReasonFork; }
+
+  const char *GetDescription() override { return "fork"; }
+
+protected:
+  void PerformAction(Event *event_ptr) override {
+    // Only perform the action once
+    if (m_performed_action)
+      return;
+    m_performed_action = true;
+    ThreadSP thread_sp(m_thread_wp.lock());
+    if (thread_sp)
+      thread_sp->GetProcess()->DidFork(m_child_pid, m_child_tid);
+  }
+
+  bool m_performed_action;
+
+private:
+  lldb::pid_t m_child_pid;
+  lldb::tid_t m_child_tid;
+};
+
+// StopInfoVFork
+
+class StopInfoVFork : public StopInfo {
+public:
+  StopInfoVFork(Thread &thread, lldb::pid_t child_pid, lldb::tid_t child_tid)
+      : StopInfo(thread, child_pid), m_performed_action(false),
+        m_child_pid(child_pid), m_child_tid(child_tid) {}
+
+  ~StopInfoVFork() override = default;
+
+  bool ShouldStop(Event *event_ptr) override { return false; }
+
+  StopReason GetStopReason() const override { return eStopReasonVFork; }
+
+  const char *GetDescription() override { return "vfork"; }
+
+protected:
+  void PerformAction(Event *event_ptr) override {
+    // Only perform the action once
+    if (m_performed_action)
+      return;
+    m_performed_action = true;
+    ThreadSP thread_sp(m_thread_wp.lock());
+    if (thread_sp)
+      thread_sp->GetProcess()->DidVFork(m_child_pid, m_child_tid);
+  }
+
+  bool m_performed_action;
+
+private:
+  lldb::pid_t m_child_pid;
+  lldb::tid_t m_child_tid;
+};
+
+// StopInfoVForkDone
+
+class StopInfoVForkDone : public StopInfo {
+public:
+  StopInfoVForkDone(Thread &thread)
+      : StopInfo(thread, 0), m_performed_action(false) {}
+
+  ~StopInfoVForkDone() override = default;
+
+  bool ShouldStop(Event *event_ptr) override { return false; }
+
+  StopReason GetStopReason() const override { return eStopReasonVForkDone; }
+
+  const char *GetDescription() override { return "vforkdone"; }
+
+protected:
+  void PerformAction(Event *event_ptr) override {
+    // Only perform the action once
+    if (m_performed_action)
+      return;
+    m_performed_action = true;
+    ThreadSP thread_sp(m_thread_wp.lock());
+    if (thread_sp)
+      thread_sp->GetProcess()->DidVForkDone();
+  }
+
+  bool m_performed_action;
+};
+
 } // namespace lldb_private
 
 StopInfoSP StopInfo::CreateStopReasonWithBreakpointSiteID(Thread &thread,
@@ -1201,6 +1298,23 @@ StopInfoSP StopInfo::CreateStopReasonProcessorTrace(Thread &thread,
 
 StopInfoSP StopInfo::CreateStopReasonWithExec(Thread &thread) {
   return StopInfoSP(new StopInfoExec(thread));
+}
+
+StopInfoSP StopInfo::CreateStopReasonFork(Thread &thread,
+                                          lldb::pid_t child_pid,
+                                          lldb::tid_t child_tid) {
+  return StopInfoSP(new StopInfoFork(thread, child_pid, child_tid));
+}
+
+
+StopInfoSP StopInfo::CreateStopReasonVFork(Thread &thread,
+                                           lldb::pid_t child_pid,
+                                           lldb::tid_t child_tid) {
+  return StopInfoSP(new StopInfoVFork(thread, child_pid, child_tid));
+}
+
+StopInfoSP StopInfo::CreateStopReasonVForkDone(Thread &thread) {
+  return StopInfoSP(new StopInfoVForkDone(thread));
 }
 
 ValueObjectSP StopInfo::GetReturnValueObject(StopInfoSP &stop_info_sp) {

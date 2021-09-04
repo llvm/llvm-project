@@ -107,8 +107,8 @@ protected:
   }
 
 public:
-  llvm::SpecificBumpPtrAllocator<FormatToken>& Allocator;
-  std::vector<std::unique_ptr<llvm::MemoryBuffer>>& Buffers;
+  llvm::SpecificBumpPtrAllocator<FormatToken> &Allocator;
+  std::vector<std::unique_ptr<llvm::MemoryBuffer>> &Buffers;
   FormatStyle Style;
   encoding::Encoding Encoding = encoding::Encoding_UTF8;
   clang::SourceManagerForFile SourceMgr;

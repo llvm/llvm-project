@@ -97,6 +97,31 @@ struct XCOFFSectionHeader64 : XCOFFSectionHeader<XCOFFSectionHeader64> {
   char Padding[4];
 };
 
+struct LoaderSectionHeader32 {
+  support::ubig32_t Version;
+  support::ubig32_t NumberOfSymTabEnt;
+  support::ubig32_t NumberOfRelTabEnt;
+  support::ubig32_t LengthOfImpidStrTbl;
+  support::ubig32_t NumberOfImpid;
+  support::big32_t OffsetToImpid;
+  support::ubig32_t LengthOfStrTbl;
+  support::big32_t OffsetToStrTbl;
+};
+
+struct LoaderSectionHeader64 {
+  support::ubig32_t Version;
+  support::ubig32_t NumberOfSymTabEnt;
+  support::ubig32_t NumberOfRelTabEnt;
+  support::ubig32_t LengthOfImpidStrTbl;
+  support::ubig32_t NumberOfImpid;
+  support::ubig32_t LengthOfStrTbl;
+  support::big64_t OffsetToImpid;
+  support::big64_t OffsetToStrTbl;
+  support::big64_t OffsetToSymTbl;
+  char Padding[16];
+  support::big32_t OffsetToRelEnt;
+};
+
 struct XCOFFStringTable {
   uint32_t Size;
   const char *Data;
@@ -290,6 +315,7 @@ private:
   const XCOFFSectionHeader64 *toSection64(DataRefImpl Ref) const;
   uintptr_t getSectionHeaderTableAddress() const;
   uintptr_t getEndOfSymbolTableAddress() const;
+  Expected<uintptr_t> getLoaderSectionAddress() const;
 
   // This returns a pointer to the start of the storage for the name field of
   // the 32-bit or 64-bit SectionHeader struct. This string is *not* necessarily
@@ -428,6 +454,9 @@ public:
 
   template <typename Shdr, typename Reloc>
   Expected<ArrayRef<Reloc>> relocations(const Shdr &Sec) const;
+
+  // Loader section related interfaces.
+  Expected<StringRef> getImportFileTable() const;
 
   // This function returns string table entry.
   Expected<StringRef> getStringTableEntry(uint32_t Offset) const;

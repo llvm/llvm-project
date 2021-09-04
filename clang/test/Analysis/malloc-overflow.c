@@ -111,3 +111,40 @@ void * f14(int n)
     return NULL;
   return malloc(n * sizeof(int));  // expected-warning {{the computation of the size of the memory allocation may overflow}}
 }
+
+void *check_before_malloc(int n, int x) {
+  int *p = NULL;
+  if (n > 10)
+    return NULL;
+  if (x == 42)
+    p = malloc(n * sizeof(int)); // no-warning, the check precedes the allocation
+
+  // Do some other stuff, e.g. initialize the memory.
+  return p;
+}
+
+void *check_after_malloc(int n, int x) {
+  int *p = NULL;
+  if (x == 42)
+    p = malloc(n * sizeof(int)); // expected-warning {{the computation of the size of the memory allocation may overflow}}
+
+  // The check is after the allocation!
+  if (n > 10) {
+    // Do something conditionally.
+  }
+  return p;
+}
+
+#define GREATER_THAN(lhs, rhs) (lhs > rhs)
+void *check_after_malloc_using_macros(int n, int x) {
+  int *p = NULL;
+  if (x == 42)
+    p = malloc(n * sizeof(int)); // expected-warning {{the computation of the size of the memory allocation may overflow}}
+
+  if (GREATER_THAN(n, 10))
+    return NULL;
+
+  // Do some other stuff, e.g. initialize the memory.
+  return p;
+}
+#undef GREATER_THAN

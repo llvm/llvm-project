@@ -118,9 +118,18 @@ public:
   // closest matching context.
   uint32_t getFuncSizeForContext(const SampleContext &Context);
 
+  // For inlinees that are full optimized away, we can establish zero size using
+  // their remaining probes.
+  void trackInlineesOptimizedAway(MCPseudoProbeDecoder &ProbeDecoder);
+
   void dump() { RootContext.dumpTree(); }
 
 private:
+  using ProbeFrameStack = SmallVector<std::pair<StringRef, uint32_t>>;
+  void trackInlineesOptimizedAway(MCPseudoProbeDecoder &ProbeDecoder,
+                              MCDecodedPseudoProbeInlineTree &ProbeNode,
+                              ProbeFrameStack &Context);
+
   // Root node for context trie tree, node that this is a reverse context trie
   // with callee as parent and caller as child. This way we can traverse from
   // root to find the best/longest matching context if an exact match does not

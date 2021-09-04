@@ -212,6 +212,10 @@ def conv_2d_nhwc_hwcf(
     dilations=AttributeDef(S.DH, S.DW)):
   """Performs 2-D convolution.
 
+  Layout:
+    * Input: NHWC.
+    * Kernel: HWCF.
+
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output.
   """
@@ -231,6 +235,10 @@ def conv_2d_nhwc_hwcf_q(
     dilations=AttributeDef(S.DH, S.DW)):
   """Performs 2-D convolution with zero point offsets.
 
+  Layout:
+    * Input: NHWC.
+    * Kernel: HWCF.
+
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output. This includes the zero
   point offsets common to quantized operations.
@@ -239,6 +247,27 @@ def conv_2d_nhwc_hwcf_q(
   O[D.n, D.oh, D.ow, D.f] += (cast(
       U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c
            ]) - cast(U, IZp)) * (cast(U, K[D.kh, D.kw, D.c, D.f]) - cast(U, KZp))
+
+@linalg_structured_op
+def conv_2d_nchw_fchw(
+    I=TensorDef(T1, S.N, S.C, S.IH, S.IW),
+    K=TensorDef(T2, S.F, S.C, S.KH, S.KW),
+    O=TensorDef(U, S.N, S.F, S.OH, S.OW, output=True),
+    strides=AttributeDef(S.SH, S.SW),
+    dilations=AttributeDef(S.DH, S.DW)):
+  """Performs 2-D convolution.
+
+  Layout:
+    * Input: NCHW.
+    * Kernel: FCHW.
+
+  Numeric casting is performed on the operands to the inner multiply, promoting
+  them to the same data type as the accumulator/output.
+  """
+  domain(D.n, D.f, D.oh, D.ow, D.c, D.kh, D.kw)
+  O[D.n, D.f, D.oh, D.ow] += cast(
+      U, I[D.n, D.c, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW
+           ]) * cast(U, K[D.f, D.c, D.kh, D.kw])
 
 @linalg_structured_op
 def conv_3d_ndhwc_dhwcf(

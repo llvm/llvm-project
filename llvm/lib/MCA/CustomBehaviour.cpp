@@ -24,5 +24,23 @@ unsigned CustomBehaviour::checkCustomHazard(ArrayRef<InstRef> IssuedInst,
   return 0;
 }
 
+std::vector<std::unique_ptr<View>>
+CustomBehaviour::getStartViews(llvm::MCInstPrinter &IP,
+                               llvm::ArrayRef<llvm::MCInst> Insts) {
+  return std::vector<std::unique_ptr<View>>();
+}
+
+std::vector<std::unique_ptr<View>>
+CustomBehaviour::getPostInstrInfoViews(llvm::MCInstPrinter &IP,
+                                       llvm::ArrayRef<llvm::MCInst> Insts) {
+  return std::vector<std::unique_ptr<View>>();
+}
+
+std::vector<std::unique_ptr<View>>
+CustomBehaviour::getEndViews(llvm::MCInstPrinter &IP,
+                             llvm::ArrayRef<llvm::MCInst> Insts) {
+  return std::vector<std::unique_ptr<View>>();
+}
+
 } // namespace mca
 } // namespace llvm

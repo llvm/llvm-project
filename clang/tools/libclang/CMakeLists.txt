@@ -1,3 +1,9 @@
+# The SOVERSION should be updated only if a change is made to the libclang
+# ABI, and when it is updated, it should be updated to the current
+# LLVM_VERSION_MAJOR.
+# Please also see clang/tools/libclang/libclang.map
+set(CLANG_SONAME 13)
+
 set(SOURCES
   ARCMigrate.cpp
   BuildSystem.cpp
@@ -171,12 +177,9 @@ if(ENABLE_SHARED)
     set_property(SOURCE ARCMigrate.cpp APPEND PROPERTY
                  OBJECT_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libclang.map)
 
-    # The SOVERSION should be updated only if a change is made to the libclang
-    # ABI, and when it is updated, it should be updated to the current
-    # LLVM_VERSION_MAJOR.
     set_target_properties(libclang PROPERTIES
                           VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX}
-                          SOVERSION 13)
+                          SOVERSION ${CLANG_SONAME})
   endif()
 endif()
 

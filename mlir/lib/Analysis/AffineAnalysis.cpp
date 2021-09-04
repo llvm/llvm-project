@@ -614,9 +614,7 @@ addMemRefAccessConstraints(const AffineValueMap &srcAccessMap,
   unsigned srcNumLocalIds = srcLocalVarCst.getNumLocalIds();
   unsigned dstNumLocalIds = destLocalVarCst.getNumLocalIds();
   unsigned numLocalIdsToAdd = srcNumLocalIds + dstNumLocalIds;
-  for (unsigned i = 0; i < numLocalIdsToAdd; i++) {
-    dependenceDomain->addLocalId(dependenceDomain->getNumLocalIds());
-  }
+  dependenceDomain->appendLocalId(numLocalIdsToAdd);
 
   unsigned numDims = dependenceDomain->getNumDimIds();
   unsigned numSymbols = dependenceDomain->getNumSymbolIds();
@@ -859,9 +857,7 @@ static void computeDirectionVector(
   unsigned numIdsToEliminate = dependenceDomain->getNumIds();
   // Add new variables to 'dependenceDomain' to represent the direction
   // constraints for each shared loop.
-  for (unsigned j = 0; j < numCommonLoops; ++j) {
-    dependenceDomain->addDimId(j);
-  }
+  dependenceDomain->insertDimId(/*pos=*/0, /*num=*/numCommonLoops);
 
   // Add equality constraints for each common loop, setting newly introduced
   // variable at column 'j' to the 'dst' IV minus the 'src IV.

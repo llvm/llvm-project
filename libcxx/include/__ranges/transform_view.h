@@ -10,6 +10,7 @@
 #define _LIBCPP___RANGES_TRANSFORM_VIEW_H
 
 #include <__config>
+#include <__functional/bind_back.h>
 #include <__functional/invoke.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iter_swap.h>
@@ -20,8 +21,10 @@
 #include <__ranges/concepts.h>
 #include <__ranges/copyable_box.h>
 #include <__ranges/empty.h>
+#include <__ranges/range_adaptor.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
+#include <__utility/forward.h>
 #include <__utility/in_place.h>
 #include <__utility/move.h>
 #include <concepts>
@@ -30,9 +33,6 @@
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
-
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -401,12 +401,34 @@ public:
   }
 };
 
+namespace views {
+namespace __transform {
+  struct __fn {
+    template<class _Range, class _Fn>
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
+    constexpr auto operator()(_Range&& __range, _Fn&& __f) const
+      noexcept(noexcept(transform_view(_VSTD::forward<_Range>(__range), _VSTD::forward<_Fn>(__f))))
+      -> decltype(      transform_view(_VSTD::forward<_Range>(__range), _VSTD::forward<_Fn>(__f)))
+      { return          transform_view(_VSTD::forward<_Range>(__range), _VSTD::forward<_Fn>(__f)); }
+
+    template<class _Fn>
+      requires constructible_from<decay_t<_Fn>, _Fn>
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
+    constexpr auto operator()(_Fn&& __f) const
+      noexcept(is_nothrow_constructible_v<decay_t<_Fn>, _Fn>)
+    { return __range_adaptor_closure_t(_VSTD::__bind_back(*this, _VSTD::forward<_Fn>(__f))); }
+  };
+}
+
+inline namespace __cpo {
+  inline constexpr auto transform = __transform::__fn{};
+}
+} // namespace views
+
 } // namespace ranges
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
 
 _LIBCPP_END_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___RANGES_TRANSFORM_VIEW_H

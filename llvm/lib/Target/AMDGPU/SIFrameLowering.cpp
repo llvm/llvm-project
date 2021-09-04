@@ -1260,8 +1260,11 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
                      FuncInfo->FramePointerSaveIndex)) &&
          "Needed to save FP but didn't save it anywhere");
 
+  // If we allow spilling to AGPRs we may have saved FP but then spill
+  // everything into AGPRs instead of the stack.
   assert((HasFP || (!FuncInfo->SGPRForFPSaveRestoreCopy &&
-                    !FuncInfo->FramePointerSaveIndex)) &&
+                    !FuncInfo->FramePointerSaveIndex) ||
+                   EnableSpillVGPRToAGPR) &&
          "Saved FP but didn't need it");
 
   assert((!HasBP || (FuncInfo->SGPRForBPSaveRestoreCopy ||

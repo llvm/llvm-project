@@ -39,7 +39,9 @@ end module m1
 ! integer(8),parameter::a1ss(1_8:*)=[INTEGER(8)::3_8]
 ! integer(8),parameter::a1sss(1_8:*)=[INTEGER(8)::1_8]
 ! integer(8),parameter::a1rs(1_8:*)=[INTEGER(8)::3_8,1_8,1_8,1_8]
+! intrinsic::rank
 ! integer(8),parameter::a1n(1_8:*)=[INTEGER(8)::125_8,5_8,5_8]
+! intrinsic::size
 ! integer(8),parameter::a1sn(1_8:*)=[INTEGER(8)::3_8,1_8,1_8]
 ! integer(8),parameter::ac1s(1_8:*)=[INTEGER(8)::1_8]
 ! integer(8),parameter::ac2s(1_8:*)=[INTEGER(8)::3_8]

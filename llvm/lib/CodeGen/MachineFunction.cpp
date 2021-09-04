@@ -1174,7 +1174,7 @@ void MachineFunction::finalizeDebugInstrRefs() {
     MI.getOperand(0).setIsDebug();
   };
 
-  if (!getTarget().Options.ValueTrackingVariableLocations)
+  if (!useDebugInstrRef())
     return;
 
   for (auto &MBB : *this) {
@@ -1219,6 +1219,24 @@ void MachineFunction::finalizeDebugInstrRefs() {
       }
     }
   }
+}
+
+bool MachineFunction::useDebugInstrRef() const {
+  // Disable instr-ref at -O0: it's very slow (in compile time). We can still
+  // have optimized code inlined into this unoptimized code, however with
+  // fewer and less aggressive optimizations happening, coverage and accuracy
+  // should not suffer.
+  if (getTarget().getOptLevel() == CodeGenOpt::None)
+    return false;
+
+  // Don't use instr-ref if this function is marked optnone.
+  if (F.hasFnAttribute(Attribute::OptimizeNone))
+    return false;
+
+  if (getTarget().Options.ValueTrackingVariableLocations)
+    return true;
+
+  return false;
 }
 
 /// \}

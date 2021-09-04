@@ -270,6 +270,19 @@ multiclass MultiPat<SDPatternOperator InFrag,
   def _rrlimm : Pat<(InFrag i32:$B, imm32:$LImm), (RRLImm i32:$B, imm32:$LImm)>;
 }
 
+// NOTE: This could be specialized later with a custom `PrintMethod` for
+//       displaying the aux register name. E.g. `[%count0]` instead of [33].
+def AuxReg : Operand<i32>;
+
+def LR_rs12 : F32_SOP_RS12<0b00100, 0b101010, 0,
+                           (outs GPR32:$B), (ins AuxReg:$C),
+                           "lr\t$B, [$C]", []>;
+def LR_ru6 : F32_SOP_RU6<0b00100, 0b101010, 0,
+                         (outs GPR32:$B), (ins AuxReg:$C),
+                         "lr\t$B, [$C]", []>;
+
+def: Pat<(i32 readcyclecounter), (LR_rs12 0x21) >;  // read timer
+
 // ---------------------------------------------------------------------------
 // Instruction definitions and patterns for 3 operand binary instructions.
 // ---------------------------------------------------------------------------
@@ -294,6 +307,10 @@ defm MPY  : ArcBinaryGEN4Inst<0b011010, "mpy",1>;
 defm MPYM : ArcBinaryGEN4Inst<0b011011, "mpym",1>;
 defm MPYMU : ArcBinaryGEN4Inst<0b011100, "mpymu",1>;
 defm SETEQ : ArcBinaryGEN4Inst<0b111000, "seteq",1>;
+let Uses=[STATUS32], isAsCheapAsAMove=0, isReMaterializable=0 in {
+  defm ADC : ArcBinaryGEN4Inst<0b000001, "adc",1>;
+  defm SBC : ArcBinaryGEN4Inst<0b000011, "sbc">;
+}
 
 // Patterns for 3 operand binary instructions.
 defm : MultiPat<add, ADD_rrr, ADD_rru6, ADD_rrlimm>;

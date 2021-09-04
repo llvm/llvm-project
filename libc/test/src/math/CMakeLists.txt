@@ -1169,6 +1169,18 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fputil
 )
 
+add_fp_unittest(
+  mod_k_pi_test
+  NEED_MPFR
+  SUITE
+    libc-long-running-tests
+  SRCS
+    mod_k_pi_test.cpp
+  DEPENDS
+    libc.src.math.generic.dp_trig
+    libc.src.__support.FPUtil.fputil
+)
+
 add_subdirectory(generic)
 add_subdirectory(exhaustive)
 add_subdirectory(differential_testing)

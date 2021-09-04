@@ -69,7 +69,7 @@ OPTIONS
 
 .. option:: -l
 
- Print load commnads.
+ Print load commands.
 
 .. option:: -mcpu=<value>
 

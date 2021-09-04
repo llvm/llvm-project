@@ -6,10 +6,17 @@ declare <32 x half> @llvm.experimental.constrained.fadd.v32f16(<32 x half>, <32 
 declare <32 x half> @llvm.experimental.constrained.fsub.v32f16(<32 x half>, <32 x half>, metadata, metadata)
 declare <32 x half> @llvm.experimental.constrained.fmul.v32f16(<32 x half>, <32 x half>, metadata, metadata)
 declare <32 x half> @llvm.experimental.constrained.fdiv.v32f16(<32 x half>, <32 x half>, metadata, metadata)
+declare <32 x half> @llvm.experimental.constrained.sqrt.v32f16(<32 x half>, metadata, metadata)
 declare <8 x double> @llvm.experimental.constrained.fpext.v8f64.v8f16(<8 x half>, metadata)
 declare <16 x float> @llvm.experimental.constrained.fpext.v16f32.v16f16(<16 x half>, metadata)
 declare <8 x half> @llvm.experimental.constrained.fptrunc.v8f16.v8f64(<8 x double>, metadata, metadata)
 declare <16 x half> @llvm.experimental.constrained.fptrunc.v16f16.v16f32(<16 x float>, metadata, metadata)
+declare <32 x half> @llvm.experimental.constrained.fma.v32f16(<32 x half>, <32 x half>, <32 x half>, metadata, metadata)
+declare <32 x half> @llvm.experimental.constrained.ceil.v32f16(<32 x half>, metadata)
+declare <32 x half> @llvm.experimental.constrained.floor.v32f16(<32 x half>, metadata)
+declare <32 x half> @llvm.experimental.constrained.trunc.v32f16(<32 x half>, metadata)
+declare <32 x half> @llvm.experimental.constrained.rint.v32f16(<32 x half>, metadata, metadata)
+declare <32 x half> @llvm.experimental.constrained.nearbyint.v32f16(<32 x half>, metadata, metadata)
 
 define <32 x half> @f2(<32 x half> %a, <32 x half> %b) #0 {
 ; CHECK-LABEL: f2:
@@ -55,6 +62,18 @@ define <32 x half> @f8(<32 x half> %a, <32 x half> %b) #0 {
   ret <32 x half> %ret
 }
 
+define <32 x half> @f10(<32 x half> %a) #0 {
+; CHECK-LABEL: f10:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsqrtph %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %ret = call <32 x half> @llvm.experimental.constrained.sqrt.v32f16(
+                              <32 x half> %a,
+                              metadata !"round.dynamic",
+                              metadata !"fpexcept.strict") #0
+  ret <32 x half > %ret
+}
+
 define <8 x double> @f11(<8 x half> %a) #0 {
 ; CHECK-LABEL: f11:
 ; CHECK:       # %bb.0:
@@ -79,6 +98,17 @@ define <8 x half> @f12(<8 x double> %a) #0 {
   ret <8 x half> %ret
 }
 
+define <32 x half> @f13(<32 x half> %a, <32 x half> %b, <32 x half> %c) #0 {
+; CHECK-LABEL: f13:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vfmadd213ph %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <32 x half> @llvm.experimental.constrained.fma.v32f16(<32 x half> %a, <32 x half> %b, <32 x half> %c,
+                                                                    metadata !"round.dynamic",
+                                                                    metadata !"fpexcept.strict") #0
+  ret <32 x half> %res
+}
+
 define <16 x float> @f14(<16 x half> %a) #0 {
 ; CHECK-LABEL: f14:
 ; CHECK:       # %bb.0:
@@ -100,6 +130,53 @@ define <16 x half> @f15(<16 x float> %a) #0 {
                                 metadata !"round.dynamic",
                                 metadata !"fpexcept.strict") #0
   ret <16 x half> %ret
+}
+
+define <32 x half> @strict_vector_fceil_v32f16(<32 x half> %f) #0 {
+; CHECK-LABEL: strict_vector_fceil_v32f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrndscaleph $10, %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <32 x half> @llvm.experimental.constrained.ceil.v32f16(<32 x half> %f, metadata !"fpexcept.strict") #0
+  ret <32 x half> %res
+}
+
+define <32 x half> @strict_vector_ffloor_v32f16(<32 x half> %f) #0 {
+; CHECK-LABEL: strict_vector_ffloor_v32f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrndscaleph $9, %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <32 x half> @llvm.experimental.constrained.floor.v32f16(<32 x half> %f, metadata !"fpexcept.strict") #0
+  ret <32 x half> %res
+}
+
+define <32 x half> @strict_vector_ftrunc_v32f16(<32 x half> %f) #0 {
+; CHECK-LABEL: strict_vector_ftrunc_v32f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrndscaleph $11, %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <32 x half> @llvm.experimental.constrained.trunc.v32f16(<32 x half> %f, metadata !"fpexcept.strict") #0
+  ret <32 x half> %res
+}
+
+define <32 x half> @strict_vector_frint_v32f16(<32 x half> %f) #0 {
+; CHECK-LABEL: strict_vector_frint_v32f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrndscaleph $4, %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <32 x half> @llvm.experimental.constrained.rint.v32f16(<32 x half> %f,
+                             metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret <32 x half> %res
+}
+
+define <32 x half> @strict_vector_fnearbyint_v32f16(<32 x half> %f) #0 {
+; CHECK-LABEL: strict_vector_fnearbyint_v32f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrndscaleph $12, %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <32 x half> @llvm.experimental.constrained.nearbyint.v32f16(<32 x half> %f,
+                             metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret <32 x half> %res
 }
 
 attributes #0 = { strictfp }

@@ -37,8 +37,8 @@ M68kTargetInfo::M68kTargetInfo(const llvm::Triple &Triple,
   // FIXME how to wire it with the used object format?
   Layout += "-m:e";
 
-  // M68k pointers are always 32 bit wide even for 16 bit cpus
-  Layout += "-p:32:32";
+  // M68k pointers are always 32 bit wide even for 16-bit CPUs
+  Layout += "-p:32:16:32";
 
   // M68k integer data types
   Layout += "-i8:8:8-i16:16:16-i32:16:32";

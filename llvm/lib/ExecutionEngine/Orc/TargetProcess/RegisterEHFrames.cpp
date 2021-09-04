@@ -85,7 +85,7 @@ static Error deregisterFrameWrapper(const void *P) {
 }
 #endif
 
-#ifdef HAVE_UNW_ADD_DYNAMIC_FDE
+#if defined(HAVE_UNW_ADD_DYNAMIC_FDE) || defined(__APPLE__)
 
 template <typename HandleFDEFn>
 Error walkLibunwindEHFrameSection(const char *const SectionStart,
@@ -123,13 +123,13 @@ Error walkLibunwindEHFrameSection(const char *const SectionStart,
   return Error::success();
 }
 
-#endif // HAVE_UNW_ADD_DYNAMIC_FDE
+#endif // HAVE_UNW_ADD_DYNAMIC_FDE || __APPLE__
 
 Error registerEHFrameSection(const void *EHFrameSectionAddr,
                              size_t EHFrameSectionSize) {
   /* libgcc and libunwind __register_frame behave differently. We use the
    * presence of __unw_add_dynamic_fde to detect libunwind. */
-#ifdef HAVE_UNW_ADD_DYNAMIC_FDE
+#if defined(HAVE_UNW_ADD_DYNAMIC_FDE) || defined(__APPLE__)
   // With libunwind, __register_frame has to be called for each FDE entry.
   return walkLibunwindEHFrameSection(
       static_cast<const char *>(EHFrameSectionAddr), EHFrameSectionSize,
@@ -146,7 +146,7 @@ Error registerEHFrameSection(const void *EHFrameSectionAddr,
 
 Error deregisterEHFrameSection(const void *EHFrameSectionAddr,
                                size_t EHFrameSectionSize) {
-#ifdef HAVE_UNW_ADD_DYNAMIC_FDE
+#if defined(HAVE_UNW_ADD_DYNAMIC_FDE) || defined(__APPLE__)
   return walkLibunwindEHFrameSection(
       static_cast<const char *>(EHFrameSectionAddr), EHFrameSectionSize,
       deregisterFrameWrapper);

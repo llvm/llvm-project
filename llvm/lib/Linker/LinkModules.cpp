@@ -24,6 +24,8 @@ using namespace llvm;
 
 namespace {
 
+enum class LinkFrom { Dst, Src };
+
 /// This is an implementation class for the LinkModules function, which is the
 /// entrypoint for this file.
 class ModuleLinker {
@@ -67,11 +69,11 @@ class ModuleLinker {
                                      Comdat::SelectionKind Src,
                                      Comdat::SelectionKind Dst,
                                      Comdat::SelectionKind &Result,
-                                     bool &LinkFromSrc);
-  std::map<const Comdat *, std::pair<Comdat::SelectionKind, bool>>
+                                     LinkFrom &From);
+  DenseMap<const Comdat *, std::pair<Comdat::SelectionKind, LinkFrom>>
       ComdatsChosen;
   bool getComdatResult(const Comdat *SrcC, Comdat::SelectionKind &SK,
-                       bool &LinkFromSrc);
+                       LinkFrom &From);
   // Keep track of the lazy linked global members of each comdat in source.
   DenseMap<const Comdat *, std::vector<GlobalValue *>> LazyComdatMembers;
 
@@ -114,7 +116,7 @@ public:
 
   bool run();
 };
-}
+} // namespace
 
 static GlobalValue::VisibilityTypes
 getMinVisibility(GlobalValue::VisibilityTypes A,
@@ -151,7 +153,7 @@ bool ModuleLinker::computeResultingSelectionKind(StringRef ComdatName,
                                                  Comdat::SelectionKind Src,
                                                  Comdat::SelectionKind Dst,
                                                  Comdat::SelectionKind &Result,
-                                                 bool &LinkFromSrc) {
+                                                 LinkFrom &From) {
   Module &DstM = Mover.getModule();
   // The ability to mix Comdat::SelectionKind::Any with
   // Comdat::SelectionKind::Largest is a behavior that comes from COFF.
@@ -175,7 +177,7 @@ bool ModuleLinker::computeResultingSelectionKind(StringRef ComdatName,
   switch (Result) {
   case Comdat::SelectionKind::Any:
     // Go with Dst.
-    LinkFromSrc = false;
+    From = LinkFrom::Dst;
     break;
   case Comdat::SelectionKind::NoDeduplicate:
     return emitError("Linking COMDATs named '" + ComdatName +
@@ -197,14 +199,14 @@ bool ModuleLinker::computeResultingSelectionKind(StringRef ComdatName,
       if (SrcGV->getInitializer() != DstGV->getInitializer())
         return emitError("Linking COMDATs named '" + ComdatName +
                          "': ExactMatch violated!");
-      LinkFromSrc = false;
+      From = LinkFrom::Dst;
     } else if (Result == Comdat::SelectionKind::Largest) {
-      LinkFromSrc = SrcSize > DstSize;
+      From = SrcSize > DstSize ? LinkFrom::Src : LinkFrom::Dst;
     } else if (Result == Comdat::SelectionKind::SameSize) {
       if (SrcSize != DstSize)
         return emitError("Linking COMDATs named '" + ComdatName +
                          "': SameSize violated!");
-      LinkFromSrc = false;
+      From = LinkFrom::Dst;
     } else {
       llvm_unreachable("unknown selection kind");
     }
@@ -217,7 +219,7 @@ bool ModuleLinker::computeResultingSelectionKind(StringRef ComdatName,
 
 bool ModuleLinker::getComdatResult(const Comdat *SrcC,
                                    Comdat::SelectionKind &Result,
-                                   bool &LinkFromSrc) {
+                                   LinkFrom &From) {
   Module &DstM = Mover.getModule();
   Comdat::SelectionKind SSK = SrcC->getSelectionKind();
   StringRef ComdatName = SrcC->getName();
@@ -226,15 +228,14 @@ bool ModuleLinker::getComdatResult(const Comdat *SrcC,
 
   if (DstCI == ComdatSymTab.end()) {
     // Use the comdat if it is only available in one of the modules.
-    LinkFromSrc = true;
+    From = LinkFrom::Src;
     Result = SSK;
     return false;
   }
 
   const Comdat *DstC = &DstCI->second;
   Comdat::SelectionKind DSK = DstC->getSelectionKind();
-  return computeResultingSelectionKind(ComdatName, SSK, DSK, Result,
-                                       LinkFromSrc);
+  return computeResultingSelectionKind(ComdatName, SSK, DSK, Result, From);
 }
 
 bool ModuleLinker::shouldLinkFromSource(bool &LinkFromSrc,
@@ -377,11 +378,10 @@ bool ModuleLinker::linkIfNeeded(GlobalValue &GV) {
   if (GV.isDeclaration())
     return false;
 
+  LinkFrom ComdatFrom = LinkFrom::Dst;
   if (const Comdat *SC = GV.getComdat()) {
-    bool LinkFromSrc;
-    Comdat::SelectionKind SK;
-    std::tie(SK, LinkFromSrc) = ComdatsChosen[SC];
-    if (!LinkFromSrc)
+    std::tie(std::ignore, ComdatFrom) = ComdatsChosen[SC];
+    if (ComdatFrom == LinkFrom::Dst)
       return false;
   }
 
@@ -462,12 +462,12 @@ bool ModuleLinker::run() {
     if (ComdatsChosen.count(&C))
       continue;
     Comdat::SelectionKind SK;
-    bool LinkFromSrc;
-    if (getComdatResult(&C, SK, LinkFromSrc))
+    LinkFrom From;
+    if (getComdatResult(&C, SK, From))
       return true;
-    ComdatsChosen[&C] = std::make_pair(SK, LinkFromSrc);
+    ComdatsChosen[&C] = std::make_pair(SK, From);
 
-    if (!LinkFromSrc)
+    if (From != LinkFrom::Src)
       continue;
 
     Module::ComdatSymTabType &ComdatSymTab = DstM.getComdatSymbolTable();

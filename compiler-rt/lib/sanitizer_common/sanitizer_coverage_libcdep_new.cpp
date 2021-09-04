@@ -151,6 +151,44 @@ class TracePcGuardController {
 
 static TracePcGuardController pc_guard_controller;
 
+// A basic default implementation of callbacks for
+// -fsanitize-coverage=inline-8bit-counters,pc-table.
+// Use TOOL_OPTIONS (UBSAN_OPTIONS, etc) to dump the coverage data:
+// * cov_8bit_counters_out=PATH to dump the 8bit counters.
+// * cov_pcs_out=PATH to dump the pc table.
+//
+// Most users will still need to define their own callbacks for greater
+// flexibility.
+namespace SingletonCounterCoverage {
+
+static char *counters_start, *counters_end;
+
+static void DumpCoverage() {
+  const char* file_path = common_flags()->cov_8bit_counters_out;
+  if (!file_path || !internal_strlen(file_path))
+    return;
+  fd_t fd = OpenFile(file_path);
+  FileCloser file_closer(fd);
+  WriteToFile(fd, counters_start, counters_end - counters_start);
+}
+
+static void Cov8bitCountersInit(char* beg, char* end) {
+  counters_start = beg;
+  counters_end = end;
+  Atexit(DumpCoverage);
+}
+
+static void CovPcsInit(const uptr* pcs_beg, const uptr* pcs_end) {
+  const char* file_path = common_flags()->cov_pcs_out;
+  if (!file_path || !internal_strlen(file_path))
+    return;
+  fd_t fd = OpenFile(file_path);
+  FileCloser file_closer(fd);
+  WriteToFile(fd, pcs_beg, (pcs_end - pcs_beg) * sizeof(uptr));
+}
+
+}  // namespace SingletonCounterCoverage
+
 }  // namespace
 }  // namespace __sancov
 
@@ -191,7 +229,9 @@ SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_cov_dump() {
 SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_cov_reset() {
   __sancov::pc_guard_controller.Reset();
 }
-// Default empty implementations (weak). Users should redefine them.
+// Default implementations (weak).
+// Either empty or very simple.
+// Most users should redefine them.
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_cmp, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_cmp1, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_cmp2, void) {}
@@ -206,9 +246,15 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_div4, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_div8, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_gep, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_pc_indir, void) {}
-SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_8bit_counters_init, void) {}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_8bit_counters_init,
+                             char* start, char* end) {
+  __sancov::SingletonCounterCoverage::Cov8bitCountersInit(start, end);
+}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_bool_flag_init, void) {}
-SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_pcs_init, void) {}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_pcs_init, const uptr* beg,
+                             const uptr* end) {
+  __sancov::SingletonCounterCoverage::CovPcsInit(beg, end);
+}
 }  // extern "C"
 // Weak definition for code instrumented with -fsanitize-coverage=stack-depth
 // and later linked with code containing a strong definition.

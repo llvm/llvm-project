@@ -1986,6 +1986,70 @@ TEST(IRSimilarityCandidate, SameStructure) {
   ASSERT_TRUE(longSimCandCompare(InstrList, true));
 }
 
+// Checks that the canonical numbering between two candidates matches the found
+// mapping between two candidates.
+TEST(IRSimilarityCandidate, CanonicalNumbering) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = sub i32 %b, %a
+                             ret i32 0
+                          bb1:
+                             %2 = add i32 %a, %b
+                             %3 = sub i32 %b, %a
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  // Check to make sure that we have a long enough region.
+  ASSERT_EQ(InstrList.size(), static_cast<unsigned>(6));
+  // Check that the instructions were added correctly to both vectors.
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+
+  std::vector<IRInstructionData *>::iterator Start, End;
+
+  Start = InstrList.begin();
+  End = InstrList.begin();
+
+  std::advance(End, 1);
+  IRSimilarityCandidate Cand1(0, 2, *Start, *End);
+
+  Start = InstrList.begin();
+  End = InstrList.begin();
+
+  std::advance(Start, 3);
+  std::advance(End, 4);
+  IRSimilarityCandidate Cand2(3, 2, *Start, *End);
+  DenseMap<unsigned, DenseSet<unsigned>> Mapping1;
+  DenseMap<unsigned, DenseSet<unsigned>> Mapping2;
+  ASSERT_TRUE(IRSimilarityCandidate::compareStructure(Cand1, Cand2, Mapping1,
+                                                      Mapping2));
+  IRSimilarityCandidate::createCanonicalMappingFor(Cand1);
+  Cand2.createCanonicalRelationFrom(Cand1, Mapping1, Mapping2);
+
+  for (std::pair<unsigned, DenseSet<unsigned>> &P : Mapping2) {
+    unsigned Source = P.first;
+
+    ASSERT_TRUE(Cand2.getCanonicalNum(Source).hasValue());
+    unsigned Canon = *Cand2.getCanonicalNum(Source);
+    ASSERT_TRUE(Cand1.fromCanonicalNum(Canon).hasValue());
+    unsigned Dest = *Cand1.fromCanonicalNum(Canon);
+
+    DenseSet<unsigned>::iterator It = P.second.find(Dest);
+    ASSERT_NE(It, P.second.end());
+  }
+}
+
 // Checks that the same structure is recognized between two candidates. While
 // the input names are reversed, they still perform the same overall operation.
 TEST(IRSimilarityCandidate, DifferentNameSameStructure) {

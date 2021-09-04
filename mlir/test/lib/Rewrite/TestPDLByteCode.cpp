@@ -80,8 +80,10 @@ struct TestPDLByteCodePass
 
     // The test cases are encompassed via two modules, one containing the
     // patterns and one containing the operations to rewrite.
-    ModuleOp patternModule = module.lookupSymbol<ModuleOp>("patterns");
-    ModuleOp irModule = module.lookupSymbol<ModuleOp>("ir");
+    ModuleOp patternModule = module.lookupSymbol<ModuleOp>(
+        StringAttr::get(module->getContext(), "patterns"));
+    ModuleOp irModule = module.lookupSymbol<ModuleOp>(
+        StringAttr::get(module->getContext(), "ir"));
     if (!patternModule || !irModule)
       return;
 

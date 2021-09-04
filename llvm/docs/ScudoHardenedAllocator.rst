@@ -45,7 +45,7 @@ The allocator combines several components that serve distinct purposes:
   time options.
 
 - the thread specific data Registry: defines how local caches operate for each
-  thread. There are currently two models implemented: the exlusive model where
+  thread. There are currently two models implemented: the exclusive model where
   each thread holds its own caches (using the ELF TLS); or the shared model
   where threads share a fixed size pool of caches.
 
@@ -262,7 +262,7 @@ The following "mallopt" options are available (options are defined in
 +---------------------------+-------------------------------------------------------+
 | M_DECAY_TIME              | Sets the release interval option to the specified     |
 |                           | value (Android only allows 0 or 1 to respectively set |
-|                           | the interval to the mininum and maximum value as      |
+|                           | the interval to the minimum and maximum value as      |
 |                           | specified at compile time).                           |
 +---------------------------+-------------------------------------------------------+
 | M_PURGE                   | Forces immediate memory reclaiming (value is unused). |

@@ -1,3 +1,11 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_TRANSFORM_TYPES_H
 #define TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_TRANSFORM_TYPES_H
 
@@ -127,6 +135,10 @@ struct ThreeWayCompView : std::ranges::view_base {
   constexpr ThreeWayCompIter begin() const { return ThreeWayCompIter(globalBuff); }
   constexpr ThreeWayCompIter end() { return ThreeWayCompIter(globalBuff + 8); }
   constexpr ThreeWayCompIter end() const { return ThreeWayCompIter(globalBuff + 8); }
+};
+
+struct TimesTwo {
+  constexpr int operator()(int x) const { return x * 2; }
 };
 
 struct PlusOneMutable {

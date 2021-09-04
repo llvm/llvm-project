@@ -11,6 +11,7 @@
 #ifndef __UNWINDCURSOR_HPP__
 #define __UNWINDCURSOR_HPP__
 
+#include "cet_unwind.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -448,6 +449,12 @@ public:
   }
 #ifdef __arm__
   virtual void saveVFPAsX() { _LIBUNWIND_ABORT("saveVFPAsX not implemented"); }
+#endif
+
+#if defined(_LIBUNWIND_USE_CET)
+  virtual void *get_registers() {
+    _LIBUNWIND_ABORT("get_registers not implemented");
+  }
 #endif
 };
 
@@ -901,6 +908,9 @@ public:
   virtual void        saveVFPAsX();
 #endif
 
+#if defined(_LIBUNWIND_USE_CET)
+  virtual void *get_registers() { return &_registers; }
+#endif
   // libunwind does not and should not depend on C++ library which means that we
   // need our own defition of inline placement new.
   static void *operator new(size_t, UnwindCursor<A, R> *p) { return p; }
@@ -2125,6 +2135,12 @@ bool UnwindCursor<A, R>::getFunctionName(char *buf, size_t bufLen,
                                          buf, bufLen, offset);
 }
 
+#if defined(_LIBUNWIND_USE_CET)
+extern "C" void *__libunwind_cet_get_registers(unw_cursor_t *cursor) {
+  AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
+  return co->get_registers();
+}
+#endif
 } // namespace libunwind
 
 #endif // __UNWINDCURSOR_HPP__

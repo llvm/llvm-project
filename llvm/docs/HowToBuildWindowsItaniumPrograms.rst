@@ -97,7 +97,7 @@ Tell the libc++ headers that the Itanium C++ ABI is being used.
 * ``-DCMAKE_C_FLAGS="-lmsvcrt -llegacy_stdio_definitions -D_NO_CRT_STDIO_INLINE"``
 
 Supply CRT definitions including stdio definitions that have been removed from the MS VS CRT.
-We don't want the stdio functions decalred inline as they will casuse multiple defintiion
+We don't want the stdio functions declared inline as they will cause multiple definition
 errors when the same symbols are pulled in from legacy_stdio_definitions.ib.
 
 * ``-DCMAKE_INSTALL_PREFIX=<install path>``

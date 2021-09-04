@@ -1006,11 +1006,11 @@ unsigned char Editline::TabCommand(int ch) {
     switch (completion.GetMode()) {
     case CompletionMode::Normal: {
       std::string to_add = completion.GetCompletion();
-      to_add = to_add.substr(request.GetCursorArgumentPrefix().size());
       // Terminate the current argument with a quote if it started with a quote.
       if (!request.GetParsedLine().empty() && request.GetParsedArg().IsQuoted())
         to_add.push_back(request.GetParsedArg().GetQuoteChar());
       to_add.push_back(' ');
+      el_deletestr(m_editline, request.GetCursorArgumentPrefix().size());
       el_insertstr(m_editline, to_add.c_str());
       // Clear all the autosuggestion parts if the only single space can be completed.
       if (to_add == " ")

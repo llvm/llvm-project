@@ -34,7 +34,7 @@ else ()
   set(LLVM_FILECHECK "${LLVM_TOOLS_BINARY_DIR}/FileCheck")
   set(LLVM_NOT "${LLVM_TOOLS_BINARY_DIR}/not")
   set(POLLY_TEST_EXTRA_PATHS "")
-  set(POLLY_TEST_DEPS llvm-config opt LLVMPolly FileCheck not)
+  set(POLLY_TEST_DEPS llvm-config opt LLVMPolly FileCheck not count)
 endif()
 
 if (POLLY_BUNDLED_ISL)

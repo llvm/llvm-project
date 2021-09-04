@@ -791,6 +791,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
 
         setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
+        setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
         setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
         setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
         setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
@@ -1204,8 +1205,10 @@ static bool useRVVForFixedLengthVectorVT(MVT VT,
 
   unsigned MinVLen = Subtarget.getMinRVVVectorSizeInBits();
 
+  MVT EltVT = VT.getVectorElementType();
+
   // Don't use RVV for vectors we cannot scalarize if required.
-  switch (VT.getVectorElementType().SimpleTy) {
+  switch (EltVT.SimpleTy) {
   // i1 is supported but has different rules.
   default:
     return false;
@@ -1234,6 +1237,10 @@ static bool useRVVForFixedLengthVectorVT(MVT VT,
     break;
   }
 
+  // Reject elements larger than ELEN.
+  if (EltVT.getSizeInBits() > Subtarget.getMaxELENForFixedLengthVectors())
+    return false;
+
   unsigned LMul = divideCeil(VT.getSizeInBits(), MinVLen);
   // Don't use RVV for types that don't fit.
   if (LMul > Subtarget.getMaxLMULForFixedLengthVectors())
@@ -1260,6 +1267,7 @@ static MVT getContainerForFixedLengthVector(const TargetLowering &TLI, MVT VT,
          "Expected legal fixed length vector!");
 
   unsigned MinVLen = Subtarget.getMinRVVVectorSizeInBits();
+  unsigned MaxELen = Subtarget.getMaxELENForFixedLengthVectors();
 
   MVT EltVT = VT.getVectorElementType();
   switch (EltVT.SimpleTy) {
@@ -1274,10 +1282,12 @@ static MVT getContainerForFixedLengthVector(const TargetLowering &TLI, MVT VT,
   case MVT::f32:
   case MVT::f64: {
     // We prefer to use LMUL=1 for VLEN sized types. Use fractional lmuls for
-    // narrower types, but we can't have a fractional LMUL with demoninator less
-    // than 64/SEW.
+    // narrower types. The smallest fractional LMUL we support is 8/ELEN. Within
+    // each fractional LMUL we support SEW between 8 and LMUL*ELEN.
     unsigned NumElts =
-        divideCeil(VT.getVectorNumElements(), MinVLen / RISCV::RVVBitsPerBlock);
+        (VT.getVectorNumElements() * RISCV::RVVBitsPerBlock) / MinVLen;
+    NumElts = std::max(NumElts, RISCV::RVVBitsPerBlock / MaxELen);
+    assert(isPowerOf2_32(NumElts) && "Expected power of 2 NumElts");
     return MVT::getScalableVectorVT(EltVT, NumElts);
   }
   }
@@ -5060,9 +5070,26 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::SRL:
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
-    if (N->getOperand(1).getOpcode() == ISD::Constant)
-      return;
-    Results.push_back(customLegalizeToWOp(N, DAG));
+    if (N->getOperand(1).getOpcode() != ISD::Constant) {
+      Results.push_back(customLegalizeToWOp(N, DAG));
+      break;
+    }
+
+    // Custom legalize ISD::SHL by placing a SIGN_EXTEND_INREG after. This is
+    // similar to customLegalizeToWOpWithSExt, but we must zero_extend the
+    // shift amount.
+    if (N->getOpcode() == ISD::SHL) {
+      SDLoc DL(N);
+      SDValue NewOp0 =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
+      SDValue NewOp1 =
+          DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, N->getOperand(1));
+      SDValue NewWOp = DAG.getNode(ISD::SHL, DL, MVT::i64, NewOp0, NewOp1);
+      SDValue NewRes = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, NewWOp,
+                                   DAG.getValueType(MVT::i32));
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, NewRes));
+    }
+
     break;
   case ISD::ROTL:
   case ISD::ROTR:
@@ -9042,6 +9069,29 @@ bool RISCVTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
   }
 
   return false;
+}
+
+bool RISCVTargetLowering::isMulAddWithConstProfitable(
+    const SDValue &AddNode, const SDValue &ConstNode) const {
+  // Let the DAGCombiner decide for vectors.
+  EVT VT = AddNode.getValueType();
+  if (VT.isVector())
+    return true;
+
+  // Let the DAGCombiner decide for larger types.
+  if (VT.getScalarSizeInBits() > Subtarget.getXLen())
+    return true;
+
+  // It is worse if c1 is simm12 while c1*c2 is not.
+  ConstantSDNode *C1Node = cast<ConstantSDNode>(AddNode.getOperand(1));
+  ConstantSDNode *C2Node = cast<ConstantSDNode>(ConstNode);
+  const APInt &C1 = C1Node->getAPIntValue();
+  const APInt &C2 = C2Node->getAPIntValue();
+  if (C1.isSignedIntN(12) && !(C1 * C2).isSignedIntN(12))
+    return false;
+
+  // Default to true and let the DAGCombiner decide.
+  return true;
 }
 
 bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(

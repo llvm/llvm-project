@@ -135,3 +135,14 @@ def E_AttrWithTypeBuilder : TestAttr<"AttrWithTypeBuilder"> {
 // DEF-LABEL: struct AttrWithTypeBuilderAttrStorage
 // DEF: AttrWithTypeBuilderAttrStorage (::mlir::IntegerAttr attr)
 // DEF-NEXT: : ::mlir::AttributeStorage(attr.getType()), attr(attr)
+
+def F_ParamWithAccessorTypeAttr : TestAttr<"ParamWithAccessorType"> {
+  let parameters = (ins AttrParameter<"std::string", "", "StringRef">:$param);
+}
+
+// DECL-LABEL: class ParamWithAccessorTypeAttr
+// DECL: StringRef getParam()
+// DEF: ParamWithAccessorTypeAttrStorage
+// DEF-NEXT: ParamWithAccessorTypeAttrStorage (std::string param)
+// DEF: StringRef ParamWithAccessorTypeAttr::getParam()
+

@@ -50,7 +50,7 @@ public:
   explicit Attribute(const llvm::DefInit *init);
 
   // Returns the storage type if set. Returns the default storage type
-  // ("Attribute") otherwise.
+  // ("::mlir::Attribute") otherwise.
   StringRef getStorageType() const;
 
   // Returns the return type for this attribute.

@@ -15,7 +15,6 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUHSAMETADATASTREAMER_H
 #define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUHSAMETADATASTREAMER_H
 
-#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/BinaryFormat/MsgPackDocument.h"
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/Alignment.h"
@@ -33,6 +32,11 @@ struct SIProgramInfo;
 class Type;
 
 namespace AMDGPU {
+
+namespace IsaInfo {
+class AMDGPUTargetID;
+}
+
 namespace HSAMD {
 
 class MetadataStreamer {

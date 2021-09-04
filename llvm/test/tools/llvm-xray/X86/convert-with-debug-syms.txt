@@ -1,4 +1,5 @@
-; RUN: llvm-xray convert -m %S/Inputs/elf64-sample-o2.bin -y %S/Inputs/naive-log-simple.xray -f yaml -o - 2>&1 | FileCheck %s
+; RUN: llvm-xray convert -m %S/Inputs/elf64-sample-o2.bin -y %S/Inputs/naive-log-simple.xray -f yaml 2>&1 | FileCheck %s
+; RUN: llvm-xray convert -m %S/Inputs/elf64-sample-o2.bin -y %S/Inputs/naive-log-simple.xray -f yaml --demangle 2>&1 | FileCheck %s
 
 ; CHECK:      ---
 ; CHECK-NEXT: header:

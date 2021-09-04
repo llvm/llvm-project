@@ -427,6 +427,10 @@ bool mlirOperationVerify(MlirOperation op) {
 
 MlirRegion mlirRegionCreate() { return wrap(new Region); }
 
+bool mlirRegionEqual(MlirRegion region, MlirRegion other) {
+  return unwrap(region) == unwrap(other);
+}
+
 MlirBlock mlirRegionGetFirstBlock(MlirRegion region) {
   Region *cppRegion = unwrap(region);
   if (cppRegion->empty())
@@ -490,6 +494,10 @@ bool mlirBlockEqual(MlirBlock block, MlirBlock other) {
 
 MlirOperation mlirBlockGetParentOperation(MlirBlock block) {
   return wrap(unwrap(block)->getParentOp());
+}
+
+MlirRegion mlirBlockGetParentRegion(MlirBlock block) {
+  return wrap(unwrap(block)->getParent());
 }
 
 MlirBlock mlirBlockGetNextInRegion(MlirBlock block) {

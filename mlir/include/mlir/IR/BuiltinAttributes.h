@@ -30,8 +30,10 @@ class ShapedType;
 //===----------------------------------------------------------------------===//
 
 namespace detail {
-template <typename T> class ElementsAttrIterator;
-template <typename T> class ElementsAttrRange;
+template <typename T>
+class ElementsAttrIterator;
+template <typename T>
+class ElementsAttrRange;
 } // namespace detail
 
 /// A base attribute that represents a reference to a static shaped tensor or
@@ -39,8 +41,10 @@ template <typename T> class ElementsAttrRange;
 class ElementsAttr : public Attribute {
 public:
   using Attribute::Attribute;
-  template <typename T> using iterator = detail::ElementsAttrIterator<T>;
-  template <typename T> using iterator_range = detail::ElementsAttrRange<T>;
+  template <typename T>
+  using iterator = detail::ElementsAttrIterator<T>;
+  template <typename T>
+  using iterator_range = detail::ElementsAttrRange<T>;
 
   /// Return the type of this ElementsAttr, guaranteed to be a vector or tensor
   /// with static shape.
@@ -52,14 +56,16 @@ public:
 
   /// Return the value of type 'T' at the given index, where 'T' corresponds to
   /// an Attribute type.
-  template <typename T> T getValue(ArrayRef<uint64_t> index) const {
+  template <typename T>
+  T getValue(ArrayRef<uint64_t> index) const {
     return getValue(index).template cast<T>();
   }
 
   /// Return the elements of this attribute as a value of type 'T'. Note:
   /// Aborts if the subclass is OpaqueElementsAttrs, these attrs do not support
   /// iteration.
-  template <typename T> iterator_range<T> getValues() const;
+  template <typename T>
+  iterator_range<T> getValues() const;
 
   /// Return if the given 'index' refers to a valid element in this attribute.
   bool isValidIndex(ArrayRef<uint64_t> index) const;
@@ -139,7 +145,8 @@ protected:
 };
 
 /// Type trait detector that checks if a given type T is a complex type.
-template <typename T> struct is_complex_t : public std::false_type {};
+template <typename T>
+struct is_complex_t : public std::false_type {};
 template <typename T>
 struct is_complex_t<std::complex<T>> : public std::true_type {};
 } // namespace detail
@@ -154,7 +161,8 @@ public:
   /// floating point type that can be used to access the underlying element
   /// types of a DenseElementsAttr.
   // TODO: Use std::disjunction when C++17 is supported.
-  template <typename T> struct is_valid_cpp_fp_type {
+  template <typename T>
+  struct is_valid_cpp_fp_type {
     /// The type is a valid floating point type if it is a builtin floating
     /// point type, or is a potentially user defined floating point type. The
     /// latter allows for supporting users that have custom types defined for
@@ -423,7 +431,8 @@ public:
   Attribute getValue(ArrayRef<uint64_t> index) const {
     return getValue<Attribute>(index);
   }
-  template <typename T> T getValue(ArrayRef<uint64_t> index) const {
+  template <typename T>
+  T getValue(ArrayRef<uint64_t> index) const {
     // Skip to the element corresponding to the flattened index.
     return *std::next(getValues<T>().begin(), getFlattenedIndex(index));
   }
@@ -680,8 +689,15 @@ public:
     return SymbolRefAttr::get(ctx, value);
   }
 
+  static FlatSymbolRefAttr get(StringAttr value) {
+    return SymbolRefAttr::get(value);
+  }
+
+  /// Returns the name of the held symbol reference as a StringAttr.
+  StringAttr getAttr() const { return getRootReference(); }
+
   /// Returns the name of the held symbol reference.
-  StringRef getValue() const { return getRootReference(); }
+  StringRef getValue() const { return getAttr().getValue(); }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(Attribute attr) {
@@ -845,22 +861,28 @@ class ElementsAttrIterator
   }
 
   /// Utility functors used to generically implement the iterators methods.
-  template <typename ItT> struct PlusAssign {
+  template <typename ItT>
+  struct PlusAssign {
     void operator()(ItT &it, ptrdiff_t offset) { it += offset; }
   };
-  template <typename ItT> struct Minus {
+  template <typename ItT>
+  struct Minus {
     ptrdiff_t operator()(const ItT &lhs, const ItT &rhs) { return lhs - rhs; }
   };
-  template <typename ItT> struct MinusAssign {
+  template <typename ItT>
+  struct MinusAssign {
     void operator()(ItT &it, ptrdiff_t offset) { it -= offset; }
   };
-  template <typename ItT> struct Dereference {
+  template <typename ItT>
+  struct Dereference {
     T operator()(ItT &it) { return *it; }
   };
-  template <typename ItT> struct ConstructIter {
+  template <typename ItT>
+  struct ConstructIter {
     void operator()(ItT &dest, const ItT &it) { ::new (&dest) ItT(it); }
   };
-  template <typename ItT> struct DestructIter {
+  template <typename ItT>
+  struct DestructIter {
     void operator()(ItT &it) { it.~ItT(); }
   };
 

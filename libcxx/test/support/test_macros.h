@@ -165,7 +165,6 @@
 
 /* Features that were introduced in C++14 */
 #if TEST_STD_VER >= 14
-#define TEST_HAS_EXTENDED_CONSTEXPR
 #define TEST_HAS_VARIABLE_TEMPLATES
 #endif
 

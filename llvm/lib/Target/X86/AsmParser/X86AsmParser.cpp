@@ -3866,6 +3866,176 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
     }
     break;
   }
+  case X86::VFCMADDCPHZ128m:
+  case X86::VFCMADDCPHZ256m:
+  case X86::VFCMADDCPHZm:
+  case X86::VFCMADDCPHZ128mb:
+  case X86::VFCMADDCPHZ256mb:
+  case X86::VFCMADDCPHZmb:
+  case X86::VFCMADDCPHZ128mbk:
+  case X86::VFCMADDCPHZ256mbk:
+  case X86::VFCMADDCPHZmbk:
+  case X86::VFCMADDCPHZ128mbkz:
+  case X86::VFCMADDCPHZ256mbkz:
+  case X86::VFCMADDCPHZmbkz:
+  case X86::VFCMADDCPHZ128mk:
+  case X86::VFCMADDCPHZ256mk:
+  case X86::VFCMADDCPHZmk:
+  case X86::VFCMADDCPHZ128mkz:
+  case X86::VFCMADDCPHZ256mkz:
+  case X86::VFCMADDCPHZmkz:
+  case X86::VFCMADDCPHZ128r:
+  case X86::VFCMADDCPHZ256r:
+  case X86::VFCMADDCPHZr:
+  case X86::VFCMADDCPHZ128rk:
+  case X86::VFCMADDCPHZ256rk:
+  case X86::VFCMADDCPHZrk:
+  case X86::VFCMADDCPHZ128rkz:
+  case X86::VFCMADDCPHZ256rkz:
+  case X86::VFCMADDCPHZrkz:
+  case X86::VFCMADDCPHZrb:
+  case X86::VFCMADDCPHZrbk:
+  case X86::VFCMADDCPHZrbkz:
+  case X86::VFCMADDCSHZm:
+  case X86::VFCMADDCSHZmk:
+  case X86::VFCMADDCSHZmkz:
+  case X86::VFCMADDCSHZr:
+  case X86::VFCMADDCSHZrb:
+  case X86::VFCMADDCSHZrbk:
+  case X86::VFCMADDCSHZrbkz:
+  case X86::VFCMADDCSHZrk:
+  case X86::VFCMADDCSHZrkz:
+  case X86::VFMADDCPHZ128m:
+  case X86::VFMADDCPHZ256m:
+  case X86::VFMADDCPHZm:
+  case X86::VFMADDCPHZ128mb:
+  case X86::VFMADDCPHZ256mb:
+  case X86::VFMADDCPHZmb:
+  case X86::VFMADDCPHZ128mbk:
+  case X86::VFMADDCPHZ256mbk:
+  case X86::VFMADDCPHZmbk:
+  case X86::VFMADDCPHZ128mbkz:
+  case X86::VFMADDCPHZ256mbkz:
+  case X86::VFMADDCPHZmbkz:
+  case X86::VFMADDCPHZ128mk:
+  case X86::VFMADDCPHZ256mk:
+  case X86::VFMADDCPHZmk:
+  case X86::VFMADDCPHZ128mkz:
+  case X86::VFMADDCPHZ256mkz:
+  case X86::VFMADDCPHZmkz:
+  case X86::VFMADDCPHZ128r:
+  case X86::VFMADDCPHZ256r:
+  case X86::VFMADDCPHZr:
+  case X86::VFMADDCPHZ128rk:
+  case X86::VFMADDCPHZ256rk:
+  case X86::VFMADDCPHZrk:
+  case X86::VFMADDCPHZ128rkz:
+  case X86::VFMADDCPHZ256rkz:
+  case X86::VFMADDCPHZrkz:
+  case X86::VFMADDCPHZrb:
+  case X86::VFMADDCPHZrbk:
+  case X86::VFMADDCPHZrbkz:
+  case X86::VFMADDCSHZm:
+  case X86::VFMADDCSHZmk:
+  case X86::VFMADDCSHZmkz:
+  case X86::VFMADDCSHZr:
+  case X86::VFMADDCSHZrb:
+  case X86::VFMADDCSHZrbk:
+  case X86::VFMADDCSHZrbkz:
+  case X86::VFMADDCSHZrk:
+  case X86::VFMADDCSHZrkz: {
+    unsigned Dest = Inst.getOperand(0).getReg();
+    for (unsigned i = 2; i < Inst.getNumOperands(); i++)
+      if (Inst.getOperand(i).isReg() && Dest == Inst.getOperand(i).getReg())
+        return Warning(Ops[0]->getStartLoc(), "Destination register should be "
+                                              "distinct from source registers");
+    break;
+  }
+  case X86::VFCMULCPHZ128rm:
+  case X86::VFCMULCPHZ256rm:
+  case X86::VFCMULCPHZrm:
+  case X86::VFCMULCPHZ128rmb:
+  case X86::VFCMULCPHZ256rmb:
+  case X86::VFCMULCPHZrmb:
+  case X86::VFCMULCPHZ128rmbk:
+  case X86::VFCMULCPHZ256rmbk:
+  case X86::VFCMULCPHZrmbk:
+  case X86::VFCMULCPHZ128rmbkz:
+  case X86::VFCMULCPHZ256rmbkz:
+  case X86::VFCMULCPHZrmbkz:
+  case X86::VFCMULCPHZ128rmk:
+  case X86::VFCMULCPHZ256rmk:
+  case X86::VFCMULCPHZrmk:
+  case X86::VFCMULCPHZ128rmkz:
+  case X86::VFCMULCPHZ256rmkz:
+  case X86::VFCMULCPHZrmkz:
+  case X86::VFCMULCPHZ128rr:
+  case X86::VFCMULCPHZ256rr:
+  case X86::VFCMULCPHZrr:
+  case X86::VFCMULCPHZ128rrk:
+  case X86::VFCMULCPHZ256rrk:
+  case X86::VFCMULCPHZrrk:
+  case X86::VFCMULCPHZ128rrkz:
+  case X86::VFCMULCPHZ256rrkz:
+  case X86::VFCMULCPHZrrkz:
+  case X86::VFCMULCPHZrrb:
+  case X86::VFCMULCPHZrrbk:
+  case X86::VFCMULCPHZrrbkz:
+  case X86::VFCMULCSHZrm:
+  case X86::VFCMULCSHZrmk:
+  case X86::VFCMULCSHZrmkz:
+  case X86::VFCMULCSHZrr:
+  case X86::VFCMULCSHZrrb:
+  case X86::VFCMULCSHZrrbk:
+  case X86::VFCMULCSHZrrbkz:
+  case X86::VFCMULCSHZrrk:
+  case X86::VFCMULCSHZrrkz:
+  case X86::VFMULCPHZ128rm:
+  case X86::VFMULCPHZ256rm:
+  case X86::VFMULCPHZrm:
+  case X86::VFMULCPHZ128rmb:
+  case X86::VFMULCPHZ256rmb:
+  case X86::VFMULCPHZrmb:
+  case X86::VFMULCPHZ128rmbk:
+  case X86::VFMULCPHZ256rmbk:
+  case X86::VFMULCPHZrmbk:
+  case X86::VFMULCPHZ128rmbkz:
+  case X86::VFMULCPHZ256rmbkz:
+  case X86::VFMULCPHZrmbkz:
+  case X86::VFMULCPHZ128rmk:
+  case X86::VFMULCPHZ256rmk:
+  case X86::VFMULCPHZrmk:
+  case X86::VFMULCPHZ128rmkz:
+  case X86::VFMULCPHZ256rmkz:
+  case X86::VFMULCPHZrmkz:
+  case X86::VFMULCPHZ128rr:
+  case X86::VFMULCPHZ256rr:
+  case X86::VFMULCPHZrr:
+  case X86::VFMULCPHZ128rrk:
+  case X86::VFMULCPHZ256rrk:
+  case X86::VFMULCPHZrrk:
+  case X86::VFMULCPHZ128rrkz:
+  case X86::VFMULCPHZ256rrkz:
+  case X86::VFMULCPHZrrkz:
+  case X86::VFMULCPHZrrb:
+  case X86::VFMULCPHZrrbk:
+  case X86::VFMULCPHZrrbkz:
+  case X86::VFMULCSHZrm:
+  case X86::VFMULCSHZrmk:
+  case X86::VFMULCSHZrmkz:
+  case X86::VFMULCSHZrr:
+  case X86::VFMULCSHZrrb:
+  case X86::VFMULCSHZrrbk:
+  case X86::VFMULCSHZrrbkz:
+  case X86::VFMULCSHZrrk:
+  case X86::VFMULCSHZrrkz: {
+    unsigned Dest = Inst.getOperand(0).getReg();
+    for (unsigned i = 1; i < Inst.getNumOperands(); i++)
+      if (Inst.getOperand(i).isReg() && Dest == Inst.getOperand(i).getReg())
+        return Warning(Ops[0]->getStartLoc(), "Destination register should be "
+                                              "distinct from source registers");
+    break;
+  }
   }
 
   const MCInstrDesc &MCID = MII.get(Inst.getOpcode());

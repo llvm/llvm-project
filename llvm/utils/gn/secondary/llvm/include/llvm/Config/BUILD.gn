@@ -2,6 +2,7 @@ import("//llvm/lib/DebugInfo/PDB/enable_dia.gni")
 import("//llvm/lib/Target/targets.gni")
 import("//llvm/lib/Target/targets_with_asm_parsers.gni")
 import("//llvm/lib/Target/targets_with_disassemblers.gni")
+import("//llvm/lib/Target/targets_with_mcas.gni")
 import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/buildflags.gni")
 import("//llvm/utils/gn/build/libs/edit/enable.gni")
@@ -437,7 +438,7 @@ write_target_def_file("Targets.def") {
 write_target_def_file("TargetMCAs.def") {
   key = "LLVM_ENUM_TARGETMCAS"
   value = "LLVM_TARGETMCA"
-  all_targets = []
+  all_targets = targets_with_mcas
 }
 
 group("write_target_def_files") {

@@ -45,6 +45,11 @@ static cl::opt<unsigned> RVVVectorLMULMax(
              "Fractional LMUL values are not supported."),
     cl::init(8), cl::Hidden);
 
+static cl::opt<unsigned> RVVVectorELENMax(
+    "riscv-v-fixed-length-vector-elen-max",
+    cl::desc("The maximum ELEN value to use for fixed length vectors."),
+    cl::init(64), cl::Hidden);
+
 void RISCVSubtarget::anchor() {}
 
 RISCVSubtarget &
@@ -142,7 +147,18 @@ unsigned RISCVSubtarget::getMaxLMULForFixedLengthVectors() const {
          "Tried to get maximum LMUL without V extension support!");
   assert(RVVVectorLMULMax <= 8 && isPowerOf2_32(RVVVectorLMULMax) &&
          "V extension requires a LMUL to be at most 8 and a power of 2!");
-  return PowerOf2Floor(std::max<unsigned>(RVVVectorLMULMax, 1));
+  return PowerOf2Floor(
+      std::max<unsigned>(std::min<unsigned>(RVVVectorLMULMax, 8), 1));
+}
+
+unsigned RISCVSubtarget::getMaxELENForFixedLengthVectors() const {
+  assert(hasStdExtV() &&
+         "Tried to get maximum ELEN without V extension support!");
+  assert(RVVVectorELENMax <= 64 && RVVVectorELENMax >= 8 &&
+         isPowerOf2_32(RVVVectorELENMax) &&
+         "V extension requires a ELEN to be a power of 2 between 8 and 64!");
+  return PowerOf2Floor(
+      std::max<unsigned>(std::min<unsigned>(RVVVectorELENMax, 64), 8));
 }
 
 bool RISCVSubtarget::useRVVForFixedLengthVectors() const {

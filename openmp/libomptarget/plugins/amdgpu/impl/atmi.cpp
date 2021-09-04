@@ -42,13 +42,13 @@ static hsa_status_t invoke_hsa_copy(hsa_signal_t sig, void *dest,
   return err;
 }
 
-struct atmiFreePtrDeletor {
+struct implFreePtrDeletor {
   void operator()(void *p) {
     core::Runtime::Memfree(p); // ignore failure to free
   }
 };
 
-hsa_status_t atmi_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
+hsa_status_t impl_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
                              const void *hostSrc, size_t size,
                              hsa_agent_t agent) {
   hsa_status_t rc = hsa_memory_copy(deviceDest, hostSrc, size);
@@ -67,7 +67,7 @@ hsa_status_t atmi_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
                 size);
     return ret;
   }
-  std::unique_ptr<void, atmiFreePtrDeletor> del(tempHostPtr);
+  std::unique_ptr<void, implFreePtrDeletor> del(tempHostPtr);
   memcpy(tempHostPtr, hostSrc, size);
 
   if (invoke_hsa_copy(signal, deviceDest, tempHostPtr, size, agent) !=
@@ -77,7 +77,7 @@ hsa_status_t atmi_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
   return HSA_STATUS_SUCCESS;
 }
 
-hsa_status_t atmi_memcpy_d2h(hsa_signal_t signal, void *dest,
+hsa_status_t impl_memcpy_d2h(hsa_signal_t signal, void *dest,
                              const void *deviceSrc, size_t size,
                              hsa_agent_t agent) {
   hsa_status_t rc = hsa_memory_copy(dest, deviceSrc, size);
@@ -96,7 +96,7 @@ hsa_status_t atmi_memcpy_d2h(hsa_signal_t signal, void *dest,
                 size);
     return ret;
   }
-  std::unique_ptr<void, atmiFreePtrDeletor> del(tempHostPtr);
+  std::unique_ptr<void, implFreePtrDeletor> del(tempHostPtr);
 
   if (invoke_hsa_copy(signal, tempHostPtr, deviceSrc, size, agent) !=
       HSA_STATUS_SUCCESS) {

@@ -3,6 +3,7 @@
 
 # RUN: yaml2obj %S/Inputs/elf64-pic.yaml -o %t.so
 # RUN: llvm-xray extract %t.so -s | FileCheck %s
+# RUN: llvm-xray extract %t.so --no-demangle --demangle -s | FileCheck %s
 
 # CHECK:      ---
 # CHECK-NEXT: - { id: 1, address: 0x420, function: 0x420, kind: function-enter, always-instrument: true, function-name: 'foo()' }
@@ -14,6 +15,7 @@
 # CHECK-NEXT: ...
 
 # RUN: llvm-xray extract -s --no-demangle %t.so | FileCheck --check-prefix=MANGLED %s
+# RUN: llvm-xray extract -s --demangle --no-demangle %t.so | FileCheck --check-prefix=MANGLED %s
 
 # MANGLED:      ---
 # MANGLED-NEXT: - { id: 1, address: 0x420, function: 0x420, kind: function-enter, always-instrument: true, function-name: _Z3foov }

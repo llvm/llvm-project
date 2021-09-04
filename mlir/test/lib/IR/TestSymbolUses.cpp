@@ -84,7 +84,7 @@ struct SymbolUsesPass
       table.erase(op);
       assert(!table.lookup(name) &&
              "expected erased operation to be unknown now");
-      module.emitRemark() << name << " function successfully erased";
+      module.emitRemark() << name.getValue() << " function successfully erased";
     }
   }
 };
@@ -110,8 +110,8 @@ struct SymbolReplacementPass
       StringAttr newName = nestedOp->getAttrOfType<StringAttr>("sym.new_name");
       if (!newName)
         return;
-      symbolUsers.replaceAllUsesWith(nestedOp, newName.getValue());
-      SymbolTable::setSymbolName(nestedOp, newName.getValue());
+      symbolUsers.replaceAllUsesWith(nestedOp, newName);
+      SymbolTable::setSymbolName(nestedOp, newName);
     });
   }
 };

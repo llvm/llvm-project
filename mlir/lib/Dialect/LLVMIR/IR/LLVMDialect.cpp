@@ -32,6 +32,7 @@
 #include "llvm/Support/SourceMgr.h"
 
 #include <iostream>
+#include <numeric>
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -235,41 +236,27 @@ void SwitchOp::build(OpBuilder &builder, OperationState &result, Value value,
                      ArrayRef<int32_t> caseValues, BlockRange caseDestinations,
                      ArrayRef<ValueRange> caseOperands,
                      ArrayRef<int32_t> branchWeights) {
-  SmallVector<Value> flattenedCaseOperands;
-  SmallVector<int32_t> caseOperandOffsets;
-  int32_t offset = 0;
-  for (ValueRange operands : caseOperands) {
-    flattenedCaseOperands.append(operands.begin(), operands.end());
-    caseOperandOffsets.push_back(offset);
-    offset += operands.size();
-  }
   ElementsAttr caseValuesAttr;
   if (!caseValues.empty())
     caseValuesAttr = builder.getI32VectorAttr(caseValues);
-  ElementsAttr caseOperandOffsetsAttr;
-  if (!caseOperandOffsets.empty())
-    caseOperandOffsetsAttr = builder.getI32VectorAttr(caseOperandOffsets);
 
   ElementsAttr weightsAttr;
   if (!branchWeights.empty())
     weightsAttr = builder.getI32VectorAttr(llvm::to_vector<4>(branchWeights));
 
-  build(builder, result, value, defaultOperands, flattenedCaseOperands,
-        caseValuesAttr, caseOperandOffsetsAttr, weightsAttr, defaultDestination,
-        caseDestinations);
+  build(builder, result, value, defaultOperands, caseOperands, caseValuesAttr,
+        weightsAttr, defaultDestination, caseDestinations);
 }
 
 /// <cases> ::= integer `:` bb-id (`(` ssa-use-and-type-list `)`)?
 ///             ( `,` integer `:` bb-id (`(` ssa-use-and-type-list `)`)? )?
-static ParseResult
-parseSwitchOpCases(OpAsmParser &parser, ElementsAttr &caseValues,
-                   SmallVectorImpl<Block *> &caseDestinations,
-                   SmallVectorImpl<OpAsmParser::OperandType> &caseOperands,
-                   SmallVectorImpl<Type> &caseOperandTypes,
-                   ElementsAttr &caseOperandOffsets) {
+static ParseResult parseSwitchOpCases(
+    OpAsmParser &parser, ElementsAttr &caseValues,
+    SmallVectorImpl<Block *> &caseDestinations,
+    SmallVectorImpl<SmallVector<OpAsmParser::OperandType>> &caseOperands,
+    SmallVectorImpl<SmallVector<Type>> &caseOperandTypes) {
   SmallVector<int32_t> values;
-  SmallVector<int32_t> offsets;
-  int32_t value, offset = 0;
+  int32_t value = 0;
   do {
     OptionalParseResult integerParseResult = parser.parseOptionalInteger(value);
     if (values.empty() && !integerParseResult.hasValue())
@@ -281,32 +268,28 @@ parseSwitchOpCases(OpAsmParser &parser, ElementsAttr &caseValues,
 
     Block *destination;
     SmallVector<OpAsmParser::OperandType> operands;
+    SmallVector<Type> operandTypes;
     if (parser.parseColon() || parser.parseSuccessor(destination))
       return failure();
     if (!parser.parseOptionalLParen()) {
       if (parser.parseRegionArgumentList(operands) ||
-          parser.parseColonTypeList(caseOperandTypes) || parser.parseRParen())
+          parser.parseColonTypeList(operandTypes) || parser.parseRParen())
         return failure();
     }
     caseDestinations.push_back(destination);
-    caseOperands.append(operands.begin(), operands.end());
-    offsets.push_back(offset);
-    offset += operands.size();
+    caseOperands.emplace_back(operands);
+    caseOperandTypes.emplace_back(operandTypes);
   } while (!parser.parseOptionalComma());
 
-  Builder &builder = parser.getBuilder();
-  caseValues = builder.getI32VectorAttr(values);
-  caseOperandOffsets = builder.getI32VectorAttr(offsets);
-
+  caseValues = parser.getBuilder().getI32VectorAttr(values);
   return success();
 }
 
 static void printSwitchOpCases(OpAsmPrinter &p, SwitchOp op,
                                ElementsAttr caseValues,
                                SuccessorRange caseDestinations,
-                               OperandRange caseOperands,
-                               TypeRange caseOperandTypes,
-                               ElementsAttr caseOperandOffsets) {
+                               OperandRangeRange caseOperands,
+                               TypeRangeRange caseOperandTypes) {
   if (!caseValues)
     return;
 
@@ -317,7 +300,7 @@ static void printSwitchOpCases(OpAsmPrinter &p, SwitchOp op,
         p << "  ";
         p << std::get<0>(i).getLimitedValue();
         p << ": ";
-        p.printSuccessorAndUseList(std::get<1>(i), op.getCaseOperands(index++));
+        p.printSuccessorAndUseList(std::get<1>(i), caseOperands[index++]);
       },
       [&] {
         p << ',';
@@ -341,28 +324,6 @@ static LogicalResult verify(SwitchOp op) {
   return success();
 }
 
-OperandRange SwitchOp::getCaseOperands(unsigned index) {
-  return getCaseOperandsMutable(index);
-}
-
-MutableOperandRange SwitchOp::getCaseOperandsMutable(unsigned index) {
-  MutableOperandRange caseOperands = caseOperandsMutable();
-  if (!case_operand_offsets()) {
-    assert(caseOperands.size() == 0 &&
-           "non-empty case operands must have offsets");
-    return caseOperands;
-  }
-
-  ElementsAttr offsets = case_operand_offsets().getValue();
-  assert(index < offsets.size() && "invalid case operand offset index");
-
-  int64_t begin = offsets.getValue(index).cast<IntegerAttr>().getInt();
-  int64_t end = index + 1 == offsets.size()
-                    ? caseOperands.size()
-                    : offsets.getValue(index + 1).cast<IntegerAttr>().getInt();
-  return caseOperandsMutable().slice(begin, end - begin);
-}
-
 Optional<MutableOperandRange>
 SwitchOp::getMutableSuccessorOperands(unsigned index) {
   assert(index < getNumSuccessors() && "invalid successor index");
@@ -374,32 +335,76 @@ SwitchOp::getMutableSuccessorOperands(unsigned index) {
 // Builder, printer and parser for for LLVM::LoadOp.
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verifyAccessGroups(Operation *op) {
-  if (Attribute attribute =
-          op->getAttr(LLVMDialect::getAccessGroupsAttrName())) {
+LogicalResult verifySymbolAttribute(
+    Operation *op, StringRef attributeName,
+    std::function<LogicalResult(Operation *, SymbolRefAttr)> verifySymbolType) {
+  if (Attribute attribute = op->getAttr(attributeName)) {
     // The attribute is already verified to be a symbol ref array attribute via
     // a constraint in the operation definition.
-    for (SymbolRefAttr accessGroupRef :
+    for (SymbolRefAttr symbolRef :
          attribute.cast<ArrayAttr>().getAsRange<SymbolRefAttr>()) {
-      StringRef metadataName = accessGroupRef.getRootReference();
+      StringAttr metadataName = symbolRef.getRootReference();
+      StringAttr symbolName = symbolRef.getLeafReference();
+      // We want @metadata::@symbol, not just @symbol
+      if (metadataName == symbolName) {
+        return op->emitOpError() << "expected '" << symbolRef
+                                 << "' to specify a fully qualified reference";
+      }
       auto metadataOp = SymbolTable::lookupNearestSymbolFrom<LLVM::MetadataOp>(
           op->getParentOp(), metadataName);
       if (!metadataOp)
-        return op->emitOpError() << "expected '" << accessGroupRef
-                                 << "' to reference a metadata op";
-      StringRef accessGroupName = accessGroupRef.getLeafReference();
-      Operation *accessGroupOp =
-          SymbolTable::lookupNearestSymbolFrom(metadataOp, accessGroupName);
-      if (!accessGroupOp)
-        return op->emitOpError() << "expected '" << accessGroupRef
-                                 << "' to reference an access_group op";
+        return op->emitOpError()
+               << "expected '" << symbolRef << "' to reference a metadata op";
+      Operation *symbolOp =
+          SymbolTable::lookupNearestSymbolFrom(metadataOp, symbolName);
+      if (!symbolOp)
+        return op->emitOpError()
+               << "expected '" << symbolRef << "' to be a valid reference";
+      if (failed(verifySymbolType(symbolOp, symbolRef))) {
+        return failure();
+      }
     }
   }
   return success();
 }
 
+// Verifies that metadata ops are wired up properly.
+template <typename OpTy>
+static LogicalResult verifyOpMetadata(Operation *op, StringRef attributeName) {
+  auto verifySymbolType = [op](Operation *symbolOp,
+                               SymbolRefAttr symbolRef) -> LogicalResult {
+    if (!isa<OpTy>(symbolOp)) {
+      return op->emitOpError()
+             << "expected '" << symbolRef << "' to resolve to a "
+             << OpTy::getOperationName();
+    }
+    return success();
+  };
+
+  return verifySymbolAttribute(op, attributeName, verifySymbolType);
+}
+
+static LogicalResult verifyMemoryOpMetadata(Operation *op) {
+  // access_groups
+  if (failed(verifyOpMetadata<LLVM::AccessGroupMetadataOp>(
+          op, LLVMDialect::getAccessGroupsAttrName())))
+    return failure();
+
+  // alias_scopes
+  if (failed(verifyOpMetadata<LLVM::AliasScopeMetadataOp>(
+          op, LLVMDialect::getAliasScopesAttrName())))
+    return failure();
+
+  // noalias_scopes
+  if (failed(verifyOpMetadata<LLVM::AliasScopeMetadataOp>(
+          op, LLVMDialect::getNoAliasScopesAttrName())))
+    return failure();
+
+  return success();
+}
+
 static LogicalResult verify(LoadOp op) {
-  return verifyAccessGroups(op.getOperation());
+  return verifyMemoryOpMetadata(op.getOperation());
 }
 
 void LoadOp::build(OpBuilder &builder, OperationState &result, Type t,
@@ -461,7 +466,7 @@ static ParseResult parseLoadOp(OpAsmParser &parser, OperationState &result) {
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(StoreOp op) {
-  return verifyAccessGroups(op.getOperation());
+  return verifyMemoryOpMetadata(op.getOperation());
 }
 
 void StoreOp::build(OpBuilder &builder, OperationState &result, Value value,
@@ -765,7 +770,7 @@ static LogicalResult verify(CallOp &op) {
   bool isIndirect = false;
 
   // If this is an indirect call, the callee attribute is missing.
-  Optional<StringRef> calleeName = op.callee();
+  FlatSymbolRefAttr calleeName = op.calleeAttr();
   if (!calleeName) {
     isIndirect = true;
     if (!op.getNumOperands())
@@ -777,14 +782,15 @@ static LogicalResult verify(CallOp &op) {
              << ptrType;
     fnType = ptrType.getElementType();
   } else {
-    Operation *callee = SymbolTable::lookupNearestSymbolFrom(op, *calleeName);
+    Operation *callee =
+        SymbolTable::lookupNearestSymbolFrom(op, calleeName.getAttr());
     if (!callee)
       return op.emitOpError()
-             << "'" << *calleeName
+             << "'" << calleeName.getValue()
              << "' does not reference a symbol in the current scope";
     auto fn = dyn_cast<LLVMFuncOp>(callee);
     if (!fn)
-      return op.emitOpError() << "'" << *calleeName
+      return op.emitOpError() << "'" << calleeName.getValue()
                               << "' does not reference a valid LLVM function";
 
     fnType = fn.getType();
@@ -2248,14 +2254,14 @@ LogicalResult LLVMDialect::verifyOperationAttribute(Operation *op,
         if (!accessGroupRef)
           return op->emitOpError()
                  << "expected '" << attr << "' to be a symbol reference";
-        StringRef metadataName = accessGroupRef.getRootReference();
+        StringAttr metadataName = accessGroupRef.getRootReference();
         auto metadataOp =
             SymbolTable::lookupNearestSymbolFrom<LLVM::MetadataOp>(
                 op->getParentOp(), metadataName);
         if (!metadataOp)
           return op->emitOpError()
                  << "expected '" << attr << "' to reference a metadata op";
-        StringRef accessGroupName = accessGroupRef.getLeafReference();
+        StringAttr accessGroupName = accessGroupRef.getLeafReference();
         Operation *accessGroupOp =
             SymbolTable::lookupNearestSymbolFrom(metadataOp, accessGroupName);
         if (!accessGroupOp)

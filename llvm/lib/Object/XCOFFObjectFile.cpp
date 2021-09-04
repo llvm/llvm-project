@@ -307,6 +307,38 @@ uint64_t XCOFFObjectFile::getSectionAlignment(DataRefImpl Sec) const {
   return Result;
 }
 
+Expected<uintptr_t> XCOFFObjectFile::getLoaderSectionAddress() const {
+  uint64_t OffsetToLoaderSection = 0;
+  uint64_t SizeOfLoaderSection = 0;
+
+  if (is64Bit()) {
+    for (const auto &Sec64 : sections64())
+      if (Sec64.getSectionType() == XCOFF::STYP_LOADER) {
+        OffsetToLoaderSection = Sec64.FileOffsetToRawData;
+        SizeOfLoaderSection = Sec64.SectionSize;
+        break;
+      }
+  } else {
+    for (const auto &Sec32 : sections32())
+      if (Sec32.getSectionType() == XCOFF::STYP_LOADER) {
+        OffsetToLoaderSection = Sec32.FileOffsetToRawData;
+        SizeOfLoaderSection = Sec32.SectionSize;
+        break;
+      }
+  }
+
+  // No loader section is not an error.
+  if (!SizeOfLoaderSection)
+    return 0;
+
+  uintptr_t LoderSectionStart =
+      reinterpret_cast<uintptr_t>(base() + OffsetToLoaderSection);
+  if (Error E =
+          Binary::checkOffset(Data, LoderSectionStart, SizeOfLoaderSection))
+    return std::move(E);
+  return LoderSectionStart;
+}
+
 bool XCOFFObjectFile::isSectionCompressed(DataRefImpl Sec) const {
   return false;
 }
@@ -792,6 +824,47 @@ XCOFFObjectFile::parseStringTable(const XCOFFObjectFile *Obj, uint64_t Offset) {
     return errorCodeToError(object_error::string_table_non_null_end);
 
   return XCOFFStringTable{Size, StringTablePtr};
+}
+
+// This function returns the import file table. Each entry in the import file
+// table consists of: "path_name\0base_name\0archive_member_name\0".
+Expected<StringRef> XCOFFObjectFile::getImportFileTable() const {
+  Expected<uintptr_t> LoaderSectionAddrOrError = getLoaderSectionAddress();
+  if (!LoaderSectionAddrOrError)
+    return LoaderSectionAddrOrError.takeError();
+
+  uintptr_t LoaderSectionAddr = LoaderSectionAddrOrError.get();
+  if (!LoaderSectionAddr)
+    return StringRef();
+
+  uint64_t OffsetToImportFileTable = 0;
+  uint64_t LengthOfImportFileTable = 0;
+  if (is64Bit()) {
+    const LoaderSectionHeader64 *LoaderSec64 =
+        viewAs<LoaderSectionHeader64>(LoaderSectionAddr);
+    OffsetToImportFileTable = LoaderSec64->OffsetToImpid;
+    LengthOfImportFileTable = LoaderSec64->LengthOfImpidStrTbl;
+  } else {
+    const LoaderSectionHeader32 *LoaderSec32 =
+        viewAs<LoaderSectionHeader32>(LoaderSectionAddr);
+    OffsetToImportFileTable = LoaderSec32->OffsetToImpid;
+    LengthOfImportFileTable = LoaderSec32->LengthOfImpidStrTbl;
+  }
+
+  auto ImportTableOrErr = getObject<char>(
+      Data,
+      reinterpret_cast<void *>(LoaderSectionAddr + OffsetToImportFileTable),
+      LengthOfImportFileTable);
+  if (Error E = ImportTableOrErr.takeError())
+    return std::move(E);
+
+  const char *ImportTablePtr = ImportTableOrErr.get();
+  if (ImportTablePtr[LengthOfImportFileTable - 1] != '\0')
+    return createStringError(
+        object_error::parse_failed,
+        "the import file table must end with a null terminator");
+
+  return StringRef(ImportTablePtr, LengthOfImportFileTable);
 }
 
 Expected<std::unique_ptr<XCOFFObjectFile>>

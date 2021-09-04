@@ -247,11 +247,11 @@ namespace ISD {
     unsigned PartOffset;
 
     OutputArg() = default;
-    OutputArg(ArgFlagsTy flags, EVT vt, EVT argvt, bool isfixed,
+    OutputArg(ArgFlagsTy flags, MVT vt, EVT argvt, bool isfixed,
               unsigned origIdx, unsigned partOffs)
-      : Flags(flags), IsFixed(isfixed), OrigArgIndex(origIdx),
-        PartOffset(partOffs) {
-      VT = vt.getSimpleVT();
+        : Flags(flags), IsFixed(isfixed), OrigArgIndex(origIdx),
+          PartOffset(partOffs) {
+      VT = vt;
       ArgVT = argvt;
     }
   };

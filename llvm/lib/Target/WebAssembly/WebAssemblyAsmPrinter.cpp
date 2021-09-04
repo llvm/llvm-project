@@ -51,7 +51,7 @@ using namespace llvm;
 #define DEBUG_TYPE "asm-printer"
 
 extern cl::opt<bool> WasmKeepRegisters;
-extern cl::opt<bool> WasmEnableEmException;
+extern cl::opt<bool> WasmEnableEmEH;
 extern cl::opt<bool> WasmEnableEmSjLj;
 
 //===----------------------------------------------------------------------===//
@@ -309,9 +309,8 @@ void WebAssemblyAsmPrinter::emitExternalDecls(const Module &M) {
       // will discard it later if it turns out not to be necessary.
       auto Signature = signatureFromMVTs(Results, Params);
       bool InvokeDetected = false;
-      auto *Sym =
-          getMCSymbolForFunction(&F, WasmEnableEmException || WasmEnableEmSjLj,
-                                 Signature.get(), InvokeDetected);
+      auto *Sym = getMCSymbolForFunction(&F, WasmEnableEmEH || WasmEnableEmSjLj,
+                                         Signature.get(), InvokeDetected);
 
       // Multiple functions can be mapped to the same invoke symbol. For
       // example, two IR functions '__invoke_void_i8*' and '__invoke_void_i32'

@@ -38,7 +38,8 @@ public:
   void SetUp() override;
 
 protected:
-  llvm::Expected<LineEntry> GetLineEntryForLine(uint32_t line);
+  llvm::Expected<SymbolContextList>
+  GetLineEntriesForLine(uint32_t line, llvm::Optional<uint16_t> column);
   llvm::Optional<TestFile> m_file;
   ModuleSP m_module_sp;
 };
@@ -50,8 +51,9 @@ void LineEntryTest::SetUp() {
   m_module_sp = std::make_shared<Module>(m_file->moduleSpec());
 }
 
-llvm::Expected<LineEntry> LineEntryTest::GetLineEntryForLine(uint32_t line) {
   // TODO: Handle SourceLocationSpec column information
+llvm::Expected<SymbolContextList> LineEntryTest::GetLineEntriesForLine(
+    uint32_t line, llvm::Optional<uint16_t> column = llvm::None) {
   SymbolContextList sc_comp_units;
   SymbolContextList sc_line_entries;
   FileSpec file_spec("inlined-functions.cpp");
@@ -62,7 +64,7 @@ llvm::Expected<LineEntry> LineEntryTest::GetLineEntryForLine(uint32_t line) {
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "No comp unit found on the test object.");
 
-  SourceLocationSpec location_spec(file_spec, line, /*column=*/llvm::None,
+  SourceLocationSpec location_spec(file_spec, line, column,
                                    /*check_inlines=*/true,
                                    /*exact_match=*/true);
 
@@ -71,33 +73,53 @@ llvm::Expected<LineEntry> LineEntryTest::GetLineEntryForLine(uint32_t line) {
   if (sc_line_entries.GetSize() == 0)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "No line entry found on the test object.");
-  return sc_line_entries[0].line_entry;
+  return sc_line_entries;
+}
+
+// This tests if we can get all line entries that match the passed line, if
+// no column is specified.
+TEST_F(LineEntryTest, GetAllExactLineMatchesWithoutColumn) {
+  auto sc_line_entries = GetLineEntriesForLine(12);
+  ASSERT_THAT_EXPECTED(sc_line_entries, llvm::Succeeded());
+  ASSERT_EQ(sc_line_entries->NumLineEntriesWithLine(12), 6u);
+}
+
+// This tests if we can get exact line and column matches.
+TEST_F(LineEntryTest, GetAllExactLineColumnMatches) {
+  auto sc_line_entries = GetLineEntriesForLine(12, 39);
+  ASSERT_THAT_EXPECTED(sc_line_entries, llvm::Succeeded());
+  ASSERT_EQ(sc_line_entries->NumLineEntriesWithLine(12), 1u);
+  auto line_entry = sc_line_entries.get()[0].line_entry;
+  ASSERT_EQ(line_entry.column, 39);
 }
 
 TEST_F(LineEntryTest, GetSameLineContiguousAddressRangeNoInlines) {
-  auto line_entry = GetLineEntryForLine(18);
-  ASSERT_THAT_EXPECTED(line_entry, llvm::Succeeded());
+  auto sc_line_entries = GetLineEntriesForLine(18);
+  ASSERT_THAT_EXPECTED(sc_line_entries, llvm::Succeeded());
+  auto line_entry = sc_line_entries.get()[0].line_entry;
   bool include_inlined_functions = false;
   auto range =
-      line_entry->GetSameLineContiguousAddressRange(include_inlined_functions);
+      line_entry.GetSameLineContiguousAddressRange(include_inlined_functions);
   ASSERT_EQ(range.GetByteSize(), (uint64_t)0x24);
 }
 
 TEST_F(LineEntryTest, GetSameLineContiguousAddressRangeOneInline) {
-  auto line_entry = GetLineEntryForLine(18);
-  ASSERT_THAT_EXPECTED(line_entry, llvm::Succeeded());
+  auto sc_line_entries = GetLineEntriesForLine(18);
+  ASSERT_THAT_EXPECTED(sc_line_entries, llvm::Succeeded());
+  auto line_entry = sc_line_entries.get()[0].line_entry;
   bool include_inlined_functions = true;
   auto range =
-      line_entry->GetSameLineContiguousAddressRange(include_inlined_functions);
+      line_entry.GetSameLineContiguousAddressRange(include_inlined_functions);
   ASSERT_EQ(range.GetByteSize(), (uint64_t)0x49);
 }
 
 TEST_F(LineEntryTest, GetSameLineContiguousAddressRangeNestedInline) {
-  auto line_entry = GetLineEntryForLine(12);
-  ASSERT_THAT_EXPECTED(line_entry, llvm::Succeeded());
+  auto sc_line_entries = GetLineEntriesForLine(12);
+  ASSERT_THAT_EXPECTED(sc_line_entries, llvm::Succeeded());
+  auto line_entry = sc_line_entries.get()[0].line_entry;
   bool include_inlined_functions = true;
   auto range =
-      line_entry->GetSameLineContiguousAddressRange(include_inlined_functions);
+      line_entry.GetSameLineContiguousAddressRange(include_inlined_functions);
   ASSERT_EQ(range.GetByteSize(), (uint64_t)0x33);
 }
 

@@ -39,8 +39,8 @@ public:
 };
 template <> class NumericLimits<unsigned long> {
 public:
-  static constexpr long max() { return ULONG_MAX; }
-  static constexpr long min() { return 0; }
+  static constexpr unsigned long max() { return ULONG_MAX; }
+  static constexpr unsigned long min() { return 0; }
 };
 template <> class NumericLimits<long long> {
 public:
@@ -49,8 +49,8 @@ public:
 };
 template <> class NumericLimits<unsigned long long> {
 public:
-  static constexpr long max() { return ULLONG_MAX; }
-  static constexpr long min() { return 0; }
+  static constexpr unsigned long long max() { return ULLONG_MAX; }
+  static constexpr unsigned long long min() { return 0; }
 };
 
 } // namespace cpp

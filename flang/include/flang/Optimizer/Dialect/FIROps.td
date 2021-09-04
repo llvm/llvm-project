@@ -3281,7 +3281,7 @@ def fir_DispatchTableOp : fir_Op<"dispatch_table",
 
     // Convert the parsed name attr into a string attr.
     result.attributes.set(mlir::SymbolTable::getSymbolAttrName(),
-      parser.getBuilder().getStringAttr(nameAttr.getRootReference()));
+      nameAttr.getRootReference());
 
     // Parse the optional table body.
     mlir::Region *body = result.addRegion();

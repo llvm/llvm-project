@@ -458,6 +458,13 @@ void Operator::populateOpStructure() {
     results.push_back({name, TypeConstraint(resultDef)});
     if (!name.empty())
       argumentsAndResultsIndex[name] = resultIndex(i);
+
+    // We currently only support VariadicOfVariadic operands.
+    if (results.back().constraint.isVariadicOfVariadic()) {
+      PrintFatalError(
+          def.getLoc(),
+          "'VariadicOfVariadic' results are currently not supported");
+    }
   }
 
   // Handle successors
@@ -577,8 +584,7 @@ bool Operator::hasAssemblyFormat() const {
 
 StringRef Operator::getAssemblyFormat() const {
   return TypeSwitch<llvm::Init *, StringRef>(def.getValueInit("assemblyFormat"))
-      .Case<llvm::StringInit>(
-          [&](auto *init) { return init->getValue(); });
+      .Case<llvm::StringInit>([&](auto *init) { return init->getValue(); });
 }
 
 void Operator::print(llvm::raw_ostream &os) const {

@@ -788,15 +788,15 @@ let SubtargetPredicate = isGFX10Plus, is_flat_global = 1 in {
   defm GLOBAL_ATOMIC_FCMPSWAP :
     FLAT_Global_Atomic_Pseudo<"global_atomic_fcmpswap", VGPR_32, f32>;
   defm GLOBAL_ATOMIC_FMIN :
-    FLAT_Global_Atomic_Pseudo<"global_atomic_fmin", VGPR_32, f32>;
+    FLAT_Global_Atomic_Pseudo<"global_atomic_fmin", VGPR_32, f32, int_amdgcn_global_atomic_fmin>;
   defm GLOBAL_ATOMIC_FMAX :
-    FLAT_Global_Atomic_Pseudo<"global_atomic_fmax", VGPR_32, f32>;
+    FLAT_Global_Atomic_Pseudo<"global_atomic_fmax", VGPR_32, f32, int_amdgcn_global_atomic_fmax>;
   defm GLOBAL_ATOMIC_FCMPSWAP_X2 :
     FLAT_Global_Atomic_Pseudo<"global_atomic_fcmpswap_x2", VReg_64, f64>;
   defm GLOBAL_ATOMIC_FMIN_X2 :
-    FLAT_Global_Atomic_Pseudo<"global_atomic_fmin_x2", VReg_64, f64>;
+    FLAT_Global_Atomic_Pseudo<"global_atomic_fmin_x2", VReg_64, f64, int_amdgcn_global_atomic_fmin>;
   defm GLOBAL_ATOMIC_FMAX_X2 :
-    FLAT_Global_Atomic_Pseudo<"global_atomic_fmax_x2", VReg_64, f64>;
+    FLAT_Global_Atomic_Pseudo<"global_atomic_fmax_x2", VReg_64, f64, int_amdgcn_global_atomic_fmax>;
 } // End SubtargetPredicate = isGFX10Plus, is_flat_global = 1
 
 let is_flat_global = 1 in {
@@ -1236,6 +1236,13 @@ defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_OR_X2", atomic_load_or_global_64, i6
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_SWAP_X2", atomic_swap_global_64, i64>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_CMPSWAP_X2", AMDGPUatomic_cmp_swap_global_64, i64, v2i64>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_XOR_X2", atomic_load_xor_global_64, i64>;
+
+let OtherPredicates = [isGFX10Plus] in {
+defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_FMIN", atomic_load_fmin_global_32, f32>;
+defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_FMAX", atomic_load_fmax_global_32, f32>;
+defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_FMIN_X2", atomic_load_fmin_global_64, f64>;
+defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_FMAX_X2", atomic_load_fmax_global_64, f64>;
+}
 
 let OtherPredicates = [HasAtomicFaddInsts] in {
 defm : GlobalFLATNoRtnAtomicPats <GLOBAL_ATOMIC_ADD_F32,    atomic_load_fadd_global_noret_32, f32>;

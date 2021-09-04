@@ -73,7 +73,8 @@ void DIBuilder::finalize() {
     return;
   }
 
-  CUNode->replaceEnumTypes(MDTuple::get(VMContext, AllEnumTypes));
+  if (!AllEnumTypes.empty())
+    CUNode->replaceEnumTypes(MDTuple::get(VMContext, AllEnumTypes));
 
   SmallVector<Metadata *, 16> RetainValues;
   // Declarations and definitions of the same type may be retained. Some
@@ -705,13 +706,14 @@ DIGlobalVariableExpression *DIBuilder::createGlobalVariableExpression(
     DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *F,
     unsigned LineNumber, DIType *Ty, bool IsLocalToUnit,
     bool isDefined, DIExpression *Expr,
-    MDNode *Decl, MDTuple *TemplateParams, uint32_t AlignInBits) {
+    MDNode *Decl, MDTuple *TemplateParams, uint32_t AlignInBits,
+    DINodeArray Annotations) {
   checkGlobalVariableScope(Context);
 
   auto *GV = DIGlobalVariable::getDistinct(
       VMContext, cast_or_null<DIScope>(Context), Name, LinkageName, F,
       LineNumber, Ty, IsLocalToUnit, isDefined, cast_or_null<DIDerivedType>(Decl),
-      TemplateParams, AlignInBits);
+      TemplateParams, AlignInBits, Annotations);
   if (!Expr)
     Expr = createExpression();
   auto *N = DIGlobalVariableExpression::get(VMContext, GV, Expr);
@@ -728,7 +730,8 @@ DIGlobalVariable *DIBuilder::createTempGlobalVariableFwdDecl(
   return DIGlobalVariable::getTemporary(
              VMContext, cast_or_null<DIScope>(Context), Name, LinkageName, F,
              LineNumber, Ty, IsLocalToUnit, false,
-             cast_or_null<DIDerivedType>(Decl), TemplateParams, AlignInBits)
+             cast_or_null<DIDerivedType>(Decl), TemplateParams, AlignInBits,
+             nullptr)
       .release();
 }
 
@@ -737,7 +740,7 @@ static DILocalVariable *createLocalVariable(
     DenseMap<MDNode *, SmallVector<TrackingMDNodeRef, 1>> &PreservedVariables,
     DIScope *Scope, StringRef Name, unsigned ArgNo, DIFile *File,
     unsigned LineNo, DIType *Ty, bool AlwaysPreserve, DINode::DIFlags Flags,
-    uint32_t AlignInBits) {
+    uint32_t AlignInBits, DINodeArray Annotations = nullptr) {
   // FIXME: Why getNonCompileUnitScope()?
   // FIXME: Why is "!Context" okay here?
   // FIXME: Why doesn't this check for a subprogram or lexical block (AFAICT
@@ -746,7 +749,8 @@ static DILocalVariable *createLocalVariable(
 
   auto *Node =
       DILocalVariable::get(VMContext, cast_or_null<DILocalScope>(Context), Name,
-                           File, LineNo, Ty, ArgNo, Flags, AlignInBits);
+                           File, LineNo, Ty, ArgNo, Flags, AlignInBits,
+                           Annotations);
   if (AlwaysPreserve) {
     // The optimizer may remove local variables. If there is an interest
     // to preserve variable info in such situation then stash it in a
@@ -770,11 +774,12 @@ DILocalVariable *DIBuilder::createAutoVariable(DIScope *Scope, StringRef Name,
 
 DILocalVariable *DIBuilder::createParameterVariable(
     DIScope *Scope, StringRef Name, unsigned ArgNo, DIFile *File,
-    unsigned LineNo, DIType *Ty, bool AlwaysPreserve, DINode::DIFlags Flags) {
+    unsigned LineNo, DIType *Ty, bool AlwaysPreserve, DINode::DIFlags Flags,
+    DINodeArray Annotations) {
   assert(ArgNo && "Expected non-zero argument number for parameter");
   return createLocalVariable(VMContext, PreservedVariables, Scope, Name, ArgNo,
                              File, LineNo, Ty, AlwaysPreserve, Flags,
-                             /* AlignInBits */0);
+                             /* AlignInBits */0, Annotations);
 }
 
 DILabel *DIBuilder::createLabel(
@@ -819,13 +824,14 @@ DISubprogram *DIBuilder::createFunction(
     unsigned LineNo, DISubroutineType *Ty, unsigned ScopeLine,
     DINode::DIFlags Flags, DISubprogram::DISPFlags SPFlags,
     DITemplateParameterArray TParams, DISubprogram *Decl,
-    DITypeArray ThrownTypes) {
+    DITypeArray ThrownTypes, DINodeArray Annotations) {
   bool IsDefinition = SPFlags & DISubprogram::SPFlagDefinition;
   auto *Node = getSubprogram(
       /*IsDistinct=*/IsDefinition, VMContext, getNonCompileUnitScope(Context),
       Name, LinkageName, File, LineNo, Ty, ScopeLine, nullptr, 0, 0, Flags,
       SPFlags, IsDefinition ? CUNode : nullptr, TParams, Decl,
-      MDTuple::getTemporary(VMContext, None).release(), ThrownTypes);
+      MDTuple::getTemporary(VMContext, None).release(), ThrownTypes,
+      Annotations);
 
   if (IsDefinition)
     AllSubprograms.push_back(Node);

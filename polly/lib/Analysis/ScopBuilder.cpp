@@ -449,6 +449,9 @@ bool ScopBuilder::buildConditionSets(
   } else if (auto *PHI = dyn_cast<PHINode>(Condition)) {
     auto *Unique = dyn_cast<ConstantInt>(
         getUniqueNonErrorValue(PHI, &scop->getRegion(), &SD));
+    assert(Unique &&
+           "A PHINode condition should only be accepted by ScopDetection if "
+           "getUniqueNonErrorValue returns non-NULL");
 
     if (Unique->isZero())
       ConsequenceCondSet = isl_set_empty(isl_set_get_space(Domain));

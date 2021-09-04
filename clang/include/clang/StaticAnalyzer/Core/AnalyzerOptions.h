@@ -395,7 +395,11 @@ public:
     return {FullCompilerInvocation,
             ShouldDisplayMacroExpansions,
             ShouldSerializeStats,
-            ShouldWriteStableReportFilename,
+            // The stable report filename option is deprecated because
+            // file names are now always stable. Now the old option acts as
+            // an alias to the new verbose filename option because this
+            // closely mimics the behavior under the old option.
+            ShouldWriteStableReportFilename || ShouldWriteVerboseReportFilename,
             AnalyzerWerror,
             ShouldApplyFixIts,
             ShouldDisplayCheckerNameForText};

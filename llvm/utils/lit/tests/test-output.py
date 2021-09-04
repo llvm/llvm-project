@@ -1,4 +1,4 @@
-# RUN: %{lit} -j 1 -v %{inputs}/test-data --output %t.results.out > %t.out
+# RUN: %{lit} -v %{inputs}/test-data --output %t.results.out > %t.out
 # RUN: FileCheck < %t.results.out %s
 
 # CHECK: {

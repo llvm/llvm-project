@@ -520,7 +520,7 @@ public:
         /*defaultOperands=*/ValueRange(),
         /*caseValues=*/caseValues,
         /*caseDestinations=*/caseDest,
-        /*caseOperands=*/ArrayRef<ValueRange>(),
+        /*caseOperands=*/ArrayRef<ValueRange>({ValueRange(), ValueRange()}),
         /*branchWeights=*/ArrayRef<int32_t>());
 
     return success();

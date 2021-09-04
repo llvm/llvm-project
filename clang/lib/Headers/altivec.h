@@ -18312,10 +18312,10 @@ vec_cfuge(vector unsigned long long __a, vector unsigned long long __b) {
            : __builtin_vsx_xxgenpcvdm((__a), (int)(__imm)))
 #endif /* __VSX__ */
 
-/* vec_clrl */
+/* vec_clr_first */
 
 static __inline__ vector signed char __ATTRS_o_ai
-vec_clrl(vector signed char __a, unsigned int __n) {
+vec_clr_first(vector signed char __a, unsigned int __n) {
 #ifdef __LITTLE_ENDIAN__
   return __builtin_altivec_vclrrb(__a, __n);
 #else
@@ -18324,7 +18324,7 @@ vec_clrl(vector signed char __a, unsigned int __n) {
 }
 
 static __inline__ vector unsigned char __ATTRS_o_ai
-vec_clrl(vector unsigned char __a, unsigned int __n) {
+vec_clr_first(vector unsigned char __a, unsigned int __n) {
 #ifdef __LITTLE_ENDIAN__
   return __builtin_altivec_vclrrb((vector signed char)__a, __n);
 #else
@@ -18332,10 +18332,10 @@ vec_clrl(vector unsigned char __a, unsigned int __n) {
 #endif
 }
 
-/* vec_clrr */
+/* vec_clr_last */
 
 static __inline__ vector signed char __ATTRS_o_ai
-vec_clrr(vector signed char __a, unsigned int __n) {
+vec_clr_last(vector signed char __a, unsigned int __n) {
 #ifdef __LITTLE_ENDIAN__
   return __builtin_altivec_vclrlb(__a, __n);
 #else
@@ -18344,7 +18344,7 @@ vec_clrr(vector signed char __a, unsigned int __n) {
 }
 
 static __inline__ vector unsigned char __ATTRS_o_ai
-vec_clrr(vector unsigned char __a, unsigned int __n) {
+vec_clr_last(vector unsigned char __a, unsigned int __n) {
 #ifdef __LITTLE_ENDIAN__
   return __builtin_altivec_vclrlb((vector signed char)__a, __n);
 #else

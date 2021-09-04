@@ -540,7 +540,7 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
         "preserved across the asm statement, and clobbering them may "
         "lead to undefined behaviour.";
     MMI->getModule()->getContext().diagnose(DiagnosticInfoInlineAsm(
-        LocCookie, Msg.c_str(), DiagnosticSeverity::DS_Warning));
+        LocCookie, Msg, DiagnosticSeverity::DS_Warning));
     MMI->getModule()->getContext().diagnose(
         DiagnosticInfoInlineAsm(LocCookie, Note, DiagnosticSeverity::DS_Note));
   }

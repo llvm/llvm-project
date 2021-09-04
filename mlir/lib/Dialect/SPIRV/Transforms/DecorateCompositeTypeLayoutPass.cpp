@@ -64,11 +64,11 @@ public:
   LogicalResult matchAndRewrite(spirv::AddressOfOp op,
                                 PatternRewriter &rewriter) const override {
     auto spirvModule = op->getParentOfType<spirv::ModuleOp>();
-    auto varName = op.variable();
+    auto varName = op.variableAttr();
     auto varOp = spirvModule.lookupSymbol<spirv::GlobalVariableOp>(varName);
 
     rewriter.replaceOpWithNewOp<spirv::AddressOfOp>(
-        op, varOp.type(), rewriter.getSymbolRefAttr(varName));
+        op, varOp.type(), rewriter.getSymbolRefAttr(varName.getAttr()));
     return success();
   }
 };

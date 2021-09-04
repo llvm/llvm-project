@@ -2160,6 +2160,7 @@ static void writeDISubprogram(raw_ostream &Out, const DISubprogram *N,
   Printer.printMetadata("declaration", N->getRawDeclaration());
   Printer.printMetadata("retainedNodes", N->getRawRetainedNodes());
   Printer.printMetadata("thrownTypes", N->getRawThrownTypes());
+  Printer.printMetadata("annotations", N->getRawAnnotations());
   Out << ")";
 }
 
@@ -2298,6 +2299,7 @@ static void writeDIGlobalVariable(raw_ostream &Out, const DIGlobalVariable *N,
   Printer.printMetadata("declaration", N->getRawStaticDataMemberDeclaration());
   Printer.printMetadata("templateParams", N->getRawTemplateParams());
   Printer.printInt("align", N->getAlignInBits());
+  Printer.printMetadata("annotations", N->getRawAnnotations());
   Out << ")";
 }
 
@@ -2314,6 +2316,7 @@ static void writeDILocalVariable(raw_ostream &Out, const DILocalVariable *N,
   Printer.printMetadata("type", N->getRawType());
   Printer.printDIFlags("flags", N->getFlags());
   Printer.printInt("align", N->getAlignInBits());
+  Printer.printMetadata("annotations", N->getRawAnnotations());
   Out << ")";
 }
 

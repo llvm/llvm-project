@@ -9,9 +9,8 @@
 #ifndef LLDB_TARGET_TRACESESSIONPARSER_H
 #define LLDB_TARGET_TRACESESSIONPARSER_H
 
-#include "llvm/Support/JSON.h"
-
 #include "ThreadPostMortemTrace.h"
+#include "TraceJSONStructs.h"
 
 namespace lldb_private {
 
@@ -24,46 +23,6 @@ namespace lldb_private {
 /// See \a Trace::FindPlugin for more information regarding these JSON files.
 class TraceSessionFileParser {
 public:
-  /// C++ structs representing the JSON trace session.
-  /// \{
-  struct JSONAddress {
-    lldb::addr_t value;
-  };
-
-  struct JSONModule {
-    std::string system_path;
-    llvm::Optional<std::string> file;
-    JSONAddress load_address;
-    llvm::Optional<std::string> uuid;
-  };
-
-  struct JSONThread {
-    int64_t tid;
-    std::string trace_file;
-  };
-
-  struct JSONProcess {
-    int64_t pid;
-    std::string triple;
-    std::vector<JSONThread> threads;
-    std::vector<JSONModule> modules;
-  };
-
-  struct JSONTracePluginSettings {
-    std::string type;
-  };
-
-  struct JSONTraceSessionBase {
-    std::vector<JSONProcess> processes;
-  };
-
-  /// The trace plug-in implementation should provide its own TPluginSettings,
-  /// which corresponds to the "trace" section of the schema.
-  template <class TPluginSettings>
-  struct JSONTraceSession : JSONTraceSessionBase {
-    TPluginSettings trace;
-  };
-  /// \}
 
   /// Helper struct holding the objects created when parsing a process
   struct ParsedProcess {
@@ -130,50 +89,5 @@ protected:
 };
 } // namespace lldb_private
 
-namespace llvm {
-namespace json {
-
-bool fromJSON(const Value &value,
-              lldb_private::TraceSessionFileParser::JSONAddress &address,
-              Path path);
-
-bool fromJSON(const Value &value,
-              lldb_private::TraceSessionFileParser::JSONModule &module,
-              Path path);
-
-bool fromJSON(const Value &value,
-              lldb_private::TraceSessionFileParser::JSONThread &thread,
-              Path path);
-
-bool fromJSON(const Value &value,
-              lldb_private::TraceSessionFileParser::JSONProcess &process,
-              Path path);
-
-bool fromJSON(const Value &value,
-              lldb_private::TraceSessionFileParser::JSONTracePluginSettings
-                  &plugin_settings,
-              Path path);
-
-bool fromJSON(
-    const Value &value,
-    lldb_private::TraceSessionFileParser::JSONTraceSessionBase &session,
-    Path path);
-
-template <class TPluginSettings>
-bool fromJSON(
-    const Value &value,
-    lldb_private::TraceSessionFileParser::JSONTraceSession<TPluginSettings>
-        &session,
-    Path path) {
-  ObjectMapper o(value, path);
-  return o && o.map("trace", session.trace) &&
-         fromJSON(value,
-                  (lldb_private::TraceSessionFileParser::JSONTraceSessionBase &)
-                      session,
-                  path);
-}
-
-} // namespace json
-} // namespace llvm
 
 #endif // LLDB_TARGET_TRACESESSIONPARSER_H

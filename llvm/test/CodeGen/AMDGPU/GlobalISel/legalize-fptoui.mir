@@ -101,8 +101,7 @@ body: |
     ; SI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; SI: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
     ; SI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[FPEXT]](s32)
-    ; SI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FPTOUI]](s32)
-    ; SI: $vgpr0 = COPY [[COPY1]](s32)
+    ; SI: $vgpr0 = COPY [[FPTOUI]](s32)
     ; VI-LABEL: name: test_fptoui_s16_to_s16
     ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
@@ -125,13 +124,11 @@ body: |
     ; SI-LABEL: name: test_fptoui_s32_to_s16
     ; SI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; SI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[COPY]](s32)
-    ; SI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FPTOUI]](s32)
-    ; SI: $vgpr0 = COPY [[COPY1]](s32)
+    ; SI: $vgpr0 = COPY [[FPTOUI]](s32)
     ; VI-LABEL: name: test_fptoui_s32_to_s16
     ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[COPY]](s32)
-    ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FPTOUI]](s32)
-    ; VI: $vgpr0 = COPY [[COPY1]](s32)
+    ; VI: $vgpr0 = COPY [[FPTOUI]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_FPTOUI %0
     %2:_(s32) = G_ANYEXT %1
@@ -147,13 +144,11 @@ body: |
     ; SI-LABEL: name: test_fptoui_s64_to_s16
     ; SI: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; SI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[COPY]](s64)
-    ; SI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FPTOUI]](s32)
-    ; SI: $vgpr0 = COPY [[COPY1]](s32)
+    ; SI: $vgpr0 = COPY [[FPTOUI]](s32)
     ; VI-LABEL: name: test_fptoui_s64_to_s16
     ; VI: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; VI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[COPY]](s64)
-    ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FPTOUI]](s32)
-    ; VI: $vgpr0 = COPY [[COPY1]](s32)
+    ; VI: $vgpr0 = COPY [[FPTOUI]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s16) = G_FPTOUI %0
     %2:_(s32) = G_ANYEXT %1
@@ -556,14 +551,12 @@ body: |
     ; SI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; SI: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
     ; SI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[FPEXT]](s32)
-    ; SI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FPTOUI]](s32)
-    ; SI: $vgpr0 = COPY [[COPY1]](s32)
+    ; SI: $vgpr0 = COPY [[FPTOUI]](s32)
     ; VI-LABEL: name: test_fptoui_s16_to_s15
     ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; VI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[TRUNC]](s16)
-    ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FPTOUI]](s32)
-    ; VI: $vgpr0 = COPY [[COPY1]](s32)
+    ; VI: $vgpr0 = COPY [[FPTOUI]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_TRUNC %0
     %2:_(s15) = G_FPTOUI %1
@@ -582,14 +575,12 @@ body: |
     ; SI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; SI: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
     ; SI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[FPEXT]](s32)
-    ; SI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FPTOUI]](s32)
-    ; SI: $vgpr0 = COPY [[COPY1]](s32)
+    ; SI: $vgpr0 = COPY [[FPTOUI]](s32)
     ; VI-LABEL: name: test_fptoui_s16_to_s17
     ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; VI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[TRUNC]](s16)
-    ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FPTOUI]](s32)
-    ; VI: $vgpr0 = COPY [[COPY1]](s32)
+    ; VI: $vgpr0 = COPY [[FPTOUI]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_TRUNC %0
     %2:_(s17) = G_FPTOUI %1
@@ -614,8 +605,7 @@ body: |
     ; SI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[FFLOOR]](s32)
     ; SI: [[FPTOUI1:%[0-9]+]]:_(s32) = G_FPTOUI [[FMA]](s32)
     ; SI: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[FPTOUI1]](s32), [[FPTOUI]](s32)
-    ; SI: [[COPY1:%[0-9]+]]:_(s64) = COPY [[MV]](s64)
-    ; SI: $vgpr0_vgpr1 = COPY [[COPY1]](s64)
+    ; SI: $vgpr0_vgpr1 = COPY [[MV]](s64)
     ; VI-LABEL: name: test_fptoui_s32_to_s33
     ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[COPY]]
@@ -627,8 +617,7 @@ body: |
     ; VI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[FFLOOR]](s32)
     ; VI: [[FPTOUI1:%[0-9]+]]:_(s32) = G_FPTOUI [[FMA]](s32)
     ; VI: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[FPTOUI1]](s32), [[FPTOUI]](s32)
-    ; VI: [[COPY1:%[0-9]+]]:_(s64) = COPY [[MV]](s64)
-    ; VI: $vgpr0_vgpr1 = COPY [[COPY1]](s64)
+    ; VI: $vgpr0_vgpr1 = COPY [[MV]](s64)
     %0:_(s32) = COPY $vgpr0
     %1:_(s33) = G_FPTOUI %0
     %2:_(s64) = G_ANYEXT %1
@@ -646,14 +635,12 @@ body: |
     ; SI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; SI: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
     ; SI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[FPEXT]](s32)
-    ; SI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FPTOUI]](s32)
-    ; SI: $vgpr0 = COPY [[COPY1]](s32)
+    ; SI: $vgpr0 = COPY [[FPTOUI]](s32)
     ; VI-LABEL: name: test_fptoui_s16_to_s7
     ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; VI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[TRUNC]](s16)
-    ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FPTOUI]](s32)
-    ; VI: $vgpr0 = COPY [[COPY1]](s32)
+    ; VI: $vgpr0 = COPY [[FPTOUI]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_TRUNC %0
     %2:_(s7) = G_FPTOUI %1
@@ -672,14 +659,12 @@ body: |
     ; SI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; SI: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
     ; SI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[FPEXT]](s32)
-    ; SI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FPTOUI]](s32)
-    ; SI: $vgpr0 = COPY [[COPY1]](s32)
+    ; SI: $vgpr0 = COPY [[FPTOUI]](s32)
     ; VI-LABEL: name: test_fptoui_s16_to_s8
     ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; VI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[TRUNC]](s16)
-    ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FPTOUI]](s32)
-    ; VI: $vgpr0 = COPY [[COPY1]](s32)
+    ; VI: $vgpr0 = COPY [[FPTOUI]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_TRUNC %0
     %2:_(s8) = G_FPTOUI %1
@@ -698,14 +683,12 @@ body: |
     ; SI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; SI: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
     ; SI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[FPEXT]](s32)
-    ; SI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FPTOUI]](s32)
-    ; SI: $vgpr0 = COPY [[COPY1]](s32)
+    ; SI: $vgpr0 = COPY [[FPTOUI]](s32)
     ; VI-LABEL: name: test_fptoui_s16_to_s9
     ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; VI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[TRUNC]](s16)
-    ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FPTOUI]](s32)
-    ; VI: $vgpr0 = COPY [[COPY1]](s32)
+    ; VI: $vgpr0 = COPY [[FPTOUI]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_TRUNC %0
     %2:_(s9) = G_FPTOUI %1
@@ -722,13 +705,11 @@ body: |
     ; SI-LABEL: name: test_fptoui_s32_to_s15
     ; SI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; SI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[COPY]](s32)
-    ; SI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FPTOUI]](s32)
-    ; SI: $vgpr0 = COPY [[COPY1]](s32)
+    ; SI: $vgpr0 = COPY [[FPTOUI]](s32)
     ; VI-LABEL: name: test_fptoui_s32_to_s15
     ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[COPY]](s32)
-    ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FPTOUI]](s32)
-    ; VI: $vgpr0 = COPY [[COPY1]](s32)
+    ; VI: $vgpr0 = COPY [[FPTOUI]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s15) = G_FPTOUI %0
     %2:_(s32) = G_ANYEXT %1
@@ -744,13 +725,11 @@ body: |
     ; SI-LABEL: name: test_fptoui_s32_to_s17
     ; SI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; SI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[COPY]](s32)
-    ; SI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FPTOUI]](s32)
-    ; SI: $vgpr0 = COPY [[COPY1]](s32)
+    ; SI: $vgpr0 = COPY [[FPTOUI]](s32)
     ; VI-LABEL: name: test_fptoui_s32_to_s17
     ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[COPY]](s32)
-    ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FPTOUI]](s32)
-    ; VI: $vgpr0 = COPY [[COPY1]](s32)
+    ; VI: $vgpr0 = COPY [[FPTOUI]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s17) = G_FPTOUI %0
     %2:_(s32) = G_ANYEXT %1

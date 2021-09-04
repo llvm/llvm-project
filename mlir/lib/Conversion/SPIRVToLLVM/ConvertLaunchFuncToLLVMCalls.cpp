@@ -127,8 +127,9 @@ static LogicalResult encodeKernelName(spirv::ModuleOp module) {
   //   {spv_module_name}_{function_name}
   auto entryPoint = *module.getOps<spirv::EntryPointOp>().begin();
   StringRef funcName = entryPoint.fn();
-  auto funcOp = module.lookupSymbol<spirv::FuncOp>(funcName);
-  std::string newFuncName = spvModuleName.str() + "_" + funcName.str();
+  auto funcOp = module.lookupSymbol<spirv::FuncOp>(entryPoint.fnAttr());
+  StringAttr newFuncName =
+      StringAttr::get(module->getContext(), spvModuleName + "_" + funcName);
   if (failed(SymbolTable::replaceAllSymbolUses(funcOp, newFuncName, module)))
     return failure();
   SymbolTable::setSymbolName(funcOp, newFuncName);
@@ -166,9 +167,10 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
     // is named:
     //   __spv__{kernel_module_name}
     // based on GPU to SPIR-V conversion.
-    StringRef kernelModuleName = launchOp.getKernelModuleName();
+    StringRef kernelModuleName = launchOp.getKernelModuleName().getValue();
     std::string spvModuleName = kSPIRVModule + kernelModuleName.str();
-    auto spvModule = module.lookupSymbol<spirv::ModuleOp>(spvModuleName);
+    auto spvModule = module.lookupSymbol<spirv::ModuleOp>(
+        StringAttr::get(context, spvModuleName));
     if (!spvModule) {
       return launchOp.emitOpError("SPIR-V kernel module '")
              << spvModuleName << "' is not found";
@@ -180,9 +182,10 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
     // variables. The name of the kernel will be
     //   {spv_module_name}_{kernel_function_name}
     // to avoid symbolic name conflicts.
-    StringRef kernelFuncName = launchOp.getKernelName();
+    StringRef kernelFuncName = launchOp.getKernelName().getValue();
     std::string newKernelFuncName = spvModuleName + "_" + kernelFuncName.str();
-    auto kernelFunc = module.lookupSymbol<LLVM::LLVMFuncOp>(newKernelFuncName);
+    auto kernelFunc = module.lookupSymbol<LLVM::LLVMFuncOp>(
+        StringAttr::get(context, newKernelFuncName));
     if (!kernelFunc) {
       OpBuilder::InsertionGuard guard(rewriter);
       rewriter.setInsertionPointToStart(module.getBody());

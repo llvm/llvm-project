@@ -119,4 +119,5 @@
 // CHECK-NEXT: unix.DynamicMemoryModeling:AddNoOwnershipChangeNotes = false
 // CHECK-NEXT: unix.DynamicMemoryModeling:Optimistic = false
 // CHECK-NEXT: unroll-loops = false
+// CHECK-NEXT: verbose-report-filename = false
 // CHECK-NEXT: widen-loops = false

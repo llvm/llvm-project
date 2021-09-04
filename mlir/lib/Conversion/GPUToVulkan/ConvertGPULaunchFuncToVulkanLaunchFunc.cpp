@@ -181,9 +181,8 @@ void ConvertGpuLaunchFuncToVulkanLaunchFunc::convertGpuLaunchFunc(
                       StringRef(binary.data(), binary.size())));
 
   // Set entry point name as an attribute.
-  vulkanLaunchCallOp->setAttr(
-      kSPIRVEntryPointAttrName,
-      StringAttr::get(loc->getContext(), launchOp.getKernelName()));
+  vulkanLaunchCallOp->setAttr(kSPIRVEntryPointAttrName,
+                              launchOp.getKernelName());
 
   launchOp.erase();
 }

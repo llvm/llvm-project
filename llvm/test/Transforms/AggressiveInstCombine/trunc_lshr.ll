@@ -218,23 +218,6 @@ define i16 @lshr_negative_operand(i16 %x) {
   ret i16 %trunc
 }
 
-define i16 @lshr_negative_operand_but_short(i16 %x) {
-; CHECK-LABEL: @lshr_negative_operand_but_short(
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i16 [[X:%.*]] to i32
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ZEXT]], 32767
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 -1, [[AND]]
-; CHECK-NEXT:    [[LSHR2:%.*]] = lshr i32 [[XOR]], 2
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[LSHR2]] to i16
-; CHECK-NEXT:    ret i16 [[TRUNC]]
-;
-  %zext = zext i16 %x to i32
-  %and = and i32 %zext, 32767
-  %xor = xor i32 -1, %and
-  %lshr2 = lshr i32 %xor, 2
-  %trunc = trunc i32 %lshr2 to i16
-  ret i16 %trunc
-}
-
 ; We may encounter unoptimized IR as below,
 ; so don't crash by assuming that we can
 ; apply instruction flags (exact) if there

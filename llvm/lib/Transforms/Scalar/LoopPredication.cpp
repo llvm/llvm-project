@@ -183,6 +183,8 @@
 #include "llvm/Analysis/GuardUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/Function.h"
@@ -255,6 +257,7 @@ class LoopPredication {
   ScalarEvolution *SE;
   LoopInfo *LI;
   BranchProbabilityInfo *BPI;
+  MemorySSAUpdater *MSSAU;
 
   Loop *L;
   const DataLayout *DL;
@@ -308,10 +311,10 @@ class LoopPredication {
   bool predicateLoopExits(Loop *L, SCEVExpander &Rewriter);
 
 public:
-  LoopPredication(AliasAnalysis *AA, DominatorTree *DT,
-                  ScalarEvolution *SE, LoopInfo *LI,
-                  BranchProbabilityInfo *BPI)
-    : AA(AA), DT(DT), SE(SE), LI(LI), BPI(BPI) {};
+  LoopPredication(AliasAnalysis *AA, DominatorTree *DT, ScalarEvolution *SE,
+                  LoopInfo *LI, BranchProbabilityInfo *BPI,
+                  MemorySSAUpdater *MSSAU)
+      : AA(AA), DT(DT), SE(SE), LI(LI), BPI(BPI), MSSAU(MSSAU){};
   bool runOnLoop(Loop *L);
 };
 
@@ -325,6 +328,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<BranchProbabilityInfoWrapperPass>();
     getLoopAnalysisUsage(AU);
+    AU.addPreserved<MemorySSAWrapperPass>();
   }
 
   bool runOnLoop(Loop *L, LPPassManager &LPM) override {
@@ -333,10 +337,14 @@ public:
     auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
     auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    auto *MSSAWP = getAnalysisIfAvailable<MemorySSAWrapperPass>();
+    std::unique_ptr<MemorySSAUpdater> MSSAU;
+    if (MSSAWP)
+      MSSAU = std::make_unique<MemorySSAUpdater>(&MSSAWP->getMSSA());
     BranchProbabilityInfo &BPI =
         getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
     auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-    LoopPredication LP(AA, DT, SE, LI, &BPI);
+    LoopPredication LP(AA, DT, SE, LI, &BPI, MSSAU ? MSSAU.get() : nullptr);
     return LP.runOnLoop(L);
   }
 };
@@ -363,11 +371,18 @@ PreservedAnalyses LoopPredicationPass::run(Loop &L, LoopAnalysisManager &AM,
   // pass. Function analyses need to be preserved across loop transformations
   // but BPI is not preserved, hence a newly built one is needed.
   BranchProbabilityInfo BPI(*F, AR.LI, &AR.TLI, &AR.DT, nullptr);
-  LoopPredication LP(&AR.AA, &AR.DT, &AR.SE, &AR.LI, &BPI);
+  std::unique_ptr<MemorySSAUpdater> MSSAU;
+  if (AR.MSSA)
+    MSSAU = std::make_unique<MemorySSAUpdater>(AR.MSSA);
+  LoopPredication LP(&AR.AA, &AR.DT, &AR.SE, &AR.LI, &BPI,
+                     MSSAU ? MSSAU.get() : nullptr);
   if (!LP.runOnLoop(&L))
     return PreservedAnalyses::all();
 
-  return getLoopPassPreservedAnalyses();
+  auto PA = getLoopPassPreservedAnalyses();
+  if (AR.MSSA)
+    PA.preserve<MemorySSAAnalysis>();
+  return PA;
 }
 
 Optional<LoopICmp>
@@ -809,7 +824,7 @@ bool LoopPredication::widenGuardConditions(IntrinsicInst *Guard,
   Value *AllChecks = Builder.CreateAnd(Checks);
   auto *OldCond = Guard->getOperand(0);
   Guard->setOperand(0, AllChecks);
-  RecursivelyDeleteTriviallyDeadInstructions(OldCond);
+  RecursivelyDeleteTriviallyDeadInstructions(OldCond, nullptr /* TLI */, MSSAU);
 
   LLVM_DEBUG(dbgs() << "Widened checks = " << NumWidened << "\n");
   return true;
@@ -835,7 +850,7 @@ bool LoopPredication::widenWidenableBranchGuardConditions(
   Value *AllChecks = Builder.CreateAnd(Checks);
   auto *OldCond = BI->getCondition();
   BI->setCondition(AllChecks);
-  RecursivelyDeleteTriviallyDeadInstructions(OldCond);
+  RecursivelyDeleteTriviallyDeadInstructions(OldCond, nullptr /* TLI */, MSSAU);
   assert(isGuardAsWidenableBranch(BI) &&
          "Stopped being a guard after transform?");
 
@@ -1242,5 +1257,8 @@ bool LoopPredication::runOnLoop(Loop *Loop) {
   for (auto *Guard : GuardsAsWidenableBranches)
     Changed |= widenWidenableBranchGuardConditions(Guard, Expander);
   Changed |= predicateLoopExits(L, Expander);
+
+  if (MSSAU && VerifyMemorySSA)
+    MSSAU->getMemorySSA()->verifyMemorySSA();
   return Changed;
 }

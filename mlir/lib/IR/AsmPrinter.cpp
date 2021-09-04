@@ -1659,7 +1659,7 @@ void ModulePrinter::printAttribute(Attribute attr,
     printType(typeAttr.getValue());
 
   } else if (auto refAttr = attr.dyn_cast<SymbolRefAttr>()) {
-    printSymbolReference(refAttr.getRootReference(), os);
+    printSymbolReference(refAttr.getRootReference().getValue(), os);
     for (FlatSymbolRefAttr nestedRef : refAttr.getNestedReferences()) {
       os << "::";
       printSymbolReference(nestedRef.getValue(), os);

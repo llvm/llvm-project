@@ -6005,6 +6005,15 @@ static void ReferenceDllExportedMembers(Sema &S, CXXRecordDecl *Class) {
       if (TSK == TSK_ImplicitInstantiation && !ClassAttr->isInherited())
         continue;
 
+      // If this is an MS ABI dllexport default constructor, instantiate any
+      // default arguments.
+      if (S.Context.getTargetInfo().getCXXABI().isMicrosoft()) {
+        auto *CD = dyn_cast<CXXConstructorDecl>(MD);
+        if (CD && CD->isDefaultConstructor() && TSK == TSK_Undeclared) {
+          S.InstantiateDefaultCtorDefaultArgs(CD);
+        }
+      }
+
       S.MarkFunctionReferenced(Class->getLocation(), MD);
 
       // The function will be passed to the consumer when its definition is

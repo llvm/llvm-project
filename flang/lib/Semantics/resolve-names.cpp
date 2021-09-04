@@ -901,11 +901,12 @@ protected:
   // it comes from the entity in the containing scope, or implicit rules.
   // Return pointer to the new symbol, or nullptr on error.
   Symbol *DeclareLocalEntity(const parser::Name &);
-  // Declare a statement entity (e.g., an implied DO loop index).
-  // If there isn't a type specified, implicit rules apply.
-  // Return pointer to the new symbol, or nullptr on error.
-  Symbol *DeclareStatementEntity(
-      const parser::Name &, const std::optional<parser::IntegerTypeSpec> &);
+  // Declare a statement entity (i.e., an implied DO loop index for
+  // a DATA statement or an array constructor).  If there isn't an explict
+  // type specified, implicit rules apply. Return pointer to the new symbol,
+  // or nullptr on error.
+  Symbol *DeclareStatementEntity(const parser::DoVariable &,
+      const std::optional<parser::IntegerTypeSpec> &);
   Symbol &MakeCommonBlockSymbol(const parser::Name &);
   Symbol &MakeCommonBlockSymbol(const std::optional<parser::Name> &);
   bool CheckUseError(const parser::Name &);
@@ -925,6 +926,16 @@ protected:
   bool PassesSharedLocalityChecks(const parser::Name &name, Symbol &symbol);
   Symbol *NoteInterfaceName(const parser::Name &);
   bool IsUplevelReference(const Symbol &);
+
+  std::optional<SourceName> BeginCheckOnIndexUseInOwnBounds(
+      const parser::DoVariable &name) {
+    std::optional<SourceName> result{checkIndexUseInOwnBounds_};
+    checkIndexUseInOwnBounds_ = name.thing.thing.source;
+    return result;
+  }
+  void EndCheckOnIndexUseInOwnBounds(const std::optional<SourceName> &restore) {
+    checkIndexUseInOwnBounds_ = restore;
+  }
 
 private:
   // The attribute corresponding to the statement containing an ObjectDecl
@@ -956,6 +967,9 @@ private:
   } enumerationState_;
   // Set for OldParameterStmt processing
   bool inOldStyleParameterStmt_{false};
+  // Set when walking DATA & array constructor implied DO loop bounds
+  // to warn about use of the implied DO intex therein.
+  std::optional<SourceName> checkIndexUseInOwnBounds_;
 
   bool HandleAttributeStmt(Attr, const std::list<parser::Name> &);
   Symbol &HandleAttributeStmt(Attr, const parser::Name &);
@@ -5010,8 +5024,10 @@ Symbol *DeclarationVisitor::DeclareLocalEntity(const parser::Name &name) {
   return &MakeHostAssocSymbol(name, prev);
 }
 
-Symbol *DeclarationVisitor::DeclareStatementEntity(const parser::Name &name,
+Symbol *DeclarationVisitor::DeclareStatementEntity(
+    const parser::DoVariable &doVar,
     const std::optional<parser::IntegerTypeSpec> &type) {
+  const parser::Name &name{doVar.thing.thing};
   const DeclTypeSpec *declTypeSpec{nullptr};
   if (auto *prev{FindSymbol(name)}) {
     if (prev->owner() == currScope()) {
@@ -5037,7 +5053,9 @@ Symbol *DeclarationVisitor::DeclareStatementEntity(const parser::Name &name,
   } else {
     ApplyImplicitRules(symbol);
   }
-  return Resolve(name, &symbol);
+  Symbol *result{Resolve(name, &symbol)};
+  AnalyzeExpr(context(), doVar); // enforce INTEGER type
+  return result;
 }
 
 // Set the type of an entity or report an error.
@@ -5321,9 +5339,7 @@ bool ConstructVisitor::Pre(const parser::LocalitySpec::Shared &x) {
 
 bool ConstructVisitor::Pre(const parser::AcSpec &x) {
   ProcessTypeSpec(x.type);
-  PushScope(Scope::Kind::ImpliedDos, nullptr);
   Walk(x.values);
-  PopScope();
   return false;
 }
 
@@ -5334,9 +5350,18 @@ bool ConstructVisitor::Pre(const parser::AcImpliedDo &x) {
   auto &control{std::get<parser::AcImpliedDoControl>(x.t)};
   auto &type{std::get<std::optional<parser::IntegerTypeSpec>>(control.t)};
   auto &bounds{std::get<parser::AcImpliedDoControl::Bounds>(control.t)};
+  // F'2018 has the scope of the implied DO variable covering the entire
+  // implied DO production (19.4(5)), which seems wrong in cases where the name
+  // of the implied DO variable appears in one of the bound expressions. Thus
+  // this extension, which shrinks the scope of the variable to exclude the
+  // expressions in the bounds.
+  auto restore{BeginCheckOnIndexUseInOwnBounds(bounds.name)};
+  Walk(bounds.lower);
+  Walk(bounds.upper);
+  Walk(bounds.step);
+  EndCheckOnIndexUseInOwnBounds(restore);
   PushScope(Scope::Kind::ImpliedDos, nullptr);
-  DeclareStatementEntity(bounds.name.thing.thing, type);
-  Walk(bounds);
+  DeclareStatementEntity(bounds.name, type);
   Walk(values);
   PopScope();
   return false;
@@ -5346,9 +5371,21 @@ bool ConstructVisitor::Pre(const parser::DataImpliedDo &x) {
   auto &objects{std::get<std::list<parser::DataIDoObject>>(x.t)};
   auto &type{std::get<std::optional<parser::IntegerTypeSpec>>(x.t)};
   auto &bounds{std::get<parser::DataImpliedDo::Bounds>(x.t)};
-  DeclareStatementEntity(bounds.name.thing.thing, type);
-  Walk(bounds);
+  // See comment in Pre(AcImpliedDo) above.
+  auto restore{BeginCheckOnIndexUseInOwnBounds(bounds.name)};
+  Walk(bounds.lower);
+  Walk(bounds.upper);
+  Walk(bounds.step);
+  EndCheckOnIndexUseInOwnBounds(restore);
+  bool pushScope{currScope().kind() != Scope::Kind::ImpliedDos};
+  if (pushScope) {
+    PushScope(Scope::Kind::ImpliedDos, nullptr);
+  }
+  DeclareStatementEntity(bounds.name, type);
   Walk(objects);
+  if (pushScope) {
+    PopScope();
+  }
   return false;
 }
 
@@ -5887,6 +5924,12 @@ const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
       ConvertToObjectEntity(*symbol);
       ApplyImplicitRules(*symbol);
     }
+    if (checkIndexUseInOwnBounds_ &&
+        *checkIndexUseInOwnBounds_ == name.source) {
+      Say(name,
+          "Implied DO index '%s' uses an object of the same name in its bounds expressions"_en_US,
+          name.source);
+    }
     return &name;
   }
   if (isImplicitNoneType()) {
@@ -5894,6 +5937,11 @@ const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
     return nullptr;
   }
   // Create the symbol then ensure it is accessible
+  if (checkIndexUseInOwnBounds_ && *checkIndexUseInOwnBounds_ == name.source) {
+    Say(name,
+        "Implied DO index '%s' uses itself in its own bounds expressions"_err_en_US,
+        name.source);
+  }
   MakeSymbol(InclusiveScope(), name.source, Attrs{});
   auto *symbol{FindSymbol(name)};
   if (!symbol) {

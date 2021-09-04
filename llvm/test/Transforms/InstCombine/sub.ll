@@ -1109,14 +1109,9 @@ define i32 @test57(i32 %A, i32 %B) {
 @dummy_global2 = external global i8*
 
 define i64 @test58([100 x [100 x i8]]* %foo, i64 %i, i64 %j) {
-; Note the reassociate pass and another instcombine pass will further optimize this to
-; "%sub = i64 %i, %j, ret i64 %sub"
-; gep1 and gep2 have only one use
 ; CHECK-LABEL: @test58(
-; CHECK-NEXT:    [[GEP1_OFFS:%.*]] = add nsw i64 [[I:%.*]], 4200
-; CHECK-NEXT:    [[GEP2_OFFS:%.*]] = add nsw i64 [[J:%.*]], 4200
-; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub nsw i64 [[GEP1_OFFS]], [[GEP2_OFFS]]
-; CHECK-NEXT:    ret i64 [[GEPDIFF]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[I:%.*]], [[J:%.*]]
+; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
   %gep1 = getelementptr inbounds [100 x [100 x i8]], [100 x [100 x i8]]* %foo, i64 0, i64 42, i64 %i
   %gep2 = getelementptr inbounds [100 x [100 x i8]], [100 x [100 x i8]]* %foo, i64 0, i64 42, i64 %j
@@ -1699,4 +1694,16 @@ define <2 x i8> @or_vec(<2 x i8> %X, <2 x i8> %Y) {
   %b = and <2 x i8> %X, %Y
   %r = sub <2 x i8> %a, %b
   ret <2 x i8> %r
+}
+
+define i32 @pr51584(i32 %a, i32 %b) {
+; CHECK-LABEL: @pr51584(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[DOTNEG:%.*]] = sub i32 -11, [[TMP1]]
+; CHECK-NEXT:    ret i32 [[DOTNEG]]
+;
+  %sub = sub i32 0, %a
+  %add = add nsw i32 11, %b
+  %sub1 = sub i32 %sub, %add
+  ret i32 %sub1
 }

@@ -278,13 +278,13 @@ body:             |
     ; CHECK-LABEL: name: test_rule96_id2146_at_idx8070
     ; CHECK: liveins: $x0
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[LDRBui:%[0-9]+]]:fpr8 = LDRBui [[COPY]], 0 :: (load (s1))
+    ; CHECK: [[LDRBui:%[0-9]+]]:fpr8 = LDRBui [[COPY]], 0 :: (load (s8))
     ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[LDRBui]]
-    ; CHECK: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY1]], 0, 0
+    ; CHECK: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY1]], 0, 7
     ; CHECK: $noreg = PATCHABLE_RET [[UBFMWri]]
     %2:gpr(p0) = COPY $x0
-    %0:fpr(s1) = G_LOAD %2(p0) :: (load (s1))
-    %1:gpr(s32) = G_ZEXT %0(s1)
+    %0:fpr(s8) = G_LOAD %2(p0) :: (load (s8))
+    %1:gpr(s32) = G_ZEXT %0(s8)
     $noreg = PATCHABLE_RET %1(s32)
 
 ...

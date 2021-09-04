@@ -117,12 +117,12 @@ define i32 @mul_pow2(i32 %a) nounwind {
 ;
 ; RV64I-LABEL: mul_pow2:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: mul_pow2:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    slli a0, a0, 3
+; RV64IM-NEXT:    slliw a0, a0, 3
 ; RV64IM-NEXT:    ret
   %1 = mul i32 %a, 8
   ret i32 %1

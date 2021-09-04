@@ -13,6 +13,9 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUTargetMachine.h"
+#include "MCTargetDesc/R600MCTargetDesc.h"
+#include "R600.h"
+#include "R600Subtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"

@@ -33,13 +33,15 @@
 # Linker could satisfy alignment by removing NOPs after linker relaxation.
 
 # The first R_RISCV_ALIGN come from
-# MCELFStreamer::InitSections() emitCodeAlignment(4).
+# MCELFStreamer::InitSections() emitCodeAlignment(getTextSectionAligntment()).
 # C-EXT-RELAX-RELOC: R_RISCV_ALIGN - 0x2
 # C-EXT-RELAX-INST:  c.nop
 test:
 	.p2align 2
-# C-EXT-RELAX-RELOC: R_RISCV_ALIGN - 0x2
-# C-EXT-RELAX-INST:  c.nop
+# If the +c extension is enabled, the text section will be 2-byte aligned, so
+# one c.nop instruction is sufficient.
+# C-EXT-RELAX-RELOC-NOT: R_RISCV_ALIGN - 0x2
+# C-EXT-RELAX-INST-NOT:  c.nop
 	bne     zero, a0, .LBB0_2
 	mv	a0, zero
 	.p2align 3

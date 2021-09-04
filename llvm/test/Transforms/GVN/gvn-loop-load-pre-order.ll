@@ -12,17 +12,16 @@ define void @main(i1 %cond) {
 ; CHECK-PRE:       while.cond.loopexit.loopexit:
 ; CHECK-PRE-NEXT:    ret void
 ; CHECK-PRE:       while.body3:
-; CHECK-PRE-NEXT:    [[TMP0:%.*]] = phi i32 [ [[DOTPRE:%.*]], [[IF_END_WHILE_BODY3_CRIT_EDGE:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-PRE-NEXT:    [[TMP0:%.*]] = phi i32 [ [[TMP1:%.*]], [[IF_END:%.*]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-PRE-NEXT:    [[TOBOOL4_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
-; CHECK-PRE-NEXT:    br i1 [[TOBOOL4_NOT]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK-PRE-NEXT:    br i1 [[TOBOOL4_NOT]], label [[IF_END]], label [[IF_THEN:%.*]]
 ; CHECK-PRE:       if.then:
 ; CHECK-PRE-NEXT:    tail call void @foo()
+; CHECK-PRE-NEXT:    [[DOTPRE:%.*]] = load i32, i32* @b, align 4
 ; CHECK-PRE-NEXT:    br label [[IF_END]]
 ; CHECK-PRE:       if.end:
-; CHECK-PRE-NEXT:    br i1 [[COND:%.*]], label [[WHILE_COND_LOOPEXIT_LOOPEXIT:%.*]], label [[IF_END_WHILE_BODY3_CRIT_EDGE]]
-; CHECK-PRE:       if.end.while.body3_crit_edge:
-; CHECK-PRE-NEXT:    [[DOTPRE]] = load i32, i32* @b, align 4
-; CHECK-PRE-NEXT:    br label [[WHILE_BODY3]]
+; CHECK-PRE-NEXT:    [[TMP1]] = phi i32 [ [[DOTPRE]], [[IF_THEN]] ], [ 0, [[WHILE_BODY3]] ]
+; CHECK-PRE-NEXT:    br i1 [[COND:%.*]], label [[WHILE_COND_LOOPEXIT_LOOPEXIT:%.*]], label [[WHILE_BODY3]]
 ;
 ; CHECK-SCCP-LABEL: @main(
 ; CHECK-SCCP-NEXT:  entry:
@@ -31,17 +30,11 @@ define void @main(i1 %cond) {
 ; CHECK-SCCP:       while.cond.loopexit.loopexit:
 ; CHECK-SCCP-NEXT:    ret void
 ; CHECK-SCCP:       while.body3:
-; CHECK-SCCP-NEXT:    [[TMP0:%.*]] = phi i32 [ [[DOTPRE:%.*]], [[IF_END_WHILE_BODY3_CRIT_EDGE:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-SCCP-NEXT:    [[TOBOOL4_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
-; CHECK-SCCP-NEXT:    br i1 [[TOBOOL4_NOT]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK-SCCP-NEXT:    br i1 true, label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK-SCCP:       if.then:
-; CHECK-SCCP-NEXT:    tail call void @foo()
 ; CHECK-SCCP-NEXT:    br label [[IF_END]]
 ; CHECK-SCCP:       if.end:
-; CHECK-SCCP-NEXT:    br i1 [[COND:%.*]], label [[WHILE_COND_LOOPEXIT_LOOPEXIT:%.*]], label [[IF_END_WHILE_BODY3_CRIT_EDGE]]
-; CHECK-SCCP:       if.end.while.body3_crit_edge:
-; CHECK-SCCP-NEXT:    [[DOTPRE]] = load i32, i32* @b, align 4
-; CHECK-SCCP-NEXT:    br label [[WHILE_BODY3]]
+; CHECK-SCCP-NEXT:    br i1 [[COND:%.*]], label [[WHILE_COND_LOOPEXIT_LOOPEXIT:%.*]], label [[WHILE_BODY3]]
 ;
 entry:
   store i32 0, i32* @b

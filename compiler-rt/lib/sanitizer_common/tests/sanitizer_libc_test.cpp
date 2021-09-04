@@ -279,6 +279,23 @@ TEST(SanitizerCommon, InternalStrFunctions) {
   EXPECT_EQ(retval, (uptr)9);
 }
 
+TEST(SanitizerCommon, InternalWideStringFunctions) {
+  const wchar_t *emptystr = L"";
+  const wchar_t *samesizestr = L"1234567";
+  const wchar_t *shortstr = L"123";
+  const wchar_t *longerstr = L"123456789";
+
+  ASSERT_EQ(internal_wcslen(emptystr), 0ul);
+  ASSERT_EQ(internal_wcslen(samesizestr), 7ul);
+  ASSERT_EQ(internal_wcslen(shortstr), 3ul);
+  ASSERT_EQ(internal_wcslen(longerstr), 9ul);
+
+  ASSERT_EQ(internal_wcsnlen(emptystr, 7), 0ul);
+  ASSERT_EQ(internal_wcsnlen(samesizestr, 7), 7ul);
+  ASSERT_EQ(internal_wcsnlen(shortstr, 7), 3ul);
+  ASSERT_EQ(internal_wcsnlen(longerstr, 7), 7ul);
+}
+
 // FIXME: File manipulations are not yet supported on Windows
 #if SANITIZER_POSIX && !SANITIZER_MAC
 TEST(SanitizerCommon, InternalMmapWithOffset) {

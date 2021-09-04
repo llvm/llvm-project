@@ -34,6 +34,14 @@ add_gen_header(
 )
 
 add_gen_header(
+  inttypes
+  DEF_FILE inttypes.h.def
+  GEN_HDR inttypes.h
+  DEPENDS
+    .llvm_libc_common_h
+)
+
+add_gen_header(
   math
   DEF_FILE math.h.def
   GEN_HDR math.h

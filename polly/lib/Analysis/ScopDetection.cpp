@@ -1417,6 +1417,11 @@ static bool isErrorBlockImpl(BasicBlock &BB, const Region &R, LoopInfo &LI,
   if (LI.isLoopHeader(&BB))
     return false;
 
+  // Don't consider something outside the SCoP as error block. It will precede
+  // the code versioning runtime check.
+  if (!R.contains(&BB))
+    return false;
+
   // Basic blocks that are always executed are not considered error blocks,
   // as their execution can not be a rare event.
   bool DominatesAllPredecessors = true;

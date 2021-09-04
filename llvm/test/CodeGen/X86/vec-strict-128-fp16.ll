@@ -6,6 +6,7 @@ declare <8 x half> @llvm.experimental.constrained.fadd.v8f16(<8 x half>, <8 x ha
 declare <8 x half> @llvm.experimental.constrained.fsub.v8f16(<8 x half>, <8 x half>, metadata, metadata)
 declare <8 x half> @llvm.experimental.constrained.fmul.v8f16(<8 x half>, <8 x half>, metadata, metadata)
 declare <8 x half> @llvm.experimental.constrained.fdiv.v8f16(<8 x half>, <8 x half>, metadata, metadata)
+declare <8 x half> @llvm.experimental.constrained.sqrt.v8f16(<8 x half>, metadata, metadata)
 declare half @llvm.experimental.constrained.fptrunc.f16.f32(float, metadata, metadata)
 declare half @llvm.experimental.constrained.fptrunc.f16.f64(double, metadata, metadata)
 declare <2 x half> @llvm.experimental.constrained.fptrunc.v2f16.v2f32(<2 x float>, metadata, metadata)
@@ -16,6 +17,7 @@ declare double @llvm.experimental.constrained.fpext.f64.f16(half, metadata)
 declare <2 x float> @llvm.experimental.constrained.fpext.v2f32.v2f16(<2 x half>, metadata)
 declare <4 x float> @llvm.experimental.constrained.fpext.v4f32.v4f16(<4 x half>, metadata)
 declare <2 x double> @llvm.experimental.constrained.fpext.v2f64.v2f16(<2 x half>, metadata)
+declare <8 x half> @llvm.experimental.constrained.fma.v8f16(<8 x half>, <8 x half>, <8 x half>, metadata, metadata)
 
 define <8 x half> @f2(<8 x half> %a, <8 x half> %b) #0 {
 ; CHECK-LABEL: f2:
@@ -61,6 +63,18 @@ define <8 x half> @f8(<8 x half> %a, <8 x half> %b) #0 {
   ret <8 x half> %ret
 }
 
+define <8 x half> @f10(<8 x half> %a) #0 {
+; CHECK-LABEL: f10:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsqrtph %xmm0, %xmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %sqrt = call <8 x half> @llvm.experimental.constrained.sqrt.v8f16(
+                              <8 x half> %a,
+                              metadata !"round.dynamic",
+                              metadata !"fpexcept.strict") #0
+  ret <8 x half > %sqrt
+}
+
 define <8 x half> @f11(<2 x double> %a0, <8 x half> %a1) #0 {
 ; CHECK-LABEL: f11:
 ; CHECK:       # %bb.0:
@@ -86,6 +100,17 @@ define <2 x double> @f12(<2 x double> %a0, <8 x half> %a1) #0 {
                                                                   metadata !"fpexcept.strict") #0
   %res = insertelement <2 x double> %a0, double %cvt, i32 0
   ret <2 x double> %res
+}
+
+define <8 x half> @f13(<8 x half> %a, <8 x half> %b, <8 x half> %c) #0 {
+; CHECK-LABEL: f13:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vfmadd213ph %xmm2, %xmm1, %xmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <8 x half> @llvm.experimental.constrained.fma.v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %c,
+                                                                  metadata !"round.dynamic",
+                                                                  metadata !"fpexcept.strict") #0
+  ret <8 x half> %res
 }
 
 define <2 x double> @f15(<2 x half> %a) #0 {

@@ -532,52 +532,20 @@ public:
       result.dropAllUses();
   }
 
-  /// This class implements a use iterator for the Operation. This iterates over
-  /// all uses of all results.
-  class UseIterator final
-      : public llvm::iterator_facade_base<
-            UseIterator, std::forward_iterator_tag, OpOperand> {
-  public:
-    /// Initialize UseIterator for op, specify end to return iterator to last
-    /// use.
-    explicit UseIterator(Operation *op, bool end = false);
+  using use_iterator = result_range::use_iterator;
+  using use_range = result_range::use_range;
 
-    using llvm::iterator_facade_base<UseIterator, std::forward_iterator_tag,
-                                     OpOperand>::operator++;
-    UseIterator &operator++();
-    OpOperand *operator->() const { return use.getOperand(); }
-    OpOperand &operator*() const { return *use.getOperand(); }
-
-    bool operator==(const UseIterator &rhs) const { return use == rhs.use; }
-    bool operator!=(const UseIterator &rhs) const { return !(*this == rhs); }
-
-  private:
-    void skipOverResultsWithNoUsers();
-
-    /// The operation whose uses are being iterated over.
-    Operation *op;
-    /// The result of op who's uses are being iterated over.
-    Operation::result_iterator res;
-    /// The use of the result.
-    Value::use_iterator use;
-  };
-  using use_iterator = UseIterator;
-  using use_range = iterator_range<use_iterator>;
-
-  use_iterator use_begin() { return use_iterator(this); }
-  use_iterator use_end() { return use_iterator(this, /*end=*/true); }
+  use_iterator use_begin() { return getResults().use_begin(); }
+  use_iterator use_end() { return getResults().use_end(); }
 
   /// Returns a range of all uses, which is useful for iterating over all uses.
-  use_range getUses() { return {use_begin(), use_end()}; }
+  use_range getUses() { return getResults().getUses(); }
 
   /// Returns true if this operation has exactly one use.
   bool hasOneUse() { return llvm::hasSingleElement(getUses()); }
 
   /// Returns true if this operation has no uses.
-  bool use_empty() {
-    return llvm::all_of(getOpResults(),
-                        [](OpResult result) { return result.use_empty(); });
-  }
+  bool use_empty() { return getResults().use_empty(); }
 
   /// Returns true if the results of this operation are used outside of the
   /// given block.

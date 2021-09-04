@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "R600MachineScheduler.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "MCTargetDesc/R600MCTargetDesc.h"
 #include "R600Subtarget.h"
 
 using namespace llvm;

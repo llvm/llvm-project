@@ -293,7 +293,7 @@ bool PrintPPOutputPPCallbacks::MoveToLine(unsigned LineNo,
       WriteLineInfo(LineNo, nullptr, 0);
     }
     StartedNewLine = true;
-  } else if (!StartedNewLine) {
+  } else if (EmittedTokensOnThisLine) {
     // If we are not on the correct line and don't need to be line-correct,
     // at least ensure we start on a new line.
     OS << '\n';

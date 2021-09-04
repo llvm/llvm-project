@@ -17,7 +17,7 @@ namespace __llvm_libc {
 // These should be extended using locale information.
 LLVM_LIBC_FUNCTION(int, tolower, (int c)) {
   if (internal::isupper(c))
-    return c + 'a' - 'A';
+    return c + ('a' - 'A');
   return c;
 }
 

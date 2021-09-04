@@ -22,6 +22,9 @@ CompilerInvocation ModuleDepCollector::makeInvocationForModuleBuildWithoutPaths(
   // Make a deep copy of the original Clang invocation.
   CompilerInvocation CI(OriginalInvocation);
 
+  CI.getLangOpts()->resetNonModularOptions();
+  CI.getPreprocessorOpts().resetNonModularOptions();
+
   // Remove options incompatible with explicit module build.
   CI.getFrontendOpts().Inputs.clear();
   CI.getFrontendOpts().OutputFile.clear();
@@ -37,8 +40,6 @@ CompilerInvocation ModuleDepCollector::makeInvocationForModuleBuildWithoutPaths(
     CI.getFrontendOpts().ModuleFiles.push_back(PrebuiltModule.PCMFile);
     CI.getFrontendOpts().ModuleMapFiles.push_back(PrebuiltModule.ModuleMapFile);
   }
-
-  CI.getPreprocessorOpts().ImplicitPCHInclude.clear();
 
   return CI;
 }
@@ -231,7 +232,8 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   // Add direct prebuilt module dependencies now, so that we can use them when
   // creating a CompilerInvocation and computing context hash for this
   // ModuleDeps instance.
-  addDirectPrebuiltModuleDeps(M, MD);
+  llvm::DenseSet<const Module *> SeenModules;
+  addAllSubmodulePrebuiltDeps(M, MD, SeenModules);
 
   MD.Invocation = MDC.makeInvocationForModuleBuildWithoutPaths(MD);
   MD.ID.ContextHash = MD.Invocation.getModuleHash();
@@ -242,12 +244,23 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   return MD.ID;
 }
 
-void ModuleDepCollectorPP::addDirectPrebuiltModuleDeps(const Module *M,
-                                                       ModuleDeps &MD) {
+void ModuleDepCollectorPP::addAllSubmodulePrebuiltDeps(
+    const Module *M, ModuleDeps &MD,
+    llvm::DenseSet<const Module *> &SeenSubmodules) {
+  addModulePrebuiltDeps(M, MD, SeenSubmodules);
+
+  for (const Module *SubM : M->submodules())
+    addAllSubmodulePrebuiltDeps(SubM, MD, SeenSubmodules);
+}
+
+void ModuleDepCollectorPP::addModulePrebuiltDeps(
+    const Module *M, ModuleDeps &MD,
+    llvm::DenseSet<const Module *> &SeenSubmodules) {
   for (const Module *Import : M->Imports)
     if (Import->getTopLevelModule() != M->getTopLevelModule())
-      if (MDC.isPrebuiltModule(Import))
-        MD.PrebuiltModuleDeps.emplace_back(Import);
+      if (MDC.isPrebuiltModule(Import->getTopLevelModule()))
+        if (SeenSubmodules.insert(Import->getTopLevelModule()).second)
+          MD.PrebuiltModuleDeps.emplace_back(Import->getTopLevelModule());
 }
 
 void ModuleDepCollectorPP::addAllSubmoduleDeps(

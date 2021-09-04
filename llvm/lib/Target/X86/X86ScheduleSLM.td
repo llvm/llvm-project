@@ -112,6 +112,7 @@ defm : SLMWriteResPair<WriteIMul64,    [SLM_IEC_RSV1],  3>;
 defm : SLMWriteResPair<WriteIMul64Imm, [SLM_IEC_RSV1],  3>;
 defm : SLMWriteResPair<WriteIMul64Reg, [SLM_IEC_RSV1],  3>;
 defm : X86WriteResUnsupported<WriteIMulH>;
+defm : X86WriteResUnsupported<WriteIMulHLd>;
 defm : X86WriteResPairUnsupported<WriteMULX32>;
 defm : X86WriteResPairUnsupported<WriteMULX64>;
 

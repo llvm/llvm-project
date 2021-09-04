@@ -1439,13 +1439,13 @@ define amdgpu_kernel void @v_ctlz_i32_sel_ne_bitwidth(i32 addrspace(1)* noalias 
 ; VI-NEXT:    s_mov_b32 s3, s7
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    buffer_load_ushort v0, off, s[0:3], 0
+; VI-NEXT:    v_mov_b32_e32 v1, 0xffff
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_ffbh_u32_e32 v1, v0
-; VI-NEXT:    v_min_u32_e32 v1, 32, v1
-; VI-NEXT:    v_add_u32_e32 v1, vcc, -16, v1
+; VI-NEXT:    v_ffbh_u32_e32 v2, v0
+; VI-NEXT:    v_min_u32_e32 v2, 32, v2
+; VI-NEXT:    v_add_u32_e32 v2, vcc, -16, v2
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; VI-NEXT:    v_mov_b32_e32 v0, 0xffff
-; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
 ; VI-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
 ;

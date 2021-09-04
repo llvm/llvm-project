@@ -273,12 +273,16 @@ LogicalResult FloatAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 //===----------------------------------------------------------------------===//
 
 FlatSymbolRefAttr SymbolRefAttr::get(MLIRContext *ctx, StringRef value) {
-  return get(ctx, value, llvm::None).cast<FlatSymbolRefAttr>();
+  return get(StringAttr::get(ctx, value));
 }
 
-StringRef SymbolRefAttr::getLeafReference() const {
+FlatSymbolRefAttr SymbolRefAttr::get(StringAttr value) {
+  return get(value, {}).cast<FlatSymbolRefAttr>();
+}
+
+StringAttr SymbolRefAttr::getLeafReference() const {
   ArrayRef<FlatSymbolRefAttr> nestedRefs = getNestedReferences();
-  return nestedRefs.empty() ? getRootReference() : nestedRefs.back().getValue();
+  return nestedRefs.empty() ? getRootReference() : nestedRefs.back().getAttr();
 }
 
 //===----------------------------------------------------------------------===//

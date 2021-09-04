@@ -909,7 +909,7 @@ module {
 
 module {
   llvm.func @accessGroups(%arg0 : !llvm.ptr<i32>) {
-      // expected-error@below {{expected '@func1' to reference a metadata op}}
+      // expected-error@below {{expected '@func1' to specify a fully qualified reference}}
       %0 = llvm.load %arg0 { "access_groups" = [@func1] } : !llvm.ptr<i32>
       llvm.return
   }
@@ -922,11 +922,87 @@ module {
 
 module {
   llvm.func @accessGroups(%arg0 : !llvm.ptr<i32>) {
-      // expected-error@below {{expected '@metadata' to reference an access_group op}}
-      %0 = llvm.load %arg0 { "access_groups" = [@metadata] } : !llvm.ptr<i32>
+      // expected-error@below {{expected '@accessGroups::@group1' to reference a metadata op}}
+      %0 = llvm.load %arg0 { "access_groups" = [@accessGroups::@group1] } : !llvm.ptr<i32>
       llvm.return
   }
   llvm.metadata @metadata {
+    llvm.return
+  }
+}
+
+// -----
+
+module {
+  llvm.func @accessGroups(%arg0 : !llvm.ptr<i32>) {
+      // expected-error@below {{expected '@metadata::@group1' to be a valid reference}}
+      %0 = llvm.load %arg0 { "access_groups" = [@metadata::@group1] } : !llvm.ptr<i32>
+      llvm.return
+  }
+  llvm.metadata @metadata {
+    llvm.return
+  }
+}
+
+// -----
+
+module {
+  llvm.func @accessGroups(%arg0 : !llvm.ptr<i32>) {
+      // expected-error@below {{expected '@metadata::@scope' to resolve to a llvm.access_group}}
+      %0 = llvm.load %arg0 { "access_groups" = [@metadata::@scope] } : !llvm.ptr<i32>
+      llvm.return
+  }
+  llvm.metadata @metadata {
+    llvm.alias_scope_domain @domain
+    llvm.alias_scope @scope { domain = @domain }
+    llvm.return
+  }
+}
+
+// -----
+
+module {
+  llvm.func @accessGroups(%arg0 : !llvm.ptr<i32>) {
+      // expected-error@below {{attribute 'alias_scopes' failed to satisfy constraint: symbol ref array attribute}}
+      %0 = llvm.load %arg0 { "alias_scopes" = "test" } : !llvm.ptr<i32>
+      llvm.return
+  }
+}
+
+// -----
+
+module {
+  llvm.func @accessGroups(%arg0 : !llvm.ptr<i32>) {
+      // expected-error@below {{attribute 'noalias_scopes' failed to satisfy constraint: symbol ref array attribute}}
+      %0 = llvm.load %arg0 { "noalias_scopes" = "test" } : !llvm.ptr<i32>
+      llvm.return
+  }
+}
+
+// -----
+
+module {
+  llvm.func @aliasScope(%arg0 : !llvm.ptr<i32>) {
+      // expected-error@below {{expected '@metadata::@group' to resolve to a llvm.alias_scope}}
+      %0 = llvm.load %arg0 { "alias_scopes" = [@metadata::@group] } : !llvm.ptr<i32>
+      llvm.return
+  }
+  llvm.metadata @metadata {
+    llvm.access_group @group
+    llvm.return
+  }
+}
+
+// -----
+
+module {
+  llvm.func @aliasScope(%arg0 : !llvm.ptr<i32>) {
+      // expected-error@below {{expected '@metadata::@group' to resolve to a llvm.alias_scope}}
+      %0 = llvm.load %arg0 { "noalias_scopes" = [@metadata::@group] } : !llvm.ptr<i32>
+      llvm.return
+  }
+  llvm.metadata @metadata {
+    llvm.access_group @group
     llvm.return
   }
 }

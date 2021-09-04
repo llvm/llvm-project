@@ -16,7 +16,6 @@
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
 using namespace clang;
 using namespace clang::targets;
@@ -45,6 +44,8 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
     if (!Feature.startswith("+ptx"))
       continue;
     PTXVersion = llvm::StringSwitch<unsigned>(Feature)
+                     .Case("+ptx74", 74)
+                     .Case("+ptx73", 73)
                      .Case("+ptx72", 72)
                      .Case("+ptx71", 71)
                      .Case("+ptx70", 70)
@@ -65,7 +66,6 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   TLSSupported = false;
   VLASupported = false;
   AddrSpaceMap = &NVPTXAddrSpaceMap;
-  GridValues = &llvm::omp::NVPTXGridValues;
   UseAddrSpaceMapMangling = true;
 
   // Define available target features

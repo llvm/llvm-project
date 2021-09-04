@@ -72,6 +72,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   include(AddLLVM)
   include(HandleLLVMOptions)
   include(VersionFromVCS)
+  include(GetErrcMessages)
 
   include(AddClang)
 
@@ -131,6 +132,8 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   option(FLANG_INCLUDE_TESTS
          "Generate build targets for the Flang unit tests."
          ON)
+
+  get_errc_messages(LLVM_LIT_ERRC_MESSAGES)
 
 #Handle unittests when out-of-tree
 #LLVM_BUILD_MAIN_SRC_DIR - Path to llvm source when out-of-tree.

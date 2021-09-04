@@ -131,8 +131,8 @@ body:             |
     ; CHECK-LABEL: name: contract_s16_truncstore
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY [[COPY1]]
-    ; CHECK: STRHHui [[COPY2]], [[COPY]], 0 :: (store (s16))
+    ; CHECK: [[COPY2:%[0-9]+]]:fpr16 = COPY [[COPY1]].hsub
+    ; CHECK: STRHui [[COPY2]], [[COPY]], 0 :: (store (s16))
     %0:gpr(p0) = COPY $x0
     %1:fpr(s32) = COPY $s1
     %2:gpr(s32) = COPY %1

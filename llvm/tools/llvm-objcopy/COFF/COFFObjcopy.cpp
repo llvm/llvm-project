@@ -94,7 +94,7 @@ static Error addGnuDebugLink(Object &Obj, StringRef DebugLinkFile) {
   return Error::success();
 }
 
-static void setSectionFlags(Section &Sec, SectionFlag AllFlags) {
+static uint32_t flagsToCharacteristics(SectionFlag AllFlags, uint32_t OldChar) {
   // Need to preserve alignment flags.
   const uint32_t PreserveMask =
       IMAGE_SCN_ALIGN_1BYTES | IMAGE_SCN_ALIGN_2BYTES | IMAGE_SCN_ALIGN_4BYTES |
@@ -107,8 +107,7 @@ static void setSectionFlags(Section &Sec, SectionFlag AllFlags) {
 
   // Setup new section characteristics based on the flags provided in command
   // line.
-  uint32_t NewCharacteristics =
-      (Sec.Header.Characteristics & PreserveMask) | IMAGE_SCN_MEM_READ;
+  uint32_t NewCharacteristics = (OldChar & PreserveMask) | IMAGE_SCN_MEM_READ;
 
   if ((AllFlags & SectionFlag::SecAlloc) && !(AllFlags & SectionFlag::SecLoad))
     NewCharacteristics |= IMAGE_SCN_CNT_UNINITIALIZED_DATA;
@@ -128,7 +127,7 @@ static void setSectionFlags(Section &Sec, SectionFlag AllFlags) {
   if (AllFlags & SectionFlag::SecExclude)
     NewCharacteristics |= IMAGE_SCN_LNK_REMOVE;
 
-  Sec.Header.Characteristics = NewCharacteristics;
+  return NewCharacteristics;
 }
 
 static Error handleArgs(const CommonConfig &Config, Object &Obj) {
@@ -226,7 +225,8 @@ static Error handleArgs(const CommonConfig &Config, Object &Obj) {
     for (Section &Sec : Obj.getMutableSections()) {
       const auto It = Config.SetSectionFlags.find(Sec.Name);
       if (It != Config.SetSectionFlags.end())
-        setSectionFlags(Sec, It->second.NewFlags);
+        Sec.Header.Characteristics = flagsToCharacteristics(
+            It->second.NewFlags, Sec.Header.Characteristics);
     }
 
   for (const auto &Flag : Config.AddSection) {
@@ -238,11 +238,18 @@ static Error handleArgs(const CommonConfig &Config, Object &Obj) {
       return createFileError(FileName, errorCodeToError(BufOrErr.getError()));
     auto Buf = std::move(*BufOrErr);
 
+    uint32_t Characteristics;
+    const auto It = Config.SetSectionFlags.find(SecName);
+    if (It != Config.SetSectionFlags.end())
+      Characteristics = flagsToCharacteristics(It->second.NewFlags, 0);
+    else
+      Characteristics = IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_1BYTES;
+
     addSection(
         Obj, SecName,
         makeArrayRef(reinterpret_cast<const uint8_t *>(Buf->getBufferStart()),
                      Buf->getBufferSize()),
-        IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_1BYTES);
+        Characteristics);
   }
 
   if (!Config.AddGnuDebugLink.empty())

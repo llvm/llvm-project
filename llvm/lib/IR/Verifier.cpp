@@ -1091,7 +1091,8 @@ void Verifier::visitDICompositeType(const DICompositeType &N) {
                N.getTag() == dwarf::DW_TAG_union_type ||
                N.getTag() == dwarf::DW_TAG_enumeration_type ||
                N.getTag() == dwarf::DW_TAG_class_type ||
-               N.getTag() == dwarf::DW_TAG_variant_part,
+               N.getTag() == dwarf::DW_TAG_variant_part ||
+               N.getTag() == dwarf::DW_TAG_namelist,
            "invalid tag", &N);
 
   AssertDI(isScope(N.getRawScope()), "invalid scope", &N, N.getRawScope());

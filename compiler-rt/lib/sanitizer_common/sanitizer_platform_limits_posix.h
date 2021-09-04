@@ -776,6 +776,10 @@ extern int glob_altdirfunc;
 
 extern unsigned path_max;
 
+#  if !SANITIZER_ANDROID
+extern const int wordexp_wrde_dooffs;
+#  endif  // !SANITIZER_ANDROID
+
 struct __sanitizer_wordexp_t {
   uptr we_wordc;
   char **we_wordv;

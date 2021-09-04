@@ -74,8 +74,6 @@ def FRAMEri : Operand<iPTR> {
   let MIOperandInfo = (ops R600_Reg32:$ptr, i32imm:$index);
 }
 
-def ADDRParam : ComplexPattern<i32, 2, "SelectADDRParam", [], []>;
-def ADDRDWord : ComplexPattern<i32, 1, "SelectADDRDWord", [], []>;
 def ADDRVTX_READ : ComplexPattern<i32, 2, "SelectADDRVTX_READ", [], []>;
 def ADDRGA_CONST_OFFSET : ComplexPattern<i32, 1, "SelectGlobalValueConstantOffset", [], []>;
 def ADDRGA_VAR_OFFSET : ComplexPattern<i32, 2, "SelectGlobalValueVariableOffset", [], []>;

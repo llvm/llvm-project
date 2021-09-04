@@ -86,6 +86,11 @@ struct OutlinableRegion {
   DenseMap<unsigned, unsigned> ExtractedArgToAgg;
   DenseMap<unsigned, unsigned> AggArgToExtracted;
 
+  /// Marks whether we need to change the order of the arguments when mapping
+  /// the old extracted function call to the new aggregate outlined function
+  /// call.
+  bool ChangedArgOrder = false;
+
   /// Mapping of the argument number in the deduplicated function
   /// to a given constant, which is used when creating the arguments to the call
   /// to the newly created deduplicated function.  This is handled separately
@@ -175,6 +180,16 @@ private:
   /// \param [in] M - The module to outline from.
   /// \returns The number of Functions created.
   unsigned doOutline(Module &M);
+
+  /// Check whether an OutlinableRegion is incompatible with code already
+  /// outlined. OutlinableRegions are incomptaible when there are overlapping
+  /// instructions, or code that has not been recorded has been added to the
+  /// instructions.
+  ///
+  /// \param [in] Region - The OutlinableRegion to check for conflicts with
+  /// already outlined code.
+  /// \returns whether the region can safely be outlined.
+  bool isCompatibleWithAlreadyOutlinedCode(const OutlinableRegion &Region);
 
   /// Remove all the IRSimilarityCandidates from \p CandidateVec that have
   /// instructions contained in a previously outlined region and put the

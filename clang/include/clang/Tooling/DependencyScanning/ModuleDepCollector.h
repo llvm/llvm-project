@@ -172,7 +172,11 @@ private:
 
   /// Adds direct modular dependencies that have already been built to the
   /// ModuleDeps instance.
-  void addDirectPrebuiltModuleDeps(const Module *M, ModuleDeps &MD);
+  void
+  addAllSubmodulePrebuiltDeps(const Module *M, ModuleDeps &MD,
+                              llvm::DenseSet<const Module *> &SeenSubmodules);
+  void addModulePrebuiltDeps(const Module *M, ModuleDeps &MD,
+                             llvm::DenseSet<const Module *> &SeenSubmodules);
 
   /// Traverses the previously collected direct modular dependencies to discover
   /// transitive modular dependencies and fills the parent \c ModuleDepCollector

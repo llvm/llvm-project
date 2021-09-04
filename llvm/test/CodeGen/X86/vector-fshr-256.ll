@@ -758,45 +758,45 @@ define <32 x i8> @var_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y, <32 x i8> %amt) 
 ; XOPAVX1-LABEL: var_funnnel_v32i8:
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vmovaps {{.*#+}} ymm3 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
-; XOPAVX1-NEXT:    vandnps %ymm3, %ymm2, %ymm4
+; XOPAVX1-NEXT:    vandps %ymm3, %ymm2, %ymm4
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm4, %xmm5
-; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm6
-; XOPAVX1-NEXT:    vpaddb %xmm6, %xmm6, %xmm6
-; XOPAVX1-NEXT:    vpshlb %xmm5, %xmm6, %xmm5
-; XOPAVX1-NEXT:    vpaddb %xmm0, %xmm0, %xmm0
-; XOPAVX1-NEXT:    vpshlb %xmm4, %xmm0, %xmm0
-; XOPAVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm0, %ymm0
-; XOPAVX1-NEXT:    vandps %ymm3, %ymm2, %ymm2
+; XOPAVX1-NEXT:    vpxor %xmm6, %xmm6, %xmm6
+; XOPAVX1-NEXT:    vpsubb %xmm5, %xmm6, %xmm5
+; XOPAVX1-NEXT:    vextractf128 $1, %ymm1, %xmm7
+; XOPAVX1-NEXT:    vpshlb %xmm5, %xmm7, %xmm5
+; XOPAVX1-NEXT:    vpsubb %xmm4, %xmm6, %xmm4
+; XOPAVX1-NEXT:    vpshlb %xmm4, %xmm1, %xmm1
+; XOPAVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm1, %ymm1
+; XOPAVX1-NEXT:    vandnps %ymm3, %ymm2, %ymm2
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; XOPAVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; XOPAVX1-NEXT:    vpsubb %xmm3, %xmm4, %xmm3
-; XOPAVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
-; XOPAVX1-NEXT:    vpshlb %xmm3, %xmm5, %xmm3
-; XOPAVX1-NEXT:    vpsubb %xmm2, %xmm4, %xmm2
-; XOPAVX1-NEXT:    vpshlb %xmm2, %xmm1, %xmm1
-; XOPAVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
+; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
+; XOPAVX1-NEXT:    vpaddb %xmm4, %xmm4, %xmm4
+; XOPAVX1-NEXT:    vpshlb %xmm3, %xmm4, %xmm3
+; XOPAVX1-NEXT:    vpaddb %xmm0, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vpshlb %xmm2, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
 ; XOPAVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; XOPAVX1-NEXT:    retq
 ;
 ; XOPAVX2-LABEL: var_funnnel_v32i8:
 ; XOPAVX2:       # %bb.0:
 ; XOPAVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
-; XOPAVX2-NEXT:    vpandn %ymm3, %ymm2, %ymm4
+; XOPAVX2-NEXT:    vpand %ymm3, %ymm2, %ymm4
 ; XOPAVX2-NEXT:    vextracti128 $1, %ymm4, %xmm5
-; XOPAVX2-NEXT:    vpaddb %ymm0, %ymm0, %ymm0
-; XOPAVX2-NEXT:    vextracti128 $1, %ymm0, %xmm6
-; XOPAVX2-NEXT:    vpshlb %xmm5, %xmm6, %xmm5
-; XOPAVX2-NEXT:    vpshlb %xmm4, %xmm0, %xmm0
-; XOPAVX2-NEXT:    vinserti128 $1, %xmm5, %ymm0, %ymm0
-; XOPAVX2-NEXT:    vpand %ymm3, %ymm2, %ymm2
+; XOPAVX2-NEXT:    vpxor %xmm6, %xmm6, %xmm6
+; XOPAVX2-NEXT:    vpsubb %xmm5, %xmm6, %xmm5
+; XOPAVX2-NEXT:    vextracti128 $1, %ymm1, %xmm7
+; XOPAVX2-NEXT:    vpshlb %xmm5, %xmm7, %xmm5
+; XOPAVX2-NEXT:    vpsubb %xmm4, %xmm6, %xmm4
+; XOPAVX2-NEXT:    vpshlb %xmm4, %xmm1, %xmm1
+; XOPAVX2-NEXT:    vinserti128 $1, %xmm5, %ymm1, %ymm1
+; XOPAVX2-NEXT:    vpandn %ymm3, %ymm2, %ymm2
 ; XOPAVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
-; XOPAVX2-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; XOPAVX2-NEXT:    vpsubb %xmm3, %xmm4, %xmm3
-; XOPAVX2-NEXT:    vextracti128 $1, %ymm1, %xmm5
-; XOPAVX2-NEXT:    vpshlb %xmm3, %xmm5, %xmm3
-; XOPAVX2-NEXT:    vpsubb %xmm2, %xmm4, %xmm2
-; XOPAVX2-NEXT:    vpshlb %xmm2, %xmm1, %xmm1
-; XOPAVX2-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
+; XOPAVX2-NEXT:    vpaddb %ymm0, %ymm0, %ymm0
+; XOPAVX2-NEXT:    vextracti128 $1, %ymm0, %xmm4
+; XOPAVX2-NEXT:    vpshlb %xmm3, %xmm4, %xmm3
+; XOPAVX2-NEXT:    vpshlb %xmm2, %xmm0, %xmm0
+; XOPAVX2-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    retq
   %res = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %x, <32 x i8> %y, <32 x i8> %amt)

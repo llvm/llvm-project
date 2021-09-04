@@ -122,7 +122,7 @@ def ForOp : SCF_Op<"for",
   let summary = "for operation";
   let description = [{
     The "scf.for" operation represents a loop taking 3 SSA value as operands
-    that represent the lower bound, upper bound and step respectively.  The
+    that represent the lower bound, upper bound and step respectively. The
     operation defines an SSA value for its induction variable. It has one
     region capturing the loop body. The induction variable is represented as an
     argument of this region. This SSA value always has type index, which is the
@@ -146,14 +146,18 @@ def ForOp : SCF_Op<"for",
     values after loop termination. The initial values of the variables are
     passed as additional SSA operands to the "scf.for" following the 3 loop
     control SSA values mentioned above (lower bound, upper bound and step). The
-    operation region has equivalent arguments for each variable representing
-    the value of the variable at the current iteration.
+    operation region has an argument for the induction variable, followed by
+    one argument for each loop-carried variable, representing he value of the
+    variable at the current iteration.
 
-    The region must terminate with a "scf.yield" that passes all the current
-    iteration variables to the next iteration, or to the "scf.for" result, if
-    at the last iteration. Note, that when the loop-carried variables are
-    present, calling ForOp::build will not insert the terminator implicitly.
-    The caller must insert "scf.yield" in that case.
+    The region must terminate with a "scf.yield" that passes the current
+    values of loop-carried variables to the next iteration, or to the "scf.for"
+    result, if at the last iteration. The type (static or dynamic) of a
+    loop-carried variable may not change with iterations. E.g., it is illegal
+    to pass a tensor of larger size to the next iteration; even if the tensor's
+    dimensions are dynamic (i.e., same static type). Note, that when the
+    loop-carried variables are present, calling ForOp::build will not insert the
+    terminator implicitly. The caller must insert "scf.yield" in that case.
 
     "scf.for" results hold the final values after the last iteration.
     For example, to sum-reduce a memref:

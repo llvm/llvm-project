@@ -246,12 +246,13 @@ public:
 
     // If `V` is of the form `A + Constant` then `-1 - V` can be folded into
     // `(-1 - Constant) - A` if we are willing to invert all of the uses.
-    if (BinaryOperator *BO = dyn_cast<BinaryOperator>(V))
-      if (BO->getOpcode() == Instruction::Add ||
-          BO->getOpcode() == Instruction::Sub)
-        if (match(BO, PatternMatch::m_c_BinOp(PatternMatch::m_Value(),
-                                              PatternMatch::m_ImmConstant())))
-          return WillInvertAllUses;
+    if (match(V, m_Add(PatternMatch::m_Value(), PatternMatch::m_ImmConstant())))
+      return WillInvertAllUses;
+
+    // If `V` is of the form `Constant - A` then `-1 - V` can be folded into
+    // `A + (-1 - Constant)` if we are willing to invert all of the uses.
+    if (match(V, m_Sub(PatternMatch::m_ImmConstant(), PatternMatch::m_Value())))
+      return WillInvertAllUses;
 
     // Selects with invertible operands are freely invertible
     if (match(V,
@@ -358,14 +359,6 @@ public:
       Out[i] = isa<UndefValue>(C) ? SafeC : C;
     }
     return ConstantVector::get(Out);
-  }
-
-  /// Create and insert the idiom we use to indicate a block is unreachable
-  /// without having to rewrite the CFG from within InstCombine.
-  static void CreateNonTerminatorUnreachable(Instruction *InsertAt) {
-    auto &Ctx = InsertAt->getContext();
-    new StoreInst(ConstantInt::getTrue(Ctx),
-                  UndefValue::get(Type::getInt1PtrTy(Ctx)), InsertAt);
   }
 
   void addToWorklist(Instruction *I) { Worklist.push(I); }

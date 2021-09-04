@@ -238,12 +238,12 @@ public:
   }
 
   /// Parses a quoted string token if present.
-  ParseResult parseOptionalString(StringRef *string) override {
+  ParseResult parseOptionalString(std::string *string) override {
     if (!parser.getToken().is(Token::string))
       return failure();
 
     if (string)
-      *string = parser.getTokenSpelling().drop_front().drop_back();
+      *string = parser.getToken().getStringValue();
     parser.consumeToken();
     return success();
   }

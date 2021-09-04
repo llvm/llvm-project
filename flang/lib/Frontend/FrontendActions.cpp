@@ -90,6 +90,9 @@ void PrintPreprocessedAction::ExecuteAction() {
         outForPP, !ci.invocation().preprocessorOpts().noLineDirectives);
   }
 
+  // Print diagnostics from the prescanner
+  ci.parsing().messages().Emit(llvm::errs(), ci.allCookedSources());
+
   // If a pre-defined output stream exists, dump the preprocessed content there
   if (!ci.IsOutputStreamNull()) {
     // Send the output to the pre-defined output buffer.
@@ -97,16 +100,14 @@ void PrintPreprocessedAction::ExecuteAction() {
     return;
   }
 
-  // Print diagnostics from the prescanner
-  ci.parsing().messages().Emit(llvm::errs(), ci.allCookedSources());
-
   // Create a file and save the preprocessed output there
-  if (auto os{ci.CreateDefaultOutputFile(
-          /*Binary=*/true, /*InFile=*/GetCurrentFileOrBufferName())}) {
-    (*os) << outForPP.str();
-  } else {
-    llvm::errs() << "Unable to create the output file\n";
+  std::unique_ptr<llvm::raw_pwrite_stream> os{ci.CreateDefaultOutputFile(
+      /*Binary=*/true, /*InFile=*/GetCurrentFileOrBufferName())};
+  if (!os) {
+    return;
   }
+
+  (*os) << outForPP.str();
 }
 
 void DebugDumpProvenanceAction::ExecuteAction() {

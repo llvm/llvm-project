@@ -56,16 +56,16 @@ return:                                           ; preds = %exit2, %exit1
 
 ; CHECK-LABEL: define {{.*}}@foo.cold.1(
 ; CHECK: br
-; CHECK: [[exit1Stub:.*]]:
-; CHECK-NEXT: ret i1 true
-; CHECK: [[returnStub:.*]]:
-; CHECK-NEXT: ret i1 false
 ; CHECK: call {{.*}}@sink
 ; CHECK-NEXT: [[cmp:%.*]] = icmp
-; CHECK-NEXT: br i1 [[cmp]], label %[[exit1Stub]], label %exit2
+; CHECK-NEXT: br i1 [[cmp]], label %[[exit1Stub:.*]], label %exit2
 ; CHECK-LABEL: exit2:
 ; CHECK-NEXT: call {{.*}}@sideeffect(i32 2)
-; CHECK-NEXT: br label %[[returnStub]]
+; CHECK-NEXT: br label %[[returnStub:.*]]
+; CHECK: [[exit1Stub]]:
+; CHECK-NEXT: ret i1 true
+; CHECK: [[returnStub]]:
+; CHECK-NEXT: ret i1 false
 
 declare void @sink(...) cold
 

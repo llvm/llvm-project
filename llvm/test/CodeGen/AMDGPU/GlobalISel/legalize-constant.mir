@@ -60,8 +60,7 @@ body: |
 
     ; CHECK-LABEL: name: test_constant_s7
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-    ; CHECK: $vgpr0 = COPY [[COPY]](s32)
+    ; CHECK: $vgpr0 = COPY [[C]](s32)
     %0:_(s7) = G_CONSTANT i7 5
     %1:_(s32) = G_ANYEXT %0
     $vgpr0 = COPY %1
@@ -74,8 +73,7 @@ body: |
 
     ; CHECK-LABEL: name: test_constant_s8
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-    ; CHECK: $vgpr0 = COPY [[COPY]](s32)
+    ; CHECK: $vgpr0 = COPY [[C]](s32)
     %0:_(s8) = G_CONSTANT i8 5
     %1:_(s32) = G_ANYEXT %0
     $vgpr0 = COPY %1

@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -exception-model=wasm -mattr=+exception-handling %s -o - | obj2yaml | FileCheck %s
+; RUN: llc -filetype=obj -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling %s -o - | obj2yaml | FileCheck %s
 
 ; This is a regression test for a decoding bug that happens when a tag's
 ; sigindex is greater than 63, so we put 63 dummy functions with different

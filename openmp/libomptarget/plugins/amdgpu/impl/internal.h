@@ -29,7 +29,7 @@
 
 #define MAX_NUM_KERNELS (1024 * 16)
 
-typedef struct atmi_implicit_args_s {
+typedef struct impl_implicit_args_s {
   unsigned long offset_x;
   unsigned long offset_y;
   unsigned long offset_z;
@@ -40,7 +40,7 @@ typedef struct atmi_implicit_args_s {
   unsigned long cpu_worker_signals;
   unsigned long cpu_queue_ptr;
   unsigned long kernarg_template_ptr;
-} atmi_implicit_args_t;
+} impl_implicit_args_t;
 
 extern "C" {
 
@@ -177,7 +177,7 @@ template <typename T> inline T *alignUp(T *value, size_t alignment) {
       alignDown((intptr_t)(value + alignment - 1), alignment));
 }
 
-extern bool atl_is_atmi_initialized();
+extern bool atl_is_impl_initialized();
 
 bool handle_group_signal(hsa_signal_value_t value, void *arg);
 

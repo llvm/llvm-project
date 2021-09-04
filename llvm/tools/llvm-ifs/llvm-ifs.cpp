@@ -99,6 +99,11 @@ cl::opt<bool> StripIFSTarget(
     "strip-ifs-target",
     cl::desc("Strip all target information away from IFS output"),
     cl::cat(IfsCategory));
+cl::opt<bool>
+    StripUndefined("strip-undefined",
+                   cl::desc("Strip undefined symbols from IFS output"),
+                   cl::cat(IfsCategory));
+
 cl::opt<std::string>
     SoName("soname",
            cl::desc("Manually set the DT_SONAME entry of any emitted files"),
@@ -443,6 +448,8 @@ int main(int argc, char *argv[]) {
       stripIFSTarget(Stub, StripIFSTarget, StripIFSArch,
                      StripIFSEndiannessWidth, StripIFSBitWidth);
     }
+    if (StripUndefined)
+      stripIFSUndefinedSymbols(Stub);
     Error IFSWriteError = writeIFS(OutputFilePath.getValue(), Stub);
     if (IFSWriteError)
       fatalError(std::move(IFSWriteError));

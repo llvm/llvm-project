@@ -88,7 +88,8 @@ public:
   size_t wordSize;
 
   size_t thunkSize = 0;
-  uint64_t branchRange = 0;
+  uint64_t forwardBranchRange = 0;
+  uint64_t backwardBranchRange = 0;
 
   // We contrive this value as sufficiently far from any valid address that it
   // will always be out-of-range for any architecture. UINT64_MAX is not a

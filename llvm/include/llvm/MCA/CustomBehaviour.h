@@ -22,6 +22,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MCA/SourceMgr.h"
+#include "llvm/MCA/View.h"
 
 namespace llvm {
 namespace mca {
@@ -65,19 +66,43 @@ public:
 
   virtual ~CustomBehaviour();
 
-  // Before the llvm-mca pipeline dispatches an instruction, it first checks
-  // for any register or resource dependencies / hazards. If it doesn't find
-  // any, this method will be invoked to determine if there are any custom
-  // hazards that the instruction needs to wait for.
-  // The return value of this method is the number of cycles that the
-  // instruction needs to wait for.
-  // It's safe to underestimate the number of cycles to wait for since these
-  // checks will be invoked again before the intruction gets dispatched.
-  // However, it's not safe (accurate) to overestimate the number of cycles
-  // to wait for since the instruction will wait for AT LEAST that number of
-  // cycles before attempting to be dispatched again.
+  /// Before the llvm-mca pipeline dispatches an instruction, it first checks
+  /// for any register or resource dependencies / hazards. If it doesn't find
+  /// any, this method will be invoked to determine if there are any custom
+  /// hazards that the instruction needs to wait for.
+  /// The return value of this method is the number of cycles that the
+  /// instruction needs to wait for.
+  /// It's safe to underestimate the number of cycles to wait for since these
+  /// checks will be invoked again before the intruction gets dispatched.
+  /// However, it's not safe (accurate) to overestimate the number of cycles
+  /// to wait for since the instruction will wait for AT LEAST that number of
+  /// cycles before attempting to be dispatched again.
   virtual unsigned checkCustomHazard(ArrayRef<InstRef> IssuedInst,
                                      const InstRef &IR);
+
+  // Functions that target CBs can override to return a list of
+  // target specific Views that need to live within /lib/Target/ so that
+  // they can benefit from the target CB or from backend functionality that is
+  // not already exposed through MC-layer classes. Keep in mind that how this
+  // function is used is that the function is called within llvm-mca.cpp and
+  // then each unique_ptr<View> is passed into the PipelinePrinter::addView()
+  // function. This function will then std::move the View into its own vector of
+  // Views. So any CB that overrides this function needs to make sure that they
+  // are not relying on the current address or reference of the View
+  // unique_ptrs. If you do need the CB and View to be able to communicate with
+  // each other, consider giving the View a reference or pointer to the CB when
+  // the View is constructed. Then the View can query the CB for information
+  // when it needs it.
+  /// Return a vector of Views that will be added before all other Views.
+  virtual std::vector<std::unique_ptr<View>>
+  getStartViews(llvm::MCInstPrinter &IP, llvm::ArrayRef<llvm::MCInst> Insts);
+  /// Return a vector of Views that will be added after the InstructionInfoView.
+  virtual std::vector<std::unique_ptr<View>>
+  getPostInstrInfoViews(llvm::MCInstPrinter &IP,
+                        llvm::ArrayRef<llvm::MCInst> Insts);
+  /// Return a vector of Views that will be added after all other Views.
+  virtual std::vector<std::unique_ptr<View>>
+  getEndViews(llvm::MCInstPrinter &IP, llvm::ArrayRef<llvm::MCInst> Insts);
 };
 
 } // namespace mca

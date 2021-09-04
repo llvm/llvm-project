@@ -456,8 +456,8 @@ loop.exit:
   ret void
 }
 
-define void @max_overflow(i8 %n) mustprogress {
-; CHECK-LABEL: Determining loop execution counts for: @max_overflow
+define void @max_overflow_se(i8 %n) mustprogress {
+; CHECK-LABEL: Determining loop execution counts for: @max_overflow_se
 ; CHECK: Loop %loop: backedge-taken count is (-126 + (126 smax %n))<nsw>
 ; CHECK: Loop %loop: max backedge-taken count is 0
 entry:
@@ -472,6 +472,33 @@ loop:
 exit:
   ret void
 }
+
+; Show that we correctly realize that %i can overflow here as long as
+; the early exit is taken before we branch on poison.
+define void @max_overflow_me(i8 %n) mustprogress {
+; CHECK-LABEL: Determining loop execution counts for: @max_overflow_me
+; CHECK: Loop %loop: <multiple exits> Unpredictable backedge-taken count.
+; CHECK:   exit count for loop: 1
+; CHECK:   exit count for latch: ***COULDNOTCOMPUTE***
+; CHECK: Loop %loop: max backedge-taken count is 1
+entry:
+  br label %loop
+
+loop:
+  %i = phi i8 [ 63, %entry ], [ %i.next, %latch ]
+  %j = phi i8 [  0, %entry ], [ %j.next, %latch ]
+  %early.exit = icmp ne i8 %j, 1
+  br i1 %early.exit, label %latch, label %exit
+latch:
+  %i.next = add nsw i8 %i, 63
+  %j.next = add nsw nuw i8 %j, 1
+  %t = icmp slt i8 %i.next, %n
+  br i1 %t, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 
 ; Max backedge-taken count is zero.
 define void @bool_stride(i1 %s, i1 %n) mustprogress {

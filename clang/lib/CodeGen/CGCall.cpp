@@ -5318,6 +5318,15 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       TargetDecl->hasAttr<MSAllocatorAttr>())
     getDebugInfo()->addHeapAllocSiteMetadata(CI, RetTy->getPointeeType(), Loc);
 
+  // Add metadata if calling an __attribute__((error(""))) or warning fn.
+  if (TargetDecl && TargetDecl->hasAttr<ErrorAttr>()) {
+    llvm::ConstantInt *Line =
+        llvm::ConstantInt::get(Int32Ty, Loc.getRawEncoding());
+    llvm::ConstantAsMetadata *MD = llvm::ConstantAsMetadata::get(Line);
+    llvm::MDTuple *MDT = llvm::MDNode::get(getLLVMContext(), {MD});
+    CI->setMetadata("srcloc", MDT);
+  }
+
   // 4. Finish the call.
 
   // If the call doesn't return, finish the basic block and clear the

@@ -46,7 +46,7 @@ TEST(LlvmLibcAToLTest, NonBaseTenWholeNumbers) {
   ASSERT_EQ(__llvm_libc::atol(hexadecimal), 0l);
 
   const char *octal = "010";
-  ASSERT_EQ(__llvm_libc::atol(hexadecimal), 10l);
+  ASSERT_EQ(__llvm_libc::atol(octal), 10l);
 
   const char *decimal_point = "5.9";
   ASSERT_EQ(__llvm_libc::atol(decimal_point), 5l);

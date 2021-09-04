@@ -37,10 +37,10 @@ declare void @foo()
 ; CHECK-LABEL: define internal void @test.loopentry()
 ; CHECK-NEXT:  newFuncRoot:
 ; CHECK-NEXT:    br label %loopentry
-; CHECK:       loopexit.exitStub:
-; CHECK-NEXT:    ret void
 ; CHECK:       loopentry:
 ; CHECK-NEXT:    br i1 false, label %loopbody, label %loopexit.exitStub
 ; CHECK:       loopbody:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label %loopentry
+; CHECK:       loopexit.exitStub:
+; CHECK-NEXT:    ret void

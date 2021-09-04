@@ -981,6 +981,15 @@ public:
   /// anything after a process exec's itself.
   virtual void DoDidExec() {}
 
+  /// Called after a reported fork.
+  virtual void DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {}
+
+  /// Called after a reported vfork.
+  virtual void DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {}
+
+  /// Called after reported vfork completion.
+  virtual void DidVForkDone() {}
+
   /// Called before launching to a process.
   ///
   /// Allow Process plug-ins to execute some code before launching a process.

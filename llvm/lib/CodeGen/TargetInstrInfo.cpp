@@ -921,7 +921,8 @@ bool TargetInstrInfo::isReallyTriviallyReMaterializableGeneric(
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 
   // Remat clients assume operand 0 is the defined register.
-  if (!MI.getNumOperands() || !MI.getOperand(0).isReg())
+  if (!MI.getNumOperands() || !MI.getOperand(0).isReg() ||
+      MI.getOperand(0).isTied())
     return false;
   Register DefReg = MI.getOperand(0).getReg();
 
@@ -982,12 +983,6 @@ bool TargetInstrInfo::isReallyTriviallyReMaterializableGeneric(
     // Only allow one virtual-register def.  There may be multiple defs of the
     // same virtual register, though.
     if (MO.isDef() && Reg != DefReg)
-      return false;
-
-    // Don't allow any virtual-register uses. Rematting an instruction with
-    // virtual register uses would length the live ranges of the uses, which
-    // is not necessarily a good idea, certainly not "trivial".
-    if (MO.isUse())
       return false;
   }
 

@@ -8,6 +8,7 @@
 
 #include "include/threads.h"
 #include "src/threads/call_once.h"
+#include "src/threads/mtx_destroy.h"
 #include "src/threads/mtx_init.h"
 #include "src/threads/mtx_lock.h"
 #include "src/threads/mtx_unlock.h"
@@ -108,4 +109,6 @@ TEST(LlvmLibcCallOnceTest, TestSynchronization) {
   ASSERT_EQ(retval, 0);
 
   ASSERT_EQ(static_cast<unsigned int>(done_count), 2U);
+
+  __llvm_libc::mtx_destroy(&once_func_blocker);
 }

@@ -765,7 +765,11 @@ Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
       // This is the first operand. Just expand it.
       Sum = expand(Op);
       ++I;
-    } else if (PointerType *PTy = dyn_cast<PointerType>(Sum->getType())) {
+      continue;
+    }
+
+    assert(!Op->getType()->isPointerTy() && "Only first op can be pointer");
+    if (PointerType *PTy = dyn_cast<PointerType>(Sum->getType())) {
       // The running sum expression is a pointer. Try to form a getelementptr
       // at this level with that as the base.
       SmallVector<const SCEV *, 4> NewOps;
@@ -779,16 +783,6 @@ Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
         NewOps.push_back(X);
       }
       Sum = expandAddToGEP(NewOps.begin(), NewOps.end(), PTy, Ty, Sum);
-    } else if (PointerType *PTy = dyn_cast<PointerType>(Op->getType())) {
-      // The running sum is an integer, and there's a pointer at this level.
-      // Try to form a getelementptr. If the running sum is instructions,
-      // use a SCEVUnknown to avoid re-analyzing them.
-      SmallVector<const SCEV *, 4> NewOps;
-      NewOps.push_back(isa<Instruction>(Sum) ? SE.getUnknown(Sum) :
-                                               SE.getSCEV(Sum));
-      for (++I; I != E && I->first == CurLoop; ++I)
-        NewOps.push_back(I->second);
-      Sum = expandAddToGEP(NewOps.begin(), NewOps.end(), PTy, Ty, expand(Op));
     } else if (Op->isNonConstantNegative()) {
       // Instead of doing a negate and add, just do a subtract.
       Value *W = expandCodeForImpl(SE.getNegativeSCEV(Op), Ty, false);
@@ -921,28 +915,6 @@ Value *SCEVExpander::visitUDivExpr(const SCEVUDivExpr *S) {
   Value *RHS = expandCodeForImpl(S->getRHS(), Ty, false);
   return InsertBinop(Instruction::UDiv, LHS, RHS, SCEV::FlagAnyWrap,
                      /*IsSafeToHoist*/ SE.isKnownNonZero(S->getRHS()));
-}
-
-/// Move parts of Base into Rest to leave Base with the minimal
-/// expression that provides a pointer operand suitable for a
-/// GEP expansion.
-static void ExposePointerBase(const SCEV *&Base, const SCEV *&Rest,
-                              ScalarEvolution &SE) {
-  while (const SCEVAddRecExpr *A = dyn_cast<SCEVAddRecExpr>(Base)) {
-    Base = A->getStart();
-    Rest = SE.getAddExpr(Rest,
-                         SE.getAddRecExpr(SE.getConstant(A->getType(), 0),
-                                          A->getStepRecurrence(SE),
-                                          A->getLoop(),
-                                          A->getNoWrapFlags(SCEV::FlagNW)));
-  }
-  if (const SCEVAddExpr *A = dyn_cast<SCEVAddExpr>(Base)) {
-    Base = A->getOperand(A->getNumOperands()-1);
-    SmallVector<const SCEV *, 8> NewAddOps(A->operands());
-    NewAddOps.back() = Rest;
-    Rest = SE.getAddExpr(NewAddOps);
-    ExposePointerBase(Base, Rest, SE);
-  }
 }
 
 /// Determine if this is a well-behaved chain of instructions leading back to
@@ -1574,28 +1546,16 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
 
   // {X,+,F} --> X + {0,+,F}
   if (!S->getStart()->isZero()) {
+    if (PointerType *PTy = dyn_cast<PointerType>(S->getType())) {
+      Value *StartV = expand(SE.getPointerBase(S));
+      assert(StartV->getType() == PTy && "Pointer type mismatch for GEP!");
+      return expandAddToGEP(SE.removePointerBase(S), PTy, Ty, StartV);
+    }
+
     SmallVector<const SCEV *, 4> NewOps(S->operands());
     NewOps[0] = SE.getConstant(Ty, 0);
     const SCEV *Rest = SE.getAddRecExpr(NewOps, L,
                                         S->getNoWrapFlags(SCEV::FlagNW));
-
-    // Turn things like ptrtoint+arithmetic+inttoptr into GEP. See the
-    // comments on expandAddToGEP for details.
-    const SCEV *Base = S->getStart();
-    // Dig into the expression to find the pointer base for a GEP.
-    const SCEV *ExposedRest = Rest;
-    ExposePointerBase(Base, ExposedRest, SE);
-    // If we found a pointer, expand the AddRec with a GEP.
-    if (PointerType *PTy = dyn_cast<PointerType>(Base->getType())) {
-      // Make sure the Base isn't something exotic, such as a multiplied
-      // or divided pointer value. In those cases, the result type isn't
-      // actually a pointer type.
-      if (!isa<SCEVMulExpr>(Base) && !isa<SCEVUDivExpr>(Base)) {
-        Value *StartV = expand(Base);
-        assert(StartV->getType() == PTy && "Pointer type mismatch for GEP!");
-        return expandAddToGEP(ExposedRest, PTy, Ty, StartV);
-      }
-    }
 
     // Just do a normal add. Pre-expand the operands to suppress folding.
     //

@@ -30,10 +30,6 @@
 
 namespace py = pybind11;
 
-// TODO: Move this to Interop.h and make it externally configurable/use it
-// consistently to locate the "import mlir" top-level.
-#define MLIR_PYTHON_PACKAGE_PREFIX "mlir."
-
 // Raw CAPI type casters need to be declared before use, so always include them
 // first.
 namespace pybind11 {
@@ -76,7 +72,7 @@ struct type_caster<MlirAffineMap> {
   static handle cast(MlirAffineMap v, return_value_policy, handle) {
     py::object capsule =
         py::reinterpret_steal<py::object>(mlirPythonAffineMapToCapsule(v));
-    return py::module::import(MLIR_PYTHON_PACKAGE_PREFIX "ir")
+    return py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
         .attr("AffineMap")
         .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
         .release();
@@ -98,7 +94,7 @@ struct type_caster<MlirAttribute> {
   static handle cast(MlirAttribute v, return_value_policy, handle) {
     py::object capsule =
         py::reinterpret_steal<py::object>(mlirPythonAttributeToCapsule(v));
-    return py::module::import(MLIR_PYTHON_PACKAGE_PREFIX "ir")
+    return py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
         .attr("Attribute")
         .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
         .release();
@@ -115,7 +111,7 @@ struct type_caster<MlirContext> {
       // TODO: This raises an error of "No current context" currently.
       // Update the implementation to pretty-print the helpful error that the
       // core implementations print in this case.
-      src = py::module::import(MLIR_PYTHON_PACKAGE_PREFIX "ir")
+      src = py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
                 .attr("Context")
                 .attr("current");
     }
@@ -144,7 +140,7 @@ struct type_caster<MlirLocation> {
   static handle cast(MlirLocation v, return_value_policy, handle) {
     py::object capsule =
         py::reinterpret_steal<py::object>(mlirPythonLocationToCapsule(v));
-    return py::module::import(MLIR_PYTHON_PACKAGE_PREFIX "ir")
+    return py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
         .attr("Location")
         .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
         .release();
@@ -166,7 +162,7 @@ struct type_caster<MlirModule> {
   static handle cast(MlirModule v, return_value_policy, handle) {
     py::object capsule =
         py::reinterpret_steal<py::object>(mlirPythonModuleToCapsule(v));
-    return py::module::import(MLIR_PYTHON_PACKAGE_PREFIX "ir")
+    return py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
         .attr("Module")
         .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
         .release();
@@ -190,7 +186,7 @@ struct type_caster<MlirOperation> {
       return py::none();
     py::object capsule =
         py::reinterpret_steal<py::object>(mlirPythonOperationToCapsule(v));
-    return py::module::import(MLIR_PYTHON_PACKAGE_PREFIX "ir")
+    return py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
         .attr("Operation")
         .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
         .release();
@@ -226,7 +222,7 @@ struct type_caster<MlirType> {
   static handle cast(MlirType t, return_value_policy, handle) {
     py::object capsule =
         py::reinterpret_steal<py::object>(mlirPythonTypeToCapsule(t));
-    return py::module::import(MLIR_PYTHON_PACKAGE_PREFIX "ir")
+    return py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
         .attr("Type")
         .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
         .release();
@@ -266,7 +262,7 @@ public:
   }
 
   template <typename Func, typename... Extra>
-  pure_subclass &def(const char *name, Func &&f, const Extra &...extra) {
+  pure_subclass &def(const char *name, Func &&f, const Extra &... extra) {
     py::cpp_function cf(
         std::forward<Func>(f), py::name(name), py::is_method(py::none()),
         py::sibling(py::getattr(thisClass, name, py::none())), extra...);
@@ -276,7 +272,7 @@ public:
 
   template <typename Func, typename... Extra>
   pure_subclass &def_property_readonly(const char *name, Func &&f,
-                                       const Extra &...extra) {
+                                       const Extra &... extra) {
     py::cpp_function cf(
         std::forward<Func>(f), py::name(name), py::is_method(py::none()),
         py::sibling(py::getattr(thisClass, name, py::none())), extra...);
@@ -288,7 +284,7 @@ public:
 
   template <typename Func, typename... Extra>
   pure_subclass &def_staticmethod(const char *name, Func &&f,
-                                  const Extra &...extra) {
+                                  const Extra &... extra) {
     static_assert(!std::is_member_function_pointer<Func>::value,
                   "def_staticmethod(...) called with a non-static member "
                   "function pointer");
@@ -301,7 +297,7 @@ public:
 
   template <typename Func, typename... Extra>
   pure_subclass &def_classmethod(const char *name, Func &&f,
-                                 const Extra &...extra) {
+                                 const Extra &... extra) {
     static_assert(!std::is_member_function_pointer<Func>::value,
                   "def_classmethod(...) called with a non-static member "
                   "function pointer");
@@ -329,7 +325,7 @@ public:
                           IsAFunctionTy isaFunction)
       : mlir_attribute_subclass(
             scope, attrClassName, isaFunction,
-            py::module::import(MLIR_PYTHON_PACKAGE_PREFIX "ir")
+            py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
                 .attr("Attribute")) {}
 
   /// Subclasses with a provided mlir.ir.Attribute super-class. This must
@@ -381,7 +377,7 @@ public:
                      IsAFunctionTy isaFunction)
       : mlir_type_subclass(
             scope, typeClassName, isaFunction,
-            py::module::import(MLIR_PYTHON_PACKAGE_PREFIX "ir").attr("Type")) {}
+            py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir")).attr("Type")) {}
 
   /// Subclasses with a provided mlir.ir.Type super-class. This must
   /// be used if the subclass is being defined in the same extension module

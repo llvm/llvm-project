@@ -997,7 +997,7 @@ option though (maybe because the instruction is modeled incorrectly on
 purpose or the instruction's behaviour is quite complex). The
 CustomBehaviour class can be used in these cases to enforce proper
 instruction modeling (often by customizing data dependencies and detecting
-hazards that :program:`llvm-ma` has no way of knowing about).
+hazards that :program:`llvm-mca` has no way of knowing about).
 
 :program:`llvm-mca` comes with one generic and multiple target specific
 CustomBehaviour classes. The generic class will be used if the ``-disable-cb``
@@ -1017,3 +1017,30 @@ If you'd like to add a CustomBehaviour class for a target that doesn't
 already have one, refer to an existing implementation to see how to set it
 up. The classes are implemented within the target specific backend (for
 example `/llvm/lib/Target/AMDGPU/MCA/`) so that they can access backend symbols.
+
+Custom Views
+""""""""""""""""""""""""""""""""""""
+:program:`llvm-mca` comes with several Views such as the Timeline View and
+Summary View. These Views are generic and can work with most (if not all)
+targets. If you wish to add a new View to :program:`llvm-mca` and it does not
+require any backend functionality that is not already exposed through MC layer
+classes (MCSubtargetInfo, MCInstrInfo, etc.), please add it to the
+`/tools/llvm-mca/View/` directory. However, if your new View is target specific
+AND requires unexposed backend symbols or functionality, you can define it in
+the `/lib/Target/<TargetName>/MCA/` directory.
+
+To enable this target specific View, you will have to use this target's
+CustomBehaviour class to override the `CustomBehaviour::getViews()` methods.
+There are 3 variations of these methods based on where you want your View to
+appear in the output: `getStartViews()`, `getPostInstrInfoViews()`, and
+`getEndViews()`. These methods returns a vector of Views so you will want to
+return a vector containing all of the target specific Views for the target in
+question.
+
+Because these target specific (and backend dependent) Views require the
+`CustomBehaviour::getViews()` variants, these Views will not be enabled if
+the `-disable-cb` flag is used.
+
+Enabling these custom Views does not affect the non-custom (generic) Views.
+Continue to use the usual command line arguments to enable / disable those
+Views.

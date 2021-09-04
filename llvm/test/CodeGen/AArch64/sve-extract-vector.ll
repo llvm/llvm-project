@@ -186,12 +186,11 @@ define <4 x i64> @extract_fixed_v4i64_nxv2i64(<vscale x 2 x i64> %vec) nounwind 
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov w10, #4
 ; CHECK-NEXT:    cmp x9, #4
-; CHECK-NEXT:    ptrue p1.d, vl4
 ; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
 ; CHECK-NEXT:    csel x9, x9, x10, lo
 ; CHECK-NEXT:    mov x10, sp
-; CHECK-NEXT:    ld1d { z0.d }, p1/z, [x10, x9, lsl #3]
-; CHECK-NEXT:    st1d { z0.d }, p1, [x8]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x10, x9, lsl #3]
+; CHECK-NEXT:    st1d { z0.d }, p0, [x8]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret

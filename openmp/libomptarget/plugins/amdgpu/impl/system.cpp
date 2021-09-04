@@ -376,12 +376,7 @@ hsa_status_t init_hsa() {
 }
 
 hsa_status_t callbackEvent(const hsa_amd_event_t *event, void *data) {
-#if (ROCM_VERSION_MAJOR >= 3) ||                                               \
-    (ROCM_VERSION_MAJOR >= 2 && ROCM_VERSION_MINOR >= 3)
   if (event->event_type == HSA_AMD_GPU_MEMORY_FAULT_EVENT) {
-#else
-  if (event->event_type == GPU_MEMORY_FAULT_EVENT) {
-#endif
     hsa_amd_gpu_memory_fault_info_t memory_fault = event->memory_fault;
     // memory_fault.agent
     // memory_fault.virtual_address
@@ -784,7 +779,7 @@ static hsa_status_t get_code_object_custom_metadata(
     // implicit args by discounting the compiler set implicit args
     info.kernel_segment_size =
         (hasHiddenArgs ? kernel_explicit_args_size : kernel_segment_size) +
-        sizeof(atmi_implicit_args_t);
+        sizeof(impl_implicit_args_t);
     DEBUG_PRINT("[%s: kernarg seg size] (%lu --> %u)\n", kernelName.c_str(),
                 kernel_segment_size, info.kernel_segment_size);
 
@@ -989,13 +984,13 @@ hsa_status_t RegisterModuleFromMemory(
       // Mutating the device image here avoids another allocation & memcpy
       void *code_object_alloc_data =
           reinterpret_cast<void *>(code_object.handle);
-      hsa_status_t atmi_err =
+      hsa_status_t impl_err =
           on_deserialized_data(code_object_alloc_data, module_size, cb_state);
-      if (atmi_err != HSA_STATUS_SUCCESS) {
+      if (impl_err != HSA_STATUS_SUCCESS) {
         printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
                "Error in deserialized_data callback",
-               get_error_string(atmi_err));
-        return atmi_err;
+               get_error_string(impl_err));
+        return impl_err;
       }
 
       /* Load the code object.  */

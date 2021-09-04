@@ -47,6 +47,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InlineAsm.h"
@@ -1765,6 +1766,8 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_VECREDUCE_UMIN;
     case Intrinsic::lround:
       return TargetOpcode::G_LROUND;
+    case Intrinsic::llround:
+      return TargetOpcode::G_LLROUND;
   }
   return Intrinsic::not_intrinsic;
 }
@@ -2330,6 +2333,15 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
 
   if (CI.isInlineAsm())
     return translateInlineAsm(CI, MIRBuilder);
+
+  if (F && F->hasFnAttribute("dontcall")) {
+    unsigned LocCookie = 0;
+    if (MDNode *MD = CI.getMetadata("srcloc"))
+      LocCookie =
+          mdconst::extract<ConstantInt>(MD->getOperand(0))->getZExtValue();
+    DiagnosticInfoDontCall D(F->getName(), LocCookie);
+    F->getContext().diagnose(D);
+  }
 
   Intrinsic::ID ID = Intrinsic::not_intrinsic;
   if (F && F->isIntrinsic()) {
@@ -3098,8 +3110,6 @@ static bool checkForMustTailInVarArgFn(bool IsVarArg, const BasicBlock &BB) {
 bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   MF = &CurMF;
   const Function &F = MF->getFunction();
-  if (F.empty())
-    return false;
   GISelCSEAnalysisWrapper &Wrapper =
       getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
   // Set the CSEConfig and run the analysis.

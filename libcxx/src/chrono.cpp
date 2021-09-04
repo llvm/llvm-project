@@ -63,6 +63,28 @@ namespace chrono
 
 #if defined(_LIBCPP_WIN32API)
 
+#if _WIN32_WINNT < _WIN32_WINNT_WIN8
+
+namespace {
+
+typedef void(WINAPI *GetSystemTimeAsFileTimePtr)(LPFILETIME);
+
+class GetSystemTimeInit {
+public:
+  GetSystemTimeInit() {
+    fp = (GetSystemTimeAsFileTimePtr)GetProcAddress(
+        GetModuleHandleW(L"kernel32.dll"), "GetSystemTimePreciseAsFileTime");
+    if (fp == nullptr)
+      fp = GetSystemTimeAsFileTime;
+  }
+  GetSystemTimeAsFileTimePtr fp;
+};
+
+GetSystemTimeInit GetSystemTimeAsFileTimeFunc _LIBCPP_INIT_PRIORITY_MAX;
+} // namespace
+
+#endif
+
 static system_clock::time_point __libcpp_system_clock_now() {
   // FILETIME is in 100ns units
   using filetime_duration =
@@ -74,10 +96,13 @@ static system_clock::time_point __libcpp_system_clock_now() {
   static _LIBCPP_CONSTEXPR const seconds nt_to_unix_epoch{11644473600};
 
   FILETIME ft;
-#if _WIN32_WINNT >= _WIN32_WINNT_WIN8 && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#if (_WIN32_WINNT >= _WIN32_WINNT_WIN8 && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)) || \
+    (_WIN32_WINNT >= _WIN32_WINNT_WIN10)
   GetSystemTimePreciseAsFileTime(&ft);
-#else
+#elif !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
   GetSystemTimeAsFileTime(&ft);
+#else
+  GetSystemTimeAsFileTimeFunc.fp(&ft);
 #endif
 
   filetime_duration d{(static_cast<__int64>(ft.dwHighDateTime) << 32) |

@@ -175,17 +175,13 @@ using ::wcrtomb _LIBCPP_USING_IF_EXISTS;
 using ::mbsrtowcs _LIBCPP_USING_IF_EXISTS;
 using ::wcsrtombs _LIBCPP_USING_IF_EXISTS;
 
-#ifndef _LIBCPP_HAS_NO_STDIN
 using ::getwchar _LIBCPP_USING_IF_EXISTS;
 using ::vwscanf _LIBCPP_USING_IF_EXISTS;
 using ::wscanf _LIBCPP_USING_IF_EXISTS;
-#endif
 
-#ifndef _LIBCPP_HAS_NO_STDOUT
 using ::putwchar _LIBCPP_USING_IF_EXISTS;
 using ::vwprintf _LIBCPP_USING_IF_EXISTS;
 using ::wprintf _LIBCPP_USING_IF_EXISTS;
-#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

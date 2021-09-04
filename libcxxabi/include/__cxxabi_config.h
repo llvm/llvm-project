@@ -93,7 +93,7 @@
 #  if !__has_feature(cxx_exceptions)
 #    define _LIBCXXABI_NO_EXCEPTIONS
 #  endif
-#elif defined(_LIBCXXABI_COMPILER_GCC) && !__EXCEPTIONS
+#elif defined(_LIBCXXABI_COMPILER_GCC) && !defined(__EXCEPTIONS)
 #  define _LIBCXXABI_NO_EXCEPTIONS
 #endif
 

@@ -125,10 +125,9 @@ public:
     if (auto Err = deserializeSeq(C, Size))
       return Err;
 
-    WrapperFunctionResult Tmp;
-    char *Data = WrapperFunctionResult::allocate(Tmp, Size);
+    auto Tmp = WrapperFunctionResult::allocate(Size);
 
-    if (auto Err = C.readBytes(Data, Size))
+    if (auto Err = C.readBytes(Tmp.data(), Tmp.size()))
       return Err;
 
     E = std::move(Tmp);

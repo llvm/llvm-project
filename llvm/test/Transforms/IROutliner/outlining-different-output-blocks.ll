@@ -86,11 +86,6 @@ entry:
 }
 
 ; CHECK: define internal void @outlined_ir_func_0(i32* [[ARG0:%.*]], i32* [[ARG1:%.*]], i32* [[ARG2:%.*]], i32* [[ARG3:%.*]], i32* [[ARG4:%.*]], i32 [[ARG5:%.*]]) #1 {
-; CHECK: _after_outline.exitStub:
-; CHECK-NEXT:    switch i32 [[ARG5]], label [[BLOCK:%.*]] [
-; CHECK-NEXT:      i32 0, label %[[BLOCK_0:.*]]
-; CHECK-NEXT:      i32 1, label %[[BLOCK_1:.*]]
-
 ; CHECK: entry_to_outline:
 ; CHECK-NEXT:    store i32 2, i32* [[ARG0]], align 4
 ; CHECK-NEXT:    store i32 3, i32* [[ARG1]], align 4
@@ -100,6 +95,11 @@ entry:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    store i32 [[ADD]], i32* [[ARG2]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARG2]], align 4
+
+; CHECK: _after_outline.exitStub:
+; CHECK-NEXT:    switch i32 [[ARG5]], label [[BLOCK:%.*]] [
+; CHECK-NEXT:      i32 0, label %[[BLOCK_0:.*]]
+; CHECK-NEXT:      i32 1, label %[[BLOCK_1:.*]]
 
 ; CHECK: [[BLOCK_0]]:
 ; CHECK-NEXT:    store i32 [[ADD]], i32* [[ARG3]], align 4

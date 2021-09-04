@@ -1233,47 +1233,75 @@ void DylibFile::checkAppExtensionSafety(bool dylibIsAppExtensionSafe) const {
 }
 
 ArchiveFile::ArchiveFile(std::unique_ptr<object::Archive> &&f)
-    : InputFile(ArchiveKind, f->getMemoryBufferRef()), file(std::move(f)) {
+    : InputFile(ArchiveKind, f->getMemoryBufferRef()), file(std::move(f)) {}
+
+void ArchiveFile::addLazySymbols() {
   for (const object::Archive::Symbol &sym : file->symbols())
     symtab->addLazy(sym.getName(), this, sym);
+}
+
+static Expected<InputFile *> loadArchiveMember(MemoryBufferRef mb,
+                                               uint32_t modTime,
+                                               StringRef archiveName,
+                                               uint64_t offsetInArchive) {
+  if (config->zeroModTime)
+    modTime = 0;
+
+  switch (identify_magic(mb.getBuffer())) {
+  case file_magic::macho_object:
+    return make<ObjFile>(mb, modTime, archiveName);
+  case file_magic::bitcode:
+    return make<BitcodeFile>(mb, archiveName, offsetInArchive);
+  default:
+    return createStringError(inconvertibleErrorCode(),
+                             mb.getBufferIdentifier() +
+                                 " has unhandled file type");
+  }
+}
+
+Error ArchiveFile::fetch(const object::Archive::Child &c, StringRef reason) {
+  if (!seen.insert(c.getChildOffset()).second)
+    return Error::success();
+
+  Expected<MemoryBufferRef> mb = c.getMemoryBufferRef();
+  if (!mb)
+    return mb.takeError();
+
+  // Thin archives refer to .o files, so --reproduce needs the .o files too.
+  if (tar && c.getParent()->isThin())
+    tar->append(relativeToRoot(CHECK(c.getFullName(), this)), mb->getBuffer());
+
+  Expected<TimePoint<std::chrono::seconds>> modTime = c.getLastModified();
+  if (!modTime)
+    return modTime.takeError();
+
+  Expected<InputFile *> file =
+      loadArchiveMember(*mb, toTimeT(*modTime), getName(), c.getChildOffset());
+
+  if (!file)
+    return file.takeError();
+
+  inputFiles.insert(*file);
+  printArchiveMemberLoad(reason, *file);
+  return Error::success();
 }
 
 void ArchiveFile::fetch(const object::Archive::Symbol &sym) {
   object::Archive::Child c =
       CHECK(sym.getMember(), toString(this) +
-                                 ": could not get the member for symbol " +
+                                 ": could not get the member defining symbol " +
                                  toMachOString(sym));
-
-  if (!seen.insert(c.getChildOffset()).second)
-    return;
-
-  MemoryBufferRef mb =
-      CHECK(c.getMemoryBufferRef(),
-            toString(this) +
-                ": could not get the buffer for the member defining symbol " +
-                toMachOString(sym));
-
-  if (tar && c.getParent()->isThin())
-    tar->append(relativeToRoot(CHECK(c.getFullName(), this)), mb.getBuffer());
-
-  uint32_t modTime = toTimeT(
-      CHECK(c.getLastModified(), toString(this) +
-                                     ": could not get the modification time "
-                                     "for the member defining symbol " +
-                                     toMachOString(sym)));
 
   // `sym` is owned by a LazySym, which will be replace<>()d by make<ObjFile>
   // and become invalid after that call. Copy it to the stack so we can refer
   // to it later.
   const object::Archive::Symbol symCopy = sym;
 
-  if (Optional<InputFile *> file = loadArchiveMember(
-          mb, modTime, getName(), /*objCOnly=*/false, c.getChildOffset())) {
-    inputFiles.insert(*file);
-    // ld64 doesn't demangle sym here even with -demangle.
-    // Match that: intentionally don't call toMachOString().
-    printArchiveMemberLoad(symCopy.getName(), *file);
-  }
+  // ld64 doesn't demangle sym here even with -demangle.
+  // Match that: intentionally don't call toMachOString().
+  if (Error e = fetch(c, symCopy.getName()))
+    error(toString(this) + ": could not get the member defining symbol " +
+          toMachOString(symCopy) + ": " + toString(std::move(e)));
 }
 
 static macho::Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &objSym,

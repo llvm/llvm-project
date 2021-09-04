@@ -339,7 +339,7 @@ static LLVMStructType parseStructType(DialectAsmParser &parser) {
   // If we are parsing a self-reference to a recursive struct, i.e. the parsing
   // stack already contains a struct with the same identifier, bail out after
   // the name.
-  StringRef name;
+  std::string name;
   bool isIdentified = succeeded(parser.parseOptionalString(&name));
   if (isIdentified) {
     if (knownStructNames.count(name)) {

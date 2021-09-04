@@ -407,12 +407,13 @@ config("crt_code") {
     "-gline-tables-only",
     "-fvisibility=hidden",
   ]
-  assert(is_clang, "CRT code is always built with just-built clang")
-  cflags += [
-    "-Werror=thread-safety",
-    "-Werror=thread-safety-reference",
-    "-Werror=thread-safety-beta",
-  ]
+  if (is_clang) {
+    cflags += [
+      "-Werror=thread-safety",
+      "-Werror=thread-safety-reference",
+      "-Werror=thread-safety-beta",
+    ]
+  }
 }
 
 config("warn_covered_switch_default") {

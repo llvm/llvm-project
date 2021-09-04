@@ -944,6 +944,7 @@ class LLVM_LIBRARY_VISIBILITY EmscriptenTargetInfo
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const final {
     WebAssemblyOSTargetInfo<Target>::getOSDefines(Opts, Triple, Builder);
+    DefineStd(Builder, "unix", Opts);
     Builder.defineMacro("__EMSCRIPTEN__");
     if (Opts.POSIXThreads)
       Builder.defineMacro("__EMSCRIPTEN_PTHREADS__");

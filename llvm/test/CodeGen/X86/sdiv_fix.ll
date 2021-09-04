@@ -276,8 +276,6 @@ define i64 @func5(i64 %x, i64 %y) nounwind {
 ; X64-NEXT:    movq %r12, %rcx
 ; X64-NEXT:    callq __divti3@PLT
 ; X64-NEXT:    movq %rax, %r13
-; X64-NEXT:    decq %rax
-; X64-NEXT:    movq %rax, (%rsp) # 8-byte Spill
 ; X64-NEXT:    testq %rbx, %rbx
 ; X64-NEXT:    sets %al
 ; X64-NEXT:    testq %r12, %r12
@@ -291,7 +289,8 @@ define i64 @func5(i64 %x, i64 %y) nounwind {
 ; X64-NEXT:    orq %rax, %rdx
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    testb %bpl, %al
-; X64-NEXT:    cmovneq (%rsp), %r13 # 8-byte Folded Reload
+; X64-NEXT:    leaq -1(%r13), %rax
+; X64-NEXT:    cmovneq %rax, %r13
 ; X64-NEXT:    movq %r13, %rax
 ; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:    popq %rbx

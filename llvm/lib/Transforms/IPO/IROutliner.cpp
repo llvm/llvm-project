@@ -87,6 +87,10 @@ struct OutlinableGroup {
   /// index in ArgumentTypes is an output argument.
   unsigned NumAggregateInputs = 0;
 
+  /// The mapping of the canonical numbering of the values in outlined sections
+  /// to specific arguments.
+  DenseMap<unsigned, unsigned> CanonicalNumberToAggArg;
+
   /// The number of instructions that will be outlined by extracting \ref
   /// Regions.
   InstructionCost Benefit = 0;
@@ -129,9 +133,18 @@ static void moveBBContents(BasicBlock &SourceBB, BasicBlock &TargetBB) {
 void OutlinableRegion::splitCandidate() {
   assert(!CandidateSplit && "Candidate already split!");
 
-  Instruction *StartInst = (*Candidate->begin()).Inst;
   Instruction *EndInst = (*Candidate->end()).Inst;
-  assert(StartInst && EndInst && "Expected a start and end instruction?");
+  assert(EndInst && "Expected an end instruction?");
+
+  // We check if the current instruction following the last instruction in the
+  // region is the same as the recorded instruction following the last
+  // instruction. If they do not match, there could be problems in rewriting
+  // the program after outlining, so we ignore it.
+  if (EndInst != Candidate->backInstruction()->getNextNonDebugInstruction())
+    return;
+
+  Instruction *StartInst = (*Candidate->begin()).Inst;
+  assert(StartInst && "Expected a start instruction?");
   StartBB = StartInst->getParent();
   PrevBB = StartBB;
 
@@ -261,8 +274,9 @@ InstructionCost OutlinableRegion::getBenefit(TargetTransformInfo &TTI) {
   // division instruction for targets that have a native division instruction.
   // To be overly conservative, we only add 1 to the number of instructions for
   // each division instruction.
-  for (Instruction &I : *StartBB) {
-    switch (I.getOpcode()) {
+  for (IRInstructionData &ID : *Candidate) {
+    Instruction *I = ID.Inst;
+    switch (I->getOpcode()) {
     case Instruction::FDiv:
     case Instruction::FRem:
     case Instruction::SDiv:
@@ -272,7 +286,7 @@ InstructionCost OutlinableRegion::getBenefit(TargetTransformInfo &TTI) {
       Benefit += 1;
       break;
     default:
-      Benefit += TTI.getInstructionCost(&I, TargetTransformInfo::TCK_CodeSize);
+      Benefit += TTI.getInstructionCost(I, TargetTransformInfo::TCK_CodeSize);
       break;
     }
   }
@@ -434,7 +448,6 @@ Function *IROutliner::createFunction(Module &M, OutlinableGroup &Group,
 static BasicBlock *moveFunctionData(Function &Old, Function &New) {
   Function::iterator CurrBB, NextBB, FinalBB;
   BasicBlock *NewEnd = nullptr;
-  std::vector<Instruction *> DebugInsts;
   for (CurrBB = Old.begin(), FinalBB = Old.end(); CurrBB != FinalBB;
        CurrBB = NextBB) {
     NextBB = std::next(CurrBB);
@@ -443,6 +456,8 @@ static BasicBlock *moveFunctionData(Function &Old, Function &New) {
     Instruction *I = CurrBB->getTerminator();
     if (isa<ReturnInst>(I))
       NewEnd = &(*CurrBB);
+
+    std::vector<Instruction *> DebugInsts;
 
     for (Instruction &Val : *CurrBB) {
       // We must handle the scoping of called functions differently than
@@ -664,10 +679,21 @@ findExtractedInputToOverallInputMapping(OutlinableRegion &Region,
   // function to account for the extracted constants, we have two different
   // counters as we find extracted arguments, and as we come across overall
   // arguments.
+
+  // Additionally, in our first pass, for the first extracted function,
+  // we find argument locations for the canonical value numbering.  This
+  // numbering overrides any discovered location for the extracted code.
   for (unsigned InputVal : InputGVNs) {
+    Optional<unsigned> CanonicalNumberOpt = C.getCanonicalNum(InputVal);
+    assert(CanonicalNumberOpt.hasValue() && "Canonical number not found?");
+    unsigned CanonicalNumber = CanonicalNumberOpt.getValue();
+
     Optional<Value *> InputOpt = C.fromGVN(InputVal);
     assert(InputOpt.hasValue() && "Global value number not found?");
     Value *Input = InputOpt.getValue();
+
+    DenseMap<unsigned, unsigned>::iterator AggArgIt =
+        Group.CanonicalNumberToAggArg.find(CanonicalNumber);
 
     if (!Group.InputTypesSet) {
       Group.ArgumentTypes.push_back(Input->getType());
@@ -684,17 +710,34 @@ findExtractedInputToOverallInputMapping(OutlinableRegion &Region,
     // Check if we have a constant. If we do add it to the overall argument
     // number to Constant map for the region, and continue to the next input.
     if (Constant *CST = dyn_cast<Constant>(Input)) {
-      Region.AggArgToConstant.insert(std::make_pair(TypeIndex, CST));
+      if (AggArgIt != Group.CanonicalNumberToAggArg.end())
+        Region.AggArgToConstant.insert(std::make_pair(AggArgIt->second, CST));
+      else {
+        Group.CanonicalNumberToAggArg.insert(
+            std::make_pair(CanonicalNumber, TypeIndex));
+        Region.AggArgToConstant.insert(std::make_pair(TypeIndex, CST));
+      }
       TypeIndex++;
       continue;
     }
 
     // It is not a constant, we create the mapping from extracted argument list
-    // to the overall argument list.
+    // to the overall argument list, using the canonical location, if it exists.
     assert(ArgInputs.count(Input) && "Input cannot be found!");
 
-    Region.ExtractedArgToAgg.insert(std::make_pair(OriginalIndex, TypeIndex));
-    Region.AggArgToExtracted.insert(std::make_pair(TypeIndex, OriginalIndex));
+    if (AggArgIt != Group.CanonicalNumberToAggArg.end()) {
+      if (OriginalIndex != AggArgIt->second)
+        Region.ChangedArgOrder = true;
+      Region.ExtractedArgToAgg.insert(
+          std::make_pair(OriginalIndex, AggArgIt->second));
+      Region.AggArgToExtracted.insert(
+          std::make_pair(AggArgIt->second, OriginalIndex));
+    } else {
+      Group.CanonicalNumberToAggArg.insert(
+          std::make_pair(CanonicalNumber, TypeIndex));
+      Region.ExtractedArgToAgg.insert(std::make_pair(OriginalIndex, TypeIndex));
+      Region.AggArgToExtracted.insert(std::make_pair(TypeIndex, OriginalIndex));
+    }
     OriginalIndex++;
     TypeIndex++;
   }
@@ -820,9 +863,10 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
   assert(AggFunc && "Function to replace with is nullptr?");
 
   // If the arguments are the same size, there are not values that need to be
-  // made argument, or different output registers to handle.  We can simply
-  // replace the called function in this case.
-  if (AggFunc->arg_size() == Call->arg_size()) {
+  // made into an argument, the argument ordering has not been change, or
+  // different output registers to handle.  We can simply replace the called
+  // function in this case.
+  if (!Region.ChangedArgOrder && AggFunc->arg_size() == Call->arg_size()) {
     LLVM_DEBUG(dbgs() << "Replace call to " << *Call << " with call to "
                       << *AggFunc << " with same number of arguments\n");
     Call->setCalledFunction(AggFunc);
@@ -1298,6 +1342,51 @@ void IROutliner::deduplicateExtractedSections(
   OutlinedFunctionNum++;
 }
 
+bool IROutliner::isCompatibleWithAlreadyOutlinedCode(
+    const OutlinableRegion &Region) {
+  IRSimilarityCandidate *IRSC = Region.Candidate;
+  unsigned StartIdx = IRSC->getStartIdx();
+  unsigned EndIdx = IRSC->getEndIdx();
+
+  // A check to make sure that we are not about to attempt to outline something
+  // that has already been outlined.
+  for (unsigned Idx = StartIdx; Idx <= EndIdx; Idx++)
+    if (Outlined.contains(Idx))
+      return false;
+
+  // We check if the recorded instruction matches the actual next instruction,
+  // if it does not, we fix it in the InstructionDataList.
+  Instruction *RealEndInstruction =
+      Region.Candidate->backInstruction()->getNextNonDebugInstruction();
+
+  assert(RealEndInstruction && "Next instruction is a nullptr?");
+  if (Region.Candidate->end()->Inst != RealEndInstruction) {
+    IRInstructionDataList *IDL = Region.Candidate->front()->IDL;
+    Instruction *NewEndInst = RealEndInstruction;
+    IRInstructionData *NewEndIRID = new (InstDataAllocator.Allocate())
+        IRInstructionData(*NewEndInst, InstructionClassifier.visit(*NewEndInst),
+                          *IDL);
+
+    // Insert the first IRInstructionData of the new region after the
+    // last IRInstructionData of the IRSimilarityCandidate.
+    IDL->insert(Region.Candidate->end(), *NewEndIRID);
+  }
+
+  return none_of(*IRSC, [this](IRInstructionData &ID) {
+    // We check if there is a discrepancy between the InstructionDataList
+    // and the actual next instruction in the module.  If there is, it means
+    // that an extra instruction was added, likely by the CodeExtractor.
+
+    // Since we do not have any similarity data about this particular
+    // instruction, we cannot confidently outline it, and must discard this
+    // candidate.
+    if (std::next(ID.getIterator())->Inst !=
+        ID.Inst->getNextNonDebugInstruction())
+      return true;
+    return !InstructionClassifier.visit(ID.Inst);
+  });
+}
+
 void IROutliner::pruneIncompatibleRegions(
     std::vector<IRSimilarityCandidate> &CandidateVec,
     OutlinableGroup &CurrentGroup) {
@@ -1621,12 +1710,17 @@ unsigned IROutliner::doOutline(Module &M) {
                         return LHS[0].getLength() * LHS.size() >
                                RHS[0].getLength() * RHS.size();
                       });
+  // Creating OutlinableGroups for each SimilarityCandidate to be used in
+  // each of the following for loops to avoid making an allocator.
+  std::vector<OutlinableGroup> PotentialGroups(SimilarityCandidates.size());
 
   DenseSet<unsigned> NotSame;
-  std::vector<Function *> FuncsToRemove;
+  std::vector<OutlinableGroup *> NegativeCostGroups;
+  std::vector<OutlinableRegion *> OutlinedRegions;
   // Iterate over the possible sets of similarity.
+  unsigned PotentialGroupIdx = 0;
   for (SimilarityGroup &CandidateVec : SimilarityCandidates) {
-    OutlinableGroup CurrentGroup;
+    OutlinableGroup &CurrentGroup = PotentialGroups[PotentialGroupIdx++];
 
     // Remove entries that were previously outlined
     pruneIncompatibleRegions(CandidateVec, CurrentGroup);
@@ -1648,11 +1742,18 @@ unsigned IROutliner::doOutline(Module &M) {
     // Create a CodeExtractor for each outlinable region. Identify inputs and
     // outputs for each section using the code extractor and create the argument
     // types for the Aggregate Outlining Function.
-    std::vector<OutlinableRegion *> OutlinedRegions;
+    OutlinedRegions.clear();
     for (OutlinableRegion *OS : CurrentGroup.Regions) {
       // Break the outlinable region out of its parent BasicBlock into its own
       // BasicBlocks (see function implementation).
       OS->splitCandidate();
+
+      // There's a chance that when the region is split, extra instructions are
+      // added to the region. This makes the region no longer viable
+      // to be split, so we ignore it for outlining.
+      if (!OS->CandidateSplit)
+        continue;
+
       std::vector<BasicBlock *> BE = {OS->StartBB};
       OS->CE = new (ExtractorAllocator.Allocate())
           CodeExtractor(BE, nullptr, false, nullptr, nullptr, nullptr, false,
@@ -1660,8 +1761,10 @@ unsigned IROutliner::doOutline(Module &M) {
       findAddInputsOutputs(M, *OS, NotSame);
       if (!OS->IgnoreRegion)
         OutlinedRegions.push_back(OS);
-      else
-        OS->reattachCandidate();
+
+      // We recombine the blocks together now that we have gathered all the
+      // needed information.
+      OS->reattachCandidate();
     }
 
     CurrentGroup.Regions = std::move(OutlinedRegions);
@@ -1674,12 +1777,11 @@ unsigned IROutliner::doOutline(Module &M) {
     if (CostModel)
       findCostBenefit(M, CurrentGroup);
 
-    // If we are adhering to the cost model, reattach all the candidates
+    // If we are adhering to the cost model, skip those groups where the cost
+    // outweighs the benefits.
     if (CurrentGroup.Cost >= CurrentGroup.Benefit && CostModel) {
-      for (OutlinableRegion *OS : CurrentGroup.Regions)
-        OS->reattachCandidate();
-      OptimizationRemarkEmitter &ORE = getORE(
-          *CurrentGroup.Regions[0]->Candidate->getFunction());
+      OptimizationRemarkEmitter &ORE =
+          getORE(*CurrentGroup.Regions[0]->Candidate->getFunction());
       ORE.emit([&]() {
         IRSimilarityCandidate *C = CurrentGroup.Regions[0]->Candidate;
         OptimizationRemarkMissed R(DEBUG_TYPE, "WouldNotDecreaseSize",
@@ -1703,12 +1805,68 @@ unsigned IROutliner::doOutline(Module &M) {
       continue;
     }
 
+    NegativeCostGroups.push_back(&CurrentGroup);
+  }
+
+  ExtractorAllocator.DestroyAll();
+
+  if (NegativeCostGroups.size() > 1)
+    stable_sort(NegativeCostGroups,
+                [](const OutlinableGroup *LHS, const OutlinableGroup *RHS) {
+                  return LHS->Benefit - LHS->Cost > RHS->Benefit - RHS->Cost;
+                });
+
+  std::vector<Function *> FuncsToRemove;
+  for (OutlinableGroup *CG : NegativeCostGroups) {
+    OutlinableGroup &CurrentGroup = *CG;
+
+    OutlinedRegions.clear();
+    for (OutlinableRegion *Region : CurrentGroup.Regions) {
+      // We check whether our region is compatible with what has already been
+      // outlined, and whether we need to ignore this item.
+      if (!isCompatibleWithAlreadyOutlinedCode(*Region))
+        continue;
+      OutlinedRegions.push_back(Region);
+    }
+
+    if (OutlinedRegions.size() < 2)
+      continue;
+
+    // Reestimate the cost and benefit of the OutlinableGroup. Continue only if
+    // we are still outlining enough regions to make up for the added cost.
+    CurrentGroup.Regions = std::move(OutlinedRegions);
+    if (CostModel) {
+      CurrentGroup.Benefit = 0;
+      CurrentGroup.Cost = 0;
+      findCostBenefit(M, CurrentGroup);
+      if (CurrentGroup.Cost >= CurrentGroup.Benefit)
+        continue;
+    }
+    OutlinedRegions.clear();
+    for (OutlinableRegion *Region : CurrentGroup.Regions) {
+      Region->splitCandidate();
+      if (!Region->CandidateSplit)
+        continue;
+      OutlinedRegions.push_back(Region);
+    }
+
+    CurrentGroup.Regions = std::move(OutlinedRegions);
+    if (CurrentGroup.Regions.size() < 2) {
+      for (OutlinableRegion *R : CurrentGroup.Regions)
+        R->reattachCandidate();
+      continue;
+    }
+
     LLVM_DEBUG(dbgs() << "Outlining regions with cost " << CurrentGroup.Cost
                       << " and benefit " << CurrentGroup.Benefit << "\n");
 
     // Create functions out of all the sections, and mark them as outlined.
     OutlinedRegions.clear();
     for (OutlinableRegion *OS : CurrentGroup.Regions) {
+      SmallVector<BasicBlock *> BE = {OS->StartBB};
+      OS->CE = new (ExtractorAllocator.Allocate())
+          CodeExtractor(BE, nullptr, false, nullptr, nullptr, nullptr, false,
+                        false, "outlined");
       bool FunctionOutlined = extractSection(*OS);
       if (FunctionOutlined) {
         unsigned StartIdx = OS->Candidate->getStartIdx();

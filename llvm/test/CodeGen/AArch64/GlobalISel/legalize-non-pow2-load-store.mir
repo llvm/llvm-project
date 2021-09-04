@@ -20,10 +20,9 @@ body:             |
     ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LOAD]], [[C2]](s64)
     ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[OR]](s32)
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C2]](s64)
+    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[OR]], [[C2]](s64)
     ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
-    ; CHECK: G_STORE [[COPY2]](s32), [[COPY1]](p0) :: (store (s16), align 4)
+    ; CHECK: G_STORE [[OR]](s32), [[COPY1]](p0) :: (store (s16), align 4)
     ; CHECK: G_STORE [[LSHR]](s32), [[PTR_ADD1]](p0) :: (store (s8) into unknown-address + 2, align 2)
     ; CHECK: $w0 = COPY [[C]](s32)
     ; CHECK: RET_ReallyLR implicit $w0
@@ -50,12 +49,11 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY [[C]](s64)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[COPY1]], [[C1]](s64)
+    ; CHECK: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[C]], [[C1]](s64)
     ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
     ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
-    ; CHECK: G_STORE [[COPY1]](s64), [[COPY]](p0) :: (store (s32), align 8)
+    ; CHECK: G_STORE [[C]](s64), [[COPY]](p0) :: (store (s32), align 8)
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
     ; CHECK: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[TRUNC]], [[C3]](s64)

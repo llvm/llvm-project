@@ -438,6 +438,7 @@ defm : PdWriteResExPair<WriteIMul64Reg, [PdEX1, PdMul],          6,  [1, 4]>;
 
 // BMI2 MULX
 defm : X86WriteResUnsupported<WriteIMulH>;
+defm : X86WriteResUnsupported<WriteIMulHLd>;
 defm : X86WriteResPairUnsupported<WriteMULX32>;
 defm : X86WriteResPairUnsupported<WriteMULX64>;
 

@@ -99,12 +99,7 @@ LiveDebugValues::LiveDebugValues() : MachineFunctionPass(ID) {
 bool LiveDebugValues::runOnMachineFunction(MachineFunction &MF) {
   if (!TheImpl) {
     TPC = getAnalysisIfAvailable<TargetPassConfig>();
-
-    bool InstrRefBased = false;
-    if (TPC) {
-      auto &TM = TPC->getTM<TargetMachine>();
-      InstrRefBased = TM.Options.ValueTrackingVariableLocations;
-    }
+    bool InstrRefBased = MF.useDebugInstrRef();
 
     // Allow the user to force selection of InstrRef LDV.
     InstrRefBased |= ForceInstrRefLDV;

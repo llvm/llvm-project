@@ -816,7 +816,7 @@ layout:
 
 ``llvm/cmake``
 --------------
-Genereates system build files.
+Generates system build files.
 
 ``llvm/cmake/modules``
   Build configuration for llvm user defined options. Checks compiler version and 

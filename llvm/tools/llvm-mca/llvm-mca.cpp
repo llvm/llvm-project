@@ -591,6 +591,21 @@ int main(int argc, char **argv) {
 
     mca::PipelinePrinter Printer(*P, *Region, RegionIdx, *STI, PO);
 
+    // Targets can define their own custom Views that exist within their
+    // /lib/Target/ directory so that the View can utilize their CustomBehaviour
+    // or other backend symbols / functionality that are not already exposed
+    // through one of the MC-layer classes. These Views will be initialized
+    // using the CustomBehaviour::getViews() variants.
+    // If a target makes a custom View that does not depend on their target
+    // CB or their backend, they should put the View within
+    // /tools/llvm-mca/Views/ instead.
+    if (!DisableCustomBehaviour) {
+      std::vector<std::unique_ptr<mca::View>> CBViews =
+          CB->getStartViews(*IP, Insts);
+      for (auto &CBView : CBViews)
+        Printer.addView(std::move(CBView));
+    }
+
     // When we output JSON, we add a view that contains the instructions
     // and CPU resource information.
     if (PrintJson) {
@@ -616,6 +631,16 @@ int main(int argc, char **argv) {
       Printer.addView(std::make_unique<mca::InstructionInfoView>(
           *STI, *MCII, CE, ShowEncoding, Insts, *IP));
 
+    // Fetch custom Views that are to be placed after the InstructionInfoView.
+    // Refer to the comment paired with the CB->getStartViews(*IP, Insts); line
+    // for more info.
+    if (!DisableCustomBehaviour) {
+      std::vector<std::unique_ptr<mca::View>> CBViews =
+          CB->getPostInstrInfoViews(*IP, Insts);
+      for (auto &CBView : CBViews)
+        Printer.addView(std::move(CBView));
+    }
+
     if (PrintDispatchStats)
       Printer.addView(std::make_unique<mca::DispatchStatistics>());
 
@@ -638,6 +663,16 @@ int main(int argc, char **argv) {
       Printer.addView(std::make_unique<mca::TimelineView>(
           *STI, *IP, Insts, std::min(TimelineIterations, S.getNumIterations()),
           TimelineMaxCycles));
+    }
+
+    // Fetch custom Views that are to be placed after all other Views.
+    // Refer to the comment paired with the CB->getStartViews(*IP, Insts); line
+    // for more info.
+    if (!DisableCustomBehaviour) {
+      std::vector<std::unique_ptr<mca::View>> CBViews =
+          CB->getEndViews(*IP, Insts);
+      for (auto &CBView : CBViews)
+        Printer.addView(std::move(CBView));
     }
 
     if (!runPipeline(*P))

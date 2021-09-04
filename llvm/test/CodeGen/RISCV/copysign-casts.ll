@@ -205,9 +205,9 @@ define float @fold_promote_f_h(float %a, half %b) nounwind {
 ; RV64I-NEXT:    lui a2, 524288
 ; RV64I-NEXT:    addiw a2, a2, -1
 ; RV64I-NEXT:    and a0, a0, a2
-; RV64I-NEXT:    lui a2, 1048568
+; RV64I-NEXT:    lui a2, 8
 ; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    slli a1, a1, 16
+; RV64I-NEXT:    slliw a1, a1, 16
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;

@@ -132,6 +132,16 @@ public:
   static lldb::StopInfoSP
   CreateStopReasonProcessorTrace(Thread &thread, const char *description);
 
+  static lldb::StopInfoSP CreateStopReasonFork(Thread &thread,
+                                               lldb::pid_t child_pid,
+                                               lldb::tid_t child_tid);
+
+  static lldb::StopInfoSP CreateStopReasonVFork(Thread &thread,
+                                                lldb::pid_t child_pid,
+                                                lldb::tid_t child_tid);
+
+  static lldb::StopInfoSP CreateStopReasonVForkDone(Thread &thread);
+
   static lldb::ValueObjectSP
   GetReturnValueObject(lldb::StopInfoSP &stop_info_sp);
 

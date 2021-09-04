@@ -1,6 +1,6 @@
-; RUN: opt < %s -wasm-lower-em-ehsjlj -S | FileCheck %s --check-prefixes=CHECK,NO-TLS -DPTR=i32
-; RUN: opt < %s -wasm-lower-em-ehsjlj -S --mattr=+atomics,+bulk-memory | FileCheck %s --check-prefixes=CHECK,TLS -DPTR=i32
-; RUN: opt < %s -wasm-lower-em-ehsjlj --mtriple=wasm64-unknown-unknown -data-layout="e-m:e-p:64:64-i64:64-n32:64-S128" -S | FileCheck %s --check-prefixes=CHECK -DPTR=i64
+; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-sjlj -S | FileCheck %s --check-prefixes=CHECK,NO-TLS -DPTR=i32
+; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-sjlj -S --mattr=+atomics,+bulk-memory | FileCheck %s --check-prefixes=CHECK,TLS -DPTR=i32
+; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-sjlj --mtriple=wasm64-unknown-unknown -data-layout="e-m:e-p:64:64-i64:64-n32:64-S128" -S | FileCheck %s --check-prefixes=CHECK -DPTR=i64
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -30,14 +30,17 @@ entry:
 ; CHECK-NEXT: %[[SETJMP_TABLE:.*]] = bitcast i8* %[[MALLOCCALL]] to i32*
 ; CHECK-NEXT: store i32 0, i32* %[[SETJMP_TABLE]]
 ; CHECK-NEXT: %[[SETJMP_TABLE_SIZE:.*]] = add i32 4, 0
+; CHECK-NEXT: br label %entry.split
+
+; CHECK: entry.split
 ; CHECK-NEXT: %[[BUF:.*]] = alloca [1 x %struct.__jmp_buf_tag]
 ; CHECK-NEXT: %[[ARRAYDECAY:.*]] = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %[[BUF]], i32 0, i32 0
 ; CHECK-NEXT: %[[SETJMP_TABLE1:.*]] = call i32* @saveSetjmp(%struct.__jmp_buf_tag* %[[ARRAYDECAY]], i32 1, i32* %[[SETJMP_TABLE]], i32 %[[SETJMP_TABLE_SIZE]])
 ; CHECK-NEXT: %[[SETJMP_TABLE_SIZE1:.*]] = call i32 @getTempRet0()
-; CHECK-NEXT: br label %entry.split
+; CHECK-NEXT: br label %entry.split.split
 
-; CHECK: entry.split:
-; CHECK-NEXT: phi i32 [ 0, %entry ], [ %[[LONGJMP_RESULT:.*]], %if.end ]
+; CHECK: entry.split.split:
+; CHECK-NEXT: phi i32 [ 0, %entry.split ], [ %[[LONGJMP_RESULT:.*]], %if.end ]
 ; CHECK-NEXT: %[[ARRAYDECAY1:.*]] = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %[[BUF]], i32 0, i32 0
 ; CHECK-NEXT: %[[JMPBUF:.*]] = ptrtoint %struct.__jmp_buf_tag* %[[ARRAYDECAY1]] to [[PTR]]
 ; CHECK-NEXT: store [[PTR]] 0, [[PTR]]* @__THREW__
@@ -50,7 +53,7 @@ entry:
 ; CHECK-NEXT: %[[CMP:.*]] = and i1 %[[CMP0]], %[[CMP1]]
 ; CHECK-NEXT: br i1 %[[CMP]], label %if.then1, label %if.else1
 
-; CHECK: entry.split.split:
+; CHECK: entry.split.split.split:
 ; CHECK-NEXT: unreachable
 
 ; CHECK: if.then1:
@@ -66,8 +69,8 @@ entry:
 ; CHECK: if.end:
 ; CHECK-NEXT: %[[LABEL_PHI:.*]] = phi i32 [ %[[LABEL:.*]], %if.end2 ], [ -1, %if.else1 ]
 ; CHECK-NEXT: %[[LONGJMP_RESULT]] = call i32 @getTempRet0()
-; CHECK-NEXT: switch i32 %[[LABEL_PHI]], label %entry.split.split [
-; CHECK-NEXT:   i32 1, label %entry.split
+; CHECK-NEXT: switch i32 %[[LABEL_PHI]], label %entry.split.split.split [
+; CHECK-NEXT:   i32 1, label %entry.split.split
 ; CHECK-NEXT: ]
 
 ; CHECK: if.then2:
@@ -93,10 +96,10 @@ entry:
 ; CHECK: entry:
 ; CHECK: %[[SETJMP_TABLE:.*]] = call i32* @saveSetjmp(
 
-; CHECK: entry.split:
+; CHECK: entry.split.split:
 ; CHECK: @__invoke_void(void ()* @foo)
 
-; CHECK: entry.split.split:
+; CHECK: entry.split.split.split:
 ; CHECK-NEXT: %[[BUF:.*]] = bitcast i32* %[[SETJMP_TABLE]] to i8*
 ; CHECK-NEXT: tail call void @free(i8* %[[BUF]])
 ; CHECK-NEXT: ret void
@@ -142,7 +145,7 @@ if.then:                                          ; preds = %entry
 ; CHECK-NEXT: %[[SETJMP_TABLE_SIZE1:.*]] = call i32 @getTempRet0()
 
 ; CHECK: if.then.split:
-; CHECK: %[[VAR1:.*]] = phi i32 [ %[[VAR0]], %if.then ], [ %[[VAR2:.*]], %if.end3 ]
+; CHECK: %[[VAR1:.*]] = phi i32 [ %[[VAR2:.*]], %if.end3 ], [ %[[VAR0]], %if.then ]
 ; CHECK: %[[SETJMP_TABLE_SIZE2:.*]] = phi i32 [ %[[SETJMP_TABLE_SIZE1]], %if.then ], [ %[[SETJMP_TABLE_SIZE3:.*]], %if.end3 ]
 ; CHECK: %[[SETJMP_TABLE2:.*]] = phi i32* [ %[[SETJMP_TABLE1]], %if.then ], [ %[[SETJMP_TABLE3:.*]], %if.end3 ]
 ; CHECK: store i32 %[[VAR1]], i32* @global_var, align 4
@@ -152,9 +155,9 @@ if.end:                                           ; preds = %if.then, %entry
   call void @longjmp(%struct.__jmp_buf_tag* %arraydecay1, i32 5) #1
   unreachable
 ; CHECK: if.end:
-; CHECK: %[[VAR2]] = phi i32 [ %[[VAR1]], %if.then.split ], [ undef, %entry ]
-; CHECK: %[[SETJMP_TABLE_SIZE3]] = phi i32 [ %[[SETJMP_TABLE_SIZE2]], %if.then.split ], [ %[[SETJMP_TABLE_SIZE0]], %entry ]
-; CHECK: %[[SETJMP_TABLE3]] = phi i32* [ %[[SETJMP_TABLE2]], %if.then.split ], [ %[[SETJMP_TABLE0]], %entry ]
+; CHECK: %[[VAR2]] = phi i32 [ %[[VAR1]], %if.then.split ], [ undef, %entry.split ]
+; CHECK: %[[SETJMP_TABLE_SIZE3]] = phi i32 [ %[[SETJMP_TABLE_SIZE2]], %if.then.split ], [ %[[SETJMP_TABLE_SIZE0]], %entry.split ]
+; CHECK: %[[SETJMP_TABLE3]] = phi i32* [ %[[SETJMP_TABLE2]], %if.then.split ], [ %[[SETJMP_TABLE0]], %entry.split ]
 }
 
 ; Test a case when a function only calls other functions that are neither setjmp nor longjmp
@@ -222,7 +225,7 @@ for.inc:                                          ; preds = %for.cond
   br label %for.cond
 
 ; CHECK: for.inc.split:
-  ; CHECK: %var[[VARNO]] = phi i32 [ %var, %for.inc ]
+  ; CHECK: %var[[VARNO]] = phi i32 [ undef, %if.end ], [ %var, %for.inc ]
 }
 
 ; Tests cases where longjmp function pointer is used in other ways than direct
@@ -281,10 +284,7 @@ attributes #2 = { nounwind }
 attributes #3 = { allocsize(0) }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { nounwind "wasm-import-module"="env" "wasm-import-name"="getTempRet0" }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { nounwind "wasm-import-module"="env" "wasm-import-name"="setTempRet0" }
-; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__resumeException" }
-; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="llvm_eh_typeid_for" }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__invoke_void" }
-; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__cxa_find_matching_catch_2" }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="saveSetjmp" }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="testSetjmp" }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="emscripten_longjmp" }

@@ -63,7 +63,7 @@ define void @func_vscale2_2(<16 x i32>* %a, <16 x i32>* %b) #2 {
 ; CHECK-LABEL: func_vscale2_2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #8
-; CHECK-NEXT:    ptrue p0.s, vl8
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x1, x8, lsl #2]
@@ -108,7 +108,7 @@ attributes #3 = { "target-features"="+sve" vscale_range(2,4) }
 define void @func_vscale4_4(<16 x i32>* %a, <16 x i32>* %b) #4 {
 ; CHECK-LABEL: func_vscale4_4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl16
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
 ; CHECK-NEXT:    add z0.s, p0/m, z0.s, z1.s

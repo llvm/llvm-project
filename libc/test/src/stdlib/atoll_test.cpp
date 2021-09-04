@@ -41,10 +41,10 @@ TEST(LlvmLibcAToLLTest, ValidNumbers) {
   ASSERT_EQ(__llvm_libc::atoll(all_together), 110ll);
 
   const char *biggest_long_long = "9223372036854775807";
-  ASSERT_EQ(__llvm_libc::atoll(biggest_int), LLONG_MAX);
+  ASSERT_EQ(__llvm_libc::atoll(biggest_long_long), LLONG_MAX);
 
   const char *smallest_long_long = "-9223372036854775808";
-  ASSERT_EQ(__llvm_libc::atoll(smallest_int), LLONG_MIN);
+  ASSERT_EQ(__llvm_libc::atoll(smallest_long_long), LLONG_MIN);
 }
 
 TEST(LlvmLibcAToLLTest, NonBaseTenWholeNumbers) {
@@ -52,10 +52,10 @@ TEST(LlvmLibcAToLLTest, NonBaseTenWholeNumbers) {
   ASSERT_EQ(__llvm_libc::atoll(hexadecimal), 0ll);
 
   const char *octal = "010";
-  ASSERT_EQ(__llvm_libc::atoll(hexadecimal), 10ll);
+  ASSERT_EQ(__llvm_libc::atoll(octal), 10ll);
 
   const char *decimal_point = "5.9";
-  ASSERT_EQ(__llvm_libc::atol(decimal_point), 5l);
+  ASSERT_EQ(__llvm_libc::atoll(decimal_point), 5ll);
 }
 
 TEST(LlvmLibcAToLLTest, NotNumbers) {

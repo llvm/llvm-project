@@ -1340,5 +1340,5 @@ InstrEmitter::InstrEmitter(const TargetMachine &TM, MachineBasicBlock *mbb,
       TRI(MF->getSubtarget().getRegisterInfo()),
       TLI(MF->getSubtarget().getTargetLowering()), MBB(mbb),
       InsertPos(insertpos) {
-  EmitDebugInstrRefs = TM.Options.ValueTrackingVariableLocations;
+  EmitDebugInstrRefs = MF->useDebugInstrRef();
 }

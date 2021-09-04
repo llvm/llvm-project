@@ -1812,14 +1812,17 @@ def SwitchOp : Std_Op<"switch",
     ```
   }];
 
-  let arguments = (ins AnyInteger:$flag,
-                       Variadic<AnyType>:$defaultOperands,
-                       Variadic<AnyType>:$caseOperands,
-                       OptionalAttr<AnyIntElementsAttr>:$case_values,
-                       OptionalAttr<I32ElementsAttr>:$case_operand_offsets);
+  let arguments = (ins
+    AnyInteger:$flag,
+    Variadic<AnyType>:$defaultOperands,
+    VariadicOfVariadic<AnyType, "case_operand_segments">:$caseOperands,
+    OptionalAttr<AnyIntElementsAttr>:$case_values,
+    I32ElementsAttr:$case_operand_segments
+  );
   let successors = (successor
-                        AnySuccessor:$defaultDestination,
-                        VariadicSuccessor<AnySuccessor>:$caseDestinations);
+    AnySuccessor:$defaultDestination,
+    VariadicSuccessor<AnySuccessor>:$caseDestinations
+  );
   let builders = [
     OpBuilder<(ins "Value":$flag,
       "Block *":$defaultDestination,
@@ -1849,19 +1852,22 @@ def SwitchOp : Std_Op<"switch",
                             $case_values,
                             $caseDestinations,
                             $caseOperands,
-                            type($caseOperands),
-                            $case_operand_offsets)
+                            type($caseOperands))
    `]`
     attr-dict
   }];
 
   let extraClassDeclaration = [{
     /// Return the operands for the case destination block at the given index.
-    OperandRange getCaseOperands(unsigned index);
+    OperandRange getCaseOperands(unsigned index) {
+      return caseOperands()[index];
+    }
 
     /// Return a mutable range of operands for the case destination block at the
     /// given index.
-    MutableOperandRange getCaseOperandsMutable(unsigned index);
+    MutableOperandRange getCaseOperandsMutable(unsigned index) {
+      return caseOperandsMutable()[index];
+    }
   }];
 
   let hasCanonicalizer = 1;

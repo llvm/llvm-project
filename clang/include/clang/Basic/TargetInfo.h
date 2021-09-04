@@ -210,9 +210,6 @@ protected:
   unsigned char RegParmMax, SSERegParmMax;
   TargetCXXABI TheCXXABI;
   const LangASMap *AddrSpaceMap;
-  const llvm::omp::GV *GridValues =
-      nullptr; // target-specific GPU grid values that must be
-               // consistent between host RTL (plugin), device RTL, and clang.
 
   mutable StringRef PlatformName;
   mutable VersionTuple PlatformMinVersion;
@@ -1410,10 +1407,10 @@ public:
     return LangAS::Default;
   }
 
-  /// Return a target-specific GPU grid values
-  const llvm::omp::GV &getGridValue() const {
-    assert(GridValues != nullptr && "GridValues not initialized");
-    return *GridValues;
+  // access target-specific GPU grid values that must be consistent between
+  // host RTL (plugin), deviceRTL and clang.
+  virtual const llvm::omp::GV &getGridValue() const {
+    llvm_unreachable("getGridValue not implemented on this target");
   }
 
   /// Retrieve the name of the platform as it is used in the

@@ -969,7 +969,6 @@ py::object PyOperation::create(
   }
   // Unpack/validate successors.
   if (successors) {
-    llvm::SmallVector<MlirBlock, 4> mlirSuccessors;
     mlirSuccessors.reserve(successors->size());
     for (auto *successor : *successors) {
       // TODO: Verify successor originate from the same context.
@@ -2207,6 +2206,13 @@ void mlir::python::populateIRCore(py::module &m) {
           },
           "Returns the owning operation of this block.")
       .def_property_readonly(
+          "region",
+          [](PyBlock &self) {
+            MlirRegion region = mlirBlockGetParentRegion(self.get());
+            return PyRegion(self.getParentOperation(), region);
+          },
+          "Returns the owning region of this block.")
+      .def_property_readonly(
           "arguments",
           [](PyBlock &self) {
             return PyBlockArgumentList(self.getParentOperation(), self.get());
@@ -2218,6 +2224,40 @@ void mlir::python::populateIRCore(py::module &m) {
             return PyOperationList(self.getParentOperation(), self.get());
           },
           "Returns a forward-optimized sequence of operations.")
+      .def(
+          "create_before",
+          [](PyBlock &self, py::args pyArgTypes) {
+            self.checkValid();
+            llvm::SmallVector<MlirType, 4> argTypes;
+            argTypes.reserve(pyArgTypes.size());
+            for (auto &pyArg : pyArgTypes) {
+              argTypes.push_back(pyArg.cast<PyType &>());
+            }
+
+            MlirBlock block = mlirBlockCreate(argTypes.size(), argTypes.data());
+            MlirRegion region = mlirBlockGetParentRegion(self.get());
+            mlirRegionInsertOwnedBlockBefore(region, self.get(), block);
+            return PyBlock(self.getParentOperation(), block);
+          },
+          "Creates and returns a new Block before this block "
+          "(with given argument types).")
+      .def(
+          "create_after",
+          [](PyBlock &self, py::args pyArgTypes) {
+            self.checkValid();
+            llvm::SmallVector<MlirType, 4> argTypes;
+            argTypes.reserve(pyArgTypes.size());
+            for (auto &pyArg : pyArgTypes) {
+              argTypes.push_back(pyArg.cast<PyType &>());
+            }
+
+            MlirBlock block = mlirBlockCreate(argTypes.size(), argTypes.data());
+            MlirRegion region = mlirBlockGetParentRegion(self.get());
+            mlirRegionInsertOwnedBlockAfter(region, self.get(), block);
+            return PyBlock(self.getParentOperation(), block);
+          },
+          "Creates and returns a new Block after this block "
+          "(with given argument types).")
       .def(
           "__iter__",
           [](PyBlock &self) {
@@ -2270,7 +2310,10 @@ void mlir::python::populateIRCore(py::module &m) {
       .def_static("at_block_terminator", &PyInsertionPoint::atBlockTerminator,
                   py::arg("block"), "Inserts before the block terminator.")
       .def("insert", &PyInsertionPoint::insert, py::arg("operation"),
-           "Inserts an operation.");
+           "Inserts an operation.")
+      .def_property_readonly(
+          "block", [](PyInsertionPoint &self) { return self.getBlock(); },
+          "Returns the block that this InsertionPoint points to.");
 
   //----------------------------------------------------------------------------
   // Mapping of PyAttribute.

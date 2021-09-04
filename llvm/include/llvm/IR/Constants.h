@@ -1287,10 +1287,6 @@ public:
   /// Return a string representation for an opcode.
   const char *getOpcodeName() const;
 
-  /// Return a constant expression identical to this one, but with the specified
-  /// operand set to the specified value.
-  Constant *getWithOperandReplaced(unsigned OpNo, Constant *Op) const;
-
   /// This returns the current constant expression with the operands replaced
   /// with the specified values. The specified array must have the same number
   /// of operands as our current one.

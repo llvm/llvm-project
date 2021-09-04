@@ -223,10 +223,9 @@ body: |
     ; CHECK: %vec:_(<2 x s64>) = G_IMPLICIT_DEF
     ; CHECK: %vec1:_(<2 x s64>) = G_IMPLICIT_DEF
     ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(slt), %vec(<2 x s64>), %vec1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY [[ICMP]](<2 x s64>)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK: [[SHL:%[0-9]+]]:_(<2 x s64>) = G_SHL [[COPY]], [[BUILD_VECTOR]](<2 x s64>)
+    ; CHECK: [[SHL:%[0-9]+]]:_(<2 x s64>) = G_SHL [[ICMP]], [[BUILD_VECTOR]](<2 x s64>)
     ; CHECK: [[ASHR:%[0-9]+]]:_(<2 x s64>) = G_ASHR [[SHL]], [[BUILD_VECTOR]](<2 x s64>)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
     ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C1]](s64), [[C1]](s64)
@@ -254,10 +253,9 @@ body: |
     ; CHECK: liveins: $x0, $q0, $q1
     ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
     ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(slt), [[DEF]](<2 x s64>), [[DEF]]
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY [[ICMP]](<2 x s64>)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK: [[SHL:%[0-9]+]]:_(<2 x s64>) = G_SHL [[COPY]], [[BUILD_VECTOR]](<2 x s64>)
+    ; CHECK: [[SHL:%[0-9]+]]:_(<2 x s64>) = G_SHL [[ICMP]], [[BUILD_VECTOR]](<2 x s64>)
     ; CHECK: [[ASHR:%[0-9]+]]:_(<2 x s64>) = G_ASHR [[SHL]], [[BUILD_VECTOR]](<2 x s64>)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
     ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C1]](s64), [[C1]](s64)
@@ -266,19 +264,18 @@ body: |
     ; CHECK: [[AND1:%[0-9]+]]:_(<2 x s64>) = G_AND [[DEF]], [[XOR]]
     ; CHECK: [[OR:%[0-9]+]]:_(<2 x s64>) = G_OR [[AND]], [[AND1]]
     ; CHECK: [[ICMP1:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(slt), [[DEF]](<2 x s64>), [[DEF]]
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY [[ICMP1]](<2 x s64>)
     ; CHECK: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK: [[SHL1:%[0-9]+]]:_(<2 x s64>) = G_SHL [[COPY1]], [[BUILD_VECTOR2]](<2 x s64>)
+    ; CHECK: [[SHL1:%[0-9]+]]:_(<2 x s64>) = G_SHL [[ICMP1]], [[BUILD_VECTOR2]](<2 x s64>)
     ; CHECK: [[ASHR1:%[0-9]+]]:_(<2 x s64>) = G_ASHR [[SHL1]], [[BUILD_VECTOR2]](<2 x s64>)
     ; CHECK: [[BUILD_VECTOR3:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C1]](s64), [[C1]](s64)
     ; CHECK: [[XOR1:%[0-9]+]]:_(<2 x s64>) = G_XOR [[ASHR1]], [[BUILD_VECTOR3]]
     ; CHECK: [[AND2:%[0-9]+]]:_(<2 x s64>) = G_AND [[DEF]], [[ASHR1]]
     ; CHECK: [[AND3:%[0-9]+]]:_(<2 x s64>) = G_AND [[DEF]], [[XOR1]]
     ; CHECK: [[OR1:%[0-9]+]]:_(<2 x s64>) = G_OR [[AND2]], [[AND3]]
-    ; CHECK: [[COPY2:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: G_STORE [[OR]](<2 x s64>), [[COPY2]](p0) :: (store (<2 x s64>), align 32)
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: G_STORE [[OR]](<2 x s64>), [[COPY]](p0) :: (store (<2 x s64>), align 32)
     ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY2]], [[C2]](s64)
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
     ; CHECK: G_STORE [[OR1]](<2 x s64>), [[PTR_ADD]](p0) :: (store (<2 x s64>) into unknown-address + 16)
     %vec:_(<4 x s64>) = G_IMPLICIT_DEF
     %vec1:_(<4 x s64>) = G_IMPLICIT_DEF
@@ -509,10 +506,9 @@ body: |
     ; CHECK: %vec:_(<2 x s64>) = G_IMPLICIT_DEF
     ; CHECK: %vec1:_(<2 x s64>) = G_IMPLICIT_DEF
     ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(ult), %vec(<2 x s64>), %vec1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY [[ICMP]](<2 x s64>)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK: [[SHL:%[0-9]+]]:_(<2 x s64>) = G_SHL [[COPY]], [[BUILD_VECTOR]](<2 x s64>)
+    ; CHECK: [[SHL:%[0-9]+]]:_(<2 x s64>) = G_SHL [[ICMP]], [[BUILD_VECTOR]](<2 x s64>)
     ; CHECK: [[ASHR:%[0-9]+]]:_(<2 x s64>) = G_ASHR [[SHL]], [[BUILD_VECTOR]](<2 x s64>)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
     ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C1]](s64), [[C1]](s64)
@@ -540,10 +536,9 @@ body: |
     ; CHECK: liveins: $x0, $q0, $q1
     ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
     ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(ult), [[DEF]](<2 x s64>), [[DEF]]
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY [[ICMP]](<2 x s64>)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK: [[SHL:%[0-9]+]]:_(<2 x s64>) = G_SHL [[COPY]], [[BUILD_VECTOR]](<2 x s64>)
+    ; CHECK: [[SHL:%[0-9]+]]:_(<2 x s64>) = G_SHL [[ICMP]], [[BUILD_VECTOR]](<2 x s64>)
     ; CHECK: [[ASHR:%[0-9]+]]:_(<2 x s64>) = G_ASHR [[SHL]], [[BUILD_VECTOR]](<2 x s64>)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
     ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C1]](s64), [[C1]](s64)
@@ -552,19 +547,18 @@ body: |
     ; CHECK: [[AND1:%[0-9]+]]:_(<2 x s64>) = G_AND [[DEF]], [[XOR]]
     ; CHECK: [[OR:%[0-9]+]]:_(<2 x s64>) = G_OR [[AND]], [[AND1]]
     ; CHECK: [[ICMP1:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(ult), [[DEF]](<2 x s64>), [[DEF]]
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY [[ICMP1]](<2 x s64>)
     ; CHECK: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK: [[SHL1:%[0-9]+]]:_(<2 x s64>) = G_SHL [[COPY1]], [[BUILD_VECTOR2]](<2 x s64>)
+    ; CHECK: [[SHL1:%[0-9]+]]:_(<2 x s64>) = G_SHL [[ICMP1]], [[BUILD_VECTOR2]](<2 x s64>)
     ; CHECK: [[ASHR1:%[0-9]+]]:_(<2 x s64>) = G_ASHR [[SHL1]], [[BUILD_VECTOR2]](<2 x s64>)
     ; CHECK: [[BUILD_VECTOR3:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C1]](s64), [[C1]](s64)
     ; CHECK: [[XOR1:%[0-9]+]]:_(<2 x s64>) = G_XOR [[ASHR1]], [[BUILD_VECTOR3]]
     ; CHECK: [[AND2:%[0-9]+]]:_(<2 x s64>) = G_AND [[DEF]], [[ASHR1]]
     ; CHECK: [[AND3:%[0-9]+]]:_(<2 x s64>) = G_AND [[DEF]], [[XOR1]]
     ; CHECK: [[OR1:%[0-9]+]]:_(<2 x s64>) = G_OR [[AND2]], [[AND3]]
-    ; CHECK: [[COPY2:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: G_STORE [[OR]](<2 x s64>), [[COPY2]](p0) :: (store (<2 x s64>), align 32)
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: G_STORE [[OR]](<2 x s64>), [[COPY]](p0) :: (store (<2 x s64>), align 32)
     ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY2]], [[C2]](s64)
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
     ; CHECK: G_STORE [[OR1]](<2 x s64>), [[PTR_ADD]](p0) :: (store (<2 x s64>) into unknown-address + 16)
     %vec:_(<4 x s64>) = G_IMPLICIT_DEF
     %vec1:_(<4 x s64>) = G_IMPLICIT_DEF
@@ -795,10 +789,9 @@ body: |
     ; CHECK: %vec:_(<2 x s64>) = G_IMPLICIT_DEF
     ; CHECK: %vec1:_(<2 x s64>) = G_IMPLICIT_DEF
     ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(sgt), %vec(<2 x s64>), %vec1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY [[ICMP]](<2 x s64>)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK: [[SHL:%[0-9]+]]:_(<2 x s64>) = G_SHL [[COPY]], [[BUILD_VECTOR]](<2 x s64>)
+    ; CHECK: [[SHL:%[0-9]+]]:_(<2 x s64>) = G_SHL [[ICMP]], [[BUILD_VECTOR]](<2 x s64>)
     ; CHECK: [[ASHR:%[0-9]+]]:_(<2 x s64>) = G_ASHR [[SHL]], [[BUILD_VECTOR]](<2 x s64>)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
     ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C1]](s64), [[C1]](s64)
@@ -826,10 +819,9 @@ body: |
     ; CHECK: liveins: $x0, $q0, $q1
     ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
     ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(sgt), [[DEF]](<2 x s64>), [[DEF]]
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY [[ICMP]](<2 x s64>)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK: [[SHL:%[0-9]+]]:_(<2 x s64>) = G_SHL [[COPY]], [[BUILD_VECTOR]](<2 x s64>)
+    ; CHECK: [[SHL:%[0-9]+]]:_(<2 x s64>) = G_SHL [[ICMP]], [[BUILD_VECTOR]](<2 x s64>)
     ; CHECK: [[ASHR:%[0-9]+]]:_(<2 x s64>) = G_ASHR [[SHL]], [[BUILD_VECTOR]](<2 x s64>)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
     ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C1]](s64), [[C1]](s64)
@@ -838,19 +830,18 @@ body: |
     ; CHECK: [[AND1:%[0-9]+]]:_(<2 x s64>) = G_AND [[DEF]], [[XOR]]
     ; CHECK: [[OR:%[0-9]+]]:_(<2 x s64>) = G_OR [[AND]], [[AND1]]
     ; CHECK: [[ICMP1:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(sgt), [[DEF]](<2 x s64>), [[DEF]]
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY [[ICMP1]](<2 x s64>)
     ; CHECK: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK: [[SHL1:%[0-9]+]]:_(<2 x s64>) = G_SHL [[COPY1]], [[BUILD_VECTOR2]](<2 x s64>)
+    ; CHECK: [[SHL1:%[0-9]+]]:_(<2 x s64>) = G_SHL [[ICMP1]], [[BUILD_VECTOR2]](<2 x s64>)
     ; CHECK: [[ASHR1:%[0-9]+]]:_(<2 x s64>) = G_ASHR [[SHL1]], [[BUILD_VECTOR2]](<2 x s64>)
     ; CHECK: [[BUILD_VECTOR3:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C1]](s64), [[C1]](s64)
     ; CHECK: [[XOR1:%[0-9]+]]:_(<2 x s64>) = G_XOR [[ASHR1]], [[BUILD_VECTOR3]]
     ; CHECK: [[AND2:%[0-9]+]]:_(<2 x s64>) = G_AND [[DEF]], [[ASHR1]]
     ; CHECK: [[AND3:%[0-9]+]]:_(<2 x s64>) = G_AND [[DEF]], [[XOR1]]
     ; CHECK: [[OR1:%[0-9]+]]:_(<2 x s64>) = G_OR [[AND2]], [[AND3]]
-    ; CHECK: [[COPY2:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: G_STORE [[OR]](<2 x s64>), [[COPY2]](p0) :: (store (<2 x s64>), align 32)
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: G_STORE [[OR]](<2 x s64>), [[COPY]](p0) :: (store (<2 x s64>), align 32)
     ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY2]], [[C2]](s64)
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
     ; CHECK: G_STORE [[OR1]](<2 x s64>), [[PTR_ADD]](p0) :: (store (<2 x s64>) into unknown-address + 16)
     %vec:_(<4 x s64>) = G_IMPLICIT_DEF
     %vec1:_(<4 x s64>) = G_IMPLICIT_DEF
@@ -1081,10 +1072,9 @@ body: |
     ; CHECK: %vec:_(<2 x s64>) = G_IMPLICIT_DEF
     ; CHECK: %vec1:_(<2 x s64>) = G_IMPLICIT_DEF
     ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(ugt), %vec(<2 x s64>), %vec1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY [[ICMP]](<2 x s64>)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK: [[SHL:%[0-9]+]]:_(<2 x s64>) = G_SHL [[COPY]], [[BUILD_VECTOR]](<2 x s64>)
+    ; CHECK: [[SHL:%[0-9]+]]:_(<2 x s64>) = G_SHL [[ICMP]], [[BUILD_VECTOR]](<2 x s64>)
     ; CHECK: [[ASHR:%[0-9]+]]:_(<2 x s64>) = G_ASHR [[SHL]], [[BUILD_VECTOR]](<2 x s64>)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
     ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C1]](s64), [[C1]](s64)
@@ -1112,10 +1102,9 @@ body: |
     ; CHECK: liveins: $x0, $q0, $q1
     ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
     ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(ugt), [[DEF]](<2 x s64>), [[DEF]]
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY [[ICMP]](<2 x s64>)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK: [[SHL:%[0-9]+]]:_(<2 x s64>) = G_SHL [[COPY]], [[BUILD_VECTOR]](<2 x s64>)
+    ; CHECK: [[SHL:%[0-9]+]]:_(<2 x s64>) = G_SHL [[ICMP]], [[BUILD_VECTOR]](<2 x s64>)
     ; CHECK: [[ASHR:%[0-9]+]]:_(<2 x s64>) = G_ASHR [[SHL]], [[BUILD_VECTOR]](<2 x s64>)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
     ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C1]](s64), [[C1]](s64)
@@ -1124,19 +1113,18 @@ body: |
     ; CHECK: [[AND1:%[0-9]+]]:_(<2 x s64>) = G_AND [[DEF]], [[XOR]]
     ; CHECK: [[OR:%[0-9]+]]:_(<2 x s64>) = G_OR [[AND]], [[AND1]]
     ; CHECK: [[ICMP1:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(ugt), [[DEF]](<2 x s64>), [[DEF]]
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY [[ICMP1]](<2 x s64>)
     ; CHECK: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK: [[SHL1:%[0-9]+]]:_(<2 x s64>) = G_SHL [[COPY1]], [[BUILD_VECTOR2]](<2 x s64>)
+    ; CHECK: [[SHL1:%[0-9]+]]:_(<2 x s64>) = G_SHL [[ICMP1]], [[BUILD_VECTOR2]](<2 x s64>)
     ; CHECK: [[ASHR1:%[0-9]+]]:_(<2 x s64>) = G_ASHR [[SHL1]], [[BUILD_VECTOR2]](<2 x s64>)
     ; CHECK: [[BUILD_VECTOR3:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C1]](s64), [[C1]](s64)
     ; CHECK: [[XOR1:%[0-9]+]]:_(<2 x s64>) = G_XOR [[ASHR1]], [[BUILD_VECTOR3]]
     ; CHECK: [[AND2:%[0-9]+]]:_(<2 x s64>) = G_AND [[DEF]], [[ASHR1]]
     ; CHECK: [[AND3:%[0-9]+]]:_(<2 x s64>) = G_AND [[DEF]], [[XOR1]]
     ; CHECK: [[OR1:%[0-9]+]]:_(<2 x s64>) = G_OR [[AND2]], [[AND3]]
-    ; CHECK: [[COPY2:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: G_STORE [[OR]](<2 x s64>), [[COPY2]](p0) :: (store (<2 x s64>), align 32)
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: G_STORE [[OR]](<2 x s64>), [[COPY]](p0) :: (store (<2 x s64>), align 32)
     ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY2]], [[C2]](s64)
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
     ; CHECK: G_STORE [[OR1]](<2 x s64>), [[PTR_ADD]](p0) :: (store (<2 x s64>) into unknown-address + 16)
     %vec:_(<4 x s64>) = G_IMPLICIT_DEF
     %vec1:_(<4 x s64>) = G_IMPLICIT_DEF

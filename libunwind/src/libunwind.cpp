@@ -11,8 +11,8 @@
 
 #include <libunwind.h>
 
-#include "libunwind_ext.h"
 #include "config.h"
+#include "libunwind_ext.h"
 
 #include <stdlib.h>
 

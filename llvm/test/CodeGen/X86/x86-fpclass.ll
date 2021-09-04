@@ -90,23 +90,22 @@ define i1 @isnan_ldouble(x86_fp80 %x) nounwind {
 ; CHECK-32-LABEL: isnan_ldouble:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    fldt {{[0-9]+}}(%esp)
-; CHECK-32-NEXT:    fxam
-; CHECK-32-NEXT:    fstp %st(0)
+; CHECK-32-NEXT:    fucomp %st(0)
 ; CHECK-32-NEXT:    fnstsw %ax
-; CHECK-32-NEXT:    andb $69, %ah
-; CHECK-32-NEXT:    cmpb $1, %ah
-; CHECK-32-NEXT:    sete %al
+; CHECK-32-NEXT:    # kill: def $ah killed $ah killed $ax
+; CHECK-32-NEXT:    sahf
+; CHECK-32-NEXT:    setp %cl
+; CHECK-32-NEXT:    setne %al
+; CHECK-32-NEXT:    orb %cl, %al
 ; CHECK-32-NEXT:    retl
 ;
 ; CHECK-64-LABEL: isnan_ldouble:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    fldt {{[0-9]+}}(%rsp)
-; CHECK-64-NEXT:    fxam
-; CHECK-64-NEXT:    fstp %st(0)
-; CHECK-64-NEXT:    fnstsw %ax
-; CHECK-64-NEXT:    andb $69, %ah
-; CHECK-64-NEXT:    cmpb $1, %ah
-; CHECK-64-NEXT:    sete %al
+; CHECK-64-NEXT:    fucompi %st(0), %st
+; CHECK-64-NEXT:    setp %cl
+; CHECK-64-NEXT:    setne %al
+; CHECK-64-NEXT:    orb %cl, %al
 ; CHECK-64-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.isnan.f80(x86_fp80 %x)
@@ -212,7 +211,7 @@ define i1 @isnan_ldouble_strictfp(x86_fp80 %x) strictfp nounwind {
 ; CHECK-32-NEXT:    fnstsw %ax
 ; CHECK-32-NEXT:    andb $69, %ah
 ; CHECK-32-NEXT:    cmpb $1, %ah
-; CHECK-32-NEXT:    sete %al
+; CHECK-32-NEXT:    setle %al
 ; CHECK-32-NEXT:    retl
 ;
 ; CHECK-64-LABEL: isnan_ldouble_strictfp:
@@ -224,7 +223,7 @@ define i1 @isnan_ldouble_strictfp(x86_fp80 %x) strictfp nounwind {
 ; CHECK-64-NEXT:    fnstsw %ax
 ; CHECK-64-NEXT:    andb $69, %ah
 ; CHECK-64-NEXT:    cmpb $1, %ah
-; CHECK-64-NEXT:    sete %al
+; CHECK-64-NEXT:    setle %al
 ; CHECK-64-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.isnan.f80(x86_fp80 %x)

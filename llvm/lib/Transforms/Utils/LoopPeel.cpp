@@ -73,10 +73,6 @@ static cl::opt<unsigned> UnrollForcePeelCount(
     "unroll-force-peel-count", cl::init(0), cl::Hidden,
     cl::desc("Force a peel count regardless of profiling information."));
 
-static cl::opt<bool> UnrollPeelMultiDeoptExit(
-    "unroll-peel-multi-deopt-exit", cl::init(true), cl::Hidden,
-    cl::desc("Allow peeling of loops with multiple deopt exits."));
-
 static const char *PeeledCountMetaData = "llvm.loop.peeled.count";
 
 // Designates that a Phi is estimated to become invariant after an "infinite"
@@ -91,39 +87,31 @@ bool llvm::canPeel(Loop *L) {
   if (!L->isLoopSimplifyForm())
     return false;
 
-  if (UnrollPeelMultiDeoptExit) {
-    SmallVector<BasicBlock *, 4> Exits;
-    L->getUniqueNonLatchExitBlocks(Exits);
-
-    if (!Exits.empty()) {
-      // Latch's terminator is a conditional branch, Latch is exiting and
-      // all non Latch exits ends up with deoptimize.
-      const BasicBlock *Latch = L->getLoopLatch();
-      const BranchInst *T = dyn_cast<BranchInst>(Latch->getTerminator());
-      return T && T->isConditional() && L->isLoopExiting(Latch) &&
-             all_of(Exits, [](const BasicBlock *BB) {
-               return BB->getTerminatingDeoptimizeCall();
-             });
-    }
-  }
-
-  // Only peel loops that contain a single exit
-  if (!L->getExitingBlock() || !L->getUniqueExitBlock())
-    return false;
-
   // Don't try to peel loops where the latch is not the exiting block.
   // This can be an indication of two different things:
   // 1) The loop is not rotated.
   // 2) The loop contains irreducible control flow that involves the latch.
   const BasicBlock *Latch = L->getLoopLatch();
-  if (Latch != L->getExitingBlock())
+  if (!L->isLoopExiting(Latch))
     return false;
 
   // Peeling is only supported if the latch is a branch.
   if (!isa<BranchInst>(Latch->getTerminator()))
     return false;
 
-  return true;
+  SmallVector<BasicBlock *, 4> Exits;
+  L->getUniqueNonLatchExitBlocks(Exits);
+  // The latch must either be the only exiting block or all non-latch exit
+  // blocks have either a deopt or unreachable terminator. Both deopt and
+  // unreachable terminators are a strong indication they are not taken. Note
+  // that this is a profitability check, not a legality check. Also note that
+  // LoopPeeling currently can only update the branch weights of latch blocks
+  // and branch weights to blocks with deopt or unreachable do not need
+  // updating.
+  return all_of(Exits, [](const BasicBlock *BB) {
+    return BB->getTerminatingDeoptimizeCall() ||
+           isa<UnreachableInst>(BB->getTerminator());
+  });
 }
 
 // This function calculates the number of iterations after which the given Phi

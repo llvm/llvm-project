@@ -1340,16 +1340,16 @@ define <4 x i16> @test_extracts_inserts_varidx_insert(<8 x i16> %x, i32 %idx) {
 ; CHECK-NEXT:    .pad #8
 ; CHECK-NEXT:    sub sp, sp, #8
 ; CHECK-NEXT:    vmov.u16 r1, d0[1]
-; CHECK-NEXT:    and r0, r0, #3
+; CHECK-NEXT:    and r12, r0, #3
 ; CHECK-NEXT:    vmov.u16 r2, d0[2]
-; CHECK-NEXT:    mov r3, sp
-; CHECK-NEXT:    vmov.u16 r12, d0[3]
-; CHECK-NEXT:    orr r0, r3, r0, lsl #1
+; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    vmov.u16 r3, d0[3]
+; CHECK-NEXT:    orr r0, r0, r12, lsl #1
 ; CHECK-NEXT:    vst1.16 {d0[0]}, [r0:16]
 ; CHECK-NEXT:    vldr d0, [sp]
 ; CHECK-NEXT:    vmov.16 d0[1], r1
 ; CHECK-NEXT:    vmov.16 d0[2], r2
-; CHECK-NEXT:    vmov.16 d0[3], r12
+; CHECK-NEXT:    vmov.16 d0[3], r3
 ; CHECK-NEXT:    add sp, sp, #8
 ; CHECK-NEXT:    bx lr
   %tmp = extractelement <8 x i16> %x, i32 0

@@ -1,10 +1,34 @@
 ; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s
-; This tests currently fails as MachineLICM does not compute register pressure
+; RUN: llc < %s -mtriple=x86_64-linux -stop-after=early-machinelicm -o - | FileCheck %s -check-prefix=MIR
+
+; This tests should fail as MachineLICM does not compute register pressure
 ; correctly. More details: llvm.org/PR23143
+
+; It however does not show any spills because leaq is rematerialized instead
+; of spilling.
+
+; Stopping after MachineLICM however exposes all ADD64ri8 instructions
+; to be hoisted which still has to be avoided.
+
 ; XFAIL: *
 
 ; MachineLICM should take register pressure into account.
-; CHECK-NOT: Spill
+; CHECK-LABEL: {{^}}test:
+; CHECK-NOT:     Spill
+; CHECK-COUNT-4: leaq
+; CHECK-NOT:     Spill
+; CHECK:         [[LOOP:\.LBB[0-9_]+]]:
+; CHECK-NOT:     Reload
+; CHECK-COUNT-2: leaq
+; CHECK-NOT:     Reload
+; CHECK:         jne [[LOOP]]
+
+; MIR-LABEL: name: test
+; MIR:         bb.0.entry:
+; MIR-COUNT-4: ADD64ri8
+; MIR:         bb.1.loop-body:
+; MIR-COUNT-2: ADD64ri8
+; MIR:         JCC_1 %bb.1
 
 %struct.A = type { i32, i32, i32, i32, i32, i32, i32 }
 

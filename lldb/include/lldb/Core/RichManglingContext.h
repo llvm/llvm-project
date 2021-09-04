@@ -42,9 +42,6 @@ public:
   /// If this symbol describes a constructor or destructor.
   bool IsCtorOrDtor() const;
 
-  /// If this symbol describes a function.
-  bool IsFunction() const;
-
   /// Get the base name of a function. This doesn't include trailing template
   /// arguments, ie "a::b<int>" gives "b". The result will overwrite the
   /// internal buffer. It can be obtained via GetBufferRef().

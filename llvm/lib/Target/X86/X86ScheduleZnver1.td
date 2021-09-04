@@ -256,9 +256,13 @@ defm : ZnWriteResPair<WriteIDiv32, [ZnALU2, ZnDivider], 25, [1,25], 2>;
 defm : ZnWriteResPair<WriteIDiv64, [ZnALU2, ZnDivider], 41, [1,41], 2>;
 
 // IMULH
-def  : WriteRes<WriteIMulH, [ZnMultiplier]>{
+def ZnWriteIMulH : WriteRes<WriteIMulH, [ZnMultiplier]>{
   let Latency = 3;
   let NumMicroOps = 0;
+}
+def  : WriteRes<WriteIMulHLd, [ZnMultiplier]> {
+  let Latency = !add(ZnWriteIMulH.Latency, Znver1Model.LoadLatency);
+  let NumMicroOps = ZnWriteIMulH.NumMicroOps;
 }
 
 // Floating point operations

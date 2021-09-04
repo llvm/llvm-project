@@ -15,6 +15,8 @@ namespace __llvm_libc {
 
 // TODO: Currently restricted to default locale.
 // These should be extended using locale information.
-LLVM_LIBC_FUNCTION(int, islower, (int c)) { return internal::islower(c); }
+LLVM_LIBC_FUNCTION(int, islower, (int c)) {
+  return static_cast<int>(internal::islower(static_cast<unsigned>(c)));
+}
 
 } // namespace __llvm_libc

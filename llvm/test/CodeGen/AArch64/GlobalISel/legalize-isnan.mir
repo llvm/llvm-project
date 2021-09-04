@@ -18,8 +18,7 @@ body:             |
     ; CHECK: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[FPTRUNC]](s16)
     ; CHECK: [[FCMP:%[0-9]+]]:_(s32) = G_FCMP floatpred(uno), [[FPEXT]](s32), [[FPEXT1]]
     ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[FCMP]](s32)
-    ; CHECK: %ext:_(s32) = G_AND [[COPY]], [[C1]]
+    ; CHECK: %ext:_(s32) = G_AND [[FCMP]], [[C1]]
     ; CHECK: $w0 = COPY %ext(s32)
     ; CHECK: RET_ReallyLR implicit $w0
     %val:_(s16) = COPY $h0
@@ -43,8 +42,7 @@ body:             |
     ; CHECK: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[C]](s32)
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[FPTRUNC]](s16), [[FPTRUNC]](s16), [[FPTRUNC]](s16), [[FPTRUNC]](s16)
     ; CHECK: [[FCMP:%[0-9]+]]:_(<4 x s16>) = G_FCMP floatpred(uno), %val(<4 x s16>), [[BUILD_VECTOR]]
-    ; CHECK: %ext:_(<4 x s16>) = COPY [[FCMP]](<4 x s16>)
-    ; CHECK: $d0 = COPY %ext(<4 x s16>)
+    ; CHECK: $d0 = COPY [[FCMP]](<4 x s16>)
     ; CHECK: RET_ReallyLR implicit $d0
     %val:_(<4 x s16>) = COPY $d0
     %isnan:_(<4 x s1>) = nofpexcept G_ISNAN %val(<4 x s16>)
@@ -65,16 +63,13 @@ body:             |
     ; CHECK: %val:_(s16) = COPY $h0
     ; CHECK: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT %val(s16)
     ; CHECK: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[FPEXT]](s32)
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[FPTOSI]](s32)
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32767
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[FPTOSI]], [[C]]
     ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 31744
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[AND]](s32)
-    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 16
+    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[AND]], 16
     ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(slt), [[C1]](s32), [[SEXT_INREG]]
     ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ICMP]](s32)
-    ; CHECK: %ext:_(s32) = G_AND [[COPY2]], [[C2]]
+    ; CHECK: %ext:_(s32) = G_AND [[ICMP]], [[C2]]
     ; CHECK: $w0 = COPY %ext(s32)
     ; CHECK: RET_ReallyLR implicit $w0
     %val:_(s16) = COPY $h0

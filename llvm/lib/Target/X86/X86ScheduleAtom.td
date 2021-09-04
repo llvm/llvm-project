@@ -91,6 +91,7 @@ defm : AtomWriteResPair<WriteIMul64,    [AtomPort01], [AtomPort01], 12, 12, [12]
 defm : AtomWriteResPair<WriteIMul64Imm, [AtomPort01], [AtomPort01], 14, 14, [14], [14]>;
 defm : AtomWriteResPair<WriteIMul64Reg, [AtomPort01], [AtomPort01], 12, 12, [12], [12]>;
 defm : X86WriteResUnsupported<WriteIMulH>;
+defm : X86WriteResUnsupported<WriteIMulHLd>;
 defm : X86WriteResPairUnsupported<WriteMULX32>;
 defm : X86WriteResPairUnsupported<WriteMULX64>;
 

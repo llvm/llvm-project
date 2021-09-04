@@ -44,7 +44,7 @@ entry:
 ; COMMON-NEXT:                                        # -HasControlledStorage, -IsTOCless
 ; COMMON-NEXT:                                        # +IsFloatingPointPresent
 ; COMMON-NEXT:                                        # -IsFloatingPointOperationLogOrAbortEnabled
-; COMMON-NEXT:  .byte   0x60                            # -IsInterruptHandler, +IsFunctionNamePresent, +IsAllocaUsed
+; COMMON-NEXT:  .byte   0x40                            # -IsInterruptHandler, +IsFunctionNamePresent, -IsAllocaUsed
 ; COMMON-NEXT:                                        # OnConditionDirective = 0, -IsCRSaved, -IsLRSaved
 ; COMMON-NEXT:  .byte   0x85                            # +IsBackChainStored, -IsFixup, NumOfFPRsSaved = 5
 ; COMMON-NEXT:  .byte   0x04                            # -HasExtensionTable, -HasVectorInfo, NumOfGPRsSaved = 4
@@ -54,7 +54,6 @@ entry:
 ; CHECK-FUNC-NEXT:  .vbyte  4, L..bar0-.bar[PR]             # Function size
 ; COMMON-NEXT:  .vbyte  2, 0x0003                       # Function name len = 3
 ; COMMON-NEXT:  .byte   "bar"                           # Function Name
-; COMMON-NEXT:  .byte   0x1f                            # AllocaUsed
 ; COMMON-NEXT:                                        # -- End function
 
 ; COMMON:     L..foov0:

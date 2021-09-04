@@ -186,7 +186,7 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
       return;
     }
 
-    case Intrinsic::wasm_catch_exn: {
+    case Intrinsic::wasm_catch: {
       int Tag = Node->getConstantOperandVal(2);
       SDValue SymNode = getTagSymNode(Tag, CurDAG);
       MachineSDNode *Catch =

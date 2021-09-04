@@ -200,12 +200,39 @@ static bool isValidElementType(Type *Ty) {
          !Ty->isPPC_FP128Ty();
 }
 
+/// \returns True if the value is a constant (but not globals/constant
+/// expressions).
+static bool isConstant(Value *V) {
+  return isa<Constant>(V) && !isa<ConstantExpr>(V) && !isa<GlobalValue>(V);
+}
+
+/// Checks if \p V is one of vector-like instructions, i.e. undef,
+/// insertelement/extractelement with constant indices for fixed vector type or
+/// extractvalue instruction.
+static bool isVectorLikeInstWithConstOps(Value *V) {
+  if (!isa<InsertElementInst, ExtractElementInst>(V) &&
+      !isa<ExtractValueInst, UndefValue>(V))
+    return false;
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I || isa<ExtractValueInst>(I))
+    return true;
+  if (!isa<FixedVectorType>(I->getOperand(0)->getType()))
+    return false;
+  if (isa<ExtractElementInst, ExtractValueInst>(I))
+    return isConstant(I->getOperand(1));
+  assert(isa<InsertElementInst>(V) && "Expected only insertelement.");
+  return isConstant(I->getOperand(2));
+}
+
 /// \returns true if all of the instructions in \p VL are in the same block or
 /// false otherwise.
 static bool allSameBlock(ArrayRef<Value *> VL) {
   Instruction *I0 = dyn_cast<Instruction>(VL[0]);
   if (!I0)
     return false;
+  if (all_of(VL, isVectorLikeInstWithConstOps))
+    return true;
+
   BasicBlock *BB = I0->getParent();
   for (int I = 1, E = VL.size(); I < E; I++) {
     auto *II = dyn_cast<Instruction>(VL[I]);
@@ -216,12 +243,6 @@ static bool allSameBlock(ArrayRef<Value *> VL) {
       return false;
   }
   return true;
-}
-
-/// \returns True if the value is a constant (but not globals/constant
-/// expressions).
-static bool isConstant(Value *V) {
-  return isa<Constant>(V) && !isa<ConstantExpr>(V) && !isa<GlobalValue>(V);
 }
 
 /// \returns True if all of the values in \p VL are constants (but not
@@ -5932,7 +5953,9 @@ void BoUpSLP::optimizeGatherSequence() {
 Optional<BoUpSLP::ScheduleData *>
 BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
                                             const InstructionsState &S) {
-  if (isa<PHINode>(S.OpValue) || isa<InsertElementInst>(S.OpValue))
+  // No need to schedule PHIs, insertelement, extractelement and extractvalue
+  // instructions.
+  if (isa<PHINode>(S.OpValue) || isVectorLikeInstWithConstOps(S.OpValue))
     return nullptr;
 
   // Initialize the instruction bundle.
@@ -6028,7 +6051,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
 
 void BoUpSLP::BlockScheduling::cancelScheduling(ArrayRef<Value *> VL,
                                                 Value *OpValue) {
-  if (isa<PHINode>(OpValue) || isa<InsertElementInst>(OpValue))
+  if (isa<PHINode>(OpValue) || isVectorLikeInstWithConstOps(OpValue))
     return;
 
   ScheduleData *Bundle = getScheduleData(OpValue);
@@ -6068,8 +6091,9 @@ bool BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V,
     return true;
   Instruction *I = dyn_cast<Instruction>(V);
   assert(I && "bundle member must be an instruction");
-  assert(!isa<PHINode>(I) && !isa<InsertElementInst>(I) &&
-         "phi nodes/insertelements don't need to be scheduled");
+  assert(!isa<PHINode>(I) && !isVectorLikeInstWithConstOps(I) &&
+         "phi nodes/insertelements/extractelements/extractvalues don't need to "
+         "be scheduled");
   auto &&CheckSheduleForI = [this, &S](Instruction *I) -> bool {
     ScheduleData *ISD = getScheduleData(I);
     if (!ISD)
@@ -6339,7 +6363,7 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
   for (auto *I = BS->ScheduleStart; I != BS->ScheduleEnd;
        I = I->getNextNode()) {
     BS->doForAllOpcodes(I, [this, &Idx, &NumToSchedule, BS](ScheduleData *SD) {
-      assert((isa<InsertElementInst>(SD->Inst) ||
+      assert((isVectorLikeInstWithConstOps(SD->Inst) ||
               SD->isPartOfBundle() == (getTreeEntry(SD->Inst) != nullptr)) &&
              "scheduler and vectorizer bundle mismatch");
       SD->FirstInBundle->SchedulingPriority = Idx++;

@@ -19,9 +19,6 @@
 #pragma GCC system_header
 #endif
 
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator1, class _InputIterator2, class _BinaryPredicate>
@@ -66,7 +63,5 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY
 #endif
 
 _LIBCPP_END_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_MISMATCH_H

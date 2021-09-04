@@ -514,8 +514,8 @@ unsigned SystemZInstrInfo::insertBranch(MachineBasicBlock &MBB,
 }
 
 bool SystemZInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
-                                      Register &SrcReg2, int &Mask,
-                                      int &Value) const {
+                                      Register &SrcReg2, int64_t &Mask,
+                                      int64_t &Value) const {
   assert(MI.isCompare() && "Caller should have checked for a comparison");
 
   if (MI.getNumExplicitOperands() == 2 && MI.getOperand(0).isReg() &&

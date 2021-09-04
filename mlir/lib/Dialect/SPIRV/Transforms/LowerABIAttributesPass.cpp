@@ -178,6 +178,9 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
   TypeConverter::SignatureConversion signatureConverter(
       funcOp.getType().getNumInputs());
 
+  auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
+  auto indexType = typeConverter.getIndexType();
+
   auto attrName = spirv::getInterfaceVarABIAttrName();
   for (auto argType : llvm::enumerate(funcOp.getType().getInputs())) {
     auto abiInfo = funcOp.getArgAttrOfType<spirv::InterfaceVarABIAttr>(
@@ -206,7 +209,6 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
     // before the use. There might be multiple loads and currently there is no
     // easy way to replace all uses with a sequence of operations.
     if (argType.value().cast<spirv::SPIRVType>().isScalarOrVector()) {
-      auto indexType = SPIRVTypeConverter::getIndexType(funcOp.getContext());
       auto zero =
           spirv::ConstantOp::getZero(indexType, funcOp.getLoc(), rewriter);
       auto loadPtr = rewriter.create<spirv::AccessChainOp>(

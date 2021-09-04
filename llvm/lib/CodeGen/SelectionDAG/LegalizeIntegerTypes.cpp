@@ -3093,6 +3093,9 @@ void DAGTypeLegalizer::ExpandIntRes_FP_TO_SINT(SDNode *N, SDValue &Lo,
     EVT NFPVT = TLI.getTypeToTransformTo(*DAG.getContext(), Op.getValueType());
     Op = GetSoftPromotedHalf(Op);
     Op = DAG.getNode(ISD::FP16_TO_FP, dl, NFPVT, Op);
+    Op = DAG.getNode(ISD::FP_TO_SINT, dl, VT, Op);
+    SplitInteger(Op, Lo, Hi);
+    return;
   }
 
   RTLIB::Libcall LC = RTLIB::getFPTOSINT(Op.getValueType(), VT);
@@ -3122,6 +3125,9 @@ void DAGTypeLegalizer::ExpandIntRes_FP_TO_UINT(SDNode *N, SDValue &Lo,
     EVT NFPVT = TLI.getTypeToTransformTo(*DAG.getContext(), Op.getValueType());
     Op = GetSoftPromotedHalf(Op);
     Op = DAG.getNode(ISD::FP16_TO_FP, dl, NFPVT, Op);
+    Op = DAG.getNode(ISD::FP_TO_UINT, dl, VT, Op);
+    SplitInteger(Op, Lo, Hi);
+    return;
   }
 
   RTLIB::Libcall LC = RTLIB::getFPTOUINT(Op.getValueType(), VT);
@@ -3470,8 +3476,11 @@ void DAGTypeLegalizer::ExpandIntRes_MULFIX(SDNode *N, SDValue &Lo,
         SDValue SatMin = DAG.getConstant(MinVal, dl, VT);
         SDValue SatMax = DAG.getConstant(MaxVal, dl, VT);
         SDValue Zero = DAG.getConstant(0, dl, VT);
-        SDValue ProdNeg = DAG.getSetCC(dl, BoolVT, Product, Zero, ISD::SETLT);
-        Result = DAG.getSelect(dl, VT, ProdNeg, SatMax, SatMin);
+        // Xor the inputs, if resulting sign bit is 0 the product will be
+        // positive, else negative.
+        SDValue Xor = DAG.getNode(ISD::XOR, dl, VT, LHS, RHS);
+        SDValue ProdNeg = DAG.getSetCC(dl, BoolVT, Xor, Zero, ISD::SETLT);
+        Result = DAG.getSelect(dl, VT, ProdNeg, SatMin, SatMax);
         Result = DAG.getSelect(dl, VT, Overflow, Result, Product);
       } else {
         // For unsigned multiplication, we only need to check the max since we

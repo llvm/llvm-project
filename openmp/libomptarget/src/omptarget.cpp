@@ -494,7 +494,7 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
       PointerTgtPtrBegin = Pointer_TPR.TargetPointer;
       IsHostPtr = Pointer_TPR.Flags.IsHostPointer;
       if (!PointerTgtPtrBegin) {
-        REPORT("Call to getOrAllocTgtPtr returned null pointer (%s).\n",
+        REPORT("Call to getTargetPointer returned null pointer (%s).\n",
                HasPresentModifier ? "'present' map type modifier"
                                   : "device failure or illegal mapping");
         return OFFLOAD_FAIL;
@@ -528,7 +528,7 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
     // If data_size==0, then the argument could be a zero-length pointer to
     // NULL, so getOrAlloc() returning NULL is not an error.
     if (!TgtPtrBegin && (data_size || HasPresentModifier)) {
-      REPORT("Call to getOrAllocTgtPtr returned null pointer (%s).\n",
+      REPORT("Call to getTargetPointer returned null pointer (%s).\n",
              HasPresentModifier ? "'present' map type modifier"
                                 : "device failure or illegal mapping");
       return OFFLOAD_FAIL;

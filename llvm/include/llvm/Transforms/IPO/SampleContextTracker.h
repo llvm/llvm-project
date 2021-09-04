@@ -37,10 +37,10 @@ class ContextTrieNode {
 public:
   ContextTrieNode(ContextTrieNode *Parent = nullptr,
                   StringRef FName = StringRef(),
-                  FunctionSamples *FSamples = nullptr, uint32_t FSize = 0,
+                  FunctionSamples *FSamples = nullptr,
                   LineLocation CallLoc = {0, 0})
       : ParentContext(Parent), FuncName(FName), FuncSamples(FSamples),
-        FuncSize(FSize), CallSiteLoc(CallLoc){};
+        CallSiteLoc(CallLoc){};
   ContextTrieNode *getChildContext(const LineLocation &CallSite,
                                    StringRef ChildName);
   ContextTrieNode *getHottestChildContext(const LineLocation &CallSite);
@@ -57,8 +57,8 @@ public:
   StringRef getFuncName() const;
   FunctionSamples *getFunctionSamples() const;
   void setFunctionSamples(FunctionSamples *FSamples);
-  uint32_t getFunctionSize() const;
-  void setFunctionSize(uint32_t FSize);
+  Optional<uint32_t> getFunctionSize() const;
+  void addFunctionSize(uint32_t FSize);
   LineLocation getCallSiteLoc() const;
   ContextTrieNode *getParentContext() const;
   void setParentContext(ContextTrieNode *Parent);
@@ -81,7 +81,7 @@ private:
   FunctionSamples *FuncSamples;
 
   // Function size for current context
-  uint32_t FuncSize;
+  Optional<uint32_t> FuncSize;
 
   // Callsite location in parent context
   LineLocation CallSiteLoc;

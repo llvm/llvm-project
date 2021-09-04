@@ -447,6 +447,10 @@ MLIR_CAPI_EXPORTED void mlirRegionDestroy(MlirRegion region);
 /// Checks whether a region is null.
 static inline bool mlirRegionIsNull(MlirRegion region) { return !region.ptr; }
 
+/// Checks whether two region handles point to the same region. This does not
+/// perform deep comparison.
+MLIR_CAPI_EXPORTED bool mlirRegionEqual(MlirRegion region, MlirRegion other);
+
 /// Gets the first block in the region.
 MLIR_CAPI_EXPORTED MlirBlock mlirRegionGetFirstBlock(MlirRegion region);
 
@@ -495,6 +499,9 @@ MLIR_CAPI_EXPORTED bool mlirBlockEqual(MlirBlock block, MlirBlock other);
 
 /// Returns the closest surrounding operation that contains this block.
 MLIR_CAPI_EXPORTED MlirOperation mlirBlockGetParentOperation(MlirBlock);
+
+/// Returns the region that contains this block.
+MLIR_CAPI_EXPORTED MlirRegion mlirBlockGetParentRegion(MlirBlock block);
 
 /// Returns the block immediately following the given block in its parent
 /// region.

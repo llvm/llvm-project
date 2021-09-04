@@ -318,7 +318,8 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
 
   // build the qSupported packet
   std::vector<std::string> features = {"xmlRegisters=i386,arm,mips,arc",
-                                       "multiprocess+"};
+                                       "multiprocess+", "fork-events+",
+                                       "vfork-events+"};
   StreamString packet;
   packet.PutCString("qSupported");
   for (uint32_t i = 0; i < features.size(); ++i) {
@@ -1457,9 +1458,12 @@ bool GDBRemoteCommunicationClient::DeallocateMemory(addr_t addr) {
   return false;
 }
 
-Status GDBRemoteCommunicationClient::Detach(bool keep_stopped) {
+Status GDBRemoteCommunicationClient::Detach(bool keep_stopped,
+                                            lldb::pid_t pid) {
   Status error;
+  lldb_private::StreamString packet;
 
+  packet.PutChar('D');
   if (keep_stopped) {
     if (m_supports_detach_stay_stopped == eLazyBoolCalculate) {
       char packet[64];
@@ -1481,17 +1485,25 @@ Status GDBRemoteCommunicationClient::Detach(bool keep_stopped) {
       error.SetErrorString("Stays stopped not supported by this target.");
       return error;
     } else {
-      StringExtractorGDBRemote response;
-      PacketResult packet_result = SendPacketAndWaitForResponse("D1", response);
-      if (packet_result != PacketResult::Success)
-        error.SetErrorString("Sending extended disconnect packet failed.");
+      packet.PutChar('1');
     }
-  } else {
-    StringExtractorGDBRemote response;
-    PacketResult packet_result = SendPacketAndWaitForResponse("D", response);
-    if (packet_result != PacketResult::Success)
-      error.SetErrorString("Sending disconnect packet failed.");
   }
+
+  if (pid != LLDB_INVALID_PROCESS_ID) {
+    if (!m_supports_multiprocess) {
+      error.SetErrorString(
+          "Multiprocess extension not supported by the server.");
+      return error;
+    }
+    packet.PutChar(';');
+    packet.PutHex64(pid);
+  }
+
+  StringExtractorGDBRemote response;
+  PacketResult packet_result =
+      SendPacketAndWaitForResponse(packet.GetString(), response);
+  if (packet_result != PacketResult::Success)
+    error.SetErrorString("Sending isconnect packet failed.");
   return error;
 }
 

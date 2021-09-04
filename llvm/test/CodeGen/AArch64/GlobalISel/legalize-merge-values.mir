@@ -14,8 +14,7 @@ body: |
     ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND]], [[C3]](s64)
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[C2]](s32)
     ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C1]]
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SHL]](s32)
-    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND1]], [[COPY1]]
+    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND1]], [[SHL]]
     ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[OR]](s32)
     ; CHECK: $x0 = COPY [[ANYEXT]](s64)
     %0:_(s64) = G_CONSTANT i64 0
@@ -30,6 +29,8 @@ body: |
 name:            test_merge_s16_s8
 body: |
   bb.0:
+
+    ; This isn't legal but we don't support widening the destination type.
     ; CHECK-LABEL: name: test_merge_s16_s8
     ; CHECK: %a:_(s32) = COPY $w0
     ; CHECK: %b:_(s32) = COPY $w1
@@ -38,8 +39,6 @@ body: |
     ; CHECK: %m:_(s16) = G_MERGE_VALUES %a_t(s8), %b_t(s8)
     ; CHECK: %ext:_(s64) = G_ANYEXT %m(s16)
     ; CHECK: $x0 = COPY %ext(s64)
-
-    ; This isn't legal but we don't support widening the destination type.
     %a:_(s32) = COPY $w0
     %b:_(s32) = COPY $w1
     %a_t:_(s8) = G_TRUNC %a
