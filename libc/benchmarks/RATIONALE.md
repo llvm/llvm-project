@@ -13,7 +13,7 @@ systems; and so other metrics can be equally important:
 ## Rationale
 
 The goal here is to satisfy the [Benchmarking
-Principles](https://en.wikipedia.org/wiki/Benchmark_\(computing\)#Benchmarking_Principles).
+Principles](https://en.wikipedia.org/wiki/Benchmark_(computing)#Benchmarking_Principles).
 
 1.  **Relevance**: Benchmarks should measure relatively vital features.
 2.  **Representativeness**: Benchmark performance metrics should be broadly
@@ -26,7 +26,7 @@ Principles](https://en.wikipedia.org/wiki/Benchmark_\(computing\)#Benchmarking_P
 7.  **Transparency**: Benchmark metrics should be easy to understand.
 
 Benchmarking is a [subtle
-art](https://en.wikipedia.org/wiki/Benchmark_\(computing\)#Challenges) and
+art](https://en.wikipedia.org/wiki/Benchmark_(computing)#Challenges) and
 benchmarking memory functions is no exception. Here we'll dive into
 peculiarities of designing good microbenchmarks for `llvm-libc` memory
 functions.
@@ -189,7 +189,7 @@ active cores."_
 is always set to `performance`. We also want to make sure that the time based
 events are not impacted by frequency scaling.**
 
-See [REAME.md](REAME.md) on how to set this up.
+See [README.md](README.md) on how to set this up.
 
 ### Reserved and pinned cores
 
