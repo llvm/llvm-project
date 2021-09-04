@@ -462,6 +462,11 @@ protected:
       Builder.defineMacro("__FLOAT128__");
   }
 
+  if (Opts.C11) {
+    Builder.defineMacro("__STDC_NO_ATOMICS__");
+    Builder.defineMacro("__STDC_NO_THREADS__");
+  }
+
 public:
   OpenBSDTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : OSTargetInfo<Target>(Triple, Opts) {
