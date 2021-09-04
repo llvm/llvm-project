@@ -24,7 +24,7 @@ namespace arm {
 
 std::string getARMTargetCPU(StringRef CPU, llvm::StringRef Arch,
                             const llvm::Triple &Triple);
-const std::string getARMArch(llvm::StringRef Arch, const llvm::Triple &Triple);
+std::string getARMArch(llvm::StringRef Arch, const llvm::Triple &Triple);
 StringRef getARMCPUForMArch(llvm::StringRef Arch, const llvm::Triple &Triple);
 llvm::ARM::ArchKind getLLVMArchKindForARM(StringRef CPU, StringRef Arch,
                                           const llvm::Triple &Triple);
