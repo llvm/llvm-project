@@ -12,6 +12,7 @@
 
 #include <__availability>
 #include <__config>
+#include <__format/buffer.h>
 #include <__format/format_args.h>
 #include <__format/format_fwd.h>
 #include <__iterator/back_insert_iterator.h>
@@ -60,16 +61,12 @@ __format_context_create(
 }
 #endif
 
-// TODO FMT Implement [format.context]/4
-// [Note 1: For a given type charT, implementations are encouraged to provide a
-// single instantiation of basic_format_context for appending to
-// basic_string<charT>, vector<charT>, or any other container with contiguous
-// storage by wrapping those in temporary objects with a uniform interface
-// (such as a span<charT>) and polymorphic reallocation. - end note]
-
-using format_context = basic_format_context<back_insert_iterator<string>, char>;
+using format_context =
+    basic_format_context<back_insert_iterator<__format::__output_buffer<char>>,
+                         char>;
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-using wformat_context = basic_format_context<back_insert_iterator<wstring>, wchar_t>;
+using wformat_context = basic_format_context<
+    back_insert_iterator<__format::__output_buffer<wchar_t>>, wchar_t>;
 #endif
 
 template <class _OutIt, class _CharT>

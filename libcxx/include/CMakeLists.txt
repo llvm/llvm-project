@@ -184,6 +184,7 @@ set(files
   __filesystem/recursive_directory_iterator.h
   __filesystem/space_info.h
   __filesystem/u8path.h
+  __format/buffer.h
   __format/format_arg.h
   __format/format_args.h
   __format/format_context.h

@@ -24,7 +24,6 @@
 // using wformat_context = basic_format_context<unspecified, wchar_t>;
 
 #include <format>
-#include <string>
 #include <string_view>
 #include <type_traits>
 
@@ -97,13 +96,11 @@ constexpr void test() {
 }
 
 constexpr void test() {
-  test<std::back_insert_iterator<std::basic_string<char>>, char>();
+  test<std::back_insert_iterator<std::__format::__output_buffer<char>>, char>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  test<std::back_insert_iterator<std::basic_string<wchar_t>>, wchar_t>();
+  test<std::back_insert_iterator<std::__format::__output_buffer<wchar_t>>,
+       wchar_t>();
 #endif
-  test<std::back_insert_iterator<std::basic_string<char8_t>>, char8_t>();
-  test<std::back_insert_iterator<std::basic_string<char16_t>>, char16_t>();
-  test<std::back_insert_iterator<std::basic_string<char32_t>>, char32_t>();
 }
 
 template <class, class>
@@ -112,11 +109,12 @@ template <class It, class CharT>
 constexpr bool is_basic_format_context_specialization<std::basic_format_context<It, CharT>, CharT> = true;
 
 static_assert(is_basic_format_context_specialization<std::format_context, char>);
-LIBCPP_STATIC_ASSERT(
+static_assert(
     std::is_same_v<
         std::format_context,
         std::basic_format_context<
-            std::back_insert_iterator<std::basic_string<char>>, char>>);
+            std::back_insert_iterator<std::__format::__output_buffer<char>>,
+            char>>);
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
 static_assert(is_basic_format_context_specialization<std::wformat_context, wchar_t>);
@@ -124,8 +122,6 @@ LIBCPP_STATIC_ASSERT(
     std::is_same_v<
         std::wformat_context,
         std::basic_format_context<
-            std::back_insert_iterator<std::basic_string<wchar_t>>, wchar_t>>);
+            std::back_insert_iterator< std::__format::__output_buffer<wchar_t>>,
+            wchar_t>>);
 #endif
-
-// Required for MSVC internal test runner compatibility.
-int main(int, char**) { return 0; }
