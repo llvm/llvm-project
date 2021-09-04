@@ -1079,6 +1079,11 @@ LogicalResult MemcpyOp::fold(ArrayRef<Attribute> operands,
   return foldMemRefCast(*this);
 }
 
+LogicalResult MemsetOp::fold(ArrayRef<Attribute> operands,
+                             SmallVectorImpl<::mlir::OpFoldResult> &results) {
+  return foldMemRefCast(*this);
+}
+
 //===----------------------------------------------------------------------===//
 // GPU_AllocOp
 //===----------------------------------------------------------------------===//

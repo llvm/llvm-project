@@ -467,6 +467,13 @@ func @memcpy_incompatible_shape(%dst : memref<7xf32>, %src : memref<9xf32>) {
 
 // -----
 
+func @memset_incompatible_shape(%dst : memref<?xf32>, %value : i32) {
+  // expected-error @+1 {{'gpu.memset' op failed to verify that all of {dst, value} have same element type}}
+  gpu.memset %dst, %value  : memref<?xf32>, i32
+}
+
+// -----
+
 func @mmamatrix_invalid_shape(){
     %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, 3>
     %i = constant 16 : index
