@@ -33,7 +33,7 @@ late to capture initialization of the debugger.
 
 .. code-block:: bash
 
-  > lldb --capture
+  $ lldb --capture
 
 In capture mode, LLDB will keep track of all the information it needs to replay
 the current debug session. Most data is captured lazily to limit the impact on
@@ -70,7 +70,7 @@ were passed to LLDB during capture are already part of the reproducer.
 
 .. code-block:: bash
 
- > lldb --replay /path/to/reproducer
+  $ lldb --replay /path/to/reproducer
 
 
 During replay LLDB will behave similar to batch mode. The session should be

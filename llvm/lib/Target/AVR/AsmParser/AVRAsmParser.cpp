@@ -170,9 +170,11 @@ public:
   }
 
   bool isImmCom8() const {
-    if (!isImm()) return false;
+    if (!isImm())
+      return false;
     const auto *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
+    if (!CE)
+      return false;
     int64_t Value = CE->getValue();
     return isUInt<8>(Value);
   }
@@ -322,11 +324,16 @@ bool AVRAsmParser::MatchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
       MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm);
 
   switch (MatchResult) {
-  case Match_Success:        return emit(Inst, Loc, Out);
-  case Match_MissingFeature: return missingFeature(Loc, ErrorInfo);
-  case Match_InvalidOperand: return invalidOperand(Loc, Operands, ErrorInfo);
-  case Match_MnemonicFail:   return Error(Loc, "invalid instruction");
-  default:                   return true;
+  case Match_Success:
+    return emit(Inst, Loc, Out);
+  case Match_MissingFeature:
+    return missingFeature(Loc, ErrorInfo);
+  case Match_InvalidOperand:
+    return invalidOperand(Loc, Operands, ErrorInfo);
+  case Match_MnemonicFail:
+    return Error(Loc, "invalid instruction");
+  default:
+    return true;
   }
 }
 
@@ -440,8 +447,7 @@ bool AVRAsmParser::tryParseRelocExpression(OperandVector &Operands) {
          tokens[1].getKind() == AsmToken::Minus)) {
 
       AsmToken::TokenKind CurTok = Parser.getLexer().getKind();
-      if (CurTok == AsmToken::Minus ||
-          tokens[1].getKind() == AsmToken::Minus) {
+      if (CurTok == AsmToken::Minus || tokens[1].getKind() == AsmToken::Minus) {
         isNegated = true;
       } else {
         assert(CurTok == AsmToken::Plus);
@@ -498,8 +504,8 @@ bool AVRAsmParser::tryParseRelocExpression(OperandVector &Operands) {
   assert(Parser.getTok().getKind() == AsmToken::RParen);
   Parser.Lex(); // Eat closing parenthesis
 
-  MCExpr const *Expression = AVRMCExpr::create(ModifierKind, InnerExpression,
-                                               isNegated, getContext());
+  MCExpr const *Expression =
+      AVRMCExpr::create(ModifierKind, InnerExpression, isNegated, getContext());
 
   SMLoc E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
   Operands.push_back(AVROperand::CreateImm(Expression, S, E));
@@ -552,8 +558,7 @@ bool AVRAsmParser::parseOperand(OperandVector &Operands) {
   return true;
 }
 
-OperandMatchResultTy
-AVRAsmParser::parseMemriOperand(OperandVector &Operands) {
+OperandMatchResultTy AVRAsmParser::parseMemriOperand(OperandVector &Operands) {
   LLVM_DEBUG(dbgs() << "parseMemriOperand()\n");
 
   SMLoc E, S;
@@ -620,7 +625,8 @@ bool AVRAsmParser::ParseInstruction(ParseInstructionInfo &Info,
 
   bool first = true;
   while (getLexer().isNot(AsmToken::EndOfStatement)) {
-    if (!first) eatComma();
+    if (!first)
+      eatComma();
 
     first = false;
 
@@ -670,7 +676,7 @@ bool AVRAsmParser::parseLiteralValues(unsigned SizeInBytes, SMLoc L) {
       Tokens[1].getKind() == AsmToken::Identifier) {
     MCSymbol *Symbol = getContext().getOrCreateSymbol(".text");
     AVRStreamer.emitValueForModiferKind(Symbol, SizeInBytes, L,
-            AVRMCExpr::VK_AVR_None);
+                                        AVRMCExpr::VK_AVR_None);
     return false;
   }
 

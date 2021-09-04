@@ -36,7 +36,7 @@ the input text file:
 
 ::
 
-   % ./dictionary Romeo-and-Juliet.txt
+   $ ./dictionary Romeo-and-Juliet.txt
    Dictionary loaded.
    Enter search word: love
    Yes!
@@ -45,7 +45,7 @@ the input text file:
    Enter search word: Romeo
    No!
    Enter search word: ^D
-   %
+   $
 
 Using Depth First Search
 ------------------------
@@ -184,7 +184,7 @@ you would do something like this:
 
 ::
 
-   % lldb
+   $ lldb
    (lldb) process attach -n "dictionary"
    Architecture set to: x86_64.
    Process 521 stopped
