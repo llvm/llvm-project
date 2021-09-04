@@ -9,9 +9,7 @@ declare void @use(i8)
 
 define i1 @rol_eq(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @rol_eq(
-; CHECK-NEXT:    [[F:%.*]] = tail call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[X]], i8 [[Z:%.*]])
-; CHECK-NEXT:    [[F2:%.*]] = tail call i8 @llvm.fshl.i8(i8 [[Y:%.*]], i8 [[Y]], i8 [[Z]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[F]], [[F2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %f = tail call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 %z)
@@ -22,9 +20,7 @@ define i1 @rol_eq(i8 %x, i8 %y, i8 %z) {
 
 define i1 @rol_ne(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @rol_ne(
-; CHECK-NEXT:    [[F:%.*]] = tail call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[X]], i8 [[Z:%.*]])
-; CHECK-NEXT:    [[F2:%.*]] = tail call i8 @llvm.fshl.i8(i8 [[Y:%.*]], i8 [[Y]], i8 [[Z]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[F]], [[F2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %f = tail call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 %z)
@@ -35,9 +31,7 @@ define i1 @rol_ne(i8 %x, i8 %y, i8 %z) {
 
 define i1 @ror_eq(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @ror_eq(
-; CHECK-NEXT:    [[F:%.*]] = tail call i8 @llvm.fshr.i8(i8 [[X:%.*]], i8 [[X]], i8 [[Z:%.*]])
-; CHECK-NEXT:    [[F2:%.*]] = tail call i8 @llvm.fshr.i8(i8 [[Y:%.*]], i8 [[Y]], i8 [[Z]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[F]], [[F2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %f = tail call i8 @llvm.fshr.i8(i8 %x, i8 %x, i8 %z)
@@ -49,9 +43,7 @@ define i1 @ror_eq(i8 %x, i8 %y, i8 %z) {
 
 define i1 @ror_ne(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @ror_ne(
-; CHECK-NEXT:    [[F:%.*]] = tail call i8 @llvm.fshr.i8(i8 [[X:%.*]], i8 [[X]], i8 [[Z:%.*]])
-; CHECK-NEXT:    [[F2:%.*]] = tail call i8 @llvm.fshr.i8(i8 [[Y:%.*]], i8 [[Y]], i8 [[Z]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[F]], [[F2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %f = tail call i8 @llvm.fshr.i8(i8 %x, i8 %x, i8 %z)
@@ -64,8 +56,7 @@ define i1 @rol_eq_use(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @rol_eq_use(
 ; CHECK-NEXT:    [[F:%.*]] = tail call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[X]], i8 [[Z:%.*]])
 ; CHECK-NEXT:    call void @use(i8 [[F]])
-; CHECK-NEXT:    [[F2:%.*]] = tail call i8 @llvm.fshl.i8(i8 [[Y:%.*]], i8 [[Y]], i8 [[Z]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[F]], [[F2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %f = tail call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 %z)
@@ -81,7 +72,7 @@ define i1 @rol_eq_uses(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    call void @use(i8 [[F]])
 ; CHECK-NEXT:    [[F2:%.*]] = tail call i8 @llvm.fshl.i8(i8 [[Y:%.*]], i8 [[Y]], i8 [[Z]])
 ; CHECK-NEXT:    call void @use(i8 [[F2]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[F]], [[F2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %f = tail call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 %z)
@@ -94,9 +85,7 @@ define i1 @rol_eq_uses(i8 %x, i8 %y, i8 %z) {
 
 define <2 x i1> @rol_eq_vec(<2 x i5> %x, <2 x i5> %y, <2 x i5> %z) {
 ; CHECK-LABEL: @rol_eq_vec(
-; CHECK-NEXT:    [[F:%.*]] = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5> [[X:%.*]], <2 x i5> [[X]], <2 x i5> [[Z:%.*]])
-; CHECK-NEXT:    [[F2:%.*]] = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5> [[Y:%.*]], <2 x i5> [[Y]], <2 x i5> [[Z]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i5> [[F]], [[F2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i5> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %f = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5> %x, <2 x i5> %x, <2 x i5> %z)
@@ -107,9 +96,7 @@ define <2 x i1> @rol_eq_vec(<2 x i5> %x, <2 x i5> %y, <2 x i5> %z) {
 
 define <2 x i1> @ror_eq_vec(<2 x i5> %x, <2 x i5> %y, <2 x i5> %z) {
 ; CHECK-LABEL: @ror_eq_vec(
-; CHECK-NEXT:    [[F:%.*]] = tail call <2 x i5> @llvm.fshr.v2i5(<2 x i5> [[X:%.*]], <2 x i5> [[X]], <2 x i5> [[Z:%.*]])
-; CHECK-NEXT:    [[F2:%.*]] = tail call <2 x i5> @llvm.fshr.v2i5(<2 x i5> [[Y:%.*]], <2 x i5> [[Y]], <2 x i5> [[Z]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i5> [[F]], [[F2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i5> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %f = tail call <2 x i5> @llvm.fshr.v2i5(<2 x i5> %x, <2 x i5> %x, <2 x i5> %z)
