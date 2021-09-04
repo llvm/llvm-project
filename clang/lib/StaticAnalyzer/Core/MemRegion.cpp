@@ -30,7 +30,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
@@ -793,11 +792,7 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
         if (Size.isNullValue())
           return true;
 
-        // FIXME: Acquire the AnalyzerOptions in a simpler way.
-        const AnalyzerOptions &Opts = SVB.getStateManager()
-                                          .getOwningEngine()
-                                          .getAnalysisManager()
-                                          .getAnalyzerOptions();
+        const AnalyzerOptions &Opts = SVB.getAnalyzerOptions();
         if (Opts.ShouldConsiderSingleElementArraysAsFlexibleArrayMembers &&
             Size.isOneValue())
           return true;
