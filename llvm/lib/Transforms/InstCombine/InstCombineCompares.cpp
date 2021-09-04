@@ -3261,6 +3261,42 @@ Instruction *InstCombinerImpl::foldICmpEqIntrinsicWithConstant(
   return nullptr;
 }
 
+/// Fold an icmp with LLVM intrinsics
+static Instruction *foldICmpIntrinsicWithIntrinsic(ICmpInst &Cmp) {
+  assert(Cmp.isEquality());
+
+  ICmpInst::Predicate Pred = Cmp.getPredicate();
+  Value *Op0 = Cmp.getOperand(0);
+  Value *Op1 = Cmp.getOperand(1);
+  const auto *IIOp0 = dyn_cast<IntrinsicInst>(Op0);
+  const auto *IIOp1 = dyn_cast<IntrinsicInst>(Op1);
+  if (!IIOp0 || !IIOp1 || IIOp0->getIntrinsicID() != IIOp1->getIntrinsicID())
+    return nullptr;
+
+  switch (IIOp0->getIntrinsicID()) {
+  case Intrinsic::bswap:
+  case Intrinsic::bitreverse:
+    // If both operands are byte-swapped or bit-reversed, just compare the
+    // original values.
+    return new ICmpInst(Pred, IIOp0->getOperand(0), IIOp1->getOperand(0));
+  case Intrinsic::fshl:
+  case Intrinsic::fshr:
+    // If both operands are rotated by same amount, just compare the
+    // original values.
+    if (IIOp0->getOperand(0) != IIOp0->getOperand(1))
+      break;
+    if (IIOp1->getOperand(0) != IIOp1->getOperand(1))
+      break;
+    if (IIOp0->getOperand(2) != IIOp1->getOperand(2))
+      break;
+    return new ICmpInst(Pred, IIOp0->getOperand(0), IIOp1->getOperand(0));
+  default:
+    break;
+  }
+
+  return nullptr;
+}
+
 /// Fold an icmp with LLVM intrinsic and constant operand: icmp Pred II, C.
 Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
                                                              IntrinsicInst *II,
@@ -4478,14 +4514,8 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
     }
   }
 
-  // If both operands are byte-swapped or bit-reversed, just compare the
-  // original values.
-  // TODO: Move this to a function similar to foldICmpIntrinsicWithConstant()
-  // and handle more intrinsics.
-  if ((match(Op0, m_BSwap(m_Value(A))) && match(Op1, m_BSwap(m_Value(B)))) ||
-      (match(Op0, m_BitReverse(m_Value(A))) &&
-       match(Op1, m_BitReverse(m_Value(B)))))
-    return new ICmpInst(Pred, A, B);
+  if (Instruction *ICmp = foldICmpIntrinsicWithIntrinsic(I))
+    return ICmp;
 
   // Canonicalize checking for a power-of-2-or-zero value:
   // (A & (A-1)) == 0 --> ctpop(A) < 2 (two commuted variants)
