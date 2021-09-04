@@ -50,7 +50,7 @@ inline RangeSelector range(std::string BeginID, std::string EndID) {
 /// Selects the (empty) range [B,B) when \p Selector selects the range [B,E).
 RangeSelector before(RangeSelector Selector);
 
-/// Selects the the point immediately following \p Selector. That is, the
+/// Selects the point immediately following \p Selector. That is, the
 /// (empty) range [E,E), when \p Selector selects either
 /// * the CharRange [B,E) or
 /// * the TokenRange [B,E'] where the token at E' spans the range [E',E).
