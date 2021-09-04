@@ -557,29 +557,9 @@ define i32 @test_signed_i32_f32(float %f) nounwind {
 ; VFP-LABEL: test_signed_i32_f32:
 ; VFP:       @ %bb.0:
 ; VFP-NEXT:    vmov s0, r0
-; VFP-NEXT:    vldr s2, .LCPI5_0
-; VFP-NEXT:    vldr s6, .LCPI5_1
-; VFP-NEXT:    vcvt.s32.f32 s4, s0
-; VFP-NEXT:    vcmp.f32 s0, s2
-; VFP-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP-NEXT:    vcmp.f32 s0, s6
-; VFP-NEXT:    vmov r0, s4
-; VFP-NEXT:    it lt
-; VFP-NEXT:    movlt.w r0, #-2147483648
-; VFP-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP-NEXT:    it gt
-; VFP-NEXT:    mvngt r0, #-2147483648
-; VFP-NEXT:    vcmp.f32 s0, s0
-; VFP-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP-NEXT:    it vs
-; VFP-NEXT:    movvs r0, #0
+; VFP-NEXT:    vcvt.s32.f32 s0, s0
+; VFP-NEXT:    vmov r0, s0
 ; VFP-NEXT:    bx lr
-; VFP-NEXT:    .p2align 2
-; VFP-NEXT:  @ %bb.1:
-; VFP-NEXT:  .LCPI5_0:
-; VFP-NEXT:    .long 0xcf000000 @ float -2.14748365E+9
-; VFP-NEXT:  .LCPI5_1:
-; VFP-NEXT:    .long 0x4effffff @ float 2.14748352E+9
     %x = call i32 @llvm.fptosi.sat.i32.f32(float %f)
     ret i32 %x
 }
@@ -1892,54 +1872,16 @@ define i32 @test_signed_i32_f64(double %f) nounwind {
 ; VFP2-LABEL: test_signed_i32_f64:
 ; VFP2:       @ %bb.0:
 ; VFP2-NEXT:    vmov d16, r0, r1
-; VFP2-NEXT:    vldr d17, .LCPI15_0
-; VFP2-NEXT:    vldr d18, .LCPI15_1
 ; VFP2-NEXT:    vcvt.s32.f64 s0, d16
-; VFP2-NEXT:    vcmp.f64 d16, d17
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
 ; VFP2-NEXT:    vmov r0, s0
-; VFP2-NEXT:    vcmp.f64 d16, d18
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt.w r0, #-2147483648
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    it gt
-; VFP2-NEXT:    mvngt r0, #-2147483648
-; VFP2-NEXT:    vcmp.f64 d16, d16
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    it vs
-; VFP2-NEXT:    movvs r0, #0
 ; VFP2-NEXT:    bx lr
-; VFP2-NEXT:    .p2align 3
-; VFP2-NEXT:  @ %bb.1:
-; VFP2-NEXT:  .LCPI15_0:
-; VFP2-NEXT:    .long 0 @ double -2147483648
-; VFP2-NEXT:    .long 3252682752
-; VFP2-NEXT:  .LCPI15_1:
-; VFP2-NEXT:    .long 4290772992 @ double 2147483647
-; VFP2-NEXT:    .long 1105199103
 ;
 ; FP16-LABEL: test_signed_i32_f64:
 ; FP16:       @ %bb.0:
-; FP16-NEXT:    vldr d0, .LCPI15_0
-; FP16-NEXT:    vmov d1, r0, r1
-; FP16-NEXT:    vldr d2, .LCPI15_1
-; FP16-NEXT:    vmaxnm.f64 d0, d1, d0
-; FP16-NEXT:    vcmp.f64 d1, d1
-; FP16-NEXT:    vminnm.f64 d0, d0, d2
+; FP16-NEXT:    vmov d0, r0, r1
 ; FP16-NEXT:    vcvt.s32.f64 s0, d0
 ; FP16-NEXT:    vmov r0, s0
-; FP16-NEXT:    vmrs APSR_nzcv, fpscr
-; FP16-NEXT:    it vs
-; FP16-NEXT:    movvs r0, #0
 ; FP16-NEXT:    bx lr
-; FP16-NEXT:    .p2align 3
-; FP16-NEXT:  @ %bb.1:
-; FP16-NEXT:  .LCPI15_0:
-; FP16-NEXT:    .long 0 @ double -2147483648
-; FP16-NEXT:    .long 3252682752
-; FP16-NEXT:  .LCPI15_1:
-; FP16-NEXT:    .long 4290772992 @ double 2147483647
-; FP16-NEXT:    .long 1105199103
     %x = call i32 @llvm.fptosi.sat.i32.f64(double %f)
     ret i32 %x
 }
@@ -3520,57 +3462,16 @@ define i32 @test_signed_i32_f16(half %f) nounwind {
 ; VFP2-NEXT:    push {r7, lr}
 ; VFP2-NEXT:    bl __aeabi_h2f
 ; VFP2-NEXT:    vmov s0, r0
-; VFP2-NEXT:    vldr s2, .LCPI25_0
-; VFP2-NEXT:    vldr s6, .LCPI25_1
-; VFP2-NEXT:    vcvt.s32.f32 s4, s0
-; VFP2-NEXT:    vcmp.f32 s0, s2
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    vcmp.f32 s0, s6
-; VFP2-NEXT:    vmov r0, s4
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt.w r0, #-2147483648
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    it gt
-; VFP2-NEXT:    mvngt r0, #-2147483648
-; VFP2-NEXT:    vcmp.f32 s0, s0
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    it vs
-; VFP2-NEXT:    movvs r0, #0
+; VFP2-NEXT:    vcvt.s32.f32 s0, s0
+; VFP2-NEXT:    vmov r0, s0
 ; VFP2-NEXT:    pop {r7, pc}
-; VFP2-NEXT:    .p2align 2
-; VFP2-NEXT:  @ %bb.1:
-; VFP2-NEXT:  .LCPI25_0:
-; VFP2-NEXT:    .long 0xcf000000 @ float -2.14748365E+9
-; VFP2-NEXT:  .LCPI25_1:
-; VFP2-NEXT:    .long 0x4effffff @ float 2.14748352E+9
 ;
 ; FP16-LABEL: test_signed_i32_f16:
 ; FP16:       @ %bb.0:
 ; FP16-NEXT:    vmov.f16 s0, r0
-; FP16-NEXT:    vldr s2, .LCPI25_0
-; FP16-NEXT:    vcvtb.f32.f16 s0, s0
-; FP16-NEXT:    vldr s6, .LCPI25_1
-; FP16-NEXT:    vcvt.s32.f32 s4, s0
-; FP16-NEXT:    vcmp.f32 s0, s2
-; FP16-NEXT:    vmrs APSR_nzcv, fpscr
-; FP16-NEXT:    vcmp.f32 s0, s6
-; FP16-NEXT:    vmov r0, s4
-; FP16-NEXT:    it lt
-; FP16-NEXT:    movlt.w r0, #-2147483648
-; FP16-NEXT:    vmrs APSR_nzcv, fpscr
-; FP16-NEXT:    it gt
-; FP16-NEXT:    mvngt r0, #-2147483648
-; FP16-NEXT:    vcmp.f32 s0, s0
-; FP16-NEXT:    vmrs APSR_nzcv, fpscr
-; FP16-NEXT:    it vs
-; FP16-NEXT:    movvs r0, #0
+; FP16-NEXT:    vcvt.s32.f16 s0, s0
+; FP16-NEXT:    vmov r0, s0
 ; FP16-NEXT:    bx lr
-; FP16-NEXT:    .p2align 2
-; FP16-NEXT:  @ %bb.1:
-; FP16-NEXT:  .LCPI25_0:
-; FP16-NEXT:    .long 0xcf000000 @ float -2.14748365E+9
-; FP16-NEXT:  .LCPI25_1:
-; FP16-NEXT:    .long 0x4effffff @ float 2.14748352E+9
     %x = call i32 @llvm.fptosi.sat.i32.f16(half %f)
     ret i32 %x
 }

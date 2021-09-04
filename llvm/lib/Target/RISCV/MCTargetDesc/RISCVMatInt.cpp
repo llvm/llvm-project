@@ -77,7 +77,7 @@ static void generateInstSeqImpl(int64_t Val,
   assert(IsRV64 && "Can't emit >32-bit imm for non-RV64 target");
 
   // In the worst case, for a full 64-bit constant, a sequence of 8 instructions
-  // (i.e., LUI+ADDIW+SLLI+ADDI+SLLI+ADDI+SLLI+ADDI) has to be emmitted. Note
+  // (i.e., LUI+ADDIW+SLLI+ADDI+SLLI+ADDI+SLLI+ADDI) has to be emitted. Note
   // that the first two instructions (LUI+ADDIW) can contribute up to 32 bits
   // while the following ADDI instructions contribute up to 12 bits each.
   //

@@ -1262,9 +1262,17 @@ class overflowingbinopw<SDPatternOperator operator>
   return hasAllWUsers(Node);
 }]>;
 
+def sexti32_allwusers : PatFrag<(ops node:$src),
+                                (sext_inreg node:$src, i32), [{
+  return hasAllWUsers(Node);
+}]>;
+
 let Predicates = [IsRV64] in {
 
 /// sext and zext
+
+// Sign extend is not needed if all users are W instructions.
+def : Pat<(sexti32_allwusers GPR:$rs1), (XLenVT GPR:$rs1)>;
 
 def : Pat<(sext_inreg GPR:$rs1, i32), (ADDIW GPR:$rs1, 0)>;
 

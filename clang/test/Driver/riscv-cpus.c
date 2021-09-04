@@ -45,6 +45,13 @@
 // RUN: %clang -target riscv64 -### -c %s 2>&1 -mtune=sifive-7-series | FileCheck -check-prefix=MTUNE-SIFIVE7-SERIES-64 %s
 // MTUNE-SIFIVE7-SERIES-64: "-tune-cpu" "sifive-7-rv64"
 
+// mcpu with mabi option
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-s51 -mabi=lp64 | FileCheck -check-prefix=MCPU-ABI-SIFIVE-S51 %s
+// MCPU-ABI-SIFIVE-S51: "-nostdsysteminc" "-target-cpu" "sifive-s51"
+// MCPU-ABI-SIFIVE-S51: "-target-feature" "+m" "-target-feature" "+a"
+// MCPU-ABI-SIFIVE-S51: "-target-feature" "+c" "-target-feature" "+64bit"
+// MCPU-ABI-SIFIVE-S51: "-target-abi" "lp64"
+
 // mcpu with default march
 // RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-u54 | FileCheck -check-prefix=MCPU-SIFIVE-U54 %s
 // MCPU-SIFIVE-U54: "-nostdsysteminc" "-target-cpu" "sifive-u54"

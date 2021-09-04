@@ -482,10 +482,6 @@ enum NodeType {
   /// Returns platform specific canonical encoding of a floating point number.
   FCANONICALIZE,
 
-  /// Performs check of floating point number property, defined by IEEE-754. The
-  /// only operand is the floating point value to check. Returns boolean value.
-  ISNAN,
-
   /// BUILD_VECTOR(ELT0, ELT1, ELT2, ELT3,...) - Return a fixed-width vector
   /// with the specified, possibly variable, elements. The types of the
   /// operands must match the vector element type, except that integer types

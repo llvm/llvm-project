@@ -287,7 +287,7 @@ struct HostRuntimeLibrary<std::complex<HostT>, LibraryVersion::Libm> {
 // First declare all libpgmaths functions
 #define PGMATH_LINKING
 #define PGMATH_DECLARE
-#include "../runtime/pgmath.h.inc"
+#include "flang/Evaluate/pgmath.h.inc"
 
 #define REAL_FOLDER(name, func) \
   FolderFactory<decltype(&func), &func>::Create(#name)
@@ -295,7 +295,7 @@ template <> struct HostRuntimeLibrary<float, LibraryVersion::PgmathFast> {
   static constexpr HostRuntimeFunction table[]{
 #define PGMATH_FAST
 #define PGMATH_USE_S(name, func) REAL_FOLDER(name, func),
-#include "../runtime/pgmath.h.inc"
+#include "flang/Evaluate/pgmath.h.inc"
   };
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
@@ -304,7 +304,7 @@ template <> struct HostRuntimeLibrary<double, LibraryVersion::PgmathFast> {
   static constexpr HostRuntimeFunction table[]{
 #define PGMATH_FAST
 #define PGMATH_USE_D(name, func) REAL_FOLDER(name, func),
-#include "../runtime/pgmath.h.inc"
+#include "flang/Evaluate/pgmath.h.inc"
   };
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
@@ -313,7 +313,7 @@ template <> struct HostRuntimeLibrary<float, LibraryVersion::PgmathRelaxed> {
   static constexpr HostRuntimeFunction table[]{
 #define PGMATH_RELAXED
 #define PGMATH_USE_S(name, func) REAL_FOLDER(name, func),
-#include "../runtime/pgmath.h.inc"
+#include "flang/Evaluate/pgmath.h.inc"
   };
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
@@ -322,7 +322,7 @@ template <> struct HostRuntimeLibrary<double, LibraryVersion::PgmathRelaxed> {
   static constexpr HostRuntimeFunction table[]{
 #define PGMATH_RELAXED
 #define PGMATH_USE_D(name, func) REAL_FOLDER(name, func),
-#include "../runtime/pgmath.h.inc"
+#include "flang/Evaluate/pgmath.h.inc"
   };
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
@@ -331,7 +331,7 @@ template <> struct HostRuntimeLibrary<float, LibraryVersion::PgmathPrecise> {
   static constexpr HostRuntimeFunction table[]{
 #define PGMATH_PRECISE
 #define PGMATH_USE_S(name, func) REAL_FOLDER(name, func),
-#include "../runtime/pgmath.h.inc"
+#include "flang/Evaluate/pgmath.h.inc"
   };
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
@@ -340,7 +340,7 @@ template <> struct HostRuntimeLibrary<double, LibraryVersion::PgmathPrecise> {
   static constexpr HostRuntimeFunction table[]{
 #define PGMATH_PRECISE
 #define PGMATH_USE_D(name, func) REAL_FOLDER(name, func),
-#include "../runtime/pgmath.h.inc"
+#include "flang/Evaluate/pgmath.h.inc"
   };
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");

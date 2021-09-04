@@ -153,6 +153,12 @@ void VirtualUnwinder::collectSamplesFromFrameTrie(
       for (const auto &Item : Cur->Children) {
         collectSamplesFromFrameTrie(Item.second.get(), EmptyStack);
       }
+
+      // Keep note of untracked call site and deduplicate them
+      // for warning later.
+      if (!Cur->isLeafFrame())
+        UntrackedCallsites.insert(Cur->Address);
+
       return;
     }
   }
@@ -368,11 +374,21 @@ void HybridPerfReader::writeRawProfile(raw_fd_ostream &OS) {
 }
 
 void HybridPerfReader::unwindSamples() {
+  std::set<uint64_t> AllUntrackedCallsites;
   for (const auto &Item : AggregatedSamples) {
     const PerfSample *Sample = Item.first.getPtr();
     VirtualUnwinder Unwinder(&SampleCounters, Binary);
     Unwinder.unwind(Sample, Item.second);
+    auto &CurrUntrackedCallsites = Unwinder.getUntrackedCallsites();
+    AllUntrackedCallsites.insert(CurrUntrackedCallsites.begin(),
+                                 CurrUntrackedCallsites.end());
   }
+
+  // Warn about untracked frames due to missing probes.
+  for (auto Address : AllUntrackedCallsites)
+    WithColor::warning() << "Profile context truncated due to missing probe "
+                         << "for call instruction at "
+                         << format("%" PRIx64, Address) << "\n";
 
   if (SkipSymbolization)
     PerfReaderBase::writeRawProfile(OutputFilename);

@@ -310,7 +310,23 @@ enabled sub-projects. Nearly all of these variable names begin with
 **LLVM_BUILD_INSTRUMENTED_COVERAGE**:BOOL
   If enabled, `source-based code coverage
   <https://clang.llvm.org/docs/SourceBasedCodeCoverage.html>`_ instrumentation
-  is enabled while building llvm.
+  is enabled while building llvm. If CMake can locate the code coverage
+  scripts and the llvm-cov and llvm-profdata tools that pair to your compiler,
+  the build will also generate the `generate-coverage-report` target to generate
+  the code coverage report for LLVM, and the `clear-profile-data` utility target
+  to delete captured profile data. See documentation for
+  *LLVM_CODE_COVERAGE_TARGETS* and *LLVM_COVERAGE_SOURCE_DIRS* for more
+  information on configuring code coverage reports.
+
+**LLVM_CODE_COVERAGE_TARGETS**:STRING
+  If set to a semicolon separated list of targets, those targets will be used
+  to drive the code coverage reports. If unset, the target list will be
+  constructed using the LLVM build's CMake export list.
+
+**LLVM_COVERAGE_SOURCE_DIRS**:STRING
+  If set to a semicolon separated list of directories, the coverage reports
+  will limit code coverage summaries to just the listed directories. If unset,
+  coverage reports will include all sources identified by the tooling.
 
 **LLVM_BUILD_LLVM_DYLIB**:BOOL
   If enabled, the target for building the libLLVM shared library is added.

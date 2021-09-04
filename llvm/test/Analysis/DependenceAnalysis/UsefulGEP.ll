@@ -1,5 +1,4 @@
 ; RUN: opt < %s -disable-output "-passes=print<da>" -aa-pipeline=basic-aa 2>&1
-; RUN: opt < %s -analyze -enable-new-pm=0 -basic-aa -da
 ;; Check this doesn't crash.
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

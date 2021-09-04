@@ -1,4 +1,3 @@
-; RUN: opt -analyze -branch-prob < %s -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
 
 declare void @bar() cold

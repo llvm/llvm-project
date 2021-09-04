@@ -1,4 +1,4 @@
-//===-- runtime/iostat.cpp --------------------------------------*- C++ -*-===//
+//===-- runtime/iostat.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "iostat.h"
+#include "flang/Runtime/iostat.h"
 
 namespace Fortran::runtime::io {
 const char *IostatErrorString(int iostat) {

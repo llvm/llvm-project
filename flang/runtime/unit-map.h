@@ -13,8 +13,8 @@
 #define FORTRAN_RUNTIME_UNIT_MAP_H_
 
 #include "lock.h"
-#include "memory.h"
 #include "unit.h"
+#include "flang/Runtime/memory.h"
 #include <cstdlib>
 
 namespace Fortran::runtime::io {

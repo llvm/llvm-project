@@ -263,7 +263,9 @@ define dso_local signext i32 @testNestedPHI(i32 signext %cond, i32 signext %coun
 ; CHECK-NEXT:    cmpwi r4, 1
 ; CHECK-NEXT:    blt cr0, .LBB3_5
 ; CHECK-NEXT:  .LBB3_3: # %for.body.preheader
-; CHECK-NEXT:    clrldi r3, r4, 32
+; CHECK-NEXT:    addi r3, r4, -1
+; CHECK-NEXT:    clrldi r3, r3, 32
+; CHECK-NEXT:    addi r3, r3, 1
 ; CHECK-NEXT:    mtctr r3
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB3_4: # %for.body
@@ -293,7 +295,9 @@ define dso_local signext i32 @testNestedPHI(i32 signext %cond, i32 signext %coun
 ; CHECK-BE-NEXT:    cmpwi r4, 1
 ; CHECK-BE-NEXT:    blt cr0, .LBB3_5
 ; CHECK-BE-NEXT:  .LBB3_3: # %for.body.preheader
-; CHECK-BE-NEXT:    clrldi r3, r4, 32
+; CHECK-BE-NEXT:    addi r3, r4, -1
+; CHECK-BE-NEXT:    clrldi r3, r3, 32
+; CHECK-BE-NEXT:    addi r3, r3, 1
 ; CHECK-BE-NEXT:    mtctr r3
 ; CHECK-BE-NEXT:    .p2align 4
 ; CHECK-BE-NEXT:  .LBB3_4: # %for.body

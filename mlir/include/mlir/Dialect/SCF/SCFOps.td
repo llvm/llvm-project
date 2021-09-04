@@ -147,17 +147,16 @@ def ForOp : SCF_Op<"for",
     passed as additional SSA operands to the "scf.for" following the 3 loop
     control SSA values mentioned above (lower bound, upper bound and step). The
     operation region has an argument for the induction variable, followed by
-    one argument for each loop-carried variable, representing he value of the
+    one argument for each loop-carried variable, representing the value of the
     variable at the current iteration.
 
     The region must terminate with a "scf.yield" that passes the current
-    values of loop-carried variables to the next iteration, or to the "scf.for"
-    result, if at the last iteration. The type (static or dynamic) of a
-    loop-carried variable may not change with iterations. E.g., it is illegal
-    to pass a tensor of larger size to the next iteration; even if the tensor's
-    dimensions are dynamic (i.e., same static type). Note, that when the
-    loop-carried variables are present, calling ForOp::build will not insert the
-    terminator implicitly. The caller must insert "scf.yield" in that case.
+    values of all loop-carried variables to the next iteration, or to the
+    "scf.for" result, if at the last iteration. The static type of a
+    loop-carried variable may not change with iterations; its runtime type is
+    allowed to change. Note, that when the loop-carried variables are present,
+    calling ForOp::build will not insert the terminator implicitly. The caller
+    must insert "scf.yield" in that case.
 
     "scf.for" results hold the final values after the last iteration.
     For example, to sum-reduce a memref:

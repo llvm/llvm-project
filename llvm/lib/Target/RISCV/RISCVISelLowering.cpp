@@ -1340,7 +1340,7 @@ getDefaultVLOps(MVT VecVT, MVT ContainerVT, SDLoc DL, SelectionDAG &DAG,
   MVT XLenVT = Subtarget.getXLenVT();
   SDValue VL = VecVT.isFixedLengthVector()
                    ? DAG.getConstant(VecVT.getVectorNumElements(), DL, XLenVT)
-                   : DAG.getRegister(RISCV::X0, XLenVT);
+                   : DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, XLenVT);
   MVT MaskVT = MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
   SDValue Mask = DAG.getNode(RISCVISD::VMSET_VL, DL, MaskVT, VL);
   return {Mask, VL};
@@ -3292,7 +3292,7 @@ SDValue RISCVTargetLowering::lowerSPLAT_VECTOR_PARTS(SDValue Op,
 
   // Fall back to use a stack store and stride x0 vector load. Use X0 as VL.
   return DAG.getNode(RISCVISD::SPLAT_VECTOR_SPLIT_I64_VL, DL, VecVT, Lo, Hi,
-                     DAG.getRegister(RISCV::X0, MVT::i64));
+                     DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, MVT::i64));
 }
 
 // Custom-lower extensions from mask vectors by using a vselect either with 1
@@ -4450,7 +4450,7 @@ SDValue RISCVTargetLowering::lowerMLOAD(SDValue Op, SelectionDAG &DAG) const {
     PassThru = convertToScalableVector(ContainerVT, PassThru, DAG, Subtarget);
     VL = DAG.getConstant(VT.getVectorNumElements(), DL, XLenVT);
   } else
-    VL = DAG.getRegister(RISCV::X0, XLenVT);
+    VL = DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, XLenVT);
 
   SDVTList VTs = DAG.getVTList({ContainerVT, MVT::Other});
   SDValue IntID = DAG.getTargetConstant(Intrinsic::riscv_vle_mask, DL, XLenVT);
@@ -4486,7 +4486,7 @@ SDValue RISCVTargetLowering::lowerMSTORE(SDValue Op, SelectionDAG &DAG) const {
     Mask = convertToScalableVector(MaskVT, Mask, DAG, Subtarget);
     VL = DAG.getConstant(VT.getVectorNumElements(), DL, XLenVT);
   } else
-    VL = DAG.getRegister(RISCV::X0, XLenVT);
+    VL = DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, XLenVT);
 
   SDValue IntID = DAG.getTargetConstant(Intrinsic::riscv_vse_mask, DL, XLenVT);
   return DAG.getMemIntrinsicNode(
@@ -4743,7 +4743,7 @@ SDValue RISCVTargetLowering::lowerMGATHER(SDValue Op, SelectionDAG &DAG) const {
 
     VL = DAG.getConstant(VT.getVectorNumElements(), DL, XLenVT);
   } else
-    VL = DAG.getRegister(RISCV::X0, XLenVT);
+    VL = DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, XLenVT);
 
   unsigned IntID =
       IsUnmasked ? Intrinsic::riscv_vluxei : Intrinsic::riscv_vluxei_mask;
@@ -4824,7 +4824,7 @@ SDValue RISCVTargetLowering::lowerMSCATTER(SDValue Op,
 
     VL = DAG.getConstant(VT.getVectorNumElements(), DL, XLenVT);
   } else
-    VL = DAG.getRegister(RISCV::X0, XLenVT);
+    VL = DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, XLenVT);
 
   unsigned IntID =
       IsUnmasked ? Intrinsic::riscv_vsoxei : Intrinsic::riscv_vsoxei_mask;

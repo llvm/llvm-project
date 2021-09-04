@@ -525,8 +525,8 @@ static hsa_status_t get_code_object_custom_metadata(
         size_t padding = new_offset - offset;
         offset = new_offset;
         info.arg_offsets.push_back(lcArg.offset_);
-        DEBUG_PRINT("Arg[%lu] \"%s\" (%u, %u)\n", i, lcArg.name_.c_str(),
-                    lcArg.size_, lcArg.offset_);
+        DP("Arg[%lu] \"%s\" (%u, %u)\n", i, lcArg.name_.c_str(), lcArg.size_,
+           lcArg.offset_);
         offset += lcArg.size_;
 
         // check if the arg is a hidden/implicit arg
@@ -541,13 +541,13 @@ static hsa_status_t get_code_object_custom_metadata(
     }
 
     // add size of implicit args, e.g.: offset x, y and z and pipe pointer, but
-    // in ATMI, do not count the compiler set implicit args, but set your own
-    // implicit args by discounting the compiler set implicit args
+    // do not count the compiler set implicit args, but set your own implicit
+    // args by discounting the compiler set implicit args
     info.kernel_segment_size =
         (hasHiddenArgs ? kernel_explicit_args_size : kernel_segment_size) +
         sizeof(impl_implicit_args_t);
-    DEBUG_PRINT("[%s: kernarg seg size] (%lu --> %u)\n", kernelName.c_str(),
-                kernel_segment_size, info.kernel_segment_size);
+    DP("[%s: kernarg seg size] (%lu --> %u)\n", kernelName.c_str(),
+       kernel_segment_size, info.kernel_segment_size);
 
     // kernel received, now add it to the kernel info table
     KernelInfoTable[kernelName] = info;
@@ -571,7 +571,7 @@ populate_InfoTables(hsa_executable_symbol_t symbol,
            "Symbol info extraction", get_error_string(err));
     return err;
   }
-  DEBUG_PRINT("Exec Symbol type: %d\n", type);
+  DP("Exec Symbol type: %d\n", type);
   if (type == HSA_SYMBOL_KIND_KERNEL) {
     err = hsa_executable_symbol_get_info(
         symbol, HSA_EXECUTABLE_SYMBOL_INFO_NAME_LENGTH, &name_length);
@@ -636,11 +636,10 @@ populate_InfoTables(hsa_executable_symbol_t symbol,
       return err;
     }
 
-    DEBUG_PRINT(
-        "Kernel %s --> %lx symbol %u group segsize %u pvt segsize %u bytes "
-        "kernarg\n",
-        kernelName.c_str(), info.kernel_object, info.group_segment_size,
-        info.private_segment_size, info.kernel_segment_size);
+    DP("Kernel %s --> %lx symbol %u group segsize %u pvt segsize %u bytes "
+       "kernarg\n",
+       kernelName.c_str(), info.kernel_object, info.group_segment_size,
+       info.private_segment_size, info.kernel_segment_size);
 
     // assign it back to the kernel info table
     KernelInfoTable[kernelName] = info;
@@ -681,12 +680,11 @@ populate_InfoTables(hsa_executable_symbol_t symbol,
       return err;
     }
 
-    DEBUG_PRINT("Symbol %s = %p (%u bytes)\n", name, (void *)info.addr,
-                info.size);
+    DP("Symbol %s = %p (%u bytes)\n", name, (void *)info.addr, info.size);
     SymbolInfoTable[std::string(name)] = info;
     free(name);
   } else {
-    DEBUG_PRINT("Symbol is an indirect function\n");
+    DP("Symbol is an indirect function\n");
   }
   return HSA_STATUS_SUCCESS;
 }
@@ -730,9 +728,8 @@ hsa_status_t RegisterModuleFromMemory(
       err = get_code_object_custom_metadata(module_bytes, module_size,
                                             KernelInfoTable);
       if (err != HSA_STATUS_SUCCESS) {
-        DEBUG_PRINT("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
-                    "Getting custom code object metadata",
-                    get_error_string(err));
+        DP("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
+           "Getting custom code object metadata", get_error_string(err));
         continue;
       }
 
@@ -741,8 +738,8 @@ hsa_status_t RegisterModuleFromMemory(
       err = hsa_code_object_deserialize(module_bytes, module_size, NULL,
                                         &code_object);
       if (err != HSA_STATUS_SUCCESS) {
-        DEBUG_PRINT("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
-                    "Code Object Deserialization", get_error_string(err));
+        DP("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
+           "Code Object Deserialization", get_error_string(err));
         continue;
       }
       assert(0 != code_object.handle);
@@ -763,8 +760,8 @@ hsa_status_t RegisterModuleFromMemory(
       err =
           hsa_executable_load_code_object(executable, agent, code_object, NULL);
       if (err != HSA_STATUS_SUCCESS) {
-        DEBUG_PRINT("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
-                    "Loading the code object", get_error_string(err));
+        DP("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
+           "Loading the code object", get_error_string(err));
         continue;
       }
 
@@ -772,7 +769,7 @@ hsa_status_t RegisterModuleFromMemory(
     }
     module_load_success = true;
   } while (0);
-  DEBUG_PRINT("Modules loaded successful? %d\n", module_load_success);
+  DP("Modules loaded successful? %d\n", module_load_success);
   if (module_load_success) {
     /* Freeze the executable; it can now be queried for symbols.  */
     err = hsa_executable_freeze(executable, "");

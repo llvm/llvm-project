@@ -29,18 +29,15 @@ define void @f(i32* noalias %a, i32* noalias %b, i32* noalias %c, i32* noalias %
 ; CHECK-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 8, i64 [[TMP0]])
 ; CHECK-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, i8* [[A5]], i64 [[MUL_RESULT3]]
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i8* [[UGLYGEP]] to i32*
-; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 [[MUL_RESULT3]], -8
-; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 8, [[TMP12]]
-; CHECK-NEXT:    [[UGLYGEP6:%.*]] = getelementptr i8, i8* [[A5]], i64 [[TMP13]]
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i8* [[UGLYGEP6]] to i32*
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp ugt i32* [[TMP14]], [[A]]
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp ult i32* [[TMP11]], [[A]]
-; CHECK-NEXT:    [[TMP17:%.*]] = select i1 false, i1 [[TMP15]], i1 [[TMP16]]
-; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP17]], [[MUL_OVERFLOW4]]
-; CHECK-NEXT:    [[TMP19:%.*]] = or i1 [[TMP10]], [[TMP18]]
-; CHECK-NEXT:    br i1 [[TMP19]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH_LDIST1:%.*]]
+; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 0, [[MUL_RESULT3]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, i8* [[A5]], i64 [[MUL_RESULT3]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, i8* [[A5]], i64 [[TMP11]]
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp ugt i8* [[TMP13]], [[A5]]
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult i8* [[TMP12]], [[A5]]
+; CHECK-NEXT:    [[TMP16:%.*]] = select i1 false, i1 [[TMP14]], i1 [[TMP15]]
+; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP16]], [[MUL_OVERFLOW4]]
+; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP10]], [[TMP17]]
+; CHECK-NEXT:    br i1 [[TMP18]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH_LDIST1:%.*]]
 ; CHECK:       for.body.ph.lver.orig:
 ; CHECK-NEXT:    br label [[FOR_BODY_LVER_ORIG:%.*]]
 ; CHECK:       for.body.lver.orig:
@@ -101,10 +98,10 @@ define void @f(i32* noalias %a, i32* noalias %b, i32* noalias %c, i32* noalias %
 ; CHECK-NEXT:    [[ARRAYIDXC:%.*]] = getelementptr inbounds i32, i32* [[C]], i64 [[MUL_EXT]]
 ; CHECK-NEXT:    store i32 [[MULC]], i32* [[ARRAYIDXC]], align 4
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[ADD]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT7:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT6:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
-; CHECK:       for.end.loopexit7:
+; CHECK:       for.end.loopexit6:
 ; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -181,18 +178,15 @@ define void @f_with_offset(i32* noalias %b, i32* noalias %c, i32* noalias %d, i3
 ; CHECK-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 8, i64 [[TMP0]])
 ; CHECK-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, i8* bitcast (i32* getelementptr inbounds ([8192 x i32], [8192 x i32]* @global_a, i64 0, i64 42) to i8*), i64 [[MUL_RESULT3]]
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i8* [[UGLYGEP]] to [8192 x i32]*
-; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 [[MUL_RESULT3]], -8
-; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 8, [[TMP12]]
-; CHECK-NEXT:    [[UGLYGEP5:%.*]] = getelementptr i8, i8* bitcast (i32* getelementptr inbounds ([8192 x i32], [8192 x i32]* @global_a, i64 0, i64 42) to i8*), i64 [[TMP13]]
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i8* [[UGLYGEP5]] to [8192 x i32]*
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp ugt [8192 x i32]* [[TMP14]], bitcast (i32* getelementptr inbounds ([8192 x i32], [8192 x i32]* @global_a, i64 0, i64 42) to [8192 x i32]*)
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp ult [8192 x i32]* [[TMP11]], bitcast (i32* getelementptr inbounds ([8192 x i32], [8192 x i32]* @global_a, i64 0, i64 42) to [8192 x i32]*)
-; CHECK-NEXT:    [[TMP17:%.*]] = select i1 false, i1 [[TMP15]], i1 [[TMP16]]
-; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP17]], [[MUL_OVERFLOW4]]
-; CHECK-NEXT:    [[TMP19:%.*]] = or i1 [[TMP10]], [[TMP18]]
-; CHECK-NEXT:    br i1 [[TMP19]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH_LDIST1:%.*]]
+; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 0, [[MUL_RESULT3]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, i8* bitcast (i32* getelementptr inbounds ([8192 x i32], [8192 x i32]* @global_a, i64 0, i64 42) to i8*), i64 [[MUL_RESULT3]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, i8* bitcast (i32* getelementptr inbounds ([8192 x i32], [8192 x i32]* @global_a, i64 0, i64 42) to i8*), i64 [[TMP11]]
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp ugt i8* [[TMP13]], bitcast (i32* getelementptr inbounds ([8192 x i32], [8192 x i32]* @global_a, i64 0, i64 42) to i8*)
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult i8* [[TMP12]], bitcast (i32* getelementptr inbounds ([8192 x i32], [8192 x i32]* @global_a, i64 0, i64 42) to i8*)
+; CHECK-NEXT:    [[TMP16:%.*]] = select i1 false, i1 [[TMP14]], i1 [[TMP15]]
+; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP16]], [[MUL_OVERFLOW4]]
+; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP10]], [[TMP17]]
+; CHECK-NEXT:    br i1 [[TMP18]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH_LDIST1:%.*]]
 ; CHECK:       for.body.ph.lver.orig:
 ; CHECK-NEXT:    br label [[FOR_BODY_LVER_ORIG:%.*]]
 ; CHECK:       for.body.lver.orig:
@@ -253,10 +247,10 @@ define void @f_with_offset(i32* noalias %b, i32* noalias %c, i32* noalias %d, i3
 ; CHECK-NEXT:    [[ARRAYIDXC:%.*]] = getelementptr inbounds i32, i32* [[C]], i64 [[MUL_EXT]]
 ; CHECK-NEXT:    store i32 [[MULC]], i32* [[ARRAYIDXC]], align 4
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[ADD]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT6:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT5:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
-; CHECK:       for.end.loopexit6:
+; CHECK:       for.end.loopexit5:
 ; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void

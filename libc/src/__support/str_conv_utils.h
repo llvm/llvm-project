@@ -34,18 +34,25 @@ static inline int b36_char_to_int(char input) {
   return 0;
 }
 
+// checks if the next 3 characters of the string pointer are the start of a
+// hexadecimal number. Does not advance the string pointer.
+static inline bool is_hex_start(const char *__restrict src) {
+  return *src == '0' && (*(src + 1) | 32) == 'x' && isalnum(*(src + 2)) &&
+         b36_char_to_int(*(src + 2)) < 16;
+}
+
 // Takes the address of the string pointer and parses the base from the start of
 // it. This will advance the string pointer.
 static inline int infer_base(const char *__restrict *__restrict src) {
-  if (**src == '0') {
+  if (is_hex_start(*src)) {
+    (*src) += 2;
+    return 16;
+  } else if (**src == '0') {
     ++(*src);
-    if ((**src | 32) == 'x') {
-      ++(*src);
-      return 16;
-    }
     return 8;
+  } else {
+    return 10;
   }
-  return 10;
 }
 
 // Takes a pointer to a string, a pointer to a string pointer, and the base to
@@ -71,7 +78,7 @@ static inline T strtointeger(const char *__restrict src,
 
   if (base == 0) {
     base = infer_base(&src);
-  } else if (base == 16 && *src == '0' && (*(src + 1) | 32) == 'x') {
+  } else if (base == 16 && is_hex_start(src)) {
     src = src + 2;
   }
 

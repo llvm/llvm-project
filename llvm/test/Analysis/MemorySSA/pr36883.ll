@@ -1,4 +1,3 @@
-; RUN: opt -basic-aa -memoryssa -enable-new-pm=0 -analyze < %s 2>&1 -S | FileCheck %s
 ; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa>,verify<memoryssa>' -S < %s 2>&1 | FileCheck %s
 ;
 ; We weren't properly considering the args in callsites in equality or hashing.

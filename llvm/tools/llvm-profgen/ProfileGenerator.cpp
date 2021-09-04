@@ -46,7 +46,7 @@ static cl::opt<bool> CSProfMergeColdContext(
              "profile."));
 
 static cl::opt<bool> CSProfTrimColdContext(
-    "csprof-trim-cold-context", cl::init(true), cl::ZeroOrMore,
+    "csprof-trim-cold-context", cl::init(false), cl::ZeroOrMore,
     cl::desc("If the total count of the profile after all merge is done "
              "is still smaller than threshold, it will be trimmed."));
 

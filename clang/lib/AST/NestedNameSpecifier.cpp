@@ -311,7 +311,8 @@ void NestedNameSpecifier::print(raw_ostream &OS, const PrintingPolicy &Policy,
           = dyn_cast<TemplateSpecializationType>(T)) {
       // Print the template name without its corresponding
       // nested-name-specifier.
-      SpecType->getTemplateName().print(OS, InnerPolicy, true);
+      SpecType->getTemplateName().print(OS, InnerPolicy,
+                                        TemplateName::Qualified::None);
 
       // Print the template argument list.
       printTemplateArgumentList(OS, SpecType->template_arguments(),

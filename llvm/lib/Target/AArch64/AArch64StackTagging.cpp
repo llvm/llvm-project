@@ -651,7 +651,8 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
 
       auto TagEnd = [&](Instruction *Node) { untagAlloca(AI, Node, Size); };
       if (!DT || !PDT ||
-          !forAllReachableExits(*DT, *PDT, Start, End, RetVec, TagEnd))
+          !forAllReachableExits(*DT, *PDT, Start, Info.LifetimeEnd, RetVec,
+                                TagEnd))
         End->eraseFromParent();
     } else {
       uint64_t Size = Info.AI->getAllocationSizeInBits(*DL).getValue() / 8;

@@ -254,7 +254,7 @@ for.inc:                                          ; preds = %for.cond
 
 ; Tests cases where longjmp function pointer is used in other ways than direct
 ; calls. longjmps should be replaced with
-; (int(*)(jmp_buf*, int))emscripten_longjmp.
+; (void(*)(jmp_buf*, int))emscripten_longjmp.
 declare void @take_longjmp(void (%struct.__jmp_buf_tag*, i32)* %arg_ptr)
 define void @indirect_longjmp() {
 ; CHECK-LABEL: @indirect_longjmp

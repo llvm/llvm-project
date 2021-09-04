@@ -17,7 +17,7 @@
 
 ; CHECK: 0x00000026:   DW_TAG_variable
 ; CHECK-NEXT:                DW_AT_name	("foo")
-; CHECK-NEXT:                DW_AT_type	(0x00000037 "int*")
+; CHECK-NEXT:                DW_AT_type	(0x00000037 "int *")
 ; CHECK-NEXT:                DW_AT_external	(true)
 ; CHECK-NEXT:                DW_AT_decl_file	("/usr/local/google/home/sbc/dev/wasm/simple{{[/\\]}}test.c")
 ; CHECK-NEXT:                DW_AT_decl_line	(4)
@@ -33,14 +33,14 @@
 
 ; CHECK: 0x00000043:   DW_TAG_variable
 ; CHECK-NEXT:                DW_AT_name	("ptr2")
-; CHECK-NEXT:                DW_AT_type	(0x00000054 "void()*")
+; CHECK-NEXT:                DW_AT_type	(0x00000054 "void (*)()")
 ; CHECK-NEXT:                DW_AT_external	(true)
 ; CHECK-NEXT:                DW_AT_decl_file	("/usr/local/google/home/sbc/dev/wasm/simple{{[/\\]}}test.c")
 ; CHECK-NEXT:                DW_AT_decl_line	(5)
 ; CHECK-NEXT:                DW_AT_location	(DW_OP_addr 0x4)
 
 ; CHECK: 0x00000054:   DW_TAG_pointer_type
-; CHECK-NEXT:                DW_AT_type	(0x00000059 "void()")
+; CHECK-NEXT:                DW_AT_type	(0x00000059 "void ()")
 
 ; CHECK: 0x00000059:   DW_TAG_subroutine_type
 ; CHECK-NEXT:                DW_AT_prototyped	(true)
@@ -70,7 +70,7 @@
 
 ; SPLIT:      0x00000019:   DW_TAG_variable
 ; SPLIT-NEXT:                 DW_AT_name      ("foo")
-; SPLIT-NEXT:                 DW_AT_type      (0x00000024 "int*")
+; SPLIT-NEXT:                 DW_AT_type      (0x00000024 "int *")
 ; SPLIT-NEXT:                 DW_AT_external  (true)
 ; SPLIT-NEXT:                 DW_AT_decl_file (0x01)
 ; SPLIT-NEXT:                 DW_AT_decl_line (4)
@@ -86,14 +86,14 @@
 
 ; SPLIT:      0x0000002d:   DW_TAG_variable
 ; SPLIT-NEXT:                 DW_AT_name      ("ptr2")
-; SPLIT-NEXT:                 DW_AT_type      (0x00000038 "void()*")
+; SPLIT-NEXT:                 DW_AT_type      (0x00000038 "void (*)()")
 ; SPLIT-NEXT:                 DW_AT_external  (true)
 ; SPLIT-NEXT:                 DW_AT_decl_file (0x01)
 ; SPLIT-NEXT:                 DW_AT_decl_line (5)
 ; SPLIT-NEXT:                 DW_AT_location  (DW_OP_GNU_addr_index 0x1)
 
 ; SPLIT:      0x00000038:   DW_TAG_pointer_type
-; SPLIT-NEXT:                 DW_AT_type      (0x0000003d "void()")
+; SPLIT-NEXT:                 DW_AT_type      (0x0000003d "void ()")
 
 ; SPLIT:      0x0000003d:   DW_TAG_subroutine_type
 ; SPLIT-NEXT:                 DW_AT_prototyped        (true)

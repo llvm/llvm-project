@@ -4,23 +4,9 @@
 
 from typing import Sequence
 
-import importlib
 import os
 
-__all__ = [
-  "load_extension",
-  "preload_dependency",
-]
-
 _this_dir = os.path.dirname(__file__)
-
-def load_extension(name):
-  return importlib.import_module(f".{name}", __package__)
-
-
-def preload_dependency(public_name):
-  # TODO: Implement this hook to pre-load DLLs with ctypes on Windows.
-  pass
 
 
 def get_lib_dirs() -> Sequence[str]:

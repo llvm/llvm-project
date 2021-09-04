@@ -12,10 +12,8 @@
 // DOT_PRODUCT, FINDLOC, MATMUL, SUM, and PRODUCT are in their own eponymous
 // source files.
 // NORM2, MAXLOC, MINLOC, MAXVAL, and MINVAL are in extrema.cpp.
-//
-// TODO: IALL, IANY
 
-#include "reduction.h"
+#include "flang/Runtime/reduction.h"
 #include "reduction-templates.h"
 #include <cinttypes>
 

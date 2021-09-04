@@ -1,8 +1,4 @@
 ; REQUIRES: asserts
-; RUN: opt -regions -analyze -enable-new-pm=0 < %s | FileCheck %s
-; RUN: opt -regions -stats -disable-output < %s 2>&1 | FileCheck -check-prefix=STAT %s
-; RUN: opt -regions -print-region-style=bb  -analyze -enable-new-pm=0 < %s 2>&1 | FileCheck -check-prefix=BBIT %s
-; RUN: opt -regions -print-region-style=rn  -analyze -enable-new-pm=0 < %s 2>&1 | FileCheck -check-prefix=RNIT %s
 
 ; RUN: opt < %s -passes='print<regions>' 2>&1 | FileCheck %s
 ; RUN: opt -passes='print<regions>' -stats -disable-output < %s 2>&1 | FileCheck -check-prefix=STAT %s

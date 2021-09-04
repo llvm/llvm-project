@@ -15,33 +15,45 @@
 #include <ranges>
 
 #include <cassert>
-#include "test_macros.h"
 #include "test_iterators.h"
 #include "types.h"
 
 constexpr bool test() {
-  std::ranges::subrange<MoveOnlyForwardIter, int*> a(MoveOnlyForwardIter(globalBuff), globalBuff + 8, 8);
-  assert(a.begin().base == globalBuff);
-  assert(!a.empty());
-  assert(a.size() == 8);
+  int buff[] = {1, 2, 3, 4, 5};
 
-  std::ranges::subrange<ForwardIter> b(ForwardIter(nullptr), ForwardIter(nullptr));
-  assert(b.empty());
+  {
+    std::ranges::subrange<MoveOnlyForwardIter, int*> a(MoveOnlyForwardIter(buff), buff + 5, 5);
+    assert(a.begin().base == buff);
+    assert(!a.empty());
+    assert(a.size() == 5);
+  }
 
-  std::ranges::subrange<ForwardIter> c{ForwardIter(globalBuff), ForwardIter(globalBuff)};
-  assert(c.empty());
+  {
+    std::ranges::subrange<ForwardIter> b(ForwardIter(nullptr), ForwardIter(nullptr));
+    assert(b.empty());
+  }
 
-  std::ranges::subrange<ForwardIter> d(ForwardIter(globalBuff), ForwardIter(globalBuff + 1));
-  assert(!d.empty());
+  {
+    std::ranges::subrange<ForwardIter> c{ForwardIter(buff), ForwardIter(buff)};
+    assert(c.empty());
+  }
 
-  std::ranges::subrange<SizedSentinelForwardIter> e(SizedSentinelForwardIter(globalBuff),
-                                                    SizedSentinelForwardIter(globalBuff + 8), 8);
-  assert(!e.empty());
-  assert(e.size() == 8);
+  {
+    std::ranges::subrange<ForwardIter> d(ForwardIter(buff), ForwardIter(buff + 1));
+    assert(!d.empty());
+  }
 
-  // Make sure that operator- is used to calculate size when possible.
-  if (!std::is_constant_evaluated())
-    assert(SizedSentinelForwardIter::minusCount == 1);
+  {
+    bool minusWasCalled = false;
+    SizedSentinelForwardIter beg(buff, &minusWasCalled), end(buff + 5, &minusWasCalled);
+    std::ranges::subrange<SizedSentinelForwardIter> e(beg, end, 5);
+    assert(!e.empty());
+
+    // Make sure that operator- is used to calculate size when possible.
+    minusWasCalled = false;
+    assert(e.size() == 5);
+    assert(minusWasCalled);
+  }
 
   return true;
 }

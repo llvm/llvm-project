@@ -1,4 +1,4 @@
-//===-- runtime/numeric.cpp -------------------------------------*- C++ -*-===//
+//===-- runtime/numeric.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "numeric.h"
+#include "flang/Runtime/numeric.h"
 #include "flang/Common/long-double.h"
 #include <climits>
 #include <cmath>

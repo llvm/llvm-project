@@ -181,6 +181,11 @@ protected:
   const RISCVSubtarget &STI;
 };
 
+namespace RISCV {
+// Special immediate for AVL operand of V pseudo instructions to indicate VLMax.
+static constexpr int64_t VLMaxSentinel = -1LL;
+} // namespace RISCV
+
 namespace RISCVVPseudosTable {
 
 struct PseudoInfo {

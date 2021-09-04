@@ -1,5 +1,3 @@
-; RUN: opt < %s -analyze -branch-prob -enable-new-pm=0 | FileCheck %s
-; RUN: opt < %s -analyze -lazy-branch-prob -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
 
 declare i32 @strcmp(i8*, i8*)
