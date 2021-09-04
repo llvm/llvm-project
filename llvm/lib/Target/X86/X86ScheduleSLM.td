@@ -79,9 +79,9 @@ multiclass SLMWriteResPair<X86FoldableSchedWrite SchedRW,
   }
 }
 
-// A folded store needs a cycle on MEC_RSV for the store data, but it does not
-// need an extra port cycle to recompute the address.
-def : WriteRes<WriteRMW, [SLM_MEC_RSV]>;
+// A folded store needs a cycle on MEC_RSV for the store data (using the same uop),
+// but it does not need an extra port cycle to recompute the address.
+def : WriteRes<WriteRMW, [SLM_MEC_RSV]> { let NumMicroOps = 0; }
 
 def : WriteRes<WriteStore,   [SLM_IEC_RSV01, SLM_MEC_RSV]>;
 def : WriteRes<WriteStoreNT, [SLM_IEC_RSV01, SLM_MEC_RSV]>;
@@ -101,16 +101,16 @@ def : InstRW<[WriteMove], (instrs COPY)>;
 defm : SLMWriteResPair<WriteALU,    [SLM_IEC_RSV01], 1>;
 defm : SLMWriteResPair<WriteADC,    [SLM_IEC_RSV01], 1>;
 
-defm : SLMWriteResPair<WriteIMul8,     [SLM_IEC_RSV1],  3>;
-defm : SLMWriteResPair<WriteIMul16,    [SLM_IEC_RSV1],  3>;
-defm : SLMWriteResPair<WriteIMul16Imm, [SLM_IEC_RSV1],  3>;
-defm : SLMWriteResPair<WriteIMul16Reg, [SLM_IEC_RSV1],  3>;
-defm : SLMWriteResPair<WriteIMul32,    [SLM_IEC_RSV1],  3>;
+defm : SLMWriteResPair<WriteIMul8,     [SLM_IEC_RSV1],  5, [5], 3>;
+defm : SLMWriteResPair<WriteIMul16,    [SLM_IEC_RSV1],  5, [5], 4, 3, 1>;
+defm : SLMWriteResPair<WriteIMul16Imm, [SLM_IEC_RSV1],  4, [4], 2, 3, 1>;
+defm : SLMWriteResPair<WriteIMul16Reg, [SLM_IEC_RSV1],  4, [4], 2, 3, 1>;
+defm : SLMWriteResPair<WriteIMul32,    [SLM_IEC_RSV1],  5, [5], 3, 3, 1>;
 defm : SLMWriteResPair<WriteIMul32Imm, [SLM_IEC_RSV1],  3>;
 defm : SLMWriteResPair<WriteIMul32Reg, [SLM_IEC_RSV1],  3>;
-defm : SLMWriteResPair<WriteIMul64,    [SLM_IEC_RSV1],  3>;
-defm : SLMWriteResPair<WriteIMul64Imm, [SLM_IEC_RSV1],  3>;
-defm : SLMWriteResPair<WriteIMul64Reg, [SLM_IEC_RSV1],  3>;
+defm : SLMWriteResPair<WriteIMul64,    [SLM_IEC_RSV1],  7, [7], 3>;
+defm : SLMWriteResPair<WriteIMul64Imm, [SLM_IEC_RSV1],  5, [2]>;
+defm : SLMWriteResPair<WriteIMul64Reg, [SLM_IEC_RSV1],  5, [2]>;
 defm : X86WriteResUnsupported<WriteIMulH>;
 defm : X86WriteResUnsupported<WriteIMulHLd>;
 defm : X86WriteResPairUnsupported<WriteMULX32>;

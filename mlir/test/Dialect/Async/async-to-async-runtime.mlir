@@ -60,6 +60,10 @@ func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
     async.yield
   }
   // CHECK: async.runtime.await %[[TOKEN]]
+  // CHECK: %[[IS_ERROR:.*]] = async.runtime.is_error %[[TOKEN]]
+  // CHECK: %[[TRUE:.*]] = constant true
+  // CHECK: %[[NOT_ERROR:.*]] = xor %[[IS_ERROR]], %[[TRUE]] : i1
+  // CHECK: assert %[[NOT_ERROR]]
   // CHECK-NEXT: return
   async.await %token0 : !async.token
   return

@@ -397,10 +397,23 @@ public:
     Location loc = op->getLoc();
     Value operand = AwaitAdaptor(operands).operand();
 
+    Type i1 = rewriter.getI1Type();
+
     // Inside regular functions we use the blocking wait operation to wait for
     // the async object (token, value or group) to become available.
-    if (!isInCoroutine)
-      rewriter.create<RuntimeAwaitOp>(loc, operand);
+    if (!isInCoroutine) {
+      ImplicitLocOpBuilder builder(loc, op, rewriter.getListener());
+      builder.create<RuntimeAwaitOp>(loc, operand);
+
+      // Assert that the awaited operands is not in the error state.
+      Value isError = builder.create<RuntimeIsErrorOp>(i1, operand);
+      Value notError = builder.create<XOrOp>(
+          isError,
+          builder.create<ConstantOp>(loc, i1, builder.getIntegerAttr(i1, 1)));
+
+      builder.create<AssertOp>(notError,
+                               "Awaited async operand is in error state");
+    }
 
     // Inside the coroutine we convert await operation into coroutine suspension
     // point, and resume execution asynchronously.
@@ -430,8 +443,7 @@ public:
 
       // Check if the awaited value is in the error state.
       builder.setInsertionPointToStart(resume);
-      auto isError =
-          builder.create<RuntimeIsErrorOp>(loc, rewriter.getI1Type(), operand);
+      auto isError = builder.create<RuntimeIsErrorOp>(loc, i1, operand);
       builder.create<CondBranchOp>(isError,
                                    /*trueDest=*/setupSetErrorBlock(coro),
                                    /*trueArgs=*/ArrayRef<Value>(),
@@ -772,7 +784,8 @@ void AsyncToAsyncRuntimePass::runOnOperation() {
     });
     return !walkResult.wasInterrupted();
   });
-  runtimeTarget.addLegalOp<BranchOp, CondBranchOp>();
+  runtimeTarget
+      .addLegalOp<AssertOp, XOrOp, ConstantOp, BranchOp, CondBranchOp>();
 
   // Assertions must be converted to runtime errors inside async functions.
   runtimeTarget.addDynamicallyLegalOp<AssertOp>([&](AssertOp op) -> bool {
