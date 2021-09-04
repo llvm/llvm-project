@@ -620,7 +620,7 @@ for postfix in ["2", "1", ""]:
   config.substitutions.append( ("%xdynamiclib_filename" + postfix, 'lib%xdynamiclib_namespec{}.so'.format(postfix)) )
   config.substitutions.append( ("%xdynamiclib_namespec", '%basename_t.dynamic') )
 
-# Provide a substituion that can be used to tell Clang to use a static libstdc++.
+# Provide a substitution that can be used to tell Clang to use a static libstdc++.
 # The substitution expands to nothing on non Linux platforms.
 # FIXME: This should check the target OS, not the host OS.
 if config.host_os == 'Linux':

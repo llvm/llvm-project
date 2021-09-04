@@ -33,6 +33,7 @@
 
 namespace clang {
 
+class AnalyzerOptions;
 class BlockDecl;
 class CXXBoolLiteralExpr;
 class CXXMethodDecl;
@@ -66,6 +67,8 @@ protected:
 
   ProgramStateManager &StateMgr;
 
+  const AnalyzerOptions &AnOpts;
+
   /// The scalar type to use for array indices.
   const QualType ArrayIndexTy;
 
@@ -96,11 +99,7 @@ protected:
 
 public:
   SValBuilder(llvm::BumpPtrAllocator &alloc, ASTContext &context,
-              ProgramStateManager &stateMgr)
-      : Context(context), BasicVals(context, alloc),
-        SymMgr(context, BasicVals, alloc), MemMgr(context, alloc),
-        StateMgr(stateMgr), ArrayIndexTy(context.LongLongTy),
-        ArrayIndexWidth(context.getTypeSize(ArrayIndexTy)) {}
+              ProgramStateManager &stateMgr);
 
   virtual ~SValBuilder() = default;
 
@@ -187,6 +186,8 @@ public:
 
   MemRegionManager &getRegionManager() { return MemMgr; }
   const MemRegionManager &getRegionManager() const { return MemMgr; }
+
+  const AnalyzerOptions &getAnalyzerOptions() const { return AnOpts; }
 
   // Forwarding methods to SymbolManager.
 

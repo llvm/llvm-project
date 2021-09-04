@@ -332,7 +332,7 @@ int ExtractResolvFDs(void *state, int *fds, int nfd) {
 }
 
 // Extract file descriptors passed via UNIX domain sockets.
-// This is requried to properly handle "open" of these fds.
+// This is required to properly handle "open" of these fds.
 // see 'man recvmsg' and 'man 3 cmsg'.
 int ExtractRecvmsgFDs(void *msgp, int *fds, int nfd) {
   int res = 0;

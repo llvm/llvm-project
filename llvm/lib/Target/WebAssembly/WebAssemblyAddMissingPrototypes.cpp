@@ -86,27 +86,37 @@ bool WebAssemblyAddMissingPrototypes::runOnModule(Module &M) {
                            F.getName());
     }
 
-    // Create a function prototype based on the first call site (first bitcast)
-    // that we find.
+    // Find calls of this function, looking through bitcasts.
+    SmallVector<CallBase *> Calls;
+    SmallVector<Value *> Worklist;
+    Worklist.push_back(&F);
+    while (!Worklist.empty()) {
+      Value *V = Worklist.pop_back_val();
+      for (User *U : V->users()) {
+        if (auto *BC = dyn_cast<BitCastOperator>(U))
+          Worklist.push_back(BC);
+        else if (auto *CB = dyn_cast<CallBase>(U))
+          if (CB->getCalledOperand() == V)
+            Calls.push_back(CB);
+      }
+    }
+
+    // Create a function prototype based on the first call site that we find.
     FunctionType *NewType = nullptr;
-    for (Use &U : F.uses()) {
-      LLVM_DEBUG(dbgs() << "prototype-less use: " << F.getName() << "\n");
-      LLVM_DEBUG(dbgs() << *U.getUser() << "\n");
-      if (auto *BC = dyn_cast<BitCastOperator>(U.getUser())) {
-        if (auto *DestType = dyn_cast<FunctionType>(
-                BC->getDestTy()->getPointerElementType())) {
-          if (!NewType) {
-            // Create a new function with the correct type
-            NewType = DestType;
-            LLVM_DEBUG(dbgs() << "found function type: " << *NewType << "\n");
-          } else if (NewType != DestType) {
-            errs() << "warning: prototype-less function used with "
-                      "conflicting signatures: "
-                   << F.getName() << "\n";
-            LLVM_DEBUG(dbgs() << "  " << *DestType << "\n");
-            LLVM_DEBUG(dbgs() << "  "<<  *NewType << "\n");
-          }
-        }
+    for (CallBase *CB : Calls) {
+      LLVM_DEBUG(dbgs() << "prototype-less call of " << F.getName() << ":\n");
+      LLVM_DEBUG(dbgs() << *CB << "\n");
+      FunctionType *DestType = CB->getFunctionType();
+      if (!NewType) {
+        // Create a new function with the correct type
+        NewType = DestType;
+        LLVM_DEBUG(dbgs() << "found function type: " << *NewType << "\n");
+      } else if (NewType != DestType) {
+        errs() << "warning: prototype-less function used with "
+                  "conflicting signatures: "
+               << F.getName() << "\n";
+        LLVM_DEBUG(dbgs() << "  " << *DestType << "\n");
+        LLVM_DEBUG(dbgs() << "  " << *NewType << "\n");
       }
     }
 

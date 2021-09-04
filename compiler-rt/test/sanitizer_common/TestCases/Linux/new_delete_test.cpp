@@ -6,7 +6,7 @@
 
 // Check that all new/delete variants are defined and work with supported
 // sanitizers. Sanitizer-specific failure modes tests are supposed to go to
-// the particular sanitizier's test suites.
+// the particular sanitizer's test suites.
 
 #include <cstddef>
 

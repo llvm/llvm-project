@@ -84,7 +84,7 @@ foreach(tool ${SUPPORTED_TOOLS})
     configure_lit_site_cfg(
       ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
       ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg.py)
-    # FIXME(dliew): LSan i386 on Darwin is completly broken right now.
+    # FIXME(dliew): LSan i386 on Darwin is completely broken right now.
     # so don't run the tests by default.
     if (NOT (CMAKE_SYSTEM_NAME MATCHES "Darwin" AND
              ${tool} STREQUAL "lsan" AND
