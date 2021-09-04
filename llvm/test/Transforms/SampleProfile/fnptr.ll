@@ -2,9 +2,6 @@
 ; formats. This checks that we produce the same profile annotations regardless
 ; of the profile format.
 ;
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/fnptr.prof | opt -analyze -branch-prob -enable-new-pm=0 | FileCheck %s
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/fnptr.binprof | opt -analyze -branch-prob  -enable-new-pm=0| FileCheck %s
-
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/fnptr.prof | opt -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/fnptr.binprof | opt -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
 
