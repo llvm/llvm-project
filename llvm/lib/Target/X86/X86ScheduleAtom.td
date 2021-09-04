@@ -56,17 +56,21 @@ multiclass AtomWriteResPair<X86FoldableSchedWrite SchedRW,
                             list<ProcResourceKind> RMPorts,
                             int RRLat = 1, int RMLat = 1,
                             list<int> RRRes = [1],
-                            list<int> RMRes = [1]> {
+                            list<int> RMRes = [1],
+                            int RRUOps = 1,
+                            int RMUOps = 1> {
   // Register variant.
   def : WriteRes<SchedRW, RRPorts> {
     let Latency = RRLat;
     let ResourceCycles = RRRes;
+    let NumMicroOps = RRUOps;
   }
 
   // Memory variant.
   def : WriteRes<SchedRW.Folded, RMPorts> {
     let Latency = RMLat;
     let ResourceCycles = RMRes;
+    let NumMicroOps = RMUOps;
   }
 }
 
