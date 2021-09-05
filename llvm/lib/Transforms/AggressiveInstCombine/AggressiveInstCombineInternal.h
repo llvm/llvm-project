@@ -17,6 +17,8 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Support/KnownBits.h"
 
 using namespace llvm;
 
@@ -103,6 +105,16 @@ private:
   ///         expression dag, or nullptr if the expression dag is not eligible
   ///         to be reduced.
   Type *getBestTruncatedType();
+
+  KnownBits computeKnownBits(const Value *V) const {
+    return llvm::computeKnownBits(V, DL, /*Depth=*/0, /*AC=*/nullptr,
+                                  /*CtxI=*/nullptr, &DT);
+  }
+
+  unsigned ComputeNumSignBits(const Value *V) const {
+    return llvm::ComputeNumSignBits(V, DL, /*Depth=*/0, /*AC=*/nullptr,
+                                    /*CtxI=*/nullptr, &DT);
+  }
 
   /// Given a \p V value and a \p SclTy scalar type return the generated reduced
   /// value of \p V based on the type \p SclTy.

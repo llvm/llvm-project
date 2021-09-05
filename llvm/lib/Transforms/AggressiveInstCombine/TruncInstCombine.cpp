@@ -288,19 +288,19 @@ Type *TruncInstCombine::getBestTruncatedType() {
   for (auto &Itr : InstInfoMap) {
     Instruction *I = Itr.first;
     if (I->isShift()) {
-      KnownBits KnownRHS = computeKnownBits(I->getOperand(1), DL);
+      KnownBits KnownRHS = computeKnownBits(I->getOperand(1));
       unsigned MinBitWidth = KnownRHS.getMaxValue()
                                  .uadd_sat(APInt(OrigBitWidth, 1))
                                  .getLimitedValue(OrigBitWidth);
       if (MinBitWidth == OrigBitWidth)
         return nullptr;
       if (I->getOpcode() == Instruction::LShr) {
-        KnownBits KnownLHS = computeKnownBits(I->getOperand(0), DL);
+        KnownBits KnownLHS = computeKnownBits(I->getOperand(0));
         MinBitWidth =
             std::max(MinBitWidth, KnownLHS.getMaxValue().getActiveBits());
       }
       if (I->getOpcode() == Instruction::AShr) {
-        unsigned NumSignBits = ComputeNumSignBits(I->getOperand(0), DL);
+        unsigned NumSignBits = ComputeNumSignBits(I->getOperand(0));
         MinBitWidth = std::max(MinBitWidth, OrigBitWidth - NumSignBits + 1);
       }
       if (MinBitWidth >= OrigBitWidth)
