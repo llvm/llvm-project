@@ -42,54 +42,34 @@ define i32 @xori64i32(i64 %a) {
 define i64 @selecti64i64(i64 %a) {
 ; CHECK7A-LABEL: selecti64i64:
 ; CHECK7A:       @ %bb.0:
-; CHECK7A-NEXT:    cmn r1, #1
-; CHECK7A-NEXT:    mov r0, #-2147483648
-; CHECK7A-NEXT:    mvn r1, #0
-; CHECK7A-NEXT:    mvngt r0, #-2147483648
-; CHECK7A-NEXT:    movwgt r1, #0
+; CHECK7A-NEXT:    mvn r0, #-2147483648
+; CHECK7A-NEXT:    eor r0, r0, r1, asr #31
+; CHECK7A-NEXT:    asr r1, r1, #31
 ; CHECK7A-NEXT:    bx lr
 ;
 ; CHECK6M-LABEL: selecti64i64:
 ; CHECK6M:       @ %bb.0:
-; CHECK6M-NEXT:    cmp r1, #0
-; CHECK6M-NEXT:    bge .LBB1_2
-; CHECK6M-NEXT:  @ %bb.1:
-; CHECK6M-NEXT:    movs r0, #1
-; CHECK6M-NEXT:    lsls r0, r0, #31
-; CHECK6M-NEXT:    b .LBB1_3
-; CHECK6M-NEXT:  .LBB1_2:
+; CHECK6M-NEXT:    asrs r1, r1, #31
 ; CHECK6M-NEXT:    ldr r0, .LCPI1_0
-; CHECK6M-NEXT:  .LBB1_3:
-; CHECK6M-NEXT:    movs r2, #0
-; CHECK6M-NEXT:    cmp r1, #0
-; CHECK6M-NEXT:    bge .LBB1_5
-; CHECK6M-NEXT:  @ %bb.4:
-; CHECK6M-NEXT:    mvns r2, r2
-; CHECK6M-NEXT:  .LBB1_5:
-; CHECK6M-NEXT:    mov r1, r2
+; CHECK6M-NEXT:    eors r0, r1
 ; CHECK6M-NEXT:    bx lr
 ; CHECK6M-NEXT:    .p2align 2
-; CHECK6M-NEXT:  @ %bb.6:
+; CHECK6M-NEXT:  @ %bb.1:
 ; CHECK6M-NEXT:  .LCPI1_0:
 ; CHECK6M-NEXT:    .long 2147483647 @ 0x7fffffff
 ;
 ; CHECK7M-LABEL: selecti64i64:
 ; CHECK7M:       @ %bb.0:
-; CHECK7M-NEXT:    cmp.w r1, #-1
-; CHECK7M-NEXT:    mov.w r0, #-2147483648
-; CHECK7M-NEXT:    mov.w r1, #-1
-; CHECK7M-NEXT:    it gt
-; CHECK7M-NEXT:    mvngt r0, #-2147483648
-; CHECK7M-NEXT:    it gt
-; CHECK7M-NEXT:    movgt r1, #0
+; CHECK7M-NEXT:    mvn r0, #-2147483648
+; CHECK7M-NEXT:    eor.w r0, r0, r1, asr #31
+; CHECK7M-NEXT:    asrs r1, r1, #31
 ; CHECK7M-NEXT:    bx lr
 ;
 ; CHECK81M-LABEL: selecti64i64:
 ; CHECK81M:       @ %bb.0:
-; CHECK81M-NEXT:    cmp.w r1, #-1
 ; CHECK81M-NEXT:    mvn r0, #-2147483648
-; CHECK81M-NEXT:    cinv r0, r0, le
-; CHECK81M-NEXT:    csetm r1, le
+; CHECK81M-NEXT:    eor.w r0, r0, r1, asr #31
+; CHECK81M-NEXT:    asrs r1, r1, #31
 ; CHECK81M-NEXT:    bx lr
   %c = icmp sgt i64 %a, -1
   %s = select i1 %c, i64 2147483647, i64 -2147483648
@@ -99,9 +79,8 @@ define i64 @selecti64i64(i64 %a) {
 define i32 @selecti64i32(i64 %a) {
 ; CHECK7A-LABEL: selecti64i32:
 ; CHECK7A:       @ %bb.0:
-; CHECK7A-NEXT:    mov r0, #-2147483648
-; CHECK7A-NEXT:    cmn r1, #1
-; CHECK7A-NEXT:    mvngt r0, #-2147483648
+; CHECK7A-NEXT:    mvn r0, #-2147483648
+; CHECK7A-NEXT:    eor r0, r0, r1, asr #31
 ; CHECK7A-NEXT:    bx lr
 ;
 ; CHECK6M-LABEL: selecti64i32:
@@ -120,17 +99,14 @@ define i32 @selecti64i32(i64 %a) {
 ;
 ; CHECK7M-LABEL: selecti64i32:
 ; CHECK7M:       @ %bb.0:
-; CHECK7M-NEXT:    mov.w r0, #-2147483648
-; CHECK7M-NEXT:    cmp.w r1, #-1
-; CHECK7M-NEXT:    it gt
-; CHECK7M-NEXT:    mvngt r0, #-2147483648
+; CHECK7M-NEXT:    mvn r0, #-2147483648
+; CHECK7M-NEXT:    eor.w r0, r0, r1, asr #31
 ; CHECK7M-NEXT:    bx lr
 ;
 ; CHECK81M-LABEL: selecti64i32:
 ; CHECK81M:       @ %bb.0:
 ; CHECK81M-NEXT:    mvn r0, #-2147483648
-; CHECK81M-NEXT:    cmp.w r1, #-1
-; CHECK81M-NEXT:    cinv r0, r0, le
+; CHECK81M-NEXT:    eor.w r0, r0, r1, asr #31
 ; CHECK81M-NEXT:    bx lr
   %c = icmp sgt i64 %a, -1
   %s = select i1 %c, i32 2147483647, i32 -2147483648
@@ -140,56 +116,37 @@ define i32 @selecti64i32(i64 %a) {
 define i64 @selecti32i64(i32 %a) {
 ; CHECK7A-LABEL: selecti32i64:
 ; CHECK7A:       @ %bb.0:
-; CHECK7A-NEXT:    mov r2, #-2147483648
-; CHECK7A-NEXT:    cmn r0, #1
-; CHECK7A-NEXT:    mvn r1, #0
-; CHECK7A-NEXT:    mvngt r2, #-2147483648
-; CHECK7A-NEXT:    movwgt r1, #0
+; CHECK7A-NEXT:    mvn r1, #-2147483648
+; CHECK7A-NEXT:    eor r2, r1, r0, asr #31
+; CHECK7A-NEXT:    asr r1, r0, #31
 ; CHECK7A-NEXT:    mov r0, r2
 ; CHECK7A-NEXT:    bx lr
 ;
 ; CHECK6M-LABEL: selecti32i64:
 ; CHECK6M:       @ %bb.0:
-; CHECK6M-NEXT:    mov r2, r0
-; CHECK6M-NEXT:    cmp r0, #0
-; CHECK6M-NEXT:    bge .LBB3_2
-; CHECK6M-NEXT:  @ %bb.1:
-; CHECK6M-NEXT:    movs r0, #1
-; CHECK6M-NEXT:    lsls r0, r0, #31
-; CHECK6M-NEXT:    b .LBB3_3
-; CHECK6M-NEXT:  .LBB3_2:
+; CHECK6M-NEXT:    asrs r1, r0, #31
 ; CHECK6M-NEXT:    ldr r0, .LCPI3_0
-; CHECK6M-NEXT:  .LBB3_3:
-; CHECK6M-NEXT:    movs r1, #0
-; CHECK6M-NEXT:    cmp r2, #0
-; CHECK6M-NEXT:    bge .LBB3_5
-; CHECK6M-NEXT:  @ %bb.4:
-; CHECK6M-NEXT:    mvns r1, r1
-; CHECK6M-NEXT:  .LBB3_5:
+; CHECK6M-NEXT:    eors r0, r1
 ; CHECK6M-NEXT:    bx lr
 ; CHECK6M-NEXT:    .p2align 2
-; CHECK6M-NEXT:  @ %bb.6:
+; CHECK6M-NEXT:  @ %bb.1:
 ; CHECK6M-NEXT:  .LCPI3_0:
 ; CHECK6M-NEXT:    .long 2147483647 @ 0x7fffffff
 ;
 ; CHECK7M-LABEL: selecti32i64:
 ; CHECK7M:       @ %bb.0:
-; CHECK7M-NEXT:    mov.w r2, #-2147483648
-; CHECK7M-NEXT:    cmp.w r0, #-1
-; CHECK7M-NEXT:    it gt
-; CHECK7M-NEXT:    mvngt r2, #-2147483648
-; CHECK7M-NEXT:    mov.w r1, #-1
+; CHECK7M-NEXT:    mvn r1, #-2147483648
+; CHECK7M-NEXT:    eor.w r2, r1, r0, asr #31
+; CHECK7M-NEXT:    asrs r1, r0, #31
 ; CHECK7M-NEXT:    mov r0, r2
-; CHECK7M-NEXT:    it gt
-; CHECK7M-NEXT:    movgt r1, #0
 ; CHECK7M-NEXT:    bx lr
 ;
 ; CHECK81M-LABEL: selecti32i64:
 ; CHECK81M:       @ %bb.0:
 ; CHECK81M-NEXT:    mvn r1, #-2147483648
-; CHECK81M-NEXT:    cmp.w r0, #-1
-; CHECK81M-NEXT:    cinv r0, r1, le
-; CHECK81M-NEXT:    csetm r1, le
+; CHECK81M-NEXT:    eor.w r2, r1, r0, asr #31
+; CHECK81M-NEXT:    asrs r1, r0, #31
+; CHECK81M-NEXT:    mov r0, r2
 ; CHECK81M-NEXT:    bx lr
   %c = icmp sgt i32 %a, -1
   %s = select i1 %c, i64 2147483647, i64 -2147483648
@@ -232,37 +189,27 @@ define i8 @xori32i8(i32 %a) {
 define i32 @selecti32i32(i32 %a) {
 ; CHECK7A-LABEL: selecti32i32:
 ; CHECK7A:       @ %bb.0:
-; CHECK7A-NEXT:    mvn r1, #84
-; CHECK7A-NEXT:    cmn r0, #1
-; CHECK7A-NEXT:    movwgt r1, #84
-; CHECK7A-NEXT:    mov r0, r1
+; CHECK7A-NEXT:    mov r1, #84
+; CHECK7A-NEXT:    eor r0, r1, r0, asr #31
 ; CHECK7A-NEXT:    bx lr
 ;
 ; CHECK6M-LABEL: selecti32i32:
 ; CHECK6M:       @ %bb.0:
-; CHECK6M-NEXT:    mov r1, r0
+; CHECK6M-NEXT:    asrs r1, r0, #31
 ; CHECK6M-NEXT:    movs r0, #84
-; CHECK6M-NEXT:    cmp r1, #0
-; CHECK6M-NEXT:    bge .LBB5_2
-; CHECK6M-NEXT:  @ %bb.1:
-; CHECK6M-NEXT:    mvns r0, r0
-; CHECK6M-NEXT:  .LBB5_2:
+; CHECK6M-NEXT:    eors r0, r1
 ; CHECK6M-NEXT:    bx lr
 ;
 ; CHECK7M-LABEL: selecti32i32:
 ; CHECK7M:       @ %bb.0:
-; CHECK7M-NEXT:    mvn r1, #84
-; CHECK7M-NEXT:    cmp.w r0, #-1
-; CHECK7M-NEXT:    it gt
-; CHECK7M-NEXT:    movgt r1, #84
-; CHECK7M-NEXT:    mov r0, r1
+; CHECK7M-NEXT:    movs r1, #84
+; CHECK7M-NEXT:    eor.w r0, r1, r0, asr #31
 ; CHECK7M-NEXT:    bx lr
 ;
 ; CHECK81M-LABEL: selecti32i32:
 ; CHECK81M:       @ %bb.0:
 ; CHECK81M-NEXT:    movs r1, #84
-; CHECK81M-NEXT:    cmp.w r0, #-1
-; CHECK81M-NEXT:    cinv r0, r1, le
+; CHECK81M-NEXT:    eor.w r0, r1, r0, asr #31
 ; CHECK81M-NEXT:    bx lr
   %c = icmp sgt i32 %a, -1
   %s = select i1 %c, i32 84, i32 -85
@@ -272,37 +219,27 @@ define i32 @selecti32i32(i32 %a) {
 define i8 @selecti32i8(i32 %a) {
 ; CHECK7A-LABEL: selecti32i8:
 ; CHECK7A:       @ %bb.0:
-; CHECK7A-NEXT:    mvn r1, #84
-; CHECK7A-NEXT:    cmn r0, #1
-; CHECK7A-NEXT:    movwgt r1, #84
-; CHECK7A-NEXT:    mov r0, r1
+; CHECK7A-NEXT:    mov r1, #84
+; CHECK7A-NEXT:    eor r0, r1, r0, asr #31
 ; CHECK7A-NEXT:    bx lr
 ;
 ; CHECK6M-LABEL: selecti32i8:
 ; CHECK6M:       @ %bb.0:
-; CHECK6M-NEXT:    mov r1, r0
+; CHECK6M-NEXT:    asrs r1, r0, #31
 ; CHECK6M-NEXT:    movs r0, #84
-; CHECK6M-NEXT:    cmp r1, #0
-; CHECK6M-NEXT:    bge .LBB6_2
-; CHECK6M-NEXT:  @ %bb.1:
-; CHECK6M-NEXT:    mvns r0, r0
-; CHECK6M-NEXT:  .LBB6_2:
+; CHECK6M-NEXT:    eors r0, r1
 ; CHECK6M-NEXT:    bx lr
 ;
 ; CHECK7M-LABEL: selecti32i8:
 ; CHECK7M:       @ %bb.0:
-; CHECK7M-NEXT:    mvn r1, #84
-; CHECK7M-NEXT:    cmp.w r0, #-1
-; CHECK7M-NEXT:    it gt
-; CHECK7M-NEXT:    movgt r1, #84
-; CHECK7M-NEXT:    mov r0, r1
+; CHECK7M-NEXT:    movs r1, #84
+; CHECK7M-NEXT:    eor.w r0, r1, r0, asr #31
 ; CHECK7M-NEXT:    bx lr
 ;
 ; CHECK81M-LABEL: selecti32i8:
 ; CHECK81M:       @ %bb.0:
 ; CHECK81M-NEXT:    movs r1, #84
-; CHECK81M-NEXT:    cmp.w r0, #-1
-; CHECK81M-NEXT:    cinv r0, r1, le
+; CHECK81M-NEXT:    eor.w r0, r1, r0, asr #31
 ; CHECK81M-NEXT:    bx lr
   %c = icmp sgt i32 %a, -1
   %s = select i1 %c, i8 84, i8 -85
@@ -312,38 +249,31 @@ define i8 @selecti32i8(i32 %a) {
 define i32 @selecti8i32(i8 %a) {
 ; CHECK7A-LABEL: selecti8i32:
 ; CHECK7A:       @ %bb.0:
-; CHECK7A-NEXT:    sxtb r1, r0
-; CHECK7A-NEXT:    mvn r0, #84
-; CHECK7A-NEXT:    cmn r1, #1
-; CHECK7A-NEXT:    movwgt r0, #84
+; CHECK7A-NEXT:    sxtb r0, r0
+; CHECK7A-NEXT:    mov r1, #84
+; CHECK7A-NEXT:    eor r0, r1, r0, asr #7
 ; CHECK7A-NEXT:    bx lr
 ;
 ; CHECK6M-LABEL: selecti8i32:
 ; CHECK6M:       @ %bb.0:
-; CHECK6M-NEXT:    sxtb r1, r0
+; CHECK6M-NEXT:    sxtb r0, r0
+; CHECK6M-NEXT:    asrs r1, r0, #7
 ; CHECK6M-NEXT:    movs r0, #84
-; CHECK6M-NEXT:    cmp r1, #0
-; CHECK6M-NEXT:    bge .LBB7_2
-; CHECK6M-NEXT:  @ %bb.1:
-; CHECK6M-NEXT:    mvns r0, r0
-; CHECK6M-NEXT:  .LBB7_2:
+; CHECK6M-NEXT:    eors r0, r1
 ; CHECK6M-NEXT:    bx lr
 ;
 ; CHECK7M-LABEL: selecti8i32:
 ; CHECK7M:       @ %bb.0:
-; CHECK7M-NEXT:    sxtb r1, r0
-; CHECK7M-NEXT:    mvn r0, #84
-; CHECK7M-NEXT:    cmp.w r1, #-1
-; CHECK7M-NEXT:    it gt
-; CHECK7M-NEXT:    movgt r0, #84
+; CHECK7M-NEXT:    sxtb r0, r0
+; CHECK7M-NEXT:    movs r1, #84
+; CHECK7M-NEXT:    eor.w r0, r1, r0, asr #7
 ; CHECK7M-NEXT:    bx lr
 ;
 ; CHECK81M-LABEL: selecti8i32:
 ; CHECK81M:       @ %bb.0:
 ; CHECK81M-NEXT:    sxtb r0, r0
 ; CHECK81M-NEXT:    movs r1, #84
-; CHECK81M-NEXT:    cmp.w r0, #-1
-; CHECK81M-NEXT:    cinv r0, r1, le
+; CHECK81M-NEXT:    eor.w r0, r1, r0, asr #7
 ; CHECK81M-NEXT:    bx lr
   %c = icmp sgt i8 %a, -1
   %s = select i1 %c, i32 84, i32 -85
