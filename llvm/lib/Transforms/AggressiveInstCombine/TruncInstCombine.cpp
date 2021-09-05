@@ -67,8 +67,12 @@ static void getRelevantOperands(Instruction *I, SmallVectorImpl<Value *> &Ops) {
   case Instruction::AShr:
   case Instruction::UDiv:
   case Instruction::URem:
+  case Instruction::InsertElement:
     Ops.push_back(I->getOperand(0));
     Ops.push_back(I->getOperand(1));
+    break;
+  case Instruction::ExtractElement:
+    Ops.push_back(I->getOperand(0));
     break;
   case Instruction::Select:
     Ops.push_back(I->getOperand(1));
@@ -138,6 +142,8 @@ bool TruncInstCombine::buildTruncExpressionDag() {
     case Instruction::AShr:
     case Instruction::UDiv:
     case Instruction::URem:
+    case Instruction::InsertElement:
+    case Instruction::ExtractElement:
     case Instruction::Select: {
       SmallVector<Value *, 2> Operands;
       getRelevantOperands(I, Operands);
@@ -146,7 +152,7 @@ bool TruncInstCombine::buildTruncExpressionDag() {
     }
     default:
       // TODO: Can handle more cases here:
-      // 1. shufflevector, extractelement, insertelement
+      // 1. shufflevector
       // 2. sdiv, srem
       // 3. phi node(and loop handling)
       // ...
@@ -423,6 +429,19 @@ void TruncInstCombine::ReduceExpressionDag(Type *SclTy) {
       if (auto *PEO = dyn_cast<PossiblyExactOperator>(I))
         if (auto *ResI = dyn_cast<Instruction>(Res))
           ResI->setIsExact(PEO->isExact());
+      break;
+    }
+    case Instruction::ExtractElement: {
+      Value *Vec = getReducedOperand(I->getOperand(0), SclTy);
+      Value *Idx = I->getOperand(1);
+      Res = Builder.CreateExtractElement(Vec, Idx);
+      break;
+    }
+    case Instruction::InsertElement: {
+      Value *Vec = getReducedOperand(I->getOperand(0), SclTy);
+      Value *NewElt = getReducedOperand(I->getOperand(1), SclTy);
+      Value *Idx = I->getOperand(2);
+      Res = Builder.CreateInsertElement(Vec, NewElt, Idx);
       break;
     }
     case Instruction::Select: {
