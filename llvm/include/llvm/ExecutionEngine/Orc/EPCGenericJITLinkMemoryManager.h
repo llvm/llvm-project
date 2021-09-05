@@ -38,10 +38,10 @@ public:
   EPCGenericJITLinkMemoryManager(ExecutorProcessControl &EPC, FuncAddrs FAs)
       : EPC(EPC), FAs(FAs) {}
 
-  /// Create using the standard memory access function names from the ORC
-  /// runtime.
+  /// Create using the standard memory allocation function names from the
+  /// ORCTargetProcess library.
   static Expected<std::unique_ptr<EPCGenericJITLinkMemoryManager>>
-  CreateUsingOrcRTFuncs(ExecutionSession &ES, JITDylib &OrcRuntimeJD);
+  CreateUsingOrcRTFuncs(ExecutorProcessControl &EPC);
 
   Expected<std::unique_ptr<Allocation>>
   allocate(const jitlink::JITLinkDylib *JD,

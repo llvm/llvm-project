@@ -88,25 +88,28 @@ private:
 
 /// Create from a ExecutorProcessControl instance.
 Expected<std::unique_ptr<EPCGenericJITLinkMemoryManager>>
-EPCGenericJITLinkMemoryManager::CreateUsingOrcRTFuncs(ExecutionSession &ES,
-                                                      JITDylib &OrcRuntimeJD) {
+EPCGenericJITLinkMemoryManager::CreateUsingOrcRTFuncs(
+    ExecutorProcessControl &EPC) {
+
+  auto H = EPC.loadDylib("");
+  if (!H)
+    return H.takeError();
 
   StringRef GlobalPrefix = "";
-  if (ES.getExecutorProcessControl().getTargetTriple().isOSBinFormatMachO())
+  if (EPC.getTargetTriple().isOSBinFormatMachO())
     GlobalPrefix = "_";
 
   FuncAddrs FAs;
   if (auto Err = lookupAndRecordAddrs(
-          ES, LookupKind::Static, makeJITDylibSearchOrder(&OrcRuntimeJD),
-          {{ES.intern((GlobalPrefix + "__orc_rt_reserve").str()), &FAs.Reserve},
-           {ES.intern((GlobalPrefix + "__orc_rt_finalize").str()),
+          EPC, *H,
+          {{EPC.intern((GlobalPrefix + "__orc_rt_reserve").str()), &FAs.Reserve},
+           {EPC.intern((GlobalPrefix + "__orc_rt_finalize").str()),
             &FAs.Finalize},
-           {ES.intern((GlobalPrefix + "__orc_rt_deallocate").str()),
+           {EPC.intern((GlobalPrefix + "__orc_rt_deallocate").str()),
             &FAs.Deallocate}}))
     return std::move(Err);
 
-  return std::make_unique<EPCGenericJITLinkMemoryManager>(
-      ES.getExecutorProcessControl(), FAs);
+  return std::make_unique<EPCGenericJITLinkMemoryManager>(EPC, std::move(FAs));
 }
 
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager::Allocation>>
