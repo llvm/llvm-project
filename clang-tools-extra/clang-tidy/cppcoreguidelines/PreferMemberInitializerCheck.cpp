@@ -83,7 +83,7 @@ static bool isSafeAssignment(const FieldDecl *Field, const Expr *Init,
       .empty();
 }
 
-static const std::pair<const FieldDecl *, const Expr *>
+static std::pair<const FieldDecl *, const Expr *>
 isAssignmentToMemberOf(const CXXRecordDecl *Rec, const Stmt *S,
                        const CXXConstructorDecl *Ctor) {
   if (const auto *BO = dyn_cast<BinaryOperator>(S)) {
