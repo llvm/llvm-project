@@ -38,7 +38,7 @@ define i8* @test_simplify2() {
 
 define void @test_simplify3(i8* %dst) {
 ; CHECK-LABEL: @test_simplify3(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(80) [[DST:%.*]], i8* noundef nonnull align 1 dereferenceable(6) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i32 6, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(6) [[DST:%.*]], i8* noundef nonnull align 1 dereferenceable(6) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i32 6, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %src = getelementptr [6 x i8], [6 x i8]* @hello, i32 0, i32 0
