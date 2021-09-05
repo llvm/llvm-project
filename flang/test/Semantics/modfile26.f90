@@ -71,6 +71,7 @@ end module m1
 !intrinsic::all
 !integer(4),parameter::intpvals(1_8:*)=[INTEGER(4)::0_4,2_4,3_4,4_4,5_4,9_4,10_4,18_4,19_4,38_4,39_4]
 !integer(4),parameter::intpkinds(1_8:*)=[INTEGER(4)::1_4,1_4,2_4,2_4,4_4,4_4,8_4,8_4,16_4,16_4,-1_4]
+!intrinsic::selected_int_kind
 !intrinsic::size
 !logical(4),parameter::ipcheck=.true._4
 !integer(4),parameter::realprecs(1_8:*)=[INTEGER(4)::3_4,2_4,6_4,15_4,18_4,33_4]
@@ -78,6 +79,7 @@ end module m1
 !logical(4),parameter::rpreccheck=.true._4
 !integer(4),parameter::realpvals(1_8:*)=[INTEGER(4)::0_4,3_4,4_4,6_4,7_4,15_4,16_4,18_4,19_4,33_4,34_4]
 !integer(4),parameter::realpkinds(1_8:*)=[INTEGER(4)::2_4,2_4,4_4,4_4,8_4,8_4,10_4,10_4,16_4,16_4,-1_4]
+!intrinsic::selected_real_kind
 !logical(4),parameter::realpcheck=.true._4
 !integer(4),parameter::realranges(1_8:*)=[INTEGER(4)::4_4,37_4,37_4,307_4,4931_4,4931_4]
 !logical(4),parameter::rrangecheck=.true._4

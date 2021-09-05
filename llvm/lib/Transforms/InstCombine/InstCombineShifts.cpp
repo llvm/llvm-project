@@ -240,7 +240,7 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
     // that shall remain in the root value (OuterShift).
 
     // An extend of an undef value becomes zero because the high bits are never
-    // completely unknown. Replace the the `undef` shift amounts with final
+    // completely unknown. Replace the `undef` shift amounts with final
     // shift bitwidth to ensure that the value remains undef when creating the
     // subsequent shift op.
     SumOfShAmts = Constant::replaceUndefsWith(
@@ -272,7 +272,7 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
     // shall be unset in the root value (OuterShift).
 
     // An extend of an undef value becomes zero because the high bits are never
-    // completely unknown. Replace the the `undef` shift amounts with negated
+    // completely unknown. Replace the `undef` shift amounts with negated
     // bitwidth of innermost shift to ensure that the value remains undef when
     // creating the subsequent shift op.
     unsigned WidestTyBitWidth = WidestTy->getScalarSizeInBits();

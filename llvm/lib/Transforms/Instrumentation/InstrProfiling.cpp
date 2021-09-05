@@ -1178,12 +1178,12 @@ void InstrProfiling::emitUses() {
   // GlobalOpt/ConstantMerge) may not discard associated sections as a unit, so
   // we conservatively retain all unconditionally in the compiler.
   //
-  // On ELF, the linker can guarantee the associated sections will be retained
-  // or discarded as a unit, so llvm.compiler.used is sufficient. Similarly on
-  // COFF, if prof data is not referenced by code we use one comdat and ensure
-  // this GC property as well. Otherwise, we have to conservatively make all of
-  // the sections retained by the linker.
-  if (TT.isOSBinFormatELF() ||
+  // On ELF and Mach-O, the linker can guarantee the associated sections will be
+  // retained or discarded as a unit, so llvm.compiler.used is sufficient.
+  // Similarly on COFF, if prof data is not referenced by code we use one comdat
+  // and ensure this GC property as well. Otherwise, we have to conservatively
+  // make all of the sections retained by the linker.
+  if (TT.isOSBinFormatELF() || TT.isOSBinFormatMachO() ||
       (TT.isOSBinFormatCOFF() && !profDataReferencedByCode(*M)))
     appendToCompilerUsed(*M, CompilerUsedVars);
   else

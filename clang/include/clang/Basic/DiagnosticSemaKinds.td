@@ -10525,6 +10525,8 @@ def err_omp_map_shared_storage : Error<
   "variable already marked as mapped in current construct">;
 def err_omp_invalid_map_type_for_directive : Error<
   "%select{map type '%1' is not allowed|map type must be specified}0 for '#pragma omp %2'">;
+def err_omp_invalid_map_type_modifier_for_directive : Error<
+  "map type modifier '%0' is not allowed for '#pragma omp %1'">;
 def err_omp_no_clause_for_directive : Error<
   "expected at least one %0 clause for '#pragma omp %1'">;
 def err_omp_threadprivate_in_clause : Error<

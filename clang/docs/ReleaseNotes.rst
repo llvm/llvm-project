@@ -71,7 +71,9 @@ Deprecated Compiler Flags
 Modified Compiler Flags
 -----------------------
 
-- ...
+- Support has been added for the following processors (``-mcpu`` identifiers in parentheses):
+
+  - RISC-V SiFive S51 (``sifive-s51``).
 
 Removed Compiler Flags
 -------------------------

@@ -3,10 +3,12 @@
 
 define void @vector_insert_extract(<vscale x 4 x i32> %v0, <vscale x 16 x i32> %v1, <16 x i32> %v2) {
 ; CHECK-LABEL: 'vector_insert_extract'
-; CHECK-NEXT: Cost Model: Found an estimated cost of 72 for instruction: %extract_fixed_from_scalable = call <16 x i32> @llvm.experimental.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> %v0, i64 0)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 72 for instruction: %insert_fixed_into_scalable = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> %v0, <16 x i32> %v2, i64 0)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction: %extract_scalable_from_scalable = call <vscale x 4 x i32> @llvm.experimental.vector.extract.nxv4i32.nxv16i32(<vscale x 16 x i32> %v1, i64 0)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction: %insert_scalable_into_scalable = call <vscale x 16 x i32> @llvm.experimental.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> %v1, <vscale x 4 x i32> %v0, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %extract_fixed_from_scalable = call <16 x i32> @llvm.experimental.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> %v0, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %insert_fixed_into_scalable = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> %v0, <16 x i32> %v2, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %extract_scalable_from_scalable = call <vscale x 4 x i32> @llvm.experimental.vector.extract.nxv4i32.nxv16i32(<vscale x 16 x i32> %v1, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %insert_scalable_into_scalable = call <vscale x 16 x i32> @llvm.experimental.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> %v1, <vscale x 4 x i32> %v0, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
   %extract_fixed_from_scalable = call <16 x i32> @llvm.experimental.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> %v0, i64 0)
   %insert_fixed_into_scalable = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> %v0, <16 x i32> %v2, i64 0)
   %extract_scalable_from_scalable = call <vscale x 4 x i32> @llvm.experimental.vector.extract.nxv4i32.nxv16i32(<vscale x 16 x i32> %v1, i64 0)
@@ -21,24 +23,32 @@ declare <vscale x 16 x i32> @llvm.experimental.vector.insert.nxv16i32.nxv4i32(<v
 
 define void @reductions(<vscale x 4 x i32> %v0, <vscale x 4 x i64> %v1, <vscale x 4 x float> %v2, <vscale x 4 x double> %v3) {
 ; CHECK-LABEL: 'reductions'
-; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %add_nxv4i32 = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> %v0)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 3 for instruction: %add_nxv4i64 = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> %v1)
-; CHECK-NEXT: Cost Model: Invalid cost for instruction: %mul_nxv4i32 = call i32 @llvm.vector.reduce.mul.nxv4i32(<vscale x 4 x i32> %v0)
-; CHECK-NEXT: Cost Model: Invalid cost for instruction: %mul_nxv4i64 = call i64 @llvm.vector.reduce.mul.nxv4i64(<vscale x 4 x i64> %v1)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %and_nxv4i32 = call i32 @llvm.vector.reduce.and.nxv4i32(<vscale x 4 x i32> %v0)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 3 for instruction: %and_nxv4i64 = call i64 @llvm.vector.reduce.and.nxv4i64(<vscale x 4 x i64> %v1)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %or_nxv4i32 = call i32 @llvm.vector.reduce.or.nxv4i32(<vscale x 4 x i32> %v0)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 3 for instruction: %or_nxv4i64 = call i64 @llvm.vector.reduce.or.nxv4i64(<vscale x 4 x i64> %v1)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %xor_nxv4i32 = call i32 @llvm.vector.reduce.xor.nxv4i32(<vscale x 4 x i32> %v0)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 3 for instruction: %xor_nxv4i64 = call i64 @llvm.vector.reduce.xor.nxv4i64(<vscale x 4 x i64> %v1)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %umin_nxv4i32 = call i32 @llvm.vector.reduce.umin.nxv4i32(<vscale x 4 x i32> %v0)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 4 for instruction: %umin_nxv4i64 = call i64 @llvm.vector.reduce.umin.nxv4i64(<vscale x 4 x i64> %v1)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %smin_nxv4i32 = call i32 @llvm.vector.reduce.smin.nxv4i32(<vscale x 4 x i32> %v0)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 4 for instruction: %smin_nxv4i64 = call i64 @llvm.vector.reduce.smin.nxv4i64(<vscale x 4 x i64> %v1)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %umax_nxv4i32 = call i32 @llvm.vector.reduce.umax.nxv4i32(<vscale x 4 x i32> %v0)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 4 for instruction: %umax_nxv4i64 = call i64 @llvm.vector.reduce.umax.nxv4i64(<vscale x 4 x i64> %v1)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %smax_nxv4i32 = call i32 @llvm.vector.reduce.smax.nxv4i32(<vscale x 4 x i32> %v0)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 4 for instruction: %smax_nxv4i64 = call i64 @llvm.vector.reduce.smax.nxv4i64(<vscale x 4 x i64> %v1)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %add_nxv4i32 = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> %v0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %add_nxv4i64 = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> %v1)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %mul_nxv4i32 = call i32 @llvm.vector.reduce.mul.nxv4i32(<vscale x 4 x i32> %v0)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %mul_nxv4i64 = call i64 @llvm.vector.reduce.mul.nxv4i64(<vscale x 4 x i64> %v1)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %and_nxv4i32 = call i32 @llvm.vector.reduce.and.nxv4i32(<vscale x 4 x i32> %v0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %and_nxv4i64 = call i64 @llvm.vector.reduce.and.nxv4i64(<vscale x 4 x i64> %v1)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %or_nxv4i32 = call i32 @llvm.vector.reduce.or.nxv4i32(<vscale x 4 x i32> %v0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %or_nxv4i64 = call i64 @llvm.vector.reduce.or.nxv4i64(<vscale x 4 x i64> %v1)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %xor_nxv4i32 = call i32 @llvm.vector.reduce.xor.nxv4i32(<vscale x 4 x i32> %v0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %xor_nxv4i64 = call i64 @llvm.vector.reduce.xor.nxv4i64(<vscale x 4 x i64> %v1)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %umin_nxv4i32 = call i32 @llvm.vector.reduce.umin.nxv4i32(<vscale x 4 x i32> %v0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %umin_nxv4i64 = call i64 @llvm.vector.reduce.umin.nxv4i64(<vscale x 4 x i64> %v1)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %smin_nxv4i32 = call i32 @llvm.vector.reduce.smin.nxv4i32(<vscale x 4 x i32> %v0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %smin_nxv4i64 = call i64 @llvm.vector.reduce.smin.nxv4i64(<vscale x 4 x i64> %v1)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %umax_nxv4i32 = call i32 @llvm.vector.reduce.umax.nxv4i32(<vscale x 4 x i32> %v0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %umax_nxv4i64 = call i64 @llvm.vector.reduce.umax.nxv4i64(<vscale x 4 x i64> %v1)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %smax_nxv4i32 = call i32 @llvm.vector.reduce.smax.nxv4i32(<vscale x 4 x i32> %v0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %smax_nxv4i64 = call i64 @llvm.vector.reduce.smax.nxv4i64(<vscale x 4 x i64> %v1)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %fadd_nxv4f32 = call fast float @llvm.vector.reduce.fadd.nxv4f32(float 0.000000e+00, <vscale x 4 x float> %v2)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %fadd_nxv4f64 = call fast double @llvm.vector.reduce.fadd.nxv4f64(double 0.000000e+00, <vscale x 4 x double> %v3)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %fmin_nxv4f32 = call fast float @llvm.vector.reduce.fmin.nxv4f32(<vscale x 4 x float> %v2)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %fmin_nxv4f64 = call fast double @llvm.vector.reduce.fmin.nxv4f64(<vscale x 4 x double> %v3)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %fmax_nxv4f32 = call fast float @llvm.vector.reduce.fmax.nxv4f32(<vscale x 4 x float> %v2)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %fmax_nxv4f64 = call fast double @llvm.vector.reduce.fmax.nxv4f64(<vscale x 4 x double> %v3)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
   %add_nxv4i32 = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> %v0)
   %add_nxv4i64 = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> %v1)
   %mul_nxv4i32 = call i32 @llvm.vector.reduce.mul.nxv4i32(<vscale x 4 x i32> %v0)
@@ -58,12 +68,6 @@ define void @reductions(<vscale x 4 x i32> %v0, <vscale x 4 x i64> %v1, <vscale 
   %smax_nxv4i32 = call i32 @llvm.vector.reduce.smax.nxv4i32(<vscale x 4 x i32> %v0)
   %smax_nxv4i64 = call i64 @llvm.vector.reduce.smax.nxv4i64(<vscale x 4 x i64> %v1)
 
-; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %fadd_nxv4f32 = call fast float @llvm.vector.reduce.fadd.nxv4f32(float 0.000000e+00, <vscale x 4 x float> %v2)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 6 for instruction: %fadd_nxv4f64 = call fast double @llvm.vector.reduce.fadd.nxv4f64(double 0.000000e+00, <vscale x 4 x double> %v3)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %fmin_nxv4f32 = call fast float @llvm.vector.reduce.fmin.nxv4f32(<vscale x 4 x float> %v2)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 4 for instruction: %fmin_nxv4f64 = call fast double @llvm.vector.reduce.fmin.nxv4f64(<vscale x 4 x double> %v3)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %fmax_nxv4f32 = call fast float @llvm.vector.reduce.fmax.nxv4f32(<vscale x 4 x float> %v2)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 4 for instruction: %fmax_nxv4f64 = call fast double @llvm.vector.reduce.fmax.nxv4f64(<vscale x 4 x double> %v3)
   %fadd_nxv4f32 = call fast float @llvm.vector.reduce.fadd.nxv4f32(float 0.0, <vscale x 4 x float> %v2)
   %fadd_nxv4f64 = call fast double @llvm.vector.reduce.fadd.nxv4f64(double 0.0, <vscale x 4 x double> %v3)
   %fmin_nxv4f32 = call fast float @llvm.vector.reduce.fmin.nxv4f32(<vscale x 4 x float> %v2)
@@ -76,10 +80,12 @@ define void @reductions(<vscale x 4 x i32> %v0, <vscale x 4 x i64> %v1, <vscale 
 
 define void @strict_fp_reductions(<vscale x 4 x float> %v0, <vscale x 4 x double> %v1) {
 ; CHECK-LABEL: 'strict_fp_reductions'
-; CHECK-NEXT: Cost Model: Found an estimated cost of 128 for instruction: %fadd_nxv4f32 = call float @llvm.vector.reduce.fadd.nxv4f32(float 0.000000e+00, <vscale x 4 x float> %v0)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 128 for instruction: %fadd_nxv4f64 = call double @llvm.vector.reduce.fadd.nxv4f64(double 0.000000e+00, <vscale x 4 x double> %v1)
-; CHECK-NEXT: Cost Model: Invalid cost for instruction: %fmul_nxv4f32 = call float @llvm.vector.reduce.fmul.nxv4f32(float 0.000000e+00, <vscale x 4 x float> %v0)
-; CHECK-NEXT: Cost Model: Invalid cost for instruction: %fmul_nxv4f64 = call double @llvm.vector.reduce.fmul.nxv4f64(double 0.000000e+00, <vscale x 4 x double> %v1)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %fadd_nxv4f32 = call float @llvm.vector.reduce.fadd.nxv4f32(float 0.000000e+00, <vscale x 4 x float> %v0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %fadd_nxv4f64 = call double @llvm.vector.reduce.fadd.nxv4f64(double 0.000000e+00, <vscale x 4 x double> %v1)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %fmul_nxv4f32 = call float @llvm.vector.reduce.fmul.nxv4f32(float 0.000000e+00, <vscale x 4 x float> %v0)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %fmul_nxv4f64 = call double @llvm.vector.reduce.fmul.nxv4f64(double 0.000000e+00, <vscale x 4 x double> %v1)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
   %fadd_nxv4f32 = call float @llvm.vector.reduce.fadd.nxv4f32(float 0.0, <vscale x 4 x float> %v0)
   %fadd_nxv4f64 = call double @llvm.vector.reduce.fadd.nxv4f64(double 0.0, <vscale x 4 x double> %v1)
   %fmul_nxv4f32 = call float @llvm.vector.reduce.fmul.nxv4f32(float 0.0, <vscale x 4 x float> %v0)
@@ -118,8 +124,10 @@ declare double @llvm.vector.reduce.fmax.nxv4f64(<vscale x 4 x double>)
 
 define void  @count_zeroes(<vscale x 4 x i32> %A) {
 ; CHECK-LABEL: 'count_zeroes'
-; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <vscale x 4 x i32> @llvm.ctlz.nxv4i32(<vscale x 4 x i32> %A, i1 true)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %cttz = call <vscale x 4 x i32> @llvm.cttz.nxv4i32(<vscale x 4 x i32> %A, i1 true)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <vscale x 4 x i32> @llvm.ctlz.nxv4i32(<vscale x 4 x i32> %A, i1 true)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cttz = call <vscale x 4 x i32> @llvm.cttz.nxv4i32(<vscale x 4 x i32> %A, i1 true)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
   %ctlz = call <vscale x 4 x i32> @llvm.ctlz.nxv4i32(<vscale x 4 x i32> %A, i1 true)
   %cttz = call <vscale x 4 x i32> @llvm.cttz.nxv4i32(<vscale x 4 x i32> %A, i1 true)
   ret void
@@ -129,34 +137,36 @@ declare <vscale x 4 x i32> @llvm.cttz.nxv4i32(<vscale x 4 x i32>, i1)
 
 
 define void @vector_reverse() #0 {
-; CHECK-LABEL: 'vector_reverse':
-; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv16i8 = call <vscale x 16 x i8> @llvm.experimental.vector.reverse.nxv16i8(<vscale x 16 x i8> undef)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %reverse_nxv32i8 = call <vscale x 32 x i8> @llvm.experimental.vector.reverse.nxv32i8(<vscale x 32 x i8> undef)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv2i16 = call <vscale x 2 x i16> @llvm.experimental.vector.reverse.nxv2i16(<vscale x 2 x i16> undef)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv4i16 = call <vscale x 4 x i16> @llvm.experimental.vector.reverse.nxv4i16(<vscale x 4 x i16> undef)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv8i16 = call <vscale x 8 x i16> @llvm.experimental.vector.reverse.nxv8i16(<vscale x 8 x i16> undef)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %reverse_nxv16i16 = call <vscale x 16 x i16> @llvm.experimental.vector.reverse.nxv16i16(<vscale x 16 x i16> undef)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv4i32 = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> undef)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %reverse_nxv8i32 = call <vscale x 8 x i32> @llvm.experimental.vector.reverse.nxv8i32(<vscale x 8 x i32> undef)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv2i64 = call <vscale x 2 x i64> @llvm.experimental.vector.reverse.nxv2i64(<vscale x 2 x i64> undef)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %reverse_nxv4i64 = call <vscale x 4 x i64> @llvm.experimental.vector.reverse.nxv4i64(<vscale x 4 x i64> undef)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv2f16 = call <vscale x 2 x half> @llvm.experimental.vector.reverse.nxv2f16(<vscale x 2 x half> undef)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv4f16 = call <vscale x 4 x half> @llvm.experimental.vector.reverse.nxv4f16(<vscale x 4 x half> undef)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv8f16 = call <vscale x 8 x half> @llvm.experimental.vector.reverse.nxv8f16(<vscale x 8 x half> undef)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %reverse_nxv16f16 = call <vscale x 16 x half> @llvm.experimental.vector.reverse.nxv16f16(<vscale x 16 x half> undef)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv2f32 = call <vscale x 2 x float> @llvm.experimental.vector.reverse.nxv2f32(<vscale x 2 x float> undef)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv4f32 = call <vscale x 4 x float> @llvm.experimental.vector.reverse.nxv4f32(<vscale x 4 x float> undef)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %reverse_nxv8f32 = call <vscale x 8 x float> @llvm.experimental.vector.reverse.nxv8f32(<vscale x 8 x float> undef)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv2f64 = call <vscale x 2 x double> @llvm.experimental.vector.reverse.nxv2f64(<vscale x 2 x double> undef)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %reverse_nxv4f64 = call <vscale x 4 x double> @llvm.experimental.vector.reverse.nxv4f64(<vscale x 4 x double> undef)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv2bf16 = call <vscale x 2 x bfloat> @llvm.experimental.vector.reverse.nxv2bf16(<vscale x 2 x bfloat> undef)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv4bf16 = call <vscale x 4 x bfloat> @llvm.experimental.vector.reverse.nxv4bf16(<vscale x 4 x bfloat> undef)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv8bf16 = call <vscale x 8 x bfloat> @llvm.experimental.vector.reverse.nxv8bf16(<vscale x 8 x bfloat> undef)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %reverse_nxv16bf16 = call <vscale x 16 x bfloat> @llvm.experimental.vector.reverse.nxv16bf16(<vscale x 16 x bfloat> undef)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %reverse_nxv16i1 = call <vscale x 16 x i1> @llvm.experimental.vector.reverse.nxv16i1(<vscale x 16 x i1> undef)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %reverse_nxv8i1 = call <vscale x 8 x i1> @llvm.experimental.vector.reverse.nxv8i1(<vscale x 8 x i1> undef)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %reverse_nxv4i1 = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> undef)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %reverse_nxv2i1 = call <vscale x 2 x i1> @llvm.experimental.vector.reverse.nxv2i1(<vscale x 2 x i1> undef)
+; CHECK-LABEL: 'vector_reverse'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv16i8 = call <vscale x 16 x i8> @llvm.experimental.vector.reverse.nxv16i8(<vscale x 16 x i8> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %reverse_nxv32i8 = call <vscale x 32 x i8> @llvm.experimental.vector.reverse.nxv32i8(<vscale x 32 x i8> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv2i16 = call <vscale x 2 x i16> @llvm.experimental.vector.reverse.nxv2i16(<vscale x 2 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv4i16 = call <vscale x 4 x i16> @llvm.experimental.vector.reverse.nxv4i16(<vscale x 4 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv8i16 = call <vscale x 8 x i16> @llvm.experimental.vector.reverse.nxv8i16(<vscale x 8 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %reverse_nxv16i16 = call <vscale x 16 x i16> @llvm.experimental.vector.reverse.nxv16i16(<vscale x 16 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv4i32 = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %reverse_nxv8i32 = call <vscale x 8 x i32> @llvm.experimental.vector.reverse.nxv8i32(<vscale x 8 x i32> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv2i64 = call <vscale x 2 x i64> @llvm.experimental.vector.reverse.nxv2i64(<vscale x 2 x i64> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %reverse_nxv4i64 = call <vscale x 4 x i64> @llvm.experimental.vector.reverse.nxv4i64(<vscale x 4 x i64> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv2f16 = call <vscale x 2 x half> @llvm.experimental.vector.reverse.nxv2f16(<vscale x 2 x half> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv4f16 = call <vscale x 4 x half> @llvm.experimental.vector.reverse.nxv4f16(<vscale x 4 x half> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv8f16 = call <vscale x 8 x half> @llvm.experimental.vector.reverse.nxv8f16(<vscale x 8 x half> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %reverse_nxv16f16 = call <vscale x 16 x half> @llvm.experimental.vector.reverse.nxv16f16(<vscale x 16 x half> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv2f32 = call <vscale x 2 x float> @llvm.experimental.vector.reverse.nxv2f32(<vscale x 2 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv4f32 = call <vscale x 4 x float> @llvm.experimental.vector.reverse.nxv4f32(<vscale x 4 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %reverse_nxv8f32 = call <vscale x 8 x float> @llvm.experimental.vector.reverse.nxv8f32(<vscale x 8 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv2f64 = call <vscale x 2 x double> @llvm.experimental.vector.reverse.nxv2f64(<vscale x 2 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %reverse_nxv4f64 = call <vscale x 4 x double> @llvm.experimental.vector.reverse.nxv4f64(<vscale x 4 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv2bf16 = call <vscale x 2 x bfloat> @llvm.experimental.vector.reverse.nxv2bf16(<vscale x 2 x bfloat> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv4bf16 = call <vscale x 4 x bfloat> @llvm.experimental.vector.reverse.nxv4bf16(<vscale x 4 x bfloat> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv8bf16 = call <vscale x 8 x bfloat> @llvm.experimental.vector.reverse.nxv8bf16(<vscale x 8 x bfloat> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %reverse_nxv16bf16 = call <vscale x 16 x bfloat> @llvm.experimental.vector.reverse.nxv16bf16(<vscale x 16 x bfloat> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv16i1 = call <vscale x 16 x i1> @llvm.experimental.vector.reverse.nxv16i1(<vscale x 16 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv8i1 = call <vscale x 8 x i1> @llvm.experimental.vector.reverse.nxv8i1(<vscale x 8 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv4i1 = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %reverse_nxv2i1 = call <vscale x 2 x i1> @llvm.experimental.vector.reverse.nxv2i1(<vscale x 2 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
 
   %reverse_nxv16i8 = call <vscale x 16 x i8> @llvm.experimental.vector.reverse.nxv16i8(<vscale x 16 x i8> undef)
   %reverse_nxv32i8 = call <vscale x 32 x i8> @llvm.experimental.vector.reverse.nxv32i8(<vscale x 32 x i8> undef)
@@ -217,15 +227,17 @@ declare <vscale x 2 x i1> @llvm.experimental.vector.reverse.nxv2i1(<vscale x 2 x
 
 define void @unsupported_fp_ops(<vscale x 4 x float> %vec) {
 ; CHECK-LABEL: 'unsupported_fp_ops'
-; CHECK-NEXT: Cost Model: Invalid cost for instruction: %sin = call <vscale x 4 x float> @llvm.sin.nxv4f32(<vscale x 4 x float> %vec)
-; CHECK-NEXT: Cost Model: Invalid cost for instruction: %cos = call <vscale x 4 x float> @llvm.cos.nxv4f32(<vscale x 4 x float> %vec)
-; CHECK-NEXT: Cost Model: Invalid cost for instruction: %pow = call <vscale x 4 x float> @llvm.pow.nxv4f32(<vscale x 4 x float> %vec, <vscale x 4 x float> %vec)
-; CHECK-NEXT: Cost Model: Invalid cost for instruction: %powi = call <vscale x 4 x float> @llvm.powi.nxv4f32.i32(<vscale x 4 x float> %vec, i32 42)
-; CHECK-NEXT: Cost Model: Invalid cost for instruction: %exp = call <vscale x 4 x float> @llvm.exp.nxv4f32(<vscale x 4 x float> %vec)
-; CHECK-NEXT: Cost Model: Invalid cost for instruction: %exp2 = call <vscale x 4 x float> @llvm.exp2.nxv4f32(<vscale x 4 x float> %vec)
-; CHECK-NEXT: Cost Model: Invalid cost for instruction: %log = call <vscale x 4 x float> @llvm.log.nxv4f32(<vscale x 4 x float> %vec)
-; CHECK-NEXT: Cost Model: Invalid cost for instruction: %log2 = call <vscale x 4 x float> @llvm.log2.nxv4f32(<vscale x 4 x float> %vec)
-; CHECK-NEXT: Cost Model: Invalid cost for instruction: %log10 = call <vscale x 4 x float> @llvm.log10.nxv4f32(<vscale x 4 x float> %vec)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %sin = call <vscale x 4 x float> @llvm.sin.nxv4f32(<vscale x 4 x float> %vec)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %cos = call <vscale x 4 x float> @llvm.cos.nxv4f32(<vscale x 4 x float> %vec)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %pow = call <vscale x 4 x float> @llvm.pow.nxv4f32(<vscale x 4 x float> %vec, <vscale x 4 x float> %vec)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %powi = call <vscale x 4 x float> @llvm.powi.nxv4f32.i32(<vscale x 4 x float> %vec, i32 42)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %exp = call <vscale x 4 x float> @llvm.exp.nxv4f32(<vscale x 4 x float> %vec)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %exp2 = call <vscale x 4 x float> @llvm.exp2.nxv4f32(<vscale x 4 x float> %vec)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %log = call <vscale x 4 x float> @llvm.log.nxv4f32(<vscale x 4 x float> %vec)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %log2 = call <vscale x 4 x float> @llvm.log2.nxv4f32(<vscale x 4 x float> %vec)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %log10 = call <vscale x 4 x float> @llvm.log10.nxv4f32(<vscale x 4 x float> %vec)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
 
   %sin = call <vscale x 4 x float> @llvm.sin.nxv4f32(<vscale x 4 x float> %vec)
   %cos = call <vscale x 4 x float> @llvm.cos.nxv4f32(<vscale x 4 x float> %vec)
@@ -305,6 +317,8 @@ define void @vector_splice() #0 {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %splice_nxv8i1_neg = call <vscale x 8 x i1> @llvm.experimental.vector.splice.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 -1)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %splice_nxv4i1_neg = call <vscale x 4 x i1> @llvm.experimental.vector.splice.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 -1)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %splice_nxv2i1_neg = call <vscale x 2 x i1> @llvm.experimental.vector.splice.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 -1)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
 
   %splice_nxv16i8 = call <vscale x 16 x i8> @llvm.experimental.vector.splice.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8> zeroinitializer, i32 1)
   %splice_nxv32i8 = call <vscale x 32 x i8> @llvm.experimental.vector.splice.nxv32i8(<vscale x 32 x i8> zeroinitializer, <vscale x 32 x i8> zeroinitializer, i32 1)

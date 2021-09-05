@@ -8,8 +8,8 @@
 #ifndef SRC_RUNTIME_INCLUDE_RT_H_
 #define SRC_RUNTIME_INCLUDE_RT_H_
 
-#include "atmi_runtime.h"
-#include "hsa_api.h"
+#include "internal.h"
+
 #include <string>
 #include <vector>
 
@@ -70,7 +70,7 @@ public:
 
 private:
   static hsa_status_t Malloc(void **ptr, size_t size, int DeviceId,
-                             atmi_devtype_t DeviceType);
+                             impl_devtype_t DeviceType);
 
 protected:
   Runtime() = default;

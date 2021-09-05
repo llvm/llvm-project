@@ -171,14 +171,13 @@ void ConvertGpuLaunchFuncToVulkanLaunchFunc::convertGpuLaunchFunc(
 
   // Create vulkan launch call op.
   auto vulkanLaunchCallOp = builder.create<CallOp>(
-      loc, TypeRange{}, builder.getSymbolRefAttr(kVulkanLaunch),
+      loc, TypeRange{}, SymbolRefAttr::get(builder.getContext(), kVulkanLaunch),
       vulkanLaunchOperands);
 
   // Set SPIR-V binary shader data as an attribute.
   vulkanLaunchCallOp->setAttr(
       kSPIRVBlobAttrName,
-      StringAttr::get(loc->getContext(),
-                      StringRef(binary.data(), binary.size())));
+      builder.getStringAttr(StringRef(binary.data(), binary.size())));
 
   // Set entry point name as an attribute.
   vulkanLaunchCallOp->setAttr(kSPIRVEntryPointAttrName,

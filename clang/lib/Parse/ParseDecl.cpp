@@ -3985,8 +3985,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       isInvalid = DS.SetTypeAltiVecBool(true, Loc, PrevSpec, DiagID, Policy);
       break;
     case tok::kw_pipe:
-      if (!getLangOpts().OpenCL || (getLangOpts().OpenCLVersion < 200 &&
-                                    !getLangOpts().OpenCLCPlusPlus)) {
+      if (!getLangOpts().OpenCL ||
+          getLangOpts().getOpenCLCompatibleVersion() < 200) {
         // OpenCL 2.0 and later define this keyword. OpenCL 1.2 and earlier
         // should support the "pipe" word as identifier.
         Tok.getIdentifierInfo()->revertTokenIDToIdentifier();
@@ -5171,8 +5171,8 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
 
   // OpenCL 2.0 and later define this keyword.
   case tok::kw_pipe:
-    return (getLangOpts().OpenCL && getLangOpts().OpenCLVersion >= 200) ||
-           getLangOpts().OpenCLCPlusPlus;
+    return getLangOpts().OpenCL &&
+           getLangOpts().getOpenCLCompatibleVersion() >= 200;
 
   case tok::identifier:   // foo::bar
     // Unfortunate hack to support "Class.factoryMethod" notation.
@@ -5702,8 +5702,8 @@ static bool isPtrOperatorToken(tok::TokenKind Kind, const LangOptions &Lang,
     return true;
 
   // OpenCL 2.0 and later define this keyword.
-  if (Kind == tok::kw_pipe &&
-      ((Lang.OpenCL && Lang.OpenCLVersion >= 200) || Lang.OpenCLCPlusPlus))
+  if (Kind == tok::kw_pipe && Lang.OpenCL &&
+      Lang.getOpenCLCompatibleVersion() >= 200)
     return true;
 
   if (!Lang.CPlusPlus)

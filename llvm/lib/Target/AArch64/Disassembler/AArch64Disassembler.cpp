@@ -323,6 +323,17 @@ DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
       //                      ^ insert implicit 8-bit element tile
       MI.insert(MI.begin()+2, MCOperand::createReg(AArch64::ZAB0));
       break;
+    case AArch64::SMOVvi8to32_idx0:
+    case AArch64::SMOVvi8to64_idx0:
+    case AArch64::SMOVvi16to32_idx0:
+    case AArch64::SMOVvi16to64_idx0:
+    case AArch64::SMOVvi32to64_idx0:
+    case AArch64::UMOVvi8_idx0:
+    case AArch64::UMOVvi16_idx0:
+    case AArch64::UMOVvi32_idx0:
+    case AArch64::UMOVvi64_idx0:
+      MI.addOperand(MCOperand::createImm(0));
+      break;
     }
 
     if (Result != MCDisassembler::Fail)

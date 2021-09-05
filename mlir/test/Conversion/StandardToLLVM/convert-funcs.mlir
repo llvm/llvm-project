@@ -37,6 +37,9 @@ func @pass_through(%arg0: () -> ()) -> (() -> ()) {
   return %bbarg : () -> ()
 }
 
+// CHECK-LABEL: llvm.func extern_weak @llvmlinkage(i32)
+func private @llvmlinkage(i32) attributes { "llvm.linkage" = #llvm.linkage<extern_weak> }
+
 // CHECK-LABEL: llvm.func @body(i32)
 func private @body(i32)
 

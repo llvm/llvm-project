@@ -17745,6 +17745,64 @@ The use of an effective %evl is discouraged for those targets.  The function
 ``TargetTransformInfo::hasActiveVectorLength()`` returns true when the target
 has native support for %evl.
 
+.. _int_vp_select:
+
+'``llvm.vp.select.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x i32>  @llvm.vp.select.v16i32 (<16 x i1> <condition>, <16 x i32> <on_true>, <16 x i32> <on_false>, i32 <evl>)
+      declare <vscale x 4 x i64>  @llvm.vp.select.nxv4i64 (<vscale x 4 x i1> <condition>, <vscale x 4 x i32> <on_true>, <vscale x 4 x i32> <on_false>, i32 <evl>)
+
+Overview:
+"""""""""
+
+The '``llvm.vp.select``' intrinsic is used to choose one value based on a
+condition vector, without IR-level branching.
+
+Arguments:
+""""""""""
+
+The first operand is a vector of ``i1`` and indicates the condition.  The
+second operand is the value that is selected where the condition vector is
+true.  The third operand is the value that is selected where the condition
+vector is false.  The vectors must be of the same size.  The fourth operand is
+the explicit vector length.
+
+#. The optional ``fast-math flags`` marker indicates that the select has one or
+   more :ref:`fast-math flags <fastmath>`. These are optimization hints to
+   enable otherwise unsafe floating-point optimizations. Fast-math flags are
+   only valid for selects that return a floating-point scalar or vector type,
+   or an array (nested to any depth) of floating-point scalar or vector types.
+
+Semantics:
+""""""""""
+
+The intrinsic selects lanes from the second and third operand depending on a
+condition vector.
+
+All result lanes at positions greater or equal than ``%evl`` are undefined.
+For all lanes below ``%evl`` where the condition vector is true the lane is
+taken from the second operand.  Otherwise, the lane is taken from the third
+operand.
+
+Example:
+""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x i32> @llvm.vp.select.v4i32(<4 x i1> %cond, <4 x i32> %on_true, <4 x i32> %on_false, i32 %evl)
+
+      ;;; Expansion.
+      ;; Any result is legal on lanes at and above %evl.
+      %also.r = select <4 x i1> %cond, <4 x i32> %on_true, <4 x i32> %on_false
+
+
 
 .. _int_vp_add:
 
@@ -21797,52 +21855,6 @@ The '``llvm.set.rounding``' intrinsic sets the current rounding mode. It is
 similar to C library function 'fesetround', however this intrinsic does not
 return any value and uses platform-independent representation of IEEE rounding
 modes.
-
-
-Floating Point Test Intrinsics
-------------------------------
-
-These functions get properties of floating point values.
-
-
-'``llvm.isnan``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare i1 @llvm.isnan(<fptype> <op>)
-      declare <N x i1> @llvm.isnan(<vector-fptype> <op>)
-
-Overview:
-"""""""""
-
-The '``llvm.isnan``' intrinsic returns a boolean value or vector of boolean
-values depending on whether the value is NaN.
-
-If the operand is a floating-point scalar, then the result type is a
-boolean (:ref:`i1 <t_integer>`).
-
-If the operand is a floating-point vector, then the result type is a
-vector of boolean with the same number of elements as the operand.
-
-Arguments:
-""""""""""
-
-The argument to the '``llvm.isnan``' intrinsic must be
-:ref:`floating-point <t_floating>` or :ref:`vector <t_vector>`
-of floating-point values.
-
-
-Semantics:
-""""""""""
-
-The function tests if ``op`` is NaN. If ``op`` is a vector, then the
-check is made element by element. Each test yields an :ref:`i1 <t_integer>`
-result, which is ``true``, if the value is NaN. The function never raises
-floating point exceptions.
 
 
 General Intrinsics

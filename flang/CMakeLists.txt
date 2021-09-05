@@ -295,6 +295,14 @@ if (FLANG_REPOSITORY_STRING)
   add_definitions(-DFLANG_REPOSITORY_STRING="${FLANG_REPOSITORY_STRING}")
 endif()
 
+include(TestBigEndian)
+test_big_endian(IS_BIGENDIAN)
+if (IS_BIGENDIAN)
+  add_compile_definitions(FLANG_BIG_ENDIAN=1)
+else ()
+  add_compile_definitions(FLANG_LITTLE_ENDIAN=1)
+endif ()
+
 # Configure Flang's Version.inc file.
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/include/flang/Version.inc.in

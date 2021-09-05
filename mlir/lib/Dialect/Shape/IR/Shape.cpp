@@ -280,7 +280,7 @@ static ParseResult parseAssumingOp(OpAsmParser &parser,
 static void print(OpAsmPrinter &p, AssumingOp op) {
   bool yieldsResults = !op.results().empty();
 
-  p << AssumingOp::getOperationName() << " " << op.witness();
+  p << " " << op.witness();
   if (yieldsResults) {
     p << " -> (" << op.getResultTypes() << ")";
   }
@@ -760,7 +760,7 @@ OpFoldResult ConcatOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 
 static void print(OpAsmPrinter &p, ConstShapeOp &op) {
-  p << "shape.const_shape ";
+  p << " ";
   p.printOptionalAttrDict(op->getAttrs(), /*elidedAttrs=*/{"shape"});
   p << "[";
   interleaveComma(op.shape().getValues<int64_t>(), p,
@@ -1096,7 +1096,7 @@ ParseResult parseFunctionLibraryOp(OpAsmParser &parser,
 }
 
 void print(OpAsmPrinter &p, FunctionLibraryOp op) {
-  p << op.getOperationName() << ' ';
+  p << ' ';
   p.printSymbolName(op.getName());
   p.printOptionalAttrDictWithKeyword(
       op->getAttrs(), {SymbolTable::getSymbolAttrName(), "mapping"});
@@ -1691,7 +1691,7 @@ static ParseResult parseReduceOp(OpAsmParser &parser, OperationState &result) {
 }
 
 static void print(OpAsmPrinter &p, ReduceOp op) {
-  p << op.getOperationName() << '(' << op.shape() << ", " << op.initVals()
+  p << '(' << op.shape() << ", " << op.initVals()
     << ") : " << op.shape().getType();
   p.printOptionalArrowTypeList(op.getResultTypes());
   p.printRegion(op.region());

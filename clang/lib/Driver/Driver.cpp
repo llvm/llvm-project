@@ -1103,7 +1103,8 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   // Silence driver warnings if requested
   Diags.setIgnoreAllWarnings(Args.hasArg(options::OPT_w));
 
-  // -no-canonical-prefixes is used very early in main.
+  // -canonical-prefixes, -no-canonical-prefixes are used very early in main.
+  Args.ClaimAllArgs(options::OPT_canonical_prefixes);
   Args.ClaimAllArgs(options::OPT_no_canonical_prefixes);
 
   // f(no-)integated-cc1 is also used very early in main.
@@ -2654,7 +2655,7 @@ class OffloadingActionBuilder final {
       assert(CudaDeviceActions.size() == GpuArchList.size() &&
              "Expecting one action per GPU architecture.");
       assert(ToolChains.size() == 1 &&
-             "Expecting to have a sing CUDA toolchain.");
+             "Expecting to have a single CUDA toolchain.");
       for (unsigned I = 0, E = GpuArchList.size(); I != E; ++I)
         AddTopLevel(CudaDeviceActions[I], GpuArchList[I]);
 
@@ -4278,7 +4279,7 @@ void Driver::BuildJobs(Compilation &C) const {
             << '\n';
         Out.flush();
         std::error_code EC;
-        llvm::raw_fd_ostream OS(CCPrintStatReportFilename.c_str(), EC,
+        llvm::raw_fd_ostream OS(CCPrintStatReportFilename, EC,
                                 llvm::sys::fs::OF_Append |
                                     llvm::sys::fs::OF_Text);
         if (EC)

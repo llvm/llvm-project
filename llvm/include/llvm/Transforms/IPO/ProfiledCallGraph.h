@@ -42,7 +42,7 @@ public:
   using iterator = std::set<ProfiledCallGraphNode *>::iterator;
 
   // Constructor for non-CS profile.
-  ProfiledCallGraph(StringMap<FunctionSamples> &ProfileMap) {
+  ProfiledCallGraph(SampleProfileMap &ProfileMap) {
     assert(!FunctionSamples::ProfileIsCS && "CS profile is not handled here");
     for (const auto &Samples : ProfileMap) {
       addProfiledCalls(Samples.second);
@@ -56,7 +56,7 @@ public:
     std::queue<ContextTrieNode *> Queue;
     for (auto &Child : ContextTracker.getRootContext().getAllChildContext()) {
       ContextTrieNode *Callee = &Child.second;
-      addProfiledFunction(Callee->getFuncName());
+      addProfiledFunction(ContextTracker.getFuncNameFor(Callee));
       Queue.push(Callee);
     }
 
@@ -72,9 +72,10 @@ public:
       // context-based one, which may in turn block context-based inlining.
       for (auto &Child : Caller->getAllChildContext()) {
         ContextTrieNode *Callee = &Child.second;
-        addProfiledFunction(Callee->getFuncName());
+        addProfiledFunction(ContextTracker.getFuncNameFor(Callee));
         Queue.push(Callee);
-        addProfiledCall(Caller->getFuncName(), Callee->getFuncName());
+        addProfiledCall(ContextTracker.getFuncNameFor(Caller),
+                        ContextTracker.getFuncNameFor(Callee));
       }
     }
   }

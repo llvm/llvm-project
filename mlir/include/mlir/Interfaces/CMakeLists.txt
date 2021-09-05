@@ -6,6 +6,7 @@ add_mlir_interface(DerivedAttributeOpInterface)
 add_mlir_interface(InferTypeOpInterface)
 add_mlir_interface(LoopLikeInterface)
 add_mlir_interface(SideEffectInterfaces)
+add_mlir_interface(TilingInterface)
 add_mlir_interface(VectorInterfaces)
 add_mlir_interface(ViewLikeInterface)
 

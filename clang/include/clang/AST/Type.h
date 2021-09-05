@@ -3524,13 +3524,9 @@ class DependentSizedMatrixType final : public MatrixType {
                            Expr *ColumnExpr, SourceLocation loc);
 
 public:
-  QualType getElementType() const { return ElementType; }
   Expr *getRowExpr() const { return RowExpr; }
   Expr *getColumnExpr() const { return ColumnExpr; }
   SourceLocation getAttributeLoc() const { return loc; }
-
-  bool isSugared() const { return false; }
-  QualType desugar() const { return QualType(this, 0); }
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == DependentSizedMatrix;

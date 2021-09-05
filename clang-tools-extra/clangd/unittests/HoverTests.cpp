@@ -939,6 +939,39 @@ class Foo {})cpp";
   }
 }
 
+TEST(Hover, DefinitionLanuage) {
+  struct {
+    const char *const Code;
+    const std::string ClangLanguageFlag;
+    const char *const ExpectedDefinitionLanguage;
+  } Cases[] = {{R"cpp(
+          void [[some^Global]]() {}
+          )cpp",
+                "", "cpp"},
+               {R"cpp(
+          void [[some^Global]]() {}
+          )cpp",
+                "-xobjective-c++", "objective-cpp"},
+               {R"cpp(
+          void [[some^Global]]() {}
+          )cpp",
+                "-xobjective-c", "objective-c"}};
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Code);
+
+    Annotations T(Case.Code);
+    TestTU TU = TestTU::withCode(T.code());
+    if (!Case.ClangLanguageFlag.empty())
+      TU.ExtraArgs.push_back(Case.ClangLanguageFlag);
+    auto AST = TU.build();
+
+    auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+    ASSERT_TRUE(H);
+
+    EXPECT_STREQ(H->DefinitionLanguage, Case.ExpectedDefinitionLanguage);
+  }
+}
+
 TEST(Hover, CallPassType) {
   const llvm::StringRef CodePrefix = R"cpp(
 class Base {};

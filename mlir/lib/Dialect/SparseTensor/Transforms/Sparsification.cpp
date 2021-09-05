@@ -30,6 +30,9 @@ using namespace mlir::sparse_tensor;
 
 namespace {
 
+// Iteration graph sorting.
+enum SortMask { kSparseOnly = 0x0, kIncludeDense = 0x1, kIncludeUndef = 0x2 };
+
 // Code generation.
 struct CodeGen {
   CodeGen(SparsificationOptions o, unsigned numTensors, unsigned numLoops)
@@ -141,7 +144,7 @@ static bool topSortDFS(unsigned i, std::vector<unsigned> &visit,
 /// order yields innermost unit-stride access with better spatial locality.
 static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
                                   std::vector<unsigned> &topSort,
-                                  bool sparseOnly) {
+                                  unsigned mask) {
   // Set up an n x n from/to adjacency matrix of the iteration graph
   // for the implicit loop indices i_0 .. i_n-1.
   unsigned n = op.getNumLoops();
@@ -152,8 +155,8 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
     auto map = op.getTiedIndexingMap(t);
     auto enc = getSparseTensorEncoding(t->get().getType());
     assert(map.getNumDims() == n);
-    // Skip dense tensor constraints when sparse only is requested.
-    if (sparseOnly && !enc)
+    // Skip dense tensor constraints when not requested.
+    if (!(mask & SortMask::kIncludeDense) && !enc)
       continue;
     // Each tensor expression and optional dimension ordering (row-major
     // by default) puts an ordering constraint on the loop indices. For
@@ -163,6 +166,16 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
       unsigned f = map.getDimPosition(perm(enc, d - 1));
       unsigned t = map.getDimPosition(perm(enc, d));
       adjM[f][t] = true;
+    }
+    // Push unrelated loops into sparse iteration space, so these
+    // will be skipped more often.
+    if (mask & SortMask::kIncludeUndef) {
+      unsigned tensor = t->getOperandNumber();
+      for (unsigned i = 0; i < n; i++)
+        if (merger.isDim(tensor, i, Dim::kSparse))
+          for (unsigned j = 0; j < n; j++)
+            if (merger.isDim(tensor, j, Dim::kUndef))
+              adjM[i][j] = true;
     }
   }
 
@@ -1134,8 +1147,12 @@ public:
     // This assumes that higher-level passes have already put the
     // tensors in each tensor expression in a feasible order.
     std::vector<unsigned> topSort;
-    if (!computeIterationGraph(merger, op, topSort, /*sparseOnly=*/false) &&
-        !computeIterationGraph(merger, op, topSort, /*sparseOnly=*/true))
+    if (!computeIterationGraph(merger, op, topSort,
+                               SortMask::kIncludeUndef |
+                                   SortMask::kIncludeDense) &&
+        !computeIterationGraph(merger, op, topSort, SortMask::kIncludeUndef) &&
+        !computeIterationGraph(merger, op, topSort, SortMask::kIncludeDense) &&
+        !computeIterationGraph(merger, op, topSort, SortMask::kSparseOnly))
       return failure();
 
     // Builds the tensor expression for the Linalg operation in SSA form.

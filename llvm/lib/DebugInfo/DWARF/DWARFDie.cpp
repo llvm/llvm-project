@@ -161,43 +161,112 @@ static void dumpArrayType(raw_ostream &OS, const DWARFDie &D) {
     }
 }
 
-/// Recursively dump the DIE type name when applicable.
-static void dumpTypeName(raw_ostream &OS, const DWARFDie &D) {
-  if (!D.isValid())
-    return;
+static void dumpTypeName(raw_ostream &OS, const DWARFDie &D, bool SkipFirstParamIfArtificial = false);
+static DWARFDie dumpTypeNameBefore(raw_ostream &OS, DWARFDie D, bool *Word = nullptr);
 
+static void dumpPointerLikeTypeBefore(raw_ostream &OS, DWARFDie D, DWARFDie Inner, StringRef Ptr, bool *Word) {
+    bool SubWord;
+    dumpTypeNameBefore(OS, Inner, &SubWord);
+    bool NeedsParens =
+        Inner && (Inner.getTag() == llvm::dwarf::DW_TAG_subroutine_type ||
+                  Inner.getTag() == llvm::dwarf::DW_TAG_array_type);
+    if (NeedsParens)
+      OS << '(';
+    else if (SubWord)
+      OS << ' ';
+    OS << Ptr;
+    if (Word)
+      *Word = false;
+}
+
+static DWARFDie dumpTypeNameBefore(raw_ostream &OS, DWARFDie D, bool *Word) {
+  if (Word)
+    *Word = true;
+  if (!D) {
+    OS << "void";
+    return DWARFDie();
+  }
   if (const char *Name = D.getName(DINameKind::LinkageName)) {
     OS << Name;
-    return;
+    return DWARFDie();
   }
 
-  // FIXME: We should have pretty printers per language. Currently we print
-  // everything as if it was C++ and fall back to the TAG type name.
+  DWARFDie Inner = D.getAttributeValueAsReferencedDie(DW_AT_type);
   const dwarf::Tag T = D.getTag();
   switch (T) {
-  case DW_TAG_array_type:
-  case DW_TAG_pointer_type:
-  case DW_TAG_ptr_to_member_type:
-  case DW_TAG_reference_type:
-  case DW_TAG_rvalue_reference_type:
-  case DW_TAG_subroutine_type:
+  case DW_TAG_pointer_type: {
+    dumpPointerLikeTypeBefore(OS, D, Inner, "*", Word);
     break;
+  }
+  case DW_TAG_subroutine_type: {
+    bool SubWord;
+    dumpTypeNameBefore(OS, Inner, &SubWord);
+    if (SubWord) {
+      OS << ' ';
+    }
+    if (Word)
+      *Word = false;
+    break;
+  }
+  case DW_TAG_array_type: {
+    bool SubWord;
+    dumpTypeNameBefore(OS, Inner, &SubWord);
+    if (SubWord)
+      OS << ' ';
+    if (Word)
+      *Word = false;
+    break;
+  }
+  case DW_TAG_reference_type:
+    dumpPointerLikeTypeBefore(OS, D, Inner, "&", Word);
+    break;
+  case DW_TAG_rvalue_reference_type:
+    dumpPointerLikeTypeBefore(OS, D, Inner, "&&", Word);
+    break;
+  case DW_TAG_ptr_to_member_type: {
+    bool SubWord;
+    dumpTypeNameBefore(OS, Inner, &SubWord);
+    bool NeedsParens =
+        Inner && (Inner.getTag() == llvm::dwarf::DW_TAG_subroutine_type ||
+                  Inner.getTag() == llvm::dwarf::DW_TAG_array_type);
+    if (NeedsParens)
+      OS << '(';
+    else if (SubWord)
+      OS << ' ';
+    if (DWARFDie Cont =
+            D.getAttributeValueAsReferencedDie(DW_AT_containing_type)) {
+      dumpTypeName(OS, Cont);
+      OS << "::";
+    }
+    OS << "*";
+    if (Word)
+      *Word = false;
+    break;
+  }
   default:
     dumpTypeTagName(OS, T);
+    dumpTypeNameBefore(OS, Inner);
+    break;
   }
+  return Inner;
+}
 
-  // Follow the DW_AT_type if possible.
-  DWARFDie TypeDie = D.getAttributeValueAsReferencedDie(DW_AT_type);
-  dumpTypeName(OS, TypeDie);
-
-  switch (T) {
+static void dumpTypeNameAfter(raw_ostream &OS, DWARFDie D, DWARFDie Inner,
+                              bool SkipFirstParamIfArtificial = false) {
+  if (!D)
+    return;
+  switch(D.getTag()) {
   case DW_TAG_subroutine_type: {
-    if (!TypeDie)
-      OS << "void";
     OS << '(';
     bool First = true;
+    bool RealFirst = true;
     for (const DWARFDie &C : D.children()) {
       if (C.getTag() == DW_TAG_formal_parameter) {
+        if (SkipFirstParamIfArtificial && RealFirst &&
+            C.find(DW_AT_artificial)) {
+          RealFirst = false;
+          continue;
+        }
         if (!First)
           OS << ", ";
         First = false;
@@ -211,26 +280,34 @@ static void dumpTypeName(raw_ostream &OS, const DWARFDie &D) {
     dumpArrayType(OS, D);
     break;
   }
-  case DW_TAG_pointer_type:
-    OS << '*';
-    break;
   case DW_TAG_ptr_to_member_type:
-    if (DWARFDie Cont =
-            D.getAttributeValueAsReferencedDie(DW_AT_containing_type)) {
-      dumpTypeName(OS << ' ', Cont);
-      OS << "::";
-    }
-    OS << '*';
-    break;
   case DW_TAG_reference_type:
-    OS << '&';
-    break;
   case DW_TAG_rvalue_reference_type:
-    OS << "&&";
+  case DW_TAG_pointer_type: {
+    bool NeedsParens =
+        Inner && (Inner.getTag() == llvm::dwarf::DW_TAG_subroutine_type ||
+                  Inner.getTag() == llvm::dwarf::DW_TAG_array_type);
+    if (NeedsParens)
+      OS << ')';
+    dumpTypeNameAfter(OS, Inner, D.getAttributeValueAsReferencedDie(DW_AT_type),
+                      /*SkipFirstParamIfArtificial=*/D.getTag() ==
+                          DW_TAG_ptr_to_member_type);
     break;
+  }
   default:
     break;
   }
+}
+
+/// Recursively dump the DIE type name when applicable.
+static void dumpTypeName(raw_ostream &OS, const DWARFDie &D, bool SkipFirstParamIfArtificial) {
+  if (!D.isValid() || D.isNULL())
+    return;
+
+  // FIXME: We should have pretty printers per language. Currently we print
+  // everything as if it was C++ and fall back to the TAG type name.
+  DWARFDie Inner = dumpTypeNameBefore(OS, D);
+  dumpTypeNameAfter(OS, D, Inner, SkipFirstParamIfArtificial);
 }
 
 static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,

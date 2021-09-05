@@ -23,9 +23,14 @@
 
 #include "hsa_api.h"
 
-#include "atmi.h"
-#include "atmi_runtime.h"
+#include "impl.h"
 #include "rt.h"
+#include "impl_runtime.h"
+#ifndef TARGET_NAME
+#error "Missing TARGET_NAME macro"
+#endif
+#define DEBUG_PREFIX "Target " GETNAME(TARGET_NAME) " RTL"
+#include "Debug.h"
 
 #define MAX_NUM_KERNELS (1024 * 16)
 
@@ -41,34 +46,6 @@ typedef struct impl_implicit_args_s {
   unsigned long cpu_queue_ptr;
   unsigned long kernarg_template_ptr;
 } impl_implicit_args_t;
-
-extern "C" {
-
-#ifdef DEBUG
-#define DEBUG_PRINT(fmt, ...)                                                  \
-  if (core::Runtime::getInstance().getDebugMode()) {                           \
-    fprintf(stderr, "[%s:%d] " fmt, __FILE__, __LINE__, ##__VA_ARGS__);        \
-  }
-#else
-#define DEBUG_PRINT(...)                                                       \
-  do {                                                                         \
-  } while (false)
-#endif
-
-#ifndef HSA_RUNTIME_INC_HSA_H_
-typedef struct hsa_signal_s {
-  uint64_t handle;
-} hsa_signal_t;
-#endif
-
-}
-
-/* ---------------------------------------------------------------------------------
- * Simulated CPU Data Structures and API
- * ---------------------------------------------------------------------------------
- */
-
-#define ATMI_WAIT_STATE HSA_WAIT_STATE_BLOCKED
 
 // ---------------------- Kernel Start -------------
 typedef struct atl_kernel_info_s {
@@ -111,7 +88,7 @@ struct SignalPoolT {
       state.pop();
       hsa_status_t rc = hsa_signal_destroy(signal);
       if (rc != HSA_STATUS_SUCCESS) {
-        DEBUG_PRINT("Signal pool destruction failed\n");
+        DP("Signal pool destruction failed\n");
       }
     }
   }
@@ -184,6 +161,10 @@ bool handle_group_signal(hsa_signal_value_t value, void *arg);
 hsa_status_t allow_access_to_all_gpu_agents(void *ptr);
 } // namespace core
 
-const char *get_error_string(hsa_status_t err);
+inline const char *get_error_string(hsa_status_t err) {
+  const char *res;
+  hsa_status_t rc = hsa_status_string(err, &res);
+  return (rc == HSA_STATUS_SUCCESS) ? res : "HSA_STATUS UNKNOWN.";
+}
 
 #endif // SRC_RUNTIME_INCLUDE_INTERNAL_H_

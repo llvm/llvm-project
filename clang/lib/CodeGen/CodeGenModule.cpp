@@ -733,8 +733,9 @@ void CodeGenModule::Release() {
     if (getTriple().isSPIR()) {
       // SPIR v2.0 s2.12 - The SPIR version used by the module is stored in the
       // opencl.spir.version named metadata.
-      // C++ is backwards compatible with OpenCL v2.0.
-      auto Version = LangOpts.OpenCLCPlusPlus ? 200 : LangOpts.OpenCLVersion;
+      // C++ for OpenCL has a distinct mapping for version compatibility with
+      // OpenCL.
+      auto Version = LangOpts.getOpenCLCompatibleVersion();
       llvm::Metadata *SPIRVerElts[] = {
           llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
               Int32Ty, Version / 100)),
@@ -827,9 +828,8 @@ void CodeGenModule::Release() {
 void CodeGenModule::EmitOpenCLMetadata() {
   // SPIR v2.0 s2.13 - The OpenCL version used by the module is stored in the
   // opencl.ocl.version named metadata node.
-  // C++ is backwards compatible with OpenCL v2.0.
-  // FIXME: We might need to add CXX version at some point too?
-  auto Version = LangOpts.OpenCLCPlusPlus ? 200 : LangOpts.OpenCLVersion;
+  // C++ for OpenCL has a distinct mapping for versions compatibile with OpenCL.
+  auto Version = LangOpts.getOpenCLCompatibleVersion();
   llvm::Metadata *OCLVerElts[] = {
       llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
           Int32Ty, Version / 100)),

@@ -24,13 +24,10 @@
 #include <unordered_map>
 #include <vector>
 
-// Header from ATMI interface
-#include "atmi_interop_hsa.h"
-#include "atmi_runtime.h"
+// Header from IMPL interface
+#include "impl_interop_hsa.h"
+#include "rt.h"
 
-#include "internal.h"
-
-#include "Debug.h"
 #include "get_elf_mach_gfx_name.h"
 #include "machine.h"
 #include "omptargetplugin.h"
@@ -39,10 +36,6 @@
 
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
-#ifndef TARGET_NAME
-#error "Missing TARGET_NAME macro"
-#endif
-#define DEBUG_PREFIX "Target " GETNAME(TARGET_NAME) " RTL"
 
 // hostrpc interface, FIXME: consider moving to its own include these are
 // statically linked into amdgpu/plugin if present from hostrpc_services.a,
@@ -88,13 +81,13 @@ int print_kernel_trace;
 #include "elf_common.h"
 
 namespace core {
-hsa_status_t RegisterModuleFromMemory(
-    std::map<std::string, atl_kernel_info_t> &KernelInfo,
-    std::map<std::string, atl_symbol_info_t> &SymbolInfoTable, void *, size_t,
-    hsa_agent_t agent,
-    hsa_status_t (*on_deserialized_data)(void *data, size_t size,
-                                         void *cb_state),
-    void *cb_state, std::vector<hsa_executable_t> &HSAExecutables);
+  hsa_status_t RegisterModuleFromMemory(
+     std::map<std::string, atl_kernel_info_t> &KernelInfo,
+     std::map<std::string, atl_symbol_info_t> &SymbolInfoTable, void *, size_t,
+     hsa_agent_t agent,
+     hsa_status_t (*on_deserialized_data)(void *data, size_t size,
+                                          void *cb_state),
+     void *cb_state, std::vector<hsa_executable_t> &HSAExecutables);
 }
 
 namespace hsa {
@@ -715,7 +708,7 @@ public:
       return;
     }
 
-    // Init hostcall soon after initializing ATMI
+    // Init hostcall soon after initializing hsa
     hostrpc_init();
 
     err = FindAgents([&](hsa_device_type_t DeviceType, hsa_agent_t Agent) {
@@ -770,8 +763,9 @@ public:
           DP("HSA query QUEUE_MAX_SIZE failed for agent %d\n", i);
           return;
         }
-        if (queue_size > core::Runtime::getInstance().getMaxQueueSize()) {
-          queue_size = core::Runtime::getInstance().getMaxQueueSize();
+        enum { MaxQueueSize = 4096 };
+        if (queue_size > MaxQueueSize) {
+          queue_size = MaxQueueSize;
         }
       }
 
@@ -814,7 +808,7 @@ public:
     // impl_finalize removes access to it
     deviceStateStore.clear();
     KernelArgPoolMap.clear();
-    // Terminate hostrpc before finalizing ATMI
+    // Terminate hostrpc before finalizing hsa
     hostrpc_terminate();
 
     hsa_status_t Err;
@@ -1517,7 +1511,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
     }
   }
 
-  DP("ATMI module successfully loaded!\n");
+  DP("AMDGPU module successfully loaded!\n");
 
   {
     // the device_State array is either large value in bss or a void* that
@@ -2187,8 +2181,7 @@ int32_t __tgt_rtl_run_target_team_region_locked(
         memcpy((char *)kernarg + sizeof(void *) * i, args[i], sizeof(void *));
       }
 
-      // Initialize implicit arguments. ATMI seems to leave most fields
-      // uninitialized
+      // Initialize implicit arguments. TODO: Which of these can be dropped
       impl_implicit_args_t *impl_args =
           reinterpret_cast<impl_implicit_args_t *>(
               static_cast<char *>(kernarg) + ArgPool->kernarg_segment_size);
@@ -2305,14 +2298,14 @@ hsa_status_t device_malloc(void **mem, size_t size, int device_id) {
   return hsa_amd_memory_pool_allocate(MemoryPool, size, 0, mem);
 }
 
-hsa_status_t atmi_free(void *mem) { return core::Runtime::Memfree(mem); }
+hsa_status_t impl_free(void *mem) { return core::Runtime::Memfree(mem); }
 
 hsa_status_t ftn_assign_wrapper(void *arg0, void *arg1, void *arg2, void *arg3,
                                 void *arg4) {
   return core::Runtime::FtnAssignWrapper(arg0, arg1, arg2, arg3, arg4);
 }
 // This method is only used by hostrpc demo
-hsa_status_t atmi_memcpy_no_signal(void *dest, const void *src, size_t size,
+hsa_status_t impl_memcpy_no_signal(void *dest, const void *src, size_t size,
                                    int host2Device) {
   hsa_signal_t sig;
   hsa_status_t err = hsa_signal_create(0, 0, NULL, &sig);

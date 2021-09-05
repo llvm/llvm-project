@@ -685,10 +685,13 @@ PluginManager::GetObjectFileCreateMemoryCallbackForPluginName(
 
 Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
                                const FileSpec &outfile,
-                               lldb::SaveCoreStyle &core_style) {
+                               lldb::SaveCoreStyle &core_style,
+                               const ConstString plugin_name) {
   Status error;
   auto &instances = GetObjectFileInstances().GetInstances();
   for (auto &instance : instances) {
+    if (plugin_name && instance.name != plugin_name)
+      continue;
     if (instance.save_core &&
         instance.save_core(process_sp, outfile, core_style, error))
       return error;

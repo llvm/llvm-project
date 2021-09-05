@@ -402,7 +402,6 @@ public:
   LegalizeResult lowerDIVREM(MachineInstr &MI);
   LegalizeResult lowerAbsToAddXor(MachineInstr &MI);
   LegalizeResult lowerAbsToMaxNeg(MachineInstr &MI);
-  LegalizeResult lowerIsNaN(MachineInstr &MI);
   LegalizeResult lowerVectorReduction(MachineInstr &MI);
 };
 

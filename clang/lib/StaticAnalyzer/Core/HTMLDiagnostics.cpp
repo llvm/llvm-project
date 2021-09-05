@@ -344,7 +344,7 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
 
   if (std::error_code EC = llvm::sys::fs::openFileForReadWrite(
           ResultPath, FD, llvm::sys::fs::CD_CreateNew,
-          llvm::sys::fs::OF_None)) {
+          llvm::sys::fs::OF_Text)) {
     // Existence of the file corresponds to the situation where a different
     // Clang instance has emitted a bug report with the same issue hash.
     // This is an entirely normal situation that does not deserve a warning,

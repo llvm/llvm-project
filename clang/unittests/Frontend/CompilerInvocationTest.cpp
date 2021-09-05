@@ -860,9 +860,7 @@ struct DummyModuleFileExtension
     return {};
   };
 
-  llvm::hash_code hashExtension(llvm::hash_code Code) const override {
-    return {};
-  }
+  void hashExtension(ExtensionHashBuilder &HBuilder) const override {}
 
   std::unique_ptr<ModuleFileExtensionWriter>
   createExtensionWriter(ASTWriter &Writer) override {

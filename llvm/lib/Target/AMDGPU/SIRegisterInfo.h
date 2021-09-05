@@ -172,6 +172,11 @@ public:
 
   bool isSGPRReg(const MachineRegisterInfo &MRI, Register Reg) const;
 
+  /// \returns true if this class contains only VGPR registers
+  bool isVGPRClass(const TargetRegisterClass *RC) const {
+    return hasVGPRs(RC) && !hasAGPRs(RC);
+  }
+
   /// \returns true if this class contains only AGPR registers
   bool isAGPRClass(const TargetRegisterClass *RC) const {
     return hasAGPRs(RC) && !hasVGPRs(RC);

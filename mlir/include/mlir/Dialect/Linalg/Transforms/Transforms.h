@@ -80,6 +80,12 @@ void populateFoldUnitDimsReshapeOpsByLinearizationPatterns(
 void populateLinalgBufferizePatterns(BufferizeTypeConverter &converter,
                                      RewritePatternSet &patterns);
 
+/// Create linalg op on buffers given the original tensor-based operation and
+/// the buffers for the outputs.
+LinalgOp createLinalgOpOnBuffers(ConversionPatternRewriter &rewriter,
+                                 LinalgOp linalgOp, ValueRange inputs,
+                                 ValueRange outputs);
+
 /// Patterns to fold unit-extent dimensions in operands/results of linalg ops on
 /// tensors.
 void populateFoldUnitExtentDimsPatterns(RewritePatternSet &patterns);

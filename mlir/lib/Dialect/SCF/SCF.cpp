@@ -114,7 +114,6 @@ static ParseResult parseExecuteRegionOp(OpAsmParser &parser,
 }
 
 static void print(OpAsmPrinter &p, ExecuteRegionOp op) {
-  p << ExecuteRegionOp::getOperationName();
   p.printOptionalArrowTypeList(op.getResultTypes());
 
   p.printRegion(op.region(),
@@ -339,8 +338,8 @@ static void printInitializationList(OpAsmPrinter &p,
 }
 
 static void print(OpAsmPrinter &p, ForOp op) {
-  p << op.getOperationName() << " " << op.getInductionVar() << " = "
-    << op.lowerBound() << " to " << op.upperBound() << " step " << op.step();
+  p << " " << op.getInductionVar() << " = " << op.lowerBound() << " to "
+    << op.upperBound() << " step " << op.step();
 
   printInitializationList(p, op.getRegionIterArgs(), op.getIterOperands(),
                           " iter_args");
@@ -1099,7 +1098,7 @@ static ParseResult parseIfOp(OpAsmParser &parser, OperationState &result) {
 static void print(OpAsmPrinter &p, IfOp op) {
   bool printBlockTerminators = false;
 
-  p << IfOp::getOperationName() << " " << op.condition();
+  p << " " << op.condition();
   if (!op.results().empty()) {
     p << " -> (" << op.getResultTypes() << ")";
     // Print yield explicitly if the op defines values.
@@ -1762,9 +1761,8 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
 }
 
 static void print(OpAsmPrinter &p, ParallelOp op) {
-  p << op.getOperationName() << " (" << op.getBody()->getArguments() << ") = ("
-    << op.lowerBound() << ") to (" << op.upperBound() << ") step (" << op.step()
-    << ")";
+  p << " (" << op.getBody()->getArguments() << ") = (" << op.lowerBound()
+    << ") to (" << op.upperBound() << ") step (" << op.step() << ")";
   if (!op.initVals().empty())
     p << " init (" << op.initVals() << ")";
   p.printOptionalArrowTypeList(op.getResultTypes());
@@ -2020,7 +2018,7 @@ static ParseResult parseReduceOp(OpAsmParser &parser, OperationState &result) {
 }
 
 static void print(OpAsmPrinter &p, ReduceOp op) {
-  p << op.getOperationName() << "(" << op.operand() << ") ";
+  p << "(" << op.operand() << ") ";
   p << " : " << op.operand().getType();
   p.printRegion(op.reductionOperator());
 }
@@ -2124,7 +2122,6 @@ static ParseResult parseWhileOp(OpAsmParser &parser, OperationState &result) {
 
 /// Prints a `while` op.
 static void print(OpAsmPrinter &p, scf::WhileOp op) {
-  p << op.getOperationName();
   printInitializationList(p, op.before().front().getArguments(), op.inits(),
                           " ");
   p << " : ";

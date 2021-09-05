@@ -11,20 +11,18 @@
 
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/Interpreter/ScriptedInterface.h"
+
 #include "lldb/lldb-private.h"
 
 #include <string>
 
 namespace lldb_private {
-class ScriptedProcessInterface {
+class ScriptedProcessInterface : virtual public ScriptedInterface {
 public:
-  ScriptedProcessInterface() : m_object_instance_sp(nullptr) {}
-
-  virtual ~ScriptedProcessInterface() = default;
-
-  virtual StructuredData::GenericSP
-  CreatePluginObject(const llvm::StringRef class_name, lldb::TargetSP target_sp,
-                     StructuredData::DictionarySP args_sp) {
+  StructuredData::GenericSP
+  CreatePluginObject(llvm::StringRef class_name, ExecutionContext &exe_ctx,
+                     StructuredData::DictionarySP args_sp) override {
     return nullptr;
   }
 
@@ -59,9 +57,6 @@ public:
   virtual lldb::pid_t GetProcessID() { return LLDB_INVALID_PROCESS_ID; }
 
   virtual bool IsAlive() { return true; }
-
-private:
-  StructuredData::ObjectSP m_object_instance_sp;
 };
 } // namespace lldb_private
 

@@ -1474,11 +1474,6 @@ def : Flag<["-"], "fextended-identifiers">, Group<clang_ignored_f_Group>;
 def : Flag<["-"], "fno-extended-identifiers">, Group<f_Group>, Flags<[Unsupported]>;
 def fhosted : Flag<["-"], "fhosted">, Group<f_Group>;
 def fdenormal_fp_math_EQ : Joined<["-"], "fdenormal-fp-math=">, Group<f_Group>, Flags<[CC1Option]>;
-def ffp_eval_method_EQ : Joined<["-"], "ffp-eval-method=">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Specifies the evaluation method to use for floating-point arithmetic.">,
-  Values<"source,double,extended">, NormalizedValuesScope<"LangOptions">,
-  NormalizedValues<["FEM_Source", "FEM_Double", "FEM_Extended"]>,
-  MarshallingInfoEnum<LangOpts<"FPEvalMethod">, "FEM_TargetDefault">;
 def ffp_model_EQ : Joined<["-"], "ffp-model=">, Group<f_Group>, Flags<[NoXarchOption]>,
   HelpText<"Controls the semantics of floating-point calculations.">;
 def ffp_exception_behavior_EQ : Joined<["-"], "ffp-exception-behavior=">, Group<f_Group>, Flags<[CC1Option]>,
@@ -2390,6 +2385,12 @@ def fopenmp : Flag<["-"], "fopenmp">, Group<f_Group>, Flags<[CC1Option, NoArgume
   HelpText<"Parse OpenMP pragmas and generate parallel code.">;
 def fno_openmp : Flag<["-"], "fno-openmp">, Group<f_Group>, Flags<[NoArgumentUnused]>;
 def fopenmp_version_EQ : Joined<["-"], "fopenmp-version=">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused]>;
+defm openmp_extensions: BoolFOption<"openmp-extensions",
+  LangOpts<"OpenMPExtensions">, DefaultTrue,
+  PosFlag<SetTrue, [CC1Option, NoArgumentUnused],
+          "Enable all Clang extensions for OpenMP directives and clauses">,
+  NegFlag<SetFalse, [CC1Option, NoArgumentUnused],
+          "Disable all Clang extensions for OpenMP directives and clauses">>;
 def fopenmp_EQ : Joined<["-"], "fopenmp=">, Group<f_Group>;
 def fopenmp_use_tls : Flag<["-"], "fopenmp-use-tls">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>;
@@ -3694,8 +3695,10 @@ def multi__module : Flag<["-"], "multi_module">;
 def multiply__defined__unused : Separate<["-"], "multiply_defined_unused">;
 def multiply__defined : Separate<["-"], "multiply_defined">;
 def mwarn_nonportable_cfstrings : Flag<["-"], "mwarn-nonportable-cfstrings">, Group<m_Group>;
+def canonical_prefixes : Flag<["-"], "canonical-prefixes">, Flags<[HelpHidden, CoreOption]>,
+  HelpText<"Use absolute paths for invoking subcommands (default)">;
 def no_canonical_prefixes : Flag<["-"], "no-canonical-prefixes">, Flags<[HelpHidden, CoreOption]>,
-  HelpText<"Use relative instead of canonical paths">;
+  HelpText<"Use relative paths for invoking subcommands">;
 def no_cpp_precomp : Flag<["-"], "no-cpp-precomp">, Group<clang_ignored_f_Group>;
 def no_integrated_cpp : Flag<["-", "--"], "no-integrated-cpp">, Flags<[NoXarchOption]>;
 def no_pedantic : Flag<["-", "--"], "no-pedantic">, Group<pedantic_Group>;

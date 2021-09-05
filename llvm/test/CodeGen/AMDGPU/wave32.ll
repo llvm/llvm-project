@@ -418,8 +418,9 @@ define i64 @test_mad_u64_u32(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 }
 
 ; GCN-LABEL: {{^}}test_div_fmas_f32:
-; GFX1032: v_cmp_eq_u32_e64 vcc_lo,
-; GFX1064: v_cmp_eq_u32_e64 vcc,
+; GCN:     s_bitcmp1_b32 s{{[0-9]+}}, 0
+; GFX1032: s_cselect_b32 vcc_lo, -1, 0
+; GFX1064: s_cselect_b64 vcc, -1, 0
 ; GCN:     v_div_fmas_f32 v{{[0-9]+}}, {{[vs][0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 define amdgpu_kernel void @test_div_fmas_f32(float addrspace(1)* %out, float %a, float %b, float %c, i1 %d) nounwind {
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 %d) nounwind readnone
@@ -428,8 +429,9 @@ define amdgpu_kernel void @test_div_fmas_f32(float addrspace(1)* %out, float %a,
 }
 
 ; GCN-LABEL: {{^}}test_div_fmas_f64:
-; GFX1032: v_cmp_eq_u32_e64 vcc_lo,
-; GFX1064: v_cmp_eq_u32_e64 vcc,
+; GCN:     s_bitcmp1_b32 s{{[0-9]+}}, 0
+; GFX1032: s_cselect_b32 vcc_lo, -1, 0
+; GFX1064: s_cselect_b64 vcc, -1, 0
 ; GCN-DAG: v_div_fmas_f64 v[{{[0-9:]+}}], {{[vs]}}[{{[0-9:]+}}], v[{{[0-9:]+}}], v[{{[0-9:]+}}]
 define amdgpu_kernel void @test_div_fmas_f64(double addrspace(1)* %out, double %a, double %b, double %c, i1 %d) nounwind {
   %result = call double @llvm.amdgcn.div.fmas.f64(double %a, double %b, double %c, i1 %d) nounwind readnone
@@ -519,7 +521,7 @@ two:
 }
 
 ; GCN-LABEL: {{^}}test_brcc_i1:
-; GCN:      s_cmp_eq_u32 s{{[0-9]+}}, 0
+; GCN:      s_bitcmp0_b32 s{{[0-9]+}}, 0
 ; GCN-NEXT: s_cbranch_scc1
 define amdgpu_kernel void @test_brcc_i1(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in, i1 %val) #0 {
   %cmp0 = icmp ne i1 %val, 0

@@ -101,6 +101,7 @@ macros = {
   '_LIBCPP_HAS_NO_LOCALIZATION': 'libcpp-has-no-localization',
   '_LIBCPP_HAS_NO_INCOMPLETE_FORMAT': 'libcpp-has-no-incomplete-format',
   '_LIBCPP_HAS_NO_INCOMPLETE_RANGES': 'libcpp-has-no-incomplete-ranges',
+  '_LIBCPP_HAS_NO_UNICODE': 'libcpp-has-no-unicode',
 }
 for macro, feature in macros.items():
   DEFAULT_FEATURES += [

@@ -15,10 +15,11 @@
 #include <__concepts/derived_from.h>
 #include <__concepts/different_from.h>
 #include <__config>
+#include <__debug>
+#include <__iterator/advance.h>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iterator_traits.h>
-#include <__iterator/advance.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/dangling.h>
@@ -118,7 +119,12 @@ namespace ranges {
     constexpr subrange(__convertible_to_non_slicing<_Iter> auto __iter, _Sent __sent,
                        make_unsigned_t<iter_difference_t<_Iter>> __n)
       requires (_Kind == subrange_kind::sized)
-      : _Base(_VSTD::move(__iter), __sent, __n) { }
+      : _Base(_VSTD::move(__iter), __sent, __n)
+    {
+      if constexpr (sized_sentinel_for<_Sent, _Iter>)
+        _LIBCPP_ASSERT((this->__end_ - this->__begin_) == static_cast<iter_difference_t<_Iter>>(__n),
+          "std::ranges::subrange was passed an invalid size hint");
+    }
 
     template<__different_from<subrange> _Range>
       requires borrowed_range<_Range> &&

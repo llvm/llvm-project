@@ -13,7 +13,7 @@
 // RUN:   | sed -e s/@.*// > %t.exports
 //
 // [BEWARE: be really careful with the sed commands, as this test can be run
-//  from different environemnts with different shells and seds]
+//  from different environments with different shells and seds]
 //
 // RUN: grep -e "INTERFACE_FUNCTION"                                           \
 // RUN:  %p/../../../../lib/asan/asan_interface.inc                            \

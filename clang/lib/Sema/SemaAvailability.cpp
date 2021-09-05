@@ -57,7 +57,7 @@ static const AvailabilityAttr *getAttrForPlatform(ASTContext &Context,
 /// \param D The declaration to check.
 /// \param Message If non-null, this will be populated with the message from
 /// the availability attribute that is selected.
-/// \param ClassReceiver If we're checking the the method of a class message
+/// \param ClassReceiver If we're checking the method of a class message
 /// send, the class. Otherwise nullptr.
 static std::pair<AvailabilityResult, const NamedDecl *>
 ShouldDiagnoseAvailabilityOfDecl(Sema &S, const NamedDecl *D,

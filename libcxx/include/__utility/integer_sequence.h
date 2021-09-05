@@ -39,11 +39,11 @@ template<size_t... _Ip>
 #if __has_builtin(__make_integer_seq) && !defined(_LIBCPP_TESTING_FALLBACK_MAKE_INTEGER_SEQUENCE)
 
 template <class _Tp, _Tp _Ep>
-using __make_integer_sequence _LIBCPP_NODEBUG_TYPE = __make_integer_seq<integer_sequence, _Tp, _Ep>;
+using __make_integer_sequence _LIBCPP_NODEBUG = __make_integer_seq<integer_sequence, _Tp, _Ep>;
 
 #else
 
-template<typename _Tp, _Tp _Np> using __make_integer_sequence_unchecked _LIBCPP_NODEBUG_TYPE  =
+template<typename _Tp, _Tp _Np> using __make_integer_sequence_unchecked _LIBCPP_NODEBUG =
   typename __detail::__make<_Np>::type::template __convert<integer_sequence, _Tp>;
 
 template <class _Tp, _Tp _Ep>
@@ -54,11 +54,11 @@ struct __make_integer_sequence_checked
     static_assert(0 <= _Ep, "std::make_integer_sequence must have a non-negative sequence length");
     // Workaround GCC bug by preventing bad installations when 0 <= _Ep
     // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=68929
-    typedef _LIBCPP_NODEBUG_TYPE  __make_integer_sequence_unchecked<_Tp, 0 <= _Ep ? _Ep : 0> type;
+    typedef _LIBCPP_NODEBUG __make_integer_sequence_unchecked<_Tp, 0 <= _Ep ? _Ep : 0> type;
 };
 
 template <class _Tp, _Tp _Ep>
-using __make_integer_sequence _LIBCPP_NODEBUG_TYPE = typename __make_integer_sequence_checked<_Tp, _Ep>::type;
+using __make_integer_sequence _LIBCPP_NODEBUG = typename __make_integer_sequence_checked<_Tp, _Ep>::type;
 
 #endif
 

@@ -306,6 +306,9 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   // the assembly matcher will provide a function to map from diagnostic types
   // to message strings.
   string DiagnosticString = "";
+
+  // Target-specific flags. This becomes the TSFlags field in TargetRegisterClass.
+  bits<8> TSFlags = 0;
 }
 
 // The memberList in a RegisterClass is a dag of set operations. TableGen

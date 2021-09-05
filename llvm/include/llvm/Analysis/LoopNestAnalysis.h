@@ -25,7 +25,7 @@ using LoopVectorTy = SmallVector<Loop *, 8>;
 class LPMUpdater;
 
 /// This class represents a loop nest and can be used to query its properties.
-class LoopNest {
+class LLVM_EXTERNAL_VISIBILITY LoopNest {
 public:
   using InstrVectorTy = SmallVector<const Instruction *>;
 

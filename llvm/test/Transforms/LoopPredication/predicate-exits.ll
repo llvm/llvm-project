@@ -1099,6 +1099,34 @@ exit:
   ret i32 %result
 }
 
+define void @test_memssa() {
+bb:
+  %tmp = call i1 @llvm.experimental.widenable.condition()
+  %tmp1 = call i1 @llvm.experimental.widenable.condition()
+  br i1 %tmp, label %bb3, label %bb2
+
+bb2:                                              ; preds = %bb
+  unreachable
+
+bb3:                                              ; preds = %bb
+  br label %bb4
+
+bb4:                                              ; preds = %bb6, %bb3
+  %tmp5 = phi i32 [ %tmp7, %bb6 ], [ 0, %bb3 ]
+  br i1 undef, label %bb10, label %bb6
+
+bb6:                                              ; preds = %bb4
+  %tmp7 = add nuw nsw i32 %tmp5, 1
+  %tmp8 = icmp ult i32 %tmp7, undef
+  br i1 %tmp8, label %bb4, label %bb9
+
+bb9:                                              ; preds = %bb6
+  ret void
+
+bb10:                                             ; preds = %bb4
+  ret void
+}
+
 
 
 declare void @unknown()

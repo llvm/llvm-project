@@ -772,37 +772,6 @@ ExprResult Sema::UsualUnaryConversions(Expr *E) {
   QualType Ty = E->getType();
   assert(!Ty.isNull() && "UsualUnaryConversions - missing type");
 
-  LangOptions::FPEvalMethodKind EvalMethod = CurFPFeatures.getFPEvalMethod();
-  if (EvalMethod != LangOptions::FEM_Source && Ty->isFloatingType()) {
-    switch (EvalMethod) {
-    default:
-      llvm_unreachable("Unrecognized float evaluation method");
-      break;
-    case LangOptions::FEM_TargetDefault:
-      // Float evaluation method not defined, use FEM_Source.
-      break;
-    case LangOptions::FEM_Double:
-      if (Context.getFloatingTypeOrder(Context.DoubleTy, Ty) > 0)
-        // Widen the expression to double.
-        return Ty->isComplexType()
-                   ? ImpCastExprToType(E,
-                                       Context.getComplexType(Context.DoubleTy),
-                                       CK_FloatingComplexCast)
-                   : ImpCastExprToType(E, Context.DoubleTy, CK_FloatingCast);
-      break;
-    case LangOptions::FEM_Extended:
-      if (Context.getFloatingTypeOrder(Context.LongDoubleTy, Ty) > 0)
-        // Widen the expression to long double.
-        return Ty->isComplexType()
-                   ? ImpCastExprToType(
-                         E, Context.getComplexType(Context.LongDoubleTy),
-                         CK_FloatingComplexCast)
-                   : ImpCastExprToType(E, Context.LongDoubleTy,
-                                       CK_FloatingCast);
-      break;
-    }
-  }
-
   // Half FP have to be promoted to float unless it is natively supported
   if (Ty->isHalfType() && !getLangOpts().NativeHalfType)
     return ImpCastExprToType(Res.get(), Context.FloatTy, CK_FloatingCast);
@@ -3901,7 +3870,7 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
                                              "cl_khr_fp64", getLangOpts())) {
         // Impose single-precision float type when cl_khr_fp64 is not enabled.
         Diag(Tok.getLocation(), diag::warn_double_const_requires_fp64)
-            << (getLangOpts().OpenCLVersion >= 300);
+            << (getLangOpts().getOpenCLCompatibleVersion() >= 300);
         Res = ImpCastExprToType(Res, Context.FloatTy, CK_FloatingCast).get();
       }
     }
@@ -12263,7 +12232,7 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
     return computeResultTy();
   }
 
-  if (getLangOpts().OpenCLVersion >= 200 || getLangOpts().OpenCLCPlusPlus) {
+  if (getLangOpts().getOpenCLCompatibleVersion() >= 200) {
     if (LHSType->isClkEventT() && RHSType->isClkEventT()) {
       return computeResultTy();
     }
@@ -12522,8 +12491,9 @@ QualType Sema::CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
                                        /*AllowBoolConversions*/false);
   if (vType.isNull())
     return InvalidOperands(Loc, LHS, RHS);
-  if (getLangOpts().OpenCL && getLangOpts().OpenCLVersion < 120 &&
-      !getLangOpts().OpenCLCPlusPlus && vType->hasFloatingRepresentation())
+  if (getLangOpts().OpenCL &&
+      getLangOpts().getOpenCLCompatibleVersion() < 120 &&
+      vType->hasFloatingRepresentation())
     return InvalidOperands(Loc, LHS, RHS);
   // FIXME: The check for C++ here is for GCC compatibility. GCC rejects the
   //        usage of the logical operators && and || with vectors in C. This
@@ -14974,8 +14944,7 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
       }
     } else if (resultType->isExtVectorType()) {
       if (Context.getLangOpts().OpenCL &&
-          Context.getLangOpts().OpenCLVersion < 120 &&
-          !Context.getLangOpts().OpenCLCPlusPlus) {
+          Context.getLangOpts().getOpenCLCompatibleVersion() < 120) {
         // OpenCL v1.1 6.3.h: The logical operator not (!) does not
         // operate on vector float types.
         QualType T = resultType->castAs<ExtVectorType>()->getElementType();

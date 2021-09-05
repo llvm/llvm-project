@@ -10,10 +10,10 @@
 // and shapes and (for MAXLOC & MINLOC) result integer kinds.  Also implements
 // NORM2 using common infrastructure.
 
-#include "character.h"
 #include "reduction-templates.h"
-#include "reduction.h"
 #include "flang/Common/long-double.h"
+#include "flang/Runtime/character.h"
+#include "flang/Runtime/reduction.h"
 #include <algorithm>
 #include <cinttypes>
 #include <cmath>

@@ -70,17 +70,18 @@ commands below.
 
 ::
 
-  > yum install libedit-devel libxml2-devel ncurses-devel python-devel swig
-  > sudo apt-get install build-essential swig python3-dev libedit-dev libncurses5-dev
-  > pkg install swig python
-  > pkgin install swig python36 cmake ninja-build
-  > brew install swig cmake ninja
+  $ yum install libedit-devel libxml2-devel ncurses-devel python-devel swig
+  $ sudo apt-get install build-essential swig python3-dev libedit-dev libncurses5-dev
+  $ pkg install swig python
+  $ pkgin install swig python36 cmake ninja-build
+  $ brew install swig cmake ninja
 
 Note that there's an `incompatibility
 <https://github.com/swig/swig/issues/1321>`_ between Python version 3.7 and later
 and swig versions older than 4.0.0 which makes builds of LLDB using debug
 versions of python unusable. This primarily affects Windows, as debug builds of
 LLDB must use debug python as well.
+
 
 Windows
 *******
@@ -139,7 +140,7 @@ source-tree with git:
 
 ::
 
-  > git clone https://github.com/llvm/llvm-project.git
+  $ git clone https://github.com/llvm/llvm-project.git
 
 CMake is a cross-platform build-generator tool. CMake does not build the
 project, it generates the files needed by your build tool. The recommended
@@ -155,7 +156,7 @@ to the ``llvm`` directory in the source-tree:
 
 ::
 
-  > cmake -G Ninja -DLLVM_ENABLE_PROJECTS="clang;lldb" [<cmake options>] path/to/llvm-project/llvm
+  $ cmake -G Ninja -DLLVM_ENABLE_PROJECTS="clang;lldb" [<cmake options>] path/to/llvm-project/llvm
 
 We used the ``LLVM_ENABLE_PROJECTS`` option here to tell the build-system which
 subprojects to build in addition to LLVM (for more options see
@@ -166,7 +167,7 @@ it only builds what is necessary to run the lldb driver:
 
 ::
 
-  > ninja lldb
+  $ ninja lldb
 
 Standalone builds
 *****************
@@ -185,10 +186,10 @@ Clang. Then we build the ``ALL`` target with ninja:
 
 ::
 
-  > cmake -B /path/to/llvm-build -G Ninja \
+  $ cmake -B /path/to/llvm-build -G Ninja \
           -DLLVM_ENABLE_PROJECTS=clang \
           [<more cmake options>] /path/to/llvm-project/llvm
-  > ninja
+  $ ninja
 
 Now run CMake a second time with ``-B`` pointing to a new directory for the
 main build-tree and the positional argument pointing to the ``lldb`` directory
@@ -199,10 +200,10 @@ build directory for Clang, remember to pass its module path via ``Clang_DIR``
 
 ::
 
-  > cmake -B /path/to/lldb-build -G Ninja \
+  $ cmake -B /path/to/lldb-build -G Ninja \
           -DLLVM_DIR=/path/to/llvm-build/lib/cmake/llvm \
           [<more cmake options>] /path/to/llvm-project/lldb
-  > ninja lldb
+  $ ninja lldb
 
 .. note::
 
@@ -225,7 +226,7 @@ ninja:
 
 ::
 
-  > cmake -G Ninja \
+  $ cmake -G Ninja \
       -DLLDB_EXPORT_ALL_SYMBOLS=1 \
       -DCMAKE_BUILD_TYPE=Debug
       <path to root of llvm source tree>
@@ -237,7 +238,7 @@ suite.
 
 ::
 
-  > cmake -G Ninja \
+  $ cmake -G Ninja \
       -DLLDB_TEST_COMPILER=<path to C compiler> \
       <path to root of llvm source tree>
 
@@ -275,7 +276,7 @@ Sample command line:
 
 ::
 
-  > cmake -G Ninja^
+  $ cmake -G Ninja^
       -DLLDB_TEST_DEBUG_TEST_CRASHES=1^
       -DPYTHON_HOME=C:\Python35^
       -DLLDB_TEST_COMPILER=d:\src\llvmbuild\ninja_release\bin\clang.exe^
@@ -292,7 +293,7 @@ project in another directory.
 
 ::
 
-  > cmake -G "Visual Studio 15 2017 Win64" -Thost=x64 <cmake variables> <path to root of llvm source tree>
+  $ cmake -G "Visual Studio 15 2017 Win64" -Thost=x64 <cmake variables> <path to root of llvm source tree>
 
 Then you can open the .sln file in Visual Studio, set lldb as the startup
 project, and use F5 to run it. You need only edit the project settings to set
@@ -338,14 +339,14 @@ LLVM <https://llvm.org/docs/BuildingADistribution.html>`_):
 
 ::
 
-  > git clone https://github.com/llvm/llvm-project
+  $ git clone https://github.com/llvm/llvm-project
 
-  > cmake -B /path/to/lldb-build -G Ninja \
+  $ cmake -B /path/to/lldb-build -G Ninja \
           -C /path/to/llvm-project/lldb/cmake/caches/Apple-lldb-macOS.cmake \
           -DLLVM_ENABLE_PROJECTS="clang;libcxx;lldb" \
           llvm-project/llvm
 
-  > DESTDIR=/path/to/lldb-install ninja -C /path/to/lldb-build check-lldb install-distribution
+  $ DESTDIR=/path/to/lldb-install ninja -C /path/to/lldb-build check-lldb install-distribution
 
 .. _CMakeGeneratedXcodeProject:
 
@@ -353,20 +354,20 @@ Build LLDB standalone for development with Xcode:
 
 ::
 
-  > git clone https://github.com/llvm/llvm-project
+  $ git clone https://github.com/llvm/llvm-project
 
-  > cmake -B /path/to/llvm-build -G Ninja \
+  $ cmake -B /path/to/llvm-build -G Ninja \
           -C /path/to/llvm-project/lldb/cmake/caches/Apple-lldb-base.cmake \
           -DLLVM_ENABLE_PROJECTS="clang;libcxx" \
           llvm-project/llvm
-  > ninja -C /path/to/llvm-build
+  $ ninja -C /path/to/llvm-build
 
-  > cmake -B /path/to/lldb-build \
+  $ cmake -B /path/to/lldb-build \
           -C /path/to/llvm-project/lldb/cmake/caches/Apple-lldb-Xcode.cmake \
           -DLLVM_DIR=/path/to/llvm-build/lib/cmake/llvm \
           llvm-project/lldb
-  > open lldb.xcodeproj
-  > cmake --build /path/to/lldb-build --target check-lldb
+  $ open lldb.xcodeproj
+  $ cmake --build /path/to/lldb-build --target check-lldb
 
 .. note::
 
@@ -391,17 +392,17 @@ do:
 
 ::
 
-  > sudo apt-get install doxygen graphviz python3-sphinx
-  > sudo pip install epydoc
+  $ sudo apt-get install doxygen graphviz python3-sphinx
+  $ sudo pip install epydoc
 
 To build the documentation, configure with ``LLVM_ENABLE_SPHINX=ON`` and build the desired target(s).
 
 ::
 
-  > ninja docs-lldb-html
-  > ninja docs-lldb-man
-  > ninja lldb-cpp-doc
-  > ninja lldb-python-doc
+  $ ninja docs-lldb-html
+  $ ninja docs-lldb-man
+  $ ninja lldb-cpp-doc
+  $ ninja lldb-python-doc
 
 Cross-compiling LLDB
 --------------------
@@ -558,7 +559,7 @@ the -P flag:
 
 ::
 
-  > export PYTHONPATH=`$llvm/build/Debug+Asserts/bin/lldb -P`
+  $ export PYTHONPATH=`$llvm/build/Debug+Asserts/bin/lldb -P`
 
 If you used a different build directory or made a release build, you may need
 to adjust the above to suit your needs. To test that the lldb Python module is
@@ -566,7 +567,7 @@ built correctly and is available to the default Python interpreter, run:
 
 ::
 
-  > python -c 'import lldb'
+  $ python -c 'import lldb'
 
 
 Make sure you're using the Python interpreter that matches the Python library

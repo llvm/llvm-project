@@ -1,5 +1,5 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/fsafdo.extbinary.afdo | opt -analyze -branch-prob -enable-new-pm=0 | FileCheck %s
-; RUN: opt < %s -sample-profile -profile-isfs -sample-profile-file=%S/Inputs/fsafdo.prof | opt -analyze -branch-prob -enable-new-pm=0 | FileCheck %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/fsafdo.extbinary.afdo | opt -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=sample-profile -profile-isfs -sample-profile-file=%S/Inputs/fsafdo.prof | opt -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
 
 target triple = "x86_64-unknown-linux-gnu"
 

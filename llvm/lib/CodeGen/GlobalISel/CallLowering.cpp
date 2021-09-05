@@ -73,7 +73,7 @@ void CallLowering::addArgFlagsFromAttributes(ISD::ArgFlagsTy &Flags,
                                              const AttributeList &Attrs,
                                              unsigned OpIdx) const {
   addFlagsUsingAttrFn(Flags, [&Attrs, &OpIdx](Attribute::AttrKind Attr) {
-    return Attrs.hasAttribute(OpIdx, Attr);
+    return Attrs.hasAttributeAtIndex(OpIdx, Attr);
   });
 }
 
@@ -168,7 +168,8 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
     assert(OpIdx >= AttributeList::FirstArgIndex);
     Type *ElementTy = PtrTy->getElementType();
 
-    auto Ty = Attrs.getAttribute(OpIdx, Attribute::ByVal).getValueAsType();
+    auto Ty =
+        Attrs.getAttributeAtIndex(OpIdx, Attribute::ByVal).getValueAsType();
     Flags.setByValSize(DL.getTypeAllocSize(Ty ? Ty : ElementTy));
 
     // For ByVal, alignment should be passed from FE.  BE will guess if

@@ -2478,14 +2478,15 @@ public:
   }
 
   void addVPTPredNOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 2 && "Invalid number of operands!");
+    assert(N == 3 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createImm(unsigned(getVPTPred())));
     unsigned RegNum = getVPTPred() == ARMVCC::None ? 0: ARM::P0;
     Inst.addOperand(MCOperand::createReg(RegNum));
+    Inst.addOperand(MCOperand::createReg(0));
   }
 
   void addVPTPredROperands(MCInst &Inst, unsigned N) const {
-    assert(N == 3 && "Invalid number of operands!");
+    assert(N == 4 && "Invalid number of operands!");
     addVPTPredNOperands(Inst, N-1);
     unsigned RegNum;
     if (getVPTPred() == ARMVCC::None) {

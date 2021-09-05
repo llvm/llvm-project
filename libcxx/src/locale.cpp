@@ -261,13 +261,6 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
 #endif // _LIBCPP_NO_EXCEPTIONS
 }
 
-// NOTE avoid the `base class should be explicitly initialized in the
-// copy constructor` warning emitted by GCC
-#if defined(__clang__) || _GNUC_VER >= 406
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wextra"
-#endif
-
 locale::__imp::__imp(const __imp& other)
     : facets_(max<size_t>(N, other.facets_.size())),
       name_(other.name_)
@@ -277,10 +270,6 @@ locale::__imp::__imp(const __imp& other)
         if (facets_[i])
             facets_[i]->__add_shared();
 }
-
-#if defined(__clang__) || _GNUC_VER >= 406
-#pragma GCC diagnostic pop
-#endif
 
 locale::__imp::__imp(const __imp& other, const string& name, locale::category c)
     : facets_(N),

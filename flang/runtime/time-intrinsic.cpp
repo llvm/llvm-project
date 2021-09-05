@@ -8,11 +8,10 @@
 
 // Implements time-related intrinsic subroutines.
 
-#include "time-intrinsic.h"
-
-#include "descriptor.h"
+#include "flang/Runtime/time-intrinsic.h"
 #include "terminator.h"
 #include "tools.h"
+#include "flang/Runtime/descriptor.h"
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>

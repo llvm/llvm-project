@@ -1,6 +1,6 @@
 // RUN: mlir-translate -verify-diagnostics -split-input-file -mlir-to-llvmir %s
 
-// expected-error @+1 {{unsupported module-level operation}}
+// expected-error @+1 {{cannot be converted to LLVM IR}}
 func @foo() {
   llvm.return
 }

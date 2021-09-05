@@ -11,10 +11,10 @@ declare i32 @llvm.ctlz.i32(i32, i1)
 define signext i32 @ctlz_i32(i32 signext %a) nounwind {
 ; RV64I-LABEL: ctlz_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    beqz a0, .LBB0_2
 ; RV64I-NEXT:  # %bb.1: # %cond.false
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    srliw a1, a0, 1
 ; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    srli a0, a0, 32
@@ -73,12 +73,11 @@ define signext i32 @ctlz_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    call __muldi3@plt
 ; RV64I-NEXT:    srli a0, a0, 56
 ; RV64I-NEXT:    addi a0, a0, -32
-; RV64I-NEXT:    j .LBB0_3
-; RV64I-NEXT:  .LBB0_2:
-; RV64I-NEXT:    addi a0, zero, 32
-; RV64I-NEXT:  .LBB0_3: # %cond.end
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB0_2:
+; RV64I-NEXT:    addi a0, zero, 32
 ; RV64I-NEXT:    ret
 ;
 ; RV64B-LABEL: ctlz_i32:
@@ -97,10 +96,10 @@ define signext i32 @ctlz_i32(i32 signext %a) nounwind {
 define signext i32 @log2_i32(i32 signext %a) nounwind {
 ; RV64I-LABEL: log2_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    beqz a0, .LBB1_2
 ; RV64I-NEXT:  # %bb.1: # %cond.false
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    srliw a1, a0, 1
 ; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    srli a0, a0, 32
@@ -159,14 +158,14 @@ define signext i32 @log2_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    call __muldi3@plt
 ; RV64I-NEXT:    srli a0, a0, 56
 ; RV64I-NEXT:    addi a0, a0, -32
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    j .LBB1_3
 ; RV64I-NEXT:  .LBB1_2:
 ; RV64I-NEXT:    addi a0, zero, 32
 ; RV64I-NEXT:  .LBB1_3: # %cond.end
 ; RV64I-NEXT:    addi a1, zero, 31
 ; RV64I-NEXT:    sub a0, a1, a0
-; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
 ; RV64B-LABEL: log2_i32:
@@ -388,13 +387,13 @@ define signext i32 @findLastSet_i32(i32 signext %a) nounwind {
 define i32 @ctlz_lshr_i32(i32 signext %a) {
 ; RV64I-LABEL: ctlz_lshr_i32:
 ; RV64I:       # %bb.0:
+; RV64I-NEXT:    srliw a0, a0, 1
+; RV64I-NEXT:    beqz a0, .LBB4_2
+; RV64I-NEXT:  # %bb.1: # %cond.false
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    .cfi_def_cfa_offset 16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    .cfi_offset ra, -8
-; RV64I-NEXT:    srliw a0, a0, 1
-; RV64I-NEXT:    beqz a0, .LBB4_2
-; RV64I-NEXT:  # %bb.1: # %cond.false
 ; RV64I-NEXT:    srli a1, a0, 1
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    srli a1, a0, 2
@@ -451,12 +450,11 @@ define i32 @ctlz_lshr_i32(i32 signext %a) {
 ; RV64I-NEXT:    call __muldi3@plt
 ; RV64I-NEXT:    srli a0, a0, 56
 ; RV64I-NEXT:    addi a0, a0, -32
-; RV64I-NEXT:    j .LBB4_3
-; RV64I-NEXT:  .LBB4_2:
-; RV64I-NEXT:    addi a0, zero, 32
-; RV64I-NEXT:  .LBB4_3: # %cond.end
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB4_2:
+; RV64I-NEXT:    addi a0, zero, 32
 ; RV64I-NEXT:    ret
 ;
 ; RV64B-LABEL: ctlz_lshr_i32:
@@ -480,10 +478,10 @@ declare i64 @llvm.ctlz.i64(i64, i1)
 define i64 @ctlz_i64(i64 %a) nounwind {
 ; RV64I-LABEL: ctlz_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    beqz a0, .LBB5_2
 ; RV64I-NEXT:  # %bb.1: # %cond.false
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    srli a1, a0, 1
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    srli a1, a0, 2
@@ -539,12 +537,11 @@ define i64 @ctlz_i64(i64 %a) nounwind {
 ; RV64I-NEXT:    addi a1, a1, 257
 ; RV64I-NEXT:    call __muldi3@plt
 ; RV64I-NEXT:    srli a0, a0, 56
-; RV64I-NEXT:    j .LBB5_3
-; RV64I-NEXT:  .LBB5_2:
-; RV64I-NEXT:    addi a0, zero, 64
-; RV64I-NEXT:  .LBB5_3: # %cond.end
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB5_2:
+; RV64I-NEXT:    addi a0, zero, 64
 ; RV64I-NEXT:    ret
 ;
 ; RV64B-LABEL: ctlz_i64:
@@ -565,10 +562,10 @@ declare i32 @llvm.cttz.i32(i32, i1)
 define signext i32 @cttz_i32(i32 signext %a) nounwind {
 ; RV64I-LABEL: cttz_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    beqz a0, .LBB6_2
 ; RV64I-NEXT:  # %bb.1: # %cond.false
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    addi a1, a0, -1
 ; RV64I-NEXT:    not a0, a0
 ; RV64I-NEXT:    and a0, a0, a1
@@ -614,12 +611,11 @@ define signext i32 @cttz_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    addi a1, a1, 257
 ; RV64I-NEXT:    call __muldi3@plt
 ; RV64I-NEXT:    srli a0, a0, 56
-; RV64I-NEXT:    j .LBB6_3
-; RV64I-NEXT:  .LBB6_2:
-; RV64I-NEXT:    addi a0, zero, 32
-; RV64I-NEXT:  .LBB6_3: # %cond.end
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB6_2:
+; RV64I-NEXT:    addi a0, zero, 32
 ; RV64I-NEXT:    ret
 ;
 ; RV64B-LABEL: cttz_i32:
@@ -878,10 +874,10 @@ declare i64 @llvm.cttz.i64(i64, i1)
 define i64 @cttz_i64(i64 %a) nounwind {
 ; RV64I-LABEL: cttz_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    beqz a0, .LBB10_2
 ; RV64I-NEXT:  # %bb.1: # %cond.false
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    addi a1, a0, -1
 ; RV64I-NEXT:    not a0, a0
 ; RV64I-NEXT:    and a0, a0, a1
@@ -927,12 +923,11 @@ define i64 @cttz_i64(i64 %a) nounwind {
 ; RV64I-NEXT:    addi a1, a1, 257
 ; RV64I-NEXT:    call __muldi3@plt
 ; RV64I-NEXT:    srli a0, a0, 56
-; RV64I-NEXT:    j .LBB10_3
-; RV64I-NEXT:  .LBB10_2:
-; RV64I-NEXT:    addi a0, zero, 64
-; RV64I-NEXT:  .LBB10_3: # %cond.end
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB10_2:
+; RV64I-NEXT:    addi a0, zero, 64
 ; RV64I-NEXT:    ret
 ;
 ; RV64B-LABEL: cttz_i64:

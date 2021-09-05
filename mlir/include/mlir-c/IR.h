@@ -162,6 +162,13 @@ MLIR_CAPI_EXPORTED MlirLocation mlirLocationFileLineColGet(
 MLIR_CAPI_EXPORTED MlirLocation mlirLocationCallSiteGet(MlirLocation callee,
                                                         MlirLocation caller);
 
+/// Creates a name location owned by the given context. Providing null location
+/// for childLoc is allowed and if childLoc is null location, then the behavior
+/// is the same as having unknown child location.
+MLIR_CAPI_EXPORTED MlirLocation mlirLocationNameGet(MlirContext context,
+                                                    MlirStringRef name,
+                                                    MlirLocation childLoc);
+
 /// Creates a location with unknown position owned by the given context.
 MLIR_CAPI_EXPORTED MlirLocation mlirLocationUnknownGet(MlirContext context);
 

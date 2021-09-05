@@ -133,12 +133,17 @@ extern "C" void mgpuMemFree(void *ptr, hipStream_t /*stream*/) {
   HIP_REPORT_IF_ERROR(hipFree(ptr));
 }
 
-extern "C" void mgpuMemcpy(void *dst, void *src, uint64_t sizeBytes,
+extern "C" void mgpuMemcpy(void *dst, void *src, size_t sizeBytes,
                            hipStream_t stream) {
   HIP_REPORT_IF_ERROR(
       hipMemcpyAsync(dst, src, sizeBytes, hipMemcpyDefault, stream));
 }
 
+extern "C" void mgpuMemset32(void *dst, int value, size_t count,
+                             hipStream_t stream) {
+  HIP_REPORT_IF_ERROR(hipMemsetD32Async(reinterpret_cast<hipDeviceptr_t>(dst),
+                                        value, count, stream));
+}
 /// Helper functions for writing mlir example code
 
 // Allows to register byte array with the ROCM runtime. Helpful until we have

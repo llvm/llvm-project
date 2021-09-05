@@ -411,10 +411,10 @@ int main(int Argc, const char **Argv) {
     // Skip end-of-line response file markers
     if (Args[i] == nullptr)
       continue;
-    if (StringRef(Args[i]) == "-no-canonical-prefixes") {
+    if (StringRef(Args[i]) == "-canonical-prefixes")
+      CanonicalPrefixes = true;
+    else if (StringRef(Args[i]) == "-no-canonical-prefixes")
       CanonicalPrefixes = false;
-      break;
-    }
   }
 
   // Handle CL and _CL_ which permits additional command line options to be
@@ -454,9 +454,14 @@ int main(int Argc, const char **Argv) {
   // should spawn a new clang subprocess (old behavior).
   // Not having an additional process saves some execution time of Windows,
   // and makes debugging and profiling easier.
-  bool UseNewCC1Process;
-  InputArgList ArgList;
+  bool UseNewCC1Process = CLANG_SPAWN_CC1;
+  for (const char *Arg : Args)
+    UseNewCC1Process = llvm::StringSwitch<bool>(Arg)
+                           .Case("-fno-integrated-cc1", true)
+                           .Case("-fintegrated-cc1", false)
+                           .Default(UseNewCC1Process);
 
+  InputArgList ArgList;
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
       CreateAndPopulateDiagOpts(Args, ArgList);
 

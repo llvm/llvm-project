@@ -25,12 +25,14 @@ func private @it7() -> !fir.char<4,?>
 // CHECK-LABEL: func private @dvd4() -> !fir.type<derived4(p:i8){f:f32}>
 // CHECK-LABEL: func private @dvd5() -> !fir.type<derived5(p1:i8,p2:i8,p3:i8,p4:i8,p5:i8){f1:f32,f2:f32,f3:f32,f4:f32,f5:f32,f6:f32,f7:f32,f8:f32}>
 // CHECK-LABEL: func private @dvd6() -> !fir.type<derived6{f:!fir.ptr<!fir.type<derived6>>}>
+// CHECK-LABEL: func private @dvd7() -> !fir.type<derived_with_field_name_same_as_integer_type{i32:f32}>
 func private @dvd1() -> !fir.type<derived1>
 func private @dvd2() -> !fir.type<derived2(p:i32)>
 func private @dvd3() -> !fir.type<derived3{f:f32}>
 func private @dvd4() -> !fir.type<derived4(p:i8){f:f32}>
 func private @dvd5() -> !fir.type<derived5(p1:i8,p2:i8,p3:i8,p4:i8,p5:i8){f1:f32,f2:f32,f3:f32,f4:f32,f5:f32,f6:f32,f7:f32,f8:f32}>
 func private @dvd6() -> !fir.type<derived6{f:!fir.ptr<!fir.type<derived6>>}>
+func private @dvd7() -> !fir.type<derived_with_field_name_same_as_integer_type{i32:f32}>
 
 // FIR array types
 // CHECK-LABEL: func private @arr1() -> !fir.array<10xf32>

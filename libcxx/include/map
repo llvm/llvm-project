@@ -535,7 +535,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     bool operator()(const _Key& __x, const _CP& __y) const
         {return static_cast<const _Compare&>(*this)(__x, __y.__get_value().first);}
-    void swap(__map_value_compare&__y)
+    void swap(__map_value_compare& __y)
         _NOEXCEPT_(__is_nothrow_swappable<_Compare>::value)
     {
       using _VSTD::swap;
@@ -583,7 +583,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     bool operator()(const _Key& __x, const _CP& __y) const
         {return comp(__x, __y.__get_value().first);}
-    void swap(__map_value_compare&__y)
+    void swap(__map_value_compare& __y)
         _NOEXCEPT_(__is_nothrow_swappable<_Compare>::value)
     {
         using _VSTD::swap;

@@ -1,4 +1,4 @@
-//===-- runtime/namelist.cpp ------------------------------------*- C++ -*-===//
+//===-- runtime/namelist.cpp ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,8 +8,8 @@
 
 #include "namelist.h"
 #include "descriptor-io.h"
-#include "io-api.h"
 #include "io-stmt.h"
+#include "flang/Runtime/io-api.h"
 #include <cstring>
 #include <limits>
 

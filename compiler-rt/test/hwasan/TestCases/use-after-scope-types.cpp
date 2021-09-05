@@ -7,8 +7,7 @@
 // RUN: not %run %t 3 2>&1 | FileCheck %s
 // RUN: not %run %t 4 2>&1 | FileCheck %s
 // RUN: not %run %t 5 2>&1 | FileCheck %s
-// The std::vector case is broken because of limited lifetime tracking.
-// TODO(fmayer): Fix and enable.
+// RUN: not %run %t 6 2>&1 | FileCheck %s
 // RUN: not %run %t 7 2>&1 | FileCheck %s
 // RUN: not %run %t 8 2>&1 | FileCheck %s
 // RUN: not %run %t 9 2>&1 | FileCheck %s

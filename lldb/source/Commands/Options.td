@@ -749,6 +749,9 @@ let Command = "process save_core" in {
   def process_save_core_style : Option<"style", "s">, Group<1>,
     EnumArg<"SaveCoreStyle", "SaveCoreStyles()">, Desc<"Request a specific style "
     "of corefile to be saved.">;
+  def process_save_core_plugin_name : Option<"plugin-name", "p">,
+    OptionalArg<"Plugin">, Desc<"Specify a plugin name to create the core file."
+    "This allows core files to be saved in different formats.">;
 }
 
 let Command = "process trace save" in {

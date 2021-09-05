@@ -14,7 +14,7 @@
   iterator_types = ["parallel", "parallel", "parallel"]
 }
 
-// CHECK-LABEL:   builtin.func @sparse_static_dims(
+// CHECK-LABEL:   func @sparse_static_dims(
 // CHECK-SAME:                          %[[VAL_0:.*]]: tensor<10x20x30xf32, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:                          %[[VAL_1:.*]]: tensor<20x30x10xf32>) -> tensor<20x30x10xf32> {
 // CHECK:           %[[VAL_2:.*]] = constant 20 : index
@@ -52,7 +52,7 @@ func @sparse_static_dims(%arga: tensor<10x20x30xf32, #X>,
   return %0 : tensor<20x30x10xf32>
 }
 
-// CHECK-LABEL:   builtin.func @sparse_dynamic_dims(
+// CHECK-LABEL:   func @sparse_dynamic_dims(
 // CHECK-SAME:                          %[[VAL_0:.*]]: tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:                          %[[VAL_1:.*]]: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
 // CHECK:           %[[VAL_2:.*]] = constant 2 : index

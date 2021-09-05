@@ -537,8 +537,7 @@ def GPU_ReturnOp : GPU_Op<"return", [HasParent<"GPUFuncOp">, NoSideEffect,
 
   let builders = [OpBuilder<(ins), [{ // empty}]>];
 
-  let parser = [{ return parseReturnOp(parser, result); }];
-  let printer = [{ p << getOperationName(); }];
+  let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
   let verifier = [{ return ::verify(*this); }];
 }
 
@@ -552,8 +551,7 @@ def GPU_TerminatorOp : GPU_Op<"terminator", [HasParent<"LaunchOp">,
     terminator takes no operands.
   }];
 
-  let parser = [{ return success(); }];
-  let printer = [{ p << getOperationName(); }];
+  let assemblyFormat = "attr-dict";
 }
 
 def GPU_YieldOp : GPU_Op<"yield", [NoSideEffect, Terminator]>,
@@ -681,8 +679,7 @@ def GPU_BarrierOp : GPU_Op<"barrier"> {
     Either none or all work items of a workgroup need to execute this op
     in convergence.
   }];
-  let parser = [{ return success(); }];
-  let printer = [{ p << getOperationName(); }];
+  let assemblyFormat = "attr-dict";
 }
 
 def GPU_GPUModuleOp : GPU_Op<"module", [
@@ -733,8 +730,7 @@ def GPU_ModuleEndOp : GPU_Op<"module_end", [
     This op terminates the only block inside the only region of a `gpu.module`.
   }];
 
-  let parser = [{ return success(); }];
-  let printer = [{ p << getOperationName(); }];
+  let assemblyFormat = "attr-dict";
 }
 
 def GPU_HostRegisterOp : GPU_Op<"host_register">,
@@ -834,6 +830,8 @@ def GPU_AllocOp : GPU_Op<"alloc", [
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies) ` `
     `(` $dynamicSizes `)` (`` `[` $symbolOperands^ `]`)? attr-dict `:` type($memref)
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 def GPU_DeallocOp : GPU_Op<"dealloc", [GPU_AsyncOpInterface]> {
@@ -900,6 +898,42 @@ def GPU_MemcpyOp : GPU_Op<"memcpy", [GPU_AsyncOpInterface]> {
     $dst`,` $src `:` type($dst)`,` type($src) attr-dict
   }];
   let verifier = [{ return ::verify(*this); }];
+  let hasFolder = 1;
+}
+
+def GPU_MemsetOp : GPU_Op<"memset",
+  [GPU_AsyncOpInterface, AllElementTypesMatch<["dst", "value"]>]> {
+
+  let summary = "GPU memset operation";
+
+  let description = [{
+    The `gpu.memset` operation sets the content of memref to a scalar value.
+
+    The op does not execute before all async dependencies have finished
+    executing.
+
+    If the `async` keyword is present, the op is executed asynchronously (i.e.
+    it does not block until the execution has finished on the device). In
+    that case, it returns a !gpu.async.token.
+
+    Example:
+
+    ```mlir
+    %token = gpu.memset async [%dep] %dst, %value : memref<?xf32, 1>, f32
+    ```
+  }];
+
+  let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
+                   Arg<AnyMemRef, "", [MemWrite]>:$dst,
+                   Arg<AnyType, "">:$value);
+  let results = (outs Optional<GPU_AsyncToken>:$asyncToken);
+
+  let assemblyFormat = [{
+    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
+    $dst`,` $value `:` type($dst)`,` type($value) attr-dict
+  }];
+  // MemsetOp is fully verified by traits.
+  let verifier = [{ return success(); }];
   let hasFolder = 1;
 }
 
@@ -1040,7 +1074,7 @@ def GPU_SubgroupMmaConstantMatrixOp : GPU_Op<"subgroup_mma_constant_matrix",
     the same value.
 
     This op is meant to be used along with `gpu.subgroup_mma_compute`.
-    
+
     Example:
 
     ```mlir

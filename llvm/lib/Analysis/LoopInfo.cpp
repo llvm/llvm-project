@@ -1102,6 +1102,11 @@ llvm::Optional<int> llvm::getOptionalIntLoopAttribute(const Loop *TheLoop,
   return IntMD->getSExtValue();
 }
 
+int llvm::getIntLoopAttribute(const Loop *TheLoop, StringRef Name,
+                              int Default) {
+  return getOptionalIntLoopAttribute(TheLoop, Name).getValueOr(Default);
+}
+
 static const char *LLVMLoopMustProgress = "llvm.loop.mustprogress";
 
 bool llvm::hasMustProgress(const Loop *L) {

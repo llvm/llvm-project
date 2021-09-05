@@ -170,10 +170,10 @@ static hsa_status_t get_memory_pool_info(hsa_amd_memory_pool_t memory_pool,
       return err;
     }
     if (HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED & global_flag) {
-      ATLMemory new_mem(memory_pool, *proc, ATMI_MEMTYPE_FINE_GRAINED);
+      ATLMemory new_mem(memory_pool, *proc, IMPL_MEMTYPE_FINE_GRAINED);
       proc->addMemory(new_mem);
     } else {
-      ATLMemory new_mem(memory_pool, *proc, ATMI_MEMTYPE_COARSE_GRAINED);
+      ATLMemory new_mem(memory_pool, *proc, IMPL_MEMTYPE_COARSE_GRAINED);
       proc->addMemory(new_mem);
     }
   }
@@ -210,9 +210,9 @@ static hsa_status_t get_agent_info(hsa_agent_t agent, void *data) {
              "Query the agent profile", get_error_string(err));
       return err;
     }
-    atmi_devtype_t gpu_type;
+    impl_devtype_t gpu_type;
     gpu_type =
-        (profile == HSA_PROFILE_FULL) ? ATMI_DEVTYPE_iGPU : ATMI_DEVTYPE_dGPU;
+        (profile == HSA_PROFILE_FULL) ? IMPL_DEVTYPE_iGPU : IMPL_DEVTYPE_dGPU;
     ATLGPUProcessor new_proc(agent, gpu_type);
     err = hsa_amd_agent_iterate_memory_pools(agent, get_memory_pool_info,
                                              &new_proc);
@@ -293,17 +293,17 @@ static hsa_status_t init_compute_and_memory() {
   int num_iGPUs = 0;
   int num_dGPUs = 0;
   for (uint32_t i = 0; i < gpu_procs.size(); i++) {
-    if (gpu_procs[i].type() == ATMI_DEVTYPE_iGPU)
+    if (gpu_procs[i].type() == IMPL_DEVTYPE_iGPU)
       num_iGPUs++;
     else
       num_dGPUs++;
   }
   assert(num_iGPUs + num_dGPUs == gpu_procs.size() &&
          "Number of dGPUs and iGPUs do not add up");
-  DEBUG_PRINT("CPU Agents: %lu\n", cpu_procs.size());
-  DEBUG_PRINT("iGPU Agents: %d\n", num_iGPUs);
-  DEBUG_PRINT("dGPU Agents: %d\n", num_dGPUs);
-  DEBUG_PRINT("GPU Agents: %lu\n", gpu_procs.size());
+  DP("CPU Agents: %lu\n", cpu_procs.size());
+  DP("iGPU Agents: %d\n", num_iGPUs);
+  DP("dGPU Agents: %d\n", num_dGPUs);
+  DP("GPU Agents: %lu\n", gpu_procs.size());
 
   int cpus_begin = 0;
   int cpus_end = cpu_procs.size();
@@ -314,19 +314,19 @@ static hsa_status_t init_compute_and_memory() {
     std::vector<ATLMemory> memories = cpu_procs[proc_index].memories();
     int fine_memories_size = 0;
     int coarse_memories_size = 0;
-    DEBUG_PRINT("CPU memory types:\t");
+    DP("CPU memory types:\t");
     for (auto &memory : memories) {
-      atmi_memtype_t type = memory.type();
-      if (type == ATMI_MEMTYPE_FINE_GRAINED) {
+      impl_memtype_t type = memory.type();
+      if (type == IMPL_MEMTYPE_FINE_GRAINED) {
         fine_memories_size++;
-        DEBUG_PRINT("Fine\t");
+        DP("Fine\t");
       } else {
         coarse_memories_size++;
-        DEBUG_PRINT("Coarse\t");
+        DP("Coarse\t");
       }
     }
-    DEBUG_PRINT("\nFine Memories : %d", fine_memories_size);
-    DEBUG_PRINT("\tCoarse Memories : %d\n", coarse_memories_size);
+    DP("\nFine Memories : %d", fine_memories_size);
+    DP("\tCoarse Memories : %d\n", coarse_memories_size);
     proc_index++;
   }
   proc_index = 0;
@@ -334,19 +334,19 @@ static hsa_status_t init_compute_and_memory() {
     std::vector<ATLMemory> memories = gpu_procs[proc_index].memories();
     int fine_memories_size = 0;
     int coarse_memories_size = 0;
-    DEBUG_PRINT("GPU memory types:\t");
+    DP("GPU memory types:\t");
     for (auto &memory : memories) {
-      atmi_memtype_t type = memory.type();
-      if (type == ATMI_MEMTYPE_FINE_GRAINED) {
+      impl_memtype_t type = memory.type();
+      if (type == IMPL_MEMTYPE_FINE_GRAINED) {
         fine_memories_size++;
-        DEBUG_PRINT("Fine\t");
+        DP("Fine\t");
       } else {
         coarse_memories_size++;
-        DEBUG_PRINT("Coarse\t");
+        DP("Coarse\t");
       }
     }
-    DEBUG_PRINT("\nFine Memories : %d", fine_memories_size);
-    DEBUG_PRINT("\tCoarse Memories : %d\n", coarse_memories_size);
+    DP("\nFine Memories : %d", fine_memories_size);
+    DP("\tCoarse Memories : %d\n", coarse_memories_size);
     proc_index++;
   }
   if (num_procs > 0)
@@ -356,7 +356,7 @@ static hsa_status_t init_compute_and_memory() {
 }
 
 hsa_status_t init_hsa() {
-  DEBUG_PRINT("Initializing HSA...");
+  DP("Initializing HSA...");
   hsa_status_t err = hsa_init();
   if (err != HSA_STATUS_SUCCESS) {
     return err;
@@ -371,7 +371,7 @@ hsa_status_t init_hsa() {
     return err;
   }
 
-  DEBUG_PRINT("done\n");
+  DP("done\n");
   return HSA_STATUS_SUCCESS;
 }
 
@@ -759,8 +759,8 @@ static hsa_status_t get_code_object_custom_metadata(
         size_t padding = new_offset - offset;
         offset = new_offset;
         info.arg_offsets.push_back(lcArg.offset_);
-        DEBUG_PRINT("Arg[%lu] \"%s\" (%u, %u)\n", i, lcArg.name_.c_str(),
-                    lcArg.size_, lcArg.offset_);
+        DP("Arg[%lu] \"%s\" (%u, %u)\n", i, lcArg.name_.c_str(), lcArg.size_,
+           lcArg.offset_);
         offset += lcArg.size_;
 
         // check if the arg is a hidden/implicit arg
@@ -775,13 +775,13 @@ static hsa_status_t get_code_object_custom_metadata(
     }
 
     // add size of implicit args, e.g.: offset x, y and z and pipe pointer, but
-    // in ATMI, do not count the compiler set implicit args, but set your own
-    // implicit args by discounting the compiler set implicit args
+    // do not count the compiler set implicit args, but set your own implicit
+    // args by discounting the compiler set implicit args
     info.kernel_segment_size =
         (hasHiddenArgs ? kernel_explicit_args_size : kernel_segment_size) +
         sizeof(impl_implicit_args_t);
-    DEBUG_PRINT("[%s: kernarg seg size] (%lu --> %u)\n", kernelName.c_str(),
-                kernel_segment_size, info.kernel_segment_size);
+    DP("[%s: kernarg seg size] (%lu --> %u)\n", kernelName.c_str(),
+       kernel_segment_size, info.kernel_segment_size);
 
     // kernel received, now add it to the kernel info table
     KernelInfoTable[kernelName] = info;
@@ -805,7 +805,7 @@ populate_InfoTables(hsa_executable_symbol_t symbol,
            "Symbol info extraction", get_error_string(err));
     return err;
   }
-  DEBUG_PRINT("Exec Symbol type: %d\n", type);
+  DP("Exec Symbol type: %d\n", type);
   if (type == HSA_SYMBOL_KIND_KERNEL) {
     err = hsa_executable_symbol_get_info(
         symbol, HSA_EXECUTABLE_SYMBOL_INFO_NAME_LENGTH, &name_length);
@@ -870,11 +870,10 @@ populate_InfoTables(hsa_executable_symbol_t symbol,
       return err;
     }
 
-    DEBUG_PRINT(
-        "Kernel %s --> %lx symbol %u group segsize %u pvt segsize %u bytes "
-        "kernarg\n",
-        kernelName.c_str(), info.kernel_object, info.group_segment_size,
-        info.private_segment_size, info.kernel_segment_size);
+    DP("Kernel %s --> %lx symbol %u group segsize %u pvt segsize %u bytes "
+       "kernarg\n",
+       kernelName.c_str(), info.kernel_object, info.group_segment_size,
+       info.private_segment_size, info.kernel_segment_size);
 
     // assign it back to the kernel info table
     KernelInfoTable[kernelName] = info;
@@ -915,12 +914,11 @@ populate_InfoTables(hsa_executable_symbol_t symbol,
       return err;
     }
 
-    DEBUG_PRINT("Symbol %s = %p (%u bytes)\n", name, (void *)info.addr,
-                info.size);
+    DP("Symbol %s = %p (%u bytes)\n", name, (void *)info.addr, info.size);
     SymbolInfoTable[std::string(name)] = info;
     free(name);
   } else {
-    DEBUG_PRINT("Symbol is an indirect function\n");
+    DP("Symbol is an indirect function\n");
   }
   return HSA_STATUS_SUCCESS;
 }
@@ -964,9 +962,8 @@ hsa_status_t RegisterModuleFromMemory(
       err = get_code_object_custom_metadata(module_bytes, module_size,
                                             KernelInfoTable);
       if (err != HSA_STATUS_SUCCESS) {
-        DEBUG_PRINT("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
-                    "Getting custom code object metadata",
-                    get_error_string(err));
+        DP("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
+           "Getting custom code object metadata", get_error_string(err));
         continue;
       }
 
@@ -975,8 +972,8 @@ hsa_status_t RegisterModuleFromMemory(
       err = hsa_code_object_deserialize(module_bytes, module_size, NULL,
                                         &code_object);
       if (err != HSA_STATUS_SUCCESS) {
-        DEBUG_PRINT("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
-                    "Code Object Deserialization", get_error_string(err));
+        DP("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
+           "Code Object Deserialization", get_error_string(err));
         continue;
       }
       assert(0 != code_object.handle);
@@ -997,8 +994,8 @@ hsa_status_t RegisterModuleFromMemory(
       err =
           hsa_executable_load_code_object(executable, agent, code_object, NULL);
       if (err != HSA_STATUS_SUCCESS) {
-        DEBUG_PRINT("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
-                    "Loading the code object", get_error_string(err));
+        DP("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
+           "Loading the code object", get_error_string(err));
         continue;
       }
 
@@ -1006,7 +1003,7 @@ hsa_status_t RegisterModuleFromMemory(
     }
     module_load_success = true;
   } while (0);
-  DEBUG_PRINT("Modules loaded successful? %d\n", module_load_success);
+  DP("Modules loaded successful? %d\n", module_load_success);
   if (module_load_success) {
     /* Freeze the executable; it can now be queried for symbols.  */
     err = hsa_executable_freeze(executable, "");

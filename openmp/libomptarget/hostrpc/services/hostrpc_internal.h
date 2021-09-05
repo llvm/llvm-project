@@ -211,7 +211,7 @@ typedef struct {
   uint32_t device_id;
 } buffer_t;
 
-#include "../../plugins/amdgpu/impl/atmi_runtime.h"
+#include "../../plugins/amdgpu/impl/impl_runtime.h"
 #include "../plugins/amdgpu/src/utils.h"
 
 #ifdef __cplusplus

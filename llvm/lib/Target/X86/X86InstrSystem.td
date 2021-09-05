@@ -529,16 +529,17 @@ let SchedRW = [WriteSystem] in {
 //===----------------------------------------------------------------------===//
 // XSAVE instructions
 let SchedRW = [WriteSystem] in {
-let Predicates = [HasXSAVE] in {
+// NOTE: No HasXSAVE predicate so that these can be used with _xgetbv/_xsetbv
+// on Windows without needing to enable the xsave feature to be compatible with
+// MSVC.
 let Defs = [EDX, EAX], Uses = [ECX] in
-  def XGETBV : I<0x01, MRM_D0, (outs), (ins), "xgetbv", []>, PS;
+def XGETBV : I<0x01, MRM_D0, (outs), (ins), "xgetbv", []>, PS;
 
 let Uses = [EDX, EAX, ECX] in
-  def XSETBV : I<0x01, MRM_D1, (outs), (ins),
-                "xsetbv",
-                [(int_x86_xsetbv ECX, EDX, EAX)]>, PS;
+def XSETBV : I<0x01, MRM_D1, (outs), (ins),
+              "xsetbv",
+              [(int_x86_xsetbv ECX, EDX, EAX)]>, PS;
 
-} // HasXSAVE
 
 let Uses = [EDX, EAX] in {
 def XSAVE : I<0xAE, MRM4m, (outs), (ins opaquemem:$dst),

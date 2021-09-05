@@ -46,7 +46,7 @@ lpad:                                             ; preds = %entry
   call void @__cxa_end_catch()
   br label %try.cont
 
-try.cont:                                         ; preds = %entry, %lpad
+try.cont:                                         ; preds = %lpad, %entry
   ret void
 }
 
@@ -63,20 +63,21 @@ entry:
 ; CHECK:      %cmp.eq.one = icmp eq i32 %__THREW__.val, 1
 ; CHECK-NEXT: %cmp.eq.zero = icmp eq i32 %__THREW__.val, 0
 ; CHECK-NEXT: %or = or i1 %cmp.eq.zero, %cmp.eq.one
-; CHECK-NEXT: br i1 %or, label %tail, label %longjmp.rethrow
+; CHECK-NEXT: br i1 %or, label %tail, label %rethrow.longjmp
 
 ; CHECK: try.cont:
 ; CHECK-NEXT:  %phi = phi i32 [ undef, %tail ], [ undef, %lpad ]
 ; CHECK-NEXT:  ret void
 
+; CHECK:    rethrow.longjmp:
+; CHECK-NEXT: %threw.phi = phi i32 [ %__THREW__.val, %entry ]
+; CHECK-NEXT: %__threwValue.val = load i32, i32* @__threwValue, align 4
+; CHECK-NEXT: call void @emscripten_longjmp(i32 %threw.phi, i32 %__threwValue.val
+; CHECK-NEXT: unreachable
+
 ; CHECK:    tail:
 ; CHECK-NEXT: %cmp = icmp eq i32 %__THREW__.val, 1
 ; CHECK-NEXT: br i1 %cmp, label %lpad, label %try.cont
-
-; CHECK:    longjmp.rethrow:
-; CHECK-NEXT: %__threwValue.val = load i32, i32* @__threwValue, align 4
-; CHECK-NEXT: call void @emscripten_longjmp(i32 %__THREW__.val, i32 %__threwValue.val)
-; CHECK-NEXT: unreachable
 
 lpad:                                             ; preds = %entry
   %0 = landingpad { i8*, i32 }
@@ -87,7 +88,7 @@ lpad:                                             ; preds = %entry
   call void @__cxa_end_catch()
   br label %try.cont
 
-try.cont:                                         ; preds = %entry, %lpad
+try.cont:                                         ; preds = %lpad, %entry
  %phi = phi i32 [ undef, %entry ], [ undef, %lpad ]
   ret void
 }
@@ -111,19 +112,19 @@ if.end:                                           ; preds = %entry
 
 ; CHECK:    if.end:
 ; CHECK:      %cmp.eq.one = icmp eq i32 %__THREW__.val, 1
-; CHECK-NEXT: br i1 %cmp.eq.one, label %eh.rethrow, label %normal
+; CHECK-NEXT: br i1 %cmp.eq.one, label %rethrow.exn, label %normal
 
-; CHECK:    normal:
-; CHECK-NEXT: icmp ne i32 %__THREW__.val, 0
-
-; CHECK:    eh.rethrow:
+; CHECK:    rethrow.exn:
 ; CHECK-NEXT: %exn = call i8* @__cxa_find_matching_catch_2()
-; CHECK-NEXT: %[[BUF:.*]] = bitcast i32* %setjmpTable1 to i8*
+; CHECK-NEXT: %[[BUF:.*]] = bitcast i32* %setjmpTable{{.*}} to i8*
 ; CHECK-NEXT: call void @free(i8* %[[BUF]])
 ; CHECK-NEXT: call void @__resumeException(i8* %exn)
 ; CHECK-NEXT: unreachable
 
-return:                                           ; preds = %entry, %if.end
+; CHECK:    normal:
+; CHECK-NEXT: icmp ne i32 %__THREW__.val, 0
+
+return:                                           ; preds = %if.end, %entry
   ret void
 }
 
@@ -142,14 +143,78 @@ if.end:                                           ; preds = %entry
   call void @foo()
   br label %throw
 
-throw:                                            ; preds = %entry, %if.end
+throw:                                            ; preds = %if.end, %entry
   call void @__cxa_throw(i8* null, i8* null, i8* null) #1
   unreachable
 
-; CHECK: throw:
-; CHECK:      %[[BUF:.*]] = bitcast i32* %setjmpTable5 to i8*
+; CHECK:    throw:
+; CHECK:      %[[BUF:.*]] = bitcast i32* %setjmpTable{{.*}} to i8*
 ; CHECK-NEXT: call void @free(i8* %[[BUF]])
 ; CHECK-NEXT: call void @__cxa_throw(i8* null, i8* null, i8* null)
+; CHECK-NEXT: unreachable
+}
+
+; The same case with @rethrow_longjmp, but there are multiple function calls
+; that can possibly longjmp (instead of throwing exception) so we have to
+; rethrow them. Here we test if we correclty generate only one 'rethrow.longjmp'
+; BB and share it for multiple calls.
+define void @rethrow_longjmp_multi() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: @rethrow_longjmp_multi
+entry:
+  invoke void @foo()
+          to label %bb unwind label %lpad
+
+bb:                                               ; preds = %entry
+  invoke void @foo()
+          to label %try.cont unwind label %lpad
+
+lpad:                                             ; preds = %bb, %entry
+  %0 = landingpad { i8*, i32 }
+          catch i8* null
+  %1 = extractvalue { i8*, i32 } %0, 0
+  %2 = extractvalue { i8*, i32 } %0, 1
+  %3 = call i8* @__cxa_begin_catch(i8* %1) #5
+  call void @__cxa_end_catch()
+  br label %try.cont
+
+try.cont:                                         ; preds = %lpad, %bb
+ %phi = phi i32 [ undef, %bb ], [ undef, %lpad ]
+  ret void
+
+; CHECK:    rethrow.longjmp:
+; CHECK-NEXT: %threw.phi = phi i32 [ %__THREW__.val, %entry ], [ %__THREW__.val1, %bb ]
+; CHECK-NEXT: %__threwValue.val = load i32, i32* @__threwValue, align 4
+; CHECK-NEXT: call void @emscripten_longjmp(i32 %threw.phi, i32 %__threwValue.val)
+; CHECK-NEXT: unreachable
+}
+
+; The same case with @rethrow_exception, but there are multiple function calls
+; that can possibly throw (instead of longjmping) so we have to rethrow them.
+; Here we test if correctly we generate only one 'rethrow.exn' BB and share it
+; for multiple calls.
+define void @rethrow_exception_multi() {
+; CHECK-LABEL: @rethrow_exception_multi
+entry:
+  %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
+  %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0
+  %call = call i32 @setjmp(%struct.__jmp_buf_tag* %arraydecay) #0
+  %cmp = icmp ne i32 %call, 0
+  br i1 %cmp, label %return, label %if.end
+
+if.end:                                           ; preds = %entry
+  call void @foo()
+  call void @foo()
+  br label %return
+
+return:                                           ; preds = %entry, %if.end
+  ret void
+
+; CHECK:    rethrow.exn:
+; CHECK-NEXT: %setjmpTable{{.*}} = phi i32* [ %setjmpTable{{.*}}, %if.end.split ], [ %setjmpTable{{.*}}, %if.end ]
+; CHECK-NEXT: %exn = call i8* @__cxa_find_matching_catch_2()
+; CHECK-NEXT: %{{.*}} = bitcast i32* %setjmpTable{{.*}} to i8*
+; CHECK-NEXT: tail call void @free(i8* %{{.*}})
+; CHECK-NEXT: call void @__resumeException(i8* %exn)
 ; CHECK-NEXT: unreachable
 }
 

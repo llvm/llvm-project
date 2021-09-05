@@ -17,22 +17,22 @@
 #include <concepts>
 #include <ranges>
 
-namespace stdr = std::ranges;
 
-static_assert(std::same_as<stdr::iterator_t<std::cmatch>, std::cmatch::iterator>);
-static_assert(stdr::common_range<std::cmatch>);
-static_assert(stdr::random_access_range<std::cmatch>);
-static_assert(stdr::contiguous_range<std::cmatch>);
-static_assert(!stdr::view<std::cmatch>);
-static_assert(stdr::sized_range<std::cmatch>);
-static_assert(!stdr::borrowed_range<std::cmatch>);
-static_assert(!stdr::viewable_range<std::cmatch>);
 
-static_assert(std::same_as<stdr::iterator_t<std::cmatch const>, std::cmatch::const_iterator>);
-static_assert(stdr::common_range<std::cmatch const>);
-static_assert(stdr::random_access_range<std::cmatch const>);
-static_assert(stdr::contiguous_range<std::cmatch const>);
-static_assert(!stdr::view<std::cmatch const>);
-static_assert(stdr::sized_range<std::cmatch const>);
-static_assert(!stdr::borrowed_range<std::cmatch const>);
-static_assert(!stdr::viewable_range<std::cmatch const>);
+static_assert(std::same_as<std::ranges::iterator_t<std::cmatch>, std::cmatch::iterator>);
+static_assert(std::ranges::common_range<std::cmatch>);
+static_assert(std::ranges::random_access_range<std::cmatch>);
+static_assert(std::ranges::contiguous_range<std::cmatch>);
+static_assert(!std::ranges::view<std::cmatch>);
+static_assert(std::ranges::sized_range<std::cmatch>);
+static_assert(!std::ranges::borrowed_range<std::cmatch>);
+static_assert(!std::ranges::viewable_range<std::cmatch>);
+
+static_assert(std::same_as<std::ranges::iterator_t<std::cmatch const>, std::cmatch::const_iterator>);
+static_assert(std::ranges::common_range<std::cmatch const>);
+static_assert(std::ranges::random_access_range<std::cmatch const>);
+static_assert(std::ranges::contiguous_range<std::cmatch const>);
+static_assert(!std::ranges::view<std::cmatch const>);
+static_assert(std::ranges::sized_range<std::cmatch const>);
+static_assert(!std::ranges::borrowed_range<std::cmatch const>);
+static_assert(!std::ranges::viewable_range<std::cmatch const>);

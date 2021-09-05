@@ -560,7 +560,7 @@ def CallOp : Std_Op<"call",
   let builders = [
     OpBuilder<(ins "FuncOp":$callee, CArg<"ValueRange", "{}">:$operands), [{
       $_state.addOperands(operands);
-      $_state.addAttribute("callee",$_builder.getSymbolRefAttr(callee));
+      $_state.addAttribute("callee", SymbolRefAttr::get(callee));
       $_state.addTypes(callee.getType().getResults());
     }]>,
     OpBuilder<(ins "SymbolRefAttr":$callee, "TypeRange":$results,
@@ -569,14 +569,19 @@ def CallOp : Std_Op<"call",
       $_state.addAttribute("callee", callee);
       $_state.addTypes(results);
     }]>,
+    OpBuilder<(ins "StringAttr":$callee, "TypeRange":$results,
+      CArg<"ValueRange", "{}">:$operands), [{
+      build($_builder, $_state, SymbolRefAttr::get(callee), results, operands);
+    }]>,
     OpBuilder<(ins "StringRef":$callee, "TypeRange":$results,
       CArg<"ValueRange", "{}">:$operands), [{
-      build($_builder, $_state, $_builder.getSymbolRefAttr(callee), results,
-            operands);
+      build($_builder, $_state, StringAttr::get($_builder.getContext(), callee),
+            results, operands);
     }]>];
 
   let extraClassDeclaration = [{
     StringRef getCallee() { return callee(); }
+    StringAttr getCalleeAttr() { return calleeAttr().getAttr(); }
     FunctionType getCalleeType();
 
     /// Get the argument operands to the called function.
@@ -1032,7 +1037,8 @@ def CondBranchOp : Std_Op<"cond_br",
 //===----------------------------------------------------------------------===//
 
 def ConstantOp : Std_Op<"constant",
-    [ConstantLike, NoSideEffect, DeclareOpInterfaceMethods<OpAsmOpInterface>]> {
+    [ConstantLike, NoSideEffect,
+     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]> {
   let summary = "constant";
   let description = [{
     Syntax:

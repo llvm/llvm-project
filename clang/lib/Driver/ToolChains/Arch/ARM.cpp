@@ -849,7 +849,7 @@ fp16_fml_fallthrough:
 
 }
 
-const std::string arm::getARMArch(StringRef Arch, const llvm::Triple &Triple) {
+std::string arm::getARMArch(StringRef Arch, const llvm::Triple &Triple) {
   std::string MArch;
   if (!Arch.empty())
     MArch = std::string(Arch);

@@ -12,16 +12,16 @@
 ; CHECK-UNCOMPRESS:[main:1 @ foo:3 @ fa]:24:0
 ; CHECK-UNCOMPRESS: 1: 1
 ; CHECK-UNCOMPRESS: 2: 13 fb:11
-; CHECK-UNCOMPRESS:[main:1 @ foo:3 @ fa:2 @ fb:2 @ fa]:7:0
-; CHECK-UNCOMPRESS: 1: 1
-; CHECK-UNCOMPRESS: 2: 2 fb:1
 ; CHECK-UNCOMPRESS:[main:1 @ foo]:7:0
 ; CHECK-UNCOMPRESS: 2: 1
 ; CHECK-UNCOMPRESS: 3: 2 fa:1
-; CHECK-UNCOMPRESS:[main:1 @ foo:3 @ fa:2 @ fb:2 @ fa:2 @ fb:2 @ fa]:2:0
-; CHECK-UNCOMPRESS: 4: 1
+; CHECK-UNCOMPRESS:[main:1 @ foo:3 @ fa:2 @ fb:2 @ fa]:7:0
+; CHECK-UNCOMPRESS: 1: 1
+; CHECK-UNCOMPRESS: 2: 2 fb:1
 ; CHECK-UNCOMPRESS:[main:1 @ foo:3 @ fa:2 @ fb:2 @ fa:2 @ fb]:2:0
 ; CHECK-UNCOMPRESS: 2: 1 fa:1
+; CHECK-UNCOMPRESS:[main:1 @ foo:3 @ fa:2 @ fb:2 @ fa:2 @ fb:2 @ fa]:2:0
+; CHECK-UNCOMPRESS: 4: 1
 
 ; CHECK-MAX-CTX-DEPTH:[foo:3 @ fa:2 @ fb]:47:0
 ; CHECK-MAX-CTX-DEPTH: 1: 11

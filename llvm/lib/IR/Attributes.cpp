@@ -1209,33 +1209,36 @@ AttributeList AttributeList::get(LLVMContext &C,
   return getImpl(C, NewAttrSets);
 }
 
-AttributeList AttributeList::addAttribute(LLVMContext &C, unsigned Index,
-                                          Attribute::AttrKind Kind) const {
-  if (hasAttribute(Index, Kind)) return *this;
+AttributeList
+AttributeList::addAttributeAtIndex(LLVMContext &C, unsigned Index,
+                                   Attribute::AttrKind Kind) const {
+  if (hasAttributeAtIndex(Index, Kind))
+    return *this;
   AttributeSet Attrs = getAttributes(Index);
   // TODO: Insert at correct position and avoid sort.
   SmallVector<Attribute, 8> NewAttrs(Attrs.begin(), Attrs.end());
   NewAttrs.push_back(Attribute::get(C, Kind));
-  return setAttributes(C, Index, AttributeSet::get(C, NewAttrs));
+  return setAttributesAtIndex(C, Index, AttributeSet::get(C, NewAttrs));
 }
 
-AttributeList AttributeList::addAttribute(LLVMContext &C, unsigned Index,
-                                          StringRef Kind,
-                                          StringRef Value) const {
+AttributeList AttributeList::addAttributeAtIndex(LLVMContext &C, unsigned Index,
+                                                 StringRef Kind,
+                                                 StringRef Value) const {
   AttrBuilder B;
   B.addAttribute(Kind, Value);
-  return addAttributes(C, Index, B);
+  return addAttributesAtIndex(C, Index, B);
 }
 
-AttributeList AttributeList::addAttribute(LLVMContext &C, unsigned Index,
-                                          Attribute A) const {
+AttributeList AttributeList::addAttributeAtIndex(LLVMContext &C, unsigned Index,
+                                                 Attribute A) const {
   AttrBuilder B;
   B.addAttribute(A);
-  return addAttributes(C, Index, B);
+  return addAttributesAtIndex(C, Index, B);
 }
 
-AttributeList AttributeList::setAttributes(LLVMContext &C, unsigned Index,
-                                           AttributeSet Attrs) const {
+AttributeList AttributeList::setAttributesAtIndex(LLVMContext &C,
+                                                  unsigned Index,
+                                                  AttributeSet Attrs) const {
   Index = attrIdxToArrayIdx(Index);
   SmallVector<AttributeSet, 4> AttrSets(this->begin(), this->end());
   if (Index >= AttrSets.size())
@@ -1244,8 +1247,9 @@ AttributeList AttributeList::setAttributes(LLVMContext &C, unsigned Index,
   return AttributeList::getImpl(C, AttrSets);
 }
 
-AttributeList AttributeList::addAttributes(LLVMContext &C, unsigned Index,
-                                           const AttrBuilder &B) const {
+AttributeList AttributeList::addAttributesAtIndex(LLVMContext &C,
+                                                  unsigned Index,
+                                                  const AttrBuilder &B) const {
   if (!B.hasAttributes())
     return *this;
 
@@ -1263,7 +1267,7 @@ AttributeList AttributeList::addAttributes(LLVMContext &C, unsigned Index,
 
   AttrBuilder Merged(getAttributes(Index));
   Merged.merge(B);
-  return setAttributes(C, Index, AttributeSet::get(C, Merged));
+  return setAttributesAtIndex(C, Index, AttributeSet::get(C, Merged));
 }
 
 AttributeList AttributeList::addParamAttribute(LLVMContext &C,
@@ -1286,9 +1290,11 @@ AttributeList AttributeList::addParamAttribute(LLVMContext &C,
   return getImpl(C, AttrSets);
 }
 
-AttributeList AttributeList::removeAttribute(LLVMContext &C, unsigned Index,
-                                             Attribute::AttrKind Kind) const {
-  if (!hasAttribute(Index, Kind)) return *this;
+AttributeList
+AttributeList::removeAttributeAtIndex(LLVMContext &C, unsigned Index,
+                                      Attribute::AttrKind Kind) const {
+  if (!hasAttributeAtIndex(Index, Kind))
+    return *this;
 
   Index = attrIdxToArrayIdx(Index);
   SmallVector<AttributeSet, 4> AttrSets(this->begin(), this->end());
@@ -1299,9 +1305,11 @@ AttributeList AttributeList::removeAttribute(LLVMContext &C, unsigned Index,
   return getImpl(C, AttrSets);
 }
 
-AttributeList AttributeList::removeAttribute(LLVMContext &C, unsigned Index,
-                                             StringRef Kind) const {
-  if (!hasAttribute(Index, Kind)) return *this;
+AttributeList AttributeList::removeAttributeAtIndex(LLVMContext &C,
+                                                    unsigned Index,
+                                                    StringRef Kind) const {
+  if (!hasAttributeAtIndex(Index, Kind))
+    return *this;
 
   Index = attrIdxToArrayIdx(Index);
   SmallVector<AttributeSet, 4> AttrSets(this->begin(), this->end());
@@ -1313,18 +1321,19 @@ AttributeList AttributeList::removeAttribute(LLVMContext &C, unsigned Index,
 }
 
 AttributeList
-AttributeList::removeAttributes(LLVMContext &C, unsigned Index,
-                                const AttrBuilder &AttrsToRemove) const {
+AttributeList::removeAttributesAtIndex(LLVMContext &C, unsigned Index,
+                                       const AttrBuilder &AttrsToRemove) const {
   AttributeSet Attrs = getAttributes(Index);
   AttributeSet NewAttrs = Attrs.removeAttributes(C, AttrsToRemove);
   // If nothing was removed, return the original list.
   if (Attrs == NewAttrs)
     return *this;
-  return setAttributes(C, Index, NewAttrs);
+  return setAttributesAtIndex(C, Index, NewAttrs);
 }
 
-AttributeList AttributeList::removeAttributes(LLVMContext &C,
-                                              unsigned WithoutIndex) const {
+AttributeList
+AttributeList::removeAttributesAtIndex(LLVMContext &C,
+                                       unsigned WithoutIndex) const {
   if (!pImpl)
     return {};
   WithoutIndex = attrIdxToArrayIdx(WithoutIndex);
@@ -1383,16 +1392,16 @@ AttributeSet AttributeList::getFnAttrs() const {
   return getAttributes(FunctionIndex);
 }
 
-bool AttributeList::hasAttribute(unsigned Index,
-                                 Attribute::AttrKind Kind) const {
+bool AttributeList::hasAttributeAtIndex(unsigned Index,
+                                        Attribute::AttrKind Kind) const {
   return getAttributes(Index).hasAttribute(Kind);
 }
 
-bool AttributeList::hasAttribute(unsigned Index, StringRef Kind) const {
+bool AttributeList::hasAttributeAtIndex(unsigned Index, StringRef Kind) const {
   return getAttributes(Index).hasAttribute(Kind);
 }
 
-bool AttributeList::hasAttributes(unsigned Index) const {
+bool AttributeList::hasAttributesAtIndex(unsigned Index) const {
   return getAttributes(Index).hasAttributes();
 }
 
@@ -1401,7 +1410,7 @@ bool AttributeList::hasFnAttr(Attribute::AttrKind Kind) const {
 }
 
 bool AttributeList::hasFnAttr(StringRef Kind) const {
-  return hasAttribute(AttributeList::FunctionIndex, Kind);
+  return hasAttributeAtIndex(AttributeList::FunctionIndex, Kind);
 }
 
 bool AttributeList::hasAttrSomewhere(Attribute::AttrKind Attr,
@@ -1409,12 +1418,13 @@ bool AttributeList::hasAttrSomewhere(Attribute::AttrKind Attr,
   return pImpl && pImpl->hasAttrSomewhere(Attr, Index);
 }
 
-Attribute AttributeList::getAttribute(unsigned Index,
-                                      Attribute::AttrKind Kind) const {
+Attribute AttributeList::getAttributeAtIndex(unsigned Index,
+                                             Attribute::AttrKind Kind) const {
   return getAttributes(Index).getAttribute(Kind);
 }
 
-Attribute AttributeList::getAttribute(unsigned Index, StringRef Kind) const {
+Attribute AttributeList::getAttributeAtIndex(unsigned Index,
+                                             StringRef Kind) const {
   return getAttributes(Index).getAttribute(Kind);
 }
 

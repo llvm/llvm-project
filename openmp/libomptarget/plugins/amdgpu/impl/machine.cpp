@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 #include "machine.h"
-#include "atmi_runtime.h"
-#include "hsa_api.h"
 #include "internal.h"
 #include <cassert>
 #include <stdio.h>

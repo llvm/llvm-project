@@ -133,11 +133,11 @@ public:
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;
 
-  Register getRegisterByName(const char* RegName, LLT VT,
+  Register getRegisterByName(const char *RegName, LLT VT,
                              const MachineFunction &MF) const override;
 
-  bool shouldSplitFunctionArgumentsAsLittleEndian(const DataLayout &DL)
-    const override {
+  bool shouldSplitFunctionArgumentsAsLittleEndian(
+      const DataLayout &DL) const override {
     return false;
   }
 
@@ -179,7 +179,6 @@ private:
                           SmallVectorImpl<SDValue> &InVals) const;
 
 protected:
-
   const AVRSubtarget &Subtarget;
 
 private:

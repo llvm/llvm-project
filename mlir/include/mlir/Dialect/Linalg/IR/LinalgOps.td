@@ -18,6 +18,7 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/TilingInterface.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 
 // Base class for Linalg dialect ops that do not correspond to library calls.
@@ -130,7 +131,10 @@ def Linalg_InitTensorOp : Linalg_Op<"init_tensor",
 
 def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     [AttrSizedOperandSegments, NoSideEffect,
-     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+     DeclareOpInterfaceMethods<TilingInterface,
+         ["getDestinationOperands", "getLoopIteratorTypes", "getLoopBounds",
+          "getTiledImplementation"]>]> {
   let summary = "tensor pad operation";
   let description = [{
     `linalg.pad_tensor` is an operation that pads the `source` tensor
@@ -143,12 +147,11 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
            dimension, i.e `low`.
     * high: A list contains the padding along the end of each
            dimension, i.e. `high`.
-    * output: An optional output operand.
 
     The result tensor dimensions are `low` + `dim` + `high` along that
     dimension. The number of elements of `low` and `high` must match
-    the rank of the input tensor (which is also the rank of the output
-    tensor). They can be either a constant or a dynamic value.
+    the rank of the input tensor. They can be either a constant or a
+    dynamic value.
 
     The region of the `pad_tensor` operation returns the value to use
     for the padding. The arguments of the region represent the index
@@ -192,8 +195,7 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     Variadic<Index>:$low,
     Variadic<Index>:$high,
     I64ArrayAttr:$static_low,
-    I64ArrayAttr:$static_high,
-    Optional<AnyTensor>:$output);
+    I64ArrayAttr:$static_high);
 
   let regions = (region SizedRegion<1>:$region);
 
@@ -204,9 +206,7 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     $source
     `low` `` custom<OperandsOrIntegersSizesList>($low, $static_low)
     `high` `` custom<OperandsOrIntegersSizesList>($high, $static_high)
-    (`into` $output^ )?
     $region attr-dict `:` type($source) `to` type($result)
-    custom<InferType>(ref($output), type($output), ref(type($result)))
   }];
 
   let extraClassDeclaration = [{
@@ -296,11 +296,6 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     OpBuilder<(ins "Type":$resultType, "Value":$source,
       "ArrayRef<OpFoldResult>":$low, "ArrayRef<OpFoldResult>":$high,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
-    // Build a PadTensorOp with mixed static and dynamic entries and custom
-    // result type.
-    OpBuilder<(ins "Type":$resultType, "Value":$source,
-      "ArrayRef<Value>":$low, "ArrayRef<Value>":$high, "ArrayAttr":$staticLow,
-      "ArrayAttr":$staticHigh)>
   ];
 
   let hasCanonicalizer = 1;
@@ -736,6 +731,22 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
       OperandRange::iterator it = llvm::find(outputs(), value);
       if (it == outputs().end()) return nullptr;
       return it.getBase();
+    }
+
+    /// Return whether the op has only MemRef input and outputs.
+    bool hasBufferSemantics() {
+      Operation* op = this->getOperation();
+      return op->getNumResults() == 0 &&
+             llvm::all_of(op->getOpOperands(), [&](OpOperand & operand) {
+               return !operand.get().getType().template isa<ShapedType>() ||
+                      operand.get().getType().template isa<MemRefType>();
+             });
+    }
+
+    /// Return whether the loop dimension is parallel or not.
+    bool isParallelDimension(unsigned dim) {
+      StringAttr attr = this->iterator_types()[dim].cast<StringAttr>();
+      return attr.getValue() == getParallelIteratorTypeName();
     }
   }];
 

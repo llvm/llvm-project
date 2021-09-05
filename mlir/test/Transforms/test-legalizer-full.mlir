@@ -32,12 +32,12 @@ func @replace_non_root_illegal_op() {
 // Test that children of recursively legal operations are ignored.
 func @recursively_legal_invalid_op() {
   /// Operation that is statically legal.
-  module attributes {test.recursively_legal} {
+  builtin.module attributes {test.recursively_legal} {
     %ignored = "test.illegal_op_f"() : () -> (i32)
   }
   /// Operation that is dynamically legal, i.e. the function has a pattern
   /// applied to legalize the argument type before it becomes recursively legal.
-  func @dynamic_func(%arg: i64) attributes {test.recursively_legal} {
+  builtin.func @dynamic_func(%arg: i64) attributes {test.recursively_legal} {
     %ignored = "test.illegal_op_f"() : () -> (i32)
     "test.return"() : () -> ()
   }

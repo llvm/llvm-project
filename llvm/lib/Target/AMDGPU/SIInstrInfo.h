@@ -331,6 +331,14 @@ public:
                           Register DstReg, ArrayRef<MachineOperand> Cond,
                           Register TrueReg, Register FalseReg) const;
 
+  bool analyzeCompare(const MachineInstr &MI, Register &SrcReg,
+                      Register &SrcReg2, int64_t &CmpMask,
+                      int64_t &CmpValue) const override;
+
+  bool optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
+                            Register SrcReg2, int64_t CmpMask, int64_t CmpValue,
+                            const MachineRegisterInfo *MRI) const override;
+
   unsigned getAddressSpaceForPseudoSourceKind(
              unsigned Kind) const override;
 
@@ -338,7 +346,7 @@ public:
   areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
                                   const MachineInstr &MIb) const override;
 
-  bool isFoldableCopy(const MachineInstr &MI) const;
+  static bool isFoldableCopy(const MachineInstr &MI);
 
   bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const final;

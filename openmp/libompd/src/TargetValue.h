@@ -1,3 +1,14 @@
+/*
+ * TargetValue.h -- Access to target values using OMPD callbacks
+ */
+
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 
 #include "omp-tools.h"
 #include "ompd-private.h"
@@ -70,7 +81,7 @@ protected:
   TError(const ompd_rc_t &error) : errorCode(error) {}
 
 public:
-  virtual std::string toString() {
+  std::string toString() {
     return std::string("TError messages not implemented yet");
   }
   friend TValue;
@@ -80,7 +91,7 @@ public:
 /**
  * class TValue
  * This class encapsules the access to target values by using OMPD
- * callback functions. The member functions are designed to concatinate
+ * callback functions. The member functions are designed to concatenate
  * the operations that are needed to access values from structures
  * e.g., _a[6]->_b._c would read like :
  * TValue(ctx,
@@ -92,11 +103,9 @@ protected:
   TError errorState;
   TType *type;
   int pointerLevel;
-  //  const char* valueName;
   ompd_address_space_context_t *context;
   ompd_thread_context_t *tcontext;
   ompd_address_t symbolAddr;
-  // size_t fieldSize;
   ompd_size_t fieldSize;
 
 public:
@@ -120,10 +129,6 @@ public:
       : TValue(_context, NULL, _addr) {}
   TValue(ompd_address_space_context_t *context, ompd_thread_context_t *tcontext,
          ompd_address_t addr);
-  //   TValue(ompd_address_space_context_t *context, const struct ompd_handle*
-  //   th): TValue(context, NULL, th) {}
-  //   TValue(ompd_address_space_context_t *context, ompd_thread_context_t
-  //   *tcontext, const struct ompd_handle* th);
   /**
    * Cast the target value object to some type of typeName
    *
@@ -159,7 +164,6 @@ public:
    * read error.
    */
   ompd_rc_t getString(const char **buf);
-  //   ompd_rc_t getAddress(struct ompd_handle* th) const;
   /**
    * Get a new target value object for the dereferenced target value
    * reduces the pointer level, uses the target value as new target address,
@@ -195,7 +199,7 @@ public:
    */
   TValue getArrayElement(int elemNumber) const;
   /**
-   * Get an element of a pointer arraz
+   * Get an element of a pointer array
    */
   TValue getPtrArrayElement(int elemNumber) const;
   /**
@@ -214,13 +218,11 @@ public:
 
 class TBaseValue : public TValue {
 protected:
-  //   ompd_target_prim_types_t baseType=ompd_type_invalid;
   ompd_size_t baseTypeSize = 0;
   TBaseValue(const TValue &, ompd_target_prim_types_t baseType);
   TBaseValue(const TValue &, ompd_size_t baseTypeSize);
 
 public:
-  //   ompd_rc_t getValue(struct ompd_handle* buf, int count);
   ompd_rc_t getValue(void *buf, int count);
   template <typename T> ompd_rc_t getValue(T &buf);
 
@@ -253,15 +255,5 @@ template <typename T> ompd_rc_t TBaseValue::getValue(T &buf) {
 #else
 #define EXTERN_C
 #endif
-
-// EXTERN_C int getNumberOfOMPThreads(ompd_address_space_context_t *context);
-// EXTERN_C int32_t getOmpThreadID(ompd_address_space_context_t *context);
-// EXTERN_C uint64_t getSystemThreadID(ompd_address_space_context_t *context,
-// ompd_thread_handle_t t);
-// EXTERN_C ompd_thread_handle_t getOmpThreadHandle(ompd_address_space_context_t
-// *context);
-// EXTERN_C void getThreadState(ompd_address_space_context_t *context,
-// ompd_thread_handle_t t, ompt_state_t *state,
-//    ompt_wait_id_t *wait_id);
 
 #endif /*SRC_TARGET_VALUE_H_*/

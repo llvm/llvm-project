@@ -293,14 +293,18 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
     // Check for equality of TC and Ceil by calculating SCEV expression
     // TC - Ceil and test it for zero.
     //
-    bool Zero = SE->getMinusSCEV(
-                      SE->getBackedgeTakenCount(L),
-                      SE->getUDivExpr(SE->getAddExpr(SE->getMulExpr(Ceil, VW),
-                                                     SE->getNegativeSCEV(VW)),
-                                      VW))
-                    ->isZero();
+    const SCEV *Sub =
+      SE->getMinusSCEV(SE->getBackedgeTakenCount(L),
+                       SE->getUDivExpr(SE->getAddExpr(SE->getMulExpr(Ceil, VW),
+                                                      SE->getNegativeSCEV(VW)),
+                                       VW));
 
-    if (!Zero) {
+    // Use context sensitive facts about the path to the loop to refine.  This
+    // comes up as the backedge taken count can incorporate context sensitive
+    // reasoning, and our RHS just above doesn't.
+    Sub = SE->applyLoopGuards(Sub, L);
+
+    if (!Sub->isZero()) {
       LLVM_DEBUG(dbgs() << "ARM TP: possible overflow in sub expression.\n");
       return false;
     }

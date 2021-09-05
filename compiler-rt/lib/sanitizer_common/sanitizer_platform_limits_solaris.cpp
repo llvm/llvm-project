@@ -123,6 +123,7 @@ namespace __sanitizer {
   unsigned struct_ElfW_Phdr_sz = sizeof(ElfW(Phdr));
 
   int glob_nomatch = GLOB_NOMATCH;
+  const int wordexp_wrde_dooffs = WRDE_DOOFFS;
 
   unsigned path_max = PATH_MAX;
 

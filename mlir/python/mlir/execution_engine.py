@@ -3,8 +3,7 @@
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 # Simply a wrapper around the extension module of the same name.
-from ._cext_loader import load_extension
-_execution_engine = load_extension("_mlirExecutionEngine")
+from ._mlir_libs import _mlirExecutionEngine as _execution_engine
 import ctypes
 
 __all__ = [

@@ -5321,8 +5321,9 @@ static CapturedStmt *buildDistanceFunc(Sema &Actions, QualType LogicalTy,
 
       if (Rel == BO_LE || Rel == BO_GE) {
         // Add one to the range if the relational operator is inclusive.
-        Range =
-            AssertSuccess(Actions.BuildUnaryOp(nullptr, {}, UO_PreInc, Range));
+        Range = AssertSuccess(Actions.BuildBinOp(
+            nullptr, {}, BO_Add, Range,
+            Actions.ActOnIntegerConstant(SourceLocation(), 1).get()));
       }
 
       // Divide by the absolute step amount.
@@ -5572,6 +5573,19 @@ StmtResult Sema::ActOnOpenMPCanonicalLoop(Stmt *AStmt) {
                                         {}, nullptr, nullptr, {}, nullptr);
   return OMPCanonicalLoop::create(getASTContext(), AStmt, DistanceFunc,
                                   LoopVarFunc, LVRef);
+}
+
+StmtResult Sema::ActOnOpenMPLoopnest(Stmt *AStmt) {
+  // Handle a literal loop.
+  if (isa<ForStmt>(AStmt) || isa<CXXForRangeStmt>(AStmt))
+    return ActOnOpenMPCanonicalLoop(AStmt);
+
+  // If not a literal loop, it must be the result of a loop transformation.
+  OMPExecutableDirective *LoopTransform = cast<OMPExecutableDirective>(AStmt);
+  assert(
+      isOpenMPLoopTransformationDirective(LoopTransform->getDirectiveKind()) &&
+      "Loop transformation directive expected");
+  return LoopTransform;
 }
 
 static ExprResult buildUserDefinedMapperRef(Sema &SemaRef, Scope *S,
@@ -19349,6 +19363,7 @@ static void checkMappableExpressionList(
     CXXScopeSpec &MapperIdScopeSpec, DeclarationNameInfo MapperId,
     ArrayRef<Expr *> UnresolvedMappers,
     OpenMPMapClauseKind MapType = OMPC_MAP_unknown,
+    ArrayRef<OpenMPMapModifierKind> Modifiers = None,
     bool IsMapTypeImplicit = false, bool NoDiagnose = false) {
   // We only expect mappable expressions in 'to', 'from', and 'map' clauses.
   assert((CKind == OMPC_map || CKind == OMPC_to || CKind == OMPC_from) &&
@@ -19369,6 +19384,10 @@ static void checkMappableExpressionList(
   auto UMIt = UnresolvedMappers.begin(), UMEnd = UnresolvedMappers.end();
   bool UpdateUMIt = false;
   Expr *UnresolvedMapper = nullptr;
+
+  bool HasHoldModifier =
+      Modifiers.end() != std::find(Modifiers.begin(), Modifiers.end(),
+                                   OMPC_MAP_MODIFIER_ompx_hold);
 
   // Keep track of the mappable components and base declarations in this clause.
   // Each entry in the list is going to have a list of components associated. We
@@ -19570,6 +19589,21 @@ static void checkMappableExpressionList(
         continue;
       }
 
+      // The 'ompx_hold' modifier is specifically intended to be used on a
+      // 'target' or 'target data' directive to prevent data from being unmapped
+      // during the associated statement.  It is not permitted on a 'target
+      // enter data' or 'target exit data' directive, which have no associated
+      // statement.
+      if ((DKind == OMPD_target_enter_data || DKind == OMPD_target_exit_data) &&
+          HasHoldModifier) {
+        SemaRef.Diag(StartLoc,
+                     diag::err_omp_invalid_map_type_modifier_for_directive)
+            << getOpenMPSimpleClauseTypeName(OMPC_map,
+                                             OMPC_MAP_MODIFIER_ompx_hold)
+            << getOpenMPDirectiveName(DKind);
+        continue;
+      }
+
       // target, target data
       // OpenMP 5.0 [2.12.2, Restrictions, p. 163]
       // OpenMP 5.0 [2.12.5, Restrictions, p. 174]
@@ -19645,7 +19679,8 @@ OMPClause *Sema::ActOnOpenMPMapClause(
     ArrayRef<Expr *> UnresolvedMappers) {
   OpenMPMapModifierKind Modifiers[] = {
       OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown,
-      OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown};
+      OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown,
+      OMPC_MAP_MODIFIER_unknown};
   SourceLocation ModifiersLoc[NumberOfOMPMapClauseModifiers];
 
   // Process map-type-modifiers, flag errors for duplicate modifiers.
@@ -19666,7 +19701,8 @@ OMPClause *Sema::ActOnOpenMPMapClause(
   MappableVarListInfo MVLI(VarList);
   checkMappableExpressionList(*this, DSAStack, OMPC_map, MVLI, Locs.StartLoc,
                               MapperIdScopeSpec, MapperId, UnresolvedMappers,
-                              MapType, IsMapTypeImplicit, NoDiagnose);
+                              MapType, Modifiers, IsMapTypeImplicit,
+                              NoDiagnose);
 
   // We need to produce a map clause even if we don't have variables so that
   // other diagnostics related with non-existing map clauses are accurate.

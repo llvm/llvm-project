@@ -623,8 +623,8 @@ body:             |
   ; CHECK: bb.5:
   ; CHECK:   successors: %bb.5(0x7c000000), %bb.1(0x04000000)
   ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3
-  ; CHECK:   renamable $q0, renamable $r0 = MVE_VIWDUPu16 killed renamable $r0, renamable $r3, 1, 0, $noreg, undef renamable $q0
-  ; CHECK:   MVE_VSTRH16_rq undef renamable $q0, renamable $r1, killed renamable $q0, 0, $noreg
+  ; CHECK:   renamable $q0, renamable $r0 = MVE_VIWDUPu16 killed renamable $r0, renamable $r3, 1, 0, $noreg, $noreg, undef renamable $q0
+  ; CHECK:   MVE_VSTRH16_rq undef renamable $q0, renamable $r1, killed renamable $q0, 0, $noreg, $noreg
   ; CHECK:   renamable $lr = t2LoopEndDec killed renamable $lr, %bb.5, implicit-def dead $cpsr
   ; CHECK:   t2B %bb.1, 14 /* CC::al */, $noreg
   ; CHECK: bb.6:
@@ -634,8 +634,8 @@ body:             |
   ; CHECK: bb.7:
   ; CHECK:   successors: %bb.7(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $lr, $r0, $r1, $r3
-  ; CHECK:   renamable $q0, renamable $r0 = MVE_VIWDUPu16 killed renamable $r0, renamable $r3, 2, 0, $noreg, undef renamable $q0
-  ; CHECK:   MVE_VSTRH16_rq undef renamable $q0, renamable $r1, killed renamable $q0, 0, $noreg
+  ; CHECK:   renamable $q0, renamable $r0 = MVE_VIWDUPu16 killed renamable $r0, renamable $r3, 2, 0, $noreg, $noreg, undef renamable $q0
+  ; CHECK:   MVE_VSTRH16_rq undef renamable $q0, renamable $r1, killed renamable $q0, 0, $noreg, $noreg
   ; CHECK:   renamable $lr = t2LoopEndDec killed renamable $lr, %bb.7, implicit-def dead $cpsr
   ; CHECK:   t2B %bb.3, 14 /* CC::al */, $noreg
   bb.0:
@@ -676,8 +676,8 @@ body:             |
     successors: %bb.4(0x7c000000), %bb.2(0x04000000)
     liveins: $lr, $r0, $r1, $r2, $r3
 
-    renamable $q0, renamable $r0 = MVE_VIWDUPu16 killed renamable $r0, renamable $r3, 1, 0, $noreg, undef renamable $q0
-    MVE_VSTRH16_rq undef renamable $q0, renamable $r1, killed renamable $q0, 0, $noreg
+    renamable $q0, renamable $r0 = MVE_VIWDUPu16 killed renamable $r0, renamable $r3, 1, 0, $noreg, $noreg, undef renamable $q0
+    MVE_VSTRH16_rq undef renamable $q0, renamable $r1, killed renamable $q0, 0, $noreg, $noreg
     renamable $lr = t2LoopEndDec killed renamable $lr, %bb.4, implicit-def dead $cpsr
     t2B %bb.2, 14 /* CC::al */, $noreg
 
@@ -698,8 +698,8 @@ body:             |
     successors: %bb.6(0x7c000000), %bb.7(0x04000000)
     liveins: $lr, $r0, $r1, $r3
 
-    renamable $q0, renamable $r0 = MVE_VIWDUPu16 killed renamable $r0, renamable $r3, 2, 0, $noreg, undef renamable $q0
-    MVE_VSTRH16_rq undef renamable $q0, renamable $r1, killed renamable $q0, 0, $noreg
+    renamable $q0, renamable $r0 = MVE_VIWDUPu16 killed renamable $r0, renamable $r3, 2, 0, $noreg, $noreg, undef renamable $q0
+    MVE_VSTRH16_rq undef renamable $q0, renamable $r1, killed renamable $q0, 0, $noreg, $noreg
     renamable $lr = t2LoopEndDec killed renamable $lr, %bb.6, implicit-def dead $cpsr
     t2B %bb.7, 14 /* CC::al */, $noreg
 

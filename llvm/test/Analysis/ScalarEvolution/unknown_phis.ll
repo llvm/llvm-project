@@ -1,4 +1,3 @@
-; RUN: opt < %s -analyze -enable-new-pm=0 -scalar-evolution | FileCheck %s
 ; RUN: opt < %s -disable-output "-passes=print<scalar-evolution>" 2>&1 | FileCheck %s
 
 define void @merge_values_with_ranges(i32 *%a_len_ptr, i32 *%b_len_ptr, i1 %unknown_cond) {

@@ -2128,8 +2128,7 @@ void CompilerInstance::createModuleFromSource(SourceLocation ImportLoc,
     const FileEntry *ModuleMapFile = Other.getFileManager().getVirtualFile(
         ModuleMapFileName, NullTerminatedSource.size(), 0);
     Other.getSourceManager().overrideFileContents(
-        ModuleMapFile,
-        llvm::MemoryBuffer::getMemBuffer(NullTerminatedSource.c_str()));
+        ModuleMapFile, llvm::MemoryBuffer::getMemBuffer(NullTerminatedSource));
 
     Other.BuiltModules = std::move(BuiltModules);
     Other.DeleteBuiltModules = false;

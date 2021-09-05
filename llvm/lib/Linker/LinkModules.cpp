@@ -24,7 +24,7 @@ using namespace llvm;
 
 namespace {
 
-enum class LinkFrom { Dst, Src };
+enum class LinkFrom { Dst, Src, Both };
 
 /// This is an implementation class for the LinkModules function, which is the
 /// entrypoint for this file.
@@ -105,7 +105,7 @@ class ModuleLinker {
   void dropReplacedComdat(GlobalValue &GV,
                           const DenseSet<const Comdat *> &ReplacedDstComdats);
 
-  bool linkIfNeeded(GlobalValue &GV);
+  bool linkIfNeeded(GlobalValue &GV, SmallVectorImpl<GlobalValue *> &GVToClone);
 
 public:
   ModuleLinker(IRMover &Mover, std::unique_ptr<Module> SrcM, unsigned Flags,
@@ -180,8 +180,8 @@ bool ModuleLinker::computeResultingSelectionKind(StringRef ComdatName,
     From = LinkFrom::Dst;
     break;
   case Comdat::SelectionKind::NoDeduplicate:
-    return emitError("Linking COMDATs named '" + ComdatName +
-                     "': nodeduplicate has been violated!");
+    From = LinkFrom::Both;
+    break;
   case Comdat::SelectionKind::ExactMatch:
   case Comdat::SelectionKind::Largest:
   case Comdat::SelectionKind::SameSize: {
@@ -326,7 +326,8 @@ bool ModuleLinker::shouldLinkFromSource(bool &LinkFromSrc,
                    "': symbol multiply defined!");
 }
 
-bool ModuleLinker::linkIfNeeded(GlobalValue &GV) {
+bool ModuleLinker::linkIfNeeded(GlobalValue &GV,
+                                SmallVectorImpl<GlobalValue *> &GVToClone) {
   GlobalValue *DGV = getLinkedToGlobal(&GV);
 
   if (shouldLinkOnlyNeeded()) {
@@ -388,6 +389,8 @@ bool ModuleLinker::linkIfNeeded(GlobalValue &GV) {
   bool LinkFromSrc = true;
   if (DGV && shouldLinkFromSource(LinkFromSrc, *DGV, GV))
     return true;
+  if (DGV && ComdatFrom == LinkFrom::Both)
+    GVToClone.push_back(LinkFromSrc ? DGV : &GV);
   if (LinkFromSrc)
     ValuesToLink.insert(&GV);
   return false;
@@ -514,21 +517,44 @@ bool ModuleLinker::run() {
 
   // Insert all of the globals in src into the DstM module... without linking
   // initializers (which could refer to functions not yet mapped over).
+  SmallVector<GlobalValue *, 0> GVToClone;
   for (GlobalVariable &GV : SrcM->globals())
-    if (linkIfNeeded(GV))
+    if (linkIfNeeded(GV, GVToClone))
       return true;
 
   for (Function &SF : *SrcM)
-    if (linkIfNeeded(SF))
+    if (linkIfNeeded(SF, GVToClone))
       return true;
 
   for (GlobalAlias &GA : SrcM->aliases())
-    if (linkIfNeeded(GA))
+    if (linkIfNeeded(GA, GVToClone))
       return true;
 
   for (GlobalIFunc &GI : SrcM->ifuncs())
-    if (linkIfNeeded(GI))
+    if (linkIfNeeded(GI, GVToClone))
       return true;
+
+  // For a variable in a comdat nodeduplicate, its initializer should be
+  // preserved (its content may be implicitly used by other members) even if
+  // symbol resolution does not pick it. Clone it into an unnamed private
+  // variable.
+  for (GlobalValue *GV : GVToClone) {
+    if (auto *Var = dyn_cast<GlobalVariable>(GV)) {
+      auto *NewVar = new GlobalVariable(*Var->getParent(), Var->getValueType(),
+                                        Var->isConstant(), Var->getLinkage(),
+                                        Var->getInitializer());
+      NewVar->copyAttributesFrom(Var);
+      NewVar->setVisibility(GlobalValue::DefaultVisibility);
+      NewVar->setLinkage(GlobalValue::PrivateLinkage);
+      NewVar->setDSOLocal(true);
+      NewVar->setComdat(Var->getComdat());
+      if (Var->getParent() != &Mover.getModule())
+        ValuesToLink.insert(NewVar);
+    } else {
+      emitError("linking '" + GV->getName() +
+                "': non-variables in comdat nodeduplicate are not handled");
+    }
+  }
 
   for (unsigned I = 0; I < ValuesToLink.size(); ++I) {
     GlobalValue *GV = ValuesToLink[I];

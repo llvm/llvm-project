@@ -210,23 +210,6 @@ ArrayAttr Builder::getArrayAttr(ArrayRef<Attribute> value) {
   return ArrayAttr::get(context, value);
 }
 
-FlatSymbolRefAttr Builder::getSymbolRefAttr(Operation *value) {
-  auto symName =
-      value->getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName());
-  assert(symName && "value does not have a valid symbol name");
-  return getSymbolRefAttr(symName.getValue());
-}
-
-FlatSymbolRefAttr Builder::getSymbolRefAttr(StringAttr value) {
-  return SymbolRefAttr::get(value);
-}
-
-SymbolRefAttr
-Builder::getSymbolRefAttr(StringAttr value,
-                          ArrayRef<FlatSymbolRefAttr> nestedReferences) {
-  return SymbolRefAttr::get(value, nestedReferences);
-}
-
 ArrayAttr Builder::getBoolArrayAttr(ArrayRef<bool> values) {
   auto attrs = llvm::to_vector<8>(llvm::map_range(
       values, [this](bool v) -> Attribute { return getBoolAttr(v); }));

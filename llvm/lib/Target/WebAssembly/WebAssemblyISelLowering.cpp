@@ -303,6 +303,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       setLoadExtAction(Ext, MVT::v4i32, MVT::v4i16, Legal);
       setLoadExtAction(Ext, MVT::v2i64, MVT::v2i32, Legal);
     }
+    setLoadExtAction(ISD::EXTLOAD, MVT::v2f64, MVT::v2f32, Legal);
   }
 
   // Don't do anything clever with build_pairs
@@ -1571,9 +1572,10 @@ WebAssemblyTargetLowering::LowerGlobalTLSAddress(SDValue Op,
 
   SDValue TLSOffset = DAG.getTargetGlobalAddress(
       GV, DL, PtrVT, GA->getOffset(), WebAssemblyII::MO_TLS_BASE_REL);
-  SDValue SymAddr = DAG.getNode(WebAssemblyISD::Wrapper, DL, PtrVT, TLSOffset);
+  SDValue SymOffset =
+      DAG.getNode(WebAssemblyISD::WrapperREL, DL, PtrVT, TLSOffset);
 
-  return DAG.getNode(ISD::ADD, DL, PtrVT, BaseAddr, SymAddr);
+  return DAG.getNode(ISD::ADD, DL, PtrVT, BaseAddr, SymOffset);
 }
 
 SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,
@@ -1606,14 +1608,13 @@ SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,
                       DAG.getTargetExternalSymbol(BaseName, PtrVT));
 
       SDValue SymAddr = DAG.getNode(
-          WebAssemblyISD::WrapperPIC, DL, VT,
+          WebAssemblyISD::WrapperREL, DL, VT,
           DAG.getTargetGlobalAddress(GA->getGlobal(), DL, VT, GA->getOffset(),
                                      OperandFlags));
 
       return DAG.getNode(ISD::ADD, DL, VT, BaseAddr, SymAddr);
-    } else {
-      OperandFlags = WebAssemblyII::MO_GOT;
     }
+    OperandFlags = WebAssemblyII::MO_GOT;
   }
 
   return DAG.getNode(WebAssemblyISD::Wrapper, DL, VT,

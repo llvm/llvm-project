@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_BASIC_OPENMPKINDS_H
 #define LLVM_CLANG_BASIC_OPENMPKINDS_H
 
+#include "clang/Basic/LangOptions.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 
@@ -167,7 +168,7 @@ enum OpenMPReductionClauseModifier {
 };
 
 unsigned getOpenMPSimpleClauseType(OpenMPClauseKind Kind, llvm::StringRef Str,
-                                   unsigned OpenMPVersion);
+                                   const LangOptions &LangOpts);
 const char *getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind, unsigned Type);
 
 /// Checks if the specified directive is a directive with an associated

@@ -319,8 +319,16 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
   Value *X, *Y;
   if (match(TI, m_FNeg(m_Value(X))) && match(FI, m_FNeg(m_Value(Y))) &&
       (TI->hasOneUse() || FI->hasOneUse())) {
+    // Intersect FMF from the fneg instructions and union those with the select.
+    FastMathFlags FMF = TI->getFastMathFlags();
+    FMF &= FI->getFastMathFlags();
+    FMF |= SI.getFastMathFlags();
     Value *NewSel = Builder.CreateSelect(Cond, X, Y, SI.getName() + ".v", &SI);
-    return UnaryOperator::CreateFNegFMF(NewSel, TI);
+    if (auto *NewSelI = dyn_cast<Instruction>(NewSel))
+      NewSelI->setFastMathFlags(FMF);
+    Instruction *NewFNeg = UnaryOperator::CreateFNeg(NewSel);
+    NewFNeg->setFastMathFlags(FMF);
+    return NewFNeg;
   }
 
   // Min/max intrinsic with a common operand can have the common operand pulled

@@ -191,10 +191,19 @@ class ReplaceLDSUseImpl {
     if (!BasicBlockEntry.second)
       return BasicBlockEntry.first->second;
 
-    // Split entry basic block of kernel K.
-    auto *EI = &(*(K->getEntryBlock().getFirstInsertionPt()));
-    IRBuilder<> Builder(EI);
+    // Split entry basic block of kernel K just after alloca.
+    //
+    // Find the split point just after alloca.
+    auto &EBB = K->getEntryBlock();
+    auto *EI = &(*(EBB.getFirstInsertionPt()));
+    BasicBlock::reverse_iterator RIT(EBB.getTerminator());
+    while (!isa<AllocaInst>(*RIT) && (&*RIT != EI))
+      ++RIT;
+    if (isa<AllocaInst>(*RIT))
+      --RIT;
 
+    // Split entry basic block.
+    IRBuilder<> Builder(&*RIT);
     Value *Mbcnt =
         Builder.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_lo, {},
                                 {Builder.getInt32(-1), Builder.getInt32(0)});

@@ -8412,6 +8412,8 @@ void ASTReader::ReadLateParsedTemplates(
       LPTMap.insert(std::make_pair(FD, std::move(LT)));
     }
   }
+
+  LateParsedTemplates.clear();
 }
 
 void ASTReader::LoadSelector(Selector Sel) {

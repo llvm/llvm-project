@@ -7,6 +7,7 @@ add_llvm_component_library(LLVMOrcJIT
   EPCDynamicLibrarySearchGenerator.cpp
   EPCDebugObjectRegistrar.cpp
   EPCEHFrameRegistrar.cpp
+  EPCGenericJITLinkMemoryManager.cpp
   EPCGenericMemoryAccess.cpp
   EPCIndirectionUtils.cpp
   ExecutionUtils.cpp

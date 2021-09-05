@@ -309,7 +309,7 @@ static void computeBlocksDominatingExits(
     // worklist, unless we visited it already.
     BasicBlock *IDomBB = DT.getNode(BB)->getIDom()->getBlock();
 
-    // Exit blocks can have an immediate dominator not beloinging to the
+    // Exit blocks can have an immediate dominator not belonging to the
     // loop. For an exit block to be immediately dominated by another block
     // outside the loop, it implies not all paths from that dominator, to the
     // exit block, go through the loop.

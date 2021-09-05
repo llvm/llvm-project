@@ -5038,7 +5038,7 @@ Stmt has pointer identity in the AST.
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('isExpandedFromMacro1')"><a name="isExpandedFromMacro1Anchor">isExpandedFromMacro</a></td><td>std::string MacroName</td></tr>
 <tr><td colspan="4" class="doc" id="isExpandedFromMacro1"><pre>Matches statements that are (transitively) expanded from the named macro.
 Does not match if only part of the statement is expanded from that macro or
-if different parts of the the statement are expanded from different
+if different parts of the statement are expanded from different
 appearances of the macro.
 </pre></td></tr>
 
@@ -7463,7 +7463,7 @@ Given
     }
   }
 
-cxxRcordDecl(hasDeclContext(namedDecl(hasName("M")))) matches the
+cxxRecordDecl(hasDeclContext(namedDecl(hasName("M")))) matches the
 declaration of class D.
 </pre></td></tr>
 

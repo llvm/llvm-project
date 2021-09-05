@@ -2,7 +2,6 @@
 ; disambiguating some obvious cases.  If LICM is able to disambiguate the
 ; two pointers, then the load should be hoisted, and the store sunk.
 
-; RUN: opt < %s -basic-aa -licm -enable-new-pm=0 -S | FileCheck %s
 ; RUN: opt < %s -aa-pipeline=basic-aa -passes='loop-mssa(licm)' -S | FileCheck %s
 target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128"
 

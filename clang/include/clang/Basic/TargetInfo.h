@@ -684,8 +684,7 @@ public:
   }
 
   /// Return the value for the C99 FLT_EVAL_METHOD macro.
-  //  Note: implementation defined values may be negative.
-  virtual int getFPEvalMethod() const { return 0; }
+  virtual unsigned getFloatEvalMethod() const { return 0; }
 
   // getLargeArrayMinWidth/Align - Return the minimum array size that is
   // 'large' and its alignment.

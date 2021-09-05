@@ -713,7 +713,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::LLROUND, MVT::f80, Expand);
     setOperationAction(ISD::LRINT, MVT::f80, Custom);
     setOperationAction(ISD::LLRINT, MVT::f80, Custom);
-    setOperationAction(ISD::ISNAN, MVT::f80, Custom);
 
     // Handle constrained floating-point operations of scalar.
     setOperationAction(ISD::STRICT_FADD     , MVT::f80, Legal);
@@ -22617,50 +22616,6 @@ static SDValue LowerFGETSIGN(SDValue Op, SelectionDAG &DAG) {
   return Res;
 }
 
-static SDValue lowerISNAN(SDValue Op, SelectionDAG &DAG) {
-  SDLoc DL(Op);
-  SDValue Arg = Op.getOperand(0);
-  MVT ArgVT = Arg.getSimpleValueType();
-  MVT ResultVT = Op.getSimpleValueType();
-
-  // If exceptions are ignored, use unordered comparison for fp80. It recognizes
-  // unsupported values as NaNs.
-  if (ArgVT == MVT::f80 && Op->getFlags().hasNoFPExcept())
-    return DAG.getSetCC(DL, ResultVT, Arg, Arg, ISD::CondCode::SETUNE);
-
-  // Determine classification of argument using instruction FXAM.
-  unsigned Opc;
-  switch (ArgVT.SimpleTy) {
-  default:
-    llvm_unreachable("Unexpected type!");
-  case MVT::f32:
-    Opc = X86::XAM_Fp32;
-    break;
-  case MVT::f64:
-    Opc = X86::XAM_Fp64;
-    break;
-  case MVT::f80:
-    Opc = X86::XAM_Fp80;
-    break;
-  }
-  SDValue Test(DAG.getMachineNode(Opc, DL, MVT::Glue, Arg), 0);
-
-  // Move FPSW to AX.
-  SDValue FNSTSW =
-      SDValue(DAG.getMachineNode(X86::FNSTSW16r, DL, MVT::i16, Test), 0);
-
-  // Extract upper 8-bits of AX.
-  SDValue Extract =
-      DAG.getTargetExtractSubreg(X86::sub_8bit_hi, DL, MVT::i8, FNSTSW);
-
-  // Mask all bits but C3, C2, C0.
-  Extract = DAG.getNode(ISD::AND, DL, MVT::i8, Extract,
-                        DAG.getConstant(0x45, DL, MVT::i8));
-
-  return DAG.getSetCC(DL, ResultVT, Extract, DAG.getConstant(1, DL, MVT::i8),
-                      ISD::CondCode::SETLE);
-}
-
 /// Helper for creating a X86ISD::SETCC node.
 static SDValue getSETCC(X86::CondCode Cond, SDValue EFLAGS, const SDLoc &dl,
                         SelectionDAG &DAG) {
@@ -31059,7 +31014,6 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FNEG:               return LowerFABSorFNEG(Op, DAG);
   case ISD::FCOPYSIGN:          return LowerFCOPYSIGN(Op, DAG);
   case ISD::FGETSIGN:           return LowerFGETSIGN(Op, DAG);
-  case ISD::ISNAN:              return lowerISNAN(Op, DAG);
   case ISD::LRINT:
   case ISD::LLRINT:             return LowerLRINT_LLRINT(Op, DAG);
   case ISD::SETCC:
@@ -44051,8 +44005,9 @@ static SDValue combineMulSpecial(uint64_t MulAmt, SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-// If the upper 17 bits of each element are zero then we can use PMADDWD,
-// which is always at least as quick as PMULLD, except on KNL.
+// If the upper 17 bits of either element are zero and the other element are
+// zero/sign bits then we can use PMADDWD, which is always at least as quick as
+// PMULLD, except on KNL.
 static SDValue combineMulToPMADDWD(SDNode *N, SelectionDAG &DAG,
                                    const X86Subtarget &Subtarget) {
   if (!Subtarget.hasSSE2())
@@ -44089,9 +44044,13 @@ static SDValue combineMulToPMADDWD(SDNode *N, SelectionDAG &DAG,
        N1.getOperand(0).getScalarValueSizeInBits() <= 8))
     return SDValue();
 
+  // Sign bits must extend through the upper 17 bits.
+  if (DAG.ComputeNumSignBits(N1) < 17 || DAG.ComputeNumSignBits(N0) < 17)
+    return SDValue();
+
+  // At least one of the elements must be zero in the upper 17 bits.
   APInt Mask17 = APInt::getHighBitsSet(32, 17);
-  if (!DAG.MaskedValueIsZero(N1, Mask17) ||
-      !DAG.MaskedValueIsZero(N0, Mask17))
+  if (!DAG.MaskedValueIsZero(N1, Mask17) && !DAG.MaskedValueIsZero(N0, Mask17))
     return SDValue();
 
   // Use SplitOpsAndApply to handle AVX splitting.
@@ -51824,6 +51783,21 @@ static SDValue combinePMULDQ(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Simplify VPMADDUBSW/VPMADDWD operations.
+static SDValue combineVPMADD(SDNode *N, SelectionDAG &DAG,
+                             TargetLowering::DAGCombinerInfo &DCI) {
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  // Multiply by zero.
+  // Don't return LHS/RHS as it may contain UNDEFs.
+  if (ISD::isBuildVectorAllZeros(LHS.getNode()) ||
+      ISD::isBuildVectorAllZeros(RHS.getNode()))
+    return DAG.getConstant(0, SDLoc(N), N->getValueType(0));
+
+  return SDValue();
+}
+
 static SDValue combineEXTEND_VECTOR_INREG(SDNode *N, SelectionDAG &DAG,
                                           TargetLowering::DAGCombinerInfo &DCI,
                                           const X86Subtarget &Subtarget) {
@@ -52274,6 +52248,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::PCMPGT:      return combineVectorCompare(N, DAG, Subtarget);
   case X86ISD::PMULDQ:
   case X86ISD::PMULUDQ:     return combinePMULDQ(N, DAG, DCI, Subtarget);
+  case X86ISD::VPMADDUBSW:
+  case X86ISD::VPMADDWD:    return combineVPMADD(N, DAG, DCI);
   case X86ISD::KSHIFTL:
   case X86ISD::KSHIFTR:     return combineKSHIFT(N, DAG, DCI);
   case ISD::FP16_TO_FP:     return combineFP16_TO_FP(N, DAG, Subtarget);
@@ -53115,6 +53091,10 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       switch (VT.SimpleTy) {
       default: break;
       // Scalar SSE types.
+      case MVT::f16:
+        if (VConstraint && Subtarget.hasFP16())
+          return std::make_pair(0U, &X86::FR16XRegClass);
+        break;
       case MVT::f32:
       case MVT::i32:
         if (VConstraint && Subtarget.hasVLX())
@@ -53133,6 +53113,10 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         }
         break;
       // Vector types and fp128.
+      case MVT::v8f16:
+        if (!Subtarget.hasFP16())
+          break;
+        LLVM_FALLTHROUGH;
       case MVT::f128:
       case MVT::v16i8:
       case MVT::v8i16:
@@ -53144,6 +53128,10 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
           return std::make_pair(0U, &X86::VR128XRegClass);
         return std::make_pair(0U, &X86::VR128RegClass);
       // AVX types.
+      case MVT::v16f16:
+        if (!Subtarget.hasFP16())
+          break;
+        LLVM_FALLTHROUGH;
       case MVT::v32i8:
       case MVT::v16i16:
       case MVT::v8i32:
@@ -53155,6 +53143,10 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         if (Subtarget.hasAVX())
           return std::make_pair(0U, &X86::VR256RegClass);
         break;
+      case MVT::v32f16:
+        if (!Subtarget.hasFP16())
+          break;
+        LLVM_FALLTHROUGH;
       case MVT::v64i8:
       case MVT::v32i16:
       case MVT::v8f64:
@@ -53184,12 +53176,20 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       switch (VT.SimpleTy) {
       default: break;
       // Scalar SSE types.
+      case MVT::f16:
+        if (!Subtarget.hasFP16())
+          break;
+        return std::make_pair(X86::XMM0, &X86::FR16XRegClass);
       case MVT::f32:
       case MVT::i32:
         return std::make_pair(X86::XMM0, &X86::FR32RegClass);
       case MVT::f64:
       case MVT::i64:
         return std::make_pair(X86::XMM0, &X86::FR64RegClass);
+      case MVT::v8f16:
+        if (!Subtarget.hasFP16())
+          break;
+        LLVM_FALLTHROUGH;
       case MVT::f128:
       case MVT::v16i8:
       case MVT::v8i16:
@@ -53199,6 +53199,10 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       case MVT::v2f64:
         return std::make_pair(X86::XMM0, &X86::VR128RegClass);
       // AVX types.
+      case MVT::v16f16:
+        if (!Subtarget.hasFP16())
+          break;
+        LLVM_FALLTHROUGH;
       case MVT::v32i8:
       case MVT::v16i16:
       case MVT::v8i32:
@@ -53208,6 +53212,10 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         if (Subtarget.hasAVX())
           return std::make_pair(X86::YMM0, &X86::VR256RegClass);
         break;
+      case MVT::v32f16:
+        if (!Subtarget.hasFP16())
+          break;
+        LLVM_FALLTHROUGH;
       case MVT::v64i8:
       case MVT::v32i16:
       case MVT::v8f64:
@@ -53365,7 +53373,9 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     // find, ignoring the required type.
 
     // TODO: Handle f128 and i128 in FR128RegClass after it is tested well.
-    if (VT == MVT::f32 || VT == MVT::i32)
+    if (VT == MVT::f16)
+      Res.second = &X86::FR16XRegClass;
+    else if (VT == MVT::f32 || VT == MVT::i32)
       Res.second = &X86::FR32XRegClass;
     else if (VT == MVT::f64 || VT == MVT::i64)
       Res.second = &X86::FR64XRegClass;

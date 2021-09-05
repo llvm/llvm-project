@@ -288,7 +288,6 @@ LLDBSwigPythonCreateScriptedProcess
     if (python_class_name == NULL || python_class_name[0] == '\0' || !session_dictionary_name)
         Py_RETURN_NONE;
 
-
     PyErr_Cleaner py_err_cleaner(true);
 
     auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(session_dictionary_name);

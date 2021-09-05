@@ -68,7 +68,7 @@ public:
     auto varOp = spirvModule.lookupSymbol<spirv::GlobalVariableOp>(varName);
 
     rewriter.replaceOpWithNewOp<spirv::AddressOfOp>(
-        op, varOp.type(), rewriter.getSymbolRefAttr(varName.getAttr()));
+        op, varOp.type(), SymbolRefAttr::get(varName.getAttr()));
     return success();
   }
 };

@@ -303,6 +303,8 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
     return 2;
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
     return 4;
+  case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
+    return 8;
   case AMDGPU::DS_READ_B32:      LLVM_FALLTHROUGH;
   case AMDGPU::DS_READ_B32_gfx9: LLVM_FALLTHROUGH;
   case AMDGPU::DS_WRITE_B32:     LLVM_FALLTHROUGH;
@@ -372,6 +374,7 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::S_BUFFER_LOAD_DWORD_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
     return S_BUFFER_LOAD_IMM;
   case AMDGPU::DS_READ_B32:
   case AMDGPU::DS_READ_B32_gfx9:
@@ -413,6 +416,7 @@ static unsigned getInstSubclass(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::S_BUFFER_LOAD_DWORD_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
     return AMDGPU::S_BUFFER_LOAD_DWORD_IMM;
   }
 }
@@ -463,6 +467,7 @@ static AddressRegs getRegs(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::S_BUFFER_LOAD_DWORD_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
     Result.SBase = true;
     return Result;
   case AMDGPU::DS_READ_B32:
@@ -857,6 +862,7 @@ bool SILoadStoreOptimizer::widthsFit(const GCNSubtarget &STM,
       return false;
     case 2:
     case 4:
+    case 8:
       return true;
     }
   }
@@ -1523,45 +1529,62 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
       return AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM;
     case 4:
       return AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM;
+    case 8:
+      return AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM;
     }
   case MIMG:
-    assert("No overlaps" && (countPopulation(CI.DMask | Paired.DMask) == Width));
+    assert((countPopulation(CI.DMask | Paired.DMask) == Width) &&
+           "No overlaps");
     return AMDGPU::getMaskedMIMGOp(CI.I->getOpcode(), Width);
   }
 }
 
 std::pair<unsigned, unsigned>
-SILoadStoreOptimizer::getSubRegIdxs(const CombineInfo &CI, const CombineInfo &Paired) {
+SILoadStoreOptimizer::getSubRegIdxs(const CombineInfo &CI,
+                                    const CombineInfo &Paired) {
 
-  if (CI.Width == 0 || Paired.Width == 0 || CI.Width + Paired.Width > 4)
-    return std::make_pair(0, 0);
+  assert(CI.Width != 0 && Paired.Width != 0 && "Width cannot be zero");
 
   bool ReverseOrder;
   if (CI.InstClass == MIMG) {
-    assert((countPopulation(CI.DMask | Paired.DMask) == CI.Width + Paired.Width) &&
-           "No overlaps");
+    assert(
+        (countPopulation(CI.DMask | Paired.DMask) == CI.Width + Paired.Width) &&
+        "No overlaps");
     ReverseOrder = CI.DMask > Paired.DMask;
   } else
     ReverseOrder = CI.Offset > Paired.Offset;
 
-  static const unsigned Idxs[4][4] = {
-      {AMDGPU::sub0, AMDGPU::sub0_sub1, AMDGPU::sub0_sub1_sub2, AMDGPU::sub0_sub1_sub2_sub3},
-      {AMDGPU::sub1, AMDGPU::sub1_sub2, AMDGPU::sub1_sub2_sub3, 0},
-      {AMDGPU::sub2, AMDGPU::sub2_sub3, 0, 0},
-      {AMDGPU::sub3, 0, 0, 0},
-  };
   unsigned Idx0;
   unsigned Idx1;
 
-  assert(CI.Width >= 1 && CI.Width <= 3);
-  assert(Paired.Width >= 1 && Paired.Width <= 3);
+  if (CI.Width + Paired.Width > 4) {
+    assert(CI.Width == 4 && Paired.Width == 4);
 
-  if (ReverseOrder) {
-    Idx1 = Idxs[0][Paired.Width - 1];
-    Idx0 = Idxs[Paired.Width][CI.Width - 1];
+    if (ReverseOrder) {
+      Idx1 = AMDGPU::sub0_sub1_sub2_sub3;
+      Idx0 = AMDGPU::sub4_sub5_sub6_sub7;
+    } else {
+      Idx0 = AMDGPU::sub0_sub1_sub2_sub3;
+      Idx1 = AMDGPU::sub4_sub5_sub6_sub7;
+    }
   } else {
-    Idx0 = Idxs[0][CI.Width - 1];
-    Idx1 = Idxs[CI.Width][Paired.Width - 1];
+    static const unsigned Idxs[4][4] = {
+        {AMDGPU::sub0, AMDGPU::sub0_sub1, AMDGPU::sub0_sub1_sub2, AMDGPU::sub0_sub1_sub2_sub3},
+        {AMDGPU::sub1, AMDGPU::sub1_sub2, AMDGPU::sub1_sub2_sub3, 0},
+        {AMDGPU::sub2, AMDGPU::sub2_sub3, 0, 0},
+        {AMDGPU::sub3, 0, 0, 0},
+    };
+
+    assert(CI.Width >= 1 && CI.Width <= 3);
+    assert(Paired.Width >= 1 && Paired.Width <= 3);
+
+    if (ReverseOrder) {
+      Idx1 = Idxs[0][Paired.Width - 1];
+      Idx0 = Idxs[Paired.Width][CI.Width - 1];
+    } else {
+      Idx0 = Idxs[0][CI.Width - 1];
+      Idx1 = Idxs[CI.Width][Paired.Width - 1];
+    }
   }
 
   return std::make_pair(Idx0, Idx1);
@@ -2134,7 +2157,7 @@ SILoadStoreOptimizer::optimizeInstsWithSameBaseAddr(
       MachineBasicBlock::iterator NewMI =
           mergeSBufferLoadImmPair(CI, Paired, InstsToMove);
       CI.setMI(NewMI, *TII, *STM);
-      OptimizeListAgain |= (CI.Width + Paired.Width) < 16;
+      OptimizeListAgain |= (CI.Width + Paired.Width) < 8;
       break;
     }
     case BUFFER_LOAD: {

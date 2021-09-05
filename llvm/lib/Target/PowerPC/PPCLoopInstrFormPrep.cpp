@@ -169,7 +169,7 @@ namespace {
 
   private:
     PPCTargetMachine *TM = nullptr;
-    const PPCSubtarget *ST; 
+    const PPCSubtarget *ST;
     DominatorTree *DT;
     LoopInfo *LI;
     ScalarEvolution *SE;
@@ -184,7 +184,7 @@ namespace {
     bool runOnLoop(Loop *L);
 
     /// Check if required PHI node is already exist in Loop \p L.
-    bool alreadyPrepared(Loop *L, Instruction* MemI,
+    bool alreadyPrepared(Loop *L, Instruction *MemI,
                          const SCEV *BasePtrStartSCEV,
                          const SCEVConstant *BasePtrIncSCEV,
                          InstrForm Form);
@@ -266,23 +266,35 @@ static std::string getInstrName(const Value *I, StringRef Suffix) {
   if (I->hasName())
     return (I->getName() + Suffix).str();
   else
-    return ""; 
+    return "";
 }
 
-static Value *GetPointerOperand(Value *MemI) {
-  if (LoadInst *LMemI = dyn_cast<LoadInst>(MemI)) {
-    return LMemI->getPointerOperand();
-  } else if (StoreInst *SMemI = dyn_cast<StoreInst>(MemI)) {
-    return SMemI->getPointerOperand();
-  } else if (IntrinsicInst *IMemI = dyn_cast<IntrinsicInst>(MemI)) {
-    if (IMemI->getIntrinsicID() == Intrinsic::prefetch ||
-        IMemI->getIntrinsicID() == Intrinsic::ppc_vsx_lxvp)
-      return IMemI->getArgOperand(0);
-    if (IMemI->getIntrinsicID() == Intrinsic::ppc_vsx_stxvp)
-      return IMemI->getArgOperand(1);
-  }
+static Value *getPointerOperandAndType(Value *MemI,
+                                       Type **PtrElementType = nullptr) {
 
-  return nullptr;
+  Value *PtrValue = nullptr;
+  Type *PointerElementType = nullptr;
+
+  if (LoadInst *LMemI = dyn_cast<LoadInst>(MemI)) {
+    PtrValue = LMemI->getPointerOperand();
+    PointerElementType = LMemI->getType();
+  } else if (StoreInst *SMemI = dyn_cast<StoreInst>(MemI)) {
+    PtrValue = SMemI->getPointerOperand();
+    PointerElementType = SMemI->getValueOperand()->getType();
+  } else if (IntrinsicInst *IMemI = dyn_cast<IntrinsicInst>(MemI)) {
+    PointerElementType = Type::getInt8Ty(MemI->getContext());
+    if (IMemI->getIntrinsicID() == Intrinsic::prefetch ||
+        IMemI->getIntrinsicID() == Intrinsic::ppc_vsx_lxvp) {
+      PtrValue = IMemI->getArgOperand(0);
+    } else if (IMemI->getIntrinsicID() == Intrinsic::ppc_vsx_stxvp) {
+      PtrValue = IMemI->getArgOperand(1);
+    }
+  }
+  /*Get ElementType if PtrElementType is not null.*/
+  if (PtrElementType)
+    *PtrElementType = PointerElementType;
+
+  return PtrValue;
 }
 
 bool PPCLoopInstrFormPrep::runOnFunction(Function &F) {
@@ -309,7 +321,7 @@ bool PPCLoopInstrFormPrep::runOnFunction(Function &F) {
 void PPCLoopInstrFormPrep::addOneCandidate(Instruction *MemI, const SCEV *LSCEV,
                                         SmallVector<Bucket, 16> &Buckets,
                                         unsigned MaxCandidateNum) {
-  assert((MemI && GetPointerOperand(MemI)) &&
+  assert((MemI && getPointerOperandAndType(MemI)) &&
          "Candidate should be a memory instruction.");
   assert(LSCEV && "Invalid SCEV for Ptr value.");
   bool FoundBucket = false;
@@ -337,27 +349,14 @@ SmallVector<Bucket, 16> PPCLoopInstrFormPrep::collectCandidates(
   SmallVector<Bucket, 16> Buckets;
   for (const auto &BB : L->blocks())
     for (auto &J : *BB) {
-      Value *PtrValue;
-      Type *PointerElementType;
+      Value *PtrValue = nullptr;
+      Type *PointerElementType = nullptr;
+      PtrValue = getPointerOperandAndType(&J, &PointerElementType);
 
-      if (LoadInst *LMemI = dyn_cast<LoadInst>(&J)) {
-        PtrValue = LMemI->getPointerOperand();
-        PointerElementType = LMemI->getType();
-      } else if (StoreInst *SMemI = dyn_cast<StoreInst>(&J)) {
-        PtrValue = SMemI->getPointerOperand();
-        PointerElementType = SMemI->getValueOperand()->getType();
-      } else if (IntrinsicInst *IMemI = dyn_cast<IntrinsicInst>(&J)) {
-        PointerElementType = Type::getInt8Ty(J.getContext());
-        if (IMemI->getIntrinsicID() == Intrinsic::prefetch ||
-            IMemI->getIntrinsicID() == Intrinsic::ppc_vsx_lxvp) {
-          PtrValue = IMemI->getArgOperand(0);
-        } else if (IMemI->getIntrinsicID() == Intrinsic::ppc_vsx_stxvp) {
-          PtrValue = IMemI->getArgOperand(1);
-        } else continue;
-      } else continue;
+      if (!PtrValue)
+        continue;
 
-      unsigned PtrAddrSpace = PtrValue->getType()->getPointerAddressSpace();
-      if (PtrAddrSpace)
+      if (PtrValue->getType()->getPointerAddressSpace())
         continue;
 
       if (L->isLoopInvariant(PtrValue))
@@ -404,13 +403,13 @@ bool PPCLoopInstrFormPrep::prepareBaseForDispFormChain(Bucket &BucketChain,
   // contains following load/stores with different remainders:
   // 1: 10 load/store whose remainder is 1;
   // 2: 9 load/store whose remainder is 2;
-  // 3: 1 for remainder 3 and 0 for remainder 0; 
+  // 3: 1 for remainder 3 and 0 for remainder 0;
   // Now we will choose the first load/store whose remainder is 1 as base and
   // adjust all other load/stores according to new base, so we will get 10 DS
   // form and 10 X form.
   // But we should be more clever, for this case we could use two bases, one for
-  // remainder 1 and the other for remainder 2, thus we could get 19 DS form and 1
-  // X form.
+  // remainder 1 and the other for remainder 2, thus we could get 19 DS form and
+  // 1 X form.
   unsigned MaxCountRemainder = 0;
   for (unsigned j = 0; j < (unsigned)Form; j++)
     if ((RemainderOffsetInfo.find(j) != RemainderOffsetInfo.end()) &&
@@ -505,7 +504,7 @@ bool PPCLoopInstrFormPrep::rewriteLoadStores(Loop *L, Bucket &BucketChain,
   // The instruction corresponding to the Bucket's BaseSCEV must be the first
   // in the vector of elements.
   Instruction *MemI = BucketChain.Elements.begin()->Instr;
-  Value *BasePtr = GetPointerOperand(MemI);
+  Value *BasePtr = getPointerOperandAndType(MemI);
   assert(BasePtr && "No pointer operand");
 
   Type *I8Ty = Type::getInt8Ty(MemI->getParent()->getContext());
@@ -627,7 +626,7 @@ bool PPCLoopInstrFormPrep::rewriteLoadStores(Loop *L, Bucket &BucketChain,
 
   for (auto I = std::next(BucketChain.Elements.begin()),
        IE = BucketChain.Elements.end(); I != IE; ++I) {
-    Value *Ptr = GetPointerOperand(I->Instr);
+    Value *Ptr = getPointerOperandAndType(I->Instr);
     assert(Ptr && "No pointer operand");
     if (NewPtrs.count(Ptr))
       continue;
@@ -673,7 +672,7 @@ bool PPCLoopInstrFormPrep::rewriteLoadStores(Loop *L, Bucket &BucketChain,
 
   MadeChange = true;
 
-  SuccPrepCount++;  
+  SuccPrepCount++;
 
   if (Form == DSForm && !CanPreInc)
     DSFormChainRewritten++;
@@ -730,7 +729,7 @@ bool PPCLoopInstrFormPrep::dispFormPrep(Loop *L, SmallVector<Bucket, 16> &Bucket
 // This function will check to see if that PHI already exists and will return
 // true if it found an existing PHI with the matched start and increment as the
 // one we wanted to create.
-bool PPCLoopInstrFormPrep::alreadyPrepared(Loop *L, Instruction* MemI,
+bool PPCLoopInstrFormPrep::alreadyPrepared(Loop *L, Instruction *MemI,
                                         const SCEV *BasePtrStartSCEV,
                                         const SCEVConstant *BasePtrIncSCEV,
                                         InstrForm Form) {
@@ -777,7 +776,7 @@ bool PPCLoopInstrFormPrep::alreadyPrepared(Loop *L, Instruction* MemI,
               PHIBasePtrSCEV->getStart() == BasePtrStartSCEV) {
             ++PHINodeAlreadyExistsUpdate;
             return true;
-          } 
+          }
           if (Form == DSForm || Form == DQForm) {
             const SCEVConstant *Diff = dyn_cast<SCEVConstant>(
                 SE->getMinusSCEV(PHIBasePtrSCEV->getStart(), BasePtrStartSCEV));
@@ -788,7 +787,7 @@ bool PPCLoopInstrFormPrep::alreadyPrepared(Loop *L, Instruction* MemI,
                 ++PHINodeAlreadyExistsDQ;
               return true;
             }
-          } 
+          }
         }
       }
     }
@@ -883,7 +882,8 @@ bool PPCLoopInstrFormPrep::runOnLoop(Loop *L) {
     return ST && ST->hasP9Vector() && (PointerElementType->isVectorTy());
   };
 
-  // intrinsic for update form.
+  // Collect buckets of comparable addresses used by loads and stores for update
+  // form.
   SmallVector<Bucket, 16> UpdateFormBuckets =
       collectCandidates(L, isUpdateFormCandidate, MaxVarsUpdateForm);
 

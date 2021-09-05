@@ -28,8 +28,6 @@ add_mlir_translation_library(MLIRTargetLLVMIRExport
 
   LINK_LIBS PUBLIC
   MLIRLLVMIR
-  MLIROpenACC
-  MLIROpenMP
   MLIRLLVMIRTransforms
   MLIRTranslation
   )

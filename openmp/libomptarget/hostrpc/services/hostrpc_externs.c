@@ -89,7 +89,7 @@ static buffer_t *atl_hcq_create_buffer(unsigned int num_packets) {
   void *newbuffer = NULL;
   hsa_status_t err = host_malloc(&newbuffer, size + align);
   if (!newbuffer || (err != HSA_STATUS_SUCCESS)) {
-    printf("call to atmi_malloc failed \n");
+    printf("call to impl_malloc failed \n");
     abort();
   }
   if (amd_hostcall_initialize_buffer(newbuffer, num_packets) !=
@@ -129,7 +129,7 @@ unsigned long hostrpc_assign_buffer(hsa_agent_t agent, hsa_queue_t *this_Q,
                        &waverPerCu);
     // ErrorCheck(Could not get number of waves per cu, err);
     unsigned int minpackets = numCu * waverPerCu;
-    //  For now, we create one bufer and one consumer per ATMI hsa queue
+    //  For now, we create one bufer and one consumer per IMPL hsa queue
     buffer_t *hcb = atl_hcq_create_buffer(minpackets);
     hcb->device_id = device_id;
     amd_hostcall_register_buffer(atl_hcq_consumer, hcb);
@@ -150,7 +150,7 @@ hsa_status_t hostrpc_terminate() {
     atl_hcq_consumer = NULL;
   }
   while (reverse_counter) {
-    atmi_free(this_front->hcb);
+    impl_free(this_front->hcb);
     last_front = this_front;
     this_front = this_front->next_ptr;
     free(last_front);

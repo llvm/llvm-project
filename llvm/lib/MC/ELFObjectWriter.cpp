@@ -796,7 +796,7 @@ MCSectionELF *ELFWriter::createRelocationSection(MCContext &Ctx,
   else
     EntrySize = is64Bit() ? sizeof(ELF::Elf64_Rel) : sizeof(ELF::Elf32_Rel);
 
-  unsigned Flags = 0;
+  unsigned Flags = ELF::SHF_INFO_LINK;
   if (Sec.getFlags() & ELF::SHF_GROUP)
     Flags = ELF::SHF_GROUP;
 

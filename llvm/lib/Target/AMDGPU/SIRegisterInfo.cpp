@@ -2283,32 +2283,12 @@ bool SIRegisterInfo::isSGPRReg(const MachineRegisterInfo &MRI,
   return isSGPRClass(RC);
 }
 
-// TODO: It might be helpful to have some target specific flags in
-// TargetRegisterClass to mark which classes are VGPRs to make this trivial.
 bool SIRegisterInfo::hasVGPRs(const TargetRegisterClass *RC) const {
-  unsigned Size = getRegSizeInBits(*RC);
-  if (Size == 16) {
-    return getCommonSubClass(&AMDGPU::VGPR_LO16RegClass, RC) != nullptr ||
-           getCommonSubClass(&AMDGPU::VGPR_HI16RegClass, RC) != nullptr;
-  }
-  const TargetRegisterClass *VRC = getVGPRClassForBitWidth(Size);
-  if (!VRC) {
-    assert(Size < 32 && "Invalid register class size");
-    return false;
-  }
-  return getCommonSubClass(VRC, RC) != nullptr;
+  return RC->TSFlags & SIRCFlags::HasVGPR;
 }
 
 bool SIRegisterInfo::hasAGPRs(const TargetRegisterClass *RC) const {
-  unsigned Size = getRegSizeInBits(*RC);
-  if (Size < 16)
-    return false;
-  const TargetRegisterClass *ARC = getAGPRClassForBitWidth(Size);
-  if (!ARC) {
-    assert(getVGPRClassForBitWidth(Size) && "Invalid register class size");
-    return false;
-  }
-  return getCommonSubClass(ARC, RC) != nullptr;
+  return RC->TSFlags & SIRCFlags::HasAGPR;
 }
 
 const TargetRegisterClass *
@@ -2452,7 +2432,7 @@ bool SIRegisterInfo::isVGPR(const MachineRegisterInfo &MRI,
                             Register Reg) const {
   const TargetRegisterClass *RC = getRegClassForReg(MRI, Reg);
   // Registers without classes are unaddressable, SGPR-like registers.
-  return RC && hasVGPRs(RC);
+  return RC && isVGPRClass(RC);
 }
 
 bool SIRegisterInfo::isAGPR(const MachineRegisterInfo &MRI,
@@ -2460,7 +2440,7 @@ bool SIRegisterInfo::isAGPR(const MachineRegisterInfo &MRI,
   const TargetRegisterClass *RC = getRegClassForReg(MRI, Reg);
 
   // Registers without classes are unaddressable, SGPR-like registers.
-  return RC && hasAGPRs(RC);
+  return RC && isAGPRClass(RC);
 }
 
 bool SIRegisterInfo::shouldCoalesce(MachineInstr *MI,

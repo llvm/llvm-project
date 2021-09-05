@@ -22,7 +22,7 @@ if(NOT LIBOMPTARGET_DEP_LIBELF_FOUND)
 endif()
 
 if(NOT CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$" AND CMAKE_SYSTEM_NAME MATCHES "Linux")
-  libomptarget_say("Not building AMDGPU plugin: only support AMDGPU in Linux x86_64, ppc64le, or aarch64 hosts.")
+  libomptarget_say("Not building AMDGPU plugin: only support AMDGPU in Linux x86_64, ppc64le, or aarch64 hosts")
   return()
 endif()
 
@@ -62,13 +62,12 @@ else()
 endif()
 
 add_library(omptarget.rtl.amdgpu SHARED
-      impl/atmi.cpp
-      impl/atmi_interop_hsa.cpp
+      impl/impl.cpp
+      impl/impl_interop_hsa.cpp
       impl/data.cpp
       impl/get_elf_mach_gfx_name.cpp
       impl/machine.cpp
       impl/system.cpp
-      impl/utils.cpp
       impl/msgpack.cpp
       src/rtl.cpp
       ${LIBOMPTARGET_EXTRA_SOURCE}

@@ -1127,6 +1127,10 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   // modifying the operand is legal.
   auto *IP = cast<Instruction>(WidenableBR->getCondition());
   IP->moveBefore(WidenableBR);
+  if (MSSAU)
+    if (auto *MUD = MSSAU->getMemorySSA()->getMemoryAccess(IP))
+       MSSAU->moveToPlace(MUD, WidenableBR->getParent(),
+                          MemorySSA::BeforeTerminator);
   Rewriter.setInsertPoint(IP);
   IRBuilder<> B(IP);
 

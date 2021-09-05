@@ -285,7 +285,7 @@ void MapShadow(uptr addr, uptr size) {
                                  "meta shadow"))
       Die();
   } else {
-    // Mapping continous heap.
+    // Mapping continuous heap.
     // Windows wants 64K alignment.
     meta_begin = RoundDownTo(meta_begin, 64 << 10);
     meta_end = RoundUpTo(meta_end, 64 << 10);

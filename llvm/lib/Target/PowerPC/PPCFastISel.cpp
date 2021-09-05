@@ -2467,9 +2467,9 @@ namespace llvm {
   // Create the fast instruction selector for PowerPC64 ELF.
   FastISel *PPC::createFastISel(FunctionLoweringInfo &FuncInfo,
                                 const TargetLibraryInfo *LibInfo) {
-    // Only available on 64-bit ELF for now.
+    // Only available on 64-bit for now.
     const PPCSubtarget &Subtarget = FuncInfo.MF->getSubtarget<PPCSubtarget>();
-    if (Subtarget.is64BitELFABI())
+    if (Subtarget.isPPC64())
       return new PPCFastISel(FuncInfo, LibInfo);
     return nullptr;
   }

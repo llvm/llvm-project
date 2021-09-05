@@ -150,7 +150,7 @@ static void win_error(DWORD last_err, const char *hint) {
                      NULL, last_err, 0, (LPSTR)&buffer, 1, NULL)) {
     fprintf(stderr, "Windows error: %s\n", buffer);
   } else {
-    fprintf(stderr, "Unkown Windows error: %s\n", hint);
+    fprintf(stderr, "Unknown Windows error: %s\n", hint);
   }
   LocalFree(buffer);
 }

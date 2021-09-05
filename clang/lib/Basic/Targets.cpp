@@ -745,7 +745,7 @@ bool TargetInfo::validateOpenCLTarget(const LangOptions &Opts,
 
   // Validate that feature macros are set properly for OpenCL C 3.0.
   // In other cases assume that target is always valid.
-  if (Opts.OpenCLCPlusPlus || Opts.OpenCLVersion < 300)
+  if (Opts.getOpenCLCompatibleVersion() < 300)
     return true;
 
   return OpenCLOptions::diagnoseUnsupportedFeatureDependencies(*this, Diags) &&

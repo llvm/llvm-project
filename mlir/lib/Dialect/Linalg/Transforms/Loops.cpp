@@ -480,36 +480,67 @@ public:
   }
 };
 
+/// Converts tiled_loop to SCF loop nests. All parallel dimensions are collected
+/// into an scf.parallel loop and all sequential dimensions will result in the
+/// nested scf.for loop nest. The pattern assumes that a tiled loop with
+/// iterator_types ["reduction", "parallel", "reduction"] can be reordered. It
+/// is true for the tiling that is currently suppported by Linalg.
 struct TiledLoopToSCFPattern : public OpRewritePattern<TiledLoopOp> {
   using OpRewritePattern<TiledLoopOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(TiledLoopOp tiledLoop,
                                 PatternRewriter &rewriter) const override {
-    Location loc = tiledLoop.getLoc();
-
     // Fail conversion if the `tiled_loop` has not been bufferized.
-    if (!llvm::all_of(tiledLoop.outputs(), [&](Value arg) {
-          return arg.getType().isa<MemRefType>();
-        }))
+    if (!tiledLoop.hasBufferSemantics())
       return failure();
 
-    // TODO: Build loop nest with `scf.for` and `scf.parallel` depending on the
-    // iterator type.
-    scf::buildLoopNest(rewriter, loc, tiledLoop.lowerBound(),
-                       tiledLoop.upperBound(), tiledLoop.step(),
-                       [&](OpBuilder &builder, Location loc, ValueRange ivs) {
-                         // Move body without its terminator.
-                         SmallVector<Value> newBlockArgs;
-                         newBlockArgs.append(ivs.begin(), ivs.end());
-                         newBlockArgs.append(tiledLoop.inputs().begin(),
-                                             tiledLoop.inputs().end());
-                         newBlockArgs.append(tiledLoop.outputs().begin(),
-                                             tiledLoop.outputs().end());
-                         Block *newBody = rewriter.getInsertionBlock();
-                         rewriter.mergeBlocks(tiledLoop.getBody(), newBody,
-                                              newBlockArgs);
-                         rewriter.eraseOp(newBody->getTerminator());
-                       });
+    // Collect loop control parameters for parallel and sequential dimensions.
+    SmallVector<Value, 3> seqLBs, seqUBs, seqSteps, seqIVs;
+    SmallVector<Value, 3> parLBs, parUBs, parSteps, parIVs;
+    for (auto en : llvm::enumerate(
+             llvm::zip(tiledLoop.lowerBound(), tiledLoop.upperBound(),
+                       tiledLoop.step(), tiledLoop.getInductionVars()))) {
+      Value lb, ub, step, iv;
+      std::tie(lb, ub, step, iv) = en.value();
+      if (tiledLoop.isParallelDimension(en.index())) {
+        parLBs.push_back(lb);
+        parUBs.push_back(ub);
+        parSteps.push_back(step);
+        parIVs.push_back(iv);
+      } else {
+        seqLBs.push_back(lb);
+        seqUBs.push_back(ub);
+        seqSteps.push_back(step);
+        seqIVs.push_back(iv);
+      }
+    }
+
+    Location loc = tiledLoop.getLoc();
+    auto generateForLoopNestAndCloneBody = [&](OpBuilder &builder, Location loc,
+                                               ValueRange ivs) {
+      BlockAndValueMapping bvm;
+      bvm.map(parIVs, ivs);
+      bvm.map(tiledLoop.getRegionInputArgs(), tiledLoop.inputs());
+      bvm.map(tiledLoop.getRegionOutputArgs(), tiledLoop.outputs());
+
+      // If not all dimensions of the tiled loop are parallel, an scf.for loop
+      // nest is generated.
+      if (!seqIVs.empty()) {
+        scf::LoopNest nest =
+            scf::buildLoopNest(builder, loc, seqLBs, seqUBs, seqSteps,
+                               [&](OpBuilder &builder, Location loc,
+                                   ValueRange ivs) { bvm.map(seqIVs, ivs); });
+        builder.setInsertionPointToStart(nest.loops.back().getBody());
+      }
+      for (auto &op : tiledLoop.getBody()->without_terminator())
+        builder.clone(op, bvm);
+    };
+
+    if (parIVs.empty())
+      generateForLoopNestAndCloneBody(rewriter, loc, llvm::None);
+    else
+      rewriter.create<scf::ParallelOp>(loc, parLBs, parUBs, parSteps,
+                                       generateForLoopNestAndCloneBody);
     rewriter.eraseOp(tiledLoop);
     return success();
   }

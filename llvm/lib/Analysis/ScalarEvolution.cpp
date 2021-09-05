@@ -7635,6 +7635,12 @@ ScalarEvolution::ExitLimit::ExitLimit(
     const SCEV *E, const SCEV *M, bool MaxOrZero,
     ArrayRef<const SmallPtrSetImpl<const SCEVPredicate *> *> PredSetList)
     : ExactNotTaken(E), MaxNotTaken(M), MaxOrZero(MaxOrZero) {
+  // If we prove the max count is zero, so is the symbolic bound.  This happens
+  // in practice due to differences in a) how context sensitive we've chosen
+  // to be and b) how we reason about bounds impied by UB.
+  if (MaxNotTaken->isZero())
+    ExactNotTaken = MaxNotTaken;
+
   assert((isa<SCEVCouldNotCompute>(ExactNotTaken) ||
           !isa<SCEVCouldNotCompute>(MaxNotTaken)) &&
          "Exact is not allowed to be less precise than Max");
@@ -11627,13 +11633,15 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     // a) IV is either nuw or nsw depending upon signedness (indicated by the
     //    NoWrap flag).
     // b) loop is single exit with no side effects.
+    // c) loop has no abnormal exits
     //
     //
     // Precondition a) implies that if the stride is negative, this is a single
     // trip loop. The backedge taken count formula reduces to zero in this case.
     //
-    // Precondition b) implies that if rhs is invariant in L, then unknown
-    // stride being zero means the backedge can't be taken without UB.
+    // Precondition b) and c) combine to imply that if rhs is invariant in L,
+    // then a zero stride means the backedge can't be taken without executing
+    // undefined behavior.
     //
     // The positive stride case is the same as isKnownPositive(Stride) returning
     // true (original behavior of the function).
@@ -11651,7 +11659,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     //   A[i] = i;
     //
     if (PredicatedIV || !NoWrap || isKnownNonPositive(Stride) ||
-        !loopIsFiniteByAssumption(L))
+        !loopIsFiniteByAssumption(L) || !loopHasNoAbnormalExits(L))
       return getCouldNotCompute();
 
     if (!isKnownNonZero(Stride)) {

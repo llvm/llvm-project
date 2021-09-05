@@ -90,7 +90,7 @@ subdirectory:
 
 ::
 
-  > git clone https://github.com/llvm/llvm-project.git
+  $ git clone https://github.com/llvm/llvm-project.git
 
 Note that LLDB generally builds from top-of-trunk using CMake and Ninja.
 Additionally it builds:

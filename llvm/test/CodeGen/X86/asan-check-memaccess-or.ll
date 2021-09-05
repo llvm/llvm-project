@@ -172,7 +172,7 @@ define void @load16(i128* nocapture readonly %x) {
 ; CHECK-NEXT:         popq    %rcx
 ; CHECK-NEXT:         jl      [[RET]]
 ; CHECK-NEXT:         movq    [[REG:.*]], %rdi
-; CHECK-NEXT:         jmp     __asan_report_store1
+; CHECK-NEXT:         jmp     __asan_report_store1@PLT
 
 ; CHECK:              .type   __asan_check_store2_rn[[RN2]],@function
 ; CHECK-NEXT:         .weak   __asan_check_store2_rn[[RN2]]
@@ -195,7 +195,7 @@ define void @load16(i128* nocapture readonly %x) {
 ; CHECK-NEXT:         popq    %rcx
 ; CHECK-NEXT:         jl      [[RET]]
 ; CHECK-NEXT:         movq    [[REG:.*]], %rdi
-; CHECK-NEXT:         jmp     __asan_report_store2
+; CHECK-NEXT:         jmp     __asan_report_store2@PLT
 
 ; CHECK:              .type   __asan_check_store4_rn[[RN4]],@function
 ; CHECK-NEXT:         .weak   __asan_check_store4_rn[[RN4]]
@@ -218,7 +218,7 @@ define void @load16(i128* nocapture readonly %x) {
 ; CHECK-NEXT:         popq    %rcx
 ; CHECK-NEXT:         jl      [[RET]]
 ; CHECK-NEXT:         movq    [[REG:.*]], %rdi
-; CHECK-NEXT:         jmp     __asan_report_store4
+; CHECK-NEXT:         jmp     __asan_report_store4@PLT
 
 ; CHECK:              .type   __asan_check_store8_rn[[RN8]],@function
 ; CHECK-NEXT:         .weak   __asan_check_store8_rn[[RN8]]
@@ -233,7 +233,7 @@ define void @load16(i128* nocapture readonly %x) {
 ; CHECK-NEXT:         retq
 ; CHECK-NEXT: [[FAIL]]:
 ; CHECK-NEXT:         movq    [[REG:.*]], %rdi
-; CHECK-NEXT:         jmp     __asan_report_store8
+; CHECK-NEXT:         jmp     __asan_report_store8@PLT
 
 ; CHECK:              .type   __asan_check_store16_rn[[RN16]],@function
 ; CHECK-NEXT:         .weak   __asan_check_store16_rn[[RN16]]
@@ -248,6 +248,6 @@ define void @load16(i128* nocapture readonly %x) {
 ; CHECK-NEXT:         retq
 ; CHECK-NEXT: [[FAIL]]:
 ; CHECK-NEXT:         movq    [[REG:.*]], %rdi
-; CHECK-NEXT:         jmp     __asan_report_store16
+; CHECK-NEXT:         jmp     __asan_report_store16@PLT
 
 declare void @llvm.asan.check.memaccess(i8*, i32 immarg)

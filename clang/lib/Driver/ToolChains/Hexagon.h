@@ -107,8 +107,8 @@ public:
   std::string getCompilerRTPath() const override;
 
   static bool isAutoHVXEnabled(const llvm::opt::ArgList &Args);
-  static const StringRef GetDefaultCPU();
-  static const StringRef GetTargetCPUVersion(const llvm::opt::ArgList &Args);
+  static StringRef GetDefaultCPU();
+  static StringRef GetTargetCPUVersion(const llvm::opt::ArgList &Args);
 
   static Optional<unsigned> getSmallDataThreshold(
       const llvm::opt::ArgList &Args);

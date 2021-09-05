@@ -30,7 +30,7 @@
 #endif // (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
 
 // Define feature macros for OpenCL C 2.0
-#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ == 200)
+#if (__OPENCL_CPP_VERSION__ == 100 || __OPENCL_C_VERSION__ == 200)
 #define __opencl_c_pipes 1
 #define __opencl_c_generic_address_space 1
 #define __opencl_c_work_group_collective_functions 1
@@ -45,12 +45,12 @@
 #endif
 
 // Define header-only feature macros for OpenCL C 3.0.
-#if (__OPENCL_C_VERSION__ == 300)
+#if (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)
 // For the SPIR target all features are supported.
 #if defined(__SPIR__)
 #define __opencl_c_atomic_scope_all_devices 1
 #endif // defined(__SPIR__)
-#endif // (__OPENCL_C_VERSION__ == 300)
+#endif // (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)
 
 // built-in scalar data types:
 
