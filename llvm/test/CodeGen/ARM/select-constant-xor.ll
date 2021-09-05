@@ -353,17 +353,15 @@ define i32 @selecti8i32(i8 %a) {
 define i32 @icmpasreq(i32 %input, i32 %a, i32 %b) {
 ; CHECK7A-LABEL: icmpasreq:
 ; CHECK7A:       @ %bb.0:
-; CHECK7A-NEXT:    mvn r3, #0
-; CHECK7A-NEXT:    cmp r3, r0, asr #31
-; CHECK7A-NEXT:    movne r1, r2
+; CHECK7A-NEXT:    cmp r0, #0
+; CHECK7A-NEXT:    movpl r1, r2
 ; CHECK7A-NEXT:    mov r0, r1
 ; CHECK7A-NEXT:    bx lr
 ;
 ; CHECK6M-LABEL: icmpasreq:
 ; CHECK6M:       @ %bb.0:
-; CHECK6M-NEXT:    asrs r0, r0, #31
-; CHECK6M-NEXT:    adds r0, r0, #1
-; CHECK6M-NEXT:    beq .LBB8_2
+; CHECK6M-NEXT:    cmp r0, #0
+; CHECK6M-NEXT:    bmi .LBB8_2
 ; CHECK6M-NEXT:  @ %bb.1:
 ; CHECK6M-NEXT:    mov r1, r2
 ; CHECK6M-NEXT:  .LBB8_2:
@@ -372,18 +370,16 @@ define i32 @icmpasreq(i32 %input, i32 %a, i32 %b) {
 ;
 ; CHECK7M-LABEL: icmpasreq:
 ; CHECK7M:       @ %bb.0:
-; CHECK7M-NEXT:    asrs r0, r0, #31
-; CHECK7M-NEXT:    adds r0, #1
-; CHECK7M-NEXT:    it ne
-; CHECK7M-NEXT:    movne r1, r2
+; CHECK7M-NEXT:    cmp r0, #0
+; CHECK7M-NEXT:    it pl
+; CHECK7M-NEXT:    movpl r1, r2
 ; CHECK7M-NEXT:    mov r0, r1
 ; CHECK7M-NEXT:    bx lr
 ;
 ; CHECK81M-LABEL: icmpasreq:
 ; CHECK81M:       @ %bb.0:
-; CHECK81M-NEXT:    asrs r0, r0, #31
-; CHECK81M-NEXT:    adds r0, #1
-; CHECK81M-NEXT:    csel r0, r1, r2, eq
+; CHECK81M-NEXT:    cmp r0, #0
+; CHECK81M-NEXT:    csel r0, r1, r2, mi
 ; CHECK81M-NEXT:    bx lr
   %sh = ashr i32 %input, 31
   %c = icmp eq i32 %sh, -1
@@ -394,17 +390,15 @@ define i32 @icmpasreq(i32 %input, i32 %a, i32 %b) {
 define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 ; CHECK7A-LABEL: icmpasrne:
 ; CHECK7A:       @ %bb.0:
-; CHECK7A-NEXT:    mvn r3, #0
-; CHECK7A-NEXT:    cmp r3, r0, asr #31
-; CHECK7A-NEXT:    moveq r1, r2
+; CHECK7A-NEXT:    cmp r0, #0
+; CHECK7A-NEXT:    movle r1, r2
 ; CHECK7A-NEXT:    mov r0, r1
 ; CHECK7A-NEXT:    bx lr
 ;
 ; CHECK6M-LABEL: icmpasrne:
 ; CHECK6M:       @ %bb.0:
-; CHECK6M-NEXT:    asrs r0, r0, #31
-; CHECK6M-NEXT:    adds r0, r0, #1
-; CHECK6M-NEXT:    bne .LBB9_2
+; CHECK6M-NEXT:    cmp r0, #0
+; CHECK6M-NEXT:    bgt .LBB9_2
 ; CHECK6M-NEXT:  @ %bb.1:
 ; CHECK6M-NEXT:    mov r1, r2
 ; CHECK6M-NEXT:  .LBB9_2:
@@ -413,18 +407,16 @@ define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 ;
 ; CHECK7M-LABEL: icmpasrne:
 ; CHECK7M:       @ %bb.0:
-; CHECK7M-NEXT:    asrs r0, r0, #31
-; CHECK7M-NEXT:    adds r0, #1
-; CHECK7M-NEXT:    it eq
-; CHECK7M-NEXT:    moveq r1, r2
+; CHECK7M-NEXT:    cmp r0, #0
+; CHECK7M-NEXT:    it le
+; CHECK7M-NEXT:    movle r1, r2
 ; CHECK7M-NEXT:    mov r0, r1
 ; CHECK7M-NEXT:    bx lr
 ;
 ; CHECK81M-LABEL: icmpasrne:
 ; CHECK81M:       @ %bb.0:
-; CHECK81M-NEXT:    asrs r0, r0, #31
-; CHECK81M-NEXT:    adds r0, #1
-; CHECK81M-NEXT:    csel r0, r1, r2, ne
+; CHECK81M-NEXT:    cmp r0, #0
+; CHECK81M-NEXT:    csel r0, r1, r2, gt
 ; CHECK81M-NEXT:    bx lr
   %sh = ashr i32 %input, 31
   %c = icmp ne i32 %sh, -1
