@@ -1,7 +1,6 @@
 ; Only verify that asan don't crash on global variables of different
 ; address space. The global variable should be unmodified by asan.
 
-; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -S | FileCheck %s
 ; RUN: opt < %s -passes='asan-pipeline' -S | FileCheck %s
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

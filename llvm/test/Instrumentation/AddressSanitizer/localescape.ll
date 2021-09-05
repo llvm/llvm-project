@@ -1,14 +1,8 @@
-; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-after-return=never -asan-stack-dynamic-alloca -S | FileCheck %s
 ; RUN: opt < %s -passes='asan-pipeline' -asan-use-after-return=never -asan-stack-dynamic-alloca -S | FileCheck %s
-; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-after-return=runtime -asan-stack-dynamic-alloca -S | FileCheck %s
 ; RUN: opt < %s -passes='asan-pipeline' -asan-use-after-return=runtime -asan-stack-dynamic-alloca -S | FileCheck %s
-; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-after-return=always -asan-stack-dynamic-alloca -S | FileCheck %s
 ; RUN: opt < %s -passes='asan-pipeline' -asan-use-after-return=always -asan-stack-dynamic-alloca -S | FileCheck %s
-; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-after-return=never -asan-stack-dynamic-alloca=0 -S | FileCheck %s
 ; RUN: opt < %s -passes='asan-pipeline' -asan-use-after-return=never -asan-stack-dynamic-alloca=0 -S | FileCheck %s
-; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-after-return=runtime -asan-stack-dynamic-alloca=0 -S | FileCheck %s
 ; RUN: opt < %s -passes='asan-pipeline' -asan-use-after-return=runtime -asan-stack-dynamic-alloca=0 -S | FileCheck %s
-; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-after-return=always -asan-stack-dynamic-alloca=0 -S | FileCheck %s
 ; RUN: opt < %s -passes='asan-pipeline' -asan-use-after-return=always -asan-stack-dynamic-alloca=0 -S | FileCheck %s
 
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"

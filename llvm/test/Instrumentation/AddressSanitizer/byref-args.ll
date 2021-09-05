@@ -1,4 +1,3 @@
-; RUN: opt < %s -asan -S -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='asan-function-pipeline' -S | FileCheck %s
 
 ; Test that for call instructions, the byref arguments are not
