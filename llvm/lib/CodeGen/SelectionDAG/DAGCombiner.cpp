@@ -22881,8 +22881,7 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
       N2C->getAPIntValue() == ~N3C->getAPIntValue() &&
       ((N1C->isAllOnesValue() && CC == ISD::SETGT) ||
        (N1C->isNullValue() && CC == ISD::SETLT)) &&
-      !TLI.shouldAvoidTransformToShift(VT, CmpOpVT.getScalarSizeInBits() - 1) &&
-      N0->hasOneUse()) {
+      !TLI.shouldAvoidTransformToShift(VT, CmpOpVT.getScalarSizeInBits() - 1)) {
     SDValue ASR = DAG.getNode(
         ISD::SRA, DL, CmpOpVT, N0,
         DAG.getConstant(CmpOpVT.getScalarSizeInBits() - 1, DL, CmpOpVT));
