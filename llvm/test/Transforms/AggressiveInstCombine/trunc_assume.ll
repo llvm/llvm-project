@@ -5,11 +5,8 @@ define i16 @trunc_shl(i16 %x, i16 %y) {
 ; CHECK-LABEL: @trunc_shl(
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp ult i16 [[Y:%.*]], 16
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP0]])
-; CHECK-NEXT:    [[ZEXTX:%.*]] = zext i16 [[X:%.*]] to i32
-; CHECK-NEXT:    [[ZEXTY:%.*]] = zext i16 [[Y]] to i32
-; CHECK-NEXT:    [[I0:%.*]] = shl i32 [[ZEXTX]], [[ZEXTY]]
-; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[I0]] to i16
-; CHECK-NEXT:    ret i16 [[R]]
+; CHECK-NEXT:    [[I0:%.*]] = shl i16 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    ret i16 [[I0]]
 ;
   %cmp0 = icmp ult i16 %y, 16
   call void @llvm.assume(i1 %cmp0)
@@ -28,11 +25,8 @@ define i16 @trunc_lshr(i16 %x, i16 %y) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i16 [[Y:%.*]], 16
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP0]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP1]])
-; CHECK-NEXT:    [[ZEXTX:%.*]] = zext i16 [[X]] to i32
-; CHECK-NEXT:    [[ZEXTY:%.*]] = zext i16 [[Y]] to i32
-; CHECK-NEXT:    [[I0:%.*]] = lshr i32 [[ZEXTX]], [[ZEXTY]]
-; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[I0]] to i16
-; CHECK-NEXT:    ret i16 [[R]]
+; CHECK-NEXT:    [[I0:%.*]] = lshr i16 [[X]], [[Y]]
+; CHECK-NEXT:    ret i16 [[I0]]
 ;
   %cmp0 = icmp ult i16 %x, 65536
   %cmp1 = icmp ult i16 %y, 16
@@ -55,11 +49,8 @@ define i16 @trunc_ashr(i16 %x, i16 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP0]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP1]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP2]])
-; CHECK-NEXT:    [[ZEXTX:%.*]] = sext i16 [[X]] to i32
-; CHECK-NEXT:    [[ZEXTY:%.*]] = sext i16 [[Y]] to i32
-; CHECK-NEXT:    [[I0:%.*]] = ashr i32 [[ZEXTX]], [[ZEXTY]]
-; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[I0]] to i16
-; CHECK-NEXT:    ret i16 [[R]]
+; CHECK-NEXT:    [[I0:%.*]] = ashr i16 [[X]], [[Y]]
+; CHECK-NEXT:    ret i16 [[I0]]
 ;
   %cmp0 = icmp slt i16 %x, 32767
   %cmp1 = icmp sge i16 %x, -32768
