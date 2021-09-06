@@ -1869,24 +1869,25 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     SCS.Second = ICK_Complex_Real;
     FromType = ToType.getUnqualifiedType();
   } else if (FromType->isRealFloatingType() && ToType->isRealFloatingType()) {
-    // FIXME: disable conversions between long double and __float128 if
-    // their representation is different until there is back end support
+    // FIXME: disable conversions between long double, __ibm128 and __float128
+    // if their representation is different until there is back end support
     // We of course allow this conversion if long double is really double.
 
     // Conversions between bfloat and other floats are not permitted.
     if (FromType == S.Context.BFloat16Ty || ToType == S.Context.BFloat16Ty)
       return false;
-    if (&S.Context.getFloatTypeSemantics(FromType) !=
-        &S.Context.getFloatTypeSemantics(ToType)) {
-      bool Float128AndLongDouble = ((FromType == S.Context.Float128Ty &&
-                                    ToType == S.Context.LongDoubleTy) ||
-                                   (FromType == S.Context.LongDoubleTy &&
-                                    ToType == S.Context.Float128Ty));
-      if (Float128AndLongDouble &&
-          (&S.Context.getFloatTypeSemantics(S.Context.LongDoubleTy) ==
-           &llvm::APFloat::PPCDoubleDouble()))
-        return false;
-    }
+
+    // Conversions between IEEE-quad and IBM-extended semantics are not
+    // permitted.
+    const llvm::fltSemantics &FromSem =
+        S.Context.getFloatTypeSemantics(FromType);
+    const llvm::fltSemantics &ToSem = S.Context.getFloatTypeSemantics(ToType);
+    if ((&FromSem == &llvm::APFloat::PPCDoubleDouble() &&
+         &ToSem == &llvm::APFloat::IEEEquad()) ||
+        (&FromSem == &llvm::APFloat::IEEEquad() &&
+         &ToSem == &llvm::APFloat::PPCDoubleDouble()))
+      return false;
+
     // Floating point conversions (C++ 4.8).
     SCS.Second = ICK_Floating_Conversion;
     FromType = ToType.getUnqualifiedType();
@@ -2237,7 +2238,8 @@ bool Sema::IsFloatingPointPromotion(QualType FromType, QualType ToType) {
           (FromBuiltin->getKind() == BuiltinType::Float ||
            FromBuiltin->getKind() == BuiltinType::Double) &&
           (ToBuiltin->getKind() == BuiltinType::LongDouble ||
-           ToBuiltin->getKind() == BuiltinType::Float128))
+           ToBuiltin->getKind() == BuiltinType::Float128 ||
+           ToBuiltin->getKind() == BuiltinType::Ibm128))
         return true;
 
       // Half can be promoted to float.
@@ -8173,6 +8175,8 @@ class BuiltinOperatorOverloadBuilder {
     ArithmeticTypes.push_back(S.Context.LongDoubleTy);
     if (S.Context.getTargetInfo().hasFloat128Type())
       ArithmeticTypes.push_back(S.Context.Float128Ty);
+    if (S.Context.getTargetInfo().hasIbm128Type())
+      ArithmeticTypes.push_back(S.Context.Ibm128Ty);
 
     // Start of integral types.
     FirstIntegralType = ArithmeticTypes.size();

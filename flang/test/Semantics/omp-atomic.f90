@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang -fopenmp
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang -fopenmp
 use omp_lib
 ! Check OpenMP 2.13.6 atomic Construct
 

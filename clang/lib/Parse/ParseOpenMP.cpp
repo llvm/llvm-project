@@ -2562,8 +2562,7 @@ Parser::ParseOpenMPDeclarativeOrExecutableDirective(ParsedStmtContext StmtCtx) {
 
         if (AssociatedStmt.isUsable() && isOpenMPLoopDirective(DKind) &&
             getLangOpts().OpenMPIRBuilder)
-          AssociatedStmt =
-              Actions.ActOnOpenMPCanonicalLoop(AssociatedStmt.get());
+          AssociatedStmt = Actions.ActOnOpenMPLoopnest(AssociatedStmt.get());
       }
       AssociatedStmt = Actions.ActOnOpenMPRegionEnd(AssociatedStmt, Clauses);
     } else if (DKind == OMPD_target_update || DKind == OMPD_target_enter_data ||

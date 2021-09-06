@@ -155,6 +155,12 @@ bool X86TargetInfo::initFeatureMap(
       llvm::find(UpdatedFeaturesVec, "-xsave") == UpdatedFeaturesVec.end())
     Features["xsave"] = true;
 
+  // Enable CRC32 if SSE4.2 is enabled and CRC32 is not explicitly disabled.
+  I = Features.find("sse4.2");
+  if (I != Features.end() && I->getValue() &&
+      llvm::find(UpdatedFeaturesVec, "-crc32") == UpdatedFeaturesVec.end())
+    Features["crc32"] = true;
+
   return true;
 }
 
@@ -330,6 +336,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasTSXLDTRK = true;
     } else if (Feature == "+uintr") {
       HasUINTR = true;
+    } else if (Feature == "+crc32") {
+      HasCRC32 = true;
     }
 
     X86SSEEnum Level = llvm::StringSwitch<X86SSEEnum>(Feature)
@@ -758,6 +766,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__TSXLDTRK__");
   if (HasUINTR)
     Builder.defineMacro("__UINTR__");
+  if (HasCRC32)
+    Builder.defineMacro("__CRC32__");
 
   // Each case falls through to the previous one here.
   switch (SSELevel) {
@@ -878,6 +888,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("clflushopt", true)
       .Case("clwb", true)
       .Case("clzero", true)
+      .Case("crc32", true)
       .Case("cx16", true)
       .Case("enqcmd", true)
       .Case("f16c", true)
@@ -970,6 +981,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("clflushopt", HasCLFLUSHOPT)
       .Case("clwb", HasCLWB)
       .Case("clzero", HasCLZERO)
+      .Case("crc32", HasCRC32)
       .Case("cx8", HasCX8)
       .Case("cx16", HasCX16)
       .Case("enqcmd", HasENQCMD)

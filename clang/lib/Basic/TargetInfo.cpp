@@ -34,6 +34,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   NoAsmVariants = false;
   HasLegalHalfType = false;
   HasFloat128 = false;
+  HasIbm128 = false;
   HasFloat16 = false;
   HasBFloat16 = false;
   HasStrictFP = false;
@@ -83,6 +84,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   LongDoubleWidth = 64;
   LongDoubleAlign = 64;
   Float128Align = 128;
+  Ibm128Align = 128;
   LargeArrayMinWidth = 0;
   LargeArrayAlign = 0;
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 0;
@@ -113,6 +115,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   DoubleFormat = &llvm::APFloat::IEEEdouble();
   LongDoubleFormat = &llvm::APFloat::IEEEdouble();
   Float128Format = &llvm::APFloat::IEEEquad();
+  Ibm128Format = &llvm::APFloat::PPCDoubleDouble();
   MCountName = "mcount";
   UserLabelPrefix = "_";
   RegParmMax = 0;
@@ -406,12 +409,13 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
     // for OpenCL C 2.0 but with no access to target capabilities. Target
     // should be immutable once created and thus these language options need
     // to be defined only once.
-    if (Opts.OpenCLVersion == 300) {
+    if (Opts.getOpenCLCompatibleVersion() == 300) {
       const auto &OpenCLFeaturesMap = getSupportedOpenCLOpts();
       Opts.OpenCLGenericAddressSpace = hasFeatureEnabled(
           OpenCLFeaturesMap, "__opencl_c_generic_address_space");
-      Opts.OpenCLPipes =
-          hasFeatureEnabled(OpenCLFeaturesMap, "__opencl_c_pipes");
+      if (Opts.OpenCLVersion == 300)
+        Opts.OpenCLPipes =
+            hasFeatureEnabled(OpenCLFeaturesMap, "__opencl_c_pipes");
     }
   }
 

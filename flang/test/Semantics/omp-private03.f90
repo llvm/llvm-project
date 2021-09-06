@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang -fopenmp
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang -fopenmp
 ! OpenMP Version 4.5
 ! Variables that appear in expressions for statement function definitions
 ! may not appear in private, firstprivate or lastprivate clauses.

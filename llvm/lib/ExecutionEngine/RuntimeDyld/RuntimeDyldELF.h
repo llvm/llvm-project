@@ -161,6 +161,18 @@ private:
   bool relocationNeedsGot(const RelocationRef &R) const override;
   bool relocationNeedsStub(const RelocationRef &R) const override;
 
+  // Process a GOTTPOFF TLS relocation for x86-64
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  void processX86_64GOTTPOFFRelocation(unsigned SectionID, uint64_t Offset,
+                                       RelocationValueRef Value,
+                                       int64_t Addend);
+  // Process a TLSLD/TLSGD relocation for x86-64
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  void processX86_64TLSRelocation(unsigned SectionID, uint64_t Offset,
+                                  uint64_t RelType, RelocationValueRef Value,
+                                  int64_t Addend,
+                                  const RelocationRef &GetAddrRelocation);
+
 public:
   RuntimeDyldELF(RuntimeDyld::MemoryManager &MemMgr,
                  JITSymbolResolver &Resolver);

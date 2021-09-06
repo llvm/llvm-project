@@ -1,11 +1,7 @@
 ; This check verifies that arguments passed by value get redzones.
-; RUN: opt < %s -asan -enable-new-pm=0 -asan-realign-stack=32 -S | FileCheck %s
 ; RUN: opt < %s -passes='asan-function-pipeline' -asan-realign-stack=32 -S | FileCheck %s
-; RUN: opt < %s -asan -enable-new-pm=0 -asan-realign-stack=32 -asan-force-dynamic-shadow -S | FileCheck %s
 ; RUN: opt < %s -passes='asan-function-pipeline' -asan-realign-stack=32 -asan-force-dynamic-shadow -S | FileCheck %s
-; RUN: opt < %s -asan -enable-new-pm=0 -asan-realign-stack=32 -asan-mapping-scale=5 -S | FileCheck %s
 ; RUN: opt < %s -passes='asan-function-pipeline' -asan-realign-stack=32 -asan-mapping-scale=5 -S | FileCheck %s
-; RUN: opt < %s -asan -enable-new-pm=0 -asan-realign-stack=32 -asan-force-dynamic-shadow -asan-mapping-scale=5 -S | FileCheck %s
 ; RUN: opt < %s -passes='asan-function-pipeline' -asan-realign-stack=32 -asan-force-dynamic-shadow -asan-mapping-scale=5 -S | FileCheck %s
 
 
