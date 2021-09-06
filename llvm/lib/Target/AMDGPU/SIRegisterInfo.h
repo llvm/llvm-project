@@ -77,6 +77,10 @@ public:
     return 100;
   }
 
+  const TargetRegisterClass *
+  getLargestLegalSuperClass(const TargetRegisterClass *RC,
+                            const MachineFunction &MF) const override;
+
   Register getFrameRegister(const MachineFunction &MF) const override;
 
   bool hasBasePointer(const MachineFunction &MF) const;

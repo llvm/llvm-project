@@ -5,15 +5,14 @@
 ; GFX900-DAG: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD0
 ; GFX900-DAG: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
 ; GFX908-NOT: SCRATCH_RSRC
-; GFX908-DAG: v_accvgpr_write_b32 a0, v{{[0-9]}} ; Reload Reuse
-; GFX908-DAG: v_accvgpr_write_b32 a1, v{{[0-9]}} ; Reload Reuse
+; GFX908-DAG: v_accvgpr_write_b32 [[A_REG:a[0-9]+]], v{{[0-9]}}
 ; GFX900:     buffer_store_dword v{{[0-9]}},
 ; GFX900:     buffer_store_dword v{{[0-9]}},
 ; GFX900:     buffer_load_dword v{{[0-9]}},
 ; GFX900:     buffer_load_dword v{{[0-9]}},
 ; GFX908-NOT: buffer_
-; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a0 ; Reload Reuse
-; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a1 ; Reload Reuse
+; GFX908-DAG: v_mov_b32_e32 v{{[0-9]}}, [[V_REG:v[0-9]+]]
+; GFX908-DAG: v_accvgpr_read_b32 [[V_REG]], [[A_REG]]
 
 ; GCN:    NumVgprs: 10
 ; GFX900: ScratchSize: 12
@@ -57,19 +56,19 @@ define amdgpu_kernel void @max_10_vgprs(i32 addrspace(1)* %p) #0 {
 }
 
 ; GCN-LABEL: {{^}}max_10_vgprs_used_9a:
-; GFX908-DAG: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD0
-; GFX908-DAG: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
-; GFX908-DAG: v_accvgpr_write_b32 a9, v{{[0-9]}} ; Reload Reuse
-; GFX908:     buffer_store_dword v{{[0-9]}},
+; GFX908-NOT: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD0
+; GFX908-NOT: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
+; GFX908-DAG: v_accvgpr_write_b32 [[A_REG:a[0-9]+]], v{{[0-9]}}
+; GFX908-NOT: buffer_store_dword v{{[0-9]}},
 ; GFX908-NOT: buffer_
-; GFX908:     v_accvgpr_read_b32 v{{[0-9]}}, a9 ; Reload Reuse
-; GFX908:     buffer_load_dword v{{[0-9]}},
+; GFX908:     v_mov_b32_e32 v{{[0-9]}}, [[V_REG:v[0-9]+]]
+; GFX908:     v_accvgpr_read_b32 [[V_REG]], [[A_REG]]
 ; GFX908-NOT: buffer_
 
 ; GFX900:     couldn't allocate input reg for constraint 'a'
 
 ; GFX908: NumVgprs: 10
-; GFX908: ScratchSize: 8
+; GFX908: ScratchSize: 0
 ; GFX908: VGPRBlocks: 2
 ; GFX908: NumVGPRsForWavesPerEU: 10
 define amdgpu_kernel void @max_10_vgprs_used_9a(i32 addrspace(1)* %p) #0 {
@@ -113,28 +112,28 @@ define amdgpu_kernel void @max_10_vgprs_used_9a(i32 addrspace(1)* %p) #0 {
 ; GCN-DAG:    s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD0
 ; GCN-DAG:    s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
 ; GFX908-DAG: v_accvgpr_write_b32 a0, 1
-; GFX908-DAG: v_accvgpr_write_b32 a1, v{{[0-9]}} ; Reload Reuse
-; GFX908-DAG: v_accvgpr_write_b32 a2, v{{[0-9]}} ; Reload Reuse
-; GFX908-DAG: v_accvgpr_write_b32 a3, v{{[0-9]}} ; Reload Reuse
-; GFX908-DAG: v_accvgpr_write_b32 a4, v{{[0-9]}} ; Reload Reuse
-; GFX908-DAG: v_accvgpr_write_b32 a5, v{{[0-9]}} ; Reload Reuse
-; GFX908-DAG: v_accvgpr_write_b32 a6, v{{[0-9]}} ; Reload Reuse
-; GFX908-DAG: v_accvgpr_write_b32 a7, v{{[0-9]}} ; Reload Reuse
-; GFX908-DAG: v_accvgpr_write_b32 a8, v{{[0-9]}} ; Reload Reuse
-; GFX908-DAG: v_accvgpr_write_b32 a9, v{{[0-9]}} ; Reload Reuse
-; GFX900:     buffer_store_dword v{{[0-9]}},
 ; GCN-DAG:    buffer_store_dword v{{[0-9]}},
-; GFX900:     buffer_load_dword v{{[0-9]}},
+; GCN-DAG:    buffer_store_dword v{{[0-9]}},
+; GFX908-DAG: v_accvgpr_write_b32 a1, v{{[0-9]}}
+; GFX908-DAG: v_accvgpr_write_b32 a2, v{{[0-9]}}
+; GFX908-DAG: v_accvgpr_write_b32 a3, v{{[0-9]}}
+; GFX908-DAG: v_accvgpr_write_b32 a4, v{{[0-9]}}
+; GFX908-DAG: v_accvgpr_write_b32 a5, v{{[0-9]}}
+; GFX908-DAG: v_accvgpr_write_b32 a6, v{{[0-9]}}
+; GFX908-DAG: v_accvgpr_write_b32 a7, v{{[0-9]}}
+; GFX908-DAG: v_accvgpr_write_b32 a8, v{{[0-9]}}
+; GFX908-DAG: v_accvgpr_write_b32 a9, v{{[0-9]}}
 ; GCN-DAG:    buffer_load_dword v{{[0-9]}},
-; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a1 ; Reload Reuse
-; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a2 ; Reload Reuse
-; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a3 ; Reload Reuse
-; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a4 ; Reload Reuse
-; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a5 ; Reload Reuse
-; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a6 ; Reload Reuse
-; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a7 ; Reload Reuse
-; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a8 ; Reload Reuse
-; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a9 ; Reload Reuse
+; GCN-DAG:    buffer_load_dword v{{[0-9]}},
+; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a1
+; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a2
+; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a3
+; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a4
+; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a5
+; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a6
+; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a7
+; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a8
+; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a9
 
 ; GCN:    NumVgprs: 10
 ; GFX900: ScratchSize: 44
@@ -166,10 +165,10 @@ define amdgpu_kernel void @max_10_vgprs_used_1a_partial_spill(i64 addrspace(1)* 
 ; GCN-LABEL: {{^}}max_10_vgprs_spill_v32:
 ; GCN-DAG:    s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD0
 ; GCN-DAG:    s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
-; GFX908-DAG: v_accvgpr_write_b32 a0, v{{[0-9]}} ; Reload Reuse
-; GFX908-DAG: v_accvgpr_write_b32 a9, v{{[0-9]}} ; Reload Reuse
-; GCN-NOT:    a10
 ; GCN:        buffer_store_dword v{{[0-9]}},
+; GFX908-DAG: v_accvgpr_write_b32 a0, v{{[0-9]}}
+; GFX908-DAG: v_accvgpr_write_b32 a9, v{{[0-9]}}
+; GCN-NOT:    a10
 
 ; GFX908: NumVgprs: 10
 ; GFX900: ScratchSize: 100
@@ -231,23 +230,20 @@ define amdgpu_kernel void @max_256_vgprs_spill_9x32(<32 x float> addrspace(1)* %
   ret void
 }
 
-; FIXME: adding an AReg_1024 register class for v32f32 and v32i32
-;        produces unnecessary copies and we still have some amount
-;        of conventional spilling.
-
 ; GCN-LABEL: {{^}}max_256_vgprs_spill_9x32_2bb:
 ; GFX900-DAG: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD0
 ; GFX900-DAG: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
-; GFX908-FIXME-NOT: SCRATCH_RSRC
-; GFX908-DAG: v_accvgpr_write_b32 a0, v
+; GFX908-NOT: SCRATCH_RSRC
+; GFX908: v_accvgpr_write_b32
+; GFX908:  global_load_
 ; GFX900:     buffer_store_dword v
 ; GFX900:     buffer_load_dword v
-; GFX908-FIXME-NOT: buffer_
+; GFX908-NOT: buffer_
 ; GFX908-DAG: v_accvgpr_read_b32
 
 ; GCN:    NumVgprs: 256
 ; GFX900: ScratchSize: 2052
-; GFX908-FIXME: ScratchSize: 0
+; GFX908: ScratchSize: 0
 ; GCN:    VGPRBlocks: 63
 ; GCN:    NumVGPRsForWavesPerEU: 256
 define amdgpu_kernel void @max_256_vgprs_spill_9x32_2bb(<32 x float> addrspace(1)* %p) #1 {
