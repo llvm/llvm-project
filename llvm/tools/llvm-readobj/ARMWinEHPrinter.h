@@ -154,7 +154,8 @@ class Decoder {
                        bool FunctionOnly = false);
 
   object::SymbolRef getPreferredSymbol(const object::COFFObjectFile &COFF,
-                                       object::SymbolRef Sym);
+                                       object::SymbolRef Sym,
+                                       uint64_t &SymbolOffset);
 
   bool dumpXDataRecord(const object::COFFObjectFile &COFF,
                        const object::SectionRef &Section,
