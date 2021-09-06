@@ -898,10 +898,10 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   unsigned EltSize = 4;
   unsigned Opcode = AMDGPU::V_MOV_B32_e32;
-  if (RI.hasAGPRs(RC)) {
+  if (RI.isAGPRClass(RC)) {
     Opcode = (RI.hasVGPRs(SrcRC)) ?
       AMDGPU::V_ACCVGPR_WRITE_B32_e64 : AMDGPU::INSTRUCTION_LIST_END;
-  } else if (RI.hasVGPRs(RC) && RI.hasAGPRs(SrcRC)) {
+  } else if (RI.hasVGPRs(RC) && RI.isAGPRClass(SrcRC)) {
     Opcode = AMDGPU::V_ACCVGPR_READ_B32_e64;
   } else if ((Size % 64 == 0) && RI.hasVGPRs(RC) &&
              (RI.isProperlyAlignedRC(*RC) &&
@@ -1205,7 +1205,7 @@ Register SIInstrInfo::insertNE(MachineBasicBlock *MBB,
 
 unsigned SIInstrInfo::getMovOpcode(const TargetRegisterClass *DstRC) const {
 
-  if (RI.hasAGPRs(DstRC))
+  if (RI.isAGPRClass(DstRC))
     return AMDGPU::COPY;
   if (RI.getRegSizeInBits(*DstRC) == 32) {
     return RI.isSGPRClass(DstRC) ? AMDGPU::S_MOV_B32 : AMDGPU::V_MOV_B32_e32;
@@ -1463,8 +1463,8 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     return;
   }
 
-  unsigned Opcode = RI.hasAGPRs(RC) ? getAGPRSpillSaveOpcode(SpillSize)
-                                    : getVGPRSpillSaveOpcode(SpillSize);
+  unsigned Opcode = RI.isAGPRClass(RC) ? getAGPRSpillSaveOpcode(SpillSize)
+                                       : getVGPRSpillSaveOpcode(SpillSize);
   MFI->setHasSpilledVGPRs();
 
   BuildMI(MBB, MI, DL, get(Opcode))
@@ -1598,8 +1598,8 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     return;
   }
 
-  unsigned Opcode = RI.hasAGPRs(RC) ? getAGPRSpillRestoreOpcode(SpillSize)
-                                    : getVGPRSpillRestoreOpcode(SpillSize);
+  unsigned Opcode = RI.isAGPRClass(RC) ? getAGPRSpillRestoreOpcode(SpillSize)
+                                       : getVGPRSpillRestoreOpcode(SpillSize);
   BuildMI(MBB, MI, DL, get(Opcode), DestReg)
     .addFrameIndex(FrameIndex)        // vaddr
     .addReg(MFI->getStackPtrOffsetReg()) // scratch_offset
@@ -2802,12 +2802,11 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
     }
 
     if (Is16Bit) {
-       if (isVGPRCopy)
-         return false; // Do not clobber vgpr_hi16
+      if (isVGPRCopy)
+        return false; // Do not clobber vgpr_hi16
 
-       if (DstReg.isVirtual() &&
-           UseMI.getOperand(0).getSubReg() != AMDGPU::lo16)
-         return false;
+      if (DstReg.isVirtual() && UseMI.getOperand(0).getSubReg() != AMDGPU::lo16)
+        return false;
 
       UseMI.getOperand(0).setSubReg(0);
       if (DstReg.isPhysical()) {
@@ -3896,9 +3895,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     // verification is broken anyway
     if (ST.needsAlignedVGPRs()) {
       const TargetRegisterClass *RC = RI.getRegClassForReg(MRI, Reg);
-      const bool IsVGPR = RI.hasVGPRs(RC);
-      const bool IsAGPR = !IsVGPR && RI.hasAGPRs(RC);
-      if ((IsVGPR || IsAGPR) && MO.getSubReg()) {
+      if (RI.hasVectorRegisters(RC) && MO.getSubReg()) {
         const TargetRegisterClass *SubRC =
             RI.getSubRegClass(RC, MO.getSubReg());
         RC = RI.getCompatibleSubRegClass(RC, SubRC, MO.getSubReg());
@@ -5522,13 +5519,13 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
         if (getOpRegClass(MI, 0) == &AMDGPU::VReg_1RegClass) {
           VRC = &AMDGPU::VReg_1RegClass;
         } else
-          VRC = RI.hasAGPRs(getOpRegClass(MI, 0))
+          VRC = RI.isAGPRClass(getOpRegClass(MI, 0))
                     ? RI.getEquivalentAGPRClass(SRC)
                     : RI.getEquivalentVGPRClass(SRC);
       } else {
-          VRC = RI.hasAGPRs(getOpRegClass(MI, 0))
-                    ? RI.getEquivalentAGPRClass(VRC)
-                    : RI.getEquivalentVGPRClass(VRC);
+        VRC = RI.isAGPRClass(getOpRegClass(MI, 0))
+                  ? RI.getEquivalentAGPRClass(VRC)
+                  : RI.getEquivalentVGPRClass(VRC);
       }
       RC = VRC;
     } else {
@@ -7065,8 +7062,8 @@ const TargetRegisterClass *SIInstrInfo::getDestEquivalentVGPRClass(
   case AMDGPU::STRICT_WWM:
   case AMDGPU::STRICT_WQM: {
     const TargetRegisterClass *SrcRC = getOpRegClass(Inst, 1);
-    if (RI.hasAGPRs(SrcRC)) {
-      if (RI.hasAGPRs(NewDstRC))
+    if (RI.isAGPRClass(SrcRC)) {
+      if (RI.isAGPRClass(NewDstRC))
         return nullptr;
 
       switch (Inst.getOpcode()) {
@@ -7082,7 +7079,7 @@ const TargetRegisterClass *SIInstrInfo::getDestEquivalentVGPRClass(
       if (!NewDstRC)
         return nullptr;
     } else {
-      if (RI.hasVGPRs(NewDstRC) || NewDstRC == &AMDGPU::VReg_1RegClass)
+      if (RI.isVGPRClass(NewDstRC) || NewDstRC == &AMDGPU::VReg_1RegClass)
         return nullptr;
 
       NewDstRC = RI.getEquivalentVGPRClass(NewDstRC);
