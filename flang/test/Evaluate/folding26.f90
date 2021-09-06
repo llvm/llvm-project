@@ -1,5 +1,4 @@
-! RUN: %S/test_folding.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_folding.py %s %flang_fc1
 ! Tests folding of TRANSPOSE
 module m
   integer, parameter :: matrix(0:1,0:2) = reshape([1,2,3,4,5,6],shape(matrix))
