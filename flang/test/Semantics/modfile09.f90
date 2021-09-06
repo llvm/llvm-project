@@ -1,2 +1,1 @@
-!RUN: %S/test_modfile.sh '%S/Inputs/modfile09-*' %t %flang_fc1
-!REQUIRES: shell
+!RUN: %python %S/test_modfile.py '%S/Inputs/modfile09-*' %flang_fc1

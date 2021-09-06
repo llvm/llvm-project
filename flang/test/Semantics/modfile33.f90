@@ -1,5 +1,4 @@
-! RUN: %S/test_modfile.sh %s %t %flang_fc1 -flogical-abbreviations -fxor-operator
-! REQUIRES: shell
+! RUN: %python %S/test_modfile.py %s %flang_fc1 -flogical-abbreviations -fxor-operator
 
 ! Resolution of user-defined operators in expressions.
 ! Test by using generic function in a specification expression that needs
