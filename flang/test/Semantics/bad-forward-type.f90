@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Forward references to derived types (error cases)
 ! C732 A parent-type-name shall be the name of a previously defined
 ! extensible type (7.5.7).

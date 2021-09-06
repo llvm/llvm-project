@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 function f1(x, y)
   integer x
   !ERROR: SAVE attribute may not be applied to dummy argument 'x'

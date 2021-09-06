@@ -1,5 +1,4 @@
-!RUN: %S/test_errors.sh %s %t %flang -fopenmp
-!REQUIRES: shell
+!RUN: %python %S/test_errors.py %s %flang -fopenmp
 ! OpenMP Version 4.5
 ! 2.15.3.3 parallel private Clause
 program omp_parallel_private
