@@ -308,7 +308,7 @@ AST_POLYMORPHIC_MATCHER_REGEX(isExpansionInFileMatching,
 
 /// Matches statements that are (transitively) expanded from the named macro.
 /// Does not match if only part of the statement is expanded from that macro or
-/// if different parts of the the statement are expanded from different
+/// if different parts of the statement are expanded from different
 /// appearances of the macro.
 AST_POLYMORPHIC_MATCHER_P(isExpandedFromMacro,
                           AST_POLYMORPHIC_SUPPORTED_TYPES(Decl, Stmt, TypeLoc),

@@ -37,7 +37,7 @@ bool BlockCoverage::AppendCoverage(const std::string &S) {
 // Coverage lines have this form:
 // CN X Y Z T
 // where N is the number of the function, T is the total number of instrumented
-// BBs, and X,Y,Z, if present, are the indecies of covered BB.
+// BBs, and X,Y,Z, if present, are the indices of covered BB.
 // BB #0, which is the entry block, is not explicitly listed.
 bool BlockCoverage::AppendCoverage(std::istream &IN) {
   std::string L;

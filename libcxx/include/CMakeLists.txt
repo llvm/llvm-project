@@ -134,6 +134,8 @@ set(files
   __format/format_error.h
   __format/format_fwd.h
   __format/format_parse_context.h
+  __format/format_string.h
+  __format/formatter.h
   __function_like.h
   __functional_base
   __functional/binary_function.h

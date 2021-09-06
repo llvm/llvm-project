@@ -24,7 +24,7 @@
 #===------------------------------------------------------------------------===#
 
 BEGIN {
-  # harcode the script name
+  # hardcode the script name
   script_name = "generate_netbsd_syscalls.awk"
   outputh = "../include/sanitizer/netbsd_syscall_hooks.h"
   outputinc = "../lib/sanitizer_common/sanitizer_syscalls_netbsd.inc"

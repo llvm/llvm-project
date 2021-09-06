@@ -383,6 +383,8 @@ namespace clang {
     ExpectedType VisitTemplateTypeParmType(const TemplateTypeParmType *T);
     ExpectedType VisitSubstTemplateTypeParmType(
         const SubstTemplateTypeParmType *T);
+    ExpectedType
+    VisitSubstTemplateTypeParmPackType(const SubstTemplateTypeParmPackType *T);
     ExpectedType VisitTemplateSpecializationType(
         const TemplateSpecializationType *T);
     ExpectedType VisitElaboratedType(const ElaboratedType *T);
@@ -1484,6 +1486,22 @@ ExpectedType ASTNodeImporter::VisitSubstTemplateTypeParmType(
 
   return Importer.getToContext().getSubstTemplateTypeParmType(
         Replaced, (*ToReplacementTypeOrErr).getCanonicalType());
+}
+
+ExpectedType ASTNodeImporter::VisitSubstTemplateTypeParmPackType(
+    const SubstTemplateTypeParmPackType *T) {
+  ExpectedType ReplacedOrErr = import(QualType(T->getReplacedParameter(), 0));
+  if (!ReplacedOrErr)
+    return ReplacedOrErr.takeError();
+  const TemplateTypeParmType *Replaced =
+      cast<TemplateTypeParmType>(ReplacedOrErr->getTypePtr());
+
+  Expected<TemplateArgument> ToArgumentPack = import(T->getArgumentPack());
+  if (!ToArgumentPack)
+    return ToArgumentPack.takeError();
+
+  return Importer.getToContext().getSubstTemplateTypeParmPackType(
+      Replaced, *ToArgumentPack);
 }
 
 ExpectedType ASTNodeImporter::VisitTemplateSpecializationType(

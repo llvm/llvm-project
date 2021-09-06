@@ -57,7 +57,7 @@ static cl::opt<bool> ProfileIsFSDisciminator(
 
 /// Dump the function profile for \p FName.
 ///
-/// \param FName Name of the function to print.
+/// \param FContext Name + context of the function to print.
 /// \param OS Stream to emit the output to.
 void SampleProfileReader::dumpFunctionProfile(SampleContext FContext,
                                               raw_ostream &OS) {

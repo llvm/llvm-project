@@ -65,7 +65,7 @@ void BufferedStackTrace::Init(const uptr *pcs, uptr cnt, uptr extra_top_pc) {
   top_frame_bp = 0;
 }
 
-// Sparc implemention is in its own file.
+// Sparc implementation is in its own file.
 #if !defined(__sparc__)
 
 // In GCC on ARM bp points to saved lr, not fp, so we should check the next

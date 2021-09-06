@@ -145,7 +145,7 @@ public:
     return Kind == CCK::PartialOrdering;
   }
 
-  /// Converts the specified result kind into the the correct result kind
+  /// Converts the specified result kind into the correct result kind
   /// for this category. Specifically it lowers strong equality results to
   /// weak equivalence if needed.
   ComparisonCategoryResult makeWeakResult(ComparisonCategoryResult Res) const {

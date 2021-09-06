@@ -141,11 +141,17 @@ extern "C" void mgpuMemFree(void *ptr, CUstream /*stream*/) {
   CUDA_REPORT_IF_ERROR(cuMemFree(reinterpret_cast<CUdeviceptr>(ptr)));
 }
 
-extern "C" void mgpuMemcpy(void *dst, void *src, uint64_t sizeBytes,
+extern "C" void mgpuMemcpy(void *dst, void *src, size_t sizeBytes,
                            CUstream stream) {
   CUDA_REPORT_IF_ERROR(cuMemcpyAsync(reinterpret_cast<CUdeviceptr>(dst),
                                      reinterpret_cast<CUdeviceptr>(src),
                                      sizeBytes, stream));
+}
+
+extern "C" void mgpuMemset32(void *dst, unsigned int value, size_t count,
+                             CUstream stream) {
+  CUDA_REPORT_IF_ERROR(cuMemsetD32Async(reinterpret_cast<CUdeviceptr>(dst),
+                                        value, count, stream));
 }
 
 /// Helper functions for writing mlir example code

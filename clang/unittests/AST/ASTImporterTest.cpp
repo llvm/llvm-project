@@ -4693,6 +4693,57 @@ TEST_P(ASTImporterOptionSpecificTestBase,
       ToD2->getDeclContext(), ToD2->getTemplateParameters()->getParam(0)));
 }
 
+const AstTypeMatcher<SubstTemplateTypeParmPackType>
+    substTemplateTypeParmPackType;
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportSubstTemplateTypeParmPackType) {
+  constexpr auto Code = R"(
+    template<typename ...T> struct D {
+      template<typename... U> using B = int(int (*...p)(T, U));
+      template<typename U1, typename U2> D(B<U1, U2>*);
+    };
+    int f(int(int, int), int(int, int));
+
+    using asd = D<float, double, float>::B<int, long, int>;
+    )";
+  Decl *FromTU = getTuDecl(Code, Lang_CXX11, "input.cpp");
+  auto *FromClass = FirstDeclMatcher<ClassTemplateSpecializationDecl>().match(
+      FromTU, classTemplateSpecializationDecl());
+
+  {
+    ASTContext &FromCtx = FromTU->getASTContext();
+    const auto *FromSubstPack = selectFirst<SubstTemplateTypeParmPackType>(
+        "pack", match(substTemplateTypeParmPackType().bind("pack"), FromCtx));
+
+    ASSERT_TRUE(FromSubstPack);
+    ASSERT_EQ(FromSubstPack->getIdentifier()->getName(), "T");
+    ArrayRef<TemplateArgument> FromArgPack =
+        FromSubstPack->getArgumentPack().pack_elements();
+    ASSERT_EQ(FromArgPack.size(), 3u);
+    ASSERT_EQ(FromArgPack[0].getAsType(), FromCtx.FloatTy);
+    ASSERT_EQ(FromArgPack[1].getAsType(), FromCtx.DoubleTy);
+    ASSERT_EQ(FromArgPack[2].getAsType(), FromCtx.FloatTy);
+  }
+  {
+    // Let's do the import.
+    ClassTemplateSpecializationDecl *ToClass = Import(FromClass, Lang_CXX11);
+    ASTContext &ToCtx = ToClass->getASTContext();
+
+    const auto *ToSubstPack = selectFirst<SubstTemplateTypeParmPackType>(
+        "pack", match(substTemplateTypeParmPackType().bind("pack"), ToCtx));
+
+    // Check if it meets the requirements.
+    ASSERT_TRUE(ToSubstPack);
+    ASSERT_EQ(ToSubstPack->getIdentifier()->getName(), "T");
+    ArrayRef<TemplateArgument> ToArgPack =
+        ToSubstPack->getArgumentPack().pack_elements();
+    ASSERT_EQ(ToArgPack.size(), 3u);
+    ASSERT_EQ(ToArgPack[0].getAsType(), ToCtx.FloatTy);
+    ASSERT_EQ(ToArgPack[1].getAsType(), ToCtx.DoubleTy);
+    ASSERT_EQ(ToArgPack[2].getAsType(), ToCtx.FloatTy);
+  }
+}
+
 struct ASTImporterLookupTableTest : ASTImporterOptionSpecificTestBase {};
 
 TEST_P(ASTImporterLookupTableTest, OneDecl) {

@@ -53,5 +53,5 @@ int main() {
 
 // CHECK: WARNING: ThreadSanitizer: data race
 // CHECK:    #100 foo
-// We must output suffucuently large stack (at least 100 frames)
+// We must output sufficiently large stack (at least 100 frames)
 

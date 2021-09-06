@@ -30,7 +30,7 @@ if(ANDROID)
   endif()
 endif()
 
-# The minimal Scudo runtime does not inlude the UBSan runtime.
+# The minimal Scudo runtime does not include the UBSan runtime.
 set(SCUDO_MINIMAL_OBJECT_LIBS
   RTSanitizerCommonNoTermination
   RTSanitizerCommonLibc

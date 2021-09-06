@@ -56,7 +56,7 @@
 //                                      tramp:  jmp QWORD [addr]
 //                                       addr:  .bytes <hook>
 //
-//    Note: <real> is equilavent to <label>.
+//    Note: <real> is equivalent to <label>.
 //
 // 3) HotPatch
 //

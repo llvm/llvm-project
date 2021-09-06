@@ -40,7 +40,7 @@ void TestContainer(size_t capacity) {
     }
   }
 
-  // Don't forget to unpoison the whole thing before destroing/reallocating.
+  // Don't forget to unpoison the whole thing before destroying/reallocating.
   __sanitizer_annotate_contiguous_container(beg, end, mid, end);
   for (size_t idx = 0; idx < capacity; idx++)
     assert(!__asan_address_is_poisoned(beg + idx));

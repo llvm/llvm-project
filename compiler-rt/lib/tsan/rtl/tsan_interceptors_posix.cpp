@@ -1961,7 +1961,7 @@ static void CallUserSignalHandler(ThreadState *thr, bool sync, bool acquire,
     Acquire(thr, 0, (uptr)&sigactions[sig]);
   // Signals are generally asynchronous, so if we receive a signals when
   // ignores are enabled we should disable ignores. This is critical for sync
-  // and interceptors, because otherwise we can miss syncronization and report
+  // and interceptors, because otherwise we can miss synchronization and report
   // false races.
   int ignore_reads_and_writes = thr->ignore_reads_and_writes;
   int ignore_interceptors = thr->ignore_interceptors;

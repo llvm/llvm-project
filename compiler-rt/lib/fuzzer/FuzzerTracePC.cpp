@@ -398,7 +398,7 @@ static size_t InternalStrnlen(const char *S, size_t MaxLen) {
 }
 
 // Finds min of (strlen(S1), strlen(S2)).
-// Needed bacause one of these strings may actually be non-zero terminated.
+// Needed because one of these strings may actually be non-zero terminated.
 static size_t InternalStrnlen2(const char *S1, const char *S2) {
   size_t Len = 0;
   for (; S1[Len] && S2[Len]; Len++)  {}
