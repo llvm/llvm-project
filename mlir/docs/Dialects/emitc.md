@@ -31,4 +31,5 @@ translating the following operations:
   * `std.return`
 * 'scf' Dialect
   * `scf.for`
+  * `scf.if`
   * `scf.yield`

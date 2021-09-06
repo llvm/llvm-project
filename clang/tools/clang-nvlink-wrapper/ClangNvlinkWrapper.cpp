@@ -13,7 +13,7 @@
 /// These temp (*.cubin) files are passed to nvlink, because nvlink does not
 /// support linking of archive files implicitly.
 ///
-/// During linking of heteregenous device archive libraries, the
+/// During linking of heterogeneous device archive libraries, the
 /// clang-offload-bundler creates a device specific archive of cubin files.
 /// Such an archive is then passed to this tool to extract cubin files before
 /// passing to nvlink.
@@ -60,7 +60,7 @@ static Error extractArchiveFiles(StringRef Filename,
   std::vector<std::unique_ptr<MemoryBuffer>> ArchiveBuffers;
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-      MemoryBuffer::getFileOrSTDIN(Filename, -1, false);
+      MemoryBuffer::getFileOrSTDIN(Filename, false, false);
   if (std::error_code EC = BufOrErr.getError())
     return createFileError(Filename, EC);
 

@@ -260,6 +260,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
       break;
 
     case 'S':
+      if (PACKET_STARTS_WITH("qSaveCore"))
+        return eServerPacketType_qLLDBSaveCore;
       if (PACKET_STARTS_WITH("qSpeedTest:"))
         return eServerPacketType_qSpeedTest;
       if (PACKET_MATCHES("qShlibInfoAddr"))

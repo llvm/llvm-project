@@ -977,12 +977,9 @@ struct FoldInitTensorWithDimOp : public OpRewritePattern<tensor::DimOp> {
     auto initTensorOp = dimOp.source().getDefiningOp<linalg::InitTensorOp>();
     if (!initTensorOp || !maybeConstantIndex)
       return failure();
-    if (initTensorOp.isDynamicSize(*maybeConstantIndex)) {
-      rewriter.replaceOp(dimOp,
-                         initTensorOp.getDynamicSize(*maybeConstantIndex));
-      return success();
-    }
-    rewriter.replaceOpWithNewOp<ConstantIndexOp>(dimOp, *maybeConstantIndex);
+    if (!initTensorOp.isDynamicSize(*maybeConstantIndex))
+      return failure();
+    rewriter.replaceOp(dimOp, initTensorOp.getDynamicSize(*maybeConstantIndex));
     return success();
   }
 };

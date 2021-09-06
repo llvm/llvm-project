@@ -1,7 +1,8 @@
 // RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only
 // RUN: %clang_cc1 %s -cl-std=CL2.0 -verify -pedantic -fsyntax-only
 // RUN: %clang_cc1 %s -cl-std=CL3.0 -cl-ext=+__opencl_c_generic_address_space -verify -pedantic -fsyntax-only
-// RUN: %clang_cc1 %s -cl-std=clc++ -verify -pedantic -fsyntax-only
+// RUN: %clang_cc1 %s -cl-std=clc++1.0 -verify -pedantic -fsyntax-only
+// RUN: %clang_cc1 %s -cl-std=clc++2021 -cl-ext=+__opencl_c_generic_address_space -verify -pedantic -fsyntax-only
 
 __constant int ci = 1;
 

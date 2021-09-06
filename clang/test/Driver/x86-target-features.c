@@ -298,3 +298,8 @@
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-avx512fp16 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AVX512FP16 %s
 // AVX512FP16: "-target-feature" "+avx512fp16"
 // NO-AVX512FP16: "-target-feature" "-avx512fp16"
+
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mcrc32 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=CRC32 %s
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-crc32 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-CRC32 %s
+// CRC32: "-target-feature" "+crc32"
+// NO-CRC32: "-target-feature" "-crc32"

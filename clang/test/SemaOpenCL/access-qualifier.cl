@@ -79,7 +79,7 @@ kernel void read_write_twice_typedef(read_write img1d_rw i){} // expected-warnin
 // expected-note@-67 {{previously declared 'read_write' here}}
 #endif
 
-#if OPENCL_C_VERSION__ >= 200
+#if __OPENCL_C_VERSION__ >= 200
 void myPipeWrite(write_only pipe int); // expected-note {{passing argument to parameter here}}
 kernel void k14(read_only pipe int p) {
   myPipeWrite(p); // expected-error {{passing '__private read_only pipe int' to parameter of incompatible type 'write_only pipe int'}}

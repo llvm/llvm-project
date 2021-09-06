@@ -78,4 +78,4 @@ declare i32 @llvm.x86.sse42.crc32.32.8(i32, i8)
 attributes #0 = { "target-cpu"="x86-64" "target-features"="+avx2" }
 attributes #1 = { "target-cpu"="x86-64" }
 attributes #2 = { "target-cpu"="corei7" "target-features"="+sse4.2" }
-attributes #3 = { "target-cpu"="x86-64" "target-features"="+avx2,+aes" }
+attributes #3 = { "target-cpu"="x86-64" "target-features"="+avx2,+aes,+crc32" }

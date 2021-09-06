@@ -1,6 +1,3 @@
-; RUN: opt < %s -sancov -sanitizer-coverage-level=0 -S -enable-new-pm=0 | FileCheck %s
-; RUN: opt < %s -sancov -sanitizer-coverage-level=1 -S -enable-new-pm=0 | FileCheck %s
-; RUN: opt < %s -sancov -sanitizer-coverage-level=2 -S -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=0 -S | FileCheck %s
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=1 -S | FileCheck %s
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=2 -S | FileCheck %s

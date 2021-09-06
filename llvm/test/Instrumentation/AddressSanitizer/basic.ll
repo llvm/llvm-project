@@ -1,7 +1,5 @@
 ; Test basic address sanitizer instrumentation.
 ;
-; RUN: opt < %s -asan -asan-module -S -enable-new-pm=0 | FileCheck --check-prefixes=CHECK,CHECK-S3 %s
-; RUN: opt < %s -asan -asan-module -asan-mapping-scale=5 -S -enable-new-pm=0 | FileCheck --check-prefixes=CHECK,CHECK-S5 %s
 
 ; RUN: opt < %s -passes='asan-pipeline' -S | FileCheck --check-prefixes=CHECK,CHECK-S3 %s
 ; RUN: opt < %s -passes='asan-pipeline' -asan-mapping-scale=5 -S | FileCheck --check-prefixes=CHECK,CHECK-S5 %s

@@ -229,39 +229,38 @@ define i64 @func5(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    movl %eax, %ebp
-; X86-NEXT:    shll %cl, %ebp
-; X86-NEXT:    shldl %cl, %eax, %ebx
-; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    movl %edx, %ebx
+; X86-NEXT:    shll %cl, %ebx
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    shldl %cl, %edx, %esi
+; X86-NEXT:    xorl %edi, %edi
 ; X86-NEXT:    testb $32, %cl
-; X86-NEXT:    cmovnel %ebp, %ebx
-; X86-NEXT:    cmovnel %edx, %ebp
-; X86-NEXT:    movl %ebx, %edx
-; X86-NEXT:    sarl %cl, %edx
-; X86-NEXT:    movl %ebx, %edi
-; X86-NEXT:    sarl $31, %edi
+; X86-NEXT:    cmovnel %ebx, %esi
+; X86-NEXT:    cmovel %ebx, %edi
+; X86-NEXT:    movl %edi, (%esp) # 4-byte Spill
+; X86-NEXT:    movl %esi, %ebx
+; X86-NEXT:    sarl %cl, %ebx
+; X86-NEXT:    movl %esi, %ebp
+; X86-NEXT:    sarl $31, %ebp
 ; X86-NEXT:    testb $32, %cl
-; X86-NEXT:    cmovel %edx, %edi
-; X86-NEXT:    movl %ebp, %esi
-; X86-NEXT:    shrdl %cl, %ebx, %esi
+; X86-NEXT:    cmovel %ebx, %ebp
+; X86-NEXT:    shrdl %cl, %esi, %edi
 ; X86-NEXT:    testb $32, %cl
-; X86-NEXT:    cmovnel %edx, %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    xorl %ecx, %edi
-; X86-NEXT:    xorl %eax, %esi
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    testl %ecx, %ecx
-; X86-NEXT:    movl $-1, %eax
-; X86-NEXT:    movl $0, %ecx
-; X86-NEXT:    cmovsl %ecx, %eax
-; X86-NEXT:    sets %dl
-; X86-NEXT:    addl $2147483647, %edx # imm = 0x7FFFFFFF
-; X86-NEXT:    orl %edi, %esi
-; X86-NEXT:    cmovel %ebp, %eax
-; X86-NEXT:    cmovel %ebx, %edx
+; X86-NEXT:    cmovnel %ebx, %edi
+; X86-NEXT:    xorl %eax, %ebp
+; X86-NEXT:    xorl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    sarl $31, %eax
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    xorl $2147483647, %edx # imm = 0x7FFFFFFF
+; X86-NEXT:    orl %ebp, %edi
+; X86-NEXT:    notl %eax
+; X86-NEXT:    cmovel (%esp), %eax # 4-byte Folded Reload
+; X86-NEXT:    cmovel %esi, %edx
+; X86-NEXT:    addl $4, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx

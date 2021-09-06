@@ -139,8 +139,8 @@ constexpr FeatureBitset FeaturesNocona =
 // Basic 64-bit capable CPU.
 constexpr FeatureBitset FeaturesX86_64 = FeaturesPentium4 | Feature64BIT;
 constexpr FeatureBitset FeaturesX86_64_V2 = FeaturesX86_64 | FeatureSAHF |
-                                            FeaturePOPCNT | FeatureSSE4_2 |
-                                            FeatureCMPXCHG16B;
+                                            FeaturePOPCNT | FeatureCRC32 |
+                                            FeatureSSE4_2 | FeatureCMPXCHG16B;
 constexpr FeatureBitset FeaturesX86_64_V3 =
     FeaturesX86_64_V2 | FeatureAVX2 | FeatureBMI | FeatureBMI2 | FeatureF16C |
     FeatureFMA | FeatureLZCNT | FeatureMOVBE | FeatureXSAVE;
@@ -153,7 +153,7 @@ constexpr FeatureBitset FeaturesCore2 =
     FeaturesNocona | FeatureSAHF | FeatureSSSE3;
 constexpr FeatureBitset FeaturesPenryn = FeaturesCore2 | FeatureSSE4_1;
 constexpr FeatureBitset FeaturesNehalem =
-    FeaturesPenryn | FeaturePOPCNT | FeatureSSE4_2;
+    FeaturesPenryn | FeaturePOPCNT | FeatureCRC32 | FeatureSSE4_2;
 constexpr FeatureBitset FeaturesWestmere = FeaturesNehalem | FeaturePCLMUL;
 constexpr FeatureBitset FeaturesSandyBridge =
     FeaturesWestmere | FeatureAVX | FeatureXSAVE | FeatureXSAVEOPT;
@@ -256,16 +256,17 @@ constexpr FeatureBitset FeaturesBTVER1 =
     FeatureSSE | FeatureSSE2 | FeatureSSE3 | FeatureSSSE3 | FeatureSSE4_A |
     FeatureSAHF;
 constexpr FeatureBitset FeaturesBTVER2 =
-    FeaturesBTVER1 | FeatureAES | FeatureAVX | FeatureBMI | FeatureF16C |
-    FeatureMOVBE | FeaturePCLMUL | FeatureXSAVE | FeatureXSAVEOPT;
+    FeaturesBTVER1 | FeatureAES | FeatureAVX | FeatureBMI | FeatureCRC32 |
+    FeatureF16C | FeatureMOVBE | FeaturePCLMUL | FeatureXSAVE | FeatureXSAVEOPT;
 
 // AMD Bulldozer architecture processors.
 constexpr FeatureBitset FeaturesBDVER1 =
     FeatureX87 | FeatureAES | FeatureAVX | FeatureCMPXCHG8B |
-    FeatureCMPXCHG16B | Feature64BIT | FeatureFMA4 | FeatureFXSR | FeatureLWP |
-    FeatureLZCNT | FeatureMMX | FeaturePCLMUL | FeaturePOPCNT | FeaturePRFCHW |
-    FeatureSAHF | FeatureSSE | FeatureSSE2 | FeatureSSE3 | FeatureSSSE3 |
-    FeatureSSE4_1 | FeatureSSE4_2 | FeatureSSE4_A | FeatureXOP | FeatureXSAVE;
+    FeatureCMPXCHG16B | FeatureCRC32 | Feature64BIT | FeatureFMA4 |
+    FeatureFXSR | FeatureLWP | FeatureLZCNT | FeatureMMX | FeaturePCLMUL |
+    FeaturePOPCNT | FeaturePRFCHW | FeatureSAHF | FeatureSSE | FeatureSSE2 |
+    FeatureSSE3 | FeatureSSSE3 | FeatureSSE4_1 | FeatureSSE4_2 | FeatureSSE4_A |
+    FeatureXOP | FeatureXSAVE;
 constexpr FeatureBitset FeaturesBDVER2 =
     FeaturesBDVER1 | FeatureBMI | FeatureFMA | FeatureF16C | FeatureTBM;
 constexpr FeatureBitset FeaturesBDVER3 =
@@ -278,9 +279,9 @@ constexpr FeatureBitset FeaturesBDVER4 = FeaturesBDVER3 | FeatureAVX2 |
 constexpr FeatureBitset FeaturesZNVER1 =
     FeatureX87 | FeatureADX | FeatureAES | FeatureAVX | FeatureAVX2 |
     FeatureBMI | FeatureBMI2 | FeatureCLFLUSHOPT | FeatureCLZERO |
-    FeatureCMPXCHG8B | FeatureCMPXCHG16B | Feature64BIT | FeatureF16C |
-    FeatureFMA | FeatureFSGSBASE | FeatureFXSR | FeatureLZCNT | FeatureMMX |
-    FeatureMOVBE | FeatureMWAITX | FeaturePCLMUL | FeaturePOPCNT |
+    FeatureCMPXCHG8B | FeatureCMPXCHG16B | FeatureCRC32 | Feature64BIT |
+    FeatureF16C | FeatureFMA | FeatureFSGSBASE | FeatureFXSR | FeatureLZCNT |
+    FeatureMMX | FeatureMOVBE | FeatureMWAITX | FeaturePCLMUL | FeaturePOPCNT |
     FeaturePRFCHW | FeatureRDRND | FeatureRDSEED | FeatureSAHF | FeatureSHA |
     FeatureSSE | FeatureSSE2 | FeatureSSE3 | FeatureSSSE3 | FeatureSSE4_1 |
     FeatureSSE4_2 | FeatureSSE4_A | FeatureXSAVE | FeatureXSAVEC |
@@ -472,6 +473,7 @@ constexpr FeatureBitset ImpliedFeaturesCLZERO = {};
 constexpr FeatureBitset ImpliedFeaturesCMOV = {};
 constexpr FeatureBitset ImpliedFeaturesCMPXCHG16B = {};
 constexpr FeatureBitset ImpliedFeaturesCMPXCHG8B = {};
+constexpr FeatureBitset ImpliedFeaturesCRC32 = {};
 constexpr FeatureBitset ImpliedFeaturesENQCMD = {};
 constexpr FeatureBitset ImpliedFeaturesFSGSBASE = {};
 constexpr FeatureBitset ImpliedFeaturesFXSR = {};

@@ -371,35 +371,34 @@ define i64 @func5(i64 %x, i64 %y) {
 ; X86-NEXT:    .cfi_offset %edi, -16
 ; X86-NEXT:    .cfi_offset %ebx, -12
 ; X86-NEXT:    .cfi_offset %ebp, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl $0, (%esp)
 ; X86-NEXT:    movl %esp, %edi
-; X86-NEXT:    xorl %ebp, %ebp
-; X86-NEXT:    xorl %ebx, %ebx
-; X86-NEXT:    movl %eax, %esi
-; X86-NEXT:    xorl %ecx, %esi
-; X86-NEXT:    movl $-1, %esi
-; X86-NEXT:    cmovsl %ebp, %esi
-; X86-NEXT:    sets %bl
-; X86-NEXT:    addl $2147483647, %ebx # imm = 0x7FFFFFFF
+; X86-NEXT:    movl %ecx, %ebx
+; X86-NEXT:    xorl %esi, %ebx
+; X86-NEXT:    sarl $31, %ebx
+; X86-NEXT:    movl %ebx, %ebp
+; X86-NEXT:    xorl $2147483647, %ebp # imm = 0x7FFFFFFF
+; X86-NEXT:    notl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl %ecx
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl %edx
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    calll __mulodi4
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -20
 ; X86-NEXT:    cmpl $0, (%esp)
-; X86-NEXT:    cmovnel %esi, %eax
-; X86-NEXT:    cmovnel %ebx, %edx
+; X86-NEXT:    cmovnel %ebx, %eax
+; X86-NEXT:    cmovnel %ebp, %edx
 ; X86-NEXT:    addl $4, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 20
 ; X86-NEXT:    popl %esi

@@ -345,6 +345,32 @@ void RuntimeDyldELF::resolveX86_64Relocation(const SectionEntry &Section,
     support::ulittle64_t::ref(Section.getAddressWithOffset(Offset)) = GOTOffset;
     break;
   }
+  case ELF::R_X86_64_DTPMOD64: {
+    // We only have one DSO, so the module id is always 1.
+    support::ulittle64_t::ref(Section.getAddressWithOffset(Offset)) = 1;
+    break;
+  }
+  case ELF::R_X86_64_DTPOFF64:
+  case ELF::R_X86_64_TPOFF64: {
+    // DTPOFF64 should resolve to the offset in the TLS block, TPOFF64 to the
+    // offset in the *initial* TLS block. Since we are statically linking, all
+    // TLS blocks already exist in the initial block, so resolve both
+    // relocations equally.
+    support::ulittle64_t::ref(Section.getAddressWithOffset(Offset)) =
+        Value + Addend;
+    break;
+  }
+  case ELF::R_X86_64_DTPOFF32:
+  case ELF::R_X86_64_TPOFF32: {
+    // As for the (D)TPOFF64 relocations above, both DTPOFF32 and TPOFF32 can
+    // be resolved equally.
+    int64_t RealValue = Value + Addend;
+    assert(RealValue >= INT32_MIN && RealValue <= INT32_MAX);
+    int32_t TruncValue = RealValue;
+    support::ulittle32_t::ref(Section.getAddressWithOffset(Offset)) =
+        TruncValue;
+    break;
+  }
   }
 }
 
@@ -1813,10 +1839,13 @@ RuntimeDyldELF::processRelocationRef(
         addRelocationForSymbol(RE, Value.SymbolName);
       else
         addRelocationForSection(RE, Value.SectionID);
-    } else if (RelType == ELF::R_X86_64_GOTPC64) {
+    } else if (RelType == ELF::R_X86_64_GOTPC32) {
       // Materialize the address of the base of the GOT relative to the PC.
       // This doesn't create a GOT entry, but it does mean we need a GOT
       // section.
+      (void)allocateGOTEntries(0);
+      resolveGOTOffsetRelocation(SectionID, Offset, Addend, ELF::R_X86_64_PC32);
+    } else if (RelType == ELF::R_X86_64_GOTPC64) {
       (void)allocateGOTEntries(0);
       resolveGOTOffsetRelocation(SectionID, Offset, Addend, ELF::R_X86_64_PC64);
     } else if (RelType == ELF::R_X86_64_GOTOFF64) {
@@ -1829,6 +1858,15 @@ RuntimeDyldELF::processRelocationRef(
     } else if (RelType == ELF::R_X86_64_PC64) {
       Value.Addend += support::ulittle64_t::ref(computePlaceholderAddress(SectionID, Offset));
       processSimpleRelocation(SectionID, Offset, RelType, Value);
+    } else if (RelType == ELF::R_X86_64_GOTTPOFF) {
+      processX86_64GOTTPOFFRelocation(SectionID, Offset, Value, Addend);
+    } else if (RelType == ELF::R_X86_64_TLSGD ||
+               RelType == ELF::R_X86_64_TLSLD) {
+      // The next relocation must be the relocation for __tls_get_addr.
+      ++RelI;
+      auto &GetAddrRelocation = *RelI;
+      processX86_64TLSRelocation(SectionID, Offset, RelType, Value, Addend,
+                                 GetAddrRelocation);
     } else {
       processSimpleRelocation(SectionID, Offset, RelType, Value);
     }
@@ -1839,6 +1877,330 @@ RuntimeDyldELF::processRelocationRef(
     processSimpleRelocation(SectionID, Offset, RelType, Value);
   }
   return ++RelI;
+}
+
+void RuntimeDyldELF::processX86_64GOTTPOFFRelocation(unsigned SectionID,
+                                                     uint64_t Offset,
+                                                     RelocationValueRef Value,
+                                                     int64_t Addend) {
+  // Use the approach from "x86-64 Linker Optimizations" from the TLS spec
+  // to replace the GOTTPOFF relocation with a TPOFF relocation. The spec
+  // only mentions one optimization even though there are two different
+  // code sequences for the Initial Exec TLS Model. We match the code to
+  // find out which one was used.
+
+  // A possible TLS code sequence and its replacement
+  struct CodeSequence {
+    // The expected code sequence
+    ArrayRef<uint8_t> ExpectedCodeSequence;
+    // The negative offset of the GOTTPOFF relocation to the beginning of
+    // the sequence
+    uint64_t TLSSequenceOffset;
+    // The new code sequence
+    ArrayRef<uint8_t> NewCodeSequence;
+    // The offset of the new TPOFF relocation
+    uint64_t TpoffRelocationOffset;
+  };
+
+  std::array<CodeSequence, 2> CodeSequences;
+
+  // Initial Exec Code Model Sequence
+  {
+    static const std::initializer_list<uint8_t> ExpectedCodeSequenceList = {
+        0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00, 0x00,
+        0x00,                                    // mov %fs:0, %rax
+        0x48, 0x03, 0x05, 0x00, 0x00, 0x00, 0x00 // add x@gotpoff(%rip),
+                                                 // %rax
+    };
+    CodeSequences[0].ExpectedCodeSequence =
+        ArrayRef<uint8_t>(ExpectedCodeSequenceList);
+    CodeSequences[0].TLSSequenceOffset = 12;
+
+    static const std::initializer_list<uint8_t> NewCodeSequenceList = {
+        0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00, 0x00, 0x00, // mov %fs:0, %rax
+        0x48, 0x8d, 0x80, 0x00, 0x00, 0x00, 0x00 // lea x@tpoff(%rax), %rax
+    };
+    CodeSequences[0].NewCodeSequence = ArrayRef<uint8_t>(NewCodeSequenceList);
+    CodeSequences[0].TpoffRelocationOffset = 12;
+  }
+
+  // Initial Exec Code Model Sequence, II
+  {
+    static const std::initializer_list<uint8_t> ExpectedCodeSequenceList = {
+        0x48, 0x8b, 0x05, 0x00, 0x00, 0x00, 0x00, // mov x@gotpoff(%rip), %rax
+        0x64, 0x48, 0x8b, 0x00, 0x00, 0x00, 0x00  // mov %fs:(%rax), %rax
+    };
+    CodeSequences[1].ExpectedCodeSequence =
+        ArrayRef<uint8_t>(ExpectedCodeSequenceList);
+    CodeSequences[1].TLSSequenceOffset = 3;
+
+    static const std::initializer_list<uint8_t> NewCodeSequenceList = {
+        0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00,             // 6 byte nop
+        0x64, 0x8b, 0x04, 0x25, 0x00, 0x00, 0x00, 0x00, // mov %fs:x@tpoff, %rax
+    };
+    CodeSequences[1].NewCodeSequence = ArrayRef<uint8_t>(NewCodeSequenceList);
+    CodeSequences[1].TpoffRelocationOffset = 10;
+  }
+
+  bool Resolved = false;
+  auto &Section = Sections[SectionID];
+  for (const auto &C : CodeSequences) {
+    assert(C.ExpectedCodeSequence.size() == C.NewCodeSequence.size() &&
+           "Old and new code sequences must have the same size");
+
+    if (Offset < C.TLSSequenceOffset ||
+        (Offset - C.TLSSequenceOffset + C.NewCodeSequence.size()) >
+            Section.getSize()) {
+      // This can't be a matching sequence as it doesn't fit in the current
+      // section
+      continue;
+    }
+
+    auto TLSSequenceStartOffset = Offset - C.TLSSequenceOffset;
+    auto *TLSSequence = Section.getAddressWithOffset(TLSSequenceStartOffset);
+    if (ArrayRef<uint8_t>(TLSSequence, C.ExpectedCodeSequence.size()) !=
+        C.ExpectedCodeSequence) {
+      continue;
+    }
+
+    memcpy(TLSSequence, C.NewCodeSequence.data(), C.NewCodeSequence.size());
+
+    // The original GOTTPOFF relocation has an addend as it is PC relative,
+    // so it needs to be corrected. The TPOFF32 relocation is used as an
+    // absolute value (which is an offset from %fs:0), so remove the addend
+    // again.
+    RelocationEntry RE(SectionID,
+                       TLSSequenceStartOffset + C.TpoffRelocationOffset,
+                       ELF::R_X86_64_TPOFF32, Value.Addend - Addend);
+
+    if (Value.SymbolName)
+      addRelocationForSymbol(RE, Value.SymbolName);
+    else
+      addRelocationForSection(RE, Value.SectionID);
+
+    Resolved = true;
+    break;
+  }
+
+  if (!Resolved) {
+    // The GOTTPOFF relocation was not used in one of the sequences
+    // described in the spec, so we can't optimize it to a TPOFF
+    // relocation.
+    uint64_t GOTOffset = allocateGOTEntries(1);
+    resolveGOTOffsetRelocation(SectionID, Offset, GOTOffset + Addend,
+                               ELF::R_X86_64_PC32);
+    RelocationEntry RE =
+        computeGOTOffsetRE(GOTOffset, Value.Offset, ELF::R_X86_64_TPOFF64);
+    if (Value.SymbolName)
+      addRelocationForSymbol(RE, Value.SymbolName);
+    else
+      addRelocationForSection(RE, Value.SectionID);
+  }
+}
+
+void RuntimeDyldELF::processX86_64TLSRelocation(
+    unsigned SectionID, uint64_t Offset, uint64_t RelType,
+    RelocationValueRef Value, int64_t Addend,
+    const RelocationRef &GetAddrRelocation) {
+  // Since we are statically linking and have no additional DSOs, we can resolve
+  // the relocation directly without using __tls_get_addr.
+  // Use the approach from "x86-64 Linker Optimizations" from the TLS spec
+  // to replace it with the Local Exec relocation variant.
+
+  // Find out whether the code was compiled with the large or small memory
+  // model. For this we look at the next relocation which is the relocation
+  // for the __tls_get_addr function. If it's a 32 bit relocation, it's the
+  // small code model, with a 64 bit relocation it's the large code model.
+  bool IsSmallCodeModel;
+  // Is the relocation for the __tls_get_addr a PC-relative GOT relocation?
+  bool IsGOTPCRel = false;
+
+  switch (GetAddrRelocation.getType()) {
+  case ELF::R_X86_64_GOTPCREL:
+  case ELF::R_X86_64_REX_GOTPCRELX:
+  case ELF::R_X86_64_GOTPCRELX:
+    IsGOTPCRel = true;
+    LLVM_FALLTHROUGH;
+  case ELF::R_X86_64_PLT32:
+    IsSmallCodeModel = true;
+    break;
+  case ELF::R_X86_64_PLTOFF64:
+    IsSmallCodeModel = false;
+    break;
+  default:
+    report_fatal_error(
+        "invalid TLS relocations for General/Local Dynamic TLS Model: "
+        "expected PLT or GOT relocation for __tls_get_addr function");
+  }
+
+  // The negative offset to the start of the TLS code sequence relative to
+  // the offset of the TLSGD/TLSLD relocation
+  uint64_t TLSSequenceOffset;
+  // The expected start of the code sequence
+  ArrayRef<uint8_t> ExpectedCodeSequence;
+  // The new TLS code sequence that will replace the existing code
+  ArrayRef<uint8_t> NewCodeSequence;
+
+  if (RelType == ELF::R_X86_64_TLSGD) {
+    // The offset of the new TPOFF32 relocation (offset starting from the
+    // beginning of the whole TLS sequence)
+    uint64_t TpoffRelocOffset;
+
+    if (IsSmallCodeModel) {
+      if (!IsGOTPCRel) {
+        static const std::initializer_list<uint8_t> CodeSequence = {
+            0x66, // data16 (no-op prefix)
+            0x48, 0x8d, 0x3d, 0x00, 0x00,
+            0x00, 0x00,                  // lea <disp32>(%rip), %rdi
+            0x66, 0x66,                  // two data16 prefixes
+            0x48,                        // rex64 (no-op prefix)
+            0xe8, 0x00, 0x00, 0x00, 0x00 // call __tls_get_addr@plt
+        };
+        ExpectedCodeSequence = ArrayRef<uint8_t>(CodeSequence);
+        TLSSequenceOffset = 4;
+      } else {
+        // This code sequence is not described in the TLS spec but gcc
+        // generates it sometimes.
+        static const std::initializer_list<uint8_t> CodeSequence = {
+            0x66, // data16 (no-op prefix)
+            0x48, 0x8d, 0x3d, 0x00, 0x00,
+            0x00, 0x00, // lea <disp32>(%rip), %rdi
+            0x66,       // data16 prefix (no-op prefix)
+            0x48,       // rex64 (no-op prefix)
+            0xff, 0x15, 0x00, 0x00, 0x00,
+            0x00 // call *__tls_get_addr@gotpcrel(%rip)
+        };
+        ExpectedCodeSequence = ArrayRef<uint8_t>(CodeSequence);
+        TLSSequenceOffset = 4;
+      }
+
+      // The replacement code for the small code model. It's the same for
+      // both sequences.
+      static const std::initializer_list<uint8_t> SmallSequence = {
+          0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00, 0x00,
+          0x00,                                    // mov %fs:0, %rax
+          0x48, 0x8d, 0x80, 0x00, 0x00, 0x00, 0x00 // lea x@tpoff(%rax),
+                                                   // %rax
+      };
+      NewCodeSequence = ArrayRef<uint8_t>(SmallSequence);
+      TpoffRelocOffset = 12;
+    } else {
+      static const std::initializer_list<uint8_t> CodeSequence = {
+          0x48, 0x8d, 0x3d, 0x00, 0x00, 0x00, 0x00, // lea <disp32>(%rip),
+                                                    // %rdi
+          0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+          0x00,             // movabs $__tls_get_addr@pltoff, %rax
+          0x48, 0x01, 0xd8, // add %rbx, %rax
+          0xff, 0xd0        // call *%rax
+      };
+      ExpectedCodeSequence = ArrayRef<uint8_t>(CodeSequence);
+      TLSSequenceOffset = 3;
+
+      // The replacement code for the large code model
+      static const std::initializer_list<uint8_t> LargeSequence = {
+          0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00, 0x00,
+          0x00,                                     // mov %fs:0, %rax
+          0x48, 0x8d, 0x80, 0x00, 0x00, 0x00, 0x00, // lea x@tpoff(%rax),
+                                                    // %rax
+          0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00        // nopw 0x0(%rax,%rax,1)
+      };
+      NewCodeSequence = ArrayRef<uint8_t>(LargeSequence);
+      TpoffRelocOffset = 12;
+    }
+
+    // The TLSGD/TLSLD relocations are PC-relative, so they have an addend.
+    // The new TPOFF32 relocations is used as an absolute offset from
+    // %fs:0, so remove the TLSGD/TLSLD addend again.
+    RelocationEntry RE(SectionID, Offset - TLSSequenceOffset + TpoffRelocOffset,
+                       ELF::R_X86_64_TPOFF32, Value.Addend - Addend);
+    if (Value.SymbolName)
+      addRelocationForSymbol(RE, Value.SymbolName);
+    else
+      addRelocationForSection(RE, Value.SectionID);
+  } else if (RelType == ELF::R_X86_64_TLSLD) {
+    if (IsSmallCodeModel) {
+      if (!IsGOTPCRel) {
+        static const std::initializer_list<uint8_t> CodeSequence = {
+            0x48, 0x8d, 0x3d, 0x00, 0x00, 0x00, // leaq <disp32>(%rip), %rdi
+            0x00, 0xe8, 0x00, 0x00, 0x00, 0x00  // call __tls_get_addr@plt
+        };
+        ExpectedCodeSequence = ArrayRef<uint8_t>(CodeSequence);
+        TLSSequenceOffset = 3;
+
+        // The replacement code for the small code model
+        static const std::initializer_list<uint8_t> SmallSequence = {
+            0x66, 0x66, 0x66, // three data16 prefixes (no-op)
+            0x64, 0x48, 0x8b, 0x04, 0x25,
+            0x00, 0x00, 0x00, 0x00 // mov %fs:0, %rax
+        };
+        NewCodeSequence = ArrayRef<uint8_t>(SmallSequence);
+      } else {
+        // This code sequence is not described in the TLS spec but gcc
+        // generates it sometimes.
+        static const std::initializer_list<uint8_t> CodeSequence = {
+            0x48, 0x8d, 0x3d, 0x00,
+            0x00, 0x00, 0x00, // leaq <disp32>(%rip), %rdi
+            0xff, 0x15, 0x00, 0x00,
+            0x00, 0x00 // call
+                       // *__tls_get_addr@gotpcrel(%rip)
+        };
+        ExpectedCodeSequence = ArrayRef<uint8_t>(CodeSequence);
+        TLSSequenceOffset = 3;
+
+        // The replacement is code is just like above but it needs to be
+        // one byte longer.
+        static const std::initializer_list<uint8_t> SmallSequence = {
+            0x0f, 0x1f, 0x40, 0x00, // 4 byte nop
+            0x64, 0x48, 0x8b, 0x04, 0x25,
+            0x00, 0x00, 0x00, 0x00 // mov %fs:0, %rax
+        };
+        NewCodeSequence = ArrayRef<uint8_t>(SmallSequence);
+      }
+    } else {
+      // This is the same sequence as for the TLSGD sequence with the large
+      // memory model above
+      static const std::initializer_list<uint8_t> CodeSequence = {
+          0x48, 0x8d, 0x3d, 0x00, 0x00, 0x00, 0x00, // lea <disp32>(%rip),
+                                                    // %rdi
+          0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+          0x48,       // movabs $__tls_get_addr@pltoff, %rax
+          0x01, 0xd8, // add %rbx, %rax
+          0xff, 0xd0  // call *%rax
+      };
+      ExpectedCodeSequence = ArrayRef<uint8_t>(CodeSequence);
+      TLSSequenceOffset = 3;
+
+      // The replacement code for the large code model
+      static const std::initializer_list<uint8_t> LargeSequence = {
+          0x66, 0x66, 0x66, // three data16 prefixes (no-op)
+          0x66, 0x66, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00,
+          0x00,                                                // 10 byte nop
+          0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00, 0x00, 0x00 // mov %fs:0,%rax
+      };
+      NewCodeSequence = ArrayRef<uint8_t>(LargeSequence);
+    }
+  } else {
+    llvm_unreachable("both TLS relocations handled above");
+  }
+
+  assert(ExpectedCodeSequence.size() == NewCodeSequence.size() &&
+         "Old and new code sequences must have the same size");
+
+  auto &Section = Sections[SectionID];
+  if (Offset < TLSSequenceOffset ||
+      (Offset - TLSSequenceOffset + NewCodeSequence.size()) >
+          Section.getSize()) {
+    report_fatal_error("unexpected end of section in TLS sequence");
+  }
+
+  auto *TLSSequence = Section.getAddressWithOffset(Offset - TLSSequenceOffset);
+  if (ArrayRef<uint8_t>(TLSSequence, ExpectedCodeSequence.size()) !=
+      ExpectedCodeSequence) {
+    report_fatal_error(
+        "invalid TLS sequence for Global/Local Dynamic TLS Model");
+  }
+
+  memcpy(TLSSequence, NewCodeSequence.data(), NewCodeSequence.size());
 }
 
 size_t RuntimeDyldELF::getGOTEntrySize() {
