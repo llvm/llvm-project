@@ -210,3 +210,21 @@ define i16 @t01(i32 %x) {
   %t2 = shl i16 %t1, ptrtoint (i16* @Y16 to i16)
   ret i16 %t2
 }
+
+define i16 @shl_tr_shl_constant_shift_amount_uses(i32 %x) {
+; CHECK-LABEL: @shl_tr_shl_constant_shift_amount_uses(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], 3
+; CHECK-NEXT:    call void @use32(i32 [[SHL]])
+; CHECK-NEXT:    [[TR:%.*]] = trunc i32 [[SHL]] to i16
+; CHECK-NEXT:    call void @use16(i16 [[TR]])
+; CHECK-NEXT:    [[X_TR:%.*]] = trunc i32 [[X]] to i16
+; CHECK-NEXT:    [[R:%.*]] = shl i16 [[X_TR]], 7
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %shl = shl i32 %x, 3
+  call void @use32(i32 %shl)
+  %tr = trunc i32 %shl to i16
+  call void @use16(i16 %tr)
+  %r = shl i16 %tr, 4
+  ret i16 %r
+}
