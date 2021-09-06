@@ -696,13 +696,14 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
   // Fold shift2(trunc(shift1(x,c1)), c2) -> trunc(shift2(shift1(x,c1),c2))
   // If 'shift2' is an ashr, we would have to get the sign bit into a funny
   // place.  Don't try to do this transformation in this case.  Also, we
-  // require that the input operand is a shift-by-constant so that we have
-  // confidence that the shifts will get folded together.  We could do this
+  // require that the input operand is a non-poison shift-by-constant so that we
+  // have confidence that the shifts will get folded together.  We could do this
   // xform in more cases, but it is unlikely to be profitable.
   Instruction *TrOp;
   const APInt *TrShiftAmt;
   if (I.isLogicalShift() && match(Op0, m_Trunc(m_Instruction(TrOp))) &&
-      match(TrOp, m_Shift(m_Value(), m_APInt(TrShiftAmt)))) {
+      match(TrOp, m_Shift(m_Value(), m_APInt(TrShiftAmt))) &&
+      TrShiftAmt->ult(TrOp->getType()->getScalarSizeInBits())) {
     Type *SrcTy = TrOp->getType();
 
     // Okay, we'll do this xform.  Make the shift of shift.
