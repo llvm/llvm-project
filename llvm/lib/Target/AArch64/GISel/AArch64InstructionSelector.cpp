@@ -1301,6 +1301,7 @@ static AArch64CC::CondCode changeICMPPredToAArch64CC(CmpInst::Predicate P) {
 static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
                               MachineRegisterInfo &MRI) {
   assert(Reg.isValid() && "Expected valid register!");
+  bool HasZext = false;
   while (MachineInstr *MI = getDefIgnoringCopies(Reg, MRI)) {
     unsigned Opc = MI->getOpcode();
 
@@ -1314,6 +1315,9 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
     // on the truncated x is the same as the bit number on x.
     if (Opc == TargetOpcode::G_ANYEXT || Opc == TargetOpcode::G_ZEXT ||
         Opc == TargetOpcode::G_TRUNC) {
+      if (Opc == TargetOpcode::G_ZEXT)
+        HasZext = true;
+
       Register NextReg = MI->getOperand(1).getReg();
       // Did we find something worth folding?
       if (!NextReg.isValid() || !MRI.hasOneNonDBGUse(NextReg))
@@ -1342,8 +1346,12 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
         std::swap(ConstantReg, TestReg);
         VRegAndVal = getConstantVRegValWithLookThrough(ConstantReg, MRI);
       }
-      if (VRegAndVal)
-        C = VRegAndVal->Value.getSExtValue();
+      if (VRegAndVal) {
+        if (HasZext)
+          C = VRegAndVal->Value.getZExtValue();
+        else
+          C = VRegAndVal->Value.getSExtValue();
+      }
       break;
     }
     case TargetOpcode::G_ASHR:
