@@ -94,7 +94,7 @@ public:
         continue;
       }
 
-      auto W = Adapters[R.Index];
+      auto *W = Adapters[R.Index];
 
       FmtAlign Align(*W, R.Where, R.Align, R.Pad);
       Align.format(S, R.Options);
