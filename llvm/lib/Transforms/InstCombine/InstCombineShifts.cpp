@@ -694,41 +694,39 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
     return nullptr;
 
   // Fold shift2(trunc(shift1(x,c1)), c2) -> trunc(shift2(shift1(x,c1),c2))
-  if (auto *TI = dyn_cast<TruncInst>(Op0)) {
-    // If 'shift2' is an ashr, we would have to get the sign bit into a funny
-    // place.  Don't try to do this transformation in this case.  Also, we
-    // require that the input operand is a shift-by-constant so that we have
-    // confidence that the shifts will get folded together.  We could do this
-    // xform in more cases, but it is unlikely to be profitable.
-    const APInt *TrShiftAmt;
-    if (I.isLogicalShift() &&
-        match(TI->getOperand(0), m_Shift(m_Value(), m_APInt(TrShiftAmt)))) {
-      auto *TrOp = cast<Instruction>(TI->getOperand(0));
-      Type *SrcTy = TrOp->getType();
+  // If 'shift2' is an ashr, we would have to get the sign bit into a funny
+  // place.  Don't try to do this transformation in this case.  Also, we
+  // require that the input operand is a shift-by-constant so that we have
+  // confidence that the shifts will get folded together.  We could do this
+  // xform in more cases, but it is unlikely to be profitable.
+  Instruction *TrOp;
+  const APInt *TrShiftAmt;
+  if (I.isLogicalShift() && match(Op0, m_Trunc(m_Instruction(TrOp))) &&
+      match(TrOp, m_Shift(m_Value(), m_APInt(TrShiftAmt)))) {
+    Type *SrcTy = TrOp->getType();
 
-      // Okay, we'll do this xform.  Make the shift of shift.
-      Constant *ShAmt = ConstantExpr::getZExt(Op1, SrcTy);
-      // (shift2 (shift1 & 0x00FF), c2)
-      Value *NSh = Builder.CreateBinOp(I.getOpcode(), TrOp, ShAmt, I.getName());
+    // Okay, we'll do this xform.  Make the shift of shift.
+    Constant *ShAmt = ConstantExpr::getZExt(Op1, SrcTy);
+    // (shift2 (shift1 & 0x00FF), c2)
+    Value *NSh = Builder.CreateBinOp(I.getOpcode(), TrOp, ShAmt, I.getName());
 
-      // For logical shifts, the truncation has the effect of making the high
-      // part of the register be zeros.  Emulate this by inserting an AND to
-      // clear the top bits as needed.  This 'and' will usually be zapped by
-      // other xforms later if dead.
-      unsigned SrcSize = SrcTy->getScalarSizeInBits();
-      Constant *MaskV =
-          ConstantInt::get(SrcTy, APInt::getLowBitsSet(SrcSize, TypeBits));
+    // For logical shifts, the truncation has the effect of making the high
+    // part of the register be zeros.  Emulate this by inserting an AND to
+    // clear the top bits as needed.  This 'and' will usually be zapped by
+    // other xforms later if dead.
+    unsigned SrcSize = SrcTy->getScalarSizeInBits();
+    Constant *MaskV =
+        ConstantInt::get(SrcTy, APInt::getLowBitsSet(SrcSize, TypeBits));
 
-      // The mask we constructed says what the trunc would do if occurring
-      // between the shifts.  We want to know the effect *after* the second
-      // shift.  We know that it is a logical shift by a constant, so adjust the
-      // mask as appropriate.
-      MaskV = ConstantExpr::get(I.getOpcode(), MaskV, ShAmt);
-      // shift1 & 0x00FF
-      Value *And = Builder.CreateAnd(NSh, MaskV, TI->getName());
-      // Return the value truncated to the interesting size.
-      return new TruncInst(And, Ty);
-    }
+    // The mask we constructed says what the trunc would do if occurring
+    // between the shifts.  We want to know the effect *after* the second
+    // shift.  We know that it is a logical shift by a constant, so adjust the
+    // mask as appropriate.
+    MaskV = ConstantExpr::get(I.getOpcode(), MaskV, ShAmt);
+    // shift1 & 0x00FF
+    Value *And = Builder.CreateAnd(NSh, MaskV, Op0->getName());
+    // Return the value truncated to the interesting size.
+    return new TruncInst(And, Ty);
   }
 
   if (auto *Op0BO = dyn_cast<BinaryOperator>(Op0)) {
