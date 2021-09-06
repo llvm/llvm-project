@@ -3590,6 +3590,8 @@ X86
 
 .. option:: -mclzero, -mno-clzero
 
+.. option:: -mcrc32, -mno-crc32
+
 .. option:: -mcx16, -mno-cx16
 
 .. option:: -menqcmd, -mno-enqcmd
