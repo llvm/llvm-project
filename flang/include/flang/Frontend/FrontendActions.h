@@ -128,7 +128,7 @@ class ParseSyntaxOnlyAction : public PrescanAndSemaAction {
 };
 
 class PluginParseTreeAction : public PrescanAndSemaAction {
-  void ExecuteAction() override;
+  void ExecuteAction() override = 0;
 };
 
 } // namespace Fortran::frontend

@@ -1,5 +1,4 @@
-! RUN: %S/test_folding.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_folding.py %s %flang_fc1
 ! Test folding of array constructors with constant implied DO bounds;
 ! their indices are constant expressions and can be used as such.
 module m1

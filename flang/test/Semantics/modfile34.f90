@@ -1,5 +1,4 @@
-! RUN: %S/test_modfile.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_modfile.py %s %flang_fc1
 ! Test resolution of type-bound generics.
 
 module m1

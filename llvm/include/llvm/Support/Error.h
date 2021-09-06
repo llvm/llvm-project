@@ -313,7 +313,7 @@ private:
   }
 
   friend raw_ostream &operator<<(raw_ostream &OS, const Error &E) {
-    if (auto P = E.getPtr())
+    if (auto *P = E.getPtr())
       P->log(OS);
     else
       OS << "success";
@@ -373,7 +373,7 @@ class ErrorList final : public ErrorInfo<ErrorList> {
 public:
   void log(raw_ostream &OS) const override {
     OS << "Multiple errors:\n";
-    for (auto &ErrPayload : Payloads) {
+    for (const auto &ErrPayload : Payloads) {
       ErrPayload->log(OS);
       OS << "\n";
     }
