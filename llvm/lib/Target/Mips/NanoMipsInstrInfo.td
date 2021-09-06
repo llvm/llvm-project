@@ -448,9 +448,9 @@ let isCodeGenOnly = 1 in {
 //       loads/store that do not fit the offset. If we put the same handling in
 //       addruimm12, this will cause addrsimm9 to never get selected.
 def LWs9_NM : LoadMemoryNM<"lw", GPR32NMOpnd, mem, load, addrsimm9, II_LW>, InstSize32;
+def LW_NM : LoadMemoryNM<"lw", GPR32NMOpnd, mem, load, addruimm12, II_LW>, InstSize32;
 def LWXS_NM : LoadMemoryNM<"lwxs", GPR32NMOpnd, mem, load, addrindexedlsl2, II_LW>, InstSize32;
 def LWX_NM : LoadMemoryNM<"lwx", GPR32NMOpnd, mem, load, addrindexed, II_LW>, InstSize32;
-def LW_NM : LoadMemoryNM<"lw", GPR32NMOpnd, mem, load, addruimm12, II_LW>, InstSize32;
 def SW_NM : StoreMemoryNM<"sw", GPR32NMOpnd, mem, store, addruimm12, II_SW>, InstSize32;
 def SWs9_NM : StoreMemoryNM<"sw", GPR32NMOpnd, mem, store, addrsimm9, II_SW>, InstSize32;
 def SWXS_NM : StoreMemoryNM<"swxs", GPR32NMOpnd, mem, store, addrindexedlsl2, II_SW>, InstSize32;
@@ -516,10 +516,16 @@ def : Pat<(i32 (extloadi8 addruimm12:$addr)),
           (LBU_NM addruimm12:$addr)>, ISA_NANOMIPS;
 def : Pat<(i32 (extloadi8 addrsimm9:$addr)),
           (LBUs9_NM addrsimm9:$addr)>, ISA_NANOMIPS;
+def : Pat<(i32 (extloadi8 addrindexed:$addr)),
+          (LBUX_NM addrindexed:$addr)>, ISA_NANOMIPS;
 def : Pat<(i32 (extloadi16 addruimm12:$addr)),
           (LHU_NM addruimm12:$addr)>, ISA_NANOMIPS;
 def : Pat<(i32 (extloadi16 addrsimm9:$addr)),
           (LHUs9_NM addrsimm9:$addr)>, ISA_NANOMIPS;
+def : Pat<(i32 (extloadi16 addrindexedlsl1:$addr)),
+          (LHUXS_NM addrindexedlsl1:$addr)>, ISA_NANOMIPS;
+def : Pat<(i32 (extloadi16 addrindexed:$addr)),
+          (LHUX_NM addrindexed:$addr)>, ISA_NANOMIPS;
 
 // Catching out-of-range immediate unaligned loads/stores.
 def : Pat<(i32 (NMUnalignedLW GPR32NM:$rs, GPR32NM:$src)),

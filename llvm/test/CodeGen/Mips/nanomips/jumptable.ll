@@ -8,14 +8,10 @@ define i32 @test_jumptable(i32 %in) {
     i32 4, label %lbl4
   ]
 
-; CHECK: sll $a0, $a0, 2
-; CHECK: SLL_NM
 ; CHECK: li $a1
 ; CHECK: Li_NM
-; CHECK: addu $a0, $a0, $a1
-; CHECK: ADDu_NM
-; CHECK: lw $a0, 0($a0)
-; CHECK: LW_NM
+; CHECK: lwxs $a0, $a0($a1)
+; CHECK: LWXS_NM
 ; CHECK: jrc $a0
 ; CHECK: JRC_NM
 
