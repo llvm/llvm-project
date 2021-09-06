@@ -13969,7 +13969,7 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       if (ExactRegion.isWrappedSet() || ExactRegion.isFullSet())
         return false;
       auto I = RewriteMap.find(LHSUnknown->getValue());
-      const SCEV *RewrittenLHS = I != RewriteMap.end() ? I->second : LHS;
+      const SCEV *RewrittenLHS = I != RewriteMap.end() ? I->second : LHSUnknown;
       RewriteMap[LHSUnknown->getValue()] = getUMaxExpr(
           getConstant(ExactRegion.getUnsignedMin()),
           getUMinExpr(RewrittenLHS, getConstant(ExactRegion.getUnsignedMax())));
