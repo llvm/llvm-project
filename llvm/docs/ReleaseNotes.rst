@@ -55,6 +55,8 @@ Non-comprehensive list of changes in this release
   emits valid unwind entrypoints which are validated when the context is being
   set during exception handling.
 
+* Flang is now included in the binary packages released by LLVM.
+
 Changes to the LLVM IR
 ----------------------
 
