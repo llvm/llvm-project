@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1 -fopenmp
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1 -fopenmp
 ! OpenMP Version 4.5
 ! 2.7.1 Loop Construct
 ! The DO loop iteration variable must be of type integer.

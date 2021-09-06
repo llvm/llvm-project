@@ -137,6 +137,7 @@ copy("Headers") {
     "clwbintrin.h",
     "clzerointrin.h",
     "cpuid.h",
+    "crc32intrin.h",
     "cuda_wrappers/algorithm",
     "cuda_wrappers/complex",
     "cuda_wrappers/new",

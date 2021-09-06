@@ -1,6 +1,6 @@
 // RUN: %clang -pthread %s -Wl,-as-needed -o %t && %run %t
 //
-// UNSUPPORTED: darwin, netbsd, solaris
+// UNSUPPORTED: darwin, solaris
 
 #include <time.h>
 #include <unistd.h>

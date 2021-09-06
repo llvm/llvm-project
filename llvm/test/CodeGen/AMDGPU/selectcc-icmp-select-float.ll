@@ -8,7 +8,7 @@ define amdgpu_kernel void @test(float addrspace(1)* %out, i32 addrspace(1)* %in)
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ALU 0, @8, KC0[CB0:0-32], KC1[]
 ; CHECK-NEXT:    TEX 0 @6
-; CHECK-NEXT:    ALU 4, @9, KC0[CB0:0-32], KC1[]
+; CHECK-NEXT:    ALU 3, @9, KC0[CB0:0-32], KC1[]
 ; CHECK-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; CHECK-NEXT:    CF_END
 ; CHECK-NEXT:    PAD
@@ -17,9 +17,8 @@ define amdgpu_kernel void @test(float addrspace(1)* %out, i32 addrspace(1)* %in)
 ; CHECK-NEXT:    ALU clause starting at 8:
 ; CHECK-NEXT:     MOV * T0.X, KC0[2].Z,
 ; CHECK-NEXT:    ALU clause starting at 9:
-; CHECK-NEXT:     SETGT_INT * T0.W, T0.X, literal.x,
-; CHECK-NEXT:    -1(nan), 0(0.000000e+00)
-; CHECK-NEXT:     CNDE_INT T0.X, PV.W, 0.0, literal.x,
+; CHECK-NEXT:     SETGT_INT * T0.W, 0.0, T0.X,
+; CHECK-NEXT:     CNDE_INT T0.X, PV.W, literal.x, 0.0,
 ; CHECK-NEXT:     LSHR * T1.X, KC0[2].Y, literal.y,
 ; CHECK-NEXT:    1065353216(1.000000e+00), 2(2.802597e-45)
 entry:

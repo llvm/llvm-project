@@ -1,16 +1,16 @@
 ; Test -hwasan-with-ifunc flag.
 ;
-; RUN: opt -hwasan -S < %s | \
+; RUN: opt -passes=hwasan -S < %s | \
 ; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-NOGLOBAL,CHECK-TLS-SLOT,CHECK-HISTORY,CHECK-HISTORY-TLS-SLOT
-; RUN: opt -hwasan -S -hwasan-with-ifunc=0 -hwasan-with-tls=1 -hwasan-record-stack-history=1 < %s | \
+; RUN: opt -passes=hwasan -S -hwasan-with-ifunc=0 -hwasan-with-tls=1 -hwasan-record-stack-history=1 < %s | \
 ; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-NOGLOBAL,CHECK-TLS-SLOT,CHECK-HISTORY,CHECK-HISTORY-TLS-SLOT
-; RUN: opt -hwasan -S -hwasan-with-ifunc=0 -hwasan-with-tls=1 -hwasan-record-stack-history=0 < %s | \
+; RUN: opt -passes=hwasan -S -hwasan-with-ifunc=0 -hwasan-with-tls=1 -hwasan-record-stack-history=0 < %s | \
 ; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-NOGLOBAL,CHECK-IFUNC,CHECK-NOHISTORY
-; RUN: opt -hwasan -S -hwasan-with-ifunc=0 -hwasan-with-tls=0 < %s | \
+; RUN: opt -passes=hwasan -S -hwasan-with-ifunc=0 -hwasan-with-tls=0 < %s | \
 ; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-GLOBAL,CHECK-NOHISTORY
-; RUN: opt -hwasan -S -hwasan-with-ifunc=1  -hwasan-with-tls=0 < %s | \
+; RUN: opt -passes=hwasan -S -hwasan-with-ifunc=1  -hwasan-with-tls=0 < %s | \
 ; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-IFUNC,CHECK-NOHISTORY
-; RUN: opt -hwasan -S -mtriple=aarch64-fuchsia < %s | \
+; RUN: opt -passes=hwasan -S -mtriple=aarch64-fuchsia < %s | \
 ; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-ZERO-OFFSET,CHECK-SHORT-GRANULES,CHECK-HISTORY,CHECK-HWASAN-TLS,CHECK-HISTORY-HWASAN-TLS
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"

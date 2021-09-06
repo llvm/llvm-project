@@ -3910,6 +3910,17 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         return DAG.getSetCC(dl, VT, N0.getOperand(0), N1, Cond);
     }
 
+    // Fold set_cc seteq (ashr X, BW-1), -1 -> set_cc setlt X, 0
+    //  and set_cc setne (ashr X, BW-1), -1 -> set_cc setge X, 0
+    if ((Cond == ISD::SETEQ || Cond == ISD::SETNE) &&
+        N0.getOpcode() == ISD::SRA && isa<ConstantSDNode>(N0.getOperand(1)) &&
+        N0.getConstantOperandAPInt(1) == OpVT.getScalarSizeInBits() - 1 &&
+        N1C && N1C->isAllOnesValue()) {
+      return DAG.getSetCC(dl, VT, N0.getOperand(0),
+                          DAG.getConstant(0, dl, OpVT),
+                          Cond == ISD::SETEQ ? ISD::SETLT : ISD::SETGT);
+    }
+
     if (SDValue V =
             optimizeSetCCOfSignedTruncationCheck(VT, N0, N1, Cond, DCI, dl))
       return V;

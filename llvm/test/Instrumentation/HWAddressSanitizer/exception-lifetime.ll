@@ -1,7 +1,7 @@
 ; Test allocas with multiple lifetime ends, as frequently seen for exception
 ; handling.
 ;
-; RUN: opt -hwasan -hwasan-use-after-scope -S -o - %s | FileCheck %s --check-prefix=CHECK
+; RUN: opt -passes=hwasan -hwasan-use-after-scope -S -o - %s | FileCheck %s --check-prefix=CHECK
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android"

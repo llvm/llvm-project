@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Tests for the last sentence of C1128:
 !A variable-name that is not permitted to appear in a variable definition
 !context shall not appear in a LOCAL or LOCAL_INIT locality-spec.

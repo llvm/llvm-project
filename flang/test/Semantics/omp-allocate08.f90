@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1 -fopenmp
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1 -fopenmp
 ! OpenMP Version 5.0
 ! 2.11.3 allocate Directive
 ! If list items within the ALLOCATE directive have the SAVE attribute, are a common block name, or are declared in the scope of a

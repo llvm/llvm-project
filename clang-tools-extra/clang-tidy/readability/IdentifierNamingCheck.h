@@ -109,7 +109,7 @@ public:
         const Decl *D,
         const IdentifierNamingCheck::HungarianNotationOption &HNOption) const;
 
-    const std::string getDataTypePrefix(
+    std::string getDataTypePrefix(
         StringRef TypeName, const NamedDecl *ND,
         const IdentifierNamingCheck::HungarianNotationOption &HNOption) const;
 

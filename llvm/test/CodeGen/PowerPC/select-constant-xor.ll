@@ -17,11 +17,9 @@ define i32 @xori64i32(i64 %a) {
 define i64 @selecti64i64(i64 %a) {
 ; CHECK-LABEL: selecti64i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lis 4, 32767
-; CHECK-NEXT:    cmpdi 3, -1
-; CHECK-NEXT:    ori 3, 4, 65535
-; CHECK-NEXT:    lis 4, -32768
-; CHECK-NEXT:    iselgt 3, 3, 4
+; CHECK-NEXT:    sradi 3, 3, 63
+; CHECK-NEXT:    xori 3, 3, 65535
+; CHECK-NEXT:    xoris 3, 3, 32767
 ; CHECK-NEXT:    blr
   %c = icmp sgt i64 %a, -1
   %s = select i1 %c, i64 2147483647, i64 -2147483648
@@ -31,11 +29,9 @@ define i64 @selecti64i64(i64 %a) {
 define i32 @selecti64i32(i64 %a) {
 ; CHECK-LABEL: selecti64i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lis 4, 32767
-; CHECK-NEXT:    cmpdi 3, -1
-; CHECK-NEXT:    ori 3, 4, 65535
-; CHECK-NEXT:    lis 4, -32768
-; CHECK-NEXT:    iselgt 3, 3, 4
+; CHECK-NEXT:    sradi 3, 3, 63
+; CHECK-NEXT:    xori 3, 3, 65535
+; CHECK-NEXT:    xoris 3, 3, 32767
 ; CHECK-NEXT:    blr
   %c = icmp sgt i64 %a, -1
   %s = select i1 %c, i32 2147483647, i32 -2147483648
@@ -45,11 +41,10 @@ define i32 @selecti64i32(i64 %a) {
 define i64 @selecti32i64(i32 %a) {
 ; CHECK-LABEL: selecti32i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lis 4, 32767
-; CHECK-NEXT:    cmpwi 3, -1
-; CHECK-NEXT:    ori 3, 4, 65535
-; CHECK-NEXT:    lis 4, -32768
-; CHECK-NEXT:    iselgt 3, 3, 4
+; CHECK-NEXT:    srawi 3, 3, 31
+; CHECK-NEXT:    extsw 3, 3
+; CHECK-NEXT:    xori 3, 3, 65535
+; CHECK-NEXT:    xoris 3, 3, 32767
 ; CHECK-NEXT:    blr
   %c = icmp sgt i32 %a, -1
   %s = select i1 %c, i64 2147483647, i64 -2147483648
@@ -73,10 +68,9 @@ define i8 @xori32i8(i32 %a) {
 define i32 @selecti32i32(i32 %a) {
 ; CHECK-LABEL: selecti32i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li 4, -85
-; CHECK-NEXT:    cmpwi 3, -1
-; CHECK-NEXT:    li 3, 84
-; CHECK-NEXT:    iselgt 3, 3, 4
+; CHECK-NEXT:    srawi 3, 3, 31
+; CHECK-NEXT:    extsw 3, 3
+; CHECK-NEXT:    xori 3, 3, 84
 ; CHECK-NEXT:    blr
   %c = icmp sgt i32 %a, -1
   %s = select i1 %c, i32 84, i32 -85
@@ -86,10 +80,9 @@ define i32 @selecti32i32(i32 %a) {
 define i8 @selecti32i8(i32 %a) {
 ; CHECK-LABEL: selecti32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li 4, -85
-; CHECK-NEXT:    cmpwi 3, -1
-; CHECK-NEXT:    li 3, 84
-; CHECK-NEXT:    iselgt 3, 3, 4
+; CHECK-NEXT:    srawi 3, 3, 31
+; CHECK-NEXT:    extsw 3, 3
+; CHECK-NEXT:    xori 3, 3, 84
 ; CHECK-NEXT:    blr
   %c = icmp sgt i32 %a, -1
   %s = select i1 %c, i8 84, i8 -85
@@ -100,10 +93,9 @@ define i32 @selecti8i32(i8 %a) {
 ; CHECK-LABEL: selecti8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    extsb 3, 3
-; CHECK-NEXT:    li 4, -85
-; CHECK-NEXT:    cmpwi 3, -1
-; CHECK-NEXT:    li 3, 84
-; CHECK-NEXT:    iselgt 3, 3, 4
+; CHECK-NEXT:    srawi 3, 3, 7
+; CHECK-NEXT:    extsw 3, 3
+; CHECK-NEXT:    xori 3, 3, 84
 ; CHECK-NEXT:    blr
   %c = icmp sgt i8 %a, -1
   %s = select i1 %c, i32 84, i32 -85
@@ -113,9 +105,8 @@ define i32 @selecti8i32(i8 %a) {
 define i32 @icmpasreq(i32 %input, i32 %a, i32 %b) {
 ; CHECK-LABEL: icmpasreq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srawi 3, 3, 31
-; CHECK-NEXT:    cmpwi 3, -1
-; CHECK-NEXT:    iseleq 3, 4, 5
+; CHECK-NEXT:    cmpwi 3, 0
+; CHECK-NEXT:    isellt 3, 4, 5
 ; CHECK-NEXT:    blr
   %sh = ashr i32 %input, 31
   %c = icmp eq i32 %sh, -1
@@ -126,9 +117,8 @@ define i32 @icmpasreq(i32 %input, i32 %a, i32 %b) {
 define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 ; CHECK-LABEL: icmpasrne:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srawi 3, 3, 31
-; CHECK-NEXT:    cmpwi 3, -1
-; CHECK-NEXT:    iseleq 3, 5, 4
+; CHECK-NEXT:    cmpwi 3, 0
+; CHECK-NEXT:    iselgt 3, 4, 5
 ; CHECK-NEXT:    blr
   %sh = ashr i32 %input, 31
   %c = icmp ne i32 %sh, -1
@@ -139,10 +129,9 @@ define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 define i32 @oneusecmp(i32 %a, i32 %b, i32 %d) {
 ; CHECK-LABEL: oneusecmp:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li 6, 127
+; CHECK-NEXT:    srawi 6, 3, 31
 ; CHECK-NEXT:    cmpwi 3, 0
-; CHECK-NEXT:    li 3, -128
-; CHECK-NEXT:    isellt 3, 3, 6
+; CHECK-NEXT:    xori 3, 6, 127
 ; CHECK-NEXT:    isellt 4, 5, 4
 ; CHECK-NEXT:    add 3, 3, 4
 ; CHECK-NEXT:    blr
