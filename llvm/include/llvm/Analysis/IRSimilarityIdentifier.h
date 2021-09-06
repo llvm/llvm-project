@@ -110,7 +110,8 @@ enum InstrType { Legal, Illegal, Invisible };
 /// by \ref isSameOperationAs.
 /// TODO: Handle GetElementPtrInsts, as some of the operands have to be the
 /// exact same, and some do not.
-struct IRInstructionData : ilist_node<IRInstructionData> {
+struct IRInstructionData
+    : ilist_node<IRInstructionData, ilist_sentinel_tracking<true>> {
 
   /// The source Instruction that is being wrapped.
   Instruction *Inst = nullptr;
@@ -127,12 +128,41 @@ struct IRInstructionData : ilist_node<IRInstructionData> {
   /// to a less than form.  It is None otherwise.
   Optional<CmpInst::Predicate> RevisedPredicate;
 
+  /// This structure holds the distances of how far "ahead of" or "behind" the
+  /// target blocks of a branch, or the incoming blocks of a phi nodes are.
+  /// If the value is negative, it means that the block was registered before
+  /// the block of this instruction in terms of blocks in the function.
+  /// Code Example:
+  /// \code
+  /// block_1:
+  ///   br i1 %0, label %block_2, label %block_3
+  /// block_2:
+  ///   br i1 %1, label %block_1, label %block_2
+  /// block_3:
+  ///   br i1 %2, label %block_2, label %block_1
+  /// ; Replacing the labels with relative values, this becomes:
+  /// block_1:
+  ///   br i1 %0, distance 1, distance 2
+  /// block_2:
+  ///   br i1 %1, distance -1, distance 0
+  /// block_3:
+  ///   br i1 %2, distance -1, distance -2
+  /// \endcode
+  /// Taking block_2 as our example, block_1 is "behind" block_2, and block_2 is
+  /// "ahead" of block_2.
+  SmallVector<int, 4> RelativeBlockLocations;
+
   /// Gather the information that is difficult to gather for an Instruction, or
   /// is changed. i.e. the operands of an Instruction and the Types of those
   /// operands. This extra information allows for similarity matching to make
   /// assertions that allow for more flexibility when checking for whether an
   /// Instruction performs the same operation.
   IRInstructionData(Instruction &I, bool Legality, IRInstructionDataList &IDL);
+  IRInstructionData(IRInstructionDataList &IDL);
+
+  /// Fills data stuctures for IRInstructionData when it is constructed from a
+  // reference or a pointer.
+  void initializeInstruction();
 
   /// Get the predicate that the compare instruction is using for hashing the
   /// instruction. the IRInstructionData must be wrapping a CmpInst.
@@ -144,6 +174,16 @@ struct IRInstructionData : ilist_node<IRInstructionData> {
   /// \param CI - The comparison operation to find a consistent preidcate for.
   /// \return the consistent comparison predicate. 
   static CmpInst::Predicate predicateForConsistency(CmpInst *CI);
+
+  /// For an IRInstructionData containing a branch, finds the
+  /// relative distances from the source basic block to the target by taking
+  /// the difference of the number assigned to the current basic block and the
+  /// target basic block of the branch.
+  ///
+  /// \param BasicBlockToInteger - The mapping of basic blocks to their location
+  /// in the module.
+  void
+  setBranchSuccessors(DenseMap<BasicBlock *, unsigned> &BasicBlockToInteger);
 
   /// Hashes \p Value based on its opcode, types, and operand types.
   /// Two IRInstructionData instances produce the same hash when they perform
@@ -198,7 +238,8 @@ struct IRInstructionData : ilist_node<IRInstructionData> {
   IRInstructionDataList *IDL = nullptr;
 };
 
-struct IRInstructionDataList : simple_ilist<IRInstructionData> {};
+struct IRInstructionDataList
+    : simple_ilist<IRInstructionData, ilist_sentinel_tracking<true>> {};
 
 /// Compare one IRInstructionData class to another IRInstructionData class for
 /// whether they are performing a the same operation, and can mapped to the
@@ -288,6 +329,10 @@ struct IRInstructionMapper {
   DenseMap<IRInstructionData *, unsigned, IRInstructionDataTraits>
       InstructionIntegerMap;
 
+  /// A mapping for a basic block in a module to its assigned number/location
+  /// in the module.
+  DenseMap<BasicBlock *, unsigned> BasicBlockToInteger;
+
   /// Set if we added an illegal number in the previous step.
   /// Since each illegal number is unique, we only need one of them between
   /// each range of legal numbers. This lets us make sure we don't add more
@@ -322,12 +367,38 @@ struct IRInstructionMapper {
   IRInstructionData *allocateIRInstructionData(Instruction &I, bool Legality,
                                                IRInstructionDataList &IDL);
 
+  /// Get an empty allocated IRInstructionData struct using the
+  /// InstDataAllocator.
+  ///
+  /// \param IDL - The InstructionDataList that the IRInstructionData is
+  /// inserted into.
+  /// \returns An allocated IRInstructionData struct.
+  IRInstructionData *allocateIRInstructionData(IRInstructionDataList &IDL);
+
   /// Get an allocated IRInstructionDataList object using the IDLAllocator.
   ///
   /// \returns An allocated IRInstructionDataList object.
   IRInstructionDataList *allocateIRInstructionDataList();
 
   IRInstructionDataList *IDL = nullptr;
+
+  /// Assigns values to all the basic blocks in function \p F starting from
+  /// integer \p BBNumber.
+  ///
+  /// \param F - The function containing the basic blocks to assign numbers to.
+  /// \param BBNumber - The number to start from.
+  void initializeForBBs(Function &F, unsigned &BBNumber) {
+    for (BasicBlock &BB : F)
+      BasicBlockToInteger.insert(std::make_pair(&BB, BBNumber++));
+  }
+
+  /// Assigns values to all the basic blocks in Module \p M.
+  /// \param M - The module containing the basic blocks to assign numbers to.
+  void initializeForBBs(Module &M) {
+    unsigned BBNumber = 0;
+    for (Function &F : M)
+      initializeForBBs(F, BBNumber);
+  }
 
   /// Maps the Instructions in a BasicBlock \p BB to legal or illegal integers
   /// determined by \p InstrType. Two Instructions are mapped to the same value
@@ -386,7 +457,11 @@ struct IRInstructionMapper {
     InstructionClassification() {}
 
     // TODO: Determine a scheme to resolve when the label is similar enough.
-    InstrType visitBranchInst(BranchInst &BI) { return Illegal; }
+    InstrType visitBranchInst(BranchInst &BI) {
+      if (EnableBranches)
+        return Legal;
+      return Illegal;
+    }
     // TODO: Determine a scheme to resolve when the labels are similar enough.
     InstrType visitPHINode(PHINode &PN) { return Illegal; }
     // TODO: Handle allocas.
@@ -419,6 +494,10 @@ struct IRInstructionMapper {
     // TODO: Handle interblock similarity.
     InstrType visitTerminator(Instruction &I) { return Illegal; }
     InstrType visitInstruction(Instruction &I) { return Legal; }
+
+    // The flag variable that lets the classifier know whether we should
+    // allow branches to be checked for similarity.
+    bool EnableBranches = false;
   };
 
   /// Maps an Instruction to a member of InstrType.
@@ -546,6 +625,21 @@ public:
     DenseMap<unsigned, DenseSet<unsigned>> &ValueNumberMapping;
   };
 
+  /// A helper struct to hold the candidate, for a branch instruction, the
+  /// relative location of a label, and the label itself.  This is mostly to
+  /// group the values together before passing them as a bundle to a function.
+  struct RelativeLocMapping {
+    /// The IRSimilarityCandidate that holds the instruction the relative
+    /// location was pulled from.
+    const IRSimilarityCandidate &IRSC;
+
+    /// The relative location to be analyzed.
+    int RelativeLocation;
+
+    /// The corresponding value.
+    Value *OperVal;
+  };
+
   /// Compare the operands in \p A and \p B and check that the current mapping
   /// of global value numbers from \p A to \p B and \p B to \A is consistent.
   ///
@@ -568,6 +662,44 @@ public:
   /// \returns true if the IRSimilarityCandidates operands are compatible.
   static bool compareCommutativeOperandMapping(OperandMapping A,
                                                OperandMapping B);
+
+  /// Compare the relative locations in \p A and \p B and check that the
+  /// distances match if both locations are contained in the region, and that
+  /// the branches both point outside the region if they do not.
+  /// Example Region:
+  /// \code
+  /// entry:
+  ///   br i1 %0, label %block_1, label %block_3
+  /// block_0:
+  ///   br i1 %0, label %block_1, label %block_2
+  /// block_1:
+  ///   br i1 %0, label %block_2, label %block_3
+  /// block_2:
+  ///   br i1 %1, label %block_1, label %block_4
+  /// block_3:
+  ///   br i1 %2, label %block_2, label %block_5
+  /// \endcode
+  /// If we compare the branches in block_0 and block_1 the relative values are
+  /// 1 and 2 for both, so we consider this a match.
+  ///
+  /// If we compare the branches in entry and block_0 the relative values are
+  /// 2 and 3, and 1 and 2 respectively.  Since these are not the same we do not
+  /// consider them a match.
+  ///
+  /// If we compare the branches in block_1 and block_2 the relative values are
+  /// 1 and 2, and -1 and None respectively.  As a result we do not consider
+  /// these to be the same
+  ///
+  /// If we compare the branches in block_2 and block_3 the relative values are
+  /// -1 and None for both.  We do consider these to be a match.
+  ///
+  /// \param A - The first IRInstructionCandidate, relative location value,
+  /// and incoming block.
+  /// \param B - The second IRInstructionCandidate, relative location value,
+  /// and incoming block.
+  /// \returns true if the relative locations match.
+  static bool checkRelativeLocations(RelativeLocMapping A,
+                                     RelativeLocMapping B);
 
   /// Create a mapping from the value numbering to a different separate set of
   /// numbers. This will serve as a guide for relating one candidate to another.
@@ -595,6 +727,31 @@ public:
       IRSimilarityCandidate &SourceCand,
       DenseMap<unsigned, DenseSet<unsigned>> &ToSourceMapping,
       DenseMap<unsigned, DenseSet<unsigned>> &FromSourceMapping);
+
+  /// \param [in,out] BBSet - The set to track the basic blocks.
+  /// \returns The BasicBlock the IRSimilarityCandidate ends in.
+  void getBasicBlocks(DenseSet<BasicBlock *> &BBSet) const {
+    for (IRInstructionData &ID : *this) {
+      BasicBlock *BB = ID.Inst->getParent();
+      if (BBSet.contains(BB))
+        continue;
+      BBSet.insert(BB);
+    }
+  }
+
+  /// \param [in,out] BBSet - The set to track the basic blocks.
+  /// \param [in,out] BBList - A list in order of use to track the basic blocks.
+  /// \returns The BasicBlock the IRSimilarityCandidate ends in.
+  void getBasicBlocks(DenseSet<BasicBlock *> &BBSet,
+                      std::vector<BasicBlock *> &BBList) const {
+    for (IRInstructionData &ID : *this) {
+      BasicBlock *BB = ID.Inst->getParent();
+      if (BBSet.contains(BB))
+        continue;
+      BBSet.insert(BB);
+      BBList.push_back(BB);
+    }
+  }
 
   /// Compare the start and end indices of the two IRSimilarityCandidates for
   /// whether they overlap. If the start instruction of one
@@ -727,8 +884,9 @@ typedef std::vector<SimilarityGroup> SimilarityGroupList;
 /// analyzing the module.
 class IRSimilarityIdentifier {
 public:
-  IRSimilarityIdentifier()
-      : Mapper(&InstDataAllocator, &InstDataListAllocator) {}
+  IRSimilarityIdentifier(bool MatchBranches = true)
+      : Mapper(&InstDataAllocator, &InstDataListAllocator),
+        EnableBranches(MatchBranches) {}
 
 private:
   /// Map the instructions in the module to unsigned integers, using mapping
@@ -803,6 +961,10 @@ private:
   /// Map Instructions to unsigned integers and wraps the Instruction in an
   /// instance of IRInstructionData.
   IRInstructionMapper Mapper;
+
+  /// The flag variable that marks whether we should check branches for
+  /// similarity, or only look within basic blocks.
+  bool EnableBranches = true;
 
   /// The SimilarityGroups found with the most recent run of \ref
   /// findSimilarity. None if there is no recent run.

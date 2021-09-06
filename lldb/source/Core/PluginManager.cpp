@@ -692,7 +692,7 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
     // Try saving core directly from the process plugin first.
     llvm::Expected<bool> ret = process_sp->SaveCore(outfile.GetPath());
     if (!ret)
-      return Status(std::move(ret.takeError()));
+      return Status(ret.takeError());
     if (ret.get())
       return Status();
   }
