@@ -865,8 +865,8 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR7:[0-9]+]]
-; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR8:[0-9]+]]
+; CHECK-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR8:[0-9]+]]
+; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR9:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -908,7 +908,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_l22
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca i8*, align 8
+; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca i8*, align 8, addrspace(5)
 ; CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i1 false, i1 false, i1 true)
@@ -916,8 +916,9 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
 ; CHECK:       worker_state_machine.begin:
 ; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
-; CHECK-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(i8** [[WORKER_WORK_FN_ADDR]])
-; CHECK-NEXT:    [[WORKER_WORK_FN:%.*]] = load i8*, i8** [[WORKER_WORK_FN_ADDR]], align 8
+; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast i8* addrspace(5)* [[WORKER_WORK_FN_ADDR]] to i8**
+; CHECK-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(i8** [[WORKER_WORK_FN_ADDR_GENERIC]])
+; CHECK-NEXT:    [[WORKER_WORK_FN:%.*]] = load i8*, i8** [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
 ; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR_CAST:%.*]] = bitcast i8* [[WORKER_WORK_FN]] to void (i16, i32)*
 ; CHECK-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq i8* [[WORKER_WORK_FN]], null
 ; CHECK-NEXT:    br i1 [[WORKER_IS_DONE]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]], label [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:%.*]]
@@ -966,11 +967,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x i8*], align 8
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x i8*], align 8
 ; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR8]]
+; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR9]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
 ; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__2 to i8*), i8* noundef @__omp_outlined__2_wrapper.ID, i8** noundef [[TMP1]], i64 noundef 0)
-; CHECK-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR7]]
+; CHECK-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR8]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS1]] to i8**
 ; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__3 to i8*), i8* noundef @__omp_outlined__3_wrapper.ID, i8** noundef [[TMP2]], i64 noundef 0)
 ; CHECK-NEXT:    ret void
@@ -982,7 +983,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    call void @p0() #[[ATTR9:[0-9]+]]
+; CHECK-NEXT:    call void @p0() #[[ATTR10:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -1008,7 +1009,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    call void @p1() #[[ATTR9]]
+; CHECK-NEXT:    call void @p1() #[[ATTR10]]
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -1032,7 +1033,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca i8*, align 8
+; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca i8*, align 8, addrspace(5)
 ; CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i1 false, i1 false, i1 true)
@@ -1040,8 +1041,9 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
 ; CHECK:       worker_state_machine.begin:
 ; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
-; CHECK-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(i8** [[WORKER_WORK_FN_ADDR]])
-; CHECK-NEXT:    [[WORKER_WORK_FN:%.*]] = load i8*, i8** [[WORKER_WORK_FN_ADDR]], align 8
+; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast i8* addrspace(5)* [[WORKER_WORK_FN_ADDR]] to i8**
+; CHECK-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(i8** [[WORKER_WORK_FN_ADDR_GENERIC]])
+; CHECK-NEXT:    [[WORKER_WORK_FN:%.*]] = load i8*, i8** [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
 ; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR_CAST:%.*]] = bitcast i8* [[WORKER_WORK_FN]] to void (i16, i32)*
 ; CHECK-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq i8* [[WORKER_WORK_FN]], null
 ; CHECK-NEXT:    br i1 [[WORKER_IS_DONE]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]], label [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:%.*]]
@@ -1095,13 +1097,13 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x i8*], align 8
 ; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR8]]
-; CHECK-NEXT:    call void @simple_state_machine_interprocedural_before.internalized() #[[ATTR7]]
-; CHECK-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR7]]
+; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR9]]
+; CHECK-NEXT:    call void @simple_state_machine_interprocedural_before.internalized() #[[ATTR8]]
+; CHECK-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR8]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
 ; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__5 to i8*), i8* noundef @__omp_outlined__5_wrapper.ID, i8** noundef [[TMP1]], i64 noundef 0)
-; CHECK-NEXT:    call void @simple_state_machine_interprocedural_after.internalized() #[[ATTR7]]
+; CHECK-NEXT:    call void @simple_state_machine_interprocedural_after.internalized() #[[ATTR8]]
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -1133,7 +1135,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    call void @p1() #[[ATTR9]]
+; CHECK-NEXT:    call void @p1() #[[ATTR10]]
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -1179,7 +1181,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca i8*, align 8
+; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca i8*, align 8, addrspace(5)
 ; CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i1 false, i1 false, i1 true)
@@ -1187,8 +1189,9 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
 ; CHECK:       worker_state_machine.begin:
 ; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
-; CHECK-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(i8** [[WORKER_WORK_FN_ADDR]])
-; CHECK-NEXT:    [[WORKER_WORK_FN:%.*]] = load i8*, i8** [[WORKER_WORK_FN_ADDR]], align 8
+; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast i8* addrspace(5)* [[WORKER_WORK_FN_ADDR]] to i8**
+; CHECK-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(i8** [[WORKER_WORK_FN_ADDR_GENERIC]])
+; CHECK-NEXT:    [[WORKER_WORK_FN:%.*]] = load i8*, i8** [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
 ; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR_CAST:%.*]] = bitcast i8* [[WORKER_WORK_FN]] to void (i16, i32)*
 ; CHECK-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq i8* [[WORKER_WORK_FN]], null
 ; CHECK-NEXT:    br i1 [[WORKER_IS_DONE]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]], label [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:%.*]]
@@ -1242,7 +1245,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
 ; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__7 to i8*), i8* noundef @__omp_outlined__7_wrapper.ID, i8** noundef [[TMP1]], i64 noundef 0)
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @unknown() #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @unknown() #[[ATTR10]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS1]] to i8**
 ; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__8 to i8*), i8* noundef @__omp_outlined__8_wrapper.ID, i8** noundef [[TMP2]], i64 noundef 0)
 ; CHECK-NEXT:    ret void
@@ -1254,7 +1257,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    call void @p0() #[[ATTR9]]
+; CHECK-NEXT:    call void @p0() #[[ATTR10]]
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -1280,7 +1283,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    call void @p1() #[[ATTR9]]
+; CHECK-NEXT:    call void @p1() #[[ATTR10]]
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -1304,7 +1307,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca i8*, align 8
+; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca i8*, align 8, addrspace(5)
 ; CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i1 false, i1 false, i1 true)
@@ -1312,8 +1315,9 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
 ; CHECK:       worker_state_machine.begin:
 ; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
-; CHECK-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(i8** [[WORKER_WORK_FN_ADDR]])
-; CHECK-NEXT:    [[WORKER_WORK_FN:%.*]] = load i8*, i8** [[WORKER_WORK_FN_ADDR]], align 8
+; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast i8* addrspace(5)* [[WORKER_WORK_FN_ADDR]] to i8**
+; CHECK-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(i8** [[WORKER_WORK_FN_ADDR_GENERIC]])
+; CHECK-NEXT:    [[WORKER_WORK_FN:%.*]] = load i8*, i8** [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
 ; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR_CAST:%.*]] = bitcast i8* [[WORKER_WORK_FN]] to void (i16, i32)*
 ; CHECK-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq i8* [[WORKER_WORK_FN]], null
 ; CHECK-NEXT:    br i1 [[WORKER_IS_DONE]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]], label [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:%.*]]
@@ -1365,7 +1369,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
 ; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__10 to i8*), i8* noundef @__omp_outlined__10_wrapper.ID, i8** noundef [[TMP1]], i64 noundef 0)
-; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR8]]
+; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR9]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS1]] to i8**
 ; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__11 to i8*), i8* noundef @__omp_outlined__11_wrapper.ID, i8** noundef [[TMP2]], i64 noundef 0)
 ; CHECK-NEXT:    ret void
@@ -1377,7 +1381,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    call void @p0() #[[ATTR9]]
+; CHECK-NEXT:    call void @p0() #[[ATTR10]]
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -1403,7 +1407,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    call void @p1() #[[ATTR9]]
+; CHECK-NEXT:    call void @p1() #[[ATTR10]]
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -1427,7 +1431,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_pure_l77
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca i8*, align 8
+; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca i8*, align 8, addrspace(5)
 ; CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i1 false, i1 false, i1 true)
@@ -1435,8 +1439,9 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
 ; CHECK:       worker_state_machine.begin:
 ; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
-; CHECK-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(i8** [[WORKER_WORK_FN_ADDR]])
-; CHECK-NEXT:    [[WORKER_WORK_FN:%.*]] = load i8*, i8** [[WORKER_WORK_FN_ADDR]], align 8
+; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast i8* addrspace(5)* [[WORKER_WORK_FN_ADDR]] to i8**
+; CHECK-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(i8** [[WORKER_WORK_FN_ADDR_GENERIC]])
+; CHECK-NEXT:    [[WORKER_WORK_FN:%.*]] = load i8*, i8** [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
 ; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR_CAST:%.*]] = bitcast i8* [[WORKER_WORK_FN]] to void (i16, i32)*
 ; CHECK-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq i8* [[WORKER_WORK_FN]], null
 ; CHECK-NEXT:    br i1 [[WORKER_IS_DONE]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]], label [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:%.*]]
@@ -1485,7 +1490,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x i8*], align 8
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x i8*], align 8
 ; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR8]]
+; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR9]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
 ; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__13 to i8*), i8* noundef @__omp_outlined__13_wrapper.ID, i8** noundef [[TMP1]], i64 noundef 0)
@@ -1500,7 +1505,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    call void @p0() #[[ATTR9]]
+; CHECK-NEXT:    call void @p0() #[[ATTR10]]
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -1526,7 +1531,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    call void @p1() #[[ATTR9]]
+; CHECK-NEXT:    call void @p1() #[[ATTR10]]
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -1550,7 +1555,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca i8*, align 8
+; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca i8*, align 8, addrspace(5)
 ; CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i1 false, i1 false, i1 true)
@@ -1558,8 +1563,9 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
 ; CHECK:       worker_state_machine.begin:
 ; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
-; CHECK-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(i8** [[WORKER_WORK_FN_ADDR]])
-; CHECK-NEXT:    [[WORKER_WORK_FN:%.*]] = load i8*, i8** [[WORKER_WORK_FN_ADDR]], align 8
+; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast i8* addrspace(5)* [[WORKER_WORK_FN_ADDR]] to i8**
+; CHECK-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(i8** [[WORKER_WORK_FN_ADDR_GENERIC]])
+; CHECK-NEXT:    [[WORKER_WORK_FN:%.*]] = load i8*, i8** [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
 ; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR_CAST:%.*]] = bitcast i8* [[WORKER_WORK_FN]] to void (i16, i32)*
 ; CHECK-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq i8* [[WORKER_WORK_FN]], null
 ; CHECK-NEXT:    br i1 [[WORKER_IS_DONE]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]], label [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:%.*]]
@@ -1600,8 +1606,8 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 bitcast (i32 (...)* @omp_get_thread_num to i32 ()*)() #[[ATTR9]]
-; CHECK-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[CALL]]) #[[ATTR7]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 bitcast (i32 (...)* @omp_get_thread_num to i32 ()*)() #[[ATTR10]]
+; CHECK-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[CALL]]) #[[ATTR8]]
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -1617,8 +1623,8 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[A]], 1
-; CHECK-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[SUB]]) #[[ATTR7]]
-; CHECK-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after.internalized() #[[ATTR7]]
+; CHECK-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[SUB]]) #[[ATTR8]]
+; CHECK-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after.internalized() #[[ATTR8]]
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
@@ -1638,8 +1644,8 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[A_ADDR]], align 4
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP1]], 1
-; CHECK-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after(i32 [[SUB]]) #[[ATTR9]]
-; CHECK-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after() #[[ATTR9]]
+; CHECK-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after(i32 [[SUB]]) #[[ATTR10]]
+; CHECK-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after() #[[ATTR10]]
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
@@ -1649,7 +1655,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca i8*, align 8
+; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca i8*, align 8, addrspace(5)
 ; CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i1 false, i1 false, i1 true)
@@ -1657,8 +1663,9 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
 ; CHECK:       worker_state_machine.begin:
 ; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
-; CHECK-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(i8** [[WORKER_WORK_FN_ADDR]])
-; CHECK-NEXT:    [[WORKER_WORK_FN:%.*]] = load i8*, i8** [[WORKER_WORK_FN_ADDR]], align 8
+; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast i8* addrspace(5)* [[WORKER_WORK_FN_ADDR]] to i8**
+; CHECK-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(i8** [[WORKER_WORK_FN_ADDR_GENERIC]])
+; CHECK-NEXT:    [[WORKER_WORK_FN:%.*]] = load i8*, i8** [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
 ; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR_CAST:%.*]] = bitcast i8* [[WORKER_WORK_FN]] to void (i16, i32)*
 ; CHECK-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq i8* [[WORKER_WORK_FN]], null
 ; CHECK-NEXT:    br i1 [[WORKER_IS_DONE]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]], label [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:%.*]]
@@ -1693,7 +1700,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    call void @weak_callee_empty() #[[ATTR7]]
+; CHECK-NEXT:    call void @weak_callee_empty() #[[ATTR8]]
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -1710,7 +1717,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    call void @p0() #[[ATTR9]]
+; CHECK-NEXT:    call void @p0() #[[ATTR10]]
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -1736,7 +1743,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    call void @p0() #[[ATTR9]]
+; CHECK-NEXT:    call void @p0() #[[ATTR10]]
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -1784,7 +1791,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    call void @p0() #[[ATTR9]]
+; CHECK-NEXT:    call void @p0() #[[ATTR10]]
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -1828,8 +1835,8 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-DISABLED-NEXT:  entry:
 ; CHECK-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-DISABLED-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR7:[0-9]+]]
-; CHECK-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR8:[0-9]+]]
+; CHECK-DISABLED-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR8:[0-9]+]]
+; CHECK-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR9:[0-9]+]]
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 ;
@@ -1895,11 +1902,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-DISABLED-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x i8*], align 8
 ; CHECK-DISABLED-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x i8*], align 8
 ; CHECK-DISABLED-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR8]]
+; CHECK-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR9]]
 ; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
 ; CHECK-DISABLED-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
 ; CHECK-DISABLED-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__2 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__2_wrapper to i8*), i8** noundef [[TMP1]], i64 noundef 0)
-; CHECK-DISABLED-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR7]]
+; CHECK-DISABLED-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR8]]
 ; CHECK-DISABLED-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS1]] to i8**
 ; CHECK-DISABLED-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__3 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__3_wrapper to i8*), i8** noundef [[TMP2]], i64 noundef 0)
 ; CHECK-DISABLED-NEXT:    ret void
@@ -1911,7 +1918,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-DISABLED-NEXT:  entry:
 ; CHECK-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-DISABLED-NEXT:    call void @p0() #[[ATTR9:[0-9]+]]
+; CHECK-DISABLED-NEXT:    call void @p0() #[[ATTR10:[0-9]+]]
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 ;
@@ -1937,7 +1944,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-DISABLED-NEXT:  entry:
 ; CHECK-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-DISABLED-NEXT:    call void @p1() #[[ATTR9]]
+; CHECK-DISABLED-NEXT:    call void @p1() #[[ATTR10]]
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 ;
@@ -1984,13 +1991,13 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-DISABLED-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x i8*], align 8
 ; CHECK-DISABLED-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR8]]
-; CHECK-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_before.internalized() #[[ATTR7]]
-; CHECK-DISABLED-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR7]]
+; CHECK-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR9]]
+; CHECK-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_before.internalized() #[[ATTR8]]
+; CHECK-DISABLED-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR8]]
 ; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
 ; CHECK-DISABLED-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
 ; CHECK-DISABLED-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__5 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__5_wrapper to i8*), i8** noundef [[TMP1]], i64 noundef 0)
-; CHECK-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_after.internalized() #[[ATTR7]]
+; CHECK-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_after.internalized() #[[ATTR8]]
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 ;
@@ -2022,7 +2029,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-DISABLED-NEXT:  entry:
 ; CHECK-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-DISABLED-NEXT:    call void @p1() #[[ATTR9]]
+; CHECK-DISABLED-NEXT:    call void @p1() #[[ATTR10]]
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 ;
@@ -2095,7 +2102,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
 ; CHECK-DISABLED-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
 ; CHECK-DISABLED-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__7 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__7_wrapper to i8*), i8** noundef [[TMP1]], i64 noundef 0)
-; CHECK-DISABLED-NEXT:    [[CALL:%.*]] = call i32 @unknown() #[[ATTR9]]
+; CHECK-DISABLED-NEXT:    [[CALL:%.*]] = call i32 @unknown() #[[ATTR10]]
 ; CHECK-DISABLED-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS1]] to i8**
 ; CHECK-DISABLED-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__8 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__8_wrapper to i8*), i8** noundef [[TMP2]], i64 noundef 0)
 ; CHECK-DISABLED-NEXT:    ret void
@@ -2107,7 +2114,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-DISABLED-NEXT:  entry:
 ; CHECK-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-DISABLED-NEXT:    call void @p0() #[[ATTR9]]
+; CHECK-DISABLED-NEXT:    call void @p0() #[[ATTR10]]
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 ;
@@ -2133,7 +2140,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-DISABLED-NEXT:  entry:
 ; CHECK-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-DISABLED-NEXT:    call void @p1() #[[ATTR9]]
+; CHECK-DISABLED-NEXT:    call void @p1() #[[ATTR10]]
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 ;
@@ -2184,7 +2191,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
 ; CHECK-DISABLED-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
 ; CHECK-DISABLED-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__10 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__10_wrapper to i8*), i8** noundef [[TMP1]], i64 noundef 0)
-; CHECK-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR8]]
+; CHECK-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR9]]
 ; CHECK-DISABLED-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS1]] to i8**
 ; CHECK-DISABLED-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__11 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__11_wrapper to i8*), i8** noundef [[TMP2]], i64 noundef 0)
 ; CHECK-DISABLED-NEXT:    ret void
@@ -2196,7 +2203,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-DISABLED-NEXT:  entry:
 ; CHECK-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-DISABLED-NEXT:    call void @p0() #[[ATTR9]]
+; CHECK-DISABLED-NEXT:    call void @p0() #[[ATTR10]]
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 ;
@@ -2222,7 +2229,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-DISABLED-NEXT:  entry:
 ; CHECK-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-DISABLED-NEXT:    call void @p1() #[[ATTR9]]
+; CHECK-DISABLED-NEXT:    call void @p1() #[[ATTR10]]
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 ;
@@ -2270,7 +2277,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-DISABLED-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x i8*], align 8
 ; CHECK-DISABLED-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x i8*], align 8
 ; CHECK-DISABLED-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR8]]
+; CHECK-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR9]]
 ; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
 ; CHECK-DISABLED-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
 ; CHECK-DISABLED-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__13 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__13_wrapper to i8*), i8** noundef [[TMP1]], i64 noundef 0)
@@ -2285,7 +2292,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-DISABLED-NEXT:  entry:
 ; CHECK-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-DISABLED-NEXT:    call void @p0() #[[ATTR9]]
+; CHECK-DISABLED-NEXT:    call void @p0() #[[ATTR10]]
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 ;
@@ -2311,7 +2318,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-DISABLED-NEXT:  entry:
 ; CHECK-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-DISABLED-NEXT:    call void @p1() #[[ATTR9]]
+; CHECK-DISABLED-NEXT:    call void @p1() #[[ATTR10]]
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 ;
@@ -2355,8 +2362,8 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-DISABLED-NEXT:  entry:
 ; CHECK-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-DISABLED-NEXT:    [[CALL:%.*]] = call i32 bitcast (i32 (...)* @omp_get_thread_num to i32 ()*)() #[[ATTR9]]
-; CHECK-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[CALL]]) #[[ATTR7]]
+; CHECK-DISABLED-NEXT:    [[CALL:%.*]] = call i32 bitcast (i32 (...)* @omp_get_thread_num to i32 ()*)() #[[ATTR10]]
+; CHECK-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[CALL]]) #[[ATTR8]]
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 ;
@@ -2372,8 +2379,8 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-DISABLED-NEXT:    br label [[RETURN:%.*]]
 ; CHECK-DISABLED:       if.end:
 ; CHECK-DISABLED-NEXT:    [[SUB:%.*]] = sub nsw i32 [[A]], 1
-; CHECK-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[SUB]]) #[[ATTR7]]
-; CHECK-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after.internalized() #[[ATTR7]]
+; CHECK-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[SUB]]) #[[ATTR8]]
+; CHECK-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after.internalized() #[[ATTR8]]
 ; CHECK-DISABLED-NEXT:    br label [[RETURN]]
 ; CHECK-DISABLED:       return:
 ; CHECK-DISABLED-NEXT:    ret void
@@ -2393,8 +2400,8 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-DISABLED:       if.end:
 ; CHECK-DISABLED-NEXT:    [[TMP1:%.*]] = load i32, i32* [[A_ADDR]], align 4
 ; CHECK-DISABLED-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP1]], 1
-; CHECK-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after(i32 [[SUB]]) #[[ATTR9]]
-; CHECK-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after() #[[ATTR9]]
+; CHECK-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after(i32 [[SUB]]) #[[ATTR10]]
+; CHECK-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after() #[[ATTR10]]
 ; CHECK-DISABLED-NEXT:    br label [[RETURN]]
 ; CHECK-DISABLED:       return:
 ; CHECK-DISABLED-NEXT:    ret void
@@ -2424,7 +2431,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-DISABLED-NEXT:  entry:
 ; CHECK-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-DISABLED-NEXT:    call void @weak_callee_empty() #[[ATTR7]]
+; CHECK-DISABLED-NEXT:    call void @weak_callee_empty() #[[ATTR8]]
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 ;
@@ -2441,7 +2448,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-DISABLED-NEXT:  entry:
 ; CHECK-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-DISABLED-NEXT:    call void @p0() #[[ATTR9]]
+; CHECK-DISABLED-NEXT:    call void @p0() #[[ATTR10]]
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 ;
@@ -2467,7 +2474,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-DISABLED-NEXT:  entry:
 ; CHECK-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-DISABLED-NEXT:    call void @p0() #[[ATTR9]]
+; CHECK-DISABLED-NEXT:    call void @p0() #[[ATTR10]]
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 ;
@@ -2515,7 +2522,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; CHECK-DISABLED-NEXT:  entry:
 ; CHECK-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-DISABLED-NEXT:    call void @p0() #[[ATTR9]]
+; CHECK-DISABLED-NEXT:    call void @p0() #[[ATTR10]]
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 ;

@@ -2043,7 +2043,7 @@ bool OpenMPOpt::rewriteDeviceCodeStateMachine() {
         UndefValue::get(Int8Ty), F->getName() + ".ID");
 
     for (Use *U : ToBeReplacedStateMachineUses)
-      U->set(ConstantExpr::getBitCast(ID, U->get()->getType()));
+      U->set(ConstantExpr::getPointerBitCastOrAddrSpaceCast(ID, U->get()->getType()));
 
     ++NumOpenMPParallelRegionsReplacedInGPUStateMachine;
 
@@ -3432,7 +3432,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
     // Create local storage for the work function pointer.
     Type *VoidPtrTy = Type::getInt8PtrTy(Ctx);
-    AllocaInst *WorkFnAI = new AllocaInst(VoidPtrTy, 0, "worker.work_fn.addr",
+    AllocaInst *WorkFnAI = new AllocaInst(VoidPtrTy, (unsigned int)AddressSpace::Local, "worker.work_fn.addr",
                                           &Kernel->getEntryBlock().front());
     WorkFnAI->setDebugLoc(DLoc);
 
@@ -3453,13 +3453,19 @@ struct AAKernelInfoFunction : AAKernelInfo {
     CallInst::Create(BarrierFn, {Ident, GTid}, "", StateMachineBeginBB)
         ->setDebugLoc(DLoc);
 
+    Instruction *WorkFnAI_generic = new AddrSpaceCastInst(WorkFnAI,
+        PointerType::getWithSamePointeeType(cast<PointerType>(WorkFnAI->getType()),
+                                            (unsigned int)AddressSpace::Generic),
+        WorkFnAI->getName() + ".generic", StateMachineBeginBB);
+    WorkFnAI_generic ->setDebugLoc(DLoc);
+
     FunctionCallee KernelParallelFn =
         OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
             M, OMPRTL___kmpc_kernel_parallel);
     Instruction *IsActiveWorker = CallInst::Create(
-        KernelParallelFn, {WorkFnAI}, "worker.is_active", StateMachineBeginBB);
+        KernelParallelFn, {WorkFnAI_generic}, "worker.is_active", StateMachineBeginBB);
     IsActiveWorker->setDebugLoc(DLoc);
-    Instruction *WorkFn = new LoadInst(VoidPtrTy, WorkFnAI, "worker.work_fn",
+    Instruction *WorkFn = new LoadInst(VoidPtrTy, WorkFnAI_generic, "worker.work_fn",
                                        StateMachineBeginBB);
     WorkFn->setDebugLoc(DLoc);
 
@@ -4428,8 +4434,6 @@ AAFoldRuntimeCall &AAFoldRuntimeCall::createForPosition(const IRPosition &IRP,
 PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   if (!containsOpenMP(M))
     return PreservedAnalyses::all();
-  if (M.getTargetTriple() == std::string("amdgcn-amd-amdhsa"))
-    return PreservedAnalyses::all();
   if (DisableOpenMPOptimizations)
     return PreservedAnalyses::all();
 
@@ -4525,8 +4529,6 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
     return PreservedAnalyses::all();
 
   Module &M = *C.begin()->getFunction().getParent();
-  if (M.getTargetTriple() == std::string("amdgcn-amd-amdhsa"))
-    return PreservedAnalyses::all();
   if (DisableOpenMPOptimizations)
     return PreservedAnalyses::all();
 
@@ -4591,9 +4593,6 @@ struct OpenMPOptCGSCCLegacyPass : public CallGraphSCCPass {
 
   bool runOnSCC(CallGraphSCC &CGSCC) override {
     if (!containsOpenMP(CGSCC.getCallGraph().getModule()))
-      return false;
-    if (CGSCC.getCallGraph().getModule().getTargetTriple()
-         == std::string("amdgcn-amd-amdhsa"))
       return false;
     if (DisableOpenMPOptimizations || skipSCC(CGSCC))
       return false;
