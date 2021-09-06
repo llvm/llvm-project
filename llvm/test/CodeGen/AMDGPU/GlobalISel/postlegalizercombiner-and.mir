@@ -12,8 +12,8 @@ body:             |
     ; CHECK-LABEL: name: remove_and_255_zextload
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK: %ptr:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK: %load:_(s32) = G_ZEXTLOAD %ptr(p1) :: (load (s8), addrspace 1)
-    ; CHECK: $vgpr0 = COPY %load(s32)
+    ; CHECK: %and:_(s32) = G_ZEXTLOAD %ptr(p1) :: (load (s8), addrspace 1)
+    ; CHECK: $vgpr0 = COPY %and(s32)
     %ptr:_(p1) = COPY $vgpr0_vgpr1
     %load:_(s32) = G_ZEXTLOAD %ptr :: (load (s8), addrspace 1, align 1)
     %mask:_(s32) = G_CONSTANT i32 255
