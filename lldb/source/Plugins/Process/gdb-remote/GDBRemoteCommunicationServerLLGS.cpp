@@ -3619,9 +3619,8 @@ GDBRemoteCommunicationServerLLGS::Handle_qSaveCore(
   std::string path_hint;
 
   StringRef packet_str{packet.GetStringRef()};
-  bool cf = packet_str.consume_front("qSaveCore");
-  assert(cf);
-  if (packet_str.consume_front(";")) {
+  assert(packet_str.startswith("qSaveCore"));
+  if (packet_str.consume_front("qSaveCore;")) {
     llvm::SmallVector<llvm::StringRef, 2> fields;
     packet_str.split(fields, ';');
 
@@ -3635,7 +3634,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qSaveCore(
 
   llvm::Expected<std::string> ret = m_current_process->SaveCore(path_hint);
   if (!ret)
-    return SendErrorResponse(std::move(ret.takeError()));
+    return SendErrorResponse(ret.takeError());
 
   StreamString response;
   response.PutCString("core-path:");
