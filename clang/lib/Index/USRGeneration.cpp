@@ -705,6 +705,7 @@ void USRGenerator::VisitType(QualType T) {
           c = 'f'; break;
         case BuiltinType::Double:
           c = 'd'; break;
+        case BuiltinType::Ibm128: // FIXME: Need separate tag
         case BuiltinType::LongDouble:
           c = 'D'; break;
         case BuiltinType::Float128:
