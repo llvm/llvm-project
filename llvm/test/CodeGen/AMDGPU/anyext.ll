@@ -14,8 +14,7 @@ define amdgpu_kernel void @anyext_i1_i32(i32 addrspace(1)* %out, i32 %cond) #0 {
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_cmp_lg_u32 s0, 0
-; GCN-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GCN-NEXT:    v_cmp_ne_u32_e64 s[0:1], s0, 0
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
@@ -27,8 +26,7 @@ define amdgpu_kernel void @anyext_i1_i32(i32 addrspace(1)* %out, i32 %cond) #0 {
 ; GFX8-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX8-NEXT:    s_mov_b32 s6, -1
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    s_cmp_eq_u32 s0, 0
-; GFX8-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GFX8-NEXT:    v_cmp_eq_u32_e64 s[0:1], s0, 0
 ; GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; GFX8-NEXT:    v_not_b32_e32 v0, v0
 ; GFX8-NEXT:    v_and_b32_e32 v0, 1, v0
@@ -42,8 +40,7 @@ define amdgpu_kernel void @anyext_i1_i32(i32 addrspace(1)* %out, i32 %cond) #0 {
 ; GFX9-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s6, -1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_cmp_eq_u32 s2, 0
-; GFX9-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GFX9-NEXT:    v_cmp_eq_u32_e64 s[0:1], s2, 0
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; GFX9-NEXT:    v_not_b32_e32 v0, v0
 ; GFX9-NEXT:    v_and_b32_e32 v0, 1, v0

@@ -68,7 +68,7 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}selectcc_bool:
-; SI: s_cmp_lg_u32
+; SI: v_cmp_ne_u32
 ; SI: v_cndmask_b32_e64
 ; SI-NOT: cmp
 ; SI-NOT: cndmask

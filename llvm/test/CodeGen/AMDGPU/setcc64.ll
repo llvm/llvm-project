@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s| FileCheck -check-prefixes=GCN,SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s| FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; XXX: Merge this into setcc, once R600 supports 64-bit operations
 
@@ -159,8 +159,7 @@ entry:
 ;;;==========================================================================;;;
 
 ; GCN-LABEL: {{^}}i64_eq:
-; SI: v_cmp_eq_u64
-; VI: s_cmp_eq_u64
+; GCN: v_cmp_eq_u64
 define amdgpu_kernel void @i64_eq(i32 addrspace(1)* %out, i64 %a, i64 %b) #0 {
 entry:
   %tmp0 = icmp eq i64 %a, %b
@@ -170,8 +169,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}i64_ne:
-; SI: v_cmp_ne_u64
-; VI: s_cmp_lg_u64
+; GCN: v_cmp_ne_u64
 define amdgpu_kernel void @i64_ne(i32 addrspace(1)* %out, i64 %a, i64 %b) #0 {
 entry:
   %tmp0 = icmp ne i64 %a, %b

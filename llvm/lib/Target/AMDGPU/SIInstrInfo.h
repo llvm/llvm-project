@@ -122,8 +122,7 @@ private:
 
   void addSCCDefUsersToVALUWorklist(MachineOperand &Op,
                                     MachineInstr &SCCDefInst,
-                                    SetVectorType &Worklist,
-                                    Register NewCond = Register()) const;
+                                    SetVectorType &Worklist) const;
   void addSCCDefsToVALUWorklist(MachineOperand &Op,
                                 SetVectorType &Worklist) const;
 

@@ -8,7 +8,7 @@
 ; GCN: s_load_dwordx2
 ; GCN: s_load_dwordx2
 
-; GCN: s_cmp_eq_u32
+; GCN: v_cmp_eq_u32
 ; GCN: v_cndmask_b32
 ; GCN: v_cndmask_b32
 

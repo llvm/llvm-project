@@ -347,9 +347,9 @@ bb:
 ; GFX1064: v_add_co_u32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX1064: v_add_co_u32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX1064: v_add_co_ci_u32_e32 v{{[0-9]+}}, vcc, 0, v{{[0-9]+}}, vcc{{$}}
-; GFX1064: v_sub_co_u32 v{{[0-9]+}}, vcc, s{{[0-9]+}}, v{{[0-9]+}}
-; GFX1064: v_subrev_co_ci_u32_e64 v{{[0-9]+}}, s[{{[0-9:]+}}], {{[vs][0-9]+}}, v{{[0-9]+}}, vcc
-; GFX1064: v_sub_co_ci_u32_e32 v{{[0-9]+}}, vcc, {{[vs][0-9]+}}, v{{[0-9]+}}, vcc
+; GFX1064: v_sub_co_u32 v{{[0-9]+}}, s[{{[0-9:]+}}], s{{[0-9]+}}, v{{[0-9]+}}
+; GFX1064: v_subrev_co_ci_u32_e64 v{{[0-9]+}}, vcc, {{[vs][0-9]+}}, v{{[0-9]+}}, s[{{[0-9:]+}}]
+; GFX1064: v_sub_co_ci_u32_e64 v{{[0-9]+}}, s[{{[0-9:]+}}], {{[vs][0-9]+}}, v{{[0-9]+}}, s[{{[0-9:]+}}]
 define amdgpu_kernel void @test_udiv64(i64 addrspace(1)* %arg) #0 {
 bb:
   %tmp = getelementptr inbounds i64, i64 addrspace(1)* %arg, i64 1
@@ -418,9 +418,8 @@ define i64 @test_mad_u64_u32(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 }
 
 ; GCN-LABEL: {{^}}test_div_fmas_f32:
-; GCN:     s_bitcmp1_b32 s{{[0-9]+}}, 0
-; GFX1032: s_cselect_b32 vcc_lo, -1, 0
-; GFX1064: s_cselect_b64 vcc, -1, 0
+; GFX1032: v_cmp_eq_u32_e64 vcc_lo,
+; GFX1064: v_cmp_eq_u32_e64 vcc,
 ; GCN:     v_div_fmas_f32 v{{[0-9]+}}, {{[vs][0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 define amdgpu_kernel void @test_div_fmas_f32(float addrspace(1)* %out, float %a, float %b, float %c, i1 %d) nounwind {
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 %d) nounwind readnone
@@ -429,9 +428,8 @@ define amdgpu_kernel void @test_div_fmas_f32(float addrspace(1)* %out, float %a,
 }
 
 ; GCN-LABEL: {{^}}test_div_fmas_f64:
-; GCN:     s_bitcmp1_b32 s{{[0-9]+}}, 0
-; GFX1032: s_cselect_b32 vcc_lo, -1, 0
-; GFX1064: s_cselect_b64 vcc, -1, 0
+; GFX1032: v_cmp_eq_u32_e64 vcc_lo,
+; GFX1064: v_cmp_eq_u32_e64 vcc,
 ; GCN-DAG: v_div_fmas_f64 v[{{[0-9:]+}}], {{[vs]}}[{{[0-9:]+}}], v[{{[0-9:]+}}], v[{{[0-9:]+}}]
 define amdgpu_kernel void @test_div_fmas_f64(double addrspace(1)* %out, double %a, double %b, double %c, i1 %d) nounwind {
   %result = call double @llvm.amdgcn.div.fmas.f64(double %a, double %b, double %c, i1 %d) nounwind readnone
