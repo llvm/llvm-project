@@ -4434,6 +4434,8 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_FMAXIMUM:
   case G_FSHL:
   case G_FSHR:
+  case G_ROTL:
+  case G_ROTR:
   case G_FREEZE:
   case G_SADDSAT:
   case G_SSUBSAT:
@@ -6078,6 +6080,27 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerRotate(MachineInstr &MI) {
   if (LI.isLegalOrCustom({RevRot, {DstTy, SrcTy}}) &&
       isPowerOf2_32(EltSizeInBits))
     return lowerRotateWithReverseRotate(MI);
+
+  // If a funnel shift is supported, use it.
+  unsigned FShOpc = IsLeft ? TargetOpcode::G_FSHL : TargetOpcode::G_FSHR;
+  unsigned RevFsh = !IsLeft ? TargetOpcode::G_FSHL : TargetOpcode::G_FSHR;
+  bool IsFShLegal = false;
+  if ((IsFShLegal = LI.isLegalOrCustom({FShOpc, {DstTy, AmtTy}})) ||
+      LI.isLegalOrCustom({RevFsh, {DstTy, AmtTy}})) {
+    auto buildFunnelShift = [&](unsigned Opc, Register R1, Register R2,
+                                Register R3) {
+      MIRBuilder.buildInstr(Opc, {R1}, {R2, R2, R3});
+      MI.eraseFromParent();
+      return Legalized;
+    };
+    // If a funnel shift in the other direction is supported, use it.
+    if (IsFShLegal) {
+      return buildFunnelShift(FShOpc, Dst, Src, Amt);
+    } else if (isPowerOf2_32(EltSizeInBits)) {
+      Amt = MIRBuilder.buildNeg(DstTy, Amt).getReg(0);
+      return buildFunnelShift(RevFsh, Dst, Src, Amt);
+    }
+  }
 
   auto Zero = MIRBuilder.buildConstant(AmtTy, 0);
   unsigned ShOpc = IsLeft ? TargetOpcode::G_SHL : TargetOpcode::G_LSHR;
