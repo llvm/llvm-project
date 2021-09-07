@@ -1213,6 +1213,13 @@ public:
 
 };
 
+/// Enable verification of loop info.
+///
+/// The flag enables checks which are expensive and are disabled by default
+/// unless the `EXPENSIVE_CHECKS` macro is defined.  The `-verify-loop-info`
+/// flag allows the checks to be enabled selectively without re-compilation.
+extern bool VerifyLoopInfo;
+
 // Allow clients to walk the list of nested loops...
 template <> struct GraphTraits<const Loop *> {
   typedef const Loop *NodeRef;
