@@ -1387,3 +1387,13 @@ void relational_operator_reversed() {
     }
   }
 }
+
+void volatile_concrete_address() {
+  // No warning. The value behind the volatile concrete address
+  // is beyond our control. It may change at any time.
+  if (*(volatile int *)0x1234) {
+    if (*(volatile int *)0x1234) {
+      doSomething();
+    }
+  }
+}
