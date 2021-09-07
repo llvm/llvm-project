@@ -2145,6 +2145,74 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createCritical(
                               /*Conditional*/ false, /*hasFinalize*/ true);
 }
 
+OpenMPIRBuilder::InsertPointTy
+OpenMPIRBuilder::createOrderedDepend(const LocationDescription &Loc,
+                                     InsertPointTy AllocaIP, unsigned NumLoops,
+                                     ArrayRef<llvm::Value *> StoreValues,
+                                     const Twine &Name, bool IsDependSource) {
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+
+  // Allocate space for vector and generate alloc instruction.
+  auto *ArrI64Ty = ArrayType::get(Int64, NumLoops);
+  Builder.restoreIP(AllocaIP);
+  AllocaInst *ArgsBase = Builder.CreateAlloca(ArrI64Ty, nullptr, Name);
+  ArgsBase->setAlignment(Align(8));
+  Builder.restoreIP(Loc.IP);
+
+  // Store the index value with offset in depend vector.
+  for (unsigned I = 0; I < NumLoops; ++I) {
+    Value *DependAddrGEPIter = Builder.CreateInBoundsGEP(
+        ArrI64Ty, ArgsBase, {Builder.getInt64(0), Builder.getInt64(I)});
+    Builder.CreateStore(StoreValues[I], DependAddrGEPIter);
+  }
+
+  Value *DependBaseAddrGEP = Builder.CreateInBoundsGEP(
+      ArrI64Ty, ArgsBase, {Builder.getInt64(0), Builder.getInt64(0)});
+
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc);
+  Value *Ident = getOrCreateIdent(SrcLocStr);
+  Value *ThreadId = getOrCreateThreadID(Ident);
+  Value *Args[] = {Ident, ThreadId, DependBaseAddrGEP};
+
+  Function *RTLFn = nullptr;
+  if (IsDependSource)
+    RTLFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_doacross_post);
+  else
+    RTLFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_doacross_wait);
+  Builder.CreateCall(RTLFn, Args);
+
+  return Builder.saveIP();
+}
+
+OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createOrderedThreadsSimd(
+    const LocationDescription &Loc, BodyGenCallbackTy BodyGenCB,
+    FinalizeCallbackTy FiniCB, bool IsThreads) {
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+
+  Directive OMPD = Directive::OMPD_ordered;
+  Instruction *EntryCall = nullptr;
+  Instruction *ExitCall = nullptr;
+
+  if (IsThreads) {
+    Constant *SrcLocStr = getOrCreateSrcLocStr(Loc);
+    Value *Ident = getOrCreateIdent(SrcLocStr);
+    Value *ThreadId = getOrCreateThreadID(Ident);
+    Value *Args[] = {Ident, ThreadId};
+
+    Function *EntryRTLFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_ordered);
+    EntryCall = Builder.CreateCall(EntryRTLFn, Args);
+
+    Function *ExitRTLFn =
+        getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_end_ordered);
+    ExitCall = Builder.CreateCall(ExitRTLFn, Args);
+  }
+
+  return EmitOMPInlinedRegion(OMPD, EntryCall, ExitCall, BodyGenCB, FiniCB,
+                              /*Conditional*/ false, /*hasFinalize*/ true);
+}
+
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::EmitOMPInlinedRegion(
     Directive OMPD, Instruction *EntryCall, Instruction *ExitCall,
     BodyGenCallbackTy BodyGenCB, FinalizeCallbackTy FiniCB, bool Conditional,

@@ -838,6 +838,35 @@ public:
                                FinalizeCallbackTy FiniCB,
                                StringRef CriticalName, Value *HintInst);
 
+  /// Generator for '#omp ordered depend (source | sink)'
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param AllocaIP The insertion point to be used for alloca instructions.
+  /// \param NumLoops The number of loops in depend clause.
+  /// \param StoreValues The value will be stored in vector address.
+  /// \param Name The name of alloca instruction.
+  /// \param IsDependSource If true, depend source; otherwise, depend sink.
+  ///
+  /// \return The insertion position *after* the ordered.
+  InsertPointTy createOrderedDepend(const LocationDescription &Loc,
+                                    InsertPointTy AllocaIP, unsigned NumLoops,
+                                    ArrayRef<llvm::Value *> StoreValues,
+                                    const Twine &Name, bool IsDependSource);
+
+  /// Generator for '#omp ordered [threads | simd]'
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param BodyGenCB Callback that will generate the region code.
+  /// \param FiniCB Callback to finalize variable copies.
+  /// \param IsThreads If true, with threads clause or without clause;
+  /// otherwise, with simd clause;
+  ///
+  /// \returns The insertion position *after* the ordered.
+  InsertPointTy createOrderedThreadsSimd(const LocationDescription &Loc,
+                                         BodyGenCallbackTy BodyGenCB,
+                                         FinalizeCallbackTy FiniCB,
+                                         bool IsThreads);
+
   /// Generator for '#omp sections'
   ///
   /// \param Loc The insert and source location description.
