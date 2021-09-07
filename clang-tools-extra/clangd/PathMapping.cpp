@@ -40,7 +40,7 @@ llvm::Optional<std::string> doPathMapping(llvm::StringRef S,
     llvm::StringRef Body = Uri->body();
     if (Body.consume_front(From) && (Body.empty() || Body.front() == '/')) {
       std::string MappedBody = (To + Body).str();
-      return URI(Uri->scheme(), Uri->authority(), MappedBody.c_str())
+      return URI(Uri->scheme(), Uri->authority(), MappedBody)
           .toString();
     }
   }

@@ -337,7 +337,7 @@ static llvm::Error handleObjectFile(ObjectFile &Obj,
   // Save the GSYM file to disk.
   support::endianness Endian =
       Obj.makeTriple().isLittleEndian() ? support::little : support::big;
-  if (auto Err = Gsym.save(OutFile.c_str(), Endian))
+  if (auto Err = Gsym.save(OutFile, Endian))
     return Err;
 
   // Verify the DWARF if requested. This will ensure all the info in the DWARF
@@ -359,7 +359,7 @@ static llvm::Error handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
     Triple ObjTriple(Obj->makeTriple());
     auto ArchName = ObjTriple.getArchName();
     outs() << "Output file (" << ArchName << "): " << OutFile << "\n";
-    if (auto Err = handleObjectFile(*Obj, OutFile.c_str()))
+    if (auto Err = handleObjectFile(*Obj, OutFile))
       return Err;
   } else if (auto *Fat = dyn_cast<MachOUniversalBinary>(BinOrErr->get())) {
     // Iterate over all contained architectures and filter out any that were
