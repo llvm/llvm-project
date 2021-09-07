@@ -1,5 +1,8 @@
 ; RUN: llc -mtriple arm64-apple-ios15.0.0 %s -o - | FileCheck %s --check-prefix=CHECK-STATIC
+; RUN: llc -mtriple arm64-apple-ios15.0.0 -swift-async-fp=auto %s -o - | FileCheck %s --check-prefix=CHECK-STATIC
+; RUN: llc -mtriple arm64-apple-ios14.9.0 -swift-async-fp=always %s -o - | FileCheck %s --check-prefix=CHECK-STATIC
 ; RUN: llc -mtriple arm64-apple-ios14.9.0 %s -o - | FileCheck %s --check-prefix=CHECK-DYNAMIC
+; RUN: llc -mtriple arm64-apple-ios14.9.0 -swift-async-fp=auto %s -o - | FileCheck %s --check-prefix=CHECK-DYNAMIC
 ; RUN: llc -mtriple arm64-apple-tvos15.0.0 %s -o - | FileCheck %s --check-prefix=CHECK-STATIC
 ; RUN: llc -mtriple arm64-apple-tvos14.9.0 %s -o - | FileCheck %s --check-prefix=CHECK-DYNAMIC
 ; RUN: llc -mtriple arm64-apple-macosx12.0.0 %s -o - | FileCheck %s --check-prefix=CHECK-STATIC

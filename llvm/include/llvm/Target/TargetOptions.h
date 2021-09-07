@@ -110,6 +110,17 @@ namespace llvm {
     DisableWithDiag // Disable the abort but emit a diagnostic on failure.
   };
 
+  /// Indicates when and how the Swift async frame pointer bit should be set.
+  enum class SwiftAsyncFramePointerMode {
+    /// Determine whether to set the bit statically or dynamically based
+    /// on the deployment target.
+    DeploymentBased,
+    /// Always set the bit.
+    Always,
+    /// Never set the bit.
+    Never,
+  };
+
   class TargetOptions {
   public:
     TargetOptions()
@@ -218,6 +229,11 @@ namespace llvm {
     /// EnableGlobalISelAbort - Control abort behaviour when global instruction
     /// selection fails to lower/select an instruction.
     GlobalISelAbortMode GlobalISelAbort = GlobalISelAbortMode::Enable;
+
+    /// Control when and how the Swift async frame pointer bit should
+    /// be set.
+    SwiftAsyncFramePointerMode SwiftAsyncFramePointer =
+        SwiftAsyncFramePointerMode::DeploymentBased;
 
     /// UseInitArray - Use .init_array instead of .ctors for static
     /// constructors.

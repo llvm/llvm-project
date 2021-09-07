@@ -1363,22 +1363,32 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   unsigned StackProbeSize = STI.getTargetLowering()->getStackProbeSize(MF);
 
   if (HasFP && X86FI->hasSwiftAsyncContext()) {
-    if (STI.swiftAsyncContextIsDynamicallySet()) {
-      // The special symbol below is absolute and has a *value* suitable to be
-      // combined with the frame pointer directly.
-      BuildMI(MBB, MBBI, DL, TII.get(X86::OR64rm), MachineFramePtr)
-          .addUse(MachineFramePtr)
-          .addUse(X86::RIP)
-          .addImm(1)
-          .addUse(X86::NoRegister)
-          .addExternalSymbol("swift_async_extendedFramePointerFlags",
-                             X86II::MO_GOTPCREL)
-          .addUse(X86::NoRegister);
-    } else {
+    switch (MF.getTarget().Options.SwiftAsyncFramePointer) {
+    case SwiftAsyncFramePointerMode::DeploymentBased:
+      if (STI.swiftAsyncContextIsDynamicallySet()) {
+        // The special symbol below is absolute and has a *value* suitable to be
+        // combined with the frame pointer directly.
+        BuildMI(MBB, MBBI, DL, TII.get(X86::OR64rm), MachineFramePtr)
+            .addUse(MachineFramePtr)
+            .addUse(X86::RIP)
+            .addImm(1)
+            .addUse(X86::NoRegister)
+            .addExternalSymbol("swift_async_extendedFramePointerFlags",
+                               X86II::MO_GOTPCREL)
+            .addUse(X86::NoRegister);
+        break;
+      }
+      LLVM_FALLTHROUGH;
+
+    case SwiftAsyncFramePointerMode::Always:
       BuildMI(MBB, MBBI, DL, TII.get(X86::BTS64ri8), MachineFramePtr)
           .addUse(MachineFramePtr)
           .addImm(60)
           .setMIFlag(MachineInstr::FrameSetup);
+      break;
+
+    case SwiftAsyncFramePointerMode::Never:
+      break;
     }
   }
 

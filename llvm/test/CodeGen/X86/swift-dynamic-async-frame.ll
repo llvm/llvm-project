@@ -1,5 +1,9 @@
 ; RUN: llc -mtriple x86_64-apple-macosx12.0.0 %s -o - | FileCheck %s --check-prefix=CHECK-STATIC
+; RUN: llc -mtriple x86_64-apple-macosx12.0.0 -swift-async-fp=always %s -o - | FileCheck %s --check-prefix=CHECK-STATIC
+; RUN: llc -mtriple x86_64-apple-macosx12.0.0 -swift-async-fp=auto %s -o - | FileCheck %s --check-prefix=CHECK-STATIC
+; RUN: llc -mtriple x86_64-apple-macosx11.9.0 -swift-async-fp=always %s -o - | FileCheck %s --check-prefix=CHECK-STATIC
 ; RUN: llc -mtriple x86_64-apple-macosx11.9.0 %s -o - | FileCheck %s --check-prefix=CHECK-DYNAMIC
+; RUN: llc -mtriple x86_64-apple-macosx11.9.0 -swift-async-fp=auto %s -o - | FileCheck %s --check-prefix=CHECK-DYNAMIC
 
 ; CHECK-STATIC-LABEL: foo:
 ; CHECK-STATIC: btsq $60, %rbp
