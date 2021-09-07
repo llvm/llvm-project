@@ -945,6 +945,7 @@ cc_library(
         ":StandardOps",
         ":Support",
         ":Translation",
+        "//llvm:Support",
     ],
 )
 
