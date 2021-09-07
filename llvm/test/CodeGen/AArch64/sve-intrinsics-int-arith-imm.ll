@@ -263,6 +263,159 @@ define <vscale x 4 x i32> @sub_i32_ptrue_all_d(<vscale x 4 x i32> %a) #0 {
   ret <vscale x 4 x i32> %out
 }
 
+; SUBR
+
+define <vscale x 16 x i8> @subr_i8(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: subr_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subr z0.b, z0.b, #127
+; CHECK-NEXT:    ret
+  %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %elt = insertelement <vscale x 16 x i8> undef, i8 127, i32 0
+  %splat = shufflevector <vscale x 16 x i8> %elt, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.subr.nxv16i8(<vscale x 16 x i1> %pg,
+                                                                <vscale x 16 x i8> %a,
+                                                                <vscale x 16 x i8> %splat)
+  ret <vscale x 16 x i8> %out
+}
+
+define <vscale x 8 x i16> @subr_i16(<vscale x 8 x i16> %a) {
+; CHECK-LABEL: subr_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subr z0.h, z0.h, #127
+; CHECK-NEXT:    ret
+  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+  %elt = insertelement <vscale x 8 x i16> undef, i16 127, i32 0
+  %splat = shufflevector <vscale x 8 x i16> %elt, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.subr.nxv8i16(<vscale x 8 x i1> %pg,
+                                                                <vscale x 8 x i16> %a,
+                                                                <vscale x 8 x i16> %splat)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 8 x i16> @subr_i16_out_of_range(<vscale x 8 x i16> %a) {
+; CHECK-LABEL: subr_i16_out_of_range:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #257
+; CHECK-NEXT:    mov z1.h, w8
+; CHECK-NEXT:    sub z0.h, z1.h, z0.h
+; CHECK-NEXT:    ret
+  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+  %elt = insertelement <vscale x 8 x i16> undef, i16 257, i32 0
+  %splat = shufflevector <vscale x 8 x i16> %elt, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.subr.nxv8i16(<vscale x 8 x i1> %pg,
+                                                                <vscale x 8 x i16> %a,
+                                                                <vscale x 8 x i16> %splat)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @subr_i32(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: subr_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subr z0.s, z0.s, #127
+; CHECK-NEXT:    ret
+  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+  %elt = insertelement <vscale x 4 x i32> undef, i32 127, i32 0
+  %splat = shufflevector <vscale x 4 x i32> %elt, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.subr.nxv4i32(<vscale x 4 x i1> %pg,
+                                                                <vscale x 4 x i32> %a,
+                                                                <vscale x 4 x i32> %splat)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 4 x i32> @subr_i32_out_of_range(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: subr_i32_out_of_range:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #257
+; CHECK-NEXT:    mov z1.s, w8
+; CHECK-NEXT:    sub z0.s, z1.s, z0.s
+; CHECK-NEXT:    ret
+  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+  %elt = insertelement <vscale x 4 x i32> undef, i32 257, i32 0
+  %splat = shufflevector <vscale x 4 x i32> %elt, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.subr.nxv4i32(<vscale x 4 x i1> %pg,
+                                                                <vscale x 4 x i32> %a,
+                                                                <vscale x 4 x i32> %splat)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @subr_i64(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: subr_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subr z0.d, z0.d, #127
+; CHECK-NEXT:    ret
+  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
+  %elt = insertelement <vscale x 2 x i64> undef, i64 127, i64 0
+  %splat = shufflevector <vscale x 2 x i64> %elt, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.subr.nxv2i64(<vscale x 2 x i1> %pg,
+                                                                <vscale x 2 x i64> %a,
+                                                                <vscale x 2 x i64> %splat)
+  ret <vscale x 2 x i64> %out
+}
+
+define <vscale x 2 x i64> @subr_i64_out_of_range(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: subr_i64_out_of_range:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #257
+; CHECK-NEXT:    mov z1.d, x8
+; CHECK-NEXT:    sub z0.d, z1.d, z0.d
+; CHECK-NEXT:    ret
+  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
+  %elt = insertelement <vscale x 2 x i64> undef, i64 257, i64 0
+  %splat = shufflevector <vscale x 2 x i64> %elt, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.subr.nxv2i64(<vscale x 2 x i1> %pg,
+                                                                <vscale x 2 x i64> %a,
+                                                                <vscale x 2 x i64> %splat)
+  ret <vscale x 2 x i64> %out
+}
+
+; As subr_i32 but where pg is i8 based and thus compatible for i32.
+define <vscale x 4 x i32> @subr_i32_ptrue_all_b(<vscale x 4 x i32> %a) #0 {
+; CHECK-LABEL: subr_i32_ptrue_all_b:
+; CHECK: subr z0.s, z0.s, #1
+; CHECK-NEXT: ret
+  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
+  %b = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dup.x.nxv4i32(i32 1)
+  %out = tail call <vscale x 4 x i32> @llvm.aarch64.sve.subr.nxv4i32(<vscale x 4 x i1> %pg.s,
+                                                                     <vscale x 4 x i32> %a,
+                                                                     <vscale x 4 x i32> %b)
+  ret <vscale x 4 x i32> %out
+}
+
+; As subr_i32 but where pg is i16 based and thus compatible for i32.
+define <vscale x 4 x i32> @subr_i32_ptrue_all_h(<vscale x 4 x i32> %a) #0 {
+; CHECK-LABEL: subr_i32_ptrue_all_h:
+; CHECK: subr z0.s, z0.s, #1
+; CHECK-NEXT: ret
+  %pg.h = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %pg.h)
+  %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
+  %b = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dup.x.nxv4i32(i32 1)
+  %out = tail call <vscale x 4 x i32> @llvm.aarch64.sve.subr.nxv4i32(<vscale x 4 x i1> %pg.s,
+                                                                     <vscale x 4 x i32> %a,
+                                                                     <vscale x 4 x i32> %b)
+  ret <vscale x 4 x i32> %out
+}
+
+; As subr_i32 but where pg is i64 based, which is not compatibile for i32 and
+; thus inactive lanes are important and the immediate form cannot be used.
+define <vscale x 4 x i32> @subr_i32_ptrue_all_d(<vscale x 4 x i32> %a) #0 {
+; CHECK-LABEL: subr_i32_ptrue_all_d:
+; CHECK-DAG: ptrue [[PG:p[0-9]+]].d
+; CHECK-DAG: mov [[DUP:z[0-9]+]].s, #1
+; CHECK-DAG: subr z0.s, [[PG]]/m, z0.s, [[DUP]].s
+; CHECK-NEXT: ret
+  %pg.d = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
+  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %pg.d)
+  %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
+  %b = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dup.x.nxv4i32(i32 1)
+  %out = tail call <vscale x 4 x i32> @llvm.aarch64.sve.subr.nxv4i32(<vscale x 4 x i1> %pg.s,
+                                                                     <vscale x 4 x i32> %a,
+                                                                     <vscale x 4 x i32> %b)
+  ret <vscale x 4 x i32> %out
+}
+
 ; SMAX
 
 define <vscale x 16 x i8> @smax_i8(<vscale x 16 x i8> %a) {
@@ -1893,6 +2046,11 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.sub.nxv16i8(<vscale x 16 x i1>, <vs
 declare <vscale x 8 x i16> @llvm.aarch64.sve.sub.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, <vscale x 8 x i16>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.sub.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.sub.nxv2i64(<vscale x 2 x i1>, <vscale x 2 x i64>, <vscale x 2 x i64>)
+
+declare <vscale x 16 x i8> @llvm.aarch64.sve.subr.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>)
+declare <vscale x 8 x i16> @llvm.aarch64.sve.subr.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, <vscale x 8 x i16>)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.subr.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.subr.nxv2i64(<vscale x 2 x i1>, <vscale x 2 x i64>, <vscale x 2 x i64>)
 
 declare <vscale x 16 x i8> @llvm.aarch64.sve.sqadd.x.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 8 x i16> @llvm.aarch64.sve.sqadd.x.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>)
