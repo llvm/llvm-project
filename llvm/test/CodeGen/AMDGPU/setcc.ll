@@ -380,8 +380,7 @@ define amdgpu_kernel void @v3i8_eq(<3 x i8> addrspace(1)* %out, <3 x i8> addrspa
 
 ; Make sure we don't try to emit i1 setcc ops
 ; FUNC-LABEL: setcc-i1
-; GCN: s_and_b32 [[AND:s[0-9]+]], s{{[0-9]+}}, 1
-; GCN: s_cmp_eq_u32 [[AND]], 0
+; GCN: s_bitcmp0_b32 s{{[0-9]+}}, 0
 define amdgpu_kernel void @setcc-i1(i32 %in) #0 {
   %and = and i32 %in, 1
   %cmp = icmp eq i32 %and, 0

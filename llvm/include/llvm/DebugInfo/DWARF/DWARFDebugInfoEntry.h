@@ -24,6 +24,11 @@ class DWARFDebugInfoEntry {
   /// Offset within the .debug_info of the start of this entry.
   uint64_t Offset = 0;
 
+  // FIXME: This could be changed to a parent_idx/sibling_idx based solution
+  // like lldb's that could be used to improve the performance of sibling
+  // iteration. Memory usage is probably acceptable - if it's good enough for
+  // lldb it's probably good enough for llvm-symbolizer, etc.
+  // There's some discussion of this direction in D102634.
   /// The integer depth of this DIE within the compile unit DIEs where the
   /// compile/type unit DIE has a depth of zero.
   uint32_t Depth = 0;

@@ -518,7 +518,7 @@ void Writer::populateTargetFeatures() {
 
   // Validate that used features are allowed in output
   if (!inferFeatures) {
-    for (auto &feature : used.keys()) {
+    for (const auto &feature : used.keys()) {
       if (!allowed.count(std::string(feature)))
         error(Twine("Target feature '") + feature + "' used by " +
               used[feature] + " is not allowed.");
@@ -529,7 +529,7 @@ void Writer::populateTargetFeatures() {
   for (ObjFile *file : symtab->objectFiles) {
     StringRef fileName(file->getName());
     SmallSet<std::string, 8> objectFeatures;
-    for (auto &feature : file->getWasmObj()->getTargetFeatures()) {
+    for (const auto &feature : file->getWasmObj()->getTargetFeatures()) {
       if (feature.Prefix == WASM_FEATURE_PREFIX_DISALLOWED)
         continue;
       objectFeatures.insert(feature.Name);
@@ -538,7 +538,7 @@ void Writer::populateTargetFeatures() {
               fileName + " is disallowed by " + disallowed[feature.Name] +
               ". Use --no-check-features to suppress.");
     }
-    for (auto &feature : required.keys()) {
+    for (const auto &feature : required.keys()) {
       if (!objectFeatures.count(std::string(feature)))
         error(Twine("Missing target feature '") + feature + "' in " + fileName +
               ", required by " + required[feature] +

@@ -1,4 +1,3 @@
-; RUN: opt -basic-aa -loop-accesses -analyze -enable-new-pm=0 < %s | FileCheck %s
 ; RUN: opt -passes=print-access-info %s -disable-output 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"

@@ -38,7 +38,8 @@ def ArmNeon_Dialect : Dialect {
 // intrinsic.
 class ArmNeon_IntrOp<string mnemonic, list<int> overloadedResults,
                      list<int> overloadedOperands, int numResults,
-                     list<OpTrait> traits = [], bit requiresAccessGroup = 0>
+                     list<OpTrait> traits = [], bit requiresAccessGroup = 0,
+                     bit requiresAliasScope = 0>
     : LLVM_IntrOpBase</*dialect=*/ArmNeon_Dialect,
                       /*opName=*/"intr." # mnemonic,
                       /*enumName=*/"aarch64_neon_" # !subst(".", "_", mnemonic),
@@ -46,7 +47,8 @@ class ArmNeon_IntrOp<string mnemonic, list<int> overloadedResults,
                       /*overloadedOperands=*/overloadedOperands,
                       /*traits=*/traits,
                       /*numResults=*/numResults,
-                      /*requiresAccessGroup=*/requiresAccessGroup>;
+                      /*requiresAccessGroup=*/requiresAccessGroup,
+                      /*requiresAliasScope=*/requiresAliasScope>;
 
 // ArmNeon dialect op that corresponds to an LLVM IR intrinsic with one
 // overloaded result.

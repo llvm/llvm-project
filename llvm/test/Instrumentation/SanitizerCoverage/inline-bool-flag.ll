@@ -1,5 +1,4 @@
 ; Test -sanitizer-coverage-inline-bool-flag=1
-; RUN: opt < %s -sancov -sanitizer-coverage-level=1 -sanitizer-coverage-inline-bool-flag=1  -S -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=1 -sanitizer-coverage-inline-bool-flag=1  -S | FileCheck %s
 
 ; CHECK:      $foo = comdat nodeduplicate

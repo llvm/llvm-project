@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 subroutine forall1
   real :: a(9)
   !ERROR: 'i' is already declared in this scoping unit

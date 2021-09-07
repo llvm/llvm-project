@@ -519,7 +519,7 @@ two:
 }
 
 ; GCN-LABEL: {{^}}test_brcc_i1:
-; GCN:      s_cmp_eq_u32 s{{[0-9]+}}, 0
+; GCN:      s_bitcmp0_b32 s{{[0-9]+}}, 0
 ; GCN-NEXT: s_cbranch_scc1
 define amdgpu_kernel void @test_brcc_i1(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in, i1 %val) #0 {
   %cmp0 = icmp ne i1 %val, 0

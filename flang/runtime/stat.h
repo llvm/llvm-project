@@ -11,8 +11,8 @@
 
 #ifndef FORTRAN_RUNTIME_STAT_H_
 #define FORTRAN_RUNTIME_STAT_H_
-#include "magic-numbers.h"
 #include "flang/ISO_Fortran_binding.h"
+#include "flang/Runtime/magic-numbers.h"
 namespace Fortran::runtime {
 
 class Descriptor;

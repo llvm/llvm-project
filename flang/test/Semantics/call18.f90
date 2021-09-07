@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Ensure that references to functions that return pointers can serve as
 ! "variables" in actual arguments.  All of these uses are conforming and
 ! no errors should be reported.

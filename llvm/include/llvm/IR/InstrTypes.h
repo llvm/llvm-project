@@ -1485,14 +1485,15 @@ public:
   /// the attribute is allowed for the call.
   bool hasFnAttr(StringRef Kind) const { return hasFnAttrImpl(Kind); }
 
+  // TODO: remove non-AtIndex versions of these methods.
   /// adds the attribute to the list of attributes.
-  void addAttribute(unsigned i, Attribute::AttrKind Kind) {
-    Attrs = Attrs.addAttribute(getContext(), i, Kind);
+  void addAttributeAtIndex(unsigned i, Attribute::AttrKind Kind) {
+    Attrs = Attrs.addAttributeAtIndex(getContext(), i, Kind);
   }
 
   /// adds the attribute to the list of attributes.
-  void addAttribute(unsigned i, Attribute Attr) {
-    Attrs = Attrs.addAttribute(getContext(), i, Attr);
+  void addAttributeAtIndex(unsigned i, Attribute Attr) {
+    Attrs = Attrs.addAttributeAtIndex(getContext(), i, Attr);
   }
 
   /// Adds the attribute to the function.
@@ -1528,13 +1529,13 @@ public:
   }
 
   /// removes the attribute from the list of attributes.
-  void removeAttribute(unsigned i, Attribute::AttrKind Kind) {
-    Attrs = Attrs.removeAttribute(getContext(), i, Kind);
+  void removeAttributeAtIndex(unsigned i, Attribute::AttrKind Kind) {
+    Attrs = Attrs.removeAttributeAtIndex(getContext(), i, Kind);
   }
 
   /// removes the attribute from the list of attributes.
-  void removeAttribute(unsigned i, StringRef Kind) {
-    Attrs = Attrs.removeAttribute(getContext(), i, Kind);
+  void removeAttributeAtIndex(unsigned i, StringRef Kind) {
+    Attrs = Attrs.removeAttributeAtIndex(getContext(), i, Kind);
   }
 
   /// Removes the attributes from the function
@@ -1595,13 +1596,13 @@ public:
   bool paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const;
 
   /// Get the attribute of a given kind at a position.
-  Attribute getAttribute(unsigned i, Attribute::AttrKind Kind) const {
-    return getAttributes().getAttribute(i, Kind);
+  Attribute getAttributeAtIndex(unsigned i, Attribute::AttrKind Kind) const {
+    return getAttributes().getAttributeAtIndex(i, Kind);
   }
 
   /// Get the attribute of a given kind at a position.
-  Attribute getAttribute(unsigned i, StringRef Kind) const {
-    return getAttributes().getAttribute(i, Kind);
+  Attribute getAttributeAtIndex(unsigned i, StringRef Kind) const {
+    return getAttributes().getAttributeAtIndex(i, Kind);
   }
 
   /// Get the attribute of a given kind for the function.

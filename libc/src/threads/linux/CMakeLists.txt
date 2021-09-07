@@ -82,6 +82,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  mtx_destroy
+  SRCS
+    mtx_destroy.cpp
+  HDRS
+    ../mtx_destroy.h
+  DEPENDS
+    .threads_utils
+    libc.include.threads
+)
+
+add_entrypoint_object(
   mtx_lock
   SRCS
     mtx_lock.cpp
@@ -98,6 +109,61 @@ add_entrypoint_object(
     mtx_unlock.cpp
   HDRS
     ../mtx_unlock.h
+  DEPENDS
+    .threads_utils
+    libc.include.threads
+)
+
+add_entrypoint_object(
+  cnd_init
+  SRCS
+    cnd_init.cpp
+  HDRS
+    ../cnd_init.h
+  DEPENDS
+    .threads_utils
+    libc.include.threads
+)
+
+add_entrypoint_object(
+  cnd_destroy
+  SRCS
+    cnd_destroy.cpp
+  HDRS
+    ../cnd_destroy.h
+  DEPENDS
+    .threads_utils
+    libc.include.threads
+)
+
+add_entrypoint_object(
+  cnd_wait
+  SRCS
+    cnd_wait.cpp
+  HDRS
+    ../cnd_wait.h
+  DEPENDS
+    .threads_utils
+    libc.include.threads
+)
+
+add_entrypoint_object(
+  cnd_signal
+  SRCS
+    cnd_signal.cpp
+  HDRS
+    ../cnd_signal.h
+  DEPENDS
+    .threads_utils
+    libc.include.threads
+)
+
+add_entrypoint_object(
+  cnd_broadcast
+  SRCS
+    cnd_broadcast.cpp
+  HDRS
+    ../cnd_broadcast.h
   DEPENDS
     .threads_utils
     libc.include.threads

@@ -182,8 +182,8 @@ T tmain(T argc) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute map(always: x) // expected-error {{missing map type}}
   for (i = 0; i < argc; ++i) foo();
-// ge51-error@+3 {{incorrect map type modifier, expected 'always', 'close', 'mapper', or 'present'}}
-// lt51-error@+2 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+// ge51-error@+3 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
+// lt51-error@+2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
 // expected-error@+1 {{missing map type}}
 #pragma omp target teams distribute map(tofrom, always: x)
   for (i = 0; i < argc; ++i) foo();
@@ -300,8 +300,8 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute map(always: x) // expected-error {{missing map type}}
   for (i = 0; i < argc; ++i) foo();
-// ge51-error@+3 {{incorrect map type modifier, expected 'always', 'close', 'mapper', or 'present'}}
-// lt51-error@+2 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+// ge51-error@+3 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
+// lt51-error@+2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
 // expected-error@+1 {{missing map type}}
 #pragma omp target teams distribute map(tofrom, always: x)
   for (i = 0; i < argc; ++i) foo();

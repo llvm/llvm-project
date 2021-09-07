@@ -1960,6 +1960,20 @@ static bool canTailPredicateInstruction(Instruction &I, int &ICmpCount) {
   // we simply count the icmps, i.e. there should only be 1 for the backedge.
   if (isa<ICmpInst>(&I) && ++ICmpCount > 1)
     return false;
+  // FIXME: This is a workaround for poor cost modelling. Min/Max intrinsics are
+  // not currently canonical, but soon will be. Code without them uses icmp, and
+  // so is not tail predicated as per the condition above. In order to get the
+  // same performance we treat min and max the same as an icmp for tailpred
+  // purposes for the moment (we often rely on non-tailpred and higher VF's to
+  // pick more optimial instructions like VQDMULH. They need to be recognized
+  // directly by the vectorizer).
+  if (auto *II = dyn_cast<IntrinsicInst>(&I))
+    if ((II->getIntrinsicID() == Intrinsic::smin ||
+         II->getIntrinsicID() == Intrinsic::smax ||
+         II->getIntrinsicID() == Intrinsic::umin ||
+         II->getIntrinsicID() == Intrinsic::umax) &&
+        ++ICmpCount > 1)
+      return false;
 
   if (isa<FCmpInst>(&I))
     return false;

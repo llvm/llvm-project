@@ -245,7 +245,7 @@ Attribute Importer::getConstantAsAttr(llvm::Constant *value) {
       return b.getFloatAttr(FloatType::getF32(context), c->getValueAPF());
   }
   if (auto *f = dyn_cast<llvm::Function>(value))
-    return b.getSymbolRefAttr(f->getName());
+    return SymbolRefAttr::get(b.getContext(), f->getName());
 
   // Convert constant data to a dense elements attribute.
   if (auto *cd = dyn_cast<llvm::ConstantDataSequential>(value)) {
@@ -668,8 +668,8 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     }
     Operation *op;
     if (llvm::Function *callee = ci->getCalledFunction()) {
-      op = b.create<CallOp>(loc, tys, b.getSymbolRefAttr(callee->getName()),
-                            ops);
+      op = b.create<CallOp>(
+          loc, tys, SymbolRefAttr::get(b.getContext(), callee->getName()), ops);
     } else {
       Value calledValue = processValue(ci->getCalledOperand());
       if (!calledValue)
@@ -713,9 +713,10 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
 
     Operation *op;
     if (llvm::Function *callee = ii->getCalledFunction()) {
-      op = b.create<InvokeOp>(loc, tys, b.getSymbolRefAttr(callee->getName()),
-                              ops, blocks[ii->getNormalDest()], normalArgs,
-                              blocks[ii->getUnwindDest()], unwindArgs);
+      op = b.create<InvokeOp>(
+          loc, tys, SymbolRefAttr::get(b.getContext(), callee->getName()), ops,
+          blocks[ii->getNormalDest()], normalArgs, blocks[ii->getUnwindDest()],
+          unwindArgs);
     } else {
       ops.insert(ops.begin(), processValue(ii->getCalledOperand()));
       op = b.create<InvokeOp>(loc, tys, ops, blocks[ii->getNormalDest()],
@@ -771,7 +772,7 @@ FlatSymbolRefAttr Importer::getPersonalityAsAttr(llvm::Function *f) {
 
   // If it directly has a name, we can use it.
   if (pf->hasName())
-    return b.getSymbolRefAttr(pf->getName());
+    return SymbolRefAttr::get(b.getContext(), pf->getName());
 
   // If it doesn't have a name, currently, only function pointers that are
   // bitcast to i8* are parsed.
@@ -779,7 +780,7 @@ FlatSymbolRefAttr Importer::getPersonalityAsAttr(llvm::Function *f) {
     if (ce->getOpcode() == llvm::Instruction::BitCast &&
         ce->getType() == llvm::Type::getInt8PtrTy(f->getContext())) {
       if (auto func = dyn_cast<llvm::Function>(ce->getOperand(0)))
-        return b.getSymbolRefAttr(func->getName());
+        return SymbolRefAttr::get(b.getContext(), func->getName());
     }
   }
   return FlatSymbolRefAttr();

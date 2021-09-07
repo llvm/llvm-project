@@ -30,6 +30,7 @@ include_directories(${LIBOMPTARGET_LLVM_INCLUDE_DIRS})
 
 # Build libomptarget library with libdl dependency.
 add_library(omptarget SHARED ${LIBOMPTARGET_SRC_FILES})
+set_target_properties(omptarget PROPERTIES INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN")
 if (OPENMP_ENABLE_LIBOMPTARGET_PROFILING)
   # Add LLVMSupport dependency if profiling is enabled.
   # Linking with LLVM component libraries also requires

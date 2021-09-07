@@ -255,11 +255,23 @@ protected:
           rewriter.getNamedAttr(function_like_impl::getArgDictAttrName(),
                                 rewriter.getArrayAttr(newArgAttrs)));
     }
+    for (auto pair : llvm::enumerate(attributes)) {
+      if (pair.value().first == "llvm.linkage") {
+        attributes.erase(attributes.begin() + pair.index());
+        break;
+      }
+    }
 
     // Create an LLVM function, use external linkage by default until MLIR
     // functions have linkage.
+    LLVM::Linkage linkage = LLVM::Linkage::External;
+    if (funcOp->hasAttr("llvm.linkage")) {
+      linkage = funcOp->getAttr("llvm.linkage")
+                    .cast<mlir::LLVM::LinkageAttr>()
+                    .getLinkage();
+    }
     auto newFuncOp = rewriter.create<LLVM::LLVMFuncOp>(
-        funcOp.getLoc(), funcOp.getName(), llvmType, LLVM::Linkage::External,
+        funcOp.getLoc(), funcOp.getName(), llvmType, linkage,
         /*dsoLocal*/ false, attributes);
     rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
                                 newFuncOp.end());

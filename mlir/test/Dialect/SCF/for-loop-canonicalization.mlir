@@ -242,3 +242,74 @@ func @tensor_dim_of_iter_arg(%t : tensor<?x?xf32>) -> index {
   }
   return %1 : index
 }
+
+// -----
+
+// CHECK-LABEL: func @tensor_dim_of_iter_arg_insertslice(
+//  CHECK-SAME:     %[[t:.*]]: tensor<?x?xf32>,
+//       CHECK:   scf.for
+//       CHECK:     tensor.dim %[[t]]
+func @tensor_dim_of_iter_arg_insertslice(%t : tensor<?x?xf32>,
+                                         %t2 : tensor<?x?xf32>) -> index {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c10 = constant 10 : index
+  %0, %1 = scf.for %i = %c0 to %c10 step %c1 iter_args(%arg0 = %t, %arg1 = %c0)
+      -> (tensor<?x?xf32>, index) {
+    %dim = tensor.dim %arg0, %c0 : tensor<?x?xf32>
+    %2 = tensor.insert_slice %t2 into %arg0[0, 0] [10, 10] [1, 1]
+        : tensor<?x?xf32> into tensor<?x?xf32>
+    %3 = tensor.insert_slice %t2 into %2[1, 1] [10, 10] [1, 1]
+        : tensor<?x?xf32> into tensor<?x?xf32>
+    scf.yield %3, %dim : tensor<?x?xf32>, index
+  }
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @tensor_dim_of_iter_arg_nested_for(
+//  CHECK-SAME:     %[[t:.*]]: tensor<?x?xf32>,
+//       CHECK:   scf.for
+//       CHECK:     scf.for
+//       CHECK:       tensor.dim %[[t]]
+func @tensor_dim_of_iter_arg_nested_for(%t : tensor<?x?xf32>,
+                                        %t2 : tensor<?x?xf32>) -> index {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c10 = constant 10 : index
+  %0, %1 = scf.for %i = %c0 to %c10 step %c1 iter_args(%arg0 = %t, %arg1 = %c0)
+      -> (tensor<?x?xf32>, index) {
+    %2, %3 = scf.for %j = %c0 to %c10 step %c1 iter_args(%arg2 = %arg0, %arg3 = %arg1)
+        -> (tensor<?x?xf32>, index) {
+      %dim = tensor.dim %arg2, %c0 : tensor<?x?xf32>
+      %4 = tensor.insert_slice %t2 into %arg2[0, 0] [10, 10] [1, 1]
+          : tensor<?x?xf32> into tensor<?x?xf32>
+      scf.yield %4, %dim : tensor<?x?xf32>, index
+    }
+    scf.yield %2, %3 : tensor<?x?xf32>, index
+  }
+  return %1 : index
+}
+
+// -----
+
+// A test case that should not canonicalize because the loop is not shape
+// conserving.
+
+// CHECK-LABEL: func @tensor_dim_of_iter_arg_no_canonicalize(
+//  CHECK-SAME:     %[[t:.*]]: tensor<?x?xf32>,
+//       CHECK:   scf.for {{.*}} iter_args(%[[arg0:.*]] = %[[t]]
+//       CHECK:     tensor.dim %[[arg0]]
+func @tensor_dim_of_iter_arg_no_canonicalize(%t : tensor<?x?xf32>,
+                                             %t2 : tensor<?x?xf32>) -> index {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c10 = constant 10 : index
+  %0, %1 = scf.for %i = %c0 to %c10 step %c1 iter_args(%arg0 = %t, %arg1 = %c0)
+      -> (tensor<?x?xf32>, index) {
+    %dim = tensor.dim %arg0, %c0 : tensor<?x?xf32>
+    scf.yield %t2, %dim : tensor<?x?xf32>, index
+  }
+  return %1 : index
+}

@@ -1,4 +1,4 @@
-//===-- runtime/io-error.cpp ------------------------------------*- C++ -*-===//
+//===-- runtime/io-error.cpp ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,8 +8,8 @@
 
 #include "io-error.h"
 #include "config.h"
-#include "magic-numbers.h"
 #include "tools.h"
+#include "flang/Runtime/magic-numbers.h"
 #include <cerrno>
 #include <cstdarg>
 #include <cstdio>

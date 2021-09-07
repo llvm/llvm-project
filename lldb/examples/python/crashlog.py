@@ -473,7 +473,8 @@ class JSONCrashLogParser:
         idx = 0
         for json_frame in json_frames:
             image_id = int(json_frame['imageIndex'])
-            ident = self.get_used_image(image_id)['name']
+            json_image = self.get_used_image(image_id)
+            ident = json_image['name'] if 'name' in json_image else ''
             thread.add_ident(ident)
             if ident not in self.crashlog.idents:
                 self.crashlog.idents.append(ident)

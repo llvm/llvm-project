@@ -17,10 +17,11 @@ define void @"japi1_align!_9477"(%jl_value_t addrspace(10)** %arg) {
 ; LV: [[OFMul:%[^ ]*]]  = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[Step:%[^ ]*]])
 ; LV-NEXT: [[OFMulResult:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul]], 0
 ; LV-NEXT: [[OFMulOverflow:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul]], 1
-; LV-NEXT: [[PosGEP:%[^ ]*]] = getelementptr i32, i32 addrspace(13)* [[Base:%[^ ]*]], i64 [[Step]]
-; LV-NEXT: [[NegGEP:%[^ ]*]] = getelementptr i32, i32 addrspace(13)* [[Base]], i64 [[NegStep:%[^ ]*]]
-; LV-NEXT: icmp ugt i32 addrspace(13)* [[NegGEP]], [[Base]]
-; LV-NEXT: icmp ult i32 addrspace(13)* [[PosGEP]], [[Base]]
+; LV: [[OFNegMulResult:%[^ ]*]] = sub i64 0, [[OFMulResult]]
+; LV-NEXT: [[PosGEP:%[^ ]*]] = getelementptr i8, i8 addrspace(13)* [[Base:%[^ ]*]], i64 [[OFMulResult]]
+; LV-NEXT: [[NegGEP:%[^ ]*]] = getelementptr i8, i8 addrspace(13)* [[Base]], i64 [[OFNegMulResult]]
+; LV-NEXT: icmp ugt i8 addrspace(13)* [[NegGEP]], [[Base]]
+; LV-NEXT: icmp ult i8 addrspace(13)* [[PosGEP]], [[Base]]
 ; LV-NOT: inttoptr
 ; LV-NOT: ptrtoint
 top:

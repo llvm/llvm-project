@@ -1328,12 +1328,11 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
 
   typedef struct {
     SmallDenseMap<Register, int, 4> DefPos;
-    int ExecPos;
-    int VALUs;
+    int ExecPos = std::numeric_limits<int>::max();
+    int VALUs = 0;
   } StateType;
 
   StateType State;
-  State.ExecPos = std::numeric_limits<int>::max();
 
   // This overloads expiry testing with all the hazard detection
   auto IsHazardFn = [&, this](StateType &State, const MachineInstr &I) {

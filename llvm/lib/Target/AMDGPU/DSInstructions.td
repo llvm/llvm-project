@@ -458,11 +458,10 @@ defm DS_AND_B32       : DS_1A1D_NORET_mc<"ds_and_b32">;
 defm DS_OR_B32        : DS_1A1D_NORET_mc<"ds_or_b32">;
 defm DS_XOR_B32       : DS_1A1D_NORET_mc<"ds_xor_b32">;
 
-let SubtargetPredicate = HasLDSFPAtomics in {
+let SubtargetPredicate = HasLDSFPAtomicAdd in {
 defm DS_ADD_F32       : DS_1A1D_NORET_mc<"ds_add_f32">;
 }
 
-// FIXME: Are these really present pre-gfx8?
 defm DS_MIN_F32       : DS_1A1D_NORET_mc<"ds_min_f32">;
 defm DS_MAX_F32       : DS_1A1D_NORET_mc<"ds_max_f32">;
 
@@ -532,7 +531,7 @@ defm DS_MAX_F64       : DS_1A1D_NORET_mc<"ds_max_f64", VReg_64>;
 
 defm DS_ADD_RTN_U32   : DS_1A1D_RET_mc<"ds_add_rtn_u32", VGPR_32, "ds_add_u32">;
 
-let SubtargetPredicate = HasLDSFPAtomics in {
+let SubtargetPredicate = HasLDSFPAtomicAdd in {
 defm DS_ADD_RTN_F32   : DS_1A1D_RET_mc<"ds_add_rtn_f32", VGPR_32, "ds_add_f32">;
 }
 defm DS_SUB_RTN_U32   : DS_1A1D_RET_mc<"ds_sub_rtn_u32", VGPR_32, "ds_sub_u32">;
@@ -704,7 +703,7 @@ def DS_BPERMUTE_B32 : DS_1A1D_PERMUTE <"ds_bpermute_b32",
 
 } // let SubtargetPredicate = isGFX8Plus
 
-let SubtargetPredicate = HasLDSFPAtomics, OtherPredicates = [HasDsSrc2Insts] in {
+let SubtargetPredicate = HasLDSFPAtomicAdd, OtherPredicates = [HasDsSrc2Insts] in {
 def DS_ADD_SRC2_F32 : DS_1A<"ds_add_src2_f32">;
 }
 
@@ -1000,6 +999,8 @@ defm : DSAtomicRetPat_mc<DS_MIN_RTN_I32, i32, "atomic_load_min">;
 defm : DSAtomicRetPat_mc<DS_MAX_RTN_I32, i32, "atomic_load_max">;
 defm : DSAtomicRetPat_mc<DS_MIN_RTN_U32, i32, "atomic_load_umin">;
 defm : DSAtomicRetPat_mc<DS_MAX_RTN_U32, i32, "atomic_load_umax">;
+defm : DSAtomicRetPat_mc<DS_MIN_RTN_F32, f32, "atomic_load_fmin">;
+defm : DSAtomicRetPat_mc<DS_MAX_RTN_F32, f32, "atomic_load_fmax">;
 
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9GFX10 in {
 defm : DSAtomicCmpXChgSwapped_mc<DS_CMPST_RTN_B32, i32, "atomic_cmp_swap">;
@@ -1009,9 +1010,7 @@ let SubtargetPredicate = isGFX11Plus in {
 defm : DSAtomicCmpXChg_mc<DS_CMPSTORE_RTN_B32, i32, "atomic_cmp_swap">;
 }
 
-let SubtargetPredicate = HasLDSFPAtomics in {
-defm : DSAtomicRetPat_mc<DS_MIN_RTN_F32, f32, "atomic_load_fmin">;
-defm : DSAtomicRetPat_mc<DS_MAX_RTN_F32, f32, "atomic_load_fmax">;
+let SubtargetPredicate = HasLDSFPAtomicAdd in {
 defm : DSAtomicRetPat_mc<DS_ADD_RTN_F32, f32, "atomic_load_fadd">;
 }
 
@@ -1028,6 +1027,8 @@ defm : DSAtomicRetPat_mc<DS_MIN_RTN_I64, i64, "atomic_load_min">;
 defm : DSAtomicRetPat_mc<DS_MAX_RTN_I64, i64, "atomic_load_max">;
 defm : DSAtomicRetPat_mc<DS_MIN_RTN_U64, i64, "atomic_load_umin">;
 defm : DSAtomicRetPat_mc<DS_MAX_RTN_U64, i64, "atomic_load_umax">;
+defm : DSAtomicRetPat_mc<DS_MIN_RTN_F64, f64, "atomic_load_fmin">;
+defm : DSAtomicRetPat_mc<DS_MAX_RTN_F64, f64, "atomic_load_fmax">;
 
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9GFX10 in {
 defm : DSAtomicCmpXChgSwapped_mc<DS_CMPST_RTN_B64, i64, "atomic_cmp_swap">;

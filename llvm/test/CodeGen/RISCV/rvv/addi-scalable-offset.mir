@@ -53,7 +53,7 @@ body: |
     ; CHECK: $x1 = LD $x2, 2024 :: (load (s64) from %stack.3)
     ; CHECK: $x2 = frame-destroy ADDI $x2, 2032
     ; CHECK: PseudoRET
-    %1:gpr = COPY $x11
+    %1:gprnox0 = COPY $x11
     %0:gpr = COPY $x10
     %2:vr = PseudoVLE64_V_M1 %0, %1, 6 :: (load unknown-size from %ir.pa, align 8)
     %3:gpr = ADDI %stack.2, 0

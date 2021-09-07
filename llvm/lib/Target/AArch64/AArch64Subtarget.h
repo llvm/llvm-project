@@ -139,7 +139,6 @@ protected:
   bool HasTRACEV8_4 = false;
   bool HasAM = false;
   bool HasSEL2 = false;
-  bool HasPMU = false;
   bool HasTLB_RMI = false;
   bool HasFlagM = false;
   bool HasRCPC_IMMO = false;
@@ -543,7 +542,6 @@ public:
   bool hasHCX() const { return HasHCX; }
   bool hasLS64() const { return HasLS64; }
   bool hasSEL2() const { return HasSEL2; }
-  bool hasPMU() const { return HasPMU; }
   bool hasTLB_RMI() const { return HasTLB_RMI; }
   bool hasFlagM() const { return HasFlagM; }
   bool hasRCPC_IMMO() const { return HasRCPC_IMMO; }

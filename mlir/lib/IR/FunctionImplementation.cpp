@@ -359,7 +359,7 @@ void mlir::function_like_impl::printFunctionLikeOp(OpAsmPrinter &p,
   auto funcName =
       op->getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName())
           .getValue();
-  p << op->getName() << ' ';
+  p << ' ';
 
   StringRef visibilityAttrName = SymbolTable::getVisibilityAttrName();
   if (auto visibility = op->getAttrOfType<StringAttr>(visibilityAttrName))

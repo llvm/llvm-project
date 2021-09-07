@@ -201,7 +201,7 @@ Additional Topics
    to LLVM.
 
 :doc:`HowToBuildWindowsItaniumPrograms`
-   Notes on assembling a Windows Itanium enviroment.
+   Notes on assembling a Windows Itanium environment.
 
 :doc:`HowToCrossCompileBuiltinsOnArm`
    Notes on cross-building and testing the compiler-rt builtins for Arm.

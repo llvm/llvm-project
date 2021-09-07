@@ -232,6 +232,10 @@ public:
 
   void DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) override;
   void DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) override;
+  void DidVForkDone() override;
+  void DidExec() override;
+
+  llvm::Expected<bool> SaveCore(llvm::StringRef outfile) override;
 
 protected:
   friend class ThreadGDBRemote;
@@ -295,6 +299,8 @@ protected:
   using FlashRangeVector = lldb_private::RangeVector<lldb::addr_t, size_t>;
   using FlashRange = FlashRangeVector::Entry;
   FlashRangeVector m_erased_flash_ranges;
+
+  bool m_vfork_in_progress;
 
   // Accessors
   bool IsRunning(lldb::StateType state) {
@@ -462,6 +468,10 @@ private:
 
   ProcessGDBRemote(const ProcessGDBRemote &) = delete;
   const ProcessGDBRemote &operator=(const ProcessGDBRemote &) = delete;
+
+  // fork helpers
+  void DidForkSwitchSoftwareBreakpoints(bool enable);
+  void DidForkSwitchHardwareTraps(bool enable);
 };
 
 } // namespace process_gdb_remote

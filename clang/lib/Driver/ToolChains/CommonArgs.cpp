@@ -355,8 +355,8 @@ static StringRef getWebAssemblyTargetCPU(const ArgList &Args) {
   return "generic";
 }
 
-std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
-                              bool FromAs) {
+std::string tools::getCPUName(const Driver &D, const ArgList &Args,
+                              const llvm::Triple &T, bool FromAs) {
   Arg *A;
 
   switch (T.getArch()) {
@@ -442,7 +442,7 @@ std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
 
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
-    return x86::getX86TargetCPU(Args, T);
+    return x86::getX86TargetCPU(D, Args, T);
 
   case llvm::Triple::hexagon:
     return "hexagon" +
@@ -510,7 +510,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   // the plugin.
 
   // Handle flags for selecting CPU variants.
-  std::string CPU = getCPUName(Args, ToolChain.getTriple());
+  std::string CPU = getCPUName(D, Args, ToolChain.getTriple());
   if (!CPU.empty())
     CmdArgs.push_back(Args.MakeArgString(Twine("-plugin-opt=mcpu=") + CPU));
 
@@ -661,7 +661,7 @@ void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
   std::string CandidateRPath = TC.getArchSpecificLibPath();
   if (TC.getVFS().exists(CandidateRPath)) {
     CmdArgs.push_back("-rpath");
-    CmdArgs.push_back(Args.MakeArgString(CandidateRPath.c_str()));
+    CmdArgs.push_back(Args.MakeArgString(CandidateRPath));
   }
 }
 
@@ -779,7 +779,8 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
     CmdArgs.push_back("-ldl");
   // Required for backtrace on some OSes
   if (TC.getTriple().isOSFreeBSD() ||
-      TC.getTriple().isOSNetBSD())
+      TC.getTriple().isOSNetBSD() ||
+      TC.getTriple().isOSOpenBSD())
     CmdArgs.push_back("-lexecinfo");
 }
 
@@ -1709,21 +1710,25 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
                         : options::OPT_libomptarget_nvptx_bc_path_EQ;
 
   StringRef ArchPrefix = Triple.isAMDGCN() ? "amdgcn" : "nvptx";
+  std::string LibOmpTargetName = "libomptarget-" + BitcodeSuffix.str() + ".bc";
+
   // First check whether user specifies bc library
   if (const Arg *A = DriverArgs.getLastArg(LibomptargetBCPathOpt)) {
-    std::string LibOmpTargetName(A->getValue());
-    if (llvm::sys::fs::exists(LibOmpTargetName)) {
+    SmallString<128> LibOmpTargetFile(A->getValue());
+    if (llvm::sys::fs::exists(LibOmpTargetFile) &&
+        llvm::sys::fs::is_directory(LibOmpTargetFile)) {
+      llvm::sys::path::append(LibOmpTargetFile, LibOmpTargetName);
+    }
+
+    if (llvm::sys::fs::exists(LibOmpTargetFile)) {
       CC1Args.push_back("-mlink-builtin-bitcode");
-      CC1Args.push_back(DriverArgs.MakeArgString(LibOmpTargetName));
+      CC1Args.push_back(DriverArgs.MakeArgString(LibOmpTargetFile));
     } else {
       D.Diag(diag::err_drv_omp_offload_target_bcruntime_not_found)
-          << LibOmpTargetName;
+          << LibOmpTargetFile;
     }
   } else {
     bool FoundBCLibrary = false;
-
-    std::string LibOmpTargetName =
-        "libomptarget-" + BitcodeSuffix.str() + ".bc";
 
     for (StringRef LibraryPath : LibraryPaths) {
       SmallString<128> LibOmpTargetFile(LibraryPath);

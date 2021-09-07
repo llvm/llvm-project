@@ -42,76 +42,145 @@ typedef enum kmp_target_offload_kind kmp_target_offload_kind_t;
 
 /// Map between host data and target data.
 struct HostDataToTargetTy {
-  uintptr_t HstPtrBase; // host info.
-  uintptr_t HstPtrBegin;
-  uintptr_t HstPtrEnd;       // non-inclusive.
-  map_var_info_t HstPtrName; // Optional source name of mapped variable.
+  const uintptr_t HstPtrBase; // host info.
+  const uintptr_t HstPtrBegin;
+  const uintptr_t HstPtrEnd;       // non-inclusive.
+  const map_var_info_t HstPtrName; // Optional source name of mapped variable.
 
-  uintptr_t TgtPtrBegin; // target info.
+  const uintptr_t TgtPtrBegin; // target info.
 
 private:
-  /// use mutable to allow modification via std::set iterator which is const.
-  mutable uint64_t RefCount;
   static const uint64_t INFRefCount = ~(uint64_t)0;
-  /// This mutex will be locked when data movement is issued. For targets that
-  /// doesn't support async data movement, this mutex can guarantee that after
-  /// it is released, memory region on the target is update to date. For targets
-  /// that support async data movement, this can guarantee that data movement
-  /// has been issued. This mutex *must* be locked right before releasing the
-  /// mapping table lock.
-  std::shared_ptr<std::mutex> UpdateMtx;
+  static std::string refCountToStr(uint64_t RefCount) {
+    return RefCount == INFRefCount ? "INF" : std::to_string(RefCount);
+  }
+
+  struct StatesTy {
+    StatesTy(uint64_t DRC, uint64_t HRC)
+        : DynRefCount(DRC), HoldRefCount(HRC) {}
+    /// The dynamic reference count is the standard reference count as of OpenMP
+    /// 4.5.  The hold reference count is an OpenMP extension for the sake of
+    /// OpenACC support.
+    ///
+    /// The 'ompx_hold' map type modifier is permitted only on "omp target" and
+    /// "omp target data", and "delete" is permitted only on "omp target exit
+    /// data" and associated runtime library routines.  As a result, we really
+    /// need to implement "reset" functionality only for the dynamic reference
+    /// counter.  Likewise, only the dynamic reference count can be infinite
+    /// because, for example, omp_target_associate_ptr and "omp declare target
+    /// link" operate only on it.  Nevertheless, it's actually easier to follow
+    /// the code (and requires less assertions for special cases) when we just
+    /// implement these features generally across both reference counters here.
+    /// Thus, it's the users of this class that impose those restrictions.
+    ///
+    uint64_t DynRefCount;
+    uint64_t HoldRefCount;
+    /// This mutex will be locked when data movement is issued. For targets that
+    /// doesn't support async data movement, this mutex can guarantee that after
+    /// it is released, memory region on the target is update to date. For
+    /// targets that support async data movement, this can guarantee that data
+    /// movement has been issued. This mutex *must* be locked right before
+    /// releasing the mapping table lock.
+    std::mutex UpdateMtx;
+  };
+  // When HostDataToTargetTy is used by std::set, std::set::iterator is const
+  // use unique_ptr to make States mutable.
+  const std::unique_ptr<StatesTy> States;
 
 public:
   HostDataToTargetTy(uintptr_t BP, uintptr_t B, uintptr_t E, uintptr_t TB,
-                     map_var_info_t Name = nullptr, bool IsINF = false)
+                     bool UseHoldRefCount, map_var_info_t Name = nullptr,
+                     bool IsINF = false)
       : HstPtrBase(BP), HstPtrBegin(B), HstPtrEnd(E), HstPtrName(Name),
-        TgtPtrBegin(TB), RefCount(IsINF ? INFRefCount : 1),
-        UpdateMtx(std::make_shared<std::mutex>()) {}
+        TgtPtrBegin(TB), States(std::make_unique<StatesTy>(UseHoldRefCount ? 0
+                                                           : IsINF ? INFRefCount
+                                                                   : 1,
+                                                           !UseHoldRefCount ? 0
+                                                           : IsINF ? INFRefCount
+                                                                   : 1)) {}
 
-  uint64_t getRefCount() const { return RefCount; }
-
-  uint64_t resetRefCount() const {
-    if (RefCount != INFRefCount)
-      RefCount = 1;
-
-    return RefCount;
+  /// Get the total reference count.  This is smarter than just getDynRefCount()
+  /// + getHoldRefCount() because it handles the case where at least one is
+  /// infinity and the other is non-zero.
+  uint64_t getTotalRefCount() const {
+    if (States->DynRefCount == INFRefCount ||
+        States->HoldRefCount == INFRefCount)
+      return INFRefCount;
+    return States->DynRefCount + States->HoldRefCount;
   }
 
-  uint64_t incRefCount() const {
-    if (RefCount != INFRefCount) {
-      ++RefCount;
-      assert(RefCount < INFRefCount && "refcount overflow");
+  /// Get the dynamic reference count.
+  uint64_t getDynRefCount() const { return States->DynRefCount; }
+
+  /// Get the hold reference count.
+  uint64_t getHoldRefCount() const { return States->HoldRefCount; }
+
+  /// Reset the specified reference count unless it's infinity.  Reset to 1
+  /// (even if currently 0) so it can be followed by a decrement.
+  void resetRefCount(bool UseHoldRefCount) const {
+    uint64_t &ThisRefCount =
+        UseHoldRefCount ? States->HoldRefCount : States->DynRefCount;
+    if (ThisRefCount != INFRefCount)
+      ThisRefCount = 1;
+  }
+
+  /// Increment the specified reference count unless it's infinity.
+  void incRefCount(bool UseHoldRefCount) const {
+    uint64_t &ThisRefCount =
+        UseHoldRefCount ? States->HoldRefCount : States->DynRefCount;
+    if (ThisRefCount != INFRefCount) {
+      ++ThisRefCount;
+      assert(ThisRefCount < INFRefCount && "refcount overflow");
     }
-
-    return RefCount;
   }
 
-  uint64_t decRefCount() const {
-    if (RefCount != INFRefCount) {
-      assert(RefCount > 0 && "refcount underflow");
-      --RefCount;
+  /// Decrement the specified reference count unless it's infinity or zero, and
+  /// return the total reference count.
+  uint64_t decRefCount(bool UseHoldRefCount) const {
+    uint64_t &ThisRefCount =
+        UseHoldRefCount ? States->HoldRefCount : States->DynRefCount;
+    uint64_t OtherRefCount =
+        UseHoldRefCount ? States->DynRefCount : States->HoldRefCount;
+    (void)OtherRefCount;
+    if (ThisRefCount != INFRefCount) {
+      if (ThisRefCount > 0)
+        --ThisRefCount;
+      else
+        assert(OtherRefCount > 0 && "total refcount underflow");
     }
-
-    return RefCount;
+    return getTotalRefCount();
   }
 
-  bool isRefCountInf() const { return RefCount == INFRefCount; }
+  /// Is the dynamic (and thus the total) reference count infinite?
+  bool isDynRefCountInf() const { return States->DynRefCount == INFRefCount; }
 
-  std::string refCountToStr() const {
-    return isRefCountInf() ? "INF" : std::to_string(getRefCount());
+  /// Convert the dynamic reference count to a debug string.
+  std::string dynRefCountToStr() const {
+    return refCountToStr(States->DynRefCount);
   }
 
-  /// Should one decrement of the reference count (after resetting it if
-  /// \c AfterReset) remove this mapping?
-  bool decShouldRemove(bool AfterReset = false) const {
+  /// Convert the hold reference count to a debug string.
+  std::string holdRefCountToStr() const {
+    return refCountToStr(States->HoldRefCount);
+  }
+
+  /// Should one decrement of the specified reference count (after resetting it
+  /// if \c AfterReset) remove this mapping?
+  bool decShouldRemove(bool UseHoldRefCount, bool AfterReset = false) const {
+    uint64_t ThisRefCount =
+        UseHoldRefCount ? States->HoldRefCount : States->DynRefCount;
+    uint64_t OtherRefCount =
+        UseHoldRefCount ? States->DynRefCount : States->HoldRefCount;
+    if (OtherRefCount > 0)
+      return false;
     if (AfterReset)
-      return !isRefCountInf();
-    return getRefCount() == 1;
+      return ThisRefCount != INFRefCount;
+    return ThisRefCount == 1;
   }
 
-  void lock() const { UpdateMtx->lock(); }
+  void lock() const { States->UpdateMtx.lock(); }
 
-  void unlock() const { UpdateMtx->unlock(); }
+  void unlock() const { States->UpdateMtx.unlock(); }
 };
 
 typedef uintptr_t HstPtrBeginTy;
@@ -173,8 +242,6 @@ struct PendingCtorDtorListsTy {
 typedef std::map<__tgt_bin_desc *, PendingCtorDtorListsTy>
     PendingCtorsDtorsPerLibrary;
 
-enum class MoveDataStateTy : uint32_t { REQUIRED, NONE, UNKNOWN };
-
 struct DeviceTy {
   int32_t DeviceID;
   RTLInfoTy *RTL;
@@ -196,12 +263,9 @@ struct DeviceTy {
   std::map<int32_t, uint64_t> LoopTripCnt;
 
   DeviceTy(RTLInfoTy *RTL);
-
-  // The existence of mutexes makes DeviceTy non-copyable. We need to
-  // provide a copy constructor and an assignment operator explicitly.
-  DeviceTy(const DeviceTy &D);
-
-  DeviceTy &operator=(const DeviceTy &D);
+  // DeviceTy is not copyable
+  DeviceTy(const DeviceTy &D) = delete;
+  DeviceTy &operator=(const DeviceTy &D) = delete;
 
   ~DeviceTy();
 
@@ -211,25 +275,33 @@ struct DeviceTy {
   LookupResult lookupMapping(void *HstPtrBegin, int64_t Size);
   /// Get the target pointer based on host pointer begin and base. If the
   /// mapping already exists, the target pointer will be returned directly. In
-  /// addition, if \p MoveData is true, the memory region pointed by \p
-  /// HstPtrBegin of size \p Size will also be transferred to the device. If the
-  /// mapping doesn't exist, and if unified memory is not enabled, a new mapping
-  /// will be created and the data will also be transferred accordingly. nullptr
-  /// will be returned because of any of following reasons:
+  /// addition, if required, the memory region pointed by \p HstPtrBegin of size
+  /// \p Size will also be transferred to the device. If the mapping doesn't
+  /// exist, and if unified shared memory is not enabled, a new mapping will be
+  /// created and the data will also be transferred accordingly. nullptr will be
+  /// returned because of any of following reasons:
   /// - Data allocation failed;
   /// - The user tried to do an illegal mapping;
   /// - Data transfer issue fails.
   TargetPointerResultTy
   getTargetPointer(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
-                   map_var_info_t HstPtrName, MoveDataStateTy MoveData,
-                   bool IsImplicit, bool UpdateRefCount, bool HasCloseModifier,
-                   bool HasPresentModifier, AsyncInfoTy &AsyncInfo);
+                   map_var_info_t HstPtrName, bool HasFlagTo,
+                   bool HasFlagAlways, bool IsImplicit, bool UpdateRefCount,
+                   bool HasCloseModifier, bool HasPresentModifier,
+                   bool HasHoldModifier, AsyncInfoTy &AsyncInfo);
   void *getTgtPtrBegin(void *HstPtrBegin, int64_t Size);
   void *getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
-                       bool UpdateRefCount, bool &IsHostPtr,
-                       bool MustContain = false, bool ForceDelete = false);
-  int deallocTgtPtr(void *TgtPtrBegin, int64_t Size,
-                    bool HasCloseModifier = false);
+                       bool UpdateRefCount, bool UseHoldRefCount,
+                       bool &IsHostPtr, bool MustContain = false,
+                       bool ForceDelete = false);
+  /// For the map entry for \p HstPtrBegin, decrement the reference count
+  /// specified by \p HasHoldModifier and, if the the total reference count is
+  /// then zero, deallocate the corresponding device storage and remove the map
+  /// entry.  Return \c OFFLOAD_SUCCESS if the map entry existed, and return
+  /// \c OFFLOAD_FAIL if not.  It is the caller's responsibility to skip calling
+  /// this function if the map entry is not expected to exist because
+  /// \p HstPtrBegin uses shared memory.
+  int deallocTgtPtr(void *HstPtrBegin, int64_t Size, bool HasHoldModifier);
   int associatePtr(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size);
   int disassociatePtr(void *HstPtrBegin);
 
@@ -306,9 +378,6 @@ private:
   void init(); // To be called only via DeviceTy::initOnce()
 };
 
-/// Map between Device ID (i.e. openmp device id) and its DeviceTy.
-typedef std::vector<DeviceTy> DevicesTy;
-
 extern bool device_is_ready(int device_num);
 
 /// Struct for the data required to handle plugins
@@ -317,7 +386,7 @@ struct PluginManager {
   RTLsTy RTLs;
 
   /// Devices associated with RTLs
-  DevicesTy Devices;
+  std::vector<std::unique_ptr<DeviceTy>> Devices;
   std::mutex RTLsMtx; ///< For RTLs and Devices
 
   /// Translation table retreived from the binary

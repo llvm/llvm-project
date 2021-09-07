@@ -559,9 +559,10 @@ SymbolRefAttr PatternLowering::generateRewriter(
       /*results=*/llvm::None));
 
   builder.create<pdl_interp::FinalizeOp>(rewriter.getLoc());
-  return builder.getSymbolRefAttr(
+  return SymbolRefAttr::get(
+      builder.getContext(),
       pdl_interp::PDLInterpDialect::getRewriterModuleName(),
-      builder.getSymbolRefAttr(rewriterFunc));
+      SymbolRefAttr::get(rewriterFunc));
 }
 
 void PatternLowering::generateRewriter(

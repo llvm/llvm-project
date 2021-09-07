@@ -103,7 +103,7 @@ void Prescanner::Statement() {
   case LineClassification::Kind::IncludeDirective:
   case LineClassification::Kind::DefinitionDirective:
   case LineClassification::Kind::PreprocessorDirective:
-    preprocessor_.Directive(TokenizePreprocessorDirective(), this);
+    preprocessor_.Directive(TokenizePreprocessorDirective(), *this);
     return;
   case LineClassification::Kind::CompilerDirective:
     directiveSentinel_ = line.sentinel;
@@ -823,7 +823,7 @@ bool Prescanner::SkipCommentLine(bool afterAmpersand) {
     // (when it does not follow '&'), #define, and #undef (because
     // they cannot be allowed to affect preceding text on a
     // continued line).
-    preprocessor_.Directive(TokenizePreprocessorDirective(), this);
+    preprocessor_.Directive(TokenizePreprocessorDirective(), *this);
     return true;
   } else if (afterAmpersand &&
       (lineClass.kind == LineClassification::Kind::IncludeDirective ||

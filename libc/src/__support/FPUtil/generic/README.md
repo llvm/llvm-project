@@ -4,7 +4,7 @@ operations. The implementations are nested in the namespace
 implementations from machine dependent implementations. Consider the example of
 the fuse-multiply-add operation (FMA). The C standard library requires three
 different flavors, `fma` which operates double precsion numbers, `fmaf` which
-operates on single precision numbers, and `fmal` which operates on `lond double`
+operates on single precision numbers, and `fmal` which operates on `long double`
 numbers. On Aarch64, there are hardware instructions which implement the single
 and double precision flavors but not the `long double` flavor. For such targets,
 we want to be able to call the generic `long double` implementation from the

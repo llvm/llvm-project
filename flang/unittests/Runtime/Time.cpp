@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "gtest/gtest.h"
-#include "../../runtime/time-intrinsic.h"
+#include "flang/Runtime/time-intrinsic.h"
 #include <algorithm>
 #include <cctype>
 #include <charconv>

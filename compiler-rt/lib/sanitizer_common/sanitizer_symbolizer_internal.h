@@ -21,7 +21,7 @@ namespace __sanitizer {
 
 // Parsing helpers, 'str' is searched for delimiter(s) and a string or uptr
 // is extracted. When extracting a string, a newly allocated (using
-// InternalAlloc) and null-terminataed buffer is returned. They return a pointer
+// InternalAlloc) and null-terminated buffer is returned. They return a pointer
 // to the next characted after the found delimiter.
 const char *ExtractToken(const char *str, const char *delims, char **result);
 const char *ExtractInt(const char *str, const char *delims, int *result);

@@ -1,4 +1,3 @@
-; RUN: opt < %s -analyze -enable-new-pm=0 -delinearize | FileCheck %s
 ; RUN: opt < %s -passes='print<delinearization>' -disable-output 2>&1 | FileCheck %s
 
 ; void foo(long n, long m, long o, long p, double A[n][m][o+p]) {

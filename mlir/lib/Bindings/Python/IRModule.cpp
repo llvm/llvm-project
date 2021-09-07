@@ -12,6 +12,8 @@
 
 #include <vector>
 
+#include "mlir-c/Bindings/Python/Interop.h"
+
 namespace py = pybind11;
 using namespace mlir;
 using namespace mlir::python;
@@ -25,6 +27,9 @@ PyGlobals *PyGlobals::instance = nullptr;
 PyGlobals::PyGlobals() {
   assert(!instance && "PyGlobals already constructed");
   instance = this;
+  // The default search path include {mlir.}dialects, where {mlir.} is the
+  // package prefix configured at compile time.
+  dialectSearchPrefixes.push_back(MAKE_MLIR_PYTHON_QUALNAME("dialects"));
 }
 
 PyGlobals::~PyGlobals() { instance = nullptr; }

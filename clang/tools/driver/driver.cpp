@@ -278,27 +278,6 @@ static void FixupDiagPrefixExeName(TextDiagnosticPrinter *DiagClient,
   DiagClient->setPrefix(std::string(ExeBasename));
 }
 
-// This lets us create the DiagnosticsEngine with a properly-filled-out
-// DiagnosticOptions instance.
-static DiagnosticOptions *
-CreateAndPopulateDiagOpts(ArrayRef<const char *> argv, bool &UseNewCC1Process) {
-  auto *DiagOpts = new DiagnosticOptions;
-  unsigned MissingArgIndex, MissingArgCount;
-  InputArgList Args = getDriverOptTable().ParseArgs(
-      argv.slice(1), MissingArgIndex, MissingArgCount);
-  // We ignore MissingArgCount and the return value of ParseDiagnosticArgs.
-  // Any errors that would be diagnosed here will also be diagnosed later,
-  // when the DiagnosticsEngine actually exists.
-  (void)ParseDiagnosticArgs(*DiagOpts, Args);
-
-  UseNewCC1Process =
-      Args.hasFlag(clang::driver::options::OPT_fno_integrated_cc1,
-                   clang::driver::options::OPT_fintegrated_cc1,
-                   /*Default=*/CLANG_SPAWN_CC1);
-
-  return DiagOpts;
-}
-
 static void SetInstallDir(SmallVectorImpl<const char *> &argv,
                           Driver &TheDriver, bool CanonicalPrefixes) {
   // Attempt to find the original path used to invoke the driver, to determine
@@ -416,10 +395,10 @@ int main(int Argc, const char **Argv) {
     // Skip end-of-line response file markers
     if (Args[i] == nullptr)
       continue;
-    if (StringRef(Args[i]) == "-no-canonical-prefixes") {
+    if (StringRef(Args[i]) == "-canonical-prefixes")
+      CanonicalPrefixes = true;
+    else if (StringRef(Args[i]) == "-no-canonical-prefixes")
       CanonicalPrefixes = false;
-      break;
-    }
   }
 
   // Handle CL and _CL_ which permits additional command line options to be
@@ -459,10 +438,15 @@ int main(int Argc, const char **Argv) {
   // should spawn a new clang subprocess (old behavior).
   // Not having an additional process saves some execution time of Windows,
   // and makes debugging and profiling easier.
-  bool UseNewCC1Process;
+  bool UseNewCC1Process = CLANG_SPAWN_CC1;
+  for (const char *Arg : Args)
+    UseNewCC1Process = llvm::StringSwitch<bool>(Arg)
+                           .Case("-fno-integrated-cc1", true)
+                           .Case("-fintegrated-cc1", false)
+                           .Default(UseNewCC1Process);
 
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
-      CreateAndPopulateDiagOpts(Args, UseNewCC1Process);
+      CreateAndPopulateDiagOpts(Args);
 
   TextDiagnosticPrinter *DiagClient
     = new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);

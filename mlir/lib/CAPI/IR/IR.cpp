@@ -15,6 +15,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/Location.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Verifier.h"
@@ -129,6 +130,15 @@ MlirLocation mlirLocationFileLineColGet(MlirContext context,
 
 MlirLocation mlirLocationCallSiteGet(MlirLocation callee, MlirLocation caller) {
   return wrap(Location(CallSiteLoc::get(unwrap(callee), unwrap(caller))));
+}
+
+MlirLocation mlirLocationNameGet(MlirContext context, MlirStringRef name,
+                                 MlirLocation childLoc) {
+  if (mlirLocationIsNull(childLoc))
+    return wrap(
+        Location(NameLoc::get(Identifier::get(unwrap(name), unwrap(context)))));
+  return wrap(Location(NameLoc::get(
+      Identifier::get(unwrap(name), unwrap(context)), unwrap(childLoc))));
 }
 
 MlirLocation mlirLocationUnknownGet(MlirContext context) {

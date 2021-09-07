@@ -687,12 +687,12 @@ All subsequent operations are provided by the
 
 * ``virtual MutableArrayRef<char> getWorkingMemory(ProtectionFlags Seg)``
 
-  Should be overriden to return the address in working memory of the segment
+  Should be overridden to return the address in working memory of the segment
   with the given protection flags.
 
 * ``virtual JITTargetAddress getTargetMemory(ProtectionFlags Seg)``
 
-  Should be overriden to return the address in the executor's address space of
+  Should be overridden to return the address in the executor's address space of
   the segment with the given protection flags.
 
 * ``virtual void finalizeAsync(FinalizeContinuation OnFinalize)``
@@ -704,7 +704,7 @@ All subsequent operations are provided by the
 
 * ``virtual Error deallocate()``
 
-  Should be overriden to deallocate memory in the target address space.
+  Should be overridden to deallocate memory in the target address space.
 
 JITLink provides a simple in-process implementation of this interface:
 ``InProcessMemoryManager``. It allocates pages once and re-uses them as both

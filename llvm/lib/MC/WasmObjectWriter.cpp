@@ -1644,7 +1644,8 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
         LLVM_DEBUG(dbgs() << " -> table index: "
                           << WasmIndices.find(&WS)->second << "\n");
       } else if (WS.isTag()) {
-        // C++ exception symbol (__cpp_exception)
+        // C++ exception symbol (__cpp_exception) or longjmp symbol
+        // (__c_longjmp)
         unsigned Index;
         if (WS.isDefined()) {
           Index = NumTagImports + Tags.size();

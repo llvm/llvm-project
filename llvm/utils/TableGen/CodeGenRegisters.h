@@ -332,6 +332,7 @@ namespace llvm {
     bool Allocatable;
     StringRef AltOrderSelect;
     uint8_t AllocationPriority;
+    uint8_t TSFlags;
     /// Contains the combination of the lane masks of all subregisters.
     LaneBitmask LaneMask;
     /// True if there are at least 2 subregisters which do not interfere.

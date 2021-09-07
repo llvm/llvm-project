@@ -527,7 +527,7 @@ extern template class LoopBase<BasicBlock, Loop>;
 
 /// Represents a single loop in the control flow graph.  Note that not all SCCs
 /// in the CFG are necessarily loops.
-class Loop : public LoopBase<BasicBlock, Loop> {
+class LLVM_EXTERNAL_VISIBILITY Loop : public LoopBase<BasicBlock, Loop> {
 public:
   /// A range representing the start and end location of a loop.
   class LocRange {
@@ -1304,6 +1304,10 @@ bool getBooleanLoopAttribute(const Loop *TheLoop, StringRef Name);
 /// Find named metadata for a loop with an integer value.
 llvm::Optional<int>
 getOptionalIntLoopAttribute(const Loop *TheLoop, StringRef Name);
+
+/// Find named metadata for a loop with an integer value. Return \p Default if
+/// not set.
+int getIntLoopAttribute(const Loop *TheLoop, StringRef Name, int Default = 0);
 
 /// Find string metadata for loop
 ///

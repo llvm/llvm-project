@@ -23,6 +23,7 @@ class FunctionType;
 class IntegerSet;
 class IntegerType;
 class Location;
+class Operation;
 class ShapedType;
 
 //===----------------------------------------------------------------------===//
@@ -685,12 +686,17 @@ public:
   using ValueType = StringRef;
 
   /// Construct a symbol reference for the given value name.
+  static FlatSymbolRefAttr get(StringAttr value) {
+    return SymbolRefAttr::get(value);
+  }
   static FlatSymbolRefAttr get(MLIRContext *ctx, StringRef value) {
     return SymbolRefAttr::get(ctx, value);
   }
 
-  static FlatSymbolRefAttr get(StringAttr value) {
-    return SymbolRefAttr::get(value);
+  /// Convenience getter for building a SymbolRefAttr based on an operation
+  /// that implements the SymbolTrait.
+  static FlatSymbolRefAttr get(Operation *symbol) {
+    return SymbolRefAttr::get(symbol);
   }
 
   /// Returns the name of the held symbol reference as a StringAttr.

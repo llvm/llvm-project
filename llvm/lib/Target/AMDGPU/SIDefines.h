@@ -14,6 +14,13 @@
 
 namespace llvm {
 
+// This needs to be kept in sync with the field bits in SIRegisterClass.
+enum SIRCFlags : uint8_t {
+  // For vector registers.
+  HasVGPR = 1 << 0,
+  HasAGPR = 1 << 1
+}; // enum SIRCFlags
+
 namespace SIInstrFlags {
 // This needs to be kept in sync with the field bits in InstSI.
 enum : uint64_t {

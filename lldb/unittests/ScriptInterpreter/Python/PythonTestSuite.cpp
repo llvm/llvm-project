@@ -12,7 +12,7 @@
 
 #include "Plugins/ScriptInterpreter/Python/ScriptInterpreterPython.h"
 #include "Plugins/ScriptInterpreter/Python/ScriptInterpreterPythonImpl.h"
-#include "lldb/API/SBError.h"
+
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 

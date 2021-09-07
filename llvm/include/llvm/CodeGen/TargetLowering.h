@@ -4445,10 +4445,6 @@ public:
   /// \returns The expansion result
   SDValue expandFP_TO_INT_SAT(SDNode *N, SelectionDAG &DAG) const;
 
-  /// Expand isnan depending on function attributes.
-  SDValue expandISNAN(EVT ResultVT, SDValue Op, SDNodeFlags Flags,
-                      const SDLoc &DL, SelectionDAG &DAG) const;
-
   /// Expand CTPOP nodes. Expands vector/scalar CTPOP nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
   /// \param N Node to expand

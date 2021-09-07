@@ -147,7 +147,12 @@ class MockGDBServerResponder:
         if packet == "s":
             return self.haltReason()
         if packet[0] == "H":
-            return self.selectThread(packet[1], int(packet[2:], 16))
+            tid = packet[2:]
+            if "." in tid:
+                assert tid.startswith("p")
+                # TODO: do we want to do anything with PID?
+                tid = tid.split(".", 1)[1]
+            return self.selectThread(packet[1], int(tid, 16))
         if packet[0:6] == "qXfer:":
             obj, read, annex, location = packet[6:].split(":")
             offset, length = [int(x, 16) for x in location.split(',')]

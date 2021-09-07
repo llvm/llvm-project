@@ -100,7 +100,10 @@ entry:
 ; CHECK-LABEL: @outline_bitcast_base2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[D:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @outlined_ir_func_1(i32* [[D]], i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]])
+; CHECK-NEXT:    [[X:%.*]] = bitcast i32* [[D]] to i8*
+; CHECK-NEXT:    [[AL:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[BL:%.*]] = add i32 [[B]], [[A]]
+; CHECK-NEXT:    [[CL:%.*]] = add i32 [[B]], [[C:%.*]]
 ; CHECK-NEXT:    [[BUFFER:%.*]] = mul i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[Y:%.*]] = bitcast i32* [[D]] to i8*
 ; CHECK-NEXT:    [[AM:%.*]] = add i32 [[A]], [[B]]
@@ -113,7 +116,9 @@ entry:
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK: @outlined_ir_func_0(i32* [[TMP0:%.*]], i32* [[TMP1:%.*]], i32* [[TMP2:%.*]], i32* [[TMP3:%.*]])
+; CHECK-LABEL: @outlined_ir_func_0(
+; CHECK-NEXT:  newFuncRoot:
+; CHECK-NEXT:    br label [[ENTRY_TO_OUTLINE:%.*]]
 ; CHECK:       entry_to_outline:
 ; CHECK-NEXT:    store i32 2, i32* [[TMP0:%.*]], align 4
 ; CHECK-NEXT:    store i32 3, i32* [[TMP1:%.*]], align 4
@@ -123,13 +128,5 @@ entry:
 ; CHECK-NEXT:    [[BL:%.*]] = load i32, i32* [[TMP1]], align 4
 ; CHECK-NEXT:    [[CL:%.*]] = load i32, i32* [[TMP2]], align 4
 ; CHECK-NEXT:    br label [[ENTRY_AFTER_OUTLINE_EXITSTUB:%.*]]
-;
-;
-; CHECK: @outlined_ir_func_1(i32* [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]], i32 [[TMP3:%.*]])
-; CHECK:       entry_to_outline:
-; CHECK-NEXT:    [[X:%.*]] = bitcast i32* [[TMP0]] to i8*
-; CHECK-NEXT:    [[AL:%.*]] = add i32 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[BL:%.*]] = add i32 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[CL:%.*]] = add i32 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    br label [[ENTRY_AFTER_OUTLINE_EXITSTUB:%.*]]
-;
+; CHECK:       entry_after_outline.exitStub:
+; CHECK-NEXT:    ret void

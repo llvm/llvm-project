@@ -264,6 +264,9 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
   if (getTriple().isOSAIX()) {
     Builder.defineMacro("__THW_PPC__");
+    // Define __PPC and __powerpc for AIX XL C/C++ compatibility
+    Builder.defineMacro("__PPC");
+    Builder.defineMacro("__powerpc");
   }
 
   // Target properties.

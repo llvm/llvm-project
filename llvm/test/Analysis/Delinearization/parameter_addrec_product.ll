@@ -1,4 +1,3 @@
-; RUN: opt -delinearize -analyze -enable-new-pm=0 < %s | FileCheck %s
 ; RUN: opt -passes='print<delinearization>' -disable-output < %s 2>&1 | FileCheck %s
 ;
 ;    void foo(float *A, long *p) {

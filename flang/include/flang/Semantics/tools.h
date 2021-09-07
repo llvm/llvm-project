@@ -56,6 +56,8 @@ const DeclTypeSpec *FindParentTypeSpec(const DeclTypeSpec &);
 const DeclTypeSpec *FindParentTypeSpec(const Scope &);
 const DeclTypeSpec *FindParentTypeSpec(const Symbol &);
 
+const EquivalenceSet *FindEquivalenceSet(const Symbol &);
+
 enum class Tristate { No, Yes, Maybe };
 inline Tristate ToTristate(bool x) { return x ? Tristate::Yes : Tristate::No; }
 
@@ -105,14 +107,13 @@ bool IsEventTypeOrLockType(const DerivedTypeSpec *);
 bool IsOrContainsEventOrLockComponent(const Symbol &);
 bool CanBeTypeBoundProc(const Symbol *);
 // Does a non-PARAMETER symbol have explicit initialization with =value or
-// =>target in its declaration, or optionally in a DATA statement? (Being
+// =>target in its declaration (but not in a DATA statement)? (Being
 // ALLOCATABLE or having a derived type with default component initialization
 // doesn't count; it must be a variable initialization that implies the SAVE
 // attribute, or a derived type component default value.)
-bool IsStaticallyInitialized(const Symbol &, bool ignoreDATAstatements = false);
+bool HasDeclarationInitializer(const Symbol &);
 // Is the symbol explicitly or implicitly initialized in any way?
-bool IsInitialized(const Symbol &, bool ignoreDATAstatements = false,
-    const Symbol *derivedType = nullptr);
+bool IsInitialized(const Symbol &, bool ignoreDATAstatements = false);
 // Is the symbol a component subject to deallocation or finalization?
 bool IsDestructible(const Symbol &, const Symbol *derivedType = nullptr);
 bool HasIntrinsicTypeName(const Symbol &);
@@ -329,6 +330,13 @@ enum class ProcedureDefinitionClass {
 };
 
 ProcedureDefinitionClass ClassifyProcedure(const Symbol &);
+
+// Returns a list of storage associations due to EQUIVALENCE in a
+// scope; each storage association is a list of symbol references
+// in ascending order of scope offset.  Note that the scope may have
+// more EquivalenceSets than this function's result has storage
+// associations; these are closures over equivalences.
+std::list<std::list<SymbolRef>> GetStorageAssociations(const Scope &);
 
 // Derived type component iterator that provides a C++ LegacyForwardIterator
 // iterator over the Ordered, Direct, Ultimate or Potential components of a

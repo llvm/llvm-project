@@ -206,6 +206,22 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
+  if (ISD == ISD::MUL && Args.size() == 2 && LT.second.isVector() &&
+      LT.second.getScalarType() == MVT::i32) {
+    // Check if the operands can be represented as a smaller datatype.
+    bool Op1Signed = false, Op2Signed = false;
+    unsigned Op1MinSize = BaseT::minRequiredElementSize(Args[0], Op1Signed);
+    unsigned Op2MinSize = BaseT::minRequiredElementSize(Args[1], Op2Signed);
+    unsigned OpMinSize = std::max(Op1MinSize, Op2MinSize);
+
+    // If both are representable as i15 and at least one is zero-extended,
+    // then we can treat this as PMADDWD which has the same costs
+    // as a vXi16 multiply..
+    if (OpMinSize <= 15 && (!Op1Signed || !Op2Signed) && !ST->isPMADDWDSlow())
+      LT.second =
+          MVT::getVectorVT(MVT::i16, 2 * LT.second.getVectorNumElements());
+  }
+
   if ((ISD == ISD::SDIV || ISD == ISD::SREM || ISD == ISD::UDIV ||
        ISD == ISD::UREM) &&
       (Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
@@ -288,6 +304,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   if (ST->isSLM()) {
     if (Args.size() == 2 && ISD == ISD::MUL && LT.second == MVT::v4i32) {
       // Check if the operands can be shrinked into a smaller datatype.
+      // TODO: Merge this into generiic vXi32 MUL patterns above.
       bool Op1Signed = false;
       unsigned Op1MinSize = BaseT::minRequiredElementSize(Args[0], Op1Signed);
       bool Op2Signed = false;
@@ -2721,8 +2738,6 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::FMAXNUM,    MVT::v2f64,   2 },
     { ISD::FMAXNUM,    MVT::v4f64,   2 },
     { ISD::FMAXNUM,    MVT::v8f64,   2 },
-    { ISD::ISNAN,      MVT::v8f64,   1 },
-    { ISD::ISNAN,      MVT::v16f32,  1 },
   };
   static const CostTblEntry XOPCostTbl[] = {
     { ISD::BITREVERSE, MVT::v4i64,   4 },
@@ -2851,8 +2866,6 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::FSQRT,      MVT::f64,    21 }, // SNB from http://www.agner.org/
     { ISD::FSQRT,      MVT::v2f64,  21 }, // SNB from http://www.agner.org/
     { ISD::FSQRT,      MVT::v4f64,  43 }, // SNB from http://www.agner.org/
-    { ISD::ISNAN,      MVT::v4f64,   1 },
-    { ISD::ISNAN,      MVT::v8f32,   1 },
   };
   static const CostTblEntry GLMCostTbl[] = {
     { ISD::FSQRT, MVT::f32,   19 }, // sqrtss
@@ -2949,16 +2962,12 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::FMAXNUM,    MVT::v2f64,   4 },
     { ISD::FSQRT,      MVT::f64,    32 }, // Nehalem from http://www.agner.org/
     { ISD::FSQRT,      MVT::v2f64,  32 }, // Nehalem from http://www.agner.org/
-    { ISD::ISNAN,      MVT::f64,    1 },
-    { ISD::ISNAN,      MVT::v2f64,  1 },
   };
   static const CostTblEntry SSE1CostTbl[] = {
     { ISD::FMAXNUM,    MVT::f32,     4 },
     { ISD::FMAXNUM,    MVT::v4f32,   4 },
     { ISD::FSQRT,      MVT::f32,    28 }, // Pentium III from http://www.agner.org/
     { ISD::FSQRT,      MVT::v4f32,  56 }, // Pentium III from http://www.agner.org/
-    { ISD::ISNAN,      MVT::f32,     1 },
-    { ISD::ISNAN,      MVT::v4f32,   1 },
   };
   static const CostTblEntry BMI64CostTbl[] = { // 64-bit targets
     { ISD::CTTZ,       MVT::i64,     1 },
@@ -3047,10 +3056,6 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   case Intrinsic::cttz:
     ISD = ISD::CTTZ;
-    break;
-  case Intrinsic::isnan:
-    ISD = ISD::ISNAN;
-    OpTy = ICA.getArgTypes()[0];
     break;
   case Intrinsic::maxnum:
   case Intrinsic::minnum:

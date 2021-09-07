@@ -150,7 +150,7 @@ int __llvm_profile_write_file(void);
 int __llvm_orderfile_write_file(void);
 /*!
  * \brief this is a wrapper interface to \c __llvm_profile_write_file.
- * After this interface is invoked, a arleady dumped flag will be set
+ * After this interface is invoked, an already dumped flag will be set
  * so that profile won't be dumped again during program exit.
  * Invocation of interface __llvm_profile_reset_counters will clear
  * the flag. This interface is designed to be used to collect profile

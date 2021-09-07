@@ -58,7 +58,7 @@ PYBIND11_MODULE(_mlirExecutionEngine, m) {
   //----------------------------------------------------------------------------
   // Mapping of the top-level PassManager
   //----------------------------------------------------------------------------
-  py::class_<PyExecutionEngine>(m, "ExecutionEngine")
+  py::class_<PyExecutionEngine>(m, "ExecutionEngine", py::module_local())
       .def(py::init<>([](MlirModule module, int optLevel,
                          const std::vector<std::string> &sharedLibPaths) {
              llvm::SmallVector<MlirStringRef, 4> libPaths;

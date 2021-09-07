@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang -fopenmp
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang -fopenmp
 ! OpenMP Version 4.5
 ! 2.7.1 Loop Construct
 ! The loop iteration variable may not appear in a firstprivate directive.

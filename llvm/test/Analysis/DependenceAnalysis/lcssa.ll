@@ -1,6 +1,5 @@
 ; RUN: opt < %s -disable-output "-passes=print<da>"                            \
 ; RUN: "-aa-pipeline=basic-aa,tbaa" 2>&1 | FileCheck %s
-; RUN: opt < %s -analyze -enable-new-pm=0 -basic-aa -tbaa -da | FileCheck %s
 
 ; CHECK:      Src:  %v = load i32, i32* %arrayidx1, align 4 --> Dst:  store i32 %add, i32* %a.lcssa, align 4
 ; CHECK-NEXT: da analyze - confused!

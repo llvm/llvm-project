@@ -111,16 +111,18 @@ static inline void dumpTargetPointerMappings(const ident_t *Loc,
   INFO(OMP_INFOTYPE_ALL, Device.DeviceID,
        "OpenMP Host-Device pointer mappings after block at %s:%d:%d:\n",
        Kernel.getFilename(), Kernel.getLine(), Kernel.getColumn());
-  INFO(OMP_INFOTYPE_ALL, Device.DeviceID, "%-18s %-18s %s %s %s\n", "Host Ptr",
-       "Target Ptr", "Size (B)", "RefCount", "Declaration");
+  INFO(OMP_INFOTYPE_ALL, Device.DeviceID, "%-18s %-18s %s %s %s %s\n",
+       "Host Ptr", "Target Ptr", "Size (B)", "DynRefCount", "HoldRefCount",
+       "Declaration");
   Device.DataMapMtx.lock();
   for (const auto &HostTargetMap : Device.HostDataToTargetMap) {
     SourceInfo Info(HostTargetMap.HstPtrName);
     INFO(OMP_INFOTYPE_ALL, Device.DeviceID,
-         DPxMOD " " DPxMOD " %-8" PRIuPTR " %-8s %s at %s:%d:%d\n",
+         DPxMOD " " DPxMOD " %-8" PRIuPTR " %-11s %-12s %s at %s:%d:%d\n",
          DPxPTR(HostTargetMap.HstPtrBegin), DPxPTR(HostTargetMap.TgtPtrBegin),
          HostTargetMap.HstPtrEnd - HostTargetMap.HstPtrBegin,
-         HostTargetMap.refCountToStr().c_str(), Info.getName(),
+         HostTargetMap.dynRefCountToStr().c_str(),
+         HostTargetMap.holdRefCountToStr().c_str(), Info.getName(),
          Info.getFilename(), Info.getLine(), Info.getColumn());
   }
   Device.DataMapMtx.unlock();

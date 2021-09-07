@@ -181,6 +181,16 @@ private:
   /// \returns The number of Functions created.
   unsigned doOutline(Module &M);
 
+  /// Check whether an OutlinableRegion is incompatible with code already
+  /// outlined. OutlinableRegions are incomptaible when there are overlapping
+  /// instructions, or code that has not been recorded has been added to the
+  /// instructions.
+  ///
+  /// \param [in] Region - The OutlinableRegion to check for conflicts with
+  /// already outlined code.
+  /// \returns whether the region can safely be outlined.
+  bool isCompatibleWithAlreadyOutlinedCode(const OutlinableRegion &Region);
+
   /// Remove all the IRSimilarityCandidates from \p CandidateVec that have
   /// instructions contained in a previously outlined region and put the
   /// remaining regions in \p CurrentGroup.

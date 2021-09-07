@@ -1,4 +1,4 @@
-//===-- runtime/io-stmt.cpp -------------------------------------*- C++ -*-===//
+//===-- runtime/io-stmt.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,9 +9,9 @@
 #include "io-stmt.h"
 #include "connection.h"
 #include "format.h"
-#include "memory.h"
 #include "tools.h"
 #include "unit.h"
+#include "flang/Runtime/memory.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
@@ -242,6 +242,10 @@ int OpenStatementState::EndIoStatement() {
       SignalError("FORM= may not be changed on an open unit");
     }
     unit().isUnformatted = *isUnformatted_;
+  }
+  if (!unit().isUnformatted) {
+    // Set default format (C.7.4 point 2).
+    unit().isUnformatted = unit().access != Access::Sequential;
   }
   return ExternalIoStatementBase::EndIoStatement();
 }
@@ -969,7 +973,7 @@ bool InquireUnitState::Inquire(
                                               : "ASCII";
     break;
   case HashInquiryKeyword("FORM"):
-    str = !unit().isUnformatted ? "UNKNOWN"
+    str = !unit().isUnformatted ? "UNDEFINED"
         : *unit().isUnformatted ? "UNFORMATTED"
                                 : "FORMATTED";
     break;

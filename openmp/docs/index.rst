@@ -28,6 +28,20 @@ A high-level overview of OpenMP in LLVM can be found :doc:`here <design/Overview
 
    design/Overview
 
+OpenACC Support
+===============
+
+:doc:`OpenACC support <openacc/Overview>` is under development for
+both Flang and Clang.  For this purpose, LLVM's OpenMP runtimes are
+being extended to serve as OpenACC runtimes.  In some cases, Clang
+supports :doc:`OpenMP extensions <openacc/OpenMPExtensions>` to make
+the additional functionality also available in OpenMP applications.
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+
+   openacc/Overview
 
 LLVM/OpenMP Optimizations
 =========================

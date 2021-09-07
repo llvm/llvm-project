@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "CrashHandlerFixture.h"
-#include "../../runtime/descriptor.h"
-#include "../../runtime/io-api.h"
 #include "../../runtime/io-error.h"
+#include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/io-api.h"
 
 using namespace Fortran::runtime;
 using namespace Fortran::runtime::io;

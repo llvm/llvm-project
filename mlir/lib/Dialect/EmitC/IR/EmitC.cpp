@@ -123,7 +123,7 @@ OpFoldResult emitc::ConstantOp::fold(ArrayRef<Attribute> operands) {
 static void print(OpAsmPrinter &p, IncludeOp &op) {
   bool standardInclude = op.is_standard_include();
 
-  p << IncludeOp::getOperationName() << " ";
+  p << " ";
   if (standardInclude)
     p << "<";
   p << "\"" << op.include() << "\"";

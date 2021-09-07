@@ -18,39 +18,39 @@
 #include "test_iterators.h"
 #include "test_range.h"
 
-namespace stdr = std::ranges;
 
-static_assert(!stdr::common_range<test_range<cpp17_input_iterator> >);
-static_assert(!stdr::common_range<test_range<cpp17_input_iterator> const>);
 
-static_assert(!stdr::common_range<test_non_const_range<cpp17_input_iterator> >);
-static_assert(!stdr::common_range<test_non_const_range<cpp17_input_iterator> const>);
+static_assert(!std::ranges::common_range<test_range<cpp17_input_iterator> >);
+static_assert(!std::ranges::common_range<test_range<cpp17_input_iterator> const>);
 
-static_assert(stdr::common_range<test_common_range<cpp17_input_iterator> >);
-static_assert(stdr::common_range<test_common_range<cpp17_input_iterator> const>);
+static_assert(!std::ranges::common_range<test_non_const_range<cpp17_input_iterator> >);
+static_assert(!std::ranges::common_range<test_non_const_range<cpp17_input_iterator> const>);
 
-static_assert(stdr::common_range<test_non_const_common_range<cpp17_input_iterator> >);
-static_assert(!stdr::common_range<test_non_const_common_range<cpp17_input_iterator> const>);
+static_assert(std::ranges::common_range<test_common_range<cpp17_input_iterator> >);
+static_assert(std::ranges::common_range<test_common_range<cpp17_input_iterator> const>);
+
+static_assert(std::ranges::common_range<test_non_const_common_range<cpp17_input_iterator> >);
+static_assert(!std::ranges::common_range<test_non_const_common_range<cpp17_input_iterator> const>);
 
 struct subtly_not_common {
   int* begin() const;
   int const* end() const;
 };
-static_assert(stdr::range<subtly_not_common> && !stdr::common_range<subtly_not_common>);
-static_assert(stdr::range<subtly_not_common const> && !stdr::common_range<subtly_not_common const>);
+static_assert(std::ranges::range<subtly_not_common> && !std::ranges::common_range<subtly_not_common>);
+static_assert(std::ranges::range<subtly_not_common const> && !std::ranges::common_range<subtly_not_common const>);
 
 struct common_range_non_const_only {
   int* begin() const;
   int* end();
   int const* end() const;
 };
-static_assert(stdr::range<common_range_non_const_only>&& stdr::common_range<common_range_non_const_only>);
-static_assert(stdr::range<common_range_non_const_only const> && !stdr::common_range<common_range_non_const_only const>);
+static_assert(std::ranges::range<common_range_non_const_only>&& std::ranges::common_range<common_range_non_const_only>);
+static_assert(std::ranges::range<common_range_non_const_only const> && !std::ranges::common_range<common_range_non_const_only const>);
 
 struct common_range_const_only {
   int* begin();
   int const* begin() const;
   int const* end() const;
 };
-static_assert(stdr::range<common_range_const_only> && !stdr::common_range<common_range_const_only>);
-static_assert(stdr::range<common_range_const_only const>&& stdr::common_range<common_range_const_only const>);
+static_assert(std::ranges::range<common_range_const_only> && !std::ranges::common_range<common_range_const_only>);
+static_assert(std::ranges::range<common_range_const_only const>&& std::ranges::common_range<common_range_const_only const>);

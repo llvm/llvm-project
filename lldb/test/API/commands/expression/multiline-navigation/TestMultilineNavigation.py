@@ -76,22 +76,32 @@ class TestCase(PExpectTest):
     @skipIfEditlineSupportMissing
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr48316')
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
-    def test_nav_arrow_up_empty_pr49845(self):
-        """Tests that navigating with the up arrow doesn't crash."""
+    def test_nav_arrow_up_empty(self):
+        """
+        Tests that navigating with the up arrow doesn't crash and skips
+        empty history entries.
+        """
         self.launch()
 
-        # Create an empty history session by only entering a newline.
+        # Create a real history entry '456' and then follow up with an
+        # empty entry (that shouldn't be saved).
+        self.child.sendline("expr")
+        self.child.expect_exact("terminate with an empty line to evaluate")
+        self.child.send("456\n\n")
+        self.expect_prompt()
+
         self.child.sendline("expr")
         self.child.expect_exact("terminate with an empty line to evaluate")
         self.child.send("\n")
         self.expect_prompt()
 
-        # Send just the up arrow in the expression evaluator. This should bring up the previous empty expression.
+        # The up arrow should recall the actual history entry and not the
+        # the empty entry (as that one shouldn't have been saved).
         self.child.sendline("expr")
         self.child.expect_exact("terminate with an empty line to evaluate")
         self.child.send(self.arrow_up)
-        self.child.expect_exact("1: ")
-        self.child.send("\n")
+        self.child.expect_exact("456")
+        self.child.send("\n\n")
         self.expect_prompt()
 
         self.quit()

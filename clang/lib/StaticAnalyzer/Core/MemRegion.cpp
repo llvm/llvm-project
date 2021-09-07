@@ -28,6 +28,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
@@ -770,9 +771,16 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
     QualType Ty = cast<TypedValueRegion>(SR)->getDesugaredValueType(Ctx);
     const DefinedOrUnknownSVal Size = getElementExtent(Ty, SVB);
 
-    // A zero-length array at the end of a struct often stands for dynamically
-    // allocated extra memory.
-    const auto isFlexibleArrayMemberCandidate = [this](QualType Ty) -> bool {
+    // We currently don't model flexible array members (FAMs), which are:
+    //  - int array[]; of IncompleteArrayType
+    //  - int array[0]; of ConstantArrayType with size 0
+    //  - int array[1]; of ConstantArrayType with size 1 (*)
+    // (*): Consider single element array object members as FAM candidates only
+    //      if the consider-single-element-arrays-as-flexible-array-members
+    //      analyzer option is true.
+    // https://gcc.gnu.org/onlinedocs/gcc/Zero-Length.html
+    const auto isFlexibleArrayMemberCandidate = [this,
+                                                 &SVB](QualType Ty) -> bool {
       const ArrayType *AT = Ctx.getAsArrayType(Ty);
       if (!AT)
         return false;
@@ -782,6 +790,11 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
       if (const auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
         const llvm::APInt &Size = CAT->getSize();
         if (Size.isNullValue())
+          return true;
+
+        const AnalyzerOptions &Opts = SVB.getAnalyzerOptions();
+        if (Opts.ShouldConsiderSingleElementArraysAsFlexibleArrayMembers &&
+            Size.isOneValue())
           return true;
       }
       return false;

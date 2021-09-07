@@ -6,6 +6,14 @@
 // RUN:   | FileCheck -match-full-lines %s  --check-prefix=NO-FEATURES
 // RUN: %clang_cc1 -triple r600-unknown-unknown %s -E -dM -o - -x cl -cl-std=CL3.0 -cl-ext=+all \
 // RUN:   | FileCheck -match-full-lines %s  --check-prefix=FEATURES
+// RUN: %clang_cc1 -triple spir-unknown-unknown %s -E -dM -o - -x cl -cl-std=clc++2021 -cl-ext=-all \
+// RUN:   | FileCheck -match-full-lines %s  --check-prefix=NO-FEATURES
+// RUN: %clang_cc1 -triple spir-unknown-unknown %s -E -dM -o - -x cl -cl-std=clc++2021 -cl-ext=+all \
+// RUN:   | FileCheck -match-full-lines %s  --check-prefix=FEATURES
+// RUN: %clang_cc1 -triple r600-unknown-unknown %s -E -dM -o - -x cl -cl-std=clc++2021 \
+// RUN:   | FileCheck -match-full-lines %s  --check-prefix=NO-FEATURES
+// RUN: %clang_cc1 -triple r600-unknown-unknown %s -E -dM -o - -x cl -cl-std=clc++2021 -cl-ext=+all \
+// RUN:   | FileCheck -match-full-lines %s  --check-prefix=FEATURES
 
 // For OpenCL C 2.0 feature macros are defined only in header, so test that earlier OpenCL
 // versions don't define feature macros accidentally and CL2.0 don't define them without header
@@ -15,7 +23,7 @@
 // RUN:   | FileCheck -match-full-lines %s  --check-prefix=NO-FEATURES
 // RUN: %clang_cc1 -triple spir-unknown-unknown %s -E -dM -o - -x cl -cl-std=CL2.0 \
 // RUN:   | FileCheck -match-full-lines %s  --check-prefix=NO-FEATURES
-// RUN: %clang_cc1 -triple spir-unknown-unknown %s -E -dM -o - -x cl -cl-std=CLC++ \
+// RUN: %clang_cc1 -triple spir-unknown-unknown %s -E -dM -o - -x cl -cl-std=clc++1.0 \
 // RUN:   | FileCheck -match-full-lines %s  --check-prefix=NO-FEATURES
 
 // Note that __opencl_c_int64 is always defined assuming

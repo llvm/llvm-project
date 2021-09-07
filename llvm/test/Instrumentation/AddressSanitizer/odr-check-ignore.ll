@@ -1,6 +1,4 @@
-; RUN: opt < %s -asan -asan-module -asan-use-private-alias=0 -enable-new-pm=0 -S | FileCheck %s --check-prefix=NOALIAS
 ; RUN: opt < %s -passes='asan-pipeline' -asan-use-private-alias=0 -S | FileCheck %s --check-prefix=NOALIAS
-; RUN: opt < %s -asan -asan-module -asan-use-private-alias=1 -enable-new-pm=0 -S | FileCheck %s --check-prefix=ALIAS
 ; RUN: opt < %s -passes='asan-pipeline' -asan-use-private-alias=1 -S | FileCheck %s --check-prefix=ALIAS
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

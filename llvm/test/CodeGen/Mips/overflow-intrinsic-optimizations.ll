@@ -3,6 +3,7 @@
 define i1 @no__mulodi4(i32 %a, i64 %b, i32* %c) {
 ; CHECK-LABEL: no__mulodi4
 ; CHECK-NOT: jal __mulodi4
+; CHECK-NOT: jal __multi3
 entry:
   %0 = sext i32 %a to i64
   %1 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %0, i64 %b)

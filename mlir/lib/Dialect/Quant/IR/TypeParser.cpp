@@ -29,15 +29,16 @@ static IntegerType parseStorageType(DialectAsmParser &parser, bool &isSigned) {
   // Parse storage type (alpha_ident, integer_literal).
   StringRef identifier;
   unsigned storageTypeWidth = 0;
-  if (failed(parser.parseOptionalKeyword(&identifier))) {
-    // If we didn't parse a keyword, this must be a signed type.
-    if (parser.parseType(type))
+  OptionalParseResult result = parser.parseOptionalType(type);
+  if (result.hasValue()) {
+    if (!succeeded(*result)) {
+      parser.parseType(type);
       return nullptr;
-    isSigned = true;
+    }
+    isSigned = !type.isUnsigned();
     storageTypeWidth = type.getWidth();
-
+  } else if (succeeded(parser.parseKeyword(&identifier))) {
     // Otherwise, this must be an unsigned integer (`u` integer-literal).
-  } else {
     if (!identifier.consume_front("u")) {
       parser.emitError(typeLoc, "illegal storage type prefix");
       return nullptr;
@@ -48,6 +49,8 @@ static IntegerType parseStorageType(DialectAsmParser &parser, bool &isSigned) {
     }
     isSigned = false;
     type = parser.getBuilder().getIntegerType(storageTypeWidth);
+  } else {
+    return nullptr;
   }
 
   if (storageTypeWidth == 0 ||

@@ -439,7 +439,7 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::Read(
 
 template <typename W, int P> std::string Real<W, P>::DumpHexadecimal() const {
   if (IsNotANumber()) {
-    return "NaN 0x"s + word_.Hexadecimal();
+    return "NaN0x"s + word_.Hexadecimal();
   } else if (IsNegative()) {
     return "-"s + Negate().DumpHexadecimal();
   } else if (IsInfinite()) {

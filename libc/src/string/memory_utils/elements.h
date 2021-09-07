@@ -443,7 +443,7 @@ template <size_t Size> struct Builtin {
 
 private:
   // Copies `kSize` bytes from `src` to `dst` using a for loop.
-  // This code requires the use of `-fno-buitin-memcpy` to prevent the compiler
+  // This code requires the use of `-fno-builtin-memcpy` to prevent the compiler
   // from turning the for-loop back into `__builtin_memcpy`.
   static void ForLoopCopy(char *__restrict dst, const char *__restrict src) {
     for (size_t i = 0; i < kSize; ++i)

@@ -249,10 +249,10 @@ def VPTPredROperand : AsmOperandClass {
 
 // Base class for both kinds of vpred.
 class vpred_ops<dag extra_op, dag extra_mi> : OperandWithDefaultOps<OtherVT,
-            !con((ops (i32 0), (i32 zero_reg)), extra_op)> {
+            !con((ops (i32 0), (i32 zero_reg), (i32 zero_reg)), extra_op)> {
   let PrintMethod = "printVPTPredicateOperand";
   let OperandNamespace = "ARM";
-  let MIOperandInfo = !con((ops i32imm:$cond, VCCR:$cond_reg), extra_mi);
+  let MIOperandInfo = !con((ops i32imm:$cond, VCCR:$cond_reg, GPRlr:$tp_reg), extra_mi);
 
   // For convenience, we provide a string value that can be appended
   // to the constraints string. It's empty for vpred_n, and for

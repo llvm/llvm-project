@@ -35,7 +35,7 @@ define dso_local void @assumeDivisibleTC(i8* noalias nocapture %a, i8* noalias n
 ; CHECK-NEXT:    store i8 [[ADD_1]], i8* [[ARRAYIDX4_1]], align 1
 ; CHECK-NEXT:    [[INC_1]] = add nuw nsw i32 [[INC]], 1
 ; CHECK-NEXT:    [[CMP1_1:%.*]] = icmp slt i32 [[INC_1]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP1_1]], label [[FOR_BODY]], label [[EXIT_LOOPEXIT:%.*]], [[LOOP0:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[CMP1_1]], label [[FOR_BODY]], label [[EXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
@@ -113,7 +113,7 @@ define dso_local void @cannotProveDivisibleTC(i8* noalias nocapture %a, i8* noal
 ; CHECK-NEXT:    [[INC_1]] = add nuw nsw i32 [[INC]], 1
 ; CHECK-NEXT:    [[NITER_NSUB_1]] = sub i32 [[NITER_NSUB]], 1
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp ne i32 [[NITER_NSUB_1]], 0
-; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[FOR_BODY]], label [[EXIT_LOOPEXIT_UNR_LCSSA_LOOPEXIT:%.*]], [[LOOP2:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[FOR_BODY]], label [[EXIT_LOOPEXIT_UNR_LCSSA_LOOPEXIT:%.*]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       exit.loopexit.unr-lcssa.loopexit:
 ; CHECK-NEXT:    [[I_011_UNR_PH:%.*]] = phi i32 [ [[INC_1]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    br label [[EXIT_LOOPEXIT_UNR_LCSSA]]
@@ -124,16 +124,11 @@ define dso_local void @cannotProveDivisibleTC(i8* noalias nocapture %a, i8* noal
 ; CHECK:       for.body.epil.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY_EPIL:%.*]]
 ; CHECK:       for.body.epil:
-; CHECK-NEXT:    [[I_011_EPIL:%.*]] = phi i32 [ [[I_011_UNR]], [[FOR_BODY_EPIL_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds i8, i8* [[B]], i32 [[I_011_EPIL]]
+; CHECK-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds i8, i8* [[B]], i32 [[I_011_UNR]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, i8* [[ARRAYIDX_EPIL]], align 1
 ; CHECK-NEXT:    [[ADD_EPIL:%.*]] = add i8 [[TMP4]], 3
-; CHECK-NEXT:    [[ARRAYIDX4_EPIL:%.*]] = getelementptr inbounds i8, i8* [[A]], i32 [[I_011_EPIL]]
+; CHECK-NEXT:    [[ARRAYIDX4_EPIL:%.*]] = getelementptr inbounds i8, i8* [[A]], i32 [[I_011_UNR]]
 ; CHECK-NEXT:    store i8 [[ADD_EPIL]], i8* [[ARRAYIDX4_EPIL]], align 1
-; CHECK-NEXT:    [[INC_EPIL:%.*]] = add nuw nsw i32 [[I_011_EPIL]], 1
-; CHECK-NEXT:    [[CMP1_EPIL:%.*]] = icmp slt i32 [[INC_EPIL]], [[N]]
-; CHECK-NEXT:    br label [[EXIT_LOOPEXIT_EPILOG_LCSSA:%.*]]
-; CHECK:       exit.loopexit.epilog-lcssa:
 ; CHECK-NEXT:    br label [[EXIT_LOOPEXIT]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]

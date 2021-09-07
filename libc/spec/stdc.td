@@ -549,6 +549,7 @@ def StdC : StandardSpec<"stdc"> {
       [
           OnceFlagType,
           CallOnceFuncType,
+          CndTType,
           MtxTType,
           ThrdStartTType,
           ThrdTType,
@@ -573,11 +574,54 @@ def StdC : StandardSpec<"stdc"> {
               ]
           >,
           FunctionSpec<
+              "cnd_broadcast",
+              RetValSpec<IntType>,
+              [
+                  ArgSpec<CndTTypePtr>,
+              ]
+          >,
+          FunctionSpec<
+              "cnd_destroy",
+              RetValSpec<VoidType>,
+              [
+                  ArgSpec<CndTTypePtr>,
+              ]
+          >,
+          FunctionSpec<
+              "cnd_init",
+              RetValSpec<IntType>,
+              [
+                  ArgSpec<CndTTypePtr>,
+              ]
+          >,
+          FunctionSpec<
+              "cnd_signal",
+              RetValSpec<IntType>,
+              [
+                  ArgSpec<CndTTypePtr>,
+              ]
+          >,
+          FunctionSpec<
+              "cnd_wait",
+              RetValSpec<IntType>,
+              [
+                  ArgSpec<CndTTypePtr>,
+                  ArgSpec<MtxTTypePtr>,
+              ]
+          >,
+          FunctionSpec<
               "mtx_init",
               RetValSpec<IntType>,
               [
                   ArgSpec<MtxTTypePtr>,
                   ArgSpec<IntType>,
+              ]
+          >,
+          FunctionSpec<
+              "mtx_destroy",
+              RetValSpec<IntType>,
+              [
+                  ArgSpec<VoidType>,
               ]
           >,
           FunctionSpec<

@@ -22,7 +22,7 @@
 #===------------------------------------------------------------------------===#
 
 BEGIN {
-  # harcode the script name
+  # hardcode the script name
   script_name = "generate_netbsd_ioctls.awk"
   outputinc = "../lib/sanitizer_common/sanitizer_interceptors_ioctl_netbsd.inc"
 

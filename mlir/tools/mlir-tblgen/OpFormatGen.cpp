@@ -2045,16 +2045,6 @@ void OperationFormat::genPrinter(Operator &op, OpClass &opClass) {
       opClass.addMethodAndPrune("void", "print", "::mlir::OpAsmPrinter &p");
   auto &body = method->body();
 
-  // Emit the operation name, trimming the prefix if this is the standard
-  // dialect.
-  body << "  p << \"";
-  std::string opName = op.getOperationName();
-  if (op.getDialectName() == "std")
-    body << StringRef(opName).drop_front(4);
-  else
-    body << opName;
-  body << "\";\n";
-
   // Flags for if we should emit a space, and if the last element was
   // punctuation.
   bool shouldEmitSpace = true, lastWasPunctuation = false;

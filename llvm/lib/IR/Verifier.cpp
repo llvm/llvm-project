@@ -1091,8 +1091,7 @@ void Verifier::visitDICompositeType(const DICompositeType &N) {
                N.getTag() == dwarf::DW_TAG_union_type ||
                N.getTag() == dwarf::DW_TAG_enumeration_type ||
                N.getTag() == dwarf::DW_TAG_class_type ||
-               N.getTag() == dwarf::DW_TAG_variant_part ||
-               N.getTag() == dwarf::DW_TAG_namelist,
+               N.getTag() == dwarf::DW_TAG_variant_part,
            "invalid tag", &N);
 
   AssertDI(isScope(N.getRawScope()), "invalid scope", &N, N.getRawScope());
@@ -4469,6 +4468,11 @@ void Verifier::visitInstruction(Instruction &I) {
     Assert(isa<LoadInst>(I) || isa<CallInst>(I) || isa<InvokeInst>(I),
            "Ranges are only for loads, calls and invokes!", &I);
     visitRangeMetadata(I, Range, I.getType());
+  }
+
+  if (I.hasMetadata(LLVMContext::MD_invariant_group)) {
+    Assert(isa<LoadInst>(I) || isa<StoreInst>(I),
+           "invariant.group metadata is only for loads and stores", &I);
   }
 
   if (I.getMetadata(LLVMContext::MD_nonnull)) {

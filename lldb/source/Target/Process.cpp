@@ -110,6 +110,19 @@ public:
   }
 };
 
+static constexpr OptionEnumValueElement g_follow_fork_mode_values[] = {
+    {
+        eFollowParent,
+        "parent",
+        "Continue tracing the parent process and detach the child.",
+    },
+    {
+        eFollowChild,
+        "child",
+        "Trace the child process and detach the parent.",
+    },
+};
+
 #define LLDB_PROPERTIES_process
 #include "TargetProperties.inc"
 
@@ -332,6 +345,12 @@ void ProcessProperties::SetOSPluginReportsAllThreads(bool does_report) {
   if (exp_values)
     exp_values->SetPropertyAtIndexAsBoolean(
         nullptr, ePropertyOSPluginReportsAllThreads, does_report);
+}
+
+FollowForkMode ProcessProperties::GetFollowForkMode() const {
+  const uint32_t idx = ePropertyFollowForkMode;
+  return (FollowForkMode)m_collection_sp->GetPropertyAtIndexAsEnumeration(
+      nullptr, idx, g_process_properties[idx].default_uint_value);
 }
 
 ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,

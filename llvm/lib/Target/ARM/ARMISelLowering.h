@@ -712,6 +712,9 @@ class VectorType;
                                       Align Alignment,
                                       const DataLayout &DL) const;
 
+    bool isMulAddWithConstProfitable(const SDValue &AddNode,
+                                     const SDValue &ConstNode) const override;
+
     bool alignLoopsWithOptSize() const override;
 
     /// Returns the number of interleaved accesses that will be generated when

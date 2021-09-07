@@ -209,7 +209,8 @@ public:
 
 protected:
   SCEVPredicateKind Kind;
-  ~SCEVPredicate() = default;
+  // Use virtual to suppress -Wnon-virtual-dtor in the presence of friend.
+  virtual ~SCEVPredicate() = default;
   SCEVPredicate(const SCEVPredicate &) = default;
   SCEVPredicate &operator=(const SCEVPredicate &) = default;
 

@@ -8,7 +8,7 @@
 ; CHECK: [[ALCDIE:0x.+]]:       DW_TAG_variable
 ; CHECK:                          DW_AT_type    ({{0x[0-9]+}} "logical")
 ; CHECK: [[LOCDIE:0x.+]]:       DW_TAG_variable
-; CHECK:                          DW_AT_type    ({{0x[0-9]+}} "integer*")
+; CHECK:                          DW_AT_type    ({{0x[0-9]+}} "integer *")
 ; CHECK:                          DW_AT_artificial    (true)
 ; CHECK:  DW_TAG_variable
 ; CHECK:    DW_AT_name  ("arr")

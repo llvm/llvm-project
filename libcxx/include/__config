@@ -24,16 +24,6 @@
 
 #ifdef __cplusplus
 
-#ifdef __GNUC__
-#  define _GNUC_VER (__GNUC__ * 100 + __GNUC_MINOR__)
-// The _GNUC_VER_NEW macro better represents the new GCC versioning scheme
-// introduced in GCC 5.0.
-#  define _GNUC_VER_NEW (_GNUC_VER * 10 + __GNUC_PATCHLEVEL__)
-#else
-#  define _GNUC_VER 0
-#  define _GNUC_VER_NEW 0
-#endif
-
 #define _LIBCPP_VERSION 14000
 
 #ifndef _LIBCPP_ABI_VERSION
@@ -265,9 +255,6 @@
 #  else  // _BYTE_ORDER == _LITTLE_ENDIAN
 #    define _LIBCPP_BIG_ENDIAN
 #  endif  // _BYTE_ORDER == _LITTLE_ENDIAN
-#  ifndef __LONG_LONG_SUPPORTED
-#    define _LIBCPP_HAS_NO_LONG_LONG
-#  endif  // __LONG_LONG_SUPPORTED
 #endif // __FreeBSD__
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -509,21 +496,7 @@ typedef __char32_t char32_t;
 #define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK __attribute__((__no_sanitize__("unsigned-integer-overflow")))
 #endif
 
-#if __has_builtin(__builtin_launder)
-#define _LIBCPP_COMPILER_HAS_BUILTIN_LAUNDER
-#endif
-
-#if __has_builtin(__builtin_constant_p)
-#define _LIBCPP_COMPILER_HAS_BUILTIN_CONSTANT_P
-#endif
-
 #define _LIBCPP_ALWAYS_INLINE __attribute__ ((__always_inline__))
-
-// Literal operators ""d and ""y are supported starting with LLVM Clang 8 and AppleClang 10.0.1
-#if (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 800) ||                 \
-    (defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1001)
-#define _LIBCPP_HAS_NO_CXX20_CHRONO_LITERALS
-#endif
 
 #define _LIBCPP_DISABLE_EXTENSION_WARNING __extension__
 
@@ -545,11 +518,6 @@ typedef __char32_t char32_t;
 
 #if !defined(__SANITIZE_ADDRESS__)
 #define _LIBCPP_HAS_NO_ASAN
-#endif
-
-#if _GNUC_VER >= 700
-#define _LIBCPP_COMPILER_HAS_BUILTIN_LAUNDER
-#define _LIBCPP_COMPILER_HAS_BUILTIN_CONSTANT_P
 #endif
 
 #define _LIBCPP_ALWAYS_INLINE __attribute__ ((__always_inline__))
@@ -1052,30 +1020,28 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_CONSTEXPR_AFTER_CXX17
 #endif
 
-// The _LIBCPP_NODISCARD_ATTRIBUTE should only be used to define other
-// NODISCARD macros to the correct attribute.
 #if __has_cpp_attribute(nodiscard) || defined(_LIBCPP_COMPILER_MSVC)
-#  define _LIBCPP_NODISCARD_ATTRIBUTE [[nodiscard]]
+#  define _LIBCPP_NODISCARD [[nodiscard]]
 #elif defined(_LIBCPP_COMPILER_CLANG_BASED) && !defined(_LIBCPP_CXX03_LANG)
-#  define _LIBCPP_NODISCARD_ATTRIBUTE [[clang::warn_unused_result]]
+#  define _LIBCPP_NODISCARD [[clang::warn_unused_result]]
 #else
 // We can't use GCC's [[gnu::warn_unused_result]] and
 // __attribute__((warn_unused_result)), because GCC does not silence them via
 // (void) cast.
-#  define _LIBCPP_NODISCARD_ATTRIBUTE
+#  define _LIBCPP_NODISCARD
 #endif
 
 // _LIBCPP_NODISCARD_EXT may be used to apply [[nodiscard]] to entities not
 // specified as such as an extension.
 #if defined(_LIBCPP_ENABLE_NODISCARD) && !defined(_LIBCPP_DISABLE_NODISCARD_EXT)
-#  define _LIBCPP_NODISCARD_EXT _LIBCPP_NODISCARD_ATTRIBUTE
+#  define _LIBCPP_NODISCARD_EXT _LIBCPP_NODISCARD
 #else
 #  define _LIBCPP_NODISCARD_EXT
 #endif
 
 #if !defined(_LIBCPP_DISABLE_NODISCARD_AFTER_CXX17) && \
     (_LIBCPP_STD_VER > 17 || defined(_LIBCPP_ENABLE_NODISCARD))
-#  define _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_NODISCARD_ATTRIBUTE
+#  define _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_NODISCARD
 #else
 #  define _LIBCPP_NODISCARD_AFTER_CXX17
 #endif
@@ -1277,7 +1243,7 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #  define _LIBCPP_FALLTHROUGH() [[fallthrough]]
 #elif __has_cpp_attribute(clang::fallthrough)
 #  define _LIBCPP_FALLTHROUGH() [[clang::fallthrough]]
-#elif __has_attribute(fallthrough) || _GNUC_VER >= 700
+#elif __has_attribute(__fallthrough__)
 #  define _LIBCPP_FALLTHROUGH() __attribute__((__fallthrough__))
 #else
 #  define _LIBCPP_FALLTHROUGH() ((void)0)
@@ -1287,12 +1253,6 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_NODEBUG __attribute__((__nodebug__))
 #else
 #define _LIBCPP_NODEBUG
-#endif
-
-#if __has_attribute(__nodebug__) && (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 900)
-#   define _LIBCPP_NODEBUG_TYPE __attribute__((nodebug))
-#else
-#   define _LIBCPP_NODEBUG_TYPE
 #endif
 
 #if __has_attribute(__standalone_debug__)
@@ -1386,12 +1346,6 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #  define _LIBCPP_FOPEN_CLOEXEC_MODE "e"
 #else
 #  define _LIBCPP_FOPEN_CLOEXEC_MODE
-#endif
-
-#ifdef _LIBCPP_COMPILER_HAS_BUILTIN_CONSTANT_P
-#define _LIBCPP_BUILTIN_CONSTANT_P(x) __builtin_constant_p(x)
-#else
-#define _LIBCPP_BUILTIN_CONSTANT_P(x) false
 #endif
 
 // Support for _FILE_OFFSET_BITS=64 landed gradually in Android, so the full set

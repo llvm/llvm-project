@@ -4,7 +4,7 @@
 // CHECK:         %[[TOKEN:.*]]: !async.token
 func @token_await(%arg0: !async.token) {
   // CHECK: async.runtime.await %[[TOKEN]]
-  // CHECK: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i32}
+  // CHECK-NOT: async.runtime.drop_ref
   async.runtime.await %arg0 : !async.token
   return
 }
@@ -13,7 +13,7 @@ func @token_await(%arg0: !async.token) {
 // CHECK:         %[[GROUP:.*]]: !async.group
 func @group_await(%arg0: !async.group) {
   // CHECK: async.runtime.await %[[GROUP]]
-  // CHECK: async.runtime.drop_ref %[[GROUP]] {count = 1 : i32}
+  // CHECK-NOT: async.runtime.drop_ref
   async.runtime.await %arg0 : !async.group
   return
 }

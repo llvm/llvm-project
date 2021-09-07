@@ -311,11 +311,6 @@
 ; GCN-O1-NEXT:        SI Fold Operands
 ; GCN-O1-NEXT:        GCN DPP Combine
 ; GCN-O1-NEXT:        SI Load Store Optimizer
-; GCN-O1-NEXT:        MachineDominator Tree Construction
-; GCN-O1-NEXT:        Slot index numbering
-; GCN-O1-NEXT:        Live Interval Analysis
-; GCN-O1-NEXT:        Analysis of per BB register pressure
-; GCN-O1-NEXT:        SI Memory operation coalescer
 ; GCN-O1-NEXT:        Remove dead machine instructions
 ; GCN-O1-NEXT:        SI Shrink Instructions
 ; GCN-O1-NEXT:        Register Usage Information Propagation
@@ -601,13 +596,9 @@
 ; GCN-O1-OPTS-NEXT:        SI Fold Operands
 ; GCN-O1-OPTS-NEXT:        GCN DPP Combine
 ; GCN-O1-OPTS-NEXT:        SI Load Store Optimizer
-; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
-; GCN-O1-OPTS-NEXT:        Slot index numbering
-; GCN-O1-OPTS-NEXT:        Live Interval Analysis
-; GCN-O1-OPTS-NEXT:        Analysis of per BB register pressure
-; GCN-O1-OPTS-NEXT:        SI Memory operation coalescer
 ; GCN-O1-OPTS-NEXT:        SI Peephole SDWA
 ; GCN-O1-OPTS-NEXT:        Machine Block Frequency Analysis
+; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Early Machine Loop Invariant Code Motion
 ; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Machine Block Frequency Analysis
@@ -901,13 +892,9 @@
 ; GCN-O2-NEXT:        SI Fold Operands
 ; GCN-O2-NEXT:        GCN DPP Combine
 ; GCN-O2-NEXT:        SI Load Store Optimizer
-; GCN-O2-NEXT:        MachineDominator Tree Construction
-; GCN-O2-NEXT:        Slot index numbering
-; GCN-O2-NEXT:        Live Interval Analysis
-; GCN-O2-NEXT:        Analysis of per BB register pressure
-; GCN-O2-NEXT:        SI Memory operation coalescer
 ; GCN-O2-NEXT:        SI Peephole SDWA
 ; GCN-O2-NEXT:        Machine Block Frequency Analysis
+; GCN-O2-NEXT:        MachineDominator Tree Construction
 ; GCN-O2-NEXT:        Early Machine Loop Invariant Code Motion
 ; GCN-O2-NEXT:        MachineDominator Tree Construction
 ; GCN-O2-NEXT:        Machine Block Frequency Analysis
@@ -1215,13 +1202,9 @@
 ; GCN-O3-NEXT:        SI Fold Operands
 ; GCN-O3-NEXT:        GCN DPP Combine
 ; GCN-O3-NEXT:        SI Load Store Optimizer
-; GCN-O3-NEXT:        MachineDominator Tree Construction
-; GCN-O3-NEXT:        Slot index numbering
-; GCN-O3-NEXT:        Live Interval Analysis
-; GCN-O3-NEXT:        Analysis of per BB register pressure
-; GCN-O3-NEXT:        SI Memory operation coalescer
 ; GCN-O3-NEXT:        SI Peephole SDWA
 ; GCN-O3-NEXT:        Machine Block Frequency Analysis
+; GCN-O3-NEXT:        MachineDominator Tree Construction
 ; GCN-O3-NEXT:        Early Machine Loop Invariant Code Motion
 ; GCN-O3-NEXT:        MachineDominator Tree Construction
 ; GCN-O3-NEXT:        Machine Block Frequency Analysis

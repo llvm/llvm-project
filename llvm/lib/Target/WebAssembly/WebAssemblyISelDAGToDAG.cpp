@@ -89,11 +89,13 @@ void WebAssemblyDAGToDAGISel::PreprocessISelDAG() {
 }
 
 static SDValue getTagSymNode(int Tag, SelectionDAG *DAG) {
-  assert(Tag == WebAssembly::CPP_EXCEPTION);
+  assert(Tag == WebAssembly::CPP_EXCEPTION || WebAssembly::C_LONGJMP);
   auto &MF = DAG->getMachineFunction();
   const auto &TLI = DAG->getTargetLoweringInfo();
   MVT PtrVT = TLI.getPointerTy(DAG->getDataLayout());
-  const char *SymName = MF.createExternalSymbolName("__cpp_exception");
+  const char *SymName = Tag == WebAssembly::CPP_EXCEPTION
+                            ? MF.createExternalSymbolName("__cpp_exception")
+                            : MF.createExternalSymbolName("__c_longjmp");
   return DAG->getTargetExternalSymbol(SymName, PtrVT);
 }
 

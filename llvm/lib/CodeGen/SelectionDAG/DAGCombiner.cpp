@@ -5149,8 +5149,9 @@ SDValue DAGCombiner::visitANDLike(SDValue N0, SDValue N1, SDNode *N) {
   if (SDValue V = foldLogicOfSetCCs(true, N0, N1, DL))
     return V;
 
+  // TODO: Rewrite this to return a new 'AND' instead of using CombineTo.
   if (N0.getOpcode() == ISD::ADD && N1.getOpcode() == ISD::SRL &&
-      VT.getSizeInBits() <= 64) {
+      VT.getSizeInBits() <= 64 && N0->hasOneUse()) {
     if (ConstantSDNode *ADDI = dyn_cast<ConstantSDNode>(N0.getOperand(1))) {
       if (ConstantSDNode *SRLI = dyn_cast<ConstantSDNode>(N1.getOperand(1))) {
         // Look for (and (add x, c1), (lshr y, c2)). If C1 wasn't a legal
@@ -13015,6 +13016,20 @@ ConstantFoldBITCASTofBUILD_VECTOR(SDNode *BV, EVT DstEltVT) {
   return DAG.getBuildVector(VT, DL, Ops);
 }
 
+// Returns true if floating point contraction is allowed on the FMUL-SDValue
+// `N`
+static bool isContractableFMUL(const TargetOptions &Options, SDValue N) {
+  assert(N.getOpcode() == ISD::FMUL);
+
+  return Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath ||
+         N->getFlags().hasAllowContract();
+}
+
+// Return true if `N` can assume no infinities involved in it's computation.
+static bool hasNoInfs(const TargetOptions &Options, SDValue N) {
+  return Options.NoInfsFPMath || N.getNode()->getFlags().hasNoInfs();
+}
+
 /// Try to perform FMA combining on a given FADD node.
 SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   SDValue N0 = N->getOperand(0);
@@ -13557,12 +13572,13 @@ SDValue DAGCombiner::visitFMULForFMADistributiveCombine(SDNode *N) {
 
   // The transforms below are incorrect when x == 0 and y == inf, because the
   // intermediate multiplication produces a nan.
-  if (!Options.NoInfsFPMath)
+  SDValue FAdd = N0.getOpcode() == ISD::FADD ? N0 : N1;
+  if (!hasNoInfs(Options, FAdd))
     return SDValue();
 
   // Floating-point multiply-add without intermediate rounding.
   bool HasFMA =
-      (Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath) &&
+      isContractableFMUL(Options, SDValue(N, 0)) &&
       TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT) &&
       (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::FMA, VT));
 
@@ -22858,6 +22874,20 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
           return DAG.getNode(ISD::CTLZ, DL, VT, N0);
       }
     }
+  }
+
+  // Fold select_cc setgt X, -1, C, ~C -> xor (ashr X, BW-1), C
+  // Fold select_cc setlt X, 0, C, ~C -> xor (ashr X, BW-1), ~C
+  if (!NotExtCompare && N1C && N2C && N3C &&
+      N2C->getAPIntValue() == ~N3C->getAPIntValue() &&
+      ((N1C->isAllOnesValue() && CC == ISD::SETGT) ||
+       (N1C->isNullValue() && CC == ISD::SETLT)) &&
+      !TLI.shouldAvoidTransformToShift(VT, CmpOpVT.getScalarSizeInBits() - 1)) {
+    SDValue ASR = DAG.getNode(
+        ISD::SRA, DL, CmpOpVT, N0,
+        DAG.getConstant(CmpOpVT.getScalarSizeInBits() - 1, DL, CmpOpVT));
+    return DAG.getNode(ISD::XOR, DL, VT, DAG.getSExtOrTrunc(ASR, DL, VT),
+                       DAG.getSExtOrTrunc(CC == ISD::SETLT ? N3 : N2, DL, VT));
   }
 
   return SDValue();

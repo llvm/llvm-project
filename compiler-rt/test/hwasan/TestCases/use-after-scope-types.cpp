@@ -1,18 +1,31 @@
 // This is the ASAN test of the same name ported to HWAsan.
 
 // RUN: %clangxx_hwasan -mllvm -hwasan-use-after-scope -std=c++11 -O0 %s -o %t
+// RUN: %clangxx_hwasan -fno-exceptions -mllvm -hwasan-use-after-scope -std=c++11 -O0 %s -o %t-noexcept
+
 // RUN: not %run %t 0 2>&1 | FileCheck %s
 // RUN: not %run %t 1 2>&1 | FileCheck %s
 // RUN: not %run %t 2 2>&1 | FileCheck %s
 // RUN: not %run %t 3 2>&1 | FileCheck %s
 // RUN: not %run %t 4 2>&1 | FileCheck %s
 // RUN: not %run %t 5 2>&1 | FileCheck %s
-// The std::vector case is broken because of limited lifetime tracking.
-// TODO(fmayer): Fix and enable.
+// RUN: not %run %t 6 2>&1 | FileCheck %s
 // RUN: not %run %t 7 2>&1 | FileCheck %s
 // RUN: not %run %t 8 2>&1 | FileCheck %s
 // RUN: not %run %t 9 2>&1 | FileCheck %s
 // RUN: not %run %t 10 2>&1 | FileCheck %s
+
+// RUN: not %run %t-noexcept 0 2>&1 | FileCheck %s
+// RUN: not %run %t-noexcept 1 2>&1 | FileCheck %s
+// RUN: not %run %t-noexcept 2 2>&1 | FileCheck %s
+// RUN: not %run %t-noexcept 3 2>&1 | FileCheck %s
+// RUN: not %run %t-noexcept 4 2>&1 | FileCheck %s
+// RUN: not %run %t-noexcept 5 2>&1 | FileCheck %s
+// RUN: not %run %t-noexcept 6 2>&1 | FileCheck %s
+// RUN: not %run %t-noexcept 7 2>&1 | FileCheck %s
+// RUN: not %run %t-noexcept 8 2>&1 | FileCheck %s
+// RUN: not %run %t-noexcept 9 2>&1 | FileCheck %s
+// RUN: not %run %t-noexcept 10 2>&1 | FileCheck %s
 
 // REQUIRES: aarch64-target-arch
 // REQUIRES: stable-runtime

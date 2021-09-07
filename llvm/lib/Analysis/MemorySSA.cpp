@@ -95,13 +95,13 @@ static cl::opt<bool, true>
     VerifyMemorySSAX("verify-memoryssa", cl::location(VerifyMemorySSA),
                      cl::Hidden, cl::desc("Enable verification of MemorySSA."));
 
-namespace llvm {
+const static char LiveOnEntryStr[] = "liveOnEntry";
+
+namespace {
 
 /// An assembly annotator class to print Memory SSA information in
 /// comments.
 class MemorySSAAnnotatedWriter : public AssemblyAnnotationWriter {
-  friend class MemorySSA;
-
   const MemorySSA *MSSA;
 
 public:
@@ -120,7 +120,34 @@ public:
   }
 };
 
-} // end namespace llvm
+/// An assembly annotator class to print Memory SSA information in
+/// comments.
+class MemorySSAWalkerAnnotatedWriter : public AssemblyAnnotationWriter {
+  MemorySSA *MSSA;
+  MemorySSAWalker *Walker;
+
+public:
+  MemorySSAWalkerAnnotatedWriter(MemorySSA *M)
+      : MSSA(M), Walker(M->getWalker()) {}
+
+  void emitInstructionAnnot(const Instruction *I,
+                            formatted_raw_ostream &OS) override {
+    if (MemoryAccess *MA = MSSA->getMemoryAccess(I)) {
+      MemoryAccess *Clobber = Walker->getClobberingMemoryAccess(MA);
+      OS << "; " << *MA;
+      if (Clobber) {
+        OS << " - clobbered by ";
+        if (MSSA->isLiveOnEntryDef(Clobber))
+          OS << LiveOnEntryStr;
+        else
+          OS << *Clobber;
+      }
+      OS << "\n";
+    }
+  }
+};
+
+} // namespace
 
 namespace {
 
@@ -2134,8 +2161,6 @@ bool MemorySSA::dominates(const MemoryAccess *Dominator,
   return dominates(Dominator, cast<MemoryAccess>(Dominatee.getUser()));
 }
 
-const static char LiveOnEntryStr[] = "liveOnEntry";
-
 void MemoryAccess::print(raw_ostream &OS) const {
   switch (getValueID()) {
   case MemoryPhiVal: return static_cast<const MemoryPhi *>(this)->print(OS);
@@ -2347,6 +2372,16 @@ PreservedAnalyses MemorySSAPrinterPass::run(Function &F,
     OS << "MemorySSA for function: " << F.getName() << "\n";
     MSSA.print(OS);
   }
+
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses MemorySSAWalkerPrinterPass::run(Function &F,
+                                                  FunctionAnalysisManager &AM) {
+  auto &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
+  OS << "MemorySSA (walker) for function: " << F.getName() << "\n";
+  MemorySSAWalkerAnnotatedWriter Writer(&MSSA);
+  F.print(OS, &Writer);
 
   return PreservedAnalyses::all();
 }

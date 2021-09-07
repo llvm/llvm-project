@@ -34,7 +34,7 @@ public:
 
     VK_AVR_LO8_GS, ///< Corresponds to `lo8(gs())`.
     VK_AVR_HI8_GS, ///< Corresponds to `hi8(gs())`.
-    VK_AVR_GS, ///< Corresponds to `gs()`.
+    VK_AVR_GS,     ///< Corresponds to `gs()`.
   };
 
 public:

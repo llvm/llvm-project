@@ -883,8 +883,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       SDValue VTypeIOp = CurDAG->getTargetConstant(VTypeI, DL, XLenVT);
 
       SDValue VLOperand;
+      unsigned Opcode = RISCV::PseudoVSETVLI;
       if (VLMax) {
         VLOperand = CurDAG->getRegister(RISCV::X0, XLenVT);
+        Opcode = RISCV::PseudoVSETVLIX0;
       } else {
         VLOperand = Node->getOperand(2);
 
@@ -902,7 +904,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       }
 
       ReplaceNode(Node,
-                  CurDAG->getMachineNode(RISCV::PseudoVSETVLI, DL, XLenVT,
+                  CurDAG->getMachineNode(Opcode, DL, XLenVT,
                                          MVT::Other, VLOperand, VTypeIOp,
                                          /* Chain */ Node->getOperand(0)));
       return;
@@ -1534,6 +1536,7 @@ bool RISCVDAGToDAGISel::selectZExti32(SDValue N, SDValue &Val) {
 bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits) const {
   assert((Node->getOpcode() == ISD::ADD || Node->getOpcode() == ISD::SUB ||
           Node->getOpcode() == ISD::MUL || Node->getOpcode() == ISD::SHL ||
+          Node->getOpcode() == ISD::SIGN_EXTEND_INREG ||
           isa<ConstantSDNode>(Node)) &&
          "Unexpected opcode");
 

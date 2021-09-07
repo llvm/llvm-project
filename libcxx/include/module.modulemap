@@ -346,6 +346,13 @@ module std [system] {
   module charconv {
     header "charconv"
     export *
+
+    module __charconv {
+      module chars_format      { private header "__charconv/chars_format.h"      }
+      module from_chars_result { private header "__charconv/from_chars_result.h" }
+      module to_chars_result   { private header "__charconv/to_chars_result.h"   }
+    }
+
   }
   module chrono {
     header "chrono"
@@ -363,6 +370,7 @@ module std [system] {
       module common_comparison_category { private header "__compare/common_comparison_category.h" }
       module compare_three_way_result   { private header "__compare/compare_three_way_result.h"   }
       module ordering                   { private header "__compare/ordering.h"                   }
+      module three_way_comparable       { private header "__compare/three_way_comparable.h"       }
     }
   }
   module complex {
@@ -424,8 +432,18 @@ module std [system] {
     export *
 
     module __format {
+      module format_arg           { private header "__format/format_arg.h"           }
+      module format_args          { private header "__format/format_args.h"          }
+      module format_context {
+        private header "__format/format_context.h"
+        export optional
+        export locale
+      }
       module format_error         { private header "__format/format_error.h"         }
+      module format_fwd           { private header "__format/format_fwd.h"           }
       module format_parse_context { private header "__format/format_parse_context.h" }
+      module format_string        { private header "__format/format_string.h"        }
+      module formatter            { private header "__format/formatter.h"            }
     }
   }
   module forward_list {

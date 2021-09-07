@@ -19,8 +19,8 @@ void call_alloc() {
 // CHECK: call i8* {{.*}}@alloc_void{{.*}} !heapallocsite [[DBG2]]
 // CHECK: call i8* {{.*}}@alloc_void{{.*}} !heapallocsite [[DBG3:!.*]]
 
-// CHECK: [[DBG1]] = !{}
 // CHECK: [[DBG2]] = !DICompositeType(tag: DW_TAG_structure_type,
 // CHECK-SAME:                                 name: "Foo"
 // CHECK: [[DBG3]] = !DICompositeType(tag: DW_TAG_structure_type,
 // CHECK-SAME:                                 name: "Bar"
+// CHECK: [[DBG1]] = !{}

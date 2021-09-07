@@ -1,4 +1,3 @@
-; RUN: opt %s -enable-new-pm=0 -analyze -divergence -use-gpu-divergence-analysis | FileCheck %s
 ; RUN: opt %s -passes='print<divergence>' -disable-output 2>&1 | FileCheck %s
 
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"

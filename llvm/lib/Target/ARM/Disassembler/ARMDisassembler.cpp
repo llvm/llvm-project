@@ -854,12 +854,15 @@ ARMDisassembler::AddThumbPredicate(MCInst &MI) const {
     VCCI = MI.insert(VCCI, MCOperand::createImm(VCC));
     ++VCCI;
     if (VCC == ARMVCC::None)
-      MI.insert(VCCI, MCOperand::createReg(0));
+      VCCI = MI.insert(VCCI, MCOperand::createReg(0));
     else
-      MI.insert(VCCI, MCOperand::createReg(ARM::P0));
+      VCCI = MI.insert(VCCI, MCOperand::createReg(ARM::P0));
+    ++VCCI;
+    VCCI = MI.insert(VCCI, MCOperand::createReg(0));
+    ++VCCI;
     if (OpInfo[VCCPos].OperandType == ARM::OPERAND_VPRED_R) {
       int TiedOp = ARMInsts[MI.getOpcode()].getOperandConstraint(
-        VCCPos + 2, MCOI::TIED_TO);
+        VCCPos + 3, MCOI::TIED_TO);
       assert(TiedOp >= 0 &&
              "Inactive register in vpred_r is not tied to an output!");
       // Copy the operand to ensure it's not invalidated when MI grows.

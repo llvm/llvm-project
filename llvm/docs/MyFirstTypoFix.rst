@@ -68,8 +68,6 @@ We're going to need some tools:
 
 -  arcanist: for uploading changes for review,
 
--  subversion: to commit changes yourself (later).
-
 As an example, on Ubuntu:
 
 .. code:: console

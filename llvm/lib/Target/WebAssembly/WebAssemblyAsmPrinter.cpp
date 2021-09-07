@@ -236,7 +236,7 @@ MCSymbol *WebAssemblyAsmPrinter::getOrCreateWasmSymbol(StringRef Name) {
 
   SmallVector<wasm::ValType, 4> Returns;
   SmallVector<wasm::ValType, 4> Params;
-  if (Name == "__cpp_exception") {
+  if (Name == "__cpp_exception" || Name == "__c_longjmp") {
     WasmSym->setType(wasm::WASM_SYMBOL_TYPE_TAG);
     // We can't confirm its signature index for now because there can be
     // imported exceptions. Set it to be 0 for now.
@@ -248,12 +248,14 @@ MCSymbol *WebAssemblyAsmPrinter::getOrCreateWasmSymbol(StringRef Name) {
     WasmSym->setWeak(true);
     WasmSym->setExternal(true);
 
-    // All C++ exceptions are assumed to have a single i32 (for wasm32) or i64
-    // (for wasm64) param type and void return type. The reaon is, all C++
-    // exception values are pointers, and to share the type section with
-    // functions, exceptions are assumed to have void return type.
-    Params.push_back(Subtarget.hasAddr64() ? wasm::ValType::I64
-                                           : wasm::ValType::I32);
+    // Currently both C++ exceptions and C longjmps have a single pointer type
+    // param. For C++ exceptions it is a pointer to an exception object, and for
+    // C longjmps it is pointer to a struct that contains a setjmp buffer and a
+    // longjmp return value. We may consider using multiple value parameters for
+    // longjmps later when multivalue support is ready.
+    wasm::ValType AddrType =
+        Subtarget.hasAddr64() ? wasm::ValType::I64 : wasm::ValType::I32;
+    Params.push_back(AddrType);
   } else { // Function symbols
     WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
     getLibcallSignature(Subtarget, Name, Returns, Params);

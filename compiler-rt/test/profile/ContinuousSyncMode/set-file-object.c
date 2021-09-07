@@ -38,6 +38,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <sys/types.h>
+#include <sys/wait.h>
+
 const int num_child_procs_to_spawn = 32;
 
 extern int __llvm_profile_is_continuous_mode_enabled(void);
@@ -64,6 +67,24 @@ int main(int argc, char **argv) {
       if (ret != 0) {
         fprintf(stderr, "Child %d could not be spawned: ret = %d, msg = %s\n",
                 I, ret, strerror(ret));
+        return 1;
+      }
+    }
+    for (I = 0; I < num_child_procs_to_spawn; ++I) {
+      int status;
+      pid_t waited_pid = waitpid(child_pids[I], &status, 0);
+      if (waited_pid != child_pids[I]) {
+        fprintf(stderr, "Failed to wait on child %d\n", I);
+        return 1;
+      }
+      if (!WIFEXITED(status)) {
+        fprintf(stderr, "Child %d did not terminate normally\n", I);
+        return 1;
+      }
+      int return_status = WEXITSTATUS(status);
+      if (return_status != 0) {
+        fprintf(stderr, "Child %d exited with non zero status %d\n", I,
+                return_status);
         return 1;
       }
     }

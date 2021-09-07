@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "descriptor.h"
+#include "flang/Runtime/descriptor.h"
 #include "derived.h"
 #include "memory.h"
 #include "stat.h"

@@ -8,12 +8,12 @@ arguments. The following cases are covered:
 
 **Case 1: Non-standard-layout type**
 
-Comparing the object representaions of non-standard-layout objects may not
+Comparing the object representations of non-standard-layout objects may not
 properly compare the value representations.
 
 **Case 2: Types with no unique object representation**
 
-Objects with the same value may not have the same object representaion.
+Objects with the same value may not have the same object representation.
 This may be caused by padding or floating-point types.
 
 See also: 

@@ -530,6 +530,10 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VMAXu16:
     case MVE_VMAXu32:
     case MVE_VMAXu8:
+    case MVE_VMAXNMf16:
+    case MVE_VMAXNMf32:
+    case MVE_VMAXNMAf16:
+    case MVE_VMAXNMAf32:
     case MVE_VMINAs16:
     case MVE_VMINAs32:
     case MVE_VMINAs8:
@@ -539,6 +543,10 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VMINu16:
     case MVE_VMINu32:
     case MVE_VMINu8:
+    case MVE_VMINNMf16:
+    case MVE_VMINNMf32:
+    case MVE_VMINNMAf16:
+    case MVE_VMINNMAf32:
     case MVE_VMLADAVas16:
     case MVE_VMLADAVas32:
     case MVE_VMLADAVas8:

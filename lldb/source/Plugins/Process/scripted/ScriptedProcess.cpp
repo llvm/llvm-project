@@ -109,8 +109,10 @@ ScriptedProcess::ScriptedProcess(
     return;
   }
 
-  StructuredData::ObjectSP object_sp = GetInterface().CreatePluginObject(
-      m_scripted_process_info.GetClassName().c_str(), target_sp,
+  ExecutionContext exe_ctx(target_sp, /*get_process=*/false);
+
+  StructuredData::GenericSP object_sp = GetInterface().CreatePluginObject(
+      m_scripted_process_info.GetClassName().c_str(), exe_ctx,
       m_scripted_process_info.GetDictionarySP());
 
   if (!object_sp || !object_sp->IsValid()) {

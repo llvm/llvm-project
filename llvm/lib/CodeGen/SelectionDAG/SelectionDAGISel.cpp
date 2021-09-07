@@ -1226,7 +1226,10 @@ static void mapWasmLandingPadIndex(MachineBasicBlock *MBB,
   bool IsSingleCatchAllClause =
       CPI->getNumArgOperands() == 1 &&
       cast<Constant>(CPI->getArgOperand(0))->isNullValue();
-  if (!IsSingleCatchAllClause) {
+  // cathchpads for longjmp use an empty type list, e.g. catchpad within %0 []
+  // and they don't need LSDA info
+  bool IsCatchLongjmp = CPI->getNumArgOperands() == 0;
+  if (!IsSingleCatchAllClause && !IsCatchLongjmp) {
     // Create a mapping from landing pad label to landing pad index.
     bool IntrFound = false;
     for (const User *U : CPI->users()) {

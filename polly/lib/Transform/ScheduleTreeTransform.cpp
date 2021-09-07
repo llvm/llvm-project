@@ -69,12 +69,12 @@ struct ScheduleTreeRewriter
     return *static_cast<const Derived *>(this);
   }
 
-  isl::schedule visitDomain(const isl::schedule_node &Node, Args... args) {
+  isl::schedule visitDomain(isl::schedule_node_domain Node, Args... args) {
     // Every schedule_tree already has a domain node, no need to add one.
     return getDerived().visit(Node.first_child(), std::forward<Args>(args)...);
   }
 
-  isl::schedule visitBand(const isl::schedule_node &Band, Args... args) {
+  isl::schedule visitBand(isl::schedule_node_band Band, Args... args) {
     isl::multi_union_pw_aff PartialSched =
         isl::manage(isl_schedule_node_band_get_partial_schedule(Band.get()));
     isl::schedule NewChild =
@@ -94,7 +94,7 @@ struct ScheduleTreeRewriter
     return NewNode.get_schedule();
   }
 
-  isl::schedule visitSequence(const isl::schedule_node &Sequence,
+  isl::schedule visitSequence(isl::schedule_node_sequence Sequence,
                               Args... args) {
     int NumChildren = isl_schedule_node_n_children(Sequence.get());
     isl::schedule Result =
@@ -105,7 +105,7 @@ struct ScheduleTreeRewriter
     return Result;
   }
 
-  isl::schedule visitSet(const isl::schedule_node &Set, Args... args) {
+  isl::schedule visitSet(isl::schedule_node_set Set, Args... args) {
     int NumChildren = isl_schedule_node_n_children(Set.get());
     isl::schedule Result =
         getDerived().visit(Set.child(0), std::forward<Args>(args)...);
@@ -118,7 +118,7 @@ struct ScheduleTreeRewriter
     return Result;
   }
 
-  isl::schedule visitLeaf(const isl::schedule_node &Leaf, Args... args) {
+  isl::schedule visitLeaf(isl::schedule_node_leaf Leaf, Args... args) {
     return isl::schedule::from_domain(Leaf.get_domain());
   }
 
@@ -133,7 +133,7 @@ struct ScheduleTreeRewriter
     return NewChild.insert_mark(TheMark).get_schedule();
   }
 
-  isl::schedule visitExtension(const isl::schedule_node &Extension,
+  isl::schedule visitExtension(isl::schedule_node_extension Extension,
                                Args... args) {
     isl::union_map TheExtension =
         Extension.as<isl::schedule_node_extension>().get_extension();
@@ -146,7 +146,7 @@ struct ScheduleTreeRewriter
     return NewChild.graft_before(NewExtension).get_schedule();
   }
 
-  isl::schedule visitFilter(const isl::schedule_node &Filter, Args... args) {
+  isl::schedule visitFilter(isl::schedule_node_filter Filter, Args... args) {
     isl::union_set FilterDomain =
         Filter.as<isl::schedule_node_filter>().get_filter();
     isl::schedule NewSchedule =
@@ -154,7 +154,7 @@ struct ScheduleTreeRewriter
     return NewSchedule.intersect_domain(FilterDomain);
   }
 
-  isl::schedule visitNode(const isl::schedule_node &Node, Args... args) {
+  isl::schedule visitNode(isl::schedule_node Node, Args... args) {
     llvm_unreachable("Not implemented");
   }
 };
@@ -178,7 +178,7 @@ struct ExtensionNodeRewriter
   BaseTy &getBase() { return *this; }
   const BaseTy &getBase() const { return *this; }
 
-  isl::schedule visitSchedule(const isl::schedule &Schedule) {
+  isl::schedule visitSchedule(isl::schedule Schedule) {
     isl::union_map Extensions;
     isl::schedule Result =
         visit(Schedule.get_root(), Schedule.get_domain(), Extensions);
@@ -186,7 +186,7 @@ struct ExtensionNodeRewriter
     return Result;
   }
 
-  isl::schedule visitSequence(const isl::schedule_node &Sequence,
+  isl::schedule visitSequence(isl::schedule_node_sequence Sequence,
                               const isl::union_set &Domain,
                               isl::union_map &Extensions) {
     int NumChildren = isl_schedule_node_n_children(Sequence.get());
@@ -201,7 +201,7 @@ struct ExtensionNodeRewriter
     return NewNode;
   }
 
-  isl::schedule visitSet(const isl::schedule_node &Set,
+  isl::schedule visitSet(isl::schedule_node_set Set,
                          const isl::union_set &Domain,
                          isl::union_map &Extensions) {
     int NumChildren = isl_schedule_node_n_children(Set.get());
@@ -217,14 +217,14 @@ struct ExtensionNodeRewriter
     return NewNode;
   }
 
-  isl::schedule visitLeaf(const isl::schedule_node &Leaf,
+  isl::schedule visitLeaf(isl::schedule_node_leaf Leaf,
                           const isl::union_set &Domain,
                           isl::union_map &Extensions) {
     Extensions = isl::union_map::empty(Leaf.ctx());
     return isl::schedule::from_domain(Domain);
   }
 
-  isl::schedule visitBand(const isl::schedule_node &OldNode,
+  isl::schedule visitBand(isl::schedule_node_band OldNode,
                           const isl::union_set &Domain,
                           isl::union_map &OuterExtensions) {
     isl::schedule_node OldChild = OldNode.first_child();
@@ -274,7 +274,7 @@ struct ExtensionNodeRewriter
     return NewNode.get_schedule();
   }
 
-  isl::schedule visitFilter(const isl::schedule_node &Filter,
+  isl::schedule visitFilter(isl::schedule_node_filter Filter,
                             const isl::union_set &Domain,
                             isl::union_map &Extensions) {
     isl::union_set FilterDomain =
@@ -285,7 +285,7 @@ struct ExtensionNodeRewriter
     return visit(Filter.first_child(), NewDomain, Extensions);
   }
 
-  isl::schedule visitExtension(const isl::schedule_node &Extension,
+  isl::schedule visitExtension(isl::schedule_node_extension Extension,
                                const isl::union_set &Domain,
                                isl::union_map &Extensions) {
     isl::union_map ExtDomain =
@@ -311,7 +311,7 @@ struct CollectASTBuildOptions
 
   llvm::SmallVector<isl::union_set, 8> ASTBuildOptions;
 
-  void visitBand(const isl::schedule_node &Band) {
+  void visitBand(isl::schedule_node_band Band) {
     ASTBuildOptions.push_back(
         isl::manage(isl_schedule_node_band_get_ast_build_options(Band.get())));
     return getBase().visitBand(Band);
@@ -335,7 +335,7 @@ struct ApplyASTBuildOptions
   ApplyASTBuildOptions(llvm::ArrayRef<isl::union_set> ASTBuildOptions)
       : ASTBuildOptions(ASTBuildOptions) {}
 
-  isl::schedule visitSchedule(const isl::schedule &Schedule) {
+  isl::schedule visitSchedule(isl::schedule Schedule) {
     Pos = 0;
     isl::schedule Result = visit(Schedule).get_schedule();
     assert(Pos == ASTBuildOptions.size() &&
@@ -343,10 +343,9 @@ struct ApplyASTBuildOptions
     return Result;
   }
 
-  isl::schedule_node visitBand(const isl::schedule_node &Band) {
-    isl::schedule_node Result =
-        Band.as<isl::schedule_node_band>().set_ast_build_options(
-            ASTBuildOptions[Pos]);
+  isl::schedule_node visitBand(isl::schedule_node_band Band) {
+    isl::schedule_node_band Result =
+        Band.set_ast_build_options(ASTBuildOptions[Pos]);
     Pos += 1;
     return getBase().visitBand(Result);
   }

@@ -1,5 +1,4 @@
 ; RUN: opt < %s -disable-output "-passes=print<da>" -aa-pipeline=basic-aa 2>&1
-; RUN: opt < %s -analyze -enable-new-pm=0 -basic-aa -da
 ;
 ; CHECK: da analyze - consistent input [S S]!
 ; CHECK: da analyze - confused!

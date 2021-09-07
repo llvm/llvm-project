@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "include/threads.h"
+#include "src/threads/mtx_destroy.h"
 #include "src/threads/mtx_init.h"
 #include "src/threads/mtx_lock.h"
 #include "src/threads/mtx_unlock.h"
@@ -63,6 +64,8 @@ TEST(LlvmLibcMutexTest, RelayCounter) {
   int retval = 123;
   __llvm_libc::thrd_join(&thread, &retval);
   ASSERT_EQ(retval, 0);
+
+  __llvm_libc::mtx_destroy(&mutex);
 }
 
 mtx_t start_lock, step_lock;
@@ -126,6 +129,9 @@ TEST(LlvmLibcMutexTest, WaitAndStep) {
   int retval = 123;
   __llvm_libc::thrd_join(&thread, &retval);
   ASSERT_EQ(retval, 0);
+
+  __llvm_libc::mtx_destroy(&start_lock);
+  __llvm_libc::mtx_destroy(&step_lock);
 }
 
 static constexpr int THREAD_COUNT = 10;
@@ -179,4 +185,7 @@ TEST(LlvmLibcMutexTest, MultipleWaiters) {
   }
 
   ASSERT_EQ(wait_count, 0);
+
+  __llvm_libc::mtx_destroy(&multiple_waiter_lock);
+  __llvm_libc::mtx_destroy(&counter_lock);
 }

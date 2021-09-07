@@ -33,7 +33,7 @@ public:
   virtual void generateProfile() = 0;
   // Use SampleProfileWriter to serialize profile map
   virtual void write(std::unique_ptr<SampleProfileWriter> Writer,
-                     StringMap<FunctionSamples> &ProfileMap);
+                     SampleProfileMap &ProfileMap);
   void write();
 
 protected:
@@ -56,7 +56,7 @@ protected:
                           const RangeSample &Ranges);
 
   // Used by SampleProfileWriter
-  StringMap<FunctionSamples> ProfileMap;
+  SampleProfileMap ProfileMap;
 
   ProfiledBinary *Binary = nullptr;
 };
@@ -190,31 +190,28 @@ public:
 
 protected:
   // Lookup or create FunctionSamples for the context
-  FunctionSamples &getFunctionProfileForContext(StringRef ContextId,
+  FunctionSamples &getFunctionProfileForContext(SampleContextFrames ContextId,
                                                 bool WasLeafInlined = false);
   // Post processing for profiles before writing out, such as mermining
   // and trimming cold profiles, running preinliner on profiles.
   void postProcessProfiles();
   void computeSummaryAndThreshold();
   void write(std::unique_ptr<SampleProfileWriter> Writer,
-             StringMap<FunctionSamples> &ProfileMap) override;
+             SampleProfileMap &ProfileMap) override;
 
   // Thresholds from profile summary to answer isHotCount/isColdCount queries.
   uint64_t HotCountThreshold;
   uint64_t ColdCountThreshold;
 
-  // String table owning context strings created from profile generation.
-  std::unordered_set<std::string> ContextStrings;
-
 private:
   // Helper function for updating body sample for a leaf location in
   // FunctionProfile
   void updateBodySamplesforFunctionProfile(FunctionSamples &FunctionProfile,
-                                           const FrameLocation &LeafLoc,
+                                           const SampleContextFrame &LeafLoc,
                                            uint64_t Count);
   void populateFunctionBodySamples(FunctionSamples &FunctionProfile,
                                    const RangeSample &RangeCounters);
-  void populateFunctionBoundarySamples(StringRef ContextId,
+  void populateFunctionBoundarySamples(SampleContextFrames ContextId,
                                        FunctionSamples &FunctionProfile,
                                        const BranchSample &BranchCounters);
   void populateInferredFunctionSamples();
@@ -243,22 +240,18 @@ private:
   void extractProbesFromRange(const RangeSample &RangeCounter,
                               ProbeCounterMap &ProbeCounter);
   // Fill in function body samples from probes
-  void
-  populateBodySamplesWithProbes(const RangeSample &RangeCounter,
-                                SmallVectorImpl<std::string> &ContextStrStack);
+  void populateBodySamplesWithProbes(const RangeSample &RangeCounter,
+                                     SampleContextFrames ContextStack);
   // Fill in boundary samples for a call probe
-  void populateBoundarySamplesWithProbes(
-      const BranchSample &BranchCounter,
-      SmallVectorImpl<std::string> &ContextStrStack);
-  // Helper function to get FunctionSamples for the leaf inlined context
-  FunctionSamples &
-  getFunctionProfileForLeafProbe(SmallVectorImpl<std::string> &ContextStrStack,
-                                 const MCPseudoProbeFuncDesc *LeafFuncDesc,
-                                 bool WasLeafInlined);
+  void populateBoundarySamplesWithProbes(const BranchSample &BranchCounter,
+                                         SampleContextFrames ContextStack);
   // Helper function to get FunctionSamples for the leaf probe
   FunctionSamples &
-  getFunctionProfileForLeafProbe(SmallVectorImpl<std::string> &ContextStrStack,
+  getFunctionProfileForLeafProbe(SampleContextFrames ContextStack,
                                  const MCDecodedPseudoProbe *LeafProbe);
+
+  // Underlying context table serves for sample profile writer.
+  std::unordered_set<SampleContextFrameVector, SampleContextFrameHash> Contexts;
 };
 
 } // end namespace sampleprof

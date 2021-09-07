@@ -29,7 +29,7 @@
 #include <utility>
 
 #define PGMATH_DECLARE
-#include "../runtime/pgmath.h.inc"
+#include "flang/Evaluate/pgmath.h.inc"
 
 /// This file implements lowering of Fortran intrinsic procedures.
 /// Intrinsics are lowered to a mix of FIR and MLIR operations as
@@ -283,17 +283,17 @@ struct RuntimeFunction {
 static constexpr RuntimeFunction pgmathFast[] = {
 #define PGMATH_FAST
 #define PGMATH_USE_ALL_TYPES(name, func) RUNTIME_STATIC_DESCRIPTION(name, func)
-#include "../runtime/pgmath.h.inc"
+#include "flang/Evaluate/pgmath.h.inc"
 };
 static constexpr RuntimeFunction pgmathRelaxed[] = {
 #define PGMATH_RELAXED
 #define PGMATH_USE_ALL_TYPES(name, func) RUNTIME_STATIC_DESCRIPTION(name, func)
-#include "../runtime/pgmath.h.inc"
+#include "flang/Evaluate/pgmath.h.inc"
 };
 static constexpr RuntimeFunction pgmathPrecise[] = {
 #define PGMATH_PRECISE
 #define PGMATH_USE_ALL_TYPES(name, func) RUNTIME_STATIC_DESCRIPTION(name, func)
-#include "../runtime/pgmath.h.inc"
+#include "flang/Evaluate/pgmath.h.inc"
 };
 
 static mlir::FunctionType genF32F32FuncType(mlir::MLIRContext *context) {
@@ -919,7 +919,7 @@ mlir::SymbolRefAttr IntrinsicLibrary::getUnrestrictedIntrinsicSymbolRefAttr(
     funcOp = getWrapper(rtCallGenerator, name, signature, loadRefArguments);
   }
 
-  return builder.getSymbolRefAttr(funcOp.getName());
+  return SymbolRefAttr::get(funcOp);
 }
 
 //===----------------------------------------------------------------------===//

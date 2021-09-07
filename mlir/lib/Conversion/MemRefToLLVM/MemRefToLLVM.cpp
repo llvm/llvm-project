@@ -305,7 +305,7 @@ struct DeallocOpLowering : public ConvertOpToLLVMPattern<memref::DeallocOp> {
         op.getLoc(), getVoidPtrType(),
         memref.allocatedPtr(rewriter, op.getLoc()));
     rewriter.replaceOpWithNewOp<LLVM::CallOp>(
-        op, TypeRange(), rewriter.getSymbolRefAttr(freeFunc), casted);
+        op, TypeRange(), SymbolRefAttr::get(freeFunc), casted);
     return success();
   }
 };

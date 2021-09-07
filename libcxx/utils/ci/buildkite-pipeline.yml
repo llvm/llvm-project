@@ -382,6 +382,17 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
+  - label: "No Unicode"
+    command: "libcxx/utils/ci/run-buildbot generic-no-unicode"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
   - label: "Benchmarks"
     command: "libcxx/utils/ci/run-buildbot benchmarks"
     artifact_paths:

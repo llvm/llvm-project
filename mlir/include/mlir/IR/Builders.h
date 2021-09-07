@@ -97,17 +97,6 @@ public:
   FloatAttr getFloatAttr(Type type, const APFloat &value);
   StringAttr getStringAttr(const Twine &bytes);
   ArrayAttr getArrayAttr(ArrayRef<Attribute> value);
-  FlatSymbolRefAttr getSymbolRefAttr(Operation *value);
-  FlatSymbolRefAttr getSymbolRefAttr(StringAttr value);
-  SymbolRefAttr getSymbolRefAttr(StringAttr value,
-                                 ArrayRef<FlatSymbolRefAttr> nestedReferences);
-  SymbolRefAttr getSymbolRefAttr(StringRef value,
-                                 ArrayRef<FlatSymbolRefAttr> nestedReferences) {
-    return getSymbolRefAttr(getStringAttr(value), nestedReferences);
-  }
-  FlatSymbolRefAttr getSymbolRefAttr(StringRef value) {
-    return getSymbolRefAttr(getStringAttr(value));
-  }
 
   // Returns a 0-valued attribute of the given `type`. This function only
   // supports boolean, integer, and 16-/32-/64-bit float types, and vector or

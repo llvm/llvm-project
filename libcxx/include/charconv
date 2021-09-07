@@ -75,9 +75,11 @@ namespace std {
 
 #include <__availability>
 #include <__bits>
+#include <__charconv/chars_format.h>
+#include <__charconv/from_chars_result.h>
+#include <__charconv/to_chars_result.h>
 #include <__config>
 #include <__errc>
-#include <__utility/to_underlying.h>
 #include <cmath> // for log2f
 #include <cstdint>
 #include <cstdlib> // for _LIBCPP_UNREACHABLE
@@ -102,67 +104,6 @@ _LIBCPP_AVAILABILITY_TO_CHARS _LIBCPP_FUNC_VIS char* __u32toa(uint32_t __value, 
 }
 
 #ifndef _LIBCPP_CXX03_LANG
-
-enum class _LIBCPP_ENUM_VIS chars_format
-{
-    scientific = 0x1,
-    fixed = 0x2,
-    hex = 0x4,
-    general = fixed | scientific
-};
-
-inline _LIBCPP_INLINE_VISIBILITY constexpr chars_format
-operator~(chars_format __x) {
-  return chars_format(~_VSTD::__to_underlying(__x));
-}
-
-inline _LIBCPP_INLINE_VISIBILITY constexpr chars_format
-operator&(chars_format __x, chars_format __y) {
-  return chars_format(_VSTD::__to_underlying(__x) &
-                      _VSTD::__to_underlying(__y));
-}
-
-inline _LIBCPP_INLINE_VISIBILITY constexpr chars_format
-operator|(chars_format __x, chars_format __y) {
-  return chars_format(_VSTD::__to_underlying(__x) |
-                      _VSTD::__to_underlying(__y));
-}
-
-inline _LIBCPP_INLINE_VISIBILITY constexpr chars_format
-operator^(chars_format __x, chars_format __y) {
-  return chars_format(_VSTD::__to_underlying(__x) ^
-                      _VSTD::__to_underlying(__y));
-}
-
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11 chars_format&
-operator&=(chars_format& __x, chars_format __y) {
-  __x = __x & __y;
-  return __x;
-}
-
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11 chars_format&
-operator|=(chars_format& __x, chars_format __y) {
-  __x = __x | __y;
-  return __x;
-}
-
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11 chars_format&
-operator^=(chars_format& __x, chars_format __y) {
-  __x = __x ^ __y;
-  return __x;
-}
-
-struct _LIBCPP_TYPE_VIS to_chars_result
-{
-    char* ptr;
-    errc ec;
-};
-
-struct _LIBCPP_TYPE_VIS from_chars_result
-{
-    const char* ptr;
-    errc ec;
-};
 
 void to_chars(char*, char*, bool, int = 10) = delete;
 void from_chars(const char*, const char*, bool, int = 10) = delete;

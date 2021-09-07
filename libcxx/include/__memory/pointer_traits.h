@@ -33,19 +33,19 @@ struct __pointer_traits_element_type;
 template <class _Ptr>
 struct __pointer_traits_element_type<_Ptr, true>
 {
-    typedef _LIBCPP_NODEBUG_TYPE typename _Ptr::element_type type;
+    typedef _LIBCPP_NODEBUG typename _Ptr::element_type type;
 };
 
 template <template <class, class...> class _Sp, class _Tp, class ..._Args>
 struct __pointer_traits_element_type<_Sp<_Tp, _Args...>, true>
 {
-    typedef _LIBCPP_NODEBUG_TYPE typename _Sp<_Tp, _Args...>::element_type type;
+    typedef _LIBCPP_NODEBUG typename _Sp<_Tp, _Args...>::element_type type;
 };
 
 template <template <class, class...> class _Sp, class _Tp, class ..._Args>
 struct __pointer_traits_element_type<_Sp<_Tp, _Args...>, false>
 {
-    typedef _LIBCPP_NODEBUG_TYPE _Tp type;
+    typedef _LIBCPP_NODEBUG _Tp type;
 };
 
 template <class _Tp, class = void>
@@ -58,13 +58,13 @@ struct __has_difference_type<_Tp,
 template <class _Ptr, bool = __has_difference_type<_Ptr>::value>
 struct __pointer_traits_difference_type
 {
-    typedef _LIBCPP_NODEBUG_TYPE ptrdiff_t type;
+    typedef _LIBCPP_NODEBUG ptrdiff_t type;
 };
 
 template <class _Ptr>
 struct __pointer_traits_difference_type<_Ptr, true>
 {
-    typedef _LIBCPP_NODEBUG_TYPE typename _Ptr::difference_type type;
+    typedef _LIBCPP_NODEBUG typename _Ptr::difference_type type;
 };
 
 template <class _Tp, class _Up>
@@ -84,9 +84,9 @@ template <class _Tp, class _Up, bool = __has_rebind<_Tp, _Up>::value>
 struct __pointer_traits_rebind
 {
 #ifndef _LIBCPP_CXX03_LANG
-    typedef _LIBCPP_NODEBUG_TYPE typename _Tp::template rebind<_Up> type;
+    typedef _LIBCPP_NODEBUG typename _Tp::template rebind<_Up> type;
 #else
-    typedef _LIBCPP_NODEBUG_TYPE typename _Tp::template rebind<_Up>::other type;
+    typedef _LIBCPP_NODEBUG typename _Tp::template rebind<_Up>::other type;
 #endif
 };
 
@@ -94,9 +94,9 @@ template <template <class, class...> class _Sp, class _Tp, class ..._Args, class
 struct __pointer_traits_rebind<_Sp<_Tp, _Args...>, _Up, true>
 {
 #ifndef _LIBCPP_CXX03_LANG
-    typedef _LIBCPP_NODEBUG_TYPE typename _Sp<_Tp, _Args...>::template rebind<_Up> type;
+    typedef _LIBCPP_NODEBUG typename _Sp<_Tp, _Args...>::template rebind<_Up> type;
 #else
-    typedef _LIBCPP_NODEBUG_TYPE typename _Sp<_Tp, _Args...>::template rebind<_Up>::other type;
+    typedef _LIBCPP_NODEBUG typename _Sp<_Tp, _Args...>::template rebind<_Up>::other type;
 #endif
 };
 
@@ -184,7 +184,7 @@ template <class _Pointer, class>
 struct __to_address_helper {
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
     static decltype(_VSTD::__to_address(declval<const _Pointer&>().operator->()))
-    __call(const _Pointer&__p) _NOEXCEPT {
+    __call(const _Pointer& __p) _NOEXCEPT {
         return _VSTD::__to_address(__p.operator->());
     }
 };
@@ -193,7 +193,7 @@ template <class _Pointer>
 struct __to_address_helper<_Pointer, decltype((void)pointer_traits<_Pointer>::to_address(declval<const _Pointer&>()))> {
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
     static decltype(pointer_traits<_Pointer>::to_address(declval<const _Pointer&>()))
-    __call(const _Pointer&__p) _NOEXCEPT {
+    __call(const _Pointer& __p) _NOEXCEPT {
         return pointer_traits<_Pointer>::to_address(__p);
     }
 };

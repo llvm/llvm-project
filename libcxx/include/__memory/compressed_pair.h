@@ -115,8 +115,8 @@ public:
     "The current implementation is NOT ABI-compatible with the previous "
     "implementation for this configuration");
 
-    typedef _LIBCPP_NODEBUG_TYPE __compressed_pair_elem<_T1, 0> _Base1;
-    typedef _LIBCPP_NODEBUG_TYPE __compressed_pair_elem<_T2, 1> _Base2;
+    typedef _LIBCPP_NODEBUG __compressed_pair_elem<_T1, 0> _Base1;
+    typedef _LIBCPP_NODEBUG __compressed_pair_elem<_T2, 1> _Base2;
 
     template <bool _Dummy = true,
       class = typename enable_if<

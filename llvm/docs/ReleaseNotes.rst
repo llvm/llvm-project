@@ -56,7 +56,9 @@ Non-comprehensive list of changes in this release
 Changes to the LLVM IR
 ----------------------
 
-* ...
+* Using the legacy pass manager for the optimization pipeline is deprecated and
+  will be removed after LLVM 14. In the meantime, only minimal effort will be
+  made to maintain the legacy pass manager for the optimization pipeline.
 
 Changes to building LLVM
 ------------------------

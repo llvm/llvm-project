@@ -1,4 +1,4 @@
-//===-- runtime/file.cpp ----------------------------------------*- C++ -*-===//
+//===-- runtime/file.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "file.h"
-#include "magic-numbers.h"
-#include "memory.h"
+#include "flang/Runtime/magic-numbers.h"
+#include "flang/Runtime/memory.h"
 #include <algorithm>
 #include <cerrno>
 #include <cstring>

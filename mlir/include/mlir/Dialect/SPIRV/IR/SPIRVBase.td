@@ -2671,6 +2671,74 @@ def SPV_ImageFormatAttr :
       SPV_IF_R8ui
     ]>;
 
+def SPV_IO_None               : BitEnumAttrCase<"None", 0x0000>;
+def SPV_IO_Bias               : BitEnumAttrCase<"Bias", 0x0001> {
+  list<Availability> availability = [
+    Capability<[SPV_C_Shader]>
+  ];
+}
+def SPV_IO_Lod                : BitEnumAttrCase<"Lod", 0x0002>;
+def SPV_IO_Grad               : BitEnumAttrCase<"Grad", 0x0004>;
+def SPV_IO_ConstOffset        : BitEnumAttrCase<"ConstOffset", 0x0008>;
+def SPV_IO_Offset             : BitEnumAttrCase<"Offset", 0x0010> {
+  list<Availability> availability = [
+    Capability<[SPV_C_ImageGatherExtended]>
+  ];
+}
+def SPV_IO_ConstOffsets       : BitEnumAttrCase<"ConstOffsets", 0x0020> {
+  list<Availability> availability = [
+    Capability<[SPV_C_ImageGatherExtended]>
+  ];
+}
+def SPV_IO_Sample             : BitEnumAttrCase<"Sample", 0x0040>;
+def SPV_IO_MinLod             : BitEnumAttrCase<"MinLod", 0x0080> {
+  list<Availability> availability = [
+    Capability<[SPV_C_MinLod]>
+  ];
+}
+def SPV_IO_MakeTexelAvailable : BitEnumAttrCase<"MakeTexelAvailable", 0x0100> {
+  list<Availability> availability = [
+    MinVersion<SPV_V_1_5>,
+    Capability<[SPV_C_VulkanMemoryModel]>
+  ];
+}
+def SPV_IO_MakeTexelVisible   : BitEnumAttrCase<"MakeTexelVisible", 0x0200> {
+  list<Availability> availability = [
+    MinVersion<SPV_V_1_5>,
+    Capability<[SPV_C_VulkanMemoryModel]>
+  ];
+}
+def SPV_IO_NonPrivateTexel    : BitEnumAttrCase<"NonPrivateTexel", 0x0400> {
+  list<Availability> availability = [
+    MinVersion<SPV_V_1_5>,
+    Capability<[SPV_C_VulkanMemoryModel]>
+  ];
+}
+def SPV_IO_VolatileTexel      : BitEnumAttrCase<"VolatileTexel", 0x0800> {
+  list<Availability> availability = [
+    MinVersion<SPV_V_1_5>,
+    Capability<[SPV_C_VulkanMemoryModel]>
+  ];
+}
+def SPV_IO_SignExtend         : BitEnumAttrCase<"SignExtend", 0x1000> {
+  list<Availability> availability = [
+    MinVersion<SPV_V_1_4>,
+  ];
+}
+def SPV_IO_ZeroExtend         : BitEnumAttrCase<"ZeroExtend", 0x2000> {
+  list<Availability> availability = [
+    MinVersion<SPV_V_1_4>,
+  ];
+}
+
+def SPV_ImageOperandAttr :
+    SPV_BitEnumAttr<"ImageOperands", "valid SPIR-V ImageOperands", [
+      SPV_IO_None, SPV_IO_Bias, SPV_IO_Lod, SPV_IO_Grad, SPV_IO_ConstOffset,
+      SPV_IO_Offset, SPV_IO_ConstOffsets, SPV_IO_Sample, SPV_IO_MinLod,
+      SPV_IO_MakeTexelAvailable, SPV_IO_MakeTexelVisible, SPV_IO_NonPrivateTexel,
+      SPV_IO_VolatileTexel, SPV_IO_SignExtend, SPV_IO_ZeroExtend
+    ]>;
+
 def SPV_LT_Export : I32EnumAttrCase<"Export", 0> {
   list<Availability> availability = [
     Capability<[SPV_C_Linkage]>

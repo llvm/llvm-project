@@ -405,8 +405,8 @@ TSAN_INTERCEPTOR(int, swapcontext, ucontext_t *oucp, const ucontext_t *ucp) {
   {
     SCOPED_INTERCEPTOR_RAW(swapcontext, oucp, ucp);
   }
-  // Bacause of swapcontext() semantics we have no option but to copy its
-  // impementation here
+  // Because of swapcontext() semantics we have no option but to copy its
+  // implementation here
   if (!oucp || !ucp) {
     errno = EINVAL;
     return -1;

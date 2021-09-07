@@ -2005,13 +2005,13 @@ class OMPUpdateClause final
     return IsExtended ? 2 : 0;
   }
 
-  /// Sets the the location of '(' in clause for 'depobj' directive.
+  /// Sets the location of '(' in clause for 'depobj' directive.
   void setLParenLoc(SourceLocation Loc) {
     assert(IsExtended && "Expected extended clause.");
     *getTrailingObjects<SourceLocation>() = Loc;
   }
 
-  /// Sets the the location of '(' in clause for 'depobj' directive.
+  /// Sets the location of '(' in clause for 'depobj' directive.
   void setArgumentLoc(SourceLocation Loc) {
     assert(IsExtended && "Expected extended clause.");
     *std::next(getTrailingObjects<SourceLocation>(), 1) = Loc;
@@ -2085,13 +2085,13 @@ public:
     return const_child_range(const_child_iterator(), const_child_iterator());
   }
 
-  /// Gets the the location of '(' in clause for 'depobj' directive.
+  /// Gets the location of '(' in clause for 'depobj' directive.
   SourceLocation getLParenLoc() const {
     assert(IsExtended && "Expected extended clause.");
     return *getTrailingObjects<SourceLocation>();
   }
 
-  /// Gets the the location of argument in clause for 'depobj' directive.
+  /// Gets the location of argument in clause for 'depobj' directive.
   SourceLocation getArgumentLoc() const {
     assert(IsExtended && "Expected extended clause.");
     return *std::next(getTrailingObjects<SourceLocation>(), 1);
@@ -5606,7 +5606,8 @@ private:
   /// Map-type-modifiers for the 'map' clause.
   OpenMPMapModifierKind MapTypeModifiers[NumberOfOMPMapClauseModifiers] = {
       OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown,
-      OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown};
+      OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown,
+      OMPC_MAP_MODIFIER_unknown};
 
   /// Location of map-type-modifiers for the 'map' clause.
   SourceLocation MapTypeModifiersLoc[NumberOfOMPMapClauseModifiers];

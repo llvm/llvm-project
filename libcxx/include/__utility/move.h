@@ -22,7 +22,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR typename remove_reference<_Tp>::type&&
 move(_Tp&& __t) _NOEXCEPT {
-  typedef _LIBCPP_NODEBUG_TYPE typename remove_reference<_Tp>::type _Up;
+  typedef _LIBCPP_NODEBUG typename remove_reference<_Tp>::type _Up;
   return static_cast<_Up&&>(__t);
 }
 

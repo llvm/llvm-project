@@ -689,10 +689,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   } else if (name == "ubound") {
     return UBOUND(context, std::move(funcRef));
   }
-  // TODO:
-  // cshift, dot_product, eoshift, findloc, ibits, image_status, ishftc,
-  // matmul, maxloc, minloc, not, pack, sign, spread, transfer, transpose,
-  // unpack
+  // TODO: count(w/ dim), dot_product, findloc, ibits, image_status, ishftc,
+  // matmul, maxloc, minloc, sign, transfer
   return Expr<T>{std::move(funcRef)};
 }
 

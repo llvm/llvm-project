@@ -970,26 +970,12 @@ public:
     weight = rewriter.create<tosa::TransposeOp>(loc, newWeightTy, weight,
                                                 weightPermValue);
 
-    // Broadcast the initial value to the output tensor before convolving.
-    SmallVector<AffineMap, 4> indexingMaps;
-    indexingMaps.push_back(AffineMap::get(
-        /*dimCount=*/resultTy.getRank(), /*symbolCount=*/0,
-        {rewriter.getAffineDimExpr(3)}, rewriter.getContext()));
-    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultTy.getRank()));
-
+    Attribute resultZeroAttr = rewriter.getZeroAttr(resultETy);
     Value initTensor = rewriter.create<linalg::InitTensorOp>(
         loc, resultTy.getShape(), resultETy);
-
-    Value biasBroadcast =
-        rewriter
-            .create<linalg::GenericOp>(
-                loc, resultTy, bias, initTensor, indexingMaps,
-                getNParallelLoopsAttrs(resultTy.getRank()),
-                [&](OpBuilder &nestedBuilder, Location nestedLoc,
-                    ValueRange args) {
-                  nestedBuilder.create<linalg::YieldOp>(nestedLoc, args[0]);
-                })
-            .getResult(0);
+    Value zero = rewriter.create<ConstantOp>(loc, resultZeroAttr);
+    Value zeroTensor =
+        rewriter.create<linalg::FillOp>(loc, zero, initTensor).getResult(0);
 
     // Extract the attributes for convolution.
     llvm::SmallVector<int64_t> stride, dilation;
@@ -1002,7 +988,17 @@ public:
     auto dilationAttr = DenseIntElementsAttr::get(
         RankedTensorType::get({2}, rewriter.getI64Type()), dilation);
 
-    Value conv;
+    // Create maps for the bias broadcasting
+    SmallVector<AffineMap, 4> indexingMaps;
+    indexingMaps.push_back(AffineMap::get(
+        /*dimCount=*/resultTy.getRank(), /*symbolCount=*/0,
+        {rewriter.getAffineDimExpr(3)}, rewriter.getContext()));
+    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultTy.getRank()));
+    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultTy.getRank()));
+
+    Value biasInitTensor = rewriter.create<linalg::InitTensorOp>(
+        loc, resultTy.getShape(), resultETy);
+
     if (isQuantized) {
       auto quantizationInfo =
           op->getAttr("quantization_info").cast<tosa::ConvOpQuantizationAttr>();
@@ -1013,15 +1009,49 @@ public:
 
       auto iZpVal = rewriter.create<ConstantOp>(loc, iZp);
       auto kZpVal = rewriter.create<ConstantOp>(loc, kZp);
-      rewriter.replaceOpWithNewOp<linalg::Conv2DNhwcHwcfQOp>(
-          op, resultTy, ValueRange{input, weight, iZpVal, kZpVal},
-          ValueRange{biasBroadcast}, strideAttr, dilationAttr);
+      Value conv =
+          rewriter
+              .create<linalg::Conv2DNhwcHwcfQOp>(
+                  loc, resultTy, ValueRange{input, weight, iZpVal, kZpVal},
+                  ValueRange{zeroTensor}, strideAttr, dilationAttr)
+              ->getResult(0);
+
+      Value result =
+          rewriter
+              .create<linalg::GenericOp>(
+                  loc, resultTy, ValueRange({bias, conv}), biasInitTensor,
+                  indexingMaps, getNParallelLoopsAttrs(resultTy.getRank()),
+                  [&](OpBuilder &nestedBuilder, Location nestedLoc,
+                      ValueRange args) {
+                    Value added =
+                        nestedBuilder.create<AddIOp>(loc, args[0], args[1]);
+                    nestedBuilder.create<linalg::YieldOp>(nestedLoc, added);
+                  })
+              .getResult(0);
+      rewriter.replaceOp(op, result);
       return success();
     }
 
-    rewriter.replaceOpWithNewOp<linalg::Conv2DNhwcHwcfOp>(
-        op, resultTy, ValueRange{input, weight}, ValueRange{biasBroadcast},
-        strideAttr, dilationAttr);
+    Value conv = rewriter
+                     .create<linalg::Conv2DNhwcHwcfOp>(
+                         loc, resultTy, ValueRange{input, weight},
+                         ValueRange{zeroTensor}, strideAttr, dilationAttr)
+                     ->getResult(0);
+
+    Value result =
+        rewriter
+            .create<linalg::GenericOp>(
+                loc, resultTy, ValueRange({bias, conv}), biasInitTensor,
+                indexingMaps, getNParallelLoopsAttrs(resultTy.getRank()),
+                [&](OpBuilder &nestedBuilder, Location nestedLoc,
+                    ValueRange args) {
+                  Value added =
+                      nestedBuilder.create<AddFOp>(loc, args[0], args[1]);
+                  nestedBuilder.create<linalg::YieldOp>(nestedLoc, added);
+                })
+            .getResult(0);
+
+    rewriter.replaceOp(op, result);
     return success();
   }
 };
@@ -1099,27 +1129,6 @@ public:
 
     input = applyPad(loc, input, pad, zeroAttr, rewriter);
 
-    // Broadcast the initial value to the output tensor before convolving.
-    SmallVector<AffineMap, 4> indexingMaps;
-    indexingMaps.push_back(AffineMap::get(
-        /*dimCount=*/resultTy.getRank(), /*symbolCount=*/0,
-        {rewriter.getAffineDimExpr(3)}, rewriter.getContext()));
-    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultTy.getRank()));
-
-    Value initTensor =
-        rewriter.create<linalg::InitTensorOp>(loc, resultShape, resultETy);
-
-    Value biasBroadcast =
-        rewriter
-            .create<linalg::GenericOp>(
-                loc, resultTy, bias, initTensor, indexingMaps,
-                getNParallelLoopsAttrs(resultTy.getRank()),
-                [&](OpBuilder &nestedBuilder, Location nestedLoc,
-                    ValueRange args) {
-                  nestedBuilder.create<linalg::YieldOp>(nestedLoc, args[0]);
-                })
-            .getResult(0);
-
     // Extract the attributes for convolution.
     llvm::SmallVector<int64_t> stride, dilation;
     getValuesFromIntArrayAttribute(strideTosaAttr, stride);
@@ -1135,28 +1144,69 @@ public:
                                weightShape[2], weightShape[3]},
                               resultETy);
 
-    Value biasReshape =
-        rewriter.create<tosa::ReshapeOp>(loc, linalgConvTy, biasBroadcast);
-    Value conv;
+    // Broadcast the initial value to the output tensor before convolving.
+    SmallVector<AffineMap, 4> indexingMaps;
+    indexingMaps.push_back(AffineMap::get(
+        /*dimCount=*/resultTy.getRank(), /*symbolCount=*/0,
+        {rewriter.getAffineDimExpr(3)}, rewriter.getContext()));
+    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultTy.getRank()));
+    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultTy.getRank()));
+
+    Attribute resultZeroAttr = rewriter.getZeroAttr(resultETy);
+    Value initTensor = rewriter.create<linalg::InitTensorOp>(
+        loc, linalgConvTy.getShape(), resultETy);
+    Value zero = rewriter.create<ConstantOp>(loc, resultZeroAttr);
+    Value zeroTensor =
+        rewriter.create<linalg::FillOp>(loc, zero, initTensor).getResult(0);
+
+    Value biasInitTensor = rewriter.create<linalg::InitTensorOp>(
+        loc, resultTy.getShape(), resultETy);
     if (!isQuantized) {
-      conv = rewriter
-                 .create<linalg::DepthwiseConv2DNhwcOp>(
-                     loc, linalgConvTy, ValueRange{input, weight},
-                     ValueRange{biasReshape}, strideAttr, dilationAttr)
-                 .getResult(0);
+      Value conv = rewriter
+                       .create<linalg::DepthwiseConv2DNhwcOp>(
+                           loc, linalgConvTy, ValueRange{input, weight},
+                           ValueRange{zeroTensor}, strideAttr, dilationAttr)
+                       .getResult(0);
+      Value convReshape = rewriter.create<tosa::ReshapeOp>(loc, resultTy, conv);
+      Value result =
+          rewriter
+              .create<linalg::GenericOp>(
+                  loc, resultTy, ValueRange({bias, convReshape}),
+                  biasInitTensor, indexingMaps,
+                  getNParallelLoopsAttrs(resultTy.getRank()),
+                  [&](OpBuilder &nestedBuilder, Location nestedLoc,
+                      ValueRange args) {
+                    Value added =
+                        nestedBuilder.create<AddFOp>(loc, args[0], args[1]);
+                    nestedBuilder.create<linalg::YieldOp>(nestedLoc, added);
+                  })
+              .getResult(0);
+      rewriter.replaceOp(op, result);
     } else {
       auto iZpVal = rewriter.create<ConstantOp>(loc, iZp);
       auto kZpVal = rewriter.create<ConstantOp>(loc, kZp);
-      conv =
+      Value conv =
           rewriter
               .create<linalg::DepthwiseConv2DNhwcQOp>(
                   loc, linalgConvTy, ValueRange{input, weight, iZpVal, kZpVal},
-                  ValueRange{biasReshape}, strideAttr, dilationAttr)
+                  ValueRange{zeroTensor}, strideAttr, dilationAttr)
               .getResult(0);
+      Value convReshape = rewriter.create<tosa::ReshapeOp>(loc, resultTy, conv);
+      Value result =
+          rewriter
+              .create<linalg::GenericOp>(
+                  loc, resultTy, ValueRange({bias, convReshape}),
+                  biasInitTensor, indexingMaps,
+                  getNParallelLoopsAttrs(resultTy.getRank()),
+                  [&](OpBuilder &nestedBuilder, Location nestedLoc,
+                      ValueRange args) {
+                    Value added =
+                        nestedBuilder.create<AddIOp>(loc, args[0], args[1]);
+                    nestedBuilder.create<linalg::YieldOp>(nestedLoc, added);
+                  })
+              .getResult(0);
+      rewriter.replaceOp(op, result);
     }
-
-    Value reshape = rewriter.create<tosa::ReshapeOp>(loc, resultTy, conv);
-    rewriter.replaceOp(op, reshape);
     return success();
   }
 };
@@ -1288,6 +1338,8 @@ public:
     auto weightTy = weight.getType().cast<ShapedType>();
     auto weightShape = weightTy.getShape();
 
+    auto outputETy = outputTy.getElementType();
+
     // Creating maps for the output of MatMul and the bias
     SmallVector<AffineMap, 4> indexingMaps;
 
@@ -1297,23 +1349,16 @@ public:
                                           rewriter.getContext()));
 
     indexingMaps.push_back(rewriter.getMultiDimIdentityMap(outputTy.getRank()));
+    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(outputTy.getRank()));
 
-    auto initTensor =
-        rewriter
-            .create<linalg::InitTensorOp>(loc, outputTy.getShape(),
-                                          outputTy.getElementType())
-            ->getResults();
+    auto initTensor = rewriter.create<linalg::InitTensorOp>(
+        loc, outputTy.getShape(), outputTy.getElementType());
 
-    auto linalgOp =
-        rewriter
-            .create<linalg::GenericOp>(
-                loc, outputTy, bias, initTensor, indexingMaps,
-                getNParallelLoopsAttrs(outputTy.getRank()),
-                [&](OpBuilder &nested_builder, Location nested_loc,
-                    ValueRange args) {
-                  nested_builder.create<linalg::YieldOp>(loc, *args.begin());
-                })
-            ->getResults();
+    // When quantized, the input elemeny type is not the same as the output
+    Attribute resultZeroAttr = rewriter.getZeroAttr(outputETy);
+    Value zero = rewriter.create<ConstantOp>(loc, resultZeroAttr);
+    Value zeroTensor =
+        rewriter.create<linalg::FillOp>(loc, zero, initTensor).getResult(0);
 
     SmallVector<int64_t> permutation{1, 0};
     auto permutationAttr = DenseIntElementsAttr::get(
@@ -1327,10 +1372,31 @@ public:
     Value transposedWeight = rewriter.create<tosa::TransposeOp>(
         loc, newWeightTy, weight, permutationValue);
 
+    auto biasInitTensor =
+        rewriter
+            .create<linalg::InitTensorOp>(loc, outputTy.getShape(), outputETy)
+            ->getResults();
+
     if (!op.quantization_info()) {
-      rewriter.replaceOpWithNewOp<linalg::MatmulOp>(
-          op, TypeRange{op.getType()}, ValueRange{input, transposedWeight},
-          linalgOp);
+      Value matmul = rewriter
+                         .create<linalg::MatmulOp>(
+                             loc, TypeRange{op.getType()},
+                             ValueRange{input, transposedWeight}, zeroTensor)
+                         ->getResult(0);
+
+      Value result =
+          rewriter
+              .create<linalg::GenericOp>(
+                  loc, outputTy, ValueRange({bias, matmul}), biasInitTensor,
+                  indexingMaps, getNParallelLoopsAttrs(outputTy.getRank()),
+                  [&](OpBuilder &nestedBuilder, Location nestedLoc,
+                      ValueRange args) {
+                    Value added =
+                        nestedBuilder.create<AddFOp>(loc, args[0], args[1]);
+                    nestedBuilder.create<linalg::YieldOp>(nestedLoc, added);
+                  })
+              .getResult(0);
+      rewriter.replaceOp(op, result);
       return success();
     }
 
@@ -1341,10 +1407,26 @@ public:
     auto outputZp = rewriter.create<ConstantOp>(
         loc, rewriter.getI32IntegerAttr(
                  quantizationInfo.weight_zp().getValue().getSExtValue()));
-    rewriter.replaceOpWithNewOp<linalg::QuantizedMatmulOp>(
-        op, TypeRange{op.getType()},
-        ValueRange{input, transposedWeight, inputZp, outputZp}, linalgOp);
-
+    Value matmul =
+        rewriter
+            .create<linalg::QuantizedMatmulOp>(
+                loc, TypeRange{op.getType()},
+                ValueRange{input, transposedWeight, inputZp, outputZp},
+                zeroTensor)
+            ->getResult(0);
+    Value result =
+        rewriter
+            .create<linalg::GenericOp>(
+                loc, outputTy, ValueRange({bias, matmul}), biasInitTensor,
+                indexingMaps, getNParallelLoopsAttrs(outputTy.getRank()),
+                [&](OpBuilder &nestedBuilder, Location nestedLoc,
+                    ValueRange args) {
+                  Value added =
+                      nestedBuilder.create<AddIOp>(loc, args[0], args[1]);
+                  nestedBuilder.create<linalg::YieldOp>(nestedLoc, added);
+                })
+            .getResult(0);
+    rewriter.replaceOp(op, result);
     return success();
   }
 };

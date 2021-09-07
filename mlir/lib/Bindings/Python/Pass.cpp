@@ -55,7 +55,7 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
   //----------------------------------------------------------------------------
   // Mapping of the top-level PassManager
   //----------------------------------------------------------------------------
-  py::class_<PyPassManager>(m, "PassManager")
+  py::class_<PyPassManager>(m, "PassManager", py::module_local())
       .def(py::init<>([](DefaultingPyMlirContext context) {
              MlirPassManager passManager =
                  mlirPassManagerCreate(context->get());

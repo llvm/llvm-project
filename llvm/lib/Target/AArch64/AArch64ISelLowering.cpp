@@ -4222,7 +4222,8 @@ bool AArch64TargetLowering::shouldExtendGSIndex(EVT VT, EVT &EltTy) const {
 
 bool AArch64TargetLowering::shouldRemoveExtendFromGSIndex(EVT VT) const {
   if (VT.getVectorElementType() == MVT::i32 &&
-      VT.getVectorElementCount().getKnownMinValue() >= 4)
+      VT.getVectorElementCount().getKnownMinValue() >= 4 &&
+      !VT.isFixedLengthVector())
     return true;
 
   return false;
@@ -5139,8 +5140,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
   DenseMap<unsigned, SDValue> CopiedRegs;
-  CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
-                 *DAG.getContext());
+  CCState CCInfo(CallConv, isVarArg, MF, ArgLocs, *DAG.getContext());
 
   // At this point, Ins[].VT may already be promoted to i32. To correctly
   // handle passing i8 as i8 instead of i32 on stack, we pass in both i32 and
@@ -5300,10 +5300,9 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
         break;
       }
 
-      ArgValue = DAG.getExtLoad(
-          ExtType, DL, VA.getLocVT(), Chain, FIN,
-          MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI),
-          MemVT);
+      ArgValue =
+          DAG.getExtLoad(ExtType, DL, VA.getLocVT(), Chain, FIN,
+                         MachinePointerInfo::getFixedStack(MF, FI), MemVT);
     }
 
     if (VA.getLocInfo() == CCValAssign::Indirect) {
@@ -5464,13 +5463,11 @@ void AArch64TargetLowering::saveVarArgRegisters(CCState &CCInfo,
     for (unsigned i = FirstVariadicGPR; i < NumGPRArgRegs; ++i) {
       unsigned VReg = MF.addLiveIn(GPRArgRegs[i], &AArch64::GPR64RegClass);
       SDValue Val = DAG.getCopyFromReg(Chain, DL, VReg, MVT::i64);
-      SDValue Store = DAG.getStore(
-          Val.getValue(1), DL, Val, FIN,
-          IsWin64
-              ? MachinePointerInfo::getFixedStack(DAG.getMachineFunction(),
-                                                  GPRIdx,
-                                                  (i - FirstVariadicGPR) * 8)
-              : MachinePointerInfo::getStack(DAG.getMachineFunction(), i * 8));
+      SDValue Store =
+          DAG.getStore(Val.getValue(1), DL, Val, FIN,
+                       IsWin64 ? MachinePointerInfo::getFixedStack(
+                                     MF, GPRIdx, (i - FirstVariadicGPR) * 8)
+                               : MachinePointerInfo::getStack(MF, i * 8));
       MemOps.push_back(Store);
       FIN =
           DAG.getNode(ISD::ADD, DL, PtrVT, FIN, DAG.getConstant(8, DL, PtrVT));
@@ -5497,9 +5494,8 @@ void AArch64TargetLowering::saveVarArgRegisters(CCState &CCInfo,
         unsigned VReg = MF.addLiveIn(FPRArgRegs[i], &AArch64::FPR128RegClass);
         SDValue Val = DAG.getCopyFromReg(Chain, DL, VReg, MVT::f128);
 
-        SDValue Store = DAG.getStore(
-            Val.getValue(1), DL, Val, FIN,
-            MachinePointerInfo::getStack(DAG.getMachineFunction(), i * 16));
+        SDValue Store = DAG.getStore(Val.getValue(1), DL, Val, FIN,
+                                     MachinePointerInfo::getStack(MF, i * 16));
         MemOps.push_back(Store);
         FIN = DAG.getNode(ISD::ADD, DL, PtrVT, FIN,
                           DAG.getConstant(16, DL, PtrVT));
@@ -5844,8 +5840,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
-  CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), ArgLocs,
-                 *DAG.getContext());
+  CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
 
   if (IsVarArg) {
     // Handle fixed and variable vector arguments differently.
@@ -6016,14 +6011,13 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         StoreSize *= NumParts;
       }
 
-      MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+      MachineFrameInfo &MFI = MF.getFrameInfo();
       Type *Ty = EVT(VA.getValVT()).getTypeForEVT(*DAG.getContext());
       Align Alignment = DAG.getDataLayout().getPrefTypeAlign(Ty);
       int FI = MFI.CreateStackObject(StoreSize, Alignment, false);
       MFI.setStackID(FI, TargetStackID::ScalableVector);
 
-      MachinePointerInfo MPI =
-          MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI);
+      MachinePointerInfo MPI = MachinePointerInfo::getFixedStack(MF, FI);
       SDValue Ptr = DAG.getFrameIndex(
           FI, DAG.getTargetLoweringInfo().getFrameIndexTy(DAG.getDataLayout()));
       SDValue SpillSlot = Ptr;
@@ -6118,8 +6112,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         int FI = MF.getFrameInfo().CreateFixedObject(OpSize, Offset, true);
 
         DstAddr = DAG.getFrameIndex(FI, PtrVT);
-        DstInfo =
-            MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI);
+        DstInfo = MachinePointerInfo::getFixedStack(MF, FI);
 
         // Make sure any stack arguments overlapping with where we're storing
         // are loaded before this eventual operation. Otherwise they'll be
@@ -6129,8 +6122,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         SDValue PtrOff = DAG.getIntPtrConstant(Offset, DL);
 
         DstAddr = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr, PtrOff);
-        DstInfo = MachinePointerInfo::getStack(DAG.getMachineFunction(),
-                                               LocMemOffset);
+        DstInfo = MachinePointerInfo::getStack(MF, LocMemOffset);
       }
 
       if (Outs[i].Flags.isByVal()) {
@@ -6310,8 +6302,7 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
   CCAssignFn *RetCC = CCAssignFnForReturn(CallConv);
   SmallVector<CCValAssign, 16> RVLocs;
-  CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs,
-                 *DAG.getContext());
+  CCState CCInfo(CallConv, isVarArg, MF, RVLocs, *DAG.getContext());
   CCInfo.AnalyzeReturn(Outs, RetCC);
 
   // Copy the result values into the output registers.
@@ -6388,8 +6379,7 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   }
 
   const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
-  const MCPhysReg *I =
-      TRI->getCalleeSavedRegsViaCopy(&DAG.getMachineFunction());
+  const MCPhysReg *I = TRI->getCalleeSavedRegsViaCopy(&MF);
   if (I) {
     for (; *I; ++I) {
       if (AArch64::GPR64RegClass.contains(*I))
@@ -13870,6 +13860,8 @@ static bool isEssentiallyExtractHighSubvector(SDValue N) {
   if (N.getOpcode() == ISD::BITCAST)
     N = N.getOperand(0);
   if (N.getOpcode() != ISD::EXTRACT_SUBVECTOR)
+    return false;
+  if (N.getOperand(0).getValueType().isScalableVector())
     return false;
   return cast<ConstantSDNode>(N.getOperand(1))->getAPIntValue() ==
          N.getOperand(0).getValueType().getVectorNumElements() / 2;

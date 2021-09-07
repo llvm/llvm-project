@@ -55,8 +55,15 @@ LLVMContextImpl::~LLVMContextImpl() {
 
   // Drop references for MDNodes.  Do this before Values get deleted to avoid
   // unnecessary RAUW when nodes are still unresolved.
-  for (auto *I : DistinctMDNodes)
+  for (auto *I : DistinctMDNodes) {
+    // We may have DIArgList that were uniqued, and as it has a custom
+    // implementation of dropAllReferences, it needs to be explicitly invoked.
+    if (auto *AL = dyn_cast<DIArgList>(I)) {
+      AL->dropAllReferences();
+      continue;
+    }
     I->dropAllReferences();
+  }
 #define HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)                                    \
   for (auto *I : CLASS##s)                                                     \
     I->dropAllReferences();

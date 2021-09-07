@@ -184,10 +184,24 @@ bool ModFileWriter::PutSymbols(const Scope &scope) {
   std::string buf; // stuff after CONTAINS in derived type
   llvm::raw_string_ostream typeBindings{buf};
   for (const Symbol &symbol : sorted) {
-    PutSymbol(typeBindings, symbol);
+    if (!symbol.test(Symbol::Flag::CompilerCreated)) {
+      PutSymbol(typeBindings, symbol);
+    }
   }
   for (const Symbol &symbol : uses) {
     PutUse(symbol);
+  }
+  for (const auto &set : scope.equivalenceSets()) {
+    if (!set.empty() &&
+        !set.front().symbol.test(Symbol::Flag::CompilerCreated)) {
+      char punctuation{'('};
+      decls_ << "equivalence";
+      for (const auto &object : set) {
+        decls_ << punctuation << object.AsFortran();
+        punctuation = ',';
+      }
+      decls_ << ")\n";
+    }
   }
   if (auto str{typeBindings.str()}; !str.empty()) {
     CHECK(scope.IsDerivedType());

@@ -39,15 +39,17 @@ def Test_Dialect : Dialect {
     void registerTypes();
 
     ::mlir::Attribute parseAttribute(::mlir::DialectAsmParser &parser,
-                             ::mlir::Type type) const override;
+                                     ::mlir::Type type) const override;
     void printAttribute(::mlir::Attribute attr,
                         ::mlir::DialectAsmPrinter &printer) const override;
 
     // Provides a custom printing/parsing for some operations.
     ::llvm::Optional<ParseOpHook>
       getParseOperationHook(::llvm::StringRef opName) const override;
-    ::mlir::LogicalResult printOperation(::mlir::Operation *op,
-                                 ::mlir::OpAsmPrinter &printer) const override;
+    ::llvm::unique_function<void(::mlir::Operation *,
+                                 ::mlir::OpAsmPrinter &printer)>
+     getOperationPrinter(::mlir::Operation *op) const override;
+
   private:
     // Storage for a custom fallback interface.
     void *fallbackEffectOpInterfaces;
@@ -624,12 +626,26 @@ def AttrSizedResultOp : TEST_Op<"attr_sized_results",
 // pretty printed value name.
 def StringAttrPrettyNameOp
  : TEST_Op<"string_attr_pretty_name",
-           [DeclareOpInterfaceMethods<OpAsmOpInterface>]> {
+           [DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]> {
   let arguments = (ins StrArrayAttr:$names);
   let results = (outs Variadic<I32>:$r);
 
   let printer = [{ return ::print(p, *this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
+}
+
+// This is used to test the OpAsmOpInterface::getDefaultDialect() feature:
+// operations nested in a region under this op will drop the "test." dialect
+// prefix.
+def DefaultDialectOp : TEST_Op<"default_dialect", [OpAsmOpInterface]> {
+ let regions = (region AnyRegion:$body);
+  let extraClassDeclaration = [{
+    static ::llvm::StringRef getDefaultDialect() {
+      return "test";
+    }
+    void getAsmResultNames(::llvm::function_ref<void(::mlir::Value, ::llvm::StringRef)> setNameFn) {}
+  }];
+  let assemblyFormat = "regions attr-dict-with-keyword";
 }
 
 //===----------------------------------------------------------------------===//

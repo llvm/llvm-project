@@ -1,6 +1,5 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s | FileCheck %s
 
-
 //===----------------------------------------------------------------------===//
 // spv.ImageDrefGather
 //===----------------------------------------------------------------------===//
@@ -8,6 +7,22 @@
 func @image_dref_gather(%arg0 : !spv.sampled_image<!spv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>, %arg1 : vector<4xf32>, %arg2 : f32) -> () {
   // CHECK: spv.ImageDrefGather {{.*}} : !spv.sampled_image<!spv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>, {{.*}} : vector<4xf32>, {{.*}} : f32 -> vector<4xi32>
   %0 = spv.ImageDrefGather %arg0 : !spv.sampled_image<!spv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>, %arg1 : vector<4xf32>, %arg2 : f32 -> vector<4xi32>
+  spv.Return
+}
+
+// -----
+
+func @image_dref_gather_with_single_imageoperands(%arg0 : !spv.sampled_image<!spv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>, %arg1 : vector<4xf32>, %arg2 : f32) -> () {
+  // CHECK: spv.ImageDrefGather {{.*}} ["NonPrivateTexel"] -> vector<4xi32>
+  %0 = spv.ImageDrefGather %arg0 : !spv.sampled_image<!spv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>, %arg1 : vector<4xf32>, %arg2 : f32 ["NonPrivateTexel"] -> vector<4xi32>
+  spv.Return
+}
+
+// -----
+
+func @image_dref_gather_with_mismatch_imageoperands(%arg0 : !spv.sampled_image<!spv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>, %arg1 : vector<4xf32>, %arg2 : f32) -> () {
+  // expected-error @+1 {{the Image Operands should encode what operands follow, as per Image Operands}}
+  %0 = spv.ImageDrefGather %arg0 : !spv.sampled_image<!spv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>, %arg1 : vector<4xf32>, %arg2 : f32 (%arg2, %arg2 : f32, f32) -> vector<4xi32>
   spv.Return
 }
 

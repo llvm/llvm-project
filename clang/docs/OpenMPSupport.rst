@@ -360,3 +360,20 @@ want to help with the implementation.
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | task extension               | nowait clause on taskwait                                    | :none:`unclaimed`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
+
+OpenMP Extensions
+=================
+
+The following table provides a quick overview over various OpenMP
+extensions and their implementation status.  These extensions are not
+currently defined by any standard, so links to associated LLVM
+documentation are provided.  As these extensions mature, they will be
+considered for standardization.  Please contact *openmp-dev* at
+*lists.llvm.org* to provide feedback.
+
++------------------------------+---------------------------------------------------------------------------+--------------------------+--------------------------------------------------------+
+|Category                      | Feature                                                                   | Status                   | Reviews                                                |
++==============================+===========================================================================+==========================+========================================================+
+| device extension             | `'ompx_hold' map type modifier                                            | :good:`prototyped`       | D106509, D106510                                       |
+|                              | <https://openmp.llvm.org/docs/openacc/OpenMPExtensions.html#ompx-hold>`_  |                          |                                                        |
++------------------------------+---------------------------------------------------------------------------+--------------------------+--------------------------------------------------------+

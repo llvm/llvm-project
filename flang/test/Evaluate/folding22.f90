@@ -1,5 +1,4 @@
-! RUN: %S/test_folding.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_folding.py %s %flang_fc1
 
 ! Test character concatenation folding
 
@@ -20,4 +19,3 @@ character(*), parameter :: zero_sized(*) = input(2:1:1) // 'abcde'
 logical, parameter :: test_zero_sized = len(zero_sized).eq.6
 
 end
- 

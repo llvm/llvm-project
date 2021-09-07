@@ -475,6 +475,48 @@ public:
   tileLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
             ArrayRef<Value *> TileSizes);
 
+  /// Fully unroll a loop.
+  ///
+  /// Instead of unrolling the loop immediately (and duplicating its body
+  /// instructions), it is deferred to LLVM's LoopUnrollPass by adding loop
+  /// metadata.
+  ///
+  /// \param DL   Debug location for instructions added by unrolling.
+  /// \param Loop The loop to unroll. The loop will be invalidated.
+  void unrollLoopFull(DebugLoc DL, CanonicalLoopInfo *Loop);
+
+  /// Fully or partially unroll a loop. How the loop is unrolled is determined
+  /// using LLVM's LoopUnrollPass.
+  ///
+  /// \param DL   Debug location for instructions added by unrolling.
+  /// \param Loop The loop to unroll. The loop will be invalidated.
+  void unrollLoopHeuristic(DebugLoc DL, CanonicalLoopInfo *Loop);
+
+  /// Partially unroll a loop.
+  ///
+  /// The CanonicalLoopInfo of the unrolled loop for use with chained
+  /// loop-associated directive can be requested using \p UnrolledCLI. Not
+  /// needing the CanonicalLoopInfo allows more efficient code generation by
+  /// deferring the actual unrolling to the LoopUnrollPass using loop metadata.
+  /// A loop-associated directive applied to the unrolled loop needs to know the
+  /// new trip count which means that if using a heuristically determined unroll
+  /// factor (\p Factor == 0), that factor must be computed immediately. We are
+  /// using the same logic as the LoopUnrollPass to derived the unroll factor,
+  /// but which assumes that some canonicalization has taken place (e.g.
+  /// Mem2Reg, LICM, GVN, Inlining, etc.). That is, the heuristic will perform
+  /// better when the unrolled loop's CanonicalLoopInfo is not needed.
+  ///
+  /// \param DL          Debug location for instructions added by unrolling.
+  /// \param Loop        The loop to unroll. The loop will be invalidated.
+  /// \param Factor      The factor to unroll the loop by. A factor of 0
+  ///                    indicates that a heuristic should be used to determine
+  ///                    the unroll-factor.
+  /// \param UnrolledCLI If non-null, receives the CanonicalLoopInfo of the
+  ///                    partially unrolled loop. Otherwise, uses loop metadata
+  ///                    to defer unrolling to the LoopUnrollPass.
+  void unrollLoopPartial(DebugLoc DL, CanonicalLoopInfo *Loop, int32_t Factor,
+                         CanonicalLoopInfo **UnrolledCLI);
+
   /// Generator for '#omp flush'
   ///
   /// \param Loc The location where the flush directive was encountered
@@ -837,6 +879,35 @@ public:
                                BodyGenCallbackTy BodyGenCB,
                                FinalizeCallbackTy FiniCB,
                                StringRef CriticalName, Value *HintInst);
+
+  /// Generator for '#omp ordered depend (source | sink)'
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param AllocaIP The insertion point to be used for alloca instructions.
+  /// \param NumLoops The number of loops in depend clause.
+  /// \param StoreValues The value will be stored in vector address.
+  /// \param Name The name of alloca instruction.
+  /// \param IsDependSource If true, depend source; otherwise, depend sink.
+  ///
+  /// \return The insertion position *after* the ordered.
+  InsertPointTy createOrderedDepend(const LocationDescription &Loc,
+                                    InsertPointTy AllocaIP, unsigned NumLoops,
+                                    ArrayRef<llvm::Value *> StoreValues,
+                                    const Twine &Name, bool IsDependSource);
+
+  /// Generator for '#omp ordered [threads | simd]'
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param BodyGenCB Callback that will generate the region code.
+  /// \param FiniCB Callback to finalize variable copies.
+  /// \param IsThreads If true, with threads clause or without clause;
+  /// otherwise, with simd clause;
+  ///
+  /// \returns The insertion position *after* the ordered.
+  InsertPointTy createOrderedThreadsSimd(const LocationDescription &Loc,
+                                         BodyGenCallbackTy BodyGenCB,
+                                         FinalizeCallbackTy FiniCB,
+                                         bool IsThreads);
 
   /// Generator for '#omp sections'
   ///

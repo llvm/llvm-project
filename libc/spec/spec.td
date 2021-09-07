@@ -77,6 +77,8 @@ def OnceFlagTypePtr : PtrType<OnceFlagType>;
 def CallOnceFuncType : NamedType<"__call_once_func_t">;
 def MtxTType : NamedType<"mtx_t">;
 def MtxTTypePtr : PtrType<MtxTType>;
+def CndTType : NamedType<"cnd_t">;
+def CndTTypePtr : PtrType<CndTType>;
 def ThrdStartTType : NamedType<"thrd_start_t">;
 def ThrdTType : NamedType<"thrd_t">;
 def ThrdTTypePtr : PtrType<ThrdTType>;

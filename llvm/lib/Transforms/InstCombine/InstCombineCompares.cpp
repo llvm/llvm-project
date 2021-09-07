@@ -3175,25 +3175,26 @@ Instruction *InstCombinerImpl::foldICmpEqIntrinsicWithConstant(
     ICmpInst &Cmp, IntrinsicInst *II, const APInt &C) {
   Type *Ty = II->getType();
   unsigned BitWidth = C.getBitWidth();
+  const ICmpInst::Predicate Pred = Cmp.getPredicate();
+
   switch (II->getIntrinsicID()) {
   case Intrinsic::abs:
     // abs(A) == 0  ->  A == 0
     // abs(A) == INT_MIN  ->  A == INT_MIN
     if (C.isNullValue() || C.isMinSignedValue())
-      return new ICmpInst(Cmp.getPredicate(), II->getArgOperand(0),
-                          ConstantInt::get(Ty, C));
+      return new ICmpInst(Pred, II->getArgOperand(0), ConstantInt::get(Ty, C));
     break;
 
   case Intrinsic::bswap:
     // bswap(A) == C  ->  A == bswap(C)
-    return new ICmpInst(Cmp.getPredicate(), II->getArgOperand(0),
+    return new ICmpInst(Pred, II->getArgOperand(0),
                         ConstantInt::get(Ty, C.byteSwap()));
 
   case Intrinsic::ctlz:
   case Intrinsic::cttz: {
     // ctz(A) == bitwidth(A)  ->  A == 0 and likewise for !=
     if (C == BitWidth)
-      return new ICmpInst(Cmp.getPredicate(), II->getArgOperand(0),
+      return new ICmpInst(Pred, II->getArgOperand(0),
                           ConstantInt::getNullValue(Ty));
 
     // ctz(A) == C -> A & Mask1 == Mask2, where Mask2 only has bit C set
@@ -3207,9 +3208,8 @@ Instruction *InstCombinerImpl::foldICmpEqIntrinsicWithConstant(
       APInt Mask2 = IsTrailing
         ? APInt::getOneBitSet(BitWidth, Num)
         : APInt::getOneBitSet(BitWidth, BitWidth - Num - 1);
-      return new ICmpInst(Cmp.getPredicate(),
-          Builder.CreateAnd(II->getArgOperand(0), Mask1),
-          ConstantInt::get(Ty, Mask2));
+      return new ICmpInst(Pred, Builder.CreateAnd(II->getArgOperand(0), Mask1),
+                          ConstantInt::get(Ty, Mask2));
     }
     break;
   }
@@ -3219,17 +3219,28 @@ Instruction *InstCombinerImpl::foldICmpEqIntrinsicWithConstant(
     // popcount(A) == bitwidth(A)  ->  A == -1 and likewise for !=
     bool IsZero = C.isNullValue();
     if (IsZero || C == BitWidth)
-      return new ICmpInst(Cmp.getPredicate(), II->getArgOperand(0),
-          IsZero ? Constant::getNullValue(Ty) : Constant::getAllOnesValue(Ty));
+      return new ICmpInst(Pred, II->getArgOperand(0),
+                          IsZero ? Constant::getNullValue(Ty)
+                                 : Constant::getAllOnesValue(Ty));
 
     break;
   }
+
+  case Intrinsic::fshl:
+  case Intrinsic::fshr:
+    // (rot X, ?) == 0/-1 --> X == 0/-1
+    // TODO: This transform is safe to re-use undef elts in a vector, but
+    //       the constant value passed in by the caller doesn't allow that.
+    if (C.isNullValue() || C.isAllOnesValue())
+      if (II->getArgOperand(0) == II->getArgOperand(1))
+        return new ICmpInst(Pred, II->getArgOperand(0), Cmp.getOperand(1));
+    break;
 
   case Intrinsic::uadd_sat: {
     // uadd.sat(a, b) == 0  ->  (a | b) == 0
     if (C.isNullValue()) {
       Value *Or = Builder.CreateOr(II->getArgOperand(0), II->getArgOperand(1));
-      return new ICmpInst(Cmp.getPredicate(), Or, Constant::getNullValue(Ty));
+      return new ICmpInst(Pred, Or, Constant::getNullValue(Ty));
     }
     break;
   }
@@ -3237,12 +3248,48 @@ Instruction *InstCombinerImpl::foldICmpEqIntrinsicWithConstant(
   case Intrinsic::usub_sat: {
     // usub.sat(a, b) == 0  ->  a <= b
     if (C.isNullValue()) {
-      ICmpInst::Predicate NewPred = Cmp.getPredicate() == ICmpInst::ICMP_EQ
-          ? ICmpInst::ICMP_ULE : ICmpInst::ICMP_UGT;
+      ICmpInst::Predicate NewPred =
+          Pred == ICmpInst::ICMP_EQ ? ICmpInst::ICMP_ULE : ICmpInst::ICMP_UGT;
       return new ICmpInst(NewPred, II->getArgOperand(0), II->getArgOperand(1));
     }
     break;
   }
+  default:
+    break;
+  }
+
+  return nullptr;
+}
+
+/// Fold an icmp with LLVM intrinsics
+static Instruction *foldICmpIntrinsicWithIntrinsic(ICmpInst &Cmp) {
+  assert(Cmp.isEquality());
+
+  ICmpInst::Predicate Pred = Cmp.getPredicate();
+  Value *Op0 = Cmp.getOperand(0);
+  Value *Op1 = Cmp.getOperand(1);
+  const auto *IIOp0 = dyn_cast<IntrinsicInst>(Op0);
+  const auto *IIOp1 = dyn_cast<IntrinsicInst>(Op1);
+  if (!IIOp0 || !IIOp1 || IIOp0->getIntrinsicID() != IIOp1->getIntrinsicID())
+    return nullptr;
+
+  switch (IIOp0->getIntrinsicID()) {
+  case Intrinsic::bswap:
+  case Intrinsic::bitreverse:
+    // If both operands are byte-swapped or bit-reversed, just compare the
+    // original values.
+    return new ICmpInst(Pred, IIOp0->getOperand(0), IIOp1->getOperand(0));
+  case Intrinsic::fshl:
+  case Intrinsic::fshr:
+    // If both operands are rotated by same amount, just compare the
+    // original values.
+    if (IIOp0->getOperand(0) != IIOp0->getOperand(1))
+      break;
+    if (IIOp1->getOperand(0) != IIOp1->getOperand(1))
+      break;
+    if (IIOp0->getOperand(2) != IIOp1->getOperand(2))
+      break;
+    return new ICmpInst(Pred, IIOp0->getOperand(0), IIOp1->getOperand(0));
   default:
     break;
   }
@@ -4467,14 +4514,8 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
     }
   }
 
-  // If both operands are byte-swapped or bit-reversed, just compare the
-  // original values.
-  // TODO: Move this to a function similar to foldICmpIntrinsicWithConstant()
-  // and handle more intrinsics.
-  if ((match(Op0, m_BSwap(m_Value(A))) && match(Op1, m_BSwap(m_Value(B)))) ||
-      (match(Op0, m_BitReverse(m_Value(A))) &&
-       match(Op1, m_BitReverse(m_Value(B)))))
-    return new ICmpInst(Pred, A, B);
+  if (Instruction *ICmp = foldICmpIntrinsicWithIntrinsic(I))
+    return ICmp;
 
   // Canonicalize checking for a power-of-2-or-zero value:
   // (A & (A-1)) == 0 --> ctpop(A) < 2 (two commuted variants)

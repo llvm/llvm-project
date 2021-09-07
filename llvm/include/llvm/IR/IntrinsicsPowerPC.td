@@ -1741,4 +1741,11 @@ let TargetPrefix = "ppc" in {
                                         llvm_i64_ty, llvm_i64_ty,
                                         llvm_i64_ty, llvm_i64_ty],
                                        [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
+  def int_ppc_atomic_load_i128 :
+    Intrinsic<[llvm_i64_ty, llvm_i64_ty],
+              [llvm_ptr_ty],
+              [IntrArgMemOnly, IntrReadMem, NoCapture<ArgIndex<0>>]>;
+  def int_ppc_atomic_store_i128 :
+    Intrinsic<[], [llvm_i64_ty, llvm_i64_ty, llvm_ptr_ty],
+              [IntrArgMemOnly, IntrWriteMem, NoCapture<ArgIndex<2>>]>;
 }

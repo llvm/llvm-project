@@ -58,7 +58,8 @@ class User;
 class BranchProbabilityInfo;
 class BlockFrequencyInfo;
 
-class Function : public GlobalObject, public ilist_node<Function> {
+class LLVM_EXTERNAL_VISIBILITY Function : public GlobalObject,
+                                          public ilist_node<Function> {
 public:
   using BasicBlockListType = SymbolTableList<BasicBlock>;
 
@@ -327,8 +328,9 @@ public:
   /// Set the attribute list for this Function.
   void setAttributes(AttributeList Attrs) { AttributeSets = Attrs; }
 
+  // TODO: remove non-AtIndex versions of these methods.
   /// adds the attribute to the list of attributes.
-  void addAttribute(unsigned i, Attribute Attr);
+  void addAttributeAtIndex(unsigned i, Attribute Attr);
 
   /// Add function attributes to this function.
   void addFnAttr(Attribute::AttrKind Kind);
@@ -355,10 +357,10 @@ public:
   void addParamAttrs(unsigned ArgNo, const AttrBuilder &Attrs);
 
   /// removes the attribute from the list of attributes.
-  void removeAttribute(unsigned i, Attribute::AttrKind Kind);
+  void removeAttributeAtIndex(unsigned i, Attribute::AttrKind Kind);
 
   /// removes the attribute from the list of attributes.
-  void removeAttribute(unsigned i, StringRef Kind);
+  void removeAttributeAtIndex(unsigned i, StringRef Kind);
 
   /// Remove function attributes from this function.
   void removeFnAttr(Attribute::AttrKind Kind);
@@ -399,10 +401,10 @@ public:
   bool hasParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const;
 
   /// gets the attribute from the list of attributes.
-  Attribute getAttribute(unsigned i, Attribute::AttrKind Kind) const;
+  Attribute getAttributeAtIndex(unsigned i, Attribute::AttrKind Kind) const;
 
   /// gets the attribute from the list of attributes.
-  Attribute getAttribute(unsigned i, StringRef Kind) const;
+  Attribute getAttributeAtIndex(unsigned i, StringRef Kind) const;
 
   /// Return the attribute for the given attribute kind.
   Attribute getFnAttribute(Attribute::AttrKind Kind) const;
