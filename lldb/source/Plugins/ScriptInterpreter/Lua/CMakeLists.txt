@@ -1,5 +1,3 @@
-find_package(Lua REQUIRED)
-
 add_lldb_library(lldbPluginScriptInterpreterLua PLUGIN
   Lua.cpp
   ScriptInterpreterLua.cpp
