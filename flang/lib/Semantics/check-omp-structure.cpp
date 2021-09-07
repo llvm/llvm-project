@@ -52,12 +52,14 @@ public:
     const auto &expr{std::get<parser::Expr>(assignment.t)};
     const auto *lhs{GetExpr(var)};
     const auto *rhs{GetExpr(expr)};
-    Tristate isDefined{semantics::IsDefinedAssignment(
-        lhs->GetType(), lhs->Rank(), rhs->GetType(), rhs->Rank())};
-    if (isDefined == Tristate::Yes) {
-      context_.Say(expr.source,
-          "Defined assignment statement is not "
-          "allowed in a WORKSHARE construct"_err_en_US);
+    if (lhs && rhs) {
+      Tristate isDefined{semantics::IsDefinedAssignment(
+          lhs->GetType(), lhs->Rank(), rhs->GetType(), rhs->Rank())};
+      if (isDefined == Tristate::Yes) {
+        context_.Say(expr.source,
+            "Defined assignment statement is not "
+            "allowed in a WORKSHARE construct"_err_en_US);
+      }
     }
     return true;
   }

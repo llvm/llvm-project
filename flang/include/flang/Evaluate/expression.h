@@ -847,6 +847,8 @@ struct GenericExprWrapper {
 struct GenericAssignmentWrapper {
   GenericAssignmentWrapper() {}
   explicit GenericAssignmentWrapper(Assignment &&x) : v{std::move(x)} {}
+  explicit GenericAssignmentWrapper(std::optional<Assignment> &&x)
+      : v{std::move(x)} {}
   ~GenericAssignmentWrapper();
   static void Deleter(GenericAssignmentWrapper *);
   std::optional<Assignment> v; // vacant if error

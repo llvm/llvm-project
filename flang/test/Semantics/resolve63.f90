@@ -158,7 +158,7 @@ module m3
     end
   end interface
 contains
-  subroutine s1(x, y) 
+  subroutine s1(x, y)
     logical :: x
     integer :: y
     integer, pointer :: px
@@ -172,17 +172,17 @@ contains
     y = -z'1'
     !ERROR: Operands of + must be numeric; have LOGICAL(4) and untyped
     y = x + z'1'
-    !ERROR: NULL() not allowed as an operand of a relational operator
+    !ERROR: A typeless NULL() pointer is not allowed as an operand
     l = x /= null()
-    !ERROR: NULL() not allowed as an operand of a relational operator
+    !ERROR: A NULL() pointer is not allowed as a relational operand
     l = null(px) /= null(px)
-    !ERROR: NULL() not allowed as an operand of a relational operator
+    !ERROR: A NULL() pointer is not allowed as an operand
     l = x /= null(px)
-    !ERROR: NULL() not allowed as an operand of a relational operator
+    !ERROR: A typeless NULL() pointer is not allowed as an operand
     l = px /= null()
-    !ERROR: NULL() not allowed as an operand of a relational operator
+    !ERROR: A NULL() pointer is not allowed as a relational operand
     l = px /= null(px)
-    !ERROR: NULL() not allowed as an operand of a relational operator
+    !ERROR: A typeless NULL() pointer is not allowed as an operand
     l = null() /= null()
   end
 end
@@ -269,5 +269,52 @@ contains
     i = y + x
     !ERROR: No intrinsic or user-defined OPERATOR(+) matches operand types INTEGER(4) and TYPE(t1)
     i = i + x
+  end
+end
+
+! Some cases where NULL is acceptable - ensure no false errors
+module m7
+  implicit none
+  type :: t1
+   contains
+    procedure :: s1
+    generic :: operator(/) => s1
+  end type
+  interface operator(-)
+    module procedure s2
+  end interface
+ contains
+  integer function s1(x, y)
+    class(t1), intent(in) :: x
+    class(t1), intent(in), pointer :: y
+    s1 = 1
+  end
+  integer function s2(x, y)
+    type(t1), intent(in), pointer :: x, y
+    s2 = 2
+  end
+  subroutine test
+    integer :: j
+    type(t1), pointer :: x1
+    allocate(x1)
+    ! These cases are fine.
+    j = x1 - x1
+    j = x1 - null(mold=x1)
+    j = null(mold=x1) - null(mold=x1)
+    j = null(mold=x1) - x1
+    j = x1 / x1
+    j = x1 / null(mold=x1)
+    !ERROR: A typeless NULL() pointer is not allowed as an operand
+    j = null() - null(mold=x1)
+    !ERROR: A typeless NULL() pointer is not allowed as an operand
+    j = null(mold=x1) - null()
+    !ERROR: A typeless NULL() pointer is not allowed as an operand
+    j = null() - null()
+    !ERROR: A typeless NULL() pointer is not allowed as an operand
+    j = null() / null(mold=x1)
+    !ERROR: A typeless NULL() pointer is not allowed as an operand
+    j = null(mold=x1) / null()
+    !ERROR: A typeless NULL() pointer is not allowed as an operand
+    j = null() / null()
   end
 end
