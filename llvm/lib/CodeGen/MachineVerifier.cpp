@@ -1653,6 +1653,8 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
       report("Unspillable Terminator does not define a reg", MI);
     Register Def = MI->getOperand(0).getReg();
     if (Def.isVirtual() &&
+        !MF->getProperties().hasProperty(
+            MachineFunctionProperties::Property::NoPHIs) &&
         std::distance(MRI->use_nodbg_begin(Def), MRI->use_nodbg_end()) > 1)
       report("Unspillable Terminator expected to have at most one use!", MI);
   }

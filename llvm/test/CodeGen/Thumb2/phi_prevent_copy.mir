@@ -50,10 +50,10 @@ body:             |
   ; CHECK:   [[COPY7:%[0-9]+]]:gprlr = COPY [[t2WhileLoopStartLR]]
   ; CHECK:   [[COPY8:%[0-9]+]]:rgpr = COPY [[COPY4]]
   ; CHECK:   [[COPY9:%[0-9]+]]:rgpr = COPY [[COPY3]]
-  ; CHECK:   [[MVE_VCTP8_:%[0-9]+]]:vccr = MVE_VCTP8 [[COPY6]], 0, $noreg
+  ; CHECK:   [[MVE_VCTP8_:%[0-9]+]]:vccr = MVE_VCTP8 [[COPY6]], 0, $noreg, $noreg
   ; CHECK:   [[t2SUBri:%[0-9]+]]:rgpr = t2SUBri killed [[COPY6]], 16, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   [[MVE_VLDRBU8_post:%[0-9]+]]:rgpr, [[MVE_VLDRBU8_post1:%[0-9]+]]:mqpr = MVE_VLDRBU8_post killed [[COPY9]], 16, 1, [[MVE_VCTP8_]]
-  ; CHECK:   [[MVE_VSTRBU8_post:%[0-9]+]]:rgpr = MVE_VSTRBU8_post killed [[MVE_VLDRBU8_post1]], killed [[COPY8]], 16, 1, killed [[MVE_VCTP8_]]
+  ; CHECK:   [[MVE_VLDRBU8_post:%[0-9]+]]:rgpr, [[MVE_VLDRBU8_post1:%[0-9]+]]:mqpr = MVE_VLDRBU8_post killed [[COPY9]], 16, 1, [[MVE_VCTP8_]], $noreg
+  ; CHECK:   [[MVE_VSTRBU8_post:%[0-9]+]]:rgpr = MVE_VSTRBU8_post killed [[MVE_VLDRBU8_post1]], killed [[COPY8]], 16, 1, killed [[MVE_VCTP8_]], $noreg
   ; CHECK:   [[COPY10:%[0-9]+]]:rgpr = COPY [[MVE_VLDRBU8_post]]
   ; CHECK:   [[COPY10:%[0-9]+]]:rgpr = COPY [[MVE_VSTRBU8_post]]
   ; CHECK:   [[COPY10:%[0-9]+]]:rgpr = COPY [[t2SUBri]]
@@ -87,10 +87,10 @@ body:             |
     %9:rgpr = PHI %0, %bb.1, %10, %bb.2
     %11:gprlr = PHI %6, %bb.1, %12, %bb.2
     %13:rgpr = PHI %2, %bb.1, %14, %bb.2
-    %15:vccr = MVE_VCTP8 %13, 0, $noreg
+    %15:vccr = MVE_VCTP8 %13, 0, $noreg, $noreg
     %14:rgpr = t2SUBri killed %13, 16, 14 /* CC::al */, $noreg, $noreg
-    %8:rgpr, %16:mqpr = MVE_VLDRBU8_post killed %7, 16, 1, %15
-    %10:rgpr = MVE_VSTRBU8_post killed %16, killed %9, 16, 1, killed %15
+    %8:rgpr, %16:mqpr = MVE_VLDRBU8_post killed %7, 16, 1, %15, $noreg
+    %10:rgpr = MVE_VSTRBU8_post killed %16, killed %9, 16, 1, killed %15, $noreg
     %12:gprlr = t2LoopEndDec killed %11, %bb.2, implicit-def dead $cpsr
     t2B %bb.3, 14 /* CC::al */, $noreg
 

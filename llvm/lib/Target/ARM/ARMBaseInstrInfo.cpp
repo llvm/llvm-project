@@ -867,6 +867,7 @@ void ARMBaseInstrInfo::copyToCPSR(MachineBasicBlock &MBB,
 void llvm::addUnpredicatedMveVpredNOp(MachineInstrBuilder &MIB) {
   MIB.addImm(ARMVCC::None);
   MIB.addReg(0);
+  MIB.addReg(0); // tp_reg
 }
 
 void llvm::addUnpredicatedMveVpredROp(MachineInstrBuilder &MIB,
@@ -878,6 +879,7 @@ void llvm::addUnpredicatedMveVpredROp(MachineInstrBuilder &MIB,
 void llvm::addPredicatedMveVpredNOp(MachineInstrBuilder &MIB, unsigned Cond) {
   MIB.addImm(Cond);
   MIB.addReg(ARM::VPR, RegState::Implicit);
+  MIB.addReg(0); // tp_reg
 }
 
 void llvm::addPredicatedMveVpredROp(MachineInstrBuilder &MIB,
