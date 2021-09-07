@@ -106,7 +106,7 @@ else()
   set(OUTPUTDIR ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
 endif()
 
-# create libraries
+# create gfx bitcode libraries
 set(mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx902 gfx906 gfx908 gfx90a gfx1010 gfx1030 gfx1031)
 if (DEFINED LIBOMPTARGET_AMDGCN_GFXLIST)
   set(mcpus ${LIBOMPTARGET_AMDGCN_GFXLIST})
