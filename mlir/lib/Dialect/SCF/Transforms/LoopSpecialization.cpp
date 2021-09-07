@@ -324,25 +324,25 @@ canonicalizeMinMaxOp(RewriterBase &rewriter, Operation *op, AffineMap map,
 /// ```
 /// %r = %step
 /// ```
-/// min/max operations inside the generated scf.if operation are rewritten in
-/// a similar way.
+/// min/max operations inside the partial iteration are rewritten in a similar
+/// way.
 ///
 /// This function builds up a set of constraints, capable of proving that:
 /// * Inside the peeled loop: min(step, ub - iv) == step
-/// * Inside the scf.if operation: min(step, ub - iv) == ub - iv
+/// * Inside the partial iteration: min(step, ub - iv) == ub - iv
 ///
 /// Returns `success` if the given operation was replaced by a new operation;
 /// `failure` otherwise.
 ///
 /// Note: `ub` is the previous upper bound of the loop (before peeling).
 /// `insideLoop` must be true for min/max ops inside the loop and false for
-/// affine.min ops inside the scf.for op. For an explanation of the other
+/// affine.min ops inside the partial iteration. For an explanation of the other
 /// parameters, see comment of `canonicalizeMinMaxOpInLoop`.
-static LogicalResult rewritePeeledMinMaxOp(RewriterBase &rewriter,
-                                           Operation *op, AffineMap map,
-                                           ValueRange operands, bool isMin,
-                                           Value iv, Value ub, Value step,
-                                           bool insideLoop) {
+LogicalResult mlir::scf::rewritePeeledMinMaxOp(RewriterBase &rewriter,
+                                               Operation *op, AffineMap map,
+                                               ValueRange operands, bool isMin,
+                                               Value iv, Value ub, Value step,
+                                               bool insideLoop) {
   FlatAffineValueConstraints constraints;
   constraints.appendDimId({iv, ub, step});
   if (auto constUb = getConstantIntValue(ub))
@@ -374,14 +374,16 @@ static void
 rewriteAffineOpAfterPeeling(RewriterBase &rewriter, ForOp forOp, scf::IfOp ifOp,
                             Value iv, Value splitBound, Value ub, Value step) {
   forOp.walk([&](OpTy affineOp) {
-    (void)rewritePeeledMinMaxOp(rewriter, affineOp, affineOp.getAffineMap(),
-                                affineOp.operands(), IsMin, iv, ub, step,
-                                /*insideLoop=*/true);
+    AffineMap map = affineOp.getAffineMap();
+    (void)scf::rewritePeeledMinMaxOp(rewriter, affineOp, map,
+                                     affineOp.operands(), IsMin, iv, ub, step,
+                                     /*insideLoop=*/true);
   });
   ifOp.walk([&](OpTy affineOp) {
-    (void)rewritePeeledMinMaxOp(rewriter, affineOp, affineOp.getAffineMap(),
-                                affineOp.operands(), IsMin, splitBound, ub,
-                                step, /*insideLoop=*/false);
+    AffineMap map = affineOp.getAffineMap();
+    (void)scf::rewritePeeledMinMaxOp(rewriter, affineOp, map,
+                                     affineOp.operands(), IsMin, splitBound, ub,
+                                     step, /*insideLoop=*/false);
   });
 }
 
