@@ -37,6 +37,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/SwapByteOrder.h"
 
+#include <limits>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -316,7 +317,9 @@ public:
     uint64_t Size;
     if (!SPSArgList<uint64_t>::deserialize(IB, Size))
       return false;
-    A = {IB.data(), Size};
+    if (Size > std::numeric_limits<size_t>::max())
+      return false;
+    A = {IB.data(), static_cast<size_t>(Size)};
     return IB.skip(Size);
   }
 };
