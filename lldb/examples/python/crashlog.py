@@ -293,18 +293,24 @@ class CrashLog(symbolication.Symbolicator):
                     return False
             if not self.resolved_path and not os.path.exists(self.path):
                 try:
-                    dsym = subprocess.check_output(
+                    mdfind_results = subprocess.check_output(
                         ["/usr/bin/mdfind",
-                         "com_apple_xcode_dsym_uuids == %s"%uuid_str]).decode("utf-8")[:-1]
-                    if dsym and os.path.exists(dsym):
-                        print(('falling back to binary inside "%s"'%dsym))
-                        self.symfile = dsym
+                         "com_apple_xcode_dsym_uuids == %s" % uuid_str]).decode("utf-8").splitlines()
+                    found_matching_slice = False
+                    for dsym in mdfind_results:
                         dwarf_dir = os.path.join(dsym, 'Contents/Resources/DWARF')
+                        if not os.path.exists(dwarf_dir):
+                            # Not a dSYM bundle, probably an Xcode archive.
+                            continue
+                        print('falling back to binary inside "%s"' % dsym)
+                        self.symfile = dsym
                         for filename in os.listdir(dwarf_dir):
-                            self.path = os.path.join(dwarf_dir, filename)
-                            if not self.find_matching_slice():
-                                return False
-                            break
+                           self.path = os.path.join(dwarf_dir, filename)
+                           if self.find_matching_slice():
+                              found_matching_slice = True
+                              break
+                        if found_matching_slice:
+                           break
                 except:
                     pass
             if (self.resolved_path and os.path.exists(self.resolved_path)) or (
