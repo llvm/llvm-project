@@ -308,7 +308,21 @@ TEST_F(StringMapTest, InsertOrAssignTest) {
   EXPECT_EQ(0, try1.first->second.copy);
 }
 
-TEST_F(StringMapTest, IterMapKeys) {
+TEST_F(StringMapTest, IterMapKeysVector) {
+  StringMap<int> Map;
+  Map["A"] = 1;
+  Map["B"] = 2;
+  Map["C"] = 3;
+  Map["D"] = 3;
+
+  std::vector<StringRef> Keys{Map.keys().begin(), Map.keys().end()};
+  llvm::sort(Keys);
+
+  std::vector<StringRef> Expected{{"A", "B", "C", "D"}};
+  EXPECT_EQ(Expected, Keys);
+}
+
+TEST_F(StringMapTest, IterMapKeysSmallVector) {
   StringMap<int> Map;
   Map["A"] = 1;
   Map["B"] = 2;
