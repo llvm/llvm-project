@@ -11542,6 +11542,7 @@ static void genTPLoopBody(MachineBasicBlock *TpLoopBody,
   BuildMI(TpLoopBody, Dl, TII->get(ARM::MVE_VCTP8), VccrReg)
       .addUse(PredCounterPhiReg)
       .addImm(ARMVCC::None)
+      .addReg(0)
       .addReg(0);
 
   BuildMI(TpLoopBody, Dl, TII->get(ARM::t2SUBri), RemainingElementsReg)
@@ -11560,7 +11561,8 @@ static void genTPLoopBody(MachineBasicBlock *TpLoopBody,
         .addReg(SrcPhiReg)
         .addImm(16)
         .addImm(ARMVCC::Then)
-        .addUse(VccrReg);
+        .addUse(VccrReg)
+        .addReg(0);
   } else
     SrcValueReg = OpSrcReg;
 
@@ -11570,7 +11572,8 @@ static void genTPLoopBody(MachineBasicBlock *TpLoopBody,
       .addReg(DestPhiReg)
       .addImm(16)
       .addImm(ARMVCC::Then)
-      .addUse(VccrReg);
+      .addUse(VccrReg)
+      .addReg(0);
 
   // Add the pseudoInstrs for decrementing the loop counter and marking the
   // end:t2DoLoopDec and t2DoLoopEnd

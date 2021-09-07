@@ -8,6 +8,7 @@ b child_func
 process launch
 # CHECK-NOT: function run in parent
 # CHECK: stop reason = breakpoint
+# CHECK-NEXT: parent_func
 continue
 # CHECK: function run in parent
 # CHECK: child exited: 0

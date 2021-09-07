@@ -2,8 +2,9 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-# Re-export the parent _cext so that every level of the API can get it locally.
-from .._cext_loader import _cext
+# Provide a convenient name for sub-packages to resolve the main C-extension
+# with a relative import.
+from .._mlir_libs import _mlir as _cext
 
 __all__ = [
     "equally_sized_accessor",

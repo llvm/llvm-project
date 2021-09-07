@@ -20,11 +20,11 @@
 #include "test_iterators.h"
 #include "test_range.h"
 
-namespace stdr = std::ranges;
 
-static_assert(std::same_as<stdr::sentinel_t<test_range<cpp20_input_iterator> >, sentinel>);
-static_assert(std::same_as<stdr::sentinel_t<test_range<cpp20_input_iterator> const>, sentinel>);
-static_assert(std::same_as<stdr::sentinel_t<test_non_const_range<cpp20_input_iterator> >, sentinel>);
-static_assert(std::same_as<stdr::sentinel_t<test_common_range<cpp17_input_iterator> >, cpp17_input_iterator<int*> >);
-static_assert(std::same_as<stdr::sentinel_t<test_common_range<cpp17_input_iterator> const>, cpp17_input_iterator<int const*> >);
-static_assert(std::same_as<stdr::sentinel_t<test_non_const_common_range<cpp17_input_iterator> >, cpp17_input_iterator<int*> >);
+
+static_assert(std::same_as<std::ranges::sentinel_t<test_range<cpp20_input_iterator> >, sentinel>);
+static_assert(std::same_as<std::ranges::sentinel_t<test_range<cpp20_input_iterator> const>, sentinel>);
+static_assert(std::same_as<std::ranges::sentinel_t<test_non_const_range<cpp20_input_iterator> >, sentinel>);
+static_assert(std::same_as<std::ranges::sentinel_t<test_common_range<cpp17_input_iterator> >, cpp17_input_iterator<int*> >);
+static_assert(std::same_as<std::ranges::sentinel_t<test_common_range<cpp17_input_iterator> const>, cpp17_input_iterator<int const*> >);
+static_assert(std::same_as<std::ranges::sentinel_t<test_non_const_common_range<cpp17_input_iterator> >, cpp17_input_iterator<int*> >);

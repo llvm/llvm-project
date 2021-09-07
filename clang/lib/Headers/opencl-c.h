@@ -12070,33 +12070,28 @@ void __ovld vstore_half16_rtn(double16 data, size_t offset, __private half *p);
  * The address computed as (p + (offset * 4))
  * must be aligned to sizeof (half) * 4 bytes.
  */
-float __ovld vloada_half(size_t offset, const __constant half *p);
 float2 __ovld vloada_half2(size_t offset, const __constant half *p);
 float3 __ovld vloada_half3(size_t offset, const __constant half *p);
 float4 __ovld vloada_half4(size_t offset, const __constant half *p);
 float8 __ovld vloada_half8(size_t offset, const __constant half *p);
 float16 __ovld vloada_half16(size_t offset, const __constant half *p);
 #if defined(__opencl_c_generic_address_space)
-float __ovld vloada_half(size_t offset, const half *p);
 float2 __ovld vloada_half2(size_t offset, const half *p);
 float3 __ovld vloada_half3(size_t offset, const half *p);
 float4 __ovld vloada_half4(size_t offset, const half *p);
 float8 __ovld vloada_half8(size_t offset, const half *p);
 float16 __ovld vloada_half16(size_t offset, const half *p);
 #else
-float __ovld vloada_half(size_t offset, const __global half *p);
 float2 __ovld vloada_half2(size_t offset, const __global half *p);
 float3 __ovld vloada_half3(size_t offset, const __global half *p);
 float4 __ovld vloada_half4(size_t offset, const __global half *p);
 float8 __ovld vloada_half8(size_t offset, const __global half *p);
 float16 __ovld vloada_half16(size_t offset, const __global half *p);
-float __ovld vloada_half(size_t offset, const __local half *p);
 float2 __ovld vloada_half2(size_t offset, const __local half *p);
 float3 __ovld vloada_half3(size_t offset, const __local half *p);
 float4 __ovld vloada_half4(size_t offset, const __local half *p);
 float8 __ovld vloada_half8(size_t offset, const __local half *p);
 float16 __ovld vloada_half16(size_t offset, const __local half *p);
-float __ovld vloada_half(size_t offset, const __private half *p);
 float2 __ovld vloada_half2(size_t offset, const __private half *p);
 float3 __ovld vloada_half3(size_t offset, const __private half *p);
 float4 __ovld vloada_half4(size_t offset, const __private half *p);
@@ -12121,35 +12116,30 @@ float16 __ovld vloada_half16(size_t offset, const __private half *p);
  * round to nearest even.
  */
 #if defined(__opencl_c_generic_address_space)
-void __ovld vstorea_half(float data, size_t offset, half *p);
 void __ovld vstorea_half2(float2 data, size_t offset, half *p);
 void __ovld vstorea_half3(float3 data, size_t offset, half *p);
 void __ovld vstorea_half4(float4 data, size_t offset, half *p);
 void __ovld vstorea_half8(float8 data, size_t offset, half *p);
 void __ovld vstorea_half16(float16 data, size_t offset, half *p);
 
-void __ovld vstorea_half_rte(float data, size_t offset, half *p);
 void __ovld vstorea_half2_rte(float2 data, size_t offset, half *p);
 void __ovld vstorea_half3_rte(float3 data, size_t offset, half *p);
 void __ovld vstorea_half4_rte(float4 data, size_t offset, half *p);
 void __ovld vstorea_half8_rte(float8 data, size_t offset, half *p);
 void __ovld vstorea_half16_rte(float16 data, size_t offset, half *p);
 
-void __ovld vstorea_half_rtz(float data, size_t offset, half *p);
 void __ovld vstorea_half2_rtz(float2 data, size_t offset, half *p);
 void __ovld vstorea_half3_rtz(float3 data, size_t offset, half *p);
 void __ovld vstorea_half4_rtz(float4 data, size_t offset, half *p);
 void __ovld vstorea_half8_rtz(float8 data, size_t offset, half *p);
 void __ovld vstorea_half16_rtz(float16 data, size_t offset, half *p);
 
-void __ovld vstorea_half_rtp(float data, size_t offset, half *p);
 void __ovld vstorea_half2_rtp(float2 data, size_t offset, half *p);
 void __ovld vstorea_half3_rtp(float3 data, size_t offset, half *p);
 void __ovld vstorea_half4_rtp(float4 data, size_t offset, half *p);
 void __ovld vstorea_half8_rtp(float8 data, size_t offset, half *p);
 void __ovld vstorea_half16_rtp(float16 data, size_t offset, half *p);
 
-void __ovld vstorea_half_rtn(float data, size_t offset, half *p);
 void __ovld vstorea_half2_rtn(float2 data, size_t offset, half *p);
 void __ovld vstorea_half3_rtn(float3 data, size_t offset, half *p);
 void __ovld vstorea_half4_rtn(float4 data, size_t offset, half *p);
@@ -12157,35 +12147,30 @@ void __ovld vstorea_half8_rtn(float8 data, size_t offset, half *p);
 void __ovld vstorea_half16_rtn(float16 data, size_t offset, half *p);
 
 #ifdef cl_khr_fp64
-void __ovld vstorea_half(double data, size_t offset, half *p);
 void __ovld vstorea_half2(double2 data, size_t offset, half *p);
 void __ovld vstorea_half3(double3 data, size_t offset, half *p);
 void __ovld vstorea_half4(double4 data, size_t offset, half *p);
 void __ovld vstorea_half8(double8 data, size_t offset, half *p);
 void __ovld vstorea_half16(double16 data, size_t offset, half *p);
 
-void __ovld vstorea_half_rte(double data, size_t offset, half *p);
 void __ovld vstorea_half2_rte(double2 data, size_t offset, half *p);
 void __ovld vstorea_half3_rte(double3 data, size_t offset, half *p);
 void __ovld vstorea_half4_rte(double4 data, size_t offset, half *p);
 void __ovld vstorea_half8_rte(double8 data, size_t offset, half *p);
 void __ovld vstorea_half16_rte(double16 data, size_t offset, half *p);
 
-void __ovld vstorea_half_rtz(double data, size_t offset, half *p);
 void __ovld vstorea_half2_rtz(double2 data, size_t offset, half *p);
 void __ovld vstorea_half3_rtz(double3 data, size_t offset, half *p);
 void __ovld vstorea_half4_rtz(double4 data, size_t offset, half *p);
 void __ovld vstorea_half8_rtz(double8 data, size_t offset, half *p);
 void __ovld vstorea_half16_rtz(double16 data, size_t offset, half *p);
 
-void __ovld vstorea_half_rtp(double data, size_t offset, half *p);
 void __ovld vstorea_half2_rtp(double2 data, size_t offset, half *p);
 void __ovld vstorea_half3_rtp(double3 data, size_t offset, half *p);
 void __ovld vstorea_half4_rtp(double4 data, size_t offset, half *p);
 void __ovld vstorea_half8_rtp(double8 data, size_t offset, half *p);
 void __ovld vstorea_half16_rtp(double16 data, size_t offset, half *p);
 
-void __ovld vstorea_half_rtn(double data, size_t offset, half *p);
 void __ovld vstorea_half2_rtn(double2 data, size_t offset, half *p);
 void __ovld vstorea_half3_rtn(double3 data, size_t offset, half *p);
 void __ovld vstorea_half4_rtn(double4 data, size_t offset, half *p);
@@ -12194,105 +12179,90 @@ void __ovld vstorea_half16_rtn(double16 data, size_t offset, half *p);
 #endif //cl_khr_fp64
 
 #else
-void __ovld vstorea_half(float data, size_t offset, __global half *p);
 void __ovld vstorea_half2(float2 data, size_t offset, __global half *p);
 void __ovld vstorea_half3(float3 data, size_t offset, __global half *p);
 void __ovld vstorea_half4(float4 data, size_t offset, __global half *p);
 void __ovld vstorea_half8(float8 data, size_t offset, __global half *p);
 void __ovld vstorea_half16(float16 data, size_t offset, __global half *p);
 
-void __ovld vstorea_half_rte(float data, size_t offset, __global half *p);
 void __ovld vstorea_half2_rte(float2 data, size_t offset, __global half *p);
 void __ovld vstorea_half3_rte(float3 data, size_t offset, __global half *p);
 void __ovld vstorea_half4_rte(float4 data, size_t offset, __global half *p);
 void __ovld vstorea_half8_rte(float8 data, size_t offset, __global half *p);
 void __ovld vstorea_half16_rte(float16 data, size_t offset, __global half *p);
 
-void __ovld vstorea_half_rtz(float data, size_t offset, __global half *p);
 void __ovld vstorea_half2_rtz(float2 data, size_t offset, __global half *p);
 void __ovld vstorea_half3_rtz(float3 data, size_t offset, __global half *p);
 void __ovld vstorea_half4_rtz(float4 data, size_t offset, __global half *p);
 void __ovld vstorea_half8_rtz(float8 data, size_t offset, __global half *p);
 void __ovld vstorea_half16_rtz(float16 data, size_t offset, __global half *p);
 
-void __ovld vstorea_half_rtp(float data, size_t offset, __global half *p);
 void __ovld vstorea_half2_rtp(float2 data, size_t offset, __global half *p);
 void __ovld vstorea_half3_rtp(float3 data, size_t offset, __global half *p);
 void __ovld vstorea_half4_rtp(float4 data, size_t offset, __global half *p);
 void __ovld vstorea_half8_rtp(float8 data, size_t offset, __global half *p);
 void __ovld vstorea_half16_rtp(float16 data, size_t offset, __global half *p);
 
-void __ovld vstorea_half_rtn(float data, size_t offset, __global half *p);
 void __ovld vstorea_half2_rtn(float2 data, size_t offset, __global half *p);
 void __ovld vstorea_half3_rtn(float3 data, size_t offset, __global half *p);
 void __ovld vstorea_half4_rtn(float4 data, size_t offset, __global half *p);
 void __ovld vstorea_half8_rtn(float8 data, size_t offset, __global half *p);
 void __ovld vstorea_half16_rtn(float16 data, size_t offset, __global half *p);
 
-void __ovld vstorea_half(float data, size_t offset, __local half *p);
 void __ovld vstorea_half2(float2 data, size_t offset, __local half *p);
 void __ovld vstorea_half3(float3 data, size_t offset, __local half *p);
 void __ovld vstorea_half4(float4 data, size_t offset, __local half *p);
 void __ovld vstorea_half8(float8 data, size_t offset, __local half *p);
 void __ovld vstorea_half16(float16 data, size_t offset, __local half *p);
 
-void __ovld vstorea_half_rte(float data, size_t offset, __local half *p);
 void __ovld vstorea_half2_rte(float2 data, size_t offset, __local half *p);
 void __ovld vstorea_half3_rte(float3 data, size_t offset, __local half *p);
 void __ovld vstorea_half4_rte(float4 data, size_t offset, __local half *p);
 void __ovld vstorea_half8_rte(float8 data, size_t offset, __local half *p);
 void __ovld vstorea_half16_rte(float16 data, size_t offset, __local half *p);
 
-void __ovld vstorea_half_rtz(float data, size_t offset, __local half *p);
 void __ovld vstorea_half2_rtz(float2 data, size_t offset, __local half *p);
 void __ovld vstorea_half3_rtz(float3 data, size_t offset, __local half *p);
 void __ovld vstorea_half4_rtz(float4 data, size_t offset, __local half *p);
 void __ovld vstorea_half8_rtz(float8 data, size_t offset, __local half *p);
 void __ovld vstorea_half16_rtz(float16 data, size_t offset, __local half *p);
 
-void __ovld vstorea_half_rtp(float data, size_t offset, __local half *p);
 void __ovld vstorea_half2_rtp(float2 data, size_t offset, __local half *p);
 void __ovld vstorea_half3_rtp(float3 data, size_t offset, __local half *p);
 void __ovld vstorea_half4_rtp(float4 data, size_t offset, __local half *p);
 void __ovld vstorea_half8_rtp(float8 data, size_t offset, __local half *p);
 void __ovld vstorea_half16_rtp(float16 data, size_t offset, __local half *p);
 
-void __ovld vstorea_half_rtn(float data, size_t offset, __local half *p);
 void __ovld vstorea_half2_rtn(float2 data, size_t offset, __local half *p);
 void __ovld vstorea_half3_rtn(float3 data, size_t offset, __local half *p);
 void __ovld vstorea_half4_rtn(float4 data, size_t offset, __local half *p);
 void __ovld vstorea_half8_rtn(float8 data, size_t offset, __local half *p);
 void __ovld vstorea_half16_rtn(float16 data, size_t offset, __local half *p);
 
-void __ovld vstorea_half(float data, size_t offset, __private half *p);
 void __ovld vstorea_half2(float2 data, size_t offset, __private half *p);
 void __ovld vstorea_half3(float3 data, size_t offset, __private half *p);
 void __ovld vstorea_half4(float4 data, size_t offset, __private half *p);
 void __ovld vstorea_half8(float8 data, size_t offset, __private half *p);
 void __ovld vstorea_half16(float16 data, size_t offset, __private half *p);
 
-void __ovld vstorea_half_rte(float data, size_t offset, __private half *p);
 void __ovld vstorea_half2_rte(float2 data, size_t offset, __private half *p);
 void __ovld vstorea_half3_rte(float3 data, size_t offset, __private half *p);
 void __ovld vstorea_half4_rte(float4 data, size_t offset, __private half *p);
 void __ovld vstorea_half8_rte(float8 data, size_t offset, __private half *p);
 void __ovld vstorea_half16_rte(float16 data, size_t offset, __private half *p);
 
-void __ovld vstorea_half_rtz(float data, size_t offset, __private half *p);
 void __ovld vstorea_half2_rtz(float2 data, size_t offset, __private half *p);
 void __ovld vstorea_half3_rtz(float3 data, size_t offset, __private half *p);
 void __ovld vstorea_half4_rtz(float4 data, size_t offset, __private half *p);
 void __ovld vstorea_half8_rtz(float8 data, size_t offset, __private half *p);
 void __ovld vstorea_half16_rtz(float16 data, size_t offset, __private half *p);
 
-void __ovld vstorea_half_rtp(float data, size_t offset, __private half *p);
 void __ovld vstorea_half2_rtp(float2 data, size_t offset, __private half *p);
 void __ovld vstorea_half3_rtp(float3 data, size_t offset, __private half *p);
 void __ovld vstorea_half4_rtp(float4 data, size_t offset, __private half *p);
 void __ovld vstorea_half8_rtp(float8 data, size_t offset, __private half *p);
 void __ovld vstorea_half16_rtp(float16 data, size_t offset, __private half *p);
 
-void __ovld vstorea_half_rtn(float data, size_t offset, __private half *p);
 void __ovld vstorea_half2_rtn(float2 data, size_t offset, __private half *p);
 void __ovld vstorea_half3_rtn(float3 data, size_t offset, __private half *p);
 void __ovld vstorea_half4_rtn(float4 data, size_t offset, __private half *p);
@@ -12300,105 +12270,90 @@ void __ovld vstorea_half8_rtn(float8 data, size_t offset, __private half *p);
 void __ovld vstorea_half16_rtn(float16 data, size_t offset, __private half *p);
 
 #ifdef cl_khr_fp64
-void __ovld vstorea_half(double data, size_t offset, __global half *p);
 void __ovld vstorea_half2(double2 data, size_t offset, __global half *p);
 void __ovld vstorea_half3(double3 data, size_t offset, __global half *p);
 void __ovld vstorea_half4(double4 data, size_t offset, __global half *p);
 void __ovld vstorea_half8(double8 data, size_t offset, __global half *p);
 void __ovld vstorea_half16(double16 data, size_t offset, __global half *p);
 
-void __ovld vstorea_half_rte(double data, size_t offset, __global half *p);
 void __ovld vstorea_half2_rte(double2 data, size_t offset, __global half *p);
 void __ovld vstorea_half3_rte(double3 data, size_t offset, __global half *p);
 void __ovld vstorea_half4_rte(double4 data, size_t offset, __global half *p);
 void __ovld vstorea_half8_rte(double8 data, size_t offset, __global half *p);
 void __ovld vstorea_half16_rte(double16 data, size_t offset, __global half *p);
 
-void __ovld vstorea_half_rtz(double data, size_t offset, __global half *p);
 void __ovld vstorea_half2_rtz(double2 data, size_t offset, __global half *p);
 void __ovld vstorea_half3_rtz(double3 data, size_t offset, __global half *p);
 void __ovld vstorea_half4_rtz(double4 data, size_t offset, __global half *p);
 void __ovld vstorea_half8_rtz(double8 data, size_t offset, __global half *p);
 void __ovld vstorea_half16_rtz(double16 data, size_t offset, __global half *p);
 
-void __ovld vstorea_half_rtp(double data, size_t offset, __global half *p);
 void __ovld vstorea_half2_rtp(double2 data, size_t offset, __global half *p);
 void __ovld vstorea_half3_rtp(double3 data, size_t offset, __global half *p);
 void __ovld vstorea_half4_rtp(double4 data, size_t offset, __global half *p);
 void __ovld vstorea_half8_rtp(double8 data, size_t offset, __global half *p);
 void __ovld vstorea_half16_rtp(double16 data, size_t offset, __global half *p);
 
-void __ovld vstorea_half_rtn(double data, size_t offset, __global half *p);
 void __ovld vstorea_half2_rtn(double2 data, size_t offset, __global half *p);
 void __ovld vstorea_half3_rtn(double3 data, size_t offset, __global half *p);
 void __ovld vstorea_half4_rtn(double4 data, size_t offset, __global half *p);
 void __ovld vstorea_half8_rtn(double8 data, size_t offset, __global half *p);
 void __ovld vstorea_half16_rtn(double16 data, size_t offset, __global half *p);
 
-void __ovld vstorea_half(double data, size_t offset, __local half *p);
 void __ovld vstorea_half2(double2 data, size_t offset, __local half *p);
 void __ovld vstorea_half3(double3 data, size_t offset, __local half *p);
 void __ovld vstorea_half4(double4 data, size_t offset, __local half *p);
 void __ovld vstorea_half8(double8 data, size_t offset, __local half *p);
 void __ovld vstorea_half16(double16 data, size_t offset, __local half *p);
 
-void __ovld vstorea_half_rte(double data, size_t offset, __local half *p);
 void __ovld vstorea_half2_rte(double2 data, size_t offset, __local half *p);
 void __ovld vstorea_half3_rte(double3 data, size_t offset, __local half *p);
 void __ovld vstorea_half4_rte(double4 data, size_t offset, __local half *p);
 void __ovld vstorea_half8_rte(double8 data, size_t offset, __local half *p);
 void __ovld vstorea_half16_rte(double16 data, size_t offset, __local half *p);
 
-void __ovld vstorea_half_rtz(double data, size_t offset, __local half *p);
 void __ovld vstorea_half2_rtz(double2 data, size_t offset, __local half *p);
 void __ovld vstorea_half3_rtz(double3 data, size_t offset, __local half *p);
 void __ovld vstorea_half4_rtz(double4 data, size_t offset, __local half *p);
 void __ovld vstorea_half8_rtz(double8 data, size_t offset, __local half *p);
 void __ovld vstorea_half16_rtz(double16 data, size_t offset, __local half *p);
 
-void __ovld vstorea_half_rtp(double data, size_t offset, __local half *p);
 void __ovld vstorea_half2_rtp(double2 data, size_t offset, __local half *p);
 void __ovld vstorea_half3_rtp(double3 data, size_t offset, __local half *p);
 void __ovld vstorea_half4_rtp(double4 data, size_t offset, __local half *p);
 void __ovld vstorea_half8_rtp(double8 data, size_t offset, __local half *p);
 void __ovld vstorea_half16_rtp(double16 data, size_t offset, __local half *p);
 
-void __ovld vstorea_half_rtn(double data, size_t offset, __local half *p);
 void __ovld vstorea_half2_rtn(double2 data, size_t offset, __local half *p);
 void __ovld vstorea_half3_rtn(double3 data, size_t offset, __local half *p);
 void __ovld vstorea_half4_rtn(double4 data, size_t offset, __local half *p);
 void __ovld vstorea_half8_rtn(double8 data, size_t offset, __local half *p);
 void __ovld vstorea_half16_rtn(double16 data, size_t offset, __local half *p);
 
-void __ovld vstorea_half(double data, size_t offset, __private half *p);
 void __ovld vstorea_half2(double2 data, size_t offset, __private half *p);
 void __ovld vstorea_half3(double3 data, size_t offset, __private half *p);
 void __ovld vstorea_half4(double4 data, size_t offset, __private half *p);
 void __ovld vstorea_half8(double8 data, size_t offset, __private half *p);
 void __ovld vstorea_half16(double16 data, size_t offset, __private half *p);
 
-void __ovld vstorea_half_rte(double data, size_t offset, __private half *p);
 void __ovld vstorea_half2_rte(double2 data, size_t offset, __private half *p);
 void __ovld vstorea_half3_rte(double3 data, size_t offset, __private half *p);
 void __ovld vstorea_half4_rte(double4 data, size_t offset, __private half *p);
 void __ovld vstorea_half8_rte(double8 data, size_t offset, __private half *p);
 void __ovld vstorea_half16_rte(double16 data, size_t offset, __private half *p);
 
-void __ovld vstorea_half_rtz(double data, size_t offset, __private half *p);
 void __ovld vstorea_half2_rtz(double2 data, size_t offset, __private half *p);
 void __ovld vstorea_half3_rtz(double3 data, size_t offset, __private half *p);
 void __ovld vstorea_half4_rtz(double4 data, size_t offset, __private half *p);
 void __ovld vstorea_half8_rtz(double8 data, size_t offset, __private half *p);
 void __ovld vstorea_half16_rtz(double16 data, size_t offset, __private half *p);
 
-void __ovld vstorea_half_rtp(double data, size_t offset, __private half *p);
 void __ovld vstorea_half2_rtp(double2 data, size_t offset, __private half *p);
 void __ovld vstorea_half3_rtp(double3 data, size_t offset, __private half *p);
 void __ovld vstorea_half4_rtp(double4 data, size_t offset, __private half *p);
 void __ovld vstorea_half8_rtp(double8 data, size_t offset, __private half *p);
 void __ovld vstorea_half16_rtp(double16 data, size_t offset, __private half *p);
 
-void __ovld vstorea_half_rtn(double data, size_t offset, __private half *p);
 void __ovld vstorea_half2_rtn(double2 data,size_t offset, __private half *p);
 void __ovld vstorea_half3_rtn(double3 data,size_t offset, __private half *p);
 void __ovld vstorea_half4_rtn(double4 data,size_t offset, __private half *p);

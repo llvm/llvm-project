@@ -789,9 +789,6 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_integral_v
 
 #endif // __has_keyword(__is_integral)
 
-// __libcpp_is_signed_integer, __libcpp_is_unsigned_integer
-// <concepts> implements __libcpp_signed_integer, __libcpp_unsigned_integer
-
 // [basic.fundamental] defines five standard signed integer types;
 // __int128_t is an extended signed integer type.
 // The signed and unsigned integer types, plus bool and the

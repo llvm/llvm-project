@@ -1,4 +1,3 @@
-; RUN: opt -analyze -enable-new-pm=0 -scalar-evolution -S < %s | FileCheck %s
 ; RUN: opt -disable-output "-passes=print<scalar-evolution>" -S < %s 2>&1 | FileCheck %s
 
 ; The exit value from this loop was originally calculated as 0.

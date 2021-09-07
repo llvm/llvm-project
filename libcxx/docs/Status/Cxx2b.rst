@@ -46,5 +46,3 @@ Library Working Group Issues Status
    :file: Cxx2bIssues.csv
    :header-rows: 1
    :widths: auto
-
-Last Updated: 22-July-2021

@@ -1,4 +1,3 @@
-; RUN: opt < %s -analyze -block-freq -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='print<block-freq>' -disable-output 2>&1 | FileCheck %s
 
 ; PR21622: Check for a crasher when the sum of exits to the same successor of a

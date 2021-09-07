@@ -369,6 +369,10 @@ func @reduction2(%lb : index, %ub : index, %step : index) {
   return
 }
 
+// CHECK: omp.critical.declare
+// CHECK-LABEL: @mutex
+omp.critical.declare @mutex
+
 // CHECK-LABEL: omp_critical
 func @omp_critical() -> () {
   omp.critical {

@@ -453,7 +453,7 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
   case llvm::Triple::mipsel:
   case llvm::Triple::mips64:
   case llvm::Triple::mips64el: {
-    bool IsNaN2008 = tools::mips::isNaN2008(Args, Triple);
+    bool IsNaN2008 = tools::mips::isNaN2008(getDriver(), Args, Triple);
 
     LibDir = "lib" + tools::mips::getMipsABILibSuffix(Args, Triple);
 

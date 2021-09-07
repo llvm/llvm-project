@@ -17,18 +17,18 @@
 
 #include "test_range.h"
 
-namespace stdr = std::ranges;
+
 
 template <template <class...> class I>
 constexpr bool check_bidirectional_range() {
-  constexpr bool result = stdr::bidirectional_range<test_range<I> >;
-  static_assert(stdr::bidirectional_range<test_range<I> const> == result);
-  static_assert(stdr::bidirectional_range<test_non_const_common_range<I> > == result);
-  static_assert(stdr::bidirectional_range<test_non_const_range<I> > == result);
-  static_assert(stdr::bidirectional_range<test_common_range<I> > == result);
-  static_assert(stdr::bidirectional_range<test_common_range<I> const> == result);
-  static_assert(!stdr::bidirectional_range<test_non_const_common_range<I> const>);
-  static_assert(!stdr::bidirectional_range<test_non_const_range<I> const>);
+  constexpr bool result = std::ranges::bidirectional_range<test_range<I> >;
+  static_assert(std::ranges::bidirectional_range<test_range<I> const> == result);
+  static_assert(std::ranges::bidirectional_range<test_non_const_common_range<I> > == result);
+  static_assert(std::ranges::bidirectional_range<test_non_const_range<I> > == result);
+  static_assert(std::ranges::bidirectional_range<test_common_range<I> > == result);
+  static_assert(std::ranges::bidirectional_range<test_common_range<I> const> == result);
+  static_assert(!std::ranges::bidirectional_range<test_non_const_common_range<I> const>);
+  static_assert(!std::ranges::bidirectional_range<test_non_const_range<I> const>);
   return result;
 }
 

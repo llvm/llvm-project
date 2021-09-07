@@ -2049,27 +2049,23 @@ define <4 x i32> @pmaddwd_negative1(<8 x i16> %A, <8 x i16> %B) {
 }
 
 ; Do not select if constant is too large
+; Lower half is too large, upper half is in range.
 define <4 x i32> @pmaddwd_negative2(<8 x i16> %A) {
 ; SSE2-LABEL: pmaddwd_negative2:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
 ; SSE2-NEXT:    psrad $16, %xmm1
-; SSE2-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    psrad $16, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [1,7,42,32]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[1,1,3,3]
-; SSE2-NEXT:    pmuludq %xmm2, %xmm4
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [32768,4294934528,0,0]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[1,1,3,3]
-; SSE2-NEXT:    pmuludq %xmm2, %xmm6
-; SSE2-NEXT:    shufps {{.*#+}} xmm6 = xmm6[0,2],xmm4[0,2]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
+; SSE2-NEXT:    psrad $16, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [32768,4294934528,0,0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[1,1,3,3]
 ; SSE2-NEXT:    pmuludq %xmm3, %xmm0
-; SSE2-NEXT:    pmuludq %xmm5, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2],xmm0[0,2]
-; SSE2-NEXT:    paddd %xmm6, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    pmuludq %xmm4, %xmm2
+; SSE2-NEXT:    pmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm1[0,2]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[1,3]
+; SSE2-NEXT:    paddd %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: pmaddwd_negative2:
@@ -2078,7 +2074,7 @@ define <4 x i32> @pmaddwd_negative2(<8 x i16> %A) {
 ; AVX1-NEXT:    vpmovsxwd %xmm1, %xmm1
 ; AVX1-NEXT:    vpmovsxwd %xmm0, %xmm0
 ; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX1-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;

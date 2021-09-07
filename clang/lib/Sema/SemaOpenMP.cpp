@@ -5320,8 +5320,9 @@ static CapturedStmt *buildDistanceFunc(Sema &Actions, QualType LogicalTy,
 
       if (Rel == BO_LE || Rel == BO_GE) {
         // Add one to the range if the relational operator is inclusive.
-        Range =
-            AssertSuccess(Actions.BuildUnaryOp(nullptr, {}, UO_PreInc, Range));
+        Range = AssertSuccess(Actions.BuildBinOp(
+            nullptr, {}, BO_Add, Range,
+            Actions.ActOnIntegerConstant(SourceLocation(), 1).get()));
       }
 
       // Divide by the absolute step amount.
@@ -5571,19 +5572,6 @@ StmtResult Sema::ActOnOpenMPCanonicalLoop(Stmt *AStmt) {
                                         {}, nullptr, nullptr, {}, nullptr);
   return OMPCanonicalLoop::create(getASTContext(), AStmt, DistanceFunc,
                                   LoopVarFunc, LVRef);
-}
-
-StmtResult Sema::ActOnOpenMPLoopnest(Stmt *AStmt) {
-  // Handle a literal loop.
-  if (isa<ForStmt>(AStmt) || isa<CXXForRangeStmt>(AStmt))
-    return ActOnOpenMPCanonicalLoop(AStmt);
-
-  // If not a literal loop, it must be the result of a loop transformation.
-  OMPExecutableDirective *LoopTransform = cast<OMPExecutableDirective>(AStmt);
-  assert(
-      isOpenMPLoopTransformationDirective(LoopTransform->getDirectiveKind()) &&
-      "Loop transformation directive expected");
-  return LoopTransform;
 }
 
 static ExprResult buildUserDefinedMapperRef(Sema &SemaRef, Scope *S,

@@ -27,9 +27,10 @@ typedef uint32_t _Unwind_EHT_Header;
 struct _Unwind_Control_Block;
 typedef struct _Unwind_Control_Block _Unwind_Control_Block;
 #define _Unwind_Exception _Unwind_Control_Block /* Alias */
+typedef uint8_t _Unwind_Exception_Class[8];
 
 struct _Unwind_Control_Block {
-  uint64_t exception_class;
+  _Unwind_Exception_Class exception_class;
   void (*exception_cleanup)(_Unwind_Reason_Code, _Unwind_Control_Block*);
 
   /* Unwinder cache, private fields for the unwinder's use */

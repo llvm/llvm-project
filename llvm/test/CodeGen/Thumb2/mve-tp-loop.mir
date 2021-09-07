@@ -70,15 +70,16 @@ body:             |
     ; CHECK: [[t2LSRri:%[0-9]+]]:rgpr = t2LSRri killed [[t2ADDri]], 4, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: [[t2WhileLoopSetup:%[0-9]+]]:gprlr = t2WhileLoopSetup killed [[t2LSRri]]
     ; CHECK: t2WhileLoopStart [[t2WhileLoopSetup]], %bb.2, implicit-def $cpsr
+    ; CHECK: t2B %bb.1, 14 /* CC::al */, $noreg
     ; CHECK: .1:
     ; CHECK: [[PHI:%[0-9]+]]:rgpr = PHI [[COPY1]], %bb.0, %7, %bb.1
     ; CHECK: [[PHI1:%[0-9]+]]:rgpr = PHI [[COPY2]], %bb.0, %9, %bb.1
     ; CHECK: [[PHI2:%[0-9]+]]:gprlr = PHI [[t2WhileLoopSetup]], %bb.0, %11, %bb.1
     ; CHECK: [[PHI3:%[0-9]+]]:rgpr = PHI [[COPY]], %bb.0, %13, %bb.1
-    ; CHECK: [[MVE_VCTP8_:%[0-9]+]]:vccr = MVE_VCTP8 [[PHI3]], 0, $noreg
+    ; CHECK: [[MVE_VCTP8_:%[0-9]+]]:vccr = MVE_VCTP8 [[PHI3]], 0, $noreg, $noreg
     ; CHECK: [[t2SUBri:%[0-9]+]]:rgpr = t2SUBri [[PHI3]], 16, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: [[MVE_VLDRBU8_post:%[0-9]+]]:rgpr, [[MVE_VLDRBU8_post1:%[0-9]+]]:mqpr = MVE_VLDRBU8_post [[PHI]], 16, 1, [[MVE_VCTP8_]]
-    ; CHECK: [[MVE_VSTRBU8_post:%[0-9]+]]:rgpr = MVE_VSTRBU8_post [[MVE_VLDRBU8_post1]], [[PHI1]], 16, 1, [[MVE_VCTP8_]]
+    ; CHECK: [[MVE_VLDRBU8_post:%[0-9]+]]:rgpr, [[MVE_VLDRBU8_post1:%[0-9]+]]:mqpr = MVE_VLDRBU8_post [[PHI]], 16, 1, [[MVE_VCTP8_]], $noreg
+    ; CHECK: [[MVE_VSTRBU8_post:%[0-9]+]]:rgpr = MVE_VSTRBU8_post [[MVE_VLDRBU8_post1]], [[PHI1]], 16, 1, [[MVE_VCTP8_]], $noreg
     ; CHECK: [[t2LoopDec:%[0-9]+]]:gprlr = t2LoopDec [[PHI2]], 1
     ; CHECK: t2LoopEnd [[t2LoopDec]], %bb.1, implicit-def $cpsr
     ; CHECK: t2B %bb.2, 14 /* CC::al */, $noreg
@@ -110,15 +111,16 @@ body:             |
   ; CHECK:   [[t2LSRri:%[0-9]+]]:rgpr = t2LSRri killed [[t2ADDri]], 4, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   [[t2WhileLoopSetup:%[0-9]+]]:gprlr = t2WhileLoopSetup killed [[t2LSRri]]
   ; CHECK:   t2WhileLoopStart [[t2WhileLoopSetup]], %bb.4, implicit-def $cpsr
+  ; CHECK:   t2B %bb.3, 14 /* CC::al */, $noreg
   ; CHECK: bb.3:
   ; CHECK:   [[PHI:%[0-9]+]]:rgpr = PHI [[COPY1]], %bb.1, %7, %bb.3
   ; CHECK:   [[PHI1:%[0-9]+]]:rgpr = PHI [[COPY2]], %bb.1, %9, %bb.3
   ; CHECK:   [[PHI2:%[0-9]+]]:gprlr = PHI [[t2WhileLoopSetup]], %bb.1, %11, %bb.3
   ; CHECK:   [[PHI3:%[0-9]+]]:rgpr = PHI [[COPY]], %bb.1, %13, %bb.3
-  ; CHECK:   [[MVE_VCTP8_:%[0-9]+]]:vccr = MVE_VCTP8 [[PHI3]], 0, $noreg
+  ; CHECK:   [[MVE_VCTP8_:%[0-9]+]]:vccr = MVE_VCTP8 [[PHI3]], 0, $noreg, $noreg
   ; CHECK:   [[t2SUBri:%[0-9]+]]:rgpr = t2SUBri [[PHI3]], 16, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   [[MVE_VLDRBU8_post:%[0-9]+]]:rgpr, [[MVE_VLDRBU8_post1:%[0-9]+]]:mqpr = MVE_VLDRBU8_post [[PHI]], 16, 1, [[MVE_VCTP8_]]
-  ; CHECK:   [[MVE_VSTRBU8_post:%[0-9]+]]:rgpr = MVE_VSTRBU8_post [[MVE_VLDRBU8_post1]], [[PHI1]], 16, 1, [[MVE_VCTP8_]]
+  ; CHECK:   [[MVE_VLDRBU8_post:%[0-9]+]]:rgpr, [[MVE_VLDRBU8_post1:%[0-9]+]]:mqpr = MVE_VLDRBU8_post [[PHI]], 16, 1, [[MVE_VCTP8_]], $noreg
+  ; CHECK:   [[MVE_VSTRBU8_post:%[0-9]+]]:rgpr = MVE_VSTRBU8_post [[MVE_VLDRBU8_post1]], [[PHI1]], 16, 1, [[MVE_VCTP8_]], $noreg
   ; CHECK:   [[t2LoopDec:%[0-9]+]]:gprlr = t2LoopDec [[PHI2]], 1
   ; CHECK:   t2LoopEnd [[t2LoopDec]], %bb.3, implicit-def $cpsr
   ; CHECK:   t2B %bb.4, 14 /* CC::al */, $noreg
@@ -162,13 +164,14 @@ body:             |
     ; CHECK: [[t2LSRri:%[0-9]+]]:rgpr = t2LSRri killed [[t2ADDri]], 4, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: [[t2WhileLoopSetup:%[0-9]+]]:gprlr = t2WhileLoopSetup killed [[t2LSRri]]
     ; CHECK: t2WhileLoopStart [[t2WhileLoopSetup]], %bb.2, implicit-def $cpsr
+    ; CHECK: t2B %bb.1, 14 /* CC::al */, $noreg
     ; CHECK: .1:
     ; CHECK: [[PHI:%[0-9]+]]:rgpr = PHI [[COPY2]], %bb.0, %7, %bb.1
     ; CHECK: [[PHI1:%[0-9]+]]:gprlr = PHI [[t2WhileLoopSetup]], %bb.0, %9, %bb.1
     ; CHECK: [[PHI2:%[0-9]+]]:rgpr = PHI [[COPY]], %bb.0, %11, %bb.1
-    ; CHECK: [[MVE_VCTP8_:%[0-9]+]]:vccr = MVE_VCTP8 [[PHI2]], 0, $noreg
+    ; CHECK: [[MVE_VCTP8_:%[0-9]+]]:vccr = MVE_VCTP8 [[PHI2]], 0, $noreg, $noreg
     ; CHECK: [[t2SUBri:%[0-9]+]]:rgpr = t2SUBri [[PHI2]], 16, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: [[MVE_VSTRBU8_post:%[0-9]+]]:rgpr = MVE_VSTRBU8_post [[COPY1]], [[PHI]], 16, 1, [[MVE_VCTP8_]]
+    ; CHECK: [[MVE_VSTRBU8_post:%[0-9]+]]:rgpr = MVE_VSTRBU8_post [[COPY1]], [[PHI]], 16, 1, [[MVE_VCTP8_]], $noreg
     ; CHECK: [[t2LoopDec:%[0-9]+]]:gprlr = t2LoopDec [[PHI1]], 1
     ; CHECK: t2LoopEnd [[t2LoopDec]], %bb.1, implicit-def $cpsr
     ; CHECK: t2B %bb.2, 14 /* CC::al */, $noreg
@@ -201,13 +204,14 @@ body:             |
   ; CHECK:   [[t2LSRri:%[0-9]+]]:rgpr = t2LSRri killed [[t2ADDri]], 4, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   [[t2WhileLoopSetup:%[0-9]+]]:gprlr = t2WhileLoopSetup killed [[t2LSRri]]
   ; CHECK:   t2WhileLoopStart [[t2WhileLoopSetup]], %bb.4, implicit-def $cpsr
+  ; CHECK:   t2B %bb.3, 14 /* CC::al */, $noreg
   ; CHECK: bb.3:
   ; CHECK:   [[PHI:%[0-9]+]]:rgpr = PHI [[COPY2]], %bb.1, %7, %bb.3
   ; CHECK:   [[PHI1:%[0-9]+]]:gprlr = PHI [[t2WhileLoopSetup]], %bb.1, %9, %bb.3
   ; CHECK:   [[PHI2:%[0-9]+]]:rgpr = PHI [[COPY]], %bb.1, %11, %bb.3
-  ; CHECK:   [[MVE_VCTP8_:%[0-9]+]]:vccr = MVE_VCTP8 [[PHI2]], 0, $noreg
+  ; CHECK:   [[MVE_VCTP8_:%[0-9]+]]:vccr = MVE_VCTP8 [[PHI2]], 0, $noreg, $noreg
   ; CHECK:   [[t2SUBri:%[0-9]+]]:rgpr = t2SUBri [[PHI2]], 16, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   [[MVE_VSTRBU8_post:%[0-9]+]]:rgpr = MVE_VSTRBU8_post [[COPY1]], [[PHI]], 16, 1, [[MVE_VCTP8_]]
+  ; CHECK:   [[MVE_VSTRBU8_post:%[0-9]+]]:rgpr = MVE_VSTRBU8_post [[COPY1]], [[PHI]], 16, 1, [[MVE_VCTP8_]], $noreg
   ; CHECK:   [[t2LoopDec:%[0-9]+]]:gprlr = t2LoopDec [[PHI1]], 1
   ; CHECK:   t2LoopEnd [[t2LoopDec]], %bb.3, implicit-def $cpsr
   ; CHECK:   t2B %bb.4, 14 /* CC::al */, $noreg

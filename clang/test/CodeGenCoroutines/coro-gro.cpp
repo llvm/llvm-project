@@ -2,7 +2,7 @@
 // Verify that coroutine promise and allocated memory are freed up on exception.
 // RUN: %clang_cc1 -std=c++1z -fcoroutines-ts -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s -disable-llvm-passes | FileCheck %s
 
-namespace std::experimental {
+namespace std {
 template <typename... T> struct coroutine_traits;
 
 template <class Promise = void> struct coroutine_handle {
@@ -15,11 +15,11 @@ template <> struct coroutine_handle<void> {
   template <class PromiseType>
   coroutine_handle(coroutine_handle<PromiseType>) noexcept;
 };
-}
+} // namespace std
 
 struct suspend_always {
   bool await_ready() noexcept;
-  void await_suspend(std::experimental::coroutine_handle<>) noexcept;
+  void await_suspend(std::coroutine_handle<>) noexcept;
   void await_resume() noexcept;
 };
 
@@ -28,7 +28,7 @@ struct GroType {
   operator int() noexcept;
 };
 
-template <> struct std::experimental::coroutine_traits<int> {
+template <> struct std::coroutine_traits<int> {
   struct promise_type {
     GroType get_return_object() noexcept;
     suspend_always initial_suspend() noexcept;
@@ -51,8 +51,8 @@ int f() {
   // CHECK: %[[Size:.+]] = call i64 @llvm.coro.size.i64()
   // CHECK: call noalias nonnull i8* @_Znwm(i64 %[[Size]])
   // CHECK: store i1 false, i1* %[[GroActive]]
-  // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJiEE12promise_typeC1Ev(
-  // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJiEE12promise_type17get_return_objectEv(
+  // CHECK: call void @_ZNSt16coroutine_traitsIJiEE12promise_typeC1Ev(
+  // CHECK: call void @_ZNSt16coroutine_traitsIJiEE12promise_type17get_return_objectEv(
   // CHECK: store i1 true, i1* %[[GroActive]]
 
   Cleanup cleanup;
@@ -60,12 +60,12 @@ int f() {
   co_return;
 
   // CHECK: call void @_Z11doSomethingv(
-  // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJiEE12promise_type11return_voidEv(
+  // CHECK: call void @_ZNSt16coroutine_traitsIJiEE12promise_type11return_voidEv(
   // CHECK: call void @_ZN7CleanupD1Ev(
 
   // Destroy promise and free the memory.
 
-  // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJiEE12promise_typeD1Ev(
+  // CHECK: call void @_ZNSt16coroutine_traitsIJiEE12promise_typeD1Ev(
   // CHECK: %[[Mem:.+]] = call i8* @llvm.coro.free(
   // CHECK: call void @_ZdlPv(i8* %[[Mem]])
 

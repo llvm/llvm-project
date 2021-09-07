@@ -1,5 +1,4 @@
 ; RUN: opt < %s -disable-output -passes="print<da>" 2>&1 | FileCheck %s
-; RUN: opt < %s -da -analyze -enable-new-pm=0 | FileCheck %s
 
 ; Note: exact results can be achived even if
 ; "-da-disable-delinearization-checks" is not used

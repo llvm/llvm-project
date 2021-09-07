@@ -17,8 +17,8 @@ namespace dr1004 { // dr1004: 5
   template<typename> struct B1 {};
   template<template<typename> class> struct B2 {};
   template<typename X> void f(); // expected-note {{[with X = dr1004::A<int>]}}
-  template<template<typename> class X> void f(); // expected-note {{[with X = A]}}
-  template<template<typename> class X> void g(); // expected-note {{[with X = A]}}
+  template<template<typename> class X> void f(); // expected-note {{[with X = dr1004::A]}}
+  template<template<typename> class X> void g(); // expected-note {{[with X = dr1004::A]}}
   template<typename X> void g(); // expected-note {{[with X = dr1004::A<int>]}}
   struct C : A<int> {
     B1<A> b1a;

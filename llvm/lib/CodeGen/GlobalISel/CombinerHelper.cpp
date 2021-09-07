@@ -4118,6 +4118,48 @@ bool CombinerHelper::matchICmpToTrueFalseKnownBits(MachineInstr &MI,
   return true;
 }
 
+bool CombinerHelper::matchICmpToLHSKnownBits(
+    MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_ICMP);
+  // Given:
+  //
+  // %x = G_WHATEVER (... x is known to be 0 or 1 ...)
+  // %cmp = G_ICMP ne %x, 0
+  //
+  // Or:
+  //
+  // %x = G_WHATEVER (... x is known to be 0 or 1 ...)
+  // %cmp = G_ICMP eq %x, 1
+  //
+  // We can replace %cmp with %x assuming true is 1 on the target.
+  auto Pred = static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
+  if (!CmpInst::isEquality(Pred))
+    return false;
+  Register Dst = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  if (getICmpTrueVal(getTargetLowering(), DstTy.isVector(),
+                     /* IsFP = */ false) != 1)
+    return false;
+  int64_t OneOrZero = Pred == CmpInst::ICMP_EQ;
+  if (!mi_match(MI.getOperand(3).getReg(), MRI, m_SpecificICst(OneOrZero)))
+    return false;
+  Register LHS = MI.getOperand(2).getReg();
+  auto KnownLHS = KB->getKnownBits(LHS);
+  if (KnownLHS.getMinValue() != 0 || KnownLHS.getMaxValue() != 1)
+    return false;
+  // Make sure replacing Dst with the LHS is a legal operation.
+  LLT LHSTy = MRI.getType(LHS);
+  unsigned LHSSize = LHSTy.getSizeInBits();
+  unsigned DstSize = DstTy.getSizeInBits();
+  unsigned Op = TargetOpcode::COPY;
+  if (DstSize != LHSSize)
+    Op = DstSize < LHSSize ? TargetOpcode::G_TRUNC : TargetOpcode::G_ZEXT;
+  if (!isLegalOrBeforeLegalizer({Op, {DstTy, LHSTy}}))
+    return false;
+  MatchInfo = [=](MachineIRBuilder &B) { B.buildInstr(Op, {Dst}, {LHS}); };
+  return true;
+}
+
 /// Form a G_SBFX from a G_SEXT_INREG fed by a right shift.
 bool CombinerHelper::matchBitfieldExtractFromSExtInReg(
     MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {

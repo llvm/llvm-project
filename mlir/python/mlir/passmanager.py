@@ -2,7 +2,4 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-# Simply a wrapper around the extension module of the same name.
-from ._cext_loader import _reexport_cext
-_reexport_cext("passmanager", __name__)
-del _reexport_cext
+from ._mlir_libs._mlir.passmanager import *
