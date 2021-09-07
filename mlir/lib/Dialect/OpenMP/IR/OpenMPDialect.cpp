@@ -976,6 +976,17 @@ static LogicalResult verifyCriticalOp(CriticalOp op) {
       (op.hint().getValue() != SyncHintKind::none))
     return op.emitOpError() << "must specify a name unless the effect is as if "
                                "hint(none) is specified";
+
+  if (op.nameAttr()) {
+    auto symbolRef = op.nameAttr().cast<SymbolRefAttr>();
+    auto decl =
+        SymbolTable::lookupNearestSymbolFrom<CriticalDeclareOp>(op, symbolRef);
+    if (!decl) {
+      return op.emitOpError() << "expected symbol reference " << symbolRef
+                              << " to point to a critical declaration";
+    }
+  }
+
   return success();
 }
 

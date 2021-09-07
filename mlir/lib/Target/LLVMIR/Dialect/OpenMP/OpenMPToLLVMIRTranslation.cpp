@@ -805,14 +805,18 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
       .Case([&](omp::WsLoopOp) {
         return convertOmpWsLoop(*op, builder, moduleTranslation);
       })
-      .Case<omp::YieldOp, omp::TerminatorOp, omp::ReductionDeclareOp>(
-          [](auto op) {
-            // `yield` and `terminator` can be just omitted. The block structure
-            // was created in the region that handles their parent operation.
-            // `reduction.declare` will be used by reductions and is not
-            // converted directly, skip it.
-            return success();
-          })
+      .Case<omp::YieldOp, omp::TerminatorOp, omp::ReductionDeclareOp,
+            omp::CriticalDeclareOp>([](auto op) {
+        // `yield` and `terminator` can be just omitted. The block structure
+        // was created in the region that handles their parent operation.
+        // `reduction.declare` will be used by reductions and is not
+        // converted directly, skip it.
+        // `critical.declare` is only used to declare names of critical
+        // sections which will be used by `critical` ops and hence can be
+        // ignored for lowering. The OpenMP IRBuilder will create unique
+        // name for critical section names.
+        return success();
+      })
       .Default([&](Operation *inst) {
         return inst->emitError("unsupported OpenMP operation: ")
                << inst->getName();
