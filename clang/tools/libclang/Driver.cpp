@@ -55,9 +55,9 @@ clang_Driver_getExternalActionsForCommand_v0(int ArgC, const char **ArgV,
     return nullptr;
 
   CXDiagnosticSetDiagnosticConsumer DiagConsumer;
-  auto Diags = CompilerInstance::createDiagnostics(
-      CreateAndPopulateDiagOpts(llvm::makeArrayRef(ArgV, ArgC)), &DiagConsumer,
-      false);
+  auto DiagOpts = CreateAndPopulateDiagOpts(llvm::makeArrayRef(ArgV, ArgC));
+  auto Diags = CompilerInstance::createDiagnostics(DiagOpts.release(),
+                                                   &DiagConsumer, false);
 
   // Use createPhysicalFileSystem instead of getRealFileSystem so that
   // setCurrentWorkingDirectory doesn't change the working directory of the
