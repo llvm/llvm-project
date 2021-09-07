@@ -303,12 +303,9 @@ public:
 
   /// Look through the existing plans and return true if we have one with all
   /// the vectorization factors in question.
-  bool hasPlanWithVFs(const ArrayRef<ElementCount> VFs) const {
-    return any_of(VPlans, [&](const VPlanPtr &Plan) {
-      return all_of(VFs, [&](const ElementCount &VF) {
-        return Plan->hasVF(VF);
-      });
-    });
+  bool hasPlanWithVF(ElementCount VF) const {
+    return any_of(VPlans,
+                  [&](const VPlanPtr &Plan) { return Plan->hasVF(VF); });
   }
 
   /// Test a \p Predicate on a \p Range of VF's. Return the value of applying
