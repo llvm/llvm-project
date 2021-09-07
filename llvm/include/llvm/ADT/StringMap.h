@@ -478,13 +478,7 @@ public:
   explicit StringMapKeyIterator(StringMapConstIterator<ValueTy> Iter)
       : base(std::move(Iter)) {}
 
-  StringRef &operator*() {
-    Key = this->wrapped()->getKey();
-    return Key;
-  }
-
-private:
-  StringRef Key;
+  StringRef operator*() const { return this->wrapped()->getKey(); }
 };
 
 } // end namespace llvm
