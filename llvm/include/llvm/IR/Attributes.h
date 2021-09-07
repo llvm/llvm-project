@@ -459,41 +459,24 @@ public:
   /// Returns a new list because attribute lists are immutable.
   LLVM_NODISCARD AttributeList addAttributeAtIndex(
       LLVMContext &C, unsigned Index, Attribute::AttrKind Kind) const;
-  LLVM_NODISCARD AttributeList addAttribute(LLVMContext &C, unsigned Index,
-                                            Attribute::AttrKind Kind) const {
-    return addAttributeAtIndex(C, Index, Kind);
-  }
 
   /// Add an attribute to the attribute set at the given index.
   /// Returns a new list because attribute lists are immutable.
   LLVM_NODISCARD AttributeList
   addAttributeAtIndex(LLVMContext &C, unsigned Index, StringRef Kind,
                       StringRef Value = StringRef()) const;
-  LLVM_NODISCARD AttributeList
-  addAttribute(LLVMContext &C, unsigned Index, StringRef Kind,
-               StringRef Value = StringRef()) const {
-    return addAttributeAtIndex(C, Index, Kind, Value);
-  }
 
   /// Add an attribute to the attribute set at the given index.
   /// Returns a new list because attribute lists are immutable.
   LLVM_NODISCARD AttributeList addAttributeAtIndex(LLVMContext &C,
                                                    unsigned Index,
                                                    Attribute A) const;
-  LLVM_NODISCARD AttributeList addAttribute(LLVMContext &C, unsigned Index,
-                                            Attribute A) const {
-    return addAttributeAtIndex(C, Index, A);
-  }
 
   /// Add attributes to the attribute set at the given index.
   /// Returns a new list because attribute lists are immutable.
   LLVM_NODISCARD AttributeList addAttributesAtIndex(LLVMContext &C,
                                                     unsigned Index,
                                                     const AttrBuilder &B) const;
-  LLVM_NODISCARD AttributeList addAttributes(LLVMContext &C, unsigned Index,
-                                             const AttrBuilder &B) const {
-    return addAttributesAtIndex(C, Index, B);
-  }
 
   /// Add a function attribute to the list. Returns a new list because
   /// attribute lists are immutable.
@@ -577,10 +560,6 @@ public:
   /// attribute list. Returns a new list because attribute lists are immutable.
   LLVM_NODISCARD AttributeList removeAttributeAtIndex(
       LLVMContext &C, unsigned Index, Attribute::AttrKind Kind) const;
-  LLVM_NODISCARD AttributeList removeAttribute(LLVMContext &C, unsigned Index,
-                                               Attribute::AttrKind Kind) const {
-    return removeAttributeAtIndex(C, Index, Kind);
-  }
 
   /// Remove the specified attribute at the specified index from this
   /// attribute list. Returns a new list because attribute lists are immutable.
@@ -596,19 +575,11 @@ public:
   /// attribute list. Returns a new list because attribute lists are immutable.
   LLVM_NODISCARD AttributeList removeAttributesAtIndex(
       LLVMContext &C, unsigned Index, const AttrBuilder &AttrsToRemove) const;
-  LLVM_NODISCARD AttributeList removeAttributes(
-      LLVMContext &C, unsigned Index, const AttrBuilder &AttrsToRemove) const {
-    return removeAttributesAtIndex(C, Index, AttrsToRemove);
-  }
 
   /// Remove all attributes at the specified index from this
   /// attribute list. Returns a new list because attribute lists are immutable.
   LLVM_NODISCARD AttributeList removeAttributesAtIndex(LLVMContext &C,
                                                        unsigned Index) const;
-  LLVM_NODISCARD AttributeList removeAttributes(LLVMContext &C,
-                                                unsigned Index) const {
-    return removeAttributesAtIndex(C, Index);
-  }
 
   /// Remove the specified attribute at the function index from this
   /// attribute list. Returns a new list because attribute lists are immutable.
@@ -697,12 +668,6 @@ public:
     return Attrs.addAttributeAtIndex(C, ArgNo,
                                      Attr.getWithNewType(C, ReplacementTy));
   }
-  LLVM_NODISCARD AttributeList replaceAttributeType(LLVMContext &C,
-                                                    unsigned ArgNo,
-                                                    Attribute::AttrKind Kind,
-                                                    Type *ReplacementTy) const {
-    return replaceAttributeTypeAtIndex(C, ArgNo, Kind, ReplacementTy);
-  }
 
   /// \brief Add the dereferenceable attribute to the attribute set at the given
   /// index. Returns a new list because attribute lists are immutable.
@@ -745,21 +710,12 @@ public:
 
   /// Return true if the attribute exists at the given index.
   bool hasAttributeAtIndex(unsigned Index, Attribute::AttrKind Kind) const;
-  bool hasAttribute(unsigned Index, Attribute::AttrKind Kind) const {
-    return hasAttributeAtIndex(Index, Kind);
-  }
 
   /// Return true if the attribute exists at the given index.
   bool hasAttributeAtIndex(unsigned Index, StringRef Kind) const;
-  bool hasAttribute(unsigned Index, StringRef Kind) const {
-    return hasAttributeAtIndex(Index, Kind);
-  }
 
   /// Return true if attribute exists at the given index.
   bool hasAttributesAtIndex(unsigned Index) const;
-  bool hasAttributes(unsigned Index) const {
-    return hasAttributesAtIndex(Index);
-  }
 
   /// Return true if the attribute exists for the given argument
   bool hasParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
@@ -806,15 +762,9 @@ public:
 
   /// Return the attribute object that exists at the given index.
   Attribute getAttributeAtIndex(unsigned Index, Attribute::AttrKind Kind) const;
-  Attribute getAttribute(unsigned Index, Attribute::AttrKind Kind) const {
-    return getAttributeAtIndex(Index, Kind);
-  }
 
   /// Return the attribute object that exists at the given index.
   Attribute getAttributeAtIndex(unsigned Index, StringRef Kind) const;
-  Attribute getAttribute(unsigned Index, StringRef Kind) const {
-    return getAttributeAtIndex(Index, Kind);
-  }
 
   /// Return the attribute object that exists at the arg index.
   Attribute getParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
