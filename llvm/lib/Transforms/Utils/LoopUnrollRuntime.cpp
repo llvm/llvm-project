@@ -423,14 +423,6 @@ static bool canSafelyUnrollMultiExitLoop(Loop *L, BasicBlock *LatchExit,
   if (!PreserveLCSSA)
     return false;
 
-  // FIXME: We bail out of multi-exit unrolling when epilog loop is generated
-  // and L is an inner loop. This is because in presence of multiple exits, the
-  // outer loop is incorrect: we do not add the EpilogPreheader and exit to the
-  // outer loop. This is automatically handled in the prolog case, so we do not
-  // have that bug in prolog generation.
-  if (UseEpilogRemainder && L->getParentLoop())
-    return false;
-
   // All constraints have been satisfied.
   return true;
 }
@@ -454,6 +446,11 @@ static bool canProfitablyUnrollMultiExitLoop(
   // TODO: We used to bail out for correctness (now fixed).  Under what
   // circumstances is this case profitable to allow?
   if (!LatchExit->getSinglePredecessor())
+    return false;
+
+  // TODO: We used to bail out for correctness (now fixed).  Under what
+  // circumstances is this case profitable to allow?
+  if (UseEpilogRemainder && L->getParentLoop())
     return false;
 
   // The main pain point with multi-exit loop unrolling is that once unrolled,
@@ -729,6 +726,21 @@ bool llvm::UnrollRuntimeLoopRemainder(
     // Split NewExit to insert epilog remainder loop.
     EpilogPreHeader = SplitBlock(NewExit, NewExitTerminator, DT, LI);
     EpilogPreHeader->setName(Header->getName() + ".epil.preheader");
+
+    // If the latch exits from multiple level of nested loops, then
+    // by assumption there must be another loop exit which branches to the
+    // outer loop and we must adjust the loop for the newly inserted blocks
+    // to account for the fact that our epilogue is still in the same outer
+    // loop. Note that this leaves loopinfo temporarily out of sync with the
+    // CFG until the actual epilogue loop is inserted.
+    if (auto *ParentL = L->getParentLoop())
+      if (LI->getLoopFor(LatchExit) != ParentL) {
+        LI->removeBlock(NewExit);
+        ParentL->addBasicBlockToLoop(NewExit, *LI);
+        LI->removeBlock(EpilogPreHeader);
+        ParentL->addBasicBlockToLoop(EpilogPreHeader, *LI);
+      }
+
   } else {
     // If prolog remainder
     // Split the original preheader twice to insert prolog remainder loop
