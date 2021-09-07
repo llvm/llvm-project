@@ -8,13 +8,13 @@ static_library("Host") {
     "//lldb/source/Utility",
     "//llvm/lib/Object",
     "//llvm/lib/Support",
-    "//llvm/utils/gn/build/libs/xml",
 
     # FIXME:
     # LINK_LIBS
     #   ${EXTRA_LIBS}
     #   ${LLDBObjCLibs}
   ]
+  public_deps = [ "//llvm/utils/gn/build/libs/xml" ]
   sources = [
     "common/File.cpp",
     "common/FileAction.cpp",
