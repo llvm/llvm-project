@@ -4787,6 +4787,7 @@ SDValue RISCVTargetLowering::lowerMaskedGather(SDValue Op,
   // Targets have to explicitly opt-in for extending vector loads.
   assert(LoadExtType == ISD::NON_EXTLOAD &&
          "Unexpected extending MGATHER/VP_GATHER");
+  (void)LoadExtType;
 
   // If the mask is known to be all ones, optimize to an unmasked intrinsic;
   // the selection of the masked intrinsics doesn't do this for us.
@@ -4885,6 +4886,7 @@ SDValue RISCVTargetLowering::lowerMaskedScatter(SDValue Op,
   // Targets have to explicitly opt-in for extending vector loads and
   // truncating vector stores.
   assert(!IsTruncatingStore && "Unexpected truncating MSCATTER/VP_SCATTER");
+  (void)IsTruncatingStore;
 
   // If the mask is known to be all ones, optimize to an unmasked intrinsic;
   // the selection of the masked intrinsics doesn't do this for us.
