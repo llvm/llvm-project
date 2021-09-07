@@ -19,28 +19,6 @@
 #include <cstdio>
 #include <string>
 
-DeviceTy::DeviceTy(const DeviceTy &D)
-    : DeviceID(D.DeviceID), RTL(D.RTL), RTLDeviceID(D.RTLDeviceID),
-      IsInit(D.IsInit), InitFlag(), HasPendingGlobals(D.HasPendingGlobals),
-      HostDataToTargetMap(D.HostDataToTargetMap),
-      PendingCtorsDtors(D.PendingCtorsDtors), ShadowPtrMap(D.ShadowPtrMap),
-      DataMapMtx(), PendingGlobalsMtx(), ShadowMtx(),
-      LoopTripCnt(D.LoopTripCnt) {}
-
-DeviceTy &DeviceTy::operator=(const DeviceTy &D) {
-  DeviceID = D.DeviceID;
-  RTL = D.RTL;
-  RTLDeviceID = D.RTLDeviceID;
-  IsInit = D.IsInit;
-  HasPendingGlobals = D.HasPendingGlobals;
-  HostDataToTargetMap = D.HostDataToTargetMap;
-  PendingCtorsDtors = D.PendingCtorsDtors;
-  ShadowPtrMap = D.ShadowPtrMap;
-  LoopTripCnt = D.LoopTripCnt;
-
-  return *this;
-}
-
 DeviceTy::DeviceTy(RTLInfoTy *RTL)
     : DeviceID(-1), RTL(RTL), RTLDeviceID(-1), IsInit(false), InitFlag(),
       HasPendingGlobals(false), HostDataToTargetMap(), PendingCtorsDtors(),
@@ -619,7 +597,7 @@ bool device_is_ready(int device_num) {
   }
 
   // Get device info
-  DeviceTy &Device = PM->Devices[device_num];
+  DeviceTy &Device = *PM->Devices[device_num];
 
   DP("Is the device %d (local ID %d) initialized? %d\n", device_num,
      Device.RTLDeviceID, Device.IsInit);

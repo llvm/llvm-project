@@ -74,7 +74,7 @@ EXTERN void omp_target_free(void *device_ptr, int device_num) {
     return;
   }
 
-  PM->Devices[device_num].deleteData(device_ptr);
+  PM->Devices[device_num]->deleteData(device_ptr);
   DP("omp_target_free deallocated device ptr\n");
 }
 
@@ -102,7 +102,7 @@ EXTERN int omp_target_is_present(const void *ptr, int device_num) {
     return false;
   }
 
-  DeviceTy &Device = PM->Devices[device_num];
+  DeviceTy &Device = *PM->Devices[device_num];
   bool IsLast; // not used
   bool IsHostPtr;
   void *TgtPtr = Device.getTgtPtrBegin(const_cast<void *>(ptr), 0, IsLast,
@@ -161,18 +161,18 @@ EXTERN int omp_target_memcpy(void *dst, const void *src, size_t length,
       rc = OFFLOAD_FAIL;
   } else if (src_device == omp_get_initial_device()) {
     DP("copy from host to device\n");
-    DeviceTy &DstDev = PM->Devices[dst_device];
+    DeviceTy &DstDev = *PM->Devices[dst_device];
     AsyncInfoTy AsyncInfo(DstDev);
     rc = DstDev.submitData(dstAddr, srcAddr, length, AsyncInfo);
   } else if (dst_device == omp_get_initial_device()) {
     DP("copy from device to host\n");
-    DeviceTy &SrcDev = PM->Devices[src_device];
+    DeviceTy &SrcDev = *PM->Devices[src_device];
     AsyncInfoTy AsyncInfo(SrcDev);
     rc = SrcDev.retrieveData(dstAddr, srcAddr, length, AsyncInfo);
   } else {
     DP("copy from device to device\n");
-    DeviceTy &SrcDev = PM->Devices[src_device];
-    DeviceTy &DstDev = PM->Devices[dst_device];
+    DeviceTy &SrcDev = *PM->Devices[src_device];
+    DeviceTy &DstDev = *PM->Devices[dst_device];
     // First try to use D2D memcpy which is more efficient. If fails, fall back
     // to unefficient way.
     if (SrcDev.isDataExchangable(DstDev)) {
@@ -281,7 +281,7 @@ EXTERN int omp_target_associate_ptr(const void *host_ptr,
     return OFFLOAD_FAIL;
   }
 
-  DeviceTy &Device = PM->Devices[device_num];
+  DeviceTy &Device = *PM->Devices[device_num];
   void *device_addr = (void *)((uint64_t)device_ptr + (uint64_t)device_offset);
   int rc = Device.associatePtr(const_cast<void *>(host_ptr),
                                const_cast<void *>(device_addr), size);
@@ -311,7 +311,7 @@ EXTERN int omp_target_disassociate_ptr(const void *host_ptr, int device_num) {
     return OFFLOAD_FAIL;
   }
 
-  DeviceTy &Device = PM->Devices[device_num];
+  DeviceTy &Device = *PM->Devices[device_num];
   int rc = Device.disassociatePtr(const_cast<void *>(host_ptr));
   DP("omp_target_disassociate_ptr returns %d\n", rc);
   return rc;
