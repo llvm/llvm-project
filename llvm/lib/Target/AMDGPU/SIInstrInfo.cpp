@@ -8009,7 +8009,8 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
 
   const auto optimizeCmpAnd = [&CmpInstr, SrcReg, CmpValue, MRI,
                                this](int64_t ExpectedValue,
-                                     unsigned SrcSize) -> bool {
+                                     unsigned SrcSize,
+                                     bool IsReversable) -> bool {
     // s_cmp_eq_u32 (s_and_b32 $src, 1), 1 => s_and_b32 $src, 1
     // s_cmp_eq_i32 (s_and_b32 $src, 1), 1 => s_and_b32 $src, 1
     // s_cmp_ge_u32 (s_and_b32 $src, 1), 1 => s_and_b32 $src, 1
@@ -8023,9 +8024,22 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     //
     // If result of the AND is unused except in the compare:
     // s_and_b(32|64) $src, 1 => s_bitcmp1_b(32|64) $src, 0
+    //
+    // s_cmp_eq_u32 (s_and_b32 $src, 1), 0 => s_bitcmp0_b32 $src, 0
+    // s_cmp_eq_i32 (s_and_b32 $src, 1), 0 => s_bitcmp0_b32 $src, 0
+    // s_cmp_eq_u64 (s_and_b64 $src, 1), 0 => s_bitcmp0_b64 $src, 0
+    // s_cmp_lg_u32 (s_and_b32 $src, 1), 1 => s_bitcmp0_b32 $src, 0
+    // s_cmp_lg_i32 (s_and_b32 $src, 1), 1 => s_bitcmp0_b32 $src, 0
+    // s_cmp_lg_u64 (s_and_b64 $src, 1), 1 => s_bitcmp0_b64 $src, 0
 
-    if (CmpValue != ExpectedValue)
-      return false;
+    bool IsReversedCC = false;
+    if (CmpValue != ExpectedValue) {
+      if (!IsReversable)
+        return false;
+      IsReversedCC = CmpValue == (ExpectedValue ^ 1);
+      if (!IsReversedCC)
+        return false;
+    }
 
     MachineInstr *Def = MRI->getUniqueVRegDef(SrcReg);
     if (!Def || Def->getParent() != CmpInstr.getParent())
@@ -8041,6 +8055,10 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     else if (!Def->getOperand(2).isImm() || Def->getOperand(2).getImm() != 1)
       return false;
 
+    Register DefReg = Def->getOperand(0).getReg();
+    if (IsReversedCC && !MRI->hasOneNonDBGUse(DefReg))
+      return false;
+
     for (auto I = std::next(Def->getIterator()), E = CmpInstr.getIterator();
          I != E; ++I) {
       if (I->modifiesRegister(AMDGPU::SCC, &RI) ||
@@ -8052,17 +8070,20 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     SccDef->setIsDead(false);
     CmpInstr.eraseFromParent();
 
-    if (!MRI->use_nodbg_empty(Def->getOperand(0).getReg()))
+    if (!MRI->use_nodbg_empty(DefReg)) {
+      assert(!IsReversedCC);
       return true;
+    }
 
     // Replace AND with unused result with a S_BITCMP.
     // TODO: If s_bitcmp can be used we are not limited to 1 and 0 but can
     //       process any power of 2.
     MachineBasicBlock *MBB = Def->getParent();
 
-    // TODO: Reverse conditions can use S_BITCMP0_*.
-    unsigned NewOpc = (SrcSize == 32) ? AMDGPU::S_BITCMP1_B32
-                                      : AMDGPU::S_BITCMP1_B64;
+    unsigned NewOpc = (SrcSize == 32) ? IsReversedCC ? AMDGPU::S_BITCMP0_B32
+                                                     : AMDGPU::S_BITCMP1_B32
+                                      : IsReversedCC ? AMDGPU::S_BITCMP0_B64
+                                                     : AMDGPU::S_BITCMP1_B64;
 
     BuildMI(*MBB, Def, Def->getDebugLoc(), get(NewOpc))
       .add(*SrcOp)
@@ -8077,26 +8098,28 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     break;
   case AMDGPU::S_CMP_EQ_U32:
   case AMDGPU::S_CMP_EQ_I32:
-  case AMDGPU::S_CMP_GE_U32:
-  case AMDGPU::S_CMP_GE_I32:
   case AMDGPU::S_CMPK_EQ_U32:
   case AMDGPU::S_CMPK_EQ_I32:
+    return optimizeCmpAnd(1, 32, true);
+  case AMDGPU::S_CMP_GE_U32:
+  case AMDGPU::S_CMP_GE_I32:
   case AMDGPU::S_CMPK_GE_U32:
   case AMDGPU::S_CMPK_GE_I32:
-    return optimizeCmpAnd(1, 32);
+    return optimizeCmpAnd(1, 32, false);
   case AMDGPU::S_CMP_EQ_U64:
-    return optimizeCmpAnd(1, 64);
+    return optimizeCmpAnd(1, 64, true);
   case AMDGPU::S_CMP_LG_U32:
   case AMDGPU::S_CMP_LG_I32:
-  case AMDGPU::S_CMP_GT_U32:
-  case AMDGPU::S_CMP_GT_I32:
   case AMDGPU::S_CMPK_LG_U32:
   case AMDGPU::S_CMPK_LG_I32:
+    return optimizeCmpAnd(0, 32, true);
+  case AMDGPU::S_CMP_GT_U32:
+  case AMDGPU::S_CMP_GT_I32:
   case AMDGPU::S_CMPK_GT_U32:
   case AMDGPU::S_CMPK_GT_I32:
-    return optimizeCmpAnd(0, 32);
+    return optimizeCmpAnd(0, 32, false);
   case AMDGPU::S_CMP_LG_U64:
-    return optimizeCmpAnd(0, 64);
+    return optimizeCmpAnd(0, 64, true);
   }
 
   return false;
