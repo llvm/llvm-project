@@ -222,6 +222,17 @@ clang_experimental_DependencyScannerWorker_getFileDependencies_v1(
     CXDependencyScannerWorker Worker, int argc, const char *const *argv,
     const char *WorkingDirectory, CXModuleDiscoveredCallback *MDC,
     void *Context, CXString *error);
+
+/**
+ * Same as \c clang_experimental_DependencyScannerWorker_getFileDependencies_v1,
+ * but get the dependencies by module name alone.
+ */
+CINDEX_LINKAGE CXFileDependencies *
+clang_experimental_DependencyScannerWorker_getDependenciesByModuleName_v0(
+    CXDependencyScannerWorker Worker, int argc, const char *const *argv,
+    const char *ModuleName, const char *WorkingDirectory,
+    CXModuleDiscoveredCallback *MDC, void *Context, CXString *error);
+
 /**
  * @}
  */

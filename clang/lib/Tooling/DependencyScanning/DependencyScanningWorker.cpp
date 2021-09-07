@@ -141,10 +141,11 @@ public:
       StringRef WorkingDirectory, DependencyConsumer &Consumer,
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
       ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings,
-      ScanningOutputFormat Format)
+      ScanningOutputFormat Format, llvm::Optional<StringRef> ModuleName = None,
+      llvm::Optional<llvm::MemoryBufferRef> FakeMemBuffer = None)
       : WorkingDirectory(WorkingDirectory), Consumer(Consumer),
-        DepFS(std::move(DepFS)), PPSkipMappings(PPSkipMappings),
-        Format(Format) {}
+        DepFS(std::move(DepFS)), PPSkipMappings(PPSkipMappings), Format(Format),
+        ModuleName(ModuleName), FakeMemBuffer(FakeMemBuffer) {}
 
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
                      FileManager *FileMgr,
@@ -214,6 +215,16 @@ public:
             .ExcludedConditionalDirectiveSkipMappings = PPSkipMappings;
     }
 
+    if (ModuleName.hasValue()) {
+      SmallString<128> FullPath(*ModuleName);
+      llvm::sys::fs::make_absolute(WorkingDirectory, FullPath);
+      SourceManager &SrcMgr = Compiler.getSourceManager();
+      FileMgr->getVirtualFile(FullPath.c_str(), FakeMemBuffer->getBufferSize(),
+                              0);
+      FileID MainFileID = SrcMgr.createFileID(*FakeMemBuffer);
+      SrcMgr.setMainFileID(MainFileID);
+    }
+
     // Create the dependency collector that will collect the produced
     // dependencies.
     //
@@ -249,7 +260,13 @@ public:
     // the impact of strict context hashing.
     Compiler.getHeaderSearchOpts().ModulesStrictContextHash = true;
 
-    auto Action = std::make_unique<ReadPCHAndPreprocessAction>();
+    std::unique_ptr<FrontendAction> Action;
+
+    if (ModuleName.hasValue())
+      Action = std::make_unique<GetDependenciesByModuleNameAction>(*ModuleName);
+    else
+      Action = std::make_unique<ReadPCHAndPreprocessAction>();
+
     const bool Result = Compiler.ExecuteAction(*Action);
     if (!DepFS)
       FileMgr->clearStatCache();
@@ -262,6 +279,8 @@ private:
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
   ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings;
   ScanningOutputFormat Format;
+  llvm::Optional<StringRef> ModuleName;
+  llvm::Optional<llvm::MemoryBufferRef> FakeMemBuffer;
 };
 
 } // end anonymous namespace
@@ -307,29 +326,53 @@ static llvm::Error runWithDiags(
 
 llvm::Error DependencyScanningWorker::computeDependencies(
     const std::string &Input, StringRef WorkingDirectory,
-    const CompilationDatabase &CDB, DependencyConsumer &Consumer) {
+    const CompilationDatabase &CDB, DependencyConsumer &Consumer,
+    llvm::Optional<StringRef> ModuleName) {
   RealFS->setCurrentWorkingDirectory(WorkingDirectory);
+  std::unique_ptr<llvm::MemoryBuffer> FakeMemBuffer =
+      ModuleName.hasValue() ? llvm::MemoryBuffer::getMemBuffer(" ") : nullptr;
   return runWithDiags(DiagOpts.get(), [&](DiagnosticConsumer &DC) {
     /// Create the tool that uses the underlying file system to ensure that any
     /// file system requests that are made by the driver do not go through the
     /// dependency scanning filesystem.
-    tooling::ClangTool Tool(CDB, Input, PCHContainerOps, RealFS, Files);
+    SmallString<128> FullPath;
+    tooling::ClangTool Tool(CDB,
+                            ModuleName.hasValue() ? ModuleName->str() : Input,
+                            PCHContainerOps, RealFS, Files);
     Tool.clearArgumentsAdjusters();
     Tool.setRestoreWorkingDir(false);
     Tool.setPrintErrorMessage(false);
     Tool.setDiagnosticConsumer(&DC);
-    DependencyScanningAction Action(WorkingDirectory, Consumer, DepFS,
-                                    PPSkipMappings.get(), Format);
+    DependencyScanningAction Action(
+        WorkingDirectory, Consumer, DepFS, PPSkipMappings.get(), Format,
+        ModuleName,
+        FakeMemBuffer
+            ? llvm::Optional<llvm::MemoryBufferRef>(*FakeMemBuffer.get())
+            : None);
+
+    if (ModuleName.hasValue()) {
+      Tool.mapVirtualFile(*ModuleName, FakeMemBuffer->getBuffer());
+      FullPath = *ModuleName;
+      llvm::sys::fs::make_absolute(WorkingDirectory, FullPath);
+      Tool.appendArgumentsAdjuster(
+          [&](const tooling::CommandLineArguments &Args, StringRef FileName) {
+            tooling::CommandLineArguments AdjustedArgs(Args);
+            AdjustedArgs.push_back(std::string(FullPath));
+            return AdjustedArgs;
+          });
+    }
+
     return !Tool.run(&Action);
   });
 }
 
 llvm::Error DependencyScanningWorker::computeDependenciesForClangInvocation(
     StringRef WorkingDirectory, ArrayRef<std::string> Arguments,
-    DependencyConsumer &Consumer) {
+    DependencyConsumer &Consumer, llvm::Optional<StringRef> ModuleName) {
   std::string Input("dependency-scanner-fake-input-file");
   StringRef Output("dependency-scanner-fake-output-file");
   SingleCommandCompilationDatabase CDB(
       CompileCommand(WorkingDirectory, Input, Arguments, Output));
-  return computeDependencies(Input, WorkingDirectory, CDB, Consumer);
+  return computeDependencies(Input, WorkingDirectory, CDB, Consumer,
+                             ModuleName);
 }
