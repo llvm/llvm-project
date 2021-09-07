@@ -255,7 +255,6 @@ set(files
   __support/fuchsia/xlocale.h
   __support/ibm/gettod_zos.h
   __support/ibm/limits.h
-  __support/ibm/locale_mgmt_aix.h
   __support/ibm/locale_mgmt_zos.h
   __support/ibm/nanosleep.h
   __support/ibm/support.h
