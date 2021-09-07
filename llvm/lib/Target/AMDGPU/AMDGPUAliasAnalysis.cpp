@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUAliasAnalysis.h"
+#include "AMDGPU.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Instructions.h"
 
@@ -35,6 +36,10 @@ ImmutablePass *llvm::createAMDGPUAAWrapperPass() {
 
 ImmutablePass *llvm::createAMDGPUExternalAAWrapperPass() {
   return new AMDGPUExternalAAWrapper();
+}
+
+AMDGPUAAWrapperPass::AMDGPUAAWrapperPass() : ImmutablePass(ID) {
+  initializeAMDGPUAAWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
 void AMDGPUAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {

@@ -13,7 +13,6 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPULDSUTILS_H
 #define LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPULDSUTILS_H
 
-#include "AMDGPU.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/Constants.h"
 

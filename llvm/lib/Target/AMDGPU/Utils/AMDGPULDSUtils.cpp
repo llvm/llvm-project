@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPULDSUtils.h"
+#include "AMDGPU.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SetVector.h"

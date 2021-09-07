@@ -97,7 +97,6 @@ protected:
   bool FP64;
   bool FMA;
   bool MIMG_R128;
-  bool IsGCN;
   bool CIInsts;
   bool GFX8Insts;
   bool GFX9Insts;
@@ -165,13 +164,8 @@ protected:
   bool HasArchitectedFlatScratch;
   bool AddNoCarryInsts;
   bool HasUnpackedD16VMem;
-  bool R600ALUInst;
-  bool CaymanISA;
-  bool CFALUBug;
   bool LDSMisalignedBug;
   bool HasMFMAInlineLiteralBug;
-  bool HasVertexCache;
-  short TexVTXClauseSize;
   bool UnalignedBufferAccess;
   bool UnalignedDSAccess;
   bool HasPackedTID;
