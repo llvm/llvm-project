@@ -993,3 +993,17 @@ void PrintDependencyDirectivesSourceMinimizerAction::ExecuteAction() {
   }
   llvm::outs() << Output;
 }
+
+void GetDependenciesByModuleNameAction::ExecuteAction() {
+  CompilerInstance &CI = getCompilerInstance();
+  Preprocessor &PP = CI.getPreprocessor();
+  SourceManager &SM = PP.getSourceManager();
+  FileID MainFileID = SM.getMainFileID();
+  SourceLocation FileStart = SM.getLocForStartOfFile(MainFileID);
+  SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
+  IdentifierInfo *ModuleID = PP.getIdentifierInfo(ModuleName);
+  Path.push_back(std::make_pair(ModuleID, FileStart));
+  auto ModResult = CI.loadModule(FileStart, Path, Module::Hidden, false);
+  PPCallbacks *CB = PP.getPPCallbacks();
+  CB->moduleImport(SourceLocation(), Path, ModResult);
+}
