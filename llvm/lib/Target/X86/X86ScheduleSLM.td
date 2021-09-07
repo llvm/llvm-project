@@ -420,12 +420,12 @@ def  : WriteRes<WriteVecExtractSt, [SLM_FPC_RSV0, SLM_MEC_RSV]> {
 // Horizontal add/sub  instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : SLMWriteResPair<WriteFHAdd,   [SLM_FPC_RSV01], 6, [6], 4>;
-defm : SLMWriteResPair<WriteFHAddY,  [SLM_FPC_RSV01], 6, [6], 4>;
+defm : SLMWriteResPair<WriteFHAdd,   [SLM_FPC_RSV1],  6, [6], 4, 1>;
+defm : X86WriteResPairUnsupported<WriteFHAddY>;
 defm : X86WriteResPairUnsupported<WriteFHAddZ>;
-defm : SLMWriteResPair<WritePHAdd,   [SLM_FPC_RSV01], 1>;
-defm : SLMWriteResPair<WritePHAddX,  [SLM_FPC_RSV01], 1>;
-defm : SLMWriteResPair<WritePHAddY,  [SLM_FPC_RSV01], 1>;
+defm : SLMWriteResPair<WritePHAdd,   [SLM_FPC_RSV01], 6, [6], 3, 1>;
+defm : SLMWriteResPair<WritePHAddX,  [SLM_FPC_RSV01], 6, [6], 3, 1>;
+defm : X86WriteResPairUnsupported<WritePHAddY>;
 defm : X86WriteResPairUnsupported<WritePHAddZ>;
 
 // String instructions.
