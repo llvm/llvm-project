@@ -687,6 +687,18 @@ public:
                                    "Not implemented");
   }
 
+  /// Save core dump into the specified file.
+  ///
+  /// \param[in] outfile
+  ///     Path to store core dump in.
+  ///
+  /// \return
+  ///     true if saved successfully, false if saving the core dump
+  ///     is not supported by the plugin, error otherwise.
+  virtual llvm::Expected<bool> SaveCore(llvm::StringRef outfile) {
+    return false;
+  }
+
 protected:
   virtual JITLoaderList &GetJITLoaders();
 

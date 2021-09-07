@@ -18793,6 +18793,31 @@ bool ARMTargetLowering::isLegalAddImmediate(int64_t Imm) const {
   return AbsImm >= 0 && AbsImm <= 255;
 }
 
+// Return false to prevent folding
+// (mul (add r, c0), c1) -> (add (mul r, c1), c0*c1) in DAGCombine,
+// if the folding leads to worse code.
+bool ARMTargetLowering::isMulAddWithConstProfitable(
+    const SDValue &AddNode, const SDValue &ConstNode) const {
+  // Let the DAGCombiner decide for vector types and large types.
+  const EVT VT = AddNode.getValueType();
+  if (VT.isVector() || VT.getScalarSizeInBits() > 32)
+    return true;
+
+  // It is worse if c0 is legal add immediate, while c1*c0 is not
+  // and has to be composed by at least two instructions.
+  const ConstantSDNode *C0Node = cast<ConstantSDNode>(AddNode.getOperand(1));
+  const ConstantSDNode *C1Node = cast<ConstantSDNode>(ConstNode);
+  const int64_t C0 = C0Node->getSExtValue();
+  APInt CA = C0Node->getAPIntValue() * C1Node->getAPIntValue();
+  if (!isLegalAddImmediate(C0) || isLegalAddImmediate(CA.getSExtValue()))
+    return true;
+  if (ConstantMaterializationCost((unsigned)CA.getZExtValue(), Subtarget) > 1)
+    return false;
+
+  // Default to true and let the DAGCombiner decide.
+  return true;
+}
+
 static bool getARMIndexedAddressParts(SDNode *Ptr, EVT VT,
                                       bool isSEXTLoad, SDValue &Base,
                                       SDValue &Offset, bool &isInc,

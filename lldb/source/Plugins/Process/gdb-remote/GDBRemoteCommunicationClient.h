@@ -547,6 +547,8 @@ public:
   SendTraceGetBinaryData(const TraceGetBinaryDataRequest &request,
                          std::chrono::seconds interrupt_timeout);
 
+  bool GetSaveCoreSupported() const;
+
 protected:
   LazyBool m_supports_not_sending_acks = eLazyBoolCalculate;
   LazyBool m_supports_thread_suffix = eLazyBoolCalculate;
@@ -585,6 +587,7 @@ protected:
   LazyBool m_supports_error_string_reply = eLazyBoolCalculate;
   LazyBool m_supports_multiprocess = eLazyBoolCalculate;
   LazyBool m_supports_memory_tagging = eLazyBoolCalculate;
+  LazyBool m_supports_qSaveCore = eLazyBoolCalculate;
 
   bool m_supports_qProcessInfoPID : 1, m_supports_qfProcessInfo : 1,
       m_supports_qUserName : 1, m_supports_qGroupName : 1,

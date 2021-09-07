@@ -1,5 +1,4 @@
-! RUN: %S/test_folding.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_folding.py %s %flang_fc1
 ! Check array sizes with varying extents, including extents where the upper
 ! bound is less than the lower bound
 module m

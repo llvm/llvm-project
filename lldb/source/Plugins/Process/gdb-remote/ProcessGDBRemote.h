@@ -235,6 +235,8 @@ public:
   void DidVForkDone() override;
   void DidExec() override;
 
+  llvm::Expected<bool> SaveCore(llvm::StringRef outfile) override;
+
 protected:
   friend class ThreadGDBRemote;
   friend class GDBRemoteCommunicationClient;

@@ -2140,7 +2140,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   } else if (NumBytes) {
     // Adjust stack pointer back: ESP += numbytes.
     emitSPUpdate(MBB, MBBI, DL, NumBytes, /*InEpilogue=*/true);
-    if (!hasFP(MF) && NeedsDwarfCFI) {
+    if (!HasFP && NeedsDwarfCFI) {
       // Define the current CFA rule to use the provided offset.
       BuildCFI(MBB, MBBI, DL,
                MCCFIInstruction::cfiDefCfaOffset(
@@ -2158,7 +2158,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   if (NeedsWin64CFI && MF.hasWinCFI())
     BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_Epilogue));
 
-  if (!hasFP(MF) && NeedsDwarfCFI) {
+  if (!HasFP && NeedsDwarfCFI) {
     MBBI = FirstCSPop;
     int64_t Offset = -CSSize - SlotSize;
     // Mark callee-saved pop instruction.
@@ -2178,9 +2178,8 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   // Emit DWARF info specifying the restores of the callee-saved registers.
   // For epilogue with return inside or being other block without successor,
   // no need to generate .cfi_restore for callee-saved registers.
-  if (NeedsDwarfCFI && !MBB.succ_empty() && !MBB.isReturnBlock()) {
+  if (NeedsDwarfCFI && !MBB.succ_empty())
     emitCalleeSavedFrameMoves(MBB, AfterPop, DL, false);
-  }
 
   if (Terminator == MBB.end() || !isTailCallOpcode(Terminator->getOpcode())) {
     // Add the return addr area delta back since we are not tail calling.

@@ -22,6 +22,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -109,6 +110,10 @@ struct TestLinalgTransforms
   ListOption<unsigned> testInterchangePattern{
       *this, "test-interchange-pattern", llvm::cl::MiscFlags::CommaSeparated,
       llvm::cl::desc("Test the interchange pattern.")};
+  ListOption<unsigned> testTiledLoopPeeling{
+      *this, "test-tiled-loop-peeling",
+      llvm::cl::desc("Test peeling of linalg.tiled_loop ops"),
+      llvm::cl::OneOrMore, llvm::cl::MiscFlags::CommaSeparated};
 };
 } // end anonymous namespace
 
@@ -575,6 +580,65 @@ static void applyInterchangePattern(FuncOp funcOp,
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(interchangePattern));
 }
 
+static constexpr char kPeeledLoopsLabel[] = "__peeled_loops__";
+
+namespace {
+/// Peel TiledLoopOps, i.e., split them into two loops: One loop where the
+/// `idx`-th loop contains only "full" iterations and a second loop for the
+/// remaining partial iteration (if any).
+struct TiledLoopPeelingPattern : public OpRewritePattern<TiledLoopOp> {
+  TiledLoopPeelingPattern(MLIRContext *ctx, int64_t idx)
+      : OpRewritePattern<TiledLoopOp>(ctx), idx(idx) {}
+
+  LogicalResult matchAndRewrite(TiledLoopOp loopOp,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<int64_t> peeledLoops;
+    if (loopOp->hasAttr(kPeeledLoopsLabel)) {
+      auto attr = loopOp->getAttr(kPeeledLoopsLabel).cast<ArrayAttr>();
+      peeledLoops =
+          llvm::to_vector<4>(llvm::map_range(attr, [](Attribute attr) {
+            return attr.cast<IntegerAttr>().getInt();
+          }));
+      // Check if the loop was already peeled.
+      if (llvm::find(peeledLoops, idx) != peeledLoops.end())
+        return failure();
+    }
+
+    if (static_cast<int64_t>(loopOp.iterator_types().size()) <= idx)
+      return failure();
+
+    // Peel loop and canonicalize.
+    TiledLoopOp result;
+    if (failed(linalg::peelAndCanonicalizeTiledLoop(rewriter, loopOp, idx,
+                                                    result)))
+      return failure();
+    peeledLoops.push_back(idx);
+
+    // Apply label, so that the same loop is not rewritten a second time.
+    rewriter.updateRootInPlace(loopOp, [&]() {
+      loopOp->setAttr(kPeeledLoopsLabel, rewriter.getI64ArrayAttr(peeledLoops));
+    });
+    result->setAttr(kPeeledLoopsLabel, rewriter.getI64ArrayAttr(peeledLoops));
+    return success();
+  }
+
+  /// Index of loop to peel.
+  int64_t idx;
+};
+} // namespace
+
+static void applyTiledLoopPeelingPattern(FuncOp funcOp,
+                                         ArrayRef<unsigned> loops) {
+  MLIRContext *ctx = funcOp.getContext();
+  RewritePatternSet patterns(ctx);
+  for (unsigned idx : loops)
+    patterns.add<TiledLoopPeelingPattern>(ctx, idx);
+  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+
+  // Drop the marker.
+  funcOp.walk([](TiledLoopOp op) { op->removeAttr(kPeeledLoopsLabel); });
+}
+
 /// Apply transformations specified as patterns.
 void TestLinalgTransforms::runOnFunction() {
   auto lambda = [&](void *) {
@@ -612,6 +676,8 @@ void TestLinalgTransforms::runOnFunction() {
     return applyGeneralizePadTensorPatterns(getFunction());
   if (testSwapSubTensorPadTensor)
     return applyExtractSliceOfPadTensorSwapPattern(getFunction());
+  if (testTiledLoopPeeling.hasValue())
+    return applyTiledLoopPeelingPattern(getFunction(), testTiledLoopPeeling);
   if (testTileAndPadPattern)
     return applyTileAndPadPattern(getFunction(), tileSizesForPadding);
   if (testHoistPadding) {

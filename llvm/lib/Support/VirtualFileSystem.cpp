@@ -442,7 +442,7 @@ std::error_code OverlayFileSystem::isLocal(const Twine &Path, bool &Result) {
 std::error_code
 OverlayFileSystem::getRealPath(const Twine &Path,
                                SmallVectorImpl<char> &Output) const {
-  for (auto &FS : FSList)
+  for (const auto &FS : FSList)
     if (FS->exists(Path))
       return FS->getRealPath(Path, Output);
   return errc::no_such_file_or_directory;

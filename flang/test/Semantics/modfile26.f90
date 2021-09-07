@@ -1,5 +1,4 @@
-! RUN: %S/test_modfile.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_modfile.py %s %flang_fc1
 ! Intrinsics SELECTED_INT_KIND, SELECTED_REAL_KIND, PRECISION, RANGE,
 ! RADIX, DIGITS
 

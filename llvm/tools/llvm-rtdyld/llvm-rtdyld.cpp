@@ -285,7 +285,9 @@ private:
   uintptr_t SlabSize = 0;
   uintptr_t CurrentSlabOffset = 0;
   SectionIDMap *SecIDMap = nullptr;
+#if defined(__x86_64__) && defined(__ELF__)
   unsigned UsedTLSStorage = 0;
+#endif
 };
 
 uint8_t *TrivialMemoryManager::allocateCodeSection(uintptr_t Size,
