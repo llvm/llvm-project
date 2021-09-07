@@ -119,7 +119,10 @@ def AssumeAlignmentOp : MemRef_Op<"assume_alignment"> {
 // AllocOp
 //===----------------------------------------------------------------------===//
 
-def MemRef_AllocOp : AllocLikeOp<"alloc", DefaultResource> {
+def MemRef_AllocOp : AllocLikeOp<"alloc", DefaultResource, [
+    DeclareOpInterfaceMethods<AllocationOpInterface,
+      ["buildDealloc", "buildClone"]>]
+  > {
   let summary = "memory allocation operation";
   let description = [{
     The `alloc` operation allocates a region of memory, as specified by its
@@ -413,7 +416,9 @@ def MemRef_CastOp : MemRef_Op<"cast", [
 
 def CloneOp : MemRef_Op<"clone", [
     CopyOpInterface,
-    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+    DeclareOpInterfaceMethods<AllocationOpInterface,
+      ["buildDealloc", "buildClone"]>
   ]> {
   let builders = [
     OpBuilder<(ins "Value":$value), [{
