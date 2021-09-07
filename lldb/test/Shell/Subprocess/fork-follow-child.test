@@ -1,14 +1,9 @@
 # REQUIRES: native
-# UNSUPPORTED: system-darwin
 # UNSUPPORTED: system-windows
 # RUN: %clangxx_host %p/Inputs/fork.cpp -DTEST_FORK=fork -o %t
 # RUN: %lldb -b -s %s %t | FileCheck %s
+settings set target.process.follow-fork-mode child
 b parent_func
-b child_func
 process launch
-# CHECK-NOT: function run in parent
-# CHECK: stop reason = breakpoint
-# CHECK-NEXT: parent_func
-continue
 # CHECK: function run in parent
 # CHECK: child exited: 0

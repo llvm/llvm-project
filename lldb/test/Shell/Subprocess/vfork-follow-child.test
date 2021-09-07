@@ -1,0 +1,9 @@
+# REQUIRES: native
+# UNSUPPORTED: system-windows
+# RUN: %clangxx_host %p/Inputs/fork.cpp -DTEST_FORK=vfork -o %t
+# RUN: %lldb -b -s %s %t | FileCheck %s
+settings set target.process.follow-fork-mode child
+b parent_func
+process launch
+# CHECK: function run in parent
+# CHECK: child exited: 0
