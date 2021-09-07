@@ -1,26 +1,14 @@
-RUN: not %lldb-server gdbserver --fd 2>&1 | FileCheck --check-prefixes=FD1,GDB_REMOTE_ALL %s
+RUN: %lldb-server gdbserver --fd 2>&1 | FileCheck --check-prefixes=FD1,ALL %s
 FD1: error: --fd: missing argument
 
-RUN: not %lldb-server gdbserver --fd three 2>&1 | FileCheck --check-prefixes=FD2,GDB_REMOTE_ALL %s
+RUN: %lldb-server gdbserver --fd three 2>&1 | FileCheck --check-prefixes=FD2,ALL %s
 FD2: error: invalid '--fd' argument
 
-RUN: not %lldb-server gdbserver --bogus 2>&1 | FileCheck --check-prefixes=BOGUS,GDB_REMOTE_ALL %s
+RUN: %lldb-server gdbserver --bogus 2>&1 | FileCheck --check-prefixes=BOGUS,ALL %s
 BOGUS: error: unknown argument '--bogus'
 
-RUN: not %lldb-server gdbserver 2>&1 | FileCheck --check-prefixes=CONN,GDB_REMOTE_ALL %s
+RUN: %lldb-server gdbserver 2>&1 | FileCheck --check-prefixes=CONN,ALL %s
 CONN: error: no connection arguments
 
-RUN: %lldb-server platform 2>&1 | FileCheck --check-prefixes=LLDB_PLATFORM_ALL %s
-
-RUN: %lldb-server platform --fd 2>&1 | FileCheck --check-prefixes=FD3,LLDB_PLATFORM_ALL %s
-FD3: lldb-server: unrecognized option `--fd'
-
-RUN: not %lldb-server platform --min-gdbserver-port 42 --max-gdbserver-port 43 2>&1 | FileCheck --check-prefixes=PORT1,LLDB_PLATFORM_ALL %s
-PORT1: error: port number 42 is not in the valid user port range of 1024 - 49152 
-
-RUN: %lldb-server version 2>&1 | FileCheck --check-prefixes=VERSION %s
-VERSION: lldb version
-
-GDB_REMOTE_ALL: Use '{{.*}} g[dbserver] --help' for a complete list of options.
-LLDB_PLATFORM_ALL: lldb-server platform [--log-file log-file-name] [--log-channels log-channel-list] [--port-file port-file-path] --server --listen port 
+ALL: Use '{{.*}} g[dbserver] --help' for a complete list of options.
 
