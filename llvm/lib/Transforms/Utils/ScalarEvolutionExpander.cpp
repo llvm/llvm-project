@@ -2490,12 +2490,11 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
   //   Start - |Step| * Backedge > Start
   Value *Add = nullptr, *Sub = nullptr;
   if (PointerType *ARPtrTy = dyn_cast<PointerType>(ARTy)) {
-    const SCEV *MulS = SE.getSCEV(MulV);
-    const SCEV *NegMulS = SE.getNegativeSCEV(MulS);
-    Add = Builder.CreateBitCast(expandAddToGEP(MulS, ARPtrTy, Ty, StartValue),
-                                ARPtrTy);
-    Sub = Builder.CreateBitCast(
-        expandAddToGEP(NegMulS, ARPtrTy, Ty, StartValue), ARPtrTy);
+    StartValue = InsertNoopCastOfTo(
+        StartValue, Builder.getInt8PtrTy(ARPtrTy->getAddressSpace()));
+    Value *NegMulV = Builder.CreateNeg(MulV);
+    Add = Builder.CreateGEP(Builder.getInt8Ty(), StartValue, MulV);
+    Sub = Builder.CreateGEP(Builder.getInt8Ty(), StartValue, NegMulV);
   } else {
     Add = Builder.CreateAdd(StartValue, MulV);
     Sub = Builder.CreateSub(StartValue, MulV);
