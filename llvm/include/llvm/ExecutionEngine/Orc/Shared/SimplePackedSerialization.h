@@ -296,6 +296,31 @@ public:
   static constexpr bool available = true;
 };
 
+/// Specialized SPSSequence<char> -> ArrayRef<char> serialization.
+///
+/// On deserialize, points directly into the input buffer.
+template <> class SPSSerializationTraits<SPSSequence<char>, ArrayRef<char>> {
+public:
+  static size_t size(const ArrayRef<char> &A) {
+    return SPSArgList<uint64_t>::size(static_cast<uint64_t>(A.size())) +
+           A.size();
+  }
+
+  static bool serialize(SPSOutputBuffer &OB, const ArrayRef<char> &A) {
+    if (!SPSArgList<uint64_t>::serialize(OB, static_cast<uint64_t>(A.size())))
+      return false;
+    return OB.write(A.data(), A.size());
+  }
+
+  static bool deserialize(SPSInputBuffer &IB, ArrayRef<char> &A) {
+    uint64_t Size;
+    if (!SPSArgList<uint64_t>::deserialize(IB, Size))
+      return false;
+    A = {IB.data(), Size};
+    return IB.skip(Size);
+  }
+};
+
 /// 'Trivial' sequence serialization: Sequence is serialized as a uint64_t size
 /// followed by a for-earch loop over the elements of the sequence to serialize
 /// each of them.
