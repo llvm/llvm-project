@@ -8,12 +8,9 @@
 ; DEFAULT-NOT: inlined into
 
 ; PREINLINE-NOT: inlined into
-; `[main:3 @ _Z5funcAi]` does not have preinline decision, so it's up for loader inliner to decided.
 ; PREINLINE: '_Z5funcAi' inlined into 'main'
-; `[main:3 @ _Z5funcAi:1 @ _Z8funcLeafi]` is inlined according to preinline decision.
 ; PREINLINE: '_Z8funcLeafi' inlined into 'main'
-; Even though `[main:3.1 @ _Z5funcBi]` context is marked should inline, `_Z5funcBi` is a noinline function, so we honor that and don't inline.
-; When _Z5funcBi is promoted to be top level context-less profile, `[_Z5funcBi:1 @ _Z8funcLeafi]` becomes synthetic context, so preinline decision is ignored and we don't inline `_Z8funcLeafi`.
+; PREINLINE: '_Z8funcLeafi' inlined into '_Z5funcBi'
 ; PREINLINE-NOT: inlined into
 
 @factor = dso_local global i32 3, align 4, !dbg !0
