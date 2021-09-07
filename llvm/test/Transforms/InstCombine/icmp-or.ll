@@ -113,9 +113,9 @@ define i1 @set_low_bit_mask_sle(i8 %x) {
 
 define i1 @eq_const_mask(i8 %x, i8 %y) {
 ; CHECK-LABEL: @eq_const_mask(
-; CHECK-NEXT:    [[B0:%.*]] = or i8 [[X:%.*]], 42
-; CHECK-NEXT:    [[B1:%.*]] = or i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[B0]], [[B1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], -43
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %b0 = or i8 %x, 42
@@ -126,9 +126,9 @@ define i1 @eq_const_mask(i8 %x, i8 %y) {
 
 define <2 x i1> @ne_const_mask(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @ne_const_mask(
-; CHECK-NEXT:    [[B0:%.*]] = or <2 x i8> [[X:%.*]], <i8 -106, i8 5>
-; CHECK-NEXT:    [[B1:%.*]] = or <2 x i8> [[Y:%.*]], <i8 -106, i8 5>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[B0]], [[B1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i8> [[TMP1]], <i8 105, i8 -6>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %b0 = or <2 x i8> %x, <i8 150, i8 5>
@@ -136,6 +136,8 @@ define <2 x i1> @ne_const_mask(<2 x i8> %x, <2 x i8> %y) {
   %cmp = icmp ne <2 x i8> %b0, %b1
   ret <2 x i1> %cmp
 }
+
+; negative test - predicate
 
 define i1 @eq_const_mask_not_equality(i8 %x, i8 %y) {
 ; CHECK-LABEL: @eq_const_mask_not_equality(
@@ -150,6 +152,8 @@ define i1 @eq_const_mask_not_equality(i8 %x, i8 %y) {
   ret i1 %cmp
 }
 
+; negative test - mismatched constants
+
 define i1 @eq_const_mask_not_same(i8 %x, i8 %y) {
 ; CHECK-LABEL: @eq_const_mask_not_same(
 ; CHECK-NEXT:    [[B0:%.*]] = or i8 [[X:%.*]], 5
@@ -163,6 +167,8 @@ define i1 @eq_const_mask_not_same(i8 %x, i8 %y) {
   ret i1 %cmp
 }
 
+; negative test - mismatched logic
+
 define i1 @eq_const_mask_wrong_opcode(i8 %x, i8 %y) {
 ; CHECK-LABEL: @eq_const_mask_wrong_opcode(
 ; CHECK-NEXT:    [[B0:%.*]] = or i8 [[X:%.*]], 5
@@ -175,6 +181,8 @@ define i1 @eq_const_mask_wrong_opcode(i8 %x, i8 %y) {
   %cmp = icmp eq i8 %b0, %b1
   ret i1 %cmp
 }
+
+; negative test - no extra uses
 
 define i1 @eq_const_mask_use1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @eq_const_mask_use1(
@@ -190,6 +198,8 @@ define i1 @eq_const_mask_use1(i8 %x, i8 %y) {
   %cmp = icmp eq i8 %b0, %b1
   ret i1 %cmp
 }
+
+; negative test - no extra uses
 
 define i1 @eq_const_mask_use2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @eq_const_mask_use2(
