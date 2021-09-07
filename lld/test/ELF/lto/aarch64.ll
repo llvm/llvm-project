@@ -10,6 +10,7 @@
 ; RUN: ld.lld %t/be.o -o %t/be
 ; RUN: llvm-readobj -h %t/be | FileCheck %s --check-prefixes=CHECK,BE
 
+; CHECK:   Class: 64-bit
 ; LE:      DataEncoding: LittleEndian
 ; BE:      DataEncoding: BigEndian
 ; CHECK: Machine: EM_AARCH64
