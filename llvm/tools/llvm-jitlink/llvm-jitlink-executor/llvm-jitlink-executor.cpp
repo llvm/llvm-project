@@ -13,8 +13,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/Orc/Shared/FDRawByteChannel.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
-#include "llvm/ExecutionEngine/Orc/TargetProcess/OrcRPCTPCServer.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleRemoteEPCServer.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
@@ -90,8 +90,6 @@ int openListener(std::string Host, std::string PortStr) {
   static constexpr int ConnectionQueueLen = 1;
   listen(SockFD, ConnectionQueueLen);
 
-  outs() << "Listening at " << Host << ":" << PortStr << "\n";
-
 #if defined(_AIX)
   assert(Hi_32(AI->ai_addrlen) == 0 && "Field is a size_t on 64-bit AIX");
   socklen_t AddrLen = Lo_32(AI->ai_addrlen);
@@ -133,24 +131,15 @@ int main(int argc, char *argv[]) {
                           "' is not a valid integer");
 
       InFD = OutFD = openListener(Host.str(), PortStr.str());
-      outs() << "Connection established. Running OrcRPCTPCServer...\n";
     } else
       printErrorAndExit("invalid specifier type \"" + SpecifierType + "\"");
   }
 
-  ExitOnErr.setBanner(std::string(argv[0]) + ":");
+  auto Server =
+      ExitOnErr(SimpleRemoteEPCServer::Create<FDSimpleRemoteEPCTransport>(
+          std::make_unique<SimpleRemoteEPCServer::ThreadDispatcher>(),
+          SimpleRemoteEPCServer::defaultBootstrapSymbols(), InFD, OutFD));
 
-  using JITLinkExecutorEndpoint =
-      shared::SingleThreadedRPCEndpoint<shared::FDRawByteChannel>;
-
-  shared::registerStringError<shared::FDRawByteChannel>();
-
-  shared::FDRawByteChannel C(InFD, OutFD);
-  JITLinkExecutorEndpoint EP(C, true);
-  OrcRPCTPCServer<JITLinkExecutorEndpoint> Server(EP);
-  Server.setProgramName(std::string("llvm-jitlink-executor"));
-
-  ExitOnErr(Server.run());
-
+  ExitOnErr(Server->waitForDisconnect());
   return 0;
 }
