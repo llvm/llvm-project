@@ -412,10 +412,13 @@ KnownBits KnownBits::abs(bool IntMinIsPoison) const {
   return KnownAbs;
 }
 
-KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS) {
+KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
+                         bool SelfMultiply) {
   unsigned BitWidth = LHS.getBitWidth();
   assert(BitWidth == RHS.getBitWidth() && !LHS.hasConflict() &&
          !RHS.hasConflict() && "Operand mismatch");
+  assert((!SelfMultiply || (LHS.One == RHS.One && LHS.Zero == RHS.Zero)) &&
+         "Self multiplication knownbits mismatch");
 
   // Compute a conservative estimate for high known-0 bits.
   unsigned LeadZ =
@@ -489,6 +492,14 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS) {
   Res.Zero.setHighBits(LeadZ);
   Res.Zero |= (~BottomKnown).getLoBits(ResultBitsKnown);
   Res.One = BottomKnown.getLoBits(ResultBitsKnown);
+
+  // If we're self-multiplying then bit[1] is guaranteed to be zero.
+  if (SelfMultiply && BitWidth > 1) {
+    assert(Res.One[1] == 0 &&
+           "Self-multiplication failed Quadratic Reciprocity!");
+    Res.Zero.setBit(1);
+  }
+
   return Res;
 }
 
