@@ -7909,6 +7909,12 @@ MipsABIInfo::classifyArgumentType(QualType Ty, uint64_t &Offset) const {
     if (TySize == 0)
       return ABIArgInfo::getIgnore();
 
+    bool IsNanoMips = getTarget().getTriple().isNanoMips();
+    if (TySize > 64 && IsNanoMips) {
+      Offset = OrigOffset + MinABIStackAlignInBytes;
+      return getNaturalAlignIndirect(Ty, false);
+    }
+
     if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
       Offset = OrigOffset + MinABIStackAlignInBytes;
       return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
@@ -8061,19 +8067,21 @@ void MipsABIInfo::computeInfo(CGFunctionInfo &FI) const {
 Address MipsABIInfo::EmitVAArgNanoMips(CodeGenFunction &CGF,
                                        Address VAListAddr,
                                        QualType OrigTy) const {
-  QualType Ty = OrigTy;
+  QualType Ty = OrigTy.getCanonicalType();
+  llvm::Type *AddressTy = CGF.ConvertTypeForMem(OrigTy)->getPointerTo();
   CharUnits Align = CGF.getContext().getTypeAlignInChars(Ty);
   CharUnits Size = CGF.getContext().getTypeSizeInChars(Ty);
+  // Types larger than 8 bytes are passed by reference.
+  bool IsIndirect = (Size.getQuantity() > 8) ? true : false;
+  if (IsIndirect) {
+    Align = Size = CharUnits::fromQuantity(4);
+    AddressTy = AddressTy->getPointerTo();
+  }
   uint64_t OSize, RSize;
   CGBuilderTy &Builder = CGF.Builder;
   CharUnits RegWidth = CharUnits::fromQuantity(4);
   uint64_t RegBits = 32;
-  llvm::Type *AddressTy = CGF.ConvertTypeForMem(OrigTy)->getPointerTo();
-  llvm::Type *PtrArithTy;
-  if (RegWidth.getQuantity() == 4)
-    PtrArithTy = llvm::Type::getInt32Ty(getVMContext());
-  else
-    PtrArithTy = llvm::Type::getInt64Ty(getVMContext());
+  llvm::Type *PtrArithTy = llvm::Type::getInt32Ty(getVMContext());
 
   // Control flow structure we want:
   // if (offset > 0) {
@@ -8172,6 +8180,9 @@ Address MipsABIInfo::EmitVAArgNanoMips(CodeGenFunction &CGF,
                                     Address(Addr, Align), OffsetGEZeroBB,
                                     Address(AddrOverflow, Align),OverflowBB,
                                     "addr");
+  if (IsIndirect)
+    ArgAddress = Address(CGF.Builder.CreateLoad(ArgAddress), Align);
+
   return ArgAddress;
 }
 
