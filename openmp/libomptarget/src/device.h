@@ -58,10 +58,6 @@ private:
   struct StatesTy {
     StatesTy(uint64_t DRC, uint64_t HRC)
         : DynRefCount(DRC), HoldRefCount(HRC) {}
-    /// this copy constructor is added to make HostDataToTargetTy copiable
-    /// when it is used by std::set copy constructor
-    StatesTy(const StatesTy &S)
-        : DynRefCount(S.DynRefCount), HoldRefCount(S.HoldRefCount) {}
     /// The dynamic reference count is the standard reference count as of OpenMP
     /// 4.5.  The hold reference count is an OpenMP extension for the sake of
     /// OpenACC support.
@@ -102,12 +98,6 @@ public:
                                                            !UseHoldRefCount ? 0
                                                            : IsINF ? INFRefCount
                                                                    : 1)) {}
-
-  HostDataToTargetTy(const HostDataToTargetTy &Entry)
-      : HstPtrBase(Entry.HstPtrBase), HstPtrBegin(Entry.HstPtrBegin),
-        HstPtrEnd(Entry.HstPtrEnd), HstPtrName(Entry.HstPtrName),
-        TgtPtrBegin(Entry.TgtPtrBegin),
-        States(std::make_unique<StatesTy>(*Entry.States)) {}
 
   /// Get the total reference count.  This is smarter than just getDynRefCount()
   /// + getHoldRefCount() because it handles the case where at least one is
@@ -273,12 +263,9 @@ struct DeviceTy {
   std::map<int32_t, uint64_t> LoopTripCnt;
 
   DeviceTy(RTLInfoTy *RTL);
-
-  // The existence of mutexes makes DeviceTy non-copyable. We need to
-  // provide a copy constructor and an assignment operator explicitly.
-  DeviceTy(const DeviceTy &D);
-
-  DeviceTy &operator=(const DeviceTy &D);
+  // DeviceTy is not copyable
+  DeviceTy(const DeviceTy &D) = delete;
+  DeviceTy &operator=(const DeviceTy &D) = delete;
 
   ~DeviceTy();
 
@@ -391,9 +378,6 @@ private:
   void init(); // To be called only via DeviceTy::initOnce()
 };
 
-/// Map between Device ID (i.e. openmp device id) and its DeviceTy.
-typedef std::vector<DeviceTy> DevicesTy;
-
 extern bool device_is_ready(int device_num);
 
 /// Struct for the data required to handle plugins
@@ -402,7 +386,7 @@ struct PluginManager {
   RTLsTy RTLs;
 
   /// Devices associated with RTLs
-  DevicesTy Devices;
+  std::vector<std::unique_ptr<DeviceTy>> Devices;
   std::mutex RTLsMtx; ///< For RTLs and Devices
 
   /// Translation table retreived from the binary

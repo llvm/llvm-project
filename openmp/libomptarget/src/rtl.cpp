@@ -309,7 +309,7 @@ static void RegisterGlobalCtorsDtorsForImage(__tgt_bin_desc *desc,
                                              RTLInfoTy *RTL) {
 
   for (int32_t i = 0; i < RTL->NumberOfDevices; ++i) {
-    DeviceTy &Device = PM->Devices[RTL->Idx + i];
+    DeviceTy &Device = *PM->Devices[RTL->Idx + i];
     Device.PendingGlobalsMtx.lock();
     Device.HasPendingGlobals = true;
     for (__tgt_offload_entry *entry = img->EntriesBegin;
@@ -379,14 +379,14 @@ void RTLsTy::initRTLonce(RTLInfoTy &R) {
   // If this RTL is not already in use, initialize it.
   if (!R.isUsed && R.NumberOfDevices != 0) {
     // Initialize the device information for the RTL we are about to use.
-    DeviceTy device(&R);
-    size_t Start = PM->Devices.size();
-    PM->Devices.resize(Start + R.NumberOfDevices, device);
+    const size_t Start = PM->Devices.size();
+    PM->Devices.reserve(Start + R.NumberOfDevices);
     for (int32_t device_id = 0; device_id < R.NumberOfDevices; device_id++) {
+      PM->Devices.push_back(std::make_unique<DeviceTy>(&R));
       // global device ID
-      PM->Devices[Start + device_id].DeviceID = Start + device_id;
+      PM->Devices[Start + device_id]->DeviceID = Start + device_id;
       // RTL local device ID
-      PM->Devices[Start + device_id].RTLDeviceID = device_id;
+      PM->Devices[Start + device_id]->RTLDeviceID = device_id;
     }
 
     // Initialize the index of this RTL and save it in the used RTLs.
@@ -497,7 +497,7 @@ void RTLsTy::UnregisterLib(__tgt_bin_desc *desc) {
       // Execute dtors for static objects if the device has been used, i.e.
       // if its PendingCtors list has been emptied.
       for (int32_t i = 0; i < FoundRTL->NumberOfDevices; ++i) {
-        DeviceTy &Device = PM->Devices[FoundRTL->Idx + i];
+        DeviceTy &Device = *PM->Devices[FoundRTL->Idx + i];
         Device.PendingGlobalsMtx.lock();
         if (Device.PendingCtorsDtors[desc].PendingCtors.empty()) {
           AsyncInfoTy AsyncInfo(Device);

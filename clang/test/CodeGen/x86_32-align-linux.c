@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -w -fblocks -ffreestanding -triple i386-pc-linux-gnu -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -w -fblocks -ffreestanding -triple i386-pc-linux-gnu -target-feature +avx -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -w -fblocks -ffreestanding -triple i386-pc-linux-gnu -target-feature +avx512f -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -w -fblocks -ffreestanding -triple i386-pc-linux-mingw -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -w -fblocks -ffreestanding -triple i386-pc-linux-mingw -target-feature +avx -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -w -fblocks -ffreestanding -triple i386-pc-linux-mingw -target-feature +avx512f -emit-llvm -o - %s | FileCheck %s
 
 #include <immintrin.h>
 

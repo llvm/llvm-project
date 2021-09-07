@@ -970,6 +970,7 @@ def : RWSysReg<"PMUSERENR_EL0",      0b11, 0b011, 0b1001, 0b1110, 0b000>;
 def : RWSysReg<"PMINTENSET_EL1",     0b11, 0b000, 0b1001, 0b1110, 0b001>;
 def : RWSysReg<"PMINTENCLR_EL1",     0b11, 0b000, 0b1001, 0b1110, 0b010>;
 def : RWSysReg<"PMOVSSET_EL0",       0b11, 0b011, 0b1001, 0b1110, 0b011>;
+def : RWSysReg<"PMMIR_EL1",          0b11, 0b000, 0b1001, 0b1110, 0b110>;
 def : RWSysReg<"MAIR_EL1",           0b11, 0b000, 0b1010, 0b0010, 0b000>;
 def : RWSysReg<"MAIR_EL2",           0b11, 0b100, 0b1010, 0b0010, 0b000>;
 def : RWSysReg<"MAIR_EL3",           0b11, 0b110, 0b1010, 0b0010, 0b000>;
@@ -1410,12 +1411,6 @@ def : RWSysReg<"CNTHPS_CTL_EL2",  0b11, 0b100, 0b1110, 0b0101, 0b001>;
 //                           Op0   Op1    CRn     CRm     Op2
 def : RWSysReg<"SDER32_EL2", 0b11, 0b100, 0b0001, 0b0011, 0b001>;
 } // FeatureSEL2
-
-// v8.4a PMU registers
-//                          Op0   Op1    CRn     CRm     Op2
-let Requires = [{ {AArch64::FeaturePMU} }] in {
-def : RWSysReg<"PMMIR_EL1", 0b11, 0b000, 0b1001, 0b1110, 0b110>;
-} // FeaturePMU
 
 // v8.4a RAS registers
 //                              Op0   Op1    CRn     CRm     Op2

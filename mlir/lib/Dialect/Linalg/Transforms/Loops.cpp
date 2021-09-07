@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
+#include "mlir/Dialect/SCF/Transforms.h"
 #include "mlir/Dialect/StandardOps/Utils/Utils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
@@ -632,6 +633,119 @@ struct LowerTiledLoopsToSCF
   }
 };
 } // namespace
+
+/// Rewrite a TiledLoopOp with bounds/step that potentially do not divide evenly
+/// into two TiledLoopOps: One where the step divides the iteration space
+/// evenly, followed another one for the last (partial) iteration (if any). This
+/// function only rewrites the `idx`-th loop of the loop nest represented by
+/// the TiledLoopOp. To peel the entire loop nest, this function must be called
+/// multiple times.
+///
+/// This function rewrites the given TiledLoopOp in-place and creates a new
+/// TiledLoopOp for the last iteration. It replaces all uses of the original
+/// TiledLoopOp with the results of the newly generated one.
+///
+/// The newly generated TiledLoopOp is returned via `result`. The boundary
+/// at which the loop is split (new upper bound) is returned via `splitBound`.
+/// The return value indicates whether the TiledLoopOp was rewritten or not.
+static LogicalResult peelTiledLoop(RewriterBase &b, TiledLoopOp loopOp,
+                                   int64_t idx, TiledLoopOp &result,
+                                   Value &splitBound) {
+  Value lb = loopOp.lowerBound()[idx], ub = loopOp.upperBound()[idx],
+        step = loopOp.step()[idx];
+  auto ubInt = getConstantIntValue(ub);
+
+  auto loc = loopOp.getLoc();
+  AffineExpr exprLb, exprUb, exprStep;
+  bindSymbols(b.getContext(), exprLb, exprUb, exprStep);
+  // New upper bound: %ub - (%ub - %lb) mod %step
+  auto modMap = AffineMap::get(0, 3, {exprUb - ((exprUb - exprLb) % exprStep)});
+  SmallVector<Value> operands{lb, ub, step};
+  mlir::canonicalizeMapAndOperands(&modMap, &operands);
+  modMap = mlir::simplifyAffineMap(modMap);
+  RewriterBase::InsertionGuard guard(b);
+  b.setInsertionPoint(loopOp);
+  splitBound = b.createOrFold<AffineApplyOp>(loc, modMap, operands);
+  // No specialization necessary if step already divides upper bound evenly.
+  if (splitBound == ub || (ubInt && ubInt == getConstantIntValue(splitBound)))
+    return failure();
+
+  // Create remainder loop.
+  b.setInsertionPointAfter(loopOp);
+  auto remainderLoop = cast<TiledLoopOp>(b.clone(*loopOp.getOperation()));
+  loopOp.replaceAllUsesWith(remainderLoop->getResults());
+  // Outputs: Take tensors from main loop's results. Take memrefs from main
+  // loop's outputs.
+  SmallVector<Value> remainderOutputs;
+  for (unsigned o = 0, t = 0; o < loopOp.getNumOutputs(); ++o) {
+    remainderOutputs.push_back(loopOp.outputs()[o].getType().isa<MemRefType>()
+                                   ? loopOp.outputs()[o]
+                                   : loopOp->getResult(t++));
+  }
+  remainderLoop.outputsMutable().assign(remainderOutputs);
+
+  // Set new loop bounds.
+  b.updateRootInPlace(loopOp, [&]() {
+    SmallVector<Value> ubs = loopOp.upperBound();
+    ubs[idx] = splitBound;
+    loopOp.upperBoundMutable().assign(ubs);
+  });
+  SmallVector<Value> lbs = remainderLoop.lowerBound();
+  lbs[idx] = splitBound;
+  remainderLoop.lowerBoundMutable().assign(lbs);
+
+  result = remainderLoop;
+  return success();
+}
+
+template <typename OpTy, bool IsMin>
+static void
+rewriteAffineOpAfterPeeling(RewriterBase &rewriter, TiledLoopOp mainLoop,
+                            TiledLoopOp remainderLoop, Value mainIv,
+                            Value remainderIv, Value ub, Value step) {
+  mainLoop.walk([&](OpTy affineOp) {
+    AffineMap map = affineOp.getAffineMap();
+    (void)scf::rewritePeeledMinMaxOp(rewriter, affineOp, map,
+                                     affineOp.operands(), IsMin, mainIv, ub,
+                                     step, /*insideLoop=*/true);
+  });
+  remainderLoop.walk([&](OpTy affineOp) {
+    AffineMap map = affineOp.getAffineMap();
+    (void)scf::rewritePeeledMinMaxOp(rewriter, affineOp, map,
+                                     affineOp.operands(), IsMin, remainderIv,
+                                     ub, step, /*insideLoop=*/false);
+  });
+}
+
+LogicalResult mlir::linalg::peelAndCanonicalizeTiledLoop(RewriterBase &rewriter,
+                                                         TiledLoopOp loopOp,
+                                                         int64_t idx,
+                                                         TiledLoopOp &result) {
+  int64_t numLoops = loopOp.iterator_types().size();
+  if (idx < 0 || numLoops <= idx)
+    return failure();
+  // Only parallel iterator supported.
+  if (!isParallelIterator(loopOp.iterator_types()[idx]))
+    return failure();
+
+  Value ub = loopOp.upperBound()[idx];
+  TiledLoopOp remainderLoop;
+  Value splitBound;
+  if (failed(peelTiledLoop(rewriter, loopOp, idx, remainderLoop, splitBound)))
+    return failure();
+
+  // Rewrite affine.min and affine.max ops.
+  Value mainIv = loopOp.getInductionVars()[idx], step = loopOp.step()[idx],
+        remainderIv = remainderLoop.getInductionVars()[idx];
+
+  rewriteAffineOpAfterPeeling<AffineMinOp, /*IsMin=*/true>(
+      rewriter, loopOp, remainderLoop, mainIv, remainderIv, ub, step);
+  rewriteAffineOpAfterPeeling<AffineMaxOp, /*IsMin=*/false>(
+      rewriter, loopOp, remainderLoop, mainIv, remainderIv, ub, step);
+
+  result = remainderLoop;
+  return success();
+}
 
 void mlir::linalg::populateTiledLoopToSCFPattern(RewritePatternSet &patterns) {
   patterns.add<TiledLoopToSCFPattern>(patterns.getContext());

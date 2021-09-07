@@ -1342,6 +1342,35 @@ void IROutliner::deduplicateExtractedSections(
   OutlinedFunctionNum++;
 }
 
+/// Checks that the next instruction in the InstructionDataList matches the
+/// next instruction in the module.  If they do not, there could be the
+/// possibility that extra code has been inserted, and we must ignore it.
+///
+/// \param ID - The IRInstructionData to check the next instruction of.
+/// \returns true if the InstructionDataList and actual instruction match.
+static bool nextIRInstructionDataMatchesNextInst(IRInstructionData &ID) {
+  // We check if there is a discrepancy between the InstructionDataList
+  // and the actual next instruction in the module.  If there is, it means
+  // that an extra instruction was added, likely by the CodeExtractor.
+
+  // Since we do not have any similarity data about this particular
+  // instruction, we cannot confidently outline it, and must discard this
+  // candidate.
+  IRInstructionDataList::iterator NextIDIt = std::next(ID.getIterator());
+  Instruction *NextIDLInst = NextIDIt->Inst;
+  Instruction *NextModuleInst = nullptr;
+  if (!ID.Inst->isTerminator())
+    NextModuleInst = ID.Inst->getNextNonDebugInstruction();
+  else if (NextIDLInst != nullptr)
+    NextModuleInst =
+        &*NextIDIt->Inst->getParent()->instructionsWithoutDebug().begin();
+
+  if (NextIDLInst && NextIDLInst != NextModuleInst)
+    return false;
+
+  return true;
+}
+
 bool IROutliner::isCompatibleWithAlreadyOutlinedCode(
     const OutlinableRegion &Region) {
   IRSimilarityCandidate *IRSC = Region.Candidate;
@@ -1373,17 +1402,10 @@ bool IROutliner::isCompatibleWithAlreadyOutlinedCode(
   }
 
   return none_of(*IRSC, [this](IRInstructionData &ID) {
-    // We check if there is a discrepancy between the InstructionDataList
-    // and the actual next instruction in the module.  If there is, it means
-    // that an extra instruction was added, likely by the CodeExtractor.
-
-    // Since we do not have any similarity data about this particular
-    // instruction, we cannot confidently outline it, and must discard this
-    // candidate.
-    if (std::next(ID.getIterator())->Inst !=
-        ID.Inst->getNextNonDebugInstruction())
+    if (!nextIRInstructionDataMatchesNextInst(ID))
       return true;
-    return !InstructionClassifier.visit(ID.Inst);
+
+    return !this->InstructionClassifier.visit(ID.Inst);
   });
 }
 
@@ -1428,16 +1450,9 @@ void IROutliner::pruneIncompatibleRegions(
       continue;
 
     bool BadInst = any_of(IRSC, [this](IRInstructionData &ID) {
-      // We check if there is a discrepancy between the InstructionDataList
-      // and the actual next instruction in the module.  If there is, it means
-      // that an extra instruction was added, likely by the CodeExtractor.
-
-      // Since we do not have any similarity data about this particular
-      // instruction, we cannot confidently outline it, and must discard this
-      // candidate.
-      if (std::next(ID.getIterator())->Inst !=
-          ID.Inst->getNextNonDebugInstruction())
+      if (!nextIRInstructionDataMatchesNextInst(ID))
         return true;
+
       return !this->InstructionClassifier.visit(ID.Inst);
     });
 

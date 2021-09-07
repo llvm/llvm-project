@@ -5147,6 +5147,58 @@ void ProcessGDBRemote::HandleStopReply() {
   BuildDynamicRegisterInfo(true);
 }
 
+llvm::Expected<bool> ProcessGDBRemote::SaveCore(llvm::StringRef outfile) {
+  if (!m_gdb_comm.GetSaveCoreSupported())
+    return false;
+
+  StreamString packet;
+  packet.PutCString("qSaveCore;path-hint:");
+  packet.PutStringAsRawHex8(outfile);
+
+  StringExtractorGDBRemote response;
+  if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response) ==
+      GDBRemoteCommunication::PacketResult::Success) {
+    // TODO: grab error message from the packet?  StringExtractor seems to
+    // be missing a method for that
+    if (response.IsErrorResponse())
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          llvm::formatv("qSaveCore returned an error"));
+
+    std::string path;
+
+    // process the response
+    llvm::SmallVector<llvm::StringRef, 1> reply_data;
+    response.GetStringRef().split(reply_data, ';');
+    for (auto x : reply_data) {
+      if (x.consume_front("core-path:"))
+        StringExtractor(x).GetHexByteString(path);
+    }
+
+    // verify that we've gotten what we need
+    if (path.empty())
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "qSaveCore returned no core path");
+
+    // now transfer the core file
+    FileSpec remote_core{llvm::StringRef(path)};
+    Platform &platform = *GetTarget().GetPlatform();
+    Status error = platform.GetFile(remote_core, FileSpec(outfile));
+
+    if (platform.IsRemote()) {
+      // NB: we unlink the file on error too
+      platform.Unlink(remote_core);
+      if (error.Fail())
+        return error.ToError();
+    }
+
+    return true;
+  }
+
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "Unable to send qSaveCore");
+}
+
 static const char *const s_async_json_packet_prefix = "JSON-async:";
 
 static StructuredData::ObjectSP

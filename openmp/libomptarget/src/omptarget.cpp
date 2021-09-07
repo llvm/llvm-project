@@ -221,7 +221,7 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
     if (!Success) {
       if (getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE)
         for (auto &Device : PM->Devices)
-          dumpTargetPointerMappings(Loc, Device);
+          dumpTargetPointerMappings(Loc, *Device);
       else
         FAILURE_MESSAGE("Run with LIBOMPTARGET_INFO=%d to dump host-target "
                         "pointer mappings.\n",
@@ -239,7 +239,7 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
     } else {
       if (getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE)
         for (auto &Device : PM->Devices)
-          dumpTargetPointerMappings(Loc, Device);
+          dumpTargetPointerMappings(Loc, *Device);
     }
     break;
   }
@@ -310,7 +310,7 @@ int checkDeviceAndCtors(int64_t &DeviceID, ident_t *Loc) {
   }
 
   // Get device info.
-  DeviceTy &Device = PM->Devices[DeviceID];
+  DeviceTy &Device = *PM->Devices[DeviceID];
 
   // Check whether global data has been mapped for this device
   Device.PendingGlobalsMtx.lock();
@@ -352,7 +352,7 @@ void *targetAllocExplicit(size_t size, int device_num, int kind,
     return NULL;
   }
 
-  DeviceTy &Device = PM->Devices[device_num];
+  DeviceTy &Device = *PM->Devices[device_num];
   rc = Device.allocData(size, nullptr, kind);
   DP("%s returns device ptr " DPxMOD "\n", name, DPxPTR(rc));
   return rc;
@@ -1048,7 +1048,7 @@ TableMap *getTableMap(void *HostPtr) {
 /// __kmpc_push_target_tripcount_mapper in one thread but doing offloading in
 /// another thread, which might occur when we call task yield.
 uint64_t getLoopTripCount(int64_t DeviceId) {
-  DeviceTy &Device = PM->Devices[DeviceId];
+  DeviceTy &Device = *PM->Devices[DeviceId];
   uint64_t LoopTripCount = 0;
 
   {
@@ -1246,7 +1246,7 @@ static int processDataBefore(ident_t *loc, int64_t DeviceId, void *HostPtr,
                              PrivateArgumentManagerTy &PrivateArgumentManager,
                              AsyncInfoTy &AsyncInfo) {
   TIMESCOPE_WITH_NAME_AND_IDENT("mappingBeforeTargetRegion", loc);
-  DeviceTy &Device = PM->Devices[DeviceId];
+  DeviceTy &Device = *PM->Devices[DeviceId];
   int Ret = targetDataBegin(loc, Device, ArgNum, ArgBases, Args, ArgSizes,
                             ArgTypes, ArgNames, ArgMappers, AsyncInfo);
   if (Ret != OFFLOAD_SUCCESS) {
@@ -1372,7 +1372,7 @@ static int processDataAfter(ident_t *loc, int64_t DeviceId, void *HostPtr,
                             PrivateArgumentManagerTy &PrivateArgumentManager,
                             AsyncInfoTy &AsyncInfo) {
   TIMESCOPE_WITH_NAME_AND_IDENT("mappingAfterTargetRegion", loc);
-  DeviceTy &Device = PM->Devices[DeviceId];
+  DeviceTy &Device = *PM->Devices[DeviceId];
 
   // Move data from device.
   int Ret = targetDataEnd(loc, Device, ArgNum, ArgBases, Args, ArgSizes,
