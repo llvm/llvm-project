@@ -1589,8 +1589,8 @@ void AddAAPCSVolatileBitfieldArgs(const ArgList &Args, ArgStringList &CmdArgs) {
 }
 
 namespace {
-void RenderARMABI(const llvm::Triple &Triple, const ArgList &Args,
-                  ArgStringList &CmdArgs) {
+void RenderARMABI(const Driver &D, const llvm::Triple &Triple,
+                  const ArgList &Args, ArgStringList &CmdArgs) {
   // Select the ABI to use.
   // FIXME: Support -meabi.
   // FIXME: Parts of this are duplicated in the backend, unify this somehow.
@@ -1598,7 +1598,7 @@ void RenderARMABI(const llvm::Triple &Triple, const ArgList &Args,
   if (Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {
     ABIName = A->getValue();
   } else {
-    std::string CPU = getCPUName(Args, Triple, /*FromAs*/ false);
+    std::string CPU = getCPUName(D, Args, Triple, /*FromAs*/ false);
     ABIName = llvm::ARM::computeDefaultTargetABI(Triple, CPU).data();
   }
 
@@ -1609,7 +1609,7 @@ void RenderARMABI(const llvm::Triple &Triple, const ArgList &Args,
 
 void Clang::AddARMTargetArgs(const llvm::Triple &Triple, const ArgList &Args,
                              ArgStringList &CmdArgs, bool KernelOrKext) const {
-  RenderARMABI(Triple, Args, CmdArgs);
+  RenderARMABI(getToolChain().getDriver(), Triple, Args, CmdArgs);
 
   // Determine floating point ABI from the options & target defaults.
   arm::FloatABI ABI = arm::getARMFloatABI(getToolChain(), Args);
@@ -4596,7 +4596,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     case llvm::Triple::arm:
     case llvm::Triple::armeb:
     case llvm::Triple::thumbeb:
-      RenderARMABI(Triple, Args, CmdArgs);
+      RenderARMABI(D, Triple, Args, CmdArgs);
       break;
     case llvm::Triple::aarch64:
     case llvm::Triple::aarch64_32:
@@ -5133,7 +5133,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     const ArgList &HostArgs =
         C.getArgsForToolChain(nullptr, StringRef(), Action::OFK_None);
     std::string HostCPU =
-        getCPUName(HostArgs, *TC.getAuxTriple(), /*FromAs*/ false);
+        getCPUName(D, HostArgs, *TC.getAuxTriple(), /*FromAs*/ false);
     if (!HostCPU.empty()) {
       CmdArgs.push_back("-aux-target-cpu");
       CmdArgs.push_back(Args.MakeArgString(HostCPU));
@@ -5175,7 +5175,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // Add the target cpu
-  std::string CPU = getCPUName(Args, Triple, /*FromAs*/ false);
+  std::string CPU = getCPUName(D, Args, Triple, /*FromAs*/ false);
   if (!CPU.empty()) {
     CmdArgs.push_back("-target-cpu");
     CmdArgs.push_back(Args.MakeArgString(CPU));
@@ -7510,7 +7510,7 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(Clang::getBaseInputName(Args, Input));
 
   // Add the target cpu
-  std::string CPU = getCPUName(Args, Triple, /*FromAs*/ true);
+  std::string CPU = getCPUName(D, Args, Triple, /*FromAs*/ true);
   if (!CPU.empty()) {
     CmdArgs.push_back("-target-cpu");
     CmdArgs.push_back(Args.MakeArgString(CPU));

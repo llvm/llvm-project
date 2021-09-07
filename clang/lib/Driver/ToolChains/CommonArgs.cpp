@@ -355,8 +355,8 @@ static StringRef getWebAssemblyTargetCPU(const ArgList &Args) {
   return "generic";
 }
 
-std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
-                              bool FromAs) {
+std::string tools::getCPUName(const Driver &D, const ArgList &Args,
+                              const llvm::Triple &T, bool FromAs) {
   Arg *A;
 
   switch (T.getArch()) {
@@ -442,7 +442,7 @@ std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
 
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
-    return x86::getX86TargetCPU(Args, T);
+    return x86::getX86TargetCPU(D, Args, T);
 
   case llvm::Triple::hexagon:
     return "hexagon" +
@@ -510,7 +510,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   // the plugin.
 
   // Handle flags for selecting CPU variants.
-  std::string CPU = getCPUName(Args, ToolChain.getTriple());
+  std::string CPU = getCPUName(D, Args, ToolChain.getTriple());
   if (!CPU.empty())
     CmdArgs.push_back(Args.MakeArgString(Twine("-plugin-opt=mcpu=") + CPU));
 

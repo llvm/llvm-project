@@ -839,18 +839,22 @@ define void @masked_scatter_v32f64(<32 x double>* %a, <32 x double*>* %b) #0 {
 
 ; The above tests test the types, the below tests check that the addressing
 ; modes still function
+
+; NOTE: This produces an non-optimal addressing mode due to a temporary workaround
 define void @masked_scatter_32b_scaled_sext_f16(<32 x half>* %a, <32 x i32>* %b, half* %base) #0 {
 ; CHECK-LABEL: masked_scatter_32b_scaled_sext_f16:
 ; VBITS_GE_2048: ptrue [[PG0:p[0-9]+]].h, vl32
 ; VBITS_GE_2048-NEXT: ld1h { [[VALS:z[0-9]+]].h }, [[PG0]]/z, [x0]
-; VBITS_GE_2048-NEXT: ptrue [[PG1:p[0-9]+]].s, vl32
-; VBITS_GE_2048-NEXT: ld1w { [[PTRS:z[0-9]+]].s }, [[PG1]]/z, [x1]
+; VBITS_GE_2048-NEXT: ptrue [[PG1:p[0-9]+]].d, vl32
+; VBITS_GE_2048-NEXT: ld1sw { [[PTRS:z[0-9]+]].d }, [[PG1]]/z, [x1]
 ; VBITS_GE_2048-NEXT: fcmeq [[CMP:p[0-9]+]].h, [[PG0]]/z, [[VALS]].h, #0.0
 ; VBITS_GE_2048-NEXT: mov [[MONE:z[0-9]+]].h, [[PG0]]/z, #-1
-; VBITS_GE_2048-NEXT: uunpklo [[UPK:z[0-9]+]].s, [[MONE]].h
-; VBITS_GE_2048-NEXT: cmpne [[MASK:p[0-9]+]].s, [[PG1]]/z, [[UPK]].s, #0
-; VBITS_GE_2048-NEXT: uunpklo [[UPKV:z[0-9]+]].s, [[VALS]].h
-; VBITS_GE_2048-NEXT: st1h { [[UPKV]].s }, [[MASK]], [x2, [[PTRS]].s, sxtw #1]
+; VBITS_GE_2048-NEXT: uunpklo [[UPK1:z[0-9]+]].s, [[MONE]].h
+; VBITS_GE_2048-NEXT: uunpklo [[UPKV1:z[0-9]+]].s, [[VALS]].h
+; VBITS_GE_2048-NEXT: uunpklo [[UPK2:z[0-9]+]].d, [[UPK1]].s
+; VBITS_GE_2048-NEXT: cmpne [[MASK:p[0-9]+]].d, [[PG1]]/z, [[UPK2]].d, #0
+; VBITS_GE_2048-NEXT: uunpklo [[UPKV2:z[0-9]+]].d, [[UPKV1]].s
+; VBITS_GE_2048-NEXT: st1h { [[UPKV2]].d }, [[MASK]], [x2, [[PTRS]].d, lsl #1]
 ; VBITS_GE_2048-NEXT: ret
   %vals = load <32 x half>, <32 x half>* %a
   %idxs = load <32 x i32>, <32 x i32>* %b
@@ -861,13 +865,19 @@ define void @masked_scatter_32b_scaled_sext_f16(<32 x half>* %a, <32 x i32>* %b,
   ret void
 }
 
+; NOTE: This produces an non-optimal addressing mode due to a temporary workaround
 define void @masked_scatter_32b_scaled_sext_f32(<32 x float>* %a, <32 x i32>* %b, float* %base) #0 {
 ; CHECK-LABEL: masked_scatter_32b_scaled_sext_f32:
-; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].s, vl32
-; VBITS_GE_2048-NEXT: ld1w { [[VALS:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_GE_2048-NEXT: ld1w { [[PTRS:z[0-9]+]].s }, [[PG]]/z, [x1]
-; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].s, [[PG]]/z, [[VALS]].s, #0.0
-; VBITS_GE_2048-NEXT: st1w { [[VALS]].s }, [[MASK]], [x2, [[PTRS]].s, sxtw #2]
+; VBITS_GE_2048: ptrue [[PG0:p[0-9]+]].s, vl32
+; VBITS_GE_2048-NEXT: ld1w { [[VALS:z[0-9]+]].s }, [[PG0]]/z, [x0]
+; VBITS_GE_2048-NEXT: ptrue [[PG1:p[0-9]+]].d, vl32
+; VBITS_GE_2048-NEXT: ld1sw { [[PTRS:z[0-9]+]].d }, [[PG1]]/z, [x1]
+; VBITS_GE_2048-NEXT: fcmeq [[CMP:p[0-9]+]].s, [[PG0]]/z, [[VALS]].s, #0.0
+; VBITS_GE_2048-NEXT: mov [[MONE:z[0-9]+]].s, [[PG0]]/z, #-1
+; VBITS_GE_2048-NEXT: uunpklo [[UPK:z[0-9]+]].d, [[MONE]].s
+; VBITS_GE_2048-NEXT: cmpne [[MASK:p[0-9]+]].d, [[PG1]]/z, [[UPK]].d, #0
+; VBITS_GE_2048-NEXT: uunpklo [[UPKV:z[0-9]+]].d, [[VALS]].s
+; VBITS_GE_2048-NEXT: st1w { [[UPKV]].d }, [[MASK]], [x2, [[PTRS]].d, lsl #2]
 ; VBITS_GE_2048-NEXT: ret
   %vals = load <32 x float>, <32 x float>* %a
   %idxs = load <32 x i32>, <32 x i32>* %b
@@ -878,14 +888,14 @@ define void @masked_scatter_32b_scaled_sext_f32(<32 x float>* %a, <32 x i32>* %b
   ret void
 }
 
+; NOTE: This produces an non-optimal addressing mode due to a temporary workaround
 define void @masked_scatter_32b_scaled_sext_f64(<32 x double>* %a, <32 x i32>* %b, double* %base) #0 {
 ; CHECK-LABEL: masked_scatter_32b_scaled_sext_f64:
-; VBITS_GE_2048: ptrue [[PG0:p[0-9]+]].d, vl32
-; VBITS_GE_2048-NEXT: ld1d { [[VALS:z[0-9]+]].d }, [[PG0]]/z, [x0]
-; VBITS_GE_2048-NEXT: ptrue [[PG1:p[0-9]+]].s, vl32
-; VBITS_GE_2048-NEXT: ld1w { [[PTRS:z[0-9]+]].s }, [[PG1]]/z, [x1]
-; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].d, [[PG0]]/z, [[VALS]].d, #0.0
-; VBITS_GE_2048-NEXT: st1d { [[VALS]].d }, [[MASK]], [x2, [[PTRS]].d, sxtw #3]
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].d, vl32
+; VBITS_GE_2048-NEXT: ld1d { [[VALS:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_2048-NEXT: ld1sw { [[PTRS:z[0-9]+]].d }, [[PG]]/z, [x1]
+; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].d, [[PG]]/z, [[VALS]].d, #0.0
+; VBITS_GE_2048-NEXT: st1d { [[VALS]].d }, [[MASK]], [x2, [[PTRS]].d, lsl #3]
 ; VBITS_GE_2048-NEXT: ret
   %vals = load <32 x double>, <32 x double>* %a
   %idxs = load <32 x i32>, <32 x i32>* %b
@@ -896,18 +906,21 @@ define void @masked_scatter_32b_scaled_sext_f64(<32 x double>* %a, <32 x i32>* %
   ret void
 }
 
+; NOTE: This produces an non-optimal addressing mode due to a temporary workaround
 define void @masked_scatter_32b_scaled_zext(<32 x half>* %a, <32 x i32>* %b, half* %base) #0 {
 ; CHECK-LABEL: masked_scatter_32b_scaled_zext:
 ; VBITS_GE_2048: ptrue [[PG0:p[0-9]+]].h, vl32
 ; VBITS_GE_2048-NEXT: ld1h { [[VALS:z[0-9]+]].h }, [[PG0]]/z, [x0]
-; VBITS_GE_2048-NEXT: ptrue [[PG1:p[0-9]+]].s, vl32
-; VBITS_GE_2048-NEXT: ld1w { [[PTRS:z[0-9]+]].s }, [[PG1]]/z, [x1]
+; VBITS_GE_2048-NEXT: ptrue [[PG1:p[0-9]+]].d, vl32
+; VBITS_GE_2048-NEXT: ld1w { [[PTRS:z[0-9]+]].d }, [[PG1]]/z, [x1]
 ; VBITS_GE_2048-NEXT: fcmeq [[CMP:p[0-9]+]].h, [[PG0]]/z, [[VALS]].h, #0.0
 ; VBITS_GE_2048-NEXT: mov [[MONE:z[0-9]+]].h, [[PG0]]/z, #-1
-; VBITS_GE_2048-NEXT: uunpklo [[UPK:z[0-9]+]].s, [[MONE]].h
-; VBITS_GE_2048-NEXT: cmpne [[MASK:p[0-9]+]].s, [[PG1]]/z, [[UPK]].s, #0
-; VBITS_GE_2048-NEXT: uunpklo [[UPKV:z[0-9]+]].s, [[VALS]].h
-; VBITS_GE_2048-NEXT: st1h { [[UPKV]].s }, [[MASK]], [x2, [[PTRS]].s, uxtw #1]
+; VBITS_GE_2048-NEXT: uunpklo [[UPK1:z[0-9]+]].s, [[MONE]].h
+; VBITS_GE_2048-NEXT: uunpklo [[UPKV1:z[0-9]+]].s, [[VALS]].h
+; VBITS_GE_2048-NEXT: uunpklo [[UPK2:z[0-9]+]].d, [[UPK1]].s
+; VBITS_GE_2048-NEXT: cmpne [[MASK:p[0-9]+]].d, [[PG1]]/z, [[UPK2]].d, #0
+; VBITS_GE_2048-NEXT: uunpklo [[UPKV2:z[0-9]+]].d, [[UPKV1]].s
+; VBITS_GE_2048-NEXT: st1h { [[UPKV2]].d }, [[MASK]], [x2, [[PTRS]].d, lsl #1]
 ; VBITS_GE_2048-NEXT: ret
   %vals = load <32 x half>, <32 x half>* %a
   %idxs = load <32 x i32>, <32 x i32>* %b
@@ -918,18 +931,21 @@ define void @masked_scatter_32b_scaled_zext(<32 x half>* %a, <32 x i32>* %b, hal
   ret void
 }
 
+; NOTE: This produces an non-optimal addressing mode due to a temporary workaround
 define void @masked_scatter_32b_unscaled_sext(<32 x half>* %a, <32 x i32>* %b, i8* %base) #0 {
 ; CHECK-LABEL: masked_scatter_32b_unscaled_sext:
 ; VBITS_GE_2048: ptrue [[PG0:p[0-9]+]].h, vl32
 ; VBITS_GE_2048-NEXT: ld1h { [[VALS:z[0-9]+]].h }, [[PG0]]/z, [x0]
-; VBITS_GE_2048-NEXT: ptrue [[PG1:p[0-9]+]].s, vl32
-; VBITS_GE_2048-NEXT: ld1w { [[PTRS:z[0-9]+]].s }, [[PG1]]/z, [x1]
+; VBITS_GE_2048-NEXT: ptrue [[PG1:p[0-9]+]].d, vl32
+; VBITS_GE_2048-NEXT: ld1sw { [[PTRS:z[0-9]+]].d }, [[PG1]]/z, [x1]
 ; VBITS_GE_2048-NEXT: fcmeq [[CMP:p[0-9]+]].h, [[PG0]]/z, [[VALS]].h, #0.0
 ; VBITS_GE_2048-NEXT: mov [[MONE:z[0-9]+]].h, [[PG0]]/z, #-1
-; VBITS_GE_2048-NEXT: uunpklo [[UPK:z[0-9]+]].s, [[MONE]].h
-; VBITS_GE_2048-NEXT: cmpne [[MASK:p[0-9]+]].s, [[PG1]]/z, [[UPK]].s, #0
-; VBITS_GE_2048-NEXT: uunpklo [[UPKV:z[0-9]+]].s, [[VALS]].h
-; VBITS_GE_2048-NEXT: st1h { [[UPKV]].s }, [[MASK]], [x2, [[PTRS]].s, sxtw]
+; VBITS_GE_2048-NEXT: uunpklo [[UPK1:z[0-9]+]].s, [[MONE]].h
+; VBITS_GE_2048-NEXT: uunpklo [[UPKV1:z[0-9]+]].s, [[VALS]].h
+; VBITS_GE_2048-NEXT: uunpklo [[UPK2:z[0-9]+]].d, [[UPK1]].s
+; VBITS_GE_2048-NEXT: cmpne [[MASK:p[0-9]+]].d, [[PG1]]/z, [[UPK2]].d, #0
+; VBITS_GE_2048-NEXT: uunpklo [[UPKV2:z[0-9]+]].d, [[UPKV1]].s
+; VBITS_GE_2048-NEXT: st1h { [[UPKV2]].d }, [[MASK]], [x2, [[PTRS]].d]
 ; VBITS_GE_2048-NEXT: ret
   %vals = load <32 x half>, <32 x half>* %a
   %idxs = load <32 x i32>, <32 x i32>* %b
@@ -941,18 +957,21 @@ define void @masked_scatter_32b_unscaled_sext(<32 x half>* %a, <32 x i32>* %b, i
   ret void
 }
 
+; NOTE: This produces an non-optimal addressing mode due to a temporary workaround
 define void @masked_scatter_32b_unscaled_zext(<32 x half>* %a, <32 x i32>* %b, i8* %base) #0 {
 ; CHECK-LABEL: masked_scatter_32b_unscaled_zext:
 ; VBITS_GE_2048: ptrue [[PG0:p[0-9]+]].h, vl32
 ; VBITS_GE_2048-NEXT: ld1h { [[VALS:z[0-9]+]].h }, [[PG0]]/z, [x0]
-; VBITS_GE_2048-NEXT: ptrue [[PG1:p[0-9]+]].s, vl32
-; VBITS_GE_2048-NEXT: ld1w { [[PTRS:z[0-9]+]].s }, [[PG1]]/z, [x1]
+; VBITS_GE_2048-NEXT: ptrue [[PG1:p[0-9]+]].d, vl32
+; VBITS_GE_2048-NEXT: ld1w { [[PTRS:z[0-9]+]].d }, [[PG1]]/z, [x1]
 ; VBITS_GE_2048-NEXT: fcmeq [[CMP:p[0-9]+]].h, [[PG0]]/z, [[VALS]].h, #0.0
 ; VBITS_GE_2048-NEXT: mov [[MONE:z[0-9]+]].h, [[PG0]]/z, #-1
-; VBITS_GE_2048-NEXT: uunpklo [[UPK:z[0-9]+]].s, [[MONE]].h
-; VBITS_GE_2048-NEXT: cmpne [[MASK:p[0-9]+]].s, [[PG1]]/z, [[UPK]].s, #0
-; VBITS_GE_2048-NEXT: uunpklo [[UPKV:z[0-9]+]].s, [[VALS]].h
-; VBITS_GE_2048-NEXT: st1h { [[UPKV]].s }, [[MASK]], [x2, [[PTRS]].s, uxtw]
+; VBITS_GE_2048-NEXT: uunpklo [[UPK1:z[0-9]+]].s, [[MONE]].h
+; VBITS_GE_2048-NEXT: uunpklo [[UPKV1:z[0-9]+]].s, [[VALS]].h
+; VBITS_GE_2048-NEXT: uunpklo [[UPK2:z[0-9]+]].d, [[UPK1]].s
+; VBITS_GE_2048-NEXT: cmpne [[MASK:p[0-9]+]].d, [[PG1]]/z, [[UPK2]].d, #0
+; VBITS_GE_2048-NEXT: uunpklo [[UPKV2:z[0-9]+]].d, [[UPKV1]].s
+; VBITS_GE_2048-NEXT: st1h { [[UPKV2]].d }, [[MASK]], [x2, [[PTRS]].d]
 ; VBITS_GE_2048-NEXT: ret
   %vals = load <32 x half>, <32 x half>* %a
   %idxs = load <32 x i32>, <32 x i32>* %b

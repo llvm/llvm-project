@@ -343,11 +343,8 @@ bool ToolInvocation::run() {
   for (const std::string &Str : CommandLine)
     Argv.push_back(Str.c_str());
   const char *const BinaryName = Argv[0];
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
-  unsigned MissingArgIndex, MissingArgCount;
-  llvm::opt::InputArgList ParsedArgs = driver::getDriverOptTable().ParseArgs(
-      ArrayRef<const char *>(Argv).slice(1), MissingArgIndex, MissingArgCount);
-  ParseDiagnosticArgs(*DiagOpts, ParsedArgs);
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
+      CreateAndPopulateDiagOpts(Argv);
   TextDiagnosticPrinter DiagnosticPrinter(
       llvm::errs(), &*DiagOpts);
   DiagnosticsEngine Diagnostics(

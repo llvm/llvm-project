@@ -1775,6 +1775,24 @@ public:
         CGF.Builder.CreateBr(&FiniBB);
     }
 
+    static void EmitCaptureStmt(CodeGenFunction &CGF, InsertPointTy CodeGenIP,
+                                llvm::BasicBlock &FiniBB, llvm::Function *Fn,
+                                ArrayRef<llvm::Value *> Args) {
+      llvm::BasicBlock *CodeGenIPBB = CodeGenIP.getBlock();
+      if (llvm::Instruction *CodeGenIPBBTI = CodeGenIPBB->getTerminator())
+        CodeGenIPBBTI->eraseFromParent();
+
+      CGF.Builder.SetInsertPoint(CodeGenIPBB);
+
+      if (Fn->doesNotThrow())
+        CGF.EmitNounwindRuntimeCall(Fn, Args);
+      else
+        CGF.EmitRuntimeCall(Fn, Args);
+
+      if (CGF.Builder.saveIP().isSet())
+        CGF.Builder.CreateBr(&FiniBB);
+    }
+
     /// RAII for preserving necessary info during Outlined region body codegen.
     class OutlinedRegionBodyRAII {
 

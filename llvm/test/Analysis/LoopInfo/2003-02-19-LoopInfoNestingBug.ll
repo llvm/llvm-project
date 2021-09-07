@@ -2,7 +2,6 @@
 ; figure out that loop "Inner" should be nested inside of leep "LoopHeader", 
 ; and instead nests it just inside loop "Top"
 ;
-; RUN: opt < %s -analyze -loops -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='print<loops>' -disable-output 2>&1 | FileCheck %s
 
 ; CHECK:  Loop at depth 3 containing: %Inner<header><latch><exiting>

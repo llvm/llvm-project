@@ -97,8 +97,9 @@ unsigned long __readcr8(void);
 unsigned int __readdr(unsigned int);
 #ifdef __i386__
 unsigned char __readfsbyte(unsigned long);
-unsigned __int64 __readfsqword(unsigned long);
 unsigned short __readfsword(unsigned long);
+unsigned long __readfsdword(unsigned long);
+unsigned __int64 __readfsqword(unsigned long);
 #endif
 unsigned __int64 __readmsr(unsigned long);
 unsigned __int64 __readpmc(unsigned long);

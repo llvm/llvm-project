@@ -98,10 +98,10 @@ body:             |
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $r0, $r1, $r2, $r5, $r12
   ; CHECK:   $r3 = tMOVr $r12, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $vpr = MVE_VCTP16 renamable $r2, 0, $noreg
+  ; CHECK:   renamable $vpr = MVE_VCTP16 renamable $r2, 0, $noreg, $noreg
   ; CHECK:   MVE_VPST 8, implicit $vpr
-  ; CHECK:   renamable $r0, renamable $q0 = MVE_VLDRHU16_post killed renamable $r0, 16, 1, killed renamable $vpr :: (load (s128) from %ir.lsr.iv17, align 2)
-  ; CHECK:   renamable $r3 = MVE_VMAXVs16 killed renamable $r3, killed renamable $q0, 0, $noreg
+  ; CHECK:   renamable $r0, renamable $q0 = MVE_VLDRHU16_post killed renamable $r0, 16, 1, killed renamable $vpr, $noreg :: (load (s128) from %ir.lsr.iv17, align 2)
+  ; CHECK:   renamable $r3 = MVE_VMAXVs16 killed renamable $r3, killed renamable $q0, 0, $noreg, $noreg
   ; CHECK:   $lr = tMOVr $r5, 14 /* CC::al */, $noreg
   ; CHECK:   early-clobber renamable $r1 = t2STRH_POST killed renamable $r3, killed renamable $r1, 2, 14 /* CC::al */, $noreg :: (store (s16) into %ir.lsr.iv.2)
   ; CHECK:   renamable $r5, dead $cpsr = nsw tSUBi8 killed $r5, 1, 14 /* CC::al */, $noreg
@@ -140,10 +140,10 @@ body:             |
     liveins: $r0, $r1, $r2, $r5, $r12
 
     $r3 = tMOVr $r12, 14 /* CC::al */, $noreg
-    renamable $vpr = MVE_VCTP16 renamable $r2, 0, $noreg
+    renamable $vpr = MVE_VCTP16 renamable $r2, 0, $noreg, $noreg
     MVE_VPST 8, implicit $vpr
-    renamable $r0, renamable $q0 = MVE_VLDRHU16_post killed renamable $r0, 16, 1, killed renamable $vpr :: (load (s128) from %ir.lsr.iv17, align 2)
-    renamable $r3 = MVE_VMAXVs16 killed renamable $r3, killed renamable $q0, 0, $noreg
+    renamable $r0, renamable $q0 = MVE_VLDRHU16_post killed renamable $r0, 16, 1, killed renamable $vpr, $noreg :: (load (s128) from %ir.lsr.iv17, align 2)
+    renamable $r3 = MVE_VMAXVs16 killed renamable $r3, killed renamable $q0, 0, $noreg, $noreg
     $lr = tMOVr $r5, 14 /* CC::al */, $noreg
     early-clobber renamable $r1 = t2STRH_POST killed renamable $r3, killed renamable $r1, 2, 14 /* CC::al */, $noreg :: (store (s16) into %ir.lsr.iv.2)
     renamable $r5, dead $cpsr = nsw tSUBi8 killed $r5, 1, 14 /* CC::al */, $noreg

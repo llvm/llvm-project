@@ -189,6 +189,22 @@ public:
                                 JITTargetAddress WrapperFnAddr,
                                 ArrayRef<char> ArgBuffer) = 0;
 
+  /// Run a wrapper function in the executor. The wrapper function should be
+  /// callable as:
+  ///
+  /// \code{.cpp}
+  ///   CWrapperFunctionResult fn(uint8_t *Data, uint64_t Size);
+  /// \endcode{.cpp}
+  shared::WrapperFunctionResult callWrapper(JITTargetAddress WrapperFnAddr,
+                                            ArrayRef<char> ArgBuffer) {
+    std::promise<shared::WrapperFunctionResult> RP;
+    auto RF = RP.get_future();
+    callWrapperAsync(
+        [&](shared::WrapperFunctionResult R) { RP.set_value(std::move(R)); },
+        WrapperFnAddr, ArgBuffer);
+    return RF.get();
+  }
+
   /// Run a wrapper function using SPS to serialize the arguments and
   /// deserialize the results.
   template <typename SPSSignature, typename SendResultT, typename... ArgTs>
@@ -203,6 +219,21 @@ public:
                            ArrayRef<char>(ArgData, ArgSize));
         },
         std::move(SendResult), Args...);
+  }
+
+  /// Run a wrapper function using SPS to serialize the arguments and
+  /// deserialize the results.
+  ///
+  /// If SPSSignature is a non-void function signature then the second argument
+  /// (the first in the Args list) should be a reference to a return value.
+  template <typename SPSSignature, typename... WrapperCallArgTs>
+  Error callSPSWrapper(JITTargetAddress WrapperFnAddr,
+                       WrapperCallArgTs &&...WrapperCallArgs) {
+    return shared::WrapperFunction<SPSSignature>::call(
+        [this, WrapperFnAddr](const char *ArgData, size_t ArgSize) {
+          return callWrapper(WrapperFnAddr, ArrayRef<char>(ArgData, ArgSize));
+        },
+        std::forward<WrapperCallArgTs>(WrapperCallArgs)...);
   }
 
   /// Disconnect from the target process.

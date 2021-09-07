@@ -45,11 +45,11 @@ class R600SubtargetFeatureGeneration <string Value, string FeatureName,
         SubtargetFeatureGeneration <Value, FeatureName, "R600Subtarget", Implies>;
 
 def FeatureR600 : R600SubtargetFeatureGeneration<"R600", "r600",
-  [FeatureR600ALUInst, FeatureFetchLimit8, FeatureLocalMemorySize0]
+  [FeatureR600ALUInst, FeatureFetchLimit8]
 >;
 
 def FeatureR700 : R600SubtargetFeatureGeneration<"R700", "r700",
-  [FeatureFetchLimit16, FeatureLocalMemorySize0]
+  [FeatureFetchLimit16]
 >;
 
 def FeatureEvergreen : R600SubtargetFeatureGeneration<"EVERGREEN", "evergreen",

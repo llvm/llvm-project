@@ -18,18 +18,18 @@
 #include "test_iterators.h"
 #include "test_range.h"
 
-namespace stdr = std::ranges;
+
 
 template <template <class...> class I>
 constexpr bool check_forward_range() {
-  constexpr bool result = stdr::forward_range<test_range<I> >;
-  static_assert(stdr::forward_range<test_range<I> const> == result);
-  static_assert(stdr::forward_range<test_non_const_common_range<I> > == result);
-  static_assert(stdr::forward_range<test_non_const_range<I> > == result);
-  static_assert(stdr::forward_range<test_common_range<I> > == result);
-  static_assert(stdr::forward_range<test_common_range<I> const> == result);
-  static_assert(!stdr::forward_range<test_non_const_common_range<I> const>);
-  static_assert(!stdr::forward_range<test_non_const_range<I> const>);
+  constexpr bool result = std::ranges::forward_range<test_range<I> >;
+  static_assert(std::ranges::forward_range<test_range<I> const> == result);
+  static_assert(std::ranges::forward_range<test_non_const_common_range<I> > == result);
+  static_assert(std::ranges::forward_range<test_non_const_range<I> > == result);
+  static_assert(std::ranges::forward_range<test_common_range<I> > == result);
+  static_assert(std::ranges::forward_range<test_common_range<I> const> == result);
+  static_assert(!std::ranges::forward_range<test_non_const_common_range<I> const>);
+  static_assert(!std::ranges::forward_range<test_non_const_range<I> const>);
   return result;
 }
 

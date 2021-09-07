@@ -5312,6 +5312,74 @@ static llvm::Function *emitOutlinedOrderedFunction(CodeGenModule &CGM,
 }
 
 void CodeGenFunction::EmitOMPOrderedDirective(const OMPOrderedDirective &S) {
+  if (CGM.getLangOpts().OpenMPIRBuilder) {
+    llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
+    using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+
+    if (S.hasClausesOfKind<OMPDependClause>()) {
+      // The ordered directive with depend clause.
+      assert(!S.hasAssociatedStmt() &&
+             "No associated statement must be in ordered depend construct.");
+      InsertPointTy AllocaIP(AllocaInsertPt->getParent(),
+                             AllocaInsertPt->getIterator());
+      for (const auto *DC : S.getClausesOfKind<OMPDependClause>()) {
+        unsigned NumLoops = DC->getNumLoops();
+        QualType Int64Ty = CGM.getContext().getIntTypeForBitwidth(
+            /*DestWidth=*/64, /*Signed=*/1);
+        llvm::SmallVector<llvm::Value *> StoreValues;
+        for (unsigned I = 0; I < NumLoops; I++) {
+          const Expr *CounterVal = DC->getLoopData(I);
+          assert(CounterVal);
+          llvm::Value *StoreValue = EmitScalarConversion(
+              EmitScalarExpr(CounterVal), CounterVal->getType(), Int64Ty,
+              CounterVal->getExprLoc());
+          StoreValues.emplace_back(StoreValue);
+        }
+        bool IsDependSource = false;
+        if (DC->getDependencyKind() == OMPC_DEPEND_source)
+          IsDependSource = true;
+        Builder.restoreIP(OMPBuilder.createOrderedDepend(
+            Builder, AllocaIP, NumLoops, StoreValues, ".cnt.addr",
+            IsDependSource));
+      }
+    } else {
+      // The ordered directive with threads or simd clause, or without clause.
+      // Without clause, it behaves as if the threads clause is specified.
+      const auto *C = S.getSingleClause<OMPSIMDClause>();
+
+      auto FiniCB = [this](InsertPointTy IP) {
+        OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
+      };
+
+      auto BodyGenCB = [&S, C, this](InsertPointTy AllocaIP,
+                                     InsertPointTy CodeGenIP,
+                                     llvm::BasicBlock &FiniBB) {
+        const CapturedStmt *CS = S.getInnermostCapturedStmt();
+        if (C) {
+          llvm::SmallVector<llvm::Value *, 16> CapturedVars;
+          GenerateOpenMPCapturedVars(*CS, CapturedVars);
+          llvm::Function *OutlinedFn =
+              emitOutlinedOrderedFunction(CGM, CS, S.getBeginLoc());
+          assert(S.getBeginLoc().isValid() &&
+                 "Outlined function call location must be valid.");
+          ApplyDebugLocation::CreateDefaultArtificial(*this, S.getBeginLoc());
+          OMPBuilderCBHelpers::EmitCaptureStmt(*this, CodeGenIP, FiniBB,
+                                               OutlinedFn, CapturedVars);
+        } else {
+          OMPBuilderCBHelpers::InlinedRegionBodyRAII IRB(*this, AllocaIP,
+                                                         FiniBB);
+          OMPBuilderCBHelpers::EmitOMPRegionBody(*this, CS->getCapturedStmt(),
+                                                 CodeGenIP, FiniBB);
+        }
+      };
+
+      OMPLexicalScope Scope(*this, S, OMPD_unknown);
+      Builder.restoreIP(
+          OMPBuilder.createOrderedThreadsSimd(Builder, BodyGenCB, FiniCB, !C));
+    }
+    return;
+  }
+
   if (S.hasClausesOfKind<OMPDependClause>()) {
     assert(!S.hasAssociatedStmt() &&
            "No associated statement must be in ordered depend construct.");

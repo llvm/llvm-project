@@ -95,6 +95,8 @@ static cl::opt<bool, true>
     VerifyMemorySSAX("verify-memoryssa", cl::location(VerifyMemorySSA),
                      cl::Hidden, cl::desc("Enable verification of MemorySSA."));
 
+const static char LiveOnEntryStr[] = "liveOnEntry";
+
 namespace {
 
 /// An assembly annotator class to print Memory SSA information in
@@ -133,8 +135,13 @@ public:
     if (MemoryAccess *MA = MSSA->getMemoryAccess(I)) {
       MemoryAccess *Clobber = Walker->getClobberingMemoryAccess(MA);
       OS << "; " << *MA;
-      if (Clobber)
-        OS << " - clobbered by " << *Clobber;
+      if (Clobber) {
+        OS << " - clobbered by ";
+        if (MSSA->isLiveOnEntryDef(Clobber))
+          OS << LiveOnEntryStr;
+        else
+          OS << *Clobber;
+      }
       OS << "\n";
     }
   }
@@ -2153,8 +2160,6 @@ bool MemorySSA::dominates(const MemoryAccess *Dominator,
   // If it's not a PHI node use, the normal dominates can already handle it.
   return dominates(Dominator, cast<MemoryAccess>(Dominatee.getUser()));
 }
-
-const static char LiveOnEntryStr[] = "liveOnEntry";
 
 void MemoryAccess::print(raw_ostream &OS) const {
   switch (getValueID()) {

@@ -3,8 +3,7 @@
 // RUN:    -fblocks
 #include "Inputs/std-coroutine.h"
 
-using namespace std::experimental;
-
+using namespace std;
 
 template <class Begin>
 struct Awaiter {

@@ -295,7 +295,7 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
   }
   std::string getDetail(const TemplateName &TN) {
     return toString([&](raw_ostream &OS) {
-      TN.print(OS, Ctx.getPrintingPolicy(), /*SuppressNNS=*/true);
+      TN.print(OS, Ctx.getPrintingPolicy(), TemplateName::Qualified::None);
     });
   }
   std::string getDetail(const Attr *A) {

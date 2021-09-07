@@ -45,8 +45,10 @@ void openbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
 
   case llvm::Triple::sparcv9: {
     CmdArgs.push_back("-64");
-    std::string CPU = getCPUName(Args, getToolChain().getTriple());
-    CmdArgs.push_back(sparc::getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
+    std::string CPU = getCPUName(getToolChain().getDriver(), Args,
+                                 getToolChain().getTriple());
+    CmdArgs.push_back(
+        sparc::getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
     AddAssemblerKPIC(getToolChain(), Args, CmdArgs);
     break;
   }
