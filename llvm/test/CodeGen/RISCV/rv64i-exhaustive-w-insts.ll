@@ -1645,9 +1645,6 @@ define signext i32 @sext_sraiw_zext(i32 zeroext %a) nounwind {
   ret i32 %1
 }
 
-; TODO: sraiw could be selected rather than sext.w and srli. Alternatively,
-; the srli could be merged in to the shifts used for zero-extension.
-
 define zeroext i32 @zext_sraiw_aext(i32 %a) nounwind {
 ; RV64I-LABEL: zext_sraiw_aext:
 ; RV64I:       # %bb.0:
@@ -1668,9 +1665,6 @@ define zeroext i32 @zext_sraiw_sext(i32 signext %a) nounwind {
   %1 = ashr i32 %a, 8
   ret i32 %1
 }
-
-; TODO: sraiw could be selected rather than sext.w and srli. Alternatively,
-; the srli could be merged in to the shifts used for zero-extension.
 
 define zeroext i32 @zext_sraiw_zext(i32 zeroext %a) nounwind {
 ; RV64I-LABEL: zext_sraiw_zext:
