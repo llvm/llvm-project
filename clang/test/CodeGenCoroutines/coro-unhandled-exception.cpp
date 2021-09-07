@@ -3,8 +3,6 @@
 
 #include "Inputs/coroutine.h"
 
-namespace coro = std::experimental::coroutines_v1;
-
 namespace std {
   using exception_ptr = int;
   exception_ptr current_exception();
@@ -13,11 +11,11 @@ namespace std {
 struct coro_t {
   struct promise_type {
     coro_t get_return_object() {
-      coro::coroutine_handle<promise_type>{};
+      std::coroutine_handle<promise_type>{};
       return {};
     }
-    coro::suspend_never initial_suspend() { return {}; }
-    coro::suspend_never final_suspend() noexcept { return {}; }
+    std::suspend_never initial_suspend() { return {}; }
+    std::suspend_never final_suspend() noexcept { return {}; }
     void return_void(){}
     void unhandled_exception() noexcept;
   };
@@ -50,9 +48,9 @@ coro_t f() {
 // CHECK: [[TRYCONT]]:
 // CHECK-NEXT: br label %[[COROFIN:.+]]
 // CHECK: [[COROFIN]]:
-// CHECK-NEXT: bitcast %"struct.std::experimental::coroutines_v1::suspend_never"* %{{.+}} to i8*
+// CHECK-NEXT: bitcast %"struct.std::suspend_never"* %{{.+}} to i8*
 // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(
-// CHECK-NEXT: call void @"?final_suspend@promise_type@coro_t@@QEAA?AUsuspend_never@coroutines_v1@experimental@std@@XZ"(
+// CHECK-NEXT: call void @"?final_suspend@promise_type@coro_t@@QEAA?AUsuspend_never@std@@XZ"(
 
 // CHECK-LPAD: @_Z1fv(
 // CHECK-LPAD:   invoke void @_Z9may_throwv()
@@ -71,6 +69,6 @@ coro_t f() {
 // CHECK-LPAD: [[TRYCONT]]:
 // CHECK-LPAD: br label %[[COROFIN:.+]]
 // CHECK-LPAD: [[COROFIN]]:
-// CHECK-LPAD-NEXT: bitcast %"struct.std::experimental::coroutines_v1::suspend_never"* %{{.+}} to i8*
+// CHECK-LPAD-NEXT: bitcast %"struct.std::suspend_never"* %{{.+}} to i8*
 // CHECK-LPAD-NEXT: call void @llvm.lifetime.start.p0i8(
 // CHECK-LPAD-NEXT: call void @_ZN6coro_t12promise_type13final_suspendEv(
