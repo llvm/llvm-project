@@ -1,4 +1,3 @@
-; RUN: opt < %s -analyze -enable-new-pm=0 -scalar-evolution -scalar-evolution-classify-expressions=0 | FileCheck %s
 ; RUN: opt < %s -disable-output "-passes=print<scalar-evolution>"  -scalar-evolution-classify-expressions=0 2>&1 | FileCheck %s
 
 ; A collection of tests that show we can use facts about an exit test to
