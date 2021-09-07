@@ -2701,7 +2701,7 @@ void SIInstrInfo::insertSelect(MachineBasicBlock &MBB,
   }
 }
 
-bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) const {
+bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case AMDGPU::V_MOV_B32_e32:
   case AMDGPU::V_MOV_B32_e64:
@@ -3079,16 +3079,24 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   return false;
 }
 
-static int64_t getFoldableImm(const MachineOperand* MO) {
+static bool getFoldableImm(Register Reg, const MachineRegisterInfo &MRI,
+                           int64_t &Imm) {
+  if (Reg.isPhysical())
+    return false;
+  auto *Def = MRI.getUniqueVRegDef(Reg);
+  if (Def && SIInstrInfo::isFoldableCopy(*Def) && Def->getOperand(1).isImm()) {
+    Imm = Def->getOperand(1).getImm();
+    return true;
+  }
+  return false;
+}
+
+static bool getFoldableImm(const MachineOperand *MO, int64_t &Imm) {
   if (!MO->isReg())
     return false;
   const MachineFunction *MF = MO->getParent()->getParent()->getParent();
   const MachineRegisterInfo &MRI = MF->getRegInfo();
-  auto Def = MRI.getUniqueVRegDef(MO->getReg());
-  if (Def && Def->getOpcode() == AMDGPU::V_MOV_B32_e32 &&
-      Def->getOperand(1).isImm())
-    return Def->getOperand(1).getImm();
-  return AMDGPU::NoRegister;
+  return getFoldableImm(MO->getReg(), MRI, Imm);
 }
 
 static void updateLiveVariables(LiveVariables *LV, MachineInstr &MI,
@@ -3160,7 +3168,8 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineFunction::iterator &MBB,
       // If we have an SGPR input, we will violate the constant bus restriction.
       (ST.getConstantBusLimit(Opc) > 1 || !Src0->isReg() ||
        !RI.isSGPRReg(MBB->getParent()->getRegInfo(), Src0->getReg()))) {
-    if (auto Imm = getFoldableImm(Src2)) {
+    int64_t Imm;
+    if (getFoldableImm(Src2, Imm)) {
       unsigned NewOpc =
           IsFMA ? (IsF16 ? AMDGPU::V_FMAAK_F16 : AMDGPU::V_FMAAK_F32)
                 : (IsF16 ? AMDGPU::V_MADAK_F16 : AMDGPU::V_MADAK_F32);
@@ -3177,7 +3186,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineFunction::iterator &MBB,
     unsigned NewOpc = IsFMA
                           ? (IsF16 ? AMDGPU::V_FMAMK_F16 : AMDGPU::V_FMAMK_F32)
                           : (IsF16 ? AMDGPU::V_MADMK_F16 : AMDGPU::V_MADMK_F32);
-    if (auto Imm = getFoldableImm(Src1)) {
+    if (getFoldableImm(Src1, Imm)) {
       if (pseudoToMCOpcode(NewOpc) != -1) {
         MIB = BuildMI(*MBB, MI, MI.getDebugLoc(), get(NewOpc))
                   .add(*Dst)
@@ -3188,7 +3197,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineFunction::iterator &MBB,
         return MIB;
       }
     }
-    if (auto Imm = getFoldableImm(Src0)) {
+    if (getFoldableImm(Src0, Imm)) {
       if (pseudoToMCOpcode(NewOpc) != -1 &&
           isOperandLegal(
               MI, AMDGPU::getNamedOperandIdx(NewOpc, AMDGPU::OpName::src0),
@@ -8004,7 +8013,10 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
                                        Register SrcReg2, int64_t CmpMask,
                                        int64_t CmpValue,
                                        const MachineRegisterInfo *MRI) const {
-  if (SrcReg2 || SrcReg.isPhysical())
+  if (!SrcReg || SrcReg.isPhysical())
+    return false;
+
+  if (SrcReg2 && !getFoldableImm(SrcReg2, *MRI, CmpValue))
     return false;
 
   const auto optimizeCmpAnd = [&CmpInstr, SrcReg, CmpValue, MRI,
@@ -8049,10 +8061,21 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         Def->getOpcode() != AMDGPU::S_AND_B64)
       return false;
 
+    const auto isMask = [](const MachineOperand *MO) -> bool {
+      int64_t Mask;
+      if (MO->isImm())
+        Mask = MO->getImm();
+      else if (!getFoldableImm(MO, Mask))
+        return false;
+      return Mask == 1;
+    };
+
     MachineOperand *SrcOp = &Def->getOperand(1);
-    if (SrcOp->isImm() && SrcOp->getImm() == 1)
+    if (isMask(SrcOp))
       SrcOp = &Def->getOperand(2);
-    else if (!Def->getOperand(2).isImm() || Def->getOperand(2).getImm() != 1)
+    else if (isMask(&Def->getOperand(2)))
+      SrcOp = &Def->getOperand(1);
+    else
       return false;
 
     Register DefReg = Def->getOperand(0).getReg();
