@@ -40,8 +40,6 @@ template <class _Tp>
 concept __libcpp_unsigned_integer = __libcpp_is_unsigned_integer<_Tp>::value;
 template <class _Tp>
 concept __libcpp_signed_integer = __libcpp_is_signed_integer<_Tp>::value;
-template <class _Tp>
-concept __libcpp_floating_point = __libcpp_is_floating_point<_Tp>::value;
 
 #endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
