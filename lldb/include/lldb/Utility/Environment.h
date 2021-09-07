@@ -73,7 +73,7 @@ public:
     return insert(std::make_pair(Split.first, std::string(Split.second)));
   }
 
-  void insert(const_iterator first, const_iterator last);
+  void insert(iterator first, iterator last);
 
   Envp getEnvp() const { return Envp(*this); }
 
