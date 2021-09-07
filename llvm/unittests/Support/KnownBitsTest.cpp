@@ -267,6 +267,23 @@ TEST(KnownBitsTest, BinaryExhaustive) {
       EXPECT_TRUE(ComputedAShr.One.isSubsetOf(KnownAShr.One));
     });
   });
+
+  // Also test 'unary' binary cases where the same argument is repeated.
+  ForeachKnownBits(Bits, [&](const KnownBits &Known) {
+    KnownBits KnownMul(Bits);
+    KnownMul.Zero.setAllBits();
+    KnownMul.One.setAllBits();
+
+    ForeachNumInKnownBits(Known, [&](const APInt &N) {
+      APInt Res = N * N;
+      KnownMul.One &= Res;
+      KnownMul.Zero &= ~Res;
+    });
+
+    KnownBits ComputedMul = KnownBits::mul(Known, Known, /*SelfMultiply*/ true);
+    EXPECT_TRUE(ComputedMul.Zero.isSubsetOf(KnownMul.Zero));
+    EXPECT_TRUE(ComputedMul.One.isSubsetOf(KnownMul.One));
+  });
 }
 
 TEST(KnownBitsTest, UnaryExhaustive) {
