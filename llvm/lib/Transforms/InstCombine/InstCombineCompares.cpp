@@ -3228,12 +3228,22 @@ Instruction *InstCombinerImpl::foldICmpEqIntrinsicWithConstant(
 
   case Intrinsic::fshl:
   case Intrinsic::fshr:
-    // (rot X, ?) == 0/-1 --> X == 0/-1
-    // TODO: This transform is safe to re-use undef elts in a vector, but
-    //       the constant value passed in by the caller doesn't allow that.
-    if (C.isNullValue() || C.isAllOnesValue())
-      if (II->getArgOperand(0) == II->getArgOperand(1))
+    if (II->getArgOperand(0) == II->getArgOperand(1)) {
+      // (rot X, ?) == 0/-1 --> X == 0/-1
+      // TODO: This transform is safe to re-use undef elts in a vector, but
+      //       the constant value passed in by the caller doesn't allow that.
+      if (C.isNullValue() || C.isAllOnesValue())
         return new ICmpInst(Pred, II->getArgOperand(0), Cmp.getOperand(1));
+
+      const APInt *RotAmtC;
+      // ror(X, RotAmtC) == C --> X == rol(C, RotAmtC)
+      // rol(X, RotAmtC) == C --> X == ror(C, RotAmtC)
+      if (match(II->getArgOperand(2), m_APInt(RotAmtC)))
+        return new ICmpInst(Pred, II->getArgOperand(0),
+                            II->getIntrinsicID() == Intrinsic::fshl
+                                ? ConstantInt::get(Ty, C.rotr(*RotAmtC))
+                                : ConstantInt::get(Ty, C.rotl(*RotAmtC)));
+    }
     break;
 
   case Intrinsic::uadd_sat: {
