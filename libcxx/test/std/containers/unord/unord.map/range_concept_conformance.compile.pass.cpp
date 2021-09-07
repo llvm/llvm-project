@@ -18,22 +18,22 @@
 #include <ranges>
 
 using range = std::unordered_map<int, int>;
-namespace stdr = std::ranges;
 
-static_assert(std::same_as<stdr::iterator_t<range>, range::iterator>);
-static_assert(stdr::common_range<range>);
-static_assert(stdr::forward_range<range>);
-static_assert(!stdr::bidirectional_range<range>);
-static_assert(!stdr::view<range>);
-static_assert(stdr::sized_range<range>);
-static_assert(!stdr::borrowed_range<range>);
-static_assert(!stdr::viewable_range<range>);
 
-static_assert(std::same_as<stdr::iterator_t<range const>, range::const_iterator>);
-static_assert(stdr::common_range<range const>);
-static_assert(stdr::forward_range<range const>);
-static_assert(!stdr::bidirectional_range<range const>);
-static_assert(!stdr::view<range const>);
-static_assert(stdr::sized_range<range const>);
-static_assert(!stdr::borrowed_range<range const>);
-static_assert(!stdr::viewable_range<range const>);
+static_assert(std::same_as<std::ranges::iterator_t<range>, range::iterator>);
+static_assert(std::ranges::common_range<range>);
+static_assert(std::ranges::forward_range<range>);
+static_assert(!std::ranges::bidirectional_range<range>);
+static_assert(!std::ranges::view<range>);
+static_assert(std::ranges::sized_range<range>);
+static_assert(!std::ranges::borrowed_range<range>);
+static_assert(!std::ranges::viewable_range<range>);
+
+static_assert(std::same_as<std::ranges::iterator_t<range const>, range::const_iterator>);
+static_assert(std::ranges::common_range<range const>);
+static_assert(std::ranges::forward_range<range const>);
+static_assert(!std::ranges::bidirectional_range<range const>);
+static_assert(!std::ranges::view<range const>);
+static_assert(std::ranges::sized_range<range const>);
+static_assert(!std::ranges::borrowed_range<range const>);
+static_assert(!std::ranges::viewable_range<range const>);
