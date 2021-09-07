@@ -1269,6 +1269,16 @@ DIE *DwarfCompileUnit::constructImportedEntityDIE(
   if (!Name.empty())
     addString(*IMDie, dwarf::DW_AT_name, Name);
 
+  // This is for imported module with renamed entities (such as variables and
+  // subprograms).
+  DINodeArray Elements = Module->getElements();
+  for (const auto *Element : Elements) {
+    if (!Element)
+      continue;
+    IMDie->addChild(
+        constructImportedEntityDIE(cast<DIImportedEntity>(Element)));
+  }
+
   return IMDie;
 }
 

@@ -165,12 +165,13 @@ DICompileUnit *DIBuilder::createCompileUnit(
 static DIImportedEntity *
 createImportedModule(LLVMContext &C, dwarf::Tag Tag, DIScope *Context,
                      Metadata *NS, DIFile *File, unsigned Line, StringRef Name,
+                     DINodeArray Elements,
                      SmallVectorImpl<TrackingMDNodeRef> &AllImportedModules) {
   if (Line)
     assert(File && "Source location has line number but no file");
   unsigned EntitiesCount = C.pImpl->DIImportedEntitys.size();
   auto *M = DIImportedEntity::get(C, Tag, Context, cast_or_null<DINode>(NS),
-                                  File, Line, Name);
+                                  File, Line, Name, Elements);
   if (EntitiesCount < C.pImpl->DIImportedEntitys.size())
     // A new Imported Entity was just added to the context.
     // Add it to the Imported Modules list.
@@ -180,36 +181,38 @@ createImportedModule(LLVMContext &C, dwarf::Tag Tag, DIScope *Context,
 
 DIImportedEntity *DIBuilder::createImportedModule(DIScope *Context,
                                                   DINamespace *NS, DIFile *File,
-                                                  unsigned Line) {
+                                                  unsigned Line,
+                                                  DINodeArray Elements) {
   return ::createImportedModule(VMContext, dwarf::DW_TAG_imported_module,
-                                Context, NS, File, Line, StringRef(),
+                                Context, NS, File, Line, StringRef(), Elements,
                                 AllImportedModules);
 }
 
 DIImportedEntity *DIBuilder::createImportedModule(DIScope *Context,
                                                   DIImportedEntity *NS,
-                                                  DIFile *File, unsigned Line) {
+                                                  DIFile *File, unsigned Line,
+                                                  DINodeArray Elements) {
   return ::createImportedModule(VMContext, dwarf::DW_TAG_imported_module,
-                                Context, NS, File, Line, StringRef(),
+                                Context, NS, File, Line, StringRef(), Elements,
                                 AllImportedModules);
 }
 
 DIImportedEntity *DIBuilder::createImportedModule(DIScope *Context, DIModule *M,
-                                                  DIFile *File, unsigned Line) {
+                                                  DIFile *File, unsigned Line,
+                                                  DINodeArray Elements) {
   return ::createImportedModule(VMContext, dwarf::DW_TAG_imported_module,
-                                Context, M, File, Line, StringRef(),
+                                Context, M, File, Line, StringRef(), Elements,
                                 AllImportedModules);
 }
 
-DIImportedEntity *DIBuilder::createImportedDeclaration(DIScope *Context,
-                                                       DINode *Decl,
-                                                       DIFile *File,
-                                                       unsigned Line,
-                                                       StringRef Name) {
+DIImportedEntity *
+DIBuilder::createImportedDeclaration(DIScope *Context, DINode *Decl,
+                                     DIFile *File, unsigned Line,
+                                     StringRef Name, DINodeArray Elements) {
   // Make sure to use the unique identifier based metadata reference for
   // types that have one.
   return ::createImportedModule(VMContext, dwarf::DW_TAG_imported_declaration,
-                                Context, Decl, File, Line, Name,
+                                Context, Decl, File, Line, Name, Elements,
                                 AllImportedModules);
 }
 

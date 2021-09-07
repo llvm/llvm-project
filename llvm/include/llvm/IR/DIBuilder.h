@@ -827,29 +827,35 @@ namespace llvm {
                                        unsigned Line, unsigned Col);
 
     /// Create a descriptor for an imported module.
-    /// \param Context The scope this module is imported into
-    /// \param NS      The namespace being imported here.
-    /// \param File    File where the declaration is located.
-    /// \param Line    Line number of the declaration.
+    /// \param Context        The scope this module is imported into
+    /// \param NS             The namespace being imported here.
+    /// \param File           File where the declaration is located.
+    /// \param Line           Line number of the declaration.
+    /// \param Elements       Renamed elements.
     DIImportedEntity *createImportedModule(DIScope *Context, DINamespace *NS,
-                                           DIFile *File, unsigned Line);
+                                           DIFile *File, unsigned Line,
+                                           DINodeArray Elements = nullptr);
 
     /// Create a descriptor for an imported module.
     /// \param Context The scope this module is imported into.
     /// \param NS      An aliased namespace.
     /// \param File    File where the declaration is located.
     /// \param Line    Line number of the declaration.
+    /// \param Elements       Renamed elements.
     DIImportedEntity *createImportedModule(DIScope *Context,
                                            DIImportedEntity *NS, DIFile *File,
-                                           unsigned Line);
+                                           unsigned Line,
+                                           DINodeArray Elements = nullptr);
 
     /// Create a descriptor for an imported module.
-    /// \param Context The scope this module is imported into.
-    /// \param M       The module being imported here
-    /// \param File    File where the declaration is located.
-    /// \param Line    Line number of the declaration.
+    /// \param Context        The scope this module is imported into.
+    /// \param M              The module being imported here
+    /// \param File           File where the declaration is located.
+    /// \param Line           Line number of the declaration.
+    /// \param Elements       Renamed elements.
     DIImportedEntity *createImportedModule(DIScope *Context, DIModule *M,
-                                           DIFile *File, unsigned Line);
+                                           DIFile *File, unsigned Line,
+                                           DINodeArray Elements = nullptr);
 
     /// Create a descriptor for an imported function.
     /// \param Context The scope this module is imported into.
@@ -857,9 +863,11 @@ namespace llvm {
     ///                variable.
     /// \param File    File where the declaration is located.
     /// \param Line    Line number of the declaration.
+    /// \param Elements       Renamed elements.
     DIImportedEntity *createImportedDeclaration(DIScope *Context, DINode *Decl,
                                                 DIFile *File, unsigned Line,
-                                                StringRef Name = "");
+                                                StringRef Name = "",
+                                                DINodeArray Elements = nullptr);
 
     /// Insert a new llvm.dbg.declare intrinsic call.
     /// \param Storage     llvm::Value of the variable

@@ -53,11 +53,10 @@ int llvm_test_dibuilder(void) {
                               "", 0,
                               "/test/include/llvm-c-test-import.h", 34,
                               "", 0);
-  LLVMMetadataRef ImportedModule =
-    LLVMDIBuilderCreateImportedModuleFromModule(DIB, Module, OtherModule,
-                                                File, 42);
-  LLVMDIBuilderCreateImportedModuleFromAlias(DIB, Module, ImportedModule,
-                                             File, 42);
+  LLVMMetadataRef ImportedModule = LLVMDIBuilderCreateImportedModuleFromModule(
+      DIB, Module, OtherModule, File, 42, NULL, 0);
+  LLVMDIBuilderCreateImportedModuleFromAlias(DIB, Module, ImportedModule, File,
+                                             42, NULL, 0);
 
   LLVMMetadataRef ClassTy = declare_objc_class(DIB, File);
   LLVMMetadataRef GlobalClassValueExpr =

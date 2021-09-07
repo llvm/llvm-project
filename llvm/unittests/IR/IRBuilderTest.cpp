@@ -945,13 +945,17 @@ TEST_F(IRBuilderTest, DIImportedEntity) {
   auto CU = DIB.createCompileUnit(dwarf::DW_LANG_Cobol74,
                                   F, "llvm-cobol74",
                                   true, "", 0);
+  MDTuple *Elements = MDTuple::getDistinct(Ctx, None);
+
   DIB.createImportedDeclaration(CU, nullptr, F, 1);
   DIB.createImportedDeclaration(CU, nullptr, F, 1);
   DIB.createImportedModule(CU, (DIImportedEntity *)nullptr, F, 2);
   DIB.createImportedModule(CU, (DIImportedEntity *)nullptr, F, 2);
+  DIB.createImportedModule(CU, (DIImportedEntity *)nullptr, F, 2, Elements);
+  DIB.createImportedModule(CU, (DIImportedEntity *)nullptr, F, 2, Elements);
   DIB.finalize();
   EXPECT_TRUE(verifyModule(*M));
-  EXPECT_TRUE(CU->getImportedEntities().size() == 2);
+  EXPECT_TRUE(CU->getImportedEntities().size() == 3);
 }
 
 //  0: #define M0 V0          <-- command line definition

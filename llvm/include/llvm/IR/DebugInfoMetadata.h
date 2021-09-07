@@ -3347,31 +3347,33 @@ class DIImportedEntity : public DINode {
   static DIImportedEntity *getImpl(LLVMContext &Context, unsigned Tag,
                                    DIScope *Scope, DINode *Entity, DIFile *File,
                                    unsigned Line, StringRef Name,
-                                   StorageType Storage,
+                                   DINodeArray Elements, StorageType Storage,
                                    bool ShouldCreate = true) {
     return getImpl(Context, Tag, Scope, Entity, File, Line,
-                   getCanonicalMDString(Context, Name), Storage, ShouldCreate);
+                   getCanonicalMDString(Context, Name), Elements.get(), Storage,
+                   ShouldCreate);
   }
-  static DIImportedEntity *getImpl(LLVMContext &Context, unsigned Tag,
-                                   Metadata *Scope, Metadata *Entity,
-                                   Metadata *File, unsigned Line,
-                                   MDString *Name, StorageType Storage,
-                                   bool ShouldCreate = true);
+  static DIImportedEntity *
+  getImpl(LLVMContext &Context, unsigned Tag, Metadata *Scope, Metadata *Entity,
+          Metadata *File, unsigned Line, MDString *Name, Metadata *Elements,
+          StorageType Storage, bool ShouldCreate = true);
 
   TempDIImportedEntity cloneImpl() const {
     return getTemporary(getContext(), getTag(), getScope(), getEntity(),
-                        getFile(), getLine(), getName());
+                        getFile(), getLine(), getName(), getElements());
   }
 
 public:
   DEFINE_MDNODE_GET(DIImportedEntity,
                     (unsigned Tag, DIScope *Scope, DINode *Entity, DIFile *File,
-                     unsigned Line, StringRef Name = ""),
-                    (Tag, Scope, Entity, File, Line, Name))
+                     unsigned Line, StringRef Name = "",
+                     DINodeArray Elements = nullptr),
+                    (Tag, Scope, Entity, File, Line, Name, Elements))
   DEFINE_MDNODE_GET(DIImportedEntity,
                     (unsigned Tag, Metadata *Scope, Metadata *Entity,
-                     Metadata *File, unsigned Line, MDString *Name),
-                    (Tag, Scope, Entity, File, Line, Name))
+                     Metadata *File, unsigned Line, MDString *Name,
+                     Metadata *Elements = nullptr),
+                    (Tag, Scope, Entity, File, Line, Name, Elements))
 
   TempDIImportedEntity clone() const { return cloneImpl(); }
 
@@ -3380,11 +3382,15 @@ public:
   DINode *getEntity() const { return cast_or_null<DINode>(getRawEntity()); }
   StringRef getName() const { return getStringOperand(2); }
   DIFile *getFile() const { return cast_or_null<DIFile>(getRawFile()); }
+  DINodeArray getElements() const {
+    return cast_or_null<MDTuple>(getRawElements());
+  }
 
   Metadata *getRawScope() const { return getOperand(0); }
   Metadata *getRawEntity() const { return getOperand(1); }
   MDString *getRawName() const { return getOperandAs<MDString>(2); }
   Metadata *getRawFile() const { return getOperand(3); }
+  Metadata *getRawElements() const { return getOperand(4); }
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIImportedEntityKind;
