@@ -980,8 +980,7 @@ define <4 x i32> @ternlog_or_andn(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 define <4 x i32> @ternlog_and_orn(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; CHECK-LABEL: ternlog_and_orn:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogq $15, %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpternlogd $224, %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    vpternlogd $176, %xmm1, %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %a = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
   %b = or <4 x i32> %a, %y
@@ -992,8 +991,7 @@ define <4 x i32> @ternlog_and_orn(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 define <4 x i32> @ternlog_and_orn_2(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; CHECK-LABEL: ternlog_and_orn_2:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogq $15, %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpternlogd $224, %xmm2, %xmm1, %xmm0
+; CHECK-NEXT:    vpternlogd $208, %xmm2, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %a = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
   %b = or <4 x i32> %y, %a
@@ -1001,6 +999,8 @@ define <4 x i32> @ternlog_and_orn_2(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
   ret <4 x i32> %c
 }
 
+; FIXME: This should be a single vpternlog, but we accidentally match the xor -1
+; as the second binary op instead of the and.
 define <4 x i32> @ternlog_orn_and(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; CHECK-LABEL: ternlog_orn_and:
 ; CHECK:       ## %bb.0:
@@ -1017,8 +1017,7 @@ define <4 x i32> @ternlog_orn_and(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 define <4 x i32> @ternlog_orn_and_2(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; CHECK-LABEL: ternlog_orn_and_2:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpternlogd $248, %xmm2, %xmm1, %xmm0
+; CHECK-NEXT:    vpternlogd $143, %xmm2, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
   %b = and <4 x i32> %y, %z
