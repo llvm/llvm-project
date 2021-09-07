@@ -347,6 +347,12 @@ public:
   /// Add return value attributes to this function.
   void addRetAttr(Attribute::AttrKind Kind);
 
+  /// Add return value attributes to this function.
+  void addRetAttr(Attribute Attr);
+
+  /// Add return value attributes to this function.
+  void addRetAttrs(const AttrBuilder &Attrs);
+
   /// adds the attribute to the list of attributes for the given arg.
   void addParamAttr(unsigned ArgNo, Attribute::AttrKind Kind);
 
