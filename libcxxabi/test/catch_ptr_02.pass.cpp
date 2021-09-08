@@ -8,23 +8,15 @@
 
 // UNSUPPORTED: no-exceptions
 
-// FIXME: GCC doesn't allow turning off the warning for exceptions being caught
-//        by earlier handlers, which this test is exercising. We have to disable
-//        warnings altogether to remove the error.
-//        See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=97675.
-// ADDITIONAL_COMPILE_FLAGS: -Wno-error
+// Compilers emit warnings about exceptions of type 'Child' being caught by
+// an earlier handler of type 'Base'. Congrats, you've just diagnosed the
+// behavior under test.
+// ADDITIONAL_COMPILE_FLAGS: -Wno-exceptions
 
 // The fix for PR17222 made it in the dylib for macOS 10.10
 // XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.9
 
 #include <cassert>
-
-// Clang emits  warnings about exceptions of type 'Child' being caught by
-// an earlier handler of type 'Base'. Congrats clang, you've just
-// diagnosed the behavior under test.
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Wexceptions"
-#endif
 
 #if __cplusplus < 201103L
 #define DISABLE_NULLPTR_TESTS
