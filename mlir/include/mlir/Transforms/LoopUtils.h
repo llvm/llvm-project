@@ -243,6 +243,14 @@ TileLoops extractFixedOuterLoops(scf::ForOp rootFOrOp, ArrayRef<int64_t> sizes);
 /// independent of any loop induction variable involved in the nest.
 void coalesceLoops(MutableArrayRef<scf::ForOp> loops);
 
+/// Replace a perfect nest of "for" loops with a single linearized loop. Assumes
+/// `loops` contains a list of perfectly nested loops outermost to innermost
+/// that are normalized (step one and lower bound of zero) and with bounds and
+/// steps independent of any loop induction variable involved in the nest.
+/// Coalescing affine.for loops is not always possible, i.e., the result may not
+/// be representable using affine.for.
+LogicalResult coalesceLoops(MutableArrayRef<AffineForOp> loops);
+
 /// Take the ParallelLoop and for each set of dimension indices, combine them
 /// into a single dimension. combinedDimensions must contain each index into
 /// loops exactly once.
