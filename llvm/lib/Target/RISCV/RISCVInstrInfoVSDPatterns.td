@@ -521,21 +521,21 @@ foreach vti = AllIntegerVectors in {
 
 // 12.15. Vector Integer Merge Instructions
 foreach vti = AllIntegerVectors in {
-  def : Pat<(vti.Vector (vselect (vti.Mask VMV0:$vm), vti.RegClass:$rs1,
+  def : Pat<(vti.Vector (vselect (vti.Mask V0), vti.RegClass:$rs1,
                                                       vti.RegClass:$rs2)),
             (!cast<Instruction>("PseudoVMERGE_VVM_"#vti.LMul.MX)
-                 vti.RegClass:$rs2, vti.RegClass:$rs1, VMV0:$vm,
+                 vti.RegClass:$rs2, vti.RegClass:$rs1, (vti.Mask V0),
                  vti.AVL, vti.Log2SEW)>;
 
-  def : Pat<(vti.Vector (vselect (vti.Mask VMV0:$vm), (SplatPat XLenVT:$rs1),
+  def : Pat<(vti.Vector (vselect (vti.Mask V0), (SplatPat XLenVT:$rs1),
                                                       vti.RegClass:$rs2)),
             (!cast<Instruction>("PseudoVMERGE_VXM_"#vti.LMul.MX)
-                 vti.RegClass:$rs2, GPR:$rs1, VMV0:$vm, vti.AVL, vti.Log2SEW)>;
+                 vti.RegClass:$rs2, GPR:$rs1, (vti.Mask V0), vti.AVL, vti.Log2SEW)>;
 
-  def : Pat<(vti.Vector (vselect (vti.Mask VMV0:$vm), (SplatPat_simm5 simm5:$rs1),
+  def : Pat<(vti.Vector (vselect (vti.Mask V0), (SplatPat_simm5 simm5:$rs1),
                                                       vti.RegClass:$rs2)),
             (!cast<Instruction>("PseudoVMERGE_VIM_"#vti.LMul.MX)
-                 vti.RegClass:$rs2, simm5:$rs1, VMV0:$vm, vti.AVL, vti.Log2SEW)>;
+                 vti.RegClass:$rs2, simm5:$rs1, (vti.Mask V0), vti.AVL, vti.Log2SEW)>;
 }
 
 // 12.1. Vector Single-Width Saturating Add and Subtract
@@ -711,25 +711,25 @@ defm : VPatFPSetCCSDNode_VV_VF_FV<SETOLE, "PseudoVMFLE", "PseudoVMFGE">;
 // 12.15. Vector Integer Merge Instructions
 // 14.15. Vector Floating-Point Merge Instruction
 foreach fvti = AllFloatVectors in {
-  def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm), fvti.RegClass:$rs1,
+  def : Pat<(fvti.Vector (vselect (fvti.Mask V0), fvti.RegClass:$rs1,
                                                         fvti.RegClass:$rs2)),
             (!cast<Instruction>("PseudoVMERGE_VVM_"#fvti.LMul.MX)
-                 fvti.RegClass:$rs2, fvti.RegClass:$rs1, VMV0:$vm,
+                 fvti.RegClass:$rs2, fvti.RegClass:$rs1, (fvti.Mask V0),
                  fvti.AVL, fvti.Log2SEW)>;
 
-  def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm),
+  def : Pat<(fvti.Vector (vselect (fvti.Mask V0),
                                   (splat_vector fvti.ScalarRegClass:$rs1),
                                   fvti.RegClass:$rs2)),
             (!cast<Instruction>("PseudoVFMERGE_V"#fvti.ScalarSuffix#"M_"#fvti.LMul.MX)
                  fvti.RegClass:$rs2,
                  (fvti.Scalar fvti.ScalarRegClass:$rs1),
-                 VMV0:$vm, fvti.AVL, fvti.Log2SEW)>;
+                 (fvti.Mask V0), fvti.AVL, fvti.Log2SEW)>;
 
-  def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm),
+  def : Pat<(fvti.Vector (vselect (fvti.Mask V0),
                                   (splat_vector (fvti.Scalar fpimm0)),
                                   fvti.RegClass:$rs2)),
             (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX)
-                 fvti.RegClass:$rs2, 0, VMV0:$vm, fvti.AVL, fvti.Log2SEW)>;
+                 fvti.RegClass:$rs2, 0, (fvti.Mask V0), fvti.AVL, fvti.Log2SEW)>;
 }
 
 // 14.17. Vector Single-Width Floating-Point/Integer Type-Convert Instructions
