@@ -14,7 +14,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "clang/Basic/Cuda.h"
 #include "clang/Basic/Version.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
@@ -135,28 +134,21 @@ static std::string BundlerExecutable;
 ///  * Offload Kind - Host, OpenMP, or HIP
 ///  * Triple - Standard LLVM Triple
 ///  * GPUArch (Optional) - Processor name, like gfx906 or sm_30
-
+/// In presence of Proc, the Triple should contain separator "-" for all
+/// standard four components, even if they are empty.
 struct OffloadTargetInfo {
   StringRef OffloadKind;
   llvm::Triple Triple;
   StringRef GPUArch;
 
   OffloadTargetInfo(const StringRef Target) {
-    auto TargetFeatures = Target.split(':');
-    auto TripleOrGPU = TargetFeatures.first.rsplit('-');
-
-    if (clang::StringToCudaArch(TripleOrGPU.second) !=
-        clang::CudaArch::UNKNOWN) {
-      auto KindTriple = TripleOrGPU.first.split('-');
-      this->OffloadKind = KindTriple.first;
-      this->Triple = llvm::Triple(KindTriple.second);
-      this->GPUArch = Target.substr(Target.find(TripleOrGPU.second));
-    } else {
-      auto KindTriple = TargetFeatures.first.split('-');
-      this->OffloadKind = KindTriple.first;
-      this->Triple = llvm::Triple(KindTriple.second);
-      this->GPUArch = "";
-    }
+    SmallVector<StringRef, 6> Components;
+    Target.split(Components, '-', 5);
+    Components.resize(6);
+    this->OffloadKind = Components[0];
+    this->Triple = llvm::Triple(Components[1], Components[2], Components[3],
+                                Components[4]);
+    this->GPUArch = Components[5];
   }
 
   bool hasHostKind() const { return this->OffloadKind == "host"; }
@@ -1071,10 +1063,9 @@ bool isCodeObjectCompatible(OffloadTargetInfo &CodeObjectInfo,
 
   // Compatible in case of exact match.
   if (CodeObjectInfo == TargetInfo) {
-    DEBUG_WITH_TYPE("CodeObjectCompatibility",
-                    dbgs() << "Compatible: Exact match: \t[CodeObject: "
-                           << CodeObjectInfo.str()
-                           << "]\t:\t[Target: " << TargetInfo.str() << "]\n");
+    DEBUG_WITH_TYPE(
+        "CodeObjectCompatibility",
+        dbgs() << "Compatible: Exact match: " << CodeObjectInfo.str() << "\n");
     return true;
   }
 
@@ -1285,19 +1276,9 @@ static Error UnbundleArchive() {
     } else if (!AllowMissingBundles) {
       std::string ErrMsg =
           Twine("no compatible code object found for the target '" + Target +
-                "' in heterogeneous archive library: " + IFName)
+                "' in heterogenous archive library: " + IFName)
               .str();
       return createStringError(inconvertibleErrorCode(), ErrMsg);
-    } else { // Create an empty archive file if no compatible code object is
-             // found and "allow-missing-bundles" is enabled. It ensures that
-             // the linker using output of this step doesn't complain about
-             // the missing input file.
-      std::vector<llvm::NewArchiveMember> EmptyArchive;
-      EmptyArchive.clear();
-      if (Error WriteErr = writeArchive(FileName, EmptyArchive, true,
-                                        getDefaultArchiveKindForHost(), true,
-                                        false, nullptr))
-        return WriteErr;
     }
   }
 

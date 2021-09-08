@@ -382,29 +382,15 @@
 // Check archive unbundling
 //
 // Create few code object bundles and archive them to create an input archive
-// RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-amdgcn-amd-amdhsa-gfx906,openmp-amdgcn-amd-amdhsa--gfx908 -inputs=%t.o,%t.tgt1,%t.tgt2 -outputs=%t.simple.bundle
+// RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-amdgcn-amd-amdhsa--gfx906,openmp-amdgcn-amd-amdhsa--gfx908 -inputs=%t.o,%t.tgt1,%t.tgt2 -outputs=%t.simple.bundle
 // RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-amdgcn-amd-amdhsa--gfx903 -inputs=%t.o,%t.tgt1 -outputs=%t.simple1.bundle
 // RUN: llvm-ar cr %t.input-archive.a %t.simple.bundle %t.simple1.bundle
 
-// RUN: clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa-gfx906,openmp-amdgcn-amd-amdhsa-gfx908 -inputs=%t.input-archive.a -outputs=%t-archive-gfx906-simple.a,%t-archive-gfx908-simple.a
+// RUN: clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa--gfx906,openmp-amdgcn-amd-amdhsa--gfx908 -inputs=%t.input-archive.a -outputs=%t-archive-gfx906-simple.a,%t-archive-gfx908-simple.a
 // RUN: llvm-ar t %t-archive-gfx906-simple.a | FileCheck %s -check-prefix=GFX906
-// GFX906: simple-openmp-amdgcn-amd-amdhsa-gfx906
+// GFX906: simple-openmp-amdgcn-amd-amdhsa--gfx906
 // RUN: llvm-ar t %t-archive-gfx908-simple.a | FileCheck %s -check-prefix=GFX908
 // GFX908-NOT: {{gfx906}}
-
-// Check for error if no compatible code object is found in the heterogeneous archive library
-// RUN: not clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa-gfx803 -inputs=%t.input-archive.a -outputs=%t-archive-gfx803-incompatible.a 2>&1 | FileCheck %s -check-prefix=INCOMPATIBLEARCHIVE
-// INCOMPATIBLEARCHIVE: error: no compatible code object found for the target 'openmp-amdgcn-amd-amdhsa-gfx803' in heterogeneous archive library
-
-// Check creation of empty archive if allow-missing-bundles is present and no compatible code object is found in the heterogeneous archive library
-// RUN: clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa-gfx803 -inputs=%t.input-archive.a -outputs=%t-archive-gfx803-empty.a -allow-missing-bundles
-// RUN: cat %t-archive-gfx803-empty.a | FileCheck %s -check-prefix=EMPTYARCHIVE
-// EMPTYARCHIVE: !<arch>
-
-// Tests to check compatibility between Bundle Entry ID formats i.e. between presence/absence of extra hyphen in case of missing environment field
-// RUN: clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa--gfx906,openmp-amdgcn-amd-amdhsa-gfx908 -inputs=%t.input-archive.a -outputs=%t-archive-gfx906-simple.a,%t-archive-gfx908-simple.a -debug-only=CodeObjectCompatibility 2>&1 | FileCheck %s -check-prefix=BUNDLECOMPATIBILITY
-// BUNDLECOMPATIBILITY: Compatible: Exact match:        [CodeObject: openmp-amdgcn-amd-amdhsa-gfx906]   :       [Target: openmp-amdgcn-amd-amdhsa--gfx906]
-// BUNDLECOMPATIBILITY: Compatible: Exact match:        [CodeObject: openmp-amdgcn-amd-amdhsa--gfx908]  :       [Target: openmp-amdgcn-amd-amdhsa-gfx908]
 
 // Some code so that we can create a binary out of this file.
 int A = 0;
