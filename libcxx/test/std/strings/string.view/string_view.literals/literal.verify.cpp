@@ -9,16 +9,14 @@
 
 // UNSUPPORTED: c++03, c++11
 
-#include <string>
-#include <cassert>
+#include <string_view>
 
-#include "test_macros.h"
-
-int main(int, char**)
-{
-    using namespace std::literals;
-
-    std::string foo  =   ""s;
-
-  return 0;
+void f() {
+  {
+    using std::string_view;
+    string_view foo = ""sv; // expected-error {{no matching literal operator}}
+  }
+  {
+    std::string_view foo = ""sv; // expected-error {{no matching literal operator}}
+  }
 }
