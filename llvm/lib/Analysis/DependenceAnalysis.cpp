@@ -3339,8 +3339,8 @@ bool DependenceInfo::tryDelinearizeFixedSize(
     return false;
 
   SmallVector<int, 4> SrcSizes, DstSizes;
-  SE->getIndexExpressionsFromGEP(SrcGEP, SrcSubscripts, SrcSizes);
-  SE->getIndexExpressionsFromGEP(DstGEP, DstSubscripts, DstSizes);
+  getIndexExpressionsFromGEP(*SE, SrcGEP, SrcSubscripts, SrcSizes);
+  getIndexExpressionsFromGEP(*SE, DstGEP, DstSubscripts, DstSizes);
 
   // Check that the two size arrays are non-empty and equal in length and
   // value.
