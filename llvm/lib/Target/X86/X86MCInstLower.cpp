@@ -1525,7 +1525,7 @@ void X86AsmPrinter::emitAsanReportError(Module &M, unsigned Reg,
                                    .addReg(X86::NoRegister + Reg),
                                STI);
   OutStreamer->emitInstruction(
-      MCInstBuilder(X86::JMP_1)
+      MCInstBuilder(X86::JMP_4)
           .addExpr(MCSymbolRefExpr::create(ReportError, MCSymbolRefExpr::VK_PLT,
                                            OutContext)),
       STI);
