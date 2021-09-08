@@ -586,6 +586,21 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
       CodeGenOpts.ValueTrackingVariableLocations;
   Options.XRayOmitFunctionIndex = CodeGenOpts.XRayOmitFunctionIndex;
 
+  switch (CodeGenOpts.getSwiftAsyncFramePointer()) {
+  case CodeGenOptions::SwiftAsyncFramePointerKind::Auto:
+    Options.SwiftAsyncFramePointer =
+        SwiftAsyncFramePointerMode::DeploymentBased;
+    break;
+
+  case CodeGenOptions::SwiftAsyncFramePointerKind::Always:
+    Options.SwiftAsyncFramePointer = SwiftAsyncFramePointerMode::Always;
+    break;
+
+  case CodeGenOptions::SwiftAsyncFramePointerKind::Never:
+    Options.SwiftAsyncFramePointer = SwiftAsyncFramePointerMode::Never;
+    break;
+  }
+
   Options.MCOptions.SplitDwarfFile = CodeGenOpts.SplitDwarfFile;
   Options.MCOptions.MCRelaxAll = CodeGenOpts.RelaxAll;
   Options.MCOptions.MCSaveTempLabels = CodeGenOpts.SaveTempLabels;
