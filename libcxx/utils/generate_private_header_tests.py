@@ -54,8 +54,7 @@ def is_still_public(path):
     return not rp.startswith('__support') and rp not in [
         "__bsd_locale_defaults.h", "__bsd_locale_fallbacks.h", "__config",
         "__config_site.in", "__debug", "__hash_table", "__functional_base",
-        "__libcpp_version", "__nullptr", "__threading_support", "__tree",
-        "__undef_macros"
+        "__libcpp_version", "__threading_support", "__tree", "__undef_macros"
     ]
 
 
