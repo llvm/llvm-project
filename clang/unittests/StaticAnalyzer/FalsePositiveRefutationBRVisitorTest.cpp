@@ -128,7 +128,7 @@ TEST_F(FalsePositiveRefutationBRVisitorTestBase, UnSatInTheMiddleNoReport) {
   EXPECT_TRUE(runCheckerOnCodeWithArgs<addFalsePositiveGenerator>(
       Code, LazyAssumeAndCrossCheckArgs, Diags));
   EXPECT_EQ(Diags,
-            "test.FalsePositiveGenerator: REACHED_WITH_NO_CONTRADICTION\n");
+            "test.FalsePositiveGenerator:REACHED_WITH_NO_CONTRADICTION\n");
   // Single warning. The second report was invalidated by the visitor.
 
   // Without enabling the crosscheck-with-z3 both reports are displayed.
@@ -136,8 +136,8 @@ TEST_F(FalsePositiveRefutationBRVisitorTestBase, UnSatInTheMiddleNoReport) {
   EXPECT_TRUE(runCheckerOnCodeWithArgs<addFalsePositiveGenerator>(
       Code, LazyAssumeArgs, Diags2));
   EXPECT_EQ(Diags2,
-            "test.FalsePositiveGenerator: REACHED_WITH_NO_CONTRADICTION\n"
-            "test.FalsePositiveGenerator: REACHED_WITH_CONTRADICTION\n");
+            "test.FalsePositiveGenerator:REACHED_WITH_NO_CONTRADICTION\n"
+            "test.FalsePositiveGenerator:REACHED_WITH_CONTRADICTION\n");
 }
 
 TEST_F(FalsePositiveRefutationBRVisitorTestBase,
@@ -159,7 +159,7 @@ TEST_F(FalsePositiveRefutationBRVisitorTestBase,
   EXPECT_TRUE(runCheckerOnCodeWithArgs<addFalsePositiveGenerator>(
       Code, LazyAssumeAndCrossCheckArgs, Diags));
   EXPECT_EQ(Diags,
-            "test.FalsePositiveGenerator: REACHED_WITH_NO_CONTRADICTION\n");
+            "test.FalsePositiveGenerator:REACHED_WITH_NO_CONTRADICTION\n");
   // Single warning. The second report was invalidated by the visitor.
 
   // Without enabling the crosscheck-with-z3 both reports are displayed.
@@ -167,8 +167,8 @@ TEST_F(FalsePositiveRefutationBRVisitorTestBase,
   EXPECT_TRUE(runCheckerOnCodeWithArgs<addFalsePositiveGenerator>(
       Code, LazyAssumeArgs, Diags2));
   EXPECT_EQ(Diags2,
-            "test.FalsePositiveGenerator: REACHED_WITH_NO_CONTRADICTION\n"
-            "test.FalsePositiveGenerator: CAN_BE_TRUE\n");
+            "test.FalsePositiveGenerator:REACHED_WITH_NO_CONTRADICTION\n"
+            "test.FalsePositiveGenerator:CAN_BE_TRUE\n");
 }
 
 TEST_F(FalsePositiveRefutationBRVisitorTestBase,
@@ -206,7 +206,7 @@ TEST_F(FalsePositiveRefutationBRVisitorTestBase,
   EXPECT_TRUE(runCheckerOnCodeWithArgs<addFalsePositiveGenerator>(
       Code, LazyAssumeAndCrossCheckArgs, Diags));
   EXPECT_EQ(Diags,
-            "test.FalsePositiveGenerator: REACHED_WITH_NO_CONTRADICTION\n");
+            "test.FalsePositiveGenerator:REACHED_WITH_NO_CONTRADICTION\n");
   // Single warning. The second report was invalidated by the visitor.
 
   // Without enabling the crosscheck-with-z3 both reports are displayed.
@@ -214,8 +214,8 @@ TEST_F(FalsePositiveRefutationBRVisitorTestBase,
   EXPECT_TRUE(runCheckerOnCodeWithArgs<addFalsePositiveGenerator>(
       Code, LazyAssumeArgs, Diags2));
   EXPECT_EQ(Diags2,
-            "test.FalsePositiveGenerator: REACHED_WITH_NO_CONTRADICTION\n"
-            "test.FalsePositiveGenerator: CAN_BE_TRUE\n");
+            "test.FalsePositiveGenerator:REACHED_WITH_NO_CONTRADICTION\n"
+            "test.FalsePositiveGenerator:CAN_BE_TRUE\n");
 }
 
 } // namespace
