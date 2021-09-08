@@ -26,10 +26,10 @@
 // CHECK-SAME:              %[[VAL_0:.*]]: tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:              %[[VAL_1:.*]]: tensor<32xi64>,
 // CHECK-SAME:              %[[VAL_2:.*]]: tensor<32xi64> {linalg.inplaceable = true}) -> tensor<32xi64> {
-// CHECK:           %[[VAL_3:.*]] = constant 32 : index
-// CHECK:           %[[VAL_4:.*]] = constant 0 : index
-// CHECK:           %[[VAL_5:.*]] = constant true
-// CHECK:           %[[VAL_6:.*]] = constant 1 : index
+// CHECK-DAG:           %[[VAL_3:.*]] = constant 32 : index
+// CHECK-DAG:           %[[VAL_4:.*]] = constant 0 : index
+// CHECK-DAG:           %[[VAL_5:.*]] = constant true
+// CHECK-DAG:           %[[VAL_6:.*]] = constant 1 : index
 // CHECK:           %[[VAL_7:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_4]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:           %[[VAL_8:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_4]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:           %[[VAL_9:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>
@@ -86,11 +86,11 @@ func @add(%arga: tensor<32xi64, #SV>,
 // CHECK-SAME:              %[[VAL_0:.*]]: tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:              %[[VAL_1:.*]]: tensor<32xi64>,
 // CHECK-SAME:              %[[VAL_2:.*]]: tensor<32xi64> {linalg.inplaceable = true}) -> tensor<32xi64> {
-// CHECK:           %[[VAL_3:.*]] = constant 32 : index
-// CHECK:           %[[VAL_4:.*]] = constant 0 : index
-// CHECK:           %[[VAL_5:.*]] = constant true
-// CHECK:           %[[VAL_6:.*]] = constant 1 : index
-// CHECK:           %[[VAL_7:.*]] = constant 0 : i64
+// CHECK-DAG:           %[[VAL_3:.*]] = constant 32 : index
+// CHECK-DAG:           %[[VAL_4:.*]] = constant 0 : index
+// CHECK-DAG:           %[[VAL_5:.*]] = constant true
+// CHECK-DAG:           %[[VAL_6:.*]] = constant 1 : index
+// CHECK-DAG:           %[[VAL_7:.*]] = constant 0 : i64
 // CHECK:           %[[VAL_8:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_4]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:           %[[VAL_9:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_4]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:           %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>
@@ -149,8 +149,8 @@ func @sub(%arga: tensor<32xi64, #SV>,
 // CHECK-SAME:              %[[VAL_0:.*]]: tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:              %[[VAL_1:.*]]: tensor<32xi64>,
 // CHECK-SAME:              %[[VAL_2:.*]]: tensor<32xi64> {linalg.inplaceable = true}) -> tensor<32xi64> {
-// CHECK:           %[[VAL_3:.*]] = constant 0 : index
-// CHECK:           %[[VAL_4:.*]] = constant 1 : index
+// CHECK-DAG:           %[[VAL_3:.*]] = constant 0 : index
+// CHECK-DAG:           %[[VAL_4:.*]] = constant 1 : index
 // CHECK:           %[[VAL_5:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_3]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:           %[[VAL_6:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_3]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>
@@ -184,9 +184,9 @@ func @mul(%arga: tensor<32xi64, #SV>,
 // CHECK-LABEL:   func @divsbyc(
 // CHECK-SAME:                  %[[VAL_0:.*]]: tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:                  %[[VAL_1:.*]]: tensor<32xi64> {linalg.inplaceable = true}) -> tensor<32xi64> {
-// CHECK:           %[[VAL_2:.*]] = constant 2 : i64
-// CHECK:           %[[VAL_3:.*]] = constant 0 : index
-// CHECK:           %[[VAL_4:.*]] = constant 1 : index
+// CHECK-DAG:           %[[VAL_2:.*]] = constant 2 : i64
+// CHECK-DAG:           %[[VAL_3:.*]] = constant 0 : index
+// CHECK-DAG:           %[[VAL_4:.*]] = constant 1 : index
 // CHECK:           %[[VAL_5:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_3]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:           %[[VAL_6:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_3]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>
@@ -218,9 +218,9 @@ func @divsbyc(%arga: tensor<32xi64, #SV>,
 // CHECK-LABEL:   func @divubyc(
 // CHECK-SAME:                  %[[VAL_0:.*]]: tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:                  %[[VAL_1:.*]]: tensor<32xi64> {linalg.inplaceable = true}) -> tensor<32xi64> {
-// CHECK:           %[[VAL_2:.*]] = constant 2 : i64
-// CHECK:           %[[VAL_3:.*]] = constant 0 : index
-// CHECK:           %[[VAL_4:.*]] = constant 1 : index
+// CHECK-DAG:           %[[VAL_2:.*]] = constant 2 : i64
+// CHECK-DAG:           %[[VAL_3:.*]] = constant 0 : index
+// CHECK-DAG:           %[[VAL_4:.*]] = constant 1 : index
 // CHECK:           %[[VAL_5:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_3]] : tensor<32xi64, #sparse_tensor.encoding<{{.*}}}>>
 // CHECK:           %[[VAL_6:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_3]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>
@@ -253,8 +253,8 @@ func @divubyc(%arga: tensor<32xi64, #SV>,
 // CHECK-SAME:              %[[VAL_0:.*]]: tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:              %[[VAL_1:.*]]: tensor<32xi64>,
 // CHECK-SAME:              %[[VAL_2:.*]]: tensor<32xi64> {linalg.inplaceable = true}) -> tensor<32xi64> {
-// CHECK:           %[[VAL_3:.*]] = constant 0 : index
-// CHECK:           %[[VAL_4:.*]] = constant 1 : index
+// CHECK-DAG:           %[[VAL_3:.*]] = constant 0 : index
+// CHECK-DAG:           %[[VAL_4:.*]] = constant 1 : index
 // CHECK:           %[[VAL_5:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_3]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
 // CHECK:           %[[VAL_6:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_3]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
 // CHECK:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xi64>
@@ -289,10 +289,10 @@ func @and(%arga: tensor<32xi64, #SV>,
 // CHECK-SAME:             %[[VAL_0:.*]]: tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:             %[[VAL_1:.*]]: tensor<32xi64>,
 // CHECK-SAME:             %[[VAL_2:.*]]: tensor<32xi64> {linalg.inplaceable = true}) -> tensor<32xi64> {
-// CHECK:           %[[VAL_3:.*]] = constant 32 : index
-// CHECK:           %[[VAL_4:.*]] = constant 0 : index
-// CHECK:           %[[VAL_5:.*]] = constant true
-// CHECK:           %[[VAL_6:.*]] = constant 1 : index
+// CHECK-DAG:           %[[VAL_3:.*]] = constant 32 : index
+// CHECK-DAG:           %[[VAL_4:.*]] = constant 0 : index
+// CHECK-DAG:           %[[VAL_5:.*]] = constant true
+// CHECK-DAG:           %[[VAL_6:.*]] = constant 1 : index
 // CHECK:           %[[VAL_7:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_4]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
 // CHECK:           %[[VAL_8:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_4]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
 // CHECK:           %[[VAL_9:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xi64>
@@ -349,10 +349,10 @@ func @or(%arga: tensor<32xi64, #SV>,
 // CHECK-SAME:             %[[VAL_0:.*]]: tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:             %[[VAL_1:.*]]: tensor<32xi64>,
 // CHECK-SAME:             %[[VAL_2:.*]]: tensor<32xi64> {linalg.inplaceable = true}) -> tensor<32xi64> {
-// CHECK:           %[[VAL_3:.*]] = constant 32 : index
-// CHECK:           %[[VAL_4:.*]] = constant 0 : index
-// CHECK:           %[[VAL_5:.*]] = constant true
-// CHECK:           %[[VAL_6:.*]] = constant 1 : index
+// CHECK-DAG:           %[[VAL_3:.*]] = constant 32 : index
+// CHECK-DAG:           %[[VAL_4:.*]] = constant 0 : index
+// CHECK-DAG:           %[[VAL_5:.*]] = constant true
+// CHECK-DAG:           %[[VAL_6:.*]] = constant 1 : index
 // CHECK:           %[[VAL_7:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_4]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
 // CHECK:           %[[VAL_8:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_4]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
 // CHECK:           %[[VAL_9:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xi64>
@@ -408,9 +408,9 @@ func @xor(%arga: tensor<32xi64, #SV>,
 // CHECK-LABEL:   func @ashrbyc(
 // CHECK-SAME:                  %[[VAL_0:.*]]: tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:                  %[[VAL_1:.*]]: tensor<32xi64> {linalg.inplaceable = true}) -> tensor<32xi64> {
-// CHECK:           %[[VAL_2:.*]] = constant 2 : i64
-// CHECK:           %[[VAL_3:.*]] = constant 0 : index
-// CHECK:           %[[VAL_4:.*]] = constant 1 : index
+// CHECK-DAG:           %[[VAL_2:.*]] = constant 2 : i64
+// CHECK-DAG:           %[[VAL_3:.*]] = constant 0 : index
+// CHECK-DAG:           %[[VAL_4:.*]] = constant 1 : index
 // CHECK:           %[[VAL_5:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_3]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
 // CHECK:           %[[VAL_6:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_3]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
 // CHECK:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xi64>
@@ -442,9 +442,9 @@ func @ashrbyc(%arga: tensor<32xi64, #SV>,
 // CHECK-LABEL:   func @lsrbyc(
 // CHECK-SAME:                 %[[VAL_0:.*]]: tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:                 %[[VAL_1:.*]]: tensor<32xi64> {linalg.inplaceable = true}) -> tensor<32xi64> {
-// CHECK:           %[[VAL_2:.*]] = constant 2 : i64
-// CHECK:           %[[VAL_3:.*]] = constant 0 : index
-// CHECK:           %[[VAL_4:.*]] = constant 1 : index
+// CHECK-DAG:           %[[VAL_2:.*]] = constant 2 : i64
+// CHECK-DAG:           %[[VAL_3:.*]] = constant 0 : index
+// CHECK-DAG:           %[[VAL_4:.*]] = constant 1 : index
 // CHECK:           %[[VAL_5:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_3]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
 // CHECK:           %[[VAL_6:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_3]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
 // CHECK:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xi64>
@@ -476,9 +476,9 @@ func @lsrbyc(%arga: tensor<32xi64, #SV>,
 // CHECK-LABEL:   func @lslbyc(
 // CHECK-SAME:                 %[[VAL_0:.*]]: tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:                 %[[VAL_1:.*]]: tensor<32xi64> {linalg.inplaceable = true}) -> tensor<32xi64> {
-// CHECK:           %[[VAL_2:.*]] = constant 2 : i64
-// CHECK:           %[[VAL_3:.*]] = constant 0 : index
-// CHECK:           %[[VAL_4:.*]] = constant 1 : index
+// CHECK-DAG:           %[[VAL_2:.*]] = constant 2 : i64
+// CHECK-DAG:           %[[VAL_3:.*]] = constant 0 : index
+// CHECK-DAG:           %[[VAL_4:.*]] = constant 1 : index
 // CHECK:           %[[VAL_5:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_3]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
 // CHECK:           %[[VAL_6:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_3]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
 // CHECK:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xi64>

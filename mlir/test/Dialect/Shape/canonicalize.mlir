@@ -12,8 +12,8 @@ func @f(%arg0: tensor<2x3x4xf32>) -> tensor<?xindex> {
 // Basic case.
 // CHECK-LABEL: func @f
 func @f() -> (!shape.shape, !shape.shape) {
-  // CHECK: shape.const_shape [2, 3] : !shape.shape
-  // CHECK: shape.const_shape [4, 5] : !shape.shape
+  // CHECK-DAG: shape.const_shape [2, 3] : !shape.shape
+  // CHECK-DAG: shape.const_shape [4, 5] : !shape.shape
   %c2 = constant 2 : index
   %0 = shape.const_shape [2, 3, 4, 5] : !shape.shape
   %head, %tail = "shape.split_at"(%0, %c2) : (!shape.shape, index) -> (!shape.shape, !shape.shape)
@@ -26,8 +26,8 @@ func @f() -> (!shape.shape, !shape.shape) {
 // Negative split point.
 // CHECK-LABEL: func @f
 func @f() -> (!shape.shape, !shape.shape) {
-  // CHECK: shape.const_shape [2, 3, 4] : !shape.shape
-  // CHECK: shape.const_shape [5] : !shape.shape
+  // CHECK-DAG: shape.const_shape [2, 3, 4] : !shape.shape
+  // CHECK-DAG: shape.const_shape [5] : !shape.shape
   %c-1 = constant -1 : index
   %0 = shape.const_shape [2, 3, 4, 5] : !shape.shape
   %head, %tail = "shape.split_at"(%0, %c-1) : (!shape.shape, index) -> (!shape.shape, !shape.shape)
