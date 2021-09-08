@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -O2 -disable-llvm-passes -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CHECK-COMMON %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -O2 -disable-llvm-passes -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CHECK-HEAP -check-prefix=CHECK-COMMON %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -O2 -disable-llvm-passes -fobjc-avoid-heapify-local-blocks -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CHECK-NOHEAP -check-prefix=CHECK-COMMON %s
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -o - %s | FileCheck -check-prefix=CHECK-UNOPT -check-prefix=CHECK-COMMON %s
 
 // CHECK-COMMON: %[[STRUCT_BLOCK_DESCRIPTOR:.*]] = type { i64, i64 }
@@ -320,7 +321,7 @@ id test9(void) {
 // CHECK-LABEL:    define{{.*}} i8* @test9(
 // CHECK:      load i8*, i8** getelementptr
 // CHECK-NEXT: bitcast i8*
-// CHECK-NEXT: call i8* 
+// CHECK-NEXT: call i8*
 // CHECK-NEXT: tail call i8* @llvm.objc.autoreleaseReturnValue
 // CHECK-NEXT: ret i8*
 
@@ -334,31 +335,35 @@ id test9(void) {
 // when the initialization captures the variable.
 void test10a(void) {
   __block void (^block)(void) = ^{ block(); };
-  // CHECK-LABEL:    define{{.*}} void @test10a()
-  // CHECK:      [[BYREF:%.*]] = alloca [[BYREF_T:%.*]],
-  // CHECK:      [[BLOCK1:%.*]] = alloca <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, align 8
+  // CHECK-LABEL:       define{{.*}} void @test10a()
+  // CHECK:             [[BYREF:%.*]] = alloca [[BYREF_T:%.*]],
+  // CHECK-NOHEAP:      [[BLOCK1:%.*]] = alloca <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, align 8
 
   // Zero-initialization before running the initializer.
-  // CHECK:      [[T0:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[BYREF]], i32 0, i32 6
-  // CHECK-NEXT: store void ()* null, void ()** [[T0]], align 8
+  // CHECK:             [[T0:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[BYREF]], i32 0, i32 6
+  // CHECK-NEXT:        store void ()* null, void ()** [[T0]], align 8
 
   // Run the initializer as an assignment.
-  // CHECK:      [[T2:%.*]] = bitcast <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>* [[BLOCK1]] to void ()*
-  // CHECK-NEXT: [[T3:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[BYREF]], i32 0, i32 1
-  // CHECK-NEXT: [[T4:%.*]] = load [[BYREF_T]]*, [[BYREF_T]]** [[T3]]
-  // CHECK-NEXT: [[T5:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[T4]], i32 0, i32 6
-  // CHECK-NEXT: [[T6:%.*]] = load void ()*, void ()** [[T5]], align 8
-  // CHECK-NEXT: store void ()* [[T2]], void ()** [[T5]], align 8
-  // CHECK-NEXT: [[T7:%.*]] = bitcast void ()* [[T6]] to i8*
-  // CHECK-NEXT: call void @llvm.objc.release(i8* [[T7]])
+  // CHECK-HEAP:        [[T0:%.*]] = bitcast void ()* {{%.*}} to i8*
+  // CHECK-HEAP-NEXT:   [[T1:%.*]] = call i8* @llvm.objc.retainBlock(i8* [[T0]])
+  // CHECK-HEAP-NEXT:   [[T2:%.*]] = bitcast i8* [[T1]] to void ()*
+  // CHECK-NOHEAP:      [[T2:%.*]] = bitcast <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>* [[BLOCK1]] to void ()*
+  // CHECK-NEXT:        [[T3:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[BYREF]], i32 0, i32 1
+  // CHECK-NEXT:        [[T4:%.*]] = load [[BYREF_T]]*, [[BYREF_T]]** [[T3]]
+  // CHECK-NEXT:        [[T5:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[T4]], i32 0, i32 6
+  // CHECK-NEXT:        [[T6:%.*]] = load void ()*, void ()** [[T5]], align 8
+  // CHECK-HEAP-NEXT:   store void ()* {{%.*}}, void ()** [[T5]], align 8
+  // CHECK-NOHEAP-NEXT: store void ()* [[T2]], void ()** [[T5]], align 8
+  // CHECK-NEXT:        [[T7:%.*]] = bitcast void ()* [[T6]] to i8*
+  // CHECK-NEXT:        call void @llvm.objc.release(i8* [[T7]])
 
   // Destroy at end of function.
-  // CHECK-NEXT: [[SLOT:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[BYREF]], i32 0, i32 6
-  // CHECK-NEXT: [[T0:%.*]] = bitcast [[BYREF_T]]* [[BYREF]] to i8*
-  // CHECK-NEXT: call void @_Block_object_dispose(i8* [[T0]], i32 8)
-  // CHECK-NEXT: [[T1:%.*]] = load void ()*, void ()** [[SLOT]]
-  // CHECK-NEXT: [[T2:%.*]] = bitcast void ()* [[T1]] to i8*
-  // CHECK-NEXT: call void @llvm.objc.release(i8* [[T2]])
+  // CHECK-NEXT:        [[SLOT:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[BYREF]], i32 0, i32 6
+  // CHECK-NEXT:        [[T0:%.*]] = bitcast [[BYREF_T]]* [[BYREF]] to i8*
+  // CHECK-NEXT:        call void @_Block_object_dispose(i8* [[T0]], i32 8)
+  // CHECK-NEXT:        [[T1:%.*]] = load void ()*, void ()** [[SLOT]]
+  // CHECK-NEXT:        [[T2:%.*]] = bitcast void ()* [[T1]] to i8*
+  // CHECK-NEXT:        call void @llvm.objc.release(i8* [[T2]])
   // CHECK: ret void
 }
 
@@ -396,32 +401,36 @@ void test10b(void) {
   __block void (^block)(void);
   block = ^{ block(); };
 
-  // CHECK-LABEL:    define{{.*}} void @test10b()
-  // CHECK:      [[BYREF:%.*]] = alloca [[BYREF_T:%.*]],
-  // CHECK:      [[BLOCK3:%.*]] = alloca <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, align 8
+  // CHECK-LABEL:       define{{.*}} void @test10b()
+  // CHECK:             [[BYREF:%.*]] = alloca [[BYREF_T:%.*]],
+  // CHECK-NOHEAP:      [[BLOCK3:%.*]] = alloca <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, align 8
 
   // Zero-initialize.
-  // CHECK:      [[T0:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[BYREF]], i32 0, i32 6
-  // CHECK-NEXT: store void ()* null, void ()** [[T0]], align 8
+  // CHECK:             [[T0:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[BYREF]], i32 0, i32 6
+  // CHECK-NEXT:        store void ()* null, void ()** [[T0]], align 8
 
-  // CHECK-NEXT: [[SLOT:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[BYREF]], i32 0, i32 6
+  // CHECK-NEXT:        [[SLOT:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[BYREF]], i32 0, i32 6
 
   // The assignment.
-  // CHECK:      [[T2:%.*]] = bitcast <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>* [[BLOCK3]] to void ()*
-  // CHECK-NEXT: [[T3:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[BYREF]], i32 0, i32 1
-  // CHECK-NEXT: [[T4:%.*]] = load [[BYREF_T]]*, [[BYREF_T]]** [[T3]]
-  // CHECK-NEXT: [[T5:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[T4]], i32 0, i32 6
-  // CHECK-NEXT: [[T6:%.*]] = load void ()*, void ()** [[T5]], align 8
-  // CHECK-NEXT: store void ()* [[T2]], void ()** [[T5]], align 8
-  // CHECK-NEXT: [[T7:%.*]] = bitcast void ()* [[T6]] to i8*
-  // CHECK-NEXT: call void @llvm.objc.release(i8* [[T7]])
+  // CHECK-HEAP:        [[T0:%.*]] = bitcast void ()* {{%.*}} to i8*
+  // CHECK-HEAP-NEXT:   [[T1:%.*]] = call i8* @llvm.objc.retainBlock(i8* [[T0]])
+  // CHECK-HEAP-NEXT:   [[T2:%.*]] = bitcast i8* [[T1]] to void ()*
+  // CHECK-NOHEAP:      [[T2:%.*]] = bitcast <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>* [[BLOCK3]] to void ()*
+  // CHECK-NEXT:        [[T3:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[BYREF]], i32 0, i32 1
+  // CHECK-NEXT:        [[T4:%.*]] = load [[BYREF_T]]*, [[BYREF_T]]** [[T3]]
+  // CHECK-NEXT:        [[T5:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[T4]], i32 0, i32 6
+  // CHECK-NEXT:        [[T6:%.*]] = load void ()*, void ()** [[T5]], align 8
+  // CHECK-HEAP-NEXT:   store void ()* {{%.*}}, void ()** [[T5]], align 8
+  // CHECK-NOHEAP-NEXT: store void ()* [[T2]], void ()** [[T5]], align 8
+  // CHECK-NEXT:        [[T7:%.*]] = bitcast void ()* [[T6]] to i8*
+  // CHECK-NEXT:        call void @llvm.objc.release(i8* [[T7]])
 
   // Destroy at end of function.
-  // CHECK-NEXT: [[T0:%.*]] = bitcast [[BYREF_T]]* [[BYREF]] to i8*
-  // CHECK-NEXT: call void @_Block_object_dispose(i8* [[T0]], i32 8)
-  // CHECK-NEXT: [[T1:%.*]] = load void ()*, void ()** [[SLOT]]
-  // CHECK-NEXT: [[T2:%.*]] = bitcast void ()* [[T1]] to i8*
-  // CHECK-NEXT: call void @llvm.objc.release(i8* [[T2]])
+  // CHECK-NEXT:        [[T0:%.*]] = bitcast [[BYREF_T]]* [[BYREF]] to i8*
+  // CHECK-NEXT:        call void @_Block_object_dispose(i8* [[T0]], i32 8)
+  // CHECK-NEXT:        [[T1:%.*]] = load void ()*, void ()** [[SLOT]]
+  // CHECK-NEXT:        [[T2:%.*]] = bitcast void ()* [[T1]] to i8*
+  // CHECK-NEXT:        call void @llvm.objc.release(i8* [[T2]])
   // CHECK: ret void
 }
 

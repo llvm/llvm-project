@@ -3332,7 +3332,8 @@ struct ARCRetainExprEmitter :
     TryEmitResult result = visitExpr(e);
     // Avoid the block-retain if this is a block literal that doesn't need to be
     // copied to the heap.
-    if (e->getBlockDecl()->canAvoidCopyToHeap())
+    if (CGF.CGM.getCodeGenOpts().ObjCAvoidHeapifyLocalBlocks &&
+        e->getBlockDecl()->canAvoidCopyToHeap())
       result.setInt(true);
     return result;
   }

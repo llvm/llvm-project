@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fobjc-arc -fblocks -std=c++1y -emit-pch %s -o %t
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fobjc-arc -fblocks -std=c++1y -include-pch %t -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fobjc-arc -fblocks -std=c++1y -include-pch %t -fobjc-avoid-heapify-local-blocks -emit-llvm -o - %s | FileCheck %s
 
 #ifndef HEADER_INCLUDED
 #define HEADER_INCLUDED
