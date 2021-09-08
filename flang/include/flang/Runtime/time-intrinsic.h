@@ -1,4 +1,4 @@
-//===-- runtime/time-intrinsic.h --------------------------------*- C++ -*-===//
+//===-- include/flang/Runtime/time-intrinsic.h ------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,8 +12,8 @@
 #ifndef FORTRAN_RUNTIME_TIME_INTRINSIC_H_
 #define FORTRAN_RUNTIME_TIME_INTRINSIC_H_
 
-#include "cpp-type.h"
-#include "entry-names.h"
+#include "flang/Runtime/cpp-type.h"
+#include "flang/Runtime/entry-names.h"
 
 namespace Fortran::runtime {
 

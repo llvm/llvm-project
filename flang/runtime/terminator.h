@@ -11,7 +11,7 @@
 #ifndef FORTRAN_RUNTIME_TERMINATOR_H_
 #define FORTRAN_RUNTIME_TERMINATOR_H_
 
-#include "entry-names.h"
+#include "flang/Runtime/entry-names.h"
 #include <cstdarg>
 
 namespace Fortran::runtime {

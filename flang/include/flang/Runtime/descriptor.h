@@ -1,4 +1,4 @@
-//===-- runtime/descriptor.h ------------------------------------*- C++ -*-===//
+//===-- include/flang/Runtime/descriptor.h ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,9 +18,9 @@
 // User C code is welcome to depend on that ISO_Fortran_binding.h file,
 // but should never reference this internal header.
 
-#include "memory.h"
-#include "type-code.h"
 #include "flang/ISO_Fortran_binding.h"
+#include "flang/Runtime/memory.h"
+#include "flang/Runtime/type-code.h"
 #include <cassert>
 #include <cinttypes>
 #include <cstddef>

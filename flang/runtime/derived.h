@@ -8,8 +8,8 @@
 
 // Internal runtime utilities for derived type operations.
 
-#ifndef FLANG_RUNTIME_DERIVED_H_
-#define FLANG_RUNTIME_DERIVED_H_
+#ifndef FORTRAN_RUNTIME_DERIVED_H_
+#define FORTRAN_RUNTIME_DERIVED_H_
 
 namespace Fortran::runtime::typeInfo {
 class DerivedType;
@@ -32,4 +32,4 @@ void Finalize(const Descriptor &, const typeInfo::DerivedType &derived);
 void Destroy(const Descriptor &, bool finalize, const typeInfo::DerivedType &);
 
 } // namespace Fortran::runtime
-#endif // FLANG_RUNTIME_DERIVED_H_
+#endif // FORTRAN_RUNTIME_DERIVED_H_

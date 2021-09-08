@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "memory.h"
+#include "flang/Runtime/memory.h"
 #include "terminator.h"
 #include <cstdlib>
 

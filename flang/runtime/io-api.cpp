@@ -8,18 +8,18 @@
 
 // Implements the I/O statement API
 
-#include "io-api.h"
+#include "flang/Runtime/io-api.h"
 #include "descriptor-io.h"
-#include "descriptor.h"
 #include "edit-input.h"
 #include "edit-output.h"
 #include "environment.h"
 #include "format.h"
 #include "io-stmt.h"
-#include "memory.h"
 #include "terminator.h"
 #include "tools.h"
 #include "unit.h"
+#include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/memory.h"
 #include <cstdlib>
 #include <memory>
 

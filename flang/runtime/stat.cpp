@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "stat.h"
-#include "descriptor.h"
 #include "terminator.h"
+#include "flang/Runtime/descriptor.h"
 
 namespace Fortran::runtime {
 const char *StatErrorString(int stat) {

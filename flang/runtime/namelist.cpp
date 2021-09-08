@@ -8,8 +8,8 @@
 
 #include "namelist.h"
 #include "descriptor-io.h"
-#include "io-api.h"
 #include "io-stmt.h"
+#include "flang/Runtime/io-api.h"
 #include <cstring>
 #include <limits>
 
