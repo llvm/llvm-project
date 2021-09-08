@@ -39,7 +39,7 @@
 "`3455 <https://wg21.link/LWG3455>`__","Incorrect Postconditions on ``unique_ptr`` move assignment","November 2020","|Nothing To Do|",""
 "`3460 <https://wg21.link/LWG3460>`__","Unimplementable ``noop_coroutine_handle`` guarantees","November 2020","|Complete|","14.0"
 "`3461 <https://wg21.link/LWG3461>`__","``convertible_to``'s description mishandles cv-qualified ``void``","November 2020","",""
-"`3465 <https://wg21.link/LWG3465>`__","``compare_partial_order_fallback`` requires ``F < E``","November 2020","","","|spaceship|"
+"`3465 <https://wg21.link/LWG3465>`__","``compare_partial_order_fallback`` requires ``F < E``","November 2020","|Complete|","14.0","|spaceship|"
 "`3466 <https://wg21.link/LWG3466>`__","Specify the requirements for ``promise``/``future``/``shared_future`` consistently","November 2020","",""
 "`3467 <https://wg21.link/LWG3467>`__","``bool`` can't be an integer-like type","November 2020","",""
 "`3472 <https://wg21.link/LWG3472>`__","``counted_iterator`` is missing preconditions","November 2020","","","|ranges|"

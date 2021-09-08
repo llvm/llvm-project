@@ -51,9 +51,14 @@ namespace std {
   struct compare_three_way; // C++20
 
   // [cmp.alg], comparison algorithms
-  template<class T> constexpr strong_ordering strong_order(const T& a, const T& b);
-  template<class T> constexpr weak_ordering weak_order(const T& a, const T& b);
-  template<class T> constexpr partial_ordering partial_order(const T& a, const T& b);
+  inline namespace unspecified {
+    inline constexpr unspecified strong_order = unspecified;
+    inline constexpr unspecified weak_order = unspecified;
+    inline constexpr unspecified partial_order = unspecified;
+    inline constexpr unspecified compare_strong_order_fallback = unspecified;
+    inline constexpr unspecified compare_weak_order_fallback = unspecified;
+    inline constexpr unspecified compare_partial_order_fallback = unspecified;
+  }
 
   // [cmp.partialord], Class partial_ordering
   class partial_ordering {
@@ -136,8 +141,11 @@ namespace std {
 */
 
 #include <__compare/common_comparison_category.h>
+#include <__compare/compare_partial_order_fallback.h>
+#include <__compare/compare_strong_order_fallback.h>
 #include <__compare/compare_three_way.h>
 #include <__compare/compare_three_way_result.h>
+#include <__compare/compare_weak_order_fallback.h>
 #include <__compare/is_eq.h>
 #include <__compare/ordering.h>
 #include <__compare/partial_order.h>
