@@ -733,21 +733,19 @@ TEST(Error, ErrorCodeConversions) {
 
 // Test that error messages work.
 TEST(Error, ErrorMessage) {
-  EXPECT_EQ(toString(Error::success()).compare(""), 0);
+  EXPECT_EQ(toString(Error::success()), "");
 
   Error E1 = make_error<CustomError>(0);
-  EXPECT_EQ(toString(std::move(E1)).compare("CustomError {0}"), 0);
+  EXPECT_EQ(toString(std::move(E1)), "CustomError {0}");
 
   Error E2 = make_error<CustomError>(0);
   handleAllErrors(std::move(E2), [](const CustomError &CE) {
-    EXPECT_EQ(CE.message().compare("CustomError {0}"), 0);
+    EXPECT_EQ(CE.message(), "CustomError {0}");
   });
 
   Error E3 = joinErrors(make_error<CustomError>(0), make_error<CustomError>(1));
-  EXPECT_EQ(toString(std::move(E3))
-                .compare("CustomError {0}\n"
-                         "CustomError {1}"),
-            0);
+  EXPECT_EQ(toString(std::move(E3)), "CustomError {0}\n"
+                                     "CustomError {1}");
 }
 
 TEST(Error, Stream) {
@@ -933,12 +931,12 @@ TEST(Error, FileErrorTest) {
 
   Error E1 = make_error<CustomError>(1);
   Error FE1 = createFileError("file.bin", std::move(E1));
-  EXPECT_EQ(toString(std::move(FE1)).compare("'file.bin': CustomError {1}"), 0);
+  EXPECT_EQ(toString(std::move(FE1)), "'file.bin': CustomError {1}");
 
   Error E2 = make_error<CustomError>(2);
   Error FE2 = createFileError("file.bin", std::move(E2));
   handleAllErrors(std::move(FE2), [](const FileError &F) {
-    EXPECT_EQ(F.message().compare("'file.bin': CustomError {2}"), 0);
+    EXPECT_EQ(F.message(), "'file.bin': CustomError {2}");
   });
 
   Error E3 = make_error<CustomError>(3);
@@ -947,19 +945,17 @@ TEST(Error, FileErrorTest) {
     return F->takeError();
   });
   handleAllErrors(std::move(E31), [](const CustomError &C) {
-    EXPECT_EQ(C.message().compare("CustomError {3}"), 0);
+    EXPECT_EQ(C.message(), "CustomError {3}");
   });
 
   Error FE4 =
       joinErrors(createFileError("file.bin", make_error<CustomError>(41)),
                  createFileError("file2.bin", make_error<CustomError>(42)));
-  EXPECT_EQ(toString(std::move(FE4))
-                .compare("'file.bin': CustomError {41}\n"
-                         "'file2.bin': CustomError {42}"),
-            0);
+  EXPECT_EQ(toString(std::move(FE4)), "'file.bin': CustomError {41}\n"
+                                      "'file2.bin': CustomError {42}");
 
   Error FE5 = createFileError("", make_error<CustomError>(5));
-  EXPECT_EQ(toString(std::move(FE5)).compare("'': CustomError {5}"), 0);
+  EXPECT_EQ(toString(std::move(FE5)), "'': CustomError {5}");
 
   Error FE6 = createFileError("unused", make_error<CustomError>(6));
   handleAllErrors(std::move(FE6), [](std::unique_ptr<FileError> F) {
@@ -1018,25 +1014,22 @@ char TestDebugError::ID;
 
 TEST(Error, SubtypeStringErrorTest) {
   auto E1 = make_error<TestDebugError>(test_error_code::error_1);
-  EXPECT_EQ(toString(std::move(E1)).compare("Error 1."), 0);
+  EXPECT_EQ(toString(std::move(E1)), "Error 1.");
 
   auto E2 = make_error<TestDebugError>(test_error_code::error_1,
                                        "Detailed information");
-  EXPECT_EQ(toString(std::move(E2)).compare("Error 1. Detailed information"),
-            0);
+  EXPECT_EQ(toString(std::move(E2)), "Error 1. Detailed information");
 
   auto E3 = make_error<TestDebugError>(test_error_code::error_2);
   handleAllErrors(std::move(E3), [](const TestDebugError &F) {
-    EXPECT_EQ(F.message().compare("Error 2."), 0);
+    EXPECT_EQ(F.message(), "Error 2.");
   });
 
   auto E4 = joinErrors(make_error<TestDebugError>(test_error_code::error_1,
                                                   "Detailed information"),
                        make_error<TestDebugError>(test_error_code::error_2));
-  EXPECT_EQ(toString(std::move(E4))
-                .compare("Error 1. Detailed information\n"
-                         "Error 2."),
-            0);
+  EXPECT_EQ(toString(std::move(E4)), "Error 1. Detailed information\n"
+                                     "Error 2.");
 }
 
 } // namespace
