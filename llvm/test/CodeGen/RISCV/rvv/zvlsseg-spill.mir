@@ -40,7 +40,7 @@ body: |
     ; CHECK: $x2 = frame-destroy ADDI $x2, 16
     ; CHECK: PseudoRET
     %0:gpr = COPY $x10
-    %1:gpr = COPY $x11
+    %1:gprnox0 = COPY $x11
     $v0_v1_v2_v3_v4_v5_v6 = PseudoVLSEG7E64_V_M1 %0, %1, 6
     PseudoVSPILL7_M1 killed renamable $v0_v1_v2_v3_v4_v5_v6, %stack.0, $x0
     renamable $v7_v8_v9_v10_v11_v12_v13 = PseudoVRELOAD7_M1 %stack.0, $x0
