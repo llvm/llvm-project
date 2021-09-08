@@ -107,14 +107,15 @@ TypeSystemSwiftTypeRef::CanonicalizeSugar(swift::Demangle::Demangler &dem,
 }
 
 /// Create a mangled name for a type alias node.
-static ConstString GetTypeAlias(swift::Demangle::Demangler &dem,
-                                swift::Demangle::NodePointer node) {
+static swift::Demangle::ManglingErrorOr<std::string>
+GetTypeAlias(swift::Demangle::Demangler &dem,
+             swift::Demangle::NodePointer node) {
   using namespace swift::Demangle;
   auto global = dem.createNode(Node::Kind::Global);
   auto type_mangling = dem.createNode(Node::Kind::TypeMangling);
   global->addChild(type_mangling, dem);
   type_mangling->addChild(node, dem);
-  return ConstString(mangleNode(global));
+  return mangleNode(global);
 }
 
 /// Find a Clang type by name in the modules in \p module_holder.
@@ -328,7 +329,14 @@ ResolveTypeAlias(SwiftASTContext *module_holder,
   // Try to look this up as a Swift type alias. For each *Swift*
   // type alias there is a debug info entry that has the mangled
   // name as name and the aliased type as a type.
-  ConstString mangled = GetTypeAlias(dem, node);
+  auto mangling = GetTypeAlias(dem, node);
+  if (!mangling.isSuccess()) {
+    LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+              "Failed while mangling type alias (%d:%u)", mangling.error().code,
+              mangling.error().line);
+    return {{}, {}};
+  }
+  ConstString mangled(mangling.result());
   TypeList types;
   if (!prefer_clang_types) {
     llvm::DenseSet<SymbolFile *> searched_symbol_files;
@@ -1333,7 +1341,10 @@ bool TypeSystemSwiftTypeRef::Verify(opaque_compiler_type_t type) {
   using namespace swift::Demangle;
   Demangler dem;
   NodePointer node = dem.demangleSymbol(str);
-  std::string remangled = mangleNode(node);
+  auto mangling = mangleNode(node);
+  if (!mangling.isSuccess())
+    return false;
+  std::string remangled = mangling.result();
   return remangled == std::string(str);
 }
 
@@ -1477,10 +1488,14 @@ template <> bool Equivalent<CompilerType>(CompilerType l, CompilerType r) {
   if (ContainsUnresolvedTypeAlias(r_node) ||
       ContainsGenericTypeParameter(r_node) || ContainsSugaredParen(r_node))
     return true;
-  if (swift::Demangle::mangleNode(StripPrivateIDs(
-          dem, TypeSystemSwiftTypeRef::CanonicalizeSugar(dem, l_node))) ==
-      swift::Demangle::mangleNode(StripPrivateIDs(
-          dem, TypeSystemSwiftTypeRef::CanonicalizeSugar(dem, r_node))))
+  auto l_mangling = swift::Demangle::mangleNode(StripPrivateIDs(
+      dem, TypeSystemSwiftTypeRef::CanonicalizeSugar(dem, l_node)));
+  auto r_mangling = swift::Demangle::mangleNode(StripPrivateIDs(
+      dem, TypeSystemSwiftTypeRef::CanonicalizeSugar(dem, r_node)));
+  if (!l_mangling.isSuccess() || !r_mangling.isSuccess())
+    return false;
+
+  if (l_mangling.result() == r_mangling.result())
     return true;
 
   // SwiftASTContext hardcodes some less-precise types.
@@ -1646,7 +1661,10 @@ TypeSystemSwiftTypeRef::RemangleAsType(swift::Demangle::Demangler &dem,
   auto type_mangling = dem.createNode(Node::Kind::TypeMangling);
   type_mangling->addChild(node, dem);
   global->addChild(type_mangling, dem);
-  ConstString mangled_element(mangleNode(global));
+  auto mangling = mangleNode(global);
+  if (!mangling.isSuccess())
+    return {};
+  ConstString mangled_element(mangling.result());
   return GetTypeFromMangledTypename(mangled_element);
 }
 
@@ -1953,7 +1971,16 @@ ConstString TypeSystemSwiftTypeRef::GetTypeName(opaque_compiler_type_t type) {
     Demangler dem;
     NodePointer print_node =
         GetDemangleTreeForPrinting(dem, AsMangledName(type), true);
-    std::string remangled = mangleNode(print_node);
+    auto mangling = mangleNode(print_node);
+    std::string remangled;
+    if (mangling.isSuccess())
+      remangled = mangling.result();
+    else {
+      std::ostringstream buf;
+      buf << "<mangling error " << mangling.error().code << ":"
+          << mangling.error().line << ">";
+      remangled = buf.str();
+    }
     return ConstString(SwiftLanguageRuntime::DemangleSymbolAsString(
         remangled, SwiftLanguageRuntime::eTypeName));
   };
@@ -1969,7 +1996,16 @@ TypeSystemSwiftTypeRef::GetDisplayTypeName(opaque_compiler_type_t type,
     Demangler dem;
     NodePointer print_node =
         GetDemangleTreeForPrinting(dem, AsMangledName(type), false);
-    std::string remangled = mangleNode(print_node);
+    auto mangling = mangleNode(print_node);
+    std::string remangled;
+    if (mangling.isSuccess())
+      remangled = mangling.result();
+    else {
+      std::ostringstream buf;
+      buf << "<mangling error " << mangling.error().code << ":"
+          << mangling.error().line << ">";
+      remangled = buf.str();
+    }
     return ConstString(SwiftLanguageRuntime::DemangleSymbolAsString(
         remangled, SwiftLanguageRuntime::eDisplayTypeName, sc));
   };
@@ -2053,7 +2089,10 @@ TypeSystemSwiftTypeRef::GetCanonicalType(opaque_compiler_type_t type) {
       CompilerType ast_type = ReconstructType({this, type}).GetCanonicalType();
       return GetTypeFromMangledTypename(ast_type.GetMangledTypeName());
     }
-    ConstString mangled(mangleNode(canonical));
+    auto mangling = mangleNode(canonical);
+    if (!mangling.isSuccess())
+      return CompilerType();
+    ConstString mangled(mangling.result());
     return GetTypeFromMangledTypename(mangled);
   };
   VALIDATE_AND_RETURN(impl, GetCanonicalType, type, (ReconstructType(type)),
