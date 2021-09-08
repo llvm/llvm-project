@@ -65,7 +65,7 @@ private:
   bool processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI);
   bool processMemMove(MemMoveInst *M);
   bool performCallSlotOptzn(Instruction *cpyLoad, Instruction *cpyStore,
-                            Value *cpyDst, Value *cpySrc, uint64_t cpyLen,
+                            Value *cpyDst, Value *cpySrc, TypeSize cpyLen,
                             Align cpyAlign, CallInst *C);
   bool processMemCpyMemCpyDependence(MemCpyInst *M, MemCpyInst *MDep);
   bool processMemSetMemCpyDependence(MemCpyInst *MemCpy, MemSetInst *MemSet);

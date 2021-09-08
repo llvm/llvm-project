@@ -178,9 +178,9 @@ public:
   }
 
   void addStore(int64_t OffsetFromFirst, StoreInst *SI) {
-    int64_t StoreSize = DL.getTypeStoreSize(SI->getOperand(0)->getType());
-
-    addRange(OffsetFromFirst, StoreSize, SI->getPointerOperand(),
+    TypeSize StoreSize = DL.getTypeStoreSize(SI->getOperand(0)->getType());
+    assert(!StoreSize.isScalable() && "Can't track scalable-typed stores");
+    addRange(OffsetFromFirst, StoreSize.getFixedSize(), SI->getPointerOperand(),
              SI->getAlign().value(), SI);
   }
 
@@ -371,6 +371,11 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
                                                  Value *ByteVal) {
   const DataLayout &DL = StartInst->getModule()->getDataLayout();
 
+  // We can't track scalable types
+  if (StoreInst *SI = dyn_cast<StoreInst>(StartInst))
+    if (DL.getTypeStoreSize(SI->getOperand(0)->getType()).isScalable())
+      return nullptr;
+
   // Okay, so we now have a single store that can be splatable.  Scan to find
   // all subsequent stores of the same value to offset from the same pointer.
   // Join these together into ranges, so we can decide whether contiguous blocks
@@ -424,6 +429,10 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
       // Don't convert stores of non-integral pointer types to memsets (which
       // stores integers).
       if (DL.isNonIntegralPointerType(StoredVal->getType()->getScalarType()))
+        break;
+
+      // We can't track ranges involving scalable types.
+      if (DL.getTypeStoreSize(StoredVal->getType()).isScalable())
         break;
 
       // Check to see if this stored value is of the same byte-splattable value.
@@ -859,7 +868,7 @@ bool MemCpyOptPass::processMemSet(MemSetInst *MSI, BasicBlock::iterator &BBI) {
 /// the call write its result directly into the destination of the memcpy.
 bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
                                          Instruction *cpyStore, Value *cpyDest,
-                                         Value *cpySrc, uint64_t cpyLen,
+                                         Value *cpySrc, TypeSize cpySize,
                                          Align cpyAlign, CallInst *C) {
   // The general transformation to keep in mind is
   //
@@ -874,6 +883,10 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   // Since moving the memcpy is technically awkward, we additionally check that
   // src only holds uninitialized values at the moment of the call, meaning that
   // the memcpy can be discarded rather than moved.
+
+  // We can't optimize scalable types.
+  if (cpySize.isScalable())
+    return false;
 
   // Lifetime marks shouldn't be operated on.
   if (Function *F = C->getCalledFunction())
@@ -893,13 +906,13 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   uint64_t srcSize = DL.getTypeAllocSize(srcAlloca->getAllocatedType()) *
                      srcArraySize->getZExtValue();
 
-  if (cpyLen < srcSize)
+  if (cpySize < srcSize)
     return false;
 
   // Check that accessing the first srcSize bytes of dest will not cause a
   // trap.  Otherwise the transform is invalid since it might cause a trap
   // to occur earlier than it otherwise would.
-  if (!isDereferenceableAndAlignedPointer(cpyDest, Align(1), APInt(64, cpyLen),
+  if (!isDereferenceableAndAlignedPointer(cpyDest, Align(1), APInt(64, cpySize),
                                           DL, C, DT))
     return false;
 
@@ -1452,9 +1465,10 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
               // of conservatively taking the minimum?
               Align Alignment = std::min(M->getDestAlign().valueOrOne(),
                                          M->getSourceAlign().valueOrOne());
-              if (performCallSlotOptzn(M, M, M->getDest(), M->getSource(),
-                                       CopySize->getZExtValue(), Alignment,
-                                       C)) {
+              if (performCallSlotOptzn(
+                      M, M, M->getDest(), M->getSource(),
+                      TypeSize::getFixed(CopySize->getZExtValue()), Alignment,
+                      C)) {
                 LLVM_DEBUG(dbgs() << "Performed call slot optimization:\n"
                                   << "    call: " << *C << "\n"
                                   << "    memcpy: " << *M << "\n");
@@ -1509,7 +1523,8 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
           Align Alignment = std::min(M->getDestAlign().valueOrOne(),
                                      M->getSourceAlign().valueOrOne());
           if (performCallSlotOptzn(M, M, M->getDest(), M->getSource(),
-                                   CopySize->getZExtValue(), Alignment, C)) {
+                                   TypeSize::getFixed(CopySize->getZExtValue()),
+                                   Alignment, C)) {
             eraseInstruction(M);
             ++NumMemCpyInstr;
             return true;
@@ -1584,7 +1599,7 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
   // Find out what feeds this byval argument.
   Value *ByValArg = CB.getArgOperand(ArgNo);
   Type *ByValTy = CB.getParamByValType(ArgNo);
-  uint64_t ByValSize = DL.getTypeAllocSize(ByValTy);
+  TypeSize ByValSize = DL.getTypeAllocSize(ByValTy);
   MemoryLocation Loc(ByValArg, LocationSize::precise(ByValSize));
   MemCpyInst *MDep = nullptr;
   if (EnableMemorySSA) {
@@ -1612,7 +1627,8 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
 
   // The length of the memcpy must be larger or equal to the size of the byval.
   ConstantInt *C1 = dyn_cast<ConstantInt>(MDep->getLength());
-  if (!C1 || C1->getValue().getZExtValue() < ByValSize)
+  if (!C1 || !TypeSize::isKnownGE(
+                 TypeSize::getFixed(C1->getValue().getZExtValue()), ByValSize))
     return false;
 
   // Get the alignment of the byval.  If the call doesn't specify the alignment,
