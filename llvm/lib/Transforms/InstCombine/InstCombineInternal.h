@@ -661,7 +661,7 @@ public:
   Instruction *foldSignBitTest(ICmpInst &I);
   Instruction *foldICmpWithZero(ICmpInst &Cmp);
 
-  Value *foldUnsignedMultiplicationOverflowCheck(ICmpInst &Cmp);
+  Value *foldMultiplicationOverflowCheck(ICmpInst &Cmp);
 
   Instruction *foldICmpSelectConstant(ICmpInst &Cmp, SelectInst *Select,
                                       ConstantInt *C);

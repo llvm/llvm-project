@@ -1363,11 +1363,10 @@ public:
     case ISD::STORE:
     case ISD::VP_STORE:
     case ISD::MSTORE:
+    case ISD::VP_SCATTER:
       return getOperand(2);
     case ISD::MGATHER:
     case ISD::MSCATTER:
-    case ISD::VP_GATHER:
-    case ISD::VP_SCATTER:
       return getOperand(3);
     default:
       return getOperand(1);

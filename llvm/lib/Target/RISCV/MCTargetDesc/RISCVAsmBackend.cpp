@@ -352,8 +352,9 @@ bool RISCVAsmBackend::mayNeedRelaxation(const MCInst &Inst,
   return getRelaxedOpcode(Inst.getOpcode()) != Inst.getOpcode();
 }
 
-bool RISCVAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
-  bool HasStdExtC = STI.getFeatureBits()[RISCV::FeatureStdExtC];
+bool RISCVAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
+                                   const MCSubtargetInfo *STI) const {
+  bool HasStdExtC = STI->getFeatureBits()[RISCV::FeatureStdExtC];
   unsigned MinNopLen = HasStdExtC ? 2 : 4;
 
   if ((Count % MinNopLen) != 0)

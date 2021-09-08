@@ -153,6 +153,14 @@ LegalityPredicate LegalityPredicates::scalarOrEltSizeNotPow2(unsigned TypeIdx) {
   };
 }
 
+LegalityPredicate LegalityPredicates::sizeNotMultipleOf(unsigned TypeIdx,
+                                                        unsigned Size) {
+  return [=](const LegalityQuery &Query) {
+    const LLT QueryTy = Query.Types[TypeIdx];
+    return QueryTy.isScalar() && QueryTy.getSizeInBits() % Size != 0;
+  };
+}
+
 LegalityPredicate LegalityPredicates::sizeNotPow2(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     const LLT QueryTy = Query.Types[TypeIdx];

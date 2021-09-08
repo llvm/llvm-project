@@ -91,6 +91,10 @@ struct OutlinableRegion {
   /// call.
   bool ChangedArgOrder = false;
 
+  /// Marks whether this region ends in a branch, there is special handling
+  /// required for the following basic blocks in this case.
+  bool EndsInBranch = false;
+
   /// Mapping of the argument number in the deduplicated function
   /// to a given constant, which is used when creating the arguments to the call
   /// to the newly created deduplicated function.  This is handled separately
@@ -316,8 +320,9 @@ private:
   struct InstructionAllowed : public InstVisitor<InstructionAllowed, bool> {
     InstructionAllowed() {}
 
-    // TODO: Determine a scheme to resolve when the label is similar enough.
-    bool visitBranchInst(BranchInst &BI) { return false; }
+    bool visitBranchInst(BranchInst &BI) { 
+      return EnableBranches;
+    }
     // TODO: Determine a scheme to resolve when the labels are similar enough.
     bool visitPHINode(PHINode &PN) { return false; }
     // TODO: Handle allocas.
@@ -356,6 +361,10 @@ private:
     // TODO: Handle interblock similarity.
     bool visitTerminator(Instruction &I) { return false; }
     bool visitInstruction(Instruction &I) { return true; }
+
+    // The flag variable that marks whether we should allow branch instructions
+    // to be outlined.
+    bool EnableBranches = false;
   };
 
   /// A InstVisitor used to exclude certain instructions from being outlined.

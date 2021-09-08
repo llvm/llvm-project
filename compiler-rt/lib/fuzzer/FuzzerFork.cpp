@@ -213,8 +213,11 @@ struct GlobalEnv {
 
     std::vector<std::string> FilesToAdd;
     std::set<uint32_t> NewFeatures, NewCov;
+    bool IsSetCoverMerge =
+        !Job->Cmd.getFlagValue("set_cover_merge").compare("1");
     CrashResistantMerge(Args, {}, MergeCandidates, &FilesToAdd, Features,
-                        &NewFeatures, Cov, &NewCov, Job->CFPath, false);
+                        &NewFeatures, Cov, &NewCov, Job->CFPath, false,
+                        IsSetCoverMerge);
     for (auto &Path : FilesToAdd) {
       auto U = FileToVector(Path);
       auto NewPath = DirPlusFile(MainCorpusDir, Hash(U));
@@ -318,7 +321,8 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
     auto CFPath = DirPlusFile(Env.TempDir, "merge.txt");
     std::set<uint32_t> NewFeatures, NewCov;
     CrashResistantMerge(Env.Args, {}, SeedFiles, &Env.Files, Env.Features,
-                        &NewFeatures, Env.Cov, &NewCov, CFPath, false);
+                        &NewFeatures, Env.Cov, &NewCov, CFPath,
+                        /*Verbose=*/false, /*IsSetCoverMerge=*/false);
     Env.Features.insert(NewFeatures.begin(), NewFeatures.end());
     Env.Cov.insert(NewFeatures.begin(), NewFeatures.end());
     RemoveFile(CFPath);

@@ -335,7 +335,7 @@ Status GDBRemoteCommunicationServerLLGS::AttachToProcess(lldb::pid_t pid) {
   auto process_or = m_process_factory.Attach(pid, *this, m_mainloop);
   if (!process_or) {
     Status status(process_or.takeError());
-    llvm::errs() << llvm::formatv("failed to attach to process {0}: {1}", pid,
+    llvm::errs() << llvm::formatv("failed to attach to process {0}: {1}\n", pid,
                                   status);
     return status;
   }

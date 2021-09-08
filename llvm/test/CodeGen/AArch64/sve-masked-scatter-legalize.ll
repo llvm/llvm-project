@@ -9,28 +9,27 @@ target triple = "aarch64-linux-gnu"
 define void @masked_scatter_nxv16i8(<vscale x 16 x i8> %data, i8* %base, <vscale x 16 x i8> %offsets, <vscale x 16 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_scatter_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    pfalse p1.b
-; CHECK-NEXT:    zip1 p2.b, p0.b, p1.b
 ; CHECK-NEXT:    sunpklo z2.h, z1.b
+; CHECK-NEXT:    punpklo p1.h, p0.b
 ; CHECK-NEXT:    uunpklo z4.h, z0.b
-; CHECK-NEXT:    zip1 p3.h, p2.h, p1.h
 ; CHECK-NEXT:    sunpklo z3.s, z2.h
+; CHECK-NEXT:    punpklo p2.h, p1.b
 ; CHECK-NEXT:    uunpklo z5.s, z4.h
-; CHECK-NEXT:    st1b { z5.s }, p3, [x0, z3.s, sxtw]
-; CHECK-NEXT:    zip2 p2.h, p2.h, p1.h
+; CHECK-NEXT:    st1b { z5.s }, p2, [x0, z3.s, sxtw]
 ; CHECK-NEXT:    sunpkhi z2.s, z2.h
+; CHECK-NEXT:    punpkhi p1.h, p1.b
 ; CHECK-NEXT:    uunpkhi z3.s, z4.h
-; CHECK-NEXT:    zip2 p0.b, p0.b, p1.b
 ; CHECK-NEXT:    sunpkhi z1.h, z1.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uunpkhi z0.h, z0.b
-; CHECK-NEXT:    st1b { z3.s }, p2, [x0, z2.s, sxtw]
-; CHECK-NEXT:    zip1 p2.h, p0.h, p1.h
+; CHECK-NEXT:    st1b { z3.s }, p1, [x0, z2.s, sxtw]
 ; CHECK-NEXT:    sunpklo z2.s, z1.h
+; CHECK-NEXT:    punpklo p1.h, p0.b
 ; CHECK-NEXT:    uunpklo z3.s, z0.h
-; CHECK-NEXT:    zip2 p0.h, p0.h, p1.h
 ; CHECK-NEXT:    sunpkhi z1.s, z1.h
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uunpkhi z0.s, z0.h
-; CHECK-NEXT:    st1b { z3.s }, p2, [x0, z2.s, sxtw]
+; CHECK-NEXT:    st1b { z3.s }, p1, [x0, z2.s, sxtw]
 ; CHECK-NEXT:    st1b { z0.s }, p0, [x0, z1.s, sxtw]
 ; CHECK-NEXT:    ret
   %ptrs = getelementptr i8, i8* %base, <vscale x 16 x i8> %offsets
@@ -41,14 +40,13 @@ define void @masked_scatter_nxv16i8(<vscale x 16 x i8> %data, i8* %base, <vscale
 define void @masked_scatter_nxv8i16(<vscale x 8 x i16> %data, i16* %base, <vscale x 8 x i16> %offsets, <vscale x 8 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_scatter_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    pfalse p1.b
-; CHECK-NEXT:    zip1 p2.h, p0.h, p1.h
 ; CHECK-NEXT:    sunpklo z2.s, z1.h
+; CHECK-NEXT:    punpklo p1.h, p0.b
 ; CHECK-NEXT:    uunpklo z3.s, z0.h
-; CHECK-NEXT:    zip2 p0.h, p0.h, p1.h
 ; CHECK-NEXT:    sunpkhi z1.s, z1.h
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uunpkhi z0.s, z0.h
-; CHECK-NEXT:    st1h { z3.s }, p2, [x0, z2.s, sxtw #1]
+; CHECK-NEXT:    st1h { z3.s }, p1, [x0, z2.s, sxtw #1]
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x0, z1.s, sxtw #1]
 ; CHECK-NEXT:    ret
   %ptrs = getelementptr i16, i16* %base, <vscale x 8 x i16> %offsets
@@ -59,14 +57,13 @@ define void @masked_scatter_nxv8i16(<vscale x 8 x i16> %data, i16* %base, <vscal
 define void @masked_scatter_nxv8bf16(<vscale x 8 x bfloat> %data, bfloat* %base, <vscale x 8 x i16> %offsets, <vscale x 8 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_scatter_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    pfalse p1.b
-; CHECK-NEXT:    zip1 p2.h, p0.h, p1.h
 ; CHECK-NEXT:    sunpklo z2.s, z1.h
+; CHECK-NEXT:    punpklo p1.h, p0.b
 ; CHECK-NEXT:    uunpklo z3.s, z0.h
-; CHECK-NEXT:    zip2 p0.h, p0.h, p1.h
 ; CHECK-NEXT:    sunpkhi z1.s, z1.h
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uunpkhi z0.s, z0.h
-; CHECK-NEXT:    st1h { z3.s }, p2, [x0, z2.s, sxtw #1]
+; CHECK-NEXT:    st1h { z3.s }, p1, [x0, z2.s, sxtw #1]
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x0, z1.s, sxtw #1]
 ; CHECK-NEXT:    ret
   %ptrs = getelementptr bfloat, bfloat* %base, <vscale x 8 x i16> %offsets
@@ -77,10 +74,9 @@ define void @masked_scatter_nxv8bf16(<vscale x 8 x bfloat> %data, bfloat* %base,
 define void @masked_scatter_nxv8f32(<vscale x 8 x float> %data, float* %base, <vscale x 8 x i32> %indexes, <vscale x 8 x i1> %masks) #0 {
 ; CHECK-LABEL: masked_scatter_nxv8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    pfalse p1.b
-; CHECK-NEXT:    zip1 p2.h, p0.h, p1.h
-; CHECK-NEXT:    zip2 p0.h, p0.h, p1.h
-; CHECK-NEXT:    st1w { z0.s }, p2, [x0, z2.s, uxtw #2]
+; CHECK-NEXT:    punpklo p1.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    st1w { z0.s }, p1, [x0, z2.s, uxtw #2]
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x0, z3.s, uxtw #2]
 ; CHECK-NEXT:    ret
   %ext = zext <vscale x 8 x i32> %indexes to <vscale x 8 x i64>
@@ -93,9 +89,6 @@ define void @masked_scatter_nxv8f32(<vscale x 8 x float> %data, float* %base, <v
 define void @masked_scatter_nxv32i32(<vscale x 32 x i32> %data, i32* %base, <vscale x 32 x i32> %offsets, <vscale x 32 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_scatter_nxv32i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    ptrue p2.s
 ; CHECK-NEXT:    ld1w { z24.s }, p2/z, [x1, #7, mul vl]
 ; CHECK-NEXT:    ld1w { z25.s }, p2/z, [x1, #6, mul vl]
@@ -105,30 +98,26 @@ define void @masked_scatter_nxv32i32(<vscale x 32 x i32> %data, i32* %base, <vsc
 ; CHECK-NEXT:    ld1w { z29.s }, p2/z, [x1, #2, mul vl]
 ; CHECK-NEXT:    ld1w { z30.s }, p2/z, [x1, #1, mul vl]
 ; CHECK-NEXT:    ld1w { z31.s }, p2/z, [x1]
-; CHECK-NEXT:    pfalse p2.b
-; CHECK-NEXT:    zip1 p3.b, p0.b, p2.b
-; CHECK-NEXT:    zip1 p4.h, p3.h, p2.h
-; CHECK-NEXT:    zip2 p3.h, p3.h, p2.h
-; CHECK-NEXT:    zip2 p0.b, p0.b, p2.b
-; CHECK-NEXT:    st1w { z0.s }, p4, [x0, z31.s, sxtw #2]
-; CHECK-NEXT:    st1w { z1.s }, p3, [x0, z30.s, sxtw #2]
-; CHECK-NEXT:    zip1 p3.h, p0.h, p2.h
-; CHECK-NEXT:    zip2 p0.h, p0.h, p2.h
-; CHECK-NEXT:    st1w { z2.s }, p3, [x0, z29.s, sxtw #2]
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    punpklo p3.h, p2.b
+; CHECK-NEXT:    punpkhi p2.h, p2.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    st1w { z0.s }, p3, [x0, z31.s, sxtw #2]
+; CHECK-NEXT:    st1w { z1.s }, p2, [x0, z30.s, sxtw #2]
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    st1w { z2.s }, p2, [x0, z29.s, sxtw #2]
 ; CHECK-NEXT:    st1w { z3.s }, p0, [x0, z28.s, sxtw #2]
-; CHECK-NEXT:    zip1 p0.b, p1.b, p2.b
-; CHECK-NEXT:    zip1 p3.h, p0.h, p2.h
-; CHECK-NEXT:    zip2 p0.h, p0.h, p2.h
-; CHECK-NEXT:    st1w { z4.s }, p3, [x0, z27.s, sxtw #2]
+; CHECK-NEXT:    punpklo p0.h, p1.b
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    st1w { z4.s }, p2, [x0, z27.s, sxtw #2]
 ; CHECK-NEXT:    st1w { z5.s }, p0, [x0, z26.s, sxtw #2]
-; CHECK-NEXT:    zip2 p0.b, p1.b, p2.b
-; CHECK-NEXT:    zip1 p1.h, p0.h, p2.h
-; CHECK-NEXT:    zip2 p0.h, p0.h, p2.h
+; CHECK-NEXT:    punpkhi p0.h, p1.b
+; CHECK-NEXT:    punpklo p1.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    st1w { z6.s }, p1, [x0, z25.s, sxtw #2]
 ; CHECK-NEXT:    st1w { z7.s }, p0, [x0, z24.s, sxtw #2]
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %ptrs = getelementptr i32, i32* %base, <vscale x 32 x i32> %offsets
   call void @llvm.masked.scatter.nxv32i32(<vscale x 32 x i32> %data, <vscale x 32 x i32*> %ptrs, i32 4, <vscale x 32 x i1> %mask)
