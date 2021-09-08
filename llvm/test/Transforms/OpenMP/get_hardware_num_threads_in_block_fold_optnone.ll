@@ -68,9 +68,10 @@ define weak void @kernel2() #0 {
 }
 
 define internal void @helper0() {
-; CHECK-LABEL: define {{[^@]+}}@helper0() {
-; CHECK-NEXT:    [[THREADLIMIT:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block() #[[ATTR1:[0-9]+]]
-; CHECK-NEXT:    store i32 undef, i32* @G, align 4
+; CHECK-LABEL: define {{[^@]+}}@helper0
+; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:    [[THREADLIMIT:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block() #[[ATTR1]]
+; CHECK-NEXT:    store i32 [[THREADLIMIT]], i32* @G, align 4
 ; CHECK-NEXT:    ret void
 ;
   %threadLimit = call i32 @__kmpc_get_hardware_num_threads_in_block()
@@ -81,11 +82,13 @@ define internal void @helper0() {
 define internal void @helper1() {
 ; CHECK-LABEL: define {{[^@]+}}@helper1() {
 ; CHECK-NEXT:    [[THREADLIMIT:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block() #[[ATTR1]]
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[THREADLIMIT]], 666
+; CHECK-NEXT:    br i1 [[C]], label [[F:%.*]], label [[T:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    call void @helper0() #[[ATTR1]]
+; CHECK-NEXT:    ret void
 ; CHECK:       f:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    ret void
 ;
   %threadLimit = call i32 @__kmpc_get_hardware_num_threads_in_block()
   %c = icmp eq i32 %threadLimit, 666
@@ -100,7 +103,7 @@ f:
 define internal void @helper2() {
 ; CHECK-LABEL: define {{[^@]+}}@helper2() {
 ; CHECK-NEXT:    [[THREADLIMIT:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block() #[[ATTR1]]
-; CHECK-NEXT:    store i32 undef, i32* @G, align 4
+; CHECK-NEXT:    store i32 [[THREADLIMIT]], i32* @G, align 4
 ; CHECK-NEXT:    ret void
 ;
   %threadLimit = call i32 @__kmpc_get_hardware_num_threads_in_block()

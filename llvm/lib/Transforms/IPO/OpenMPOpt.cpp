@@ -579,7 +579,9 @@ struct KernelInfoState : AbstractState {
   /// See AbstractState::indicatePessimisticFixpoint(...)
   ChangeStatus indicatePessimisticFixpoint() override {
     IsAtFixpoint = true;
+    ReachingKernelEntries.indicatePessimisticFixpoint();
     SPMDCompatibilityTracker.indicatePessimisticFixpoint();
+    ReachedKnownParallelRegions.indicatePessimisticFixpoint();
     ReachedUnknownParallelRegions.indicatePessimisticFixpoint();
     return ChangeStatus::CHANGED;
   }
@@ -626,13 +628,13 @@ struct KernelInfoState : AbstractState {
   KernelInfoState operator^=(const KernelInfoState &KIS) {
     // Do not merge two different _init and _deinit call sites.
     if (KIS.KernelInitCB) {
-      if (KernelInitCB && KernelInitCB != KIS.KernelInitCB)
-        indicatePessimisticFixpoint();
+      if(KernelInitCB && KernelInitCB != KIS.KernelInitCB)
+        llvm_unreachable("Kernel that calls another kernel violates OpenMP-Opt assumptions.");
       KernelInitCB = KIS.KernelInitCB;
     }
     if (KIS.KernelDeinitCB) {
-      if (KernelDeinitCB && KernelDeinitCB != KIS.KernelDeinitCB)
-        indicatePessimisticFixpoint();
+      if(KernelDeinitCB && KernelDeinitCB != KIS.KernelDeinitCB)
+        llvm_unreachable("Kernel that calls another kernel violates OpenMP-Opt assumptions.");
       KernelDeinitCB = KIS.KernelDeinitCB;
     }
     SPMDCompatibilityTracker ^= KIS.SPMDCompatibilityTracker;
@@ -2828,9 +2830,13 @@ struct AAKernelInfo : public StateWrapper<KernelInfoState, AbstractAttribute> {
            std::string(SPMDCompatibilityTracker.isAtFixpoint() ? " [FIX]"
                                                                : "") +
            std::string(" #PRs: ") +
-           std::to_string(ReachedKnownParallelRegions.size()) +
+           (ReachedKnownParallelRegions.isValidState()
+                ? std::to_string(ReachedKnownParallelRegions.size())
+                : "<invalid>") +
            ", #Unknown PRs: " +
-           std::to_string(ReachedUnknownParallelRegions.size()) +
+           (ReachedUnknownParallelRegions.isValidState()
+                ? std::to_string(ReachedUnknownParallelRegions.size())
+                : "<invalid>") +
            ", #Reaching Kernels: " +
            (ReachingKernelEntries.isValidState()
                 ? std::to_string(ReachingKernelEntries.size())
@@ -3036,7 +3042,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
     // If we can we change the execution mode to SPMD-mode otherwise we build a
     // custom state machine.
     if (!mayContainParallelRegion() || !changeToSPMDMode(A))
-      buildCustomStateMachine(A);
+      return buildCustomStateMachine(A);
 
     return ChangeStatus::CHANGED;
   }
@@ -3340,7 +3346,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
   ChangeStatus buildCustomStateMachine(Attributor &A) {
     // If we have disabled state machine rewrites, don't make a custom one
     if (DisableOpenMPOptStateMachineRewrite)
-      return indicatePessimisticFixpoint();
+      return ChangeStatus::UNCHANGED;
 
     assert(ReachedKnownParallelRegions.isValidState() &&
            "Custom state machine with invalid parallel region states?");
@@ -3683,8 +3689,10 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
     bool UsedAssumedInformationInCheckCallInst = false;
     if (!A.checkForAllCallLikeInstructions(
-            CheckCallInst, *this, UsedAssumedInformationInCheckCallInst))
+            CheckCallInst, *this, UsedAssumedInformationInCheckCallInst)) {
+      LLVM_DEBUG(dbgs() << TAG << "Failed to visit all call-like instructions!\n";);
       return indicatePessimisticFixpoint();
+    }
 
     // If we haven't used any assumed information for the SPMD state we can fix
     // it.
@@ -3892,18 +3900,16 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       // We do not look into tasks right now, just give up.
       SPMDCompatibilityTracker.insert(&CB);
       ReachedUnknownParallelRegions.insert(&CB);
-      indicatePessimisticFixpoint();
-      return;
+      break;
     case OMPRTL___kmpc_alloc_shared:
     case OMPRTL___kmpc_free_shared:
       // Return without setting a fixpoint, to be resolved in updateImpl.
       return;
     default:
       // Unknown OpenMP runtime calls cannot be executed in SPMD-mode,
-      // generally.
+      // generally. However, they do not hide parallel regions.
       SPMDCompatibilityTracker.insert(&CB);
-      indicatePessimisticFixpoint();
-      return;
+      break;
     }
     // All other OpenMP runtime calls will not reach parallel regions so they
     // can be safely ignored for now. Since it is a known OpenMP runtime call we
