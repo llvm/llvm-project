@@ -373,8 +373,8 @@ void llvm::computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
     // the array.
     if (i == Last) {
 
-      // Bail out if the remainder is too complex.
-      if (isa<SCEVAddRecExpr>(R)) {
+      // Bail out if the byte offset is non-zero.
+      if (!R->isZero()) {
         Subscripts.clear();
         Sizes.clear();
         return;
