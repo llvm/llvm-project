@@ -1720,6 +1720,28 @@ let TargetPrefix = "ppc" in {
                         Intrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
   def int_ppc_frsqrtes : GCCBuiltin<"__builtin_ppc_frsqrtes">,
                          Intrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+  def int_ppc_compare_exp_uo : GCCBuiltin<"__builtin_ppc_compare_exp_uo">,
+                               Intrinsic<[llvm_i32_ty],
+                                         [llvm_double_ty, llvm_double_ty], 
+                                         [IntrNoMem]>;
+  def int_ppc_compare_exp_lt : GCCBuiltin<"__builtin_ppc_compare_exp_lt">,
+                               Intrinsic<[llvm_i32_ty], 
+                                         [llvm_double_ty, llvm_double_ty], 
+                                         [IntrNoMem]>;
+  def int_ppc_compare_exp_gt : GCCBuiltin<"__builtin_ppc_compare_exp_gt">,
+                               Intrinsic<[llvm_i32_ty],
+                                         [llvm_double_ty, llvm_double_ty], 
+                                         [IntrNoMem]>;
+  def int_ppc_compare_exp_eq : GCCBuiltin<"__builtin_ppc_compare_exp_eq">,
+                               Intrinsic<[llvm_i32_ty], 
+                                         [llvm_double_ty, llvm_double_ty], 
+                                         [IntrNoMem]>;
+  def int_ppc_test_data_class_d : Intrinsic<[llvm_i32_ty],
+                                            [llvm_double_ty, llvm_i32_ty],
+                                            [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+  def int_ppc_test_data_class_f : Intrinsic<[llvm_i32_ty],
+                                            [llvm_float_ty, llvm_i32_ty],
+                                            [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 }
 
 //===----------------------------------------------------------------------===//

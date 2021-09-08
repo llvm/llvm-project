@@ -238,6 +238,11 @@ static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__fsqrts", "__builtin_ppc_fsqrts");
   Builder.defineMacro("__addex", "__builtin_ppc_addex");
   Builder.defineMacro("__cmplxl", "__builtin_complex");
+  Builder.defineMacro("__compare_exp_uo", "__builtin_ppc_compare_exp_uo");
+  Builder.defineMacro("__compare_exp_lt", "__builtin_ppc_compare_exp_lt");
+  Builder.defineMacro("__compare_exp_gt", "__builtin_ppc_compare_exp_gt");
+  Builder.defineMacro("__compare_exp_eq", "__builtin_ppc_compare_exp_eq");
+  Builder.defineMacro("__test_data_class", "__builtin_ppc_test_data_class");
 }
 
 /// PPCTargetInfo::getTargetDefines - Return a set of the PowerPC-specific
