@@ -212,6 +212,12 @@ StringRef ARMTargetInfo::getCPUAttr() const {
     return "8_6A";
   case llvm::ARM::ArchKind::ARMV8_7A:
     return "8_7A";
+  case llvm::ARM::ArchKind::ARMV9A:
+    return "9A";
+  case llvm::ARM::ArchKind::ARMV9_1A:
+    return "9_1A";
+  case llvm::ARM::ArchKind::ARMV9_2A:
+    return "9_2A";
   case llvm::ARM::ArchKind::ARMV8MBaseline:
     return "8M_BASE";
   case llvm::ARM::ArchKind::ARMV8MMainline:
@@ -535,6 +541,7 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       LDREX = LDREX_D | LDREX_W | LDREX_H | LDREX_B;
     break;
   case 8:
+  case 9:
     LDREX = LDREX_D | LDREX_W | LDREX_H | LDREX_B;
   }
 
@@ -877,6 +884,9 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::ARM::ArchKind::ARMV8_4A:
   case llvm::ARM::ArchKind::ARMV8_5A:
   case llvm::ARM::ArchKind::ARMV8_6A:
+  case llvm::ARM::ArchKind::ARMV9A:
+  case llvm::ARM::ArchKind::ARMV9_1A:
+  case llvm::ARM::ArchKind::ARMV9_2A:
     getTargetDefinesARMV83A(Opts, Builder);
     break;
   }

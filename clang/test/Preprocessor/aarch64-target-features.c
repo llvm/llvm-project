@@ -177,19 +177,16 @@
 // CHECK-SVE-8_6-NOFEATURES-NOT: __ARM_FEATURE_SVE_MATMUL_INT8 1
 // CHECK-SVE-8_6-NOFEATURES:     __ARM_FEATURE_SVE 1
 
-// The following tests may need to be revised in the future since
-// SVE2 is currently still part of Future Architecture Technologies
-// (https://developer.arm.com/docs/ddi0602/latest)
-//
-// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
 // CHECK-SVE2: __ARM_FEATURE_SVE2 1
-// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve2-aes -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2AES %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2-aes -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2AES %s
 // CHECK-SVE2AES: __ARM_FEATURE_SVE2_AES 1
-// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve2-sha3 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2SHA3 %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2-sha3 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2SHA3 %s
 // CHECK-SVE2SHA3: __ARM_FEATURE_SVE2_SHA3 1
-// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve2-sm4 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2SM4 %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2-sm4 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2SM4 %s
 // CHECK-SVE2SM4: __ARM_FEATURE_SVE2_SM4 1
-// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve2-bitperm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2BITPERM %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2-bitperm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2BITPERM %s
 // CHECK-SVE2BITPERM: __ARM_FEATURE_SVE2_BITPERM 1
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8.2a+dotprod -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-DOTPROD %s

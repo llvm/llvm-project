@@ -27,6 +27,12 @@ def HasV8_6a         : Predicate<"Subtarget->hasV8_6aOps()">,
                                  AssemblerPredicate<(all_of HasV8_6aOps), "armv8.6a">;
 def HasV8_7a         : Predicate<"Subtarget->hasV8_7aOps()">,
                                  AssemblerPredicate<(all_of HasV8_7aOps), "armv8.7a">;
+def HasV9_0a         : Predicate<"Subtarget->hasV9_0aOps()">,
+                                 AssemblerPredicate<(all_of HasV9_0aOps), "armv9-a">;
+def HasV9_1a         : Predicate<"Subtarget->hasV9_1aOps()">,
+                                 AssemblerPredicate<(all_of HasV9_1aOps), "armv9.1a">;
+def HasV9_2a         : Predicate<"Subtarget->hasV9_2aOps()">,
+                                 AssemblerPredicate<(all_of HasV9_2aOps), "armv9.2a">;
 def HasVH            : Predicate<"Subtarget->hasVH()">,
                        AssemblerPredicate<(all_of FeatureVH), "vh">;
 

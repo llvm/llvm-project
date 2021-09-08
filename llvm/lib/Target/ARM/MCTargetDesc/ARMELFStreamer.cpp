@@ -785,6 +785,9 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
   case ARM::ArchKind::ARMV8_4A:
   case ARM::ArchKind::ARMV8_5A:
   case ARM::ArchKind::ARMV8_6A:
+  case ARM::ArchKind::ARMV9A:
+  case ARM::ArchKind::ARMV9_1A:
+  case ARM::ArchKind::ARMV9_2A:
     S.setAttributeItem(CPU_arch_profile, ApplicationProfile, false);
     S.setAttributeItem(ARM_ISA_use, Allowed, false);
     S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false);

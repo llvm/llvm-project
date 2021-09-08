@@ -58,6 +58,24 @@ AARCH64_ARCH("armv8.7-a", ARMV8_7A, "8.7-A", "v8.7a",
               AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
               AArch64::AEK_SM4 | AArch64::AEK_SHA3 | AArch64::AEK_BF16 |
               AArch64::AEK_SHA2 | AArch64::AEK_AES | AArch64::AEK_I8MM))
+AARCH64_ARCH("armv9-a",   ARMV9A, "9-A", "v9a",
+             ARMBuildAttrs::CPUArch::v8_A, FK_NEON_FP_ARMV8,
+             (AArch64::AEK_CRC | AArch64::AEK_FP |
+              AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
+              AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
+              AArch64::AEK_SVE2))
+AARCH64_ARCH("armv9.1-a", ARMV9_1A, "9.1-A", "v9.1a",
+             ARMBuildAttrs::CPUArch::v8_A, FK_NEON_FP_ARMV8,
+             (AArch64::AEK_CRC | AArch64::AEK_FP |
+              AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
+              AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
+              AArch64::AEK_SVE2))
+AARCH64_ARCH("armv9.2-a", ARMV9_2A, "9.2-A", "v9.2a",
+             ARMBuildAttrs::CPUArch::v8_A, FK_NEON_FP_ARMV8,
+             (AArch64::AEK_CRC | AArch64::AEK_FP |
+              AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
+              AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
+              AArch64::AEK_SVE2))
 // For v8-R, we do not enable crypto and align with GCC that enables a more
 // minimal set of optional architecture extensions.
 AARCH64_ARCH("armv8-r", ARMV8R, "8-R", "v8r",

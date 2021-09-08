@@ -79,10 +79,13 @@ static bool DecodeAArch64Features(const Driver &D, StringRef text,
     else
       return false;
 
-    // +sve implies +f32mm if the base architecture is v8.6A or v8.7A
-    // it isn't the case in general that sve implies both f64mm and f32mm
+    // +sve implies +f32mm if the base architecture is v8.6A, v8.7A, v9.1A or
+    // v9.2A. It isn't the case in general that sve implies both f64mm and f32mm
     if ((ArchKind == llvm::AArch64::ArchKind::ARMV8_6A ||
-         ArchKind == llvm::AArch64::ArchKind::ARMV8_7A) && Feature == "sve")
+         ArchKind == llvm::AArch64::ArchKind::ARMV8_7A ||
+         ArchKind == llvm::AArch64::ArchKind::ARMV9_1A ||
+         ArchKind == llvm::AArch64::ArchKind::ARMV9_2A) &&
+        Feature == "sve")
       Features.push_back("+f32mm");
   }
   return true;
@@ -345,7 +348,10 @@ fp16_fml_fallthrough:
       NoCrypto = true;
   }
 
-  if (std::find(ItBegin, ItEnd, "+v8.4a") != ItEnd) {
+  if (std::find(ItBegin, ItEnd, "+v8.4a") != ItEnd ||
+      std::find(ItBegin, ItEnd, "+v9a") != ItEnd ||
+      std::find(ItBegin, ItEnd, "+v9.1a") != ItEnd ||
+      std::find(ItBegin, ItEnd, "+v9.2a") != ItEnd) {
     if (HasCrypto && !NoCrypto) {
       // Check if we have NOT disabled an algorithm with something like:
       //   +crypto, -algorithm
@@ -404,9 +410,19 @@ fp16_fml_fallthrough:
     }
   }
 
-  auto V8_6Pos = llvm::find(Features, "+v8.6a");
-  if (V8_6Pos != std::end(Features))
-    V8_6Pos = Features.insert(std::next(V8_6Pos), {"+i8mm", "+bf16"});
+  const char *Archs[] = {"+v8.6a", "+v8.7a", "+v9.1a", "+v9.2a"};
+  auto Pos = std::find_first_of(Features.begin(), Features.end(),
+                                std::begin(Archs), std::end(Archs));
+  if (Pos != std::end(Features))
+    Pos = Features.insert(std::next(Pos), {"+i8mm", "+bf16"});
+
+  // Enable SVE2 by default on Armv9-A.
+  // It can still be disabled if +nosve2 is present.
+  const char *SVE2Archs[] = {"+v9a", "+v9.1a", "+v9.2a"};
+  Pos = std::find_first_of(Features.begin(), Features.end(),
+                           std::begin(SVE2Archs), std::end(SVE2Archs));
+  if (Pos != Features.end())
+    Features.insert(++Pos, "+sve2");
 
   if (Arg *A = Args.getLastArg(options::OPT_mno_unaligned_access,
                                options::OPT_munaligned_access)) {
