@@ -747,6 +747,12 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       Subtarget->hasFPRegs()) {
     addRegisterClass(MVT::f32, &ARM::SPRRegClass);
     addRegisterClass(MVT::f64, &ARM::DPRRegClass);
+
+    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i32, Custom);
+    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i32, Custom);
+    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Custom);
+    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Custom);
+
     if (!Subtarget->hasVFP2Base())
       setAllExpand(MVT::f32);
     if (!Subtarget->hasFP64())
@@ -5824,14 +5830,25 @@ SDValue ARMTargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
   return Op;
 }
 
-static SDValue LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) {
+static SDValue LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
+                                  const ARMSubtarget *Subtarget) {
   EVT VT = Op.getValueType();
   EVT ToVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
   EVT FromVT = Op.getOperand(0).getValueType();
 
-  if (VT == MVT::v4i32 && ToVT == MVT::i32 && FromVT == MVT::v4f32)
+  if (VT == MVT::i32 && ToVT == MVT::i32 && FromVT == MVT::f32)
     return Op;
-  if (VT == MVT::v8i16 && ToVT == MVT::i16 && FromVT == MVT::v8f16)
+  if (VT == MVT::i32 && ToVT == MVT::i32 && FromVT == MVT::f64 &&
+      Subtarget->hasFP64())
+    return Op;
+  if (VT == MVT::i32 && ToVT == MVT::i32 && FromVT == MVT::f16 &&
+      Subtarget->hasFullFP16())
+    return Op;
+  if (VT == MVT::v4i32 && ToVT == MVT::i32 && FromVT == MVT::v4f32 &&
+      Subtarget->hasMVEFloatOps())
+    return Op;
+  if (VT == MVT::v8i16 && ToVT == MVT::i16 && FromVT == MVT::v8f16 &&
+      Subtarget->hasMVEFloatOps())
     return Op;
 
   if (FromVT != MVT::v4f32 && FromVT != MVT::v8f16)
@@ -10194,7 +10211,7 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:    return LowerFP_TO_INT(Op, DAG);
   case ISD::FP_TO_SINT_SAT:
-  case ISD::FP_TO_UINT_SAT: return LowerFP_TO_INT_SAT(Op, DAG);
+  case ISD::FP_TO_UINT_SAT: return LowerFP_TO_INT_SAT(Op, DAG, Subtarget);
   case ISD::FCOPYSIGN:     return LowerFCOPYSIGN(Op, DAG);
   case ISD::RETURNADDR:    return LowerRETURNADDR(Op, DAG);
   case ISD::FRAMEADDR:     return LowerFRAMEADDR(Op, DAG);
@@ -10380,6 +10397,10 @@ void ARMTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
     Res = LowerVectorExtend(N, DAG, Subtarget);
+    break;
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT:
+    Res = LowerFP_TO_INT_SAT(SDValue(N, 0), DAG, Subtarget);
     break;
   }
   if (Res.getNode())
