@@ -29,16 +29,13 @@ group("unittests") {
     ]
   }
   if (host_os != "win") {
+    # FIXME: libclang unit tests are disabled on Windows due
+    # to failures, mostly in libclang.VirtualFileOverlay_*.
+    # FIXME: Also, the executable can't find libclang.dll since that's
+    # in a different directory.
     deps += [
-      # FIXME: libclang unit tests are disabled on Windows due
-      # to failures, mostly in libclang.VirtualFileOverlay_*.
-      # FIXME: Also, the executable can't find libclang.dll since that's
-      # in a different directory.
       "libclang:libclangTests",
       "libclang/CrashTests:libclangCrashTests",
-
-      # Exceptions on Windows are not yet supported.
-      "Interpreter/ExceptionTests:ClangReplInterpreterExceptionTests",
     ]
   }
   testonly = true
