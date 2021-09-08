@@ -1605,6 +1605,8 @@ let Predicates=[HasVFP2, HasDPVFP] in {
 
   def : VFPPat<(alignedstore32 (i32 (fp_to_sint (f64 DPR:$a))), addrmode5:$ptr),
                (VSTRS (VTOSIZD DPR:$a), addrmode5:$ptr)>;
+  def : VFPPat<(alignedstore32 (i32 (fp_to_sint_sat (f64 DPR:$a), i32)), addrmode5:$ptr),
+               (VSTRS (VTOSIZD DPR:$a), addrmode5:$ptr)>;
 }
 
 def VTOSIZS : AVConv1InsS_Encode<0b11101, 0b11, 0b1101, 0b1010,
@@ -1627,6 +1629,9 @@ def : VFPPat<(i32 (fp_to_sint_sat SPR:$a, i32)),
 def : VFPNoNEONPat<(alignedstore32 (i32 (fp_to_sint (f32 SPR:$a))),
                                    addrmode5:$ptr),
                    (VSTRS (VTOSIZS SPR:$a), addrmode5:$ptr)>;
+def : VFPPat<(alignedstore32 (i32 (fp_to_sint_sat (f32 SPR:$a), i32)),
+                                   addrmode5:$ptr),
+             (VSTRS (VTOSIZS SPR:$a), addrmode5:$ptr)>;
 
 def VTOSIZH : AVConv1IsH_Encode<0b11101, 0b11, 0b1101, 0b1001,
                                  (outs SPR:$Sd), (ins HPR:$Sm),
@@ -1658,6 +1663,8 @@ let Predicates=[HasVFP2, HasDPVFP] in {
 
   def : VFPPat<(alignedstore32 (i32 (fp_to_uint (f64 DPR:$a))), addrmode5:$ptr),
                (VSTRS (VTOUIZD DPR:$a), addrmode5:$ptr)>;
+  def : VFPPat<(alignedstore32 (i32 (fp_to_uint_sat (f64 DPR:$a), i32)), addrmode5:$ptr),
+               (VSTRS (VTOUIZD DPR:$a), addrmode5:$ptr)>;
 }
 
 def VTOUIZS : AVConv1InsS_Encode<0b11101, 0b11, 0b1100, 0b1010,
@@ -1680,6 +1687,9 @@ def : VFPPat<(i32 (fp_to_uint_sat SPR:$a, i32)),
 def : VFPNoNEONPat<(alignedstore32 (i32 (fp_to_uint (f32 SPR:$a))),
                                    addrmode5:$ptr),
                   (VSTRS (VTOUIZS SPR:$a), addrmode5:$ptr)>;
+def : VFPPat<(alignedstore32 (i32 (fp_to_uint_sat (f32 SPR:$a), i32)),
+                                   addrmode5:$ptr),
+             (VSTRS (VTOUIZS SPR:$a), addrmode5:$ptr)>;
 
 def VTOUIZH : AVConv1IsH_Encode<0b11101, 0b11, 0b1100, 0b1001,
                                  (outs SPR:$Sd), (ins HPR:$Sm),
