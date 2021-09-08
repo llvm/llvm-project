@@ -236,10 +236,9 @@ LogicalResult OperationFolder::tryToFold(
       // Ensure that this constant dominates the operation we are replacing it
       // with. This may not automatically happen if the operation being folded
       // was inserted before the constant within the insertion block.
-      if (constOp->getBlock() == op->getBlock() &&
-          !constOp->isBeforeInBlock(op)) {
-        constOp->moveBefore(op);
-      }
+      Block *opBlock = op->getBlock();
+      if (opBlock == constOp->getBlock() && &opBlock->front() != constOp)
+        constOp->moveBefore(&opBlock->front());
 
       results.push_back(constOp->getResult(0));
       continue;
