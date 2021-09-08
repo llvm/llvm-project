@@ -3918,7 +3918,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         N1C && N1C->isAllOnesValue()) {
       return DAG.getSetCC(dl, VT, N0.getOperand(0),
                           DAG.getConstant(0, dl, OpVT),
-                          Cond == ISD::SETEQ ? ISD::SETLT : ISD::SETGT);
+                          Cond == ISD::SETEQ ? ISD::SETLT : ISD::SETGE);
     }
 
     if (SDValue V =
