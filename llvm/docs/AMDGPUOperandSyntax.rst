@@ -31,7 +31,7 @@ Vector registers. There are 256 32-bit vector registers.
 
 A sequence of *vector* registers may be used to operate with more than 32 bits of data.
 
-Assembler currently supports sequences of 1, 2, 3, 4, 5, 6, 8, 16 and 32 *vector* registers.
+Assembler currently supports sequences of 1, 2, 3, 4, 5, 6, 7, 8, 16 and 32 *vector* registers.
 
     =================================================== ====================================================================
     Syntax                                              Description
@@ -61,7 +61,7 @@ Note: *N* and *K* must satisfy the following conditions:
 * *N* <= *K*.
 * 0 <= *N* <= 255.
 * 0 <= *K* <= 255.
-* *K-N+1* must be equal to 1, 2, 3, 4, 5, 6, 8, 16 or 32.
+* *K-N+1* must be equal to 1, 2, 3, 4, 5, 6, 7, 8, 16 or 32.
 
 GFX90A has an additional alignment requirement: pairs of *vector* registers must be even-aligned
 (first register must be even).
@@ -114,7 +114,7 @@ Accumulator registers. There are 256 32-bit accumulator registers.
 
 A sequence of *accumulator* registers may be used to operate with more than 32 bits of data.
 
-Assembler currently supports sequences of 1, 2, 3, 4, 5, 6, 8, 16 and 32 *accumulator* registers.
+Assembler currently supports sequences of 1, 2, 3, 4, 5, 6, 7, 8, 16 and 32 *accumulator* registers.
 
     =================================================== ========================================================= ====================================================================
     Syntax                                              An Alternative Syntax (SP3)                               Description
@@ -144,7 +144,7 @@ Note: *N* and *K* must satisfy the following conditions:
 * *N* <= *K*.
 * 0 <= *N* <= 255.
 * 0 <= *K* <= 255.
-* *K-N+1* must be equal to 1, 2, 3, 4, 5, 6, 8, 16 or 32.
+* *K-N+1* must be equal to 1, 2, 3, 4, 5, 6, 7, 8, 16 or 32.
 
 GFX90A has an additional alignment requirement: pairs of *accumulator* registers must be even-aligned
 (first register must be even).
@@ -185,7 +185,7 @@ Scalar 32-bit registers. The number of available *scalar* registers depends on G
     ======= ============================
 
 A sequence of *scalar* registers may be used to operate with more than 32 bits of data.
-Assembler currently supports sequences of 1, 2, 4, 8, 16 and 32 *scalar* registers.
+Assembler currently supports sequences of 1, 2, 3, 4, 5, 6, 7, 8, 16 and 32 *scalar* registers.
 
 Pairs of *scalar* registers must be even-aligned (first register must be even).
 Sequences of 4 and more *scalar* registers must be quad-aligned.
@@ -221,7 +221,7 @@ Note: *N* and *K* must satisfy the following conditions:
 * *N* <= *K*.
 * 0 <= *N* < *SMAX*\ , where *SMAX* is the number of available *scalar* registers.
 * 0 <= *K* < *SMAX*\ , where *SMAX* is the number of available *scalar* registers.
-* *K-N+1* must be equal to 1, 2, 4, 8, 16 or 32.
+* *K-N+1* must be equal to 1, 2, 3, 4, 5, 6, 7, 8, 16 or 32.
 
 Examples:
 
@@ -273,7 +273,7 @@ The number of available *ttmp* registers depends on GPU:
     ======= ===========================
 
 A sequence of *ttmp* registers may be used to operate with more than 32 bits of data.
-Assembler currently supports sequences of 1, 2, 4, 8 and 16 *ttmp* registers.
+Assembler currently supports sequences of 1, 2, 3, 4, 5, 6, 7, 8 and 16 *ttmp* registers.
 
 Pairs of *ttmp* registers must be even-aligned (first register must be even).
 Sequences of 4 and more *ttmp* registers must be quad-aligned.
@@ -307,7 +307,7 @@ Note: *N* and *K* must satisfy the following conditions:
 * *N* <= *K*.
 * 0 <= *N* < *TMAX*, where *TMAX* is the number of available *ttmp* registers.
 * 0 <= *K* < *TMAX*, where *TMAX* is the number of available *ttmp* registers.
-* *K-N+1* must be equal to 1, 2, 4, 8 or 16.
+* *K-N+1* must be equal to 1, 2, 3, 4, 5, 6, 7, 8 or 16.
 
 Examples:
 
