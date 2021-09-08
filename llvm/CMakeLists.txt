@@ -1152,6 +1152,7 @@ endif()
 # after all targets are created.
 llvm_distribution_add_targets()
 process_llvm_pass_plugins(GEN_CONFIG)
+include(CoverageReport)
 
 # This allows us to deploy the Universal CRT DLLs by passing -DCMAKE_INSTALL_UCRT_LIBRARIES=ON to CMake
 if (MSVC AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows" AND CMAKE_INSTALL_UCRT_LIBRARIES)
