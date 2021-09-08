@@ -957,6 +957,9 @@ TEST(Error, FileErrorTest) {
                 .compare("'file.bin': CustomError {41}\n"
                          "'file2.bin': CustomError {42}"),
             0);
+
+  Error FE5 = createFileError("", make_error<CustomError>(1));
+  EXPECT_EQ(toString(std::move(FE5)).compare("'': CustomError {1}"), 0);
 }
 
 enum class test_error_code {
