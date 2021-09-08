@@ -431,3 +431,24 @@ define i32 @zext_or_masked_bit_test(i32 %a, i32 %b, i32 %x) {
   ret i32 %z
 }
 
+define i32 @zext_or_masked_bit_test_uses(i32 %a, i32 %b, i32 %x) {
+; CHECK-LABEL: @zext_or_masked_bit_test_uses(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 1, [[B:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHL]], [[A:%.*]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], [[B]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[TOBOOL]], [[CMP]]
+; CHECK-NEXT:    call void @use1(i1 [[OR]])
+; CHECK-NEXT:    [[Z34:%.*]] = or i1 [[TOBOOL]], [[CMP]]
+; CHECK-NEXT:    [[Z3:%.*]] = zext i1 [[Z34]] to i32
+; CHECK-NEXT:    ret i32 [[Z3]]
+;
+  %shl = shl i32 1, %b
+  %and = and i32 %shl, %a
+  %tobool = icmp ne i32 %and, 0
+  %cmp = icmp eq i32 %x, %b
+  %or = or i1 %tobool, %cmp
+  call void @use1(i1 %or)
+  %z = zext i1 %or to i32
+  ret i32 %z
+}
