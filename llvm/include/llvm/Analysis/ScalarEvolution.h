@@ -2005,14 +2005,8 @@ private:
   bool matchURem(const SCEV *Expr, const SCEV *&LHS, const SCEV *&RHS);
 
   /// Look for a SCEV expression with type `SCEVType` and operands `Ops` in
-  /// `UniqueSCEVs`.
-  ///
-  /// The first component of the returned tuple is the SCEV if found and null
-  /// otherwise.  The second component is the `FoldingSetNodeID` that was
-  /// constructed to look up the SCEV and the third component is the insertion
-  /// point.
-  std::tuple<SCEV *, FoldingSetNodeID, void *>
-  findExistingSCEVInCache(SCEVTypes SCEVType, ArrayRef<const SCEV *> Ops);
+  /// `UniqueSCEVs`.  Return if found, else nullptr.
+  SCEV *findExistingSCEVInCache(SCEVTypes SCEVType, ArrayRef<const SCEV *> Ops);
 
   FoldingSet<SCEV> UniqueSCEVs;
   FoldingSet<SCEVPredicate> UniquePreds;
