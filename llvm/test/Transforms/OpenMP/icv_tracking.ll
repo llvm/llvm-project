@@ -10,7 +10,7 @@
 ; doesn't modify any ICVs.
 define i32 @icv_free_use(i32 %0) {
 ; CHECK-LABEL: define {{[^@]+}}@icv_free_use
-; CHECK-SAME: (i32 [[TMP0:%.*]])
+; CHECK-SAME: (i32 [[TMP0:%.*]]) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP0]], 1
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
@@ -20,7 +20,7 @@ define i32 @icv_free_use(i32 %0) {
 
 define i32 @bad_use(i32 %0) {
 ; CHECK-LABEL: define {{[^@]+}}@bad_use
-; CHECK-SAME: (i32 [[TMP0:%.*]])
+; CHECK-SAME: (i32 [[TMP0:%.*]]) {
 ; CHECK-NEXT:    tail call void @use(i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP0]], 1
 ; CHECK-NEXT:    ret i32 [[TMP2]]
@@ -33,8 +33,8 @@ define i32 @bad_use(i32 %0) {
 define i32 @ok_use_assume(i32 %0) {
 ; CHECK-LABEL: define {{[^@]+}}@ok_use_assume
 ; CHECK-SAME: (i32 [[TMP0:%.*]]) {
-; CHECK-NEXT:    call void @use(i32 [[TMP0]]) [[ATTR1:#.*]]
-; CHECK-NEXT:    call void @use(i32 [[TMP0]]) [[ATTR2:#.*]]
+; CHECK-NEXT:    call void @use(i32 [[TMP0]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    call void @use(i32 [[TMP0]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    call void @no_openmp_use(i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP0]], 1
 ; CHECK-NEXT:    ret i32 [[TMP2]]
@@ -48,12 +48,13 @@ define i32 @ok_use_assume(i32 %0) {
 
 define void @indirect_call(void ()* %0) {
 ; CHECK-LABEL: define {{[^@]+}}@indirect_call
-; CHECK-SAME: (void ()* [[TMP0:%.*]])
+; CHECK-SAME: (void ()* [[TMP0:%.*]]) {
 ; CHECK-NEXT:    call void @omp_set_num_threads(i32 4)
 ; CHECK-NEXT:    tail call void [[TMP0]]()
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @omp_get_max_threads()
 ; CHECK-NEXT:    tail call void @use(i32 [[TMP2]])
 ; CHECK-NEXT:    ret void
+;
   call void @omp_set_num_threads(i32 4)
   tail call void %0()
   %2 = tail call i32 @omp_get_max_threads()
@@ -63,12 +64,12 @@ define void @indirect_call(void ()* %0) {
 
 define dso_local i32 @foo(i32 %0, i32 %1) {
 ; CHECK-LABEL: define {{[^@]+}}@foo
-; CHECK-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; CHECK-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
 ; CHECK-NEXT:    tail call void @omp_set_num_threads(i32 [[TMP0]])
 ; CHECK-NEXT:    tail call void @omp_set_num_threads(i32 [[TMP1]])
 ; CHECK-NEXT:    tail call void @use(i32 [[TMP1]])
 ; CHECK-NEXT:    tail call void @use(i32 [[TMP1]])
-; CHECK-NEXT:    tail call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull @0, i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*))
+; CHECK-NEXT:    tail call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull @[[GLOB0:[0-9]+]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*))
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @omp_get_max_threads()
 ; CHECK-NEXT:    tail call void @use(i32 [[TMP3]])
 ; CHECK-NEXT:    ret i32 0
@@ -97,7 +98,7 @@ declare dso_local void @no_openmp_use(i32) "no_openmp"
 
 define internal void @.omp_outlined.(i32* %0, i32* %1) {
 ; CHECK-LABEL: define {{[^@]+}}@.omp_outlined.
-; CHECK-SAME: (i32* [[TMP0:%.*]], i32* [[TMP1:%.*]])
+; CHECK-SAME: (i32* [[TMP0:%.*]], i32* [[TMP1:%.*]]) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @omp_get_max_threads()
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @omp_get_max_threads()
 ; CHECK-NEXT:    tail call void @use(i32 [[TMP4]])
@@ -119,11 +120,11 @@ declare !callback !0 void @__kmpc_fork_call(%struct.ident_t*, i32, void (i32*, i
 
 define dso_local i32 @bar(i32 %0, i32 %1) {
 ; CHECK-LABEL: define {{[^@]+}}@bar
-; CHECK-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; CHECK-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 [[TMP0]], i32 [[TMP1]]
 ; CHECK-NEXT:    tail call void @omp_set_num_threads(i32 [[TMP4]])
-; CHECK-NEXT:    tail call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull @0, i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..1 to void (i32*, i32*, ...)*))
+; CHECK-NEXT:    tail call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull @[[GLOB0]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..1 to void (i32*, i32*, ...)*))
 ; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @omp_get_max_threads()
 ; CHECK-NEXT:    tail call void @use(i32 [[TMP5]])
 ; CHECK-NEXT:    ret i32 0
@@ -141,7 +142,7 @@ define dso_local i32 @bar(i32 %0, i32 %1) {
 
 define internal void @.omp_outlined..1(i32* %0, i32*  %1) {
 ; CHECK-LABEL: define {{[^@]+}}@.omp_outlined..1
-; CHECK-SAME: (i32* [[TMP0:%.*]], i32* [[TMP1:%.*]])
+; CHECK-SAME: (i32* [[TMP0:%.*]], i32* [[TMP1:%.*]]) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @omp_get_max_threads()
 ; CHECK-NEXT:    tail call void @use(i32 [[TMP3]])
 ; CHECK-NEXT:    tail call void @omp_set_num_threads(i32 10)
@@ -162,11 +163,11 @@ define internal void @.omp_outlined..1(i32* %0, i32*  %1) {
 
 define dso_local i32 @bar1(i32 %0, i32 %1) {
 ; CHECK-LABEL: define {{[^@]+}}@bar1
-; CHECK-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; CHECK-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 [[TMP0]], i32 [[TMP1]]
 ; CHECK-NEXT:    tail call void @omp_set_num_threads(i32 [[TMP4]])
-; CHECK-NEXT:    tail call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull @0, i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..2 to void (i32*, i32*, ...)*))
+; CHECK-NEXT:    tail call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull @[[GLOB0]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..2 to void (i32*, i32*, ...)*))
 ; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @omp_get_max_threads()
 ; CHECK-NEXT:    tail call void @use(i32 [[TMP5]])
 ; CHECK-NEXT:    ret i32 0
@@ -183,7 +184,7 @@ define dso_local i32 @bar1(i32 %0, i32 %1) {
 
 define internal void @.omp_outlined..2(i32* %0, i32*  %1) {
 ; CHECK-LABEL: define {{[^@]+}}@.omp_outlined..2
-; CHECK-SAME: (i32* [[TMP0:%.*]], i32* [[TMP1:%.*]])
+; CHECK-SAME: (i32* [[TMP0:%.*]], i32* [[TMP1:%.*]]) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @omp_get_max_threads()
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @icv_free_use(i32 [[TMP3]])
 ; CHECK-NEXT:    tail call void @omp_set_num_threads(i32 10)
@@ -202,7 +203,7 @@ define internal void @.omp_outlined..2(i32* %0, i32*  %1) {
 }
 define void @test(i1 %0) {
 ; CHECK-LABEL: define {{[^@]+}}@test
-; CHECK-SAME: (i1 [[TMP0:%.*]])
+; CHECK-SAME: (i1 [[TMP0:%.*]]) {
 ; CHECK-NEXT:    call void @omp_set_num_threads(i32 2)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i1 [[TMP0]], false
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP4:%.*]], label [[TMP3:%.*]]
@@ -230,7 +231,7 @@ define void @test(i1 %0) {
 
 define void @test1(i1 %0) {
 ; CHECK-LABEL: define {{[^@]+}}@test1
-; CHECK-SAME: (i1 [[TMP0:%.*]])
+; CHECK-SAME: (i1 [[TMP0:%.*]]) {
 ; CHECK-NEXT:    call void @omp_set_num_threads(i32 2)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i1 [[TMP0]], false
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP5:%.*]], label [[TMP3:%.*]]
@@ -257,7 +258,7 @@ define void @test1(i1 %0) {
 
 define void @bad_use_test(i1 %0) {
 ; CHECK-LABEL: define {{[^@]+}}@bad_use_test
-; CHECK-SAME: (i1 [[TMP0:%.*]])
+; CHECK-SAME: (i1 [[TMP0:%.*]]) {
 ; CHECK-NEXT:    call void @omp_set_num_threads(i32 2)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i1 [[TMP0]], false
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP5:%.*]], label [[TMP3:%.*]]
@@ -312,7 +313,7 @@ define void @ok_use_assume_test(i1 %0) {
 
 define weak void @weak_known_unique_icv(i1 %0) {
 ; CHECK-LABEL: define {{[^@]+}}@weak_known_unique_icv
-; CHECK-SAME: (i1 [[TMP0:%.*]])
+; CHECK-SAME: (i1 [[TMP0:%.*]]) {
 ; CHECK-NEXT:    call void @omp_set_num_threads(i32 2)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i1 [[TMP0]], false
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP5:%.*]], label [[TMP3:%.*]]
@@ -340,7 +341,7 @@ define weak void @weak_known_unique_icv(i1 %0) {
 
 define void @known_unique_icv(i1 %0) {
 ; CHECK-LABEL: define {{[^@]+}}@known_unique_icv
-; CHECK-SAME: (i1 [[TMP0:%.*]])
+; CHECK-SAME: (i1 [[TMP0:%.*]]) {
 ; CHECK-NEXT:    call void @omp_set_num_threads(i32 2)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i1 [[TMP0]], false
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP5:%.*]], label [[TMP3:%.*]]
@@ -367,7 +368,7 @@ define void @known_unique_icv(i1 %0) {
 
 define i32 @no_unique_icv(i1 %0) {
 ; CHECK-LABEL: define {{[^@]+}}@no_unique_icv
-; CHECK-SAME: (i1 [[TMP0:%.*]])
+; CHECK-SAME: (i1 [[TMP0:%.*]]) {
 ; CHECK-NEXT:    call void @omp_set_num_threads(i32 4)
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[TMP3:%.*]], label [[TMP2:%.*]]
 ; CHECK:       2:
@@ -391,7 +392,7 @@ define i32 @no_unique_icv(i1 %0) {
 
 define void @test2(i1 %0) {
 ; CHECK-LABEL: define {{[^@]+}}@test2
-; CHECK-SAME: (i1 [[TMP0:%.*]])
+; CHECK-SAME: (i1 [[TMP0:%.*]]) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i1 [[TMP0]], false
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP4:%.*]], label [[TMP3:%.*]]
 ; CHECK:       3:
@@ -417,7 +418,7 @@ define void @test2(i1 %0) {
 
 define void @test3(i1 %0) {
 ; CHECK-LABEL: define {{[^@]+}}@test3
-; CHECK-SAME: (i1 [[TMP0:%.*]])
+; CHECK-SAME: (i1 [[TMP0:%.*]]) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i1 [[TMP0]], false
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP4:%.*]], label [[TMP3:%.*]]
 ; CHECK:       3:
@@ -447,7 +448,7 @@ declare void @__cxa_rethrow()
 
 define i32 @maybe_throw(i1 zeroext %0) {
 ; CHECK-LABEL: define {{[^@]+}}@maybe_throw
-; CHECK-SAME: (i1 zeroext [[TMP0:%.*]])
+; CHECK-SAME: (i1 zeroext [[TMP0:%.*]]) {
 ; CHECK-NEXT:    call void @omp_set_num_threads(i32 4)
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[TMP2:%.*]], label [[TMP3:%.*]]
 ; CHECK:       2:
@@ -469,7 +470,7 @@ define i32 @maybe_throw(i1 zeroext %0) {
 
 define void @test4(i1 %0) {
 ; CHECK-LABEL: define {{[^@]+}}@test4
-; CHECK-SAME: (i1 [[TMP0:%.*]])
+; CHECK-SAME: (i1 [[TMP0:%.*]]) {
 ; CHECK-NEXT:    call void @known_unique_icv(i1 [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i1 [[TMP0]], false
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP4:%.*]], label [[TMP3:%.*]]
@@ -502,7 +503,7 @@ define void @test4(i1 %0) {
 
 define void @test4_invoke(i1 %0) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK-LABEL: define {{[^@]+}}@test4_invoke
-; CHECK-SAME: (i1 [[TMP0:%.*]]) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
+; CHECK-SAME: (i1 [[TMP0:%.*]]) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK-NEXT:    call void @known_unique_icv(i1 [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = invoke i32 @maybe_throw(i1 zeroext [[TMP0]])
 ; CHECK-NEXT:    to label [[CONT:%.*]] unwind label [[EXC:%.*]]
@@ -545,7 +546,7 @@ exc:
 
 define i32 @test5(i32 %0)  #0 {
 ; CHECK-LABEL: define {{[^@]+}}@test5
-; CHECK-SAME: (i32 [[TMP0:%.*]])
+; CHECK-SAME: (i32 [[TMP0:%.*]]) {
 ; CHECK-NEXT:    call void @omp_set_num_threads(i32 4)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP0]], 3
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP4:%.*]]
@@ -611,7 +612,7 @@ define i32 @test5(i32 %0)  #0 {
 
 define i32 @test6(i32 %0) {
 ; CHECK-LABEL: define {{[^@]+}}@test6
-; CHECK-SAME: (i32 [[TMP0:%.*]])
+; CHECK-SAME: (i32 [[TMP0:%.*]]) {
 ; CHECK-NEXT:    call void @omp_set_num_threads(i32 4)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP0]], 3
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
