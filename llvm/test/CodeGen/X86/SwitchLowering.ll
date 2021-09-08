@@ -62,10 +62,10 @@ bb7:            ; preds = %bb, %bb
 
 declare void @foo(i8)
 
+; PR50080
+; The important part of this test is that we emit only 1 bit test rather than
+; 2 since the default BB of the switch is unreachable.
 define i32 @baz(i32 %0) {
-; FIXME: Get rid of this conditional jump and bit test in .LBB1_1.
-; FIXME: .LBB1_4 should not have .LBB1_1 as a predecessor, or be past the end
-; FIXME: of the function.
 ; CHECK-LABEL: baz:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -73,16 +73,11 @@ define i32 @baz(i32 %0) {
 ; CHECK-NEXT:    movl $13056, %edx # imm = 0x3300
 ; CHECK-NEXT:    btl %ecx, %edx
 ; CHECK-NEXT:    jae .LBB1_1
-; CHECK-NEXT:  # %bb.3: # %return
+; CHECK-NEXT:  # %bb.2: # %return
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB1_1:
-; CHECK-NEXT:    movl $48, %eax
-; CHECK-NEXT:    btl %ecx, %eax
-; CHECK-NEXT:    jae .LBB1_4
-; CHECK-NEXT:  # %bb.2: # %sw.epilog8
+; CHECK-NEXT:  .LBB1_1: # %sw.epilog8
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB1_4: # %if.then.unreachabledefault
   switch i32 %0, label %if.then.unreachabledefault [
     i32 4, label %sw.epilog8
     i32 5, label %sw.epilog8
