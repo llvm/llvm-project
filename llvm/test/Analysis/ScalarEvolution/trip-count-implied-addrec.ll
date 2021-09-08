@@ -9,8 +9,8 @@
 @G = external global i8
 
 ; CHECK-LABEL: Determining loop execution counts for: @nw_implies_nuw
-; CHECK: Loop %for.body: Unpredictable backedge-taken count
-; CHECK: Loop %for.body: Unpredictable max backedge-taken count
+; CHECK: Loop %for.body: backedge-taken count is %n
+; CHECK: Loop %for.body: max backedge-taken count is -1
 define void @nw_implies_nuw(i16 %n) mustprogress {
 entry:
   br label %for.body

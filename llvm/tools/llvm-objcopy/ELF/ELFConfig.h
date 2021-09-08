@@ -20,6 +20,16 @@ namespace objcopy {
 // ELF specific configuration for copying/stripping a single file.
 struct ELFConfig {
   uint8_t NewSymbolVisibility = (uint8_t)ELF::STV_DEFAULT;
+
+  // ELF entry point address expression. The input parameter is an entry point
+  // address in the input ELF file. The entry address in the output file is
+  // calculated with EntryExpr(input_address), when either --set-start or
+  // --change-start is used.
+  std::function<uint64_t(uint64_t)> EntryExpr;
+
+  bool AllowBrokenLinks = false;
+  bool KeepFileSymbols = false;
+  bool LocalizeHidden = false;
 };
 
 } // namespace objcopy

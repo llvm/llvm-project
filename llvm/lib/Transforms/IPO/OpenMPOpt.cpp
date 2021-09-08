@@ -612,6 +612,12 @@ struct KernelInfoState : AbstractState {
     return true;
   }
 
+  /// Returns true if this kernel contains any OpenMP parallel regions.
+  bool mayContainParallelRegion() {
+    return !ReachedKnownParallelRegions.empty() ||
+           !ReachedUnknownParallelRegions.empty();
+  }
+
   /// Return empty set as the best state of potential values.
   static KernelInfoState getBestState() { return KernelInfoState(true); }
 
@@ -3016,7 +3022,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
     // If we can we change the execution mode to SPMD-mode otherwise we build a
     // custom state machine.
-    if (!changeToSPMDMode(A))
+    if (!mayContainParallelRegion() || !changeToSPMDMode(A))
       buildCustomStateMachine(A);
 
     return ChangeStatus::CHANGED;
@@ -3321,8 +3327,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
     // happen if there simply are no parallel regions. In the resulting kernel
     // all worker threads will simply exit right away, leaving the main thread
     // to do the work alone.
-    if (ReachedKnownParallelRegions.empty() &&
-        ReachedUnknownParallelRegions.empty()) {
+    if (!mayContainParallelRegion()) {
       ++NumOpenMPTargetRegionKernelsWithoutStateMachine;
 
       auto Remark = [&](OptimizationRemark OR) {

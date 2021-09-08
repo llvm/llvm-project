@@ -79,8 +79,9 @@ contains
     integer function f_impure()
       f_impure = 1
     end
-    elemental integer function f_elemental()
-      f_elemental = 1
+    elemental integer function f_elemental(n)
+      real, value :: n
+      f_elemental = n
     end
   end
 

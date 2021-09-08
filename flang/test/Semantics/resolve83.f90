@@ -28,7 +28,9 @@ contains
     end function realFunc
 
     !WARNING: Attribute 'ELEMENTAL' cannot be used more than once
-    elemental real elemental function elementalFunc()
+    elemental real elemental function elementalFunc(x)
+      real, value :: x
+      elementalFunc = x
     end function elementalFunc
 
     !WARNING: Attribute 'IMPURE' cannot be used more than once

@@ -372,7 +372,7 @@ class NFList<int lmul> {
 }
 
 // Generate [start, end) SubRegIndex list.
-class SubRegSet<list<SubRegIndex> LIn, int start, int nf, int lmul> {
+class SubRegSet<int nf, int lmul> {
   list<SubRegIndex> L = !foldl([]<SubRegIndex>,
                                [0, 1, 2, 3, 4, 5, 6, 7],
                                AccList, i,
@@ -463,10 +463,10 @@ let RegAltNameIndices = [ABIRegAltName] in {
 foreach m = [1, 2, 4] in {
   foreach n = NFList<m>.L in {
     def "VN" # n # "M" # m # "NoV0": RegisterTuples<
-                                       SubRegSet<[], 0, n, m>.L,
+                                       SubRegSet<n, m>.L,
                                        VRegList<[], 0, n, m, 1>.L>;
     def "VN" # n # "M" # m # "V0" : RegisterTuples<
-                                       SubRegSet<[], 0, n, m>.L,
+                                       SubRegSet<n, m>.L,
                                        VRegList<[], 0, n, m, 0>.L>;
   }
 }

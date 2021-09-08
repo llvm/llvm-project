@@ -388,18 +388,18 @@ define void @insert_v8i1_v4i1_0(<8 x i1>* %vp, <4 x i1>* %svp) {
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vle1.v v0, (a0)
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
-; CHECK-NEXT:    vle1.v v27, (a1)
+; CHECK-NEXT:    vle1.v v25, (a1)
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vmv.v.i v25, 0
-; CHECK-NEXT:    vmerge.vim v25, v25, 1, v0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vmv1r.v v0, v27
 ; CHECK-NEXT:    vmerge.vim v26, v26, 1, v0
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vmv.v.i v27, 0
+; CHECK-NEXT:    vmv1r.v v0, v25
+; CHECK-NEXT:    vmerge.vim v25, v27, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, mu
-; CHECK-NEXT:    vslideup.vi v25, v26, 0
+; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vmsne.vi v25, v25, 0
+; CHECK-NEXT:    vmsne.vi v25, v26, 0
 ; CHECK-NEXT:    vse1.v v25, (a0)
 ; CHECK-NEXT:    ret
   %v = load <8 x i1>, <8 x i1>* %vp
@@ -415,18 +415,18 @@ define void @insert_v8i1_v4i1_4(<8 x i1>* %vp, <4 x i1>* %svp) {
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vle1.v v0, (a0)
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
-; CHECK-NEXT:    vle1.v v27, (a1)
+; CHECK-NEXT:    vle1.v v25, (a1)
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vmv.v.i v25, 0
-; CHECK-NEXT:    vmerge.vim v25, v25, 1, v0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vmv1r.v v0, v27
 ; CHECK-NEXT:    vmerge.vim v26, v26, 1, v0
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vmv.v.i v27, 0
+; CHECK-NEXT:    vmv1r.v v0, v25
+; CHECK-NEXT:    vmerge.vim v25, v27, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, tu, mu
-; CHECK-NEXT:    vslideup.vi v25, v26, 4
+; CHECK-NEXT:    vslideup.vi v26, v25, 4
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, mu
-; CHECK-NEXT:    vmsne.vi v25, v25, 0
+; CHECK-NEXT:    vmsne.vi v25, v26, 0
 ; CHECK-NEXT:    vse1.v v25, (a0)
 ; CHECK-NEXT:    ret
   %v = load <8 x i1>, <8 x i1>* %vp
@@ -466,18 +466,18 @@ define <vscale x 2 x i1> @insert_nxv2i1_v4i1_0(<vscale x 2 x i1> %v, <4 x i1>* %
 ; CHECK-LABEL: insert_nxv2i1_v4i1_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
-; CHECK-NEXT:    vle1.v v27, (a0)
+; CHECK-NEXT:    vle1.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, mu
-; CHECK-NEXT:    vmv.v.i v25, 0
-; CHECK-NEXT:    vmerge.vim v25, v25, 1, v0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vmv1r.v v0, v27
 ; CHECK-NEXT:    vmerge.vim v26, v26, 1, v0
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vmv.v.i v27, 0
+; CHECK-NEXT:    vmv1r.v v0, v25
+; CHECK-NEXT:    vmerge.vim v25, v27, 1, v0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, tu, mu
-; CHECK-NEXT:    vslideup.vi v25, v26, 0
+; CHECK-NEXT:    vslideup.vi v26, v25, 0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, mu
-; CHECK-NEXT:    vmsne.vi v0, v25, 0
+; CHECK-NEXT:    vmsne.vi v0, v26, 0
 ; CHECK-NEXT:    ret
   %sv = load <4 x i1>, <4 x i1>* %svp
   %c = call <vscale x 2 x i1> @llvm.experimental.vector.insert.v4i1.nxv2i1(<vscale x 2 x i1> %v, <4 x i1> %sv, i64 0)

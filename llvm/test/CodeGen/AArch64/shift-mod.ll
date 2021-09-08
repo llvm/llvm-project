@@ -18,8 +18,8 @@ define i32 @test1(i32 %x, i64 %y) {
 define i64 @test2(i32 %x, i64 %y) {
 ; CHECK-LABEL: test2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg w[[REG:[0-9]+]], w0
-; CHECK-NEXT:    asr x0, x1, x[[REG]]
+; CHECK-NEXT:    neg w8, w0
+; CHECK-NEXT:    asr x0, x1, x8
 ; CHECK-NEXT:    ret
   %sub9 = sub nsw i32 64, %x
   %sh_prom12.i = zext i32 %sub9 to i64

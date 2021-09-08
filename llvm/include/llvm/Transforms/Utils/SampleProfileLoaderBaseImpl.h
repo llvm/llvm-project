@@ -114,7 +114,7 @@ public:
       DenseMap<const BasicBlockT *, SmallVector<const BasicBlockT *, 8>>;
 
 protected:
-  virtual ~SampleProfileLoaderBaseImpl() = default;
+  ~SampleProfileLoaderBaseImpl() = default;
   friend class SampleCoverageTracker;
 
   Function &getFunction(FunctionT &F) {

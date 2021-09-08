@@ -51,6 +51,14 @@ template("unix_toolchain") {
       outputs = [ "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.o" ]
     }
 
+    tool("objcxx") {
+      depfile = "{{output}}.d"
+      command = "$cxx -MMD -MF $depfile -o {{output}} -c {{source}} {{defines}} {{include_dirs}} {{cflags}} {{cflags_objcc}}"
+      depsformat = "gcc"
+      description = "OBJCXX {{output}}"
+      outputs = [ "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.o" ]
+    }
+
     tool("asm") {
       depfile = "{{output}}.d"
       command = "$cc -MMD -MF $depfile -o {{output}} -c {{source}} {{defines}} {{include_dirs}} {{asmflags}}"

@@ -10869,10 +10869,9 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
           BTB->DefaultProb -= DefaultProb / 2;
         }
 
-        if (FallthroughUnreachable) {
-          // Skip the range check if the fallthrough block is unreachable.
+        // Skip the range check if the fallthrough block is unreachable.
+        if (FallthroughUnreachable)
           BTB->OmitRangeCheck = true;
-        }
 
         // If we're in the right place, emit the bit test header right now.
         if (CurMBB == SwitchMBB) {
