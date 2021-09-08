@@ -86,6 +86,7 @@ static kmp_dephash_t *__kmp_dephash_extend(kmp_info_t *thread,
   h->buckets = (kmp_dephash_entry **)(h + 1);
   h->generation = gen;
   h->nconflicts = 0;
+  h->last_all = current_dephash->last_all;
 
   // make sure buckets are properly initialized
   for (size_t i = 0; i < new_size; i++) {
@@ -142,6 +143,7 @@ static kmp_dephash_t *__kmp_dephash_create(kmp_info_t *thread,
   h->nelements = 0;
   h->nconflicts = 0;
   h->buckets = (kmp_dephash_entry **)(h + 1);
+  h->last_all = NULL;
 
   for (size_t i = 0; i < h_size; i++)
     h->buckets[i] = 0;
@@ -174,7 +176,10 @@ static kmp_dephash_entry *__kmp_dephash_find(kmp_info_t *thread,
         thread, sizeof(kmp_dephash_entry_t));
 #endif
     entry->addr = addr;
-    entry->last_out = NULL;
+    if (!h->last_all) // no predecessor task with omp_all_memory dependence
+      entry->last_out = NULL;
+    else // else link the omp_all_memory depnode to the new entry
+      entry->last_out = __kmp_node_ref(h->last_all);
     entry->last_set = NULL;
     entry->prev_set = NULL;
     entry->last_flag = 0;
@@ -287,6 +292,63 @@ static inline kmp_int32 __kmp_depnode_link_successor(kmp_int32 gtid,
     }
     KMP_RELEASE_DEPNODE(gtid, sink);
   }
+  return npredecessors;
+}
+
+static inline kmp_int32
+__kmp_process_dep_all(kmp_int32 gtid, kmp_depnode_t *node, kmp_dephash_t *h,
+                      bool dep_barrier, kmp_task_t *task) {
+  KA_TRACE(30, ("__kmp_process_dep_all: T#%d processing dep_all, "
+                "dep_barrier = %d\n",
+                gtid, dep_barrier));
+  kmp_info_t *thread = __kmp_threads[gtid];
+  kmp_int32 npredecessors = 0;
+
+  // process previous omp_all_memory node if any
+  npredecessors +=
+      __kmp_depnode_link_successor(gtid, thread, task, node, h->last_all);
+  __kmp_node_deref(thread, h->last_all);
+  if (!dep_barrier) {
+    h->last_all = __kmp_node_ref(node);
+  } else {
+    // if this is a sync point in the serial sequence, then the previous
+    // outputs are guaranteed to be completed after the execution of this
+    // task so the previous output nodes can be cleared.
+    h->last_all = NULL;
+  }
+
+  // process all regular dependences
+  for (size_t i = 0; i < h->size; i++) {
+    kmp_dephash_entry_t *info = h->buckets[i];
+    if (!info) // skip empty slots in dephash
+      continue;
+    for (; info; info = info->next_in_bucket) {
+      // for each entry the omp_all_memory works as OUT dependence
+      kmp_depnode_t *last_out = info->last_out;
+      kmp_depnode_list_t *last_set = info->last_set;
+      kmp_depnode_list_t *prev_set = info->prev_set;
+      if (last_set) {
+        npredecessors +=
+            __kmp_depnode_link_successor(gtid, thread, task, node, last_set);
+        __kmp_depnode_list_free(thread, last_set);
+        __kmp_depnode_list_free(thread, prev_set);
+        info->last_set = NULL;
+        info->prev_set = NULL;
+        info->last_flag = 0; // no sets in this dephash entry
+      } else {
+        npredecessors +=
+            __kmp_depnode_link_successor(gtid, thread, task, node, last_out);
+      }
+      __kmp_node_deref(thread, last_out);
+      if (!dep_barrier) {
+        info->last_out = __kmp_node_ref(node);
+      } else {
+        info->last_out = NULL;
+      }
+    }
+  }
+  KA_TRACE(30, ("__kmp_process_dep_all: T#%d found %d predecessors\n", gtid,
+                npredecessors));
   return npredecessors;
 }
 
@@ -417,7 +479,7 @@ static bool __kmp_check_deps(kmp_int32 gtid, kmp_depnode_t *node,
                              kmp_depend_info_t *dep_list,
                              kmp_int32 ndeps_noalias,
                              kmp_depend_info_t *noalias_dep_list) {
-  int i, n_mtxs = 0;
+  int i, n_mtxs = 0, dep_all = 0;
 #if KMP_DEBUG
   kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(task);
 #endif
@@ -429,7 +491,7 @@ static bool __kmp_check_deps(kmp_int32 gtid, kmp_depnode_t *node,
   // Filter deps in dep_list
   // TODO: Different algorithm for large dep_list ( > 10 ? )
   for (i = 0; i < ndeps; i++) {
-    if (dep_list[i].base_addr != 0) {
+    if (dep_list[i].base_addr != 0 && dep_list[i].base_addr != KMP_SIZE_T_MAX) {
       KMP_DEBUG_ASSERT(
           dep_list[i].flag == KMP_DEP_IN || dep_list[i].flag == KMP_DEP_OUT ||
           dep_list[i].flag == KMP_DEP_INOUT ||
@@ -451,6 +513,13 @@ static bool __kmp_check_deps(kmp_int32 gtid, kmp_depnode_t *node,
           dep_list[i].flag = KMP_DEP_OUT; // downgrade mutexinoutset to inout
         }
       }
+    } else if (dep_list[i].flag == KMP_DEP_ALL ||
+               dep_list[i].base_addr == KMP_SIZE_T_MAX) {
+      // omp_all_memory dependence can be marked by compiler by either
+      // (addr=0 && flag=0x80) (flag KMP_DEP_ALL), or (addr=-1).
+      // omp_all_memory overrides all other dependences if any
+      dep_all = 1;
+      break;
     }
   }
 
@@ -464,10 +533,14 @@ static bool __kmp_check_deps(kmp_int32 gtid, kmp_depnode_t *node,
   // the end
   int npredecessors;
 
-  npredecessors = __kmp_process_deps<true>(gtid, node, hash, dep_barrier, ndeps,
-                                           dep_list, task);
-  npredecessors += __kmp_process_deps<false>(
-      gtid, node, hash, dep_barrier, ndeps_noalias, noalias_dep_list, task);
+  if (!dep_all) { // regular dependences
+    npredecessors = __kmp_process_deps<true>(gtid, node, hash, dep_barrier,
+                                             ndeps, dep_list, task);
+    npredecessors += __kmp_process_deps<false>(
+        gtid, node, hash, dep_barrier, ndeps_noalias, noalias_dep_list, task);
+  } else { // omp_all_memory dependence
+    npredecessors = __kmp_process_dep_all(gtid, node, *hash, dep_barrier, task);
+  }
 
   node->dn.task = task;
   KMP_MB();
