@@ -1922,6 +1922,13 @@ public:
            Idx < getBundleOperandsEndIndex();
   }
 
+  /// Return true if the operand at index \p Idx is a bundle operand that has
+  /// tag ID \p ID.
+  bool isOperandBundleOfType(uint32_t ID, unsigned Idx) const {
+    return isBundleOperand(Idx) &&
+           getOperandBundleForOperand(Idx).getTagID() == ID;
+  }
+
   /// Returns true if the use is a bundle operand.
   bool isBundleOperand(const Use *U) const {
     assert(this == U->getUser() &&
