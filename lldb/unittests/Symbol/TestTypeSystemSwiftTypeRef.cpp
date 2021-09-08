@@ -88,7 +88,7 @@ public:
     return GlobalTypeMangling(Node(Node::Kind::Type, type));
   }
 
-  std::string Mangle(NodePointer node) { return mangleNode(node); }
+  std::string Mangle(NodePointer node) { return mangleNode(node).result(); }
 };
 
 TEST_F(TestTypeSystemSwiftTypeRef, Array) {
