@@ -14,9 +14,9 @@
 namespace mlir {
 namespace sparse_tensor {
 
-//
+//===----------------------------------------------------------------------===//
 // Constructors.
-//
+//===----------------------------------------------------------------------===//
 
 TensorExp::TensorExp(Kind k, unsigned x, unsigned y, Value v)
     : kind(k), val(v) {
@@ -37,6 +37,20 @@ TensorExp::TensorExp(Kind k, unsigned x, unsigned y, Value v)
     children.e0 = x;
     children.e1 = y;
     break;
+  case kTruncF:
+  case kExtF:
+  case kCastFS:
+  case kCastFU:
+  case kCastSF:
+  case kCastUF:
+  case kCastS:
+  case kCastU:
+  case kTruncI:
+  case kBitCast:
+    assert(x != -1u && y == -1u && v);
+    children.e0 = x;
+    children.e1 = y;
+    break;
   default:
     assert(x != -1u && y != -1u && !v);
     children.e0 = x;
@@ -53,9 +67,9 @@ LatPoint::LatPoint(unsigned n, unsigned e, unsigned b)
 LatPoint::LatPoint(const llvm::BitVector &b, unsigned e)
     : bits(b), simple(), exp(e) {}
 
-//
+//===----------------------------------------------------------------------===//
 // Lattice methods.
-//
+//===----------------------------------------------------------------------===//
 
 unsigned Merger::addExp(Kind k, unsigned e0, unsigned e1, Value v) {
   unsigned e = tensorExps.size();
@@ -109,11 +123,11 @@ unsigned Merger::takeDisj(Kind kind, unsigned s0, unsigned s1) {
   return s;
 }
 
-unsigned Merger::mapSet(Kind kind, unsigned s0) {
-  assert(kAbsF <= kind && kind <= kNegI);
+unsigned Merger::mapSet(Kind kind, unsigned s0, Value v) {
+  assert(kAbsF <= kind && kind <= kBitCast);
   unsigned s = addSet();
   for (unsigned p : latSets[s0]) {
-    unsigned e = addExp(kind, latPoints[p].exp);
+    unsigned e = addExp(kind, latPoints[p].exp, v);
     latPoints.push_back(LatPoint(latPoints[p].bits, e));
     latSets[s].push_back(latPoints.size() - 1);
   }
@@ -207,6 +221,16 @@ bool Merger::isConjunction(unsigned t, unsigned e) const {
   case kFloorF:
   case kNegF:
   case kNegI:
+  case kTruncF:
+  case kExtF:
+  case kCastFS:
+  case kCastFU:
+  case kCastSF:
+  case kCastUF:
+  case kCastS:
+  case kCastU:
+  case kTruncI:
+  case kBitCast:
     return isConjunction(t, tensorExps[e].children.e0);
   case kDivF: // note: x / c only
   case kDivS:
@@ -230,9 +254,9 @@ bool Merger::isConjunction(unsigned t, unsigned e) const {
 
 #ifndef NDEBUG
 
-//
+//===----------------------------------------------------------------------===//
 // Print methods (for debugging).
-//
+//===----------------------------------------------------------------------===//
 
 static const char *kindToOpSymbol(Kind kind) {
   switch (kind) {
@@ -250,6 +274,17 @@ static const char *kindToOpSymbol(Kind kind) {
     return "-";
   case kNegI:
     return "-";
+  case kTruncF:
+  case kExtF:
+  case kCastFS:
+  case kCastFU:
+  case kCastSF:
+  case kCastUF:
+  case kCastS:
+  case kCastU:
+  case kTruncI:
+  case kBitCast:
+    return "cast";
   case kMulF:
     return "*";
   case kMulI:
@@ -301,6 +336,16 @@ void Merger::dumpExp(unsigned e) const {
   case kFloorF:
   case kNegF:
   case kNegI:
+  case kTruncF:
+  case kExtF:
+  case kCastFS:
+  case kCastFU:
+  case kCastSF:
+  case kCastUF:
+  case kCastS:
+  case kCastU:
+  case kTruncI:
+  case kBitCast:
     llvm::dbgs() << kindToOpSymbol(tensorExps[e].kind) << " ";
     dumpExp(tensorExps[e].children.e0);
     break;
@@ -358,9 +403,9 @@ void Merger::dumpBits(const llvm::BitVector &bits) const {
 
 #endif // NDEBUG
 
-//
+//===----------------------------------------------------------------------===//
 // Builder methods.
-//
+//===----------------------------------------------------------------------===//
 
 unsigned Merger::buildLattices(unsigned e, unsigned i) {
   Kind kind = tensorExps[e].kind;
@@ -380,13 +425,24 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
   case kFloorF:
   case kNegF:
   case kNegI:
+  case kTruncF:
+  case kExtF:
+  case kCastFS:
+  case kCastFU:
+  case kCastSF:
+  case kCastUF:
+  case kCastS:
+  case kCastU:
+  case kTruncI:
+  case kBitCast:
     // A zero preserving operation (viz. f(0) = 0, [Bik96,Ch5]) maps the
     // lattice set of the operand through the operator into a new set.
     //
     //  -y|!y | y |
     //  --+---+---+
     //    | 0 |-y |
-    return mapSet(kind, buildLattices(tensorExps[e].children.e0, i));
+    return mapSet(kind, buildLattices(tensorExps[e].children.e0, i),
+                  tensorExps[e].val);
   case kMulF:
   case kMulI:
   case kAndI:
@@ -469,6 +525,16 @@ bool Merger::isInvariant(unsigned e) const {
   return tensorExps[e].kind == kInvariant;
 }
 
+Type Merger::inferType(unsigned e, Value src) {
+  // Obtain the destination type from the cast node.
+  Type dtp = tensorExps[e].val.getType();
+  // Inspect source type. For vector types, apply the same
+  // vectorization to the destination type.
+  if (auto vtp = src.getType().dyn_cast<VectorType>())
+    return VectorType::get(vtp.getNumElements(), dtp);
+  return dtp;
+}
+
 Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
   if (auto arg = v.dyn_cast<BlockArgument>()) {
     unsigned argN = arg.getArgNumber();
@@ -501,12 +567,32 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
       if (isa<FloorFOp>(def))
         return addExp(kFloorF, e);
       if (isa<NegFOp>(def))
-        return addExp(kNegF, e);
-      // TODO: no negi in std?
+        return addExp(kNegF, e); // TODO: no negi in std?
+      if (isa<FPTruncOp>(def))
+        return addExp(kTruncF, e, v);
+      if (isa<FPExtOp>(def))
+        return addExp(kExtF, e, v);
+      if (isa<FPToSIOp>(def))
+        return addExp(kCastFS, e, v);
+      if (isa<FPToUIOp>(def))
+        return addExp(kCastFU, e, v);
+      if (isa<SIToFPOp>(def))
+        return addExp(kCastSF, e, v);
+      if (isa<UIToFPOp>(def))
+        return addExp(kCastUF, e, v);
+      if (isa<SignExtendIOp>(def))
+        return addExp(kCastS, e, v);
+      if (isa<ZeroExtendIOp>(def))
+        return addExp(kCastU, e, v);
+      if (isa<TruncateIOp>(def))
+        return addExp(kTruncI, e, v);
+      if (isa<BitcastOp>(def))
+        return addExp(kBitCast, e, v);
     }
   }
   // Construct binary operations if subexpressions can be built.
-  // TODO: see buildLattices() for an explanation of rejecting certain divisions
+  // TODO: see buildLattices() for an explanation of rejecting
+  //       certain division and shift operations
   if (def->getNumOperands() == 2) {
     auto x = buildTensorExp(op, def->getOperand(0));
     auto y = buildTensorExp(op, def->getOperand(1));
@@ -555,6 +641,7 @@ Value Merger::buildExp(PatternRewriter &rewriter, Location loc, unsigned e,
   case kTensor:
   case kInvariant:
     llvm_unreachable("unexpected non-op");
+  // Unary ops.
   case kAbsF:
     return rewriter.create<AbsFOp>(loc, v0);
   case kCeilF:
@@ -566,6 +653,27 @@ Value Merger::buildExp(PatternRewriter &rewriter, Location loc, unsigned e,
   case kNegI:
     assert(v1); // no negi in std
     return rewriter.create<SubIOp>(loc, v0, v1);
+  case kTruncF:
+    return rewriter.create<FPTruncOp>(loc, v0, inferType(e, v0));
+  case kExtF:
+    return rewriter.create<FPExtOp>(loc, v0, inferType(e, v0));
+  case kCastFS:
+    return rewriter.create<FPToSIOp>(loc, v0, inferType(e, v0));
+  case kCastFU:
+    return rewriter.create<FPToUIOp>(loc, v0, inferType(e, v0));
+  case kCastSF:
+    return rewriter.create<SIToFPOp>(loc, v0, inferType(e, v0));
+  case kCastUF:
+    return rewriter.create<UIToFPOp>(loc, v0, inferType(e, v0));
+  case kCastS:
+    return rewriter.create<SignExtendIOp>(loc, v0, inferType(e, v0));
+  case kCastU:
+    return rewriter.create<ZeroExtendIOp>(loc, v0, inferType(e, v0));
+  case kTruncI:
+    return rewriter.create<TruncateIOp>(loc, v0, inferType(e, v0));
+  case kBitCast:
+    return rewriter.create<BitcastOp>(loc, v0, inferType(e, v0));
+  // Binary ops.
   case kMulF:
     return rewriter.create<MulFOp>(loc, v0, v1);
   case kMulI:
