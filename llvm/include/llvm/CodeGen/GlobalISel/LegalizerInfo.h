@@ -113,6 +113,14 @@ struct LegalityQuery {
     LLT MemoryTy;
     uint64_t AlignInBits;
     AtomicOrdering Ordering;
+
+    MemDesc() = default;
+    MemDesc(LLT MemoryTy, uint64_t AlignInBits, AtomicOrdering Ordering)
+        : MemoryTy(MemoryTy), AlignInBits(AlignInBits), Ordering(Ordering) {}
+    MemDesc(const MachineMemOperand &MMO)
+        : MemoryTy(MMO.getMemoryType()),
+          AlignInBits(MMO.getAlign().value() * 8),
+          Ordering(MMO.getSuccessOrdering()) {}
   };
 
   /// Operations which require memory can use this to place requirements on the
