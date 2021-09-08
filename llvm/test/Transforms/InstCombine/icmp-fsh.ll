@@ -8,8 +8,7 @@ declare void @use(i8)
 
 define i1 @rotl_eq_0(i8 %x, i8 %y) {
 ; CHECK-LABEL: @rotl_eq_0(
-; CHECK-NEXT:    [[ROT:%.*]] = tail call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[X]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[ROT]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %rot = tail call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 %y)
@@ -17,11 +16,13 @@ define i1 @rotl_eq_0(i8 %x, i8 %y) {
   ret i1 %r
 }
 
+; Extra use is ok.
+
 define i1 @rotl_ne_0(i8 %x, i8 %y) {
 ; CHECK-LABEL: @rotl_ne_0(
 ; CHECK-NEXT:    [[ROT:%.*]] = tail call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[X]], i8 [[Y:%.*]])
 ; CHECK-NEXT:    call void @use(i8 [[ROT]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[ROT]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %rot = tail call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 %y)
@@ -32,8 +33,7 @@ define i1 @rotl_ne_0(i8 %x, i8 %y) {
 
 define i1 @rotl_eq_n1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @rotl_eq_n1(
-; CHECK-NEXT:    [[ROT:%.*]] = tail call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[X]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[ROT]], -1
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %rot = tail call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 %y)
@@ -41,16 +41,19 @@ define i1 @rotl_eq_n1(i8 %x, i8 %y) {
   ret i1 %r
 }
 
+; Vectors work too.
+
 define <2 x i1> @rotl_ne_n1(<2 x i5> %x, <2 x i5> %y) {
 ; CHECK-LABEL: @rotl_ne_n1(
-; CHECK-NEXT:    [[ROT:%.*]] = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5> [[X:%.*]], <2 x i5> [[X]], <2 x i5> [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i5> [[ROT]], <i5 -1, i5 -1>
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i5> [[X:%.*]], <i5 -1, i5 -1>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %rot = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5>%x, <2 x i5> %x, <2 x i5> %y)
   %r = icmp ne <2 x i5> %rot, <i5 -1, i5 -1>
   ret <2 x i1> %r
 }
+
+; TODO: We filter out vector constants with undef elts, but that isn't needed for this transform.
 
 define <2 x i1> @rotl_ne_n1_undef(<2 x i5> %x, <2 x i5> %y) {
 ; CHECK-LABEL: @rotl_ne_n1_undef(
@@ -67,7 +70,7 @@ define i1 @rotr_eq_0(i8 %x, i8 %y) {
 ; CHECK-LABEL: @rotr_eq_0(
 ; CHECK-NEXT:    [[ROT:%.*]] = tail call i8 @llvm.fshr.i8(i8 [[X:%.*]], i8 [[X]], i8 [[Y:%.*]])
 ; CHECK-NEXT:    call void @use(i8 [[ROT]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[ROT]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %rot = tail call i8 @llvm.fshr.i8(i8 %x, i8 %x, i8 %y)
@@ -78,8 +81,7 @@ define i1 @rotr_eq_0(i8 %x, i8 %y) {
 
 define i1 @rotr_ne_0(i8 %x, i8 %y) {
 ; CHECK-LABEL: @rotr_ne_0(
-; CHECK-NEXT:    [[ROT:%.*]] = tail call i8 @llvm.fshr.i8(i8 [[X:%.*]], i8 [[X]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[ROT]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %rot = tail call i8 @llvm.fshr.i8(i8 %x, i8 %x, i8 %y)
@@ -89,8 +91,7 @@ define i1 @rotr_ne_0(i8 %x, i8 %y) {
 
 define i1 @rotr_eq_n1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @rotr_eq_n1(
-; CHECK-NEXT:    [[ROT:%.*]] = tail call i8 @llvm.fshr.i8(i8 [[X:%.*]], i8 [[X]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[ROT]], -1
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %rot = tail call i8 @llvm.fshr.i8(i8 %x, i8 %x, i8 %y)
@@ -100,14 +101,15 @@ define i1 @rotr_eq_n1(i8 %x, i8 %y) {
 
 define i1 @rotr_ne_n1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @rotr_ne_n1(
-; CHECK-NEXT:    [[ROT:%.*]] = tail call i8 @llvm.fshr.i8(i8 [[X:%.*]], i8 [[X]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[ROT]], -1
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %rot = tail call i8 @llvm.fshr.i8(i8 %x, i8 %x, i8 %y)
   %r = icmp ne i8 %rot, -1
   ret i1 %r
 }
+
+; negative test - wrong constant value
 
 define i1 @rotr_ne_1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @rotr_ne_1(
@@ -120,6 +122,8 @@ define i1 @rotr_ne_1(i8 %x, i8 %y) {
   ret i1 %r
 }
 
+; negative test - wrong predicate
+
 define i1 @rotr_sgt_n1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @rotr_sgt_n1(
 ; CHECK-NEXT:    [[ROT:%.*]] = tail call i8 @llvm.fshr.i8(i8 [[X:%.*]], i8 [[X]], i8 [[Y:%.*]])
@@ -130,6 +134,8 @@ define i1 @rotr_sgt_n1(i8 %x, i8 %y) {
   %r = icmp sgt i8 %rot, -1
   ret i1 %r
 }
+
+; negative test - must be a rotate, not general funnel shift
 
 define i1 @fshr_sgt_n1(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @fshr_sgt_n1(
