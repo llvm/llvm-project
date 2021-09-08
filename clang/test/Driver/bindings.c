@@ -27,3 +27,7 @@
 // GNU StaticLibTool binding
 // RUN: %clang -target x86_64-linux-gnu -ccc-print-bindings --emit-static-lib %s 2>&1 | FileCheck %s --check-prefix=CHECK15
 // CHECK15: "x86_64-unknown-linux-gnu" - "GNU::StaticLibTool", inputs: ["{{.*}}.o"], output: "a.out"
+
+// Darwin StaticLibTool binding
+// RUN: %clang -target i386-apple-darwin9 -ccc-print-bindings --emit-static-lib %s 2>&1 | FileCheck %s --check-prefix=CHECK16
+// CHECK16: "i386-apple-darwin9" - "darwin::StaticLibTool", inputs: ["{{.*}}.o"], output: "a.out"
