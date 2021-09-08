@@ -279,28 +279,28 @@ public:
     template <class _Alloc>
         _LIBCPP_INLINE_VISIBILITY
         explicit queue(const _Alloc& __a,
-                       _EnableIf<uses_allocator<container_type, _Alloc>::value>* = 0)
+                       __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0)
             : c(__a) {}
     template <class _Alloc>
         _LIBCPP_INLINE_VISIBILITY
         queue(const queue& __q, const _Alloc& __a,
-                       _EnableIf<uses_allocator<container_type, _Alloc>::value>* = 0)
+                       __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0)
             : c(__q.c, __a) {}
     template <class _Alloc>
         _LIBCPP_INLINE_VISIBILITY
         queue(const container_type& __c, const _Alloc& __a,
-                       _EnableIf<uses_allocator<container_type, _Alloc>::value>* = 0)
+                       __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0)
             : c(__c, __a) {}
 #ifndef _LIBCPP_CXX03_LANG
     template <class _Alloc>
         _LIBCPP_INLINE_VISIBILITY
         queue(container_type&& __c, const _Alloc& __a,
-                       _EnableIf<uses_allocator<container_type, _Alloc>::value>* = 0)
+                       __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0)
             : c(_VSTD::move(__c), __a) {}
     template <class _Alloc>
         _LIBCPP_INLINE_VISIBILITY
         queue(queue&& __q, const _Alloc& __a,
-                       _EnableIf<uses_allocator<container_type, _Alloc>::value>* = 0)
+                       __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0)
             : c(_VSTD::move(__q.c), __a) {}
 
 #endif // _LIBCPP_CXX03_LANG
@@ -424,7 +424,7 @@ operator<=(const queue<_Tp, _Container>& __x,const queue<_Tp, _Container>& __y)
 
 template <class _Tp, class _Container>
 inline _LIBCPP_INLINE_VISIBILITY
-_EnableIf<__is_swappable<_Container>::value, void>
+__enable_if_t<__is_swappable<_Container>::value, void>
 swap(queue<_Tp, _Container>& __x, queue<_Tp, _Container>& __y)
     _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y)))
 {
@@ -491,16 +491,16 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     priority_queue(const value_compare& __comp, container_type&& __c);
 #endif
-    template <class _InputIter, class = _EnableIf<__is_cpp17_input_iterator<_InputIter>::value> >
+    template <class _InputIter, class = __enable_if_t<__is_cpp17_input_iterator<_InputIter>::value> >
         _LIBCPP_INLINE_VISIBILITY
         priority_queue(_InputIter __f, _InputIter __l,
                        const value_compare& __comp = value_compare());
-    template <class _InputIter, class = _EnableIf<__is_cpp17_input_iterator<_InputIter>::value> >
+    template <class _InputIter, class = __enable_if_t<__is_cpp17_input_iterator<_InputIter>::value> >
         _LIBCPP_INLINE_VISIBILITY
         priority_queue(_InputIter __f, _InputIter __l,
                        const value_compare& __comp, const container_type& __c);
 #ifndef _LIBCPP_CXX03_LANG
-    template <class _InputIter, class = _EnableIf<__is_cpp17_input_iterator<_InputIter>::value> >
+    template <class _InputIter, class = __enable_if_t<__is_cpp17_input_iterator<_InputIter>::value> >
         _LIBCPP_INLINE_VISIBILITY
         priority_queue(_InputIter __f, _InputIter __l,
                        const value_compare& __comp, container_type&& __c);
@@ -508,55 +508,55 @@ public:
     template <class _Alloc>
         _LIBCPP_INLINE_VISIBILITY
         explicit priority_queue(const _Alloc& __a,
-                       _EnableIf<uses_allocator<container_type, _Alloc>::value>* = 0);
+                       __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0);
     template <class _Alloc>
         _LIBCPP_INLINE_VISIBILITY
         priority_queue(const value_compare& __comp, const _Alloc& __a,
-                       _EnableIf<uses_allocator<container_type, _Alloc>::value>* = 0);
+                       __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0);
     template <class _Alloc>
         _LIBCPP_INLINE_VISIBILITY
         priority_queue(const value_compare& __comp, const container_type& __c,
                        const _Alloc& __a,
-                       _EnableIf<uses_allocator<container_type, _Alloc>::value>* = 0);
+                       __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0);
     template <class _Alloc>
         _LIBCPP_INLINE_VISIBILITY
         priority_queue(const priority_queue& __q, const _Alloc& __a,
-                       _EnableIf<uses_allocator<container_type, _Alloc>::value>* = 0);
+                       __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0);
 #ifndef _LIBCPP_CXX03_LANG
     template <class _Alloc>
         _LIBCPP_INLINE_VISIBILITY
         priority_queue(const value_compare& __comp, container_type&& __c,
                        const _Alloc& __a,
-                       _EnableIf<uses_allocator<container_type, _Alloc>::value>* = 0);
+                       __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0);
     template <class _Alloc>
         _LIBCPP_INLINE_VISIBILITY
         priority_queue(priority_queue&& __q, const _Alloc& __a,
-                       _EnableIf<uses_allocator<container_type, _Alloc>::value>* = 0);
+                       __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0);
 #endif // _LIBCPP_CXX03_LANG
 
-    template <class _InputIter, class _Alloc, class = _EnableIf<__is_cpp17_input_iterator<_InputIter>::value> >
+    template <class _InputIter, class _Alloc, class = __enable_if_t<__is_cpp17_input_iterator<_InputIter>::value> >
         _LIBCPP_INLINE_VISIBILITY
         priority_queue(_InputIter __f, _InputIter __l, const _Alloc& __a,
-                       _EnableIf<uses_allocator<container_type, _Alloc>::value>* = 0);
+                       __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0);
 
-    template <class _InputIter, class _Alloc, class = _EnableIf<__is_cpp17_input_iterator<_InputIter>::value> >
+    template <class _InputIter, class _Alloc, class = __enable_if_t<__is_cpp17_input_iterator<_InputIter>::value> >
         _LIBCPP_INLINE_VISIBILITY
         priority_queue(_InputIter __f, _InputIter __l,
                        const value_compare& __comp, const _Alloc& __a,
-                       _EnableIf<uses_allocator<container_type, _Alloc>::value>* = 0);
+                       __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0);
 
-    template <class _InputIter, class _Alloc, class = _EnableIf<__is_cpp17_input_iterator<_InputIter>::value> >
+    template <class _InputIter, class _Alloc, class = __enable_if_t<__is_cpp17_input_iterator<_InputIter>::value> >
         _LIBCPP_INLINE_VISIBILITY
         priority_queue(_InputIter __f, _InputIter __l,
                        const value_compare& __comp, const container_type& __c, const _Alloc& __a,
-                       _EnableIf<uses_allocator<container_type, _Alloc>::value>* = 0);
+                       __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0);
 
 #ifndef _LIBCPP_CXX03_LANG
-    template <class _InputIter, class _Alloc, class = _EnableIf<__is_cpp17_input_iterator<_InputIter>::value> >
+    template <class _InputIter, class _Alloc, class = __enable_if_t<__is_cpp17_input_iterator<_InputIter>::value> >
         _LIBCPP_INLINE_VISIBILITY
         priority_queue(_InputIter __f, _InputIter __l,
                        const value_compare& __comp, container_type&& __c, const _Alloc& __a,
-                       _EnableIf<uses_allocator<container_type, _Alloc>::value>* = 0);
+                       __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0);
 #endif  // _LIBCPP_CXX03_LANG
 
     _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
@@ -710,7 +710,7 @@ template <class _Tp, class _Container, class _Compare>
 template <class _Alloc>
 inline
 priority_queue<_Tp, _Container, _Compare>::priority_queue(const _Alloc& __a,
-                       _EnableIf<uses_allocator<container_type, _Alloc>::value>*)
+                       __enable_if_t<uses_allocator<container_type, _Alloc>::value>*)
     : c(__a)
 {
 }
@@ -720,7 +720,7 @@ template <class _Alloc>
 inline
 priority_queue<_Tp, _Container, _Compare>::priority_queue(const value_compare& __comp,
                                                           const _Alloc& __a,
-                       _EnableIf<uses_allocator<container_type, _Alloc>::value>*)
+                       __enable_if_t<uses_allocator<container_type, _Alloc>::value>*)
     : c(__a),
       comp(__comp)
 {
@@ -732,7 +732,7 @@ inline
 priority_queue<_Tp, _Container, _Compare>::priority_queue(const value_compare& __comp,
                                                           const container_type& __c,
                                                           const _Alloc& __a,
-                       _EnableIf<uses_allocator<container_type, _Alloc>::value>*)
+                       __enable_if_t<uses_allocator<container_type, _Alloc>::value>*)
     : c(__c, __a),
       comp(__comp)
 {
@@ -744,7 +744,7 @@ template <class _Alloc>
 inline
 priority_queue<_Tp, _Container, _Compare>::priority_queue(const priority_queue& __q,
                                                           const _Alloc& __a,
-                       _EnableIf<uses_allocator<container_type, _Alloc>::value>*)
+                       __enable_if_t<uses_allocator<container_type, _Alloc>::value>*)
     : c(__q.c, __a),
       comp(__q.comp)
 {
@@ -758,7 +758,7 @@ inline
 priority_queue<_Tp, _Container, _Compare>::priority_queue(const value_compare& __comp,
                                                           container_type&& __c,
                                                           const _Alloc& __a,
-                       _EnableIf<uses_allocator<container_type, _Alloc>::value>*)
+                       __enable_if_t<uses_allocator<container_type, _Alloc>::value>*)
     : c(_VSTD::move(__c), __a),
       comp(__comp)
 {
@@ -770,7 +770,7 @@ template <class _Alloc>
 inline
 priority_queue<_Tp, _Container, _Compare>::priority_queue(priority_queue&& __q,
                                                           const _Alloc& __a,
-                       _EnableIf<uses_allocator<container_type, _Alloc>::value>*)
+                       __enable_if_t<uses_allocator<container_type, _Alloc>::value>*)
     : c(_VSTD::move(__q.c), __a),
       comp(_VSTD::move(__q.comp))
 {
@@ -783,7 +783,7 @@ template <class _InputIter, class _Alloc, class>
 inline
 priority_queue<_Tp, _Container, _Compare>::priority_queue(
         _InputIter __f, _InputIter __l, const _Alloc& __a,
-        _EnableIf<uses_allocator<container_type, _Alloc>::value>*)
+        __enable_if_t<uses_allocator<container_type, _Alloc>::value>*)
     : c(__f, __l, __a),
       comp()
 {
@@ -796,7 +796,7 @@ inline
 priority_queue<_Tp, _Container, _Compare>::priority_queue(
         _InputIter __f, _InputIter __l,
         const value_compare& __comp, const _Alloc& __a,
-        _EnableIf<uses_allocator<container_type, _Alloc>::value>*)
+        __enable_if_t<uses_allocator<container_type, _Alloc>::value>*)
     : c(__f, __l, __a),
       comp(__comp)
 {
@@ -809,7 +809,7 @@ inline
 priority_queue<_Tp, _Container, _Compare>::priority_queue(
         _InputIter __f, _InputIter __l,
         const value_compare& __comp, const container_type& __c, const _Alloc& __a,
-        _EnableIf<uses_allocator<container_type, _Alloc>::value>*)
+        __enable_if_t<uses_allocator<container_type, _Alloc>::value>*)
     : c(__c, __a),
       comp(__comp)
 {
@@ -824,7 +824,7 @@ inline
 priority_queue<_Tp, _Container, _Compare>::priority_queue(
         _InputIter __f, _InputIter __l, const value_compare& __comp,
         container_type&& __c, const _Alloc& __a,
-        _EnableIf<uses_allocator<container_type, _Alloc>::value>*)
+        __enable_if_t<uses_allocator<container_type, _Alloc>::value>*)
     : c(_VSTD::move(__c), __a),
       comp(__comp)
 {
@@ -888,7 +888,7 @@ priority_queue<_Tp, _Container, _Compare>::swap(priority_queue& __q)
 
 template <class _Tp, class _Container, class _Compare>
 inline _LIBCPP_INLINE_VISIBILITY
-_EnableIf<
+__enable_if_t<
     __is_swappable<_Container>::value && __is_swappable<_Compare>::value,
     void
 >
