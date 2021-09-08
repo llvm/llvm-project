@@ -8116,7 +8116,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
 
     BuildMI(*MBB, Def, Def->getDebugLoc(), get(NewOpc))
       .add(*SrcOp)
-      .addImm(Log2_64(Mask));
+      .addImm(BitNo);
     Def->eraseFromParent();
 
     return true;
