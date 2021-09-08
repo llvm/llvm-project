@@ -74,6 +74,7 @@ public:
   bool isLocal() const;
   bool isWeak() const;
   bool isHidden() const;
+  bool isTLS() const;
 
   // Returns true if this symbol exists in a discarded (due to COMDAT) section
   bool isDiscarded() const;

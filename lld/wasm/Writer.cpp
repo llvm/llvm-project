@@ -639,7 +639,7 @@ void Writer::calculateExports() {
     } else if (auto *t = dyn_cast<DefinedTag>(sym)) {
       export_ = {name, WASM_EXTERNAL_TAG, t->getTagIndex()};
     } else if (auto *d = dyn_cast<DefinedData>(sym)) {
-      if (d->segment && d->segment->isTLS()) {
+      if (sym->isTLS()) {
         // We can't currenly export TLS data symbols.
         if (sym->isExportedExplicit())
           error("TLS symbols cannot yet be exported: `" + toString(*sym) + "`");
