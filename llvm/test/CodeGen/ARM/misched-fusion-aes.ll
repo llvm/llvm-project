@@ -76,13 +76,14 @@ define void @aesea(<16 x i8>* %a0, <16 x i8>* %b0, <16 x i8>* %c0, <16 x i8> %d,
 ; CHECK: aese.8 [[QB:q[0-9][0-9]?]], {{q[0-9][0-9]?}}
 ; CHECK-NEXT: aesmc.8 {{q[0-9][0-9]?}}, [[QB]]
 
-; CHECK: aese.8 {{q[0-9][0-9]?}}, {{q[0-9][0-9]?}}
 ; CHECK: aese.8 [[QC:q[0-9][0-9]?]], {{q[0-9][0-9]?}}
 ; CHECK-NEXT: aesmc.8 {{q[0-9][0-9]?}}, [[QC]]
+; CHECK: aese.8 {{q[0-9][0-9]?}}, {{q[0-9][0-9]?}}
 
 ; CHECK: aese.8 [[QD:q[0-9][0-9]?]], {{q[0-9][0-9]?}}
 ; CHECK-NEXT: aesmc.8 {{q[0-9][0-9]?}}, [[QD]]
 
+; CHECK: aese.8 {{q[0-9][0-9]?}}, {{q[0-9][0-9]?}}
 ; CHECK: aese.8 [[QE:q[0-9][0-9]?]], {{q[0-9][0-9]?}}
 ; CHECK-NEXT: aesmc.8 {{q[0-9][0-9]?}}, [[QE]]
 
@@ -92,8 +93,6 @@ define void @aesea(<16 x i8>* %a0, <16 x i8>* %b0, <16 x i8>* %c0, <16 x i8> %d,
 ; CHECK: aese.8 {{q[0-9][0-9]?}}, {{q[0-9][0-9]?}}
 ; CHECK: aese.8 [[QG:q[0-9][0-9]?]], {{q[0-9][0-9]?}}
 ; CHECK-NEXT: aesmc.8 {{q[0-9][0-9]?}}, [[QG]]
-
-; CHECK: aese.8 {{q[0-9][0-9]?}}, {{q[0-9][0-9]?}}
 
 ; CHECK: aese.8 [[QH:q[0-9][0-9]?]], {{q[0-9][0-9]?}}
 ; CHECK-NEXT: aesmc.8 {{q[0-9][0-9]?}}, [[QH]]
@@ -170,13 +169,14 @@ define void @aesda(<16 x i8>* %a0, <16 x i8>* %b0, <16 x i8>* %c0, <16 x i8> %d,
 ; CHECK: aesd.8 [[QB:q[0-9][0-9]?]], {{q[0-9][0-9]?}}
 ; CHECK-NEXT: aesimc.8 {{q[0-9][0-9]?}}, [[QB]]
 
-; CHECK: aesd.8 {{q[0-9][0-9]?}}, {{q[0-9][0-9]?}}
 ; CHECK: aesd.8 [[QC:q[0-9][0-9]?]], {{q[0-9][0-9]?}}
 ; CHECK-NEXT: aesimc.8 {{q[0-9][0-9]?}}, [[QC]]
+; CHECK: aesd.8 {{q[0-9][0-9]?}}, {{q[0-9][0-9]?}}
 
 ; CHECK: aesd.8 [[QD:q[0-9][0-9]?]], {{q[0-9][0-9]?}}
 ; CHECK-NEXT: aesimc.8 {{q[0-9][0-9]?}}, [[QD]]
 
+; CHECK: aesd.8 {{q[0-9][0-9]?}}, {{q[0-9][0-9]?}}
 ; CHECK: aesd.8 [[QE:q[0-9][0-9]?]], {{q[0-9][0-9]?}}
 ; CHECK-NEXT: aesimc.8 {{q[0-9][0-9]?}}, [[QE]]
 
@@ -187,7 +187,6 @@ define void @aesda(<16 x i8>* %a0, <16 x i8>* %b0, <16 x i8>* %c0, <16 x i8> %d,
 ; CHECK: aesd.8 [[QG:q[0-9][0-9]?]], {{q[0-9][0-9]?}}
 ; CHECK-NEXT: aesimc.8 {{q[0-9][0-9]?}}, [[QG]]
 
-; CHECK: aesd.8 {{q[0-9][0-9]?}}, {{q[0-9][0-9]?}}
 ; CHECK: aesd.8 [[QH:q[0-9][0-9]?]], {{q[0-9][0-9]?}}
 ; CHECK-NEXT: aesimc.8 {{q[0-9][0-9]?}}, [[QH]]
 }

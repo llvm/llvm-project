@@ -10,18 +10,17 @@ define void @test() {
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    .pad #24
 ; CHECK-NEXT:    sub sp, #24
+; CHECK-NEXT:    vmov.i32 q8, #0x0
 ; CHECK-NEXT:    mov r0, sp
 ; CHECK-NEXT:    mov.w r1, #-1
-; CHECK-NEXT:    vmov.i32 q8, #0x0
-; CHECK-NEXT:    movs r2, #15
-; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r2, r0
 ; CHECK-NEXT:    strd r1, r1, [sp, #8]
 ; CHECK-NEXT:    strd r1, r1, [sp]
-; CHECK-NEXT:    str r1, [sp, #16]
-; CHECK-NEXT:    vst1.64 {d16, d17}, [r3], r2
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    str r2, [r3]
+; CHECK-NEXT:    vst1.64 {d16, d17}, [r2]!
+; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    str r1, [sp, #20]
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    str.w r1, [sp, #15]
 ; CHECK-NEXT:    bl callee
 ; CHECK-NEXT:    add sp, #24
 ; CHECK-NEXT:    pop {r7, pc}
