@@ -1266,6 +1266,13 @@ public:
     Err->log(OS);
   }
 
+  std::string messageWithoutFileInfo() const {
+    std::string Msg;
+    raw_string_ostream OS(Msg);
+    Err->log(OS);
+    return OS.str();
+  }
+
   StringRef getFileName() { return FileName; }
 
   Error takeError() { return Error(std::move(Err)); }
