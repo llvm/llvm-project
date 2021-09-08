@@ -14,10 +14,11 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/HashBuilder.h"
 #include <cstdint>
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
 
 namespace clang {
 
@@ -256,9 +257,21 @@ inline llvm::hash_code hash_value(const HeaderSearchOptions::Entry &E) {
   return llvm::hash_combine(E.Path, E.Group, E.IsFramework, E.IgnoreSysRoot);
 }
 
+template <typename HasherT, llvm::support::endianness Endianness>
+inline void addHash(llvm::HashBuilderImpl<HasherT, Endianness> &HBuilder,
+                    const HeaderSearchOptions::Entry &E) {
+  HBuilder.add(E.Path, E.Group, E.IsFramework, E.IgnoreSysRoot);
+}
+
 inline llvm::hash_code
 hash_value(const HeaderSearchOptions::SystemHeaderPrefix &SHP) {
   return llvm::hash_combine(SHP.Prefix, SHP.IsSystemHeader);
+}
+
+template <typename HasherT, llvm::support::endianness Endianness>
+inline void addHash(llvm::HashBuilderImpl<HasherT, Endianness> &HBuilder,
+                    const HeaderSearchOptions::SystemHeaderPrefix &SHP) {
+  HBuilder.add(SHP.Prefix, SHP.IsSystemHeader);
 }
 
 } // namespace clang
