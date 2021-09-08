@@ -3228,12 +3228,22 @@ Instruction *InstCombinerImpl::foldICmpEqIntrinsicWithConstant(
 
   case Intrinsic::fshl:
   case Intrinsic::fshr:
-    // (rot X, ?) == 0/-1 --> X == 0/-1
-    // TODO: This transform is safe to re-use undef elts in a vector, but
-    //       the constant value passed in by the caller doesn't allow that.
-    if (C.isNullValue() || C.isAllOnesValue())
-      if (II->getArgOperand(0) == II->getArgOperand(1))
+    if (II->getArgOperand(0) == II->getArgOperand(1)) {
+      // (rot X, ?) == 0/-1 --> X == 0/-1
+      // TODO: This transform is safe to re-use undef elts in a vector, but
+      //       the constant value passed in by the caller doesn't allow that.
+      if (C.isNullValue() || C.isAllOnesValue())
         return new ICmpInst(Pred, II->getArgOperand(0), Cmp.getOperand(1));
+
+      const APInt *RotAmtC;
+      // ror(X, RotAmtC) == C --> X == rol(C, RotAmtC)
+      // rol(X, RotAmtC) == C --> X == ror(C, RotAmtC)
+      if (match(II->getArgOperand(2), m_APInt(RotAmtC)))
+        return new ICmpInst(Pred, II->getArgOperand(0),
+                            II->getIntrinsicID() == Intrinsic::fshl
+                                ? ConstantInt::get(Ty, C.rotr(*RotAmtC))
+                                : ConstantInt::get(Ty, C.rotl(*RotAmtC)));
+    }
     break;
 
   case Intrinsic::uadd_sat: {
@@ -3819,19 +3829,22 @@ foldShiftIntoShiftInAnotherHandOfAndInICmp(ICmpInst &I, const SimplifyQuery SQ,
 
 /// Fold
 ///   (-1 u/ x) u< y
-///   ((x * y) u/ x) != y
+///   ((x * y) ?/ x) != y
 /// to
-///   @llvm.umul.with.overflow(x, y) plus extraction of overflow bit
+///   @llvm.?mul.with.overflow(x, y) plus extraction of overflow bit
 /// Note that the comparison is commutative, while inverted (u>=, ==) predicate
 /// will mean that we are looking for the opposite answer.
-Value *InstCombinerImpl::foldUnsignedMultiplicationOverflowCheck(ICmpInst &I) {
+Value *InstCombinerImpl::foldMultiplicationOverflowCheck(ICmpInst &I) {
   ICmpInst::Predicate Pred;
   Value *X, *Y;
   Instruction *Mul;
+  Instruction *Div;
   bool NeedNegation;
   // Look for: (-1 u/ x) u</u>= y
   if (!I.isEquality() &&
-      match(&I, m_c_ICmp(Pred, m_OneUse(m_UDiv(m_AllOnes(), m_Value(X))),
+      match(&I, m_c_ICmp(Pred,
+                         m_CombineAnd(m_OneUse(m_UDiv(m_AllOnes(), m_Value(X))),
+                                      m_Instruction(Div)),
                          m_Value(Y)))) {
     Mul = nullptr;
 
@@ -3846,13 +3859,16 @@ Value *InstCombinerImpl::foldUnsignedMultiplicationOverflowCheck(ICmpInst &I) {
     default:
       return nullptr; // Wrong predicate.
     }
-  } else // Look for: ((x * y) u/ x) !=/== y
+  } else // Look for: ((x * y) / x) !=/== y
       if (I.isEquality() &&
-          match(&I, m_c_ICmp(Pred, m_Value(Y),
-                             m_OneUse(m_UDiv(m_CombineAnd(m_c_Mul(m_Deferred(Y),
+          match(&I,
+                m_c_ICmp(Pred, m_Value(Y),
+                         m_CombineAnd(
+                             m_OneUse(m_IDiv(m_CombineAnd(m_c_Mul(m_Deferred(Y),
                                                                   m_Value(X)),
                                                           m_Instruction(Mul)),
-                                             m_Deferred(X)))))) {
+                                             m_Deferred(X))),
+                             m_Instruction(Div))))) {
     NeedNegation = Pred == ICmpInst::Predicate::ICMP_EQ;
   } else
     return nullptr;
@@ -3864,19 +3880,22 @@ Value *InstCombinerImpl::foldUnsignedMultiplicationOverflowCheck(ICmpInst &I) {
   if (MulHadOtherUses)
     Builder.SetInsertPoint(Mul);
 
-  Function *F = Intrinsic::getDeclaration(
-      I.getModule(), Intrinsic::umul_with_overflow, X->getType());
-  CallInst *Call = Builder.CreateCall(F, {X, Y}, "umul");
+  Function *F = Intrinsic::getDeclaration(I.getModule(),
+                                          Div->getOpcode() == Instruction::UDiv
+                                              ? Intrinsic::umul_with_overflow
+                                              : Intrinsic::smul_with_overflow,
+                                          X->getType());
+  CallInst *Call = Builder.CreateCall(F, {X, Y}, "mul");
 
   // If the multiplication was used elsewhere, to ensure that we don't leave
   // "duplicate" instructions, replace uses of that original multiplication
   // with the multiplication result from the with.overflow intrinsic.
   if (MulHadOtherUses)
-    replaceInstUsesWith(*Mul, Builder.CreateExtractValue(Call, 0, "umul.val"));
+    replaceInstUsesWith(*Mul, Builder.CreateExtractValue(Call, 0, "mul.val"));
 
-  Value *Res = Builder.CreateExtractValue(Call, 1, "umul.ov");
+  Value *Res = Builder.CreateExtractValue(Call, 1, "mul.ov");
   if (NeedNegation) // This technically increases instruction count.
-    Res = Builder.CreateNot(Res, "umul.not.ov");
+    Res = Builder.CreateNot(Res, "mul.not.ov");
 
   // If we replaced the mul, erase it. Do this after all uses of Builder,
   // as the mul is used as insertion point.
@@ -4273,7 +4292,7 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
     }
   }
 
-  if (Value *V = foldUnsignedMultiplicationOverflowCheck(I))
+  if (Value *V = foldMultiplicationOverflowCheck(I))
     return replaceInstUsesWith(I, V);
 
   if (Value *V = foldICmpWithLowBitMaskedVal(I, Builder))
@@ -4443,6 +4462,19 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
       Op1 = Builder.CreateXor(X, Y);
       Op1 = Builder.CreateAnd(Op1, Z);
       return new ICmpInst(Pred, Op1, Constant::getNullValue(Op1->getType()));
+    }
+  }
+
+  {
+    // Similar to above, but specialized for constant because invert is needed:
+    // (X | C) == (Y | C) --> (X ^ Y) & ~C == 0
+    Value *X, *Y;
+    Constant *C;
+    if (match(Op0, m_OneUse(m_Or(m_Value(X), m_Constant(C)))) &&
+        match(Op1, m_OneUse(m_Or(m_Value(Y), m_Specific(C))))) {
+      Value *Xor = Builder.CreateXor(X, Y);
+      Value *And = Builder.CreateAnd(Xor, ConstantExpr::getNot(C));
+      return new ICmpInst(Pred, And, Constant::getNullValue(And->getType()));
     }
   }
 

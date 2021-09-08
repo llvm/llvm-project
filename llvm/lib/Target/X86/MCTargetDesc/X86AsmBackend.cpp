@@ -166,7 +166,8 @@ public:
 
   bool allowAutoPadding() const override;
   bool allowEnhancedRelaxation() const override;
-  void emitInstructionBegin(MCObjectStreamer &OS, const MCInst &Inst) override;
+  void emitInstructionBegin(MCObjectStreamer &OS, const MCInst &Inst,
+                            const MCSubtargetInfo &STI) override;
   void emitInstructionEnd(MCObjectStreamer &OS, const MCInst &Inst) override;
 
   unsigned getNumFixupKinds() const override {
@@ -207,9 +208,10 @@ public:
 
   void finishLayout(MCAssembler const &Asm, MCAsmLayout &Layout) const override;
 
-  unsigned getMaximumNopSize() const override;
+  unsigned getMaximumNopSize(const MCSubtargetInfo &STI) const override;
 
-  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
+  bool writeNopData(raw_ostream &OS, uint64_t Count,
+                    const MCSubtargetInfo *STI) const override;
 };
 } // end anonymous namespace
 
@@ -598,7 +600,7 @@ bool X86AsmBackend::needAlign(const MCInst &Inst) const {
 
 /// Insert BoundaryAlignFragment before instructions to align branches.
 void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
-                                         const MCInst &Inst) {
+                                         const MCInst &Inst, const MCSubtargetInfo &STI) {
   CanPadInst = canPadInst(Inst, OS);
 
   if (!canPadBranches(OS))
@@ -637,7 +639,7 @@ void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
                           isFirstMacroFusibleInst(Inst, *MCII))) {
     // If we meet a unfused branch or the first instuction in a fusiable pair,
     // insert a BoundaryAlign fragment.
-    OS.insert(PendingBA = new MCBoundaryAlignFragment(AlignBoundary));
+    OS.insert(PendingBA = new MCBoundaryAlignFragment(AlignBoundary, STI));
   }
 }
 
@@ -1081,7 +1083,7 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
   }
 }
 
-unsigned X86AsmBackend::getMaximumNopSize() const {
+unsigned X86AsmBackend::getMaximumNopSize(const MCSubtargetInfo &STI) const {
   if (STI.hasFeature(X86::Mode16Bit))
     return 4;
   if (!STI.hasFeature(X86::FeatureNOPL) && !STI.hasFeature(X86::Mode64Bit))
@@ -1101,7 +1103,8 @@ unsigned X86AsmBackend::getMaximumNopSize() const {
 /// Write a sequence of optimal nops to the output, covering \p Count
 /// bytes.
 /// \return - true on success, false on failure
-bool X86AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
+bool X86AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
+                                 const MCSubtargetInfo *STI) const {
   static const char Nops32Bit[10][11] = {
       // nop
       "\x90",
@@ -1138,9 +1141,9 @@ bool X86AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
   };
 
   const char(*Nops)[11] =
-      STI.getFeatureBits()[X86::Mode16Bit] ? Nops16Bit : Nops32Bit;
+      STI->getFeatureBits()[X86::Mode16Bit] ? Nops16Bit : Nops32Bit;
 
-  uint64_t MaxNopLength = (uint64_t)getMaximumNopSize();
+  uint64_t MaxNopLength = (uint64_t)getMaximumNopSize(*STI);
 
   // Emit as many MaxNopLength NOPs as needed, then emit a NOP of the remaining
   // length.

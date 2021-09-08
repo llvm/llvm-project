@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/Hashing.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/HashBuilder.h"
 #include "gtest/gtest.h"
 #include <deque>
 #include <list>
@@ -402,4 +403,36 @@ TEST(HashingTest, HashCombineArgs18) {
 #undef CHECK_SAME
 }
 
+struct StructWithHashBuilderSupport {
+  char C;
+  int I;
+  template <typename HasherT, llvm::support::endianness Endianness>
+  friend void addHash(llvm::HashBuilderImpl<HasherT, Endianness> &HBuilder,
+                      const StructWithHashBuilderSupport &Value) {
+    HBuilder.add(Value.C, Value.I);
+  }
+};
+
+TEST(HashingTest, HashWithHashBuilder) {
+  StructWithHashBuilderSupport S{'c', 1};
+  EXPECT_NE(static_cast<size_t>(llvm::hash_value(S)), static_cast<size_t>(0));
 }
+
+struct StructWithHashBuilderAndHashValueSupport {
+  char C;
+  int I;
+  template <typename HasherT, llvm::support::endianness Endianness>
+  friend void addHash(llvm::HashBuilderImpl<HasherT, Endianness> &HBuilder,
+                      const StructWithHashBuilderAndHashValueSupport &Value) {}
+  friend hash_code
+  hash_value(const StructWithHashBuilderAndHashValueSupport &Value) {
+    return 0xbeef;
+  }
+};
+
+TEST(HashingTest, HashBuilderAndHashValue) {
+  StructWithHashBuilderAndHashValueSupport S{'c', 1};
+  EXPECT_EQ(static_cast<size_t>(hash_value(S)), static_cast<size_t>(0xbeef));
+}
+
+} // namespace

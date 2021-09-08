@@ -137,6 +137,14 @@ TEST_CONSTEXPR_CXX14 bool test() {
     assert(std::__to_address(p8b) == p8_nil);
     ASSERT_SAME_TYPE(decltype(std::__to_address(p8b)), decltype(p8_nil));
 
+    int p9[2] = {};
+    assert(std::__to_address(p9) == p9);
+    ASSERT_SAME_TYPE(decltype(std::__to_address(p9)), int*);
+
+    const int p10[2] = {};
+    assert(std::__to_address(p10) == p10);
+    ASSERT_SAME_TYPE(decltype(std::__to_address(p10)), const int*);
+
     return true;
 }
 

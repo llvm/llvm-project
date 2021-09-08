@@ -6035,8 +6035,11 @@ MachineBasicBlock *SIInstrInfo::moveToVALU(MachineInstr &TopInst,
       continue;
 
     case AMDGPU::S_CSELECT_B32:
+      lowerSelect32(Worklist, Inst, MDT);
+      Inst.eraseFromParent();
+      continue;
     case AMDGPU::S_CSELECT_B64:
-      lowerSelect(Worklist, Inst, MDT);
+      splitSelect64(Worklist, Inst, MDT);
       Inst.eraseFromParent();
       continue;
     }
@@ -6186,8 +6189,8 @@ SIInstrInfo::moveScalarAddSub(SetVectorType &Worklist, MachineInstr &Inst,
   return std::make_pair(false, nullptr);
 }
 
-void SIInstrInfo::lowerSelect(SetVectorType &Worklist, MachineInstr &Inst,
-                              MachineDominatorTree *MDT) const {
+void SIInstrInfo::lowerSelect32(SetVectorType &Worklist, MachineInstr &Inst,
+                                MachineDominatorTree *MDT) const {
 
   MachineBasicBlock &MBB = *Inst.getParent();
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
@@ -6256,6 +6259,95 @@ void SIInstrInfo::lowerSelect(SetVectorType &Worklist, MachineInstr &Inst,
   MRI.replaceRegWith(Dest.getReg(), ResultReg);
   legalizeOperands(*UpdatedInst, MDT);
   addUsersToMoveToVALUWorklist(ResultReg, MRI, Worklist);
+}
+
+void SIInstrInfo::splitSelect64(SetVectorType &Worklist, MachineInstr &Inst,
+                                MachineDominatorTree *MDT) const {
+  // Split S_CSELECT_B64 into a pair of S_CSELECT_B32 and lower them
+  // further.
+  const DebugLoc &DL = Inst.getDebugLoc();
+  MachineBasicBlock::iterator MII = Inst;
+  MachineBasicBlock &MBB = *Inst.getParent();
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+
+  // Get the original operands.
+  MachineOperand &Dest = Inst.getOperand(0);
+  MachineOperand &Src0 = Inst.getOperand(1);
+  MachineOperand &Src1 = Inst.getOperand(2);
+  MachineOperand &Cond = Inst.getOperand(3);
+
+  Register SCCSource = Cond.getReg();
+  bool IsSCC = (SCCSource == AMDGPU::SCC);
+
+  // If this is a trivial select where the condition is effectively not SCC
+  // (SCCSource is a source of copy to SCC), then the select is semantically
+  // equivalent to copying SCCSource. Hence, there is no need to create
+  // V_CNDMASK, we can just use that and bail out.
+  if (!IsSCC && (Src0.isImm() && Src0.getImm() == -1) &&
+      (Src1.isImm() && Src1.getImm() == 0)) {
+    MRI.replaceRegWith(Dest.getReg(), SCCSource);
+    return;
+  }
+
+  // Prepare the split destination.
+  Register FullDestReg = MRI.createVirtualRegister(&AMDGPU::VReg_64RegClass);
+  Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+
+  // Split the source operands.
+  const TargetRegisterClass *Src0RC = nullptr;
+  const TargetRegisterClass *Src0SubRC = nullptr;
+  if (Src0.isReg()) {
+    Src0RC = MRI.getRegClass(Src0.getReg());
+    Src0SubRC = RI.getSubRegClass(Src0RC, AMDGPU::sub0);
+  }
+  const TargetRegisterClass *Src1RC = nullptr;
+  const TargetRegisterClass *Src1SubRC = nullptr;
+  if (Src1.isReg()) {
+    Src1RC = MRI.getRegClass(Src1.getReg());
+    Src1SubRC = RI.getSubRegClass(Src1RC, AMDGPU::sub0);
+  }
+  // Split lo.
+  MachineOperand SrcReg0Sub0 =
+      buildExtractSubRegOrImm(MII, MRI, Src0, Src0RC, AMDGPU::sub0, Src0SubRC);
+  MachineOperand SrcReg1Sub0 =
+      buildExtractSubRegOrImm(MII, MRI, Src1, Src1RC, AMDGPU::sub0, Src1SubRC);
+  // Split hi.
+  MachineOperand SrcReg0Sub1 =
+      buildExtractSubRegOrImm(MII, MRI, Src0, Src0RC, AMDGPU::sub1, Src0SubRC);
+  MachineOperand SrcReg1Sub1 =
+      buildExtractSubRegOrImm(MII, MRI, Src1, Src1RC, AMDGPU::sub1, Src1SubRC);
+  // Select the lo part.
+  MachineInstr *LoHalf =
+      BuildMI(MBB, MII, DL, get(AMDGPU::S_CSELECT_B32), DestSub0)
+          .add(SrcReg0Sub0)
+          .add(SrcReg1Sub0);
+  // Replace the condition operand with the original one.
+  LoHalf->getOperand(3).setReg(SCCSource);
+  Worklist.insert(LoHalf);
+  // Select the hi part.
+  MachineInstr *HiHalf =
+      BuildMI(MBB, MII, DL, get(AMDGPU::S_CSELECT_B32), DestSub1)
+          .add(SrcReg0Sub1)
+          .add(SrcReg1Sub1);
+  // Replace the condition operand with the original one.
+  HiHalf->getOperand(3).setReg(SCCSource);
+  Worklist.insert(HiHalf);
+  // Merge them back to the original 64-bit one.
+  BuildMI(MBB, MII, DL, get(TargetOpcode::REG_SEQUENCE), FullDestReg)
+      .addReg(DestSub0)
+      .addImm(AMDGPU::sub0)
+      .addReg(DestSub1)
+      .addImm(AMDGPU::sub1);
+  MRI.replaceRegWith(Dest.getReg(), FullDestReg);
+
+  // Try to legalize the operands in case we need to swap the order to keep
+  // it valid.
+  legalizeOperands(*LoHalf, MDT);
+  legalizeOperands(*HiHalf, MDT);
+
+  // Move all users of this moved value.
+  addUsersToMoveToVALUWorklist(FullDestReg, MRI, Worklist);
 }
 
 void SIInstrInfo::lowerScalarAbs(SetVectorType &Worklist,

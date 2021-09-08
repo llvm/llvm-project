@@ -2585,8 +2585,7 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
       }
 
       if (PreservedFlags != SCEV::FlagAnyWrap) {
-        SmallVector<const SCEV *, 4> NewOps(AddExpr->op_begin(),
-                                            AddExpr->op_end());
+        SmallVector<const SCEV *, 4> NewOps(AddExpr->operands());
         NewOps[0] = getConstant(ConstAdd);
         return getAddExpr(NewOps, PreservedFlags);
       }
@@ -11632,9 +11631,9 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     //
     // a) IV is either nuw or nsw depending upon signedness (indicated by the
     //    NoWrap flag).
-    // b) loop is single exit with no side effects.
-    // c) loop has no abnormal exits
-    //
+    // b) the loop is guaranteed to be finite (e.g. is mustprogress and has
+    //    no side effects within the loop)
+    // c) loop has a single static exit (with no abnormal exits)
     //
     // Precondition a) implies that if the stride is negative, this is a single
     // trip loop. The backedge taken count formula reduces to zero in this case.
