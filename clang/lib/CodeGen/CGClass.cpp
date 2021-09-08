@@ -2061,6 +2061,10 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
   LangAS ThisAS = ThisType.getTypePtr()->getPointeeType().getAddressSpace();
   llvm::Value *ThisPtr = This.getPointer();
 
+  if (CGM.getLangOpts().OpenMPIsDevice &&
+      getContext().getTargetInfo().getTriple().isAMDGCN() &&
+      (SlotAS == LangAS::Default))
+    SlotAS = LangAS::cuda_device;
   if (SlotAS != ThisAS) {
     unsigned TargetThisAS = getContext().getTargetAddressSpace(ThisAS);
     llvm::Type *NewType =
