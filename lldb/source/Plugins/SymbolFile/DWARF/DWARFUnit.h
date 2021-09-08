@@ -286,6 +286,8 @@ protected:
 
   const llvm::Optional<llvm::DWARFDebugRnglistTable> &GetRnglistTable();
 
+  lldb_private::DWARFDataExtractor GetRnglistData() const;
+
   SymbolFileDWARF &m_dwarf;
   std::shared_ptr<DWARFUnit> m_dwo;
   DWARFUnitHeader m_header;
