@@ -114,12 +114,13 @@ entry:
 ; SI: v_ashrrev_i32_e32 v[[R_I64_0_High:[0-9]+]], 31, v[[R_I64_0_Low]]
 ; SI: v_cvt_i32_f32_e32 v[[R_I64_1_Low:[0-9]+]], v[[A_F32_1]]
 ; SI: v_ashrrev_i32_e32 v[[R_I64_1_High:[0-9]+]], 31, v[[R_I64_1_Low]]
-; VI: v_cvt_f32_f16_sdwa v[[A_F32_1:[0-9]+]], v[[A_F16_0]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; VI: v_cvt_f32_f16_e32 v[[A_F32_0:[0-9]+]], v[[A_F16_0]]
-; VI: v_cvt_i32_f32_e32 v[[R_I64_1_Low:[0-9]+]], v[[A_F32_1]]
-; VI: v_cvt_i32_f32_e32 v[[R_I64_0_Low:[0-9]+]], v[[A_F32_0]]
-; VI: v_ashrrev_i32_e32 v[[R_I64_1_High:[0-9]+]], 31, v[[R_I64_1_Low]]
-; VI: v_ashrrev_i32_e32 v[[R_I64_0_High:[0-9]+]], 31, v[[R_I64_0_Low]]
+; VI-DAG: v_cvt_f32_f16_sdwa v[[A_F32_1:[0-9]+]], v[[A_F16_0]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; VI-DAG: v_cvt_f32_f16_e32 v[[A_F32_0:[0-9]+]], v[[A_F16_0]]
+; VI-DAG: v_cvt_i32_f32_e32 v[[R_I64_1_Low:[0-9]+]], v[[A_F32_1]]
+; VI-DAG: v_cvt_i32_f32_e32 v[[R_I64_0_Low:[0-9]+]], v[[A_F32_0]]
+; VI-NOT: DEADBEEF
+; VI-DAG: v_ashrrev_i32_e32 v[[R_I64_1_High:[0-9]+]], 31, v[[R_I64_1_Low]]
+; VI-DAG: v_ashrrev_i32_e32 v[[R_I64_0_High:[0-9]+]], 31, v[[R_I64_0_Low]]
 ; GCN: buffer_store_dwordx4 v{{\[}}[[R_I64_0_Low]]{{\:}}[[R_I64_1_High]]{{\]}}
 ; GCN: s_endpgm
 define amdgpu_kernel void @fptosi_v2f16_to_v2i64(

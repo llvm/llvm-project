@@ -128,12 +128,12 @@ define amdgpu_kernel void @localize_globals(i1 %cond) {
 ; GFX9-NEXT:    s_getpc_b64 s[0:1]
 ; GFX9-NEXT:    s_add_u32 s0, s0, gv0@gotpcrel32@lo+4
 ; GFX9-NEXT:    s_addc_u32 s1, s1, gv0@gotpcrel32@hi+12
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; GFX9-NEXT:    s_getpc_b64 s[2:3]
 ; GFX9-NEXT:    s_add_u32 s2, s2, gv1@gotpcrel32@lo+4
 ; GFX9-NEXT:    s_addc_u32 s3, s3, gv1@gotpcrel32@hi+12
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_store_dword v0, v0, s[0:1]

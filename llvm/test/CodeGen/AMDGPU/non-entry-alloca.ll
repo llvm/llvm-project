@@ -30,8 +30,8 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; MUBUF-NEXT:    s_add_i32 s6, s32, 0x1000
 ; MUBUF-NEXT:    s_lshl_b32 s7, s10, 2
 ; MUBUF-NEXT:    s_mov_b32 s32, s6
-; MUBUF-NEXT:    v_mov_b32_e32 v2, s6
 ; MUBUF-NEXT:    v_mov_b32_e32 v1, 0
+; MUBUF-NEXT:    v_mov_b32_e32 v2, s6
 ; MUBUF-NEXT:    v_mov_b32_e32 v3, 1
 ; MUBUF-NEXT:    s_add_i32 s6, s6, s7
 ; MUBUF-NEXT:    buffer_store_dword v1, v2, s[0:3], 0 offen
@@ -63,8 +63,8 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; FLATSCR-NEXT:    s_cmp_lg_u32 s5, 0
 ; FLATSCR-NEXT:    s_cbranch_scc1 BB0_3
 ; FLATSCR-NEXT:  ; %bb.2: ; %bb.1
-; FLATSCR-NEXT:    s_add_i32 s2, s32, 0x1000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v1, 0
+; FLATSCR-NEXT:    s_add_i32 s2, s32, 0x1000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v2, 1
 ; FLATSCR-NEXT:    s_lshl_b32 s3, s6, 2
 ; FLATSCR-NEXT:    s_mov_b32 s32, s2
@@ -130,8 +130,8 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; MUBUF-NEXT:    s_and_b32 s6, s6, 0xfffff000
 ; MUBUF-NEXT:    s_lshl_b32 s7, s7, 2
 ; MUBUF-NEXT:    s_mov_b32 s32, s6
-; MUBUF-NEXT:    v_mov_b32_e32 v2, s6
 ; MUBUF-NEXT:    v_mov_b32_e32 v1, 0
+; MUBUF-NEXT:    v_mov_b32_e32 v2, s6
 ; MUBUF-NEXT:    v_mov_b32_e32 v3, 1
 ; MUBUF-NEXT:    s_add_i32 s6, s6, s7
 ; MUBUF-NEXT:    buffer_store_dword v1, v2, s[0:3], 0 offen
@@ -161,8 +161,8 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; FLATSCR-NEXT:    s_cbranch_scc1 BB1_2
 ; FLATSCR-NEXT:  ; %bb.1: ; %bb.0
 ; FLATSCR-NEXT:    s_add_i32 s2, s32, 0x1000
-; FLATSCR-NEXT:    s_and_b32 s2, s2, 0xfffff000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v1, 0
+; FLATSCR-NEXT:    s_and_b32 s2, s2, 0xfffff000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v2, 1
 ; FLATSCR-NEXT:    s_lshl_b32 s3, s3, 2
 ; FLATSCR-NEXT:    s_mov_b32 s32, s2
@@ -356,8 +356,8 @@ define void @func_non_entry_block_static_alloca_align64(i32 addrspace(1)* %out, 
 ; FLATSCR-NEXT:    s_and_b32 s2, s2, 0xfffff000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v5, 0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v6, 1
-; FLATSCR-NEXT:    v_lshl_add_u32 v2, v3, 2, s2
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[5:6], s2
+; FLATSCR-NEXT:    v_lshl_add_u32 v2, v3, 2, s2
 ; FLATSCR-NEXT:    scratch_load_dword v2, v2, off
 ; FLATSCR-NEXT:    v_and_b32_e32 v3, 0x3ff, v4
 ; FLATSCR-NEXT:    s_mov_b32 s32, s2

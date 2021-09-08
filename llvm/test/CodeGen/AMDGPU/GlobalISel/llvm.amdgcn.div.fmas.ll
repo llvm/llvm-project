@@ -141,8 +141,8 @@ define amdgpu_ps double @s_div_fmas_f64(double inreg %a, double inreg %b, double
 ; GFX7-LABEL: s_div_fmas_f64:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_cmp_eq_u32 s6, 0
-; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s4
@@ -159,8 +159,8 @@ define amdgpu_ps double @s_div_fmas_f64(double inreg %a, double inreg %b, double
 ; GFX8-LABEL: s_div_fmas_f64:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_cmp_eq_u32 s6, 0
-; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s4

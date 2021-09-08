@@ -193,8 +193,8 @@ define amdgpu_kernel void @local_volatile_store_0(
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX10-WGP-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-WGP-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s2
+; GFX10-WGP-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX10-WGP-NEXT:    ds_write_b32 v0, v1
@@ -206,8 +206,8 @@ define amdgpu_kernel void @local_volatile_store_0(
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX10-CU-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-CU-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s2
+; GFX10-CU-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX10-CU-NEXT:    ds_write_b32 v0, v1
@@ -267,8 +267,8 @@ define amdgpu_kernel void @local_volatile_store_1(
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX10-WGP-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-WGP-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX10-WGP-NEXT:    v_lshl_add_u32 v0, v0, 2, s2
+; GFX10-WGP-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX10-WGP-NEXT:    ds_write_b32 v0, v1
@@ -280,8 +280,8 @@ define amdgpu_kernel void @local_volatile_store_1(
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX10-CU-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-CU-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX10-CU-NEXT:    v_lshl_add_u32 v0, v0, 2, s2
+; GFX10-CU-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX10-CU-NEXT:    ds_write_b32 v0, v1

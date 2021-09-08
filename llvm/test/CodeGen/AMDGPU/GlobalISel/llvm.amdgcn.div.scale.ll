@@ -530,8 +530,8 @@ define amdgpu_kernel void @test_div_scale_f64_scalar_num_1(double addrspace(1)* 
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s7
+; GFX7-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
 ; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX7-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s4
@@ -548,8 +548,8 @@ define amdgpu_kernel void @test_div_scale_f64_scalar_num_1(double addrspace(1)* 
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s4
@@ -590,8 +590,8 @@ define amdgpu_kernel void @test_div_scale_f64_scalar_num_2(double addrspace(1)* 
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s7
+; GFX7-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
 ; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX7-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s4
@@ -608,8 +608,8 @@ define amdgpu_kernel void @test_div_scale_f64_scalar_num_2(double addrspace(1)* 
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s4
@@ -650,8 +650,8 @@ define amdgpu_kernel void @test_div_scale_f64_scalar_den_1(double addrspace(1)* 
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s7
+; GFX7-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
 ; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX7-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s4
@@ -668,8 +668,8 @@ define amdgpu_kernel void @test_div_scale_f64_scalar_den_1(double addrspace(1)* 
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s4
@@ -710,8 +710,8 @@ define amdgpu_kernel void @test_div_scale_f64_scalar_den_2(double addrspace(1)* 
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s7
+; GFX7-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
 ; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX7-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s4
@@ -728,8 +728,8 @@ define amdgpu_kernel void @test_div_scale_f64_scalar_den_2(double addrspace(1)* 
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s4

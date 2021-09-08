@@ -57,8 +57,8 @@ define <3 x i32> @v_load_constant_v3i32_align1(<3 x i32> addrspace(4)* %ptr) {
 ; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v4, 24, v5
 ; GFX9-NOUNALIGNED-NEXT:    v_and_or_b32 v5, v6, s4, v7
 ; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v6, 16, v8
-; GFX9-NOUNALIGNED-NEXT:    v_and_or_b32 v8, v10, v0, v1
 ; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v7, 24, v9
+; GFX9-NOUNALIGNED-NEXT:    v_and_or_b32 v8, v10, v0, v1
 ; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v9, 16, v11
 ; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v10, 24, v12
 ; GFX9-NOUNALIGNED-NEXT:    v_or3_b32 v0, v2, v3, v4
@@ -94,8 +94,8 @@ define <3 x i32> @v_load_constant_v3i32_align1(<3 x i32> addrspace(4)* %ptr) {
 ; GFX7-NOUNALIGNED-NEXT:    buffer_load_ubyte v11, v[0:1], s[4:7], 0 addr64 offset:9
 ; GFX7-NOUNALIGNED-NEXT:    buffer_load_ubyte v12, v[0:1], s[4:7], 0 addr64 offset:10
 ; GFX7-NOUNALIGNED-NEXT:    buffer_load_ubyte v0, v[0:1], s[4:7], 0 addr64 offset:11
-; GFX7-NOUNALIGNED-NEXT:    v_mov_b32_e32 v1, 0xff
 ; GFX7-NOUNALIGNED-NEXT:    s_movk_i32 s4, 0xff
+; GFX7-NOUNALIGNED-NEXT:    v_mov_b32_e32 v1, 0xff
 ; GFX7-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(11)
 ; GFX7-NOUNALIGNED-NEXT:    v_and_b32_e32 v2, s4, v2
 ; GFX7-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(10)
@@ -211,8 +211,8 @@ define <3 x i32> @v_load_constant_v3i32_align2(<3 x i32> addrspace(4)* %ptr) {
 ; GFX7-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NOUNALIGNED-NEXT:    v_and_b32_e32 v0, s4, v0
 ; GFX7-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; GFX7-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v6, 16, v0
 ; GFX7-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
+; GFX7-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v6, 16, v0
 ; GFX7-NOUNALIGNED-NEXT:    v_or_b32_e32 v0, v1, v2
 ; GFX7-NOUNALIGNED-NEXT:    v_or_b32_e32 v1, v3, v4
 ; GFX7-NOUNALIGNED-NEXT:    v_or_b32_e32 v2, v5, v6
@@ -323,10 +323,10 @@ define <12 x i8> @v_load_constant_v12i8_align8(<12 x i8> addrspace(4)* %ptr) {
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v5, 8, v1
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v6, 16, v1
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 24, v1
-; GFX9-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v9, 8, v2
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v10, 16, v2
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v11, 24, v2
+; GFX9-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v8, v2
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v13
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v12
@@ -346,10 +346,10 @@ define <12 x i8> @v_load_constant_v12i8_align8(<12 x i8> addrspace(4)* %ptr) {
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v5, 8, v1
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v6, 16, v1
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v7, 24, v1
-; GFX7-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v9, 8, v2
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v10, 16, v2
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v11, 24, v2
+; GFX7-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX7-NEXT:    v_mov_b32_e32 v8, v2
 ; GFX7-NEXT:    v_mov_b32_e32 v1, v13
 ; GFX7-NEXT:    v_mov_b32_e32 v2, v12
@@ -405,8 +405,8 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align1(<3 x i32> addrspace(4)*
 ; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v10, v0, s[0:1] offset:9
 ; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v11, v0, s[0:1] offset:10
 ; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v12, v0, s[0:1] offset:11
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v0, 0xff
 ; GFX9-NOUNALIGNED-NEXT:    s_movk_i32 s0, 0xff
+; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v0, 0xff
 ; GFX9-NOUNALIGNED-NEXT:    s_mov_b32 s1, 8
 ; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v13, 8
 ; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(10)
@@ -471,8 +471,8 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align1(<3 x i32> addrspace(4)*
 ; GFX7-NOUNALIGNED-NEXT:    buffer_load_ubyte v9, off, s[0:3], 0 offset:9
 ; GFX7-NOUNALIGNED-NEXT:    buffer_load_ubyte v10, off, s[0:3], 0 offset:10
 ; GFX7-NOUNALIGNED-NEXT:    buffer_load_ubyte v11, off, s[0:3], 0 offset:11
-; GFX7-NOUNALIGNED-NEXT:    v_mov_b32_e32 v12, 0xff
 ; GFX7-NOUNALIGNED-NEXT:    s_movk_i32 s0, 0xff
+; GFX7-NOUNALIGNED-NEXT:    v_mov_b32_e32 v12, 0xff
 ; GFX7-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(11)
 ; GFX7-NOUNALIGNED-NEXT:    v_and_b32_e32 v0, s0, v0
 ; GFX7-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(10)
@@ -498,17 +498,17 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align1(<3 x i32> addrspace(4)*
 ; GFX7-NOUNALIGNED-NEXT:    v_and_b32_e32 v7, v7, v12
 ; GFX7-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NOUNALIGNED-NEXT:    v_and_b32_e32 v11, v11, v12
-; GFX7-NOUNALIGNED-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; GFX7-NOUNALIGNED-NEXT:    v_or_b32_e32 v1, v4, v5
 ; GFX7-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
 ; GFX7-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
+; GFX7-NOUNALIGNED-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX7-NOUNALIGNED-NEXT:    v_or_b32_e32 v1, v4, v5
 ; GFX7-NOUNALIGNED-NEXT:    v_or_b32_e32 v4, v8, v9
-; GFX7-NOUNALIGNED-NEXT:    v_or_b32_e32 v0, v0, v2
 ; GFX7-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v3, 24, v3
 ; GFX7-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v7, 24, v7
-; GFX7-NOUNALIGNED-NEXT:    v_or_b32_e32 v1, v1, v6
 ; GFX7-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v11, 24, v11
+; GFX7-NOUNALIGNED-NEXT:    v_or_b32_e32 v0, v0, v2
+; GFX7-NOUNALIGNED-NEXT:    v_or_b32_e32 v1, v1, v6
 ; GFX7-NOUNALIGNED-NEXT:    v_or_b32_e32 v2, v4, v10
 ; GFX7-NOUNALIGNED-NEXT:    v_or_b32_e32 v0, v0, v3
 ; GFX7-NOUNALIGNED-NEXT:    v_or_b32_e32 v1, v1, v7
@@ -585,13 +585,15 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align2(<3 x i32> addrspace(4)*
 ; GFX7-NOUNALIGNED-NEXT:    v_and_b32_e32 v0, s0, v0
 ; GFX7-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(4)
 ; GFX7-NOUNALIGNED-NEXT:    v_and_b32_e32 v1, s0, v1
-; GFX7-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX7-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(3)
+; GFX7-NOUNALIGNED-NEXT:    v_and_b32_e32 v2, s0, v2
 ; GFX7-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(2)
 ; GFX7-NOUNALIGNED-NEXT:    v_and_b32_e32 v3, s0, v3
-; GFX7-NOUNALIGNED-NEXT:    v_and_b32_e32 v2, s0, v2
+; GFX7-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(1)
+; GFX7-NOUNALIGNED-NEXT:    v_and_b32_e32 v4, s0, v4
 ; GFX7-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NOUNALIGNED-NEXT:    v_and_b32_e32 v5, s0, v5
-; GFX7-NOUNALIGNED-NEXT:    v_and_b32_e32 v4, s0, v4
+; GFX7-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX7-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX7-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
 ; GFX7-NOUNALIGNED-NEXT:    v_or_b32_e32 v0, v0, v1

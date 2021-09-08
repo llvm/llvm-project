@@ -496,8 +496,8 @@ define amdgpu_ps float @atomic_add_i32_3d(<8 x i32> inreg %rsrc, i32 %data, i16 
 ; GFX9-NEXT:    s_mov_b32 s1, s3
 ; GFX9-NEXT:    s_mov_b32 s3, s5
 ; GFX9-NEXT:    s_mov_b32 s5, s7
-; GFX9-NEXT:    v_and_or_b32 v1, v1, v4, v2
 ; GFX9-NEXT:    s_mov_b32 s7, s9
+; GFX9-NEXT:    v_and_or_b32 v1, v1, v4, v2
 ; GFX9-NEXT:    v_and_or_b32 v2, v3, v4, s8
 ; GFX9-NEXT:    image_atomic_add v0, v[1:2], s[0:7] dmask:0x1 unorm glc a16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -540,8 +540,8 @@ define amdgpu_ps float @atomic_add_i32_cube(<8 x i32> inreg %rsrc, i32 %data, i1
 ; GFX9-NEXT:    s_mov_b32 s1, s3
 ; GFX9-NEXT:    s_mov_b32 s3, s5
 ; GFX9-NEXT:    s_mov_b32 s5, s7
-; GFX9-NEXT:    v_and_or_b32 v1, v1, v4, v2
 ; GFX9-NEXT:    s_mov_b32 s7, s9
+; GFX9-NEXT:    v_and_or_b32 v1, v1, v4, v2
 ; GFX9-NEXT:    v_and_or_b32 v2, v3, v4, s8
 ; GFX9-NEXT:    image_atomic_add v0, v[1:2], s[0:7] dmask:0x1 unorm glc a16 da
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -623,8 +623,8 @@ define amdgpu_ps float @atomic_add_i32_2darray(<8 x i32> inreg %rsrc, i32 %data,
 ; GFX9-NEXT:    s_mov_b32 s1, s3
 ; GFX9-NEXT:    s_mov_b32 s3, s5
 ; GFX9-NEXT:    s_mov_b32 s5, s7
-; GFX9-NEXT:    v_and_or_b32 v1, v1, v4, v2
 ; GFX9-NEXT:    s_mov_b32 s7, s9
+; GFX9-NEXT:    v_and_or_b32 v1, v1, v4, v2
 ; GFX9-NEXT:    v_and_or_b32 v2, v3, v4, s8
 ; GFX9-NEXT:    image_atomic_add v0, v[1:2], s[0:7] dmask:0x1 unorm glc a16 da
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -667,8 +667,8 @@ define amdgpu_ps float @atomic_add_i32_2dmsaa(<8 x i32> inreg %rsrc, i32 %data, 
 ; GFX9-NEXT:    s_mov_b32 s1, s3
 ; GFX9-NEXT:    s_mov_b32 s3, s5
 ; GFX9-NEXT:    s_mov_b32 s5, s7
-; GFX9-NEXT:    v_and_or_b32 v1, v1, v4, v2
 ; GFX9-NEXT:    s_mov_b32 s7, s9
+; GFX9-NEXT:    v_and_or_b32 v1, v1, v4, v2
 ; GFX9-NEXT:    v_and_or_b32 v2, v3, v4, s8
 ; GFX9-NEXT:    image_atomic_add v0, v[1:2], s[0:7] dmask:0x1 unorm glc a16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -1270,8 +1270,8 @@ define amdgpu_ps <2 x float> @atomic_add_i64_3d(<8 x i32> inreg %rsrc, i64 %data
 ; GFX9-NEXT:    s_mov_b32 s1, s3
 ; GFX9-NEXT:    s_mov_b32 s3, s5
 ; GFX9-NEXT:    s_mov_b32 s5, s7
-; GFX9-NEXT:    v_and_or_b32 v2, v2, v5, v3
 ; GFX9-NEXT:    s_mov_b32 s7, s9
+; GFX9-NEXT:    v_and_or_b32 v2, v2, v5, v3
 ; GFX9-NEXT:    v_and_or_b32 v3, v4, v5, s8
 ; GFX9-NEXT:    image_atomic_add v[0:1], v[2:3], s[0:7] dmask:0x3 unorm glc a16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -1314,8 +1314,8 @@ define amdgpu_ps <2 x float> @atomic_add_i64_cube(<8 x i32> inreg %rsrc, i64 %da
 ; GFX9-NEXT:    s_mov_b32 s1, s3
 ; GFX9-NEXT:    s_mov_b32 s3, s5
 ; GFX9-NEXT:    s_mov_b32 s5, s7
-; GFX9-NEXT:    v_and_or_b32 v2, v2, v5, v3
 ; GFX9-NEXT:    s_mov_b32 s7, s9
+; GFX9-NEXT:    v_and_or_b32 v2, v2, v5, v3
 ; GFX9-NEXT:    v_and_or_b32 v3, v4, v5, s8
 ; GFX9-NEXT:    image_atomic_add v[0:1], v[2:3], s[0:7] dmask:0x3 unorm glc a16 da
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -1397,8 +1397,8 @@ define amdgpu_ps <2 x float> @atomic_add_i64_2darray(<8 x i32> inreg %rsrc, i64 
 ; GFX9-NEXT:    s_mov_b32 s1, s3
 ; GFX9-NEXT:    s_mov_b32 s3, s5
 ; GFX9-NEXT:    s_mov_b32 s5, s7
-; GFX9-NEXT:    v_and_or_b32 v2, v2, v5, v3
 ; GFX9-NEXT:    s_mov_b32 s7, s9
+; GFX9-NEXT:    v_and_or_b32 v2, v2, v5, v3
 ; GFX9-NEXT:    v_and_or_b32 v3, v4, v5, s8
 ; GFX9-NEXT:    image_atomic_add v[0:1], v[2:3], s[0:7] dmask:0x3 unorm glc a16 da
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -1441,8 +1441,8 @@ define amdgpu_ps <2 x float> @atomic_add_i64_2dmsaa(<8 x i32> inreg %rsrc, i64 %
 ; GFX9-NEXT:    s_mov_b32 s1, s3
 ; GFX9-NEXT:    s_mov_b32 s3, s5
 ; GFX9-NEXT:    s_mov_b32 s5, s7
-; GFX9-NEXT:    v_and_or_b32 v2, v2, v5, v3
 ; GFX9-NEXT:    s_mov_b32 s7, s9
+; GFX9-NEXT:    v_and_or_b32 v2, v2, v5, v3
 ; GFX9-NEXT:    v_and_or_b32 v3, v4, v5, s8
 ; GFX9-NEXT:    image_atomic_add v[0:1], v[2:3], s[0:7] dmask:0x3 unorm glc a16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)

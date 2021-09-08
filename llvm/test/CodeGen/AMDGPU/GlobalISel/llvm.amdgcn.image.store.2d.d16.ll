@@ -117,9 +117,9 @@ define amdgpu_ps void @image_store_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
 ; GFX81-NEXT:    s_mov_b32 s3, s5
 ; GFX81-NEXT:    s_mov_b32 s4, s6
 ; GFX81-NEXT:    s_mov_b32 s5, s7
-; GFX81-NEXT:    v_or_b32_sdwa v2, v2, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX81-NEXT:    s_mov_b32 s6, s8
 ; GFX81-NEXT:    s_mov_b32 s7, s9
+; GFX81-NEXT:    v_or_b32_sdwa v2, v2, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX81-NEXT:    v_and_b32_e32 v3, 0xffff, v3
 ; GFX81-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX81-NEXT:    image_store v[2:4], v[0:1], s[0:7] dmask:0x7 unorm d16

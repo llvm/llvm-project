@@ -1063,9 +1063,9 @@ define amdgpu_kernel void @v_cttz_zero_undef_i64_with_select(i64 addrspace(1)* n
 ; GFX9-GISEL-NEXT:    v_or_b32_sdwa v4, v7, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX9-GISEL-NEXT:    v_bfe_u32 v3, v3, 0, 16
 ; GFX9-GISEL-NEXT:    v_bfe_u32 v4, v4, 0, 16
-; GFX9-GISEL-NEXT:    v_lshl_or_b32 v3, v4, 16, v3
 ; GFX9-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 16
 ; GFX9-GISEL-NEXT:    v_bfe_u32 v2, v2, 0, 16
+; GFX9-GISEL-NEXT:    v_lshl_or_b32 v3, v4, 16, v3
 ; GFX9-GISEL-NEXT:    v_lshl_or_b32 v2, v2, 16, v0
 ; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v4, v3
 ; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v0, v2

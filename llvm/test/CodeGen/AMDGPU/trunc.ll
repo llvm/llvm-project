@@ -41,7 +41,6 @@ define amdgpu_kernel void @trunc_load_shl_i64(i32 addrspace(1)* %out, [8 x i32],
 ; GCN: s_lshl_b64 s{{\[}}[[LO_SHL:[0-9]+]]:{{[0-9]+\]}}, s{{\[}}[[LO_SREG]]:{{[0-9]+\]}}, 2
 ; GCN: s_add_u32 s[[LO_SREG2:[0-9]+]], s[[LO_SHL]],
 ; GCN: v_mov_b32_e32 v[[LO_VREG:[0-9]+]], s[[LO_SREG2]]
-; GCN: s_addc_u32
 ; SI: buffer_store_dword v[[LO_VREG]],
 ; VI: flat_store_dword v[{{[0-9:]+}}], v[[LO_VREG]]
 ; GCN: v_mov_b32_e32

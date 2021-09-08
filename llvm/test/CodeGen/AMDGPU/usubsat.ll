@@ -110,9 +110,9 @@ define <2 x i16> @v_usubsat_v2i16(<2 x i16> %lhs, <2 x i16> %rhs) {
 ; GFX6-NEXT:    s_mov_b32 s4, 0xffff
 ; GFX6-NEXT:    v_and_b32_e32 v4, s4, v3
 ; GFX6-NEXT:    v_and_b32_e32 v1, s4, v1
-; GFX6-NEXT:    v_max_u32_e32 v1, v1, v4
 ; GFX6-NEXT:    v_and_b32_e32 v2, s4, v2
 ; GFX6-NEXT:    v_and_b32_e32 v0, s4, v0
+; GFX6-NEXT:    v_max_u32_e32 v1, v1, v4
 ; GFX6-NEXT:    v_max_u32_e32 v0, v0, v2
 ; GFX6-NEXT:    v_sub_i32_e32 v1, vcc, v1, v3
 ; GFX6-NEXT:    v_sub_i32_e32 v0, vcc, v0, v2
@@ -152,9 +152,9 @@ define <3 x i16> @v_usubsat_v3i16(<3 x i16> %lhs, <3 x i16> %rhs) {
 ; GFX6-NEXT:    s_mov_b32 s4, 0xffff
 ; GFX6-NEXT:    v_and_b32_e32 v6, s4, v4
 ; GFX6-NEXT:    v_and_b32_e32 v1, s4, v1
-; GFX6-NEXT:    v_max_u32_e32 v1, v1, v6
 ; GFX6-NEXT:    v_and_b32_e32 v3, s4, v3
 ; GFX6-NEXT:    v_and_b32_e32 v0, s4, v0
+; GFX6-NEXT:    v_max_u32_e32 v1, v1, v6
 ; GFX6-NEXT:    v_max_u32_e32 v0, v0, v3
 ; GFX6-NEXT:    v_sub_i32_e32 v1, vcc, v1, v4
 ; GFX6-NEXT:    v_and_b32_e32 v5, s4, v5
@@ -201,9 +201,9 @@ define <2 x float> @v_usubsat_v4i16(<4 x i16> %lhs, <4 x i16> %rhs) {
 ; GFX6-NEXT:    s_mov_b32 s4, 0xffff
 ; GFX6-NEXT:    v_and_b32_e32 v9, s4, v5
 ; GFX6-NEXT:    v_and_b32_e32 v1, s4, v1
-; GFX6-NEXT:    v_max_u32_e32 v1, v1, v9
 ; GFX6-NEXT:    v_and_b32_e32 v4, s4, v4
 ; GFX6-NEXT:    v_and_b32_e32 v0, s4, v0
+; GFX6-NEXT:    v_max_u32_e32 v1, v1, v9
 ; GFX6-NEXT:    v_max_u32_e32 v0, v0, v4
 ; GFX6-NEXT:    v_sub_i32_e32 v1, vcc, v1, v5
 ; GFX6-NEXT:    v_and_b32_e32 v8, s4, v7

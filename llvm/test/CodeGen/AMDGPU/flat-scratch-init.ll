@@ -171,14 +171,14 @@ define amdgpu_kernel void @test(i32 addrspace(1)* %out, i32 %in) {
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, vcc_lo
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    s_mov_b32 s2, exec_lo

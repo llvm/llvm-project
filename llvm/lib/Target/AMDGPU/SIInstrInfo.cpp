@@ -21,6 +21,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -7460,6 +7461,20 @@ SIInstrInfo::CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
 ScheduleHazardRecognizer *
 SIInstrInfo::CreateTargetPostRAHazardRecognizer(const MachineFunction &MF) const {
   return new GCNHazardRecognizer(MF);
+}
+
+// Called during:
+// - pre-RA scheduling and post-RA scheduling
+ScheduleHazardRecognizer *
+SIInstrInfo::CreateTargetMIHazardRecognizer(const InstrItineraryData *II,
+                                            const ScheduleDAGMI *DAG) const {
+  // Borrowed from Arm Target
+  // We would like to restrict this hazard recognizer to only
+  // post-RA scheduling; we can tell that we're post-RA because we don't
+  // track VRegLiveness.
+  if (!DAG->hasVRegLiveness())
+    return new GCNHazardRecognizer(DAG->MF);
+  return TargetInstrInfo::CreateTargetMIHazardRecognizer(II, DAG);
 }
 
 std::pair<unsigned, unsigned>

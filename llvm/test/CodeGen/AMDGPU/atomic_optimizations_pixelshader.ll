@@ -311,8 +311,8 @@ define amdgpu_ps void @add_i32_varying(<4 x i32> inreg %out, <4 x i32> inreg %in
 ; GFX1064-NEXT:    v_readlane_b32 s12, v1, 31
 ; GFX1064-NEXT:    v_mov_b32_e32 v2, s12
 ; GFX1064-NEXT:    v_add_nc_u32_dpp v1, v2, v1 quad_perm:[0,1,2,3] row_mask:0xc bank_mask:0xf
-; GFX1064-NEXT:    v_readlane_b32 s12, v1, 15
 ; GFX1064-NEXT:    v_mov_b32_dpp v3, v1 row_shr:1 row_mask:0xf bank_mask:0xf
+; GFX1064-NEXT:    v_readlane_b32 s12, v1, 15
 ; GFX1064-NEXT:    v_readlane_b32 s13, v1, 31
 ; GFX1064-NEXT:    v_writelane_b32 v3, s12, 16
 ; GFX1064-NEXT:    s_mov_b64 exec, s[10:11]

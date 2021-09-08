@@ -171,8 +171,8 @@ define amdgpu_kernel void @fshl_v2i32(<2 x i32> addrspace(1)* %in, <2 x i32> %x,
 ; SI-NEXT:    v_mov_b32_e32 v0, s9
 ; SI-NEXT:    s_not_b32 s1, s1
 ; SI-NEXT:    v_alignbit_b32 v0, s3, v0, 1
-; SI-NEXT:    v_mov_b32_e32 v1, s1
 ; SI-NEXT:    s_lshr_b32 s3, s3, 1
+; SI-NEXT:    v_mov_b32_e32 v1, s1
 ; SI-NEXT:    v_alignbit_b32 v1, s3, v0, v1
 ; SI-NEXT:    v_mov_b32_e32 v0, s8
 ; SI-NEXT:    s_not_b32 s0, s0
@@ -192,9 +192,9 @@ define amdgpu_kernel void @fshl_v2i32(<2 x i32> addrspace(1)* %in, <2 x i32> %x,
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s7
 ; VI-NEXT:    s_not_b32 s1, s1
-; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    s_lshr_b32 s7, s5, 1
 ; VI-NEXT:    v_alignbit_b32 v0, s5, v0, 1
+; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_alignbit_b32 v1, s7, v0, v1
 ; VI-NEXT:    v_mov_b32_e32 v0, s6
 ; VI-NEXT:    s_not_b32 s0, s0
@@ -218,8 +218,8 @@ define amdgpu_kernel void @fshl_v2i32(<2 x i32> addrspace(1)* %in, <2 x i32> %x,
 ; GFX9-NEXT:    s_lshr_b32 s0, s5, 1
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s7
 ; GFX9-NEXT:    s_not_b32 s1, s9
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    v_alignbit_b32 v0, s5, v0, 1
+; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    v_alignbit_b32 v1, s0, v0, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX9-NEXT:    s_not_b32 s1, s8
@@ -363,20 +363,20 @@ define amdgpu_kernel void @fshl_v4i32(<4 x i32> addrspace(1)* %in, <4 x i32> %x,
 ; SI-NEXT:    v_mov_b32_e32 v0, s15
 ; SI-NEXT:    s_not_b32 s3, s3
 ; SI-NEXT:    v_alignbit_b32 v0, s11, v0, 1
-; SI-NEXT:    v_mov_b32_e32 v1, s3
 ; SI-NEXT:    s_lshr_b32 s11, s11, 1
+; SI-NEXT:    v_mov_b32_e32 v1, s3
 ; SI-NEXT:    v_alignbit_b32 v3, s11, v0, v1
 ; SI-NEXT:    v_mov_b32_e32 v0, s14
 ; SI-NEXT:    s_not_b32 s2, s2
-; SI-NEXT:    v_mov_b32_e32 v1, s2
 ; SI-NEXT:    v_alignbit_b32 v0, s10, v0, 1
 ; SI-NEXT:    s_lshr_b32 s3, s10, 1
+; SI-NEXT:    v_mov_b32_e32 v1, s2
 ; SI-NEXT:    v_alignbit_b32 v2, s3, v0, v1
 ; SI-NEXT:    v_mov_b32_e32 v0, s13
 ; SI-NEXT:    s_not_b32 s1, s1
-; SI-NEXT:    v_mov_b32_e32 v1, s1
 ; SI-NEXT:    v_alignbit_b32 v0, s9, v0, 1
 ; SI-NEXT:    s_lshr_b32 s2, s9, 1
+; SI-NEXT:    v_mov_b32_e32 v1, s1
 ; SI-NEXT:    v_alignbit_b32 v1, s2, v0, v1
 ; SI-NEXT:    v_mov_b32_e32 v0, s12
 ; SI-NEXT:    s_not_b32 s0, s0
@@ -396,21 +396,21 @@ define amdgpu_kernel void @fshl_v4i32(<4 x i32> addrspace(1)* %in, <4 x i32> %x,
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s11
 ; VI-NEXT:    s_not_b32 s3, s3
-; VI-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-NEXT:    s_lshr_b32 s11, s7, 1
 ; VI-NEXT:    v_alignbit_b32 v0, s7, v0, 1
+; VI-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-NEXT:    v_alignbit_b32 v3, s11, v0, v1
 ; VI-NEXT:    v_mov_b32_e32 v0, s10
 ; VI-NEXT:    s_not_b32 s2, s2
-; VI-NEXT:    v_mov_b32_e32 v1, s2
 ; VI-NEXT:    v_alignbit_b32 v0, s6, v0, 1
 ; VI-NEXT:    s_lshr_b32 s3, s6, 1
+; VI-NEXT:    v_mov_b32_e32 v1, s2
 ; VI-NEXT:    v_alignbit_b32 v2, s3, v0, v1
 ; VI-NEXT:    v_mov_b32_e32 v0, s9
 ; VI-NEXT:    s_not_b32 s1, s1
-; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_alignbit_b32 v0, s5, v0, 1
 ; VI-NEXT:    s_lshr_b32 s2, s5, 1
+; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_alignbit_b32 v1, s2, v0, v1
 ; VI-NEXT:    v_mov_b32_e32 v0, s8
 ; VI-NEXT:    s_not_b32 s0, s0
@@ -434,20 +434,20 @@ define amdgpu_kernel void @fshl_v4i32(<4 x i32> addrspace(1)* %in, <4 x i32> %x,
 ; GFX9-NEXT:    s_lshr_b32 s0, s7, 1
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s11
 ; GFX9-NEXT:    s_not_b32 s1, s15
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    v_alignbit_b32 v0, s7, v0, 1
+; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    v_alignbit_b32 v3, s0, v0, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s10
 ; GFX9-NEXT:    s_not_b32 s1, s14
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    v_alignbit_b32 v0, s6, v0, 1
 ; GFX9-NEXT:    s_lshr_b32 s0, s6, 1
+; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    v_alignbit_b32 v2, s0, v0, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s9
 ; GFX9-NEXT:    s_not_b32 s1, s13
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    v_alignbit_b32 v0, s5, v0, 1
 ; GFX9-NEXT:    s_lshr_b32 s0, s5, 1
+; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    v_alignbit_b32 v1, s0, v0, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s8
 ; GFX9-NEXT:    s_not_b32 s1, s12
@@ -494,10 +494,10 @@ define amdgpu_kernel void @fshl_v4i32(<4 x i32> addrspace(1)* %in, <4 x i32> %x,
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_lshr_b32 s0, s7, 1
-; GFX10-NEXT:    v_alignbit_b32 v5, s5, s9, 1
-; GFX10-NEXT:    v_alignbit_b32 v6, s4, s8, 1
 ; GFX10-NEXT:    v_alignbit_b32 v0, s7, s11, 1
 ; GFX10-NEXT:    v_alignbit_b32 v1, s6, s10, 1
+; GFX10-NEXT:    v_alignbit_b32 v5, s5, s9, 1
+; GFX10-NEXT:    v_alignbit_b32 v6, s4, s8, 1
 ; GFX10-NEXT:    s_not_b32 s1, s15
 ; GFX10-NEXT:    s_lshr_b32 s6, s6, 1
 ; GFX10-NEXT:    s_not_b32 s7, s14

@@ -454,8 +454,8 @@ define amdgpu_kernel void @dynamic_insertelement_v3f32(<3 x float> addrspace(1)*
 ; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s4, 1
 ; SI-NEXT:    v_cndmask_b32_e32 v2, v0, v1, vcc
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v1, s9
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s4, 0
 ; SI-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
 ; SI-NEXT:    v_mov_b32_e32 v3, s8
@@ -478,8 +478,8 @@ define amdgpu_kernel void @dynamic_insertelement_v3f32(<3 x float> addrspace(1)*
 ; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_lg_u32 s4, 1
 ; VI-NEXT:    v_cndmask_b32_e32 v2, v0, v1, vcc
-; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    v_mov_b32_e32 v1, s9
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_lg_u32 s4, 0
 ; VI-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
 ; VI-NEXT:    v_mov_b32_e32 v3, s8
@@ -507,12 +507,12 @@ define amdgpu_kernel void @dynamic_insertelement_v4f32(<4 x float> addrspace(1)*
 ; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s4, 2
 ; SI-NEXT:    v_cndmask_b32_e32 v3, v0, v1, vcc
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v1, s10
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s4, 1
 ; SI-NEXT:    v_cndmask_b32_e32 v2, v0, v1, vcc
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v1, s9
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s4, 0
 ; SI-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
 ; SI-NEXT:    v_mov_b32_e32 v4, s8
@@ -535,12 +535,12 @@ define amdgpu_kernel void @dynamic_insertelement_v4f32(<4 x float> addrspace(1)*
 ; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_lg_u32 s4, 2
 ; VI-NEXT:    v_cndmask_b32_e32 v3, v0, v1, vcc
-; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    v_mov_b32_e32 v1, s10
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_lg_u32 s4, 1
 ; VI-NEXT:    v_cndmask_b32_e32 v2, v0, v1, vcc
-; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    v_mov_b32_e32 v1, s9
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_lg_u32 s4, 0
 ; VI-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
 ; VI-NEXT:    v_mov_b32_e32 v4, s8
@@ -568,28 +568,28 @@ define amdgpu_kernel void @dynamic_insertelement_v8f32(<8 x float> addrspace(1)*
 ; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s4, 2
 ; SI-NEXT:    v_cndmask_b32_e32 v3, v4, v0, vcc
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v0, s10
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s4, 1
 ; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v0, vcc
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v0, s9
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s4, 0
 ; SI-NEXT:    v_cndmask_b32_e32 v1, v4, v0, vcc
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v0, s8
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s4, 7
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v5, s15
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s4, 6
 ; SI-NEXT:    v_cndmask_b32_e32 v7, v4, v5, vcc
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v5, s14
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s4, 5
 ; SI-NEXT:    v_cndmask_b32_e32 v6, v4, v5, vcc
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v5, s13
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s4, 4
 ; SI-NEXT:    v_cndmask_b32_e32 v5, v4, v5, vcc
 ; SI-NEXT:    v_mov_b32_e32 v8, s12
@@ -613,28 +613,28 @@ define amdgpu_kernel void @dynamic_insertelement_v8f32(<8 x float> addrspace(1)*
 ; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_lg_u32 s4, 2
 ; VI-NEXT:    v_cndmask_b32_e32 v3, v4, v0, vcc
-; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    v_mov_b32_e32 v0, s10
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_lg_u32 s4, 1
 ; VI-NEXT:    v_cndmask_b32_e32 v2, v4, v0, vcc
-; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    v_mov_b32_e32 v0, s9
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_lg_u32 s4, 0
 ; VI-NEXT:    v_cndmask_b32_e32 v1, v4, v0, vcc
-; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    v_mov_b32_e32 v0, s8
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_lg_u32 s4, 7
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
-; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    v_mov_b32_e32 v5, s15
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_lg_u32 s4, 6
 ; VI-NEXT:    v_cndmask_b32_e32 v7, v4, v5, vcc
-; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    v_mov_b32_e32 v5, s14
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_lg_u32 s4, 5
 ; VI-NEXT:    v_cndmask_b32_e32 v6, v4, v5, vcc
-; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    v_mov_b32_e32 v5, s13
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_lg_u32 s4, 4
 ; VI-NEXT:    v_cndmask_b32_e32 v5, v4, v5, vcc
 ; VI-NEXT:    v_mov_b32_e32 v8, s12
@@ -774,8 +774,8 @@ define amdgpu_kernel void @dynamic_insertelement_v3i32(<3 x i32> addrspace(1)* %
 ; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s4, 1
 ; SI-NEXT:    v_cndmask_b32_e32 v2, 5, v0, vcc
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v0, s9
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s4, 0
 ; SI-NEXT:    v_cndmask_b32_e32 v1, 5, v0, vcc
 ; SI-NEXT:    v_mov_b32_e32 v0, s8
@@ -820,16 +820,16 @@ define amdgpu_kernel void @dynamic_insertelement_v4i32(<4 x i32> addrspace(1)* %
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s11
 ; SI-NEXT:    s_cmp_eq_u32 s6, 3
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v4, s4
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_eq_u32 s6, 2
 ; SI-NEXT:    v_cndmask_b32_e32 v3, v0, v4, vcc
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v0, s10
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_eq_u32 s6, 1
 ; SI-NEXT:    v_cndmask_b32_e32 v2, v0, v4, vcc
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v0, s9
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_eq_u32 s6, 0
 ; SI-NEXT:    v_cndmask_b32_e32 v1, v0, v4, vcc
 ; SI-NEXT:    v_mov_b32_e32 v0, s8
@@ -880,28 +880,28 @@ define amdgpu_kernel void @dynamic_insertelement_v8i32(<8 x i32> addrspace(1)* %
 ; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s4, 2
 ; SI-NEXT:    v_cndmask_b32_e32 v3, 5, v0, vcc
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v0, s10
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s4, 1
 ; SI-NEXT:    v_cndmask_b32_e32 v2, 5, v0, vcc
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v0, s9
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s4, 0
 ; SI-NEXT:    v_cndmask_b32_e32 v1, 5, v0, vcc
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v0, s8
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s4, 7
 ; SI-NEXT:    v_cndmask_b32_e32 v0, 5, v0, vcc
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v4, s15
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s4, 6
 ; SI-NEXT:    v_cndmask_b32_e32 v7, 5, v4, vcc
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v4, s14
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s4, 5
 ; SI-NEXT:    v_cndmask_b32_e32 v6, 5, v4, vcc
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v4, s13
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s4, 4
 ; SI-NEXT:    v_cndmask_b32_e32 v5, 5, v4, vcc
 ; SI-NEXT:    v_mov_b32_e32 v4, s12
@@ -1164,8 +1164,8 @@ define amdgpu_kernel void @dynamic_insertelement_v3i8(<3 x i8> addrspace(1)* %ou
 ; SI-NEXT:    s_andn2_b32 s5, s6, s4
 ; SI-NEXT:    s_and_b32 s4, s4, 0x5050505
 ; SI-NEXT:    s_or_b32 s4, s4, s5
-; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    s_lshr_b32 s5, s4, 16
+; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    v_mov_b32_e32 v0, s5
 ; SI-NEXT:    buffer_store_byte v0, off, s[0:3], 0 offset:2
@@ -1184,8 +1184,8 @@ define amdgpu_kernel void @dynamic_insertelement_v3i8(<3 x i8> addrspace(1)* %ou
 ; VI-NEXT:    s_andn2_b32 s5, s6, s4
 ; VI-NEXT:    s_and_b32 s4, s4, 0x5050505
 ; VI-NEXT:    s_or_b32 s4, s4, s5
-; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    s_lshr_b32 s5, s4, 16
+; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; VI-NEXT:    v_mov_b32_e32 v0, s5
 ; VI-NEXT:    buffer_store_byte v0, off, s[0:3], 0 offset:2
@@ -1306,28 +1306,28 @@ define amdgpu_kernel void @dynamic_insertelement_v16i8(<16 x i8> addrspace(1)* %
 ; SI-NEXT:    v_cndmask_b32_e32 v0, 5, v0, vcc
 ; SI-NEXT:    v_mov_b32_e32 v1, s5
 ; SI-NEXT:    s_cselect_b64 vcc, -1, 0
-; SI-NEXT:    s_lshr_b32 s6, s11, 8
 ; SI-NEXT:    v_cndmask_b32_e32 v1, 5, v1, vcc
 ; SI-NEXT:    s_movk_i32 s5, 0xff
-; SI-NEXT:    s_cmp_lg_u32 s4, 13
+; SI-NEXT:    s_lshr_b32 s6, s11, 8
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
 ; SI-NEXT:    v_and_b32_e32 v1, s5, v1
+; SI-NEXT:    s_cmp_lg_u32 s4, 13
 ; SI-NEXT:    v_or_b32_e32 v0, v1, v0
 ; SI-NEXT:    v_mov_b32_e32 v1, s6
 ; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s4, 12
 ; SI-NEXT:    v_cndmask_b32_e32 v1, 5, v1, vcc
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v2, s11
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_cndmask_b32_e32 v2, 5, v2, vcc
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 8, v1
 ; SI-NEXT:    v_and_b32_e32 v2, s5, v2
 ; SI-NEXT:    v_or_b32_e32 v1, v2, v1
 ; SI-NEXT:    s_mov_b32 s6, 0xffff
 ; SI-NEXT:    s_lshr_b32 s7, s10, 24
-; SI-NEXT:    s_cmp_lg_u32 s4, 11
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; SI-NEXT:    v_and_b32_e32 v1, s6, v1
+; SI-NEXT:    s_cmp_lg_u32 s4, 11
 ; SI-NEXT:    v_or_b32_e32 v3, v1, v0
 ; SI-NEXT:    v_mov_b32_e32 v0, s7
 ; SI-NEXT:    s_cselect_b64 vcc, -1, 0
@@ -1338,24 +1338,24 @@ define amdgpu_kernel void @dynamic_insertelement_v16i8(<16 x i8> addrspace(1)* %
 ; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_cndmask_b32_e32 v1, 5, v1, vcc
 ; SI-NEXT:    s_lshr_b32 s7, s10, 8
-; SI-NEXT:    s_cmp_lg_u32 s4, 9
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
 ; SI-NEXT:    v_and_b32_e32 v1, s5, v1
+; SI-NEXT:    s_cmp_lg_u32 s4, 9
 ; SI-NEXT:    v_or_b32_e32 v0, v1, v0
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v1, s7
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s4, 8
 ; SI-NEXT:    v_cndmask_b32_e32 v1, 5, v1, vcc
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v2, s10
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_cndmask_b32_e32 v2, 5, v2, vcc
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 8, v1
 ; SI-NEXT:    v_and_b32_e32 v2, s5, v2
 ; SI-NEXT:    v_or_b32_e32 v1, v2, v1
 ; SI-NEXT:    s_lshr_b32 s7, s9, 24
-; SI-NEXT:    s_cmp_lg_u32 s4, 7
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; SI-NEXT:    v_and_b32_e32 v1, s6, v1
+; SI-NEXT:    s_cmp_lg_u32 s4, 7
 ; SI-NEXT:    v_or_b32_e32 v2, v1, v0
 ; SI-NEXT:    v_mov_b32_e32 v0, s7
 ; SI-NEXT:    s_cselect_b64 vcc, -1, 0
@@ -1366,24 +1366,24 @@ define amdgpu_kernel void @dynamic_insertelement_v16i8(<16 x i8> addrspace(1)* %
 ; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_cndmask_b32_e32 v1, 5, v1, vcc
 ; SI-NEXT:    s_lshr_b32 s7, s9, 8
-; SI-NEXT:    s_cmp_lg_u32 s4, 5
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
 ; SI-NEXT:    v_and_b32_e32 v1, s5, v1
+; SI-NEXT:    s_cmp_lg_u32 s4, 5
 ; SI-NEXT:    v_or_b32_e32 v0, v1, v0
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v1, s7
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s4, 4
 ; SI-NEXT:    v_cndmask_b32_e32 v1, 5, v1, vcc
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v4, s9
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_cndmask_b32_e32 v4, 5, v4, vcc
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 8, v1
 ; SI-NEXT:    v_and_b32_e32 v4, s5, v4
 ; SI-NEXT:    v_or_b32_e32 v1, v4, v1
 ; SI-NEXT:    s_lshr_b32 s7, s8, 24
-; SI-NEXT:    s_cmp_lg_u32 s4, 3
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; SI-NEXT:    v_and_b32_e32 v1, s6, v1
+; SI-NEXT:    s_cmp_lg_u32 s4, 3
 ; SI-NEXT:    v_or_b32_e32 v1, v1, v0
 ; SI-NEXT:    v_mov_b32_e32 v0, s7
 ; SI-NEXT:    s_cselect_b64 vcc, -1, 0
@@ -1394,12 +1394,12 @@ define amdgpu_kernel void @dynamic_insertelement_v16i8(<16 x i8> addrspace(1)* %
 ; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_cndmask_b32_e32 v4, 5, v4, vcc
 ; SI-NEXT:    s_lshr_b32 s7, s8, 8
-; SI-NEXT:    s_cmp_lg_u32 s4, 1
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
 ; SI-NEXT:    v_and_b32_e32 v4, s5, v4
+; SI-NEXT:    s_cmp_lg_u32 s4, 1
 ; SI-NEXT:    v_or_b32_e32 v0, v4, v0
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v4, s7
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s4, 0
 ; SI-NEXT:    v_cndmask_b32_e32 v4, 5, v4, vcc
 ; SI-NEXT:    v_mov_b32_e32 v5, s8
@@ -1436,15 +1436,15 @@ define amdgpu_kernel void @dynamic_insertelement_v16i8(<16 x i8> addrspace(1)* %
 ; VI-NEXT:    v_cndmask_b32_e32 v1, 5, v1, vcc
 ; VI-NEXT:    s_cmp_lg_u32 s4, 13
 ; VI-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_lg_u32 s4, 12
 ; VI-NEXT:    v_cndmask_b32_e32 v1, 5, v1, vcc
-; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    v_mov_b32_e32 v2, s11
-; VI-NEXT:    s_lshr_b32 s5, s10, 24
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    v_lshlrev_b16_e32 v1, 8, v1
 ; VI-NEXT:    v_cndmask_b32_e32 v2, 5, v2, vcc
+; VI-NEXT:    s_lshr_b32 s5, s10, 24
 ; VI-NEXT:    v_or_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; VI-NEXT:    s_cmp_lg_u32 s4, 11
 ; VI-NEXT:    v_or_b32_sdwa v3, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
@@ -1460,15 +1460,15 @@ define amdgpu_kernel void @dynamic_insertelement_v16i8(<16 x i8> addrspace(1)* %
 ; VI-NEXT:    v_cndmask_b32_e32 v1, 5, v1, vcc
 ; VI-NEXT:    s_cmp_lg_u32 s4, 9
 ; VI-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_lg_u32 s4, 8
 ; VI-NEXT:    v_cndmask_b32_e32 v1, 5, v1, vcc
-; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    v_mov_b32_e32 v2, s10
-; VI-NEXT:    s_lshr_b32 s5, s9, 24
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    v_lshlrev_b16_e32 v1, 8, v1
 ; VI-NEXT:    v_cndmask_b32_e32 v2, 5, v2, vcc
+; VI-NEXT:    s_lshr_b32 s5, s9, 24
 ; VI-NEXT:    v_or_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; VI-NEXT:    s_cmp_lg_u32 s4, 7
 ; VI-NEXT:    v_or_b32_sdwa v2, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
@@ -1484,15 +1484,15 @@ define amdgpu_kernel void @dynamic_insertelement_v16i8(<16 x i8> addrspace(1)* %
 ; VI-NEXT:    v_cndmask_b32_e32 v1, 5, v1, vcc
 ; VI-NEXT:    s_cmp_lg_u32 s4, 5
 ; VI-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_lg_u32 s4, 4
 ; VI-NEXT:    v_cndmask_b32_e32 v1, 5, v1, vcc
-; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    v_mov_b32_e32 v4, s9
-; VI-NEXT:    s_lshr_b32 s5, s8, 24
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    v_lshlrev_b16_e32 v1, 8, v1
 ; VI-NEXT:    v_cndmask_b32_e32 v4, 5, v4, vcc
+; VI-NEXT:    s_lshr_b32 s5, s8, 24
 ; VI-NEXT:    v_or_b32_sdwa v1, v4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; VI-NEXT:    s_cmp_lg_u32 s4, 3
 ; VI-NEXT:    v_or_b32_sdwa v1, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
@@ -1508,8 +1508,8 @@ define amdgpu_kernel void @dynamic_insertelement_v16i8(<16 x i8> addrspace(1)* %
 ; VI-NEXT:    v_cndmask_b32_e32 v4, 5, v4, vcc
 ; VI-NEXT:    s_cmp_lg_u32 s4, 1
 ; VI-NEXT:    v_or_b32_sdwa v0, v4, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    v_mov_b32_e32 v4, s5
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_lg_u32 s4, 0
 ; VI-NEXT:    v_cndmask_b32_e32 v4, 5, v4, vcc
 ; VI-NEXT:    v_mov_b32_e32 v5, s8
@@ -1660,8 +1660,8 @@ define amdgpu_kernel void @dynamic_insertelement_v2i64(<2 x i64> addrspace(1)* %
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_cmp_eq_u32 s6, 1
-; SI-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v0, s11
+; SI-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; SI-NEXT:    v_cndmask_b32_e64 v3, v0, 0, s[4:5]
 ; SI-NEXT:    v_mov_b32_e32 v0, s10
 ; SI-NEXT:    s_cmp_eq_u32 s6, 0
@@ -1715,8 +1715,8 @@ define amdgpu_kernel void @dynamic_insertelement_v3i64(<3 x i64> addrspace(1)* %
 ; SI-NEXT:    v_mov_b32_e32 v0, s10
 ; SI-NEXT:    s_cmp_eq_u32 s12, 0
 ; SI-NEXT:    v_cndmask_b32_e64 v2, v0, 5, s[4:5]
-; SI-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v0, s9
+; SI-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; SI-NEXT:    v_cndmask_b32_e64 v1, v0, 0, s[4:5]
 ; SI-NEXT:    v_mov_b32_e32 v0, s8
 ; SI-NEXT:    s_cmp_eq_u32 s12, 2
@@ -1775,14 +1775,14 @@ define amdgpu_kernel void @dynamic_insertelement_v4f64(<4 x double> addrspace(1)
 ; SI-NEXT:    v_mov_b32_e32 v0, s10
 ; SI-NEXT:    s_cmp_eq_u32 s4, 0
 ; SI-NEXT:    v_cndmask_b32_e64 v2, v0, 0, vcc
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v0, s9
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_cndmask_b32_e32 v1, v0, v4, vcc
 ; SI-NEXT:    v_mov_b32_e32 v0, s8
 ; SI-NEXT:    s_cmp_eq_u32 s4, 3
 ; SI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_mov_b32_e32 v5, s15
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_cndmask_b32_e32 v7, v5, v4, vcc
 ; SI-NEXT:    v_mov_b32_e32 v5, s14
 ; SI-NEXT:    s_cmp_eq_u32 s4, 2

@@ -92,8 +92,8 @@ define amdgpu_kernel void @local_store_i55(i55 addrspace(3)* %ptr, i55 %arg) #0 
 ; GFX9-NEXT:    s_load_dword s0, s[4:5], 0x0
 ; GFX9-NEXT:    s_load_dword s1, s[4:5], 0x8
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_and_b32 s3, s2, 0xffff
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s0
+; GFX9-NEXT:    s_and_b32 s3, s2, 0xffff
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX9-NEXT:    ds_write_b16 v1, v2 offset:4
@@ -244,8 +244,8 @@ define amdgpu_kernel void @local_store_i65(i65 addrspace(3)* %ptr, i65 %arg) #0 
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_and_b32 s2, s2, 1
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s3
-; GFX10-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-NEXT:    v_mov_b32_e32 v3, s2
+; GFX10-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX10-NEXT:    ds_write_b8 v2, v3 offset:8
 ; GFX10-NEXT:    ds_write_b64 v2, v[0:1]

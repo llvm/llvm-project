@@ -56,8 +56,8 @@ entry:
 ; GCN: buffer_load_dword
 ; SI-DAG: v_lshrrev_b32_e32
 ; SI-DAG: v_cvt_f32_f16_e32
-; GFX89: v_cvt_f32_f16_sdwa
 ; GCN: v_cvt_f32_f16_e32
+; GFX89: v_cvt_f32_f16_sdwa
 
 ; GCN: v_cvt_f64_f32_e32
 ; GCN: v_cvt_f64_f32_e32

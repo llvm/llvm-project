@@ -640,8 +640,8 @@ define void @too_many_args_use_workitem_id_x_byval(
 ; FIXEDABI-NOT: v2
 ; FIXEDABI: v_mov_b32_e32 v31, v0
 ; FIXEDABI: v_mov_b32_e32 [[K0:v[0-9]+]], 0x3e7
-; FIXEDABI: buffer_store_dword [[K0]], off, s[0:3], 0 offset:4{{$}}
 ; FIXEDABI: s_movk_i32 s32, 0x400{{$}}
+; FIXEDABI: buffer_store_dword [[K0]], off, s[0:3], 0 offset:4{{$}}
 ; FIXEDABI: v_mov_b32_e32 [[K1:v[0-9]+]], 0x140
 
 ; FIXEDABI: buffer_store_dword [[K1]], off, s[0:3], s32{{$}}
@@ -787,14 +787,14 @@ define void @too_many_args_use_workitem_id_xyz(
 ; GCN-DAG: s_mov_b32 s32, 0
 
 ; GCN-DAG: v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
+; FIXEDABI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x140
 ; GCN-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
 ; GCN-DAG: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
 ; VARABI-DAG: v_or_b32_e32 [[PACKEDID:v[0-9]+]], [[TMP2]], [[TMP0]]
 ; VARABI: buffer_store_dword [[PACKEDID]], off, s[0:3], s32{{$}}
 
-; FIXEDABI-DAG: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
-; FIXEDABI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x140
 ; FIXEDABI: buffer_store_dword [[K]], off, s[0:3], s32{{$}}
+; FIXEDABI-DAG: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
 
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_xyz() #1 {

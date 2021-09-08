@@ -99,8 +99,6 @@ define amdgpu_kernel void @local_nontemporal_load_0(
 ; GFX90A-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-TGSPLIT-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX90A-TGSPLIT-NEXT:    s_endpgm
-;
-;
     i32 addrspace(3)* %in, i32 addrspace(1)* %out) {
 entry:
   %val = load i32, i32 addrspace(3)* %in, align 4, !nontemporal !0
@@ -203,8 +201,6 @@ define amdgpu_kernel void @local_nontemporal_load_1(
 ; GFX90A-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-TGSPLIT-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX90A-TGSPLIT-NEXT:    s_endpgm
-;
-;
     i32 addrspace(3)* %in, i32 addrspace(1)* %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -247,8 +243,8 @@ define amdgpu_kernel void @local_nontemporal_store_0(
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX10-WGP-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-WGP-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s2
+; GFX10-WGP-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX10-WGP-NEXT:    ds_write_b32 v0, v1
@@ -260,8 +256,8 @@ define amdgpu_kernel void @local_nontemporal_store_0(
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX10-CU-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-CU-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s2
+; GFX10-CU-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX10-CU-NEXT:    ds_write_b32 v0, v1
@@ -285,8 +281,8 @@ define amdgpu_kernel void @local_nontemporal_store_0(
 ; GFX90A-NOTTGSPLIT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX90A-NOTTGSPLIT-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NOTTGSPLIT-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX90A-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v0, s2
+; GFX90A-NOTTGSPLIT-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX90A-NOTTGSPLIT-NEXT:    ds_write_b32 v0, v1
@@ -297,14 +293,12 @@ define amdgpu_kernel void @local_nontemporal_store_0(
 ; GFX90A-TGSPLIT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX90A-TGSPLIT-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX90A-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-TGSPLIT-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX90A-TGSPLIT-NEXT:    v_mov_b32_e32 v0, s2
+; GFX90A-TGSPLIT-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX90A-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX90A-TGSPLIT-NEXT:    ds_write_b32 v0, v1
 ; GFX90A-TGSPLIT-NEXT:    s_endpgm
-;
-;
     i32 addrspace(1)* %in, i32 addrspace(3)* %out) {
 entry:
   %val = load i32, i32 addrspace(1)* %in, align 4
@@ -347,8 +341,8 @@ define amdgpu_kernel void @local_nontemporal_store_1(
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX10-WGP-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-WGP-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX10-WGP-NEXT:    v_lshl_add_u32 v0, v0, 2, s2
+; GFX10-WGP-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX10-WGP-NEXT:    ds_write_b32 v0, v1
@@ -360,8 +354,8 @@ define amdgpu_kernel void @local_nontemporal_store_1(
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX10-CU-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-CU-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX10-CU-NEXT:    v_lshl_add_u32 v0, v0, 2, s2
+; GFX10-CU-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX10-CU-NEXT:    ds_write_b32 v0, v1
@@ -386,8 +380,8 @@ define amdgpu_kernel void @local_nontemporal_store_1(
 ; GFX90A-NOTTGSPLIT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX90A-NOTTGSPLIT-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NOTTGSPLIT-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX90A-NOTTGSPLIT-NEXT:    v_lshl_add_u32 v0, v0, 2, s2
+; GFX90A-NOTTGSPLIT-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX90A-NOTTGSPLIT-NEXT:    ds_write_b32 v0, v1
@@ -398,14 +392,12 @@ define amdgpu_kernel void @local_nontemporal_store_1(
 ; GFX90A-TGSPLIT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX90A-TGSPLIT-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX90A-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-TGSPLIT-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX90A-TGSPLIT-NEXT:    v_lshl_add_u32 v0, v0, 2, s2
+; GFX90A-TGSPLIT-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX90A-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX90A-TGSPLIT-NEXT:    ds_write_b32 v0, v1
 ; GFX90A-TGSPLIT-NEXT:    s_endpgm
-;
-;
     i32 addrspace(1)* %in, i32 addrspace(3)* %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

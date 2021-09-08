@@ -338,10 +338,10 @@ define amdgpu_kernel void @fp_to_sint_v2i64(<2 x i64> addrspace(1)* %out, <2 x f
 ; VI-NEXT:    v_floor_f32_e32 v1, v1
 ; VI-NEXT:    v_fma_f32 v2, v1, s3, |v0|
 ; VI-NEXT:    v_trunc_f32_e32 v4, s0
-; VI-NEXT:    v_mul_f32_e64 v3, |v4|, s2
 ; VI-NEXT:    v_cvt_u32_f32_e32 v2, v2
-; VI-NEXT:    v_floor_f32_e32 v3, v3
+; VI-NEXT:    v_mul_f32_e64 v3, |v4|, s2
 ; VI-NEXT:    v_cvt_u32_f32_e32 v1, v1
+; VI-NEXT:    v_floor_f32_e32 v3, v3
 ; VI-NEXT:    v_cvt_u32_f32_e32 v5, v3
 ; VI-NEXT:    v_fma_f32 v3, v3, s3, |v4|
 ; VI-NEXT:    v_ashrrev_i32_e32 v0, 31, v0
@@ -517,10 +517,10 @@ define amdgpu_kernel void @fp_to_sint_v4i64(<4 x i64> addrspace(1)* %out, <4 x f
 ; VI-NEXT:    v_mul_f32_e64 v1, |v0|, s8
 ; VI-NEXT:    v_floor_f32_e32 v1, v1
 ; VI-NEXT:    v_fma_f32 v2, v1, s9, |v0|
-; VI-NEXT:    v_trunc_f32_e32 v4, s0
 ; VI-NEXT:    v_cvt_u32_f32_e32 v2, v2
-; VI-NEXT:    v_mul_f32_e64 v3, |v4|, s8
+; VI-NEXT:    v_trunc_f32_e32 v4, s0
 ; VI-NEXT:    v_cvt_u32_f32_e32 v1, v1
+; VI-NEXT:    v_mul_f32_e64 v3, |v4|, s8
 ; VI-NEXT:    v_floor_f32_e32 v3, v3
 ; VI-NEXT:    v_ashrrev_i32_e32 v0, 31, v0
 ; VI-NEXT:    v_cvt_u32_f32_e32 v5, v3
@@ -549,8 +549,8 @@ define amdgpu_kernel void @fp_to_sint_v4i64(<4 x i64> addrspace(1)* %out, <4 x f
 ; VI-NEXT:    v_cvt_u32_f32_e32 v9, v6
 ; VI-NEXT:    v_fma_f32 v6, v6, s9, |v8|
 ; VI-NEXT:    v_cvt_u32_f32_e32 v10, v6
-; VI-NEXT:    v_sub_u32_e32 v6, vcc, v5, v4
 ; VI-NEXT:    v_xor_b32_e32 v7, v7, v4
+; VI-NEXT:    v_sub_u32_e32 v6, vcc, v5, v4
 ; VI-NEXT:    v_ashrrev_i32_e32 v5, 31, v8
 ; VI-NEXT:    v_subb_u32_e32 v7, vcc, v7, v4, vcc
 ; VI-NEXT:    v_xor_b32_e32 v4, v10, v5

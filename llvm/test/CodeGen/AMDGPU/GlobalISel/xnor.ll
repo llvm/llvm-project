@@ -38,10 +38,10 @@ define amdgpu_ps i32 @scalar_xnor_v2i16_one_use(<2 x i16> inreg %a, <2 x i16> in
 ;
 ; GFX8-LABEL: scalar_xnor_v2i16_one_use:
 ; GFX8:       ; %bb.0: ; %entry
-; GFX8-NEXT:    s_xor_b32 s0, s0, s1
 ; GFX8-NEXT:    s_mov_b32 s2, 0xffff
-; GFX8-NEXT:    s_lshr_b32 s1, s0, 16
+; GFX8-NEXT:    s_xor_b32 s0, s0, s1
 ; GFX8-NEXT:    s_mov_b32 s3, s2
+; GFX8-NEXT:    s_lshr_b32 s1, s0, 16
 ; GFX8-NEXT:    s_and_b32 s0, s0, s2
 ; GFX8-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
 ; GFX8-NEXT:    s_lshl_b32 s1, s1, 16
@@ -124,8 +124,8 @@ define amdgpu_ps i64 @scalar_xnor_v4i16_one_use(<4 x i16> inreg %a, <4 x i16> in
 ; GFX7-NEXT:    s_lshl_b32 s1, s3, 16
 ; GFX7-NEXT:    s_and_b32 s2, s2, s8
 ; GFX7-NEXT:    s_or_b32 s1, s1, s2
-; GFX7-NEXT:    s_and_b32 s3, s4, s8
 ; GFX7-NEXT:    s_lshl_b32 s2, s5, 16
+; GFX7-NEXT:    s_and_b32 s3, s4, s8
 ; GFX7-NEXT:    s_or_b32 s2, s2, s3
 ; GFX7-NEXT:    s_lshl_b32 s3, s7, 16
 ; GFX7-NEXT:    s_and_b32 s4, s6, s8
@@ -138,8 +138,8 @@ define amdgpu_ps i64 @scalar_xnor_v4i16_one_use(<4 x i16> inreg %a, <4 x i16> in
 ;
 ; GFX8-LABEL: scalar_xnor_v4i16_one_use:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
 ; GFX8-NEXT:    s_mov_b32 s4, 0xffff
+; GFX8-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
 ; GFX8-NEXT:    s_lshr_b32 s3, s0, 16
 ; GFX8-NEXT:    s_and_b32 s2, s0, s4
 ; GFX8-NEXT:    s_mov_b32 s5, s4

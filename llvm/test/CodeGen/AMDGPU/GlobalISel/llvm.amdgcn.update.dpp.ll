@@ -47,9 +47,8 @@ define amdgpu_kernel void @update_dpp64_test(i64 addrspace(1)* %arg, i64 %in1, i
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s2
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    s_nop 0
-; GFX8-NEXT:    v_mov_b32_dpp v4, v2 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
 ; GFX8-NEXT:    v_mov_b32_dpp v5, v3 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
+; GFX8-NEXT:    v_mov_b32_dpp v4, v2 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
 ; GFX8-NEXT:    flat_store_dwordx2 v[0:1], v[4:5]
 ; GFX8-NEXT:    s_endpgm
 ;

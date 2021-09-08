@@ -80,8 +80,8 @@ define <3 x i16> @v_mul_v3i16(<3 x i16> %a, <3 x i16> %b) {
 ; SI: v_mul_u32_u24
 
 ; VI: v_mul_lo_u16_sdwa
-; VI: v_mul_lo_u16_e32
 ; VI: v_mul_lo_u16_sdwa
+; VI: v_mul_lo_u16_e32
 ; VI: v_mul_lo_u16_e32
 ; VI: v_or_b32_e32
 ; VI: v_or_b32_e32

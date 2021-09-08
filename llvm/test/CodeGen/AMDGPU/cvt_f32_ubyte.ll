@@ -87,9 +87,9 @@ define float @v_uitofp_to_f32_multi_use_lshr8_mask255(i32 %arg0) nounwind {
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
-; SI-NEXT:    v_cvt_f32_ubyte1_e32 v0, v0
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    v_cvt_f32_ubyte1_e32 v0, v0
 ; SI-NEXT:    buffer_store_dword v1, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -98,9 +98,9 @@ define float @v_uitofp_to_f32_multi_use_lshr8_mask255(i32 %arg0) nounwind {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
-; VI-NEXT:    v_cvt_f32_ubyte1_e32 v0, v0
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
+; VI-NEXT:    v_cvt_f32_ubyte1_e32 v0, v0
 ; VI-NEXT:    buffer_store_dword v1, off, s[4:7], 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -933,8 +933,8 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(<4 x float> addrspace(1)* n
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v0, s0, v4
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, 9, v5
-; SI-NEXT:    v_or_b32_e32 v0, v7, v0
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 8, v6
+; SI-NEXT:    v_or_b32_e32 v0, v7, v0
 ; SI-NEXT:    v_and_b32_e32 v2, s0, v2
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, 0x900, v0
 ; SI-NEXT:    v_or_b32_e32 v1, v1, v2
@@ -955,8 +955,8 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(<4 x float> addrspace(1)* n
 ; VI-NEXT:    s_mov_b32 s10, -1
 ; VI-NEXT:    v_mov_b32_e32 v5, 9
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    flat_load_dword v4, v[0:1]
 ; VI-NEXT:    s_mov_b32 s6, s10
@@ -968,10 +968,11 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(<4 x float> addrspace(1)* n
 ; VI-NEXT:    v_cvt_f32_ubyte2_e32 v2, v4
 ; VI-NEXT:    v_cvt_f32_ubyte1_e32 v1, v4
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v4
-; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; VI-NEXT:    v_and_b32_e32 v7, 0xffffff00, v4
 ; VI-NEXT:    v_add_u16_e32 v8, 9, v4
 ; VI-NEXT:    v_add_u16_sdwa v4, v4, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
+; VI-NEXT:    s_nop 0
 ; VI-NEXT:    v_lshlrev_b16_e32 v1, 8, v6
 ; VI-NEXT:    v_or_b32_sdwa v0, v7, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; VI-NEXT:    v_or_b32_sdwa v1, v1, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
@@ -1056,10 +1057,10 @@ define amdgpu_kernel void @load_v7i8_to_v7f32(<7 x float> addrspace(1)* noalias 
 ; SI-NEXT:    v_cvt_f32_ubyte2_e32 v5, v5
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v2, v8
+; SI-NEXT:    v_cvt_f32_ubyte0_e32 v4, v7
 ; SI-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:24
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
-; SI-NEXT:    v_cvt_f32_ubyte0_e32 v4, v7
 ; SI-NEXT:    v_cvt_f32_ubyte3_e32 v3, v2
 ; SI-NEXT:    v_cvt_f32_ubyte2_e32 v2, v2
 ; SI-NEXT:    buffer_store_dwordx2 v[4:5], off, s[4:7], 0 offset:16
@@ -1104,11 +1105,11 @@ define amdgpu_kernel void @load_v7i8_to_v7f32(<7 x float> addrspace(1)* noalias 
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v6, v4
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
-; VI-NEXT:    v_or_b32_sdwa v2, v2, v10 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v4, v11
-; VI-NEXT:    v_cvt_f32_ubyte3_e32 v3, v2
+; VI-NEXT:    v_or_b32_sdwa v2, v2, v10 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
+; VI-NEXT:    v_cvt_f32_ubyte3_e32 v3, v2
 ; VI-NEXT:    v_cvt_f32_ubyte2_e32 v2, v2
 ; VI-NEXT:    buffer_store_dwordx3 v[4:6], off, s[4:7], 0 offset:16
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0

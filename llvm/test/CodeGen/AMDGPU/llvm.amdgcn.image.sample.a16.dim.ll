@@ -557,8 +557,8 @@ define amdgpu_ps <4 x float> @sample_d_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GFX9-NEXT:    v_and_b32_e32 v4, v6, v4
 ; GFX9-NEXT:    v_and_b32_e32 v2, v6, v2
 ; GFX9-NEXT:    v_and_b32_e32 v0, v6, v0
-; GFX9-NEXT:    v_lshl_or_b32 v3, v3, 16, v2
 ; GFX9-NEXT:    v_lshl_or_b32 v4, v5, 16, v4
+; GFX9-NEXT:    v_lshl_or_b32 v3, v3, 16, v2
 ; GFX9-NEXT:    v_lshl_or_b32 v2, v1, 16, v0
 ; GFX9-NEXT:    image_sample_d v[0:3], v[2:4], s[0:7], s[8:11] dmask:0xf a16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -639,12 +639,12 @@ define amdgpu_ps <4 x float> @sample_c_d_2d(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX9-LABEL: sample_c_d_2d:
 ; GFX9:       ; %bb.0: ; %main_body
 ; GFX9-NEXT:    v_mov_b32_e32 v9, 0xffff
-; GFX9-NEXT:    v_mov_b32_e32 v8, v2
 ; GFX9-NEXT:    v_mov_b32_e32 v7, v3
+; GFX9-NEXT:    v_mov_b32_e32 v8, v2
 ; GFX9-NEXT:    v_and_b32_e32 v2, v9, v5
-; GFX9-NEXT:    v_and_b32_e32 v1, v9, v1
 ; GFX9-NEXT:    v_lshl_or_b32 v3, v6, 16, v2
 ; GFX9-NEXT:    v_and_b32_e32 v2, v9, v7
+; GFX9-NEXT:    v_and_b32_e32 v1, v9, v1
 ; GFX9-NEXT:    v_lshl_or_b32 v2, v4, 16, v2
 ; GFX9-NEXT:    v_lshl_or_b32 v1, v8, 16, v1
 ; GFX9-NEXT:    image_sample_c_d v[0:3], v[0:3], s[0:7], s[8:11] dmask:0xf a16
@@ -798,8 +798,8 @@ define amdgpu_ps <4 x float> @sample_cd_2d(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GFX9-NEXT:    v_and_b32_e32 v4, v6, v4
 ; GFX9-NEXT:    v_and_b32_e32 v2, v6, v2
 ; GFX9-NEXT:    v_and_b32_e32 v0, v6, v0
-; GFX9-NEXT:    v_lshl_or_b32 v3, v3, 16, v2
 ; GFX9-NEXT:    v_lshl_or_b32 v4, v5, 16, v4
+; GFX9-NEXT:    v_lshl_or_b32 v3, v3, 16, v2
 ; GFX9-NEXT:    v_lshl_or_b32 v2, v1, 16, v0
 ; GFX9-NEXT:    image_sample_cd v[0:3], v[2:4], s[0:7], s[8:11] dmask:0xf a16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -843,12 +843,12 @@ define amdgpu_ps <4 x float> @sample_c_cd_2d(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GFX9-LABEL: sample_c_cd_2d:
 ; GFX9:       ; %bb.0: ; %main_body
 ; GFX9-NEXT:    v_mov_b32_e32 v9, 0xffff
-; GFX9-NEXT:    v_mov_b32_e32 v8, v2
 ; GFX9-NEXT:    v_mov_b32_e32 v7, v3
+; GFX9-NEXT:    v_mov_b32_e32 v8, v2
 ; GFX9-NEXT:    v_and_b32_e32 v2, v9, v5
-; GFX9-NEXT:    v_and_b32_e32 v1, v9, v1
 ; GFX9-NEXT:    v_lshl_or_b32 v3, v6, 16, v2
 ; GFX9-NEXT:    v_and_b32_e32 v2, v9, v7
+; GFX9-NEXT:    v_and_b32_e32 v1, v9, v1
 ; GFX9-NEXT:    v_lshl_or_b32 v2, v4, 16, v2
 ; GFX9-NEXT:    v_lshl_or_b32 v1, v8, 16, v1
 ; GFX9-NEXT:    image_sample_c_cd v[0:3], v[0:3], s[0:7], s[8:11] dmask:0xf a16

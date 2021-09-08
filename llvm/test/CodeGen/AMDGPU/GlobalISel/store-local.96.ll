@@ -55,36 +55,36 @@ define amdgpu_kernel void @store_lds_v3i32_align1(<3 x i32> addrspace(3)* %out, 
 ; GFX9-NEXT:    s_load_dwordx4 s[12:15], s[0:1], 0x34
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s2
-; GFX9-NEXT:    v_mov_b32_e32 v0, s12
 ; GFX9-NEXT:    s_lshr_b32 s0, s12, 8
+; GFX9-NEXT:    v_mov_b32_e32 v0, s12
+; GFX9-NEXT:    s_lshr_b32 s1, s12, 16
 ; GFX9-NEXT:    ds_write_b8 v1, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    s_lshr_b32 s1, s12, 16
+; GFX9-NEXT:    s_lshr_b32 s3, s12, 24
 ; GFX9-NEXT:    ds_write_b8 v1, v0 offset:1
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s1
-; GFX9-NEXT:    s_lshr_b32 s3, s12, 24
 ; GFX9-NEXT:    ds_write_b8 v1, v0 offset:2
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX9-NEXT:    ds_write_b8 v1, v0 offset:3
-; GFX9-NEXT:    v_mov_b32_e32 v0, s13
 ; GFX9-NEXT:    s_lshr_b32 s0, s13, 8
+; GFX9-NEXT:    v_mov_b32_e32 v0, s13
+; GFX9-NEXT:    s_lshr_b32 s1, s13, 16
 ; GFX9-NEXT:    ds_write_b8 v1, v0 offset:4
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    s_lshr_b32 s1, s13, 16
+; GFX9-NEXT:    s_lshr_b32 s2, s13, 24
 ; GFX9-NEXT:    ds_write_b8 v1, v0 offset:5
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s1
-; GFX9-NEXT:    s_lshr_b32 s2, s13, 24
 ; GFX9-NEXT:    ds_write_b8 v1, v0 offset:6
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX9-NEXT:    ds_write_b8 v1, v0 offset:7
-; GFX9-NEXT:    v_mov_b32_e32 v0, s14
 ; GFX9-NEXT:    s_lshr_b32 s0, s14, 8
+; GFX9-NEXT:    v_mov_b32_e32 v0, s14
+; GFX9-NEXT:    s_lshr_b32 s1, s14, 16
 ; GFX9-NEXT:    ds_write_b8 v1, v0 offset:8
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    s_lshr_b32 s1, s14, 16
+; GFX9-NEXT:    s_lshr_b32 s2, s14, 24
 ; GFX9-NEXT:    ds_write_b8 v1, v0 offset:9
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s1
-; GFX9-NEXT:    s_lshr_b32 s2, s14, 24
 ; GFX9-NEXT:    ds_write_b8 v1, v0 offset:10
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX9-NEXT:    ds_write_b8 v1, v0 offset:11
@@ -97,36 +97,36 @@ define amdgpu_kernel void @store_lds_v3i32_align1(<3 x i32> addrspace(3)* %out, 
 ; GFX7-NEXT:    s_mov_b32 m0, -1
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s4
-; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    s_lshr_b32 s3, s0, 8
+; GFX7-NEXT:    v_mov_b32_e32 v0, s0
+; GFX7-NEXT:    s_lshr_b32 s5, s0, 16
 ; GFX7-NEXT:    ds_write_b8 v1, v0
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s3
-; GFX7-NEXT:    s_lshr_b32 s5, s0, 16
 ; GFX7-NEXT:    s_lshr_b32 s6, s0, 24
 ; GFX7-NEXT:    ds_write_b8 v1, v0 offset:1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s5
 ; GFX7-NEXT:    ds_write_b8 v1, v0 offset:2
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX7-NEXT:    ds_write_b8 v1, v0 offset:3
-; GFX7-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX7-NEXT:    s_lshr_b32 s0, s1, 8
+; GFX7-NEXT:    v_mov_b32_e32 v0, s1
+; GFX7-NEXT:    s_lshr_b32 s3, s1, 16
 ; GFX7-NEXT:    ds_write_b8 v1, v0 offset:4
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
-; GFX7-NEXT:    s_lshr_b32 s3, s1, 16
 ; GFX7-NEXT:    s_lshr_b32 s4, s1, 24
 ; GFX7-NEXT:    ds_write_b8 v1, v0 offset:5
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX7-NEXT:    ds_write_b8 v1, v0 offset:6
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    ds_write_b8 v1, v0 offset:7
-; GFX7-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX7-NEXT:    s_lshr_b32 s0, s2, 8
+; GFX7-NEXT:    v_mov_b32_e32 v0, s2
+; GFX7-NEXT:    s_lshr_b32 s1, s2, 16
 ; GFX7-NEXT:    ds_write_b8 v1, v0 offset:8
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
-; GFX7-NEXT:    s_lshr_b32 s1, s2, 16
+; GFX7-NEXT:    s_lshr_b32 s3, s2, 24
 ; GFX7-NEXT:    ds_write_b8 v1, v0 offset:9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s1
-; GFX7-NEXT:    s_lshr_b32 s3, s2, 24
 ; GFX7-NEXT:    ds_write_b8 v1, v0 offset:10
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX7-NEXT:    ds_write_b8 v1, v0 offset:11
@@ -139,9 +139,9 @@ define amdgpu_kernel void @store_lds_v3i32_align1(<3 x i32> addrspace(3)* %out, 
 ; GFX10-NEXT:    s_load_dword s2, s[0:1], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_lshr_b32 s0, s12, 8
+; GFX10-NEXT:    v_mov_b32_e32 v0, s12
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX10-NEXT:    s_lshr_b32 s5, s13, 24
-; GFX10-NEXT:    v_mov_b32_e32 v0, s12
 ; GFX10-NEXT:    s_lshr_b32 s1, s12, 16
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s13
 ; GFX10-NEXT:    s_lshr_b32 s3, s12, 24
@@ -184,18 +184,18 @@ define amdgpu_kernel void @store_lds_v3i32_align2(<3 x i32> addrspace(3)* %out, 
 ; GFX9-NEXT:    s_load_dwordx4 s[12:15], s[0:1], 0x34
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s2
-; GFX9-NEXT:    v_mov_b32_e32 v0, s12
 ; GFX9-NEXT:    s_lshr_b32 s0, s12, 16
+; GFX9-NEXT:    v_mov_b32_e32 v0, s12
 ; GFX9-NEXT:    ds_write_b16 v1, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    ds_write_b16 v1, v0 offset:2
-; GFX9-NEXT:    v_mov_b32_e32 v0, s13
 ; GFX9-NEXT:    s_lshr_b32 s0, s13, 16
+; GFX9-NEXT:    v_mov_b32_e32 v0, s13
 ; GFX9-NEXT:    ds_write_b16 v1, v0 offset:4
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    ds_write_b16 v1, v0 offset:6
-; GFX9-NEXT:    v_mov_b32_e32 v0, s14
 ; GFX9-NEXT:    s_lshr_b32 s0, s14, 16
+; GFX9-NEXT:    v_mov_b32_e32 v0, s14
 ; GFX9-NEXT:    ds_write_b16 v1, v0 offset:8
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    ds_write_b16 v1, v0 offset:10
@@ -208,18 +208,18 @@ define amdgpu_kernel void @store_lds_v3i32_align2(<3 x i32> addrspace(3)* %out, 
 ; GFX7-NEXT:    s_mov_b32 m0, -1
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s4
-; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    s_lshr_b32 s3, s0, 16
+; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    ds_write_b16 v1, v0
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX7-NEXT:    ds_write_b16 v1, v0 offset:2
-; GFX7-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX7-NEXT:    s_lshr_b32 s0, s1, 16
+; GFX7-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX7-NEXT:    ds_write_b16 v1, v0 offset:4
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    ds_write_b16 v1, v0 offset:6
-; GFX7-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX7-NEXT:    s_lshr_b32 s0, s2, 16
+; GFX7-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX7-NEXT:    ds_write_b16 v1, v0 offset:8
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    ds_write_b16 v1, v0 offset:10

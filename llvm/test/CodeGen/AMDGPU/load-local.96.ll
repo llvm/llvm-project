@@ -106,12 +106,11 @@ define <3 x i32> @load_lds_v3i32_align1(<3 x i32> addrspace(3)* %ptr) {
 ; GFX7-NEXT:    v_or_b32_e32 v3, v3, v6
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(3)
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
-; GFX7-NEXT:    s_waitcnt lgkmcnt(2)
-; GFX7-NEXT:    v_or_b32_e32 v2, v2, v4
-; GFX7-NEXT:    s_waitcnt lgkmcnt(1)
-; GFX7-NEXT:    v_lshlrev_b32_e32 v5, 8, v5
 ; GFX7-NEXT:    v_or_b32_e32 v7, v7, v8
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; GFX7-NEXT:    s_waitcnt lgkmcnt(1)
+; GFX7-NEXT:    v_lshlrev_b32_e32 v5, 8, v5
+; GFX7-NEXT:    v_or_b32_e32 v2, v2, v4
 ; GFX7-NEXT:    v_or_b32_e32 v3, v3, v7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    v_or_b32_e32 v0, v5, v0

@@ -428,8 +428,8 @@ define amdgpu_kernel void @v_lshr_32_i64(i64 addrspace(1)* %out, i64 addrspace(1
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
-; SI-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
+; SI-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; SI-NEXT:    s_mov_b64 s[0:1], s[2:3]

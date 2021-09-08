@@ -375,10 +375,10 @@ define <4 x half> @v_roundeven_v4f16(<4 x half> %x) {
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_rndne_f16_e32 v2, v0
-; GFX8-NEXT:    v_rndne_f16_e32 v3, v1
 ; GFX8-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX8-NEXT:    v_mov_b32_e32 v4, 16
+; GFX8-NEXT:    v_rndne_f16_e32 v3, v1
 ; GFX8-NEXT:    v_rndne_f16_sdwa v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GFX8-NEXT:    v_mov_b32_e32 v4, 16
 ; GFX8-NEXT:    v_lshlrev_b32_sdwa v0, v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX8-NEXT:    v_lshlrev_b32_sdwa v1, v4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX8-NEXT:    v_or_b32_sdwa v0, v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
@@ -389,10 +389,10 @@ define <4 x half> @v_roundeven_v4f16(<4 x half> %x) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_rndne_f16_e32 v2, v0
-; GFX9-NEXT:    v_rndne_f16_e32 v3, v1
 ; GFX9-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9-NEXT:    v_mov_b32_e32 v4, 0xffff
+; GFX9-NEXT:    v_rndne_f16_e32 v3, v1
 ; GFX9-NEXT:    v_rndne_f16_sdwa v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0xffff
 ; GFX9-NEXT:    v_and_or_b32 v0, v2, v4, v0
 ; GFX9-NEXT:    v_and_or_b32 v1, v3, v4, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -402,8 +402,8 @@ define <4 x half> @v_roundeven_v4f16(<4 x half> %x) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_rndne_f16_e32 v2, v0
-; GFX10-NEXT:    v_rndne_f16_e32 v3, v1
 ; GFX10-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GFX10-NEXT:    v_rndne_f16_e32 v3, v1
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0xffff
 ; GFX10-NEXT:    v_rndne_f16_sdwa v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; GFX10-NEXT:    v_and_or_b32 v0, v2, v4, v0

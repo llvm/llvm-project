@@ -371,7 +371,7 @@
 ; GCN-O1-NEXT:        SI post-RA bundler
 ; GCN-O1-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-NEXT:        Machine Natural Loop Construction
-; GCN-O1-NEXT:        Post RA top-down list latency scheduler
+; GCN-O1-NEXT:        PostRA Machine Instruction Scheduler
 ; GCN-O1-NEXT:        Machine Block Frequency Analysis
 ; GCN-O1-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O1-NEXT:        Branch Probability Basic Block Placement
@@ -656,7 +656,7 @@
 ; GCN-O1-OPTS-NEXT:        SI post-RA bundler
 ; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Machine Natural Loop Construction
-; GCN-O1-OPTS-NEXT:        Post RA top-down list latency scheduler
+; GCN-O1-OPTS-NEXT:        PostRA Machine Instruction Scheduler
 ; GCN-O1-OPTS-NEXT:        Machine Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Branch Probability Basic Block Placement
@@ -943,7 +943,7 @@
 ; GCN-O2-NEXT:        SI post-RA bundler
 ; GCN-O2-NEXT:        MachineDominator Tree Construction
 ; GCN-O2-NEXT:        Machine Natural Loop Construction
-; GCN-O2-NEXT:        Post RA top-down list latency scheduler
+; GCN-O2-NEXT:        PostRA Machine Instruction Scheduler
 ; GCN-O2-NEXT:        Machine Block Frequency Analysis
 ; GCN-O2-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O2-NEXT:        Branch Probability Basic Block Placement
@@ -1243,7 +1243,7 @@
 ; GCN-O3-NEXT:        SI post-RA bundler
 ; GCN-O3-NEXT:        MachineDominator Tree Construction
 ; GCN-O3-NEXT:        Machine Natural Loop Construction
-; GCN-O3-NEXT:        Post RA top-down list latency scheduler
+; GCN-O3-NEXT:        PostRA Machine Instruction Scheduler
 ; GCN-O3-NEXT:        Machine Block Frequency Analysis
 ; GCN-O3-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O3-NEXT:        Branch Probability Basic Block Placement
