@@ -6,7 +6,7 @@ target triple = "wasm32-unknown-unknown"
 
 %struct.__jmp_buf_tag = type { [6 x i32], i32, [32 x i32] }
 
-; CHECK: LLVM ERROR: Does not support indirect uses of setjmp
+; CHECK: LLVM ERROR: Indirect use of setjmp is not supported
 @setjmp_fp = global i32 (%struct.__jmp_buf_tag*)* @setjmp, align 4
 
 define void @indirect_setjmp_call() {
