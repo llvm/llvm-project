@@ -690,6 +690,9 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
   if (Instruction *FoldedShift = foldBinOpIntoSelectOrPhi(I))
     return FoldedShift;
 
+  if (!Op0->hasOneUse())
+    return nullptr;
+
   // Fold shift2(trunc(shift1(x,c1)), c2) -> trunc(shift2(shift1(x,c1),c2))
   if (auto *TI = dyn_cast<TruncInst>(Op0)) {
     // If 'shift2' is an ashr, we would have to get the sign bit into a funny
@@ -727,9 +730,6 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
       return new TruncInst(And, Ty);
     }
   }
-
-  if (!Op0->hasOneUse())
-    return nullptr;
 
   if (auto *Op0BO = dyn_cast<BinaryOperator>(Op0)) {
     // Turn ((X >> C) + Y) << C  ->  (X + (Y << C)) & (~0 << C)

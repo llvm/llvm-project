@@ -217,8 +217,7 @@ define i16 @shl_tr_shl_constant_shift_amount_uses(i32 %x) {
 ; CHECK-NEXT:    call void @use32(i32 [[SHL]])
 ; CHECK-NEXT:    [[TR:%.*]] = trunc i32 [[SHL]] to i16
 ; CHECK-NEXT:    call void @use16(i16 [[TR]])
-; CHECK-NEXT:    [[X_TR:%.*]] = trunc i32 [[X]] to i16
-; CHECK-NEXT:    [[R:%.*]] = shl i16 [[X_TR]], 7
+; CHECK-NEXT:    [[R:%.*]] = shl i16 [[TR]], 4
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %shl = shl i32 %x, 3
