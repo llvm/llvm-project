@@ -339,6 +339,13 @@ generic-no-localization)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-localization.cmake"
     check-cxx-cxxabi
 ;;
+generic-no-unicode)
+    export CC=clang
+    export CXX=clang++
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-unicode.cmake"
+    check-cxx-cxxabi
+;;
 x86_64-apple-system)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake"
