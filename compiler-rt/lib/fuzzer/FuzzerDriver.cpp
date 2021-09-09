@@ -870,6 +870,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     exit(0);
   }
 
+  Options.ForkCorpusGroups = Flags.fork_corpus_groups;
   if (Flags.fork)
     FuzzWithFork(F->GetMD().GetRand(), Options, Args, *Inputs, Flags.fork);
 

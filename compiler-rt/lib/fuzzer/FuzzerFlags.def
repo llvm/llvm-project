@@ -58,6 +58,10 @@ FUZZER_FLAG_INT(max_total_time, 0, "If positive, indicates the maximal total "
 FUZZER_FLAG_INT(help, 0, "Print help.")
 FUZZER_FLAG_INT(fork, 0, "Experimental mode where fuzzing happens "
                 "in a subprocess")
+FUZZER_FLAG_INT(fork_corpus_groups, 0, "For fork mode, enable the corpus-group "
+		"strategy, The main corpus will be grouped according to size, "
+		"and each sub-process will randomly select seeds from different "
+		"groups as the sub-corpus.")
 FUZZER_FLAG_INT(ignore_timeouts, 1, "Ignore timeouts in fork mode")
 FUZZER_FLAG_INT(ignore_ooms, 1, "Ignore OOMs in fork mode")
 FUZZER_FLAG_INT(ignore_crashes, 0, "Ignore crashes in fork mode")
