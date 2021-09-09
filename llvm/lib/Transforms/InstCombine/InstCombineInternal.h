@@ -242,15 +242,11 @@ private:
   ///
   /// \param ICI The icmp of the (zext icmp) pair we are interested in.
   /// \parem CI The zext of the (zext icmp) pair we are interested in.
-  /// \param DoTransform Pass false to just test whether the given (zext icmp)
-  /// would be transformed. Pass true to actually perform the transformation.
   ///
   /// \return null if the transformation cannot be performed. If the
   /// transformation can be performed the new instruction that replaces the
-  /// (zext icmp) pair will be returned (if \p DoTransform is false the
-  /// unmodified \p ICI will be returned in this case).
-  Instruction *transformZExtICmp(ICmpInst *ICI, ZExtInst &CI,
-                                 bool DoTransform = true);
+  /// (zext icmp) pair will be returned.
+  Instruction *transformZExtICmp(ICmpInst *ICI, ZExtInst &CI);
 
   Instruction *transformSExtICmp(ICmpInst *ICI, Instruction &CI);
 
