@@ -273,7 +273,6 @@ multiclass VPatBinaryVL_VV<SDNode vop,
                            ValueType mask_type,
                            int sew,
                            LMULInfo vlmul,
-                           VReg RetClass,
                            VReg op_reg_class> {
   def : Pat<(result_type (vop
                          (op_type op_reg_class:$rs1),
@@ -304,7 +303,6 @@ multiclass VPatBinaryVL_XI<SDNode vop,
                            ValueType mask_type,
                            int sew,
                            LMULInfo vlmul,
-                           VReg RetClass,
                            VReg vop_reg_class,
                            ComplexPattern SplatPatKind,
                            DAGOperand xop_kind> {
@@ -333,11 +331,10 @@ multiclass VPatBinaryVL_VV_VX<SDNode vop, string instruction_name> {
   foreach vti = AllIntegerVectors in {
     defm : VPatBinaryVL_VV<vop, instruction_name,
                            vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                           vti.LMul, vti.RegClass, vti.RegClass>;
+                           vti.LMul, vti.RegClass>;
     defm : VPatBinaryVL_XI<vop, instruction_name, "VX",
                            vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                           vti.LMul, vti.RegClass, vti.RegClass,
-                           SplatPat, GPR>;
+                           vti.LMul, vti.RegClass, SplatPat, GPR>;
   }
 }
 
@@ -347,7 +344,7 @@ multiclass VPatBinaryVL_VV_VX_VI<SDNode vop, string instruction_name,
   foreach vti = AllIntegerVectors in {
     defm : VPatBinaryVL_XI<vop, instruction_name, "VI",
                            vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                           vti.LMul, vti.RegClass, vti.RegClass,
+                           vti.LMul, vti.RegClass,
                            !cast<ComplexPattern>(SplatPat#_#ImmType),
                            ImmType>;
   }
@@ -359,11 +356,10 @@ multiclass VPatBinaryWVL_VV_VX<SDNode vop, string instruction_name> {
     defvar wti = VtiToWti.Wti;
     defm : VPatBinaryVL_VV<vop, instruction_name,
                            wti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                           vti.LMul, wti.RegClass, vti.RegClass>;
+                           vti.LMul, vti.RegClass>;
     defm : VPatBinaryVL_XI<vop, instruction_name, "VX",
                            wti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                           vti.LMul, wti.RegClass, vti.RegClass,
-                           SplatPat, GPR>;
+                           vti.LMul, vti.RegClass, SplatPat, GPR>;
   }
 }
 
@@ -374,7 +370,6 @@ class VPatBinaryVL_VF<SDNode vop,
                       ValueType mask_type,
                       int sew,
                       LMULInfo vlmul,
-                      VReg RetClass,
                       VReg vop_reg_class,
                       RegisterClass scalar_reg_class> :
     Pat<(result_type (vop (vop_type vop_reg_class:$rs1),
@@ -390,11 +385,10 @@ multiclass VPatBinaryFPVL_VV_VF<SDNode vop, string instruction_name> {
   foreach vti = AllFloatVectors in {
     defm : VPatBinaryVL_VV<vop, instruction_name,
                            vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                           vti.LMul, vti.RegClass, vti.RegClass>;
+                           vti.LMul, vti.RegClass>;
     def : VPatBinaryVL_VF<vop, instruction_name#"_V"#vti.ScalarSuffix,
                           vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                          vti.LMul, vti.RegClass, vti.RegClass,
-                          vti.ScalarRegClass>;
+                          vti.LMul, vti.RegClass, vti.ScalarRegClass>;
   }
 }
 
