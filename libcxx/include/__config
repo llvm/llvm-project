@@ -305,6 +305,11 @@
 #  endif
 #endif // __sun__
 
+#if defined(_AIX) && !defined(__64BIT__)
+   // The size of wchar is 2 byte on 32-bit mode on AIX.
+#  define _LIBCPP_SHORT_WCHAR   1
+#endif
+
 #if defined(__OpenBSD__)
    // Certain architectures provide arc4random(). Prefer using
    // arc4random() over /dev/{u,}random to make it possible to obtain
