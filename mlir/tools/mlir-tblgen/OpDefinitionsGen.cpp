@@ -850,10 +850,14 @@ static void generateNamedOperandGetters(const Operator &op, Class &opClass,
 
   // Then we emit nicer named getter methods by redirecting to the "sink" getter
   // method.
+  // Keep track of the operand names to find duplicates.
+  SmallDenseSet<StringRef> operandNames;
   for (int i = 0; i != numOperands; ++i) {
     const auto &operand = op.getOperand(i);
     if (operand.name.empty())
       continue;
+    if (!operandNames.insert(operand.name).second)
+      PrintFatalError(op.getLoc(), "op has two operands with the same name");
 
     if (operand.isOptional()) {
       m = opClass.addMethodAndPrune("::mlir::Value", operand.name);
