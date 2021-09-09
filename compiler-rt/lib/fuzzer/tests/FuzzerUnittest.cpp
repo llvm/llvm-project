@@ -865,6 +865,137 @@ TEST(Merger, Merge) {
   TRACED_EQ(NewFeatures, {1, 2, 3});
 }
 
+TEST(Merger, SetCoverMerge) {
+  Merger M;
+  std::set<uint32_t> Features, NewFeatures;
+  std::set<uint32_t> Cov, NewCov;
+  std::vector<std::string> NewFiles;
+
+  // Adds new files and features
+  EXPECT_TRUE(M.Parse("3\n0\nA\nB\nC\n"
+                      "STARTED 0 1000\n"
+                      "FT 0 1 2 3\n"
+                      "STARTED 1 1001\n"
+                      "FT 1 4 5 6 \n"
+                      "STARTED 2 1002\n"
+                      "FT 2 6 1 3\n"
+                      "",
+                      true));
+  EXPECT_EQ(M.SetCoverMerge(Features, &NewFeatures, Cov, &NewCov, &NewFiles),
+            6U);
+  TRACED_EQ(M.Files, {"A", "B", "C"});
+  TRACED_EQ(NewFiles, {"A", "B"});
+  TRACED_EQ(NewFeatures, {1, 2, 3, 4, 5, 6});
+
+  // Doesn't return features or files in the initial corpus.
+  EXPECT_TRUE(M.Parse("3\n1\nA\nB\nC\n"
+                      "STARTED 0 1000\n"
+                      "FT 0 1 2 3\n"
+                      "STARTED 1 1001\n"
+                      "FT 1 4 5 6 \n"
+                      "STARTED 2 1002\n"
+                      "FT 2 6 1 3\n"
+                      "",
+                      true));
+  EXPECT_EQ(M.SetCoverMerge(Features, &NewFeatures, Cov, &NewCov, &NewFiles),
+            3U);
+  TRACED_EQ(M.Files, {"A", "B", "C"});
+  TRACED_EQ(NewFiles, {"B"});
+  TRACED_EQ(NewFeatures, {4, 5, 6});
+
+  // No new features, so no new files
+  EXPECT_TRUE(M.Parse("3\n2\nA\nB\nC\n"
+                      "STARTED 0 1000\n"
+                      "FT 0 1 2 3\n"
+                      "STARTED 1 1001\n"
+                      "FT 1 4 5 6 \n"
+                      "STARTED 2 1002\n"
+                      "FT 2 6 1 3\n"
+                      "",
+                      true));
+  EXPECT_EQ(M.SetCoverMerge(Features, &NewFeatures, Cov, &NewCov, &NewFiles),
+            0U);
+  TRACED_EQ(M.Files, {"A", "B", "C"});
+  TRACED_EQ(NewFiles, {});
+  TRACED_EQ(NewFeatures, {});
+
+  // Can pass initial features and coverage.
+  Features = {1, 2, 3};
+  Cov = {};
+  EXPECT_TRUE(M.Parse("2\n0\nA\nB\n"
+                      "STARTED 0 1000\n"
+                      "FT 0 1 2 3\n"
+                      "STARTED 1 1001\n"
+                      "FT 1 4 5 6\n"
+                      "",
+                      true));
+  EXPECT_EQ(M.SetCoverMerge(Features, &NewFeatures, Cov, &NewCov, &NewFiles),
+            3U);
+  TRACED_EQ(M.Files, {"A", "B"});
+  TRACED_EQ(NewFiles, {"B"});
+  TRACED_EQ(NewFeatures, {4, 5, 6});
+  Features.clear();
+  Cov.clear();
+
+  // Prefer files with a lot of features first (C has 4 features)
+  // Then prefer B over A due to the smaller size. After choosing C and B,
+  // A and D have no new features to contribute.
+  EXPECT_TRUE(M.Parse("4\n0\nA\nB\nC\nD\n"
+                      "STARTED 0 2000\n"
+                      "FT 0 3 5 6\n"
+                      "STARTED 1 1000\n"
+                      "FT 1 4 5 6 \n"
+                      "STARTED 2 1000\n"
+                      "FT 2 1 2 3 4 \n"
+                      "STARTED 3 500\n"
+                      "FT 3 1  \n"
+                      "",
+                      true));
+  EXPECT_EQ(M.SetCoverMerge(Features, &NewFeatures, Cov, &NewCov, &NewFiles),
+            6U);
+  TRACED_EQ(M.Files, {"A", "B", "C", "D"});
+  TRACED_EQ(NewFiles, {"C", "B"});
+  TRACED_EQ(NewFeatures, {1, 2, 3, 4, 5, 6});
+
+  // Only 1 file covers all features.
+  EXPECT_TRUE(M.Parse("4\n1\nA\nB\nC\nD\n"
+                      "STARTED 0 2000\n"
+                      "FT 0 4 5 6 7 8\n"
+                      "STARTED 1 1100\n"
+                      "FT 1 1 2 3 \n"
+                      "STARTED 2 1100\n"
+                      "FT 2 2 3 \n"
+                      "STARTED 3 1000\n"
+                      "FT 3 1  \n"
+                      "",
+                      true));
+  EXPECT_EQ(M.SetCoverMerge(Features, &NewFeatures, Cov, &NewCov, &NewFiles),
+            3U);
+  TRACED_EQ(M.Files, {"A", "B", "C", "D"});
+  TRACED_EQ(NewFiles, {"B"});
+  TRACED_EQ(NewFeatures, {1, 2, 3});
+
+  // A Feature has a value greater than (1 << 21) and hence
+  // there are collisions in the underlying `covered features`
+  // bitvector.
+  EXPECT_TRUE(M.Parse("3\n0\nA\nB\nC\n"
+                      "STARTED 0 2000\n"
+                      "FT 0 1 2 3\n"
+                      "STARTED 1 1000\n"
+                      "FT 1 3 4 5 \n"
+                      "STARTED 2 1000\n"
+                      "FT 2 3 2097153 \n" // Last feature is (2^21 + 1).
+                      "",
+                      true));
+  EXPECT_EQ(M.SetCoverMerge(Features, &NewFeatures, Cov, &NewCov, &NewFiles),
+            5U);
+  TRACED_EQ(M.Files, {"A", "B", "C"});
+  // File 'C' is not added because it's last feature is considered
+  // covered due to collision with feature 1.
+  TRACED_EQ(NewFiles, {"B", "A"});
+  TRACED_EQ(NewFeatures, {1, 2, 3, 4, 5});
+}
+
 #undef TRACED_EQ
 
 TEST(DFT, BlockCoverage) {
