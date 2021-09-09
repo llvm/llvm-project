@@ -1305,6 +1305,10 @@ bool getBooleanLoopAttribute(const Loop *TheLoop, StringRef Name);
 llvm::Optional<int>
 getOptionalIntLoopAttribute(const Loop *TheLoop, StringRef Name);
 
+/// Find named metadata for a loop with an integer value. Return \p Default if
+/// not set.
+int getIntLoopAttribute(const Loop *TheLoop, StringRef Name, int Default = 0);
+
 /// Find string metadata for loop
 ///
 /// If it has a value (e.g. {"llvm.distribute", 1} return the value as an
