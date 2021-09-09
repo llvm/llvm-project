@@ -2498,8 +2498,10 @@ unsigned ASTContext::getPreferredTypeAlign(const Type *T) const {
     const RecordDecl *RD = RT->getDecl();
 
     // When used as part of a typedef, or together with a 'packed' attribute,
-    // the 'aligned' attribute can be used to decrease alignment.
-    if ((TI.isAlignRequired() && T->getAs<TypedefType>() != nullptr) ||
+    // the 'aligned' attribute can be used to decrease alignment. Note that the
+    // 'packed' case is already taken into consideration when computing the
+    // alignment, we only need to handle the typedef case here.
+    if (TI.AlignRequirement == AlignRequirementKind::RequiredByTypedef ||
         RD->isInvalidDecl())
       return ABIAlign;
 
