@@ -1422,7 +1422,6 @@ TEST(APIntTest, Log2) {
 #ifdef GTEST_HAS_DEATH_TEST
 #ifndef NDEBUG
 TEST(APIntTest, StringDeath) {
-  EXPECT_DEATH((void)APInt(0, "", 0), "Bitwidth too small");
   EXPECT_DEATH((void)APInt(32, "", 0), "Invalid string length");
   EXPECT_DEATH((void)APInt(32, "0", 0), "Radix should be 2, 8, 10, 16, or 36!");
   EXPECT_DEATH((void)APInt(32, "", 10), "Invalid string length");
@@ -2906,6 +2905,81 @@ TEST(APIntTest, SignbitZeroChecks) {
   EXPECT_TRUE(APInt(8, 1).isNonNegative());
   EXPECT_TRUE(APInt(8, 1).isStrictlyPositive());
   EXPECT_FALSE(APInt(8, 1).isNonPositive());
+}
+
+TEST(APIntTest, ZeroWidth) {
+  // Zero width Constructors.
+  auto ZW = APInt::getZeroWidth();
+  EXPECT_EQ(0U, ZW.getBitWidth());
+  EXPECT_EQ(0U, APInt(0, ArrayRef<uint64_t>({0, 1, 2})).getBitWidth());
+  EXPECT_EQ(0U, APInt(0, "0", 10).getBitWidth());
+
+  // Default constructor is single bit wide.
+  EXPECT_EQ(1U, APInt().getBitWidth());
+
+  // Copy ctor (move is down below).
+  APInt ZW2(ZW);
+  EXPECT_EQ(0U, ZW2.getBitWidth());
+  // Assignment
+  ZW = ZW2;
+  EXPECT_EQ(0U, ZW.getBitWidth());
+
+  // Methods like getLowBitsSet work with zero bits.
+  EXPECT_EQ(0U, APInt::getLowBitsSet(0, 0).getBitWidth());
+  EXPECT_EQ(0U, APInt::getSplat(0, ZW).getBitWidth());
+
+  // Logical operators.
+  ZW |= ZW2;
+  ZW &= ZW2;
+  ZW ^= ZW2;
+  ZW |= 42; // These ignore high bits of the literal.
+  ZW &= 42;
+  ZW ^= 42;
+  EXPECT_EQ(1, ZW.isIntN(0));
+
+  // Modulo Arithmetic.  Divide/Rem aren't defined on division by zero, so they
+  // aren't supported.
+  ZW += ZW2;
+  ZW -= ZW2;
+  ZW *= ZW2;
+
+  // Logical Shifts and rotates, the amount must be <= bitwidth.
+  ZW <<= 0;
+  ZW.lshrInPlace(0);
+  (void)ZW.rotl(0);
+  (void)ZW.rotr(0);
+
+  // Comparisons.
+  EXPECT_EQ(1, ZW == ZW);
+  EXPECT_EQ(0, ZW != ZW);
+  EXPECT_EQ(0, ZW.ult(ZW));
+
+  // Mutations.
+  ZW.setBitsWithWrap(0, 0);
+  ZW.setBits(0, 0);
+  ZW.clearAllBits();
+  ZW.flipAllBits();
+
+  // Leading, trailing, ctpop, etc
+  EXPECT_EQ(0U, ZW.countLeadingZeros());
+  EXPECT_EQ(0U, ZW.countLeadingOnes());
+  EXPECT_EQ(0U, ZW.countPopulation());
+  EXPECT_EQ(0U, ZW.reverseBits().getBitWidth());
+  EXPECT_EQ(0U, ZW.getHiBits(0).getBitWidth());
+  EXPECT_EQ(0U, ZW.getLoBits(0).getBitWidth());
+  EXPECT_EQ(0, ZW.zext(4));
+  EXPECT_EQ(0U, APInt(4, 3).trunc(0).getBitWidth());
+
+  SmallString<42> STR;
+  ZW.toStringUnsigned(STR);
+  EXPECT_EQ("0", STR);
+
+  // Move ctor (keep at the end of the method since moves are destructive).
+  APInt MZW1(std::move(ZW));
+  EXPECT_EQ(0U, MZW1.getBitWidth());
+  // Move Assignment
+  MZW1 = std::move(ZW2);
+  EXPECT_EQ(0U, MZW1.getBitWidth());
 }
 
 } // end anonymous namespace

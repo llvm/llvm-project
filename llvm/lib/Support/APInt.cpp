@@ -89,7 +89,6 @@ void APInt::initSlowCase(const APInt& that) {
 }
 
 void APInt::initFromArray(ArrayRef<uint64_t> bigVal) {
-  assert(BitWidth && "Bitwidth too small");
   assert(bigVal.data() && "Null pointer detected!");
   if (isSingleWord())
     U.VAL = bigVal[0];
@@ -105,19 +104,17 @@ void APInt::initFromArray(ArrayRef<uint64_t> bigVal) {
   clearUnusedBits();
 }
 
-APInt::APInt(unsigned numBits, ArrayRef<uint64_t> bigVal)
-  : BitWidth(numBits) {
+APInt::APInt(unsigned numBits, ArrayRef<uint64_t> bigVal) : BitWidth(numBits) {
   initFromArray(bigVal);
 }
 
 APInt::APInt(unsigned numBits, unsigned numWords, const uint64_t bigVal[])
-  : BitWidth(numBits) {
+    : BitWidth(numBits) {
   initFromArray(makeArrayRef(bigVal, numWords));
 }
 
 APInt::APInt(unsigned numbits, StringRef Str, uint8_t radix)
-  : BitWidth(numbits) {
-  assert(BitWidth && "Bitwidth too small");
+    : BitWidth(numbits) {
   fromString(numbits, Str, radix);
 }
 
@@ -233,9 +230,7 @@ APInt APInt::operator*(const APInt& RHS) const {
     return APInt(BitWidth, U.VAL * RHS.U.VAL);
 
   APInt Result(getMemory(getNumWords()), getBitWidth());
-
   tcMultiply(Result.U.pVal, U.pVal, RHS.U.pVal, getNumWords());
-
   Result.clearUnusedBits();
   return Result;
 }
@@ -258,8 +253,7 @@ void APInt::XorAssignSlowCase(const APInt &RHS) {
     dst[i] ^= rhs[i];
 }
 
-APInt& APInt::operator*=(const APInt& RHS) {
-  assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
+APInt &APInt::operator*=(const APInt &RHS) {
   *this = *this * RHS;
   return *this;
 }
@@ -714,6 +708,8 @@ APInt APInt::reverseBits() const {
     return APInt(BitWidth, llvm::reverseBits<uint16_t>(U.VAL));
   case 8:
     return APInt(BitWidth, llvm::reverseBits<uint8_t>(U.VAL));
+  case 0:
+    return *this;
   default:
     break;
   }
@@ -873,7 +869,6 @@ double APInt::roundToDouble(bool isSigned) const {
 // Truncate to new width.
 APInt APInt::trunc(unsigned width) const {
   assert(width < BitWidth && "Invalid APInt Truncate request");
-  assert(width && "Can't truncate to 0 bits");
 
   if (width <= APINT_BITS_PER_WORD)
     return APInt(width, getRawData()[0]);
@@ -896,7 +891,6 @@ APInt APInt::trunc(unsigned width) const {
 // Truncate to new width with unsigned saturation.
 APInt APInt::truncUSat(unsigned width) const {
   assert(width < BitWidth && "Invalid APInt Truncate request");
-  assert(width && "Can't truncate to 0 bits");
 
   // Can we just losslessly truncate it?
   if (isIntN(width))
@@ -908,7 +902,6 @@ APInt APInt::truncUSat(unsigned width) const {
 // Truncate to new width with signed saturation.
 APInt APInt::truncSSat(unsigned width) const {
   assert(width < BitWidth && "Invalid APInt Truncate request");
-  assert(width && "Can't truncate to 0 bits");
 
   // Can we just losslessly truncate it?
   if (isSignedIntN(width))
@@ -1071,6 +1064,8 @@ void APInt::shlSlowCase(unsigned ShiftAmt) {
 
 // Calculate the rotate amount modulo the bit width.
 static unsigned rotateModulo(unsigned BitWidth, const APInt &rotateAmt) {
+  if (BitWidth == 0)
+    return 0;
   unsigned rotBitWidth = rotateAmt.getBitWidth();
   APInt rot = rotateAmt;
   if (rotBitWidth < BitWidth) {
@@ -1087,6 +1082,8 @@ APInt APInt::rotl(const APInt &rotateAmt) const {
 }
 
 APInt APInt::rotl(unsigned rotateAmt) const {
+  if (BitWidth == 0)
+    return *this;
   rotateAmt %= BitWidth;
   if (rotateAmt == 0)
     return *this;
@@ -1098,6 +1095,8 @@ APInt APInt::rotr(const APInt &rotateAmt) const {
 }
 
 APInt APInt::rotr(unsigned rotateAmt) const {
+  if (BitWidth == 0)
+    return *this;
   rotateAmt %= BitWidth;
   if (rotateAmt == 0)
     return *this;
@@ -2145,7 +2144,7 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix,
   }
 
   // First, check for a zero value and just short circuit the logic below.
-  if (*this == 0) {
+  if (isZero()) {
     while (*Prefix) {
       Str.push_back(*Prefix);
       ++Prefix;
@@ -2713,7 +2712,7 @@ APInt llvm::APIntOps::RoundingUDiv(const APInt &A, const APInt &B,
   case APInt::Rounding::UP: {
     APInt Quo, Rem;
     APInt::udivrem(A, B, Quo, Rem);
-    if (Rem == 0)
+    if (Rem.isZero())
       return Quo;
     return Quo + 1;
   }
@@ -2728,7 +2727,7 @@ APInt llvm::APIntOps::RoundingSDiv(const APInt &A, const APInt &B,
   case APInt::Rounding::UP: {
     APInt Quo, Rem;
     APInt::sdivrem(A, B, Quo, Rem);
-    if (Rem == 0)
+    if (Rem.isZero())
       return Quo;
     // This algorithm deals with arbitrary rounding mode used by sdivrem.
     // We want to check whether the non-integer part of the mathematical value
