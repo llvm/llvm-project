@@ -194,6 +194,11 @@ llvm::cl::opt<bool> SkipExcludedPPRanges(
         "until reaching the end directive."),
     llvm::cl::init(true), llvm::cl::cat(DependencyScannerCategory));
 
+llvm::cl::opt<std::string> ModuleName(
+    "module-name", llvm::cl::Optional,
+    llvm::cl::desc("the module of which the dependencies are to be computed"),
+    llvm::cl::cat(DependencyScannerCategory));
+
 llvm::cl::opt<bool> Verbose("v", llvm::cl::Optional,
                             llvm::cl::desc("Use verbose output."),
                             llvm::cl::init(false),
@@ -544,13 +549,20 @@ int main(int argc, const char **argv) {
         }
         // Run the tool on it.
         if (Format == ScanningOutputFormat::Make) {
-          auto MaybeFile = WorkerTools[I]->getDependencyFile(*Input, CWD);
+          auto MaybeFile = WorkerTools[I]->getDependencyFile(
+              *Input, CWD,
+              ModuleName.empty()
+                  ? None
+                  : llvm::Optional<StringRef>(ModuleName.c_str()));
           if (handleMakeDependencyToolResult(Filename, MaybeFile, DependencyOS,
                                              Errs))
             HadErrors = true;
         } else {
           auto MaybeFullDeps = WorkerTools[I]->getFullDependencies(
-              *Input, CWD, AlreadySeenModules);
+              *Input, CWD, AlreadySeenModules,
+              ModuleName.empty()
+                  ? None
+                  : llvm::Optional<StringRef>(ModuleName.c_str()));
           if (handleFullDependencyToolResult(Filename, MaybeFullDeps, FD,
                                              LocalIndex, DependencyOS, Errs))
             HadErrors = true;
