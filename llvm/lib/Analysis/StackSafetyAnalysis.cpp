@@ -208,7 +208,6 @@ template <typename CalleeTy> struct FunctionInfo {
     } else {
       assert(Allocas.empty());
     }
-    O << "\n";
   }
 };
 
@@ -466,7 +465,7 @@ FunctionInfo<GlobalValue> StackSafetyLocalAnalysis::run() {
   }
 
   LLVM_DEBUG(Info.print(dbgs(), F.getName(), &F));
-  LLVM_DEBUG(dbgs() << "[StackSafety] done\n");
+  LLVM_DEBUG(dbgs() << "\n[StackSafety] done\n");
   return Info;
 }
 
@@ -792,6 +791,7 @@ const StackSafetyInfo::InfoTy &StackSafetyInfo::getInfo() const {
 
 void StackSafetyInfo::print(raw_ostream &O) const {
   getInfo().Info.print(O, F->getName(), dyn_cast<Function>(F));
+  O << "\n";
 }
 
 const StackSafetyGlobalInfo::InfoTy &StackSafetyGlobalInfo::getInfo() const {
@@ -892,6 +892,7 @@ void StackSafetyGlobalInfo::print(raw_ostream &O) const {
   for (auto &F : M.functions()) {
     if (!F.isDeclaration()) {
       SSI.find(&F)->second.print(O, F.getName(), &F);
+      O << "\n";
       O << "\n";
     }
   }
