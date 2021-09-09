@@ -11778,7 +11778,9 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   const SCEV *Start = IV->getStart();
 
   // Preserve pointer-typed Start/RHS to pass to isLoopEntryGuardedByCond.
-  // Use integer-typed versions for actual computation.
+  // If we convert to integers, isLoopEntryGuardedByCond will miss some cases.
+  // Use integer-typed versions for actual computation; we can't subtract
+  // pointers in general.
   const SCEV *OrigStart = Start;
   const SCEV *OrigRHS = RHS;
   if (Start->getType()->isPointerTy()) {
@@ -11809,10 +11811,10 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   // is End and so the result is as above, and if not max(End,Start) is Start
   // so we get a backedge count of zero.
   const SCEV *BECount = nullptr;
-  auto *StartMinusStride = getMinusSCEV(OrigStart, Stride);
+  auto *OrigStartMinusStride = getMinusSCEV(OrigStart, Stride);
   // Can we prove (max(RHS,Start) > Start - Stride?
-  if (isLoopEntryGuardedByCond(L, Cond, StartMinusStride, Start) &&
-      isLoopEntryGuardedByCond(L, Cond, StartMinusStride, RHS)) {
+  if (isLoopEntryGuardedByCond(L, Cond, OrigStartMinusStride, OrigStart) &&
+      isLoopEntryGuardedByCond(L, Cond, OrigStartMinusStride, OrigRHS)) {
     // In this case, we can use a refined formula for computing backedge taken
     // count.  The general formula remains:
     //   "End-Start /uceiling Stride" where "End = max(RHS,Start)"
@@ -11833,10 +11835,8 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     //   Our preconditions trivially imply no overflow in that form.
     const SCEV *MinusOne = getMinusOne(Stride->getType());
     const SCEV *Numerator =
-        getMinusSCEV(getAddExpr(RHS, MinusOne), StartMinusStride);
-    if (!isa<SCEVCouldNotCompute>(Numerator)) {
-      BECount = getUDivExpr(Numerator, Stride);
-    }
+        getMinusSCEV(getAddExpr(RHS, MinusOne), getMinusSCEV(Start, Stride));
+    BECount = getUDivExpr(Numerator, Stride);
   }
 
   const SCEV *BECountIfBackedgeTaken = nullptr;
