@@ -250,8 +250,9 @@ public:
     auxv = (1u << 4),
     libraries_svr4 = (1u << 5),
     memory_tagging = (1u << 6),
+    savecore = (1u << 7),
 
-    LLVM_MARK_AS_BITMASK_ENUM(memory_tagging)
+    LLVM_MARK_AS_BITMASK_ENUM(savecore)
   };
 
   class Factory {
@@ -367,6 +368,19 @@ public:
   ///     The bitmap of enabled extensions.
   virtual void SetEnabledExtensions(Extension flags) {
     m_enabled_extensions = flags;
+  }
+
+  /// Write a core dump (without crashing the program).
+  ///
+  /// \param[in] path_hint
+  ///     Suggested core dump path (optional, can be empty).
+  ///
+  /// \return
+  ///     Path to the core dump if successfully written, an error
+  ///     otherwise.
+  virtual llvm::Expected<std::string> SaveCore(llvm::StringRef path_hint) {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Not implemented");
   }
 
 protected:
