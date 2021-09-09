@@ -4829,6 +4829,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::Double:
     case clang::BuiltinType::LongDouble:
     case clang::BuiltinType::BFloat16:
+    case clang::BuiltinType::Ibm128:
       return lldb::eEncodingIEEE754;
 
     case clang::BuiltinType::ObjCClass:
