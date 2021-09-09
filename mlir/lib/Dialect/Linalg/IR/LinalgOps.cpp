@@ -2286,6 +2286,44 @@ struct TiledLoopInputsFolder : public OpRewritePattern<linalg::TiledLoopOp> {
   }
 };
 
+} // namespace
+
+/// A simple, conservative analysis to determine if the loop is shape
+/// conserving. I.e., the type of the arg-th yielded value is the same as the
+/// type of the corresponding basic block argument of the loop.
+/// Note: This function handles only simple cases. Expand as needed.
+static bool isShapePreserving(TiledLoopOp loopOp, int64_t arg) {
+  auto yieldOp = cast<YieldOp>(loopOp.getLoopBody().front().getTerminator());
+  if (yieldOp.values().empty())
+    // Tiled loop either has no outputs or is a "memref-based version". In
+    // either case, the loop is shape conserving.
+    return true;
+  assert(arg < static_cast<int64_t>(yieldOp.values().size()) &&
+         "arg is out of bounds");
+  Value value = yieldOp.values()[arg];
+  while (value) {
+    if (value == loopOp.getRegionOutputArgs()[arg])
+      return true;
+    OpResult opResult = value.dyn_cast<OpResult>();
+    if (!opResult)
+      return false;
+
+    using tensor::InsertSliceOp;
+    value = llvm::TypeSwitch<Operation *, Value>(opResult.getOwner())
+                .template Case<InsertSliceOp>(
+                    [&](InsertSliceOp op) { return op.dest(); })
+                .template Case<TiledLoopOp>([&](TiledLoopOp loopOp) {
+                  return isShapePreserving(loopOp, opResult.getResultNumber())
+                             ? loopOp.outputs()[opResult.getResultNumber()]
+                             : Value();
+                })
+                .Default([&](auto op) { return Value(); });
+  }
+  return false;
+}
+
+namespace {
+
 /// Fold dim(x) where `x` is an input/output argument of a TiledLoopOp block
 /// to dim(y) where `y` is the initial input/output value of the argument.
 ///
@@ -2306,40 +2344,6 @@ struct TiledLoopInputsFolder : public OpRewritePattern<linalg::TiledLoopOp> {
 template <typename OpTy>
 struct DimOfTiledLoopInsOutsFolder : public OpRewritePattern<OpTy> {
   using OpRewritePattern<OpTy>::OpRewritePattern;
-
-  /// A simple, conservative analysis to determine if the loop is shape
-  /// conserving. I.e., the type of the arg-th yielded value is the same as the
-  /// type of the corresponding basic block argument of the loop.
-  /// Note: This function handles only simple cases. Expand as needed.
-  static bool isShapePreserving(TiledLoopOp loopOp, int64_t arg) {
-    auto yieldOp = cast<YieldOp>(loopOp.getLoopBody().front().getTerminator());
-    if (yieldOp.values().empty())
-      // Tiled loop either has no outputs or is a "memref-based version". In
-      // either case, the loop is shape conserving.
-      return true;
-    assert(arg < static_cast<int64_t>(yieldOp.values().size()) &&
-           "arg is out of bounds");
-    Value value = yieldOp.values()[arg];
-    while (value) {
-      if (value == loopOp.getRegionOutputArgs()[arg])
-        return true;
-      OpResult opResult = value.dyn_cast<OpResult>();
-      if (!opResult)
-        return false;
-
-      using tensor::InsertSliceOp;
-      value = llvm::TypeSwitch<Operation *, Value>(opResult.getOwner())
-                  .template Case<InsertSliceOp>(
-                      [&](InsertSliceOp op) { return op.dest(); })
-                  .template Case<TiledLoopOp>([&](TiledLoopOp loopOp) {
-                    return isShapePreserving(loopOp, opResult.getResultNumber())
-                               ? loopOp.outputs()[opResult.getResultNumber()]
-                               : Value();
-                  })
-                  .Default([&](auto op) { return Value(); });
-    }
-    return false;
-  }
 
   LogicalResult matchAndRewrite(OpTy dimOp,
                                 PatternRewriter &rewriter) const final {
@@ -2377,6 +2381,45 @@ struct DimOfTiledLoopInsOutsFolder : public OpRewritePattern<OpTy> {
     }
 
     return failure();
+  }
+};
+
+/// Fold dim(r) where `r` is the result of a TiledLoopOp to dim(y) where `y`
+/// is the initial output value of the loop.
+///
+/// E.g.:
+/// %y = ... : tensor<...>
+/// %r = linalg.tiled_loop ... outs(%i = %y : tensor<...>) {
+///   ...
+/// }
+/// %0 = tensor.dim %r, %c0 : tensor<...>
+///
+/// is folded to:
+/// %y = ... : tensor<...>
+/// linalg.tiled_loop ... outs(%i = %y : tensor<...>) {
+///   ...
+/// }
+/// %0 = tensor.dim %y, %c0 : tensor<...>
+///
+/// Note: Dim ops are folded only if it can be proven that the runtime type of
+/// the yielded value (in case of outputs) does not change with loop iterations.
+template <typename OpTy>
+struct DimOfTiledLoopResultFolder : public OpRewritePattern<OpTy> {
+  using OpRewritePattern<OpTy>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(OpTy dimOp,
+                                PatternRewriter &rewriter) const final {
+    auto loopOp = dimOp.source().template getDefiningOp<TiledLoopOp>();
+    if (!loopOp)
+      return failure();
+    auto opResult = dimOp.source().template cast<OpResult>();
+    unsigned resultNumber = opResult.getResultNumber();
+    if (!isShapePreserving(loopOp, resultNumber))
+      return failure();
+    rewriter.updateRootInPlace(dimOp, [&]() {
+      dimOp.sourceMutable().assign(loopOp.outputs()[resultNumber]);
+    });
+    return success();
   }
 };
 
@@ -2485,7 +2528,9 @@ void TiledLoopOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                               MLIRContext *context) {
   results.insert<TiledLoopInputsFolder, TiledLoopResultsFolder,
                  DimOfTiledLoopInsOutsFolder<tensor::DimOp>,
-                 DimOfTiledLoopInsOutsFolder<memref::DimOp>>(context);
+                 DimOfTiledLoopInsOutsFolder<memref::DimOp>,
+                 DimOfTiledLoopResultFolder<tensor::DimOp>,
+                 DimOfTiledLoopResultFolder<memref::DimOp>>(context);
 }
 
 LogicalResult TiledLoopOp::fold(ArrayRef<Attribute>,
