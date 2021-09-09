@@ -85,10 +85,6 @@ extern bool DebugFlag;
 /// turning the checks on without need to recompile.
 /// \{
 
-/// Enables verification of dominator trees.
-///
-extern bool VerifyDomInfo;
-
 /// Enables verification of loop info.
 ///
 extern bool VerifyLoopInfo;
