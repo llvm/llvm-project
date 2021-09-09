@@ -1359,8 +1359,7 @@ bool TargetLowering::SimplifyDemandedBits(
       // If the RHS is a constant, see if we can change it. Don't alter a -1
       // constant because that's a 'not' op, and that is better for combining
       // and codegen.
-      if (!C->isAllOnesValue() &&
-          DemandedBits.isSubsetOf(C->getAPIntValue())) {
+      if (!C->isAllOnes() && DemandedBits.isSubsetOf(C->getAPIntValue())) {
         // We're flipping all demanded bits. Flip the undemanded bits too.
         SDValue New = TLO.DAG.getNOT(dl, Op0, VT);
         return TLO.CombineTo(Op, New);
@@ -1368,7 +1367,7 @@ bool TargetLowering::SimplifyDemandedBits(
     }
 
     // If we can't turn this into a 'not', try to shrink the constant.
-    if (!C || !C->isAllOnesValue())
+    if (!C || !C->isAllOnes())
       if (ShrinkDemandedConstant(Op, DemandedBits, DemandedElts, TLO))
         return true;
 
@@ -2252,7 +2251,7 @@ bool TargetLowering::SimplifyDemandedBits(
     // is probably not useful (and could be detrimental).
     ConstantSDNode *C = isConstOrConstSplat(Op1);
     APInt HighMask = APInt::getHighBitsSet(BitWidth, DemandedBitsLZ);
-    if (C && !C->isAllOnesValue() && !C->isOne() &&
+    if (C && !C->isAllOnes() && !C->isOne() &&
         (C->getAPIntValue() | HighMask).isAllOnes()) {
       SDValue Neg1 = TLO.DAG.getAllOnesConstant(dl, VT);
       // Disable the nsw and nuw flags. We can no longer guarantee that we
@@ -3146,7 +3145,7 @@ bool TargetLowering::isConstFalseVal(const SDNode *N) const {
   if (getBooleanContents(N->getValueType(0)) == UndefinedBooleanContent)
     return !CN->getAPIntValue()[0];
 
-  return CN->isNullValue();
+  return CN->isZero();
 }
 
 bool TargetLowering::isExtendedTrueVal(const ConstantSDNode *N, EVT VT,
@@ -3162,7 +3161,7 @@ bool TargetLowering::isExtendedTrueVal(const ConstantSDNode *N, EVT VT,
     return (N->isOne() && !SExt) || (SExt && (N->getValueType(0) != MVT::i1));
   case TargetLowering::UndefinedBooleanContent:
   case TargetLowering::ZeroOrNegativeOneBooleanContent:
-    return N->isAllOnesValue() && SExt;
+    return N->isAllOnes() && SExt;
   }
   llvm_unreachable("Unexpected enumeration.");
 }
@@ -3216,7 +3215,7 @@ SDValue TargetLowering::foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1,
     // Bail out if the compare operand that we want to turn into a zero is
     // already a zero (otherwise, infinite loop).
     auto *YConst = dyn_cast<ConstantSDNode>(Y);
-    if (YConst && YConst->isNullValue())
+    if (YConst && YConst->isZero())
       return SDValue();
 
     // Transform this into: ~X & Y == 0.
@@ -3654,8 +3653,8 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
             (isConstFalseVal(N1C) ||
              isExtendedTrueVal(N1C, N0->getValueType(0), SExt))) {
 
-          bool Inverse = (N1C->isNullValue() && Cond == ISD::SETEQ) ||
-                         (!N1C->isNullValue() && Cond == ISD::SETNE);
+          bool Inverse = (N1C->isZero() && Cond == ISD::SETEQ) ||
+                         (!N1C->isZero() && Cond == ISD::SETNE);
 
           if (!Inverse)
             return TopSetCC;
@@ -3806,8 +3805,8 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
       // Otherwise, make this a use of a zext.
       return DAG.getSetCC(dl, VT, ZextOp,
                           DAG.getConstant(C1 & Imm, dl, ExtDstTy), Cond);
-    } else if ((N1C->isNullValue() || N1C->isOne()) &&
-                (Cond == ISD::SETEQ || Cond == ISD::SETNE)) {
+    } else if ((N1C->isZero() || N1C->isOne()) &&
+               (Cond == ISD::SETEQ || Cond == ISD::SETNE)) {
       // SETCC (SETCC), [0|1], [EQ|NE]  -> SETCC
       if (N0.getOpcode() == ISD::SETCC &&
           isTypeLegal(VT) && VT.bitsLE(N0.getValueType()) &&
@@ -3900,7 +3899,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
     //   icmp eq/ne (urem %x, %y), 0
     // Iff %x has 0 or 1 bits set, and %y has at least 2 bits set, omit 'urem':
     //   icmp eq/ne %x, 0
-    if (N0.getOpcode() == ISD::UREM && N1C->isNullValue() &&
+    if (N0.getOpcode() == ISD::UREM && N1C->isZero() &&
         (Cond == ISD::SETEQ || Cond == ISD::SETNE)) {
       KnownBits XKnown = DAG.computeKnownBits(N0.getOperand(0));
       KnownBits YKnown = DAG.computeKnownBits(N0.getOperand(1));
@@ -3913,7 +3912,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
     if ((Cond == ISD::SETEQ || Cond == ISD::SETNE) &&
         N0.getOpcode() == ISD::SRA && isa<ConstantSDNode>(N0.getOperand(1)) &&
         N0.getConstantOperandAPInt(1) == OpVT.getScalarSizeInBits() - 1 &&
-        N1C && N1C->isAllOnesValue()) {
+        N1C && N1C->isAllOnes()) {
       return DAG.getSetCC(dl, VT, N0.getOperand(0),
                           DAG.getConstant(0, dl, OpVT),
                           Cond == ISD::SETEQ ? ISD::SETLT : ISD::SETGE);
@@ -5067,7 +5066,7 @@ static SDValue BuildExactSDIV(const TargetLowering &TLI, SDNode *N,
   SmallVector<SDValue, 16> Shifts, Factors;
 
   auto BuildSDIVPattern = [&](ConstantSDNode *C) {
-    if (C->isNullValue())
+    if (C->isZero())
       return false;
     APInt Divisor = C->getAPIntValue();
     unsigned Shift = Divisor.countTrailingZeros();
@@ -5275,7 +5274,7 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
   SmallVector<SDValue, 16> MagicFactors, Factors, Shifts, ShiftMasks;
 
   auto BuildSDIVPattern = [&](ConstantSDNode *C) {
-    if (C->isNullValue())
+    if (C->isZero())
       return false;
 
     const APInt &Divisor = C->getAPIntValue();
@@ -5420,7 +5419,7 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   SmallVector<SDValue, 16> PreShifts, PostShifts, MagicFactors, NPQFactors;
 
   auto BuildUDIVPattern = [&](ConstantSDNode *C) {
-    if (C->isNullValue())
+    if (C->isZero())
       return false;
     // FIXME: We should use a narrower constant when the upper
     // bits are known to be zero.
@@ -5634,7 +5633,7 @@ TargetLowering::prepareUREMEqFold(EVT SETCCVT, SDValue REMNode,
 
   auto BuildUREMPattern = [&](ConstantSDNode *CDiv, ConstantSDNode *CCmp) {
     // Division by 0 is UB. Leave it to be constant-folded elsewhere.
-    if (CDiv->isNullValue())
+    if (CDiv->isZero())
       return false;
 
     const APInt &D = CDiv->getAPIntValue();
@@ -5875,7 +5874,7 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
 
   // TODO: Could support comparing with non-zero too.
   ConstantSDNode *CompTarget = isConstOrConstSplat(CompTargetNode);
-  if (!CompTarget || !CompTarget->isNullValue())
+  if (!CompTarget || !CompTarget->isZero())
     return SDValue();
 
   bool HadIntMinDivisor = false;
@@ -5888,7 +5887,7 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
 
   auto BuildSREMPattern = [&](ConstantSDNode *C) {
     // Division by 0 is UB. Leave it to be constant-folded elsewhere.
-    if (C->isNullValue())
+    if (C->isZero())
       return false;
 
     // FIXME: we don't fold `rem %X, -C` to `rem %X, C` in DAGCombine.
@@ -8041,7 +8040,7 @@ SDValue TargetLowering::lowerCmpEqZeroToCtlzSrl(SDValue Op,
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
   SDLoc dl(Op);
   if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
-    if (C->isNullValue() && CC == ISD::SETEQ) {
+    if (C->isZero() && CC == ISD::SETEQ) {
       EVT VT = Op.getOperand(0).getValueType();
       SDValue Zext = Op.getOperand(0);
       if (VT.bitsLT(MVT::i32)) {

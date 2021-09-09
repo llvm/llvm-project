@@ -52,7 +52,7 @@ static bool isNullConstantOrUndef(SDValue V) {
     return true;
 
   ConstantSDNode *Const = dyn_cast<ConstantSDNode>(V);
-  return Const != nullptr && Const->isNullValue();
+  return Const != nullptr && Const->isZero();
 }
 
 static bool getConstantValue(SDValue N, uint32_t &Out) {
@@ -354,7 +354,7 @@ static bool isExtractHiElt(SDValue In, SDValue &Out) {
 static SDValue stripExtractLoElt(SDValue In) {
   if (In.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
     if (ConstantSDNode *Idx = dyn_cast<ConstantSDNode>(In.getOperand(1))) {
-      if (Idx->isNullValue() && In.getValueSizeInBits() <= 32)
+      if (Idx->isZero() && In.getValueSizeInBits() <= 32)
         return In.getOperand(0);
     }
   }

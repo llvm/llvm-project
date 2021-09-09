@@ -9139,7 +9139,7 @@ static bool isExtendedBUILD_VECTOR(SDNode *N, SelectionDAG &DAG,
           Hi1->getSExtValue() == Lo1->getSExtValue() >> 32)
         return true;
     } else {
-      if (Hi0->isNullValue() && Hi1->isNullValue())
+      if (Hi0->isZero() && Hi1->isZero())
         return true;
     }
     return false;
@@ -17261,7 +17261,7 @@ static SDValue SearchLoopIntrinsic(SDValue N, ISD::CondCode &CC, int &Imm,
     auto *Const = dyn_cast<ConstantSDNode>(N.getOperand(1));
     if (!Const)
       return SDValue();
-    if (Const->isNullValue())
+    if (Const->isZero())
       Imm = 0;
     else if (Const->isOne())
       Imm = 1;
@@ -17313,7 +17313,7 @@ static SDValue PerformHWLoopCombine(SDNode *N,
     Cond = N->getOperand(2);
     Dest = N->getOperand(4);
     if (auto *Const = dyn_cast<ConstantSDNode>(N->getOperand(3))) {
-      if (!Const->isOne() && !Const->isNullValue())
+      if (!Const->isOne() && !Const->isZero())
         return SDValue();
       Imm = Const->getZExtValue();
     } else
