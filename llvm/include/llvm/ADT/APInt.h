@@ -1823,6 +1823,9 @@ public:
   /// debug method
   void dump() const;
 
+  /// Returns whether this instance allocated memory.
+  bool needsCleanup() const { return !isSingleWord(); }
+
 private:
   /// This union is used to store the integer value. When the
   /// integer bit-width <= 64, it uses VAL, otherwise it uses pVal.
@@ -1989,9 +1992,6 @@ private:
   /// Signed comparison. Returns -1, 0, or 1 if this APInt is less than, equal
   /// to, or greater than RHS.
   int compareSigned(const APInt &RHS) const LLVM_READONLY;
-
-  /// Returns whether this instance allocated memory.
-  bool needsCleanup() const { return !isSingleWord(); }
 
   /// @}
 };
