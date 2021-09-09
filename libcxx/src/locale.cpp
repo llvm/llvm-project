@@ -4380,7 +4380,7 @@ static bool checked_string_to_char_convert(char& dest,
     dest = res;
     return true;
   }
-  // FIXME: Work around specific multibyte sequences that we can reasonable
+  // FIXME: Work around specific multibyte sequences that we can reasonably
   // translate into a different single byte.
   switch (wout) {
   case L'\u202F': // narrow non-breaking space
