@@ -303,40 +303,40 @@ define <8 x double> @si2fp_v8i1_v8f64(<8 x i1> %x) {
 ;
 ; LMULMAX1-LABEL: si2fp_v8i1_v8f64:
 ; LMULMAX1:       # %bb.0:
+; LMULMAX1-NEXT:    vmv1r.v v25, v0
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; LMULMAX1-NEXT:    vmv.v.i v25, 0
-; LMULMAX1-NEXT:    vmerge.vim v26, v25, -1, v0
-; LMULMAX1-NEXT:    vfcvt.f.x.v v8, v26
-; LMULMAX1-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; LMULMAX1-NEXT:    vmv.v.i v26, 0
-; LMULMAX1-NEXT:    vmerge.vim v27, v26, 1, v0
-; LMULMAX1-NEXT:    vmv1r.v v28, v0
-; LMULMAX1-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
-; LMULMAX1-NEXT:    vslidedown.vi v27, v27, 2
-; LMULMAX1-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
-; LMULMAX1-NEXT:    vmsne.vi v0, v27, 0
-; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; LMULMAX1-NEXT:    vmerge.vim v27, v25, -1, v0
-; LMULMAX1-NEXT:    vfcvt.f.x.v v9, v27
-; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; LMULMAX1-NEXT:    vmerge.vim v27, v26, -1, v0
+; LMULMAX1-NEXT:    vfcvt.f.x.v v8, v27
+; LMULMAX1-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; LMULMAX1-NEXT:    vmv.v.i v27, 0
-; LMULMAX1-NEXT:    vmv1r.v v0, v28
-; LMULMAX1-NEXT:    vmerge.vim v27, v27, 1, v0
-; LMULMAX1-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
-; LMULMAX1-NEXT:    vslidedown.vi v27, v27, 4
-; LMULMAX1-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
-; LMULMAX1-NEXT:    vmsne.vi v0, v27, 0
-; LMULMAX1-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; LMULMAX1-NEXT:    vmerge.vim v27, v25, -1, v0
-; LMULMAX1-NEXT:    vfcvt.f.x.v v10, v27
-; LMULMAX1-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
-; LMULMAX1-NEXT:    vmerge.vim v26, v26, 1, v0
+; LMULMAX1-NEXT:    vmerge.vim v28, v27, 1, v0
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
-; LMULMAX1-NEXT:    vslidedown.vi v26, v26, 2
+; LMULMAX1-NEXT:    vslidedown.vi v28, v28, 2
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
-; LMULMAX1-NEXT:    vmsne.vi v0, v26, 0
+; LMULMAX1-NEXT:    vmsne.vi v0, v28, 0
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; LMULMAX1-NEXT:    vmerge.vim v25, v25, -1, v0
+; LMULMAX1-NEXT:    vmerge.vim v28, v26, -1, v0
+; LMULMAX1-NEXT:    vfcvt.f.x.v v9, v28
+; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; LMULMAX1-NEXT:    vmv.v.i v28, 0
+; LMULMAX1-NEXT:    vmv1r.v v0, v25
+; LMULMAX1-NEXT:    vmerge.vim v25, v28, 1, v0
+; LMULMAX1-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
+; LMULMAX1-NEXT:    vslidedown.vi v25, v25, 4
+; LMULMAX1-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; LMULMAX1-NEXT:    vmsne.vi v0, v25, 0
+; LMULMAX1-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; LMULMAX1-NEXT:    vmerge.vim v25, v26, -1, v0
+; LMULMAX1-NEXT:    vfcvt.f.x.v v10, v25
+; LMULMAX1-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; LMULMAX1-NEXT:    vmerge.vim v25, v27, 1, v0
+; LMULMAX1-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
+; LMULMAX1-NEXT:    vslidedown.vi v25, v25, 2
+; LMULMAX1-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; LMULMAX1-NEXT:    vmsne.vi v0, v25, 0
+; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; LMULMAX1-NEXT:    vmerge.vim v25, v26, -1, v0
 ; LMULMAX1-NEXT:    vfcvt.f.x.v v11, v25
 ; LMULMAX1-NEXT:    ret
   %z = sitofp <8 x i1> %x to <8 x double>
@@ -354,40 +354,40 @@ define <8 x double> @ui2fp_v8i1_v8f64(<8 x i1> %x) {
 ;
 ; LMULMAX1-LABEL: ui2fp_v8i1_v8f64:
 ; LMULMAX1:       # %bb.0:
+; LMULMAX1-NEXT:    vmv1r.v v25, v0
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; LMULMAX1-NEXT:    vmv.v.i v25, 0
-; LMULMAX1-NEXT:    vmerge.vim v26, v25, 1, v0
-; LMULMAX1-NEXT:    vfcvt.f.xu.v v8, v26
-; LMULMAX1-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; LMULMAX1-NEXT:    vmv.v.i v26, 0
 ; LMULMAX1-NEXT:    vmerge.vim v27, v26, 1, v0
-; LMULMAX1-NEXT:    vmv1r.v v28, v0
-; LMULMAX1-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
-; LMULMAX1-NEXT:    vslidedown.vi v27, v27, 2
-; LMULMAX1-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
-; LMULMAX1-NEXT:    vmsne.vi v0, v27, 0
-; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; LMULMAX1-NEXT:    vmerge.vim v27, v25, 1, v0
-; LMULMAX1-NEXT:    vfcvt.f.xu.v v9, v27
-; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; LMULMAX1-NEXT:    vfcvt.f.xu.v v8, v27
+; LMULMAX1-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; LMULMAX1-NEXT:    vmv.v.i v27, 0
-; LMULMAX1-NEXT:    vmv1r.v v0, v28
-; LMULMAX1-NEXT:    vmerge.vim v27, v27, 1, v0
-; LMULMAX1-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
-; LMULMAX1-NEXT:    vslidedown.vi v27, v27, 4
-; LMULMAX1-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
-; LMULMAX1-NEXT:    vmsne.vi v0, v27, 0
-; LMULMAX1-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; LMULMAX1-NEXT:    vmerge.vim v27, v25, 1, v0
-; LMULMAX1-NEXT:    vfcvt.f.xu.v v10, v27
-; LMULMAX1-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
-; LMULMAX1-NEXT:    vmerge.vim v26, v26, 1, v0
+; LMULMAX1-NEXT:    vmerge.vim v28, v27, 1, v0
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
-; LMULMAX1-NEXT:    vslidedown.vi v26, v26, 2
+; LMULMAX1-NEXT:    vslidedown.vi v28, v28, 2
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
-; LMULMAX1-NEXT:    vmsne.vi v0, v26, 0
+; LMULMAX1-NEXT:    vmsne.vi v0, v28, 0
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; LMULMAX1-NEXT:    vmerge.vim v25, v25, 1, v0
+; LMULMAX1-NEXT:    vmerge.vim v28, v26, 1, v0
+; LMULMAX1-NEXT:    vfcvt.f.xu.v v9, v28
+; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; LMULMAX1-NEXT:    vmv.v.i v28, 0
+; LMULMAX1-NEXT:    vmv1r.v v0, v25
+; LMULMAX1-NEXT:    vmerge.vim v25, v28, 1, v0
+; LMULMAX1-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
+; LMULMAX1-NEXT:    vslidedown.vi v25, v25, 4
+; LMULMAX1-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; LMULMAX1-NEXT:    vmsne.vi v0, v25, 0
+; LMULMAX1-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; LMULMAX1-NEXT:    vmerge.vim v25, v26, 1, v0
+; LMULMAX1-NEXT:    vfcvt.f.xu.v v10, v25
+; LMULMAX1-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; LMULMAX1-NEXT:    vmerge.vim v25, v27, 1, v0
+; LMULMAX1-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
+; LMULMAX1-NEXT:    vslidedown.vi v25, v25, 2
+; LMULMAX1-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; LMULMAX1-NEXT:    vmsne.vi v0, v25, 0
+; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; LMULMAX1-NEXT:    vmerge.vim v25, v26, 1, v0
 ; LMULMAX1-NEXT:    vfcvt.f.xu.v v11, v25
 ; LMULMAX1-NEXT:    ret
   %z = uitofp <8 x i1> %x to <8 x double>
