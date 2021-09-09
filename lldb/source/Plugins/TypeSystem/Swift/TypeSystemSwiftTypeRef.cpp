@@ -2317,9 +2317,8 @@ lldb::Encoding TypeSystemSwiftTypeRef::GetEncoding(opaque_compiler_type_t type,
       return referent_type.GetEncoding(count);
     }
     default:
-      assert(false && "Unhandled node kind");
       LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-                "GetEncoding: Unhandled node kind for type %s",
+                "No encoding for type %s",
                 AsMangledName(type));
       break;
     }
