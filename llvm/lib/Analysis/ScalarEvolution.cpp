@@ -11581,6 +11581,62 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   const SCEVAddRecExpr *IV = dyn_cast<SCEVAddRecExpr>(LHS);
   bool PredicatedIV = false;
 
+  auto canAssumeNoSelfWrap = [&](const SCEVAddRecExpr *AR) {
+    // Can we prove this loop *must* be UB if overflow of IV occurs?
+    // Reasoning goes as follows:
+    // * Suppose the IV did self wrap.
+    // * If Stride evenly divides the iteration space, then once wrap
+    //   occurs, the loop must revisit the same values.
+    // * We know that RHS is invariant, and that none of those values
+    //   caused this exit to be taken previously.  Thus, this exit is
+    //   dynamically dead.
+    // * If this is the sole exit, then a dead exit implies the loop
+    //   must be infinite if there are no abnormal exits.
+    // * If the loop were infinite, then it must either not be mustprogress
+    //   or have side effects. Otherwise, it must be UB.
+    // * It can't (by assumption), be UB so we have contradicted our
+    //   premise and can conclude the IV did not in fact self-wrap.
+    if (!isLoopInvariant(RHS, L))
+      return false;
+
+    auto *StrideC = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*this));
+    if (!StrideC || !StrideC->getAPInt().isPowerOf2())
+      return false;
+
+    if (!ControlsExit || !loopHasNoAbnormalExits(L))
+      return false;
+
+    return loopIsFiniteByAssumption(L);
+  };
+
+  if (!IV) {
+    if (auto *ZExt = dyn_cast<SCEVZeroExtendExpr>(LHS)) {
+      const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(ZExt->getOperand());
+      if (AR && AR->getLoop() == L && AR->isAffine()) {
+        auto Flags = AR->getNoWrapFlags();
+        if (!hasFlags(Flags, SCEV::FlagNW) && canAssumeNoSelfWrap(AR)) {
+          Flags = setFlags(Flags, SCEV::FlagNW);
+
+          SmallVector<const SCEV*> Operands{AR->operands()};
+          Flags = StrengthenNoWrapFlags(this, scAddRecExpr, Operands, Flags);
+
+          setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), Flags);
+        }
+        if (AR->hasNoUnsignedWrap()) {
+          // Emulate what getZeroExtendExpr would have done during construction
+          // if we'd been able to infer the fact just above at that time.
+          const SCEV *Step = AR->getStepRecurrence(*this);
+          Type *Ty = ZExt->getType();
+          auto *S = getAddRecExpr(
+            getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Ty, this, 0),
+            getZeroExtendExpr(Step, Ty, 0), L, AR->getNoWrapFlags());
+          IV = dyn_cast<SCEVAddRecExpr>(S);
+        }
+      }
+    }
+  }
+
+
   if (!IV && AllowPredicates) {
     // Try to make this an AddRec using runtime tests, in the first X
     // iterations of this loop, where X is the SCEV expression found by the
@@ -11694,37 +11750,12 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     }
   } else if (!Stride->isOne() && !NoWrap) {
     auto isUBOnWrap = [&]() {
-      // Can we prove this loop *must* be UB if overflow of IV occurs?
-      // Reasoning goes as follows:
-      // * Suppose the IV did self wrap.
-      // * If Stride evenly divides the iteration space, then once wrap
-      //   occurs, the loop must revisit the same values.
-      // * We know that RHS is invariant, and that none of those values
-      //   caused this exit to be taken previously.  Thus, this exit is
-      //   dynamically dead.
-      // * If this is the sole exit, then a dead exit implies the loop
-      //   must be infinite if there are no abnormal exits.
-      // * If the loop were infinite, then it must either not be mustprogress
-      //   or have side effects. Otherwise, it must be UB.
-      // * It can't (by assumption), be UB so we have contradicted our
-      //   premise and can conclude the IV did not in fact self-wrap.
       // From no-self-wrap, we need to then prove no-(un)signed-wrap.  This
       // follows trivially from the fact that every (un)signed-wrapped, but
       // not self-wrapped value must be LT than the last value before
       // (un)signed wrap.  Since we know that last value didn't exit, nor
       // will any smaller one.
-
-      if (!isLoopInvariant(RHS, L))
-        return false;
-
-      auto *StrideC = dyn_cast<SCEVConstant>(Stride);
-      if (!StrideC || !StrideC->getAPInt().isPowerOf2())
-        return false;
-
-      if (!ControlsExit || !loopHasNoAbnormalExits(L))
-        return false;
-
-      return loopIsFiniteByAssumption(L);
+      return canAssumeNoSelfWrap(IV);
     };
 
     // Avoid proven overflow cases: this will ensure that the backedge taken
