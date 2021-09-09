@@ -4316,9 +4316,11 @@ cc_library(
     deps = [
         ":ConversionPassIncGen",
         ":IR",
+        ":LLVMDialect",
         ":OpenMPDialect",
         ":Pass",
         ":SCFDialect",
+        ":StandardOps",
         ":Support",
         ":Transforms",
     ],
