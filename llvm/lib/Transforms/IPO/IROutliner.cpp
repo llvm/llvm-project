@@ -163,6 +163,16 @@ static void getSortedConstantKeys(std::vector<Value *> &SortedKeys,
   });
 }
 
+Value *OutlinableRegion::findCorrespondingValueIn(const OutlinableRegion &Other,
+                                                  Value *V) {
+  Optional<unsigned> GVN = Candidate->getGVN(V);
+  assert(GVN.hasValue() && "No GVN for incoming value");
+  Optional<unsigned> CanonNum = Candidate->getCanonicalNum(*GVN);
+  Optional<unsigned> FirstGVN = Other.Candidate->fromCanonicalNum(*CanonNum);
+  Optional<Value *> FoundValueOpt = Other.Candidate->fromGVN(*FirstGVN);
+  return FoundValueOpt.getValueOr(nullptr);
+}
+
 void OutlinableRegion::splitCandidate() {
   assert(!CandidateSplit && "Candidate already split!");
 
@@ -1129,12 +1139,25 @@ replaceArgumentUses(OutlinableRegion &Region,
       auto VBBIt = OutputBBs.find(RetVal);
       assert(VBBIt != OutputBBs.end() && "Could not find output value!");
 
-      Instruction *NewI = I->clone();
+      // If this is storing a PHINode, we must make sure it is included in the
+      // overall function.
+      StoreInst *SI = cast<StoreInst>(I);
+
+      Value *ValueOperand = SI->getValueOperand();
+
+      StoreInst *NewI = cast<StoreInst>(I->clone());
       NewI->setDebugLoc(DebugLoc());
       BasicBlock *OutputBB = VBBIt->second;
       OutputBB->getInstList().push_back(NewI);
       LLVM_DEBUG(dbgs() << "Move store for instruction " << *I << " to "
                         << *OutputBB << "\n");
+
+      if (FirstFunction)
+        continue;
+      Value *CorrVal =
+          Region.findCorrespondingValueIn(*Group.Regions[0], ValueOperand);
+      assert(CorrVal && "Value is nullptr?");
+      NewI->setOperand(0, CorrVal);
     }
 
     // If we added an edge for basic blocks without a predecessor, we remove it
@@ -1179,34 +1202,6 @@ void replaceConstants(OutlinableRegion &Region) {
       return false;
     });
   }
-}
-
-/// For the given function, find all the nondebug or lifetime instructions,
-/// and return them as a vector. Exclude any blocks in \p ExludeBlocks.
-///
-/// \param [in] F - The function we collect the instructions from.
-/// \param [in] ExcludeBlocks - BasicBlocks to ignore.
-/// \returns the list of instructions extracted.
-static std::vector<Instruction *>
-collectRelevantInstructions(Function &F,
-                            DenseSet<BasicBlock *> &ExcludeBlocks) {
-  std::vector<Instruction *> RelevantInstructions;
-
-  for (BasicBlock &BB : F) {
-    if (ExcludeBlocks.contains(&BB))
-      continue;
-
-    for (Instruction &Inst : BB) {
-      if (Inst.isLifetimeStartOrEnd())
-        continue;
-      if (isa<DbgInfoIntrinsic>(Inst))
-        continue;
-
-      RelevantInstructions.push_back(&Inst);
-    }
-  }
-
-  return RelevantInstructions;
 }
 
 /// It is possible that there is a basic block that already performs the same
@@ -1323,51 +1318,6 @@ static void alignOutputBlockWithAggFunc(
     DenseMap<Value *, BasicBlock *> &EndBBs,
     const DenseMap<Value *, Value *> &OutputMappings,
     std::vector<DenseMap<Value *, BasicBlock *>> &OutputStoreBBs) {
-  DenseSet<unsigned> ValuesToFind(Region.GVNStores.begin(),
-                                  Region.GVNStores.end());
-
-  // We iterate over the instructions in the extracted function, and find the
-  // global value number of the instructions.  If we find a value that should
-  // be contained in a store, we replace the uses of the value with the value
-  // from the overall function, so that the store is storing the correct
-  // value from the overall function.
-  DenseSet<BasicBlock *> ExcludeBBs;
-  for (DenseMap<Value *, BasicBlock *> &BBMap : OutputStoreBBs)
-    for (std::pair<Value *, BasicBlock *> &VBPair : BBMap)
-      ExcludeBBs.insert(VBPair.second);
-  for (std::pair<Value *, BasicBlock *> &VBPair : OutputBBs)
-    ExcludeBBs.insert(VBPair.second);
-
-  std::vector<Instruction *> ExtractedFunctionInsts =
-      collectRelevantInstructions(*(Region.ExtractedFunction), ExcludeBBs);
-  std::vector<Instruction *> OverallFunctionInsts =
-      collectRelevantInstructions(*OG.OutlinedFunction, ExcludeBBs);
-
-  assert(ExtractedFunctionInsts.size() == OverallFunctionInsts.size() &&
-         "Number of relevant instructions not equal!");
-
-  unsigned NumInstructions = ExtractedFunctionInsts.size();
-  for (unsigned Idx = 0; Idx < NumInstructions; Idx++) {
-    Value *V = ExtractedFunctionInsts[Idx];
-
-    if (OutputMappings.find(V) != OutputMappings.end())
-      V = OutputMappings.find(V)->second;
-    Optional<unsigned> GVN = Region.Candidate->getGVN(V);
-
-    // If we have found one of the stored values for output, replace the value
-    // with the corresponding one from the overall function.
-    if (GVN.hasValue() && ValuesToFind.erase(GVN.getValue())) {
-      V->replaceAllUsesWith(OverallFunctionInsts[Idx]);
-      if (ValuesToFind.size() == 0)
-        break;
-    }
-
-    if (ValuesToFind.size() == 0)
-      break;
-  }
-
-  assert(ValuesToFind.size() == 0 && "Not all store values were handled!");
-
   // If none of the output blocks have any instructions, this means that we do
   // not have to determine if it matches any of the other output schemes, and we
   // don't have to do anything else.
