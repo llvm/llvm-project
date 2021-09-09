@@ -35,6 +35,12 @@ namespace std {
   template<class... Ts>
     using common_comparison_category_t = typename common_comparison_category<Ts...>::type;
 
+  // [cmp.concept], concept three_way_comparable
+  template<class T, class Cat = partial_ordering>
+    concept three_way_comparable = see below;
+  template<class T, class U, class Cat = partial_ordering>
+    concept three_way_comparable_with = see below;
+
   // [cmp.result], result of three-way comparison
   template<class T, class U = T> struct compare_three_way_result;
 
@@ -129,6 +135,7 @@ namespace std {
 #include <__compare/common_comparison_category.h>
 #include <__compare/compare_three_way_result.h>
 #include <__compare/ordering.h>
+#include <__compare/three_way_comparable.h>
 #include <__config>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER

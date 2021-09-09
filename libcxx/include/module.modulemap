@@ -370,6 +370,7 @@ module std [system] {
       module common_comparison_category { private header "__compare/common_comparison_category.h" }
       module compare_three_way_result   { private header "__compare/compare_three_way_result.h"   }
       module ordering                   { private header "__compare/ordering.h"                   }
+      module three_way_comparable       { private header "__compare/three_way_comparable.h"       }
     }
   }
   module complex {
