@@ -462,7 +462,7 @@ if(APPLE)
     endforeach()
   endif()
 
-  # Explictly disable unsupported Sanitizer configurations.
+  # Explicitly disable unsupported Sanitizer configurations.
   list(REMOVE_ITEM FUZZER_SUPPORTED_OS "watchos")
   list(REMOVE_ITEM FUZZER_SUPPORTED_OS "watchossim")
 

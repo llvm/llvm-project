@@ -1144,7 +1144,7 @@ INTERCEPTOR(int, __cxa_atexit, void (*func)(void *), void *arg,
 
 // Unpoison argument shadow for C++ module destructors.
 INTERCEPTOR(int, atexit, void (*func)()) {
-  // Avoid calling real atexit as it is unrechable on at least on Linux.
+  // Avoid calling real atexit as it is unreachable on at least on Linux.
   if (msan_init_is_running)
     return REAL(__cxa_atexit)((void (*)(void *a))func, 0, 0);
   return setup_at_exit_wrapper((void(*)())func, 0, 0);

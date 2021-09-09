@@ -27,7 +27,7 @@
 #define NO_OVERFLOW(x) assert(__msan_test_shadow(&x, sizeof(x)) == 0)
 
 #if defined(__x86_64__)
-// In x86_64, if argument is partially outside tls, it is considered completly
+// In x86_64, if argument is partially outside tls, it is considered completely
 // unpoisoned
 #define PARTIAL_OVERFLOW(x) OVERFLOW(x)
 #else

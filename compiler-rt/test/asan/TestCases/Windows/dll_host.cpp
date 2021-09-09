@@ -17,7 +17,7 @@
 //
 // Get the list of ASan wrappers imported by the DLL RTL:
 // [BEWARE: be really careful with the sed commands, as this test can be run
-//  from different environemnts with different shells and seds]
+//  from different environments with different shells and seds]
 // RUN: grep INTERCEPT_LIBRARY_FUNCTION %p/../../../../lib/asan/asan_win_dll_thunk.cpp \
 // RUN:  | grep -v define | sed -e s/.*(/__asan_wrap_/ -e s/).*//              \
 // RUN:  > %t.imports1
