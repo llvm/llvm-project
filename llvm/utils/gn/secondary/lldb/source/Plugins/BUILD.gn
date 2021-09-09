@@ -41,6 +41,10 @@ lldb_plugins += [
     "DynamicLoaderStatic",
   ],
   [
+    "//lldb/source/Plugins/DynamicLoader/Windows-DYLD",
+    "DynamicLoaderWindowsDYLD",
+  ],
+  [
     "//lldb/source/Plugins/Instruction/ARM",
     "InstructionARM",
   ],
@@ -211,7 +215,7 @@ write_cmake_config("Plugins.def") {
   # These are in separate variables to make sure ProcessWindowsCommon is
   # initalized after all plugins, but before ProcessGDBRemote.
   if (current_os == "win") {
-    values += [ "LLDB_PROCESS_WINDOWS_PLUGIN=LLDB_PLUGIN(XXX)" ]
+    values += [ "LLDB_PROCESS_WINDOWS_PLUGIN=LLDB_PLUGIN(ProcessWindowsCommon)" ]
   } else {
     values += [ "LLDB_PROCESS_WINDOWS_PLUGIN=" ]
   }
