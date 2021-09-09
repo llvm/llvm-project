@@ -867,13 +867,19 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
   if ((EnableEmSjLj || EnableWasmSjLj) && SetjmpF) {
     // Precompute setjmp users
     for (User *U : SetjmpF->users()) {
-      if (auto *UI = dyn_cast<Instruction>(U)) {
-        auto *UserF = UI->getFunction();
+      if (auto *CB = dyn_cast<CallBase>(U)) {
+        auto *UserF = CB->getFunction();
         // If a function that calls setjmp does not contain any other calls that
         // can longjmp, we don't need to do any transformation on that function,
         // so can ignore it
         if (containsLongjmpableCalls(UserF))
           SetjmpUsers.insert(UserF);
+      } else {
+        std::string S;
+        raw_string_ostream SS(S);
+        SS << *U;
+        report_fatal_error(Twine("Indirect use of setjmp is not supported: ") +
+                           SS.str());
       }
     }
   }
@@ -1217,9 +1223,10 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
   Function *SetjmpF = M.getFunction("setjmp");
   for (User *U : SetjmpF->users()) {
     auto *CI = dyn_cast<CallInst>(U);
+    // FIXME 'invoke' to setjmp can happen when we use Wasm EH + Wasm SjLj, but
+    // we don't support two being used together yet.
     if (!CI)
-      report_fatal_error("Does not support indirect calls to setjmp");
-
+      report_fatal_error("Wasm EH + Wasm SjLj is not fully supported yet");
     BasicBlock *BB = CI->getParent();
     if (BB->getParent() != &F) // in other function
       continue;
