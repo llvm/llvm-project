@@ -5111,7 +5111,11 @@ SubstDefaultTemplateArgument(Sema &SemaRef,
     for (unsigned i = 0, e = Param->getDepth(); i != e; ++i)
       TemplateArgLists.addOuterTemplateArguments(None);
 
-    Sema::ContextRAII SavedContext(SemaRef, Template->getDeclContext());
+    bool ForLambdaCallOperator = false;
+    if (const auto *Rec = dyn_cast<CXXRecordDecl>(Template->getDeclContext()))
+      ForLambdaCallOperator = Rec->isLambda();
+    Sema::ContextRAII SavedContext(SemaRef, Template->getDeclContext(),
+                                   !ForLambdaCallOperator);
     ArgType =
         SemaRef.SubstType(ArgType, TemplateArgLists,
                           Param->getDefaultArgumentLoc(), Param->getDeclName());
