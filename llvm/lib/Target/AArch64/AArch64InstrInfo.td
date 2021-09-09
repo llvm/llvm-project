@@ -688,40 +688,40 @@ let isReMaterializable = 1, isCodeGenOnly = 1 in {
 // removed, along with the AArch64Wrapper node.
 
 let AddedComplexity = 10 in
-def LOADgot : Pseudo<(outs GPR64:$dst), (ins i64imm:$addr),
-                     [(set GPR64:$dst, (AArch64LOADgot tglobaladdr:$addr))]>,
+def LOADgot : Pseudo<(outs GPR64common:$dst), (ins i64imm:$addr),
+                     [(set GPR64common:$dst, (AArch64LOADgot tglobaladdr:$addr))]>,
               Sched<[WriteLDAdr]>;
 
 // The MOVaddr instruction should match only when the add is not folded
 // into a load or store address.
 def MOVaddr
-    : Pseudo<(outs GPR64:$dst), (ins i64imm:$hi, i64imm:$low),
-             [(set GPR64:$dst, (AArch64addlow (AArch64adrp tglobaladdr:$hi),
+    : Pseudo<(outs GPR64common:$dst), (ins i64imm:$hi, i64imm:$low),
+             [(set GPR64common:$dst, (AArch64addlow (AArch64adrp tglobaladdr:$hi),
                                             tglobaladdr:$low))]>,
       Sched<[WriteAdrAdr]>;
 def MOVaddrJT
-    : Pseudo<(outs GPR64:$dst), (ins i64imm:$hi, i64imm:$low),
-             [(set GPR64:$dst, (AArch64addlow (AArch64adrp tjumptable:$hi),
+    : Pseudo<(outs GPR64common:$dst), (ins i64imm:$hi, i64imm:$low),
+             [(set GPR64common:$dst, (AArch64addlow (AArch64adrp tjumptable:$hi),
                                              tjumptable:$low))]>,
       Sched<[WriteAdrAdr]>;
 def MOVaddrCP
-    : Pseudo<(outs GPR64:$dst), (ins i64imm:$hi, i64imm:$low),
-             [(set GPR64:$dst, (AArch64addlow (AArch64adrp tconstpool:$hi),
+    : Pseudo<(outs GPR64common:$dst), (ins i64imm:$hi, i64imm:$low),
+             [(set GPR64common:$dst, (AArch64addlow (AArch64adrp tconstpool:$hi),
                                              tconstpool:$low))]>,
       Sched<[WriteAdrAdr]>;
 def MOVaddrBA
-    : Pseudo<(outs GPR64:$dst), (ins i64imm:$hi, i64imm:$low),
-             [(set GPR64:$dst, (AArch64addlow (AArch64adrp tblockaddress:$hi),
+    : Pseudo<(outs GPR64common:$dst), (ins i64imm:$hi, i64imm:$low),
+             [(set GPR64common:$dst, (AArch64addlow (AArch64adrp tblockaddress:$hi),
                                              tblockaddress:$low))]>,
       Sched<[WriteAdrAdr]>;
 def MOVaddrTLS
-    : Pseudo<(outs GPR64:$dst), (ins i64imm:$hi, i64imm:$low),
-             [(set GPR64:$dst, (AArch64addlow (AArch64adrp tglobaltlsaddr:$hi),
+    : Pseudo<(outs GPR64common:$dst), (ins i64imm:$hi, i64imm:$low),
+             [(set GPR64common:$dst, (AArch64addlow (AArch64adrp tglobaltlsaddr:$hi),
                                             tglobaltlsaddr:$low))]>,
       Sched<[WriteAdrAdr]>;
 def MOVaddrEXT
-    : Pseudo<(outs GPR64:$dst), (ins i64imm:$hi, i64imm:$low),
-             [(set GPR64:$dst, (AArch64addlow (AArch64adrp texternalsym:$hi),
+    : Pseudo<(outs GPR64common:$dst), (ins i64imm:$hi, i64imm:$low),
+             [(set GPR64common:$dst, (AArch64addlow (AArch64adrp texternalsym:$hi),
                                             texternalsym:$low))]>,
       Sched<[WriteAdrAdr]>;
 // Normally AArch64addlow either gets folded into a following ldr/str,
@@ -729,8 +729,8 @@ def MOVaddrEXT
 // might appear without either of them, so allow lowering it into a plain
 // add.
 def ADDlowTLS
-    : Pseudo<(outs GPR64:$dst), (ins GPR64:$src, i64imm:$low),
-             [(set GPR64:$dst, (AArch64addlow GPR64:$src,
+    : Pseudo<(outs GPR64sp:$dst), (ins GPR64sp:$src, i64imm:$low),
+             [(set GPR64sp:$dst, (AArch64addlow GPR64sp:$src,
                                             tglobaltlsaddr:$low))]>,
       Sched<[WriteAdr]>;
 

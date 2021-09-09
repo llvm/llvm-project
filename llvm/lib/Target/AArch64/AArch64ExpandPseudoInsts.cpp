@@ -1084,6 +1084,7 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case AArch64::MOVaddrEXT: {
     // Expand into ADRP + ADD.
     Register DstReg = MI.getOperand(0).getReg();
+    assert(DstReg != AArch64::XZR);
     MachineInstrBuilder MIB1 =
         BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ADRP), DstReg)
             .add(MI.getOperand(1));
