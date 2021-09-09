@@ -1,3 +1,4 @@
+import("//compiler-rt/target.gni")
 import("//llvm/utils/TableGen/tablegen.gni")
 
 tablegen("LLGSOptions") {
@@ -57,4 +58,8 @@ executable("lldb-server") {
     "lldb-platform.cpp",
     "lldb-server.cpp",
   ]
+
+  if (current_os == "android") {
+    output_dir = "$root_build_dir/runtimes_ndk_cxx/$crt_current_target_arch"
+  }
 }
