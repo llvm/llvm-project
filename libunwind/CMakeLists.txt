@@ -123,6 +123,8 @@ if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBUNWIND_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
   set(LIBUNWIND_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE PATH
       "Path where built libunwind libraries should be installed.")
+  set(LIBUNWIND_INSTALL_RUNTIME_DIR bin CACHE PATH
+      "Path where built libunwind runtime libraries should be installed.")
   if(LIBCXX_LIBDIR_SUBDIR)
     string(APPEND LIBUNWIND_LIBRARY_DIR /${LIBUNWIND_LIBDIR_SUBDIR})
     string(APPEND LIBUNWIND_INSTALL_LIBRARY_DIR /${LIBUNWIND_LIBDIR_SUBDIR})
@@ -131,10 +133,14 @@ elseif(LLVM_LIBRARY_OUTPUT_INTDIR)
   set(LIBUNWIND_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
   set(LIBUNWIND_INSTALL_LIBRARY_DIR lib${LIBUNWIND_LIBDIR_SUFFIX} CACHE PATH
       "Path where built libunwind libraries should be installed.")
+  set(LIBUNWIND_INSTALL_RUNTIME_DIR bin CACHE PATH
+      "Path where built libunwind runtime libraries should be installed.")
 else()
   set(LIBUNWIND_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBUNWIND_LIBDIR_SUFFIX})
   set(LIBUNWIND_INSTALL_LIBRARY_DIR lib${LIBUNWIND_LIBDIR_SUFFIX} CACHE PATH
       "Path where built libunwind libraries should be installed.")
+  set(LIBUNWIND_INSTALL_RUNTIME_DIR bin CACHE PATH
+      "Path where built libunwind runtime libraries should be installed.")
 endif()
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBUNWIND_LIBRARY_DIR})
