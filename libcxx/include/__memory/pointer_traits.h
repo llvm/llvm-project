@@ -173,7 +173,7 @@ _Tp* __to_address(_Tp* __p) _NOEXCEPT {
 }
 
 // enable_if is needed here to avoid instantiating checks for fancy pointers on raw pointers
-template <class _Pointer, class = _EnableIf<
+template <class _Pointer, class = __enable_if_t<
     !is_pointer<_Pointer>::value && !is_array<_Pointer>::value && !is_function<_Pointer>::value
 > >
 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
