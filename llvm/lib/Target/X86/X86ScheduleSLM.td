@@ -79,9 +79,9 @@ multiclass SLMWriteResPair<X86FoldableSchedWrite SchedRW,
   }
 }
 
-// A folded store needs a cycle on MEC_RSV for the store data, but it does not
-// need an extra port cycle to recompute the address.
-def : WriteRes<WriteRMW, [SLM_MEC_RSV]>;
+// A folded store needs a cycle on MEC_RSV for the store data (using the same uop),
+// but it does not need an extra port cycle to recompute the address.
+def : WriteRes<WriteRMW, [SLM_MEC_RSV]> { let NumMicroOps = 0; }
 
 def : WriteRes<WriteStore,   [SLM_IEC_RSV01, SLM_MEC_RSV]>;
 def : WriteRes<WriteStoreNT, [SLM_IEC_RSV01, SLM_MEC_RSV]>;
