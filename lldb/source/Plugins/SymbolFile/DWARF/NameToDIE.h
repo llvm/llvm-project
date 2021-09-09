@@ -38,8 +38,9 @@ public:
   bool Find(const lldb_private::RegularExpression &regex,
             llvm::function_ref<bool(DIERef ref)> callback) const;
 
+  /// \a unit must be the skeleton unit if possible, not GetNonSkeletonUnit().
   void
-  FindAllEntriesForUnit(const DWARFUnit &unit,
+  FindAllEntriesForUnit(DWARFUnit &unit,
                         llvm::function_ref<bool(DIERef ref)> callback) const;
 
   void

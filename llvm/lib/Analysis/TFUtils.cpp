@@ -1,9 +1,8 @@
 //===- TFUtils.cpp - tensorflow evaluation utilities ----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -293,11 +292,11 @@ class LoggerDataImpl {
   void transferLog(tensorflow::SequenceExample &SE) {
     auto *FL = SE.mutable_feature_lists()->mutable_feature_list();
     if (IncludeReward)
-      (*FL)[RewardSpec.name()].Swap(&Reward);
+      (*FL)[RewardSpec.name()] = std::move(Reward);
     assert(FeatureLists.size() == LoggedFeatureSpecs.size());
     for (size_t I = 0; I < FeatureLists.size(); ++I) {
       const auto &LFS = LoggedFeatureSpecs[I];
-      (*FL)[LFS.getLoggingName()].Swap(&FeatureLists[I]);
+      (*FL)[LFS.getLoggingName()] = std::move(FeatureLists[I]);
     }
   }
 
@@ -310,6 +309,7 @@ public:
   // flush the logged info to a stream and clear the log contents.
   void flush(raw_ostream &OS) {
     size_t NrRecords = getNrRecords();
+    (void)NrRecords;
     tensorflow::SequenceExample SE;
     transferLog(SE);
     assert(isSelfConsistent(SE, NrRecords));

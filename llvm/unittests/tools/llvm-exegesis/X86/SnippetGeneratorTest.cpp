@@ -362,6 +362,29 @@ TEST_F(X86ParallelSnippetGeneratorTest, MOV16ms) {
               testing::HasSubstr("no available registers"));
 }
 
+TEST_F(X86ParallelSnippetGeneratorTest,
+       AvoidSerializingThroughImplicitRegisters) {
+  // MULX32rr implicitly uses EDX. We should not select that register to avoid
+  // serialization.
+  const unsigned Opcode = X86::MULX32rr;
+  randomGenerator().seed(0); // Initialize seed.
+  const Instruction &Instr = State.getIC().getInstr(Opcode);
+  // Forbid all registers but RDX/EDX/DX/DH/DL. The only option would be to
+  // choose that register, but that would serialize the instruction, so we
+  // should be returning an error.
+  auto AllRegisters = State.getRATC().emptyRegisters();
+  AllRegisters.flip();
+  AllRegisters.reset(X86::RDX);
+  AllRegisters.reset(X86::EDX);
+  AllRegisters.reset(X86::DX);
+  AllRegisters.reset(X86::DH);
+  AllRegisters.reset(X86::DL);
+  auto Err = Generator.generateCodeTemplates(&Instr, AllRegisters);
+  EXPECT_FALSE((bool)Err);
+  EXPECT_THAT(toString(Err.takeError()),
+              testing::HasSubstr("no available registers"));
+}
+
 class X86FakeSnippetGenerator : public SnippetGenerator {
 public:
   X86FakeSnippetGenerator(const LLVMState &State, const Options &Opts)

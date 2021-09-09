@@ -578,9 +578,6 @@ void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
     __kmp_free(top);
   }
 
-  // if( serial_team -> t.t_serialized > 1 )
-  serial_team->t.t_level--;
-
   /* pop dispatch buffers stack */
   KMP_DEBUG_ASSERT(serial_team->t.t_dispatch->th_disp_buffer);
   {
@@ -605,6 +602,7 @@ void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
     }
 #endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */
 
+    __kmp_pop_current_task_from_thread(this_thr);
 #if OMPD_SUPPORT
     if (ompd_state & OMPD_ENABLE_BP)
       ompd_bp_parallel_end();
@@ -622,8 +620,6 @@ void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
     /* TODO the below shouldn't need to be adjusted for serialized teams */
     this_thr->th.th_dispatch =
         &this_thr->th.th_team->t.t_dispatch[serial_team->t.t_master_tid];
-
-    __kmp_pop_current_task_from_thread(this_thr);
 
     KMP_ASSERT(this_thr->th.th_current_task->td_flags.executing == 0);
     this_thr->th.th_current_task->td_flags.executing = 1;
@@ -645,6 +641,7 @@ void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
     }
   }
 
+  serial_team->t.t_level--;
   if (__kmp_env_consistency_check)
     __kmp_pop_parallel(global_tid, NULL);
 #if OMPT_SUPPORT
@@ -4393,6 +4390,38 @@ void __kmpc_error(ident_t *loc, int severity, const char *message) {
     KMP_FATAL(UserDirectedError, src_loc, message);
 
   __kmp_str_free(&src_loc);
+}
+
+// Mark begin of scope directive.
+void __kmpc_scope(ident_t *loc, kmp_int32 gtid, void *reserved) {
+// reserved is for extension of scope directive and not used.
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  if (ompt_enabled.enabled && ompt_enabled.ompt_callback_work) {
+    kmp_team_t *team = __kmp_threads[gtid]->th.th_team;
+    int tid = __kmp_tid_from_gtid(gtid);
+    ompt_callbacks.ompt_callback(ompt_callback_work)(
+        ompt_work_scope, ompt_scope_begin,
+        &(team->t.ompt_team_info.parallel_data),
+        &(team->t.t_implicit_task_taskdata[tid].ompt_task_info.task_data), 1,
+        OMPT_GET_RETURN_ADDRESS(0));
+  }
+#endif // OMPT_SUPPORT && OMPT_OPTIONAL
+}
+
+// Mark end of scope directive
+void __kmpc_end_scope(ident_t *loc, kmp_int32 gtid, void *reserved) {
+// reserved is for extension of scope directive and not used.
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  if (ompt_enabled.enabled && ompt_enabled.ompt_callback_work) {
+    kmp_team_t *team = __kmp_threads[gtid]->th.th_team;
+    int tid = __kmp_tid_from_gtid(gtid);
+    ompt_callbacks.ompt_callback(ompt_callback_work)(
+        ompt_work_scope, ompt_scope_end,
+        &(team->t.ompt_team_info.parallel_data),
+        &(team->t.t_implicit_task_taskdata[tid].ompt_task_info.task_data), 1,
+        OMPT_GET_RETURN_ADDRESS(0));
+  }
+#endif // OMPT_SUPPORT && OMPT_OPTIONAL
 }
 
 #ifdef KMP_USE_VERSION_SYMBOLS

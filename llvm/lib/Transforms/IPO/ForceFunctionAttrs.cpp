@@ -50,14 +50,14 @@ static void forceAttributes(Function &F) {
     return Kind;
   };
 
-  for (auto &S : ForceAttributes) {
+  for (const auto &S : ForceAttributes) {
     auto Kind = ParseFunctionAndAttr(S);
     if (Kind == Attribute::None || F.hasFnAttribute(Kind))
       continue;
     F.addFnAttr(Kind);
   }
 
-  for (auto &S : ForceRemoveAttributes) {
+  for (const auto &S : ForceRemoveAttributes) {
     auto Kind = ParseFunctionAndAttr(S);
     if (Kind == Attribute::None || !F.hasFnAttribute(Kind))
       continue;

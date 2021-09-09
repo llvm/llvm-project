@@ -1,5 +1,8 @@
 // RUN: %libomptarget-compilexx-generic -O3 && %libomptarget-run-generic
 
+// Wrong results on amdgcn
+// UNSUPPORTED: amdgcn-amd-amdhsa
+
 #include <iostream>
 
 template <typename T> int test_map() {

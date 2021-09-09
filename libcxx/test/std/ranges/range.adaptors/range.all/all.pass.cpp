@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // std::views::all;
@@ -16,6 +15,10 @@
 #include <ranges>
 
 #include <cassert>
+#include <concepts>
+#include <type_traits>
+#include <utility>
+
 #include "test_macros.h"
 #include "test_iterators.h"
 
@@ -84,6 +87,11 @@ struct RandomAccessRange {
 template<>
 inline constexpr bool std::ranges::enable_borrowed_range<RandomAccessRange> = true;
 
+template <class View, class T>
+concept CanBePiped = requires (View&& view, T&& t) {
+  { std::forward<View>(view) | std::forward<T>(t) };
+};
+
 constexpr bool test() {
   {
     ASSERT_SAME_TYPE(decltype(std::views::all(View<true>())), View<true>);
@@ -141,6 +149,53 @@ constexpr bool test() {
                      std::ranges::subrange<random_access_iterator<int*>, RandomAccessRange::sentinel>);
     assert(std::ranges::begin(subrange).base() == globalBuff);
     assert(std::ranges::end(subrange) == std::ranges::begin(subrange) + 8);
+  }
+
+  // Check SFINAE friendliness of the call operator
+  {
+    static_assert(!std::is_invocable_v<decltype(std::views::all)>);
+    static_assert(!std::is_invocable_v<decltype(std::views::all), RandomAccessRange, RandomAccessRange>);
+  }
+
+  // Test that std::views::all is a range adaptor
+  {
+    // Test `v | views::all`
+    {
+      Range range(0);
+      auto result = range | std::views::all;
+      ASSERT_SAME_TYPE(decltype(result), std::ranges::ref_view<Range>);
+      assert(&result.base() == &range);
+    }
+
+    // Test `adaptor | views::all`
+    {
+      Range range(0);
+      auto f = [](int i) { return i; };
+      auto const partial = std::views::transform(f) | std::views::all;
+      using Result = std::ranges::transform_view<std::ranges::ref_view<Range>, decltype(f)>;
+      std::same_as<Result> auto result = partial(range);
+      assert(&result.base().base() == &range);
+    }
+
+    // Test `views::all | adaptor`
+    {
+      Range range(0);
+      auto f = [](int i) { return i; };
+      auto const partial = std::views::all | std::views::transform(f);
+      using Result = std::ranges::transform_view<std::ranges::ref_view<Range>, decltype(f)>;
+      std::same_as<Result> auto result = partial(range);
+      assert(&result.base().base() == &range);
+    }
+
+    {
+      struct NotAView { };
+      static_assert( CanBePiped<Range&,    decltype(std::views::all)>);
+      static_assert(!CanBePiped<NotAView,  decltype(std::views::all)>);
+    }
+  }
+
+  {
+    static_assert(std::same_as<decltype(std::views::all), decltype(std::ranges::views::all)>);
   }
 
   return true;

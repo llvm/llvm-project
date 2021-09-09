@@ -7,18 +7,16 @@
 define amdgpu_kernel void @v_insert_v64i32_varidx(<64 x i32> addrspace(1)* %out.ptr, <64 x i32> addrspace(1)* %ptr, i32 %val, i32 %idx) #0 {
 ; GCN-LABEL: v_insert_v64i32_varidx:
 ; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dwordx4 s[20:23], s[4:5], 0x0
+; GCN-NEXT:    s_load_dwordx2 s[24:25], s[4:5], 0x10
 ; GCN-NEXT:    s_add_u32 s0, s0, s7
-; GCN-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
-; GCN-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x10
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
 ; GCN-NEXT:    v_mov_b32_e32 v16, 0x100
-; GCN-NEXT:    v_mov_b32_e32 v64, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_load_dwordx16 s[36:51], s[10:11], 0x0
-; GCN-NEXT:    s_load_dwordx16 s[52:67], s[10:11], 0x40
-; GCN-NEXT:    s_load_dwordx16 s[12:27], s[10:11], 0x80
-; GCN-NEXT:    s_and_b32 s4, s7, 63
-; GCN-NEXT:    s_lshl_b32 s4, s4, 2
+; GCN-NEXT:    s_load_dwordx16 s[36:51], s[22:23], 0x0
+; GCN-NEXT:    s_load_dwordx16 s[52:67], s[22:23], 0x40
+; GCN-NEXT:    s_load_dwordx16 s[4:19], s[22:23], 0x80
+; GCN-NEXT:    v_mov_b32_e32 v64, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s36
 ; GCN-NEXT:    v_mov_b32_e32 v1, s37
@@ -36,7 +34,7 @@ define amdgpu_kernel void @v_insert_v64i32_varidx(<64 x i32> addrspace(1)* %out.
 ; GCN-NEXT:    v_mov_b32_e32 v13, s49
 ; GCN-NEXT:    v_mov_b32_e32 v14, s50
 ; GCN-NEXT:    v_mov_b32_e32 v15, s51
-; GCN-NEXT:    s_load_dwordx16 s[36:51], s[10:11], 0xc0
+; GCN-NEXT:    s_load_dwordx16 s[36:51], s[22:23], 0xc0
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:256
 ; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:260
 ; GCN-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:264
@@ -85,37 +83,37 @@ define amdgpu_kernel void @v_insert_v64i32_varidx(<64 x i32> addrspace(1)* %out.
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:376
 ; GCN-NEXT:    v_mov_b32_e32 v0, s67
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:380
-; GCN-NEXT:    v_mov_b32_e32 v0, s12
+; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:384
-; GCN-NEXT:    v_mov_b32_e32 v0, s13
+; GCN-NEXT:    v_mov_b32_e32 v0, s5
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:388
-; GCN-NEXT:    v_mov_b32_e32 v0, s14
+; GCN-NEXT:    v_mov_b32_e32 v0, s6
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:392
-; GCN-NEXT:    v_mov_b32_e32 v0, s15
+; GCN-NEXT:    v_mov_b32_e32 v0, s7
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:396
-; GCN-NEXT:    v_mov_b32_e32 v0, s16
+; GCN-NEXT:    v_mov_b32_e32 v0, s8
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:400
-; GCN-NEXT:    v_mov_b32_e32 v0, s17
+; GCN-NEXT:    v_mov_b32_e32 v0, s9
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:404
-; GCN-NEXT:    v_mov_b32_e32 v0, s18
+; GCN-NEXT:    v_mov_b32_e32 v0, s10
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:408
-; GCN-NEXT:    v_mov_b32_e32 v0, s19
+; GCN-NEXT:    v_mov_b32_e32 v0, s11
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:412
-; GCN-NEXT:    v_mov_b32_e32 v0, s20
+; GCN-NEXT:    v_mov_b32_e32 v0, s12
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:416
-; GCN-NEXT:    v_mov_b32_e32 v0, s21
+; GCN-NEXT:    v_mov_b32_e32 v0, s13
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:420
-; GCN-NEXT:    v_mov_b32_e32 v0, s22
+; GCN-NEXT:    v_mov_b32_e32 v0, s14
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:424
-; GCN-NEXT:    v_mov_b32_e32 v0, s23
+; GCN-NEXT:    v_mov_b32_e32 v0, s15
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:428
-; GCN-NEXT:    v_mov_b32_e32 v0, s24
+; GCN-NEXT:    v_mov_b32_e32 v0, s16
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:432
-; GCN-NEXT:    v_mov_b32_e32 v0, s25
+; GCN-NEXT:    v_mov_b32_e32 v0, s17
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:436
-; GCN-NEXT:    v_mov_b32_e32 v0, s26
+; GCN-NEXT:    v_mov_b32_e32 v0, s18
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:440
-; GCN-NEXT:    v_mov_b32_e32 v0, s27
+; GCN-NEXT:    v_mov_b32_e32 v0, s19
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:444
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s36
@@ -145,13 +143,15 @@ define amdgpu_kernel void @v_insert_v64i32_varidx(<64 x i32> addrspace(1)* %out.
 ; GCN-NEXT:    v_mov_b32_e32 v0, s48
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:496
 ; GCN-NEXT:    v_mov_b32_e32 v0, s49
+; GCN-NEXT:    s_and_b32 s4, s25, 63
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:500
 ; GCN-NEXT:    v_mov_b32_e32 v0, s50
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:504
 ; GCN-NEXT:    v_mov_b32_e32 v0, s51
+; GCN-NEXT:    s_lshl_b32 s4, s4, 2
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:508
 ; GCN-NEXT:    v_add_u32_e32 v0, s4, v16
-; GCN-NEXT:    v_mov_b32_e32 v1, s6
+; GCN-NEXT:    v_mov_b32_e32 v1, s24
 ; GCN-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:256
 ; GCN-NEXT:    s_nop 0
@@ -219,37 +219,37 @@ define amdgpu_kernel void @v_insert_v64i32_varidx(<64 x i32> addrspace(1)* %out.
 ; GCN-NEXT:    buffer_load_dword v62, off, s[0:3], 0 offset:504
 ; GCN-NEXT:    buffer_load_dword v63, off, s[0:3], 0 offset:508
 ; GCN-NEXT:    s_waitcnt vmcnt(60)
-; GCN-NEXT:    global_store_dwordx4 v64, v[0:3], s[8:9]
+; GCN-NEXT:    global_store_dwordx4 v64, v[0:3], s[20:21]
 ; GCN-NEXT:    s_waitcnt vmcnt(57)
-; GCN-NEXT:    global_store_dwordx4 v64, v[4:7], s[8:9] offset:16
+; GCN-NEXT:    global_store_dwordx4 v64, v[4:7], s[20:21] offset:16
 ; GCN-NEXT:    s_waitcnt vmcnt(54)
-; GCN-NEXT:    global_store_dwordx4 v64, v[8:11], s[8:9] offset:32
+; GCN-NEXT:    global_store_dwordx4 v64, v[8:11], s[20:21] offset:32
 ; GCN-NEXT:    s_waitcnt vmcnt(51)
-; GCN-NEXT:    global_store_dwordx4 v64, v[12:15], s[8:9] offset:48
+; GCN-NEXT:    global_store_dwordx4 v64, v[12:15], s[20:21] offset:48
 ; GCN-NEXT:    s_waitcnt vmcnt(48)
-; GCN-NEXT:    global_store_dwordx4 v64, v[16:19], s[8:9] offset:64
+; GCN-NEXT:    global_store_dwordx4 v64, v[16:19], s[20:21] offset:64
 ; GCN-NEXT:    s_waitcnt vmcnt(45)
-; GCN-NEXT:    global_store_dwordx4 v64, v[20:23], s[8:9] offset:80
+; GCN-NEXT:    global_store_dwordx4 v64, v[20:23], s[20:21] offset:80
 ; GCN-NEXT:    s_waitcnt vmcnt(42)
-; GCN-NEXT:    global_store_dwordx4 v64, v[24:27], s[8:9] offset:96
+; GCN-NEXT:    global_store_dwordx4 v64, v[24:27], s[20:21] offset:96
 ; GCN-NEXT:    s_waitcnt vmcnt(39)
-; GCN-NEXT:    global_store_dwordx4 v64, v[28:31], s[8:9] offset:112
+; GCN-NEXT:    global_store_dwordx4 v64, v[28:31], s[20:21] offset:112
 ; GCN-NEXT:    s_waitcnt vmcnt(36)
-; GCN-NEXT:    global_store_dwordx4 v64, v[32:35], s[8:9] offset:128
+; GCN-NEXT:    global_store_dwordx4 v64, v[32:35], s[20:21] offset:128
 ; GCN-NEXT:    s_waitcnt vmcnt(33)
-; GCN-NEXT:    global_store_dwordx4 v64, v[36:39], s[8:9] offset:144
+; GCN-NEXT:    global_store_dwordx4 v64, v[36:39], s[20:21] offset:144
 ; GCN-NEXT:    s_waitcnt vmcnt(30)
-; GCN-NEXT:    global_store_dwordx4 v64, v[40:43], s[8:9] offset:160
+; GCN-NEXT:    global_store_dwordx4 v64, v[40:43], s[20:21] offset:160
 ; GCN-NEXT:    s_waitcnt vmcnt(27)
-; GCN-NEXT:    global_store_dwordx4 v64, v[44:47], s[8:9] offset:176
+; GCN-NEXT:    global_store_dwordx4 v64, v[44:47], s[20:21] offset:176
 ; GCN-NEXT:    s_waitcnt vmcnt(24)
-; GCN-NEXT:    global_store_dwordx4 v64, v[48:51], s[8:9] offset:192
+; GCN-NEXT:    global_store_dwordx4 v64, v[48:51], s[20:21] offset:192
 ; GCN-NEXT:    s_waitcnt vmcnt(21)
-; GCN-NEXT:    global_store_dwordx4 v64, v[52:55], s[8:9] offset:208
+; GCN-NEXT:    global_store_dwordx4 v64, v[52:55], s[20:21] offset:208
 ; GCN-NEXT:    s_waitcnt vmcnt(18)
-; GCN-NEXT:    global_store_dwordx4 v64, v[56:59], s[8:9] offset:224
+; GCN-NEXT:    global_store_dwordx4 v64, v[56:59], s[20:21] offset:224
 ; GCN-NEXT:    s_waitcnt vmcnt(15)
-; GCN-NEXT:    global_store_dwordx4 v64, v[60:63], s[8:9] offset:240
+; GCN-NEXT:    global_store_dwordx4 v64, v[60:63], s[20:21] offset:240
 ; GCN-NEXT:    s_endpgm
   %vec = load <64 x i32>, <64 x i32> addrspace(1)* %ptr
   %insert = insertelement <64 x i32> %vec, i32 %val, i32 %idx

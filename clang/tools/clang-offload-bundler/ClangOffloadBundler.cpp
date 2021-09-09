@@ -1076,7 +1076,29 @@ static std::string getDeviceLibraryFileName(StringRef BundleFileName,
 static bool checkDeviceOptions(StringRef Device, std::string OffloadArch) {
   return !OffloadArch.empty() && OffloadArch == Device;
 }
-
+#if 0
+/// @brief Computes a list of targets among all given targets which are
+/// compatible with this code object
+/// @param [in] CodeObjectInfo Code Object
+/// @param [out] CompatibleTargets List of all compatible targets among all
+/// given targets
+/// @return false, if no compatible target is found.
+static bool
+getCompatibleOffloadTargets(OffloadTargetInfo &CodeObjectInfo,
+                            SmallVectorImpl<StringRef> &CompatibleTargets) {
+  if (!CompatibleTargets.empty()) {
+    DEBUG_WITH_TYPE("CodeObjectCompatibility",
+                    dbgs() << "CompatibleTargets list should be empty\n");
+    return false;
+  }
+  for (auto &Target : TargetNames) {
+    auto TargetInfo = OffloadTargetInfo(Target);
+    if (isCodeObjectCompatible(CodeObjectInfo, TargetInfo))
+      CompatibleTargets.push_back(Target);
+  }
+  return !CompatibleTargets.empty();
+}
+#endif
 
 // UnbundleArchive takes an archive file (".a") as input containing bundled
 // object files, and an offload target (not host), and extracts the device code

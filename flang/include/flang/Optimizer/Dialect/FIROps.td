@@ -151,7 +151,7 @@ class fir_AllocatableOp<string mnemonic, Resource resource,
   }];
 
   let printer = [{
-    p << getOperationName() << ' ' << (*this)->getAttr(inType());
+    p << ' ' << (*this)->getAttr(inType());
     if (hasLenParams()) {
       // print the LEN parameters to a derived type in parens
       p << '(' << getLenParams() << " : " << getLenParams().getTypes() << ')';
@@ -341,7 +341,7 @@ def fir_LoadOp : fir_OneResultOp<"load"> {
   }];
 
   let printer = [{
-    p << getOperationName() << ' ';
+    p << ' ';
     p.printOperand(memref());
     p.printOptionalAttrDict((*this)->getAttrs(), {});
     p << " : " << memref().getType();
@@ -391,7 +391,7 @@ def fir_StoreOp : fir_Op<"store", []> {
   }];
 
   let printer = [{
-    p << getOperationName() << ' ';
+    p << ' ';
     p.printOperand(value());
     p << " to ";
     p.printOperand(memref());
@@ -652,7 +652,7 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
   }];
 
   let printer = [{
-    p << getOperationName() << ' ';
+    p << ' ';
     p.printOperand(getSelector());
     p << " : " << getSelector().getType() << " [";
     auto cases = (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
@@ -776,7 +776,7 @@ def fir_SelectCaseOp : fir_SwitchTerminatorOp<"select_case"> {
   let parser = "return parseSelectCase(parser, result);";
 
   let printer = [{
-    p << getOperationName() << ' ';
+    p << ' ';
     p.printOperand(getSelector());
     p << " : " << getSelector().getType() << " [";
     auto cases = (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
@@ -892,7 +892,7 @@ def fir_SelectTypeOp : fir_SwitchTerminatorOp<"select_type"> {
   let parser = "return parseSelectType(parser, result);";
 
   let printer = [{
-    p << getOperationName() << ' ';
+    p << ' ';
     p.printOperand(getSelector());
     p << " : " << getSelector().getType() << " [";
     auto cases = (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
@@ -948,7 +948,7 @@ def fir_UnreachableOp : fir_Op<"unreachable", [Terminator]> {
 
   let parser = "return mlir::success();";
 
-  let printer = "p << getOperationName();";
+  let printer = "";
 }
 
 def fir_FirEndOp : fir_Op<"end", [Terminator]> {
@@ -1202,7 +1202,7 @@ def fir_EmboxProcOp : fir_Op<"emboxproc", [NoSideEffect]> {
   }];
 
   let printer = [{
-    p << getOperationName() << ' ' << (*this)->getAttr("funcname");
+    p << ' ' << (*this)->getAttr("funcname");
     auto h = host();
     if (h) {
       p << ", ";
@@ -1906,7 +1906,7 @@ def fir_FieldIndexOp : fir_OneResultOp<"field_index", [NoSideEffect]> {
   }];
 
   let printer = [{
-    p << getOperationName() << ' '
+    p << ' '
       << (*this)->getAttrOfType<mlir::StringAttr>(fieldAttrName()).getValue()
       << ", " << (*this)->getAttr(typeAttrName());
     if (getNumOperands()) {
@@ -2228,7 +2228,7 @@ def fir_LenParamIndexOp : fir_OneResultOp<"len_param_index", [NoSideEffect]> {
   }];
 
   let printer = [{
-    p << getOperationName() << ' '
+    p << ' '
       << (*this)->getAttrOfType<mlir::StringAttr>(fieldAttrName()).getValue()
       << ", " << (*this)->getAttr(typeAttrName());
   }];
@@ -2545,7 +2545,7 @@ def fir_CallOp : fir_Op<"call", [CallOpInterface]> {
     [{
       $_state.addOperands(operands);
       $_state.addAttribute(calleeAttrName($_state.name),
-        $_builder.getSymbolRefAttr(callee));
+                           SymbolRefAttr::get(callee));
       $_state.addTypes(callee.getType().getResults());
     }]>,
     OpBuilder<(ins "mlir::SymbolRefAttr":$callee,
@@ -2560,7 +2560,8 @@ def fir_CallOp : fir_Op<"call", [CallOpInterface]> {
         "llvm::ArrayRef<mlir::Type>":$results,
         CArg<"mlir::ValueRange", "{}">:$operands),
     [{
-      build($_builder, $_state, $_builder.getSymbolRefAttr(callee), results,
+      build($_builder, $_state,
+            SymbolRefAttr::get($_builder.getContext(), callee), results,
             operands);
     }]>];
 
@@ -2632,7 +2633,7 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
   }];
 
   let printer = [{
-    p << getOperationName() << ' ' << methodAttr() << '(';
+    p << ' ' << methodAttr() << '(';
     p.printOperand(object());
     if (!args().empty()) {
       p << ", ";
@@ -2710,7 +2711,7 @@ def fir_StringLitOp : fir_Op<"string_lit", [NoSideEffect]> {
   }];
 
   let printer = [{
-    p << getOperationName() << ' ' << getValue() << '(';
+    p << ' ' << getValue() << '(';
     p << getSize().cast<mlir::IntegerAttr>().getValue() << ") : ";
     p.printType(getType());
   }];
@@ -2844,7 +2845,7 @@ def fir_ConstcOp : fir_Op<"constc", [NoSideEffect]> {
   }];
 
   let printer = [{
-    p << getOperationName() << " (0x";
+    p << " (0x";
     auto f1 = (*this)->getAttr(realAttrName()).cast<mlir::FloatAttr>();
     auto i1 = f1.getValue().bitcastToAPInt();
     p.getStream().write_hex(i1.getZExtValue());
@@ -3032,7 +3033,7 @@ def fir_GenTypeDescOp : fir_OneResultOp<"gentypedesc", [NoSideEffect]> {
   }];
 
   let printer = [{
-    p << getOperationName() << ' ' << (*this)->getAttr("in_type");
+    p << ' ' << (*this)->getAttr("in_type");
     p.printOptionalAttrDict((*this)->getAttrs(), {"in_type"});
   }];
 
@@ -3122,7 +3123,6 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
   let parser = "return parseGlobalOp(parser, result);";
 
   let printer = [{
-    p << getOperationName();
     if (linkName().hasValue())
       p << ' ' << linkName().getValue();
     p << ' ';
@@ -3240,7 +3240,7 @@ def fir_GlobalLenOp : fir_Op<"global_len", []> {
   }];
 
   let printer = [{
-    p << getOperationName() << ' ' << (*this)->getAttr(lenParamAttrName())
+    p << ' ' << (*this)->getAttr(lenParamAttrName())
       << ", " << (*this)->getAttr(intAttrName());
   }];
 
@@ -3281,7 +3281,7 @@ def fir_DispatchTableOp : fir_Op<"dispatch_table",
 
     // Convert the parsed name attr into a string attr.
     result.attributes.set(mlir::SymbolTable::getSymbolAttrName(),
-      parser.getBuilder().getStringAttr(nameAttr.getRootReference()));
+      nameAttr.getRootReference());
 
     // Parse the optional table body.
     mlir::Region *body = result.addRegion();
@@ -3296,7 +3296,7 @@ def fir_DispatchTableOp : fir_Op<"dispatch_table",
   let printer = [{
     auto tableName = (*this)->getAttrOfType<StringAttr>(
       mlir::SymbolTable::getSymbolAttrName()).getValue();
-    p << getOperationName() << " @" << tableName;
+    p << " @" << tableName;
 
     Region &body = (*this)->getRegion(0);
     if (!body.empty())
@@ -3375,7 +3375,7 @@ def fir_DTEntryOp : fir_Op<"dt_entry", []> {
   }];
 
   let printer = [{
-    p << getOperationName() << ' ' << methodAttr() << ", "
+    p << ' ' << methodAttr() << ", "
       << procAttr();
   }];
 }

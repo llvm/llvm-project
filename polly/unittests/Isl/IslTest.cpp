@@ -47,15 +47,7 @@ static bool operator==(const isl::space &LHS, const isl::space &RHS) {
   return bool(LHS.is_equal(RHS));
 }
 
-static bool operator==(const isl::basic_set &LHS, const isl::basic_set &RHS) {
-  return bool(LHS.is_equal(RHS));
-}
-
 static bool operator==(const isl::set &LHS, const isl::set &RHS) {
-  return bool(LHS.is_equal(RHS));
-}
-
-static bool operator==(const isl::basic_map &LHS, const isl::basic_map &RHS) {
   return bool(LHS.is_equal(RHS));
 }
 
@@ -144,7 +136,7 @@ TEST(Isl, APIntToIslVal) {
   {
     APInt APNOne(32, (1ull << 32) - 1, false);
     auto IslNOne = valFromAPInt(IslCtx, APNOne, false);
-    auto IslRef = isl::val(IslCtx, 32).pow2().sub_ui(1);
+    auto IslRef = isl::val(IslCtx, 32).pow2().sub(1);
     EXPECT_EQ(IslNOne, IslRef);
   }
 
@@ -231,7 +223,7 @@ TEST(Isl, IslValToAPInt) {
   }
 
   {
-    auto IslNOne = isl::val(IslCtx, 32).pow2().sub_ui(1);
+    auto IslNOne = isl::val(IslCtx, 32).pow2().sub(1);
     auto APNOne = APIntFromVal(IslNOne);
     EXPECT_EQ((1ull << 32) - 1, APNOne);
     EXPECT_EQ(33u, APNOne.getBitWidth());
@@ -240,7 +232,7 @@ TEST(Isl, IslValToAPInt) {
   {
     auto IslLargeNum = isl::val(IslCtx, 60);
     IslLargeNum = IslLargeNum.pow2();
-    IslLargeNum = IslLargeNum.sub_ui(1);
+    IslLargeNum = IslLargeNum.sub(1);
     auto APLargeNum = APIntFromVal(IslLargeNum);
     EXPECT_EQ((1ull << 60) - 1, APLargeNum);
     EXPECT_EQ(61u, APLargeNum.getBitWidth());
@@ -1142,9 +1134,9 @@ TEST(Isl, Quota) {
     EXPECT_TRUE(BoolResult.is_error());
     EXPECT_FALSE(BoolResult.is_false());
     EXPECT_FALSE(BoolResult.is_true());
-    EXPECT_DEATH((bool)BoolResult,
+    EXPECT_DEATH((void)(bool)BoolResult,
                  "IMPLEMENTATION ERROR: Unhandled error state");
-    EXPECT_DEATH((bool)!BoolResult,
+    EXPECT_DEATH((void)(bool)!BoolResult,
                  "IMPLEMENTATION ERROR: Unhandled error state");
     EXPECT_DEATH(
         {

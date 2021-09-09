@@ -3847,7 +3847,7 @@ int foobar() {
 //
 //
 // CHECK-TLS1-LABEL: define {{[^@]+}}@__cxx_global_var_init.3
-// CHECK-TLS1-SAME: () #[[ATTR0]] comdat($_ZN2STI2S4E2stE) {
+// CHECK-TLS1-SAME: () #[[ATTR0]] {
 // CHECK-TLS1-NEXT:  entry:
 // CHECK-TLS1-NEXT:    [[TMP0:%.*]] = load i8, i8* bitcast (i64* @_ZGVN2STI2S4E2stE to i8*), align 8
 // CHECK-TLS1-NEXT:    [[GUARD_UNINITIALIZED:%.*]] = icmp eq i8 [[TMP0]], 0
@@ -4373,7 +4373,7 @@ int foobar() {
 //
 //
 // CHECK-TLS2-LABEL: define {{[^@]+}}@__cxx_global_var_init.3
-// CHECK-TLS2-SAME: () #[[ATTR6]] comdat($_ZN2STI2S4E2stE) {
+// CHECK-TLS2-SAME: () #[[ATTR6]] {
 // CHECK-TLS2-NEXT:  entry:
 // CHECK-TLS2-NEXT:    [[TMP0:%.*]] = load i8, i8* bitcast (i64* @_ZGVN2STI2S4E2stE to i8*), align 8
 // CHECK-TLS2-NEXT:    [[GUARD_UNINITIALIZED:%.*]] = icmp eq i8 [[TMP0]], 0
@@ -4906,7 +4906,7 @@ int foobar() {
 //
 //
 // CHECK-TLS3-LABEL: define {{[^@]+}}@__cxx_global_var_init.3
-// CHECK-TLS3-SAME: () #[[ATTR0]] comdat($_ZN2STI2S4E2stE) !dbg [[DBG289:![0-9]+]] {
+// CHECK-TLS3-SAME: () #[[ATTR0]] !dbg [[DBG289:![0-9]+]] {
 // CHECK-TLS3-NEXT:  entry:
 // CHECK-TLS3-NEXT:    [[TMP0:%.*]] = load i8, i8* bitcast (i64* @_ZGVN2STI2S4E2stE to i8*), align 8, !dbg [[DBG290:![0-9]+]]
 // CHECK-TLS3-NEXT:    [[GUARD_UNINITIALIZED:%.*]] = icmp eq i8 [[TMP0]], 0, !dbg [[DBG290]]
@@ -5459,7 +5459,7 @@ int foobar() {
 //
 //
 // CHECK-TLS4-LABEL: define {{[^@]+}}@__cxx_global_var_init.3
-// CHECK-TLS4-SAME: () #[[ATTR7]] comdat($_ZN2STI2S4E2stE) !dbg [[DBG289:![0-9]+]] {
+// CHECK-TLS4-SAME: () #[[ATTR7]] !dbg [[DBG289:![0-9]+]] {
 // CHECK-TLS4-NEXT:  entry:
 // CHECK-TLS4-NEXT:    [[TMP0:%.*]] = load i8, i8* bitcast (i64* @_ZGVN2STI2S4E2stE to i8*), align 8, !dbg [[DBG290:![0-9]+]]
 // CHECK-TLS4-NEXT:    [[GUARD_UNINITIALIZED:%.*]] = icmp eq i8 [[TMP0]], 0, !dbg [[DBG290]]

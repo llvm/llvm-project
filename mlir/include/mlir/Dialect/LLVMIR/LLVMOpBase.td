@@ -32,6 +32,8 @@ def LLVM_Dialect : Dialect {
     static StringRef getDataLayoutAttrName() { return "llvm.data_layout"; }
     static StringRef getAlignAttrName() { return "llvm.align"; }
     static StringRef getNoAliasAttrName() { return "llvm.noalias"; }
+    static StringRef getNoAliasScopesAttrName() { return "noalias_scopes"; }
+    static StringRef getAliasScopesAttrName() { return "alias_scopes"; }
     static StringRef getLoopAttrName() { return "llvm.loop"; }
     static StringRef getParallelAccessAttrName() { return "parallel_access"; }
     static StringRef getLoopOptionsAttrName() { return "options"; }
@@ -130,8 +132,9 @@ def LLVM_AnyAggregate : Type<
 
 // Type constraint accepting any LLVM non-aggregate type, i.e. not structure or
 // array.
-def LLVM_AnyNonAggregate : Type<Neg<LLVM_AnyAggregate.predicate>,
-                               "LLVM non-aggregate type">;
+def LLVM_AnyNonAggregate : Type<And<[LLVM_Type.predicate,
+                                     Neg<LLVM_AnyAggregate.predicate>]>,
+                               "LLVM-compatible non-aggregate type">;
 
 // Type constraint accepting any LLVM vector type.
 def LLVM_AnyVector : Type<CPred<"::mlir::LLVM::isCompatibleVectorType($_self)">,
@@ -252,7 +255,7 @@ def LLVM_IntrPatterns {
 class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
                       list<int> overloadedResults, list<int> overloadedOperands,
                       list<OpTrait> traits, int numResults,
-                      bit requiresAccessGroup = 0>
+                      bit requiresAccessGroup = 0, bit requiresAliasScope = 0>
     : LLVM_OpBase<dialect, opName, traits>,
       Results<!if(!gt(numResults, 0), (outs LLVM_Type:$res), (outs))> {
   string resultPattern = !if(!gt(numResults, 1),
@@ -273,6 +276,9 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
     }] # !if(!gt(requiresAccessGroup, 0),
       "moduleTranslation.setAccessGroupsMetadata(op, inst);",
       "(void) inst;")
+    # !if(!gt(requiresAliasScope, 0),
+      "moduleTranslation.setAliasScopeMetadata(op, inst);",
+      "(void) inst;")
     # !if(!gt(numResults, 0), "$res = inst;", "");
 }
 
@@ -280,10 +286,11 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
 // the intrinsic into the LLVM dialect and prefixes its name with "intr.".
 class LLVM_IntrOp<string mnem, list<int> overloadedResults,
                   list<int> overloadedOperands, list<OpTrait> traits,
-                  int numResults, bit requiresAccessGroup = 0>
+                  int numResults, bit requiresAccessGroup = 0,
+                  bit requiresAliasScope = 0>
     : LLVM_IntrOpBase<LLVM_Dialect, "intr." # mnem, !subst(".", "_", mnem),
                       overloadedResults, overloadedOperands, traits,
-                      numResults, requiresAccessGroup>;
+                      numResults, requiresAccessGroup, requiresAliasScope>;
 
 // Base class for LLVM intrinsic operations returning no results. Places the
 // intrinsic into the LLVM dialect and prefixes its name with "intr.".

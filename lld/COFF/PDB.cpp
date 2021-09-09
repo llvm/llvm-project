@@ -266,6 +266,7 @@ static void pdbMakeAbsolute(SmallVectorImpl<char> &fileName) {
   if (config->pdbSourcePath.empty()) {
     sys::path::native(fileName);
     sys::fs::make_absolute(fileName);
+    sys::path::remove_dots(fileName, true);
     return;
   }
 

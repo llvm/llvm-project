@@ -167,10 +167,6 @@ get_local_func_address:
 # CHECK-NEXT:         Kind:            GLOBAL
 # CHECK-NEXT:         GlobalType:      I32
 # CHECK-NEXT:         GlobalMutable:   false
-# CHECK-NEXT:       - Module:          env
-# CHECK-NEXT:         Field:           func_external
-# CHECK-NEXT:         Kind:            FUNCTION
-# CHECK-NEXT:         SigIndex:        1
 # CHECK-NEXT:       - Module:          GOT.mem
 # CHECK-NEXT:         Field:           indirect_func
 # CHECK-NEXT:         Kind:            GLOBAL
@@ -197,7 +193,7 @@ get_local_func_address:
 # CHECK-NEXT:     Exports:
 # CHECK-NEXT:       - Name:            __wasm_call_ctors
 # CHECK-NEXT:         Kind:            FUNCTION
-# CHECK-NEXT:         Index:           1
+# CHECK-NEXT:         Index:           0
 
 # check for elem segment initialized with __table_base global as offset
 
@@ -206,17 +202,17 @@ get_local_func_address:
 # CHECK-NEXT:       - Offset:
 # CHECK-NEXT:           Opcode:          GLOBAL_GET
 # CHECK-NEXT:           Index:           2
-# CHECK-NEXT:         Functions:       [ 4, 3 ]
+# CHECK-NEXT:         Functions:       [ 3, 2 ]
 
 # check the generated code in __wasm_call_ctors and __wasm_apply_data_relocs functions
 # TODO(sbc): Disassemble and verify instructions.
 
 # CHECK:        - Type:            CODE
 # CHECK-NEXT:     Functions:
-# CHECK-NEXT:       - Index:           1
+# CHECK-NEXT:       - Index:           0
 # CHECK-NEXT:         Locals:          []
-# CHECK-NEXT:         Body:            10020B
-# CHECK-NEXT:       - Index:           2
+# CHECK-NEXT:         Body:            10010B
+# CHECK-NEXT:       - Index:           1
 # CHECK-NEXT:         Locals:          []
 # CHECK-NEXT:         Body:            230141046A2304360200230141086A230241016A3602002301410C6A230141006A360200230141106A2305360200230141146A230641046A3602000B
 

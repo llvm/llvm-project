@@ -553,9 +553,8 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
                 messages.Say(
                     "Actual procedure argument has an implicit interface "
                     "which is not known to be compatible with %s which has an "
-                    "explicit interface"_err_en_US,
+                    "explicit interface"_en_US,
                     dummyName);
-                return;
               }
             }
           } else { // 15.5.2.9(2,3)

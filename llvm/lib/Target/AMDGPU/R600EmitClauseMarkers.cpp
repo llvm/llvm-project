@@ -13,8 +13,8 @@
 /// initiated by CF_ALU instructions.
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPU.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "MCTargetDesc/R600MCTargetDesc.h"
+#include "R600.h"
 #include "R600Defines.h"
 #include "R600Subtarget.h"
 

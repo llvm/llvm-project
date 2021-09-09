@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 
 // template<class T>
 // concept contiguous_iterator;
@@ -102,9 +101,10 @@ static_assert(!std::contiguous_iterator<mismatch_value_iter_ref_t>);
 struct wrong_iter_reference_t {
     typedef std::contiguous_iterator_tag    iterator_category;
     typedef short                           value_type;
+    typedef short                           element_type;
     typedef std::ptrdiff_t                  difference_type;
-    typedef int*                            pointer;
-    typedef short&                          reference;
+    typedef short*                          pointer;
+    typedef int&                            reference;
     typedef wrong_iter_reference_t          self;
 
     wrong_iter_reference_t();
@@ -132,40 +132,6 @@ struct wrong_iter_reference_t {
 
 static_assert(std::random_access_iterator<wrong_iter_reference_t>);
 static_assert(!std::contiguous_iterator<wrong_iter_reference_t>);
-
-struct no_element_type {
-    typedef std::contiguous_iterator_tag    iterator_category;
-    typedef int                             value_type;
-    typedef std::ptrdiff_t                  difference_type;
-    typedef int*                            pointer;
-    typedef int&                            reference;
-    typedef no_element_type                 self;
-
-    no_element_type();
-
-    reference operator*() const;
-    pointer operator->() const;
-    auto operator<=>(const self&) const = default;
-
-    self& operator++();
-    self operator++(int);
-
-    self& operator--();
-    self operator--(int);
-
-    self& operator+=(difference_type n);
-    self operator+(difference_type n) const;
-    friend self operator+(difference_type n, self x);
-
-    self& operator-=(difference_type n);
-    self operator-(difference_type n) const;
-    difference_type operator-(const self& n) const;
-
-    reference operator[](difference_type n) const;
-};
-
-static_assert(std::random_access_iterator<no_element_type>);
-static_assert(!std::contiguous_iterator<no_element_type>);
 
 struct to_address_wrong_return_type {
     typedef std::contiguous_iterator_tag    iterator_category;

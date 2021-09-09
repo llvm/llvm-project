@@ -131,6 +131,13 @@ std::string printDefinition(const Decl *D, const PrintingPolicy &PP) {
   return Definition;
 }
 
+const char *getMarkdownLanguage(const ASTContext &Ctx) {
+  const auto &LangOpts = Ctx.getLangOpts();
+  if (LangOpts.ObjC && LangOpts.CPlusPlus)
+    return "objective-cpp";
+  return LangOpts.ObjC ? "objective-c" : "cpp";
+}
+
 std::string printType(QualType QT, const PrintingPolicy &PP) {
   // TypePrinter doesn't resolve decltypes, so resolve them here.
   // FIXME: This doesn't handle composite types that contain a decltype in them.
@@ -731,7 +738,7 @@ llvm::Optional<HoverInfo> getHoverContents(const Attr *A, ParsedAST &AST) {
     llvm::raw_string_ostream OS(HI.Definition);
     A->printPretty(OS, AST.getASTContext().getPrintingPolicy());
   }
-  // FIXME: attributes have documentation, can we get at that?
+  HI.Documentation = Attr::getDocumentation(A->getKind()).str();
   return HI;
 }
 
@@ -920,6 +927,22 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
   if (TokensTouchingCursor.empty())
     return llvm::None;
 
+  // Show full header file path if cursor is on include directive.
+  if (const auto MainFilePath =
+          getCanonicalPath(SM.getFileEntryForID(SM.getMainFileID()), SM)) {
+    for (const auto &Inc : AST.getIncludeStructure().MainFileIncludes) {
+      if (Inc.Resolved.empty() || Inc.HashLine != Pos.line)
+        continue;
+      HoverInfo HI;
+      HI.Name = std::string(llvm::sys::path::filename(Inc.Resolved));
+      // FIXME: We don't have a fitting value for Kind.
+      HI.Definition =
+          URIForFile::canonicalize(Inc.Resolved, *MainFilePath).file().str();
+      HI.DefinitionLanguage = "";
+      return HI;
+    }
+  }
+
   // To be used as a backup for highlighting the selected token, we use back as
   // it aligns better with biases elsewhere (editors tend to send the position
   // for the left of the hovered token).
@@ -991,6 +1014,7 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
   if (auto Formatted =
           tooling::applyAllReplacements(HI->Definition, Replacements))
     HI->Definition = *Formatted;
+  HI->DefinitionLanguage = getMarkdownLanguage(AST.getASTContext());
   HI->SymRange = halfOpenToRange(SM, HighlightRange);
 
   return HI;
@@ -998,6 +1022,7 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
 
 markup::Document HoverInfo::present() const {
   markup::Document Output;
+
   // Header contains a text of the form:
   // variable `var`
   //
@@ -1098,7 +1123,8 @@ markup::Document HoverInfo::present() const {
                                            : Definition;
     // Note that we don't print anything for global namespace, to not annoy
     // non-c++ projects or projects that are not making use of namespaces.
-    Output.addCodeBlock(ScopeComment + DefinitionWithAccess);
+    Output.addCodeBlock(ScopeComment + DefinitionWithAccess,
+                        DefinitionLanguage);
   }
 
   return Output;

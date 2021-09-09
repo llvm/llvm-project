@@ -31,12 +31,15 @@
 // the compile unit using the name index if it is split.
 // RUN: %clang -c -o %t-1.o --target=x86_64-pc-linux -gdwarf-5 -gsplit-dwarf -gpubnames %s
 // RUN: %clang -c -o %t-2.o --target=x86_64-pc-linux -gdwarf-5 -gsplit-dwarf -gpubnames %S/Inputs/find-variable-file-2.cpp
-// RUN: ld.lld %t-1.o %t-2.o -o %t
+// RUN: %clang -c -o %t-3.o --target=x86_64-pc-linux -gdwarf-5 -gsplit-dwarf -gpubnames %S/Inputs/find-variable-file-3.cpp
+// RUN: ld.lld %t-1.o %t-2.o %t-3.o -o %t
 // RUN: llvm-readobj --sections %t | FileCheck %s --check-prefix NAMES
 // RUN: lldb-test symbols --file=find-variable-file.cpp --find=variable %t | \
 // RUN:   FileCheck --check-prefix=ONE %s
 // RUN: lldb-test symbols --file=find-variable-file-2.cpp --find=variable %t | \
 // RUN:   FileCheck --check-prefix=TWO %s
+// RUN: lldb-test symbols --file=find-variable-file-3.cpp --find=variable \
+// RUN:   --name=notexists %t
 
 // NAMES: Name: .debug_names
 

@@ -29,7 +29,7 @@ lpad:                                             ; preds = %entry
 ; X64-NEXT: .set .Lmain$parent_frame_offset, 32
 ; X64-NEXT: .long   (.Llsda_end0-.Llsda_begin0)/16 # Number of call sites
 ; X64-NEXT: .Llsda_begin0:
-; X64-NEXT: .long   .Ltmp0@IMGREL+1 # LabelStart
+; X64-NEXT: .long   .Ltmp0@IMGREL # LabelStart
 ; X64-NEXT: .long   .Ltmp1@IMGREL+1 # LabelEnd
 ; X64-NEXT: .long   "?dtor$2@?0?main@4HA"@IMGREL # FinallyFunclet
 ; X64-NEXT: .long   0               # Null

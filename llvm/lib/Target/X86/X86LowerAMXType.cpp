@@ -40,8 +40,10 @@
 //
 #include "X86.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -56,66 +58,44 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 using namespace PatternMatch;
 
 #define DEBUG_TYPE "lower-amx-type"
 
-static AllocaInst *createAllocaInstAtEntry(IRBuilder<> &Builder,
-                                           BasicBlock *BB) {
+static bool isAMXCast(Instruction *II) {
+  return match(II,
+               m_Intrinsic<Intrinsic::x86_cast_vector_to_tile>(m_Value())) ||
+         match(II, m_Intrinsic<Intrinsic::x86_cast_tile_to_vector>(m_Value()));
+}
+
+static AllocaInst *createAllocaInstAtEntry(IRBuilder<> &Builder, BasicBlock *BB,
+                                           Type *Ty) {
   Function &F = *BB->getParent();
   Module *M = BB->getModule();
   const DataLayout &DL = M->getDataLayout();
 
-  Type *V256I32Ty = VectorType::get(Builder.getInt32Ty(), 256, false);
   LLVMContext &Ctx = Builder.getContext();
   auto AllocaAlignment = DL.getPrefTypeAlign(Type::getX86_AMXTy(Ctx));
   unsigned AllocaAS = DL.getAllocaAddrSpace();
   AllocaInst *AllocaRes =
-      new AllocaInst(V256I32Ty, AllocaAS, "", &F.getEntryBlock().front());
+      new AllocaInst(Ty, AllocaAS, "", &F.getEntryBlock().front());
   AllocaRes->setAlignment(AllocaAlignment);
   return AllocaRes;
 }
 
-namespace {
-class X86LowerAMXType {
-  Function &Func;
-  TargetMachine *TM = nullptr;
-
-  // In AMX intrinsics we let Shape = {Row, Col}, but the
-  // RealCol = Col / ElementSize. We may use the RealCol
-  // as a new Row for other new created AMX intrinsics.
-  std::map<Value *, Value *> Col2Row;
-
-public:
-  X86LowerAMXType(Function &F, TargetMachine *TargetM) : Func(F), TM(TargetM) {}
-  bool visit();
-  void combineLoadBitcast(LoadInst *LD, BitCastInst *Bitcast);
-  void combineBitcastStore(BitCastInst *Bitcast, StoreInst *ST);
-  bool transformBitcast(BitCastInst *Bitcast);
-  std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo);
-  Value *getRowFromCol(Instruction *II, Value *V, unsigned Granularity);
-};
-
-Value *X86LowerAMXType::getRowFromCol(Instruction *II, Value *V,
-                                      unsigned Granularity) {
-  if (Col2Row.count(V))
-    return Col2Row[V];
-  IRBuilder<> Builder(&*II->getParent()->getFirstInsertionPt());
-  if (auto *I = dyn_cast<Instruction>(V)) {
-    BasicBlock::iterator Iter = I->getIterator();
-    ++Iter;
-    Builder.SetInsertPoint(&*Iter);
-  }
-  ConstantInt *Gran = Builder.getInt16(Granularity);
-  Value *RealRow = Builder.CreateUDiv(V, Gran);
-  Col2Row[V] = RealRow;
-  return RealRow;
+static Instruction *getFirstNonAllocaInTheEntryBlock(Function &F) {
+  for (Instruction &I : F.getEntryBlock())
+    if (!isa<AllocaInst>(&I))
+      return &I;
+  llvm_unreachable("No terminator in the entry block!");
 }
 
-std::pair<Value *, Value *> X86LowerAMXType::getShape(IntrinsicInst *II,
-                                                      unsigned OpNo) {
+static std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo) {
+  IRBuilder<> Builder(II);
   Value *Row = nullptr, *Col = nullptr;
   switch (II->getIntrinsicID()) {
   default:
@@ -144,14 +124,32 @@ std::pair<Value *, Value *> X86LowerAMXType::getShape(IntrinsicInst *II,
       Col = II->getArgOperand(2);
       break;
     case 5:
-      Row = II->getArgOperand(2);
-      // FIXME: There is a design bug for AMX shape, which the Col should be
-      // Col/4 if it will be used as Row, but current Greedy RA can't handle
-      // this case well, it may failed if we generate a new Shape definition.
-      // So Let's just do it in O0 first.
-      // Row = Row / 4
-      if (TM->getOptLevel() == CodeGenOpt::None)
-        Row = getRowFromCol(II, Row, 4);
+      if (isa<ConstantInt>(II->getArgOperand(2)))
+        Row = Builder.getInt16(
+            (cast<ConstantInt>(II->getOperand(2))->getSExtValue()) / 4);
+      else if (isa<Instruction>(II->getArgOperand(2))) {
+        // When it is not a const value and it is not a function argument, we
+        // create Row after the definition of II->getOperand(2) instead of
+        // before II. For example, II is %118, we try to getshape for %117:
+        //   %117 = call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x
+        //   i32> %115).
+        //   %118 = call x86_amx @llvm.x86.tdpbf16ps.internal(i16
+        //   %104, i16 %105, i16 %106, x86_amx %110, x86_amx %114, x86_amx
+        //   %117).
+        // If we create %row = udiv i16 %106, 4 before %118(aka. II), then its
+        // definition is after its user(new tileload for %117).
+        // So, the best choice is to create %row right after the definition of
+        // %106.
+        Builder.SetInsertPoint(cast<Instruction>(II->getOperand(2)));
+        Row = Builder.CreateUDiv(II->getOperand(2), Builder.getInt16(4));
+        cast<Instruction>(Row)->moveAfter(cast<Instruction>(II->getOperand(2)));
+      } else {
+        // When it is not a const value and it is a function argument, we create
+        // Row at the entry bb.
+        IRBuilder<> NewBuilder(
+            getFirstNonAllocaInTheEntryBlock(*II->getFunction()));
+        Row = NewBuilder.CreateUDiv(II->getOperand(2), NewBuilder.getInt16(4));
+      }
       Col = II->getArgOperand(1);
       break;
     }
@@ -161,6 +159,23 @@ std::pair<Value *, Value *> X86LowerAMXType::getShape(IntrinsicInst *II,
 
   return std::make_pair(Row, Col);
 }
+
+namespace {
+class X86LowerAMXType {
+  Function &Func;
+
+  // In AMX intrinsics we let Shape = {Row, Col}, but the
+  // RealCol = Col / ElementSize. We may use the RealCol
+  // as a new Row for other new created AMX intrinsics.
+  std::map<Value *, Value *> Col2Row;
+
+public:
+  X86LowerAMXType(Function &F) : Func(F) {}
+  bool visit();
+  void combineLoadBitcast(LoadInst *LD, BitCastInst *Bitcast);
+  void combineBitcastStore(BitCastInst *Bitcast, StoreInst *ST);
+  bool transformBitcast(BitCastInst *Bitcast);
+};
 
 // %src = load <256 x i32>, <256 x i32>* %addr, align 64
 // %2 = bitcast <256 x i32> %src to x86_amx
@@ -230,8 +245,8 @@ bool X86LowerAMXType::transformBitcast(BitCastInst *Bitcast) {
   Value *I8Ptr, *Stride;
   auto *Src = Bitcast->getOperand(0);
 
-  auto Prepare = [&]() {
-    AllocaAddr = createAllocaInstAtEntry(Builder, Bitcast->getParent());
+  auto Prepare = [&](Type *MemTy) {
+    AllocaAddr = createAllocaInstAtEntry(Builder, Bitcast->getParent(), MemTy);
     I8Ptr = Builder.CreateBitCast(AllocaAddr, Builder.getInt8PtrTy());
     Stride = Builder.getInt64(64);
   };
@@ -250,7 +265,7 @@ bool X86LowerAMXType::transformBitcast(BitCastInst *Bitcast) {
     auto *II = dyn_cast<IntrinsicInst>(U.getUser());
     if (!II)
       return false; // May be bitcast from x86amx to <256 x i32>.
-    Prepare();
+    Prepare(Bitcast->getOperand(0)->getType());
     Builder.CreateStore(Src, AllocaAddr);
     // TODO we can pick an constant operand for the shape.
     Value *Row = nullptr, *Col = nullptr;
@@ -270,7 +285,7 @@ bool X86LowerAMXType::transformBitcast(BitCastInst *Bitcast) {
     auto *II = dyn_cast<IntrinsicInst>(Src);
     if (!II)
       return false; // May be bitcast from <256 x i32> to x86amx.
-    Prepare();
+    Prepare(Bitcast->getType());
     Value *Row = II->getOperand(0);
     Value *Col = II->getOperand(1);
     std::array<Value *, 5> Args = {Row, Col, I8Ptr, Stride, Src};
@@ -637,6 +652,366 @@ bool X86VolatileTileData::volatileTileData() {
 
 namespace {
 
+class X86LowerAMXCast {
+  Function &Func;
+
+public:
+  X86LowerAMXCast(Function &F) : Func(F) {}
+  bool combineAMXcast(TargetLibraryInfo *TLI);
+  bool transformAMXCast(IntrinsicInst *AMXCast);
+  bool transformAllAMXCast();
+  bool optimizeAMXCastFromPhi(IntrinsicInst *CI, PHINode *PN,
+                              SmallSetVector<Instruction *, 16> &DeadInst);
+};
+
+static bool DCEInstruction(Instruction *I,
+                           SmallSetVector<Instruction *, 16> &WorkList,
+                           const TargetLibraryInfo *TLI) {
+  if (isInstructionTriviallyDead(I, TLI)) {
+    salvageDebugInfo(*I);
+    salvageKnowledge(I);
+
+    // Null out all of the instruction's operands to see if any operand becomes
+    // dead as we go.
+    for (unsigned i = 0, e = I->getNumOperands(); i != e; ++i) {
+      Value *OpV = I->getOperand(i);
+      I->setOperand(i, nullptr);
+
+      if (!OpV->use_empty() || I == OpV)
+        continue;
+
+      // If the operand is an instruction that became dead as we nulled out the
+      // operand, and if it is 'trivially' dead, delete it in a future loop
+      // iteration.
+      if (Instruction *OpI = dyn_cast<Instruction>(OpV)) {
+        if (isInstructionTriviallyDead(OpI, TLI)) {
+          WorkList.insert(OpI);
+        }
+      }
+    }
+    I->eraseFromParent();
+    return true;
+  }
+  return false;
+}
+
+/// This function handles following case
+///
+///     A  ->  B    amxcast
+///     PHI
+///     B  ->  A    amxcast
+///
+/// All the related PHI nodes can be replaced by new PHI nodes with type A.
+/// The uses of \p CI can be changed to the new PHI node corresponding to \p PN.
+bool X86LowerAMXCast::optimizeAMXCastFromPhi(
+    IntrinsicInst *CI, PHINode *PN,
+    SmallSetVector<Instruction *, 16> &DeadInst) {
+  IRBuilder<> Builder(CI);
+  Value *Src = CI->getOperand(0);
+  Type *SrcTy = Src->getType(); // Type B
+  Type *DestTy = CI->getType(); // Type A
+
+  SmallVector<PHINode *, 4> PhiWorklist;
+  SmallSetVector<PHINode *, 4> OldPhiNodes;
+
+  // Find all of the A->B casts and PHI nodes.
+  // We need to inspect all related PHI nodes, but PHIs can be cyclic, so
+  // OldPhiNodes is used to track all known PHI nodes, before adding a new
+  // PHI to PhiWorklist, it is checked against and added to OldPhiNodes first.
+  PhiWorklist.push_back(PN);
+  OldPhiNodes.insert(PN);
+  while (!PhiWorklist.empty()) {
+    auto *OldPN = PhiWorklist.pop_back_val();
+    for (Value *IncValue : OldPN->incoming_values()) {
+      // TODO: currently, We ignore cases where it is a const. In the future, we
+      // might support const.
+      if (isa<Constant>(IncValue))
+        return false;
+
+      if (auto *PNode = dyn_cast<PHINode>(IncValue)) {
+        if (OldPhiNodes.insert(PNode))
+          PhiWorklist.push_back(PNode);
+        continue;
+      }
+      Instruction *ACI = dyn_cast<Instruction>(IncValue);
+      if (ACI && isAMXCast(ACI)) {
+        // Verify it's a A->B cast.
+        Type *TyA = ACI->getOperand(0)->getType();
+        Type *TyB = ACI->getType();
+        if (TyA != DestTy || TyB != SrcTy)
+          return false;
+        continue;
+      }
+      return false;
+    }
+  }
+
+  // Check that each user of each old PHI node is something that we can
+  // rewrite, so that all of the old PHI nodes can be cleaned up afterwards.
+  for (auto *OldPN : OldPhiNodes) {
+    for (User *V : OldPN->users()) {
+      Instruction *ACI = dyn_cast<Instruction>(V);
+      if (ACI && isAMXCast(ACI)) {
+        // Verify it's a B->A cast.
+        Type *TyB = ACI->getOperand(0)->getType();
+        Type *TyA = ACI->getType();
+        if (TyA != DestTy || TyB != SrcTy)
+          return false;
+      } else if (auto *PHI = dyn_cast<PHINode>(V)) {
+        // As long as the user is another old PHI node, then even if we don't
+        // rewrite it, the PHI web we're considering won't have any users
+        // outside itself, so it'll be dead.
+        // example:
+        //   bb.0:
+        //      %0 = amxcast ...
+        //   bb.1:
+        //      %1 = amxcast ...
+        //   bb.2:
+        //      %goodphi = phi %0, %1
+        //      %3 = amxcast %goodphi
+        //   bb.3:
+        //      %goodphi2 = phi %0, %goodphi
+        //      %4 = amxcast %goodphi2
+        // When optimizeAMXCastFromPhi process %3 and %goodphi, %goodphi2 is
+        // outside the phi-web, so the combination stop When
+        // optimizeAMXCastFromPhi process %4 and %goodphi2, the optimization
+        // will be done.
+        if (OldPhiNodes.count(PHI) == 0)
+          return false;
+      } else
+        return false;
+    }
+  }
+
+  // For each old PHI node, create a corresponding new PHI node with a type A.
+  SmallDenseMap<PHINode *, PHINode *> NewPNodes;
+  for (auto *OldPN : OldPhiNodes) {
+    Builder.SetInsertPoint(OldPN);
+    PHINode *NewPN = Builder.CreatePHI(DestTy, OldPN->getNumOperands());
+    NewPNodes[OldPN] = NewPN;
+  }
+
+  // Fill in the operands of new PHI nodes.
+  for (auto *OldPN : OldPhiNodes) {
+    PHINode *NewPN = NewPNodes[OldPN];
+    for (unsigned j = 0, e = OldPN->getNumOperands(); j != e; ++j) {
+      Value *V = OldPN->getOperand(j);
+      Value *NewV = nullptr;
+      Instruction *ACI = dyn_cast<Instruction>(V);
+      // There should not be a AMXcast from a const.
+      if (ACI && isAMXCast(ACI))
+        NewV = ACI->getOperand(0);
+      else if (auto *PrevPN = dyn_cast<PHINode>(V))
+        NewV = NewPNodes[PrevPN];
+      assert(NewV);
+      NewPN->addIncoming(NewV, OldPN->getIncomingBlock(j));
+    }
+  }
+
+  // Traverse all accumulated PHI nodes and process its users,
+  // which are Stores and BitcCasts. Without this processing
+  // NewPHI nodes could be replicated and could lead to extra
+  // moves generated after DeSSA.
+  // If there is a store with type B, change it to type A.
+
+  // Replace users of BitCast B->A with NewPHI. These will help
+  // later to get rid of a closure formed by OldPHI nodes.
+  for (auto *OldPN : OldPhiNodes) {
+    PHINode *NewPN = NewPNodes[OldPN];
+    for (User *V : make_early_inc_range(OldPN->users())) {
+      Instruction *ACI = dyn_cast<Instruction>(V);
+      if (ACI && isAMXCast(ACI)) {
+        Type *TyB = ACI->getOperand(0)->getType();
+        Type *TyA = ACI->getType();
+        assert(TyA == DestTy && TyB == SrcTy);
+        (void)TyA;
+        (void)TyB;
+        ACI->replaceAllUsesWith(NewPN);
+        DeadInst.insert(ACI);
+      } else if (auto *PHI = dyn_cast<PHINode>(V)) {
+        // We don't need to push PHINode into DeadInst since they are operands
+        // of rootPN DCE can safely delete rootPN's operands if rootPN is dead.
+        assert(OldPhiNodes.contains(PHI));
+        (void)PHI;
+      } else
+        llvm_unreachable("all uses should be handled");
+    }
+  }
+  return true;
+}
+
+bool X86LowerAMXCast::combineAMXcast(TargetLibraryInfo *TLI) {
+  bool Change = false;
+  // Collect tile cast instruction.
+  SmallVector<Instruction *, 8> Vec2TileInsts;
+  SmallVector<Instruction *, 8> Tile2VecInsts;
+  SmallVector<Instruction *, 8> PhiCastWorkList;
+  SmallSetVector<Instruction *, 16> DeadInst;
+  for (BasicBlock &BB : Func) {
+    for (Instruction &I : BB) {
+      Value *Vec;
+      if (match(&I,
+                m_Intrinsic<Intrinsic::x86_cast_vector_to_tile>(m_Value(Vec))))
+        Vec2TileInsts.push_back(&I);
+      else if (match(&I, m_Intrinsic<Intrinsic::x86_cast_tile_to_vector>(
+                             m_Value(Vec))))
+        Tile2VecInsts.push_back(&I);
+    }
+  }
+
+  auto Convert = [&](SmallVectorImpl<Instruction *> &Insts, Intrinsic::ID IID) {
+    for (auto *Inst : Insts) {
+      for (User *U : Inst->users()) {
+        IntrinsicInst *II = dyn_cast<IntrinsicInst>(U);
+        if (!II || II->getIntrinsicID() != IID)
+          continue;
+        // T1 = vec2tile V0
+        // V2 = tile2vec T1
+        // V3 = OP V2
+        // -->
+        // T1 = vec2tile V0
+        // V2 = tile2vec T1
+        // V3 = OP V0
+        II->replaceAllUsesWith(Inst->getOperand(0));
+        Change = true;
+      }
+    }
+  };
+
+  Convert(Vec2TileInsts, Intrinsic::x86_cast_tile_to_vector);
+  Convert(Tile2VecInsts, Intrinsic::x86_cast_vector_to_tile);
+
+  auto EraseInst = [&](SmallVectorImpl<Instruction *> &Insts) {
+    for (auto *Inst : Insts) {
+      if (Inst->use_empty()) {
+        Inst->eraseFromParent();
+        Change = true;
+      }
+    }
+  };
+
+  EraseInst(Vec2TileInsts);
+  EraseInst(Tile2VecInsts);
+
+  // Handle the A->B->A cast, and there is an intervening PHI node.
+  for (BasicBlock &BB : Func) {
+    for (Instruction &I : BB) {
+      if (isAMXCast(&I)) {
+        if (isa<PHINode>(I.getOperand(0)))
+          PhiCastWorkList.push_back(&I);
+      }
+    }
+  }
+  for (auto *I : PhiCastWorkList) {
+    // We skip the dead Amxcast.
+    if (DeadInst.contains(I))
+      continue;
+    PHINode *PN = cast<PHINode>(I->getOperand(0));
+    if (optimizeAMXCastFromPhi(cast<IntrinsicInst>(I), PN, DeadInst)) {
+      DeadInst.insert(PN);
+      Change = true;
+    }
+  }
+
+  // Since we create new phi and merge AMXCast, some old phis and AMXCast might
+  // have no uses. We do some DeadCodeElimination for them.
+  while (!DeadInst.empty()) {
+    Instruction *I = DeadInst.pop_back_val();
+    Change |= DCEInstruction(I, DeadInst, TLI);
+  }
+  return Change;
+}
+
+// There might be remaining AMXcast after combineAMXcast and they should be
+// handled elegantly.
+bool X86LowerAMXCast::transformAMXCast(IntrinsicInst *AMXCast) {
+  IRBuilder<> Builder(AMXCast);
+  AllocaInst *AllocaAddr;
+  Value *I8Ptr, *Stride;
+  auto *Src = AMXCast->getOperand(0);
+
+  auto Prepare = [&](Type *MemTy) {
+    AllocaAddr = createAllocaInstAtEntry(Builder, AMXCast->getParent(), MemTy);
+    I8Ptr = Builder.CreateBitCast(AllocaAddr, Builder.getInt8PtrTy());
+    Stride = Builder.getInt64(64);
+  };
+
+  if (AMXCast->getType()->isX86_AMXTy()) {
+    // %2 = amxcast <225 x i32> %src to x86_amx
+    // call void @llvm.x86.tilestored64.internal(i16 15, i16 60,
+    //                                           i8* %addr3, i64 60, x86_amx %2)
+    // -->
+    // %addr = alloca <225 x i32>, align 64
+    // store <225 x i32> %src, <225 x i32>* %addr, align 64
+    // %addr2 = bitcast <225 x i32>* %addr to i8*
+    // %2 = call x86_amx @llvm.x86.tileloadd64.internal(i16 15, i16 60,
+    //                                                  i8* %addr2,
+    //                                                  i64 60)
+    // call void @llvm.x86.tilestored64.internal(i16 15, i16 60,
+    //                                           i8* %addr3, i64 60, x86_amx %2)
+    Use &U = *(AMXCast->use_begin());
+    unsigned OpNo = U.getOperandNo();
+    auto *II = dyn_cast<IntrinsicInst>(U.getUser());
+    if (!II)
+      return false; // May be bitcast from x86amx to <256 x i32>.
+    Prepare(AMXCast->getOperand(0)->getType());
+    Builder.CreateStore(Src, AllocaAddr);
+    // TODO we can pick an constant operand for the shape.
+    Value *Row = nullptr, *Col = nullptr;
+    std::tie(Row, Col) = getShape(II, OpNo);
+    std::array<Value *, 4> Args = {
+        Row, Col, I8Ptr, Builder.CreateSExt(Col, Builder.getInt64Ty())};
+    Value *NewInst = Builder.CreateIntrinsic(
+        Intrinsic::x86_tileloadd64_internal, None, Args);
+    AMXCast->replaceAllUsesWith(NewInst);
+    AMXCast->eraseFromParent();
+  } else {
+    // %2 = amxcast x86_amx %src to <225 x i32>
+    // -->
+    // %addr = alloca <225 x i32>, align 64
+    // %addr2 = bitcast <225 x i32>* to i8*
+    // call void @llvm.x86.tilestored64.internal(i16 %row, i16 %col,
+    //                                           i8* %addr2, i64 %stride)
+    // %2 = load <225 x i32>, <225 x i32>* %addr, align 64
+    auto *II = dyn_cast<IntrinsicInst>(Src);
+    if (!II)
+      return false; // May be bitcast from <256 x i32> to x86amx.
+    Prepare(AMXCast->getType());
+    Value *Row = II->getOperand(0);
+    Value *Col = II->getOperand(1);
+    std::array<Value *, 5> Args = {
+        Row, Col, I8Ptr, Builder.CreateSExt(Col, Builder.getInt64Ty()), Src};
+    Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, None, Args);
+    Value *NewInst = Builder.CreateLoad(AMXCast->getType(), AllocaAddr);
+    AMXCast->replaceAllUsesWith(NewInst);
+    AMXCast->eraseFromParent();
+  }
+
+  return true;
+}
+
+bool X86LowerAMXCast::transformAllAMXCast() {
+  bool Change = false;
+  // Collect tile cast instruction.
+  SmallVector<Instruction *, 8> WorkLists;
+  for (BasicBlock &BB : Func) {
+    for (Instruction &I : BB) {
+      if (isAMXCast(&I))
+        WorkLists.push_back(&I);
+    }
+  }
+
+  for (auto *Inst : WorkLists) {
+    Change |= transformAMXCast(cast<IntrinsicInst>(Inst));
+  }
+
+  return Change;
+}
+
+} // anonymous namespace
+
+namespace {
+
 class X86LowerAMXTypeLegacyPass : public FunctionPass {
 public:
   static char ID;
@@ -646,10 +1021,18 @@ public:
   }
 
   bool runOnFunction(Function &F) override {
+    bool C = false;
     TargetMachine *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+    TargetLibraryInfo *TLI =
+        &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
+    X86LowerAMXCast LAC(F);
+    C |= LAC.combineAMXcast(TLI);
+    // There might be remaining AMXcast after combineAMXcast and they should be
+    // handled elegantly.
+    C |= LAC.transformAllAMXCast();
 
-    X86LowerAMXType LAT(F, TM);
-    bool C = LAT.visit();
+    X86LowerAMXType LAT(F);
+    C |= LAT.visit();
 
     // Prepare for fast register allocation at O0.
     // Todo: May better check the volatile model of AMX code, not just
@@ -671,6 +1054,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<TargetPassConfig>();
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
   }
 };
 
@@ -681,6 +1065,7 @@ char X86LowerAMXTypeLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(X86LowerAMXTypeLegacyPass, DEBUG_TYPE, PassName, false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(X86LowerAMXTypeLegacyPass, DEBUG_TYPE, PassName, false,
                     false)
 

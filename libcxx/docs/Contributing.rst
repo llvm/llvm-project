@@ -71,7 +71,7 @@ Working on large features
 =========================
 
 Libc++ makes no guarantees about the implementation status or the ABI stability
-of features that have not been ratified in the C++ Standard yet. After the C++
+of features that have not yet been ratified in the C++ Standard. After the C++
 Standard is ratified libc++ promises a conforming and ABI-stable
 implementation. When working on a large new feature in the ratified version of
 the C++ Standard that can't be finished before the next release branch is
@@ -87,29 +87,29 @@ customers. This is done by the CMake option
 the following steps are required to guard the new library with the CMake
 option.
 
-* ``CMakeLists.txt`` add
+* ``libcxx/CMakeLists.txt``: Add
 
   .. code-block:: cmake
 
     config_define_if_not(LIBCXX_ENABLE_INCOMPLETE_FEATURES _LIBCPP_HAS_NO_INCOMPLETE_FOO)
 
-* ``libcxx/include/__config_site.in`` add
+* ``libcxx/include/__config_site.in``: Add
 
   .. code-block:: c++
 
     #cmakedefine _LIBCPP_HAS_NO_INCOMPLETE_FOO
 
-* ``include/foo`` the contents of the file should be guarded in an ``ifdef``
-  and always include ``<version>``
+* ``libcxx/include/foo``: The contents of the file should be guarded in an
+  ``ifdef`` and always include ``<version>``
 
   .. code-block:: c++
 
     #ifndef _LIBCPP_FOO
     #define _LIBCPP_FOO
 
-    // Make sure all feature tests macros are always available.
+    // Make sure all feature-test macros are available.
     #include <version>
-    // Only enable the contents of the header when libc++ was build with LIBCXX_ENABLE_INCOMPLETE_FEATURES enabled
+    // Enable the contents of the header only when libc++ was built with LIBCXX_ENABLE_INCOMPLETE_FEATURES.
     #if !defined(_LIBCPP_HAS_NO_INCOMPLETE_FOO)
 
     ...
@@ -117,8 +117,8 @@ option.
     #endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_FO0)
     #endif // _LIBCPP_FOO
 
-* ``src/CMakeLists.txt`` when the library has a file ``foo.cpp`` it should only
-  be added when ``LIBCXX_ENABLE_INCOMPLETE_FEATURES`` is enabled
+* ``libcxx/src/CMakeLists.txt``: When the library has a file ``foo.cpp`` it
+  should only be added when ``LIBCXX_ENABLE_INCOMPLETE_FEATURES`` is enabled
 
   .. code-block:: cmake
 
@@ -128,25 +128,26 @@ option.
       )
     endif()
 
-* ``utils/generate_feature_test_macro_components.py`` add to ``lit_markup``
+* ``libcxx/utils/generate_feature_test_macro_components.py``: Add to
+  ``lit_markup``
 
   .. code-block:: python
 
     "foo": ["UNSUPPORTED: libcpp-has-no-incomplete-foo"],
 
-* ``utils/generate_header_inclusion_tests.py`` add to ``lit_markup``
+* ``libcxx/utils/generate_header_inclusion_tests.py``: Add to ``lit_markup``
 
   .. code-block:: python
 
     "foo": ["UNSUPPORTED: libcpp-has-no-incomplete-foo"],
 
-* ``utils/generate_header_tests.py`` add to ``header_markup``
+* ``libcxx/utils/generate_header_tests.py``: Add to ``header_markup``
 
   .. code-block:: python
 
     "foo": ["ifndef _LIBCPP_HAS_NO_INCOMPLETE_FOO"],
 
-* ``utils/libcxx/test/features.py`` add to ``macros``
+* ``libcxx/utils/libcxx/test/features.py``: Add to ``macros``
 
   .. code-block:: python
 

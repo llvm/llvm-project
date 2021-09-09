@@ -105,6 +105,7 @@ bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case RISCV::PseudoLA_TLS_GD:
     return expandLoadTLSGDAddress(MBB, MBBI, NextMBBI);
   case RISCV::PseudoVSETVLI:
+  case RISCV::PseudoVSETVLIX0:
   case RISCV::PseudoVSETIVLI:
     return expandVSetVL(MBB, MBBI);
   case RISCV::PseudoVMCLR_M_B1:
@@ -246,13 +247,14 @@ bool RISCVExpandPseudo::expandVSetVL(MachineBasicBlock &MBB,
   DebugLoc DL = MBBI->getDebugLoc();
 
   assert((MBBI->getOpcode() == RISCV::PseudoVSETVLI ||
+          MBBI->getOpcode() == RISCV::PseudoVSETVLIX0 ||
           MBBI->getOpcode() == RISCV::PseudoVSETIVLI) &&
          "Unexpected pseudo instruction");
   unsigned Opcode;
-  if (MBBI->getOpcode() == RISCV::PseudoVSETVLI)
-    Opcode = RISCV::VSETVLI;
-  else
+  if (MBBI->getOpcode() == RISCV::PseudoVSETIVLI)
     Opcode = RISCV::VSETIVLI;
+  else
+    Opcode = RISCV::VSETVLI;
   const MCInstrDesc &Desc = TII->get(Opcode);
   assert(Desc.getNumOperands() == 3 && "Unexpected instruction format");
 
@@ -285,9 +287,10 @@ bool RISCVExpandPseudo::expandVSPILL(MachineBasicBlock &MBB,
   const TargetRegisterInfo *TRI =
       MBB.getParent()->getSubtarget().getRegisterInfo();
   DebugLoc DL = MBBI->getDebugLoc();
-  Register SrcReg = MBBI->getOperand(0).getReg();
-  Register Base = MBBI->getOperand(1).getReg();
-  Register VL = MBBI->getOperand(2).getReg();
+  Register AddrInc = MBBI->getOperand(0).getReg();
+  Register SrcReg = MBBI->getOperand(1).getReg();
+  Register Base = MBBI->getOperand(2).getReg();
+  Register VL = MBBI->getOperand(3).getReg();
   auto ZvlssegInfo = TII->isRVVSpillForZvlsseg(MBBI->getOpcode());
   if (!ZvlssegInfo)
     return false;
@@ -316,10 +319,12 @@ bool RISCVExpandPseudo::expandVSPILL(MachineBasicBlock &MBB,
         .addReg(TRI->getSubReg(SrcReg, SubRegIdx + I))
         .addReg(Base)
         .addMemOperand(*(MBBI->memoperands_begin()));
-    if (I != NF - 1)
-      BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADD), Base)
+    if (I != NF - 1) {
+      BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADD), AddrInc)
           .addReg(Base)
           .addReg(VL);
+      Base = AddrInc;
+    }
   }
   MBBI->eraseFromParent();
   return true;
@@ -331,8 +336,9 @@ bool RISCVExpandPseudo::expandVRELOAD(MachineBasicBlock &MBB,
       MBB.getParent()->getSubtarget().getRegisterInfo();
   DebugLoc DL = MBBI->getDebugLoc();
   Register DestReg = MBBI->getOperand(0).getReg();
-  Register Base = MBBI->getOperand(1).getReg();
-  Register VL = MBBI->getOperand(2).getReg();
+  Register AddrInc = MBBI->getOperand(1).getReg();
+  Register Base = MBBI->getOperand(2).getReg();
+  Register VL = MBBI->getOperand(3).getReg();
   auto ZvlssegInfo = TII->isRVVSpillForZvlsseg(MBBI->getOpcode());
   if (!ZvlssegInfo)
     return false;
@@ -361,10 +367,12 @@ bool RISCVExpandPseudo::expandVRELOAD(MachineBasicBlock &MBB,
             TRI->getSubReg(DestReg, SubRegIdx + I))
         .addReg(Base)
         .addMemOperand(*(MBBI->memoperands_begin()));
-    if (I != NF - 1)
-      BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADD), Base)
+    if (I != NF - 1) {
+      BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADD), AddrInc)
           .addReg(Base)
           .addReg(VL);
+      Base = AddrInc;
+    }
   }
   MBBI->eraseFromParent();
   return true;

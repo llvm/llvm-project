@@ -1584,6 +1584,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
     }
   }
   assert(tag_decl_kind != -1);
+  (void)tag_decl_kind;
   bool clang_type_was_created = false;
   clang_type.SetCompilerType(
       &m_ast, dwarf->GetForwardDeclDieToClangType().lookup(die.GetDIE()));
@@ -1966,16 +1967,12 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
       TypeSystemClang::StartTagDeclarationDefinition(clang_type);
     }
 
-    int tag_decl_kind = -1;
     AccessType default_accessibility = eAccessNone;
     if (tag == DW_TAG_structure_type) {
-      tag_decl_kind = clang::TTK_Struct;
       default_accessibility = eAccessPublic;
     } else if (tag == DW_TAG_union_type) {
-      tag_decl_kind = clang::TTK_Union;
       default_accessibility = eAccessPublic;
     } else if (tag == DW_TAG_class_type) {
-      tag_decl_kind = clang::TTK_Class;
       default_accessibility = eAccessPrivate;
     }
 

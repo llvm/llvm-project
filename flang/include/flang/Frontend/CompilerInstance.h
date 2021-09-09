@@ -18,6 +18,21 @@
 
 namespace Fortran::frontend {
 
+/// Helper class for managing a single instance of the Flang compiler.
+///
+/// This class serves two purposes:
+///  (1) It manages the various objects which are necessary to run the compiler
+///  (2) It provides utility routines for constructing and manipulating the
+///      common Flang objects.
+///
+/// The compiler instance generally owns the instance of all the objects that it
+/// manages. However, clients can still share objects by manually setting the
+/// object and retaking ownership prior to destroying the CompilerInstance.
+///
+/// The compiler instance is intended to simplify clients, but not to lock them
+/// in to the compiler instance for everything. When possible, utility functions
+/// come in two forms; a short form that reuses the CompilerInstance objects,
+/// and a long form that takes explicit instances of any required objects.
 class CompilerInstance {
 
   /// The options used in this compiler instance.
@@ -29,6 +44,8 @@ class CompilerInstance {
   std::shared_ptr<Fortran::parser::AllCookedSources> allCookedSources_;
 
   std::shared_ptr<Fortran::parser::Parsing> parsing_;
+
+  std::unique_ptr<Fortran::semantics::Semantics> semantics_;
 
   /// The stream for diagnostics from Semantics
   llvm::raw_ostream *semaOutputStream_ = &llvm::errs();
@@ -45,11 +62,6 @@ class CompilerInstance {
     OutputFile(std::string inputFilename)
         : filename_(std::move(inputFilename)) {}
   };
-
-  /// Output stream that doesn't support seeking (e.g. terminal, pipe).
-  /// This stream is normally wrapped in buffer_ostream before being passed
-  /// to users (e.g. via CreateOutputFile).
-  std::unique_ptr<llvm::raw_fd_ostream> nonSeekStream_;
 
   /// The list of active output files.
   std::list<OutputFile> outputFiles_;
@@ -110,6 +122,13 @@ public:
   /// Get the current stream for verbose output.
   llvm::raw_ostream &semaOutputStream() { return *semaOutputStream_; }
 
+  Fortran::semantics::Semantics &semantics() { return *semantics_; }
+  const Fortran::semantics::Semantics &semantics() const { return *semantics_; }
+
+  void setSemantics(std::unique_ptr<Fortran::semantics::Semantics> semantics) {
+    semantics_ = std::move(semantics);
+  }
+
   /// }
   /// @name High-Level Operations
   /// {
@@ -165,17 +184,12 @@ public:
   /// @name Output Files
   /// {
 
-  /// Add an output file onto the list of tracked output files.
-  ///
-  /// \param outFile - The output file info.
-  void AddOutputFile(OutputFile &&outFile);
-
   /// Clear the output file list.
   void ClearOutputFiles(bool eraseFiles);
 
   /// Create the default output file (based on the invocation's options) and
   /// add it to the list of tracked output files. If the name of the output
-  /// file is not provided, it is derived from the input file.
+  /// file is not provided, it will be derived from the input file.
   ///
   /// \param binary     The mode to open the file in.
   /// \param baseInput  If the invocation contains no output file name (i.e.
@@ -183,20 +197,21 @@ public:
   ///                   name to use for deriving the output path.
   /// \param extension  The extension to use for output names derived from
   ///                   \p baseInput.
-  /// \return           ostream for the output file or nullptr on error.
+  /// \return           Null on error, ostream for the output file otherwise
   std::unique_ptr<llvm::raw_pwrite_stream> CreateDefaultOutputFile(
       bool binary = true, llvm::StringRef baseInput = "",
       llvm::StringRef extension = "");
 
+private:
   /// Create a new output file
   ///
   /// \param outputPath   The path to the output file.
-  /// \param error [out]  On failure, the error.
   /// \param binary       The mode to open the file in.
-  /// \return             ostream for the output file or nullptr on error.
-  std::unique_ptr<llvm::raw_pwrite_stream> CreateOutputFile(
-      llvm::StringRef outputPath, std::error_code &error, bool binary);
+  /// \return             Null on error, ostream for the output file otherwise
+  llvm::Expected<std::unique_ptr<llvm::raw_pwrite_stream>> CreateOutputFileImpl(
+      llvm::StringRef outputPath, bool binary);
 
+public:
   /// }
   /// @name Construction Utility Methods
   /// {

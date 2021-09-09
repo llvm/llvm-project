@@ -4747,23 +4747,20 @@ static void createUnreachableSwitchDefault(SwitchInst *Switch,
                                            DomTreeUpdater *DTU) {
   LLVM_DEBUG(dbgs() << "SimplifyCFG: switch default is dead.\n");
   auto *BB = Switch->getParent();
-  BasicBlock *NewDefaultBlock = SplitBlockPredecessors(
-      Switch->getDefaultDest(), Switch->getParent(), "", DTU);
   auto *OrigDefaultBlock = Switch->getDefaultDest();
+  OrigDefaultBlock->removePredecessor(BB);
+  BasicBlock *NewDefaultBlock = BasicBlock::Create(
+      BB->getContext(), BB->getName() + ".unreachabledefault", BB->getParent(),
+      OrigDefaultBlock);
+  new UnreachableInst(Switch->getContext(), NewDefaultBlock);
   Switch->setDefaultDest(&*NewDefaultBlock);
-  if (DTU)
-    DTU->applyUpdates({{DominatorTree::Insert, BB, &*NewDefaultBlock},
-                       {DominatorTree::Delete, BB, OrigDefaultBlock}});
-  SplitBlock(&*NewDefaultBlock, &NewDefaultBlock->front(), DTU);
-  SmallVector<DominatorTree::UpdateType, 2> Updates;
-  if (DTU)
-    for (auto *Successor : successors(NewDefaultBlock))
-      Updates.push_back({DominatorTree::Delete, NewDefaultBlock, Successor});
-  auto *NewTerminator = NewDefaultBlock->getTerminator();
-  new UnreachableInst(Switch->getContext(), NewTerminator);
-  EraseTerminatorAndDCECond(NewTerminator);
-  if (DTU)
+  if (DTU) {
+    SmallVector<DominatorTree::UpdateType, 2> Updates;
+    Updates.push_back({DominatorTree::Insert, BB, &*NewDefaultBlock});
+    if (!is_contained(successors(BB), OrigDefaultBlock))
+      Updates.push_back({DominatorTree::Delete, BB, &*OrigDefaultBlock});
     DTU->applyUpdates(Updates);
+  }
 }
 
 /// Turn a switch with two reachable destinations into an integer range
@@ -6394,6 +6391,11 @@ static BasicBlock *allPredecessorsComeFromSameSource(BasicBlock *BB) {
 }
 
 bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
+  assert(
+      !isa<ConstantInt>(BI->getCondition()) &&
+      BI->getSuccessor(0) != BI->getSuccessor(1) &&
+      "Tautological conditional branch should have been eliminated already.");
+
   BasicBlock *BB = BI->getParent();
   if (!Options.SimplifyCondBranch)
     return false;
@@ -6596,9 +6598,17 @@ static bool removeUndefIntroducingPredecessor(BasicBlock *BB,
           // destination from conditional branches.
           if (BI->isUnconditional())
             Builder.CreateUnreachable();
-          else
+          else {
+            // Preserve guarding condition in assume, because it might not be
+            // inferrable from any dominating condition.
+            Value *Cond = BI->getCondition();
+            if (BI->getSuccessor(0) == BB)
+              Builder.CreateAssumption(Builder.CreateNot(Cond));
+            else
+              Builder.CreateAssumption(Cond);
             Builder.CreateBr(BI->getSuccessor(0) == BB ? BI->getSuccessor(1)
                                                        : BI->getSuccessor(0));
+          }
           BI->eraseFromParent();
           if (DTU)
             DTU->applyUpdates({{DominatorTree::Delete, Predecessor, BB}});
@@ -6634,7 +6644,8 @@ bool SimplifyCFGOpt::simplifyOnceImpl(BasicBlock *BB) {
   Changed |= EliminateDuplicatePHINodes(BB);
 
   // Check for and remove branches that will always cause undefined behavior.
-  Changed |= removeUndefIntroducingPredecessor(BB, DTU);
+  if (removeUndefIntroducingPredecessor(BB, DTU))
+    return requestResimplify();
 
   // Merge basic blocks into their predecessor if there is only one distinct
   // pred, and if there is only one distinct successor of the predecessor, and
@@ -6659,7 +6670,8 @@ bool SimplifyCFGOpt::simplifyOnceImpl(BasicBlock *BB) {
     // eliminate it, do so now.
     if (auto *PN = dyn_cast<PHINode>(BB->begin()))
       if (PN->getNumIncomingValues() == 2)
-        Changed |= FoldTwoEntryPHINode(PN, TTI, DTU, DL);
+        if (FoldTwoEntryPHINode(PN, TTI, DTU, DL))
+          return true;
   }
 
   Instruction *Terminator = BB->getTerminator();

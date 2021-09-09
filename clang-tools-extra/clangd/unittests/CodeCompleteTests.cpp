@@ -907,7 +907,7 @@ TEST(CompletionTest, Documentation) {
   auto Results = completions(
       R"cpp(
       // Non-doxygen comment.
-      int foo();
+      __attribute__((annotate("custom_annotation"))) int foo();
       /// Doxygen comment.
       /// \param int a
       int bar(int a);
@@ -919,7 +919,8 @@ TEST(CompletionTest, Documentation) {
       int x = ^
      )cpp");
   EXPECT_THAT(Results.Completions,
-              Contains(AllOf(Named("foo"), Doc("Non-doxygen comment."))));
+              Contains(AllOf(Named("foo"),
+              Doc("Annotation: custom_annotation\nNon-doxygen comment."))));
   EXPECT_THAT(
       Results.Completions,
       Contains(AllOf(Named("bar"), Doc("Doxygen comment.\n\\param int a"))));
@@ -1657,7 +1658,7 @@ TEST(CompletionTest, OverloadBundling) {
   std::string Context = R"cpp(
     struct X {
       // Overload with int
-      int a(int);
+      int a(int) __attribute__((deprecated("", "")));
       // Overload with bool
       int a(bool);
       int b(float);
@@ -1695,6 +1696,7 @@ TEST(CompletionTest, OverloadBundling) {
   EXPECT_EQ(A.ReturnType, "int"); // All overloads return int.
   // For now we just return one of the doc strings arbitrarily.
   ASSERT_TRUE(A.Documentation);
+  ASSERT_FALSE(A.Deprecated); // Not all overloads deprecated.
   EXPECT_THAT(
       A.Documentation->asPlainText(),
       AnyOf(HasSubstr("Overload with int"), HasSubstr("Overload with bool")));

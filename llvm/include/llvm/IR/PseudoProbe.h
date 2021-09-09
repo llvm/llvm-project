@@ -27,10 +27,6 @@ constexpr const char *PseudoProbeDescMetadataName = "llvm.pseudo_probe_desc";
 
 enum class PseudoProbeType { Block = 0, IndirectCall, DirectCall };
 
-enum class PseudoProbeAttributes {
-  Reserved = 0x1, // Reserved for future use.
-};
-
 // The saturated distrution factor representing 100% for block probes.
 constexpr static uint64_t PseudoProbeFullDistributionFactor =
     std::numeric_limits<uint64_t>::max();

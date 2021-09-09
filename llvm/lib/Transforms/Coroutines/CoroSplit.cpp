@@ -906,8 +906,7 @@ void CoroCloner::create() {
   case coro::ABI::Switch:
     // Bootstrap attributes by copying function attributes from the
     // original function.  This should include optimization settings and so on.
-    NewAttrs = NewAttrs.addAttributes(Context, AttributeList::FunctionIndex,
-                                      OrigAttrs.getFnAttributes());
+    NewAttrs = NewAttrs.addFnAttributes(Context, OrigAttrs.getFnAttrs());
 
     addFramePointerAttrs(NewAttrs, Context, 0,
                          Shape.FrameSize, Shape.FrameAlign);
@@ -929,9 +928,8 @@ void CoroCloner::create() {
     }
 
     // Transfer the original function's attributes.
-    auto FnAttrs = OrigF.getAttributes().getFnAttributes();
-    NewAttrs =
-        NewAttrs.addAttributes(Context, AttributeList::FunctionIndex, FnAttrs);
+    auto FnAttrs = OrigF.getAttributes().getFnAttrs();
+    NewAttrs = NewAttrs.addFnAttributes(Context, FnAttrs);
     break;
   }
   case coro::ABI::Retcon:
@@ -1144,11 +1142,13 @@ static void updateCoroFrame(coro::Shape &Shape, Function *ResumeFn,
 static void postSplitCleanup(Function &F) {
   removeUnreachableBlocks(F);
 
+#ifndef NDEBUG
   // For now, we do a mandatory verification step because we don't
   // entirely trust this pass.  Note that we don't want to add a verifier
   // pass to FPM below because it will also verify all the global data.
   if (verifyFunction(F, &errs()))
     report_fatal_error("Broken function");
+#endif
 }
 
 // Assuming we arrived at the block NewBlock from Prev instruction, store
@@ -1262,7 +1262,7 @@ static bool shouldBeMustTail(const CallInst &CI, const Function &F) {
       Attribute::SwiftSelf,    Attribute::SwiftError};
   AttributeList Attrs = CI.getAttributes();
   for (auto AK : ABIAttrs)
-    if (Attrs.hasParamAttribute(0, AK))
+    if (Attrs.hasParamAttr(0, AK))
       return false;
 
   return true;
@@ -1568,8 +1568,8 @@ static void splitAsyncCoroutine(Function &F, coro::Shape &Shape,
   // Reset various things that the optimizer might have decided it
   // "knows" about the coroutine function due to not seeing a return.
   F.removeFnAttr(Attribute::NoReturn);
-  F.removeAttribute(AttributeList::ReturnIndex, Attribute::NoAlias);
-  F.removeAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
+  F.removeRetAttr(Attribute::NoAlias);
+  F.removeRetAttr(Attribute::NonNull);
 
   auto &Context = F.getContext();
   auto *Int8PtrTy = Type::getInt8PtrTy(Context);
@@ -1667,8 +1667,8 @@ static void splitRetconCoroutine(Function &F, coro::Shape &Shape,
   // Reset various things that the optimizer might have decided it
   // "knows" about the coroutine function due to not seeing a return.
   F.removeFnAttr(Attribute::NoReturn);
-  F.removeAttribute(AttributeList::ReturnIndex, Attribute::NoAlias);
-  F.removeAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
+  F.removeRetAttr(Attribute::NoAlias);
+  F.removeRetAttr(Attribute::NonNull);
 
   // Allocate the frame.
   auto *Id = cast<AnyCoroIdRetconInst>(Shape.CoroBegin->getId());

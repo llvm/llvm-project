@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Pointer assignment constraints 10.2.2.2 (see also assign02.f90)
 
 module m
@@ -80,8 +79,9 @@ contains
     integer function f_impure()
       f_impure = 1
     end
-    elemental integer function f_elemental()
-      f_elemental = 1
+    elemental integer function f_elemental(n)
+      real, value :: n
+      f_elemental = n
     end
   end
 

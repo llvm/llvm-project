@@ -42,25 +42,28 @@ public:
       : ParentContext(Parent), FuncName(FName), FuncSamples(FSamples),
         CallSiteLoc(CallLoc){};
   ContextTrieNode *getChildContext(const LineLocation &CallSite,
-                                   StringRef CalleeName);
+                                   StringRef ChildName);
   ContextTrieNode *getHottestChildContext(const LineLocation &CallSite);
   ContextTrieNode *getOrCreateChildContext(const LineLocation &CallSite,
-                                           StringRef CalleeName,
+                                           StringRef ChildName,
                                            bool AllowCreate = true);
 
   ContextTrieNode &moveToChildContext(const LineLocation &CallSite,
                                       ContextTrieNode &&NodeToMove,
-                                      StringRef ContextStrToRemove,
+                                      uint32_t ContextFramesToRemove,
                                       bool DeleteNode = true);
-  void removeChildContext(const LineLocation &CallSite, StringRef CalleeName);
+  void removeChildContext(const LineLocation &CallSite, StringRef ChildName);
   std::map<uint32_t, ContextTrieNode> &getAllChildContext();
   StringRef getFuncName() const;
   FunctionSamples *getFunctionSamples() const;
   void setFunctionSamples(FunctionSamples *FSamples);
+  Optional<uint32_t> getFunctionSize() const;
+  void addFunctionSize(uint32_t FSize);
   LineLocation getCallSiteLoc() const;
   ContextTrieNode *getParentContext() const;
   void setParentContext(ContextTrieNode *Parent);
-  void dump();
+  void dumpNode();
+  void dumpTree();
 
 private:
   static uint32_t nodeHash(StringRef ChildName, const LineLocation &Callsite);
@@ -77,6 +80,9 @@ private:
   // Function Samples for current context
   FunctionSamples *FuncSamples;
 
+  // Function size for current context
+  Optional<uint32_t> FuncSize;
+
   // Callsite location in parent context
   LineLocation CallSiteLoc;
 };
@@ -90,9 +96,22 @@ private:
 // calling context and the context is identified by path from root to the node.
 class SampleContextTracker {
 public:
-  using ContextSamplesTy = SmallVector<FunctionSamples *, 16>;
+  struct ProfileComparer {
+    bool operator()(FunctionSamples *A, FunctionSamples *B) const {
+      // Sort function profiles by the number of total samples and their
+      // contexts.
+      if (A->getTotalSamples() == B->getTotalSamples())
+        return A->getContext() < B->getContext();
+      return A->getTotalSamples() > B->getTotalSamples();
+    }
+  };
 
-  SampleContextTracker(StringMap<FunctionSamples> &Profiles);
+  // Keep profiles of a function sorted so that they will be processed/promoted
+  // deterministically.
+  using ContextSamplesTy = std::set<FunctionSamples *, ProfileComparer>;
+
+  SampleContextTracker(SampleProfileMap &Profiles,
+                       const DenseMap<uint64_t, StringRef> *GUIDToFuncNameMap);
   // Query context profile for a specific callee with given name at a given
   // call-site. The full context is identified by location of call instruction.
   FunctionSamples *getCalleeContextSamplesFor(const CallBase &Inst,
@@ -116,6 +135,8 @@ public:
   FunctionSamples *getBaseSamplesFor(StringRef Name, bool MergeContext = true);
   // Retrieve the context trie node for given profile context
   ContextTrieNode *getContextFor(const SampleContext &Context);
+  // Get real function name for a given trie node.
+  StringRef getFuncNameFor(ContextTrieNode *Node) const;
   // Mark a context profile as inlined when function is inlined.
   // This makes sure that inlined context profile will be excluded in
   // function's base profile.
@@ -136,13 +157,17 @@ private:
   ContextTrieNode &addTopLevelContextNode(StringRef FName);
   ContextTrieNode &promoteMergeContextSamplesTree(ContextTrieNode &NodeToPromo);
   void mergeContextNode(ContextTrieNode &FromNode, ContextTrieNode &ToNode,
-                        StringRef ContextStrToRemove);
-  ContextTrieNode &promoteMergeContextSamplesTree(ContextTrieNode &FromNode,
-                                                  ContextTrieNode &ToNodeParent,
-                                                  StringRef ContextStrToRemove);
+                        uint32_t ContextFramesToRemove);
+  ContextTrieNode &
+  promoteMergeContextSamplesTree(ContextTrieNode &FromNode,
+                                 ContextTrieNode &ToNodeParent,
+                                 uint32_t ContextFramesToRemove);
 
   // Map from function name to context profiles (excluding base profile)
   StringMap<ContextSamplesTy> FuncToCtxtProfiles;
+
+  // Map from function guid to real function names. Only used in md5 mode.
+  const DenseMap<uint64_t, StringRef> *GUIDToFuncNameMap;
 
   // Root node for context trie tree
   ContextTrieNode RootContext;

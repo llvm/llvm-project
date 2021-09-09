@@ -987,15 +987,16 @@ bool PPCFastISel::SelectFPTrunc(const Instruction *I) {
   auto RC = MRI.getRegClass(SrcReg);
   if (Subtarget->hasSPE()) {
     DestReg = createResultReg(&PPC::GPRCRegClass);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
-      TII.get(PPC::EFSCFD), DestReg)
-      .addReg(SrcReg);
-  } else if (isVSFRCRegClass(RC)) {
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(PPC::EFSCFD),
+            DestReg)
+        .addReg(SrcReg);
+  } else if (Subtarget->hasP8Vector() && isVSFRCRegClass(RC)) {
     DestReg = createResultReg(&PPC::VSSRCRegClass);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
-      TII.get(PPC::XSRSP), DestReg)
-      .addReg(SrcReg);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(PPC::XSRSP),
+            DestReg)
+        .addReg(SrcReg);
   } else {
+    SrcReg = copyRegToRegClass(&PPC::F8RCRegClass, SrcReg);
     DestReg = createResultReg(&PPC::F4RCRegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
       TII.get(PPC::FRSP), DestReg)
@@ -2467,9 +2468,9 @@ namespace llvm {
   // Create the fast instruction selector for PowerPC64 ELF.
   FastISel *PPC::createFastISel(FunctionLoweringInfo &FuncInfo,
                                 const TargetLibraryInfo *LibInfo) {
-    // Only available on 64-bit ELF for now.
+    // Only available on 64-bit for now.
     const PPCSubtarget &Subtarget = FuncInfo.MF->getSubtarget<PPCSubtarget>();
-    if (Subtarget.is64BitELFABI())
+    if (Subtarget.isPPC64())
       return new PPCFastISel(FuncInfo, LibInfo);
     return nullptr;
   }

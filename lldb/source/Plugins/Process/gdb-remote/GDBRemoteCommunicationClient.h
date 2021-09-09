@@ -147,21 +147,6 @@ public:
   int SendLaunchEventDataPacket(const char *data,
                                 bool *was_supported = nullptr);
 
-  /// Sends a "vAttach:PID" where PID is in hex.
-  ///
-  /// \param[in] pid
-  ///     A process ID for the remote gdb server to attach to.
-  ///
-  /// \param[out] response
-  ///     The response received from the gdb server. If the return
-  ///     value is zero, \a response will contain a stop reply
-  ///     packet.
-  ///
-  /// \return
-  ///     Zero if the attach was successful, or an error indicating
-  ///     an error code.
-  int SendAttach(lldb::pid_t pid, StringExtractorGDBRemote &response);
-
   /// Sends a GDB remote protocol 'I' packet that delivers stdin
   /// data to the remote process.
   ///
@@ -235,7 +220,7 @@ public:
 
   bool DeallocateMemory(lldb::addr_t addr);
 
-  Status Detach(bool keep_stopped);
+  Status Detach(bool keep_stopped, lldb::pid_t pid = LLDB_INVALID_PROCESS_ID);
 
   Status GetMemoryRegionInfo(lldb::addr_t addr, MemoryRegionInfo &range_info);
 
@@ -547,6 +532,8 @@ public:
   SendTraceGetBinaryData(const TraceGetBinaryDataRequest &request,
                          std::chrono::seconds interrupt_timeout);
 
+  bool GetSaveCoreSupported() const;
+
 protected:
   LazyBool m_supports_not_sending_acks = eLazyBoolCalculate;
   LazyBool m_supports_thread_suffix = eLazyBoolCalculate;
@@ -585,6 +572,7 @@ protected:
   LazyBool m_supports_error_string_reply = eLazyBoolCalculate;
   LazyBool m_supports_multiprocess = eLazyBoolCalculate;
   LazyBool m_supports_memory_tagging = eLazyBoolCalculate;
+  LazyBool m_supports_qSaveCore = eLazyBoolCalculate;
 
   bool m_supports_qProcessInfoPID : 1, m_supports_qfProcessInfo : 1,
       m_supports_qUserName : 1, m_supports_qGroupName : 1,

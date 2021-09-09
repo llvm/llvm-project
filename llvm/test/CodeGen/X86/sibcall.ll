@@ -657,47 +657,6 @@ define fastcc void @t21_sret_to_sret(%struct.foo* noalias sret(%struct.foo) %agg
   ret void
 }
 
-define fastcc void @t21_sret_to_sret_alloca(%struct.foo* noalias sret(%struct.foo) %agg.result) nounwind  {
-; X86-LABEL: t21_sret_to_sret_alloca:
-; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $24, %esp
-; X86-NEXT:    movl %ecx, %esi
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    calll t21_f_sret
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    addl $24, %esp
-; X86-NEXT:    popl %esi
-; X86-NEXT:    retl
-;
-; X64-LABEL: t21_sret_to_sret_alloca:
-; X64:       # %bb.0:
-; X64-NEXT:    pushq %rbx
-; X64-NEXT:    subq $16, %rsp
-; X64-NEXT:    movq %rdi, %rbx
-; X64-NEXT:    movq %rsp, %rdi
-; X64-NEXT:    callq t21_f_sret
-; X64-NEXT:    movq %rbx, %rax
-; X64-NEXT:    addq $16, %rsp
-; X64-NEXT:    popq %rbx
-; X64-NEXT:    retq
-;
-; X32-LABEL: t21_sret_to_sret_alloca:
-; X32:       # %bb.0:
-; X32-NEXT:    pushq %rbx
-; X32-NEXT:    subl $16, %esp
-; X32-NEXT:    movq %rdi, %rbx
-; X32-NEXT:    movl %esp, %edi
-; X32-NEXT:    callq t21_f_sret
-; X32-NEXT:    movl %ebx, %eax
-; X32-NEXT:    addl $16, %esp
-; X32-NEXT:    popq %rbx
-; X32-NEXT:    retq
-  %a = alloca %struct.foo, align 8
-  tail call fastcc void @t21_f_sret(%struct.foo* noalias sret(%struct.foo) %a) nounwind
-  ret void
-}
-
 define fastcc void @t21_sret_to_sret_more_args(%struct.foo* noalias sret(%struct.foo) %agg.result, i32 %a, i32 %b) nounwind  {
 ; X86-LABEL: t21_sret_to_sret_more_args:
 ; X86:       # %bb.0:
@@ -1016,8 +975,8 @@ define fastcc void @t21_sret_to_non_sret(%struct.foo* noalias sret(%struct.foo) 
   ret void
 }
 
-
 define ccc void @t22_non_sret_to_sret(%struct.foo* %agg.result) nounwind  {
+; i686 not tailcallable, as sret is callee-pop here.
 ; X86-LABEL: t22_non_sret_to_sret:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
@@ -1029,17 +988,11 @@ define ccc void @t22_non_sret_to_sret(%struct.foo* %agg.result) nounwind  {
 ;
 ; X64-LABEL: t22_non_sret_to_sret:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq t22_f_sret@PLT
-; X64-NEXT:    popq %rax
-; X64-NEXT:    retq
+; X64-NEXT:    jmp	t22_f_sret@PLT                  # TAILCALL
 ;
 ; X32-LABEL: t22_non_sret_to_sret:
 ; X32:       # %bb.0:
-; X32-NEXT:    pushq %rax
-; X32-NEXT:    callq t22_f_sret@PLT
-; X32-NEXT:    popq %rax
-; X32-NEXT:    retq
+; X32-NEXT:    jmp	t22_f_sret@PLT                  # TAILCALL
   tail call ccc void @t22_f_sret(%struct.foo* noalias sret(%struct.foo) %agg.result) nounwind
   ret void
 }

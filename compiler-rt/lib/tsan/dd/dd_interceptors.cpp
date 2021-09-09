@@ -285,7 +285,8 @@ static void InitDataSeg() {
     if (is_bss) g_data_end = segment.end;
     prev_is_data = is_data;
   }
-  VPrintf(1, "guessed data_start=%p data_end=%p\n",  g_data_start, g_data_end);
+  VPrintf(1, "guessed data_start=0x%zx data_end=0x%zx\n", g_data_start,
+          g_data_end);
   CHECK_LT(g_data_start, g_data_end);
   CHECK_GE((uptr)&g_data_start, g_data_start);
   CHECK_LT((uptr)&g_data_start, g_data_end);

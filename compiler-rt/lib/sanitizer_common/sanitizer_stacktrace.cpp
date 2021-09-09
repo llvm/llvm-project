@@ -22,7 +22,8 @@ namespace __sanitizer {
 uptr StackTrace::GetNextInstructionPc(uptr pc) {
 #if defined(__sparc__) || defined(__mips__)
   return pc + 8;
-#elif defined(__powerpc__) || defined(__arm__) || defined(__aarch64__)
+#elif defined(__powerpc__) || defined(__arm__) || defined(__aarch64__) || \
+    defined(__hexagon__)
   return pc + 4;
 #elif SANITIZER_RISCV64
   // Current check order is 4 -> 2 -> 6 -> 8
@@ -64,7 +65,7 @@ void BufferedStackTrace::Init(const uptr *pcs, uptr cnt, uptr extra_top_pc) {
   top_frame_bp = 0;
 }
 
-// Sparc implemention is in its own file.
+// Sparc implementation is in its own file.
 #if !defined(__sparc__)
 
 // In GCC on ARM bp points to saved lr, not fp, so we should check the next

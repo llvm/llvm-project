@@ -1,197 +1,143 @@
-//===-- llvm-ar.cpp - LLVM archive librarian utility ----------------------===//
+//===-- clang-nvlink-wrapper/ClangNvlinkWrapper.cpp - wrapper over nvlink-===//
 //
-//                     The LLVM Compiler Infrastructure
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
-//
-//===----------------------------------------------------------------------===//
-//
-// Builds up (relatively) standard unix archive files (.a) containing LLVM
-// bitcode or other files.
-//
-//===----------------------------------------------------------------------===//
+//===---------------------------------------------------------------------===//
+///
+/// \file
+/// This tool works as a wrapper over nvlink program. It transparently passes
+/// every input option and objects to nvlink except archive files. It reads
+/// each input archive file to extract archived cubin files as temporary files.
+/// These temp (*.cubin) files are passed to nvlink, because nvlink does not
+/// support linking of archive files implicitly.
+///
+/// During linking of heterogeneous device archive libraries, the
+/// clang-offload-bundler creates a device specific archive of cubin files.
+/// Such an archive is then passed to this tool to extract cubin files before
+/// passing to nvlink.
+///
+/// Example:
+/// clang-nvlink-wrapper -o a.out-openmp-nvptx64 /tmp/libTest-nvptx-sm_50.a
+///
+/// 1. Extract (libTest-nvptx-sm_50.a) => /tmp/a.cubin /tmp/b.cubin
+/// 2. nvlink -o a.out-openmp-nvptx64 /tmp/a.cubin /tmp/b.cubin
+//===---------------------------------------------------------------------===//
 
 #include "llvm/Object/Archive.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
-#if !defined(_MSC_VER) && !defined(__MINGW32__)
-#include <unistd.h>
-#endif
-
 using namespace llvm;
 
-// The name this program was invoked as.
-static StringRef ToolName;
+static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
 
-const char NVLWHelp[] = R"(
-OVERVIEW: Clang Nvlink Wrapper
-
-USAGE: clang-nvlink-wrapper [options] <objects>
-
-For descriptions of the options please run 'nvlink --help'
-The wrapper extracts any arcive objects and call nvlink with the
-individual files instead, plus any other options/object.
-
-)";
-
-void printHelpMessage() { outs() << NVLWHelp; }
-
-// Show the error message and exit.
-[[noreturn]] static void fail(Twine Error) {
-  WithColor::error(errs(), ToolName) << Error << ".\n";
-  printHelpMessage();
-  exit(1);
-}
-
-static void failIfError(std::error_code EC, Twine Context = "") {
-  if (!EC)
-    return;
-
-  std::string ContextStr = Context.str();
-  if (ContextStr.empty())
-    fail(EC.message());
-  fail(Context + ": " + EC.message());
-}
-
-static bool isArchiveFile(StringRef Arg) {
-  if (Arg.startswith("-"))
-    return false;
-
-  StringRef Extension = sys::path::extension(Arg);
-  bool isArchive = Extension == ".a";
-  return isArchive;
-}
-
-std::vector<std::unique_ptr<llvm::MemoryBuffer>> ArchiveBuffers;
-std::vector<std::unique_ptr<llvm::object::Archive>> Archives;
-
-static object::Archive &readArchive(std::unique_ptr<MemoryBuffer> Buf) {
-  ArchiveBuffers.push_back(std::move(Buf));
-  auto LibOrErr =
-      object::Archive::create(ArchiveBuffers.back()->getMemBufferRef());
-  failIfError(errorToErrorCode(LibOrErr.takeError()),
-              "Could not parse library");
-  Archives.push_back(std::move(*LibOrErr));
-  return *Archives.back();
-}
-
-static void reportError(Twine Error) {
-  errs() << "ERROR: " << Error << "\n";
-  // FIXME: Handle Errors here.
-  // llvm::errs() << Error << ".\n";
-}
-
-static bool reportIfError(std::error_code EC, Twine Context = "") {
-  if (!EC)
-    return false;
-
-  std::string ContextStr = Context.str();
-  if (ContextStr.empty())
-    reportError(EC.message());
-  reportError(Context + ": " + EC.message());
-  return true;
-}
-
-static bool reportIfError(llvm::Error E, Twine Context = "") {
-  if (!E)
-    return false;
-  ;
-
-  handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EIB) {
-    std::string ContextStr = Context.str();
-    if (ContextStr.empty())
-      reportError(EIB.message());
-    reportError(Context + ": " + EIB.message());
-  });
-  return true;
-}
-
-void printNVLinkCommand(std::vector<StringRef> &Command) {
-  for (auto &Arg : Command)
-    errs() << Arg << " ";
-  errs() << "\n";
-}
-
-static void runNVLink(std::string NVLinkPath,
-                      SmallVectorImpl<std::string> &Args) {
-  int ExecResult = -1;
-  const char *NVLProgram = NVLinkPath.c_str();
+static Error runNVLink(std::string NVLinkPath,
+                       SmallVectorImpl<std::string> &Args) {
   std::vector<StringRef> NVLArgs;
-  NVLArgs.push_back("nvlink");
+  NVLArgs.push_back(NVLinkPath);
   for (auto &Arg : Args) {
     NVLArgs.push_back(Arg);
   }
-  printNVLinkCommand(NVLArgs);
-  ExecResult = llvm::sys::ExecuteAndWait(NVLProgram, NVLArgs);
-  if (ExecResult) {
-    errs() << "Error: NVlink encountered a problem\n";
-  }
+
+  if (sys::ExecuteAndWait(NVLinkPath.c_str(), NVLArgs))
+    return createStringError(inconvertibleErrorCode(), "'nvlink' failed");
+  return Error::success();
 }
 
-static void getArchiveFiles(StringRef Filename,
-                            SmallVectorImpl<std::string> &Args,
-                            SmallVectorImpl<std::string> &TmpFiles) {
-  StringRef IFName = Filename;
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> BufOrErr =
-      llvm::MemoryBuffer::getFileOrSTDIN(IFName, -1, false);
+static Error extractArchiveFiles(StringRef Filename,
+                                 SmallVectorImpl<std::string> &Args,
+                                 SmallVectorImpl<std::string> &TmpFiles) {
+  std::vector<std::unique_ptr<MemoryBuffer>> ArchiveBuffers;
 
-  if (reportIfError(BufOrErr.getError(), "Can't open file " + IFName))
-    return;
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+      MemoryBuffer::getFileOrSTDIN(Filename, false, false);
+  if (std::error_code EC = BufOrErr.getError())
+    return createFileError(Filename, EC);
 
-  auto &Archive = readArchive(std::move(BufOrErr.get()));
-  SmallVector<std::string, 8> SourcePaths;
+  ArchiveBuffers.push_back(std::move(*BufOrErr));
+  Expected<std::unique_ptr<llvm::object::Archive>> LibOrErr =
+      object::Archive::create(ArchiveBuffers.back()->getMemBufferRef());
+  if (!LibOrErr)
+    return LibOrErr.takeError();
 
-  llvm::Error Err = llvm::Error::success();
-  auto ChildEnd = Archive.child_end();
-  for (auto ChildIter = Archive.child_begin(Err); ChildIter != ChildEnd;
+  auto Archive = std::move(*LibOrErr);
+
+  Error Err = Error::success();
+  auto ChildEnd = Archive->child_end();
+  for (auto ChildIter = Archive->child_begin(Err); ChildIter != ChildEnd;
        ++ChildIter) {
+    if (Err)
+      return Err;
     auto ChildNameOrErr = (*ChildIter).getName();
+    if (!ChildNameOrErr)
+      return ChildNameOrErr.takeError();
 
-    if (reportIfError(ChildNameOrErr.takeError(), "No Child Name")) {
-      continue;
-    }
-    StringRef ChildName = llvm::sys::path::filename(ChildNameOrErr.get());
+    StringRef ChildName = sys::path::filename(ChildNameOrErr.get());
 
     auto ChildBufferRefOrErr = (*ChildIter).getMemoryBufferRef();
-    reportIfError(ChildBufferRefOrErr.takeError(), "No Child Mem Buf");
+    if (!ChildBufferRefOrErr)
+      return ChildBufferRefOrErr.takeError();
+
     auto ChildBuffer =
         MemoryBuffer::getMemBuffer(ChildBufferRefOrErr.get(), false);
     auto ChildNameSplit = ChildName.split('.');
+
     SmallString<16> Path;
     int FileDesc;
-    std::error_code EC = llvm::sys::fs::createTemporaryFile(
-        (ChildNameSplit.first), (ChildNameSplit.second), FileDesc, Path);
-    if (reportIfError(EC, "Unable to create temporary file")) {
-      continue;
-    }
-    std::string TmpFileName(Path.str().str());
+    if (std::error_code EC = sys::fs::createTemporaryFile(
+            (ChildNameSplit.first), (ChildNameSplit.second), FileDesc, Path))
+      return createFileError(ChildName, EC);
 
+    std::string TmpFileName(Path.str());
     Args.push_back(TmpFileName);
     TmpFiles.push_back(TmpFileName);
-    raw_fd_ostream OS(FileDesc, true);
+    std::error_code EC;
+    raw_fd_ostream OS(Path.c_str(), EC, sys::fs::OF_None);
+    if (EC)
+      return createFileError(TmpFileName, errc::io_error);
     OS << ChildBuffer->getBuffer();
     OS.close();
   }
-  reportIfError(std::move(Err));
+  return Err;
 }
 
-static void cleanupTmpFiles(SmallVectorImpl<std::string> &TmpFiles) {
+static Error cleanupTmpFiles(SmallVectorImpl<std::string> &TmpFiles) {
   for (auto &TmpFile : TmpFiles) {
-    std::error_code EC = llvm::sys::fs::remove(TmpFile);
-    reportIfError(EC, "Unable to delete temporary file");
+    if (std::error_code EC = sys::fs::remove(TmpFile))
+      return createFileError(TmpFile, errc::no_such_file_or_directory);
   }
+  return Error::success();
 }
 
-int main(int argc, char **argv) {
-  ToolName = argv[0];
+int main(int argc, const char **argv) {
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
+
+  if (Help) {
+    cl::PrintHelpMessage();
+    return 0;
+  }
+
+  auto reportError = [argv](Error E) {
+    logAllUnhandledErrors(std::move(E), WithColor::error(errs(), argv[0]));
+    exit(1);
+  };
+
+  ErrorOr<std::string> NvlinkPath = sys::findProgramByName("nvlink");
+  if (!NvlinkPath) {
+    reportError(createStringError(NvlinkPath.getError(),
+                                  "unable to find 'nvlink' in path"));
+  }
+
   SmallVector<const char *, 0> Argv(argv, argv + argc);
   SmallVector<std::string, 0> ArgvSubst;
   SmallVector<std::string, 0> TmpFiles;
@@ -199,15 +145,20 @@ int main(int argc, char **argv) {
   StringSaver Saver(Alloc);
   cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv);
 
-  for (size_t i = 2; i < Argv.size(); ++i) {
+  for (size_t i = 1; i < Argv.size(); ++i) {
     std::string Arg = Argv[i];
-    if (isArchiveFile(Arg)) {
-      getArchiveFiles(Arg, ArgvSubst, TmpFiles);
+    if (sys::path::extension(Arg) == ".a") {
+      if (Error Err = extractArchiveFiles(Arg, ArgvSubst, TmpFiles))
+        reportError(std::move(Err));
     } else {
       ArgvSubst.push_back(Arg);
     }
   }
-  runNVLink(Argv[1], ArgvSubst);
-  cleanupTmpFiles(TmpFiles);
+
+  if (Error Err = runNVLink(NvlinkPath.get(), ArgvSubst))
+    reportError(std::move(Err));
+  if (Error Err = cleanupTmpFiles(TmpFiles))
+    reportError(std::move(Err));
+
   return 0;
 }

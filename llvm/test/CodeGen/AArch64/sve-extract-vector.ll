@@ -186,18 +186,190 @@ define <4 x i64> @extract_fixed_v4i64_nxv2i64(<vscale x 2 x i64> %vec) nounwind 
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov w10, #4
 ; CHECK-NEXT:    cmp x9, #4
-; CHECK-NEXT:    ptrue p1.d, vl4
 ; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
 ; CHECK-NEXT:    csel x9, x9, x10, lo
 ; CHECK-NEXT:    mov x10, sp
-; CHECK-NEXT:    ld1d { z0.d }, p1/z, [x10, x9, lsl #3]
-; CHECK-NEXT:    st1d { z0.d }, p1, [x8]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x10, x9, lsl #3]
+; CHECK-NEXT:    st1d { z0.d }, p0, [x8]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %retval = call <4 x i64> @llvm.experimental.vector.extract.v4i64.nxv2i64(<vscale x 2 x i64> %vec, i64 4)
   ret <4 x i64> %retval
 }
+
+;
+; Extracting a predicate from a wider predicate, that is more than twice the size.
+;
+
+define <vscale x 2 x i1> @extract_nxv2i1_nxv16i1_0(<vscale x 16 x i1> %vec) {
+; CHECK-LABEL: extract_nxv2i1_nxv16i1_0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i1> @llvm.experimental.vector.extract.nxv2i1.nxv16i1(<vscale x 16 x i1> %vec, i64 0)
+  ret <vscale x 2 x i1> %res
+}
+
+define <vscale x 2 x i1> @extract_nxv2i1_nxv16i1_2(<vscale x 16 x i1> %vec) {
+; CHECK-LABEL: extract_nxv2i1_nxv16i1_2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i1> @llvm.experimental.vector.extract.nxv2i1.nxv16i1(<vscale x 16 x i1> %vec, i64 2)
+  ret <vscale x 2 x i1> %res
+}
+
+define <vscale x 2 x i1> @extract_nxv2i1_nxv16i1_4(<vscale x 16 x i1> %vec) {
+; CHECK-LABEL: extract_nxv2i1_nxv16i1_4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i1> @llvm.experimental.vector.extract.nxv2i1.nxv16i1(<vscale x 16 x i1> %vec, i64 4)
+  ret <vscale x 2 x i1> %res
+}
+
+define <vscale x 2 x i1> @extract_nxv2i1_nxv16i1_6(<vscale x 16 x i1> %vec) {
+; CHECK-LABEL: extract_nxv2i1_nxv16i1_6:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i1> @llvm.experimental.vector.extract.nxv2i1.nxv16i1(<vscale x 16 x i1> %vec, i64 6)
+  ret <vscale x 2 x i1> %res
+}
+
+define <vscale x 2 x i1> @extract_nxv2i1_nxv16i1_8(<vscale x 16 x i1> %vec) {
+; CHECK-LABEL: extract_nxv2i1_nxv16i1_8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i1> @llvm.experimental.vector.extract.nxv2i1.nxv16i1(<vscale x 16 x i1> %vec, i64 8)
+  ret <vscale x 2 x i1> %res
+}
+
+define <vscale x 2 x i1> @extract_nxv2i1_nxv16i1_10(<vscale x 16 x i1> %vec) {
+; CHECK-LABEL: extract_nxv2i1_nxv16i1_10:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i1> @llvm.experimental.vector.extract.nxv2i1.nxv16i1(<vscale x 16 x i1> %vec, i64 10)
+  ret <vscale x 2 x i1> %res
+}
+
+define <vscale x 2 x i1> @extract_nxv2i1_nxv16i1_12(<vscale x 16 x i1> %vec) {
+; CHECK-LABEL: extract_nxv2i1_nxv16i1_12:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i1> @llvm.experimental.vector.extract.nxv2i1.nxv16i1(<vscale x 16 x i1> %vec, i64 12)
+  ret <vscale x 2 x i1> %res
+}
+
+define <vscale x 2 x i1> @extract_nxv2i1_nxv16i1_14(<vscale x 16 x i1> %vec) {
+; CHECK-LABEL: extract_nxv2i1_nxv16i1_14:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i1> @llvm.experimental.vector.extract.nxv2i1.nxv16i1(<vscale x 16 x i1> %vec, i64 14)
+  ret <vscale x 2 x i1> %res
+}
+
+define <vscale x 2 x i1> @extract_nxv2i1_nxv8i1_0(<vscale x 8 x i1> %vec) {
+; CHECK-LABEL: extract_nxv2i1_nxv8i1_0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i1> @llvm.experimental.vector.extract.nxv2i1.nxv8i1(<vscale x 8 x i1> %vec, i64 0)
+  ret <vscale x 2 x i1> %res
+}
+
+define <vscale x 2 x i1> @extract_nxv2i1_nxv8i1_2(<vscale x 8 x i1> %vec) {
+; CHECK-LABEL: extract_nxv2i1_nxv8i1_2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i1> @llvm.experimental.vector.extract.nxv2i1.nxv8i1(<vscale x 8 x i1> %vec, i64 2)
+  ret <vscale x 2 x i1> %res
+}
+
+define <vscale x 2 x i1> @extract_nxv2i1_nxv8i1_4(<vscale x 8 x i1> %vec) {
+; CHECK-LABEL: extract_nxv2i1_nxv8i1_4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i1> @llvm.experimental.vector.extract.nxv2i1.nxv8i1(<vscale x 8 x i1> %vec, i64 4)
+  ret <vscale x 2 x i1> %res
+}
+
+define <vscale x 2 x i1> @extract_nxv2i1_nxv8i1_6(<vscale x 8 x i1> %vec) {
+; CHECK-LABEL: extract_nxv2i1_nxv8i1_6:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i1> @llvm.experimental.vector.extract.nxv2i1.nxv8i1(<vscale x 8 x i1> %vec, i64 6)
+  ret <vscale x 2 x i1> %res
+}
+
+define <vscale x 4 x i1> @extract_nxv4i1_nxv16i1_0(<vscale x 16 x i1> %vec) {
+; CHECK-LABEL: extract_nxv4i1_nxv16i1_0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x i1> @llvm.experimental.vector.extract.nxv4i1.nxv16i1(<vscale x 16 x i1> %vec, i64 0)
+  ret <vscale x 4 x i1> %res
+}
+
+define <vscale x 4 x i1> @extract_nxv4i1_nxv16i1_4(<vscale x 16 x i1> %vec) {
+; CHECK-LABEL: extract_nxv4i1_nxv16i1_4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x i1> @llvm.experimental.vector.extract.nxv4i1.nxv16i1(<vscale x 16 x i1> %vec, i64 4)
+  ret <vscale x 4 x i1> %res
+}
+
+define <vscale x 4 x i1> @extract_nxv4i1_nxv16i1_8(<vscale x 16 x i1> %vec) {
+; CHECK-LABEL: extract_nxv4i1_nxv16i1_8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x i1> @llvm.experimental.vector.extract.nxv4i1.nxv16i1(<vscale x 16 x i1> %vec, i64 8)
+  ret <vscale x 4 x i1> %res
+}
+
+define <vscale x 4 x i1> @extract_nxv4i1_nxv16i1_12(<vscale x 16 x i1> %vec) {
+; CHECK-LABEL: extract_nxv4i1_nxv16i1_12:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x i1> @llvm.experimental.vector.extract.nxv4i1.nxv16i1(<vscale x 16 x i1> %vec, i64 12)
+  ret <vscale x 4 x i1> %res
+}
+
 
 attributes #0 = { vscale_range(2,2) }
 
@@ -210,3 +382,7 @@ declare <4 x i64> @llvm.experimental.vector.extract.v4i64.nxv2i64(<vscale x 2 x 
 
 declare <vscale x 1 x i32> @llvm.experimental.vector.extract.nxv1i32.nxv4i32(<vscale x 4 x i32>, i64)
 declare <vscale x 1 x i16> @llvm.experimental.vector.extract.nxv1i16.nxv6i16(<vscale x 6 x i16>, i64)
+
+declare <vscale x 2 x i1> @llvm.experimental.vector.extract.nxv2i1.nxv16i1(<vscale x 16 x i1>, i64)
+declare <vscale x 2 x i1> @llvm.experimental.vector.extract.nxv2i1.nxv8i1(<vscale x 8 x i1>, i64)
+declare <vscale x 4 x i1> @llvm.experimental.vector.extract.nxv4i1.nxv16i1(<vscale x 16 x i1>, i64)

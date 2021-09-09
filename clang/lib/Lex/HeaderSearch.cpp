@@ -91,7 +91,7 @@ void HeaderSearch::PrintStats() {
                << FileInfo.size() << " files tracked.\n";
   unsigned NumOnceOnlyFiles = 0, MaxNumIncludes = 0, NumSingleIncludedFiles = 0;
   for (unsigned i = 0, e = FileInfo.size(); i != e; ++i) {
-    NumOnceOnlyFiles += FileInfo[i].isImport;
+    NumOnceOnlyFiles += (FileInfo[i].isPragmaOnce || FileInfo[i].isImport);
     if (MaxNumIncludes < FileInfo[i].NumIncludes)
       MaxNumIncludes = FileInfo[i].NumIncludes;
     NumSingleIncludedFiles += FileInfo[i].NumIncludes == 1;
@@ -1325,7 +1325,7 @@ bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP,
   } else {
     // Otherwise, if this is a #include of a file that was previously #import'd
     // or if this is the second #include of a #pragma once file, ignore it.
-    if (FileInfo.isImport && !TryEnterImported())
+    if ((FileInfo.isPragmaOnce || FileInfo.isImport) && !TryEnterImported())
       return false;
   }
 

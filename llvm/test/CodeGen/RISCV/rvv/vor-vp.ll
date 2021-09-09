@@ -4,6 +4,20 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-v -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,RV64
 
+declare <vscale x 8 x i7> @llvm.vp.or.nxv8i7(<vscale x 8 x i7>, <vscale x 8 x i7>, <vscale x 8 x i1>, i32)
+
+define <vscale x 8 x i7> @vor_vx_nxv8i7(<vscale x 8 x i7> %a, i7 signext %b, <vscale x 8 x i1> %mask, i32 zeroext %evl) {
+; CHECK-LABEL: vor_vx_nxv8i7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vor.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 8 x i7> undef, i7 %b, i32 0
+  %vb = shufflevector <vscale x 8 x i7> %elt.head, <vscale x 8 x i7> undef, <vscale x 8 x i32> zeroinitializer
+  %v = call <vscale x 8 x i7> @llvm.vp.or.nxv8i7(<vscale x 8 x i7> %a, <vscale x 8 x i7> %vb, <vscale x 8 x i1> %mask, i32 %evl)
+  ret <vscale x 8 x i7> %v
+}
+
 declare <vscale x 1 x i8> @llvm.vp.or.nxv1i8(<vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i1>, i32)
 
 define <vscale x 1 x i8> @vor_vv_nxv1i8(<vscale x 1 x i8> %va, <vscale x 1 x i8> %b, <vscale x 1 x i1> %m, i32 zeroext %evl) {
@@ -1294,6 +1308,82 @@ define <vscale x 8 x i32> @vor_vi_nxv8i32_unmasked(<vscale x 8 x i32> %va, i32 z
   %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> undef, <vscale x 8 x i32> zeroinitializer
   %v = call <vscale x 8 x i32> @llvm.vp.or.nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i32> %vb, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i32> %v
+}
+
+declare <vscale x 10 x i32> @llvm.vp.or.nxv10i32(<vscale x 10 x i32>, <vscale x 10 x i32>, <vscale x 10 x i1>, i32)
+
+define <vscale x 10 x i32> @vor_vv_nxv10i32(<vscale x 10 x i32> %va, <vscale x 10 x i32> %b, <vscale x 10 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vor_vv_nxv10i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, mu
+; CHECK-NEXT:    vor.vv v8, v8, v16, v0.t
+; CHECK-NEXT:    ret
+  %v = call <vscale x 10 x i32> @llvm.vp.or.nxv10i32(<vscale x 10 x i32> %va, <vscale x 10 x i32> %b, <vscale x 10 x i1> %m, i32 %evl)
+  ret <vscale x 10 x i32> %v
+}
+
+define <vscale x 10 x i32> @vor_vv_nxv10i32_unmasked(<vscale x 10 x i32> %va, <vscale x 10 x i32> %b, i32 zeroext %evl) {
+; CHECK-LABEL: vor_vv_nxv10i32_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, mu
+; CHECK-NEXT:    vor.vv v8, v8, v16
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 10 x i1> undef, i1 true, i32 0
+  %m = shufflevector <vscale x 10 x i1> %head, <vscale x 10 x i1> undef, <vscale x 10 x i32> zeroinitializer
+  %v = call <vscale x 10 x i32> @llvm.vp.or.nxv10i32(<vscale x 10 x i32> %va, <vscale x 10 x i32> %b, <vscale x 10 x i1> %m, i32 %evl)
+  ret <vscale x 10 x i32> %v
+}
+
+define <vscale x 10 x i32> @vor_vx_nxv10i32(<vscale x 10 x i32> %va, i32 %b, <vscale x 10 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vor_vx_nxv10i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, mu
+; CHECK-NEXT:    vor.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 10 x i32> undef, i32 %b, i32 0
+  %vb = shufflevector <vscale x 10 x i32> %elt.head, <vscale x 10 x i32> undef, <vscale x 10 x i32> zeroinitializer
+  %v = call <vscale x 10 x i32> @llvm.vp.or.nxv10i32(<vscale x 10 x i32> %va, <vscale x 10 x i32> %vb, <vscale x 10 x i1> %m, i32 %evl)
+  ret <vscale x 10 x i32> %v
+}
+
+define <vscale x 10 x i32> @vor_vx_nxv10i32_unmasked(<vscale x 10 x i32> %va, i32 %b, i32 zeroext %evl) {
+; CHECK-LABEL: vor_vx_nxv10i32_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, mu
+; CHECK-NEXT:    vor.vx v8, v8, a0
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 10 x i32> undef, i32 %b, i32 0
+  %vb = shufflevector <vscale x 10 x i32> %elt.head, <vscale x 10 x i32> undef, <vscale x 10 x i32> zeroinitializer
+  %head = insertelement <vscale x 10 x i1> undef, i1 true, i32 0
+  %m = shufflevector <vscale x 10 x i1> %head, <vscale x 10 x i1> undef, <vscale x 10 x i32> zeroinitializer
+  %v = call <vscale x 10 x i32> @llvm.vp.or.nxv10i32(<vscale x 10 x i32> %va, <vscale x 10 x i32> %vb, <vscale x 10 x i1> %m, i32 %evl)
+  ret <vscale x 10 x i32> %v
+}
+
+define <vscale x 10 x i32> @vor_vi_nxv10i32(<vscale x 10 x i32> %va, <vscale x 10 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vor_vi_nxv10i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, mu
+; CHECK-NEXT:    vor.vi v8, v8, 5, v0.t
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 10 x i32> undef, i32 5, i32 0
+  %vb = shufflevector <vscale x 10 x i32> %elt.head, <vscale x 10 x i32> undef, <vscale x 10 x i32> zeroinitializer
+  %v = call <vscale x 10 x i32> @llvm.vp.or.nxv10i32(<vscale x 10 x i32> %va, <vscale x 10 x i32> %vb, <vscale x 10 x i1> %m, i32 %evl)
+  ret <vscale x 10 x i32> %v
+}
+
+define <vscale x 10 x i32> @vor_vi_nxv10i32_unmasked(<vscale x 10 x i32> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vor_vi_nxv10i32_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, mu
+; CHECK-NEXT:    vor.vi v8, v8, 5
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 10 x i32> undef, i32 5, i32 0
+  %vb = shufflevector <vscale x 10 x i32> %elt.head, <vscale x 10 x i32> undef, <vscale x 10 x i32> zeroinitializer
+  %head = insertelement <vscale x 10 x i1> undef, i1 true, i32 0
+  %m = shufflevector <vscale x 10 x i1> %head, <vscale x 10 x i1> undef, <vscale x 10 x i32> zeroinitializer
+  %v = call <vscale x 10 x i32> @llvm.vp.or.nxv10i32(<vscale x 10 x i32> %va, <vscale x 10 x i32> %vb, <vscale x 10 x i1> %m, i32 %evl)
+  ret <vscale x 10 x i32> %v
 }
 
 declare <vscale x 16 x i32> @llvm.vp.or.nxv16i32(<vscale x 16 x i32>, <vscale x 16 x i32>, <vscale x 16 x i1>, i32)

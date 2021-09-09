@@ -1463,3 +1463,56 @@ define i8 @PR46271(<2 x i8> %x) {
   %r = extractelement <2 x i8> %not, i32 1
   ret i8 %r
 }
+
+define i32 @twoway_clamp_lt(i32 %num) {
+; CHECK-LABEL: @twoway_clamp_lt(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[NUM:%.*]], 13768
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[CMP1]], i32 [[NUM]], i32 13768
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[S1]], 13767
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP2]], i32 [[S1]], i32 13767
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %cmp1 = icmp slt i32 %num, 13768
+  %s1 = select i1 %cmp1, i32 %num, i32 13768
+  %cmp2 = icmp sgt i32 %s1, 13767
+  %r = select i1 %cmp2, i32 %s1, i32 13767
+  ret i32 %r
+}
+
+define i32 @twoway_clamp_gt(i32 %num) {
+; CHECK-LABEL: @twoway_clamp_gt(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[NUM:%.*]], 13767
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[CMP1]], i32 [[NUM]], i32 13767
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[S1]], 13768
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP2]], i32 [[S1]], i32 13768
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %cmp1 = icmp sgt i32 %num, 13767
+  %s1 = select i1 %cmp1, i32 %num, i32 13767
+  %cmp2 = icmp slt i32 %s1, 13768
+  %r = select i1 %cmp2, i32 %s1, i32 13768
+  ret i32 %r
+}
+
+define i32 @twoway_clamp_gt_nonconst(i32 %num, i32 %k) {
+; CHECK-LABEL: @twoway_clamp_gt_nonconst(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[K1:%.*]] = add i32 [[K:%.*]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[NUM:%.*]], [[K]]
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[CMP1]], i32 [[NUM]], i32 [[K]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[S1]], [[K1]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP2]], i32 [[S1]], i32 [[K1]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %k1 = add i32 %k, 1
+  %cmp1 = icmp sgt i32 %num, %k
+  %s1 = select i1 %cmp1, i32 %num, i32 %k
+  %cmp2 = icmp slt i32 %s1, %k1
+  %r = select i1 %cmp2, i32 %s1, i32 %k1
+  ret i32 %r
+}

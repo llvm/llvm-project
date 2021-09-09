@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<range R>
@@ -30,9 +29,9 @@
 #include "test_iterators.h"
 #include "test_range.h"
 
-namespace stdr = std::ranges;
 
-static_assert(std::same_as<stdr::range_difference_t<test_range<cpp20_input_iterator> >, std::iter_difference_t<int*> >);
-static_assert(std::same_as<stdr::range_value_t<test_range<cpp20_input_iterator> >, std::iter_value_t<int*> >);
-static_assert(std::same_as<stdr::range_reference_t<test_range<cpp20_input_iterator> >, std::iter_reference_t<int*> >);
-static_assert(std::same_as<stdr::range_rvalue_reference_t<test_range<cpp20_input_iterator> >, std::iter_rvalue_reference_t<int*> >);
+
+static_assert(std::same_as<std::ranges::range_difference_t<test_range<cpp20_input_iterator> >, std::iter_difference_t<int*> >);
+static_assert(std::same_as<std::ranges::range_value_t<test_range<cpp20_input_iterator> >, std::iter_value_t<int*> >);
+static_assert(std::same_as<std::ranges::range_reference_t<test_range<cpp20_input_iterator> >, std::iter_reference_t<int*> >);
+static_assert(std::same_as<std::ranges::range_rvalue_reference_t<test_range<cpp20_input_iterator> >, std::iter_rvalue_reference_t<int*> >);

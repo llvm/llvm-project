@@ -6,10 +6,10 @@
 define <16 x i8> @vector_add_i8(<16 x i8> %lhs, <16 x i8> %rhs) {
 ; CHECK-LE-LABEL: vector_add_i8:
 ; CHECK-LE:       @ %bb.0: @ %entry
-; CHECK-LE-NEXT:    vmov d1, r2, r3
 ; CHECK-LE-NEXT:    vmov d0, r0, r1
 ; CHECK-LE-NEXT:    mov r0, sp
 ; CHECK-LE-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-LE-NEXT:    vmov d1, r2, r3
 ; CHECK-LE-NEXT:    vadd.i8 q0, q0, q1
 ; CHECK-LE-NEXT:    vmov r0, r1, d0
 ; CHECK-LE-NEXT:    vmov r2, r3, d1
@@ -17,9 +17,9 @@ define <16 x i8> @vector_add_i8(<16 x i8> %lhs, <16 x i8> %rhs) {
 ;
 ; CHECK-BE-LABEL: vector_add_i8:
 ; CHECK-BE:       @ %bb.0: @ %entry
-; CHECK-BE-NEXT:    vmov d1, r3, r2
 ; CHECK-BE-NEXT:    vmov d0, r1, r0
 ; CHECK-BE-NEXT:    mov r0, sp
+; CHECK-BE-NEXT:    vmov d1, r3, r2
 ; CHECK-BE-NEXT:    vrev64.8 q1, q0
 ; CHECK-BE-NEXT:    vldrb.u8 q0, [r0]
 ; CHECK-BE-NEXT:    vadd.i8 q0, q1, q0
@@ -35,10 +35,10 @@ entry:
 define <8 x i16> @vector_add_i16(<8 x i16> %lhs, <8 x i16> %rhs) {
 ; CHECK-LE-LABEL: vector_add_i16:
 ; CHECK-LE:       @ %bb.0: @ %entry
-; CHECK-LE-NEXT:    vmov d1, r2, r3
 ; CHECK-LE-NEXT:    vmov d0, r0, r1
 ; CHECK-LE-NEXT:    mov r0, sp
 ; CHECK-LE-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-LE-NEXT:    vmov d1, r2, r3
 ; CHECK-LE-NEXT:    vadd.i16 q0, q0, q1
 ; CHECK-LE-NEXT:    vmov r0, r1, d0
 ; CHECK-LE-NEXT:    vmov r2, r3, d1
@@ -46,9 +46,9 @@ define <8 x i16> @vector_add_i16(<8 x i16> %lhs, <8 x i16> %rhs) {
 ;
 ; CHECK-BE-LABEL: vector_add_i16:
 ; CHECK-BE:       @ %bb.0: @ %entry
-; CHECK-BE-NEXT:    vmov d1, r3, r2
 ; CHECK-BE-NEXT:    vmov d0, r1, r0
 ; CHECK-BE-NEXT:    mov r0, sp
+; CHECK-BE-NEXT:    vmov d1, r3, r2
 ; CHECK-BE-NEXT:    vrev64.16 q1, q0
 ; CHECK-BE-NEXT:    vldrh.u16 q0, [r0]
 ; CHECK-BE-NEXT:    vadd.i16 q0, q1, q0
@@ -64,10 +64,10 @@ entry:
 define <4 x i32> @vector_add_i32(<4 x i32> %lhs, <4 x i32> %rhs) {
 ; CHECK-LE-LABEL: vector_add_i32:
 ; CHECK-LE:       @ %bb.0: @ %entry
-; CHECK-LE-NEXT:    vmov d1, r2, r3
 ; CHECK-LE-NEXT:    vmov d0, r0, r1
 ; CHECK-LE-NEXT:    mov r0, sp
 ; CHECK-LE-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-LE-NEXT:    vmov d1, r2, r3
 ; CHECK-LE-NEXT:    vadd.i32 q0, q0, q1
 ; CHECK-LE-NEXT:    vmov r0, r1, d0
 ; CHECK-LE-NEXT:    vmov r2, r3, d1
@@ -75,9 +75,9 @@ define <4 x i32> @vector_add_i32(<4 x i32> %lhs, <4 x i32> %rhs) {
 ;
 ; CHECK-BE-LABEL: vector_add_i32:
 ; CHECK-BE:       @ %bb.0: @ %entry
-; CHECK-BE-NEXT:    vmov d1, r3, r2
 ; CHECK-BE-NEXT:    vmov d0, r1, r0
 ; CHECK-BE-NEXT:    mov r0, sp
+; CHECK-BE-NEXT:    vmov d1, r3, r2
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
 ; CHECK-BE-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-BE-NEXT:    vadd.i32 q0, q1, q0
@@ -144,10 +144,10 @@ define <8 x half> @vector_add_f16(<8 x half> %lhs, <8 x half> %rhs) {
 ; CHECK-MVE-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-MVE-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
 ; CHECK-MVE-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
-; CHECK-MVE-NEXT:    vmov d9, r2, r3
 ; CHECK-MVE-NEXT:    vmov d8, r0, r1
 ; CHECK-MVE-NEXT:    add r0, sp, #64
 ; CHECK-MVE-NEXT:    vldrw.u32 q6, [r0]
+; CHECK-MVE-NEXT:    vmov d9, r2, r3
 ; CHECK-MVE-NEXT:    vmov.u16 r4, q4[0]
 ; CHECK-MVE-NEXT:    vmov.u16 r0, q6[0]
 ; CHECK-MVE-NEXT:    bl __aeabi_h2f
@@ -239,13 +239,13 @@ define <8 x half> @vector_add_f16(<8 x half> %lhs, <8 x half> %rhs) {
 ; CHECK-BE-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-BE-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
 ; CHECK-BE-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
-; CHECK-BE-NEXT:    vmov d1, r3, r2
 ; CHECK-BE-NEXT:    vmov d0, r1, r0
 ; CHECK-BE-NEXT:    add r0, sp, #64
 ; CHECK-BE-NEXT:    vldrh.u16 q6, [r0]
+; CHECK-BE-NEXT:    vmov d1, r3, r2
 ; CHECK-BE-NEXT:    vrev64.16 q4, q0
-; CHECK-BE-NEXT:    vmov.u16 r4, q4[0]
 ; CHECK-BE-NEXT:    vmov.u16 r0, q6[0]
+; CHECK-BE-NEXT:    vmov.u16 r4, q4[0]
 ; CHECK-BE-NEXT:    bl __aeabi_h2f
 ; CHECK-BE-NEXT:    mov r5, r0
 ; CHECK-BE-NEXT:    mov r0, r4
@@ -332,10 +332,10 @@ define <8 x half> @vector_add_f16(<8 x half> %lhs, <8 x half> %rhs) {
 ;
 ; CHECK-FP-LABEL: vector_add_f16:
 ; CHECK-FP:       @ %bb.0: @ %entry
-; CHECK-FP-NEXT:    vmov d1, r2, r3
 ; CHECK-FP-NEXT:    vmov d0, r0, r1
 ; CHECK-FP-NEXT:    mov r0, sp
 ; CHECK-FP-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-FP-NEXT:    vmov d1, r2, r3
 ; CHECK-FP-NEXT:    vadd.f16 q0, q0, q1
 ; CHECK-FP-NEXT:    vmov r0, r1, d0
 ; CHECK-FP-NEXT:    vmov r2, r3, d1
@@ -352,21 +352,21 @@ define <4 x float> @vector_add_f32(<4 x float> %lhs, <4 x float> %rhs) {
 ; CHECK-MVE-NEXT:    push {r4, r5, r6, r7, lr}
 ; CHECK-MVE-NEXT:    .pad #4
 ; CHECK-MVE-NEXT:    sub sp, #4
-; CHECK-MVE-NEXT:    .vsave {d8, d9, d10, d11}
-; CHECK-MVE-NEXT:    vpush {d8, d9, d10, d11}
+; CHECK-MVE-NEXT:    .vsave {d8, d9}
+; CHECK-MVE-NEXT:    vpush {d8, d9}
 ; CHECK-MVE-NEXT:    mov r4, r0
-; CHECK-MVE-NEXT:    add r0, sp, #56
-; CHECK-MVE-NEXT:    vldrw.u32 q5, [r0]
+; CHECK-MVE-NEXT:    add r0, sp, #40
+; CHECK-MVE-NEXT:    vldrw.u32 q4, [r0]
 ; CHECK-MVE-NEXT:    mov r6, r1
 ; CHECK-MVE-NEXT:    mov r0, r3
 ; CHECK-MVE-NEXT:    mov r5, r2
-; CHECK-MVE-NEXT:    vmov r7, r1, d11
+; CHECK-MVE-NEXT:    vmov r7, r1, d9
 ; CHECK-MVE-NEXT:    bl __aeabi_fadd
 ; CHECK-MVE-NEXT:    vmov s19, r0
 ; CHECK-MVE-NEXT:    mov r0, r5
 ; CHECK-MVE-NEXT:    mov r1, r7
 ; CHECK-MVE-NEXT:    bl __aeabi_fadd
-; CHECK-MVE-NEXT:    vmov r5, r1, d10
+; CHECK-MVE-NEXT:    vmov r5, r1, d8
 ; CHECK-MVE-NEXT:    vmov s18, r0
 ; CHECK-MVE-NEXT:    mov r0, r6
 ; CHECK-MVE-NEXT:    bl __aeabi_fadd
@@ -377,7 +377,7 @@ define <4 x float> @vector_add_f32(<4 x float> %lhs, <4 x float> %rhs) {
 ; CHECK-MVE-NEXT:    vmov s16, r0
 ; CHECK-MVE-NEXT:    vmov r2, r3, d9
 ; CHECK-MVE-NEXT:    vmov r0, r1, d8
-; CHECK-MVE-NEXT:    vpop {d8, d9, d10, d11}
+; CHECK-MVE-NEXT:    vpop {d8, d9}
 ; CHECK-MVE-NEXT:    add sp, #4
 ; CHECK-MVE-NEXT:    pop {r4, r5, r6, r7, pc}
 ;
@@ -385,23 +385,23 @@ define <4 x float> @vector_add_f32(<4 x float> %lhs, <4 x float> %rhs) {
 ; CHECK-BE:       @ %bb.0: @ %entry
 ; CHECK-BE-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-BE-NEXT:    push {r4, r5, r7, lr}
-; CHECK-BE-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
-; CHECK-BE-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
-; CHECK-BE-NEXT:    vmov d1, r3, r2
+; CHECK-BE-NEXT:    .vsave {d8, d9, d10, d11}
+; CHECK-BE-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-BE-NEXT:    vmov d0, r1, r0
-; CHECK-BE-NEXT:    add r1, sp, #64
-; CHECK-BE-NEXT:    vldrw.u32 q6, [r1]
-; CHECK-BE-NEXT:    vrev64.32 q5, q0
-; CHECK-BE-NEXT:    vmov r4, r0, d11
-; CHECK-BE-NEXT:    vmov r5, r1, d13
+; CHECK-BE-NEXT:    add r1, sp, #48
+; CHECK-BE-NEXT:    vldrw.u32 q5, [r1]
+; CHECK-BE-NEXT:    vmov d1, r3, r2
+; CHECK-BE-NEXT:    vrev64.32 q4, q0
+; CHECK-BE-NEXT:    vmov r4, r0, d9
+; CHECK-BE-NEXT:    vmov r5, r1, d11
 ; CHECK-BE-NEXT:    bl __aeabi_fadd
 ; CHECK-BE-NEXT:    vmov s19, r0
 ; CHECK-BE-NEXT:    mov r0, r4
 ; CHECK-BE-NEXT:    mov r1, r5
 ; CHECK-BE-NEXT:    bl __aeabi_fadd
 ; CHECK-BE-NEXT:    vmov s18, r0
-; CHECK-BE-NEXT:    vmov r4, r0, d10
-; CHECK-BE-NEXT:    vmov r5, r1, d12
+; CHECK-BE-NEXT:    vmov r4, r0, d8
+; CHECK-BE-NEXT:    vmov r5, r1, d10
 ; CHECK-BE-NEXT:    bl __aeabi_fadd
 ; CHECK-BE-NEXT:    vmov s17, r0
 ; CHECK-BE-NEXT:    mov r0, r4
@@ -411,15 +411,15 @@ define <4 x float> @vector_add_f32(<4 x float> %lhs, <4 x float> %rhs) {
 ; CHECK-BE-NEXT:    vrev64.32 q0, q4
 ; CHECK-BE-NEXT:    vmov r1, r0, d0
 ; CHECK-BE-NEXT:    vmov r3, r2, d1
-; CHECK-BE-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
+; CHECK-BE-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-BE-NEXT:    pop {r4, r5, r7, pc}
 ;
 ; CHECK-FP-LABEL: vector_add_f32:
 ; CHECK-FP:       @ %bb.0: @ %entry
-; CHECK-FP-NEXT:    vmov d1, r2, r3
 ; CHECK-FP-NEXT:    vmov d0, r0, r1
 ; CHECK-FP-NEXT:    mov r0, sp
 ; CHECK-FP-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-FP-NEXT:    vmov d1, r2, r3
 ; CHECK-FP-NEXT:    vadd.f32 q0, q0, q1
 ; CHECK-FP-NEXT:    vmov r0, r1, d0
 ; CHECK-FP-NEXT:    vmov r2, r3, d1

@@ -13,13 +13,15 @@ static cl::opt<bool> ShowMmapEvents("show-mmap-events", cl::ReallyHidden,
                                     cl::init(false), cl::ZeroOrMore,
                                     cl::desc("Print binary load events."));
 
-static cl::opt<bool> ShowUnwinderOutput("show-unwinder-output",
-                                        cl::ReallyHidden, cl::init(false),
-                                        cl::ZeroOrMore,
-                                        cl::desc("Print unwinder output"));
+cl::opt<bool> SkipSymbolization("skip-symbolization", cl::ReallyHidden,
+                                cl::init(false), cl::ZeroOrMore,
+                                cl::desc("Dump the unsumbolized profile to the "
+                                         "output file. It will show unwinder "
+                                         "output for CS profile generation."));
 
 extern cl::opt<bool> ShowDisassemblyOnly;
 extern cl::opt<bool> ShowSourceLocations;
+extern cl::opt<std::string> OutputFilename;
 
 namespace llvm {
 namespace sampleprof {
@@ -93,8 +95,7 @@ void VirtualUnwinder::unwindBranchWithinFrame(UnwindState &State) {
 std::shared_ptr<StringBasedCtxKey> FrameStack::getContextKey() {
   std::shared_ptr<StringBasedCtxKey> KeyStr =
       std::make_shared<StringBasedCtxKey>();
-  KeyStr->Context =
-      Binary->getExpandedContextStr(Stack, KeyStr->WasLeafInlined);
+  KeyStr->Context = Binary->getExpandedContext(Stack, KeyStr->WasLeafInlined);
   if (KeyStr->Context.empty())
     return nullptr;
   KeyStr->genHashCode();
@@ -109,6 +110,9 @@ std::shared_ptr<ProbeBasedCtxKey> ProbeStack::getContextKey() {
   }
   CSProfileGenerator::compressRecursionContext<const MCDecodedPseudoProbe *>(
       ProbeBasedKey->Probes);
+  CSProfileGenerator::trimContext<const MCDecodedPseudoProbe *>(
+      ProbeBasedKey->Probes);
+
   ProbeBasedKey->genHashCode();
   return ProbeBasedKey;
 }
@@ -149,6 +153,12 @@ void VirtualUnwinder::collectSamplesFromFrameTrie(
       for (const auto &Item : Cur->Children) {
         collectSamplesFromFrameTrie(Item.second.get(), EmptyStack);
       }
+
+      // Keep note of untracked call site and deduplicate them
+      // for warning later.
+      if (!Cur->isLeafFrame())
+        UntrackedCallsites.insert(Cur->Address);
+
       return;
     }
   }
@@ -189,9 +199,9 @@ void VirtualUnwinder::recordBranchCount(const LBREntry &Branch,
   }
 }
 
-bool VirtualUnwinder::unwind(const HybridSample *Sample, uint64_t Repeat) {
+bool VirtualUnwinder::unwind(const PerfSample *Sample, uint64_t Repeat) {
   // Capture initial state as starting point for unwinding.
-  UnwindState State(Sample);
+  UnwindState State(Sample, Binary);
 
   // Sanity check - making sure leaf of LBR aligns with leaf of stack sample
   // Stack sample sometimes can be unreliable, so filter out bogus ones.
@@ -241,53 +251,15 @@ bool VirtualUnwinder::unwind(const HybridSample *Sample, uint64_t Repeat) {
   return true;
 }
 
-void PerfReaderBase::validateCommandLine(
-    cl::list<std::string> &BinaryFilenames,
-    cl::list<std::string> &PerfTraceFilenames) {
-  // Allow the invalid perfscript if we only use to show binary disassembly
-  if (!ShowDisassemblyOnly) {
-    for (auto &File : PerfTraceFilenames) {
-      if (!llvm::sys::fs::exists(File)) {
-        std::string Msg = "Input perf script(" + File + ") doesn't exist!";
-        exitWithError(Msg);
-      }
-    }
-  }
-  if (BinaryFilenames.size() > 1) {
-    // TODO: remove this if everything is ready to support multiple binaries.
-    exitWithError(
-        "Currently only support one input binary, multiple binaries' "
-        "profile will be merged in one profile and make profile "
-        "summary info inaccurate. Please use `llvm-perfdata` to merge "
-        "profiles from multiple binaries.");
-  }
-  for (auto &Binary : BinaryFilenames) {
-    if (!llvm::sys::fs::exists(Binary)) {
-      std::string Msg = "Input binary(" + Binary + ") doesn't exist!";
-      exitWithError(Msg);
-    }
-  }
-  if (CSProfileGenerator::MaxCompressionSize < -1) {
-    exitWithError("Value of --compress-recursion should >= -1");
-  }
-  if (ShowSourceLocations && !ShowDisassemblyOnly) {
-    exitWithError("--show-source-locations should work together with "
-                  "--show-disassembly-only!");
-  }
-}
-
 std::unique_ptr<PerfReaderBase>
-PerfReaderBase::create(cl::list<std::string> &BinaryFilenames,
+PerfReaderBase::create(ProfiledBinary *Binary,
                        cl::list<std::string> &PerfTraceFilenames) {
-  validateCommandLine(BinaryFilenames, PerfTraceFilenames);
-
   PerfScriptType PerfType = extractPerfType(PerfTraceFilenames);
   std::unique_ptr<PerfReaderBase> PerfReader;
   if (PerfType == PERF_LBR_STACK) {
-    PerfReader.reset(new HybridPerfReader(BinaryFilenames));
+    PerfReader.reset(new HybridPerfReader(Binary));
   } else if (PerfType == PERF_LBR) {
-    // TODO:
-    exitWithError("Unsupported perfscript!");
+    PerfReader.reset(new LBRPerfReader(Binary));
   } else {
     exitWithError("Unsupported perfscript!");
   }
@@ -295,77 +267,36 @@ PerfReaderBase::create(cl::list<std::string> &BinaryFilenames,
   return PerfReader;
 }
 
-PerfReaderBase::PerfReaderBase(cl::list<std::string> &BinaryFilenames) {
-  // Load the binaries.
-  for (auto Filename : BinaryFilenames)
-    loadBinary(Filename, /*AllowNameConflict*/ false);
-}
-
-ProfiledBinary &PerfReaderBase::loadBinary(const StringRef BinaryPath,
-                                           bool AllowNameConflict) {
-  // The binary table is currently indexed by the binary name not the full
-  // binary path. This is because the user-given path may not match the one
-  // that was actually executed.
-  StringRef BinaryName = llvm::sys::path::filename(BinaryPath);
-
-  // Call to load the binary in the ctor of ProfiledBinary.
-  auto Ret = BinaryTable.insert({BinaryName, ProfiledBinary(BinaryPath)});
-
-  if (!Ret.second && !AllowNameConflict) {
-    std::string ErrorMsg = "Binary name conflict: " + BinaryPath.str() +
-                           " and " + Ret.first->second.getPath().str() + " \n";
-    exitWithError(ErrorMsg);
-  }
-
-  // Initialize the base address to preferred address.
-  ProfiledBinary &B = Ret.first->second;
-  uint64_t PreferredAddr = B.getPreferredBaseAddress();
-  AddrToBinaryMap[PreferredAddr] = &B;
-  B.setBaseAddress(PreferredAddr);
-
-  return B;
-}
-
 void PerfReaderBase::updateBinaryAddress(const MMapEvent &Event) {
-  // Load the binary.
-  StringRef BinaryPath = Event.BinaryPath;
-  StringRef BinaryName = llvm::sys::path::filename(BinaryPath);
-
-  auto I = BinaryTable.find(BinaryName);
-  // Drop the event which doesn't belong to user-provided binaries
-  if (I == BinaryTable.end())
+  // Drop the event which doesn't belong to user-provided binary
+  StringRef BinaryName = llvm::sys::path::filename(Event.BinaryPath);
+  if (Binary->getName() != BinaryName)
     return;
 
-  ProfiledBinary &Binary = I->second;
   // Drop the event if its image is loaded at the same address
-  if (Event.Address == Binary.getBaseAddress()) {
-    Binary.setIsLoadedByMMap(true);
+  if (Event.Address == Binary->getBaseAddress()) {
+    Binary->setIsLoadedByMMap(true);
     return;
   }
 
-  if (Event.Offset == Binary.getTextSegmentOffset()) {
+  if (Event.Offset == Binary->getTextSegmentOffset()) {
     // A binary image could be unloaded and then reloaded at different
-    // place, so update the address map here.
+    // place, so update binary load address.
     // Only update for the first executable segment and assume all other
     // segments are loaded at consecutive memory addresses, which is the case on
     // X64.
-    AddrToBinaryMap.erase(Binary.getBaseAddress());
-    AddrToBinaryMap[Event.Address] = &Binary;
-
-    // Update binary load address.
-    Binary.setBaseAddress(Event.Address);
-
-    Binary.setIsLoadedByMMap(true);
+    Binary->setBaseAddress(Event.Address);
+    Binary->setIsLoadedByMMap(true);
   } else {
     // Verify segments are loaded consecutively.
-    const auto &Offsets = Binary.getTextSegmentOffsets();
+    const auto &Offsets = Binary->getTextSegmentOffsets();
     auto It = std::lower_bound(Offsets.begin(), Offsets.end(), Event.Offset);
     if (It != Offsets.end() && *It == Event.Offset) {
       // The event is for loading a separate executable segment.
       auto I = std::distance(Offsets.begin(), It);
-      const auto &PreferredAddrs = Binary.getPreferredTextSegmentAddresses();
-      if (PreferredAddrs[I] - Binary.getPreferredBaseAddress() !=
-          Event.Address - Binary.getBaseAddress())
+      const auto &PreferredAddrs = Binary->getPreferredTextSegmentAddresses();
+      if (PreferredAddrs[I] - Binary->getPreferredBaseAddress() !=
+          Event.Address - Binary->getBaseAddress())
         exitWithError("Executable segments not loaded consecutively");
     } else {
       if (It == Offsets.begin())
@@ -375,109 +306,104 @@ void PerfReaderBase::updateBinaryAddress(const MMapEvent &Event) {
         // via multiple mmap calls with consecutive memory addresses.
         --It;
         assert(*It < Event.Offset);
-        if (Event.Offset - *It != Event.Address - Binary.getBaseAddress())
+        if (Event.Offset - *It != Event.Address - Binary->getBaseAddress())
           exitWithError("Segment not loaded by consecutive mmaps");
       }
     }
   }
 }
 
-ProfiledBinary *PerfReaderBase::getBinary(uint64_t Address) {
-  auto Iter = AddrToBinaryMap.lower_bound(Address);
-  if (Iter == AddrToBinaryMap.end() || Iter->first != Address) {
-    if (Iter == AddrToBinaryMap.begin())
-      return nullptr;
-    Iter--;
-  }
-  return Iter->second;
-}
-
 // Use ordered map to make the output deterministic
 using OrderedCounterForPrint = std::map<std::string, RangeSample>;
 
-static void printSampleCounter(OrderedCounterForPrint &OrderedCounter) {
+static void printSampleCounter(OrderedCounterForPrint &OrderedCounter,
+                               raw_fd_ostream &OS) {
   for (auto Range : OrderedCounter) {
-    outs() << Range.first << "\n";
+    OS << Range.first << "\n";
     for (auto I : Range.second) {
-      outs() << "  (" << format("%" PRIx64, I.first.first) << ", "
-             << format("%" PRIx64, I.first.second) << "): " << I.second << "\n";
+      OS << "  (" << format("%" PRIx64, I.first.first) << ", "
+         << format("%" PRIx64, I.first.second) << "): " << I.second << "\n";
     }
   }
 }
 
 static std::string getContextKeyStr(ContextKey *K,
                                     const ProfiledBinary *Binary) {
-  std::string ContextStr;
   if (const auto *CtxKey = dyn_cast<StringBasedCtxKey>(K)) {
-    return CtxKey->Context;
+    return SampleContext::getContextString(CtxKey->Context);
   } else if (const auto *CtxKey = dyn_cast<ProbeBasedCtxKey>(K)) {
-    SmallVector<std::string, 16> ContextStack;
+    SampleContextFrameVector ContextStack;
     for (const auto *Probe : CtxKey->Probes) {
       Binary->getInlineContextForProbe(Probe, ContextStack, true);
     }
-    for (const auto &Context : ContextStack) {
-      if (ContextStr.size())
-        ContextStr += " @ ";
-      ContextStr += Context;
-    }
+    // Probe context key at this point does not have leaf probe, so do not
+    // include the leaf inline location.
+    return SampleContext::getContextString(ContextStack, true);
+  } else {
+    llvm_unreachable("unexpected key type");
   }
-  return ContextStr;
 }
 
 static void printRangeCounter(ContextSampleCounterMap &Counter,
-                              const ProfiledBinary *Binary) {
+                              const ProfiledBinary *Binary,
+                              raw_fd_ostream &OS) {
   OrderedCounterForPrint OrderedCounter;
   for (auto &CI : Counter) {
     OrderedCounter[getContextKeyStr(CI.first.getPtr(), Binary)] =
         CI.second.RangeCounter;
   }
-  printSampleCounter(OrderedCounter);
+  printSampleCounter(OrderedCounter, OS);
 }
 
 static void printBranchCounter(ContextSampleCounterMap &Counter,
-                               const ProfiledBinary *Binary) {
+                               const ProfiledBinary *Binary,
+                               raw_fd_ostream &OS) {
   OrderedCounterForPrint OrderedCounter;
   for (auto &CI : Counter) {
     OrderedCounter[getContextKeyStr(CI.first.getPtr(), Binary)] =
         CI.second.BranchCounter;
   }
-  printSampleCounter(OrderedCounter);
+  printSampleCounter(OrderedCounter, OS);
 }
 
-void HybridPerfReader::printUnwinderOutput() {
-  for (auto I : BinarySampleCounters) {
-    const ProfiledBinary *Binary = I.first;
-    outs() << "Binary(" << Binary->getName().str() << ")'s Range Counter:\n";
-    printRangeCounter(I.second, Binary);
-    outs() << "\nBinary(" << Binary->getName().str() << ")'s Branch Counter:\n";
-    printBranchCounter(I.second, Binary);
-  }
+void HybridPerfReader::writeRawProfile(raw_fd_ostream &OS) {
+  OS << "Binary(" << Binary->getName().str() << ")'s Range Counter:\n";
+  printRangeCounter(SampleCounters, Binary, OS);
+  OS << "\nBinary(" << Binary->getName().str() << ")'s Branch Counter:\n";
+  printBranchCounter(SampleCounters, Binary, OS);
 }
 
 void HybridPerfReader::unwindSamples() {
+  std::set<uint64_t> AllUntrackedCallsites;
   for (const auto &Item : AggregatedSamples) {
-    const HybridSample *Sample = dyn_cast<HybridSample>(Item.first.getPtr());
-    VirtualUnwinder Unwinder(&BinarySampleCounters[Sample->Binary],
-                             Sample->Binary);
+    const PerfSample *Sample = Item.first.getPtr();
+    VirtualUnwinder Unwinder(&SampleCounters, Binary);
     Unwinder.unwind(Sample, Item.second);
+    auto &CurrUntrackedCallsites = Unwinder.getUntrackedCallsites();
+    AllUntrackedCallsites.insert(CurrUntrackedCallsites.begin(),
+                                 CurrUntrackedCallsites.end());
   }
 
-  if (ShowUnwinderOutput)
-    printUnwinderOutput();
+  // Warn about untracked frames due to missing probes.
+  for (auto Address : AllUntrackedCallsites)
+    WithColor::warning() << "Profile context truncated due to missing probe "
+                         << "for call instruction at "
+                         << format("%" PRIx64, Address) << "\n";
+
+  if (SkipSymbolization)
+    PerfReaderBase::writeRawProfile(OutputFilename);
 }
 
 bool PerfReaderBase::extractLBRStack(TraceStream &TraceIt,
-                                     SmallVectorImpl<LBREntry> &LBRStack,
-                                     ProfiledBinary *Binary) {
+                                     SmallVectorImpl<LBREntry> &LBRStack) {
   // The raw format of LBR stack is like:
   // 0x4005c8/0x4005dc/P/-/-/0 0x40062f/0x4005b0/P/-/-/0 ...
   //                           ... 0x4005c8/0x4005dc/P/-/-/0
   // It's in FIFO order and seperated by whitespace.
   SmallVector<StringRef, 32> Records;
-  TraceIt.getCurrentLine().split(Records, " ");
+  TraceIt.getCurrentLine().split(Records, " ", -1, false);
 
-  // Extract leading instruction pointer if present, use single
-  // list to pass out as reference.
+  // Skip the leading instruction pointer.
   size_t Index = 0;
   if (!Records.empty() && Records[0].find('/') == StringRef::npos) {
     Index = 1;
@@ -569,7 +495,6 @@ bool PerfReaderBase::extractCallstack(TraceStream &TraceIt,
   // It's in bottom-up order with each frame in one line.
 
   // Extract stack frames from sample
-  ProfiledBinary *Binary = nullptr;
   while (!TraceIt.isAtEoF() && !TraceIt.getCurrentLine().startswith(" 0x")) {
     StringRef FrameStr = TraceIt.getCurrentLine().ltrim();
     uint64_t FrameAddr = 0;
@@ -580,16 +505,6 @@ bool PerfReaderBase::extractCallstack(TraceStream &TraceIt,
       return false;
     }
     TraceIt.advance();
-    if (!Binary) {
-      Binary = getBinary(FrameAddr);
-      // we might have addr not match the MMAP, skip it
-      if (!Binary) {
-        if (AddrToBinaryMap.size() == 0)
-          WithColor::warning() << "No MMAP event in the perfscript, create it "
-                                  "with '--show-mmap-events'\n";
-        break;
-      }
-    }
     // Currently intermixed frame from different binaries is not supported.
     // Ignore bottom frames not from binary of interest.
     if (!Binary->addressIsCode(FrameAddr))
@@ -622,6 +537,15 @@ bool PerfReaderBase::extractCallstack(TraceStream &TraceIt,
          !Binary->addressInPrologEpilog(CallStack.front());
 }
 
+void PerfReaderBase::warnIfMissingMMap() {
+  if (!Binary->getMissingMMapWarned() && !Binary->getIsLoadedByMMap()) {
+    WithColor::warning() << "No relevant mmap event is matched, will use "
+                            "preferred address as the base loading address!\n";
+    // Avoid redundant warning, only warn at the first unmatched sample.
+    Binary->setMissingMMapWarned(true);
+  }
+}
+
 void HybridPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
   // The raw hybird sample started with call stack in FILO order and followed
   // intermediately by LBR sample
@@ -632,39 +556,113 @@ void HybridPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
   // 0x4005c8/0x4005dc/P/-/-/0   0x40062f/0x4005b0/P/-/-/0 ...
   //          ... 0x4005c8/0x4005dc/P/-/-/0    # LBR Entries
   //
-  std::shared_ptr<HybridSample> Sample = std::make_shared<HybridSample>();
+  std::shared_ptr<PerfSample> Sample = std::make_shared<PerfSample>();
 
-  // Parsing call stack and populate into HybridSample.CallStack
+  // Parsing call stack and populate into PerfSample.CallStack
   if (!extractCallstack(TraceIt, Sample->CallStack)) {
     // Skip the next LBR line matched current call stack
     if (!TraceIt.isAtEoF() && TraceIt.getCurrentLine().startswith(" 0x"))
       TraceIt.advance();
     return;
   }
-  // Set the binary current sample belongs to
-  ProfiledBinary *PB = getBinary(Sample->CallStack.front());
-  Sample->Binary = PB;
-  if (!PB->getMissingMMapWarned() && !PB->getIsLoadedByMMap()) {
-    WithColor::warning() << "No relevant mmap event is matched, will use "
-                            "preferred address as the base loading address!\n";
-    // Avoid redundant warning, only warn at the first unmatched sample.
-    PB->setMissingMMapWarned(true);
-  }
+
+  warnIfMissingMMap();
 
   if (!TraceIt.isAtEoF() && TraceIt.getCurrentLine().startswith(" 0x")) {
-    // Parsing LBR stack and populate into HybridSample.LBRStack
-    if (extractLBRStack(TraceIt, Sample->LBRStack, Sample->Binary)) {
+    // Parsing LBR stack and populate into PerfSample.LBRStack
+    if (extractLBRStack(TraceIt, Sample->LBRStack)) {
       // Canonicalize stack leaf to avoid 'random' IP from leaf frame skew LBR
       // ranges
       Sample->CallStack.front() = Sample->LBRStack[0].Target;
       // Record samples by aggregation
-      Sample->genHashCode();
       AggregatedSamples[Hashable<PerfSample>(Sample)] += Count;
     }
   } else {
     // LBR sample is encoded in single line after stack sample
     exitWithError("'Hybrid perf sample is corrupted, No LBR sample line");
   }
+}
+
+void PerfReaderBase::writeRawProfile(StringRef Filename) {
+  std::error_code EC;
+  raw_fd_ostream OS(Filename, EC, llvm::sys::fs::OF_TextWithCRLF);
+  if (EC)
+    exitWithError(EC, Filename);
+  writeRawProfile(OS);
+}
+
+void LBRPerfReader::writeRawProfile(raw_fd_ostream &OS) {
+  /*
+     Format:
+     number of entries in RangeCounter
+     from_1-to_1:count_1
+     from_2-to_2:count_2
+     ......
+     from_n-to_n:count_n
+     number of entries in BranchCounter
+     src_1->dst_1:count_1
+     src_2->dst_2:count_2
+     ......
+     src_n->dst_n:count_n
+  */
+
+  SampleCounter &Counter = SampleCounters.begin()->second;
+  OS << Counter.RangeCounter.size() << "\n";
+  for (auto I : Counter.RangeCounter) {
+    OS << Twine::utohexstr(I.first.first) << "-"
+       << Twine::utohexstr(I.first.second) << ":" << I.second << "\n";
+  }
+
+  OS << Counter.BranchCounter.size() << "\n";
+  for (auto I : Counter.BranchCounter) {
+    OS << Twine::utohexstr(I.first.first) << "->"
+       << Twine::utohexstr(I.first.second) << ":" << I.second << "\n";
+  }
+}
+
+void LBRPerfReader::computeCounterFromLBR(const PerfSample *Sample,
+                                          uint64_t Repeat) {
+  SampleCounter &Counter = SampleCounters.begin()->second;
+  uint64_t EndOffeset = 0;
+  for (const LBREntry &LBR : Sample->LBRStack) {
+    uint64_t SourceOffset = Binary->virtualAddrToOffset(LBR.Source);
+    uint64_t TargetOffset = Binary->virtualAddrToOffset(LBR.Target);
+
+    if (!LBR.IsArtificial) {
+      Counter.recordBranchCount(SourceOffset, TargetOffset, Repeat);
+    }
+
+    // If this not the first LBR, update the range count between TO of current
+    // LBR and FROM of next LBR.
+    uint64_t StartOffset = TargetOffset;
+    if (EndOffeset != 0) {
+      assert(StartOffset <= EndOffeset &&
+             "Bogus range should be filtered ealier!");
+      Counter.recordRangeCount(StartOffset, EndOffeset, Repeat);
+    }
+    EndOffeset = SourceOffset;
+  }
+}
+
+void LBRPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
+  std::shared_ptr<PerfSample> Sample = std::make_shared<PerfSample>();
+  // Parsing LBR stack and populate into PerfSample.LBRStack
+  if (extractLBRStack(TraceIt, Sample->LBRStack)) {
+    warnIfMissingMMap();
+    // Record LBR only samples by aggregation
+    AggregatedSamples[Hashable<PerfSample>(Sample)] += Count;
+  }
+}
+
+void LBRPerfReader::generateRawProfile() {
+  assert(SampleCounters.size() == 1 && "Must have one entry of sample counter");
+  for (const auto &Item : AggregatedSamples) {
+    const PerfSample *Sample = Item.first.getPtr();
+    computeCounterFromLBR(Sample, Item.second);
+  }
+
+  if (SkipSymbolization)
+    PerfReaderBase::writeRawProfile(OutputFilename);
 }
 
 uint64_t PerfReaderBase::parseAggregatedCount(TraceStream &TraceIt) {

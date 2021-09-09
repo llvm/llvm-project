@@ -42,8 +42,8 @@ static void ReportDeadlock(Thread *thr, DDReport *rep) {
   Printf("==============================\n");
   Printf("WARNING: lock-order-inversion (potential deadlock)\n");
   for (int i = 0; i < rep->n; i++) {
-    Printf("Thread %d locks mutex %llu while holding mutex %llu:\n",
-      rep->loop[i].thr_ctx, rep->loop[i].mtx_ctx1, rep->loop[i].mtx_ctx0);
+    Printf("Thread %lld locks mutex %llu while holding mutex %llu:\n",
+           rep->loop[i].thr_ctx, rep->loop[i].mtx_ctx1, rep->loop[i].mtx_ctx0);
     PrintStackTrace(thr, rep->loop[i].stk[1]);
     if (rep->loop[i].stk[0]) {
       Printf("Mutex %llu was acquired here:\n",

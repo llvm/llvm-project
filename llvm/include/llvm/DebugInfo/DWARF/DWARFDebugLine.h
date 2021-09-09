@@ -110,10 +110,6 @@ public:
     /// Length of the prologue in bytes.
     uint64_t getLength() const;
 
-    int32_t getMaxLineIncrementForSpecialOpcode() const {
-      return LineBase + (int8_t)LineRange - 1;
-    }
-
     /// Get DWARF-version aware access to the file name entry at the provided
     /// index.
     const llvm::DWARFDebugLine::FileNameEntry &

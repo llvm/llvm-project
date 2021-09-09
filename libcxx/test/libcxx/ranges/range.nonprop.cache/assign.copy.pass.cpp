@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // __non_propagating_cache& operator=(__non_propagating_cache const&);
@@ -48,7 +47,7 @@ constexpr void test() {
 
   // Assign to an empty cache
   {
-    Cache a; a.__set(T{3});
+    Cache a; a.__emplace(3);
     Cache b;
 
     Cache& result = (b = a);
@@ -61,8 +60,8 @@ constexpr void test() {
 
   // Assign to a non-empty cache
   {
-    Cache a; a.__set(T{3});
-    Cache b; b.__set(T{5});
+    Cache a; a.__emplace(3);
+    Cache b; b.__emplace(5);
 
     Cache& result = (b = a);
     assert(&result == &b);
@@ -82,7 +81,7 @@ constexpr void test() {
 
   // Self-assignment should not do anything (case with non-empty cache)
   {
-    Cache b; b.__set(T{5});
+    Cache b; b.__emplace(5);
     Cache& result = (b = b);
     assert(&result == &b);
     assert(b.__has_value());

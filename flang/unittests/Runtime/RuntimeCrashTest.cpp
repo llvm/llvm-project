@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 #include "CrashHandlerFixture.h"
-#include "../../runtime/io-api.h"
 #include "../../runtime/terminator.h"
+#include "flang/Runtime/io-api.h"
 #include <gtest/gtest.h>
 
 using namespace Fortran::runtime;

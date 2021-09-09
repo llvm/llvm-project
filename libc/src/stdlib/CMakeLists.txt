@@ -1,3 +1,77 @@
+add_entrypoint_object(
+  atoi
+  SRCS
+    atoi.cpp
+  HDRS
+    atoi.h
+  DEPENDS
+    libc.src.__support.str_conv_utils
+)
+
+add_entrypoint_object(
+  atol
+  SRCS
+    atol.cpp
+  HDRS
+    atol.h
+  DEPENDS
+    libc.src.__support.str_conv_utils
+)
+
+add_entrypoint_object(
+  atoll
+  SRCS
+    atoll.cpp
+  HDRS
+    atoll.h
+  DEPENDS
+    libc.src.__support.str_conv_utils
+)
+
+add_entrypoint_object(
+  strtol
+  SRCS
+    strtol.cpp
+  HDRS
+    strtol.h
+  DEPENDS
+    libc.src.__support.str_conv_utils
+)
+
+add_entrypoint_object(
+  strtoll
+  SRCS
+    strtoll.cpp
+  HDRS
+    strtoll.h
+  DEPENDS
+    libc.src.__support.str_conv_utils
+)
+
+add_entrypoint_object(
+  strtoul
+  SRCS
+    strtoul.cpp
+  HDRS
+    strtoul.h
+  DEPENDS
+    libc.src.__support.str_conv_utils
+)
+
+add_entrypoint_object(
+  strtoull
+  SRCS
+    strtoull.cpp
+  HDRS
+    strtoull.h
+  DEPENDS
+    libc.src.__support.str_conv_utils
+)
+
+if(NOT LLVM_LIBC_FULL_BUILD)
+  return()
+endif()
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()

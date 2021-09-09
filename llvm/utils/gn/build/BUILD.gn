@@ -41,6 +41,7 @@ config("compiler_defaults") {
 
   asmflags = target_flags
   cflags = target_flags
+  cflags_cc = []
   ldflags = target_flags + target_ldflags
 
   # Mostly for compiler-rt, see compiler-rt/cmake/config-ix.cmake
@@ -86,7 +87,7 @@ config("compiler_defaults") {
     if (use_lld) {
       ldflags += [ "-Wl,--color-diagnostics" ]
     }
-    cflags_cc = [
+    cflags_cc += [
       "-std=c++14",
       "-fvisibility-inlines-hidden",
     ]
@@ -348,12 +349,16 @@ config("compiler_defaults") {
       ]
     }
   }
+
+  cflags_objcc = cflags_cc
 }
 
 config("no_exceptions") {
+  cflags_cc = []
   if (host_os != "win") {
-    cflags_cc = [ "-fno-exceptions" ]
+    cflags_cc += [ "-fno-exceptions" ]
   }
+  cflags_objcc = cflags_cc
 }
 
 config("no_rtti") {
@@ -362,6 +367,7 @@ config("no_rtti") {
   } else {
     cflags_cc = [ "-fno-rtti" ]
   }
+  cflags_objcc = cflags_cc
 }
 
 # To make an archive that can be distributed, you need to remove this config and
@@ -377,6 +383,9 @@ config("llvm_code") {
     "//llvm/include",
     "$root_gen_dir/llvm/include",
   ]
+  if (current_os != "win") {
+    cflags = [ "-fPIC" ]
+  }
 }
 
 config("lld_code") {
@@ -404,11 +413,22 @@ config("crt_code") {
     "-gline-tables-only",
     "-fvisibility=hidden",
   ]
-  assert(is_clang, "CRT code is always built with just-built clang")
-  cflags += [
-    "-Werror=thread-safety",
-    "-Werror=thread-safety-reference",
-    "-Werror=thread-safety-beta",
+  if (is_clang) {
+    cflags += [
+      "-Werror=thread-safety",
+      "-Werror=thread-safety-reference",
+      "-Werror=thread-safety-beta",
+    ]
+  }
+}
+
+config("lldb_code") {
+  if (host_os != "win") {
+    cflags = [ "-fno-strict-aliasing" ]
+  }
+  include_dirs = [
+    "//lldb/include",
+    "$root_gen_dir/lldb/include",
   ]
 }
 

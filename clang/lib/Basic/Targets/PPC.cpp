@@ -14,7 +14,6 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "llvm/Support/Host.h"
 
 using namespace clang;
 using namespace clang::targets;
@@ -237,6 +236,8 @@ static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__frsqrtes", "__builtin_ppc_frsqrtes");
   Builder.defineMacro("__fsqrt", "__builtin_ppc_fsqrt");
   Builder.defineMacro("__fsqrts", "__builtin_ppc_fsqrts");
+  Builder.defineMacro("__addex", "__builtin_ppc_addex");
+  Builder.defineMacro("__cmplxl", "__builtin_complex");
 }
 
 /// PPCTargetInfo::getTargetDefines - Return a set of the PowerPC-specific
@@ -263,6 +264,9 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
   if (getTriple().isOSAIX()) {
     Builder.defineMacro("__THW_PPC__");
+    // Define __PPC and __powerpc for AIX XL C/C++ compatibility
+    Builder.defineMacro("__PPC");
+    Builder.defineMacro("__powerpc");
   }
 
   // Target properties.
@@ -306,11 +310,6 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (getTriple().isOSAIX() && Opts.LongDoubleSize == 64) {
     assert(LongDoubleWidth == 64);
     Builder.defineMacro("__LONGDOUBLE64");
-  }
-
-  if (llvm::Triple(llvm::sys::getProcessTriple()).isOSAIX() &&
-      getTriple().isOSAIX()) {
-    Builder.defineMacro("__HOS_AIX__");
   }
 
   // Define this for elfv2 (64-bit only) or 64-bit darwin.
@@ -379,8 +378,6 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__MMA__");
   if (HasROPProtect)
     Builder.defineMacro("__ROP_PROTECT__");
-  if (HasPrivileged)
-    Builder.defineMacro("__PRIVILEGED__");
   if (HasP10Vector)
     Builder.defineMacro("__POWER10_VECTOR__");
   if (HasPCRelativeMemops)

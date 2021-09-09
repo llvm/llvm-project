@@ -198,6 +198,21 @@ raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
   return OS;
 }
 
+void sampleprof::sortFuncProfiles(
+    const SampleProfileMap &ProfileMap,
+    std::vector<NameFunctionSamples> &SortedProfiles) {
+  for (const auto &I : ProfileMap) {
+    assert(I.first == I.second.getContext() && "Inconsistent profile map");
+    SortedProfiles.push_back(std::make_pair(I.second.getContext(), &I.second));
+  }
+  llvm::stable_sort(SortedProfiles, [](const NameFunctionSamples &A,
+                                       const NameFunctionSamples &B) {
+    if (A.second->getTotalSamples() == B.second->getTotalSamples())
+      return A.first < B.first;
+    return A.second->getTotalSamples() > B.second->getTotalSamples();
+  });
+}
+
 unsigned FunctionSamples::getOffset(const DILocation *DIL) {
   return (DIL->getLine() - DIL->getScope()->getSubprogram()->getLine()) &
       0xffff;
@@ -245,7 +260,7 @@ const FunctionSamples *FunctionSamples::findFunctionSamples(
 }
 
 void FunctionSamples::findAllNames(DenseSet<StringRef> &NameSet) const {
-  NameSet.insert(Name);
+  NameSet.insert(getName());
   for (const auto &BS : BodySamples)
     for (const auto &TS : BS.second.getCallTargets())
       NameSet.insert(TS.getKey());
@@ -326,23 +341,23 @@ void SampleContextTrimmer::trimAndMergeColdContextProfiles(
 
   // Filter the cold profiles from ProfileMap and move them into a tmp
   // container
-  std::vector<std::pair<StringRef, const FunctionSamples *>> ColdProfiles;
+  std::vector<std::pair<SampleContext, const FunctionSamples *>> ColdProfiles;
   for (const auto &I : ProfileMap) {
     const FunctionSamples &FunctionProfile = I.second;
     if (FunctionProfile.getTotalSamples() >= ColdCountThreshold)
       continue;
-    ColdProfiles.emplace_back(I.getKey(), &I.second);
+    ColdProfiles.emplace_back(I.first, &I.second);
   }
 
   // Remove the cold profile from ProfileMap and merge them into
   // MergedProfileMap by the last K frames of context
-  StringMap<FunctionSamples> MergedProfileMap;
+  SampleProfileMap MergedProfileMap;
   for (const auto &I : ColdProfiles) {
     if (MergeColdContext) {
-      auto Ret = MergedProfileMap.try_emplace(
-          I.second->getContext().getContextWithLastKFrames(
-              ColdContextFrameLength),
-          FunctionSamples());
+      auto MergedContext = I.second->getContext().getContextFrames();
+      if (ColdContextFrameLength < MergedContext.size())
+        MergedContext = MergedContext.take_back(ColdContextFrameLength);
+      auto Ret = MergedProfileMap.emplace(MergedContext, FunctionSamples());
       FunctionSamples &MergedProfile = Ret.first->second;
       MergedProfile.merge(*I.second);
     }
@@ -353,16 +368,15 @@ void SampleContextTrimmer::trimAndMergeColdContextProfiles(
   for (const auto &I : MergedProfileMap) {
     // Filter the cold merged profile
     if (TrimColdContext && I.second.getTotalSamples() < ColdCountThreshold &&
-        ProfileMap.find(I.getKey()) == ProfileMap.end())
+        ProfileMap.find(I.first) == ProfileMap.end())
       continue;
     // Merge the profile if the original profile exists, otherwise just insert
     // as a new profile
-    auto Ret = ProfileMap.try_emplace(I.getKey(), FunctionSamples());
+    auto Ret = ProfileMap.emplace(I.first, FunctionSamples());
     if (Ret.second) {
-      SampleContext FContext(Ret.first->first(), RawContext);
+      SampleContext FContext(Ret.first->first, RawContext);
       FunctionSamples &FProfile = Ret.first->second;
       FProfile.setContext(FContext);
-      FProfile.setName(FContext.getNameWithoutContext());
     }
     FunctionSamples &OrigProfile = Ret.first->second;
     OrigProfile.merge(I.second);
@@ -370,12 +384,12 @@ void SampleContextTrimmer::trimAndMergeColdContextProfiles(
 }
 
 void SampleContextTrimmer::canonicalizeContextProfiles() {
-  std::vector<StringRef> ProfilesToBeRemoved;
-  StringMap<FunctionSamples> ProfilesToBeAdded;
+  std::vector<SampleContext> ProfilesToBeRemoved;
+  SampleProfileMap ProfilesToBeAdded;
   for (auto &I : ProfileMap) {
     FunctionSamples &FProfile = I.second;
-    StringRef ContextStr = FProfile.getNameWithContext();
-    if (I.first() == ContextStr)
+    SampleContext &Context = FProfile.getContext();
+    if (I.first == Context)
       continue;
 
     // Use the context string from FunctionSamples to update the keys of
@@ -390,10 +404,10 @@ void SampleContextTrimmer::canonicalizeContextProfiles() {
     // with different profiles) from the map can cause a conflict if they are
     // not handled in a right order. This can be solved by just caching the
     // profiles to be added.
-    auto Ret = ProfilesToBeAdded.try_emplace(ContextStr, FProfile);
+    auto Ret = ProfilesToBeAdded.emplace(Context, FProfile);
     (void)Ret;
     assert(Ret.second && "Context conflict during canonicalization");
-    ProfilesToBeRemoved.push_back(I.first());
+    ProfilesToBeRemoved.push_back(I.first);
   }
 
   for (auto &I : ProfilesToBeRemoved) {
@@ -401,7 +415,7 @@ void SampleContextTrimmer::canonicalizeContextProfiles() {
   }
 
   for (auto &I : ProfilesToBeAdded) {
-    ProfileMap.try_emplace(I.first(), I.second);
+    ProfileMap.emplace(I.first, I.second);
   }
 }
 

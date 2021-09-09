@@ -26,7 +26,6 @@ struct AMDGPUResourceUsageAnalysis;
 class AMDGPUTargetStreamer;
 class MCCodeEmitter;
 class MCOperand;
-class GCNSubtarget;
 
 namespace AMDGPU {
 namespace HSAMD {

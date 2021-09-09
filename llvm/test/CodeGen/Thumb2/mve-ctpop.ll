@@ -12,6 +12,7 @@ define arm_aapcs_vfpcc <2 x i64> @ctpop_2i64_t(<2 x i64> %src){
 ; CHECK-NEXT:    vmov r3, r4, d0
 ; CHECK-NEXT:    mov.w r12, #858993459
 ; CHECK-NEXT:    vldr s1, .LCPI0_0
+; CHECK-NEXT:    vmov.f32 s3, s1
 ; CHECK-NEXT:    and.w r0, lr, r2, lsr #1
 ; CHECK-NEXT:    subs r0, r2, r0
 ; CHECK-NEXT:    and.w r2, r12, r0, lsr #2
@@ -51,7 +52,6 @@ define arm_aapcs_vfpcc <2 x i64> @ctpop_2i64_t(<2 x i64> %src){
 ; CHECK-NEXT:    vmov s2, r1
 ; CHECK-NEXT:    add.w r0, r2, r0, lsr #24
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vmov.f32 s3, s1
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.1:

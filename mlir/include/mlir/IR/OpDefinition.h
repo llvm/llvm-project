@@ -180,6 +180,8 @@ protected:
 
   // The fallback for the printer is to print it the generic assembly form.
   static void print(Operation *op, OpAsmPrinter &p);
+  static void printOpName(Operation *op, OpAsmPrinter &p,
+                          StringRef defaultDialect);
 
   /// Mutability management is handled by the OpWrapper/OpConstWrapper classes,
   /// so we can cast it away here.
@@ -267,6 +269,9 @@ LogicalResult verifyZeroSuccessor(Operation *op);
 LogicalResult verifyOneSuccessor(Operation *op);
 LogicalResult verifyNSuccessors(Operation *op, unsigned numSuccessors);
 LogicalResult verifyAtLeastNSuccessors(Operation *op, unsigned numSuccessors);
+LogicalResult verifyValueSizeAttr(Operation *op, StringRef attrName,
+                                  StringRef valueGroupName,
+                                  size_t expectedCount);
 LogicalResult verifyOperandSizeAttr(Operation *op, StringRef sizeAttrName);
 LogicalResult verifyResultSizeAttr(Operation *op, StringRef sizeAttrName);
 LogicalResult verifyNoRegionArguments(Operation *op);
@@ -1773,8 +1778,8 @@ private:
   static std::enable_if_t<!detect_has_print<ConcreteOpT>::value,
                           AbstractOperation::PrintAssemblyFn>
   getPrintAssemblyFnImpl() {
-    return [](Operation *op, OpAsmPrinter &parser) {
-      return OpState::print(op, parser);
+    return [](Operation *op, OpAsmPrinter &printer, StringRef defaultDialect) {
+      return OpState::print(op, printer);
     };
   }
   /// The internal implementation of `getPrintAssemblyFn` that is invoked when
@@ -1785,7 +1790,9 @@ private:
   getPrintAssemblyFnImpl() {
     return &printAssembly;
   }
-  static void printAssembly(Operation *op, OpAsmPrinter &p) {
+  static void printAssembly(Operation *op, OpAsmPrinter &p,
+                            StringRef defaultDialect) {
+    OpState::printOpName(op, p, defaultDialect);
     return cast<ConcreteType>(op).print(p);
   }
   /// Implementation of `VerifyInvariantsFn` AbstractOperation hook.

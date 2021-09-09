@@ -37,6 +37,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/SwapByteOrder.h"
 
+#include <limits>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -289,6 +290,40 @@ public:
   }
 };
 
+/// Trivial ArrayRef<T> -> SPSSequence<SPSElementTagT> serialization.
+template <typename SPSElementTagT, typename T>
+class TrivialSPSSequenceSerialization<SPSElementTagT, ArrayRef<T>> {
+public:
+  static constexpr bool available = true;
+};
+
+/// Specialized SPSSequence<char> -> ArrayRef<char> serialization.
+///
+/// On deserialize, points directly into the input buffer.
+template <> class SPSSerializationTraits<SPSSequence<char>, ArrayRef<char>> {
+public:
+  static size_t size(const ArrayRef<char> &A) {
+    return SPSArgList<uint64_t>::size(static_cast<uint64_t>(A.size())) +
+           A.size();
+  }
+
+  static bool serialize(SPSOutputBuffer &OB, const ArrayRef<char> &A) {
+    if (!SPSArgList<uint64_t>::serialize(OB, static_cast<uint64_t>(A.size())))
+      return false;
+    return OB.write(A.data(), A.size());
+  }
+
+  static bool deserialize(SPSInputBuffer &IB, ArrayRef<char> &A) {
+    uint64_t Size;
+    if (!SPSArgList<uint64_t>::deserialize(IB, Size))
+      return false;
+    if (Size > std::numeric_limits<size_t>::max())
+      return false;
+    A = {IB.data(), static_cast<size_t>(Size)};
+    return IB.skip(Size);
+  }
+};
+
 /// 'Trivial' sequence serialization: Sequence is serialized as a uint64_t size
 /// followed by a for-earch loop over the elements of the sequence to serialize
 /// each of them.
@@ -327,6 +362,44 @@ public:
         return false;
     }
     return true;
+  }
+};
+
+/// SPSTuple serialization for std::tuple.
+template <typename... SPSTagTs, typename... Ts>
+class SPSSerializationTraits<SPSTuple<SPSTagTs...>, std::tuple<Ts...>> {
+private:
+  using TupleArgList = typename SPSTuple<SPSTagTs...>::AsArgList;
+  using ArgIndices = std::make_index_sequence<sizeof...(Ts)>;
+
+  template <std::size_t... I>
+  static size_t size(const std::tuple<Ts...> &T, std::index_sequence<I...>) {
+    return TupleArgList::size(std::get<I>(T)...);
+  }
+
+  template <std::size_t... I>
+  static bool serialize(SPSOutputBuffer &OB, const std::tuple<Ts...> &T,
+                        std::index_sequence<I...>) {
+    return TupleArgList::serialize(OB, std::get<I>(T)...);
+  }
+
+  template <std::size_t... I>
+  static bool deserialize(SPSInputBuffer &IB, std::tuple<Ts...> &T,
+                          std::index_sequence<I...>) {
+    return TupleArgList::deserialize(IB, std::get<I>(T)...);
+  }
+
+public:
+  static size_t size(const std::tuple<Ts...> &T) {
+    return size(T, ArgIndices{});
+  }
+
+  static bool serialize(SPSOutputBuffer &OB, const std::tuple<Ts...> &T) {
+    return serialize(OB, T, ArgIndices{});
+  }
+
+  static bool deserialize(SPSInputBuffer &IB, std::tuple<Ts...> &T) {
+    return deserialize(IB, T, ArgIndices{});
   }
 };
 

@@ -24,7 +24,7 @@ include "TestInterfaces.td"
 
 def Test_Dialect : Dialect {
   let name = "test";
-  let cppNamespace = "::mlir::test";
+  let cppNamespace = "::test";
   let hasCanonicalizer = 1;
   let hasConstantMaterializer = 1;
   let hasOperationAttrVerify = 1;
@@ -38,16 +38,18 @@ def Test_Dialect : Dialect {
     void registerAttributes();
     void registerTypes();
 
-    Attribute parseAttribute(DialectAsmParser &parser,
-                             Type type) const override;
-    void printAttribute(Attribute attr,
-                        DialectAsmPrinter &printer) const override;
+    ::mlir::Attribute parseAttribute(::mlir::DialectAsmParser &parser,
+                                     ::mlir::Type type) const override;
+    void printAttribute(::mlir::Attribute attr,
+                        ::mlir::DialectAsmPrinter &printer) const override;
 
     // Provides a custom printing/parsing for some operations.
-    Optional<ParseOpHook>
-      getParseOperationHook(StringRef opName) const override;
-    LogicalResult printOperation(Operation *op,
-                                 OpAsmPrinter &printer) const override;
+    ::llvm::Optional<ParseOpHook>
+      getParseOperationHook(::llvm::StringRef opName) const override;
+    ::llvm::unique_function<void(::mlir::Operation *,
+                                 ::mlir::OpAsmPrinter &printer)>
+     getOperationPrinter(::mlir::Operation *op) const override;
+
   private:
     // Storage for a custom fallback interface.
     void *fallbackEffectOpInterfaces;
@@ -117,8 +119,8 @@ def MultiTensorRankOf : TEST_Op<"multi_tensor_rank_of"> {
 }
 
 def TEST_TestType : DialectType<Test_Dialect,
-    CPred<"$_self.isa<::mlir::test::TestType>()">, "test">,
-    BuildableType<"$_builder.getType<::mlir::test::TestType>()">;
+    CPred<"$_self.isa<::test::TestType>()">, "test">,
+    BuildableType<"$_builder.getType<::test::TestType>()">;
 
 //===----------------------------------------------------------------------===//
 // Test Symbols
@@ -372,8 +374,8 @@ def ConversionCallOp : TEST_Op<"conversion_call_op",
     operand_range getArgOperands() { return inputs(); }
 
     /// Return the callee of this operation.
-    CallInterfaceCallable getCallableForCallee() {
-      return (*this)->getAttrOfType<SymbolRefAttr>("callee");
+    ::mlir::CallInterfaceCallable getCallableForCallee() {
+      return (*this)->getAttrOfType<::mlir::SymbolRefAttr>("callee");
     }
   }];
 }
@@ -384,9 +386,9 @@ def FunctionalRegionOp : TEST_Op<"functional_region_op",
   let results = (outs FunctionType);
 
   let extraClassDeclaration = [{
-    Region *getCallableRegion() { return &body(); }
-    ArrayRef<Type> getCallableResults() {
-      return getType().cast<FunctionType>().getResults();
+    ::mlir::Region *getCallableRegion() { return &body(); }
+    ::llvm::ArrayRef<::mlir::Type> getCallableResults() {
+      return getType().cast<::mlir::FunctionType>().getResults();
     }
   }];
 }
@@ -624,12 +626,26 @@ def AttrSizedResultOp : TEST_Op<"attr_sized_results",
 // pretty printed value name.
 def StringAttrPrettyNameOp
  : TEST_Op<"string_attr_pretty_name",
-           [DeclareOpInterfaceMethods<OpAsmOpInterface>]> {
+           [DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]> {
   let arguments = (ins StrArrayAttr:$names);
   let results = (outs Variadic<I32>:$r);
 
   let printer = [{ return ::print(p, *this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
+}
+
+// This is used to test the OpAsmOpInterface::getDefaultDialect() feature:
+// operations nested in a region under this op will drop the "test." dialect
+// prefix.
+def DefaultDialectOp : TEST_Op<"default_dialect", [OpAsmOpInterface]> {
+ let regions = (region AnyRegion:$body);
+  let extraClassDeclaration = [{
+    static ::llvm::StringRef getDefaultDialect() {
+      return "test";
+    }
+    void getAsmResultNames(::llvm::function_ref<void(::mlir::Value, ::llvm::StringRef)> setNameFn) {}
+  }];
+  let assemblyFormat = "regions attr-dict-with-keyword";
 }
 
 //===----------------------------------------------------------------------===//
@@ -748,7 +764,7 @@ def OpFuncRef : TEST_Op<"op_funcref"> {
   let description = [{
     The "test.op_funcref" is a test op with a reference to a function symbol.
   }];
-  let builders = [OpBuilder<(ins "FuncOp":$function)>];
+  let builders = [OpBuilder<(ins "::mlir::FuncOp":$function)>];
 }
 
 // Pattern add the argument plus a increasing static number hidden in
@@ -898,10 +914,10 @@ def OpAllAttrConstraint2 : TEST_Op<"all_attr_constraint_of2"> {
 }
 def Constraint0 : AttrConstraint<
     CPred<"$_self.cast<ArrayAttr>()[0]."
-          "cast<IntegerAttr>().getInt() == 0">,
+          "cast<::mlir::IntegerAttr>().getInt() == 0">,
     "[0] == 0">;
 def Constraint1 : AttrConstraint<
-    CPred<"$_self.cast<ArrayAttr>()[1].cast<IntegerAttr>().getInt() == 1">,
+    CPred<"$_self.cast<ArrayAttr>()[1].cast<::mlir::IntegerAttr>().getInt() == 1">,
     "[1] == 1">;
 def : Pat<(OpAllAttrConstraint1
             AllAttrConstraintsOf<[Constraint0, Constraint1]>:$attr),
@@ -917,7 +933,7 @@ def TestOpConstant : TEST_Op<"constant", [ConstantLike, NoSideEffect]> {
   let arguments = (ins AnyAttr:$value);
   let results = (outs AnyType);
   let extraClassDeclaration = [{
-    Attribute getValue() { return (*this)->getAttr("value"); }
+    ::mlir::Attribute getValue() { return (*this)->getAttr("value"); }
   }];
 
   let hasFolder = 1;
@@ -1268,7 +1284,7 @@ def MixedVResultOp3 : TEST_Op<"mixed_variadic_out3",
   // We will use this op in a nested result pattern, where we cannot deduce the
   // result type. So need to provide a builder not requiring result types.
   let builders = [
-    OpBuilder<(ins "IntegerAttr":$count),
+    OpBuilder<(ins "::mlir::IntegerAttr":$count),
     [{
       auto i32Type = $_builder.getIntegerType(32);
       $_state.addTypes(i32Type); // $output1
@@ -1661,6 +1677,14 @@ def FormatVariadicOperand : TEST_Op<"format_variadic_operand"> {
   let arguments = (ins Variadic<I64>:$operand);
   let assemblyFormat = [{ $operand `:` type($operand) attr-dict}];
 }
+def FormatVariadicOfVariadicOperand
+   : TEST_Op<"format_variadic_of_variadic_operand"> {
+  let arguments = (ins
+    VariadicOfVariadic<I64, "operand_segments">:$operand,
+    I32ElementsAttr:$operand_segments
+  );
+  let assemblyFormat = [{ $operand `:` type($operand) attr-dict}];
+}
 
 def FormatMultipleVariadicOperands :
     TEST_Op<"format_multiple_variadic_operands", [AttrSizedOperandSegments]> {
@@ -1936,8 +1960,8 @@ def CopyOp : TEST_Op<"copy", [CopyOpInterface]> {
      attr-dict
   }];
   let extraClassDeclaration = [{
-    Value getSource() { return source(); }
-    Value getTarget() { return target(); }
+    ::mlir::Value getSource() { return source(); }
+    ::mlir::Value getTarget() { return target(); }
   }];
 }
 
@@ -2027,16 +2051,16 @@ def RegionIfOp : TEST_Op<"region_if",
                         AnyRegion:$elseRegion,
                         AnyRegion:$joinRegion);
   let extraClassDeclaration = [{
-    Block::BlockArgListType getThenArgs() {
+    ::mlir::Block::BlockArgListType getThenArgs() {
       return getBody(0)->getArguments();
     }
-    Block::BlockArgListType getElseArgs() {
+    ::mlir::Block::BlockArgListType getElseArgs() {
       return getBody(1)->getArguments();
     }
-    Block::BlockArgListType getJoinArgs() {
+    ::mlir::Block::BlockArgListType getJoinArgs() {
       return getBody(2)->getArguments();
     }
-    OperandRange getSuccessorEntryOperands(unsigned index);
+    ::mlir::OperandRange getSuccessorEntryOperands(unsigned index);
   }];
 }
 
@@ -2089,12 +2113,12 @@ def TableGenBuildOp5 : TEST_Op<"tblgen_build_5",
   let results = (outs AnyType:$result);
 
   let extraClassDeclaration = [{
-    static LogicalResult inferReturnTypes(MLIRContext *,
-          Optional<Location> location, ValueRange operands,
-          DictionaryAttr attributes, RegionRange regions,
-          SmallVectorImpl<Type> &inferredReturnTypes) {
+    static ::mlir::LogicalResult inferReturnTypes(::mlir::MLIRContext *,
+          ::llvm::Optional<::mlir::Location> location, ::mlir::ValueRange operands,
+          ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
+          ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
       inferredReturnTypes.assign({operands[0].getType()});
-      return success();
+      return ::mlir::success();
     }
    }];
 }

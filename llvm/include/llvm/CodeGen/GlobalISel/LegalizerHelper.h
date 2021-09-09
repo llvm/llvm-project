@@ -256,6 +256,20 @@ private:
                                         LLT SrcTy, LLT NarrowTy,
                                         unsigned ScalarOpc);
 
+  // Memcpy family legalization helpers.
+  LegalizeResult lowerMemset(MachineInstr &MI, Register Dst, Register Val,
+                             uint64_t KnownLen, Align Alignment,
+                             bool IsVolatile);
+  LegalizeResult lowerMemcpyInline(MachineInstr &MI, Register Dst, Register Src,
+                                   uint64_t KnownLen, Align DstAlign,
+                                   Align SrcAlign, bool IsVolatile);
+  LegalizeResult lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
+                             uint64_t KnownLen, uint64_t Limit, Align DstAlign,
+                             Align SrcAlign, bool IsVolatile);
+  LegalizeResult lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
+                              uint64_t KnownLen, Align DstAlign, Align SrcAlign,
+                              bool IsVolatile);
+
 public:
   /// Return the alignment to use for a stack temporary object with the given
   /// type.
@@ -402,6 +416,9 @@ public:
   LegalizeResult lowerDIVREM(MachineInstr &MI);
   LegalizeResult lowerAbsToAddXor(MachineInstr &MI);
   LegalizeResult lowerAbsToMaxNeg(MachineInstr &MI);
+  LegalizeResult lowerVectorReduction(MachineInstr &MI);
+  LegalizeResult lowerMemcpyInline(MachineInstr &MI);
+  LegalizeResult lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen = 0);
 };
 
 /// Helper function that creates a libcall to the given \p Name using the given

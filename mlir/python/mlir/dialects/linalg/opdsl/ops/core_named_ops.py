@@ -144,55 +144,173 @@ def dot(
   implements(ContractionOpInterface)
   C[None] += cast(U, A[D.m]) * cast(U, B[D.m])
 
-
 @linalg_structured_op
-def conv_2d_input_nhwc_filter_ohwi_poly(
-    I=TensorDef(T1, S.N, S.IH, S.IW, S.IC),
-    K=TensorDef(T2, S.OC, S.KH, S.KW, S.IC),
-    O=TensorDef(U, S.N, S.OH, S.OW, S.OC, output=True),
-    strides=AttributeDef(S.SH, S.SW),
-    dilations=AttributeDef(S.DH, S.DW)):
-  """Performs a 2-D convolution.
+def conv_1d(
+    I=TensorDef(T1, S.IW),
+    K=TensorDef(T2, S.KW),
+    O=TensorDef(U, S.OW, output=True)):
+  """Performs 1-D convolution with no channels.
 
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output.
   """
-  domain(D.n, D.oh, D.ow, D.kh, D.kw, D.oc, D.ic)
-  O[D.n, D.oh, D.ow, D.oc] += cast(
-      U, I[D.n,
-           D.oh * S.SH + D.kh * S.DH,
-           D.ow * S.SW + D.kw * S.DW,
-           D.ic]) * cast(U, K[D.oc, D.kh, D.kw, D.ic])
+  domain(D.ow, D.kw)
+  O[D.ow] += cast(
+      U, I[D.ow + D.kw]) * cast(U, K[D.kw])
 
 @linalg_structured_op
-def conv_2d_input_nhwc_filter_ohwi_poly_q(
-    I=TensorDef(T1, S.N, S.IH, S.IW, S.IC),
-    K=TensorDef(T2, S.OC, S.KH, S.KW, S.IC),
-    IZp=ScalarDef(I32),
-    KZp=ScalarDef(I32),
-    O=TensorDef(U, S.N, S.OH, S.OW, S.OC, output=True),
-    strides=AttributeDef(S.SH, S.SW),
-    dilations=AttributeDef(S.DH, S.DW)):
-  """Performs a 2-D quantized convolution.
+def conv_2d(
+    I=TensorDef(T1, S.IH, S.IW),
+    K=TensorDef(T2, S.KH, S.KW),
+    O=TensorDef(U, S.OH, S.OW, output=True)):
+  """Performs 2-D convolution with no channels.
 
   Numeric casting is performed on the operands to the inner multiply, promoting
-  them to the same data type as the accumulator/output. Includes zero point
-  adjustment for quantization.
+  them to the same data type as the accumulator/output.
   """
-  domain(D.n, D.oh, D.ow, D.kh, D.kw, D.oc, D.ic)
-  O[D.n, D.oh, D.ow, D.oc] += ((cast(
-      U, I[D.n,
-           D.oh * S.SH + D.kh * S.DH,
-           D.ow * S.SW + D.kw * S.DW,
-           D.ic]) - cast(U, IZp)) *
-           (cast(U, K[D.oc, D.kh, D.kw, D.ic]) - cast(U, KZp)))
-
+  domain(D.oh, D.ow, D.kh, D.kw)
+  O[D.oh, D.ow] += cast(
+      U, I[D.oh + D.kh, D.ow + D.kw]) * cast(U, K[D.kh, D.kw])
 
 @linalg_structured_op
-def depthwise_conv_2d_input_nhwc_filter_hwc_poly(
+def conv_3d(
+    I=TensorDef(T1, S.ID, S.IH, S.IW),
+    K=TensorDef(T2, S.KD, S.KH, S.KW),
+    O=TensorDef(U, S.OD, S.OH, S.OW, output=True)):
+  """Performs 3-D convolution with no channels.
+
+  Numeric casting is performed on the operands to the inner multiply, promoting
+  them to the same data type as the accumulator/output.
+  """
+  domain(D.od, D.oh, D.ow, D.kd, D.kh, D.kw)
+  O[D.od, D.oh, D.ow] += cast(
+      U, I[D.od + D.kd, D.oh + D.kh, D.ow + D.kw]) * cast(U, K[D.kd, D.kh, D.kw])
+
+@linalg_structured_op
+def conv_1d_nwc_wcf(
+    I=TensorDef(T1, S.N, S.IW, S.C),
+    K=TensorDef(T2, S.KW, S.C, S.F),
+    O=TensorDef(U, S.N, S.OW, S.F, output=True),
+    strides=AttributeDef(S.SW),
+    dilations=AttributeDef(S.DW)):
+  """Performs 1-D convolution.
+
+  Numeric casting is performed on the operands to the inner multiply, promoting
+  them to the same data type as the accumulator/output.
+  """
+  domain(D.n, D.ow, D.f, D.kw, D.c)
+  O[D.n, D.ow, D.f] += cast(
+      U, I[D.n, D.ow * S.SW + D.kw * S.DW, D.c
+           ]) * cast(U, K[D.kw, D.c, D.f])
+
+@linalg_structured_op
+def conv_2d_nhwc_hwcf(
     I=TensorDef(T1, S.N, S.IH, S.IW, S.C),
-    K=TensorDef(T2, S.KH, S.KW, S.C),
-    O=TensorDef(U, S.N, S.OH, S.OW, S.C, output=True),
+    K=TensorDef(T2, S.KH, S.KW, S.C, S.F),
+    O=TensorDef(U, S.N, S.OH, S.OW, S.F, output=True),
+    strides=AttributeDef(S.SH, S.SW),
+    dilations=AttributeDef(S.DH, S.DW)):
+  """Performs 2-D convolution.
+
+  Layout:
+    * Input: NHWC.
+    * Kernel: HWCF.
+
+  Numeric casting is performed on the operands to the inner multiply, promoting
+  them to the same data type as the accumulator/output.
+  """
+  domain(D.n, D.oh, D.ow, D.f, D.kh, D.kw, D.c)
+  O[D.n, D.oh, D.ow, D.f] += cast(
+      U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c
+           ]) * cast(U, K[D.kh, D.kw, D.c, D.f])
+
+@linalg_structured_op
+def conv_2d_nhwc_hwcf_q(
+    I=TensorDef(T1, S.N, S.IH, S.IW, S.C),
+    K=TensorDef(T2, S.KH, S.KW, S.C, S.F),
+    IZp=ScalarDef(I32),
+    KZp=ScalarDef(I32),
+    O=TensorDef(U, S.N, S.OH, S.OW, S.F, output=True),
+    strides=AttributeDef(S.SH, S.SW),
+    dilations=AttributeDef(S.DH, S.DW)):
+  """Performs 2-D convolution with zero point offsets.
+
+  Layout:
+    * Input: NHWC.
+    * Kernel: HWCF.
+
+  Numeric casting is performed on the operands to the inner multiply, promoting
+  them to the same data type as the accumulator/output. This includes the zero
+  point offsets common to quantized operations.
+  """
+  domain(D.n, D.oh, D.ow, D.f, D.kh, D.kw, D.c)
+  O[D.n, D.oh, D.ow, D.f] += (cast(
+      U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c
+           ]) - cast(U, IZp)) * (cast(U, K[D.kh, D.kw, D.c, D.f]) - cast(U, KZp))
+
+@linalg_structured_op
+def conv_2d_nchw_fchw(
+    I=TensorDef(T1, S.N, S.C, S.IH, S.IW),
+    K=TensorDef(T2, S.F, S.C, S.KH, S.KW),
+    O=TensorDef(U, S.N, S.F, S.OH, S.OW, output=True),
+    strides=AttributeDef(S.SH, S.SW),
+    dilations=AttributeDef(S.DH, S.DW)):
+  """Performs 2-D convolution.
+
+  Layout:
+    * Input: NCHW.
+    * Kernel: FCHW.
+
+  Numeric casting is performed on the operands to the inner multiply, promoting
+  them to the same data type as the accumulator/output.
+  """
+  domain(D.n, D.f, D.oh, D.ow, D.c, D.kh, D.kw)
+  O[D.n, D.f, D.oh, D.ow] += cast(
+      U, I[D.n, D.c, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW
+           ]) * cast(U, K[D.f, D.c, D.kh, D.kw])
+
+@linalg_structured_op
+def conv_3d_ndhwc_dhwcf(
+    I=TensorDef(T1, S.N, S.ID, S.IH, S.IW, S.C),
+    K=TensorDef(T2, S.KD, S.KH, S.KW, S.C, S.F),
+    O=TensorDef(U, S.N, S.OD, S.OH, S.OW, S.F, output=True),
+    strides=AttributeDef(S.SD, S.SH, S.SW),
+    dilations=AttributeDef(S.DD, S.DH, S.DW)):
+  """Performs 3-D convolution.
+
+  Numeric casting is performed on the operands to the inner multiply, promoting
+  them to the same data type as the accumulator/output.
+  """
+  domain(D.n, D.od, D.oh, D.ow, D.f, D.kd, D.kh, D.kw, D.c)
+  O[D.n, D.od, D.oh, D.ow, D.f] += cast(
+      U, I[D.n, D.od * S.SD + D.kd * S.DD, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c
+           ]) * cast(U, K[D.kd, D.kh, D.kw, D.c, D.f])
+
+@linalg_structured_op
+def depthwise_conv2D_nhw(
+    I=TensorDef(T1, S.N, S.IH, S.IW, S.IC),
+    K=TensorDef(T2, S.KH, S.KW, S.IC),
+    O=TensorDef(U, S.N, S.OH, S.OW, S.IC, output=True),
+    strides=AttributeDef(S.SH, S.SW),
+    dilations=AttributeDef(S.DH, S.DW)):
+  """Performs depth-wise 2-D convolution.
+
+  Numeric casting is performed on the operands to the inner multiply, promoting
+  them to the same data type as the accumulator/output. Multiplier is set to 1
+  which is a special case for most dpethwise convolutions.
+  """
+  domain(D.n, D.oh, D.ow, D.ic, D.kh, D.kw)
+  O[D.n, D.oh, D.ow, D.ic] += cast(
+      U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
+           D.ic]) * cast(U, K[D.kh, D.kw, D.ic])
+
+@linalg_structured_op
+def depthwise_conv2D_nhw_q(
+    I=TensorDef(T1, S.N, S.IH, S.IW, S.IC),
+    K=TensorDef(T2, S.KH, S.KW, S.IC),
+    IZp=ScalarDef(I32),
+    KZp=ScalarDef(I32),
+    O=TensorDef(U, S.N, S.OH, S.OW, S.IC, output=True),
     strides=AttributeDef(S.SH, S.SW),
     dilations=AttributeDef(S.DH, S.DW)):
   """Performs depth-wise 2-D convolution.
@@ -200,27 +318,48 @@ def depthwise_conv_2d_input_nhwc_filter_hwc_poly(
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output.
   """
-  domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
-  O[D.n, D.oh, D.ow, D.c] += cast(
-      U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
-           D.c]) * cast(U, K[D.kh, D.kw, D.c])
+  domain(D.n, D.oh, D.ow, D.ic, D.kh, D.kw)
+  O[D.n, D.oh, D.ow, D.ic] += (
+      (cast(U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
+                 D.ic]) - cast(U, IZp)) *
+      (cast(U, K[D.kh, D.kw, D.ic]) - cast(U, KZp)))
 
 @linalg_structured_op
-def conv_2d_nchw(
-    I=TensorDef(T1, S.N, S.C, S.IH, S.IW),
-    K=TensorDef(T2, S.F, S.C, S.KH, S.KW),
-    O=TensorDef(U, S.N, S.F, S.OH, S.OW, S.C, output=True),
+def depthwise_conv2D_nhwc(
+    I=TensorDef(T1, S.N, S.IH, S.IW, S.IC),
+    K=TensorDef(T2, S.KH, S.KW, S.IC, S.CM),
+    O=TensorDef(U, S.N, S.OH, S.OW, S.IC, S.CM, output=True),
     strides=AttributeDef(S.SH, S.SW),
     dilations=AttributeDef(S.DH, S.DW)):
-  """Performs 2-D convolution.
+  """Performs depth-wise 2-D convolution.
 
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output.
   """
-  domain(D.n, D.f, D.oh, D.ow, D.c, D.kh, D.kw)
-  O[D.n, D.f, D.oh, D.ow] += cast(
-      U, I[D.n, D.c, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
-           ]) * cast(U, K[D.f, D.c, D.kh, D.kw])
+  domain(D.n, D.oh, D.ow, D.ic, D.cm, D.kh, D.kw)
+  O[D.n, D.oh, D.ow, D.ic, D.cm] += cast(
+      U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
+           D.ic]) * cast(U, K[D.kh, D.kw, D.ic, D.cm])
+
+@linalg_structured_op
+def depthwise_conv2D_nhwc_q(
+    I=TensorDef(T1, S.N, S.IH, S.IW, S.IC),
+    K=TensorDef(T2, S.KH, S.KW, S.IC, S.CM),
+    IZp=ScalarDef(I32),
+    KZp=ScalarDef(I32),
+    O=TensorDef(U, S.N, S.OH, S.OW, S.IC, S.CM, output=True),
+    strides=AttributeDef(S.SH, S.SW),
+    dilations=AttributeDef(S.DH, S.DW)):
+  """Performs depth-wise 2-D convolution.
+
+  Numeric casting is performed on the operands to the inner multiply, promoting
+  them to the same data type as the accumulator/output.
+  """
+  domain(D.n, D.oh, D.ow, D.ic, D.cm, D.kh, D.kw)
+  O[D.n, D.oh, D.ow, D.ic, D.cm] += (
+      (cast(U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
+                 D.ic]) - cast(U, IZp)) *
+      (cast(U, K[D.kh, D.kw, D.ic, D.cm]) - cast(U, KZp)))
 
 
 @linalg_structured_op

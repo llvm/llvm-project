@@ -46,6 +46,7 @@
 #include "llvm/Analysis/GuardUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/ConstantRange.h"
@@ -105,8 +106,10 @@ static void setCondition(Instruction *I, Value *NewCond) {
 }
 
 // Eliminates the guard instruction properly.
-static void eliminateGuard(Instruction *GuardInst) {
+static void eliminateGuard(Instruction *GuardInst, MemorySSAUpdater *MSSAU) {
   GuardInst->eraseFromParent();
+  if (MSSAU)
+    MSSAU->removeMemoryAccess(GuardInst);
   ++GuardsEliminated;
 }
 
@@ -114,6 +117,7 @@ class GuardWideningImpl {
   DominatorTree &DT;
   PostDominatorTree *PDT;
   LoopInfo &LI;
+  MemorySSAUpdater *MSSAU;
 
   /// Together, these describe the region of interest.  This might be all of
   /// the blocks within a function, or only a given loop's blocks and preheader.
@@ -269,12 +273,12 @@ class GuardWideningImpl {
   }
 
 public:
-
   explicit GuardWideningImpl(DominatorTree &DT, PostDominatorTree *PDT,
-                             LoopInfo &LI, DomTreeNode *Root,
+                             LoopInfo &LI, MemorySSAUpdater *MSSAU,
+                             DomTreeNode *Root,
                              std::function<bool(BasicBlock*)> BlockFilter)
-    : DT(DT), PDT(PDT), LI(LI), Root(Root), BlockFilter(BlockFilter)
-        {}
+      : DT(DT), PDT(PDT), LI(LI), MSSAU(MSSAU), Root(Root),
+        BlockFilter(BlockFilter) {}
 
   /// The entry point for this pass.
   bool run();
@@ -313,7 +317,7 @@ bool GuardWideningImpl::run() {
     if (!WidenedGuards.count(I)) {
       assert(isa<ConstantInt>(getCondition(I)) && "Should be!");
       if (isSupportedGuardInstruction(I))
-        eliminateGuard(I);
+        eliminateGuard(I, MSSAU);
       else {
         assert(isa<BranchInst>(I) &&
                "Eliminated something other than guard or branch?");
@@ -766,12 +770,18 @@ PreservedAnalyses GuardWideningPass::run(Function &F,
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
-  if (!GuardWideningImpl(DT, &PDT, LI, DT.getRootNode(),
-                         [](BasicBlock*) { return true; } ).run())
+  auto *MSSAA = AM.getCachedResult<MemorySSAAnalysis>(F);
+  std::unique_ptr<MemorySSAUpdater> MSSAU;
+  if (MSSAA)
+    MSSAU = std::make_unique<MemorySSAUpdater>(&MSSAA->getMSSA());
+  if (!GuardWideningImpl(DT, &PDT, LI, MSSAU ? MSSAU.get() : nullptr,
+                         DT.getRootNode(), [](BasicBlock *) { return true; })
+           .run())
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
+  PA.preserve<MemorySSAAnalysis>();
   return PA;
 }
 
@@ -784,11 +794,17 @@ PreservedAnalyses GuardWideningPass::run(Loop &L, LoopAnalysisManager &AM,
   auto BlockFilter = [&](BasicBlock *BB) {
     return BB == RootBB || L.contains(BB);
   };
-  if (!GuardWideningImpl(AR.DT, nullptr, AR.LI, AR.DT.getNode(RootBB),
-                         BlockFilter).run())
+  std::unique_ptr<MemorySSAUpdater> MSSAU;
+  if (AR.MSSA)
+    MSSAU = std::make_unique<MemorySSAUpdater>(AR.MSSA);
+  if (!GuardWideningImpl(AR.DT, nullptr, AR.LI, MSSAU ? MSSAU.get() : nullptr,
+                         AR.DT.getNode(RootBB), BlockFilter).run())
     return PreservedAnalyses::all();
 
-  return getLoopPassPreservedAnalyses();
+  auto PA = getLoopPassPreservedAnalyses();
+  if (AR.MSSA)
+    PA.preserve<MemorySSAAnalysis>();
+  return PA;
 }
 
 namespace {
@@ -805,8 +821,14 @@ struct GuardWideningLegacyPass : public FunctionPass {
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
-    return GuardWideningImpl(DT, &PDT, LI, DT.getRootNode(),
-                         [](BasicBlock*) { return true; } ).run();
+    auto *MSSAWP = getAnalysisIfAvailable<MemorySSAWrapperPass>();
+    std::unique_ptr<MemorySSAUpdater> MSSAU;
+    if (MSSAWP)
+      MSSAU = std::make_unique<MemorySSAUpdater>(&MSSAWP->getMSSA());
+    return GuardWideningImpl(DT, &PDT, LI, MSSAU ? MSSAU.get() : nullptr,
+                             DT.getRootNode(),
+                             [](BasicBlock *) { return true; })
+        .run();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -814,6 +836,7 @@ struct GuardWideningLegacyPass : public FunctionPass {
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<PostDominatorTreeWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
+    AU.addPreserved<MemorySSAWrapperPass>();
   }
 };
 
@@ -833,13 +856,18 @@ struct LoopGuardWideningLegacyPass : public LoopPass {
     auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     auto *PDTWP = getAnalysisIfAvailable<PostDominatorTreeWrapperPass>();
     auto *PDT = PDTWP ? &PDTWP->getPostDomTree() : nullptr;
+    auto *MSSAWP = getAnalysisIfAvailable<MemorySSAWrapperPass>();
+    std::unique_ptr<MemorySSAUpdater> MSSAU;
+    if (MSSAWP)
+      MSSAU = std::make_unique<MemorySSAUpdater>(&MSSAWP->getMSSA());
+
     BasicBlock *RootBB = L->getLoopPredecessor();
     if (!RootBB)
       RootBB = L->getHeader();
     auto BlockFilter = [&](BasicBlock *BB) {
       return BB == RootBB || L->contains(BB);
     };
-    return GuardWideningImpl(DT, PDT, LI,
+    return GuardWideningImpl(DT, PDT, LI, MSSAU ? MSSAU.get() : nullptr,
                              DT.getNode(RootBB), BlockFilter).run();
   }
 
@@ -847,6 +875,7 @@ struct LoopGuardWideningLegacyPass : public LoopPass {
     AU.setPreservesCFG();
     getLoopAnalysisUsage(AU);
     AU.addPreserved<PostDominatorTreeWrapperPass>();
+    AU.addPreserved<MemorySSAWrapperPass>();
   }
 };
 }

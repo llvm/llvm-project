@@ -18,7 +18,7 @@
 ;   return a;
 ; }
 ;
-define i32 @PR33613(double* %b, double %j, i32 %d) {
+define i32 @PR33613(double* %b, double %j, i32 %d) #0 {
 ; CHECK-VF4UF2-LABEL: @PR33613
 ; CHECK-VF4UF2: vector.body
 ; CHECK-VF4UF2: %[[VEC_RECUR:.*]] = phi <vscale x 4 x double> [ {{.*}}, %vector.ph ], [ {{.*}}, %vector.body ]
@@ -66,7 +66,7 @@ for.body:
 ; }
 ;
 ; Check that the sext sank after the load in the vector loop.
-define void @PR34711([2 x i16]* %a, i32* %b, i32* %c, i64 %n) {
+define void @PR34711([2 x i16]* %a, i32* %b, i32* %c, i64 %n) #0 {
 ; CHECK-VF4UF1-LABEL: @PR34711
 ; CHECK-VF4UF1: vector.body
 ; CHECK-VF4UF1: %[[VEC_RECUR:.*]] = phi <vscale x 4 x i16> [ %vector.recur.init, %vector.ph ], [ %[[MGATHER:.*]], %vector.body ]
@@ -100,5 +100,6 @@ for.end:
   ret void
 }
 
+attributes #0 = { vscale_range(0, 16) }
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}

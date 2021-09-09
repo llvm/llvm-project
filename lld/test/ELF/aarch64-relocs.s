@@ -19,7 +19,7 @@ msgend:
 # CHECK:        4:
 # #4 is the adr immediate value.
 
-.section .R_AARCH64_ADR_PREL_PG_H121,"ax",@progbits
+.section .R_AARCH64_ADR_PREL_PG_HI21,"ax",@progbits
   adrp x1,mystr
 mystr:
   .asciz "blah"
@@ -27,7 +27,7 @@ mystr:
 
 # PAGE(S + A) - PAGE(P) = PAGE(210136) - PAGE(0x210132) = 0
 #
-# CHECK: Disassembly of section .R_AARCH64_ADR_PREL_PG_H121:
+# CHECK: Disassembly of section .R_AARCH64_ADR_PREL_PG_HI21:
 # CHECK-EMPTY:
 # CHECK-NEXT: <$x.2>:
 # CHECK-NEXT:   210132:       01 00 00 90     adrp    x1, 0x210000

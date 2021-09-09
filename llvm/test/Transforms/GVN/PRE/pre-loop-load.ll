@@ -202,31 +202,36 @@ exit:
   ret i32 %x
 }
 
+declare void @may_modify_or_free_pointer(i32* %p)
+
 ; TODO: Despite the fact that the function may free memory in general, it
 ; cannot free memory allocated by alloca.
 define i32 @test_load_on_cold_path_may_free_memory_alloca() {
 ; CHECK-LABEL: @test_load_on_cold_path_may_free_memory_alloca(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @may_free_memory()
+; CHECK-NEXT:    call void @may_modify_or_free_pointer(i32* [[P]])
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    br i1 undef, label [[HOT_PATH:%.*]], label [[COLD_PATH:%.*]]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P]], align 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X]], 0
+; CHECK-NEXT:    br i1 [[COND]], label [[HOT_PATH:%.*]], label [[COLD_PATH:%.*]]
 ; CHECK:       hot_path:
-; CHECK-NEXT:    br label [[BACKEDGE:%.*]]
+; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       cold_path:
-; CHECK-NEXT:    call void @may_free_memory()
+; CHECK-NEXT:    call void @may_modify_or_free_pointer(i32* [[P]])
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
-; CHECK-NEXT:    br i1 false, label [[BACKEDGE_LOOP_CRIT_EDGE:%.*]], label [[EXIT:%.*]]
-; CHECK:       backedge.loop_crit_edge:
-; CHECK-NEXT:    br label [[LOOP]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 [[X]]
 ;
 entry:
   %p = alloca i32
-  call void @may_free_memory()
+  call void @may_modify_or_free_pointer(i32* %p)
   br label %loop
 
 loop:
@@ -239,7 +244,7 @@ hot_path:
   br label %backedge
 
 cold_path:
-  call void @may_free_memory()
+  call void @may_modify_or_free_pointer(i32* %p)
   br label %backedge
 
 backedge:

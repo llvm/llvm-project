@@ -1,7 +1,5 @@
 ! Verify that reading from stdin works as expected
 
-! REQUIRES: new-flang-driver
-
 !--------------------------
 ! FLANG DRIVER (flang)
 !--------------------------

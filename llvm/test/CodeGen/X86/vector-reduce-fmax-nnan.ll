@@ -3,8 +3,9 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4.1 | FileCheck %s --check-prefixes=ALL,SSE,SSE41
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=ALL,AVX
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=ALL,AVX
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=ALL,AVX512
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw,+avx512vl | FileCheck %s --check-prefixes=ALL,AVX512
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=ALL,AVX512,AVX512BW
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw,+avx512vl | FileCheck %s --check-prefixes=ALL,AVX512,AVX512BW
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512fp16,+avx512vl | FileCheck %s --check-prefixes=ALL,AVX512,AVX512FP16
 
 ;
 ; vXf32
@@ -416,21 +417,29 @@ define half @test_v2f16(<2 x half> %a0) nounwind {
 ; AVX-NEXT:    popq %rbp
 ; AVX-NEXT:    retq
 ;
-; AVX512-LABEL: test_v2f16:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    movzwl %si, %eax
-; AVX512-NEXT:    vmovd %eax, %xmm0
-; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512-NEXT:    movzwl %di, %ecx
-; AVX512-NEXT:    vmovd %ecx, %xmm1
-; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX512-NEXT:    vucomiss %xmm0, %xmm1
-; AVX512-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; AVX512-NEXT:    cmoval %edi, %esi
-; AVX512-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
-; AVX512-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
-; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
-; AVX512-NEXT:    retq
+; AVX512BW-LABEL: test_v2f16:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    movzwl %si, %eax
+; AVX512BW-NEXT:    vmovd %eax, %xmm0
+; AVX512BW-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512BW-NEXT:    movzwl %di, %ecx
+; AVX512BW-NEXT:    vmovd %ecx, %xmm1
+; AVX512BW-NEXT:    vcvtph2ps %xmm1, %xmm1
+; AVX512BW-NEXT:    vucomiss %xmm0, %xmm1
+; AVX512BW-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; AVX512BW-NEXT:    cmoval %edi, %esi
+; AVX512BW-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; AVX512BW-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
+; AVX512BW-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512BW-NEXT:    retq
+;
+; AVX512FP16-LABEL: test_v2f16:
+; AVX512FP16:       # %bb.0:
+; AVX512FP16-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX512FP16-NEXT:    vcmpltph %xmm0, %xmm1, %k1
+; AVX512FP16-NEXT:    vmovsh %xmm0, %xmm0, %xmm1 {%k1}
+; AVX512FP16-NEXT:    vmovaps %xmm1, %xmm0
+; AVX512FP16-NEXT:    retq
   %1 = call nnan half @llvm.vector.reduce.fmax.v2f16(<2 x half> %a0)
   ret half %1
 }

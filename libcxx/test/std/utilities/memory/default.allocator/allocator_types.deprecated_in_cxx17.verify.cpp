@@ -25,10 +25,6 @@
 
 // REQUIRES: c++17
 
-// Clang 6 does not handle the deprecated attribute on template members properly,
-// so the rebind<int> check below fails.
-// UNSUPPORTED: clang-6
-
 #include <memory>
 
 int main(int, char**) {

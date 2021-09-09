@@ -2386,7 +2386,10 @@ static bool __kmp_affinity_create_cpuinfo_map(int *line,
         unsigned val;
         if ((p == NULL) || (KMP_SSCANF(p + 1, "%u\n", &val) != 1))
           goto no_val;
-        KMP_ASSERT(nodeIdIndex + level <= maxIndex);
+        // validate the input before using level:
+        if (level > (unsigned)__kmp_xproc) { // level is too big
+          level = __kmp_xproc;
+        }
         if (threadInfo[num_avail][nodeIdIndex + level] != UINT_MAX)
           goto dup_field;
         threadInfo[num_avail][nodeIdIndex + level] = val;

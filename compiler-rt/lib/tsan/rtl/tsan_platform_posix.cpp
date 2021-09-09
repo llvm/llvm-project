@@ -98,24 +98,24 @@ void CheckAndProtect() {
       continue;
     if (segment.start >= VdsoBeg())  // vdso
       break;
-    Printf("FATAL: ThreadSanitizer: unexpected memory mapping %p-%p\n",
+    Printf("FATAL: ThreadSanitizer: unexpected memory mapping 0x%zx-0x%zx\n",
            segment.start, segment.end);
     Die();
   }
 
-#if defined(__aarch64__) && defined(__APPLE__) && !HAS_48_BIT_ADDRESS_SPACE
+#    if defined(__aarch64__) && defined(__APPLE__) && SANITIZER_IOS
   ProtectRange(HeapMemEnd(), ShadowBeg());
   ProtectRange(ShadowEnd(), MetaShadowBeg());
   ProtectRange(MetaShadowEnd(), TraceMemBeg());
 #else
   ProtectRange(LoAppMemEnd(), ShadowBeg());
   ProtectRange(ShadowEnd(), MetaShadowBeg());
-#ifdef TSAN_MID_APP_RANGE
-  ProtectRange(MetaShadowEnd(), MidAppMemBeg());
-  ProtectRange(MidAppMemEnd(), TraceMemBeg());
-#else
-  ProtectRange(MetaShadowEnd(), TraceMemBeg());
-#endif
+  if (MidAppMemBeg()) {
+    ProtectRange(MetaShadowEnd(), MidAppMemBeg());
+    ProtectRange(MidAppMemEnd(), TraceMemBeg());
+  } else {
+    ProtectRange(MetaShadowEnd(), TraceMemBeg());
+  }
   // Memory for traces is mapped lazily in MapThreadTrace.
   // Protect the whole range for now, so that user does not map something here.
   ProtectRange(TraceMemBeg(), TraceMemEnd());

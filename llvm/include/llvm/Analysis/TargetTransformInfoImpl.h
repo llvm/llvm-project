@@ -263,6 +263,8 @@ public:
 
   bool isLegalMaskedExpandLoad(Type *DataType) const { return false; }
 
+  bool enableOrderedReductions() const { return false; }
+
   bool hasDivRemOp(Type *DataType, bool IsSigned) const { return false; }
 
   bool hasVolatileVariant(Instruction *I, unsigned AddrSpace) const {

@@ -7,7 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "gtest/gtest.h"
-#include "../../runtime/time-intrinsic.h"
+#include "flang/Runtime/time-intrinsic.h"
+#include <algorithm>
+#include <cctype>
+#include <charconv>
+#include <string>
 
 using namespace Fortran::runtime;
 
@@ -24,5 +28,116 @@ TEST(TimeIntrinsics, CpuTime) {
   for (double end = start; end == start; end = RTNAME(CpuTime)()) {
     ASSERT_GE(end, 0.0);
     ASSERT_GE(end, start);
+  }
+}
+
+using count_t = CppTypeFor<TypeCategory::Integer, 8>;
+
+TEST(TimeIntrinsics, SystemClock) {
+  // We can't really test that we get the "right" result for SYSTEM_CLOCK, but
+  // we can have a smoke test to see that we get something reasonable on the
+  // platforms where we expect to support it.
+
+  // The value of the count rate and max will vary by platform, but they should
+  // always be strictly positive if we have a working implementation of
+  // SYSTEM_CLOCK.
+  EXPECT_GT(RTNAME(SystemClockCountRate)(), 0);
+
+  count_t max{RTNAME(SystemClockCountMax)()};
+  EXPECT_GT(max, 0);
+
+  count_t start{RTNAME(SystemClockCount)()};
+  EXPECT_GE(start, 0);
+  EXPECT_LE(start, max);
+
+  // Loop until we get a different value from SystemClockCount. If we don't get
+  // one before we time out, then we should probably look into an implementation
+  // for SystemClokcCount with a better timer resolution on this platform.
+  for (count_t end = start; end == start; end = RTNAME(SystemClockCount)()) {
+    EXPECT_GE(end, 0);
+    EXPECT_LE(end, max);
+
+    EXPECT_GE(end, start);
+  }
+}
+
+TEST(TimeIntrinsics, DateAndTime) {
+  constexpr std::size_t bufferSize{16};
+  std::string date(bufferSize, 'Z'), time(bufferSize, 'Z'),
+      zone(bufferSize, 'Z');
+  RTNAME(DateAndTime)
+  (date.data(), date.size(), time.data(), time.size(), zone.data(), zone.size(),
+      /*source=*/nullptr, /*line=*/0, /*values=*/nullptr);
+  auto isBlank = [](const std::string &s) -> bool {
+    return std::all_of(
+        s.begin(), s.end(), [](char c) { return std::isblank(c); });
+  };
+  // Validate date is blank or YYYYMMDD.
+  if (isBlank(date)) {
+    EXPECT_TRUE(true);
+  } else {
+    count_t number{-1};
+    auto [_, ec]{
+        std::from_chars(date.data(), date.data() + date.size(), number)};
+    ASSERT_TRUE(ec != std::errc::invalid_argument &&
+        ec != std::errc::result_out_of_range);
+    EXPECT_GE(number, 0);
+    auto year = number / 10000;
+    auto month = (number - year * 10000) / 100;
+    auto day = number % 100;
+    // Do not assume anything about the year, the test could be
+    // run on system with fake/outdated dates.
+    EXPECT_LE(month, 12);
+    EXPECT_GT(month, 0);
+    EXPECT_LE(day, 31);
+    EXPECT_GT(day, 0);
+  }
+
+  // Validate time is hhmmss.sss or blank.
+  if (isBlank(time)) {
+    EXPECT_TRUE(true);
+  } else {
+    count_t number{-1};
+    auto [next, ec]{
+        std::from_chars(time.data(), time.data() + date.size(), number)};
+    ASSERT_TRUE(ec != std::errc::invalid_argument &&
+        ec != std::errc::result_out_of_range);
+    ASSERT_GE(number, 0);
+    auto hours = number / 10000;
+    auto minutes = (number - hours * 10000) / 100;
+    auto seconds = number % 100;
+    EXPECT_LE(hours, 23);
+    EXPECT_LE(minutes, 59);
+    // Accept 60 for leap seconds.
+    EXPECT_LE(seconds, 60);
+    ASSERT_TRUE(next != time.data() + time.size());
+    EXPECT_EQ(*next, '.');
+
+    count_t milliseconds{-1};
+    ASSERT_TRUE(next + 1 != time.data() + time.size());
+    auto [_, ec2]{
+        std::from_chars(next + 1, time.data() + date.size(), milliseconds)};
+    ASSERT_TRUE(ec2 != std::errc::invalid_argument &&
+        ec2 != std::errc::result_out_of_range);
+    EXPECT_GE(milliseconds, 0);
+    EXPECT_LE(milliseconds, 999);
+  }
+
+  // Validate zone is +hhmm or -hhmm or blank.
+  if (isBlank(zone)) {
+    EXPECT_TRUE(true);
+  } else {
+    ASSERT_TRUE(zone.size() > 1);
+    EXPECT_TRUE(zone[0] == '+' || zone[0] == '-');
+    count_t number{-1};
+    auto [next, ec]{
+        std::from_chars(zone.data() + 1, zone.data() + zone.size(), number)};
+    ASSERT_TRUE(ec != std::errc::invalid_argument &&
+        ec != std::errc::result_out_of_range);
+    ASSERT_GE(number, 0);
+    auto hours = number / 100;
+    auto minutes = number % 100;
+    EXPECT_LE(hours, 23);
+    EXPECT_LE(minutes, 59);
   }
 }

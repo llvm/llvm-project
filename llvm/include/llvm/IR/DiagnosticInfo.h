@@ -79,6 +79,7 @@ enum DiagnosticKind {
   DK_PGOProfile,
   DK_Unsupported,
   DK_SrcMgr,
+  DK_DontCall,
   DK_FirstPluginKind // Must be last value to work with
                      // getNextAvailablePluginDiagnosticKind
 };
@@ -1067,6 +1068,22 @@ public:
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_SrcMgr;
+  }
+};
+
+class DiagnosticInfoDontCall : public DiagnosticInfo {
+  StringRef CalleeName;
+  unsigned LocCookie;
+
+public:
+  DiagnosticInfoDontCall(StringRef CalleeName, unsigned LocCookie)
+      : DiagnosticInfo(DK_DontCall, DS_Error), CalleeName(CalleeName),
+        LocCookie(LocCookie) {}
+  StringRef getFunctionName() const { return CalleeName; }
+  unsigned getLocCookie() const { return LocCookie; }
+  void print(DiagnosticPrinter &DP) const override;
+  static bool classof(const DiagnosticInfo *DI) {
+    return DI->getKind() == DK_DontCall;
   }
 };
 

@@ -928,6 +928,15 @@ func @index_vector(%arg0: vector<4xindex>) {
 
 // -----
 
+// CHECK-LABEL: @bitcast_1d
+func @bitcast_1d(%arg0: vector<2xf32>) {
+  // CHECK: llvm.bitcast %{{.*}} : vector<2xf32> to vector<2xi32>
+  std.bitcast %arg0 : vector<2xf32> to vector<2xi32>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @cmpf_2dvector(
 func @cmpf_2dvector(%arg0 : vector<4x3xf32>, %arg1 : vector<4x3xf32>) {
   // CHECK: %[[EXTRACT1:.*]] = llvm.extractvalue %arg0[0] : !llvm.array<4 x vector<3xf32>>

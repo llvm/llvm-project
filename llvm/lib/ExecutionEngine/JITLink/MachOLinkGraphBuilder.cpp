@@ -299,8 +299,9 @@ Error MachOLinkGraphBuilder::createNormalizedSymbols() {
         return NSec.takeError();
 
       if (Value < NSec->Address || Value > NSec->Address + NSec->Size)
-        return make_error<JITLinkError>("Symbol address does not fall within "
-                                        "section");
+        return make_error<JITLinkError>("Address " + formatv("{0:x}", Value) +
+                                        " for symbol " + *Name +
+                                        " does not fall within section");
 
       if (!NSec->GraphSection) {
         LLVM_DEBUG({

@@ -9,8 +9,8 @@
 #include "../../runtime/namelist.h"
 #include "CrashHandlerFixture.h"
 #include "tools.h"
-#include "../../runtime/descriptor.h"
-#include "../../runtime/io-api.h"
+#include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/io-api.h"
 #include <algorithm>
 #include <cinttypes>
 #include <complex>

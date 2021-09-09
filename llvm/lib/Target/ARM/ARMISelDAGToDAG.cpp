@@ -1822,8 +1822,11 @@ bool ARMDAGToDAGISel::tryMVEIndexedLoad(SDNode *N) {
   else
     return false;
 
-  SDValue Ops[] = {Base, NewOffset,
-                   CurDAG->getTargetConstant(Pred, SDLoc(N), MVT::i32), PredReg,
+  SDValue Ops[] = {Base,
+                   NewOffset,
+                   CurDAG->getTargetConstant(Pred, SDLoc(N), MVT::i32),
+                   PredReg,
+                   CurDAG->getRegister(0, MVT::i32), // tp_reg
                    Chain};
   SDNode *New = CurDAG->getMachineNode(Opcode, SDLoc(N), MVT::i32,
                                        N->getValueType(0), MVT::Other, Ops);
@@ -2529,6 +2532,7 @@ void ARMDAGToDAGISel::AddMVEPredicateToOps(SDValueVector &Ops, SDLoc Loc,
                                            SDValue PredicateMask) {
   Ops.push_back(CurDAG->getTargetConstant(ARMVCC::Then, Loc, MVT::i32));
   Ops.push_back(PredicateMask);
+  Ops.push_back(CurDAG->getRegister(0, MVT::i32)); // tp_reg
 }
 
 template <typename SDValueVector>
@@ -2537,6 +2541,7 @@ void ARMDAGToDAGISel::AddMVEPredicateToOps(SDValueVector &Ops, SDLoc Loc,
                                            SDValue Inactive) {
   Ops.push_back(CurDAG->getTargetConstant(ARMVCC::Then, Loc, MVT::i32));
   Ops.push_back(PredicateMask);
+  Ops.push_back(CurDAG->getRegister(0, MVT::i32)); // tp_reg
   Ops.push_back(Inactive);
 }
 
@@ -2544,6 +2549,7 @@ template <typename SDValueVector>
 void ARMDAGToDAGISel::AddEmptyMVEPredicateToOps(SDValueVector &Ops, SDLoc Loc) {
   Ops.push_back(CurDAG->getTargetConstant(ARMVCC::None, Loc, MVT::i32));
   Ops.push_back(CurDAG->getRegister(0, MVT::i32));
+  Ops.push_back(CurDAG->getRegister(0, MVT::i32)); // tp_reg
 }
 
 template <typename SDValueVector>
@@ -2551,6 +2557,7 @@ void ARMDAGToDAGISel::AddEmptyMVEPredicateToOps(SDValueVector &Ops, SDLoc Loc,
                                                 EVT InactiveTy) {
   Ops.push_back(CurDAG->getTargetConstant(ARMVCC::None, Loc, MVT::i32));
   Ops.push_back(CurDAG->getRegister(0, MVT::i32));
+  Ops.push_back(CurDAG->getRegister(0, MVT::i32)); // tp_reg
   Ops.push_back(SDValue(
       CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, Loc, InactiveTy), 0));
 }
@@ -5499,8 +5506,8 @@ static int getARClassRegisterMask(StringRef Reg, StringRef Flags) {
 // using the supplied metadata string to select the instruction node to use
 // and the registers/masks to construct as operands for the node.
 bool ARMDAGToDAGISel::tryReadRegister(SDNode *N){
-  const MDNodeSDNode *MD = dyn_cast<MDNodeSDNode>(N->getOperand(1));
-  const MDString *RegString = dyn_cast<MDString>(MD->getMD()->getOperand(0));
+  const auto *MD = cast<MDNodeSDNode>(N->getOperand(1));
+  const auto *RegString = cast<MDString>(MD->getMD()->getOperand(0));
   bool IsThumb2 = Subtarget->isThumb2();
   SDLoc DL(N);
 
@@ -5614,8 +5621,8 @@ bool ARMDAGToDAGISel::tryReadRegister(SDNode *N){
 // using the supplied metadata string to select the instruction node to use
 // and the registers/masks to use in the nodes
 bool ARMDAGToDAGISel::tryWriteRegister(SDNode *N){
-  const MDNodeSDNode *MD = dyn_cast<MDNodeSDNode>(N->getOperand(1));
-  const MDString *RegString = dyn_cast<MDString>(MD->getMD()->getOperand(0));
+  const auto *MD = cast<MDNodeSDNode>(N->getOperand(1));
+  const auto *RegString = cast<MDString>(MD->getMD()->getOperand(0));
   bool IsThumb2 = Subtarget->isThumb2();
   SDLoc DL(N);
 

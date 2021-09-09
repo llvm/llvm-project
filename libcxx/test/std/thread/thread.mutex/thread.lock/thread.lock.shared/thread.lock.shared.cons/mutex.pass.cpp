@@ -99,7 +99,7 @@ int main(int, char**)
         q.join();
     }
 
-#ifdef __cpp_deduction_guides
+#if TEST_STD_VER >= 17
     std::shared_lock sl(m);
     static_assert((std::is_same<decltype(sl), std::shared_lock<decltype(m)>>::value), "" );
 #endif

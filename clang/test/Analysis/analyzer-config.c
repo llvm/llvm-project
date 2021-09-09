@@ -31,6 +31,7 @@
 // CHECK-NEXT: cfg-rich-constructors = true
 // CHECK-NEXT: cfg-scopes = false
 // CHECK-NEXT: cfg-temporary-dtors = true
+// CHECK-NEXT: consider-single-element-arrays-as-flexible-array-members = false
 // CHECK-NEXT: core.CallAndMessage:ArgInitializedness = true
 // CHECK-NEXT: core.CallAndMessage:ArgPointeeInitializedness = false
 // CHECK-NEXT: core.CallAndMessage:CXXDeallocationArg = true
@@ -116,6 +117,8 @@
 // CHECK-NEXT: suppress-null-return-paths = true
 // CHECK-NEXT: track-conditions = true
 // CHECK-NEXT: track-conditions-debug = false
+// CHECK-NEXT: unix.DynamicMemoryModeling:AddNoOwnershipChangeNotes = false
 // CHECK-NEXT: unix.DynamicMemoryModeling:Optimistic = false
 // CHECK-NEXT: unroll-loops = false
+// CHECK-NEXT: verbose-report-filename = false
 // CHECK-NEXT: widen-loops = false

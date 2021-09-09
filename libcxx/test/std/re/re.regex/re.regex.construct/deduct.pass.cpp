@@ -8,14 +8,11 @@
 
 // <regex>
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: libcpp-no-deduction-guides
-
 
 // template<class ForwardIterator>
 // basic_regex(ForwardIterator, ForwardIterator,
 //             regex_constants::syntax_option_type = regex_constants::ECMAScript)
 // -> basic_regex<typename iterator_traits<ForwardIterator>::value_type>;
-
 
 #include <regex>
 #include <string>

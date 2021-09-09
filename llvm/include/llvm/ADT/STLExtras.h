@@ -1328,7 +1328,7 @@ template <typename ContainerTy> auto make_second_range(ContainerTy &&c) {
 /// compares less than the first component of another std::pair.
 struct less_first {
   template <typename T> bool operator()(const T &lhs, const T &rhs) const {
-    return lhs.first < rhs.first;
+    return std::less<>()(lhs.first, rhs.first);
   }
 };
 
@@ -1336,7 +1336,7 @@ struct less_first {
 /// compares less than the second component of another std::pair.
 struct less_second {
   template <typename T> bool operator()(const T &lhs, const T &rhs) const {
-    return lhs.second < rhs.second;
+    return std::less<>()(lhs.second, rhs.second);
   }
 };
 

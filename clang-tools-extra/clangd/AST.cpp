@@ -488,15 +488,22 @@ std::vector<const Attr *> getAttributes(const DynTypedNode &N) {
   if (const auto *TL = N.get<TypeLoc>()) {
     for (AttributedTypeLoc ATL = TL->getAs<AttributedTypeLoc>(); !ATL.isNull();
          ATL = ATL.getModifiedLoc().getAs<AttributedTypeLoc>()) {
-      Result.push_back(ATL.getAttr());
+      if (const Attr *A = ATL.getAttr())
+        Result.push_back(A);
       assert(!ATL.getModifiedLoc().isNull());
     }
   }
-  if (const auto *S = N.get<AttributedStmt>())
+  if (const auto *S = N.get<AttributedStmt>()) {
     for (; S != nullptr; S = dyn_cast<AttributedStmt>(S->getSubStmt()))
-      llvm::copy(S->getAttrs(), std::back_inserter(Result));
-  if (const auto *D = N.get<Decl>())
-    llvm::copy(D->attrs(), std::back_inserter(Result));
+      for (const Attr *A : S->getAttrs())
+        if (A)
+          Result.push_back(A);
+  }
+  if (const auto *D = N.get<Decl>()) {
+    for (const Attr *A : D->attrs())
+      if (A)
+        Result.push_back(A);
+  }
   return Result;
 }
 

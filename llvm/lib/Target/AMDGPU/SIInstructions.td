@@ -2127,6 +2127,22 @@ def : GCNPat <
 >;
 
 def : GCNPat <
+  (i1 (UniformUnaryFrag<trunc> i32:$a)),
+  (S_CMP_EQ_U32 (S_AND_B32 (i32 1), $a), (i32 1))
+>;
+
+def : GCNPat <
+  (i1 (UniformUnaryFrag<trunc> i16:$a)),
+  (S_CMP_EQ_U32 (S_AND_B32 (i32 1), $a), (i32 1))
+>;
+
+def : GCNPat <
+  (i1 (UniformUnaryFrag<trunc> i64:$a)),
+  (S_CMP_EQ_U32 (S_AND_B32 (i32 1),
+                    (i32 (EXTRACT_SUBREG $a, sub0))), (i32 1))
+>;
+
+def : GCNPat <
   (i1 (trunc i32:$a)),
   (V_CMP_EQ_U32_e64 (S_AND_B32 (i32 1), $a), (i32 1))
 >;

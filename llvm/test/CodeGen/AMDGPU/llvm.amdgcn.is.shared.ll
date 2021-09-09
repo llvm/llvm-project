@@ -30,8 +30,7 @@ define amdgpu_kernel void @is_local_vgpr(i8* addrspace(1)* %ptr.ptr) {
 ; CI-DAG: s_load_dword [[PTR_HI:s[0-9]+]], s[6:7], 0x1{{$}}
 ; GFX9-DAG: s_load_dword [[PTR_HI:s[0-9]+]], s[6:7], 0x4{{$}}
 
-; GCN: v_mov_b32_e32 [[V_APERTURE:v[0-9]+]], [[APERTURE]]
-; GCN: v_cmp_eq_u32_e32 vcc, [[PTR_HI]], [[V_APERTURE]]
+; GCN: s_cmp_eq_u32 [[PTR_HI]], [[APERTURE]]
 ; GCN: s_cbranch_vccnz
 define amdgpu_kernel void @is_local_sgpr(i8* %ptr) {
   %val = call i1 @llvm.amdgcn.is.shared(i8* %ptr)

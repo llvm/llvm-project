@@ -452,7 +452,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // Most Android ARM64 targets should enable the linker fix for erratum
   // 843419. Only non-Cortex-A53 devices are allowed to skip this flag.
   if (Arch == llvm::Triple::aarch64 && isAndroid) {
-    std::string CPU = getCPUName(Args, Triple);
+    std::string CPU = getCPUName(D, Args, Triple);
     if (CPU.empty() || CPU == "generic" || CPU == "cortex-a53")
       CmdArgs.push_back("--fix-cortex-a53-843419");
   }
@@ -770,32 +770,32 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
     CmdArgs.push_back("-a32");
     CmdArgs.push_back("-mppc");
     CmdArgs.push_back("-mbig-endian");
-    CmdArgs.push_back(
-      ppc::getPPCAsmModeForCPU(getCPUName(Args, getToolChain().getTriple())));
+    CmdArgs.push_back(ppc::getPPCAsmModeForCPU(
+        getCPUName(D, Args, getToolChain().getTriple())));
     break;
   }
   case llvm::Triple::ppcle: {
     CmdArgs.push_back("-a32");
     CmdArgs.push_back("-mppc");
     CmdArgs.push_back("-mlittle-endian");
-    CmdArgs.push_back(
-        ppc::getPPCAsmModeForCPU(getCPUName(Args, getToolChain().getTriple())));
+    CmdArgs.push_back(ppc::getPPCAsmModeForCPU(
+        getCPUName(D, Args, getToolChain().getTriple())));
     break;
   }
   case llvm::Triple::ppc64: {
     CmdArgs.push_back("-a64");
     CmdArgs.push_back("-mppc64");
     CmdArgs.push_back("-mbig-endian");
-    CmdArgs.push_back(
-      ppc::getPPCAsmModeForCPU(getCPUName(Args, getToolChain().getTriple())));
+    CmdArgs.push_back(ppc::getPPCAsmModeForCPU(
+        getCPUName(D, Args, getToolChain().getTriple())));
     break;
   }
   case llvm::Triple::ppc64le: {
     CmdArgs.push_back("-a64");
     CmdArgs.push_back("-mppc64");
     CmdArgs.push_back("-mlittle-endian");
-    CmdArgs.push_back(
-      ppc::getPPCAsmModeForCPU(getCPUName(Args, getToolChain().getTriple())));
+    CmdArgs.push_back(ppc::getPPCAsmModeForCPU(
+        getCPUName(D, Args, getToolChain().getTriple())));
     break;
   }
   case llvm::Triple::riscv32:
@@ -811,7 +811,7 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel: {
     CmdArgs.push_back("-32");
-    std::string CPU = getCPUName(Args, getToolChain().getTriple());
+    std::string CPU = getCPUName(D, Args, getToolChain().getTriple());
     CmdArgs.push_back(
         sparc::getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
     AddAssemblerKPIC(getToolChain(), Args, CmdArgs);
@@ -819,7 +819,7 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
   }
   case llvm::Triple::sparcv9: {
     CmdArgs.push_back("-64");
-    std::string CPU = getCPUName(Args, getToolChain().getTriple());
+    std::string CPU = getCPUName(D, Args, getToolChain().getTriple());
     CmdArgs.push_back(
         sparc::getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
     AddAssemblerKPIC(getToolChain(), Args, CmdArgs);
@@ -1509,7 +1509,7 @@ bool clang::driver::findMIPSMultilibs(const Driver &D,
   addMultilibFlag(CPUName == "mips64r6", "march=mips64r6", Flags);
   addMultilibFlag(isMicroMips(Args), "mmicromips", Flags);
   addMultilibFlag(tools::mips::isUCLibc(Args), "muclibc", Flags);
-  addMultilibFlag(tools::mips::isNaN2008(Args, TargetTriple), "mnan=2008",
+  addMultilibFlag(tools::mips::isNaN2008(D, Args, TargetTriple), "mnan=2008",
                   Flags);
   addMultilibFlag(ABIName == "n32", "mabi=n32", Flags);
   addMultilibFlag(ABIName == "n64", "mabi=n64", Flags);
@@ -2088,7 +2088,8 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
 
   // Non-Solaris is much simpler - most systems just go with "/usr".
   if (SysRoot.empty() && TargetTriple.getOS() == llvm::Triple::Linux) {
-    // Yet, still look for RHEL devtoolsets.
+    // Yet, still look for RHEL/CentOS devtoolsets and gcc-toolsets.
+    Prefixes.push_back("/opt/rh/gcc-toolset-10/root/usr");
     Prefixes.push_back("/opt/rh/devtoolset-10/root/usr");
     Prefixes.push_back("/opt/rh/devtoolset-9/root/usr");
     Prefixes.push_back("/opt/rh/devtoolset-8/root/usr");

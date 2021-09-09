@@ -104,21 +104,21 @@ define <8 x i64> *@vst4_v2i64(<2 x i64> *%src, <8 x i64> *%dst) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
-; CHECK-NEXT:    vldrw.u32 q4, [r0]
 ; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
-; CHECK-NEXT:    vldrw.u32 q3, [r0, #32]
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
 ; CHECK-NEXT:    vldrw.u32 q1, [r0, #48]
-; CHECK-NEXT:    vmov.f64 d4, d8
+; CHECK-NEXT:    vldrw.u32 q3, [r0, #32]
+; CHECK-NEXT:    vmov.f32 s8, s16
 ; CHECK-NEXT:    vmov.f32 s9, s17
 ; CHECK-NEXT:    vmov.f32 s10, s0
 ; CHECK-NEXT:    vmov.f32 s11, s1
 ; CHECK-NEXT:    vmov.f32 s0, s18
 ; CHECK-NEXT:    vmov.f32 s1, s19
-; CHECK-NEXT:    vmov.f64 d8, d6
-; CHECK-NEXT:    vstrw.32 q0, [r1, #32]
-; CHECK-NEXT:    vmov.f32 s17, s13
 ; CHECK-NEXT:    vmov.f32 s18, s4
+; CHECK-NEXT:    vstrw.32 q0, [r1, #32]
 ; CHECK-NEXT:    vmov.f32 s19, s5
+; CHECK-NEXT:    vmov.f32 s16, s12
+; CHECK-NEXT:    vmov.f32 s17, s13
 ; CHECK-NEXT:    vmov.f32 s4, s14
 ; CHECK-NEXT:    vstrw.32 q4, [r1, #16]
 ; CHECK-NEXT:    vmov.f32 s5, s15
@@ -215,16 +215,16 @@ define <8 x double> *@vst4_v2f64(<2 x double> *%src, <8 x double> *%dst) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
-; CHECK-NEXT:    vldrw.u32 q3, [r0]
 ; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
-; CHECK-NEXT:    vldrw.u32 q4, [r0, #32]
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #48]
+; CHECK-NEXT:    vldrw.u32 q4, [r0, #32]
 ; CHECK-NEXT:    vmov.f64 d2, d6
 ; CHECK-NEXT:    vmov.f64 d3, d0
 ; CHECK-NEXT:    vmov.f64 d0, d7
-; CHECK-NEXT:    vmov.f64 d6, d8
-; CHECK-NEXT:    vstrw.32 q0, [r1, #32]
 ; CHECK-NEXT:    vmov.f64 d7, d4
+; CHECK-NEXT:    vstrw.32 q0, [r1, #32]
+; CHECK-NEXT:    vmov.f64 d6, d8
 ; CHECK-NEXT:    vmov.f64 d4, d9
 ; CHECK-NEXT:    vstrw.32 q3, [r1, #16]
 ; CHECK-NEXT:    vstrw.32 q2, [r1, #48]

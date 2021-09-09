@@ -42,8 +42,6 @@ declare void @foo()
 ; CHECK-LABEL: define internal void @test3.loop.1()
 ; CHECK-NEXT:  newFuncRoot:
 ; CHECK-NEXT:    br label %loop.1
-; CHECK:       exit.exitStub:
-; CHECK-NEXT:    ret void
 ; CHECK:       loop.1:
 ; CHECK-NEXT:    %index.1 = phi i32 [ %next.1, %loop.1.loop.1_crit_edge ], [ 10, %newFuncRoot ]
 ; CHECK-NEXT:    tail call void @foo()
@@ -52,12 +50,12 @@ declare void @foo()
 ; CHECK-NEXT:    br i1 %repeat.1, label %loop.1.loop.1_crit_edge, label %exit.exitStub
 ; CHECK:       loop.1.loop.1_crit_edge:
 ; CHECK-NEXT:    br label %loop.1
+; CHECK:       exit.exitStub:
+; CHECK-NEXT:    ret void
 
 ; CHECK-LABEL: define internal void @test3.loop.0()
 ; CHECK-NEXT:  newFuncRoot:
 ; CHECK-NEXT:    br label %loop.0
-; CHECK:       loop.0.loop.1_crit_edge.exitStub:
-; CHECK-NEXT:    ret void
 ; CHECK:       loop.0:
 ; CHECK-NEXT:    %index.0 = phi i32 [ 10, %newFuncRoot ], [ %next.0, %loop.0.loop.0_crit_edge ]
 ; CHECK-NEXT:    tail call void @foo()
@@ -66,3 +64,5 @@ declare void @foo()
 ; CHECK-NEXT:    br i1 %repeat.0, label %loop.0.loop.0_crit_edge, label %loop.0.loop.1_crit_edge.exitStub
 ; CHECK:       loop.0.loop.0_crit_edge:
 ; CHECK-NEXT:    br label %loop.0
+; CHECK:       loop.0.loop.1_crit_edge.exitStub:
+; CHECK-NEXT:    ret void

@@ -52,8 +52,15 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     // split up large offsets in GEP into better parts than ConstantHoisting
     // can.
     return TTI::TCC_Free;
-  case Instruction::Add:
   case Instruction::And:
+    // zext.h
+    if (Imm == UINT64_C(0xffff) && ST->hasStdExtZbb())
+      return TTI::TCC_Free;
+    // zext.w
+    if (Imm == UINT64_C(0xffffffff) && ST->hasStdExtZbb())
+      return TTI::TCC_Free;
+    LLVM_FALLTHROUGH;
+  case Instruction::Add:
   case Instruction::Or:
   case Instruction::Xor:
   case Instruction::Mul:

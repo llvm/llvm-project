@@ -16,6 +16,10 @@
 namespace clang {
 namespace driver {
 
+namespace toolchains {
+class AMDGPUOpenMPToolChain;
+}
+
 namespace tools {
 
 namespace AMDGCN {
@@ -47,11 +51,11 @@ private:
                                     llvm::StringRef OutputFilePrefix) const;
 
   /// \return llvm-link output file name.
-  const char *constructLLVMLinkCommand(Compilation &C, const JobAction &JA,
-                                       const InputInfoList &Inputs,
-                                       const llvm::opt::ArgList &Args,
-                                       llvm::StringRef SubArchName,
-                                       llvm::StringRef OutputFilePrefix) const;
+  const char *constructLLVMLinkCommand(
+      const toolchains::AMDGPUOpenMPToolChain &AMDGPUOpenMPTC, Compilation &C,
+      const JobAction &JA, const InputInfoList &Inputs,
+      const llvm::opt::ArgList &Args, llvm::StringRef SubArchName,
+      llvm::StringRef OutputFilePrefix) const;
 
   /// \return opt output file name.
   const char *constructOptCommand(Compilation &C, const JobAction &JA,

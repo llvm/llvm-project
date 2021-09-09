@@ -13,13 +13,14 @@
 #include "Target.h"
 
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Bitcode/BitcodeReader.h"
 
 using namespace llvm;
 using namespace llvm::MachO;
 using namespace lld;
 using namespace lld::macho;
 
-template <class LP> static bool hasObjCSection(MemoryBufferRef mb) {
+template <class LP> static bool objectHasObjCSection(MemoryBufferRef mb) {
   using Section = typename LP::section;
 
   auto *hdr =
@@ -46,9 +47,20 @@ template <class LP> static bool hasObjCSection(MemoryBufferRef mb) {
   return false;
 }
 
-bool macho::hasObjCSection(MemoryBufferRef mb) {
+static bool objectHasObjCSection(MemoryBufferRef mb) {
   if (target->wordSize == 8)
-    return ::hasObjCSection<LP64>(mb);
+    return ::objectHasObjCSection<LP64>(mb);
   else
-    return ::hasObjCSection<ILP32>(mb);
+    return ::objectHasObjCSection<ILP32>(mb);
+}
+
+bool macho::hasObjCSection(MemoryBufferRef mb) {
+  switch (identify_magic(mb.getBuffer())) {
+  case file_magic::macho_object:
+    return objectHasObjCSection(mb);
+  case file_magic::bitcode:
+    return check(isBitcodeContainingObjCCategory(mb));
+  default:
+    return false;
+  }
 }

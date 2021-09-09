@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<class T>
@@ -18,63 +17,63 @@
 
 #include "test_iterators.h"
 
-namespace stdr = std::ranges;
 
-static_assert(stdr::sized_range<int[5]>);
-static_assert(stdr::sized_range<int (&)[5]>);
-static_assert(!stdr::sized_range<int (&)[]>);
-static_assert(!stdr::sized_range<int[]>);
+
+static_assert(std::ranges::sized_range<int[5]>);
+static_assert(std::ranges::sized_range<int (&)[5]>);
+static_assert(!std::ranges::sized_range<int (&)[]>);
+static_assert(!std::ranges::sized_range<int[]>);
 
 struct range_has_size {
   bidirectional_iterator<int*> begin();
   bidirectional_iterator<int*> end();
   int size();
 };
-static_assert(stdr::sized_range<range_has_size>);
-static_assert(!stdr::sized_range<range_has_size const>);
+static_assert(std::ranges::sized_range<range_has_size>);
+static_assert(!std::ranges::sized_range<range_has_size const>);
 
 struct range_has_const_size {
   bidirectional_iterator<int*> begin();
   bidirectional_iterator<int*> end();
   int size() const;
 };
-static_assert(stdr::sized_range<range_has_const_size>);
-static_assert(!stdr::sized_range<range_has_const_size const>);
+static_assert(std::ranges::sized_range<range_has_const_size>);
+static_assert(!std::ranges::sized_range<range_has_const_size const>);
 
 struct const_range_has_size {
   bidirectional_iterator<int*> begin() const;
   bidirectional_iterator<int*> end() const;
   int size();
 };
-static_assert(stdr::sized_range<const_range_has_size>);
-static_assert(stdr::range<const_range_has_size const>);
-static_assert(!stdr::sized_range<const_range_has_size const>);
+static_assert(std::ranges::sized_range<const_range_has_size>);
+static_assert(std::ranges::range<const_range_has_size const>);
+static_assert(!std::ranges::sized_range<const_range_has_size const>);
 
 struct const_range_has_const_size {
   bidirectional_iterator<int*> begin() const;
   bidirectional_iterator<int*> end() const;
   int size() const;
 };
-static_assert(stdr::sized_range<const_range_has_const_size>);
-static_assert(stdr::sized_range<const_range_has_const_size const>);
+static_assert(std::ranges::sized_range<const_range_has_const_size>);
+static_assert(std::ranges::sized_range<const_range_has_const_size const>);
 
 struct sized_sentinel_range_has_size {
   int* begin();
   int* end();
 };
-static_assert(stdr::sized_range<sized_sentinel_range_has_size>);
-static_assert(!stdr::sized_range<sized_sentinel_range_has_size const>);
+static_assert(std::ranges::sized_range<sized_sentinel_range_has_size>);
+static_assert(!std::ranges::sized_range<sized_sentinel_range_has_size const>);
 
 struct const_sized_sentinel_range_has_size {
   int* begin() const;
   int* end() const;
 };
-static_assert(stdr::sized_range<const_sized_sentinel_range_has_size>);
-static_assert(stdr::sized_range<const_sized_sentinel_range_has_size const>);
+static_assert(std::ranges::sized_range<const_sized_sentinel_range_has_size>);
+static_assert(std::ranges::sized_range<const_sized_sentinel_range_has_size const>);
 
 struct non_range_has_size {
   int size() const;
 };
-static_assert(requires(non_range_has_size const x) { stdr::size(x); });
-static_assert(!stdr::sized_range<non_range_has_size>);
-static_assert(!stdr::sized_range<non_range_has_size const>);
+static_assert(requires(non_range_has_size const x) { std::ranges::size(x); });
+static_assert(!std::ranges::sized_range<non_range_has_size>);
+static_assert(!std::ranges::sized_range<non_range_has_size const>);

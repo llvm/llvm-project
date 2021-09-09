@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // class transform_view::<sentinel>;
@@ -22,18 +21,18 @@ template<class T>
 concept EndIsIter = requires(T t) { ++t.end(); };
 
 constexpr bool test() {
-  std::ranges::transform_view<SizedSentinelView, IncrementConst> transformView1;
+  std::ranges::transform_view<SizedSentinelView, PlusOne> transformView1;
   // Going to const and back.
   auto sent1 = transformView1.end();
-  std::ranges::sentinel_t<const std::ranges::transform_view<SizedSentinelView, IncrementConst>> sent2{sent1};
-  std::ranges::sentinel_t<const std::ranges::transform_view<SizedSentinelView, IncrementConst>> sent3{sent2};
+  std::ranges::sentinel_t<const std::ranges::transform_view<SizedSentinelView, PlusOne>> sent2{sent1};
+  std::ranges::sentinel_t<const std::ranges::transform_view<SizedSentinelView, PlusOne>> sent3{sent2};
   (void)sent3;
 
   static_assert(!EndIsIter<decltype(sent1)>);
   static_assert(!EndIsIter<decltype(sent2)>);
   assert(sent1.base() == globalBuff + 8);
 
-  std::ranges::transform_view transformView2(SizedSentinelView{4}, IncrementConst());
+  std::ranges::transform_view transformView2(SizedSentinelView{4}, PlusOne());
   auto sent4 = transformView2.end();
   auto iter = transformView1.begin();
   {

@@ -3,8 +3,8 @@
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
-; CHECK: LV: Disabling scalable vectorization, because target does not support scalable vectors.
-; CHECK: remark: <unknown>:0:0: Disabling scalable vectorization, because target does not support scalable vectors.
+; CHECK: LV: User VF=vscale x 4 is ignored because scalable vectors are not available.
+; CHECK: remark: <unknown>:0:0: User-specified vectorization factor vscale x 4 is ignored because the target does not support scalable vectors. The compiler will pick a more suitable value.
 ; CHECK: LV: The Widest register safe to use is: 32 bits.
 define void @test1(i32* %a, i32* %b) {
 entry:

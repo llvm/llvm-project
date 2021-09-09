@@ -318,9 +318,8 @@ bool CallBase::isReturnNonNull() const {
   if (hasRetAttr(Attribute::NonNull))
     return true;
 
-  if (getDereferenceableBytes(AttributeList::ReturnIndex) > 0 &&
-           !NullPointerIsDefined(getCaller(),
-                                 getType()->getPointerAddressSpace()))
+  if (getRetDereferenceableBytes() > 0 &&
+      !NullPointerIsDefined(getCaller(), getType()->getPointerAddressSpace()))
     return true;
 
   return false;
@@ -329,11 +328,10 @@ bool CallBase::isReturnNonNull() const {
 Value *CallBase::getReturnedArgOperand() const {
   unsigned Index;
 
-  if (Attrs.hasAttrSomewhere(Attribute::Returned, &Index) && Index)
+  if (Attrs.hasAttrSomewhere(Attribute::Returned, &Index))
     return getArgOperand(Index - AttributeList::FirstArgIndex);
   if (const Function *F = getCalledFunction())
-    if (F->getAttributes().hasAttrSomewhere(Attribute::Returned, &Index) &&
-        Index)
+    if (F->getAttributes().hasAttrSomewhere(Attribute::Returned, &Index))
       return getArgOperand(Index - AttributeList::FirstArgIndex);
 
   return nullptr;
@@ -343,22 +341,22 @@ Value *CallBase::getReturnedArgOperand() const {
 bool CallBase::paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
   assert(ArgNo < getNumArgOperands() && "Param index out of bounds!");
 
-  if (Attrs.hasParamAttribute(ArgNo, Kind))
+  if (Attrs.hasParamAttr(ArgNo, Kind))
     return true;
   if (const Function *F = getCalledFunction())
-    return F->getAttributes().hasParamAttribute(ArgNo, Kind);
+    return F->getAttributes().hasParamAttr(ArgNo, Kind);
   return false;
 }
 
 bool CallBase::hasFnAttrOnCalledFunction(Attribute::AttrKind Kind) const {
   if (const Function *F = getCalledFunction())
-    return F->getAttributes().hasFnAttribute(Kind);
+    return F->getAttributes().hasFnAttr(Kind);
   return false;
 }
 
 bool CallBase::hasFnAttrOnCalledFunction(StringRef Kind) const {
   if (const Function *F = getCalledFunction())
-    return F->getAttributes().hasFnAttribute(Kind);
+    return F->getAttributes().hasFnAttr(Kind);
   return false;
 }
 

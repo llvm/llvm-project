@@ -178,17 +178,11 @@
 
 #elif TEST_STD_VER == 17
 
-# if TEST_HAS_BUILTIN(__builtin_addressof) || TEST_GCC_VER >= 700
-#   ifndef __cpp_lib_addressof_constexpr
-#     error "__cpp_lib_addressof_constexpr should be defined in c++17"
-#   endif
-#   if __cpp_lib_addressof_constexpr != 201603L
-#     error "__cpp_lib_addressof_constexpr should have the value 201603L in c++17"
-#   endif
-# else
-#   ifdef __cpp_lib_addressof_constexpr
-#     error "__cpp_lib_addressof_constexpr should not be defined when TEST_HAS_BUILTIN(__builtin_addressof) || TEST_GCC_VER >= 700 is not defined!"
-#   endif
+# ifndef __cpp_lib_addressof_constexpr
+#   error "__cpp_lib_addressof_constexpr should be defined in c++17"
+# endif
+# if __cpp_lib_addressof_constexpr != 201603L
+#   error "__cpp_lib_addressof_constexpr should have the value 201603L in c++17"
 # endif
 
 # ifndef __cpp_lib_allocator_traits_is_always_equal
@@ -274,17 +268,11 @@
 
 #elif TEST_STD_VER == 20
 
-# if TEST_HAS_BUILTIN(__builtin_addressof) || TEST_GCC_VER >= 700
-#   ifndef __cpp_lib_addressof_constexpr
-#     error "__cpp_lib_addressof_constexpr should be defined in c++20"
-#   endif
-#   if __cpp_lib_addressof_constexpr != 201603L
-#     error "__cpp_lib_addressof_constexpr should have the value 201603L in c++20"
-#   endif
-# else
-#   ifdef __cpp_lib_addressof_constexpr
-#     error "__cpp_lib_addressof_constexpr should not be defined when TEST_HAS_BUILTIN(__builtin_addressof) || TEST_GCC_VER >= 700 is not defined!"
-#   endif
+# ifndef __cpp_lib_addressof_constexpr
+#   error "__cpp_lib_addressof_constexpr should be defined in c++20"
+# endif
+# if __cpp_lib_addressof_constexpr != 201603L
+#   error "__cpp_lib_addressof_constexpr should have the value 201603L in c++20"
 # endif
 
 # ifndef __cpp_lib_allocator_traits_is_always_equal
@@ -424,17 +412,11 @@
 
 #elif TEST_STD_VER > 20
 
-# if TEST_HAS_BUILTIN(__builtin_addressof) || TEST_GCC_VER >= 700
-#   ifndef __cpp_lib_addressof_constexpr
-#     error "__cpp_lib_addressof_constexpr should be defined in c++2b"
-#   endif
-#   if __cpp_lib_addressof_constexpr != 201603L
-#     error "__cpp_lib_addressof_constexpr should have the value 201603L in c++2b"
-#   endif
-# else
-#   ifdef __cpp_lib_addressof_constexpr
-#     error "__cpp_lib_addressof_constexpr should not be defined when TEST_HAS_BUILTIN(__builtin_addressof) || TEST_GCC_VER >= 700 is not defined!"
-#   endif
+# ifndef __cpp_lib_addressof_constexpr
+#   error "__cpp_lib_addressof_constexpr should be defined in c++2b"
+# endif
+# if __cpp_lib_addressof_constexpr != 201603L
+#   error "__cpp_lib_addressof_constexpr should have the value 201603L in c++2b"
 # endif
 
 # ifndef __cpp_lib_allocator_traits_is_always_equal

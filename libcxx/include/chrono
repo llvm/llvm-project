@@ -2907,7 +2907,7 @@ inline namespace literals
         return chrono::duration<long double, nano> (__ns);
     }
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CXX20_CHRONO_LITERALS)
+#if _LIBCPP_STD_VER > 17
     constexpr chrono::day operator ""d(unsigned long long __d) noexcept
     {
         return chrono::day(static_cast<unsigned>(__d));

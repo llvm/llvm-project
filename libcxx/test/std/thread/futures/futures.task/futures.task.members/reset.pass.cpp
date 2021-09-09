@@ -38,10 +38,10 @@ int main(int, char**)
     {
         std::packaged_task<double(int, char)> p(A(5));
         std::future<double> f = p.get_future();
-        p(3, 'a');
+        p(3, 97);
         assert(f.get() == 105.0);
         p.reset();
-        p(4, 'a');
+        p(4, 97);
         f = p.get_future();
         assert(f.get() == 106.0);
     }

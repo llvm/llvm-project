@@ -1113,8 +1113,8 @@ static Value *extractIntPart(const IntPart &P, IRBuilderBase &Builder) {
 /// (icmp eq X0, Y0) & (icmp eq X1, Y1) -> icmp eq X01, Y01
 /// (icmp ne X0, Y0) | (icmp ne X1, Y1) -> icmp ne X01, Y01
 /// where X0, X1 and Y0, Y1 are adjacent parts extracted from an integer.
-static Value *foldEqOfParts(ICmpInst *Cmp0, ICmpInst *Cmp1, bool IsAnd,
-                            InstCombiner::BuilderTy &Builder) {
+Value *InstCombinerImpl::foldEqOfParts(ICmpInst *Cmp0, ICmpInst *Cmp1,
+                                       bool IsAnd) {
   if (!Cmp0->hasOneUse() || !Cmp1->hasOneUse())
     return nullptr;
 
@@ -1262,7 +1262,7 @@ Value *InstCombinerImpl::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
           foldUnsignedUnderflowCheck(RHS, LHS, /*IsAnd=*/true, Q, Builder))
     return X;
 
-  if (Value *X = foldEqOfParts(LHS, RHS, /*IsAnd=*/true, Builder))
+  if (Value *X = foldEqOfParts(LHS, RHS, /*IsAnd=*/true))
     return X;
 
   // This only handles icmp of constants: (icmp1 A, C1) & (icmp2 B, C2).
@@ -2493,7 +2493,7 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
           foldUnsignedUnderflowCheck(RHS, LHS, /*IsAnd=*/false, Q, Builder))
     return X;
 
-  if (Value *X = foldEqOfParts(LHS, RHS, /*IsAnd=*/false, Builder))
+  if (Value *X = foldEqOfParts(LHS, RHS, /*IsAnd=*/false))
     return X;
 
   // (icmp ne A, 0) | (icmp ne B, 0) --> (icmp ne (A|B), 0)
@@ -3573,13 +3573,17 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   // ~min(~X, ~Y) --> max(X, Y)
   // ~max(~X, Y) --> min(X, ~Y)
   auto *II = dyn_cast<IntrinsicInst>(Op0);
-  if (II && match(Op1, m_AllOnes())) {
-    if (match(Op0, m_MaxOrMin(m_Not(m_Value(X)), m_Not(m_Value(Y))))) {
+  if (II && II->hasOneUse() && match(Op1, m_AllOnes())) {
+    if (match(Op0, m_MaxOrMin(m_Value(X), m_Value(Y))) &&
+        isFreeToInvert(X, X->hasOneUse()) &&
+        isFreeToInvert(Y, Y->hasOneUse())) {
       Intrinsic::ID InvID = getInverseMinMaxIntrinsic(II->getIntrinsicID());
-      Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, X, Y);
+      Value *NotX = Builder.CreateNot(X);
+      Value *NotY = Builder.CreateNot(Y);
+      Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, NotX, NotY);
       return replaceInstUsesWith(I, InvMaxMin);
     }
-    if (match(Op0, m_OneUse(m_c_MaxOrMin(m_Not(m_Value(X)), m_Value(Y))))) {
+    if (match(Op0, m_c_MaxOrMin(m_Not(m_Value(X)), m_Value(Y)))) {
       Intrinsic::ID InvID = getInverseMinMaxIntrinsic(II->getIntrinsicID());
       Value *NotY = Builder.CreateNot(Y);
       Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, X, NotY);

@@ -32,7 +32,7 @@ clang ParenExpr).
 Examining the AST
 =================
 
-A good way to familarize yourself with the Clang AST is to actually look
+A good way to familiarize yourself with the Clang AST is to actually look
 at it on some simple example code. Clang has a builtin AST-dump mode,
 which can be enabled with the flag ``-ast-dump``.
 

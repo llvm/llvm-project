@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: clang-8
 // UNSUPPORTED: LIBCXX-DEBUG-FIXME
 
 // <string>

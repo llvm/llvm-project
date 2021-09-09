@@ -36,7 +36,7 @@ llvm::Value *CGOpenMPRuntimeNVPTX::getGPUWarpSize(CodeGenFunction &CGF) {
   if (CGF.getTarget().getTriple().isAMDGCN()) {
     CGBuilderTy &Bld = CGF.Builder;
     // return constant compile-time target-specific warp size
-    unsigned TargetWarpSize = CGF.getTarget().getGridValue(GVIDX::GV_Warp_Size);
+    unsigned TargetWarpSize = CGF.getTarget().getGridValue().GV_Warp_Size;
     return Bld.getInt32(TargetWarpSize);
   }
 

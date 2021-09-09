@@ -1,4 +1,4 @@
-; RUN: opt -loop-rotate -licm -enable-mssa-loop-dependency -verify-memoryssa %s -S | FileCheck %s
+; RUN: opt -loop-rotate -licm -verify-memoryssa %s -S | FileCheck %s
 ; REQUIRES: asserts
 
 target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"

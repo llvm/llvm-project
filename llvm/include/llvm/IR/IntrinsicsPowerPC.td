@@ -1706,7 +1706,10 @@ let TargetPrefix = "ppc" in {
   def int_ppc_fres
       : GCCBuiltin<"__builtin_ppc_fres">,
         Intrinsic <[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  
+  def int_ppc_addex
+      : GCCBuiltin<"__builtin_ppc_addex">,
+        Intrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty],
+                  [IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<2>>]>;
   def int_ppc_fsel : GCCBuiltin<"__builtin_ppc_fsel">,
                      Intrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty, 
                                                   llvm_double_ty], [IntrNoMem]>;
@@ -1738,4 +1741,11 @@ let TargetPrefix = "ppc" in {
                                         llvm_i64_ty, llvm_i64_ty,
                                         llvm_i64_ty, llvm_i64_ty],
                                        [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
+  def int_ppc_atomic_load_i128 :
+    Intrinsic<[llvm_i64_ty, llvm_i64_ty],
+              [llvm_ptr_ty],
+              [IntrArgMemOnly, IntrReadMem, NoCapture<ArgIndex<0>>]>;
+  def int_ppc_atomic_store_i128 :
+    Intrinsic<[], [llvm_i64_ty, llvm_i64_ty, llvm_ptr_ty],
+              [IntrArgMemOnly, IntrWriteMem, NoCapture<ArgIndex<2>>]>;
 }

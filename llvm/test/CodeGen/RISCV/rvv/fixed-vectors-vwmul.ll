@@ -376,8 +376,8 @@ define <4 x i32> @vwmul_v4i32_v4i8_v4i16(<4 x i8>* %x, <4 x i16>* %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vle16.v v26, (a1)
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vsext.vf2 v27, v25
 ; CHECK-NEXT:    vwmul.vv v8, v27, v26
 ; CHECK-NEXT:    ret
@@ -393,12 +393,10 @@ define <4 x i64> @vwmul_v4i64_v4i32_v4i8(<4 x i32>* %x, <4 x i8>* %y) {
 ; CHECK-LABEL: vwmul_v4i64_v4i32_v4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vle32.v v25, (a0)
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, mu
-; CHECK-NEXT:    vle8.v v26, (a1)
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
-; CHECK-NEXT:    vsext.vf4 v27, v26
-; CHECK-NEXT:    vwmul.vv v8, v25, v27
+; CHECK-NEXT:    vle8.v v25, (a1)
+; CHECK-NEXT:    vle32.v v26, (a0)
+; CHECK-NEXT:    vsext.vf4 v27, v25
+; CHECK-NEXT:    vwmul.vv v8, v26, v27
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, <4 x i32>* %x
   %b = load <4 x i8>, <4 x i8>* %y

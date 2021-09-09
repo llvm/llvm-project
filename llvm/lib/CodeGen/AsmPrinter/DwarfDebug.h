@@ -615,7 +615,7 @@ private:
                          DenseSet<InlinedEntity> &ProcessedVars);
 
   /// Build the location list for all DBG_VALUEs in the
-  /// function that describe the same variable. If the resulting 
+  /// function that describe the same variable. If the resulting
   /// list has only one entry that is valid for entire variable's
   /// scope return true.
   bool buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
@@ -634,6 +634,9 @@ protected:
 
   /// Gather and emit post-function debug information.
   void endFunctionImpl(const MachineFunction *MF) override;
+
+  /// Get Dwarf compile unit ID for line table.
+  unsigned getDwarfCompileUnitIDForLineTable(const DwarfCompileUnit &CU);
 
   void skippedNonDebugFunction() override;
 

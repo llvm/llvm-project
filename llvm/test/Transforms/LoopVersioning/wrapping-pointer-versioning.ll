@@ -28,7 +28,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 define void @f1(i16* noalias %a,
 ; LV-LABEL: @f1(
 ; LV-NEXT:  for.body.lver.check:
-; LV-NEXT:    [[A2:%.*]] = ptrtoint i16* [[A:%.*]] to i64
+; LV-NEXT:    [[A5:%.*]] = bitcast i16* [[A:%.*]] to i8*
 ; LV-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], -1
 ; LV-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 ; LV-NEXT:    [[MUL1:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 2, i32 [[TMP1]])
@@ -43,17 +43,18 @@ define void @f1(i16* noalias %a,
 ; LV-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
 ; LV-NEXT:    [[TMP9:%.*]] = or i1 [[TMP8]], [[MUL_OVERFLOW]]
 ; LV-NEXT:    [[TMP10:%.*]] = or i1 false, [[TMP9]]
-; LV-NEXT:    [[MUL3:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[TMP0]])
-; LV-NEXT:    [[MUL_RESULT4:%.*]] = extractvalue { i64, i1 } [[MUL3]], 0
-; LV-NEXT:    [[MUL_OVERFLOW5:%.*]] = extractvalue { i64, i1 } [[MUL3]], 1
-; LV-NEXT:    [[TMP11:%.*]] = add i64 [[A2]], [[MUL_RESULT4]]
-; LV-NEXT:    [[TMP12:%.*]] = sub i64 [[A2]], [[MUL_RESULT4]]
-; LV-NEXT:    [[TMP13:%.*]] = icmp ugt i64 [[TMP12]], [[A2]]
-; LV-NEXT:    [[TMP14:%.*]] = icmp ult i64 [[TMP11]], [[A2]]
-; LV-NEXT:    [[TMP15:%.*]] = select i1 false, i1 [[TMP13]], i1 [[TMP14]]
-; LV-NEXT:    [[TMP16:%.*]] = or i1 [[TMP15]], [[MUL_OVERFLOW5]]
-; LV-NEXT:    [[TMP17:%.*]] = or i1 [[TMP10]], [[TMP16]]
-; LV-NEXT:    br i1 [[TMP17]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH:%.*]]
+; LV-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[TMP0]])
+; LV-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
+; LV-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
+; LV-NEXT:    [[TMP11:%.*]] = sub i64 0, [[MUL_RESULT3]]
+; LV-NEXT:    [[TMP12:%.*]] = getelementptr i8, i8* [[A5]], i64 [[MUL_RESULT3]]
+; LV-NEXT:    [[TMP13:%.*]] = getelementptr i8, i8* [[A5]], i64 [[TMP11]]
+; LV-NEXT:    [[TMP14:%.*]] = icmp ugt i8* [[TMP13]], [[A5]]
+; LV-NEXT:    [[TMP15:%.*]] = icmp ult i8* [[TMP12]], [[A5]]
+; LV-NEXT:    [[TMP16:%.*]] = select i1 false, i1 [[TMP14]], i1 [[TMP15]]
+; LV-NEXT:    [[TMP17:%.*]] = or i1 [[TMP16]], [[MUL_OVERFLOW4]]
+; LV-NEXT:    [[TMP18:%.*]] = or i1 [[TMP10]], [[TMP17]]
+; LV-NEXT:    br i1 [[TMP18]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH:%.*]]
 ; LV:       for.body.ph.lver.orig:
 ; LV-NEXT:    br label [[FOR_BODY_LVER_ORIG:%.*]]
 ; LV:       for.body.lver.orig:
@@ -153,7 +154,6 @@ for.end:                                          ; preds = %for.body
 define void @f2(i16* noalias %a,
 ; LV-LABEL: @f2(
 ; LV-NEXT:  for.body.lver.check:
-; LV-NEXT:    [[A2:%.*]] = ptrtoint i16* [[A:%.*]] to i64
 ; LV-NEXT:    [[TRUNCN:%.*]] = trunc i64 [[N:%.*]] to i32
 ; LV-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
 ; LV-NEXT:    [[TMP1:%.*]] = shl i32 [[TRUNCN]], 1
@@ -172,17 +172,19 @@ define void @f2(i16* noalias %a,
 ; LV-NEXT:    [[TMP11:%.*]] = or i1 false, [[TMP10]]
 ; LV-NEXT:    [[TMP12:%.*]] = trunc i64 [[N]] to i31
 ; LV-NEXT:    [[TMP13:%.*]] = zext i31 [[TMP12]] to i64
-; LV-NEXT:    [[TMP14:%.*]] = shl nuw nsw i64 [[TMP13]], 2
-; LV-NEXT:    [[TMP15:%.*]] = add i64 [[A2]], [[TMP14]]
-; LV-NEXT:    [[MUL3:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[TMP0]])
-; LV-NEXT:    [[MUL_RESULT4:%.*]] = extractvalue { i64, i1 } [[MUL3]], 0
-; LV-NEXT:    [[MUL_OVERFLOW5:%.*]] = extractvalue { i64, i1 } [[MUL3]], 1
-; LV-NEXT:    [[TMP16:%.*]] = add i64 [[TMP15]], [[MUL_RESULT4]]
-; LV-NEXT:    [[TMP17:%.*]] = sub i64 [[TMP15]], [[MUL_RESULT4]]
-; LV-NEXT:    [[TMP18:%.*]] = icmp ugt i64 [[TMP17]], [[TMP15]]
-; LV-NEXT:    [[TMP19:%.*]] = icmp ult i64 [[TMP16]], [[TMP15]]
+; LV-NEXT:    [[TMP14:%.*]] = shl nuw nsw i64 [[TMP13]], 1
+; LV-NEXT:    [[SCEVGEP:%.*]] = getelementptr i16, i16* [[A:%.*]], i64 [[TMP14]]
+; LV-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[TMP0]])
+; LV-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
+; LV-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
+; LV-NEXT:    [[SCEVGEP5:%.*]] = bitcast i16* [[SCEVGEP]] to i8*
+; LV-NEXT:    [[TMP15:%.*]] = sub i64 0, [[MUL_RESULT3]]
+; LV-NEXT:    [[TMP16:%.*]] = getelementptr i8, i8* [[SCEVGEP5]], i64 [[MUL_RESULT3]]
+; LV-NEXT:    [[TMP17:%.*]] = getelementptr i8, i8* [[SCEVGEP5]], i64 [[TMP15]]
+; LV-NEXT:    [[TMP18:%.*]] = icmp ugt i8* [[TMP17]], [[SCEVGEP5]]
+; LV-NEXT:    [[TMP19:%.*]] = icmp ult i8* [[TMP16]], [[SCEVGEP5]]
 ; LV-NEXT:    [[TMP20:%.*]] = select i1 true, i1 [[TMP18]], i1 [[TMP19]]
-; LV-NEXT:    [[TMP21:%.*]] = or i1 [[TMP20]], [[MUL_OVERFLOW5]]
+; LV-NEXT:    [[TMP21:%.*]] = or i1 [[TMP20]], [[MUL_OVERFLOW4]]
 ; LV-NEXT:    [[TMP22:%.*]] = or i1 [[TMP11]], [[TMP21]]
 ; LV-NEXT:    br i1 [[TMP22]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH:%.*]]
 ; LV:       for.body.ph.lver.orig:
@@ -269,7 +271,7 @@ for.end:                                          ; preds = %for.body
 define void @f3(i16* noalias %a,
 ; LV-LABEL: @f3(
 ; LV-NEXT:  for.body.lver.check:
-; LV-NEXT:    [[A2:%.*]] = ptrtoint i16* [[A:%.*]] to i64
+; LV-NEXT:    [[A5:%.*]] = bitcast i16* [[A:%.*]] to i8*
 ; LV-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], -1
 ; LV-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 ; LV-NEXT:    [[MUL1:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 2, i32 [[TMP1]])
@@ -284,17 +286,18 @@ define void @f3(i16* noalias %a,
 ; LV-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
 ; LV-NEXT:    [[TMP9:%.*]] = or i1 [[TMP8]], [[MUL_OVERFLOW]]
 ; LV-NEXT:    [[TMP10:%.*]] = or i1 false, [[TMP9]]
-; LV-NEXT:    [[MUL3:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[TMP0]])
-; LV-NEXT:    [[MUL_RESULT4:%.*]] = extractvalue { i64, i1 } [[MUL3]], 0
-; LV-NEXT:    [[MUL_OVERFLOW5:%.*]] = extractvalue { i64, i1 } [[MUL3]], 1
-; LV-NEXT:    [[TMP11:%.*]] = add i64 [[A2]], [[MUL_RESULT4]]
-; LV-NEXT:    [[TMP12:%.*]] = sub i64 [[A2]], [[MUL_RESULT4]]
-; LV-NEXT:    [[TMP13:%.*]] = icmp ugt i64 [[TMP12]], [[A2]]
-; LV-NEXT:    [[TMP14:%.*]] = icmp ult i64 [[TMP11]], [[A2]]
-; LV-NEXT:    [[TMP15:%.*]] = select i1 false, i1 [[TMP13]], i1 [[TMP14]]
-; LV-NEXT:    [[TMP16:%.*]] = or i1 [[TMP15]], [[MUL_OVERFLOW5]]
-; LV-NEXT:    [[TMP17:%.*]] = or i1 [[TMP10]], [[TMP16]]
-; LV-NEXT:    br i1 [[TMP17]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH:%.*]]
+; LV-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[TMP0]])
+; LV-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
+; LV-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
+; LV-NEXT:    [[TMP11:%.*]] = sub i64 0, [[MUL_RESULT3]]
+; LV-NEXT:    [[TMP12:%.*]] = getelementptr i8, i8* [[A5]], i64 [[MUL_RESULT3]]
+; LV-NEXT:    [[TMP13:%.*]] = getelementptr i8, i8* [[A5]], i64 [[TMP11]]
+; LV-NEXT:    [[TMP14:%.*]] = icmp ugt i8* [[TMP13]], [[A5]]
+; LV-NEXT:    [[TMP15:%.*]] = icmp ult i8* [[TMP12]], [[A5]]
+; LV-NEXT:    [[TMP16:%.*]] = select i1 false, i1 [[TMP14]], i1 [[TMP15]]
+; LV-NEXT:    [[TMP17:%.*]] = or i1 [[TMP16]], [[MUL_OVERFLOW4]]
+; LV-NEXT:    [[TMP18:%.*]] = or i1 [[TMP10]], [[TMP17]]
+; LV-NEXT:    br i1 [[TMP18]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH:%.*]]
 ; LV:       for.body.ph.lver.orig:
 ; LV-NEXT:    br label [[FOR_BODY_LVER_ORIG:%.*]]
 ; LV:       for.body.lver.orig:
@@ -370,7 +373,6 @@ for.end:                                          ; preds = %for.body
 define void @f4(i16* noalias %a,
 ; LV-LABEL: @f4(
 ; LV-NEXT:  for.body.lver.check:
-; LV-NEXT:    [[A2:%.*]] = ptrtoint i16* [[A:%.*]] to i64
 ; LV-NEXT:    [[TRUNCN:%.*]] = trunc i64 [[N:%.*]] to i32
 ; LV-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
 ; LV-NEXT:    [[TMP1:%.*]] = shl i32 [[TRUNCN]], 1
@@ -388,19 +390,20 @@ define void @f4(i16* noalias %a,
 ; LV-NEXT:    [[TMP10:%.*]] = or i1 [[TMP9]], [[MUL_OVERFLOW]]
 ; LV-NEXT:    [[TMP11:%.*]] = or i1 false, [[TMP10]]
 ; LV-NEXT:    [[TMP12:%.*]] = sext i32 [[TMP1]] to i64
-; LV-NEXT:    [[TMP13:%.*]] = shl nsw i64 [[TMP12]], 1
-; LV-NEXT:    [[TMP14:%.*]] = add i64 [[A2]], [[TMP13]]
-; LV-NEXT:    [[MUL3:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[TMP0]])
-; LV-NEXT:    [[MUL_RESULT4:%.*]] = extractvalue { i64, i1 } [[MUL3]], 0
-; LV-NEXT:    [[MUL_OVERFLOW5:%.*]] = extractvalue { i64, i1 } [[MUL3]], 1
-; LV-NEXT:    [[TMP15:%.*]] = add i64 [[TMP14]], [[MUL_RESULT4]]
-; LV-NEXT:    [[TMP16:%.*]] = sub i64 [[TMP14]], [[MUL_RESULT4]]
-; LV-NEXT:    [[TMP17:%.*]] = icmp ugt i64 [[TMP16]], [[TMP14]]
-; LV-NEXT:    [[TMP18:%.*]] = icmp ult i64 [[TMP15]], [[TMP14]]
-; LV-NEXT:    [[TMP19:%.*]] = select i1 true, i1 [[TMP17]], i1 [[TMP18]]
-; LV-NEXT:    [[TMP20:%.*]] = or i1 [[TMP19]], [[MUL_OVERFLOW5]]
-; LV-NEXT:    [[TMP21:%.*]] = or i1 [[TMP11]], [[TMP20]]
-; LV-NEXT:    br i1 [[TMP21]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH:%.*]]
+; LV-NEXT:    [[SCEVGEP:%.*]] = getelementptr i16, i16* [[A:%.*]], i64 [[TMP12]]
+; LV-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[TMP0]])
+; LV-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
+; LV-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
+; LV-NEXT:    [[SCEVGEP5:%.*]] = bitcast i16* [[SCEVGEP]] to i8*
+; LV-NEXT:    [[TMP13:%.*]] = sub i64 0, [[MUL_RESULT3]]
+; LV-NEXT:    [[TMP14:%.*]] = getelementptr i8, i8* [[SCEVGEP5]], i64 [[MUL_RESULT3]]
+; LV-NEXT:    [[TMP15:%.*]] = getelementptr i8, i8* [[SCEVGEP5]], i64 [[TMP13]]
+; LV-NEXT:    [[TMP16:%.*]] = icmp ugt i8* [[TMP15]], [[SCEVGEP5]]
+; LV-NEXT:    [[TMP17:%.*]] = icmp ult i8* [[TMP14]], [[SCEVGEP5]]
+; LV-NEXT:    [[TMP18:%.*]] = select i1 true, i1 [[TMP16]], i1 [[TMP17]]
+; LV-NEXT:    [[TMP19:%.*]] = or i1 [[TMP18]], [[MUL_OVERFLOW4]]
+; LV-NEXT:    [[TMP20:%.*]] = or i1 [[TMP11]], [[TMP19]]
+; LV-NEXT:    br i1 [[TMP20]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH:%.*]]
 ; LV:       for.body.ph.lver.orig:
 ; LV-NEXT:    br label [[FOR_BODY_LVER_ORIG:%.*]]
 ; LV:       for.body.lver.orig:
@@ -484,7 +487,6 @@ for.end:                                          ; preds = %for.body
 define void @f5(i16* noalias %a,
 ; LV-LABEL: @f5(
 ; LV-NEXT:  for.body.lver.check:
-; LV-NEXT:    [[A2:%.*]] = ptrtoint i16* [[A:%.*]] to i64
 ; LV-NEXT:    [[TRUNCN:%.*]] = trunc i64 [[N:%.*]] to i32
 ; LV-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
 ; LV-NEXT:    [[TMP1:%.*]] = shl i32 [[TRUNCN]], 1
@@ -502,19 +504,20 @@ define void @f5(i16* noalias %a,
 ; LV-NEXT:    [[TMP10:%.*]] = or i1 [[TMP9]], [[MUL_OVERFLOW]]
 ; LV-NEXT:    [[TMP11:%.*]] = or i1 false, [[TMP10]]
 ; LV-NEXT:    [[TMP12:%.*]] = sext i32 [[TMP1]] to i64
-; LV-NEXT:    [[TMP13:%.*]] = shl nsw i64 [[TMP12]], 1
-; LV-NEXT:    [[TMP14:%.*]] = add i64 [[A2]], [[TMP13]]
-; LV-NEXT:    [[MUL3:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[TMP0]])
-; LV-NEXT:    [[MUL_RESULT4:%.*]] = extractvalue { i64, i1 } [[MUL3]], 0
-; LV-NEXT:    [[MUL_OVERFLOW5:%.*]] = extractvalue { i64, i1 } [[MUL3]], 1
-; LV-NEXT:    [[TMP15:%.*]] = add i64 [[TMP14]], [[MUL_RESULT4]]
-; LV-NEXT:    [[TMP16:%.*]] = sub i64 [[TMP14]], [[MUL_RESULT4]]
-; LV-NEXT:    [[TMP17:%.*]] = icmp ugt i64 [[TMP16]], [[TMP14]]
-; LV-NEXT:    [[TMP18:%.*]] = icmp ult i64 [[TMP15]], [[TMP14]]
-; LV-NEXT:    [[TMP19:%.*]] = select i1 true, i1 [[TMP17]], i1 [[TMP18]]
-; LV-NEXT:    [[TMP20:%.*]] = or i1 [[TMP19]], [[MUL_OVERFLOW5]]
-; LV-NEXT:    [[TMP21:%.*]] = or i1 [[TMP11]], [[TMP20]]
-; LV-NEXT:    br i1 [[TMP21]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH:%.*]]
+; LV-NEXT:    [[SCEVGEP:%.*]] = getelementptr i16, i16* [[A:%.*]], i64 [[TMP12]]
+; LV-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[TMP0]])
+; LV-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
+; LV-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
+; LV-NEXT:    [[SCEVGEP5:%.*]] = bitcast i16* [[SCEVGEP]] to i8*
+; LV-NEXT:    [[TMP13:%.*]] = sub i64 0, [[MUL_RESULT3]]
+; LV-NEXT:    [[TMP14:%.*]] = getelementptr i8, i8* [[SCEVGEP5]], i64 [[MUL_RESULT3]]
+; LV-NEXT:    [[TMP15:%.*]] = getelementptr i8, i8* [[SCEVGEP5]], i64 [[TMP13]]
+; LV-NEXT:    [[TMP16:%.*]] = icmp ugt i8* [[TMP15]], [[SCEVGEP5]]
+; LV-NEXT:    [[TMP17:%.*]] = icmp ult i8* [[TMP14]], [[SCEVGEP5]]
+; LV-NEXT:    [[TMP18:%.*]] = select i1 true, i1 [[TMP16]], i1 [[TMP17]]
+; LV-NEXT:    [[TMP19:%.*]] = or i1 [[TMP18]], [[MUL_OVERFLOW4]]
+; LV-NEXT:    [[TMP20:%.*]] = or i1 [[TMP11]], [[TMP19]]
+; LV-NEXT:    br i1 [[TMP20]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH:%.*]]
 ; LV:       for.body.ph.lver.orig:
 ; LV-NEXT:    br label [[FOR_BODY_LVER_ORIG:%.*]]
 ; LV:       for.body.lver.orig:

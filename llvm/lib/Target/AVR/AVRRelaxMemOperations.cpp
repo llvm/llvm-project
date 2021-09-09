@@ -84,8 +84,7 @@ bool AVRRelaxMem::runOnBasicBlock(Block &MBB) {
   return Modified;
 }
 
-template <>
-bool AVRRelaxMem::relax<AVR::STDWPtrQRr>(Block &MBB, BlockIt MBBI) {
+template <> bool AVRRelaxMem::relax<AVR::STDWPtrQRr>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
 
   MachineOperand &Ptr = MI.getOperand(0);
@@ -96,24 +95,23 @@ bool AVRRelaxMem::relax<AVR::STDWPtrQRr>(Block &MBB, BlockIt MBBI) {
   if (Imm > 63) {
     // Push the previous state of the pointer register.
     // This instruction must preserve the value.
-    buildMI(MBB, MBBI, AVR::PUSHWRr)
-      .addReg(Ptr.getReg());
+    buildMI(MBB, MBBI, AVR::PUSHWRr).addReg(Ptr.getReg());
 
     // Add the immediate to the pointer register.
     buildMI(MBB, MBBI, AVR::SBCIWRdK)
-      .addReg(Ptr.getReg(), RegState::Define)
-      .addReg(Ptr.getReg())
-      .addImm(-Imm);
+        .addReg(Ptr.getReg(), RegState::Define)
+        .addReg(Ptr.getReg())
+        .addImm(-Imm);
 
     // Store the value in the source register to the address
     // pointed to by the pointer register.
     buildMI(MBB, MBBI, AVR::STWPtrRr)
-      .addReg(Ptr.getReg())
-      .addReg(Src.getReg(), getKillRegState(Src.isKill()));
+        .addReg(Ptr.getReg())
+        .addReg(Src.getReg(), getKillRegState(Src.isKill()));
 
     // Pop the original state of the pointer register.
     buildMI(MBB, MBBI, AVR::POPWRd)
-      .addDef(Ptr.getReg(), getKillRegState(Ptr.isKill()));
+        .addDef(Ptr.getReg(), getKillRegState(Ptr.isKill()));
 
     MI.removeFromParent();
   }
@@ -125,21 +123,19 @@ bool AVRRelaxMem::runOnInstruction(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   int Opcode = MBBI->getOpcode();
 
-#define RELAX(Op)                \
-  case Op:                       \
+#define RELAX(Op)                                                              \
+  case Op:                                                                     \
     return relax<Op>(MBB, MI)
 
-  switch (Opcode) {
-    RELAX(AVR::STDWPtrQRr);
-  }
+  switch (Opcode) { RELAX(AVR::STDWPtrQRr); }
 #undef RELAX
   return false;
 }
 
 } // end of anonymous namespace
 
-INITIALIZE_PASS(AVRRelaxMem, "avr-relax-mem",
-                AVR_RELAX_MEM_OPS_NAME, false, false)
+INITIALIZE_PASS(AVRRelaxMem, "avr-relax-mem", AVR_RELAX_MEM_OPS_NAME, false,
+                false)
 
 namespace llvm {
 

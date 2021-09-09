@@ -9,7 +9,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 define void @f(i32* noalias %a, i32* noalias %b, i32* noalias %c, i32* noalias %d, i32* noalias %e, i64 %N) {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A2:%.*]] = ptrtoint i32* [[A:%.*]] to i64
+; CHECK-NEXT:    [[A5:%.*]] = bitcast i32* [[A:%.*]] to i8*
 ; CHECK-NEXT:    br label [[FOR_BODY_LVER_CHECK:%.*]]
 ; CHECK:       for.body.lver.check:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], -1
@@ -26,17 +26,18 @@ define void @f(i32* noalias %a, i32* noalias %b, i32* noalias %c, i32* noalias %
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP8]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = or i1 false, [[TMP9]]
-; CHECK-NEXT:    [[MUL3:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 8, i64 [[TMP0]])
-; CHECK-NEXT:    [[MUL_RESULT4:%.*]] = extractvalue { i64, i1 } [[MUL3]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW5:%.*]] = extractvalue { i64, i1 } [[MUL3]], 1
-; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[A2]], [[MUL_RESULT4]]
-; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 [[A2]], [[MUL_RESULT4]]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp ugt i64 [[TMP12]], [[A2]]
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp ult i64 [[TMP11]], [[A2]]
-; CHECK-NEXT:    [[TMP15:%.*]] = select i1 false, i1 [[TMP13]], i1 [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[TMP15]], [[MUL_OVERFLOW5]]
-; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP10]], [[TMP16]]
-; CHECK-NEXT:    br i1 [[TMP17]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH_LDIST1:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 8, i64 [[TMP0]])
+; CHECK-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
+; CHECK-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
+; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 0, [[MUL_RESULT3]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, i8* [[A5]], i64 [[MUL_RESULT3]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, i8* [[A5]], i64 [[TMP11]]
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp ugt i8* [[TMP13]], [[A5]]
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult i8* [[TMP12]], [[A5]]
+; CHECK-NEXT:    [[TMP16:%.*]] = select i1 false, i1 [[TMP14]], i1 [[TMP15]]
+; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP16]], [[MUL_OVERFLOW4]]
+; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP10]], [[TMP17]]
+; CHECK-NEXT:    br i1 [[TMP18]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH_LDIST1:%.*]]
 ; CHECK:       for.body.ph.lver.orig:
 ; CHECK-NEXT:    br label [[FOR_BODY_LVER_ORIG:%.*]]
 ; CHECK:       for.body.lver.orig:
@@ -177,14 +178,15 @@ define void @f_with_offset(i32* noalias %b, i32* noalias %c, i32* noalias %d, i3
 ; CHECK-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 8, i64 [[TMP0]])
 ; CHECK-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
-; CHECK-NEXT:    [[TMP11:%.*]] = add i64 add (i64 ptrtoint ([8192 x i32]* @global_a to i64), i64 168), [[MUL_RESULT3]]
-; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 add (i64 ptrtoint ([8192 x i32]* @global_a to i64), i64 168), [[MUL_RESULT3]]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp ugt i64 [[TMP12]], add (i64 ptrtoint ([8192 x i32]* @global_a to i64), i64 168)
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp ult i64 [[TMP11]], add (i64 ptrtoint ([8192 x i32]* @global_a to i64), i64 168)
-; CHECK-NEXT:    [[TMP15:%.*]] = select i1 false, i1 [[TMP13]], i1 [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[TMP15]], [[MUL_OVERFLOW4]]
-; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP10]], [[TMP16]]
-; CHECK-NEXT:    br i1 [[TMP17]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH_LDIST1:%.*]]
+; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 0, [[MUL_RESULT3]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, i8* bitcast (i32* getelementptr inbounds ([8192 x i32], [8192 x i32]* @global_a, i64 0, i64 42) to i8*), i64 [[MUL_RESULT3]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, i8* bitcast (i32* getelementptr inbounds ([8192 x i32], [8192 x i32]* @global_a, i64 0, i64 42) to i8*), i64 [[TMP11]]
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp ugt i8* [[TMP13]], bitcast (i32* getelementptr inbounds ([8192 x i32], [8192 x i32]* @global_a, i64 0, i64 42) to i8*)
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult i8* [[TMP12]], bitcast (i32* getelementptr inbounds ([8192 x i32], [8192 x i32]* @global_a, i64 0, i64 42) to i8*)
+; CHECK-NEXT:    [[TMP16:%.*]] = select i1 false, i1 [[TMP14]], i1 [[TMP15]]
+; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP16]], [[MUL_OVERFLOW4]]
+; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP10]], [[TMP17]]
+; CHECK-NEXT:    br i1 [[TMP18]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH_LDIST1:%.*]]
 ; CHECK:       for.body.ph.lver.orig:
 ; CHECK-NEXT:    br label [[FOR_BODY_LVER_ORIG:%.*]]
 ; CHECK:       for.body.lver.orig:

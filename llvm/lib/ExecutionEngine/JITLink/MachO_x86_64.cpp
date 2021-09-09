@@ -300,7 +300,7 @@ private:
           else
             return TargetSymbolOrErr.takeError();
           Addend = *(const little32_t *)FixupContent;
-          Kind = x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable;
+          Kind = x86_64::RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable;
           if (FixupOffset < 3)
             return make_error<JITLinkError>("GOTLD at invalid offset " +
                                             formatv("{0}", FixupOffset));
@@ -319,7 +319,10 @@ private:
           else
             return TargetSymbolOrErr.takeError();
           Addend = *(const little32_t *)FixupContent;
-          Kind = x86_64::RequestTLVPAndTransformToPCRel32TLVPLoadRelaxable;
+          Kind = x86_64::RequestTLVPAndTransformToPCRel32TLVPLoadREXRelaxable;
+          if (FixupOffset < 3)
+            return make_error<JITLinkError>("TLV at invalid offset " +
+                                            formatv("{0}", FixupOffset));
           break;
         case MachOPointer32:
           if (auto TargetSymbolOrErr = findSymbolByIndex(RI.r_symbolnum))
@@ -429,7 +432,7 @@ public:
   bool isGOTEdgeToFix(Edge &E) const {
     return E.getKind() == x86_64::RequestGOTAndTransformToDelta32 ||
            E.getKind() ==
-               x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable;
+               x86_64::RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable;
   }
 
   Symbol &createGOTEntry(Symbol &Target) {
@@ -442,8 +445,8 @@ public:
     case x86_64::RequestGOTAndTransformToDelta32:
       E.setKind(x86_64::Delta32);
       break;
-    case x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable:
-      E.setKind(x86_64::PCRel32GOTLoadRelaxable);
+    case x86_64::RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable:
+      E.setKind(x86_64::PCRel32GOTLoadREXRelaxable);
       break;
     default:
       llvm_unreachable("Not a GOT transform edge");
@@ -466,10 +469,10 @@ public:
     assert(E.getAddend() == 0 &&
            "BranchPCRel32 edge has unexpected addend value");
 
-    // Set the edge kind to BranchPCRel32ToPtrJumpStubRelaxable. We will use
+    // Set the edge kind to BranchPCRel32ToPtrJumpStubBypassable. We will use
     // this to check for stub optimization opportunities in the
     // optimizeMachO_x86_64_GOTAndStubs pass below.
-    E.setKind(x86_64::BranchPCRel32ToPtrJumpStubRelaxable);
+    E.setKind(x86_64::BranchPCRel32ToPtrJumpStubBypassable);
     E.setTarget(Stub);
   }
 
@@ -495,79 +498,6 @@ private:
 
 } // namespace
 
-static Error optimizeMachO_x86_64_GOTAndStubs(LinkGraph &G) {
-  LLVM_DEBUG(dbgs() << "Optimizing GOT entries and stubs:\n");
-
-  for (auto *B : G.blocks())
-    for (auto &E : B->edges())
-      if (E.getKind() == x86_64::PCRel32GOTLoadRelaxable) {
-        assert(E.getOffset() >= 3 && "GOT edge occurs too early in block");
-
-        // Optimize GOT references.
-        auto &GOTBlock = E.getTarget().getBlock();
-        assert(GOTBlock.getSize() == G.getPointerSize() &&
-               "GOT entry block should be pointer sized");
-        assert(GOTBlock.edges_size() == 1 &&
-               "GOT entry should only have one outgoing edge");
-
-        auto &GOTTarget = GOTBlock.edges().begin()->getTarget();
-        JITTargetAddress EdgeAddr = B->getAddress() + E.getOffset();
-        JITTargetAddress TargetAddr = GOTTarget.getAddress();
-
-        // Check that this is a recognized MOV instruction.
-        // FIXME: Can we assume this?
-        constexpr uint8_t MOVQRIPRel[] = {0x48, 0x8b};
-        if (strncmp(B->getContent().data() + E.getOffset() - 3,
-                    reinterpret_cast<const char *>(MOVQRIPRel), 2) != 0)
-          continue;
-
-        int64_t Displacement = TargetAddr - EdgeAddr + 4;
-        if (Displacement >= std::numeric_limits<int32_t>::min() &&
-            Displacement <= std::numeric_limits<int32_t>::max()) {
-          E.setTarget(GOTTarget);
-          E.setKind(x86_64::Delta32);
-          E.setAddend(E.getAddend() - 4);
-          char *BlockData = B->getMutableContent(G).data();
-          BlockData[E.getOffset() - 2] = (char)0x8d;
-          LLVM_DEBUG({
-            dbgs() << "  Replaced GOT load wih LEA:\n    ";
-            printEdge(dbgs(), *B, E, x86_64::getEdgeKindName(E.getKind()));
-            dbgs() << "\n";
-          });
-        }
-      } else if (E.getKind() == x86_64::BranchPCRel32ToPtrJumpStubRelaxable) {
-        auto &StubBlock = E.getTarget().getBlock();
-        assert(StubBlock.getSize() == sizeof(x86_64::PointerJumpStubContent) &&
-               "Stub block should be stub sized");
-        assert(StubBlock.edges_size() == 1 &&
-               "Stub block should only have one outgoing edge");
-
-        auto &GOTBlock = StubBlock.edges().begin()->getTarget().getBlock();
-        assert(GOTBlock.getSize() == G.getPointerSize() &&
-               "GOT block should be pointer sized");
-        assert(GOTBlock.edges_size() == 1 &&
-               "GOT block should only have one outgoing edge");
-
-        auto &GOTTarget = GOTBlock.edges().begin()->getTarget();
-        JITTargetAddress EdgeAddr = B->getAddress() + E.getOffset();
-        JITTargetAddress TargetAddr = GOTTarget.getAddress();
-
-        int64_t Displacement = TargetAddr - EdgeAddr + 4;
-        if (Displacement >= std::numeric_limits<int32_t>::min() &&
-            Displacement <= std::numeric_limits<int32_t>::max()) {
-          E.setKind(x86_64::BranchPCRel32);
-          E.setTarget(GOTTarget);
-          LLVM_DEBUG({
-            dbgs() << "  Replaced stub branch with direct branch:\n    ";
-            printEdge(dbgs(), *B, E, x86_64::getEdgeKindName(E.getKind()));
-            dbgs() << "\n";
-          });
-        }
-      }
-
-  return Error::success();
-}
-
 namespace llvm {
 namespace jitlink {
 
@@ -582,7 +512,7 @@ public:
 
 private:
   Error applyFixup(LinkGraph &G, Block &B, const Edge &E) const {
-    return x86_64::applyFixup(G, B, E);
+    return x86_64::applyFixup(G, B, E, nullptr);
   }
 };
 
@@ -615,7 +545,7 @@ void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
         PerGraphGOTAndPLTStubsBuilder_MachO_x86_64::asPass);
 
     // Add GOT/Stubs optimizer pass.
-    Config.PreFixupPasses.push_back(optimizeMachO_x86_64_GOTAndStubs);
+    Config.PreFixupPasses.push_back(x86_64::optimize_x86_64_GOTAndStubs);
   }
 
   if (auto Err = Ctx->modifyPassConfig(*G, Config))

@@ -30,81 +30,94 @@ struct ScheduleTreeVisitor {
     return *static_cast<const Derived *>(this);
   }
 
-  RetTy visit(const isl::schedule_node &Node, Args... args) {
+  RetTy visit(isl::schedule_node Node, Args... args) {
     assert(!Node.is_null());
     switch (isl_schedule_node_get_type(Node.get())) {
     case isl_schedule_node_domain:
       assert(isl_schedule_node_n_children(Node.get()) == 1);
-      return getDerived().visitDomain(Node, std::forward<Args>(args)...);
+      return getDerived().visitDomain(Node.as<isl::schedule_node_domain>(),
+                                      std::forward<Args>(args)...);
     case isl_schedule_node_band:
       assert(isl_schedule_node_n_children(Node.get()) == 1);
-      return getDerived().visitBand(Node, std::forward<Args>(args)...);
+      return getDerived().visitBand(Node.as<isl::schedule_node_band>(),
+                                    std::forward<Args>(args)...);
     case isl_schedule_node_sequence:
       assert(isl_schedule_node_n_children(Node.get()) >= 2);
-      return getDerived().visitSequence(Node, std::forward<Args>(args)...);
+      return getDerived().visitSequence(Node.as<isl::schedule_node_sequence>(),
+                                        std::forward<Args>(args)...);
     case isl_schedule_node_set:
-      return getDerived().visitSet(Node, std::forward<Args>(args)...);
+      return getDerived().visitSet(Node.as<isl::schedule_node_set>(),
+                                   std::forward<Args>(args)...);
       assert(isl_schedule_node_n_children(Node.get()) >= 2);
     case isl_schedule_node_leaf:
       assert(isl_schedule_node_n_children(Node.get()) == 0);
-      return getDerived().visitLeaf(Node, std::forward<Args>(args)...);
+      return getDerived().visitLeaf(Node.as<isl::schedule_node_leaf>(),
+                                    std::forward<Args>(args)...);
     case isl_schedule_node_mark:
       assert(isl_schedule_node_n_children(Node.get()) == 1);
-      return getDerived().visitMark(Node, std::forward<Args>(args)...);
+      return getDerived().visitMark(Node.as<isl::schedule_node_mark>(),
+                                    std::forward<Args>(args)...);
     case isl_schedule_node_extension:
       assert(isl_schedule_node_n_children(Node.get()) == 1);
-      return getDerived().visitExtension(Node, std::forward<Args>(args)...);
+      return getDerived().visitExtension(
+          Node.as<isl::schedule_node_extension>(), std::forward<Args>(args)...);
     case isl_schedule_node_filter:
       assert(isl_schedule_node_n_children(Node.get()) == 1);
-      return getDerived().visitFilter(Node, std::forward<Args>(args)...);
+      return getDerived().visitFilter(Node.as<isl::schedule_node_filter>(),
+                                      std::forward<Args>(args)...);
     default:
       llvm_unreachable("unimplemented schedule node type");
     }
   }
 
-  RetTy visitDomain(const isl::schedule_node &Domain, Args... args) {
-    return getDerived().visitSingleChild(Domain, std::forward<Args>(args)...);
-  }
-
-  RetTy visitBand(const isl::schedule_node &Band, Args... args) {
-    return getDerived().visitSingleChild(Band, std::forward<Args>(args)...);
-  }
-
-  RetTy visitSequence(const isl::schedule_node &Sequence, Args... args) {
-    return getDerived().visitMultiChild(Sequence, std::forward<Args>(args)...);
-  }
-
-  RetTy visitSet(const isl::schedule_node &Set, Args... args) {
-    return getDerived().visitMultiChild(Set, std::forward<Args>(args)...);
-  }
-
-  RetTy visitLeaf(const isl::schedule_node &Leaf, Args... args) {
-    return getDerived().visitNode(Leaf, std::forward<Args>(args)...);
-  }
-
-  RetTy visitMark(const isl::schedule_node &Mark, Args... args) {
-    return getDerived().visitSingleChild(Mark, std::forward<Args>(args)...);
-  }
-
-  RetTy visitExtension(const isl::schedule_node &Extension, Args... args) {
-    return getDerived().visitSingleChild(Extension,
+  RetTy visitDomain(isl::schedule_node_domain Domain, Args... args) {
+    return getDerived().visitSingleChild(std::move(Domain),
                                          std::forward<Args>(args)...);
   }
 
-  RetTy visitFilter(const isl::schedule_node &Extension, Args... args) {
-    return getDerived().visitSingleChild(Extension,
+  RetTy visitBand(isl::schedule_node_band Band, Args... args) {
+    return getDerived().visitSingleChild(std::move(Band),
                                          std::forward<Args>(args)...);
   }
 
-  RetTy visitSingleChild(const isl::schedule_node &Node, Args... args) {
-    return getDerived().visitNode(Node, std::forward<Args>(args)...);
+  RetTy visitSequence(isl::schedule_node_sequence Sequence, Args... args) {
+    return getDerived().visitMultiChild(std::move(Sequence),
+                                        std::forward<Args>(args)...);
   }
 
-  RetTy visitMultiChild(const isl::schedule_node &Node, Args... args) {
-    return getDerived().visitNode(Node, std::forward<Args>(args)...);
+  RetTy visitSet(isl::schedule_node_set Set, Args... args) {
+    return getDerived().visitMultiChild(std::move(Set),
+                                        std::forward<Args>(args)...);
   }
 
-  RetTy visitNode(const isl::schedule_node &Node, Args... args) {
+  RetTy visitLeaf(isl::schedule_node_leaf Leaf, Args... args) {
+    return getDerived().visitNode(std::move(Leaf), std::forward<Args>(args)...);
+  }
+
+  RetTy visitMark(isl::schedule_node_mark Mark, Args... args) {
+    return getDerived().visitSingleChild(std::move(Mark),
+                                         std::forward<Args>(args)...);
+  }
+
+  RetTy visitExtension(isl::schedule_node_extension Extension, Args... args) {
+    return getDerived().visitSingleChild(std::move(Extension),
+                                         std::forward<Args>(args)...);
+  }
+
+  RetTy visitFilter(isl::schedule_node_filter Filter, Args... args) {
+    return getDerived().visitSingleChild(std::move(Filter),
+                                         std::forward<Args>(args)...);
+  }
+
+  RetTy visitSingleChild(isl::schedule_node Node, Args... args) {
+    return getDerived().visitNode(std::move(Node), std::forward<Args>(args)...);
+  }
+
+  RetTy visitMultiChild(isl::schedule_node Node, Args... args) {
+    return getDerived().visitNode(std::move(Node), std::forward<Args>(args)...);
+  }
+
+  RetTy visitNode(isl::schedule_node Node, Args... args) {
     llvm_unreachable("Unimplemented other");
   }
 };
@@ -122,19 +135,19 @@ struct RecursiveScheduleTreeVisitor
   }
 
   /// When visiting an entire schedule tree, start at its root node.
-  RetTy visit(const isl::schedule &Schedule, Args... args) {
+  RetTy visit(isl::schedule Schedule, Args... args) {
     return getDerived().visit(Schedule.get_root(), std::forward<Args>(args)...);
   }
 
   // Necessary to allow overload resolution with the added visit(isl::schedule)
   // overload.
-  RetTy visit(const isl::schedule_node &Node, Args... args) {
+  RetTy visit(isl::schedule_node Node, Args... args) {
     return getBase().visit(Node, std::forward<Args>(args)...);
   }
 
   /// By default, recursively visit the child nodes.
-  RetTy visitNode(const isl::schedule_node &Node, Args... args) {
-    isl_size NumChildren = Node.n_children();
+  RetTy visitNode(isl::schedule_node Node, Args... args) {
+    isl_size NumChildren = Node.n_children().release();
     for (isl_size i = 0; i < NumChildren; i += 1)
       getDerived().visit(Node.child(i), std::forward<Args>(args)...);
     return RetTy();

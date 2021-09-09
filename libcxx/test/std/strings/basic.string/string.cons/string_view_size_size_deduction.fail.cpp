@@ -8,8 +8,6 @@
 
 // <string>
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: gcc-7
-// XFAIL: libcpp-no-deduction-guides
 
 // template<class InputIterator>
 //   basic_string(InputIterator begin, InputIterator end,
@@ -30,7 +28,6 @@
 //
 //  The deduction guide shall not participate in overload resolution if Allocator
 //  is a type that does not qualify as an allocator.
-
 
 #include <string>
 #include <string_view>

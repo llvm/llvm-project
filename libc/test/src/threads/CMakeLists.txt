@@ -9,6 +9,7 @@ add_libc_unittest(
   DEPENDS
     libc.include.threads
     libc.src.threads.call_once
+    libc.src.threads.mtx_destroy
     libc.src.threads.mtx_init
     libc.src.threads.mtx_lock
     libc.src.threads.mtx_unlock
@@ -39,6 +40,7 @@ add_libc_unittest(
   DEPENDS
     libc.include.threads
     libc.src.errno.__errno_location
+    libc.src.threads.mtx_destroy
     libc.src.threads.mtx_init
     libc.src.threads.mtx_lock
     libc.src.threads.mtx_unlock

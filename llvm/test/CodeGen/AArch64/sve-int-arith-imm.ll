@@ -800,4 +800,18 @@ entry:
   ret <vscale x 4 x i32> %div
 }
 
+;
+; UQSUB
+;
+define <vscale x 8 x i16> @uqsub(<vscale x 8 x i16> %a) {
+; CHECK-LABEL: uqsub:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uqsub z0.h, z0.h, #32768 // =0x8000
+; CHECK-NEXT:    ret
+  %cmp = icmp slt <vscale x 8 x i16> %a, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> undef, i16 0, i32 0), <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer)
+  %sub = xor <vscale x 8 x i16> %a, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> undef, i16 -32768, i32 0), <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer)
+  %sel = select <vscale x 8 x i1> %cmp, <vscale x 8 x i16> %sub, <vscale x 8 x i16> shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> undef, i16 0, i32 0), <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer)
+  ret <vscale x 8 x i16> %sel
+}
+
 attributes #0 = { minsize }

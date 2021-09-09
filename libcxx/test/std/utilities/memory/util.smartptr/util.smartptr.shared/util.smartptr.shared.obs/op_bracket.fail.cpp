@@ -10,9 +10,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// Clang doesn't support filename wildcards in verify tests until 05eedf1f5b44.
-// UNSUPPORTED: clang-10
-
 // shared_ptr
 
 // element_type& operator[](ptrdiff_t i) const;

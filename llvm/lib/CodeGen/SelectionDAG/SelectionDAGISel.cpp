@@ -575,7 +575,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
         LiveInMap.insert(LI);
 
   // Insert DBG_VALUE instructions for function arguments to the entry block.
-  bool InstrRef = TM.Options.ValueTrackingVariableLocations;
+  bool InstrRef = MF->useDebugInstrRef();
   for (unsigned i = 0, e = FuncInfo->ArgDbgValues.size(); i != e; ++i) {
     MachineInstr *MI = FuncInfo->ArgDbgValues[e - i - 1];
     assert(MI->getOpcode() != TargetOpcode::DBG_VALUE_LIST &&
@@ -1045,25 +1045,25 @@ public:
 } // end anonymous namespace
 
 // This function is used to enforce the topological node id property
-// property leveraged during Instruction selection. Before selection all
-// nodes are given a non-negative id such that all nodes have a larger id than
+// leveraged during instruction selection. Before the selection process all
+// nodes are given a non-negative id such that all nodes have a greater id than
 // their operands. As this holds transitively we can prune checks that a node N
 // is a predecessor of M another by not recursively checking through M's
-// operands if N's ID is larger than M's ID. This is significantly improves
-// performance of for various legality checks (e.g. IsLegalToFold /
-// UpdateChains).
+// operands if N's ID is larger than M's ID. This significantly improves
+// performance of various legality checks (e.g. IsLegalToFold / UpdateChains).
 
-// However, when we fuse multiple nodes into a single node
-// during selection we may induce a predecessor relationship between inputs and
-// outputs of distinct nodes being merged violating the topological property.
-// Should a fused node have a successor which has yet to be selected, our
-// legality checks would be incorrect. To avoid this we mark all unselected
-// sucessor nodes, i.e. id != -1 as invalid for pruning by bit-negating (x =>
+// However, when we fuse multiple nodes into a single node during the
+// selection we may induce a predecessor relationship between inputs and
+// outputs of distinct nodes being merged, violating the topological property.
+// Should a fused node have a successor which has yet to be selected,
+// our legality checks would be incorrect. To avoid this we mark all unselected
+// successor nodes, i.e. id != -1, as invalid for pruning by bit-negating (x =>
 // (-(x+1))) the ids and modify our pruning check to ignore negative Ids of M.
 // We use bit-negation to more clearly enforce that node id -1 can only be
-// achieved by selected nodes). As the conversion is reversable the original Id,
-// topological pruning can still be leveraged when looking for unselected nodes.
-// This method is call internally in all ISel replacement calls.
+// achieved by selected nodes. As the conversion is reversable to the original
+// Id, topological pruning can still be leveraged when looking for unselected
+// nodes. This method is called internally in all ISel replacement related
+// functions.
 void SelectionDAGISel::EnforceNodeIdInvariant(SDNode *Node) {
   SmallVector<SDNode *, 4> Nodes;
   Nodes.push_back(Node);
@@ -1080,7 +1080,7 @@ void SelectionDAGISel::EnforceNodeIdInvariant(SDNode *Node) {
   }
 }
 
-// InvalidateNodeId - As discusses in EnforceNodeIdInvariant, mark a
+// InvalidateNodeId - As explained in EnforceNodeIdInvariant, mark a
 // NodeId with the equivalent node id which is invalid for topological
 // pruning.
 void SelectionDAGISel::InvalidateNodeId(SDNode *N) {
@@ -1226,7 +1226,10 @@ static void mapWasmLandingPadIndex(MachineBasicBlock *MBB,
   bool IsSingleCatchAllClause =
       CPI->getNumArgOperands() == 1 &&
       cast<Constant>(CPI->getArgOperand(0))->isNullValue();
-  if (!IsSingleCatchAllClause) {
+  // cathchpads for longjmp use an empty type list, e.g. catchpad within %0 []
+  // and they don't need LSDA info
+  bool IsCatchLongjmp = CPI->getNumArgOperands() == 0;
+  if (!IsSingleCatchAllClause && !IsCatchLongjmp) {
     // Create a mapping from landing pad label to landing pad index.
     bool IntrFound = false;
     for (const User *U : CPI->users()) {
@@ -1861,9 +1864,9 @@ SelectionDAGISel::FinishBasicBlock() {
       // test, and delete the last bit test.
 
       MachineBasicBlock *NextMBB;
-      if (BTB.ContiguousRange && j + 2 == ej) {
-        // Second-to-last bit-test with contiguous range: fall through to the
-        // target of the final bit test.
+      if ((BTB.ContiguousRange || BTB.OmitRangeCheck) && j + 2 == ej) {
+        // Second-to-last bit-test with contiguous range or omitted range
+        // check: fall through to the target of the final bit test.
         NextMBB = BTB.Cases[j + 1].TargetBB;
       } else if (j + 1 == ej) {
         // For the last bit test, fall through to Default.
@@ -1880,7 +1883,7 @@ SelectionDAGISel::FinishBasicBlock() {
       SDB->clear();
       CodeGenAndEmitDAG();
 
-      if (BTB.ContiguousRange && j + 2 == ej) {
+      if ((BTB.ContiguousRange || BTB.OmitRangeCheck) && j + 2 == ej) {
         // Since we're not going to use the final bit test, remove it.
         BTB.Cases.pop_back();
         break;

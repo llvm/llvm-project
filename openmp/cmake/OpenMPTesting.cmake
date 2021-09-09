@@ -3,9 +3,9 @@ set(ENABLE_CHECK_TARGETS TRUE)
 
 # Function to find required dependencies for testing.
 function(find_standalone_test_dependencies)
-  include(FindPythonInterp)
+  include(FindPython3)
 
-  if (NOT PYTHONINTERP_FOUND)
+  if (NOT Python3_Interpreter_FOUND)
     message(STATUS "Could not find Python.")
     message(WARNING "The check targets will not be available!")
     set(ENABLE_CHECK_TARGETS FALSE PARENT_SCOPE)

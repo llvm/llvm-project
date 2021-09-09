@@ -47,7 +47,7 @@ class InitOnlyAction : public FrontendAction {
 //===----------------------------------------------------------------------===//
 class PrescanAction : public FrontendAction {
   void ExecuteAction() override = 0;
-  bool BeginSourceFileAction(CompilerInstance &ci) override;
+  bool BeginSourceFileAction() override;
 };
 
 class PrintPreprocessedAction : public PrescanAction {
@@ -71,7 +71,7 @@ class DebugMeasureParseTreeAction : public PrescanAction {
 //===----------------------------------------------------------------------===//
 class PrescanAndParseAction : public FrontendAction {
   void ExecuteAction() override = 0;
-  bool BeginSourceFileAction(CompilerInstance &ci) override;
+  bool BeginSourceFileAction() override;
 };
 
 class DebugUnparseNoSemaAction : public PrescanAndParseAction {
@@ -86,18 +86,9 @@ class DebugDumpParseTreeNoSemaAction : public PrescanAndParseAction {
 // PrescanAndSema Actions
 //===----------------------------------------------------------------------===//
 class PrescanAndSemaAction : public FrontendAction {
-  std::unique_ptr<Fortran::semantics::Semantics> semantics_;
 
   void ExecuteAction() override = 0;
-  bool BeginSourceFileAction(CompilerInstance &ci) override;
-
-public:
-  Fortran::semantics::Semantics &semantics() { return *semantics_; }
-  const Fortran::semantics::Semantics &semantics() const { return *semantics_; }
-
-  void setSemantics(std::unique_ptr<Fortran::semantics::Semantics> semantics) {
-    semantics_ = std::move(semantics);
-  }
+  bool BeginSourceFileAction() override;
 };
 
 class DebugUnparseWithSymbolsAction : public PrescanAndSemaAction {
@@ -134,6 +125,10 @@ class GetSymbolsSourcesAction : public PrescanAndSemaAction {
 
 class ParseSyntaxOnlyAction : public PrescanAndSemaAction {
   void ExecuteAction() override;
+};
+
+class PluginParseTreeAction : public PrescanAndSemaAction {
+  void ExecuteAction() override = 0;
 };
 
 } // namespace Fortran::frontend

@@ -1978,7 +1978,7 @@ address space qualifiers, therefore, other type qualifiers such as
   void foo(T *par){
     T var1; // error - local function variable with global address space
     __private T var2; // error - conflicting address space qualifiers
-    __private __remove_address_space<T> var3; // var3 is __private int
+    __private __remove_address_space<T>::type var3; // var3 is __private int
   }
 
   void bar(){
@@ -3579,7 +3579,7 @@ specification, a stack is supported so that the ``pragma float_control``
 settings can be pushed or popped.
 
 When ``pragma float_control(precise, on)`` is enabled, the section of code
-governed by the pragma uses precise floating-point semantics, effectively
+governed by the pragma uses precise floating point semantics, effectively
 ``-ffast-math`` is disabled and ``-ffp-contract=on``
 (fused multiply add) is enabled.
 
@@ -3590,29 +3590,8 @@ when ``pragma float_control(precise, off)`` is enabled, the section of code
 governed by the pragma behaves as though the command-line option
 ``-ffp-exception-behavior=ignore`` is enabled.
 
-When ``pragma float_control(source, on)`` is enabled, the section of code governed
-by the pragma behaves as though the command-line option
-``-ffp-eval-method=source`` is enabled. Note: The default
-floating-point evaluation method is target-specific, typically ``source``.
-
-When ``pragma float_control(double, on)`` is enabled, the section of code governed
-by the pragma behaves as though the command-line option
-``-ffp-eval-method=double`` is enabled.
-
-When ``pragma float_control(extended, on)`` is enabled, the section of code governed
-by the pragma behaves as though the command-line option
-``-ffp-eval-method=extended`` is enabled.
-
-When ``pragma float_control(source, off)`` or
-``pragma float_control(double, off)`` or
-``pragma float_control(extended, off)`` is enabled,
-the section of code governed
-by the pragma behaves as though the command-line option
-``-ffp-eval-method=source`` is enabled, returning floating-point evaluation
-method to the default setting.
-
 The full syntax this pragma supports is
-``float_control(except|precise|source|double|extended, on|off [, push])`` and
+``float_control(except|precise, on|off [, push])`` and
 ``float_control(push|pop)``.
 The ``push`` and ``pop`` forms, including using ``push`` as the optional
 third argument, can only occur at file scope.
@@ -3930,6 +3909,40 @@ provide deprecation warnings for macro uses. For example:
 ``#pragma clang deprecated`` should be preferred for this purpose over
 ``#pragma GCC warning`` because the warning can be controlled with
 ``-Wdeprecated``.
+
+Restricted Expansion Macros
+===========================
+
+Clang supports the pragma ``#pragma clang restrict_expansion``, which can be
+used restrict macro expansion in headers. This can be valuable when providing
+headers with ABI stability requirements. Any expansion of the annotated macro
+processed by the preprocessor after the ``#pragma`` annotation will log a
+warning. Redefining the macro or undefining the macro will not be diagnosed, nor
+will expansion of the macro within the main source file. For example:
+
+.. code-block:: c
+
+   #define TARGET_ARM 1
+   #pragma clang restrict_expansion(TARGET_ARM, "<reason>")
+
+   /// Foo.h
+   struct Foo {
+   #if TARGET_ARM // warning: TARGET_ARM is marked unsafe in headers: <reason>
+     uint32_t X;
+   #else
+     uint64_t X;
+   #endif
+   };
+
+   /// main.c
+   #include "foo.h"
+   #if TARGET_ARM // No warning in main source file
+   X_TYPE uint32_t
+   #else
+   X_TYPE uint64_t
+   #endif
+
+This warning is controlled by ``-Wpedantic-macros``.
 
 Extended Integer Types
 ======================

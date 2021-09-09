@@ -525,6 +525,52 @@ for.cond.cleanup:
   ret void
 }
 
+; Identify trip count when it is constant and the IV has been widened.
+define i32 @constTripCount() {
+; CHECK-LABEL: @constTripCount(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[FLATTEN_TRIPCOUNT:%.*]] = mul i64 20, 20
+; CHECK-NEXT:    br label [[I_LOOP:%.*]]
+; CHECK:       i.loop:
+; CHECK-NEXT:    [[INDVAR1:%.*]] = phi i64 [ [[INDVAR_NEXT2:%.*]], [[J_LOOPDONE:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br label [[J_LOOP:%.*]]
+; CHECK:       j.loop:
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[I_LOOP]] ]
+; CHECK-NEXT:    call void @payload()
+; CHECK-NEXT:    [[INDVAR_NEXT:%.*]] = add i64 [[INDVAR]], 1
+; CHECK-NEXT:    [[J_ATEND:%.*]] = icmp eq i64 [[INDVAR_NEXT]], 20
+; CHECK-NEXT:    br label [[J_LOOPDONE]]
+; CHECK:       j.loopdone:
+; CHECK-NEXT:    [[INDVAR_NEXT2]] = add i64 [[INDVAR1]], 1
+; CHECK-NEXT:    [[I_ATEND:%.*]] = icmp eq i64 [[INDVAR_NEXT2]], [[FLATTEN_TRIPCOUNT]]
+; CHECK-NEXT:    br i1 [[I_ATEND]], label [[I_LOOPDONE:%.*]], label [[I_LOOP]]
+; CHECK:       i.loopdone:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %i.loop
+
+i.loop:
+  %i = phi i8 [ 0, %entry ], [ %i.inc, %j.loopdone ]
+  br label %j.loop
+
+j.loop:
+  %j = phi i8 [ 0, %i.loop ], [ %j.inc, %j.loop ]
+  call void @payload()
+  %j.inc = add i8 %j, 1
+  %j.atend = icmp eq i8 %j.inc, 20
+  br i1 %j.atend, label %j.loopdone, label %j.loop
+
+j.loopdone:
+  %i.inc = add i8 %i, 1
+  %i.atend = icmp eq i8 %i.inc, 20
+  br i1 %i.atend, label %i.loopdone, label %i.loop
+
+i.loopdone:
+  ret i32 0
+}
+
+declare void @payload()
 declare dso_local i32 @use_32(i32)
 declare dso_local i32 @use_16(i16)
 declare dso_local i32 @use_64(i64)

@@ -253,16 +253,15 @@ define arm_aapcs_vfpcc void @ssatmul_4_q31(i32* nocapture readonly %pSrcA, i32* 
 ; CHECK-NEXT:    mov.w r2, #-1
 ; CHECK-NEXT:    vmov.f32 s16, s10
 ; CHECK-NEXT:    str r1, [sp, #8] @ 4-byte Spill
-; CHECK-NEXT:    vmov.f32 s20, s14
 ; CHECK-NEXT:    vmov.f32 s18, s11
+; CHECK-NEXT:    vmov.f32 s20, s14
 ; CHECK-NEXT:    vmov.f32 s22, s15
 ; CHECK-NEXT:    vmullb.s32 q6, q5, q4
-; CHECK-NEXT:    vmov.f32 s14, s13
+; CHECK-NEXT:    vmov.f32 s10, s9
 ; CHECK-NEXT:    vmov r4, r7, d13
 ; CHECK-NEXT:    asrl r4, r7, #31
-; CHECK-NEXT:    vmov.f32 s10, s9
-; CHECK-NEXT:    rsbs.w r5, r4, #-2147483648
 ; CHECK-NEXT:    vmov r6, s12
+; CHECK-NEXT:    rsbs.w r5, r4, #-2147483648
 ; CHECK-NEXT:    sbcs.w r5, r2, r7
 ; CHECK-NEXT:    mov.w r5, #0
 ; CHECK-NEXT:    it lt
@@ -306,10 +305,11 @@ define arm_aapcs_vfpcc void @ssatmul_4_q31(i32* nocapture readonly %pSrcA, i32* 
 ; CHECK-NEXT:    csetm r4, ne
 ; CHECK-NEXT:    vmov q5[2], q5[0], r3, r4
 ; CHECK-NEXT:    vmov r3, s10
-; CHECK-NEXT:    vmov r4, s14
+; CHECK-NEXT:    vmov.f32 s10, s13
 ; CHECK-NEXT:    vbic q6, q1, q5
 ; CHECK-NEXT:    vand q4, q4, q5
 ; CHECK-NEXT:    vorr q4, q4, q6
+; CHECK-NEXT:    vmov r4, s10
 ; CHECK-NEXT:    smull r6, r5, r6, r5
 ; CHECK-NEXT:    asrl r6, r5, #31
 ; CHECK-NEXT:    smull r4, r7, r4, r3
@@ -522,17 +522,15 @@ define arm_aapcs_vfpcc void @ssatmul_4t_q31(i32* nocapture readonly %pSrcA, i32*
 ; CHECK-NEXT:    vorr q4, q4, q0
 ; CHECK-NEXT:    vpt.u32 cs, q1, q4
 ; CHECK-NEXT:    vldrwt.u32 q4, [r0], #16
-; CHECK-NEXT:    vmov.f32 s24, s18
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vldrwt.u32 q5, [r1], #16
-; CHECK-NEXT:    vmov.f32 s28, s22
+; CHECK-NEXT:    vmov.f32 s24, s18
 ; CHECK-NEXT:    vmov.f32 s26, s19
+; CHECK-NEXT:    vmov.f32 s28, s22
 ; CHECK-NEXT:    vmov.f32 s30, s23
 ; CHECK-NEXT:    vmullb.s32 q0, q7, q6
-; CHECK-NEXT:    vmov.f32 s18, s17
 ; CHECK-NEXT:    vmov r6, r5, d1
 ; CHECK-NEXT:    asrl r6, r5, #31
-; CHECK-NEXT:    vmov.f32 s22, s21
 ; CHECK-NEXT:    rsbs.w r7, r6, #-2147483648
 ; CHECK-NEXT:    sbcs.w r7, r12, r5
 ; CHECK-NEXT:    mov.w r7, #0
@@ -575,11 +573,13 @@ define arm_aapcs_vfpcc void @ssatmul_4t_q31(i32* nocapture readonly %pSrcA, i32*
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    csetm r4, ne
 ; CHECK-NEXT:    vmov q0[2], q0[0], r3, r4
-; CHECK-NEXT:    vmov r3, s18
-; CHECK-NEXT:    vmov r4, s22
 ; CHECK-NEXT:    vbic q7, q3, q0
 ; CHECK-NEXT:    vand q0, q6, q0
 ; CHECK-NEXT:    vorr q6, q0, q7
+; CHECK-NEXT:    vmov.f32 s2, s17
+; CHECK-NEXT:    vmov r3, s2
+; CHECK-NEXT:    vmov.f32 s2, s21
+; CHECK-NEXT:    vmov r4, s2
 ; CHECK-NEXT:    smull r6, r5, r4, r3
 ; CHECK-NEXT:    vmov r4, s16
 ; CHECK-NEXT:    asrl r6, r5, #31

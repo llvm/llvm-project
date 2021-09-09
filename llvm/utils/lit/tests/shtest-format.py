@@ -1,10 +1,7 @@
 # Check the various features of the ShTest format.
 
-# FIXME: this test depends on order of tests
-# RUN: rm -f %{inputs}/shtest-format/.lit_test_times.txt
-
 # RUN: rm -f %t.xml
-# RUN: not %{lit} -j 1 -v %{inputs}/shtest-format --xunit-xml-output %t.xml > %t.out
+# RUN: not %{lit} -v %{inputs}/shtest-format --xunit-xml-output %t.xml > %t.out
 # RUN: FileCheck < %t.out %s
 # RUN: FileCheck --check-prefix=XUNIT < %t.xml %s
 
@@ -20,7 +17,7 @@
 # CHECK-NEXT: line 2: failed test output on stdout
 # CHECK: Command Output (stderr):
 # CHECK-NEXT: --
-# CHECK-NEXT: cat{{(\.exe)?}}: {{cannot open does-not-exist|does-not-exist: No such file or directory}}
+# CHECK-NEXT: cat{{(_64)?(\.exe)?}}: {{cannot open does-not-exist|does-not-exist: No such file or directory}}
 # CHECK: --
 
 # CHECK: FAIL: shtest-format :: external_shell/fail_with_bad_encoding.txt

@@ -988,7 +988,7 @@ void SlotTracker::processModule() {
 
     // Add all the function attributes to the table.
     // FIXME: Add attributes of other objects?
-    AttributeSet FnAttrs = F.getAttributes().getFnAttributes();
+    AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
     if (FnAttrs.hasAttributes())
       CreateAttributeSetSlot(FnAttrs);
   }
@@ -1029,7 +1029,7 @@ void SlotTracker::processFunction() {
       // target may not be linked into the optimizer.
       if (const auto *Call = dyn_cast<CallBase>(&I)) {
         // Add all the call attributes to the table.
-        AttributeSet Attrs = Call->getAttributes().getFnAttributes();
+        AttributeSet Attrs = Call->getAttributes().getFnAttrs();
         if (Attrs.hasAttributes())
           CreateAttributeSetSlot(Attrs);
       }
@@ -1938,10 +1938,9 @@ static void writeDIGenericSubrange(raw_ostream &Out, const DIGenericSubrange *N,
 
   auto IsConstant = [&](Metadata *Bound) -> bool {
     if (auto *BE = dyn_cast_or_null<DIExpression>(Bound)) {
-      return BE->isConstant()
-                 ? DIExpression::SignedOrUnsignedConstant::SignedConstant ==
-                       *BE->isConstant()
-                 : false;
+      return BE->isConstant() &&
+             DIExpression::SignedOrUnsignedConstant::SignedConstant ==
+                 *BE->isConstant();
     }
     return false;
   };
@@ -2047,6 +2046,7 @@ static void writeDIDerivedType(raw_ostream &Out, const DIDerivedType *N,
   if (const auto &DWARFAddressSpace = N->getDWARFAddressSpace())
     Printer.printInt("dwarfAddressSpace", *DWARFAddressSpace,
                      /* ShouldSkipZero */ false);
+  Printer.printMetadata("annotations", N->getRawAnnotations());
   Out << ")";
 }
 
@@ -2080,6 +2080,7 @@ static void writeDICompositeType(raw_ostream &Out, const DICompositeType *N,
                      /* ShouldSkipZero */ false);
   else
     Printer.printMetadata("rank", N->getRawRank(), /*ShouldSkipNull */ true);
+  Printer.printMetadata("annotations", N->getRawAnnotations());
   Out << ")";
 }
 
@@ -2166,6 +2167,7 @@ static void writeDISubprogram(raw_ostream &Out, const DISubprogram *N,
   Printer.printMetadata("declaration", N->getRawDeclaration());
   Printer.printMetadata("retainedNodes", N->getRawRetainedNodes());
   Printer.printMetadata("thrownTypes", N->getRawThrownTypes());
+  Printer.printMetadata("annotations", N->getRawAnnotations());
   Out << ")";
 }
 
@@ -2304,6 +2306,7 @@ static void writeDIGlobalVariable(raw_ostream &Out, const DIGlobalVariable *N,
   Printer.printMetadata("declaration", N->getRawStaticDataMemberDeclaration());
   Printer.printMetadata("templateParams", N->getRawTemplateParams());
   Printer.printInt("align", N->getAlignInBits());
+  Printer.printMetadata("annotations", N->getRawAnnotations());
   Out << ")";
 }
 
@@ -2320,6 +2323,7 @@ static void writeDILocalVariable(raw_ostream &Out, const DILocalVariable *N,
   Printer.printMetadata("type", N->getRawType());
   Printer.printDIFlags("flags", N->getFlags());
   Printer.printInt("align", N->getAlignInBits());
+  Printer.printMetadata("annotations", N->getRawAnnotations());
   Out << ")";
 }
 
@@ -3758,8 +3762,8 @@ void AssemblyWriter::printFunction(const Function *F) {
     Out << "; Materializable\n";
 
   const AttributeList &Attrs = F->getAttributes();
-  if (Attrs.hasAttributes(AttributeList::FunctionIndex)) {
-    AttributeSet AS = Attrs.getFnAttributes();
+  if (Attrs.hasFnAttrs()) {
+    AttributeSet AS = Attrs.getFnAttrs();
     std::string AttrStr;
 
     for (const Attribute &Attr : AS) {
@@ -3796,7 +3800,7 @@ void AssemblyWriter::printFunction(const Function *F) {
   }
 
   FunctionType *FT = F->getFunctionType();
-  if (Attrs.hasAttributes(AttributeList::ReturnIndex))
+  if (Attrs.hasRetAttrs())
     Out << Attrs.getAsString(AttributeList::ReturnIndex) << ' ';
   TypePrinter.print(F->getReturnType(), Out);
   Out << ' ';
@@ -3813,7 +3817,7 @@ void AssemblyWriter::printFunction(const Function *F) {
       // Output type...
       TypePrinter.print(FT->getParamType(I), Out);
 
-      AttributeSet ArgAttrs = Attrs.getParamAttributes(I);
+      AttributeSet ArgAttrs = Attrs.getParamAttrs(I);
       if (ArgAttrs.hasAttributes()) {
         Out << ' ';
         writeAttributeSet(ArgAttrs);
@@ -3825,7 +3829,7 @@ void AssemblyWriter::printFunction(const Function *F) {
       // Insert commas as we go... the first arg doesn't get a comma
       if (Arg.getArgNo() != 0)
         Out << ", ";
-      printArgument(&Arg, Attrs.getParamAttributes(Arg.getArgNo()));
+      printArgument(&Arg, Attrs.getParamAttrs(Arg.getArgNo()));
     }
   }
 
@@ -3845,8 +3849,8 @@ void AssemblyWriter::printFunction(const Function *F) {
   if (F->getAddressSpace() != 0 || !Mod ||
       Mod->getDataLayout().getProgramAddressSpace() != 0)
     Out << " addrspace(" << F->getAddressSpace() << ")";
-  if (Attrs.hasAttributes(AttributeList::FunctionIndex))
-    Out << " #" << Machine.getAttributeGroupSlot(Attrs.getFnAttributes());
+  if (Attrs.hasFnAttrs())
+    Out << " #" << Machine.getAttributeGroupSlot(Attrs.getFnAttrs());
   if (F->hasSection()) {
     Out << " section \"";
     printEscapedString(F->getSection(), Out);
@@ -4202,7 +4206,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     Type *RetTy = FTy->getReturnType();
     const AttributeList &PAL = CI->getAttributes();
 
-    if (PAL.hasAttributes(AttributeList::ReturnIndex))
+    if (PAL.hasRetAttrs())
       Out << ' ' << PAL.getAsString(AttributeList::ReturnIndex);
 
     // Only print addrspace(N) if necessary:
@@ -4220,7 +4224,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     for (unsigned op = 0, Eop = CI->getNumArgOperands(); op < Eop; ++op) {
       if (op > 0)
         Out << ", ";
-      writeParamOperand(CI->getArgOperand(op), PAL.getParamAttributes(op));
+      writeParamOperand(CI->getArgOperand(op), PAL.getParamAttrs(op));
     }
 
     // Emit an ellipsis if this is a musttail call in a vararg function.  This
@@ -4231,8 +4235,8 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
       Out << ", ...";
 
     Out << ')';
-    if (PAL.hasAttributes(AttributeList::FunctionIndex))
-      Out << " #" << Machine.getAttributeGroupSlot(PAL.getFnAttributes());
+    if (PAL.hasFnAttrs())
+      Out << " #" << Machine.getAttributeGroupSlot(PAL.getFnAttrs());
 
     writeOperandBundles(CI);
   } else if (const InvokeInst *II = dyn_cast<InvokeInst>(&I)) {
@@ -4247,7 +4251,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
       PrintCallingConv(II->getCallingConv(), Out);
     }
 
-    if (PAL.hasAttributes(AttributeList::ReturnIndex))
+    if (PAL.hasRetAttrs())
       Out << ' ' << PAL.getAsString(AttributeList::ReturnIndex);
 
     // Only print addrspace(N) if necessary:
@@ -4265,12 +4269,12 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     for (unsigned op = 0, Eop = II->getNumArgOperands(); op < Eop; ++op) {
       if (op)
         Out << ", ";
-      writeParamOperand(II->getArgOperand(op), PAL.getParamAttributes(op));
+      writeParamOperand(II->getArgOperand(op), PAL.getParamAttrs(op));
     }
 
     Out << ')';
-    if (PAL.hasAttributes(AttributeList::FunctionIndex))
-      Out << " #" << Machine.getAttributeGroupSlot(PAL.getFnAttributes());
+    if (PAL.hasFnAttrs())
+      Out << " #" << Machine.getAttributeGroupSlot(PAL.getFnAttrs());
 
     writeOperandBundles(II);
 
@@ -4290,7 +4294,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
       PrintCallingConv(CBI->getCallingConv(), Out);
     }
 
-    if (PAL.hasAttributes(AttributeList::ReturnIndex))
+    if (PAL.hasRetAttrs())
       Out << ' ' << PAL.getAsString(AttributeList::ReturnIndex);
 
     // If possible, print out the short form of the callbr instruction. We can
@@ -4305,12 +4309,12 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     for (unsigned op = 0, Eop = CBI->getNumArgOperands(); op < Eop; ++op) {
       if (op)
         Out << ", ";
-      writeParamOperand(CBI->getArgOperand(op), PAL.getParamAttributes(op));
+      writeParamOperand(CBI->getArgOperand(op), PAL.getParamAttrs(op));
     }
 
     Out << ')';
-    if (PAL.hasAttributes(AttributeList::FunctionIndex))
-      Out << " #" << Machine.getAttributeGroupSlot(PAL.getFnAttributes());
+    if (PAL.hasFnAttrs())
+      Out << " #" << Machine.getAttributeGroupSlot(PAL.getFnAttrs());
 
     writeOperandBundles(CBI);
 

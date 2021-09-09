@@ -8,7 +8,6 @@
 
 #include "lldb/Symbol/UnwindPlan.h"
 
-#include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"

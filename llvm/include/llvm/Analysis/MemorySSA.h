@@ -106,9 +106,6 @@
 
 namespace llvm {
 
-/// Enables memory ssa as a dependency for loop passes.
-extern cl::opt<bool> EnableMSSALoopDependency;
-
 class AllocaInst;
 class Function;
 class Instruction;
@@ -795,8 +792,7 @@ public:
   enum InsertionPlace { Beginning, End, BeforeTerminator };
 
 protected:
-  // Used by Memory SSA annotater, dumpers, and wrapper pass
-  friend class MemorySSAAnnotatedWriter;
+  // Used by Memory SSA dumpers and wrapper pass
   friend class MemorySSAPrinterLegacyPass;
   friend class MemorySSAUpdater;
 
@@ -898,6 +894,13 @@ private:
   unsigned NextID;
 };
 
+/// Enables verification of MemorySSA.
+///
+/// The checks which this flag enables is exensive and disabled by default
+/// unless `EXPENSIVE_CHECKS` is defined.  The flag `-verify-memoryssa` can be
+/// used to selectively enable the verification without re-compilation.
+extern bool VerifyMemorySSA;
+
 // Internal MemorySSA utils, for use by MemorySSA classes and walkers
 class MemorySSAUtil {
 protected:
@@ -952,6 +955,17 @@ class MemorySSAPrinterPass : public PassInfoMixin<MemorySSAPrinterPass> {
 
 public:
   explicit MemorySSAPrinterPass(raw_ostream &OS) : OS(OS) {}
+
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+/// Printer pass for \c MemorySSA via the walker.
+class MemorySSAWalkerPrinterPass
+    : public PassInfoMixin<MemorySSAWalkerPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit MemorySSAWalkerPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

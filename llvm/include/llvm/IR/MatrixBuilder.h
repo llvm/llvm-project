@@ -74,7 +74,7 @@ public:
 
     Value *Ops[] = {DataPtr, Stride, B.getInt1(IsVolatile), B.getInt32(Rows),
                     B.getInt32(Columns)};
-    Type *OverloadedTypes[] = {RetType};
+    Type *OverloadedTypes[] = {RetType, Stride->getType()};
 
     Function *TheFn = Intrinsic::getDeclaration(
         getModule(), Intrinsic::matrix_column_major_load, OverloadedTypes);
@@ -82,7 +82,7 @@ public:
     CallInst *Call = B.CreateCall(TheFn->getFunctionType(), TheFn, Ops, Name);
     Attribute AlignAttr =
         Attribute::getWithAlignment(Call->getContext(), Alignment);
-    Call->addAttribute(1, AlignAttr);
+    Call->addParamAttr(0, AlignAttr);
     return Call;
   }
 
@@ -97,7 +97,7 @@ public:
     Value *Ops[] = {Matrix,           Ptr,
                     Stride,           B.getInt1(IsVolatile),
                     B.getInt32(Rows), B.getInt32(Columns)};
-    Type *OverloadedTypes[] = {Matrix->getType()};
+    Type *OverloadedTypes[] = {Matrix->getType(), Stride->getType()};
 
     Function *TheFn = Intrinsic::getDeclaration(
         getModule(), Intrinsic::matrix_column_major_store, OverloadedTypes);
@@ -105,7 +105,7 @@ public:
     CallInst *Call = B.CreateCall(TheFn->getFunctionType(), TheFn, Ops, Name);
     Attribute AlignAttr =
         Attribute::getWithAlignment(Call->getContext(), Alignment);
-    Call->addAttribute(2, AlignAttr);
+    Call->addParamAttr(1, AlignAttr);
     return Call;
   }
 

@@ -23,7 +23,7 @@ def riscv_read_vlenb : SDNode<"RISCVISD::READ_VLENB",
 // Operand that is allowed to be a register or a 5 bit immediate.
 // This allows us to pick between VSETIVLI and VSETVLI opcodes using the same
 // pseudo instructions.
-def AVL : RegisterOperand<GPR> {
+def AVL : RegisterOperand<GPRNoX0> {
   let OperandNamespace = "RISCVOp";
   let OperandType = "OPERAND_AVL";
 }
@@ -140,7 +140,9 @@ class octuple_to_str<int octuple> {
 def VLOpFrag : PatFrag<(ops), (XLenVT (VLOp (XLenVT AVL:$vl)))>;
 
 // Output pattern for X0 used to represent VLMAX in the pseudo instructions.
-def VLMax : OutPatFrag<(ops), (XLenVT X0)>;
+// We can't use X0 register becuase the AVL operands use GPRNoX0.
+// This must be kept in sync with RISCV::VLMaxSentinel.
+def VLMax : OutPatFrag<(ops), (XLenVT -1)>;
 
 // List of EEW.
 defvar EEWList = [8, 16, 32, 64];
@@ -2382,7 +2384,6 @@ class VPatTernaryNoMask<string intrinsic,
                         ValueType result_type,
                         ValueType op1_type,
                         ValueType op2_type,
-                        ValueType mask_type,
                         int sew,
                         LMULInfo vlmul,
                         VReg result_reg_class,
@@ -2405,7 +2406,6 @@ class VPatTernaryNoMaskWithPolicy<string intrinsic,
                                   ValueType result_type,
                                   ValueType op1_type,
                                   ValueType op2_type,
-                                  ValueType mask_type,
                                   int sew,
                                   LMULInfo vlmul,
                                   VReg result_reg_class,
@@ -3012,8 +3012,8 @@ multiclass VPatTernary<string intrinsic,
                        RegisterClass op1_reg_class,
                        DAGOperand op2_kind> {
   def : VPatTernaryNoMask<intrinsic, inst, kind, result_type, op1_type, op2_type,
-                    mask_type, sew, vlmul, result_reg_class, op1_reg_class,
-                    op2_kind>;
+                          sew, vlmul, result_reg_class, op1_reg_class,
+                          op2_kind>;
   def : VPatTernaryMask<intrinsic, inst, kind, result_type, op1_type, op2_type,
                         mask_type, sew, vlmul, result_reg_class, op1_reg_class,
                         op2_kind>;
@@ -3032,8 +3032,8 @@ multiclass VPatTernaryWithPolicy<string intrinsic,
                                  RegisterClass op1_reg_class,
                                  DAGOperand op2_kind> {
   def : VPatTernaryNoMaskWithPolicy<intrinsic, inst, kind, result_type, op1_type,
-                                    op2_type, mask_type, sew, vlmul,
-                                    result_reg_class, op1_reg_class, op2_kind>;
+                                    op2_type, sew, vlmul, result_reg_class,
+                                    op1_reg_class, op2_kind>;
   def : VPatTernaryMask<intrinsic, inst, kind, result_type, op1_type, op2_type,
                         mask_type, sew, vlmul, result_reg_class, op1_reg_class,
                         op2_kind>;
@@ -3354,11 +3354,11 @@ foreach lmul = MxList.m in {
     defvar vreg = SegRegClass<lmul, nf>.RC;
     let hasSideEffects = 0, mayLoad = 0, mayStore = 1, isCodeGenOnly = 1 in {
       def "PseudoVSPILL" # nf # "_" # lmul.MX :
-        Pseudo<(outs), (ins vreg:$rs1, GPR:$rs2, GPR:$vlenb), []>;
+        Pseudo<(outs GPR:$addrinc), (ins vreg:$rs1, GPR:$rs2, GPR:$vlenb), []>;
     }
     let hasSideEffects = 0, mayLoad = 1, mayStore = 0, isCodeGenOnly = 1 in {
       def "PseudoVRELOAD" # nf # "_" # lmul.MX :
-        Pseudo<(outs vreg:$rs1), (ins GPR:$rs2, GPR:$vlenb), []>;
+        Pseudo<(outs vreg:$rs1, GPR:$addrinc), (ins GPR:$rs2, GPR:$vlenb), []>;
     }
   }
 }
@@ -3369,7 +3369,12 @@ foreach lmul = MxList.m in {
 
 // Pseudos.
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0, Defs = [VL, VTYPE] in {
-def PseudoVSETVLI : Pseudo<(outs GPR:$rd), (ins GPR:$rs1, VTypeIOp:$vtypei), []>;
+// Due to rs1=X0 having special meaning, we need a GPRNoX0 register class for
+// the when we aren't using one of the special X0 encodings. Otherwise it could
+// be accidentally be made X0 by MachineIR optimizations. To satisfy the
+// verifier, we also need a GPRX0 instruction for the special encodings.
+def PseudoVSETVLI : Pseudo<(outs GPR:$rd), (ins GPRNoX0:$rs1, VTypeIOp:$vtypei), []>;
+def PseudoVSETVLIX0 : Pseudo<(outs GPR:$rd), (ins GPRX0:$rs1, VTypeIOp:$vtypei), []>;
 def PseudoVSETIVLI : Pseudo<(outs GPR:$rd), (ins uimm5:$rs1, VTypeIOp:$vtypei), []>;
 }
 

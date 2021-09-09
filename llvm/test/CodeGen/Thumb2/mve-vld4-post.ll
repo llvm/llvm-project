@@ -6,18 +6,14 @@
 define <16 x i32> *@vld4_v4i32(<16 x i32> *%src, <4 x i32> *%dst) {
 ; CHECK-LABEL: vld4_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vld40.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld41.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld42.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld43.32 {q0, q1, q2, q3}, [r0]!
-; CHECK-NEXT:    @ kill: def $q0 killed $q0 killed $q0_q1_q2_q3
-; CHECK-NEXT:    vadd.i32 q4, q2, q3
+; CHECK-NEXT:    vadd.i32 q2, q2, q3
 ; CHECK-NEXT:    vadd.i32 q0, q0, q1
-; CHECK-NEXT:    vadd.i32 q0, q0, q4
+; CHECK-NEXT:    vadd.i32 q0, q0, q2
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
-; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:
   %l1 = load <16 x i32>, <16 x i32>* %src, align 4
@@ -38,18 +34,14 @@ entry:
 define <32 x i16> *@vld4_v8i16(<32 x i16> *%src, <8 x i16> *%dst) {
 ; CHECK-LABEL: vld4_v8i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vld40.16 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld41.16 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld42.16 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld43.16 {q0, q1, q2, q3}, [r0]!
-; CHECK-NEXT:    @ kill: def $q0 killed $q0 killed $q0_q1_q2_q3
-; CHECK-NEXT:    vadd.i16 q4, q2, q3
+; CHECK-NEXT:    vadd.i16 q2, q2, q3
 ; CHECK-NEXT:    vadd.i16 q0, q0, q1
-; CHECK-NEXT:    vadd.i16 q0, q0, q4
+; CHECK-NEXT:    vadd.i16 q0, q0, q2
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
-; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:
   %l1 = load <32 x i16>, <32 x i16>* %src, align 4
@@ -70,18 +62,14 @@ entry:
 define <64 x i8> *@vld4_v16i8(<64 x i8> *%src, <16 x i8> *%dst) {
 ; CHECK-LABEL: vld4_v16i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vld40.8 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld41.8 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld42.8 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld43.8 {q0, q1, q2, q3}, [r0]!
-; CHECK-NEXT:    @ kill: def $q0 killed $q0 killed $q0_q1_q2_q3
-; CHECK-NEXT:    vadd.i8 q4, q2, q3
+; CHECK-NEXT:    vadd.i8 q2, q2, q3
 ; CHECK-NEXT:    vadd.i8 q0, q0, q1
-; CHECK-NEXT:    vadd.i8 q0, q0, q4
+; CHECK-NEXT:    vadd.i8 q0, q0, q2
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
-; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:
   %l1 = load <64 x i8>, <64 x i8>* %src, align 4
@@ -109,23 +97,19 @@ define <8 x i64> *@vld4_v2i64(<8 x i64> *%src, <2 x i64> *%dst) {
 ; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #48]
 ; CHECK-NEXT:    vldrw.u32 q4, [r0, #32]
-; CHECK-NEXT:    vmov.f64 d2, d1
+; CHECK-NEXT:    vmov.f32 s4, s2
 ; CHECK-NEXT:    vmov.f32 s5, s3
-; CHECK-NEXT:    vmov.f32 s6, s10
 ; CHECK-NEXT:    vmov.f32 s2, s8
-; CHECK-NEXT:    vmov.f32 s7, s11
 ; CHECK-NEXT:    vmov.f32 s3, s9
+; CHECK-NEXT:    vmov lr, r12, d5
 ; CHECK-NEXT:    vldrw.u32 q2, [r0], #64
-; CHECK-NEXT:    vmov.f64 d6, d5
+; CHECK-NEXT:    vmov r4, r8, d9
+; CHECK-NEXT:    vmov.f32 s12, s10
 ; CHECK-NEXT:    vmov.f32 s13, s11
-; CHECK-NEXT:    vmov.f32 s14, s18
-; CHECK-NEXT:    vmov.f32 s10, s16
-; CHECK-NEXT:    vmov.f32 s15, s19
-; CHECK-NEXT:    vmov.f32 s11, s17
-; CHECK-NEXT:    vmov lr, r12, d3
 ; CHECK-NEXT:    vmov r2, r7, d1
-; CHECK-NEXT:    vmov r4, r8, d7
-; CHECK-NEXT:    vmov r3, r6, d5
+; CHECK-NEXT:    vmov.f32 s2, s16
+; CHECK-NEXT:    vmov.f32 s3, s17
+; CHECK-NEXT:    vmov r3, r6, d1
 ; CHECK-NEXT:    adds.w r2, r2, lr
 ; CHECK-NEXT:    adc.w r7, r7, r12
 ; CHECK-NEXT:    adds r3, r3, r4
@@ -166,18 +150,14 @@ entry:
 define <16 x float> *@vld4_v4f32(<16 x float> *%src, <4 x float> *%dst) {
 ; CHECK-LABEL: vld4_v4f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vld40.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld41.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld42.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld43.32 {q0, q1, q2, q3}, [r0]!
-; CHECK-NEXT:    @ kill: def $q0 killed $q0 killed $q0_q1_q2_q3
-; CHECK-NEXT:    vadd.f32 q4, q2, q3
+; CHECK-NEXT:    vadd.f32 q2, q2, q3
 ; CHECK-NEXT:    vadd.f32 q0, q0, q1
-; CHECK-NEXT:    vadd.f32 q0, q0, q4
+; CHECK-NEXT:    vadd.f32 q0, q0, q2
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
-; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:
   %l1 = load <16 x float>, <16 x float>* %src, align 4
@@ -198,18 +178,14 @@ entry:
 define <32 x half> *@vld4_v8f16(<32 x half> *%src, <8 x half> *%dst) {
 ; CHECK-LABEL: vld4_v8f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vld40.16 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld41.16 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld42.16 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld43.16 {q0, q1, q2, q3}, [r0]!
-; CHECK-NEXT:    @ kill: def $q0 killed $q0 killed $q0_q1_q2_q3
-; CHECK-NEXT:    vadd.f16 q4, q2, q3
+; CHECK-NEXT:    vadd.f16 q2, q2, q3
 ; CHECK-NEXT:    vadd.f16 q0, q0, q1
-; CHECK-NEXT:    vadd.f16 q0, q0, q4
+; CHECK-NEXT:    vadd.f16 q0, q0, q2
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
-; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:
   %l1 = load <32 x half>, <32 x half>* %src, align 4

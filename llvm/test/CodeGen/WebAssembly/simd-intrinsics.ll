@@ -540,6 +540,26 @@ define <4 x float> @bitselect_v4f32(<4 x float> %v1, <4 x float> %v2, <4 x float
   ret <4 x float> %a
 }
 
+; CHECK-LABEL: pmin_v4f32:
+; CHECK-NEXT: .functype pmin_v4f32 (v128, v128) -> (v128){{$}}
+; CHECK-NEXT: f32x4.pmin $push[[R:[0-9]+]]=, $0, $1{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+declare <4 x float> @llvm.wasm.pmin.v4f32(<4 x float>, <4 x float>)
+define <4 x float> @pmin_v4f32(<4 x float> %a, <4 x float> %b) {
+  %v = call <4 x float> @llvm.wasm.pmin.v4f32(<4 x float> %a, <4 x float> %b)
+  ret <4 x float> %v
+}
+
+; CHECK-LABEL: pmax_v4f32:
+; CHECK-NEXT: .functype pmax_v4f32 (v128, v128) -> (v128){{$}}
+; CHECK-NEXT: f32x4.pmax $push[[R:[0-9]+]]=, $0, $1{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+declare <4 x float> @llvm.wasm.pmax.v4f32(<4 x float>, <4 x float>)
+define <4 x float> @pmax_v4f32(<4 x float> %a, <4 x float> %b) {
+  %v = call <4 x float> @llvm.wasm.pmax.v4f32(<4 x float> %a, <4 x float> %b)
+  ret <4 x float> %v
+}
+
 ; CHECK-LABEL: ceil_v4f32:
 ; CHECK-NEXT: .functype ceil_v4f32 (v128) -> (v128){{$}}
 ; CHECK-NEXT: f32x4.ceil $push[[R:[0-9]+]]=, $0{{$}}
@@ -593,6 +613,26 @@ define <2 x double> @bitselect_v2f64(<2 x double> %v1, <2 x double> %v2, <2 x do
     <2 x double> %v1, <2 x double> %v2, <2 x double> %c
   )
   ret <2 x double> %a
+}
+
+; CHECK-LABEL: pmin_v2f64:
+; CHECK-NEXT: .functype pmin_v2f64 (v128, v128) -> (v128){{$}}
+; CHECK-NEXT: f64x2.pmin $push[[R:[0-9]+]]=, $0, $1{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+declare <2 x double> @llvm.wasm.pmin.v2f64(<2 x double>, <2 x double>)
+define <2 x double> @pmin_v2f64(<2 x double> %a, <2 x double> %b) {
+  %v = call <2 x double> @llvm.wasm.pmin.v2f64(<2 x double> %a, <2 x double> %b)
+  ret <2 x double> %v
+}
+
+; CHECK-LABEL: pmax_v2f64:
+; CHECK-NEXT: .functype pmax_v2f64 (v128, v128) -> (v128){{$}}
+; CHECK-NEXT: f64x2.pmax $push[[R:[0-9]+]]=, $0, $1{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+declare <2 x double> @llvm.wasm.pmax.v2f64(<2 x double>, <2 x double>)
+define <2 x double> @pmax_v2f64(<2 x double> %a, <2 x double> %b) {
+  %v = call <2 x double> @llvm.wasm.pmax.v2f64(<2 x double> %a, <2 x double> %b)
+  ret <2 x double> %v
 }
 
 ; CHECK-LABEL: ceil_v2f64:

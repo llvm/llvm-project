@@ -1,6 +1,6 @@
 ; RUN: opt -loop-vectorize -scalable-vectorization=on -dce -instcombine -mtriple aarch64-linux-gnu -mattr=+sve -S %s -o - | FileCheck %s
 
-define void @cond_inv_load_i32i32i16(i32* noalias nocapture %a, i32* noalias nocapture readonly %cond, i16* noalias nocapture readonly %inv, i64 %n) {
+define void @cond_inv_load_i32i32i16(i32* noalias nocapture %a, i32* noalias nocapture readonly %cond, i16* noalias nocapture readonly %inv, i64 %n) #0 {
 ; CHECK-LABEL: @cond_inv_load_i32i32i16
 ; CHECK:     vector.ph:
 ; CHECK:       %[[INVINS:.*]] = insertelement <vscale x 4 x i16*> poison, i16* %inv, i32 0
@@ -39,7 +39,7 @@ exit:                        ; preds = %for.inc
   ret void
 }
 
-define void @cond_inv_load_f64f64f64(double* noalias nocapture %a, double* noalias nocapture readonly %cond, double* noalias nocapture readonly %inv, i64 %n) {
+define void @cond_inv_load_f64f64f64(double* noalias nocapture %a, double* noalias nocapture readonly %cond, double* noalias nocapture readonly %inv, i64 %n) #0 {
 ; CHECK-LABEL: @cond_inv_load_f64f64f64
 ; CHECK:     vector.ph:
 ; CHECK:       %[[INVINS:.*]] = insertelement <vscale x 4 x double*> poison, double* %inv, i32 0
@@ -76,7 +76,7 @@ exit:                        ; preds = %for.inc
   ret void
 }
 
-define void @invariant_load_cond(i32* noalias nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %cond, i64 %n) {
+define void @invariant_load_cond(i32* noalias nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %cond, i64 %n) #0 {
 ; CHECK-LABEL: @invariant_load_cond
 ; CHECK: vector.body
 ; CHECK: %[[GEP:.*]] = getelementptr inbounds i32, i32* %b, i64 42
@@ -117,6 +117,7 @@ for.end:
   ret void
 }
 
+attributes #0 = { vscale_range(0, 16) }
 !0 = distinct !{!0, !1, !2, !3, !4, !5}
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}

@@ -1,9 +1,8 @@
 //===-- gsymutil.cpp - GSYM dumping and creation utility for llvm ---------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -338,7 +337,7 @@ static llvm::Error handleObjectFile(ObjectFile &Obj,
   // Save the GSYM file to disk.
   support::endianness Endian =
       Obj.makeTriple().isLittleEndian() ? support::little : support::big;
-  if (auto Err = Gsym.save(OutFile.c_str(), Endian))
+  if (auto Err = Gsym.save(OutFile, Endian))
     return Err;
 
   // Verify the DWARF if requested. This will ensure all the info in the DWARF
@@ -360,7 +359,7 @@ static llvm::Error handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
     Triple ObjTriple(Obj->makeTriple());
     auto ArchName = ObjTriple.getArchName();
     outs() << "Output file (" << ArchName << "): " << OutFile << "\n";
-    if (auto Err = handleObjectFile(*Obj, OutFile.c_str()))
+    if (auto Err = handleObjectFile(*Obj, OutFile))
       return Err;
   } else if (auto *Fat = dyn_cast<MachOUniversalBinary>(BinOrErr->get())) {
     // Iterate over all contained architectures and filter out any that were

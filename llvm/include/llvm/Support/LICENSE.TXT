@@ -1,6 +1,6 @@
 LLVM System Interface Library
 -------------------------------------------------------------------------------
-The LLVM System Interface Library is licensed under the Illinois Open Source
-License and has the following additional copyright:
 
-Copyright (C) 2004 eXtensible Systems, Inc.
+Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+See https://llvm.org/LICENSE.txt for license information.
+SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception

@@ -581,6 +581,16 @@ CodeGenModule::EmitCXXGlobalVarDeclInitFunc(const VarDecl *D,
       // llvm.used to prevent linker GC.
       addUsedGlobal(COMDATKey);
     }
+
+    // If we used a COMDAT key for the global ctor, the init function can be
+    // discarded if the global ctor entry is discarded.
+    // FIXME: Do we need to restrict this to ELF and Wasm?
+    llvm::Comdat *C = Addr->getComdat();
+    if (COMDATKey && C &&
+        (getTarget().getTriple().isOSBinFormatELF() ||
+         getTarget().getTriple().isOSBinFormatWasm())) {
+      Fn->setComdat(C);
+    }
   } else {
     I = DelayedCXXInitPosition.find(D); // Re-do lookup in case of re-hash.
     if (I == DelayedCXXInitPosition.end()) {

@@ -275,7 +275,7 @@ bool AsmPrinter::doInitialization(Module &M) {
   const_cast<TargetLoweringObjectFile &>(getObjFileLowering())
       .getModuleMetadata(M);
 
-  OutStreamer->InitSections(false);
+  OutStreamer->initSections(false, *TM.getMCSubtargetInfo());
 
   if (DisableDebugInfoPrinting)
     MMI->setDebugInfoAvailability(false);
@@ -326,16 +326,10 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   // Emit module-level inline asm if it exists.
   if (!M.getModuleInlineAsm().empty()) {
-    // We're at the module level. Construct MCSubtarget from the default CPU
-    // and target triple.
-    std::unique_ptr<MCSubtargetInfo> STI(TM.getTarget().createMCSubtargetInfo(
-        TM.getTargetTriple().str(), TM.getTargetCPU(),
-        TM.getTargetFeatureString()));
-    assert(STI && "Unable to create subtarget info");
     OutStreamer->AddComment("Start of file scope inline assembly");
     OutStreamer->AddBlankLine();
-    emitInlineAsm(M.getModuleInlineAsm() + "\n",
-                  OutContext.getSubtargetCopy(*STI), TM.Options.MCOptions);
+    emitInlineAsm(M.getModuleInlineAsm() + "\n", *TM.getMCSubtargetInfo(),
+                  TM.Options.MCOptions);
     OutStreamer->AddComment("End of file scope inline assembly");
     OutStreamer->AddBlankLine();
   }
@@ -2460,9 +2454,14 @@ void AsmPrinter::emitAlignment(Align Alignment, const GlobalObject *GV) const {
   if (Alignment == Align(1))
     return; // 1-byte aligned: no need to emit alignment.
 
-  if (getCurrentSection()->getKind().isText())
-    OutStreamer->emitCodeAlignment(Alignment.value());
-  else
+  if (getCurrentSection()->getKind().isText()) {
+    const MCSubtargetInfo *STI = nullptr;
+    if (this->MF)
+      STI = &getSubtargetInfo();
+    else
+      STI = TM.getMCSubtargetInfo();
+    OutStreamer->emitCodeAlignment(Alignment.value(), STI);
+  } else
     OutStreamer->emitValueToAlignment(Alignment.value());
 }
 
@@ -3270,21 +3269,21 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
   // reference the block.  It is possible that there is more than one label
   // here, because multiple LLVM BB's may have been RAUW'd to this block after
   // the references were generated.
+  const BasicBlock *BB = MBB.getBasicBlock();
   if (MBB.hasAddressTaken()) {
-    const BasicBlock *BB = MBB.getBasicBlock();
     if (isVerbose())
       OutStreamer->AddComment("Block address taken");
 
     // MBBs can have their address taken as part of CodeGen without having
     // their corresponding BB's address taken in IR
-    if (BB->hasAddressTaken())
+    if (BB && BB->hasAddressTaken())
       for (MCSymbol *Sym : MMI->getAddrLabelSymbolToEmit(BB))
         OutStreamer->emitLabel(Sym);
   }
 
   // Print some verbose block comments.
   if (isVerbose()) {
-    if (const BasicBlock *BB = MBB.getBasicBlock()) {
+    if (BB) {
       if (BB->hasName()) {
         BB->printAsOperand(OutStreamer->GetCommentOS(),
                            /*PrintType=*/false, BB->getModule());
@@ -3543,7 +3542,7 @@ void AsmPrinter::emitXRayTable() {
   // pointers. This should work for both 32-bit and 64-bit platforms.
   if (FnSledIndex) {
     OutStreamer->SwitchSection(FnSledIndex);
-    OutStreamer->emitCodeAlignment(2 * WordSizeBytes);
+    OutStreamer->emitCodeAlignment(2 * WordSizeBytes, &getSubtargetInfo());
     OutStreamer->emitSymbolValue(SledsStart, WordSizeBytes, false);
     OutStreamer->emitSymbolValue(SledsEnd, WordSizeBytes, false);
     OutStreamer->SwitchSection(PrevSection);

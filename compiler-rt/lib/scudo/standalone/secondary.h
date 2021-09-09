@@ -485,7 +485,7 @@ void *MapAllocator<Config>::allocate(Options Options, uptr Size, uptr Alignment,
                                      FillContentsMode FillContents) {
   if (Options.get(OptionBit::AddLargeAllocationSlack))
     Size += 1UL << SCUDO_MIN_ALIGNMENT_LOG;
-  Alignment = Max(Alignment, 1UL << SCUDO_MIN_ALIGNMENT_LOG);
+  Alignment = Max(Alignment, uptr(1U) << SCUDO_MIN_ALIGNMENT_LOG);
   const uptr PageSize = getPageSizeCached();
   uptr RoundedSize =
       roundUpTo(roundUpTo(Size, Alignment) + LargeBlock::getHeaderSize() +
@@ -602,12 +602,11 @@ void MapAllocator<Config>::deallocate(Options Options, void *Ptr) {
 
 template <typename Config>
 void MapAllocator<Config>::getStats(ScopedString *Str) const {
-  Str->append(
-      "Stats: MapAllocator: allocated %zu times (%zuK), freed %zu times "
-      "(%zuK), remains %zu (%zuK) max %zuM\n",
-      NumberOfAllocs, AllocatedBytes >> 10, NumberOfFrees, FreedBytes >> 10,
-      NumberOfAllocs - NumberOfFrees, (AllocatedBytes - FreedBytes) >> 10,
-      LargestSize >> 20);
+  Str->append("Stats: MapAllocator: allocated %u times (%zuK), freed %u times "
+              "(%zuK), remains %u (%zuK) max %zuM\n",
+              NumberOfAllocs, AllocatedBytes >> 10, NumberOfFrees,
+              FreedBytes >> 10, NumberOfAllocs - NumberOfFrees,
+              (AllocatedBytes - FreedBytes) >> 10, LargestSize >> 20);
 }
 
 } // namespace scudo

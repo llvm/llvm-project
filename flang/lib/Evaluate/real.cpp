@@ -262,6 +262,107 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::Divide(
 }
 
 template <typename W, int P>
+ValueWithRealFlags<Real<W, P>> Real<W, P>::SQRT(Rounding rounding) const {
+  ValueWithRealFlags<Real> result;
+  if (IsNotANumber()) {
+    result.value = NotANumber();
+    if (IsSignalingNaN()) {
+      result.flags.set(RealFlag::InvalidArgument);
+    }
+  } else if (IsNegative()) {
+    if (IsZero()) {
+      // SQRT(-0) == -0 in IEEE-754.
+      result.value.word_ = result.value.word_.IBSET(bits - 1);
+    } else {
+      result.value = NotANumber();
+    }
+  } else if (IsInfinite()) {
+    // SQRT(+Inf) == +Inf
+    result.value = Infinity(false);
+  } else {
+    // Slow but reliable bit-at-a-time method.  Start with a clear significand
+    // and half the unbiased exponent, and then try to set significand bits
+    // in descending order of magnitude without exceeding the exact result.
+    int expo{UnbiasedExponent()};
+    if (IsSubnormal()) {
+      expo -= GetFraction().LEADZ();
+    }
+    expo = expo / 2 + exponentBias;
+    result.value.Normalize(false, expo, Fraction::MASKL(1));
+    for (int bit{significandBits - 1}; bit >= 0; --bit) {
+      Word word{result.value.word_};
+      result.value.word_ = word.IBSET(bit);
+      auto squared{result.value.Multiply(result.value, rounding)};
+      if (squared.flags.test(RealFlag::Overflow) ||
+          squared.flags.test(RealFlag::Underflow) ||
+          Compare(squared.value) == Relation::Less) {
+        result.value.word_ = word;
+      }
+    }
+    // The computed square root, when squared, has a square that's not greater
+    // than the original argument.  Check this square against the square of the
+    // next Real value, and return that one if its square is closer in magnitude
+    // to the original argument.
+    Real resultSq{result.value.Multiply(result.value).value};
+    Real diff{Subtract(resultSq).value.ABS()};
+    if (diff.IsZero()) {
+      return result; // exact
+    }
+    Real ulp;
+    ulp.Normalize(false, expo, Fraction::MASKR(1));
+    Real nextAfter{result.value.Add(ulp).value};
+    auto nextAfterSq{nextAfter.Multiply(nextAfter)};
+    if (!nextAfterSq.flags.test(RealFlag::Overflow) &&
+        !nextAfterSq.flags.test(RealFlag::Underflow)) {
+      Real nextAfterDiff{Subtract(nextAfterSq.value).value.ABS()};
+      if (nextAfterDiff.Compare(diff) == Relation::Less) {
+        result.value = nextAfter;
+        if (nextAfterDiff.IsZero()) {
+          return result; // exact
+        }
+      }
+    }
+    result.flags.set(RealFlag::Inexact);
+  }
+  return result;
+}
+
+// HYPOT(x,y) = SQRT(x**2 + y**2) by definition, but those squared intermediate
+// values are susceptible to over/underflow when computed naively.
+// Assuming that x>=y, calculate instead:
+//   HYPOT(x,y) = SQRT(x**2 * (1+(y/x)**2))
+//              = ABS(x) * SQRT(1+(y/x)**2)
+template <typename W, int P>
+ValueWithRealFlags<Real<W, P>> Real<W, P>::HYPOT(
+    const Real &y, Rounding rounding) const {
+  ValueWithRealFlags<Real> result;
+  if (IsNotANumber() || y.IsNotANumber()) {
+    result.flags.set(RealFlag::InvalidArgument);
+    result.value = NotANumber();
+  } else if (ABS().Compare(y.ABS()) == Relation::Less) {
+    return y.HYPOT(*this);
+  } else if (IsZero()) {
+    return result; // x==y==0
+  } else {
+    auto yOverX{y.Divide(*this, rounding)}; // y/x
+    bool inexact{yOverX.flags.test(RealFlag::Inexact)};
+    auto squared{yOverX.value.Multiply(yOverX.value, rounding)}; // (y/x)**2
+    inexact |= squared.flags.test(RealFlag::Inexact);
+    Real one;
+    one.Normalize(false, exponentBias, Fraction::MASKL(1)); // 1.0
+    auto sum{squared.value.Add(one, rounding)}; // 1.0 + (y/x)**2
+    inexact |= sum.flags.test(RealFlag::Inexact);
+    auto sqrt{sum.value.SQRT()};
+    inexact |= sqrt.flags.test(RealFlag::Inexact);
+    result = sqrt.value.Multiply(ABS(), rounding);
+    if (inexact) {
+      result.flags.set(RealFlag::Inexact);
+    }
+  }
+  return result;
+}
+
+template <typename W, int P>
 ValueWithRealFlags<Real<W, P>> Real<W, P>::ToWholeNumber(
     common::RoundingMode mode) const {
   ValueWithRealFlags<Real> result{*this};
@@ -439,7 +540,7 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::Read(
 
 template <typename W, int P> std::string Real<W, P>::DumpHexadecimal() const {
   if (IsNotANumber()) {
-    return "NaN 0x"s + word_.Hexadecimal();
+    return "NaN0x"s + word_.Hexadecimal();
   } else if (IsNegative()) {
     return "-"s + Negate().DumpHexadecimal();
   } else if (IsInfinite()) {

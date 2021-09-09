@@ -150,7 +150,7 @@ int __llvm_profile_write_file(void);
 int __llvm_orderfile_write_file(void);
 /*!
  * \brief this is a wrapper interface to \c __llvm_profile_write_file.
- * After this interface is invoked, a arleady dumped flag will be set
+ * After this interface is invoked, an already dumped flag will be set
  * so that profile won't be dumped again during program exit.
  * Invocation of interface __llvm_profile_reset_counters will clear
  * the flag. This interface is designed to be used to collect profile
@@ -194,7 +194,8 @@ int __llvm_orderfile_dump(void);
 void __llvm_profile_set_filename(const char *Name);
 
 /*!
- * \brief Set the FILE object for writing instrumentation data.
+ * \brief Set the FILE object for writing instrumentation data. Return 0 if set
+ * successfully or return 1 if failed.
  *
  * Sets the FILE object to be used for subsequent calls to
  * \a __llvm_profile_write_file(). The profile file name set by environment
@@ -213,13 +214,12 @@ void __llvm_profile_set_filename(const char *Name);
  * instrumented image/DSO). This API only modifies the file object within the
  * copy of the runtime available to the calling image.
  *
- * Warning: This is a no-op if continuous mode (\ref
- * __llvm_profile_is_continuous_mode_enabled) is on. The reason for this is
- * that in continuous mode, profile counters are mmap()'d to the profile at
- * program initialization time. Support for transferring the mmap'd profile
- * counts to a new file has not been implemented.
+ * Warning: This is a no-op if EnableMerge is 0 in continuous mode (\ref
+ * __llvm_profile_is_continuous_mode_enabled), because disable merging requires
+ * copying the old profile file to new profile file and this function is usually
+ * used when the proess doesn't have permission to open file.
  */
-void __llvm_profile_set_file_object(FILE *File, int EnableMerge);
+int __llvm_profile_set_file_object(FILE *File, int EnableMerge);
 
 /*! \brief Register to write instrumentation data to file at exit. */
 int __llvm_profile_register_write_file_atexit(void);

@@ -124,7 +124,7 @@ EnablePartialStoreMerging("enable-dse-partial-store-merging",
 static cl::opt<unsigned>
     MemorySSAScanLimit("dse-memoryssa-scanlimit", cl::init(150), cl::Hidden,
                        cl::desc("The number of memory instructions to scan for "
-                                "dead store elimination (default = 100)"));
+                                "dead store elimination (default = 150)"));
 static cl::opt<unsigned> MemorySSAUpwardsStepLimit(
     "dse-memoryssa-walklimit", cl::init(90), cl::Hidden,
     cl::desc("The maximum number of steps while walking upwards to find "
@@ -1501,11 +1501,6 @@ struct DSEState {
     };
     PushMemUses(EarlierAccess);
 
-    // Optimistically collect all accesses for reads. If we do not find any
-    // read clobbers, add them to the cache.
-    SmallPtrSet<MemoryAccess *, 16> KnownNoReads;
-    if (!EarlierMemInst->mayReadFromMemory())
-      KnownNoReads.insert(EarlierAccess);
     // Check if EarlierDef may be read.
     for (unsigned I = 0; I < WorkList.size(); I++) {
       MemoryAccess *UseAccess = WorkList[I];
@@ -1518,7 +1513,6 @@ struct DSEState {
       }
       --ScanLimit;
       NumDomMemDefChecks++;
-      KnownNoReads.insert(UseAccess);
 
       if (isa<MemoryPhi>(UseAccess)) {
         if (any_of(KillingDefs, [this, UseAccess](Instruction *KI) {
@@ -1852,7 +1846,7 @@ struct DSEState {
               Func != LibFunc_malloc)
             return false;
           if (Malloc->getOperand(0) == MemSet->getLength()) {
-            if (DT.dominates(Malloc, MemSet) &&
+            if (DT.dominates(Malloc, MemSet) && PDT.dominates(MemSet, Malloc) &&
                 memoryIsNotModifiedBetween(Malloc, MemSet, BatchAA, DL, &DT)) {
               IRBuilder<> IRB(Malloc);
               const auto &DL = Malloc->getModule()->getDataLayout();

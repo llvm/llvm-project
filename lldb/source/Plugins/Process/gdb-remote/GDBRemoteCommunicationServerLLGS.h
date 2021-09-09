@@ -214,6 +214,8 @@ protected:
 
   PacketResult Handle_QPassSignals(StringExtractorGDBRemote &packet);
 
+  PacketResult Handle_qSaveCore(StringExtractorGDBRemote &packet);
+
   PacketResult Handle_g(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_qMemTags(StringExtractorGDBRemote &packet);

@@ -2308,7 +2308,7 @@ bool InitListExpr::isStringLiteralInit() const {
   const Expr *Init = getInit(0);
   if (!Init)
     return false;
-  Init = Init->IgnoreParens();
+  Init = Init->IgnoreParenImpCasts();
   return isa<StringLiteral>(Init) || isa<ObjCEncodeExpr>(Init);
 }
 

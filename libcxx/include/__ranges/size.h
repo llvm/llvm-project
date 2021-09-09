@@ -13,7 +13,7 @@
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__ranges/access.h>
-#include <__utility/__decay_copy.h>
+#include <__utility/decay_copy.h>
 #include <__utility/forward.h>
 #include <concepts>
 #include <type_traits>
@@ -21,9 +21,6 @@
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
-
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -117,7 +114,7 @@ namespace __ssize {
 }
 
 inline namespace __cpo {
-  inline constexpr const auto ssize = __ssize::__fn{};
+  inline constexpr auto ssize = __ssize::__fn{};
 } // namespace __cpo
 } // namespace ranges
 
@@ -126,7 +123,5 @@ inline namespace __cpo {
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
 
 _LIBCPP_END_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___RANGES_SIZE_H

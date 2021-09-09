@@ -41,6 +41,8 @@ struct EquivalenceObject {
       std::optional<ConstantSubscript> substringStart, parser::CharBlock source)
       : symbol{symbol}, subscripts{subscripts},
         substringStart{substringStart}, source{source} {}
+  explicit EquivalenceObject(Symbol &symbol)
+      : symbol{symbol}, source{symbol.name()} {}
 
   bool operator==(const EquivalenceObject &) const;
   bool operator<(const EquivalenceObject &) const;

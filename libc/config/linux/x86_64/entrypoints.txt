@@ -21,6 +21,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.errno.__errno_location
 
     # string.h entrypoints
+    libc.src.string.bcmp
     libc.src.string.bzero
     libc.src.string.memchr
     libc.src.string.memcmp
@@ -43,6 +44,19 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strstr
     libc.src.string.strtok
     libc.src.string.strtok_r
+
+    # inttypes.h entrypoints
+    libc.src.inttypes.strtoimax
+    libc.src.inttypes.strtoumax
+
+    # stdlib.h entrypoints
+    libc.src.stdlib.atoi
+    libc.src.stdlib.atol
+    libc.src.stdlib.atoll
+    libc.src.stdlib.strtol
+    libc.src.stdlib.strtoll
+    libc.src.stdlib.strtoul
+    libc.src.stdlib.strtoull
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
@@ -175,6 +189,12 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # threads.h entrypoints
     libc.src.threads.call_once
+    libc.src.threads.cnd_broadcast
+    libc.src.threads.cnd_destroy
+    libc.src.threads.cnd_init
+    libc.src.threads.cnd_signal
+    libc.src.threads.cnd_wait
+    libc.src.threads.mtx_destroy
     libc.src.threads.mtx_init
     libc.src.threads.mtx_lock
     libc.src.threads.mtx_unlock

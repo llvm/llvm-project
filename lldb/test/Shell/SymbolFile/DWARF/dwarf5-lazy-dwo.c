@@ -8,7 +8,7 @@
 // RUN: %clang_host %s -fno-standalone-debug -g \
 // RUN:   -gdwarf-5 -gpubnames -gsplit-dwarf -c -o %t2.o -DTWO
 // RUN: %clang_host %t1.o %t2.o -o %t
-// RUN: %lldb %t -o "log enable ll""db object" -o "settings set stop-line-count-before 0" \
+// RUN: %lldb %t -o "log enable 'lldb' object" -o "settings set stop-line-count-before 0" \
 // RUN:   -o "b main" -o "run" -o "image lookup -n main -v" -b | FileCheck %s
 
 // CHECK-NOT: 2.dwo,

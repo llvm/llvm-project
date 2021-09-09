@@ -38,6 +38,8 @@
   define void @load_4xi32(<4 x i32>* %ptr) { ret void }
   define void @load_8xi16(<8 x i16>* %ptr) { ret void }
   define void @load_16xi8(<16 x i8>* %ptr) { ret void }
+  define void @anyext_on_fpr() { ret void }
+  define void @anyext_on_fpr8() { ret void }
 
 ...
 
@@ -636,5 +638,71 @@ body:             |
     %1:fpr(<16 x s8>) = G_LOAD %0(p0) :: (load (<16 x s8>) from %ir.ptr)
     $q0 = COPY %1(<16 x s8>)
     RET_ReallyLR implicit $q0
+
+...
+---
+name:            anyext_on_fpr
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x2' }
+  - { reg: '$w3' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.1:
+    liveins: $w3, $x0, $x1, $x2
+
+    ; CHECK-LABEL: name: anyext_on_fpr
+    ; CHECK: liveins: $w3, $x0, $x1, $x2
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: [[LDRHui:%[0-9]+]]:fpr16 = LDRHui [[COPY]], 0 :: (load (s16))
+    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG 0, [[LDRHui]], %subreg.hsub
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr32all = COPY [[SUBREG_TO_REG]]
+    ; CHECK: $w0 = COPY [[COPY1]]
+    ; CHECK: RET_ReallyLR
+    %0:gpr(p0) = COPY $x0
+    %16:fpr(s32) = G_LOAD %0(p0) :: (load (s16))
+    %24:gpr(s32) = COPY %16(s32)
+    $w0 = COPY %24(s32)
+    RET_ReallyLR
+
+...
+---
+name:            anyext_on_fpr8
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x2' }
+  - { reg: '$w3' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.1:
+    liveins: $w3, $x0, $x1, $x2
+
+    ; CHECK-LABEL: name: anyext_on_fpr8
+    ; CHECK: liveins: $w3, $x0, $x1, $x2
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: [[LDRBui:%[0-9]+]]:fpr8 = LDRBui [[COPY]], 0 :: (load (s8))
+    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG 0, [[LDRBui]], %subreg.bsub
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr32all = COPY [[SUBREG_TO_REG]]
+    ; CHECK: $w0 = COPY [[COPY1]]
+    ; CHECK: RET_ReallyLR
+    %0:gpr(p0) = COPY $x0
+    %16:fpr(s32) = G_LOAD %0(p0) :: (load (s8))
+    %24:gpr(s32) = COPY %16(s32)
+    $w0 = COPY %24(s32)
+    RET_ReallyLR
 
 ...

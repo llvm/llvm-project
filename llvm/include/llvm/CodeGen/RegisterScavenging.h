@@ -211,9 +211,6 @@ private:
   /// Initialize RegisterScavenger.
   void init(MachineBasicBlock &MBB);
 
-  /// Mark live-in registers of basic block as used.
-  void setLiveInsUsed(const MachineBasicBlock &MBB);
-
   /// Spill a register after position \p After and reload it before position
   /// \p UseMI.
   ScavengedInfo &spill(Register Reg, const TargetRegisterClass &RC, int SPAdj,

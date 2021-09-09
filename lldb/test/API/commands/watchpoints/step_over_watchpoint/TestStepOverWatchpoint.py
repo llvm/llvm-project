@@ -21,7 +21,10 @@ class TestStepOverWatchpoint(TestBase):
         bugnumber="llvm.org/pr26031")
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=['s390x'])
-    @expectedFailureAll(oslist=["ios", "watchos", "tvos", "bridgeos"], bugnumber="<rdar://problem/34027183>")  # watchpoint tests aren't working on arm64
+    @expectedFailureAll(
+        oslist=["ios", "watchos", "tvos", "bridgeos", "macosx"],
+        archs=['aarch64', 'arm'],
+        bugnumber="<rdar://problem/34027183>")
     @add_test_categories(["basic_process"])
     def test(self):
         """Test stepping over watchpoints."""

@@ -76,7 +76,7 @@ option(OPENMP_ENABLE_LIBOMP_PROFILING "Enable time profiling for libomp." OFF)
 # to enable time profiling support in the OpenMP runtime.
 add_subdirectory(runtime)
 
-# Build OMPD
+# Build libompd.so
 add_subdirectory(libompd)
 
 if (OPENMP_ENABLE_LIBOMPTARGET)

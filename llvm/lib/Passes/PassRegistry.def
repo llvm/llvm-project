@@ -60,8 +60,6 @@ MODULE_PASS("globaldce", GlobalDCEPass())
 MODULE_PASS("globalopt", GlobalOptPass())
 MODULE_PASS("globalsplit", GlobalSplitPass())
 MODULE_PASS("hotcoldsplit", HotColdSplittingPass())
-MODULE_PASS("hwasan", HWAddressSanitizerPass(false, false))
-MODULE_PASS("khwasan", HWAddressSanitizerPass(true, true))
 MODULE_PASS("inferattrs", InferFunctionAttrsPass())
 MODULE_PASS("inliner-wrapper", ModuleInlinerWrapperPass())
 MODULE_PASS("inliner-wrapper-no-mandatory-first", ModuleInlinerWrapperPass(
@@ -75,7 +73,6 @@ MODULE_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 MODULE_PASS("ipsccp", IPSCCPPass())
 MODULE_PASS("iroutliner", IROutlinerPass())
 MODULE_PASS("print-ir-similarity", IRSimilarityAnalysisPrinterPass(dbgs()))
-MODULE_PASS("loop-extract", LoopExtractorPass())
 MODULE_PASS("lowertypetests", LowerTypeTestsPass())
 MODULE_PASS("metarenamer", MetaRenamerPass())
 MODULE_PASS("mergefunc", MergeFunctionsPass())
@@ -101,7 +98,6 @@ MODULE_PASS("rpo-function-attrs", ReversePostOrderFunctionAttrsPass())
 MODULE_PASS("sample-profile", SampleProfileLoaderPass())
 MODULE_PASS("scc-oz-module-inliner",
   buildInlinerPipeline(OptimizationLevel::Oz, ThinOrFullLTOPhase::None))
-MODULE_PASS("loop-extract-single", LoopExtractorPass(1))
 MODULE_PASS("strip", StripSymbolsPass())
 MODULE_PASS("strip-dead-debug-info", StripDeadDebugInfoPass())
 MODULE_PASS("pseudo-probe", SampleProfileProbePass(TM))
@@ -122,6 +118,27 @@ MODULE_PASS("memprof-module", ModuleMemProfilerPass())
 MODULE_PASS("poison-checking", PoisonCheckingPass())
 MODULE_PASS("pseudo-probe-update", PseudoProbeUpdatePass())
 #undef MODULE_PASS
+
+#ifndef MODULE_PASS_WITH_PARAMS
+#define MODULE_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)
+#endif
+MODULE_PASS_WITH_PARAMS("loop-extract",
+                        "LoopExtractorPass",
+                        [](bool Single) {
+                          if (Single)
+                            return LoopExtractorPass(1);
+                          return LoopExtractorPass();
+                        },
+                        parseLoopExtractorPassOptions,
+                        "single")
+MODULE_PASS_WITH_PARAMS("hwasan",
+                        "HWAddressSanitizerPass",
+                        [](HWAddressSanitizerOptions Opts) {
+                          return HWAddressSanitizerPass(Opts);
+                        },
+                        parseHWASanPassOptions,
+                        "kernel;recover")
+#undef MODULE_PASS_WITH_PARAMS
 
 #ifndef CGSCC_ANALYSIS
 #define CGSCC_ANALYSIS(NAME, CREATE_PASS)
@@ -217,12 +234,8 @@ FUNCTION_PASS("div-rem-pairs", DivRemPairsPass())
 FUNCTION_PASS("dse", DSEPass())
 FUNCTION_PASS("dot-cfg", CFGPrinterPass())
 FUNCTION_PASS("dot-cfg-only", CFGOnlyPrinterPass())
-FUNCTION_PASS("early-cse", EarlyCSEPass(/*UseMemorySSA=*/false))
-FUNCTION_PASS("early-cse-memssa", EarlyCSEPass(/*UseMemorySSA=*/true))
-FUNCTION_PASS("ee-instrument", EntryExitInstrumenterPass(/*PostInlining=*/false))
 FUNCTION_PASS("fix-irreducible", FixIrreduciblePass())
 FUNCTION_PASS("make-guards-explicit", MakeGuardsExplicitPass())
-FUNCTION_PASS("post-inline-ee-instrument", EntryExitInstrumenterPass(/*PostInlining=*/true))
 FUNCTION_PASS("gvn-hoist", GVNHoistPass())
 FUNCTION_PASS("gvn-sink", GVNSinkPass())
 FUNCTION_PASS("helloworld", HelloWorldPass())
@@ -242,8 +255,6 @@ FUNCTION_PASS("loweratomic", LowerAtomicPass())
 FUNCTION_PASS("lower-expect", LowerExpectIntrinsicPass())
 FUNCTION_PASS("lower-guard-intrinsic", LowerGuardIntrinsicPass())
 FUNCTION_PASS("lower-constant-intrinsics", LowerConstantIntrinsicsPass())
-FUNCTION_PASS("lower-matrix-intrinsics", LowerMatrixIntrinsicsPass())
-FUNCTION_PASS("lower-matrix-intrinsics-minimal", LowerMatrixIntrinsicsPass(true))
 FUNCTION_PASS("lower-widenable-condition", LowerWidenableConditionPass())
 FUNCTION_PASS("guard-widening", GuardWideningPass())
 FUNCTION_PASS("load-store-vectorizer", LoadStoreVectorizerPass())
@@ -286,6 +297,7 @@ FUNCTION_PASS("print<inliner-size-estimator>",
   InlineSizeEstimatorAnalysisPrinterPass(dbgs()))
 FUNCTION_PASS("print<loops>", LoopPrinterPass(dbgs()))
 FUNCTION_PASS("print<memoryssa>", MemorySSAPrinterPass(dbgs()))
+FUNCTION_PASS("print<memoryssa-walker>", MemorySSAWalkerPrinterPass(dbgs()))
 FUNCTION_PASS("print<phi-values>", PhiValuesPrinterPass(dbgs()))
 FUNCTION_PASS("print<regions>", RegionInfoPrinterPass(dbgs()))
 FUNCTION_PASS("print<scalar-evolution>", ScalarEvolutionPrinterPass(dbgs()))
@@ -322,10 +334,7 @@ FUNCTION_PASS("verify<scalar-evolution>", ScalarEvolutionVerifierPass())
 FUNCTION_PASS("view-cfg", CFGViewerPass())
 FUNCTION_PASS("view-cfg-only", CFGOnlyViewerPass())
 FUNCTION_PASS("transform-warning", WarnMissedTransformationsPass())
-FUNCTION_PASS("asan", AddressSanitizerPass(false, false, false))
-FUNCTION_PASS("kasan", AddressSanitizerPass(true, false, false))
 FUNCTION_PASS("msan", MemorySanitizerPass({}))
-FUNCTION_PASS("kmsan", MemorySanitizerPass({0, false, /*Kernel=*/true}))
 FUNCTION_PASS("tsan", ThreadSanitizerPass())
 FUNCTION_PASS("memprof", MemProfilerPass())
 #undef FUNCTION_PASS
@@ -333,6 +342,27 @@ FUNCTION_PASS("memprof", MemProfilerPass())
 #ifndef FUNCTION_PASS_WITH_PARAMS
 #define FUNCTION_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)
 #endif
+FUNCTION_PASS_WITH_PARAMS("early-cse",
+                          "EarlyCSEPass",
+                           [](bool UseMemorySSA) {
+                             return EarlyCSEPass(UseMemorySSA);
+                           },
+                          parseEarlyCSEPassOptions,
+                          "memssa")
+FUNCTION_PASS_WITH_PARAMS("ee-instrument",
+                          "EntryExitInstrumenterPass",
+                           [](bool PostInlining) {
+                             return EntryExitInstrumenterPass(PostInlining);
+                           },
+                          parseEntryExitInstrumenterPassOptions,
+                          "post-inline")
+FUNCTION_PASS_WITH_PARAMS("lower-matrix-intrinsics",
+                          "LowerMatrixIntrinsicsPass",
+                           [](bool Minimal) {
+                             return LowerMatrixIntrinsicsPass(Minimal);
+                           },
+                          parseLowerMatrixIntrinsicsPassOptions,
+                          "minimal")
 FUNCTION_PASS_WITH_PARAMS("loop-unroll",
                           "LoopUnrollPass",
                            [](LoopUnrollOptions Opts) {
@@ -345,6 +375,13 @@ FUNCTION_PASS_WITH_PARAMS("loop-unroll",
                           "no-profile-peeling;profile-peeling;"
                           "no-runtime;runtime;"
                           "no-upperbound;upperbound")
+FUNCTION_PASS_WITH_PARAMS("asan",
+                          "AddressSanitizerPass",
+                           [](AddressSanitizerOptions Opts) {
+                             return AddressSanitizerPass(Opts);
+                           },
+                          parseASanPassOptions,
+                          "kernel")
 FUNCTION_PASS_WITH_PARAMS("msan",
                           "MemorySanitizerPass",
                            [](MemorySanitizerOptions Opts) {

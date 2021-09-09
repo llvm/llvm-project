@@ -137,3 +137,28 @@ namespace rdar13296133 {
   }
 }
 
+void write_stack_address_to(char **q) {
+  char local;
+  *q = &local;
+  // expected-warning@-1 {{Address of stack memory associated with local \
+variable 'local' is still referred to by the stack variable 'p' upon \
+returning to the caller}}
+}
+
+void test_stack() {
+  char *p;
+  write_stack_address_to(&p);
+}
+
+struct C {
+  ~C() {} // non-trivial class
+};
+
+C make1() {
+  C c;
+  return c; // no-warning
+}
+
+void test_copy_elision() {
+  C c1 = make1();
+}

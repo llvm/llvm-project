@@ -80,6 +80,12 @@ void populateFoldUnitDimsReshapeOpsByLinearizationPatterns(
 void populateLinalgBufferizePatterns(BufferizeTypeConverter &converter,
                                      RewritePatternSet &patterns);
 
+/// Create linalg op on buffers given the original tensor-based operation and
+/// the buffers for the outputs.
+LinalgOp createLinalgOpOnBuffers(ConversionPatternRewriter &rewriter,
+                                 LinalgOp linalgOp, ValueRange inputs,
+                                 ValueRange outputs);
+
 /// Patterns to fold unit-extent dimensions in operands/results of linalg ops on
 /// tensors.
 void populateFoldUnitExtentDimsPatterns(RewritePatternSet &patterns);
@@ -982,69 +988,6 @@ struct LinalgCopyVTWForwardingPattern
                                 PatternRewriter &rewriter) const override;
 };
 
-using GetMinMaxExprFn =
-    std::function<Optional<std::pair<AffineExpr, AffineExpr>>(
-        Value value, SmallVectorImpl<Value> &dims,
-        SmallVectorImpl<Value> &symbols)>;
-
-/// Canonicalize AffineMinOp operations in the context of ops with a known range
-/// by:
-///   1. building an affine map where uses of the known ops are replaced by
-///   their min annd max expressions returned by the lambda `getMinMaxFn`.
-///   2. checking whether any of the results of this affine map is known to be
-///   greater than all other results.
-///   3. replacing the AffineMinOp by the result of (2).
-struct AffineMinRangeCanonicalizationPattern
-    : public OpRewritePattern<AffineMinOp> {
-  AffineMinRangeCanonicalizationPattern(MLIRContext *context,
-                                        GetMinMaxExprFn getMinMaxFn)
-      : OpRewritePattern<AffineMinOp>(context), getMinMaxFn(getMinMaxFn) {}
-  LogicalResult matchAndRewrite(AffineMinOp minOp,
-                                PatternRewriter &rewriter) const override;
-
-protected:
-  GetMinMaxExprFn getMinMaxFn;
-};
-
-/// Specialized version of `AffineMinRangeCanonicalizationPattern` pattern
-/// using `getSCFMinMaxExpr` to know the min and max expression of induction
-/// variables from scf loops.
-// TODO: move to a more appropriate place when it is determined. For now Linalg
-// depends both on Affine and SCF but they do not depend on each other.
-struct AffineMinSCFCanonicalizationPattern
-    : public AffineMinRangeCanonicalizationPattern {
-  static Optional<std::pair<AffineExpr, AffineExpr>>
-  getMinMax(Value value, SmallVectorImpl<Value> &dims,
-            SmallVectorImpl<Value> &symbols) {
-    return getSCFMinMaxExpr(value, dims, symbols);
-  }
-  AffineMinSCFCanonicalizationPattern(MLIRContext *context)
-      : AffineMinRangeCanonicalizationPattern(context, getMinMax) {}
-};
-
-/// Helper struct to return the results of `substituteMin`.
-struct AffineMapAndOperands {
-  AffineMap map;
-  SmallVector<Value> dims;
-  SmallVector<Value> symbols;
-};
-
-/// Traverse the dims of the AffineMap of `affineMinOp` and substitute
-/// dimensions with known range by new expressions involving the min or max
-/// expression:
-///   - If the AffineDimExpr mapped to a known value has a positive sign, it
-///     is replaced by the min expression.
-///   - If the AffineDimExpr mapped to a known value has a negative sign, it is
-///     replaced by the max expression.
-/// All known values are iteratively replaced.
-/// This is used as an intermediate step in computing bounding boxes and
-/// canonicalize AffineMinOps. All dim and symbol operands are assumed to have
-/// positive values (positive orthant assumptions).
-/// Return a new AffineMap, dims and symbols that have been canonicalized and
-/// simplified.
-AffineMapAndOperands substituteMin(AffineMinOp affineMinOp,
-                                   GetMinMaxExprFn getMinMaxExpr);
-
 /// Converts Convolution op into vector contraction.
 ///
 /// Conversion expects ConvOp to have dimensions marked in the *mask* as
@@ -1092,6 +1035,31 @@ public:
   LogicalResult matchAndRewrite(ConvOp minOp,
                                 PatternRewriter &rewriter) const override;
 };
+
+/// Rewrite a TiledLoopOp with bounds/step that potentially do not divide evenly
+/// into a TiledLoopOp where the step divides the iteration space evenly,
+/// followed by another TiledLoopOp for the last (partial) iteration (if any).
+/// This transformation is called "loop peeling".
+///
+/// This function peels the `idx`-th loop of the TiledLoopOp. To tile all loops
+/// in the loop nest, this function must be called multiple times.
+///
+/// After loop peeling, this function tries to simplify/canonicalize affine.min
+/// and affine.max ops in the body of the two TiledLoopOps. For more details,
+/// refer to `mlir::scf::peelAndCanonicalizeForLoop`.
+///
+/// The return value indicates whether the loop was rewritten or not. Loops are
+/// not rewritten if:
+/// * Loop step size is 1 or
+/// * Loop bounds and step size are static, and step already divides the
+///   iteration space evenly.
+///
+/// Note: This function rewrites the given TiledLoopOp in-place and clones the
+/// TileLoopOp operation for the last iteration. It replaces all uses of the
+/// unpeeled TiledLoopOp with the results of the newly generated TiledLoopOp.
+LogicalResult peelAndCanonicalizeTiledLoop(RewriterBase &rewriter,
+                                           TiledLoopOp loopOp, int64_t idx,
+                                           TiledLoopOp &result);
 
 //===----------------------------------------------------------------------===//
 // Support for staged pattern application.

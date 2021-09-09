@@ -264,11 +264,11 @@ static SomeExpr SaveNumericPointerTarget(
     object.set_shape(arraySpec);
     object.set_init(evaluate::AsGenericExpr(evaluate::Constant<T>{
         std::move(x), evaluate::ConstantSubscripts{elements}}));
-    const Symbol &symbol{
-        *scope
-             .try_emplace(
-                 name, Attrs{Attr::TARGET, Attr::SAVE}, std::move(object))
-             .first->second};
+    Symbol &symbol{*scope
+                        .try_emplace(name, Attrs{Attr::TARGET, Attr::SAVE},
+                            std::move(object))
+                        .first->second};
+    symbol.set(Symbol::Flag::CompilerCreated);
     return evaluate::AsGenericExpr(
         evaluate::Expr<T>{evaluate::Designator<T>{symbol}});
   }
@@ -301,11 +301,11 @@ static SomeExpr SaveDerivedPointerTarget(Scope &scope, SourceName name,
     object.set_init(
         evaluate::AsGenericExpr(evaluate::Constant<evaluate::SomeDerived>{
             derivedType, std::move(x), std::move(shape)}));
-    const Symbol &symbol{
-        *scope
-             .try_emplace(
-                 name, Attrs{Attr::TARGET, Attr::SAVE}, std::move(object))
-             .first->second};
+    Symbol &symbol{*scope
+                        .try_emplace(name, Attrs{Attr::TARGET, Attr::SAVE},
+                            std::move(object))
+                        .first->second};
+    symbol.set(Symbol::Flag::CompilerCreated);
     return evaluate::AsGenericExpr(
         evaluate::Designator<evaluate::SomeDerived>{symbol});
   }
@@ -313,11 +313,12 @@ static SomeExpr SaveDerivedPointerTarget(Scope &scope, SourceName name,
 
 static SomeExpr SaveObjectInit(
     Scope &scope, SourceName name, const ObjectEntityDetails &object) {
-  const Symbol &symbol{*scope
-                            .try_emplace(name, Attrs{Attr::TARGET, Attr::SAVE},
-                                ObjectEntityDetails{object})
-                            .first->second};
+  Symbol &symbol{*scope
+                      .try_emplace(name, Attrs{Attr::TARGET, Attr::SAVE},
+                          ObjectEntityDetails{object})
+                      .first->second};
   CHECK(symbol.get<ObjectEntityDetails>().init().has_value());
+  symbol.set(Symbol::Flag::CompilerCreated);
   return evaluate::AsGenericExpr(
       evaluate::Designator<evaluate::SomeDerived>{symbol});
 }
@@ -615,6 +616,7 @@ Symbol &RuntimeTableBuilder::CreateObject(
       Attrs{Attr::TARGET, Attr::SAVE}, std::move(object))};
   CHECK(pair.second);
   Symbol &result{*pair.first->second};
+  result.set(Symbol::Flag::CompilerCreated);
   return result;
 }
 
@@ -638,11 +640,11 @@ SomeExpr RuntimeTableBuilder::SaveNameAsPointerTarget(
   using Ascii = evaluate::Type<TypeCategory::Character, 1>;
   using AsciiExpr = evaluate::Expr<Ascii>;
   object.set_init(evaluate::AsGenericExpr(AsciiExpr{name}));
-  const Symbol &symbol{
-      *scope
-           .try_emplace(SaveObjectName(".n."s + name),
-               Attrs{Attr::TARGET, Attr::SAVE}, std::move(object))
-           .first->second};
+  Symbol &symbol{*scope
+                      .try_emplace(SaveObjectName(".n."s + name),
+                          Attrs{Attr::TARGET, Attr::SAVE}, std::move(object))
+                      .first->second};
+  symbol.set(Symbol::Flag::CompilerCreated);
   return evaluate::AsGenericExpr(
       AsciiExpr{evaluate::Designator<Ascii>{symbol}});
 }
@@ -819,6 +821,7 @@ bool RuntimeTableBuilder::InitializeDataPointer(
         ".dp."s + distinctName + "."s + symbol.name().ToString())};
     Symbol &ptrDtSym{
         *scope.try_emplace(ptrDtName, Attrs{}, UnknownDetails{}).first->second};
+    ptrDtSym.set(Symbol::Flag::CompilerCreated);
     Scope &ptrDtScope{scope.MakeScope(Scope::Kind::DerivedType, &ptrDtSym)};
     ignoreScopes_.insert(&ptrDtScope);
     ObjectEntityDetails ptrDtObj;
@@ -955,9 +958,27 @@ void RuntimeTableBuilder::DescribeSpecialProc(
     std::uint8_t isArgDescriptorSet{0};
     int argThatMightBeDescriptor{0};
     MaybeExpr which;
-    if (isAssignment) { // only type-bound asst's are germane to runtime
-      CHECK(binding != nullptr);
+    if (isAssignment) {
+      // Only type-bound asst's with the same type on both dummy arguments
+      // are germane to the runtime, which needs only these to implement
+      // component assignment as part of intrinsic assignment.
+      // Non-type-bound generic INTERFACEs and assignments from distinct
+      // types must not be used for component intrinsic assignment.
       CHECK(proc->dummyArguments.size() == 2);
+      const auto t1{
+          DEREF(std::get_if<evaluate::characteristics::DummyDataObject>(
+                    &proc->dummyArguments[0].u))
+              .type.type()};
+      const auto t2{
+          DEREF(std::get_if<evaluate::characteristics::DummyDataObject>(
+                    &proc->dummyArguments[1].u))
+              .type.type()};
+      if (!binding || t1.category() != TypeCategory::Derived ||
+          t2.category() != TypeCategory::Derived ||
+          t1.IsUnlimitedPolymorphic() || t2.IsUnlimitedPolymorphic() ||
+          t1.GetDerivedTypeSpec() != t2.GetDerivedTypeSpec()) {
+        return;
+      }
       which = proc->IsElemental() ? elementalAssignmentEnum_
                                   : scalarAssignmentEnum_;
       if (binding && binding->passName() &&

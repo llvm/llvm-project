@@ -483,6 +483,7 @@ void MCAssembler::writeFragmentPadding(raw_ostream &OS,
            "Writing bundle padding for a fragment without instructions");
 
     unsigned TotalLength = BundlePadding + static_cast<unsigned>(FSize);
+    const MCSubtargetInfo *STI = EF.getSubtargetInfo();
     if (EF.alignToBundleEnd() && TotalLength > getBundleAlignSize()) {
       // If the padding itself crosses a bundle boundary, it must be emitted
       // in 2 pieces, since even nop instructions must not cross boundaries.
@@ -493,12 +494,12 @@ void MCAssembler::writeFragmentPadding(raw_ostream &OS,
       // ----------------------------
       //        ^-------------------^   <- TotalLength
       unsigned DistanceToBoundary = TotalLength - getBundleAlignSize();
-      if (!getBackend().writeNopData(OS, DistanceToBoundary))
+      if (!getBackend().writeNopData(OS, DistanceToBoundary, STI))
         report_fatal_error("unable to write NOP sequence of " +
                            Twine(DistanceToBoundary) + " bytes");
       BundlePadding -= DistanceToBoundary;
     }
-    if (!getBackend().writeNopData(OS, BundlePadding))
+    if (!getBackend().writeNopData(OS, BundlePadding, STI))
       report_fatal_error("unable to write NOP sequence of " +
                          Twine(BundlePadding) + " bytes");
   }
@@ -544,7 +545,7 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
     // bytes left to fill use the Value and ValueSize to fill the rest.
     // If we are aligning with nops, ask that target to emit the right data.
     if (AF.hasEmitNops()) {
-      if (!Asm.getBackend().writeNopData(OS, Count))
+      if (!Asm.getBackend().writeNopData(OS, Count, AF.getSubtargetInfo()))
         report_fatal_error("unable to write nop sequence of " +
                           Twine(Count) + " bytes");
       break;
@@ -621,9 +622,11 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
   case MCFragment::FT_Nops: {
     ++stats::EmittedNopsFragments;
     const MCNopsFragment &NF = cast<MCNopsFragment>(F);
+
     int64_t NumBytes = NF.getNumBytes();
     int64_t ControlledNopLength = NF.getControlledNopLength();
-    int64_t MaximumNopLength = Asm.getBackend().getMaximumNopSize();
+    int64_t MaximumNopLength =
+        Asm.getBackend().getMaximumNopSize(*NF.getSubtargetInfo());
 
     assert(NumBytes > 0 && "Expected positive NOPs fragment size");
     assert(ControlledNopLength >= 0 && "Expected non-negative NOP size");
@@ -647,7 +650,8 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
       uint64_t NumBytesToEmit =
           (uint64_t)std::min(NumBytes, ControlledNopLength);
       assert(NumBytesToEmit && "try to emit empty NOP instruction");
-      if (!Asm.getBackend().writeNopData(OS, NumBytesToEmit)) {
+      if (!Asm.getBackend().writeNopData(OS, NumBytesToEmit,
+                                         NF.getSubtargetInfo())) {
         report_fatal_error("unable to write nop sequence of the remaining " +
                            Twine(NumBytesToEmit) + " bytes");
         break;
@@ -664,7 +668,8 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
   }
 
   case MCFragment::FT_BoundaryAlign: {
-    if (!Asm.getBackend().writeNopData(OS, FragmentSize))
+    const MCBoundaryAlignFragment &BF = cast<MCBoundaryAlignFragment>(F);
+    if (!Asm.getBackend().writeNopData(OS, FragmentSize, BF.getSubtargetInfo()))
       report_fatal_error("unable to write nop sequence of " +
                          Twine(FragmentSize) + " bytes");
     break;

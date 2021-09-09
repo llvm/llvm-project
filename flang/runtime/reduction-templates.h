@@ -21,10 +21,10 @@
 #ifndef FORTRAN_RUNTIME_REDUCTION_TEMPLATES_H_
 #define FORTRAN_RUNTIME_REDUCTION_TEMPLATES_H_
 
-#include "cpp-type.h"
-#include "descriptor.h"
 #include "terminator.h"
 #include "tools.h"
+#include "flang/Runtime/cpp-type.h"
+#include "flang/Runtime/descriptor.h"
 
 namespace Fortran::runtime {
 

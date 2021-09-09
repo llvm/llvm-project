@@ -26,7 +26,7 @@ NVPTXTargetStreamer::~NVPTXTargetStreamer() = default;
 
 void NVPTXTargetStreamer::outputDwarfFileDirectives() {
   for (const std::string &S : DwarfFiles)
-    getStreamer().emitRawText(S.data());
+    getStreamer().emitRawText(S);
   DwarfFiles.clear();
 }
 

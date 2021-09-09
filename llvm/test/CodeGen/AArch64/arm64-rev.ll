@@ -572,10 +572,7 @@ define void @float_vrev64(float* nocapture %source, <4 x float>* nocapture %dest
 ; GISEL-LABEL: float_vrev64:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    movi d0, #0000000000000000
-; GISEL-NEXT:    mov.s v0[1], v0[0]
-; GISEL-NEXT:    mov.s v0[2], v0[0]
 ; GISEL-NEXT:    adrp x8, .LCPI28_0
-; GISEL-NEXT:    mov.s v0[3], v0[0]
 ; GISEL-NEXT:    ldr q1, [x0]
 ; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI28_0]
 ; GISEL-NEXT:    tbl.16b v0, { v0, v1 }, v2

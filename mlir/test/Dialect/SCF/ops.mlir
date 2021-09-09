@@ -291,6 +291,12 @@ func @execute_region() -> i64 {
     scf.yield %c1 : i64
   }
 
+  // CHECK:      scf.execute_region -> (i64, i64) {
+  %res2:2 = scf.execute_region -> (i64, i64) {
+    %c1 = constant 1 : i64
+    scf.yield %c1, %c1 : i64, i64
+  }
+
   // CHECK:       scf.execute_region {
   // CHECK-NEXT:    br ^bb1
   // CHECK-NEXT:  ^bb1:

@@ -79,7 +79,7 @@ func @conv_tensors_static(%input: tensor<1x225x225x3xf32>, %filter: tensor<3x3x3
   %init = linalg.init_tensor [1, 112, 112, 32] : tensor<1x112x112x32xf32>
   %fill = linalg.fill(%cst, %init) : f32, tensor<1x112x112x32xf32> -> tensor<1x112x112x32xf32>
 
-  %conv = linalg.conv_2d_input_nhwc_filter_hwcf
+  %conv = linalg.conv_2d_nhwc_hwcf
     {dilations = dense<1> : tensor<2xi64>, strides = dense<2> : tensor<2xi64>}
     ins(%input, %filter : tensor<1x225x225x3xf32>, tensor<3x3x3x32xf32>)
     outs(%fill : tensor<1x112x112x32xf32>) -> tensor<1x112x112x32xf32>
@@ -133,7 +133,7 @@ func @conv_tensors_static(%input: tensor<1x225x225x3xf32>, %filter: tensor<3x3x3
 // CHECK-NEXT:       %[[ST_ARG2:.+]] = tensor.extract_slice %[[ARG2]][0, %[[IV0]], %[[IV1]], %[[IV2]]] [1, 8, 16, 4] [1, 1, 1, 1] : tensor<1x112x112x32xf32> to tensor<1x8x16x4xf32>
 // CHECK-NEXT:       %[[ST_FILTER:.+]] = tensor.extract_slice %[[FILTER]][0, 0, 0, %[[IV2]]] [3, 3, 3, 4] [1, 1, 1, 1] : tensor<3x3x3x32xf32> to tensor<3x3x3x4xf32>
 // CHECK-NEXT:       %[[ST_FILL:.+]] = tensor.extract_slice %[[FILL]][0, %[[IV0]], %[[IV1]], %[[IV2]]] [1, 8, 16, 4] [1, 1, 1, 1] : tensor<1x112x112x32xf32> to tensor<1x8x16x4xf32>
-// CHECK-NEXT:       %[[ST_CONV:.+]] = linalg.conv_2d_input_nhwc_filter_hwcf
+// CHECK-NEXT:       %[[ST_CONV:.+]] = linalg.conv_2d_nhwc_hwcf
 // CHECK-SAME:         ins(%[[ST_INPUT]], %[[ST_FILTER]] : tensor<1x17x33x3xf32>, tensor<3x3x3x4xf32>)
 // CHECK-SAME:         outs(%[[ST_FILL]] : tensor<1x8x16x4xf32>)
 // CHECK-NEXT:       %[[ADD:.+]] = linalg.generic
@@ -161,7 +161,7 @@ func @conv_tensors_dynamic(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?x?x?x
   %init = linalg.init_tensor [%n, %oh, %ow, %oc] : tensor<?x?x?x?xf32>
   %fill = linalg.fill(%cst, %init) : f32, tensor<?x?x?x?xf32> -> tensor<?x?x?x?xf32>
 
-  %conv = linalg.conv_2d_input_nhwc_filter_hwcf
+  %conv = linalg.conv_2d_nhwc_hwcf
     {dilations = dense<1> : tensor<2xi64>, strides = dense<2> : tensor<2xi64>}
     ins(%input, %filter : tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>)
     outs(%fill : tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
@@ -271,7 +271,7 @@ func @conv_tensors_dynamic(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?x?x?x
 // CHECK-NEXT:           %[[SIZE_ELEM_OC_3:.+]] = affine.min #[[BOUND2_MAP_2]](%[[IV3]], %[[IV2]])[%[[FILL_C]], %[[ELEM_OC]]]
 // CHECK-NEXT:           %[[ST_FILL:.+]] = tensor.extract_slice %[[FILL]][%[[IV0]], %[[IV1]], %[[IV2]], %[[IV3]]]
 // CHECK-SAME:                 [%[[SIZE_ELEM_N_2]], %[[SIZE_ELEM_OH_2]], %[[SIZE_ELEM_OW_2]], %[[SIZE_ELEM_OC_3]]]
-// CHECK-NEXT:           %[[ST_CONV:.+]] = linalg.conv_2d_input_nhwc_filter_hwcf
+// CHECK-NEXT:           %[[ST_CONV:.+]] = linalg.conv_2d_nhwc_hwcf
 // CHECK-SAME:                 ins(%[[ST_INPUT]], %[[ST_FILTER]] : tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>)
 // CHECK-SAME:                 outs(%[[ST_FILL]] : tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
 // CHECK-NEXT:           %[[ST_ADD:.+]] = linalg.generic

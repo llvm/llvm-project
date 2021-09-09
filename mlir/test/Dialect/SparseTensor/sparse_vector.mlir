@@ -1,25 +1,13 @@
-// RUN: mlir-opt %s -sparsification="vectorization-strategy=0 vl=16" | \
+// RUN: mlir-opt %s -sparsification="vectorization-strategy=0 vl=16" -split-input-file | \
 // RUN:   FileCheck %s --check-prefix=CHECK-VEC0
-// RUN: mlir-opt %s -sparsification="vectorization-strategy=1 vl=16" | \
+// RUN: mlir-opt %s -sparsification="vectorization-strategy=1 vl=16" -split-input-file | \
 // RUN:   FileCheck %s --check-prefix=CHECK-VEC1
-// RUN: mlir-opt %s -sparsification="vectorization-strategy=2 vl=16" | \
+// RUN: mlir-opt %s -sparsification="vectorization-strategy=2 vl=16" -split-input-file | \
 // RUN:   FileCheck %s --check-prefix=CHECK-VEC2
-// RUN: mlir-opt %s -sparsification="vectorization-strategy=2 vl=16 enable-simd-index32=true" | \
+// RUN: mlir-opt %s -sparsification="vectorization-strategy=2 vl=16 enable-simd-index32=true" -split-input-file | \
 // RUN:   FileCheck %s --check-prefix=CHECK-VEC3
 
 #DenseVector = #sparse_tensor.encoding<{ dimLevelType = [ "dense" ] }>
-
-#SparseVector = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed" ],
-  pointerBitWidth = 32,
-  indexBitWidth = 32
-}>
-
-#SparseMatrix = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "compressed" ],
-  pointerBitWidth = 32,
-  indexBitWidth = 32
-}>
 
 #trait_scale_d = {
   indexing_maps = [
@@ -77,6 +65,14 @@ func @scale_d(%arga: tensor<1024xf32, #DenseVector>, %b: f32, %argx: tensor<1024
   return %0 : tensor<1024xf32>
 }
 
+// -----
+
+#SparseVector = #sparse_tensor.encoding<{
+  dimLevelType = [ "compressed" ],
+  pointerBitWidth = 32,
+  indexBitWidth = 32
+}>
+
 #trait_mul_s = {
   indexing_maps = [
     affine_map<(i) -> (i)>,  // a
@@ -128,6 +124,7 @@ func @scale_d(%arga: tensor<1024xf32, #DenseVector>, %b: f32, %argx: tensor<1024
 // CHECK-VEC1:       }
 // CHECK-VEC1:       return
 //
+// CHECK-VEC2:       #[[$map:.*]] = affine_map<(d0, d1)[s0] -> (16, d0 - d1)
 // CHECK-VEC2-LABEL: func @mul_s
 // CHECK-VEC2-DAG:   %[[c0:.*]] = constant 0 : index
 // CHECK-VEC2-DAG:   %[[c1:.*]] = constant 1 : index
@@ -139,7 +136,7 @@ func @scale_d(%arga: tensor<1024xf32, #DenseVector>, %b: f32, %argx: tensor<1024
 // CHECK-VEC2:       %[[b:.*]] = zexti %[[r]] : i32 to i64
 // CHECK-VEC2:       %[[s:.*]] = index_cast %[[b]] : i64 to index
 // CHECK-VEC2:       scf.for %[[i:.*]] = %[[q]] to %[[s]] step %[[c16]] {
-// CHECK-VEC2:         %[[sub:.*]] = subi %[[s]], %[[i]] : index
+// CHECK-VEC2:         %[[sub:.*]] = affine.min #[[$map]](%[[s]], %[[i]])[%[[c16]]]
 // CHECK-VEC2:         %[[mask:.*]] = vector.create_mask %[[sub]] : vector<16xi1>
 // CHECK-VEC2:         %[[li:.*]] = vector.maskedload %{{.*}}[%[[i]]], %[[mask]], %{{.*}} : memref<?xi32>, vector<16xi1>, vector<16xi32> into vector<16xi32>
 // CHECK-VEC2:         %[[zi:.*]] = zexti %[[li]] : vector<16xi32> to vector<16xi64>
@@ -150,6 +147,7 @@ func @scale_d(%arga: tensor<1024xf32, #DenseVector>, %b: f32, %argx: tensor<1024
 // CHECK-VEC2:       }
 // CHECK-VEC2:       return
 //
+// CHECK-VEC3:       #[[$map:.*]] = affine_map<(d0, d1)[s0] -> (16, d0 - d1)
 // CHECK-VEC3-LABEL: func @mul_s
 // CHECK-VEC3-DAG:   %[[c0:.*]] = constant 0 : index
 // CHECK-VEC3-DAG:   %[[c1:.*]] = constant 1 : index
@@ -161,7 +159,7 @@ func @scale_d(%arga: tensor<1024xf32, #DenseVector>, %b: f32, %argx: tensor<1024
 // CHECK-VEC3:       %[[b:.*]] = zexti %[[r]] : i32 to i64
 // CHECK-VEC3:       %[[s:.*]] = index_cast %[[b]] : i64 to index
 // CHECK-VEC3:       scf.for %[[i:.*]] = %[[q]] to %[[s]] step %[[c16]] {
-// CHECK-VEC3:         %[[sub:.*]] = subi %{{.*}}, %[[i]] : index
+// CHECK-VEC3:         %[[sub:.*]] = affine.min #[[$map]](%[[s]], %[[i]])[%[[c16]]]
 // CHECK-VEC3:         %[[mask:.*]] = vector.create_mask %[[sub]] : vector<16xi1>
 // CHECK-VEC3:         %[[li:.*]] = vector.maskedload %{{.*}}[%[[i]]], %[[mask]], %{{.*}} : memref<?xi32>, vector<16xi1>, vector<16xi32> into vector<16xi32>
 // CHECK-VEC3:         %[[la:.*]] = vector.maskedload %{{.*}}[%[[i]]], %[[mask]], %{{.*}} : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
@@ -181,6 +179,10 @@ func @mul_s(%arga: tensor<1024xf32, #SparseVector>, %argb: tensor<1024xf32>, %ar
   } -> tensor<1024xf32>
   return %0 : tensor<1024xf32>
 }
+
+// -----
+
+#DenseVector = #sparse_tensor.encoding<{ dimLevelType = [ "dense" ] }>
 
 #trait_reduction_d = {
   indexing_maps = [
@@ -248,6 +250,14 @@ func @reduction_d(%arga: tensor<1024xf32, #DenseVector>, %argb: tensor<1024xf32>
   return %0 : tensor<f32>
 }
 
+// -----
+
+#SparseMatrix = #sparse_tensor.encoding<{
+  dimLevelType = [ "dense", "compressed" ],
+  pointerBitWidth = 32,
+  indexBitWidth = 32
+}>
+
 #trait_mul_ds = {
   indexing_maps = [
     affine_map<(i,j) -> (i,j)>,  // A
@@ -307,6 +317,7 @@ func @reduction_d(%arga: tensor<1024xf32, #DenseVector>, %argb: tensor<1024xf32>
 // CHECK-VEC1:       }
 // CHECK-VEC1:       return
 //
+// CHECK-VEC2:       #[[$map:.*]] = affine_map<(d0, d1)[s0] -> (16, d0 - d1)
 // CHECK-VEC2-LABEL: func @mul_ds
 // CHECK-VEC2-DAG:   %[[c0:.*]] = constant 0 : index
 // CHECK-VEC2-DAG:   %[[c1:.*]] = constant 1 : index
@@ -321,7 +332,7 @@ func @reduction_d(%arga: tensor<1024xf32, #DenseVector>, %argb: tensor<1024xf32>
 // CHECK-VEC2:         %[[b:.*]] = zexti %[[r]] : i32 to i64
 // CHECK-VEC2:         %[[s:.*]] = index_cast %[[b]] : i64 to index
 // CHECK-VEC2:         scf.for %[[j:.*]] = %[[q]] to %[[s]] step %[[c16]] {
-// CHECK-VEC2:           %[[sub:.*]] = subi %[[s]], %[[j]] : index
+// CHECK-VEC2:           %[[sub:.*]] = affine.min #[[$map]](%[[s]], %[[j]])[%[[c16]]]
 // CHECK-VEC2:           %[[mask:.*]] = vector.create_mask %[[sub]] : vector<16xi1>
 // CHECK-VEC2:           %[[lj:.*]] = vector.maskedload %{{.*}}[%[[j]]], %[[mask]], %{{.*}} : memref<?xi32>, vector<16xi1>, vector<16xi32> into vector<16xi32>
 // CHECK-VEC2:           %[[zj:.*]] = zexti %[[lj]] : vector<16xi32> to vector<16xi64>
@@ -333,6 +344,7 @@ func @reduction_d(%arga: tensor<1024xf32, #DenseVector>, %argb: tensor<1024xf32>
 // CHECK-VEC2:       }
 // CHECK-VEC2:       return
 //
+// CHECK-VEC3:       #[[$map:.*]] = affine_map<(d0, d1)[s0] -> (16, d0 - d1)
 // CHECK-VEC3-LABEL: func @mul_ds
 // CHECK-VEC3-DAG:   %[[c0:.*]] = constant 0 : index
 // CHECK-VEC3-DAG:   %[[c1:.*]] = constant 1 : index
@@ -347,7 +359,7 @@ func @reduction_d(%arga: tensor<1024xf32, #DenseVector>, %argb: tensor<1024xf32>
 // CHECK-VEC3:         %[[b:.*]] = zexti %[[r]] : i32 to i64
 // CHECK-VEC3:         %[[s:.*]] = index_cast %[[b]] : i64 to index
 // CHECK-VEC3:         scf.for %[[j:.*]] = %[[q]] to %[[s]] step %[[c16]] {
-// CHECK-VEC3:           %[[sub:.*]] = subi %[[s]], %[[j]] : index
+// CHECK-VEC3:           %[[sub:.*]] = affine.min #[[$map]](%[[s]], %[[j]])[%[[c16]]]
 // CHECK-VEC3:           %[[mask:.*]] = vector.create_mask %[[sub]] : vector<16xi1>
 // CHECK-VEC3:           %[[lj:.*]] = vector.maskedload %{{.*}}[%[[j]]], %[[mask]], %{{.*}} : memref<?xi32>, vector<16xi1>, vector<16xi32> into vector<16xi32>
 // CHECK-VEC3:           %[[la:.*]] = vector.maskedload %{{.*}}[%[[j]]], %[[mask]], %{{.*}} : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>

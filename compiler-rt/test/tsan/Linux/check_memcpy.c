@@ -3,9 +3,7 @@
 // its objdump.
 
 // RUN: %clang_tsan -O1 %s -o %t
-// RUN: llvm-objdump -d %t | FileCheck %s
-
-// REQUIRES: compiler-rt-optimized
+// RUN: llvm-objdump -d -l %t | FileCheck %s
 
 int main() {
   return 0;

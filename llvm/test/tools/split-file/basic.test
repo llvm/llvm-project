@@ -9,20 +9,20 @@ cc
 //--- end
 
 # RUN: rm -rf %t
-# RUN: split-file %s %t
+# RUN: split-file --leading-lines %s %t
 # RUN: diff %S/Inputs/basic-aa.txt %t/aa
 # RUN: diff %S/Inputs/basic-bb.txt %t/bb
 # RUN: diff %S/Inputs/basic-cc.txt %t/subdir/cc
 # RUN: FileCheck %s --check-prefix=END < %t/end
 
 ## Can be called on a non-empty directory.
-# RUN: split-file %s %t
+# RUN: split-file --leading-lines %s %t
 # RUN: diff %S/Inputs/basic-aa.txt %t/aa
 
 ## Test that we will delete the output if it is a file, so that we can create
 ## a directory.
 # RUN: rm -rf %t && touch %t
-# RUN: split-file %s %t
+# RUN: split-file --leading-lines %s %t
 # RUN: diff %S/Inputs/basic-aa.txt %t/aa
 
 # END: RUN: split-file %s %t

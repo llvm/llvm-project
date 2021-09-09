@@ -19,9 +19,6 @@
 #pragma GCC system_header
 #endif
 
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Compare, class _ForwardIterator, class _Tp>
@@ -53,9 +50,6 @@ binary_search(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __va
                              __less<typename iterator_traits<_ForwardIterator>::value_type, _Tp>());
 }
 
-
 _LIBCPP_END_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_BINARY_SEARCH_H

@@ -44,20 +44,19 @@ Value spirv::Deserializer::getValue(uint32_t id) {
   }
   if (auto varOp = getGlobalVariable(id)) {
     auto addressOfOp = opBuilder.create<spirv::AddressOfOp>(
-        unknownLoc, varOp.type(),
-        opBuilder.getSymbolRefAttr(varOp.getOperation()));
+        unknownLoc, varOp.type(), SymbolRefAttr::get(varOp.getOperation()));
     return addressOfOp.pointer();
   }
   if (auto constOp = getSpecConstant(id)) {
     auto referenceOfOp = opBuilder.create<spirv::ReferenceOfOp>(
         unknownLoc, constOp.default_value().getType(),
-        opBuilder.getSymbolRefAttr(constOp.getOperation()));
+        SymbolRefAttr::get(constOp.getOperation()));
     return referenceOfOp.reference();
   }
   if (auto constCompositeOp = getSpecConstantComposite(id)) {
     auto referenceOfOp = opBuilder.create<spirv::ReferenceOfOp>(
         unknownLoc, constCompositeOp.type(),
-        opBuilder.getSymbolRefAttr(constCompositeOp.getOperation()));
+        SymbolRefAttr::get(constCompositeOp.getOperation()));
     return referenceOfOp.reference();
   }
   if (auto specConstOperationInfo = getSpecConstantOperation(id)) {
@@ -357,12 +356,12 @@ Deserializer::processOp<spirv::EntryPointOp>(ArrayRef<uint32_t> words) {
       return emitError(unknownLoc, "undefined result <id> ")
              << words[wordIndex] << " while decoding OpEntryPoint";
     }
-    interface.push_back(opBuilder.getSymbolRefAttr(arg.getOperation()));
+    interface.push_back(SymbolRefAttr::get(arg.getOperation()));
     wordIndex++;
   }
-  opBuilder.create<spirv::EntryPointOp>(unknownLoc, execModel,
-                                        opBuilder.getSymbolRefAttr(fnName),
-                                        opBuilder.getArrayAttr(interface));
+  opBuilder.create<spirv::EntryPointOp>(
+      unknownLoc, execModel, SymbolRefAttr::get(opBuilder.getContext(), fnName),
+      opBuilder.getArrayAttr(interface));
   return success();
 }
 
@@ -394,7 +393,8 @@ Deserializer::processOp<spirv::ExecutionModeOp>(ArrayRef<uint32_t> words) {
   }
   auto values = opBuilder.getArrayAttr(attrListElems);
   opBuilder.create<spirv::ExecutionModeOp>(
-      unknownLoc, opBuilder.getSymbolRefAttr(fn.getName()), execMode, values);
+      unknownLoc, SymbolRefAttr::get(opBuilder.getContext(), fn.getName()),
+      execMode, values);
   return success();
 }
 
@@ -461,8 +461,8 @@ Deserializer::processOp<spirv::FunctionCallOp>(ArrayRef<uint32_t> operands) {
   }
 
   auto opFunctionCall = opBuilder.create<spirv::FunctionCallOp>(
-      unknownLoc, resultType, opBuilder.getSymbolRefAttr(functionName),
-      arguments);
+      unknownLoc, resultType,
+      SymbolRefAttr::get(opBuilder.getContext(), functionName), arguments);
 
   if (resultType)
     valueMap[resultID] = opFunctionCall.getResult(0);

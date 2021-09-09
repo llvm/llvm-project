@@ -492,7 +492,6 @@ if(MINGW)
     arm/aeabi_uidivmod.S
     arm/aeabi_uldivmod.S
     arm/chkstk.S
-    mingw_fixfloat.c
     ${arm_SOURCES}
   )
 elseif(NOT WIN32)

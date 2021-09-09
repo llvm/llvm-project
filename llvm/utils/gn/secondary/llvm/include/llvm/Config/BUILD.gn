@@ -2,6 +2,7 @@ import("//llvm/lib/DebugInfo/PDB/enable_dia.gni")
 import("//llvm/lib/Target/targets.gni")
 import("//llvm/lib/Target/targets_with_asm_parsers.gni")
 import("//llvm/lib/Target/targets_with_disassemblers.gni")
+import("//llvm/lib/Target/targets_with_mcas.gni")
 import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/buildflags.gni")
 import("//llvm/utils/gn/build/libs/edit/enable.gni")
@@ -162,6 +163,7 @@ write_cmake_config("config") {
       "HAVE_MALLOC_ZONE_STATISTICS=1",
       "HAVE_PROC_PID_RUSAGE=1",
       "HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC=1",
+      "HAVE_UNW_ADD_DYNAMIC_FDE=1",
     ]
   } else {
     values += [
@@ -173,6 +175,7 @@ write_cmake_config("config") {
       "HAVE_MALLOC_ZONE_STATISTICS=",
       "HAVE_PROC_PID_RUSAGE=",
       "HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC=",
+      "HAVE_UNW_ADD_DYNAMIC_FDE=",
     ]
   }
 
@@ -435,7 +438,7 @@ write_target_def_file("Targets.def") {
 write_target_def_file("TargetMCAs.def") {
   key = "LLVM_ENUM_TARGETMCAS"
   value = "LLVM_TARGETMCA"
-  all_targets = []
+  all_targets = targets_with_mcas
 }
 
 group("write_target_def_files") {

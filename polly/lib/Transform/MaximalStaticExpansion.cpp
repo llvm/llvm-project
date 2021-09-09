@@ -118,10 +118,10 @@ private:
 /// i.e. there are two constants Min and Max, such that every value x of the
 /// chosen dimensions is Min <= x <= Max.
 static bool isDimBoundedByConstant(isl::set Set, unsigned dim) {
-  auto ParamDims = Set.dim(isl::dim::param);
+  auto ParamDims = Set.dim(isl::dim::param).release();
   Set = Set.project_out(isl::dim::param, 0, ParamDims);
   Set = Set.project_out(isl::dim::set, 0, dim);
-  auto SetDims = Set.tuple_dim();
+  auto SetDims = Set.tuple_dim().release();
   Set = Set.project_out(isl::dim::set, 1, SetDims - 1);
   return bool(Set.is_bounded());
 }
@@ -350,7 +350,7 @@ ScopArrayInfo *MaximalStaticExpander::expandAccess(Scop &S, MemoryAccess *MA) {
   // Get the current AM.
   auto CurrentAccessMap = MA->getAccessRelation();
 
-  unsigned in_dimensions = CurrentAccessMap.domain_tuple_dim();
+  unsigned in_dimensions = CurrentAccessMap.domain_tuple_dim().release();
 
   // Get domain from the current AM.
   auto Domain = CurrentAccessMap.domain();
@@ -405,7 +405,7 @@ ScopArrayInfo *MaximalStaticExpander::expandAccess(Scop &S, MemoryAccess *MA) {
   // Add constraints to linked output with input id.
   auto SpaceMap = NewAccessMap.get_space();
   auto ConstraintBasicMap =
-      isl::basic_map::equal(SpaceMap, SpaceMap.dim(isl::dim::in));
+      isl::basic_map::equal(SpaceMap, SpaceMap.dim(isl::dim::in).release());
   NewAccessMap = isl::map(ConstraintBasicMap);
 
   // Set the new access relation map.

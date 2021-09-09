@@ -196,6 +196,9 @@ public:
   // Get the C++ type of this parameter.
   StringRef getCppType() const;
 
+  // Get the C++ accessor type of this parameter.
+  StringRef getCppAccessorType() const;
+
   // Get a description of this parameter for documentation purposes.
   Optional<StringRef> getSummary() const;
 

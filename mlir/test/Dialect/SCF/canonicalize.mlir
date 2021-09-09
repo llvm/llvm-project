@@ -666,7 +666,7 @@ func @matmul_on_tensors(%t0: tensor<32x1024xf32>, %t1: tensor<1024x1024xf32>) ->
   return %res : tensor<1024x1024xf32>
 }
 
-
+// -----
 
 // CHECK-LABEL: @cond_prop
 func @cond_prop(%arg0 : i1) -> index {
@@ -707,6 +707,8 @@ func @cond_prop(%arg0 : i1) -> index {
 // CHECK-NEXT:  return %[[if]] : index
 // CHECK-NEXT:}
 
+// -----
+
 // CHECK-LABEL: @replace_if_with_cond1
 func @replace_if_with_cond1(%arg0 : i1) -> (i32, i1) {
   %true = constant true
@@ -728,6 +730,8 @@ func @replace_if_with_cond1(%arg0 : i1) -> (i32, i1) {
 // CHECK-NEXT:      scf.yield %[[sv2]] : i32
 // CHECK-NEXT:    }
 // CHECK-NEXT:    return %[[if]], %arg0 : i32, i1
+
+// -----
 
 // CHECK-LABEL: @replace_if_with_cond2
 func @replace_if_with_cond2(%arg0 : i1) -> (i32, i1) {
@@ -753,6 +757,7 @@ func @replace_if_with_cond2(%arg0 : i1) -> (i32, i1) {
 // CHECK-NEXT:     }
 // CHECK-NEXT:     return %[[if]], %[[toret]] : i32, i1
 
+// -----
 
 // CHECK-LABEL: @replace_if_with_cond3
 func @replace_if_with_cond3(%arg0 : i1, %arg2: i64) -> (i32, i64) {
@@ -774,6 +779,7 @@ func @replace_if_with_cond3(%arg0 : i1, %arg2: i64) -> (i32, i64) {
 // CHECK-NEXT:     }
 // CHECK-NEXT:     return %[[if]], %arg1 : i32, i64
 
+// -----
 
 // CHECK-LABEL: @while_cond_true
 func @while_cond_true() {

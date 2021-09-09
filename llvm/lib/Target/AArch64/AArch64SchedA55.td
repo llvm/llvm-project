@@ -182,6 +182,7 @@ def CortexA55WriteFSqrtDP : SchedWriteRes<[CortexA55UnitFPDIV]> { let Latency = 
 def : ReadAdvance<ReadVLD, 0>;
 def : ReadAdvance<ReadExtrHi, 1>;
 def : ReadAdvance<ReadAdrBase, 1>;
+def : ReadAdvance<ReadST, 1>;
 
 // ALU - ALU input operands are generally needed in EX1. An operand produced in
 //       in say EX2 can be forwarded for consumption to ALU in EX1, thereby

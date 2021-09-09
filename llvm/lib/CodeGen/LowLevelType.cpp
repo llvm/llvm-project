@@ -52,6 +52,16 @@ MVT llvm::getMVTForLLT(LLT Ty) {
       Ty.getNumElements());
 }
 
+EVT llvm::getApproximateEVTForLLT(LLT Ty, const DataLayout &DL,
+                                  LLVMContext &Ctx) {
+  if (Ty.isVector()) {
+    EVT EltVT = getApproximateEVTForLLT(Ty.getElementType(), DL, Ctx);
+    return EVT::getVectorVT(Ctx, EltVT, Ty.getElementCount());
+  }
+
+  return EVT::getIntegerVT(Ctx, Ty.getSizeInBits());
+}
+
 LLT llvm::getLLTForMVT(MVT Ty) {
   if (!Ty.isVector())
     return LLT::scalar(Ty.getSizeInBits());

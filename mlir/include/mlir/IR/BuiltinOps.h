@@ -14,6 +14,7 @@
 #define MLIR_IR_BUILTINOPS_H_
 
 #include "mlir/IR/FunctionSupport.h"
+#include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OwningOpRef.h"
 #include "mlir/IR/RegionKindInterface.h"
 #include "mlir/IR/SymbolTable.h"

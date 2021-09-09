@@ -10,10 +10,10 @@
 #define FORTRAN_UNITTESTS_RUNTIME_TOOLS_H_
 
 #include "gtest/gtest.h"
-#include "../../runtime/allocatable.h"
-#include "../../runtime/cpp-type.h"
-#include "../../runtime/descriptor.h"
-#include "../../runtime/type-code.h"
+#include "flang/Runtime/allocatable.h"
+#include "flang/Runtime/cpp-type.h"
+#include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/type-code.h"
 #include <cstdint>
 #include <cstring>
 #include <vector>

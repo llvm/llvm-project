@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 // Test the set of C++11 features that Clang provides as an extension in C++03 mode.
 // The language features we expect are:
 //

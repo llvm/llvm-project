@@ -881,17 +881,34 @@ def Builtin_SymbolRefAttr : Builtin_Attr<"SymbolRef"> {
     @parent_reference::@nested_reference
     ```
   }];
-  let parameters = (ins
-    StringRefParameter<"">:$rootReference,
-    ArrayRefParameter<"FlatSymbolRefAttr", "">:$nestedReferences
-  );
+  let parameters =
+     (ins "StringAttr":$rootReference,
+          ArrayRefParameter<"FlatSymbolRefAttr", "">:$nestedReferences);
+
+  let builders = [
+    AttrBuilderWithInferredContext<
+      (ins "StringAttr":$rootReference,
+           "ArrayRef<FlatSymbolRefAttr>":$nestedReferences), [{
+      return $_get(rootReference.getContext(), rootReference, nestedReferences);
+    }]>,
+  ];
   let extraClassDeclaration = [{
+    static SymbolRefAttr get(MLIRContext *ctx, StringRef value,
+                             ArrayRef<FlatSymbolRefAttr> nestedRefs);
+    /// Convenience getters for building a SymbolRefAttr with no path, which is
+    /// known to produce a FlatSymbolRefAttr.
+    static FlatSymbolRefAttr get(StringAttr value);
     static FlatSymbolRefAttr get(MLIRContext *ctx, StringRef value);
+
+    /// Convenience getter for buliding a SymbolRefAttr based on an operation
+    /// that implements the SymbolTrait.
+    static FlatSymbolRefAttr get(Operation *symbol);
 
     /// Returns the name of the fully resolved symbol, i.e. the leaf of the
     /// reference path.
-    StringRef getLeafReference() const;
+    StringAttr getLeafReference() const;
   }];
+  let skipDefaultBuilders = 1;
 }
 
 //===----------------------------------------------------------------------===//

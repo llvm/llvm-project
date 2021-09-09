@@ -159,7 +159,7 @@ define amdgpu_kernel void @sel_constants_sub_constant_sel_constants_v4i32(<4 x i
 }
 
 ; GCN-LABEL: {{^}}sdiv_constant_sel_constants_i64:
-; GCN: s_cselect_b32 s{{[0-9]+}}, 0, 5
+; GCN: s_cselect_b64 s[{{[0-9]+}}:{{[0-9]+}}], 0, 5
 define amdgpu_kernel void @sdiv_constant_sel_constants_i64(i64 addrspace(1)* %p, i1 %cond) {
   %sel = select i1 %cond, i64 121, i64 23
   %bo = sdiv i64 120, %sel
@@ -177,7 +177,7 @@ define amdgpu_kernel void @sdiv_constant_sel_constants_i32(i32 addrspace(1)* %p,
 }
 
 ; GCN-LABEL: {{^}}udiv_constant_sel_constants_i64:
-; GCN: s_cselect_b32 s{{[0-9]+}}, 0, 5
+; GCN: s_cselect_b64 s[{{[0-9]+}}:{{[0-9]+}}], 0, 5
 define amdgpu_kernel void @udiv_constant_sel_constants_i64(i64 addrspace(1)* %p, i1 %cond) {
   %sel = select i1 %cond, i64 -4, i64 23
   %bo = udiv i64 120, %sel
@@ -186,7 +186,7 @@ define amdgpu_kernel void @udiv_constant_sel_constants_i64(i64 addrspace(1)* %p,
 }
 
 ; GCN-LABEL: {{^}}srem_constant_sel_constants:
-; GCN: s_cselect_b32 s{{[0-9]+}}, 33, 3
+; GCN: s_cselect_b64 s[{{[0-9]+}}:{{[0-9]+}}], 33, 3
 define amdgpu_kernel void @srem_constant_sel_constants(i64 addrspace(1)* %p, i1 %cond) {
   %sel = select i1 %cond, i64 34, i64 15
   %bo = srem i64 33, %sel
@@ -195,7 +195,7 @@ define amdgpu_kernel void @srem_constant_sel_constants(i64 addrspace(1)* %p, i1 
 }
 
 ; GCN-LABEL: {{^}}urem_constant_sel_constants:
-; GCN: s_cselect_b32 s{{[0-9]+}}, 33, 3
+; GCN: s_cselect_b64 s[{{[0-9]+}}:{{[0-9]+}}], 33, 3
 define amdgpu_kernel void @urem_constant_sel_constants(i64 addrspace(1)* %p, i1 %cond) {
   %sel = select i1 %cond, i64 34, i64 15
   %bo = urem i64 33, %sel

@@ -678,8 +678,8 @@ static __isl_give isl_printer *cbPrintUser(__isl_take isl_printer *P,
                                            __isl_take isl_ast_print_options *O,
                                            __isl_keep isl_ast_node *Node,
                                            void *User) {
-  isl::ast_node AstNode = isl::manage_copy(Node);
-  isl::ast_expr NodeExpr = AstNode.user_get_expr();
+  isl::ast_node_user AstNode = isl::manage_copy(Node).as<isl::ast_node_user>();
+  isl::ast_expr NodeExpr = AstNode.expr();
   isl::ast_expr CallExpr = NodeExpr.get_op_arg(0);
   isl::id CallExprId = CallExpr.get_id();
   ScopStmt *AccessStmt = (ScopStmt *)CallExprId.get_user();

@@ -264,6 +264,24 @@ void X86InstPrinterCommon::printCMPMnemonic(const MCInst *MI, bool IsVCmp,
   case X86::VCMPSSZrrb_Int: case X86::VCMPSSZrrb_Intk:
     OS << "ss\t";
     break;
+  case X86::VCMPPHZ128rmi:  case X86::VCMPPHZ128rri:
+  case X86::VCMPPHZ256rmi:  case X86::VCMPPHZ256rri:
+  case X86::VCMPPHZrmi:     case X86::VCMPPHZrri:
+  case X86::VCMPPHZ128rmik: case X86::VCMPPHZ128rrik:
+  case X86::VCMPPHZ256rmik: case X86::VCMPPHZ256rrik:
+  case X86::VCMPPHZrmik:    case X86::VCMPPHZrrik:
+  case X86::VCMPPHZ128rmbi: case X86::VCMPPHZ128rmbik:
+  case X86::VCMPPHZ256rmbi: case X86::VCMPPHZ256rmbik:
+  case X86::VCMPPHZrmbi:    case X86::VCMPPHZrmbik:
+  case X86::VCMPPHZrrib:    case X86::VCMPPHZrribk:
+    OS << "ph\t";
+    break;
+  case X86::VCMPSHZrm:      case X86::VCMPSHZrr:
+  case X86::VCMPSHZrm_Int:  case X86::VCMPSHZrr_Int:
+  case X86::VCMPSHZrrb_Int: case X86::VCMPSHZrrb_Intk:
+  case X86::VCMPSHZrm_Intk: case X86::VCMPSHZrr_Intk:
+    OS << "sh\t";
+    break;
   }
 }
 

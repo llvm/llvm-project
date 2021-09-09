@@ -1,5 +1,4 @@
-; RUN: opt -S -loop-unswitch -enable-new-pm=0 < %s | FileCheck %s
-; RUN: opt -S -loop-unswitch -enable-new-pm=0 -enable-mssa-loop-dependency=true -verify-memoryssa < %s | FileCheck %s
+; RUN: opt -S -loop-unswitch -enable-new-pm=0 -verify-memoryssa < %s | FileCheck %s
 target triple = "x86_64-pc-win32"
 
 define void @f(i32 %doit, i1 %x, i1 %y) personality i32 (...)* @__CxxFrameHandler3 {

@@ -24,6 +24,10 @@ func @execute_no_async_args(%arg0: f32, %arg1: memref<1xf32>) {
     async.yield
   }
   // CHECK: call @mlirAsyncRuntimeAwaitToken(%[[TOKEN]])
+  // CHECK: %[[IS_ERROR:.*]] = call @mlirAsyncRuntimeIsTokenError(%[[TOKEN]])
+  // CHECK: %[[TRUE:.*]] = constant true
+  // CHECK: %[[NOT_ERROR:.*]] = xor %[[IS_ERROR]], %[[TRUE]] : i1
+  // CHECK: assert %[[NOT_ERROR]]
   // CHECK-NEXT: return
   async.await %token : !async.token
   return
@@ -83,7 +87,10 @@ func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
     async.yield
   }
   // CHECK: call @mlirAsyncRuntimeAwaitToken(%[[TOKEN]])
-  // CHECK-NEXT: return
+  // CHECK: %[[IS_ERROR:.*]] = call @mlirAsyncRuntimeIsTokenError(%[[TOKEN]])
+  // CHECK: %[[TRUE:.*]] = constant true
+  // CHECK: %[[NOT_ERROR:.*]] = xor %[[IS_ERROR]], %[[TRUE]] : i1
+  // CHECK: assert %[[NOT_ERROR]]
   async.await %token0 : !async.token
   return
 }

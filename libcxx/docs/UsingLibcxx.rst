@@ -68,8 +68,8 @@ Using ``-stdlib=libc++`` will select libc++:
 
   $ clang++ -stdlib=libc++ test.cpp
 
-On systems where libc++ is the library in use by default such as macOS and FreeBSD,
-this flag is not required.
+On systems where libc++ is the library in use by default such as macOS, FreeBSD
+and OpenBSD, this flag is not required.
 
 
 .. _alternate libcxx:

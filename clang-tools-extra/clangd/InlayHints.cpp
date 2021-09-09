@@ -13,6 +13,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/SourceManager.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 namespace clangd {
@@ -23,7 +24,8 @@ public:
       : Results(Results), AST(AST.getASTContext()),
         MainFileID(AST.getSourceManager().getMainFileID()),
         Resolver(AST.getHeuristicResolver()),
-        TypeHintPolicy(this->AST.getPrintingPolicy()) {
+        TypeHintPolicy(this->AST.getPrintingPolicy()),
+        StructuredBindingPolicy(this->AST.getPrintingPolicy()) {
     bool Invalid = false;
     llvm::StringRef Buf =
         AST.getSourceManager().getBufferData(MainFileID, &Invalid);
@@ -32,14 +34,16 @@ public:
     TypeHintPolicy.SuppressScope = true; // keep type names short
     TypeHintPolicy.AnonymousTagLocations =
         false; // do not print lambda locations
-    // Print canonical types. Otherwise, SuppressScope would result in
-    // things like "metafunction<args>::type" being shorted to just "type",
-    // which is useless. This is particularly important for structured
-    // bindings that use the tuple_element protocol, where the non-canonical
-    // types would be "tuple_element<I, A>::type".
-    // Note, for "auto", we would often prefer sugared types, but the AST
-    // doesn't currently retain them in DeducedType anyways.
-    TypeHintPolicy.PrintCanonicalTypes = true;
+
+    // For structured bindings, print canonical types. This is important because
+    // for bindings that use the tuple_element protocol, the non-canonical types
+    // would be "tuple_element<I, A>::type".
+    // For "auto", we often prefer sugared types, but the AST doesn't currently
+    // retain them in DeducedType. However, not setting PrintCanonicalTypes for
+    // "auto" at least allows SuppressDefaultTemplateArgs (set by default) to
+    // have an effect.
+    StructuredBindingPolicy = TypeHintPolicy;
+    StructuredBindingPolicy.PrintCanonicalTypes = true;
   }
 
   bool VisitCXXConstructExpr(CXXConstructExpr *E) {
@@ -97,7 +101,8 @@ public:
     // but show hints for the individual bindings.
     if (auto *DD = dyn_cast<DecompositionDecl>(D)) {
       for (auto *Binding : DD->bindings()) {
-        addTypeHint(Binding->getLocation(), Binding->getType(), ": ");
+        addTypeHint(Binding->getLocation(), Binding->getType(), ": ",
+                    StructuredBindingPolicy);
       }
       return true;
     }
@@ -314,6 +319,10 @@ private:
         toHalfOpenFileRange(AST.getSourceManager(), AST.getLangOpts(), R);
     if (!FileRange)
       return;
+    // The hint may be in a file other than the main file (for example, a header
+    // file that was included after the preamble), do not show in that case.
+    if (!AST.getSourceManager().isWrittenInMainFile(FileRange->getBegin()))
+      return;
     Results.push_back(InlayHint{
         Range{
             sourceLocToPosition(AST.getSourceManager(), FileRange->getBegin()),
@@ -322,12 +331,18 @@ private:
   }
 
   void addTypeHint(SourceRange R, QualType T, llvm::StringRef Prefix) {
+    addTypeHint(R, T, Prefix, TypeHintPolicy);
+  }
+
+  void addTypeHint(SourceRange R, QualType T, llvm::StringRef Prefix,
+                   const PrintingPolicy &Policy) {
     // Do not print useless "NULL TYPE" hint.
     if (!T.getTypePtrOrNull())
       return;
 
-    addInlayHint(R, InlayHintKind::TypeHint,
-                 std::string(Prefix) + T.getAsString(TypeHintPolicy));
+    std::string TypeName = T.getAsString(Policy);
+    if (TypeName.length() < TypeNameLimit)
+      addInlayHint(R, InlayHintKind::TypeHint, std::string(Prefix) + TypeName);
   }
 
   std::vector<InlayHint> &Results;
@@ -335,7 +350,16 @@ private:
   FileID MainFileID;
   StringRef MainFileBuf;
   const HeuristicResolver *Resolver;
+  // We want to suppress default template arguments, but otherwise print
+  // canonical types. Unfortunately, they're conflicting policies so we can't
+  // have both. For regular types, suppressing template arguments is more
+  // important, whereas printing canonical types is crucial for structured
+  // bindings, so we use two separate policies. (See the constructor where
+  // the policies are initialized for more details.)
   PrintingPolicy TypeHintPolicy;
+  PrintingPolicy StructuredBindingPolicy;
+
+  static const size_t TypeNameLimit = 32;
 };
 
 std::vector<InlayHint> inlayHints(ParsedAST &AST) {

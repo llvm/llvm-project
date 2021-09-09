@@ -3772,6 +3772,53 @@ entry:
   ret i8 %52
 }
 
+
+define arm_aapcs_vfpcc i32 @add_two_const(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: add_two_const:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vaddv.u32 r0, q1
+; CHECK-NEXT:    vaddva.u32 r0, q0
+; CHECK-NEXT:    adds r0, #10
+; CHECK-NEXT:    bx lr
+entry:
+  %a = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %x)
+  %b = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %y)
+  %c = add i32 %a, %b
+  %d = add i32 %c, 10
+  ret i32 %d
+}
+
+define arm_aapcs_vfpcc i32 @add_two_const2(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: add_two_const2:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vaddv.u32 r0, q1
+; CHECK-NEXT:    vaddva.u32 r0, q0
+; CHECK-NEXT:    adds r0, #10
+; CHECK-NEXT:    bx lr
+entry:
+  %a = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %x)
+  %b = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %y)
+  %c = add i32 %a, 10
+  %d = add i32 %c, %b
+  ret i32 %d
+}
+
+define arm_aapcs_vfpcc i32 @add_two_const3(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: add_two_const3:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vaddv.u32 r0, q0
+; CHECK-NEXT:    vaddva.u32 r0, q1
+; CHECK-NEXT:    adds r0, #20
+; CHECK-NEXT:    bx lr
+entry:
+  %a = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %x)
+  %b = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %y)
+  %c = add i32 %a, 10
+  %d = add i32 %b, 10
+  %e = add i32 %c, %d
+  ret i32 %e
+}
+
 declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
 declare i32 @llvm.vector.reduce.add.v8i32(<8 x i32>)
 declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>)

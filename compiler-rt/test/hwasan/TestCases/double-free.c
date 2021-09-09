@@ -15,8 +15,8 @@ int main() {
   // CHECK: tags: [[PTR_TAG:..]]/[[MEM_TAG:..]] (ptr/mem)
   // CHECK: #0 {{[0x]+}}{{.*}}[[PC]]
   // If we instrument using calls (default on x86), free is not the top frame
-  // of the fault.
-  // CHECK: in free
+  // of the fault. With TCO the free frame can be replaced with the interceptor.
+  // CHECK: in {{.*}}free
   // CHECK: freed by thread {{.*}} here:
   // CHECK: previously allocated here:
   // CHECK: Memory tags around the buggy address (one tag corresponds to 16 bytes):

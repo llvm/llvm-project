@@ -132,10 +132,7 @@ int main(int, char**)
     static_assert((std::is_same<decltype(rand()), int>::value), "");
     static_assert((std::is_same<decltype(srand(0)), void>::value), "");
 
-#if TEST_STD_VER > 14 && defined(TEST_HAS_ALIGNED_ALLOC)
-    static_assert((std::is_same<decltype(aligned_alloc(1, 0)), void*>::value),
-                  "");
-#endif
+    // aligned_alloc tested in stdlib_h.aligned_alloc.compile.pass.cpp
 
     void* pv = 0;
     void (*handler)() = 0;

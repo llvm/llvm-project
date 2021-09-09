@@ -8,11 +8,11 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: clang-10
-// UNSUPPORTED: gcc-10
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
+// REQUIRES: libc++
 
-// std::ranges::empty
+// Test the libc++ specific behavior that we provide a better diagnostic when calling
+// std::ranges::empty on an array of incomplete type.
 
 #include <ranges>
 

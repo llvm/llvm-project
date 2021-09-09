@@ -1,5 +1,4 @@
-; RUN: opt -S -loop-unswitch -enable-new-pm=0 < %s | FileCheck %s
-; RUN: opt -S -loop-unswitch -enable-new-pm=0 -enable-mssa-loop-dependency=true -verify-memoryssa < %s | FileCheck %s
+; RUN: opt -S -loop-unswitch -enable-new-pm=0 -verify-memoryssa < %s | FileCheck %s
 
 declare void @llvm.experimental.guard(i1, ...)
 

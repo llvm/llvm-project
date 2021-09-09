@@ -1,3 +1,15 @@
+/*
+ * Debug.h -- OMP debug
+ */
+
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include <iostream>
 #include <ostream>
 
@@ -15,13 +27,11 @@ enum Code {
   BG_BLUE = 44,
   BG_DEFAULT = 49
 };
-//    std::ostream& operator<<(std::ostream& os, Code code);
-std::ostream &operator<<(std::ostream &os, Code code) {
+inline std::ostream &operator<<(std::ostream &os, Code code) {
   return os << "\033[" << static_cast<int>(code) << "m";
 }
-}
+} // namespace GdbColor
 
-// class ColorOut: public std::ostream
 class ColorOut {
 private:
   std::ostream &out;
@@ -34,17 +44,6 @@ public:
     out << color << val << GdbColor::FG_DEFAULT;
     return *this;
   }
-  /*    template<typename T>
-        const ColorOut& operator<< (const T* val) const
-          {out << GdbColor::FG_RED << val << GdbColor::FG_DEFAULT;
-          return *this;}
-      template <class _CharT, class _Traits = std::char_traits<_CharT> >
-        const ColorOut& operator<< ( const
-              std::basic_ios<_CharT,_Traits>&
-     (*pf)(std::basic_ios<_CharT,_Traits>&))const
-          {out << GdbColor::FG_RED << pf << GdbColor::FG_DEFAULT;
-          return *this;}
-  */
   const ColorOut &operator<<(std::ostream &(*pf)(std::ostream &)) const {
     out << color << pf << GdbColor::FG_DEFAULT;
     return *this;

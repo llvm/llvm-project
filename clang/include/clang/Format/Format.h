@@ -505,20 +505,8 @@ struct FormatStyle {
   /// \endcode
   bool AllowAllArgumentsOnNextLine;
 
-  /// \brief If a constructor definition with a member initializer list doesn't
-  /// fit on a single line, allow putting all member initializers onto the next
-  /// line, if ```ConstructorInitializerAllOnOneLineOrOnePerLine``` is true.
-  /// Note that this parameter has no effect if
-  /// ```ConstructorInitializerAllOnOneLineOrOnePerLine``` is false.
-  /// \code
-  ///   true:
-  ///   MyClass::MyClass() :
-  ///       member0(0), member1(2) {}
-  ///
-  ///   false:
-  ///   MyClass::MyClass() :
-  ///       member0(0),
-  ///       member1(2) {}
+  /// This option is **deprecated**. See ``NextLine`` of
+  /// ``PackConstructorInitializers``.
   bool AllowAllConstructorInitializersOnNextLine;
 
   /// If the function declaration doesn't fit on a line,
@@ -1790,7 +1778,7 @@ struct FormatStyle {
     BCIS_AfterColon
   };
 
-  /// The constructor initializers style to use.
+  /// The break constructor initializers style to use.
   BreakConstructorInitializersStyle BreakConstructorInitializers;
 
   /// Break after each annotation on a field in Java files.
@@ -1893,25 +1881,9 @@ struct FormatStyle {
   /// \endcode
   bool CompactNamespaces;
 
-  // clang-format off
-  /// If the constructor initializers don't fit on a line, put each
-  /// initializer on its own line.
-  /// \code
-  ///   true:
-  ///   SomeClass::Constructor()
-  ///       : aaaaaaaa(aaaaaaaa), aaaaaaaa(aaaaaaaa), aaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaa) {
-  ///     return 0;
-  ///   }
-  ///
-  ///   false:
-  ///   SomeClass::Constructor()
-  ///       : aaaaaaaa(aaaaaaaa), aaaaaaaa(aaaaaaaa),
-  ///         aaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaa) {
-  ///     return 0;
-  ///   }
-  /// \endcode
+  /// This option is **deprecated**. See ``CurrentLine`` of
+  /// ``PackConstructorInitializers``.
   bool ConstructorInitializerAllOnOneLineOrOnePerLine;
-  // clang-format on
 
   /// The number of characters to use for indentation of constructor
   /// initializer lists as well as inheritance lists.
@@ -2086,6 +2058,52 @@ struct FormatStyle {
   /// NOTE: This is an experimental flag, that might go away or be renamed. Do
   /// not use this in config files, etc. Use at your own risk.
   bool ExperimentalAutoDetectBinPacking;
+
+  /// Different ways to try to fit all constructor initializers on a line.
+  enum PackConstructorInitializersStyle : unsigned char {
+    /// Always put each constructor initializer on its own line.
+    /// \code
+    ///    Constructor()
+    ///        : a(),
+    ///          b()
+    /// \endcode
+    PCIS_Never,
+    /// Bin-pack constructor initializers.
+    /// \code
+    ///    Constructor()
+    ///        : aaaaaaaaaaaaaaaaaaaa(), bbbbbbbbbbbbbbbbbbbb(),
+    ///          cccccccccccccccccccc()
+    /// \endcode
+    PCIS_BinPack,
+    /// Put all constructor initializers on the current line if they fit.
+    /// Otherwise, put each one on its own line.
+    /// \code
+    ///    Constructor() : a(), b()
+    ///
+    ///    Constructor()
+    ///        : aaaaaaaaaaaaaaaaaaaa(),
+    ///          bbbbbbbbbbbbbbbbbbbb(),
+    ///          ddddddddddddd()
+    /// \endcode
+    PCIS_CurrentLine,
+    /// Same as ``PCIS_CurrentLine`` except that if all constructor initializers
+    /// do not fit on the current line, try to fit them on the next line.
+    /// \code
+    ///    Constructor() : a(), b()
+    ///
+    ///    Constructor()
+    ///        : aaaaaaaaaaaaaaaaaaaa(), bbbbbbbbbbbbbbbbbbbb(), ddddddddddddd()
+    ///
+    ///    Constructor()
+    ///        : aaaaaaaaaaaaaaaaaaaa(),
+    ///          bbbbbbbbbbbbbbbbbbbb(),
+    ///          cccccccccccccccccccc()
+    /// \endcode
+    PCIS_NextLine,
+  };
+
+  /// The pack constructor initializers style to use.
+  PackConstructorInitializersStyle PackConstructorInitializers;
 
   /// If ``true``, clang-format adds missing namespace end comments for
   /// short namespaces and fixes invalid existing ones. Short ones are
@@ -3083,7 +3101,7 @@ struct FormatStyle {
     /// ForEach and If macros. This is useful in projects where ForEach/If
     /// macros are treated as function calls instead of control statements.
     /// ``SBPO_ControlStatementsExceptForEachMacros`` remains an alias for
-    /// backward compatability.
+    /// backward compatibility.
     /// \code
     ///    void f() {
     ///      Q_FOREACH(...) {
@@ -3391,8 +3409,6 @@ struct FormatStyle {
            AlignOperands == R.AlignOperands &&
            AlignTrailingComments == R.AlignTrailingComments &&
            AllowAllArgumentsOnNextLine == R.AllowAllArgumentsOnNextLine &&
-           AllowAllConstructorInitializersOnNextLine ==
-               R.AllowAllConstructorInitializersOnNextLine &&
            AllowAllParametersOfDeclarationOnNextLine ==
                R.AllowAllParametersOfDeclarationOnNextLine &&
            AllowShortEnumsOnASingleLine == R.AllowShortEnumsOnASingleLine &&
@@ -3423,8 +3439,6 @@ struct FormatStyle {
            BreakStringLiterals == R.BreakStringLiterals &&
            ColumnLimit == R.ColumnLimit && CommentPragmas == R.CommentPragmas &&
            BreakInheritanceList == R.BreakInheritanceList &&
-           ConstructorInitializerAllOnOneLineOrOnePerLine ==
-               R.ConstructorInitializerAllOnOneLineOrOnePerLine &&
            ConstructorInitializerIndentWidth ==
                R.ConstructorInitializerIndentWidth &&
            ContinuationIndentWidth == R.ContinuationIndentWidth &&
@@ -3436,6 +3450,7 @@ struct FormatStyle {
            EmptyLineBeforeAccessModifier == R.EmptyLineBeforeAccessModifier &&
            ExperimentalAutoDetectBinPacking ==
                R.ExperimentalAutoDetectBinPacking &&
+           PackConstructorInitializers == R.PackConstructorInitializers &&
            FixNamespaceComments == R.FixNamespaceComments &&
            ForEachMacros == R.ForEachMacros &&
            IncludeStyle.IncludeBlocks == R.IncludeStyle.IncludeBlocks &&

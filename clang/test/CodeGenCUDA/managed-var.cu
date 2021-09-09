@@ -52,15 +52,15 @@ extern __managed__ int ex;
 
 // NORDC-D-DAG: @_ZL2sx.managed = addrspace(1) externally_initialized global i32 1, align 4
 // NORDC-D-DAG: @_ZL2sx = addrspace(1) externally_initialized global i32 addrspace(1)* null
-// RDC-D-DAG: @_ZL2sx.static.[[HASH:.*]].managed = addrspace(1) externally_initialized global i32 1, align 4
-// RDC-D-DAG: @_ZL2sx.static.[[HASH]] = addrspace(1) externally_initialized global i32 addrspace(1)* null
+// RDC-D-DAG: @_ZL2sx__static__[[HASH:.*]].managed = addrspace(1) externally_initialized global i32 1, align 4
+// RDC-D-DAG: @_ZL2sx__static__[[HASH]] = addrspace(1) externally_initialized global i32 addrspace(1)* null
 // HOST-DAG: @_ZL2sx.managed = internal global i32 1
 // HOST-DAG: @_ZL2sx = internal externally_initialized global i32* null
 // NORDC-DAG: @[[DEVNAMESX:[0-9]+]] = {{.*}}c"_ZL2sx\00"
-// RDC-DAG: @[[DEVNAMESX:[0-9]+]] = {{.*}}c"_ZL2sx.static.[[HASH:.*]]\00"
+// RDC-DAG: @[[DEVNAMESX:[0-9]+]] = {{.*}}c"_ZL2sx__static__[[HASH:.*]]\00"
 
-// POSTFIX:  @_ZL2sx.static.[[HASH:.*]] = addrspace(1) externally_initialized global i32 addrspace(1)* null
-// POSTFIX: @[[DEVNAMESX:[0-9]+]] = {{.*}}c"_ZL2sx.static.[[HASH]]\00"
+// POSTFIX:  @_ZL2sx__static__[[HASH:.*]] = addrspace(1) externally_initialized global i32 addrspace(1)* null
+// POSTFIX: @[[DEVNAMESX:[0-9]+]] = {{.*}}c"_ZL2sx__static__[[HASH]]\00"
 static __managed__ int sx = 1;
 
 // DEV-DAG: @llvm.compiler.used

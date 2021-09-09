@@ -690,7 +690,7 @@ Optional<uint64_t> DWARFFormValue::getAsReference() const {
     return R->Unit ? R->Unit->getOffset() + R->Offset : R->Offset;
   return None;
 }
-  
+
 Optional<DWARFFormValue::UnitOffset> DWARFFormValue::getAsRelativeReference() const {
   if (!isFormClass(FC_Reference))
     return None;
@@ -761,4 +761,18 @@ Optional<uint64_t> DWARFFormValue::getAsReferenceUVal() const {
   if (!isFormClass(FC_Reference))
     return None;
   return Value.uval;
+}
+
+Optional<std::string>
+DWARFFormValue::getAsFile(DILineInfoSpecifier::FileLineInfoKind Kind) const {
+  if (U == nullptr || !isFormClass(FC_Constant))
+    return None;
+  DWARFUnit *DU = const_cast<DWARFUnit *>(U);
+  if (auto *LT = U->getContext().getLineTableForUnit(DU->getLinkedUnit())) {
+    std::string FileName;
+    if (LT->getFileNameByIndex(Value.uval, DU->getCompilationDir(), Kind,
+                               FileName))
+      return FileName;
+  }
+  return None;
 }

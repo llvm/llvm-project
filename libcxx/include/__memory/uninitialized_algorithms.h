@@ -20,9 +20,6 @@
 #pragma GCC system_header
 #endif
 
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _ForwardIterator>
@@ -148,7 +145,7 @@ _ForwardIterator uninitialized_default_construct_n(_ForwardIterator __first, _Si
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try {
 #endif
-    for (; __n > 0; (void)++__idx, --__n)
+    for (; __n > 0; ++__idx, (void) --__n)
         ::new ((void*)_VSTD::addressof(*__idx)) _Vt;
     return __idx;
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -186,7 +183,7 @@ _ForwardIterator uninitialized_value_construct_n(_ForwardIterator __first, _Size
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try {
 #endif
-    for (; __n > 0; (void)++__idx, --__n)
+    for (; __n > 0; ++__idx, (void) --__n)
         ::new ((void*)_VSTD::addressof(*__idx)) _Vt();
     return __idx;
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -206,7 +203,7 @@ _ForwardIt uninitialized_move(_InputIt __first, _InputIt __last, _ForwardIt __fi
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try {
 #endif
-    for (; __first != __last; (void)++__idx, ++__first)
+    for (; __first != __last; ++__idx, (void) ++__first)
         ::new ((void*)_VSTD::addressof(*__idx)) _Vt(_VSTD::move(*__first));
     return __idx;
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -226,7 +223,7 @@ uninitialized_move_n(_InputIt __first, _Size __n, _ForwardIt __first_res) {
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try {
 #endif
-    for (; __n > 0; ++__idx, (void)++__first, --__n)
+    for (; __n > 0; ++__idx, (void) ++__first, --__n)
         ::new ((void*)_VSTD::addressof(*__idx)) _Vt(_VSTD::move(*__first));
     return {__first, __idx};
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -240,7 +237,5 @@ uninitialized_move_n(_InputIt __first, _Size __n, _ForwardIt __first_res) {
 #endif // _LIBCPP_STD_VER > 14
 
 _LIBCPP_END_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___MEMORY_UNINITIALIZED_ALGORITHMS_H

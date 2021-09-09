@@ -170,11 +170,14 @@ ELFLinkGraphBuilder<ELFT>::getSymbolLinkageAndScope(
     // Nothing to do here.
     break;
   case ELF::STB_WEAK:
+  case ELF::STB_GNU_UNIQUE:
     L = Linkage::Weak;
     break;
   default:
-    return make_error<StringError>("Unrecognized symbol binding for " + Name,
-                                   inconvertibleErrorCode());
+    return make_error<StringError>(
+        "Unrecognized symbol binding " +
+            Twine(static_cast<int>(Sym.getBinding())) + " for " + Name,
+        inconvertibleErrorCode());
   }
 
   switch (Sym.getVisibility()) {
@@ -190,8 +193,10 @@ ELFLinkGraphBuilder<ELFT>::getSymbolLinkageAndScope(
       S = Scope::Hidden;
     break;
   case ELF::STV_INTERNAL:
-    return make_error<StringError>("Unrecognized symbol visibility for " + Name,
-                                   inconvertibleErrorCode());
+    return make_error<StringError>(
+        "Unrecognized symbol visibility " +
+            Twine(static_cast<int>(Sym.getVisibility())) + " for " + Name,
+        inconvertibleErrorCode());
   }
 
   return std::make_pair(L, S);

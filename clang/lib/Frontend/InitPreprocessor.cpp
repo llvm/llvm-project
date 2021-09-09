@@ -433,11 +433,18 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
   // OpenCL v1.0/1.1 s6.9, v1.2/2.0 s6.10: Preprocessor Directives and Macros.
   if (LangOpts.OpenCL) {
     if (LangOpts.CPlusPlus) {
-      if (LangOpts.OpenCLCPlusPlusVersion == 100)
+      switch (LangOpts.OpenCLCPlusPlusVersion) {
+      case 100:
         Builder.defineMacro("__OPENCL_CPP_VERSION__", "100");
-      else
+        break;
+      case 202100:
+        Builder.defineMacro("__OPENCL_CPP_VERSION__", "202100");
+        break;
+      default:
         llvm_unreachable("Unsupported C++ version for OpenCL");
+      }
       Builder.defineMacro("__CL_CPP_VERSION_1_0__", "100");
+      Builder.defineMacro("__CL_CPP_VERSION_2021__", "202100");
     } else {
       // OpenCL v1.0 and v1.1 do not have a predefined macro to indicate the
       // language standard with which the program is compiled. __OPENCL_VERSION__
@@ -1083,8 +1090,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   }
 
   // Macros to control C99 numerics and <float.h>
-  // Note: __FLT_EVAL_METHOD__ is not defined here since it is a special
-  // builtin macro, its value may fluctuate during compilation.
+  Builder.defineMacro("__FLT_EVAL_METHOD__", Twine(TI.getFloatEvalMethod()));
   Builder.defineMacro("__FLT_RADIX__", "2");
   Builder.defineMacro("__DECIMAL_DIG__", "__LDBL_DECIMAL_DIG__");
 

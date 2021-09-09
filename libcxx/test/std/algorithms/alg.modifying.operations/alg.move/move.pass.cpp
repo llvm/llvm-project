@@ -13,11 +13,6 @@
 //   OutIter
 //   move(InIter first, InIter last, OutIter result);
 
-// Older compilers don't support std::is_constant_evaluated
-// UNSUPPORTED: clang-4, clang-5, clang-6, clang-7, clang-8
-// UNSUPPORTED: apple-clang-9, apple-clang-10, apple-clang-11
-// UNSUPPORTED: gcc-5, gcc-6, gcc-7, gcc-8
-
 #include <algorithm>
 #include <cassert>
 #include <memory>

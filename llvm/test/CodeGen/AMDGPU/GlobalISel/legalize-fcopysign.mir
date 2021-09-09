@@ -299,8 +299,7 @@ body: |
     ; SI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C1]]
     ; SI: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; SI: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; SI: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
-    ; SI: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C3]]
+    ; SI: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C3]]
     ; SI: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C2]](s32)
     ; SI: [[AND2:%[0-9]+]]:_(s32) = G_AND [[SHL]], [[C]]
     ; SI: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[AND2]]
@@ -313,8 +312,7 @@ body: |
     ; VI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C1]]
     ; VI: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; VI: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; VI: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
-    ; VI: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C3]]
+    ; VI: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C3]]
     ; VI: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C2]](s32)
     ; VI: [[AND2:%[0-9]+]]:_(s32) = G_AND [[SHL]], [[C]]
     ; VI: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[AND2]]
@@ -327,8 +325,7 @@ body: |
     ; GFX9: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C1]]
     ; GFX9: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; GFX9: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; GFX9: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
-    ; GFX9: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C3]]
+    ; GFX9: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C3]]
     ; GFX9: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C2]](s32)
     ; GFX9: [[AND2:%[0-9]+]]:_(s32) = G_AND [[SHL]], [[C]]
     ; GFX9: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[AND2]]
@@ -806,8 +803,7 @@ body: |
     ; SI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C1]]
     ; SI: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; SI: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; SI: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
-    ; SI: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C3]]
+    ; SI: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C3]]
     ; SI: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C2]](s32)
     ; SI: [[AND2:%[0-9]+]]:_(s32) = G_AND [[SHL]], [[C]]
     ; SI: [[OR:%[0-9]+]]:_(s32) = nnan G_OR [[AND]], [[AND2]]
@@ -820,8 +816,7 @@ body: |
     ; VI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C1]]
     ; VI: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; VI: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; VI: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
-    ; VI: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C3]]
+    ; VI: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C3]]
     ; VI: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C2]](s32)
     ; VI: [[AND2:%[0-9]+]]:_(s32) = G_AND [[SHL]], [[C]]
     ; VI: [[OR:%[0-9]+]]:_(s32) = nnan G_OR [[AND]], [[AND2]]
@@ -834,8 +829,7 @@ body: |
     ; GFX9: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C1]]
     ; GFX9: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; GFX9: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; GFX9: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
-    ; GFX9: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C3]]
+    ; GFX9: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C3]]
     ; GFX9: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C2]](s32)
     ; GFX9: [[AND2:%[0-9]+]]:_(s32) = G_AND [[SHL]], [[C]]
     ; GFX9: [[OR:%[0-9]+]]:_(s32) = nnan G_OR [[AND]], [[AND2]]

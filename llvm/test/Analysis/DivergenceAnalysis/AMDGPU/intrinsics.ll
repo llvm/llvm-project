@@ -1,4 +1,3 @@
-; RUN: opt -mtriple=amdgcn-- -enable-new-pm=0 -analyze -divergence -use-gpu-divergence-analysis %s | FileCheck %s
 ; RUN: opt -mtriple amdgcn-- -passes='print<divergence>' -disable-output %s 2>&1 | FileCheck %s
 
 ; CHECK: DIVERGENT: %swizzle = call i32 @llvm.amdgcn.ds.swizzle(i32 %src, i32 100) #0

@@ -51,13 +51,18 @@ typedef __m128i m128;
 
 namespace __tsan {
 
+constexpr uptr kByteBits = 8;
+
 // Thread slot ID.
 enum class Sid : u8 {};
 constexpr uptr kThreadSlotCount = 256;
+constexpr Sid kFreeSid = static_cast<Sid>(255);
 
 // Abstract time unit, vector clock element.
 enum class Epoch : u16 {};
+constexpr uptr kEpochBits = 14;
 constexpr Epoch kEpochZero = static_cast<Epoch>(0);
+constexpr Epoch kEpochOver = static_cast<Epoch>(1 << kEpochBits);
 
 const int kClkBits = 42;
 const unsigned kMaxTidReuse = (1 << (64 - kClkBits)) - 1;
@@ -114,6 +119,9 @@ const uptr kMetaShadowCell = 8;
 
 // Size of a single meta shadow value (u32).
 const uptr kMetaShadowSize = 4;
+
+// All addresses and PCs are assumed to be compressable to that many bits.
+const uptr kCompressedAddrBits = 44;
 
 #if TSAN_NO_HISTORY
 const bool kCollectHistory = false;

@@ -117,6 +117,7 @@ const char *AMDGCN::OpenMPLinker::constructOmpExtraCmds(
     Compilation &C, const JobAction &JA, const InputInfoList &Inputs,
     const ArgList &Args, StringRef SubArchName,
     StringRef OutputFilePrefix) const {
+  ArgStringList CmdArgs;
 
   std::string TmpName;
   TmpName = C.getDriver().isSaveTempsEnabled()
@@ -125,7 +126,6 @@ const char *AMDGCN::OpenMPLinker::constructOmpExtraCmds(
                       OutputFilePrefix.str() + "-select", "bc");
   const char *OutputFileName =
       C.addTempFile(C.getArgs().MakeArgString(TmpName));
-  ArgStringList CmdArgs;
   // CmdArgs.push_back("-v");
   llvm::SmallVector<std::string, 10> BCLibs;
   for (const auto &II : Inputs) {
@@ -227,8 +227,9 @@ const char *AMDGCN::OpenMPLinker::constructOmpExtraCmds(
 }
 
 const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
-    Compilation &C, const JobAction &JA, const InputInfoList &Inputs,
-    const ArgList &Args, StringRef SubArchName,
+  const toolchains::AMDGPUOpenMPToolChain &AMDGPUOpenMPTC, Compilation &C,
+  const JobAction &JA, const InputInfoList &Inputs,
+  const llvm::opt::ArgList &Args, llvm::StringRef SubArchName,
     StringRef OutputFilePrefix) const {
   ArgStringList CmdArgs;
 
@@ -261,6 +262,25 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
     SplitString(OptEnv.getValue(), Envs);
     for (StringRef Env : Envs)
       CmdArgs.push_back(Args.MakeArgString(Env.trim()));
+  }
+
+  if (Args.hasArg(options::OPT_l)) {
+    auto Lm = Args.getAllArgValues(options::OPT_l);
+    bool HasLibm = false;
+    for (auto &Lib : Lm) {
+      if (Lib == "m") {
+        HasLibm = true;
+        break;
+      }
+    }
+
+    if (HasLibm) {
+      SmallVector<std::string, 12> BCLibs =
+          AMDGPUOpenMPTC.getCommonDeviceLibNames(Args, SubArchName.str());
+      llvm::for_each(BCLibs, [&](StringRef BCFile) {
+        CmdArgs.push_back(Args.MakeArgString(BCFile));
+      });
+    }
   }
 
   // Add an intermediate output file.
@@ -437,10 +457,11 @@ void AMDGCN::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Each command outputs different files.
   const char *LLVMLinkCommand =
-      constructLLVMLinkCommand( C, JA, Inputs, Args,  GPUArch.c_str(), Prefix);
+      constructLLVMLinkCommand(AMDGPUOpenMPTC, C, JA, Inputs, Args,  GPUArch.c_str(), Prefix);
   const char *OptCommand = constructOptCommand(C, JA, Inputs, Args,
 		                               GPUArch.c_str(),
                                                Prefix, LLVMLinkCommand);
+  // Produce readable assembly if save-temps is enabled.
   if (C.getDriver().isSaveTempsEnabled())
     constructLlcCommand(C, JA, Inputs, Args, GPUArch.c_str(), Prefix, OptCommand,
                         /*OutputIsAsm=*/true);
@@ -612,6 +633,9 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
       CC1Args.push_back(DriverArgs.MakeArgString(BCFile));
     });
   }
+  // Fixme: do we need this?
+  //addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, BitcodeSuffix,
+  //                   getTriple());
 }
 
 llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(

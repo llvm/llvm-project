@@ -387,11 +387,9 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
         MVT NewVT = TLI.getRegisterTypeForCallingConv(Ctx, CC, SplitEVTs[i]);
         if (EVT(NewVT) != SplitEVTs[i]) {
           unsigned ExtendOp = TargetOpcode::G_ANYEXT;
-          if (F.getAttributes().hasAttribute(AttributeList::ReturnIndex,
-                                             Attribute::SExt))
+          if (F.getAttributes().hasRetAttr(Attribute::SExt))
             ExtendOp = TargetOpcode::G_SEXT;
-          else if (F.getAttributes().hasAttribute(AttributeList::ReturnIndex,
-                                                  Attribute::ZExt))
+          else if (F.getAttributes().hasRetAttr(Attribute::ZExt))
             ExtendOp = TargetOpcode::G_ZEXT;
 
           LLT NewLLT(NewVT);

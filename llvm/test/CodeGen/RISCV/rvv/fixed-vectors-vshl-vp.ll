@@ -4,6 +4,21 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-v -riscv-v-vector-bits-min=128 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,RV64
 
+declare <8 x i7> @llvm.vp.shl.v8i7(<8 x i7>, <8 x i7>, <8 x i1>, i32)
+
+define <8 x i7> @vsll_vv_v8i7(<8 x i7> %va, <8 x i7> %b, <8 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vsll_vv_v8i7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a1, zero, 127
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vand.vx v25, v9, a1
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
+; CHECK-NEXT:    vsll.vv v8, v8, v25, v0.t
+; CHECK-NEXT:    ret
+  %v = call <8 x i7> @llvm.vp.shl.v8i7(<8 x i7> %va, <8 x i7> %b, <8 x i1> %m, i32 %evl)
+  ret <8 x i7> %v
+}
+
 declare <2 x i8> @llvm.vp.shl.v2i8(<2 x i8>, <2 x i8>, <2 x i1>, i32)
 
 define <2 x i8> @vsll_vv_v2i8(<2 x i8> %va, <2 x i8> %b, <2 x i1> %m, i32 zeroext %evl) {
@@ -78,6 +93,18 @@ define <2 x i8> @vsll_vi_v2i8_unmasked(<2 x i8> %va, i32 zeroext %evl) {
   %m = shufflevector <2 x i1> %head, <2 x i1> undef, <2 x i32> zeroinitializer
   %v = call <2 x i8> @llvm.vp.shl.v2i8(<2 x i8> %va, <2 x i8> %vb, <2 x i1> %m, i32 %evl)
   ret <2 x i8> %v
+}
+
+declare <3 x i8> @llvm.vp.shl.v3i8(<3 x i8>, <3 x i8>, <3 x i1>, i32)
+
+define <3 x i8> @vsll_vv_v3i8(<3 x i8> %va, <3 x i8> %b, <3 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vsll_vv_v3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
+; CHECK-NEXT:    vsll.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    ret
+  %v = call <3 x i8> @llvm.vp.shl.v3i8(<3 x i8> %va, <3 x i8> %b, <3 x i1> %m, i32 %evl)
+  ret <3 x i8> %v
 }
 
 declare <4 x i8> @llvm.vp.shl.v4i8(<4 x i8>, <4 x i8>, <4 x i1>, i32)

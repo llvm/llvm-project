@@ -90,7 +90,7 @@ subdirectory:
 
 ::
 
-  > git clone https://github.com/llvm/llvm-project.git
+  $ git clone https://github.com/llvm/llvm-project.git
 
 Note that LLDB generally builds from top-of-trunk using CMake and Ninja.
 Additionally it builds:
@@ -159,7 +159,6 @@ interesting areas to contribute to lldb.
 
    design/overview
    design/reproducers
-   design/structureddataplugins
    design/sbapi
 
 .. toctree::

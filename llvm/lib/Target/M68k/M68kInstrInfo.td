@@ -404,9 +404,11 @@ def MxBrTarget16 : MxBrTargetOperand<16>;
 def MxBrTarget32 : MxBrTargetOperand<32>;
 
 // Used with MOVEM
+def MxMoveMaskClass : MxOpClass<"MoveMask">;
 def MxMoveMask : MxOp<i16, MxSize16, "m"> {
   let OperandType = "OPERAND_IMMEDIATE";
   let PrintMethod = "printMoveMask";
+  let ParserMatchClass = MxMoveMaskClass;
 }
 
 //===----------------------------------------------------------------------===//

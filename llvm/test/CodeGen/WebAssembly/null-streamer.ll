@@ -1,5 +1,5 @@
-; RUN: llc < %s -O0 -filetype=null -exception-model=wasm -mattr=+exception-handling
-; RUN: llc < %s -O0 -filetype=asm -asm-verbose=false -exception-model=wasm -mattr=+exception-handling | FileCheck %s
+; RUN: llc < %s -O0 -filetype=null -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling
+; RUN: llc < %s -O0 -filetype=asm -asm-verbose=false -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling | FileCheck %s
 
 target triple = "wasm32-unknown-unknown"
 

@@ -6,9 +6,8 @@
 # RUN: llvm-objdump -D --symbol-description %p/Inputs/xcoff-section-headers64.o | \
 # RUN:   FileCheck --check-prefixes=COMMON,DESC %s
 
-# RUN: not --crash llvm-objdump -D -r --symbol-description %p/Inputs/xcoff-section-headers64.o 2>&1 | \
-# RUN:   FileCheck --check-prefix=ERROR %s
-# ERROR: 64-bit support not implemented yet
+# RUN: llvm-objdump -D -r --symbol-description %p/Inputs/xcoff-section-headers64.o | \
+# RUN:   FileCheck --check-prefixes=COMMON,DESC,RELOC,COMMON-RELOC %s
 
 ## xcoff-section-headers64.o Compiled with IBM XL C/C++ for AIX, V16.1.0
 ## compiler command: xlc -q64 -qtls -o xcoff-section-headers64.o -c test.c
@@ -29,6 +28,7 @@ COMMON-EMPTY:
 PLAIN:        0000000000000000 <.func>:
 DESC:         0000000000000000 (idx: 6) .func:
 COMMON-NEXT:         0: e8 62 00 08   ld 3, 8(2)
+RELOC-NEXT:                           00000002:  R_TOC        (idx: 16) a[TC]
 COMMON-NEXT:         4: e8 63 00 02   lwa 3, 0(3)
 COMMON-NEXT:         8: 4e 80 00 20   blr
 COMMON-NEXT:         c: 00 00 00 00   <unknown>
@@ -44,31 +44,40 @@ COMMON-EMPTY:
 PLAIN:        0000000000000080 <func>:
 DESC:         0000000000000080 (idx: 12) func[TC]:
 COMMON-NEXT:        80: 00 00 00 00   <unknown>
+RELOC-NEXT:                           00000080:  R_POS       (idx: 10) func[DS]
 COMMON-NEXT:        84: 00 00 00 a8   <unknown>
 COMMON-EMPTY:
 PLAIN:        0000000000000088 <a>:
 DESC:         0000000000000088 (idx: 16) a[TC]:
 COMMON-NEXT:        88: 00 00 00 00   <unknown>
+RELOC-NEXT:                            00000088:  R_POS       (idx: 14) a[RW]
 COMMON-NEXT:        8c: 00 00 00 c8   <unknown>
 COMMON-EMPTY:
 PLAIN:        0000000000000090 <b>:
 DESC:         0000000000000090 (idx: 20) b[TC]:
 COMMON-NEXT:        90: 00 00 00 00   <unknown>
+RELOC-NEXT:                            00000090:  R_POS       (idx: 18) b[RW]
 COMMON-NEXT:        94: 00 00 00 c0   <unknown>
 COMMON-EMPTY:
 PLAIN:        0000000000000098 <c>:
 DESC:         0000000000000098 (idx: 24) c[TC]:
 COMMON-NEXT:        98: 00 00 00 00   <unknown>
+RELOC-NEXT:                            00000098:  R_TLS       (idx: 22) c[UL]
 COMMON-NEXT:        9c: 00 00 00 08   <unknown>
 COMMON-EMPTY:
 PLAIN:        00000000000000a0 <d>:
 DESC:         00000000000000a0 (idx: 28) d[TC]:
-COMMON-NEXT:                  ...
-COMMON-EMPTY:
+COMMON-RELOC-NEXT:  a0: 00 00 00 00   <unknown>
+RELOC-NEXT:                           000000a0:  R_TLS        (idx: 26) d[TL]
+COMMON-RELOC-NEXT:  a4: 00 00 00 00   <unknown>
 PLAIN:        00000000000000a8 <func>:
 DESC:         00000000000000a8 (idx: 10) func[DS]:
-COMMON-NEXT:                  ...
-COMMON-NEXT:        b4: 00 00 00 80   <unknown>
+COMMON-RELOC-NEXT:  a8: 00 00 00 00   <unknown>
+RELOC-NEXT:                           000000a8:  R_POS        (idx: 6) .func
+COMMON-RELOC-NEXT:  ac: 00 00 00 00   <unknown>
+COMMON-RELOC-NEXT:  b0: 00 00 00 00   <unknown>
+RELOC-NEXT:                           000000b0:  R_POS        (idx: 8) TOC[TC0]
+COMMON:             b4: 00 00 00 80   <unknown>
 COMMON-NEXT:                  ...
 COMMON-EMPTY:
 PLAIN:        00000000000000c0 <b>:

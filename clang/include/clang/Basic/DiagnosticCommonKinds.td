@@ -149,8 +149,8 @@ def err_nullability_conflicting : Error<
 
 // OpenCL Section 6.8.g
 def err_opencl_unknown_type_specifier : Error<
-  "%select{OpenCL C|C++ for OpenCL}0 version %1 does not support the "
-  "'%2' %select{type qualifier|storage class specifier}3">;
+  "%0 does not support the '%1' "
+  "%select{type qualifier|storage class specifier}2">;
 
 def warn_unknown_attribute_ignored : Warning<
   "unknown attribute %0 ignored">, InGroup<UnknownAttributes>;

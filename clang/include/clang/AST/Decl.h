@@ -614,7 +614,9 @@ public:
     if (!isInline())
       return false;
     auto X = lookup(Name);
-    auto Y = getParent()->lookup(Name);
+    // We should not perform a lookup within a transparent context, so find a
+    // non-transparent parent context.
+    auto Y = getParent()->getNonTransparentContext()->lookup(Name);
     return std::distance(X.begin(), X.end()) ==
       std::distance(Y.begin(), Y.end());
   }

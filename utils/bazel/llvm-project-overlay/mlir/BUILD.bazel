@@ -758,6 +758,13 @@ alias(
 )
 
 td_library(
+    name = "TilingInterfaceTdFiles",
+    srcs = ["include/mlir/Interfaces/TilingInterface.td"],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"],
+)
+
+td_library(
     name = "VectorInterfacesTdFiles",
     srcs = ["include/mlir/Interfaces/VectorInterfaces.td"],
     includes = ["include"],
@@ -922,6 +929,24 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/EmitC/IR/EmitC.td",
     deps = [":EmitCTdFiles"],
+)
+
+cc_library(
+    name = "TargetCpp",
+    srcs = glob([
+        "lib/Target/Cpp/*.cpp",
+        "lib/Target/Cpp/*.h",
+    ]),
+    hdrs = glob(["include/mlir/Target/Cpp/*.h"]),
+    deps = [
+        ":EmitC",
+        ":IR",
+        ":SCFDialect",
+        ":StandardOps",
+        ":Support",
+        ":Translation",
+        "//llvm:Support",
+    ],
 )
 
 ##---------------------------------------------------------------------------##
@@ -1475,10 +1500,14 @@ cc_library(
         "lib/Dialect/SCF/Transforms/*.cpp",
         "lib/Dialect/SCF/Transforms/*.h",
     ]),
-    hdrs = ["include/mlir/Dialect/SCF/Passes.h"],
+    hdrs = [
+        "include/mlir/Dialect/SCF/Passes.h",
+        "include/mlir/Dialect/SCF/Transforms.h",
+    ],
     includes = ["include"],
     deps = [
         ":Affine",
+        ":Analysis",
         ":DialectUtils",
         ":IR",
         ":MemRefDialect",
@@ -1487,6 +1516,7 @@ cc_library(
         ":SCFPassIncGen",
         ":StandardOps",
         ":Support",
+        ":TensorDialect",
         ":Transforms",
         "//llvm:Support",
     ],
@@ -1635,6 +1665,7 @@ cc_library(
     hdrs = ["include/mlir/Dialect/SparseTensor/Transforms/Passes.h"],
     includes = ["include"],
     deps = [
+        ":Affine",
         ":IR",
         ":LLVMDialect",
         ":LinalgOps",
@@ -4597,6 +4628,24 @@ alias(
     actual = "SideEffectInterfaces",
 )
 
+gentbl_cc_library(
+    name = "TilingInterfaceIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Interfaces/TilingInterface.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Interfaces/TilingInterface.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Interfaces/TilingInterface.td",
+    deps = [":TilingInterfaceTdFiles"],
+)
+
 cc_library(
     name = "Analysis",
     srcs = glob(
@@ -4964,6 +5013,7 @@ cc_library(
     deps = [
         ":FromLLVMIRTranslation",
         ":SPIRVTranslateRegistration",
+        ":TargetCpp",
         ":ToLLVMIRTranslationRegistration",
     ],
 )
@@ -5784,6 +5834,7 @@ td_library(
         ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
+        ":TilingInterfaceTdFiles",
         ":ViewLikeInterfaceTdFiles",
     ],
 )
@@ -6039,10 +6090,12 @@ cc_library(
         ":MathDialect",
         ":MemRefDialect",
         ":Parser",
+        ":SCFDialect",
         ":SideEffectInterfaces",
         ":StandardOps",
         ":Support",
         ":TensorDialect",
+        ":TilingInterface",
         ":ViewLikeInterface",
         "//llvm:Support",
     ],
@@ -6085,12 +6138,10 @@ cc_library(
         "lib/Dialect/Linalg/Transforms/*.cpp",
         "lib/Dialect/Linalg/Transforms/*.h",
     ]) + [
-        "lib/Dialect/Linalg/Analysis/ConstraintsSet.cpp",
         "lib/Dialect/Linalg/Analysis/DependenceAnalysis.cpp",
         "lib/Dialect/Linalg/Utils/Utils.cpp",
     ],
     hdrs = [
-        "include/mlir/Dialect/Linalg/Analysis/ConstraintsSet.h",
         "include/mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h",
         "include/mlir/Dialect/Linalg/Passes.h",
         "include/mlir/Dialect/Linalg/Transforms/CodegenStrategy.h",
@@ -6121,6 +6172,21 @@ cc_library(
         ":TransformUtils",
         ":VectorOps",
         ":VectorToSCF",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "TilingInterface",
+    srcs = ["lib/Interfaces/TilingInterface.cpp"],
+    hdrs = ["include/mlir/Interfaces/TilingInterface.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":Support",
+        ":TensorDialect",
+        ":TilingInterfaceIncGen",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )
@@ -6686,7 +6752,6 @@ cc_library(
     includes = ["include"],
     deps = [
         ":IR",
-        ":LLVMDialect",
         ":MathDialect",
         ":Pass",
         ":SCFDialect",

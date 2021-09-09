@@ -551,12 +551,12 @@ TEST(FlatAffineConstraintsTest, removeRedundantConstraintsTest) {
 
 TEST(FlatAffineConstraintsTest, addConstantUpperBound) {
   FlatAffineConstraints fac = makeFACFromConstraints(2, {}, {});
-  fac.addConstantUpperBound(0, 1);
+  fac.addBound(FlatAffineConstraints::UB, 0, 1);
   EXPECT_EQ(fac.atIneq(0, 0), -1);
   EXPECT_EQ(fac.atIneq(0, 1), 0);
   EXPECT_EQ(fac.atIneq(0, 2), 1);
 
-  fac.addConstantUpperBound({1, 2, 3}, 1);
+  fac.addBound(FlatAffineConstraints::UB, {1, 2, 3}, 1);
   EXPECT_EQ(fac.atIneq(1, 0), -1);
   EXPECT_EQ(fac.atIneq(1, 1), -2);
   EXPECT_EQ(fac.atIneq(1, 2), -2);
@@ -564,12 +564,12 @@ TEST(FlatAffineConstraintsTest, addConstantUpperBound) {
 
 TEST(FlatAffineConstraintsTest, addConstantLowerBound) {
   FlatAffineConstraints fac = makeFACFromConstraints(2, {}, {});
-  fac.addConstantLowerBound(0, 1);
+  fac.addBound(FlatAffineConstraints::LB, 0, 1);
   EXPECT_EQ(fac.atIneq(0, 0), 1);
   EXPECT_EQ(fac.atIneq(0, 1), 0);
   EXPECT_EQ(fac.atIneq(0, 2), -1);
 
-  fac.addConstantLowerBound({1, 2, 3}, 1);
+  fac.addBound(FlatAffineConstraints::LB, {1, 2, 3}, 1);
   EXPECT_EQ(fac.atIneq(1, 0), 1);
   EXPECT_EQ(fac.atIneq(1, 1), 2);
   EXPECT_EQ(fac.atIneq(1, 2), 2);
@@ -589,25 +589,126 @@ TEST(FlatAffineConstraintsTest, clearConstraints) {
   EXPECT_EQ(fac.atIneq(0, 1), 0);
 }
 
-TEST(FlatAffineConstraintsTest, constantDivs) {
-  // This test checks if floordivs with numerator containing non zero constant
-  // term can be computed from a FlatAffineConstraints instance.
+/// Check if the expected division representation of local variables matches the
+/// computed representation. The expected division representation is given as
+/// a vector of expressions set in `divisions` and the corressponding
+/// denominator in `denoms`. If expected denominator for a variable is
+/// non-positive, the local variable is expected to not have a computed
+/// representation.
+static void checkDivisionRepresentation(
+    FlatAffineConstraints &fac,
+    const std::vector<SmallVector<int64_t, 8>> &divisions,
+    const SmallVector<int64_t, 8> &denoms) {
+
+  assert(divisions.size() == fac.getNumLocalIds() &&
+         "Size of expected divisions does not match number of local variables");
+  assert(
+      denoms.size() == fac.getNumLocalIds() &&
+      "Size of expected denominators does not match number of local variables");
+
+  std::vector<llvm::Optional<std::pair<unsigned, unsigned>>> res(
+      fac.getNumLocalIds(), llvm::None);
+  fac.getLocalReprLbUbPairs(res);
+
+  // Check if all expected divisions are computed.
+  for (unsigned i = 0, e = fac.getNumLocalIds(); i < e; ++i)
+    if (denoms[i] > 0)
+      EXPECT_TRUE(res[i].hasValue());
+    else
+      EXPECT_FALSE(res[i].hasValue());
+
+  unsigned divOffset = fac.getNumDimAndSymbolIds();
+  for (unsigned i = 0, e = fac.getNumLocalIds(); i < e; ++i) {
+    if (!res[i])
+      continue;
+
+    // Check if the bounds are of the form:
+    //      0 <= expr - divisor * id <= divisor - 1
+    // Rearranging, we have:
+    //       divisor * id - expr + (divisor - 1) >= 0  <-- Lower bound for 'id'
+    //      -divisor * id + expr                 >= 0  <-- Upper bound for 'id'
+    // where `id = expr floordiv divisor`.
+    unsigned ubPos = res[i]->first, lbPos = res[i]->second;
+    const SmallVector<int64_t, 8> &expr = divisions[i];
+
+    // Check if lower bound is of the correct form.
+    int64_t computedDivisorLb = fac.atIneq(lbPos, i + divOffset);
+    EXPECT_EQ(computedDivisorLb, denoms[i]);
+    for (unsigned c = 0, f = fac.getNumLocalIds(); c < f; ++c) {
+      if (c == i + divOffset)
+        continue;
+      EXPECT_EQ(fac.atIneq(lbPos, c), -expr[c]);
+    }
+    // Check if constant term of lower bound matches expected constant term.
+    EXPECT_EQ(fac.atIneq(lbPos, fac.getNumCols() - 1),
+              -expr.back() + (denoms[i] - 1));
+
+    // Check if upper bound is of the correct form.
+    int64_t computedDivisorUb = fac.atIneq(ubPos, i + divOffset);
+    EXPECT_EQ(computedDivisorUb, -denoms[i]);
+    for (unsigned c = 0, f = fac.getNumLocalIds(); c < f; ++c) {
+      if (c == i + divOffset)
+        continue;
+      EXPECT_EQ(fac.atIneq(ubPos, c), expr[c]);
+    }
+    // Check if constant term of upper bound matches expected constant term.
+    EXPECT_EQ(fac.atIneq(ubPos, fac.getNumCols() - 1), expr.back());
+  }
+}
+
+TEST(FlatAffineConstraintsTest, computeLocalReprSimple) {
+  FlatAffineConstraints fac = makeFACFromConstraints(1, {}, {});
+
+  fac.addLocalFloorDiv({1, 4}, 10);
+  fac.addLocalFloorDiv({1, 0, 100}, 10);
+
+  std::vector<SmallVector<int64_t, 8>> divisions = {{1, 0, 0, 4},
+                                                    {1, 0, 0, 100}};
+  SmallVector<int64_t, 8> denoms = {10, 10};
+
+  // Check if floordivs can be computed when no other inequalities exist
+  // and floor divs do not depend on each other.
+  checkDivisionRepresentation(fac, divisions, denoms);
+}
+
+TEST(FlatAffineConstraintsTest, computeLocalReprConstantFloorDiv) {
   FlatAffineConstraints fac = makeFACFromConstraints(4, {}, {});
 
-  // Build a FlatAffineConstraints instance with floordivs containing numerator
-  // with non zero constant term.
-  fac.addLocalFloorDiv({0, 1, 0, 0, 10}, 30);
-  fac.addLocalFloorDiv({1, 0, 0, 0, 0, 99}, 101);
+  fac.addInequality({1, 0, 3, 1, 2});
+  fac.addInequality({1, 2, -8, 1, 10});
+  fac.addEquality({1, 2, -4, 1, 10});
 
-  // Add inequalities using the local variables created above.
-  fac.addInequality({1, 0, 0, 0, 1, 0, 2});
-  fac.addInequality({1, 0, 0, 0, 0, 1, 5});
+  fac.addLocalFloorDiv({0, 0, 0, 0, 10}, 30);
+  fac.addLocalFloorDiv({0, 0, 0, 0, 0, 99}, 101);
 
-  // FlatAffineConstraints::getAsIntegerSet returns a null integer set if an
-  // explicit representation for each local variable could not be found.
-  MLIRContext ctx;
-  IntegerSet iSet = fac.getAsIntegerSet(&ctx);
-  EXPECT_TRUE((bool)iSet);
+  std::vector<SmallVector<int64_t, 8>> divisions = {{0, 0, 0, 0, 0, 0, 10},
+                                                    {0, 0, 0, 0, 0, 0, 99}};
+  SmallVector<int64_t, 8> denoms = {30, 101};
+
+  // Check if floordivs with constant numerator can be computed.
+  checkDivisionRepresentation(fac, divisions, denoms);
+}
+
+TEST(FlatAffineConstraintsTest, computeLocalReprRecursive) {
+  FlatAffineConstraints fac = makeFACFromConstraints(4, {}, {});
+  fac.addInequality({1, 0, 3, 1, 2});
+  fac.addInequality({1, 2, -8, 1, 10});
+  fac.addEquality({1, 2, -4, 1, 10});
+
+  fac.addLocalFloorDiv({0, -2, 7, 2, 10}, 3);
+  fac.addLocalFloorDiv({3, 0, 9, 2, 2, 10}, 5);
+  fac.addLocalFloorDiv({0, 1, -123, 2, 0, -4, 10}, 3);
+
+  fac.addInequality({1, 2, -2, 1, -5, 0, 6, 100});
+  fac.addInequality({1, 2, -8, 1, 3, 7, 0, -9});
+
+  std::vector<SmallVector<int64_t, 8>> divisions = {{0, -2, 7, 2, 0, 0, 0, 10},
+                                                    {3, 0, 9, 2, 2, 0, 0, 10},
+                                                    {0, 1, -123, 2, 0, -4, 10}};
+  SmallVector<int64_t, 8> denoms = {3, 5, 3};
+
+  // Check if floordivs which may depend on other floordivs can be computed.
+  checkDivisionRepresentation(fac, divisions, denoms);
 }
 
 } // namespace mlir

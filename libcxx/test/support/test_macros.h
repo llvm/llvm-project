@@ -87,8 +87,8 @@
 #elif defined(__clang_major__)
 #define TEST_CLANG_VER (__clang_major__ * 100) + __clang_minor__
 #elif defined(__GNUC__)
-#define TEST_GCC_VER (__GNUC__ * 100 + __GNUC_MINOR__)
-#define TEST_GCC_VER_NEW (TEST_GCC_VER * 10 + __GNUC_PATCHLEVEL__)
+// Given GCC XX.YY.ZZ, TEST_GCC_VER is XXYYZZ
+#define TEST_GCC_VER ((__GNUC__ * 10000) + (__GNUC_MINOR__ * 100) + __GNUC_PATCHLEVEL__)
 #endif
 
 /* Make a nice name for the standard version */
@@ -163,70 +163,8 @@
 # define TEST_CONSTEXPR_CXX20
 #endif
 
-// Sniff out to see if the underlying C library has C11 features
-// This is cribbed from __config; but lives here as well because we can't assume libc++
-#if (defined(__ISO_C_VISIBLE) && (__ISO_C_VISIBLE >= 2011)) ||                 \
-    TEST_STD_VER >= 11
-#  if defined(__FreeBSD__)
-#    if __FreeBSD_version >= 1300064 || \
-       (__FreeBSD_version >= 1201504 && __FreeBSD_version < 1300000)
-#      define TEST_HAS_TIMESPEC_GET
-#    endif
-#    define TEST_HAS_ALIGNED_ALLOC
-#    define TEST_HAS_QUICK_EXIT
-#  elif defined(__BIONIC__)
-#    if __ANDROID_API__ >= 21
-#      define TEST_HAS_QUICK_EXIT
-#    endif
-#    if __ANDROID_API__ >= 28
-#      define TEST_HAS_ALIGNED_ALLOC
-#    endif
-#    if __ANDROID_API__ >= 29
-#      define TEST_HAS_TIMESPEC_GET
-#    endif
-#  elif defined(__Fuchsia__) || defined(__wasi__) || defined(__NetBSD__)
-#    define TEST_HAS_QUICK_EXIT
-#    define TEST_HAS_ALIGNED_ALLOC
-#    define TEST_HAS_TIMESPEC_GET
-#  elif defined(__linux__)
-// This block preserves the old behavior used by include/__config:
-// _LIBCPP_GLIBC_PREREQ would be defined to 0 if __GLIBC_PREREQ was not
-// available. The configuration here may be too vague though, as Bionic, uClibc,
-// newlib, etc may all support these features but need to be configured.
-#    if defined(TEST_GLIBC_PREREQ)
-#      if TEST_GLIBC_PREREQ(2, 15)
-#        define TEST_HAS_QUICK_EXIT
-#      endif
-#      if TEST_GLIBC_PREREQ(2, 17)
-#        define TEST_HAS_ALIGNED_ALLOC
-#        define TEST_HAS_TIMESPEC_GET
-#      endif
-#    elif defined(_LIBCPP_HAS_MUSL_LIBC)
-#      define TEST_HAS_QUICK_EXIT
-#      define TEST_HAS_ALIGNED_ALLOC
-#      define TEST_HAS_TIMESPEC_GET
-#    endif
-#  elif defined(_WIN32)
-#    if defined(_MSC_VER) && !defined(__MINGW32__)
-#      define TEST_HAS_QUICK_EXIT
-#      define TEST_HAS_TIMESPEC_GET
-#    endif
-#  elif defined(__APPLE__)
-     // timespec_get and aligned_alloc were introduced in macOS 10.15 and
-     // aligned releases
-#    if ((defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 101500) || \
-         (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ >= 130000) || \
-         (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ >= 130000) || \
-         (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ >= 60000))
-#      define TEST_HAS_ALIGNED_ALLOC
-#      define TEST_HAS_TIMESPEC_GET
-#    endif
-#  endif // __APPLE__
-#endif
-
 /* Features that were introduced in C++14 */
 #if TEST_STD_VER >= 14
-#define TEST_HAS_EXTENDED_CONSTEXPR
 #define TEST_HAS_VARIABLE_TEMPLATES
 #endif
 

@@ -49,6 +49,16 @@ using namespace ento;
 
 void SValBuilder::anchor() {}
 
+SValBuilder::SValBuilder(llvm::BumpPtrAllocator &alloc, ASTContext &context,
+                         ProgramStateManager &stateMgr)
+    : Context(context), BasicVals(context, alloc),
+      SymMgr(context, BasicVals, alloc), MemMgr(context, alloc),
+      StateMgr(stateMgr),
+      AnOpts(
+          stateMgr.getOwningEngine().getAnalysisManager().getAnalyzerOptions()),
+      ArrayIndexTy(context.LongLongTy),
+      ArrayIndexWidth(context.getTypeSize(ArrayIndexTy)) {}
+
 DefinedOrUnknownSVal SValBuilder::makeZeroVal(QualType type) {
   if (Loc::isLocType(type))
     return makeNull();
@@ -405,9 +415,7 @@ SVal SValBuilder::makeSymExprValNN(BinaryOperator::Opcode Op,
 
   // TODO: When the Max Complexity is reached, we should conjure a symbol
   // instead of generating an Unknown value and propagate the taint info to it.
-  const unsigned MaxComp = StateMgr.getOwningEngine()
-                               .getAnalysisManager()
-                               .options.MaxSymbolComplexity;
+  const unsigned MaxComp = AnOpts.MaxSymbolComplexity;
 
   if (symLHS && symRHS &&
       (symLHS->computeComplexity() + symRHS->computeComplexity()) <  MaxComp)
@@ -725,16 +733,12 @@ SVal SValBuilder::evalCastSubKind(loc::MemRegionVal V, QualType CastTy,
       // This change is needed for architectures with varying
       // pointer widths. See the amdgcn opencl reproducer with
       // this change as an example: solver-sym-simplification-ptr-bool.cl
-      // FIXME: We could encounter a reference here,
-      //        try returning a concrete 'true' since it might
-      //        be easier on the solver.
       // FIXME: Cleanup remainder of `getZeroWithPtrWidth ()`
       //        and `getIntWithPtrWidth()` functions to prevent future
       //        confusion
-      const llvm::APSInt &Zero = Ty->isReferenceType()
-                                     ? BasicVals.getZeroWithPtrWidth()
-                                     : BasicVals.getZeroWithTypeSize(Ty);
-      return makeNonLoc(Sym, BO_NE, Zero, CastTy);
+      if (!Ty->isReferenceType())
+        return makeNonLoc(Sym, BO_NE, BasicVals.getZeroWithTypeSize(Ty),
+                          CastTy);
     }
     // Non-symbolic memory regions are always true.
     return makeTruthVal(true, CastTy);

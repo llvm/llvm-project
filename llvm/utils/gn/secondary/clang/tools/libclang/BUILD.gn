@@ -5,33 +5,24 @@ import("//llvm/version.gni")
 # This build file is just enough to get check-clang to pass, it's missing
 # several things from the CMake build:
 # - a build target copying the Python bindings
-# - the GN linux build always builds without -fPIC (as if LLVM_ENABLE_PIC=OFF
-#   in the CMake build), so libclang is always a static library on linux
 # - the GN build doesn't have LIBCLANG_BUILD_STATIC
 
-libclang_target_type = "shared_library"
-if (host_os != "win" && host_os != "mac") {
-  # ELF targets need -fPIC to build shared libs but they aren't on by default.
-  # For now, make libclang a static lib there.
-  libclang_target_type = "static_library"
-} else {
-  action("linker_script_to_exports") {
-    script = "linker-script-to-export-list.py"
-    inputs = [ "libclang.map" ]
-    outputs = [ "$target_gen_dir/libclang.exports" ]
-    args = [
-      rebase_path(inputs[0], root_build_dir),
-      rebase_path(outputs[0], root_build_dir),
-    ]
-  }
-
-  symbol_exports("exports") {
-    deps = [ ":linker_script_to_exports" ]
-    exports_file = "$target_gen_dir/libclang.exports"
-  }
+action("linker_script_to_exports") {
+  script = "linker-script-to-export-list.py"
+  inputs = [ "libclang.map" ]
+  outputs = [ "$target_gen_dir/libclang.exports" ]
+  args = [
+    rebase_path(inputs[0], root_build_dir),
+    rebase_path(outputs[0], root_build_dir),
+  ]
 }
 
-target(libclang_target_type, "libclang") {
+symbol_exports("exports") {
+  deps = [ ":linker_script_to_exports" ]
+  exports_file = "$target_gen_dir/libclang.exports"
+}
+
+shared_library("libclang") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
     "//clang/include/clang/Config",
@@ -48,12 +39,15 @@ target(libclang_target_type, "libclang") {
     "//llvm/lib/Support",
     "//llvm/lib/Target:TargetsToBuild",
   ]
+  if (current_os == "win" || current_os == "mac") {
+    deps += [ ":exports" ]
+  } else {
+    inputs = [ "libclang.map" ]
+    ldflags =
+        [ "-Wl,--version-script," + rebase_path(inputs[0], root_build_dir) ]
+  }
   if (clang_enable_arcmt) {
     deps += [ "//clang/lib/ARCMigrate" ]
-  }
-
-  if (libclang_target_type == "shared_library") {
-    deps += [ ":exports" ]
   }
 
   defines = []

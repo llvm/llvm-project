@@ -148,43 +148,51 @@ define i1 @test_urem_negative_odd(i9 %X) nounwind {
 define i1 @test_urem_oversized(i66 %X) nounwind {
 ; MIPSEL-LABEL: test_urem_oversized:
 ; MIPSEL:       # %bb.0:
-; MIPSEL-NEXT:    addiu $sp, $sp, -40
-; MIPSEL-NEXT:    sw $ra, 36($sp) # 4-byte Folded Spill
-; MIPSEL-NEXT:    move $7, $6
-; MIPSEL-NEXT:    move $6, $5
-; MIPSEL-NEXT:    move $5, $4
 ; MIPSEL-NEXT:    lui $1, 12057
 ; MIPSEL-NEXT:    ori $1, $1, 37186
-; MIPSEL-NEXT:    lui $2, 52741
-; MIPSEL-NEXT:    ori $2, $2, 40665
-; MIPSEL-NEXT:    sw $2, 28($sp)
-; MIPSEL-NEXT:    sw $1, 24($sp)
-; MIPSEL-NEXT:    addiu $1, $zero, 2
-; MIPSEL-NEXT:    sw $1, 20($sp)
-; MIPSEL-NEXT:    sw $zero, 16($sp)
-; MIPSEL-NEXT:    jal __multi3
-; MIPSEL-NEXT:    addiu $4, $zero, 0
-; MIPSEL-NEXT:    sll $1, $4, 31
-; MIPSEL-NEXT:    srl $2, $5, 1
-; MIPSEL-NEXT:    or $1, $2, $1
-; MIPSEL-NEXT:    lui $2, 60010
-; MIPSEL-NEXT:    ori $2, $2, 61135
-; MIPSEL-NEXT:    sltu $1, $1, $2
-; MIPSEL-NEXT:    srl $2, $4, 1
-; MIPSEL-NEXT:    andi $3, $3, 3
-; MIPSEL-NEXT:    sll $4, $3, 31
-; MIPSEL-NEXT:    or $4, $2, $4
+; MIPSEL-NEXT:    multu $6, $1
+; MIPSEL-NEXT:    mflo $2
+; MIPSEL-NEXT:    mfhi $3
+; MIPSEL-NEXT:    lui $7, 52741
+; MIPSEL-NEXT:    ori $7, $7, 40665
+; MIPSEL-NEXT:    multu $6, $7
+; MIPSEL-NEXT:    mflo $8
+; MIPSEL-NEXT:    mfhi $9
+; MIPSEL-NEXT:    multu $5, $7
+; MIPSEL-NEXT:    mfhi $10
+; MIPSEL-NEXT:    mflo $11
+; MIPSEL-NEXT:    addu $9, $11, $9
+; MIPSEL-NEXT:    addu $12, $2, $9
+; MIPSEL-NEXT:    sltu $9, $9, $11
+; MIPSEL-NEXT:    sll $11, $12, 31
+; MIPSEL-NEXT:    sltu $2, $12, $2
+; MIPSEL-NEXT:    srl $13, $8, 1
+; MIPSEL-NEXT:    sll $8, $8, 1
+; MIPSEL-NEXT:    addu $2, $3, $2
+; MIPSEL-NEXT:    or $3, $13, $11
+; MIPSEL-NEXT:    srl $11, $12, 1
+; MIPSEL-NEXT:    addu $9, $10, $9
+; MIPSEL-NEXT:    mul $4, $4, $7
+; MIPSEL-NEXT:    mul $1, $5, $1
+; MIPSEL-NEXT:    sll $5, $6, 1
+; MIPSEL-NEXT:    lui $6, 60010
+; MIPSEL-NEXT:    ori $6, $6, 61135
+; MIPSEL-NEXT:    addu $2, $9, $2
+; MIPSEL-NEXT:    addu $1, $1, $2
+; MIPSEL-NEXT:    addu $2, $5, $4
+; MIPSEL-NEXT:    addu $1, $1, $2
+; MIPSEL-NEXT:    andi $1, $1, 3
+; MIPSEL-NEXT:    sll $2, $1, 31
+; MIPSEL-NEXT:    or $4, $11, $2
 ; MIPSEL-NEXT:    sltiu $2, $4, 13
 ; MIPSEL-NEXT:    xori $4, $4, 13
-; MIPSEL-NEXT:    movz $2, $1, $4
-; MIPSEL-NEXT:    sll $1, $5, 1
-; MIPSEL-NEXT:    srl $3, $3, 1
-; MIPSEL-NEXT:    or $1, $3, $1
+; MIPSEL-NEXT:    sltu $3, $3, $6
+; MIPSEL-NEXT:    movz $2, $3, $4
+; MIPSEL-NEXT:    srl $1, $1, 1
+; MIPSEL-NEXT:    or $1, $1, $8
 ; MIPSEL-NEXT:    andi $1, $1, 3
-; MIPSEL-NEXT:    movn $2, $zero, $1
-; MIPSEL-NEXT:    lw $ra, 36($sp) # 4-byte Folded Reload
 ; MIPSEL-NEXT:    jr $ra
-; MIPSEL-NEXT:    addiu $sp, $sp, 40
+; MIPSEL-NEXT:    movn $2, $zero, $1
 ;
 ; MIPS64EL-LABEL: test_urem_oversized:
 ; MIPS64EL:       # %bb.0:

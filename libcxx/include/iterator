@@ -410,6 +410,10 @@ template<input_iterator I>
   requires see below
   struct iterator_traits<counted_iterator<I>>;
 
+// [unreachable.sentinel], unreachable sentinel
+struct unreachable_sentinel_t;
+inline constexpr unreachable_sentinel_t unreachable_sentinel{};
+
 template <class T, class charT = char, class traits = char_traits<charT>, class Distance = ptrdiff_t>
 class istream_iterator
     : public iterator<input_iterator_tag, T, Distance, const T*, const T&> // until C++17
@@ -606,6 +610,7 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <__iterator/reverse_access.h>
 #include <__iterator/reverse_iterator.h>
 #include <__iterator/size.h>
+#include <__iterator/unreachable_sentinel.h>
 #include <__iterator/wrap_iter.h>
 #include <__memory/addressof.h>
 #include <__memory/pointer_traits.h>

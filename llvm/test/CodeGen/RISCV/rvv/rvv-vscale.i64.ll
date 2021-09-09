@@ -81,4 +81,29 @@ entry:
   ret i64 %1
 }
 
+; vscale will always be a positive number, but we don't know that until after op
+; legalization. The and will be considered a NOP and replaced with its input,
+; but not until after the select becomes RISCVISD::SELECT_CC. Make sure we
+; simplify this and don't leave behind any code for calculating the select
+; condition.
+define i64 @vscale_select(i32 %x, i32 %y) {
+; RV64-LABEL: vscale_select:
+; RV64:       # %bb.0:
+; RV64-NEXT:    csrr a0, vlenb
+; RV64-NEXT:    srli a0, a0, 3
+; RV64-NEXT:    ret
+;
+; RV32-LABEL: vscale_select:
+; RV32:       # %bb.0:
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    srli a0, a0, 3
+; RV32-NEXT:    mv a1, zero
+; RV32-NEXT:    ret
+  %a = call i64 @llvm.vscale.i64()
+  %b = and i64 %a, 4294967295
+  %c = icmp eq i32 %x, %y
+  %d = select i1 %c, i64 %a, i64 %b
+  ret i64 %d
+}
+
 declare i64 @llvm.vscale.i64()

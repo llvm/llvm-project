@@ -398,7 +398,6 @@ body:             |
   ; CHECK:   [[ADD4_2:%[0-9]+]]:gprc = nsw ADD4 [[LWZU]], [[PHI5]]
   ; CHECK:   [[ADD4_3:%[0-9]+]]:gprc = nsw ADD4 [[PHI8]], [[ADD4_2]]
   ; CHECK:   STW killed [[ADD4_3]], 0, [[ADDI8_4]] :: (store (s32) into %ir.44, !tbaa !2)
-  ; CHECK:   [[LWZ:%[0-9]+]]:gprc = LWZ 4, [[LWZU1]] :: (load (s32) from %ir.uglygep1112.cast, !tbaa !2)
   ; CHECK:   BCC 76, [[CMPLWI2]], %bb.15
   ; CHECK:   B %bb.13
   ; CHECK: bb.13 (%ir-block.60):
@@ -424,6 +423,7 @@ body:             |
   ; CHECK:   successors: %bb.9(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   [[PHI9:%[0-9]+]]:gprc = PHI [[ADDI3]], %bb.14, [[RLWINM4]], %bb.15, [[COPY14]], %bb.16
   ; CHECK:   [[COPY15:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY [[ADDI8_4]]
+  ; CHECK:   [[LWZ:%[0-9]+]]:gprc = LWZ 4, [[LWZU1]] :: (load (s32) from %ir.uglygep1112.cast, !tbaa !2)
   ; CHECK:   [[ADD4_4:%[0-9]+]]:gprc = nsw ADD4 [[LWZ]], [[ADD4_2]]
   ; CHECK:   [[ADD4_5:%[0-9]+]]:gprc = nsw ADD4 [[PHI9]], [[ADD4_4]]
   ; CHECK:   STW killed [[ADD4_5]], 4, [[COPY15]] :: (store (s32) into %ir.uglygep78.cast, !tbaa !2)

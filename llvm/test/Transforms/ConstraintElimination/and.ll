@@ -3,145 +3,130 @@
 
 declare void @use(i1)
 
-define i32 @test_and_ule(i32 %x, i32 %y, i32 %z, i32 %a) {
+define i1 @test_and_ule(i4 %x, i4 %y, i4 %z, i4 %a) {
 ; CHECK-LABEL: @test_and_ule(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i32 [[Y]], [[Z:%.*]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i4 [[Y]], [[Z:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], [[C_2]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[BB1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i32 [[X]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i32 [[X]], [[Y]]
-; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ule i32 [[Y]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[C_3:%.*]] = icmp ule i32 [[X]], [[A:%.*]]
-; CHECK-NEXT:    call void @use(i1 [[C_3]])
-; CHECK-NEXT:    ret i32 10
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i4 [[X]], [[Z]]
+; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i4 [[X]], [[Y]]
+; CHECK-NEXT:    [[R_1:%.*]] = xor i1 true, true
+; CHECK-NEXT:    [[T_3:%.*]] = icmp ule i4 [[Y]], [[Z]]
+; CHECK-NEXT:    [[R_2:%.*]] = xor i1 [[R_1]], true
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ule i4 [[X]], [[A:%.*]]
+; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], [[C_3]]
+; CHECK-NEXT:    ret i1 [[R_3]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[C_4:%.*]] = icmp ule i32 [[X]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[C_4]])
-; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i32 [[X]], [[A]]
-; CHECK-NEXT:    call void @use(i1 [[C_5]])
-; CHECK-NEXT:    [[C_6:%.*]] = icmp ule i32 [[X]], [[Y]]
-; CHECK-NEXT:    call void @use(i1 [[C_6]])
-; CHECK-NEXT:    [[C_7:%.*]] = icmp ule i32 [[Y]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[C_7]])
-; CHECK-NEXT:    ret i32 20
+; CHECK-NEXT:    [[C_4:%.*]] = icmp ule i4 [[X]], [[Z]]
+; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i4 [[X]], [[A]]
+; CHECK-NEXT:    [[R_4:%.*]] = xor i1 [[C_4]], [[C_5]]
+; CHECK-NEXT:    [[C_6:%.*]] = icmp ule i4 [[X]], [[Y]]
+; CHECK-NEXT:    [[R_5:%.*]] = xor i1 [[R_4]], [[C_6]]
+; CHECK-NEXT:    [[C_7:%.*]] = icmp ule i4 [[Y]], [[Z]]
+; CHECK-NEXT:    [[R_6:%.*]] = xor i1 [[R_5]], [[C_7]]
+; CHECK-NEXT:    ret i1 [[R_6]]
 ;
 entry:
-  %c.1 = icmp ule i32 %x, %y
-  %c.2 = icmp ule i32 %y, %z
+  %c.1 = icmp ule i4 %x, %y
+  %c.2 = icmp ule i4 %y, %z
   %and = and i1 %c.1, %c.2
   br i1 %and, label %bb1, label %exit
 
 bb1:
-  %t.1 = icmp ule i32 %x, %z
-  call void @use(i1 %t.1)
+  %t.1 = icmp ule i4 %x, %z
+  %t.2 = icmp ule i4 %x, %y
+  %r.1 = xor i1 %t.1, %t.2
 
-  %t.2 = icmp ule i32 %x, %y
-  call void @use(i1 %t.2)
-
-  %t.3 = icmp ule i32 %y, %z
-  call void @use(i1 %t.3)
+  %t.3 = icmp ule i4 %y, %z
+  %r.2 = xor i1 %r.1, %t.3
 
 
-  %c.3 = icmp ule i32 %x, %a
-  call void @use(i1 %c.3)
+  %c.3 = icmp ule i4 %x, %a
+  %r.3 = xor i1 %r.2, %c.3
 
-  ret i32 10
+  ret i1 %r.3
 
 exit:
-  %c.4 = icmp ule i32 %x, %z
-  call void @use(i1 %c.4)
+  %c.4 = icmp ule i4 %x, %z
+  %c.5 = icmp ule i4 %x, %a
+  %r.4 = xor i1 %c.4, %c.5
 
-  %c.5 = icmp ule i32 %x, %a
-  call void @use(i1 %c.5)
+  %c.6 = icmp ule i4 %x, %y
+  %r.5 = xor i1 %r.4, %c.6
 
-  %c.6 = icmp ule i32 %x, %y
-  call void @use(i1 %c.6)
+  %c.7 = icmp ule i4 %y, %z
+  %r.6 = xor i1 %r.5, %c.7
 
-  %c.7 = icmp ule i32 %y, %z
-  call void @use(i1 %c.7)
-
-  ret i32 20
+  ret i1 %r.6
 }
 
 ; The result of test_and_ule and test_and_select_ule should be same
-define i32 @test_and_select_ule(i32 %x, i32 %y, i32 %z, i32 %a) {
+define i1 @test_and_select_ule(i4 %x, i4 %y, i4 %z, i4 %a) {
 ; CHECK-LABEL: @test_and_select_ule(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i32 [[Y]], [[Z:%.*]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i4 [[Y]], [[Z:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C_1]], i1 [[C_2]], i1 false
 ; CHECK-NEXT:    br i1 [[AND]], label [[BB1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i32 [[X]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i32 [[X]], [[Y]]
-; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ule i32 [[Y]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[C_3:%.*]] = icmp ule i32 [[X]], [[A:%.*]]
-; CHECK-NEXT:    call void @use(i1 [[C_3]])
-; CHECK-NEXT:    ret i32 10
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i4 [[X]], [[Z]]
+; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i4 [[X]], [[Y]]
+; CHECK-NEXT:    [[R_1:%.*]] = xor i1 true, true
+; CHECK-NEXT:    [[T_3:%.*]] = icmp ule i4 [[Y]], [[Z]]
+; CHECK-NEXT:    [[R_2:%.*]] = xor i1 [[R_1]], true
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ule i4 [[X]], [[A:%.*]]
+; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], [[C_3]]
+; CHECK-NEXT:    ret i1 [[R_3]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[C_4:%.*]] = icmp ule i32 [[X]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[C_4]])
-; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i32 [[X]], [[A]]
-; CHECK-NEXT:    call void @use(i1 [[C_5]])
-; CHECK-NEXT:    [[C_6:%.*]] = icmp ule i32 [[X]], [[Y]]
-; CHECK-NEXT:    call void @use(i1 [[C_6]])
-; CHECK-NEXT:    [[C_7:%.*]] = icmp ule i32 [[Y]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[C_7]])
-; CHECK-NEXT:    ret i32 20
+; CHECK-NEXT:    [[C_4:%.*]] = icmp ule i4 [[X]], [[Z]]
+; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i4 [[X]], [[A]]
+; CHECK-NEXT:    [[R_4:%.*]] = xor i1 [[C_4]], [[C_5]]
+; CHECK-NEXT:    [[C_6:%.*]] = icmp ule i4 [[X]], [[Y]]
+; CHECK-NEXT:    [[R_5:%.*]] = xor i1 [[R_4]], [[C_6]]
+; CHECK-NEXT:    [[C_7:%.*]] = icmp ule i4 [[Y]], [[Z]]
+; CHECK-NEXT:    [[R_6:%.*]] = xor i1 [[R_5]], [[C_7]]
+; CHECK-NEXT:    ret i1 [[R_6]]
 ;
 entry:
-  %c.1 = icmp ule i32 %x, %y
-  %c.2 = icmp ule i32 %y, %z
+  %c.1 = icmp ule i4 %x, %y
+  %c.2 = icmp ule i4 %y, %z
   %and = select i1 %c.1, i1 %c.2, i1 false
   br i1 %and, label %bb1, label %exit
 
 bb1:
-  %t.1 = icmp ule i32 %x, %z
-  call void @use(i1 %t.1)
+  %t.1 = icmp ule i4 %x, %z
+  %t.2 = icmp ule i4 %x, %y
+  %r.1 = xor i1 %t.1, %t.2
 
-  %t.2 = icmp ule i32 %x, %y
-  call void @use(i1 %t.2)
+  %t.3 = icmp ule i4 %y, %z
+  %r.2 = xor i1 %r.1, %t.3
 
-  %t.3 = icmp ule i32 %y, %z
-  call void @use(i1 %t.3)
-
-
-  %c.3 = icmp ule i32 %x, %a
-  call void @use(i1 %c.3)
-
-  ret i32 10
+  %c.3 = icmp ule i4 %x, %a
+  %r.3 = xor i1 %r.2, %c.3
+  ret i1 %r.3
 
 exit:
-  %c.4 = icmp ule i32 %x, %z
-  call void @use(i1 %c.4)
+  %c.4 = icmp ule i4 %x, %z
+  %c.5 = icmp ule i4 %x, %a
+  %r.4 = xor i1 %c.4, %c.5
 
-  %c.5 = icmp ule i32 %x, %a
-  call void @use(i1 %c.5)
+  %c.6 = icmp ule i4 %x, %y
+  %r.5 = xor i1 %r.4, %c.6
 
-  %c.6 = icmp ule i32 %x, %y
-  call void @use(i1 %c.6)
-
-  %c.7 = icmp ule i32 %y, %z
-  call void @use(i1 %c.7)
-
-  ret i32 20
+  %c.7 = icmp ule i4 %y, %z
+  %r.6 = xor i1 %r.5, %c.7
+  ret i1 %r.6
 }
 
-define i4 @and_compare_undef(i16 %N, i16 %step) {
+define i4 @and_compare_undef(i4 %N, i4 %step) {
 ; CHECK-LABEL: @and_compare_undef(
 ; CHECK-NEXT:  step.check:
-; CHECK-NEXT:    [[STEP_POS:%.*]] = icmp uge i16 [[STEP:%.*]], 0
-; CHECK-NEXT:    [[B1:%.*]] = add i16 undef, -1
-; CHECK-NEXT:    [[STEP_ULT_N:%.*]] = icmp ult i16 [[B1]], [[N:%.*]]
+; CHECK-NEXT:    [[STEP_POS:%.*]] = icmp uge i4 [[STEP:%.*]], 0
+; CHECK-NEXT:    [[B1:%.*]] = add i4 undef, -1
+; CHECK-NEXT:    [[STEP_ULT_N:%.*]] = icmp ult i4 [[B1]], [[N:%.*]]
 ; CHECK-NEXT:    [[AND_STEP:%.*]] = and i1 [[STEP_POS]], [[STEP_ULT_N]]
 ; CHECK-NEXT:    br i1 [[AND_STEP]], label [[PTR_CHECK:%.*]], label [[EXIT:%.*]]
 ; CHECK:       ptr.check:
@@ -150,9 +135,9 @@ define i4 @and_compare_undef(i16 %N, i16 %step) {
 ; CHECK-NEXT:    ret i4 3
 ;
 step.check:
-  %step.pos = icmp uge i16 %step, 0
-  %B1 = add i16 undef, -1
-  %step.ult.N = icmp ult i16 %B1, %N
+  %step.pos = icmp uge i4 %step, 0
+  %B1 = add i4 undef, -1
+  %step.ult.N = icmp ult i4 %B1, %N
   %and.step = and i1 %step.pos, %step.ult.N
   br i1 %and.step, label %ptr.check, label %exit
 

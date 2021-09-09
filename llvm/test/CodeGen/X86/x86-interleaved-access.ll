@@ -369,8 +369,8 @@ define void @interleaved_store_vf16_i8_stride4(<16 x i8> %x1, <16 x i8> %x2, <16
 ; AVX512-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm4[4],xmm1[4],xmm4[5],xmm1[5],xmm4[6],xmm1[6],xmm4[7],xmm1[7]
 ; AVX512-NEXT:    vpunpcklwd {{.*#+}} xmm4 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
 ; AVX512-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
-; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm3, %ymm1
 ; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm4, %ymm0
+; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm3, %ymm1
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512-NEXT:    vmovdqa64 %zmm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
@@ -1467,15 +1467,15 @@ define <64 x i8> @interleaved_load_vf64_i8_stride3(<192 x i8>* %ptr){
 ; AVX512-NEXT:    vmovdqu 96(%rdi), %xmm3
 ; AVX512-NEXT:    vmovdqu 112(%rdi), %xmm4
 ; AVX512-NEXT:    vmovdqu 128(%rdi), %xmm5
-; AVX512-NEXT:    vinserti128 $1, 48(%rdi), %ymm0, %ymm0
-; AVX512-NEXT:    vinserti128 $1, 64(%rdi), %ymm1, %ymm1
-; AVX512-NEXT:    vinserti128 $1, 80(%rdi), %ymm2, %ymm2
 ; AVX512-NEXT:    vinserti128 $1, 144(%rdi), %ymm3, %ymm3
-; AVX512-NEXT:    vinserti128 $1, 160(%rdi), %ymm4, %ymm4
-; AVX512-NEXT:    vinserti128 $1, 176(%rdi), %ymm5, %ymm5
+; AVX512-NEXT:    vinserti128 $1, 48(%rdi), %ymm0, %ymm0
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm3, %zmm0, %zmm0
-; AVX512-NEXT:    vinserti64x4 $1, %ymm4, %zmm1, %zmm1
-; AVX512-NEXT:    vinserti64x4 $1, %ymm5, %zmm2, %zmm2
+; AVX512-NEXT:    vinserti128 $1, 160(%rdi), %ymm4, %ymm3
+; AVX512-NEXT:    vinserti128 $1, 64(%rdi), %ymm1, %ymm1
+; AVX512-NEXT:    vinserti64x4 $1, %ymm3, %zmm1, %zmm1
+; AVX512-NEXT:    vinserti128 $1, 176(%rdi), %ymm5, %ymm3
+; AVX512-NEXT:    vinserti128 $1, 80(%rdi), %ymm2, %ymm2
+; AVX512-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm2
 ; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,3,6,9,12,15,2,5,8,11,14,1,4,7,10,13,0,3,6,9,12,15,2,5,8,11,14,1,4,7,10,13,0,3,6,9,12,15,2,5,8,11,14,1,4,7,10,13,0,3,6,9,12,15,2,5,8,11,14,1,4,7,10,13]
 ; AVX512-NEXT:    vpshufb %zmm3, %zmm0, %zmm0
 ; AVX512-NEXT:    vpshufb %zmm3, %zmm1, %zmm1

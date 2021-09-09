@@ -127,7 +127,6 @@ const llvm::Optional<std::string> detectSysroot() {
   if (::getenv("SDKROOT"))
     return llvm::None;
   return queryXcrun({"xcrun", "--show-sdk-path"});
-  return llvm::None;
 }
 
 std::string detectStandardResourceDir() {

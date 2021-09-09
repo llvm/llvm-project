@@ -252,6 +252,8 @@ void ThreadStart(ThreadState *thr, Tid tid, tid_t os_id,
   thr->tctx = (ThreadContext*)tr->GetThreadLocked(tid);
   tr->Unlock();
 
+  while (!thr->tctx->trace.parts.Empty()) thr->tctx->trace.parts.PopBack();
+
 #if !SANITIZER_GO
   if (ctx->after_multithreaded_fork) {
     thr->ignore_interceptors++;

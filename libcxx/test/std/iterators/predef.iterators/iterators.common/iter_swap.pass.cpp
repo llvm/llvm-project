@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 
 // template<indirectly_swappable<I> I2, class S2>
 //   friend void iter_swap(const common_iterator& x, const common_iterator<I2, S2>& y)

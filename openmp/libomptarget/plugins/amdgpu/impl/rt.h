@@ -8,8 +8,8 @@
 #ifndef SRC_RUNTIME_INCLUDE_RT_H_
 #define SRC_RUNTIME_INCLUDE_RT_H_
 
-#include "atmi_runtime.h"
-#include "hsa_api.h"
+#include "internal.h"
+
 #include <string>
 #include <vector>
 
@@ -61,16 +61,16 @@ public:
   // data
   static hsa_status_t Memcpy(hsa_signal_t, void *, const void *, size_t);
   static hsa_status_t Memfree(void *);
+  static hsa_status_t FtnAssignWrapper(void *, void *, void *, void *, void *);
   static hsa_status_t HostMalloc(void **ptr, size_t size);
   static hsa_status_t DeviceMalloc(void **ptr, size_t size, int DeviceId);
-  static hsa_status_t FtnAssignWrapper(void *, void *, void *, void *, void *);
 
   int getMaxQueueSize() const { return env_.getMaxQueueSize(); }
   int getDebugMode() const { return env_.getDebugMode(); }
 
 private:
   static hsa_status_t Malloc(void **ptr, size_t size, int DeviceId,
-                             atmi_devtype_t DeviceType);
+                             impl_devtype_t DeviceType);
 
 protected:
   Runtime() = default;

@@ -53,6 +53,7 @@ def Sparsification : Pass<"sparsification", "ModuleOp"> {
   }];
   let constructor = "mlir::createSparsificationPass()";
   let dependentDialects = [
+    "AffineDialect",
     "LLVM::LLVMDialect",
     "memref::MemRefDialect",
     "scf::SCFDialect",

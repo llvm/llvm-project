@@ -202,14 +202,14 @@ define hidden void @blam() {
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GCN-NEXT:    flat_load_dword v41, v[1:2]
-; GCN-NEXT:    v_mov_b32_e32 v43, 0
+; GCN-NEXT:    flat_load_dword v43, v[1:2]
+; GCN-NEXT:    v_mov_b32_e32 v42, 0
 ; GCN-NEXT:    s_getpc_b64 s[36:37]
 ; GCN-NEXT:    s_add_u32 s36, s36, spam@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s37, s37, spam@rel32@hi+12
-; GCN-NEXT:    v_lshlrev_b32_e32 v42, 2, v0
+; GCN-NEXT:    v_lshlrev_b32_e32 v41, 2, v0
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cmp_eq_f32_e64 s[34:35], 0, v41
+; GCN-NEXT:    v_cmp_eq_f32_e64 s[34:35], 0, v43
 ; GCN-NEXT:    s_branch BB1_3
 ; GCN-NEXT:  BB1_1: ; %bb10
 ; GCN-NEXT:    ; in Loop: Header=BB1_3 Depth=1
@@ -228,7 +228,7 @@ define hidden void @blam() {
 ; GCN-NEXT:  BB1_4: ; %bb2
 ; GCN-NEXT:    ; Parent Loop BB1_3 Depth=1
 ; GCN-NEXT:    ; => This Inner Loop Header: Depth=2
-; GCN-NEXT:    flat_load_dword v0, v[42:43]
+; GCN-NEXT:    flat_load_dword v0, v[41:42]
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
@@ -272,7 +272,7 @@ define hidden void @blam() {
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NEXT:  BB1_10: ; %bb17
 ; GCN-NEXT:    ; in Loop: Header=BB1_3 Depth=1
-; GCN-NEXT:    buffer_store_dword v41, off, s[0:3], 0
+; GCN-NEXT:    buffer_store_dword v43, off, s[0:3], 0
 ; GCN-NEXT:    s_branch BB1_2
 bb:
   %tmp = load float, float* null, align 16

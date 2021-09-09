@@ -27,6 +27,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
@@ -371,7 +372,7 @@ public:
       // Check to see if this is a known operation.  If so, use the registered
       // custom printer hook.
       if (auto *opInfo = op->getAbstractOperation()) {
-        opInfo->printAssembly(op, *this);
+        opInfo->printAssembly(op, *this, /*defaultDialect=*/"");
         return;
       }
     }
@@ -382,7 +383,7 @@ public:
 
 private:
   /// Print the given operation in the generic form.
-  void printGenericOp(Operation *op) override {
+  void printGenericOp(Operation *op, bool printOpName = true) override {
     // Consider nested operations for aliases.
     if (op->getNumRegions() != 0) {
       for (Region &region : op->getRegions())
@@ -1659,7 +1660,7 @@ void ModulePrinter::printAttribute(Attribute attr,
     printType(typeAttr.getValue());
 
   } else if (auto refAttr = attr.dyn_cast<SymbolRefAttr>()) {
-    printSymbolReference(refAttr.getRootReference(), os);
+    printSymbolReference(refAttr.getRootReference().getValue(), os);
     for (FlatSymbolRefAttr nestedRef : refAttr.getNestedReferences()) {
       os << "::";
       printSymbolReference(nestedRef.getValue(), os);
@@ -2318,7 +2319,7 @@ public:
   /// Print the bare location, not including indentation/location/etc.
   void printOperation(Operation *op);
   /// Print the given operation in the generic form.
-  void printGenericOp(Operation *op) override;
+  void printGenericOp(Operation *op, bool printOpName) override;
 
   /// Print the name of the given block.
   void printBlockName(Block *block);
@@ -2424,6 +2425,13 @@ public:
   }
 
 private:
+  // Contains the stack of default dialects to use when printing regions.
+  // A new dialect is pushed to the stack before parsing regions nested under an
+  // operation implementing `OpAsmOpInterface`, and popped when done. At the
+  // top-level we start with "builtin" as the default, so that the top-level
+  // `module` operation prints as-is.
+  SmallVector<StringRef> defaultDialectStack{"builtin"};
+
   /// The number of spaces used for indenting nested operations.
   const static unsigned indentWidth = 2;
 
@@ -2503,24 +2511,34 @@ void OperationPrinter::printOperation(Operation *op) {
     // Check to see if this is a known operation.  If so, use the registered
     // custom printer hook.
     if (auto *opInfo = op->getAbstractOperation()) {
-      opInfo->printAssembly(op, *this);
+      opInfo->printAssembly(op, *this, defaultDialectStack.back());
       return;
     }
     // Otherwise try to dispatch to the dialect, if available.
     if (Dialect *dialect = op->getDialect()) {
-      if (succeeded(dialect->printOperation(op, *this)))
+      if (auto opPrinter = dialect->getOperationPrinter(op)) {
+        // Print the op name first.
+        StringRef name = op->getName().getStringRef();
+        name.consume_front((defaultDialectStack.back() + ".").str());
+        printEscapedString(name, os);
+        // Print the rest of the op now.
+        opPrinter(op, *this);
         return;
+      }
     }
   }
 
   // Otherwise print with the generic assembly form.
-  printGenericOp(op);
+  printGenericOp(op, /*printOpName=*/true);
 }
 
-void OperationPrinter::printGenericOp(Operation *op) {
-  os << '"';
-  printEscapedString(op->getName().getStringRef(), os);
-  os << "\"(";
+void OperationPrinter::printGenericOp(Operation *op, bool printOpName) {
+  if (printOpName) {
+    os << '"';
+    printEscapedString(op->getName().getStringRef(), os);
+    os << '"';
+  }
+  os << '(';
   interleaveComma(op->getOperands(), [&](Value value) { printValueID(value); });
   os << ')';
 
@@ -2648,6 +2666,13 @@ void OperationPrinter::printRegion(Region &region, bool printEntryBlockArgs,
                                    bool printEmptyBlock) {
   os << " {" << newLine;
   if (!region.empty()) {
+    auto restoreDefaultDialect =
+        llvm::make_scope_exit([&]() { defaultDialectStack.pop_back(); });
+    if (auto iface = dyn_cast<OpAsmOpInterface>(region.getParentOp()))
+      defaultDialectStack.push_back(iface.getDefaultDialect());
+    else
+      defaultDialectStack.push_back("");
+
     auto *entryBlock = &region.front();
     // Force printing the block header if printEmptyBlock is set and the block
     // is empty or if printEntryBlockArgs is set and there are arguments to

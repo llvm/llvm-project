@@ -607,8 +607,15 @@ public:
     static_assert((is_same<_CharT, typename traits_type::char_type>::value),
                   "traits_type::char_type must be the same type as CharT");
 
+#ifdef _LIBCPP_CXX03_LANG
+    // Preserve the ability to compare with literal 0,
+    // and implicitly convert to bool, but not implicitly convert to int.
+    _LIBCPP_INLINE_VISIBILITY
+    operator void*() const {return fail() ? nullptr : (void*)this;}
+#else
     _LIBCPP_INLINE_VISIBILITY
     explicit operator bool() const {return !fail();}
+#endif
 
     _LIBCPP_INLINE_VISIBILITY bool operator!() const    {return  fail();}
     _LIBCPP_INLINE_VISIBILITY iostate rdstate() const   {return ios_base::rdstate();}

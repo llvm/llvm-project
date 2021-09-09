@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // __non_propagating_cache(__non_propagating_cache&&);
@@ -35,7 +34,7 @@ constexpr void test() {
   // Test with direct initialization
   {
     Cache a;
-    a.__set(T{3});
+    a.__emplace(3);
 
     Cache b(std::move(a));
     assert(!b.__has_value()); // make sure we don't propagate
@@ -45,7 +44,7 @@ constexpr void test() {
   // Test with copy initialization
   {
     Cache a;
-    a.__set(T{3});
+    a.__emplace(3);
 
     Cache b = std::move(a);
     assert(!b.__has_value()); // make sure we don't propagate

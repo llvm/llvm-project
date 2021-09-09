@@ -146,6 +146,8 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
       "-mcpu=hexagon" +
       toolchains::HexagonToolChain::GetTargetCPUVersion(Args)));
 
+  addSanitizerRuntimes(HTC, Args, CmdArgs);
+
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
     CmdArgs.push_back(Output.getFilename());
@@ -223,6 +225,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   bool UseShared = IsShared && !IsStatic;
   StringRef CpuVer = toolchains::HexagonToolChain::GetTargetCPUVersion(Args);
 
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(HTC, Args, CmdArgs);
+
   //----------------------------------------------------------------------------
   // Silence warnings for various options
   //----------------------------------------------------------------------------
@@ -288,6 +292,12 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
     AddLinkerInputs(HTC, Inputs, Args, CmdArgs, JA);
 
     if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+      if (NeedsSanitizerDeps) {
+        linkSanitizerRuntimeDeps(HTC, CmdArgs);
+
+        CmdArgs.push_back("-lunwind");
+      }
+
       CmdArgs.push_back("-lclang_rt.builtins-hexagon");
       CmdArgs.push_back("-lc");
     }
@@ -448,6 +458,13 @@ Optional<unsigned> HexagonToolChain::getSmallDataThreshold(
     return G;
 
   return None;
+}
+
+std::string HexagonToolChain::getCompilerRTPath() const {
+  SmallString<128> Dir(getDriver().SysRoot);
+  llvm::sys::path::append(Dir, "usr", "lib");
+  Dir += SelectedMultilib.gccSuffix();
+  return std::string(Dir.str());
 }
 
 void HexagonToolChain::getHexagonLibraryPaths(const ArgList &Args,
@@ -687,11 +704,11 @@ bool HexagonToolChain::isAutoHVXEnabled(const llvm::opt::ArgList &Args) {
 // Returns the default CPU for Hexagon. This is the default compilation target
 // if no Hexagon processor is selected at the command-line.
 //
-const StringRef HexagonToolChain::GetDefaultCPU() {
+StringRef HexagonToolChain::GetDefaultCPU() {
   return "hexagonv60";
 }
 
-const StringRef HexagonToolChain::GetTargetCPUVersion(const ArgList &Args) {
+StringRef HexagonToolChain::GetTargetCPUVersion(const ArgList &Args) {
   Arg *CpuArg = nullptr;
   if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
     CpuArg = A;

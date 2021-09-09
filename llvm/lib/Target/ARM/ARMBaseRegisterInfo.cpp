@@ -263,6 +263,13 @@ ARMBaseRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
     case ARM::QQQQPRRegClassID:
       if (MF.getSubtarget<ARMSubtarget>().hasNEON())
         return Super;
+      break;
+    case ARM::MQPRRegClassID:
+    case ARM::MQQPRRegClassID:
+    case ARM::MQQQQPRRegClassID:
+      if (MF.getSubtarget<ARMSubtarget>().hasMVEIntegerOps())
+        return Super;
+      break;
     }
     Super = *I++;
   } while (Super);

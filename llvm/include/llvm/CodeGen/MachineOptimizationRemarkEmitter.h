@@ -118,6 +118,12 @@ public:
       : DiagnosticInfoMIROptimization(DK_MachineOptimizationRemarkAnalysis,
                                       PassName, RemarkName, Loc, MBB) {}
 
+  MachineOptimizationRemarkAnalysis(const char *PassName, StringRef RemarkName,
+                                    const MachineInstr *MI)
+      : DiagnosticInfoMIROptimization(DK_MachineOptimizationRemarkAnalysis,
+                                      PassName, RemarkName, MI->getDebugLoc(),
+                                      MI->getParent()) {}
+
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_MachineOptimizationRemarkAnalysis;
   }

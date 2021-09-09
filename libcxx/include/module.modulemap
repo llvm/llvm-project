@@ -346,6 +346,13 @@ module std [system] {
   module charconv {
     header "charconv"
     export *
+
+    module __charconv {
+      module chars_format      { private header "__charconv/chars_format.h"      }
+      module from_chars_result { private header "__charconv/from_chars_result.h" }
+      module to_chars_result   { private header "__charconv/to_chars_result.h"   }
+    }
+
   }
   module chrono {
     header "chrono"
@@ -361,7 +368,9 @@ module std [system] {
 
     module __compare {
       module common_comparison_category { private header "__compare/common_comparison_category.h" }
+      module compare_three_way_result   { private header "__compare/compare_three_way_result.h"   }
       module ordering                   { private header "__compare/ordering.h"                   }
+      module three_way_comparable       { private header "__compare/three_way_comparable.h"       }
     }
   }
   module complex {
@@ -371,6 +380,31 @@ module std [system] {
   module concepts {
     header "concepts"
     export *
+
+    module __concepts {
+      module arithmetic                 { private header "__concepts/arithmetic.h"                }
+      module assignable                 { private header "__concepts/assignable.h"                }
+      module boolean_testable           { private header "__concepts/boolean_testable.h"          }
+      module class_or_enum              { private header "__concepts/class_or_enum.h"             }
+      module common_reference_with      { private header "__concepts/common_reference_with.h"     }
+      module common_with                { private header "__concepts/common_with.h"               }
+      module constructible              { private header "__concepts/constructible.h"             }
+      module convertible_to             { private header "__concepts/convertible_to.h"            }
+      module copyable                   { private header "__concepts/copyable.h"                  }
+      module derived_from               { private header "__concepts/derived_from.h"              }
+      module destructible               { private header "__concepts/destructible.h"              }
+      module different_from             { private header "__concepts/different_from.h"            }
+      module equality_comparable        { private header "__concepts/equality_comparable.h"       }
+      module invocable                  { private header "__concepts/invocable.h"                 }
+      module movable                    { private header "__concepts/movable.h"                   }
+      module predicate                  { private header "__concepts/predicate.h"                 }
+      module regular                    { private header "__concepts/regular.h"                   }
+      module relation                   { private header "__concepts/relation.h"                  }
+      module same_as                    { private header "__concepts/same_as.h"                   }
+      module semiregular                { private header "__concepts/semiregular.h"               }
+      module swappable                  { private header "__concepts/swappable.h"                 }
+      module totally_ordered            { private header "__concepts/totally_ordered.h"           }
+    }
   }
   module condition_variable {
     header "condition_variable"
@@ -398,8 +432,18 @@ module std [system] {
     export *
 
     module __format {
+      module format_arg           { private header "__format/format_arg.h"           }
+      module format_args          { private header "__format/format_args.h"          }
+      module format_context {
+        private header "__format/format_context.h"
+        export optional
+        export locale
+      }
       module format_error         { private header "__format/format_error.h"         }
+      module format_fwd           { private header "__format/format_fwd.h"           }
       module format_parse_context { private header "__format/format_parse_context.h" }
+      module format_string        { private header "__format/format_string.h"        }
+      module formatter            { private header "__format/formatter.h"            }
     }
   }
   module forward_list {
@@ -419,15 +463,17 @@ module std [system] {
       module binary_function            { private header "__functional/binary_function.h" }
       module binary_negate              { private header "__functional/binary_negate.h" }
       module bind                       { private header "__functional/bind.h" }
+      module bind_back                  { private header "__functional/bind_back.h" }
       module bind_front                 { private header "__functional/bind_front.h" }
       module binder1st                  { private header "__functional/binder1st.h" }
       module binder2nd                  { private header "__functional/binder2nd.h" }
+      module compose                    { private header "__functional/compose.h" }
       module default_searcher           { private header "__functional/default_searcher.h" }
       module function                   { private header "__functional/function.h" }
       module hash                       { private header "__functional/hash.h" }
       module identity                   { private header "__functional/identity.h" }
-      module is_transparent             { private header "__functional/is_transparent.h" }
       module invoke                     { private header "__functional/invoke.h" }
+      module is_transparent             { private header "__functional/is_transparent.h" }
       module mem_fn                     { private header "__functional/mem_fn.h"  }
       module mem_fun_ref                { private header "__functional/mem_fun_ref.h"  }
       module not_fn                     { private header "__functional/not_fn.h" }
@@ -521,6 +567,7 @@ module std [system] {
       module reverse_access        { private header "__iterator/reverse_access.h" }
       module reverse_iterator      { private header "__iterator/reverse_iterator.h" }
       module size                  { private header "__iterator/size.h" }
+      module unreachable_sentinel  { private header "__iterator/unreachable_sentinel.h" }
       module wrap_iter             { private header "__iterator/wrap_iter.h" }
     }
   }
@@ -618,10 +665,15 @@ module std [system] {
 
     module __ranges {
       module access                 { private header "__ranges/access.h"                }
-      module all                    { private header "__ranges/all.h"                   }
+      module all                    {
+        private header "__ranges/all.h"
+        export functional.__functional.compose
+        export functional.__functional.perfect_forward
+      }
       module common_view            { private header "__ranges/common_view.h"           }
       module concepts               { private header "__ranges/concepts.h"              }
       module copyable_box           { private header "__ranges/copyable_box.h"          }
+      module counted                { private header "__ranges/counted.h"               }
       module dangling               { private header "__ranges/dangling.h"              }
       module data                   { private header "__ranges/data.h"                  }
       module drop_view              { private header "__ranges/drop_view.h"             }
@@ -629,14 +681,21 @@ module std [system] {
       module empty_view             { private header "__ranges/empty_view.h"            }
       module enable_borrowed_range  { private header "__ranges/enable_borrowed_range.h" }
       module enable_view            { private header "__ranges/enable_view.h"           }
+      module iota_view              { private header "__ranges/iota_view.h"             }
+      module join_view              { private header "__ranges/join_view.h"             }
       module non_propagating_cache  { private header "__ranges/non_propagating_cache.h" }
+      module range_adaptor          { private header "__ranges/range_adaptor.h"         }
       module ref_view               { private header "__ranges/ref_view.h"              }
       module reverse_view           { private header "__ranges/reverse_view.h"          }
       module size                   { private header "__ranges/size.h"                  }
       module single_view            { private header "__ranges/single_view.h"           }
       module subrange               { private header "__ranges/subrange.h"              }
       module take_view              { private header "__ranges/take_view.h"             }
-      module transform_view         { private header "__ranges/transform_view.h"        }
+      module transform_view         {
+        private header "__ranges/transform_view.h"
+        export functional.__functional.bind_back
+        export functional.__functional.perfect_forward
+      }
       module view_interface         { private header "__ranges/view_interface.h"        }
     }
   }
@@ -748,9 +807,9 @@ module std [system] {
     export *
 
     module __utility {
-      module __decay_copy        { private header "__utility/__decay_copy.h"        }
       module as_const            { private header "__utility/as_const.h"            }
       module cmp                 { private header "__utility/cmp.h"                 }
+      module decay_copy          { private header "__utility/decay_copy.h"          }
       module declval             { private header "__utility/declval.h"             }
       module exchange            { private header "__utility/exchange.h"            }
       module forward             { private header "__utility/forward.h"             }

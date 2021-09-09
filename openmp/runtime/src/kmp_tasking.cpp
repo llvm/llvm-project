@@ -324,10 +324,16 @@ static kmp_int32 __kmp_push_task(kmp_int32 gtid, kmp_task_t *task) {
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(task);
 
-  // We don't need to map to shadow gtid if it is already hidden helper thread
-  if (taskdata->td_flags.hidden_helper && !KMP_HIDDEN_HELPER_THREAD(gtid)) {
-    gtid = KMP_GTID_TO_SHADOW_GTID(gtid);
-    thread = __kmp_threads[gtid];
+  // If we encounter a hidden helper task, and the current thread is not a
+  // hidden helper thread, we have to give the task to any hidden helper thread
+  // starting from its shadow one.
+  if (UNLIKELY(taskdata->td_flags.hidden_helper &&
+               !KMP_HIDDEN_HELPER_THREAD(gtid))) {
+    kmp_int32 shadow_gtid = KMP_GTID_TO_SHADOW_GTID(gtid);
+    __kmpc_give_task(task, __kmp_tid_from_gtid(shadow_gtid));
+    // Signal the hidden helper threads.
+    __kmp_hidden_helper_worker_thread_signal();
+    return TASK_SUCCESSFULLY_PUSHED;
   }
 
   kmp_task_team_t *task_team = thread->th.th_task_team;
@@ -434,15 +440,7 @@ static kmp_int32 __kmp_push_task(kmp_int32 gtid, kmp_task_t *task) {
                 gtid, taskdata, thread_data->td.td_deque_ntasks,
                 thread_data->td.td_deque_head, thread_data->td.td_deque_tail));
 
-  auto hidden_helper = taskdata->td_flags.hidden_helper;
-
   __kmp_release_bootstrap_lock(&thread_data->td.td_deque_lock);
-
-  // Signal one worker thread to execute the task
-  if (UNLIKELY(hidden_helper)) {
-    // Wake hidden helper threads up if they're sleeping
-    __kmp_hidden_helper_worker_thread_signal();
-  }
 
   return TASK_SUCCESSFULLY_PUSHED;
 }
@@ -809,6 +807,24 @@ static void __kmp_free_task_and_ancestors(kmp_int32 gtid,
            gtid, taskdata, children));
 }
 
+// Only need to keep track of child task counts if any of the following:
+// 1. team parallel and tasking not serialized;
+// 2. it is a proxy or detachable or hidden helper task
+// 3. the children counter of its parent task is greater than 0.
+// The reason for the 3rd one is for serialized team that found detached task,
+// hidden helper task, T. In this case, the execution of T is still deferred,
+// and it is also possible that a regular task depends on T. In this case, if we
+// don't track the children, task synchronization will be broken.
+static bool __kmp_track_children_task(kmp_taskdata_t *taskdata) {
+  kmp_tasking_flags_t flags = taskdata->td_flags;
+  bool ret = !(flags.team_serial || flags.tasking_ser);
+  ret = ret || flags.proxy == TASK_PROXY ||
+        flags.detachable == TASK_DETACHABLE || flags.hidden_helper;
+  ret = ret ||
+        KMP_ATOMIC_LD_ACQ(&taskdata->td_parent->td_incomplete_child_tasks) > 0;
+  return ret;
+}
+
 // __kmp_task_finish: bookkeeping to do when a task finishes execution
 //
 // gtid: global thread ID for calling thread
@@ -935,12 +951,9 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
     if (ompt)
       __ompt_task_finish(task, resumed_task, ompt_task_complete);
 #endif
-
-    // Only need to keep track of count if team parallel and tasking not
-    // serialized, or task is detachable and event has already been fulfilled
-    if (!(taskdata->td_flags.team_serial || taskdata->td_flags.tasking_ser) ||
-        taskdata->td_flags.detachable == TASK_DETACHABLE ||
-        taskdata->td_flags.hidden_helper) {
+    // TODO: What would be the balance between the conditions in the function
+    // and an atomic operation?
+    if (__kmp_track_children_task(taskdata)) {
       __kmp_release_deps(gtid, taskdata);
       // Predecrement simulated by "- 1" calculation
 #if KMP_DEBUG
@@ -1378,11 +1391,9 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
   if (UNLIKELY(ompt_enabled.enabled))
     __ompt_task_init(taskdata, gtid);
 #endif
-  // Only need to keep track of child task counts if team parallel and tasking
-  // not serialized or if it is a proxy or detachable or hidden helper task
-  if (flags->proxy == TASK_PROXY || flags->detachable == TASK_DETACHABLE ||
-      flags->hidden_helper ||
-      !(taskdata->td_flags.team_serial || taskdata->td_flags.tasking_ser)) {
+  // TODO: What would be the balance between the conditions in the function and
+  // an atomic operation?
+  if (__kmp_track_children_task(taskdata)) {
     KMP_ATOMIC_INC(&parent_task->td_incomplete_child_tasks);
     if (parent_task->td_taskgroup)
       KMP_ATOMIC_INC(&parent_task->td_taskgroup->count);

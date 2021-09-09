@@ -235,7 +235,7 @@ void Lint::visitCallBase(CallBase &I) {
           for (auto BI = I.arg_begin(); BI != AE; ++BI, ++ArgNo) {
             // Skip ByVal arguments since they will be memcpy'd to the callee's
             // stack so we're not really passing the pointer anyway.
-            if (PAL.hasParamAttribute(ArgNo, Attribute::ByVal))
+            if (PAL.hasParamAttr(ArgNo, Attribute::ByVal))
               continue;
             // If both arguments are readonly, they have no dependence.
             if (Formal->onlyReadsMemory() && I.onlyReadsMemory(ArgNo))
@@ -268,7 +268,7 @@ void Lint::visitCallBase(CallBase &I) {
       for (Value *Arg : I.args()) {
         // Skip ByVal arguments since they will be memcpy'd to the callee's
         // stack anyway.
-        if (PAL.hasParamAttribute(ArgNo++, Attribute::ByVal))
+        if (PAL.hasParamAttr(ArgNo++, Attribute::ByVal))
           continue;
         Value *Obj = findValue(Arg, /*OffsetOk=*/true);
         Assert(!isa<AllocaInst>(Obj),

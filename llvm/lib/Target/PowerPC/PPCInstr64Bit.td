@@ -73,7 +73,7 @@ def SRL64 : SDNodeXForm<imm, [{
 //
 
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
-let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7 in {
+let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7, hasSideEffects = 0 in {
   let isReturn = 1, isPredicable = 1, Uses = [LR8, RM] in
     def BLR8 : XLForm_2_ext<19, 16, 20, 0, 0, (outs), (ins), "blr", IIC_BrB,
                             [(retflag)]>, Requires<[In64BitMode]>;
@@ -100,7 +100,7 @@ let Defs = [LR8] in
   def MovePCtoLR8 : PPCEmitTimePseudo<(outs), (ins), "#MovePCtoLR8", []>,
                     PPC970_Unit_BRU;
 
-let isBranch = 1, isTerminator = 1, hasCtrlDep = 1, PPC970_Unit = 7 in {
+let isBranch = 1, isTerminator = 1, hasCtrlDep = 1, PPC970_Unit = 7, hasSideEffects = 0 in {
   let Defs = [CTR8], Uses = [CTR8] in {
     def BDZ8  : BForm_1<16, 18, 0, 0, (outs), (ins condbrtarget:$dst),
                         "bdz $dst">;
@@ -118,7 +118,7 @@ let isBranch = 1, isTerminator = 1, hasCtrlDep = 1, PPC970_Unit = 7 in {
 
 
 
-let isCall = 1, PPC970_Unit = 7, Defs = [LR8] in {
+let isCall = 1, PPC970_Unit = 7, Defs = [LR8], hasSideEffects = 0 in {
   // Convenient aliases for call instructions
   let Uses = [RM] in {
     def BL8  : IForm<18, 0, 1, (outs), (ins calltarget:$func),
@@ -193,7 +193,7 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
 // FIXME: Duplicating this for the asm parser should be unnecessary, but the
 // previous definition must be marked as CodeGen only to prevent decoding
 // conflicts.
-let Interpretation64Bit = 1, isAsmParserOnly = 1 in
+let Interpretation64Bit = 1, isAsmParserOnly = 1, hasSideEffects = 0 in
 let isCall = 1, PPC970_Unit = 7, Defs = [LR8], Uses = [RM] in
 def BL8_TLS_ : IForm<18, 0, 1, (outs), (ins tlscall:$func),
                      "bl $func", IIC_BrB, []>;
@@ -408,6 +408,7 @@ def TCRETURNri8 : PPCEmitTimePseudo<(outs), (ins CTRRC8:$dst, i32imm:$offset),
                  "#TC_RETURNr8 $dst $offset",
                  []>;
 
+let hasSideEffects = 0 in {
 let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7, isBranch = 1,
     isIndirectBranch = 1, isCall = 1, isReturn = 1, Uses = [CTR8, RM] in
 def TAILBCTR8 : XLForm_2_ext<19, 528, 20, 0, 0, (outs), (ins), "bctr", IIC_BrB,
@@ -425,6 +426,7 @@ let isBranch = 1, isTerminator = 1, hasCtrlDep = 1, PPC970_Unit = 7,
 def TAILBA8   : IForm<18, 0, 0, (outs), (ins abscalltarget:$dst),
                   "ba $dst", IIC_BrB,
                   []>;
+}
 } // Interpretation64Bit
 
 def : Pat<(PPCtc_return (i64 tglobaladdr:$dst),  imm:$imm),
@@ -1340,11 +1342,24 @@ def LQ   : DQForm_RTp5_RA17_MEM<56, 0,
                                 []>,
                                 RegConstraint<"@earlyclobber $RTp">,
                                 isPPC64;
+// We don't really have LQX in the ISA, make a pseudo one so that we can
+// handle x-form during isel. Make it pre-ra may expose
+// oppotunities to some opts(CSE, LICM and etc.) for the result of adding
+// RA and RB.
+def LQX_PSEUDO : PPCCustomInserterPseudo<(outs g8prc:$RTp),
+                                         (ins memrr:$src), "#LQX_PSEUDO", []>;
+
 def RESTORE_QUADWORD : PPCEmitTimePseudo<(outs g8prc:$RTp), (ins memrix:$src),
                                          "#RESTORE_QUADWORD", []>;
 }
 
 }
+
+def : Pat<(int_ppc_atomic_load_i128 iaddrX16:$src),
+          (SPLIT_QUADWORD (LQ memrix16:$src))>;
+
+def : Pat<(int_ppc_atomic_load_i128 ForceXForm:$src),
+          (SPLIT_QUADWORD (LQX_PSEUDO memrr:$src))>;
 
 // Support for medium and large code model.
 let hasSideEffects = 0 in {
@@ -1534,11 +1549,27 @@ let mayStore = 1, hasNoSchedulingInfo = 1 in {
 def STQ : DSForm_1<62, 2, (outs), (ins g8prc:$RSp, memrix:$dst),
                    "stq $RSp, $dst", IIC_LdStSTQ,
                    []>, isPPC64;
+
+def STQX_PSEUDO : PPCCustomInserterPseudo<(outs),
+                                          (ins g8prc:$RSp, memrr:$dst),
+                                          "#STQX_PSEUDO", []>;
+
 def SPILL_QUADWORD : PPCEmitTimePseudo<(outs), (ins g8prc:$RSp, memrix:$dst),
                                        "#SPILL_QUADWORD", []>;
 }
 
 }
+
+def BUILD_QUADWORD : PPCPostRAExpPseudo<
+                       (outs g8prc:$RTp),
+                       (ins g8rc:$lo, g8rc:$hi),
+                       "#BUILD_QUADWORD", []>;
+
+def : Pat<(int_ppc_atomic_store_i128 i64:$lo, i64:$hi, DSForm:$dst),
+          (STQ (BUILD_QUADWORD g8rc:$lo, g8rc:$hi), memrix:$dst)>;
+
+def : Pat<(int_ppc_atomic_store_i128 i64:$lo, i64:$hi, ForceXForm:$dst),
+          (STQX_PSEUDO (BUILD_QUADWORD g8rc:$lo, g8rc:$hi), memrr:$dst)>;
 
 // Stores with Update (pre-inc).
 let PPC970_Unit = 2, mayStore = 1, mayLoad = 0 in {
@@ -1669,6 +1700,13 @@ def HASHCHKP : XForm_XD6_RA5_RB5<31, 690, (outs),
                                  (ins g8rc:$RB, memrihash:$D_RA_XD),
                                  "hashchkp $RB, $D_RA_XD", IIC_IntGeneral, []>;
 }
+
+let Interpretation64Bit = 1, isCodeGenOnly = 1, hasSideEffects = 1 in
+def ADDEX8 : Z23Form_RTAB5_CY2<31, 170, (outs g8rc:$rT),
+                              (ins g8rc:$rA, g8rc:$rB, u2imm:$CY),
+                              "addex $rT, $rA, $rB, $CY", IIC_IntGeneral,
+                              [(set i64:$rT, (int_ppc_addex i64:$rA, i64:$rB,
+                                                            timm:$CY))]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction Patterns

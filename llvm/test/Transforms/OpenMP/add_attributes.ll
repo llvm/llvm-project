@@ -626,9 +626,9 @@ declare void @__kmpc_destroy_allocator(i32, i8*)
 
 declare void @__kmpc_push_target_tripcount_mapper(%struct.ident_t*, i64, i64)
 
-declare i32 @__kmpc_warp_active_thread_mask()
+declare i64 @__kmpc_warp_active_thread_mask()
 
-declare void @__kmpc_syncwarp(i32)
+declare void @__kmpc_syncwarp(i64)
 
 declare i32 @__tgt_target_mapper(%struct.ident_t*, i64, i8*, i32, i8**, i8**, i64*, i64*, i8**, i8**)
 
@@ -1149,10 +1149,10 @@ attributes #0 = { noinline cold }
 ; CHECK-NEXT: declare void @__kmpc_push_target_tripcount_mapper(%struct.ident_t*, i64, i64)
 
 ; CHECK: ; Function Attrs: convergent nounwind
-; CHECK-NEXT: declare i32 @__kmpc_warp_active_thread_mask()
+; CHECK-NEXT: declare i64 @__kmpc_warp_active_thread_mask()
 
 ; CHECK: ; Function Attrs: convergent nounwind
-; CHECK-NEXT: declare void @__kmpc_syncwarp(i32)
+; CHECK-NEXT: declare void @__kmpc_syncwarp(i64)
 
 ; CHECK: ; Function Attrs: nounwind
 ; CHECK-NEXT: declare i32 @__tgt_target_mapper(%struct.ident_t*, i64, i8*, i32, i8**, i8**, i64*, i64*, i8**, i8**)
@@ -1677,10 +1677,10 @@ attributes #0 = { noinline cold }
 ; OPTIMISTIC-NEXT: declare void @__kmpc_push_target_tripcount_mapper(%struct.ident_t*, i64, i64)
 
 ; OPTIMISTIC: ; Function Attrs: convergent nounwind
-; OPTIMISTIC-NEXT: declare i32 @__kmpc_warp_active_thread_mask()
+; OPTIMISTIC-NEXT: declare i64 @__kmpc_warp_active_thread_mask()
 
 ; OPTIMISTIC: ; Function Attrs: convergent nounwind
-; OPTIMISTIC-NEXT: declare void @__kmpc_syncwarp(i32)
+; OPTIMISTIC-NEXT: declare void @__kmpc_syncwarp(i64)
 
 ; OPTIMISTIC: ; Function Attrs: nounwind
 ; OPTIMISTIC-NEXT: declare i32 @__tgt_target_mapper(%struct.ident_t*, i64, i8*, i32, i8**, i8**, i64*, i64*, i8**, i8**)

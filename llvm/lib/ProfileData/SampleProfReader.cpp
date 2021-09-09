@@ -53,21 +53,23 @@ using namespace sampleprof;
 // For ext-binary format profiles, the flag is set in the summary.
 static cl::opt<bool> ProfileIsFSDisciminator(
     "profile-isfs", cl::Hidden, cl::init(false),
-    cl::desc("Profile uses flow senstive discriminators"));
+    cl::desc("Profile uses flow sensitive discriminators"));
 
 /// Dump the function profile for \p FName.
 ///
-/// \param FName Name of the function to print.
+/// \param FContext Name + context of the function to print.
 /// \param OS Stream to emit the output to.
-void SampleProfileReader::dumpFunctionProfile(StringRef FName,
+void SampleProfileReader::dumpFunctionProfile(SampleContext FContext,
                                               raw_ostream &OS) {
-  OS << "Function: " << FName << ": " << Profiles[FName];
+  OS << "Function: " << FContext.toString() << ": " << Profiles[FContext];
 }
 
 /// Dump all the function profiles found on stream \p OS.
 void SampleProfileReader::dump(raw_ostream &OS) {
-  for (const auto &I : Profiles)
-    dumpFunctionProfile(I.getKey(), OS);
+  std::vector<NameFunctionSamples> V;
+  sortFuncProfiles(Profiles, V);
+  for (const auto &I : V)
+    dumpFunctionProfile(I.first, OS);
 }
 
 /// Parse \p Input as function head.
@@ -249,6 +251,7 @@ std::error_code SampleProfileReaderText::readImpl() {
   bool SeenMetadata = false;
 
   ProfileIsFS = ProfileIsFSDisciminator;
+  FunctionSamples::ProfileIsFS = ProfileIsFS;
   for (; !LineIt.is_at_eof(); ++LineIt) {
     if ((*LineIt)[(*LineIt).find_first_not_of(' ')] == '#')
       continue;
@@ -273,12 +276,11 @@ std::error_code SampleProfileReaderText::readImpl() {
         return sampleprof_error::malformed;
       }
       SeenMetadata = false;
-      SampleContext FContext(FName);
+      SampleContext FContext(FName, CSNameTable);
       if (FContext.hasContext())
         ++CSProfileCount;
       Profiles[FContext] = FunctionSamples();
       FunctionSamples &FProfile = Profiles[FContext];
-      FProfile.setName(FContext.getNameWithoutContext());
       FProfile.setContext(FContext);
       MergeResult(Result, FProfile.addTotalSamples(NumSamples));
       MergeResult(Result, FProfile.addHeadSamples(NumHeadSamples));
@@ -450,6 +452,13 @@ ErrorOr<StringRef> SampleProfileReaderBinary::readStringFromTable() {
   return NameTable[*Idx];
 }
 
+ErrorOr<SampleContext> SampleProfileReaderBinary::readSampleContextFromTable() {
+  auto FName(readStringFromTable());
+  if (std::error_code EC = FName.getError())
+    return EC;
+  return SampleContext(*FName);
+}
+
 ErrorOr<StringRef> SampleProfileReaderExtBinaryBase::readStringFromTable() {
   if (!FixedLengthMD5)
     return SampleProfileReaderBinary::readStringFromTable();
@@ -576,18 +585,16 @@ SampleProfileReaderBinary::readFuncProfile(const uint8_t *Start) {
   if (std::error_code EC = NumHeadSamples.getError())
     return EC;
 
-  auto FName(readStringFromTable());
-  if (std::error_code EC = FName.getError())
+  ErrorOr<SampleContext> FContext(readSampleContextFromTable());
+  if (std::error_code EC = FContext.getError())
     return EC;
 
-  SampleContext FContext(*FName);
-  Profiles[FContext] = FunctionSamples();
-  FunctionSamples &FProfile = Profiles[FContext];
-  FProfile.setName(FContext.getNameWithoutContext());
-  FProfile.setContext(FContext);
+  Profiles[*FContext] = FunctionSamples();
+  FunctionSamples &FProfile = Profiles[*FContext];
+  FProfile.setContext(*FContext);
   FProfile.addHeadSamples(*NumHeadSamples);
 
-  if (FContext.hasContext())
+  if (FContext->hasContext())
     CSProfileCount++;
 
   if (std::error_code EC = readProfile(FProfile))
@@ -597,12 +604,38 @@ SampleProfileReaderBinary::readFuncProfile(const uint8_t *Start) {
 
 std::error_code SampleProfileReaderBinary::readImpl() {
   ProfileIsFS = ProfileIsFSDisciminator;
+  FunctionSamples::ProfileIsFS = ProfileIsFS;
   while (!at_eof()) {
     if (std::error_code EC = readFuncProfile(Data))
       return EC;
   }
 
   return sampleprof_error::success;
+}
+
+ErrorOr<SampleContextFrames>
+SampleProfileReaderExtBinaryBase::readContextFromTable() {
+  auto ContextIdx = readNumber<uint32_t>();
+  if (std::error_code EC = ContextIdx.getError())
+    return EC;
+  if (*ContextIdx >= CSNameTable->size())
+    return sampleprof_error::truncated_name_table;
+  return (*CSNameTable)[*ContextIdx];
+}
+
+ErrorOr<SampleContext>
+SampleProfileReaderExtBinaryBase::readSampleContextFromTable() {
+  if (ProfileIsCS) {
+    auto FContext(readContextFromTable());
+    if (std::error_code EC = FContext.getError())
+      return EC;
+    return SampleContext(*FContext);
+  } else {
+    auto FName(readStringFromTable());
+    if (std::error_code EC = FName.getError())
+      return EC;
+    return SampleContext(*FName);
+  }
 }
 
 std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
@@ -632,11 +665,17 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
       return EC;
     break;
   }
+  case SecCSNameTable: {
+    if (std::error_code EC = readCSNameTableSec())
+      return EC;
+    break;
+  }
   case SecLBRProfile:
     if (std::error_code EC = readFuncProfiles())
       return EC;
     break;
   case SecFuncOffsetTable:
+    FuncOffsetsOrdered = hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagOrdered);
     if (std::error_code EC = readFuncOffsetTable())
       return EC;
     break;
@@ -682,17 +721,27 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncOffsetTable() {
     return EC;
 
   FuncOffsetTable.reserve(*Size);
+
+  if (FuncOffsetsOrdered) {
+    OrderedFuncOffsets =
+        std::make_unique<std::vector<std::pair<SampleContext, uint64_t>>>();
+    OrderedFuncOffsets->reserve(*Size);
+  }
+
   for (uint32_t I = 0; I < *Size; ++I) {
-    auto FName(readStringFromTable());
-    if (std::error_code EC = FName.getError())
+    auto FContext(readSampleContextFromTable());
+    if (std::error_code EC = FContext.getError())
       return EC;
 
     auto Offset = readNumber<uint64_t>();
     if (std::error_code EC = Offset.getError())
       return EC;
 
-    FuncOffsetTable[*FName] = *Offset;
+    FuncOffsetTable[*FContext] = *Offset;
+    if (FuncOffsetsOrdered)
+      OrderedFuncOffsets->emplace_back(*FContext, *Offset);
   }
+
   return sampleprof_error::success;
 }
 
@@ -721,75 +770,77 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
       }
     }
 
-    if (useMD5()) {
-      for (auto Name : FuncsToUse) {
-        auto GUID = std::to_string(MD5Hash(Name));
-        auto iter = FuncOffsetTable.find(StringRef(GUID));
-        if (iter == FuncOffsetTable.end())
-          continue;
-        const uint8_t *FuncProfileAddr = Start + iter->second;
-        assert(FuncProfileAddr < End && "out of LBRProfile section");
-        if (std::error_code EC = readFuncProfile(FuncProfileAddr))
-          return EC;
+    if (ProfileIsCS) {
+      DenseSet<uint64_t> FuncGuidsToUse;
+      if (useMD5()) {
+        for (auto Name : FuncsToUse)
+          FuncGuidsToUse.insert(Function::getGUID(Name));
       }
-    } else if (FunctionSamples::ProfileIsCS) {
-      // Compute the ordered set of names, so we can
-      // get all context profiles under a subtree by
-      // iterating through the ordered names.
-      struct Comparer {
-        // Ignore the closing ']' when ordering context
-        bool operator()(const StringRef &L, const StringRef &R) const {
-          return L.substr(0, L.size() - 1) < R.substr(0, R.size() - 1);
+
+      // For each function in current module, load all context profiles for
+      // the function as well as their callee contexts which can help profile
+      // guided importing for ThinLTO. This can be achieved by walking
+      // through an ordered context container, where contexts are laid out
+      // as if they were walked in preorder of a context trie. While
+      // traversing the trie, a link to the highest common ancestor node is
+      // kept so that all of its decendants will be loaded.
+      assert(OrderedFuncOffsets.get() &&
+             "func offset table should always be sorted in CS profile");
+      const SampleContext *CommonContext = nullptr;
+      for (const auto &NameOffset : *OrderedFuncOffsets) {
+        const auto &FContext = NameOffset.first;
+        auto FName = FContext.getName();
+        // For function in the current module, keep its farthest ancestor
+        // context. This can be used to load itself and its child and
+        // sibling contexts.
+        if ((useMD5() && FuncGuidsToUse.count(std::stoull(FName.data()))) ||
+            (!useMD5() && (FuncsToUse.count(FName) ||
+                           (Remapper && Remapper->exist(FName))))) {
+          if (!CommonContext || !CommonContext->IsPrefixOf(FContext))
+            CommonContext = &FContext;
         }
-      };
-      std::set<StringRef, Comparer> OrderedNames;
-      for (auto Name : FuncOffsetTable) {
-        OrderedNames.insert(Name.first);
-      }
 
-      // For each function in current module, load all
-      // context profiles for the function.
-      for (auto NameOffset : FuncOffsetTable) {
-        StringRef ContextName = NameOffset.first;
-        SampleContext FContext(ContextName);
-        auto FuncName = FContext.getNameWithoutContext();
-        if (!FuncsToUse.count(FuncName) &&
-            (!Remapper || !Remapper->exist(FuncName)))
-          continue;
-
-        // For each context profile we need, try to load
-        // all context profile in the subtree. This can
-        // help profile guided importing for ThinLTO.
-        auto It = OrderedNames.find(ContextName);
-        while (It != OrderedNames.end() &&
-               It->startswith(ContextName.substr(0, ContextName.size() - 1))) {
-          const uint8_t *FuncProfileAddr = Start + FuncOffsetTable[*It];
+        if (CommonContext == &FContext ||
+            (CommonContext && CommonContext->IsPrefixOf(FContext))) {
+          // Load profile for the current context which originated from
+          // the common ancestor.
+          const uint8_t *FuncProfileAddr = Start + NameOffset.second;
           assert(FuncProfileAddr < End && "out of LBRProfile section");
           if (std::error_code EC = readFuncProfile(FuncProfileAddr))
             return EC;
-          // Remove loaded context profile so we won't
-          // load it repeatedly.
-          It = OrderedNames.erase(It);
         }
       }
     } else {
-      for (auto NameOffset : FuncOffsetTable) {
-        SampleContext FContext(NameOffset.first);
-        auto FuncName = FContext.getNameWithoutContext();
-        if (!FuncsToUse.count(FuncName) &&
-            (!Remapper || !Remapper->exist(FuncName)))
-          continue;
-        const uint8_t *FuncProfileAddr = Start + NameOffset.second;
-        assert(FuncProfileAddr < End && "out of LBRProfile section");
-        if (std::error_code EC = readFuncProfile(FuncProfileAddr))
-          return EC;
+      if (useMD5()) {
+        for (auto Name : FuncsToUse) {
+          auto GUID = std::to_string(MD5Hash(Name));
+          auto iter = FuncOffsetTable.find(StringRef(GUID));
+          if (iter == FuncOffsetTable.end())
+            continue;
+          const uint8_t *FuncProfileAddr = Start + iter->second;
+          assert(FuncProfileAddr < End && "out of LBRProfile section");
+          if (std::error_code EC = readFuncProfile(FuncProfileAddr))
+            return EC;
+        }
+      } else {
+        for (auto NameOffset : FuncOffsetTable) {
+          SampleContext FContext(NameOffset.first);
+          auto FuncName = FContext.getName();
+          if (!FuncsToUse.count(FuncName) &&
+              (!Remapper || !Remapper->exist(FuncName)))
+            continue;
+          const uint8_t *FuncProfileAddr = Start + NameOffset.second;
+          assert(FuncProfileAddr < End && "out of LBRProfile section");
+          if (std::error_code EC = readFuncProfile(FuncProfileAddr))
+            return EC;
+        }
       }
     }
     Data = End;
   }
   assert((CSProfileCount == 0 || CSProfileCount == Profiles.size()) &&
          "Cannot have both context-sensitive and regular profile");
-  assert(ProfileIsCS == (CSProfileCount > 0) &&
+  assert((!CSProfileCount || ProfileIsCS) &&
          "Section flag should be consistent with actual profile");
   return sampleprof_error::success;
 }
@@ -885,6 +936,7 @@ std::error_code SampleProfileReaderCompactBinary::readImpl() {
   // given a module.
   bool LoadFuncsToBeUsed = collectFuncsFromModule();
   ProfileIsFS = ProfileIsFSDisciminator;
+  FunctionSamples::ProfileIsFS = ProfileIsFS;
   std::vector<uint64_t> OffsetsToUse;
   if (!LoadFuncsToBeUsed) {
     // load all the function profiles.
@@ -983,22 +1035,62 @@ std::error_code SampleProfileReaderExtBinaryBase::readNameTableSec(bool IsMD5) {
   return SampleProfileReaderBinary::readNameTable();
 }
 
+// Read in the CS name table section, which basically contains a list of context
+// vectors. Each element of a context vector, aka a frame, refers to the
+// underlying raw function names that are stored in the name table, as well as
+// a callsite identifier that only makes sense for non-leaf frames.
+std::error_code SampleProfileReaderExtBinaryBase::readCSNameTableSec() {
+  auto Size = readNumber<uint32_t>();
+  if (std::error_code EC = Size.getError())
+    return EC;
+
+  std::vector<SampleContextFrameVector> *PNameVec =
+      new std::vector<SampleContextFrameVector>();
+  PNameVec->reserve(*Size);
+  for (uint32_t I = 0; I < *Size; ++I) {
+    PNameVec->emplace_back(SampleContextFrameVector());
+    auto ContextSize = readNumber<uint32_t>();
+    if (std::error_code EC = ContextSize.getError())
+      return EC;
+    for (uint32_t J = 0; J < *ContextSize; ++J) {
+      auto FName(readStringFromTable());
+      if (std::error_code EC = FName.getError())
+        return EC;
+      auto LineOffset = readNumber<uint64_t>();
+      if (std::error_code EC = LineOffset.getError())
+        return EC;
+
+      if (!isOffsetLegal(*LineOffset))
+        return std::error_code();
+
+      auto Discriminator = readNumber<uint64_t>();
+      if (std::error_code EC = Discriminator.getError())
+        return EC;
+
+      PNameVec->back().emplace_back(
+          FName.get(), LineLocation(LineOffset.get(), Discriminator.get()));
+    }
+  }
+
+  // From this point the underlying object of CSNameTable should be immutable.
+  CSNameTable.reset(PNameVec);
+  return sampleprof_error::success;
+}
+
 std::error_code
 SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute) {
   while (Data < End) {
-    auto FName(readStringFromTable());
-    if (std::error_code EC = FName.getError())
+    auto FContext(readSampleContextFromTable());
+    if (std::error_code EC = FContext.getError())
       return EC;
 
-    SampleContext FContext(*FName);
-    bool ProfileInMap = Profiles.count(FContext);
-
+    bool ProfileInMap = Profiles.count(*FContext);
     if (ProfileIsProbeBased) {
       auto Checksum = readNumber<uint64_t>();
       if (std::error_code EC = Checksum.getError())
         return EC;
       if (ProfileInMap)
-        Profiles[FContext].setFunctionHash(*Checksum);
+        Profiles[*FContext].setFunctionHash(*Checksum);
     }
 
     if (ProfileHasAttribute) {
@@ -1006,7 +1098,7 @@ SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute) {
       if (std::error_code EC = Attributes.getError())
         return EC;
       if (ProfileInMap)
-        Profiles[FContext].getContext().setAllAttributes(*Attributes);
+        Profiles[*FContext].getContext().setAllAttributes(*Attributes);
     }
   }
 
@@ -1131,6 +1223,10 @@ static std::string getSecFlagsStr(const SecHdrTableEntry &Entry) {
       Flags.append("context,");
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFSDiscriminator))
       Flags.append("fs-discriminator,");
+    break;
+  case SecFuncOffsetTable:
+    if (hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagOrdered))
+      Flags.append("ordered,");
     break;
   default:
     break;

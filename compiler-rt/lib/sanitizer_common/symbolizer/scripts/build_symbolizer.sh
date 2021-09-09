@@ -71,6 +71,7 @@ TBLGEN=$CLANG_DIR/llvm-tblgen
 OPT=$CLANG_DIR/opt
 export AR=$CLANG_DIR/llvm-ar
 export LINK=$CLANG_DIR/llvm-link
+TARGET_TRIPLE=$($CC -print-target-triple)
 
 for F in $CC $CXX $TBLGEN $LINK $OPT $AR; do
   if [[ ! -x "$F" ]]; then
@@ -123,7 +124,7 @@ cd ${LIBCXX_BUILD}
 ninja cxx cxxabi
 
 FLAGS="${FLAGS} -fno-rtti -fno-exceptions"
-LLVM_FLAGS="${FLAGS} -nostdinc++ -I${ZLIB_BUILD} -I${LIBCXX_BUILD}/include/c++/v1 -Wno-error=global-constructors"
+LLVM_FLAGS="${FLAGS} -nostdinc++ -I${ZLIB_BUILD} -isystem ${LIBCXX_BUILD}/include/${TARGET_TRIPLE}/c++/v1 -isystem ${LIBCXX_BUILD}/include/c++/v1 -Wno-error=global-constructors"
 
 # Build LLVM.
 if [[ ! -d ${LLVM_BUILD} ]]; then

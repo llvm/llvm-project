@@ -225,7 +225,7 @@ private:
                                bool IsNegStride, bool IsLoopMemset = false);
   bool processLoopStoreOfLoopLoad(StoreInst *SI, const SCEV *BECount);
   bool processLoopStoreOfLoopLoad(Value *DestPtr, Value *SourcePtr,
-                                  unsigned StoreSize, MaybeAlign StoreAlign,
+                                  const SCEV *StoreSize, MaybeAlign StoreAlign,
                                   MaybeAlign LoadAlign, Instruction *TheStore,
                                   Instruction *TheLoad,
                                   const SCEVAddRecExpr *StoreEv,
@@ -858,15 +858,15 @@ bool LoopIdiomRecognize::processLoopMemCpy(MemCpyInst *MCI,
 
   // Check if the stride matches the size of the memcpy. If so, then we know
   // that every byte is touched in the loop.
-  const SCEVConstant *StoreStride =
+  const SCEVConstant *ConstStoreStride =
       dyn_cast<SCEVConstant>(StoreEv->getOperand(1));
-  const SCEVConstant *LoadStride =
+  const SCEVConstant *ConstLoadStride =
       dyn_cast<SCEVConstant>(LoadEv->getOperand(1));
-  if (!StoreStride || !LoadStride)
+  if (!ConstStoreStride || !ConstLoadStride)
     return false;
 
-  APInt StoreStrideValue = StoreStride->getAPInt();
-  APInt LoadStrideValue = LoadStride->getAPInt();
+  APInt StoreStrideValue = ConstStoreStride->getAPInt();
+  APInt LoadStrideValue = ConstLoadStride->getAPInt();
   // Huge stride value - give up
   if (StoreStrideValue.getBitWidth() > 64 || LoadStrideValue.getBitWidth() > 64)
     return false;
@@ -876,7 +876,7 @@ bool LoopIdiomRecognize::processLoopMemCpy(MemCpyInst *MCI,
       return OptimizationRemarkMissed(DEBUG_TYPE, "SizeStrideUnequal", MCI)
              << ore::NV("Inst", "memcpy") << " in "
              << ore::NV("Function", MCI->getFunction())
-             << " function will not be hoised: "
+             << " function will not be hoisted: "
              << ore::NV("Reason", "memcpy size is not equal to stride");
     });
     return false;
@@ -888,16 +888,17 @@ bool LoopIdiomRecognize::processLoopMemCpy(MemCpyInst *MCI,
   if (StoreStrideInt != LoadStrideInt)
     return false;
 
-  return processLoopStoreOfLoopLoad(Dest, Source, (unsigned)SizeInBytes,
-                                    MCI->getDestAlign(), MCI->getSourceAlign(),
-                                    MCI, MCI, StoreEv, LoadEv, BECount);
+  return processLoopStoreOfLoopLoad(
+      Dest, Source, SE->getConstant(Dest->getType(), SizeInBytes),
+      MCI->getDestAlign(), MCI->getSourceAlign(), MCI, MCI, StoreEv, LoadEv,
+      BECount);
 }
 
 /// processLoopMemSet - See if this memset can be promoted to a large memset.
 bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
                                            const SCEV *BECount) {
-  // We can only handle non-volatile memsets with a constant size.
-  if (MSI->isVolatile() || !isa<ConstantInt>(MSI->getLength()))
+  // We can only handle non-volatile memsets.
+  if (MSI->isVolatile())
     return false;
 
   // If we're not allowed to hack on memset, we fail.
@@ -910,23 +911,72 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
   // loop, which indicates a strided store.  If we have something else, it's a
   // random store we can't handle.
   const SCEVAddRecExpr *Ev = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(Pointer));
-  if (!Ev || Ev->getLoop() != CurLoop || !Ev->isAffine())
+  if (!Ev || Ev->getLoop() != CurLoop)
+    return false;
+  if (!Ev->isAffine()) {
+    LLVM_DEBUG(dbgs() << "  Pointer is not affine, abort\n");
+    return false;
+  }
+
+  const SCEV *PointerStrideSCEV = Ev->getOperand(1);
+  const SCEV *MemsetSizeSCEV = SE->getSCEV(MSI->getLength());
+  if (!PointerStrideSCEV || !MemsetSizeSCEV)
     return false;
 
-  // Reject memsets that are so large that they overflow an unsigned.
-  uint64_t SizeInBytes = cast<ConstantInt>(MSI->getLength())->getZExtValue();
-  if ((SizeInBytes >> 32) != 0)
-    return false;
+  bool IsNegStride = false;
+  const bool IsConstantSize = isa<ConstantInt>(MSI->getLength());
 
-  // Check to see if the stride matches the size of the memset.  If so, then we
-  // know that every byte is touched in the loop.
-  const SCEVConstant *ConstStride = dyn_cast<SCEVConstant>(Ev->getOperand(1));
-  if (!ConstStride)
-    return false;
+  if (IsConstantSize) {
+    // Memset size is constant.
+    // Check if the pointer stride matches the memset size. If so, then
+    // we know that every byte is touched in the loop.
+    LLVM_DEBUG(dbgs() << "  memset size is constant\n");
+    uint64_t SizeInBytes = cast<ConstantInt>(MSI->getLength())->getZExtValue();
+    const SCEVConstant *ConstStride = dyn_cast<SCEVConstant>(Ev->getOperand(1));
+    if (!ConstStride)
+      return false;
 
-  APInt Stride = ConstStride->getAPInt();
-  if (SizeInBytes != Stride && SizeInBytes != -Stride)
-    return false;
+    APInt Stride = ConstStride->getAPInt();
+    if (SizeInBytes != Stride && SizeInBytes != -Stride)
+      return false;
+
+    IsNegStride = SizeInBytes == -Stride;
+  } else {
+    // Memset size is non-constant.
+    // Check if the pointer stride matches the memset size.
+    // To be conservative, the pass would not promote pointers that aren't in
+    // address space zero. Also, the pass only handles memset length and stride
+    // that are invariant for the top level loop.
+    LLVM_DEBUG(dbgs() << "  memset size is non-constant\n");
+    if (Pointer->getType()->getPointerAddressSpace() != 0) {
+      LLVM_DEBUG(dbgs() << "  pointer is not in address space zero, "
+                        << "abort\n");
+      return false;
+    }
+    if (!SE->isLoopInvariant(MemsetSizeSCEV, CurLoop)) {
+      LLVM_DEBUG(dbgs() << "  memset size is not a loop-invariant, "
+                        << "abort\n");
+      return false;
+    }
+
+    // Compare positive direction PointerStrideSCEV with MemsetSizeSCEV
+    IsNegStride = PointerStrideSCEV->isNonConstantNegative();
+    const SCEV *PositiveStrideSCEV =
+        IsNegStride ? SE->getNegativeSCEV(PointerStrideSCEV)
+                    : PointerStrideSCEV;
+    LLVM_DEBUG(dbgs() << "  MemsetSizeSCEV: " << *MemsetSizeSCEV << "\n"
+                      << "  PositiveStrideSCEV: " << *PositiveStrideSCEV
+                      << "\n");
+
+    if (PositiveStrideSCEV != MemsetSizeSCEV) {
+      // TODO: folding can be done to the SCEVs
+      // The folding is to fold expressions that is covered by the loop guard
+      // at loop entry. After the folding, compare again and proceed
+      // optimization if equal.
+      LLVM_DEBUG(dbgs() << "  SCEV don't match, abort\n");
+      return false;
+    }
+  }
 
   // Verify that the memset value is loop invariant.  If not, we can't promote
   // the memset.
@@ -936,7 +986,6 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
 
   SmallPtrSet<Instruction *, 1> MSIs;
   MSIs.insert(MSI);
-  bool IsNegStride = SizeInBytes == -Stride;
   return processLoopStridedStore(Pointer, SE->getSCEV(MSI->getLength()),
                                  MaybeAlign(MSI->getDestAlignment()),
                                  SplatValue, MSI, MSIs, Ev, BECount,
@@ -950,7 +999,7 @@ static bool
 mayLoopAccessLocation(Value *Ptr, ModRefInfo Access, Loop *L,
                       const SCEV *BECount, const SCEV *StoreSizeSCEV,
                       AliasAnalysis &AA,
-                      SmallPtrSetImpl<Instruction *> &IgnoredStores) {
+                      SmallPtrSetImpl<Instruction *> &IgnoredInsts) {
   // Get the location that may be stored across the loop.  Since the access is
   // strided positively through memory, we say that the modified location starts
   // at the pointer and has infinite size.
@@ -973,7 +1022,7 @@ mayLoopAccessLocation(Value *Ptr, ModRefInfo Access, Loop *L,
   for (Loop::block_iterator BI = L->block_begin(), E = L->block_end(); BI != E;
        ++BI)
     for (Instruction &I : **BI)
-      if (IgnoredStores.count(&I) == 0 &&
+      if (IgnoredInsts.count(&I) == 0 &&
           isModOrRefSet(
               intersectModRef(AA.getModRefInfo(&I, StoreLoc), Access)))
         return true;
@@ -1028,20 +1077,6 @@ static const SCEV *getTripCount(const SCEV *BECount, Type *IntPtr,
 ///
 /// This also maps the SCEV into the provided type and tries to handle the
 /// computation in a way that will fold cleanly.
-static const SCEV *getNumBytes(const SCEV *BECount, Type *IntPtr,
-                               unsigned StoreSize, Loop *CurLoop,
-                               const DataLayout *DL, ScalarEvolution *SE) {
-  const SCEV *TripCountSCEV = getTripCount(BECount, IntPtr, CurLoop, DL, SE);
-
-  // And scale it based on the store size.
-  if (StoreSize != 1) {
-    return SE->getMulExpr(TripCountSCEV, SE->getConstant(IntPtr, StoreSize),
-                          SCEV::FlagNUW);
-  }
-  return TripCountSCEV;
-}
-
-/// getNumBytes that takes StoreSize as a SCEV
 static const SCEV *getNumBytes(const SCEV *BECount, Type *IntPtr,
                                const SCEV *StoreSizeSCEV, Loop *CurLoop,
                                const DataLayout *DL, ScalarEvolution *SE) {
@@ -1208,16 +1243,18 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
   // random load we can't handle.
   Value *LoadPtr = LI->getPointerOperand();
   const SCEVAddRecExpr *LoadEv = cast<SCEVAddRecExpr>(SE->getSCEV(LoadPtr));
-  return processLoopStoreOfLoopLoad(StorePtr, LoadPtr, StoreSize,
+
+  const SCEV *StoreSizeSCEV = SE->getConstant(StorePtr->getType(), StoreSize);
+  return processLoopStoreOfLoopLoad(StorePtr, LoadPtr, StoreSizeSCEV,
                                     SI->getAlign(), LI->getAlign(), SI, LI,
                                     StoreEv, LoadEv, BECount);
 }
 
 bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
-    Value *DestPtr, Value *SourcePtr, unsigned StoreSize, MaybeAlign StoreAlign,
-    MaybeAlign LoadAlign, Instruction *TheStore, Instruction *TheLoad,
-    const SCEVAddRecExpr *StoreEv, const SCEVAddRecExpr *LoadEv,
-    const SCEV *BECount) {
+    Value *DestPtr, Value *SourcePtr, const SCEV *StoreSizeSCEV,
+    MaybeAlign StoreAlign, MaybeAlign LoadAlign, Instruction *TheStore,
+    Instruction *TheLoad, const SCEVAddRecExpr *StoreEv,
+    const SCEVAddRecExpr *LoadEv, const SCEV *BECount) {
 
   // FIXME: until llvm.memcpy.inline supports dynamic sizes, we need to
   // conservatively bail here, since otherwise we may have to transform
@@ -1240,9 +1277,14 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
   Type *IntIdxTy = Builder.getIntNTy(DL->getIndexSizeInBits(StrAS));
 
   APInt Stride = getStoreStride(StoreEv);
+  const SCEVConstant *ConstStoreSize = dyn_cast<SCEVConstant>(StoreSizeSCEV);
+
+  // TODO: Deal with non-constant size; Currently expect constant store size
+  assert(ConstStoreSize && "store size is expected to be a constant");
+
+  int64_t StoreSize = ConstStoreSize->getValue()->getZExtValue();
   bool IsNegStride = StoreSize == -Stride;
 
-  const SCEV *StoreSizeSCEV = SE->getConstant(BECount->getType(), StoreSize);
   // Handle negative strided loops.
   if (IsNegStride)
     StrStart =
@@ -1266,19 +1308,24 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
   // the return value will read this comment, and leave them alone.
   Changed = true;
 
-  SmallPtrSet<Instruction *, 2> Stores;
-  Stores.insert(TheStore);
+  SmallPtrSet<Instruction *, 2> IgnoredInsts;
+  IgnoredInsts.insert(TheStore);
 
   bool IsMemCpy = isa<MemCpyInst>(TheStore);
   const StringRef InstRemark = IsMemCpy ? "memcpy" : "load and store";
 
   bool UseMemMove =
       mayLoopAccessLocation(StoreBasePtr, ModRefInfo::ModRef, CurLoop, BECount,
-                            StoreSizeSCEV, *AA, Stores);
+                            StoreSizeSCEV, *AA, IgnoredInsts);
   if (UseMemMove) {
-    Stores.insert(TheLoad);
+    // For memmove case it's not enough to guarantee that loop doesn't access
+    // TheStore and TheLoad. Additionally we need to make sure that TheStore is
+    // the only user of TheLoad.
+    if (!TheLoad->hasOneUse())
+      return Changed;
+    IgnoredInsts.insert(TheLoad);
     if (mayLoopAccessLocation(StoreBasePtr, ModRefInfo::ModRef, CurLoop,
-                              BECount, StoreSizeSCEV, *AA, Stores)) {
+                              BECount, StoreSizeSCEV, *AA, IgnoredInsts)) {
       ORE.emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "LoopMayAccessStore",
                                         TheStore)
@@ -1289,7 +1336,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
       });
       return Changed;
     }
-    Stores.erase(TheLoad);
+    IgnoredInsts.erase(TheLoad);
   }
 
   const SCEV *LdStart = LoadEv->getStart();
@@ -1308,9 +1355,9 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
   // If the store is a memcpy instruction, we must check if it will write to
   // the load memory locations. So remove it from the ignored stores.
   if (IsMemCpy)
-    Stores.erase(TheStore);
+    IgnoredInsts.erase(TheStore);
   if (mayLoopAccessLocation(LoadBasePtr, ModRefInfo::Mod, CurLoop, BECount,
-                            StoreSizeSCEV, *AA, Stores)) {
+                            StoreSizeSCEV, *AA, IgnoredInsts)) {
     ORE.emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "LoopMayAccessLoad", TheLoad)
              << ore::NV("Inst", InstRemark) << " in "
@@ -1343,7 +1390,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
   // Okay, everything is safe, we can transform this!
 
   const SCEV *NumBytesS =
-      getNumBytes(BECount, IntIdxTy, StoreSize, CurLoop, DL, SE);
+      getNumBytes(BECount, IntIdxTy, StoreSizeSCEV, CurLoop, DL, SE);
 
   Value *NumBytes =
       Expander.expandCodeFor(NumBytesS, IntIdxTy, Preheader->getTerminator());
@@ -1408,8 +1455,8 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
            << " function";
   });
 
-  // Okay, the memcpy has been formed.  Zap the original store and anything that
-  // feeds into it.
+  // Okay, a new call to memcpy/memmove has been formed.  Zap the original store
+  // and anything that feeds into it.
   if (MSSAU)
     MSSAU->removeMemoryAccess(TheStore, true);
   deleteDeadInstruction(TheStore);

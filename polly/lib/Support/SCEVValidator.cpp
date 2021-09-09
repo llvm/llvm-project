@@ -777,8 +777,7 @@ extractConstantFactor(const SCEV *S, ScalarEvolution &SE) {
 }
 
 const SCEV *tryForwardThroughPHI(const SCEV *Expr, Region &R,
-                                 ScalarEvolution &SE, LoopInfo &LI,
-                                 const DominatorTree &DT) {
+                                 ScalarEvolution &SE, ScopDetection *SD) {
   if (auto *Unknown = dyn_cast<SCEVUnknown>(Expr)) {
     Value *V = Unknown->getValue();
     auto *PHI = dyn_cast<PHINode>(V);
@@ -789,7 +788,7 @@ const SCEV *tryForwardThroughPHI(const SCEV *Expr, Region &R,
 
     for (unsigned i = 0; i < PHI->getNumIncomingValues(); i++) {
       BasicBlock *Incoming = PHI->getIncomingBlock(i);
-      if (isErrorBlock(*Incoming, R, LI, DT) && R.contains(Incoming))
+      if (SD->isErrorBlock(*Incoming, R) && R.contains(Incoming))
         continue;
       if (Final)
         return Expr;
@@ -802,12 +801,11 @@ const SCEV *tryForwardThroughPHI(const SCEV *Expr, Region &R,
   return Expr;
 }
 
-Value *getUniqueNonErrorValue(PHINode *PHI, Region *R, LoopInfo &LI,
-                              const DominatorTree &DT) {
+Value *getUniqueNonErrorValue(PHINode *PHI, Region *R, ScopDetection *SD) {
   Value *V = nullptr;
   for (unsigned i = 0; i < PHI->getNumIncomingValues(); i++) {
     BasicBlock *BB = PHI->getIncomingBlock(i);
-    if (!isErrorBlock(*BB, *R, LI, DT)) {
+    if (!SD->isErrorBlock(*BB, *R)) {
       if (V)
         return nullptr;
       V = PHI->getIncomingValue(i);

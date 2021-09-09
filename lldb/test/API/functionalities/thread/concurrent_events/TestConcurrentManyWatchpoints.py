@@ -1,4 +1,3 @@
-
 import unittest2
 
 from lldbsuite.test.decorators import *
@@ -13,6 +12,10 @@ class ConcurrentManyWatchpoints(ConcurrentEventsBase):
 
     # Atomic sequences are not supported yet for MIPS in LLDB.
     @skipIf(triple='^mips')
+    @skipIf(
+        oslist=["ios", "watchos", "tvos", "bridgeos", "macosx"],
+        archs=['arm64', 'arm64e', 'arm64_32', 'arm'],
+        bugnumber="rdar://81811539")
     @add_test_categories(["watchpoint"])
     @skipIfOutOfTreeDebugserver
     def test(self):

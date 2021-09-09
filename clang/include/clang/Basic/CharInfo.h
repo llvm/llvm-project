@@ -43,6 +43,11 @@ LLVM_READNONE inline bool isASCII(char c) {
   return static_cast<unsigned char>(c) <= 127;
 }
 
+LLVM_READNONE inline bool isASCII(unsigned char c) { return c <= 127; }
+
+/// Returns true if this is an ASCII character.
+LLVM_READNONE inline bool isASCII(uint32_t c) { return c <= 127; }
+
 /// Returns true if this is a valid first character of a C identifier,
 /// which is [a-zA-Z_].
 LLVM_READONLY inline bool isIdentifierHead(unsigned char c,

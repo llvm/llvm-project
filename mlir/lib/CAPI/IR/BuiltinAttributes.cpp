@@ -212,15 +212,16 @@ MlirAttribute mlirSymbolRefAttrGet(MlirContext ctx, MlirStringRef symbol,
   refs.reserve(numReferences);
   for (intptr_t i = 0; i < numReferences; ++i)
     refs.push_back(unwrap(references[i]).cast<FlatSymbolRefAttr>());
-  return wrap(SymbolRefAttr::get(unwrap(ctx), unwrap(symbol), refs));
+  auto symbolAttr = StringAttr::get(unwrap(ctx), unwrap(symbol));
+  return wrap(SymbolRefAttr::get(symbolAttr, refs));
 }
 
 MlirStringRef mlirSymbolRefAttrGetRootReference(MlirAttribute attr) {
-  return wrap(unwrap(attr).cast<SymbolRefAttr>().getRootReference());
+  return wrap(unwrap(attr).cast<SymbolRefAttr>().getRootReference().getValue());
 }
 
 MlirStringRef mlirSymbolRefAttrGetLeafReference(MlirAttribute attr) {
-  return wrap(unwrap(attr).cast<SymbolRefAttr>().getLeafReference());
+  return wrap(unwrap(attr).cast<SymbolRefAttr>().getLeafReference().getValue());
 }
 
 intptr_t mlirSymbolRefAttrGetNumNestedReferences(MlirAttribute attr) {

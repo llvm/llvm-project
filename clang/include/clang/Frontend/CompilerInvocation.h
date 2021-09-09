@@ -50,6 +50,11 @@ class HeaderSearchOptions;
 class PreprocessorOptions;
 class TargetOptions;
 
+// This lets us create the DiagnosticsEngine with a properly-filled-out
+// DiagnosticOptions instance.
+std::unique_ptr<DiagnosticOptions>
+CreateAndPopulateDiagOpts(ArrayRef<const char *> Argv);
+
 /// Fill out Opts based on the options given in Args.
 ///
 /// Args must have been created from the OptTable returned by

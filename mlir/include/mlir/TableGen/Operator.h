@@ -277,7 +277,7 @@ public:
   struct OperandOrAttribute {
     enum class Kind { Operand, Attribute };
     OperandOrAttribute(Kind kind, int index) {
-      packed = (index << 1) & (kind == Kind::Attribute);
+      packed = (index << 1) | (kind == Kind::Attribute);
     }
     int operandOrAttributeIndex() const { return (packed >> 1); }
     Kind kind() { return (packed & 0x1) ? Kind::Attribute : Kind::Operand; }

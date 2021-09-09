@@ -1613,8 +1613,8 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
           // If the stored value and the address of the second instruction is
           // the same, it needs to be using the updated register and therefore
           // it must not be folded.
-          bool IsMIRegTheSame =
-              getLdStRegOp(MI).getReg() == getLdStBaseOp(MI).getReg();
+          bool IsMIRegTheSame = TRI->regsOverlap(getLdStRegOp(MI).getReg(),
+                                                 getLdStBaseOp(MI).getReg());
           if (IsOutOfBounds || IsBaseRegUsed || IsBaseRegModified ||
               IsMIRegTheSame) {
             LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits,

@@ -65,20 +65,20 @@ define arm_aapcs_vfpcc <4 x i32> @ext_add_trunc_i32(<4 x i32> %a, <4 x i32> %b) 
 ; CHECK-LABEL: ext_add_trunc_i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s8, s6
-; CHECK-NEXT:    vmov.f32 s12, s2
-; CHECK-NEXT:    vmov.f32 s14, s3
-; CHECK-NEXT:    vmov.f32 s10, s7
+; CHECK-NEXT:    vmov.f32 s6, s7
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    vmov r1, s12
-; CHECK-NEXT:    vmov.f32 s2, s1
-; CHECK-NEXT:    vmov.f32 s6, s5
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    vmov r3, s2
+; CHECK-NEXT:    vmov.f32 s8, s2
+; CHECK-NEXT:    vmov.f32 s2, s3
+; CHECK-NEXT:    vmov r1, s8
+; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    vmov.f32 s2, s5
 ; CHECK-NEXT:    add.w r12, r1, r0
-; CHECK-NEXT:    vmov r1, s10
+; CHECK-NEXT:    vmov r1, s6
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    add r1, r2
-; CHECK-NEXT:    vmov r2, s6
+; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    vmov.f32 s2, s1
+; CHECK-NEXT:    vmov r3, s2
 ; CHECK-NEXT:    add r2, r3
 ; CHECK-NEXT:    vmov r3, s4
 ; CHECK-NEXT:    add r0, r3
@@ -184,17 +184,17 @@ define arm_aapcs_vfpcc <4 x i32> @ext_add_ashr_trunc_i32(<4 x i32> %a, <4 x i32>
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
 ; CHECK-NEXT:    vmov.f32 s12, s6
 ; CHECK-NEXT:    vmov.i64 q2, #0xffffffff
-; CHECK-NEXT:    vmov.f32 s14, s7
 ; CHECK-NEXT:    vmov.f32 s6, s5
-; CHECK-NEXT:    vand q3, q3, q2
+; CHECK-NEXT:    vmov.f32 s14, s7
 ; CHECK-NEXT:    vand q1, q1, q2
-; CHECK-NEXT:    vmov.f32 s8, s2
-; CHECK-NEXT:    vmov.f32 s10, s3
-; CHECK-NEXT:    vmov r4, s8
-; CHECK-NEXT:    vmov r0, r1, d6
 ; CHECK-NEXT:    vmov r2, r3, d2
-; CHECK-NEXT:    vmov.f32 s2, s1
+; CHECK-NEXT:    vand q3, q3, q2
+; CHECK-NEXT:    vmov.f32 s4, s2
+; CHECK-NEXT:    vmov r0, r1, d6
+; CHECK-NEXT:    vmov.f32 s2, s3
+; CHECK-NEXT:    vmov.f32 s10, s1
 ; CHECK-NEXT:    vmov r12, lr, d7
+; CHECK-NEXT:    vmov r4, s4
 ; CHECK-NEXT:    adds r0, r0, r4
 ; CHECK-NEXT:    asr.w r5, r4, #31
 ; CHECK-NEXT:    adcs r1, r5
@@ -205,9 +205,9 @@ define arm_aapcs_vfpcc <4 x i32> @ext_add_ashr_trunc_i32(<4 x i32> %a, <4 x i32>
 ; CHECK-NEXT:    adcs r3, r4
 ; CHECK-NEXT:    lsrl r2, r3, #1
 ; CHECK-NEXT:    vmov r1, r5, d3
-; CHECK-NEXT:    vmov r3, s10
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
-; CHECK-NEXT:    vmov r0, s2
+; CHECK-NEXT:    vmov r3, s2
+; CHECK-NEXT:    vmov q0[2], q0[0], r2, r0
+; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    adds.w r4, r3, r12
 ; CHECK-NEXT:    asr.w r6, r3, #31
 ; CHECK-NEXT:    adc.w r3, r6, lr
@@ -216,8 +216,7 @@ define arm_aapcs_vfpcc <4 x i32> @ext_add_ashr_trunc_i32(<4 x i32> %a, <4 x i32>
 ; CHECK-NEXT:    adc.w r1, r2, r5
 ; CHECK-NEXT:    lsrl r4, r3, #1
 ; CHECK-NEXT:    lsrl r0, r1, #1
-; CHECK-NEXT:    vmov q1[3], q1[1], r0, r4
-; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    vmov q0[3], q0[1], r0, r4
 ; CHECK-NEXT:    pop {r4, r5, r6, pc}
 entry:
   %sa = sext <4 x i32> %a to <4 x i64>
@@ -346,11 +345,11 @@ define arm_aapcs_vfpcc <4 x i32> @ext_ops_trunc_i32(<4 x i32> %a, <4 x i32> %b) 
 ; CHECK-NEXT:    vand q2, q2, q3
 ; CHECK-NEXT:    vand q1, q1, q3
 ; CHECK-NEXT:    vmov.f32 s12, s2
-; CHECK-NEXT:    vmov.f32 s14, s3
-; CHECK-NEXT:    vmov.f32 s2, s1
+; CHECK-NEXT:    vmov.f32 s2, s3
 ; CHECK-NEXT:    vmov r12, r2, d5
 ; CHECK-NEXT:    vmov r8, r9, d3
-; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    vmov r1, s2
+; CHECK-NEXT:    vmov.f32 s2, s1
 ; CHECK-NEXT:    vmov lr, s2
 ; CHECK-NEXT:    str r1, [sp, #4] @ 4-byte Spill
 ; CHECK-NEXT:    adds.w r4, r1, r12
@@ -359,21 +358,21 @@ define arm_aapcs_vfpcc <4 x i32> @ext_ops_trunc_i32(<4 x i32> %a, <4 x i32> %b) 
 ; CHECK-NEXT:    asrl r4, r5, r12
 ; CHECK-NEXT:    subs.w r0, r4, r12
 ; CHECK-NEXT:    sbc.w r2, r5, r2
-; CHECK-NEXT:    asr.w r5, lr, #31
 ; CHECK-NEXT:    umull r0, r4, r0, r12
 ; CHECK-NEXT:    adds.w r6, lr, r8
-; CHECK-NEXT:    adc.w r5, r5, r9
-; CHECK-NEXT:    asrl r6, r5, r8
 ; CHECK-NEXT:    mla r3, r2, r12, r4
-; CHECK-NEXT:    subs.w r7, r6, r8
-; CHECK-NEXT:    sbc.w r10, r5, r9
+; CHECK-NEXT:    asr.w r5, lr, #31
+; CHECK-NEXT:    adc.w r5, r5, r9
 ; CHECK-NEXT:    rsbs r2, r1, #0
-; CHECK-NEXT:    vmov r5, s12
+; CHECK-NEXT:    asrl r6, r5, r8
 ; CHECK-NEXT:    lsll r0, r3, r2
+; CHECK-NEXT:    subs.w r7, r6, r8
 ; CHECK-NEXT:    vmov r6, r2, d4
+; CHECK-NEXT:    sbc.w r10, r5, r9
+; CHECK-NEXT:    vmov r5, s12
 ; CHECK-NEXT:    lsll r0, r3, r12
-; CHECK-NEXT:    asrs r3, r5, #31
 ; CHECK-NEXT:    adds r4, r5, r6
+; CHECK-NEXT:    asr.w r3, r5, #31
 ; CHECK-NEXT:    adcs r3, r2
 ; CHECK-NEXT:    asrl r4, r3, r6
 ; CHECK-NEXT:    subs r4, r4, r6

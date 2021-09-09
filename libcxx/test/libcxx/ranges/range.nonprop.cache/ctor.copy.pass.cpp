@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // __non_propagating_cache(__non_propagating_cache const&);
@@ -40,7 +39,7 @@ constexpr void test() {
   using Cache = std::ranges::__non_propagating_cache<T>;
   static_assert(std::is_nothrow_copy_constructible_v<Cache>);
   Cache a;
-  a.__set(T{3});
+  a.__emplace(3);
 
   // Test with direct initialization
   {

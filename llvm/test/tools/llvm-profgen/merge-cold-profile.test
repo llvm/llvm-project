@@ -11,7 +11,7 @@
 ; RUN: FileCheck %s --input-file %t3 --check-prefix=CHECK-UNMERGED
 
 ; Test --csprof-frame-depth-for-cold-context
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t2 --compress-recursion=-1 --profile-summary-cold-count=100 --csprof-trim-cold-context=0 --csprof-frame-depth-for-cold-context=2
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t2 --compress-recursion=-1 --profile-summary-cold-count=100 --csprof-trim-cold-context=0 --csprof-max-cold-context-depth=2
 ; RUN: FileCheck %s --input-file %t2 --check-prefix=CHECK-COLD-CONTEXT-LENGTH
 
 ; CHECK:     [fa]:14:4

@@ -228,6 +228,7 @@ AsmToken AsmLexer::LexLineComment() {
   int CurChar = getNextChar();
   while (CurChar != '\n' && CurChar != '\r' && CurChar != EOF)
     CurChar = getNextChar();
+  const char *NewlinePtr = CurPtr;
   if (CurChar == '\r' && CurPtr != CurBuf.end() && *CurPtr == '\n')
     ++CurPtr;
 
@@ -235,7 +236,7 @@ AsmToken AsmLexer::LexLineComment() {
   if (CommentConsumer) {
     CommentConsumer->HandleComment(
         SMLoc::getFromPointer(CommentTextStart),
-        StringRef(CommentTextStart, CurPtr - 1 - CommentTextStart));
+        StringRef(CommentTextStart, NewlinePtr - 1 - CommentTextStart));
   }
 
   IsAtStartOfLine = true;

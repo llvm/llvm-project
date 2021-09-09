@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Tests for the ASSOCIATED() and NULL() intrinsics
 subroutine assoc()
 
@@ -28,8 +27,9 @@ subroutine assoc()
     pureFunc = 343
   end function pureFunc
 
-  elemental integer function elementalFunc()
-    elementalFunc = 343
+  elemental integer function elementalFunc(n)
+    integer, value :: n
+    elementalFunc = n
   end function elementalFunc
 
   subroutine subr(i)

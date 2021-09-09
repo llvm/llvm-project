@@ -10,12 +10,17 @@
 #
 ##===----------------------------------------------------------------------===##
 
-# By default we will not build NVPTX deviceRTL on a CUDA free system
+# By default we will build NVPTX deviceRTL on a CUDA free system
 set(LIBOMPTARGET_BUILD_NVPTX_BCLIB FALSE CACHE BOOL
   "Whether build NVPTX deviceRTL on CUDA free system.")
 
 if (NOT (LIBOMPTARGET_DEP_CUDA_FOUND OR LIBOMPTARGET_BUILD_NVPTX_BCLIB))
   libomptarget_say("Not building NVPTX deviceRTL by default on CUDA free system.")
+  return()
+endif()
+
+if (NOT LIBOMPTARGET_LLVM_INCLUDE_DIRS)
+  libomptarget_say("Not building NVPTX device RTL: Missing definition for LIBOMPTARGET_LLVM_INCLUDE_DIRS")
   return()
 endif()
 
@@ -151,9 +156,14 @@ set(cuda_src_files
   src/target_impl.cu
 )
 
+# Prepend -I to each list element
+set (LIBOMPTARGET_LLVM_INCLUDE_DIRS_NVPTX "${LIBOMPTARGET_LLVM_INCLUDE_DIRS}")
+list(TRANSFORM LIBOMPTARGET_LLVM_INCLUDE_DIRS_NVPTX PREPEND "-I")
+
 # Set flags for LLVM Bitcode compilation.
 set(bc_flags -S -x c++ -O1 -std=c++14
              -mllvm -openmp-opt-disable
+             -ffreestanding
              -target nvptx64
              -Xclang -emit-llvm-bc
              -Xclang -aux-triple -Xclang ${aux_triple}
@@ -162,7 +172,8 @@ set(bc_flags -S -x c++ -O1 -std=c++14
              -D__CUDACC__
              -I${devicertl_base_directory}
              -I${devicertl_common_directory}/include
-             -I${devicertl_nvptx_directory}/src)
+             -I${devicertl_nvptx_directory}/src
+             ${LIBOMPTARGET_LLVM_INCLUDE_DIRS_NVPTX})
 
 if(${LIBOMPTARGET_NVPTX_DEBUG})
   list(APPEND bc_flags -DOMPTARGET_NVPTX_DEBUG=-1 -g)

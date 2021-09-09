@@ -210,6 +210,11 @@ namespace {
     void visitMachineBasicBlockBefore(const MachineBasicBlock *MBB);
     void visitMachineBundleBefore(const MachineInstr *MI);
 
+    /// Verify that all of \p MI's virtual register operands are scalars.
+    /// \returns True if all virtual register operands are scalar. False
+    /// otherwise.
+    bool verifyAllRegOpsScalar(const MachineInstr &MI,
+                               const MachineRegisterInfo &MRI);
     bool verifyVectorElementMatch(LLT Ty0, LLT Ty1, const MachineInstr *MI);
     void verifyPreISelGenericInstruction(const MachineInstr *MI);
     void visitMachineInstrBefore(const MachineInstr *MI);
@@ -849,6 +854,21 @@ void MachineVerifier::verifyInlineAsm(const MachineInstr *MI) {
   }
 }
 
+bool MachineVerifier::verifyAllRegOpsScalar(const MachineInstr &MI,
+                                            const MachineRegisterInfo &MRI) {
+  if (none_of(MI.explicit_operands(), [&MRI](const MachineOperand &Op) {
+        if (!Op.isReg())
+          return false;
+        const auto Reg = Op.getReg();
+        if (Reg.isPhysical())
+          return false;
+        return !MRI.getType(Reg).isScalar();
+      }))
+    return true;
+  report("All register operands must have scalar types", &MI);
+  return false;
+}
+
 /// Check that types are consistent when two operands need to have the same
 /// number of vector elements.
 /// \return true if the types are valid.
@@ -1392,7 +1412,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       AttributeList Attrs
         = Intrinsic::getAttributes(MF->getFunction().getContext(),
                                    static_cast<Intrinsic::ID>(IntrID));
-      bool DeclHasSideEffects = !Attrs.hasFnAttribute(Attribute::ReadNone);
+      bool DeclHasSideEffects = !Attrs.hasFnAttr(Attribute::ReadNone);
       if (NoSideEffects && DeclHasSideEffects) {
         report("G_INTRINSIC used with intrinsic that accesses memory", MI);
         break;
@@ -1570,11 +1590,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   case TargetOpcode::G_VECREDUCE_UMAX:
   case TargetOpcode::G_VECREDUCE_UMIN: {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
-    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
     if (!DstTy.isScalar())
       report("Vector reduction requires a scalar destination type", MI);
-    if (!SrcTy.isVector())
-      report("Vector reduction requires vector source=", MI);
     break;
   }
 
@@ -1598,7 +1615,11 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
     break;
   }
-
+  case TargetOpcode::G_LLROUND:
+  case TargetOpcode::G_LROUND: {
+    verifyAllRegOpsScalar(*MI, *MRI);
+    break;
+  }
   default:
     break;
   }
@@ -1632,6 +1653,8 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
       report("Unspillable Terminator does not define a reg", MI);
     Register Def = MI->getOperand(0).getReg();
     if (Def.isVirtual() &&
+        !MF->getProperties().hasProperty(
+            MachineFunctionProperties::Property::NoPHIs) &&
         std::distance(MRI->use_nodbg_begin(Def), MRI->use_nodbg_end()) > 1)
       report("Unspillable Terminator expected to have at most one use!", MI);
   }

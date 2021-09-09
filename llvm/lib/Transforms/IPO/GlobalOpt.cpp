@@ -703,8 +703,9 @@ static bool AllUsesOfValueWillTrapIfNull(const Value *V,
                !ICmpInst::isSigned(cast<ICmpInst>(U)->getPredicate()) &&
                isa<LoadInst>(U->getOperand(0)) &&
                isa<ConstantPointerNull>(U->getOperand(1))) {
-      assert(isa<GlobalValue>(
-                 cast<LoadInst>(U->getOperand(0))->getPointerOperand()) &&
+      assert(isa<GlobalValue>(cast<LoadInst>(U->getOperand(0))
+                                  ->getPointerOperand()
+                                  ->stripPointerCasts()) &&
              "Should be GlobalVariable");
       // This and only this kind of non-signed ICmpInst is to be replaced with
       // the comparing of the value of the created global init bool later in
@@ -1605,27 +1606,32 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
       return true;
   }
   if (GS.StoredType == GlobalStatus::StoredOnce && GS.StoredOnceValue) {
+    // Avoid speculating constant expressions that might trap (div/rem).
+    auto *SOVConstant = dyn_cast<Constant>(GS.StoredOnceValue);
+    if (SOVConstant && SOVConstant->canTrap())
+      return Changed;
+
     // If the initial value for the global was an undef value, and if only
     // one other value was stored into it, we can just change the
     // initializer to be the stored value, then delete all stores to the
     // global.  This allows us to mark it constant.
-    if (Constant *SOVConstant = dyn_cast<Constant>(GS.StoredOnceValue))
-      if (isa<UndefValue>(GV->getInitializer())) {
-        // Change the initial value here.
-        GV->setInitializer(SOVConstant);
+    if (SOVConstant && SOVConstant->getType() == GV->getValueType() &&
+        isa<UndefValue>(GV->getInitializer())) {
+      // Change the initial value here.
+      GV->setInitializer(SOVConstant);
 
-        // Clean up any obviously simplifiable users now.
-        CleanupConstantGlobalUsers(GV, GV->getInitializer(), DL, GetTLI);
+      // Clean up any obviously simplifiable users now.
+      CleanupConstantGlobalUsers(GV, GV->getInitializer(), DL, GetTLI);
 
-        if (GV->use_empty()) {
-          LLVM_DEBUG(dbgs() << "   *** Substituting initializer allowed us to "
-                            << "simplify all users and delete global!\n");
-          GV->eraseFromParent();
-          ++NumDeleted;
-        }
-        ++NumSubstitute;
-        return true;
+      if (GV->use_empty()) {
+        LLVM_DEBUG(dbgs() << "   *** Substituting initializer allowed us to "
+                          << "simplify all users and delete global!\n");
+        GV->eraseFromParent();
+        ++NumDeleted;
       }
+      ++NumSubstitute;
+      return true;
+    }
 
     // Try to optimize globals based on the knowledge that only one value
     // (besides its initializer) is ever stored to the global.
@@ -1635,12 +1641,10 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
 
     // Otherwise, if the global was not a boolean, we can shrink it to be a
     // boolean.
-    if (Constant *SOVConstant = dyn_cast<Constant>(GS.StoredOnceValue)) {
-      if (GS.Ordering == AtomicOrdering::NotAtomic) {
-        if (TryToShrinkGlobalToBoolean(GV, SOVConstant)) {
-          ++NumShrunkToBool;
-          return true;
-        }
+    if (SOVConstant && GS.Ordering == AtomicOrdering::NotAtomic) {
+      if (TryToShrinkGlobalToBoolean(GV, SOVConstant)) {
+        ++NumShrunkToBool;
+        return true;
       }
     }
   }
@@ -1701,7 +1705,7 @@ static AttributeList StripAttr(LLVMContext &C, AttributeList Attrs,
                                Attribute::AttrKind A) {
   unsigned AttrIndex;
   if (Attrs.hasAttrSomewhere(A, &AttrIndex))
-    return Attrs.removeAttribute(C, AttrIndex, A);
+    return Attrs.removeAttributeAtIndex(C, AttrIndex, A);
   return Attrs;
 }
 
@@ -1914,10 +1918,8 @@ static void RemovePreallocated(Function *F) {
       Value *AllocaReplacement = ArgAllocas[AllocArgIndex];
       if (!AllocaReplacement) {
         auto AddressSpace = UseCall->getType()->getPointerAddressSpace();
-        auto *ArgType = UseCall
-                            ->getAttribute(AttributeList::FunctionIndex,
-                                           Attribute::Preallocated)
-                            .getValueAsType();
+        auto *ArgType =
+            UseCall->getFnAttr(Attribute::Preallocated).getValueAsType();
         auto *InsertBefore = PreallocatedSetup->getNextNonDebugInstruction();
         Builder.SetInsertPoint(InsertBefore);
         auto *Alloca =

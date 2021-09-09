@@ -55,6 +55,7 @@ void InitializeFlags(Flags *f, const char *env, const char *env_option_name) {
     // Override some common flags defaults.
     CommonFlags cf;
     cf.CopyFrom(*common_flags());
+    cf.external_symbolizer_path = GetEnv("TSAN_SYMBOLIZER_PATH");
     cf.allow_addr2line = true;
     if (SANITIZER_GO) {
       // Does not work as expected for Go: runtime handles SIGABRT and crashes.

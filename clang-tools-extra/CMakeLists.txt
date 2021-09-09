@@ -16,7 +16,10 @@ add_subdirectory(clang-query)
 add_subdirectory(pp-trace)
 add_subdirectory(tool-template)
 
-add_subdirectory(amdclang)
+option(CLANG_ENABLE_AMDCLANG "Enable amdclang" ON)
+if (CLANG_ENABLE_AMDCLANG)
+  add_subdirectory(amdclang)
+endif()
 
 # Add the common testsuite after all the tools.
 if(CLANG_INCLUDE_TESTS)

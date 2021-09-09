@@ -206,6 +206,9 @@ public:
   uint8_t *allocateDataSection(uintptr_t Size, unsigned Alignment,
                                unsigned SectionID, StringRef SectionName,
                                bool IsReadOnly) override;
+  TrivialMemoryManager::TLSSection
+  allocateTLSSection(uintptr_t Size, unsigned Alignment, unsigned SectionID,
+                     StringRef SectionName) override;
 
   /// If non null, records subsequent Name -> SectionID mappings.
   void setSectionIDsMap(SectionIDMap *SecIDMap) {
@@ -282,6 +285,9 @@ private:
   uintptr_t SlabSize = 0;
   uintptr_t CurrentSlabOffset = 0;
   SectionIDMap *SecIDMap = nullptr;
+#if defined(__x86_64__) && defined(__ELF__)
+  unsigned UsedTLSStorage = 0;
+#endif
 };
 
 uint8_t *TrivialMemoryManager::allocateCodeSection(uintptr_t Size,
@@ -337,6 +343,46 @@ uint8_t *TrivialMemoryManager::allocateDataSection(uintptr_t Size,
     report_fatal_error("MemoryManager allocation failed: " + EC.message());
   DataMemory.push_back(SectionInfo(SectionName, MB, SectionID));
   return (uint8_t*)MB.base();
+}
+
+// In case the execution needs TLS storage, we define a very small TLS memory
+// area here that will be used in allocateTLSSection().
+#if defined(__x86_64__) && defined(__ELF__)
+extern "C" {
+alignas(16) __attribute__((visibility("hidden"), tls_model("initial-exec"),
+                           used)) thread_local char LLVMRTDyldTLSSpace[16];
+}
+#endif
+
+TrivialMemoryManager::TLSSection
+TrivialMemoryManager::allocateTLSSection(uintptr_t Size, unsigned Alignment,
+                                         unsigned SectionID,
+                                         StringRef SectionName) {
+#if defined(__x86_64__) && defined(__ELF__)
+  if (Size + UsedTLSStorage > sizeof(LLVMRTDyldTLSSpace)) {
+    return {};
+  }
+
+  // Get the offset of the TLSSpace in the TLS block by using a tpoff
+  // relocation here.
+  int64_t TLSOffset;
+  asm("leaq LLVMRTDyldTLSSpace@tpoff, %0" : "=r"(TLSOffset));
+
+  TLSSection Section;
+  // We use the storage directly as the initialization image. This means that
+  // when a new thread is spawned after this allocation, it will not be
+  // initialized correctly. This means, llvm-rtdyld will only support TLS in a
+  // single thread.
+  Section.InitializationImage =
+      reinterpret_cast<uint8_t *>(LLVMRTDyldTLSSpace + UsedTLSStorage);
+  Section.Offset = TLSOffset + UsedTLSStorage;
+
+  UsedTLSStorage += Size;
+
+  return Section;
+#else
+  return {};
+#endif
 }
 
 static const char *ProgramName;

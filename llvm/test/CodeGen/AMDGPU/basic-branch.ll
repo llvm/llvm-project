@@ -32,8 +32,8 @@ end:
 ; GCN: s_load_dword [[VAL:s[0-9]+]]
 ; GCNNOOPT: s_mov_b32 [[ONE:s[0-9]+]], 1{{$}}
 ; GCNNOOPT: s_and_b32 s{{[0-9]+}}, [[VAL]], [[ONE]]
-; GCNOPT: s_and_b32 s{{[0-9]+}}, [[VAL]], 1
-; GCN: s_cmp_eq_u32
+; GCNOPT:   s_bitcmp0_b32 [[VAL]], 0
+; GCNNOOPT: s_cmp_eq_u32
 ; GCN: s_cbranch_scc1 [[END:BB[0-9]+_[0-9]+]]
 
 ; GCN: buffer_store_dword

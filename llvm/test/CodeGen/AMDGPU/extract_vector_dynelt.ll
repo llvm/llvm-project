@@ -2,9 +2,12 @@
 
 ; GCN-LABEL: {{^}}float4_extelt:
 ; GCN-NOT: buffer_
-; GCN-DAG: v_cmp_eq_u32_e64 [[C1:[^,]+]], [[IDX:s[0-9]+]], 1
-; GCN-DAG: v_cmp_ne_u32_e64 [[C2:[^,]+]], [[IDX]], 2
-; GCN-DAG: v_cmp_ne_u32_e64 [[C3:[^,]+]], [[IDX]], 3
+; GCN-DAG: s_cmp_eq_u32 [[IDX:s[0-9]+]], 1
+; GCN-DAG: s_cselect_b64 [[C1:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 2
+; GCN-DAG: s_cselect_b64 [[C2:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 3
+; GCN-DAG: s_cselect_b64 [[C3:[^,]+]], -1, 0
 ; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V1:v[0-9]+]], 0, 1.0, [[C1]]
 ; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V2:v[0-9]+]], 2.0, [[V1]], [[C2]]
 ; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V3:v[0-9]+]], 4.0, [[V2]], [[C3]]
@@ -19,7 +22,8 @@ entry:
 ; GCN-LABEL: {{^}}int4_extelt:
 ; GCN-NOT: buffer_
 ; GCN-DAG: s_cmp_lg_u32 [[IDX:s[0-9]+]], 2
-; GCN-DAG: v_cmp_eq_u32_e64 [[C1:[^,]+]], [[IDX]], 1
+; GCN-DAG: s_cmp_eq_u32 [[IDX]], 1
+; GCN-DAG: s_cselect_b64 [[C1:[^,]+]], -1, 0
 ; GCN-DAG: s_cmp_lg_u32 [[IDX]], 3
 ; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V1:v[0-9]+]], 0, 1, [[C1]]
 ; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V2:v[0-9]+]], 2, [[V1]], vcc
@@ -34,13 +38,23 @@ entry:
 
 ; GCN-LABEL: {{^}}double4_extelt:
 ; GCN-NOT: buffer_
-; GCN-DAG: v_cmp_eq_u32_e64 [[C1:[^,]+]], [[IDX:s[0-9]+]], 1
-; GCN-DAG: v_cmp_eq_u32_e64 [[C2:[^,]+]], [[IDX]], 2
-; GCN-DAG: v_cmp_eq_u32_e64 [[C3:[^,]+]], [[IDX]], 3
-; GCN-DAG: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, {{[^,]+}}, [[C1]]
-; GCN-DAG: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, {{[^,]+}}, [[C2]]
-; GCN-DAG: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, {{[^,]+}}, [[C3]]
-; GCN: store_dwordx2 v[{{[0-9:]+}}]
+; GCN-DAG: s_mov_b32 s[[L0LO:[0-9]+]], 0x47ae147b
+; GCN-DAG: s_mov_b32 s[[L0HI:[0-9]+]], 0x3f847ae1
+; GCN-DAG: s_mov_b32 s[[L1LO:[0-9]+]], 0xc28f5c29
+; GCN-DAG: s_mov_b32 s[[L1HI:[0-9]+]], 0x3ff028f5
+; GCN-DAG: s_cmp_eq_u32 [[IDX:s[0-9]+]], 1
+; GCN: s_cselect_b64 s{{\[}}[[T0LO:[0-9]+]]:[[T0HI:[0-9]+]]{{\]}}, s{{\[}}[[L1LO]]:[[L1HI]]{{\]}}, s{{\[}}[[L0LO]]:[[L0HI]]{{\]}}
+; GCN-DAG: s_mov_b32 s[[L2LO:[0-9]+]], 0xe147ae14
+; GCN-DAG: s_mov_b32 s[[L2HI:[0-9]+]], 0x4000147a
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 2
+; GCN: s_cselect_b64 s{{\[}}[[T1LO:[0-9]+]]:[[T1HI:[0-9]+]]{{\]}}, s{{\[}}[[T0LO]]:[[T0HI]]{{\]}}, s{{\[}}[[L2LO]]:[[L2HI]]{{\]}}
+; GCN-DAG: s_mov_b32 s[[L3LO:[0-9]+]], 0x70a3d70a
+; GCN-DAG: s_mov_b32 s[[L3HI:[0-9]+]], 0x40100a3d
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 3
+; GCN: s_cselect_b64 s{{\[}}[[T2LO:[0-9]+]]:[[T2HI:[0-9]+]]{{\]}}, s{{\[}}[[T1LO]]:[[T1HI]]{{\]}}, s{{\[}}[[L3LO]]:[[L3HI]]{{\]}}
+; GCN-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[T2LO]]
+; GCN-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], s[[T2HI]]
+; GCN: store_dwordx2 v[{{[0-9:]+}}], v{{\[}}[[V_LO]]:[[V_HI]]{{\]}}
 define amdgpu_kernel void @double4_extelt(double addrspace(1)* %out, i32 %sel) {
 entry:
   %ext = extractelement <4 x double> <double 0.01, double 1.01, double 2.01, double 4.01>, i32 %sel
@@ -50,15 +64,27 @@ entry:
 
 ; GCN-LABEL: {{^}}double5_extelt:
 ; GCN-NOT: buffer_
-; GCN-DAG: v_cmp_eq_u32_e64 [[C1:[^,]+]], [[IDX:s[0-9]+]], 1
-; GCN-DAG: v_cmp_eq_u32_e64 [[C2:[^,]+]], [[IDX]], 2
-; GCN-DAG: v_cmp_eq_u32_e64 [[C3:[^,]+]], [[IDX]], 3
-; GCN-DAG: v_cmp_eq_u32_e64 [[C4:[^,]+]], [[IDX]], 4
-; GCN-DAG: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, {{[^,]+}}, [[C1]]
-; GCN-DAG: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, {{[^,]+}}, [[C2]]
-; GCN-DAG: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, {{[^,]+}}, [[C3]]
-; GCN-DAG: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, {{[^,]+}}, [[C4]]
-; GCN: store_dwordx2 v[{{[0-9:]+}}]
+; GCN-DAG: s_mov_b32 s[[L0LO:[0-9]+]], 0x47ae147b
+; GCN-DAG: s_mov_b32 s[[L0HI:[0-9]+]], 0x3f847ae1
+; GCN-DAG: s_mov_b32 s[[L1LO:[0-9]+]], 0xc28f5c29
+; GCN-DAG: s_mov_b32 s[[L1HI:[0-9]+]], 0x3ff028f5
+; GCN-DAG: s_cmp_eq_u32 [[IDX:s[0-9]+]], 1
+; GCN: s_cselect_b64 s{{\[}}[[T0LO:[0-9]+]]:[[T0HI:[0-9]+]]{{\]}}, s{{\[}}[[L1LO]]:[[L1HI]]{{\]}}, s{{\[}}[[L0LO]]:[[L0HI]]{{\]}}
+; GCN-DAG: s_mov_b32 s[[L2LO:[0-9]+]], 0xe147ae14
+; GCN-DAG: s_mov_b32 s[[L2HI:[0-9]+]], 0x4000147a
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 2
+; GCN: s_cselect_b64 s{{\[}}[[T1LO:[0-9]+]]:[[T1HI:[0-9]+]]{{\]}}, s{{\[}}[[T0LO]]:[[T0HI]]{{\]}}, s{{\[}}[[L2LO]]:[[L2HI]]{{\]}}
+; GCN-DAG: s_mov_b32 s[[L3LO:[0-9]+]], 0x70a3d70a
+; GCN-DAG: s_mov_b32 s[[L3HI:[0-9]+]], 0x40100a3d
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 3
+; GCN: s_cselect_b64 s{{\[}}[[T2LO:[0-9]+]]:[[T2HI:[0-9]+]]{{\]}}, s{{\[}}[[T1LO]]:[[T1HI]]{{\]}}, s{{\[}}[[L3LO]]:[[L3HI]]{{\]}}
+; Double literals 5.01 and 4.01 share the same low 32 bits.
+; GCN-DAG: s_mov_b32 s[[L4HI:[0-9]+]], 0x40140a3d
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 4
+; GCN: s_cselect_b64 s{{\[}}[[T3LO:[0-9]+]]:[[T3HI:[0-9]+]]{{\]}}, s{{\[}}[[T2LO]]:[[T2HI]]{{\]}}, s{{\[}}[[L3LO]]:[[L4HI]]{{\]}}
+; GCN-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[T3LO]]
+; GCN-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], s[[T3HI]]
+; GCN: store_dwordx2 v[{{[0-9:]+}}], v{{\[}}[[V_LO]]:[[V_HI]]{{\]}}
 define amdgpu_kernel void @double5_extelt(double addrspace(1)* %out, i32 %sel) {
 entry:
   %ext = extractelement <5 x double> <double 0.01, double 1.01, double 2.01, double 4.01, double 5.01>, i32 %sel
@@ -83,7 +109,8 @@ entry:
 
 ; GCN-LABEL: {{^}}float2_extelt:
 ; GCN-NOT: buffer_
-; GCN-DAG: v_cmp_eq_u32_e64 [[C1:[^,]+]], [[IDX:s[0-9]+]], 1
+; GCN-DAG: s_cmp_eq_u32 [[IDX:s[0-9]+]], 1
+; GCN-DAG: s_cselect_b64 [[C1:[^,]+]], -1, 0
 ; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V1:v[0-9]+]], 0, 1.0, [[C1]]
 ; GCN: store_dword v[{{[0-9:]+}}], [[V1]]
 define amdgpu_kernel void @float2_extelt(float addrspace(1)* %out, i32 %sel) {
@@ -95,10 +122,15 @@ entry:
 
 ; GCN-LABEL: {{^}}double2_extelt:
 ; GCN-NOT: buffer_
-; GCN-DAG: v_cmp_eq_u32_e64 [[C1:[^,]+]], [[IDX:s[0-9]+]], 1
-; GCN-DAG: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, {{[^,]+}}, [[C1]]
-; GCN-DAG: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, {{[^,]+}}, [[C1]]
-; GCN: store_dwordx2 v[{{[0-9:]+}}]
+; GCN-DAG: s_mov_b32 s[[L0LO:[0-9]+]], 0x47ae147b
+; GCN-DAG: s_mov_b32 s[[L0HI:[0-9]+]], 0x3f847ae1
+; GCN-DAG: s_mov_b32 s[[L1LO:[0-9]+]], 0xc28f5c29
+; GCN-DAG: s_mov_b32 s[[L1HI:[0-9]+]], 0x3ff028f5
+; GCN-DAG: s_cmp_eq_u32 [[IDX:s[0-9]+]], 1
+; GCN: s_cselect_b64 s{{\[}}[[T0LO:[0-9]+]]:[[T0HI:[0-9]+]]{{\]}}, s{{\[}}[[L1LO]]:[[L1HI]]{{\]}}, s{{\[}}[[L0LO]]:[[L0HI]]{{\]}}
+; GCN-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[T0LO]]
+; GCN-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], s[[T0HI]]
+; GCN: store_dwordx2 v[{{[0-9:]+}}], v{{\[}}[[V_LO]]:[[V_HI]]{{\]}}
 define amdgpu_kernel void @double2_extelt(double addrspace(1)* %out, i32 %sel) {
 entry:
   %ext = extractelement <2 x double> <double 0.01, double 1.01>, i32 %sel
@@ -108,13 +140,20 @@ entry:
 
 ; GCN-LABEL: {{^}}half8_extelt:
 ; GCN-NOT: buffer_
-; GCN-DAG: v_cmp_eq_u32_e64 [[C1:[^,]+]], [[IDX:s[0-9]+]], 1
-; GCN-DAG: v_cmp_ne_u32_e64 [[C2:[^,]+]], [[IDX]], 2
-; GCN-DAG: v_cmp_ne_u32_e64 [[C3:[^,]+]], [[IDX]], 3
-; GCN-DAG: v_cmp_ne_u32_e64 [[C4:[^,]+]], [[IDX]], 4
-; GCN-DAG: v_cmp_ne_u32_e64 [[C5:[^,]+]], [[IDX]], 5
-; GCN-DAG: v_cmp_ne_u32_e64 [[C6:[^,]+]], [[IDX]], 6
-; GCN-DAG: v_cmp_ne_u32_e64 [[C7:[^,]+]], [[IDX]], 7
+; GCN-DAG: s_cmp_eq_u32 [[IDX:s[0-9]+]], 1
+; GCN-DAG: s_cselect_b64 [[C1:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 2
+; GCN-DAG: s_cselect_b64 [[C2:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 3
+; GCN-DAG: s_cselect_b64 [[C3:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 4
+; GCN-DAG: s_cselect_b64 [[C4:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 5
+; GCN-DAG: s_cselect_b64 [[C5:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 6
+; GCN-DAG: s_cselect_b64 [[C6:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 7
+; GCN-DAG: s_cselect_b64 [[C7:[^,]+]], -1, 0
 ; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V1:v[0-9]+]], {{[^,]+}}, {{[^,]+}}, [[C1]]
 ; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V2:v[0-9]+]], {{[^,]+}}, [[V1]], [[C2]]
 ; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V3:v[0-9]+]], {{[^,]+}}, [[V2]], [[C3]]
@@ -132,13 +171,20 @@ entry:
 
 ; GCN-LABEL: {{^}}short8_extelt:
 ; GCN-NOT: buffer_
-; GCN-DAG: v_cmp_eq_u32_e64 [[C1:[^,]+]], [[IDX:s[0-9]+]], 1
-; GCN-DAG: v_cmp_ne_u32_e64 [[C2:[^,]+]], [[IDX]], 2
-; GCN-DAG: v_cmp_ne_u32_e64 [[C3:[^,]+]], [[IDX]], 3
-; GCN-DAG: v_cmp_ne_u32_e64 [[C4:[^,]+]], [[IDX]], 4
-; GCN-DAG: v_cmp_ne_u32_e64 [[C5:[^,]+]], [[IDX]], 5
-; GCN-DAG: v_cmp_ne_u32_e64 [[C6:[^,]+]], [[IDX]], 6
-; GCN-DAG: v_cmp_ne_u32_e64 [[C7:[^,]+]], [[IDX]], 7
+; GCN-DAG: s_cmp_eq_u32 [[IDX:s[0-9]+]], 1
+; GCN-DAG: s_cselect_b64 [[C1:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 2
+; GCN-DAG: s_cselect_b64 [[C2:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 3
+; GCN-DAG: s_cselect_b64 [[C3:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 4
+; GCN-DAG: s_cselect_b64 [[C4:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 5
+; GCN-DAG: s_cselect_b64 [[C5:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 6
+; GCN-DAG: s_cselect_b64 [[C6:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 7
+; GCN-DAG: s_cselect_b64 [[C7:[^,]+]], -1, 0
 ; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V1:v[0-9]+]], {{[^,]+}}, {{[^,]+}}, [[C1]]
 ; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V2:v[0-9]+]], {{[^,]+}}, [[V1]], [[C2]]
 ; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V3:v[0-9]+]], {{[^,]+}}, [[V2]], [[C3]]
@@ -156,13 +202,20 @@ entry:
 
 ; GCN-LABEL: {{^}}float8_extelt:
 ; GCN-NOT: buffer_
-; GCN-DAG: v_cmp_eq_u32_e64 [[C1:[^,]+]], [[IDX:s[0-9]+]], 1
-; GCN-DAG: v_cmp_ne_u32_e64 [[C2:[^,]+]], [[IDX]], 2
-; GCN-DAG: v_cmp_ne_u32_e64 [[C3:[^,]+]], [[IDX]], 3
-; GCN-DAG: v_cmp_ne_u32_e64 [[C4:[^,]+]], [[IDX]], 4
-; GCN-DAG: v_cmp_ne_u32_e64 [[C5:[^,]+]], [[IDX]], 5
-; GCN-DAG: v_cmp_ne_u32_e64 [[C6:[^,]+]], [[IDX]], 6
-; GCN-DAG: v_cmp_ne_u32_e64 [[C7:[^,]+]], [[IDX]], 7
+; GCN-DAG: s_cmp_eq_u32 [[IDX:s[0-9]+]], 1
+; GCN-DAG: s_cselect_b64 [[C1:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 2
+; GCN-DAG: s_cselect_b64 [[C2:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 3
+; GCN-DAG: s_cselect_b64 [[C3:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 4
+; GCN-DAG: s_cselect_b64 [[C4:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 5
+; GCN-DAG: s_cselect_b64 [[C5:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 6
+; GCN-DAG: s_cselect_b64 [[C6:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 7
+; GCN-DAG: s_cselect_b64 [[C7:[^,]+]], -1, 0
 ; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V1:v[0-9]+]], {{[^,]+}}, {{[^,]+}}, [[C1]]
 ; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V2:v[0-9]+]], {{[^,]+}}, [[V1]], [[C2]]
 ; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V3:v[0-9]+]], {{[^,]+}}, [[V2]], [[C3]]
@@ -331,21 +384,36 @@ entry:
 
 ; GCN-LABEL: {{^}}byte16_extelt:
 ; GCN-NOT: buffer_
-; GCN-DAG: v_cmp_eq_u32_e64 [[C1:[^,]+]], [[IDX:s[0-9]+]], 1
-; GCN-DAG: v_cmp_ne_u32_e64 [[C2:[^,]+]], [[IDX]], 2
-; GCN-DAG: v_cmp_ne_u32_e64 [[C3:[^,]+]], [[IDX]], 3
-; GCN-DAG: v_cmp_ne_u32_e64 [[C4:[^,]+]], [[IDX]], 4
-; GCN-DAG: v_cmp_ne_u32_e64 [[C5:[^,]+]], [[IDX]], 5
-; GCN-DAG: v_cmp_ne_u32_e64 [[C6:[^,]+]], [[IDX]], 6
-; GCN-DAG: v_cmp_ne_u32_e64 [[C7:[^,]+]], [[IDX]], 7
-; GCN-DAG: v_cmp_ne_u32_e64 [[C8:[^,]+]], [[IDX]], 8
-; GCN-DAG: v_cmp_ne_u32_e64 [[C9:[^,]+]], [[IDX]], 9
-; GCN-DAG: v_cmp_ne_u32_e64 [[C10:[^,]+]], [[IDX]], 10
-; GCN-DAG: v_cmp_ne_u32_e64 [[C11:[^,]+]], [[IDX]], 11
-; GCN-DAG: v_cmp_ne_u32_e64 [[C12:[^,]+]], [[IDX]], 12
-; GCN-DAG: v_cmp_ne_u32_e64 [[C13:[^,]+]], [[IDX]], 13
-; GCN-DAG: v_cmp_ne_u32_e64 [[C14:[^,]+]], [[IDX]], 14
-; GCN-DAG: v_cmp_ne_u32_e64 [[C15:[^,]+]], [[IDX]], 15
+; GCN-DAG: s_cmp_eq_u32 [[IDX:s[0-9]+]], 1
+; GCN-DAG: s_cselect_b64 [[C1:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 2
+; GCN-DAG: s_cselect_b64 [[C2:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 3
+; GCN-DAG: s_cselect_b64 [[C3:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 4
+; GCN-DAG: s_cselect_b64 [[C4:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 5
+; GCN-DAG: s_cselect_b64 [[C5:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 6
+; GCN-DAG: s_cselect_b64 [[C6:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 7
+; GCN-DAG: s_cselect_b64 [[C7:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 8
+; GCN-DAG: s_cselect_b64 [[C8:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 9
+; GCN-DAG: s_cselect_b64 [[C9:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 10
+; GCN-DAG: s_cselect_b64 [[C10:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 11
+; GCN-DAG: s_cselect_b64 [[C11:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 12
+; GCN-DAG: s_cselect_b64 [[C12:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 13
+; GCN-DAG: s_cselect_b64 [[C13:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 14
+; GCN-DAG: s_cselect_b64 [[C14:[^,]+]], -1, 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 15
+; GCN-DAG: s_cselect_b64 [[C15:[^,]+]], -1, 0
 ; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V1:v[0-9]+]], {{[^,]+}}, {{[^,]+}}, [[C1]]
 ; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V2:v[0-9]+]], {{[^,]+}}, [[V1]], [[C2]]
 ; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V3:v[0-9]+]], {{[^,]+}}, [[V2]], [[C3]]
@@ -390,9 +458,9 @@ entry:
 ; GCN-LABEL: {{^}}bit128_extelt:
 ; GCN-NOT: buffer_
 ; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V1:v[0-9]+]], 0, 1
-; GCN-DAG: v_mov_b32_e32 [[LASTIDX:v[0-9]+]], 0x7f
-; GCN-DAG: v_cmp_ne_u32_e32 [[CL:[^,]+]], s{{[0-9]+}}, [[LASTIDX]]
-; GCN-DAG: v_cndmask_b32_e{{32|64}} [[VL:v[0-9]+]], 0, [[V1]], [[CL]]
+; GCN: s_cmpk_lg_i32 {{s[0-9]+}}, 0x7f
+; GCN: s_cselect_b64 [[CL:[^,]+]], -1, 0
+; GCN: v_cndmask_b32_e{{32|64}} [[VL:v[0-9]+]], 0, [[V1]], [[CL]]
 ; GCN:     v_and_b32_e32 [[RES:v[0-9]+]], 1, [[VL]]
 ; GCN:     store_dword v[{{[0-9:]+}}], [[RES]]
 define amdgpu_kernel void @bit128_extelt(i32 addrspace(1)* %out, i32 %sel) {

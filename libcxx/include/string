@@ -522,6 +522,7 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++1
 #include <algorithm>
 #include <compare>
 #include <cstdio>  // EOF
+#include <cstdlib>
 #include <cstring>
 #include <cwchar>
 #include <initializer_list>
@@ -1714,6 +1715,24 @@ private:
         return data() <= __p && __p <= data() + size();
     }
 
+    _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI
+    void __throw_length_error() const {
+#ifndef _LIBCPP_NO_EXCEPTIONS
+        __basic_string_common<true>::__throw_length_error();
+#else
+        _VSTD::abort();
+#endif
+    }
+
+    _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI
+    void __throw_out_of_range() const {
+#ifndef _LIBCPP_NO_EXCEPTIONS
+        __basic_string_common<true>::__throw_out_of_range();
+#else
+        _VSTD::abort();
+#endif
+    }
+
     friend basic_string operator+<>(const basic_string&, const basic_string&);
     friend basic_string operator+<>(const value_type*, const basic_string&);
     friend basic_string operator+<>(value_type, const basic_string&);
@@ -1732,12 +1751,12 @@ _LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, wchar_t)
 #endif
 
 
-#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+#if _LIBCPP_STD_VER >= 17
 template<class _InputIterator,
          class _CharT = __iter_value_type<_InputIterator>,
          class _Allocator = allocator<_CharT>,
-         class = _EnableIf<__is_cpp17_input_iterator<_InputIterator>::value>,
-         class = _EnableIf<__is_allocator<_Allocator>::value>
+         class = enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>,
+         class = enable_if_t<__is_allocator<_Allocator>::value>
          >
 basic_string(_InputIterator, _InputIterator, _Allocator = _Allocator())
   -> basic_string<_CharT, char_traits<_CharT>, _Allocator>;
@@ -1745,7 +1764,7 @@ basic_string(_InputIterator, _InputIterator, _Allocator = _Allocator())
 template<class _CharT,
          class _Traits,
          class _Allocator = allocator<_CharT>,
-         class = _EnableIf<__is_allocator<_Allocator>::value>
+         class = enable_if_t<__is_allocator<_Allocator>::value>
          >
 explicit basic_string(basic_string_view<_CharT, _Traits>, const _Allocator& = _Allocator())
   -> basic_string<_CharT, _Traits, _Allocator>;
@@ -1753,7 +1772,7 @@ explicit basic_string(basic_string_view<_CharT, _Traits>, const _Allocator& = _A
 template<class _CharT,
          class _Traits,
          class _Allocator = allocator<_CharT>,
-         class = _EnableIf<__is_allocator<_Allocator>::value>,
+         class = enable_if_t<__is_allocator<_Allocator>::value>,
          class _Sz = typename allocator_traits<_Allocator>::size_type
          >
 basic_string(basic_string_view<_CharT, _Traits>, _Sz, _Sz, const _Allocator& = _Allocator())
@@ -2354,7 +2373,7 @@ basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::assign(const value_type* __s, size_type __n)
 {
     _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string::assign received nullptr");
-    return (_LIBCPP_BUILTIN_CONSTANT_P(__n) && __n < __min_cap)
+    return (__builtin_constant_p(__n) && __n < __min_cap)
                ? __assign_short(__s, __n)
                : __assign_external(__s, __n);
 }
@@ -2506,7 +2525,7 @@ basic_string<_CharT, _Traits, _Allocator>::assign(_ForwardIterator __first, _For
             __grow_by(__cap, __n - __cap, __sz, 0, __sz);
         }
         pointer __p = __get_pointer();
-        for (; __first != __last; ++__first, ++__p)
+        for (; __first != __last; ++__p, (void) ++__first)
             traits_type::assign(*__p, *__first);
         traits_type::assign(*__p, value_type());
         __set_size(__n);
@@ -2559,7 +2578,7 @@ basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::assign(const value_type* __s)
 {
     _LIBCPP_ASSERT(__s != nullptr, "string::assign received nullptr");
-    return _LIBCPP_BUILTIN_CONSTANT_P(*__s)
+    return __builtin_constant_p(*__s)
                ? (traits_type::length(__s) < __min_cap
                       ? __assign_short(__s, traits_type::length(__s))
                       : __assign_external(__s, traits_type::length(__s)))
@@ -2684,7 +2703,7 @@ basic_string<_CharT, _Traits, _Allocator>::append(
             if (__cap - __sz < __n)
                 __grow_by(__cap, __sz + __n - __cap, __sz, __sz, 0);
             pointer __p = __get_pointer() + __sz;
-            for (; __first != __last; ++__p, ++__first)
+            for (; __first != __last; ++__p, (void) ++__first)
                 traits_type::assign(*__p, *__first);
             traits_type::assign(*__p, value_type());
             __set_size(__sz + __n);
@@ -2862,7 +2881,7 @@ basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, _Forward
             __sz += __n;
             __set_size(__sz);
             traits_type::assign(__p[__sz], value_type());
-            for (__p += __ip; __first != __last; ++__p, ++__first)
+            for (__p += __ip; __first != __last; ++__p, (void) ++__first)
                 traits_type::assign(*__p, *__first);
         }
         else

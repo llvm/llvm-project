@@ -47,13 +47,35 @@ bool LangOptions::isNoBuiltinFunc(StringRef FuncName) const {
 
 VersionTuple LangOptions::getOpenCLVersionTuple() const {
   const int Ver = OpenCLCPlusPlus ? OpenCLCPlusPlusVersion : OpenCLVersion;
+  if (OpenCLCPlusPlus && Ver != 100)
+    return VersionTuple(Ver / 100);
   return VersionTuple(Ver / 100, (Ver % 100) / 10);
+}
+
+unsigned LangOptions::getOpenCLCompatibleVersion() const {
+  if (!OpenCLCPlusPlus)
+    return OpenCLVersion;
+  if (OpenCLCPlusPlusVersion == 100)
+    return 200;
+  if (OpenCLCPlusPlusVersion == 202100)
+    return 300;
+  llvm_unreachable("Unknown OpenCL version");
 }
 
 void LangOptions::remapPathPrefix(SmallString<256> &Path) const {
   for (const auto &Entry : MacroPrefixMap)
     if (llvm::sys::path::replace_path_prefix(Path, Entry.first, Entry.second))
       break;
+}
+
+std::string LangOptions::getOpenCLVersionString() const {
+  std::string Result;
+  {
+    llvm::raw_string_ostream Out(Result);
+    Out << (OpenCLCPlusPlus ? "C++ for OpenCL" : "OpenCL C") << " version "
+        << getOpenCLVersionTuple().getAsString();
+  }
+  return Result;
 }
 
 FPOptions FPOptions::defaultWithoutTrailingStorage(const LangOptions &LO) {

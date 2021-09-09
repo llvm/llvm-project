@@ -29,8 +29,16 @@ using namespace __sanitizer;
 #endif
 
 #ifndef SIGNAL_INTERCEPTOR_SIGACTION_IMPL
-#define SIGNAL_INTERCEPTOR_SIGACTION_IMPL(signum, act, oldact) \
-  { return REAL(sigaction_symname)(signum, act, oldact); }
+#  define SIGNAL_INTERCEPTOR_SIGACTION_IMPL(signum, act, oldact)              \
+    {                                                                         \
+      if (!REAL(sigaction_symname)) {                                         \
+        Printf(                                                               \
+            "Warning: REAL(sigaction_symname) == nullptr. This may happen "   \
+            "if you link with ubsan statically. Sigaction will not work.\n"); \
+        return -1;                                                            \
+      }                                                                       \
+      return REAL(sigaction_symname)(signum, act, oldact);                    \
+    }
 #endif
 
 #if SANITIZER_INTERCEPT_BSD_SIGNAL

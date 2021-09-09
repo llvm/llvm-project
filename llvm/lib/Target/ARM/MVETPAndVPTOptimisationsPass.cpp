@@ -40,6 +40,11 @@ MergeEndDec("arm-enable-merge-loopenddec", cl::Hidden,
     cl::desc("Enable merging Loop End and Dec instructions."),
     cl::init(true));
 
+static cl::opt<bool>
+SetLRPredicate("arm-set-lr-predicate", cl::Hidden,
+    cl::desc("Enable setting lr as a predicate in tail predication regions."),
+    cl::init(true));
+
 namespace {
 class MVETPAndVPTOptimisations : public MachineFunctionPass {
 public:
@@ -434,10 +439,14 @@ bool MVETPAndVPTOptimisations::ConvertTailPredLoop(MachineLoop *ML,
     return false;
 
   SmallVector<MachineInstr *, 4> VCTPs;
-  for (MachineBasicBlock *BB : ML->blocks())
+  SmallVector<MachineInstr *, 4> MVEInstrs;
+  for (MachineBasicBlock *BB : ML->blocks()) {
     for (MachineInstr &MI : *BB)
       if (isVCTP(&MI))
         VCTPs.push_back(&MI);
+      else if (findFirstVPTPredOperandIdx(MI) != -1)
+        MVEInstrs.push_back(&MI);
+  }
 
   if (VCTPs.empty()) {
     LLVM_DEBUG(dbgs() << "  no VCTPs\n");
@@ -509,6 +518,16 @@ bool MVETPAndVPTOptimisations::ConvertTailPredLoop(MachineLoop *ML,
                     << *MI.getInstr());
   MRI->constrainRegClass(CountReg, &ARM::rGPRRegClass);
   LoopStart->eraseFromParent();
+
+  if (SetLRPredicate) {
+    // Each instruction in the loop needs to be using LR as the predicate from
+    // the Phi as the predicate.
+    Register LR = LoopPhi->getOperand(0).getReg();
+    for (MachineInstr *MI : MVEInstrs) {
+      int Idx = findFirstVPTPredOperandIdx(*MI);
+      MI->getOperand(Idx + 2).setReg(LR);
+    }
+  }
 
   return true;
 }
@@ -991,6 +1010,7 @@ bool MVETPAndVPTOptimisations::ConvertVPSEL(MachineBasicBlock &MBB) {
             .add(MI.getOperand(1))
             .addImm(ARMVCC::Then)
             .add(MI.getOperand(4))
+            .add(MI.getOperand(5))
             .add(MI.getOperand(2));
     // Silence unused variable warning in release builds.
     (void)MIBuilder;

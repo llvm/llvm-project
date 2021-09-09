@@ -234,32 +234,47 @@ template <typename T> struct HeadTail {
 //
 // Precondition:
 // - size >= T::kSize
-template <typename T> struct Loop {
+template <typename T, typename TailT = T> struct Loop {
+  static_assert(T::kSize == TailT::kSize,
+                "Tail type must have the same size as T");
+
   static void Copy(char *__restrict dst, const char *__restrict src,
                    size_t size) {
-    for (size_t offset = 0; offset < size - T::kSize; offset += T::kSize)
+    size_t offset = 0;
+    do {
       T::Copy(dst + offset, src + offset);
-    Tail<T>::Copy(dst, src, size);
+      offset += T::kSize;
+    } while (offset < size - T::kSize);
+    Tail<TailT>::Copy(dst, src, size);
   }
 
   static bool Equals(const char *lhs, const char *rhs, size_t size) {
-    for (size_t offset = 0; offset < size - T::kSize; offset += T::kSize)
+    size_t offset = 0;
+    do {
       if (!T::Equals(lhs + offset, rhs + offset))
         return false;
-    return Tail<T>::Equals(lhs, rhs, size);
+      offset += T::kSize;
+    } while (offset < size - T::kSize);
+    return Tail<TailT>::Equals(lhs, rhs, size);
   }
 
   static int ThreeWayCompare(const char *lhs, const char *rhs, size_t size) {
-    for (size_t offset = 0; offset < size - T::kSize; offset += T::kSize)
+    size_t offset = 0;
+    do {
       if (!T::Equals(lhs + offset, rhs + offset))
         return T::ThreeWayCompare(lhs + offset, rhs + offset);
-    return Tail<T>::ThreeWayCompare(lhs, rhs, size);
+      offset += T::kSize;
+    } while (offset < size - T::kSize);
+    return Tail<TailT>::ThreeWayCompare(lhs, rhs, size);
   }
 
   static void SplatSet(char *dst, const unsigned char value, size_t size) {
-    for (size_t offset = 0; offset < size - T::kSize; offset += T::kSize)
+    size_t offset = 0;
+    do {
       T::SplatSet(dst + offset, value);
-    Tail<T>::SplatSet(dst, value, size);
+      offset += T::kSize;
+    } while (offset < size - T::kSize);
+    Tail<TailT>::SplatSet(dst, value, size);
   }
 };
 
@@ -428,7 +443,7 @@ template <size_t Size> struct Builtin {
 
 private:
   // Copies `kSize` bytes from `src` to `dst` using a for loop.
-  // This code requires the use of `-fno-buitin-memcpy` to prevent the compiler
+  // This code requires the use of `-fno-builtin-memcpy` to prevent the compiler
   // from turning the for-loop back into `__builtin_memcpy`.
   static void ForLoopCopy(char *__restrict dst, const char *__restrict src) {
     for (size_t i = 0; i < kSize; ++i)

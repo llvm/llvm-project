@@ -329,19 +329,18 @@ define <vscale x 2 x i64> @insert_fixed_v4i64_nxv2i64(<vscale x 2 x i64> %vec, <
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; CHECK-NEXT:    subs x8, x8, #4
 ; CHECK-NEXT:    csel x8, xzr, x8, lo
 ; CHECK-NEXT:    mov w9, #4
 ; CHECK-NEXT:    cmp x8, #4
-; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    csel x8, x8, x9, lo
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    st1d { z0.d }, p1, [sp]
+; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
 ; CHECK-NEXT:    st1d { z1.d }, p0, [x9, x8, lsl #3]
-; CHECK-NEXT:    ld1d { z0.d }, p1/z, [sp]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [sp]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret

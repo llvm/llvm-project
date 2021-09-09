@@ -2671,6 +2671,74 @@ def SPV_ImageFormatAttr :
       SPV_IF_R8ui
     ]>;
 
+def SPV_IO_None               : BitEnumAttrCase<"None", 0x0000>;
+def SPV_IO_Bias               : BitEnumAttrCase<"Bias", 0x0001> {
+  list<Availability> availability = [
+    Capability<[SPV_C_Shader]>
+  ];
+}
+def SPV_IO_Lod                : BitEnumAttrCase<"Lod", 0x0002>;
+def SPV_IO_Grad               : BitEnumAttrCase<"Grad", 0x0004>;
+def SPV_IO_ConstOffset        : BitEnumAttrCase<"ConstOffset", 0x0008>;
+def SPV_IO_Offset             : BitEnumAttrCase<"Offset", 0x0010> {
+  list<Availability> availability = [
+    Capability<[SPV_C_ImageGatherExtended]>
+  ];
+}
+def SPV_IO_ConstOffsets       : BitEnumAttrCase<"ConstOffsets", 0x0020> {
+  list<Availability> availability = [
+    Capability<[SPV_C_ImageGatherExtended]>
+  ];
+}
+def SPV_IO_Sample             : BitEnumAttrCase<"Sample", 0x0040>;
+def SPV_IO_MinLod             : BitEnumAttrCase<"MinLod", 0x0080> {
+  list<Availability> availability = [
+    Capability<[SPV_C_MinLod]>
+  ];
+}
+def SPV_IO_MakeTexelAvailable : BitEnumAttrCase<"MakeTexelAvailable", 0x0100> {
+  list<Availability> availability = [
+    MinVersion<SPV_V_1_5>,
+    Capability<[SPV_C_VulkanMemoryModel]>
+  ];
+}
+def SPV_IO_MakeTexelVisible   : BitEnumAttrCase<"MakeTexelVisible", 0x0200> {
+  list<Availability> availability = [
+    MinVersion<SPV_V_1_5>,
+    Capability<[SPV_C_VulkanMemoryModel]>
+  ];
+}
+def SPV_IO_NonPrivateTexel    : BitEnumAttrCase<"NonPrivateTexel", 0x0400> {
+  list<Availability> availability = [
+    MinVersion<SPV_V_1_5>,
+    Capability<[SPV_C_VulkanMemoryModel]>
+  ];
+}
+def SPV_IO_VolatileTexel      : BitEnumAttrCase<"VolatileTexel", 0x0800> {
+  list<Availability> availability = [
+    MinVersion<SPV_V_1_5>,
+    Capability<[SPV_C_VulkanMemoryModel]>
+  ];
+}
+def SPV_IO_SignExtend         : BitEnumAttrCase<"SignExtend", 0x1000> {
+  list<Availability> availability = [
+    MinVersion<SPV_V_1_4>,
+  ];
+}
+def SPV_IO_ZeroExtend         : BitEnumAttrCase<"ZeroExtend", 0x2000> {
+  list<Availability> availability = [
+    MinVersion<SPV_V_1_4>,
+  ];
+}
+
+def SPV_ImageOperandAttr :
+    SPV_BitEnumAttr<"ImageOperands", "valid SPIR-V ImageOperands", [
+      SPV_IO_None, SPV_IO_Bias, SPV_IO_Lod, SPV_IO_Grad, SPV_IO_ConstOffset,
+      SPV_IO_Offset, SPV_IO_ConstOffsets, SPV_IO_Sample, SPV_IO_MinLod,
+      SPV_IO_MakeTexelAvailable, SPV_IO_MakeTexelVisible, SPV_IO_NonPrivateTexel,
+      SPV_IO_VolatileTexel, SPV_IO_SignExtend, SPV_IO_ZeroExtend
+    ]>;
+
 def SPV_LT_Export : I32EnumAttrCase<"Export", 0> {
   list<Availability> availability = [
     Capability<[SPV_C_Linkage]>
@@ -3194,6 +3262,8 @@ def SPV_OC_OpLoad                      : I32EnumAttrCase<"OpLoad", 61>;
 def SPV_OC_OpStore                     : I32EnumAttrCase<"OpStore", 62>;
 def SPV_OC_OpCopyMemory                : I32EnumAttrCase<"OpCopyMemory", 63>;
 def SPV_OC_OpAccessChain               : I32EnumAttrCase<"OpAccessChain", 65>;
+def SPV_OC_OpPtrAccessChain            : I32EnumAttrCase<"OpPtrAccessChain", 67>;
+def SPV_OC_OpInBoundsPtrAccessChain    : I32EnumAttrCase<"OpInBoundsPtrAccessChain", 70>;
 def SPV_OC_OpDecorate                  : I32EnumAttrCase<"OpDecorate", 71>;
 def SPV_OC_OpMemberDecorate            : I32EnumAttrCase<"OpMemberDecorate", 72>;
 def SPV_OC_OpVectorExtractDynamic      : I32EnumAttrCase<"OpVectorExtractDynamic", 77>;
@@ -3340,10 +3410,10 @@ def SPV_OpcodeAttr :
       SPV_OC_OpSpecConstant, SPV_OC_OpSpecConstantComposite, SPV_OC_OpSpecConstantOp,
       SPV_OC_OpFunction, SPV_OC_OpFunctionParameter, SPV_OC_OpFunctionEnd,
       SPV_OC_OpFunctionCall, SPV_OC_OpVariable, SPV_OC_OpLoad, SPV_OC_OpStore,
-      SPV_OC_OpCopyMemory, SPV_OC_OpAccessChain, SPV_OC_OpDecorate,
-      SPV_OC_OpMemberDecorate, SPV_OC_OpVectorExtractDynamic,
-      SPV_OC_OpVectorInsertDynamic, SPV_OC_OpVectorShuffle,
-      SPV_OC_OpCompositeConstruct, SPV_OC_OpCompositeExtract,
+      SPV_OC_OpCopyMemory, SPV_OC_OpAccessChain, SPV_OC_OpPtrAccessChain,
+      SPV_OC_OpInBoundsPtrAccessChain, SPV_OC_OpDecorate, SPV_OC_OpMemberDecorate,
+      SPV_OC_OpVectorExtractDynamic, SPV_OC_OpVectorInsertDynamic,
+      SPV_OC_OpVectorShuffle, SPV_OC_OpCompositeConstruct, SPV_OC_OpCompositeExtract,
       SPV_OC_OpCompositeInsert, SPV_OC_OpTranspose, SPV_OC_OpImageDrefGather,
       SPV_OC_OpImage, SPV_OC_OpImageQuerySize, SPV_OC_OpConvertFToU,
       SPV_OC_OpConvertFToS, SPV_OC_OpConvertSToF, SPV_OC_OpConvertUToF,

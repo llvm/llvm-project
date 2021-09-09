@@ -1,6 +1,5 @@
-; RUN: opt -S -licm < %s | FileCheck %s --check-prefix=IR-AFTER-TRANSFORM
-; RUN: opt -analyze -scalar-evolution -licm -scalar-evolution -enable-new-pm=0 < %s | FileCheck %s --check-prefix=SCEV-EXPRS
-; RUN: opt -passes='print<scalar-evolution>,loop(licm),print<scalar-evolution>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=SCEV-EXPRS
+; RUN: opt -S -passes=licm < %s | FileCheck %s --check-prefix=IR-AFTER-TRANSFORM
+; RUN: opt -passes='print<scalar-evolution>,loop-mssa(licm),print<scalar-evolution>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=SCEV-EXPRS
 
 declare void @clobber()
 

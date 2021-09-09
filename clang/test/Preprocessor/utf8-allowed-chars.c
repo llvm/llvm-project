@@ -18,51 +18,41 @@ extern char x̀; // C11, C++11. Note that this does not have a composed form.
 
 // Identifier initial characters
 extern char ๐; // C++03, C11, C++11
-extern char ̀; // disallowed initially in C11/C++11, always in C99/C++03
-
-
-
-
+extern char ̀; // disallowed initially in C11/C++, always in C99
 
 
 
 
 #if __cplusplus
-# if __cplusplus >= 201103L
-// C++11
-// expected-warning@9 {{using this character in an identifier is incompatible with C++98}}
-// expected-warning@10 {{using this character in an identifier is incompatible with C++98}}
-// expected-error@13 {{non-ASCII characters are not allowed outside of literals and identifiers}}
-// expected-warning@14 {{using this character in an identifier is incompatible with C++98}}
-// expected-error@21 {{expected unqualified-id}}
+// expected-error@11 {{not allowed in an identifier}}
+// expected-error@13 {{not allowed in an identifier}}
+// expected-error@20 {{character <U+0E50> not allowed at the start of an identifier}}
+// expected-error@21 {{character <U+0300> not allowed at the start of an identifier}}
+// expected-warning@20 {{declaration does not declare anything}}
+// expected-warning@21 {{declaration does not declare anything}}
 
-# else
-// C++03
-// expected-error@9 {{non-ASCII characters are not allowed outside of literals and identifiers}}
-// expected-error@10 {{non-ASCII characters are not allowed outside of literals and identifiers}}
-// expected-error@13 {{non-ASCII characters are not allowed outside of literals and identifiers}}
-// expected-error@14 {{non-ASCII characters are not allowed outside of literals and identifiers}}
-// expected-error@21 {{non-ASCII characters are not allowed outside of literals and identifiers}} expected-warning@21 {{declaration does not declare anything}}
-
-# endif
 #else
 # if __STDC_VERSION__ >= 201112L
 // C11
 // expected-warning@9 {{using this character in an identifier is incompatible with C99}}
 // expected-warning@11 {{using this character in an identifier is incompatible with C99}}
-// expected-error@13 {{non-ASCII characters are not allowed outside of literals and identifiers}}
+// expected-error@13 {{not allowed in an identifier}}
 // expected-warning@14 {{using this character in an identifier is incompatible with C99}}
 // expected-warning@20 {{starting an identifier with this character is incompatible with C99}}
-// expected-error@21 {{expected identifier}}
+// expected-warning@21 {{declaration does not declare anything}}
+// expected-error@21 {{not allowed at the start of an identifier}}
 
 # else
 // C99
-// expected-error@9 {{non-ASCII characters are not allowed outside of literals and identifiers}}
-// expected-error@11 {{non-ASCII characters are not allowed outside of literals and identifiers}}
-// expected-error@13 {{non-ASCII characters are not allowed outside of literals and identifiers}}
-// expected-error@14 {{non-ASCII characters are not allowed outside of literals and identifiers}}
-// expected-error@20 {{expected identifier}}
-// expected-error@21 {{non-ASCII characters are not allowed outside of literals and identifiers}} expected-warning@21 {{declaration does not declare anything}}
+// expected-error@9 {{not allowed in an identifier}}
+// expected-error@11 {{not allowed in an identifier}}
+// expected-error@13 {{not allowed in an identifier}}
+// expected-error@14 {{not allowed in an identifier}}
+// expected-error@20 {{character <U+0E50> not allowed at the start of an identifier}}
+// expected-error@21 {{unexpected character <U+0300>}}
+// expected-warning@20 {{declaration does not declare anything}}
+// expected-warning@21 {{declaration does not declare anything}}
+
 
 # endif
 #endif

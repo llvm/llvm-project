@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PRO_TYPE_MEMBER_INIT_H
 
 #include "../ClangTidyCheck.h"
+#include "llvm/ADT/DenseSet.h"
 
 namespace clang {
 namespace tidy {
@@ -72,6 +73,10 @@ private:
   // instead of brace initialization. Only effective in C++11 mode. Default is
   // false.
   bool UseAssignment;
+
+  // Record the member variables that have been initialized to prevent repeated
+  // initialization.
+  llvm::DenseSet<const FieldDecl *> HasRecordClassMemberSet;
 };
 
 } // namespace cppcoreguidelines

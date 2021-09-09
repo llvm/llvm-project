@@ -9,6 +9,7 @@
 #include "AArch64TargetTransformInfo.h"
 #include "AArch64ExpandImm.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
@@ -593,39 +594,11 @@ static Optional<Instruction *> instCombineSVELast(InstCombiner &IC,
       cast<ConstantInt>(IntrPG->getOperand(0))->getZExtValue();
 
   // Can the intrinsic's predicate be converted to a known constant index?
-  unsigned Idx;
-  switch (PTruePattern) {
-  default:
+  unsigned MinNumElts = getNumElementsFromSVEPredPattern(PTruePattern);
+  if (!MinNumElts)
     return None;
-  case AArch64SVEPredPattern::vl1:
-    Idx = 0;
-    break;
-  case AArch64SVEPredPattern::vl2:
-    Idx = 1;
-    break;
-  case AArch64SVEPredPattern::vl3:
-    Idx = 2;
-    break;
-  case AArch64SVEPredPattern::vl4:
-    Idx = 3;
-    break;
-  case AArch64SVEPredPattern::vl5:
-    Idx = 4;
-    break;
-  case AArch64SVEPredPattern::vl6:
-    Idx = 5;
-    break;
-  case AArch64SVEPredPattern::vl7:
-    Idx = 6;
-    break;
-  case AArch64SVEPredPattern::vl8:
-    Idx = 7;
-    break;
-  case AArch64SVEPredPattern::vl16:
-    Idx = 15;
-    break;
-  }
 
+  unsigned Idx = MinNumElts - 1;
   // Increment the index if extracting the element after the last active
   // predicate element.
   if (IsAfter)
@@ -678,26 +651,9 @@ instCombineSVECntElts(InstCombiner &IC, IntrinsicInst &II, unsigned NumElts) {
     return IC.replaceInstUsesWith(II, VScale);
   }
 
-  unsigned MinNumElts = 0;
-  switch (Pattern) {
-  default:
-    return None;
-  case AArch64SVEPredPattern::vl1:
-  case AArch64SVEPredPattern::vl2:
-  case AArch64SVEPredPattern::vl3:
-  case AArch64SVEPredPattern::vl4:
-  case AArch64SVEPredPattern::vl5:
-  case AArch64SVEPredPattern::vl6:
-  case AArch64SVEPredPattern::vl7:
-  case AArch64SVEPredPattern::vl8:
-    MinNumElts = Pattern;
-    break;
-  case AArch64SVEPredPattern::vl16:
-    MinNumElts = 16;
-    break;
-  }
+  unsigned MinNumElts = getNumElementsFromSVEPredPattern(Pattern);
 
-  return NumElts >= MinNumElts
+  return MinNumElts && NumElts >= MinNumElts
              ? Optional<Instruction *>(IC.replaceInstUsesWith(
                    II, ConstantInt::get(II.getType(), MinNumElts)))
              : None;
@@ -1437,9 +1393,13 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     return (Cost + 1) * LT.first;
 
   case ISD::FADD:
+  case ISD::FSUB:
+  case ISD::FMUL:
+  case ISD::FDIV:
+  case ISD::FNEG:
     // These nodes are marked as 'custom' just to lower them to SVE.
     // We know said lowering will incur no additional cost.
-    if (isa<FixedVectorType>(Ty) && !Ty->getScalarType()->isFP128Ty())
+    if (!Ty->getScalarType()->isFP128Ty())
       return (Cost + 2) * LT.first;
 
     return Cost + BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
@@ -1549,7 +1509,7 @@ InstructionCost
 AArch64TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
                                       Align Alignment, unsigned AddressSpace,
                                       TTI::TargetCostKind CostKind) {
-  if (!isa<ScalableVectorType>(Src))
+  if (useNeonVector(Src))
     return BaseT::getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                         CostKind);
   auto LT = TLI->getTypeLegalizationCost(DL, Src);
@@ -1569,8 +1529,7 @@ AArch64TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
 InstructionCost AArch64TTIImpl::getGatherScatterOpCost(
     unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
     Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) {
-
-  if (!isa<ScalableVectorType>(DataTy))
+  if (useNeonVector(DataTy))
     return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
                                          Alignment, CostKind, I);
   auto *VT = cast<VectorType>(DataTy);
@@ -1589,7 +1548,7 @@ InstructionCost AArch64TTIImpl::getGatherScatterOpCost(
   ElementCount LegalVF = LT.second.getVectorElementCount();
   InstructionCost MemOpCost =
       getMemoryOpCost(Opcode, VT->getElementType(), Alignment, 0, CostKind, I);
-  return LT.first * MemOpCost * getMaxNumElements(LegalVF);
+  return LT.first * MemOpCost * getMaxNumElements(LegalVF, I->getFunction());
 }
 
 bool AArch64TTIImpl::useNeonVector(const Type *Ty) const {
@@ -1754,6 +1713,8 @@ void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   // Enable partial unrolling and runtime unrolling.
   BaseT::getUnrollingPreferences(L, SE, UP, ORE);
 
+  UP.UpperBound = true;
+
   // For inner loop, it is more likely to be a hot one, and the runtime check
   // can be promoted out from LICM pass, so the overhead is less, let's try
   // a larger threshold to unroll more loops.
@@ -1794,7 +1755,6 @@ void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
       !ST->getSchedModel().isOutOfOrder()) {
     UP.Runtime = true;
     UP.Partial = true;
-    UP.UpperBound = true;
     UP.UnrollRemainder = true;
     UP.DefaultUnrollRuntimeCount = 4;
 
@@ -1999,8 +1959,13 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
                                            Optional<FastMathFlags> FMF,
                                            TTI::TargetCostKind CostKind) {
   if (TTI::requiresOrderedReduction(FMF)) {
-    if (!isa<ScalableVectorType>(ValTy))
-      return BaseT::getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
+    if (auto *FixedVTy = dyn_cast<FixedVectorType>(ValTy)) {
+      InstructionCost BaseCost =
+          BaseT::getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
+      // Add on extra cost to reflect the extra overhead on some CPUs. We still
+      // end up vectorizing for more computationally intensive loops.
+      return BaseCost + FixedVTy->getNumElements();
+    }
 
     if (Opcode != Instruction::FAdd)
       return InstructionCost::getInvalid();

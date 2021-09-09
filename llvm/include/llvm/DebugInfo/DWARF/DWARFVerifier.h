@@ -79,14 +79,11 @@ private:
   raw_ostream &OS;
   DWARFContext &DCtx;
   DIDumpOptions DumpOpts;
-  /// A map that tracks all references (converted absolute references) so we
-  /// can verify each reference points to a valid DIE and not an offset that
-  /// lies between to valid DIEs.
-  std::map<uint64_t, std::set<uint64_t>> ReferenceToDIEOffsets;
   uint32_t NumDebugLineErrors = 0;
   // Used to relax some checks that do not currently work portably
   bool IsObjectFile;
   bool IsMachOObject;
+  using ReferenceMap = std::map<uint64_t, std::set<uint64_t>>;
 
   raw_ostream &error() const;
   raw_ostream &warn() const;
@@ -144,7 +141,9 @@ private:
   /// \param Unit      The DWARF Unit to verify.
   ///
   /// \returns The number of errors that occurred during verification.
-  unsigned verifyUnitContents(DWARFUnit &Unit);
+  unsigned verifyUnitContents(DWARFUnit &Unit,
+                              ReferenceMap &UnitLocalReferences,
+                              ReferenceMap &CrossUnitReferences);
 
   /// Verifies the unit headers and contents in a .debug_info or .debug_types
   /// section.
@@ -196,7 +195,9 @@ private:
   ///
   /// \returns NumErrors The number of errors occurred during verification of
   /// attributes' forms in a unit
-  unsigned verifyDebugInfoForm(const DWARFDie &Die, DWARFAttribute &AttrValue);
+  unsigned verifyDebugInfoForm(const DWARFDie &Die, DWARFAttribute &AttrValue,
+                               ReferenceMap &UnitLocalReferences,
+                               ReferenceMap &CrossUnitReferences);
 
   /// Verifies the all valid references that were found when iterating through
   /// all of the DIE attributes.
@@ -208,7 +209,9 @@ private:
   ///
   /// \returns NumErrors The number of errors occurred during verification of
   /// references for the .debug_info and .debug_types sections
-  unsigned verifyDebugInfoReferences();
+  unsigned verifyDebugInfoReferences(
+      const ReferenceMap &,
+      llvm::function_ref<DWARFUnit *(uint64_t)> GetUnitForDieOffset);
 
   /// Verify the DW_AT_stmt_list encoding and value and ensure that no
   /// compile units that have the same DW_AT_stmt_list value.

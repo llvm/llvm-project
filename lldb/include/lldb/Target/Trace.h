@@ -20,6 +20,7 @@
 #include "lldb/Utility/TraceGDBRemotePackets.h"
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/lldb-private.h"
+#include "lldb/lldb-types.h"
 
 namespace lldb_private {
 
@@ -54,6 +55,22 @@ public:
   /// \param[in] s
   ///     A stream object to dump the information to.
   virtual void Dump(Stream *s) const = 0;
+
+  /// Save the trace of a live process to the specified directory, which
+  /// will be created if needed.
+  /// This will also create a a file \a <directory>/trace.json with the main
+  /// properties of the trace session, along with others files which contain
+  /// the actual trace data. The trace.json file can be used later as input
+  /// for the "trace load" command to load the trace in LLDB.
+  /// The process being trace is not a live process, return an error.
+  ///
+  /// \param[in] directory
+  ///   The directory where the trace files will be saved.
+  ///
+  /// \return
+  ///   \a llvm::success if the operation was successful, or an \a llvm::Error
+  ///   otherwise.
+  virtual llvm::Error SaveLiveTraceToDisk(FileSpec directory) = 0;
 
   /// Find a trace plug-in using JSON data.
   ///
@@ -156,12 +173,12 @@ public:
 
   /// Check if a thread is currently traced by this object.
   ///
-  /// \param[in] thread
-  ///     The thread in question.
+  /// \param[in] tid
+  ///     The id of the thread in question.
   ///
   /// \return
   ///     \b true if the thread is traced by this instance, \b false otherwise.
-  virtual bool IsTraced(const Thread &thread) = 0;
+  virtual bool IsTraced(lldb::tid_t tid) = 0;
 
   /// \return
   ///     A description of the parameters to use for the \a Trace::Start method.

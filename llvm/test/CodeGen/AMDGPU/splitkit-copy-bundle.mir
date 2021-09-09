@@ -14,42 +14,39 @@ body:             |
   ; RA:   successors: %bb.1(0x80000000)
   ; RA:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; RA:   [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; RA:   undef %5.sub1:sgpr_1024 = S_MOV_B32 -1
-  ; RA:   %5.sub0:sgpr_1024 = S_MOV_B32 -1
-  ; RA:   undef %4.sub0_sub1:sgpr_1024 = COPY %5.sub0_sub1
+  ; RA:   undef %2.sub1:sgpr_1024 = S_MOV_B32 -1
+  ; RA:   %2.sub0:sgpr_1024 = S_MOV_B32 -1
   ; RA:   undef %3.sub0:sgpr_1024 = S_MOV_B32 0
   ; RA: bb.1:
   ; RA:   successors: %bb.2(0x80000000)
-  ; RA:   undef %6.sub0_sub1:sgpr_1024 = COPY %4.sub0_sub1
-  ; RA:   %6.sub2:sgpr_1024 = COPY %6.sub0
-  ; RA:   %6.sub3:sgpr_1024 = COPY %6.sub1
-  ; RA:   %6.sub4:sgpr_1024 = COPY %6.sub0
-  ; RA:   %6.sub5:sgpr_1024 = COPY %6.sub1
-  ; RA:   %6.sub6:sgpr_1024 = COPY %6.sub0
-  ; RA:   %6.sub7:sgpr_1024 = COPY %6.sub1
-  ; RA:   %6.sub8:sgpr_1024 = COPY %6.sub0
-  ; RA:   %6.sub9:sgpr_1024 = COPY %6.sub1
-  ; RA:   %6.sub10:sgpr_1024 = COPY %6.sub0
-  ; RA:   %6.sub11:sgpr_1024 = COPY %6.sub1
-  ; RA:   %6.sub12:sgpr_1024 = COPY %6.sub0
-  ; RA:   %6.sub13:sgpr_1024 = COPY %6.sub1
-  ; RA:   %6.sub14:sgpr_1024 = COPY %6.sub0
-  ; RA:   %6.sub15:sgpr_1024 = COPY %6.sub1
-  ; RA:   %6.sub16:sgpr_1024 = COPY %6.sub0
-  ; RA:   %6.sub17:sgpr_1024 = COPY %6.sub1
-  ; RA:   %6.sub18:sgpr_1024 = COPY %6.sub0
-  ; RA:   %6.sub19:sgpr_1024 = COPY %6.sub1
-  ; RA:   %6.sub20:sgpr_1024 = COPY %6.sub0
-  ; RA:   %6.sub21:sgpr_1024 = COPY %6.sub1
-  ; RA:   %6.sub22:sgpr_1024 = COPY %6.sub0
-  ; RA:   %6.sub23:sgpr_1024 = COPY %6.sub1
-  ; RA:   %6.sub24:sgpr_1024 = COPY %6.sub0
-  ; RA:   %6.sub25:sgpr_1024 = COPY %6.sub1
-  ; RA:   %6.sub26:sgpr_1024 = COPY %6.sub0
-  ; RA:   %6.sub27:sgpr_1024 = COPY %6.sub1
-  ; RA:   %6.sub28:sgpr_1024 = COPY %6.sub0
-  ; RA:   %6.sub29:sgpr_1024 = COPY %6.sub1
-  ; RA:   undef %4.sub0_sub1:sgpr_1024 = COPY %6.sub0_sub1
+  ; RA:   %2.sub2:sgpr_1024 = COPY %2.sub0
+  ; RA:   %2.sub3:sgpr_1024 = COPY %2.sub1
+  ; RA:   %2.sub4:sgpr_1024 = COPY %2.sub0
+  ; RA:   %2.sub5:sgpr_1024 = COPY %2.sub1
+  ; RA:   %2.sub6:sgpr_1024 = COPY %2.sub0
+  ; RA:   %2.sub7:sgpr_1024 = COPY %2.sub1
+  ; RA:   %2.sub8:sgpr_1024 = COPY %2.sub0
+  ; RA:   %2.sub9:sgpr_1024 = COPY %2.sub1
+  ; RA:   %2.sub10:sgpr_1024 = COPY %2.sub0
+  ; RA:   %2.sub11:sgpr_1024 = COPY %2.sub1
+  ; RA:   %2.sub12:sgpr_1024 = COPY %2.sub0
+  ; RA:   %2.sub13:sgpr_1024 = COPY %2.sub1
+  ; RA:   %2.sub14:sgpr_1024 = COPY %2.sub0
+  ; RA:   %2.sub15:sgpr_1024 = COPY %2.sub1
+  ; RA:   %2.sub16:sgpr_1024 = COPY %2.sub0
+  ; RA:   %2.sub17:sgpr_1024 = COPY %2.sub1
+  ; RA:   %2.sub18:sgpr_1024 = COPY %2.sub0
+  ; RA:   %2.sub19:sgpr_1024 = COPY %2.sub1
+  ; RA:   %2.sub20:sgpr_1024 = COPY %2.sub0
+  ; RA:   %2.sub21:sgpr_1024 = COPY %2.sub1
+  ; RA:   %2.sub22:sgpr_1024 = COPY %2.sub0
+  ; RA:   %2.sub23:sgpr_1024 = COPY %2.sub1
+  ; RA:   %2.sub24:sgpr_1024 = COPY %2.sub0
+  ; RA:   %2.sub25:sgpr_1024 = COPY %2.sub1
+  ; RA:   %2.sub26:sgpr_1024 = COPY %2.sub0
+  ; RA:   %2.sub27:sgpr_1024 = COPY %2.sub1
+  ; RA:   %2.sub28:sgpr_1024 = COPY %2.sub0
+  ; RA:   %2.sub29:sgpr_1024 = COPY %2.sub1
   ; RA:   %3.sub1:sgpr_1024 = COPY %3.sub0
   ; RA:   %3.sub2:sgpr_1024 = COPY %3.sub0
   ; RA:   %3.sub3:sgpr_1024 = COPY %3.sub0
@@ -89,79 +86,77 @@ body:             |
   ; VR-LABEL: name: splitkit_copy_bundle
   ; VR: bb.0:
   ; VR:   successors: %bb.1(0x80000000)
-  ; VR:   renamable $sgpr69 = S_MOV_B32 -1
-  ; VR:   renamable $sgpr68 = S_MOV_B32 -1
-  ; VR:   renamable $sgpr36 = S_MOV_B32 0
+  ; VR:   renamable $sgpr37 = S_MOV_B32 -1
+  ; VR:   renamable $sgpr36 = S_MOV_B32 -1
+  ; VR:   renamable $sgpr68 = S_MOV_B32 0
   ; VR:   renamable $sgpr34_sgpr35 = IMPLICIT_DEF
-  ; VR:   renamable $sgpr70_sgpr71 = IMPLICIT_DEF
+  ; VR:   renamable $sgpr66_sgpr67 = IMPLICIT_DEF
   ; VR: bb.1:
   ; VR:   successors: %bb.2(0x80000000)
-  ; VR:   liveins: $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67:0x0000000000000003, $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99:0x000000000000000F, $sgpr34_sgpr35, $sgpr70_sgpr71
-  ; VR:   renamable $sgpr40_sgpr41 = COPY killed renamable $sgpr68_sgpr69
-  ; VR:   renamable $sgpr42 = COPY renamable $sgpr40
-  ; VR:   renamable $sgpr43 = COPY renamable $sgpr41
-  ; VR:   renamable $sgpr44 = COPY renamable $sgpr40
-  ; VR:   renamable $sgpr45 = COPY renamable $sgpr41
-  ; VR:   renamable $sgpr46 = COPY renamable $sgpr40
-  ; VR:   renamable $sgpr47 = COPY renamable $sgpr41
-  ; VR:   renamable $sgpr48 = COPY renamable $sgpr40
-  ; VR:   renamable $sgpr49 = COPY renamable $sgpr41
-  ; VR:   renamable $sgpr50 = COPY renamable $sgpr40
-  ; VR:   renamable $sgpr51 = COPY renamable $sgpr41
-  ; VR:   renamable $sgpr52 = COPY renamable $sgpr40
-  ; VR:   renamable $sgpr53 = COPY renamable $sgpr41
-  ; VR:   renamable $sgpr54 = COPY renamable $sgpr40
-  ; VR:   renamable $sgpr55 = COPY renamable $sgpr41
-  ; VR:   renamable $sgpr56 = COPY renamable $sgpr40
-  ; VR:   renamable $sgpr57 = COPY renamable $sgpr41
-  ; VR:   renamable $sgpr58 = COPY renamable $sgpr40
-  ; VR:   renamable $sgpr59 = COPY renamable $sgpr41
-  ; VR:   renamable $sgpr60 = COPY renamable $sgpr40
-  ; VR:   renamable $sgpr61 = COPY renamable $sgpr41
-  ; VR:   renamable $sgpr62 = COPY renamable $sgpr40
-  ; VR:   renamable $sgpr63 = COPY renamable $sgpr41
-  ; VR:   renamable $sgpr64 = COPY renamable $sgpr40
-  ; VR:   renamable $sgpr65 = COPY renamable $sgpr41
-  ; VR:   renamable $sgpr66 = COPY renamable $sgpr40
-  ; VR:   renamable $sgpr67 = COPY renamable $sgpr41
-  ; VR:   renamable $sgpr68 = COPY renamable $sgpr40
-  ; VR:   renamable $sgpr69 = COPY renamable $sgpr41
-  ; VR:   renamable $sgpr68_sgpr69 = COPY killed renamable $sgpr40_sgpr41
-  ; VR:   renamable $sgpr37 = COPY renamable $sgpr36
+  ; VR:   liveins: $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67:0x000000000000000F, $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99:0x0000000000000003, $sgpr34_sgpr35, $sgpr66_sgpr67
   ; VR:   renamable $sgpr38 = COPY renamable $sgpr36
-  ; VR:   renamable $sgpr39 = COPY renamable $sgpr36
+  ; VR:   renamable $sgpr39 = COPY renamable $sgpr37
   ; VR:   renamable $sgpr40 = COPY renamable $sgpr36
-  ; VR:   renamable $sgpr41 = COPY renamable $sgpr36
+  ; VR:   renamable $sgpr41 = COPY renamable $sgpr37
   ; VR:   renamable $sgpr42 = COPY renamable $sgpr36
-  ; VR:   renamable $sgpr43 = COPY renamable $sgpr36
+  ; VR:   renamable $sgpr43 = COPY renamable $sgpr37
   ; VR:   renamable $sgpr44 = COPY renamable $sgpr36
-  ; VR:   renamable $sgpr45 = COPY renamable $sgpr36
+  ; VR:   renamable $sgpr45 = COPY renamable $sgpr37
   ; VR:   renamable $sgpr46 = COPY renamable $sgpr36
-  ; VR:   renamable $sgpr47 = COPY renamable $sgpr36
+  ; VR:   renamable $sgpr47 = COPY renamable $sgpr37
   ; VR:   renamable $sgpr48 = COPY renamable $sgpr36
-  ; VR:   renamable $sgpr49 = COPY renamable $sgpr36
+  ; VR:   renamable $sgpr49 = COPY renamable $sgpr37
   ; VR:   renamable $sgpr50 = COPY renamable $sgpr36
-  ; VR:   renamable $sgpr51 = COPY renamable $sgpr36
+  ; VR:   renamable $sgpr51 = COPY renamable $sgpr37
   ; VR:   renamable $sgpr52 = COPY renamable $sgpr36
-  ; VR:   renamable $sgpr53 = COPY renamable $sgpr36
+  ; VR:   renamable $sgpr53 = COPY renamable $sgpr37
   ; VR:   renamable $sgpr54 = COPY renamable $sgpr36
-  ; VR:   renamable $sgpr55 = COPY renamable $sgpr36
+  ; VR:   renamable $sgpr55 = COPY renamable $sgpr37
   ; VR:   renamable $sgpr56 = COPY renamable $sgpr36
-  ; VR:   renamable $sgpr57 = COPY renamable $sgpr36
+  ; VR:   renamable $sgpr57 = COPY renamable $sgpr37
   ; VR:   renamable $sgpr58 = COPY renamable $sgpr36
-  ; VR:   renamable $sgpr59 = COPY renamable $sgpr36
+  ; VR:   renamable $sgpr59 = COPY renamable $sgpr37
   ; VR:   renamable $sgpr60 = COPY renamable $sgpr36
-  ; VR:   renamable $sgpr61 = COPY renamable $sgpr36
+  ; VR:   renamable $sgpr61 = COPY renamable $sgpr37
   ; VR:   renamable $sgpr62 = COPY renamable $sgpr36
-  ; VR:   renamable $sgpr63 = COPY renamable $sgpr36
+  ; VR:   renamable $sgpr63 = COPY renamable $sgpr37
   ; VR:   renamable $sgpr64 = COPY renamable $sgpr36
-  ; VR:   renamable $sgpr65 = COPY renamable $sgpr36
-  ; VR:   renamable $sgpr66 = COPY renamable $sgpr36
-  ; VR:   renamable $sgpr67 = COPY renamable $sgpr36
+  ; VR:   renamable $sgpr65 = COPY renamable $sgpr37
+  ; VR:   renamable $sgpr69 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr70 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr71 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr72 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr73 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr74 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr75 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr76 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr77 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr78 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr79 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr80 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr81 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr82 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr83 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr84 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr85 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr86 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr87 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr88 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr89 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr90 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr91 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr92 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr93 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr94 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr95 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr96 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr97 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr98 = COPY renamable $sgpr68
+  ; VR:   renamable $sgpr99 = COPY renamable $sgpr68
   ; VR: bb.2:
   ; VR:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; VR:   liveins: $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67:0x0000000000000003, $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99:0x000000000000000F, $sgpr34_sgpr35, $sgpr70_sgpr71
-  ; VR:   S_NOP 0, csr_amdgpu_highregs, implicit renamable $sgpr34_sgpr35, implicit renamable $sgpr70_sgpr71
+  ; VR:   liveins: $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67:0x000000000000000F, $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99:0x0000000000000003, $sgpr34_sgpr35, $sgpr66_sgpr67
+  ; VR:   S_NOP 0, csr_amdgpu_highregs, implicit renamable $sgpr34_sgpr35, implicit renamable $sgpr66_sgpr67
   ; VR:   S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc
   ; VR:   S_BRANCH %bb.2
   bb.0:
@@ -309,11 +304,11 @@ body:             |
     ; VR: renamable $sgpr9 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr13, 0 :: (dereferenceable invariant load (s32))
     ; VR: renamable $sgpr14 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr15, 0 :: (dereferenceable invariant load (s32))
     ; VR: renamable $sgpr10_sgpr11 = IMPLICIT_DEF
-    ; VR: renamable $sgpr17 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr22,  0 :: (dereferenceable invariant load (s32))
-    ; VR: renamable $sgpr15 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr16,  0 :: (dereferenceable invariant load (s32))
-    ; VR: renamable $sgpr12 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr18,  0 :: (dereferenceable invariant load (s32))
-    ; VR: renamable $sgpr13 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr19,  0 :: (dereferenceable invariant load (s32))
-    ; VR: renamable $sgpr16 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr21,  0 :: (dereferenceable invariant load (s32))
+    ; VR: renamable $sgpr17 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr22, 0 :: (dereferenceable invariant load (s32))
+    ; VR: renamable $sgpr15 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr16, 0 :: (dereferenceable invariant load (s32))
+    ; VR: renamable $sgpr12 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr18, 0 :: (dereferenceable invariant load (s32))
+    ; VR: renamable $sgpr13 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr19, 0 :: (dereferenceable invariant load (s32))
+    ; VR: renamable $sgpr16 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr21, 0 :: (dereferenceable invariant load (s32))
     ; VR: S_NOP 0, implicit killed renamable $sgpr4_sgpr5_sgpr6_sgpr7, implicit killed renamable $sgpr10_sgpr11, implicit killed renamable $sgpr8, implicit killed renamable $sgpr9, implicit killed renamable $sgpr12, implicit killed renamable $sgpr13, implicit killed renamable $sgpr14, implicit killed renamable $sgpr15, implicit killed renamable $sgpr16, implicit killed renamable $sgpr17
     %0:sgpr_128 = IMPLICIT_DEF
     %1:sreg_64 = IMPLICIT_DEF

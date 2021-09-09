@@ -39,7 +39,7 @@ public:
   /// \name MCStreamer Interface
   /// @{
 
-  void InitSections(bool NoExecStack) override;
+  void initSections(bool NoExecStack, const MCSubtargetInfo &STI) override;
   void changeSection(MCSection *Section, const MCExpr *Subsection) override;
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment *F,

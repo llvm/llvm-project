@@ -962,8 +962,8 @@ static bool mustBeJSIdent(const AdditionalKeywords &Keywords,
               Keywords.kw_function, Keywords.kw_import, Keywords.kw_is,
               Keywords.kw_let, Keywords.kw_var, tok::kw_const,
               Keywords.kw_abstract, Keywords.kw_extends, Keywords.kw_implements,
-              Keywords.kw_instanceof, Keywords.kw_interface, Keywords.kw_throws,
-              Keywords.kw_from));
+              Keywords.kw_instanceof, Keywords.kw_interface,
+              Keywords.kw_override, Keywords.kw_throws, Keywords.kw_from));
 }
 
 static bool mustBeJSIdentOrValue(const AdditionalKeywords &Keywords,
@@ -994,6 +994,13 @@ static bool isJSDeclOrStmt(const AdditionalKeywords &Keywords,
       Keywords.kw_import, tok::kw_export);
 }
 
+// Checks whether a token is a type in K&R C (aka C78).
+static bool isC78Type(const FormatToken &Tok) {
+  return Tok.isOneOf(tok::kw_char, tok::kw_short, tok::kw_int, tok::kw_long,
+                     tok::kw_unsigned, tok::kw_float, tok::kw_double,
+                     tok::identifier);
+}
+
 // This function checks whether a token starts the first parameter declaration
 // in a K&R C (aka C78) function definition, e.g.:
 //   int f(a, b)
@@ -1001,13 +1008,24 @@ static bool isJSDeclOrStmt(const AdditionalKeywords &Keywords,
 //   {
 //      return a + b;
 //   }
-static bool isC78ParameterDecl(const FormatToken *Tok) {
-  if (!Tok)
+static bool isC78ParameterDecl(const FormatToken *Tok, const FormatToken *Next,
+                               const FormatToken *FuncName) {
+  assert(Tok);
+  assert(Next);
+  assert(FuncName);
+
+  if (FuncName->isNot(tok::identifier))
     return false;
 
-  if (!Tok->isOneOf(tok::kw_int, tok::kw_char, tok::kw_float, tok::kw_double,
-                    tok::kw_struct, tok::kw_union, tok::kw_long, tok::kw_short,
-                    tok::kw_unsigned, tok::kw_register, tok::identifier))
+  const FormatToken *Prev = FuncName->Previous;
+  if (!Prev || (Prev->isNot(tok::star) && !isC78Type(*Prev)))
+    return false;
+
+  if (!isC78Type(*Tok) &&
+      !Tok->isOneOf(tok::kw_register, tok::kw_struct, tok::kw_union))
+    return false;
+
+  if (Next->isNot(tok::star) && !Next->Tok.getIdentifierInfo())
     return false;
 
   Tok = Tok->Previous;
@@ -1368,21 +1386,20 @@ void UnwrappedLineParser::parseStructuralElement(bool IsTopLevel) {
     case tok::r_brace:
       addUnwrappedLine();
       return;
-    case tok::l_paren:
+    case tok::l_paren: {
       parseParens();
       // Break the unwrapped line if a K&R C function definition has a parameter
       // declaration.
-      if (!IsTopLevel || !Style.isCpp())
+      if (!IsTopLevel || !Style.isCpp() || !Previous || FormatTok->is(tok::eof))
         break;
-      if (!Previous || Previous->isNot(tok::identifier))
-        break;
-      if (Previous->Previous && Previous->Previous->is(tok::at))
-        break;
-      if (isC78ParameterDecl(FormatTok)) {
+      const unsigned Position = Tokens->getPosition() + 1;
+      assert(Position < AllTokens.size());
+      if (isC78ParameterDecl(FormatTok, AllTokens[Position], Previous)) {
         addUnwrappedLine();
         return;
       }
       break;
+    }
     case tok::kw_operator:
       nextToken();
       if (FormatTok->isBinaryOperator())

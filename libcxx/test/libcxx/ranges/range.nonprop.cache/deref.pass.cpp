@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // constexpr T const& operator*() const;
@@ -24,14 +23,14 @@ constexpr void test() {
 
   // non-const version
   {
-    Cache cache; cache.__set(T{3});
+    Cache cache; cache.__emplace(3);
     T& result = *cache;
     assert(result == T{3});
   }
 
   // const version
   {
-    Cache cache; cache.__set(T{3});
+    Cache cache; cache.__emplace(3);
     T const& result = *static_cast<Cache const&>(cache);
     assert(result == T{3});
   }

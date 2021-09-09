@@ -143,12 +143,15 @@ public:
   /// `*this` and apply replace with `map` on its subexpressions.
   AffineExpr replace(const DenseMap<AffineExpr, AffineExpr> &map) const;
 
-  /// Replace dims[0 .. numDims - 1] by dims[shift .. shift + numDims - 1].
-  AffineExpr shiftDims(unsigned numDims, unsigned shift) const;
+  /// Replace dims[offset ... numDims)
+  /// by dims[offset + shift ... shift + numDims).
+  AffineExpr shiftDims(unsigned numDims, unsigned shift,
+                       unsigned offset = 0) const;
 
-  /// Replace symbols[0 .. numSymbols - 1] by
-  ///         symbols[shift .. shift + numSymbols - 1].
-  AffineExpr shiftSymbols(unsigned numSymbols, unsigned shift) const;
+  /// Replace symbols[offset ... numSymbols)
+  /// by symbols[offset + shift ... shift + numSymbols).
+  AffineExpr shiftSymbols(unsigned numSymbols, unsigned shift,
+                          unsigned offset = 0) const;
 
   AffineExpr operator+(int64_t v) const;
   AffineExpr operator+(AffineExpr other) const;

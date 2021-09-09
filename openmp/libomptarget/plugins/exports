@@ -24,6 +24,13 @@ VERS1.0 {
     __tgt_rtl_supports_empty_images;
     __tgt_rtl_set_info_flag;
     __tgt_rtl_print_device_info;
+    __tgt_rtl_create_event;
+    __tgt_rtl_record_event;
+    __tgt_rtl_wait_event;
+    __tgt_rtl_sync_event;
+    __tgt_rtl_destroy_event;
+    __tgt_rtl_set_coarse_grain_mem_region;
+    __tgt_rtl_query_coarse_grain_mem_region;
   local:
     *;
 };

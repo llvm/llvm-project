@@ -173,6 +173,11 @@ or to run all of the ARM CodeGen tests:
 
     % llvm-lit ~/llvm/test/CodeGen/ARM
 
+The regression tests will use the Python psutil module only if installed in a
+**non-user** location. Under Linux, install with sudo or within a virtual
+environment. Under Windows, install Python for all users and then run
+``pip install psutil`` in an elevated command prompt.
+
 For more information on using the :program:`lit` tool, see ``llvm-lit --help``
 or the :doc:`lit man page <CommandGuide/lit>`.
 

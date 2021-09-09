@@ -1293,7 +1293,8 @@ class Base(unittest2.TestCase):
 
     def isAArch64(self):
         """Returns true if the architecture is AArch64."""
-        return self.getArchitecture().lower() == "aarch64"
+        arch = self.getArchitecture().lower()
+        return arch in ["aarch64", "arm64", "arm64e"]
 
     def isAArch64SVE(self):
         return self.isAArch64() and "sve" in self.getCPUInfo()

@@ -452,7 +452,7 @@ static bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
     const SIRegisterInfo &SRI = TII->getRegisterInfo();
 
     // Fine if the operand can be encoded as an inline constant
-    if (OpToFold->isImm()) {
+    if (TII->isLiteralConstantLike(*OpToFold, OpInfo)) {
       if (!SRI.opCanUseInlineConstant(OpInfo.OperandType) ||
           !TII->isInlineConstant(*OpToFold, OpInfo)) {
         // Otherwise check for another constant

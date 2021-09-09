@@ -50,9 +50,9 @@ def CC_AArch64_AAPCS : CallingConv<[
   // "sret" on argument 1 means instance methods.
 
   CCIfInReg<CCIfType<[i64],
-    CCIfSRet<CCIfType<[i64], CCAssignToRegWithShadow<[X0, X1], [W0, W1]>>>>>,
+    CCIfSRet<CCIfType<[i64], CCAssignToReg<[X0, X1]>>>>>,
 
-  CCIfSRet<CCIfType<[i64], CCAssignToRegWithShadow<[X8], [W8]>>>,
+  CCIfSRet<CCIfType<[i64], CCAssignToReg<[X8]>>>,
 
   // Put ByVal arguments directly on the stack. Minimum size and alignment of a
   // slot is 64-bit.
@@ -64,14 +64,14 @@ def CC_AArch64_AAPCS : CallingConv<[
   CCIfNest<CCAssignToReg<[X18]>>,
 
   // Pass SwiftSelf in a callee saved register.
-  CCIfSwiftSelf<CCIfType<[i64], CCAssignToRegWithShadow<[X20], [W20]>>>,
+  CCIfSwiftSelf<CCIfType<[i64], CCAssignToReg<[X20]>>>,
 
   // A SwiftError is passed in X21.
-  CCIfSwiftError<CCIfType<[i64], CCAssignToRegWithShadow<[X21], [W21]>>>,
+  CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[X21]>>>,
 
   // Pass SwiftAsync in an otherwise callee saved register so that it will be
   // preserved for normal function calls.
-  CCIfSwiftAsync<CCIfType<[i64], CCAssignToRegWithShadow<[X22], [W22]>>>,
+  CCIfSwiftAsync<CCIfType<[i64], CCAssignToReg<[X22]>>>,
 
   CCIfConsecutiveRegs<CCCustom<"CC_AArch64_Custom_Block">>,
 
@@ -90,8 +90,7 @@ def CC_AArch64_AAPCS : CallingConv<[
   // Handle i1, i8, i16, i32, i64, f32, f64 and v2f64 by passing in registers,
   // up to eight each of GPR and FPR.
   CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
-  CCIfType<[i32], CCAssignToRegWithShadow<[W0, W1, W2, W3, W4, W5, W6, W7],
-                                          [X0, X1, X2, X3, X4, X5, X6, X7]>>,
+  CCIfType<[i32], CCAssignToReg<[W0, W1, W2, W3, W4, W5, W6, W7]>>,
   // i128 is split to two i64s, we can't fit half to register X7.
   CCIfType<[i64], CCIfSplit<CCAssignToRegWithShadow<[X0, X2, X4, X6],
                                                     [X0, X1, X3, X5]>>>,
@@ -99,19 +98,13 @@ def CC_AArch64_AAPCS : CallingConv<[
   // i128 is split to two i64s, and its stack alignment is 16 bytes.
   CCIfType<[i64], CCIfSplit<CCAssignToStackWithShadow<8, 16, [X7]>>>,
 
-  CCIfType<[i64], CCAssignToRegWithShadow<[X0, X1, X2, X3, X4, X5, X6, X7],
-                                          [W0, W1, W2, W3, W4, W5, W6, W7]>>,
-  CCIfType<[f16], CCAssignToRegWithShadow<[H0, H1, H2, H3, H4, H5, H6, H7],
-                                          [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
-  CCIfType<[bf16], CCAssignToRegWithShadow<[H0, H1, H2, H3, H4, H5, H6, H7],
-                                           [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
-  CCIfType<[f32], CCAssignToRegWithShadow<[S0, S1, S2, S3, S4, S5, S6, S7],
-                                          [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
-  CCIfType<[f64], CCAssignToRegWithShadow<[D0, D1, D2, D3, D4, D5, D6, D7],
-                                          [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
+  CCIfType<[i64], CCAssignToReg<[X0, X1, X2, X3, X4, X5, X6, X7]>>,
+  CCIfType<[f16], CCAssignToReg<[H0, H1, H2, H3, H4, H5, H6, H7]>>,
+  CCIfType<[bf16], CCAssignToReg<[H0, H1, H2, H3, H4, H5, H6, H7]>>,
+  CCIfType<[f32], CCAssignToReg<[S0, S1, S2, S3, S4, S5, S6, S7]>>,
+  CCIfType<[f64], CCAssignToReg<[D0, D1, D2, D3, D4, D5, D6, D7]>>,
   CCIfType<[v1i64, v2i32, v4i16, v8i8, v1f64, v2f32, v4f16, v4bf16],
-           CCAssignToRegWithShadow<[D0, D1, D2, D3, D4, D5, D6, D7],
-                                   [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
+           CCAssignToReg<[D0, D1, D2, D3, D4, D5, D6, D7]>>,
   CCIfType<[f128, v2i64, v4i32, v8i16, v16i8, v4f32, v2f64, v8f16, v8bf16],
            CCAssignToReg<[Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
 
@@ -131,7 +124,7 @@ def RetCC_AArch64_AAPCS : CallingConv<[
   CCIfType<[v2f64, v4f32], CCBitConvertToType<v2i64>>,
 
   CCIfConsecutiveRegs<CCCustom<"CC_AArch64_Custom_Block">>,
-  CCIfSwiftError<CCIfType<[i64], CCAssignToRegWithShadow<[X21], [W21]>>>,
+  CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[X21]>>>,
 
   // Big endian vectors must be passed as if they were 1-element vectors so that
   // their lanes are in a consistent order.
@@ -141,21 +134,14 @@ def RetCC_AArch64_AAPCS : CallingConv<[
                          CCBitConvertToType<f128>>>,
 
   CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
-  CCIfType<[i32], CCAssignToRegWithShadow<[W0, W1, W2, W3, W4, W5, W6, W7],
-                                          [X0, X1, X2, X3, X4, X5, X6, X7]>>,
-  CCIfType<[i64], CCAssignToRegWithShadow<[X0, X1, X2, X3, X4, X5, X6, X7],
-                                          [W0, W1, W2, W3, W4, W5, W6, W7]>>,
-  CCIfType<[f16], CCAssignToRegWithShadow<[H0, H1, H2, H3, H4, H5, H6, H7],
-                                          [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
-  CCIfType<[bf16], CCAssignToRegWithShadow<[H0, H1, H2, H3, H4, H5, H6, H7],
-                                           [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
-  CCIfType<[f32], CCAssignToRegWithShadow<[S0, S1, S2, S3, S4, S5, S6, S7],
-                                          [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
-  CCIfType<[f64], CCAssignToRegWithShadow<[D0, D1, D2, D3, D4, D5, D6, D7],
-                                          [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
+  CCIfType<[i32], CCAssignToReg<[W0, W1, W2, W3, W4, W5, W6, W7]>>,
+  CCIfType<[i64], CCAssignToReg<[X0, X1, X2, X3, X4, X5, X6, X7]>>,
+  CCIfType<[f16], CCAssignToReg<[H0, H1, H2, H3, H4, H5, H6, H7]>>,
+  CCIfType<[bf16], CCAssignToReg<[H0, H1, H2, H3, H4, H5, H6, H7]>>,
+  CCIfType<[f32], CCAssignToReg<[S0, S1, S2, S3, S4, S5, S6, S7]>>,
+  CCIfType<[f64], CCAssignToReg<[D0, D1, D2, D3, D4, D5, D6, D7]>>,
   CCIfType<[v1i64, v2i32, v4i16, v8i8, v1f64, v2f32, v4f16, v4bf16],
-      CCAssignToRegWithShadow<[D0, D1, D2, D3, D4, D5, D6, D7],
-                              [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
+      CCAssignToReg<[D0, D1, D2, D3, D4, D5, D6, D7]>>,
   CCIfType<[f128, v2i64, v4i32, v8i16, v16i8, v4f32, v2f64, v8f16, v8bf16],
       CCAssignToReg<[Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
 
@@ -195,49 +181,41 @@ def CC_AArch64_DarwinPCS : CallingConv<[
   CCIfType<[v2f64, v4f32, f128], CCBitConvertToType<v2i64>>,
 
   // An SRet is passed in X8, not X0 like a normal pointer parameter.
-  CCIfSRet<CCIfType<[i64], CCAssignToRegWithShadow<[X8], [W8]>>>,
+  CCIfSRet<CCIfType<[i64], CCAssignToReg<[X8]>>>,
 
   // Put ByVal arguments directly on the stack. Minimum size and alignment of a
   // slot is 64-bit.
   CCIfByVal<CCPassByVal<8, 8>>,
 
   // Pass SwiftSelf in a callee saved register.
-  CCIfSwiftSelf<CCIfType<[i64], CCAssignToRegWithShadow<[X20], [W20]>>>,
+  CCIfSwiftSelf<CCIfType<[i64], CCAssignToReg<[X20]>>>,
 
   // A SwiftError is passed in X21.
-  CCIfSwiftError<CCIfType<[i64], CCAssignToRegWithShadow<[X21], [W21]>>>,
+  CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[X21]>>>,
 
   // Pass SwiftAsync in an otherwise callee saved register so that it will be
   // preserved for normal function calls.
-  CCIfSwiftAsync<CCIfType<[i64], CCAssignToRegWithShadow<[X22], [W22]>>>,
+  CCIfSwiftAsync<CCIfType<[i64], CCAssignToReg<[X22]>>>,
 
   CCIfConsecutiveRegs<CCCustom<"CC_AArch64_Custom_Block">>,
 
   // Handle i1, i8, i16, i32, i64, f32, f64 and v2f64 by passing in registers,
   // up to eight each of GPR and FPR.
   CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
-  CCIfType<[i32], CCAssignToRegWithShadow<[W0, W1, W2, W3, W4, W5, W6, W7],
-                                          [X0, X1, X2, X3, X4, X5, X6, X7]>>,
+  CCIfType<[i32], CCAssignToReg<[W0, W1, W2, W3, W4, W5, W6, W7]>>,
   // i128 is split to two i64s, we can't fit half to register X7.
   CCIfType<[i64],
-           CCIfSplit<CCAssignToRegWithShadow<[X0, X1, X2, X3, X4, X5, X6],
-                                             [W0, W1, W2, W3, W4, W5, W6]>>>,
+           CCIfSplit<CCAssignToReg<[X0, X1, X2, X3, X4, X5, X6]>>>,
   // i128 is split to two i64s, and its stack alignment is 16 bytes.
   CCIfType<[i64], CCIfSplit<CCAssignToStackWithShadow<8, 16, [X7]>>>,
 
-  CCIfType<[i64], CCAssignToRegWithShadow<[X0, X1, X2, X3, X4, X5, X6, X7],
-                                          [W0, W1, W2, W3, W4, W5, W6, W7]>>,
-  CCIfType<[f16], CCAssignToRegWithShadow<[H0, H1, H2, H3, H4, H5, H6, H7],
-                                          [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
-  CCIfType<[bf16], CCAssignToRegWithShadow<[H0, H1, H2, H3, H4, H5, H6, H7],
-                                           [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
-  CCIfType<[f32], CCAssignToRegWithShadow<[S0, S1, S2, S3, S4, S5, S6, S7],
-                                          [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
-  CCIfType<[f64], CCAssignToRegWithShadow<[D0, D1, D2, D3, D4, D5, D6, D7],
-                                          [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
+  CCIfType<[i64], CCAssignToReg<[X0, X1, X2, X3, X4, X5, X6, X7]>>,
+  CCIfType<[f16], CCAssignToReg<[H0, H1, H2, H3, H4, H5, H6, H7]>>,
+  CCIfType<[bf16], CCAssignToReg<[H0, H1, H2, H3, H4, H5, H6, H7]>>,
+  CCIfType<[f32], CCAssignToReg<[S0, S1, S2, S3, S4, S5, S6, S7]>>,
+  CCIfType<[f64], CCAssignToReg<[D0, D1, D2, D3, D4, D5, D6, D7]>>,
   CCIfType<[v1i64, v2i32, v4i16, v8i8, v1f64, v2f32, v4f16, v4bf16],
-           CCAssignToRegWithShadow<[D0, D1, D2, D3, D4, D5, D6, D7],
-                                   [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
+           CCAssignToReg<[D0, D1, D2, D3, D4, D5, D6, D7]>>,
   CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32, v2f64, v8f16, v8bf16],
            CCAssignToReg<[Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
 
@@ -310,8 +288,8 @@ let Entry = 1 in
 def CC_AArch64_WebKit_JS : CallingConv<[
   // Handle i1, i8, i16, i32, and i64 passing in register X0 (W0).
   CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
-  CCIfType<[i32], CCAssignToRegWithShadow<[W0], [X0]>>,
-  CCIfType<[i64], CCAssignToRegWithShadow<[X0], [W0]>>,
+  CCIfType<[i32], CCAssignToReg<[W0]>>,
+  CCIfType<[i64], CCAssignToReg<[X0]>>,
 
   // Pass the remaining arguments on the stack instead.
   CCIfType<[i32, f32], CCAssignToStack<4, 4>>,
@@ -320,14 +298,10 @@ def CC_AArch64_WebKit_JS : CallingConv<[
 
 let Entry = 1 in
 def RetCC_AArch64_WebKit_JS : CallingConv<[
-  CCIfType<[i32], CCAssignToRegWithShadow<[W0, W1, W2, W3, W4, W5, W6, W7],
-                                          [X0, X1, X2, X3, X4, X5, X6, X7]>>,
-  CCIfType<[i64], CCAssignToRegWithShadow<[X0, X1, X2, X3, X4, X5, X6, X7],
-                                          [W0, W1, W2, W3, W4, W5, W6, W7]>>,
-  CCIfType<[f32], CCAssignToRegWithShadow<[S0, S1, S2, S3, S4, S5, S6, S7],
-                                          [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
-  CCIfType<[f64], CCAssignToRegWithShadow<[D0, D1, D2, D3, D4, D5, D6, D7],
-                                          [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>
+  CCIfType<[i32], CCAssignToReg<[W0, W1, W2, W3, W4, W5, W6, W7]>>,
+  CCIfType<[i64], CCAssignToReg<[X0, X1, X2, X3, X4, X5, X6, X7]>>,
+  CCIfType<[f32], CCAssignToReg<[S0, S1, S2, S3, S4, S5, S6, S7]>>,
+  CCIfType<[f64], CCAssignToReg<[D0, D1, D2, D3, D4, D5, D6, D7]>>
 ]>;
 
 //===----------------------------------------------------------------------===//

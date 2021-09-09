@@ -641,7 +641,7 @@ body:             |
 # CHECK-LABEL: bb.0.entry:
 # CHECK:       DBG_VALUE $rdi, 0, ![[TVAR]], !DIExpression()
 # CHECK-LABEL: bb.1.if.then:
-# CHECK:       DBG_VALUE $rsp, 0, ![[TVAR]], !DIExpression(DW_OP_constu, 8, DW_OP_minus)
+# CHECK:       DBG_VALUE $rsp, 0, ![[TVAR]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref)
 # CHECK:       INLINEASM
 # CHECK:       DBG_VALUE ${{[a-zA-Z0-9]+}}, 0, ![[TVAR]], !DIExpression()
 # CHECK-LABEL: bb.2.if.end

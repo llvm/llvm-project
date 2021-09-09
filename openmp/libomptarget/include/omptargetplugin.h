@@ -145,6 +145,32 @@ void __tgt_rtl_set_info_flag(uint32_t);
 // Print the device information
 void __tgt_rtl_print_device_info(int32_t ID);
 
+// Event related interfaces. It is expected to use the interfaces in the
+// following way:
+// 1) Create an event on the target device (__tgt_rtl_create_event).
+// 2) Record the event based on the status of \p AsyncInfo->Queue at the moment
+// of function call to __tgt_rtl_record_event. An event becomes "meaningful"
+// once it is recorded, such that others can depend on it.
+// 3) Call __tgt_rtl_wait_event to set dependence on the event. Whether the
+// operation is blocking or non-blocking depends on the target. It is expected
+// to be non-blocking, just set dependence and return.
+// 4) Call __tgt_rtl_sync_event to sync the event. It is expected to block the
+// thread calling the function.
+// 5) Destroy the event (__tgt_rtl_destroy_event).
+// {
+int32_t __tgt_rtl_create_event(int32_t ID, void **Event);
+
+int32_t __tgt_rtl_record_event(int32_t ID, void *Event,
+                               __tgt_async_info *AsyncInfo);
+
+int32_t __tgt_rtl_wait_event(int32_t ID, void *Event,
+                             __tgt_async_info *AsyncInfo);
+
+int32_t __tgt_rtl_sync_event(int32_t ID, void *Event);
+
+int32_t __tgt_rtl_destroy_event(int32_t ID, void *Event);
+// }
+
 #ifdef __cplusplus
 }
 #endif

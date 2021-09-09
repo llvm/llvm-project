@@ -32,7 +32,7 @@ struct isl_iterator
   using ElementT = list_element_type<ListT>;
 
   explicit isl_iterator(const ListT &List)
-      : List(&List), Position(std::max(List.size(), 0)) {}
+      : List(&List), Position(std::max(List.size().release(), 0)) {}
   isl_iterator(const ListT &List, int Position)
       : List(&List), Position(Position) {}
 

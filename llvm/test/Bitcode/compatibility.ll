@@ -1510,7 +1510,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #45
+  ; CHECK: call void @f.nobuiltin() #46
 
   call fastcc noalias i32* @f.noalias() noinline
   ; CHECK: call fastcc noalias i32* @f.noalias() #12
@@ -1907,6 +1907,9 @@ define void @instructions.strictfp() strictfp {
 declare void @f.nosanitize_coverage() nosanitize_coverage
 ; CHECK: declare void @f.nosanitize_coverage() #44
 
+declare void @f.disable_sanitizer_instrumentation() disable_sanitizer_instrumentation
+; CHECK: declare void @f.disable_sanitizer_instrumentation() #45
+
 ; immarg attribute
 declare void @llvm.test.immarg.intrinsic(i32 immarg)
 ; CHECK: declare void @llvm.test.immarg.intrinsic(i32 immarg)
@@ -1965,7 +1968,8 @@ declare void @byval_named_type(%named_type* byval(%named_type))
 ; CHECK: attributes #42 = { speculatable }
 ; CHECK: attributes #43 = { strictfp }
 ; CHECK: attributes #44 = { nosanitize_coverage }
-; CHECK: attributes #45 = { builtin }
+; CHECK: attributes #45 = { disable_sanitizer_instrumentation }
+; CHECK: attributes #46 = { builtin }
 
 ;; Metadata
 

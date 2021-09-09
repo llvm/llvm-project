@@ -120,23 +120,23 @@ __except.ret:                                     ; preds = %catch.dispatch.7
 ; CHECK-NEXT:         .set .Lmain$parent_frame_offset, 32
 ; CHECK-NEXT:         .long   (.Llsda_end0-.Llsda_begin0)/16
 ; CHECK-NEXT: .Llsda_begin0:
-; CHECK-NEXT:         .long   .Ltmp0@IMGREL+1
+; CHECK-NEXT:         .long   .Ltmp0@IMGREL
 ; CHECK-NEXT:         .long   .Ltmp1@IMGREL+1
 ; CHECK-NEXT:         .long   1
 ; CHECK-NEXT:         .long   .LBB1_[[except1bb]]@IMGREL
-; CHECK-NEXT:         .long   .Ltmp0@IMGREL+1
+; CHECK-NEXT:         .long   .Ltmp0@IMGREL
 ; CHECK-NEXT:         .long   .Ltmp1@IMGREL+1
 ; CHECK-NEXT:         .long   "?filt$0@0@main@@"@IMGREL
 ; CHECK-NEXT:         .long   .LBB1_[[except2bb]]@IMGREL
-; CHECK-NEXT:         .long   .Ltmp2@IMGREL+1
+; CHECK-NEXT:         .long   .Ltmp2@IMGREL
 ; CHECK-NEXT:         .long   .Ltmp3@IMGREL+1
 ; CHECK-NEXT:         .long   "?dtor$[[finbb:[0-9]+]]@?0?main@4HA"@IMGREL
 ; CHECK-NEXT:         .long   0
-; CHECK-NEXT:         .long   .Ltmp2@IMGREL+1
+; CHECK-NEXT:         .long   .Ltmp2@IMGREL
 ; CHECK-NEXT:         .long   .Ltmp3@IMGREL+1
 ; CHECK-NEXT:         .long   "?filt$0@0@main@@"@IMGREL
 ; CHECK-NEXT:         .long   .LBB1_3@IMGREL
-; CHECK-NEXT:         .long   .Ltmp6@IMGREL+1
+; CHECK-NEXT:         .long   .Ltmp6@IMGREL
 ; CHECK-NEXT:         .long   .Ltmp7@IMGREL+1
 ; CHECK-NEXT:         .long   "?filt$0@0@main@@"@IMGREL
 ; CHECK-NEXT:         .long   .LBB1_3@IMGREL

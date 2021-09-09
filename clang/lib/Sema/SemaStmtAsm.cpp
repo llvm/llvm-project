@@ -393,30 +393,31 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
                               diag::err_asm_invalid_lvalue_in_input)
                          << Info.getConstraintStr()
                          << InputExpr->getSourceRange());
-    } else if (Info.requiresImmediateConstant() && !Info.allowsRegister()) {
-      if (!InputExpr->isValueDependent()) {
-        Expr::EvalResult EVResult;
-        if (InputExpr->EvaluateAsRValue(EVResult, Context, true)) {
-          // For compatibility with GCC, we also allow pointers that would be
-          // integral constant expressions if they were cast to int.
-          llvm::APSInt IntResult;
-          if (EVResult.Val.toIntegralConstant(IntResult, InputExpr->getType(),
-                                               Context))
-            if (!Info.isValidAsmImmediate(IntResult))
-              return StmtError(Diag(InputExpr->getBeginLoc(),
-                                    diag::err_invalid_asm_value_for_constraint)
-                               << toString(IntResult, 10)
-                               << Info.getConstraintStr()
-                               << InputExpr->getSourceRange());
-        }
-      }
-
     } else {
       ExprResult Result = DefaultFunctionArrayLvalueConversion(Exprs[i]);
       if (Result.isInvalid())
         return StmtError();
 
-      Exprs[i] = Result.get();
+      InputExpr = Exprs[i] = Result.get();
+
+      if (Info.requiresImmediateConstant() && !Info.allowsRegister()) {
+        if (!InputExpr->isValueDependent()) {
+          Expr::EvalResult EVResult;
+          if (InputExpr->EvaluateAsRValue(EVResult, Context, true)) {
+            // For compatibility with GCC, we also allow pointers that would be
+            // integral constant expressions if they were cast to int.
+            llvm::APSInt IntResult;
+            if (EVResult.Val.toIntegralConstant(IntResult, InputExpr->getType(),
+                                                Context))
+              if (!Info.isValidAsmImmediate(IntResult))
+                return StmtError(
+                    Diag(InputExpr->getBeginLoc(),
+                         diag::err_invalid_asm_value_for_constraint)
+                    << toString(IntResult, 10) << Info.getConstraintStr()
+                    << InputExpr->getSourceRange());
+          }
+        }
+      }
     }
 
     if (Info.allowsRegister()) {

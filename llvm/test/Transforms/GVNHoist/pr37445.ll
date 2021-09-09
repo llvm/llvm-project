@@ -1,8 +1,12 @@
 ; RUN: opt < %s -early-cse-memssa -earlycse-debug-hash -gvn-hoist -S | FileCheck %s
 
 ; Make sure opt won't crash and that this pair of
-; instructions (load, icmp) is hoisted successfully
-; from bb45 and bb58 to bb41.
+; instructions (load, icmp) are not hoisted.
+; Although it is safe to hoist the loads from bb45 to
+; bb41, gvn-hoist does not have appropriate mechanism
+; to handle corner cases (see PR46874) when these instructions
+; were hoisted.
+; FIXME: Hoist loads from bb58 and bb45 to bb41.
 
 @g_10 = external global i32, align 4
 @g_536 = external global i8*, align 8
@@ -48,8 +52,6 @@ bb36:
   br label %bb12
 
 ;CHECK: bb41:
-;CHECK:   %tmp47 = load i32, i32* %arg1, align 4
-;CHECK:   %tmp48 = icmp eq i32 %tmp47, 0
 
 bb41:
   %tmp43 = load i32, i32* %arg, align 4
@@ -57,8 +59,8 @@ bb41:
   br i1 %tmp44, label %bb52, label %bb45
 
 ;CHECK:     bb45:
-;CHECK-NOT:   %tmp47 = load i32, i32* %arg1, align 4
-;CHECK-NOT:   %tmp48 = icmp eq i32 %tmp47, 0
+;CHECK:   %tmp47 = load i32, i32* %arg1, align 4
+;CHECK:   %tmp48 = icmp eq i32 %tmp47, 0
 
 bb45:
   %tmp47 = load i32, i32* %arg1, align 4
@@ -78,9 +80,13 @@ bb55:
   %tmp57 = add nsw i32 %tmp8.0, 1
   br label %bb52
 
-;CHECK:     bb58:
-;CHECK-NOT:   %tmp60 = load i32, i32* %arg1, align 4
-;CHECK-NOT:   %tmp61 = icmp eq i32 %tmp60, 0
+;CHECK: bb58:
+;CHECK: %tmp60 = load i32, i32* %arg1, align 4
+;CHECK: %tmp61 = icmp eq i32 %tmp60, 0
+;CHECK: bb62:
+;CHECK: load
+;CHECK: bb64:
+;CHECK: load
 
 bb58:
   %tmp60 = load i32, i32* %arg1, align 4

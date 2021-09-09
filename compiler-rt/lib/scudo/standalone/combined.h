@@ -205,6 +205,16 @@ public:
 #endif // GWP_ASAN_HOOKS
   }
 
+#ifdef GWP_ASAN_HOOKS
+  const gwp_asan::AllocationMetadata *getGwpAsanAllocationMetadata() {
+    return GuardedAlloc.getMetadataRegion();
+  }
+
+  const gwp_asan::AllocatorState *getGwpAsanAllocatorState() {
+    return GuardedAlloc.getAllocatorState();
+  }
+#endif // GWP_ASAN_HOOKS
+
   ALWAYS_INLINE void initThreadMaybe(bool MinimalInit = false) {
     TSDRegistry.initThreadMaybe(this, MinimalInit);
   }
@@ -910,7 +920,7 @@ public:
     if (!Depot->find(Hash, &RingPos, &Size))
       return;
     for (unsigned I = 0; I != Size && I != MaxTraceSize; ++I)
-      Trace[I] = (*Depot)[RingPos + I];
+      Trace[I] = static_cast<uintptr_t>((*Depot)[RingPos + I]);
   }
 
   static void getErrorInfo(struct scudo_error_info *ErrorInfo,

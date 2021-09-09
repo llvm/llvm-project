@@ -12,8 +12,7 @@
 // disable them for now until their behavior can be designed better later.
 // See https://reviews.llvm.org/D84049 for details.
 
-// UNSUPPORTED: clang-4, clang-5, clang-6, clang-7, clang-8, clang-9, clang-10
-// UNSUPPORTED: apple-clang-9, apple-clang-10, apple-clang-11, apple-clang-12
+// UNSUPPORTED: apple-clang-12
 
 // UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: c++03

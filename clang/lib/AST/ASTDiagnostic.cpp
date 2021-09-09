@@ -1088,6 +1088,9 @@ class TemplateDiff {
             Ty->getAs<TemplateSpecializationType>())
       return TST;
 
+    if (const auto* SubstType = Ty->getAs<SubstTemplateTypeParmType>())
+      Ty = SubstType->getReplacementType();
+
     const RecordType *RT = Ty->getAs<RecordType>();
 
     if (!RT)

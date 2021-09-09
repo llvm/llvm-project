@@ -629,7 +629,7 @@ Now we can load the module into LLDB and use it
 
 ::
 
-  % lldb
+  $ lldb
   (lldb) command script import ~/ls.py
   The "ls" python command has been installed and is ready for use.
   (lldb) ls -l /tmp/
@@ -706,7 +706,7 @@ For sh and bash:
 
 ::
 
-  % export PYTHONPATH=`lldb -P`
+  $ export PYTHONPATH=`lldb -P`
 
 Alternately, you can append the LLDB Python directory to the sys.path list
 directly in your Python code before importing the lldb module.

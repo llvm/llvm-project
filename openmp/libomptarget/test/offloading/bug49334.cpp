@@ -3,6 +3,8 @@
 // Currently hangs on amdgpu
 // UNSUPPORTED: amdgcn-amd-amdhsa
 
+// UNSUPPORTED: x86_64-pc-linux-gnu
+
 #include <cassert>
 #include <iostream>
 #include <memory>

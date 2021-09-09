@@ -58,6 +58,7 @@ add_unittest(ClangdUnitTests ClangdTests
   HeadersTests.cpp
   HeaderSourceSwitchTests.cpp
   HoverTests.cpp
+  IncludeCleanerTests.cpp
   IndexActionTests.cpp
   IndexTests.cpp
   InlayHintTests.cpp

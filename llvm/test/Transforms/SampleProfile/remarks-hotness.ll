@@ -36,8 +36,8 @@
 ; YAML-MISS-NEXT: Function:        _Z7caller2v
 ; YAML-MISS-NEXT: Hotness:         2
 
-; CHECK-RPASS: _Z7callee1v inlined into _Z7caller1v with (cost=-30, threshold=4500) at callsite _Z7caller1v:1:10; (hotness: 401)
-; CHECK-RPASS-NOT: _Z7callee2v not inlined into _Z7caller2v because it should never be inlined (cost=never): noinline function attribute (hotness: 2)
+; CHECK-RPASS: '_Z7callee1v' inlined into '_Z7caller1v' with (cost=-30, threshold=4500) at callsite _Z7caller1v:1:10; (hotness: 401)
+; CHECK-RPASS-NOT: '_Z7callee2v' not inlined into '_Z7caller2v' because it should never be inlined (cost=never): noinline function attribute (hotness: 2)
 
 ; ModuleID = 'remarks-hotness.cpp'
 source_filename = "remarks-hotness.cpp"

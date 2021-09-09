@@ -8,10 +8,10 @@ define i32 @foo(i8* nocapture readnone %match, i32 %cur_match, i32 %best_len, i3
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_EXT2:%.*]] = zext i32 [[CUR_MATCH:%.*]] to i64
+; CHECK-NEXT:    [[ADD_PTR4:%.*]] = getelementptr inbounds i8, i8* [[WIN:%.*]], i64 [[IDX_EXT2]]
 ; CHECK-NEXT:    [[IDX_EXT1:%.*]] = zext i32 [[BEST_LEN:%.*]] to i64
-; CHECK-NEXT:    [[ADD_PTR25_IDX:%.*]] = add nuw nsw i64 [[IDX_EXT1]], [[IDX_EXT2]]
-; CHECK-NEXT:    [[ADD_PTR36_IDX:%.*]] = add nsw i64 [[ADD_PTR25_IDX]], -1
-; CHECK-NEXT:    [[ADD_PTR36:%.*]] = getelementptr inbounds i8, i8* [[WIN:%.*]], i64 [[ADD_PTR36_IDX]]
+; CHECK-NEXT:    [[ADD_PTR25:%.*]] = getelementptr inbounds i8, i8* [[ADD_PTR4]], i64 [[IDX_EXT1]]
+; CHECK-NEXT:    [[ADD_PTR36:%.*]] = getelementptr inbounds i8, i8* [[ADD_PTR25]], i64 -1
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[ADD_PTR36]] to i32*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
 ; CHECK-NEXT:    [[CMP7:%.*]] = icmp eq i32 [[TMP1]], [[SCAN_END:%.*]]
@@ -20,9 +20,9 @@ define i32 @foo(i8* nocapture readnone %match, i32 %cur_match, i32 %best_len, i3
 ; CHECK-NEXT:    br label [[IF_THEN:%.*]]
 ; CHECK:       do.body:
 ; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[TMP4:%.*]] to i64
-; CHECK-NEXT:    [[ADD_PTR2_IDX:%.*]] = add nuw nsw i64 [[IDX_EXT]], [[IDX_EXT1]]
-; CHECK-NEXT:    [[ADD_PTR3_IDX:%.*]] = add nsw i64 [[ADD_PTR2_IDX]], -1
-; CHECK-NEXT:    [[ADD_PTR3:%.*]] = getelementptr inbounds i8, i8* [[WIN]], i64 [[ADD_PTR3_IDX]]
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[WIN]], i64 [[IDX_EXT1]]
+; CHECK-NEXT:    [[ADD_PTR2:%.*]] = getelementptr inbounds i8, i8* [[ADD_PTR]], i64 -1
+; CHECK-NEXT:    [[ADD_PTR3:%.*]] = getelementptr inbounds i8, i8* [[ADD_PTR2]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[ADD_PTR3]] to i32*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP2]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP3]], [[SCAN_END]]
@@ -185,4 +185,72 @@ loop:
   %e6 = getelementptr inbounds i8, <2 x i8*> %e5, i64 80
   call void @blackhole(<2 x i8*> %e6)
   br label %loop
+}
+
+; This would crash because we did not expect to be able to constant fold a GEP.
+
+define void @PR51485(<2 x i64> %v) {
+; CHECK-LABEL: @PR51485(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[SL1:%.*]] = shl nuw nsw <2 x i64> [[V:%.*]], <i64 7, i64 7>
+; CHECK-NEXT:    [[E6:%.*]] = getelementptr inbounds i8, i8* getelementptr (i8, i8* bitcast (void (<2 x i64>)* @PR51485 to i8*), i64 80), <2 x i64> [[SL1]]
+; CHECK-NEXT:    call void @blackhole(<2 x i8*> [[E6]])
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %sl1 = shl nuw nsw <2 x i64> %v, <i64 7, i64 7>
+  %e5 = getelementptr inbounds i8, i8* bitcast (void (<2 x i64>)* @PR51485 to i8*), <2 x i64> %sl1
+  %e6 = getelementptr inbounds i8, <2 x i8*> %e5, i64 80
+  call void @blackhole(<2 x i8*> %e6)
+  br label %loop
+}
+
+; Avoid folding the GEP outside the loop to inside, and increasing loop
+; instruction count.
+define float @gep_cross_loop(i64* %_arg_, float* %_arg_3, float %_arg_8)
+; CHECK-LABEL: @gep_cross_loop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* [[_ARG_:%.*]], align 8
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds float, float* [[_ARG_3:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    br label [[FOR_COND_I:%.*]]
+; CHECK:       for.cond.i:
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[ADD11_I:%.*]], [[FOR_BODY_I:%.*]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I:%.*]], [[FOR_BODY_I]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IDX]], 17
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY_I]], label [[FOR_COND_I_I_I_PREHEADER:%.*]]
+; CHECK:       for.cond.i.i.i.preheader:
+; CHECK-NEXT:    ret float [[SUM]]
+; CHECK:       for.body.i:
+; CHECK-NEXT:    [[ARRAYIDX_I84_I:%.*]] = getelementptr inbounds float, float* [[ADD_PTR]], i64 [[IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[ARRAYIDX_I84_I]], align 4
+; CHECK-NEXT:    [[ADD_I]] = fadd fast float [[SUM]], [[TMP1]]
+; CHECK-NEXT:    [[ADD11_I]] = add nuw nsw i64 [[IDX]], 1
+; CHECK-NEXT:    br label [[FOR_COND_I]]
+;
+{
+entry:
+  %0 = load i64, i64* %_arg_, align 8
+  %add.ptr = getelementptr inbounds float, float* %_arg_3, i64 %0
+  br label %for.cond.i
+
+for.cond.i:                                       ; preds = %for.body.i, %entry
+  %idx = phi i64 [ 0, %entry ], [ %add11.i, %for.body.i ]
+  %sum = phi float [ 0.000000e+00, %entry ], [ %add.i, %for.body.i ]
+  %cmp = icmp ule i64 %idx, 16
+  br i1 %cmp, label %for.body.i, label %for.cond.i.i.i.preheader
+
+for.cond.i.i.i.preheader:                         ; preds = %for.cond.i
+  ret float %sum
+
+for.body.i:                                       ; preds = %for.cond.i
+  %arrayidx.i84.i = getelementptr inbounds float, float * %add.ptr, i64 %idx
+  %1 = load float, float* %arrayidx.i84.i, align 4
+  %add.i = fadd fast float %sum, %1
+  %add11.i = add nsw i64 %idx, 1
+  br label %for.cond.i
 }

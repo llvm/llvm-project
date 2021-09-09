@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: gcc-7, gcc-8, gcc-9
-
 // PR33425 and PR33487 are not fixed until the dylib shipped with macOS 10.15
 // XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.14
 
@@ -20,7 +18,7 @@
 // bases.
 #if defined(__clang__)
 #   pragma clang diagnostic ignored "-Winaccessible-base"
-#elif defined(__GNUC__) && (__GNUC__ >= 10)
+#elif defined(__GNUC__)
 #   pragma GCC diagnostic ignored "-Winaccessible-base"
 #endif
 

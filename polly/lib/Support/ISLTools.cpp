@@ -36,7 +36,7 @@ isl::multi_aff makeShiftDimAff(isl::space Space, int Pos, int Amount) {
   auto Identity = isl::multi_aff::identity(Space);
   if (Amount == 0)
     return Identity;
-  auto ShiftAff = Identity.get_aff(Pos);
+  auto ShiftAff = Identity.at(Pos);
   ShiftAff = ShiftAff.set_constant_si(Amount);
   return Identity.set_aff(Pos, ShiftAff);
 }
@@ -56,8 +56,8 @@ isl::basic_map makeTupleSwapBasicMap(isl::space FromSpace1,
   assert(FromSpace1.is_set());
   assert(FromSpace2.is_set());
 
-  unsigned Dims1 = FromSpace1.dim(isl::dim::set);
-  unsigned Dims2 = FromSpace2.dim(isl::dim::set);
+  unsigned Dims1 = FromSpace1.dim(isl::dim::set).release();
+  unsigned Dims2 = FromSpace2.dim(isl::dim::set).release();
 
   isl::space FromSpace =
       FromSpace1.map_from_domain_and_range(FromSpace2).wrap();
@@ -166,7 +166,7 @@ isl_size polly::getNumScatterDims(const isl::union_map &Schedule) {
     if (Map.is_null())
       continue;
 
-    Dims = std::max(Dims, Map.range_tuple_dim());
+    Dims = std::max(Dims, Map.range_tuple_dim().release());
   }
   return Dims;
 }
@@ -214,7 +214,7 @@ isl::union_map polly::reverseDomain(const isl::union_map &UMap) {
 }
 
 isl::set polly::shiftDim(isl::set Set, int Pos, int Amount) {
-  int NumDims = Set.tuple_dim();
+  int NumDims = Set.tuple_dim().release();
   if (Pos < 0)
     Pos = NumDims + Pos;
   assert(Pos < NumDims && "Dimension index must be in range");
@@ -235,7 +235,7 @@ isl::union_set polly::shiftDim(isl::union_set USet, int Pos, int Amount) {
 }
 
 isl::map polly::shiftDim(isl::map Map, isl::dim Dim, int Pos, int Amount) {
-  int NumDims = Map.dim(Dim);
+  int NumDims = Map.dim(Dim).release();
   if (Pos < 0)
     Pos = NumDims + Pos;
   assert(Pos < NumDims && "Dimension index must be in range");
@@ -449,16 +449,16 @@ isl::map polly::distributeDomain(isl::map Map) {
   isl::space DomainSpace = Space.domain();
   if (DomainSpace.is_null())
     return {};
-  unsigned DomainDims = DomainSpace.dim(isl::dim::set);
+  unsigned DomainDims = DomainSpace.dim(isl::dim::set).release();
   isl::space RangeSpace = Space.range().unwrap();
   isl::space Range1Space = RangeSpace.domain();
   if (Range1Space.is_null())
     return {};
-  unsigned Range1Dims = Range1Space.dim(isl::dim::set);
+  unsigned Range1Dims = Range1Space.dim(isl::dim::set).release();
   isl::space Range2Space = RangeSpace.range();
   if (Range2Space.is_null())
     return {};
-  unsigned Range2Dims = Range2Space.dim(isl::dim::set);
+  unsigned Range2Dims = Range2Space.dim(isl::dim::set).release();
 
   isl::space OutputSpace =
       DomainSpace.map_from_domain_and_range(Range1Space)
@@ -606,17 +606,17 @@ static int flatCompare(const isl::basic_set &A, const isl::basic_set &B) {
   if (A.is_null() || B.is_null())
     return 0;
 
-  unsigned ALen = A.dim(isl::dim::set);
-  unsigned BLen = B.dim(isl::dim::set);
+  unsigned ALen = A.dim(isl::dim::set).release();
+  unsigned BLen = B.dim(isl::dim::set).release();
   unsigned Len = std::min(ALen, BLen);
 
   for (unsigned i = 0; i < Len; i += 1) {
     isl::basic_set ADim =
-        A.project_out(isl::dim::param, 0, A.dim(isl::dim::param))
+        A.project_out(isl::dim::param, 0, A.dim(isl::dim::param).release())
             .project_out(isl::dim::set, i + 1, ALen - i - 1)
             .project_out(isl::dim::set, 0, i);
     isl::basic_set BDim =
-        B.project_out(isl::dim::param, 0, B.dim(isl::dim::param))
+        B.project_out(isl::dim::param, 0, B.dim(isl::dim::param).release())
             .project_out(isl::dim::set, i + 1, BLen - i - 1)
             .project_out(isl::dim::set, 0, i);
 
@@ -687,7 +687,8 @@ static int structureCompare(const isl::space &ASpace, const isl::space &BSpace,
     return NameCompare;
 
   if (ConsiderTupleLen) {
-    int LenCompare = BSpace.dim(isl::dim::set) - ASpace.dim(isl::dim::set);
+    int LenCompare = BSpace.dim(isl::dim::set).release() -
+                     ASpace.dim(isl::dim::set).release();
     if (LenCompare != 0)
       return LenCompare;
   }
@@ -782,14 +783,14 @@ static void printSortedPolyhedra(isl::union_set USet, llvm::raw_ostream &OS,
 }
 
 static void recursiveExpand(isl::basic_set BSet, int Dim, isl::set &Expanded) {
-  int Dims = BSet.dim(isl::dim::set);
+  int Dims = BSet.dim(isl::dim::set).release();
   if (Dim >= Dims) {
     Expanded = Expanded.unite(BSet);
     return;
   }
 
   isl::basic_set DimOnly =
-      BSet.project_out(isl::dim::param, 0, BSet.dim(isl::dim::param))
+      BSet.project_out(isl::dim::param, 0, BSet.dim(isl::dim::param).release())
           .project_out(isl::dim::set, Dim + 1, Dims - Dim - 1)
           .project_out(isl::dim::set, 0, Dim);
   if (!DimOnly.is_bounded()) {

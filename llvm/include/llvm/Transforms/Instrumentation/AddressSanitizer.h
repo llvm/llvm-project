@@ -1,9 +1,8 @@
 //===--------- Definition of the AddressSanitizer class ---------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -90,6 +89,20 @@ private:
   static AnalysisKey Key;
 };
 
+struct AddressSanitizerOptions {
+  AddressSanitizerOptions()
+      : AddressSanitizerOptions(false, false, false,
+                                AsanDetectStackUseAfterReturnMode::Runtime){};
+  AddressSanitizerOptions(bool CompileKernel, bool Recover, bool UseAfterScope,
+                          AsanDetectStackUseAfterReturnMode UseAfterReturn)
+      : CompileKernel(CompileKernel), Recover(Recover),
+        UseAfterScope(UseAfterScope), UseAfterReturn(UseAfterReturn){};
+  bool CompileKernel;
+  bool Recover;
+  bool UseAfterScope;
+  AsanDetectStackUseAfterReturnMode UseAfterReturn;
+};
+
 /// Public interface to the address sanitizer pass for instrumenting code to
 /// check for various memory errors at runtime.
 ///
@@ -99,19 +112,13 @@ private:
 /// surrounding requested memory to be checked for invalid accesses.
 class AddressSanitizerPass : public PassInfoMixin<AddressSanitizerPass> {
 public:
-  explicit AddressSanitizerPass(
-      bool CompileKernel = false, bool Recover = false,
-      bool UseAfterScope = false,
-      AsanDetectStackUseAfterReturnMode UseAfterReturn =
-          AsanDetectStackUseAfterReturnMode::Runtime);
+  explicit AddressSanitizerPass(AddressSanitizerOptions Options)
+      : Options(Options){};
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   static bool isRequired() { return true; }
 
 private:
-  bool CompileKernel;
-  bool Recover;
-  bool UseAfterScope;
-  AsanDetectStackUseAfterReturnMode UseAfterReturn;
+  AddressSanitizerOptions Options;
 };
 
 /// Public interface to the address sanitizer module pass for instrumenting code
@@ -147,6 +154,16 @@ ModulePass *createModuleAddressSanitizerLegacyPassPass(
     bool CompileKernel = false, bool Recover = false, bool UseGlobalsGC = true,
     bool UseOdrIndicator = true,
     AsanDtorKind DestructorKind = AsanDtorKind::Global);
+
+struct ASanAccessInfo {
+  const int32_t Packed;
+  const uint8_t AccessSizeIndex;
+  const bool IsWrite;
+  const bool CompileKernel;
+
+  explicit ASanAccessInfo(int32_t Packed);
+  ASanAccessInfo(bool IsWrite, bool CompileKernel, uint8_t AccessSizeIndex);
+};
 
 } // namespace llvm
 

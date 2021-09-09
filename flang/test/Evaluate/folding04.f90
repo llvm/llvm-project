@@ -1,5 +1,4 @@
-! RUN: %S/test_folding.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_folding.py %s %flang_fc1
 ! Test intrinsic function folding edge case (both expected value and messages)
 ! These tests make assumptions regarding real(4) extrema.
 

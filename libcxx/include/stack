@@ -231,17 +231,17 @@ public:
     operator< (const stack<T1, _C1>& __x, const stack<T1, _C1>& __y);
 };
 
-#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+#if _LIBCPP_STD_VER >= 17
 template<class _Container,
-         class = _EnableIf<!__is_allocator<_Container>::value>
+         class = enable_if_t<!__is_allocator<_Container>::value>
 >
 stack(_Container)
     -> stack<typename _Container::value_type, _Container>;
 
 template<class _Container,
          class _Alloc,
-         class = _EnableIf<!__is_allocator<_Container>::value>,
-         class = _EnableIf<uses_allocator<_Container, _Alloc>::value>
+         class = enable_if_t<!__is_allocator<_Container>::value>,
+         class = enable_if_t<uses_allocator<_Container, _Alloc>::value>
          >
 stack(_Container, _Alloc)
     -> stack<typename _Container::value_type, _Container>;

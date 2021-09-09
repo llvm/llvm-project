@@ -290,12 +290,13 @@ namespace llvm {
     /// \param OffsetInBits Member offset.
     /// \param Flags        Flags to encode member attribute, e.g. private
     /// \param Ty           Parent type.
+    /// \param Annotations  Member annotations.
     DIDerivedType *createMemberType(DIScope *Scope, StringRef Name,
                                     DIFile *File, unsigned LineNo,
-                                    uint64_t SizeInBits,
-                                    uint32_t AlignInBits,
+                                    uint64_t SizeInBits, uint32_t AlignInBits,
                                     uint64_t OffsetInBits,
-                                    DINode::DIFlags Flags, DIType *Ty);
+                                    DINode::DIFlags Flags, DIType *Ty,
+                                    DINodeArray Annotations = nullptr);
 
     /// Create debugging information entry for a variant.  A variant
     /// normally should be a member of a variant part.
@@ -328,10 +329,14 @@ namespace llvm {
     /// \param StorageOffsetInBits Member storage offset.
     /// \param Flags               Flags to encode member attribute.
     /// \param Ty                  Parent type.
-    DIDerivedType *createBitFieldMemberType(
-        DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNo,
-        uint64_t SizeInBits, uint64_t OffsetInBits,
-        uint64_t StorageOffsetInBits, DINode::DIFlags Flags, DIType *Ty);
+    /// \param Annotations         Member annotations.
+    DIDerivedType *createBitFieldMemberType(DIScope *Scope, StringRef Name,
+                                            DIFile *File, unsigned LineNo,
+                                            uint64_t SizeInBits,
+                                            uint64_t OffsetInBits,
+                                            uint64_t StorageOffsetInBits,
+                                            DINode::DIFlags Flags, DIType *Ty,
+                                            DINodeArray Annotations = nullptr);
 
     /// Create debugging information entry for a
     /// C++ static data member.
@@ -597,7 +602,7 @@ namespace llvm {
         unsigned Tag, StringRef Name, DIScope *Scope, DIFile *F, unsigned Line,
         unsigned RuntimeLang = 0, uint64_t SizeInBits = 0,
         uint32_t AlignInBits = 0, DINode::DIFlags Flags = DINode::FlagFwdDecl,
-        StringRef UniqueIdentifier = "");
+        StringRef UniqueIdentifier = "", DINodeArray Annotations = nullptr);
 
     /// Retain DIScope* in a module even if it is not referenced
     /// through debug info anchors.
@@ -650,7 +655,7 @@ namespace llvm {
         DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *File,
         unsigned LineNo, DIType *Ty, bool IsLocalToUnit, bool isDefined = true,
         MDNode *Decl = nullptr, MDTuple *TemplateParams = nullptr,
-        uint32_t AlignInBits = 0);
+        uint32_t AlignInBits = 0, DINodeArray Annotations = nullptr);
 
     /// Create a new descriptor for the specified variable.
     /// \param Context     Variable scope.
@@ -670,7 +675,8 @@ namespace llvm {
         DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *File,
         unsigned LineNo, DIType *Ty, bool IsLocalToUnit, bool isDefined = true,
         DIExpression *Expr = nullptr, MDNode *Decl = nullptr,
-        MDTuple *TemplateParams = nullptr, uint32_t AlignInBits = 0);
+        MDTuple *TemplateParams = nullptr, uint32_t AlignInBits = 0,
+        DINodeArray Annotations = nullptr);
 
     /// Identical to createGlobalVariable
     /// except that the resulting DbgNode is temporary and meant to be RAUWed.
@@ -716,7 +722,8 @@ namespace llvm {
     createParameterVariable(DIScope *Scope, StringRef Name, unsigned ArgNo,
                             DIFile *File, unsigned LineNo, DIType *Ty,
                             bool AlwaysPreserve = false,
-                            DINode::DIFlags Flags = DINode::FlagZero);
+                            DINode::DIFlags Flags = DINode::FlagZero,
+                            DINodeArray Annotations = nullptr);
 
     /// Create a new descriptor for the specified
     /// variable which has a complex address expression for its address.
@@ -745,6 +752,7 @@ namespace llvm {
     /// \param SPFlags       Additional flags specific to subprograms.
     /// \param TParams       Function template parameters.
     /// \param ThrownTypes   Exception types this function may throw.
+    /// \param Annotations   Attribute Annotations.
     DISubprogram *
     createFunction(DIScope *Scope, StringRef Name, StringRef LinkageName,
                    DIFile *File, unsigned LineNo, DISubroutineType *Ty,
@@ -752,7 +760,8 @@ namespace llvm {
                    DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagZero,
                    DITemplateParameterArray TParams = nullptr,
                    DISubprogram *Decl = nullptr,
-                   DITypeArray ThrownTypes = nullptr);
+                   DITypeArray ThrownTypes = nullptr,
+                   DINodeArray Annotations = nullptr);
 
     /// Identical to createFunction,
     /// except that the resulting DbgNode is meant to be RAUWed.

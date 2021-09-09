@@ -352,6 +352,21 @@ def MasterOp : OpenMP_Op<"master"> {
 //===----------------------------------------------------------------------===//
 // 2.17.1 critical Construct
 //===----------------------------------------------------------------------===//
+def CriticalDeclareOp : OpenMP_Op<"critical.declare", [Symbol]> {
+  let summary = "declares a named critical section.";
+
+  let description = [{
+    Declares a named critical section.
+
+    The name can be used in critical constructs in the dialect.
+  }];
+
+  let arguments = (ins SymbolNameAttr:$sym_name);
+
+  let assemblyFormat = "$sym_name attr-dict";
+}
+
+
 // TODO: Autogenerate this from OMP.td in llvm/include/Frontend
 def omp_sync_hint_none: I32EnumAttrCase<"none", 0>;
 def omp_sync_hint_uncontended: I32EnumAttrCase<"uncontended", 1>;

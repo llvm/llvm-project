@@ -992,3 +992,15 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O2
 )
+
+add_object_library(
+  dp_trig
+  SRCS
+    dp_trig.cpp
+  HDRS
+    dp_trig.h
+  DEPENDS
+    libc.src.__support.FPUtil.fputil
+  COMPILE_OPTIONS
+   -O3
+)

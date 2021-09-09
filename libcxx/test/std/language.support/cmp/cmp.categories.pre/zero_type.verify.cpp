@@ -8,11 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: apple-clang-9, apple-clang-10, apple-clang-11, apple-clang-12.0.0
+// UNSUPPORTED: apple-clang-12
 
 // In MSVC mode, there's a slightly different number of errors printed for
 // each of these, so it doesn't add up to the exact expected count of 18.
-// UNSUPPORTED: msvc
+// XFAIL: msvc
 
 // <compare>
 

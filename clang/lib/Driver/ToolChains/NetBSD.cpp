@@ -29,6 +29,8 @@ void netbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
                                      const InputInfoList &Inputs,
                                      const ArgList &Args,
                                      const char *LinkingOutput) const {
+  const Driver &D = getToolChain().getDriver();
+
   claimNoWarnArgs(Args);
   ArgStringList CmdArgs;
 
@@ -76,16 +78,18 @@ void netbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel: {
     CmdArgs.push_back("-32");
-    std::string CPU = getCPUName(Args, getToolChain().getTriple());
-    CmdArgs.push_back(sparc::getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
+    std::string CPU = getCPUName(D, Args, getToolChain().getTriple());
+    CmdArgs.push_back(
+        sparc::getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
     AddAssemblerKPIC(getToolChain(), Args, CmdArgs);
     break;
   }
 
   case llvm::Triple::sparcv9: {
     CmdArgs.push_back("-64");
-    std::string CPU = getCPUName(Args, getToolChain().getTriple());
-    CmdArgs.push_back(sparc::getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
+    std::string CPU = getCPUName(D, Args, getToolChain().getTriple());
+    CmdArgs.push_back(
+        sparc::getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
     AddAssemblerKPIC(getToolChain(), Args, CmdArgs);
     break;
   }
@@ -261,8 +265,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs();
   if (SanArgs.needsSharedRt()) {
     CmdArgs.push_back("-rpath");
-    CmdArgs.push_back(Args.MakeArgString(
-        ToolChain.getCompilerRTPath().c_str()));
+    CmdArgs.push_back(Args.MakeArgString(ToolChain.getCompilerRTPath()));
   }
 
   unsigned Major, Minor, Micro;

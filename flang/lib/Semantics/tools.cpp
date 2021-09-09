@@ -507,6 +507,18 @@ const DeclTypeSpec *FindParentTypeSpec(const Symbol &symbol) {
   return nullptr;
 }
 
+const EquivalenceSet *FindEquivalenceSet(const Symbol &symbol) {
+  const Symbol &ultimate{symbol.GetUltimate()};
+  for (const EquivalenceSet &set : ultimate.owner().equivalenceSets()) {
+    for (const EquivalenceObject &object : set) {
+      if (object.symbol == ultimate) {
+        return &set;
+      }
+    }
+  }
+  return nullptr;
+}
+
 bool IsExtensibleType(const DerivedTypeSpec *derived) {
   return derived && !IsIsoCType(derived) &&
       !derived->typeSymbol().attrs().test(Attr::BIND_C) &&
@@ -569,34 +581,36 @@ bool CanBeTypeBoundProc(const Symbol *symbol) {
   }
 }
 
-bool IsStaticallyInitialized(const Symbol &symbol, bool ignoreDATAstatements) {
-  if (!ignoreDATAstatements && symbol.test(Symbol::Flag::InDataStmt)) {
-    return true;
-  } else if (IsNamedConstant(symbol)) {
+bool HasDeclarationInitializer(const Symbol &symbol) {
+  if (IsNamedConstant(symbol)) {
     return false;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
     return object->init().has_value();
   } else if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
     return proc->init().has_value();
+  } else {
+    return false;
   }
-  return false;
 }
 
-bool IsInitialized(const Symbol &symbol, bool ignoreDATAstatements,
-    const Symbol *derivedTypeSymbol) {
-  if (IsStaticallyInitialized(symbol, ignoreDATAstatements) ||
-      IsAllocatable(symbol)) {
+bool IsInitialized(const Symbol &symbol, bool ignoreDataStatements) {
+  if (IsAllocatable(symbol) ||
+      (!ignoreDataStatements && symbol.test(Symbol::Flag::InDataStmt)) ||
+      HasDeclarationInitializer(symbol)) {
     return true;
   } else if (IsNamedConstant(symbol) || IsFunctionResult(symbol) ||
       IsPointer(symbol)) {
     return false;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
     if (!object->isDummy() && object->type()) {
-      const auto *derived{object->type()->AsDerived()};
-      // error recovery: avoid infinite recursion on invalid
-      // recursive usage of a derived type
-      return derived && &derived->typeSymbol() != derivedTypeSymbol &&
-          derived->HasDefaultInitialization();
+      if (const auto *derived{object->type()->AsDerived()}) {
+        DirectComponentIterator directs{*derived};
+        return bool{std::find_if(
+            directs.begin(), directs.end(), [](const Symbol &component) {
+              return IsAllocatable(component) ||
+                  HasDeclarationInitializer(component);
+            })};
+      }
     }
   }
   return false;
@@ -786,6 +800,39 @@ bool IsInBlankCommon(const Symbol &symbol) {
 // of CHARACTER type
 bool IsExternal(const Symbol &symbol) {
   return ClassifyProcedure(symbol) == ProcedureDefinitionClass::External;
+}
+
+// Most scopes have no EQUIVALENCE, and this function is a fast no-op for them.
+std::list<std::list<SymbolRef>> GetStorageAssociations(const Scope &scope) {
+  UnorderedSymbolSet distinct;
+  for (const EquivalenceSet &set : scope.equivalenceSets()) {
+    for (const EquivalenceObject &object : set) {
+      distinct.emplace(object.symbol);
+    }
+  }
+  // This set is ordered by ascending offsets, with ties broken by greatest
+  // size.  A multiset is used here because multiple symbols may have the
+  // same offset and size; the symbols in the set, however, are distinct.
+  std::multiset<SymbolRef, SymbolOffsetCompare> associated;
+  for (SymbolRef ref : distinct) {
+    associated.emplace(*ref);
+  }
+  std::list<std::list<SymbolRef>> result;
+  std::size_t limit{0};
+  const Symbol *currentCommon{nullptr};
+  for (const Symbol &symbol : associated) {
+    const Symbol *thisCommon{FindCommonBlockContaining(symbol)};
+    if (result.empty() || symbol.offset() >= limit ||
+        thisCommon != currentCommon) {
+      // Start a new group
+      result.emplace_back(std::list<SymbolRef>{});
+      limit = 0;
+      currentCommon = thisCommon;
+    }
+    result.back().emplace_back(symbol);
+    limit = std::max(limit, symbol.offset() + symbol.size());
+  }
+  return result;
 }
 
 bool IsModuleProcedure(const Symbol &symbol) {

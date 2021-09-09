@@ -1446,19 +1446,30 @@ void Lexer::SetByteOffset(unsigned Offset, bool StartOfLine) {
   IsAtPhysicalStartOfLine = StartOfLine;
 }
 
+static bool isUnicodeWhitespace(uint32_t Codepoint) {
+  static const llvm::sys::UnicodeCharSet UnicodeWhitespaceChars(
+      UnicodeWhitespaceCharRanges);
+  return UnicodeWhitespaceChars.contains(Codepoint);
+}
+
 static bool isAllowedIDChar(uint32_t C, const LangOptions &LangOpts) {
   if (LangOpts.AsmPreprocessor) {
     return false;
   } else if (LangOpts.DollarIdents && '$' == C) {
     return true;
-  } else if (LangOpts.CPlusPlus11 || LangOpts.C11) {
+  } else if (LangOpts.CPlusPlus) {
+    // A non-leading codepoint must have the XID_Continue property.
+    // XIDContinueRanges doesn't contains characters also in XIDStartRanges,
+    // so we need to check both tables.
+    // '_' doesn't have the XID_Continue property but is allowed in C++.
+    static const llvm::sys::UnicodeCharSet XIDStartChars(XIDStartRanges);
+    static const llvm::sys::UnicodeCharSet XIDContinueChars(XIDContinueRanges);
+    return C == '_' || XIDStartChars.contains(C) ||
+           XIDContinueChars.contains(C);
+  } else if (LangOpts.C11) {
     static const llvm::sys::UnicodeCharSet C11AllowedIDChars(
         C11AllowedIDCharRanges);
     return C11AllowedIDChars.contains(C);
-  } else if (LangOpts.CPlusPlus) {
-    static const llvm::sys::UnicodeCharSet CXX03AllowedIDChars(
-        CXX03AllowedIDCharRanges);
-    return CXX03AllowedIDChars.contains(C);
   } else {
     static const llvm::sys::UnicodeCharSet C99AllowedIDChars(
         C99AllowedIDCharRanges);
@@ -1467,20 +1478,24 @@ static bool isAllowedIDChar(uint32_t C, const LangOptions &LangOpts) {
 }
 
 static bool isAllowedInitiallyIDChar(uint32_t C, const LangOptions &LangOpts) {
-  assert(isAllowedIDChar(C, LangOpts));
   if (LangOpts.AsmPreprocessor) {
     return false;
-  } else if (LangOpts.CPlusPlus11 || LangOpts.C11) {
+  }
+  if (LangOpts.CPlusPlus) {
+    static const llvm::sys::UnicodeCharSet XIDStartChars(XIDStartRanges);
+    // '_' doesn't have the XID_Start property but is allowed in C++.
+    return C == '_' || XIDStartChars.contains(C);
+  }
+  if (!isAllowedIDChar(C, LangOpts))
+    return false;
+  if (LangOpts.C11) {
     static const llvm::sys::UnicodeCharSet C11DisallowedInitialIDChars(
         C11DisallowedInitialIDCharRanges);
     return !C11DisallowedInitialIDChars.contains(C);
-  } else if (LangOpts.CPlusPlus) {
-    return true;
-  } else {
-    static const llvm::sys::UnicodeCharSet C99DisallowedInitialIDChars(
-        C99DisallowedInitialIDCharRanges);
-    return !C99DisallowedInitialIDChars.contains(C);
   }
+  static const llvm::sys::UnicodeCharSet C99DisallowedInitialIDChars(
+      C99DisallowedInitialIDCharRanges);
+  return !C99DisallowedInitialIDChars.contains(C);
 }
 
 static inline CharSourceRange makeCharRange(Lexer &L, const char *Begin,
@@ -1510,16 +1525,6 @@ static void maybeDiagnoseIDCharCompat(DiagnosticsEngine &Diags, uint32_t C,
       Diags.Report(Range.getBegin(), diag::warn_c99_compat_unicode_id)
         << Range
         << CannotStartIdentifier;
-    }
-  }
-
-  // Check C++98 compatibility.
-  if (!Diags.isIgnored(diag::warn_cxx98_compat_unicode_id, Range.getBegin())) {
-    static const llvm::sys::UnicodeCharSet CXX03AllowedIDChars(
-        CXX03AllowedIDCharRanges);
-    if (!CXX03AllowedIDChars.contains(C)) {
-      Diags.Report(Range.getBegin(), diag::warn_cxx98_compat_unicode_id)
-        << Range;
     }
   }
 }
@@ -1608,14 +1613,56 @@ static void maybeDiagnoseUTF8Homoglyph(DiagnosticsEngine &Diags, uint32_t C,
   }
 }
 
+static void diagnoseInvalidUnicodeCodepointInIdentifier(
+    DiagnosticsEngine &Diags, const LangOptions &LangOpts, uint32_t CodePoint,
+    CharSourceRange Range, bool IsFirst) {
+  if (isASCII(CodePoint))
+    return;
+
+  bool IsIDStart = isAllowedInitiallyIDChar(CodePoint, LangOpts);
+  bool IsIDContinue = IsIDStart || isAllowedIDChar(CodePoint, LangOpts);
+
+  if ((IsFirst && IsIDStart) || (!IsFirst && IsIDContinue))
+    return;
+
+  bool InvalidOnlyAtStart = IsFirst && !IsIDStart && IsIDContinue;
+
+  llvm::SmallString<5> CharBuf;
+  llvm::raw_svector_ostream CharOS(CharBuf);
+  llvm::write_hex(CharOS, CodePoint, llvm::HexPrintStyle::Upper, 4);
+
+  if (!IsFirst || InvalidOnlyAtStart) {
+    Diags.Report(Range.getBegin(), diag::err_character_not_allowed_identifier)
+        << Range << CharBuf << int(InvalidOnlyAtStart)
+        << FixItHint::CreateRemoval(Range);
+  } else {
+    Diags.Report(Range.getBegin(), diag::err_character_not_allowed)
+        << Range << CharBuf << FixItHint::CreateRemoval(Range);
+  }
+}
+
 bool Lexer::tryConsumeIdentifierUCN(const char *&CurPtr, unsigned Size,
                                     Token &Result) {
   const char *UCNPtr = CurPtr + Size;
   uint32_t CodePoint = tryReadUCN(UCNPtr, CurPtr, /*Token=*/nullptr);
-  if (CodePoint == 0 || !isAllowedIDChar(CodePoint, LangOpts))
+  if (CodePoint == 0) {
     return false;
+  }
 
-  if (!isLexingRawMode())
+  if (!isAllowedIDChar(CodePoint, LangOpts)) {
+    if (isASCII(CodePoint) || isUnicodeWhitespace(CodePoint))
+      return false;
+    if (!isLexingRawMode() && !ParsingPreprocessorDirective &&
+        !PP->isPreprocessedOutput())
+      diagnoseInvalidUnicodeCodepointInIdentifier(
+          PP->getDiagnostics(), LangOpts, CodePoint,
+          makeCharRange(*this, CurPtr, UCNPtr),
+          /*IsFirst=*/false);
+
+    // We got a unicode codepoint that is neither a space nor a
+    // a valid identifier part.
+    // Carry on as if the codepoint was valid for recovery purposes.
+  } else if (!isLexingRawMode())
     maybeDiagnoseIDCharCompat(PP->getDiagnostics(), CodePoint,
                               makeCharRange(*this, CurPtr, UCNPtr),
                               /*IsFirst=*/false);
@@ -1638,11 +1685,22 @@ bool Lexer::tryConsumeIdentifierUTF8Char(const char *&CurPtr) {
                                 (const llvm::UTF8 *)BufferEnd,
                                 &CodePoint,
                                 llvm::strictConversion);
-  if (Result != llvm::conversionOK ||
-      !isAllowedIDChar(static_cast<uint32_t>(CodePoint), LangOpts))
+  if (Result != llvm::conversionOK)
     return false;
 
-  if (!isLexingRawMode()) {
+  if (!isAllowedIDChar(static_cast<uint32_t>(CodePoint), LangOpts)) {
+    if (isASCII(CodePoint) || isUnicodeWhitespace(CodePoint))
+      return false;
+
+    if (!isLexingRawMode() && !ParsingPreprocessorDirective &&
+        !PP->isPreprocessedOutput())
+      diagnoseInvalidUnicodeCodepointInIdentifier(
+          PP->getDiagnostics(), LangOpts, CodePoint,
+          makeCharRange(*this, CurPtr, UnicodePtr), /*IsFirst=*/false);
+    // We got a unicode codepoint that is neither a space nor a
+    // a valid identifier part. Carry on as if the codepoint was
+    // valid for recovery purposes.
+  } else if (!isLexingRawMode()) {
     maybeDiagnoseIDCharCompat(PP->getDiagnostics(), CodePoint,
                               makeCharRange(*this, CurPtr, UnicodePtr),
                               /*IsFirst=*/false);
@@ -3136,10 +3194,8 @@ uint32_t Lexer::tryReadUCN(const char *&StartPtr, const char *SlashLoc,
 
 bool Lexer::CheckUnicodeWhitespace(Token &Result, uint32_t C,
                                    const char *CurPtr) {
-  static const llvm::sys::UnicodeCharSet UnicodeWhitespaceChars(
-      UnicodeWhitespaceCharRanges);
   if (!isLexingRawMode() && !PP->isPreprocessedOutput() &&
-      UnicodeWhitespaceChars.contains(C)) {
+      isUnicodeWhitespace(C)) {
     Diag(BufferPtr, diag::ext_unicode_whitespace)
       << makeCharRange(*this, BufferPtr, CurPtr);
 
@@ -3150,7 +3206,7 @@ bool Lexer::CheckUnicodeWhitespace(Token &Result, uint32_t C,
 }
 
 bool Lexer::LexUnicode(Token &Result, uint32_t C, const char *CurPtr) {
-  if (isAllowedIDChar(C, LangOpts) && isAllowedInitiallyIDChar(C, LangOpts)) {
+  if (isAllowedInitiallyIDChar(C, LangOpts)) {
     if (!isLexingRawMode() && !ParsingPreprocessorDirective &&
         !PP->isPreprocessedOutput()) {
       maybeDiagnoseIDCharCompat(PP->getDiagnostics(), C,
@@ -3165,8 +3221,8 @@ bool Lexer::LexUnicode(Token &Result, uint32_t C, const char *CurPtr) {
   }
 
   if (!isLexingRawMode() && !ParsingPreprocessorDirective &&
-      !PP->isPreprocessedOutput() &&
-      !isASCII(*BufferPtr) && !isAllowedIDChar(C, LangOpts)) {
+      !PP->isPreprocessedOutput() && !isASCII(*BufferPtr) &&
+      !isAllowedInitiallyIDChar(C, LangOpts) && !isUnicodeWhitespace(C)) {
     // Non-ASCII characters tend to creep into source code unintentionally.
     // Instead of letting the parser complain about the unknown token,
     // just drop the character.
@@ -3176,9 +3232,9 @@ bool Lexer::LexUnicode(Token &Result, uint32_t C, const char *CurPtr) {
     // loophole in the mapping of Unicode characters to basic character set
     // characters that allows us to map these particular characters to, say,
     // whitespace.
-    Diag(BufferPtr, diag::err_non_ascii)
-      << FixItHint::CreateRemoval(makeCharRange(*this, BufferPtr, CurPtr));
-
+    diagnoseInvalidUnicodeCodepointInIdentifier(
+        PP->getDiagnostics(), LangOpts, C,
+        makeCharRange(*this, BufferPtr, CurPtr), /*IsStart*/ true);
     BufferPtr = CurPtr;
     return false;
   }

@@ -75,8 +75,8 @@ define void @test_evaluate_gep_as_ptrs_array(i8 addrspace(2)* %B) {
 
 define i32* @test4(i32* %I, i32 %C, i32 %D) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[B_IDX:%.*]] = add i32 [[D:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = getelementptr i32, i32* [[I:%.*]], i32 [[B_IDX]]
+; CHECK-NEXT:    [[A:%.*]] = getelementptr i32, i32* [[I:%.*]], i32 [[C:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = getelementptr i32, i32* [[A]], i32 [[D:%.*]]
 ; CHECK-NEXT:    ret i32* [[B]]
 ;
   %A = getelementptr i32, i32* %I, i32 %C

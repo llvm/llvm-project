@@ -1381,7 +1381,6 @@ public:
       assert(ActiveVLocIt != ActiveVLocs.end());
       ActiveVLocIt->second.Loc = Dst;
 
-      assert(Dst != 0);
       MachineInstr *MI =
           MTracker->emitLoc(Dst, Var, ActiveVLocIt->second.Properties);
       PendingDbgValues.push_back(MI);
@@ -1684,7 +1683,8 @@ private:
   /// RPOT block ordering.
   void initialSetup(MachineFunction &MF);
 
-  bool ExtendRanges(MachineFunction &MF, TargetPassConfig *TPC) override;
+  bool ExtendRanges(MachineFunction &MF, TargetPassConfig *TPC,
+                    unsigned InputBBLimit, unsigned InputDbgValLimit) override;
 
 public:
   /// Default construct and initialize the pass.
@@ -1758,6 +1758,17 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
   auto *Scope = LS.findLexicalScope(MI.getDebugLoc().get());
   if (Scope == nullptr)
     return true; // handled it; by doing nothing
+
+  // For now, ignore DBG_VALUE_LISTs when extending ranges. Allow it to
+  // contribute to locations in this block, but don't propagate further.
+  // Interpret it like a DBG_VALUE $noreg.
+  if (MI.isDebugValueList()) {
+    if (VTracker)
+      VTracker->defVar(MI, Properties, None);
+    if (TTracker)
+      TTracker->redefVar(MI, Properties, None);
+    return true;
+  }
 
   const MachineOperand &MO = MI.getOperand(0);
 
@@ -3523,8 +3534,9 @@ void InstrRefBasedLDV::initialSetup(MachineFunction &MF) {
 
 /// Calculate the liveness information for the given machine function and
 /// extend ranges across basic blocks.
-bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
-                                    TargetPassConfig *TPC) {
+bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF, TargetPassConfig *TPC,
+                                    unsigned InputBBLimit,
+                                    unsigned InputDbgValLimit) {
   // No subprogram means this function contains no debuginfo.
   if (!MF.getFunction().getSubprogram())
     return false;
@@ -3626,6 +3638,7 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
 
   // To mirror old LiveDebugValues, enumerate variables in RPOT order. Otherwise
   // the order is unimportant, it just has to be stable.
+  unsigned VarAssignCount = 0;
   for (unsigned int I = 0; I < OrderToBB.size(); ++I) {
     auto *MBB = OrderToBB[I];
     auto *VTracker = &vlocs[MBB->getNumber()];
@@ -3643,33 +3656,48 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
       ScopeToVars[Scope].insert(Var);
       ScopeToBlocks[Scope].insert(VTracker->MBB);
       ScopeToDILocation[Scope] = ScopeLoc;
+      ++VarAssignCount;
     }
   }
 
-  // OK. Iterate over scopes: there might be something to be said for
-  // ordering them by size/locality, but that's for the future. For each scope,
-  // solve the variable value problem, producing a map of variables to values
-  // in SavedLiveIns.
-  for (auto &P : ScopeToVars) {
-    vlocDataflow(P.first, ScopeToDILocation[P.first], P.second,
-                 ScopeToBlocks[P.first], SavedLiveIns, MOutLocs, MInLocs,
-                 vlocs);
+  bool Changed = false;
+
+  // If we have an extremely large number of variable assignments and blocks,
+  // bail out at this point. We've burnt some time doing analysis already,
+  // however we should cut our losses.
+  if ((unsigned)MaxNumBlocks > InputBBLimit &&
+      VarAssignCount > InputDbgValLimit) {
+    LLVM_DEBUG(dbgs() << "Disabling InstrRefBasedLDV: " << MF.getName()
+                      << " has " << MaxNumBlocks << " basic blocks and "
+                      << VarAssignCount
+                      << " variable assignments, exceeding limits.\n");
+  } else {
+    // Compute the extended ranges, iterating over scopes. There might be
+    // something to be said for ordering them by size/locality, but that's for
+    // the future. For each scope, solve the variable value problem, producing
+    // a map of variables to values in SavedLiveIns.
+    for (auto &P : ScopeToVars) {
+      vlocDataflow(P.first, ScopeToDILocation[P.first], P.second,
+                   ScopeToBlocks[P.first], SavedLiveIns, MOutLocs, MInLocs,
+                   vlocs);
+    }
+
+    // Using the computed value locations and variable values for each block,
+    // create the DBG_VALUE instructions representing the extended variable
+    // locations.
+    emitLocations(MF, SavedLiveIns, MOutLocs, MInLocs, AllVarsNumbering, *TPC);
+
+    // Did we actually make any changes? If we created any DBG_VALUEs, then yes.
+    Changed = TTracker->Transfers.size() != 0;
   }
 
-  // Using the computed value locations and variable values for each block,
-  // create the DBG_VALUE instructions representing the extended variable
-  // locations.
-  emitLocations(MF, SavedLiveIns, MOutLocs, MInLocs, AllVarsNumbering, *TPC);
-
+  // Common clean-up of memory.
   for (int Idx = 0; Idx < MaxNumBlocks; ++Idx) {
     delete[] MOutLocs[Idx];
     delete[] MInLocs[Idx];
   }
   delete[] MOutLocs;
   delete[] MInLocs;
-
-  // Did we actually make any changes? If we created any DBG_VALUEs, then yes.
-  bool Changed = TTracker->Transfers.size() != 0;
 
   delete MTracker;
   delete TTracker;

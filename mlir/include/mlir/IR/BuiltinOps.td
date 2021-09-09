@@ -15,6 +15,7 @@
 #define BUILTIN_OPS
 
 include "mlir/IR/BuiltinDialect.td"
+include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/RegionKindInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
@@ -115,7 +116,7 @@ def FuncOp : Builtin_Op<"func", [
     /// Returns the region on the current operation that is callable. This may
     /// return null in the case of an external callable object, e.g. an external
     /// function.
-    Region *getCallableRegion() { return isExternal() ? nullptr : &getBody(); }
+    ::mlir::Region *getCallableRegion() { return isExternal() ? nullptr : &getBody(); }
 
     /// Returns the results types that the callable region produces when
     /// executed.
@@ -160,8 +161,9 @@ def FuncOp : Builtin_Op<"func", [
 //===----------------------------------------------------------------------===//
 
 def ModuleOp : Builtin_Op<"module", [
-  AffineScope, IsolatedFromAbove, NoRegionArguments, SymbolTable, Symbol] 
-  # GraphRegionNoTerminator.traits> {
+    AffineScope, IsolatedFromAbove, NoRegionArguments, SymbolTable, Symbol,
+    OpAsmOpInterface
+  ] # GraphRegionNoTerminator.traits> {
   let summary = "A top level container operation";
   let description = [{
     A `module` represents a top-level container operation. It contains a single
@@ -206,6 +208,14 @@ def ModuleOp : Builtin_Op<"module", [
     //===------------------------------------------------------------------===//
 
     DataLayoutSpecInterface getDataLayoutSpec();
+
+    //===------------------------------------------------------------------===//
+    // OpAsmOpInterface Methods
+    //===------------------------------------------------------------------===//
+
+    static ::llvm::StringRef getDefaultDialect() {
+      return "builtin";
+    }
   }];
   let verifier = [{ return ::verify(*this); }];
 

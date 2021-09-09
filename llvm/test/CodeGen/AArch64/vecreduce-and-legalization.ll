@@ -113,7 +113,7 @@ define i8 @test_v9i8(<9 x i8> %a) nounwind {
 ; CHECK-NEXT:    and w8, w8, w9
 ; CHECK-NEXT:    umov w9, v0.b[4]
 ; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    umov w9, v1.b[5]
+; CHECK-NEXT:    umov w9, v0.b[5]
 ; CHECK-NEXT:    and w8, w8, w9
 ; CHECK-NEXT:    umov w9, v0.b[6]
 ; CHECK-NEXT:    and w8, w8, w9

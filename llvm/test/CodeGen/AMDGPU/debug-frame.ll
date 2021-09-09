@@ -1,5 +1,6 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=asm -o - %s | FileCheck --check-prefixes=CHECK,WAVE64,GFX900 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -filetype=asm -o - %s | FileCheck --check-prefixes=CHECK,WAVE64,GFX90A %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -amdgpu-spill-vgpr-to-agpr=0 -filetype=asm -o - %s | FileCheck --check-prefixes=CHECK,WAVE64,GFX90A-V2A-DIS %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -amdgpu-spill-vgpr-to-agpr=1 -filetype=asm -o - %s | FileCheck --check-prefixes=CHECK,WAVE64,GFX90A-V2A-EN %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -filetype=asm -o - %s | FileCheck --check-prefixes=CHECK,WAVE32 %s
 
 ; CHECK-LABEL: kern1:
@@ -58,12 +59,14 @@ entry:
 ; CHECK: .cfi_startproc
 
 ; SGPR33 = 65
-; CHECK: v_mov_b32_e32 [[TMP_VGPR1:v[0-9]+]], s33
-; GFX900: buffer_store_dword [[TMP_VGPR1]], off, s[0:3], s32 offset:452 ; 4-byte Folded Spill
-; GFX90A: buffer_store_dword [[TMP_VGPR1]], off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
+; CHECK: v_mov_b32_e32 [[TMP_VGPR:v[0-9]+]], s33
+; GFX900: buffer_store_dword [[TMP_VGPR]], off, s[0:3], s32 offset:452 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS: buffer_store_dword [[TMP_VGPR]], off, s[0:3], s32 offset:452 ; 4-byte Folded Spill
+; GFX90A-V2A-EN: buffer_store_dword [[TMP_VGPR]], off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
 
 ; GFX900: .cfi_offset 65, 28928
-; GFX90A: .cfi_offset 65, 20736
+; GFX90A-V2A-DIS: .cfi_offset 65, 28928
+; GFX90A-V2A-EN: .cfi_offset 65, 20736
 ; WAVE32: .cfi_offset 65, 14464
 
 ; CHECK: .cfi_endproc
@@ -276,38 +279,71 @@ declare hidden void @ex() #0
 ; WAVE64-NEXT: .cfi_undefined 2807
 
 ; AGPR0_wave64 = 3072
-; GFX90A-NEXT: .cfi_undefined 3072
-; GFX90A-NEXT: .cfi_undefined 3073
-; GFX90A-NEXT: .cfi_undefined 3074
-; GFX90A-NEXT: .cfi_undefined 3075
-; GFX90A-NEXT: .cfi_undefined 3076
-; GFX90A-NEXT: .cfi_undefined 3077
-; GFX90A-NEXT: .cfi_undefined 3078
-; GFX90A-NEXT: .cfi_undefined 3079
-; GFX90A-NEXT: .cfi_undefined 3080
-; GFX90A-NEXT: .cfi_undefined 3081
-; GFX90A-NEXT: .cfi_undefined 3082
-; GFX90A-NEXT: .cfi_undefined 3083
-; GFX90A-NEXT: .cfi_undefined 3084
-; GFX90A-NEXT: .cfi_undefined 3085
-; GFX90A-NEXT: .cfi_undefined 3086
-; GFX90A-NEXT: .cfi_undefined 3087
-; GFX90A-NEXT: .cfi_undefined 3088
-; GFX90A-NEXT: .cfi_undefined 3089
-; GFX90A-NEXT: .cfi_undefined 3090
-; GFX90A-NEXT: .cfi_undefined 3091
-; GFX90A-NEXT: .cfi_undefined 3092
-; GFX90A-NEXT: .cfi_undefined 3093
-; GFX90A-NEXT: .cfi_undefined 3094
-; GFX90A-NEXT: .cfi_undefined 3095
-; GFX90A-NEXT: .cfi_undefined 3096
-; GFX90A-NEXT: .cfi_undefined 3097
-; GFX90A-NEXT: .cfi_undefined 3098
-; GFX90A-NEXT: .cfi_undefined 3099
-; GFX90A-NEXT: .cfi_undefined 3100
-; GFX90A-NEXT: .cfi_undefined 3101
-; GFX90A-NEXT: .cfi_undefined 3102
-; GFX90A-NEXT: .cfi_undefined 3103
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3072
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3073
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3074
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3075
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3076
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3077
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3078
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3079
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3080
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3081
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3082
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3083
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3084
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3085
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3086
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3087
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3088
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3089
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3090
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3091
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3092
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3093
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3094
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3095
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3096
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3097
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3098
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3099
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3100
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3101
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3102
+; GFX90A-V2A-DIS-NEXT: .cfi_undefined 3103
+
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3072
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3073
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3074
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3075
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3076
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3077
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3078
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3079
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3080
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3081
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3082
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3083
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3084
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3085
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3086
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3087
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3088
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3089
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3090
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3091
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3092
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3093
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3094
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3095
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3096
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3097
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3098
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3099
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3100
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3101
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3102
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3103
 
 ; VGPR0_wave32 = 1536
 ; WAVE32-NEXT: .cfi_undefined 1536
@@ -559,12 +595,212 @@ entry:
   ret void
 }
 
+; CHECK-LABEL: func_spill_vgpr_to_vmem:
+; CHECK: .cfi_startproc
+
+; CHECK-NOT: .cfi_{{.*}}
+
+; CHECK: %bb.0:
+; SGPR32 = 64
+; CHECK-NEXT: .cfi_llvm_def_aspace_cfa 64, 0, 6
+; CHECK-NEXT: .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 2560
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 2561
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3072
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3073
+
+; CHECK-NOT: .cfi_{{.*}}
+
+; WAVE32: buffer_store_dword v40, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; GFX900: buffer_store_dword v40, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS: buffer_store_dword v40, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
+; GFX90A-V2A-EN: v_accvgpr_write_b32 a[[#TMP_AGPR1:]], v[[#VGPR1:]]
+
+; DW_CFA_expression [0x10]
+;   VGPR40_wave64 ULEB128(1576)=[0xa8, 0x14]
+;   BLOCK_LENGTH ULEB128(14)=[0x0e]
+;     DW_OP_regx [0x90]
+;       VGPR40_wave64 ULEB128(1576)=[0xa8, 0x14]
+;     DW_OP_swap [0x16]
+;     DW_OP_LLVM_offset_uconst [0xe4]
+;       OFFSET ULEB128(256)=[0x80, 0x02] / OFFSET ULEB128(256)=[0x80, 0x06]
+;     DW_OP_LLVM_call_frame_entry_reg [0xe6]
+;       EXEC_MASK_wave64 ULEB128(17)=[0x11]
+;     DW_OP_deref_size [0x94]
+;       SIZE [0x08]
+;     DW_OP_LLVM_select_bit_piece [0xec]
+;       ELEMENT_SIZE [0x20]
+;       ELEMENT_COUNT [0x40]
+; GFX900-NEXT: .cfi_escape 0x10, 0xa8, 0x14, 0x0e, 0x90, 0xa8, 0x14, 0x16, 0xe4, 0x80, 0x02, 0xe6, 0x11, 0x94, 0x08, 0xec, 0x20, 0x40
+; GFX90A-V2A-DIS-NEXT: .cfi_escape 0x10, 0xa8, 0x14, 0x0e, 0x90, 0xa8, 0x14, 0x16, 0xe4, 0x80, 0x06, 0xe6, 0x11, 0x94, 0x08, 0xec, 0x20, 0x40
+; GFX90A-V2A-EN-NEXT: .cfi_register [[#VGPR1+2560]], [[#TMP_AGPR1+3072]]
+
+; DW_CFA_expression [0x10]
+;   VGPR40_wave32 ULEB128(1576)=[0xa8, 0x0c]
+;   BLOCK_LENGTH ULEB128(14)=[0x0e]
+;     DW_OP_regx [0x90]
+;       VGPR40_wave32 ULEB128(1576)=[0xa8, 0x0c]
+;     DW_OP_swap [0x16]
+;     DW_OP_LLVM_offset_uconst [0xe4]
+;       OFFSET ULEB128(128)=[0x80, 0x01]
+;     DW_OP_LLVM_call_frame_entry_reg [0xe6]
+;       EXEC_MASK_wave32 ULEB128(1)=[0x01]
+;     DW_OP_deref_size [0x94]
+;       SIZE [0x04]
+;     DW_OP_LLVM_select_bit_piece [0xec]
+;       ELEMENT_SIZE [0x20]
+;       ELEMENT_COUNT [0x20]
+; WAVE32-NEXT: .cfi_escape 0x10, 0xa8, 0x0c, 0x0e, 0x90, 0xa8, 0x0c, 0x16, 0xe4, 0x80, 0x01, 0xe6, 0x01, 0x94, 0x04, 0xec, 0x20, 0x20
+
+; CHECK-NOT: .cfi_{{.*}}
+
+; WAVE32: buffer_store_dword v41, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX900: buffer_store_dword v41, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS: buffer_store_dword v41, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
+; GFX90A-V2A-EN: v_accvgpr_write_b32 a[[#TMP_AGPR2:]], v[[#VGPR2:]]
+
+; DW_CFA_expression [0x10]
+;   VGPR41_wave64 ULEB128(2601)=[0xa9, 0x14]
+;   BLOCK_LENGTH ULEB128(13)=[0x0d]
+;     DW_OP_regx [0x90]
+;       VGPR41_wave64 ULEB128(2601)=[0xa9, 0x14]
+;     DW_OP_swap [0x16]
+;     DW_OP_LLVM_offset_uconst [0xe4]
+;       OFFSET ULEB128(0)=[0x00] / OFFSET ULEB128(128)=[0x80, 0x04]
+;     DW_OP_LLVM_call_frame_entry_reg [0xe6]
+;       EXEC_MASK_wave64 ULEB128(17)=[0x11]
+;     DW_OP_deref_size [0x94]
+;       SIZE [0x08]
+;     DW_OP_LLVM_select_bit_piece [0xec]
+;       ELEMENT_SIZE [0x20]
+;       ELEMENT_COUNT [0x40]
+; GFX900-NEXT: .cfi_escape 0x10, 0xa9, 0x14, 0x0d, 0x90, 0xa9, 0x14, 0x16, 0xe4, 0x00, 0xe6, 0x11, 0x94, 0x08, 0xec, 0x20, 0x40
+; GFX90A-V2A-DIS-NEXT: .cfi_escape 0x10, 0xa9, 0x14, 0x0e, 0x90, 0xa9, 0x14, 0x16, 0xe4, 0x80, 0x04, 0xe6, 0x11, 0x94, 0x08, 0xec, 0x20, 0x40
+; GFX90A-V2A-EN-NEXT: .cfi_register [[#VGPR2+2560]], [[#TMP_AGPR2+3072]]
+
+; DW_CFA_expression [0x10]
+;   VGPR41_wave32 ULEB128(1577)=[0xa9, 0x0c]
+;   BLOCK_LENGTH ULEB128(13)=[0x0d]
+;     DW_OP_regx [0x90]
+;       VGPR41_wave32 ULEB128(1577)=[0xa9, 0x0c]
+;     DW_OP_swap [0x16]
+;     DW_OP_LLVM_offset_uconst [0xe4]
+;       OFFSET ULEB128(0)=[0x00]
+;     DW_OP_LLVM_call_frame_entry_reg [0xe6]
+;       EXEC_MASK_wave32 ULEB128(1)=[0x01]
+;     DW_OP_deref_size [0x94]
+;       SIZE [0x04]
+;     DW_OP_LLVM_select_bit_piece [0xec]
+;       ELEMENT_SIZE [0x20]
+;       ELEMENT_COUNT [0x20]
+; WAVE32: .cfi_escape 0x10, 0xa9, 0x0c, 0x0d, 0x90, 0xa9, 0x0c, 0x16, 0xe4, 0x00, 0xe6, 0x01, 0x94, 0x04, 0xec, 0x20, 0x20
+
+; GFX90A-V2A-DIS: buffer_store_dword a32, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; GFX90A-V2A-EN: v_accvgpr_read_b32 v[[#TMP_VGPR1:]], a[[#AGPR1:]]
+
+; DW_CFA_expression [0x10]
+;   AGPR32_wave64 ULEB128(3104)=[0xa0, 0x18]
+;   BLOCK_LENGTH ULEB128(14)=[0x0e]
+;     DW_OP_regx [0x90]
+;       AGPR32_wave64 ULEB128(3104)=[0xa0, 0x18]
+;     DW_OP_swap [0x16]
+;     DW_OP_LLVM_offset_uconst [0xe4]
+;       OFFSET ULEB128(256)=[0x80, 0x02]
+;     DW_OP_LLVM_call_frame_entry_reg [0xe6]
+;       EXEC_MASK_wave64 ULEB128(17)=[0x11]
+;     DW_OP_deref_size [0x94]
+;       SIZE [0x08]
+;     DW_OP_LLVM_select_bit_piece [0xec]
+;       ELEMENT_SIZE [0x20]
+;       ELEMENT_COUNT [0x40]
+; GFX90A-V2A-DIS-NEXT: .cfi_escape 0x10, 0xa0, 0x18, 0x0e, 0x90, 0xa0, 0x18, 0x16, 0xe4, 0x80, 0x02, 0xe6, 0x11, 0x94, 0x08, 0xec, 0x20, 0x40
+; GFX90A-V2A-EN-NEXT: .cfi_register [[#AGPR1+3072]], [[#TMP_VGPR1+2560]]
+
+; CHECK-NOT: .cfi_{{.*}}
+
+; GFX90A-V2A-DIS: buffer_store_dword a33, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX90A-V2A-EN: v_accvgpr_read_b32 v[[#TMP_VGPR2:]], a[[#AGPR2:]]
+
+; DW_CFA_expression [0x10]
+;   AGPR32_wave64 ULEB128(3105)=[0xa1, 0x18]
+;   BLOCK_LENGTH ULEB128(14)=[0x0d]
+;     DW_OP_regx [0x90]
+;       AGPR32_wave64 ULEB128(3105)=[0xa1, 0x18]
+;     DW_OP_swap [0x16]
+;     DW_OP_LLVM_offset_uconst [0xe4]
+;       OFFSET ULEB128(0)=[0x00]
+;     DW_OP_LLVM_call_frame_entry_reg [0xe6]
+;       EXEC_MASK_wave64 ULEB128(17)=[0x11]
+;     DW_OP_deref_size [0x94]
+;       SIZE [0x08]
+;     DW_OP_LLVM_select_bit_piece [0xec]
+;       ELEMENT_SIZE [0x20]
+;       ELEMENT_COUNT [0x40]
+; GFX90A-V2A-DIS-NEXT: .cfi_escape 0x10, 0xa1, 0x18, 0x0d, 0x90, 0xa1, 0x18, 0x16, 0xe4, 0x00, 0xe6, 0x11, 0x94, 0x08, 0xec, 0x20, 0x40
+; GFX90A-V2A-EN-NEXT: .cfi_register [[#AGPR2+3072]], [[#TMP_VGPR2+2560]]
+
+; CHECK-NOT: .cfi_{{.*}}
+
+; CHECK: .cfi_endproc
+define hidden void @func_spill_vgpr_to_vmem() #0 {
+entry:
+  call void asm sideeffect "; clobber", "~{v40}"() #0
+  call void asm sideeffect "; clobber", "~{v41}"() #0
+  call void asm sideeffect "; clobber", "~{a32}"() #0
+  call void asm sideeffect "; clobber", "~{a33}"() #0
+  ret void
+}
+
+; CHECK-LABEL: func_spill_vgpr_to_agpr:
+; CHECK: .cfi_startproc
+
+; CHECK-NOT: .cfi_{{.*}}
+
+; CHECK: %bb.0:
+; CHECK-NEXT: .cfi_llvm_def_aspace_cfa 64, 0, 6
+; CHECK-NEXT: .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 2560
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 2561
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3072
+; GFX90A-V2A-EN-NEXT: .cfi_undefined 3073
+
+; CHECK-NOT: .cfi_{{.*}}
+
+; CHECK-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-V2A-EN-NEXT: v_accvgpr_write_b32 a[[#TMP_AGPR1:]], v[[#VGPR1:]]
+; GFX90A-V2A-EN-NEXT: .cfi_register [[#VGPR1+2560]], [[#TMP_AGPR1+3072]]
+; GFX90A-V2A-EN-NEXT: v_accvgpr_write_b32 a[[#TMP_AGPR2]], v[[#VGPR2]]
+; GFX90A-V2A-EN-NEXT: .cfi_register [[#VGPR2+2560]], [[#TMP_AGPR2+3072]]
+; GFX90A-V2A-EN-NEXT: v_accvgpr_read_b32 v[[#TMP_VGPR1:]], a[[#AGPR1:]]
+; GFX90A-V2A-EN-NEXT: .cfi_register [[#AGPR1+3072]], [[#TMP_VGPR1+2560]]
+; GFX90A-V2A-EN-NEXT: v_accvgpr_read_b32 v[[#TMP_VGPR2:]], a[[#AGPR2:]]
+; GFX90A-V2A-EN-NEXT: .cfi_register [[#AGPR2+3072]], [[#TMP_VGPR2+2560]]
+; GFX90A-V2A-EN: v_accvgpr_write_b32 a33, v1
+; GFX90A-V2A-EN-NEXT: v_accvgpr_write_b32 a32, v0
+; GFX90A-V2A-EN-NEXT: v_accvgpr_read_b32 v41, a1
+; GFX90A-V2A-EN-NEXT: v_accvgpr_read_b32 v40, a0
+
+; CHECK:	s_setpc_b64 s[30:31]
+
+; CHECK-NOT:	.cfi_{{.*}}
+; CHECK:	.cfi_endproc
+
+define hidden void @func_spill_vgpr_to_agpr() #2 {
+  call void asm sideeffect "; clobber", "~{v40}"()
+  call void asm sideeffect "; clobber", "~{v41}"()
+  call void asm sideeffect "; clobber", "~{a32}"()
+  call void asm sideeffect "; clobber", "~{a33}"()
+  ret void
+}
+
+
 ; NOTE: Number of VGPRs available to kernel, and in turn number of corresponding CFIs generated,
 ; is dependent on waves/WG size. Since the intent here is to check whether we generate the correct
 ; CFIs, doing it for any one set of details is sufficient which also makes the test insensitive to
 ; changes in those details.
 attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="128,128" }
 attributes #1 = { nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="128,128" "frame-pointer"="all" }
+attributes #2 = { nounwind }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3}

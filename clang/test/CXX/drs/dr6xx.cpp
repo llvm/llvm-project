@@ -551,9 +551,11 @@ namespace dr648 { // dr648: yes
 
 #if __cplusplus >= 201103L
 namespace dr649 { // dr649: yes
-  alignas(0x40000000) int n; // expected-error {{requested alignment}}1
-  struct alignas(0x40000000) X {}; // expected-error {{requested alignment}}
-  struct Y { int n alignas(0x40000000); }; // expected-error {{requested alignment}}
+alignas(0x80000000) int n;       // expected-error {{requested alignment}}1
+struct alignas(0x80000000) X {}; // expected-error {{requested alignment}}
+struct Y {
+  int n alignas(0x80000000); // expected-error {{requested alignment}}
+};
   struct alignas(256) Z {};
   // This part is superseded by dr2130 and eventually by aligned allocation support.
   auto *p = new Z;
@@ -720,11 +722,8 @@ namespace dr662 { // dr662: yes
   void g(int n) { f<int&>(n); } // expected-note {{instantiation of}}
 }
 
-namespace dr663 { // dr663: yes c++11
+namespace dr663 { // dr663: sup P1949
   int ЍЎ = 123;
-#if __cplusplus < 201103L
-  // expected-error@-2 {{non-ASCII}}
-#endif
 }
 
 #if __cplusplus >= 201103L

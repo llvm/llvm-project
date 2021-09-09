@@ -5,8 +5,8 @@
 ; Test that we don't inline when caller and callee don't have matching
 ; noprofile fn attrs.
 
-; CHECK-INLINE: profile not inlined into profile_caller because it should never be inlined (cost=never): conflicting attributes
-; CHECK-INLINE: noprofile not inlined into noprofile_caller because it should never be inlined (cost=never): conflicting attributes
+; CHECK-INLINE: 'profile' not inlined into 'profile_caller' because it should never be inlined (cost=never): conflicting attributes
+; CHECK-INLINE: 'noprofile' not inlined into 'noprofile_caller' because it should never be inlined (cost=never): conflicting attributes
 
 define i32 @profile() { ret i32 42 }
 define i32 @noprofile() noprofile { ret i32 43 }

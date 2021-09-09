@@ -29,6 +29,9 @@ def err_drv_invalid_riscv_arch_name : Error<
   "invalid arch name '%0', %1">;
 def err_drv_invalid_riscv_ext_arch_name : Error<
   "invalid arch name '%0', %1 '%2'">;
+def warn_drv_invalid_arch_name_with_suggestion : Warning<
+  "ignoring invalid /arch: argument '%0'; for %select{64|32}1-bit expected one of %2">,
+  InGroup<UnusedCommandLineArgument>;
 def warn_drv_avr_mcu_not_specified : Warning<
   "no target microcontroller specified on command line, cannot "
   "link standard libraries, please pass -mmcu=<mcu name>">,
@@ -77,8 +80,11 @@ def err_drv_cuda_version_unsupported : Error<
   "but installation at %3 is %4; use '--cuda-path' to specify a different CUDA "
   "install, pass a different GPU arch with '--cuda-gpu-arch', or pass "
   "'--no-cuda-version-check'">;
-def warn_drv_unknown_cuda_version: Warning<
-  "unknown CUDA version: %0; assuming the latest supported version %1">,
+def warn_drv_new_cuda_version: Warning<
+  "CUDA version%0 is newer than the latest%select{| partially}1 supported version %2">,
+  InGroup<CudaUnknownVersion>;
+def warn_drv_partially_supported_cuda_version: Warning<
+  "CUDA version %0 is only partially supported">,
   InGroup<CudaUnknownVersion>;
 def err_drv_cuda_host_arch : Error<
   "unsupported architecture '%0' for host compilation">;

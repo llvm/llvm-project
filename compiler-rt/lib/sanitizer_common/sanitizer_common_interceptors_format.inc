@@ -324,8 +324,8 @@ static void scanf_common(void *ctx, int n_inputs, bool allowGnuMalloc,
       continue;
     int size = scanf_get_value_size(&dir);
     if (size == FSS_INVALID) {
-      Report("%s: WARNING: unexpected format specifier in scanf interceptor: ",
-             SanitizerToolName, "%.*s\n", dir.end - dir.begin, dir.begin);
+      Report("%s: WARNING: unexpected format specifier in scanf interceptor: %.*s\n",
+             SanitizerToolName, static_cast<int>(dir.end - dir.begin), dir.begin);
       break;
     }
     void *argp = va_arg(aq, void *);
@@ -469,7 +469,7 @@ static int printf_get_value_size(PrintfDirective *dir) {
         break;                                                     \
       default:                                                     \
         Report("WARNING: unexpected floating-point arg size"       \
-               " in printf interceptor: %d\n", size);              \
+               " in printf interceptor: %zu\n", static_cast<uptr>(size));             \
         return;                                                    \
       }                                                            \
     } else {                                                       \
@@ -484,7 +484,7 @@ static int printf_get_value_size(PrintfDirective *dir) {
         break;                                                     \
       default:                                                     \
         Report("WARNING: unexpected arg size"                      \
-               " in printf interceptor: %d\n", size);              \
+               " in printf interceptor: %zu\n", static_cast<uptr>(size));             \
         return;                                                    \
       }                                                            \
     }                                                              \
@@ -530,7 +530,7 @@ static void printf_common(void *ctx, const char *format, va_list aq) {
         Report(
             "%s: WARNING: unexpected format specifier in printf "
             "interceptor: %.*s (reported once per process)\n",
-            SanitizerToolName, dir.end - dir.begin, dir.begin);
+            SanitizerToolName, static_cast<int>(dir.end - dir.begin), dir.begin);
       break;
     }
     if (dir.convSpecifier == 'n') {

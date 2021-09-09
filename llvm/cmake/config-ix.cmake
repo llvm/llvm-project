@@ -211,6 +211,7 @@ endif()
 # Determine whether we can register EH tables.
 check_symbol_exists(__register_frame "${CMAKE_CURRENT_LIST_DIR}/unwind.h" HAVE_REGISTER_FRAME)
 check_symbol_exists(__deregister_frame "${CMAKE_CURRENT_LIST_DIR}/unwind.h" HAVE_DEREGISTER_FRAME)
+check_symbol_exists(__unw_add_dynamic_fde "${CMAKE_CURRENT_LIST_DIR}/unwind.h" HAVE_UNW_ADD_DYNAMIC_FDE)
 
 check_symbol_exists(_Unwind_Backtrace "unwind.h" HAVE__UNWIND_BACKTRACE)
 check_symbol_exists(getpagesize unistd.h HAVE_GETPAGESIZE)
@@ -689,3 +690,30 @@ if(PY_PYGMENTS_FOUND AND PY_PYGMENTS_LEXERS_C_CPP_FOUND AND PY_YAML_FOUND)
 else()
   set (LLVM_HAVE_OPT_VIEWER_MODULES 0)
 endif()
+
+function(llvm_get_host_prefixes_and_suffixes)
+  # Not all platform files will set these variables (relying on them being
+  # implicitly empty if they're unset), so unset the variables before including
+  # the platform file, to prevent any values from the target system leaking.
+  unset(CMAKE_STATIC_LIBRARY_PREFIX)
+  unset(CMAKE_STATIC_LIBRARY_SUFFIX)
+  unset(CMAKE_SHARED_LIBRARY_PREFIX)
+  unset(CMAKE_SHARED_LIBRARY_SUFFIX)
+  unset(CMAKE_IMPORT_LIBRARY_PREFIX)
+  unset(CMAKE_IMPORT_LIBRARY_SUFFIX)
+  unset(CMAKE_EXECUTABLE_SUFFIX)
+  unset(CMAKE_LINK_LIBRARY_SUFFIX)
+  include(Platform/${CMAKE_HOST_SYSTEM_NAME} OPTIONAL RESULT_VARIABLE _includedFile)
+  if (_includedFile)
+    set(LLVM_HOST_STATIC_LIBRARY_PREFIX ${CMAKE_STATIC_LIBRARY_PREFIX} PARENT_SCOPE)
+    set(LLVM_HOST_STATIC_LIBRARY_SUFFIX ${CMAKE_STATIC_LIBRARY_SUFFIX} PARENT_SCOPE)
+    set(LLVM_HOST_SHARED_LIBRARY_PREFIX ${CMAKE_SHARED_LIBRARY_PREFIX} PARENT_SCOPE)
+    set(LLVM_HOST_SHARED_LIBRARY_SUFFIX ${CMAKE_SHARED_LIBRARY_SUFFIX} PARENT_SCOPE)
+    set(LLVM_HOST_IMPORT_LIBRARY_PREFIX ${CMAKE_IMPORT_LIBRARY_PREFIX} PARENT_SCOPE)
+    set(LLVM_HOST_IMPORT_LIBRARY_SUFFIX ${CMAKE_IMPORT_LIBRARY_SUFFIX} PARENT_SCOPE)
+    set(LLVM_HOST_EXECUTABLE_SUFFIX ${CMAKE_EXECUTABLE_SUFFIX} PARENT_SCOPE)
+    set(LLVM_HOST_LINK_LIBRARY_SUFFIX ${CMAKE_LINK_LIBRARY_SUFFIX} PARENT_SCOPE)
+  endif()
+endfunction()
+
+llvm_get_host_prefixes_and_suffixes()

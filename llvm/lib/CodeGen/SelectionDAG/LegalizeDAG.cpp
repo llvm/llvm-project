@@ -1164,6 +1164,16 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     Action = TLI.getOperationAction(Node->getOpcode(),
                     cast<MaskedStoreSDNode>(Node)->getValue().getValueType());
     break;
+  case ISD::VP_SCATTER:
+    Action = TLI.getOperationAction(
+        Node->getOpcode(),
+        cast<VPScatterSDNode>(Node)->getValue().getValueType());
+    break;
+  case ISD::VP_STORE:
+    Action = TLI.getOperationAction(
+        Node->getOpcode(),
+        cast<VPStoreSDNode>(Node)->getValue().getValueType());
+    break;
   case ISD::VECREDUCE_FADD:
   case ISD::VECREDUCE_FMUL:
   case ISD::VECREDUCE_ADD:
@@ -1184,10 +1194,6 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::VECREDUCE_SEQ_FMUL:
     Action = TLI.getOperationAction(
         Node->getOpcode(), Node->getOperand(1).getValueType());
-    break;
-  case ISD::ISNAN:
-    Action = TLI.getOperationAction(Node->getOpcode(),
-                                    Node->getOperand(0).getValueType());
     break;
   default:
     if (Node->getOpcode() >= ISD::BUILTIN_OP_END) {
@@ -3111,12 +3117,6 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     break;
   case ISD::FCOPYSIGN:
     Results.push_back(ExpandFCOPYSIGN(Node));
-    break;
-  case ISD::ISNAN:
-    if (SDValue Expanded =
-            TLI.expandISNAN(Node->getValueType(0), Node->getOperand(0),
-                            Node->getFlags(), SDLoc(Node), DAG))
-      Results.push_back(Expanded);
     break;
   case ISD::FNEG:
     Results.push_back(ExpandFNEG(Node));

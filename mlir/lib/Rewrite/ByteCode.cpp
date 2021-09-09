@@ -818,7 +818,7 @@ void Generator::generate(pdl_interp::IsNotNullOp op, ByteCodeWriter &writer) {
 void Generator::generate(pdl_interp::RecordMatchOp op, ByteCodeWriter &writer) {
   ByteCodeField patternIndex = patterns.size();
   patterns.emplace_back(PDLByteCodePattern::create(
-      op, rewriterToAddr[op.rewriter().getLeafReference()]));
+      op, rewriterToAddr[op.rewriter().getLeafReference().getValue()]));
   writer.append(OpCode::RecordMatch, patternIndex,
                 SuccessorRange(op.getOperation()), op.matchedOps());
   writer.appendPDLValueList(op.inputs());

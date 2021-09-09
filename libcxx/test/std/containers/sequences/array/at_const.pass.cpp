@@ -10,9 +10,6 @@
 
 // const_reference at (size_type) const; // constexpr in C++14
 
-// GCC 5 doesn't implement the required constexpr support
-// UNSUPPORTED: gcc-5
-
 #include <array>
 #include <cassert>
 

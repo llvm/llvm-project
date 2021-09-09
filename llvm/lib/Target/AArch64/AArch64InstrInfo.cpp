@@ -1112,8 +1112,8 @@ bool AArch64InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
 /// in SrcReg and SrcReg2, and the value it compares against in CmpValue.
 /// Return true if the comparison instruction can be analyzed.
 bool AArch64InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
-                                      Register &SrcReg2, int &CmpMask,
-                                      int &CmpValue) const {
+                                      Register &SrcReg2, int64_t &CmpMask,
+                                      int64_t &CmpValue) const {
   // The first operand can be a frame index where we'd normally expect a
   // register.
   assert(MI.getNumOperands() >= 2 && "All AArch64 cmps should have 2 operands");
@@ -1155,8 +1155,7 @@ bool AArch64InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
     SrcReg = MI.getOperand(1).getReg();
     SrcReg2 = 0;
     CmpMask = ~0;
-    // FIXME: In order to convert CmpValue to 0 or 1
-    CmpValue = MI.getOperand(2).getImm() != 0;
+    CmpValue = MI.getOperand(2).getImm();
     return true;
   case AArch64::ANDSWri:
   case AArch64::ANDSXri:
@@ -1165,14 +1164,9 @@ bool AArch64InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
     SrcReg = MI.getOperand(1).getReg();
     SrcReg2 = 0;
     CmpMask = ~0;
-    // FIXME:The return val type of decodeLogicalImmediate is uint64_t,
-    // while the type of CmpValue is int. When converting uint64_t to int,
-    // the high 32 bits of uint64_t will be lost.
-    // In fact it causes a bug in spec2006-483.xalancbmk
-    // CmpValue is only used to compare with zero in OptimizeCompareInstr
     CmpValue = AArch64_AM::decodeLogicalImmediate(
                    MI.getOperand(2).getImm(),
-                   MI.getOpcode() == AArch64::ANDSWri ? 32 : 64) != 0;
+                   MI.getOpcode() == AArch64::ANDSWri ? 32 : 64);
     return true;
   }
 
@@ -1433,8 +1427,8 @@ bool AArch64InstrInfo::optimizePTestInstr(
 ///    instruction.
 ///    Only comparison with zero is supported.
 bool AArch64InstrInfo::optimizeCompareInstr(
-    MachineInstr &CmpInstr, Register SrcReg, Register SrcReg2, int CmpMask,
-    int CmpValue, const MachineRegisterInfo *MRI) const {
+    MachineInstr &CmpInstr, Register SrcReg, Register SrcReg2, int64_t CmpMask,
+    int64_t CmpValue, const MachineRegisterInfo *MRI) const {
   assert(CmpInstr.getParent());
   assert(MRI);
 
@@ -1462,10 +1456,6 @@ bool AArch64InstrInfo::optimizeCompareInstr(
   if (CmpInstr.getOpcode() == AArch64::PTEST_PP)
     return optimizePTestInstr(&CmpInstr, SrcReg, SrcReg2, MRI);
 
-  // Continue only if we have a "ri" where immediate is zero.
-  // FIXME:CmpValue has already been converted to 0 or 1 in analyzeCompare
-  // function.
-  assert((CmpValue == 0 || CmpValue == 1) && "CmpValue must be 0 or 1!");
   if (SrcReg2 != 0)
     return false;
 
@@ -1473,9 +1463,10 @@ bool AArch64InstrInfo::optimizeCompareInstr(
   if (!MRI->use_nodbg_empty(CmpInstr.getOperand(0).getReg()))
     return false;
 
-  if (!CmpValue && substituteCmpToZero(CmpInstr, SrcReg, *MRI))
+  if (CmpValue == 0 && substituteCmpToZero(CmpInstr, SrcReg, *MRI))
     return true;
-  return removeCmpToZeroOrOne(CmpInstr, SrcReg, CmpValue, *MRI);
+  return (CmpValue == 0 || CmpValue == 1) &&
+         removeCmpToZeroOrOne(CmpInstr, SrcReg, CmpValue, *MRI);
 }
 
 /// Get opcode of S version of Instr.

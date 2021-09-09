@@ -7,19 +7,22 @@
 # CHECK:   DW_AT_type{{.*}}"int"
 
 # pointer_type
-# CHECK:   DW_AT_type{{.*}}"int*"
+# CHECK:   DW_AT_type{{.*}}"int *"
 
 # reference_type
-# CHECK:   DW_AT_type{{.*}}"int&"
+# CHECK:   DW_AT_type{{.*}}"int &"
 
 # rvalue_reference_type
-# CHECK:   DW_AT_type{{.*}}"int&&"
+# CHECK:   DW_AT_type{{.*}}"int &&"
 
 # ptr_to_member_type
 # CHECK:   DW_AT_type{{.*}}"int foo::*"
 
+# ptr_to_member_type to a member function
+# CHECK:   DW_AT_type{{.*}}"void (foo::*)(int)"
+
 # array_type
-# CHECK:   DW_AT_type{{.*}}"int
+# CHECK:   DW_AT_type{{.*}}"int{{ }}
 # Testing with a default lower bound of 0 and the following explicit bounds:
 #   lower_bound(1)
 # CHECK-NOT: {{.}}
@@ -45,14 +48,15 @@
 
 
 # subroutine types
-# CHECK:   DW_AT_type{{.*}}"int()"
-# CHECK:   DW_AT_type{{.*}}"void(int)"
-# CHECK:   DW_AT_type{{.*}}"void(int, int)"
+# CHECK:   DW_AT_type{{.*}}"int ()"
+# CHECK:   DW_AT_type{{.*}}"void (int)"
+# CHECK:   DW_AT_type{{.*}}"void (int, int)"
+# CHECK:   DW_AT_type{{.*}}"void (*)(foo *, int)"
 
 # array_type with a language with a default lower bound of 1 instead of 0 and
 # an upper bound of 2. This describes an array with 2 elements (whereas with a
 # default lower bound of 0 it would be an array of 3 elements)
-# CHECK: DW_AT_type{{.*}}"int[2]"
+# CHECK: DW_AT_type{{.*}}"int [2]"
 
 	.section	.debug_str,"MS",@progbits,1
 .Lint_name:
@@ -188,6 +192,15 @@
 	.byte	0                       # DW_CHILDREN_no
 	.byte	0                       # EOM(1)
 	.byte	0                       # EOM(2)
+	.byte	19                      # Abbreviation Code
+	.byte	0x5                     # DW_TAG_formal_parameter
+	.byte	0                       # DW_CHILDREN_no
+	.byte	73                      # DW_AT_type
+	.byte	19                      # DW_FORM_ref4
+	.byte	0x34                    # DW_AT_artificial
+	.byte	0x19                    # DW_FORM_flag_present
+	.byte	0                       # EOM(1)
+	.byte	0                       # EOM(2)
 	.byte	0                       # EOM(3)
 	.section	.debug_info,"",@progbits
 .Lcu_begin:
@@ -213,9 +226,16 @@
 .Lstruct_type:
 	.byte	14			# DW_TAG_structure_type
 	.long	.Lfoo_name              #   DW_AT_name
+.Lstruct_ptr_type:
+	.byte	4                       # DW_TAG_pointer_type
+	.long	.Lstruct_type - .Lcu_begin #   DW_AT_type
 .Lptr_to_member_type:
 	.byte	7                       # DW_TAG_ptr_to_member_type
 	.long	.Lint_type - .Lcu_begin #   DW_AT_type
+	.long   .Lstruct_type - .Lcu_begin #   DW_AT_containing_type
+.Lptr_to_member_type_function:
+	.byte	7                       # DW_TAG_ptr_to_member_type
+	.long	.Lsub_void_foo_int_type - .Lcu_begin #   DW_AT_type
 	.long   .Lstruct_type - .Lcu_begin #   DW_AT_containing_type
 .Larray_type:
 	.byte	8                       # DW_TAG_array_type
@@ -252,6 +272,16 @@
 	.byte	17                       #   DW_TAG_formal_parameter
 	.long	.Lint_type - .Lcu_begin #     DW_AT_type
 	.byte	0                       # End Of Children Mark
+.Lsub_void_foo_int_type:
+	.byte	16                      # DW_TAG_subroutine_type
+	.byte	19                      #   DW_TAG_formal_parameter
+	.long	.Lstruct_ptr_type - .Lcu_begin #     DW_AT_type
+	.byte	17                      #   DW_TAG_formal_parameter
+	.long	.Lint_type - .Lcu_begin #     DW_AT_type
+	.byte	0                       # End Of Children Mark
+.Lpointer_to_function_type:
+	.byte	4                       # DW_TAG_pointer_type
+	.long	.Lsub_void_foo_int_type - .Lcu_begin #   DW_AT_type
 
 	.byte	3                       # DW_TAG_variable
 	.long	.Lint_type - .Lcu_begin #   DW_AT_type
@@ -264,6 +294,8 @@
 	.byte	3                       # DW_TAG_variable
 	.long	.Lptr_to_member_type - .Lcu_begin #   DW_AT_type
 	.byte	3                       # DW_TAG_variable
+	.long	.Lptr_to_member_type_function - .Lcu_begin #   DW_AT_type
+	.byte	3                       # DW_TAG_variable
 	.long	.Larray_type - .Lcu_begin #   DW_AT_type
 	.byte	3                       # DW_TAG_variable
 	.long	.Lsub_int_empty_type - .Lcu_begin #   DW_AT_type
@@ -271,6 +303,8 @@
 	.long	.Lsub_void_int_type - .Lcu_begin #   DW_AT_type
 	.byte	3                       # DW_TAG_variable
 	.long	.Lsub_void_int_int_type - .Lcu_begin #   DW_AT_type
+	.byte	3                       # DW_TAG_variable
+	.long	.Lpointer_to_function_type - .Lcu_begin #   DW_AT_type
 	.byte	0                       # End Of Children Mark
 .Lunit_end:
 .Lcu2_begin:

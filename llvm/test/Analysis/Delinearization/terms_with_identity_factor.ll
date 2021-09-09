@@ -1,5 +1,4 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -analyze -enable-new-pm=0 -delinearize -debug 2>&1 | FileCheck %s
 ; RUN: opt < %s -passes='print<delinearization>' -disable-output -debug 2>&1 2>&1 | FileCheck %s
 ; void foo (int m, int n, char *A) {
 ;    for (int i=0; i < m; i++)

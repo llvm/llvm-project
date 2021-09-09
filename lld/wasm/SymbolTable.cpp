@@ -548,9 +548,12 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef name,
       else if (getFunctionVariant(s, sig, file, &s))
         replaceSym();
     }
-    if (existingUndefined)
+    if (existingUndefined) {
       setImportAttributes(existingUndefined, importName, importModule, flags,
                           file);
+      if (isCalledDirectly)
+        existingUndefined->isCalledDirectly = true;
+    }
   }
 
   return s;

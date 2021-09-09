@@ -170,8 +170,7 @@ body: |
     ; CHECK-LABEL: name: test_inttoptr_s29_to_p3
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 536870911
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; CHECK: [[INTTOPTR:%[0-9]+]]:_(p3) = G_INTTOPTR [[AND]](s32)
     ; CHECK: S_ENDPGM 0, implicit [[INTTOPTR]](p3)
     %0:_(s32) = COPY $vgpr0

@@ -41,23 +41,18 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; X86-LABEL: func64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    subl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    seto %bl
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    sarl $31, %eax
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    sarl $31, %edx
 ; X86-NEXT:    testb %bl, %bl
-; X86-NEXT:    cmovel %ecx, %eax
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    testl %esi, %esi
-; X86-NEXT:    setns %dl
-; X86-NEXT:    addl $2147483647, %edx # imm = 0x7FFFFFFF
+; X86-NEXT:    cmovnel %edx, %eax
+; X86-NEXT:    xorl $-2147483648, %edx # imm = 0x80000000
 ; X86-NEXT:    testb %bl, %bl
-; X86-NEXT:    cmovel %esi, %edx
-; X86-NEXT:    popl %esi
+; X86-NEXT:    cmovel %ecx, %edx
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
 ;

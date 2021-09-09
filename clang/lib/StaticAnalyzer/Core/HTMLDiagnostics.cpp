@@ -245,6 +245,18 @@ void HTMLDiagnostics::FlushDiagnosticsImpl(
     ReportDiag(*Diag, filesMade);
 }
 
+static llvm::SmallString<32> getIssueHash(const PathDiagnostic &D,
+                                          const Preprocessor &PP) {
+  SourceManager &SMgr = PP.getSourceManager();
+  PathDiagnosticLocation UPDLoc = D.getUniqueingLoc();
+  FullSourceLoc L(SMgr.getExpansionLoc(UPDLoc.isValid()
+                                           ? UPDLoc.asLocation()
+                                           : D.getLocation().asLocation()),
+                  SMgr);
+  return getIssueHash(L, D.getCheckerName(), D.getBugType(),
+                      D.getDeclWithIssue(), PP.getLangOpts());
+}
+
 void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
                                  FilesMade *filesMade) {
   // Create the HTML directory if it is missing.
@@ -270,11 +282,6 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
 
   // Create a new rewriter to generate HTML.
   Rewriter R(const_cast<SourceManager&>(SMgr), PP.getLangOpts());
-
-  // The file for the first path element is considered the main report file, it
-  // will usually be equivalent to SMgr.getMainFileID(); however, it might be a
-  // header when -analyzer-opt-analyze-headers is used.
-  FileID ReportFile = path.front()->getLocation().asLocation().getExpansionLoc().getFileID();
 
   // Get the function/method name
   SmallString<128> declName("unknown");
@@ -302,46 +309,52 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
 
   // Create a path for the target HTML file.
   int FD;
-  SmallString<128> Model, ResultPath;
 
-  if (!DiagOpts.ShouldWriteStableReportFilename) {
-      llvm::sys::path::append(Model, Directory, "report-%%%%%%.html");
-      if (std::error_code EC =
-          llvm::sys::fs::make_absolute(Model)) {
-          llvm::errs() << "warning: could not make '" << Model
-                       << "' absolute: " << EC.message() << '\n';
-        return;
-      }
-      if (std::error_code EC = llvm::sys::fs::createUniqueFile(
-              Model, FD, ResultPath, llvm::sys::fs::OF_Text)) {
-        llvm::errs() << "warning: could not create file in '" << Directory
-                     << "': " << EC.message() << '\n';
-        return;
-      }
-  } else {
-      int i = 1;
-      std::error_code EC;
-      do {
-          // Find a filename which is not already used
-          const FileEntry* Entry = SMgr.getFileEntryForID(ReportFile);
-          std::stringstream filename;
-          Model = "";
-          filename << "report-"
-                   << llvm::sys::path::filename(Entry->getName()).str()
-                   << "-" << declName.c_str()
-                   << "-" << offsetDecl
-                   << "-" << i << ".html";
-          llvm::sys::path::append(Model, Directory,
-                                  filename.str());
-          EC = llvm::sys::fs::openFileForReadWrite(
-              Model, FD, llvm::sys::fs::CD_CreateNew, llvm::sys::fs::OF_None);
-          if (EC && EC != llvm::errc::file_exists) {
-              llvm::errs() << "warning: could not create file '" << Model
-                           << "': " << EC.message() << '\n';
-              return;
-          }
-          i++;
-      } while (EC);
+  SmallString<128> FileNameStr;
+  llvm::raw_svector_ostream FileName(FileNameStr);
+  FileName << "report-";
+
+  // Historically, neither the stable report filename nor the unstable report
+  // filename were actually stable. That said, the stable report filename
+  // was more stable because it was mostly composed of information
+  // about the bug report instead of being completely random.
+  // Now both stable and unstable report filenames are in fact stable
+  // but the stable report filename is still more verbose.
+  if (DiagOpts.ShouldWriteVerboseReportFilename) {
+    // FIXME: This code relies on knowing what constitutes the issue hash.
+    // Otherwise deduplication won't work correctly.
+    FileID ReportFile =
+        path.back()->getLocation().asLocation().getExpansionLoc().getFileID();
+
+    const FileEntry *Entry = SMgr.getFileEntryForID(ReportFile);
+
+    FileName << llvm::sys::path::filename(Entry->getName()).str() << "-"
+             << declName.c_str() << "-" << offsetDecl << "-";
+  }
+
+  FileName << StringRef(getIssueHash(D, PP)).substr(0, 6).str() << ".html";
+
+  SmallString<128> ResultPath;
+  llvm::sys::path::append(ResultPath, Directory, FileName.str());
+  if (std::error_code EC = llvm::sys::fs::make_absolute(ResultPath)) {
+    llvm::errs() << "warning: could not make '" << ResultPath
+                 << "' absolute: " << EC.message() << '\n';
+    return;
+  }
+
+  if (std::error_code EC = llvm::sys::fs::openFileForReadWrite(
+          ResultPath, FD, llvm::sys::fs::CD_CreateNew,
+          llvm::sys::fs::OF_Text)) {
+    // Existence of the file corresponds to the situation where a different
+    // Clang instance has emitted a bug report with the same issue hash.
+    // This is an entirely normal situation that does not deserve a warning,
+    // as apart from hash collisions this can happen because the reports
+    // are in fact similar enough to be considered duplicates of each other.
+    if (EC != llvm::errc::file_exists) {
+      llvm::errs() << "warning: could not create file in '" << Directory
+                   << "': " << EC.message() << '\n';
+    }
+    return;
   }
 
   llvm::raw_fd_ostream os(FD, true);
@@ -638,7 +651,6 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
                                              ? UPDLoc.asLocation()
                                              : D.getLocation().asLocation()),
                     SMgr);
-    const Decl *DeclWithIssue = D.getDeclWithIssue();
 
     StringRef BugCategory = D.getCategory();
     if (!BugCategory.empty())
@@ -650,9 +662,7 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
 
     os  << "\n<!-- FUNCTIONNAME " <<  declName << " -->\n";
 
-    os << "\n<!-- ISSUEHASHCONTENTOFLINEINCONTEXT "
-       << getIssueHash(L, D.getCheckerName(), D.getBugType(), DeclWithIssue,
-                       PP.getLangOpts())
+    os << "\n<!-- ISSUEHASHCONTENTOFLINEINCONTEXT " << getIssueHash(D, PP)
        << " -->\n";
 
     os << "\n<!-- BUGLINE "
@@ -1289,15 +1299,32 @@ var findNum = function() {
     return out;
 };
 
+var classListAdd = function(el, theClass) {
+  if(!el.className.baseVal)
+    el.className += " " + theClass;
+  else
+    el.className.baseVal += " " + theClass;
+};
+
+var classListRemove = function(el, theClass) {
+  var className = (!el.className.baseVal) ?
+      el.className : el.className.baseVal;
+    className = className.replace(" " + theClass, "");
+  if(!el.className.baseVal)
+    el.className = className;
+  else
+    el.className.baseVal = className;
+};
+
 var scrollTo = function(el) {
     querySelectorAllArray(".selected").forEach(function(s) {
-        s.classList.remove("selected");
+      classListRemove(s, "selected");
     });
-    el.classList.add("selected");
+    classListAdd(el, "selected");
     window.scrollBy(0, el.getBoundingClientRect().top -
         (window.innerHeight / 2));
     highlightArrowsForSelectedEvent();
-}
+};
 
 var move = function(num, up, numItems) {
   if (num == 1 && up || num == numItems - 1 && !up) {
@@ -1332,9 +1359,11 @@ window.addEventListener("keydown", function (event) {
   if (event.defaultPrevented) {
     return;
   }
-  if (event.key == "j") {
+  // key 'j'
+  if (event.keyCode == 74) {
     navigateTo(/*up=*/false);
-  } else if (event.key == "k") {
+  // key 'k'
+  } else if (event.keyCode == 75) {
     navigateTo(/*up=*/true);
   } else {
     return;
@@ -1350,8 +1379,11 @@ StringRef HTMLDiagnostics::generateArrowDrawingJavascript() {
 <script type='text/javascript'>
 // Return range of numbers from a range [lower, upper).
 function range(lower, upper) {
-  const size = upper - lower;
-  return Array.from(new Array(size), (x, i) => i + lower);
+  var array = [];
+  for (var i = lower; i <= upper; ++i) {
+      array.push(i);
+  }
+  return array;
 }
 
 var getRelatedArrowIndices = function(pathId) {
@@ -1371,7 +1403,9 @@ var highlightArrowsForSelectedEvent = function() {
   const arrowIndicesToHighlight = getRelatedArrowIndices(selectedNum);
   arrowIndicesToHighlight.forEach((index) => {
     var arrow = document.querySelector("#arrow" + index);
-    arrow.classList.add("selected");
+    if(arrow) {
+      classListAdd(arrow, "selected")
+    }
   });
 }
 

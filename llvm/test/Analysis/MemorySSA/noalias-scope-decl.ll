@@ -1,4 +1,3 @@
-; RUN: opt -basic-aa -memoryssa -enable-new-pm=0 -analyze < %s 2>&1 | FileCheck %s
 ; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; Ensures that llvm.experimental.noalias.scope.decl is treated as not reading or writing memory.

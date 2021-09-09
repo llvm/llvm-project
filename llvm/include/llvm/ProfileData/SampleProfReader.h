@@ -242,9 +242,11 @@
 #include "llvm/Support/SymbolRemappingReader.h"
 #include <algorithm>
 #include <cstdint>
+#include <list>
 #include <memory>
 #include <string>
 #include <system_error>
+#include <unordered_set>
 #include <vector>
 
 namespace llvm {
@@ -380,8 +382,8 @@ public:
   /// The implementaion to read sample profiles from the associated file.
   virtual std::error_code readImpl() = 0;
 
-  /// Print the profile for \p FName on stream \p OS.
-  void dumpFunctionProfile(StringRef FName, raw_ostream &OS = dbgs());
+  /// Print the profile for \p FContext on stream \p OS.
+  void dumpFunctionProfile(SampleContext FContext, raw_ostream &OS = dbgs());
 
   /// Collect functions with definitions in Module M. For reader which
   /// support loading function profiles on demand, return true when the
@@ -407,6 +409,13 @@ public:
     std::string FGUID;
     StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
     CanonName = getRepInFormat(CanonName, useMD5(), FGUID);
+    auto It = Profiles.find(CanonName);
+    if (It != Profiles.end())
+      return &It->second;
+    if (!FGUID.empty()) {
+      assert(useMD5() && "New name should only be generated for md5 profile");
+      CanonName = *MD5NameBuffer.insert(FGUID).first;
+    }
     return &Profiles[CanonName];
   }
 
@@ -429,7 +438,7 @@ public:
   }
 
   /// Return all the profiles.
-  StringMap<FunctionSamples> &getProfiles() { return Profiles; }
+  SampleProfileMap &getProfiles() { return Profiles; }
 
   /// Report a parse error message.
   void reportError(int64_t LineNumber, const Twine &Msg) const {
@@ -495,13 +504,17 @@ protected:
   /// The profile of every function executed at runtime is collected
   /// in the structure FunctionSamples. This maps function objects
   /// to their corresponding profiles.
-  StringMap<FunctionSamples> Profiles;
+  SampleProfileMap Profiles;
 
   /// LLVM context used to emit diagnostics.
   LLVMContext &Ctx;
 
   /// Memory buffer holding the profile file.
   std::unique_ptr<MemoryBuffer> Buffer;
+
+  /// Extra name buffer holding names created on demand.
+  /// This should only be needed for md5 profiles.
+  std::unordered_set<std::string> MD5NameBuffer;
 
   /// Profile summary information.
   std::unique_ptr<ProfileSummary> Summary;
@@ -555,6 +568,11 @@ public:
 
   /// Return true if \p Buffer is in the format supported by this class.
   static bool hasFormat(const MemoryBuffer &Buffer);
+
+private:
+  /// CSNameTable is used to save full context vectors. This serves as an
+  /// underlying immutable buffer for all clients.
+  std::list<SampleContextFrameVector> CSNameTable;
 };
 
 class SampleProfileReaderBinary : public SampleProfileReader {
@@ -626,6 +644,7 @@ protected:
 
   /// Read a string indirectly via the name table.
   virtual ErrorOr<StringRef> readStringFromTable();
+  virtual ErrorOr<SampleContext> readSampleContextFromTable();
 
 private:
   std::error_code readSummaryEntry(std::vector<ProfileSummaryEntry> &Entries);
@@ -683,6 +702,7 @@ protected:
   std::error_code readFuncProfiles();
   std::error_code readMD5NameTable();
   std::error_code readNameTableSec(bool IsMD5);
+  std::error_code readCSNameTableSec();
   std::error_code readProfileSymbolList();
 
   virtual std::error_code readHeader() override;
@@ -692,12 +712,19 @@ protected:
   // placeholder for subclasses to dispatch their own section readers.
   virtual std::error_code readCustomSection(const SecHdrTableEntry &Entry) = 0;
   virtual ErrorOr<StringRef> readStringFromTable() override;
+  virtual ErrorOr<SampleContext> readSampleContextFromTable() override;
+  ErrorOr<SampleContextFrames> readContextFromTable();
 
   std::unique_ptr<ProfileSymbolList> ProfSymList;
 
-  /// The table mapping from function name to the offset of its FunctionSample
-  /// towards file start.
-  DenseMap<StringRef, uint64_t> FuncOffsetTable;
+  /// The table mapping from function context to the offset of its
+  /// FunctionSample towards file start.
+  DenseMap<SampleContext, uint64_t> FuncOffsetTable;
+
+  /// Function offset mapping ordered by contexts.
+  std::unique_ptr<std::vector<std::pair<SampleContext, uint64_t>>>
+      OrderedFuncOffsets;
+
   /// The set containing the functions to use when compiling a module.
   DenseSet<StringRef> FuncsToUse;
 
@@ -716,9 +743,15 @@ protected:
   /// the lifetime of MD5StringBuf is not shorter than that of NameTable.
   std::unique_ptr<std::vector<std::string>> MD5StringBuf;
 
+  /// CSNameTable is used to save full context vectors. This serves as an
+  /// underlying immutable buffer for all clients.
+  std::unique_ptr<const std::vector<SampleContextFrameVector>> CSNameTable;
+
   /// If SkipFlatProf is true, skip the sections with
   /// SecFlagFlat flag.
   bool SkipFlatProf = false;
+
+  bool FuncOffsetsOrdered = false;
 
 public:
   SampleProfileReaderExtBinaryBase(std::unique_ptr<MemoryBuffer> B,
@@ -753,6 +786,8 @@ private:
   virtual std::error_code verifySPMagic(uint64_t Magic) override;
   virtual std::error_code
   readCustomSection(const SecHdrTableEntry &Entry) override {
+    // Update the data reader pointer to the end of the section.
+    Data += Entry.Size;
     return sampleprof_error::success;
   };
 

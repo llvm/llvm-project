@@ -327,3 +327,13 @@ void ifs::stripIFSTarget(IFSStub &Stub, bool StripTriple, bool StripArch,
     Stub.Target.ObjectFormat.reset();
   }
 }
+
+void ifs::stripIFSUndefinedSymbols(IFSStub &Stub) {
+  for (auto Iter = Stub.Symbols.begin(); Iter != Stub.Symbols.end();) {
+    if (Iter->Undefined) {
+      Iter = Stub.Symbols.erase(Iter);
+    } else {
+      Iter++;
+    }
+  }
+}

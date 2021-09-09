@@ -1,5 +1,7 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 
+// UNSUPPORTED: x86_64-pc-linux-gnu
+
 #include <omp.h>
 
 #include <cassert>

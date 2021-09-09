@@ -623,7 +623,10 @@ func @transpose(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
 
 // -----
 
-// CHECK: llvm.mlir.global external @gv0() : !llvm.array<2 x f32>
+// CHECK:   llvm.mlir.global external @gv0() : !llvm.array<2 x f32> {
+// CHECK-NEXT:     %0 = llvm.mlir.undef : !llvm.array<2 x f32>
+// CHECK-NEXT:     llvm.return %0 : !llvm.array<2 x f32>
+// CHECK-NEXT:   }
 memref.global @gv0 : memref<2xf32> = uninitialized
 
 // CHECK: llvm.mlir.global private @gv1() : !llvm.array<2 x f32>

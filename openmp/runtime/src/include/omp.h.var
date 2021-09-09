@@ -148,6 +148,7 @@
                                             const size_t *, const size_t *, const size_t *, const size_t *, int, int);
     extern int   __KAI_KMPC_CONVENTION  omp_target_associate_ptr(const void *, const void *, size_t, size_t, int);
     extern int   __KAI_KMPC_CONVENTION  omp_target_disassociate_ptr(const void *, int);
+    extern int   __KAI_KMPC_CONVENTION  omp_is_coarse_grain_mem_region(void *, size_t);
 
     /* OpenMP 5.0 */
     extern int   __KAI_KMPC_CONVENTION  omp_get_device_num (void);

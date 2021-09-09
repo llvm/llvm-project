@@ -14,8 +14,8 @@
 #include "mlir/Dialect/Linalg/Transforms/Hoisting.h"
 #include "mlir/Analysis/AffineStructures.h"
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/Utils.h"
-#include "mlir/Dialect/Linalg/Analysis/ConstraintsSet.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/SCF.h"
@@ -555,17 +555,15 @@ static Value buildLoopIterationCount(OpBuilder &b, scf::ForOp outer,
 /// Given a set of loops, assumed to be scf::ForOp, create a constraint set
 /// containing the inequalities `iv - lb >= 0` and `-iv + ub - 1 >= 0` for each
 /// loop.
-static ConstraintsSet initLoopIvsAndBounds(ArrayRef<Operation *> loops) {
-  ConstraintsSet constraints;
+static FlatAffineValueConstraints
+initLoopIvsAndBounds(ArrayRef<Operation *> loops) {
+  FlatAffineValueConstraints constraints;
   for (Operation *op : loops)
-    constraints.addDimId(constraints.getNumDimIds(),
-                         cast<scf::ForOp>(op).getInductionVar());
+    constraints.appendDimId(cast<scf::ForOp>(op).getInductionVar());
   for (Operation *op : loops)
-    constraints.addDimId(constraints.getNumDimIds(),
-                         cast<scf::ForOp>(op).lowerBound());
+    constraints.appendDimId(cast<scf::ForOp>(op).lowerBound());
   for (Operation *op : loops)
-    constraints.addDimId(constraints.getNumDimIds(),
-                         cast<scf::ForOp>(op).upperBound());
+    constraints.appendDimId(cast<scf::ForOp>(op).upperBound());
   unsigned numLoops = loops.size();
   for (unsigned ivIdx = 0, e = numLoops; ivIdx < e; ++ivIdx) {
     // iv - lb >= 0
@@ -598,7 +596,7 @@ static ConstraintsSet initLoopIvsAndBounds(ArrayRef<Operation *> loops) {
 /// If any other operation is met, return failure.
 // TODO: extend on a per-need basis.
 static LogicalResult
-foldUpperBoundsIntoConstraintsSet(ConstraintsSet &constraints,
+foldUpperBoundsIntoConstraintsSet(FlatAffineValueConstraints &constraints,
                                   scf::ForOp outerLimit,
                                   ArrayRef<Operation *> loops) {
   SetVector<Value> toProjectOut;
@@ -622,7 +620,13 @@ foldUpperBoundsIntoConstraintsSet(ConstraintsSet &constraints,
         continue;
       // Ensure there is a
       auto ensureIdFailed = [&](Value v) {
-        return failed(constraints.ensureIdOfType(v, /*asDim=*/true));
+        if (constraints.containsId(v)) {
+          unsigned pos;
+          constraints.findId(v, &pos);
+          return pos >= constraints.getNumDimIds();
+        }
+        constraints.appendDimId(v);
+        return false;
       };
 
       // Ensure all ids exist and add results for later projection.
@@ -636,40 +640,27 @@ foldUpperBoundsIntoConstraintsSet(ConstraintsSet &constraints,
 
       // Compose supported ops.
       if (auto affineApplyOp = dyn_cast<AffineApplyOp>(op)) {
-        if (failed(constraints.composeAffineApply(affineApplyOp.getResult(),
-                                                  affineApplyOp.getAffineMap(),
-                                                  affineApplyOp.getOperands())))
+        AffineValueMap avm(affineApplyOp.getAffineMap(),
+                           affineApplyOp.getOperands(),
+                           affineApplyOp.getResult());
+        if (failed(constraints.composeMap(&avm)))
           return failure();
         continue;
       }
       auto affineMinOp = cast<AffineMinOp>(op);
-      if (failed(constraints.composeMin(affineMinOp.getResult(),
-                                        affineMinOp.getAffineMap(),
-                                        affineMinOp.operands())))
+      unsigned pos;
+      bool foundMinOp = constraints.findId(affineMinOp.getResult(), &pos);
+      (void)foundMinOp;
+      assert(foundMinOp);
+      AffineMap alignedMap = constraints.computeAlignedMap(
+          affineMinOp.getAffineMap(), affineMinOp.getOperands());
+      if (failed(
+              constraints.addBound(FlatAffineConstraints::UB, pos, alignedMap)))
         return failure();
     }
   }
   for (Value v : toProjectOut)
     constraints.projectOut(v);
-  return success();
-}
-
-/// Compute dynamic tensor sizes, independent of any value defined inside
-/// `outer` and such that every n-D iteration of the packingLoops has its own
-/// space (so that each packed buffer has a storage location). This is achieved
-/// by computing the extent for each of the packing loops.
-static LogicalResult computeBounds(scf::ForOp outer,
-                                   ArrayRef<Operation *> packingLoops,
-                                   SmallVector<AffineMap> &lbs,
-                                   SmallVector<AffineMap> &ubs) {
-  // Packing loop IVs are introduced as the first positions.
-  ConstraintsSet constraints = initLoopIvsAndBounds(packingLoops);
-  if (failed(
-          foldUpperBoundsIntoConstraintsSet(constraints, outer, packingLoops)))
-    return failure();
-  // Compute the bounds of the first positions, assuming the others are fixed.
-  constraints.getSliceBounds(/*pos=*/0, /*num=*/packingLoops.size(),
-                             outer->getContext(), &lbs, &ubs);
   return success();
 }
 
@@ -758,18 +749,20 @@ hoistPaddingOnTensorsPrerequisites(linalg::PadTensorOp padTensorOp, int nLevels,
 
   scf::ForOp outer = cast<scf::ForOp>(outermostEnclosingForOp);
 
-  ConstraintsSet constraints = initLoopIvsAndBounds(packingLoops.getArrayRef());
+  FlatAffineValueConstraints constraints =
+      initLoopIvsAndBounds(packingLoops.getArrayRef());
   if (failed(foldUpperBoundsIntoConstraintsSet(constraints, outer,
                                                packingLoops.getArrayRef())))
     return failure();
 
   unsigned numLoops = packingLoops.size();
   SmallVector<AffineMap> lbs(numLoops), ubs(numLoops);
-  if (failed(computeBounds(outer, packingLoops.getArrayRef(), lbs, ubs)))
-    return failure();
+  // Compute the bounds of the first positions, assuming the others are fixed.
+  constraints.getSliceBounds(/*pos=*/0, /*num=*/packingLoops.size(),
+                             outer->getContext(), &lbs, &ubs);
 
   SmallVector<Value> allValues;
-  constraints.getAllIdValues(&allValues);
+  constraints.getAllValues(&allValues);
   SmallVector<Value> allNonLoopValues(allValues.begin() + numLoops,
                                       allValues.end());
 

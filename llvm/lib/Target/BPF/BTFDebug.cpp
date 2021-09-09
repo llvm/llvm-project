@@ -386,6 +386,27 @@ void BTFTypeFloat::completeType(BTFDebug &BDebug) {
   BTFType.NameOff = BDebug.addString(Name);
 }
 
+BTFTypeTag::BTFTypeTag(uint32_t BaseTypeId, int ComponentId, StringRef Tag)
+    : Tag(Tag) {
+  Kind = BTF::BTF_KIND_TAG;
+  BTFType.Info = ((ComponentId < 0) << 31) | (Kind << 24);
+  BTFType.Type = BaseTypeId;
+  Info = ComponentId < 0 ? 0 : ComponentId;
+}
+
+void BTFTypeTag::completeType(BTFDebug &BDebug) {
+  if (IsCompleted)
+    return;
+  IsCompleted = true;
+
+  BTFType.NameOff = BDebug.addString(Tag);
+}
+
+void BTFTypeTag::emitType(MCStreamer &OS) {
+  BTFTypeBase::emitType(OS);
+  OS.emitInt32(Info);
+}
+
 uint32_t BTFStringTable::addString(StringRef S) {
   // Check whether the string already exists.
   for (auto &OffsetM : OffsetToIdMap) {
@@ -475,6 +496,24 @@ void BTFDebug::visitSubroutineType(
   }
 }
 
+void BTFDebug::processAnnotations(DINodeArray Annotations, uint32_t BaseTypeId,
+                                  int ComponentId) {
+  if (!Annotations)
+     return;
+
+  for (const Metadata *Annotation : Annotations->operands()) {
+    const MDNode *MD = cast<MDNode>(Annotation);
+    const MDString *Name = cast<MDString>(MD->getOperand(0));
+    if (!Name->getString().equals("btf_tag"))
+      continue;
+
+    const MDString *Value = cast<MDString>(MD->getOperand(1));
+    auto TypeEntry = std::make_unique<BTFTypeTag>(BaseTypeId, ComponentId,
+                                                  Value->getString());
+    addType(std::move(TypeEntry));
+  }
+}
+
 /// Handle structure/union types.
 void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
                                uint32_t &TypeId) {
@@ -498,9 +537,17 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
   StructTypes.push_back(TypeEntry.get());
   TypeId = addType(std::move(TypeEntry), CTy);
 
+  // Check struct/union annotations
+  processAnnotations(CTy->getAnnotations(), TypeId, -1);
+
   // Visit all struct members.
-  for (const auto *Element : Elements)
-    visitTypeEntry(cast<DIDerivedType>(Element));
+  int FieldNo = 0;
+  for (const auto *Element : Elements) {
+    const auto Elem = cast<DIDerivedType>(Element);
+    visitTypeEntry(Elem);
+    processAnnotations(Elem->getAnnotations(), TypeId, FieldNo);
+    FieldNo++;
+  }
 }
 
 void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
@@ -964,6 +1011,17 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
       std::make_unique<BTFTypeFunc>(SP->getName(), ProtoTypeId, Scope);
   uint32_t FuncTypeId = addType(std::move(FuncTypeEntry));
 
+  // Process argument annotations.
+  for (const DINode *DN : SP->getRetainedNodes()) {
+    if (const auto *DV = dyn_cast<DILocalVariable>(DN)) {
+      uint32_t Arg = DV->getArg();
+      if (Arg)
+        processAnnotations(DV->getAnnotations(), FuncTypeId, Arg - 1);
+    }
+  }
+
+  processAnnotations(SP->getAnnotations(), FuncTypeId, -1);
+
   for (const auto &TypeEntry : TypeEntries)
     TypeEntry->completeType(*this);
 
@@ -1176,11 +1234,13 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
       continue;
 
     uint32_t GVTypeId = 0;
+    DIGlobalVariable *DIGlobal = nullptr;
     for (auto *GVE : GVs) {
+      DIGlobal = GVE->getVariable();
       if (SecName.startswith(".maps"))
-        visitMapDefType(GVE->getVariable()->getType(), GVTypeId);
+        visitMapDefType(DIGlobal->getType(), GVTypeId);
       else
-        visitTypeEntry(GVE->getVariable()->getType(), GVTypeId, false, false);
+        visitTypeEntry(DIGlobal->getType(), GVTypeId, false, false);
       break;
     }
 
@@ -1211,6 +1271,8 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
     auto VarEntry =
         std::make_unique<BTFKindVar>(Global.getName(), GVTypeId, GVarInfo);
     uint32_t VarId = addType(std::move(VarEntry));
+
+    processAnnotations(DIGlobal->getAnnotations(), VarId, -1);
 
     // An empty SecName means an extern variable without section attribute.
     if (SecName.empty())
@@ -1306,6 +1368,9 @@ void BTFDebug::processFuncPrototypes(const Function *F) {
   auto FuncTypeEntry =
       std::make_unique<BTFTypeFunc>(SP->getName(), ProtoTypeId, Scope);
   uint32_t FuncId = addType(std::move(FuncTypeEntry));
+
+  processAnnotations(SP->getAnnotations(), FuncId, -1);
+
   if (F->hasSection()) {
     StringRef SecName = F->getSection();
 

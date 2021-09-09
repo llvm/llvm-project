@@ -279,19 +279,27 @@ void ObjFile::parseSections(ArrayRef<Section> sections) {
             {off, make<ConcatInputSection>(segname, name, this,
                                            data.slice(off, literalSize), align,
                                            flags)});
+    } else if (segname == segment_names::llvm) {
+      // ld64 does not appear to emit contents from sections within the __LLVM
+      // segment. Symbols within those sections point to bitcode metadata
+      // instead of actual symbols. Global symbols within those sections could
+      // have the same name without causing duplicate symbol errors. Push an
+      // empty map to ensure indices line up for the remaining sections.
+      // TODO: Evaluate whether the bitcode metadata is needed.
+      subsections.push_back({});
     } else {
       auto *isec =
           make<ConcatInputSection>(segname, name, this, data, align, flags);
-      if (!(isDebugSection(isec->getFlags()) &&
-            isec->getSegName() == segment_names::dwarf)) {
-        subsections.push_back({{0, isec}});
-      } else {
+      if (isDebugSection(isec->getFlags()) &&
+          isec->getSegName() == segment_names::dwarf) {
         // Instead of emitting DWARF sections, we emit STABS symbols to the
         // object files that contain them. We filter them out early to avoid
         // parsing their relocations unnecessarily. But we must still push an
         // empty map to ensure the indices line up for the remaining sections.
         subsections.push_back({});
         debugSections.push_back(isec);
+      } else {
+        subsections.push_back({{0, isec}});
       }
     }
   }
@@ -1225,47 +1233,75 @@ void DylibFile::checkAppExtensionSafety(bool dylibIsAppExtensionSafe) const {
 }
 
 ArchiveFile::ArchiveFile(std::unique_ptr<object::Archive> &&f)
-    : InputFile(ArchiveKind, f->getMemoryBufferRef()), file(std::move(f)) {
+    : InputFile(ArchiveKind, f->getMemoryBufferRef()), file(std::move(f)) {}
+
+void ArchiveFile::addLazySymbols() {
   for (const object::Archive::Symbol &sym : file->symbols())
     symtab->addLazy(sym.getName(), this, sym);
+}
+
+static Expected<InputFile *> loadArchiveMember(MemoryBufferRef mb,
+                                               uint32_t modTime,
+                                               StringRef archiveName,
+                                               uint64_t offsetInArchive) {
+  if (config->zeroModTime)
+    modTime = 0;
+
+  switch (identify_magic(mb.getBuffer())) {
+  case file_magic::macho_object:
+    return make<ObjFile>(mb, modTime, archiveName);
+  case file_magic::bitcode:
+    return make<BitcodeFile>(mb, archiveName, offsetInArchive);
+  default:
+    return createStringError(inconvertibleErrorCode(),
+                             mb.getBufferIdentifier() +
+                                 " has unhandled file type");
+  }
+}
+
+Error ArchiveFile::fetch(const object::Archive::Child &c, StringRef reason) {
+  if (!seen.insert(c.getChildOffset()).second)
+    return Error::success();
+
+  Expected<MemoryBufferRef> mb = c.getMemoryBufferRef();
+  if (!mb)
+    return mb.takeError();
+
+  // Thin archives refer to .o files, so --reproduce needs the .o files too.
+  if (tar && c.getParent()->isThin())
+    tar->append(relativeToRoot(CHECK(c.getFullName(), this)), mb->getBuffer());
+
+  Expected<TimePoint<std::chrono::seconds>> modTime = c.getLastModified();
+  if (!modTime)
+    return modTime.takeError();
+
+  Expected<InputFile *> file =
+      loadArchiveMember(*mb, toTimeT(*modTime), getName(), c.getChildOffset());
+
+  if (!file)
+    return file.takeError();
+
+  inputFiles.insert(*file);
+  printArchiveMemberLoad(reason, *file);
+  return Error::success();
 }
 
 void ArchiveFile::fetch(const object::Archive::Symbol &sym) {
   object::Archive::Child c =
       CHECK(sym.getMember(), toString(this) +
-                                 ": could not get the member for symbol " +
+                                 ": could not get the member defining symbol " +
                                  toMachOString(sym));
-
-  if (!seen.insert(c.getChildOffset()).second)
-    return;
-
-  MemoryBufferRef mb =
-      CHECK(c.getMemoryBufferRef(),
-            toString(this) +
-                ": could not get the buffer for the member defining symbol " +
-                toMachOString(sym));
-
-  if (tar && c.getParent()->isThin())
-    tar->append(relativeToRoot(CHECK(c.getFullName(), this)), mb.getBuffer());
-
-  uint32_t modTime = toTimeT(
-      CHECK(c.getLastModified(), toString(this) +
-                                     ": could not get the modification time "
-                                     "for the member defining symbol " +
-                                     toMachOString(sym)));
 
   // `sym` is owned by a LazySym, which will be replace<>()d by make<ObjFile>
   // and become invalid after that call. Copy it to the stack so we can refer
   // to it later.
   const object::Archive::Symbol symCopy = sym;
 
-  if (Optional<InputFile *> file = loadArchiveMember(
-          mb, modTime, getName(), /*objCOnly=*/false, c.getChildOffset())) {
-    inputFiles.insert(*file);
-    // ld64 doesn't demangle sym here even with -demangle.
-    // Match that: intentionally don't call toMachOString().
-    printArchiveMemberLoad(symCopy.getName(), *file);
-  }
+  // ld64 doesn't demangle sym here even with -demangle.
+  // Match that: intentionally don't call toMachOString().
+  if (Error e = fetch(c, symCopy.getName()))
+    error(toString(this) + ": could not get the member defining symbol " +
+          toMachOString(symCopy) + ": " + toString(std::move(e)));
 }
 
 static macho::Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &objSym,

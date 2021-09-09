@@ -319,8 +319,13 @@ void CompileUnit::ResolveSymbolContext(
   // subsequent line exact matches below.
   const bool inlines = false;
   const bool exact = true;
-  SourceLocationSpec found_entry(line_entry.file, line_entry.line,
-                                 line_entry.column, inlines, exact);
+  const llvm::Optional<uint16_t> column =
+      src_location_spec.GetColumn().hasValue()
+          ? llvm::Optional<uint16_t>(line_entry.column)
+          : llvm::None;
+
+  SourceLocationSpec found_entry(line_entry.file, line_entry.line, column,
+                                 inlines, exact);
 
   while (line_idx != UINT32_MAX) {
     // If they only asked for the line entry, then we're done, we can

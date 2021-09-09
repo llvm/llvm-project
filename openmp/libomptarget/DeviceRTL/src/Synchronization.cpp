@@ -286,11 +286,9 @@ void __kmpc_end_single(IdentTy *Loc, int32_t TId) {
 
 void __kmpc_flush(IdentTy *Loc) { fence::kernel(__ATOMIC_SEQ_CST); }
 
-__kmpc_impl_lanemask_t __kmpc_warp_active_thread_mask() {
-  return mapping::activemask();
-}
+uint64_t __kmpc_warp_active_thread_mask(void) { return mapping::activemask(); }
 
-void __kmpc_syncwarp(__kmpc_impl_lanemask_t Mask) { synchronize::warp(Mask); }
+void __kmpc_syncwarp(uint64_t Mask) { synchronize::warp(Mask); }
 
 void __kmpc_critical(IdentTy *Loc, int32_t TId, CriticalNameTy *Name) {
   omp_set_lock(reinterpret_cast<omp_lock_t *>(Name));

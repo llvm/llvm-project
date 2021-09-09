@@ -1377,11 +1377,11 @@ static AttributeList legalizeCallAttributes(LLVMContext &Ctx,
     return AL;
 
   // Remove the readonly, readnone, and statepoint function attributes.
-  AttrBuilder FnAttrs = AL.getFnAttributes();
+  AttrBuilder FnAttrs = AL.getFnAttrs();
   for (auto Attr : FnAttrsToStrip)
     FnAttrs.removeAttribute(Attr);
 
-  for (Attribute A : AL.getFnAttributes()) {
+  for (Attribute A : AL.getFnAttrs()) {
     if (isStatepointDirectiveAttr(A))
       FnAttrs.remove(A);
   }
@@ -1533,9 +1533,8 @@ static StringRef getDeoptLowering(CallBase *Call) {
     // FIXME: Calls have a *really* confusing interface around attributes
     // with values.
     const AttributeList &CSAS = Call->getAttributes();
-    if (CSAS.hasAttribute(AttributeList::FunctionIndex, DeoptLowering))
-      return CSAS.getAttribute(AttributeList::FunctionIndex, DeoptLowering)
-          .getValueAsString();
+    if (CSAS.hasFnAttr(DeoptLowering))
+      return CSAS.getFnAttr(DeoptLowering).getValueAsString();
     Function *F = Call->getCalledFunction();
     assert(F && F->hasFnAttribute(DeoptLowering));
     return F->getFnAttribute(DeoptLowering).getValueAsString();
@@ -1801,7 +1800,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
       CallInst *GCResult = Builder.CreateGCResult(Token, Call->getType(), Name);
       GCResult->setAttributes(
           AttributeList::get(GCResult->getContext(), AttributeList::ReturnIndex,
-                             Call->getAttributes().getRetAttributes()));
+                             Call->getAttributes().getRetAttrs()));
 
       // We cannot RAUW or delete CS.getInstruction() because it could be in the
       // live set of some other safepoint, in which case that safepoint's
@@ -2656,18 +2655,19 @@ template <typename AttrHolder>
 static void RemoveNonValidAttrAtIndex(LLVMContext &Ctx, AttrHolder &AH,
                                       unsigned Index) {
   AttrBuilder R;
-  if (AH.getDereferenceableBytes(Index))
+  AttributeSet AS = AH.getAttributes().getAttributes(Index);
+  if (AS.getDereferenceableBytes())
     R.addAttribute(Attribute::get(Ctx, Attribute::Dereferenceable,
-                                  AH.getDereferenceableBytes(Index)));
-  if (AH.getDereferenceableOrNullBytes(Index))
+                                  AS.getDereferenceableBytes()));
+  if (AS.getDereferenceableOrNullBytes())
     R.addAttribute(Attribute::get(Ctx, Attribute::DereferenceableOrNull,
-                                  AH.getDereferenceableOrNullBytes(Index)));
+                                  AS.getDereferenceableOrNullBytes()));
   for (auto Attr : ParamAttrsToStrip)
-    if (AH.getAttributes().hasAttribute(Index, Attr))
+    if (AS.hasAttribute(Attr))
       R.addAttribute(Attr);
 
   if (!R.empty())
-    AH.setAttributes(AH.getAttributes().removeAttributes(Ctx, Index, R));
+    AH.setAttributes(AH.getAttributes().removeAttributesAtIndex(Ctx, Index, R));
 }
 
 static void stripNonValidAttributesFromPrototype(Function &F) {

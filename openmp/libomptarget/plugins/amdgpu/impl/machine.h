@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 #ifndef SRC_RUNTIME_INCLUDE_MACHINE_H_
 #define SRC_RUNTIME_INCLUDE_MACHINE_H_
-#include "atmi.h"
+#include "impl.h"
 #include "hsa_api.h"
 #include "internal.h"
 #include <vector>
@@ -17,46 +17,46 @@ class ATLMemory;
 class ATLProcessor {
 public:
   explicit ATLProcessor(hsa_agent_t agent,
-                        atmi_devtype_t type = ATMI_DEVTYPE_ALL)
+                        impl_devtype_t type = IMPL_DEVTYPE_ALL)
       : agent_(agent), type_(type) {
     memories_.clear();
   }
   void addMemory(const ATLMemory &p);
   hsa_agent_t agent() const { return agent_; }
   const std::vector<ATLMemory> &memories() const;
-  atmi_devtype_t type() const { return type_; }
+  impl_devtype_t type() const { return type_; }
 
 protected:
   hsa_agent_t agent_;
-  atmi_devtype_t type_;
+  impl_devtype_t type_;
   std::vector<ATLMemory> memories_;
 };
 
 class ATLCPUProcessor : public ATLProcessor {
 public:
   explicit ATLCPUProcessor(hsa_agent_t agent)
-      : ATLProcessor(agent, ATMI_DEVTYPE_CPU) {}
+      : ATLProcessor(agent, IMPL_DEVTYPE_CPU) {}
 };
 
 class ATLGPUProcessor : public ATLProcessor {
 public:
   explicit ATLGPUProcessor(hsa_agent_t agent,
-                           atmi_devtype_t type = ATMI_DEVTYPE_dGPU)
+                           impl_devtype_t type = IMPL_DEVTYPE_dGPU)
       : ATLProcessor(agent, type) {}
 };
 
 class ATLMemory {
 public:
-  ATLMemory(hsa_amd_memory_pool_t pool, ATLProcessor p, atmi_memtype_t t)
+  ATLMemory(hsa_amd_memory_pool_t pool, ATLProcessor p, impl_memtype_t t)
       : memory_pool_(pool), processor_(p), type_(t) {}
   hsa_amd_memory_pool_t memory() const { return memory_pool_; }
 
-  atmi_memtype_t type() const { return type_; }
+  impl_memtype_t type() const { return type_; }
 
 private:
   hsa_amd_memory_pool_t memory_pool_;
   ATLProcessor processor_;
-  atmi_memtype_t type_;
+  impl_memtype_t type_;
 };
 
 class ATLMachine {

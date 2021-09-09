@@ -139,7 +139,7 @@ Type GPUDialect::parseType(DialectAsmParser &parser) const {
       return nullptr;
 
     // Parse operand.
-    StringRef operand;
+    std::string operand;
     if (failed(parser.parseOptionalString(&operand)))
       return nullptr;
 
@@ -196,14 +196,15 @@ LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
       return success();
 
     // Check that `launch_func` refers to a well-formed GPU kernel module.
-    StringRef kernelModuleName = launchOp.getKernelModuleName();
+    StringAttr kernelModuleName = launchOp.getKernelModuleName();
     auto kernelModule = module.lookupSymbol<GPUModuleOp>(kernelModuleName);
     if (!kernelModule)
       return launchOp.emitOpError()
-             << "kernel module '" << kernelModuleName << "' is undefined";
+             << "kernel module '" << kernelModuleName.getValue()
+             << "' is undefined";
 
     // Check that `launch_func` refers to a well-formed kernel function.
-    Operation *kernelFunc = module.lookupSymbol(launchOp.kernel());
+    Operation *kernelFunc = module.lookupSymbol(launchOp.kernelAttr());
     auto kernelGPUFunction = dyn_cast_or_null<gpu::GPUFuncOp>(kernelFunc);
     auto kernelLLVMFunction = dyn_cast_or_null<LLVM::LLVMFuncOp>(kernelFunc);
     if (!kernelGPUFunction && !kernelLLVMFunction)
@@ -299,8 +300,8 @@ static LogicalResult verifyShuffleOp(gpu::ShuffleOp shuffleOp) {
 }
 
 static void printShuffleOp(OpAsmPrinter &p, ShuffleOp op) {
-  p << ShuffleOp::getOperationName() << ' ' << op.getOperands() << ' '
-    << op.mode() << " : " << op.value().getType();
+  p << ' ' << op.getOperands() << ' ' << op.mode() << " : "
+    << op.value().getType();
 }
 
 static ParseResult parseShuffleOp(OpAsmParser &parser, OperationState &state) {
@@ -441,7 +442,7 @@ static void printSizeAssignment(OpAsmPrinter &p, KernelDim3 size,
 
 static void printLaunchOp(OpAsmPrinter &p, LaunchOp op) {
   // Print the launch configuration.
-  p << LaunchOp::getOperationName() << ' ' << op.getBlocksKeyword();
+  p << ' ' << op.getBlocksKeyword();
   printSizeAssignment(p, op.getGridSize(), op.getGridSizeOperandValues(),
                       op.getBlockIds());
   p << ' ' << op.getThreadsKeyword();
@@ -541,8 +542,9 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
                       blockSize.y, blockSize.z});
   result.addOperands(kernelOperands);
   auto kernelModule = kernelFunc->getParentOfType<GPUModuleOp>();
-  auto kernelSymbol = builder.getSymbolRefAttr(
-      kernelModule.getName(), {builder.getSymbolRefAttr(kernelFunc.getName())});
+  auto kernelSymbol =
+      SymbolRefAttr::get(kernelModule.getNameAttr(),
+                         {SymbolRefAttr::get(kernelFunc.getNameAttr())});
   result.addAttribute(getKernelAttrName(), kernelSymbol);
   SmallVector<int32_t, 8> segmentSizes(8, 1);
   segmentSizes.front() = 0; // Initially no async dependencies.
@@ -555,11 +557,11 @@ unsigned LaunchFuncOp::getNumKernelOperands() {
   return getNumOperands() - asyncDependencies().size() - kNumConfigOperands;
 }
 
-StringRef LaunchFuncOp::getKernelModuleName() {
+StringAttr LaunchFuncOp::getKernelModuleName() {
   return kernel().getRootReference();
 }
 
-StringRef LaunchFuncOp::getKernelName() { return kernel().getLeafReference(); }
+StringAttr LaunchFuncOp::getKernelName() { return kernel().getLeafReference(); }
 
 Value LaunchFuncOp::getKernelOperand(unsigned i) {
   return getOperand(asyncDependencies().size() + kNumConfigOperands + i);
@@ -781,7 +783,7 @@ static void printAttributions(OpAsmPrinter &p, StringRef keyword,
 
 /// Prints a GPU Func op.
 static void printGPUFuncOp(OpAsmPrinter &p, GPUFuncOp op) {
-  p << GPUFuncOp::getOperationName() << ' ';
+  p << ' ';
   p.printSymbolName(op.getName());
 
   FunctionType type = op.getType();
@@ -862,18 +864,6 @@ LogicalResult GPUFuncOp::verifyBody() {
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseReturnOp(OpAsmParser &parser, OperationState &result) {
-  llvm::SmallVector<OpAsmParser::OperandType, 4> operands;
-  llvm::SmallVector<Type, 4> types;
-  if (parser.parseOperandList(operands) ||
-      parser.parseOptionalColonTypeList(types) ||
-      parser.resolveOperands(operands, types, parser.getCurrentLocation(),
-                             result.operands))
-    return failure();
-
-  return success();
-}
-
 static LogicalResult verify(gpu::ReturnOp returnOp) {
   GPUFuncOp function = returnOp->getParentOfType<GPUFuncOp>();
 
@@ -930,7 +920,7 @@ static ParseResult parseGPUModuleOp(OpAsmParser &parser,
 }
 
 static void print(OpAsmPrinter &p, GPUModuleOp op) {
-  p << op.getOperationName() << ' ';
+  p << ' ';
   p.printSymbolName(op.getName());
   p.printOptionalAttrDictWithKeyword(op->getAttrs(),
                                      {SymbolTable::getSymbolAttrName()});
@@ -1087,6 +1077,49 @@ static LogicalResult foldMemRefCast(Operation *op) {
 LogicalResult MemcpyOp::fold(ArrayRef<Attribute> operands,
                              SmallVectorImpl<::mlir::OpFoldResult> &results) {
   return foldMemRefCast(*this);
+}
+
+LogicalResult MemsetOp::fold(ArrayRef<Attribute> operands,
+                             SmallVectorImpl<::mlir::OpFoldResult> &results) {
+  return foldMemRefCast(*this);
+}
+
+//===----------------------------------------------------------------------===//
+// GPU_AllocOp
+//===----------------------------------------------------------------------===//
+namespace {
+
+/// Folding of memref.dim(gpu.alloc(%size), %idx) -> %size similar to
+/// `memref::AllocOp`.
+struct SimplifyDimOfAllocOp : public OpRewritePattern<memref::DimOp> {
+  using OpRewritePattern<memref::DimOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(memref::DimOp dimOp,
+                                PatternRewriter &rewriter) const override {
+    auto index = dimOp.index().getDefiningOp<ConstantIndexOp>();
+    if (!index)
+      return failure();
+
+    auto memrefType = dimOp.source().getType().dyn_cast<MemRefType>();
+    if (!memrefType || !memrefType.isDynamicDim(index.getValue()))
+      return failure();
+
+    auto alloc = dimOp.source().getDefiningOp<AllocOp>();
+    if (!alloc)
+      return failure();
+
+    Value substituteOp = *(alloc.dynamicSizes().begin() +
+                           memrefType.getDynamicDimIndex(index.getValue()));
+    rewriter.replaceOp(dimOp, substituteOp);
+    return success();
+  }
+};
+
+} // end anonymous namespace.
+
+void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                          MLIRContext *context) {
+  results.add<SimplifyDimOfAllocOp>(context);
 }
 
 #include "mlir/Dialect/GPU/GPUOpInterfaces.cpp.inc"

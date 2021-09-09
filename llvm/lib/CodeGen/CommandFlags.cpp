@@ -672,13 +672,11 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
           if (const auto *F = Call->getCalledFunction())
             if (F->getIntrinsicID() == Intrinsic::debugtrap ||
                 F->getIntrinsicID() == Intrinsic::trap)
-              Call->addAttribute(
-                  AttributeList::FunctionIndex,
+              Call->addFnAttr(
                   Attribute::get(Ctx, "trap-func-name", getTrapFuncName()));
 
   // Let NewAttrs override Attrs.
-  F.setAttributes(
-      Attrs.addAttributes(Ctx, AttributeList::FunctionIndex, NewAttrs));
+  F.setAttributes(Attrs.addFnAttributes(Ctx, NewAttrs));
 }
 
 /// Set function attributes of functions in Module M based on CPU,

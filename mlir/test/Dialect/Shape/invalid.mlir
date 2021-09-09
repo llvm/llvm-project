@@ -97,6 +97,14 @@ func @shape_of(%value_arg : !shape.value_shape,
 
 // -----
 
+func @shape_of_incompatible_return_types(%value_arg : tensor<1x2xindex>) {
+  // expected-error@+1 {{'shape.shape_of' op inferred type(s) 'tensor<2xindex>' are incompatible with return type(s) of operation 'tensor<3xf32>'}}
+  %0 = shape.shape_of %value_arg : tensor<1x2xindex> -> tensor<3xf32>
+  return
+}
+
+// -----
+
 func @rank(%arg : !shape.shape) {
   // expected-error@+1 {{if at least one of the operands can hold error values then the result must be of type `size` to propagate them}}
   %0 = shape.rank %arg : !shape.shape -> index
@@ -164,7 +172,7 @@ module attributes {shape.lib = [@shape_lib, "shape_lib"]} {
 
 shape.function_library @shape_lib {
   // Test shape function that returns the shape of input arg as result shape.
-  func @same_result_shape(%arg: !shape.value_shape) -> !shape.shape {
+  builtin.func @same_result_shape(%arg: !shape.value_shape) -> !shape.shape {
     %0 = shape.shape_of %arg : !shape.value_shape -> !shape.shape
     return %0 : !shape.shape
   }
@@ -184,7 +192,7 @@ module attributes {shape.lib = [@shape_lib, @shape_lib]} {
 
 shape.function_library @shape_lib {
   // Test shape function that returns the shape of input arg as result shape.
-  func @same_result_shape(%arg: !shape.value_shape) -> !shape.shape {
+  builtin.func @same_result_shape(%arg: !shape.value_shape) -> !shape.shape {
     %0 = shape.shape_of %arg : !shape.value_shape -> !shape.shape
     return %0 : !shape.shape
   }
@@ -204,7 +212,7 @@ module attributes {shape.lib = [@shape_lib]} {
 
 shape.function_library @shape_lib {
   // Test shape function that returns the shape of input arg as result shape.
-  func @same_result_shape(%arg: !shape.value_shape) -> !shape.shape {
+  builtin.func @same_result_shape(%arg: !shape.value_shape) -> !shape.shape {
     %0 = shape.shape_of %arg : !shape.value_shape -> !shape.shape
     return %0 : !shape.shape
   }

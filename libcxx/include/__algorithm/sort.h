@@ -17,14 +17,10 @@
 #include <__algorithm/unwrap_iter.h>
 #include <__utility/swap.h>
 #include <memory>
-#include <type_traits> // swap
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
-
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -131,9 +127,7 @@ __selection_sort(_BidirectionalIterator __first, _BidirectionalIterator __last, 
     _BidirectionalIterator __lm1 = __last;
     for (--__lm1; __first != __lm1; ++__first)
     {
-        _BidirectionalIterator __i = _VSTD::min_element<_BidirectionalIterator,
-                                                        typename add_lvalue_reference<_Compare>::type>
-                                                       (__first, __last, __comp);
+        _BidirectionalIterator __i = _VSTD::min_element<_BidirectionalIterator, _Compare&>(__first, __last, __comp);
         if (__i != __first)
             swap(*__first, *__i);
     }
@@ -524,7 +518,5 @@ sort(_RandomAccessIterator __first, _RandomAccessIterator __last)
 }
 
 _LIBCPP_END_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_SORT_H

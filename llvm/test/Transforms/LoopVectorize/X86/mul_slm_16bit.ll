@@ -36,13 +36,13 @@ for.body:                                         ; preds = %for.body.preheader,
   %mul = mul nsw i32 %conv3, %conv
 ; sources of the mul is zext\sext from i8
 ; use pmulhw\pmullw\pshuf
-; SLM:  cost of 5 for VF 4 {{.*}} mul nsw i32
+; SLM:  cost of 2 for VF 4 {{.*}} mul nsw i32
   %conv4 = zext i8 %1 to i32
   %mul2 = mul nsw i32 %conv4, %conv
   %sum0 = add i32 %mul, %mul2
 ; sources of the mul is zext\zext from i8
 ; use pmullw\zext
-; SLM:  cost of 3 for VF 4 {{.*}} mul nsw i32
+; SLM:  cost of 2 for VF 4 {{.*}} mul nsw i32
   %conv5 = zext i8 %0 to i32
   %mul3 = mul nsw i32 %conv5, %conv4
   %sum1 = add i32 %sum0, %mul3
@@ -53,17 +53,17 @@ for.body:                                         ; preds = %for.body.preheader,
   %sum2 = add i32 %sum1, %mul4
 ; sources of the mul is sext\250
 ; use pmulhw\pmullw\pshuf
-; SLM:  cost of 5 for VF 4 {{.*}} mul nsw i32
+; SLM:  cost of 2 for VF 4 {{.*}} mul nsw i32
   %mul5 = mul nsw i32 250, %conv3
   %sum3 = add i32 %sum2, %mul5
 ; sources of the mul is zext\-120
 ; use pmulhw\pmullw\pshuf
-; SLM:  cost of 5 for VF 4 {{.*}} mul nsw i32
+; SLM:  cost of 2 for VF 4 {{.*}} mul nsw i32
   %mul6 = mul nsw i32 -120, %conv4
   %sum4 = add i32 %sum3, %mul6
 ; sources of the mul is zext\250
 ; use pmullw\zext
-; SLM:  cost of 3 for VF 4 {{.*}} mul nsw i32
+; SLM:  cost of 2 for VF 4 {{.*}} mul nsw i32
   %mul7 = mul nsw i32 250, %conv4
   %sum5 = add i32 %sum4, %mul7
   %add = add i32 %acc.013, 5

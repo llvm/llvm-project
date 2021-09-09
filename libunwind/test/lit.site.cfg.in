@@ -27,6 +27,7 @@ config.host_triple              = "@LLVM_HOST_TRIPLE@"
 config.sysroot                  = "@LIBUNWIND_SYSROOT@"
 config.gcc_toolchain            = "@LIBUNWIND_GCC_TOOLCHAIN@"
 config.cxx_ext_threads          = @LIBUNWIND_BUILD_EXTERNAL_THREAD_LIBRARY@
+config.x86_cet                  = @LIBUNWIND_ENABLE_CET@
 
 site.addsitedir(os.path.join(config.libunwind_src_root, 'test'))
 site.addsitedir(os.path.join(config.libcxx_src_root, 'utils'))

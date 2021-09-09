@@ -52,11 +52,18 @@ struct RTLInfoTy {
                                             int32_t, uint64_t,
                                             __tgt_async_info *);
   typedef int64_t(init_requires_ty)(int64_t);
-  typedef int64_t(synchronize_ty)(int32_t, __tgt_async_info *);
+  typedef int32_t(synchronize_ty)(int32_t, __tgt_async_info *);
   typedef int32_t (*register_lib_ty)(__tgt_bin_desc *);
   typedef int32_t(supports_empty_images_ty)();
   typedef void(print_device_info_ty)(int32_t);
   typedef void(set_info_flag_ty)(uint32_t);
+  typedef int32_t(create_event_ty)(int32_t, void **);
+  typedef int32_t(record_event_ty)(int32_t, void *, __tgt_async_info *);
+  typedef int32_t(wait_event_ty)(int32_t, void *, __tgt_async_info *);
+  typedef int32_t(sync_event_ty)(int32_t, void *);
+  typedef int32_t(destroy_event_ty)(int32_t, void *);
+  typedef int(set_coarse_grain_mem_region_ty)(void *, int64_t);
+  typedef int32_t(query_coarse_grain_mem_region_ty)(void *, int64_t);
 
   int32_t Idx = -1;             // RTL index, index is the number of devices
                                 // of other RTLs that were registered before,
@@ -95,6 +102,13 @@ struct RTLInfoTy {
   supports_empty_images_ty *supports_empty_images = nullptr;
   set_info_flag_ty *set_info_flag = nullptr;
   print_device_info_ty *print_device_info = nullptr;
+  create_event_ty *create_event = nullptr;
+  record_event_ty *record_event = nullptr;
+  wait_event_ty *wait_event = nullptr;
+  sync_event_ty *sync_event = nullptr;
+  destroy_event_ty *destroy_event = nullptr;
+  set_coarse_grain_mem_region_ty *set_coarse_grain_mem_region = nullptr;
+  query_coarse_grain_mem_region_ty *query_coarse_grain_mem_region = nullptr;
 
   // Are there images associated with this RTL.
   bool isUsed = false;
@@ -115,6 +129,10 @@ struct RTLsTy {
   std::vector<RTLInfoTy *> UsedRTLs;
 
   int64_t RequiresFlags = OMP_REQ_UNDEFINED;
+
+  // Set by OMPX_DISABLE_MAPS environment variable.
+  // When active, maps are ignored by the runtime
+  bool NoMaps = false;
 
   explicit RTLsTy() = default;
 

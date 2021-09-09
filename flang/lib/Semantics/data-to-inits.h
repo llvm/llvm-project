@@ -28,8 +28,9 @@ class Symbol;
 struct SymbolDataInitialization {
   using Range = common::Interval<common::ConstantSubscript>;
   explicit SymbolDataInitialization(std::size_t bytes) : image{bytes} {}
+  SymbolDataInitialization(SymbolDataInitialization &&) = default;
   evaluate::InitialImage image;
-  std::list<Range> inits;
+  std::list<Range> initializedRanges;
 };
 
 using DataInitializations = std::map<const Symbol *, SymbolDataInitialization>;

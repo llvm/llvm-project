@@ -357,7 +357,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   RetAttrs.addAttribute(Attribute::SExt);
   RetAttrs.addAttribute(Attribute::ZExt);
   RetAttrs.addAttribute(Attribute::NoAlias);
-  NewFunc->removeAttributes(AttributeList::ReturnIndex, RetAttrs);
+  NewFunc->removeRetAttrs(RetAttrs);
   // TODO: How to preserve metadata?
 
   // Move the body of the function into the new rewritten function, and replace

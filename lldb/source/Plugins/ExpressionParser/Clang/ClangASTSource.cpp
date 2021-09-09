@@ -1495,7 +1495,7 @@ bool ClangASTSource::layoutRecordType(const RecordDecl *record, uint64_t &size,
 
   LLDB_LOG(log,
            "LayoutRecordType on (ASTContext*){0} '{1}' for (RecordDecl*)"
-           "{3} [name = '{4}']",
+           "{2} [name = '{3}']",
            m_ast_context, m_clang_ast_context->getDisplayName(), record,
            record->getName());
 
@@ -1571,8 +1571,10 @@ bool ClangASTSource::layoutRecordType(const RecordDecl *record, uint64_t &size,
                                     fe = record->field_end();
          fi != fe; ++fi) {
       LLDB_LOG(log,
-               "LRT     (FieldDecl*){0}, Name = '{1}', Offset = {2} bits",
-               *fi, fi->getName(), field_offsets[*fi]);
+               "LRT     (FieldDecl*){0}, Name = '{1}', Type = '{2}', Offset = "
+               "{3} bits",
+               *fi, fi->getName(), fi->getType().getAsString(),
+               field_offsets[*fi]);
     }
     DeclFromParser<const CXXRecordDecl> parser_cxx_record =
         DynCast<const CXXRecordDecl>(parser_record);

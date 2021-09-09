@@ -1,5 +1,5 @@
 # RUN: rm -rf %t && mkdir -p %t
-# RUN: llvm-mc -triple=x86_64-unknown-linux -position-independent -filetype=obj -o %t/elf_common.o %s
+# RUN: llvm-mc -triple=x86_64-unknown-linux -relax-relocations=false -position-independent -filetype=obj -o %t/elf_common.o %s
 # RUN: llvm-jitlink -entry=load_common -noexec -check %s %t/elf_common.o
 
         .text

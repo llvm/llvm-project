@@ -145,8 +145,8 @@ typedef struct VPDataReaderType {
                                         uint32_t N);
 } VPDataReaderType;
 
-/* Write profile data to destinitation. If SkipNameDataWrite is set to 1,
-   the name data is already in destintation, we just skip over it. */
+/* Write profile data to destination. If SkipNameDataWrite is set to 1,
+   the name data is already in destination, we just skip over it. */
 int lprofWriteData(ProfDataWriter *Writer, VPDataReaderType *VPDataReader,
                    int SkipNameDataWrite);
 int lprofWriteDataImpl(ProfDataWriter *Writer,

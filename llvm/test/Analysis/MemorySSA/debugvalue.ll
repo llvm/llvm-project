@@ -1,4 +1,4 @@
-; RUN: opt -disable-basic-aa -loop-rotate -enable-mssa-loop-dependency -verify-memoryssa -S %s | FileCheck %s
+; RUN: opt -disable-basic-aa -loop-rotate -verify-memoryssa -S %s | FileCheck %s
 ; REQUIRES: asserts
 
 ; CHECK-LABEL: @f_w4_i2

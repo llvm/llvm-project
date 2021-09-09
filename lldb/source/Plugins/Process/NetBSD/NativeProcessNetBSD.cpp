@@ -136,7 +136,8 @@ NativeProcessNetBSD::Factory::Attach(
 NativeProcessNetBSD::Extension
 NativeProcessNetBSD::Factory::GetSupportedExtensions() const {
   return Extension::multiprocess | Extension::fork | Extension::vfork |
-         Extension::pass_signals | Extension::auxv | Extension::libraries_svr4;
+         Extension::pass_signals | Extension::auxv | Extension::libraries_svr4 |
+         Extension::savecore;
 }
 
 // Public Instance Methods
@@ -1072,4 +1073,28 @@ void NativeProcessNetBSD::MonitorClone(::pid_t child_pid, bool is_vfork,
       SetState(StateType::eStateInvalid);
     }
   }
+}
+
+llvm::Expected<std::string>
+NativeProcessNetBSD::SaveCore(llvm::StringRef path_hint) {
+  llvm::SmallString<128> path{path_hint};
+  Status error;
+
+  // Try with the suggested path first.
+  if (!path.empty()) {
+    error = PtraceWrapper(PT_DUMPCORE, GetID(), path.data(), path.size());
+    if (!error.Fail())
+      return path.str().str();
+
+    // If the request errored, fall back to a generic temporary file.
+  }
+
+  if (std::error_code errc =
+          llvm::sys::fs::createTemporaryFile("lldb", "core", path))
+    return llvm::createStringError(errc, "Unable to create a temporary file");
+
+  error = PtraceWrapper(PT_DUMPCORE, GetID(), path.data(), path.size());
+  if (error.Fail())
+    return error.ToError();
+  return path.str().str();
 }

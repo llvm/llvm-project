@@ -24,7 +24,8 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // -----
 
 def SPV_AddressOfOp : SPV_Op<"mlir.addressof",
-    [DeclareOpInterfaceMethods<OpAsmOpInterface>, InFunctionScope, NoSideEffect]> {
+    [DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+     InFunctionScope, NoSideEffect]> {
   let summary = "Get the address of a global variable.";
 
   let description = [{
@@ -70,7 +71,9 @@ def SPV_AddressOfOp : SPV_Op<"mlir.addressof",
 // -----
 
 def SPV_ConstantOp : SPV_Op<"Constant",
-    [ConstantLike, DeclareOpInterfaceMethods<OpAsmOpInterface>, NoSideEffect]> {
+    [ConstantLike,
+     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+     NoSideEffect]> {
   let summary = "The op that declares a SPIR-V normal constant";
 
   let description = [{

@@ -119,6 +119,19 @@ public:
   Optional<ArrayRef<uint8_t>> getAsBlock() const;
   Optional<uint64_t> getAsCStringOffset() const;
   Optional<uint64_t> getAsReferenceUVal() const;
+  /// Correctly extract any file paths from a form value.
+  ///
+  /// These attributes can be in the from DW_AT_decl_file or DW_AT_call_file
+  /// attributes. We need to use the file index in the correct DWARFUnit's line
+  /// table prologue, and each DWARFFormValue has the DWARFUnit the form value
+  /// was extracted from.
+  ///
+  /// \param Kind The kind of path to extract.
+  ///
+  /// \returns A valid string value on success, or llvm::None if the form class
+  /// is not FC_Constant, or if the file index is not valid.
+  Optional<std::string>
+  getAsFile(DILineInfoSpecifier::FileLineInfoKind Kind) const;
 
   /// Skip a form's value in \p DebugInfoData at the offset specified by
   /// \p OffsetPtr.

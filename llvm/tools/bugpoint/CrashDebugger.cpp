@@ -358,8 +358,7 @@ bool ReduceCrashingFunctionAttributes::TestFuncAttrs(
   for (auto A : Attrs)
     AB.addAttribute(A);
   AttributeList NewAttrs;
-  NewAttrs =
-      NewAttrs.addAttributes(BD.getContext(), AttributeList::FunctionIndex, AB);
+  NewAttrs = NewAttrs.addFnAttributes(BD.getContext(), AB);
 
   // Set this new list of attributes on the function.
   F->setAttributes(NewAttrs);
@@ -375,7 +374,7 @@ bool ReduceCrashingFunctionAttributes::TestFuncAttrs(
 
     // Pass along the set of attributes that caused the crash.
     Attrs.clear();
-    for (Attribute A : NewAttrs.getFnAttributes()) {
+    for (Attribute A : NewAttrs.getFnAttrs()) {
       Attrs.push_back(A);
     }
     return true;
@@ -1232,7 +1231,7 @@ static Error DebugACrash(BugDriver &BD, BugTester TestFn) {
         assert(Fn && "Could not find function?");
 
         std::vector<Attribute> Attrs;
-        for (Attribute A : Fn->getAttributes().getFnAttributes())
+        for (Attribute A : Fn->getAttributes().getFnAttrs())
           Attrs.push_back(A);
 
         OldSize += Attrs.size();

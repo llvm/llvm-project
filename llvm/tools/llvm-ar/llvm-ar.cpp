@@ -96,11 +96,11 @@ OPTIONS:
 OPERATIONS:
   d - delete [files] from the archive
   m - move [files] in the archive
-  p - print [files] found in the archive
+  p - print contents of [files] found in the archive
   q - quick append [files] to the archive
   r - replace or insert [files] into the archive
   s - act as ranlib
-  t - display contents of archive
+  t - display list of files in archive
   x - extract [files] from the archive
 
 MODIFIERS:

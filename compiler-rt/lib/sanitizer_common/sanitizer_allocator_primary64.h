@@ -282,6 +282,8 @@ class SizeClassAllocator64 {
     CHECK(kMetadataSize);
     uptr class_id = GetSizeClass(p);
     uptr size = ClassIdToSize(class_id);
+    if (!size)
+      return nullptr;
     uptr chunk_idx = GetChunkIdx(reinterpret_cast<uptr>(p), size);
     uptr region_beg = GetRegionBeginBySizeClass(class_id);
     return reinterpret_cast<void *>(GetMetadataEnd(region_beg) -
@@ -315,7 +317,7 @@ class SizeClassAllocator64 {
     Printf(
         "%s %02zd (%6zd): mapped: %6zdK allocs: %7zd frees: %7zd inuse: %6zd "
         "num_freed_chunks %7zd avail: %6zd rss: %6zdK releases: %6zd "
-        "last released: %6zdK region: 0x%zx\n",
+        "last released: %6lldK region: 0x%zx\n",
         region->exhausted ? "F" : " ", class_id, ClassIdToSize(class_id),
         region->mapped_user >> 10, region->stats.n_allocated,
         region->stats.n_freed, in_use, region->num_freed_chunks, avail_chunks,
@@ -623,7 +625,7 @@ class SizeClassAllocator64 {
 
   static const uptr kRegionSize = kSpaceSize / kNumClassesRounded;
   // FreeArray is the array of free-d chunks (stored as 4-byte offsets).
-  // In the worst case it may reguire kRegionSize/SizeClassMap::kMinSize
+  // In the worst case it may require kRegionSize/SizeClassMap::kMinSize
   // elements, but in reality this will not happen. For simplicity we
   // dedicate 1/8 of the region's virtual space to FreeArray.
   static const uptr kFreeArraySize = kRegionSize / 8;

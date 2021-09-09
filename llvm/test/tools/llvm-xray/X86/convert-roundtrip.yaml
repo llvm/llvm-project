@@ -1,4 +1,4 @@
-#RUN: llvm-xray convert %s -f=raw -o %t && llvm-xray convert %t -f=yaml -o - | FileCheck %s
+#RUN: llvm-xray convert %s -f raw -o %t && llvm-xray convert %t -f yaml -o - | FileCheck %s
 ---
 header:
   version: 1

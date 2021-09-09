@@ -12,6 +12,7 @@ if (NOT DEFINED LIBCXX_ENABLE_SHARED)
 endif()
 
 pythonize_bool(LIBUNWIND_BUILD_32_BITS)
+pythonize_bool(LIBUNWIND_ENABLE_CET)
 pythonize_bool(LIBCXX_ENABLE_SHARED)
 pythonize_bool(LIBUNWIND_ENABLE_SHARED)
 pythonize_bool(LIBUNWIND_ENABLE_THREADS)

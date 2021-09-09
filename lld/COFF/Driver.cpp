@@ -383,6 +383,7 @@ void LinkerDriver::parseDirectives(InputFile *file) {
   for (StringRef inc : directives.includes)
     addUndefined(inc);
 
+  // https://docs.microsoft.com/en-us/cpp/preprocessor/comment-c-cpp?view=msvc-160
   for (auto *arg : directives.args) {
     switch (arg->getOption().getID()) {
     case OPT_aligncomm:
@@ -403,6 +404,9 @@ void LinkerDriver::parseDirectives(InputFile *file) {
       break;
     case OPT_incl:
       addUndefined(arg->getValue());
+      break;
+    case OPT_manifestdependency:
+      config->manifestDependencies.insert(arg->getValue());
       break;
     case OPT_merge:
       parseMerge(arg->getValue());
@@ -651,15 +655,10 @@ static std::string createResponseFile(const opt::InputArgList &args,
     case OPT_INPUT:
     case OPT_defaultlib:
     case OPT_libpath:
-    case OPT_manifest:
-    case OPT_manifest_colon:
-    case OPT_manifestdependency:
-    case OPT_manifestfile:
-    case OPT_manifestinput:
-    case OPT_manifestuac:
       break;
     case OPT_call_graph_ordering_file:
     case OPT_deffile:
+    case OPT_manifestinput:
     case OPT_natvis:
       os << arg->getSpelling() << quote(rewritePath(arg->getValue())) << '\n';
       break;
@@ -677,6 +676,7 @@ static std::string createResponseFile(const opt::InputArgList &args,
       break;
     }
     case OPT_implib:
+    case OPT_manifestfile:
     case OPT_pdb:
     case OPT_pdbstripped:
     case OPT_out:
@@ -1705,12 +1705,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   for (auto *arg : args.filtered(OPT_aligncomm))
     parseAligncomm(arg->getValue());
 
-  // Handle /manifestdependency. This enables /manifest unless /manifest:no is
-  // also passed.
-  if (auto *arg = args.getLastArg(OPT_manifestdependency)) {
-    config->manifestDependency = arg->getValue();
-    config->manifest = Configuration::SideBySide;
-  }
+  // Handle /manifestdependency.
+  for (auto *arg : args.filtered(OPT_manifestdependency))
+    config->manifestDependencies.insert(arg->getValue());
 
   // Handle /manifest and /manifest:
   if (auto *arg = args.getLastArg(OPT_manifest, OPT_manifest_colon)) {
@@ -1750,6 +1747,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   config->ltoCSProfileGenerate = args.hasArg(OPT_lto_cs_profile_generate);
   config->ltoCSProfileFile = args.getLastArgValue(OPT_lto_cs_profile_file);
   // Handle miscellaneous boolean flags.
+  config->ltoPGOWarnMismatch = args.hasFlag(OPT_lto_pgo_warn_mismatch,
+                                            OPT_lto_pgo_warn_mismatch_no, true);
   config->allowBind = args.hasFlag(OPT_allowbind, OPT_allowbind_no, true);
   config->allowIsolation =
       args.hasFlag(OPT_allowisolation, OPT_allowisolation_no, true);
@@ -1870,10 +1869,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   for (auto *arg : args.filtered(OPT_defaultlib))
     if (Optional<StringRef> path = findLib(arg->getValue()))
       enqueuePath(*path, false, false);
-
-  // Windows specific -- Create a resource file containing a manifest file.
-  if (config->manifest == Configuration::Embed)
-    addBuffer(createManifestRes(), false, false);
 
   // Read all input files given via the command line.
   run();
@@ -2228,8 +2223,14 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     c->setAlignment(std::max(c->getAlignment(), alignment));
   }
 
-  // Windows specific -- Create a side-by-side manifest file.
-  if (config->manifest == Configuration::SideBySide)
+  // Windows specific -- Create an embedded or side-by-side manifest.
+  // /manifestdependency: enables /manifest unless an explicit /manifest:no is
+  // also passed.
+  if (config->manifest == Configuration::Embed)
+    addBuffer(createManifestRes(), false, false);
+  else if (config->manifest == Configuration::SideBySide ||
+           (config->manifest == Configuration::Default &&
+            !config->manifestDependencies.empty()))
     createSideBySideManifest();
 
   // Handle /order. We want to do this at this moment because we

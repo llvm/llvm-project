@@ -339,9 +339,9 @@ func @const_fold_scalar_isub_flow() -> (i32, i32, i32, i32) {
   // 0xffff ffff - 0x7fff ffff -> 0xffff ffff + 0x8000 0001 = 0x1 8000 0000
   // CHECK-DAG: spv.Constant -2147483648
   // 0x0000 0001 - 0xffff ffff -> 0x0000 0001 + 0x0000 0001 = 0x0000 0002
-  // CHECK-DAG: spv.Constant 2
+  // CHECK-DAG: spv.Constant 2 :
   // 0x0000 0000 - 0xffff ffff -> 0x0000 0000 + 0x0000 0001 = 0x0000 0001
-  // CHECK-DAG: spv.Constant 1
+  // CHECK-DAG: spv.Constant 1 :
   // 0xffff fffe - 0x7fff ffff -> 0xffff fffe + 0x8000 0001 = 0x1 7fff ffff
   // CHECK-DAG: spv.Constant 2147483647
   %0 = spv.ISub %c1, %c3 : i32

@@ -394,6 +394,7 @@ struct __sanitizer_glob_t {
 
 extern int glob_nomatch;
 extern int glob_altdirfunc;
+extern const int wordexp_wrde_dooffs;
 
 extern unsigned path_max;
 

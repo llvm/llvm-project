@@ -52,6 +52,98 @@ static const Target *getTarget(const ObjectFile *Obj) {
   return TheTarget;
 }
 
+void BinarySizeContextTracker::addInstructionForContext(
+    const SampleContextFrameVector &Context, uint32_t InstrSize) {
+  ContextTrieNode *CurNode = &RootContext;
+  bool IsLeaf = true;
+  for (const auto &Callsite : reverse(Context)) {
+    StringRef CallerName = Callsite.CallerName;
+    LineLocation CallsiteLoc = IsLeaf ? LineLocation(0, 0) : Callsite.Callsite;
+    CurNode = CurNode->getOrCreateChildContext(CallsiteLoc, CallerName);
+    IsLeaf = false;
+  }
+
+  CurNode->addFunctionSize(InstrSize);
+}
+
+uint32_t
+BinarySizeContextTracker::getFuncSizeForContext(const SampleContext &Context) {
+  ContextTrieNode *CurrNode = &RootContext;
+  ContextTrieNode *PrevNode = nullptr;
+  SampleContextFrames Frames = Context.getContextFrames();
+  int32_t I = Frames.size() - 1;
+  Optional<uint32_t> Size;
+
+  // Start from top-level context-less function, traverse down the reverse
+  // context trie to find the best/longest match for given context, then
+  // retrieve the size.
+
+  while (CurrNode && I >= 0) {
+    // Process from leaf function to callers (added to context).
+    const auto &ChildFrame = Frames[I--];
+    PrevNode = CurrNode;
+    CurrNode =
+        CurrNode->getChildContext(ChildFrame.Callsite, ChildFrame.CallerName);
+    if (CurrNode && CurrNode->getFunctionSize().hasValue())
+      Size = CurrNode->getFunctionSize().getValue();
+  }
+
+  // If we traversed all nodes along the path of the context and haven't
+  // found a size yet, pivot to look for size from sibling nodes, i.e size
+  // of inlinee under different context.
+  if (!Size.hasValue()) {
+    if (!CurrNode)
+      CurrNode = PrevNode;
+    while (!Size.hasValue() && CurrNode &&
+           !CurrNode->getAllChildContext().empty()) {
+      CurrNode = &CurrNode->getAllChildContext().begin()->second;
+      if (CurrNode->getFunctionSize().hasValue())
+        Size = CurrNode->getFunctionSize().getValue();
+    }
+  }
+
+  assert(Size.hasValue() && "We should at least find one context size.");
+  return Size.getValue();
+}
+
+void BinarySizeContextTracker::trackInlineesOptimizedAway(
+    MCPseudoProbeDecoder &ProbeDecoder) {
+  ProbeFrameStack ProbeContext;
+  for (const auto &Child : ProbeDecoder.getDummyInlineRoot().getChildren())
+    trackInlineesOptimizedAway(ProbeDecoder, *Child.second.get(), ProbeContext);
+}
+
+void BinarySizeContextTracker::trackInlineesOptimizedAway(
+    MCPseudoProbeDecoder &ProbeDecoder,
+    MCDecodedPseudoProbeInlineTree &ProbeNode, ProbeFrameStack &ProbeContext) {
+  StringRef FuncName =
+      ProbeDecoder.getFuncDescForGUID(ProbeNode.Guid)->FuncName;
+  ProbeContext.emplace_back(FuncName, 0);
+
+  // This ProbeContext has a probe, so it has code before inlining and
+  // optimization. Make sure we mark its size as known.
+  if (!ProbeNode.getProbes().empty()) {
+    ContextTrieNode *SizeContext = &RootContext;
+    for (auto &ProbeFrame : reverse(ProbeContext)) {
+      StringRef CallerName = ProbeFrame.first;
+      LineLocation CallsiteLoc(ProbeFrame.second, 0);
+      SizeContext =
+          SizeContext->getOrCreateChildContext(CallsiteLoc, CallerName);
+    }
+    // Add 0 size to make known.
+    SizeContext->addFunctionSize(0);
+  }
+
+  // DFS down the probe inline tree
+  for (const auto &ChildNode : ProbeNode.getChildren()) {
+    InlineSite Location = ChildNode.first;
+    ProbeContext.back().second = std::get<1>(Location);
+    trackInlineesOptimizedAway(ProbeDecoder, *ChildNode.second.get(), ProbeContext);
+  }
+
+  ProbeContext.pop_back();
+}
+
 void ProfiledBinary::load() {
   // Attempt to open the binary.
   OwningBinary<Binary> OBinary = unwrapOrError(createBinary(Path), Path);
@@ -76,6 +168,10 @@ void ProfiledBinary::load() {
   // Disassemble the text sections.
   disassemble(Obj);
 
+  // Track size for optimized inlinees when probe is available
+  if (UsePseudoProbes && TrackFuncContextSize)
+    FuncSizeTracker.trackInlineesOptimizedAway(ProbeDecoder);
+
   // Use function start and return address to infer prolog and epilog
   ProEpilogTracker.inferPrologOffsets(FuncStartAddrMap);
   ProEpilogTracker.inferEpilogOffsets(RetAddrs);
@@ -87,8 +183,8 @@ bool ProfiledBinary::inlineContextEqual(uint64_t Address1,
                                         uint64_t Address2) const {
   uint64_t Offset1 = virtualAddrToOffset(Address1);
   uint64_t Offset2 = virtualAddrToOffset(Address2);
-  const FrameLocationStack &Context1 = getFrameLocationStack(Offset1);
-  const FrameLocationStack &Context2 = getFrameLocationStack(Offset2);
+  const SampleContextFrameVector &Context1 = getFrameLocationStack(Offset1);
+  const SampleContextFrameVector &Context2 = getFrameLocationStack(Offset2);
   if (Context1.size() != Context2.size())
     return false;
   if (Context1.empty())
@@ -99,45 +195,34 @@ bool ProfiledBinary::inlineContextEqual(uint64_t Address1,
                     Context2.begin(), Context2.begin() + Context2.size() - 1);
 }
 
-std::string
-ProfiledBinary::getExpandedContextStr(const SmallVectorImpl<uint64_t> &Stack,
-                                      bool &WasLeafInlined) const {
-  std::string ContextStr;
-  SmallVector<std::string, 16> ContextVec;
+SampleContextFrameVector
+ProfiledBinary::getExpandedContext(const SmallVectorImpl<uint64_t> &Stack,
+                                   bool &WasLeafInlined) const {
+  SampleContextFrameVector ContextVec;
   // Process from frame root to leaf
   for (auto Address : Stack) {
     uint64_t Offset = virtualAddrToOffset(Address);
-    const FrameLocationStack &ExpandedContext = getFrameLocationStack(Offset);
+    const SampleContextFrameVector &ExpandedContext =
+        getFrameLocationStack(Offset);
     // An instruction without a valid debug line will be ignored by sample
     // processing
     if (ExpandedContext.empty())
-      return std::string();
+      return SampleContextFrameVector();
     // Set WasLeafInlined to the size of inlined frame count for the last
     // address which is leaf
     WasLeafInlined = (ExpandedContext.size() > 1);
-    for (const auto &Loc : ExpandedContext) {
-      ContextVec.push_back(getCallSite(Loc));
-    }
+    ContextVec.append(ExpandedContext);
   }
 
-  assert(ContextVec.size() && "Context length should be at least 1");
   // Compress the context string except for the leaf frame
-  std::string LeafFrame = ContextVec.back();
+  auto LeafFrame = ContextVec.back();
+  LeafFrame.Callsite = LineLocation(0, 0);
   ContextVec.pop_back();
-  CSProfileGenerator::compressRecursionContext<std::string>(ContextVec);
-
-  std::ostringstream OContextStr;
-  for (uint32_t I = 0; I < (uint32_t)ContextVec.size(); I++) {
-    if (OContextStr.str().size()) {
-      OContextStr << " @ ";
-    }
-    OContextStr << ContextVec[I];
-  }
-  // Only keep the function name for the leaf frame
-  if (OContextStr.str().size())
-    OContextStr << " @ ";
-  OContextStr << StringRef(LeafFrame).split(":").first.str();
-  return OContextStr.str();
+  assert(ContextVec.size() && "Context length should be at least 1");
+  CSProfileGenerator::compressRecursionContext(ContextVec);
+  CSProfileGenerator::trimContext(ContextVec);
+  ContextVec.push_back(LeafFrame);
+  return ContextVec;
 }
 
 template <class ELFT>
@@ -252,7 +337,8 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
         if (Cur < 40)
           outs().indent(40 - Cur);
         InstructionPointer IP(this, Offset);
-        outs() << getReversedLocWithContext(symbolize(IP, ShowCanonicalFnName));
+        outs() << getReversedLocWithContext(
+            symbolize(IP, ShowCanonicalFnName, ShowPseudoProbe));
       }
       outs() << "\n";
     }
@@ -262,12 +348,22 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
       // Populate a vector of the symbolized callsite at this location
       // We don't need symbolized info for probe-based profile, just use an
       // empty stack as an entry to indicate a valid binary offset
-      FrameLocationStack SymbolizedCallStack;
-      if (!UsePseudoProbes) {
+      SampleContextFrameVector SymbolizedCallStack;
+      if (!UsePseudoProbes || TrackFuncContextSize) {
         InstructionPointer IP(this, Offset);
-        SymbolizedCallStack = symbolize(IP, true);
+        // TODO: reallocation of Offset2LocStackMap will lead to dangling
+        // strings We need ProfiledBinary to owned these string.
+        Offset2LocStackMap[Offset] = symbolize(IP, true, UsePseudoProbes);
+        SampleContextFrameVector &SymbolizedCallStack =
+            Offset2LocStackMap[Offset];
+        // Record instruction size for the corresponding context
+        if (TrackFuncContextSize && !SymbolizedCallStack.empty())
+          FuncSizeTracker.addInstructionForContext(Offset2LocStackMap[Offset],
+                                                   Size);
+      } else {
+        Offset2LocStackMap[Offset] = SampleContextFrameVector();
       }
-      Offset2LocStackMap[Offset] = SymbolizedCallStack;
+
       // Populate address maps.
       CodeAddrs.push_back(Offset);
       if (MCDesc.isCall())
@@ -409,8 +505,9 @@ void ProfiledBinary::setupSymbolizer() {
   Symbolizer = std::make_unique<symbolize::LLVMSymbolizer>(SymbolizerOpts);
 }
 
-FrameLocationStack ProfiledBinary::symbolize(const InstructionPointer &IP,
-                                             bool UseCanonicalFnName) {
+SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
+                                                   bool UseCanonicalFnName,
+                                                   bool UseProbeDiscriminator) {
   assert(this == IP.Binary &&
          "Binary should only symbolize its own instruction");
   auto Addr = object::SectionedAddress{IP.Offset + getPreferredBaseAddress(),
@@ -418,28 +515,38 @@ FrameLocationStack ProfiledBinary::symbolize(const InstructionPointer &IP,
   DIInliningInfo InlineStack =
       unwrapOrError(Symbolizer->symbolizeInlinedCode(Path, Addr), getName());
 
-  FrameLocationStack CallStack;
-
+  SampleContextFrameVector CallStack;
   for (int32_t I = InlineStack.getNumberOfFrames() - 1; I >= 0; I--) {
     const auto &CallerFrame = InlineStack.getFrame(I);
     if (CallerFrame.FunctionName == "<invalid>")
       break;
+
     StringRef FunctionName(CallerFrame.FunctionName);
     if (UseCanonicalFnName)
       FunctionName = FunctionSamples::getCanonicalFnName(FunctionName);
-    LineLocation Line(CallerFrame.Line - CallerFrame.StartLine,
-                      DILocation::getBaseDiscriminatorFromDiscriminator(
-                          CallerFrame.Discriminator,
-                          /* IsFSDiscriminator */ false));
-    FrameLocation Callsite(FunctionName.str(), Line);
-    CallStack.push_back(Callsite);
+
+    uint32_t Discriminator = CallerFrame.Discriminator;
+    uint32_t LineOffset = CallerFrame.Line - CallerFrame.StartLine;
+    if (UseProbeDiscriminator) {
+      LineOffset =
+          PseudoProbeDwarfDiscriminator::extractProbeIndex(Discriminator);
+      Discriminator = 0;
+    } else {
+      Discriminator = DILocation::getBaseDiscriminatorFromDiscriminator(
+          CallerFrame.Discriminator,
+          /* IsFSDiscriminator */ false);
+    }
+
+    LineLocation Line(LineOffset, Discriminator);
+    auto It = NameStrings.insert(FunctionName.str());
+    CallStack.emplace_back(*It.first, Line);
   }
 
   return CallStack;
 }
 
-InstructionPointer::InstructionPointer(ProfiledBinary *Binary, uint64_t Address,
-                                       bool RoundToNext)
+InstructionPointer::InstructionPointer(const ProfiledBinary *Binary,
+                                       uint64_t Address, bool RoundToNext)
     : Binary(Binary), Address(Address) {
   Index = Binary->getIndexForAddr(Address);
   if (RoundToNext) {

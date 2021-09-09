@@ -110,6 +110,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -198,12 +199,14 @@ static cl::opt<bool>
                             "warnings about missing profile data for "
                             "functions."));
 
+namespace llvm {
 // Command line option to enable/disable the warning about a hash mismatch in
 // the profile data.
-static cl::opt<bool>
+cl::opt<bool>
     NoPGOWarnMismatch("no-pgo-warn-mismatch", cl::init(false), cl::Hidden,
                       cl::desc("Use this option to turn off/on "
                                "warnings about profile cfg mismatch."));
+} // namespace llvm
 
 // Command line option to enable/disable the warning about a hash mismatch in
 // the profile data for Comdat functions, which often turns out to be false
@@ -462,7 +465,10 @@ public:
 private:
   bool runOnModule(Module &M) override {
     createProfileFileNameVar(M, InstrProfileOutput);
-    createIRLevelProfileFlagVar(M, /* IsCS */ true, PGOInstrumentEntry);
+    // The variable in a comdat may be discarded by LTO. Ensure the
+    // declaration will be retained.
+    appendToCompilerUsed(
+        M, createIRLevelProfileFlagVar(M, /*IsCS=*/true, PGOInstrumentEntry));
     return false;
   }
   std::string InstrProfileOutput;
@@ -1610,7 +1616,7 @@ static bool InstrumentAllFunctions(
   // For the context-sensitve instrumentation, we should have a separated pass
   // (before LTO/ThinLTO linking) to create these variables.
   if (!IsCS)
-    createIRLevelProfileFlagVar(M, /* IsCS */ false, PGOInstrumentEntry);
+    createIRLevelProfileFlagVar(M, /*IsCS=*/false, PGOInstrumentEntry);
   std::unordered_multimap<Comdat *, GlobalValue *> ComdatMembers;
   collectComdatMembers(M, ComdatMembers);
 
@@ -1630,7 +1636,10 @@ static bool InstrumentAllFunctions(
 PreservedAnalyses
 PGOInstrumentationGenCreateVar::run(Module &M, ModuleAnalysisManager &AM) {
   createProfileFileNameVar(M, CSInstrName);
-  createIRLevelProfileFlagVar(M, /* IsCS */ true, PGOInstrumentEntry);
+  // The variable in a comdat may be discarded by LTO. Ensure the declaration
+  // will be retained.
+  appendToCompilerUsed(
+      M, createIRLevelProfileFlagVar(M, /*IsCS=*/true, PGOInstrumentEntry));
   return PreservedAnalyses::all();
 }
 

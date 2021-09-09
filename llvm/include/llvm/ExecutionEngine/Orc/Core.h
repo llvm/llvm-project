@@ -21,7 +21,6 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
-#include "llvm/ExecutionEngine/OrcV1Deprecation.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ExtensibleRTTI.h"
 
@@ -1476,12 +1475,7 @@ public:
   /// \endcode{.cpp}
   shared::WrapperFunctionResult callWrapper(JITTargetAddress WrapperFnAddr,
                                             ArrayRef<char> ArgBuffer) {
-    std::promise<shared::WrapperFunctionResult> RP;
-    auto RF = RP.get_future();
-    callWrapperAsync(
-        [&](shared::WrapperFunctionResult R) { RP.set_value(std::move(R)); },
-        WrapperFnAddr, ArgBuffer);
-    return RF.get();
+    return EPC->callWrapper(WrapperFnAddr, ArgBuffer);
   }
 
   /// Run a wrapper function using SPS to serialize the arguments and
@@ -1490,14 +1484,8 @@ public:
   void callSPSWrapperAsync(SendResultT &&SendResult,
                            JITTargetAddress WrapperFnAddr,
                            const ArgTs &...Args) {
-    shared::WrapperFunction<SPSSignature>::callAsync(
-        [this,
-         WrapperFnAddr](ExecutorProcessControl::SendResultFunction SendResult,
-                        const char *ArgData, size_t ArgSize) {
-          callWrapperAsync(std::move(SendResult), WrapperFnAddr,
-                           ArrayRef<char>(ArgData, ArgSize));
-        },
-        std::move(SendResult), Args...);
+    EPC->callSPSWrapperAsync<SPSSignature, SendResultT, ArgTs...>(
+        std::forward<SendResultT>(SendResult), WrapperFnAddr, Args...);
   }
 
   /// Run a wrapper function using SPS to serialize the arguments and
@@ -1508,11 +1496,8 @@ public:
   template <typename SPSSignature, typename... WrapperCallArgTs>
   Error callSPSWrapper(JITTargetAddress WrapperFnAddr,
                        WrapperCallArgTs &&...WrapperCallArgs) {
-    return shared::WrapperFunction<SPSSignature>::call(
-        [this, WrapperFnAddr](const char *ArgData, size_t ArgSize) {
-          return callWrapper(WrapperFnAddr, ArrayRef<char>(ArgData, ArgSize));
-        },
-        std::forward<WrapperCallArgTs>(WrapperCallArgs)...);
+    return EPC->callSPSWrapper<SPSSignature, WrapperCallArgTs...>(
+        WrapperFnAddr, std::forward<WrapperCallArgTs>(WrapperCallArgs)...);
   }
 
   /// Wrap a handler that takes concrete argument types (and a sender for a

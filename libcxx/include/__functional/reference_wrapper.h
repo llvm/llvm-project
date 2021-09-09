@@ -176,7 +176,7 @@ public:
 #endif // _LIBCPP_CXX03_LANG
 };
 
-#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 reference_wrapper(_Tp&) -> reference_wrapper<_Tp>;
 #endif

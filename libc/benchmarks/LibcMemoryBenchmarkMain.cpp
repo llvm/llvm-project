@@ -27,6 +27,7 @@ extern void *memcpy(void *__restrict, const void *__restrict, size_t);
 extern void *memset(void *, int, size_t);
 extern void bzero(void *, size_t);
 extern int memcmp(const void *, const void *, size_t);
+extern int bcmp(const void *, const void *, size_t);
 
 } // namespace __llvm_libc
 
@@ -75,6 +76,9 @@ using BenchmarkSetup = SetSetup;
 using BenchmarkSetup = SetSetup;
 #elif defined(LIBC_BENCHMARK_FUNCTION_MEMCMP)
 #define LIBC_BENCHMARK_FUNCTION LIBC_BENCHMARK_FUNCTION_MEMCMP
+using BenchmarkSetup = ComparisonSetup;
+#elif defined(LIBC_BENCHMARK_FUNCTION_BCMP)
+#define LIBC_BENCHMARK_FUNCTION LIBC_BENCHMARK_FUNCTION_BCMP
 using BenchmarkSetup = ComparisonSetup;
 #else
 #error "Missing LIBC_BENCHMARK_FUNCTION_XXX definition"

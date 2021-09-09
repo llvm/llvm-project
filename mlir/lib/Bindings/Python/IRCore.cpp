@@ -163,7 +163,7 @@ struct PyGlobalDebugFlag {
 
   static void bind(py::module &m) {
     // Debug flags.
-    py::class_<PyGlobalDebugFlag>(m, "_GlobalDebug")
+    py::class_<PyGlobalDebugFlag>(m, "_GlobalDebug", py::module_local())
         .def_property_static("flag", &PyGlobalDebugFlag::get,
                              &PyGlobalDebugFlag::set, "LLVM-wide debug flag");
   }
@@ -192,7 +192,7 @@ public:
   }
 
   static void bind(py::module &m) {
-    py::class_<PyRegionIterator>(m, "RegionIterator")
+    py::class_<PyRegionIterator>(m, "RegionIterator", py::module_local())
         .def("__iter__", &PyRegionIterator::dunderIter)
         .def("__next__", &PyRegionIterator::dunderNext);
   }
@@ -224,7 +224,7 @@ public:
   }
 
   static void bind(py::module &m) {
-    py::class_<PyRegionList>(m, "RegionSequence")
+    py::class_<PyRegionList>(m, "RegionSequence", py::module_local())
         .def("__len__", &PyRegionList::dunderLen)
         .def("__getitem__", &PyRegionList::dunderGetItem);
   }
@@ -252,7 +252,7 @@ public:
   }
 
   static void bind(py::module &m) {
-    py::class_<PyBlockIterator>(m, "BlockIterator")
+    py::class_<PyBlockIterator>(m, "BlockIterator", py::module_local())
         .def("__iter__", &PyBlockIterator::dunderIter)
         .def("__next__", &PyBlockIterator::dunderNext);
   }
@@ -317,7 +317,7 @@ public:
   }
 
   static void bind(py::module &m) {
-    py::class_<PyBlockList>(m, "BlockList")
+    py::class_<PyBlockList>(m, "BlockList", py::module_local())
         .def("__getitem__", &PyBlockList::dunderGetItem)
         .def("__iter__", &PyBlockList::dunderIter)
         .def("__len__", &PyBlockList::dunderLen)
@@ -349,7 +349,7 @@ public:
   }
 
   static void bind(py::module &m) {
-    py::class_<PyOperationIterator>(m, "OperationIterator")
+    py::class_<PyOperationIterator>(m, "OperationIterator", py::module_local())
         .def("__iter__", &PyOperationIterator::dunderIter)
         .def("__next__", &PyOperationIterator::dunderNext);
   }
@@ -405,7 +405,7 @@ public:
   }
 
   static void bind(py::module &m) {
-    py::class_<PyOperationList>(m, "OperationList")
+    py::class_<PyOperationList>(m, "OperationList", py::module_local())
         .def("__getitem__", &PyOperationList::dunderGetItem)
         .def("__iter__", &PyOperationList::dunderIter)
         .def("__len__", &PyOperationList::dunderLen);
@@ -868,22 +868,23 @@ py::object PyOperationBase::getAsm(bool binary,
   return fileObject.attr("getvalue")();
 }
 
-PyOperationRef PyOperation::getParentOperation() {
+llvm::Optional<PyOperationRef> PyOperation::getParentOperation() {
   checkValid();
   if (!isAttached())
     throw SetPyError(PyExc_ValueError, "Detached operations have no parent");
   MlirOperation operation = mlirOperationGetParentOperation(get());
   if (mlirOperationIsNull(operation))
-    throw SetPyError(PyExc_ValueError, "Operation has no parent.");
+    return {};
   return PyOperation::forOperation(getContext(), operation);
 }
 
 PyBlock PyOperation::getBlock() {
   checkValid();
-  PyOperationRef parentOperation = getParentOperation();
+  llvm::Optional<PyOperationRef> parentOperation = getParentOperation();
   MlirBlock block = mlirOperationGetBlock(get());
   assert(!mlirBlockIsNull(block) && "Attached operation has null parent");
-  return PyBlock{std::move(parentOperation), block};
+  assert(parentOperation && "Operation has no parent");
+  return PyBlock{std::move(*parentOperation), block};
 }
 
 py::object PyOperation::getCapsule() {
@@ -968,7 +969,6 @@ py::object PyOperation::create(
   }
   // Unpack/validate successors.
   if (successors) {
-    llvm::SmallVector<MlirBlock, 4> mlirSuccessors;
     mlirSuccessors.reserve(successors->size());
     for (auto *successor : *successors) {
       // TODO: Verify successor originate from the same context.
@@ -1539,7 +1539,7 @@ public:
 
   /// Binds the Python module objects to functions of this class.
   static void bind(py::module &m) {
-    auto cls = ClassTy(m, DerivedTy::pyClassName);
+    auto cls = ClassTy(m, DerivedTy::pyClassName, py::module_local());
     cls.def(py::init<PyValue &>(), py::keep_alive<0, 1>());
     DerivedTy::bindDerived(cls);
   }
@@ -1617,7 +1617,7 @@ public:
 
   /// Defines a Python class in the bindings.
   static void bind(py::module &m) {
-    py::class_<PyBlockArgumentList>(m, "BlockArgumentList")
+    py::class_<PyBlockArgumentList>(m, "BlockArgumentList", py::module_local())
         .def("__len__", &PyBlockArgumentList::dunderLen)
         .def("__getitem__", &PyBlockArgumentList::dunderGetItem);
   }
@@ -1764,7 +1764,7 @@ public:
   }
 
   static void bind(py::module &m) {
-    py::class_<PyOpAttributeMap>(m, "OpAttributeMap")
+    py::class_<PyOpAttributeMap>(m, "OpAttributeMap", py::module_local())
         .def("__contains__", &PyOpAttributeMap::dunderContains)
         .def("__len__", &PyOpAttributeMap::dunderLen)
         .def("__getitem__", &PyOpAttributeMap::dunderGetItemNamed)
@@ -1787,7 +1787,7 @@ void mlir::python::populateIRCore(py::module &m) {
   //----------------------------------------------------------------------------
   // Mapping of MlirContext.
   //----------------------------------------------------------------------------
-  py::class_<PyMlirContext>(m, "Context")
+  py::class_<PyMlirContext>(m, "Context", py::module_local())
       .def(py::init<>(&PyMlirContext::createNewContextForInit))
       .def_static("_get_live_count", &PyMlirContext::getLiveCount)
       .def("_get_context_again",
@@ -1851,7 +1851,7 @@ void mlir::python::populateIRCore(py::module &m) {
   //----------------------------------------------------------------------------
   // Mapping of PyDialectDescriptor
   //----------------------------------------------------------------------------
-  py::class_<PyDialectDescriptor>(m, "DialectDescriptor")
+  py::class_<PyDialectDescriptor>(m, "DialectDescriptor", py::module_local())
       .def_property_readonly("namespace",
                              [](PyDialectDescriptor &self) {
                                MlirStringRef ns =
@@ -1869,7 +1869,7 @@ void mlir::python::populateIRCore(py::module &m) {
   //----------------------------------------------------------------------------
   // Mapping of PyDialects
   //----------------------------------------------------------------------------
-  py::class_<PyDialects>(m, "Dialects")
+  py::class_<PyDialects>(m, "Dialects", py::module_local())
       .def("__getitem__",
            [=](PyDialects &self, std::string keyName) {
              MlirDialect dialect =
@@ -1889,7 +1889,7 @@ void mlir::python::populateIRCore(py::module &m) {
   //----------------------------------------------------------------------------
   // Mapping of PyDialect
   //----------------------------------------------------------------------------
-  py::class_<PyDialect>(m, "Dialect")
+  py::class_<PyDialect>(m, "Dialect", py::module_local())
       .def(py::init<py::object>(), "descriptor")
       .def_property_readonly(
           "descriptor", [](PyDialect &self) { return self.getDescriptor(); })
@@ -1904,7 +1904,7 @@ void mlir::python::populateIRCore(py::module &m) {
   //----------------------------------------------------------------------------
   // Mapping of Location
   //----------------------------------------------------------------------------
-  py::class_<PyLocation>(m, "Location")
+  py::class_<PyLocation>(m, "Location", py::module_local())
       .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR, &PyLocation::getCapsule)
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyLocation::createFromCapsule)
       .def("__enter__", &PyLocation::contextEnter)
@@ -1956,7 +1956,7 @@ void mlir::python::populateIRCore(py::module &m) {
   //----------------------------------------------------------------------------
   // Mapping of Module
   //----------------------------------------------------------------------------
-  py::class_<PyModule>(m, "Module")
+  py::class_<PyModule>(m, "Module", py::module_local())
       .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR, &PyModule::getCapsule)
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyModule::createFromCapsule)
       .def_static(
@@ -2025,7 +2025,7 @@ void mlir::python::populateIRCore(py::module &m) {
   //----------------------------------------------------------------------------
   // Mapping of Operation.
   //----------------------------------------------------------------------------
-  py::class_<PyOperationBase>(m, "_OperationBase")
+  py::class_<PyOperationBase>(m, "_OperationBase", py::module_local())
       .def("__eq__",
            [](PyOperationBase &self, PyOperationBase &other) {
              return &self.getOperation() == &other.getOperation();
@@ -2112,7 +2112,7 @@ void mlir::python::populateIRCore(py::module &m) {
           "Verify the operation and return true if it passes, false if it "
           "fails.");
 
-  py::class_<PyOperation, PyOperationBase>(m, "Operation")
+  py::class_<PyOperation, PyOperationBase>(m, "Operation", py::module_local())
       .def_static("create", &PyOperation::create, py::arg("name"),
                   py::arg("results") = py::none(),
                   py::arg("operands") = py::none(),
@@ -2121,8 +2121,11 @@ void mlir::python::populateIRCore(py::module &m) {
                   py::arg("loc") = py::none(), py::arg("ip") = py::none(),
                   kOperationCreateDocstring)
       .def_property_readonly("parent",
-                             [](PyOperation &self) {
-                               return self.getParentOperation().getObject();
+                             [](PyOperation &self) -> py::object {
+                               auto parent = self.getParentOperation();
+                               if (parent)
+                                 return parent->getObject();
+                               return py::none();
                              })
       .def("erase", &PyOperation::erase)
       .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
@@ -2146,7 +2149,7 @@ void mlir::python::populateIRCore(py::module &m) {
       .def_property_readonly("opview", &PyOperation::createOpView);
 
   auto opViewClass =
-      py::class_<PyOpView, PyOperationBase>(m, "OpView")
+      py::class_<PyOpView, PyOperationBase>(m, "OpView", py::module_local())
           .def(py::init<py::object>())
           .def_property_readonly("operation", &PyOpView::getOperationObject)
           .def_property_readonly(
@@ -2171,7 +2174,7 @@ void mlir::python::populateIRCore(py::module &m) {
   //----------------------------------------------------------------------------
   // Mapping of PyRegion.
   //----------------------------------------------------------------------------
-  py::class_<PyRegion>(m, "Region")
+  py::class_<PyRegion>(m, "Region", py::module_local())
       .def_property_readonly(
           "blocks",
           [](PyRegion &self) {
@@ -2195,7 +2198,20 @@ void mlir::python::populateIRCore(py::module &m) {
   //----------------------------------------------------------------------------
   // Mapping of PyBlock.
   //----------------------------------------------------------------------------
-  py::class_<PyBlock>(m, "Block")
+  py::class_<PyBlock>(m, "Block", py::module_local())
+      .def_property_readonly(
+          "owner",
+          [](PyBlock &self) {
+            return self.getParentOperation()->createOpView();
+          },
+          "Returns the owning operation of this block.")
+      .def_property_readonly(
+          "region",
+          [](PyBlock &self) {
+            MlirRegion region = mlirBlockGetParentRegion(self.get());
+            return PyRegion(self.getParentOperation(), region);
+          },
+          "Returns the owning region of this block.")
       .def_property_readonly(
           "arguments",
           [](PyBlock &self) {
@@ -2208,6 +2224,40 @@ void mlir::python::populateIRCore(py::module &m) {
             return PyOperationList(self.getParentOperation(), self.get());
           },
           "Returns a forward-optimized sequence of operations.")
+      .def(
+          "create_before",
+          [](PyBlock &self, py::args pyArgTypes) {
+            self.checkValid();
+            llvm::SmallVector<MlirType, 4> argTypes;
+            argTypes.reserve(pyArgTypes.size());
+            for (auto &pyArg : pyArgTypes) {
+              argTypes.push_back(pyArg.cast<PyType &>());
+            }
+
+            MlirBlock block = mlirBlockCreate(argTypes.size(), argTypes.data());
+            MlirRegion region = mlirBlockGetParentRegion(self.get());
+            mlirRegionInsertOwnedBlockBefore(region, self.get(), block);
+            return PyBlock(self.getParentOperation(), block);
+          },
+          "Creates and returns a new Block before this block "
+          "(with given argument types).")
+      .def(
+          "create_after",
+          [](PyBlock &self, py::args pyArgTypes) {
+            self.checkValid();
+            llvm::SmallVector<MlirType, 4> argTypes;
+            argTypes.reserve(pyArgTypes.size());
+            for (auto &pyArg : pyArgTypes) {
+              argTypes.push_back(pyArg.cast<PyType &>());
+            }
+
+            MlirBlock block = mlirBlockCreate(argTypes.size(), argTypes.data());
+            MlirRegion region = mlirBlockGetParentRegion(self.get());
+            mlirRegionInsertOwnedBlockAfter(region, self.get(), block);
+            return PyBlock(self.getParentOperation(), block);
+          },
+          "Creates and returns a new Block after this block "
+          "(with given argument types).")
       .def(
           "__iter__",
           [](PyBlock &self) {
@@ -2238,7 +2288,7 @@ void mlir::python::populateIRCore(py::module &m) {
   // Mapping of PyInsertionPoint.
   //----------------------------------------------------------------------------
 
-  py::class_<PyInsertionPoint>(m, "InsertionPoint")
+  py::class_<PyInsertionPoint>(m, "InsertionPoint", py::module_local())
       .def(py::init<PyBlock &>(), py::arg("block"),
            "Inserts after the last operation but still inside the block.")
       .def("__enter__", &PyInsertionPoint::contextEnter)
@@ -2260,12 +2310,15 @@ void mlir::python::populateIRCore(py::module &m) {
       .def_static("at_block_terminator", &PyInsertionPoint::atBlockTerminator,
                   py::arg("block"), "Inserts before the block terminator.")
       .def("insert", &PyInsertionPoint::insert, py::arg("operation"),
-           "Inserts an operation.");
+           "Inserts an operation.")
+      .def_property_readonly(
+          "block", [](PyInsertionPoint &self) { return self.getBlock(); },
+          "Returns the block that this InsertionPoint points to.");
 
   //----------------------------------------------------------------------------
   // Mapping of PyAttribute.
   //----------------------------------------------------------------------------
-  py::class_<PyAttribute>(m, "Attribute")
+  py::class_<PyAttribute>(m, "Attribute", py::module_local())
       // Delegate to the PyAttribute copy constructor, which will also lifetime
       // extend the backing context which owns the MlirAttribute.
       .def(py::init<PyAttribute &>(), py::arg("cast_from_type"),
@@ -2336,7 +2389,7 @@ void mlir::python::populateIRCore(py::module &m) {
   //----------------------------------------------------------------------------
   // Mapping of PyNamedAttribute
   //----------------------------------------------------------------------------
-  py::class_<PyNamedAttribute>(m, "NamedAttribute")
+  py::class_<PyNamedAttribute>(m, "NamedAttribute", py::module_local())
       .def("__repr__",
            [](PyNamedAttribute &self) {
              PyPrintAccumulator printAccum;
@@ -2372,7 +2425,7 @@ void mlir::python::populateIRCore(py::module &m) {
   //----------------------------------------------------------------------------
   // Mapping of PyType.
   //----------------------------------------------------------------------------
-  py::class_<PyType>(m, "Type")
+  py::class_<PyType>(m, "Type", py::module_local())
       // Delegate to the PyType copy constructor, which will also lifetime
       // extend the backing context which owns the MlirType.
       .def(py::init<PyType &>(), py::arg("cast_from_type"),
@@ -2426,7 +2479,7 @@ void mlir::python::populateIRCore(py::module &m) {
   //----------------------------------------------------------------------------
   // Mapping of Value.
   //----------------------------------------------------------------------------
-  py::class_<PyValue>(m, "Value")
+  py::class_<PyValue>(m, "Value", py::module_local())
       .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR, &PyValue::getCapsule)
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyValue::createFromCapsule)
       .def_property_readonly(

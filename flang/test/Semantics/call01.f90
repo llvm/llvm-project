@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Confirm enforcement of constraints and restrictions in 15.6.2.1
 
 non_recursive function f01(n) result(res)

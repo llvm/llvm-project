@@ -41,7 +41,9 @@ void getVectors(Module &M, IRInstructionMapper &Mapper,
 void getSimilarities(
     Module &M,
     std::vector<std::vector<IRSimilarityCandidate>> &SimilarityCandidates) {
-  IRSimilarityIdentifier Identifier;
+  // In order to keep the size of the tests from becoming too large, we do not
+  // recognize similarity for branches unless explicitly needed.
+  IRSimilarityIdentifier Identifier(/*EnableBranchMatching = */false);
   SimilarityCandidates = Identifier.findSimilarity(M);
 }
 
@@ -726,22 +728,8 @@ TEST(IRInstructionMapper, StoreDifferentAtomic) {
   ASSERT_TRUE(UnsignedVec[0] != UnsignedVec[1]);
 }
 
-// In most cases, the illegal instructions we are collecting don't require any
-// sort of setup.  In these cases, we can just only have illegal instructions,
-// and the mapper will create 0 length vectors, and we can check that.
-
-// In cases where we have legal instructions needed to set up the illegal
-// instruction, to check illegal instructions are assigned unsigned integers
-// from the maximum value decreasing to 0, it will be greater than a legal
-// instruction that comes after.  So to check that we have an illegal
-// instruction, we place a legal instruction after an illegal instruction, and
-// check that the illegal unsigned integer is greater than the unsigned integer
-// of the legal instruction.
-
-// Checks that the branch is mapped to be illegal since there is extra checking
-// needed to ensure that a branch in one region is branching to an isomorphic
-// location in a different region.
-TEST(IRInstructionMapper, BranchIllegal) {
+// Checks that the branch is mapped to legal when the option is set.
+TEST(IRInstructionMapper, BranchLegal) {
   StringRef ModuleString = R"(
                           define i32 @f(i32 %a, i32 %b) {
                           bb0:
@@ -759,11 +747,27 @@ TEST(IRInstructionMapper, BranchIllegal) {
   SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
   SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
   IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.InstClassifier.EnableBranches = true;
+  Mapper.initializeForBBs(*M);
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
-  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+  ASSERT_TRUE(UnsignedVec[1] > UnsignedVec[0]);
+  ASSERT_TRUE(UnsignedVec[1] < UnsignedVec[2]);
 }
+
+// In most cases, the illegal instructions we are collecting don't require any
+// sort of setup.  In these cases, we can just only have illegal instructions,
+// and the mapper will create 0 length vectors, and we can check that.
+
+// In cases where we have legal instructions needed to set up the illegal
+// instruction, to check illegal instructions are assigned unsigned integers
+// from the maximum value decreasing to 0, it will be greater than a legal
+// instruction that comes after.  So to check that we have an illegal
+// instruction, we place a legal instruction after an illegal instruction, and
+// check that the illegal unsigned integer is greater than the unsigned integer
+// of the legal instruction.
 
 // Checks that a PHINode is mapped to be illegal since there is extra checking
 // needed to ensure that a branch in one region is bin an isomorphic
@@ -1445,8 +1449,8 @@ TEST(IRInstructionMapper, MemSetIllegal) {
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
-  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(6));
-  ASSERT_TRUE(UnsignedVec[2] < UnsignedVec[1]);
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(7));
+  ASSERT_TRUE(UnsignedVec[2] < UnsignedVec[0]);
 }
 
 // Checks that a memcpy instruction is mapped to an illegal value.
@@ -1476,8 +1480,9 @@ TEST(IRInstructionMapper, MemCpyIllegal) {
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
-  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(6));
-  ASSERT_TRUE(UnsignedVec[2] < UnsignedVec[1]);
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(7));
+  ASSERT_GT(UnsignedVec[2], UnsignedVec[3]);
+  ASSERT_LT(UnsignedVec[2], UnsignedVec[0]);
 }
 
 // Checks that a memmove instruction is mapped to an illegal value.
@@ -1507,8 +1512,8 @@ TEST(IRInstructionMapper, MemMoveIllegal) {
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
-  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(6));
-  ASSERT_TRUE(UnsignedVec[2] < UnsignedVec[1]);
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(7));
+  ASSERT_LT(UnsignedVec[2], UnsignedVec[0]);
 }
 
 // Checks that a variable argument instructions are mapped to an illegal value.
@@ -1555,11 +1560,10 @@ TEST(IRInstructionMapper, VarArgsIllegal) {
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
-  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(16));
-  ASSERT_TRUE(UnsignedVec[4] < UnsignedVec[3]);
-  ASSERT_TRUE(UnsignedVec[7] < UnsignedVec[6]);
-  ASSERT_TRUE(UnsignedVec[10] < UnsignedVec[9]);
-  ASSERT_TRUE(UnsignedVec[13] < UnsignedVec[12]);
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(17));
+  ASSERT_TRUE(UnsignedVec[7] < UnsignedVec[0]);
+  ASSERT_TRUE(UnsignedVec[13] < UnsignedVec[10]);
+  ASSERT_TRUE(UnsignedVec[16] < UnsignedVec[13]);
 }
 
 // Check the length of adding two illegal instructions one after th other.  We
@@ -1599,21 +1603,23 @@ TEST(IRInstructionMapper, RepeatedIllegalLength) {
 // two blocks of two legal instructions and terminator, and checks them for
 // instruction similarity.
 static bool longSimCandCompare(std::vector<IRInstructionData *> &InstrList,
-                               bool Structure = false) {
+                               bool Structure = false, unsigned Length = 2,
+                               unsigned StartIdxOne = 0,
+                               unsigned StartIdxTwo = 3) {
   std::vector<IRInstructionData *>::iterator Start, End;
 
   Start = InstrList.begin();
   End = InstrList.begin();
 
-  std::advance(End, 1);
-  IRSimilarityCandidate Cand1(0, 2, *Start, *End);
+  std::advance(End, StartIdxOne + Length - 1);
+  IRSimilarityCandidate Cand1(StartIdxOne, Length, *Start, *End);
 
   Start = InstrList.begin();
   End = InstrList.begin();
 
-  std::advance(Start, 3);
-  std::advance(End, 4);
-  IRSimilarityCandidate Cand2(3, 2, *Start, *End);
+  std::advance(Start, StartIdxTwo);
+  std::advance(End, StartIdxTwo + Length - 1);
+  IRSimilarityCandidate Cand2(StartIdxTwo, Length, *Start, *End);
   if (Structure)
     return IRSimilarityCandidate::compareStructure(Cand1, Cand2);
   return IRSimilarityCandidate::isSimilar(Cand1, Cand2);
@@ -1986,6 +1992,70 @@ TEST(IRSimilarityCandidate, SameStructure) {
   ASSERT_TRUE(longSimCandCompare(InstrList, true));
 }
 
+// Checks that the canonical numbering between two candidates matches the found
+// mapping between two candidates.
+TEST(IRSimilarityCandidate, CanonicalNumbering) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = sub i32 %b, %a
+                             ret i32 0
+                          bb1:
+                             %2 = add i32 %a, %b
+                             %3 = sub i32 %b, %a
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  // Check to make sure that we have a long enough region.
+  ASSERT_EQ(InstrList.size(), static_cast<unsigned>(6));
+  // Check that the instructions were added correctly to both vectors.
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+
+  std::vector<IRInstructionData *>::iterator Start, End;
+
+  Start = InstrList.begin();
+  End = InstrList.begin();
+
+  std::advance(End, 1);
+  IRSimilarityCandidate Cand1(0, 2, *Start, *End);
+
+  Start = InstrList.begin();
+  End = InstrList.begin();
+
+  std::advance(Start, 3);
+  std::advance(End, 4);
+  IRSimilarityCandidate Cand2(3, 2, *Start, *End);
+  DenseMap<unsigned, DenseSet<unsigned>> Mapping1;
+  DenseMap<unsigned, DenseSet<unsigned>> Mapping2;
+  ASSERT_TRUE(IRSimilarityCandidate::compareStructure(Cand1, Cand2, Mapping1,
+                                                      Mapping2));
+  IRSimilarityCandidate::createCanonicalMappingFor(Cand1);
+  Cand2.createCanonicalRelationFrom(Cand1, Mapping1, Mapping2);
+
+  for (std::pair<unsigned, DenseSet<unsigned>> &P : Mapping2) {
+    unsigned Source = P.first;
+
+    ASSERT_TRUE(Cand2.getCanonicalNum(Source).hasValue());
+    unsigned Canon = *Cand2.getCanonicalNum(Source);
+    ASSERT_TRUE(Cand1.fromCanonicalNum(Canon).hasValue());
+    unsigned Dest = *Cand1.fromCanonicalNum(Canon);
+
+    DenseSet<unsigned>::iterator It = P.second.find(Dest);
+    ASSERT_NE(It, P.second.end());
+  }
+}
+
 // Checks that the same structure is recognized between two candidates. While
 // the input names are reversed, they still perform the same overall operation.
 TEST(IRSimilarityCandidate, DifferentNameSameStructure) {
@@ -2017,6 +2087,206 @@ TEST(IRSimilarityCandidate, DifferentNameSameStructure) {
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
 
   ASSERT_TRUE(longSimCandCompare(InstrList, true));
+}
+
+// Checks that the same structure is recognized between two candidates when
+// the branches target other blocks inside the same region, the relative
+// distance between the blocks must be the same.
+TEST(IRSimilarityCandidate, SameBranchStructureInternal) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = add i32 %b, %a
+                             br label %bb1
+                          bb1:
+                             %2 = add i32 %b, %a
+                             %3 = add i32 %a, %b
+                             ret i32 0
+                          }
+                          
+                          define i32 @f2(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = add i32 %b, %a
+                             br label %bb1
+                          bb1:
+                             %2 = add i32 %b, %a
+                             %3 = add i32 %a, %b
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.InstClassifier.EnableBranches = true;
+  Mapper.initializeForBBs(*M);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  // Check to make sure that we have a long enough region.
+  ASSERT_EQ(InstrList.size(), static_cast<unsigned>(12));
+  // Check that the instructions were added correctly to both vectors.
+  ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
+
+  ASSERT_TRUE(longSimCandCompare(InstrList, true, 5, 0, 6));
+}
+
+// Checks that the different structure is recognized between two candidates,
+// when the branches target other blocks inside the same region, the relative
+// distance between the blocks must be the same.
+TEST(IRSimilarityCandidate, DifferentBranchStructureInternal) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = add i32 %b, %a
+                             br label %bb2
+                          bb1:
+                             %2 = add i32 %b, %a
+                             %3 = add i32 %a, %b
+                             br label %bb2
+                          bb2:
+                             %4 = add i32 %b, %a
+                             %5 = add i32 %a, %b
+                             ret i32 0
+                          }
+                          
+                          define i32 @f2(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = add i32 %b, %a
+                             br label %bb1
+                          bb1:
+                             %2 = add i32 %b, %a
+                             %3 = add i32 %a, %b
+                             br label %bb2
+                          bb2:
+                             %4 = add i32 %b, %a
+                             %5 = add i32 %a, %b
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.InstClassifier.EnableBranches = true;
+  Mapper.initializeForBBs(*M);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  // Check to make sure that we have a long enough region.
+  ASSERT_EQ(InstrList.size(), static_cast<unsigned>(18));
+  // Check that the instructions were added correctly to both vectors.
+  ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
+
+  ASSERT_FALSE(longSimCandCompare(InstrList, true, 6, 0, 9));
+}
+
+// Checks that the same structure is recognized between two candidates, when
+// the branches target other blocks outside region, the relative distance
+// does not need to be the same.
+TEST(IRSimilarityCandidate, SameBranchStructureOutside) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = add i32 %b, %a
+                             br label %bb1
+                          bb1:
+                             %2 = add i32 %b, %a
+                             %3 = add i32 %a, %b
+                             ret i32 0
+                          }
+                          
+                          define i32 @f2(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = add i32 %b, %a
+                             br label %bb1
+                          bb1:
+                             %2 = add i32 %b, %a
+                             %3 = add i32 %a, %b
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.InstClassifier.EnableBranches = true;
+  Mapper.initializeForBBs(*M);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  // Check to make sure that we have a long enough region.
+  ASSERT_EQ(InstrList.size(), static_cast<unsigned>(12));
+  // Check that the instructions were added correctly to both vectors.
+  ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
+
+  ASSERT_TRUE(longSimCandCompare(InstrList, true, 3, 0, 6));
+}
+
+// Checks that the same structure is recognized between two candidates, when
+// the branches target other blocks outside region, the relative distance
+// does not need to be the same.
+TEST(IRSimilarityCandidate, DifferentBranchStructureOutside) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = add i32 %b, %a
+                             br label %bb1
+                          bb1:
+                             %2 = add i32 %b, %a
+                             %3 = add i32 %a, %b
+                             ret i32 0
+                          }
+                          
+                          define i32 @f2(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = add i32 %b, %a
+                             br label %bb2
+                          bb1:
+                             %2 = add i32 %b, %a
+                             %3 = add i32 %a, %b
+                             br label %bb2
+                          bb2:
+                             %4 = add i32 %b, %a
+                             %5 = add i32 %a, %b
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.InstClassifier.EnableBranches = true;
+  Mapper.initializeForBBs(*M);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  // Check to make sure that we have a long enough region.
+  ASSERT_EQ(InstrList.size(), static_cast<unsigned>(15));
+  // Check that the instructions were added correctly to both vectors.
+  ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
+
+  ASSERT_TRUE(longSimCandCompare(InstrList, true, 3, 0, 6));
 }
 
 // Checks that two sets of identical instructions are found to be the same.

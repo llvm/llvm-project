@@ -139,7 +139,7 @@ Origin tracking trace representation
 ------------------------------------
 
 An origin tracking trace is a list of chains. Each chain has a stack trace
-where the DFSan runtime records a label propapation, and a pointer to its
+where the DFSan runtime records a label propagation, and a pointer to its
 previous chain. The very first chain does not point to any chain.
 
 Every four 4-bytes aligned application bytes share a 4-byte origin trace ID. A

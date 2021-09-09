@@ -16,6 +16,7 @@
 #include <csignal>
 #include <cstdint>
 #include <cstdio>
+#include <string>
 #include <sys/syslimits.h>
 #include <unistd.h>
 #include <vector>
@@ -318,11 +319,13 @@ struct DNBExecutableImageInfo {
 
 struct DNBRegionInfo {
 public:
-  DNBRegionInfo() : addr(0), size(0), permissions(0), dirty_pages() {}
+  DNBRegionInfo()
+      : addr(0), size(0), permissions(0), dirty_pages(), vm_types() {}
   nub_addr_t addr;
   nub_addr_t size;
   uint32_t permissions;
   std::vector<nub_addr_t> dirty_pages;
+  std::vector<std::string> vm_types;
 };
 
 enum DNBProfileDataScanType {

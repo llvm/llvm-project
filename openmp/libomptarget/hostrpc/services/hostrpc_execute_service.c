@@ -143,7 +143,7 @@ static void hostrpc_handler_SERVICE_PRINTF(uint32_t device_id,
   hostrpc_status_t rc = hostrpc_printf(device_buffer, bufsz, &uint_value);
   payload[0] = (uint64_t)uint_value; // what the printf returns
   payload[1] = (uint64_t)rc;         // Any errors in the service function
-  atmi_free(device_buffer);
+  impl_free(device_buffer);
 }
 static void hostrpc_handler_SERVICE_FPRINTF(uint32_t device_id,
                                             uint64_t *payload) {
@@ -153,7 +153,7 @@ static void hostrpc_handler_SERVICE_FPRINTF(uint32_t device_id,
   hostrpc_status_t rc = hostrpc_fprintf(device_buffer, bufsz, &uint_value);
   payload[0] = (uint64_t)uint_value; // what the printf returns
   payload[1] = (uint64_t)rc;         // Any errors in the service function
-  atmi_free(device_buffer);
+  impl_free(device_buffer);
 }
 
 static void hostrpc_handler_SERVICE_VARFNUINT(uint32_t device_id,
@@ -164,7 +164,7 @@ static void hostrpc_handler_SERVICE_VARFNUINT(uint32_t device_id,
   hostrpc_status_t rc = hostrpc_varfn_uint_(device_buffer, bufsz, &uint_value);
   payload[0] = (uint64_t)uint_value; // What the vargs function pointer returns
   payload[1] = (uint64_t)rc;         // any errors in the service function
-  atmi_free(device_buffer);
+  impl_free(device_buffer);
 }
 
 static void hostrpc_handler_SERVICE_VARFNUINT64(uint32_t device_id,
@@ -177,7 +177,7 @@ static void hostrpc_handler_SERVICE_VARFNUINT64(uint32_t device_id,
   payload[0] =
       (uint64_t)uint64_value; // What the vargs function pointer returns
   payload[1] = (uint64_t)rc;  // any errors in the service function
-  atmi_free(device_buffer);
+  impl_free(device_buffer);
 }
 
 static void hostrpc_handler_SERVICE_VARFNDOUBLE(uint32_t device_id,
@@ -189,7 +189,7 @@ static void hostrpc_handler_SERVICE_VARFNDOUBLE(uint32_t device_id,
       hostrpc_varfn_double_(device_buffer, bufsz, (double *)&double_value);
   memcpy(&payload[0], &double_value, 8);
   payload[1] = (uint64_t)rc; // any errors in the service function
-  atmi_free(device_buffer);
+  impl_free(device_buffer);
 }
 
 static void hostrpc_handler_SERVICE_MALLOC_PRINTF(uint32_t device_id,
@@ -222,7 +222,7 @@ static void hostrpc_handler_SERVICE_FTNASSIGN(uint32_t device_id,
 static void hostrpc_handler_SERVICE_FREE(uint32_t device_id,
                                          uint64_t *payload) {
   char *device_buffer = (char *)payload[0];
-  atmi_free(device_buffer);
+  impl_free(device_buffer);
 }
 
 static void hostrpc_handler_SERVICE_FUNCTIONCALL(uint32_t device_id,
@@ -254,11 +254,11 @@ static void hostrpc_handler_SERVICE_DEMO(uint32_t device_id,
   int *A = (int *)malloc(N * sizeof(int));
   int *B = (int *)malloc(N * sizeof(int));
   int *C = (int *)malloc(N * sizeof(int));
-  copyerr = atmi_memcpy_no_signal(A, A_D, N * sizeof(int), false);
-  copyerr = atmi_memcpy_no_signal(B, B_D, N * sizeof(int), false);
+  copyerr = impl_memcpy_no_signal(A, A_D, N * sizeof(int), false);
+  copyerr = impl_memcpy_no_signal(B, B_D, N * sizeof(int), false);
 
   int num_zeros = local_vector_product_zeros(N, A, B, C);
-  copyerr = atmi_memcpy_no_signal(C_D, C, N * sizeof(int), true);
+  copyerr = impl_memcpy_no_signal(C_D, C, N * sizeof(int), true);
   payload[0] = (uint64_t)copyerr;
   payload[1] = (uint64_t)num_zeros;
 }

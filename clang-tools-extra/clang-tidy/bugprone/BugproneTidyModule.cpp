@@ -52,6 +52,7 @@
 #include "StringLiteralWithEmbeddedNulCheck.h"
 #include "SuspiciousEnumUsageCheck.h"
 #include "SuspiciousIncludeCheck.h"
+#include "SuspiciousMemoryComparisonCheck.h"
 #include "SuspiciousMemsetUsageCheck.h"
 #include "SuspiciousMissingCommaCheck.h"
 #include "SuspiciousSemicolonCheck.h"
@@ -160,6 +161,8 @@ public:
         "bugprone-suspicious-enum-usage");
     CheckFactories.registerCheck<SuspiciousIncludeCheck>(
         "bugprone-suspicious-include");
+    CheckFactories.registerCheck<SuspiciousMemoryComparisonCheck>(
+        "bugprone-suspicious-memory-comparison");
     CheckFactories.registerCheck<SuspiciousMemsetUsageCheck>(
         "bugprone-suspicious-memset-usage");
     CheckFactories.registerCheck<SuspiciousMissingCommaCheck>(

@@ -20,11 +20,6 @@
 #include <tuple>
 #include <__cxxabi_config.h>
 
-#if defined(_LIBCXXABI_ARM_EHABI)
-int main(int, char**) {
-  return 0;
-}
-#else
 static int bits = 0;
 
 struct C {
@@ -58,7 +53,7 @@ static void cleanup(_Unwind_Reason_Code, struct _Unwind_Exception* exc) {
 
 static void forced_unwind() {
   _Unwind_Exception* exc = new _Unwind_Exception;
-  exc->exception_class = 0;
+  memset(&exc->exception_class, 0, sizeof(exc->exception_class));
   exc->exception_cleanup = cleanup;
   _Unwind_ForcedUnwind(exc, Stop<_Unwind_Stop_Fn>::stop, 0);
   abort();
@@ -84,4 +79,3 @@ int main(int, char**) {
   test();
   return bits != 15;
 }
-#endif

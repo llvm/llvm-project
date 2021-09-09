@@ -69,3 +69,7 @@ if(LLVM_USE_HOST_TOOLS)
     endif()
   endif()
 endif()
+
+configure_file(
+  update_core_linalg_named_ops.sh.in
+  ${MLIR_TOOLS_DIR}/update_core_linalg_named_ops.sh)

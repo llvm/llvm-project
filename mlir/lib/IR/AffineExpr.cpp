@@ -101,19 +101,26 @@ AffineExpr::replaceSymbols(ArrayRef<AffineExpr> symReplacements) const {
   return replaceDimsAndSymbols({}, symReplacements);
 }
 
-/// Replace symbols[0 .. numDims - 1] by symbols[shift .. shift + numDims - 1].
-AffineExpr AffineExpr::shiftDims(unsigned numDims, unsigned shift) const {
+/// Replace dims[offset ... numDims)
+/// by dims[offset + shift ... shift + numDims).
+AffineExpr AffineExpr::shiftDims(unsigned numDims, unsigned shift,
+                                 unsigned offset) const {
   SmallVector<AffineExpr, 4> dims;
-  for (unsigned idx = 0; idx < numDims; ++idx)
+  for (unsigned idx = 0; idx < offset; ++idx)
+    dims.push_back(getAffineDimExpr(idx, getContext()));
+  for (unsigned idx = offset; idx < numDims; ++idx)
     dims.push_back(getAffineDimExpr(idx + shift, getContext()));
   return replaceDimsAndSymbols(dims, {});
 }
 
-/// Replace symbols[0 .. numSymbols - 1] by
-/// symbols[shift .. shift + numSymbols - 1].
-AffineExpr AffineExpr::shiftSymbols(unsigned numSymbols, unsigned shift) const {
+/// Replace symbols[offset ... numSymbols)
+/// by symbols[offset + shift ... shift + numSymbols).
+AffineExpr AffineExpr::shiftSymbols(unsigned numSymbols, unsigned shift,
+                                    unsigned offset) const {
   SmallVector<AffineExpr, 4> symbols;
-  for (unsigned idx = 0; idx < numSymbols; ++idx)
+  for (unsigned idx = 0; idx < offset; ++idx)
+    symbols.push_back(getAffineSymbolExpr(idx, getContext()));
+  for (unsigned idx = offset; idx < numSymbols; ++idx)
     symbols.push_back(getAffineSymbolExpr(idx + shift, getContext()));
   return replaceDimsAndSymbols({}, symbols);
 }

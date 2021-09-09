@@ -29,7 +29,7 @@ IFSStub::IFSStub(IFSStub &&Stub) {
   Symbols = std::move(Stub.Symbols);
 }
 
-IFSStubTriple::IFSStubTriple(IFSStubTriple const &Stub) {
+IFSStubTriple::IFSStubTriple(IFSStubTriple const &Stub) : IFSStub() {
   IfsVersion = Stub.IfsVersion;
   Target = Stub.Target;
   SoName = Stub.SoName;
@@ -37,7 +37,7 @@ IFSStubTriple::IFSStubTriple(IFSStubTriple const &Stub) {
   Symbols = Stub.Symbols;
 }
 
-IFSStubTriple::IFSStubTriple(IFSStub const &Stub) {
+IFSStubTriple::IFSStubTriple(IFSStub const &Stub) : IFSStub() {
   IfsVersion = Stub.IfsVersion;
   Target = Stub.Target;
   SoName = Stub.SoName;

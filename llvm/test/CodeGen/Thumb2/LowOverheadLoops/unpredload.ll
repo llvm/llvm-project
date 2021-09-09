@@ -11,9 +11,9 @@ define void @arm_cmplx_mag_squared_q15_mve(i16* %pSrc, i16* %pDst, i32 %blockSiz
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vld20.16 {q0, q1}, [r0]
 ; CHECK-NEXT:    vld21.16 {q0, q1}, [r0]!
-; CHECK-NEXT:    vmulh.s16 q2, q1, q1
+; CHECK-NEXT:    vmulh.s16 q1, q1, q1
 ; CHECK-NEXT:    vmulh.s16 q0, q0, q0
-; CHECK-NEXT:    vqadd.s16 q0, q0, q2
+; CHECK-NEXT:    vqadd.s16 q0, q0, q1
 ; CHECK-NEXT:    vshr.s16 q0, q0, #1
 ; CHECK-NEXT:    vstrh.16 q0, [r1], #16
 ; CHECK-NEXT:    letp lr, .LBB0_1

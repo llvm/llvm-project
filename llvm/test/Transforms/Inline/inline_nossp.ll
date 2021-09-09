@@ -2,8 +2,8 @@
 ; RUN: opt -passes='cgscc(inline)' %s -S -pass-remarks-missed=inline 2>&1 | FileCheck --check-prefixes=CHECK,CHECK-INLINE %s
 ; RUN: opt -passes=always-inline -o - -S %s | FileCheck %s
 
-; CHECK-INLINE: ssp not inlined into nossp_caller because it should never be inlined (cost=never): stack protected callee but caller requested no stack protector
-; CHECK-INLINE: nossp not inlined into ssp_caller because it should never be inlined (cost=never): stack protected caller but callee requested no stack protector
+; CHECK-INLINE: 'ssp' not inlined into 'nossp_caller' because it should never be inlined (cost=never): stack protected callee but caller requested no stack protector
+; CHECK-INLINE: 'nossp' not inlined into 'ssp_caller' because it should never be inlined (cost=never): stack protected caller but callee requested no stack protector
 
 ; Not interesting to test.
 define i32 @nossp() { ret i32 41 }

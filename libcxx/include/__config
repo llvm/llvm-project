@@ -24,16 +24,6 @@
 
 #ifdef __cplusplus
 
-#ifdef __GNUC__
-#  define _GNUC_VER (__GNUC__ * 100 + __GNUC_MINOR__)
-// The _GNUC_VER_NEW macro better represents the new GCC versioning scheme
-// introduced in GCC 5.0.
-#  define _GNUC_VER_NEW (_GNUC_VER * 10 + __GNUC_PATCHLEVEL__)
-#else
-#  define _GNUC_VER 0
-#  define _GNUC_VER_NEW 0
-#endif
-
 #define _LIBCPP_VERSION 14000
 
 #ifndef _LIBCPP_ABI_VERSION
@@ -265,9 +255,6 @@
 #  else  // _BYTE_ORDER == _LITTLE_ENDIAN
 #    define _LIBCPP_BIG_ENDIAN
 #  endif  // _BYTE_ORDER == _LITTLE_ENDIAN
-#  ifndef __LONG_LONG_SUPPORTED
-#    define _LIBCPP_HAS_NO_LONG_LONG
-#  endif  // __LONG_LONG_SUPPORTED
 #endif // __FreeBSD__
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -318,7 +305,7 @@
 #  endif
 #endif // __sun__
 
-#if defined(__OpenBSD__) || defined(__CloudABI__)
+#if defined(__OpenBSD__)
    // Certain architectures provide arc4random(). Prefer using
    // arc4random() over /dev/{u,}random to make it possible to obtain
    // random data even when using sandboxing mechanisms such as chroots,
@@ -354,6 +341,16 @@
 #  define _LIBCPP_NO_CFI
 #endif
 
+// If the compiler supports using_if_exists, pretend we have those functions and they'll
+// be picked up if the C library provides them.
+//
+// TODO: Once we drop support for Clang 12, we can assume the compiler supports using_if_exists
+//       for platforms that don't have a conforming C11 library, so we can drop this whole thing.
+#if __has_attribute(using_if_exists)
+# define _LIBCPP_HAS_TIMESPEC_GET
+# define _LIBCPP_HAS_QUICK_EXIT
+# define _LIBCPP_HAS_ALIGNED_ALLOC
+#else
 #if (defined(__ISO_C_VISIBLE) && (__ISO_C_VISIBLE >= 2011)) || __cplusplus >= 201103L
 #  if defined(__FreeBSD__)
 #    define _LIBCPP_HAS_ALIGNED_ALLOC
@@ -408,6 +405,7 @@
 #    endif
 #  endif // __APPLE__
 #endif
+#endif // __has_attribute(using_if_exists)
 
 #ifndef _LIBCPP_CXX03_LANG
 # define _LIBCPP_ALIGNOF(_Tp) alignof(_Tp)
@@ -481,10 +479,6 @@ typedef __char32_t char32_t;
 #  define _LIBCPP_HAS_BLOCKS_RUNTIME
 #endif
 
-#if !(__has_feature(cxx_relaxed_constexpr))
-#define _LIBCPP_HAS_NO_CXX14_CONSTEXPR
-#endif
-
 #if !(__has_feature(cxx_variable_templates))
 #define _LIBCPP_HAS_NO_VARIABLE_TEMPLATES
 #endif
@@ -502,25 +496,7 @@ typedef __char32_t char32_t;
 #define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK __attribute__((__no_sanitize__("unsigned-integer-overflow")))
 #endif
 
-#if __has_builtin(__builtin_launder)
-#define _LIBCPP_COMPILER_HAS_BUILTIN_LAUNDER
-#endif
-
-#if __has_builtin(__builtin_constant_p)
-#define _LIBCPP_COMPILER_HAS_BUILTIN_CONSTANT_P
-#endif
-
-#if !__is_identifier(__has_unique_object_representations)
-#define _LIBCPP_HAS_UNIQUE_OBJECT_REPRESENTATIONS
-#endif
-
 #define _LIBCPP_ALWAYS_INLINE __attribute__ ((__always_inline__))
-
-// Literal operators ""d and ""y are supported starting with LLVM Clang 8 and AppleClang 10.0.1
-#if (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 800) ||                 \
-    (defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1001)
-#define _LIBCPP_HAS_NO_CXX20_CHRONO_LITERALS
-#endif
 
 #define _LIBCPP_DISABLE_EXTENSION_WARNING __extension__
 
@@ -535,11 +511,6 @@ typedef __char32_t char32_t;
 #  define _LIBCPP_NO_EXCEPTIONS
 #endif
 
-// Determine if GCC supports relaxed constexpr
-#if !defined(__cpp_constexpr) || __cpp_constexpr < 201304L
-#define _LIBCPP_HAS_NO_CXX14_CONSTEXPR
-#endif
-
 // GCC 5 supports variable templates
 #if !defined(__cpp_variable_templates) || __cpp_variable_templates < 201304L
 #define _LIBCPP_HAS_NO_VARIABLE_TEMPLATES
@@ -547,12 +518,6 @@ typedef __char32_t char32_t;
 
 #if !defined(__SANITIZE_ADDRESS__)
 #define _LIBCPP_HAS_NO_ASAN
-#endif
-
-#if _GNUC_VER >= 700
-#define _LIBCPP_COMPILER_HAS_BUILTIN_LAUNDER
-#define _LIBCPP_COMPILER_HAS_BUILTIN_CONSTANT_P
-#define _LIBCPP_HAS_UNIQUE_OBJECT_REPRESENTATIONS
 #endif
 
 #define _LIBCPP_ALWAYS_INLINE __attribute__ ((__always_inline__))
@@ -569,7 +534,6 @@ typedef __char32_t char32_t;
 #error "MSVC versions prior to Visual Studio 2015 are not supported"
 #endif
 
-#define _LIBCPP_HAS_NO_CXX14_CONSTEXPR
 #define _LIBCPP_HAS_NO_VARIABLE_TEMPLATES
 #define __alignof__ __alignof
 #define _LIBCPP_NORETURN __declspec(noreturn)
@@ -929,7 +893,7 @@ typedef unsigned int   char32_t;
 #endif
 
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(_LIBCPP_MSVCRT_LIKE) || \
-    defined(__sun__) || defined(__NetBSD__) || defined(__CloudABI__)
+    defined(__sun__) || defined(__NetBSD__)
 #define _LIBCPP_LOCALE__L_EXTENSIONS 1
 #endif
 
@@ -1038,48 +1002,46 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_EXPLICIT_AFTER_CXX11 explicit
 #endif
 
-#if _LIBCPP_STD_VER > 11 && !defined(_LIBCPP_HAS_NO_CXX14_CONSTEXPR)
+#if _LIBCPP_STD_VER > 11
 #  define _LIBCPP_CONSTEXPR_AFTER_CXX11 constexpr
 #else
 #  define _LIBCPP_CONSTEXPR_AFTER_CXX11
 #endif
 
-#if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_CXX14_CONSTEXPR)
+#if _LIBCPP_STD_VER > 14
 #  define _LIBCPP_CONSTEXPR_AFTER_CXX14 constexpr
 #else
 #  define _LIBCPP_CONSTEXPR_AFTER_CXX14
 #endif
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CXX14_CONSTEXPR)
+#if _LIBCPP_STD_VER > 17
 #  define _LIBCPP_CONSTEXPR_AFTER_CXX17 constexpr
 #else
 #  define _LIBCPP_CONSTEXPR_AFTER_CXX17
 #endif
 
-// The _LIBCPP_NODISCARD_ATTRIBUTE should only be used to define other
-// NODISCARD macros to the correct attribute.
 #if __has_cpp_attribute(nodiscard) || defined(_LIBCPP_COMPILER_MSVC)
-#  define _LIBCPP_NODISCARD_ATTRIBUTE [[nodiscard]]
+#  define _LIBCPP_NODISCARD [[nodiscard]]
 #elif defined(_LIBCPP_COMPILER_CLANG_BASED) && !defined(_LIBCPP_CXX03_LANG)
-#  define _LIBCPP_NODISCARD_ATTRIBUTE [[clang::warn_unused_result]]
+#  define _LIBCPP_NODISCARD [[clang::warn_unused_result]]
 #else
 // We can't use GCC's [[gnu::warn_unused_result]] and
 // __attribute__((warn_unused_result)), because GCC does not silence them via
 // (void) cast.
-#  define _LIBCPP_NODISCARD_ATTRIBUTE
+#  define _LIBCPP_NODISCARD
 #endif
 
 // _LIBCPP_NODISCARD_EXT may be used to apply [[nodiscard]] to entities not
 // specified as such as an extension.
 #if defined(_LIBCPP_ENABLE_NODISCARD) && !defined(_LIBCPP_DISABLE_NODISCARD_EXT)
-#  define _LIBCPP_NODISCARD_EXT _LIBCPP_NODISCARD_ATTRIBUTE
+#  define _LIBCPP_NODISCARD_EXT _LIBCPP_NODISCARD
 #else
 #  define _LIBCPP_NODISCARD_EXT
 #endif
 
 #if !defined(_LIBCPP_DISABLE_NODISCARD_AFTER_CXX17) && \
     (_LIBCPP_STD_VER > 17 || defined(_LIBCPP_ENABLE_NODISCARD))
-#  define _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_NODISCARD_ATTRIBUTE
+#  define _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_NODISCARD
 #else
 #  define _LIBCPP_NODISCARD_AFTER_CXX17
 #endif
@@ -1090,10 +1052,10 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_INLINE_VAR
 #endif
 
-#if defined(_LIBCPP_DEBUG) || defined(_LIBCPP_HAS_NO_CXX14_CONSTEXPR)
-#   define _LIBCPP_CONSTEXPR_IF_NODEBUG
-#else
+#if !defined(_LIBCPP_DEBUG) && _LIBCPP_STD_VER > 11
 #   define _LIBCPP_CONSTEXPR_IF_NODEBUG constexpr
+#else
+#   define _LIBCPP_CONSTEXPR_IF_NODEBUG
 #endif
 
 #if __has_attribute(no_destroy)
@@ -1133,7 +1095,6 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
       defined(__linux__) || \
       defined(__GNU__) || \
       defined(__APPLE__) || \
-      defined(__CloudABI__) || \
       defined(__sun__) || \
       defined(__MVS__) || \
       defined(_AIX) || \
@@ -1207,21 +1168,6 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 # define _LIBCPP_HAS_TRIVIAL_CONDVAR_DESTRUCTION
 #endif
 
-// Systems that use capability-based security (FreeBSD with Capsicum,
-// Nuxi CloudABI) may only provide local filesystem access (using *at()).
-// Functions like open(), rename(), unlink() and stat() should not be
-// used, as they attempt to access the global filesystem namespace.
-#ifdef __CloudABI__
-#define _LIBCPP_HAS_NO_GLOBAL_FILESYSTEM_NAMESPACE
-#endif
-
-// CloudABI is intended for running networked services. Processes do not
-// have standard input and output channels.
-#ifdef __CloudABI__
-#define _LIBCPP_HAS_NO_STDIN
-#define _LIBCPP_HAS_NO_STDOUT
-#endif
-
 // Some systems do not provide gets() in their C library, for security reasons.
 #if defined(_LIBCPP_MSVCRT) || \
     (defined(__FreeBSD_version) && __FreeBSD_version >= 1300043) || \
@@ -1229,16 +1175,10 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #   define _LIBCPP_C_HAS_NO_GETS
 #endif
 
-#if defined(__BIONIC__) || defined(__CloudABI__) || defined(__NuttX__) ||      \
+#if defined(__BIONIC__) || defined(__NuttX__) ||      \
     defined(__Fuchsia__) || defined(__wasi__) || defined(_LIBCPP_HAS_MUSL_LIBC) || \
     defined(__MVS__) || defined(__OpenBSD__)
 #define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
-#endif
-
-// Thread-unsafe functions such as strtok() and localtime()
-// are not available.
-#ifdef __CloudABI__
-#define _LIBCPP_HAS_NO_THREAD_UNSAFE_C_FUNCTIONS
 #endif
 
 #if __has_feature(cxx_atomic) || __has_extension(c_atomic) || __has_keyword(_Atomic)
@@ -1288,14 +1228,6 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #  define _LIBCPP_SAFE_STATIC
 #endif
 
-#if !__has_builtin(__builtin_addressof) && _GNUC_VER < 700
-#define _LIBCPP_HAS_NO_BUILTIN_ADDRESSOF
-#endif
-
-#if !__has_builtin(__builtin_is_constant_evaluated) && _GNUC_VER < 900
-#define _LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED
-#endif
-
 #if __has_attribute(diagnose_if) && !defined(_LIBCPP_DISABLE_ADDITIONAL_DIAGNOSTICS)
 #  define _LIBCPP_DIAGNOSE_WARNING(...) \
      __attribute__((diagnose_if(__VA_ARGS__, "warning")))
@@ -1311,7 +1243,7 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #  define _LIBCPP_FALLTHROUGH() [[fallthrough]]
 #elif __has_cpp_attribute(clang::fallthrough)
 #  define _LIBCPP_FALLTHROUGH() [[clang::fallthrough]]
-#elif __has_attribute(fallthrough) || _GNUC_VER >= 700
+#elif __has_attribute(__fallthrough__)
 #  define _LIBCPP_FALLTHROUGH() __attribute__((__fallthrough__))
 #else
 #  define _LIBCPP_FALLTHROUGH() ((void)0)
@@ -1321,12 +1253,6 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_NODEBUG __attribute__((__nodebug__))
 #else
 #define _LIBCPP_NODEBUG
-#endif
-
-#if __has_attribute(__nodebug__) && (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 900)
-#   define _LIBCPP_NODEBUG_TYPE __attribute__((nodebug))
-#else
-#   define _LIBCPP_NODEBUG_TYPE
 #endif
 
 #if __has_attribute(__standalone_debug__)
@@ -1362,14 +1288,6 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_ENABLE_CXX20_REMOVED_RAW_STORAGE_ITERATOR
 #define _LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS
 #endif // _LIBCPP_ENABLE_CXX20_REMOVED_FEATURES
-
-#if !defined(__cpp_deduction_guides) || __cpp_deduction_guides < 201611
-#define _LIBCPP_HAS_NO_DEDUCTION_GUIDES
-#endif
-
-#if !__has_keyword(__is_aggregate) && (_GNUC_VER_NEW < 7001)
-#define _LIBCPP_HAS_NO_IS_AGGREGATE
-#endif
 
 #if !defined(__cpp_coroutines) || __cpp_coroutines < 201703L
 #define _LIBCPP_HAS_NO_COROUTINES
@@ -1428,12 +1346,6 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #  define _LIBCPP_FOPEN_CLOEXEC_MODE "e"
 #else
 #  define _LIBCPP_FOPEN_CLOEXEC_MODE
-#endif
-
-#ifdef _LIBCPP_COMPILER_HAS_BUILTIN_CONSTANT_P
-#define _LIBCPP_BUILTIN_CONSTANT_P(x) __builtin_constant_p(x)
-#else
-#define _LIBCPP_BUILTIN_CONSTANT_P(x) false
 #endif
 
 // Support for _FILE_OFFSET_BITS=64 landed gradually in Android, so the full set

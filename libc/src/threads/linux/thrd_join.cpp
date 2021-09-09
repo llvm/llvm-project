@@ -12,7 +12,8 @@
 #include "include/threads.h"      // For thrd_* type definitions.
 #include "src/__support/common.h"
 #include "src/sys/mman/munmap.h"
-#include "src/threads/linux/thread_utils.h"
+#include "src/threads/linux/Futex.h"
+#include "src/threads/linux/Thread.h"
 
 #include <linux/futex.h> // For futex operations.
 #include <stdatomic.h>   // For atomic_load.
@@ -20,8 +21,8 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, thrd_join, (thrd_t * thread, int *retval)) {
-  FutexData *clear_tid_address =
-      reinterpret_cast<FutexData *>(thread->__clear_tid);
+  FutexWord *clear_tid_address =
+      reinterpret_cast<FutexWord *>(thread->__clear_tid);
 
   // The kernel should set the value at the clear tid address to zero.
   // If not, it is a spurious wake and we should continue to wait on

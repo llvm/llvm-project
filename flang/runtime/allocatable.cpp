@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "allocatable.h"
-#include "assign.h"
+#include "flang/Runtime/allocatable.h"
 #include "derived.h"
 #include "stat.h"
 #include "terminator.h"
 #include "type-info.h"
+#include "flang/Runtime/assign.h"
 
 namespace Fortran::runtime {
 extern "C" {

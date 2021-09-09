@@ -67,11 +67,11 @@
 // SET reads 4 input bytes in little-endian byte order and stores them
 // in a properly aligned word in host byte order.
 #define SET(n)                                                                 \
-  (block[(n)] =                                                                \
-       (MD5_u32plus) ptr[(n) * 4] | ((MD5_u32plus) ptr[(n) * 4 + 1] << 8) |    \
-       ((MD5_u32plus) ptr[(n) * 4 + 2] << 16) |                                \
-       ((MD5_u32plus) ptr[(n) * 4 + 3] << 24))
-#define GET(n) (block[(n)])
+  (InternalState.block[(n)] = (MD5_u32plus)ptr[(n)*4] |                        \
+                              ((MD5_u32plus)ptr[(n)*4 + 1] << 8) |             \
+                              ((MD5_u32plus)ptr[(n)*4 + 2] << 16) |            \
+                              ((MD5_u32plus)ptr[(n)*4 + 3] << 24))
+#define GET(n) (InternalState.block[(n)])
 
 using namespace llvm;
 
@@ -85,10 +85,10 @@ const uint8_t *MD5::body(ArrayRef<uint8_t> Data) {
 
   ptr = Data.data();
 
-  a = this->a;
-  b = this->b;
-  c = this->c;
-  d = this->d;
+  a = InternalState.a;
+  b = InternalState.b;
+  c = InternalState.c;
+  d = InternalState.d;
 
   do {
     saved_a = a;
@@ -176,10 +176,10 @@ const uint8_t *MD5::body(ArrayRef<uint8_t> Data) {
     ptr += 64;
   } while (Size -= 64);
 
-  this->a = a;
-  this->b = b;
-  this->c = c;
-  this->d = d;
+  InternalState.a = a;
+  InternalState.b = b;
+  InternalState.c = c;
+  InternalState.d = d;
 
   return ptr;
 }
@@ -193,10 +193,10 @@ void MD5::update(ArrayRef<uint8_t> Data) {
   const uint8_t *Ptr = Data.data();
   unsigned long Size = Data.size();
 
-  saved_lo = lo;
-  if ((lo = (saved_lo + Size) & 0x1fffffff) < saved_lo)
-    hi++;
-  hi += Size >> 29;
+  saved_lo = InternalState.lo;
+  if ((InternalState.lo = (saved_lo + Size) & 0x1fffffff) < saved_lo)
+    InternalState.hi++;
+  InternalState.hi += Size >> 29;
 
   used = saved_lo & 0x3f;
 
@@ -204,14 +204,14 @@ void MD5::update(ArrayRef<uint8_t> Data) {
     free = 64 - used;
 
     if (Size < free) {
-      memcpy(&buffer[used], Ptr, Size);
+      memcpy(&InternalState.buffer[used], Ptr, Size);
       return;
     }
 
-    memcpy(&buffer[used], Ptr, free);
+    memcpy(&InternalState.buffer[used], Ptr, free);
     Ptr = Ptr + free;
     Size -= free;
-    body(makeArrayRef(buffer, 64));
+    body(makeArrayRef(InternalState.buffer, 64));
   }
 
   if (Size >= 64) {
@@ -219,7 +219,7 @@ void MD5::update(ArrayRef<uint8_t> Data) {
     Size &= 0x3f;
   }
 
-  memcpy(buffer, Ptr, Size);
+  memcpy(InternalState.buffer, Ptr, Size);
 }
 
 /// Add the bytes in the StringRef \p Str to the hash.
@@ -235,31 +235,48 @@ void MD5::update(StringRef Str) {
 void MD5::final(MD5Result &Result) {
   unsigned long used, free;
 
-  used = lo & 0x3f;
+  used = InternalState.lo & 0x3f;
 
-  buffer[used++] = 0x80;
+  InternalState.buffer[used++] = 0x80;
 
   free = 64 - used;
 
   if (free < 8) {
-    memset(&buffer[used], 0, free);
-    body(makeArrayRef(buffer, 64));
+    memset(&InternalState.buffer[used], 0, free);
+    body(makeArrayRef(InternalState.buffer, 64));
     used = 0;
     free = 64;
   }
 
-  memset(&buffer[used], 0, free - 8);
+  memset(&InternalState.buffer[used], 0, free - 8);
 
-  lo <<= 3;
-  support::endian::write32le(&buffer[56], lo);
-  support::endian::write32le(&buffer[60], hi);
+  InternalState.lo <<= 3;
+  support::endian::write32le(&InternalState.buffer[56], InternalState.lo);
+  support::endian::write32le(&InternalState.buffer[60], InternalState.hi);
 
-  body(makeArrayRef(buffer, 64));
+  body(makeArrayRef(InternalState.buffer, 64));
 
-  support::endian::write32le(&Result[0], a);
-  support::endian::write32le(&Result[4], b);
-  support::endian::write32le(&Result[8], c);
-  support::endian::write32le(&Result[12], d);
+  support::endian::write32le(&Result[0], InternalState.a);
+  support::endian::write32le(&Result[4], InternalState.b);
+  support::endian::write32le(&Result[8], InternalState.c);
+  support::endian::write32le(&Result[12], InternalState.d);
+}
+
+StringRef MD5::final() {
+  final(Result);
+  return StringRef(reinterpret_cast<char *>(Result.Bytes.data()),
+                   Result.Bytes.size());
+}
+
+StringRef MD5::result() {
+  auto StateToRestore = InternalState;
+
+  auto Hash = final();
+
+  // Restore the state
+  InternalState = StateToRestore;
+
+  return Hash;
 }
 
 SmallString<32> MD5::MD5Result::digest() const {

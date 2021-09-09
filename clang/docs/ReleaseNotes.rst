@@ -71,7 +71,9 @@ Deprecated Compiler Flags
 Modified Compiler Flags
 -----------------------
 
-- ...
+- Support has been added for the following processors (``-mcpu`` identifiers in parentheses):
+
+  - RISC-V SiFive S51 (``sifive-s51``).
 
 Removed Compiler Flags
 -------------------------
@@ -86,15 +88,31 @@ New Pragmas in Clang
 Attribute Changes in Clang
 --------------------------
 
-- ...
+- Attributes loaded as clang plugins which are sensitive to LangOpts must
+  now override ``acceptsLangOpts`` instead of ``diagLangOpts``.
+  Returning false will produce a generic "attribute ignored" diagnostic, as
+  with clang's built-in attributes.
+  If plugins want to provide richer diagnostics, they can do so when the
+  attribute is handled instead, e.g. in ``handleDeclAttribute``.
+  (This was changed in order to better support attributes in code completion).
 
 Windows Support
 ---------------
 
+- An MSVC compatibility workaround for C++ operator names was removed. As a
+  result, the ``<query.h>`` Windows SDK header may not compile out of the box.
+  Users should use a recent SDK and pass ``-DQUERY_H_RESTRICTION_PERMISSIVE``
+  or pass ``/permissive`` to disable C++ operator names altogether. See
+  `PR42427 <https://llvm.org/pr42427>` for more info.
+
 C Language Changes in Clang
 ---------------------------
 
-- ...
+- Wide multi-characters literals such as ``L'ab'`` that would previously be interpreted as ``L'b'``
+  are now ill-formed in all language modes. The motivation for this change is outlined in
+  `P2362 <wg21.link/P2362>`_.
+- Support for ``__attribute__((error("")))`` and
+  ``__attribute__((warning("")))`` function attributes have been added.
 
 C++ Language Changes in Clang
 -----------------------------
@@ -108,6 +126,12 @@ C++20 Feature Support
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 ...
+
+CUDA Language Changes in Clang
+------------------------------
+
+- Clang now supports CUDA versions up to 11.4.
+- Default GPU architecture has been changed from sm_20 to sm_35.
 
 Objective-C Language Changes in Clang
 -------------------------------------
@@ -123,7 +147,8 @@ ABI Changes in Clang
 OpenMP Support in Clang
 -----------------------
 
-- ...
+- ``clang-nvlink-wrapper`` tool introduced to support linking of cubin files archived in an archive. See :doc:`ClangNvlinkWrapper`.
+
 
 CUDA Support in Clang
 ---------------------

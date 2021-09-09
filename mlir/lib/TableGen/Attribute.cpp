@@ -65,7 +65,7 @@ StringRef Attribute::getStorageType() const {
   const auto *init = def->getValueInit("storageType");
   auto type = getValueAsString(init);
   if (type.empty())
-    return "Attribute";
+    return "::mlir::Attribute";
   return type;
 }
 

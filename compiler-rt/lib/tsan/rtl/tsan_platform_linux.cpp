@@ -85,10 +85,8 @@ static void InitializeLongjmpXorKey();
 static uptr longjmp_xor_key;
 #endif
 
-#ifdef TSAN_RUNTIME_VMA
 // Runtime detected VMA size.
 uptr vmaSize;
-#endif
 
 enum {
   MemTotal  = 0,
@@ -109,17 +107,12 @@ void FillProfileCallback(uptr p, uptr rss, bool file,
     mem[MemShadow] += rss;
   else if (p >= MetaShadowBeg() && p < MetaShadowEnd())
     mem[MemMeta] += rss;
-#if !SANITIZER_GO
-  else if (p >= HeapMemBeg() && p < HeapMemEnd())
-    mem[MemHeap] += rss;
   else if (p >= LoAppMemBeg() && p < LoAppMemEnd())
     mem[file ? MemFile : MemMmap] += rss;
   else if (p >= HiAppMemBeg() && p < HiAppMemEnd())
     mem[file ? MemFile : MemMmap] += rss;
-#else
-  else if (p >= AppMemBeg() && p < AppMemEnd())
-    mem[file ? MemFile : MemMmap] += rss;
-#endif
+  else if (p >= HeapMemBeg() && p < HeapMemEnd())
+    mem[MemHeap] += rss;
   else if (p >= TraceMemBeg() && p < TraceMemEnd())
     mem[MemTrace] += rss;
   else
@@ -219,7 +212,6 @@ void InitializeShadowMemoryPlatform() {
 #endif  // #if !SANITIZER_GO
 
 void InitializePlatformEarly() {
-#ifdef TSAN_RUNTIME_VMA
   vmaSize =
     (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1);
 #if defined(__aarch64__)
@@ -264,7 +256,6 @@ void InitializePlatformEarly() {
     Die();
   }
 # endif
-#endif
 #endif
 }
 
@@ -341,7 +332,7 @@ int ExtractResolvFDs(void *state, int *fds, int nfd) {
 }
 
 // Extract file descriptors passed via UNIX domain sockets.
-// This is requried to properly handle "open" of these fds.
+// This is required to properly handle "open" of these fds.
 // see 'man recvmsg' and 'man 3 cmsg'.
 int ExtractRecvmsgFDs(void *msgp, int *fds, int nfd) {
   int res = 0;

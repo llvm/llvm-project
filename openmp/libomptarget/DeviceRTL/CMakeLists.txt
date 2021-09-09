@@ -21,6 +21,12 @@ if (NOT (LIBOMPTARGET_DEP_CUDA_FOUND OR LIBOMPTARGET_BUILD_NVPTX_BCLIB))
   return()
 endif()
 
+if (NOT LIBOMPTARGET_LLVM_INCLUDE_DIRS)
+  libomptarget_say("Not building device RTL: Missing definition for LIBOMPTARGET_LLVM_INCLUDE_DIRS")
+  return()
+endif()
+
+
 # Check if we can create an LLVM bitcode implementation of the runtime library
 # that could be inlined in the user application. For that we need to find
 # a Clang compiler capable of compiling our CUDA files to LLVM bitcode and
@@ -132,6 +138,10 @@ set(src_files
 set(clang_opt_flags -O1 -mllvm -openmp-opt-disable -DSHARED_SCRATCHPAD_SIZE=2048)
 set(link_opt_flags  -O1        -openmp-opt-disable)
 
+# Prepend -I to each list element
+set (LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL "${LIBOMPTARGET_LLVM_INCLUDE_DIRS}")
+list(TRANSFORM LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL PREPEND "-I")
+
 # Set flags for LLVM Bitcode compilation.
 set(bc_flags -S -x c++ -std=c++17
               ${clang_opt_flags}
@@ -141,6 +151,7 @@ set(bc_flags -S -x c++ -std=c++17
              -fopenmp -fopenmp-cuda-mode -Xclang -fopenmp-is-device
              -Xclang -target-feature -Xclang +ptx61
              -I${include_directory}
+             ${LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL}
 )
 
 if(${LIBOMPTARGET_DEVICE_DEBUG})
@@ -151,6 +162,7 @@ endif()
 
 # Create target to build all Bitcode libraries.
 add_custom_target(omptarget-new-nvptx-bc)
+add_dependencies(omptarget-new-nvptx-bc opt llvm-link)
 
 # Generate a Bitcode library for all the compute capabilities the user requested
 foreach(sm ${nvptx_sm_list})
@@ -197,6 +209,7 @@ foreach(sm ${nvptx_sm_list})
 
   add_custom_target(${bclib_target_name} ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}_opt)
   add_dependencies(omptarget-new-nvptx-bc ${bclib_target_name})
+  add_dependencies(${bclib_target_name} opt llvm-link)
 
   # Copy library to destination.
   add_custom_command(TARGET ${bclib_target_name} POST_BUILD

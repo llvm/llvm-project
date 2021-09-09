@@ -377,12 +377,12 @@ private:
     if (!Root)
       return;
     // Depth first walk on PDom tree to fill the CHIargs at each PDF.
-    RenameStackType RenameStack;
     for (auto Node : depth_first(Root)) {
       BasicBlock *BB = Node->getBlock();
       if (!BB)
         continue;
 
+      RenameStackType RenameStack;
       // Collect all values in BB and push to stack.
       fillRenameStack(BB, ValueBBs, RenameStack);
 
@@ -827,6 +827,8 @@ void GVNHoist::fillRenameStack(BasicBlock *BB, InValuesType &ValueBBs,
   auto it1 = ValueBBs.find(BB);
   if (it1 != ValueBBs.end()) {
     // Iterate in reverse order to keep lower ranked values on the top.
+    LLVM_DEBUG(dbgs() << "\nVisiting: " << BB->getName()
+                      << " for pushing instructions on stack";);
     for (std::pair<VNType, Instruction *> &VI : reverse(it1->second)) {
       // Get the value of instruction I
       LLVM_DEBUG(dbgs() << "\nPushing on stack: " << *VI.second);

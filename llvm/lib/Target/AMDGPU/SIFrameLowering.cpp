@@ -1260,8 +1260,11 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
                      FuncInfo->FramePointerSaveIndex)) &&
          "Needed to save FP but didn't save it anywhere");
 
+  // If we allow spilling to AGPRs we may have saved FP but then spill
+  // everything into AGPRs instead of the stack.
   assert((HasFP || (!FuncInfo->SGPRForFPSaveRestoreCopy &&
-                    !FuncInfo->FramePointerSaveIndex)) &&
+                    !FuncInfo->FramePointerSaveIndex) ||
+                   EnableSpillVGPRToAGPR) &&
          "Saved FP but didn't need it");
 
   assert((!HasBP || (FuncInfo->SGPRForBPSaveRestoreCopy ||
@@ -1835,6 +1838,17 @@ MachineInstr *SIFrameLowering::buildCFI(MachineBasicBlock &MBB,
   return BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
       .addCFIIndex(MF.addFrameInst(CFIInst))
       .setMIFlag(MachineInstr::FrameSetup);
+}
+
+MachineInstr *SIFrameLowering::buildCFIForRegToRegSpill(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    const DebugLoc &DL, const Register Reg, const Register RegCopy) const {
+  MachineFunction &MF = *MBB.getParent();
+  const MCRegisterInfo &MCRI = *MF.getMMI().getContext().getRegisterInfo();
+  return buildCFI(
+      MBB, MBBI, DL,
+      MCCFIInstruction::createRegister(nullptr, MCRI.getDwarfRegNum(Reg, false),
+                                       MCRI.getDwarfRegNum(RegCopy, false)));
 }
 
 static void encodeDwarfRegisterLocation(int DwarfReg, raw_ostream &OS) {

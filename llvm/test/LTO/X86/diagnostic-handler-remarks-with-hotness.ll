@@ -26,9 +26,11 @@
 ; YAML-NEXT: Function:        main
 ; YAML-NEXT: Hotness:         300
 ; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          ''''
 ; YAML-NEXT:   - Callee:          foo
-; YAML-NEXT:   - String:          ' inlined into '
+; YAML-NEXT:   - String:          ''' inlined into '''
 ; YAML-NEXT:   - Caller:          main
+; YAML-NEXT:   - String:          ''''
 ; YAML-NEXT:   - String:          ' with '
 ; YAML-NEXT:   - String:          '(cost='
 ; YAML-NEXT:   - Cost:            '-15000'

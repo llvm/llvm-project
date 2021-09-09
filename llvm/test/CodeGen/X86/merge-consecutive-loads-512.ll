@@ -8,17 +8,13 @@
 define <8 x double> @merge_8f64_2f64_12u4(<2 x double>* %ptr) nounwind uwtable noinline ssp {
 ; ALL-LABEL: merge_8f64_2f64_12u4:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vmovups 16(%rdi), %ymm0
-; ALL-NEXT:    vinsertf128 $1, 64(%rdi), %ymm0, %ymm1
-; ALL-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; ALL-NEXT:    vmovups 16(%rdi), %zmm0
 ; ALL-NEXT:    retq
 ;
 ; X86-AVX512F-LABEL: merge_8f64_2f64_12u4:
 ; X86-AVX512F:       # %bb.0:
 ; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512F-NEXT:    vmovups 16(%eax), %ymm0
-; X86-AVX512F-NEXT:    vinsertf128 $1, 64(%eax), %ymm0, %ymm1
-; X86-AVX512F-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; X86-AVX512F-NEXT:    vmovups 16(%eax), %zmm0
 ; X86-AVX512F-NEXT:    retl
   %ptr0 = getelementptr inbounds <2 x double>, <2 x double>* %ptr, i64 1
   %ptr1 = getelementptr inbounds <2 x double>, <2 x double>* %ptr, i64 2
@@ -35,19 +31,15 @@ define <8 x double> @merge_8f64_2f64_12u4(<2 x double>* %ptr) nounwind uwtable n
 define <8 x double> @merge_8f64_2f64_23z5(<2 x double>* %ptr) nounwind uwtable noinline ssp {
 ; ALL-LABEL: merge_8f64_2f64_23z5:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vmovups 32(%rdi), %ymm0
-; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vinsertf128 $1, 80(%rdi), %ymm1, %ymm1
-; ALL-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; ALL-NEXT:    vmovdqu64 32(%rdi), %zmm0
+; ALL-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; ALL-NEXT:    retq
 ;
 ; X86-AVX512F-LABEL: merge_8f64_2f64_23z5:
 ; X86-AVX512F:       # %bb.0:
 ; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512F-NEXT:    vmovups 32(%eax), %ymm0
-; X86-AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X86-AVX512F-NEXT:    vinsertf128 $1, 80(%eax), %ymm1, %ymm1
-; X86-AVX512F-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; X86-AVX512F-NEXT:    vmovdqu64 32(%eax), %zmm0
+; X86-AVX512F-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}, %zmm0, %zmm0
 ; X86-AVX512F-NEXT:    retl
   %ptr0 = getelementptr inbounds <2 x double>, <2 x double>* %ptr, i64 2
   %ptr1 = getelementptr inbounds <2 x double>, <2 x double>* %ptr, i64 3

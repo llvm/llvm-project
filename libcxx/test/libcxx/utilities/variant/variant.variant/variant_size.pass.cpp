@@ -9,9 +9,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// GCC 5 pretends it supports C++17, but it doesn't properly support it
-// UNSUPPORTED: gcc-5
-
 // <variant>
 
 // template <class ...Types> class variant;

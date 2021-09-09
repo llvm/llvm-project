@@ -210,7 +210,7 @@ static Value reduceIfNeeded(OpBuilder &b, VectorType targetVectorType,
   unsigned idx = 0;
   SmallVector<bool> reductionMask(linalgOp.iterator_types().size(), false);
   for (auto attr : linalgOp.iterator_types()) {
-    if (isReductionIteratorType(attr))
+    if (isReductionIterator(attr))
       reductionMask[idx] = true;
     ++idx;
   }
@@ -615,7 +615,7 @@ static bool allIndexingsAreProjectedPermutation(LinalgOp op) {
 // TODO: probably need some extra checks for reduction followed by consumer
 // ops that may not commute (e.g. linear reduction + non-linear instructions).
 static LogicalResult reductionPreconditions(LinalgOp op) {
-  if (llvm::none_of(op.iterator_types(), isReductionIteratorType))
+  if (llvm::none_of(op.iterator_types(), isReductionIterator))
     return failure();
   for (OpOperand *opOperand : op.getOutputOperands()) {
     Operation *reductionOp = getSingleBinaryOpAssumedReduction(opOperand);
@@ -1127,7 +1127,7 @@ LogicalResult ConvOpVectorization<ConvOp, N>::matchAndRewrite(
   return success();
 }
 
-using ConvOpConst = ConvOpVectorization<ConvWOp, 1>;
+using ConvOpConst = ConvOpVectorization<Conv1DOp, 1>;
 
 /// Inserts tiling, promotion and vectorization pattern for ConvOp
 /// conversion into corresponding pattern lists.
@@ -1165,43 +1165,22 @@ void mlir::linalg::populateConvVectorizationPatterns(
   RewritePatternSet tiling(context);
   RewritePatternSet promotion(context);
   RewritePatternSet vectorization(context);
-  populateVectorizationPatterns<ConvWOp, 1>(tiling, promotion, vectorization,
-                                            tileSizes);
-
-  populateVectorizationPatterns<ConvNWCOp, 3>(tiling, promotion, vectorization,
-                                              tileSizes);
-  populateVectorizationPatterns<ConvInputNWCFilterWCFOp, 3>(
-      tiling, promotion, vectorization, tileSizes);
-
-  populateVectorizationPatterns<ConvNCWOp, 3>(tiling, promotion, vectorization,
-                                              tileSizes);
-  populateVectorizationPatterns<ConvInputNCWFilterWCFOp, 3>(
-      tiling, promotion, vectorization, tileSizes);
-
-  populateVectorizationPatterns<ConvHWOp, 2>(tiling, promotion, vectorization,
+  populateVectorizationPatterns<Conv1DOp, 1>(tiling, promotion, vectorization,
                                              tileSizes);
 
-  populateVectorizationPatterns<ConvNHWCOp, 4>(tiling, promotion, vectorization,
-                                               tileSizes);
-  populateVectorizationPatterns<ConvInputNHWCFilterHWCFOp, 4>(
-      tiling, promotion, vectorization, tileSizes);
+  populateVectorizationPatterns<Conv2DOp, 2>(tiling, promotion, vectorization,
+                                             tileSizes);
 
-  populateVectorizationPatterns<Conv2DNchwOp, 4>(tiling, promotion,
-                                                 vectorization, tileSizes);
-  populateVectorizationPatterns<ConvInputNCHWFilterHWCFOp, 4>(
-      tiling, promotion, vectorization, tileSizes);
+  populateVectorizationPatterns<Conv3DOp, 3>(tiling, promotion, vectorization,
+                                             tileSizes);
 
-  populateVectorizationPatterns<ConvDHWOp, 3>(tiling, promotion, vectorization,
-                                              tileSizes);
+  populateVectorizationPatterns<Conv1DNwcWcfOp, 3>(tiling, promotion,
+                                                   vectorization, tileSizes);
 
-  populateVectorizationPatterns<ConvNDHWCOp, 5>(tiling, promotion,
-                                                vectorization, tileSizes);
-  populateVectorizationPatterns<ConvInputNDHWCFilterDHWCFOp, 5>(
-      tiling, promotion, vectorization, tileSizes);
+  populateVectorizationPatterns<Conv2DNhwcHwcfOp, 4>(tiling, promotion,
+                                                     vectorization, tileSizes);
 
-  populateVectorizationPatterns<ConvNCDHWOp, 5>(tiling, promotion,
-                                                vectorization, tileSizes);
-  populateVectorizationPatterns<ConvInputNCDHWFilterDHWCFOp, 5>(
+  populateVectorizationPatterns<Conv3DNdhwcDhwcfOp, 5>(
       tiling, promotion, vectorization, tileSizes);
 
   patterns.push_back(std::move(tiling));

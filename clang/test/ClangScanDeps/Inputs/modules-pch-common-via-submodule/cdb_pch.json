@@ -1,0 +1,7 @@
+[
+  {
+    "directory": "DIR",
+    "command": "clang -x c-header DIR/pch.h -fmodules -gmodules -fimplicit-module-maps -fmodules-cache-path=DIR/cache -o DIR/pch.h.gch",
+    "file": "DIR/pch.h"
+  }
+]

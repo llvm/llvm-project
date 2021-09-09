@@ -83,6 +83,9 @@ public:
     return valueMapping.lookup(value);
   }
 
+  /// Looks up remapped a list of remapped values.
+  SmallVector<llvm::Value *> lookupValues(ValueRange values);
+
   /// Stores the mapping between an MLIR block and LLVM IR basic block.
   void mapBlock(Block *mlir, llvm::BasicBlock *llvm) {
     auto result = blockMapping.try_emplace(mlir, llvm);
@@ -110,10 +113,19 @@ public:
     return branchMapping.lookup(op);
   }
 
+  /// Removes the mapping for blocks contained in the region and values defined
+  /// in these blocks.
+  void forgetMapping(Region &region);
+
   /// Returns the LLVM metadata corresponding to a reference to an mlir LLVM
   /// dialect access group operation.
   llvm::MDNode *getAccessGroup(Operation &opInst,
                                SymbolRefAttr accessGroupRef) const;
+
+  /// Returns the LLVM metadata corresponding to a reference to an mlir LLVM
+  /// dialect alias scope operation
+  llvm::MDNode *getAliasScope(Operation &opInst,
+                              SymbolRefAttr aliasScopeRef) const;
 
   /// Returns the LLVM metadata corresponding to a llvm loop's codegen
   /// options attribute.
@@ -131,11 +143,11 @@ public:
   // Sets LLVM metadata for memory operations that are in a parallel loop.
   void setAccessGroupsMetadata(Operation *op, llvm::Instruction *inst);
 
+  // Sets LLVM metadata for memory operations that have alias scope information.
+  void setAliasScopeMetadata(Operation *op, llvm::Instruction *inst);
+
   /// Converts the type from MLIR LLVM dialect to LLVM.
   llvm::Type *convertType(Type type);
-
-  /// Looks up remapped a list of remapped values.
-  SmallVector<llvm::Value *, 8> lookupValues(ValueRange values);
 
   /// Returns the MLIR context of the module being translated.
   MLIRContext &getContext() { return *mlirModule->getContext(); }
@@ -209,7 +221,7 @@ public:
   /// translated makes the frame available when translating ops within that
   /// region.
   template <typename T, typename... Args>
-  void stackPush(Args &&... args) {
+  void stackPush(Args &&...args) {
     static_assert(
         std::is_base_of<StackFrame, T>::value,
         "can only push instances of StackFrame on ModuleTranslation stack");
@@ -268,6 +280,10 @@ private:
   /// metadata nodes.
   LogicalResult createAccessGroupMetadata();
 
+  /// Process alias.scope LLVM Metadata operations and create LLVM
+  /// metadata nodes for them and their domains.
+  LogicalResult createAliasScopeMetadata();
+
   /// Translates dialect attributes attached to the given operation.
   LogicalResult convertDialectAttributes(Operation *op);
 
@@ -300,7 +316,7 @@ private:
   /// values after all operations are converted.
   DenseMap<Operation *, llvm::Instruction *> branchMapping;
 
-  /// Mapping from an access group metadata optation to its LLVM metadata.
+  /// Mapping from an access group metadata operation to its LLVM metadata.
   /// This map is populated on module entry and is used to annotate loops (as
   /// identified via their branches) and contained memory accesses.
   DenseMap<Operation *, llvm::MDNode *> accessGroupMetadataMapping;
@@ -309,6 +325,10 @@ private:
   /// metadata. The metadata is attached to Latch block branches with this
   /// attribute.
   DenseMap<Attribute, llvm::MDNode *> loopOptionsMetadataMapping;
+
+  /// Mapping from an access scope metadata operation to its LLVM metadata.
+  /// This map is populated on module entry.
+  DenseMap<Operation *, llvm::MDNode *> aliasScopeMetadataMapping;
 
   /// Stack of user-specified state elements, useful when translating operations
   /// with regions.

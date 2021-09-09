@@ -255,8 +255,6 @@ PreservedAnalyses MemProfilerPass::run(Function &F,
   if (Profiler.instrumentFunction(F))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
-
-  return PreservedAnalyses::all();
 }
 
 ModuleMemProfilerPass::ModuleMemProfilerPass() {}

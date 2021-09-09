@@ -97,6 +97,31 @@ struct XCOFFSectionHeader64 : XCOFFSectionHeader<XCOFFSectionHeader64> {
   char Padding[4];
 };
 
+struct LoaderSectionHeader32 {
+  support::ubig32_t Version;
+  support::ubig32_t NumberOfSymTabEnt;
+  support::ubig32_t NumberOfRelTabEnt;
+  support::ubig32_t LengthOfImpidStrTbl;
+  support::ubig32_t NumberOfImpid;
+  support::big32_t OffsetToImpid;
+  support::ubig32_t LengthOfStrTbl;
+  support::big32_t OffsetToStrTbl;
+};
+
+struct LoaderSectionHeader64 {
+  support::ubig32_t Version;
+  support::ubig32_t NumberOfSymTabEnt;
+  support::ubig32_t NumberOfRelTabEnt;
+  support::ubig32_t LengthOfImpidStrTbl;
+  support::ubig32_t NumberOfImpid;
+  support::ubig32_t LengthOfStrTbl;
+  support::big64_t OffsetToImpid;
+  support::big64_t OffsetToStrTbl;
+  support::big64_t OffsetToSymTbl;
+  char Padding[16];
+  support::big32_t OffsetToRelEnt;
+};
+
 struct XCOFFStringTable {
   uint32_t Size;
   const char *Data;
@@ -228,7 +253,7 @@ struct XCOFFSectAuxEntForStat {
   uint8_t Pad[10];
 }; // 32-bit XCOFF file only.
 
-struct XCOFFRelocation32 {
+template <typename AddressType> struct XCOFFRelocation {
   // Masks for packing/unpacking the r_rsize field of relocations.
 
   // The msb is used to indicate if the bits being relocated are signed or
@@ -244,7 +269,7 @@ struct XCOFFRelocation32 {
   static constexpr uint8_t XR_BIASED_LENGTH_MASK = 0x3f;
 
 public:
-  support::ubig32_t VirtualAddress;
+  AddressType VirtualAddress;
   support::ubig32_t SymbolIndex;
 
   // Packed field, see XR_* masks for details of packing.
@@ -259,6 +284,12 @@ public:
   // Returns the number of bits being relocated.
   uint8_t getRelocatedLength() const;
 };
+
+extern template struct XCOFFRelocation<llvm::support::ubig32_t>;
+extern template struct XCOFFRelocation<llvm::support::ubig64_t>;
+
+struct XCOFFRelocation32 : XCOFFRelocation<llvm::support::ubig32_t> {};
+struct XCOFFRelocation64 : XCOFFRelocation<llvm::support::ubig64_t> {};
 
 class XCOFFSymbolRef;
 
@@ -275,6 +306,7 @@ private:
 
   const XCOFFSectionHeader32 *sectionHeaderTable32() const;
   const XCOFFSectionHeader64 *sectionHeaderTable64() const;
+  template <typename T> const T *sectionHeaderTable() const;
 
   size_t getFileHeaderSize() const;
   size_t getSectionHeaderSize() const;
@@ -283,6 +315,7 @@ private:
   const XCOFFSectionHeader64 *toSection64(DataRefImpl Ref) const;
   uintptr_t getSectionHeaderTableAddress() const;
   uintptr_t getEndOfSymbolTableAddress() const;
+  Expected<uintptr_t> getLoaderSectionAddress() const;
 
   // This returns a pointer to the start of the storage for the name field of
   // the 32-bit or 64-bit SectionHeader struct. This string is *not* necessarily
@@ -415,11 +448,15 @@ public:
   void checkSymbolEntryPointer(uintptr_t SymbolEntPtr) const;
 
   // Relocation-related interfaces.
+  template <typename T>
   Expected<uint32_t>
-  getLogicalNumberOfRelocationEntries(const XCOFFSectionHeader32 &Sec) const;
+  getNumberOfRelocationEntries(const XCOFFSectionHeader<T> &Sec) const;
 
-  Expected<ArrayRef<XCOFFRelocation32>>
-  relocations(const XCOFFSectionHeader32 &) const;
+  template <typename Shdr, typename Reloc>
+  Expected<ArrayRef<Reloc>> relocations(const Shdr &Sec) const;
+
+  // Loader section related interfaces.
+  Expected<StringRef> getImportFileTable() const;
 
   // This function returns string table entry.
   Expected<StringRef> getStringTableEntry(uint32_t Offset) const;
@@ -572,6 +609,7 @@ class XCOFFTracebackTable {
   Optional<uint8_t> ExtensionTable;
 
   XCOFFTracebackTable(const uint8_t *Ptr, uint64_t &Size, Error &Err);
+
 public:
   /// Parse an XCOFF Traceback Table from \a Ptr with \a Size bytes.
   /// Returns an XCOFFTracebackTable upon successful parsing, otherwise an

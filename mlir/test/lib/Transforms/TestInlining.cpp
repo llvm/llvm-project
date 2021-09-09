@@ -22,7 +22,7 @@
 #include "llvm/ADT/StringSet.h"
 
 using namespace mlir;
-using namespace mlir::test;
+using namespace test;
 
 namespace {
 struct Inliner : public PassWrapper<Inliner, FunctionPass> {

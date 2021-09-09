@@ -147,15 +147,10 @@ IncrementalCompilerBuilder::create(std::vector<const char *> &ClangArgv) {
   // Buffer diagnostics from argument parsing so that we can output them using a
   // well formed diagnostic object.
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
+      CreateAndPopulateDiagOpts(ClangArgv);
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagsBuffer);
-  unsigned MissingArgIndex, MissingArgCount;
-  const llvm::opt::OptTable &Opts = driver::getDriverOptTable();
-  llvm::opt::InputArgList ParsedArgs =
-      Opts.ParseArgs(ArrayRef<const char *>(ClangArgv).slice(1),
-                     MissingArgIndex, MissingArgCount);
-  ParseDiagnosticArgs(*DiagOpts, ParsedArgs, &Diags);
 
   driver::Driver Driver(/*MainBinaryName=*/ClangArgv[0],
                         llvm::sys::getProcessTriple(), Diags);

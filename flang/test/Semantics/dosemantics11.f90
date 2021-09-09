@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! C1135 A cycle-stmt shall not appear within a CHANGE TEAM, CRITICAL, or DO 
 ! CONCURRENT construct if it belongs to an outer construct.
 !

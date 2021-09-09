@@ -778,7 +778,7 @@ def MemRef_PrefetchOp : MemRef_Op<"prefetch"> {
 def MemRef_ReinterpretCastOp:
     BaseOpWithOffsetSizesAndStrides<MemRef_Dialect, "reinterpret_cast", [
       NoSideEffect, AttrSizedOperandSegments, ViewLikeOpInterface,
-      OffsetSizeAndStrideOpInterface
+      OffsetSizeAndStrideOpInterface, MemRefsNormalizable
     ]> {
   let summary = "memref reinterpret cast operation";
   let description = [{

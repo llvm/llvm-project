@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -247,7 +248,10 @@ static void emitDialectDoc(const Dialect &dialect, ArrayRef<AttrDef> attrDefs,
   emitIfNotEmpty(dialect.getSummary(), os);
   emitIfNotEmpty(dialect.getDescription(), os);
 
-  os << "[TOC]\n\n";
+  // Generate a TOC marker except if description already contains one.
+  llvm::Regex r("^[[:space:]]*\\[TOC\\]$", llvm::Regex::RegexFlags::Newline);
+  if (!r.match(dialect.getDescription()))
+    os << "[TOC]\n\n";
 
   if (!attrDefs.empty()) {
     os << "## Attribute definition\n\n";

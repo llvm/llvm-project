@@ -21,14 +21,14 @@ __attribute__((noinline)) int callee2() {
   return 2;
 }
 
-// REMARKS: _Z7callee1v inlined into _Z7caller1v
-// HOT_CALL: _Z7callee1v inlined into _Z7caller1v
+// REMARKS: '_Z7callee1v' inlined into '_Z7caller1v'
+// HOT_CALL: '_Z7callee1v' inlined into '_Z7caller1v'
 int caller1() {
   return callee1();
 }
 
-// REMARKS: _Z7callee2v not inlined into _Z7caller2v
-// HOT_CALL-NOT: _Z7callee2v not inlined into _Z7caller2v
+// REMARKS: '_Z7callee2v' not inlined into '_Z7caller2v'
+// HOT_CALL-NOT: '_Z7callee2v' not inlined into '_Z7caller2v'
 int caller2() {
   return callee2();
 }

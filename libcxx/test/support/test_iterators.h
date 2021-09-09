@@ -914,6 +914,13 @@ private:
   difference_type stride_displacement_ = 0;
 };
 
+template<class T, class U>
+concept sentinel_for_base = requires(U const& u) {
+  u.base();
+  requires std::input_or_output_iterator<std::remove_cvref_t<decltype(u.base())>>;
+  requires std::equality_comparable_with<T, decltype(u.base())>;
+};
+
 template <std::input_or_output_iterator I>
 class sentinel_wrapper {
 public:
@@ -926,6 +933,12 @@ public:
 
   constexpr const I& base() const& { return base_; }
   constexpr I base() && { return std::move(base_); }
+
+  template<std::input_or_output_iterator I2>
+  requires sentinel_for_base<I, I2>
+  constexpr bool operator==(I2 const& other) const {
+    return base_ == other.base();
+  }
 
 private:
   I base_ = I();

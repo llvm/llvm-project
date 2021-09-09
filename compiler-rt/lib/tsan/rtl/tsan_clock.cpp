@@ -72,9 +72,9 @@
 // clk_ - variable size vector clock, low kClkBits hold timestamp,
 //   the remaining bits hold "acquired" flag (the actual value is thread's
 //   reused counter);
-//   if acquried == thr->reused_, then the respective thread has already
+//   if acquired == thr->reused_, then the respective thread has already
 //   acquired this clock (except possibly for dirty elements).
-// dirty_ - holds up to two indeces in the vector clock that other threads
+// dirty_ - holds up to two indices in the vector clock that other threads
 //   need to acquire regardless of "acquired" flag value;
 // release_store_tid_ - denotes that the clock state is a result of
 //   release-store operation by the thread with release_store_tid_ index.
@@ -272,7 +272,7 @@ void ThreadClock::ReleaseStore(ClockCache *c, SyncClock *dst) {
     // we could update the existing clock and cache it, or replace it with the
     // currently cached clock and release the old one. And for a shared
     // existing clock, we could replace it with the currently cached;
-    // or unshare, update and cache. But, for simplicity, we currnetly reuse
+    // or unshare, update and cache. But, for simplicity, we currently reuse
     // cached clock only when the target clock is empty.
     dst->tab_ = ctx->clock_alloc.Map(cached_idx_);
     dst->tab_idx_ = cached_idx_;
@@ -285,7 +285,7 @@ void ThreadClock::ReleaseStore(ClockCache *c, SyncClock *dst) {
     dst->dirty_[0].epoch = clk_[tid_];
     dst->release_store_tid_ = tid_;
     dst->release_store_reused_ = reused_;
-    // Rememeber that we don't need to acquire it in future.
+    // Remember that we don't need to acquire it in future.
     dst->elem(tid_).reused = reused_;
     // Grab a reference.
     atomic_fetch_add(ref_ptr(dst->tab_), 1, memory_order_relaxed);
@@ -316,7 +316,7 @@ void ThreadClock::ReleaseStore(ClockCache *c, SyncClock *dst) {
   for (uptr i = 0; i < kDirtyTids; i++) dst->dirty_[i].set_tid(kInvalidTid);
   dst->release_store_tid_ = tid_;
   dst->release_store_reused_ = reused_;
-  // Rememeber that we don't need to acquire it in future.
+  // Remember that we don't need to acquire it in future.
   dst->elem(tid_).reused = reused_;
 
   // If the resulting clock is cachable, cache it for future release operations.

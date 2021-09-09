@@ -3985,6 +3985,45 @@ Environment TargetProperties::GetEnvironment() const {
   return ComputeEnvironment();
 }
 
+Environment TargetProperties::GetInheritedEnvironment() const {
+  Environment environment;
+
+  if (m_target == nullptr)
+    return environment;
+
+  if (!m_collection_sp->GetPropertyAtIndexAsBoolean(
+          nullptr, ePropertyInheritEnv,
+          g_target_properties[ePropertyInheritEnv].default_uint_value != 0))
+    return environment;
+
+  PlatformSP platform_sp = m_target->GetPlatform();
+  if (platform_sp == nullptr)
+    return environment;
+
+  Environment platform_environment = platform_sp->GetEnvironment();
+  for (const auto &KV : platform_environment)
+    environment[KV.first()] = KV.second;
+
+  Args property_unset_environment;
+  m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, ePropertyUnsetEnvVars,
+                                            property_unset_environment);
+  for (const auto &var : property_unset_environment)
+    environment.erase(var.ref());
+
+  return environment;
+}
+
+Environment TargetProperties::GetTargetEnvironment() const {
+  Args property_environment;
+  m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, ePropertyEnvVars,
+                                            property_environment);
+  Environment environment;
+  for (const auto &KV : Environment(property_environment))
+    environment[KV.first()] = KV.second;
+
+  return environment;
+}
+
 void TargetProperties::SetEnvironment(Environment env) {
   // TODO: Get rid of the Args intermediate step
   const uint32_t idx = ePropertyEnvVars;

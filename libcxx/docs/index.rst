@@ -43,8 +43,9 @@ Getting Started with libc++
    Status/Cxx17
    Status/Cxx20
    Status/Cxx2b
-   Status/Ranges
    Status/Format
+   Status/Ranges
+   Status/Spaceship
 
 
 .. toctree::
@@ -114,6 +115,7 @@ Target platform Target architecture       Notes
 =============== ========================= ============================
 macOS 10.9+     i386, x86_64, arm64       Building the shared library itself requires targetting macOS 10.11+
 FreeBSD 10+     i386, x86_64, arm
+OpenBSD         i386, x86_64, arm, arm64
 Linux           i386, x86_64, arm, arm64
 Windows         x86_64
 =============== ========================= ============================
@@ -128,8 +130,8 @@ for all the platforms and compilers that we claim to support. If a platform or c
 is not listed here, it is not officially supported. It may happen to work, and
 in practice the library is known to work on some platforms not listed here, but
 we don't make any guarantees. If you would like your compiler and/or platform
-to be formally supported and listed here,
-please work with the libc++ team to set up testing for your configuration.
+to be formally supported and listed here, please work with the libc++ team to set
+up testing for your configuration.
 
 
 C++ Dialect Support

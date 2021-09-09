@@ -312,18 +312,18 @@ define arm_aapcs_vfpcc void @ptr_f16(<8 x half> %v, <8 x half*>* %offptr) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q2, [r0]
 ; CHECK-NEXT:    vldrw.u32 q1, [r0, #16]
-; CHECK-NEXT:    vmovx.f16 s12, s0
 ; CHECK-NEXT:    vmov r0, r1, d4
 ; CHECK-NEXT:    vstr.16 s0, [r0]
-; CHECK-NEXT:    vstr.16 s12, [r1]
+; CHECK-NEXT:    vmovx.f16 s0, s0
+; CHECK-NEXT:    vstr.16 s0, [r1]
 ; CHECK-NEXT:    vmov r0, r1, d5
-; CHECK-NEXT:    vmovx.f16 s8, s1
+; CHECK-NEXT:    vmovx.f16 s0, s1
 ; CHECK-NEXT:    vstr.16 s1, [r0]
-; CHECK-NEXT:    vstr.16 s8, [r1]
+; CHECK-NEXT:    vstr.16 s0, [r1]
 ; CHECK-NEXT:    vmov r0, r1, d2
-; CHECK-NEXT:    vmovx.f16 s8, s2
+; CHECK-NEXT:    vmovx.f16 s0, s2
 ; CHECK-NEXT:    vstr.16 s2, [r0]
-; CHECK-NEXT:    vstr.16 s8, [r1]
+; CHECK-NEXT:    vstr.16 s0, [r1]
 ; CHECK-NEXT:    vmov r0, r1, d3
 ; CHECK-NEXT:    vmovx.f16 s0, s3
 ; CHECK-NEXT:    vstr.16 s3, [r0]
@@ -339,10 +339,10 @@ define arm_aapcs_vfpcc void @ptr_v4f16(<4 x half> %v, <4 x half*>* %offptr) {
 ; CHECK-LABEL: ptr_v4f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vmovx.f16 s8, s0
 ; CHECK-NEXT:    vmov r0, r1, d2
 ; CHECK-NEXT:    vstr.16 s0, [r0]
-; CHECK-NEXT:    vstr.16 s8, [r1]
+; CHECK-NEXT:    vmovx.f16 s0, s0
+; CHECK-NEXT:    vstr.16 s0, [r1]
 ; CHECK-NEXT:    vmov r0, r1, d3
 ; CHECK-NEXT:    vmovx.f16 s0, s1
 ; CHECK-NEXT:    vstr.16 s1, [r0]

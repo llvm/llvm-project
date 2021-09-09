@@ -14,6 +14,7 @@
 #include "../bugprone/SignalHandlerCheck.h"
 #include "../bugprone/SignedCharMisuseCheck.h"
 #include "../bugprone/SpuriouslyWakeUpFunctionsCheck.h"
+#include "../bugprone/SuspiciousMemoryComparisonCheck.h"
 #include "../bugprone/UnhandledSelfAssignmentCheck.h"
 #include "../concurrency/ThreadCanceltypeAsynchronousCheck.h"
 #include "../google/UnnamedNamespaceInHeaderCheck.h"
@@ -98,8 +99,13 @@ public:
         "cert-dcl37-c");
     // ENV
     CheckFactories.registerCheck<CommandProcessorCheck>("cert-env33-c");
+    // EXP
+    CheckFactories.registerCheck<bugprone::SuspiciousMemoryComparisonCheck>(
+        "cert-exp42-c");
     // FLP
     CheckFactories.registerCheck<FloatLoopCounter>("cert-flp30-c");
+    CheckFactories.registerCheck<bugprone::SuspiciousMemoryComparisonCheck>(
+        "cert-flp37-c");
     // FIO
     CheckFactories.registerCheck<misc::NonCopyableObjectsCheck>("cert-fio38-c");
     // ERR

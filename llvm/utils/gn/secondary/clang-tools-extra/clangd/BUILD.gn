@@ -98,6 +98,7 @@ static_library("clangd") {
     "Headers.cpp",
     "HeuristicResolver.cpp",
     "Hover.cpp",
+    "IncludeCleaner.cpp",
     "IncludeFixer.cpp",
     "InlayHints.cpp",
     "JSONTransport.cpp",

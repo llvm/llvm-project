@@ -50,6 +50,9 @@ DWARFVerifier::DieRangeInfo::insert(const DWARFAddressRange &R) {
 
 DWARFVerifier::DieRangeInfo::die_range_info_iterator
 DWARFVerifier::DieRangeInfo::insert(const DieRangeInfo &RI) {
+  if (RI.Ranges.empty())
+    return Children.end();
+
   auto End = Children.end();
   auto Iter = Children.begin();
   while (Iter != End) {
@@ -158,7 +161,9 @@ bool DWARFVerifier::verifyUnitHeader(const DWARFDataExtractor DebugInfoData,
   return Success;
 }
 
-unsigned DWARFVerifier::verifyUnitContents(DWARFUnit &Unit) {
+unsigned DWARFVerifier::verifyUnitContents(DWARFUnit &Unit,
+                                           ReferenceMap &UnitLocalReferences,
+                                           ReferenceMap &CrossUnitReferences) {
   unsigned NumUnitErrors = 0;
   unsigned NumDies = Unit.getNumDIEs();
   for (unsigned I = 0; I < NumDies; ++I) {
@@ -169,7 +174,8 @@ unsigned DWARFVerifier::verifyUnitContents(DWARFUnit &Unit) {
 
     for (auto AttrValue : Die.attributes()) {
       NumUnitErrors += verifyDebugInfoAttribute(Die, AttrValue);
-      NumUnitErrors += verifyDebugInfoForm(Die, AttrValue);
+      NumUnitErrors += verifyDebugInfoForm(Die, AttrValue, UnitLocalReferences,
+                                           CrossUnitReferences);
     }
 
     if (Die.hasChildren()) {
@@ -299,6 +305,10 @@ unsigned DWARFVerifier::verifyUnitSection(const DWARFSection &S,
   bool hasDIE = DebugInfoData.isValidOffset(Offset);
   DWARFUnitVector TypeUnitVector;
   DWARFUnitVector CompileUnitVector;
+  /// A map that tracks all references (converted absolute references) so we
+  /// can verify each reference points to a valid DIE and not an offset that
+  /// lies between to valid DIEs.
+  ReferenceMap CrossUnitReferences;
   while (hasDIE) {
     OffsetStart = Offset;
     if (!verifyUnitHeader(DebugInfoData, &Offset, UnitIdx, UnitType,
@@ -309,6 +319,7 @@ unsigned DWARFVerifier::verifyUnitSection(const DWARFSection &S,
     } else {
       DWARFUnitHeader Header;
       Header.extract(DCtx, DebugInfoData, &OffsetStart, SectionKind);
+      ReferenceMap UnitLocalReferences;
       DWARFUnit *Unit;
       switch (UnitType) {
       case dwarf::DW_UT_type:
@@ -337,7 +348,10 @@ unsigned DWARFVerifier::verifyUnitSection(const DWARFSection &S,
       }
       default: { llvm_unreachable("Invalid UnitType."); }
       }
-      NumDebugInfoErrors += verifyUnitContents(*Unit);
+      NumDebugInfoErrors +=
+          verifyUnitContents(*Unit, UnitLocalReferences, CrossUnitReferences);
+      NumDebugInfoErrors += verifyDebugInfoReferences(
+          UnitLocalReferences, [&](uint64_t Offset) { return Unit; });
     }
     hasDIE = DebugInfoData.isValidOffset(Offset);
     ++UnitIdx;
@@ -348,7 +362,14 @@ unsigned DWARFVerifier::verifyUnitSection(const DWARFSection &S,
   }
   if (!isHeaderChainValid)
     ++NumDebugInfoErrors;
-  NumDebugInfoErrors += verifyDebugInfoReferences();
+  NumDebugInfoErrors += verifyDebugInfoReferences(
+      CrossUnitReferences, [&](uint64_t Offset) -> DWARFUnit * {
+        if (DWARFUnit *U = TypeUnitVector.getUnitForOffset(Offset))
+          return U;
+        if (DWARFUnit *U = CompileUnitVector.getUnitForOffset(Offset))
+          return U;
+        return nullptr;
+      });
   return NumDebugInfoErrors;
 }
 
@@ -383,7 +404,7 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
     return NumErrors;
   }
 
-  DWARFAddressRangesVector Ranges = RangesOrError.get();
+  const DWARFAddressRangesVector &Ranges = RangesOrError.get();
   // Build RI for this DIE and check that ranges within this DIE do not
   // overlap.
   DieRangeInfo RI(Die);
@@ -444,7 +465,7 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
   }
 
   // Verify that ranges are contained within their parent.
-  bool ShouldBeContained = !Ranges.empty() && !ParentRI.Ranges.empty() &&
+  bool ShouldBeContained = !RI.Ranges.empty() && !ParentRI.Ranges.empty() &&
                            !(Die.getTag() == DW_TAG_subprogram &&
                              ParentRI.Die.getTag() == DW_TAG_subprogram);
   if (ShouldBeContained && !ParentRI.contains(RI)) {
@@ -587,7 +608,9 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
 }
 
 unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
-                                            DWARFAttribute &AttrValue) {
+                                            DWARFAttribute &AttrValue,
+                                            ReferenceMap &LocalReferences,
+                                            ReferenceMap &CrossUnitReferences) {
   const DWARFObject &DObj = DCtx.getDWARFObj();
   auto DieCU = Die.getDwarfUnit();
   unsigned NumErrors = 0;
@@ -615,7 +638,7 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
       } else {
         // Valid reference, but we will verify it points to an actual
         // DIE later.
-        ReferenceToDIEOffsets[*RefVal].insert(Die.getOffset());
+        LocalReferences[*RefVal].insert(Die.getOffset());
       }
     }
     break;
@@ -634,7 +657,7 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
       } else {
         // Valid reference, but we will verify it points to an actual
         // DIE later.
-        ReferenceToDIEOffsets[*RefVal].insert(Die.getOffset());
+        CrossUnitReferences[*RefVal].insert(Die.getOffset());
       }
     }
     break;
@@ -694,20 +717,24 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
   return NumErrors;
 }
 
-unsigned DWARFVerifier::verifyDebugInfoReferences() {
-  // Take all references and make sure they point to an actual DIE by
-  // getting the DIE by offset and emitting an error
-  OS << "Verifying .debug_info references...\n";
+unsigned DWARFVerifier::verifyDebugInfoReferences(
+    const ReferenceMap &References,
+    llvm::function_ref<DWARFUnit *(uint64_t)> GetUnitForOffset) {
+  auto GetDIEForOffset = [&](uint64_t Offset) {
+    if (DWARFUnit *U = GetUnitForOffset(Offset))
+      return U->getDIEForOffset(Offset);
+    return DWARFDie();
+  };
   unsigned NumErrors = 0;
   for (const std::pair<const uint64_t, std::set<uint64_t>> &Pair :
-       ReferenceToDIEOffsets) {
-    if (DCtx.getDIEForOffset(Pair.first))
+       References) {
+    if (GetDIEForOffset(Pair.first))
       continue;
     ++NumErrors;
     error() << "invalid DIE reference " << format("0x%08" PRIx64, Pair.first)
             << ". Offset is in between DIEs:\n";
     for (auto Offset : Pair.second)
-      dump(DCtx.getDIEForOffset(Offset)) << '\n';
+      dump(GetDIEForOffset(Offset)) << '\n';
     OS << "\n";
   }
   return NumErrors;

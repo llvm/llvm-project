@@ -1189,7 +1189,7 @@ class TemplateTypeParmDecl final : public TypeDecl,
 
   /// Whether the type constraint has been initialized. This can be false if the
   /// constraint was not initialized yet or if there was an error forming the
-  /// type constriant.
+  /// type constraint.
   bool TypeConstraintInitialized : 1;
 
   /// Whether this non-type template parameter is an "expanded"

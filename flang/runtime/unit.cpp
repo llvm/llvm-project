@@ -1,4 +1,4 @@
-//===-- runtime/unit.cpp ----------------------------------------*- C++ -*-===//
+//===-- runtime/unit.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -258,13 +258,20 @@ bool ExternalFileUnit::Emit(const char *data, std::size_t bytes,
     std::size_t elementBytes, IoErrorHandler &handler) {
   auto furthestAfter{std::max(furthestPositionInRecord,
       positionInRecord + static_cast<std::int64_t>(bytes))};
-  if (furthestAfter > recordLength.value_or(furthestAfter)) {
-    handler.SignalError(IostatRecordWriteOverrun,
-        "Attempt to write %zd bytes to position %jd in a fixed-size record of "
-        "%jd bytes",
-        bytes, static_cast<std::intmax_t>(positionInRecord),
-        static_cast<std::intmax_t>(*recordLength));
-    return false;
+  if (recordLength) {
+    // It is possible for recordLength to have a value now for a
+    // variable-length output record if the previous operation
+    // was a BACKSPACE.
+    if (!isFixedRecordLength) {
+      recordLength.reset();
+    } else if (furthestAfter > *recordLength) {
+      handler.SignalError(IostatRecordWriteOverrun,
+          "Attempt to write %zd bytes to position %jd in a fixed-size record "
+          "of %jd bytes",
+          bytes, static_cast<std::intmax_t>(positionInRecord),
+          static_cast<std::intmax_t>(*recordLength));
+      return false;
+    }
   }
   WriteFrame(frameOffsetInFile_, recordOffsetInFrame_ + furthestAfter, handler);
   if (positionInRecord > furthestPositionInRecord) {
@@ -350,13 +357,10 @@ bool ExternalFileUnit::SetSequentialVariableFormattedRecordLength() {
       if (*recordLength > 0 && record[*recordLength - 1] == '\r') {
         --*recordLength;
       }
-    } else {
-      recordLength = bytes; // final record w/o \n
+      return true;
     }
-    return true;
-  } else {
-    return false;
   }
+  return false;
 }
 
 void ExternalFileUnit::SetLeftTabLimit() {
@@ -421,7 +425,10 @@ void ExternalFileUnit::FinishReadingRecord(IoErrorHandler &handler) {
             Frame()[recordOffsetInFrame_ + *recordLength] == '\n') {
           ++recordOffsetInFrame_;
         }
-        recordOffsetInFrame_ += *recordLength;
+        if (!resumptionRecordNumber || mayPosition()) {
+          frameOffsetInFile_ += recordOffsetInFrame_ + *recordLength;
+          recordOffsetInFrame_ = 0;
+        }
         recordLength.reset();
       }
     }
@@ -612,10 +619,17 @@ void ExternalFileUnit::BeginSequentialVariableFormattedInputRecord(
   }
   std::size_t length{0};
   do {
-    std::size_t need{recordOffsetInFrame_ + length + 1};
-    length = ReadFrame(frameOffsetInFile_, need, handler);
+    std::size_t need{length + 1};
+    length =
+        ReadFrame(frameOffsetInFile_, recordOffsetInFrame_ + need, handler) -
+        recordOffsetInFrame_;
     if (length < need) {
-      handler.SignalEnd();
+      if (length > 0) {
+        // final record w/o \n
+        recordLength = length;
+      } else {
+        handler.SignalEnd();
+      }
       break;
     }
   } while (!SetSequentialVariableFormattedRecordLength());

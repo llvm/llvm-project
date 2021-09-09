@@ -257,6 +257,7 @@ void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
     m_attach_or_wait_reply = eLazyBoolCalculate;
     m_avoid_g_packets = eLazyBoolCalculate;
     m_supports_multiprocess = eLazyBoolCalculate;
+    m_supports_qSaveCore = eLazyBoolCalculate;
     m_supports_qXfer_auxv_read = eLazyBoolCalculate;
     m_supports_qXfer_libraries_read = eLazyBoolCalculate;
     m_supports_qXfer_libraries_svr4_read = eLazyBoolCalculate;
@@ -312,13 +313,15 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
   m_supports_qEcho = eLazyBoolNo;
   m_supports_QPassSignals = eLazyBoolNo;
   m_supports_memory_tagging = eLazyBoolNo;
+  m_supports_qSaveCore = eLazyBoolNo;
 
   m_max_packet_size = UINT64_MAX; // It's supposed to always be there, but if
                                   // not, we assume no limit
 
   // build the qSupported packet
   std::vector<std::string> features = {"xmlRegisters=i386,arm,mips,arc",
-                                       "multiprocess+"};
+                                       "multiprocess+", "fork-events+",
+                                       "vfork-events+"};
   StreamString packet;
   packet.PutCString("qSupported");
   for (uint32_t i = 0; i < features.size(); ++i) {
@@ -358,6 +361,8 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         m_supports_multiprocess = eLazyBoolYes;
       else if (x == "memory-tagging+")
         m_supports_memory_tagging = eLazyBoolYes;
+      else if (x == "qSaveCore+")
+        m_supports_qSaveCore = eLazyBoolYes;
       // Look for a list of compressions in the features list e.g.
       // qXfer:features:read+;PacketSize=20000;qEcho+;SupportedCompressions=zlib-
       // deflate,lzma
@@ -498,6 +503,10 @@ LazyBool GDBRemoteCommunicationClient::GetThreadPacketSupported(
     return eLazyBoolYes;
   }
   return eLazyBoolNo;
+}
+
+bool GDBRemoteCommunicationClient::GetSaveCoreSupported() const {
+  return m_supports_qSaveCore == eLazyBoolYes;
 }
 
 StructuredData::ObjectSP GDBRemoteCommunicationClient::GetThreadsInfo() {
@@ -1360,24 +1369,6 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
   return m_qHostInfo_is_valid == eLazyBoolYes;
 }
 
-int GDBRemoteCommunicationClient::SendAttach(
-    lldb::pid_t pid, StringExtractorGDBRemote &response) {
-  if (pid != LLDB_INVALID_PROCESS_ID) {
-    char packet[64];
-    const int packet_len =
-        ::snprintf(packet, sizeof(packet), "vAttach;%" PRIx64, pid);
-    UNUSED_IF_ASSERT_DISABLED(packet_len);
-    assert(packet_len < (int)sizeof(packet));
-    if (SendPacketAndWaitForResponse(packet, response) ==
-        PacketResult::Success) {
-      if (response.IsErrorResponse())
-        return response.GetError();
-      return 0;
-    }
-  }
-  return -1;
-}
-
 int GDBRemoteCommunicationClient::SendStdinNotification(const char *data,
                                                         size_t data_len) {
   StreamString packet;
@@ -1457,9 +1448,12 @@ bool GDBRemoteCommunicationClient::DeallocateMemory(addr_t addr) {
   return false;
 }
 
-Status GDBRemoteCommunicationClient::Detach(bool keep_stopped) {
+Status GDBRemoteCommunicationClient::Detach(bool keep_stopped,
+                                            lldb::pid_t pid) {
   Status error;
+  lldb_private::StreamString packet;
 
+  packet.PutChar('D');
   if (keep_stopped) {
     if (m_supports_detach_stay_stopped == eLazyBoolCalculate) {
       char packet[64];
@@ -1481,17 +1475,25 @@ Status GDBRemoteCommunicationClient::Detach(bool keep_stopped) {
       error.SetErrorString("Stays stopped not supported by this target.");
       return error;
     } else {
-      StringExtractorGDBRemote response;
-      PacketResult packet_result = SendPacketAndWaitForResponse("D1", response);
-      if (packet_result != PacketResult::Success)
-        error.SetErrorString("Sending extended disconnect packet failed.");
+      packet.PutChar('1');
     }
-  } else {
-    StringExtractorGDBRemote response;
-    PacketResult packet_result = SendPacketAndWaitForResponse("D", response);
-    if (packet_result != PacketResult::Success)
-      error.SetErrorString("Sending disconnect packet failed.");
   }
+
+  if (pid != LLDB_INVALID_PROCESS_ID) {
+    if (!m_supports_multiprocess) {
+      error.SetErrorString(
+          "Multiprocess extension not supported by the server.");
+      return error;
+    }
+    packet.PutChar(';');
+    packet.PutHex64(pid);
+  }
+
+  StringExtractorGDBRemote response;
+  PacketResult packet_result =
+      SendPacketAndWaitForResponse(packet.GetString(), response);
+  if (packet_result != PacketResult::Success)
+    error.SetErrorString("Sending isconnect packet failed.");
   return error;
 }
 
@@ -1571,6 +1573,19 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
                 break;
               }
             }
+          }
+        } else if (name.equals("type")) {
+          std::string comma_sep_str = value.str();
+          size_t comma_pos;
+          while ((comma_pos = comma_sep_str.find(',')) != std::string::npos) {
+            comma_sep_str[comma_pos] = '\0';
+            if (comma_sep_str == "stack") {
+              region_info.SetIsStackMemory(MemoryRegionInfo::eYes);
+            }
+          }
+          // handle final (or only) type of "stack"
+          if (comma_sep_str == "stack") {
+            region_info.SetIsStackMemory(MemoryRegionInfo::eYes);
           }
         } else if (name.equals("error")) {
           StringExtractorGDBRemote error_extractor(value);

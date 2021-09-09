@@ -24,6 +24,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -109,8 +110,7 @@ public:
 /// is the same for all known NVPTX architectures.
 enum MachineConfiguration : unsigned {
   /// See "llvm/Frontend/OpenMP/OMPGridValues.h" for various related target
-  /// specific Grid Values like GV_Warp_Size, GV_Warp_Size_Log2,
-  /// and GV_Warp_Size_Log2_Mask.
+  /// specific Grid Values like GV_Warp_Size, GV_Slot_Size
 
   /// Global memory alignment for performance.
   GlobalMemoryAlignment = 128,
@@ -342,7 +342,7 @@ class CheckVarsEscapingDeclContext final
     assert(!GlobalizedRD &&
            "Record for globalized variables is built already.");
     ArrayRef<const ValueDecl *> EscapedDeclsForParallel, EscapedDeclsForTeams;
-    unsigned WarpSize = CGF.getTarget().getGridValue(llvm::omp::GV_Warp_Size);
+    unsigned WarpSize = CGF.getTarget().getGridValue().GV_Warp_Size;
     if (IsInTTDRegion)
       EscapedDeclsForTeams = EscapedDecls.getArrayRef();
     else
@@ -539,7 +539,7 @@ public:
 static llvm::Value *getNVPTXWarpID(CodeGenFunction &CGF) {
   CGBuilderTy &Bld = CGF.Builder;
   unsigned LaneIDBits =
-      CGF.getTarget().getGridValue(llvm::omp::GV_Warp_Size_Log2);
+      llvm::Log2_32(CGF.getTarget().getGridValue().GV_Warp_Size);
   auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGF.CGM.getOpenMPRuntime());
   return Bld.CreateAShr(RT.getGPUThreadID(CGF), LaneIDBits, "nvptx_warp_id");
 }
@@ -549,8 +549,9 @@ static llvm::Value *getNVPTXWarpID(CodeGenFunction &CGF) {
 /// on the NVPTX device, to generate more efficient code.
 static llvm::Value *getNVPTXLaneID(CodeGenFunction &CGF) {
   CGBuilderTy &Bld = CGF.Builder;
-  unsigned LaneIDMask = CGF.getContext().getTargetInfo().getGridValue(
-      llvm::omp::GV_Warp_Size_Log2_Mask);
+  unsigned LaneIDBits =
+      llvm::Log2_32(CGF.getTarget().getGridValue().GV_Warp_Size);
+  unsigned LaneIDMask = ~0u >> (32u - LaneIDBits);
   auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGF.CGM.getOpenMPRuntime());
   return Bld.CreateAnd(RT.getGPUThreadID(CGF), Bld.getInt32(LaneIDMask),
                        "nvptx_lane_id");
@@ -1032,14 +1033,14 @@ void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
   int FlatAttr = 0;
   bool flatAttrEmitted = false;
   int DefaultWorkGroupSz =
-      CGM.getTarget().getGridValue(GVIDX::GV_Default_WG_Size);
+      CGM.getTarget().getGridValue().GV_Default_WG_Size;
   // If constant ThreadLimit(), set reqd_work_group_size metadata
   if (isOpenMPTeamsDirective(D.getDirectiveKind()) ||
       isOpenMPParallelDirective(D.getDirectiveKind())) {
     const auto *ThreadLimitClause = D.getSingleClause<OMPThreadLimitClause>();
     const auto *NumThreadsClause = D.getSingleClause<OMPNumThreadsClause>();
     int MaxWorkGroupSz =
-        CGM.getTarget().getGridValue(GVIDX::GV_Max_WG_Size);
+        CGM.getTarget().getGridValue().GV_Max_WG_Size;
     int compileTimeThreadLimit = 0;
     // Only one of thread_limit or num_threads is used, cant do it for both
     if (ThreadLimitClause && !NumThreadsClause) {
@@ -1060,7 +1061,7 @@ void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
       // Add the WarpSize to gneric, to reflect what runtime dispatch does.
       if (IsGeneric)
         compileTimeThreadLimit +=
-            CGM.getTarget().getGridValue(GVIDX::GV_Warp_Size);
+            CGM.getTarget().getGridValue().GV_Warp_Size;
       if (compileTimeThreadLimit > MaxWorkGroupSz)
         compileTimeThreadLimit = MaxWorkGroupSz;
       std::string AttrVal = llvm::utostr(compileTimeThreadLimit);
@@ -1388,7 +1389,7 @@ llvm::Function *CGOpenMPRuntimeGPU::emitTeamsOutlinedFunction(
   const RecordDecl *GlobalizedRD = nullptr;
   llvm::SmallVector<const ValueDecl *, 4> LastPrivatesReductions;
   llvm::SmallDenseMap<const ValueDecl *, const FieldDecl *> MappedDeclsFields;
-  unsigned WarpSize = CGM.getTarget().getGridValue(llvm::omp::GV_Warp_Size);
+  unsigned WarpSize = CGM.getTarget().getGridValue().GV_Warp_Size;
   // Globalize team reductions variable unconditionally in all modes.
   if (getExecutionMode() != CGOpenMPRuntimeGPU::EM_SPMD)
     getTeamsReductionVars(CGM.getContext(), D, LastPrivatesReductions);
@@ -2170,7 +2171,7 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
       "__openmp_nvptx_data_transfer_temporary_storage";
   llvm::GlobalVariable *TransferMedium =
       M.getGlobalVariable(TransferMediumName);
-  unsigned WarpSize = CGF.getTarget().getGridValue(llvm::omp::GV_Warp_Size);
+  unsigned WarpSize = CGF.getTarget().getGridValue().GV_Warp_Size;
   if (!TransferMedium) {
     auto *Ty = llvm::ArrayType::get(CGM.Int32Ty, WarpSize);
     unsigned SharedAddressSpace = C.getTargetAddressSpace(LangAS::cuda_shared);

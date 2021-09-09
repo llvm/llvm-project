@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcpp-has-no-stdin, libcpp-has-no-stdout
-
 // Make sure that the iostreams are initialized before everything else.
 // This has been an issue when statically linking libc++ in some contexts.
 // See https://llvm.org/PR28954 for details.

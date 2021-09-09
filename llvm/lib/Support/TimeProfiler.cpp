@@ -273,7 +273,7 @@ void llvm::timeTraceProfilerInitialize(unsigned TimeTraceGranularity,
 void llvm::timeTraceProfilerCleanup() {
   delete TimeTraceProfilerInstance;
   std::lock_guard<std::mutex> Lock(Mu);
-  for (auto TTP : *ThreadTimeTraceProfilerInstances)
+  for (auto *TTP : *ThreadTimeTraceProfilerInstances)
     delete TTP;
   ThreadTimeTraceProfilerInstances->clear();
 }

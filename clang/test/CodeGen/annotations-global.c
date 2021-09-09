@@ -4,6 +4,7 @@
 // RUN: FileCheck --check-prefix=BAR %s < %t1
 // RUN: FileCheck --check-prefix=FOOS %s < %t1
 // RUN: FileCheck --check-prefix=ADDRSPACE %s < %t1
+// RUN: %clang_cc1 %s -triple r600 -emit-llvm -o - | FileCheck %s --check-prefix AS1-GLOBALS
 // END.
 
 static __attribute((annotate("sfoo_0"))) __attribute((annotate("sfoo_1"))) char sfoo;
@@ -45,3 +46,8 @@ __attribute((address_space(1))) __attribute__((annotate("addrspace1_ann"))) char
 
 // ADDRSPACE: target triple
 // ADDRSPACE: @llvm.global.annotations = appending global {{.*}} addrspacecast (i8 addrspace(1)* @addrspace1_var to i8*), {{.*}}
+
+// AS1-GLOBALS: target datalayout = "{{.+}}-A5-G1"
+// AS1-GLOBALS: @llvm.global.annotations = appending addrspace(1) global [11 x { i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*, i32, i8 addrspace(1)* }]
+// AS1-GLOBALS-SAME: { i8 addrspace(1)* @a.bar,
+// AS1-GLOBALS-SAME: { i8 addrspace(1)* @addrspace1_var,

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wimplicit-fallthrough %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wimplicit-fallthrough -Wunreachable-code-fallthrough %s
 // expected-no-diagnostics
 
 template<bool param>

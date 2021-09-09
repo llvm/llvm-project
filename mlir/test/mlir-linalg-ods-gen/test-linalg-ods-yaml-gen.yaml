@@ -62,8 +62,14 @@ structured_op: !LinalgStructuredOpConfig
 #  ODS-NEXT:    Variadic<AnyShaped>:$outputs
 
 #       ODS:  let builders =
+#       ODS:  (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
+#  ODS-NEXT:       "ValueRange":$outputs,
+#  ODS-NEXT:       CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+
 #       ODS:    $_state.addOperands(inputs);
 #  ODS-NEXT:    $_state.addOperands(outputs);
+#  ODS-NEXT:    $_state.addTypes(resultTensorTypes);
+#  ODS-NEXT:    $_state.addAttributes(attributes);
 #  ODS-NEXT:    $_state.addAttribute(
 #  ODS-NEXT:      "operand_segment_sizes",
 #  ODS-NEXT:      $_builder.getI32VectorAttr({

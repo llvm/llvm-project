@@ -70,3 +70,7 @@ AEABI_RTABI float __aeabi_ul2f(du_int a) { return __floatundisf(a); }
 COMPILER_RT_ALIAS(__floatundisf, __aeabi_ul2f)
 #endif
 #endif
+
+#if defined(__MINGW32__) && defined(__arm__)
+COMPILER_RT_ALIAS(__floatundisf, __u64tos)
+#endif

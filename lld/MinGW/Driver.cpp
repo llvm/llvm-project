@@ -308,13 +308,19 @@ bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     add("-kill-at");
   if (args.hasArg(OPT_appcontainer))
     add("-appcontainer");
-  if (args.hasArg(OPT_no_seh))
+  if (args.hasFlag(OPT_no_seh, OPT_disable_no_seh, false))
     add("-noseh");
 
   if (args.getLastArgValue(OPT_m) != "thumb2pe" &&
       args.getLastArgValue(OPT_m) != "arm64pe" &&
-      args.hasArg(OPT_no_dynamicbase))
+      args.hasFlag(OPT_disable_dynamicbase, OPT_dynamicbase, false))
     add("-dynamicbase:no");
+  if (args.hasFlag(OPT_disable_high_entropy_va, OPT_high_entropy_va, false))
+    add("-highentropyva:no");
+  if (args.hasFlag(OPT_disable_nxcompat, OPT_nxcompat, false))
+    add("-nxcompat:no");
+  if (args.hasFlag(OPT_disable_tsaware, OPT_tsaware, false))
+    add("-tsaware:no");
 
   if (args.hasFlag(OPT_no_insert_timestamp, OPT_insert_timestamp, false))
     add("-timestamp:0");

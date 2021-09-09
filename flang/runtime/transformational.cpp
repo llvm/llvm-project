@@ -16,7 +16,7 @@
 // work with arbitrary lower bounds.  This may be technically an extension
 // of the standard but it more likely to conform with its intent.
 
-#include "transformational.h"
+#include "flang/Runtime/transformational.h"
 #include "copy.h"
 #include "terminator.h"
 #include "tools.h"
@@ -284,6 +284,8 @@ void RTNAME(EoshiftVector)(Descriptor &result, const Descriptor &source,
     SubscriptValue sourceAt{lb + j - 1 + shift};
     if (sourceAt >= lb && sourceAt < lb + extent) {
       CopyElement(result, &j, source, &sourceAt, terminator);
+    } else if (boundary) {
+      CopyElement(result, &j, *boundary, 0, terminator);
     }
   }
 }

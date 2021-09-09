@@ -1137,6 +1137,7 @@ enum SaveCoreStyle {
   eSaveCoreUnspecified = 0,
   eSaveCoreFull = 1,
   eSaveCoreDirtyOnly = 2,
+  eSaveCoreStackOnly = 3,
 };
 
 } // namespace lldb

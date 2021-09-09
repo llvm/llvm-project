@@ -49,8 +49,8 @@ namespace __asan {
   ASAN_READ_RANGE((ctx), (s),                                   \
     common_flags()->strict_string_checks ? (len) + 1 : (n))
 
-#define ASAN_READ_STRING(ctx, s, n)                             \
-  ASAN_READ_STRING_OF_LEN((ctx), (s), REAL(strlen)(s), (n))
+#  define ASAN_READ_STRING(ctx, s, n) \
+    ASAN_READ_STRING_OF_LEN((ctx), (s), internal_strlen(s), (n))
 
 static inline uptr MaybeRealStrnlen(const char *s, uptr maxlen) {
 #if SANITIZER_INTERCEPT_STRNLEN
@@ -370,9 +370,9 @@ DEFINE_REAL(char*, index, const char *string, int c)
     ASAN_INTERCEPTOR_ENTER(ctx, strcat);
     ENSURE_ASAN_INITED();
     if (flags()->replace_str) {
-      uptr from_length = REAL(strlen)(from);
+      uptr from_length = internal_strlen(from);
       ASAN_READ_RANGE(ctx, from, from_length + 1);
-      uptr to_length = REAL(strlen)(to);
+      uptr to_length = internal_strlen(to);
       ASAN_READ_STRING_OF_LEN(ctx, to, to_length, to_length);
       ASAN_WRITE_RANGE(ctx, to + to_length, from_length + 1);
       // If the copying actually happens, the |from| string should not overlap
@@ -394,7 +394,7 @@ INTERCEPTOR(char*, strncat, char *to, const char *from, uptr size) {
     uptr from_length = MaybeRealStrnlen(from, size);
     uptr copy_length = Min(size, from_length + 1);
     ASAN_READ_RANGE(ctx, from, copy_length);
-    uptr to_length = REAL(strlen)(to);
+    uptr to_length = internal_strlen(to);
     ASAN_READ_STRING_OF_LEN(ctx, to, to_length, to_length);
     ASAN_WRITE_RANGE(ctx, to + to_length, from_length + 1);
     if (from_length > 0) {
@@ -419,7 +419,7 @@ INTERCEPTOR(char *, strcpy, char *to, const char *from) {
   }
   ENSURE_ASAN_INITED();
   if (flags()->replace_str) {
-    uptr from_size = REAL(strlen)(from) + 1;
+    uptr from_size = internal_strlen(from) + 1;
     CHECK_RANGES_OVERLAP("strcpy", to, from_size, from, from_size);
     ASAN_READ_RANGE(ctx, from, from_size);
     ASAN_WRITE_RANGE(ctx, to, from_size);
@@ -432,7 +432,7 @@ INTERCEPTOR(char*, strdup, const char *s) {
   ASAN_INTERCEPTOR_ENTER(ctx, strdup);
   if (UNLIKELY(!asan_inited)) return internal_strdup(s);
   ENSURE_ASAN_INITED();
-  uptr length = REAL(strlen)(s);
+  uptr length = internal_strlen(s);
   if (flags()->replace_str) {
     ASAN_READ_RANGE(ctx, s, length + 1);
   }
@@ -448,7 +448,7 @@ INTERCEPTOR(char*, __strdup, const char *s) {
   ASAN_INTERCEPTOR_ENTER(ctx, strdup);
   if (UNLIKELY(!asan_inited)) return internal_strdup(s);
   ENSURE_ASAN_INITED();
-  uptr length = REAL(strlen)(s);
+  uptr length = internal_strlen(s);
   if (flags()->replace_str) {
     ASAN_READ_RANGE(ctx, s, length + 1);
   }
@@ -581,7 +581,7 @@ INTERCEPTOR(int, atexit, void (*func)()) {
 #if CAN_SANITIZE_LEAKS
   __lsan::ScopedInterceptorDisabler disabler;
 #endif
-  // Avoid calling real atexit as it is unrechable on at least on Linux.
+  // Avoid calling real atexit as it is unreachable on at least on Linux.
   int res = REAL(__cxa_atexit)((void (*)(void *a))func, nullptr, nullptr);
   REAL(__cxa_atexit)(AtCxaAtexit, nullptr, nullptr);
   return res;

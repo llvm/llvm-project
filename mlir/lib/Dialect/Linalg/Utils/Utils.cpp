@@ -116,27 +116,6 @@ RegionMatcher::matchAsScalarBinaryOp(GenericOp op) {
   return llvm::None;
 }
 
-bool mlir::linalg::isParallelIteratorType(Attribute attr) {
-  if (auto strAttr = attr.dyn_cast<StringAttr>()) {
-    return strAttr.getValue() == getParallelIteratorTypeName();
-  }
-  return false;
-}
-
-bool mlir::linalg::isReductionIteratorType(Attribute attr) {
-  if (auto strAttr = attr.dyn_cast<StringAttr>()) {
-    return strAttr.getValue() == getReductionIteratorTypeName();
-  }
-  return false;
-}
-
-bool mlir::linalg::isWindowIteratorType(Attribute attr) {
-  if (auto strAttr = attr.dyn_cast<StringAttr>()) {
-    return strAttr.getValue() == getWindowIteratorTypeName();
-  }
-  return false;
-}
-
 /// Explicit instantiation of loop nest generator for different loop types.
 template struct mlir::linalg::GenerateLoopNest<scf::ForOp>;
 template struct mlir::linalg::GenerateLoopNest<scf::ParallelOp>;
@@ -233,7 +212,7 @@ void GenerateLoopNest<scf::ForOp>::doit(
     // Collect loop ranges for parallel dimensions.
     SmallVector<Range, 2> parallelLoopRanges;
     for (auto iteratorType : enumerate(iteratorTypes))
-      if (isParallelIteratorType(iteratorType.value()))
+      if (isParallelIterator(iteratorType.value()))
         parallelLoopRanges.push_back(loopRanges[iteratorType.index()]);
 
     // Get their distribution schemes.
@@ -254,7 +233,7 @@ void GenerateLoopNest<scf::ForOp>::doit(
   // Filter out scf.for loops that were created out of parallel dimensions.
   SmallVector<scf::ForOp, 4> loops;
   for (auto iteratorType : enumerate(iteratorTypes))
-    if (isParallelIteratorType(iteratorType.value()))
+    if (isParallelIterator(iteratorType.value()))
       loops.push_back(loopNest.loops[iteratorType.index()]);
 
   // Distribute - only supports cyclic distribution for now.
@@ -375,7 +354,7 @@ static void generateParallelLoopNest(
   // Find the outermost parallel loops and drop their types from the list.
   unsigned nLoops = iteratorTypes.size();
   unsigned nOuterPar =
-      nLoops - iteratorTypes.drop_while(isParallelIteratorType).size();
+      nLoops - iteratorTypes.drop_while(isParallelIterator).size();
 
   // If there are no outer parallel loops, generate one sequential loop and
   // recurse. Note that we wouldn't have dropped anything from `iteratorTypes`
@@ -502,7 +481,7 @@ void GenerateLoopNest<scf::ParallelOp>::doit(
                               distributionOptions->distributionMethod.end());
     SmallVector<Range, 2> parallelLoopRanges;
     for (auto iteratorType : enumerate(iteratorTypes)) {
-      if (isParallelIteratorType(iteratorType.value()))
+      if (isParallelIterator(iteratorType.value()))
         parallelLoopRanges.push_back(loopRanges[iteratorType.index()]);
     }
     if (distributionMethod.size() < parallelLoopRanges.size())
@@ -513,7 +492,7 @@ void GenerateLoopNest<scf::ParallelOp>::doit(
     for (auto iteratorType : enumerate(iteratorTypes)) {
       if (index >= procInfo.size())
         break;
-      if (isParallelIteratorType(iteratorType.value())) {
+      if (isParallelIterator(iteratorType.value())) {
         unsigned i = iteratorType.index();
         updateBoundsForCyclicDistribution(b, loc, procInfo[index].procId,
                                           procInfo[index].nprocs, lbsStorage[i],

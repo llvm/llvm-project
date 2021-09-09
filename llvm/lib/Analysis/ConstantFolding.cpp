@@ -987,7 +987,15 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   // Also, this helps GlobalOpt do SROA on GlobalVariables.
   SmallVector<Constant *, 32> NewIdxs;
   Type *Ty = PTy;
-  SrcElemTy = PTy->getElementType();
+
+  // For GEPs of GlobalValues, use the value type even for opaque pointers.
+  // Otherwise use an i8 GEP.
+  if (auto *GV = dyn_cast<GlobalValue>(Ptr))
+    SrcElemTy = GV->getValueType();
+  else if (!PTy->isOpaque())
+    SrcElemTy = PTy->getElementType();
+  else
+    SrcElemTy = Type::getInt8Ty(Ptr->getContext());
 
   do {
     if (!Ty->isStructTy()) {
@@ -1067,7 +1075,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   // Create a GEP.
   Constant *C = ConstantExpr::getGetElementPtr(SrcElemTy, Ptr, NewIdxs,
                                                InBounds, InRangeIndex);
-  assert(C->getType()->getPointerElementType() == Ty &&
+  assert(cast<PointerType>(C->getType())->isOpaqueOrPointeeTypeMatches(Ty) &&
          "Computed GetElementPtr has unexpected type!");
 
   // If we ended up indexing a member with a type that doesn't match
@@ -1579,10 +1587,9 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
     return !Call->isStrictFP();
 
   // Sign operations are actually bitwise operations, they do not raise
-  // exceptions even for SNANs. The same applies to classification functions.
+  // exceptions even for SNANs.
   case Intrinsic::fabs:
   case Intrinsic::copysign:
-  case Intrinsic::isnan:
   // Non-constrained variants of rounding operations means default FP
   // environment, they can be folded in any case.
   case Intrinsic::ceil:
@@ -1880,7 +1887,7 @@ static bool mayFoldConstrained(ConstrainedFPIntrinsic *CI,
     // know that its evaluation does not raise exceptions, so side effect
     // is absent. To allow removing the call, mark it as not accessing memory.
     if (EB && *EB != fp::ExceptionBehavior::ebIgnore)
-      CI->addAttribute(AttributeList::FunctionIndex, Attribute::ReadNone);
+      CI->addFnAttr(Attribute::ReadNone);
     return true;
   }
 
@@ -2002,9 +2009,6 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       U.convertToInteger(Int, APFloat::rmTowardZero, &IsExact);
       return ConstantInt::get(Ty, Int);
     }
-
-    if (IntrinsicID == Intrinsic::isnan)
-      return ConstantInt::get(Ty, U.isNaN());
 
     if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())
       return nullptr;

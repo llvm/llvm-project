@@ -371,6 +371,9 @@ function(add_mlir_python_common_capi_library name)
   set_target_properties(${name} PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
     BINARY_OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
+    # Needed for windows (and don't hurt others).
+    RUNTIME_OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
+    ARCHIVE_OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
   )
   mlir_python_setup_extension_rpath(${name}
     RELATIVE_INSTALL_ROOT "${ARG_RELATIVE_INSTALL_ROOT}"
@@ -494,6 +497,7 @@ function(add_mlir_python_extension libname extname)
     set_target_properties(
       ${libname} PROPERTIES
       RUNTIME_OUTPUT_DIRECTORY ${ARG_OUTPUT_DIRECTORY}
+      ARCHIVE_OUTPUT_DIRECTORY ${ARG_OUTPUT_DIRECTORY}
     )
   endif()
 

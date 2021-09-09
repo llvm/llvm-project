@@ -396,6 +396,7 @@ cc_library(
         "//mlir:LinalgOps",
         "//mlir:LinalgTransforms",
         "//mlir:Pass",
+        "//mlir:SCFTransforms",
         "//mlir:StandardOps",
         "//mlir:TransformUtils",
         "//mlir:VectorOps",
@@ -409,7 +410,6 @@ cc_library(
     defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
     includes = ["lib/Dialect/Test"],
     deps = [
-        "//mlir:LLVMDialect",
         "//mlir:MathDialect",
         "//mlir:MathTransforms",
         "//mlir:Pass",

@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "misc-intrinsic.h"
-#include "descriptor.h"
+#include "flang/Runtime/misc-intrinsic.h"
 #include "terminator.h"
+#include "flang/Runtime/descriptor.h"
 #include <algorithm>
 #include <cstring>
 

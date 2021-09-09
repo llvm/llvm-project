@@ -70,7 +70,7 @@ DataLayoutEntryAttr DataLayoutEntryAttr::parse(DialectAsmParser &parser) {
     return {};
 
   Type type = nullptr;
-  StringRef identifier;
+  std::string identifier;
   llvm::SMLoc idLoc = parser.getCurrentLocation();
   OptionalParseResult parsedType = parser.parseOptionalType(type);
   if (parsedType.hasValue() && failed(parsedType.getValue()))

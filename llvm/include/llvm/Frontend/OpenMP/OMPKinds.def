@@ -39,7 +39,6 @@ __OMP_TYPE(Int32Ptr)
 __OMP_TYPE(Int64Ptr)
 
 OMP_TYPE(SizeTy, M.getDataLayout().getIntPtrType(Ctx))
-OMP_TYPE(LanemaskTy, getLanemaskType())
 
 #define __OMP_PTR_TYPE(NAME, BASE) OMP_TYPE(NAME, BASE->getPointerTo())
 
@@ -443,8 +442,8 @@ __OMP_RTL(__kmpc_parallel_level, false, Int8, )
 __OMP_RTL(__kmpc_is_spmd_exec_mode, false, Int8, )
 __OMP_RTL(__kmpc_barrier_simple_spmd, false, Void, IdentPtr, Int32)
 
-__OMP_RTL(__kmpc_warp_active_thread_mask, false, LanemaskTy,)
-__OMP_RTL(__kmpc_syncwarp, false, Void, LanemaskTy)
+__OMP_RTL(__kmpc_warp_active_thread_mask, false, Int64,)
+__OMP_RTL(__kmpc_syncwarp, false, Void, Int64)
 
 __OMP_RTL(__kmpc_is_generic_main_thread_id, false, Int8, Int32)
 
@@ -509,6 +508,11 @@ __OMP_ATTRS_SET(NoCaptureAttrs,
                 OptimisticAttributes
                     ? AttributeSet(EnumAttr(NoCapture))
                     : AttributeSet(EnumAttr(NoCapture)))
+
+__OMP_ATTRS_SET(AlwaysInlineAttrs,
+                OptimisticAttributes
+                    ? AttributeSet(EnumAttr(AlwaysInline))
+                    : AttributeSet(EnumAttr(AlwaysInline)))
 
 #if 0
 __OMP_ATTRS_SET(InaccessibleOnlyAttrs,
@@ -896,6 +900,9 @@ __OMP_RTL_ATTRS(__tgt_push_mapper_component, ForkAttrs, AttributeSet(),
                 ParamAttrs())
 __OMP_RTL_ATTRS(__kmpc_task_allow_completion_event, DefaultAttrs,
                 ReturnPtrAttrs, ParamAttrs(ReadOnlyPtrAttrs))
+
+__OMP_RTL_ATTRS(__kmpc_parallel_51, AlwaysInlineAttrs, AttributeSet(),
+                ParamAttrs())
 
 #undef __OMP_RTL_ATTRS
 #undef OMP_RTL_ATTRS

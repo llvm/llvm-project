@@ -29,9 +29,6 @@
 #pragma GCC system_header
 #endif
 
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
@@ -122,7 +119,7 @@ class _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS unique_ptr {
 public:
   typedef _Tp element_type;
   typedef _Dp deleter_type;
-  typedef _LIBCPP_NODEBUG_TYPE typename __pointer<_Tp, deleter_type>::type pointer;
+  typedef _LIBCPP_NODEBUG typename __pointer<_Tp, deleter_type>::type pointer;
 
   static_assert(!is_rvalue_reference<deleter_type>::value,
                 "the specified deleter type cannot be an rvalue reference");
@@ -132,38 +129,38 @@ private:
 
   struct __nat { int __for_bool_; };
 
-  typedef _LIBCPP_NODEBUG_TYPE __unique_ptr_deleter_sfinae<_Dp> _DeleterSFINAE;
+  typedef _LIBCPP_NODEBUG __unique_ptr_deleter_sfinae<_Dp> _DeleterSFINAE;
 
   template <bool _Dummy>
-  using _LValRefType _LIBCPP_NODEBUG_TYPE =
+  using _LValRefType _LIBCPP_NODEBUG =
       typename __dependent_type<_DeleterSFINAE, _Dummy>::__lval_ref_type;
 
   template <bool _Dummy>
-  using _GoodRValRefType _LIBCPP_NODEBUG_TYPE =
+  using _GoodRValRefType _LIBCPP_NODEBUG =
       typename __dependent_type<_DeleterSFINAE, _Dummy>::__good_rval_ref_type;
 
   template <bool _Dummy>
-  using _BadRValRefType _LIBCPP_NODEBUG_TYPE  =
+  using _BadRValRefType _LIBCPP_NODEBUG =
       typename __dependent_type<_DeleterSFINAE, _Dummy>::__bad_rval_ref_type;
 
   template <bool _Dummy, class _Deleter = typename __dependent_type<
                              __identity<deleter_type>, _Dummy>::type>
-  using _EnableIfDeleterDefaultConstructible _LIBCPP_NODEBUG_TYPE =
+  using _EnableIfDeleterDefaultConstructible _LIBCPP_NODEBUG =
       typename enable_if<is_default_constructible<_Deleter>::value &&
                          !is_pointer<_Deleter>::value>::type;
 
   template <class _ArgType>
-  using _EnableIfDeleterConstructible _LIBCPP_NODEBUG_TYPE  =
+  using _EnableIfDeleterConstructible _LIBCPP_NODEBUG =
       typename enable_if<is_constructible<deleter_type, _ArgType>::value>::type;
 
   template <class _UPtr, class _Up>
-  using _EnableIfMoveConvertible _LIBCPP_NODEBUG_TYPE  = typename enable_if<
+  using _EnableIfMoveConvertible _LIBCPP_NODEBUG = typename enable_if<
       is_convertible<typename _UPtr::pointer, pointer>::value &&
       !is_array<_Up>::value
   >::type;
 
   template <class _UDel>
-  using _EnableIfDeleterConvertible _LIBCPP_NODEBUG_TYPE  = typename enable_if<
+  using _EnableIfDeleterConvertible _LIBCPP_NODEBUG = typename enable_if<
       (is_reference<_Dp>::value && is_same<_Dp, _UDel>::value) ||
       (!is_reference<_Dp>::value && is_convertible<_UDel, _Dp>::value)
     >::type;
@@ -350,35 +347,35 @@ private:
   typedef __unique_ptr_deleter_sfinae<_Dp> _DeleterSFINAE;
 
   template <bool _Dummy>
-  using _LValRefType _LIBCPP_NODEBUG_TYPE =
+  using _LValRefType _LIBCPP_NODEBUG =
       typename __dependent_type<_DeleterSFINAE, _Dummy>::__lval_ref_type;
 
   template <bool _Dummy>
-  using _GoodRValRefType _LIBCPP_NODEBUG_TYPE =
+  using _GoodRValRefType _LIBCPP_NODEBUG =
       typename __dependent_type<_DeleterSFINAE, _Dummy>::__good_rval_ref_type;
 
   template <bool _Dummy>
-  using _BadRValRefType _LIBCPP_NODEBUG_TYPE =
+  using _BadRValRefType _LIBCPP_NODEBUG =
       typename __dependent_type<_DeleterSFINAE, _Dummy>::__bad_rval_ref_type;
 
   template <bool _Dummy, class _Deleter = typename __dependent_type<
                              __identity<deleter_type>, _Dummy>::type>
-  using _EnableIfDeleterDefaultConstructible _LIBCPP_NODEBUG_TYPE  =
+  using _EnableIfDeleterDefaultConstructible _LIBCPP_NODEBUG =
       typename enable_if<is_default_constructible<_Deleter>::value &&
                          !is_pointer<_Deleter>::value>::type;
 
   template <class _ArgType>
-  using _EnableIfDeleterConstructible _LIBCPP_NODEBUG_TYPE  =
+  using _EnableIfDeleterConstructible _LIBCPP_NODEBUG =
       typename enable_if<is_constructible<deleter_type, _ArgType>::value>::type;
 
   template <class _Pp>
-  using _EnableIfPointerConvertible _LIBCPP_NODEBUG_TYPE  = typename enable_if<
+  using _EnableIfPointerConvertible _LIBCPP_NODEBUG = typename enable_if<
       _CheckArrayPointerConversion<_Pp>::value
   >::type;
 
   template <class _UPtr, class _Up,
         class _ElemT = typename _UPtr::element_type>
-  using _EnableIfMoveConvertible _LIBCPP_NODEBUG_TYPE  = typename enable_if<
+  using _EnableIfMoveConvertible _LIBCPP_NODEBUG = typename enable_if<
       is_array<_Up>::value &&
       is_same<pointer, element_type*>::value &&
       is_same<typename _UPtr::pointer, _ElemT*>::value &&
@@ -386,13 +383,13 @@ private:
     >::type;
 
   template <class _UDel>
-  using _EnableIfDeleterConvertible _LIBCPP_NODEBUG_TYPE  = typename enable_if<
+  using _EnableIfDeleterConvertible _LIBCPP_NODEBUG = typename enable_if<
       (is_reference<_Dp>::value && is_same<_Dp, _UDel>::value) ||
       (!is_reference<_Dp>::value && is_convertible<_UDel, _Dp>::value)
     >::type;
 
   template <class _UDel>
-  using _EnableIfDeleterAssignable _LIBCPP_NODEBUG_TYPE  = typename enable_if<
+  using _EnableIfDeleterAssignable _LIBCPP_NODEBUG = typename enable_if<
       is_assignable<_Dp&, _UDel&&>::value
     >::type;
 
@@ -767,7 +764,5 @@ struct _LIBCPP_TEMPLATE_VIS hash<__enable_hash_helper<
 };
 
 _LIBCPP_END_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___MEMORY_UNIQUE_PTR_H

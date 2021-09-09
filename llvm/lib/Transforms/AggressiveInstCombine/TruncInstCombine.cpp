@@ -33,6 +33,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/Support/KnownBits.h"
 
 using namespace llvm;
 
@@ -61,6 +62,9 @@ static void getRelevantOperands(Instruction *I, SmallVectorImpl<Value *> &Ops) {
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor:
+  case Instruction::Shl:
+  case Instruction::LShr:
+  case Instruction::AShr:
     Ops.push_back(I->getOperand(0));
     Ops.push_back(I->getOperand(1));
     break;
@@ -127,6 +131,9 @@ bool TruncInstCombine::buildTruncExpressionDag() {
     case Instruction::And:
     case Instruction::Or:
     case Instruction::Xor:
+    case Instruction::Shl:
+    case Instruction::LShr:
+    case Instruction::AShr:
     case Instruction::Select: {
       SmallVector<Value *, 2> Operands;
       getRelevantOperands(I, Operands);
@@ -137,8 +144,7 @@ bool TruncInstCombine::buildTruncExpressionDag() {
       // TODO: Can handle more cases here:
       // 1. shufflevector, extractelement, insertelement
       // 2. udiv, urem
-      // 3. shl, lshr, ashr
-      // 4. phi node(and loop handling)
+      // 3. phi node(and loop handling)
       // ...
       return false;
     }
@@ -270,6 +276,38 @@ Type *TruncInstCombine::getBestTruncatedType() {
   unsigned OrigBitWidth =
       CurrentTruncInst->getOperand(0)->getType()->getScalarSizeInBits();
 
+  // Initialize MinBitWidth for shift instructions with the minimum number
+  // that is greater than shift amount (i.e. shift amount + 1).
+  // For `lshr` adjust MinBitWidth so that all potentially truncated
+  // bits of the value-to-be-shifted are zeros.
+  // For `ashr` adjust MinBitWidth so that all potentially truncated
+  // bits of the value-to-be-shifted are sign bits (all zeros or ones)
+  // and even one (first) untruncated bit is sign bit.
+  // Exit early if MinBitWidth is not less than original bitwidth.
+  for (auto &Itr : InstInfoMap) {
+    Instruction *I = Itr.first;
+    if (I->isShift()) {
+      KnownBits KnownRHS = computeKnownBits(I->getOperand(1));
+      unsigned MinBitWidth = KnownRHS.getMaxValue()
+                                 .uadd_sat(APInt(OrigBitWidth, 1))
+                                 .getLimitedValue(OrigBitWidth);
+      if (MinBitWidth == OrigBitWidth)
+        return nullptr;
+      if (I->getOpcode() == Instruction::LShr) {
+        KnownBits KnownLHS = computeKnownBits(I->getOperand(0));
+        MinBitWidth =
+            std::max(MinBitWidth, KnownLHS.getMaxValue().getActiveBits());
+      }
+      if (I->getOpcode() == Instruction::AShr) {
+        unsigned NumSignBits = ComputeNumSignBits(I->getOperand(0));
+        MinBitWidth = std::max(MinBitWidth, OrigBitWidth - NumSignBits + 1);
+      }
+      if (MinBitWidth >= OrigBitWidth)
+        return nullptr;
+      Itr.second.MinBitWidth = MinBitWidth;
+    }
+  }
+
   // Calculate minimum allowed bit-width allowed for shrinking the currently
   // visited truncate's operand.
   unsigned MinBitWidth = getMinBitWidth();
@@ -356,10 +394,17 @@ void TruncInstCombine::ReduceExpressionDag(Type *SclTy) {
     case Instruction::Mul:
     case Instruction::And:
     case Instruction::Or:
-    case Instruction::Xor: {
+    case Instruction::Xor:
+    case Instruction::Shl:
+    case Instruction::LShr:
+    case Instruction::AShr: {
       Value *LHS = getReducedOperand(I->getOperand(0), SclTy);
       Value *RHS = getReducedOperand(I->getOperand(1), SclTy);
       Res = Builder.CreateBinOp((Instruction::BinaryOps)Opc, LHS, RHS);
+      // Preserve `exact` flag since truncation doesn't change exactness
+      if (auto *PEO = dyn_cast<PossiblyExactOperator>(I))
+        if (auto *ResI = dyn_cast<Instruction>(Res))
+          ResI->setIsExact(PEO->isExact());
       break;
     }
     case Instruction::Select: {

@@ -8,10 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// Before GCC 6, aggregate initialization kicks in.
-// See https://stackoverflow.com/q/41799015/627587.
-// UNSUPPORTED: gcc-5
-
 // <memory>
 
 // struct allocator_arg_t { explicit allocator_arg_t() = default; };

@@ -37,3 +37,9 @@ target_link_libraries(libc-gwp-asan-uaf-should-crash
   PRIVATE
   llvmlibc
 )
+
+add_custom_command(TARGET libc-scudo-integration-test
+                   POST_BUILD
+                   COMMAND $<TARGET_FILE:libc-scudo-integration-test>
+                   COMMENT "Run the test after it is built." 
+                   VERBATIM)

@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<class R>
@@ -19,28 +18,28 @@
 #include "test_iterators.h"
 #include "test_range.h"
 
-namespace stdr = std::ranges;
 
-static_assert(stdr::input_range<test_range<cpp17_input_iterator> >);
-static_assert(stdr::input_range<test_range<cpp17_input_iterator> const>);
 
-static_assert(stdr::input_range<test_range<cpp20_input_iterator> >);
-static_assert(stdr::input_range<test_range<cpp20_input_iterator> const>);
+static_assert(std::ranges::input_range<test_range<cpp17_input_iterator> >);
+static_assert(std::ranges::input_range<test_range<cpp17_input_iterator> const>);
 
-static_assert(stdr::input_range<test_non_const_range<cpp17_input_iterator> >);
-static_assert(stdr::input_range<test_non_const_range<cpp20_input_iterator> >);
+static_assert(std::ranges::input_range<test_range<cpp20_input_iterator> >);
+static_assert(std::ranges::input_range<test_range<cpp20_input_iterator> const>);
 
-static_assert(!stdr::input_range<test_non_const_range<cpp17_input_iterator> const>);
-static_assert(!stdr::input_range<test_non_const_range<cpp20_input_iterator> const>);
+static_assert(std::ranges::input_range<test_non_const_range<cpp17_input_iterator> >);
+static_assert(std::ranges::input_range<test_non_const_range<cpp20_input_iterator> >);
 
-static_assert(stdr::input_range<test_common_range<cpp17_input_iterator> >);
-static_assert(!stdr::input_range<test_common_range<cpp20_input_iterator> >);
+static_assert(!std::ranges::input_range<test_non_const_range<cpp17_input_iterator> const>);
+static_assert(!std::ranges::input_range<test_non_const_range<cpp20_input_iterator> const>);
 
-static_assert(stdr::input_range<test_common_range<cpp17_input_iterator> const>);
-static_assert(!stdr::input_range<test_common_range<cpp20_input_iterator> const>);
+static_assert(std::ranges::input_range<test_common_range<cpp17_input_iterator> >);
+static_assert(!std::ranges::input_range<test_common_range<cpp20_input_iterator> >);
 
-static_assert(stdr::input_range<test_non_const_common_range<cpp17_input_iterator> >);
-static_assert(!stdr::input_range<test_non_const_common_range<cpp20_input_iterator> >);
+static_assert(std::ranges::input_range<test_common_range<cpp17_input_iterator> const>);
+static_assert(!std::ranges::input_range<test_common_range<cpp20_input_iterator> const>);
 
-static_assert(!stdr::input_range<test_non_const_common_range<cpp17_input_iterator> const>);
-static_assert(!stdr::input_range<test_non_const_common_range<cpp20_input_iterator> const>);
+static_assert(std::ranges::input_range<test_non_const_common_range<cpp17_input_iterator> >);
+static_assert(!std::ranges::input_range<test_non_const_common_range<cpp20_input_iterator> >);
+
+static_assert(!std::ranges::input_range<test_non_const_common_range<cpp17_input_iterator> const>);
+static_assert(!std::ranges::input_range<test_non_const_common_range<cpp20_input_iterator> const>);

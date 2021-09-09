@@ -1,7 +1,5 @@
 ! Ensure argument -ffixed-line-length=n works as expected.
 
-! REQUIRES: new-flang-driver
-
 !--------------------------
 ! FLANG DRIVER (flang)
 !--------------------------

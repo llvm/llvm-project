@@ -121,7 +121,7 @@ const MappingDesc kMemoryLayout[] = {
     // The mappings below are used only for 48-bits VMA.
     // TODO(unknown): 48-bit mapping ony covers the usual PIE, non-PIE
     // segments and some more segments totalizing 262144GB of VMA (which cover
-    // only 0.32% of all 48-bit VMA). Memory avaliability can be increase by
+    // only 0.32% of all 48-bit VMA). Memory availability can be increase by
     // adding multiple application segments like 39 and 42 mapping.
     {0x0040000000000ULL, 0x0041000000000ULL, MappingDesc::INVALID, "invalid"},
     {0x0041000000000ULL, 0x0042000000000ULL, MappingDesc::APP, "app-10"},
@@ -219,7 +219,7 @@ const MappingDesc kMemoryLayout[] = {
 #elif SANITIZER_NETBSD || (SANITIZER_LINUX && SANITIZER_WORDSIZE == 64)
 
 #ifdef MSAN_LINUX_X86_64_OLD_MAPPING
-// Requries PIE binary and ASLR enabled.
+// Requires PIE binary and ASLR enabled.
 // Main thread stack and DSOs at 0x7f0000000000 (sometimes 0x7e0000000000).
 // Heap at 0x600000000000.
 const MappingDesc kMemoryLayout[] = {

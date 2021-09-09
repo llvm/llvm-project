@@ -186,6 +186,32 @@ def C9LeftShift : PatLeaf<(imm), [{
   return C > 9 && ((C % 9) == 0) && isPowerOf2_64(C / 9);
 }]>;
 
+def CSImm12MulBy4 : PatLeaf<(imm), [{
+  if (!N->hasOneUse())
+    return false;
+  int64_t C = N->getSExtValue();
+  // Skip if C is simm12 or can be optimized by the PatLeaf AddiPair.
+  return !isInt<13>(C) && isInt<14>(C) && (C & 3) == 0;
+}]>;
+
+def CSImm12MulBy8 : PatLeaf<(imm), [{
+  if (!N->hasOneUse())
+    return false;
+  int64_t C = N->getSExtValue();
+  // Skip if C is simm12 or can be optimized by the PatLeaf AddiPair.
+  return !isInt<13>(C) && isInt<15>(C) && (C & 7) == 0;
+}]>;
+
+def SimmShiftRightBy2XForm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getSExtValue() >> 2, SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+
+def SimmShiftRightBy3XForm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getSExtValue() >> 3, SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+
 //===----------------------------------------------------------------------===//
 // Instruction class templates
 //===----------------------------------------------------------------------===//
@@ -1011,6 +1037,13 @@ def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 40)), GPR:$rs2),
 def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 72)), GPR:$rs2),
           (SH3ADD (SH3ADD GPR:$rs1, GPR:$rs1), GPR:$rs2)>;
 
+def : Pat<(add GPR:$r, CSImm12MulBy4:$i),
+          (SH2ADD (ADDI X0, (SimmShiftRightBy2XForm CSImm12MulBy4:$i)),
+                  GPR:$r)>;
+def : Pat<(add GPR:$r, CSImm12MulBy8:$i),
+          (SH3ADD (ADDI X0, (SimmShiftRightBy3XForm CSImm12MulBy8:$i)),
+                  GPR:$r)>;
+
 def : Pat<(mul GPR:$r, C3LeftShift:$i),
           (SLLI (SH1ADD GPR:$r, GPR:$r),
                 (TrailingZerosXForm C3LeftShift:$i))>;
@@ -1107,6 +1140,9 @@ let Predicates = [HasStdExtZbp, IsRV64] in {
 def : Pat<(i64 (sext_inreg (or (shl GPR:$rs2, (i64 16)),
                                (and GPR:$rs1, 0x000000000000FFFF)),
                            i32)),
+          (PACKW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(i64 (or (sext_inreg (shl GPR:$rs2, (i64 16)), i32),
+                   (and GPR:$rs1, 0x000000000000FFFF))),
           (PACKW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i64 (or (and (assertsexti32 GPR:$rs2), 0xFFFFFFFFFFFF0000),
                    (srl (and GPR:$rs1, 0xFFFFFFFF), (i64 16)))),

@@ -2100,6 +2100,10 @@ class VPlan {
   /// Holds the VPLoopInfo analysis for this VPlan.
   VPLoopInfo VPLInfo;
 
+  /// Indicates whether it is safe use the Value2VPValue mapping or if the
+  /// mapping cannot be used any longer, because it is stale.
+  bool Value2VPValueEnabled = true;
+
 public:
   VPlan(VPBlockBase *Entry = nullptr) : Entry(Entry) {
     if (Entry)
@@ -2141,6 +2145,10 @@ public:
     return BackedgeTakenCount;
   }
 
+  /// Mark the plan to indicate that using Value2VPValue is not safe any
+  /// longer, because it may be stale.
+  void disableValue2VPValue() { Value2VPValueEnabled = false; }
+
   void addVF(ElementCount VF) { VFs.insert(VF); }
 
   bool hasVF(ElementCount VF) { return VFs.count(VF); }
@@ -2154,6 +2162,8 @@ public:
   void addExternalDef(VPValue *VPVal) { VPExternalDefs.insert(VPVal); }
 
   void addVPValue(Value *V) {
+    assert(Value2VPValueEnabled &&
+           "IR value to VPValue mapping may be out of date!");
     assert(V && "Trying to add a null Value to VPlan");
     assert(!Value2VPValue.count(V) && "Value already exists in VPlan");
     VPValue *VPV = new VPValue(V);
@@ -2162,25 +2172,39 @@ public:
   }
 
   void addVPValue(Value *V, VPValue *VPV) {
+    assert(Value2VPValueEnabled && "Value2VPValue mapping may be out of date!");
     assert(V && "Trying to add a null Value to VPlan");
     assert(!Value2VPValue.count(V) && "Value already exists in VPlan");
     Value2VPValue[V] = VPV;
   }
 
-  VPValue *getVPValue(Value *V) {
+  /// Returns the VPValue for \p V. \p OverrideAllowed can be used to disable
+  /// checking whether it is safe to query VPValues using IR Values.
+  VPValue *getVPValue(Value *V, bool OverrideAllowed = false) {
+    assert((OverrideAllowed || isa<Constant>(V) || Value2VPValueEnabled) &&
+           "Value2VPValue mapping may be out of date!");
     assert(V && "Trying to get the VPValue of a null Value");
     assert(Value2VPValue.count(V) && "Value does not exist in VPlan");
     return Value2VPValue[V];
   }
 
-  VPValue *getOrAddVPValue(Value *V) {
+  /// Gets the VPValue or adds a new one (if none exists yet) for \p V. \p
+  /// OverrideAllowed can be used to disable checking whether it is safe to
+  /// query VPValues using IR Values.
+  VPValue *getOrAddVPValue(Value *V, bool OverrideAllowed = false) {
+    assert((OverrideAllowed || isa<Constant>(V) || Value2VPValueEnabled) &&
+           "Value2VPValue mapping may be out of date!");
     assert(V && "Trying to get or add the VPValue of a null Value");
     if (!Value2VPValue.count(V))
       addVPValue(V);
     return getVPValue(V);
   }
 
-  void removeVPValueFor(Value *V) { Value2VPValue.erase(V); }
+  void removeVPValueFor(Value *V) {
+    assert(Value2VPValueEnabled &&
+           "IR value to VPValue mapping may be out of date!");
+    Value2VPValue.erase(V);
+  }
 
   /// Return the VPLoopInfo analysis for this VPlan.
   VPLoopInfo &getVPLoopInfo() { return VPLInfo; }

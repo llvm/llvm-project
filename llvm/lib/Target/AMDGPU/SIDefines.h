@@ -7,12 +7,19 @@
 /// \file
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCInstrDesc.h"
-
 #ifndef LLVM_LIB_TARGET_AMDGPU_SIDEFINES_H
 #define LLVM_LIB_TARGET_AMDGPU_SIDEFINES_H
 
+#include "llvm/MC/MCInstrDesc.h"
+
 namespace llvm {
+
+// This needs to be kept in sync with the field bits in SIRegisterClass.
+enum SIRCFlags : uint8_t {
+  // For vector registers.
+  HasVGPR = 1 << 0,
+  HasAGPR = 1 << 1
+}; // enum SIRCFlags
 
 namespace SIInstrFlags {
 // This needs to be kept in sync with the field bits in InstSI.

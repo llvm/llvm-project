@@ -5,13 +5,11 @@
 from typing import Dict, Sequence
 
 from .....ir import *
+from ....._mlir_libs._mlir.dialects.linalg import fill_builtin_region
+
 from .... import linalg
 from .... import std
 from .... import math
-# TODO: resolve name collision for Linalg functionality that is injected inside
-# the _mlir.dialects.linalg directly via pybind.
-from ....._cext_loader import _cext
-fill_builtin_region = _cext.dialects.linalg.fill_builtin_region
 
 from .scalar_expr import *
 from .config import *
@@ -216,8 +214,8 @@ class _BodyBuilder:
       value_attr = Attribute.parse(expr.scalar_const.value)
       return std.ConstantOp(value_attr.type, value_attr).result
     elif expr.scalar_index:
-      dim_attr = IntegerAttr.get(
-          IntegerType.get_signless(64), expr.scalar_index.dim)
+      dim_attr = IntegerAttr.get(IntegerType.get_signless(64),
+                                 expr.scalar_index.dim)
       return linalg.IndexOp(IndexType.get(), dim_attr).result
     elif expr.scalar_apply:
       try:

@@ -236,14 +236,14 @@ Status NativeRegisterContextLinux_arm::WriteAllRegisterValues(
 
   if (!data_sp) {
     error.SetErrorStringWithFormat(
-        "NativeRegisterContextLinux_x86_64::%s invalid data_sp provided",
+        "NativeRegisterContextLinux_arm::%s invalid data_sp provided",
         __FUNCTION__);
     return error;
   }
 
   if (data_sp->GetByteSize() != REG_CONTEXT_SIZE) {
     error.SetErrorStringWithFormat(
-        "NativeRegisterContextLinux_x86_64::%s data_sp contained mismatched "
+        "NativeRegisterContextLinux_arm::%s data_sp contained mismatched "
         "data size, expected %" PRIu64 ", actual %" PRIu64,
         __FUNCTION__, (uint64_t)REG_CONTEXT_SIZE, data_sp->GetByteSize());
     return error;
@@ -251,7 +251,7 @@ Status NativeRegisterContextLinux_arm::WriteAllRegisterValues(
 
   uint8_t *src = data_sp->GetBytes();
   if (src == nullptr) {
-    error.SetErrorStringWithFormat("NativeRegisterContextLinux_x86_64::%s "
+    error.SetErrorStringWithFormat("NativeRegisterContextLinux_arm::%s "
                                    "DataBuffer::GetBytes() returned a null "
                                    "pointer",
                                    __FUNCTION__);
@@ -401,7 +401,7 @@ Status NativeRegisterContextLinux_arm::GetHardwareBreakHitIndex(
     uint32_t &bp_index, lldb::addr_t trap_addr) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_BREAKPOINTS));
 
-  LLDB_LOGF(log, "NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
+  LLDB_LOGF(log, "NativeRegisterContextLinux_arm::%s()", __FUNCTION__);
 
   lldb::addr_t break_addr;
 

@@ -13,10 +13,12 @@
 #ifndef MLIR_DIALECT_SCF_TRANSFORMS_H_
 #define MLIR_DIALECT_SCF_TRANSFORMS_H_
 
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 
 namespace mlir {
 
+class AffineMap;
 class ConversionTarget;
 struct LogicalResult;
 class MLIRContext;
@@ -26,6 +28,8 @@ class TypeConverter;
 class RewritePatternSet;
 using OwningRewritePatternList = RewritePatternSet;
 class Operation;
+class Value;
+class ValueRange;
 
 namespace scf {
 
@@ -34,6 +38,29 @@ class ForOp;
 class ParallelOp;
 class ForOp;
 
+/// Match "for loop"-like operations: If the first parameter is an iteration
+/// variable, return lower/upper bounds via the second/third parameter and the
+/// step size via the last parameter. The function should return `success` in
+/// that case. If the first parameter is not an iteration variable, return
+/// `failure`.
+using LoopMatcherFn =
+    function_ref<LogicalResult(Value, Value &, Value &, Value &)>;
+
+/// Try to canonicalize an min/max operations in the context of for `loops` with
+/// a known range.
+///
+/// `map` is the body of the min/max operation and `operands` are the SSA values
+/// that the dimensions and symbols are bound to; dimensions are listed first.
+/// If `isMin`, the operation is a min operation; otherwise, a max operation.
+/// `loopMatcher` is used to retrieve loop bounds and the step size for a given
+/// iteration variable.
+///
+/// Note: `loopMatcher` allows this function to be used with any "for loop"-like
+/// operation (scf.for, scf.parallel and even ops defined in other dialects).
+LogicalResult canonicalizeMinMaxOpInLoop(RewriterBase &rewriter, Operation *op,
+                                         AffineMap map, ValueRange operands,
+                                         bool isMin, LoopMatcherFn loopMatcher);
+
 /// Fuses all adjacent scf.parallel operations with identical bounds and step
 /// into one scf.parallel operations. Uses a naive aliasing and dependency
 /// analysis.
@@ -41,12 +68,13 @@ void naivelyFuseParallelOps(Region &region);
 
 /// Rewrite a for loop with bounds/step that potentially do not divide evenly
 /// into a for loop where the step divides the iteration space evenly, followed
-/// by an scf.if for the last (partial) iteration (if any). This transformation
-/// is called "loop peeling".
+/// by an scf.if for the last (partial) iteration (if any; returned via `ifOp`).
+/// This transformation is called "loop peeling".
 ///
-/// Other patterns can simplify/canonicalize operations in the body of the loop
-/// and the scf.if. This is beneficial for a wide range of transformations such
-/// as vectorization or loop tiling.
+/// This transformation is beneficial for a wide range of transformations such
+/// as vectorization or loop tiling: It enables additional canonicalizations
+/// inside the peeled loop body such as rewriting masked loads into unmaked
+/// loads.
 ///
 /// E.g., assuming a lower bound of 0 (for illustration purposes):
 /// ```
@@ -65,11 +93,41 @@ void naivelyFuseParallelOps(Region &region);
 /// }
 /// ```
 ///
-/// This function rewrites the given scf.for loop in-place and creates a new
-/// scf.if operation (returned via `ifOp`) for the last iteration.
+/// After loop peeling, this function tries to simplify/canonicalize affine.min
+/// and affine.max ops in the body of the loop and the scf.if, taking advantage
+/// of the fact that the peeled loop has only "full" iterations and the scf.if
+/// is always a partial iteration (if any). This canonicalization is expected to
+/// enable further canonicalization opportunities through other patterns.
 ///
-/// TODO: Simplify affine.min ops inside the new loop/if statement.
-LogicalResult peelForLoop(RewriterBase &b, ForOp forOp, scf::IfOp &ifOp);
+/// The return value indicates whether the loop was rewritten or not. Loops are
+/// not rewritten if:
+/// * Loop step size is 1 or
+/// * Loop bounds and step size are static, and step already divides the
+///   iteration space evenly.
+///
+/// Note: This function rewrites the given scf.for loop in-place and creates a
+/// new scf.if operation for the last iteration. It replaces all uses of the
+/// unpeeled loop with the results of the newly generated scf.if.
+LogicalResult peelAndCanonicalizeForLoop(RewriterBase &rewriter, ForOp forOp,
+                                         scf::IfOp &ifOp);
+
+/// Try to simplify a min/max operation `op` after loop peeling. This function
+/// can simplify min/max operations such as (ub is the previous upper bound of
+/// the unpeeled loop):
+/// ```
+/// #map = affine_map<(d0)[s0, s1] -> (s0, -d0 + s1)>
+/// %r = affine.min #affine.min #map(%iv)[%step, %ub]
+/// ```
+/// and rewrites them into (in the case the peeled loop):
+/// ```
+/// %r = %step
+/// ```
+/// min/max operations inside the partial iteration are rewritten in a similar
+/// way.
+LogicalResult rewritePeeledMinMaxOp(RewriterBase &rewriter, Operation *op,
+                                    AffineMap map, ValueRange operands,
+                                    bool isMin, Value iv, Value ub, Value step,
+                                    bool insideLoop);
 
 /// Tile a parallel loop of the form
 ///   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
@@ -87,7 +145,8 @@ LogicalResult peelForLoop(RewriterBase &b, ForOp forOp, scf::IfOp &ifOp);
 /// The function returns the resulting ParallelOps, i.e. {outer_loop_op,
 /// inner_loop_op}.
 std::pair<ParallelOp, ParallelOp>
-tileParallelLoop(ParallelOp op, llvm::ArrayRef<int64_t> tileSizes);
+tileParallelLoop(ParallelOp op, llvm::ArrayRef<int64_t> tileSizes,
+                 bool noMinMaxBounds);
 
 /// Populates patterns for SCF structural type conversions and sets up the
 /// provided ConversionTarget with the appropriate legality configuration for
@@ -134,6 +193,11 @@ struct PipeliningOption {
 /// S2(N)                        // Epilogue
 void populateSCFLoopPipeliningPatterns(RewritePatternSet &patterns,
                                        const PipeliningOption &options);
+
+/// Populate patterns for canonicalizing operations inside SCF loop bodies.
+/// At the moment, only affine.min/max computations with iteration variables,
+/// loop bounds and loop steps are canonicalized.
+void populateSCFForLoopCanonicalizationPatterns(RewritePatternSet &patterns);
 
 } // namespace scf
 } // namespace mlir

@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1 -fopenmp
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1 -fopenmp
 ! OpenMP Version 4.5
 ! 2.15.3.4 firstprivate Clause
 ! Variables that appear in a firstprivate clause on a distribute or
@@ -12,6 +11,7 @@ program omp_firstprivate
   a = 10
   b = 20
 
+  !ERROR: TARGET construct with nested TEAMS region contains statements or directives outside of the TEAMS construct
   !$omp target
   !$omp teams private(a, b)
   !ERROR: FIRSTPRIVATE variable 'a' is PRIVATE in outer context

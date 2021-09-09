@@ -34,16 +34,26 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm"
 
 // Emscripten's asm.js-style exception handling
-cl::opt<bool> WasmEnableEmException(
-    "enable-emscripten-cxx-exceptions",
-    cl::desc("WebAssembly Emscripten-style exception handling"),
-    cl::init(false));
+cl::opt<bool>
+    WasmEnableEmEH("enable-emscripten-cxx-exceptions",
+                   cl::desc("WebAssembly Emscripten-style exception handling"),
+                   cl::init(false));
 
 // Emscripten's asm.js-style setjmp/longjmp handling
 cl::opt<bool> WasmEnableEmSjLj(
     "enable-emscripten-sjlj",
     cl::desc("WebAssembly Emscripten-style setjmp/longjmp handling"),
     cl::init(false));
+
+// Exception handling using wasm EH instructions
+cl::opt<bool> WasmEnableEH("wasm-enable-eh",
+                           cl::desc("WebAssembly exception handling"),
+                           cl::init(false));
+
+// setjmp/longjmp handling using wasm EH instrutions
+cl::opt<bool> WasmEnableSjLj("wasm-enable-sjlj",
+                             cl::desc("WebAssembly setjmp/longjmp handling"),
+                             cl::init(false));
 
 // A command-line option to keep implicit locals
 // for the purpose of testing with lit/llc ONLY.
@@ -356,6 +366,43 @@ FunctionPass *WebAssemblyPassConfig::createTargetRegisterAllocator(bool) {
   return nullptr; // No reg alloc
 }
 
+static void checkSanityForEHAndSjLj(const TargetMachine *TM) {
+  // Sanity checking related to -exception-model
+  if (TM->Options.ExceptionModel != ExceptionHandling::None &&
+      TM->Options.ExceptionModel != ExceptionHandling::Wasm)
+    report_fatal_error("-exception-model should be either 'none' or 'wasm'");
+  if (WasmEnableEmEH && TM->Options.ExceptionModel == ExceptionHandling::Wasm)
+    report_fatal_error("-exception-model=wasm not allowed with "
+                       "-enable-emscripten-cxx-exceptions");
+  if (WasmEnableEH && TM->Options.ExceptionModel != ExceptionHandling::Wasm)
+    report_fatal_error(
+        "-wasm-enable-eh only allowed with -exception-model=wasm");
+  if (WasmEnableSjLj && TM->Options.ExceptionModel != ExceptionHandling::Wasm)
+    report_fatal_error(
+        "-wasm-enable-sjlj only allowed with -exception-model=wasm");
+  if ((!WasmEnableEH && !WasmEnableSjLj) &&
+      TM->Options.ExceptionModel == ExceptionHandling::Wasm)
+    report_fatal_error(
+        "-exception-model=wasm only allowed with at least one of "
+        "-wasm-enable-eh or -wasm-enable-sjj");
+
+  // You can't enable two modes of EH at the same time
+  if (WasmEnableEmEH && WasmEnableEH)
+    report_fatal_error(
+        "-enable-emscripten-cxx-exceptions not allowed with -wasm-enable-eh");
+  // You can't enable two modes of SjLj at the same time
+  if (WasmEnableEmSjLj && WasmEnableSjLj)
+    report_fatal_error(
+        "-enable-emscripten-sjlj not allowed with -wasm-enable-sjlj");
+  // You can't mix Emscripten EH with Wasm SjLj.
+  if (WasmEnableEmEH && WasmEnableSjLj)
+    report_fatal_error(
+        "-enable-emscripten-cxx-exceptions not allowed with -wasm-enable-sjlj");
+  // Currently it is allowed to mix Wasm EH with Emscripten SjLj as an interim
+  // measure, but some code will error out at compile time in this combination.
+  // See WebAssemblyLowerEmscriptenEHSjLj pass for details.
+}
+
 //===----------------------------------------------------------------------===//
 // The following functions are called from lib/CodeGen/Passes.cpp to modify
 // the CodeGen pass sequence.
@@ -382,23 +429,27 @@ void WebAssemblyPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOpt::None)
     addPass(createWebAssemblyOptimizeReturned());
 
+  checkSanityForEHAndSjLj(TM);
+
   // If exception handling is not enabled and setjmp/longjmp handling is
   // enabled, we lower invokes into calls and delete unreachable landingpad
   // blocks. Lowering invokes when there is no EH support is done in
-  // TargetPassConfig::addPassesToHandleExceptions, but this runs after this
-  // function and SjLj handling expects all invokes to be lowered before.
-  if (!WasmEnableEmException &&
-      TM->Options.ExceptionModel == ExceptionHandling::None) {
+  // TargetPassConfig::addPassesToHandleExceptions, but that runs after these IR
+  // passes and Emscripten SjLj handling expects all invokes to be lowered
+  // before.
+  if (!WasmEnableEmEH && !WasmEnableEH) {
     addPass(createLowerInvokePass());
     // The lower invoke pass may create unreachable code. Remove it in order not
     // to process dead blocks in setjmp/longjmp handling.
     addPass(createUnreachableBlockEliminationPass());
   }
 
-  // Handle exceptions and setjmp/longjmp if enabled.
-  if (WasmEnableEmException || WasmEnableEmSjLj)
-    addPass(createWebAssemblyLowerEmscriptenEHSjLj(WasmEnableEmException,
-                                                   WasmEnableEmSjLj));
+  // Handle exceptions and setjmp/longjmp if enabled. Unlike Wasm EH preparation
+  // done in WasmEHPrepare pass, Wasm SjLj preparation shares libraries and
+  // transformation algorithms with Emscripten SjLj, so we run
+  // LowerEmscriptenEHSjLj pass also when Wasm SjLj is enabled.
+  if (WasmEnableEmEH || WasmEnableEmSjLj || WasmEnableSjLj)
+    addPass(createWebAssemblyLowerEmscriptenEHSjLj());
 
   // Expand indirectbr instructions to switches.
   addPass(createIndirectBrExpandPass());

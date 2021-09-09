@@ -1791,8 +1791,8 @@ HexagonInstrInfo::CreateTargetPostRAHazardRecognizer(
 /// compares against in CmpValue. Return true if the comparison instruction
 /// can be analyzed.
 bool HexagonInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
-                                      Register &SrcReg2, int &Mask,
-                                      int &Value) const {
+                                      Register &SrcReg2, int64_t &Mask,
+                                      int64_t &Value) const {
   unsigned Opc = MI.getOpcode();
 
   // Set mask and the first source register.

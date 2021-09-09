@@ -15,16 +15,18 @@
 ; CHECK-NOT: llvm-lto:
 
 
-; Verify that bar is imported and inlined into foo
+; Verify that bar is imported 'and' inlined into 'foo'
 ; RUN: cat %t.yaml.thin.0.yaml | FileCheck %s -check-prefix=YAML1
 ; YAML1:      --- !Passed
 ; YAML1-NEXT: Pass:            inline
 ; YAML1-NEXT: Name:            Inlined
 ; YAML1-NEXT: Function:        main
 ; YAML1-NEXT: Args:
+; YAML1-NEXT:   - String:          ''''
 ; YAML1-NEXT:   - Callee:          foo
-; YAML1-NEXT:   - String:          ' inlined into '
+; YAML1-NEXT:   - String:          ''' inlined into '
 ; YAML1-NEXT:   - Caller:          main
+; YAML1-NEXT:   - String:          ''''
 ; YAML1-NEXT:   - String:          ' with '
 ; YAML1-NEXT:   - String:          '(cost='
 ; YAML1-NEXT:   - Cost:            '-30'
@@ -34,16 +36,18 @@
 ; YAML1-NEXT: ...
 
 
-; Verify that bar is imported and inlined into foo
+; Verify that bar is imported 'and' inlined into 'foo'
 ; RUN: cat %t.yaml.thin.1.yaml | FileCheck %s -check-prefix=YAML2
 ; YAML2: --- !Passed
 ; YAML2-NEXT: Pass:            inline
 ; YAML2-NEXT: Name:            Inlined
 ; YAML2-NEXT: Function:        foo
 ; YAML2-NEXT: Args:
+; YAML2-NEXT:   - String:          ''''
 ; YAML2-NEXT:   - Callee:          bar
-; YAML2-NEXT:   - String:          ' inlined into '
+; YAML2-NEXT:   - String:          ''' inlined into '
 ; YAML2-NEXT:   - Caller:          foo
+; YAML2-NEXT:   - String:          ''''
 ; YAML2-NEXT:   - String:          ' with '
 ; YAML2-NEXT:   - String:          '(cost='
 ; YAML2-NEXT:   - Cost:            '-30'

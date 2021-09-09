@@ -25,6 +25,7 @@ add_llvm_component_library(LLVMLTO
   Extensions
   IPO
   InstCombine
+  Instrumentation
   Linker
   MC
   ObjCARC

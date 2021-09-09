@@ -1496,11 +1496,8 @@ template <typename _Tp,
           typename _Base = __cxx_atomic_base_impl<_Tp> >
 #endif //_LIBCPP_ATOMIC_ONLY_USE_BUILTINS
 struct __cxx_atomic_impl : public _Base {
-
-#if _GNUC_VER >= 501
     static_assert(is_trivially_copyable<_Tp>::value,
       "std::atomic<Tp> requires that 'Tp' be a trivially copyable type");
-#endif
 
   _LIBCPP_INLINE_VISIBILITY __cxx_atomic_impl() _NOEXCEPT _LIBCPP_DEFAULT
   _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR explicit __cxx_atomic_impl(_Tp value) _NOEXCEPT

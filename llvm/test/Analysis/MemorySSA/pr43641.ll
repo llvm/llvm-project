@@ -1,4 +1,4 @@
-; RUN: opt -simple-loop-unswitch -enable-nontrivial-unswitch -enable-mssa-loop-dependency -verify-memoryssa -S < %s | FileCheck %s
+; RUN: opt -simple-loop-unswitch -enable-nontrivial-unswitch -verify-memoryssa -S < %s | FileCheck %s
 ; REQUIRES: asserts
 
 ; CHECK-LABEL: @c

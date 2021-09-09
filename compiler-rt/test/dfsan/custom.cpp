@@ -161,6 +161,10 @@ dfsan_label i_j_label = 0;
 #define ASSERT_SAVED_N_ORIGINS(val, n)
 #endif
 
+#if !defined(__GLIBC_PREREQ)
+#  define __GLIBC_PREREQ(a, b) 0
+#endif
+
 void test_stat() {
   int i = 1;
   dfsan_set_label(i_label, &i, sizeof(i));
@@ -942,6 +946,21 @@ void test_get_current_dir_name() {
   assert(ret[0] == '/');
   ASSERT_READ_ZERO_LABEL(ret, strlen(ret) + 1);
   ASSERT_ZERO_LABEL(ret);
+}
+
+void test_getentropy() {
+  char buf[64];
+  dfsan_set_label(i_label, buf + 2, 2);
+  DEFINE_AND_SAVE_ORIGINS(buf)
+#if __GLIBC_PREREQ(2, 25)
+  // glibc >= 2.25 has getentropy()
+  int ret = getentropy(buf, sizeof(buf));
+  ASSERT_ZERO_LABEL(ret);
+  if (ret == 0) {
+    ASSERT_READ_ZERO_LABEL(buf + 2, 2);
+    ASSERT_SAVED_ORIGINS(buf)
+  }
+#endif
 }
 
 void test_gethostname() {
@@ -1967,6 +1986,7 @@ int main(void) {
   test_fstat();
   test_get_current_dir_name();
   test_getcwd();
+  test_getentropy();
   test_gethostname();
   test_getpeername();
   test_getpwuid_r();

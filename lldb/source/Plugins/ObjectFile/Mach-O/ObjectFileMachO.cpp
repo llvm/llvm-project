@@ -1127,6 +1127,10 @@ bool ObjectFileMachO::IsDynamicLoader() const {
   return m_header.filetype == MH_DYLINKER;
 }
 
+bool ObjectFileMachO::IsSharedCacheBinary() const {
+  return m_header.flags & MH_DYLIB_IN_CACHE;
+}
+
 uint32_t ObjectFileMachO::GetAddressByteSize() const {
   return m_data.GetAddressByteSize();
 }
@@ -1377,7 +1381,7 @@ void ObjectFileMachO::SanitizeSegmentCommand(
   if (m_length == 0 || seg_cmd.filesize == 0)
     return;
 
-  if ((m_header.flags & MH_DYLIB_IN_CACHE) && !IsInMemory()) {
+  if (IsSharedCacheBinary() && !IsInMemory()) {
     // In shared cache images, the load commands are relative to the
     // shared cache file, and not the specific image we are
     // examining. Let's fix this up so that it looks like a normal
@@ -1675,29 +1679,38 @@ void ObjectFileMachO::ProcessSegmentCommand(
     if (add_to_unified)
       context.UnifiedList.AddSection(segment_sp);
   } else if (unified_section_sp) {
+    // If this is a dSYM and the file addresses in the dSYM differ from the
+    // file addresses in the ObjectFile, we must use the file base address for
+    // the Section from the dSYM for the DWARF to resolve correctly.
+    // This only happens with binaries in the shared cache in practice;
+    // normally a mismatch like this would give a binary & dSYM that do not
+    // match UUIDs. When a binary is included in the shared cache, its
+    // segments are rearranged to optimize the shared cache, so its file
+    // addresses will differ from what the ObjectFile had originally,
+    // and what the dSYM has.
     if (is_dsym && unified_section_sp->GetFileAddress() != load_cmd.vmaddr) {
-      // Check to see if the module was read from memory?
-      if (module_sp->GetObjectFile()->IsInMemory()) {
-        // We have a module that is in memory and needs to have its file
-        // address adjusted. We need to do this because when we load a file
-        // from memory, its addresses will be slid already, yet the addresses
-        // in the new symbol file will still be unslid.  Since everything is
-        // stored as section offset, this shouldn't cause any problems.
-
-        // Make sure we've parsed the symbol table from the ObjectFile before
-        // we go around changing its Sections.
-        module_sp->GetObjectFile()->GetSymtab();
-        // eh_frame would present the same problems but we parse that on a per-
-        // function basis as-needed so it's more difficult to remove its use of
-        // the Sections.  Realistically, the environments where this code path
-        // will be taken will not have eh_frame sections.
-
-        unified_section_sp->SetFileAddress(load_cmd.vmaddr);
-
-        // Notify the module that the section addresses have been changed once
-        // we're done so any file-address caches can be updated.
-        context.FileAddressesChanged = true;
+      Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS));
+      if (log) {
+        log->Printf(
+            "Installing dSYM's %s segment file address over ObjectFile's "
+            "so symbol table/debug info resolves correctly for %s",
+            const_segname.AsCString(),
+            module_sp->GetFileSpec().GetFilename().AsCString());
       }
+
+      // Make sure we've parsed the symbol table from the ObjectFile before
+      // we go around changing its Sections.
+      module_sp->GetObjectFile()->GetSymtab();
+      // eh_frame would present the same problems but we parse that on a per-
+      // function basis as-needed so it's more difficult to remove its use of
+      // the Sections.  Realistically, the environments where this code path
+      // will be taken will not have eh_frame sections.
+
+      unified_section_sp->SetFileAddress(load_cmd.vmaddr);
+
+      // Notify the module that the section addresses have been changed once
+      // we're done so any file-address caches can be updated.
+      context.FileAddressesChanged = true;
     }
     m_sections_up->AddSection(unified_section_sp);
   }
@@ -1726,7 +1739,7 @@ void ObjectFileMachO::ProcessSegmentCommand(
     if (m_data.GetU32(&offset, &sect64.offset, num_u32s) == nullptr)
       break;
 
-    if ((m_header.flags & MH_DYLIB_IN_CACHE) && !IsInMemory()) {
+    if (IsSharedCacheBinary() && !IsInMemory()) {
       sect64.offset = sect64.addr - m_text_address;
     }
 
@@ -2352,7 +2365,7 @@ size_t ObjectFileMachO::ParseSymtab() {
   Process *process = process_sp.get();
 
   uint32_t memory_module_load_level = eMemoryModuleLoadLevelComplete;
-  bool is_shared_cache_image = m_header.flags & MH_DYLIB_IN_CACHE;
+  bool is_shared_cache_image = IsSharedCacheBinary();
   bool is_local_shared_cache_image = is_shared_cache_image && !IsInMemory();
   SectionSP linkedit_section_sp(
       section_list->FindSectionByName(GetSegmentNameLINKEDIT()));
@@ -2668,7 +2681,7 @@ size_t ObjectFileMachO::ParseSymtab() {
   // to parse any DSC unmapped symbol information. If we find any, we set a
   // flag that tells the normal nlist parser to ignore all LOCAL symbols.
 
-  if (m_header.flags & MH_DYLIB_IN_CACHE) {
+  if (IsSharedCacheBinary()) {
     // Before we can start mapping the DSC, we need to make certain the
     // target process is actually using the cache we can find.
 
@@ -6342,13 +6355,17 @@ struct segment_vmaddr {
 // are some multiple passes over the image list while calculating
 // everything.
 
-static offset_t
-CreateAllImageInfosPayload(const lldb::ProcessSP &process_sp,
-                           offset_t initial_file_offset,
-                           StreamString &all_image_infos_payload) {
+static offset_t CreateAllImageInfosPayload(
+    const lldb::ProcessSP &process_sp, offset_t initial_file_offset,
+    StreamString &all_image_infos_payload, SaveCoreStyle core_style) {
   Target &target = process_sp->GetTarget();
-  const ModuleList &modules = target.GetImages();
-  size_t modules_count = modules.GetSize();
+  ModuleList modules = target.GetImages();
+
+  // stack-only corefiles have no reason to include binaries that
+  // are not executing; we're trying to make the smallest corefile
+  // we can, so leave the rest out.
+  if (core_style == SaveCoreStyle::eSaveCoreStackOnly)
+    modules.Clear();
 
   std::set<std::string> executing_uuids;
   ThreadList &thread_list(process_sp->GetThreadList());
@@ -6363,10 +6380,12 @@ CreateAllImageInfosPayload(const lldb::ProcessSP &process_sp,
         UUID uuid = module_sp->GetUUID();
         if (uuid.IsValid()) {
           executing_uuids.insert(uuid.GetAsString());
+          modules.AppendIfNeeded(module_sp);
         }
       }
     }
   }
+  size_t modules_count = modules.GetSize();
 
   struct all_image_infos_header infos;
   infos.version = 1;
@@ -6508,12 +6527,9 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
   if (!process_sp)
     return false;
 
-  // For Mach-O, we can only create full corefiles or dirty-page-only
-  // corefiles.  The default is dirty-page-only.
-  if (core_style != SaveCoreStyle::eSaveCoreFull) {
+  // Default on macOS is to create a dirty-memory-only corefile.
+  if (core_style == SaveCoreStyle::eSaveCoreUnspecified) {
     core_style = SaveCoreStyle::eSaveCoreDirtyOnly;
-  } else {
-    core_style = SaveCoreStyle::eSaveCoreFull;
   }
 
   Target &target = process_sp->GetTarget();
@@ -6568,13 +6584,23 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
           if (size == 0)
             break;
 
-          if (prot != 0) {
+          bool include_this_region = true;
+          bool dirty_pages_only = false;
+          if (core_style == SaveCoreStyle::eSaveCoreStackOnly) {
+            dirty_pages_only = true;
+            if (range_info.IsStackMemory() != MemoryRegionInfo::eYes) {
+              include_this_region = false;
+            }
+          }
+          if (core_style == SaveCoreStyle::eSaveCoreDirtyOnly) {
+            dirty_pages_only = true;
+          }
+
+          if (prot != 0 && include_this_region) {
             addr_t pagesize = range_info.GetPageSize();
             const llvm::Optional<std::vector<addr_t>> &dirty_page_list =
                 range_info.GetDirtyPageList();
-            if (core_style == SaveCoreStyle::eSaveCoreDirtyOnly &&
-                dirty_page_list.hasValue()) {
-              core_style = SaveCoreStyle::eSaveCoreDirtyOnly;
+            if (dirty_pages_only && dirty_page_list.hasValue()) {
               for (addr_t dirtypage : dirty_page_list.getValue()) {
                 page_object obj;
                 obj.addr = dirtypage;
@@ -6603,6 +6629,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
         std::vector<page_object> combined_page_objects;
         page_object last_obj;
         last_obj.addr = LLDB_INVALID_ADDRESS;
+        last_obj.size = 0;
         for (page_object obj : pages_to_copy) {
           if (last_obj.addr == LLDB_INVALID_ADDRESS) {
             last_obj = obj;
@@ -6616,6 +6643,10 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
           combined_page_objects.push_back(last_obj);
           last_obj = obj;
         }
+        // Add the last entry we were looking to combine
+        // on to the array.
+        if (last_obj.addr != LLDB_INVALID_ADDRESS && last_obj.size != 0)
+          combined_page_objects.push_back(last_obj);
 
         for (page_object obj : combined_page_objects) {
           uint32_t cmd_type = LC_SEGMENT_64;
@@ -6767,7 +6798,8 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
         all_image_infos_lcnote_up->name = "all image infos";
         all_image_infos_lcnote_up->payload_file_offset = file_offset;
         file_offset = CreateAllImageInfosPayload(
-            process_sp, file_offset, all_image_infos_lcnote_up->payload);
+            process_sp, file_offset, all_image_infos_lcnote_up->payload,
+            core_style);
         lc_notes.push_back(std::move(all_image_infos_lcnote_up));
 
         // Add LC_NOTE load commands

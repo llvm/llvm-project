@@ -14,6 +14,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
+#include "llvm/ADT/StringExtras.h"
 #include <numeric>
 
 using namespace mlir;
@@ -641,6 +642,17 @@ ParseResult OpState::parse(OpAsmParser &parser, OperationState &result) {
 
 // The fallback for the printer is to print in the generic assembly form.
 void OpState::print(Operation *op, OpAsmPrinter &p) { p.printGenericOp(op); }
+// The fallback for the printer is to print in the generic assembly form.
+void OpState::printOpName(Operation *op, OpAsmPrinter &p,
+                          StringRef defaultDialect) {
+  StringRef name = op->getName().getStringRef();
+  if (name.startswith((defaultDialect + ".").str()))
+    name = name.drop_front(defaultDialect.size() + 1);
+  // TODO: remove this special case.
+  else if (name.startswith("std."))
+    name = name.drop_front(4);
+  p.getStream() << name;
+}
 
 /// Emit an error about fatal conditions with this operation, reporting up to
 /// any diagnostic handlers that may be listening.
@@ -996,16 +1008,19 @@ OpTrait::impl::verifyResultsAreSignlessIntegerLike(Operation *op) {
   return success();
 }
 
-static LogicalResult verifyValueSizeAttr(Operation *op, StringRef attrName,
-                                         bool isOperand) {
+LogicalResult OpTrait::impl::verifyValueSizeAttr(Operation *op,
+                                                 StringRef attrName,
+                                                 StringRef valueGroupName,
+                                                 size_t expectedCount) {
   auto sizeAttr = op->getAttrOfType<DenseIntElementsAttr>(attrName);
   if (!sizeAttr)
-    return op->emitOpError("requires 1D vector attribute '") << attrName << "'";
+    return op->emitOpError("requires 1D i32 elements attribute '")
+           << attrName << "'";
 
-  auto sizeAttrType = sizeAttr.getType().dyn_cast<VectorType>();
-  if (!sizeAttrType || sizeAttrType.getRank() != 1 ||
+  auto sizeAttrType = sizeAttr.getType();
+  if (sizeAttrType.getRank() != 1 ||
       !sizeAttrType.getElementType().isInteger(32))
-    return op->emitOpError("requires 1D vector of i32 attribute '")
+    return op->emitOpError("requires 1D i32 elements attribute '")
            << attrName << "'";
 
   if (llvm::any_of(sizeAttr.getIntValues(), [](const APInt &element) {
@@ -1018,25 +1033,22 @@ static LogicalResult verifyValueSizeAttr(Operation *op, StringRef attrName,
       sizeAttr.begin(), sizeAttr.end(), 0,
       [](unsigned all, APInt one) { return all + one.getZExtValue(); });
 
-  if (isOperand && totalCount != op->getNumOperands())
-    return op->emitOpError("operand count (")
-           << op->getNumOperands() << ") does not match with the total size ("
-           << totalCount << ") specified in attribute '" << attrName << "'";
-  else if (!isOperand && totalCount != op->getNumResults())
-    return op->emitOpError("result count (")
-           << op->getNumResults() << ") does not match with the total size ("
-           << totalCount << ") specified in attribute '" << attrName << "'";
+  if (totalCount != expectedCount)
+    return op->emitOpError()
+           << valueGroupName << " count (" << expectedCount
+           << ") does not match with the total size (" << totalCount
+           << ") specified in attribute '" << attrName << "'";
   return success();
 }
 
 LogicalResult OpTrait::impl::verifyOperandSizeAttr(Operation *op,
                                                    StringRef attrName) {
-  return verifyValueSizeAttr(op, attrName, /*isOperand=*/true);
+  return verifyValueSizeAttr(op, attrName, "operand", op->getNumOperands());
 }
 
 LogicalResult OpTrait::impl::verifyResultSizeAttr(Operation *op,
                                                   StringRef attrName) {
-  return verifyValueSizeAttr(op, attrName, /*isOperand=*/false);
+  return verifyValueSizeAttr(op, attrName, "result", op->getNumResults());
 }
 
 LogicalResult OpTrait::impl::verifyNoRegionArguments(Operation *op) {
@@ -1167,6 +1179,24 @@ ParseResult impl::parseOneResultSameOperandTypeOp(OpAsmParser &parser,
                                                   OperationState &result) {
   SmallVector<OpAsmParser::OperandType, 2> ops;
   Type type;
+  // If the operand list is in-between parentheses, then we have a generic form.
+  // (see the fallback in `printOneResultOp`).
+  llvm::SMLoc loc = parser.getCurrentLocation();
+  if (!parser.parseOptionalLParen()) {
+    if (parser.parseOperandList(ops) || parser.parseRParen() ||
+        parser.parseOptionalAttrDict(result.attributes) ||
+        parser.parseColon() || parser.parseType(type))
+      return failure();
+    auto fnType = type.dyn_cast<FunctionType>();
+    if (!fnType) {
+      parser.emitError(loc, "expected function type");
+      return failure();
+    }
+    if (parser.resolveOperands(ops, fnType.getInputs(), loc, result.operands))
+      return failure();
+    result.addTypes(fnType.getResults());
+    return success();
+  }
   return failure(parser.parseOperandList(ops) ||
                  parser.parseOptionalAttrDict(result.attributes) ||
                  parser.parseColonType(type) ||
@@ -1182,11 +1212,11 @@ void impl::printOneResultOp(Operation *op, OpAsmPrinter &p) {
   auto resultType = op->getResult(0).getType();
   if (llvm::any_of(op->getOperandTypes(),
                    [&](Type type) { return type != resultType; })) {
-    p.printGenericOp(op);
+    p.printGenericOp(op, /*printOpName=*/false);
     return;
   }
 
-  p << op->getName() << ' ';
+  p << ' ';
   p.printOperands(op->getOperands());
   p.printOptionalAttrDict(op->getAttrs());
   // Now we can output only one type for all operands and the result.
@@ -1257,7 +1287,7 @@ ParseResult impl::parseCastOp(OpAsmParser &parser, OperationState &result) {
 }
 
 void impl::printCastOp(Operation *op, OpAsmPrinter &p) {
-  p << op->getName() << ' ' << op->getOperand(0);
+  p << ' ' << op->getOperand(0);
   p.printOptionalAttrDict(op->getAttrs());
   p << " : " << op->getOperand(0).getType() << " to "
     << op->getResult(0).getType();
@@ -1313,39 +1343,4 @@ void impl::ensureRegionTerminator(
     function_ref<Operation *(OpBuilder &, Location)> buildTerminatorOp) {
   OpBuilder opBuilder(builder.getContext());
   ensureRegionTerminator(region, opBuilder, loc, buildTerminatorOp);
-}
-
-//===----------------------------------------------------------------------===//
-// UseIterator
-//===----------------------------------------------------------------------===//
-
-Operation::UseIterator::UseIterator(Operation *op, bool end)
-    : op(op), res(end ? op->result_end() : op->result_begin()) {
-  // Only initialize current use if there are results/can be uses.
-  if (op->getNumResults())
-    skipOverResultsWithNoUsers();
-}
-
-Operation::UseIterator &Operation::UseIterator::operator++() {
-  // We increment over uses, if we reach the last use then move to next
-  // result.
-  if (use != (*res).use_end())
-    ++use;
-  if (use == (*res).use_end()) {
-    ++res;
-    skipOverResultsWithNoUsers();
-  }
-  return *this;
-}
-
-void Operation::UseIterator::skipOverResultsWithNoUsers() {
-  while (res != op->result_end() && (*res).use_empty())
-    ++res;
-
-  // If we are at the last result, then set use to first use of
-  // first result (sentinel value used for end).
-  if (res == op->result_end())
-    use = {};
-  else
-    use = (*res).use_begin();
 }

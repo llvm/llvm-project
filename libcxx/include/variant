@@ -233,10 +233,7 @@ public:
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// TODO: GCC 5 lies about its support for C++17 (it says it supports it but it
-//       really doesn't). That breaks variant, which uses some C++17 features.
-//       Remove this once we drop support for GCC 5.
-#if _LIBCPP_STD_VER > 14 && !(defined(_LIBCPP_COMPILER_GCC) && _GNUC_VER_NEW < 6000)
+#if _LIBCPP_STD_VER > 14
 
 // Light N-dimensional array of function pointers. Used in place of std::array to avoid
 // adding a dependency.
@@ -1196,11 +1193,11 @@ struct __narrowing_check {
   template <class _Dest>
   static auto __test_impl(_Dest (&&)[1]) -> __identity<_Dest>;
   template <class _Dest, class _Source>
-  using _Apply _LIBCPP_NODEBUG_TYPE = decltype(__test_impl<_Dest>({declval<_Source>()}));
+  using _Apply _LIBCPP_NODEBUG = decltype(__test_impl<_Dest>({declval<_Source>()}));
 };
 
 template <class _Dest, class _Source>
-using __check_for_narrowing _LIBCPP_NODEBUG_TYPE =
+using __check_for_narrowing _LIBCPP_NODEBUG =
   typename _If<
 #ifdef _LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT
     false &&
@@ -1244,11 +1241,11 @@ struct __make_overloads_imp;
 template <size_t ..._Idx>
 struct __make_overloads_imp<__tuple_indices<_Idx...> > {
   template <class ..._Types>
-  using _Apply _LIBCPP_NODEBUG_TYPE = __all_overloads<__overload<_Types, _Idx>...>;
+  using _Apply _LIBCPP_NODEBUG = __all_overloads<__overload<_Types, _Idx>...>;
 };
 
 template <class ..._Types>
-using _MakeOverloads _LIBCPP_NODEBUG_TYPE = typename __make_overloads_imp<
+using _MakeOverloads _LIBCPP_NODEBUG = typename __make_overloads_imp<
     __make_indices_imp<sizeof...(_Types), 0> >::template _Apply<_Types...>;
 
 template <class _Tp, class... _Types>
@@ -1718,11 +1715,10 @@ inline _LIBCPP_INLINE_VISIBILITY
 
 template <class... _Types>
 inline _LIBCPP_INLINE_VISIBILITY
-auto swap(variant<_Types...>& __lhs,
-          variant<_Types...>& __rhs) noexcept(noexcept(__lhs.swap(__rhs)))
-    -> decltype(__lhs.swap(__rhs)) {
-  __lhs.swap(__rhs);
-}
+auto swap(variant<_Types...>& __lhs, variant<_Types...>& __rhs)
+  noexcept(noexcept(__lhs.swap(__rhs)))
+  -> decltype(      __lhs.swap(__rhs))
+  { return          __lhs.swap(__rhs); }
 
 template <class... _Types>
 struct _LIBCPP_TEMPLATE_VIS hash<

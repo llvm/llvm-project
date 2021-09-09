@@ -733,8 +733,8 @@ bool CFI_Parser<A>::parseFDEInstructions(A &addressSpace,
 #if defined(_LIBUNWIND_TARGET_AARCH64)
         case REGISTERS_ARM64: {
           int64_t value =
-              results->savedRegisters[UNW_ARM64_RA_SIGN_STATE].value ^ 0x1;
-          results->setRegisterValue(UNW_ARM64_RA_SIGN_STATE, value,
+              results->savedRegisters[UNW_AARCH64_RA_SIGN_STATE].value ^ 0x1;
+          results->setRegisterValue(UNW_AARCH64_RA_SIGN_STATE, value,
                                     initialState);
           _LIBUNWIND_TRACE_DWARF("DW_CFA_AARCH64_negate_ra_state\n");
         } break;

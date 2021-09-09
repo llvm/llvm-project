@@ -14,7 +14,7 @@
 #include "test_iterators.h"
 
 #ifdef _LIBCPP_HAS_NO_RANGES
-#error "test/suppoort/test_range.h" can only be included in builds supporting ranges
+#error "test/support/test_range.h" can only be included in builds supporting ranges
 #endif
 
 struct sentinel {

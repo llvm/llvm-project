@@ -437,15 +437,20 @@ ParseListTableHeader(const llvm::DWARFDataExtractor &data, uint64_t offset,
   // We are expected to be called with Offset 0 or pointing just past the table
   // header. Correct Offset in the latter case so that it points to the start
   // of the header.
-  if (offset > 0) {
-    uint64_t HeaderSize = llvm::DWARFListTableHeader::getHeaderSize(format);
-    if (offset < HeaderSize)
-      return llvm::createStringError(errc::invalid_argument,
-                                     "did not detect a valid"
-                                     " list table with base = 0x%" PRIx64 "\n",
-                                     offset);
-    offset -= HeaderSize;
+  if (offset == 0) {
+    // This means DW_AT_rnglists_base is missing and therefore DW_FORM_rnglistx
+    // cannot be handled. Returning a default-constructed ListTableType allows
+    // DW_FORM_sec_offset to be supported.
+    return ListTableType();
   }
+
+  uint64_t HeaderSize = llvm::DWARFListTableHeader::getHeaderSize(format);
+  if (offset < HeaderSize)
+    return llvm::createStringError(errc::invalid_argument,
+                                   "did not detect a valid"
+                                   " list table with base = 0x%" PRIx64 "\n",
+                                   offset);
+  offset -= HeaderSize;
   ListTableType Table;
   if (llvm::Error E = Table.extractHeaderAndOffsets(data, &offset))
     return std::move(E);
@@ -508,6 +513,24 @@ DWARFDataExtractor DWARFUnit::GetLocationData() const {
   return data;
 }
 
+DWARFDataExtractor DWARFUnit::GetRnglistData() const {
+  DWARFContext &Ctx = GetSymbolFileDWARF().GetDWARFContext();
+  const DWARFDataExtractor &data = Ctx.getOrLoadRngListsData();
+  if (const llvm::DWARFUnitIndex::Entry *entry = m_header.GetIndexEntry()) {
+    if (const auto *contribution =
+            entry->getContribution(llvm::DW_SECT_RNGLISTS))
+      return DWARFDataExtractor(data, contribution->Offset,
+                                contribution->Length);
+    GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
+        "Failed to find range list contribution for CU with signature "
+        "0x%" PRIx64,
+        entry->getSignature());
+
+    return DWARFDataExtractor();
+  }
+  return data;
+}
+
 void DWARFUnit::SetRangesBase(dw_addr_t ranges_base) {
   lldbassert(!m_rnglist_table_done);
 
@@ -520,8 +543,7 @@ DWARFUnit::GetRnglistTable() {
     m_rnglist_table_done = true;
     if (auto table_or_error =
             ParseListTableHeader<llvm::DWARFDebugRnglistTable>(
-                m_dwarf.GetDWARFContext().getOrLoadRngListsData().GetAsLLVM(),
-                m_ranges_base, DWARF32))
+                GetRnglistData().GetAsLLVM(), m_ranges_base, DWARF32))
       m_rnglist_table = std::move(table_or_error.get());
     else
       GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
@@ -542,7 +564,7 @@ llvm::Expected<uint64_t> DWARFUnit::GetRnglistOffset(uint32_t Index) {
                                    "DW_AT_rnglists_base for CU at 0x%8.8x",
                                    GetOffset());
   if (llvm::Optional<uint64_t> off = GetRnglistTable()->getOffsetEntry(
-          m_dwarf.GetDWARFContext().getOrLoadRngListsData().GetAsLLVM(), Index))
+          GetRnglistData().GetAsLLVM(), Index))
     return *off + m_ranges_base;
   return llvm::createStringError(
       errc::invalid_argument,
@@ -996,8 +1018,11 @@ DWARFUnit::FindRnglistFromOffset(dw_offset_t offset) {
     return llvm::createStringError(errc::invalid_argument,
                                    "missing or invalid range list table");
 
-  auto range_list_or_error = GetRnglistTable()->findList(
-      m_dwarf.GetDWARFContext().getOrLoadRngListsData().GetAsLLVM(), offset);
+  llvm::DWARFDataExtractor data = GetRnglistData().GetAsLLVM();
+
+  // As DW_AT_rnglists_base may be missing we need to call setAddressSize.
+  data.setAddressSize(m_header.GetAddressByteSize());
+  auto range_list_or_error = GetRnglistTable()->findList(data, offset);
   if (!range_list_or_error)
     return range_list_or_error.takeError();
 

@@ -49,5 +49,5 @@ becomes
 
 For better consistency of user code, the check renames both virtual and
 non-virtual member functions with matching names in derived types. The check
-tries to provide a only warning when a fix cannot be made safely, as is the case
+tries to provide only a warning when a fix cannot be made safely, as is the case
 with some template and macro uses.

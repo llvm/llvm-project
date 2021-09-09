@@ -9,6 +9,7 @@
 #ifndef LLVM_TOOLS_LLVM_PROFGEN_PGOINLINEADVISOR_H
 #define LLVM_TOOLS_LLVM_PROFGEN_PGOINLINEADVISOR_H
 
+#include "ProfiledBinary.h"
 #include "llvm/ADT/PriorityQueue.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SampleProf.h"
@@ -23,9 +24,9 @@ namespace sampleprof {
 
 // Inline candidate seen from profile
 struct ProfiledInlineCandidate {
-  ProfiledInlineCandidate(const FunctionSamples *Samples, uint64_t Count)
-      : CalleeSamples(Samples), CallsiteCount(Count),
-        SizeCost(Samples->getBodySamples().size()) {}
+  ProfiledInlineCandidate(const FunctionSamples *Samples, uint64_t Count,
+                          uint32_t Size)
+      : CalleeSamples(Samples), CallsiteCount(Count), SizeCost(Size) {}
   // Context-sensitive function profile for inline candidate
   const FunctionSamples *CalleeSamples;
   // Call site count for an inline candidate
@@ -33,7 +34,6 @@ struct ProfiledInlineCandidate {
   // target count for corresponding call are consistent.
   uint64_t CallsiteCount;
   // Size proxy for function under particular call context.
-  // TODO: use post-inline callee size from debug info.
   uint64_t SizeCost;
 };
 
@@ -67,8 +67,8 @@ using ProfiledCandidateQueue =
 // size by only keep context that is estimated to be inlined.
 class CSPreInliner {
 public:
-  CSPreInliner(StringMap<FunctionSamples> &Profiles, uint64_t HotThreshold,
-               uint64_t ColdThreshold);
+  CSPreInliner(SampleProfileMap &Profiles, ProfiledBinary &Binary,
+               uint64_t HotThreshold, uint64_t ColdThreshold);
   void run();
 
 private:
@@ -77,8 +77,11 @@ private:
   std::vector<StringRef> buildTopDownOrder();
   void processFunction(StringRef Name);
   bool shouldInline(ProfiledInlineCandidate &Candidate);
+  uint32_t getFuncSize(const FunctionSamples &FSamples);
+  bool UseContextCost;
   SampleContextTracker ContextTracker;
-  StringMap<FunctionSamples> &ProfileMap;
+  SampleProfileMap &ProfileMap;
+  ProfiledBinary &Binary;
 
   // Count thresholds to answer isHotCount and isColdCount queries.
   // Mirrors the threshold in ProfileSummaryInfo.

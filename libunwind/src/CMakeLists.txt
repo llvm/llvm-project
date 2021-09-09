@@ -34,6 +34,7 @@ set(LIBUNWIND_HEADERS
     AddressSpace.hpp
     assembly.h
     CompactUnwinder.hpp
+    cet_unwind.h
     config.h
     dwarf2.h
     DwarfInstructions.hpp
@@ -47,6 +48,8 @@ set(LIBUNWIND_HEADERS
     UnwindCursor.hpp
     ../include/libunwind.h
     ../include/unwind.h
+    ../include/unwind_itanium.h
+    ../include/unwind_arm_ehabi.h
     )
 if(APPLE)
   list(APPEND LIBUNWIND_HEADERS

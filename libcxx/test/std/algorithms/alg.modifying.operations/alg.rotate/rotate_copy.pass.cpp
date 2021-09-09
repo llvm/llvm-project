@@ -12,10 +12,6 @@
 //   constexpr OutIter          // constexpr after C++17
 //   rotate_copy(InIter first, InIter middle, InIter last, OutIter result);
 
-// Older compilers don't support std::is_constant_evaluated
-// UNSUPPORTED: clang-4, clang-5, clang-6, clang-7, clang-8
-// UNSUPPORTED: apple-clang-9, apple-clang-10
-
 #include <algorithm>
 #include <cassert>
 

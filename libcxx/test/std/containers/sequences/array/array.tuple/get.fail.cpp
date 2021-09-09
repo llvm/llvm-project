@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// GCC 5 does not evaluate static assertions dependent on a template parameter.
-// UNSUPPORTED: gcc-5
-
 // <array>
 
 // template <size_t I, class T, size_t N> T& get(array<T, N>& a);

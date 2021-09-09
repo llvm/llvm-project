@@ -25,7 +25,7 @@ define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 ;
 ; RV64I-LABEL: func32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    mul a1, a1, a2
+; RV64I-NEXT:    mulw a1, a1, a2
 ; RV64I-NEXT:    subw a1, a0, a1
 ; RV64I-NEXT:    sext.w a2, a0
 ; RV64I-NEXT:    mv a0, zero

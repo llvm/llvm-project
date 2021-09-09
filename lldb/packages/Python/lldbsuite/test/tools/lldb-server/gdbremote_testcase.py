@@ -724,7 +724,8 @@ class GdbRemoteTestCaseBase(Base):
                  "flags",
                  "name",
                  "error",
-                 "dirty-pages"])
+                 "dirty-pages",
+                 "type"])
             self.assertIsNotNone(val)
 
         mem_region_dict["name"] = seven.unhexlify(mem_region_dict.get("name", ""))
@@ -859,6 +860,7 @@ class GdbRemoteTestCaseBase(Base):
         "fork-events",
         "vfork-events",
         "memory-tagging",
+        "qSaveCore",
     ]
 
     def parse_qSupported_response(self, context):

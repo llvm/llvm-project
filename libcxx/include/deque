@@ -908,31 +908,8 @@ move_backward(__deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __f,
     return __r;
 }
 
-template <bool>
-class __deque_base_common
-{
-protected:
-    _LIBCPP_NORETURN void __throw_length_error() const;
-    _LIBCPP_NORETURN void __throw_out_of_range() const;
-};
-
-template <bool __b>
-void
-__deque_base_common<__b>::__throw_length_error() const
-{
-    _VSTD::__throw_length_error("deque");
-}
-
-template <bool __b>
-void
-__deque_base_common<__b>::__throw_out_of_range() const
-{
-    _VSTD::__throw_out_of_range("deque");
-}
-
 template <class _Tp, class _Allocator>
 class __deque_base
-    : protected __deque_base_common<true>
 {
     __deque_base(const __deque_base& __c);
     __deque_base& operator=(const __deque_base& __c);
@@ -1588,17 +1565,17 @@ public:
     void __move_assign(deque& __c, false_type);
 };
 
-#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+#if _LIBCPP_STD_VER >= 17
 template<class _InputIterator,
          class _Alloc = allocator<__iter_value_type<_InputIterator>>,
-         class = _EnableIf<__is_allocator<_Alloc>::value>
+         class = enable_if_t<__is_allocator<_Alloc>::value>
          >
 deque(_InputIterator, _InputIterator)
   -> deque<__iter_value_type<_InputIterator>, _Alloc>;
 
 template<class _InputIterator,
          class _Alloc,
-         class = _EnableIf<__is_allocator<_Alloc>::value>
+         class = enable_if_t<__is_allocator<_Alloc>::value>
          >
 deque(_InputIterator, _InputIterator, _Alloc)
   -> deque<__iter_value_type<_InputIterator>, _Alloc>;
@@ -1873,7 +1850,7 @@ typename deque<_Tp, _Allocator>::reference
 deque<_Tp, _Allocator>::at(size_type __i)
 {
     if (__i >= __base::size())
-        __base::__throw_out_of_range();
+        _VSTD::__throw_out_of_range("deque");
     size_type __p = __base::__start_ + __i;
     return *(*(__base::__map_.begin() + __p / __base::__block_size) + __p % __base::__block_size);
 }
@@ -1884,7 +1861,7 @@ typename deque<_Tp, _Allocator>::const_reference
 deque<_Tp, _Allocator>::at(size_type __i) const
 {
     if (__i >= __base::size())
-        __base::__throw_out_of_range();
+        _VSTD::__throw_out_of_range("deque");
     size_type __p = __base::__start_ + __i;
     return *(*(__base::__map_.begin() + __p / __base::__block_size) + __p % __base::__block_size);
 }
@@ -2237,7 +2214,7 @@ deque<_Tp, _Allocator>::insert(const_iterator __p, size_type __n, const value_ty
         size_type __de = __base::size() - __pos;
         if (__n > __de)
         {
-            for (size_type __m = __n - __de; __m; --__m, ++__i, ++__base::size())
+            for (size_type __m = __n - __de; __m; --__m, (void) ++__i, ++__base::size())
                 __alloc_traits::construct(__a, _VSTD::addressof(*__i), __v);
             __n = __de;
         }
@@ -2340,7 +2317,7 @@ deque<_Tp, _Allocator>::insert(const_iterator __p, _BiIter __f, _BiIter __l,
         if (__n > 0)
         {
             iterator __oen = __old_end - __n;
-            for (iterator __j = __oen; __j != __old_end; ++__i, ++__j, ++__base::size())
+            for (iterator __j = __oen; __j != __old_end; ++__i, (void) ++__j, ++__base::size())
                 __alloc_traits::construct(__a, _VSTD::addressof(*__i), _VSTD::move(*__j));
             if (__n < __de)
                 __old_end = _VSTD::move_backward(__old_end - __de, __oen, __old_end);

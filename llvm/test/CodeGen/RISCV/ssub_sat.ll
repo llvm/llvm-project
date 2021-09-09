@@ -21,9 +21,9 @@ define signext i32 @func(i32 signext %x, i32 signext %y) nounwind {
 ; RV32I-NEXT:    slt a1, a0, a2
 ; RV32I-NEXT:    beq a3, a1, .LBB0_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    slti a0, a0, 0
+; RV32I-NEXT:    srai a0, a0, 31
 ; RV32I-NEXT:    lui a1, 524288
-; RV32I-NEXT:    sub a0, a1, a0
+; RV32I-NEXT:    xor a0, a0, a1
 ; RV32I-NEXT:  .LBB0_2:
 ; RV32I-NEXT:    ret
 ;
@@ -52,9 +52,9 @@ define signext i32 @func(i32 signext %x, i32 signext %y) nounwind {
 ; RV32IZbbNOZbt-NEXT:    slt a1, a0, a2
 ; RV32IZbbNOZbt-NEXT:    beq a3, a1, .LBB0_2
 ; RV32IZbbNOZbt-NEXT:  # %bb.1:
-; RV32IZbbNOZbt-NEXT:    slti a0, a0, 0
+; RV32IZbbNOZbt-NEXT:    srai a0, a0, 31
 ; RV32IZbbNOZbt-NEXT:    lui a1, 524288
-; RV32IZbbNOZbt-NEXT:    sub a0, a1, a0
+; RV32IZbbNOZbt-NEXT:    xor a0, a0, a1
 ; RV32IZbbNOZbt-NEXT:  .LBB0_2:
 ; RV32IZbbNOZbt-NEXT:    ret
 ;
@@ -73,10 +73,9 @@ define signext i32 @func(i32 signext %x, i32 signext %y) nounwind {
 ; RV32IZbbZbt-NEXT:    sub a1, a0, a1
 ; RV32IZbbZbt-NEXT:    slt a0, a1, a0
 ; RV32IZbbZbt-NEXT:    xor a0, a2, a0
-; RV32IZbbZbt-NEXT:    slti a2, a1, 0
+; RV32IZbbZbt-NEXT:    srai a2, a1, 31
 ; RV32IZbbZbt-NEXT:    lui a3, 524288
-; RV32IZbbZbt-NEXT:    addi a4, a3, -1
-; RV32IZbbZbt-NEXT:    cmov a2, a2, a4, a3
+; RV32IZbbZbt-NEXT:    xor a2, a2, a3
 ; RV32IZbbZbt-NEXT:    cmov a0, a0, a2, a1
 ; RV32IZbbZbt-NEXT:    ret
   %tmp = call i32 @llvm.ssub.sat.i32(i32 %x, i32 %y);
@@ -98,11 +97,9 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; RV32I-NEXT:    sub a0, a0, a2
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB1_2:
-; RV32I-NEXT:    slti a0, a1, 0
-; RV32I-NEXT:    lui a2, 524288
-; RV32I-NEXT:    sub a2, a2, a0
 ; RV32I-NEXT:    srai a0, a1, 31
-; RV32I-NEXT:    mv a1, a2
+; RV32I-NEXT:    lui a1, 524288
+; RV32I-NEXT:    xor a1, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: func2:
@@ -113,10 +110,10 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; RV64I-NEXT:    slt a1, a0, a2
 ; RV64I-NEXT:    beq a3, a1, .LBB1_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    slti a0, a0, 0
+; RV64I-NEXT:    srai a0, a0, 63
 ; RV64I-NEXT:    addi a1, zero, -1
 ; RV64I-NEXT:    slli a1, a1, 63
-; RV64I-NEXT:    sub a0, a1, a0
+; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:  .LBB1_2:
 ; RV64I-NEXT:    ret
 ;
@@ -134,11 +131,9 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; RV32IZbbNOZbt-NEXT:    sub a0, a0, a2
 ; RV32IZbbNOZbt-NEXT:    ret
 ; RV32IZbbNOZbt-NEXT:  .LBB1_2:
-; RV32IZbbNOZbt-NEXT:    slti a0, a1, 0
-; RV32IZbbNOZbt-NEXT:    lui a2, 524288
-; RV32IZbbNOZbt-NEXT:    sub a2, a2, a0
 ; RV32IZbbNOZbt-NEXT:    srai a0, a1, 31
-; RV32IZbbNOZbt-NEXT:    mv a1, a2
+; RV32IZbbNOZbt-NEXT:    lui a1, 524288
+; RV32IZbbNOZbt-NEXT:    xor a1, a0, a1
 ; RV32IZbbNOZbt-NEXT:    ret
 ;
 ; RV64IZbbNOZbt-LABEL: func2:
@@ -149,10 +144,10 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; RV64IZbbNOZbt-NEXT:    slt a1, a0, a2
 ; RV64IZbbNOZbt-NEXT:    beq a3, a1, .LBB1_2
 ; RV64IZbbNOZbt-NEXT:  # %bb.1:
-; RV64IZbbNOZbt-NEXT:    slti a0, a0, 0
+; RV64IZbbNOZbt-NEXT:    srai a0, a0, 63
 ; RV64IZbbNOZbt-NEXT:    addi a1, zero, -1
 ; RV64IZbbNOZbt-NEXT:    slli a1, a1, 63
-; RV64IZbbNOZbt-NEXT:    sub a0, a1, a0
+; RV64IZbbNOZbt-NEXT:    xor a0, a0, a1
 ; RV64IZbbNOZbt-NEXT:  .LBB1_2:
 ; RV64IZbbNOZbt-NEXT:    ret
 ;
@@ -161,18 +156,16 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; RV32IZbbZbt-NEXT:    sltu a4, a0, a2
 ; RV32IZbbZbt-NEXT:    sub a5, a1, a3
 ; RV32IZbbZbt-NEXT:    sub a4, a5, a4
-; RV32IZbbZbt-NEXT:    slti a7, a4, 0
-; RV32IZbbZbt-NEXT:    lui a6, 524288
-; RV32IZbbZbt-NEXT:    addi a5, a6, -1
-; RV32IZbbZbt-NEXT:    cmov a6, a7, a5, a6
+; RV32IZbbZbt-NEXT:    srai a6, a4, 31
+; RV32IZbbZbt-NEXT:    lui a5, 524288
+; RV32IZbbZbt-NEXT:    xor a7, a6, a5
 ; RV32IZbbZbt-NEXT:    xor a5, a1, a4
 ; RV32IZbbZbt-NEXT:    xor a1, a1, a3
 ; RV32IZbbZbt-NEXT:    and a1, a1, a5
 ; RV32IZbbZbt-NEXT:    slti a3, a1, 0
-; RV32IZbbZbt-NEXT:    cmov a1, a3, a6, a4
-; RV32IZbbZbt-NEXT:    srai a4, a4, 31
+; RV32IZbbZbt-NEXT:    cmov a1, a3, a7, a4
 ; RV32IZbbZbt-NEXT:    sub a0, a0, a2
-; RV32IZbbZbt-NEXT:    cmov a0, a3, a4, a0
+; RV32IZbbZbt-NEXT:    cmov a0, a3, a6, a0
 ; RV32IZbbZbt-NEXT:    ret
 ;
 ; RV64IZbbZbt-LABEL: func2:
@@ -181,11 +174,10 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; RV64IZbbZbt-NEXT:    sub a1, a0, a1
 ; RV64IZbbZbt-NEXT:    slt a0, a1, a0
 ; RV64IZbbZbt-NEXT:    xor a0, a2, a0
-; RV64IZbbZbt-NEXT:    slti a2, a1, 0
+; RV64IZbbZbt-NEXT:    srai a2, a1, 63
 ; RV64IZbbZbt-NEXT:    addi a3, zero, -1
-; RV64IZbbZbt-NEXT:    slli a4, a3, 63
-; RV64IZbbZbt-NEXT:    srli a3, a3, 1
-; RV64IZbbZbt-NEXT:    cmov a2, a2, a3, a4
+; RV64IZbbZbt-NEXT:    slli a3, a3, 63
+; RV64IZbbZbt-NEXT:    xor a2, a2, a3
 ; RV64IZbbZbt-NEXT:    cmov a0, a0, a2, a1
 ; RV64IZbbZbt-NEXT:    ret
   %tmp = call i64 @llvm.ssub.sat.i64(i64 %x, i64 %y);

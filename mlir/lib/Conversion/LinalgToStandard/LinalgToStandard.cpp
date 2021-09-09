@@ -50,11 +50,11 @@ static FlatSymbolRefAttr getLibraryCallSymbolRef(Operation *op,
   }
 
   // fnName is a dynamic std::string, unique it via a SymbolRefAttr.
-  FlatSymbolRefAttr fnNameAttr = rewriter.getSymbolRefAttr(fnName);
+  FlatSymbolRefAttr fnNameAttr =
+      SymbolRefAttr::get(rewriter.getContext(), fnName);
   auto module = op->getParentOfType<ModuleOp>();
-  if (module.lookupSymbol(fnName)) {
+  if (module.lookupSymbol(fnNameAttr.getAttr()))
     return fnNameAttr;
-  }
 
   SmallVector<Type, 4> inputTypes(extractOperandTypes(op));
   assert(op->getNumResults() == 0 &&

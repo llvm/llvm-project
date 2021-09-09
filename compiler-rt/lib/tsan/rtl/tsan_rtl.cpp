@@ -86,8 +86,8 @@ static ThreadContextBase *CreateThreadContext(Tid tid) {
     ReleaseMemoryPagesToOS(hdr_end, hdr + sizeof(Trace));
     uptr unused = hdr + sizeof(Trace) - hdr_end;
     if (hdr_end != (uptr)MmapFixedNoAccess(hdr_end, unused)) {
-      Report("ThreadSanitizer: failed to mprotect(%p, %p)\n",
-          hdr_end, unused);
+      Report("ThreadSanitizer: failed to mprotect [0x%zx-0x%zx) \n", hdr_end,
+             unused);
       CHECK("unable to mprotect" && 0);
     }
   }
@@ -285,7 +285,7 @@ void MapShadow(uptr addr, uptr size) {
                                  "meta shadow"))
       Die();
   } else {
-    // Mapping continous heap.
+    // Mapping continuous heap.
     // Windows wants 64K alignment.
     meta_begin = RoundDownTo(meta_begin, 64 << 10);
     meta_end = RoundUpTo(meta_end, 64 << 10);
@@ -298,8 +298,8 @@ void MapShadow(uptr addr, uptr size) {
       Die();
     mapped_meta_end = meta_end;
   }
-  VPrintf(2, "mapped meta shadow for (%p-%p) at (%p-%p)\n",
-      addr, addr+size, meta_begin, meta_end);
+  VPrintf(2, "mapped meta shadow for (0x%zx-0x%zx) at (0x%zx-0x%zx)\n", addr,
+          addr + size, meta_begin, meta_end);
 }
 
 void MapThreadTrace(uptr addr, uptr size, const char *name) {
@@ -308,44 +308,9 @@ void MapThreadTrace(uptr addr, uptr size, const char *name) {
   CHECK_LE(addr + size, TraceMemEnd());
   CHECK_EQ(addr, addr & ~((64 << 10) - 1));  // windows wants 64K alignment
   if (!MmapFixedSuperNoReserve(addr, size, name)) {
-    Printf("FATAL: ThreadSanitizer can not mmap thread trace (%p/%p)\n",
-        addr, size);
+    Printf("FATAL: ThreadSanitizer can not mmap thread trace (0x%zx/0x%zx)\n",
+           addr, size);
     Die();
-  }
-}
-
-static void CheckShadowMapping() {
-  uptr beg, end;
-  for (int i = 0; GetUserRegion(i, &beg, &end); i++) {
-    // Skip cases for empty regions (heap definition for architectures that
-    // do not use 64-bit allocator).
-    if (beg == end)
-      continue;
-    VPrintf(3, "checking shadow region %p-%p\n", beg, end);
-    uptr prev = 0;
-    for (uptr p0 = beg; p0 <= end; p0 += (end - beg) / 4) {
-      for (int x = -(int)kShadowCell; x <= (int)kShadowCell; x += kShadowCell) {
-        const uptr p = RoundDown(p0 + x, kShadowCell);
-        if (p < beg || p >= end)
-          continue;
-        RawShadow *const s = MemToShadow(p);
-        u32 *const m = MemToMeta(p);
-        VPrintf(3, "  checking pointer %p: shadow=%p meta=%p\n", p, s, m);
-        CHECK(IsAppMem(p));
-        CHECK(IsShadowMem(s));
-        CHECK_EQ(p, ShadowToMem(s));
-        CHECK(IsMetaMem(m));
-        if (prev) {
-          // Ensure that shadow and meta mappings are linear within a single
-          // user range. Lots of code that processes memory ranges assumes it.
-          RawShadow *const prev_s = MemToShadow(prev);
-          u32 *const prev_m = MemToMeta(prev);
-          CHECK_EQ((s - prev_s) * kShadowSize, (p - prev) * kShadowMultiplier);
-          CHECK_EQ(m - prev_m, (p - prev) / kMetaShadowCell);
-        }
-        prev = p;
-      }
-    }
   }
 }
 
@@ -408,7 +373,6 @@ void Initialize(ThreadState *thr) {
   Processor *proc = ProcCreate();
   ProcWire(proc, thr);
   InitializeInterceptors();
-  CheckShadowMapping();
   InitializePlatform();
   InitializeDynamicAnnotations();
 #if !SANITIZER_GO
@@ -590,6 +554,188 @@ StackID CurrentStackId(ThreadState *thr, uptr pc) {
     thr->shadow_stack_pos--;
   return id;
 }
+
+namespace v3 {
+
+ALWAYS_INLINE USED bool TryTraceMemoryAccess(ThreadState *thr, uptr pc,
+                                             uptr addr, uptr size,
+                                             AccessType typ) {
+  DCHECK(size == 1 || size == 2 || size == 4 || size == 8);
+  if (!kCollectHistory)
+    return true;
+  EventAccess *ev;
+  if (UNLIKELY(!TraceAcquire(thr, &ev)))
+    return false;
+  u64 size_log = size == 1 ? 0 : size == 2 ? 1 : size == 4 ? 2 : 3;
+  uptr pc_delta = pc - thr->trace_prev_pc + (1 << (EventAccess::kPCBits - 1));
+  thr->trace_prev_pc = pc;
+  if (LIKELY(pc_delta < (1 << EventAccess::kPCBits))) {
+    ev->is_access = 1;
+    ev->is_read = !!(typ & kAccessRead);
+    ev->is_atomic = !!(typ & kAccessAtomic);
+    ev->size_log = size_log;
+    ev->pc_delta = pc_delta;
+    DCHECK_EQ(ev->pc_delta, pc_delta);
+    ev->addr = CompressAddr(addr);
+    TraceRelease(thr, ev);
+    return true;
+  }
+  auto *evex = reinterpret_cast<EventAccessExt *>(ev);
+  evex->is_access = 0;
+  evex->is_func = 0;
+  evex->type = EventType::kAccessExt;
+  evex->is_read = !!(typ & kAccessRead);
+  evex->is_atomic = !!(typ & kAccessAtomic);
+  evex->size_log = size_log;
+  evex->addr = CompressAddr(addr);
+  evex->pc = pc;
+  TraceRelease(thr, evex);
+  return true;
+}
+
+ALWAYS_INLINE USED bool TryTraceMemoryAccessRange(ThreadState *thr, uptr pc,
+                                                  uptr addr, uptr size,
+                                                  AccessType typ) {
+  if (!kCollectHistory)
+    return true;
+  EventAccessRange *ev;
+  if (UNLIKELY(!TraceAcquire(thr, &ev)))
+    return false;
+  thr->trace_prev_pc = pc;
+  ev->is_access = 0;
+  ev->is_func = 0;
+  ev->type = EventType::kAccessRange;
+  ev->is_read = !!(typ & kAccessRead);
+  ev->is_free = !!(typ & kAccessFree);
+  ev->size_lo = size;
+  ev->pc = CompressAddr(pc);
+  ev->addr = CompressAddr(addr);
+  ev->size_hi = size >> EventAccessRange::kSizeLoBits;
+  TraceRelease(thr, ev);
+  return true;
+}
+
+void TraceMemoryAccessRange(ThreadState *thr, uptr pc, uptr addr, uptr size,
+                            AccessType typ) {
+  if (LIKELY(TryTraceMemoryAccessRange(thr, pc, addr, size, typ)))
+    return;
+  TraceSwitchPart(thr);
+  UNUSED bool res = TryTraceMemoryAccessRange(thr, pc, addr, size, typ);
+  DCHECK(res);
+}
+
+void TraceFunc(ThreadState *thr, uptr pc) {
+  if (LIKELY(TryTraceFunc(thr, pc)))
+    return;
+  TraceSwitchPart(thr);
+  UNUSED bool res = TryTraceFunc(thr, pc);
+  DCHECK(res);
+}
+
+void TraceMutexLock(ThreadState *thr, EventType type, uptr pc, uptr addr,
+                    StackID stk) {
+  DCHECK(type == EventType::kLock || type == EventType::kRLock);
+  if (!kCollectHistory)
+    return;
+  EventLock ev;
+  ev.is_access = 0;
+  ev.is_func = 0;
+  ev.type = type;
+  ev.pc = CompressAddr(pc);
+  ev.stack_lo = stk;
+  ev.stack_hi = stk >> EventLock::kStackIDLoBits;
+  ev._ = 0;
+  ev.addr = CompressAddr(addr);
+  TraceEvent(thr, ev);
+}
+
+void TraceMutexUnlock(ThreadState *thr, uptr addr) {
+  if (!kCollectHistory)
+    return;
+  EventUnlock ev;
+  ev.is_access = 0;
+  ev.is_func = 0;
+  ev.type = EventType::kUnlock;
+  ev._ = 0;
+  ev.addr = CompressAddr(addr);
+  TraceEvent(thr, ev);
+}
+
+void TraceTime(ThreadState *thr) {
+  if (!kCollectHistory)
+    return;
+  EventTime ev;
+  ev.is_access = 0;
+  ev.is_func = 0;
+  ev.type = EventType::kTime;
+  ev.sid = static_cast<u64>(thr->sid);
+  ev.epoch = static_cast<u64>(thr->epoch);
+  ev._ = 0;
+  TraceEvent(thr, ev);
+}
+
+NOINLINE
+void TraceSwitchPart(ThreadState *thr) {
+  Trace *trace = &thr->tctx->trace;
+  Event *pos = reinterpret_cast<Event *>(atomic_load_relaxed(&thr->trace_pos));
+  DCHECK_EQ(reinterpret_cast<uptr>(pos + 1) & TracePart::kAlignment, 0);
+  auto *part = trace->parts.Back();
+  DPrintf("TraceSwitchPart part=%p pos=%p\n", part, pos);
+  if (part) {
+    // We can get here when we still have space in the current trace part.
+    // The fast-path check in TraceAcquire has false positives in the middle of
+    // the part. Check if we are indeed at the end of the current part or not,
+    // and fill any gaps with NopEvent's.
+    Event *end = &part->events[TracePart::kSize];
+    DCHECK_GE(pos, &part->events[0]);
+    DCHECK_LE(pos, end);
+    if (pos + 1 < end) {
+      if ((reinterpret_cast<uptr>(pos) & TracePart::kAlignment) ==
+          TracePart::kAlignment)
+        *pos++ = NopEvent;
+      *pos++ = NopEvent;
+      DCHECK_LE(pos + 2, end);
+      atomic_store_relaxed(&thr->trace_pos, reinterpret_cast<uptr>(pos));
+      // Ensure we setup trace so that the next TraceAcquire
+      // won't detect trace part end.
+      Event *ev;
+      CHECK(TraceAcquire(thr, &ev));
+      return;
+    }
+    // We are indeed at the end.
+    for (; pos < end; pos++) *pos = NopEvent;
+  }
+#if !SANITIZER_GO
+  if (ctx->after_multithreaded_fork) {
+    // We just need to survive till exec.
+    CHECK(part);
+    atomic_store_relaxed(&thr->trace_pos,
+                         reinterpret_cast<uptr>(&part->events[0]));
+    return;
+  }
+#endif
+  part = new (MmapOrDie(sizeof(TracePart), "TracePart")) TracePart();
+  part->trace = trace;
+  thr->trace_prev_pc = 0;
+  {
+    Lock lock(&trace->mtx);
+    trace->parts.PushBack(part);
+    atomic_store_relaxed(&thr->trace_pos,
+                         reinterpret_cast<uptr>(&part->events[0]));
+  }
+  // Make this part self-sufficient by restoring the current stack
+  // and mutex set in the beginning of the trace.
+  TraceTime(thr);
+  for (uptr *pos = &thr->shadow_stack[0]; pos < thr->shadow_stack_pos; pos++)
+    CHECK(TryTraceFunc(thr, *pos));
+  for (uptr i = 0; i < thr->mset.Size(); i++) {
+    MutexSet::Desc d = thr->mset.Get(i);
+    TraceMutexLock(thr, d.write ? EventType::kLock : EventType::kRLock, 0,
+                   d.addr, d.stack_id);
+  }
+}
+
+}  // namespace v3
 
 void TraceSwitch(ThreadState *thr) {
 #if !SANITIZER_GO

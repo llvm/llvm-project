@@ -4,6 +4,25 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-v -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,RV64
 
+declare <vscale x 8 x i7> @llvm.vp.lshr.nxv8i7(<vscale x 8 x i7>, <vscale x 8 x i7>, <vscale x 8 x i1>, i32)
+
+define <vscale x 8 x i7> @vsrl_vx_nxv8i7(<vscale x 8 x i7> %a, i7 signext %b, <vscale x 8 x i1> %mask, i32 zeroext %evl) {
+; CHECK-LABEL: vsrl_vx_nxv8i7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a2, zero, 127
+; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vand.vx v25, v8, a2
+; CHECK-NEXT:    vmv.v.x v26, a0
+; CHECK-NEXT:    vand.vx v26, v26, a2
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vsrl.vv v8, v25, v26, v0.t
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 8 x i7> undef, i7 %b, i32 0
+  %vb = shufflevector <vscale x 8 x i7> %elt.head, <vscale x 8 x i7> undef, <vscale x 8 x i32> zeroinitializer
+  %v = call <vscale x 8 x i7> @llvm.vp.lshr.nxv8i7(<vscale x 8 x i7> %a, <vscale x 8 x i7> %vb, <vscale x 8 x i1> %mask, i32 %evl)
+  ret <vscale x 8 x i7> %v
+}
+
 declare <vscale x 1 x i8> @llvm.vp.lshr.nxv1i8(<vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i1>, i32)
 
 define <vscale x 1 x i8> @vsrl_vv_nxv1i8(<vscale x 1 x i8> %va, <vscale x 1 x i8> %b, <vscale x 1 x i1> %m, i32 zeroext %evl) {
@@ -1634,6 +1653,18 @@ define <vscale x 4 x i64> @vsrl_vi_nxv4i64_unmasked(<vscale x 4 x i64> %va, i32 
   %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer
   %v = call <vscale x 4 x i64> @llvm.vp.lshr.nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x i64> %vb, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x i64> %v
+}
+
+declare <vscale x 5 x i64> @llvm.vp.lshr.nxv5i64(<vscale x 5 x i64>, <vscale x 5 x i64>, <vscale x 5 x i1>, i32)
+
+define <vscale x 5 x i64> @vsrl_vv_nxv5i64(<vscale x 5 x i64> %va, <vscale x 5 x i64> %b, <vscale x 5 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vsrl_vv_nxv5i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
+; CHECK-NEXT:    vsrl.vv v8, v8, v16, v0.t
+; CHECK-NEXT:    ret
+  %v = call <vscale x 5 x i64> @llvm.vp.lshr.nxv5i64(<vscale x 5 x i64> %va, <vscale x 5 x i64> %b, <vscale x 5 x i1> %m, i32 %evl)
+  ret <vscale x 5 x i64> %v
 }
 
 declare <vscale x 8 x i64> @llvm.vp.lshr.nxv8i64(<vscale x 8 x i64>, <vscale x 8 x i64>, <vscale x 8 x i1>, i32)

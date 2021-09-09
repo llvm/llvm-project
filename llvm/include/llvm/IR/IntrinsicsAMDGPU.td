@@ -684,7 +684,14 @@ class AMDGPUDimAtomicProfile<string opmod,
   let IsAtomic = true;
 }
 
-class AMDGPUDimGetResInfoProfile<AMDGPUDimProps dim> : AMDGPUDimProfile<"GET_RESINFO", dim> {
+class AMDGPUDimAtomicFloatProfile<string opmod, AMDGPUDimProps dim,
+                                  list<AMDGPUArg> dataargs>
+    : AMDGPUDimAtomicProfile<opmod, dim, dataargs> {
+  let RetTypes = [llvm_anyfloat_ty];
+}
+
+class AMDGPUDimGetResInfoProfile<AMDGPUDimProps dim>
+    : AMDGPUDimProfile<"GET_RESINFO", dim> {
   let RetTypes = [llvm_anyfloat_ty];
   let DataArgs = [];
   let AddrArgs = [AMDGPUArg<llvm_anyint_ty, "mip">];
@@ -860,17 +867,24 @@ defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimIntrinsics = {
 // atomic intrinsics
 //////////////////////////////////////////////////////////////////////////
 defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimAtomicIntrinsics = {
-  multiclass AMDGPUImageDimAtomicX<string opmod, list<AMDGPUArg> dataargs> {
-    foreach dim = AMDGPUDims.All in {
-      def !strconcat(NAME, "_", dim.Name)
-        : AMDGPUImageDimIntrinsic<
-            AMDGPUDimAtomicProfile<opmod, dim, dataargs>,
-            [], [SDNPMemOperand]>;
-    }
+  multiclass AMDGPUImageDimAtomicX<string opmod, list<AMDGPUArg> dataargs,
+                                   int isFloat = 0> {
+        foreach dim = AMDGPUDims.All in {
+          def !strconcat(NAME, "_", dim.Name): AMDGPUImageDimIntrinsic<
+              !if (isFloat, AMDGPUDimAtomicFloatProfile<opmod, dim, dataargs>,
+                   AMDGPUDimAtomicProfile<opmod, dim, dataargs>),
+              [], [SDNPMemOperand]>;
+        }
   }
 
-  multiclass AMDGPUImageDimAtomic<string opmod> {
-    defm "" : AMDGPUImageDimAtomicX<opmod, [AMDGPUArg<LLVMMatchType<0>, "vdata">]>;
+  multiclass AMDGPUImageDimAtomic<string opmod, int isFloat = 0> {
+    defm ""
+        : AMDGPUImageDimAtomicX<opmod, [AMDGPUArg<LLVMMatchType<0>, "vdata">],
+                                isFloat>;
+  }
+
+  multiclass AMDGPUImageDimFloatAtomic<string opmod> {
+    defm "" : AMDGPUImageDimAtomic<opmod, 1 /*isFloat*/>;
   }
 
   defm int_amdgcn_image_atomic_swap : AMDGPUImageDimAtomic<"ATOMIC_SWAP">;
@@ -878,8 +892,10 @@ defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimAtomicIntrinsics = {
   defm int_amdgcn_image_atomic_sub : AMDGPUImageDimAtomic<"ATOMIC_SUB">;
   defm int_amdgcn_image_atomic_smin : AMDGPUImageDimAtomic<"ATOMIC_SMIN">;
   defm int_amdgcn_image_atomic_umin : AMDGPUImageDimAtomic<"ATOMIC_UMIN">;
+  defm int_amdgcn_image_atomic_fmin : AMDGPUImageDimFloatAtomic<"ATOMIC_FMIN">;
   defm int_amdgcn_image_atomic_smax : AMDGPUImageDimAtomic<"ATOMIC_SMAX">;
   defm int_amdgcn_image_atomic_umax : AMDGPUImageDimAtomic<"ATOMIC_UMAX">;
+  defm int_amdgcn_image_atomic_fmax : AMDGPUImageDimFloatAtomic<"ATOMIC_FMAX">;
   defm int_amdgcn_image_atomic_and : AMDGPUImageDimAtomic<"ATOMIC_AND">;
   defm int_amdgcn_image_atomic_or : AMDGPUImageDimAtomic<"ATOMIC_OR">;
   defm int_amdgcn_image_atomic_xor : AMDGPUImageDimAtomic<"ATOMIC_XOR">;
@@ -1015,8 +1031,10 @@ def int_amdgcn_raw_buffer_atomic_add : AMDGPURawBufferAtomic;
 def int_amdgcn_raw_buffer_atomic_sub : AMDGPURawBufferAtomic;
 def int_amdgcn_raw_buffer_atomic_smin : AMDGPURawBufferAtomic;
 def int_amdgcn_raw_buffer_atomic_umin : AMDGPURawBufferAtomic;
+def int_amdgcn_raw_buffer_atomic_fmin : AMDGPURawBufferAtomic<llvm_anyfloat_ty>;
 def int_amdgcn_raw_buffer_atomic_smax : AMDGPURawBufferAtomic;
 def int_amdgcn_raw_buffer_atomic_umax : AMDGPURawBufferAtomic;
+def int_amdgcn_raw_buffer_atomic_fmax : AMDGPURawBufferAtomic<llvm_anyfloat_ty>;
 def int_amdgcn_raw_buffer_atomic_and : AMDGPURawBufferAtomic;
 def int_amdgcn_raw_buffer_atomic_or : AMDGPURawBufferAtomic;
 def int_amdgcn_raw_buffer_atomic_xor : AMDGPURawBufferAtomic;
@@ -1035,10 +1053,6 @@ def int_amdgcn_raw_buffer_atomic_cmpswap : Intrinsic<
 
 // gfx908 intrinsic
 def int_amdgcn_raw_buffer_atomic_fadd : AMDGPURawBufferAtomic<llvm_anyfloat_ty>;
-
-// gfx90a intrinsics
-def int_amdgcn_raw_buffer_atomic_fmin : AMDGPURawBufferAtomic<llvm_anyfloat_ty>;
-def int_amdgcn_raw_buffer_atomic_fmax : AMDGPURawBufferAtomic<llvm_anyfloat_ty>;
 
 class AMDGPUStructBufferAtomic<LLVMType data_ty = llvm_any_ty, bit NoRtn = false> : Intrinsic <
   !if(NoRtn, [], [data_ty]),

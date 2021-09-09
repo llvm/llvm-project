@@ -9,10 +9,6 @@
 
 // UNSUPPORTED: c++03
 
-// AppleClang9 doesn't yet support C++17's implicitly synthesized deduction
-// guides from existing ctors, needed by default_searcher() below.
-// UNSUPPORTED: apple-clang-9
-
 // Test that entities declared [[nodiscard]] as an extension by libc++, are
 // only actually declared such when _LIBCPP_ENABLE_NODISCARD is specified.
 

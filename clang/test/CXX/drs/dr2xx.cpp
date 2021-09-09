@@ -597,12 +597,8 @@ namespace dr247 { // dr247: yes
   void (F::*i)() = &F::f;
 }
 
-namespace dr248 { // dr248: yes c++11
-  // FIXME: Should this also apply to c++98 mode? This was a DR against C++98.
+namespace dr248 { // dr248: sup P1949
   int \u040d\u040e = 0;
-#if __cplusplus < 201103L
-  // FIXME: expected-error@-2 {{expected ';'}}
-#endif
 }
 
 namespace dr249 { // dr249: yes

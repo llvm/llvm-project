@@ -155,6 +155,12 @@ bool X86TargetInfo::initFeatureMap(
       llvm::find(UpdatedFeaturesVec, "-xsave") == UpdatedFeaturesVec.end())
     Features["xsave"] = true;
 
+  // Enable CRC32 if SSE4.2 is enabled and CRC32 is not explicitly disabled.
+  I = Features.find("sse4.2");
+  if (I != Features.end() && I->getValue() &&
+      llvm::find(UpdatedFeaturesVec, "-crc32") == UpdatedFeaturesVec.end())
+    Features["crc32"] = true;
+
   return true;
 }
 
@@ -330,6 +336,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasTSXLDTRK = true;
     } else if (Feature == "+uintr") {
       HasUINTR = true;
+    } else if (Feature == "+crc32") {
+      HasCRC32 = true;
     }
 
     X86SSEEnum Level = llvm::StringSwitch<X86SSEEnum>(Feature)
@@ -758,6 +766,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__TSXLDTRK__");
   if (HasUINTR)
     Builder.defineMacro("__UINTR__");
+  if (HasCRC32)
+    Builder.defineMacro("__CRC32__");
 
   // Each case falls through to the previous one here.
   switch (SSELevel) {
@@ -878,6 +888,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("clflushopt", true)
       .Case("clwb", true)
       .Case("clzero", true)
+      .Case("crc32", true)
       .Case("cx16", true)
       .Case("enqcmd", true)
       .Case("f16c", true)
@@ -970,6 +981,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("clflushopt", HasCLFLUSHOPT)
       .Case("clwb", HasCLWB)
       .Case("clzero", HasCLZERO)
+      .Case("crc32", HasCRC32)
       .Case("cx8", HasCX8)
       .Case("cx16", HasCX16)
       .Case("enqcmd", HasENQCMD)
@@ -1041,33 +1053,20 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
 // X86TargetInfo::hasFeature for a somewhat comprehensive list).
 bool X86TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
   return llvm::StringSwitch<bool>(FeatureStr)
-#define X86_FEATURE_COMPAT(ENUM, STR) .Case(STR, true)
+#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY) .Case(STR, true)
 #include "llvm/Support/X86TargetParser.def"
       .Default(false);
 }
 
 static llvm::X86::ProcessorFeatures getFeature(StringRef Name) {
   return llvm::StringSwitch<llvm::X86::ProcessorFeatures>(Name)
-#define X86_FEATURE_COMPAT(ENUM, STR) .Case(STR, llvm::X86::FEATURE_##ENUM)
+#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY)                                \
+  .Case(STR, llvm::X86::FEATURE_##ENUM)
+
 #include "llvm/Support/X86TargetParser.def"
       ;
   // Note, this function should only be used after ensuring the value is
   // correct, so it asserts if the value is out of range.
-}
-
-static unsigned getFeaturePriority(llvm::X86::ProcessorFeatures Feat) {
-  enum class FeatPriority {
-#define FEATURE(FEAT) FEAT,
-#include "clang/Basic/X86Target.def"
-  };
-  switch (Feat) {
-#define FEATURE(FEAT)                                                          \
-  case llvm::X86::FEAT:                                                        \
-    return static_cast<unsigned>(FeatPriority::FEAT);
-#include "clang/Basic/X86Target.def"
-  default:
-    llvm_unreachable("No Feature Priority for non-CPUSupports Features");
-  }
 }
 
 unsigned X86TargetInfo::multiVersionSortPriority(StringRef Name) const {
@@ -1089,21 +1088,21 @@ bool X86TargetInfo::validateCPUSpecificCPUDispatch(StringRef Name) const {
   return llvm::StringSwitch<bool>(Name)
 #define CPU_SPECIFIC(NAME, MANGLING, FEATURES) .Case(NAME, true)
 #define CPU_SPECIFIC_ALIAS(NEW_NAME, NAME) .Case(NEW_NAME, true)
-#include "clang/Basic/X86Target.def"
+#include "llvm/Support/X86TargetParser.def"
       .Default(false);
 }
 
 static StringRef CPUSpecificCPUDispatchNameDealias(StringRef Name) {
   return llvm::StringSwitch<StringRef>(Name)
 #define CPU_SPECIFIC_ALIAS(NEW_NAME, NAME) .Case(NEW_NAME, NAME)
-#include "clang/Basic/X86Target.def"
+#include "llvm/Support/X86TargetParser.def"
       .Default(Name);
 }
 
 char X86TargetInfo::CPUSpecificManglingCharacter(StringRef Name) const {
   return llvm::StringSwitch<char>(CPUSpecificCPUDispatchNameDealias(Name))
 #define CPU_SPECIFIC(NAME, MANGLING, FEATURES) .Case(NAME, MANGLING)
-#include "clang/Basic/X86Target.def"
+#include "llvm/Support/X86TargetParser.def"
       .Default(0);
 }
 
@@ -1112,7 +1111,7 @@ void X86TargetInfo::getCPUSpecificCPUDispatchFeatures(
   StringRef WholeList =
       llvm::StringSwitch<StringRef>(CPUSpecificCPUDispatchNameDealias(Name))
 #define CPU_SPECIFIC(NAME, MANGLING, FEATURES) .Case(NAME, FEATURES)
-#include "clang/Basic/X86Target.def"
+#include "llvm/Support/X86TargetParser.def"
           .Default("");
   WholeList.split(Features, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
 }

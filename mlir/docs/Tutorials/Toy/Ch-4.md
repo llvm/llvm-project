@@ -95,6 +95,22 @@ struct ToyInlinerInterface : public DialectInlinerInterface {
 };
 ```
 
+Besides, the inliner will only discard private-visible unused function
+definitions. We also have to set the visibility of functions (except the
+main function) in the MLIR generator.
+
+```c++
+/// Emit a new function and add it to the MLIR module.
+mlir::FuncOp mlirGen(FunctionAST &funcAST) {
+  ...
+  // If this function isn't main, then set the visibility to private.
+  if (funcAST.getProto()->getName() != "main")
+    function.setPrivate();
+
+  return function;
+}
+```
+
 We then register our dialect interface directly on the Toy dialect, similarly to
 how we did for operations.
 

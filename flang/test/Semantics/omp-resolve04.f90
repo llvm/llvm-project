@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang -fopenmp
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang -fopenmp
 
 ! 2.15.3 Data-Sharing Attribute Clauses
 ! A list item that specifies a given variable may not appear in more than

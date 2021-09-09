@@ -35,10 +35,7 @@ void func(std::packaged_task<double(int, char)>)
 {
 }
 
-void func2(std::packaged_task<double(int, char)> p)
-{
-    p(3, 'a');
-}
+void func2(std::packaged_task<double(int, char)> p) { p(3, 97); }
 
 int main(int, char**)
 {

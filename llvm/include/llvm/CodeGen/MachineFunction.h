@@ -227,7 +227,7 @@ struct LandingPadInfo {
       : LandingPadBlock(MBB) {}
 };
 
-class MachineFunction {
+class LLVM_EXTERNAL_VISIBILITY MachineFunction {
   Function &F;
   const LLVMTargetMachine &Target;
   const TargetSubtargetInfo *STI;
@@ -535,6 +535,10 @@ public:
   /// enough information for every DBG_INSTR_REF to point at an instruction
   /// (or DBG_PHI).
   void finalizeDebugInstrRefs();
+
+  /// Returns true if the function's variable locations should be tracked with
+  /// instruction referencing.
+  bool useDebugInstrRef() const;
 
   MachineFunction(Function &F, const LLVMTargetMachine &Target,
                   const TargetSubtargetInfo &STI, unsigned FunctionNum,

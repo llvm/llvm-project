@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../../runtime/transformational.h"
+#include "flang/Runtime/transformational.h"
 #include "gtest/gtest.h"
 #include "tools.h"
-#include "../../runtime/type-code.h"
+#include "flang/Runtime/type-code.h"
 
 using namespace Fortran::runtime;
 using Fortran::common::TypeCategory;
@@ -110,6 +110,26 @@ TEST(Transformational, Shifts) {
         *result.ZeroBasedIndexedElement<std::int32_t>(j), eoshiftExpect1[j]);
   }
   result.Destroy();
+
+  // VECTOR EOSHIFT
+  StaticDescriptor<0> boundaryDescriptor;
+  Descriptor vectorBoundary{boundaryDescriptor.descriptor()};
+  std::int32_t boundaryValue{343};
+  vectorBoundary.Establish(TypeCategory::Integer, 4,
+      const_cast<void *>(reinterpret_cast<const void *>(&boundaryValue)), 0);
+  RTNAME(EoshiftVector)
+  (vectorResult, *vector, 2, &vectorBoundary, __FILE__, __LINE__);
+  EXPECT_EQ(vectorResult.type(), array->type());
+  EXPECT_EQ(vectorResult.rank(), 1);
+  EXPECT_EQ(vectorResult.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(vectorResult.GetDimension(0).Extent(), 6);
+  EXPECT_EQ(vectorResult.type(), (TypeCode{TypeCategory::Integer, 4}));
+  static std::int32_t eoshiftVectorExpect[6]{3, 4, 5, 6, 343, 343};
+  for (int j{0}; j < 6; ++j) {
+    EXPECT_EQ(*vectorResult.ZeroBasedIndexedElement<std::int32_t>(j),
+        eoshiftVectorExpect[j]);
+  }
+  vectorResult.Destroy();
 }
 
 TEST(Transformational, Pack) {

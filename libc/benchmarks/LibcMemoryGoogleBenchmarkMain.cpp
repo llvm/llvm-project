@@ -28,6 +28,7 @@ extern void *memcpy(void *__restrict, const void *__restrict, size_t);
 extern void *memset(void *, int, size_t);
 extern void bzero(void *, size_t);
 extern int memcmp(const void *, const void *, size_t);
+extern int bcmp(const void *, const void *, size_t);
 
 } // namespace __llvm_libc
 
@@ -37,6 +38,9 @@ static constexpr MemcpyConfiguration kMemcpyConfigurations[] = {
 
 static constexpr MemcmpConfiguration kMemcmpConfigurations[] = {
     {__llvm_libc::memcmp, "__llvm_libc::memcmp"}};
+
+static constexpr MemcmpConfiguration kBcmpConfigurations[] = {
+    {__llvm_libc::bcmp, "__llvm_libc::bcmp"}};
 
 static constexpr MemsetConfiguration kMemsetConfigurations[] = {
     {__llvm_libc::memset, "__llvm_libc::memset"}};
@@ -116,6 +120,8 @@ BENCHMARK_MEMORY_FUNCTION(BM_Memcpy, CopySetup, MemcpyConfiguration,
                           llvm::makeArrayRef(kMemcpyConfigurations));
 BENCHMARK_MEMORY_FUNCTION(BM_Memcmp, ComparisonSetup, MemcmpConfiguration,
                           llvm::makeArrayRef(kMemcmpConfigurations));
+BENCHMARK_MEMORY_FUNCTION(BM_Bcmp, ComparisonSetup, MemcmpConfiguration,
+                          llvm::makeArrayRef(kBcmpConfigurations));
 BENCHMARK_MEMORY_FUNCTION(BM_Memset, SetSetup, MemsetConfiguration,
                           llvm::makeArrayRef(kMemsetConfigurations));
 BENCHMARK_MEMORY_FUNCTION(BM_Bzero, SetSetup, BzeroConfiguration,

@@ -8,8 +8,6 @@
 
 // <string>
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: clang-4.0
-// UNSUPPORTED: apple-clang-9
 
 // template<class InputIterator,
 //      class Allocator = allocator<typename iterator_traits<InputIterator>::value_type>>

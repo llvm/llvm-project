@@ -2118,28 +2118,18 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
               // -- have to recreate %src & %gep
               // put NewSrc at same location as %src
               Builder.SetInsertPoint(cast<Instruction>(PtrOp));
-              auto *NewSrc = cast<GetElementPtrInst>(
-                  Builder.CreateGEP(GEPEltType, SO0, GO1, Src->getName()));
-              NewSrc->setIsInBounds(Src->isInBounds());
-              auto *NewGEP =
+              Value *NewSrc =
+                  Builder.CreateGEP(GEPEltType, SO0, GO1, Src->getName());
+              // Propagate 'inbounds' if the new source was not constant-folded.
+              if (auto *NewSrcGEPI = dyn_cast<GetElementPtrInst>(NewSrc))
+                NewSrcGEPI->setIsInBounds(Src->isInBounds());
+              GetElementPtrInst *NewGEP =
                   GetElementPtrInst::Create(GEPEltType, NewSrc, {SO1});
               NewGEP->setIsInBounds(GEP.isInBounds());
               return NewGEP;
             }
           }
         }
-      }
-
-      // Fold (gep(gep(Ptr,Idx0),Idx1) -> gep(Ptr,add(Idx0,Idx1))
-      if (GO1->getType() == SO1->getType()) {
-        bool NewInBounds = GEP.isInBounds() && Src->isInBounds();
-        auto *NewIdx =
-            Builder.CreateAdd(GO1, SO1, GEP.getName() + ".idx",
-                              /*HasNUW*/ false, /*HasNSW*/ NewInBounds);
-        auto *NewGEP = GetElementPtrInst::Create(
-            GEPEltType, Src->getPointerOperand(), {NewIdx});
-        NewGEP->setIsInBounds(NewInBounds);
-        return NewGEP;
       }
     }
 

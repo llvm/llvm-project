@@ -195,7 +195,7 @@ body:             |
   ; CHECK:   renamable $r3 = t2BICri killed renamable $r3, 3, 14 /* CC::al */, $noreg, $noreg, debug-location !28
   ; CHECK:   renamable $r4, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3, 4, 14 /* CC::al */, $noreg, debug-location !28
-  ; CHECK:   renamable $q0 = MVE_VDUP32 killed renamable $r4, 0, $noreg, undef renamable $q0, debug-location !28
+  ; CHECK:   renamable $q0 = MVE_VDUP32 killed renamable $r4, 0, $noreg, $noreg, undef renamable $q0, debug-location !28
   ; CHECK:   renamable $q0 = MVE_VMOV_to_lane_32 killed renamable $q0, killed renamable $r12, 0, 14 /* CC::al */, $noreg, debug-location !28
   ; CHECK:   renamable $lr = nuw nsw t2ADDrs killed renamable $lr, renamable $r3, 19, 14 /* CC::al */, $noreg, $noreg, debug-location !28
   ; CHECK:   renamable $r3, dead $cpsr = tLSRri killed renamable $r3, 2, 14 /* CC::al */, $noreg, debug-location !28
@@ -203,21 +203,21 @@ body:             |
   ; CHECK: bb.2.vector.body:
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $lr, $q0, $r0, $r1, $r2, $r3
-  ; CHECK:   renamable $vpr = MVE_VCTP32 renamable $r2, 0, $noreg, debug-location !30
+  ; CHECK:   renamable $vpr = MVE_VCTP32 renamable $r2, 0, $noreg, $noreg, debug-location !30
   ; CHECK:   DBG_VALUE $vpr, $noreg, !17, !DIExpression(), debug-location !30
-  ; CHECK:   $q1 = MVE_VORR killed $q0, killed $q0, 0, $noreg, undef $q1
+  ; CHECK:   $q1 = MVE_VORR killed $q0, killed $q0, 0, $noreg, $noreg, undef $q1
   ; CHECK:   MVE_VPST 8, implicit $vpr, debug-location !30
-  ; CHECK:   renamable $r1, renamable $q0 = MVE_VLDRHU32_post killed renamable $r1, 8, 1, killed renamable $vpr, debug-location !30 :: (load (s64) from %ir.lsr.iv14, align 2)
+  ; CHECK:   renamable $r1, renamable $q0 = MVE_VLDRHU32_post killed renamable $r1, 8, 1, killed renamable $vpr, $noreg, debug-location !30 :: (load (s64) from %ir.lsr.iv14, align 2)
   ; CHECK:   renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14 /* CC::al */, $noreg, debug-location !30
-  ; CHECK:   renamable $q0 = MVE_VMOVLs16bh killed renamable $q0, 0, $noreg, undef renamable $q0, debug-location !30
-  ; CHECK:   renamable $q0 = MVE_VSUBi32 renamable $q1, killed renamable $q0, 0, $noreg, undef renamable $q0, debug-location !32
+  ; CHECK:   renamable $q0 = MVE_VMOVLs16bh killed renamable $q0, 0, $noreg, $noreg, undef renamable $q0, debug-location !30
+  ; CHECK:   renamable $q0 = MVE_VSUBi32 renamable $q1, killed renamable $q0, 0, $noreg, $noreg, undef renamable $q0, debug-location !32
   ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.2, debug-location !29
   ; CHECK: bb.3.middle.block:
   ; CHECK:   successors: %bb.4(0x80000000)
   ; CHECK:   liveins: $q0, $q1, $r0, $r3
-  ; CHECK:   renamable $vpr = MVE_VCTP32 killed renamable $r3, 0, $noreg, debug-location !30
-  ; CHECK:   renamable $q0 = MVE_VPSEL killed renamable $q0, killed renamable $q1, 0, killed renamable $vpr, debug-location !32
-  ; CHECK:   renamable $r12 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg, debug-location !28
+  ; CHECK:   renamable $vpr = MVE_VCTP32 killed renamable $r3, 0, $noreg, $noreg, debug-location !30
+  ; CHECK:   renamable $q0 = MVE_VPSEL killed renamable $q0, killed renamable $q1, 0, killed renamable $vpr, $noreg, debug-location !32
+  ; CHECK:   renamable $r12 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg, $noreg, debug-location !28
   ; CHECK: bb.4.for.cond.cleanup:
   ; CHECK:   liveins: $r0, $r12
   ; CHECK:   DBG_VALUE $r12, $noreg, !20, !DIExpression(), debug-location !23
@@ -255,7 +255,7 @@ body:             |
     renamable $r3 = t2BICri killed renamable $r3, 3, 14, $noreg, $noreg, debug-location !32
     renamable $r4, dead $cpsr = tMOVi8 0, 14, $noreg
     renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3, 4, 14, $noreg, debug-location !32
-    renamable $q0 = MVE_VDUP32 killed renamable $r4, 0, $noreg, undef renamable $q0, debug-location !32
+    renamable $q0 = MVE_VDUP32 killed renamable $r4, 0, $noreg, $noreg, undef renamable $q0, debug-location !32
     renamable $q0 = MVE_VMOV_to_lane_32 killed renamable $q0, killed renamable $r12, 0, 14, $noreg, debug-location !32
     renamable $lr = nuw nsw t2ADDrs killed renamable $lr, renamable $r3, 19, 14, $noreg, $noreg, debug-location !32
     renamable $r3, dead $cpsr = tLSRri killed renamable $r3, 2, 14, $noreg, debug-location !32
@@ -266,15 +266,15 @@ body:             |
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
     liveins: $lr, $q0, $r0, $r1, $r2, $r3
 
-    renamable $vpr = MVE_VCTP32 renamable $r2, 0, $noreg, debug-location !34
+    renamable $vpr = MVE_VCTP32 renamable $r2, 0, $noreg, $noreg, debug-location !34
     DBG_VALUE $vpr, $noreg, !17, !DIExpression(), debug-location !34
-    $q1 = MVE_VORR killed $q0, $q0, 0, $noreg, undef $q1
+    $q1 = MVE_VORR killed $q0, $q0, 0, $noreg, $noreg, undef $q1
     MVE_VPST 8, implicit $vpr, debug-location !34
-    renamable $r1, renamable $q0 = MVE_VLDRHU32_post killed renamable $r1, 8, 1, killed renamable $vpr, debug-location !34 :: (load (s64) from %ir.lsr.iv14, align 2)
+    renamable $r1, renamable $q0 = MVE_VLDRHU32_post killed renamable $r1, 8, 1, killed renamable $vpr, $noreg, debug-location !34 :: (load (s64) from %ir.lsr.iv14, align 2)
     renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14, $noreg, debug-location !34
-    renamable $q0 = MVE_VMOVLs16bh killed renamable $q0, 0, $noreg, undef renamable $q0, debug-location !34
+    renamable $q0 = MVE_VMOVLs16bh killed renamable $q0, 0, $noreg, $noreg, undef renamable $q0, debug-location !34
     renamable $lr = t2LoopDec killed renamable $lr, 1, debug-location !33
-    renamable $q0 = MVE_VSUBi32 renamable $q1, killed renamable $q0, 0, $noreg, undef renamable $q0, debug-location !38
+    renamable $q0 = MVE_VSUBi32 renamable $q1, killed renamable $q0, 0, $noreg, $noreg, undef renamable $q0, debug-location !38
     t2LoopEnd renamable $lr, %bb.2, implicit-def dead $cpsr, debug-location !33
     tB %bb.3, 14, $noreg, debug-location !33
 
@@ -282,9 +282,9 @@ body:             |
     successors: %bb.4(0x80000000)
     liveins: $q0, $q1, $r0, $r3
 
-    renamable $vpr = MVE_VCTP32 killed renamable $r3, 0, $noreg, debug-location !34
-    renamable $q0 = MVE_VPSEL killed renamable $q0, killed renamable $q1, 0, killed renamable $vpr, debug-location !38
-    renamable $r12 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg, debug-location !32
+    renamable $vpr = MVE_VCTP32 killed renamable $r3, 0, $noreg, $noreg, debug-location !34
+    renamable $q0 = MVE_VPSEL killed renamable $q0, killed renamable $q1, 0, killed renamable $vpr, $noreg, debug-location !38
+    renamable $r12 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg, $noreg, debug-location !32
 
   bb.4.for.cond.cleanup:
     liveins: $r0, $r12

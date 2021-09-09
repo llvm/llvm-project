@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // constexpr auto size() requires sized_range<V>
@@ -24,19 +23,19 @@ concept SizeInvocable = requires(T t) { t.size(); };
 
 constexpr bool test() {
   {
-    std::ranges::transform_view transformView(ContiguousView{}, Increment{});
+    std::ranges::transform_view transformView(ContiguousView{}, PlusOne{});
     assert(transformView.size() == 8);
   }
 
   {
-    const std::ranges::transform_view transformView(ContiguousView{globalBuff, 4}, Increment{});
+    const std::ranges::transform_view transformView(ContiguousView{globalBuff, 4}, PlusOne{});
     assert(transformView.size() == 4);
   }
 
-  static_assert(!SizeInvocable<std::ranges::transform_view<ForwardView, Increment>>);
+  static_assert(!SizeInvocable<std::ranges::transform_view<ForwardView, PlusOne>>);
 
-  static_assert(SizeInvocable<std::ranges::transform_view<SizedSentinelNotConstView, Increment>>);
-  static_assert(!SizeInvocable<const std::ranges::transform_view<SizedSentinelNotConstView, Increment>>);
+  static_assert(SizeInvocable<std::ranges::transform_view<SizedSentinelNotConstView, PlusOne>>);
+  static_assert(!SizeInvocable<const std::ranges::transform_view<SizedSentinelNotConstView, PlusOne>>);
 
   return true;
 }

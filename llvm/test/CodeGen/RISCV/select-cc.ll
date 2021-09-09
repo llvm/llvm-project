@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zbt -disable-block-placement -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32IBT %s
 
-define i32 @foo(i32 %a, i32 *%b) nounwind {
+define signext i32 @foo(i32 signext %a, i32 *%b) nounwind {
 ; RV32I-LABEL: foo:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lw a2, 0(a1)
@@ -159,3 +159,58 @@ define i32 @foo(i32 %a, i32 *%b) nounwind {
 
   ret i32 %val24
 }
+
+; Test that we can ComputeNumSignBits across basic blocks when the live out is
+; RISCVISD::SELECT_CC. There should be no slli+srai or sext.h in the output.
+define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, i16 signext %3) nounwind {
+; RV32I-LABEL: numsignbits:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    mv s0, a3
+; RV32I-NEXT:    beqz a0, .LBB1_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    mv s0, a2
+; RV32I-NEXT:  .LBB1_2:
+; RV32I-NEXT:    beqz a1, .LBB1_4
+; RV32I-NEXT:  # %bb.3:
+; RV32I-NEXT:    mv a0, s0
+; RV32I-NEXT:    call bar@plt
+; RV32I-NEXT:  .LBB1_4:
+; RV32I-NEXT:    mv a0, s0
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV32IBT-LABEL: numsignbits:
+; RV32IBT:       # %bb.0:
+; RV32IBT-NEXT:    addi sp, sp, -16
+; RV32IBT-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IBT-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32IBT-NEXT:    cmov s0, a0, a2, a3
+; RV32IBT-NEXT:    beqz a1, .LBB1_2
+; RV32IBT-NEXT:  # %bb.1:
+; RV32IBT-NEXT:    mv a0, s0
+; RV32IBT-NEXT:    call bar@plt
+; RV32IBT-NEXT:  .LBB1_2:
+; RV32IBT-NEXT:    mv a0, s0
+; RV32IBT-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32IBT-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IBT-NEXT:    addi sp, sp, 16
+; RV32IBT-NEXT:    ret
+  %5 = icmp eq i16 %0, 0
+  %6 = select i1 %5, i16 %3, i16 %2
+  %7 = icmp eq i16 %1, 0
+  br i1 %7, label %9, label %8
+
+8:                                                ; preds = %4
+  tail call void @bar(i16 signext %6)
+  br label %9
+
+9:                                                ; preds = %8, %4
+  ret i16 %6
+}
+
+declare void @bar(i16 signext)

@@ -36,7 +36,7 @@ the input text file:
 
 ::
 
-   % ./dictionary Romeo-and-Juliet.txt
+   $ ./dictionary Romeo-and-Juliet.txt
    Dictionary loaded.
    Enter search word: love
    Yes!
@@ -45,7 +45,7 @@ the input text file:
    Enter search word: Romeo
    No!
    Enter search word: ^D
-   %
+   $
 
 Using Depth First Search
 ------------------------
@@ -184,7 +184,7 @@ you would do something like this:
 
 ::
 
-   % lldb
+   $ lldb
    (lldb) process attach -n "dictionary"
    Architecture set to: x86_64.
    Process 521 stopped
@@ -500,12 +500,11 @@ tree_utils.py - Example Python functions using LLDB's API, including DFS
    """
    # ===-- tree_utils.py ---------------------------------------*- Python -*-===//
    #
-   #                     The LLVM Compiler Infrastructure
+   #  Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+   #  See https://llvm.org/LICENSE.txt for license information.
+   #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
    #
-   # This file is distributed under the University of Illinois Open Source
-   # License. See LICENSE.TXT for details.
-   #
-   # ===---------------------------------------------------------------------===//
+   # ===----------------------------------------------------------------------===//
 
    tree_utils.py  - A set of functions for examining binary
    search trees, based on the example search tree defined in
@@ -623,12 +622,11 @@ dictionary.c - Sample dictionary program, with bug
 
    //===-- dictionary.c ---------------------------------------------*- C -*-===//
    //
-   //                     The LLVM Compiler Infrastructure
+   // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+   // See https://llvm.org/LICENSE.txt for license information.
+   // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
    //
-   // This file is distributed under the University of Illinois Open Source
-   // License. See LICENSE.TXT for details.
-   //
-   //===---------------------------------------------------------------------===//
+   //===----------------------------------------------------------------------===//
    #include <ctype.h>
    #include <stdio.h>
    #include <stdlib.h>

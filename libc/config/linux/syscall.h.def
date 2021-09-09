@@ -6,4 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_CONFIG_LINUX_SYSCALL_H
+#define LLVM_LIBC_CONFIG_LINUX_SYSCALL_H
+
 %%include_file(${inline_syscalls})
+
+#endif // LLVM_LIBC_CONFIG_LINUX_SYSCALL_H

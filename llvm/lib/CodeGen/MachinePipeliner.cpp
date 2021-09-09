@@ -200,8 +200,7 @@ bool MachinePipeliner::runOnMachineFunction(MachineFunction &mf) {
   if (!EnableSWP)
     return false;
 
-  if (mf.getFunction().getAttributes().hasAttribute(
-          AttributeList::FunctionIndex, Attribute::OptimizeForSize) &&
+  if (mf.getFunction().getAttributes().hasFnAttr(Attribute::OptimizeForSize) &&
       !EnableSWPOptSize.getPosition())
     return false;
 

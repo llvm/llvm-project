@@ -224,49 +224,6 @@ static llvm::CachePruningPolicy getLTOCachePolicy(InputArgList &args) {
   return CHECK(parseCachePruningPolicy(ltoPolicy), "invalid LTO cache policy");
 }
 
-namespace {
-struct ArchiveMember {
-  MemoryBufferRef mbref;
-  uint32_t modTime;
-  uint64_t offsetInArchive;
-};
-} // namespace
-
-// Returns slices of MB by parsing MB as an archive file.
-// Each slice consists of a member file in the archive.
-static std::vector<ArchiveMember> getArchiveMembers(MemoryBufferRef mb) {
-  std::unique_ptr<Archive> file =
-      CHECK(Archive::create(mb),
-            mb.getBufferIdentifier() + ": failed to parse archive");
-  Archive *archive = file.get();
-  make<std::unique_ptr<Archive>>(std::move(file)); // take ownership
-
-  std::vector<ArchiveMember> v;
-  Error err = Error::success();
-
-  // Thin archives refer to .o files, so --reproduce needs the .o files too.
-  bool addToTar = archive->isThin() && tar;
-
-  for (const Archive::Child &c : archive->children(err)) {
-    MemoryBufferRef mbref =
-        CHECK(c.getMemoryBufferRef(),
-              mb.getBufferIdentifier() +
-                  ": could not get the buffer for a child of the archive");
-    if (addToTar)
-      tar->append(relativeToRoot(check(c.getFullName())), mbref.getBuffer());
-    uint32_t modTime = toTimeT(
-        CHECK(c.getLastModified(), mb.getBufferIdentifier() +
-                                       ": could not get the modification "
-                                       "time for a child of the archive"));
-    v.push_back({mbref, modTime, c.getChildOffset()});
-  }
-  if (err)
-    fatal(mb.getBufferIdentifier() +
-          ": Archive::children failed: " + toString(std::move(err)));
-
-  return v;
-}
-
 static DenseMap<StringRef, ArchiveFile *> loadedArchives;
 
 static InputFile *addFile(StringRef path, bool forceLoadArchive,
@@ -289,48 +246,51 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
     if (ArchiveFile *cachedFile = loadedArchives[path])
       return cachedFile;
 
-    std::unique_ptr<object::Archive> file = CHECK(
+    std::unique_ptr<object::Archive> archive = CHECK(
         object::Archive::create(mbref), path + ": failed to parse archive");
 
-    if (!file->isEmpty() && !file->hasSymbolTable())
+    if (!archive->isEmpty() && !archive->hasSymbolTable())
       error(path + ": archive has no index; run ranlib to add one");
 
+    auto *file = make<ArchiveFile>(std::move(archive));
     if (config->allLoad || forceLoadArchive) {
       if (Optional<MemoryBufferRef> buffer = readFile(path)) {
-        for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
-          if (Optional<InputFile *> file = loadArchiveMember(
-                  member.mbref, member.modTime, path, /*objCOnly=*/false,
-                  member.offsetInArchive)) {
-            inputFiles.insert(*file);
-            printArchiveMemberLoad(
-                (forceLoadArchive ? "-force_load" : "-all_load"),
-                inputFiles.back());
-          }
+        Error e = Error::success();
+        for (const object::Archive::Child &c : file->getArchive().children(e)) {
+          StringRef reason = forceLoadArchive ? "-force_load" : "-all_load";
+          if (Error e = file->fetch(c, reason))
+            error(toString(file) + ": " + reason +
+                  " failed to load archive member: " + toString(std::move(e)));
         }
+        if (e)
+          error(toString(file) +
+                ": Archive::children failed: " + toString(std::move(e)));
       }
     } else if (config->forceLoadObjC) {
-      for (const object::Archive::Symbol &sym : file->symbols())
+      for (const object::Archive::Symbol &sym : file->getArchive().symbols())
         if (sym.getName().startswith(objc::klass))
-          symtab->addUndefined(sym.getName(), /*file=*/nullptr,
-                               /*isWeakRef=*/false);
+          file->fetch(sym);
 
       // TODO: no need to look for ObjC sections for a given archive member if
-      // we already found that it contains an ObjC symbol. We should also
-      // consider creating a LazyObjFile class in order to avoid double-loading
-      // these files here and below (as part of the ArchiveFile).
+      // we already found that it contains an ObjC symbol.
       if (Optional<MemoryBufferRef> buffer = readFile(path)) {
-        for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
-          if (Optional<InputFile *> file = loadArchiveMember(
-                  member.mbref, member.modTime, path, /*objCOnly=*/true,
-                  member.offsetInArchive)) {
-            inputFiles.insert(*file);
-            printArchiveMemberLoad("-ObjC", inputFiles.back());
-          }
+        Error e = Error::success();
+        for (const object::Archive::Child &c : file->getArchive().children(e)) {
+          Expected<MemoryBufferRef> mb = c.getMemoryBufferRef();
+          if (!mb || !hasObjCSection(*mb))
+            continue;
+          if (Error e = file->fetch(c, "-ObjC"))
+            error(toString(file) + ": -ObjC failed to load archive member: " +
+                  toString(std::move(e)));
         }
+        if (e)
+          error(toString(file) +
+                ": Archive::children failed: " + toString(std::move(e)));
       }
     }
 
-    newFile = loadedArchives[path] = make<ArchiveFile>(std::move(file));
+    file->addLazySymbols();
+    newFile = loadedArchives[path] = file;
     break;
   }
   case file_magic::macho_object:

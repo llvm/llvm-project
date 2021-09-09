@@ -59,7 +59,7 @@ def testTraverseOpRegionBlockIterators():
 
   # CHECK: REGION 0:
   # CHECK:   BLOCK 0:
-  # CHECK:     OP 0: builtin.func
+  # CHECK:     OP 0: func
   # CHECK:       REGION 0:
   # CHECK:         BLOCK 0:
   # CHECK:           OP 0: %0 = "custom.addi"
@@ -96,7 +96,7 @@ def testTraverseOpRegionBlockIndices():
 
   # CHECK: REGION 0:
   # CHECK:   BLOCK 0:
-  # CHECK:     OP 0: builtin.func
+  # CHECK:     OP 0: func
   # CHECK:     OP 0: parent builtin.module
   # CHECK:       REGION 0:
   # CHECK:         BLOCK 0:

@@ -289,6 +289,9 @@ public:
   /// Whether we are performing an implicit module build.
   unsigned BuildingImplicitModule : 1;
 
+  /// Whether to use a filesystem lock when building implicit modules.
+  unsigned BuildingImplicitModuleUsesLock : 1;
+
   /// Whether we should embed all used files into the PCM file.
   unsigned ModulesEmbedAllFiles : 1;
 
@@ -461,9 +464,9 @@ public:
         SkipFunctionBodies(false), UseGlobalModuleIndex(true),
         GenerateGlobalModuleIndex(true), ASTDumpDecls(false),
         ASTDumpLookups(false), BuildingImplicitModule(false),
-        ModulesEmbedAllFiles(false), IncludeTimestamps(true),
-        UseTemporary(true), AllowPCMWithCompilerErrors(false),
-        TimeTraceGranularity(500) {}
+        BuildingImplicitModuleUsesLock(true), ModulesEmbedAllFiles(false),
+        IncludeTimestamps(true), UseTemporary(true),
+        AllowPCMWithCompilerErrors(false), TimeTraceGranularity(500) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.

@@ -413,7 +413,8 @@ void DefGenerator::emitDefDecl(const AttrOrTypeDef &def) {
     for (AttrOrTypeParameter &parameter : parameters) {
       SmallString<16> name = parameter.getName();
       name[0] = llvm::toUpper(name[0]);
-      os << formatv("    {0} get{1}() const;\n", parameter.getCppType(), name);
+      os << formatv("    {0} get{1}() const;\n", parameter.getCppAccessorType(),
+                    name);
     }
   }
 
@@ -859,7 +860,7 @@ void DefGenerator::emitDefDef(const AttrOrTypeDef &def) {
         SmallString<16> name = param.getName();
         name[0] = llvm::toUpper(name[0]);
         os << formatv("{0} {3}::get{1}() const {{ return getImpl()->{2}; }\n",
-                      param.getCppType(), name, paramStorageName,
+                      param.getCppAccessorType(), name, paramStorageName,
                       def.getCppClassName());
       }
     }

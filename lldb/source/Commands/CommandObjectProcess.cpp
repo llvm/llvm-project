@@ -170,8 +170,6 @@ protected:
     if (!StopProcessIfNecessary(m_exe_ctx.GetProcessPtr(), state, result))
       return false;
 
-    llvm::StringRef target_settings_argv0 = target->GetArg0();
-
     // Determine whether we will disable ASLR or leave it in the default state
     // (i.e. enabled if the platform supports it). First check if the process
     // launch options explicitly turn on/off
@@ -215,6 +213,8 @@ protected:
     Environment target_env = target->GetEnvironment();
     m_options.launch_info.GetEnvironment().insert(target_env.begin(),
                                                   target_env.end());
+
+    llvm::StringRef target_settings_argv0 = target->GetArg0();
 
     if (!target_settings_argv0.empty()) {
       m_options.launch_info.GetArguments().AppendArgument(
@@ -1166,7 +1166,9 @@ protected:
 static constexpr OptionEnumValueElement g_corefile_save_style[] = {
     {eSaveCoreFull, "full", "Create a core file with all memory saved"},
     {eSaveCoreDirtyOnly, "modified-memory",
-     "Create a corefile with only modified memory saved"}};
+     "Create a corefile with only modified memory saved"},
+    {eSaveCoreStackOnly, "stack",
+     "Create a corefile with only stack  memory saved"}};
 
 static constexpr OptionEnumValues SaveCoreStyles() {
   return OptionEnumValues(g_corefile_save_style);
@@ -1178,12 +1180,13 @@ static constexpr OptionEnumValues SaveCoreStyles() {
 class CommandObjectProcessSaveCore : public CommandObjectParsed {
 public:
   CommandObjectProcessSaveCore(CommandInterpreter &interpreter)
-      : CommandObjectParsed(interpreter, "process save-core",
-                            "Save the current process as a core file using an "
-                            "appropriate file type.",
-                            "process save-core [-s corefile-style] FILE",
-                            eCommandRequiresProcess | eCommandTryTargetAPILock |
-                                eCommandProcessMustBeLaunched) {}
+      : CommandObjectParsed(
+            interpreter, "process save-core",
+            "Save the current process as a core file using an "
+            "appropriate file type.",
+            "process save-core [-s corefile-style -p plugin-name] FILE",
+            eCommandRequiresProcess | eCommandTryTargetAPILock |
+                eCommandProcessMustBeLaunched) {}
 
   ~CommandObjectProcessSaveCore() override = default;
 
@@ -1206,6 +1209,9 @@ public:
       Status error;
 
       switch (short_option) {
+      case 'p':
+        m_requested_plugin_name.SetString(option_arg);
+        break;
       case 's':
         m_requested_save_core_style =
             (lldb::SaveCoreStyle)OptionArgParser::ToOptionEnum(
@@ -1221,10 +1227,12 @@ public:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_requested_save_core_style = eSaveCoreUnspecified;
+      m_requested_plugin_name.Clear();
     }
 
     // Instance variables to hold the values for command options.
     SaveCoreStyle m_requested_save_core_style;
+    ConstString m_requested_plugin_name;
   };
 
 protected:
@@ -1235,13 +1243,15 @@ protected:
         FileSpec output_file(command.GetArgumentAtIndex(0));
         SaveCoreStyle corefile_style = m_options.m_requested_save_core_style;
         Status error =
-            PluginManager::SaveCore(process_sp, output_file, corefile_style);
+            PluginManager::SaveCore(process_sp, output_file, corefile_style,
+                                    m_options.m_requested_plugin_name);
         if (error.Success()) {
-          if (corefile_style == SaveCoreStyle::eSaveCoreDirtyOnly) {
+          if (corefile_style == SaveCoreStyle::eSaveCoreDirtyOnly ||
+              corefile_style == SaveCoreStyle::eSaveCoreStackOnly) {
             result.AppendMessageWithFormat(
-                "\nModified-memory only corefile "
-                "created.  This corefile may not show \n"
-                "library/framework/app binaries "
+                "\nModified-memory or stack-memory only corefile "
+                "created.  This corefile may \n"
+                "not show library/framework/app binaries "
                 "on a different system, or when \n"
                 "those binaries have "
                 "been updated/modified. Copies are not included\n"
@@ -1641,6 +1651,80 @@ protected:
   }
 };
 
+// CommandObjectProcessTraceSave
+#define LLDB_OPTIONS_process_trace_save
+#include "CommandOptions.inc"
+
+#pragma mark CommandObjectProcessTraceSave
+
+class CommandObjectProcessTraceSave : public CommandObjectParsed {
+public:
+  class CommandOptions : public Options {
+  public:
+    CommandOptions() : Options() { OptionParsingStarting(nullptr); }
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
+      const int short_option = m_getopt_table[option_idx].val;
+
+      switch (short_option) {
+
+      case 'd': {
+        m_directory.SetFile(option_arg, FileSpec::Style::native);
+        FileSystem::Instance().Resolve(m_directory);
+        break;
+      }
+      default:
+        llvm_unreachable("Unimplemented option");
+      }
+      return error;
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override{};
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::makeArrayRef(g_process_trace_save_options);
+    };
+
+    FileSpec m_directory;
+  };
+
+  Options *GetOptions() override { return &m_options; }
+  CommandObjectProcessTraceSave(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "process trace save",
+            "Save the trace of the current process in the specified directory. "
+            "The directory will be created if needed. "
+            "This will also create a file <directory>/trace.json with the main "
+            "properties of the trace session, along with others files which "
+            "contain the actual trace data. The trace.json file can be used "
+            "later as input for the \"trace load\" command to load the trace "
+            "in LLDB",
+            "process trace save [<cmd-options>]",
+            eCommandRequiresProcess | eCommandTryTargetAPILock |
+                eCommandProcessMustBeLaunched | eCommandProcessMustBePaused |
+                eCommandProcessMustBeTraced) {}
+
+  ~CommandObjectProcessTraceSave() override = default;
+
+protected:
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
+    ProcessSP process_sp = m_exe_ctx.GetProcessSP();
+
+    TraceSP trace_sp = process_sp->GetTarget().GetTrace();
+
+    if (llvm::Error err = trace_sp->SaveLiveTraceToDisk(m_options.m_directory))
+      result.AppendError(toString(std::move(err)));
+    else
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+
+    return result.Succeeded();
+  }
+
+  CommandOptions m_options;
+};
+
 // CommandObjectProcessTraceStop
 class CommandObjectProcessTraceStop : public CommandObjectParsed {
 public:
@@ -1678,6 +1762,8 @@ public:
       : CommandObjectMultiword(
             interpreter, "trace", "Commands for tracing the current process.",
             "process trace <subcommand> [<subcommand objects>]") {
+    LoadSubCommand("save", CommandObjectSP(
+                               new CommandObjectProcessTraceSave(interpreter)));
     LoadSubCommand("start", CommandObjectSP(new CommandObjectProcessTraceStart(
                                 interpreter)));
     LoadSubCommand("stop", CommandObjectSP(

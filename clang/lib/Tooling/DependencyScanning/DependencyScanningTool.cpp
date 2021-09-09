@@ -180,7 +180,7 @@ DependencyScanningTool::getFullDependencies(
   private:
     std::vector<std::string> Dependencies;
     std::vector<PrebuiltModuleDep> PrebuiltModuleDeps;
-    std::unordered_map<std::string, ModuleDeps> ClangModuleDeps;
+    std::map<std::string, ModuleDeps> ClangModuleDeps;
     std::string ContextHash;
     std::vector<std::string> OutputPaths;
     const llvm::StringSet<> &AlreadySeen;

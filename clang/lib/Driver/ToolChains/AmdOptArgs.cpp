@@ -234,7 +234,7 @@ static bool checkForPropOpts(const ToolChain &TC, const Driver &D,
     ClosedToolChainNeeded = true;
   } else if (Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
     if (ClosedToolChainNeeded && HasAltPath) {
-      std::string CPU = getCPUName(Args, TC.getTriple());
+      std::string CPU = getCPUName(D, Args, TC.getTriple());
       StringRef MArch = A->getValue();
 #define ZNVER1_MEMBLOCK_SIZE "8192"
 #define ZNVER2_MEMBLOCK_SIZE "16384"

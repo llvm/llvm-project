@@ -331,6 +331,12 @@ Value *llvm::findScalarElement(Value *V, unsigned EltNo) {
       if (Elt->isNullValue())
         return findScalarElement(Val, EltNo);
 
+  // If the vector is a splat then we can trivially find the scalar element.
+  if (isa<ScalableVectorType>(VTy))
+    if (Value *Splat = getSplatValue(V))
+      if (EltNo < VTy->getElementCount().getKnownMinValue())
+        return Splat;
+
   // Otherwise, we don't know.
   return nullptr;
 }
@@ -1352,9 +1358,7 @@ std::string VFABI::mangleTLIVectorName(StringRef VectorName,
 
 void VFABI::getVectorVariantNames(
     const CallInst &CI, SmallVectorImpl<std::string> &VariantMappings) {
-  const StringRef S =
-      CI.getAttribute(AttributeList::FunctionIndex, VFABI::MappingsAttrName)
-          .getValueAsString();
+  const StringRef S = CI.getFnAttr(VFABI::MappingsAttrName).getValueAsString();
   if (S.empty())
     return;
 

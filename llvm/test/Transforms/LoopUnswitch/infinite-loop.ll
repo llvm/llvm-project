@@ -1,6 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -loop-unswitch -enable-new-pm=0 -disable-output -stats -info-output-file - < %s | FileCheck --check-prefix=STATS %s
-; RUN: opt -loop-unswitch -enable-new-pm=0 -enable-mssa-loop-dependency=true -verify-memoryssa -disable-output -stats -info-output-file - < %s | FileCheck --check-prefix=STATS %s
+; RUN: opt -loop-unswitch -enable-new-pm=0 -verify-memoryssa -disable-output -stats -info-output-file - < %s | FileCheck --check-prefix=STATS %s
 ; RUN: opt -loop-unswitch -enable-new-pm=0 -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S < %s | FileCheck %s
 ; PR5373
 

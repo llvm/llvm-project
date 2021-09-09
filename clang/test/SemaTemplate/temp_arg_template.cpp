@@ -59,7 +59,7 @@ namespace N {
     0 << a.const_ref(); // expected-error{{invalid operands to binary expression ('int' and 'X<int>')}}
   }
 
-  void f0( Y<int,1> y){ 1 << y; } // expected-note{{in instantiation of function template specialization 'N::operator<<<Y, int, 1>' requested here}}
+  void f0( Y<int,1> y){ 1 << y; } // expected-note{{in instantiation of function template specialization 'N::operator<<<N::Y, int, 1>' requested here}}
 }
 
 // PR12179

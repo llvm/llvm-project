@@ -1,4 +1,4 @@
-//===-- runtime/numeric.cpp -------------------------------------*- C++ -*-===//
+//===-- runtime/numeric.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "numeric.h"
+#include "flang/Runtime/numeric.h"
 #include "flang/Common/long-double.h"
 #include <climits>
 #include <cmath>
@@ -109,7 +109,7 @@ template <typename T> inline T SetExponent(T x, std::int64_t p) {
   } else if (x == 0) {
     return 0; // 0 -> 0
   } else {
-    int expo{std::ilogb(x)};
+    int expo{std::ilogb(x) + 1};
     auto ip{static_cast<int>(p - expo)};
     if (ip != p - expo) {
       ip = p < 0 ? std::numeric_limits<int>::min()

@@ -180,12 +180,12 @@ getRegionNodeSuccessor(RegionNode *RN, Instruction *TI, unsigned idx) {
   return TI->getSuccessor(idx);
 }
 
-static bool containsErrorBlock(RegionNode *RN, const Region &R, LoopInfo &LI,
-                               const DominatorTree &DT) {
+static bool containsErrorBlock(RegionNode *RN, const Region &R,
+                               ScopDetection *SD) {
   if (!RN->isSubRegion())
-    return isErrorBlock(*RN->getNodeAs<BasicBlock>(), R, LI, DT);
+    return SD->isErrorBlock(*RN->getNodeAs<BasicBlock>(), R);
   for (BasicBlock *BB : RN->getNodeAs<Region>()->blocks())
-    if (isErrorBlock(*BB, R, LI, DT))
+    if (SD->isErrorBlock(*BB, R))
       return true;
   return false;
 }
@@ -202,7 +202,7 @@ static bool containsErrorBlock(RegionNode *RN, const Region &R, LoopInfo &LI,
 static isl::map createNextIterationMap(isl::space SetSpace, unsigned Dim) {
   isl::space MapSpace = SetSpace.map_from_set();
   isl::map NextIterationMap = isl::map::universe(MapSpace);
-  for (auto u : seq<isl_size>(0, NextIterationMap.domain_tuple_dim()))
+  for (auto u : seq<isl_size>(0, NextIterationMap.domain_tuple_dim().release()))
     if (u != (isl_size)Dim)
       NextIterationMap =
           NextIterationMap.equate(isl::dim::in, u, isl::dim::out, u);
@@ -230,10 +230,10 @@ static isl::set collectBoundedParts(isl::set S) {
 ///          both with regards to the dimension @p Dim.
 static std::pair<isl::set, isl::set> partitionSetParts(isl::set S,
                                                        unsigned Dim) {
-  for (unsigned u = 0, e = S.tuple_dim(); u < e; u++)
+  for (unsigned u = 0, e = S.tuple_dim().release(); u < e; u++)
     S = S.lower_bound_si(isl::dim::set, u, 0);
 
-  unsigned NumDimsS = S.tuple_dim();
+  unsigned NumDimsS = S.tuple_dim().release();
   isl::set OnlyDimS = S;
 
   // Remove dimensions that are greater than Dim as they are not interesting.
@@ -328,7 +328,7 @@ isl::set ScopBuilder::adjustDomainDimensions(isl::set Dom, Loop *OldL,
   } else {
     assert(OldDepth > NewDepth);
     int Diff = OldDepth - NewDepth;
-    int NumDim = Dom.tuple_dim();
+    int NumDim = Dom.tuple_dim().release();
     assert(NumDim >= Diff);
     Dom = Dom.project_out(isl::dim::set, NumDim - Diff, Diff);
   }
@@ -448,7 +448,10 @@ bool ScopBuilder::buildConditionSets(
                              .release();
   } else if (auto *PHI = dyn_cast<PHINode>(Condition)) {
     auto *Unique = dyn_cast<ConstantInt>(
-        getUniqueNonErrorValue(PHI, &scop->getRegion(), LI, DT));
+        getUniqueNonErrorValue(PHI, &scop->getRegion(), &SD));
+    assert(Unique &&
+           "A PHINode condition should only be accepted by ScopDetection if "
+           "getUniqueNonErrorValue returns non-NULL");
 
     if (Unique->isZero())
       ConsequenceCondSet = isl_set_empty(isl_set_get_space(Domain));
@@ -497,8 +500,8 @@ bool ScopBuilder::buildConditionSets(
     const SCEV *LeftOperand = SE.getSCEVAtScope(ICond->getOperand(0), L),
                *RightOperand = SE.getSCEVAtScope(ICond->getOperand(1), L);
 
-    LeftOperand = tryForwardThroughPHI(LeftOperand, R, SE, LI, DT);
-    RightOperand = tryForwardThroughPHI(RightOperand, R, SE, LI, DT);
+    LeftOperand = tryForwardThroughPHI(LeftOperand, R, SE, &SD);
+    RightOperand = tryForwardThroughPHI(RightOperand, R, SE, &SD);
 
     switch (ICond->getPredicate()) {
     case ICmpInst::ICMP_ULT:
@@ -706,9 +709,11 @@ isl::set ScopBuilder::getPredecessorDomainConstraints(BasicBlock *BB,
 
     // Check if there is a valid region we can use for propagation, thus look
     // for a region that contains the predecessor and has @p BB as exit block.
+    // FIXME: This was an side-effect-free (and possibly infinite) loop when
+    //        committed and seems not to be needed.
     auto *PredR = RI.getRegionFor(PredBB);
     while (PredR->getExit() != BB && !PredR->contains(BB))
-      PredR->getParent();
+      PredR = PredR->getParent();
 
     // If a valid region for propagation was found use the entry of that region
     // for propagation, otherwise the PredBB directly.
@@ -838,11 +843,11 @@ bool ScopBuilder::buildDomains(
       isl_set_universe(isl_space_set_alloc(scop->getIslCtx().get(), 0, LD + 1));
 
   InvalidDomainMap[EntryBB] = isl::manage(isl_set_empty(isl_set_get_space(S)));
-  isl::noexceptions::set Domain = isl::manage(S);
+  isl::set Domain = isl::manage(S);
   scop->setDomain(EntryBB, Domain);
 
   if (IsOnlyNonAffineRegion)
-    return !containsErrorBlock(R->getNode(), *R, LI, DT);
+    return !containsErrorBlock(R->getNode(), *R, &SD);
 
   if (!buildDomainsWithBranchConstraints(R, InvalidDomainMap))
     return false;
@@ -895,7 +900,7 @@ bool ScopBuilder::buildDomainsWithBranchConstraints(
       }
     }
 
-    if (containsErrorBlock(RN, scop->getRegion(), LI, DT))
+    if (containsErrorBlock(RN, scop->getRegion(), &SD))
       scop->notifyErrorBlock();
     ;
 
@@ -909,7 +914,7 @@ bool ScopBuilder::buildDomainsWithBranchConstraints(
       continue;
     isl::set Domain = scop->getDomainConditions(BB);
 
-    scop->updateMaxLoopDepth(Domain.tuple_dim());
+    scop->updateMaxLoopDepth(Domain.tuple_dim().release());
 
     auto *BBLoop = getRegionNodeLoop(RN, LI);
     // Propagate the domain from BB directly to blocks that have a superset
@@ -983,7 +988,7 @@ bool ScopBuilder::buildDomainsWithBranchConstraints(
 
       // Check if the maximal number of domain disjunctions was reached.
       // In case this happens we will clean up and bail.
-      if (SuccDomain.n_basic_set() < MaxDisjunctsInDomain)
+      if (SuccDomain.n_basic_set().release() < MaxDisjunctsInDomain)
         continue;
 
       scop->invalidate(COMPLEXITY, DebugLoc());
@@ -1011,7 +1016,7 @@ bool ScopBuilder::propagateInvalidStmtDomains(
       }
     }
 
-    bool ContainsErrorBlock = containsErrorBlock(RN, scop->getRegion(), LI, DT);
+    bool ContainsErrorBlock = containsErrorBlock(RN, scop->getRegion(), &SD);
     BasicBlock *BB = getRegionNodeBasicBlock(RN);
     isl::set &Domain = scop->getOrInitEmptyDomain(BB);
     assert(!Domain.is_null() && "Cannot propagate a nullptr");
@@ -1063,7 +1068,7 @@ bool ScopBuilder::propagateInvalidStmtDomains(
 
       // Check if the maximal number of domain disjunctions was reached.
       // In case this happens we will bail.
-      if (SuccInvalidDomain.n_basic_set() < MaxDisjunctsInDomain)
+      if (SuccInvalidDomain.n_basic_set().release() < MaxDisjunctsInDomain)
         continue;
 
       InvalidDomainMap.erase(BB);
@@ -1162,7 +1167,7 @@ static isl::multi_union_pw_aff mapToDimension(isl::union_set USet, int N) {
   auto Result = isl::union_pw_multi_aff::empty(USet.get_space());
 
   for (isl::set S : USet.get_set_list()) {
-    int Dim = S.tuple_dim();
+    int Dim = S.tuple_dim().release();
     auto PMA = isl::pw_multi_aff::project_out_map(S.get_space(), isl::dim::set,
                                                   N, Dim - N);
     if (N > 1)
@@ -1307,10 +1312,8 @@ void ScopBuilder::buildSchedule(RegionNode *RN, LoopStackTy &LoopStack) {
       // It is easier to insert the marks here that do it retroactively.
       isl::id IslLoopId = createIslLoopAttr(scop->getIslCtx(), L);
       if (!IslLoopId.is_null())
-        Schedule = Schedule.get_root()
-                       .get_child(0)
-                       .insert_mark(IslLoopId)
-                       .get_schedule();
+        Schedule =
+            Schedule.get_root().child(0).insert_mark(IslLoopId).get_schedule();
 
       LoopData->Schedule = combineInSequence(LoopData->Schedule, Schedule);
     }
@@ -2257,7 +2260,7 @@ void ScopBuilder::buildAccessFunctions(ScopStmt *Stmt, BasicBlock &BB,
 
   // We do not build access functions for error blocks, as they may contain
   // instructions we can not model.
-  if (isErrorBlock(BB, scop->getRegion(), LI, DT))
+  if (SD.isErrorBlock(BB, scop->getRegion()))
     return;
 
   auto BuildAccessesForInst = [this, Stmt,
@@ -2405,7 +2408,7 @@ void ScopBuilder::foldSizeConstantsToRight() {
     isl::map Transform = isl::map::universe(Array->getSpace().map_from_set());
 
     std::vector<int> Int;
-    int Dims = Elements.tuple_dim();
+    int Dims = Elements.tuple_dim().release();
     for (int i = 0; i < Dims; i++) {
       isl::set DimOnly = isl::set(Elements).project_out(isl::dim::set, 0, i);
       DimOnly = DimOnly.project_out(isl::dim::set, 1, Dims - i - 1);
@@ -2419,7 +2422,7 @@ void ScopBuilder::foldSizeConstantsToRight() {
         continue;
       }
 
-      if (DimHull.dim(isl::dim::div) == 1) {
+      if (DimHull.dim(isl::dim::div).release() == 1) {
         isl::aff Diff = DimHull.get_div(0);
         isl::val Val = Diff.get_denominator_val();
 
@@ -2839,8 +2842,8 @@ static bool isAccessRangeTooComplex(isl::set AccessRange) {
   int NumTotalDims = 0;
 
   for (isl::basic_set BSet : AccessRange.get_basic_set_list()) {
-    NumTotalDims += BSet.dim(isl::dim::div);
-    NumTotalDims += BSet.dim(isl::dim::set);
+    NumTotalDims += BSet.dim(isl::dim::div).release();
+    NumTotalDims += BSet.dim(isl::dim::set).release();
   }
 
   if (NumTotalDims > MaxDimensionsInAccessRange)
@@ -2869,7 +2872,8 @@ void ScopBuilder::addUserContext() {
 
   isl::set UserContext = isl::set(scop->getIslCtx(), UserContextStr.c_str());
   isl::space Space = scop->getParamSpace();
-  if (Space.dim(isl::dim::param) != UserContext.dim(isl::dim::param)) {
+  if (Space.dim(isl::dim::param).release() !=
+      UserContext.dim(isl::dim::param).release()) {
     std::string SpaceStr = stringFromIslObj(Space, "null");
     errs() << "Error: the context provided in -polly-context has not the same "
            << "number of dimensions than the computed context. Due to this "
@@ -2878,7 +2882,7 @@ void ScopBuilder::addUserContext() {
     return;
   }
 
-  for (auto i : seq<isl_size>(0, Space.dim(isl::dim::param))) {
+  for (auto i : seq<isl_size>(0, Space.dim(isl::dim::param).release())) {
     std::string NameContext =
         scop->getContext().get_dim_name(isl::dim::param, i);
     std::string NameUserContext = UserContext.get_dim_name(isl::dim::param, i);
@@ -2962,7 +2966,7 @@ isl::set ScopBuilder::getNonHoistableCtx(MemoryAccess *Access,
     return WrittenCtx;
 
   WrittenCtx = WrittenCtx.remove_divs();
-  bool TooComplex = WrittenCtx.n_basic_set() >= MaxDisjunctsInDomain;
+  bool TooComplex = WrittenCtx.n_basic_set().release() >= MaxDisjunctsInDomain;
   if (TooComplex || !isRequiredInvariantLoad(LI))
     return {};
 
@@ -3028,7 +3032,7 @@ void ScopBuilder::addInvariantLoads(ScopStmt &Stmt,
   isl::set DomainCtx = Stmt.getDomain().params();
   DomainCtx = DomainCtx.subtract(StmtInvalidCtx);
 
-  if (DomainCtx.n_basic_set() >= MaxDisjunctsInDomain) {
+  if (DomainCtx.n_basic_set().release() >= MaxDisjunctsInDomain) {
     auto *AccInst = InvMAs.front().MA->getAccessInstruction();
     scop->invalidate(COMPLEXITY, AccInst->getDebugLoc(), AccInst->getParent());
     return;
@@ -3304,7 +3308,7 @@ static bool buildMinMaxAccess(isl::set Set,
   Set = Set.remove_divs();
   polly::simplify(Set);
 
-  if (Set.n_basic_set() > RunTimeChecksMaxAccessDisjuncts)
+  if (Set.n_basic_set().release() > RunTimeChecksMaxAccessDisjuncts)
     Set = Set.simple_hull();
 
   // Restrict the number of parameters involved in the access as the lexmin/
@@ -3342,11 +3346,11 @@ static bool buildMinMaxAccess(isl::set Set,
   // enclose the accessed memory region by MinPMA and MaxPMA. The pointer
   // we test during code generation might now point after the end of the
   // allocated array but we will never dereference it anyway.
-  assert((MaxPMA.is_null() || MaxPMA.dim(isl::dim::out)) &&
+  assert((MaxPMA.is_null() || MaxPMA.dim(isl::dim::out).release()) &&
          "Assumed at least one output dimension");
 
-  Pos = MaxPMA.dim(isl::dim::out) - 1;
-  LastDimAff = MaxPMA.get_pw_aff(Pos);
+  Pos = MaxPMA.dim(isl::dim::out).release() - 1;
+  LastDimAff = MaxPMA.at(Pos);
   OneAff = isl::aff(isl::local_space(LastDimAff.get_domain_space()));
   OneAff = OneAff.add_constant_si(1);
   LastDimAff = LastDimAff.add(OneAff);
@@ -3386,7 +3390,7 @@ bool ScopBuilder::calculateMinMaxAccess(AliasGroupTy AliasGroup,
 
 static isl::set getAccessDomain(MemoryAccess *MA) {
   isl::set Domain = MA->getStatement()->getDomain();
-  Domain = Domain.project_out(isl::dim::set, 0, Domain.tuple_dim());
+  Domain = Domain.project_out(isl::dim::set, 0, Domain.tuple_dim().release());
   return Domain.reset_tuple_id();
 }
 
@@ -3672,7 +3676,7 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC) {
   // created somewhere.
   const InvariantLoadsSetTy &RIL = scop->getRequiredInvariantLoads();
   for (BasicBlock *BB : scop->getRegion().blocks()) {
-    if (isErrorBlock(*BB, scop->getRegion(), LI, DT))
+    if (SD.isErrorBlock(*BB, scop->getRegion()))
       continue;
 
     for (Instruction &Inst : *BB) {

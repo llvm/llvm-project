@@ -51,19 +51,6 @@ end:
   br label %block
 }
 
-; Currently can't handle vector lengths that aren't an exact multiple of
-; natively supported vector lengths. Test that the fall-back works for those.
-; FALLBACK-WITH-REPORT-ERR-G_IMPLICIT_DEF-LEGALIZABLE: (FIXME: this is what is expected once we can legalize non-pow-of-2 G_IMPLICIT_DEF) remark: <unknown>:0:0: unable to legalize instruction: %1:_(<7 x s64>) = G_ADD %0, %0 (in function: nonpow2_vector_add_fewerelements
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %47:_(<14 x s64>) = G_CONCAT_VECTORS %41:_(<2 x s64>), %42:_(<2 x s64>), %43:_(<2 x s64>), %44:_(<2 x s64>), %29:_(<2 x s64>), %29:_(<2 x s64>), %29:_(<2 x s64>) (in function: nonpow2_vector_add_fewerelements)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_vector_add_fewerelements
-; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_vector_add_fewerelements:
-define void @nonpow2_vector_add_fewerelements() {
-  %dummy = add <7 x i64> undef, undef
-  %ex = extractelement <7 x i64> %dummy, i64 0
-  store i64 %ex, i64* undef
-  ret void
-}
-
 ; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: cannot select: RET_ReallyLR implicit $x0 (in function: strict_align_feature)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for strict_align_feature
 ; FALLBACK-WITH-REPORT-OUT-LABEL: strict_align_feature
@@ -147,6 +134,19 @@ entry:
   %val = load i512, i512* %incast, align 8
   call void asm sideeffect "st64b $0,[$1]", "r,r,~{memory}"(i512 %val, i8* %addr)
   ret void
+}
+
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %4:_(s128), %5:_(s1) = G_UMULO %0:_, %6:_ (in function: umul_s128)
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for umul_s128
+; FALLBACK-WITH-REPORT-OUT-LABEL: umul_s128
+declare {i128, i1} @llvm.umul.with.overflow.i128(i128, i128) nounwind readnone
+define zeroext i1 @umul_s128(i128 %v1, i128* %res) {
+entry:
+  %t = call {i128, i1} @llvm.umul.with.overflow.i128(i128 %v1, i128 2)
+  %val = extractvalue {i128, i1} %t, 0
+  %obit = extractvalue {i128, i1} %t, 1
+  store i128 %val, i128* %res
+  ret i1 %obit
 }
 
 attributes #1 = { "target-features"="+sve" }

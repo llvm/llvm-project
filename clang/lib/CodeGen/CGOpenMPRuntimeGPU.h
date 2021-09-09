@@ -17,7 +17,6 @@
 #include "CGOpenMPRuntime.h"
 #include "CodeGenFunction.h"
 #include "clang/AST/StmtOpenMP.h"
-#include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
 namespace clang {
 namespace CodeGen {

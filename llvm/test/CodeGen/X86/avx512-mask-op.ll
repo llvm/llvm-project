@@ -1271,8 +1271,8 @@ define <64 x i8> @test17(i64 %x, i32 %y, i32 %z) {
 ;
 ; X86-LABEL: test17:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    setg %al
 ; X86-NEXT:    kshiftrq $6, %k0, %k1

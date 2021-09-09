@@ -367,7 +367,7 @@ public:
 
     // Allocate memory for the coroutine frame.
     auto coroAlloc = rewriter.create<LLVM::CallOp>(
-        loc, i8Ptr, rewriter.getSymbolRefAttr(kMalloc),
+        loc, i8Ptr, SymbolRefAttr::get(rewriter.getContext(), kMalloc),
         ValueRange(coroSize.getResult()));
 
     // Begin a coroutine: @llvm.coro.begin.
@@ -399,9 +399,9 @@ public:
     auto coroMem = rewriter.create<LLVM::CoroFreeOp>(loc, i8Ptr, operands);
 
     // Free the memory.
-    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, TypeRange(),
-                                              rewriter.getSymbolRefAttr(kFree),
-                                              ValueRange(coroMem.getResult()));
+    rewriter.replaceOpWithNewOp<LLVM::CallOp>(
+        op, TypeRange(), SymbolRefAttr::get(rewriter.getContext(), kFree),
+        ValueRange(coroMem.getResult()));
 
     return success();
   }
@@ -520,7 +520,7 @@ public:
         /*defaultOperands=*/ValueRange(),
         /*caseValues=*/caseValues,
         /*caseDestinations=*/caseDest,
-        /*caseOperands=*/ArrayRef<ValueRange>(),
+        /*caseOperands=*/ArrayRef<ValueRange>({ValueRange(), ValueRange()}),
         /*branchWeights=*/ArrayRef<int32_t>());
 
     return success();

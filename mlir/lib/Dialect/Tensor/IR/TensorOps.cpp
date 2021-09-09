@@ -1085,7 +1085,24 @@ public:
   }
 };
 
-/// Fold tensor_casts with insert_slice operations.
+/// Fold tensor_casts with insert_slice operations. If the source or destination
+/// tensor is a tensor_cast that removes static type information, the cast is
+/// folded into the insert_slice operation. E.g.:
+///
+/// ```mlir
+///   %1 = tensor.cast %0 : tensor<8x16xf32> to tensor<?x?xf32>
+///   %2 = tensor.insert_slice %1 into ... : tensor<?x?xf32> into ...
+/// ```
+///
+/// folds into:
+///
+/// ```mlir
+///   %2 = tensor.insert_slice %0 into ... : tensor<8x16xf32> into ...
+/// ```
+///
+/// Note: When folding a cast on the destination tensor, the result of the
+/// insert_slice operation is casted to ensure that the type of the result did
+/// not change.
 struct InsertSliceOpCastFolder final : public OpRewritePattern<InsertSliceOp> {
   using OpRewritePattern<InsertSliceOp>::OpRewritePattern;
 
@@ -1123,12 +1140,63 @@ struct InsertSliceOpCastFolder final : public OpRewritePattern<InsertSliceOp> {
     return success();
   }
 };
+
+/// If additional static type information can be deduced from a insert_slice's
+/// size operands, insert an explicit cast of the op's source operand. This
+/// enables other canonicalization patterns that are matching for tensor_cast
+/// ops such as `ForOpTensorCastFolder` in SCF.
+///
+/// Example:
+///
+/// ```mlir
+///   %r = tensor.insert_slice %0 into %1[...] [64, 64] [1, 1]
+///       : tensor<?x?xf32> into ...
+/// ```
+///
+/// folds into:
+///
+/// ```mlir
+///   %tmp = tensor.cast %0 : tensor<?x?xf32> to tensor<64x64xf32>
+///   %r = tensor.insert_slice %tmp into %1[...] [64, 64] [1, 1]
+///       : tensor<64x64xf32> into ...
+/// ```
+struct InsertSliceOpSourceCastInserter final
+    : public OpRewritePattern<InsertSliceOp> {
+  using OpRewritePattern<InsertSliceOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(InsertSliceOp insertSliceOp,
+                                PatternRewriter &rewriter) const override {
+    RankedTensorType srcType = insertSliceOp.getSourceType();
+    if (srcType.getRank() != insertSliceOp.getType().getRank())
+      return failure();
+    SmallVector<int64_t> newSrcShape(srcType.getShape().begin(),
+                                     srcType.getShape().end());
+    for (int64_t i = 0; i < srcType.getRank(); ++i) {
+      if (Optional<int64_t> constInt =
+              getConstantIntValue(insertSliceOp.getMixedSizes()[i]))
+        newSrcShape[i] = *constInt;
+    }
+    RankedTensorType newSrcType =
+        RankedTensorType::get(newSrcShape, srcType.getElementType());
+    if (srcType == newSrcType)
+      return failure();
+
+    // srcType and newSrcType are different. Insert a cast.
+    Value cast = rewriter.create<tensor::CastOp>(
+        insertSliceOp.getLoc(), newSrcType, insertSliceOp.source());
+    rewriter.replaceOpWithNewOp<InsertSliceOp>(
+        insertSliceOp, cast, insertSliceOp.dest(),
+        insertSliceOp.getMixedOffsets(), insertSliceOp.getMixedSizes(),
+        insertSliceOp.getMixedStrides());
+    return success();
+  }
+};
 } // namespace
 
 void InsertSliceOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                 MLIRContext *context) {
-  results.add<InsertSliceOpConstantArgumentFolder, InsertSliceOpCastFolder>(
-      context);
+  results.add<InsertSliceOpConstantArgumentFolder, InsertSliceOpCastFolder,
+              InsertSliceOpSourceCastInserter>(context);
 }
 
 //===----------------------------------------------------------------------===//

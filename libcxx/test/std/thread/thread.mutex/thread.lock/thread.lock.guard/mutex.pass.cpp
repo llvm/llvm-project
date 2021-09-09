@@ -40,7 +40,7 @@ int main(int, char**) {
   m.lock();
   m.unlock();
 
-#ifdef __cpp_deduction_guides
+#if TEST_STD_VER >= 17
   std::lock_guard lg(m);
   static_assert((std::is_same<decltype(lg), std::lock_guard<decltype(m)>>::value), "" );
 #endif

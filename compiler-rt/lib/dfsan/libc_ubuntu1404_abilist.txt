@@ -1852,6 +1852,7 @@ fun:getdirentries64=uninstrumented
 fun:getdomainname=uninstrumented
 fun:getdtablesize=uninstrumented
 fun:getegid=uninstrumented
+fun:getentropy=uninstrumented
 fun:getenv=uninstrumented
 fun:geteuid=uninstrumented
 fun:getfsent=uninstrumented

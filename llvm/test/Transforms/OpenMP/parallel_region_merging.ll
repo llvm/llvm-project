@@ -4715,8 +4715,6 @@ entry:
 ; CHECK1-NEXT:    store i32 [[TMP0]], i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK1-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK1-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-; CHECK1:       omp.par.outlined.exit.exitStub:
-; CHECK1-NEXT:    ret void
 ; CHECK1:       omp.par.region:
 ; CHECK1-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK1:       omp.par.merged:
@@ -4731,6 +4729,8 @@ entry:
 ; CHECK1-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 ; CHECK1:       omp.par.pre_finalize:
 ; CHECK1-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
+; CHECK1:       omp.par.outlined.exit.exitStub:
+; CHECK1-NEXT:    ret void
 ;
 ;
 ; CHECK1-LABEL: define {{[^@]+}}@.omp_outlined.
@@ -4860,8 +4860,6 @@ entry:
 ; CHECK1-NEXT:    store i32 [[TMP0]], i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK1-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK1-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-; CHECK1:       omp.par.outlined.exit.exitStub:
-; CHECK1-NEXT:    ret void
 ; CHECK1:       omp.par.region:
 ; CHECK1-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK1:       omp.par.merged:
@@ -4897,6 +4895,8 @@ entry:
 ; CHECK1:       omp_region.body.split:
 ; CHECK1-NEXT:    call void @__kmpc_end_master(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK1-NEXT:    br label [[OMP_REGION_END]]
+; CHECK1:       omp.par.outlined.exit.exitStub:
+; CHECK1-NEXT:    ret void
 ;
 ;
 ; CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..8
@@ -4944,8 +4944,6 @@ entry:
 ; CHECK1-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK1-NEXT:    [[TMP1:%.*]] = load float, float* [[F_RELOADED]], align 4
 ; CHECK1-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-; CHECK1:       omp.par.outlined.exit.exitStub:
-; CHECK1-NEXT:    ret void
 ; CHECK1:       omp.par.region:
 ; CHECK1-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK1:       omp.par.merged:
@@ -4980,6 +4978,8 @@ entry:
 ; CHECK1:       omp_region.body.split:
 ; CHECK1-NEXT:    call void @__kmpc_end_master(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK1-NEXT:    br label [[OMP_REGION_END]]
+; CHECK1:       omp.par.outlined.exit.exitStub:
+; CHECK1-NEXT:    ret void
 ;
 ;
 ; CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..10
@@ -5029,8 +5029,6 @@ entry:
 ; CHECK1-NEXT:    store i32 [[TMP0]], i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK1-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK1-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-; CHECK1:       omp.par.outlined.exit.exitStub:
-; CHECK1-NEXT:    ret void
 ; CHECK1:       omp.par.region:
 ; CHECK1-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK1:       omp.par.merged:
@@ -5069,6 +5067,8 @@ entry:
 ; CHECK1:       omp_region.body.split:
 ; CHECK1-NEXT:    call void @__kmpc_end_master(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK1-NEXT:    br label [[OMP_REGION_END]]
+; CHECK1:       omp.par.outlined.exit.exitStub:
+; CHECK1-NEXT:    ret void
 ;
 ;
 ; CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..12
@@ -5114,8 +5114,6 @@ entry:
 ; CHECK1-NEXT:    store i32 [[TMP0]], i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK1-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK1-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-; CHECK1:       omp.par.outlined.exit.exitStub:
-; CHECK1-NEXT:    ret void
 ; CHECK1:       omp.par.region:
 ; CHECK1-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK1:       omp.par.merged:
@@ -5154,6 +5152,8 @@ entry:
 ; CHECK1:       omp_region.body.split:
 ; CHECK1-NEXT:    call void @__kmpc_end_master(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK1-NEXT:    br label [[OMP_REGION_END]]
+; CHECK1:       omp.par.outlined.exit.exitStub:
+; CHECK1-NEXT:    ret void
 ;
 ;
 ; CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..14
@@ -5206,8 +5206,6 @@ entry:
 ; CHECK1-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[A_RELOADED]], align 4
 ; CHECK1-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-; CHECK1:       omp.par.outlined.exit.exitStub:
-; CHECK1-NEXT:    ret void
 ; CHECK1:       omp.par.region:
 ; CHECK1-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK1:       omp.par.merged:
@@ -5243,6 +5241,8 @@ entry:
 ; CHECK1:       omp_region.body.split:
 ; CHECK1-NEXT:    call void @__kmpc_end_master(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK1-NEXT:    br label [[OMP_REGION_END]]
+; CHECK1:       omp.par.outlined.exit.exitStub:
+; CHECK1-NEXT:    ret void
 ;
 ;
 ; CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..16
@@ -5291,8 +5291,6 @@ entry:
 ; CHECK1-NEXT:    store i32 [[TMP0]], i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK1-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK1-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-; CHECK1:       omp.par.outlined.exit.exitStub:
-; CHECK1-NEXT:    ret void
 ; CHECK1:       omp.par.region:
 ; CHECK1-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK1:       omp.par.merged:
@@ -5307,6 +5305,8 @@ entry:
 ; CHECK1-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 ; CHECK1:       omp.par.pre_finalize:
 ; CHECK1-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
+; CHECK1:       omp.par.outlined.exit.exitStub:
+; CHECK1-NEXT:    ret void
 ;
 ;
 ; CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..18
@@ -5368,8 +5368,6 @@ entry:
 ; CHECK1-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CANCEL1_RELOADED]], align 4
 ; CHECK1-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-; CHECK1:       omp.par.outlined.exit.exitStub:
-; CHECK1-NEXT:    ret void
 ; CHECK1:       omp.par.region:
 ; CHECK1-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK1:       omp.par.merged:
@@ -5405,6 +5403,8 @@ entry:
 ; CHECK1:       omp_region.body.split:
 ; CHECK1-NEXT:    call void @__kmpc_end_master(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK1-NEXT:    br label [[OMP_REGION_END]]
+; CHECK1:       omp.par.outlined.exit.exitStub:
+; CHECK1-NEXT:    ret void
 ;
 ;
 ; CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..20
@@ -5461,8 +5461,6 @@ entry:
 ; CHECK1-NEXT:    store i32 [[TMP0]], i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK1-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK1-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-; CHECK1:       omp.par.outlined.exit.exitStub:
-; CHECK1-NEXT:    ret void
 ; CHECK1:       omp.par.region:
 ; CHECK1-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK1:       omp.par.merged:
@@ -5480,6 +5478,8 @@ entry:
 ; CHECK1-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 ; CHECK1:       omp.par.pre_finalize:
 ; CHECK1-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
+; CHECK1:       omp.par.outlined.exit.exitStub:
+; CHECK1-NEXT:    ret void
 ;
 ;
 ; CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..22
@@ -5539,8 +5539,6 @@ entry:
 ; CHECK1-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[A_RELOADED]], align 4
 ; CHECK1-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-; CHECK1:       omp.par.outlined.exit.exitStub:
-; CHECK1-NEXT:    ret void
 ; CHECK1:       omp.par.region:
 ; CHECK1-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK1:       omp.par.merged:
@@ -5599,6 +5597,8 @@ entry:
 ; CHECK1:       omp_region.body.split:
 ; CHECK1-NEXT:    call void @__kmpc_end_master(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK1-NEXT:    br label [[OMP_REGION_END]]
+; CHECK1:       omp.par.outlined.exit.exitStub:
+; CHECK1-NEXT:    ret void
 ;
 ;
 ; CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..25
@@ -5764,8 +5764,6 @@ entry:
 ; CHECK1-NEXT:    store i32 [[TMP0]], i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK1-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK1-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-; CHECK1:       omp.par.outlined.exit.exitStub:
-; CHECK1-NEXT:    ret void
 ; CHECK1:       omp.par.region:
 ; CHECK1-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK1:       omp.par.merged:
@@ -5780,6 +5778,8 @@ entry:
 ; CHECK1-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 ; CHECK1:       omp.par.pre_finalize:
 ; CHECK1-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
+; CHECK1:       omp.par.outlined.exit.exitStub:
+; CHECK1-NEXT:    ret void
 ;
 ;
 ; CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..37
@@ -5832,8 +5832,6 @@ entry:
 ; CHECK2-NEXT:    store i32 [[TMP0]], i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK2-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK2-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
-; CHECK2-NEXT:    ret void
 ; CHECK2:       omp.par.region:
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK2:       omp.par.merged:
@@ -5848,6 +5846,8 @@ entry:
 ; CHECK2-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 ; CHECK2:       omp.par.pre_finalize:
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
+; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined.
@@ -5977,8 +5977,6 @@ entry:
 ; CHECK2-NEXT:    store i32 [[TMP0]], i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK2-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK2-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
-; CHECK2-NEXT:    ret void
 ; CHECK2:       omp.par.region:
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK2:       omp.par.merged:
@@ -6014,6 +6012,8 @@ entry:
 ; CHECK2:       omp_region.body.split:
 ; CHECK2-NEXT:    call void @__kmpc_end_master(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK2-NEXT:    br label [[OMP_REGION_END]]
+; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..8
@@ -6061,8 +6061,6 @@ entry:
 ; CHECK2-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK2-NEXT:    [[TMP1:%.*]] = load float, float* [[F_RELOADED]], align 4
 ; CHECK2-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
-; CHECK2-NEXT:    ret void
 ; CHECK2:       omp.par.region:
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK2:       omp.par.merged:
@@ -6097,6 +6095,8 @@ entry:
 ; CHECK2:       omp_region.body.split:
 ; CHECK2-NEXT:    call void @__kmpc_end_master(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK2-NEXT:    br label [[OMP_REGION_END]]
+; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..10
@@ -6146,8 +6146,6 @@ entry:
 ; CHECK2-NEXT:    store i32 [[TMP0]], i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK2-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK2-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
-; CHECK2-NEXT:    ret void
 ; CHECK2:       omp.par.region:
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK2:       omp.par.merged:
@@ -6186,6 +6184,8 @@ entry:
 ; CHECK2:       omp_region.body.split:
 ; CHECK2-NEXT:    call void @__kmpc_end_master(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK2-NEXT:    br label [[OMP_REGION_END]]
+; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..12
@@ -6231,8 +6231,6 @@ entry:
 ; CHECK2-NEXT:    store i32 [[TMP0]], i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK2-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK2-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
-; CHECK2-NEXT:    ret void
 ; CHECK2:       omp.par.region:
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK2:       omp.par.merged:
@@ -6271,6 +6269,8 @@ entry:
 ; CHECK2:       omp_region.body.split:
 ; CHECK2-NEXT:    call void @__kmpc_end_master(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK2-NEXT:    br label [[OMP_REGION_END]]
+; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..14
@@ -6323,8 +6323,6 @@ entry:
 ; CHECK2-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[A_RELOADED]], align 4
 ; CHECK2-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
-; CHECK2-NEXT:    ret void
 ; CHECK2:       omp.par.region:
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK2:       omp.par.merged:
@@ -6360,6 +6358,8 @@ entry:
 ; CHECK2:       omp_region.body.split:
 ; CHECK2-NEXT:    call void @__kmpc_end_master(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK2-NEXT:    br label [[OMP_REGION_END]]
+; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..16
@@ -6408,8 +6408,6 @@ entry:
 ; CHECK2-NEXT:    store i32 [[TMP0]], i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK2-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK2-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
-; CHECK2-NEXT:    ret void
 ; CHECK2:       omp.par.region:
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK2:       omp.par.merged:
@@ -6424,6 +6422,8 @@ entry:
 ; CHECK2-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 ; CHECK2:       omp.par.pre_finalize:
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
+; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..18
@@ -6485,8 +6485,6 @@ entry:
 ; CHECK2-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CANCEL1_RELOADED]], align 4
 ; CHECK2-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
-; CHECK2-NEXT:    ret void
 ; CHECK2:       omp.par.region:
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK2:       omp.par.merged:
@@ -6522,6 +6520,8 @@ entry:
 ; CHECK2:       omp_region.body.split:
 ; CHECK2-NEXT:    call void @__kmpc_end_master(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK2-NEXT:    br label [[OMP_REGION_END]]
+; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..20
@@ -6578,8 +6578,6 @@ entry:
 ; CHECK2-NEXT:    store i32 [[TMP0]], i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK2-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK2-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
-; CHECK2-NEXT:    ret void
 ; CHECK2:       omp.par.region:
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK2:       omp.par.merged:
@@ -6597,6 +6595,8 @@ entry:
 ; CHECK2-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 ; CHECK2:       omp.par.pre_finalize:
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
+; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..22
@@ -6656,8 +6656,6 @@ entry:
 ; CHECK2-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[A_RELOADED]], align 4
 ; CHECK2-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
-; CHECK2-NEXT:    ret void
 ; CHECK2:       omp.par.region:
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK2:       omp.par.merged:
@@ -6716,6 +6714,8 @@ entry:
 ; CHECK2:       omp_region.body.split:
 ; CHECK2-NEXT:    call void @__kmpc_end_master(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK2-NEXT:    br label [[OMP_REGION_END]]
+; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..25
@@ -6881,8 +6881,6 @@ entry:
 ; CHECK2-NEXT:    store i32 [[TMP0]], i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK2-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 ; CHECK2-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
-; CHECK2-NEXT:    ret void
 ; CHECK2:       omp.par.region:
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED:%.*]]
 ; CHECK2:       omp.par.merged:
@@ -6897,6 +6895,8 @@ entry:
 ; CHECK2-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 ; CHECK2:       omp.par.pre_finalize:
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
+; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2-NEXT:    ret void
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..37

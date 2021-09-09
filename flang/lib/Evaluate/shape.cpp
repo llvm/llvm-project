@@ -316,6 +316,26 @@ Shape GetLowerBounds(FoldingContext &context, const NamedEntity &base) {
   return result;
 }
 
+// If the upper and lower bounds are constant, return a constant expression for
+// the extent.  In particular, if the upper bound is less than the lower bound,
+// return zero.
+static MaybeExtentExpr GetNonNegativeExtent(
+    const semantics::ShapeSpec &shapeSpec) {
+  const auto &ubound{shapeSpec.ubound().GetExplicit()};
+  const auto &lbound{shapeSpec.lbound().GetExplicit()};
+  std::optional<ConstantSubscript> uval{ToInt64(ubound)};
+  std::optional<ConstantSubscript> lval{ToInt64(lbound)};
+  if (uval && lval) {
+    if (*uval < *lval) {
+      return ExtentExpr{0};
+    } else {
+      return ExtentExpr{*uval - *lval + 1};
+    }
+  }
+  return common::Clone(ubound.value()) - common::Clone(lbound.value()) +
+      ExtentExpr{1};
+}
+
 MaybeExtentExpr GetExtent(const NamedEntity &base, int dimension) {
   CHECK(dimension >= 0);
   const Symbol &symbol{ResolveAssociations(base.GetLastSymbol())};
@@ -330,11 +350,12 @@ MaybeExtentExpr GetExtent(const NamedEntity &base, int dimension) {
       int j{0};
       for (const auto &shapeSpec : details->shape()) {
         if (j++ == dimension) {
-          if (shapeSpec.ubound().isExplicit()) {
-            if (const auto &ubound{shapeSpec.ubound().GetExplicit()}) {
-              if (const auto &lbound{shapeSpec.lbound().GetExplicit()}) {
-                return common::Clone(ubound.value()) -
-                    common::Clone(lbound.value()) + ExtentExpr{1};
+          if (const auto &ubound{shapeSpec.ubound().GetExplicit()}) {
+            if (shapeSpec.ubound().GetExplicit()) {
+              // 8.5.8.2, paragraph 3.  If the upper bound is less than the
+              // lower bound, the extent is zero.
+              if (shapeSpec.lbound().GetExplicit()) {
+                return GetNonNegativeExtent(shapeSpec);
               } else {
                 return ubound.value();
               }

@@ -305,7 +305,7 @@ struct DeallocOpLowering : public ConvertOpToLLVMPattern<memref::DeallocOp> {
         op.getLoc(), getVoidPtrType(),
         memref.allocatedPtr(rewriter, op.getLoc()));
     rewriter.replaceOpWithNewOp<LLVM::CallOp>(
-        op, TypeRange(), rewriter.getSymbolRefAttr(freeFunc), casted);
+        op, TypeRange(), SymbolRefAttr::get(freeFunc), casted);
     return success();
   }
 };
@@ -454,9 +454,17 @@ struct GlobalMemrefOpLowering
         initialValue = elementsAttr.getValue({});
     }
 
-    rewriter.replaceOpWithNewOp<LLVM::GlobalOp>(
+    auto newGlobal = rewriter.replaceOpWithNewOp<LLVM::GlobalOp>(
         global, arrayTy, global.constant(), linkage, global.sym_name(),
         initialValue, /*alignment=*/0, type.getMemorySpaceAsInt());
+    if (!global.isExternal() && global.isUninitialized()) {
+      Block *blk = new Block();
+      newGlobal.getInitializerRegion().push_back(blk);
+      rewriter.setInsertionPointToStart(blk);
+      Value undef[] = {
+          rewriter.create<LLVM::UndefOp>(global.getLoc(), arrayTy)};
+      rewriter.create<LLVM::ReturnOp>(global.getLoc(), undef);
+    }
     return success();
   }
 };

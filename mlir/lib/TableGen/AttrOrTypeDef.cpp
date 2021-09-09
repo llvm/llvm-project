@@ -210,6 +210,15 @@ StringRef AttrOrTypeParameter::getCppType() const {
       "which inherit from AttrOrTypeParameter\n");
 }
 
+StringRef AttrOrTypeParameter::getCppAccessorType() const {
+  if (auto *param = dyn_cast<llvm::DefInit>(def->getArg(index))) {
+    if (Optional<StringRef> type =
+            param->getDef()->getValueAsOptionalString("cppAccessorType"))
+      return *type;
+  }
+  return getCppType();
+}
+
 Optional<StringRef> AttrOrTypeParameter::getSummary() const {
   auto *parameterType = def->getArg(index);
   if (auto *param = dyn_cast<llvm::DefInit>(parameterType)) {

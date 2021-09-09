@@ -557,6 +557,9 @@ def QQPR : RegisterClass<"ARM", [v4i64], 256, (add Tuples2Q)> {
   let AltOrderSelect = [{ return 1; }];
 }
 
+// Same as QQPR but for MVE, containing the 7 register pairs made up from Q0-Q7.
+def MQQPR : RegisterClass<"ARM", [v4i64], 256, (trunc QQPR, 7)>;
+
 // Tuples of 4 D regs that isn't also a pair of Q regs.
 def TuplesOE4D : RegisterTuples<[dsub_0, dsub_1, dsub_2, dsub_3],
                                 [(decimate (shl DPR, 1), 2),
@@ -579,6 +582,9 @@ def QQQQPR : RegisterClass<"ARM", [v8i64], 256, (add Tuples2QQ)> {
   let AltOrders = [(rotl QQQQPR, 8)];
   let AltOrderSelect = [{ return 1; }];
 }
+
+// Same as QQPR but for MVE, containing the 5 register quads made up from Q0-Q7.
+def MQQQQPR : RegisterClass<"ARM", [v8i64], 256, (trunc QQQQPR, 5)>;
 
 
 // Pseudo-registers representing 2-spaced consecutive D registers.

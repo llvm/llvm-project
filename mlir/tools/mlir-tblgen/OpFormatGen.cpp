@@ -497,6 +497,7 @@ struct OperationFormat {
 
   /// The set of attributes explicitly used within the format.
   SmallVector<const NamedAttribute *, 8> usedAttributes;
+  llvm::StringSet<> inferredAttributes;
 };
 } // end anonymous namespace
 
@@ -616,10 +617,38 @@ const char *const operandParserCode = R"(
   if (parser.parseOperand({0}RawOperands[0]))
     return ::mlir::failure();
 )";
+/// The code snippet used to generate a parser call for a VariadicOfVariadic
+/// operand.
+///
+/// {0}: The name of the operand.
+/// {1}: The name of segment size attribute.
+const char *const variadicOfVariadicOperandParserCode = R"(
+  {
+    {0}OperandsLoc = parser.getCurrentLocation();
+    int32_t curSize = 0;
+    do {
+      if (parser.parseOptionalLParen())
+        break;
+      if (parser.parseOperandList({0}Operands) || parser.parseRParen())
+        return ::mlir::failure();
+      {0}OperandGroupSizes.push_back({0}Operands.size() - curSize);
+      curSize = {0}Operands.size();
+    } while (succeeded(parser.parseOptionalComma()));
+  }
+)";
 
 /// The code snippet used to generate a parser call for a type list.
 ///
 /// {0}: The name for the type list.
+const char *const variadicOfVariadicTypeParserCode = R"(
+  do {
+    if (parser.parseOptionalLParen())
+      break;
+    if (parser.parseOptionalRParen() &&
+        (parser.parseTypeList({0}Types) || parser.parseRParen()))
+      return ::mlir::failure();
+  } while (succeeded(parser.parseOptionalComma()));
+)";
 const char *const variadicTypeParserCode = R"(
   if (parser.parseTypeList({0}Types))
     return ::mlir::failure();
@@ -758,6 +787,9 @@ const char *successorParserCode = R"(
 namespace {
 /// The type of length for a given parse argument.
 enum class ArgumentLengthKind {
+  /// The argument is a variadic of a variadic, and may contain 0->N range
+  /// elements.
+  VariadicOfVariadic,
   /// The argument is variadic, and may contain 0->N elements.
   Variadic,
   /// The argument is optional, and may contain 0 or 1 elements.
@@ -772,6 +804,8 @@ static ArgumentLengthKind
 getArgumentLengthKind(const NamedTypeConstraint *var) {
   if (var->isOptional())
     return ArgumentLengthKind::Optional;
+  if (var->isVariadicOfVariadic())
+    return ArgumentLengthKind::VariadicOfVariadic;
   if (var->isVariadic())
     return ArgumentLengthKind::Variadic;
   return ArgumentLengthKind::Single;
@@ -863,6 +897,10 @@ static void genElementParserStorage(Element *element, OpMethodBody &body) {
     if (operand->getVar()->isVariableLength()) {
       body << "  ::mlir::SmallVector<::mlir::OpAsmParser::OperandType, 4> "
            << name << "Operands;\n";
+      if (operand->getVar()->isVariadicOfVariadic()) {
+        body << "    llvm::SmallVector<int32_t> " << name
+             << "OperandGroupSizes;\n";
+      }
     } else {
       body << "  ::mlir::OpAsmParser::OperandType " << name
            << "RawOperands[1];\n"
@@ -924,7 +962,9 @@ static void genCustomParameterParser(Element &param, OpMethodBody &body) {
   } else if (auto *operand = dyn_cast<OperandVariable>(&param)) {
     StringRef name = operand->getVar()->name;
     ArgumentLengthKind lengthKind = getArgumentLengthKind(operand->getVar());
-    if (lengthKind == ArgumentLengthKind::Variadic)
+    if (lengthKind == ArgumentLengthKind::VariadicOfVariadic)
+      body << llvm::formatv("{0}OperandGroups", name);
+    else if (lengthKind == ArgumentLengthKind::Variadic)
       body << llvm::formatv("{0}Operands", name);
     else if (lengthKind == ArgumentLengthKind::Optional)
       body << llvm::formatv("{0}Operand", name);
@@ -951,7 +991,9 @@ static void genCustomParameterParser(Element &param, OpMethodBody &body) {
   } else if (auto *dir = dyn_cast<TypeDirective>(&param)) {
     ArgumentLengthKind lengthKind;
     StringRef listName = getTypeListName(dir->getOperand(), lengthKind);
-    if (lengthKind == ArgumentLengthKind::Variadic)
+    if (lengthKind == ArgumentLengthKind::VariadicOfVariadic)
+      body << llvm::formatv("{0}TypeGroups", listName);
+    else if (lengthKind == ArgumentLengthKind::Variadic)
       body << llvm::formatv("{0}Types", listName);
     else if (lengthKind == ArgumentLengthKind::Optional)
       body << llvm::formatv("{0}Type", listName);
@@ -972,19 +1014,32 @@ static void genCustomDirectiveParser(CustomDirective *dir, OpMethodBody &body) {
   // * Set the location of operand variables.
   for (Element &param : dir->getArguments()) {
     if (auto *operand = dyn_cast<OperandVariable>(&param)) {
-      body << "    " << operand->getVar()->name
+      auto *var = operand->getVar();
+      body << "    " << var->name
            << "OperandsLoc = parser.getCurrentLocation();\n";
-      if (operand->getVar()->isOptional()) {
+      if (var->isOptional()) {
         body << llvm::formatv(
             "    llvm::Optional<::mlir::OpAsmParser::OperandType> "
             "{0}Operand;\n",
-            operand->getVar()->name);
+            var->name);
+      } else if (var->isVariadicOfVariadic()) {
+        body << llvm::formatv("    "
+                              "llvm::SmallVector<llvm::SmallVector<::mlir::"
+                              "OpAsmParser::OperandType>> "
+                              "{0}OperandGroups;\n",
+                              var->name);
       }
     } else if (auto *dir = dyn_cast<TypeDirective>(&param)) {
       ArgumentLengthKind lengthKind;
       StringRef listName = getTypeListName(dir->getOperand(), lengthKind);
-      if (lengthKind == ArgumentLengthKind::Optional)
+      if (lengthKind == ArgumentLengthKind::Optional) {
         body << llvm::formatv("    ::mlir::Type {0}Type;\n", listName);
+      } else if (lengthKind == ArgumentLengthKind::VariadicOfVariadic) {
+        body << llvm::formatv(
+            "    llvm::SmallVector<llvm::SmallVector<::mlir::Type>> "
+            "{0}TypeGroups;\n",
+            listName);
+      }
     } else if (auto *dir = dyn_cast<RefDirective>(&param)) {
       Element *input = dir->getOperand();
       if (auto *operand = dyn_cast<OperandVariable>(input)) {
@@ -1028,11 +1083,18 @@ static void genCustomDirectiveParser(CustomDirective *dir, OpMethodBody &body) {
                             var->name);
     } else if (auto *operand = dyn_cast<OperandVariable>(&param)) {
       const NamedTypeConstraint *var = operand->getVar();
-      if (!var->isOptional())
-        continue;
-      body << llvm::formatv("    if ({0}Operand.hasValue())\n"
-                            "      {0}Operands.push_back(*{0}Operand);\n",
-                            var->name);
+      if (var->isOptional()) {
+        body << llvm::formatv("    if ({0}Operand.hasValue())\n"
+                              "      {0}Operands.push_back(*{0}Operand);\n",
+                              var->name);
+      } else if (var->isVariadicOfVariadic()) {
+        body << llvm::formatv(
+            "    for (const auto &subRange : {0}OperandGroups) {{\n"
+            "      {0}Operands.append(subRange.begin(), subRange.end());\n"
+            "      {0}OperandGroupSizes.push_back(subRange.size());\n"
+            "    }\n",
+            var->name, var->constraint.getVariadicOfVariadicSegmentSizeAttr());
+      }
     } else if (auto *dir = dyn_cast<TypeDirective>(&param)) {
       ArgumentLengthKind lengthKind;
       StringRef listName = getTypeListName(dir->getOperand(), lengthKind);
@@ -1040,6 +1102,11 @@ static void genCustomDirectiveParser(CustomDirective *dir, OpMethodBody &body) {
         body << llvm::formatv("    if ({0}Type)\n"
                               "      {0}Types.push_back({0}Type);\n",
                               listName);
+      } else if (lengthKind == ArgumentLengthKind::VariadicOfVariadic) {
+        body << llvm::formatv(
+            "    for (const auto &subRange : {0}TypeGroups)\n"
+            "      {0}Types.append(subRange.begin(), subRange.end());\n",
+            listName);
       }
     }
   }
@@ -1229,7 +1296,11 @@ void OperationFormat::genElementParser(Element *element, OpMethodBody &body,
   } else if (auto *operand = dyn_cast<OperandVariable>(element)) {
     ArgumentLengthKind lengthKind = getArgumentLengthKind(operand->getVar());
     StringRef name = operand->getVar()->name;
-    if (lengthKind == ArgumentLengthKind::Variadic)
+    if (lengthKind == ArgumentLengthKind::VariadicOfVariadic)
+      body << llvm::formatv(
+          variadicOfVariadicOperandParserCode, name,
+          operand->getVar()->constraint.getVariadicOfVariadicSegmentSizeAttr());
+    else if (lengthKind == ArgumentLengthKind::Variadic)
       body << llvm::formatv(variadicOperandParserCode, name);
     else if (lengthKind == ArgumentLengthKind::Optional)
       body << llvm::formatv(optionalOperandParserCode, name);
@@ -1281,7 +1352,9 @@ void OperationFormat::genElementParser(Element *element, OpMethodBody &body,
   } else if (auto *dir = dyn_cast<TypeDirective>(element)) {
     ArgumentLengthKind lengthKind;
     StringRef listName = getTypeListName(dir->getOperand(), lengthKind);
-    if (lengthKind == ArgumentLengthKind::Variadic)
+    if (lengthKind == ArgumentLengthKind::VariadicOfVariadic)
+      body << llvm::formatv(variadicOfVariadicTypeParserCode, listName);
+    else if (lengthKind == ArgumentLengthKind::Variadic)
       body << llvm::formatv(variadicTypeParserCode, listName);
     else if (lengthKind == ArgumentLengthKind::Optional)
       body << llvm::formatv(optionalTypeParserCode, listName);
@@ -1501,19 +1574,29 @@ void OperationFormat::genParserSuccessorResolution(Operator &op,
 
 void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
                                                          OpMethodBody &body) {
-  if (!allOperands &&
-      op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
-    body << "  result.addAttribute(\"operand_segment_sizes\", "
-         << "parser.getBuilder().getI32VectorAttr({";
-    auto interleaveFn = [&](const NamedTypeConstraint &operand) {
-      // If the operand is variadic emit the parsed size.
-      if (operand.isVariableLength())
-        body << "static_cast<int32_t>(" << operand.name << "Operands.size())";
-      else
-        body << "1";
-    };
-    llvm::interleaveComma(op.getOperands(), body, interleaveFn);
-    body << "}));\n";
+  if (!allOperands) {
+    if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
+      body << "  result.addAttribute(\"operand_segment_sizes\", "
+           << "parser.getBuilder().getI32VectorAttr({";
+      auto interleaveFn = [&](const NamedTypeConstraint &operand) {
+        // If the operand is variadic emit the parsed size.
+        if (operand.isVariableLength())
+          body << "static_cast<int32_t>(" << operand.name << "Operands.size())";
+        else
+          body << "1";
+      };
+      llvm::interleaveComma(op.getOperands(), body, interleaveFn);
+      body << "}));\n";
+    }
+    for (const NamedTypeConstraint &operand : op.getOperands()) {
+      if (!operand.isVariadicOfVariadic())
+        continue;
+      body << llvm::formatv(
+          "  result.addAttribute(\"{0}\", "
+          "parser.getBuilder().getI32TensorAttr({1}OperandGroupSizes));\n",
+          operand.constraint.getVariadicOfVariadicSegmentSizeAttr(),
+          operand.name);
+    }
   }
 
   if (!allResultTypes &&
@@ -1575,6 +1658,10 @@ static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
   if (!fmt.allResultTypes &&
       op.getTrait("::mlir::OpTrait::AttrSizedResultSegments"))
     body << "\"result_segment_sizes\", ";
+  if (!fmt.inferredAttributes.empty()) {
+    for (const auto &attr : fmt.inferredAttributes)
+      body << "\"" << attr.getKey() << "\", ";
+  }
   llvm::interleaveComma(
       fmt.usedAttributes, body,
       [&](const NamedAttribute *attr) { body << "\"" << attr->name << "\""; });
@@ -1693,6 +1780,8 @@ static OpMethodBody &genTypeOperandPrinter(Element *arg, OpMethodBody &body) {
     return body << "getOperation()->getResultTypes()";
   auto *operand = dyn_cast<OperandVariable>(arg);
   auto *var = operand ? operand->getVar() : cast<ResultVariable>(arg)->getVar();
+  if (var->isVariadicOfVariadic())
+    return body << llvm::formatv("{0}().join().getTypes()", var->name);
   if (var->isVariadic())
     return body << var->name << "().getTypes()";
   if (var->isOptional())
@@ -1896,7 +1985,12 @@ void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
     else
       body << "  p.printAttribute(" << var->name << "Attr());\n";
   } else if (auto *operand = dyn_cast<OperandVariable>(element)) {
-    if (operand->getVar()->isOptional()) {
+    if (operand->getVar()->isVariadicOfVariadic()) {
+      body << "  ::llvm::interleaveComma(" << operand->getVar()->name
+           << "(), p, [&](const auto &operands) { p << \"(\" << operands << "
+              "\")\"; });\n";
+
+    } else if (operand->getVar()->isOptional()) {
       body << "  if (::mlir::Value value = " << operand->getVar()->name
            << "())\n"
            << "    p << value;\n";
@@ -1926,6 +2020,15 @@ void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
   } else if (isa<SuccessorsDirective>(element)) {
     body << "  ::llvm::interleaveComma(getOperation()->getSuccessors(), p);\n";
   } else if (auto *dir = dyn_cast<TypeDirective>(element)) {
+    if (auto *operand = dyn_cast<OperandVariable>(dir->getOperand())) {
+      if (operand->getVar()->isVariadicOfVariadic()) {
+        body << llvm::formatv("  ::llvm::interleaveComma({0}().getTypes(), p, "
+                              "[&](::mlir::TypeRange types) {{ p << \"(\" << "
+                              "types << \")\"; });\n",
+                              operand->getVar()->name);
+        return;
+      }
+    }
     body << "  p << ";
     genTypeOperandPrinter(dir->getOperand(), body) << ";\n";
   } else if (auto *dir = dyn_cast<FunctionalTypeDirective>(element)) {
@@ -1941,16 +2044,6 @@ void OperationFormat::genPrinter(Operator &op, OpClass &opClass) {
   auto *method =
       opClass.addMethodAndPrune("void", "print", "::mlir::OpAsmPrinter &p");
   auto &body = method->body();
-
-  // Emit the operation name, trimming the prefix if this is the standard
-  // dialect.
-  body << "  p << \"";
-  std::string opName = op.getOperationName();
-  if (op.getDialectName() == "std")
-    body << StringRef(opName).drop_front(4);
-  else
-    body << opName;
-  body << "\";\n";
 
   // Flags for if we should emit a space, and if the last element was
   // punctuation.
@@ -2449,6 +2542,16 @@ LogicalResult FormatParser::verifyAttributes(llvm::SMLoc loc) {
   while (!iteratorStack.empty())
     if (failed(verifyAttributes(loc, iteratorStack)))
       return ::mlir::failure();
+
+  // Check for VariadicOfVariadic variables. The segment attribute of those
+  // variables will be infered.
+  for (const NamedTypeConstraint *var : seenOperands) {
+    if (var->constraint.isVariadicOfVariadic()) {
+      fmt.inferredAttributes.insert(
+          var->constraint.getVariadicOfVariadicSegmentSizeAttr());
+    }
+  }
+
   return ::mlir::success();
 }
 /// Verify the attribute elements at the back of the given stack of iterators.

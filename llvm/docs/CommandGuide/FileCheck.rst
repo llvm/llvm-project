@@ -431,7 +431,7 @@ However, this would be a bad test: if the value for ``foo`` changes, the test
 would still pass because the "``CHECK: Value: 1``" line would match the value
 from ``baz``. To fix this, you could add ``CHECK-NEXT`` matchers for every
 ``FieldN:`` line, but that would be verbose, and need to be updated when
-``Field4`` is added. A more succint way to write the test using the
+``Field4`` is added. A more succinct way to write the test using the
 "``CHECK-SAME:``" matcher would be as follows:
 
 .. code-block:: text

@@ -355,7 +355,7 @@ def generate_float_conversion(src, dst, size, mode, sat):
     print("  return convert_{DST}{N}(x);".format(DST=dst, N=size))
   else:
     print("  {DST}{N} r = convert_{DST}{N}(x);".format(DST=dst, N=size))
-    print("  {SRC}{N} y = convert_{SRC}{N}(y);".format(SRC=src, N=size))
+    print("  {SRC}{N} y = convert_{SRC}{N}(r);".format(SRC=src, N=size))
     if mode == '_rtz':
       if src in int_types:
         print("  {USRC}{N} abs_x = abs(x);".format(USRC=unsigned_type[src], N=size))

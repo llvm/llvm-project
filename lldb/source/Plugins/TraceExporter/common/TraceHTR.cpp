@@ -112,7 +112,7 @@ HTRBlockMetadata HTRInstructionLayer::GetMetadataByIndex(size_t index) const {
       func_calls[*func_name] = 1;
     }
   }
-  return {instruction_load_address, 1, func_calls};
+  return {instruction_load_address, 1, std::move(func_calls)};
 }
 
 size_t HTRInstructionLayer::GetNumUnits() const {
@@ -391,20 +391,35 @@ llvm::json::Value lldb_private::toJSON(const TraceHTR &htr) {
     std::string load_address_hex_string(stream.str());
     display_name.assign(load_address_hex_string);
 
+    // name: load address of the first instruction of the block and the name
+    // of the most frequently called function from the block (if applicable)
+
+    // ph: the event type - 'X' for Complete events (see link to documentation
+    // below)
+
+    // Since trace timestamps aren't yet supported in HTR, the ts (timestamp) is
+    // based on the instruction's offset in the trace and the dur (duration) is
+    // 1 since this layer contains single instructions. Using the instruction
+    // offset and a duration of 1 oversimplifies the true timing information of
+    // the trace, nonetheless, these approximate timestamps/durations provide an
+    // clear visualization of the trace.
+
+    // ts: offset from the beginning of the trace for the first instruction in
+    // the block
+
+    // dur: 1 since this layer contains single instructions.
+
+    // pid: the ID of the HTR layer the blocks belong to
+
+    // See
+    // https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview#heading=h.j75x71ritcoy
+    // for documentation on the Trace Event Format
     layers_as_json.emplace_back(llvm::json::Object{
         {"name", display_name},
-        {"ph", "B"},
+        {"ph", "X"},
         {"ts", (int64_t)i},
-
+        {"dur", 1},
         {"pid", (int64_t)layer_id},
-        {"tid", (int64_t)layer_id},
-    });
-
-    layers_as_json.emplace_back(llvm::json::Object{
-        {"ph", "E"},
-        {"ts", (int64_t)i + 1},
-        {"pid", (int64_t)layer_id},
-        {"tid", (int64_t)layer_id},
     });
   }
 
@@ -420,8 +435,6 @@ llvm::json::Value lldb_private::toJSON(const TraceHTR &htr) {
 
       HTRBlockMetadata metadata = block.GetMetadata();
 
-      size_t end_ts = start_ts + metadata.GetNumInstructions();
-
       llvm::Optional<llvm::StringRef> most_freq_func =
           metadata.GetMostFrequentlyCalledFunction();
       std::stringstream stream;
@@ -431,22 +444,23 @@ llvm::json::Value lldb_private::toJSON(const TraceHTR &htr) {
           most_freq_func ? offset_hex_string + ": " + most_freq_func->str()
                          : offset_hex_string;
 
+      // Since trace timestamps aren't yet supported in HTR, the ts (timestamp)
+      // and dur (duration) are based on the block's offset in the trace and
+      // number of instructions in the block, respectively. Using the block
+      // offset and the number of instructions oversimplifies the true timing
+      // information of the trace, nonetheless, these approximate
+      // timestamps/durations provide an understandable visualization of the
+      // trace.
+      auto duration = metadata.GetNumInstructions();
       layers_as_json.emplace_back(llvm::json::Object{
           {"name", display_name},
-          {"ph", "B"},
+          {"ph", "X"},
           {"ts", (int64_t)start_ts},
+          {"dur", (int64_t)duration},
           {"pid", (int64_t)layer_id},
-          {"tid", (int64_t)layer_id},
-      });
-
-      layers_as_json.emplace_back(llvm::json::Object{
-          {"ph", "E"},
-          {"ts", (int64_t)end_ts},
-          {"pid", (int64_t)layer_id},
-          {"tid", (int64_t)layer_id},
           {"args", block_json},
       });
-      start_ts = end_ts;
+      start_ts += duration;
     }
   }
   return layers_as_json;

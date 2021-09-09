@@ -2811,6 +2811,7 @@ static MachineInstr *createPostIncLoadStore(MachineInstr *MI, int Offset,
         .addImm(Offset)
         .add(MI->getOperand(3))
         .add(MI->getOperand(4))
+        .add(MI->getOperand(5))
         .cloneMemRefs(*MI);
   case ARMII::AddrModeT2_i8:
     if (MI->mayLoad()) {

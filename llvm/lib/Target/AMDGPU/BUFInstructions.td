@@ -1438,6 +1438,13 @@ defm : BufferAtomicPatterns<SIbuffer_atomic_xor, i64, "BUFFER_ATOMIC_XOR_X2">;
 defm : BufferAtomicPatterns<SIbuffer_atomic_inc, i64, "BUFFER_ATOMIC_INC_X2">;
 defm : BufferAtomicPatterns<SIbuffer_atomic_dec, i64, "BUFFER_ATOMIC_DEC_X2">;
 
+let SubtargetPredicate = isGFX6GFX7GFX10 in {
+  defm : BufferAtomicPatterns<SIbuffer_atomic_fmin, f32, "BUFFER_ATOMIC_FMIN">;
+  defm : BufferAtomicPatterns<SIbuffer_atomic_fmax, f32, "BUFFER_ATOMIC_FMAX">;
+  defm : BufferAtomicPatterns<SIbuffer_atomic_fmin, f64, "BUFFER_ATOMIC_FMIN_X2">;
+  defm : BufferAtomicPatterns<SIbuffer_atomic_fmax, f64, "BUFFER_ATOMIC_FMAX_X2">;
+}
+
 class NoUseBufferAtomic<SDPatternOperator Op, ValueType vt> : PatFrag <
   (ops node:$src0, node:$src1, node:$src2, node:$src3, node:$src4, node:$src5, node:$src6, node:$src7),
   (vt (Op $src0, $src1, $src2, $src3, $src4, $src5, $src6, $src7)),
