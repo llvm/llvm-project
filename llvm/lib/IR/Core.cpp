@@ -2858,12 +2858,12 @@ void LLVMSetInstructionCallConv(LLVMValueRef Instr, unsigned CC) {
       static_cast<CallingConv::ID>(CC));
 }
 
-void LLVMSetInstrParamAlignment(LLVMValueRef Instr, unsigned index,
+void LLVMSetInstrParamAlignment(LLVMValueRef Instr, LLVMAttributeIndex Idx,
                                 unsigned align) {
   auto *Call = unwrap<CallBase>(Instr);
   Attribute AlignAttr =
       Attribute::getWithAlignment(Call->getContext(), Align(align));
-  Call->addAttributeAtIndex(index, AlignAttr);
+  Call->addAttributeAtIndex(Idx, AlignAttr);
 }
 
 void LLVMAddCallSiteAttribute(LLVMValueRef C, LLVMAttributeIndex Idx,
