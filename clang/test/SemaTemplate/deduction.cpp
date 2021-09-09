@@ -60,12 +60,14 @@ struct Replace<const T, Arg1, Arg2> {
 // Replacement of templates
 template<template<typename> class TT, typename T1, typename Arg1, typename Arg2>
 struct Replace<TT<T1>, Arg1, Arg2> {
+// expected-note@-1 2 {{partial specialization matches}}
   typedef TT<typename Replace<T1, Arg1, Arg2>::type> type;
 };
 
 template<template<typename, typename> class TT, typename T1, typename T2,
          typename Arg1, typename Arg2>
 struct Replace<TT<T1, T2>, Arg1, Arg2> {
+// expected-note@-1 2 {{partial specialization matches}}
   typedef TT<typename Replace<T1, Arg1, Arg2>::type,
              typename Replace<T2, Arg1, Arg2>::type> type;
 };
@@ -79,8 +81,19 @@ struct Replace<TT<T1, _2>, Arg1, Arg2> {
 
 int array0[is_same<Replace<_1, int, float>::type, int>::value? 1 : -1];
 int array1[is_same<Replace<const _1, int, float>::type, const int>::value? 1 : -1];
+
 int array2[is_same<Replace<vector<_1>, int, float>::type, vector<int> >::value? 1 : -1];
+// expected-error@-1 {{ambiguous partial specializations of 'Replace<vector<_1>, int, float>'}}
+// FIXME: Some bad error recovery from the parser here:
+// expected-error@-3 {{expected '(' for function-style cast or type construction}}
+// expected-error@-4 {{no member named 'value' in the global namespace}}
+
 int array3[is_same<Replace<vector<const _1>, int, float>::type, vector<const int> >::value? 1 : -1];
+// expected-error@-1 {{ambiguous partial specializations of 'Replace<vector<const _1>, int, float>'}}
+// FIXME: Some bad error recovery from the parser here:
+// expected-error@-3 {{expected '(' for function-style cast or type construction}}
+// expected-error@-4 {{no member named 'value' in the global namespace}}
+
 int array4[is_same<Replace<vector<int, _2>, double, float>::type, vector<int, float> >::value? 1 : -1];
 
 // PR5911

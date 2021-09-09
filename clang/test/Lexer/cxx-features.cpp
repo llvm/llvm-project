@@ -5,7 +5,7 @@
 // RUN: %clang_cc1 -std=c++20 -fcxx-exceptions -fsized-deallocation -verify %s
 // RUN: %clang_cc1 -std=c++2b -fcxx-exceptions -fsized-deallocation -verify %s
 //
-// RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -fsized-deallocation -frelaxed-template-template-args -DRELAXED_TEMPLATE_TEMPLATE_ARGS=1 -verify %s
+// RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -fsized-deallocation -fno-relaxed-template-template-args -DNO_RELAXED_TEMPLATE_TEMPLATE_ARGS=1 -verify %s
 // RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -fsized-deallocation -DCONCEPTS_TS=1 -verify %s
 // RUN: %clang_cc1 -std=c++14 -fno-rtti -fno-threadsafe-statics -verify %s -DNO_EXCEPTIONS -DNO_RTTI -DNO_THREADSAFE_STATICS -fsized-deallocation
 // RUN: %clang_cc1 -std=c++14 -fcoroutines-ts -DNO_EXCEPTIONS -DCOROUTINES -verify -fsized-deallocation %s
@@ -195,9 +195,9 @@
 #error "wrong value for __cpp_nontype_template_args"
 #endif
 
-#if defined(RELAXED_TEMPLATE_TEMPLATE_ARGS) \
-    ? check(template_template_args, 0, 0, 0, 201611, 201611, 201611) \
-    : check(template_template_args, 0, 0, 0, 0, 0, 0)
+#if defined(NO_RELAXED_TEMPLATE_TEMPLATE_ARGS) \
+    ? check(template_template_args, 0, 0, 0, 0, 0, 0) \
+    : check(template_template_args, 201611, 201611, 201611, 201611, 201611, 201611)
 #error "wrong value for __cpp_template_template_args"
 #endif
 
