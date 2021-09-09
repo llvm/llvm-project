@@ -1170,7 +1170,8 @@ public:
       IsRetSmallStructInRegABI(RetSmallStructInRegABI),
       IsWin32StructABI(Win32StructABI), IsSoftFloatABI(SoftFloatABI),
       IsMCUABI(CGT.getTarget().getTriple().isOSIAMCU()),
-      IsLinuxABI(CGT.getTarget().getTriple().isOSLinux()),
+      IsLinuxABI(CGT.getTarget().getTriple().isOSLinux() ||
+                 CGT.getTarget().getTriple().isOSCygMing()),
       DefaultNumRegisterParameters(NumRegisterParameters) {}
 
   bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> scalars,
