@@ -147,21 +147,6 @@ public:
   int SendLaunchEventDataPacket(const char *data,
                                 bool *was_supported = nullptr);
 
-  /// Sends a "vAttach:PID" where PID is in hex.
-  ///
-  /// \param[in] pid
-  ///     A process ID for the remote gdb server to attach to.
-  ///
-  /// \param[out] response
-  ///     The response received from the gdb server. If the return
-  ///     value is zero, \a response will contain a stop reply
-  ///     packet.
-  ///
-  /// \return
-  ///     Zero if the attach was successful, or an error indicating
-  ///     an error code.
-  int SendAttach(lldb::pid_t pid, StringExtractorGDBRemote &response);
-
   /// Sends a GDB remote protocol 'I' packet that delivers stdin
   /// data to the remote process.
   ///
