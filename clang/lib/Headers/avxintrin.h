@@ -4748,6 +4748,135 @@ _mm256_zextsi128_si256(__m128i __a)
 #define _mm256_extractf128_si256(V, M) \
   ((__m128i)__builtin_ia32_vextractf128_si256((__v8si)(__m256i)(V), (int)(M)))
 
+/// Constructs a 256-bit floating-point vector of [8 x float] by
+///    concatenating two 128-bit floating-point vectors of [4 x float].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the <c> VINSERTF128 </c> instruction.
+///
+/// \param __hi
+///    A 128-bit floating-point vector of [4 x float] to be copied to the upper
+///    128 bits of the result.
+/// \param __lo
+///    A 128-bit floating-point vector of [4 x float] to be copied to the lower
+///    128 bits of the result.
+/// \returns A 256-bit floating-point vector of [8 x float] containing the
+///    concatenated result.
+static __inline __m256 __DEFAULT_FN_ATTRS
+_mm256_set_m128 (__m128 __hi, __m128 __lo)
+{
+  return (__m256) __builtin_shufflevector((__v4sf)__lo, (__v4sf)__hi, 0, 1, 2, 3, 4, 5, 6, 7);
+}
+
+/// Constructs a 256-bit floating-point vector of [4 x double] by
+///    concatenating two 128-bit floating-point vectors of [2 x double].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the <c> VINSERTF128 </c> instruction.
+///
+/// \param __hi
+///    A 128-bit floating-point vector of [2 x double] to be copied to the upper
+///    128 bits of the result.
+/// \param __lo
+///    A 128-bit floating-point vector of [2 x double] to be copied to the lower
+///    128 bits of the result.
+/// \returns A 256-bit floating-point vector of [4 x double] containing the
+///    concatenated result.
+static __inline __m256d __DEFAULT_FN_ATTRS
+_mm256_set_m128d (__m128d __hi, __m128d __lo)
+{
+  return (__m256d) __builtin_shufflevector((__v2df)__lo, (__v2df)__hi, 0, 1, 2, 3);
+}
+
+/// Constructs a 256-bit integer vector by concatenating two 128-bit
+///    integer vectors.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the <c> VINSERTF128 </c> instruction.
+///
+/// \param __hi
+///    A 128-bit integer vector to be copied to the upper 128 bits of the
+///    result.
+/// \param __lo
+///    A 128-bit integer vector to be copied to the lower 128 bits of the
+///    result.
+/// \returns A 256-bit integer vector containing the concatenated result.
+static __inline __m256i __DEFAULT_FN_ATTRS
+_mm256_set_m128i (__m128i __hi, __m128i __lo)
+{
+  return (__m256i) __builtin_shufflevector((__v2di)__lo, (__v2di)__hi, 0, 1, 2, 3);
+}
+
+/// Constructs a 256-bit floating-point vector of [8 x float] by
+///    concatenating two 128-bit floating-point vectors of [4 x float]. This is
+///    similar to _mm256_set_m128, but the order of the input parameters is
+///    swapped.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the <c> VINSERTF128 </c> instruction.
+///
+/// \param __lo
+///    A 128-bit floating-point vector of [4 x float] to be copied to the lower
+///    128 bits of the result.
+/// \param __hi
+///    A 128-bit floating-point vector of [4 x float] to be copied to the upper
+///    128 bits of the result.
+/// \returns A 256-bit floating-point vector of [8 x float] containing the
+///    concatenated result.
+static __inline __m256 __DEFAULT_FN_ATTRS
+_mm256_setr_m128 (__m128 __lo, __m128 __hi)
+{
+  return _mm256_set_m128(__hi, __lo);
+}
+
+/// Constructs a 256-bit floating-point vector of [4 x double] by
+///    concatenating two 128-bit floating-point vectors of [2 x double]. This is
+///    similar to _mm256_set_m128d, but the order of the input parameters is
+///    swapped.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the <c> VINSERTF128 </c> instruction.
+///
+/// \param __lo
+///    A 128-bit floating-point vector of [2 x double] to be copied to the lower
+///    128 bits of the result.
+/// \param __hi
+///    A 128-bit floating-point vector of [2 x double] to be copied to the upper
+///    128 bits of the result.
+/// \returns A 256-bit floating-point vector of [4 x double] containing the
+///    concatenated result.
+static __inline __m256d __DEFAULT_FN_ATTRS
+_mm256_setr_m128d (__m128d __lo, __m128d __hi)
+{
+  return (__m256d)_mm256_set_m128d(__hi, __lo);
+}
+
+/// Constructs a 256-bit integer vector by concatenating two 128-bit
+///    integer vectors. This is similar to _mm256_set_m128i, but the order of
+///    the input parameters is swapped.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the <c> VINSERTF128 </c> instruction.
+///
+/// \param __lo
+///    A 128-bit integer vector to be copied to the lower 128 bits of the
+///    result.
+/// \param __hi
+///    A 128-bit integer vector to be copied to the upper 128 bits of the
+///    result.
+/// \returns A 256-bit integer vector containing the concatenated result.
+static __inline __m256i __DEFAULT_FN_ATTRS
+_mm256_setr_m128i (__m128i __lo, __m128i __hi)
+{
+  return (__m256i)_mm256_set_m128i(__hi, __lo);
+}
+
 /* SIMD load ops (unaligned) */
 /// Loads two 128-bit floating-point vectors of [4 x float] from
 ///    unaligned memory locations and constructs a 256-bit floating-point vector
@@ -4916,135 +5045,6 @@ _mm256_storeu2_m128i(__m128i_u *__addr_hi, __m128i_u *__addr_lo, __m256i __a)
   _mm_storeu_si128(__addr_lo, __v128);
   __v128 = _mm256_extractf128_si256(__a, 1);
   _mm_storeu_si128(__addr_hi, __v128);
-}
-
-/// Constructs a 256-bit floating-point vector of [8 x float] by
-///    concatenating two 128-bit floating-point vectors of [4 x float].
-///
-/// \headerfile <x86intrin.h>
-///
-/// This intrinsic corresponds to the <c> VINSERTF128 </c> instruction.
-///
-/// \param __hi
-///    A 128-bit floating-point vector of [4 x float] to be copied to the upper
-///    128 bits of the result.
-/// \param __lo
-///    A 128-bit floating-point vector of [4 x float] to be copied to the lower
-///    128 bits of the result.
-/// \returns A 256-bit floating-point vector of [8 x float] containing the
-///    concatenated result.
-static __inline __m256 __DEFAULT_FN_ATTRS
-_mm256_set_m128 (__m128 __hi, __m128 __lo)
-{
-  return (__m256) __builtin_shufflevector((__v4sf)__lo, (__v4sf)__hi, 0, 1, 2, 3, 4, 5, 6, 7);
-}
-
-/// Constructs a 256-bit floating-point vector of [4 x double] by
-///    concatenating two 128-bit floating-point vectors of [2 x double].
-///
-/// \headerfile <x86intrin.h>
-///
-/// This intrinsic corresponds to the <c> VINSERTF128 </c> instruction.
-///
-/// \param __hi
-///    A 128-bit floating-point vector of [2 x double] to be copied to the upper
-///    128 bits of the result.
-/// \param __lo
-///    A 128-bit floating-point vector of [2 x double] to be copied to the lower
-///    128 bits of the result.
-/// \returns A 256-bit floating-point vector of [4 x double] containing the
-///    concatenated result.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_set_m128d (__m128d __hi, __m128d __lo)
-{
-  return (__m256d) __builtin_shufflevector((__v2df)__lo, (__v2df)__hi, 0, 1, 2, 3);
-}
-
-/// Constructs a 256-bit integer vector by concatenating two 128-bit
-///    integer vectors.
-///
-/// \headerfile <x86intrin.h>
-///
-/// This intrinsic corresponds to the <c> VINSERTF128 </c> instruction.
-///
-/// \param __hi
-///    A 128-bit integer vector to be copied to the upper 128 bits of the
-///    result.
-/// \param __lo
-///    A 128-bit integer vector to be copied to the lower 128 bits of the
-///    result.
-/// \returns A 256-bit integer vector containing the concatenated result.
-static __inline __m256i __DEFAULT_FN_ATTRS
-_mm256_set_m128i (__m128i __hi, __m128i __lo)
-{
-  return (__m256i) __builtin_shufflevector((__v2di)__lo, (__v2di)__hi, 0, 1, 2, 3);
-}
-
-/// Constructs a 256-bit floating-point vector of [8 x float] by
-///    concatenating two 128-bit floating-point vectors of [4 x float]. This is
-///    similar to _mm256_set_m128, but the order of the input parameters is
-///    swapped.
-///
-/// \headerfile <x86intrin.h>
-///
-/// This intrinsic corresponds to the <c> VINSERTF128 </c> instruction.
-///
-/// \param __lo
-///    A 128-bit floating-point vector of [4 x float] to be copied to the lower
-///    128 bits of the result.
-/// \param __hi
-///    A 128-bit floating-point vector of [4 x float] to be copied to the upper
-///    128 bits of the result.
-/// \returns A 256-bit floating-point vector of [8 x float] containing the
-///    concatenated result.
-static __inline __m256 __DEFAULT_FN_ATTRS
-_mm256_setr_m128 (__m128 __lo, __m128 __hi)
-{
-  return _mm256_set_m128(__hi, __lo);
-}
-
-/// Constructs a 256-bit floating-point vector of [4 x double] by
-///    concatenating two 128-bit floating-point vectors of [2 x double]. This is
-///    similar to _mm256_set_m128d, but the order of the input parameters is
-///    swapped.
-///
-/// \headerfile <x86intrin.h>
-///
-/// This intrinsic corresponds to the <c> VINSERTF128 </c> instruction.
-///
-/// \param __lo
-///    A 128-bit floating-point vector of [2 x double] to be copied to the lower
-///    128 bits of the result.
-/// \param __hi
-///    A 128-bit floating-point vector of [2 x double] to be copied to the upper
-///    128 bits of the result.
-/// \returns A 256-bit floating-point vector of [4 x double] containing the
-///    concatenated result.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_setr_m128d (__m128d __lo, __m128d __hi)
-{
-  return (__m256d)_mm256_set_m128d(__hi, __lo);
-}
-
-/// Constructs a 256-bit integer vector by concatenating two 128-bit
-///    integer vectors. This is similar to _mm256_set_m128i, but the order of
-///    the input parameters is swapped.
-///
-/// \headerfile <x86intrin.h>
-///
-/// This intrinsic corresponds to the <c> VINSERTF128 </c> instruction.
-///
-/// \param __lo
-///    A 128-bit integer vector to be copied to the lower 128 bits of the
-///    result.
-/// \param __hi
-///    A 128-bit integer vector to be copied to the upper 128 bits of the
-///    result.
-/// \returns A 256-bit integer vector containing the concatenated result.
-static __inline __m256i __DEFAULT_FN_ATTRS
-_mm256_setr_m128i (__m128i __lo, __m128i __hi)
-{
-  return (__m256i)_mm256_set_m128i(__hi, __lo);
 }
 
 #undef __DEFAULT_FN_ATTRS
