@@ -29,7 +29,7 @@
 "`P0019R8 <https://wg21.link/P0019R8>`__","LWG","Atomic Ref","Rapperswil","",""
 "`P0458R2 <https://wg21.link/P0458R2>`__","LWG","Checking for Existence of an Element in Associative Containers","Rapperswil","|Complete|","13.0"
 "`P0475R1 <https://wg21.link/P0475R1>`__","LWG","LWG 2511: guaranteed copy elision for piecewise construction","Rapperswil","|Complete|",""
-"`P0476R2 <https://wg21.link/P0476R2>`__","LWG","Bit-casting object representations","Rapperswil","",""
+"`P0476R2 <https://wg21.link/P0476R2>`__","LWG","Bit-casting object representations","Rapperswil","|Complete|","14.0"
 "`P0528R3 <https://wg21.link/P0528R3>`__","CWG","The Curious Case of Padding Bits, Featuring Atomic Compare-and-Exchange","Rapperswil","",""
 "`P0542R5 <https://wg21.link/P0542R5>`__","CWG","Support for contract based programming in C++","Rapperswil","*Removed in Cologne*","n/a"
 "`P0556R3 <https://wg21.link/P0556R3>`__","LWG","Integral power-of-2 operations","Rapperswil","|Complete|","9.0"
