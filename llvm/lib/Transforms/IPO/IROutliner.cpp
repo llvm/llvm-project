@@ -1126,8 +1126,7 @@ replaceArgumentUses(OutlinableRegion &Region,
       if (!RI)
         continue;
       Value *RetVal = RI->getReturnValue();
-      DenseMap<Value *, BasicBlock *>::iterator VBBIt, PHIVBBIt;
-      VBBIt = OutputBBs.find(RetVal);
+      auto VBBIt = OutputBBs.find(RetVal);
       assert(VBBIt != OutputBBs.end() && "Could not find output value!");
 
       Instruction *NewI = I->clone();
