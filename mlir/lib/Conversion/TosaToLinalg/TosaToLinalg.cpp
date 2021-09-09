@@ -254,7 +254,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
   // tosa::BitwiseNotOp
   if (isa<tosa::BitwiseNotOp>(op) && elementTy.isa<IntegerType>()) {
     auto allOnesAttr = rewriter.getIntegerAttr(
-        elementTy, APInt::getAllOnesValue(elementTy.getIntOrFloatBitWidth()));
+        elementTy, APInt::getAllOnes(elementTy.getIntOrFloatBitWidth()));
     auto allOnes = rewriter.create<ConstantOp>(loc, allOnesAttr);
     return rewriter.create<mlir::XOrOp>(loc, resultTypes, args[0], allOnes);
   }
@@ -739,10 +739,10 @@ static Attribute createInitialValueForReduceOp(Operation *op, Type elementTy,
         elementTy, APInt::getSignedMinValue(elementTy.getIntOrFloatBitWidth()));
 
   if (isa<tosa::ReduceAllOp>(op) && elementTy.isInteger(1))
-    return rewriter.getIntegerAttr(elementTy, APInt::getAllOnesValue(1));
+    return rewriter.getIntegerAttr(elementTy, APInt::getAllOnes(1));
 
   if (isa<tosa::ReduceAnyOp>(op) && elementTy.isInteger(1))
-    return rewriter.getIntegerAttr(elementTy, APInt::getNullValue(1));
+    return rewriter.getIntegerAttr(elementTy, APInt::getZero(1));
 
   if (isa<tosa::ArgMaxOp>(op) && elementTy.isa<FloatType>())
     return rewriter.getFloatAttr(

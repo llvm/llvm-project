@@ -4866,7 +4866,7 @@ APFloat::opStatus APFloat::convert(const fltSemantics &ToSemantics,
 
 APFloat APFloat::getAllOnesValue(const fltSemantics &Semantics,
                                  unsigned BitWidth) {
-  return APFloat(Semantics, APInt::getAllOnesValue(BitWidth));
+  return APFloat(Semantics, APInt::getAllOnes(BitWidth));
 }
 
 void APFloat::print(raw_ostream &OS) const {

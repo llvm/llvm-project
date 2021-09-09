@@ -26,7 +26,7 @@ TEST(APIntTest, ValueInit) {
 
 // Test that APInt shift left works when bitwidth > 64 and shiftamt == 0
 TEST(APIntTest, ShiftLeftByZero) {
-  APInt One = APInt::getNullValue(65) + 1;
+  APInt One = APInt::getZero(65) + 1;
   APInt Shl = One.shl(0);
   EXPECT_TRUE(Shl[0]);
   EXPECT_FALSE(Shl[1]);
@@ -102,7 +102,7 @@ TEST(APIntTest, i65_Count) {
 }
 
 TEST(APIntTest, i128_PositiveCount) {
-  APInt u128max = APInt::getAllOnesValue(128);
+  APInt u128max = APInt::getAllOnes(128);
   EXPECT_EQ(128u, u128max.countLeadingOnes());
   EXPECT_EQ(0u, u128max.countLeadingZeros());
   EXPECT_EQ(128u, u128max.getActiveBits());
@@ -2323,7 +2323,7 @@ TEST(APIntTest, getHiBits) {
 }
 
 TEST(APIntTest, clearLowBits) {
-  APInt i64hi32 = APInt::getAllOnesValue(64);
+  APInt i64hi32 = APInt::getAllOnes(64);
   i64hi32.clearLowBits(32);
   EXPECT_EQ(32u, i64hi32.countLeadingOnes());
   EXPECT_EQ(0u, i64hi32.countLeadingZeros());
@@ -2332,7 +2332,7 @@ TEST(APIntTest, clearLowBits) {
   EXPECT_EQ(0u, i64hi32.countTrailingOnes());
   EXPECT_EQ(32u, i64hi32.countPopulation());
 
-  APInt i128hi64 = APInt::getAllOnesValue(128);
+  APInt i128hi64 = APInt::getAllOnes(128);
   i128hi64.clearLowBits(64);
   EXPECT_EQ(64u, i128hi64.countLeadingOnes());
   EXPECT_EQ(0u, i128hi64.countLeadingZeros());
@@ -2341,7 +2341,7 @@ TEST(APIntTest, clearLowBits) {
   EXPECT_EQ(0u, i128hi64.countTrailingOnes());
   EXPECT_EQ(64u, i128hi64.countPopulation());
 
-  APInt i128hi24 = APInt::getAllOnesValue(128);
+  APInt i128hi24 = APInt::getAllOnes(128);
   i128hi24.clearLowBits(104);
   EXPECT_EQ(24u, i128hi24.countLeadingOnes());
   EXPECT_EQ(0u, i128hi24.countLeadingZeros());
@@ -2350,7 +2350,7 @@ TEST(APIntTest, clearLowBits) {
   EXPECT_EQ(0u, i128hi24.countTrailingOnes());
   EXPECT_EQ(24u, i128hi24.countPopulation());
 
-  APInt i128hi104 = APInt::getAllOnesValue(128);
+  APInt i128hi104 = APInt::getAllOnes(128);
   i128hi104.clearLowBits(24);
   EXPECT_EQ(104u, i128hi104.countLeadingOnes());
   EXPECT_EQ(0u, i128hi104.countLeadingZeros());
@@ -2359,7 +2359,7 @@ TEST(APIntTest, clearLowBits) {
   EXPECT_EQ(0u, i128hi104.countTrailingOnes());
   EXPECT_EQ(104u, i128hi104.countPopulation());
 
-  APInt i128hi0 = APInt::getAllOnesValue(128);
+  APInt i128hi0 = APInt::getAllOnes(128);
   i128hi0.clearLowBits(128);
   EXPECT_EQ(0u, i128hi0.countLeadingOnes());
   EXPECT_EQ(128u, i128hi0.countLeadingZeros());
@@ -2368,7 +2368,7 @@ TEST(APIntTest, clearLowBits) {
   EXPECT_EQ(0u, i128hi0.countTrailingOnes());
   EXPECT_EQ(0u, i128hi0.countPopulation());
 
-  APInt i80hi1 = APInt::getAllOnesValue(80);
+  APInt i80hi1 = APInt::getAllOnes(80);
   i80hi1.clearLowBits(79);
   EXPECT_EQ(1u, i80hi1.countLeadingOnes());
   EXPECT_EQ(0u, i80hi1.countLeadingZeros());
@@ -2377,7 +2377,7 @@ TEST(APIntTest, clearLowBits) {
   EXPECT_EQ(0u, i80hi1.countTrailingOnes());
   EXPECT_EQ(1u, i80hi1.countPopulation());
 
-  APInt i32hi16 = APInt::getAllOnesValue(32);
+  APInt i32hi16 = APInt::getAllOnes(32);
   i32hi16.clearLowBits(16);
   EXPECT_EQ(16u, i32hi16.countLeadingOnes());
   EXPECT_EQ(0u, i32hi16.countLeadingZeros());
@@ -2484,7 +2484,7 @@ TEST(APIntTest, ArithmeticRightShift) {
 
   // Ensure we handle large shifts of multi-word.
   const APInt signmin32(APInt::getSignedMinValue(32));
-  EXPECT_TRUE(signmin32.ashr(32).isAllOnesValue());
+  EXPECT_TRUE(signmin32.ashr(32).isAllOnes());
 
   // Ensure we handle large shifts of multi-word.
   const APInt umax32(APInt::getSignedMaxValue(32));
@@ -2492,7 +2492,7 @@ TEST(APIntTest, ArithmeticRightShift) {
 
   // Ensure we handle large shifts of multi-word.
   const APInt signmin128(APInt::getSignedMinValue(128));
-  EXPECT_TRUE(signmin128.ashr(128).isAllOnesValue());
+  EXPECT_TRUE(signmin128.ashr(128).isAllOnes());
 
   // Ensure we handle large shifts of multi-word.
   const APInt umax128(APInt::getSignedMaxValue(128));

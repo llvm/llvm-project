@@ -1469,8 +1469,8 @@ struct is_float_nan_pred {
 TEST_F(PatternMatchTest, ConstantPredicateType) {
 
   // Scalar integer
-  APInt U32Max = APInt::getAllOnesValue(32);
-  APInt U32Zero = APInt::getNullValue(32);
+  APInt U32Max = APInt::getAllOnes(32);
+  APInt U32Zero = APInt::getZero(32);
   APInt U32DeadBeef(32, 0xDEADBEEF);
 
   Type *U32Ty = Type::getInt32Ty(Ctx);

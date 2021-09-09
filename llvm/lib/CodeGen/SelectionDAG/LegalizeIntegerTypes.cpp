@@ -832,7 +832,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
   unsigned NewBits = PromotedType.getScalarSizeInBits();
 
   if (Opcode == ISD::UADDSAT) {
-    APInt MaxVal = APInt::getAllOnesValue(OldBits).zext(NewBits);
+    APInt MaxVal = APInt::getAllOnes(OldBits).zext(NewBits);
     SDValue SatMax = DAG.getConstant(MaxVal, dl, PromotedType);
     SDValue Add =
         DAG.getNode(ISD::ADD, dl, PromotedType, Op1Promoted, Op2Promoted);
@@ -3698,7 +3698,7 @@ void DAGTypeLegalizer::ExpandIntRes_MULFIX(SDNode *N, SDValue &Lo,
 
   // Saturate to signed maximum.
   APInt MaxHi = APInt::getSignedMaxValue(NVTSize);
-  APInt MaxLo = APInt::getAllOnesValue(NVTSize);
+  APInt MaxLo = APInt::getAllOnes(NVTSize);
   Hi = DAG.getSelect(dl, NVT, SatMax, DAG.getConstant(MaxHi, dl, NVT), Hi);
   Lo = DAG.getSelect(dl, NVT, SatMax, DAG.getConstant(MaxLo, dl, NVT), Lo);
   // Saturate to signed minimum.

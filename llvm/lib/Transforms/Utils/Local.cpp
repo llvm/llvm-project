@@ -3179,7 +3179,7 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
 
   // Now, is the bit permutation correct for a bswap or a bitreverse? We can
   // only byteswap values with an even number of bytes.
-  APInt DemandedMask = APInt::getAllOnesValue(DemandedBW);
+  APInt DemandedMask = APInt::getAllOnes(DemandedBW);
   bool OKForBSwap = MatchBSwaps && (DemandedBW % 16) == 0;
   bool OKForBitReverse = MatchBitReversals;
   for (unsigned BitIdx = 0;

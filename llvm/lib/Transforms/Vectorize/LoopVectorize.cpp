@@ -6898,7 +6898,7 @@ int LoopVectorizationCostModel::computePredInstDiscount(
     if (isScalarWithPredication(I) && !I->getType()->isVoidTy()) {
       ScalarCost += TTI.getScalarizationOverhead(
           cast<VectorType>(ToVectorTy(I->getType(), VF)),
-          APInt::getAllOnesValue(VF.getFixedValue()), true, false);
+          APInt::getAllOnes(VF.getFixedValue()), true, false);
       ScalarCost +=
           VF.getFixedValue() *
           TTI.getCFInstrCost(Instruction::PHI, TTI::TCK_RecipThroughput);
@@ -6917,7 +6917,7 @@ int LoopVectorizationCostModel::computePredInstDiscount(
         else if (needsExtract(J, VF)) {
           ScalarCost += TTI.getScalarizationOverhead(
               cast<VectorType>(ToVectorTy(J->getType(), VF)),
-              APInt::getAllOnesValue(VF.getFixedValue()), false, true);
+              APInt::getAllOnes(VF.getFixedValue()), false, true);
         }
       }
 
@@ -7063,7 +7063,7 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
     auto *Vec_i1Ty =
         VectorType::get(IntegerType::getInt1Ty(ValTy->getContext()), VF);
     Cost += TTI.getScalarizationOverhead(
-        Vec_i1Ty, APInt::getAllOnesValue(VF.getKnownMinValue()),
+        Vec_i1Ty, APInt::getAllOnes(VF.getKnownMinValue()),
         /*Insert=*/false, /*Extract=*/true);
     Cost += TTI.getCFInstrCost(Instruction::Br, TTI::TCK_RecipThroughput);
 
@@ -7405,8 +7405,8 @@ LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
   if (!RetTy->isVoidTy() &&
       (!isa<LoadInst>(I) || !TTI.supportsEfficientVectorElementLoadStore()))
     Cost += TTI.getScalarizationOverhead(
-        cast<VectorType>(RetTy), APInt::getAllOnesValue(VF.getKnownMinValue()),
-        true, false);
+        cast<VectorType>(RetTy), APInt::getAllOnes(VF.getKnownMinValue()), true,
+        false);
 
   // Some targets keep addresses scalar.
   if (isa<LoadInst>(I) && !TTI.prefersVectorizedAddressing())
@@ -7657,8 +7657,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
           VectorType::get(IntegerType::getInt1Ty(RetTy->getContext()), VF);
       return (
           TTI.getScalarizationOverhead(
-              Vec_i1Ty, APInt::getAllOnesValue(VF.getFixedValue()), false,
-              true) +
+              Vec_i1Ty, APInt::getAllOnes(VF.getFixedValue()), false, true) +
           (TTI.getCFInstrCost(Instruction::Br, CostKind) * VF.getFixedValue()));
     } else if (I->getParent() == TheLoop->getLoopLatch() || VF.isScalar())
       // The back-edge branch will remain, as will all scalar branches.

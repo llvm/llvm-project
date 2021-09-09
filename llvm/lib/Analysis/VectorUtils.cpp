@@ -946,7 +946,7 @@ APInt llvm::possiblyDemandedEltsInMask(Value *Mask) {
 
   const unsigned VWidth =
       cast<FixedVectorType>(Mask->getType())->getNumElements();
-  APInt DemandedElts = APInt::getAllOnesValue(VWidth);
+  APInt DemandedElts = APInt::getAllOnes(VWidth);
   if (auto *CV = dyn_cast<ConstantVector>(Mask))
     for (unsigned i = 0; i < VWidth; i++)
       if (CV->getAggregateElement(i)->isNullValue())

@@ -1978,7 +1978,7 @@ SDValue M68kTargetLowering::LowerSETCCCARRY(SDValue Op,
   M68k::CondCode CC = TranslateIntegerM68kCC(cast<CondCodeSDNode>(Cond)->get());
 
   EVT CarryVT = Carry.getValueType();
-  APInt NegOne = APInt::getAllOnesValue(CarryVT.getScalarSizeInBits());
+  APInt NegOne = APInt::getAllOnes(CarryVT.getScalarSizeInBits());
   Carry = DAG.getNode(M68kISD::ADD, DL, DAG.getVTList(CarryVT, MVT::i32), Carry,
                       DAG.getConstant(NegOne, DL, CarryVT));
 

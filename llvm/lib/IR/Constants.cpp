@@ -366,9 +366,8 @@ Constant *Constant::getNullValue(Type *Ty) {
     return ConstantFP::get(Ty->getContext(),
                            APFloat::getZero(APFloat::IEEEquad()));
   case Type::PPC_FP128TyID:
-    return ConstantFP::get(Ty->getContext(),
-                           APFloat(APFloat::PPCDoubleDouble(),
-                                   APInt::getNullValue(128)));
+    return ConstantFP::get(Ty->getContext(), APFloat(APFloat::PPCDoubleDouble(),
+                                                     APInt::getZero(128)));
   case Type::PointerTyID:
     return ConstantPointerNull::get(cast<PointerType>(Ty));
   case Type::StructTyID:
@@ -404,7 +403,7 @@ Constant *Constant::getIntegerValue(Type *Ty, const APInt &V) {
 Constant *Constant::getAllOnesValue(Type *Ty) {
   if (IntegerType *ITy = dyn_cast<IntegerType>(Ty))
     return ConstantInt::get(Ty->getContext(),
-                            APInt::getAllOnesValue(ITy->getBitWidth()));
+                            APInt::getAllOnes(ITy->getBitWidth()));
 
   if (Ty->isFloatingPointTy()) {
     APFloat FL = APFloat::getAllOnesValue(Ty->getFltSemantics(),

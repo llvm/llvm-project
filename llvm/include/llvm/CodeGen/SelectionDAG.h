@@ -621,8 +621,8 @@ public:
 
   SDValue getAllOnesConstant(const SDLoc &DL, EVT VT, bool IsTarget = false,
                              bool IsOpaque = false) {
-    return getConstant(APInt::getAllOnesValue(VT.getScalarSizeInBits()), DL,
-                       VT, IsTarget, IsOpaque);
+    return getConstant(APInt::getAllOnes(VT.getScalarSizeInBits()), DL, VT,
+                       IsTarget, IsOpaque);
   }
 
   SDValue getConstant(const ConstantInt &Val, const SDLoc &DL, EVT VT,

@@ -3899,7 +3899,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
 
       unsigned const NumElts = SrcVecTy->getNumElements();
       unsigned const NumScalars = VL.size();
-      APInt DemandedElts = APInt::getNullValue(NumElts);
+      APInt DemandedElts = APInt::getZero(NumElts);
       // TODO: Add support for Instruction::InsertValue.
       unsigned Offset = UINT_MAX;
       bool IsIdentity = true;
@@ -4525,7 +4525,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
           VF.push_back(FTy->getNumElements());
           ShuffleMask.emplace_back(VF.back(), UndefMaskElem);
           FirstUsers.push_back(EU.User);
-          DemandedElts.push_back(APInt::getNullValue(VF.back()));
+          DemandedElts.push_back(APInt::getZero(VF.back()));
           VecId = FirstUsers.size() - 1;
         } else {
           VecId = std::distance(FirstUsers.begin(), It);
@@ -4759,7 +4759,7 @@ InstructionCost
 BoUpSLP::getGatherCost(FixedVectorType *Ty,
                        const DenseSet<unsigned> &ShuffledIndices) const {
   unsigned NumElts = Ty->getNumElements();
-  APInt DemandedElts = APInt::getNullValue(NumElts);
+  APInt DemandedElts = APInt::getZero(NumElts);
   for (unsigned I = 0; I < NumElts; ++I)
     if (!ShuffledIndices.count(I))
       DemandedElts.setBit(I);

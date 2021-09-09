@@ -206,8 +206,8 @@ struct MaskOps {
   bool FoundAnd1;
 
   MaskOps(unsigned BitWidth, bool MatchAnds)
-      : Root(nullptr), Mask(APInt::getNullValue(BitWidth)),
-        MatchAndChain(MatchAnds), FoundAnd1(false) {}
+      : Root(nullptr), Mask(APInt::getZero(BitWidth)), MatchAndChain(MatchAnds),
+        FoundAnd1(false) {}
 };
 
 /// This is a recursive helper for foldAnyOrAllBitsSet() that walks through a

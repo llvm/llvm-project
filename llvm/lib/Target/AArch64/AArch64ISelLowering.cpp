@@ -13525,7 +13525,7 @@ performVectorTruncateCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
     unsigned ElemSizeInBits = VT.getScalarSizeInBits();
     APInt CAsAPInt(ElemSizeInBits, C);
-    if (CAsAPInt != APInt::getAllOnesValue(ElemSizeInBits))
+    if (CAsAPInt != APInt::getAllOnes(ElemSizeInBits))
       return SDValue();
 
     ExtendOpA = Xor.getOperand(0);

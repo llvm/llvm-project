@@ -3740,7 +3740,7 @@ X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy, Align Alignment,
   if ((IsLoad && !isLegalMaskedLoad(SrcVTy, Alignment)) ||
       (IsStore && !isLegalMaskedStore(SrcVTy, Alignment))) {
     // Scalarization
-    APInt DemandedElts = APInt::getAllOnesValue(NumElem);
+    APInt DemandedElts = APInt::getAllOnes(NumElem);
     InstructionCost MaskSplitCost =
         getScalarizationOverhead(MaskTy, DemandedElts, false, true);
     InstructionCost ScalarCompareCost = getCmpSelInstrCost(
@@ -4653,7 +4653,7 @@ InstructionCost X86TTIImpl::getGSScalarCost(unsigned Opcode, Type *SrcVTy,
                                             bool VariableMask, Align Alignment,
                                             unsigned AddressSpace) {
   unsigned VF = cast<FixedVectorType>(SrcVTy)->getNumElements();
-  APInt DemandedElts = APInt::getAllOnesValue(VF);
+  APInt DemandedElts = APInt::getAllOnes(VF);
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
   InstructionCost MaskUnpackCost = 0;
