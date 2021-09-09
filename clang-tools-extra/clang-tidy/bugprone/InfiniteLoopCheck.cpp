@@ -65,6 +65,17 @@ static bool isVarThatIsPossiblyChanged(const Decl *Func, const Stmt *LoopStmt,
                  ObjCIvarRefExpr, ObjCPropertyRefExpr, ObjCMessageExpr>(Cond)) {
     // FIXME: Handle MemberExpr.
     return true;
+  } else if (const auto *CE = dyn_cast<CastExpr>(Cond)) {
+    QualType T = CE->getType();
+    while (true) {
+      if (T.isVolatileQualified())
+        return true;
+
+      if (!T->isAnyPointerType() && !T->isReferenceType())
+        break;
+
+      T = T->getPointeeType();
+    }
   }
 
   return false;
