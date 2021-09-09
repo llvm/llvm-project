@@ -1194,3 +1194,187 @@ define i64 @oneusei64_d(i64 %val, i64 %numhighbits, i64* %escape) nounwind {
   %masked = lshr i64 %sh1, %numhighbits
   ret i64 %masked
 }
+
+; ---------------------------------------------------------------------------- ;
+; Misc.
+;
+; Variation of pattern
+;   c) x &  (-1 >> (C - y))
+; but with C != bitwidth(x)
+; ---------------------------------------------------------------------------- ;
+
+define i32 @clear_highbits32_16(i32 %val, i32 %numlowbits) nounwind {
+; X86-NOBMI2-LABEL: clear_highbits32_16:
+; X86-NOBMI2:       # %bb.0:
+; X86-NOBMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI2-NEXT:    movb $16, %cl
+; X86-NOBMI2-NEXT:    subb {{[0-9]+}}(%esp), %cl
+; X86-NOBMI2-NEXT:    shll %cl, %eax
+; X86-NOBMI2-NEXT:    shrl %cl, %eax
+; X86-NOBMI2-NEXT:    retl
+;
+; X86-BMI2-LABEL: clear_highbits32_16:
+; X86-BMI2:       # %bb.0:
+; X86-BMI2-NEXT:    movb $16, %al
+; X86-BMI2-NEXT:    subb {{[0-9]+}}(%esp), %al
+; X86-BMI2-NEXT:    shlxl %eax, {{[0-9]+}}(%esp), %ecx
+; X86-BMI2-NEXT:    shrxl %eax, %ecx, %eax
+; X86-BMI2-NEXT:    retl
+;
+; X64-NOBMI2-LABEL: clear_highbits32_16:
+; X64-NOBMI2:       # %bb.0:
+; X64-NOBMI2-NEXT:    movl %edi, %eax
+; X64-NOBMI2-NEXT:    movb $16, %cl
+; X64-NOBMI2-NEXT:    subb %sil, %cl
+; X64-NOBMI2-NEXT:    shll %cl, %eax
+; X64-NOBMI2-NEXT:    shrl %cl, %eax
+; X64-NOBMI2-NEXT:    retq
+;
+; X64-BMI2-LABEL: clear_highbits32_16:
+; X64-BMI2:       # %bb.0:
+; X64-BMI2-NEXT:    movb $16, %al
+; X64-BMI2-NEXT:    subb %sil, %al
+; X64-BMI2-NEXT:    shlxl %eax, %edi, %ecx
+; X64-BMI2-NEXT:    shrxl %eax, %ecx, %eax
+; X64-BMI2-NEXT:    retq
+  %numhighbits = sub i32 16, %numlowbits
+  %mask = lshr i32 -1, %numhighbits
+  %masked = and i32 %mask, %val
+  ret i32 %masked
+}
+define i32 @clear_highbits32_48(i32 %val, i32 %numlowbits) nounwind {
+; X86-NOBMI2-LABEL: clear_highbits32_48:
+; X86-NOBMI2:       # %bb.0:
+; X86-NOBMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI2-NEXT:    movb $48, %cl
+; X86-NOBMI2-NEXT:    subb {{[0-9]+}}(%esp), %cl
+; X86-NOBMI2-NEXT:    shll %cl, %eax
+; X86-NOBMI2-NEXT:    shrl %cl, %eax
+; X86-NOBMI2-NEXT:    retl
+;
+; X86-BMI2-LABEL: clear_highbits32_48:
+; X86-BMI2:       # %bb.0:
+; X86-BMI2-NEXT:    movb $48, %al
+; X86-BMI2-NEXT:    subb {{[0-9]+}}(%esp), %al
+; X86-BMI2-NEXT:    shlxl %eax, {{[0-9]+}}(%esp), %ecx
+; X86-BMI2-NEXT:    shrxl %eax, %ecx, %eax
+; X86-BMI2-NEXT:    retl
+;
+; X64-NOBMI2-LABEL: clear_highbits32_48:
+; X64-NOBMI2:       # %bb.0:
+; X64-NOBMI2-NEXT:    movl %edi, %eax
+; X64-NOBMI2-NEXT:    movb $48, %cl
+; X64-NOBMI2-NEXT:    subb %sil, %cl
+; X64-NOBMI2-NEXT:    shll %cl, %eax
+; X64-NOBMI2-NEXT:    shrl %cl, %eax
+; X64-NOBMI2-NEXT:    retq
+;
+; X64-BMI2-LABEL: clear_highbits32_48:
+; X64-BMI2:       # %bb.0:
+; X64-BMI2-NEXT:    movb $48, %al
+; X64-BMI2-NEXT:    subb %sil, %al
+; X64-BMI2-NEXT:    shlxl %eax, %edi, %ecx
+; X64-BMI2-NEXT:    shrxl %eax, %ecx, %eax
+; X64-BMI2-NEXT:    retq
+  %numhighbits = sub i32 48, %numlowbits
+  %mask = lshr i32 -1, %numhighbits
+  %masked = and i32 %mask, %val
+  ret i32 %masked
+}
+
+define i32 @clear_highbits32_16_extrause(i32 %val, i32 %numlowbits, i32* %escape) nounwind {
+; X86-NOBMI2-LABEL: clear_highbits32_16_extrause:
+; X86-NOBMI2:       # %bb.0:
+; X86-NOBMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NOBMI2-NEXT:    movb $16, %cl
+; X86-NOBMI2-NEXT:    subb {{[0-9]+}}(%esp), %cl
+; X86-NOBMI2-NEXT:    movl $-1, %eax
+; X86-NOBMI2-NEXT:    shrl %cl, %eax
+; X86-NOBMI2-NEXT:    movl %eax, (%edx)
+; X86-NOBMI2-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI2-NEXT:    retl
+;
+; X86-BMI2-LABEL: clear_highbits32_16_extrause:
+; X86-BMI2:       # %bb.0:
+; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-BMI2-NEXT:    movb $16, %al
+; X86-BMI2-NEXT:    subb {{[0-9]+}}(%esp), %al
+; X86-BMI2-NEXT:    movl $-1, %edx
+; X86-BMI2-NEXT:    shrxl %eax, %edx, %eax
+; X86-BMI2-NEXT:    movl %eax, (%ecx)
+; X86-BMI2-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-BMI2-NEXT:    retl
+;
+; X64-NOBMI2-LABEL: clear_highbits32_16_extrause:
+; X64-NOBMI2:       # %bb.0:
+; X64-NOBMI2-NEXT:    movb $16, %cl
+; X64-NOBMI2-NEXT:    subb %sil, %cl
+; X64-NOBMI2-NEXT:    movl $-1, %eax
+; X64-NOBMI2-NEXT:    shrl %cl, %eax
+; X64-NOBMI2-NEXT:    movl %eax, (%rdx)
+; X64-NOBMI2-NEXT:    andl %edi, %eax
+; X64-NOBMI2-NEXT:    retq
+;
+; X64-BMI2-LABEL: clear_highbits32_16_extrause:
+; X64-BMI2:       # %bb.0:
+; X64-BMI2-NEXT:    movb $16, %al
+; X64-BMI2-NEXT:    subb %sil, %al
+; X64-BMI2-NEXT:    movl $-1, %ecx
+; X64-BMI2-NEXT:    shrxl %eax, %ecx, %eax
+; X64-BMI2-NEXT:    movl %eax, (%rdx)
+; X64-BMI2-NEXT:    andl %edi, %eax
+; X64-BMI2-NEXT:    retq
+  %numhighbits = sub i32 16, %numlowbits
+  %mask = lshr i32 -1, %numhighbits
+  store i32 %mask, i32* %escape
+  %masked = and i32 %mask, %val
+  ret i32 %masked
+}
+define i32 @clear_highbits32_48_extrause(i32 %val, i32 %numlowbits, i32* %escape) nounwind {
+; X86-NOBMI2-LABEL: clear_highbits32_48_extrause:
+; X86-NOBMI2:       # %bb.0:
+; X86-NOBMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NOBMI2-NEXT:    movb $48, %cl
+; X86-NOBMI2-NEXT:    subb {{[0-9]+}}(%esp), %cl
+; X86-NOBMI2-NEXT:    movl $-1, %eax
+; X86-NOBMI2-NEXT:    shrl %cl, %eax
+; X86-NOBMI2-NEXT:    movl %eax, (%edx)
+; X86-NOBMI2-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI2-NEXT:    retl
+;
+; X86-BMI2-LABEL: clear_highbits32_48_extrause:
+; X86-BMI2:       # %bb.0:
+; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-BMI2-NEXT:    movb $48, %al
+; X86-BMI2-NEXT:    subb {{[0-9]+}}(%esp), %al
+; X86-BMI2-NEXT:    movl $-1, %edx
+; X86-BMI2-NEXT:    shrxl %eax, %edx, %eax
+; X86-BMI2-NEXT:    movl %eax, (%ecx)
+; X86-BMI2-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-BMI2-NEXT:    retl
+;
+; X64-NOBMI2-LABEL: clear_highbits32_48_extrause:
+; X64-NOBMI2:       # %bb.0:
+; X64-NOBMI2-NEXT:    movb $48, %cl
+; X64-NOBMI2-NEXT:    subb %sil, %cl
+; X64-NOBMI2-NEXT:    movl $-1, %eax
+; X64-NOBMI2-NEXT:    shrl %cl, %eax
+; X64-NOBMI2-NEXT:    movl %eax, (%rdx)
+; X64-NOBMI2-NEXT:    andl %edi, %eax
+; X64-NOBMI2-NEXT:    retq
+;
+; X64-BMI2-LABEL: clear_highbits32_48_extrause:
+; X64-BMI2:       # %bb.0:
+; X64-BMI2-NEXT:    movb $48, %al
+; X64-BMI2-NEXT:    subb %sil, %al
+; X64-BMI2-NEXT:    movl $-1, %ecx
+; X64-BMI2-NEXT:    shrxl %eax, %ecx, %eax
+; X64-BMI2-NEXT:    movl %eax, (%rdx)
+; X64-BMI2-NEXT:    andl %edi, %eax
+; X64-BMI2-NEXT:    retq
+  %numhighbits = sub i32 48, %numlowbits
+  %mask = lshr i32 -1, %numhighbits
+  store i32 %mask, i32* %escape
+  %masked = and i32 %mask, %val
+  ret i32 %masked
+}
