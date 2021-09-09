@@ -132,7 +132,7 @@ enum SecType {
 };
 
 static inline std::string getSecName(SecType Type) {
-  switch (Type) {
+  switch ((int)Type) { // Avoid -Wcovered-switch-default
   case SecInValid:
     return "InvalidSection";
   case SecProfSummary:
@@ -149,8 +149,9 @@ static inline std::string getSecName(SecType Type) {
     return "CSNameTableSection";
   case SecLBRProfile:
     return "LBRProfileSection";
+  default:
+    return "UnknownSection";
   }
-  llvm_unreachable("");
 }
 
 // Entry type of section header table used by SampleProfileExtBinaryBaseReader
