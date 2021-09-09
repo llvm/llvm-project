@@ -12182,8 +12182,7 @@ static bool isConditionalZeroOrAllOnes(SDNode *N, bool AllOnes,
       // When looking for a 0 constant, N can be zext or sext.
       OtherOp = DAG.getConstant(1, dl, VT);
     else
-      OtherOp = DAG.getConstant(APInt::getAllOnesValue(VT.getSizeInBits()), dl,
-                                VT);
+      OtherOp = DAG.getConstant(APInt::getAllOnes(VT.getSizeInBits()), dl, VT);
     return true;
   }
   }
@@ -19325,8 +19324,8 @@ bool ARMTargetLowering::SimplifyDemandedBitsForTargetNode(
     if (Op.getResNo() == 0 && !Op->hasAnyUseOfValue(1) &&
         isa<ConstantSDNode>(Op->getOperand(2))) {
       unsigned ShAmt = Op->getConstantOperandVal(2);
-      if (ShAmt < 32 && OriginalDemandedBits.isSubsetOf(
-                            APInt::getAllOnesValue(32) << (32 - ShAmt)))
+      if (ShAmt < 32 && OriginalDemandedBits.isSubsetOf(APInt::getAllOnes(32)
+                                                        << (32 - ShAmt)))
         return TLO.CombineTo(
             Op, TLO.DAG.getNode(
                     ISD::SHL, SDLoc(Op), MVT::i32, Op.getOperand(1),

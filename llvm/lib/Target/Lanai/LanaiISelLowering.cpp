@@ -1400,8 +1400,7 @@ static bool isConditionalZeroOrAllOnes(SDNode *N, bool AllOnes, SDValue &CC,
       // value is 0.
       OtherOp = DAG.getConstant(0, dl, VT);
     else
-      OtherOp =
-          DAG.getConstant(APInt::getAllOnesValue(VT.getSizeInBits()), dl, VT);
+      OtherOp = DAG.getConstant(APInt::getAllOnes(VT.getSizeInBits()), dl, VT);
     return true;
   }
   }

@@ -364,7 +364,7 @@ bool TypePromotion::isSafeWrap(Instruction *I) {
   Total += OverflowConst->getValue().getBitWidth() < 32 ?
     OverflowConst->getValue().abs().zext(32) : OverflowConst->getValue().abs();
 
-  APInt Max = APInt::getAllOnesValue(TypePromotion::TypeSize);
+  APInt Max = APInt::getAllOnes(TypePromotion::TypeSize);
 
   if (Total.getBitWidth() > Max.getBitWidth()) {
     if (Total.ugt(Max.zext(Total.getBitWidth())))

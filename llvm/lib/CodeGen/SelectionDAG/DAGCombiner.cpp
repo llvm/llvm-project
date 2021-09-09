@@ -319,7 +319,7 @@ namespace {
     /// If so, return true.
     bool SimplifyDemandedBits(SDValue Op) {
       unsigned BitWidth = Op.getScalarValueSizeInBits();
-      APInt DemandedBits = APInt::getAllOnesValue(BitWidth);
+      APInt DemandedBits = APInt::getAllOnes(BitWidth);
       return SimplifyDemandedBits(Op, DemandedBits);
     }
 
@@ -345,7 +345,7 @@ namespace {
         return false;
 
       unsigned NumElts = Op.getValueType().getVectorNumElements();
-      APInt DemandedElts = APInt::getAllOnesValue(NumElts);
+      APInt DemandedElts = APInt::getAllOnes(NumElts);
       return SimplifyDemandedVectorElts(Op, DemandedElts);
     }
 
@@ -5640,11 +5640,11 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     // fold (and x, 0) -> 0, vector edition
     if (ISD::isConstantSplatVectorAllZeros(N0.getNode()))
       // do not return N0, because undef node may exist in N0
-      return DAG.getConstant(APInt::getNullValue(N0.getScalarValueSizeInBits()),
+      return DAG.getConstant(APInt::getZero(N0.getScalarValueSizeInBits()),
                              SDLoc(N), N0.getValueType());
     if (ISD::isConstantSplatVectorAllZeros(N1.getNode()))
       // do not return N1, because undef node may exist in N1
-      return DAG.getConstant(APInt::getNullValue(N1.getScalarValueSizeInBits()),
+      return DAG.getConstant(APInt::getZero(N1.getScalarValueSizeInBits()),
                              SDLoc(N), N1.getValueType());
 
     // fold (and x, -1) -> x, vector edition
@@ -5695,8 +5695,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
 
   // if (and x, c) is known to be zero, return 0
   unsigned BitWidth = VT.getScalarSizeInBits();
-  if (N1C && DAG.MaskedValueIsZero(SDValue(N, 0),
-                                   APInt::getAllOnesValue(BitWidth)))
+  if (N1C && DAG.MaskedValueIsZero(SDValue(N, 0), APInt::getAllOnes(BitWidth)))
     return DAG.getConstant(0, SDLoc(N), VT);
 
   if (SDValue NewSel = foldBinOpIntoSelect(N))
@@ -5758,7 +5757,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     // Get the constant (if applicable) the zero'th operand is being ANDed with.
     // This can be a pure constant or a vector splat, in which case we treat the
     // vector as a scalar and use the splat value.
-    APInt Constant = APInt::getNullValue(1);
+    APInt Constant = APInt::getZero(1);
     if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(N1)) {
       Constant = C->getAPIntValue();
     } else if (BuildVectorSDNode *Vector = dyn_cast<BuildVectorSDNode>(N1)) {
@@ -5789,7 +5788,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
         // Make sure that variable 'Constant' is only set if 'SplatBitSize' is a
         // multiple of 'BitWidth'. Otherwise, we could propagate a wrong value.
         if ((SplatBitSize % EltBitWidth) == 0) {
-          Constant = APInt::getAllOnesValue(EltBitWidth);
+          Constant = APInt::getAllOnes(EltBitWidth);
           for (unsigned i = 0, n = (SplatBitSize / EltBitWidth); i < n; ++i)
             Constant &= SplatValue.extractBits(EltBitWidth, i * EltBitWidth);
         }
@@ -7915,7 +7914,7 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
       // shift has been simplified to undef.
       uint64_t ShiftAmt = ShiftC->getLimitedValue();
       if (ShiftAmt < BitWidth) {
-        APInt Ones = APInt::getAllOnesValue(BitWidth);
+        APInt Ones = APInt::getAllOnes(BitWidth);
         Ones = N0Opcode == ISD::SHL ? Ones.shl(ShiftAmt) : Ones.lshr(ShiftAmt);
         if (XorC->getAPIntValue() == Ones) {
           // If the xor constant is a shifted -1, do a 'not' before the shift:
@@ -8271,8 +8270,7 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
     return NewSel;
 
   // if (shl x, c) is known to be zero, return 0
-  if (DAG.MaskedValueIsZero(SDValue(N, 0),
-                            APInt::getAllOnesValue(OpSizeInBits)))
+  if (DAG.MaskedValueIsZero(SDValue(N, 0), APInt::getAllOnes(OpSizeInBits)))
     return DAG.getConstant(0, SDLoc(N), VT);
 
   // fold (shl x, (trunc (and y, c))) -> (shl x, (and (trunc y), (trunc c))).
@@ -8790,8 +8788,8 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
     return NewSel;
 
   // if (srl x, c) is known to be zero, return 0
-  if (N1C && DAG.MaskedValueIsZero(SDValue(N, 0),
-                                   APInt::getAllOnesValue(OpSizeInBits)))
+  if (N1C &&
+      DAG.MaskedValueIsZero(SDValue(N, 0), APInt::getAllOnes(OpSizeInBits)))
     return DAG.getConstant(0, SDLoc(N), VT);
 
   // fold (srl (srl x, c1), c2) -> 0 or (srl x, (add c1, c2))
@@ -16733,7 +16731,7 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
     unsigned BitWidth = N1.getValueSizeInBits();
     APInt Imm = cast<ConstantSDNode>(N1)->getAPIntValue();
     if (Opc == ISD::AND)
-      Imm ^= APInt::getAllOnesValue(BitWidth);
+      Imm ^= APInt::getAllOnes(BitWidth);
     if (Imm == 0 || Imm.isAllOnesValue())
       return SDValue();
     unsigned ShAmt = Imm.countTrailingZeros();
@@ -16761,7 +16759,7 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
     if ((Imm & Mask) == Imm) {
       APInt NewImm = (Imm & Mask).lshr(ShAmt).trunc(NewBW);
       if (Opc == ISD::AND)
-        NewImm ^= APInt::getAllOnesValue(NewBW);
+        NewImm ^= APInt::getAllOnes(NewBW);
       uint64_t PtrOff = ShAmt / 8;
       // For big endian targets, we need to adjust the offset to the pointer to
       // load the correct bytes.
@@ -18911,7 +18909,7 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
                Use->getOperand(0) == VecOp &&
                isa<ConstantSDNode>(Use->getOperand(1));
       })) {
-    APInt DemandedElts = APInt::getNullValue(NumElts);
+    APInt DemandedElts = APInt::getZero(NumElts);
     for (SDNode *Use : VecOp->uses()) {
       auto *CstElt = cast<ConstantSDNode>(Use->getOperand(1));
       if (CstElt->getAPIntValue().ult(NumElts))
@@ -18924,7 +18922,7 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
         AddToWorklist(N);
       return SDValue(N, 0);
     }
-    APInt DemandedBits = APInt::getAllOnesValue(VecEltBitWidth);
+    APInt DemandedBits = APInt::getAllOnes(VecEltBitWidth);
     if (SimplifyDemandedBits(VecOp, DemandedBits, DemandedElts, true)) {
       // We simplified the vector operand of this extract element. If this
       // extract is not dead, visit it again so it is folded properly.

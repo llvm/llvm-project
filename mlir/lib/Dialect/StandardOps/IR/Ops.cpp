@@ -288,8 +288,7 @@ OpFoldResult AndOp::fold(ArrayRef<Attribute> operands) {
     return rhs();
   /// and(x, allOnes) -> x
   APInt intValue;
-  if (matchPattern(rhs(), m_ConstantInt(&intValue)) &&
-      intValue.isAllOnesValue())
+  if (matchPattern(rhs(), m_ConstantInt(&intValue)) && intValue.isAllOnes())
     return lhs();
   /// and(x,x) -> x
   if (lhs() == rhs())
@@ -1774,7 +1773,7 @@ OpFoldResult SignedFloorDivIOp::fold(ArrayRef<Attribute> operands) {
       return a;
     }
     unsigned bits = a.getBitWidth();
-    APInt zero = APInt::getNullValue(bits);
+    APInt zero = APInt::getZero(bits);
     if (a.sge(zero) && b.sgt(zero)) {
       // Both positive (or a is zero), return a / b.
       return a.sdiv_ov(b, overflowOrDiv0);
@@ -1824,7 +1823,7 @@ OpFoldResult SignedCeilDivIOp::fold(ArrayRef<Attribute> operands) {
       return a;
     }
     unsigned bits = a.getBitWidth();
-    APInt zero = APInt::getNullValue(bits);
+    APInt zero = APInt::getZero(bits);
     if (a.sgt(zero) && b.sgt(zero)) {
       // Both positive, return ceil(a, b).
       return signedCeilNonnegInputs(a, b, overflowOrDiv0);

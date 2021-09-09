@@ -173,10 +173,11 @@ public:
   /// \name Value Generators
   /// @{
 
-  /// Get the '0' value.
-  ///
-  /// \returns the '0' value for an APInt of the specified bit-width.
-  static APInt getNullValue(unsigned numBits) { return APInt(numBits, 0); }
+  /// Get the '0' value for the specified bit-width.
+  static APInt getZero(unsigned numBits) { return APInt(numBits, 0); }
+
+  /// NOTE: This is soft-deprecated.  Please use `getZero()` instead.
+  static APInt getNullValue(unsigned numBits) { return getZero(numBits); }
 
   /// Gets maximum unsigned value of APInt for specific bit width.
   static APInt getMaxValue(unsigned numBits) {
@@ -208,12 +209,13 @@ public:
     return getSignedMinValue(BitWidth);
   }
 
-  /// Get the all-ones value.
-  ///
-  /// \returns the all-ones value for an APInt of the specified bit-width.
-  static APInt getAllOnesValue(unsigned numBits) {
+  /// Return an APInt of a specified width with all bits set.
+  static APInt getAllOnes(unsigned numBits) {
     return APInt(numBits, WORDTYPE_MAX, true);
   }
+
+  /// NOTE: This is soft-deprecated.  Please use `getAllOnes()` instead.
+  static APInt getAllOnesValue(unsigned numBits) { return getAllOnes(numBits); }
 
   /// Return an APInt with exactly one bit set in the result.
   static APInt getOneBitSet(unsigned numBits, unsigned BitNo) {
@@ -340,42 +342,46 @@ public:
   /// that 0 is not a positive value.
   ///
   /// \returns true if this APInt is positive.
-  bool isStrictlyPositive() const { return isNonNegative() && !isNullValue(); }
+  bool isStrictlyPositive() const { return isNonNegative() && !isZero(); }
 
   /// Determine if this APInt Value is non-positive (<= 0).
   ///
   /// \returns true if this APInt is non-positive.
   bool isNonPositive() const { return !isStrictlyPositive(); }
 
-  /// Determine if all bits are set
-  ///
-  /// This checks to see if the value has all bits of the APInt are set or not.
-  bool isAllOnesValue() const {
+  /// Determine if all bits are set.
+  bool isAllOnes() const {
     if (isSingleWord())
       return U.VAL == WORDTYPE_MAX >> (APINT_BITS_PER_WORD - BitWidth);
     return countTrailingOnesSlowCase() == BitWidth;
   }
 
-  /// Determine if all bits are clear
-  ///
-  /// This checks to see if the value has all bits of the APInt are clear or
-  /// not.
-  bool isNullValue() const { return !*this; }
+  /// NOTE: This is soft-deprecated.  Please use `isAllOnes()` instead.
+  bool isAllOnesValue() const { return isAllOnes(); }
+
+  /// Determine if this value is zero, i.e. all bits are clear.
+  bool isZero() const { return !*this; }
+
+  /// NOTE: This is soft-deprecated.  Please use `isZero()` instead.
+  bool isNullValue() const { return isZero(); }
 
   /// Determine if this is a value of 1.
   ///
   /// This checks to see if the value of this APInt is one.
-  bool isOneValue() const {
+  bool isOne() const {
     if (isSingleWord())
       return U.VAL == 1;
     return countLeadingZerosSlowCase() == BitWidth - 1;
   }
 
+  /// NOTE: This is soft-deprecated.  Please use `isOne()` instead.
+  bool isOneValue() const { return isOne(); }
+
   /// Determine if this is the largest unsigned value.
   ///
   /// This checks to see if the value of this APInt is the maximum unsigned
   /// value for the APInt's bit width.
-  bool isMaxValue() const { return isAllOnesValue(); }
+  bool isMaxValue() const { return isAllOnes(); }
 
   /// Determine if this is the largest signed value.
   ///
@@ -391,7 +397,7 @@ public:
   ///
   /// This checks to see if the value of this APInt is the minimum unsigned
   /// value for the APInt's bit width.
-  bool isMinValue() const { return isNullValue(); }
+  bool isMinValue() const { return isZero(); }
 
   /// Determine if this is the smallest signed value.
   ///

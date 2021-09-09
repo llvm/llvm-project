@@ -170,7 +170,7 @@ ConstantRange getStaticAllocaSizeRange(const AllocaInst &AI) {
     if (Overflow)
       return R;
   }
-  R = ConstantRange(APInt::getNullValue(PointerSize), APSize);
+  R = ConstantRange(APInt::getZero(PointerSize), APSize);
   assert(!isUnsafe(R));
   return R;
 }
@@ -299,8 +299,8 @@ ConstantRange StackSafetyLocalAnalysis::getAccessRange(Value *Addr, Value *Base,
   APInt APSize(PointerSize, Size.getFixedSize(), true);
   if (APSize.isNegative())
     return UnknownRange;
-  return getAccessRange(
-      Addr, Base, ConstantRange(APInt::getNullValue(PointerSize), APSize));
+  return getAccessRange(Addr, Base,
+                        ConstantRange(APInt::getZero(PointerSize), APSize));
 }
 
 ConstantRange StackSafetyLocalAnalysis::getMemIntrinsicAccessRange(
@@ -323,8 +323,7 @@ ConstantRange StackSafetyLocalAnalysis::getMemIntrinsicAccessRange(
   if (Sizes.getUpper().isNegative() || isUnsafe(Sizes))
     return UnknownRange;
   Sizes = Sizes.sextOrTrunc(PointerSize);
-  ConstantRange SizeRange(APInt::getNullValue(PointerSize),
-                          Sizes.getUpper() - 1);
+  ConstantRange SizeRange(APInt::getZero(PointerSize), Sizes.getUpper() - 1);
   return getAccessRange(U, Base, SizeRange);
 }
 

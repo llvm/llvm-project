@@ -60,7 +60,7 @@ public:
   }
 
   /// Returns true if we don't know any bits.
-  bool isUnknown() const { return Zero.isNullValue() && One.isNullValue(); }
+  bool isUnknown() const { return Zero.isZero() && One.isZero(); }
 
   /// Resets the known state of all bits.
   void resetAll() {
@@ -99,10 +99,12 @@ public:
   bool isNonNegative() const { return Zero.isSignBitSet(); }
 
   /// Returns true if this value is known to be non-zero.
-  bool isNonZero() const { return !One.isNullValue(); }
+  bool isNonZero() const { return !One.isZero(); }
 
   /// Returns true if this value is known to be positive.
-  bool isStrictlyPositive() const { return Zero.isSignBitSet() && !One.isNullValue(); }
+  bool isStrictlyPositive() const {
+    return Zero.isSignBitSet() && !One.isZero();
+  }
 
   /// Make this value negative.
   void makeNegative() {

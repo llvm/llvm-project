@@ -1121,7 +1121,7 @@ unsigned APInt::nearestLogBase2() const {
     return U.VAL - 1;
 
   // Handle the zero case.
-  if (isNullValue())
+  if (isZero())
     return UINT32_MAX;
 
   // The non-zero case is handled by computing:
@@ -2764,7 +2764,7 @@ llvm::APIntOps::SolveQuadraticEquationWrap(APInt A, APInt B, APInt C,
                     << "x + " << C << ", rw:" << RangeWidth << '\n');
 
   // Identify 0 as a (non)solution immediately.
-  if (C.sextOrTrunc(RangeWidth).isNullValue() ) {
+  if (C.sextOrTrunc(RangeWidth).isZero()) {
     LLVM_DEBUG(dbgs() << __func__ << ": zero solution\n");
     return APInt(CoeffWidth, 0);
   }
@@ -2826,7 +2826,7 @@ llvm::APIntOps::SolveQuadraticEquationWrap(APInt A, APInt B, APInt C,
   auto RoundUp = [] (const APInt &V, const APInt &A) -> APInt {
     assert(A.isStrictlyPositive());
     APInt T = V.abs().urem(A);
-    if (T.isNullValue())
+    if (T.isZero())
       return V;
     return V.isNegative() ? V+T : V+(A-T);
   };
@@ -2910,7 +2910,7 @@ llvm::APIntOps::SolveQuadraticEquationWrap(APInt A, APInt B, APInt C,
   // can be 0, but cannot be negative.
   assert(X.isNonNegative() && "Solution should be non-negative");
 
-  if (!InexactSQ && Rem.isNullValue()) {
+  if (!InexactSQ && Rem.isZero()) {
     LLVM_DEBUG(dbgs() << __func__ << ": solution (root): " << X << '\n');
     return X;
   }
@@ -2926,8 +2926,8 @@ llvm::APIntOps::SolveQuadraticEquationWrap(APInt A, APInt B, APInt C,
 
   APInt VX = (A*X + B)*X + C;
   APInt VY = VX + TwoA*X + A + B;
-  bool SignChange = VX.isNegative() != VY.isNegative() ||
-                    VX.isNullValue() != VY.isNullValue();
+  bool SignChange =
+      VX.isNegative() != VY.isNegative() || VX.isZero() != VY.isZero();
   // If the sign did not change between X and X+1, X is not a valid solution.
   // This could happen when the actual (exact) roots don't have an integer
   // between them, so they would both be contained between X and X+1.
