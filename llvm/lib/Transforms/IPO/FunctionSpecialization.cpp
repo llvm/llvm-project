@@ -68,8 +68,8 @@ static cl::opt<unsigned> MaxConstantsThreshold(
 
 static cl::opt<unsigned> SmallFunctionThreshold(
     "func-specialization-size-threshold", cl::Hidden,
-    cl::desc("For functions whose IR instruction count below this threshold, "
-             " they wouldn't be specialized to avoid useless sepcializations."),
+    cl::desc("Don't specialize functions that have less than this theshold "
+             "number of instructions"),
     cl::init(100));
 
 static cl::opt<unsigned>
@@ -77,9 +77,12 @@ static cl::opt<unsigned>
                           cl::desc("Average loop iteration count cost"),
                           cl::init(10));
 
+// TODO: This needs checking to see the impact on compile-times, which is why
+// this is off by default for now.
 static cl::opt<bool> EnableSpecializationForLiteralConstant(
     "function-specialization-for-literal-constant", cl::init(false), cl::Hidden,
-    cl::desc("Make function specialization available for literal constant."));
+    cl::desc("Enable specialization of functions that take a literal constant "
+             "as an argument."));
 
 // Helper to check if \p LV is either a constant or a constant
 // range with a single element. This should cover exactly the same cases as the
