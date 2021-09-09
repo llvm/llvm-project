@@ -7,7 +7,7 @@ tablegen("Options") {
   args = [ "-gen-opt-parser-defs" ]
 }
 
-if (host_os == "mac") {
+if (current_os == "mac") {
   write_cmake_config("write_info_plist") {
     input = "lldb-Info.plist.in"
     output = "$target_gen_dir/lldb-Info.plist"
@@ -25,11 +25,14 @@ executable("lldb") {
     "//llvm/lib/Support",
     "//llvm/utils/gn/build/libs/xar",
   ]
-  if (host_os == "mac") {
+  if (current_os == "mac") {
     deps += [ ":write_info_plist" ]
     plist = get_target_outputs(":write_info_plist")
     ldflags = [ "-Wl,-sectcreate,__TEXT,__info_plist," +
                 rebase_path(plist[0], root_out_dir) ]
+  }
+  if (current_os == "linux") {
+    deps += [ "//lldb/tools/lldb-server" ]
   }
 
   sources = [

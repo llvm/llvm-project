@@ -109,6 +109,10 @@ lldb_plugins += [
     "ObjectFileWasm",
   ],
   [
+    "//lldb/source/Plugins/Platform/Linux",
+    "PlatformLinux",
+  ],
+  [
     "//lldb/source/Plugins/Platform/MacOSX",
     "PlatformMacOSX",
   ],
