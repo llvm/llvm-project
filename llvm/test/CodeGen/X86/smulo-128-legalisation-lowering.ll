@@ -5,22 +5,77 @@
 define zeroext i1 @smuloi128(i128 %v1, i128 %v2, i128* %res) {
 ; X64-LABEL: smuloi128:
 ; X64:       ## %bb.0:
-; X64-NEXT:    pushq %rbx
+; X64-NEXT:    pushq %r15
 ; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    subq $16, %rsp
+; X64-NEXT:    pushq %r14
+; X64-NEXT:    .cfi_def_cfa_offset 24
+; X64-NEXT:    pushq %r12
 ; X64-NEXT:    .cfi_def_cfa_offset 32
-; X64-NEXT:    .cfi_offset %rbx, -16
-; X64-NEXT:    movq %r8, %rbx
-; X64-NEXT:    movq $0, {{[0-9]+}}(%rsp)
-; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
-; X64-NEXT:    callq ___muloti4
-; X64-NEXT:    cmpq $0, {{[0-9]+}}(%rsp)
-; X64-NEXT:    setne %cl
-; X64-NEXT:    movq %rdx, 8(%rbx)
-; X64-NEXT:    movq %rax, (%rbx)
-; X64-NEXT:    movl %ecx, %eax
-; X64-NEXT:    addq $16, %rsp
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    .cfi_def_cfa_offset 40
+; X64-NEXT:    .cfi_offset %rbx, -40
+; X64-NEXT:    .cfi_offset %r12, -32
+; X64-NEXT:    .cfi_offset %r14, -24
+; X64-NEXT:    .cfi_offset %r15, -16
+; X64-NEXT:    movq %rdx, %r12
+; X64-NEXT:    movq %rsi, %r10
+; X64-NEXT:    movq %rdi, %r15
+; X64-NEXT:    sarq $63, %rsi
+; X64-NEXT:    movq %rdx, %rdi
+; X64-NEXT:    imulq %rsi, %rdi
+; X64-NEXT:    movq %rdx, %rax
+; X64-NEXT:    mulq %rsi
+; X64-NEXT:    movq %rax, %r9
+; X64-NEXT:    addq %rdi, %rdx
+; X64-NEXT:    imulq %rcx, %rsi
+; X64-NEXT:    addq %rdx, %rsi
+; X64-NEXT:    movq %rcx, %rdi
+; X64-NEXT:    sarq $63, %rdi
+; X64-NEXT:    movq %rdi, %rbx
+; X64-NEXT:    imulq %r10, %rbx
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    mulq %r15
+; X64-NEXT:    movq %rax, %r11
+; X64-NEXT:    addq %rbx, %rdx
+; X64-NEXT:    imulq %r15, %rdi
+; X64-NEXT:    addq %rdx, %rdi
+; X64-NEXT:    addq %r9, %r11
+; X64-NEXT:    adcq %rsi, %rdi
+; X64-NEXT:    movq %r15, %rax
+; X64-NEXT:    mulq %r12
+; X64-NEXT:    movq %rdx, %r14
+; X64-NEXT:    movq %rax, %r9
+; X64-NEXT:    movq %r10, %rax
+; X64-NEXT:    mulq %r12
+; X64-NEXT:    movq %rdx, %rbx
+; X64-NEXT:    movq %rax, %rsi
+; X64-NEXT:    addq %r14, %rsi
+; X64-NEXT:    adcq $0, %rbx
+; X64-NEXT:    movq %r15, %rax
+; X64-NEXT:    mulq %rcx
+; X64-NEXT:    movq %rdx, %r14
+; X64-NEXT:    movq %rax, %r15
+; X64-NEXT:    addq %rsi, %r15
+; X64-NEXT:    adcq %rbx, %r14
+; X64-NEXT:    setb %al
+; X64-NEXT:    movzbl %al, %esi
+; X64-NEXT:    movq %r10, %rax
+; X64-NEXT:    mulq %rcx
+; X64-NEXT:    addq %r14, %rax
+; X64-NEXT:    adcq %rsi, %rdx
+; X64-NEXT:    addq %r11, %rax
+; X64-NEXT:    adcq %rdi, %rdx
+; X64-NEXT:    movq %r15, 8(%r8)
+; X64-NEXT:    sarq $63, %r15
+; X64-NEXT:    xorq %r15, %rdx
+; X64-NEXT:    xorq %rax, %r15
+; X64-NEXT:    orq %rdx, %r15
+; X64-NEXT:    setne %al
+; X64-NEXT:    movq %r9, (%r8)
 ; X64-NEXT:    popq %rbx
+; X64-NEXT:    popq %r12
+; X64-NEXT:    popq %r14
+; X64-NEXT:    popq %r15
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: smuloi128:
