@@ -2456,7 +2456,7 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
   if (Depth > MaxArithDepth || hasHugeExpression(Ops))
     return getOrCreateAddExpr(Ops, ComputeFlags(Ops));
 
-  if (SCEV *S = std::get<0>(findExistingSCEVInCache(scAddExpr, Ops))) {
+  if (SCEV *S = findExistingSCEVInCache(scAddExpr, Ops)) {
     // Don't strengthen flags if we have no new information.
     SCEVAddExpr *Add = static_cast<SCEVAddExpr *>(S);
     if (Add->getNoWrapFlags(OrigFlags) != OrigFlags)
@@ -3026,7 +3026,7 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
   if (Depth > MaxArithDepth || hasHugeExpression(Ops))
     return getOrCreateMulExpr(Ops, ComputeFlags(Ops));
 
-  if (SCEV *S = std::get<0>(findExistingSCEVInCache(scMulExpr, Ops))) {
+  if (SCEV *S = findExistingSCEVInCache(scMulExpr, Ops)) {
     // Don't strengthen flags if we have no new information.
     SCEVMulExpr *Mul = static_cast<SCEVMulExpr *>(S);
     if (Mul->getNoWrapFlags(OrigFlags) != OrigFlags)
@@ -3657,16 +3657,14 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
   return GEPExpr;
 }
 
-std::tuple<SCEV *, FoldingSetNodeID, void *>
-ScalarEvolution::findExistingSCEVInCache(SCEVTypes SCEVType,
-                                         ArrayRef<const SCEV *> Ops) {
+SCEV *ScalarEvolution::findExistingSCEVInCache(SCEVTypes SCEVType,
+                                               ArrayRef<const SCEV *> Ops) {
   FoldingSetNodeID ID;
-  void *IP = nullptr;
   ID.AddInteger(SCEVType);
   for (unsigned i = 0, e = Ops.size(); i != e; ++i)
     ID.AddPointer(Ops[i]);
-  return std::tuple<SCEV *, FoldingSetNodeID, void *>(
-      UniqueSCEVs.FindNodeOrInsertPos(ID, IP), std::move(ID), IP);
+  void *IP = nullptr;
+  return UniqueSCEVs.FindNodeOrInsertPos(ID, IP);
 }
 
 const SCEV *ScalarEvolution::getAbsExpr(const SCEV *Op, bool IsNSW) {
@@ -3696,7 +3694,7 @@ const SCEV *ScalarEvolution::getMinMaxExpr(SCEVTypes Kind,
   GroupByComplexity(Ops, &LI, DT);
 
   // Check if we have created the same expression before.
-  if (const SCEV *S = std::get<0>(findExistingSCEVInCache(Kind, Ops))) {
+  if (const SCEV *S = findExistingSCEVInCache(Kind, Ops)) {
     return S;
   }
 
@@ -3794,10 +3792,12 @@ const SCEV *ScalarEvolution::getMinMaxExpr(SCEVTypes Kind,
 
   // Okay, it looks like we really DO need an expr.  Check to see if we
   // already have one, otherwise create a new one.
-  const SCEV *ExistingSCEV;
   FoldingSetNodeID ID;
-  void *IP;
-  std::tie(ExistingSCEV, ID, IP) = findExistingSCEVInCache(Kind, Ops);
+  ID.AddInteger(Kind);
+  for (unsigned i = 0, e = Ops.size(); i != e; ++i)
+    ID.AddPointer(Ops[i]);
+  void *IP = nullptr;
+  const SCEV *ExistingSCEV = UniqueSCEVs.FindNodeOrInsertPos(ID, IP);
   if (ExistingSCEV)
     return ExistingSCEV;
   const SCEV **O = SCEVAllocator.Allocate<const SCEV *>(Ops.size());
