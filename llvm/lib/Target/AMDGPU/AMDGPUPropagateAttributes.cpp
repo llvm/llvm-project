@@ -55,10 +55,7 @@ static constexpr const FeatureBitset TargetFeatures = {
 
 // Attributes to propagate.
 // TODO: Support conservative min/max merging instead of cloning.
-static constexpr const char* AttributeNames[] = {
-  "amdgpu-waves-per-eu",
-  "amdgpu-flat-work-group-size"
-};
+static constexpr const char *AttributeNames[] = {"amdgpu-waves-per-eu"};
 
 static constexpr unsigned NumAttr =
   sizeof(AttributeNames) / sizeof(AttributeNames[0]);
