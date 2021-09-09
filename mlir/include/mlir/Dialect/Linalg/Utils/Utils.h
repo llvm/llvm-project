@@ -91,7 +91,7 @@ SmallVector<Value> computeTileSizes(OpBuilder &b, Location loc, ValueRange ivs,
 /// at offsets `lbs` and with sizes `subShapeSizes`.
 Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
                      ValueRange tileSizes, AffineMap map, ValueRange lbs,
-                     ValueRange subShapeSizes);
+                     ValueRange ubs, ValueRange subShapeSizes);
 
 /// Creates extract_slice/subview ops for all `valuesToTile` of the given
 /// `linalgOp` with `builder`, assuming `linalgOp` is being fused into a loop
