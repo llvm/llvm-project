@@ -16,6 +16,7 @@
 #define LLVM_SUPPORT_HASHBUILDER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Endian.h"
@@ -405,6 +406,33 @@ using HashBuilder =
     HashBuilderImpl<HasherT, (Endianness == support::endianness::native
                                   ? support::endian::system_endianness()
                                   : Endianness)>;
+
+namespace hashbuilder_detail {
+class HashCodeHasher {
+public:
+  HashCodeHasher() : Code(0) {}
+  void update(ArrayRef<uint8_t> Data) {
+    hash_code DataCode = hash_value(Data);
+    Code = hash_combine(Code, DataCode);
+  }
+  hash_code Code;
+};
+
+using HashCodeHashBuilder = HashBuilder<hashbuilder_detail::HashCodeHasher,
+                                        support::endianness::native>;
+} // namespace hashbuilder_detail
+
+/// Provide a default implementation of `hash_value` when `addHash(const T &)`
+/// is supported.
+template <typename T>
+std::enable_if_t<
+    is_detected<hashbuilder_detail::HashCodeHashBuilder::HasAddHashT, T>::value,
+    hash_code>
+hash_value(const T &Value) {
+  hashbuilder_detail::HashCodeHashBuilder HBuilder;
+  HBuilder.add(Value);
+  return HBuilder.getHasher().Code;
+}
 } // end namespace llvm
 
 #endif // LLVM_SUPPORT_HASHBUILDER_H
