@@ -1152,15 +1152,13 @@ def addr   : ComplexPattern<iPTR, 1, "SelectAddr",[], []>;
 /// This is just the offset part of iaddr, used for preinc.
 def iaddroff : ComplexPattern<iPTR, 1, "SelectAddrImmOffs", [], []>;
 
-// PC Relative Address
-def pcreladdr : ComplexPattern<iPTR, 1, "SelectAddrPCRel", [], []>;
-
 // Load and Store Instruction Selection addressing modes.
 def DForm  : ComplexPattern<iPTR, 2, "SelectDForm",    [], [SDNPWantParent]>;
 def DSForm : ComplexPattern<iPTR, 2, "SelectDSForm",   [], [SDNPWantParent]>;
 def DQForm : ComplexPattern<iPTR, 2, "SelectDQForm",   [], [SDNPWantParent]>;
 def XForm  : ComplexPattern<iPTR, 2, "SelectXForm",    [], [SDNPWantParent]>;
 def ForceXForm : ComplexPattern<iPTR, 2, "SelectForceXForm", [], [SDNPWantParent]>;
+def PCRelForm : ComplexPattern<iPTR, 2, "SelectPCRelForm", [], [SDNPWantParent]>;
 
 //===----------------------------------------------------------------------===//
 // PowerPC Instruction Predicate Definitions.

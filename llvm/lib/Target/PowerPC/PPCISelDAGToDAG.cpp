@@ -262,6 +262,14 @@ namespace {
                                                 None) == PPC::AM_DForm;
     }
 
+    /// SelectPCRelForm - Returns true if address N can be represented by
+    /// PC-Relative addressing mode.
+    bool SelectPCRelForm(SDNode *Parent, SDValue N, SDValue &Disp,
+                         SDValue &Base) {
+      return PPCLowering->SelectOptimalAddrMode(Parent, N, Disp, Base, *CurDAG,
+                                                None) == PPC::AM_PCRel;
+    }
+
     /// SelectXForm - Returns true if address N can be represented by the
     /// addressing mode of XForm instructions (an indexed [r+r] operation).
     bool SelectXForm(SDNode *Parent, SDValue N, SDValue &Disp, SDValue &Base) {
