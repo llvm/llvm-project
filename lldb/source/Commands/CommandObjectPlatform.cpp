@@ -498,8 +498,7 @@ public:
                 lldb::eFilePermissionsWorldRead;
       lldb::user_id_t fd = platform_sp->OpenFile(
           FileSpec(cmd_line),
-          File::eOpenOptionReadWrite | File::eOpenOptionAppend |
-               File::eOpenOptionCanCreate,
+          File::eOpenOptionReadWrite | File::eOpenOptionCanCreate,
           perms, error);
       if (error.Success()) {
         result.AppendMessageWithFormat("File Descriptor = %" PRIu64 "\n", fd);
