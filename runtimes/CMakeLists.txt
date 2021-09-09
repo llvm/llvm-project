@@ -58,12 +58,6 @@ if(compiler_rt_path)
   endif()
 endif()
 
-if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-  set(LLVM_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
-  set(LLVM_TOOLS_BINARY_DIR ${LLVM_BINARY_DIR}/bin)
-  set(LLVM_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib)
-endif()
-
 # Setting these variables will allow the sub-build to put their outputs into
 # the library and bin directories of the top-level build.
 set(LLVM_LIBRARY_OUTPUT_INTDIR ${LLVM_LIBRARY_DIR})
