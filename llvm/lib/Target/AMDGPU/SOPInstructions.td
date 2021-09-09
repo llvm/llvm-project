@@ -517,9 +517,10 @@ let Uses = [SCC] in {
     def S_CSELECT_B32 : SOP2_32 <"s_cselect_b32",
       [(set i32:$sdst, (SelectPat<select> i32:$src0, i32:$src1))]
     >;
+    def S_CSELECT_B64 : SOP2_64 <"s_cselect_b64",
+      [(set i64:$sdst, (SelectPat<select> i64:$src0, i64:$src1))]
+    >;
   }
-
-  def S_CSELECT_B64 : SOP2_64 <"s_cselect_b64">;
 } // End Uses = [SCC]
 
 let Defs = [SCC] in {
