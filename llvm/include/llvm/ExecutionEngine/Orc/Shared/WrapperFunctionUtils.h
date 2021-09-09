@@ -315,6 +315,7 @@ private:
   static void callAsync(HandlerT &&H,
                         SerializeAndSendResultT &&SerializeAndSendResult,
                         ArgTupleT Args, std::index_sequence<I...>) {
+    (void)Args; // Silence a buggy GCC warning.
     return std::forward<HandlerT>(H)(std::move(SerializeAndSendResult),
                                      std::move(std::get<I>(Args))...);
   }
