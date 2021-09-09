@@ -534,7 +534,7 @@ bool IdentifierNamingCheck::HungarianNotation::removeDuplicatedPrefix(
   return false;
 }
 
-const std::string IdentifierNamingCheck::HungarianNotation::getDataTypePrefix(
+std::string IdentifierNamingCheck::HungarianNotation::getDataTypePrefix(
     StringRef TypeName, const NamedDecl *ND,
     const IdentifierNamingCheck::HungarianNotationOption &HNOption) const {
   if (!ND || TypeName.empty())
