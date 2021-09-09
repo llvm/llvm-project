@@ -747,8 +747,6 @@ collate_byname<wchar_t>::do_transform(const char_type* lo, const char_type* hi) 
     return out;
 }
 
-// template <> class ctype<wchar_t>;
-
 const ctype_base::mask ctype_base::space;
 const ctype_base::mask ctype_base::print;
 const ctype_base::mask ctype_base::cntrl;
@@ -761,6 +759,8 @@ const ctype_base::mask ctype_base::xdigit;
 const ctype_base::mask ctype_base::blank;
 const ctype_base::mask ctype_base::alnum;
 const ctype_base::mask ctype_base::graph;
+
+// template <> class ctype<wchar_t>;
 
 locale::id ctype<wchar_t>::id;
 
