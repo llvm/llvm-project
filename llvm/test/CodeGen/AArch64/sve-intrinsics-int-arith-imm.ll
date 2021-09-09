@@ -6,7 +6,7 @@
 define <vscale x 16 x i8> @add_i8(<vscale x 16 x i8> %a) {
 ; CHECK-LABEL: add_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add z0.b, z0.b, #127
+; CHECK-NEXT:    add z0.b, z0.b, #127 // =0x7f
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %elt = insertelement <vscale x 16 x i8> undef, i8 127, i32 0
@@ -20,7 +20,7 @@ define <vscale x 16 x i8> @add_i8(<vscale x 16 x i8> %a) {
 define <vscale x 8 x i16> @add_i16(<vscale x 8 x i16> %a) {
 ; CHECK-LABEL: add_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add z0.h, z0.h, #127
+; CHECK-NEXT:    add z0.h, z0.h, #127 // =0x7f
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
   %elt = insertelement <vscale x 8 x i16> undef, i16 127, i32 0
@@ -50,7 +50,7 @@ define <vscale x 8 x i16> @add_i16_out_of_range(<vscale x 8 x i16> %a) {
 define <vscale x 4 x i32> @add_i32(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: add_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add z0.s, z0.s, #127
+; CHECK-NEXT:    add z0.s, z0.s, #127 // =0x7f
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
   %elt = insertelement <vscale x 4 x i32> undef, i32 127, i32 0
@@ -80,7 +80,7 @@ define <vscale x 4 x i32> @add_i32_out_of_range(<vscale x 4 x i32> %a) {
 define <vscale x 2 x i64> @add_i64(<vscale x 2 x i64> %a) {
 ; CHECK-LABEL: add_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add z0.d, z0.d, #127
+; CHECK-NEXT:    add z0.d, z0.d, #127 // =0x7f
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
   %elt = insertelement <vscale x 2 x i64> undef, i64 127, i64 0
@@ -112,7 +112,7 @@ define <vscale x 2 x i64> @add_i64_out_of_range(<vscale x 2 x i64> %a) {
 define <vscale x 16 x i8> @sub_i8(<vscale x 16 x i8> %a) {
 ; CHECK-LABEL: sub_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub z0.b, z0.b, #127
+; CHECK-NEXT:    sub z0.b, z0.b, #127 // =0x7f
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %elt = insertelement <vscale x 16 x i8> undef, i8 127, i32 0
@@ -126,7 +126,7 @@ define <vscale x 16 x i8> @sub_i8(<vscale x 16 x i8> %a) {
 define <vscale x 8 x i16> @sub_i16(<vscale x 8 x i16> %a) {
 ; CHECK-LABEL: sub_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub z0.h, z0.h, #127
+; CHECK-NEXT:    sub z0.h, z0.h, #127 // =0x7f
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
   %elt = insertelement <vscale x 8 x i16> undef, i16 127, i32 0
@@ -156,7 +156,7 @@ define <vscale x 8 x i16> @sub_i16_out_of_range(<vscale x 8 x i16> %a) {
 define <vscale x 4 x i32> @sub_i32(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: sub_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub z0.s, z0.s, #127
+; CHECK-NEXT:    sub z0.s, z0.s, #127 // =0x7f
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
   %elt = insertelement <vscale x 4 x i32> undef, i32 127, i32 0
@@ -186,7 +186,7 @@ define <vscale x 4 x i32> @sub_i32_out_of_range(<vscale x 4 x i32> %a) {
 define <vscale x 2 x i64> @sub_i64(<vscale x 2 x i64> %a) {
 ; CHECK-LABEL: sub_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub z0.d, z0.d, #127
+; CHECK-NEXT:    sub z0.d, z0.d, #127 // =0x7f
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
   %elt = insertelement <vscale x 2 x i64> undef, i64 127, i64 0
@@ -216,8 +216,9 @@ define <vscale x 2 x i64> @sub_i64_out_of_range(<vscale x 2 x i64> %a) {
 ; As sub_i32 but where pg is i8 based and thus compatible for i32.
 define <vscale x 4 x i32> @sub_i32_ptrue_all_b(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: sub_i32_ptrue_all_b:
-; CHECK: sub z0.s, z0.s, #1
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub z0.s, z0.s, #1 // =0x1
+; CHECK-NEXT:    ret
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
   %b = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dup.x.nxv4i32(i32 1)
@@ -230,8 +231,9 @@ define <vscale x 4 x i32> @sub_i32_ptrue_all_b(<vscale x 4 x i32> %a) #0 {
 ; As sub_i32 but where pg is i16 based and thus compatible for i32.
 define <vscale x 4 x i32> @sub_i32_ptrue_all_h(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: sub_i32_ptrue_all_h:
-; CHECK: sub z0.s, z0.s, #1
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub z0.s, z0.s, #1 // =0x1
+; CHECK-NEXT:    ret
   %pg.h = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %pg.h)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
@@ -246,10 +248,11 @@ define <vscale x 4 x i32> @sub_i32_ptrue_all_h(<vscale x 4 x i32> %a) #0 {
 ; thus inactive lanes are important and the immediate form cannot be used.
 define <vscale x 4 x i32> @sub_i32_ptrue_all_d(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: sub_i32_ptrue_all_d:
-; CHECK-DAG: ptrue [[PG:p[0-9]+]].d
-; CHECK-DAG: mov [[DUP:z[0-9]+]].s, #1
-; CHECK-DAG: sub z0.s, [[PG]]/m, z0.s, [[DUP]].s
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z1.s, #1 // =0x1
+; CHECK-NEXT:    sub z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
   %pg.d = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %pg.d)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
@@ -372,8 +375,9 @@ define <vscale x 2 x i64> @smax_i64_out_of_range(<vscale x 2 x i64> %a) {
 ; As smax_i32 but where pg is i8 based and thus compatible for i32.
 define <vscale x 4 x i32> @smax_i32_ptrue_all_b(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: smax_i32_ptrue_all_b:
-; CHECK: smax z0.s, z0.s, #1
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smax z0.s, z0.s, #1
+; CHECK-NEXT:    ret
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
   %b = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dup.x.nxv4i32(i32 1)
@@ -386,8 +390,9 @@ define <vscale x 4 x i32> @smax_i32_ptrue_all_b(<vscale x 4 x i32> %a) #0 {
 ; As smax_i32 but where pg is i16 based and thus compatible for i32.
 define <vscale x 4 x i32> @smax_i32_ptrue_all_h(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: smax_i32_ptrue_all_h:
-; CHECK: smax z0.s, z0.s, #1
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smax z0.s, z0.s, #1
+; CHECK-NEXT:    ret
   %pg.h = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %pg.h)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
@@ -402,10 +407,11 @@ define <vscale x 4 x i32> @smax_i32_ptrue_all_h(<vscale x 4 x i32> %a) #0 {
 ; thus inactive lanes are important and the immediate form cannot be used.
 define <vscale x 4 x i32> @smax_i32_ptrue_all_d(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: smax_i32_ptrue_all_d:
-; CHECK-DAG: ptrue [[PG:p[0-9]+]].d
-; CHECK-DAG: mov [[DUP:z[0-9]+]].s, #1
-; CHECK-DAG: smax z0.s, [[PG]]/m, z0.s, [[DUP]].s
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z1.s, #1 // =0x1
+; CHECK-NEXT:    smax z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
   %pg.d = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %pg.d)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
@@ -528,8 +534,9 @@ define <vscale x 2 x i64> @smin_i64_out_of_range(<vscale x 2 x i64> %a) {
 ; As smin_i32 but where pg is i8 based and thus compatible for i32.
 define <vscale x 4 x i32> @smin_i32_ptrue_all_b(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: smin_i32_ptrue_all_b:
-; CHECK: smin z0.s, z0.s, #1
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smin z0.s, z0.s, #1
+; CHECK-NEXT:    ret
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
   %b = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dup.x.nxv4i32(i32 1)
@@ -542,8 +549,9 @@ define <vscale x 4 x i32> @smin_i32_ptrue_all_b(<vscale x 4 x i32> %a) #0 {
 ; As smin_i32 but where pg is i16 based and thus compatible for i32.
 define <vscale x 4 x i32> @smin_i32_ptrue_all_h(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: smin_i32_ptrue_all_h:
-; CHECK: smin z0.s, z0.s, #1
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smin z0.s, z0.s, #1
+; CHECK-NEXT:    ret
   %pg.h = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %pg.h)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
@@ -558,10 +566,11 @@ define <vscale x 4 x i32> @smin_i32_ptrue_all_h(<vscale x 4 x i32> %a) #0 {
 ; thus inactive lanes are important and the immediate form cannot be used.
 define <vscale x 4 x i32> @smin_i32_ptrue_all_d(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: smin_i32_ptrue_all_d:
-; CHECK-DAG: ptrue [[PG:p[0-9]+]].d
-; CHECK-DAG: mov [[DUP:z[0-9]+]].s, #1
-; CHECK-DAG: smin z0.s, [[PG]]/m, z0.s, [[DUP]].s
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z1.s, #1 // =0x1
+; CHECK-NEXT:    smin z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
   %pg.d = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %pg.d)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
@@ -684,8 +693,9 @@ define <vscale x 2 x i64> @umax_i64_out_of_range(<vscale x 2 x i64> %a) {
 ; As umax_i32 but where pg is i8 based and thus compatible for i32.
 define <vscale x 4 x i32> @umax_i32_ptrue_all_b(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: umax_i32_ptrue_all_b:
-; CHECK: umax z0.s, z0.s, #1
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umax z0.s, z0.s, #1
+; CHECK-NEXT:    ret
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
   %b = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dup.x.nxv4i32(i32 1)
@@ -698,8 +708,9 @@ define <vscale x 4 x i32> @umax_i32_ptrue_all_b(<vscale x 4 x i32> %a) #0 {
 ; As umax_i32 but where pg is i16 based and thus compatible for i32.
 define <vscale x 4 x i32> @umax_i32_ptrue_all_h(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: umax_i32_ptrue_all_h:
-; CHECK: umax z0.s, z0.s, #1
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umax z0.s, z0.s, #1
+; CHECK-NEXT:    ret
   %pg.h = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %pg.h)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
@@ -714,10 +725,11 @@ define <vscale x 4 x i32> @umax_i32_ptrue_all_h(<vscale x 4 x i32> %a) #0 {
 ; thus inactive lanes are important and the immediate form cannot be used.
 define <vscale x 4 x i32> @umax_i32_ptrue_all_d(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: umax_i32_ptrue_all_d:
-; CHECK-DAG: ptrue [[PG:p[0-9]+]].d
-; CHECK-DAG: mov [[DUP:z[0-9]+]].s, #1
-; CHECK-DAG: umax z0.s, [[PG]]/m, z0.s, [[DUP]].s
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z1.s, #1 // =0x1
+; CHECK-NEXT:    umax z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
   %pg.d = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %pg.d)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
@@ -840,8 +852,9 @@ define <vscale x 2 x i64> @umin_i64_out_of_range(<vscale x 2 x i64> %a) {
 ; As umin_i32 but where pg is i8 based and thus compatible for i32.
 define <vscale x 4 x i32> @umin_i32_ptrue_all_b(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: umin_i32_ptrue_all_b:
-; CHECK: umin z0.s, z0.s, #1
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umin z0.s, z0.s, #1
+; CHECK-NEXT:    ret
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
   %b = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dup.x.nxv4i32(i32 1)
@@ -854,8 +867,9 @@ define <vscale x 4 x i32> @umin_i32_ptrue_all_b(<vscale x 4 x i32> %a) #0 {
 ; As umin_i32 but where pg is i16 based and thus compatible for i32.
 define <vscale x 4 x i32> @umin_i32_ptrue_all_h(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: umin_i32_ptrue_all_h:
-; CHECK: umin z0.s, z0.s, #1
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umin z0.s, z0.s, #1
+; CHECK-NEXT:    ret
   %pg.h = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %pg.h)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
@@ -870,10 +884,11 @@ define <vscale x 4 x i32> @umin_i32_ptrue_all_h(<vscale x 4 x i32> %a) #0 {
 ; thus inactive lanes are important and the immediate form cannot be used.
 define <vscale x 4 x i32> @umin_i32_ptrue_all_d(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: umin_i32_ptrue_all_d:
-; CHECK-DAG: ptrue [[PG:p[0-9]+]].d
-; CHECK-DAG: mov [[DUP:z[0-9]+]].s, #1
-; CHECK-DAG: umin z0.s, [[PG]]/m, z0.s, [[DUP]].s
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z1.s, #1 // =0x1
+; CHECK-NEXT:    umin z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
   %pg.d = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %pg.d)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
@@ -1769,8 +1784,9 @@ define <vscale x 2 x i64> @lsr_i64_too_small(<vscale x 2 x i1> %pg, <vscale x 2 
 ; As lsr_i32 but where pg is i8 based and thus compatible for i32.
 define <vscale x 4 x i32> @lsr_i32_ptrue_all_b(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: lsr_i32_ptrue_all_b:
-; CHECK: lsr z0.s, z0.s, #1
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr z0.s, z0.s, #1
+; CHECK-NEXT:    ret
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
   %b = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dup.x.nxv4i32(i32 1)
@@ -1783,8 +1799,9 @@ define <vscale x 4 x i32> @lsr_i32_ptrue_all_b(<vscale x 4 x i32> %a) #0 {
 ; As lsr_i32 but where pg is i16 based and thus compatible for i32.
 define <vscale x 4 x i32> @lsr_i32_ptrue_all_h(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: lsr_i32_ptrue_all_h:
-; CHECK: lsr z0.s, z0.s, #1
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr z0.s, z0.s, #1
+; CHECK-NEXT:    ret
   %pg.h = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %pg.h)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
@@ -1799,9 +1816,10 @@ define <vscale x 4 x i32> @lsr_i32_ptrue_all_h(<vscale x 4 x i32> %a) #0 {
 ; thus inactive lanes are important and the immediate form cannot be used.
 define <vscale x 4 x i32> @lsr_i32_ptrue_all_d(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: lsr_i32_ptrue_all_d:
-; CHECK-DAG: ptrue [[PG:p[0-9]+]].d
-; CHECK-DAG: lsr z0.s, [[PG]]/m, z0.s, #1
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    lsr z0.s, p0/m, z0.s, #1
+; CHECK-NEXT:    ret
   %pg.d = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %pg.d)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
@@ -1819,8 +1837,9 @@ define <vscale x 4 x i32> @lsr_i32_ptrue_all_d(<vscale x 4 x i32> %a) #0 {
 ; As mul_i32 but where pg is i8 based and thus compatible for i32.
 define <vscale x 4 x i32> @mul_i32_ptrue_all_b(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: mul_i32_ptrue_all_b:
-; CHECK: mul z0.s, z0.s, #1
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mul z0.s, z0.s, #1
+; CHECK-NEXT:    ret
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
   %b = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dup.x.nxv4i32(i32 1)
@@ -1833,8 +1852,9 @@ define <vscale x 4 x i32> @mul_i32_ptrue_all_b(<vscale x 4 x i32> %a) #0 {
 ; As mul_i32 but where pg is i16 based and thus compatible for i32.
 define <vscale x 4 x i32> @mul_i32_ptrue_all_h(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: mul_i32_ptrue_all_h:
-; CHECK: mul z0.s, z0.s, #1
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mul z0.s, z0.s, #1
+; CHECK-NEXT:    ret
   %pg.h = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %pg.h)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
@@ -1849,10 +1869,11 @@ define <vscale x 4 x i32> @mul_i32_ptrue_all_h(<vscale x 4 x i32> %a) #0 {
 ; thus inactive lanes are important and the immediate form cannot be used.
 define <vscale x 4 x i32> @mul_i32_ptrue_all_d(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: mul_i32_ptrue_all_d:
-; CHECK-DAG: ptrue [[PG:p[0-9]+]].d
-; CHECK-DAG: mov [[DUP:z[0-9]+]].s, #1
-; CHECK-DAG: mul z0.s, [[PG]]/m, z0.s, [[DUP]].s
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z1.s, #1 // =0x1
+; CHECK-NEXT:    mul z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
   %pg.d = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %pg.d)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)

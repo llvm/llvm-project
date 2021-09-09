@@ -233,7 +233,7 @@ define <vscale x 2 x i64> @abs_i64_active(<vscale x 2 x i64> %a, <vscale x 2 x i
 define <vscale x 2 x i64> @abs_i64_not_active(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i1> %pg) #0 {
 ; CHECK-LABEL: abs_i64_not_active:
 ; CHECK:       // %bb.0:
-; CHECK:         abs z0.d, p0/m, z1.d
+; CHECK-NEXT:    abs z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %ret = tail call <vscale x 2 x i64> @llvm.aarch64.sve.abs.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> %pg, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %ret
@@ -424,7 +424,7 @@ define <vscale x 2 x i64> @cls_i64_active(<vscale x 2 x i64> %a, <vscale x 2 x i
 define <vscale x 2 x i64> @cls_i64_not_active(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i1> %pg) #0 {
 ; CHECK-LABEL: cls_i64_not_active:
 ; CHECK:       // %bb.0:
-; CHECK:         cls z0.d, p0/m, z1.d
+; CHECK-NEXT:    cls z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %ret = tail call <vscale x 2 x i64> @llvm.aarch64.sve.cls.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> %pg, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %ret
@@ -598,7 +598,7 @@ define <vscale x 2 x double> @fabs_f64_active(<vscale x 2 x double> %a, <vscale 
 define <vscale x 2 x double> @fabs_f64_not_active(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x i1> %pg) #0 {
 ; CHECK-LABEL: fabs_f64_not_active:
 ; CHECK:       // %bb.0:
-; CHECK:         fabs z0.d, p0/m, z1.d
+; CHECK-NEXT:    fabs z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %ret = tail call <vscale x 2 x double> @llvm.aarch64.sve.fabs.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x i1> %pg, <vscale x 2 x double> %b)
   ret <vscale x 2 x double> %ret
@@ -772,7 +772,7 @@ define <vscale x 2 x i64> @sxtb_i64_active(<vscale x 2 x i64> %a, <vscale x 2 x 
 define <vscale x 2 x i64> @sxtb_i64_not_active(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i1> %pg) #0 {
 ; CHECK-LABEL: sxtb_i64_not_active:
 ; CHECK:       // %bb.0:
-; CHECK:         sxtb z0.d, p0/m, z1.d
+; CHECK-NEXT:    sxtb z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %ret = tail call <vscale x 2 x i64> @llvm.aarch64.sve.sxtb.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> %pg, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %ret
@@ -888,7 +888,7 @@ define <vscale x 2 x i64> @sxth_i64_active(<vscale x 2 x i64> %a, <vscale x 2 x 
 define <vscale x 2 x i64> @sxth_i64_not_active(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i1> %pg) #0 {
 ; CHECK-LABEL: sxth_i64_not_active:
 ; CHECK:       // %bb.0:
-; CHECK:         sxth z0.d, p0/m, z1.d
+; CHECK-NEXT:    sxth z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %ret = tail call <vscale x 2 x i64> @llvm.aarch64.sve.sxth.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> %pg, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %ret
@@ -946,7 +946,7 @@ define <vscale x 2 x i64> @sxtw_i64_active(<vscale x 2 x i64> %a, <vscale x 2 x 
 define <vscale x 2 x i64> @sxtw_i64_not_active(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i1> %pg) #0 {
 ; CHECK-LABEL: sxtw_i64_not_active:
 ; CHECK:       // %bb.0:
-; CHECK:         sxtw z0.d, p0/m, z1.d
+; CHECK-NEXT:    sxtw z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %ret = tail call <vscale x 2 x i64> @llvm.aarch64.sve.sxtw.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> %pg, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %ret

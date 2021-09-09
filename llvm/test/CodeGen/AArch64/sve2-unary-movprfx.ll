@@ -192,7 +192,7 @@ define <vscale x 2 x i64> @sqabs_i64_active(<vscale x 2 x i64> %a, <vscale x 2 x
 define <vscale x 2 x i64> @sqabs_i64_not_active(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i1> %pg) #0 {
 ; CHECK-LABEL: sqabs_i64_not_active:
 ; CHECK:       // %bb.0:
-; CHECK:         sqabs z0.d, p0/m, z1.d
+; CHECK-NEXT:    sqabs z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %ret = tail call <vscale x 2 x i64> @llvm.aarch64.sve.sqabs.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> %pg, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %ret

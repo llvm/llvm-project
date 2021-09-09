@@ -50,22 +50,24 @@ define <vscale x 16 x i1> @reverse_nxv16i1(<vscale x 16 x i1> %a) #0 {
 
 ; Verify splitvec type legalisation works as expected.
 define <vscale x 32 x i1> @reverse_nxv32i1(<vscale x 32 x i1> %a) #0 {
-; CHECK-LABEL: reverse_nxv32i1:
+; CHECK-SELDAG-LABEL: reverse_nxv32i1:
 ; CHECK-SELDAG:       // %bb.0:
 ; CHECK-SELDAG-NEXT:    rev p2.b, p1.b
 ; CHECK-SELDAG-NEXT:    rev p1.b, p0.b
 ; CHECK-SELDAG-NEXT:    mov p0.b, p2.b
 ; CHECK-SELDAG-NEXT:    ret
+;
+; CHECK-FASTISEL-LABEL: reverse_nxv32i1:
 ; CHECK-FASTISEL:       // %bb.0:
-; CHECK-FASTISEL-NEXT:    str    x29, [sp, #-16]
-; CHECK-FASTISEL-NEXT:    addvl    sp, sp, #-1
-; CHECK-FASTISEL-NEXT:    str    p1, [sp, #7, mul vl]
-; CHECK-FASTISEL-NEXT:    mov    p1.b, p0.b
-; CHECK-FASTISEL-NEXT:    ldr    p0, [sp, #7, mul vl]
-; CHECK-FASTISEL-NEXT:    rev    p0.b, p0.b
-; CHECK-FASTISEL-NEXT:    rev    p1.b, p1.b
-; CHECK-FASTISEL-NEXT:    addvl    sp, sp, #1
-; CHECK-FASTISEL-NEXT:    ldr    x29, [sp], #16
+; CHECK-FASTISEL-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-FASTISEL-NEXT:    addvl sp, sp, #-1
+; CHECK-FASTISEL-NEXT:    str p1, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-FASTISEL-NEXT:    mov p1.b, p0.b
+; CHECK-FASTISEL-NEXT:    ldr p0, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-FASTISEL-NEXT:    rev p0.b, p0.b
+; CHECK-FASTISEL-NEXT:    rev p1.b, p1.b
+; CHECK-FASTISEL-NEXT:    addvl sp, sp, #1
+; CHECK-FASTISEL-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-FASTISEL-NEXT:    ret
 
   %res = call <vscale x 32 x i1> @llvm.experimental.vector.reverse.nxv32i1(<vscale x 32 x i1> %a)
@@ -158,22 +160,24 @@ define <vscale x 2 x i8> @reverse_nxv2i8(<vscale x 2 x i8> %a) #0 {
 
 ; Verify splitvec type legalisation works as expected.
 define <vscale x 8 x i32> @reverse_nxv8i32(<vscale x 8 x i32> %a) #0 {
-; CHECK-LABEL: reverse_nxv8i32:
+; CHECK-SELDAG-LABEL: reverse_nxv8i32:
 ; CHECK-SELDAG:       // %bb.0:
 ; CHECK-SELDAG-NEXT:    rev z2.s, z1.s
 ; CHECK-SELDAG-NEXT:    rev z1.s, z0.s
 ; CHECK-SELDAG-NEXT:    mov z0.d, z2.d
 ; CHECK-SELDAG-NEXT:    ret
+;
+; CHECK-FASTISEL-LABEL: reverse_nxv8i32:
 ; CHECK-FASTISEL:       // %bb.0:
-; CHECK-FASTISEL-NEXT:    str    x29, [sp, #-16]
-; CHECK-FASTISEL-NEXT:    addvl    sp, sp, #-1
-; CHECK-FASTISEL-NEXT:    str    z1, [sp]
-; CHECK-FASTISEL-NEXT:    mov    z1.d, z0.d
-; CHECK-FASTISEL-NEXT:    ldr    z0, [sp]
-; CHECK-FASTISEL-NEXT:    rev    z0.s, z0.s
-; CHECK-FASTISEL-NEXT:    rev    z1.s, z1.s
-; CHECK-FASTISEL-NEXT:    addvl    sp, sp, #1
-; CHECK-FASTISEL-NEXT:    ldr    x29, [sp], #16
+; CHECK-FASTISEL-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-FASTISEL-NEXT:    addvl sp, sp, #-1
+; CHECK-FASTISEL-NEXT:    str z1, [sp] // 16-byte Folded Spill
+; CHECK-FASTISEL-NEXT:    mov z1.d, z0.d
+; CHECK-FASTISEL-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
+; CHECK-FASTISEL-NEXT:    rev z0.s, z0.s
+; CHECK-FASTISEL-NEXT:    rev z1.s, z1.s
+; CHECK-FASTISEL-NEXT:    addvl sp, sp, #1
+; CHECK-FASTISEL-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-FASTISEL-NEXT:    ret
 
   %res = call <vscale x 8 x i32> @llvm.experimental.vector.reverse.nxv8i32(<vscale x 8 x i32> %a)
@@ -182,7 +186,7 @@ define <vscale x 8 x i32> @reverse_nxv8i32(<vscale x 8 x i32> %a) #0 {
 
 ; Verify splitvec type legalisation works as expected.
 define <vscale x 16 x float> @reverse_nxv16f32(<vscale x 16 x float> %a) #0 {
-; CHECK-LABEL: reverse_nxv16f32:
+; CHECK-SELDAG-LABEL: reverse_nxv16f32:
 ; CHECK-SELDAG:       // %bb.0:
 ; CHECK-SELDAG-NEXT:    rev z5.s, z3.s
 ; CHECK-SELDAG-NEXT:    rev z4.s, z2.s
@@ -191,21 +195,23 @@ define <vscale x 16 x float> @reverse_nxv16f32(<vscale x 16 x float> %a) #0 {
 ; CHECK-SELDAG-NEXT:    mov z0.d, z5.d
 ; CHECK-SELDAG-NEXT:    mov z1.d, z4.d
 ; CHECK-SELDAG-NEXT:    ret
+;
+; CHECK-FASTISEL-LABEL: reverse_nxv16f32:
 ; CHECK-FASTISEL:       // %bb.0:
-; CHECK-FASTISEL-NEXT:    str    x29, [sp, #-16]
-; CHECK-FASTISEL-NEXT:    addvl    sp, sp, #-2
-; CHECK-FASTISEL-NEXT:    str    z3, [sp, #1, mul vl]
-; CHECK-FASTISEL-NEXT:    str    z2, [sp]
-; CHECK-FASTISEL-NEXT:    mov    z2.d, z1.d
-; CHECK-FASTISEL-NEXT:    ldr    z1, [sp]
-; CHECK-FASTISEL-NEXT:    mov    z3.d, z0.d
-; CHECK-FASTISEL-NEXT:    ldr    z0, [sp, #1, mul vl]
-; CHECK-FASTISEL-NEXT:    rev    z0.s, z0.s
-; CHECK-FASTISEL-NEXT:    rev    z1.s, z1.s
-; CHECK-FASTISEL-NEXT:    rev    z2.s, z2.s
-; CHECK-FASTISEL-NEXT:    rev    z3.s, z3.s
-; CHECK-FASTISEL-NEXT:    addvl    sp, sp, #2
-; CHECK-FASTISEL-NEXT:    ldr    x29, [sp], #16
+; CHECK-FASTISEL-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-FASTISEL-NEXT:    addvl sp, sp, #-2
+; CHECK-FASTISEL-NEXT:    str z3, [sp, #1, mul vl] // 16-byte Folded Spill
+; CHECK-FASTISEL-NEXT:    str z2, [sp] // 16-byte Folded Spill
+; CHECK-FASTISEL-NEXT:    mov z2.d, z1.d
+; CHECK-FASTISEL-NEXT:    ldr z1, [sp] // 16-byte Folded Reload
+; CHECK-FASTISEL-NEXT:    mov z3.d, z0.d
+; CHECK-FASTISEL-NEXT:    ldr z0, [sp, #1, mul vl] // 16-byte Folded Reload
+; CHECK-FASTISEL-NEXT:    rev z0.s, z0.s
+; CHECK-FASTISEL-NEXT:    rev z1.s, z1.s
+; CHECK-FASTISEL-NEXT:    rev z2.s, z2.s
+; CHECK-FASTISEL-NEXT:    rev z3.s, z3.s
+; CHECK-FASTISEL-NEXT:    addvl sp, sp, #2
+; CHECK-FASTISEL-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-FASTISEL-NEXT:    ret
 
   %res = call <vscale x 16 x float> @llvm.experimental.vector.reverse.nxv16f32(<vscale x 16 x float> %a)
