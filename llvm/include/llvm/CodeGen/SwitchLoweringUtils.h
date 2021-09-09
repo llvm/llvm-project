@@ -183,12 +183,12 @@ struct JumpTableHeader {
   const Value *SValue;
   MachineBasicBlock *HeaderBB;
   bool Emitted;
-  bool OmitRangeCheck;
+  bool FallthroughUnreachable;
 
   JumpTableHeader(APInt F, APInt L, const Value *SV, MachineBasicBlock *H,
                   bool E = false)
       : First(std::move(F)), Last(std::move(L)), SValue(SV), HeaderBB(H),
-        Emitted(E), OmitRangeCheck(false) {}
+        Emitted(E), FallthroughUnreachable(false) {}
 };
 using JumpTableBlock = std::pair<JumpTableHeader, JumpTable>;
 
@@ -218,14 +218,14 @@ struct BitTestBlock {
   BitTestInfo Cases;
   BranchProbability Prob;
   BranchProbability DefaultProb;
-  bool OmitRangeCheck;
+  bool FallthroughUnreachable;
 
   BitTestBlock(APInt F, APInt R, const Value *SV, unsigned Rg, MVT RgVT, bool E,
                bool CR, MachineBasicBlock *P, MachineBasicBlock *D,
                BitTestInfo C, BranchProbability Pr)
       : First(std::move(F)), Range(std::move(R)), SValue(SV), Reg(Rg),
         RegVT(RgVT), Emitted(E), ContiguousRange(CR), Parent(P), Default(D),
-        Cases(std::move(C)), Prob(Pr), OmitRangeCheck(false) {}
+        Cases(std::move(C)), Prob(Pr), FallthroughUnreachable(false) {}
 };
 
 /// Return the range of values within a range.
