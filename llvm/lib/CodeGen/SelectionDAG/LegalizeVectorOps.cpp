@@ -958,8 +958,7 @@ SDValue VectorLegalizer::ExpandSELECT(SDNode *Node) {
   Op1 = DAG.getNode(ISD::BITCAST, DL, MaskTy, Op1);
   Op2 = DAG.getNode(ISD::BITCAST, DL, MaskTy, Op2);
 
-  SDValue AllOnes = DAG.getAllOnesConstant(DL, MaskTy);
-  SDValue NotMask = DAG.getNode(ISD::XOR, DL, MaskTy, Mask, AllOnes);
+  SDValue NotMask = DAG.getNOT(DL, Mask, MaskTy);
 
   Op1 = DAG.getNode(ISD::AND, DL, MaskTy, Op1, Mask);
   Op2 = DAG.getNode(ISD::AND, DL, MaskTy, Op2, NotMask);
@@ -1204,8 +1203,7 @@ SDValue VectorLegalizer::ExpandVSELECT(SDNode *Node) {
   Op1 = DAG.getNode(ISD::BITCAST, DL, VT, Op1);
   Op2 = DAG.getNode(ISD::BITCAST, DL, VT, Op2);
 
-  SDValue AllOnes = DAG.getAllOnesConstant(DL, VT);
-  SDValue NotMask = DAG.getNode(ISD::XOR, DL, VT, Mask, AllOnes);
+  SDValue NotMask = DAG.getNOT(DL, Mask, VT);
 
   Op1 = DAG.getNode(ISD::AND, DL, VT, Op1, Mask);
   Op2 = DAG.getNode(ISD::AND, DL, VT, Op2, NotMask);
