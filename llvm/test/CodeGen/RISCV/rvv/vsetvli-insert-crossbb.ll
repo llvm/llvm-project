@@ -457,7 +457,6 @@ define void @saxpy_vec(i64 %n, float %a, float* nocapture readonly %x, float* no
 ; CHECK-NEXT:    add a2, a2, a1
 ; CHECK-NEXT:    vsetvli zero, a4, e32, m8, tu, mu
 ; CHECK-NEXT:    vfmacc.vf v16, ft0, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, mu
 ; CHECK-NEXT:    vse32.v v16, (a3)
 ; CHECK-NEXT:    sub a0, a0, a4
 ; CHECK-NEXT:    vsetvli a4, a0, e32, m8, ta, mu
