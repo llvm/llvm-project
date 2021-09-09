@@ -34,7 +34,7 @@ using namespace clang::driver::toolchains;
 using namespace clang;
 using namespace llvm::opt;
 
-static const VersionTuple minimumMacCatalystDeploymentTarget() {
+static VersionTuple minimumMacCatalystDeploymentTarget() {
   return VersionTuple(13, 1);
 }
 
