@@ -1813,10 +1813,13 @@ RuntimeDyldELF::processRelocationRef(
         addRelocationForSymbol(RE, Value.SymbolName);
       else
         addRelocationForSection(RE, Value.SectionID);
-    } else if (RelType == ELF::R_X86_64_GOTPC64) {
+    } else if (RelType == ELF::R_X86_64_GOTPC32) {
       // Materialize the address of the base of the GOT relative to the PC.
       // This doesn't create a GOT entry, but it does mean we need a GOT
       // section.
+      (void)allocateGOTEntries(0);
+      resolveGOTOffsetRelocation(SectionID, Offset, Addend, ELF::R_X86_64_PC32);
+    } else if (RelType == ELF::R_X86_64_GOTPC64) {
       (void)allocateGOTEntries(0);
       resolveGOTOffsetRelocation(SectionID, Offset, Addend, ELF::R_X86_64_PC64);
     } else if (RelType == ELF::R_X86_64_GOTOFF64) {
