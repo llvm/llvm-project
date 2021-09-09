@@ -154,7 +154,7 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
     auto eqIter{equivalenceBlock_.end()};
     auto iter{dependents_.find(symbol)};
     if (iter == dependents_.end()) {
-      auto eqIter = equivalenceBlock_.find(symbol);
+      eqIter = equivalenceBlock_.find(symbol);
       if (eqIter != equivalenceBlock_.end()) {
         DoEquivalenceBlockBase(symbol, eqIter->second);
       }
