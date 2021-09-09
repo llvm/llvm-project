@@ -3032,7 +3032,7 @@ void IRTranslator::finalizeBasicBlock() {
       // test, and delete the last bit test.
 
       MachineBasicBlock *NextMBB;
-      if (BTB.ContiguousRange && j + 2 == ej) {
+      if ((BTB.ContiguousRange || BTB.OmitRangeCheck) && j + 2 == ej) {
         // Second-to-last bit-test with contiguous range: fall through to the
         // target of the final bit test.
         NextMBB = BTB.Cases[j + 1].TargetBB;
@@ -3046,7 +3046,7 @@ void IRTranslator::finalizeBasicBlock() {
 
       emitBitTestCase(BTB, NextMBB, UnhandledProb, BTB.Reg, BTB.Cases[j], MBB);
 
-      if (BTB.ContiguousRange && j + 2 == ej) {
+      if ((BTB.ContiguousRange || BTB.OmitRangeCheck) && j + 2 == ej) {
         // We need to record the replacement phi edge here that normally
         // happens in emitBitTestCase before we delete the case, otherwise the
         // phi edge will be lost.
