@@ -421,9 +421,9 @@ TARGET_BUILTIN(__builtin_ia32_pcmpestrio128, "iV16ciV16ciIc","ncV:128:", "sse4.2
 TARGET_BUILTIN(__builtin_ia32_pcmpestris128, "iV16ciV16ciIc","ncV:128:", "sse4.2")
 TARGET_BUILTIN(__builtin_ia32_pcmpestriz128, "iV16ciV16ciIc","ncV:128:", "sse4.2")
 
-TARGET_BUILTIN(__builtin_ia32_crc32qi, "UiUiUc", "nc", "sse4.2")
-TARGET_BUILTIN(__builtin_ia32_crc32hi, "UiUiUs", "nc", "sse4.2")
-TARGET_BUILTIN(__builtin_ia32_crc32si, "UiUiUi", "nc", "sse4.2")
+TARGET_BUILTIN(__builtin_ia32_crc32qi, "UiUiUc", "nc", "crc32")
+TARGET_BUILTIN(__builtin_ia32_crc32hi, "UiUiUs", "nc", "crc32")
+TARGET_BUILTIN(__builtin_ia32_crc32si, "UiUiUi", "nc", "crc32")
 
 // SSE4a
 TARGET_BUILTIN(__builtin_ia32_extrqi, "V2OiV2OiIcIc", "ncV:128:", "sse4a")
