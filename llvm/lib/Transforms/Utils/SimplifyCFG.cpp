@@ -6598,9 +6598,17 @@ static bool removeUndefIntroducingPredecessor(BasicBlock *BB,
           // destination from conditional branches.
           if (BI->isUnconditional())
             Builder.CreateUnreachable();
-          else
+          else {
+            // Preserve guarding condition in assume, because it might not be
+            // inferrable from any dominating condition.
+            Value *Cond = BI->getCondition();
+            if (BI->getSuccessor(0) == BB)
+              Builder.CreateAssumption(Builder.CreateNot(Cond));
+            else
+              Builder.CreateAssumption(Cond);
             Builder.CreateBr(BI->getSuccessor(0) == BB ? BI->getSuccessor(1)
                                                        : BI->getSuccessor(0));
+          }
           BI->eraseFromParent();
           if (DTU)
             DTU->applyUpdates({{DominatorTree::Delete, Predecessor, BB}});
