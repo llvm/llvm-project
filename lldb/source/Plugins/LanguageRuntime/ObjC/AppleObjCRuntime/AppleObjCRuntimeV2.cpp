@@ -2196,8 +2196,12 @@ lldb::addr_t AppleObjCRuntimeV2::GetSharedCacheBaseAddress() {
   if (!info_dict)
     return LLDB_INVALID_ADDRESS;
 
-  return info_dict->GetValueForKey("shared_cache_base_address")
-      ->GetIntegerValue(LLDB_INVALID_ADDRESS);
+  StructuredData::ObjectSP value =
+      info_dict->GetValueForKey("shared_cache_base_address");
+  if (!value)
+    return LLDB_INVALID_ADDRESS;
+
+  return value->GetIntegerValue(LLDB_INVALID_ADDRESS);
 }
 
 void AppleObjCRuntimeV2::UpdateISAToDescriptorMapIfNeeded() {
