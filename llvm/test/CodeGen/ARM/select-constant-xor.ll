@@ -358,9 +358,9 @@ define i32 @oneusecmp(i32 %a, i32 %b, i32 %d) {
 ; CHECK7A-LABEL: oneusecmp:
 ; CHECK7A:       @ %bb.0:
 ; CHECK7A-NEXT:    cmp r0, #0
-; CHECK7A-NEXT:    mov r0, #127
-; CHECK7A-NEXT:    mvnmi r0, #127
 ; CHECK7A-NEXT:    movmi r1, r2
+; CHECK7A-NEXT:    mov r2, #127
+; CHECK7A-NEXT:    eor r0, r2, r0, asr #31
 ; CHECK7A-NEXT:    add r0, r0, r1
 ; CHECK7A-NEXT:    bx lr
 ;
@@ -371,32 +371,28 @@ define i32 @oneusecmp(i32 %a, i32 %b, i32 %d) {
 ; CHECK6M-NEXT:  @ %bb.1:
 ; CHECK6M-NEXT:    mov r2, r1
 ; CHECK6M-NEXT:  .LBB10_2:
+; CHECK6M-NEXT:    asrs r0, r0, #31
 ; CHECK6M-NEXT:    movs r1, #127
-; CHECK6M-NEXT:    cmp r0, #0
-; CHECK6M-NEXT:    bpl .LBB10_4
-; CHECK6M-NEXT:  @ %bb.3:
-; CHECK6M-NEXT:    mvns r1, r1
-; CHECK6M-NEXT:  .LBB10_4:
+; CHECK6M-NEXT:    eors r1, r0
 ; CHECK6M-NEXT:    adds r0, r1, r2
 ; CHECK6M-NEXT:    bx lr
 ;
 ; CHECK7M-LABEL: oneusecmp:
 ; CHECK7M:       @ %bb.0:
 ; CHECK7M-NEXT:    cmp r0, #0
-; CHECK7M-NEXT:    mov.w r0, #127
 ; CHECK7M-NEXT:    it mi
 ; CHECK7M-NEXT:    movmi r1, r2
-; CHECK7M-NEXT:    it mi
-; CHECK7M-NEXT:    mvnmi r0, #127
+; CHECK7M-NEXT:    movs r2, #127
+; CHECK7M-NEXT:    eor.w r0, r2, r0, asr #31
 ; CHECK7M-NEXT:    add r0, r1
 ; CHECK7M-NEXT:    bx lr
 ;
 ; CHECK81M-LABEL: oneusecmp:
 ; CHECK81M:       @ %bb.0:
 ; CHECK81M-NEXT:    cmp r0, #0
-; CHECK81M-NEXT:    csel r0, r2, r1, mi
-; CHECK81M-NEXT:    mov.w r1, #127
-; CHECK81M-NEXT:    cinv r1, r1, mi
+; CHECK81M-NEXT:    csel r1, r2, r1, mi
+; CHECK81M-NEXT:    movs r2, #127
+; CHECK81M-NEXT:    eor.w r0, r2, r0, asr #31
 ; CHECK81M-NEXT:    add r0, r1
 ; CHECK81M-NEXT:    bx lr
   %c = icmp sle i32 %a, -1

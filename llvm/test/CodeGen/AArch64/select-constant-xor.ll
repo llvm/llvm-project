@@ -198,9 +198,9 @@ define i32 @selecti32i32_sgt(i32 %a) {
 define i32 @oneusecmp(i32 %a, i32 %b, i32 %d) {
 ; CHECK-LABEL: oneusecmp:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    asr w8, w0, #31
 ; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    mov w8, #-128
-; CHECK-NEXT:    cinv w8, w8, ge
+; CHECK-NEXT:    eor w8, w8, #0x7f
 ; CHECK-NEXT:    csel w9, w2, w1, lt
 ; CHECK-NEXT:    add w0, w8, w9
 ; CHECK-NEXT:    ret
