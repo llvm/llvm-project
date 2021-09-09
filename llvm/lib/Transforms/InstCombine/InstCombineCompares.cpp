@@ -4465,6 +4465,19 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
     }
   }
 
+  {
+    // Similar to above, but specialized for constant because invert is needed:
+    // (X | C) == (Y | C) --> (X ^ Y) & ~C == 0
+    Value *X, *Y;
+    Constant *C;
+    if (match(Op0, m_OneUse(m_Or(m_Value(X), m_Constant(C)))) &&
+        match(Op1, m_OneUse(m_Or(m_Value(Y), m_Specific(C))))) {
+      Value *Xor = Builder.CreateXor(X, Y);
+      Value *And = Builder.CreateAnd(Xor, ConstantExpr::getNot(C));
+      return new ICmpInst(Pred, And, Constant::getNullValue(And->getType()));
+    }
+  }
+
   // Transform (zext A) == (B & (1<<X)-1) --> A == (trunc B)
   // and       (B & (1<<X)-1) == (zext A) --> A == (trunc B)
   ConstantInt *Cst1;
