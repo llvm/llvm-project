@@ -75,7 +75,7 @@ registers:
   - { id: 0, class: gpr }
 
 # CHECK:  body:
-# LINUX-DEFAULT: %0:gpr64 = MOVaddr target-flags(aarch64-page) @var_local, target-flags(aarch64-pageoff, aarch64-nc) @var_local
+# LINUX-DEFAULT: %0:gpr64common = MOVaddr target-flags(aarch64-page) @var_local, target-flags(aarch64-pageoff, aarch64-nc) @var_local
 body:             |
   bb.0:
     %0(p0) = G_GLOBAL_VALUE @var_local
@@ -91,7 +91,7 @@ registers:
   - { id: 0, class: gpr }
 
 # CHECK:  body:
-# LINUX-DEFAULT: %0:gpr64 = MOVaddr target-flags(aarch64-page) @var_got, target-flags(aarch64-pageoff, aarch64-nc) @var_got
+# LINUX-DEFAULT: %0:gpr64common = MOVaddr target-flags(aarch64-page) @var_got, target-flags(aarch64-pageoff, aarch64-nc) @var_got
 body:             |
   bb.0:
     %0(p0) = G_GLOBAL_VALUE @var_got

@@ -274,7 +274,7 @@ registers:
   - { id: 17, class: gpr32, preferred-register: '' }
   - { id: 18, class: gpr32sp, preferred-register: '' }
   - { id: 19, class: gpr32, preferred-register: '' }
-  - { id: 20, class: gpr64, preferred-register: '' }
+  - { id: 20, class: gpr64common, preferred-register: '' }
   - { id: 21, class: gpr64, preferred-register: '' }
   - { id: 22, class: gpr64sp, preferred-register: '' }
   - { id: 23, class: gpr64sp, preferred-register: '' }
@@ -338,7 +338,7 @@ body:             |
   ; CHECK:   [[COPY6:%[0-9]+]]:gpr64all = COPY [[ADDXri4]]
   ; CHECK:   [[ADDXri5:%[0-9]+]]:gpr64sp = ADDXri [[COPY1]], 1, 0
   ; CHECK:   [[COPY7:%[0-9]+]]:gpr64all = COPY [[ADDXri5]]
-  ; CHECK:   [[MOVaddrJT:%[0-9]+]]:gpr64 = MOVaddrJT target-flags(aarch64-page) %jump-table.0, target-flags(aarch64-pageoff, aarch64-nc) %jump-table.0
+  ; CHECK:   [[MOVaddrJT:%[0-9]+]]:gpr64common = MOVaddrJT target-flags(aarch64-page) %jump-table.0, target-flags(aarch64-pageoff, aarch64-nc) %jump-table.0
   ; CHECK: bb.1..backedge:
   ; CHECK:   successors: %bb.9(0x09249249), %bb.2(0x76db6db7)
   ; CHECK:   [[PHI:%[0-9]+]]:gpr64sp = PHI [[COPY7]], %bb.0, %7, %bb.9
@@ -415,7 +415,7 @@ body:             |
     %4:gpr64all = COPY %14
     %15:gpr64sp = ADDXri %8, 1, 0
     %5:gpr64all = COPY %15
-    %20:gpr64 = MOVaddrJT target-flags(aarch64-page) %jump-table.0, target-flags(aarch64-pageoff, aarch64-nc) %jump-table.0
+    %20:gpr64common = MOVaddrJT target-flags(aarch64-page) %jump-table.0, target-flags(aarch64-pageoff, aarch64-nc) %jump-table.0
 
   bb.1..backedge:
     successors: %bb.8(0x09249249), %bb.9(0x76db6db7)
