@@ -728,160 +728,155 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
     }
   }
 
-  if (Op0->hasOneUse()) {
-    if (BinaryOperator *Op0BO = dyn_cast<BinaryOperator>(Op0)) {
-      // Turn ((X >> C) + Y) << C  ->  (X + (Y << C)) & (~0 << C)
-      Value *V1;
-      const APInt *CC;
-      switch (Op0BO->getOpcode()) {
-      default: break;
-      case Instruction::Add:
-      case Instruction::And:
-      case Instruction::Or:
-      case Instruction::Xor: {
-        // These operators commute.
-        // Turn (Y + (X >> C)) << C  ->  (X + (Y << C)) & (~0 << C)
-        if (isLeftShift && Op0BO->getOperand(1)->hasOneUse() &&
-            match(Op0BO->getOperand(1), m_Shr(m_Value(V1),
-                  m_Specific(Op1)))) {
-          Value *YS =         // (Y << C)
+  if (!Op0->hasOneUse())
+    return nullptr;
+
+  if (auto *Op0BO = dyn_cast<BinaryOperator>(Op0)) {
+    // Turn ((X >> C) + Y) << C  ->  (X + (Y << C)) & (~0 << C)
+    Value *V1;
+    const APInt *CC;
+    switch (Op0BO->getOpcode()) {
+    default:
+      break;
+    case Instruction::Add:
+    case Instruction::And:
+    case Instruction::Or:
+    case Instruction::Xor: {
+      // These operators commute.
+      // Turn (Y + (X >> C)) << C  ->  (X + (Y << C)) & (~0 << C)
+      if (isLeftShift && Op0BO->getOperand(1)->hasOneUse() &&
+          match(Op0BO->getOperand(1), m_Shr(m_Value(V1), m_Specific(Op1)))) {
+        Value *YS = // (Y << C)
             Builder.CreateShl(Op0BO->getOperand(0), Op1, Op0BO->getName());
-          // (X + (Y << C))
-          Value *X = Builder.CreateBinOp(Op0BO->getOpcode(), YS, V1,
-                                         Op0BO->getOperand(1)->getName());
-          unsigned Op1Val = Op1C->getLimitedValue(TypeBits);
-          APInt Bits = APInt::getHighBitsSet(TypeBits, TypeBits - Op1Val);
-          Constant *Mask = ConstantInt::get(Ty, Bits);
-          return BinaryOperator::CreateAnd(X, Mask);
-        }
-
-        // Turn (Y + ((X >> C) & CC)) << C  ->  ((X & (CC << C)) + (Y << C))
-        Value *Op0BOOp1 = Op0BO->getOperand(1);
-        if (isLeftShift && Op0BOOp1->hasOneUse() &&
-            match(Op0BOOp1, m_And(m_OneUse(m_Shr(m_Value(V1), m_Specific(Op1))),
-                                  m_APInt(CC)))) {
-          Value *YS = // (Y << C)
-              Builder.CreateShl(Op0BO->getOperand(0), Op1, Op0BO->getName());
-          // X & (CC << C)
-          Value *XM = Builder.CreateAnd(
-              V1, ConstantExpr::getShl(ConstantInt::get(Ty, *CC), Op1),
-              V1->getName() + ".mask");
-          return BinaryOperator::Create(Op0BO->getOpcode(), YS, XM);
-        }
-        LLVM_FALLTHROUGH;
+        // (X + (Y << C))
+        Value *X = Builder.CreateBinOp(Op0BO->getOpcode(), YS, V1,
+                                       Op0BO->getOperand(1)->getName());
+        unsigned Op1Val = Op1C->getLimitedValue(TypeBits);
+        APInt Bits = APInt::getHighBitsSet(TypeBits, TypeBits - Op1Val);
+        Constant *Mask = ConstantInt::get(Ty, Bits);
+        return BinaryOperator::CreateAnd(X, Mask);
       }
 
-      case Instruction::Sub: {
-        // Turn ((X >> C) + Y) << C  ->  (X + (Y << C)) & (~0 << C)
-        if (isLeftShift && Op0BO->getOperand(0)->hasOneUse() &&
-            match(Op0BO->getOperand(0), m_Shr(m_Value(V1),
-                  m_Specific(Op1)))) {
-          Value *YS =  // (Y << C)
+      // Turn (Y + ((X >> C) & CC)) << C  ->  ((X & (CC << C)) + (Y << C))
+      Value *Op0BOOp1 = Op0BO->getOperand(1);
+      if (isLeftShift && Op0BOOp1->hasOneUse() &&
+          match(Op0BOOp1, m_And(m_OneUse(m_Shr(m_Value(V1), m_Specific(Op1))),
+                                m_APInt(CC)))) {
+        Value *YS = // (Y << C)
+            Builder.CreateShl(Op0BO->getOperand(0), Op1, Op0BO->getName());
+        // X & (CC << C)
+        Value *XM = Builder.CreateAnd(
+            V1, ConstantExpr::getShl(ConstantInt::get(Ty, *CC), Op1),
+            V1->getName() + ".mask");
+        return BinaryOperator::Create(Op0BO->getOpcode(), YS, XM);
+      }
+      LLVM_FALLTHROUGH;
+    }
+
+    case Instruction::Sub: {
+      // Turn ((X >> C) + Y) << C  ->  (X + (Y << C)) & (~0 << C)
+      if (isLeftShift && Op0BO->getOperand(0)->hasOneUse() &&
+          match(Op0BO->getOperand(0), m_Shr(m_Value(V1), m_Specific(Op1)))) {
+        Value *YS = // (Y << C)
             Builder.CreateShl(Op0BO->getOperand(1), Op1, Op0BO->getName());
-          // (X + (Y << C))
-          Value *X = Builder.CreateBinOp(Op0BO->getOpcode(), V1, YS,
-                                         Op0BO->getOperand(0)->getName());
-          unsigned Op1Val = Op1C->getLimitedValue(TypeBits);
-          APInt Bits = APInt::getHighBitsSet(TypeBits, TypeBits - Op1Val);
-          Constant *Mask = ConstantInt::get(Ty, Bits);
-          return BinaryOperator::CreateAnd(X, Mask);
-        }
-
-        // Turn (((X >> C)&CC) + Y) << C  ->  (X + (Y << C)) & (CC << C)
-        if (isLeftShift && Op0BO->getOperand(0)->hasOneUse() &&
-            match(Op0BO->getOperand(0),
-                  m_And(m_OneUse(m_Shr(m_Value(V1), m_Specific(Op1))),
-                        m_APInt(CC)))) {
-          Value *YS = // (Y << C)
-              Builder.CreateShl(Op0BO->getOperand(1), Op1, Op0BO->getName());
-          // X & (CC << C)
-          Value *XM = Builder.CreateAnd(
-              V1, ConstantExpr::getShl(ConstantInt::get(Ty, *CC), Op1),
-              V1->getName() + ".mask");
-          return BinaryOperator::Create(Op0BO->getOpcode(), XM, YS);
-        }
-
-        break;
-      }
+        // (X + (Y << C))
+        Value *X = Builder.CreateBinOp(Op0BO->getOpcode(), V1, YS,
+                                       Op0BO->getOperand(0)->getName());
+        unsigned Op1Val = Op1C->getLimitedValue(TypeBits);
+        APInt Bits = APInt::getHighBitsSet(TypeBits, TypeBits - Op1Val);
+        Constant *Mask = ConstantInt::get(Ty, Bits);
+        return BinaryOperator::CreateAnd(X, Mask);
       }
 
-      // If the operand is a bitwise operator with a constant RHS, and the
-      // shift is the only use, we can pull it out of the shift.
-      const APInt *Op0C;
-      if (match(Op0BO->getOperand(1), m_APInt(Op0C))) {
-        if (canShiftBinOpWithConstantRHS(I, Op0BO)) {
-          Constant *NewRHS = ConstantExpr::get(I.getOpcode(),
-                                     cast<Constant>(Op0BO->getOperand(1)), Op1);
+      // Turn (((X >> C)&CC) + Y) << C  ->  (X + (Y << C)) & (CC << C)
+      if (isLeftShift && Op0BO->getOperand(0)->hasOneUse() &&
+          match(Op0BO->getOperand(0),
+                m_And(m_OneUse(m_Shr(m_Value(V1), m_Specific(Op1))),
+                      m_APInt(CC)))) {
+        Value *YS = // (Y << C)
+            Builder.CreateShl(Op0BO->getOperand(1), Op1, Op0BO->getName());
+        // X & (CC << C)
+        Value *XM = Builder.CreateAnd(
+            V1, ConstantExpr::getShl(ConstantInt::get(Ty, *CC), Op1),
+            V1->getName() + ".mask");
+        return BinaryOperator::Create(Op0BO->getOpcode(), XM, YS);
+      }
 
-          Value *NewShift =
+      break;
+    }
+    }
+
+    // If the operand is a bitwise operator with a constant RHS, and the
+    // shift is the only use, we can pull it out of the shift.
+    const APInt *Op0C;
+    if (match(Op0BO->getOperand(1), m_APInt(Op0C))) {
+      if (canShiftBinOpWithConstantRHS(I, Op0BO)) {
+        Constant *NewRHS = ConstantExpr::get(
+            I.getOpcode(), cast<Constant>(Op0BO->getOperand(1)), Op1);
+
+        Value *NewShift =
             Builder.CreateBinOp(I.getOpcode(), Op0BO->getOperand(0), Op1);
-          NewShift->takeName(Op0BO);
-
-          return BinaryOperator::Create(Op0BO->getOpcode(), NewShift,
-                                        NewRHS);
-        }
-      }
-
-      // If the operand is a subtract with a constant LHS, and the shift
-      // is the only use, we can pull it out of the shift.
-      // This folds (shl (sub C1, X), C2) -> (sub (C1 << C2), (shl X, C2))
-      if (isLeftShift && Op0BO->getOpcode() == Instruction::Sub &&
-          match(Op0BO->getOperand(0), m_APInt(Op0C))) {
-        Constant *NewRHS = ConstantExpr::get(I.getOpcode(),
-                                   cast<Constant>(Op0BO->getOperand(0)), Op1);
-
-        Value *NewShift = Builder.CreateShl(Op0BO->getOperand(1), Op1);
         NewShift->takeName(Op0BO);
 
-        return BinaryOperator::CreateSub(NewRHS, NewShift);
+        return BinaryOperator::Create(Op0BO->getOpcode(), NewShift, NewRHS);
       }
     }
 
-    // If we have a select that conditionally executes some binary operator,
-    // see if we can pull it the select and operator through the shift.
-    //
-    // For example, turning:
-    //   shl (select C, (add X, C1), X), C2
-    // Into:
-    //   Y = shl X, C2
-    //   select C, (add Y, C1 << C2), Y
-    Value *Cond;
-    BinaryOperator *TBO;
-    Value *FalseVal;
-    if (match(Op0, m_Select(m_Value(Cond), m_OneUse(m_BinOp(TBO)),
-                            m_Value(FalseVal)))) {
-      const APInt *C;
-      if (!isa<Constant>(FalseVal) && TBO->getOperand(0) == FalseVal &&
-          match(TBO->getOperand(1), m_APInt(C)) &&
-          canShiftBinOpWithConstantRHS(I, TBO)) {
-        Constant *NewRHS = ConstantExpr::get(I.getOpcode(),
-                                       cast<Constant>(TBO->getOperand(1)), Op1);
+    // If the operand is a subtract with a constant LHS, and the shift
+    // is the only use, we can pull it out of the shift.
+    // This folds (shl (sub C1, X), C2) -> (sub (C1 << C2), (shl X, C2))
+    if (isLeftShift && Op0BO->getOpcode() == Instruction::Sub &&
+        match(Op0BO->getOperand(0), m_APInt(Op0C))) {
+      Constant *NewRHS = ConstantExpr::get(
+          I.getOpcode(), cast<Constant>(Op0BO->getOperand(0)), Op1);
 
-        Value *NewShift =
-          Builder.CreateBinOp(I.getOpcode(), FalseVal, Op1);
-        Value *NewOp = Builder.CreateBinOp(TBO->getOpcode(), NewShift,
-                                           NewRHS);
-        return SelectInst::Create(Cond, NewOp, NewShift);
-      }
+      Value *NewShift = Builder.CreateShl(Op0BO->getOperand(1), Op1);
+      NewShift->takeName(Op0BO);
+
+      return BinaryOperator::CreateSub(NewRHS, NewShift);
     }
+  }
 
-    BinaryOperator *FBO;
-    Value *TrueVal;
-    if (match(Op0, m_Select(m_Value(Cond), m_Value(TrueVal),
-                            m_OneUse(m_BinOp(FBO))))) {
-      const APInt *C;
-      if (!isa<Constant>(TrueVal) && FBO->getOperand(0) == TrueVal &&
-          match(FBO->getOperand(1), m_APInt(C)) &&
-          canShiftBinOpWithConstantRHS(I, FBO)) {
-        Constant *NewRHS = ConstantExpr::get(I.getOpcode(),
-                                       cast<Constant>(FBO->getOperand(1)), Op1);
+  // If we have a select that conditionally executes some binary operator,
+  // see if we can pull it the select and operator through the shift.
+  //
+  // For example, turning:
+  //   shl (select C, (add X, C1), X), C2
+  // Into:
+  //   Y = shl X, C2
+  //   select C, (add Y, C1 << C2), Y
+  Value *Cond;
+  BinaryOperator *TBO;
+  Value *FalseVal;
+  if (match(Op0, m_Select(m_Value(Cond), m_OneUse(m_BinOp(TBO)),
+                          m_Value(FalseVal)))) {
+    const APInt *C;
+    if (!isa<Constant>(FalseVal) && TBO->getOperand(0) == FalseVal &&
+        match(TBO->getOperand(1), m_APInt(C)) &&
+        canShiftBinOpWithConstantRHS(I, TBO)) {
+      Constant *NewRHS = ConstantExpr::get(
+          I.getOpcode(), cast<Constant>(TBO->getOperand(1)), Op1);
 
-        Value *NewShift =
-          Builder.CreateBinOp(I.getOpcode(), TrueVal, Op1);
-        Value *NewOp = Builder.CreateBinOp(FBO->getOpcode(), NewShift,
-                                           NewRHS);
-        return SelectInst::Create(Cond, NewShift, NewOp);
-      }
+      Value *NewShift = Builder.CreateBinOp(I.getOpcode(), FalseVal, Op1);
+      Value *NewOp = Builder.CreateBinOp(TBO->getOpcode(), NewShift, NewRHS);
+      return SelectInst::Create(Cond, NewOp, NewShift);
+    }
+  }
+
+  BinaryOperator *FBO;
+  Value *TrueVal;
+  if (match(Op0, m_Select(m_Value(Cond), m_Value(TrueVal),
+                          m_OneUse(m_BinOp(FBO))))) {
+    const APInt *C;
+    if (!isa<Constant>(TrueVal) && FBO->getOperand(0) == TrueVal &&
+        match(FBO->getOperand(1), m_APInt(C)) &&
+        canShiftBinOpWithConstantRHS(I, FBO)) {
+      Constant *NewRHS = ConstantExpr::get(
+          I.getOpcode(), cast<Constant>(FBO->getOperand(1)), Op1);
+
+      Value *NewShift = Builder.CreateBinOp(I.getOpcode(), TrueVal, Op1);
+      Value *NewOp = Builder.CreateBinOp(FBO->getOpcode(), NewShift, NewRHS);
+      return SelectInst::Create(Cond, NewShift, NewOp);
     }
   }
 
