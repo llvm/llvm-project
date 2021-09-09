@@ -315,9 +315,11 @@ containsUndefinedElement(const Constant *C,
       return false;
 
     for (unsigned i = 0, e = cast<FixedVectorType>(VTy)->getNumElements();
-         i != e; ++i)
-      if (HasFn(C->getAggregateElement(i)))
-        return true;
+         i != e; ++i) {
+      if (Constant *Elem = C->getAggregateElement(i))
+        if (HasFn(Elem))
+          return true;
+    }
   }
 
   return false;
