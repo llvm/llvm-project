@@ -1,7 +1,5 @@
 ; Test kernel inline hwasan instrumentation.
 
-; RUN: opt < %s -asan -asan-kernel=1 -asan-recover=1 -asan-instrumentation-with-call-threshold=10000 -S -enable-new-pm=0 | FileCheck --check-prefixes=CHECK-INLINE %s
-; RUN: opt < %s -asan -asan-kernel=1 -asan-recover=1 -asan-instrumentation-with-call-threshold=0 -S -enable-new-pm=0 | FileCheck --check-prefixes=CHECK-CALLBACK %s
 ; RUN: opt < %s -passes=asan-function-pipeline -asan-kernel=1 -asan-recover=1 -asan-instrumentation-with-call-threshold=10000 -S | FileCheck --check-prefixes=CHECK-INLINE %s
 ; RUN: opt < %s -passes=asan-function-pipeline -asan-kernel=1 -asan-recover=1 -asan-instrumentation-with-call-threshold=0 -S | FileCheck --check-prefixes=CHECK-CALLBACK %s
 
