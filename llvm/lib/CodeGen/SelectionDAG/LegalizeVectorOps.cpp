@@ -943,10 +943,8 @@ SDValue VectorLegalizer::ExpandSELECT(SDNode *Node) {
   // What is the size of each element in the vector mask.
   EVT BitTy = MaskTy.getScalarType();
 
-  Mask = DAG.getSelect(
-      DL, BitTy, Mask,
-      DAG.getConstant(APInt::getAllOnes(BitTy.getSizeInBits()), DL, BitTy),
-      DAG.getConstant(0, DL, BitTy));
+  Mask = DAG.getSelect(DL, BitTy, Mask, DAG.getAllOnesConstant(DL, BitTy),
+                       DAG.getConstant(0, DL, BitTy));
 
   // Broadcast the mask so that the entire vector is all one or all zero.
   if (VT.isFixedLengthVector())
@@ -960,8 +958,7 @@ SDValue VectorLegalizer::ExpandSELECT(SDNode *Node) {
   Op1 = DAG.getNode(ISD::BITCAST, DL, MaskTy, Op1);
   Op2 = DAG.getNode(ISD::BITCAST, DL, MaskTy, Op2);
 
-  SDValue AllOnes =
-      DAG.getConstant(APInt::getAllOnes(BitTy.getSizeInBits()), DL, MaskTy);
+  SDValue AllOnes = DAG.getAllOnesConstant(DL, MaskTy);
   SDValue NotMask = DAG.getNode(ISD::XOR, DL, MaskTy, Mask, AllOnes);
 
   Op1 = DAG.getNode(ISD::AND, DL, MaskTy, Op1, Mask);
@@ -1207,8 +1204,7 @@ SDValue VectorLegalizer::ExpandVSELECT(SDNode *Node) {
   Op1 = DAG.getNode(ISD::BITCAST, DL, VT, Op1);
   Op2 = DAG.getNode(ISD::BITCAST, DL, VT, Op2);
 
-  SDValue AllOnes =
-      DAG.getConstant(APInt::getAllOnes(VT.getScalarSizeInBits()), DL, VT);
+  SDValue AllOnes = DAG.getAllOnesConstant(DL, VT);
   SDValue NotMask = DAG.getNode(ISD::XOR, DL, VT, Mask, AllOnes);
 
   Op1 = DAG.getNode(ISD::AND, DL, VT, Op1, Mask);
@@ -1501,10 +1497,9 @@ void VectorLegalizer::UnrollStrictFPOp(SDNode *Node,
 
     if (Node->getOpcode() == ISD::STRICT_FSETCC ||
         Node->getOpcode() == ISD::STRICT_FSETCCS)
-      ScalarResult = DAG.getSelect(
-          dl, EltVT, ScalarResult,
-          DAG.getConstant(APInt::getAllOnes(EltVT.getSizeInBits()), dl, EltVT),
-          DAG.getConstant(0, dl, EltVT));
+      ScalarResult = DAG.getSelect(dl, EltVT, ScalarResult,
+                                   DAG.getAllOnesConstant(dl, EltVT),
+                                   DAG.getConstant(0, dl, EltVT));
 
     OpValues.push_back(ScalarResult);
     OpChains.push_back(ScalarChain);
@@ -1536,10 +1531,8 @@ SDValue VectorLegalizer::UnrollVSETCC(SDNode *Node) {
                          TLI.getSetCCResultType(DAG.getDataLayout(),
                                                 *DAG.getContext(), TmpEltVT),
                          LHSElem, RHSElem, CC);
-    Ops[i] = DAG.getSelect(
-        dl, EltVT, Ops[i],
-        DAG.getConstant(APInt::getAllOnes(EltVT.getSizeInBits()), dl, EltVT),
-        DAG.getConstant(0, dl, EltVT));
+    Ops[i] = DAG.getSelect(dl, EltVT, Ops[i], DAG.getAllOnesConstant(dl, EltVT),
+                           DAG.getConstant(0, dl, EltVT));
   }
   return DAG.getBuildVector(VT, dl, Ops);
 }

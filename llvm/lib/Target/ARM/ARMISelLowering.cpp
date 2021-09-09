@@ -12182,7 +12182,7 @@ static bool isConditionalZeroOrAllOnes(SDNode *N, bool AllOnes,
       // When looking for a 0 constant, N can be zext or sext.
       OtherOp = DAG.getConstant(1, dl, VT);
     else
-      OtherOp = DAG.getConstant(APInt::getAllOnes(VT.getSizeInBits()), dl, VT);
+      OtherOp = DAG.getAllOnesConstant(dl, VT);
     return true;
   }
   }

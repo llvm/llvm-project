@@ -3240,9 +3240,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     assert(TLI.isOperationLegalOrCustom(ISD::ADD, VT) &&
            TLI.isOperationLegalOrCustom(ISD::XOR, VT) &&
            "Don't know how to expand this subtraction!");
-    Tmp1 = DAG.getNode(
-        ISD::XOR, dl, VT, Node->getOperand(1),
-        DAG.getConstant(APInt::getAllOnes(VT.getSizeInBits()), dl, VT));
+    Tmp1 = DAG.getNode(ISD::XOR, dl, VT, Node->getOperand(1),
+                       DAG.getAllOnesConstant(dl, VT));
     Tmp1 = DAG.getNode(ISD::ADD, dl, VT, Tmp1, DAG.getConstant(1, dl, VT));
     Results.push_back(DAG.getNode(ISD::ADD, dl, VT, Node->getOperand(0), Tmp1));
     break;
