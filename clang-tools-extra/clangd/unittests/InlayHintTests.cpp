@@ -591,6 +591,17 @@ TEST(TypeHints, DependentType) {
   )cpp");
 }
 
+TEST(TypeHints, LongTypeName) {
+  assertTypeHints(R"cpp(
+    template <typename, typename, typename>
+    struct A {};
+    struct MultipleWords {};
+    A<MultipleWords, MultipleWords, MultipleWords> foo();
+    // Omit type hint past a certain length (currently 32)
+    auto var = foo();
+  )cpp");
+}
+
 // FIXME: Low-hanging fruit where we could omit a type hint:
 //  - auto x = TypeName(...);
 //  - auto x = (TypeName) (...);
