@@ -3,6 +3,7 @@
 // RUN:               -async-runtime-ref-counting-opt                          \
 // RUN:               -convert-async-to-llvm                                   \
 // RUN:               -convert-std-to-llvm                                     \
+// RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:     -e main -entry-point-result=void -O0                               \
 // RUN:     -shared-libs=%linalg_test_lib_dir/libmlir_c_runner_utils%shlibext  \
