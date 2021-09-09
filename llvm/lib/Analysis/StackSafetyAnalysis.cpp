@@ -242,7 +242,7 @@ class StackSafetyLocalAnalysis {
   ConstantRange getMemIntrinsicAccessRange(const MemIntrinsic *MI, const Use &U,
                                            Value *Base);
 
-  bool analyzeAllUses(Value *Ptr, UseInfo<GlobalValue> &AS,
+  void analyzeAllUses(Value *Ptr, UseInfo<GlobalValue> &AS,
                       const StackLifetime &SL);
 
 public:
@@ -328,7 +328,7 @@ ConstantRange StackSafetyLocalAnalysis::getMemIntrinsicAccessRange(
 
 /// The function analyzes all local uses of Ptr (alloca or argument) and
 /// calculates local access range and all function calls where it was used.
-bool StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
+void StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
                                               UseInfo<GlobalValue> &US,
                                               const StackLifetime &SL) {
   SmallPtrSet<const Value *, 16> Visited;
@@ -350,7 +350,7 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
       case Instruction::Load: {
         if (AI && !SL.isAliveAfter(AI, I)) {
           US.updateRange(UnknownRange);
-          return false;
+          return;
         }
         US.updateRange(
             getAccessRange(UI, Ptr, DL.getTypeStoreSize(I->getType())));
@@ -364,11 +364,11 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
         if (V == I->getOperand(0)) {
           // Stored the pointer - conservatively assume it may be unsafe.
           US.updateRange(UnknownRange);
-          return false;
+          return;
         }
         if (AI && !SL.isAliveAfter(AI, I)) {
           US.updateRange(UnknownRange);
-          return false;
+          return;
         }
         US.updateRange(getAccessRange(
             UI, Ptr, DL.getTypeStoreSize(I->getOperand(0)->getType())));
@@ -380,7 +380,7 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
         // FIXME: Process parameters correctly. This is a leak only if we return
         // alloca.
         US.updateRange(UnknownRange);
-        return false;
+        return;
 
       case Instruction::Call:
       case Instruction::Invoke: {
@@ -389,7 +389,7 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
 
         if (AI && !SL.isAliveAfter(AI, I)) {
           US.updateRange(UnknownRange);
-          return false;
+          return;
         }
 
         if (const MemIntrinsic *MI = dyn_cast<MemIntrinsic>(I)) {
@@ -400,7 +400,7 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
         const auto &CB = cast<CallBase>(*I);
         if (!CB.isArgOperand(&UI)) {
           US.updateRange(UnknownRange);
-          return false;
+          return;
         }
 
         unsigned ArgNo = CB.getArgOperandNo(&UI);
@@ -417,7 +417,7 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
             dyn_cast<GlobalValue>(CB.getCalledOperand()->stripPointerCasts());
         if (!Callee) {
           US.updateRange(UnknownRange);
-          return false;
+          return;
         }
 
         assert(isa<Function>(Callee) || isa<GlobalAlias>(Callee));
@@ -435,8 +435,6 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
       }
     }
   }
-
-  return true;
 }
 
 FunctionInfo<GlobalValue> StackSafetyLocalAnalysis::run() {
