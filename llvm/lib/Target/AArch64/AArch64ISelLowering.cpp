@@ -9841,9 +9841,10 @@ SDValue AArch64TargetLowering::LowerSPLAT_VECTOR(SDValue Op,
     // The only legal i1 vectors are SVE vectors, so we can use SVE-specific
     // lowering code.
     if (auto *ConstVal = dyn_cast<ConstantSDNode>(SplatVal)) {
+      if (ConstVal->isNullValue())
+        return SDValue(DAG.getMachineNode(AArch64::PFALSE, dl, VT), 0);
       if (ConstVal->isOne())
         return getPTrue(DAG, dl, VT, AArch64SVEPredPattern::all);
-      // TODO: Add special case for constant false
     }
     // The general case of i1.  There isn't any natural way to do this,
     // so we use some trickery with whilelo.
