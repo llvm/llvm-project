@@ -38,7 +38,10 @@ What's New in Libc++ 14.0.0?
 New Features
 ------------
 
-- ...
+- There's initial support for the C++20 header ``<format>``. The implementation
+  is incomplete. Some functions are known to be inefficient; both in memory
+  usage and performance. The implementation is considered experimental and isn't
+  considered ABI stable.
 
 API Changes
 -----------
