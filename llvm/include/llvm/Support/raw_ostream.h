@@ -330,6 +330,8 @@ public:
   // changeColor() has no effect until enable_colors(true) is called.
   virtual void enable_colors(bool enable) { ColorEnabled = enable; }
 
+  bool colors_enabled() const { return ColorEnabled; }
+
   /// Tie this stream to the specified stream. Replaces any existing tied-to
   /// stream. Specifying a nullptr unties the stream.
   void tie(raw_ostream *TieTo) { TiedStream = TieTo; }
