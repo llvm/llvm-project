@@ -1944,7 +1944,7 @@ multiclass sve_fp_3op_p_zds_b<bits<2> opc, string asm, SDPatternOperator op,
   def : SVE_4_Op_Pat<nxv2f64, op, nxv2i1, nxv2f64, nxv2f64, nxv2f64, !cast<Instruction>(NAME # _D)>;
 }
 
-multiclass sve_fp_3op_p_zds_zx<SDPatternOperator op, SDPatternOperator rev_op> {
+multiclass sve_fp_3op_p_zds_zx {
   def _UNDEF_H : PredThreeOpPseudo<NAME # _H, ZPR16, FalseLanesUndef>;
   def _UNDEF_S : PredThreeOpPseudo<NAME # _S, ZPR32, FalseLanesUndef>;
   def _UNDEF_D : PredThreeOpPseudo<NAME # _D, ZPR64, FalseLanesUndef>;
