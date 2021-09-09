@@ -281,7 +281,7 @@ def select_constant_cmp: GICombineRule<
 def right_identity_zero: GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_SUB, G_ADD, G_OR, G_XOR, G_SHL, G_ASHR, G_LSHR,
-                           G_PTR_ADD):$root,
+                           G_PTR_ADD, G_ROTL, G_ROTR):$root,
     [{ return Helper.matchConstantOp(${root}->getOperand(2), 0); }]),
   (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
 >;
