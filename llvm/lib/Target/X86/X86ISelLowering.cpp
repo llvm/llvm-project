@@ -41235,7 +41235,7 @@ static SDValue combineMinMaxReduction(SDNode *Extract, SelectionDAG &DAG,
   else if (BinOp == ISD::SMIN)
     Mask = DAG.getConstant(APInt::getSignedMinValue(MaskEltsBits), DL, SrcVT);
   else if (BinOp == ISD::UMAX)
-    Mask = DAG.getConstant(APInt::getAllOnes(MaskEltsBits), DL, SrcVT);
+    Mask = DAG.getAllOnesConstant(DL, SrcVT);
 
   if (Mask)
     MinPos = DAG.getNode(ISD::XOR, DL, SrcVT, Mask, MinPos);
