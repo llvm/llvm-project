@@ -1,4 +1,3 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/discriminator.prof | opt -analyze -branch-prob -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/discriminator.prof | opt -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
 
 ; Original code

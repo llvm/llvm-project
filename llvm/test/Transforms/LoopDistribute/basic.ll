@@ -1,14 +1,10 @@
-; RUN: opt -basic-aa -loop-distribute -enable-loop-distribute -verify-loop-info -verify-dom-info -S \
+; RUN: opt -aa-pipeline=basic-aa -passes=loop-distribute -enable-loop-distribute -verify-loop-info -verify-dom-info -S \
 ; RUN:   < %s | FileCheck %s
 
-; RUN: opt -basic-aa -loop-distribute -enable-loop-distribute -verify-loop-info -verify-dom-info \
-; RUN:   -loop-accesses -analyze < %s -enable-new-pm=0 | FileCheck %s --check-prefix=ANALYSIS
+; RUN: opt -aa-pipeline=basic-aa -passes='loop-distribute,loop(print-access-info)' -enable-loop-distribute \
+; RUN:   -verify-loop-info -verify-dom-info -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ANALYSIS
 
-; TODO: the following changes the order loop-access printing prints loops, remove legacy RUN and change after NPM switch
-; TODO: opt -aa-pipeline=basic-aa -passes='loop-distribute,print-access-info' -enable-loop-distribute \
-; TODO:   -verify-loop-info -verify-dom-info -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ANALYSIS
-
-; RUN: opt -basic-aa -loop-distribute -enable-loop-distribute -loop-vectorize -force-vector-width=4 -S \
+; RUN: opt -aa-pipeline=basic-aa -passes=loop-distribute,loop-vectorize -enable-loop-distribute -force-vector-width=4 -S \
 ; RUN:   < %s | FileCheck %s --check-prefix=VECTORIZE
 
 ; We should distribute this loop into a safe (2nd statement) and unsafe loop
@@ -46,10 +42,10 @@ entry:
 ; CHECK: for.end:
 
 
-; ANALYSIS: for.body:
-; ANALYSIS-NEXT: Memory dependences are safe{{$}}
 ; ANALYSIS: for.body.ldist1:
 ; ANALYSIS-NEXT: Report: unsafe dependent memory operations in loop
+; ANALYSIS: for.body:
+; ANALYSIS-NEXT: Memory dependences are safe{{$}}
 
 
 ; VECTORIZE: mul <4 x i32>
@@ -116,11 +112,11 @@ entry:
 ; CHECK: for.end:
 
 
+; ANALYSIS: for.body.ldist1:
+; ANALYSIS-NEXT: Report: unsafe dependent memory operations in loop
 ; ANALYSIS: for.body:
 ; ANALYSIS-NEXT: Has convergent operation in loop
 ; ANALYSIS-NEXT: Report: cannot add control dependency to convergent operation
-; ANALYSIS: for.body.ldist1:
-; ANALYSIS-NEXT: Report: unsafe dependent memory operations in loop
 
 ; convergent instruction happens to block vectorization
 ; VECTORIZE: call i32 @llvm.convergent
