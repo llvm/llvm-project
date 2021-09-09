@@ -1,0 +1,14 @@
+static_library("Arm") {
+  output_name = "lldbPluginArchitectureArm"
+  configs += [ "//llvm/utils/gn/build:lldb_code" ]
+  deps = [
+    "//lldb/source/Core",
+    "//lldb/source/Target",
+    "//lldb/source/Utility",
+    "//lldb/source/Plugins/Process/Utility",
+    "//llvm/lib/Support",
+  ]
+  # Uses source-relative paths for own includes.
+  include_dirs = [ "//lldb/source" ]
+  sources = [ "ArchitectureArm.cpp" ]
+}
