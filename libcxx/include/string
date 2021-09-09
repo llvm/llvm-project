@@ -675,7 +675,7 @@ typedef basic_string<char8_t> u8string;
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
 typedef basic_string<char16_t> u16string;
 typedef basic_string<char32_t> u32string;
-#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
+#endif
 
 template<class _CharT, class _Traits, class _Allocator>
 class
