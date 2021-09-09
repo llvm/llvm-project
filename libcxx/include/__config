@@ -789,7 +789,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #ifdef _LIBCPP_HAS_NO_UNICODE_CHARS
 typedef unsigned short char16_t;
 typedef unsigned int   char32_t;
-#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
+#endif
 
 #ifndef __SIZEOF_INT128__
 #define _LIBCPP_HAS_NO_INT128
