@@ -1638,25 +1638,7 @@ public:
   ///
   /// to get around any mathematical concerns resulting from
   /// referencing 2 in a space where 2 does no exist.
-  unsigned nearestLogBase2() const {
-    // Special case when we have a bitwidth of 1. If VAL is 1, then we
-    // get 0. If VAL is 0, we get WORDTYPE_MAX which gets truncated to
-    // UINT32_MAX.
-    if (BitWidth == 1)
-      return U.VAL - 1;
-
-    // Handle the zero case.
-    if (isNullValue())
-      return UINT32_MAX;
-
-    // The non-zero case is handled by computing:
-    //
-    //   nearestLogBase2(x) = logBase2(x) + x[logBase2(x)-1].
-    //
-    // where x[i] is referring to the value of the ith bit of x.
-    unsigned lg = logBase2();
-    return lg + unsigned((*this)[lg - 1]);
-  }
+  unsigned nearestLogBase2() const;
 
   /// \returns the log base 2 of this APInt if its an exact power of two, -1
   /// otherwise
@@ -1666,12 +1648,12 @@ public:
     return logBase2();
   }
 
-  /// Compute the square root
+  /// Compute the square root.
   APInt sqrt() const;
 
-  /// Get the absolute value;
-  ///
-  /// If *this is < 0 then return -(*this), otherwise *this;
+  /// Get the absolute value.  If *this is < 0 then return -(*this), otherwise
+  /// *this.  Note that the "most negative" signed number (e.g. -128 for 8 bit
+  /// wide APInt) is unchanged due to how negation works.
   APInt abs() const {
     if (isNegative())
       return -(*this);
@@ -1680,18 +1662,6 @@ public:
 
   /// \returns the multiplicative inverse for a given modulo.
   APInt multiplicativeInverse(const APInt &modulo) const;
-
-  /// @}
-  /// \name Support for division by constant
-  /// @{
-
-  /// Calculate the magic number for signed division by a constant.
-  struct ms;
-  ms magic() const;
-
-  /// Calculate the magic number for unsigned division by a constant.
-  struct mu;
-  mu magicu(unsigned LeadingZeros = 0) const;
 
   /// @}
   /// \name Building-block Operations for APInt and APFloat
@@ -1794,12 +1764,6 @@ public:
   /// restrictions on Count.
   static void tcShiftRight(WordType *, unsigned Words, unsigned Count);
 
-  /// The obvious AND, OR and XOR and complement operations.
-  static void tcAnd(WordType *, const WordType *, unsigned);
-  static void tcOr(WordType *, const WordType *, unsigned);
-  static void tcXor(WordType *, const WordType *, unsigned);
-  static void tcComplement(WordType *, unsigned);
-
   /// Comparison (unsigned) of two bignums.
   static int tcCompare(const WordType *, const WordType *, unsigned);
 
@@ -1812,9 +1776,6 @@ public:
   static WordType tcDecrement(WordType *dst, unsigned parts) {
     return tcSubtractPart(dst, 1, parts);
   }
-
-  /// Set the least significant BITS and clear the rest.
-  static void tcSetLeastSignificantBits(WordType *, unsigned, unsigned bits);
 
   /// Used to insert APInt objects, or objects that contain APInt objects, into
   ///  FoldingSets.
@@ -1994,19 +1955,6 @@ private:
   int compareSigned(const APInt &RHS) const LLVM_READONLY;
 
   /// @}
-};
-
-/// Magic data for optimising signed division by a constant.
-struct APInt::ms {
-  APInt m;    ///< magic number
-  unsigned s; ///< shift amount
-};
-
-/// Magic data for optimising unsigned division by a constant.
-struct APInt::mu {
-  APInt m;    ///< magic number
-  bool a;     ///< add indicator
-  unsigned s; ///< shift amount
 };
 
 inline bool operator==(uint64_t V1, const APInt &V2) { return V2 == V1; }
