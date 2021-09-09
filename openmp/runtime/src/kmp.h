@@ -4130,6 +4130,10 @@ typedef enum kmp_severity_t {
 } kmp_severity_t;
 extern void __kmpc_error(ident_t *loc, int severity, const char *message);
 
+// Support for scope directive
+KMP_EXPORT void __kmpc_scope(ident_t *loc, kmp_int32 gtid, void *reserved);
+KMP_EXPORT void __kmpc_end_scope(ident_t *loc, kmp_int32 gtid, void *reserved);
+
 #ifdef __cplusplus
 }
 #endif
