@@ -1924,6 +1924,13 @@ ModulePassManager PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
 
   ModulePassManager MPM;
 
+  // Perform pseudo probe instrumentation in O0 mode. This is for the
+  // consistency between different build modes. For example, a LTO build can be
+  // mixed with an O0 prelink and an O2 postlink. Loading a sample profile in
+  // the postlink will require pseudo probe instrumentation in the prelink.
+  if (PGOOpt && PGOOpt->PseudoProbeForProfiling)
+    MPM.addPass(SampleProfileProbePass(TM));
+
   if (PGOOpt && (PGOOpt->Action == PGOOptions::IRInstr ||
                  PGOOpt->Action == PGOOptions::IRUse))
     addPGOInstrPassesForO0(
