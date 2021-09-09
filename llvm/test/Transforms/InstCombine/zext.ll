@@ -410,17 +410,15 @@ define i32 @masked_bit_wrong_pred(i32 %x, i32 %y) {
   ret i32 %r
 }
 
-; Assert that zext(or(masked_bit_test, icmp)) can be correctly transformed to
-; or(shifted_masked_bit, zext(icmp))
-
 define i32 @zext_or_masked_bit_test(i32 %a, i32 %b, i32 %x) {
 ; CHECK-LABEL: @zext_or_masked_bit_test(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[A:%.*]], [[B]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 1
-; CHECK-NEXT:    [[CMP2:%.*]] = zext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[Z3:%.*]] = or i32 [[TMP2]], [[CMP2]]
-; CHECK-NEXT:    ret i32 [[Z3]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 1, [[B:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHL]], [[A:%.*]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], [[B]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[TOBOOL]], [[CMP]]
+; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[OR]] to i32
+; CHECK-NEXT:    ret i32 [[Z]]
 ;
   %shl = shl i32 1, %b
   %and = and i32 %shl, %a
@@ -439,9 +437,8 @@ define i32 @zext_or_masked_bit_test_uses(i32 %a, i32 %b, i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], [[B]]
 ; CHECK-NEXT:    [[OR:%.*]] = or i1 [[TOBOOL]], [[CMP]]
 ; CHECK-NEXT:    call void @use1(i1 [[OR]])
-; CHECK-NEXT:    [[Z34:%.*]] = or i1 [[TOBOOL]], [[CMP]]
-; CHECK-NEXT:    [[Z3:%.*]] = zext i1 [[Z34]] to i32
-; CHECK-NEXT:    ret i32 [[Z3]]
+; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[OR]] to i32
+; CHECK-NEXT:    ret i32 [[Z]]
 ;
   %shl = shl i32 1, %b
   %and = and i32 %shl, %a

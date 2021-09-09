@@ -1259,11 +1259,18 @@ class FileError final : public ErrorInfo<FileError> {
 
 public:
   void log(raw_ostream &OS) const override {
-    assert(Err && !FileName.empty() && "Trying to log after takeError().");
+    assert(Err && "Trying to log after takeError().");
     OS << "'" << FileName << "': ";
     if (Line.hasValue())
       OS << "line " << Line.getValue() << ": ";
     Err->log(OS);
+  }
+
+  std::string messageWithoutFileInfo() const {
+    std::string Msg;
+    raw_string_ostream OS(Msg);
+    Err->log(OS);
+    return OS.str();
   }
 
   StringRef getFileName() { return FileName; }
@@ -1279,8 +1286,6 @@ private:
   FileError(const Twine &F, Optional<size_t> LineNum,
             std::unique_ptr<ErrorInfoBase> E) {
     assert(E && "Cannot create FileError from Error success value.");
-    assert(!F.isTriviallyEmpty() &&
-           "The file name provided to FileError must not be empty.");
     FileName = F.str();
     Err = std::move(E);
     Line = std::move(LineNum);

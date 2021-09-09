@@ -411,11 +411,12 @@ hsa_status_t callbackEvent(const hsa_amd_event_t *event, void *data) {
 }
 
 hsa_status_t atl_init_gpu_context() {
+  // need call tto init_hsa, dont know why trunk does not seem to.
   hsa_status_t err;
   err = init_hsa();
   if (err != HSA_STATUS_SUCCESS)
     return HSA_STATUS_ERROR;
-
+  // end of added workaround
   err = hsa_amd_register_system_event_handler(callbackEvent, NULL);
   if (err != HSA_STATUS_SUCCESS) {
     printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,

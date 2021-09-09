@@ -467,6 +467,8 @@ void MappingTraits<COFFYAML::PEHeader>::mapping(IO &IO,
   IO.mapRequired("SizeOfHeapReserve", PH.Header.SizeOfHeapReserve);
   IO.mapRequired("SizeOfHeapCommit", PH.Header.SizeOfHeapCommit);
 
+  IO.mapOptional("NumberOfRvaAndSize", PH.Header.NumberOfRvaAndSize,
+                 COFF::NUM_DATA_DIRECTORIES + 1);
   IO.mapOptional("ExportTable", PH.DataDirectories[COFF::EXPORT_TABLE]);
   IO.mapOptional("ImportTable", PH.DataDirectories[COFF::IMPORT_TABLE]);
   IO.mapOptional("ResourceTable", PH.DataDirectories[COFF::RESOURCE_TABLE]);

@@ -5,12 +5,14 @@ static_library("Initialization") {
     "//lldb/source/Core",
     "//lldb/source/Host",
     "//lldb/source/Plugins/Process/gdb-remote",
-
-    # XXX:
-    # lldbPluginProcessPOSIX on linux/android
-    # lldbPluginProcessWindowsCommon on win
     "//llvm/lib/Support",
   ]
+
+  if (current_os == "linux" || current_os == "android") {
+    deps += [ "//lldb/source/Plugins/Process/POSIX" ]
+  } else if (current_os == "win") {
+    deps += [ "//lldb/source/Plugins/Process/Windows/Common" ]
+  }
 
   # SystemInitializerCommon.cpp includes headers from Plugins/Process/....
   include_dirs = [ ".." ]

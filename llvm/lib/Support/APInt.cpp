@@ -240,16 +240,22 @@ APInt APInt::operator*(const APInt& RHS) const {
   return Result;
 }
 
-void APInt::AndAssignSlowCase(const APInt& RHS) {
-  tcAnd(U.pVal, RHS.U.pVal, getNumWords());
+void APInt::AndAssignSlowCase(const APInt &RHS) {
+  WordType *dst = U.pVal, *rhs = RHS.U.pVal;
+  for (size_t i = 0, e = getNumWords(); i != e; ++i)
+    dst[i] &= rhs[i];
 }
 
-void APInt::OrAssignSlowCase(const APInt& RHS) {
-  tcOr(U.pVal, RHS.U.pVal, getNumWords());
+void APInt::OrAssignSlowCase(const APInt &RHS) {
+  WordType *dst = U.pVal, *rhs = RHS.U.pVal;
+  for (size_t i = 0, e = getNumWords(); i != e; ++i)
+    dst[i] |= rhs[i];
 }
 
-void APInt::XorAssignSlowCase(const APInt& RHS) {
-  tcXor(U.pVal, RHS.U.pVal, getNumWords());
+void APInt::XorAssignSlowCase(const APInt &RHS) {
+  WordType *dst = U.pVal, *rhs = RHS.U.pVal;
+  for (size_t i = 0, e = getNumWords(); i != e; ++i)
+    dst[i] ^= rhs[i];
 }
 
 APInt& APInt::operator*=(const APInt& RHS) {
@@ -325,6 +331,12 @@ void APInt::setBitsSlowCase(unsigned loBit, unsigned hiBit) {
   // Fill any words between loWord and hiWord with all ones.
   for (unsigned word = loWord + 1; word < hiWord; ++word)
     U.pVal[word] = WORDTYPE_MAX;
+}
+
+// Complement a bignum in-place.
+static void tcComplement(APInt::WordType *dst, unsigned parts) {
+  for (unsigned i = 0; i < parts; i++)
+    dst[i] = ~dst[i];
 }
 
 /// Toggle every bit to its opposite value.
@@ -1092,6 +1104,35 @@ APInt APInt::rotr(unsigned rotateAmt) const {
   return lshr(rotateAmt) | shl(BitWidth - rotateAmt);
 }
 
+/// \returns the nearest log base 2 of this APInt. Ties round up.
+///
+/// NOTE: When we have a BitWidth of 1, we define:
+///
+///   log2(0) = UINT32_MAX
+///   log2(1) = 0
+///
+/// to get around any mathematical concerns resulting from
+/// referencing 2 in a space where 2 does no exist.
+unsigned APInt::nearestLogBase2() const {
+  // Special case when we have a bitwidth of 1. If VAL is 1, then we
+  // get 0. If VAL is 0, we get WORDTYPE_MAX which gets truncated to
+  // UINT32_MAX.
+  if (BitWidth == 1)
+    return U.VAL - 1;
+
+  // Handle the zero case.
+  if (isNullValue())
+    return UINT32_MAX;
+
+  // The non-zero case is handled by computing:
+  //
+  //   nearestLogBase2(x) = logBase2(x) + x[logBase2(x)-1].
+  //
+  // where x[i] is referring to the value of the ith bit of x.
+  unsigned lg = logBase2();
+  return lg + unsigned((*this)[lg - 1]);
+}
+
 // Square Root - this method computes and returns the square root of "this".
 // Three mechanisms are used for computation. For small values (<= 5 bits),
 // a table lookup is done. This gets some performance for common cases. For
@@ -1220,98 +1261,6 @@ APInt APInt::multiplicativeInverse(const APInt& modulo) const {
     t[i] += modulo;
 
   return std::move(t[i]);
-}
-
-/// Calculate the magic numbers required to implement a signed integer division
-/// by a constant as a sequence of multiplies, adds and shifts.  Requires that
-/// the divisor not be 0, 1, or -1.  Taken from "Hacker's Delight", Henry S.
-/// Warren, Jr., chapter 10.
-APInt::ms APInt::magic() const {
-  const APInt& d = *this;
-  unsigned p;
-  APInt ad, anc, delta, q1, r1, q2, r2, t;
-  APInt signedMin = APInt::getSignedMinValue(d.getBitWidth());
-  struct ms mag;
-
-  ad = d.abs();
-  t = signedMin + (d.lshr(d.getBitWidth() - 1));
-  anc = t - 1 - t.urem(ad);   // absolute value of nc
-  p = d.getBitWidth() - 1;    // initialize p
-  q1 = signedMin.udiv(anc);   // initialize q1 = 2p/abs(nc)
-  r1 = signedMin - q1*anc;    // initialize r1 = rem(2p,abs(nc))
-  q2 = signedMin.udiv(ad);    // initialize q2 = 2p/abs(d)
-  r2 = signedMin - q2*ad;     // initialize r2 = rem(2p,abs(d))
-  do {
-    p = p + 1;
-    q1 = q1<<1;          // update q1 = 2p/abs(nc)
-    r1 = r1<<1;          // update r1 = rem(2p/abs(nc))
-    if (r1.uge(anc)) {  // must be unsigned comparison
-      q1 = q1 + 1;
-      r1 = r1 - anc;
-    }
-    q2 = q2<<1;          // update q2 = 2p/abs(d)
-    r2 = r2<<1;          // update r2 = rem(2p/abs(d))
-    if (r2.uge(ad)) {   // must be unsigned comparison
-      q2 = q2 + 1;
-      r2 = r2 - ad;
-    }
-    delta = ad - r2;
-  } while (q1.ult(delta) || (q1 == delta && r1 == 0));
-
-  mag.m = q2 + 1;
-  if (d.isNegative()) mag.m = -mag.m;   // resulting magic number
-  mag.s = p - d.getBitWidth();          // resulting shift
-  return mag;
-}
-
-/// Calculate the magic numbers required to implement an unsigned integer
-/// division by a constant as a sequence of multiplies, adds and shifts.
-/// Requires that the divisor not be 0.  Taken from "Hacker's Delight", Henry
-/// S. Warren, Jr., chapter 10.
-/// LeadingZeros can be used to simplify the calculation if the upper bits
-/// of the divided value are known zero.
-APInt::mu APInt::magicu(unsigned LeadingZeros) const {
-  const APInt& d = *this;
-  unsigned p;
-  APInt nc, delta, q1, r1, q2, r2;
-  struct mu magu;
-  magu.a = 0;               // initialize "add" indicator
-  APInt allOnes = APInt::getAllOnesValue(d.getBitWidth()).lshr(LeadingZeros);
-  APInt signedMin = APInt::getSignedMinValue(d.getBitWidth());
-  APInt signedMax = APInt::getSignedMaxValue(d.getBitWidth());
-
-  nc = allOnes - (allOnes - d).urem(d);
-  p = d.getBitWidth() - 1;  // initialize p
-  q1 = signedMin.udiv(nc);  // initialize q1 = 2p/nc
-  r1 = signedMin - q1*nc;   // initialize r1 = rem(2p,nc)
-  q2 = signedMax.udiv(d);   // initialize q2 = (2p-1)/d
-  r2 = signedMax - q2*d;    // initialize r2 = rem((2p-1),d)
-  do {
-    p = p + 1;
-    if (r1.uge(nc - r1)) {
-      q1 = q1 + q1 + 1;  // update q1
-      r1 = r1 + r1 - nc; // update r1
-    }
-    else {
-      q1 = q1+q1; // update q1
-      r1 = r1+r1; // update r1
-    }
-    if ((r2 + 1).uge(d - r2)) {
-      if (q2.uge(signedMax)) magu.a = 1;
-      q2 = q2+q2 + 1;     // update q2
-      r2 = r2+r2 + 1 - d; // update r2
-    }
-    else {
-      if (q2.uge(signedMin)) magu.a = 1;
-      q2 = q2+q2;     // update q2
-      r2 = r2+r2 + 1; // update r2
-    }
-    delta = d - 1 - r2;
-  } while (p < d.getBitWidth()*2 &&
-           (q1.ult(delta) || (q1 == delta && r1 == 0)));
-  magu.m = q2 + 1; // resulting magic number
-  magu.s = p - d.getBitWidth();  // resulting shift
-  return magu;
 }
 
 /// Implementation of Knuth's Algorithm D (Division of nonnegative integers)
@@ -2305,55 +2254,51 @@ void APInt::print(raw_ostream &OS, bool isSigned) const {
 static_assert(APInt::APINT_BITS_PER_WORD % 2 == 0,
               "Part width must be divisible by 2!");
 
-/* Some handy functions local to this file.  */
-
-/* Returns the integer part with the least significant BITS set.
-   BITS cannot be zero.  */
+// Returns the integer part with the least significant BITS set.
+// BITS cannot be zero.
 static inline APInt::WordType lowBitMask(unsigned bits) {
   assert(bits != 0 && bits <= APInt::APINT_BITS_PER_WORD);
-
   return ~(APInt::WordType) 0 >> (APInt::APINT_BITS_PER_WORD - bits);
 }
 
-/* Returns the value of the lower half of PART.  */
+/// Returns the value of the lower half of PART.
 static inline APInt::WordType lowHalf(APInt::WordType part) {
   return part & lowBitMask(APInt::APINT_BITS_PER_WORD / 2);
 }
 
-/* Returns the value of the upper half of PART.  */
+/// Returns the value of the upper half of PART.
 static inline APInt::WordType highHalf(APInt::WordType part) {
   return part >> (APInt::APINT_BITS_PER_WORD / 2);
 }
 
-/* Returns the bit number of the most significant set bit of a part.
-   If the input number has no bits set -1U is returned.  */
+/// Returns the bit number of the most significant set bit of a part.
+/// If the input number has no bits set -1U is returned.
 static unsigned partMSB(APInt::WordType value) {
   return findLastSet(value, ZB_Max);
 }
 
-/* Returns the bit number of the least significant set bit of a
-   part.  If the input number has no bits set -1U is returned.  */
+/// Returns the bit number of the least significant set bit of a part.  If the
+/// input number has no bits set -1U is returned.
 static unsigned partLSB(APInt::WordType value) {
   return findFirstSet(value, ZB_Max);
 }
 
-/* Sets the least significant part of a bignum to the input value, and
-   zeroes out higher parts.  */
+/// Sets the least significant part of a bignum to the input value, and zeroes
+/// out higher parts.
 void APInt::tcSet(WordType *dst, WordType part, unsigned parts) {
   assert(parts > 0);
-
   dst[0] = part;
   for (unsigned i = 1; i < parts; i++)
     dst[i] = 0;
 }
 
-/* Assign one bignum to another.  */
+/// Assign one bignum to another.
 void APInt::tcAssign(WordType *dst, const WordType *src, unsigned parts) {
   for (unsigned i = 0; i < parts; i++)
     dst[i] = src[i];
 }
 
-/* Returns true if a bignum is zero, false otherwise.  */
+/// Returns true if a bignum is zero, false otherwise.
 bool APInt::tcIsZero(const WordType *src, unsigned parts) {
   for (unsigned i = 0; i < parts; i++)
     if (src[i])
@@ -2362,28 +2307,27 @@ bool APInt::tcIsZero(const WordType *src, unsigned parts) {
   return true;
 }
 
-/* Extract the given bit of a bignum; returns 0 or 1.  */
+/// Extract the given bit of a bignum; returns 0 or 1.
 int APInt::tcExtractBit(const WordType *parts, unsigned bit) {
   return (parts[whichWord(bit)] & maskBit(bit)) != 0;
 }
 
-/* Set the given bit of a bignum. */
+/// Set the given bit of a bignum.
 void APInt::tcSetBit(WordType *parts, unsigned bit) {
   parts[whichWord(bit)] |= maskBit(bit);
 }
 
-/* Clears the given bit of a bignum. */
+/// Clears the given bit of a bignum.
 void APInt::tcClearBit(WordType *parts, unsigned bit) {
   parts[whichWord(bit)] &= ~maskBit(bit);
 }
 
-/* Returns the bit number of the least significant set bit of a
-   number.  If the input number has no bits set -1U is returned.  */
+/// Returns the bit number of the least significant set bit of a number.  If the
+/// input number has no bits set -1U is returned.
 unsigned APInt::tcLSB(const WordType *parts, unsigned n) {
   for (unsigned i = 0; i < n; i++) {
     if (parts[i] != 0) {
       unsigned lsb = partLSB(parts[i]);
-
       return lsb + i * APINT_BITS_PER_WORD;
     }
   }
@@ -2391,8 +2335,8 @@ unsigned APInt::tcLSB(const WordType *parts, unsigned n) {
   return -1U;
 }
 
-/* Returns the bit number of the most significant set bit of a number.
-   If the input number has no bits set -1U is returned.  */
+/// Returns the bit number of the most significant set bit of a number.
+/// If the input number has no bits set -1U is returned.
 unsigned APInt::tcMSB(const WordType *parts, unsigned n) {
   do {
     --n;
@@ -2407,10 +2351,10 @@ unsigned APInt::tcMSB(const WordType *parts, unsigned n) {
   return -1U;
 }
 
-/* Copy the bit vector of width srcBITS from SRC, starting at bit
-   srcLSB, to DST, of dstCOUNT parts, such that the bit srcLSB becomes
-   the least significant bit of DST.  All high bits above srcBITS in
-   DST are zero-filled.  */
+/// Copy the bit vector of width srcBITS from SRC, starting at bit srcLSB, to
+/// DST, of dstCOUNT parts, such that the bit srcLSB becomes the least
+/// significant bit of DST.  All high bits above srcBITS in DST are zero-filled.
+/// */
 void
 APInt::tcExtract(WordType *dst, unsigned dstCount, const WordType *src,
                  unsigned srcBits, unsigned srcLSB) {
@@ -2418,14 +2362,14 @@ APInt::tcExtract(WordType *dst, unsigned dstCount, const WordType *src,
   assert(dstParts <= dstCount);
 
   unsigned firstSrcPart = srcLSB / APINT_BITS_PER_WORD;
-  tcAssign (dst, src + firstSrcPart, dstParts);
+  tcAssign(dst, src + firstSrcPart, dstParts);
 
   unsigned shift = srcLSB % APINT_BITS_PER_WORD;
-  tcShiftRight (dst, dstParts, shift);
+  tcShiftRight(dst, dstParts, shift);
 
-  /* We now have (dstParts * APINT_BITS_PER_WORD - shift) bits from SRC
-     in DST.  If this is less that srcBits, append the rest, else
-     clear the high bits.  */
+  // We now have (dstParts * APINT_BITS_PER_WORD - shift) bits from SRC
+  // in DST.  If this is less that srcBits, append the rest, else
+  // clear the high bits.
   unsigned n = dstParts * APINT_BITS_PER_WORD - shift;
   if (n < srcBits) {
     WordType mask = lowBitMask (srcBits - n);
@@ -2436,12 +2380,12 @@ APInt::tcExtract(WordType *dst, unsigned dstCount, const WordType *src,
       dst[dstParts - 1] &= lowBitMask (srcBits % APINT_BITS_PER_WORD);
   }
 
-  /* Clear high parts.  */
+  // Clear high parts.
   while (dstParts < dstCount)
     dst[dstParts++] = 0;
 }
 
-/* DST += RHS + C where C is zero or one.  Returns the carry flag.  */
+//// DST += RHS + C where C is zero or one.  Returns the carry flag.
 APInt::WordType APInt::tcAdd(WordType *dst, const WordType *rhs,
                              WordType c, unsigned parts) {
   assert(c <= 1);
@@ -2476,7 +2420,7 @@ APInt::WordType APInt::tcAddPart(WordType *dst, WordType src,
   return 1;
 }
 
-/* DST -= RHS + C where C is zero or one.  Returns the carry flag.  */
+/// DST -= RHS + C where C is zero or one.  Returns the carry flag.
 APInt::WordType APInt::tcSubtract(WordType *dst, const WordType *rhs,
                                   WordType c, unsigned parts) {
   assert(c <= 1);
@@ -2515,47 +2459,39 @@ APInt::WordType APInt::tcSubtractPart(WordType *dst, WordType src,
   return 1;
 }
 
-/* Negate a bignum in-place.  */
+/// Negate a bignum in-place.
 void APInt::tcNegate(WordType *dst, unsigned parts) {
   tcComplement(dst, parts);
   tcIncrement(dst, parts);
 }
 
-/*  DST += SRC * MULTIPLIER + CARRY   if add is true
-    DST  = SRC * MULTIPLIER + CARRY   if add is false
-
-    Requires 0 <= DSTPARTS <= SRCPARTS + 1.  If DST overlaps SRC
-    they must start at the same point, i.e. DST == SRC.
-
-    If DSTPARTS == SRCPARTS + 1 no overflow occurs and zero is
-    returned.  Otherwise DST is filled with the least significant
-    DSTPARTS parts of the result, and if all of the omitted higher
-    parts were zero return zero, otherwise overflow occurred and
-    return one.  */
+/// DST += SRC * MULTIPLIER + CARRY   if add is true
+/// DST  = SRC * MULTIPLIER + CARRY   if add is false
+/// Requires 0 <= DSTPARTS <= SRCPARTS + 1.  If DST overlaps SRC
+/// they must start at the same point, i.e. DST == SRC.
+/// If DSTPARTS == SRCPARTS + 1 no overflow occurs and zero is
+/// returned.  Otherwise DST is filled with the least significant
+/// DSTPARTS parts of the result, and if all of the omitted higher
+/// parts were zero return zero, otherwise overflow occurred and
+/// return one.
 int APInt::tcMultiplyPart(WordType *dst, const WordType *src,
                           WordType multiplier, WordType carry,
                           unsigned srcParts, unsigned dstParts,
                           bool add) {
-  /* Otherwise our writes of DST kill our later reads of SRC.  */
+  // Otherwise our writes of DST kill our later reads of SRC.
   assert(dst <= src || dst >= src + srcParts);
   assert(dstParts <= srcParts + 1);
 
-  /* N loops; minimum of dstParts and srcParts.  */
+  // N loops; minimum of dstParts and srcParts.
   unsigned n = std::min(dstParts, srcParts);
 
   for (unsigned i = 0; i < n; i++) {
-    WordType low, mid, high, srcPart;
-
-      /* [ LOW, HIGH ] = MULTIPLIER * SRC[i] + DST[i] + CARRY.
-
-         This cannot overflow, because
-
-         (n - 1) * (n - 1) + 2 (n - 1) = (n - 1) * (n + 1)
-
-         which is less than n^2.  */
-
-    srcPart = src[i];
-
+    // [LOW, HIGH] = MULTIPLIER * SRC[i] + DST[i] + CARRY.
+    // This cannot overflow, because:
+    //   (n - 1) * (n - 1) + 2 (n - 1) = (n - 1) * (n + 1)
+    // which is less than n^2.
+    WordType srcPart = src[i];
+    WordType low, mid, high;
     if (multiplier == 0 || srcPart == 0) {
       low = carry;
       high = 0;
@@ -2577,14 +2513,14 @@ int APInt::tcMultiplyPart(WordType *dst, const WordType *src,
         high++;
       low += mid;
 
-      /* Now add carry.  */
+      // Now add carry.
       if (low + carry < low)
         high++;
       low += carry;
     }
 
     if (add) {
-      /* And now DST[i], and store the new low part there.  */
+      // And now DST[i], and store the new low part there.
       if (low + dst[i] < low)
         high++;
       dst[i] += low;
@@ -2595,32 +2531,32 @@ int APInt::tcMultiplyPart(WordType *dst, const WordType *src,
   }
 
   if (srcParts < dstParts) {
-    /* Full multiplication, there is no overflow.  */
+    // Full multiplication, there is no overflow.
     assert(srcParts + 1 == dstParts);
     dst[srcParts] = carry;
     return 0;
   }
 
-  /* We overflowed if there is carry.  */
+  // We overflowed if there is carry.
   if (carry)
     return 1;
 
-  /* We would overflow if any significant unwritten parts would be
-     non-zero.  This is true if any remaining src parts are non-zero
-     and the multiplier is non-zero.  */
+  // We would overflow if any significant unwritten parts would be
+  // non-zero.  This is true if any remaining src parts are non-zero
+  // and the multiplier is non-zero.
   if (multiplier)
     for (unsigned i = dstParts; i < srcParts; i++)
       if (src[i])
         return 1;
 
-  /* We fitted in the narrow destination.  */
+  // We fitted in the narrow destination.
   return 0;
 }
 
-/* DST = LHS * RHS, where DST has the same width as the operands and
-   is filled with the least significant parts of the result.  Returns
-   one if overflow occurred, otherwise zero.  DST must be disjoint
-   from both operands.  */
+/// DST = LHS * RHS, where DST has the same width as the operands and
+/// is filled with the least significant parts of the result.  Returns
+/// one if overflow occurred, otherwise zero.  DST must be disjoint
+/// from both operands.
 int APInt::tcMultiply(WordType *dst, const WordType *lhs,
                       const WordType *rhs, unsigned parts) {
   assert(dst != lhs && dst != rhs);
@@ -2640,7 +2576,7 @@ int APInt::tcMultiply(WordType *dst, const WordType *lhs,
 void APInt::tcFullMultiply(WordType *dst, const WordType *lhs,
                            const WordType *rhs, unsigned lhsParts,
                            unsigned rhsParts) {
-  /* Put the narrower number on the LHS for less loops below.  */
+  // Put the narrower number on the LHS for less loops below.
   if (lhsParts > rhsParts)
     return tcFullMultiply (dst, rhs, lhs, rhsParts, lhsParts);
 
@@ -2652,16 +2588,15 @@ void APInt::tcFullMultiply(WordType *dst, const WordType *lhs,
     tcMultiplyPart(&dst[i], rhs, lhs[i], 0, rhsParts, rhsParts + 1, true);
 }
 
-/* If RHS is zero LHS and REMAINDER are left unchanged, return one.
-   Otherwise set LHS to LHS / RHS with the fractional part discarded,
-   set REMAINDER to the remainder, return zero.  i.e.
-
-   OLD_LHS = RHS * LHS + REMAINDER
-
-   SCRATCH is a bignum of the same size as the operands and result for
-   use by the routine; its contents need not be initialized and are
-   destroyed.  LHS, REMAINDER and SCRATCH must be distinct.
-*/
+// If RHS is zero LHS and REMAINDER are left unchanged, return one.
+// Otherwise set LHS to LHS / RHS with the fractional part discarded,
+// set REMAINDER to the remainder, return zero.  i.e.
+//
+//   OLD_LHS = RHS * LHS + REMAINDER
+//
+// SCRATCH is a bignum of the same size as the operands and result for
+// use by the routine; its contents need not be initialized and are
+// destroyed.  LHS, REMAINDER and SCRATCH must be distinct.
 int APInt::tcDivide(WordType *lhs, const WordType *rhs,
                     WordType *remainder, WordType *srhs,
                     unsigned parts) {
@@ -2680,8 +2615,8 @@ int APInt::tcDivide(WordType *lhs, const WordType *rhs,
   tcAssign(remainder, lhs, parts);
   tcSet(lhs, 0, parts);
 
-  /* Loop, subtracting SRHS if REMAINDER is greater and adding that to
-     the total.  */
+  // Loop, subtracting SRHS if REMAINDER is greater and adding that to the
+  // total.
   for (;;) {
     int compare = tcCompare(remainder, srhs, parts);
     if (compare >= 0) {
@@ -2756,31 +2691,7 @@ void APInt::tcShiftRight(WordType *Dst, unsigned Words, unsigned Count) {
   std::memset(Dst + WordsToMove, 0, WordShift * APINT_WORD_SIZE);
 }
 
-/* Bitwise and of two bignums.  */
-void APInt::tcAnd(WordType *dst, const WordType *rhs, unsigned parts) {
-  for (unsigned i = 0; i < parts; i++)
-    dst[i] &= rhs[i];
-}
-
-/* Bitwise inclusive or of two bignums.  */
-void APInt::tcOr(WordType *dst, const WordType *rhs, unsigned parts) {
-  for (unsigned i = 0; i < parts; i++)
-    dst[i] |= rhs[i];
-}
-
-/* Bitwise exclusive or of two bignums.  */
-void APInt::tcXor(WordType *dst, const WordType *rhs, unsigned parts) {
-  for (unsigned i = 0; i < parts; i++)
-    dst[i] ^= rhs[i];
-}
-
-/* Complement a bignum in-place.  */
-void APInt::tcComplement(WordType *dst, unsigned parts) {
-  for (unsigned i = 0; i < parts; i++)
-    dst[i] = ~dst[i];
-}
-
-/* Comparison (unsigned) of two bignums.  */
+// Comparison (unsigned) of two bignums.
 int APInt::tcCompare(const WordType *lhs, const WordType *rhs,
                      unsigned parts) {
   while (parts) {
@@ -2790,23 +2701,6 @@ int APInt::tcCompare(const WordType *lhs, const WordType *rhs,
   }
 
   return 0;
-}
-
-/* Set the least significant BITS bits of a bignum, clear the
-   rest.  */
-void APInt::tcSetLeastSignificantBits(WordType *dst, unsigned parts,
-                                      unsigned bits) {
-  unsigned i = 0;
-  while (bits > APINT_BITS_PER_WORD) {
-    dst[i++] = ~(WordType) 0;
-    bits -= APINT_BITS_PER_WORD;
-  }
-
-  if (bits)
-    dst[i++] = ~(WordType) 0 >> (APINT_BITS_PER_WORD - bits);
-
-  while (i < parts)
-    dst[i++] = 0;
 }
 
 APInt llvm::APIntOps::RoundingUDiv(const APInt &A, const APInt &B,

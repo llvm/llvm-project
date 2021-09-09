@@ -1,7 +1,7 @@
  // XFAIL: *
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
-// RUN:   env LIBRARY_PATH=%S/Inputs/hip_dev_lib %clang -### --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 %s 2>&1 \
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 --libomptarget-amdgcn-bc-path=%S/Inputs/hip_dev_lib %s 2>&1 \
 // RUN:   | FileCheck %s
 
 // verify the tools invocations
@@ -57,13 +57,13 @@
 // CHECK-PRINT-BINDINGS: "x86_64-unknown-linux-gnu" - "GNU::Linker", inputs: ["[[HOST_O]]", "[[OFFLOAD_O]]"], output:
 
 // verify the llc is invoked for textual assembly output
-// RUN:   env LIBRARY_PATH=%S/Inputs/hip_dev_lib %clang -### --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 -save-temps %s 2>&1 \
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 --libomptarget-amdgcn-bc-path=%S/Inputs/hip_dev_lib -save-temps %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-SAVE-ASM
 // CHECK-SAVE-ASM: llc{{.*}}amdgpu-openmp-toolchain-{{.*}}-gfx906-linked.bc" "-mtriple=amdgcn-amd-amdhsa" "-mcpu=gfx906" "-filetype=asm" "-o"{{.*}}amdgpu-openmp-toolchain-{{.*}}-gfx906.s"
 // CHECK-SAVE-ASM: llc{{.*}}amdgpu-openmp-toolchain-{{.*}}-gfx906-linked.bc" "-mtriple=amdgcn-amd-amdhsa" "-mcpu=gfx906" "-filetype=obj" "-o"{{.*}}amdgpu-openmp-toolchain-{{.*}}-gfx906.o"
 
 // check the handling of -c
-// RUN:   env LIBRARY_PATH=%S/Inputs/hip_dev_lib %clang -ccc-print-bindings -c --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 -save-temps %s 2>&1 \
+// RUN:   %clang -ccc-print-bindings -c --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 --libomptarget-amdgcn-bc-path=%S/Inputs/hip_dev_lib -save-temps %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-C
 // CHECK-C: "x86_64-unknown-linux-gnu" - "clang",
 // CHECK-C: "x86_64-unknown-linux-gnu" - "clang",{{.*}}output: "[[HOST_BC:.*]]"
@@ -76,5 +76,5 @@
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -emit-llvm -S -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx803 -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-EMIT-LLVM-IR
 // CHECK-EMIT-LLVM-IR: clang{{.*}}"-cc1"{{.*}}"-triple" "amdgcn-amd-amdhsa"{{.*}}"-emit-llvm"
 
-// RUN: env LIBRARY_PATH=%S/Inputs/hip_dev_lib %clang -### -target x86_64-pc-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx803 -lm --rocm-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode %s 2>&1 | FileCheck %s --check-prefix=CHECK-LIB-DEVICE
+// RUN: %clang -### -target x86_64-pc-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx803 -lm --rocm-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode %s 2>&1 | FileCheck %s --check-prefix=CHECK-LIB-DEVICE
 // CHECK-LIB-DEVICE: {{.*}}llvm-link{{.*}}ocml.bc"{{.*}}ockl.bc"{{.*}}oclc_daz_opt_on.bc"{{.*}}oclc_unsafe_math_off.bc"{{.*}}oclc_finite_only_off.bc"{{.*}}oclc_correctly_rounded_sqrt_on.bc"{{.*}}oclc_wavefrontsize64_on.bc"{{.*}}oclc_isa_version_803.bc"

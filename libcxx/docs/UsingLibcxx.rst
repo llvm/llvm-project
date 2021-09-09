@@ -68,8 +68,8 @@ Using ``-stdlib=libc++`` will select libc++:
 
   $ clang++ -stdlib=libc++ test.cpp
 
-On systems where libc++ is the library in use by default such as macOS, FreeBSD
-and OpenBSD, this flag is not required.
+On systems where libc++ is the library in use by default such as macOS and FreeBSD,
+this flag is not required.
 
 
 .. _alternate libcxx:
@@ -338,6 +338,7 @@ which no dialect declares as such (See the second form described above).
 * ``upper_bound``
 * ``lock_guard``'s constructors
 * ``as_const``
+* ``bit_cast``
 * ``forward``
 * ``move``
 * ``move_if_noexcept``

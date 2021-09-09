@@ -74,6 +74,14 @@ struct ShiftOfShiftedLogic {
 
 using BuildFnTy = std::function<void(MachineIRBuilder &)>;
 
+struct MergeTruncStoresInfo {
+  SmallVector<GStore *> FoundStores;
+  GStore *LowestIdxStore = nullptr;
+  Register WideSrcVal;
+  bool NeedBSwap = false;
+  bool NeedRotate = false;
+};
+
 using OperandBuildSteps =
     SmallVector<std::function<void(MachineInstrBuilder &)>, 4>;
 struct InstructionBuildSteps {
@@ -522,6 +530,9 @@ public:
   /// And check if the tree can be replaced with a M-bit load + possibly a
   /// bswap.
   bool matchLoadOrCombine(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  bool matchTruncStoreMerge(MachineInstr &MI, MergeTruncStoresInfo &MatchInfo);
+  void applyTruncStoreMerge(MachineInstr &MI, MergeTruncStoresInfo &MatchInfo);
 
   bool matchExtendThroughPhis(MachineInstr &MI, MachineInstr *&ExtMI);
   void applyExtendThroughPhis(MachineInstr &MI, MachineInstr *&ExtMI);

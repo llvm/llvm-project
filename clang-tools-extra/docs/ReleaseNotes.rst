@@ -75,12 +75,21 @@ New checks
 - New :doc:`bugprone-suspicious-memory-comparison
   <clang-tidy/checks/bugprone-suspicious-memory-comparison>` check.
 
-  Finds potentially incorrect calls to ``memcmp()`` based on properties of the arguments.
+  Finds potentially incorrect calls to ``memcmp()`` based on properties of the
+  arguments.
+
+- New :doc:`cppcoreguidelines-virtual-class-destructor
+  <clang-tidy/checks/cppcoreguidelines-virtual-class-destructor>` check.
+
+  Finds virtual classes whose destructor is neither public and virtual nor
+  protected and non-virtual.
 
 - New :doc:`readability-identifier-length
   <clang-tidy/checks/readability-identifier-length>` check.
 
-  Reports identifiers whose names are too short. Currently checks local variables and function parameters only.
+  Reports identifiers whose names are too short. Currently checks local
+  variables and function parameters only.
+
 
 New check aliases
 ^^^^^^^^^^^^^^^^^

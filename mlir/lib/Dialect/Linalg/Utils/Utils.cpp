@@ -514,7 +514,7 @@ void GenerateLoopNest<scf::ParallelOp>::doit(
 
 Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
                      ValueRange tileSizes, AffineMap map, ValueRange lbs,
-                     ValueRange subShapeSizes) {
+                     ValueRange ubs, ValueRange subShapeSizes) {
   auto shapedType = valueToTile.getType().dyn_cast<ShapedType>();
   assert(shapedType && "only shaped types can be tiled");
   ArrayRef<int64_t> shape = shapedType.getShape();
@@ -567,7 +567,7 @@ Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
           AffineMap::inferFromExprList(
               ArrayRef<ArrayRef<AffineExpr>>{{dim0, dim1 - dim2}})
               .front();
-      Value d = createOrFoldDimOp(builder, loc, valueToTile, r);
+      Value d = applyMapToValues(builder, loc, m, ubs).front();
       SmallVector<Value, 4> operands{size, d, offset};
       fullyComposeAffineMapAndOperands(&minMap, &operands);
       size = builder.create<AffineMinOp>(loc, builder.getIndexType(), minMap,
@@ -656,8 +656,8 @@ SmallVector<Value, 4> makeTiledShapes(OpBuilder &b, Location loc,
     }
     LLVM_DEBUG(llvm::dbgs() << ": tiled: figure out subshape...\n");
 
-    tiledShapes.push_back(
-        makeTiledShape(b, loc, shapedOp, tileSizes, map, lbs, subShapeSizes));
+    tiledShapes.push_back(makeTiledShape(b, loc, shapedOp, tileSizes, map, lbs,
+                                         sizeBounds, subShapeSizes));
   }
 
   return tiledShapes;

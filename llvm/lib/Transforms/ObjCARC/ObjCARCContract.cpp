@@ -540,7 +540,7 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
   AA = A;
   DT = D;
   PA.setAA(A);
-  BundledRetainClaimRVs BRV(EP, true);
+  BundledRetainClaimRVs BRV(true);
   BundledInsts = &BRV;
 
   std::pair<bool, bool> R = BundledInsts->insertAfterInvokes(F, DT);

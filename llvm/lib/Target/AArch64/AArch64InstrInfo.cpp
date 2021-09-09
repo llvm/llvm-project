@@ -7350,7 +7350,11 @@ MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
     unsigned Reg = findRegisterToSaveLRTo(C);
     assert(Reg != 0 && "No callee-saved register available?");
 
-    // Save and restore LR from that register.
+    // LR has to be a live in so that we can save it.
+    if (!MBB.isLiveIn(AArch64::LR))
+      MBB.addLiveIn(AArch64::LR);
+
+    // Save and restore LR from Reg.
     Save = BuildMI(MF, DebugLoc(), get(AArch64::ORRXrs), Reg)
                .addReg(AArch64::XZR)
                .addReg(AArch64::LR)

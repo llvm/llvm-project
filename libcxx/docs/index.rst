@@ -115,7 +115,6 @@ Target platform Target architecture       Notes
 =============== ========================= ============================
 macOS 10.9+     i386, x86_64, arm64       Building the shared library itself requires targetting macOS 10.11+
 FreeBSD 10+     i386, x86_64, arm
-OpenBSD         i386, x86_64, arm, arm64
 Linux           i386, x86_64, arm, arm64
 Windows         x86_64
 =============== ========================= ============================

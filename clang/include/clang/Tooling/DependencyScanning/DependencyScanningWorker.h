@@ -76,14 +76,16 @@ public:
 
   /// Run the dependency scanning tool for a given clang driver invocation (as
   /// specified for the given Input in the CDB), and report the discovered
-  /// dependencies to the provided consumer.
+  /// dependencies to the provided consumer. If \p ModuleName isn't empty, this
+  /// function reports the dependencies of module \p ModuleName.
   ///
   /// \returns A \c StringError with the diagnostic output if clang errors
   /// occurred, success otherwise.
   llvm::Error computeDependencies(const std::string &Input,
                                   StringRef WorkingDirectory,
                                   const CompilationDatabase &CDB,
-                                  DependencyConsumer &Consumer);
+                                  DependencyConsumer &Consumer,
+                                  llvm::Optional<StringRef> ModuleName = None);
 
 private:
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;

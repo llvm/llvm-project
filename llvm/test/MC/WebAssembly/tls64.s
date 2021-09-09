@@ -56,13 +56,13 @@ tls2:
 # CHECK-OBJ-NEXT:      - Index:           2
 # CHECK-OBJ-NEXT:        Kind:            DATA
 # CHECK-OBJ-NEXT:        Name:            tls1
-# CHECK-OBJ-NEXT:        Flags:           [ BINDING_LOCAL ]
+# CHECK-OBJ-NEXT:        Flags:           [ BINDING_LOCAL, TLS ]
 # CHECK-OBJ-NEXT:        Segment:         0
 # CHECK-OBJ-NEXT:        Size:            4
 # CHECK-OBJ-NEXT:      - Index:           3
 # CHECK-OBJ-NEXT:        Kind:            DATA
 # CHECK-OBJ-NEXT:        Name:            tls2
-# CHECK-OBJ-NEXT:        Flags:           [ BINDING_LOCAL ]
+# CHECK-OBJ-NEXT:        Flags:           [ BINDING_LOCAL, TLS ]
 # CHECK-OBJ-NEXT:        Segment:         1
 # CHECK-OBJ-NEXT:        Size:            4
 # CHECK-OBJ-NEXT:    SegmentInfo:

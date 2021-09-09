@@ -124,8 +124,11 @@ if (COMPILER_RT_HAS_GWP_ASAN)
        RTGwpAsan RTGwpAsanBacktraceLibc RTGwpAsanSegvHandler
        RTGwpAsanOptionsParser)
 
-  list(APPEND SCUDO_CFLAGS -DGWP_ASAN_HOOKS -fno-omit-frame-pointer
-                           -mno-omit-leaf-frame-pointer)
+  append_list_if(COMPILER_RT_HAS_OMIT_FRAME_POINTER_FLAG -fno-omit-frame-pointer
+                                                         -mno-omit-leaf-frame-pointer
+                 SCUDO_CFLAGS)
+  list(APPEND SCUDO_CFLAGS -DGWP_ASAN_HOOKS)
+
 endif()
 
 set(SCUDO_LINK_LIBS)
