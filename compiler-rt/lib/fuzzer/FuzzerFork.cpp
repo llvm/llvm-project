@@ -410,7 +410,7 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
       Env.FilesSizes.clear();
       CrashResistantMerge(Env.Args, {}, CurrentSeedFiles, &Env.Files,
                           TmpFeatures, &TmpNewFeatures, TmpCov, &TmpNewCov,
-                          CFPath, false);
+                          CFPath, /*Verbose=*/false, /*IsSetCoverMerge=*/false);
       for (auto &path : Env.Files)
         Env.FilesSizes.push_back(FileSize(path));
       RemoveFile(CFPath);
