@@ -55,9 +55,9 @@ func @sparse_static_dims(%arga: tensor<10x20x30xf32, #X>,
 // CHECK-LABEL:   func @sparse_dynamic_dims(
 // CHECK-SAME:                          %[[VAL_0:.*]]: tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:                          %[[VAL_1:.*]]: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
-// CHECK:           %[[VAL_2:.*]] = constant 2 : index
-// CHECK:           %[[VAL_3:.*]] = constant 0 : index
-// CHECK:           %[[VAL_4:.*]] = constant 1 : index
+// CHECK-DAG:       %[[VAL_2:.*]] = constant 2 : index
+// CHECK-DAG:       %[[VAL_3:.*]] = constant 0 : index
+// CHECK-DAG:       %[[VAL_4:.*]] = constant 1 : index
 // CHECK:           %[[VAL_5:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:           %[[VAL_6:.*]] = tensor.dim %[[VAL_1]], %[[VAL_3]] : tensor<?x?x?xf32>
 // CHECK:           %[[VAL_7:.*]] = tensor.dim %[[VAL_1]], %[[VAL_4]] : tensor<?x?x?xf32>

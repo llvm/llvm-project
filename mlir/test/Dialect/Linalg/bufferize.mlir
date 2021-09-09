@@ -281,10 +281,10 @@ func @pad_tensor_dynamic_shape(%arg0: tensor<4x?x2x?xf32>, %arg1: index) -> tens
   return %out : tensor<4x?x?x?xf32>
 }
 
-// CHECK:           %[[C3:.*]] = constant 3 : index
-// CHECK:           %[[C2:.*]] = constant 2 : index
-// CHECK:           %[[C1:.*]] = constant 1 : index
-// CHECK:           %[[CST:.*]] = constant 0.000000e+00 : f32
+// CHECK-DAG:       %[[C3:.*]] = constant 3 : index
+// CHECK-DAG:       %[[C2:.*]] = constant 2 : index
+// CHECK-DAG:       %[[C1:.*]] = constant 1 : index
+// CHECK-DAG:       %[[CST:.*]] = constant 0.000000e+00 : f32
 // CHECK:           %[[DIM1:.*]] = tensor.dim %[[IN]], %[[C1]] : tensor<4x?x2x?xf32>
 // CHECK:           %[[OUT_DIM2:.*]] = addi %[[OFFSET]], %[[C2]] : index
 // CHECK:           %[[DIM3:.*]] = tensor.dim %[[IN]], %[[C3]] : tensor<4x?x2x?xf32>

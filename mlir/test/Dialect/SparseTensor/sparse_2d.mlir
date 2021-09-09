@@ -94,11 +94,11 @@ func @mul_dd(%arga: tensor<32x16xf32, #Tdd>, %argb: tensor<32x16xf32>, %argx: te
 // CHECK-SAME:                 %[[VAL_0:.*]]: tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
 // CHECK-SAME:                 %[[VAL_1:.*]]: tensor<32x16xf32>,
 // CHECK-SAME:                 %[[VAL_2:.*]]: tensor<32x16xf32>) -> tensor<32x16xf32> {
-// CHECK:           %[[VAL_3:.*]] = constant 32 : index
-// CHECK:           %[[VAL_4:.*]] = constant 16 : index
-// CHECK:           %[[VAL_5:.*]] = constant 0 : index
-// CHECK:           %[[VAL_6:.*]] = constant true
-// CHECK:           %[[VAL_7:.*]] = constant 1 : index
+// CHECK-DAG:           %[[VAL_3:.*]] = constant 32 : index
+// CHECK-DAG:           %[[VAL_4:.*]] = constant 16 : index
+// CHECK-DAG:           %[[VAL_5:.*]] = constant 0 : index
+// CHECK-DAG:           %[[VAL_6:.*]] = constant true
+// CHECK-DAG:           %[[VAL_7:.*]] = constant 1 : index
 // CHECK:           %[[VAL_8:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_7]] : tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_9:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_7]] : tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xf32>
@@ -158,9 +158,9 @@ func @add_ds(%arga: tensor<32x16xf32, #Tds>, %argb: tensor<32x16xf32>, %argx: te
 // CHECK-SAME:                 %[[VAL_0:.*]]: tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
 // CHECK-SAME:                 %[[VAL_1:.*]]: tensor<32x16xf32>,
 // CHECK-SAME:                 %[[VAL_2:.*]]: tensor<32x16xf32>) -> tensor<32x16xf32> {
-// CHECK:           %[[VAL_3:.*]] = constant 32 : index
-// CHECK:           %[[VAL_4:.*]] = constant 0 : index
-// CHECK:           %[[VAL_5:.*]] = constant 1 : index
+// CHECK-DAG:           %[[VAL_3:.*]] = constant 32 : index
+// CHECK-DAG:           %[[VAL_4:.*]] = constant 0 : index
+// CHECK-DAG:           %[[VAL_5:.*]] = constant 1 : index
 // CHECK:           %[[VAL_6:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_5]] : tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_7:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_5]] : tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xf32>
@@ -198,11 +198,11 @@ func @mul_ds(%arga: tensor<32x16xf32, #Tds>, %argb: tensor<32x16xf32>, %argx: te
 // CHECK-SAME:                 %[[VAL_0:.*]]: tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
 // CHECK-SAME:                 %[[VAL_1:.*]]: tensor<32x16xf32>,
 // CHECK-SAME:                 %[[VAL_2:.*]]: tensor<32x16xf32>) -> tensor<32x16xf32> {
-// CHECK:           %[[VAL_3:.*]] = constant 32 : index
-// CHECK:           %[[VAL_4:.*]] = constant 16 : index
-// CHECK:           %[[VAL_5:.*]] = constant true
-// CHECK:           %[[VAL_6:.*]] = constant 0 : index
-// CHECK:           %[[VAL_7:.*]] = constant 1 : index
+// CHECK-DAG:           %[[VAL_3:.*]] = constant 32 : index
+// CHECK-DAG:           %[[VAL_4:.*]] = constant 16 : index
+// CHECK-DAG:           %[[VAL_5:.*]] = constant true
+// CHECK-DAG:           %[[VAL_6:.*]] = constant 0 : index
+// CHECK-DAG:           %[[VAL_7:.*]] = constant 1 : index
 // CHECK:           %[[VAL_8:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_6]] : tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_9:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_6]] : tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xf32>
@@ -267,9 +267,9 @@ func @add_sd(%arga: tensor<32x16xf32, #Tsd>, %argb: tensor<32x16xf32>, %argx: te
 // CHECK-SAME:                 %[[VAL_0:.*]]: tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
 // CHECK-SAME:                 %[[VAL_1:.*]]: tensor<32x16xf32>,
 // CHECK-SAME:                 %[[VAL_2:.*]]: tensor<32x16xf32>) -> tensor<32x16xf32> {
-// CHECK:           %[[VAL_3:.*]] = constant 16 : index
-// CHECK:           %[[VAL_4:.*]] = constant 0 : index
-// CHECK:           %[[VAL_5:.*]] = constant 1 : index
+// CHECK-DAG:           %[[VAL_3:.*]] = constant 16 : index
+// CHECK-DAG:           %[[VAL_4:.*]] = constant 0 : index
+// CHECK-DAG:           %[[VAL_5:.*]] = constant 1 : index
 // CHECK:           %[[VAL_6:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_4]] : tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_7:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_4]] : tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xf32>
@@ -308,11 +308,11 @@ func @mul_sd(%arga: tensor<32x16xf32, #Tsd>, %argb: tensor<32x16xf32>, %argx: te
 // CHECK-SAME:                 %[[VAL_0:.*]]: tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
 // CHECK-SAME:                 %[[VAL_1:.*]]: tensor<32x16xf32>,
 // CHECK-SAME:                 %[[VAL_2:.*]]: tensor<32x16xf32>) -> tensor<32x16xf32> {
-// CHECK:           %[[VAL_3:.*]] = constant 32 : index
-// CHECK:           %[[VAL_4:.*]] = constant 16 : index
-// CHECK:           %[[VAL_5:.*]] = constant true
-// CHECK:           %[[VAL_6:.*]] = constant 0 : index
-// CHECK:           %[[VAL_7:.*]] = constant 1 : index
+// CHECK-DAG:           %[[VAL_3:.*]] = constant 32 : index
+// CHECK-DAG:           %[[VAL_4:.*]] = constant 16 : index
+// CHECK-DAG:           %[[VAL_5:.*]] = constant true
+// CHECK-DAG:           %[[VAL_6:.*]] = constant 0 : index
+// CHECK-DAG:           %[[VAL_7:.*]] = constant 1 : index
 // CHECK:           %[[VAL_8:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_6]] : tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_9:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_6]] : tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_10:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_7]] : tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
@@ -709,11 +709,11 @@ func @mul_ss_ss(%arga: tensor<32x16xf32, #Tss>, %argb: tensor<32x16xf32, #Tss>, 
 // CHECK-SAME:                    %[[VAL_0:.*]]: tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
 // CHECK-SAME:                    %[[VAL_1:.*]]: tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
 // CHECK-SAME:                    %[[VAL_2:.*]]: tensor<32x16xf32>) -> tensor<32x16xf32> {
-// CHECK:           %[[VAL_3:.*]] = constant 32 : index
-// CHECK:           %[[VAL_4:.*]] = constant 16 : index
-// CHECK:           %[[VAL_5:.*]] = constant 0 : index
-// CHECK:           %[[VAL_6:.*]] = constant true
-// CHECK:           %[[VAL_7:.*]] = constant 1 : index
+// CHECK-DAG:           %[[VAL_3:.*]] = constant 32 : index
+// CHECK-DAG:           %[[VAL_4:.*]] = constant 16 : index
+// CHECK-DAG:           %[[VAL_5:.*]] = constant 0 : index
+// CHECK-DAG:           %[[VAL_6:.*]] = constant true
+// CHECK-DAG:           %[[VAL_7:.*]] = constant 1 : index
 // CHECK:           %[[VAL_8:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_5]] : tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_9:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_5]] : tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xf32>
@@ -816,9 +816,9 @@ func @add_sd_ds(%arga: tensor<32x16xf32, #Tsd>, %argb: tensor<32x16xf32, #Tds>, 
 // CHECK-SAME:                    %[[VAL_0:.*]]: tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
 // CHECK-SAME:                    %[[VAL_1:.*]]: tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
 // CHECK-SAME:                    %[[VAL_2:.*]]: tensor<32x16xf32>) -> tensor<32x16xf32> {
-// CHECK:           %[[VAL_3:.*]] = constant 16 : index
-// CHECK:           %[[VAL_4:.*]] = constant 0 : index
-// CHECK:           %[[VAL_5:.*]] = constant 1 : index
+// CHECK-DAG:           %[[VAL_3:.*]] = constant 16 : index
+// CHECK-DAG:           %[[VAL_4:.*]] = constant 0 : index
+// CHECK-DAG:           %[[VAL_5:.*]] = constant 1 : index
 // CHECK:           %[[VAL_6:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_4]] : tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_7:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_4]] : tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x16xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xf32>
@@ -873,9 +873,9 @@ func @mul_sd_ds(%arga: tensor<32x16xf32, #Tsd>, %argb: tensor<32x16xf32, #Tds>, 
 // CHECK-SAME:                 %[[VAL_0:.*]]: tensor<16x32xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
 // CHECK-SAME:                 %[[VAL_1:.*]]: tensor<32xf32>,
 // CHECK-SAME:                 %[[VAL_2:.*]]: tensor<16xf32>) -> tensor<16xf32> {
-// CHECK:           %[[VAL_3:.*]] = constant 16 : index
-// CHECK:           %[[VAL_4:.*]] = constant 0 : index
-// CHECK:           %[[VAL_5:.*]] = constant 1 : index
+// CHECK-DAG:           %[[VAL_3:.*]] = constant 16 : index
+// CHECK-DAG:           %[[VAL_4:.*]] = constant 0 : index
+// CHECK-DAG:           %[[VAL_5:.*]] = constant 1 : index
 // CHECK:           %[[VAL_6:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_5]] : tensor<16x32xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_7:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_5]] : tensor<16x32xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<16x32xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xf32>
@@ -925,9 +925,9 @@ func @matvec(%argA: tensor<16x32xf32, #Tds>, %argb: tensor<32xf32>, %argx: tenso
 // CHECK-LABEL:   func @sum_reduction(
 // CHECK-SAME:                        %[[VAL_0:.*]]: tensor<10x20xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
 // CHECK-SAME:                        %[[VAL_1:.*]]: tensor<f32>) -> tensor<f32> {
-// CHECK:           %[[VAL_2:.*]] = constant 10 : index
-// CHECK:           %[[VAL_3:.*]] = constant 0 : index
-// CHECK:           %[[VAL_4:.*]] = constant 1 : index
+// CHECK-DAG:           %[[VAL_2:.*]] = constant 10 : index
+// CHECK-DAG:           %[[VAL_3:.*]] = constant 0 : index
+// CHECK-DAG:           %[[VAL_4:.*]] = constant 1 : index
 // CHECK:           %[[VAL_5:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_4]] : tensor<10x20xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_6:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<10x20xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xf32>
 // CHECK:           %[[VAL_7:.*]] = memref.buffer_cast %[[VAL_1]] : memref<f32>
@@ -971,9 +971,9 @@ func @sum_reduction(%arga: tensor<10x20xf32, #Tds>, %argx: tensor<f32>) -> tenso
 // CHECK-LABEL:   func @scale(
 // CHECK-SAME:                %[[VAL_0:.*]]: tensor<?x?xf64, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
 // CHECK-SAME:                %[[VAL_1:.*]]: tensor<?x?xf64>) -> tensor<?x?xf64> {
-// CHECK:           %[[VAL_2:.*]] = constant 2.000000e+00 : f64
-// CHECK:           %[[VAL_3:.*]] = constant 0 : index
-// CHECK:           %[[VAL_4:.*]] = constant 1 : index
+// CHECK-DAG:           %[[VAL_2:.*]] = constant 2.000000e+00 : f64
+// CHECK-DAG:           %[[VAL_3:.*]] = constant 0 : index
+// CHECK-DAG:           %[[VAL_4:.*]] = constant 1 : index
 // CHECK:           %[[VAL_5:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_4]] : tensor<?x?xf64, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_6:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_4]] : tensor<?x?xf64, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<?x?xf64, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xf64>
@@ -1100,9 +1100,9 @@ func @sampled_dense_dense(%args: tensor<?x?xf32, #Tss>,
 // CHECK-SAME:                              %[[VAL_3:.*3]]: tensor<?xf32>,
 // CHECK-SAME:                              %[[VAL_4:.*4]]: tensor<f32>,
 // CHECK-SAME:                              %[[VAL_5:.*5]]: tensor<?xf32>) -> tensor<?xf32> {
-// CHECK:           %[[VAL_6:.*]] = constant 0 : index
-// CHECK:           %[[VAL_7:.*]] = constant true
-// CHECK:           %[[VAL_8:.*]] = constant 1 : index
+// CHECK-DAG:           %[[VAL_6:.*]] = constant 0 : index
+// CHECK-DAG:           %[[VAL_7:.*]] = constant true
+// CHECK-DAG:           %[[VAL_8:.*]] = constant 1 : index
 // CHECK:           %[[VAL_9:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_6]] : tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_10:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_6]] : tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_11:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_8]] : tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
