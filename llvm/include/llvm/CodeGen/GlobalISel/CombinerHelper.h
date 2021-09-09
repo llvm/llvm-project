@@ -577,6 +577,14 @@ public:
   /// Match: shr (shl x, n), k -> sbfx/ubfx x, pos, width
   bool matchBitfieldExtractFromShr(MachineInstr &MI, BuildFnTy &MatchInfo);
 
+  // Helpers for reassociation:
+  bool matchReassocConstantInnerRHS(GPtrAdd &MI, MachineInstr *RHS,
+                                    BuildFnTy &MatchInfo);
+  bool matchReassocFoldConstantsInSubTree(GPtrAdd &MI, MachineInstr *LHS,
+                                          MachineInstr *RHS,
+                                          BuildFnTy &MatchInfo);
+  bool matchReassocConstantInnerLHS(GPtrAdd &MI, MachineInstr *LHS,
+                                    MachineInstr *RHS, BuildFnTy &MatchInfo);
   /// Reassociate pointer calculations with G_ADD involved, to allow better
   /// addressing mode usage.
   bool matchReassocPtrAdd(MachineInstr &MI, BuildFnTy &MatchInfo);

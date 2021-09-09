@@ -4090,9 +4090,91 @@ bool CombinerHelper::reassociationCanBreakAddressingModePattern(
   return false;
 }
 
-bool CombinerHelper::matchReassocPtrAdd(
-    MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
-  assert(MI.getOpcode() == TargetOpcode::G_PTR_ADD);
+bool CombinerHelper::matchReassocConstantInnerRHS(GPtrAdd &MI,
+                                                  MachineInstr *RHS,
+                                                  BuildFnTy &MatchInfo) {
+  // G_PTR_ADD(BASE, G_ADD(X, C)) -> G_PTR_ADD(G_PTR_ADD(BASE, X), C)
+  Register Src1Reg = MI.getOperand(1).getReg();
+  if (RHS->getOpcode() != TargetOpcode::G_ADD)
+    return false;
+  auto C2 = getConstantVRegVal(RHS->getOperand(2).getReg(), MRI);
+  if (!C2)
+    return false;
+
+  MatchInfo = [=, &MI](MachineIRBuilder &B) {
+    LLT PtrTy = MRI.getType(MI.getOperand(0).getReg());
+
+    auto NewBase =
+        Builder.buildPtrAdd(PtrTy, Src1Reg, RHS->getOperand(1).getReg());
+    Observer.changingInstr(MI);
+    MI.getOperand(1).setReg(NewBase.getReg(0));
+    MI.getOperand(2).setReg(RHS->getOperand(2).getReg());
+    Observer.changedInstr(MI);
+  };
+  return !reassociationCanBreakAddressingModePattern(MI);
+}
+
+bool CombinerHelper::matchReassocConstantInnerLHS(GPtrAdd &MI,
+                                                  MachineInstr *LHS,
+                                                  MachineInstr *RHS,
+                                                  BuildFnTy &MatchInfo) {
+  // G_PTR_ADD (G_PTR_ADD X, C), Y) -> (G_PTR_ADD (G_PTR_ADD(X, Y), C)
+  // if and only if (G_PTR_ADD X, C) has one use.
+  Register LHSBase;
+  Register LHSCstOff;
+  if (!mi_match(MI.getBaseReg(), MRI,
+                m_OneNonDBGUse(m_GPtrAdd(m_Reg(LHSBase), m_ICst(LHSCstOff)))))
+    return false;
+
+  auto *LHSPtrAdd = cast<GPtrAdd>(LHS);
+  MatchInfo = [=, &MI](MachineIRBuilder &B) {
+    // When we change LHSPtrAdd's offset register we might cause it to use a reg
+    // before its def. Sink the instruction so the outer PTR_ADD to ensure this
+    // doesn't happen.
+    LHSPtrAdd->moveBefore(&MI);
+    Register RHSReg = MI.getOffsetReg();
+    Observer.changingInstr(MI);
+    MI.getOperand(2).setReg(LHSCstOff);
+    Observer.changedInstr(MI);
+    Observer.changingInstr(*LHSPtrAdd);
+    LHSPtrAdd->getOperand(2).setReg(RHSReg);
+    Observer.changedInstr(*LHSPtrAdd);
+  };
+  return !reassociationCanBreakAddressingModePattern(MI);
+}
+
+bool CombinerHelper::matchReassocFoldConstantsInSubTree(GPtrAdd &MI,
+                                                        MachineInstr *LHS,
+                                                        MachineInstr *RHS,
+                                                        BuildFnTy &MatchInfo) {
+  // G_PTR_ADD(G_PTR_ADD(BASE, C1), C2) -> G_PTR_ADD(BASE, C1+C2)
+  auto *LHSPtrAdd = dyn_cast<GPtrAdd>(LHS);
+  if (!LHSPtrAdd)
+    return false;
+
+  Register Src2Reg = MI.getOperand(2).getReg();
+  Register LHSSrc1 = LHSPtrAdd->getBaseReg();
+  Register LHSSrc2 = LHSPtrAdd->getOffsetReg();
+  auto C1 = getConstantVRegVal(LHSSrc2, MRI);
+  if (!C1)
+    return false;
+  auto C2 = getConstantVRegVal(Src2Reg, MRI);
+  if (!C2)
+    return false;
+
+  MatchInfo = [=, &MI](MachineIRBuilder &B) {
+    auto NewCst = B.buildConstant(MRI.getType(Src2Reg), *C1 + *C2);
+    Observer.changingInstr(MI);
+    MI.getOperand(1).setReg(LHSSrc1);
+    MI.getOperand(2).setReg(NewCst.getReg(0));
+    Observer.changedInstr(MI);
+  };
+  return !reassociationCanBreakAddressingModePattern(MI);
+}
+
+bool CombinerHelper::matchReassocPtrAdd(MachineInstr &MI,
+                                        BuildFnTy &MatchInfo) {
+  auto &PtrAdd = cast<GPtrAdd>(MI);
   // We're trying to match a few pointer computation patterns here for
   // re-association opportunities.
   // 1) Isolating a constant operand to be on the RHS, e.g.:
@@ -4101,49 +4183,26 @@ bool CombinerHelper::matchReassocPtrAdd(
   // 2) Folding two constants in each sub-tree as long as such folding
   // doesn't break a legal addressing mode.
   // G_PTR_ADD(G_PTR_ADD(BASE, C1), C2) -> G_PTR_ADD(BASE, C1+C2)
-  Register Src1Reg = MI.getOperand(1).getReg();
-  Register Src2Reg = MI.getOperand(2).getReg();
-  MachineInstr *LHS = MRI.getVRegDef(Src1Reg);
-  MachineInstr *RHS = MRI.getVRegDef(Src2Reg);
+  //
+  // 3) Move a constant from the LHS of an inner op to the RHS of the outer.
+  // G_PTR_ADD (G_PTR_ADD X, C), Y) -> G_PTR_ADD (G_PTR_ADD(X, Y), C)
+  // iif (G_PTR_ADD X, C) has one use.
+  MachineInstr *LHS = MRI.getVRegDef(PtrAdd.getBaseReg());
+  MachineInstr *RHS = MRI.getVRegDef(PtrAdd.getOffsetReg());
 
-  if (LHS->getOpcode() != TargetOpcode::G_PTR_ADD) {
-    // Try to match example 1).
-    if (RHS->getOpcode() != TargetOpcode::G_ADD)
-      return false;
-    auto C2 = getConstantVRegVal(RHS->getOperand(2).getReg(), MRI);
-    if (!C2)
-      return false;
+  // Try to match example 2.
+  if (matchReassocFoldConstantsInSubTree(PtrAdd, LHS, RHS, MatchInfo))
+    return true;
 
-    MatchInfo = [=,&MI](MachineIRBuilder &B) {
-      LLT PtrTy = MRI.getType(MI.getOperand(0).getReg());
+  // Try to match example 3.
+  if (matchReassocConstantInnerLHS(PtrAdd, LHS, RHS, MatchInfo))
+    return true;
 
-      auto NewBase =
-          Builder.buildPtrAdd(PtrTy, Src1Reg, RHS->getOperand(1).getReg());
-      Observer.changingInstr(MI);
-      MI.getOperand(1).setReg(NewBase.getReg(0));
-      MI.getOperand(2).setReg(RHS->getOperand(2).getReg());
-      Observer.changedInstr(MI);
-    };
-  } else {
-    // Try to match example 2.
-    Register LHSSrc1 = LHS->getOperand(1).getReg();
-    Register LHSSrc2 = LHS->getOperand(2).getReg();
-    auto C1 = getConstantVRegVal(LHSSrc2, MRI);
-    if (!C1)
-      return false;
-    auto C2 = getConstantVRegVal(Src2Reg, MRI);
-    if (!C2)
-      return false;
+  // Try to match example 1.
+  if (matchReassocConstantInnerRHS(PtrAdd, RHS, MatchInfo))
+    return true;
 
-    MatchInfo = [=, &MI](MachineIRBuilder &B) {
-      auto NewCst = B.buildConstant(MRI.getType(Src2Reg), *C1 + *C2);
-      Observer.changingInstr(MI);
-      MI.getOperand(1).setReg(LHSSrc1);
-      MI.getOperand(2).setReg(NewCst.getReg(0));
-      Observer.changedInstr(MI);
-    };
-  }
-  return !reassociationCanBreakAddressingModePattern(MI);
+  return false;
 }
 
 bool CombinerHelper::matchConstantFold(MachineInstr &MI, APInt &MatchInfo) {
