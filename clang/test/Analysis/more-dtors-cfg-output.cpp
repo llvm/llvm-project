@@ -275,32 +275,32 @@ void new_default_ctor_with_default_arg(long count) {
 #if CXX2A
 // Boilerplate needed to test co_return:
 
-namespace std {
-template <typename Promise>
-struct coroutine_handle {
-  static coroutine_handle from_address(void *) noexcept;
-};
-} // namespace std
+namespace std::experimental {
+  template <typename Promise>
+  struct coroutine_handle {
+    static coroutine_handle from_address(void *) noexcept;
+  };
+}
 
 struct TestPromise {
   TestPromise initial_suspend();
   TestPromise final_suspend() noexcept;
   bool await_ready() noexcept;
-  void await_suspend(const std::coroutine_handle<TestPromise> &) noexcept;
+  void await_suspend(const std::experimental::coroutine_handle<TestPromise> &) noexcept;
   void await_resume() noexcept;
   Foo return_value(const Bar &);
   Bar get_return_object();
   void unhandled_exception();
 };
 
-namespace std {
-template <typename Ret, typename... Args>
-struct coroutine_traits;
-template <>
-struct coroutine_traits<Bar> {
-  using promise_type = TestPromise;
-};
-} // namespace std
+namespace std::experimental {
+  template <typename Ret, typename... Args>
+  struct coroutine_traits;
+  template <>
+  struct coroutine_traits<Bar> {
+      using promise_type = TestPromise;
+  };
+}
 
 Bar coreturn() {
   co_return get_bar();

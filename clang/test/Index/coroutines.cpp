@@ -1,8 +1,8 @@
 // RUN: c-index-test -test-load-source all -c %s -fsyntax-only -target x86_64-apple-darwin9 -fcoroutines-ts -std=c++1z -I%S/../SemaCXX/Inputs | FileCheck %s
 #include "std-coroutine.h"
 
-using std::suspend_always;
-using std::suspend_never;
+using std::experimental::suspend_always;
+using std::experimental::suspend_never;
 
 struct promise_void {
   void get_return_object();
@@ -13,7 +13,7 @@ struct promise_void {
 };
 
 template <>
-struct std::coroutine_traits<void> { using promise_type = promise_void; };
+struct std::experimental::coroutine_traits<void> { using promise_type = promise_void; };
 
 void CoroutineTestRet() {
   co_return;
