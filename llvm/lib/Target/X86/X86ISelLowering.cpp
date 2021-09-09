@@ -5239,16 +5239,16 @@ static X86::CondCode TranslateX86CC(ISD::CondCode SetCCOpcode, const SDLoc &DL,
                                SelectionDAG &DAG) {
   if (!isFP) {
     if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS)) {
-      if (SetCCOpcode == ISD::SETGT && RHSC->isAllOnesValue()) {
+      if (SetCCOpcode == ISD::SETGT && RHSC->isAllOnes()) {
         // X > -1   -> X == 0, jump !sign.
         RHS = DAG.getConstant(0, DL, RHS.getValueType());
         return X86::COND_NS;
       }
-      if (SetCCOpcode == ISD::SETLT && RHSC->isNullValue()) {
+      if (SetCCOpcode == ISD::SETLT && RHSC->isZero()) {
         // X < 0   -> X == 0, jump on sign.
         return X86::COND_S;
       }
-      if (SetCCOpcode == ISD::SETGE && RHSC->isNullValue()) {
+      if (SetCCOpcode == ISD::SETGE && RHSC->isZero()) {
         // X >= 0   -> X == 0, jump on !sign.
         return X86::COND_NS;
       }
@@ -41038,9 +41038,9 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
       VT.isVector() && VT.getVectorElementType() == MVT::i1 &&
       isa<ConstantSDNode>(N0)) {
     auto *C = cast<ConstantSDNode>(N0);
-    if (C->isAllOnesValue())
+    if (C->isAllOnes())
       return DAG.getConstant(1, SDLoc(N0), VT);
-    if (C->isNullValue())
+    if (C->isZero())
       return DAG.getConstant(0, SDLoc(N0), VT);
   }
 
@@ -42267,7 +42267,7 @@ static SDValue combineSelectOfTwoConstants(SDNode *N, SelectionDAG &DAG) {
       R = DAG.getNode(ISD::MUL, DL, VT, R, DAG.getConstant(AbsDiff, DL, VT));
 
     // Add the base if non-zero.
-    if (!FalseC->isNullValue())
+    if (!FalseC->isZero())
       R = DAG.getNode(ISD::ADD, DL, VT, R, SDValue(FalseC, 0));
 
     return R;
@@ -50409,8 +50409,8 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
   // the general case below.
   auto *ConstantX = dyn_cast<ConstantSDNode>(X);
   if (ConstantX) {
-    if ((!IsSub && CC == X86::COND_AE && ConstantX->isAllOnesValue()) ||
-        (IsSub && CC == X86::COND_B && ConstantX->isNullValue())) {
+    if ((!IsSub && CC == X86::COND_AE && ConstantX->isAllOnes()) ||
+        (IsSub && CC == X86::COND_B && ConstantX->isZero())) {
       // This is a complicated way to get -1 or 0 from the carry flag:
       // -1 + SETAE --> -1 + (!CF) --> CF ? -1 : 0 --> SBB %eax, %eax
       //  0 - SETB  -->  0 -  (CF) --> CF ? -1 : 0 --> SBB %eax, %eax
@@ -50419,8 +50419,8 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
                          Y.getOperand(1));
     }
 
-    if ((!IsSub && CC == X86::COND_BE && ConstantX->isAllOnesValue()) ||
-        (IsSub && CC == X86::COND_A && ConstantX->isNullValue())) {
+    if ((!IsSub && CC == X86::COND_BE && ConstantX->isAllOnes()) ||
+        (IsSub && CC == X86::COND_A && ConstantX->isZero())) {
       SDValue EFLAGS = Y->getOperand(1);
       if (EFLAGS.getOpcode() == X86ISD::SUB && EFLAGS.hasOneUse() &&
           EFLAGS.getValueType().isInteger() &&
@@ -50518,8 +50518,8 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
     // fake operands:
     //  0 - (Z != 0) --> sbb %eax, %eax, (neg Z)
     // -1 + (Z == 0) --> sbb %eax, %eax, (neg Z)
-    if ((IsSub && CC == X86::COND_NE && ConstantX->isNullValue()) ||
-        (!IsSub && CC == X86::COND_E && ConstantX->isAllOnesValue())) {
+    if ((IsSub && CC == X86::COND_NE && ConstantX->isZero()) ||
+        (!IsSub && CC == X86::COND_E && ConstantX->isAllOnes())) {
       SDValue Zero = DAG.getConstant(0, DL, ZVT);
       SDVTList X86SubVTs = DAG.getVTList(ZVT, MVT::i32);
       SDValue Neg = DAG.getNode(X86ISD::SUB, DL, X86SubVTs, Zero, Z);
@@ -50532,8 +50532,8 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
     // with fake operands:
     //  0 - (Z == 0) --> sbb %eax, %eax, (cmp Z, 1)
     // -1 + (Z != 0) --> sbb %eax, %eax, (cmp Z, 1)
-    if ((IsSub && CC == X86::COND_E && ConstantX->isNullValue()) ||
-        (!IsSub && CC == X86::COND_NE && ConstantX->isAllOnesValue())) {
+    if ((IsSub && CC == X86::COND_E && ConstantX->isZero()) ||
+        (!IsSub && CC == X86::COND_NE && ConstantX->isAllOnes())) {
       SDValue One = DAG.getConstant(1, DL, ZVT);
       SDVTList X86SubVTs = DAG.getVTList(ZVT, MVT::i32);
       SDValue Cmp1 = DAG.getNode(X86ISD::SUB, DL, X86SubVTs, Z, One);
@@ -51681,7 +51681,7 @@ static SDValue combineScalarToVector(SDNode *N, SelectionDAG &DAG) {
       Src.hasOneUse() && Src.getOperand(0).getValueType().isVector() &&
       Src.getOperand(0).getValueType().getVectorElementType() == MVT::i1)
     if (auto *C = dyn_cast<ConstantSDNode>(Src.getOperand(1)))
-      if (C->isNullValue())
+      if (C->isZero())
         return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Src.getOperand(0),
                            Src.getOperand(1));
 

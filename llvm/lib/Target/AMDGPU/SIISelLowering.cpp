@@ -4844,7 +4844,7 @@ static SDValue lowerBALLOTIntrinsic(const SITargetLowering &TLI, SDNode *N,
   }
   if (const ConstantSDNode *Arg = dyn_cast<ConstantSDNode>(Src)) {
     // (ballot 0) -> 0
-    if (Arg->isNullValue())
+    if (Arg->isZero())
       return DAG.getConstant(0, SL, VT);
 
     // (ballot 1) -> EXEC/EXEC_LO
@@ -6153,7 +6153,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   if (MIPMappingInfo) {
     if (auto *ConstantLod = dyn_cast<ConstantSDNode>(
             Op.getOperand(ArgOffset + Intr->MipIndex))) {
-      if (ConstantLod->isNullValue()) {
+      if (ConstantLod->isZero()) {
         IntrOpcode = MIPMappingInfo->NONMIP;  // set new opcode to variant without _mip
         VAddrEnd--;                           // remove 'mip'
       }
@@ -6688,7 +6688,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     // intrinsic has the numerator as the first operand to match a normal
     // division operation.
 
-    SDValue Src0 = Param->isAllOnesValue() ? Numerator : Denominator;
+    SDValue Src0 = Param->isAllOnes() ? Numerator : Denominator;
 
     return DAG.getNode(AMDGPUISD::DIV_SCALE, DL, Op->getVTList(), Src0,
                        Denominator, Numerator);
@@ -6822,7 +6822,7 @@ static void updateBufferMMO(MachineMemOperand *MMO, SDValue VOffset,
   }
 
   if (VIndex && (!isa<ConstantSDNode>(VIndex) ||
-                 !cast<ConstantSDNode>(VIndex)->isNullValue())) {
+                 !cast<ConstantSDNode>(VIndex)->isZero())) {
     // The strided index component of the address is not known to be zero, so we
     // cannot represent it in the MMO. Give up.
     MMO->setValue((Value *)nullptr);
@@ -7667,7 +7667,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       Op.getOperand(0) // Chain
     };
 
-    unsigned Opc = Done->isNullValue() ? AMDGPU::EXP : AMDGPU::EXP_DONE;
+    unsigned Opc = Done->isZero() ? AMDGPU::EXP : AMDGPU::EXP_DONE;
     return SDValue(DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops), 0);
   }
   case Intrinsic::amdgcn_s_barrier: {
@@ -9512,7 +9512,7 @@ SDValue SITargetLowering::performClassCombine(SDNode *N,
 
   // fp_class x, 0 -> false
   if (const ConstantSDNode *CMask = dyn_cast<ConstantSDNode>(Mask)) {
-    if (CMask->isNullValue())
+    if (CMask->isZero())
       return DAG.getConstant(0, SDLoc(N), MVT::i1);
   }
 
@@ -10501,7 +10501,7 @@ SDValue SITargetLowering::performSubCombine(SDNode *N,
   if (LHS.getOpcode() == ISD::SUBCARRY) {
     // sub (subcarry x, 0, cc), y => subcarry x, y, cc
     auto C = dyn_cast<ConstantSDNode>(LHS.getOperand(1));
-    if (!C || !C->isNullValue())
+    if (!C || !C->isZero())
       return SDValue();
     SDValue Args[] = { LHS.getOperand(0), RHS, LHS.getOperand(2) };
     return DAG.getNode(ISD::SUBCARRY, SDLoc(N), LHS->getVTList(), Args);
@@ -10724,15 +10724,15 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
       // setcc (sext from i1 cc), -1, eq|sle|uge) => cc
       // setcc (sext from i1 cc),  0, eq|sge|ule) => not cc => xor cc, -1
       // setcc (sext from i1 cc),  0, ne|ugt|slt) => cc
-      if ((CRHS->isAllOnesValue() &&
+      if ((CRHS->isAllOnes() &&
            (CC == ISD::SETNE || CC == ISD::SETGT || CC == ISD::SETULT)) ||
-          (CRHS->isNullValue() &&
+          (CRHS->isZero() &&
            (CC == ISD::SETEQ || CC == ISD::SETGE || CC == ISD::SETULE)))
         return DAG.getNode(ISD::XOR, SL, MVT::i1, LHS.getOperand(0),
                            DAG.getConstant(-1, SL, MVT::i1));
-      if ((CRHS->isAllOnesValue() &&
+      if ((CRHS->isAllOnes() &&
            (CC == ISD::SETEQ || CC == ISD::SETLE || CC == ISD::SETUGE)) ||
-          (CRHS->isNullValue() &&
+          (CRHS->isZero() &&
            (CC == ISD::SETNE || CC == ISD::SETUGT || CC == ISD::SETLT)))
         return LHS.getOperand(0);
     }

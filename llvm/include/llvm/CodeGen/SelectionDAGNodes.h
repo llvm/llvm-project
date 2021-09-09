@@ -1577,8 +1577,12 @@ public:
   Align getAlignValue() const { return Value->getAlignValue(); }
 
   bool isOne() const { return Value->isOne(); }
-  bool isNullValue() const { return Value->isZero(); }
-  bool isAllOnesValue() const { return Value->isMinusOne(); }
+  bool isZero() const { return Value->isZero(); }
+  // NOTE: This is soft-deprecated.  Please use `isZero()` instead.
+  bool isNullValue() const { return isZero(); }
+  bool isAllOnes() const { return Value->isMinusOne(); }
+  // NOTE: This is soft-deprecated.  Please use `isAllOnes()` instead.
+  bool isAllOnesValue() const { return isAllOnes(); }
   bool isMaxSignedValue() const { return Value->isMaxValue(true); }
   bool isMinSignedValue() const { return Value->isMinValue(true); }
 

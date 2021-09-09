@@ -3509,7 +3509,7 @@ SDValue PPCTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
     // Leave comparisons against 0 and -1 alone for now, since they're usually
     // optimized.  FIXME: revisit this when we can custom lower all setcc
     // optimizations.
-    if (C->isAllOnesValue() || C->isNullValue())
+    if (C->isAllOnes() || C->isZero())
       return SDValue();
   }
 
@@ -14853,8 +14853,8 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     break;
   case PPCISD::SRA:
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(N->getOperand(0))) {
-      if (C->isNullValue() ||   //  0 >>s V -> 0.
-          C->isAllOnesValue())    // -1 >>s V -> -1.
+      if (C->isZero() ||  //  0 >>s V -> 0.
+          C->isAllOnes()) // -1 >>s V -> -1.
         return N->getOperand(0);
     }
     break;
