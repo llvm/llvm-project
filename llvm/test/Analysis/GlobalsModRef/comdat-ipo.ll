@@ -1,5 +1,4 @@
-; RUN: opt < %s -basic-aa -globals-aa -gvn -enable-new-pm=0 -S | FileCheck %s
-; RUN: opt < %s -basic-aa -globals-aa -gvn -enable-new-pm=1 -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa,globals-aa -passes=gvn -S | FileCheck %s
 
 ; See PR26774
 
