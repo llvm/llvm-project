@@ -5131,6 +5131,112 @@ SDValue TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
   return SDValue();
 }
 
+namespace {
+/// Magic data for optimising signed division by a constant.
+struct ms {
+  APInt m;    ///< magic number
+  unsigned s; ///< shift amount
+};
+
+/// Magic data for optimising unsigned division by a constant.
+struct mu {
+  APInt m;    ///< magic number
+  bool a;     ///< add indicator
+  unsigned s; ///< shift amount
+};
+} // namespace
+
+/// Calculate the magic numbers required to implement an unsigned integer
+/// division by a constant as a sequence of multiplies, adds and shifts.
+/// Requires that the divisor not be 0.  Taken from "Hacker's Delight", Henry
+/// S. Warren, Jr., chapter 10.
+/// LeadingZeros can be used to simplify the calculation if the upper bits
+/// of the divided value are known zero.
+static mu magicu(const APInt &d, unsigned LeadingZeros = 0) {
+  unsigned p;
+  APInt nc, delta, q1, r1, q2, r2;
+  struct mu magu;
+  magu.a = 0; // initialize "add" indicator
+  APInt allOnes = APInt::getAllOnesValue(d.getBitWidth()).lshr(LeadingZeros);
+  APInt signedMin = APInt::getSignedMinValue(d.getBitWidth());
+  APInt signedMax = APInt::getSignedMaxValue(d.getBitWidth());
+
+  nc = allOnes - (allOnes - d).urem(d);
+  p = d.getBitWidth() - 1;  // initialize p
+  q1 = signedMin.udiv(nc);  // initialize q1 = 2p/nc
+  r1 = signedMin - q1 * nc; // initialize r1 = rem(2p,nc)
+  q2 = signedMax.udiv(d);   // initialize q2 = (2p-1)/d
+  r2 = signedMax - q2 * d;  // initialize r2 = rem((2p-1),d)
+  do {
+    p = p + 1;
+    if (r1.uge(nc - r1)) {
+      q1 = q1 + q1 + 1;  // update q1
+      r1 = r1 + r1 - nc; // update r1
+    } else {
+      q1 = q1 + q1; // update q1
+      r1 = r1 + r1; // update r1
+    }
+    if ((r2 + 1).uge(d - r2)) {
+      if (q2.uge(signedMax))
+        magu.a = 1;
+      q2 = q2 + q2 + 1;     // update q2
+      r2 = r2 + r2 + 1 - d; // update r2
+    } else {
+      if (q2.uge(signedMin))
+        magu.a = 1;
+      q2 = q2 + q2;     // update q2
+      r2 = r2 + r2 + 1; // update r2
+    }
+    delta = d - 1 - r2;
+  } while (p < d.getBitWidth() * 2 &&
+           (q1.ult(delta) || (q1 == delta && r1 == 0)));
+  magu.m = q2 + 1;              // resulting magic number
+  magu.s = p - d.getBitWidth(); // resulting shift
+  return magu;
+}
+
+/// Calculate the magic numbers required to implement a signed integer division
+/// by a constant as a sequence of multiplies, adds and shifts.  Requires that
+/// the divisor not be 0, 1, or -1.  Taken from "Hacker's Delight", Henry S.
+/// Warren, Jr., Chapter 10.
+static ms magic(const APInt &d) {
+  unsigned p;
+  APInt ad, anc, delta, q1, r1, q2, r2, t;
+  APInt signedMin = APInt::getSignedMinValue(d.getBitWidth());
+  struct ms mag;
+
+  ad = d.abs();
+  t = signedMin + (d.lshr(d.getBitWidth() - 1));
+  anc = t - 1 - t.urem(ad);  // absolute value of nc
+  p = d.getBitWidth() - 1;   // initialize p
+  q1 = signedMin.udiv(anc);  // initialize q1 = 2p/abs(nc)
+  r1 = signedMin - q1 * anc; // initialize r1 = rem(2p,abs(nc))
+  q2 = signedMin.udiv(ad);   // initialize q2 = 2p/abs(d)
+  r2 = signedMin - q2 * ad;  // initialize r2 = rem(2p,abs(d))
+  do {
+    p = p + 1;
+    q1 = q1 << 1;      // update q1 = 2p/abs(nc)
+    r1 = r1 << 1;      // update r1 = rem(2p/abs(nc))
+    if (r1.uge(anc)) { // must be unsigned comparison
+      q1 = q1 + 1;
+      r1 = r1 - anc;
+    }
+    q2 = q2 << 1;     // update q2 = 2p/abs(d)
+    r2 = r2 << 1;     // update r2 = rem(2p/abs(d))
+    if (r2.uge(ad)) { // must be unsigned comparison
+      q2 = q2 + 1;
+      r2 = r2 - ad;
+    }
+    delta = ad - r2;
+  } while (q1.ult(delta) || (q1 == delta && r1 == 0));
+
+  mag.m = q2 + 1;
+  if (d.isNegative())
+    mag.m = -mag.m;            // resulting magic number
+  mag.s = p - d.getBitWidth(); // resulting shift
+  return mag;
+}
+
 /// Given an ISD::SDIV node expressing a divide by constant,
 /// return a DAG expression to select that will generate the same value by
 /// multiplying by a magic number.
@@ -5175,7 +5281,7 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
       return false;
 
     const APInt &Divisor = C->getAPIntValue();
-    APInt::ms magics = Divisor.magic();
+    ms magics = magic(Divisor);
     int NumeratorFactor = 0;
     int ShiftMask = -1;
 
@@ -5321,7 +5427,7 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
     // FIXME: We should use a narrower constant when the upper
     // bits are known to be zero.
     const APInt& Divisor = C->getAPIntValue();
-    APInt::mu magics = Divisor.magicu();
+    mu magics = magicu(Divisor);
     unsigned PreShift = 0, PostShift = 0;
 
     // If the divisor is even, we can avoid using the expensive fixup by
@@ -5329,7 +5435,7 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
     if (magics.a != 0 && !Divisor[0]) {
       PreShift = Divisor.countTrailingZeros();
       // Get magic number for the shifted divisor.
-      magics = Divisor.lshr(PreShift).magicu(PreShift);
+      magics = magicu(Divisor.lshr(PreShift), PreShift);
       assert(magics.a == 0 && "Should use cheap fixup now");
     }
 
