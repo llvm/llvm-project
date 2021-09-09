@@ -220,7 +220,7 @@ void MCStreamer::emitFill(uint64_t NumBytes, uint8_t FillValue) {
 }
 
 void llvm::MCStreamer::emitNops(int64_t NumBytes, int64_t ControlledNopLen,
-                                llvm::SMLoc) {}
+                                llvm::SMLoc, const MCSubtargetInfo& STI) {}
 
 /// The implementation in this class just redirects to emitFill.
 void MCStreamer::emitZeros(uint64_t NumBytes) { emitFill(NumBytes, 0); }

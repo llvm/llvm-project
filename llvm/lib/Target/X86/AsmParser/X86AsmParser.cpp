@@ -4855,7 +4855,7 @@ bool X86AsmParser::parseDirectiveArch() {
 bool X86AsmParser::parseDirectiveNops(SMLoc L) {
   int64_t NumBytes = 0, Control = 0;
   SMLoc NumBytesLoc, ControlLoc;
-  const MCSubtargetInfo STI = getSTI();
+  const MCSubtargetInfo& STI = getSTI();
   NumBytesLoc = getTok().getLoc();
   if (getParser().checkForValidSection() ||
       getParser().parseAbsoluteExpression(NumBytes))
@@ -4881,7 +4881,7 @@ bool X86AsmParser::parseDirectiveNops(SMLoc L) {
   }
 
   /// Emit nops
-  getParser().getStreamer().emitNops(NumBytes, Control, L);
+  getParser().getStreamer().emitNops(NumBytes, Control, L, STI);
 
   return false;
 }

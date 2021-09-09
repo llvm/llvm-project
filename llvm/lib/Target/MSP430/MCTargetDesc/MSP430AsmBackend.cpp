@@ -90,7 +90,8 @@ public:
     return Infos[Kind - FirstTargetFixupKind];
   }
 
-  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
+  bool writeNopData(raw_ostream &OS, uint64_t Count,
+                    const MCSubtargetInfo *STI) const override;
 };
 
 uint64_t MSP430AsmBackend::adjustFixupValue(const MCFixup &Fixup,
@@ -147,7 +148,8 @@ void MSP430AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   }
 }
 
-bool MSP430AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
+bool MSP430AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
+                                    const MCSubtargetInfo *STI) const {
   if ((Count % 2) != 0)
     return false;
 
