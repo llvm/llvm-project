@@ -121,7 +121,7 @@ module m08
     type(t) :: x(3,3)
   end subroutine
   impure elemental subroutine s3(x)
-    type(t) :: x
+    type(t), intent(in) :: x
   end subroutine
 !CHECK: .dt.t, SAVE, TARGET (CompilerCreated): ObjectEntity type: TYPE(derivedtype) init:derivedtype(binding=NULL(),name=.n.t,sizeinbytes=0_8,uninstantiated=NULL(),kindparameter=NULL(),lenparameterkind=NULL(),component=NULL(),procptr=NULL(),special=.s.t,specialbitset=3200_4,hasparent=0_1,noinitializationneeded=1_1,nodestructionneeded=0_1,nofinalizationneeded=0_1)
 !CHECK: .s.t, SAVE, TARGET (CompilerCreated): ObjectEntity type: TYPE(specialbinding) shape: 0_8:2_8 init:[specialbinding::specialbinding(which=7_1,isargdescriptorset=0_1,proc=s3),specialbinding(which=10_1,isargdescriptorset=1_1,proc=s1),specialbinding(which=11_1,isargdescriptorset=0_1,proc=s2)]
