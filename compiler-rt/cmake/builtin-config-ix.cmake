@@ -83,7 +83,8 @@ if(APPLE)
     execute_process(COMMAND
         /usr/libexec/PlistBuddy -c "Print :SupportedTargets:${os}:Archs" ${sdk_path}/SDKSettings.plist
       OUTPUT_VARIABLE SDK_SUPPORTED_ARCHS
-      RESULT_VARIABLE PLIST_ERROR)
+      RESULT_VARIABLE PLIST_ERROR
+      ERROR_QUIET)
     if (PLIST_ERROR EQUAL 0 AND
         SDK_SUPPORTED_ARCHS MATCHES " ${arch}\n")
       message(STATUS "Found ${arch} support in ${sdk_path}/SDKSettings.plist")
