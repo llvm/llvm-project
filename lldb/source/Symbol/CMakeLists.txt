@@ -1,7 +1,9 @@
 set(LLVM_OPTIONAL_SOURCES LocateSymbolFileMacOSX.cpp)
 
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
-  set(PLATFORM_SOURCES LocateSymbolFileMacOSX.cpp)
+  set(PLATFORM_SOURCES
+    LocateSymbolFileMacOSX.cpp
+    )
 endif()
 
 set(SWIFT_LIBS
