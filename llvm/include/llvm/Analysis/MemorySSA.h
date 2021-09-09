@@ -894,6 +894,13 @@ private:
   unsigned NextID;
 };
 
+/// Enables verification of MemorySSA.
+///
+/// The checks which this flag enables is exensive and disabled by default
+/// unless `EXPENSIVE_CHECKS` is defined.  The flag `-verify-memoryssa` can be
+/// used to selectively enable the verification without re-compilation.
+extern bool VerifyMemorySSA;
+
 // Internal MemorySSA utils, for use by MemorySSA classes and walkers
 class MemorySSAUtil {
 protected:
