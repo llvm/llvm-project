@@ -361,13 +361,13 @@ MachineBasicBlock::iterator AVRFrameLowering::eliminateCallFramePseudoInstr(
       // values, etc) is tricky and thus left to be optimized in the future.
       BuildMI(MBB, MI, DL, TII.get(AVR::SPREAD), AVR::R31R30).addReg(AVR::SP);
 
-      MachineInstr *New = BuildMI(MBB, MI, DL, TII.get(AVR::SUBIWRdK), AVR::R31R30)
-                              .addReg(AVR::R31R30, RegState::Kill)
-                              .addImm(Amount);
+      MachineInstr *New =
+          BuildMI(MBB, MI, DL, TII.get(AVR::SUBIWRdK), AVR::R31R30)
+              .addReg(AVR::R31R30, RegState::Kill)
+              .addImm(Amount);
       New->getOperand(3).setIsDead();
 
-      BuildMI(MBB, MI, DL, TII.get(AVR::SPWRITE), AVR::SP)
-          .addReg(AVR::R31R30);
+      BuildMI(MBB, MI, DL, TII.get(AVR::SPWRITE), AVR::SP).addReg(AVR::R31R30);
 
       // Make sure the remaining stack stores are converted to real store
       // instructions.
@@ -536,4 +536,3 @@ char AVRDynAllocaSR::ID = 0;
 FunctionPass *createAVRDynAllocaSRPass() { return new AVRDynAllocaSR(); }
 
 } // end of namespace llvm
-

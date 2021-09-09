@@ -14,9 +14,8 @@
 //===----------------------------------------------------------------------===//
 
 // Special return value calling convention for runtime functions.
-def RetCC_AVR_BUILTIN : CallingConv
-<[
-  CCIfType<[i8], CCAssignToReg<[R24,R25]>>,
+def RetCC_AVR_BUILTIN : CallingConv<[
+  CCIfType<[i8], CCAssignToReg<[R24, R25]>>,
   CCIfType<[i16], CCAssignToReg<[R23R22, R25R24]>>
 ]>;
 
@@ -27,8 +26,7 @@ def RetCC_AVR_BUILTIN : CallingConv
 // The calling conventions are implemented in custom C++ code
 
 // Calling convention for variadic functions.
-def ArgCC_AVR_Vararg : CallingConv
-<[
+def ArgCC_AVR_Vararg : CallingConv<[
   // i16 are always passed through the stack with an alignment of 1.
   CCAssignToStack<2, 1>
 ]>;
@@ -38,4 +36,4 @@ def ArgCC_AVR_Vararg : CallingConv
 //===----------------------------------------------------------------------===//
 
 def CSR_Normal : CalleeSavedRegs<(add R29, R28, (sequence "R%u", 17, 2))>;
-def CSR_Interrupts : CalleeSavedRegs<(add (sequence "R%u", 31, 0))>;
+def CSR_Interrupts : CalleeSavedRegs<(add(sequence "R%u", 31, 0))>;

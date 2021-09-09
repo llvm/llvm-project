@@ -109,9 +109,9 @@ public:
 
   unsigned insertIndirectBranch(MachineBasicBlock &MBB,
                                 MachineBasicBlock &NewDestBB,
-                                const DebugLoc &DL,
-                                int64_t BrOffset,
+                                const DebugLoc &DL, int64_t BrOffset,
                                 RegScavenger *RS) const override;
+
 private:
   const AVRRegisterInfo RI;
 };
