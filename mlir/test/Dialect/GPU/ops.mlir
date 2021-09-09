@@ -195,6 +195,17 @@ module attributes {gpu.container_module} {
     return
   }
 
+  func @memset(%dst : memref<3x7xf32>, %value : f32) {
+    // CHECK-LABEL: func @memset
+    // CHECK: gpu.memset {{.*}}, {{.*}} : memref<3x7xf32>, f32
+    gpu.memset %dst, %value : memref<3x7xf32>, f32
+    // CHECK: %[[t0:.*]] = gpu.wait async
+    %0 = gpu.wait async
+    // CHECK: {{.*}} = gpu.memset async [%[[t0]]] {{.*}}, {{.*}} : memref<3x7xf32>, f32
+    %1 = gpu.memset async [%0] %dst, %value : memref<3x7xf32>, f32
+    return
+  }
+
   func @mmamatrix_valid_element_type(){
     // CHECK-LABEL: func @mmamatrix_valid_element_type
     %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, 3>
