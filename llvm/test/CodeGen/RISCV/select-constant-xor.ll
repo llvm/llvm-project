@@ -202,21 +202,18 @@ define i32 @selecti8i32(i8 %a) {
 define i32 @icmpasreq(i32 %input, i32 %a, i32 %b) {
 ; CHECK32-LABEL: icmpasreq:
 ; CHECK32:       # %bb.0:
-; CHECK32-NEXT:    srai a3, a0, 31
-; CHECK32-NEXT:    addi a4, zero, -1
-; CHECK32-NEXT:    mv a0, a1
-; CHECK32-NEXT:    beq a3, a4, .LBB8_2
+; CHECK32-NEXT:    bltz a0, .LBB8_2
 ; CHECK32-NEXT:  # %bb.1:
-; CHECK32-NEXT:    mv a0, a2
+; CHECK32-NEXT:    mv a1, a2
 ; CHECK32-NEXT:  .LBB8_2:
+; CHECK32-NEXT:    mv a0, a1
 ; CHECK32-NEXT:    ret
 ;
 ; CHECK64-LABEL: icmpasreq:
 ; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    sraiw a3, a0, 31
-; CHECK64-NEXT:    addi a4, zero, -1
+; CHECK64-NEXT:    sext.w a3, a0
 ; CHECK64-NEXT:    mv a0, a1
-; CHECK64-NEXT:    beq a3, a4, .LBB8_2
+; CHECK64-NEXT:    bltz a3, .LBB8_2
 ; CHECK64-NEXT:  # %bb.1:
 ; CHECK64-NEXT:    mv a0, a2
 ; CHECK64-NEXT:  .LBB8_2:
@@ -230,21 +227,18 @@ define i32 @icmpasreq(i32 %input, i32 %a, i32 %b) {
 define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 ; CHECK32-LABEL: icmpasrne:
 ; CHECK32:       # %bb.0:
-; CHECK32-NEXT:    srai a3, a0, 31
-; CHECK32-NEXT:    addi a4, zero, -1
-; CHECK32-NEXT:    mv a0, a1
-; CHECK32-NEXT:    bne a3, a4, .LBB9_2
+; CHECK32-NEXT:    bgtz a0, .LBB9_2
 ; CHECK32-NEXT:  # %bb.1:
-; CHECK32-NEXT:    mv a0, a2
+; CHECK32-NEXT:    mv a1, a2
 ; CHECK32-NEXT:  .LBB9_2:
+; CHECK32-NEXT:    mv a0, a1
 ; CHECK32-NEXT:    ret
 ;
 ; CHECK64-LABEL: icmpasrne:
 ; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    sraiw a3, a0, 31
-; CHECK64-NEXT:    addi a4, zero, -1
+; CHECK64-NEXT:    sext.w a3, a0
 ; CHECK64-NEXT:    mv a0, a1
-; CHECK64-NEXT:    bne a3, a4, .LBB9_2
+; CHECK64-NEXT:    bgtz a3, .LBB9_2
 ; CHECK64-NEXT:  # %bb.1:
 ; CHECK64-NEXT:    mv a0, a2
 ; CHECK64-NEXT:  .LBB9_2:

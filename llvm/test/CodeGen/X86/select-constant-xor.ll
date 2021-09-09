@@ -115,9 +115,8 @@ define i32 @icmpasreq(i32 %input, i32 %a, i32 %b) {
 ; CHECK-LABEL: icmpasreq:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    sarl $31, %edi
-; CHECK-NEXT:    cmpl $-1, %edi
-; CHECK-NEXT:    cmovnel %edx, %eax
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    cmovnsl %edx, %eax
 ; CHECK-NEXT:    retq
   %sh = ashr i32 %input, 31
   %c = icmp eq i32 %sh, -1
@@ -129,9 +128,8 @@ define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 ; CHECK-LABEL: icmpasrne:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    sarl $31, %edi
-; CHECK-NEXT:    cmpl $-1, %edi
-; CHECK-NEXT:    cmovel %edx, %eax
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    cmovlel %edx, %eax
 ; CHECK-NEXT:    retq
   %sh = ashr i32 %input, 31
   %c = icmp ne i32 %sh, -1

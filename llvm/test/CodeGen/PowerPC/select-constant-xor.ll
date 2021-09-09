@@ -113,9 +113,8 @@ define i32 @selecti8i32(i8 %a) {
 define i32 @icmpasreq(i32 %input, i32 %a, i32 %b) {
 ; CHECK-LABEL: icmpasreq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srawi 3, 3, 31
-; CHECK-NEXT:    cmpwi 3, -1
-; CHECK-NEXT:    iseleq 3, 4, 5
+; CHECK-NEXT:    cmpwi 3, 0
+; CHECK-NEXT:    isellt 3, 4, 5
 ; CHECK-NEXT:    blr
   %sh = ashr i32 %input, 31
   %c = icmp eq i32 %sh, -1
@@ -126,9 +125,8 @@ define i32 @icmpasreq(i32 %input, i32 %a, i32 %b) {
 define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 ; CHECK-LABEL: icmpasrne:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srawi 3, 3, 31
-; CHECK-NEXT:    cmpwi 3, -1
-; CHECK-NEXT:    iseleq 3, 5, 4
+; CHECK-NEXT:    cmpwi 3, 0
+; CHECK-NEXT:    iselgt 3, 4, 5
 ; CHECK-NEXT:    blr
   %sh = ashr i32 %input, 31
   %c = icmp ne i32 %sh, -1

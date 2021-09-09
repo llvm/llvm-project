@@ -123,8 +123,7 @@ define i32 @icmpasreq(i32 %input, i32 %a, i32 %b) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
-; CHECK-NEXT:    v_ashrrev_i32_e32 v0, 31, v0
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc_lo, -1, v0
+; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 0, v0
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %sh = ashr i32 %input, 31
@@ -138,8 +137,7 @@ define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
-; CHECK-NEXT:    v_ashrrev_i32_e32 v0, 31, v0
-; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc_lo, -1, v0
+; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 0, v0
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %sh = ashr i32 %input, 31
