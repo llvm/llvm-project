@@ -311,6 +311,9 @@ class MCAlignFragment : public MCFragment {
   /// cannot be satisfied in this width then this fragment is ignored.
   unsigned MaxBytesToEmit;
 
+  /// When emitting Nops some subtargets have specific nop encodings.
+  const MCSubtargetInfo *STI;
+
 public:
   MCAlignFragment(unsigned Alignment, int64_t Value, unsigned ValueSize,
                   unsigned MaxBytesToEmit, MCSection *Sec = nullptr)
@@ -326,7 +329,12 @@ public:
   unsigned getMaxBytesToEmit() const { return MaxBytesToEmit; }
 
   bool hasEmitNops() const { return EmitNops; }
-  void setEmitNops(bool Value) { EmitNops = Value; }
+  void setEmitNops(bool Value, const MCSubtargetInfo *STI) {
+    EmitNops = Value;
+    this->STI = STI;
+  }
+
+  const MCSubtargetInfo *getSubtargetInfo() const { return STI; }
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_Align;

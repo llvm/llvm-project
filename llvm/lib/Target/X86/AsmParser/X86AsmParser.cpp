@@ -4894,11 +4894,11 @@ bool X86AsmParser::parseDirectiveEven(SMLoc L) {
 
   const MCSection *Section = getStreamer().getCurrentSectionOnly();
   if (!Section) {
-    getStreamer().InitSections(false);
+    getStreamer().initSections(false, getSTI());
     Section = getStreamer().getCurrentSectionOnly();
   }
   if (Section->UseCodeAlign())
-    getStreamer().emitCodeAlignment(2, 0);
+    getStreamer().emitCodeAlignment(2, &getSTI(), 0);
   else
     getStreamer().emitValueToAlignment(2, 0, 1, 0);
   return false;

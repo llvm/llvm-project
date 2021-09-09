@@ -276,7 +276,7 @@ bool AsmPrinter::doInitialization(Module &M) {
   const_cast<TargetLoweringObjectFile &>(getObjFileLowering())
       .getModuleMetadata(M);
 
-  OutStreamer->InitSections(false);
+  OutStreamer->initSections(false, *TM.getMCSubtargetInfo());
 
   if (DisableDebugInfoPrinting)
     MMI->setDebugInfoAvailability(false);
@@ -2459,9 +2459,14 @@ void AsmPrinter::emitAlignment(Align Alignment, const GlobalObject *GV) const {
   if (Alignment == Align(1))
     return; // 1-byte aligned: no need to emit alignment.
 
-  if (getCurrentSection()->getKind().isText())
-    OutStreamer->emitCodeAlignment(Alignment.value());
-  else
+  if (getCurrentSection()->getKind().isText()) {
+    const MCSubtargetInfo *STI = nullptr;
+    if (this->MF)
+      STI = &getSubtargetInfo();
+    else
+      STI = TM.getMCSubtargetInfo();
+    OutStreamer->emitCodeAlignment(Alignment.value(), STI);
+  } else
     OutStreamer->emitValueToAlignment(Alignment.value());
 }
 
@@ -3638,7 +3643,7 @@ void AsmPrinter::emitXRayTable() {
   // pointers. This should work for both 32-bit and 64-bit platforms.
   if (FnSledIndex) {
     OutStreamer->SwitchSection(FnSledIndex);
-    OutStreamer->emitCodeAlignment(2 * WordSizeBytes);
+    OutStreamer->emitCodeAlignment(2 * WordSizeBytes, &getSubtargetInfo());
     OutStreamer->emitSymbolValue(SledsStart, WordSizeBytes, false);
     OutStreamer->emitSymbolValue(SledsEnd, WordSizeBytes, false);
     OutStreamer->SwitchSection(PrevSection);
