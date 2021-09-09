@@ -41,8 +41,22 @@ end submodule t16
 
 module t5
   interface t7
-  !ERROR: INTERFACE generic-name (t7) mismatch
+  !ERROR: END INTERFACE generic name (t8) does not match generic INTERFACE (t7)
   end interface t8
+  abstract interface
+  !ERROR: END INTERFACE generic name (t19) may not appear for ABSTRACT INTERFACE
+  end interface t19
+  interface
+  !ERROR: END INTERFACE generic name (t20) may not appear for non-generic INTERFACE
+  end interface t20
+  interface
+  !ERROR: END INTERFACE generic name (assignment(=)) may not appear for non-generic INTERFACE
+  end interface assignment(=)
+  interface operator(<)
+  end interface operator(.LT.) ! not an error
+  interface operator(.EQ.)
+  end interface operator(==) ! not an error
+
   type t17
   !ERROR: derived type definition name mismatch
   end type t18

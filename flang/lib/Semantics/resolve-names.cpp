@@ -2423,7 +2423,7 @@ void ScopeHandler::MakeExternal(Symbol &symbol) {
 bool ModuleVisitor::Pre(const parser::Only &x) {
   std::visit(common::visitors{
                  [&](const Indirection<parser::GenericSpec> &generic) {
-                   const GenericSpecInfo &genericSpecInfo{generic.value()};
+                   GenericSpecInfo genericSpecInfo{generic.value()};
                    AddUseOnly(genericSpecInfo.symbolName());
                    AddUse(genericSpecInfo);
                  },
