@@ -34,7 +34,7 @@ private:
     tuple<_Bound...> __bound_;
 
 public:
-    template <class ..._BoundArgs, class = _EnableIf<
+    template <class ..._BoundArgs, class = enable_if_t<
         is_constructible_v<tuple<_Bound...>, _BoundArgs&&...>
     >>
     explicit constexpr __perfect_forward_impl(_BoundArgs&& ...__bound)
@@ -47,40 +47,40 @@ public:
     __perfect_forward_impl& operator=(__perfect_forward_impl const&) = default;
     __perfect_forward_impl& operator=(__perfect_forward_impl&&) = default;
 
-    template <class ..._Args, class = _EnableIf<is_invocable_v<_Op, _Bound&..., _Args...>>>
+    template <class ..._Args, class = enable_if_t<is_invocable_v<_Op, _Bound&..., _Args...>>>
     _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Args&&... __args) &
         noexcept(noexcept(_Op()(_VSTD::get<_Idx>(__bound_)..., _VSTD::forward<_Args>(__args)...)))
         -> decltype(      _Op()(_VSTD::get<_Idx>(__bound_)..., _VSTD::forward<_Args>(__args)...))
         { return          _Op()(_VSTD::get<_Idx>(__bound_)..., _VSTD::forward<_Args>(__args)...); }
 
-    template <class ..._Args, class = _EnableIf<!is_invocable_v<_Op, _Bound&..., _Args...>>>
+    template <class ..._Args, class = enable_if_t<!is_invocable_v<_Op, _Bound&..., _Args...>>>
     auto operator()(_Args&&...) & = delete;
 
-    template <class ..._Args, class = _EnableIf<is_invocable_v<_Op, _Bound const&..., _Args...>>>
+    template <class ..._Args, class = enable_if_t<is_invocable_v<_Op, _Bound const&..., _Args...>>>
     _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Args&&... __args) const&
         noexcept(noexcept(_Op()(_VSTD::get<_Idx>(__bound_)..., _VSTD::forward<_Args>(__args)...)))
         -> decltype(      _Op()(_VSTD::get<_Idx>(__bound_)..., _VSTD::forward<_Args>(__args)...))
         { return          _Op()(_VSTD::get<_Idx>(__bound_)..., _VSTD::forward<_Args>(__args)...); }
 
-    template <class ..._Args, class = _EnableIf<!is_invocable_v<_Op, _Bound const&..., _Args...>>>
+    template <class ..._Args, class = enable_if_t<!is_invocable_v<_Op, _Bound const&..., _Args...>>>
     auto operator()(_Args&&...) const& = delete;
 
-    template <class ..._Args, class = _EnableIf<is_invocable_v<_Op, _Bound..., _Args...>>>
+    template <class ..._Args, class = enable_if_t<is_invocable_v<_Op, _Bound..., _Args...>>>
     _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Args&&... __args) &&
         noexcept(noexcept(_Op()(_VSTD::get<_Idx>(_VSTD::move(__bound_))..., _VSTD::forward<_Args>(__args)...)))
         -> decltype(      _Op()(_VSTD::get<_Idx>(_VSTD::move(__bound_))..., _VSTD::forward<_Args>(__args)...))
         { return          _Op()(_VSTD::get<_Idx>(_VSTD::move(__bound_))..., _VSTD::forward<_Args>(__args)...); }
 
-    template <class ..._Args, class = _EnableIf<!is_invocable_v<_Op, _Bound..., _Args...>>>
+    template <class ..._Args, class = enable_if_t<!is_invocable_v<_Op, _Bound..., _Args...>>>
     auto operator()(_Args&&...) && = delete;
 
-    template <class ..._Args, class = _EnableIf<is_invocable_v<_Op, _Bound const..., _Args...>>>
+    template <class ..._Args, class = enable_if_t<is_invocable_v<_Op, _Bound const..., _Args...>>>
     _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Args&&... __args) const&&
         noexcept(noexcept(_Op()(_VSTD::get<_Idx>(_VSTD::move(__bound_))..., _VSTD::forward<_Args>(__args)...)))
         -> decltype(      _Op()(_VSTD::get<_Idx>(_VSTD::move(__bound_))..., _VSTD::forward<_Args>(__args)...))
         { return          _Op()(_VSTD::get<_Idx>(_VSTD::move(__bound_))..., _VSTD::forward<_Args>(__args)...); }
 
-    template <class ..._Args, class = _EnableIf<!is_invocable_v<_Op, _Bound const..., _Args...>>>
+    template <class ..._Args, class = enable_if_t<!is_invocable_v<_Op, _Bound const..., _Args...>>>
     auto operator()(_Args&&...) const&& = delete;
 };
 
