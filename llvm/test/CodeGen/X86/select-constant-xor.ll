@@ -18,10 +18,9 @@ define i32 @xori64i32(i64 %a) {
 define i64 @selecti64i64(i64 %a) {
 ; CHECK-LABEL: selecti64i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    movl $2147483647, %ecx # imm = 0x7FFFFFFF
-; CHECK-NEXT:    movq $-2147483648, %rax # imm = 0x80000000
-; CHECK-NEXT:    cmovnsq %rcx, %rax
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    sarq $63, %rax
+; CHECK-NEXT:    xorq $2147483647, %rax # imm = 0x7FFFFFFF
 ; CHECK-NEXT:    retq
   %c = icmp sgt i64 %a, -1
   %s = select i1 %c, i64 2147483647, i64 -2147483648
@@ -45,10 +44,9 @@ define i32 @selecti64i32(i64 %a) {
 define i64 @selecti32i64(i32 %a) {
 ; CHECK-LABEL: selecti32i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    movl $2147483647, %ecx # imm = 0x7FFFFFFF
-; CHECK-NEXT:    movq $-2147483648, %rax # imm = 0x80000000
-; CHECK-NEXT:    cmovnsq %rcx, %rax
+; CHECK-NEXT:    sarl $31, %edi
+; CHECK-NEXT:    movslq %edi, %rax
+; CHECK-NEXT:    xorq $2147483647, %rax # imm = 0x7FFFFFFF
 ; CHECK-NEXT:    retq
   %c = icmp sgt i32 %a, -1
   %s = select i1 %c, i64 2147483647, i64 -2147483648
@@ -74,10 +72,9 @@ define i8 @xori32i8(i32 %a) {
 define i32 @selecti32i32(i32 %a) {
 ; CHECK-LABEL: selecti32i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    movl $84, %ecx
-; CHECK-NEXT:    movl $-85, %eax
-; CHECK-NEXT:    cmovnsl %ecx, %eax
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    sarl $31, %eax
+; CHECK-NEXT:    xorl $84, %eax
 ; CHECK-NEXT:    retq
   %c = icmp sgt i32 %a, -1
   %s = select i1 %c, i32 84, i32 -85
@@ -87,10 +84,9 @@ define i32 @selecti32i32(i32 %a) {
 define i8 @selecti32i8(i32 %a) {
 ; CHECK-LABEL: selecti32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    movl $84, %ecx
-; CHECK-NEXT:    movl $171, %eax
-; CHECK-NEXT:    cmovnsl %ecx, %eax
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    sarl $31, %eax
+; CHECK-NEXT:    xorb $84, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %c = icmp sgt i32 %a, -1
@@ -101,10 +97,9 @@ define i8 @selecti32i8(i32 %a) {
 define i32 @selecti8i32(i8 %a) {
 ; CHECK-LABEL: selecti8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    testb %dil, %dil
-; CHECK-NEXT:    movl $84, %ecx
-; CHECK-NEXT:    movl $-85, %eax
-; CHECK-NEXT:    cmovnsl %ecx, %eax
+; CHECK-NEXT:    sarb $7, %dil
+; CHECK-NEXT:    movsbl %dil, %eax
+; CHECK-NEXT:    xorl $84, %eax
 ; CHECK-NEXT:    retq
   %c = icmp sgt i8 %a, -1
   %s = select i1 %c, i32 84, i32 -85
@@ -141,12 +136,12 @@ define i32 @oneusecmp(i32 %a, i32 %b, i32 %d) {
 ; CHECK-LABEL: oneusecmp:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    sarl $31, %eax
+; CHECK-NEXT:    xorl $127, %eax
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    cmovsl %edx, %esi
-; CHECK-NEXT:    leal -128(%rsi), %ecx
-; CHECK-NEXT:    leal 127(%rsi), %eax
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    cmovsl %ecx, %eax
+; CHECK-NEXT:    addl %esi, %eax
 ; CHECK-NEXT:    retq
   %c = icmp sle i32 %a, -1
   %s = select i1 %c, i32 -128, i32 127

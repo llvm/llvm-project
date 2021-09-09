@@ -16,9 +16,8 @@ define i32 @xori64i32(i64 %a) {
 define i64 @selecti64i64(i64 %a) {
 ; CHECK-LABEL: selecti64i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    mov w8, #2147483647
-; CHECK-NEXT:    cinv x0, x8, lt
+; CHECK-NEXT:    asr x8, x0, #63
+; CHECK-NEXT:    eor x0, x8, #0x7fffffff
 ; CHECK-NEXT:    ret
   %c = icmp sgt i64 %a, -1
   %s = select i1 %c, i64 2147483647, i64 -2147483648
@@ -28,9 +27,8 @@ define i64 @selecti64i64(i64 %a) {
 define i32 @selecti64i32(i64 %a) {
 ; CHECK-LABEL: selecti64i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    mov w8, #2147483647
-; CHECK-NEXT:    cinv w0, w8, lt
+; CHECK-NEXT:    asr x8, x0, #63
+; CHECK-NEXT:    eor w0, w8, #0x7fffffff
 ; CHECK-NEXT:    ret
   %c = icmp sgt i64 %a, -1
   %s = select i1 %c, i32 2147483647, i32 -2147483648
@@ -40,9 +38,9 @@ define i32 @selecti64i32(i64 %a) {
 define i64 @selecti32i64(i32 %a) {
 ; CHECK-LABEL: selecti32i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    mov w8, #2147483647
-; CHECK-NEXT:    cinv x0, x8, lt
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sbfx x8, x0, #31, #1
+; CHECK-NEXT:    eor x0, x8, #0x7fffffff
 ; CHECK-NEXT:    ret
   %c = icmp sgt i32 %a, -1
   %s = select i1 %c, i64 2147483647, i64 -2147483648
@@ -66,9 +64,8 @@ define i8 @xori32i8(i32 %a) {
 define i32 @selecti32i32(i32 %a) {
 ; CHECK-LABEL: selecti32i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    mov w8, #84
-; CHECK-NEXT:    cinv w0, w8, lt
+; CHECK-NEXT:    eor w0, w8, w0, asr #31
 ; CHECK-NEXT:    ret
   %c = icmp sgt i32 %a, -1
   %s = select i1 %c, i32 84, i32 -85
@@ -78,9 +75,8 @@ define i32 @selecti32i32(i32 %a) {
 define i8 @selecti32i8(i32 %a) {
 ; CHECK-LABEL: selecti32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    mov w8, #84
-; CHECK-NEXT:    cinv w0, w8, lt
+; CHECK-NEXT:    eor w0, w8, w0, asr #31
 ; CHECK-NEXT:    ret
   %c = icmp sgt i32 %a, -1
   %s = select i1 %c, i8 84, i8 -85
@@ -91,9 +87,8 @@ define i32 @selecti8i32(i8 %a) {
 ; CHECK-LABEL: selecti8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sxtb w8, w0
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    mov w8, #84
-; CHECK-NEXT:    cinv w0, w8, lt
+; CHECK-NEXT:    mov w9, #84
+; CHECK-NEXT:    eor w0, w9, w8, asr #7
 ; CHECK-NEXT:    ret
   %c = icmp sgt i8 %a, -1
   %s = select i1 %c, i32 84, i32 -85
@@ -148,9 +143,8 @@ define i32 @selecti32i32_m1(i32 %a) {
 define i32 @selecti32i32_1(i32 %a) {
 ; CHECK-LABEL: selecti32i32_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    mov w8, #1
-; CHECK-NEXT:    cinv w0, w8, lt
+; CHECK-NEXT:    asr w8, w0, #31
+; CHECK-NEXT:    eor w0, w8, #0x1
 ; CHECK-NEXT:    ret
   %c = icmp sgt i32 %a, -1
   %s = select i1 %c, i32 1, i32 -2
@@ -160,9 +154,8 @@ define i32 @selecti32i32_1(i32 %a) {
 define i32 @selecti32i32_sge(i32 %a) {
 ; CHECK-LABEL: selecti32i32_sge:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    mov w8, #12
-; CHECK-NEXT:    cinv w0, w8, lt
+; CHECK-NEXT:    asr w8, w0, #31
+; CHECK-NEXT:    eor w0, w8, #0xc
 ; CHECK-NEXT:    ret
   %c = icmp sge i32 %a, 0
   %s = select i1 %c, i32 12, i32 -13
@@ -172,9 +165,8 @@ define i32 @selecti32i32_sge(i32 %a) {
 define i32 @selecti32i32_slt(i32 %a) {
 ; CHECK-LABEL: selecti32i32_slt:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    mov w8, #-13
-; CHECK-NEXT:    cinv w0, w8, ge
+; CHECK-NEXT:    asr w8, w0, #31
+; CHECK-NEXT:    eor w0, w8, #0xc
 ; CHECK-NEXT:    ret
   %c = icmp slt i32 %a, 0
   %s = select i1 %c, i32 -13, i32 12
@@ -184,9 +176,8 @@ define i32 @selecti32i32_slt(i32 %a) {
 define i32 @selecti32i32_sle(i32 %a) {
 ; CHECK-LABEL: selecti32i32_sle:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    mov w8, #-13
-; CHECK-NEXT:    cinv w0, w8, ge
+; CHECK-NEXT:    asr w8, w0, #31
+; CHECK-NEXT:    eor w0, w8, #0xc
 ; CHECK-NEXT:    ret
   %c = icmp sle i32 %a, -1
   %s = select i1 %c, i32 -13, i32 12
@@ -196,9 +187,8 @@ define i32 @selecti32i32_sle(i32 %a) {
 define i32 @selecti32i32_sgt(i32 %a) {
 ; CHECK-LABEL: selecti32i32_sgt:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    mov w8, #-13
-; CHECK-NEXT:    cinv w0, w8, ge
+; CHECK-NEXT:    asr w8, w0, #31
+; CHECK-NEXT:    eor w0, w8, #0xc
 ; CHECK-NEXT:    ret
   %c = icmp sle i32 %a, -1
   %s = select i1 %c, i32 -13, i32 12

@@ -22875,6 +22875,21 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
     }
   }
 
+  // Fold select_cc setgt X, -1, C, ~C -> xor (ashr X, BW-1), C
+  // Fold select_cc setlt X, 0, C, ~C -> xor (ashr X, BW-1), ~C
+  if (!NotExtCompare && N1C && N2C && N3C &&
+      N2C->getAPIntValue() == ~N3C->getAPIntValue() &&
+      ((N1C->isAllOnesValue() && CC == ISD::SETGT) ||
+       (N1C->isNullValue() && CC == ISD::SETLT)) &&
+      !TLI.shouldAvoidTransformToShift(VT, CmpOpVT.getScalarSizeInBits() - 1) &&
+      N0->hasOneUse()) {
+    SDValue ASR = DAG.getNode(
+        ISD::SRA, DL, CmpOpVT, N0,
+        DAG.getConstant(CmpOpVT.getScalarSizeInBits() - 1, DL, CmpOpVT));
+    return DAG.getNode(ISD::XOR, DL, VT, DAG.getSExtOrTrunc(ASR, DL, VT),
+                       DAG.getSExtOrTrunc(CC == ISD::SETLT ? N3 : N2, DL, VT));
+  }
+
   return SDValue();
 }
 
