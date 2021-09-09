@@ -2963,7 +2963,7 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
     // that are compatible with being a vararg call argument.
     unsigned SRetIdx;
     if (CallerPAL.hasAttrSomewhere(Attribute::StructRet, &SRetIdx) &&
-        SRetIdx > FT->getNumParams())
+        SRetIdx - AttributeList::FirstArgIndex >= FT->getNumParams())
       return false;
   }
 
