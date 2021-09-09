@@ -16,9 +16,10 @@ define internal i8* @foo() {
 ; CHECK call void (...) @llvm.objc.clang.arc.noop.use(i8* %[[R]])
 
 define void @test() {
-  %r = call i8* @foo() [ "clang.arc.attachedcall"(i64 1) ]
+  %r = call i8* @foo() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
   call void (...) @llvm.objc.clang.arc.noop.use(i8* %r)
   ret void
 }
 
+declare i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8*)
 declare void @llvm.objc.clang.arc.noop.use(...)
