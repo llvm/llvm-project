@@ -82,6 +82,7 @@ def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
 
   }];
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
+  let hasFolder = 1;
 }
 
 def SparseTensor_ToPointersOp : SparseTensor_Op<"pointers", [NoSideEffect]>,
