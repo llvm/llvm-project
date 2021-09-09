@@ -12,28 +12,29 @@
 #define _LCONV_C99
 #endif
 
-#include "string"
-#include "locale"
-#include "codecvt"
-#include "vector"
 #include "algorithm"
-#include "typeinfo"
-#ifndef _LIBCPP_NO_EXCEPTIONS
-#  include "type_traits"
-#endif
 #include "clocale"
+#include "codecvt"
+#include "cstdio"
+#include "cstdlib"
 #include "cstring"
-#if defined(_LIBCPP_MSVCRT)
-#define _CTYPE_DISABLE_MACROS
-#endif
 #include "cwctype"
-#if defined(_LIBCPP_MSVCRT) || defined(__MINGW32__)
-#include "__support/win32/locale_win32.h"
-#elif !defined(__BIONIC__) && !defined(__NuttX__)
-#include <langinfo.h>
+#include "locale"
+#include "string"
+#include "type_traits"
+#include "typeinfo"
+#include "vector"
+
+#if defined(_LIBCPP_MSVCRT)
+#   define _CTYPE_DISABLE_MACROS
 #endif
-#include <stdlib.h>
-#include <stdio.h>
+
+#if defined(_LIBCPP_MSVCRT) || defined(__MINGW32__)
+#   include "__support/win32/locale_win32.h"
+#elif !defined(__BIONIC__) && !defined(__NuttX__)
+#   include <langinfo.h>
+#endif
+
 #include "include/atomic_support.h"
 #include "include/sso_allocator.h"
 #include "__undef_macros"
