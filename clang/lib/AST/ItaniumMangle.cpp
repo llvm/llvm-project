@@ -2863,6 +2863,7 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
   //                 ::= d  # double
   //                 ::= e  # long double, __float80
   //                 ::= g  # __float128
+  //                 ::= g  # __ibm128
   // UNSUPPORTED:    ::= Dd # IEEE 754r decimal floating point (64 bits)
   // UNSUPPORTED:    ::= De # IEEE 754r decimal floating point (128 bits)
   // UNSUPPORTED:    ::= Df # IEEE 754r decimal floating point (32 bits)
@@ -2989,6 +2990,11 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
   case BuiltinType::BFloat16: {
     const TargetInfo *TI = &getASTContext().getTargetInfo();
     Out << TI->getBFloat16Mangling();
+    break;
+  }
+  case BuiltinType::Ibm128: {
+    const TargetInfo *TI = &getASTContext().getTargetInfo();
+    Out << TI->getIbm128Mangling();
     break;
   }
   case BuiltinType::NullPtr:

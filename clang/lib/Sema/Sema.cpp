@@ -1893,12 +1893,22 @@ void Sema::checkDeviceDecl(ValueDecl *D, SourceLocation Loc) {
       return;
     }
 
+    // Check if we are dealing with two 'long double' but with different
+    // semantics.
+    bool LongDoubleMismatched = false;
+    if (Ty->isRealFloatingType() && Context.getTypeSize(Ty) == 128) {
+      const llvm::fltSemantics &Sem = Context.getFloatTypeSemantics(Ty);
+      if (!Ty->isIbm128Type() && !Ty->isFloat128Type() &&
+          &Sem != &Context.getTargetInfo().getLongDoubleFormat())
+        LongDoubleMismatched = true;
+    }
+
     if ((Ty->isFloat16Type() && !Context.getTargetInfo().hasFloat16Type()) ||
-        ((Ty->isFloat128Type() ||
-          (Ty->isRealFloatingType() && Context.getTypeSize(Ty) == 128)) &&
-         !Context.getTargetInfo().hasFloat128Type()) ||
+        (Ty->isFloat128Type() && !Context.getTargetInfo().hasFloat128Type()) ||
+        (Ty->isIbm128Type() && !Context.getTargetInfo().hasIbm128Type()) ||
         (Ty->isIntegerType() && Context.getTypeSize(Ty) == 128 &&
-         !Context.getTargetInfo().hasInt128Type())) {
+         !Context.getTargetInfo().hasInt128Type()) ||
+        LongDoubleMismatched) {
       if (targetDiag(Loc, diag::err_device_unsupported_type, FD)
           << D << true /*show bit size*/
           << static_cast<unsigned>(Context.getTypeSize(Ty)) << Ty

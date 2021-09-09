@@ -1533,6 +1533,13 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
         << "__float128";
     Result = Context.Float128Ty;
     break;
+  case DeclSpec::TST_ibm128:
+    if (!S.Context.getTargetInfo().hasIbm128Type() &&
+        !S.getLangOpts().SYCLIsDevice &&
+        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsDevice))
+      S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported) << "__ibm128";
+    Result = Context.Ibm128Ty;
+    break;
   case DeclSpec::TST_bool:
     Result = Context.BoolTy; // _Bool or bool
     break;
