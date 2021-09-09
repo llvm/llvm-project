@@ -18,7 +18,7 @@ executable("lldb-server") {
     "//lldb/source/Host",
     "//lldb/source/Initialization",
 
-    #"//lldb/source/Plugins/Instruction/ARM", # XXX
+    "//lldb/source/Plugins/Instruction/ARM",
     #"//lldb/source/Plugins/Instruction/MIPS", # XXX
     #"//lldb/source/Plugins/Instruction/MIPS64", # XXX
     "//llvm/lib/Option",
