@@ -129,6 +129,9 @@ template <typename CalleeTy> struct UseInfo {
   UseInfo(unsigned PointerSize) : Range{PointerSize, false} {}
 
   void updateRange(const ConstantRange &R) { Range = unionNoWrap(Range, R); }
+  void addRange(const Instruction *I, const ConstantRange &R) {
+    updateRange(R);
+  }
 };
 
 template <typename CalleeTy>
@@ -348,11 +351,11 @@ void StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
       switch (I->getOpcode()) {
       case Instruction::Load: {
         if (AI && !SL.isAliveAfter(AI, I)) {
-          US.updateRange(UnknownRange);
+          US.addRange(I, UnknownRange);
           return;
         }
-        US.updateRange(
-            getAccessRange(UI, Ptr, DL.getTypeStoreSize(I->getType())));
+        US.addRange(I,
+                    getAccessRange(UI, Ptr, DL.getTypeStoreSize(I->getType())));
         break;
       }
 
@@ -362,15 +365,16 @@ void StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
       case Instruction::Store: {
         if (V == I->getOperand(0)) {
           // Stored the pointer - conservatively assume it may be unsafe.
-          US.updateRange(UnknownRange);
+          US.addRange(I, UnknownRange);
           return;
         }
         if (AI && !SL.isAliveAfter(AI, I)) {
-          US.updateRange(UnknownRange);
+          US.addRange(I, UnknownRange);
           return;
         }
-        US.updateRange(getAccessRange(
-            UI, Ptr, DL.getTypeStoreSize(I->getOperand(0)->getType())));
+        US.addRange(
+            I, getAccessRange(
+                   UI, Ptr, DL.getTypeStoreSize(I->getOperand(0)->getType())));
         break;
       }
 
@@ -378,7 +382,7 @@ void StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
         // Information leak.
         // FIXME: Process parameters correctly. This is a leak only if we return
         // alloca.
-        US.updateRange(UnknownRange);
+        US.addRange(I, UnknownRange);
         return;
 
       case Instruction::Call:
@@ -387,25 +391,26 @@ void StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
           break;
 
         if (AI && !SL.isAliveAfter(AI, I)) {
-          US.updateRange(UnknownRange);
+          US.addRange(I, UnknownRange);
           return;
         }
 
         if (const MemIntrinsic *MI = dyn_cast<MemIntrinsic>(I)) {
-          US.updateRange(getMemIntrinsicAccessRange(MI, UI, Ptr));
+          US.addRange(I, getMemIntrinsicAccessRange(MI, UI, Ptr));
           break;
         }
 
         const auto &CB = cast<CallBase>(*I);
         if (!CB.isArgOperand(&UI)) {
-          US.updateRange(UnknownRange);
+          US.addRange(I, UnknownRange);
           return;
         }
 
         unsigned ArgNo = CB.getArgOperandNo(&UI);
         if (CB.isByValArgument(ArgNo)) {
-          US.updateRange(getAccessRange(
-              UI, Ptr, DL.getTypeStoreSize(CB.getParamByValType(ArgNo))));
+          US.addRange(I, getAccessRange(
+                             UI, Ptr,
+                             DL.getTypeStoreSize(CB.getParamByValType(ArgNo))));
           break;
         }
 
@@ -415,7 +420,7 @@ void StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
         const GlobalValue *Callee =
             dyn_cast<GlobalValue>(CB.getCalledOperand()->stripPointerCasts());
         if (!Callee) {
-          US.updateRange(UnknownRange);
+          US.addRange(I, UnknownRange);
           return;
         }
 
