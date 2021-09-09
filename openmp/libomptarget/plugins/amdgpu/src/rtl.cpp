@@ -691,7 +691,10 @@ public:
       print_kernel_trace = 0;
 
     DP("Start initializing " GETNAME(TARGET_NAME) "\n");
-    hsa_status_t err = core::atl_init_gpu_context();
+    hsa_status_t err = hsa_init();
+    if (err == HSA_STATUS_SUCCESS) {
+      err = core::atl_init_gpu_context();
+    }
     if (err == HSA_STATUS_SUCCESS) {
       HSAInitializeSucceeded = true;
     } else {

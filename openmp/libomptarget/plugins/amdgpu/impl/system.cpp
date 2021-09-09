@@ -177,12 +177,7 @@ hsa_status_t callbackEvent(const hsa_amd_event_t *event, void *data) {
 }
 
 hsa_status_t atl_init_gpu_context() {
-  hsa_status_t err;
-  err = hsa_init();
-  if (err != HSA_STATUS_SUCCESS)
-    return HSA_STATUS_ERROR;
-
-  err = hsa_amd_register_system_event_handler(callbackEvent, NULL);
+  hsa_status_t err = hsa_amd_register_system_event_handler(callbackEvent, NULL);
   if (err != HSA_STATUS_SUCCESS) {
     printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
            "Registering the system for memory faults", get_error_string(err));
