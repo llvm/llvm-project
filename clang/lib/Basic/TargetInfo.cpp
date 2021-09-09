@@ -407,12 +407,13 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
     // for OpenCL C 2.0 but with no access to target capabilities. Target
     // should be immutable once created and thus these language options need
     // to be defined only once.
-    if (Opts.OpenCLVersion == 300) {
+    if (Opts.getOpenCLCompatibleVersion() == 300) {
       const auto &OpenCLFeaturesMap = getSupportedOpenCLOpts();
       Opts.OpenCLGenericAddressSpace = hasFeatureEnabled(
           OpenCLFeaturesMap, "__opencl_c_generic_address_space");
-      Opts.OpenCLPipes =
-          hasFeatureEnabled(OpenCLFeaturesMap, "__opencl_c_pipes");
+      if (Opts.OpenCLVersion == 300)
+        Opts.OpenCLPipes =
+            hasFeatureEnabled(OpenCLFeaturesMap, "__opencl_c_pipes");
     }
   }
 
