@@ -63,9 +63,6 @@ def HasAM            : Predicate<"Subtarget->hasAM()">,
 def HasSEL2          : Predicate<"Subtarget->hasSEL2()">,
                        AssemblerPredicate<(all_of FeatureSEL2), "sel2">;
 
-def HasPMU           : Predicate<"Subtarget->hasPMU()">,
-                       AssemblerPredicate<(all_of FeaturePMU), "pmu">;
-
 def HasTLB_RMI          : Predicate<"Subtarget->hasTLB_RMI()">,
                        AssemblerPredicate<(all_of FeatureTLB_RMI), "tlb-rmi">;
 
