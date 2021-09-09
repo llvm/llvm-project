@@ -222,7 +222,6 @@ struct HostRuntimeLibrary<HostT, LibraryVersion::Libm> {
       FolderFactory<F, F{std::erfc}>::Create("erfc"),
       FolderFactory<F, F{std::exp}>::Create("exp"),
       FolderFactory<F, F{std::tgamma}>::Create("gamma"),
-      FolderFactory<F2, F2{std::hypot}>::Create("hypot"),
       FolderFactory<F, F{std::log}>::Create("log"),
       FolderFactory<F, F{std::log10}>::Create("log10"),
       FolderFactory<F, F{std::lgamma}>::Create("log_gamma"),
@@ -230,7 +229,6 @@ struct HostRuntimeLibrary<HostT, LibraryVersion::Libm> {
       FolderFactory<F2, F2{std::pow}>::Create("pow"),
       FolderFactory<F, F{std::sin}>::Create("sin"),
       FolderFactory<F, F{std::sinh}>::Create("sinh"),
-      FolderFactory<F, F{std::sqrt}>::Create("sqrt"),
       FolderFactory<F, F{std::tan}>::Create("tan"),
       FolderFactory<F, F{std::tanh}>::Create("tanh"),
   };
