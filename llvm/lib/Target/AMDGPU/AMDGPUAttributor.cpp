@@ -214,17 +214,19 @@ struct AAAMDAttributes : public StateWrapper<
 };
 const char AAAMDAttributes::ID = 0;
 
-struct AAAMDWorkGroupSize
+struct AAUniformWorkGroupSize
     : public StateWrapper<BooleanState, AbstractAttribute> {
   using Base = StateWrapper<BooleanState, AbstractAttribute>;
-  AAAMDWorkGroupSize(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+  AAUniformWorkGroupSize(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
   /// Create an abstract attribute view for the position \p IRP.
-  static AAAMDWorkGroupSize &createForPosition(const IRPosition &IRP,
-                                               Attributor &A);
+  static AAUniformWorkGroupSize &createForPosition(const IRPosition &IRP,
+                                                   Attributor &A);
 
   /// See AbstractAttribute::getName().
-  const std::string getName() const override { return "AAAMDWorkGroupSize"; }
+  const std::string getName() const override {
+    return "AAUniformWorkGroupSize";
+  }
 
   /// See AbstractAttribute::getIdAddr().
   const char *getIdAddr() const override { return &ID; }
@@ -238,11 +240,11 @@ struct AAAMDWorkGroupSize
   /// Unique ID (due to the unique address)
   static const char ID;
 };
-const char AAAMDWorkGroupSize::ID = 0;
+const char AAUniformWorkGroupSize::ID = 0;
 
-struct AAAMDWorkGroupSizeFunction : public AAAMDWorkGroupSize {
-  AAAMDWorkGroupSizeFunction(const IRPosition &IRP, Attributor &A)
-      : AAAMDWorkGroupSize(IRP, A) {}
+struct AAUniformWorkGroupSizeFunction : public AAUniformWorkGroupSize {
+  AAUniformWorkGroupSizeFunction(const IRPosition &IRP, Attributor &A)
+      : AAUniformWorkGroupSize(IRP, A) {}
 
   void initialize(Attributor &A) override {
     Function *F = getAssociatedFunction();
@@ -268,10 +270,10 @@ struct AAAMDWorkGroupSizeFunction : public AAAMDWorkGroupSize {
 
     auto CheckCallSite = [&](AbstractCallSite CS) {
       Function *Caller = CS.getInstruction()->getFunction();
-      LLVM_DEBUG(dbgs() << "[AAAMDWorkGroupSize] Call " << Caller->getName()
+      LLVM_DEBUG(dbgs() << "[AAUniformWorkGroupSize] Call " << Caller->getName()
                         << "->" << getAssociatedFunction()->getName() << "\n");
 
-      const auto &CallerInfo = A.getAAFor<AAAMDWorkGroupSize>(
+      const auto &CallerInfo = A.getAAFor<AAUniformWorkGroupSize>(
           *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
 
       Change = Change | clampStateAndIndicateChange(this->getState(),
@@ -310,11 +312,13 @@ struct AAAMDWorkGroupSizeFunction : public AAAMDWorkGroupSize {
   void trackStatistics() const override {}
 };
 
-AAAMDWorkGroupSize &AAAMDWorkGroupSize::createForPosition(const IRPosition &IRP,
-                                                          Attributor &A) {
+AAUniformWorkGroupSize &
+AAUniformWorkGroupSize::createForPosition(const IRPosition &IRP,
+                                          Attributor &A) {
   if (IRP.getPositionKind() == IRPosition::IRP_FUNCTION)
-    return *new (A.Allocator) AAAMDWorkGroupSizeFunction(IRP, A);
-  llvm_unreachable("AAAMDWorkGroupSize is only valid for function position");
+    return *new (A.Allocator) AAUniformWorkGroupSizeFunction(IRP, A);
+  llvm_unreachable(
+      "AAUniformWorkGroupSize is only valid for function position");
 }
 
 struct AAAMDAttributesFunction : public AAAMDAttributes {
@@ -493,14 +497,14 @@ public:
     BumpPtrAllocator Allocator;
     AMDGPUInformationCache InfoCache(M, AG, Allocator, nullptr, *TM);
     DenseSet<const char *> Allowed(
-        {&AAAMDAttributes::ID, &AAAMDWorkGroupSize::ID, &AACallEdges::ID});
+        {&AAAMDAttributes::ID, &AAUniformWorkGroupSize::ID, &AACallEdges::ID});
 
     Attributor A(Functions, InfoCache, CGUpdater, &Allowed);
 
     for (Function &F : M) {
       if (!F.isIntrinsic()) {
         A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(F));
-        A.getOrCreateAAFor<AAAMDWorkGroupSize>(IRPosition::function(F));
+        A.getOrCreateAAFor<AAUniformWorkGroupSize>(IRPosition::function(F));
       }
     }
 
