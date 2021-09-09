@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 
 ! Tests for defined input/output.  See 12.6.4.8 and 15.4.3.2, and C777
 module m1

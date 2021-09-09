@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! C1108  --  Save statement in a BLOCK construct shall not conatin a
 !            saved-entity-list that does not specify a common-block-name
 

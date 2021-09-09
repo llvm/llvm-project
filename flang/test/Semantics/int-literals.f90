@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Fortran syntax considers signed int literals in complex literals
 ! to be a distinct production, not an application of unary +/- to
 ! an unsigned int literal, so they're used here to test overflow
