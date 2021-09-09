@@ -968,12 +968,16 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     case AArch64::ORRWrr:      Opcode = AArch64::ORRWrs; break;
     case AArch64::ORRXrr:      Opcode = AArch64::ORRXrs; break;
     }
-    MachineInstrBuilder MIB1 =
-        BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opcode),
-                MI.getOperand(0).getReg())
-            .add(MI.getOperand(1))
-            .add(MI.getOperand(2))
-            .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
+    MachineFunction &MF = *MBB.getParent();
+    // Try to create new inst without implicit operands added.
+    MachineInstr *NewMI = MF.CreateMachineInstr(
+        TII->get(Opcode), MI.getDebugLoc(), /*NoImplicit=*/true);
+    MBB.insert(MBBI, NewMI);
+    MachineInstrBuilder MIB1(MF, NewMI);
+    MIB1.addReg(MI.getOperand(0).getReg(), RegState::Define)
+        .add(MI.getOperand(1))
+        .add(MI.getOperand(2))
+        .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
     transferImpOps(MI, MIB1, MIB1);
     MI.eraseFromParent();
     return true;
