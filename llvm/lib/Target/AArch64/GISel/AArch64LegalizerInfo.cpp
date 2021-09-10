@@ -103,8 +103,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_BSWAP)
       .legalFor({s32, s64, v4s32, v2s32, v2s64})
       .clampScalar(0, s32, s64)
-      .widenScalarToNextPow2(0)
-      .customIf(typeIs(0, v2s16)); // custom lower as G_REV32 + G_LSHR
+      .widenScalarToNextPow2(0);
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
       .legalFor({s32, s64, v2s32, v4s32, v4s16, v8s16, v16s8, v8s8})
@@ -799,8 +798,6 @@ bool AArch64LegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE:
     return legalizeLoadStore(MI, MRI, MIRBuilder, Observer);
-  case TargetOpcode::G_BSWAP:
-    return legalizeBSwap(MI, MRI, MIRBuilder);
   case TargetOpcode::G_SHL:
   case TargetOpcode::G_ASHR:
   case TargetOpcode::G_LSHR:
@@ -1011,46 +1008,6 @@ bool AArch64LegalizerInfo::legalizeLoadStore(
     auto NewLoad = MIRBuilder.buildLoad(NewTy, MI.getOperand(1), MMO);
     MIRBuilder.buildBitcast(ValReg, NewLoad);
   }
-  MI.eraseFromParent();
-  return true;
-}
-
-bool AArch64LegalizerInfo::legalizeBSwap(MachineInstr &MI,
-                                         MachineRegisterInfo &MRI,
-                                         MachineIRBuilder &MIRBuilder) const {
-  assert(MI.getOpcode() == TargetOpcode::G_BSWAP);
-
-  // The <2 x half> case needs special lowering because there isn't an
-  // instruction that does that directly. Instead, we widen to <8 x i8>
-  // and emit a G_REV32 followed by a G_LSHR knowing that instruction selection
-  // will later match them as:
-  //
-  //   rev32.8b v0, v0
-  //   ushr.2s v0, v0, #16
-  //
-  // We could emit those here directly, but it seems better to keep things as
-  // generic as possible through legalization, and avoid committing layering
-  // violations by legalizing & selecting here at the same time.
-
-  Register ValReg = MI.getOperand(1).getReg();
-  assert(LLT::fixed_vector(2, 16) == MRI.getType(ValReg));
-  const LLT v2s32 = LLT::fixed_vector(2, 32);
-  const LLT v8s8 = LLT::fixed_vector(8, 8);
-  const LLT s32 = LLT::scalar(32);
-
-  auto Undef = MIRBuilder.buildUndef(v8s8);
-  auto Insert =
-      MIRBuilder
-          .buildInstr(TargetOpcode::INSERT_SUBREG, {v8s8}, {Undef, ValReg})
-          .addImm(AArch64::ssub);
-  auto Rev32 = MIRBuilder.buildInstr(AArch64::G_REV32, {v8s8}, {Insert});
-  auto Bitcast = MIRBuilder.buildBitcast(v2s32, Rev32);
-  auto Amt = MIRBuilder.buildConstant(v2s32, 16);
-  auto UShr =
-      MIRBuilder.buildInstr(TargetOpcode::G_LSHR, {v2s32}, {Bitcast, Amt});
-  auto Zero = MIRBuilder.buildConstant(s32, 0);
-  auto Extract = MIRBuilder.buildExtractVectorElement(s32, UShr, Zero);
-  MIRBuilder.buildBitcast({MI.getOperand(0).getReg()}, Extract);
   MI.eraseFromParent();
   return true;
 }
