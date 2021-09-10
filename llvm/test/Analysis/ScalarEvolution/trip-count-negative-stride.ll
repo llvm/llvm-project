@@ -84,8 +84,8 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 ; CHECK-LABEL: Determining loop execution counts for: @ult_129_unknown_start
-; CHECK: Loop %for.body: Unpredictable backedge-taken count
-; CHECK: Loop %for.body: Unpredictable max backedge-taken count
+; CHECK: Loop %for.body: backedge-taken count is (((127 + (-1 * (1 umin (127 + (-1 * %start) + (-128 umax (-127 + %start)))))<nuw><nsw> + (-1 * %start) + (-128 umax (-127 + %start))) /u -127) + (1 umin (127 + (-1 * %start) + (-128 umax (-127 + %start)))))
+; CHECK: Loop %for.body: max backedge-taken count is 1
 
 define void @ult_129_unknown_start(i8 %start) mustprogress {
 entry:
