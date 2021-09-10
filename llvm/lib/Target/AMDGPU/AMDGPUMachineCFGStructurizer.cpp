@@ -606,7 +606,7 @@ MRT::initializeMRT(MachineFunction &MF, const MachineRegionInfo *RegionInfo,
                    DenseMap<MachineRegion *, RegionMRT *> &RegionMap) {
   for (auto &MFI : MF) {
     MachineBasicBlock *ExitMBB = &MFI;
-    if (ExitMBB->succ_size() == 0) {
+    if (ExitMBB->succ_empty()) {
       return ExitMBB;
     }
   }
@@ -1686,7 +1686,7 @@ void AMDGPUMachineCFGStructurizer::insertUnconditionalBranch(MachineBasicBlock *
 static MachineBasicBlock *getSingleExitNode(MachineFunction &MF) {
   MachineBasicBlock *result = nullptr;
   for (auto &MFI : MF) {
-    if (MFI.succ_size() == 0) {
+    if (MFI.succ_empty()) {
       if (result == nullptr) {
         result = &MFI;
       } else {
