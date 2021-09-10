@@ -224,6 +224,82 @@ TEST(ToolInvocation, TestVirtualModulesCompilation) {
   EXPECT_TRUE(Invocation.run());
 }
 
+struct ErrorCountingDiagnosticConsumer : public DiagnosticConsumer {
+  ErrorCountingDiagnosticConsumer() : NumErrorsSeen(0) {}
+  void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
+                        const Diagnostic &Info) override {
+    if (DiagLevel == DiagnosticsEngine::Level::Error)
+      ++NumErrorsSeen;
+  }
+  unsigned NumErrorsSeen;
+};
+
+TEST(ToolInvocation, DiagnosticsEngineProperlyInitializedForCC1Construction) {
+  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
+      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
+  OverlayFileSystem->pushOverlay(InMemoryFileSystem);
+  llvm::IntrusiveRefCntPtr<FileManager> Files(
+      new FileManager(FileSystemOptions(), OverlayFileSystem));
+
+  std::vector<std::string> Args;
+  Args.push_back("tool-executable");
+  Args.push_back("-target");
+  // Invalid argument that by default results in an error diagnostic:
+  Args.push_back("i386-apple-ios14.0-simulator");
+  // Argument that downgrades the error into a warning:
+  Args.push_back("-Wno-error=invalid-ios-deployment-target");
+  Args.push_back("-fsyntax-only");
+  Args.push_back("test.cpp");
+
+  clang::tooling::ToolInvocation Invocation(
+      Args, std::make_unique<SyntaxOnlyAction>(), Files.get());
+  InMemoryFileSystem->addFile(
+      "test.cpp", 0, llvm::MemoryBuffer::getMemBuffer("int a() {}\n"));
+  ErrorCountingDiagnosticConsumer Consumer;
+  Invocation.setDiagnosticConsumer(&Consumer);
+  EXPECT_TRUE(Invocation.run());
+  // Check that `-Wno-error=invalid-ios-deployment-target` downgraded the error
+  // into a warning.
+  EXPECT_EQ(Consumer.NumErrorsSeen, 0u);
+}
+
+TEST(ToolInvocation, CustomDiagnosticOptionsOverwriteParsedOnes) {
+  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
+      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
+  OverlayFileSystem->pushOverlay(InMemoryFileSystem);
+  llvm::IntrusiveRefCntPtr<FileManager> Files(
+      new FileManager(FileSystemOptions(), OverlayFileSystem));
+
+  std::vector<std::string> Args;
+  Args.push_back("tool-executable");
+  Args.push_back("-target");
+  // Invalid argument that by default results in an error diagnostic:
+  Args.push_back("i386-apple-ios14.0-simulator");
+  // Argument that downgrades the error into a warning:
+  Args.push_back("-Wno-error=invalid-ios-deployment-target");
+  Args.push_back("-fsyntax-only");
+  Args.push_back("test.cpp");
+
+  clang::tooling::ToolInvocation Invocation(
+      Args, std::make_unique<SyntaxOnlyAction>(), Files.get());
+  InMemoryFileSystem->addFile(
+      "test.cpp", 0, llvm::MemoryBuffer::getMemBuffer("int a() {}\n"));
+  ErrorCountingDiagnosticConsumer Consumer;
+  Invocation.setDiagnosticConsumer(&Consumer);
+
+  auto DiagOpts = llvm::makeIntrusiveRefCnt<DiagnosticOptions>();
+  Invocation.setDiagnosticOptions(&*DiagOpts);
+
+  EXPECT_TRUE(Invocation.run());
+  // Check that `-Wno-error=invalid-ios-deployment-target` didn't downgrade the
+  // error into a warning due to being overwritten by custom diagnostic options.
+  EXPECT_EQ(Consumer.NumErrorsSeen, 1u);
+}
+
 struct DiagnosticConsumerExpectingSourceManager : public DiagnosticConsumer {
   bool SawSourceManager;
 
