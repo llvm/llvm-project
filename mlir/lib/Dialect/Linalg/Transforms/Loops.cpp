@@ -431,8 +431,9 @@ static Optional<LinalgLoops> linalgOpToLoopsImpl(PatternRewriter &rewriter,
   GenerateLoopNest<LoopTy>::doit(
       rewriter, linalgOp.getLoc(), loopRanges, linalgOp, iteratorTypes,
       [&](OpBuilder &b, Location loc, ValueRange ivs,
-          ValueRange iterArgs) -> scf::ValueVector {
-        assert(iterArgs.empty() && "unexpected iterArgs");
+          ValueRange operandValuesToUse) -> scf::ValueVector {
+        assert(operandValuesToUse == linalgOp->getOperands() &&
+               "expect operands are captured and not passed by loop argument");
         allIvs.append(ivs.begin(), ivs.end());
         llvm::TypeSwitch<Operation *>(linalgOp)
             .Case<ConvOp, PoolingMaxOp, PoolingMinOp, PoolingSumOp, LinalgOp>(

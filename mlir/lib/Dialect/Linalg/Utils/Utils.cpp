@@ -225,7 +225,18 @@ void GenerateLoopNest<scf::ForOp>::doit(
   SmallVector<Value, 4> lbs, ubs, steps;
   unpackRanges(loopRanges, lbs, ubs, steps);
   LoopNest loopNest = mlir::scf::buildLoopNest(
-      b, loc, lbs, ubs, steps, iterArgInitValues, bodyBuilderFn);
+      b, loc, lbs, ubs, steps, iterArgInitValues,
+      [&](OpBuilder &b, Location loc, ValueRange ivs, ValueRange iterArgs) {
+        assert(iterArgs.size() == linalgOp.getOutputTensorOperands().size() &&
+               "expect the number of output tensors and iter args to match");
+        SmallVector<Value> operandValuesToUse =
+            linalgOp.getInputAndOutputOperands();
+        if (!iterArgs.empty()) {
+          operandValuesToUse = linalgOp.getInputOperands();
+          operandValuesToUse.append(iterArgs.begin(), iterArgs.end());
+        }
+        return bodyBuilderFn(b, loc, ivs, operandValuesToUse);
+      });
 
   if (!distributionOptions || loopNest.loops.empty())
     return;
@@ -268,7 +279,9 @@ void GenerateLoopNest<AffineForOp>::doit(
 
   mlir::buildAffineLoopNest(b, loc, lbs, ubs, constantSteps,
                             [&](OpBuilder &b, Location loc, ValueRange ivs) {
-                              bodyBuilderFn(b, loc, ivs, {});
+                              SmallVector<Value> operandValuesToUse =
+                                  linalgOp.getInputAndOutputOperands();
+                              bodyBuilderFn(b, loc, ivs, operandValuesToUse);
                             });
 }
 
@@ -289,9 +302,10 @@ void GenerateLoopNest<TiledLoopOp>::doit(
   auto wrappedBuilderFn = [&](OpBuilder &nestedBuilder, Location nestedLoc,
                               ValueRange ivs, ValueRange inputs,
                               ValueRange outputs) {
-    SmallVector<Value> outputTensors = linalgOp.getOutputTensorOperands();
+    SmallVector<Value> operandValuesToUse = inputs;
+    operandValuesToUse.append(outputs.begin(), outputs.end());
     scf::ValueVector results =
-        bodyBuilderFn(nestedBuilder, nestedLoc, ivs, outputTensors);
+        bodyBuilderFn(nestedBuilder, nestedLoc, ivs, operandValuesToUse);
     nestedBuilder.create<linalg::YieldOp>(nestedLoc, results);
   };
 
@@ -302,15 +316,6 @@ void GenerateLoopNest<TiledLoopOp>::doit(
                             b.getArrayAttr(iteratorTypes), wrappedBuilderFn);
   if (!distributionTypes.empty())
     tiledLoop.setDistributionTypes(b, distributionTypes);
-
-  // Replace inputs/outputs with the corresponding region args.
-  auto isInsideTiledLoop = [&](OpOperand &operand) {
-    return operand.getOwner()->getBlock() == tiledLoop.getBody();
-  };
-  for (auto it : llvm::zip(inputOperands, tiledLoop.getRegionInputArgs()))
-    std::get<0>(it).replaceUsesWithIf(std::get<1>(it), isInsideTiledLoop);
-  for (auto it : llvm::zip(outputOperands, tiledLoop.getRegionOutputArgs()))
-    std::get<0>(it).replaceUsesWithIf(std::get<1>(it), isInsideTiledLoop);
 }
 
 /// Update the `lb`, `ub` and `step` to get per processor `lb`, `ub` and `step`.
@@ -505,7 +510,9 @@ void GenerateLoopNest<scf::ParallelOp>::doit(
   generateParallelLoopNest(
       b, loc, lbs, ubs, steps, iteratorTypes,
       [&](OpBuilder &b, Location loc, ValueRange ivs) {
-        bodyBuilderFn(b, loc, ivs, {});
+        SmallVector<Value> operandValuesToUse =
+            linalgOp.getInputAndOutputOperands();
+        bodyBuilderFn(b, loc, ivs, operandValuesToUse);
       },
       ivs, distributionMethod);
 
