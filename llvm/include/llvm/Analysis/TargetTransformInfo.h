@@ -383,10 +383,6 @@ public:
 
   bool isNoopAddrSpaceCast(unsigned FromAS, unsigned ToAS) const;
 
-  /// Return true if globals in this address space can have initializers other
-  /// than `undef`.
-  bool canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const;
-
   unsigned getAssumedAddrSpace(const Value *V) const;
 
   /// Rewrite intrinsic call \p II such that \p OldV will be replaced with \p
@@ -1461,8 +1457,6 @@ public:
   virtual bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                           Intrinsic::ID IID) const = 0;
   virtual bool isNoopAddrSpaceCast(unsigned FromAS, unsigned ToAS) const = 0;
-  virtual bool
-  canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const = 0;
   virtual unsigned getAssumedAddrSpace(const Value *V) const = 0;
   virtual Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
                                                   Value *OldV,
@@ -1786,11 +1780,6 @@ public:
 
   bool isNoopAddrSpaceCast(unsigned FromAS, unsigned ToAS) const override {
     return Impl.isNoopAddrSpaceCast(FromAS, ToAS);
-  }
-
-  bool
-  canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const override {
-    return Impl.canHaveNonUndefGlobalInitializerInAddressSpace(AS);
   }
 
   unsigned getAssumedAddrSpace(const Value *V) const override {
