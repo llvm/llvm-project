@@ -28,8 +28,9 @@
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
-#include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -1028,6 +1029,59 @@ bool RISCVTargetLowering::isCheapToSpeculateCttz() const {
 
 bool RISCVTargetLowering::isCheapToSpeculateCtlz() const {
   return Subtarget.hasStdExtZbb();
+}
+
+/// Check if sinking \p I's operands to I's basic block is profitable, because
+/// the operands can be folded into a target instruction, e.g.
+/// splats of scalars can fold into vector instructions.
+bool RISCVTargetLowering::shouldSinkOperands(
+    Instruction *I, SmallVectorImpl<Use *> &Ops) const {
+  using namespace llvm::PatternMatch;
+
+  if (!I->getType()->isVectorTy() || !Subtarget.hasStdExtV())
+    return false;
+
+  auto IsSinker = [&](Instruction *I, int Operand) {
+    switch (I->getOpcode()) {
+    case Instruction::Add:
+    case Instruction::Sub:
+    case Instruction::Mul:
+      return true;
+    case Instruction::Shl:
+    case Instruction::LShr:
+    case Instruction::AShr:
+      return Operand == 1;
+    default:
+      return false;
+    }
+  };
+
+  for (auto OpIdx : enumerate(I->operands())) {
+    if (!IsSinker(I, OpIdx.index()))
+      continue;
+
+    Instruction *Op = dyn_cast<Instruction>(OpIdx.value().get());
+    // Make sure we are not already sinking this operand
+    if (!Op || any_of(Ops, [&](Use *U) { return U->get() == Op; }))
+      continue;
+
+    // We are looking for a splat that can be sunk.
+    if (!match(Op, m_Shuffle(m_InsertElt(m_Undef(), m_Value(), m_ZeroInt()),
+                             m_Undef(), m_ZeroMask())))
+      continue;
+
+    // All uses of the shuffle should be sunk to avoid duplicating it across gpr
+    // and vector registers
+    for (Use &U : Op->uses()) {
+      Instruction *Insn = cast<Instruction>(U.getUser());
+      if (!IsSinker(Insn, U.getOperandNo()))
+        return false;
+    }
+
+    Ops.push_back(&Op->getOperandUse(0));
+    Ops.push_back(&OpIdx.value());
+  }
+  return true;
 }
 
 bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
