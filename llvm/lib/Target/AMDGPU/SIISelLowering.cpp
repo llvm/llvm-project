@@ -1820,11 +1820,16 @@ SDValue SITargetLowering::getPreloadedValue(SelectionDAG &DAG,
 
   std::tie(Reg, RC, Ty) = MFI.getPreloadedValue(PVID);
   if (!Reg) {
-    // It's possible for a kernarg intrinsic call to appear in a kernel with no
-    // allocated segment, in which case we do not add the user sgpr argument, so
-    // just return null.
-    assert(PVID == AMDGPUFunctionArgInfo::PreloadedValue::KERNARG_SEGMENT_PTR);
-    return DAG.getConstant(0, SDLoc(), VT);
+    if (PVID == AMDGPUFunctionArgInfo::PreloadedValue::KERNARG_SEGMENT_PTR) {
+      // It's possible for a kernarg intrinsic call to appear in a kernel with
+      // no allocated segment, in which case we do not add the user sgpr
+      // argument, so just return null.
+      return DAG.getConstant(0, SDLoc(), VT);
+    }
+
+    // It's undefined behavior if a function marked with the amdgpu-no-*
+    // attributes uses the corresponding intrinsic.
+    return DAG.getUNDEF(VT);
   }
 
   return CreateLiveInRegister(DAG, RC, Reg->getRegister(), VT);
@@ -2042,31 +2047,33 @@ void SITargetLowering::allocateSpecialInputSGPRs(
   SIMachineFunctionInfo &Info) const {
   auto &ArgInfo = Info.getArgInfo();
 
-  // TODO: Unify handling with private memory pointers.
+  // We need to allocate these in place regardless of their use.
+  const bool IsFixed = AMDGPUTargetMachine::EnableFixedFunctionABI;
 
-  if (Info.hasDispatchPtr())
+  // TODO: Unify handling with private memory pointers.
+  if (IsFixed || Info.hasDispatchPtr())
     allocateSGPR64Input(CCInfo, ArgInfo.DispatchPtr);
 
-  if (Info.hasQueuePtr())
+  if (IsFixed || Info.hasQueuePtr())
     allocateSGPR64Input(CCInfo, ArgInfo.QueuePtr);
 
   // Implicit arg ptr takes the place of the kernarg segment pointer. This is a
   // constant offset from the kernarg segment.
-  if (Info.hasImplicitArgPtr())
+  if (IsFixed || Info.hasImplicitArgPtr())
     allocateSGPR64Input(CCInfo, ArgInfo.ImplicitArgPtr);
 
-  if (Info.hasDispatchID())
+  if (IsFixed || Info.hasDispatchID())
     allocateSGPR64Input(CCInfo, ArgInfo.DispatchID);
 
   // flat_scratch_init is not applicable for non-kernel functions.
 
-  if (Info.hasWorkGroupIDX())
+  if (IsFixed || Info.hasWorkGroupIDX())
     allocateSGPR32Input(CCInfo, ArgInfo.WorkGroupIDX);
 
-  if (Info.hasWorkGroupIDY())
+  if (IsFixed || Info.hasWorkGroupIDY())
     allocateSGPR32Input(CCInfo, ArgInfo.WorkGroupIDY);
 
-  if (Info.hasWorkGroupIDZ())
+  if (IsFixed || Info.hasWorkGroupIDZ())
     allocateSGPR32Input(CCInfo, ArgInfo.WorkGroupIDZ);
 }
 
@@ -2766,20 +2773,27 @@ void SITargetLowering::passSpecialInputs(
   // TODO: Unify with private memory register handling. This is complicated by
   // the fact that at least in kernels, the input argument is not necessarily
   // in the same location as the input.
-  AMDGPUFunctionArgInfo::PreloadedValue InputRegs[] = {
-    AMDGPUFunctionArgInfo::DISPATCH_PTR,
-    AMDGPUFunctionArgInfo::QUEUE_PTR,
-    AMDGPUFunctionArgInfo::IMPLICIT_ARG_PTR,
-    AMDGPUFunctionArgInfo::DISPATCH_ID,
-    AMDGPUFunctionArgInfo::WORKGROUP_ID_X,
-    AMDGPUFunctionArgInfo::WORKGROUP_ID_Y,
-    AMDGPUFunctionArgInfo::WORKGROUP_ID_Z
+  static constexpr std::pair<AMDGPUFunctionArgInfo::PreloadedValue,
+                             StringLiteral> ImplicitAttrs[] = {
+    {AMDGPUFunctionArgInfo::DISPATCH_PTR, "amdgpu-no-dispatch-ptr"},
+    {AMDGPUFunctionArgInfo::QUEUE_PTR, "amdgpu-no-queue-ptr" },
+    {AMDGPUFunctionArgInfo::IMPLICIT_ARG_PTR, "amdgpu-no-implicitarg-ptr"},
+    {AMDGPUFunctionArgInfo::DISPATCH_ID, "amdgpu-no-dispatch-id"},
+    {AMDGPUFunctionArgInfo::WORKGROUP_ID_X, "amdgpu-no-workgroup-id-x"},
+    {AMDGPUFunctionArgInfo::WORKGROUP_ID_Y,"amdgpu-no-workgroup-id-y"},
+    {AMDGPUFunctionArgInfo::WORKGROUP_ID_Z,"amdgpu-no-workgroup-id-z"}
   };
 
-  for (auto InputID : InputRegs) {
+  for (auto Attr : ImplicitAttrs) {
     const ArgDescriptor *OutgoingArg;
     const TargetRegisterClass *ArgRC;
     LLT ArgTy;
+
+    AMDGPUFunctionArgInfo::PreloadedValue InputID = Attr.first;
+
+    // If the callee does not use the attribute value, skip copying the value.
+    if (CLI.CB->hasFnAttr(Attr.second))
+      continue;
 
     std::tie(OutgoingArg, ArgRC, ArgTy) =
         CalleeArgInfo->getPreloadedValue(InputID);
@@ -2846,11 +2860,17 @@ void SITargetLowering::passSpecialInputs(
   SDValue InputReg;
   SDLoc SL;
 
+  const bool NeedWorkItemIDX = !CLI.CB->hasFnAttr("amdgpu-no-workitem-id-x");
+  const bool NeedWorkItemIDY = !CLI.CB->hasFnAttr("amdgpu-no-workitem-id-y");
+  const bool NeedWorkItemIDZ = !CLI.CB->hasFnAttr("amdgpu-no-workitem-id-z");
+
   // If incoming ids are not packed we need to pack them.
-  if (IncomingArgX && !IncomingArgX->isMasked() && CalleeArgInfo->WorkItemIDX)
+  if (IncomingArgX && !IncomingArgX->isMasked() && CalleeArgInfo->WorkItemIDX &&
+      NeedWorkItemIDX)
     InputReg = loadInputValue(DAG, ArgRC, MVT::i32, DL, *IncomingArgX);
 
-  if (IncomingArgY && !IncomingArgY->isMasked() && CalleeArgInfo->WorkItemIDY) {
+  if (IncomingArgY && !IncomingArgY->isMasked() && CalleeArgInfo->WorkItemIDY &&
+      NeedWorkItemIDY) {
     SDValue Y = loadInputValue(DAG, ArgRC, MVT::i32, DL, *IncomingArgY);
     Y = DAG.getNode(ISD::SHL, SL, MVT::i32, Y,
                     DAG.getShiftAmountConstant(10, MVT::i32, SL));
@@ -2858,7 +2878,8 @@ void SITargetLowering::passSpecialInputs(
                  DAG.getNode(ISD::OR, SL, MVT::i32, InputReg, Y) : Y;
   }
 
-  if (IncomingArgZ && !IncomingArgZ->isMasked() && CalleeArgInfo->WorkItemIDZ) {
+  if (IncomingArgZ && !IncomingArgZ->isMasked() && CalleeArgInfo->WorkItemIDZ &&
+      NeedWorkItemIDZ) {
     SDValue Z = loadInputValue(DAG, ArgRC, MVT::i32, DL, *IncomingArgZ);
     Z = DAG.getNode(ISD::SHL, SL, MVT::i32, Z,
                     DAG.getShiftAmountConstant(20, MVT::i32, SL));
@@ -2866,7 +2887,7 @@ void SITargetLowering::passSpecialInputs(
                  DAG.getNode(ISD::OR, SL, MVT::i32, InputReg, Z) : Z;
   }
 
-  if (!InputReg.getNode()) {
+  if (!InputReg && (NeedWorkItemIDX || NeedWorkItemIDY || NeedWorkItemIDZ)) {
     // Workitem ids are already packed, any of present incoming arguments
     // will carry all required fields.
     ArgDescriptor IncomingArg = ArgDescriptor::createArg(
@@ -2877,13 +2898,17 @@ void SITargetLowering::passSpecialInputs(
   }
 
   if (OutgoingArg->isRegister()) {
-    RegsToPass.emplace_back(OutgoingArg->getRegister(), InputReg);
+    if (InputReg)
+      RegsToPass.emplace_back(OutgoingArg->getRegister(), InputReg);
+
     CCInfo.AllocateReg(OutgoingArg->getRegister());
   } else {
     unsigned SpecialArgOffset = CCInfo.AllocateStack(4, Align(4));
-    SDValue ArgStore = storeStackInputValue(DAG, DL, Chain, InputReg,
-                                            SpecialArgOffset);
-    MemOpChains.push_back(ArgStore);
+    if (InputReg) {
+      SDValue ArgStore = storeStackInputValue(DAG, DL, Chain, InputReg,
+                                              SpecialArgOffset);
+      MemOpChains.push_back(ArgStore);
+    }
   }
 }
 
@@ -5292,9 +5317,18 @@ SDValue SITargetLowering::lowerTrapHsaQueuePtr(
   MachineFunction &MF = DAG.getMachineFunction();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   Register UserSGPR = Info->getQueuePtrUserSGPR();
-  assert(UserSGPR != AMDGPU::NoRegister);
-  SDValue QueuePtr = CreateLiveInRegister(
-    DAG, &AMDGPU::SReg_64RegClass, UserSGPR, MVT::i64);
+
+  SDValue QueuePtr;
+  if (UserSGPR == AMDGPU::NoRegister) {
+    // We probably are in a function incorrectly marked with
+    // amdgpu-no-queue-ptr. This is undefined. We don't want to delete the trap,
+    // so just use a null pointer.
+    QueuePtr = DAG.getConstant(0, SL, MVT::i64);
+  } else {
+    QueuePtr = CreateLiveInRegister(
+      DAG, &AMDGPU::SReg_64RegClass, UserSGPR, MVT::i64);
+  }
+
   SDValue SGPR01 = DAG.getRegister(AMDGPU::SGPR0_SGPR1, MVT::i64);
   SDValue ToReg = DAG.getCopyToReg(Chain, SL, SGPR01,
                                    QueuePtr, SDValue());
@@ -5371,7 +5405,11 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
   MachineFunction &MF = DAG.getMachineFunction();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   Register UserSGPR = Info->getQueuePtrUserSGPR();
-  assert(UserSGPR != AMDGPU::NoRegister);
+  if (UserSGPR == AMDGPU::NoRegister) {
+    // We probably are in a function incorrectly marked with
+    // amdgpu-no-queue-ptr. This is undefined.
+    return DAG.getUNDEF(MVT::i32);
+  }
 
   SDValue QueuePtr = CreateLiveInRegister(
     DAG, &AMDGPU::SReg_64RegClass, UserSGPR, MVT::i64);

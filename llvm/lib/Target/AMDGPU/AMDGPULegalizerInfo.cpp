@@ -2899,10 +2899,16 @@ bool AMDGPULegalizerInfo::loadInputValue(
   std::tie(Arg, ArgRC, ArgTy) = MFI->getPreloadedValue(ArgType);
 
   if (!Arg) {
-    assert(ArgType == AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR);
-    // The intrinsic may appear when we have a 0 sized kernarg segment, in which
-    // case the pointer argument may be missing and we use null.
-    B.buildConstant(DstReg, 0);
+    if (ArgType == AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR) {
+      // The intrinsic may appear when we have a 0 sized kernarg segment, in which
+      // case the pointer argument may be missing and we use null.
+      B.buildConstant(DstReg, 0);
+      return true;
+    }
+
+    // It's undefined behavior if a function marked with the amdgpu-no-*
+    // attributes uses the corresponding intrinsic.
+    B.buildUndef(DstReg);
     return true;
   }
 
