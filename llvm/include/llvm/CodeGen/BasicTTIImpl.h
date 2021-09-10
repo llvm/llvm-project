@@ -697,7 +697,7 @@ public:
                                            bool Extract) {
     auto *Ty = cast<FixedVectorType>(InTy);
 
-    APInt DemandedElts = APInt::getAllOnesValue(Ty->getNumElements());
+    APInt DemandedElts = APInt::getAllOnes(Ty->getNumElements());
     return thisT()->getScalarizationOverhead(Ty, DemandedElts, Insert, Extract);
   }
 

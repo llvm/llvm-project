@@ -2271,9 +2271,9 @@ bool ShuffleVectorInst::isInsertSubvectorMask(ArrayRef<int> Mask,
     return false;
 
   // Determine which mask elements are attributed to which source.
-  APInt UndefElts = APInt::getNullValue(NumMaskElts);
-  APInt Src0Elts = APInt::getNullValue(NumMaskElts);
-  APInt Src1Elts = APInt::getNullValue(NumMaskElts);
+  APInt UndefElts = APInt::getZero(NumMaskElts);
+  APInt Src0Elts = APInt::getZero(NumMaskElts);
+  APInt Src1Elts = APInt::getZero(NumMaskElts);
   bool Src0Identity = true;
   bool Src1Identity = true;
 

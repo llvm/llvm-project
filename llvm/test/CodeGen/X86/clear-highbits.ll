@@ -335,8 +335,9 @@ define i32 @clear_highbits32_c0(i32 %val, i32 %numhighbits) nounwind {
 ; X86-BMI2-LABEL: clear_highbits32_c0:
 ; X86-BMI2:       # %bb.0:
 ; X86-BMI2-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-BMI2-NEXT:    shlxl %eax, {{[0-9]+}}(%esp), %ecx
-; X86-BMI2-NEXT:    shrxl %eax, %ecx, %eax
+; X86-BMI2-NEXT:    movl $32, %ecx
+; X86-BMI2-NEXT:    subl %eax, %ecx
+; X86-BMI2-NEXT:    bzhil %ecx, {{[0-9]+}}(%esp), %eax
 ; X86-BMI2-NEXT:    retl
 ;
 ; X64-NOBMI2-LABEL: clear_highbits32_c0:
@@ -350,8 +351,9 @@ define i32 @clear_highbits32_c0(i32 %val, i32 %numhighbits) nounwind {
 ;
 ; X64-BMI2-LABEL: clear_highbits32_c0:
 ; X64-BMI2:       # %bb.0:
-; X64-BMI2-NEXT:    shlxl %esi, %edi, %eax
-; X64-BMI2-NEXT:    shrxl %esi, %eax, %eax
+; X64-BMI2-NEXT:    movl $32, %eax
+; X64-BMI2-NEXT:    subl %esi, %eax
+; X64-BMI2-NEXT:    bzhil %eax, %edi, %eax
 ; X64-BMI2-NEXT:    retq
   %mask = lshr i32 -1, %numhighbits
   %masked = and i32 %mask, %val
@@ -370,8 +372,9 @@ define i32 @clear_highbits32_c1_indexzext(i32 %val, i8 %numhighbits) nounwind {
 ; X86-BMI2-LABEL: clear_highbits32_c1_indexzext:
 ; X86-BMI2:       # %bb.0:
 ; X86-BMI2-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-BMI2-NEXT:    shlxl %eax, {{[0-9]+}}(%esp), %ecx
-; X86-BMI2-NEXT:    shrxl %eax, %ecx, %eax
+; X86-BMI2-NEXT:    movl $32, %ecx
+; X86-BMI2-NEXT:    subl %eax, %ecx
+; X86-BMI2-NEXT:    bzhil %ecx, {{[0-9]+}}(%esp), %eax
 ; X86-BMI2-NEXT:    retl
 ;
 ; X64-NOBMI2-LABEL: clear_highbits32_c1_indexzext:
@@ -385,8 +388,9 @@ define i32 @clear_highbits32_c1_indexzext(i32 %val, i8 %numhighbits) nounwind {
 ;
 ; X64-BMI2-LABEL: clear_highbits32_c1_indexzext:
 ; X64-BMI2:       # %bb.0:
-; X64-BMI2-NEXT:    shlxl %esi, %edi, %eax
-; X64-BMI2-NEXT:    shrxl %esi, %eax, %eax
+; X64-BMI2-NEXT:    movl $32, %eax
+; X64-BMI2-NEXT:    subl %esi, %eax
+; X64-BMI2-NEXT:    bzhil %eax, %edi, %eax
 ; X64-BMI2-NEXT:    retq
   %sh_prom = zext i8 %numhighbits to i32
   %mask = lshr i32 -1, %sh_prom
@@ -408,8 +412,9 @@ define i32 @clear_highbits32_c2_load(i32* %w, i32 %numhighbits) nounwind {
 ; X86-BMI2:       # %bb.0:
 ; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BMI2-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-BMI2-NEXT:    shlxl %ecx, (%eax), %eax
-; X86-BMI2-NEXT:    shrxl %ecx, %eax, %eax
+; X86-BMI2-NEXT:    movl $32, %edx
+; X86-BMI2-NEXT:    subl %ecx, %edx
+; X86-BMI2-NEXT:    bzhil %edx, (%eax), %eax
 ; X86-BMI2-NEXT:    retl
 ;
 ; X64-NOBMI2-LABEL: clear_highbits32_c2_load:
@@ -423,8 +428,9 @@ define i32 @clear_highbits32_c2_load(i32* %w, i32 %numhighbits) nounwind {
 ;
 ; X64-BMI2-LABEL: clear_highbits32_c2_load:
 ; X64-BMI2:       # %bb.0:
-; X64-BMI2-NEXT:    shlxl %esi, (%rdi), %eax
-; X64-BMI2-NEXT:    shrxl %esi, %eax, %eax
+; X64-BMI2-NEXT:    movl $32, %eax
+; X64-BMI2-NEXT:    subl %esi, %eax
+; X64-BMI2-NEXT:    bzhil %eax, (%rdi), %eax
 ; X64-BMI2-NEXT:    retq
   %val = load i32, i32* %w
   %mask = lshr i32 -1, %numhighbits
@@ -446,8 +452,9 @@ define i32 @clear_highbits32_c3_load_indexzext(i32* %w, i8 %numhighbits) nounwin
 ; X86-BMI2:       # %bb.0:
 ; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BMI2-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-BMI2-NEXT:    shlxl %ecx, (%eax), %eax
-; X86-BMI2-NEXT:    shrxl %ecx, %eax, %eax
+; X86-BMI2-NEXT:    movl $32, %edx
+; X86-BMI2-NEXT:    subl %ecx, %edx
+; X86-BMI2-NEXT:    bzhil %edx, (%eax), %eax
 ; X86-BMI2-NEXT:    retl
 ;
 ; X64-NOBMI2-LABEL: clear_highbits32_c3_load_indexzext:
@@ -461,8 +468,9 @@ define i32 @clear_highbits32_c3_load_indexzext(i32* %w, i8 %numhighbits) nounwin
 ;
 ; X64-BMI2-LABEL: clear_highbits32_c3_load_indexzext:
 ; X64-BMI2:       # %bb.0:
-; X64-BMI2-NEXT:    shlxl %esi, (%rdi), %eax
-; X64-BMI2-NEXT:    shrxl %esi, %eax, %eax
+; X64-BMI2-NEXT:    movl $32, %eax
+; X64-BMI2-NEXT:    subl %esi, %eax
+; X64-BMI2-NEXT:    bzhil %eax, (%rdi), %eax
 ; X64-BMI2-NEXT:    retq
   %val = load i32, i32* %w
   %sh_prom = zext i8 %numhighbits to i32
@@ -483,8 +491,9 @@ define i32 @clear_highbits32_c4_commutative(i32 %val, i32 %numhighbits) nounwind
 ; X86-BMI2-LABEL: clear_highbits32_c4_commutative:
 ; X86-BMI2:       # %bb.0:
 ; X86-BMI2-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-BMI2-NEXT:    shlxl %eax, {{[0-9]+}}(%esp), %ecx
-; X86-BMI2-NEXT:    shrxl %eax, %ecx, %eax
+; X86-BMI2-NEXT:    movl $32, %ecx
+; X86-BMI2-NEXT:    subl %eax, %ecx
+; X86-BMI2-NEXT:    bzhil %ecx, {{[0-9]+}}(%esp), %eax
 ; X86-BMI2-NEXT:    retl
 ;
 ; X64-NOBMI2-LABEL: clear_highbits32_c4_commutative:
@@ -498,8 +507,9 @@ define i32 @clear_highbits32_c4_commutative(i32 %val, i32 %numhighbits) nounwind
 ;
 ; X64-BMI2-LABEL: clear_highbits32_c4_commutative:
 ; X64-BMI2:       # %bb.0:
-; X64-BMI2-NEXT:    shlxl %esi, %edi, %eax
-; X64-BMI2-NEXT:    shrxl %esi, %eax, %eax
+; X64-BMI2-NEXT:    movl $32, %eax
+; X64-BMI2-NEXT:    subl %esi, %eax
+; X64-BMI2-NEXT:    bzhil %eax, %edi, %eax
 ; X64-BMI2-NEXT:    retq
   %mask = lshr i32 -1, %numhighbits
   %masked = and i32 %val, %mask ; swapped order
@@ -574,8 +584,9 @@ define i64 @clear_highbits64_c0(i64 %val, i64 %numhighbits) nounwind {
 ;
 ; X64-BMI2-LABEL: clear_highbits64_c0:
 ; X64-BMI2:       # %bb.0:
-; X64-BMI2-NEXT:    shlxq %rsi, %rdi, %rax
-; X64-BMI2-NEXT:    shrxq %rsi, %rax, %rax
+; X64-BMI2-NEXT:    movl $64, %eax
+; X64-BMI2-NEXT:    subl %esi, %eax
+; X64-BMI2-NEXT:    bzhiq %rax, %rdi, %rax
 ; X64-BMI2-NEXT:    retq
   %mask = lshr i64 -1, %numhighbits
   %masked = and i64 %mask, %val
@@ -646,9 +657,9 @@ define i64 @clear_highbits64_c1_indexzext(i64 %val, i8 %numhighbits) nounwind {
 ;
 ; X64-BMI2-LABEL: clear_highbits64_c1_indexzext:
 ; X64-BMI2:       # %bb.0:
-; X64-BMI2-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-BMI2-NEXT:    shlxq %rsi, %rdi, %rax
-; X64-BMI2-NEXT:    shrxq %rsi, %rax, %rax
+; X64-BMI2-NEXT:    movl $64, %eax
+; X64-BMI2-NEXT:    subl %esi, %eax
+; X64-BMI2-NEXT:    bzhiq %rax, %rdi, %rax
 ; X64-BMI2-NEXT:    retq
   %sh_prom = zext i8 %numhighbits to i64
   %mask = lshr i64 -1, %sh_prom
@@ -729,8 +740,9 @@ define i64 @clear_highbits64_c2_load(i64* %w, i64 %numhighbits) nounwind {
 ;
 ; X64-BMI2-LABEL: clear_highbits64_c2_load:
 ; X64-BMI2:       # %bb.0:
-; X64-BMI2-NEXT:    shlxq %rsi, (%rdi), %rax
-; X64-BMI2-NEXT:    shrxq %rsi, %rax, %rax
+; X64-BMI2-NEXT:    movl $64, %eax
+; X64-BMI2-NEXT:    subl %esi, %eax
+; X64-BMI2-NEXT:    bzhiq %rax, (%rdi), %rax
 ; X64-BMI2-NEXT:    retq
   %val = load i64, i64* %w
   %mask = lshr i64 -1, %numhighbits
@@ -811,9 +823,9 @@ define i64 @clear_highbits64_c3_load_indexzext(i64* %w, i8 %numhighbits) nounwin
 ;
 ; X64-BMI2-LABEL: clear_highbits64_c3_load_indexzext:
 ; X64-BMI2:       # %bb.0:
-; X64-BMI2-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-BMI2-NEXT:    shlxq %rsi, (%rdi), %rax
-; X64-BMI2-NEXT:    shrxq %rsi, %rax, %rax
+; X64-BMI2-NEXT:    movl $64, %eax
+; X64-BMI2-NEXT:    subl %esi, %eax
+; X64-BMI2-NEXT:    bzhiq %rax, (%rdi), %rax
 ; X64-BMI2-NEXT:    retq
   %val = load i64, i64* %w
   %sh_prom = zext i8 %numhighbits to i64
@@ -886,8 +898,9 @@ define i64 @clear_highbits64_c4_commutative(i64 %val, i64 %numhighbits) nounwind
 ;
 ; X64-BMI2-LABEL: clear_highbits64_c4_commutative:
 ; X64-BMI2:       # %bb.0:
-; X64-BMI2-NEXT:    shlxq %rsi, %rdi, %rax
-; X64-BMI2-NEXT:    shrxq %rsi, %rax, %rax
+; X64-BMI2-NEXT:    movl $64, %eax
+; X64-BMI2-NEXT:    subl %esi, %eax
+; X64-BMI2-NEXT:    bzhiq %rax, %rdi, %rax
 ; X64-BMI2-NEXT:    retq
   %mask = lshr i64 -1, %numhighbits
   %masked = and i64 %val, %mask ; swapped order
@@ -1217,8 +1230,9 @@ define i32 @clear_highbits32_16(i32 %val, i32 %numlowbits) nounwind {
 ; X86-BMI2:       # %bb.0:
 ; X86-BMI2-NEXT:    movb $16, %al
 ; X86-BMI2-NEXT:    subb {{[0-9]+}}(%esp), %al
-; X86-BMI2-NEXT:    shlxl %eax, {{[0-9]+}}(%esp), %ecx
-; X86-BMI2-NEXT:    shrxl %eax, %ecx, %eax
+; X86-BMI2-NEXT:    movl $32, %ecx
+; X86-BMI2-NEXT:    subl %eax, %ecx
+; X86-BMI2-NEXT:    bzhil %ecx, {{[0-9]+}}(%esp), %eax
 ; X86-BMI2-NEXT:    retl
 ;
 ; X64-NOBMI2-LABEL: clear_highbits32_16:
@@ -1234,8 +1248,9 @@ define i32 @clear_highbits32_16(i32 %val, i32 %numlowbits) nounwind {
 ; X64-BMI2:       # %bb.0:
 ; X64-BMI2-NEXT:    movb $16, %al
 ; X64-BMI2-NEXT:    subb %sil, %al
-; X64-BMI2-NEXT:    shlxl %eax, %edi, %ecx
-; X64-BMI2-NEXT:    shrxl %eax, %ecx, %eax
+; X64-BMI2-NEXT:    movl $32, %ecx
+; X64-BMI2-NEXT:    subl %eax, %ecx
+; X64-BMI2-NEXT:    bzhil %ecx, %edi, %eax
 ; X64-BMI2-NEXT:    retq
   %numhighbits = sub i32 16, %numlowbits
   %mask = lshr i32 -1, %numhighbits
@@ -1256,8 +1271,9 @@ define i32 @clear_highbits32_48(i32 %val, i32 %numlowbits) nounwind {
 ; X86-BMI2:       # %bb.0:
 ; X86-BMI2-NEXT:    movb $48, %al
 ; X86-BMI2-NEXT:    subb {{[0-9]+}}(%esp), %al
-; X86-BMI2-NEXT:    shlxl %eax, {{[0-9]+}}(%esp), %ecx
-; X86-BMI2-NEXT:    shrxl %eax, %ecx, %eax
+; X86-BMI2-NEXT:    movl $32, %ecx
+; X86-BMI2-NEXT:    subl %eax, %ecx
+; X86-BMI2-NEXT:    bzhil %ecx, {{[0-9]+}}(%esp), %eax
 ; X86-BMI2-NEXT:    retl
 ;
 ; X64-NOBMI2-LABEL: clear_highbits32_48:
@@ -1273,8 +1289,9 @@ define i32 @clear_highbits32_48(i32 %val, i32 %numlowbits) nounwind {
 ; X64-BMI2:       # %bb.0:
 ; X64-BMI2-NEXT:    movb $48, %al
 ; X64-BMI2-NEXT:    subb %sil, %al
-; X64-BMI2-NEXT:    shlxl %eax, %edi, %ecx
-; X64-BMI2-NEXT:    shrxl %eax, %ecx, %eax
+; X64-BMI2-NEXT:    movl $32, %ecx
+; X64-BMI2-NEXT:    subl %eax, %ecx
+; X64-BMI2-NEXT:    bzhil %ecx, %edi, %eax
 ; X64-BMI2-NEXT:    retq
   %numhighbits = sub i32 48, %numlowbits
   %mask = lshr i32 -1, %numhighbits

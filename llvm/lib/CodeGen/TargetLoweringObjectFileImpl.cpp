@@ -1945,7 +1945,7 @@ static std::string APIntToHexString(const APInt &AI) {
 static std::string scalarConstantToHexString(const Constant *C) {
   Type *Ty = C->getType();
   if (isa<UndefValue>(C)) {
-    return APIntToHexString(APInt::getNullValue(Ty->getPrimitiveSizeInBits()));
+    return APIntToHexString(APInt::getZero(Ty->getPrimitiveSizeInBits()));
   } else if (const auto *CFP = dyn_cast<ConstantFP>(C)) {
     return APIntToHexString(CFP->getValueAPF().bitcastToAPInt());
   } else if (const auto *CI = dyn_cast<ConstantInt>(C)) {

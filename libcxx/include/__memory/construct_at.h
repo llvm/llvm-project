@@ -47,7 +47,7 @@ template <class _ForwardIterator>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
 void destroy(_ForwardIterator, _ForwardIterator);
 
-template <class _Tp, _EnableIf<!is_array_v<_Tp>, int> = 0>
+template <class _Tp, enable_if_t<!is_array_v<_Tp>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
 void destroy_at(_Tp* __loc) {
     _LIBCPP_ASSERT(__loc, "null pointer given to destroy_at");
@@ -55,7 +55,7 @@ void destroy_at(_Tp* __loc) {
 }
 
 #if _LIBCPP_STD_VER > 17
-template <class _Tp, _EnableIf<is_array_v<_Tp>, int> = 0>
+template <class _Tp, enable_if_t<is_array_v<_Tp>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
 void destroy_at(_Tp* __loc) {
     _LIBCPP_ASSERT(__loc, "null pointer given to destroy_at");

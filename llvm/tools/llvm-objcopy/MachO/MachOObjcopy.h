@@ -24,7 +24,8 @@ struct MachOConfig;
 class MultiFormatConfig;
 
 namespace macho {
-Error executeObjcopyOnBinary(const CommonConfig &Config, const MachOConfig &,
+Error executeObjcopyOnBinary(const CommonConfig &Config,
+                             const MachOConfig &MachOConfig,
                              object::MachOObjectFile &In, raw_ostream &Out);
 
 Error executeObjcopyOnMachOUniversalBinary(

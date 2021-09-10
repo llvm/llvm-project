@@ -348,7 +348,6 @@ void GpuToLLVMConversionPass::runOnOperation() {
   LLVMConversionTarget target(getContext());
 
   target.addIllegalDialect<gpu::GPUDialect>();
-  target.addIllegalOp<UnrealizedConversionCastOp>();
 
   populateVectorToLLVMConversionPatterns(converter, patterns);
   populateMemRefToLLVMConversionPatterns(converter, patterns);

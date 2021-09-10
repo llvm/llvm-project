@@ -1344,13 +1344,13 @@ define amdgpu_kernel void @ds_read_call_read(i32 addrspace(1)* %out, i32 addrspa
 ; CI-NEXT:    s_getpc_b64 s[40:41]
 ; CI-NEXT:    s_mov_b32 s40, s0
 ; CI-NEXT:    s_load_dwordx4 s[40:43], s[40:41], 0x0
-; CI-NEXT:    s_load_dwordx2 s[36:37], s[0:1], 0x9
-; CI-NEXT:    s_load_dword s0, s[0:1], 0xb
+; CI-NEXT:    s_load_dwordx2 s[36:37], s[4:5], 0x9
+; CI-NEXT:    s_load_dword s0, s[4:5], 0xb
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    s_mov_b32 s32, 0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    s_add_u32 s40, s40, s3
+; CI-NEXT:    s_add_u32 s40, s40, s11
 ; CI-NEXT:    s_addc_u32 s41, s41, 0
 ; CI-NEXT:    v_add_i32_e32 v40, vcc, s0, v0
 ; CI-NEXT:    s_getpc_b64 s[0:1]
@@ -1376,17 +1376,17 @@ define amdgpu_kernel void @ds_read_call_read(i32 addrspace(1)* %out, i32 addrspa
 ; GFX9-NEXT:    s_mov_b32 s36, s0
 ; GFX9-NEXT:    s_load_dwordx4 s[36:39], s[36:37], 0x0
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    s_load_dwordx2 s[34:35], s[0:1], 0x24
-; GFX9-NEXT:    s_load_dword s2, s[0:1], 0x2c
+; GFX9-NEXT:    s_load_dwordx2 s[34:35], s[4:5], 0x24
+; GFX9-NEXT:    s_load_dword s0, s[4:5], 0x2c
 ; GFX9-NEXT:    s_mov_b32 s32, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v40, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_add_u32 s36, s36, s3
+; GFX9-NEXT:    s_add_u32 s36, s36, s11
 ; GFX9-NEXT:    s_addc_u32 s37, s37, 0
+; GFX9-NEXT:    v_lshl_add_u32 v41, v0, 2, s0
 ; GFX9-NEXT:    s_getpc_b64 s[0:1]
 ; GFX9-NEXT:    s_add_u32 s0, s0, void_func_void@gotpcrel32@lo+4
 ; GFX9-NEXT:    s_addc_u32 s1, s1, void_func_void@gotpcrel32@hi+12
-; GFX9-NEXT:    v_lshl_add_u32 v41, v0, 2, s2
 ; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
 ; GFX9-NEXT:    ds_read_b32 v42, v41
 ; GFX9-NEXT:    s_mov_b64 s[0:1], s[36:37]

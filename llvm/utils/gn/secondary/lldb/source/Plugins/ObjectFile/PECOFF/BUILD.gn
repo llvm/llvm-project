@@ -20,6 +20,6 @@ static_library("PECOFF") {
 
   if (current_os == "win") {
     # Dbghelp is used on windows for writing minidump files.
-    libs = [ "dbghelp" ]
+    libs = [ "dbghelp.lib" ]
   }
 }

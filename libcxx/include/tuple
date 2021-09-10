@@ -231,7 +231,7 @@ public:
               "Attempted to default construct a reference element in a tuple");}
 
     template <class _Tp,
-              class = _EnableIf<
+              class = __enable_if_t<
                   _And<
                       _IsNotSame<__uncvref_t<_Tp>, __tuple_leaf>,
                       is_constructible<_Hp, _Tp>
@@ -304,7 +304,7 @@ public:
             : _Hp(__a) {}
 
     template <class _Tp,
-              class = _EnableIf<
+              class = __enable_if_t<
                   _And<
                     _IsNotSame<__uncvref_t<_Tp>, __tuple_leaf>,
                     is_constructible<_Hp, _Tp>
@@ -466,7 +466,7 @@ public:
     // [tuple.cnstr]
 
     // tuple() constructors (including allocator_arg_t variants)
-    template <template<class...> class _IsImpDefault = __is_implicitly_default_constructible, _EnableIf<
+    template <template<class...> class _IsImpDefault = __is_implicitly_default_constructible, __enable_if_t<
         _And<
             _IsImpDefault<_Tp>... // explicit check
         >::value
@@ -477,7 +477,7 @@ public:
     { }
 
     template <template<class...> class _IsImpDefault = __is_implicitly_default_constructible,
-              template<class...> class _IsDefault = is_default_constructible, _EnableIf<
+              template<class...> class _IsDefault = is_default_constructible, __enable_if_t<
         _And<
             _IsDefault<_Tp>...,
             _Not<_Lazy<_And, _IsImpDefault<_Tp>...> > // explicit check
@@ -488,7 +488,7 @@ public:
         _NOEXCEPT_(_And<is_nothrow_default_constructible<_Tp>...>::value)
     { }
 
-    template <class _Alloc, template<class...> class _IsImpDefault = __is_implicitly_default_constructible, _EnableIf<
+    template <class _Alloc, template<class...> class _IsImpDefault = __is_implicitly_default_constructible, __enable_if_t<
         _And<
             _IsImpDefault<_Tp>... // explicit check
         >::value
@@ -502,7 +502,7 @@ public:
 
     template <class _Alloc,
               template<class...> class _IsImpDefault = __is_implicitly_default_constructible,
-              template<class...> class _IsDefault = is_default_constructible, _EnableIf<
+              template<class...> class _IsDefault = is_default_constructible, __enable_if_t<
         _And<
             _IsDefault<_Tp>...,
             _Not<_Lazy<_And, _IsImpDefault<_Tp>...> > // explicit check
@@ -516,7 +516,7 @@ public:
                     __tuple_types<_Tp...>()) {}
 
     // tuple(const T&...) constructors (including allocator_arg_t variants)
-    template <template<class...> class _And = _And, _EnableIf<
+    template <template<class...> class _And = _And, __enable_if_t<
         _And<
             _BoolConstant<sizeof...(_Tp) >= 1>,
             is_copy_constructible<_Tp>...,
@@ -533,7 +533,7 @@ public:
                 __t...
                ) {}
 
-    template <template<class...> class _And = _And, _EnableIf<
+    template <template<class...> class _And = _And, __enable_if_t<
         _And<
             _BoolConstant<sizeof...(_Tp) >= 1>,
             is_copy_constructible<_Tp>...,
@@ -550,7 +550,7 @@ public:
                 __t...
                ) {}
 
-    template <class _Alloc, template<class...> class _And = _And, _EnableIf<
+    template <class _Alloc, template<class...> class _And = _And, __enable_if_t<
         _And<
             _BoolConstant<sizeof...(_Tp) >= 1>,
             is_copy_constructible<_Tp>...,
@@ -567,7 +567,7 @@ public:
                 __t...
                ) {}
 
-    template <class _Alloc, template<class...> class _And = _And, _EnableIf<
+    template <class _Alloc, template<class...> class _And = _And, __enable_if_t<
         _And<
             _BoolConstant<sizeof...(_Tp) >= 1>,
             is_copy_constructible<_Tp>...,
@@ -595,7 +595,7 @@ public:
         is_constructible<_Tp, _Up>...
     > { };
 
-    template <class ..._Up, _EnableIf<
+    template <class ..._Up, __enable_if_t<
         _And<
             _BoolConstant<sizeof...(_Up) == sizeof...(_Tp)>,
             _EnableUTypesCtor<_Up...>,
@@ -611,7 +611,7 @@ public:
                     typename __make_tuple_types<tuple, sizeof...(_Tp), sizeof...(_Up)>::type(),
                     _VSTD::forward<_Up>(__u)...) {}
 
-    template <class ..._Up, _EnableIf<
+    template <class ..._Up, __enable_if_t<
         _And<
             _BoolConstant<sizeof...(_Up) == sizeof...(_Tp)>,
             _EnableUTypesCtor<_Up...>,
@@ -627,7 +627,7 @@ public:
                     typename __make_tuple_types<tuple, sizeof...(_Tp), sizeof...(_Up)>::type(),
                     _VSTD::forward<_Up>(__u)...) {}
 
-    template <class _Alloc, class ..._Up, _EnableIf<
+    template <class _Alloc, class ..._Up, __enable_if_t<
         _And<
             _BoolConstant<sizeof...(_Up) == sizeof...(_Tp)>,
             _EnableUTypesCtor<_Up...>,
@@ -643,7 +643,7 @@ public:
                     typename __make_tuple_types<tuple, sizeof...(_Tp), sizeof...(_Up)>::type(),
                     _VSTD::forward<_Up>(__u)...) {}
 
-    template <class _Alloc, class ..._Up, _EnableIf<
+    template <class _Alloc, class ..._Up, __enable_if_t<
         _And<
             _BoolConstant<sizeof...(_Up) == sizeof...(_Tp)>,
             _EnableUTypesCtor<_Up...>,
@@ -663,14 +663,14 @@ public:
     tuple(const tuple&) = default;
     tuple(tuple&&) = default;
 
-    template <class _Alloc, template<class...> class _And = _And, _EnableIf<
+    template <class _Alloc, template<class...> class _And = _And, __enable_if_t<
         _And<is_copy_constructible<_Tp>...>::value
     , int> = 0>
     tuple(allocator_arg_t, const _Alloc& __alloc, const tuple& __t)
         : __base_(allocator_arg_t(), __alloc, __t)
     { }
 
-    template <class _Alloc, template<class...> class _And = _And, _EnableIf<
+    template <class _Alloc, template<class...> class _And = _And, __enable_if_t<
         _And<is_move_constructible<_Tp>...>::value
     , int> = 0>
     tuple(allocator_arg_t, const _Alloc& __alloc, tuple&& __t)
@@ -693,7 +693,7 @@ public:
         is_constructible<_Tp, const _Up&>...
     > { };
 
-    template <class ..._Up, _EnableIf<
+    template <class ..._Up, __enable_if_t<
         _And<
             _BoolConstant<sizeof...(_Up) == sizeof...(_Tp)>,
             _EnableCopyFromOtherTuple<_Up...>,
@@ -706,7 +706,7 @@ public:
         : __base_(__t)
     { }
 
-    template <class ..._Up, _EnableIf<
+    template <class ..._Up, __enable_if_t<
         _And<
             _BoolConstant<sizeof...(_Up) == sizeof...(_Tp)>,
             _EnableCopyFromOtherTuple<_Up...>,
@@ -719,7 +719,7 @@ public:
         : __base_(__t)
     { }
 
-    template <class ..._Up, class _Alloc, _EnableIf<
+    template <class ..._Up, class _Alloc, __enable_if_t<
         _And<
             _BoolConstant<sizeof...(_Up) == sizeof...(_Tp)>,
             _EnableCopyFromOtherTuple<_Up...>,
@@ -731,7 +731,7 @@ public:
         : __base_(allocator_arg_t(), __a, __t)
     { }
 
-    template <class ..._Up, class _Alloc, _EnableIf<
+    template <class ..._Up, class _Alloc, __enable_if_t<
         _And<
             _BoolConstant<sizeof...(_Up) == sizeof...(_Tp)>,
             _EnableCopyFromOtherTuple<_Up...>,
@@ -759,7 +759,7 @@ public:
         is_constructible<_Tp, _Up>...
     > { };
 
-    template <class ..._Up, _EnableIf<
+    template <class ..._Up, __enable_if_t<
         _And<
             _BoolConstant<sizeof...(_Up) == sizeof...(_Tp)>,
             _EnableMoveFromOtherTuple<_Up...>,
@@ -772,7 +772,7 @@ public:
         : __base_(_VSTD::move(__t))
     { }
 
-    template <class ..._Up, _EnableIf<
+    template <class ..._Up, __enable_if_t<
         _And<
             _BoolConstant<sizeof...(_Up) == sizeof...(_Tp)>,
             _EnableMoveFromOtherTuple<_Up...>,
@@ -785,7 +785,7 @@ public:
         : __base_(_VSTD::move(__t))
     { }
 
-    template <class _Alloc, class ..._Up, _EnableIf<
+    template <class _Alloc, class ..._Up, __enable_if_t<
         _And<
             _BoolConstant<sizeof...(_Up) == sizeof...(_Tp)>,
             _EnableMoveFromOtherTuple<_Up...>,
@@ -797,7 +797,7 @@ public:
         : __base_(allocator_arg_t(), __a, _VSTD::move(__t))
     { }
 
-    template <class _Alloc, class ..._Up, _EnableIf<
+    template <class _Alloc, class ..._Up, __enable_if_t<
         _And<
             _BoolConstant<sizeof...(_Up) == sizeof...(_Tp)>,
             _EnableMoveFromOtherTuple<_Up...>,
@@ -826,7 +826,7 @@ public:
         _Not<is_convertible<const _Up2&, _SecondType<_DependentTp...> > >
     > { };
 
-    template <class _Up1, class _Up2, template<class...> class _And = _And, _EnableIf<
+    template <class _Up1, class _Up2, template<class...> class _And = _And, __enable_if_t<
         _And<
             _BoolConstant<sizeof...(_Tp) == 2>,
             _EnableImplicitCopyFromPair<_Up1, _Up2, _Tp...>
@@ -841,7 +841,7 @@ public:
         : __base_(__p)
     { }
 
-    template <class _Up1, class _Up2, template<class...> class _And = _And, _EnableIf<
+    template <class _Up1, class _Up2, template<class...> class _And = _And, __enable_if_t<
         _And<
             _BoolConstant<sizeof...(_Tp) == 2>,
             _EnableExplicitCopyFromPair<_Up1, _Up2, _Tp...>
@@ -856,7 +856,7 @@ public:
         : __base_(__p)
     { }
 
-    template <class _Alloc, class _Up1, class _Up2, template<class...> class _And = _And, _EnableIf<
+    template <class _Alloc, class _Up1, class _Up2, template<class...> class _And = _And, __enable_if_t<
         _And<
             _BoolConstant<sizeof...(_Tp) == 2>,
             _EnableImplicitCopyFromPair<_Up1, _Up2, _Tp...>
@@ -867,7 +867,7 @@ public:
         : __base_(allocator_arg_t(), __a, __p)
     { }
 
-    template <class _Alloc, class _Up1, class _Up2, template<class...> class _And = _And, _EnableIf<
+    template <class _Alloc, class _Up1, class _Up2, template<class...> class _And = _And, __enable_if_t<
         _And<
             _BoolConstant<sizeof...(_Tp) == 2>,
             _EnableExplicitCopyFromPair<_Up1, _Up2, _Tp...>
@@ -895,7 +895,7 @@ public:
         _Not<is_convertible<_Up2, _SecondType<_DependentTp...> > >
     > { };
 
-    template <class _Up1, class _Up2, template<class...> class _And = _And, _EnableIf<
+    template <class _Up1, class _Up2, template<class...> class _And = _And, __enable_if_t<
         _And<
             _BoolConstant<sizeof...(_Tp) == 2>,
             _EnableImplicitMoveFromPair<_Up1, _Up2, _Tp...>
@@ -910,7 +910,7 @@ public:
         : __base_(_VSTD::move(__p))
     { }
 
-    template <class _Up1, class _Up2, template<class...> class _And = _And, _EnableIf<
+    template <class _Up1, class _Up2, template<class...> class _And = _And, __enable_if_t<
         _And<
             _BoolConstant<sizeof...(_Tp) == 2>,
             _EnableExplicitMoveFromPair<_Up1, _Up2, _Tp...>
@@ -925,7 +925,7 @@ public:
         : __base_(_VSTD::move(__p))
     { }
 
-    template <class _Alloc, class _Up1, class _Up2, template<class...> class _And = _And, _EnableIf<
+    template <class _Alloc, class _Up1, class _Up2, template<class...> class _And = _And, __enable_if_t<
         _And<
             _BoolConstant<sizeof...(_Tp) == 2>,
             _EnableImplicitMoveFromPair<_Up1, _Up2, _Tp...>
@@ -936,7 +936,7 @@ public:
         : __base_(allocator_arg_t(), __a, _VSTD::move(__p))
     { }
 
-    template <class _Alloc, class _Up1, class _Up2, template<class...> class _And = _And, _EnableIf<
+    template <class _Alloc, class _Up1, class _Up2, template<class...> class _And = _And, __enable_if_t<
         _And<
             _BoolConstant<sizeof...(_Tp) == 2>,
             _EnableExplicitMoveFromPair<_Up1, _Up2, _Tp...>
@@ -967,7 +967,7 @@ public:
         return *this;
     }
 
-    template<class... _Up, _EnableIf<
+    template<class... _Up, __enable_if_t<
         _And<
             _BoolConstant<sizeof...(_Tp) == sizeof...(_Up)>,
             is_assignable<_Tp&, _Up const&>...
@@ -982,7 +982,7 @@ public:
         return *this;
     }
 
-    template<class... _Up, _EnableIf<
+    template<class... _Up, __enable_if_t<
         _And<
             _BoolConstant<sizeof...(_Tp) == sizeof...(_Up)>,
             is_assignable<_Tp&, _Up>...
@@ -998,7 +998,7 @@ public:
         return *this;
     }
 
-    template<class _Up1, class _Up2, class _Dep = true_type, _EnableIf<
+    template<class _Up1, class _Up2, class _Dep = true_type, __enable_if_t<
         _And<_Dep,
             _BoolConstant<sizeof...(_Tp) == 2>,
             is_assignable<_FirstType<_Tp..., _Dep>&, _Up1 const&>,
@@ -1017,7 +1017,7 @@ public:
         return *this;
     }
 
-    template<class _Up1, class _Up2, class _Dep = true_type, _EnableIf<
+    template<class _Up1, class _Up2, class _Dep = true_type, __enable_if_t<
         _And<_Dep,
             _BoolConstant<sizeof...(_Tp) == 2>,
             is_assignable<_FirstType<_Tp..., _Dep>&, _Up1>,
@@ -1037,7 +1037,7 @@ public:
     }
 
     // EXTENSION
-    template<class _Up, size_t _Np, class = _EnableIf<
+    template<class _Up, size_t _Np, class = __enable_if_t<
         _And<
             _BoolConstant<_Np == sizeof...(_Tp)>,
             is_assignable<_Tp&, _Up const&>...
@@ -1053,7 +1053,7 @@ public:
     }
 
     // EXTENSION
-    template<class _Up, size_t _Np, class = void, class = _EnableIf<
+    template<class _Up, size_t _Np, class = void, class = __enable_if_t<
         _And<
             _BoolConstant<_Np == sizeof...(_Tp)>,
             is_assignable<_Tp&, _Up>...

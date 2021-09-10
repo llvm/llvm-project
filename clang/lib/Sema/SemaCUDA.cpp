@@ -878,8 +878,13 @@ void Sema::CUDACheckLambdaCapture(CXXMethodDecl *Callee,
                           diag::err_capture_bad_target, Callee, *this)
         << Capture.getVariable();
   } else if (Capture.isThisCapture()) {
+    // Capture of this pointer is allowed since this pointer may be pointing to
+    // managed memory which is accessible on both device and host sides. It only
+    // results in invalid memory access if this pointer points to memory not
+    // accessible on device side.
     SemaDiagnosticBuilder(DiagKind, Capture.getLocation(),
-                          diag::err_capture_bad_target_this_ptr, Callee, *this);
+                          diag::warn_maybe_capture_bad_target_this_ptr, Callee,
+                          *this);
   }
   return;
 }

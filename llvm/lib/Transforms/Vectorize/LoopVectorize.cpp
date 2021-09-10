@@ -4765,6 +4765,14 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
             Builder, ConstantInt::get(PtrInd->getType(), Part), VF);
 
         if (NeedsVectorIndex) {
+          // Here we cache the whole vector, which means we can support the
+          // extraction of any lane. However, in some cases the extractelement
+          // instruction that is generated for scalar uses of this vector (e.g.
+          // a load instruction) is not folded away. Therefore we still
+          // calculate values for the first n lanes to avoid redundant moves
+          // (when extracting the 0th element) and to produce scalar code (i.e.
+          // additional add/gep instructions instead of expensive extractelement
+          // instructions) when extracting higher-order elements.
           Value *PartStartSplat = Builder.CreateVectorSplat(VF, PartStart);
           Value *Indices = Builder.CreateAdd(PartStartSplat, UnitStepVec);
           Value *GlobalIndices = Builder.CreateAdd(PtrIndSplat, Indices);
@@ -4772,9 +4780,6 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
               emitTransformedIndex(Builder, GlobalIndices, PSE.getSE(), DL, II);
           SclrGep->setName("next.gep");
           State.set(PhiR, SclrGep, Part);
-          // We've cached the whole vector, which means we can support the
-          // extraction of any lane.
-          continue;
         }
 
         for (unsigned Lane = 0; Lane < Lanes; ++Lane) {
@@ -6898,7 +6903,7 @@ int LoopVectorizationCostModel::computePredInstDiscount(
     if (isScalarWithPredication(I) && !I->getType()->isVoidTy()) {
       ScalarCost += TTI.getScalarizationOverhead(
           cast<VectorType>(ToVectorTy(I->getType(), VF)),
-          APInt::getAllOnesValue(VF.getFixedValue()), true, false);
+          APInt::getAllOnes(VF.getFixedValue()), true, false);
       ScalarCost +=
           VF.getFixedValue() *
           TTI.getCFInstrCost(Instruction::PHI, TTI::TCK_RecipThroughput);
@@ -6917,7 +6922,7 @@ int LoopVectorizationCostModel::computePredInstDiscount(
         else if (needsExtract(J, VF)) {
           ScalarCost += TTI.getScalarizationOverhead(
               cast<VectorType>(ToVectorTy(J->getType(), VF)),
-              APInt::getAllOnesValue(VF.getFixedValue()), false, true);
+              APInt::getAllOnes(VF.getFixedValue()), false, true);
         }
       }
 
@@ -7063,7 +7068,7 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
     auto *Vec_i1Ty =
         VectorType::get(IntegerType::getInt1Ty(ValTy->getContext()), VF);
     Cost += TTI.getScalarizationOverhead(
-        Vec_i1Ty, APInt::getAllOnesValue(VF.getKnownMinValue()),
+        Vec_i1Ty, APInt::getAllOnes(VF.getKnownMinValue()),
         /*Insert=*/false, /*Extract=*/true);
     Cost += TTI.getCFInstrCost(Instruction::Br, TTI::TCK_RecipThroughput);
 
@@ -7405,8 +7410,8 @@ LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
   if (!RetTy->isVoidTy() &&
       (!isa<LoadInst>(I) || !TTI.supportsEfficientVectorElementLoadStore()))
     Cost += TTI.getScalarizationOverhead(
-        cast<VectorType>(RetTy), APInt::getAllOnesValue(VF.getKnownMinValue()),
-        true, false);
+        cast<VectorType>(RetTy), APInt::getAllOnes(VF.getKnownMinValue()), true,
+        false);
 
   // Some targets keep addresses scalar.
   if (isa<LoadInst>(I) && !TTI.prefersVectorizedAddressing())
@@ -7657,8 +7662,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
           VectorType::get(IntegerType::getInt1Ty(RetTy->getContext()), VF);
       return (
           TTI.getScalarizationOverhead(
-              Vec_i1Ty, APInt::getAllOnesValue(VF.getFixedValue()), false,
-              true) +
+              Vec_i1Ty, APInt::getAllOnes(VF.getFixedValue()), false, true) +
           (TTI.getCFInstrCost(Instruction::Br, CostKind) * VF.getFixedValue()));
     } else if (I->getParent() == TheLoop->getLoopLatch() || VF.isScalar())
       // The back-edge branch will remain, as will all scalar branches.

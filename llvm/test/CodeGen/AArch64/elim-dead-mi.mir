@@ -13,18 +13,18 @@
 name:            main
 tracksRegLiveness: true
 registers:
-  - { id: 0, class: gpr64, preferred-register: '' }
+  - { id: 0, class: gpr64common, preferred-register: '' }
   - { id: 1, class: gpr64common, preferred-register: '' }
   - { id: 2, class: gpr64, preferred-register: '' }
   - { id: 3, class: gpr64common, preferred-register: '' }
   - { id: 4, class: gpr32, preferred-register: '' }
   - { id: 5, class: gpr32all, preferred-register: '' }
-  - { id: 6, class: gpr64, preferred-register: '' }
+  - { id: 6, class: gpr64common, preferred-register: '' }
 body:             |
   bb.0:
     successors: %bb.4(0x30000000), %bb.5(0x50000000)
 
-    %0:gpr64 = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
+    %0:gpr64common = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
     CBZX killed %0, %bb.4
     B %bb.5
 
@@ -55,7 +55,7 @@ body:             |
   bb.5:
     successors: %bb.1(0x80000000)
     ; CHECK: bb.5
-    ; CHECK-NOT: %6:gpr64 = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
-    %6:gpr64 = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
+    ; CHECK-NOT: %6:gpr64common = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
+    %6:gpr64common = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
     B %bb.1
 ...

@@ -1981,6 +1981,7 @@ cc_library(
         ":OpenACCToSCF",
         ":OpenMPToLLVM",
         ":PDLToPDLInterp",
+        ":ReconcileUnrealizedCasts",
         ":SCFToGPUPass",
         ":SCFToOpenMP",
         ":SCFToSPIRV",
@@ -4316,9 +4317,11 @@ cc_library(
     deps = [
         ":ConversionPassIncGen",
         ":IR",
+        ":LLVMDialect",
         ":OpenMPDialect",
         ":Pass",
         ":SCFDialect",
+        ":StandardOps",
         ":Support",
         ":Transforms",
     ],
@@ -4363,6 +4366,19 @@ cc_library(
         ":Support",
         ":Transforms",
         "//llvm:Core",
+    ],
+)
+
+cc_library(
+    name = "ReconcileUnrealizedCasts",
+    srcs = ["lib/Conversion/PassDetail.h"] + glob(["lib/Conversion/ReconcileUnrealizedCasts/*.cpp"]),
+    hdrs = glob(["include/mlir/Conversion/ReconcileUnrealizedCasts/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ConversionPassIncGen",
+        ":IR",
+        ":Pass",
+        ":TransformUtils",
     ],
 )
 
@@ -5099,6 +5115,7 @@ cc_library(
         ":QuantOps",
         ":QuantPassIncGen",
         ":ROCDLDialect",
+        ":ReconcileUnrealizedCasts",
         ":SCFDialect",
         ":SCFPassIncGen",
         ":SCFToGPUPass",
@@ -5347,6 +5364,7 @@ cc_binary(
         ":MemRefTransforms",
         ":MlirJitRunner",
         ":Pass",
+        ":ReconcileUnrealizedCasts",
         ":SPIRVDialect",
         ":SPIRVTransforms",
         ":StandardOps",
@@ -6479,6 +6497,7 @@ cc_library(
         ":LinalgOps",
         ":MathDialect",
         ":Pass",
+        ":SCFDialect",
         ":StandardOps",
         ":TensorDialect",
         ":TosaDialect",

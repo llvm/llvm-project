@@ -68,8 +68,8 @@ void naivelyFuseParallelOps(Region &region);
 
 /// Rewrite a for loop with bounds/step that potentially do not divide evenly
 /// into a for loop where the step divides the iteration space evenly, followed
-/// by an scf.if for the last (partial) iteration (if any; returned via `ifOp`).
-/// This transformation is called "loop peeling".
+/// by another scf.for for the last (partial) iteration (if any; returned via
+/// `partialIteration`). This transformation is called "loop peeling".
 ///
 /// This transformation is beneficial for a wide range of transformations such
 /// as vectorization or loop tiling: It enables additional canonicalizations
@@ -88,16 +88,16 @@ void naivelyFuseParallelOps(Region &region);
 /// scf.for %iv = %c0 to %newUb step %c4 {
 ///   (loop body)
 /// }
-/// scf.if %newUb < %ub {
+/// scf.for %iv2 = %newUb to %ub {
 ///   (loop body)
 /// }
 /// ```
 ///
 /// After loop peeling, this function tries to simplify/canonicalize affine.min
-/// and affine.max ops in the body of the loop and the scf.if, taking advantage
-/// of the fact that the peeled loop has only "full" iterations and the scf.if
-/// is always a partial iteration (if any). This canonicalization is expected to
-/// enable further canonicalization opportunities through other patterns.
+/// and affine.max ops in the body of the peeled loop and in the body of the
+/// partial iteration loop, taking advantage of the fact that the peeled loop
+/// has only "full" iterations. This canonicalization is expected to enable
+/// further canonicalization opportunities through other patterns.
 ///
 /// The return value indicates whether the loop was rewritten or not. Loops are
 /// not rewritten if:
@@ -106,10 +106,10 @@ void naivelyFuseParallelOps(Region &region);
 ///   iteration space evenly.
 ///
 /// Note: This function rewrites the given scf.for loop in-place and creates a
-/// new scf.if operation for the last iteration. It replaces all uses of the
-/// unpeeled loop with the results of the newly generated scf.if.
+/// new scf.for operation for the last iteration. It replaces all uses of the
+/// unpeeled loop with the results of the newly generated scf.for.
 LogicalResult peelAndCanonicalizeForLoop(RewriterBase &rewriter, ForOp forOp,
-                                         scf::IfOp &ifOp);
+                                         scf::ForOp &partialIteration);
 
 /// Try to simplify a min/max operation `op` after loop peeling. This function
 /// can simplify min/max operations such as (ub is the previous upper bound of

@@ -20,7 +20,7 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: select_add_low_without_offset
     ; CHECK: liveins: $x0
-    ; CHECK: %add_low:gpr64 = MOVaddr target-flags(aarch64-page) @x, target-flags(aarch64-pageoff, aarch64-nc) @x
+    ; CHECK: %add_low:gpr64common = MOVaddr target-flags(aarch64-page) @x, target-flags(aarch64-pageoff, aarch64-nc) @x
     ; CHECK: $x0 = COPY %add_low
     ; CHECK: RET_ReallyLR implicit $x0
     %copy:gpr(p0) = COPY $x0
@@ -40,7 +40,7 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: select_add_low_with_offset
     ; CHECK: liveins: $x0
-    ; CHECK: %add_low:gpr64 = MOVaddr target-flags(aarch64-page) @x + 1, target-flags(aarch64-pageoff, aarch64-nc) @x + 1
+    ; CHECK: %add_low:gpr64common = MOVaddr target-flags(aarch64-page) @x + 1, target-flags(aarch64-pageoff, aarch64-nc) @x + 1
     ; CHECK: $x0 = COPY %add_low
     ; CHECK: RET_ReallyLR implicit $x0
     %copy:gpr(p0) = COPY $x0

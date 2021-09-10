@@ -9,7 +9,8 @@
 // RUN:               -std-expand                                              \
 // RUN:               -convert-vector-to-llvm                                  \
 // RUN:               -convert-memref-to-llvm                                  \
-// RUN:               -convert-std-to-llvm -print-ir-after-all                 \
+// RUN:               -convert-std-to-llvm                                     \
+// RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN: -e entry -entry-point-result=void -O3                                  \
 // RUN: -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext  \
@@ -29,6 +30,7 @@
 // RUN:               -convert-vector-to-llvm                                  \
 // RUN:               -convert-memref-to-llvm                                  \
 // RUN:               -convert-std-to-llvm                                     \
+// RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN: -e entry -entry-point-result=void -O3                                  \
 // RUN: -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext  \
@@ -42,6 +44,7 @@
 // RUN:               -convert-vector-to-llvm                                  \
 // RUN:               -convert-memref-to-llvm                                  \
 // RUN:               -convert-std-to-llvm                                     \
+// RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN: -e entry -entry-point-result=void -O3                                  \
 // RUN: -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext  \

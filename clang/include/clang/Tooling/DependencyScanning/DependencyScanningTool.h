@@ -77,16 +77,18 @@ public:
 
   /// Print out the dependency information into a string using the dependency
   /// file format that is specified in the options (-MD is the default) and
-  /// return it.
+  /// return it. If \p ModuleName isn't empty, this function returns the
+  /// dependency information of module \p ModuleName.
   ///
   /// \returns A \c StringError with the diagnostic output if clang errors
   /// occurred, dependency file contents otherwise.
   llvm::Expected<std::string>
-  getDependencyFile(const tooling::CompilationDatabase &Compilations,
-                    StringRef CWD);
+  getDependencyFile(const std::vector<std::string> &CommandLine, StringRef CWD,
+                    llvm::Optional<StringRef> ModuleName = None);
 
   /// Collect the full module dependency graph for the input, ignoring any
-  /// modules which have already been seen.
+  /// modules which have already been seen. If \p ModuleName isn't empty, this
+  /// function returns the full dependency information of module \p ModuleName.
   ///
   /// \param AlreadySeen This stores modules which have previously been
   ///                    reported. Use the same instance for all calls to this
@@ -97,8 +99,9 @@ public:
   /// \returns a \c StringError with the diagnostic output if clang errors
   /// occurred, \c FullDependencies otherwise.
   llvm::Expected<FullDependenciesResult>
-  getFullDependencies(const tooling::CompilationDatabase &Compilations,
-                      StringRef CWD, const llvm::StringSet<> &AlreadySeen);
+  getFullDependencies(const std::vector<std::string> &CommandLine,
+                      StringRef CWD, const llvm::StringSet<> &AlreadySeen,
+                      llvm::Optional<StringRef> ModuleName = None);
 
 private:
   DependencyScanningWorker Worker;

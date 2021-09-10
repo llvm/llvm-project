@@ -158,28 +158,28 @@ public:
     template <class _Alloc>
         _LIBCPP_INLINE_VISIBILITY
         explicit stack(const _Alloc& __a,
-                       _EnableIf<uses_allocator<container_type, _Alloc>::value>* = 0)
+                       __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0)
             : c(__a) {}
     template <class _Alloc>
         _LIBCPP_INLINE_VISIBILITY
         stack(const container_type& __c, const _Alloc& __a,
-              _EnableIf<uses_allocator<container_type, _Alloc>::value>* = 0)
+              __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0)
             : c(__c, __a) {}
     template <class _Alloc>
         _LIBCPP_INLINE_VISIBILITY
         stack(const stack& __s, const _Alloc& __a,
-              _EnableIf<uses_allocator<container_type, _Alloc>::value>* = 0)
+              __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0)
             : c(__s.c, __a) {}
 #ifndef _LIBCPP_CXX03_LANG
     template <class _Alloc>
         _LIBCPP_INLINE_VISIBILITY
         stack(container_type&& __c, const _Alloc& __a,
-              _EnableIf<uses_allocator<container_type, _Alloc>::value>* = 0)
+              __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0)
             : c(_VSTD::move(__c), __a) {}
     template <class _Alloc>
         _LIBCPP_INLINE_VISIBILITY
         stack(stack&& __s, const _Alloc& __a,
-              _EnableIf<uses_allocator<container_type, _Alloc>::value>* = 0)
+              __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0)
             : c(_VSTD::move(__s.c), __a) {}
 #endif // _LIBCPP_CXX03_LANG
 
@@ -233,15 +233,15 @@ public:
 
 #if _LIBCPP_STD_VER >= 17
 template<class _Container,
-         class = _EnableIf<!__is_allocator<_Container>::value>
+         class = enable_if_t<!__is_allocator<_Container>::value>
 >
 stack(_Container)
     -> stack<typename _Container::value_type, _Container>;
 
 template<class _Container,
          class _Alloc,
-         class = _EnableIf<!__is_allocator<_Container>::value>,
-         class = _EnableIf<uses_allocator<_Container, _Alloc>::value>
+         class = enable_if_t<!__is_allocator<_Container>::value>,
+         class = enable_if_t<uses_allocator<_Container, _Alloc>::value>
          >
 stack(_Container, _Alloc)
     -> stack<typename _Container::value_type, _Container>;
@@ -297,7 +297,7 @@ operator<=(const stack<_Tp, _Container>& __x, const stack<_Tp, _Container>& __y)
 
 template <class _Tp, class _Container>
 inline _LIBCPP_INLINE_VISIBILITY
-_EnableIf<__is_swappable<_Container>::value, void>
+__enable_if_t<__is_swappable<_Container>::value, void>
 swap(stack<_Tp, _Container>& __x, stack<_Tp, _Container>& __y)
     _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y)))
 {

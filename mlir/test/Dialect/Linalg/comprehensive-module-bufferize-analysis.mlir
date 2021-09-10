@@ -247,20 +247,20 @@ func @extract_slice_to_linalg_write_use(
     %C : tensor<?x?xf32> {linalg.inplaceable = true})
   ->  (tensor<4x4xf32>, tensor<4x4xf32>)
 {
-  // Step 3. %sB forward propagates to a write in %D but it is not inplace.
+  // Step 4. %sB forward propagates to a write in %D but it is not inplace.
   // So this is only ever read and can bufferize inplace.
   //     CHECK: tensor.extract_slice
   // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
   %sB = tensor.extract_slice %B[0, 0][4, 4][1, 1] : tensor<?x?xf32> to tensor<4x4xf32>
 
-  // Step 2. %sB has a read interference in %E, it does not bufferize inplace.
+  // Step 3. %sB has a read interference in %E, it does not bufferize inplace.
   //     CHECK: linalg.matmul
   // CHECK-SAME: {__inplace_results_attr__ = ["false"]}
   %D = linalg.matmul  ins(%B, %C: tensor<?x?xf32>, tensor<?x?xf32>)
                      outs(%sB: tensor<4x4xf32>)
     -> tensor<4x4xf32>
 
-  // Step 4. %sC forward propagates to an inplace write in %E.
+  // Step 2. %sC forward propagates to an inplace write in %E.
   // %sC backward propagates to %C which is inplaceable.
   // As a consequence this is bufferized inplace.
   //     CHECK: tensor.extract_slice
@@ -298,7 +298,7 @@ func @extract_slice_to_linalg_write_use(
   // CHECK-SAME: {__inplace_results_attr__ = ["false"]}
   %sB = tensor.extract_slice %B[0, 0][4, 4][1, 1] : tensor<?x?xf32> to tensor<4x4xf32>
 
-  // Step 1. %sB backprops to the tensor.extract_slice producer which is not
+  // Step 3. %sB backprops to the tensor.extract_slice producer which is not
   // considered an interference. This bufferizes inplace.
   //     CHECK: linalg.matmul
   // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
@@ -306,7 +306,7 @@ func @extract_slice_to_linalg_write_use(
                      outs(%sB: tensor<4x4xf32>)
     -> tensor<4x4xf32>
 
-  // Step 3. %sC forward propagates to an inplace write in %E.
+  // Step 2. %sC forward propagates to an inplace write in %E.
   // %sC backward propagates to %C which is inplaceable.
   // As a consequence this is bufferized inplace.
   //     CHECK: tensor.extract_slice
@@ -482,7 +482,7 @@ func @scf_for_deps(%A : tensor<?xf32> {linalg.inplaceable = true},
                    %lb : index, %ub : index, %step : index)
   -> (tensor<?xf32>, tensor<?xf32>)
 {
-  // %r0 must be out of place because one use of %t in the subsequent production 
+  // %r0 must be out of place because one use of %t in the subsequent production
   // of %r1 is read.
   //      CHECK: scf.for
   // CHECK-NEXT: call
@@ -503,7 +503,7 @@ func @scf_for_deps(%A : tensor<?xf32> {linalg.inplaceable = true},
     scf.yield %t : tensor<?xf32>
   }
 
-  // %r2 must be out of place because one use of %t in the subsequent production 
+  // %r2 must be out of place because one use of %t in the subsequent production
   // of %r3 is read.
   //      CHECK: linalg.tiled_loop
   // CHECK-NEXT: call
@@ -618,4 +618,87 @@ func @read_dependence_through_scf_and_call(
   call @bar(%A2) : (tensor<64xf32>) -> ()
   call @bar(%B2) : (tensor<64xf32>) -> ()
   return
+}
+
+//===----------------------------------------------------------------------===//
+// Transitive cases through extract_slice.
+//===----------------------------------------------------------------------===//
+
+builtin.func @matmul_on_tensors(
+    %arg0: tensor<518x518xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = false},
+    %arg1: tensor<518x518xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = false},
+    %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
+    -> tensor<256x256xf32>
+{
+  %c0 = constant 0 : index
+  %cst_0 = constant 0.000000e+00 : f32
+  %cst_1 = constant 1.000000e+00 : f32
+
+  %7 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
+
+  //      CHECK: linalg.fill
+  // CHECK-SAME: {__inplace_results_attr__ = ["false"]}
+  //      CHECK: linalg.fill
+  // CHECK-SAME: {__inplace_results_attr__ = ["false"]}
+  %8 = linalg.fill(%cst_0, %7) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
+  %11 = linalg.fill(%cst_1, %7) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
+
+  //      CHECK: tensor.extract_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
+  //      CHECK: tensor.extract_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
+  //      CHECK: linalg.matmul
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
+  %sA = tensor.extract_slice %8[0, 0][256, 16][1, 1]: tensor<256x256xf32> to tensor<256x16xf32>
+  %sB = tensor.extract_slice %11[0, 0][16, 256][1, 1]: tensor<256x256xf32> to tensor<16x256xf32>
+  %r = linalg.matmul
+         ins(%sA, %sB : tensor<256x16xf32>, tensor<16x256xf32>)
+        outs(%arg2 : tensor<256x256xf32>) -> tensor<256x256xf32>
+
+  return %r : tensor<256x256xf32>
+}
+
+// -----
+
+builtin.func @matmul_on_tensors(
+    %arg0: tensor<518x518xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = false},
+    %arg1: tensor<518x518xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = false},
+    %arg2: tensor<256x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
+    -> tensor<256x256xf32>
+{
+  %c0 = constant 0 : index
+  %cst_0 = constant 0.000000e+00 : f32
+  %cst_1 = constant 1.000000e+00 : f32
+
+  %7 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
+
+  //     CHECK: linalg.fill
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
+  //      CHECK: vector.transfer_write
+  // CHECK-SAME: {__inplace_results_attr__ = ["false"]
+  %8 = linalg.fill(%cst_0, %7) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
+  %9 = vector.transfer_read %arg0[%c0, %c0], %cst_0 {in_bounds = [false, true]} : tensor<518x518xf32>, vector<256x256xf32>
+  %10 = vector.transfer_write %9, %8[%c0, %c0] {in_bounds = [true, true]} : vector<256x256xf32>, tensor<256x256xf32>
+
+  //      CHECK: linalg.fill
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
+  //      CHECK: vector.transfer_write
+  // CHECK-SAME: {__inplace_results_attr__ = ["false"]
+  %11 = linalg.fill(%cst_1, %7) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
+  %12 = vector.transfer_read %arg1[%c0, %c0], %cst_0 {in_bounds = [false, true]} : tensor<518x518xf32>, vector<256x256xf32>
+  %13 = vector.transfer_write %12, %11[%c0, %c0] {in_bounds = [true, true]} : vector<256x256xf32>, tensor<256x256xf32>
+
+  //      CHECK: tensor.extract_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
+  //      CHECK: tensor.extract_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
+  //      CHECK: linalg.matmul
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
+  %sA = tensor.extract_slice %10[0, 0][256, 16][1, 1]: tensor<256x256xf32> to tensor<256x16xf32>
+  %sB = tensor.extract_slice %13[0, 0][16, 256][1, 1]: tensor<256x256xf32> to tensor<16x256xf32>
+  %r = linalg.matmul
+         ins(%sA, %sB : tensor<256x16xf32>, tensor<16x256xf32>)
+        outs(%arg2 : tensor<256x256xf32>) -> tensor<256x256xf32>
+
+  return %r : tensor<256x256xf32>
 }

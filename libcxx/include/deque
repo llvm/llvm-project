@@ -1568,14 +1568,14 @@ public:
 #if _LIBCPP_STD_VER >= 17
 template<class _InputIterator,
          class _Alloc = allocator<__iter_value_type<_InputIterator>>,
-         class = _EnableIf<__is_allocator<_Alloc>::value>
+         class = enable_if_t<__is_allocator<_Alloc>::value>
          >
 deque(_InputIterator, _InputIterator)
   -> deque<__iter_value_type<_InputIterator>, _Alloc>;
 
 template<class _InputIterator,
          class _Alloc,
-         class = _EnableIf<__is_allocator<_Alloc>::value>
+         class = enable_if_t<__is_allocator<_Alloc>::value>
          >
 deque(_InputIterator, _InputIterator, _Alloc)
   -> deque<__iter_value_type<_InputIterator>, _Alloc>;
@@ -2214,7 +2214,7 @@ deque<_Tp, _Allocator>::insert(const_iterator __p, size_type __n, const value_ty
         size_type __de = __base::size() - __pos;
         if (__n > __de)
         {
-            for (size_type __m = __n - __de; __m; --__m, ++__i, ++__base::size())
+            for (size_type __m = __n - __de; __m; --__m, (void) ++__i, ++__base::size())
                 __alloc_traits::construct(__a, _VSTD::addressof(*__i), __v);
             __n = __de;
         }
@@ -2317,7 +2317,7 @@ deque<_Tp, _Allocator>::insert(const_iterator __p, _BiIter __f, _BiIter __l,
         if (__n > 0)
         {
             iterator __oen = __old_end - __n;
-            for (iterator __j = __oen; __j != __old_end; ++__i, ++__j, ++__base::size())
+            for (iterator __j = __oen; __j != __old_end; ++__i, (void) ++__j, ++__base::size())
                 __alloc_traits::construct(__a, _VSTD::addressof(*__i), _VSTD::move(*__j));
             if (__n < __de)
                 __old_end = _VSTD::move_backward(__old_end - __de, __oen, __old_end);

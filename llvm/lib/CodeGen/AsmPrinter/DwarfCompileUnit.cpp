@@ -1105,9 +1105,10 @@ void DwarfCompileUnit::constructAbstractSubprogramScopeDIE(
   // shouldn't be found by lookup.
   AbsDef = &ContextCU->createAndAddDIE(dwarf::DW_TAG_subprogram, *ContextDIE, nullptr);
   ContextCU->applySubprogramAttributesToDefinition(SP, *AbsDef);
-
-  if (!ContextCU->includeMinimalInlineScopes())
-    ContextCU->addUInt(*AbsDef, dwarf::DW_AT_inline, None, dwarf::DW_INL_inlined);
+  ContextCU->addSInt(*AbsDef, dwarf::DW_AT_inline,
+                     DD->getDwarfVersion() <= 4 ? Optional<dwarf::Form>()
+                                                : dwarf::DW_FORM_implicit_const,
+                     dwarf::DW_INL_inlined);
   if (DIE *ObjectPointer = ContextCU->createAndAddScopeChildren(Scope, *AbsDef))
     ContextCU->addDIEEntry(*AbsDef, dwarf::DW_AT_object_pointer, *ObjectPointer);
 }

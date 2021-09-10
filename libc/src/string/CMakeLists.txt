@@ -19,17 +19,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  memmove
-  SRCS
-    memmove.cpp
-  HDRS
-    memmove.h
-  DEPENDS
-    libc.src.__support.integer_operations
-    libc.src.string.memcpy
-)
-
-add_entrypoint_object(
   memrchr
   SRCS
     memrchr.cpp
@@ -334,6 +323,27 @@ else()
   add_memcpy(memcpy_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_memcpy(memcpy)
 endif()
+
+# ------------------------------------------------------------------------------
+# memmove
+# ------------------------------------------------------------------------------
+
+function(add_memmove memmove_name)
+  add_implementation(memmove ${memmove_name}
+          SRCS ${MEMMOVE_SRC}
+          HDRS ${LIBC_SOURCE_DIR}/src/string/memmove.h
+          DEPENDS
+          .memory_utils.memory_utils
+          libc.src.__support.integer_operations
+          libc.src.string.memcpy
+          COMPILE_OPTIONS
+          -fno-builtin-memmove
+          ${ARGN}
+          )
+endfunction()
+
+set(MEMMOVE_SRC ${LIBC_SOURCE_DIR}/src/string/memmove.cpp)
+add_memmove(memmove)
 
 # ------------------------------------------------------------------------------
 # memset

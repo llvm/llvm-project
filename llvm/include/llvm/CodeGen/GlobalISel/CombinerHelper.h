@@ -72,6 +72,16 @@ struct ShiftOfShiftedLogic {
   uint64_t ValSum;
 };
 
+using BuildFnTy = std::function<void(MachineIRBuilder &)>;
+
+struct MergeTruncStoresInfo {
+  SmallVector<GStore *> FoundStores;
+  GStore *LowestIdxStore = nullptr;
+  Register WideSrcVal;
+  bool NeedBSwap = false;
+  bool NeedRotate = false;
+};
+
 using OperandBuildSteps =
     SmallVector<std::function<void(MachineInstrBuilder &)>, 4>;
 struct InstructionBuildSteps {
@@ -463,7 +473,7 @@ public:
 
   /// Fold and(and(x, C1), C2) -> C1&C2 ? and(x, C1&C2) : 0
   bool matchOverlappingAnd(MachineInstr &MI,
-                           std::function<void(MachineIRBuilder &)> &MatchInfo);
+                           BuildFnTy &MatchInfo);
 
   /// \return true if \p MI is a G_AND instruction whose operands are x and y
   /// where x & y == x or x & y == y. (E.g., one of operands is all-ones value.)
@@ -519,8 +529,10 @@ public:
   ///
   /// And check if the tree can be replaced with a M-bit load + possibly a
   /// bswap.
-  bool matchLoadOrCombine(MachineInstr &MI,
-                          std::function<void(MachineIRBuilder &)> &MatchInfo);
+  bool matchLoadOrCombine(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  bool matchTruncStoreMerge(MachineInstr &MI, MergeTruncStoresInfo &MatchInfo);
+  void applyTruncStoreMerge(MachineInstr &MI, MergeTruncStoresInfo &MatchInfo);
 
   bool matchExtendThroughPhis(MachineInstr &MI, MachineInstr *&ExtMI);
   void applyExtendThroughPhis(MachineInstr &MI, MachineInstr *&ExtMI);
@@ -537,12 +549,10 @@ public:
 
   /// Use a function which takes in a MachineIRBuilder to perform a combine.
   /// By default, it erases the instruction \p MI from the function.
-  void applyBuildFn(MachineInstr &MI,
-                    std::function<void(MachineIRBuilder &)> &MatchInfo);
+  void applyBuildFn(MachineInstr &MI, BuildFnTy &MatchInfo);
   /// Use a function which takes in a MachineIRBuilder to perform a combine.
   /// This variant does not erase \p MI after calling the build function.
-  void applyBuildFnNoErase(MachineInstr &MI,
-                           std::function<void(MachineIRBuilder &)> &MatchInfo);
+  void applyBuildFnNoErase(MachineInstr &MI, BuildFnTy &MatchInfo);
 
   bool matchFunnelShiftToRotate(MachineInstr &MI);
   void applyFunnelShiftToRotate(MachineInstr &MI);
@@ -557,31 +567,26 @@ public:
   /// KnownBits information.
   bool
   matchICmpToLHSKnownBits(MachineInstr &MI,
-                          std::function<void(MachineIRBuilder &)> &MatchInfo);
+                          BuildFnTy &MatchInfo);
 
-  bool matchBitfieldExtractFromSExtInReg(
-      MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo);
+  bool matchBitfieldExtractFromSExtInReg(MachineInstr &MI,
+                                         BuildFnTy &MatchInfo);
   /// Match: and (lshr x, cst), mask -> ubfx x, cst, width
-  bool matchBitfieldExtractFromAnd(
-      MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo);
+  bool matchBitfieldExtractFromAnd(MachineInstr &MI, BuildFnTy &MatchInfo);
 
   /// Match: shr (shl x, n), k -> sbfx/ubfx x, pos, width
-  bool matchBitfieldExtractFromShr(
-      MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo);
+  bool matchBitfieldExtractFromShr(MachineInstr &MI, BuildFnTy &MatchInfo);
 
   /// Reassociate pointer calculations with G_ADD involved, to allow better
   /// addressing mode usage.
-  bool matchReassocPtrAdd(MachineInstr &MI,
-                          std::function<void(MachineIRBuilder &)> &MatchInfo);
-
+  bool matchReassocPtrAdd(MachineInstr &MI, BuildFnTy &MatchInfo);
 
   /// Do constant folding when opportunities are exposed after MIR building.
   bool matchConstantFold(MachineInstr &MI, APInt &MatchInfo);
 
   /// \returns true if it is possible to narrow the width of a scalar binop
   /// feeding a G_AND instruction \p MI.
-  bool matchNarrowBinopFeedingAnd(
-      MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo);
+  bool matchNarrowBinopFeedingAnd(MachineInstr &MI, BuildFnTy &MatchInfo);
 
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.

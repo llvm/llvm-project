@@ -738,7 +738,18 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   check_cxx_compiler_flag("-Wnoexcept-type" CXX_SUPPORTS_NOEXCEPT_TYPE_FLAG)
   append_if(CXX_SUPPORTS_NOEXCEPT_TYPE_FLAG "-Wno-noexcept-type" CMAKE_CXX_FLAGS)
 
-  append("-Wnon-virtual-dtor" CMAKE_CXX_FLAGS)
+  # Check if -Wnon-virtual-dtor warns for a class marked final, when it has a
+  # friend declaration. If it does, don't add -Wnon-virtual-dtor. The case is
+  # considered unhelpful (https://gcc.gnu.org/PR102168).
+  set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -Werror=non-virtual-dtor")
+  CHECK_CXX_SOURCE_COMPILES("class f {};
+                             class base {friend f; public: virtual void anchor();protected: ~base();};
+                             int main() { return 0; }"
+                            CXX_WONT_WARN_ON_FINAL_NONVIRTUALDTOR)
+  set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
+  append_if(CXX_WONT_WARN_ON_FINAL_NONVIRTUALDTOR "-Wnon-virtual-dtor" CMAKE_CXX_FLAGS)
+
   append("-Wdelete-non-virtual-dtor" CMAKE_CXX_FLAGS)
 
   # Enable -Wsuggest-override if it's available, and only if it doesn't

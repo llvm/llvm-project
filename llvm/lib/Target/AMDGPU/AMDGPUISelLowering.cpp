@@ -3547,7 +3547,7 @@ SDValue AMDGPUTargetLowering::performMulhuCombine(SDNode *N,
 
 static bool isNegativeOne(SDValue Val) {
   if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Val))
-    return C->isAllOnesValue();
+    return C->isAllOnes();
   return false;
 }
 
@@ -3582,7 +3582,7 @@ SDValue AMDGPUTargetLowering::performCtlz_CttzCombine(const SDLoc &SL, SDValue C
                                                  SDValue LHS, SDValue RHS,
                                                  DAGCombinerInfo &DCI) const {
   ConstantSDNode *CmpRhs = dyn_cast<ConstantSDNode>(Cond.getOperand(1));
-  if (!CmpRhs || !CmpRhs->isNullValue())
+  if (!CmpRhs || !CmpRhs->isZero())
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;

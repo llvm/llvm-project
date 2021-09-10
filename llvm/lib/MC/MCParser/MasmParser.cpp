@@ -4772,7 +4772,8 @@ bool MasmParser::emitAlignTo(int64_t Alignment) {
     const MCSection *Section = getStreamer().getCurrentSectionOnly();
     assert(Section && "must have section to emit alignment");
     if (Section->UseCodeAlign()) {
-      getStreamer().emitCodeAlignment(Alignment, /*MaxBytesToEmit=*/0);
+      getStreamer().emitCodeAlignment(Alignment, &getTargetParser().getSTI(),
+                                      /*MaxBytesToEmit=*/0);
     } else {
       // FIXME: Target specific behavior about how the "extra" bytes are filled.
       getStreamer().emitValueToAlignment(Alignment, /*Value=*/0,

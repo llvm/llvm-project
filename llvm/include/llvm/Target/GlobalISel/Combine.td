@@ -281,7 +281,7 @@ def select_constant_cmp: GICombineRule<
 def right_identity_zero: GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_SUB, G_ADD, G_OR, G_XOR, G_SHL, G_ASHR, G_LSHR,
-                           G_PTR_ADD):$root,
+                           G_PTR_ADD, G_ROTL, G_ROTR):$root,
     [{ return Helper.matchConstantOp(${root}->getOperand(2), 0); }]),
   (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
 >;
@@ -594,6 +594,14 @@ def load_or_combine : GICombineRule<
     [{ return Helper.matchLoadOrCombine(*${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
 
+
+def truncstore_merge_matcdata : GIDefMatchData<"MergeTruncStoresInfo">;
+def truncstore_merge : GICombineRule<
+  (defs root:$root, truncstore_merge_matcdata:$info),
+  (match (wip_match_opcode G_STORE):$root,
+   [{ return Helper.matchTruncStoreMerge(*${root}, ${info}); }]),
+  (apply [{ Helper.applyTruncStoreMerge(*${root}, ${info}); }])>;
+
 def extend_through_phis_matchdata: GIDefMatchData<"MachineInstr*">;
 def extend_through_phis : GICombineRule<
   (defs root:$root, extend_through_phis_matchdata:$matchinfo),
@@ -733,8 +741,8 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     unmerge_zext_to_zext, merge_unmerge, trunc_ext_fold, trunc_shl,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
     shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
-    div_rem_to_divrem, funnel_shift_combines, form_bitfield_extract,
-    constant_fold]>;
+    truncstore_merge, div_rem_to_divrem, funnel_shift_combines,
+    form_bitfield_extract, constant_fold]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

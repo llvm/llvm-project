@@ -622,7 +622,7 @@ static void replaceSwiftErrorOps(Function &F, coro::Shape &Shape,
 
     // If there are no arguments, this is a 'get' operation.
     Value *MappedResult;
-    if (Op->getNumArgOperands() == 0) {
+    if (Op->arg_empty()) {
       auto ValueTy = Op->getType();
       auto Slot = getSwiftErrorSlot(ValueTy);
       MappedResult = Builder.CreateLoad(ValueTy, Slot);

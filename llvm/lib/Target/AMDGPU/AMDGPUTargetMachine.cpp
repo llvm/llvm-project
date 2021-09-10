@@ -982,8 +982,13 @@ void AMDGPUPassConfig::addIRPasses() {
 }
 
 void AMDGPUPassConfig::addCodeGenPrepare() {
-  if (TM->getTargetTriple().getArch() == Triple::amdgcn)
+  if (TM->getTargetTriple().getArch() == Triple::amdgcn) {
+    addPass(createAMDGPUAttributorPass());
+
+    // FIXME: This pass adds 2 hacky attributes that can be replaced with an
+    // analysis, and should be removed.
     addPass(createAMDGPUAnnotateKernelFeaturesPass());
+  }
 
   if (TM->getTargetTriple().getArch() == Triple::amdgcn &&
       EnableLowerKernelArguments)

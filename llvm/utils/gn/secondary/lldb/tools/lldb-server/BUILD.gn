@@ -1,3 +1,4 @@
+import("//compiler-rt/target.gni")
 import("//llvm/utils/TableGen/tablegen.gni")
 
 tablegen("LLGSOptions") {
@@ -29,13 +30,13 @@ executable("lldb-server") {
     "//lldb/source/Plugins/Language/CPlusPlus",
   ]
 
-  #if (current_os == "android" || current_os == "linux") {
-    #deps += [ "//lldb/source/Plugins/Process/Linux" ]
+  if (current_os == "android" || current_os == "linux") {
+    deps += [ "//lldb/source/Plugins/Process/Linux" ]
     #} else if (current_os == "freebsd") {
     #deps += [ "//lldb/source/Plugins/Process/FreeBSD" ]
     #} else if (current_os == "netbsd") {
     #deps += [ "//lldb/source/Plugins/Process/NetBSD" ]
-  #}
+  }
 
   if (current_os == "mac") {
     deps += [ "//lldb/source/Plugins/ObjectFile/Mach-O" ]
@@ -57,4 +58,8 @@ executable("lldb-server") {
     "lldb-platform.cpp",
     "lldb-server.cpp",
   ]
+
+  if (current_os == "android") {
+    output_dir = "$root_build_dir/runtimes_ndk_cxx/$crt_current_target_arch"
+  }
 }

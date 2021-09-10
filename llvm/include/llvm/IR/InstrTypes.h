@@ -1875,7 +1875,7 @@ public:
   /// Determine if the call returns a structure through first
   /// pointer argument.
   bool hasStructRetAttr() const {
-    if (getNumArgOperands() == 0)
+    if (arg_empty())
       return false;
 
     // Be friendly and also check the callee.
@@ -1920,6 +1920,13 @@ public:
   bool isBundleOperand(unsigned Idx) const {
     return hasOperandBundles() && Idx >= getBundleOperandsStartIndex() &&
            Idx < getBundleOperandsEndIndex();
+  }
+
+  /// Return true if the operand at index \p Idx is a bundle operand that has
+  /// tag ID \p ID.
+  bool isOperandBundleOfType(uint32_t ID, unsigned Idx) const {
+    return isBundleOperand(Idx) &&
+           getOperandBundleForOperand(Idx).getTagID() == ID;
   }
 
   /// Returns true if the use is a bundle operand.

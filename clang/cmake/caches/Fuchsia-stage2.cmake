@@ -60,7 +60,6 @@ if(APPLE)
   set(COMPILER_RT_USE_BUILTINS_LIBRARY ON CACHE BOOL "")
 
   set(LIBUNWIND_ENABLE_SHARED OFF CACHE BOOL "")
-  set(LIBUNWIND_INSTALL_LIBRARY OFF CACHE BOOL "")
   set(LIBUNWIND_USE_COMPILER_RT ON CACHE BOOL "")
   set(LIBCXXABI_ENABLE_SHARED OFF CACHE BOOL "")
   set(LIBCXXABI_ENABLE_STATIC_UNWINDER ON CACHE BOOL "")
@@ -123,7 +122,6 @@ foreach(target aarch64-unknown-linux-gnu;armv7-unknown-linux-gnueabihf;i386-unkn
     set(RUNTIMES_${target}_COMPILER_RT_USE_BUILTINS_LIBRARY ON CACHE BOOL "")
     set(RUNTIMES_${target}_LIBUNWIND_ENABLE_SHARED OFF CACHE BOOL "")
     set(RUNTIMES_${target}_LIBUNWIND_USE_COMPILER_RT ON CACHE BOOL "")
-    set(RUNTIMES_${target}_LIBUNWIND_INSTALL_LIBRARY OFF CACHE BOOL "")
     set(RUNTIMES_${target}_LIBCXXABI_USE_COMPILER_RT ON CACHE BOOL "")
     set(RUNTIMES_${target}_LIBCXXABI_ENABLE_SHARED OFF CACHE BOOL "")
     set(RUNTIMES_${target}_LIBCXXABI_USE_LLVM_UNWINDER ON CACHE BOOL "")
@@ -136,6 +134,10 @@ foreach(target aarch64-unknown-linux-gnu;armv7-unknown-linux-gnueabihf;i386-unkn
     set(RUNTIMES_${target}_LLVM_ENABLE_ASSERTIONS OFF CACHE BOOL "")
     set(RUNTIMES_${target}_SANITIZER_CXX_ABI "libc++" CACHE STRING "")
     set(RUNTIMES_${target}_SANITIZER_CXX_ABI_INTREE ON CACHE BOOL "")
+    set(RUNTIMES_${target}_COMPILER_RT_TEST_COMPILER_CFLAGS "--unwindlib=libunwind -static-libgcc" CACHE STRING "")
+    set(RUNTIMES_${target}_SANITIZER_COMMON_TEST_TARGET_CFLAGS "--unwindlib=libunwind -static-libgcc" CACHE STRING "")
+    set(RUNTIMES_${target}_TSAN_TEST_TARGET_CFLAGS "--unwindlib=libunwind" CACHE STRING "")
+    set(RUNTIMES_${target}_LLVM_TOOLS_DIR "${CMAKE_BINARY_DIR}/bin" CACHE BOOL "")
     set(RUNTIMES_${target}_LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "")
 
     # Use .build-id link.

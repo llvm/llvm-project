@@ -188,7 +188,7 @@ define i32 @icmpasreq(i32 %input, i32 %a, i32 %b) {
 define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 ; CHECK32-LABEL: icmpasrne:
 ; CHECK32:       # %bb.0:
-; CHECK32-NEXT:    bgtz a0, .LBB9_2
+; CHECK32-NEXT:    bgez a0, .LBB9_2
 ; CHECK32-NEXT:  # %bb.1:
 ; CHECK32-NEXT:    mv a1, a2
 ; CHECK32-NEXT:  .LBB9_2:
@@ -199,7 +199,7 @@ define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 ; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    sext.w a3, a0
 ; CHECK64-NEXT:    mv a0, a1
-; CHECK64-NEXT:    bgtz a3, .LBB9_2
+; CHECK64-NEXT:    bgez a3, .LBB9_2
 ; CHECK64-NEXT:  # %bb.1:
 ; CHECK64-NEXT:    mv a0, a2
 ; CHECK64-NEXT:  .LBB9_2:

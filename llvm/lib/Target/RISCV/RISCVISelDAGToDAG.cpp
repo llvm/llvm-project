@@ -467,7 +467,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   switch (Opcode) {
   case ISD::Constant: {
     auto *ConstNode = cast<ConstantSDNode>(Node);
-    if (VT == XLenVT && ConstNode->isNullValue()) {
+    if (VT == XLenVT && ConstNode->isZero()) {
       SDValue New =
           CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL, RISCV::X0, XLenVT);
       ReplaceNode(Node, New.getNode());

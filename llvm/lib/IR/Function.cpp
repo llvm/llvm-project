@@ -1745,8 +1745,8 @@ Optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
 /// and llvm.compiler.used variables.
 bool Function::hasAddressTaken(const User **PutOffender,
                                bool IgnoreCallbackUses,
-                               bool IgnoreAssumeLikeCalls,
-                               bool IgnoreLLVMUsed) const {
+                               bool IgnoreAssumeLikeCalls, bool IgnoreLLVMUsed,
+                               bool IgnoreARCAttachedCall) const {
   for (const Use &U : uses()) {
     const User *FU = U.getUser();
     if (isa<BlockAddress>(FU))
@@ -1790,6 +1790,11 @@ bool Function::hasAddressTaken(const User **PutOffender,
       return true;
     }
     if (!Call->isCallee(&U)) {
+      if (IgnoreARCAttachedCall &&
+          Call->isOperandBundleOfType(LLVMContext::OB_clang_arc_attachedcall,
+                                      U.getOperandNo()))
+        continue;
+
       if (PutOffender)
         *PutOffender = FU;
       return true;

@@ -864,11 +864,11 @@ func @genbool_var_2d(%arg0: index, %arg1: index) -> vector<2x3xi1> {
 // CHECK-SAME: %[[A:.*0]]: index,
 // CHECK-SAME: %[[B:.*1]]: index,
 // CHECK-SAME: %[[C:.*2]]: index)
-// CHECK:      %[[C1:.*]] = constant dense<false> : vector<7xi1>
-// CHECK:      %[[C2:.*]] = constant dense<false> : vector<1x7xi1>
-// CHECK:      %[[C3:.*]] = constant dense<false> : vector<2x1x7xi1>
-// CHECK:      %[[c0:.*]] = constant 0 : index
-// CHECK:      %[[c1:.*]] = constant 1 : index
+// CHECK-DAG:  %[[C1:.*]] = constant dense<false> : vector<7xi1>
+// CHECK-DAG:  %[[C2:.*]] = constant dense<false> : vector<1x7xi1>
+// CHECK-DAG:  %[[C3:.*]] = constant dense<false> : vector<2x1x7xi1>
+// CHECK-DAG:  %[[c0:.*]] = constant 0 : index
+// CHECK-DAG:  %[[c1:.*]] = constant 1 : index
 // CHECK:      %[[T0:.*]] = vector.create_mask %[[C]] : vector<7xi1>
 // CHECK:      %[[T1:.*]] = cmpi slt, %[[c0]], %[[B]] : index
 // CHECK:      %[[T2:.*]] = select %[[T1]], %[[T0]], %[[C1]] : vector<7xi1>

@@ -194,6 +194,11 @@ llvm::cl::opt<bool> SkipExcludedPPRanges(
         "until reaching the end directive."),
     llvm::cl::init(true), llvm::cl::cat(DependencyScannerCategory));
 
+llvm::cl::opt<std::string> ModuleName(
+    "module-name", llvm::cl::Optional,
+    llvm::cl::desc("the module of which the dependencies are to be computed"),
+    llvm::cl::cat(DependencyScannerCategory));
+
 llvm::cl::opt<bool> Verbose("v", llvm::cl::Optional,
                             llvm::cl::desc("Use verbose output."),
                             llvm::cl::init(false),
@@ -508,10 +513,8 @@ int main(int argc, const char **argv) {
   for (unsigned I = 0; I < Pool.getThreadCount(); ++I)
     WorkerTools.push_back(std::make_unique<DependencyScanningTool>(Service));
 
-  std::vector<SingleCommandCompilationDatabase> Inputs;
-  for (tooling::CompileCommand Cmd :
-       AdjustingCompilations->getAllCompileCommands())
-    Inputs.emplace_back(Cmd);
+  std::vector<tooling::CompileCommand> Inputs =
+      AdjustingCompilations->getAllCompileCommands();
 
   std::atomic<bool> HadErrors(false);
   FullDeps FD;
@@ -527,7 +530,7 @@ int main(int argc, const char **argv) {
                 &DependencyOS, &Errs]() {
       llvm::StringSet<> AlreadySeenModules;
       while (true) {
-        const SingleCommandCompilationDatabase *Input;
+        const tooling::CompileCommand *Input;
         std::string Filename;
         std::string CWD;
         size_t LocalIndex;
@@ -538,19 +541,22 @@ int main(int argc, const char **argv) {
             return;
           LocalIndex = Index;
           Input = &Inputs[Index++];
-          tooling::CompileCommand Cmd = Input->getAllCompileCommands()[0];
-          Filename = std::move(Cmd.Filename);
-          CWD = std::move(Cmd.Directory);
+          Filename = std::move(Input->Filename);
+          CWD = std::move(Input->Directory);
         }
+        Optional<StringRef> MaybeModuleName;
+        if (!ModuleName.empty())
+          MaybeModuleName = ModuleName;
         // Run the tool on it.
         if (Format == ScanningOutputFormat::Make) {
-          auto MaybeFile = WorkerTools[I]->getDependencyFile(*Input, CWD);
+          auto MaybeFile = WorkerTools[I]->getDependencyFile(
+              Input->CommandLine, CWD, MaybeModuleName);
           if (handleMakeDependencyToolResult(Filename, MaybeFile, DependencyOS,
                                              Errs))
             HadErrors = true;
         } else {
           auto MaybeFullDeps = WorkerTools[I]->getFullDependencies(
-              *Input, CWD, AlreadySeenModules);
+              Input->CommandLine, CWD, AlreadySeenModules, MaybeModuleName);
           if (handleFullDependencyToolResult(Filename, MaybeFullDeps, FD,
                                              LocalIndex, DependencyOS, Errs))
             HadErrors = true;

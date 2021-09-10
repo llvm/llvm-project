@@ -59,6 +59,13 @@ static_library("Utility") {
     "XcodeSDK.cpp",
   ]
 
+  if (current_os == "win") {
+    libs = [
+      "rpcrt4.lib",
+      "ws2_32.lib",
+    ]
+  }
+
   # FIXME:
   # if (APPLE)
   #   list(APPEND LLDB_SYSTEM_LIBS
@@ -74,10 +81,6 @@ static_library("Utility") {
   # endif()
   #
   # list(APPEND LLDB_SYSTEM_LIBS ${CMAKE_DL_LIBS})
-  #
-  # if (CMAKE_SYSTEM_NAME MATCHES "Windows")
-  #   list(APPEND LLDB_SYSTEM_LIBS ws2_32 rpcrt4)
-  # endif ()
   #
   # if (NOT HAVE_CXX_ATOMICS64_WITHOUT_LIB )
   #     list(APPEND LLDB_SYSTEM_LIBS atomic)

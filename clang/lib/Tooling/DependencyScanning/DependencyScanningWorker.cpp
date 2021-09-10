@@ -141,10 +141,10 @@ public:
       StringRef WorkingDirectory, DependencyConsumer &Consumer,
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
       ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings,
-      ScanningOutputFormat Format)
+      ScanningOutputFormat Format, llvm::Optional<StringRef> ModuleName = None)
       : WorkingDirectory(WorkingDirectory), Consumer(Consumer),
-        DepFS(std::move(DepFS)), PPSkipMappings(PPSkipMappings),
-        Format(Format) {}
+        DepFS(std::move(DepFS)), PPSkipMappings(PPSkipMappings), Format(Format),
+        ModuleName(ModuleName) {}
 
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
                      FileManager *FileMgr,
@@ -249,7 +249,13 @@ public:
     // the impact of strict context hashing.
     Compiler.getHeaderSearchOpts().ModulesStrictContextHash = true;
 
-    auto Action = std::make_unique<ReadPCHAndPreprocessAction>();
+    std::unique_ptr<FrontendAction> Action;
+
+    if (ModuleName.hasValue())
+      Action = std::make_unique<GetDependenciesByModuleNameAction>(*ModuleName);
+    else
+      Action = std::make_unique<ReadPCHAndPreprocessAction>();
+
     const bool Result = Compiler.ExecuteAction(*Action);
     if (!DepFS)
       FileMgr->clearStatCache();
@@ -262,6 +268,7 @@ private:
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
   ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings;
   ScanningOutputFormat Format;
+  llvm::Optional<StringRef> ModuleName;
 };
 
 } // end anonymous namespace
@@ -279,7 +286,12 @@ DependencyScanningWorker::DependencyScanningWorker(
   PCHContainerOps->registerWriter(
       std::make_unique<ObjectFilePCHContainerWriter>());
 
-  RealFS = llvm::vfs::createPhysicalFileSystem();
+  auto OverlayFS = llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
+      llvm::vfs::createPhysicalFileSystem());
+  InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  OverlayFS->pushOverlay(InMemoryFS);
+  RealFS = OverlayFS;
+
   if (Service.canSkipExcludedPPRanges())
     PPSkipMappings =
         std::make_unique<ExcludedPreprocessorDirectiveSkipMapping>();
@@ -306,20 +318,35 @@ static llvm::Error runWithDiags(
 }
 
 llvm::Error DependencyScanningWorker::computeDependencies(
-    const std::string &Input, StringRef WorkingDirectory,
-    const CompilationDatabase &CDB, DependencyConsumer &Consumer) {
+    StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
+    DependencyConsumer &Consumer, llvm::Optional<StringRef> ModuleName) {
+  // Reset what might have been modified in the previous worker invocation.
   RealFS->setCurrentWorkingDirectory(WorkingDirectory);
+  if (Files)
+    Files->setVirtualFileSystem(RealFS);
+
+  llvm::IntrusiveRefCntPtr<FileManager> CurrentFiles =
+      Files ? Files : new FileManager(FileSystemOptions(), RealFS);
+
+  Optional<std::vector<std::string>> ModifiedCommandLine;
+  if (ModuleName.hasValue()) {
+    ModifiedCommandLine = CommandLine;
+    InMemoryFS->addFile(*ModuleName, 0, llvm::MemoryBuffer::getMemBuffer(""));
+    ModifiedCommandLine->emplace_back(*ModuleName);
+  }
+
+  const std::vector<std::string> &FinalCommandLine =
+      ModifiedCommandLine ? *ModifiedCommandLine : CommandLine;
+
   return runWithDiags(DiagOpts.get(), [&](DiagnosticConsumer &DC) {
-    /// Create the tool that uses the underlying file system to ensure that any
-    /// file system requests that are made by the driver do not go through the
-    /// dependency scanning filesystem.
-    tooling::ClangTool Tool(CDB, Input, PCHContainerOps, RealFS, Files);
-    Tool.clearArgumentsAdjusters();
-    Tool.setRestoreWorkingDir(false);
-    Tool.setPrintErrorMessage(false);
-    Tool.setDiagnosticConsumer(&DC);
     DependencyScanningAction Action(WorkingDirectory, Consumer, DepFS,
-                                    PPSkipMappings.get(), Format);
-    return !Tool.run(&Action);
+                                    PPSkipMappings.get(), Format, ModuleName);
+    // Create an invocation that uses the underlying file system to ensure that
+    // any file system requests that are made by the driver do not go through
+    // the dependency scanning filesystem.
+    ToolInvocation Invocation(FinalCommandLine, &Action, CurrentFiles.get(),
+                              PCHContainerOps);
+    Invocation.setDiagnosticConsumer(&DC);
+    return Invocation.run();
   });
 }

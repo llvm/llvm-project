@@ -2675,7 +2675,7 @@ static bool EvalAndBitcastToAPInt(EvalInfo &Info, const Expr *E,
     QualType EltTy = VecTy->castAs<VectorType>()->getElementType();
     unsigned EltSize = Info.Ctx.getTypeSize(EltTy);
     bool BigEndian = Info.Ctx.getTargetInfo().isBigEndian();
-    Res = llvm::APInt::getNullValue(VecSize);
+    Res = llvm::APInt::getZero(VecSize);
     for (unsigned i = 0; i < SVal.getVectorLength(); i++) {
       APValue &Elt = SVal.getVectorElt(i);
       llvm::APInt EltAsInt;

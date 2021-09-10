@@ -1365,9 +1365,9 @@ func @conv3d_no_symbols(%in : memref<?x?x?xf32>, %filter : memref<?x?x?xf32>, %o
 //  CHECK-SAME: %[[arg0:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
 //  CHECK-SAME: %[[arg1:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
 //  CHECK-SAME: %[[arg2:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
-//       CHECK: %[[c2:.*]] = constant 2 : index
-//       CHECK: %[[c0:.*]] = constant 0 : index
-//       CHECK: %[[c1:.*]] = constant 1 : index
+//       CHECK-DAG: %[[c2:.*]] = constant 2 : index
+//       CHECK-DAG: %[[c0:.*]] = constant 0 : index
+//       CHECK-DAG: %[[c1:.*]] = constant 1 : index
 //       CHECK: %[[dim0:.*]] = memref.dim %[[arg1]], %[[c0]] : memref<?x?x?xf32>
 //       CHECK: %[[dim1:.*]] = memref.dim %[[arg1]], %[[c1]] : memref<?x?x?xf32>
 //       CHECK: %[[dim2:.*]] = memref.dim %[[arg1]], %[[c2]] : memref<?x?x?xf32>
@@ -1396,9 +1396,9 @@ func @conv3d_no_symbols(%in : memref<?x?x?xf32>, %filter : memref<?x?x?xf32>, %o
 //  CHECKPARALLEL-SAME: %[[arg0:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
 //  CHECKPARALLEL-SAME: %[[arg1:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
 //  CHECKPARALLEL-SAME: %[[arg2:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
-//       CHECKPARALLEL: %[[c2:.*]] = constant 2 : index
-//       CHECKPARALLEL: %[[c0:.*]] = constant 0 : index
-//       CHECKPARALLEL: %[[c1:.*]] = constant 1 : index
+//       CHECKPARALLEL-DAG: %[[c2:.*]] = constant 2 : index
+//       CHECKPARALLEL-DAG: %[[c0:.*]] = constant 0 : index
+//       CHECKPARALLEL-DAG: %[[c1:.*]] = constant 1 : index
 //       CHECKPARALLEL: %[[dim0:.*]] = memref.dim %[[arg1]], %[[c0]] : memref<?x?x?xf32>
 //       CHECKPARALLEL: %[[dim1:.*]] = memref.dim %[[arg1]], %[[c1]] : memref<?x?x?xf32>
 //       CHECKPARALLEL: %[[dim2:.*]] = memref.dim %[[arg1]], %[[c2]] : memref<?x?x?xf32>

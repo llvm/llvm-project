@@ -5,6 +5,7 @@
 
 ; PR20558
 
+; Load the stack guard for the second time, just in case the previous value gets spilled.
 define i32 @test_stack_guard_remat2() ssp {
 ; CHECK-LABEL: test_stack_guard_remat2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -17,7 +18,6 @@ define i32 @test_stack_guard_remat2() ssp {
 ; CHECK-NEXT:  Lloh0:
 ; CHECK-NEXT:    adrp x8, ___stack_chk_guard@GOTPAGE
 ; CHECK-NEXT:  Lloh1:
-; Load the stack guard for the second time, just in case the previous value gets spilled.
 ; CHECK-NEXT:    adrp x9, ___stack_chk_guard@GOTPAGE
 ; CHECK-NEXT:  Lloh2:
 ; CHECK-NEXT:    ldr x8, [x8, ___stack_chk_guard@GOTPAGEOFF]

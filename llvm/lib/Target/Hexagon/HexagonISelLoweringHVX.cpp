@@ -525,7 +525,7 @@ HexagonTargetLowering::buildHvxVectorReg(ArrayRef<SDValue> Values,
   if (IsSplat) {
     assert(SplatV.getNode());
     auto *IdxN = dyn_cast<ConstantSDNode>(SplatV.getNode());
-    if (IdxN && IdxN->isNullValue())
+    if (IdxN && IdxN->isZero())
       return getZero(dl, VecTy, DAG);
     MVT WordTy = MVT::getVectorVT(MVT::i32, HwLen/4);
     SDValue S = DAG.getNode(ISD::SPLAT_VECTOR, dl, WordTy, SplatV);
@@ -743,12 +743,12 @@ HexagonTargetLowering::buildHvxVectorPred(ArrayRef<SDValue> Values,
 
   auto IsTrue = [] (SDValue V) {
     if (const auto *N = dyn_cast<ConstantSDNode>(V.getNode()))
-      return !N->isNullValue();
+      return !N->isZero();
     return false;
   };
   auto IsFalse = [] (SDValue V) {
     if (const auto *N = dyn_cast<ConstantSDNode>(V.getNode()))
-      return N->isNullValue();
+      return N->isZero();
     return false;
   };
 
@@ -1065,7 +1065,7 @@ HexagonTargetLowering::insertHvxSubvectorReg(SDValue VecV, SDValue SubV,
   assert(SubTy.getSizeInBits() == 32 || SubTy.getSizeInBits() == 64);
   // Convert IdxV to be index in bytes.
   auto *IdxN = dyn_cast<ConstantSDNode>(IdxV.getNode());
-  if (!IdxN || !IdxN->isNullValue()) {
+  if (!IdxN || !IdxN->isZero()) {
     IdxV = DAG.getNode(ISD::MUL, dl, MVT::i32, IdxV,
                        DAG.getConstant(ElemWidth/8, dl, MVT::i32));
     SingleV = DAG.getNode(HexagonISD::VROR, dl, SingleTy, SingleV, IdxV);
@@ -1088,7 +1088,7 @@ HexagonTargetLowering::insertHvxSubvectorReg(SDValue VecV, SDValue SubV,
     RolBase = HwLen-4;
   }
   // If the vector wasn't ror'ed, don't ror it back.
-  if (RolBase != 4 || !IdxN || !IdxN->isNullValue()) {
+  if (RolBase != 4 || !IdxN || !IdxN->isZero()) {
     SDValue RolV = DAG.getNode(ISD::SUB, dl, MVT::i32,
                                DAG.getConstant(RolBase, dl, MVT::i32), IdxV);
     SingleV = DAG.getNode(HexagonISD::VROR, dl, SingleTy, SingleV, RolV);
@@ -1125,7 +1125,7 @@ HexagonTargetLowering::insertHvxSubvectorPred(SDValue VecV, SDValue SubV,
   SDValue ByteIdx;
 
   auto *IdxN = dyn_cast<ConstantSDNode>(IdxV.getNode());
-  if (!IdxN || !IdxN->isNullValue()) {
+  if (!IdxN || !IdxN->isZero()) {
     ByteIdx = DAG.getNode(ISD::MUL, dl, MVT::i32, IdxV,
                           DAG.getConstant(BitBytes, dl, MVT::i32));
     ByteVec = DAG.getNode(HexagonISD::VROR, dl, ByteTy, ByteVec, ByteIdx);
@@ -1140,7 +1140,7 @@ HexagonTargetLowering::insertHvxSubvectorPred(SDValue VecV, SDValue SubV,
                        {DAG.getConstant(BlockLen, dl, MVT::i32)}, DAG);
   ByteVec = getInstr(Hexagon::V6_vmux, dl, ByteTy, {Q, ByteSub, ByteVec}, DAG);
   // Rotate ByteVec back, and convert to a vector predicate.
-  if (!IdxN || !IdxN->isNullValue()) {
+  if (!IdxN || !IdxN->isZero()) {
     SDValue HwLenV = DAG.getConstant(HwLen, dl, MVT::i32);
     SDValue ByteXdi = DAG.getNode(ISD::SUB, dl, MVT::i32, HwLenV, ByteIdx);
     ByteVec = DAG.getNode(HexagonISD::VROR, dl, ByteTy, ByteVec, ByteXdi);
@@ -2255,8 +2255,8 @@ HexagonTargetLowering::PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
     case HexagonISD::V2Q:
       if (Ops[0].getOpcode() == ISD::SPLAT_VECTOR) {
         if (const auto *C = dyn_cast<ConstantSDNode>(Ops[0].getOperand(0)))
-          return C->isNullValue() ? DAG.getNode(HexagonISD::QFALSE, dl, ty(Op))
-                                  : DAG.getNode(HexagonISD::QTRUE, dl, ty(Op));
+          return C->isZero() ? DAG.getNode(HexagonISD::QFALSE, dl, ty(Op))
+                             : DAG.getNode(HexagonISD::QTRUE, dl, ty(Op));
       }
       break;
     case HexagonISD::Q2V:

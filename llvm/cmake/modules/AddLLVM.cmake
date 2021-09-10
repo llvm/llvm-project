@@ -1638,7 +1638,7 @@ function(configure_lit_site_cfg site_in site_out)
     set(ENABLE_SHARED "0")
   endif()
 
-  if(LLVM_ENABLE_ASSERTIONS AND NOT MSVC_IDE)
+  if(LLVM_ENABLE_ASSERTIONS)
     set(ENABLE_ASSERTIONS "1")
   else()
     set(ENABLE_ASSERTIONS "0")

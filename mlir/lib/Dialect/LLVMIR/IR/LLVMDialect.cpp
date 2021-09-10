@@ -1410,8 +1410,11 @@ void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
 
 static void printGlobalOp(OpAsmPrinter &p, GlobalOp op) {
   p << ' ' << stringifyLinkage(op.linkage()) << ' ';
-  if (op.unnamed_addr())
-    p << stringifyUnnamedAddr(*op.unnamed_addr()) << ' ';
+  if (auto unnamedAddr = op.unnamed_addr()) {
+    StringRef str = stringifyUnnamedAddr(*unnamedAddr);
+    if (!str.empty())
+      p << str << ' ';
+  }
   if (op.constant())
     p << "constant ";
   p.printSymbolName(op.sym_name());

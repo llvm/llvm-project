@@ -76,8 +76,8 @@ registers:
   - { id: 0, class: gpr }
 
 # CHECK:  body:
-# IOS: %0:gpr64 = MOVaddr target-flags(aarch64-page) @var_local, target-flags(aarch64-pageoff, aarch64-nc) @var_local
-# LINUX-PIC: %0:gpr64 = LOADgot target-flags(aarch64-got) @var_local
+# IOS: %0:gpr64common = MOVaddr target-flags(aarch64-page) @var_local, target-flags(aarch64-pageoff, aarch64-nc) @var_local
+# LINUX-PIC: %0:gpr64common = LOADgot target-flags(aarch64-got) @var_local
 body:             |
   bb.0:
     %0(p0) = G_GLOBAL_VALUE @var_local
@@ -93,8 +93,8 @@ registers:
   - { id: 0, class: gpr }
 
 # CHECK:  body:
-# IOS: %0:gpr64 = LOADgot target-flags(aarch64-got) @var_got
-# LINUX-PIC: %0:gpr64 = LOADgot target-flags(aarch64-got) @var_got
+# IOS: %0:gpr64common = LOADgot target-flags(aarch64-got) @var_got
+# LINUX-PIC: %0:gpr64common = LOADgot target-flags(aarch64-got) @var_got
 body:             |
   bb.0:
     %0(p0) = G_GLOBAL_VALUE @var_got

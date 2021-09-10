@@ -282,7 +282,7 @@ static APInt findDemandedEltsBySingleUser(Value *V, Instruction *UserInstr) {
   unsigned VWidth = cast<FixedVectorType>(V->getType())->getNumElements();
 
   // Conservatively assume that all elements are needed.
-  APInt UsedElts(APInt::getAllOnesValue(VWidth));
+  APInt UsedElts(APInt::getAllOnes(VWidth));
 
   switch (UserInstr->getOpcode()) {
   case Instruction::ExtractElement: {
@@ -330,11 +330,11 @@ static APInt findDemandedEltsByAllUsers(Value *V) {
     if (Instruction *I = dyn_cast<Instruction>(U.getUser())) {
       UnionUsedElts |= findDemandedEltsBySingleUser(V, I);
     } else {
-      UnionUsedElts = APInt::getAllOnesValue(VWidth);
+      UnionUsedElts = APInt::getAllOnes(VWidth);
       break;
     }
 
-    if (UnionUsedElts.isAllOnesValue())
+    if (UnionUsedElts.isAllOnes())
       break;
   }
 
@@ -396,7 +396,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
         // If the input vector has multiple uses, simplify it based on a union
         // of all elements used.
         APInt DemandedElts = findDemandedEltsByAllUsers(SrcVec);
-        if (!DemandedElts.isAllOnesValue()) {
+        if (!DemandedElts.isAllOnes()) {
           APInt UndefElts(NumElts, 0);
           if (Value *V = SimplifyDemandedVectorElts(
                   SrcVec, DemandedElts, UndefElts, 0 /* Depth */,
@@ -1486,7 +1486,7 @@ Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
   if (auto VecTy = dyn_cast<FixedVectorType>(VecOp->getType())) {
     unsigned VWidth = VecTy->getNumElements();
     APInt UndefElts(VWidth, 0);
-    APInt AllOnesEltMask(APInt::getAllOnesValue(VWidth));
+    APInt AllOnesEltMask(APInt::getAllOnes(VWidth));
     if (Value *V = SimplifyDemandedVectorElts(&IE, AllOnesEltMask, UndefElts)) {
       if (V != &IE)
         return replaceInstUsesWith(IE, V);
@@ -2435,7 +2435,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     return I;
 
   APInt UndefElts(VWidth, 0);
-  APInt AllOnesEltMask(APInt::getAllOnesValue(VWidth));
+  APInt AllOnesEltMask(APInt::getAllOnes(VWidth));
   if (Value *V = SimplifyDemandedVectorElts(&SVI, AllOnesEltMask, UndefElts)) {
     if (V != &SVI)
       return replaceInstUsesWith(SVI, V);

@@ -97,7 +97,7 @@ __mu_expand(_Ti& __ti, tuple<_Uj...>& __uj, __tuple_indices<_Indx...>)
 
 template <class _Ti, class ..._Uj>
 inline _LIBCPP_INLINE_VISIBILITY
-typename _EnableIf
+typename __enable_if_t
 <
     is_bind_expression<_Ti>::value,
     __invoke_of<_Ti&, _Uj...>
