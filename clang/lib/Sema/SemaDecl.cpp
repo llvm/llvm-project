@@ -15146,6 +15146,30 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
       else
         FD->addAttr(CUDAHostAttr::CreateImplicit(Context, FD->getLocation()));
     }
+
+    // Add known guaranteed alignment for allocation functions.
+    switch (BuiltinID) {
+    case Builtin::BIaligned_alloc:
+    case Builtin::BIcalloc:
+    case Builtin::BImalloc:
+    case Builtin::BImemalign:
+    case Builtin::BIrealloc:
+    case Builtin::BIstrdup:
+    case Builtin::BIstrndup: {
+      if (!FD->hasAttr<AssumeAlignedAttr>()) {
+        unsigned NewAlign = Context.getTargetInfo().getNewAlign() /
+                            Context.getTargetInfo().getCharWidth();
+        IntegerLiteral *Alignment = IntegerLiteral::Create(
+            Context, Context.MakeIntValue(NewAlign, Context.UnsignedIntTy),
+            Context.UnsignedIntTy, FD->getLocation());
+        FD->addAttr(AssumeAlignedAttr::CreateImplicit(
+            Context, Alignment, /*Offset=*/nullptr, FD->getLocation()));
+      }
+      break;
+    }
+    default:
+      break;
+    }
   }
 
   AddKnownFunctionAttributesForReplaceableGlobalAllocationFunction(FD);
