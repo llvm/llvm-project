@@ -513,10 +513,8 @@ int main(int argc, const char **argv) {
   for (unsigned I = 0; I < Pool.getThreadCount(); ++I)
     WorkerTools.push_back(std::make_unique<DependencyScanningTool>(Service));
 
-  std::vector<SingleCommandCompilationDatabase> Inputs;
-  for (tooling::CompileCommand Cmd :
-       AdjustingCompilations->getAllCompileCommands())
-    Inputs.emplace_back(Cmd);
+  std::vector<tooling::CompileCommand> Inputs =
+      AdjustingCompilations->getAllCompileCommands();
 
   std::atomic<bool> HadErrors(false);
   FullDeps FD;
@@ -532,7 +530,7 @@ int main(int argc, const char **argv) {
                 &DependencyOS, &Errs]() {
       llvm::StringSet<> AlreadySeenModules;
       while (true) {
-        const SingleCommandCompilationDatabase *Input;
+        const tooling::CompileCommand *Input;
         std::string Filename;
         std::string CWD;
         size_t LocalIndex;
@@ -543,14 +541,13 @@ int main(int argc, const char **argv) {
             return;
           LocalIndex = Index;
           Input = &Inputs[Index++];
-          tooling::CompileCommand Cmd = Input->getAllCompileCommands()[0];
-          Filename = std::move(Cmd.Filename);
-          CWD = std::move(Cmd.Directory);
+          Filename = std::move(Input->Filename);
+          CWD = std::move(Input->Directory);
         }
         // Run the tool on it.
         if (Format == ScanningOutputFormat::Make) {
           auto MaybeFile = WorkerTools[I]->getDependencyFile(
-              *Input, CWD,
+              Input->CommandLine, CWD,
               ModuleName.empty()
                   ? None
                   : llvm::Optional<StringRef>(ModuleName.c_str()));
@@ -559,7 +556,7 @@ int main(int argc, const char **argv) {
             HadErrors = true;
         } else {
           auto MaybeFullDeps = WorkerTools[I]->getFullDependencies(
-              *Input, CWD, AlreadySeenModules,
+              Input->CommandLine, CWD, AlreadySeenModules,
               ModuleName.empty()
                   ? None
                   : llvm::Optional<StringRef>(ModuleName.c_str()));
