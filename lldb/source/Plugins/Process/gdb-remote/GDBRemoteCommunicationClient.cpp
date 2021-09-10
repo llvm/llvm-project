@@ -3062,6 +3062,17 @@ GDBRemoteCommunicationClient::SetFilePermissions(const FileSpec &file_spec,
   return Status(response.GetHexMaxU32(false, UINT32_MAX), eErrorTypePOSIX);
 }
 
+static int gdb_errno_to_system(int err) {
+  switch (err) {
+#define HANDLE_ERRNO(name, value)                                              \
+  case GDB_##name:                                                             \
+    return name;
+#include "Plugins/Process/gdb-remote/GDBRemoteErrno.def"
+  default:
+    return -1;
+  }
+}
+
 static uint64_t ParseHostIOPacketResponse(StringExtractorGDBRemote &response,
                                           uint64_t fail_result, Status &error) {
   response.SetFilePos(0);
@@ -3071,8 +3082,8 @@ static uint64_t ParseHostIOPacketResponse(StringExtractorGDBRemote &response,
   if (result == -2)
     return fail_result;
   if (response.GetChar() == ',') {
-    int result_errno = response.GetS32(-2, 16);
-    if (result_errno != -2)
+    int result_errno = gdb_errno_to_system(response.GetS32(-1, 16));
+    if (result_errno != -1)
       error.SetError(result_errno, eErrorTypePOSIX);
     else
       error.SetError(-1, eErrorTypeGeneric);
@@ -3225,7 +3236,7 @@ GDBRemoteCommunicationClient::GetFilePermissions(const FileSpec &file_spec,
         const uint32_t mode = response.GetS32(-1, 16);
         if (static_cast<int32_t>(mode) == -1) {
           if (response.GetChar() == ',') {
-            int response_errno = response.GetS32(-1, 16);
+            int response_errno = gdb_errno_to_system(response.GetS32(-1, 16));
             if (response_errno > 0)
               error.SetError(response_errno, lldb::eErrorTypePOSIX);
             else
@@ -3266,7 +3277,7 @@ uint64_t GDBRemoteCommunicationClient::ReadFile(lldb::user_id_t fd,
     if (retcode == -1) {
       error.SetErrorToGenericError();
       if (response.GetChar() == ',') {
-        int response_errno = response.GetS32(-1, 16);
+        int response_errno = gdb_errno_to_system(response.GetS32(-1, 16));
         if (response_errno > 0)
           error.SetError(response_errno, lldb::eErrorTypePOSIX);
       }
@@ -3309,7 +3320,7 @@ uint64_t GDBRemoteCommunicationClient::WriteFile(lldb::user_id_t fd,
     if (bytes_written == -1) {
       error.SetErrorToGenericError();
       if (response.GetChar() == ',') {
-        int response_errno = response.GetS32(-1, 16);
+        int response_errno = gdb_errno_to_system(response.GetS32(-1, 16));
         if (response_errno > 0)
           error.SetError(response_errno, lldb::eErrorTypePOSIX);
       }
@@ -3341,7 +3352,7 @@ Status GDBRemoteCommunicationClient::CreateSymlink(const FileSpec &src,
       if (result != 0) {
         error.SetErrorToGenericError();
         if (response.GetChar() == ',') {
-          int response_errno = response.GetS32(-1, 16);
+          int response_errno = gdb_errno_to_system(response.GetS32(-1, 16));
           if (response_errno > 0)
             error.SetError(response_errno, lldb::eErrorTypePOSIX);
         }
@@ -3372,7 +3383,7 @@ Status GDBRemoteCommunicationClient::Unlink(const FileSpec &file_spec) {
       if (result != 0) {
         error.SetErrorToGenericError();
         if (response.GetChar() == ',') {
-          int response_errno = response.GetS32(-1, 16);
+          int response_errno = gdb_errno_to_system(response.GetS32(-1, 16));
           if (response_errno > 0)
             error.SetError(response_errno, lldb::eErrorTypePOSIX);
         }
