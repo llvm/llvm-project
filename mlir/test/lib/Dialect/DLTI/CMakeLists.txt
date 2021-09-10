@@ -10,5 +10,8 @@ add_mlir_library(MLIRDLTITestPasses
   MLIRTestDialect
   )
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../Test)
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/../Test)
+target_include_directories(MLIRDLTITestPasses
+  PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/../Test
+  ${CMAKE_CURRENT_BINARY_DIR}/../Test
+  )

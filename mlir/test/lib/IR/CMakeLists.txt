@@ -21,5 +21,9 @@ add_mlir_library(MLIRTestIR
   MLIRPass
   MLIRTestDialect
   )
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../Dialect/Test)
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/../Dialect/Test)
+
+target_include_directories(MLIRTestIR
+  PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/../Dialect/Test
+  ${CMAKE_CURRENT_BINARY_DIR}/../Dialect/Test
+  )
