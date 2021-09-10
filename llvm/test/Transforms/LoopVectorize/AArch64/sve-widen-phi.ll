@@ -131,6 +131,7 @@ define i32 @pointer_iv_mixed(i32* noalias %a, i32** noalias %b, i64 %n) #0 {
 ; CHECK-NEXT:  %[[TMP2:.*]] = shufflevector <vscale x 2 x i64> %[[TMP1]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:  %[[VECIND1:.*]] = add <vscale x 2 x i64> %[[TMP2]], %[[STEPVEC]]
 ; CHECK-NEXT:  %[[APTRS1:.*]] = getelementptr i32, i32* %a, <vscale x 2 x i64> %[[VECIND1]]
+; CHECK-NEXT:  %[[GEPA1:.*]] = getelementptr i32, i32* %a, i64 %[[IDX]]
 ; CHECK-NEXT:  %[[VSCALE64:.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:  %[[VSCALE64X2:.*]] = shl i64 %[[VSCALE64]], 1
 ; CHECK-NEXT:  %[[TMP3:.*]] = insertelement <vscale x 2 x i64> poison, i64 %[[VSCALE64X2]], i32 0
@@ -139,6 +140,10 @@ define i32 @pointer_iv_mixed(i32* noalias %a, i32** noalias %b, i64 %n) #0 {
 ; CHECK-NEXT:  %[[VECIND2:.*]] = add <vscale x 2 x i64> %[[TMP2]], %[[TMP5]]
 ; CHECK-NEXT:  %[[APTRS2:.*]] = getelementptr i32, i32* %a, <vscale x 2 x i64> %[[VECIND2]]
 ; CHECK-NEXT:  %[[GEPB1:.*]] = getelementptr i32*, i32** %b, i64 %[[IDX]]
+; The following checks that there is no extractelement after
+; vectorization when the stepvector has multiple uses, which demonstrates
+; the removal of a redundant fmov instruction in the generated asm code.
+; CHECK-NOT:   %[[EXTRACT:.*]] = extractelement <vscale x 2 x i32*> [[APTRS1]], i32 0
 ; CHECK:       %[[BPTR1:.*]] = bitcast i32** %[[GEPB1]] to <vscale x 2 x i32*>*
 ; CHECK-NEXT:  store <vscale x 2 x i32*> %[[APTRS1]], <vscale x 2 x i32*>* %[[BPTR1]], align 8
 ; CHECK:       %[[VSCALE32:.*]] = call i32 @llvm.vscale.i32()
