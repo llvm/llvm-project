@@ -318,9 +318,8 @@ static llvm::Error runWithDiags(
 }
 
 llvm::Error DependencyScanningWorker::computeDependencies(
-    const std::string &Input, StringRef WorkingDirectory,
-    const CompilationDatabase &CDB, DependencyConsumer &Consumer,
-    llvm::Optional<StringRef> ModuleName) {
+    StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
+    DependencyConsumer &Consumer, llvm::Optional<StringRef> ModuleName) {
   // Reset what might have been modified in the previous worker invocation.
   RealFS->setCurrentWorkingDirectory(WorkingDirectory);
   if (Files)
@@ -328,11 +327,6 @@ llvm::Error DependencyScanningWorker::computeDependencies(
 
   llvm::IntrusiveRefCntPtr<FileManager> CurrentFiles =
       Files ? Files : new FileManager(FileSystemOptions(), RealFS);
-
-  // FIXME: Avoid this copy.
-  std::vector<CompileCommand> CompileCommands = CDB.getCompileCommands(Input);
-  const std::vector<std::string> &CommandLine =
-      CompileCommands.front().CommandLine;
 
   Optional<std::vector<std::string>> ModifiedCommandLine;
   if (ModuleName.hasValue()) {
@@ -355,15 +349,4 @@ llvm::Error DependencyScanningWorker::computeDependencies(
     Invocation.setDiagnosticConsumer(&DC);
     return Invocation.run();
   });
-}
-
-llvm::Error DependencyScanningWorker::computeDependenciesForClangInvocation(
-    StringRef WorkingDirectory, ArrayRef<std::string> Arguments,
-    DependencyConsumer &Consumer, llvm::Optional<StringRef> ModuleName) {
-  std::string Input("dependency-scanner-fake-input-file");
-  StringRef Output("dependency-scanner-fake-output-file");
-  SingleCommandCompilationDatabase CDB(
-      CompileCommand(WorkingDirectory, Input, Arguments, Output));
-  return computeDependencies(Input, WorkingDirectory, CDB, Consumer,
-                             ModuleName);
 }

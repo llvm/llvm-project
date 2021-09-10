@@ -110,11 +110,13 @@ llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
   // behavior.
   assert(Compilations.getAllCompileCommands().size() == 1 &&
          "Expected a compilation database with a single command!");
-  std::string Input = Compilations.getAllCompileCommands().front().Filename;
+  // FIXME: Avoid this copy.
+  std::vector<std::string> CommandLine =
+      Compilations.getAllCompileCommands().front().CommandLine;
 
   MakeDependencyPrinterConsumer Consumer;
-  auto Result = Worker.computeDependencies(Input, CWD, Compilations, Consumer,
-                                           ModuleName);
+  auto Result =
+      Worker.computeDependencies(CWD, CommandLine, Consumer, ModuleName);
   if (Result)
     return std::move(Result);
   std::string Output;
@@ -196,11 +198,13 @@ DependencyScanningTool::getFullDependencies(
   // behavior.
   assert(Compilations.getAllCompileCommands().size() == 1 &&
          "Expected a compilation database with a single command!");
-  std::string Input = Compilations.getAllCompileCommands().front().Filename;
+  // FIXME: Avoid this copy.
+  std::vector<std::string> CommandLine =
+      Compilations.getAllCompileCommands().front().CommandLine;
 
   FullDependencyPrinterConsumer Consumer(AlreadySeen);
-  llvm::Error Result = Worker.computeDependencies(Input, CWD, Compilations,
-                                                  Consumer, ModuleName);
+  llvm::Error Result =
+      Worker.computeDependencies(CWD, CommandLine, Consumer, ModuleName);
   if (Result)
     return std::move(Result);
   return Consumer.getFullDependencies();
