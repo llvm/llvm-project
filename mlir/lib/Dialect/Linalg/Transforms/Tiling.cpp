@@ -227,9 +227,9 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
   // 2. Create the tiled loops.
   LinalgOp res = op;
   SmallVector<Value, 4> ivs, tensorResults;
-  auto tiledLoopBodyBuilder = [&](OpBuilder &b, Location loc,
-                                  ValueRange localIvs,
-                                  ValueRange iterArgs) -> scf::ValueVector {
+  auto tiledLoopBodyBuilder =
+      [&](OpBuilder &b, Location loc, ValueRange localIvs,
+          ValueRange operandValuesToUse) -> scf::ValueVector {
     ivs.assign(localIvs.begin(), localIvs.end());
 
     // When an `interchangeVector` is present, it has been applied to the
@@ -241,20 +241,16 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
     else
       interchangedIvs.assign(ivs.begin(), ivs.end());
 
-    assert(op.getOutputTensorOperands().size() == iterArgs.size() &&
-           "num output tensors must match number of loop iter arguments");
-
-    SmallVector<Value> operands = op.getInputOperands();
-    SmallVector<Value> outputBuffers = op.getOutputBufferOperands();
-    // TODO: thanks to simplifying assumption we do not need to worry about
-    // order of output buffers and tensors: there is only ever one kind.
-    assert(outputBuffers.empty() || iterArgs.empty());
-    operands.append(outputBuffers.begin(), outputBuffers.end());
-    operands.append(iterArgs.begin(), iterArgs.end());
+    // Tile the `operandValuesToUse` that either match the `op` operands
+    // themselves or the tile loop arguments forwarding them.
+    assert(operandValuesToUse.size() ==
+               static_cast<size_t>(op.getNumInputsAndOutputs()) &&
+           "expect the number of operands and inputs and outputs to match");
+    SmallVector<Value> valuesToTile = operandValuesToUse;
     auto sizeBounds =
         applyMapToValues(b, loc, shapeSizesToLoopsMap, allShapeSizes);
     SmallVector<Value, 4> tiledOperands = makeTiledShapes(
-        b, loc, op, operands, interchangedIvs, tileSizes, sizeBounds);
+        b, loc, op, valuesToTile, interchangedIvs, tileSizes, sizeBounds);
 
     // TODO: use an interface/adaptor to avoid leaking position in
     // `tiledOperands`.

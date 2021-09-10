@@ -24,11 +24,6 @@
 int main(int, char**) {
     std::wcerr << L"1234";
     assert(std::wcerr.flags() & std::ios_base::unitbuf);
-
-#ifdef _LIBCPP_HAS_NO_STDOUT
-    assert(std::wcerr.tie() == NULL);
-#else
     assert(std::wcerr.tie() == &std::wcout);
-#endif
     return 0;
 }

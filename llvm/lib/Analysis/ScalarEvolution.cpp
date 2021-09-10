@@ -4127,6 +4127,8 @@ static const SCEV *MatchNotExpr(const SCEV *Expr) {
 
 /// Return a SCEV corresponding to ~V = -1-V
 const SCEV *ScalarEvolution::getNotSCEV(const SCEV *V) {
+  assert(!V->getType()->isPointerTy() && "Can't negate pointer");
+
   if (const SCEVConstant *VC = dyn_cast<SCEVConstant>(V))
     return getConstant(
                 cast<ConstantInt>(ConstantExpr::getNot(VC->getValue())));
@@ -10672,15 +10674,21 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
     if (!isa<SCEVConstant>(FoundRHS) && !isa<SCEVAddRecExpr>(FoundLHS))
       return isImpliedCondOperands(Pred, LHS, RHS, FoundRHS, FoundLHS, Context);
 
-    // Don't try to getNotSCEV pointers.
-    if (LHS->getType()->isPointerTy() || FoundLHS->getType()->isPointerTy())
-      return false;
+    // There's no clear preference between forms 3. and 4., try both.  Avoid
+    // forming getNotSCEV of pointer values as the resulting subtract is
+    // not legal.
+    if (!LHS->getType()->isPointerTy() && !RHS->getType()->isPointerTy() &&
+        isImpliedCondOperands(FoundPred, getNotSCEV(LHS), getNotSCEV(RHS),
+                              FoundLHS, FoundRHS, Context))
+      return true;
 
-    // There's no clear preference between forms 3. and 4., try both.
-    return isImpliedCondOperands(FoundPred, getNotSCEV(LHS), getNotSCEV(RHS),
-                                 FoundLHS, FoundRHS, Context) ||
-           isImpliedCondOperands(Pred, LHS, RHS, getNotSCEV(FoundLHS),
-                                 getNotSCEV(FoundRHS), Context);
+    if (!FoundLHS->getType()->isPointerTy() &&
+        !FoundRHS->getType()->isPointerTy() &&
+        isImpliedCondOperands(Pred, LHS, RHS, getNotSCEV(FoundLHS),
+                              getNotSCEV(FoundRHS), Context))
+      return true;
+
+    return false;
   }
 
   // Unsigned comparison is the same as signed comparison when both the operands
@@ -11539,6 +11547,12 @@ const SCEV *ScalarEvolution::computeMaxBECountForLT(const SCEV *Start,
   if (IsSigned && BitWidth == 1)
     return getZero(Stride->getType());
 
+  // This code has only been closely audited for negative strides in the
+  // unsigned comparison case, it may be correct for signed comparison, but
+  // that needs to be established.
+  assert((!IsSigned || !isKnownNonPositive(Stride)) &&
+         "Stride is expected strictly positive for signed case!");
+
   // Calculate the maximum backedge count based on the range of values
   // permitted by Start, End, and Stride.
   APInt MinStart =
@@ -11701,20 +11715,15 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     // The positive stride case is the same as isKnownPositive(Stride) returning
     // true (original behavior of the function).
     //
-    // We want to make sure that the stride is truly unknown as there are edge
-    // cases where ScalarEvolution propagates no wrap flags to the
-    // post-increment/decrement IV even though the increment/decrement operation
-    // itself is wrapping. The computed backedge taken count may be wrong in
-    // such cases. This is prevented by checking that the stride is not known to
-    // be either positive or non-positive. For example, no wrap flags are
-    // propagated to the post-increment IV of this loop with a trip count of 2 -
-    //
-    // unsigned char i;
-    // for(i=127; i<128; i+=129)
-    //   A[i] = i;
-    //
-    if (PredicatedIV || !NoWrap || isKnownNonPositive(Stride) ||
-        !loopIsFiniteByAssumption(L) || !loopHasNoAbnormalExits(L))
+    if (PredicatedIV || !NoWrap || !loopIsFiniteByAssumption(L) ||
+        !loopHasNoAbnormalExits(L))
+      return getCouldNotCompute();
+
+    // This bailout is protecting the logic in computeMaxBECountForLT which
+    // has not yet been sufficiently auditted or tested with negative strides.
+    // We used to filter out all known-non-positive cases here, we're in the
+    // process of being less restrictive bit by bit.
+    if (IsSigned && isKnownNonPositive(Stride))
       return getCouldNotCompute();
 
     if (!isKnownNonZero(Stride)) {
@@ -11778,7 +11787,9 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   const SCEV *Start = IV->getStart();
 
   // Preserve pointer-typed Start/RHS to pass to isLoopEntryGuardedByCond.
-  // Use integer-typed versions for actual computation.
+  // If we convert to integers, isLoopEntryGuardedByCond will miss some cases.
+  // Use integer-typed versions for actual computation; we can't subtract
+  // pointers in general.
   const SCEV *OrigStart = Start;
   const SCEV *OrigRHS = RHS;
   if (Start->getType()->isPointerTy()) {
@@ -11809,10 +11820,10 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   // is End and so the result is as above, and if not max(End,Start) is Start
   // so we get a backedge count of zero.
   const SCEV *BECount = nullptr;
-  auto *StartMinusStride = getMinusSCEV(OrigStart, Stride);
+  auto *OrigStartMinusStride = getMinusSCEV(OrigStart, Stride);
   // Can we prove (max(RHS,Start) > Start - Stride?
-  if (isLoopEntryGuardedByCond(L, Cond, StartMinusStride, Start) &&
-      isLoopEntryGuardedByCond(L, Cond, StartMinusStride, RHS)) {
+  if (isLoopEntryGuardedByCond(L, Cond, OrigStartMinusStride, OrigStart) &&
+      isLoopEntryGuardedByCond(L, Cond, OrigStartMinusStride, OrigRHS)) {
     // In this case, we can use a refined formula for computing backedge taken
     // count.  The general formula remains:
     //   "End-Start /uceiling Stride" where "End = max(RHS,Start)"
@@ -11833,10 +11844,8 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     //   Our preconditions trivially imply no overflow in that form.
     const SCEV *MinusOne = getMinusOne(Stride->getType());
     const SCEV *Numerator =
-        getMinusSCEV(getAddExpr(RHS, MinusOne), StartMinusStride);
-    if (!isa<SCEVCouldNotCompute>(Numerator)) {
-      BECount = getUDivExpr(Numerator, Stride);
-    }
+        getMinusSCEV(getAddExpr(RHS, MinusOne), getMinusSCEV(Start, Stride));
+    BECount = getUDivExpr(Numerator, Stride);
   }
 
   const SCEV *BECountIfBackedgeTaken = nullptr;

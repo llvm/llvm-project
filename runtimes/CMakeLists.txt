@@ -61,7 +61,7 @@ endif()
 # If building standalone by pointing CMake at this runtimes directory,
 # LLVM_BINARY_DIR isn't set, find_package(LLVM) will fail and these
 # intermediate paths are unset.
-if (LLVM_BINARY_DIR STREQUAL "")
+if (NOT LLVM_BINARY_DIR)
   set(LLVM_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 if (NOT LLVM_FOUND)

@@ -2308,7 +2308,7 @@ static bool isZerosVector(const SDNode *N) {
   auto Opnd0 = N->getOperand(0);
   auto *CINT = dyn_cast<ConstantSDNode>(Opnd0);
   auto *CFP = dyn_cast<ConstantFPSDNode>(Opnd0);
-  return (CINT && CINT->isNullValue()) || (CFP && CFP->isZero());
+  return (CINT && CINT->isZero()) || (CFP && CFP->isZero());
 }
 
 /// changeIntCCToAArch64CC - Convert a DAG integer condition code to an AArch64
@@ -2990,9 +2990,9 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
       }
     }
 
-    if (!Cmp && (RHSC->isNullValue() || RHSC->isOne())) {
+    if (!Cmp && (RHSC->isZero() || RHSC->isOne())) {
       if ((Cmp = emitConjunction(DAG, LHS, AArch64CC))) {
-        if ((CC == ISD::SETNE) ^ RHSC->isNullValue())
+        if ((CC == ISD::SETNE) ^ RHSC->isZero())
           AArch64CC = AArch64CC::getInvertedCondCode(AArch64CC);
       }
     }
@@ -3157,14 +3157,14 @@ SDValue AArch64TargetLowering::LowerXOR(SDValue Op, SelectionDAG &DAG) const {
 
   // We can commute the SELECT_CC by inverting the condition.  This
   // might be needed to make this fit into a CSINV pattern.
-  if (CTVal->isAllOnesValue() && CFVal->isNullValue()) {
+  if (CTVal->isAllOnes() && CFVal->isZero()) {
     std::swap(TVal, FVal);
     std::swap(CTVal, CFVal);
     CC = ISD::getSetCCInverse(CC, LHS.getValueType());
   }
 
   // If the constants line up, perform the transform!
-  if (CTVal->isNullValue() && CFVal->isAllOnesValue()) {
+  if (CTVal->isZero() && CFVal->isAllOnes()) {
     SDValue CCVal;
     SDValue Cmp = getAArch64Cmp(LHS, RHS, CC, CCVal, DAG, dl);
 
@@ -7433,8 +7433,8 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(ISD::CondCode CC, SDValue LHS,
     // Check for sign pattern (SELECT_CC setgt, iN lhs, -1, 1, -1) and transform
     // into (OR (ASR lhs, N-1), 1), which requires less instructions for the
     // supported types.
-    if (CC == ISD::SETGT && RHSC && RHSC->isAllOnesValue() && CTVal && CFVal &&
-        CTVal->isOne() && CFVal->isAllOnesValue() &&
+    if (CC == ISD::SETGT && RHSC && RHSC->isAllOnes() && CTVal && CFVal &&
+        CTVal->isOne() && CFVal->isAllOnes() &&
         LHS.getValueType() == TVal.getValueType()) {
       EVT VT = LHS.getValueType();
       SDValue Shift =
@@ -7447,11 +7447,11 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(ISD::CondCode CC, SDValue LHS,
 
     // If both the TVal and the FVal are constants, see if we can swap them in
     // order to for a CSINV or CSINC out of them.
-    if (CTVal && CFVal && CTVal->isAllOnesValue() && CFVal->isNullValue()) {
+    if (CTVal && CFVal && CTVal->isAllOnes() && CFVal->isZero()) {
       std::swap(TVal, FVal);
       std::swap(CTVal, CFVal);
       CC = ISD::getSetCCInverse(CC, LHS.getValueType());
-    } else if (CTVal && CFVal && CTVal->isOne() && CFVal->isNullValue()) {
+    } else if (CTVal && CFVal && CTVal->isOne() && CFVal->isZero()) {
       std::swap(TVal, FVal);
       std::swap(CTVal, CFVal);
       CC = ISD::getSetCCInverse(CC, LHS.getValueType());
@@ -7530,7 +7530,7 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(ISD::CondCode CC, SDValue LHS,
     // FVal, respectively.
     ConstantSDNode *RHSVal = dyn_cast<ConstantSDNode>(RHS);
     if (Opcode == AArch64ISD::CSEL && RHSVal && !RHSVal->isOne() &&
-        !RHSVal->isNullValue() && !RHSVal->isAllOnesValue()) {
+        !RHSVal->isZero() && !RHSVal->isAllOnes()) {
       AArch64CC::CondCode AArch64CC = changeIntCCToAArch64CC(CC);
       // Transform "a == C ? C : x" to "a == C ? a : x" and "a != C ? x : C" to
       // "a != C ? x : a" to avoid materializing C.
@@ -9643,7 +9643,7 @@ SDValue AArch64TargetLowering::LowerSPLAT_VECTOR(SDValue Op,
     // The only legal i1 vectors are SVE vectors, so we can use SVE-specific
     // lowering code.
     if (auto *ConstVal = dyn_cast<ConstantSDNode>(SplatVal)) {
-      if (ConstVal->isNullValue())
+      if (ConstVal->isZero())
         return SDValue(DAG.getMachineNode(AArch64::PFALSE, dl, VT), 0);
       if (ConstVal->isOne())
         return getPTrue(DAG, dl, VT, AArch64SVEPredPattern::all);
@@ -13525,7 +13525,7 @@ performVectorTruncateCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
     unsigned ElemSizeInBits = VT.getScalarSizeInBits();
     APInt CAsAPInt(ElemSizeInBits, C);
-    if (CAsAPInt != APInt::getAllOnesValue(ElemSizeInBits))
+    if (CAsAPInt != APInt::getAllOnes(ElemSizeInBits))
       return SDValue();
 
     ExtendOpA = Xor.getOperand(0);
@@ -13967,7 +13967,7 @@ static bool isSetCC(SDValue Op, SetCCInfoAndKind &SetCCInfo) {
     SetCCInfo.Info.AArch64.CC =
         AArch64CC::getInvertedCondCode(SetCCInfo.Info.AArch64.CC);
   }
-  return TValue->isOne() && FValue->isNullValue();
+  return TValue->isOne() && FValue->isZero();
 }
 
 // Returns true if Op is setcc or zext of setcc.
@@ -14045,7 +14045,7 @@ static SDValue performUADDVCombine(SDNode *N, SelectionDAG &DAG) {
 
   auto *LHSN1 = dyn_cast<ConstantSDNode>(LHS->getOperand(1));
   auto *RHSN1 = dyn_cast<ConstantSDNode>(RHS->getOperand(1));
-  if (!LHSN1 || LHSN1 != RHSN1 || !RHSN1->isNullValue())
+  if (!LHSN1 || LHSN1 != RHSN1 || !RHSN1->isZero())
     return SDValue();
 
   SDValue Op1 = LHS->getOperand(0);

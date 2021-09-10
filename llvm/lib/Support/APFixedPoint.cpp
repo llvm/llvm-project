@@ -381,7 +381,7 @@ void APFixedPoint::toString(SmallVectorImpl<char> &Str) const {
   // Add 4 digits to hold the value after multiplying 10 (the radix)
   unsigned Width = Val.getBitWidth() + 4;
   APInt FractPart = Val.zextOrTrunc(Scale).zext(Width);
-  APInt FractPartMask = APInt::getAllOnesValue(Scale).zext(Width);
+  APInt FractPartMask = APInt::getAllOnes(Scale).zext(Width);
   APInt RadixInt = APInt(Width, 10);
 
   IntPart.toString(Str, /*Radix=*/10);

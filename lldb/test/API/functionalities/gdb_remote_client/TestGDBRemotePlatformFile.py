@@ -77,3 +77,58 @@ class TestGDBRemotePlatformFile(GDBRemoteTestBase):
                 ])
         finally:
             self.dbg.GetSelectedPlatform().DisconnectRemote()
+
+    def test_file_size(self):
+        """Test 'platform get-size'"""
+
+        class Responder(MockGDBServerResponder):
+            def vFile(self, packet):
+                return "F1000"
+
+        self.server.responder = Responder()
+
+        try:
+            self.runCmd("platform select remote-gdb-server")
+            self.runCmd("platform connect connect://" +
+                        self.server.get_connect_address())
+            self.assertTrue(self.dbg.GetSelectedPlatform().IsConnected())
+
+            self.match("platform get-size /some/file.txt",
+                       [r"File size of /some/file\.txt \(remote\): 4096"])
+            self.assertPacketLogContains([
+                "vFile:size:2f736f6d652f66696c652e747874",
+                ])
+        finally:
+            self.dbg.GetSelectedPlatform().DisconnectRemote()
+
+    def test_file_size_fallback(self):
+        """Test 'platform get-size fallback to vFile:fstat'"""
+
+        class Responder(MockGDBServerResponder):
+            def vFile(self, packet):
+                if packet.startswith("vFile:open:"):
+                    return "F5"
+                elif packet.startswith("vFile:fstat:"):
+                    return "F40;" + 28 * "\0" + "\0\0\0\0\0\1\2\3" + 28 * "\0"
+                if packet.startswith("vFile:close:"):
+                    return "F0"
+                return ""
+
+        self.server.responder = Responder()
+
+        try:
+            self.runCmd("platform select remote-gdb-server")
+            self.runCmd("platform connect connect://" +
+                        self.server.get_connect_address())
+            self.assertTrue(self.dbg.GetSelectedPlatform().IsConnected())
+
+            self.match("platform get-size /some/file.txt",
+                       [r"File size of /some/file\.txt \(remote\): 66051"])
+            self.assertPacketLogContains([
+                "vFile:size:2f736f6d652f66696c652e747874",
+                "vFile:open:2f736f6d652f66696c652e747874,00000000,00000000",
+                "vFile:fstat:5",
+                "vFile:close:5",
+                ])
+        finally:
+            self.dbg.GetSelectedPlatform().DisconnectRemote()

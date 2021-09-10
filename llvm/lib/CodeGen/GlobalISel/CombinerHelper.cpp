@@ -2652,14 +2652,14 @@ bool CombinerHelper::matchRedundantAnd(MachineInstr &MI,
   //
   // Check if we can replace AndDst with the LHS of the G_AND
   if (canReplaceReg(AndDst, LHS, MRI) &&
-      (LHSBits.Zero | RHSBits.One).isAllOnesValue()) {
+      (LHSBits.Zero | RHSBits.One).isAllOnes()) {
     Replacement = LHS;
     return true;
   }
 
   // Check if we can replace AndDst with the RHS of the G_AND
   if (canReplaceReg(AndDst, RHS, MRI) &&
-      (LHSBits.One | RHSBits.Zero).isAllOnesValue()) {
+      (LHSBits.One | RHSBits.Zero).isAllOnes()) {
     Replacement = RHS;
     return true;
   }

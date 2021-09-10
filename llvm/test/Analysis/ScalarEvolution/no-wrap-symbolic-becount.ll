@@ -127,13 +127,13 @@ define void @pointer_iv_nowrap_guard(i32* %startptr, i32* %endptr) local_unnamed
 ; CHECK-NEXT:    %init = getelementptr inbounds i32, i32* %startptr, i64 2000
 ; CHECK-NEXT:    --> (8000 + %startptr)<nuw> U: [8000,0) S: [8000,0)
 ; CHECK-NEXT:    %iv = phi i32* [ %init, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {(8000 + %startptr)<nuw>,+,4}<nuw><%loop> U: [8000,0) S: [8000,0) Exits: (8000 + (4 * ((-8001 + (-1 * (ptrtoint i32* %startptr to i64)) + ((8004 + (ptrtoint i32* %startptr to i64))<nuw> umax (ptrtoint i32* %endptr to i64))) /u 4))<nuw> + %startptr) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(8000 + %startptr)<nuw>,+,4}<nuw><%loop> U: [8000,0) S: [8000,0) Exits: (8000 + (4 * ((-8001 + (-1 * (ptrtoint i32* %startptr to i64)) + (ptrtoint i32* %endptr to i64)) /u 4))<nuw> + %startptr) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = getelementptr inbounds i32, i32* %iv, i64 1
-; CHECK-NEXT:    --> {(8004 + %startptr)<nuw>,+,4}<nuw><%loop> U: [8004,0) S: [8004,0) Exits: (8004 + (4 * ((-8001 + (-1 * (ptrtoint i32* %startptr to i64)) + ((8004 + (ptrtoint i32* %startptr to i64))<nuw> umax (ptrtoint i32* %endptr to i64))) /u 4))<nuw> + %startptr) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(8004 + %startptr)<nuw>,+,4}<nuw><%loop> U: [8004,0) S: [8004,0) Exits: (8004 + (4 * ((-8001 + (-1 * (ptrtoint i32* %startptr to i64)) + (ptrtoint i32* %endptr to i64)) /u 4))<nuw> + %startptr) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @pointer_iv_nowrap_guard
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-8001 + (-1 * (ptrtoint i32* %startptr to i64)) + ((8004 + (ptrtoint i32* %startptr to i64))<nuw> umax (ptrtoint i32* %endptr to i64))) /u 4)
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-8001 + (-1 * (ptrtoint i32* %startptr to i64)) + (ptrtoint i32* %endptr to i64)) /u 4)
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is 4611686018427385902
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-8001 + (-1 * (ptrtoint i32* %startptr to i64)) + ((8004 + (ptrtoint i32* %startptr to i64))<nuw> umax (ptrtoint i32* %endptr to i64))) /u 4)
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-8001 + (-1 * (ptrtoint i32* %startptr to i64)) + (ptrtoint i32* %endptr to i64)) /u 4)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
 ;

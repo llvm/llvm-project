@@ -25,8 +25,11 @@ add_dependencies(MLIRTableGenTests MLIRTableGenStructAttrIncGen)
 add_dependencies(MLIRTableGenTests MLIRTableGenTestPassIncGen)
 add_dependencies(MLIRTableGenTests MLIRTestDialect)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../test/lib/Dialect/Test)
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/../../test/lib/Dialect/Test)
+target_include_directories(MLIRTableGenTests
+  PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../test/lib/Dialect/Test
+  ${CMAKE_CURRENT_BINARY_DIR}/../../test/lib/Dialect/Test
+)
 
 target_link_libraries(MLIRTableGenTests
   PRIVATE MLIRTableGen MLIRIR

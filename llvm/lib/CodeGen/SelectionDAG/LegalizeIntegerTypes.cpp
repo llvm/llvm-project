@@ -832,7 +832,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
   unsigned NewBits = PromotedType.getScalarSizeInBits();
 
   if (Opcode == ISD::UADDSAT) {
-    APInt MaxVal = APInt::getAllOnesValue(OldBits).zext(NewBits);
+    APInt MaxVal = APInt::getAllOnes(OldBits).zext(NewBits);
     SDValue SatMax = DAG.getConstant(MaxVal, dl, PromotedType);
     SDValue Add =
         DAG.getNode(ISD::ADD, dl, PromotedType, Op1Promoted, Op2Promoted);
@@ -3698,7 +3698,7 @@ void DAGTypeLegalizer::ExpandIntRes_MULFIX(SDNode *N, SDValue &Lo,
 
   // Saturate to signed maximum.
   APInt MaxHi = APInt::getSignedMaxValue(NVTSize);
-  APInt MaxLo = APInt::getAllOnesValue(NVTSize);
+  APInt MaxLo = APInt::getAllOnes(NVTSize);
   Hi = DAG.getSelect(dl, NVT, SatMax, DAG.getConstant(MaxHi, dl, NVT), Hi);
   Lo = DAG.getSelect(dl, NVT, SatMax, DAG.getConstant(MaxLo, dl, NVT), Lo);
   // Saturate to signed minimum.
@@ -4375,7 +4375,7 @@ void DAGTypeLegalizer::IntegerExpandSetCCOperands(SDValue &NewLHS,
   if (CCCode == ISD::SETEQ || CCCode == ISD::SETNE) {
     if (RHSLo == RHSHi) {
       if (ConstantSDNode *RHSCST = dyn_cast<ConstantSDNode>(RHSLo)) {
-        if (RHSCST->isAllOnesValue()) {
+        if (RHSCST->isAllOnes()) {
           // Equality comparison to -1.
           NewLHS = DAG.getNode(ISD::AND, dl,
                                LHSLo.getValueType(), LHSLo, LHSHi);
@@ -4395,8 +4395,8 @@ void DAGTypeLegalizer::IntegerExpandSetCCOperands(SDValue &NewLHS,
   // If this is a comparison of the sign bit, just look at the top part.
   // X > -1,  x < 0
   if (ConstantSDNode *CST = dyn_cast<ConstantSDNode>(NewRHS))
-    if ((CCCode == ISD::SETLT && CST->isNullValue()) ||     // X < 0
-        (CCCode == ISD::SETGT && CST->isAllOnesValue())) {  // X > -1
+    if ((CCCode == ISD::SETLT && CST->isZero()) ||    // X < 0
+        (CCCode == ISD::SETGT && CST->isAllOnes())) { // X > -1
       NewLHS = LHSHi;
       NewRHS = RHSHi;
       return;
@@ -4447,9 +4447,11 @@ void DAGTypeLegalizer::IntegerExpandSetCCOperands(SDValue &NewLHS,
   bool EqAllowed = (CCCode == ISD::SETLE || CCCode == ISD::SETGE ||
                     CCCode == ISD::SETUGE || CCCode == ISD::SETULE);
 
-  if ((EqAllowed && (HiCmpC && HiCmpC->isNullValue())) ||
-      (!EqAllowed && ((HiCmpC && (HiCmpC->getAPIntValue() == 1)) ||
-                      (LoCmpC && LoCmpC->isNullValue())))) {
+  // FIXME: Is the HiCmpC->isOne() here correct for
+  // ZeroOrNegativeOneBooleanContent.
+  if ((EqAllowed && (HiCmpC && HiCmpC->isZero())) ||
+      (!EqAllowed &&
+       ((HiCmpC && HiCmpC->isOne()) || (LoCmpC && LoCmpC->isZero())))) {
     // For LE / GE, if high part is known false, ignore the low part.
     // For LT / GT: if low part is known false, return the high part.
     //              if high part is known true, ignore the low part.

@@ -165,16 +165,16 @@ public:
     switch (Pred) {
     case ICmpInst::ICMP_SLT: // True if LHS s< 0
       TrueIfSigned = true;
-      return RHS.isNullValue();
+      return RHS.isZero();
     case ICmpInst::ICMP_SLE: // True if LHS s<= -1
       TrueIfSigned = true;
-      return RHS.isAllOnesValue();
+      return RHS.isAllOnes();
     case ICmpInst::ICMP_SGT: // True if LHS s> -1
       TrueIfSigned = false;
-      return RHS.isAllOnesValue();
+      return RHS.isAllOnes();
     case ICmpInst::ICMP_SGE: // True if LHS s>= 0
       TrueIfSigned = false;
-      return RHS.isNullValue();
+      return RHS.isZero();
     case ICmpInst::ICMP_UGT:
       // True if LHS u> RHS and RHS == sign-bit-mask - 1
       TrueIfSigned = true;

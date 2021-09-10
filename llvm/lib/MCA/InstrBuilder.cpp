@@ -687,7 +687,7 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
     if (IsDepBreaking) {
       // A mask of all zeroes means: explicit input operands are not
       // independent.
-      if (Mask.isNullValue()) {
+      if (Mask.isZero()) {
         if (!RD.isImplicitRead())
           RS.setIndependentFromDef();
       } else {

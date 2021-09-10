@@ -1265,9 +1265,9 @@ static Instruction *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
     // We want to canonicalize it to 'ult', so we'll need to increment C0,
     // which again means it must not have any all-ones elements.
     if (!match(C0,
-               m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_NE,
-                                  APInt::getAllOnesValue(
-                                      C0->getType()->getScalarSizeInBits()))))
+               m_SpecificInt_ICMP(
+                   ICmpInst::Predicate::ICMP_NE,
+                   APInt::getAllOnes(C0->getType()->getScalarSizeInBits()))))
       return nullptr; // Can't do, have all-ones element[s].
     C0 = InstCombiner::AddOne(C0);
     std::swap(X, Sel1);
@@ -2441,7 +2441,7 @@ Instruction *InstCombinerImpl::foldVectorSelect(SelectInst &Sel) {
 
   unsigned NumElts = VecTy->getNumElements();
   APInt UndefElts(NumElts, 0);
-  APInt AllOnesEltMask(APInt::getAllOnesValue(NumElts));
+  APInt AllOnesEltMask(APInt::getAllOnes(NumElts));
   if (Value *V = SimplifyDemandedVectorElts(&Sel, AllOnesEltMask, UndefElts)) {
     if (V != &Sel)
       return replaceInstUsesWith(Sel, V);

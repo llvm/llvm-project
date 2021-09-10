@@ -65,6 +65,7 @@ GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
       m_supports_QEnvironmentHexEncoded(true), m_supports_qSymbol(true),
       m_qSymbol_requests_done(false), m_supports_qModuleInfo(true),
       m_supports_jThreadsInfo(true), m_supports_jModulesInfo(true),
+      m_supports_vFileSize(true),
 
       m_host_arch(), m_process_arch(), m_os_build(), m_os_kernel(),
       m_hostname(), m_gdb_server_name(), m_default_packet_timeout(0),
@@ -82,6 +83,8 @@ bool GDBRemoteCommunicationClient::HandshakeWithServer(Status *error_ptr) {
 
   // Start the read thread after we send the handshake ack since if we fail to
   // send the handshake ack, there is no reason to continue...
+  std::chrono::steady_clock::time_point start_of_handshake =
+      std::chrono::steady_clock::now();
   if (SendAck()) {
     // Wait for any responses that might have been queued up in the remote
     // GDB server and flush them all
@@ -97,8 +100,24 @@ bool GDBRemoteCommunicationClient::HandshakeWithServer(Status *error_ptr) {
     if (QueryNoAckModeSupported()) {
       return true;
     } else {
-      if (error_ptr)
-        error_ptr->SetErrorString("failed to get reply to handshake packet");
+      std::chrono::steady_clock::time_point end_of_handshake =
+          std::chrono::steady_clock::now();
+      auto handshake_timeout =
+          std::chrono::duration<double>(end_of_handshake - start_of_handshake)
+              .count();
+      if (error_ptr) {
+        if (packet_result == PacketResult::ErrorDisconnected)
+          error_ptr->SetErrorString("Connection shut down by remote side "
+                                    "while waiting for reply to initial "
+                                    "handshake packet");
+        else if (packet_result == PacketResult::ErrorReplyTimeout)
+          error_ptr->SetErrorStringWithFormat(
+              "failed to get reply to handshake packet within timeout of "
+              "%.1f seconds",
+              handshake_timeout);
+        else
+          error_ptr->SetErrorString("failed to get reply to handshake packet");
+      }
     }
   } else {
     if (error_ptr)
@@ -3050,22 +3069,66 @@ bool GDBRemoteCommunicationClient::CloseFile(lldb::user_id_t fd,
   return false;
 }
 
-// Extension of host I/O packets to get the file size.
-lldb::user_id_t GDBRemoteCommunicationClient::GetFileSize(
-    const lldb_private::FileSpec &file_spec) {
-  std::string path(file_spec.GetPath(false));
+llvm::Optional<GDBRemoteFStatData>
+GDBRemoteCommunicationClient::FStat(lldb::user_id_t fd) {
   lldb_private::StreamString stream;
-  stream.PutCString("vFile:size:");
-  stream.PutStringAsRawHex8(path);
+  stream.Printf("vFile:fstat:%" PRIx64, fd);
   StringExtractorGDBRemote response;
   if (SendPacketAndWaitForResponse(stream.GetString(), response) ==
       PacketResult::Success) {
     if (response.GetChar() != 'F')
-      return UINT64_MAX;
-    uint32_t retcode = response.GetHexMaxU64(false, UINT64_MAX);
-    return retcode;
+      return llvm::None;
+    int64_t size = response.GetS64(-1, 16);
+    if (size > 0 && response.GetChar() == ';') {
+      std::string buffer;
+      if (response.GetEscapedBinaryData(buffer)) {
+        GDBRemoteFStatData out;
+        if (buffer.size() != sizeof(out))
+          return llvm::None;
+        memcpy(&out, buffer.data(), sizeof(out));
+        return out;
+      }
+    }
   }
-  return UINT64_MAX;
+  return llvm::None;
+}
+
+llvm::Optional<GDBRemoteFStatData>
+GDBRemoteCommunicationClient::Stat(const lldb_private::FileSpec &file_spec) {
+  Status error;
+  lldb::user_id_t fd = OpenFile(file_spec, File::eOpenOptionReadOnly, 0, error);
+  if (fd == UINT64_MAX)
+    return llvm::None;
+  llvm::Optional<GDBRemoteFStatData> st = FStat(fd);
+  CloseFile(fd, error);
+  return st;
+}
+
+// Extension of host I/O packets to get the file size.
+lldb::user_id_t GDBRemoteCommunicationClient::GetFileSize(
+    const lldb_private::FileSpec &file_spec) {
+  if (m_supports_vFileSize) {
+    std::string path(file_spec.GetPath(false));
+    lldb_private::StreamString stream;
+    stream.PutCString("vFile:size:");
+    stream.PutStringAsRawHex8(path);
+    StringExtractorGDBRemote response;
+    if (SendPacketAndWaitForResponse(stream.GetString(), response) !=
+        PacketResult::Success)
+      return UINT64_MAX;
+
+    if (!response.IsUnsupportedResponse()) {
+      if (response.GetChar() != 'F')
+        return UINT64_MAX;
+      uint32_t retcode = response.GetHexMaxU64(false, UINT64_MAX);
+      return retcode;
+    }
+    m_supports_vFileSize = false;
+  }
+
+  // Fallback to fstat.
+  llvm::Optional<GDBRemoteFStatData> st = Stat(file_spec);
+  return st ? st->gdb_st_size : UINT64_MAX;
 }
 
 void GDBRemoteCommunicationClient::AutoCompleteDiskFileOrDirectory(

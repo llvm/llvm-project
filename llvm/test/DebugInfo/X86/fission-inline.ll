@@ -58,7 +58,7 @@
 
 ; CHECK:      DW_TAG_subprogram
 ; CHECK-NEXT:   DW_AT_name {{.*}} "f2<int>"
-; CHECK-NOT: DW_
+; CHECK-NEXT:   DW_AT_inline
 ; CHECK:      DW_TAG_subprogram
 ; CHECK-NEXT:   DW_AT_low_pc [DW_FORM_addr]
 ; CHECK-NEXT:   DW_AT_high_pc

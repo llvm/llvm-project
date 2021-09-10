@@ -263,7 +263,7 @@ struct RegionMatcher {
 /// Utility class used to generate nested loops with ranges described by
 /// `loopRanges` and loop type described by the `iteratorTypes`. `bodyBuilderFn`
 /// is used to generate the body of the innermost loop. It is passed a range
-/// of loop induction variables and a range of iterArgs.
+/// of loop induction variables and a range of operand values to use.
 template <typename LoopTy>
 struct GenerateLoopNest {
   static void doit(OpBuilder &b, Location loc, ArrayRef<Range> loopRanges,

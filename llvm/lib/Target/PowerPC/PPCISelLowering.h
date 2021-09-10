@@ -494,6 +494,11 @@ namespace llvm {
     /// Constrained floating point add in round-to-zero mode.
     STRICT_FADDRTZ,
 
+    // NOTE: The nodes below may require PC-Rel specific patterns if the
+    // address could be PC-Relative. When adding new nodes below, consider
+    // whether or not the address can be PC-Relative and add the corresponding
+    // PC-relative patterns and tests.
+
     /// CHAIN = STBRX CHAIN, GPRC, Ptr, Type - This is a
     /// byte-swapping store instruction.  It byte-swaps the low "Type" bits of
     /// the GPRC input, then stores it through Ptr.  Type can be either i16 or
@@ -713,6 +718,7 @@ namespace llvm {
       AM_DSForm,
       AM_DQForm,
       AM_XForm,
+      AM_PCRel
     };
   } // end namespace PPC
 

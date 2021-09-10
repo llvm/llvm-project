@@ -2443,7 +2443,7 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
   Value *StartValue = expandCodeForImpl(Start, ARTy, Loc, false);
 
   ConstantInt *Zero =
-      ConstantInt::get(Loc->getContext(), APInt::getNullValue(DstBits));
+      ConstantInt::get(Loc->getContext(), APInt::getZero(DstBits));
 
   Builder.SetInsertPoint(Loc);
   // Compute |Step|

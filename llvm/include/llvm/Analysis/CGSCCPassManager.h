@@ -161,6 +161,12 @@ struct RequireAnalysisPass<AnalysisT, LazyCallGraph::SCC, CGSCCAnalysisManager,
     (void)AM.template getResult<AnalysisT>(C, CG);
     return PreservedAnalyses::all();
   }
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName) {
+    auto ClassName = AnalysisT::name();
+    auto PassName = MapClassName2PassName(ClassName);
+    OS << "require<" << PassName << ">";
+  }
 };
 
 /// A proxy from a \c CGSCCAnalysisManager to a \c Module.
@@ -363,6 +369,13 @@ public:
   /// Runs the CGSCC pass across every SCC in the module.
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName) {
+    OS << "cgscc(";
+    Pass->printPipeline(OS, MapClassName2PassName);
+    OS << ")";
+  }
+
   static bool isRequired() { return true; }
 
 private:
@@ -481,6 +494,13 @@ public:
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &UR);
 
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName) {
+    OS << "function(";
+    Pass->printPipeline(OS, MapClassName2PassName);
+    OS << ")";
+  }
+
   static bool isRequired() { return true; }
 
 private:
@@ -527,6 +547,13 @@ public:
   /// whenever an indirect call is refined.
   PreservedAnalyses run(LazyCallGraph::SCC &InitialC, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &UR);
+
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName) {
+    OS << "devirt<" << MaxIterations << ">(";
+    Pass->printPipeline(OS, MapClassName2PassName);
+    OS << ")";
+  }
 
 private:
   std::unique_ptr<PassConceptT> Pass;
