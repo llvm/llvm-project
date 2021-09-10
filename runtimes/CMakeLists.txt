@@ -116,6 +116,8 @@ if (NOT LLVM_DEFAULT_TARGET_TRIPLE)
   get_host_triple(LLVM_DEFAULT_TARGET_TRIPLE)
 endif()
 
+option(LLVM_INCLUDE_TESTS "Generate build targets for the runtimes unit tests." ON)
+
 # Use libtool instead of ar if you are both on an Apple host, and targeting Apple.
 if(CMAKE_HOST_APPLE AND APPLE)
   include(UseLibtool)
@@ -184,6 +186,14 @@ if(LLVM_INCLUDE_TESTS)
     ARGS ${RUNTIMES_LIT_EXTRA_ARGS}
     )
   add_custom_target(runtimes-test-depends DEPENDS ${RUNTIMES_LIT_DEPENDS})
+
+  if (NOT HAVE_LLVM_LIT)
+    # If built by manually invoking cmake on this directory, we don't have
+    # llvm-lit. If invoked via llvm/runtimes, the toplevel llvm cmake
+    # invocation already generated the llvm-lit script.
+    add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/llvm-lit
+                     ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
+  endif()
 endif()
 
 get_property(SUB_COMPONENTS GLOBAL PROPERTY SUB_COMPONENTS)
