@@ -430,7 +430,7 @@ endif()
 
 if(SANITIZER_AMDGPU)
   list(APPEND SANITIZER_COMMON_CFLAGS -DSANITIZER_AMDGPU=1)
-  find_path(HSA_INCLUDE hsa.h HINTS ${CMAKE_INSTALL_PREFIX}/include/hsa ${CMAKE_INSTALL_PREFIX}/../include/hsa /opt/rocm/include/hsa PATH_SUFFIXES hsa)
+  find_path(HSA_INCLUDE hsa.h HINTS ${HSA_INCLUDE_PATH} ${CMAKE_INSTALL_PREFIX}/include/hsa ${CMAKE_INSTALL_PREFIX}/../include/hsa /opt/rocm/include/hsa PATH_SUFFIXES hsa)
   include_directories(${HSA_INCLUDE})
 endif()
 
