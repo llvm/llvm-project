@@ -1,6 +1,6 @@
 from gdbclientutils import *
 
-class TestGDBRemotePlatformFile(GDBRemoteTestBase):
+class TestGDBRemotePlatformFile(GDBPlatformClientTestBase):
 
     def test_file(self):
         """Test mock operations on a remote file"""
@@ -15,68 +15,54 @@ class TestGDBRemotePlatformFile(GDBRemoteTestBase):
                     return "Fa"
                 elif packet.startswith("vFile:close:"):
                     return "F0"
-                return "F-1,16"
+                return "F-1,58"
 
         self.server.responder = Responder()
 
-        try:
-            self.runCmd("platform select remote-gdb-server")
-            self.runCmd("platform connect connect://" +
-                        self.server.get_connect_address())
-            self.assertTrue(self.dbg.GetSelectedPlatform().IsConnected())
-
-            self.match("platform file open /some/file.txt -v 0755",
-                       [r"File Descriptor = 16"])
-            self.match("platform file read 16 -o 11 -c 13",
-                       [r"Return = 11\nData = \"frobnicator\""])
-            self.match("platform file write 16 -o 11 -d teststring",
-                       [r"Return = 10"])
-            self.match("platform file close 16",
-                       [r"file 16 closed."])
-            self.assertPacketLogContains([
-                "vFile:open:2f736f6d652f66696c652e747874,00000202,000001ed",
-                "vFile:pread:10,d,b",
-                "vFile:pwrite:10,b,teststring",
-                "vFile:close:10",
-                ])
-        finally:
-            self.dbg.GetSelectedPlatform().DisconnectRemote()
+        self.match("platform file open /some/file.txt -v 0755",
+                   [r"File Descriptor = 16"])
+        self.match("platform file read 16 -o 11 -c 13",
+                   [r"Return = 11\nData = \"frobnicator\""])
+        self.match("platform file write 16 -o 11 -d teststring",
+                   [r"Return = 10"])
+        self.match("platform file close 16",
+                   [r"file 16 closed."])
+        self.assertPacketLogContains([
+            "vFile:open:2f736f6d652f66696c652e747874,00000202,000001ed",
+            "vFile:pread:10,d,b",
+            "vFile:pwrite:10,b,teststring",
+            "vFile:close:10",
+            ])
 
     def test_file_fail(self):
         """Test mocked failures of remote operations"""
 
         class Responder(MockGDBServerResponder):
             def vFile(self, packet):
-                return "F-1,16"
+                # use ENOSYS as this constant differs between GDB Remote
+                # Protocol and Linux, so we can test the translation
+                return "F-1,58"
 
         self.server.responder = Responder()
 
-        try:
-            self.runCmd("platform select remote-gdb-server")
-            self.runCmd("platform connect connect://" +
-                        self.server.get_connect_address())
-            self.assertTrue(self.dbg.GetSelectedPlatform().IsConnected())
-
-            self.match("platform file open /some/file.txt -v 0755",
-                       [r"error: Invalid argument"],
-                       error=True)
-            self.match("platform file read 16 -o 11 -c 13",
-                       [r"error: Invalid argument"],
-                       error=True)
-            self.match("platform file write 16 -o 11 -d teststring",
-                       [r"error: Invalid argument"],
-                       error=True)
-            self.match("platform file close 16",
-                       [r"error: Invalid argument"],
-                       error=True)
-            self.assertPacketLogContains([
-                "vFile:open:2f736f6d652f66696c652e747874,00000202,000001ed",
-                "vFile:pread:10,d,b",
-                "vFile:pwrite:10,b,teststring",
-                "vFile:close:10",
-                ])
-        finally:
-            self.dbg.GetSelectedPlatform().DisconnectRemote()
+        self.match("platform file open /some/file.txt -v 0755",
+                   [r"error: Function not implemented"],
+                   error=True)
+        self.match("platform file read 16 -o 11 -c 13",
+                   [r"error: Function not implemented"],
+                   error=True)
+        self.match("platform file write 16 -o 11 -d teststring",
+                   [r"error: Function not implemented"],
+                   error=True)
+        self.match("platform file close 16",
+                   [r"error: Function not implemented"],
+                   error=True)
+        self.assertPacketLogContains([
+            "vFile:open:2f736f6d652f66696c652e747874,00000202,000001ed",
+            "vFile:pread:10,d,b",
+            "vFile:pwrite:10,b,teststring",
+            "vFile:close:10",
+            ])
 
     def test_file_size(self):
         """Test 'platform get-size'"""
@@ -87,19 +73,11 @@ class TestGDBRemotePlatformFile(GDBRemoteTestBase):
 
         self.server.responder = Responder()
 
-        try:
-            self.runCmd("platform select remote-gdb-server")
-            self.runCmd("platform connect connect://" +
-                        self.server.get_connect_address())
-            self.assertTrue(self.dbg.GetSelectedPlatform().IsConnected())
-
-            self.match("platform get-size /some/file.txt",
-                       [r"File size of /some/file\.txt \(remote\): 4096"])
-            self.assertPacketLogContains([
-                "vFile:size:2f736f6d652f66696c652e747874",
-                ])
-        finally:
-            self.dbg.GetSelectedPlatform().DisconnectRemote()
+        self.match("platform get-size /some/file.txt",
+                   [r"File size of /some/file\.txt \(remote\): 4096"])
+        self.assertPacketLogContains([
+            "vFile:size:2f736f6d652f66696c652e747874",
+            ])
 
     def test_file_size_fallback(self):
         """Test 'platform get-size fallback to vFile:fstat'"""
@@ -116,19 +94,122 @@ class TestGDBRemotePlatformFile(GDBRemoteTestBase):
 
         self.server.responder = Responder()
 
-        try:
-            self.runCmd("platform select remote-gdb-server")
-            self.runCmd("platform connect connect://" +
-                        self.server.get_connect_address())
-            self.assertTrue(self.dbg.GetSelectedPlatform().IsConnected())
+        self.match("platform get-size /some/file.txt",
+                   [r"File size of /some/file\.txt \(remote\): 66051"])
+        self.assertPacketLogContains([
+            "vFile:size:2f736f6d652f66696c652e747874",
+            "vFile:open:2f736f6d652f66696c652e747874,00000000,00000000",
+            "vFile:fstat:5",
+            "vFile:close:5",
+            ])
 
-            self.match("platform get-size /some/file.txt",
-                       [r"File size of /some/file\.txt \(remote\): 66051"])
+    def test_file_permissions(self):
+        """Test 'platform get-permissions'"""
+
+        class Responder(MockGDBServerResponder):
+            def vFile(self, packet):
+                return "F1a4"
+
+        self.server.responder = Responder()
+
+        self.match("platform get-permissions /some/file.txt",
+                   [r"File permissions of /some/file\.txt \(remote\): 0o0644"])
+        self.assertPacketLogContains([
+            "vFile:mode:2f736f6d652f66696c652e747874",
+            ])
+
+    def test_file_permissions_fallback(self):
+        """Test 'platform get-permissions' fallback to fstat"""
+
+        class Responder(MockGDBServerResponder):
+            def vFile(self, packet):
+                if packet.startswith("vFile:open:"):
+                    return "F5"
+                elif packet.startswith("vFile:fstat:"):
+                    return "F40;" + 8 * "\0" + "\0\0\1\xA4" + 52 * "\0"
+                if packet.startswith("vFile:close:"):
+                    return "F0"
+                return ""
+
+        self.server.responder = Responder()
+
+        try:
+            self.match("platform get-permissions /some/file.txt",
+                       [r"File permissions of /some/file\.txt \(remote\): 0o0644"])
             self.assertPacketLogContains([
-                "vFile:size:2f736f6d652f66696c652e747874",
+                "vFile:mode:2f736f6d652f66696c652e747874",
                 "vFile:open:2f736f6d652f66696c652e747874,00000000,00000000",
                 "vFile:fstat:5",
                 "vFile:close:5",
                 ])
         finally:
             self.dbg.GetSelectedPlatform().DisconnectRemote()
+
+    def test_file_exists(self):
+        """Test 'platform file-exists'"""
+
+        class Responder(MockGDBServerResponder):
+            def vFile(self, packet):
+                return "F,1"
+
+        self.server.responder = Responder()
+
+        self.match("platform file-exists /some/file.txt",
+                   [r"File /some/file\.txt \(remote\) exists"])
+        self.assertPacketLogContains([
+            "vFile:exists:2f736f6d652f66696c652e747874",
+            ])
+
+    def test_file_exists_not(self):
+        """Test 'platform file-exists' with non-existing file"""
+
+        class Responder(MockGDBServerResponder):
+            def vFile(self, packet):
+                return "F,0"
+
+        self.server.responder = Responder()
+
+        self.match("platform file-exists /some/file.txt",
+                   [r"File /some/file\.txt \(remote\) does not exist"])
+        self.assertPacketLogContains([
+            "vFile:exists:2f736f6d652f66696c652e747874",
+            ])
+
+    def test_file_exists_fallback(self):
+        """Test 'platform file-exists' fallback to open"""
+
+        class Responder(MockGDBServerResponder):
+            def vFile(self, packet):
+                if packet.startswith("vFile:open:"):
+                    return "F5"
+                if packet.startswith("vFile:close:"):
+                    return "F0"
+                return ""
+
+        self.server.responder = Responder()
+
+        self.match("platform file-exists /some/file.txt",
+                   [r"File /some/file\.txt \(remote\) exists"])
+        self.assertPacketLogContains([
+            "vFile:exists:2f736f6d652f66696c652e747874",
+            "vFile:open:2f736f6d652f66696c652e747874,00000000,00000000",
+            "vFile:close:5",
+            ])
+
+    def test_file_exists_not_fallback(self):
+        """Test 'platform file-exists' fallback to open with non-existing file"""
+
+        class Responder(MockGDBServerResponder):
+            def vFile(self, packet):
+                if packet.startswith("vFile:open:"):
+                    return "F-1,2"
+                return ""
+
+        self.server.responder = Responder()
+
+        self.match("platform file-exists /some/file.txt",
+                   [r"File /some/file\.txt \(remote\) does not exist"])
+        self.assertPacketLogContains([
+            "vFile:exists:2f736f6d652f66696c652e747874",
+            "vFile:open:2f736f6d652f66696c652e747874,00000000,00000000",
+            ])
