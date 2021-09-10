@@ -140,3 +140,42 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O2
 )
+
+add_entrypoint_object(
+  feenableexcept
+  SRCS
+    feenableexcept.cpp
+  HDRS
+    feenableexcept.h
+  DEPENDS
+    libc.include.fenv
+    libc.src.__support.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  fedisableexcept
+  SRCS
+    fedisableexcept.cpp
+  HDRS
+    fedisableexcept.h
+  DEPENDS
+    libc.include.fenv
+    libc.src.__support.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  fegetexcept
+  SRCS
+    fegetexcept.cpp
+  HDRS
+    fegetexcept.h
+  DEPENDS
+    libc.include.fenv
+    libc.src.__support.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
