@@ -51,7 +51,8 @@ def SparseTensor_NewOp : SparseTensor_Op<"new", []>,
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($result)";
 }
 
-def SparseTensor_ConvertOp : SparseTensor_Op<"convert", [SameOperandsAndResultType]>,
+def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
+  [NoSideEffect, SameOperandsAndResultType]>,
     Arguments<(ins AnyTensor:$source)>,
     Results<(outs AnyTensor:$dest)> {
   string summary = "Converts between different tensor types";
