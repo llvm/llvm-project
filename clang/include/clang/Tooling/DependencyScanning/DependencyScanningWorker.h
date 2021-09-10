@@ -68,7 +68,6 @@ public:
                                   llvm::Optional<StringRef> ModuleName = None);
 
 private:
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
   std::unique_ptr<ExcludedPreprocessorDirectiveSkipMapping> PPSkipMappings;
 
