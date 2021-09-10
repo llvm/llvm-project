@@ -127,9 +127,9 @@ static bool analyzeGlobalAux(const Value *V, GlobalStatus &GS,
                 GS.StoredType = GlobalStatus::InitializerStored;
             } else if (GS.StoredType < GlobalStatus::StoredOnce) {
               GS.StoredType = GlobalStatus::StoredOnce;
-              GS.StoredOnceValue = StoredVal;
+              GS.StoredOnceStore = SI;
             } else if (GS.StoredType == GlobalStatus::StoredOnce &&
-                       GS.StoredOnceValue == StoredVal) {
+                       GS.getStoredOnceValue() == StoredVal) {
               // noop.
             } else {
               GS.StoredType = GlobalStatus::Stored;
