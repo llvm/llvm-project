@@ -1250,6 +1250,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             self.assertEqual(read_value, expected_reg_values[thread_index])
             thread_index += 1
 
+    @add_test_categories(["llgs"])
     def test_launch_via_A(self):
         self.build()
         exe_path = self.getBuildArtifact("a.out")
@@ -1273,6 +1274,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assertEqual(context["O_content"],
                          b'arg1\r\narg2\r\narg3\r\n')
 
+    @add_test_categories(["llgs"])
     def test_launch_via_vRun(self):
         self.build()
         exe_path = self.getBuildArtifact("a.out")
@@ -1291,6 +1293,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             True)
         context = self.expect_gdbremote_sequence()
 
+    @add_test_categories(["llgs"])
     def test_launch_via_vRun_no_args(self):
         self.build()
         exe_path = self.getBuildArtifact("a.out")
@@ -1308,6 +1311,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             True)
         self.expect_gdbremote_sequence()
 
+    @add_test_categories(["llgs"])
     def test_QEnvironment(self):
         self.build()
         exe_path = self.getBuildArtifact("a.out")
@@ -1334,6 +1338,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         context = self.expect_gdbremote_sequence()
         self.assertEqual(context["O_content"], b"test\r\na=z\r\n")
 
+    @add_test_categories(["llgs"])
     def test_QEnvironmentHexEncoded(self):
         self.build()
         exe_path = self.getBuildArtifact("a.out")
