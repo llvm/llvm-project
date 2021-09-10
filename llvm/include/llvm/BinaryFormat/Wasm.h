@@ -339,6 +339,12 @@ enum : unsigned {
   WASM_SYMBOL_TABLE = 0x8,
 };
 
+// Kind codes used in the custom "dylink" section
+enum : unsigned {
+  WASM_DYLINK_MEM_INFO = 0x1,
+  WASM_DYLINK_NEEDED = 0x2,
+};
+
 // Kind codes used in the custom "linking" section in the WASM_COMDAT_INFO
 enum : unsigned {
   WASM_COMDAT_DATA = 0x0,
