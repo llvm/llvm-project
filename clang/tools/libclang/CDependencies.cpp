@@ -164,7 +164,7 @@ static CXFileDependencies *getFullDependencies(
     void *Context, CXString *error, BuildArgsFn GetBuildArgs,
     llvm::Optional<StringRef> ModuleName = None) {
   FullDependencyConsumer Consumer(Worker->AlreadySeen);
-  llvm::Error Result = Worker->computeDependenciesForClangInvocation(
+  llvm::Error Result = Worker->computeDependencies(
       WorkingDirectory, Compilation, Consumer, ModuleName);
 
   if (Result) {
