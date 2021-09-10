@@ -3188,6 +3188,34 @@ struct AAKernelInfoFunction : AAKernelInfo {
             ->setDebugLoc(DL);
     };
 
+    auto &AllocSharedRFI = OMPInfoCache.RFIs[OMPRTL___kmpc_alloc_shared];
+    SmallPtrSet<BasicBlock *, 8> Visited;
+    for (Instruction *GuardedI : SPMDCompatibilityTracker) {
+      BasicBlock *BB = GuardedI->getParent();
+      if (!Visited.insert(BB).second)
+        continue;
+
+      SmallVector<std::pair<Instruction *, Instruction *>> Reorders;
+      Instruction *LastEffect = nullptr;
+      BasicBlock::reverse_iterator IP = BB->rbegin(), IPEnd = BB->rend();
+      while (++IP != IPEnd) {
+        if (!IP->mayHaveSideEffects() && !IP->mayReadFromMemory())
+          continue;
+        Instruction *I = &*IP;
+        if (OpenMPOpt::getCallIfRegularCall(*I, &AllocSharedRFI))
+          continue;
+        if (!I->user_empty() || !SPMDCompatibilityTracker.contains(I)) {
+          LastEffect = nullptr;
+          continue;
+        }
+        if (LastEffect)
+          Reorders.push_back({I, LastEffect});
+        LastEffect = &*IP;
+      }
+      for (auto &Reorder : Reorders)
+        Reorder.first->moveBefore(Reorder.second);
+    }
+
     SmallVector<std::pair<Instruction *, Instruction *>, 4> GuardedRegions;
 
     for (Instruction *GuardedI : SPMDCompatibilityTracker) {
@@ -4241,7 +4269,6 @@ void OpenMPOpt::registerAAs(bool IsModulePass) {
           IRPosition::function(*Kernel), /* QueryingAA */ nullptr,
           DepClassTy::NONE, /* ForceUpdate */ false,
           /* UpdateAfterInit */ false);
-
 
     registerFoldRuntimeCall(OMPRTL___kmpc_is_generic_main_thread_id);
     registerFoldRuntimeCall(OMPRTL___kmpc_is_spmd_exec_mode);
