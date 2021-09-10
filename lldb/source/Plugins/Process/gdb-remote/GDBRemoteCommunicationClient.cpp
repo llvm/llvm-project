@@ -65,7 +65,8 @@ GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
       m_supports_QEnvironmentHexEncoded(true), m_supports_qSymbol(true),
       m_qSymbol_requests_done(false), m_supports_qModuleInfo(true),
       m_supports_jThreadsInfo(true), m_supports_jModulesInfo(true),
-      m_supports_vFileSize(true),
+      m_supports_vFileSize(true), m_supports_vFileMode(true),
+      m_supports_vFileExists(true),
 
       m_host_arch(), m_process_arch(), m_os_build(), m_os_kernel(),
       m_hostname(), m_gdb_server_name(), m_default_packet_timeout(0),
@@ -3159,37 +3160,50 @@ void GDBRemoteCommunicationClient::AutoCompleteDiskFileOrDirectory(
 Status
 GDBRemoteCommunicationClient::GetFilePermissions(const FileSpec &file_spec,
                                                  uint32_t &file_permissions) {
-  std::string path{file_spec.GetPath(false)};
-  Status error;
-  lldb_private::StreamString stream;
-  stream.PutCString("vFile:mode:");
-  stream.PutStringAsRawHex8(path);
-  StringExtractorGDBRemote response;
-  if (SendPacketAndWaitForResponse(stream.GetString(), response) ==
-      PacketResult::Success) {
-    if (response.GetChar() != 'F') {
-      error.SetErrorStringWithFormat("invalid response to '%s' packet",
+  if (m_supports_vFileMode) {
+    std::string path{file_spec.GetPath(false)};
+    Status error;
+    lldb_private::StreamString stream;
+    stream.PutCString("vFile:mode:");
+    stream.PutStringAsRawHex8(path);
+    StringExtractorGDBRemote response;
+    if (SendPacketAndWaitForResponse(stream.GetString(), response) !=
+        PacketResult::Success) {
+      error.SetErrorStringWithFormat("failed to send '%s' packet",
                                      stream.GetData());
-    } else {
-      const uint32_t mode = response.GetS32(-1, 16);
-      if (static_cast<int32_t>(mode) == -1) {
-        if (response.GetChar() == ',') {
-          int response_errno = response.GetS32(-1, 16);
-          if (response_errno > 0)
-            error.SetError(response_errno, lldb::eErrorTypePOSIX);
-          else
-            error.SetErrorToGenericError();
-        } else
-          error.SetErrorToGenericError();
-      } else {
-        file_permissions = mode & (S_IRWXU | S_IRWXG | S_IRWXO);
-      }
+      return error;
     }
-  } else {
-    error.SetErrorStringWithFormat("failed to send '%s' packet",
-                                   stream.GetData());
+    if (!response.IsUnsupportedResponse()) {
+      if (response.GetChar() != 'F') {
+        error.SetErrorStringWithFormat("invalid response to '%s' packet",
+                                       stream.GetData());
+      } else {
+        const uint32_t mode = response.GetS32(-1, 16);
+        if (static_cast<int32_t>(mode) == -1) {
+          if (response.GetChar() == ',') {
+            int response_errno = response.GetS32(-1, 16);
+            if (response_errno > 0)
+              error.SetError(response_errno, lldb::eErrorTypePOSIX);
+            else
+              error.SetErrorToGenericError();
+          } else
+            error.SetErrorToGenericError();
+        } else {
+          file_permissions = mode & (S_IRWXU | S_IRWXG | S_IRWXO);
+        }
+      }
+      return error;
+    } else { // response.IsUnsupportedResponse()
+      m_supports_vFileMode = false;
+    }
   }
-  return error;
+
+  // Fallback to fstat.
+  if (llvm::Optional<GDBRemoteFStatData> st = Stat(file_spec)) {
+    file_permissions = st->gdb_st_mode & (S_IRWXU | S_IRWXG | S_IRWXO);
+    return Status();
+  }
+  return Status("fstat failed");
 }
 
 uint64_t GDBRemoteCommunicationClient::ReadFile(lldb::user_id_t fd,
@@ -3332,21 +3346,33 @@ Status GDBRemoteCommunicationClient::Unlink(const FileSpec &file_spec) {
 // Extension of host I/O packets to get whether a file exists.
 bool GDBRemoteCommunicationClient::GetFileExists(
     const lldb_private::FileSpec &file_spec) {
-  std::string path(file_spec.GetPath(false));
-  lldb_private::StreamString stream;
-  stream.PutCString("vFile:exists:");
-  stream.PutStringAsRawHex8(path);
-  StringExtractorGDBRemote response;
-  if (SendPacketAndWaitForResponse(stream.GetString(), response) ==
-      PacketResult::Success) {
-    if (response.GetChar() != 'F')
+  if (m_supports_vFileExists) {
+    std::string path(file_spec.GetPath(false));
+    lldb_private::StreamString stream;
+    stream.PutCString("vFile:exists:");
+    stream.PutStringAsRawHex8(path);
+    StringExtractorGDBRemote response;
+    if (SendPacketAndWaitForResponse(stream.GetString(), response) !=
+        PacketResult::Success)
       return false;
-    if (response.GetChar() != ',')
-      return false;
-    bool retcode = (response.GetChar() != '0');
-    return retcode;
+    if (!response.IsUnsupportedResponse()) {
+      if (response.GetChar() != 'F')
+        return false;
+      if (response.GetChar() != ',')
+        return false;
+      bool retcode = (response.GetChar() != '0');
+      return retcode;
+    } else
+      m_supports_vFileExists = false;
   }
-  return false;
+
+  // Fallback to open.
+  Status error;
+  lldb::user_id_t fd = OpenFile(file_spec, File::eOpenOptionReadOnly, 0, error);
+  if (fd == UINT64_MAX)
+    return false;
+  CloseFile(fd, error);
+  return true;
 }
 
 bool GDBRemoteCommunicationClient::CalculateMD5(
