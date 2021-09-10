@@ -54,15 +54,11 @@ class TestToolBase(ToolBase):
     def handle_options(self, defaults):
         options = self.context.options
 
-        # We accept either or both of --binary and --builder.
-        if not options.binary and not options.builder:
-            raise Error('expected --builder or --binary')
+        if not options.builder and (options.cflags or options.ldflags):
+            warn(self.context, '--cflags and --ldflags will be ignored when not'
+                               ' using --builder')
 
-        # --binary overrides --builder
         if options.binary:
-            if options.builder:
-                warn(self.context, "overriding --builder with --binary\n")
-
             options.binary = os.path.abspath(options.binary)
             if not os.path.isfile(options.binary):
                 raise Error('<d>could not find binary file</> <r>"{}"</>'
