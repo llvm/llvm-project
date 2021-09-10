@@ -3710,13 +3710,15 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     Function *Callee = getAssociatedFunction();
 
     // Helper to lookup an assumption string.
-    auto HasAssumption = [](Function *Fn, StringRef AssumptionStr) {
-      return Fn && hasAssumption(*Fn, AssumptionStr);
+    auto HasAssumption = [](CallBase &CB, StringRef AssumptionStr) {
+      return hasAssumption(CB, AssumptionStr);
     };
 
     // Check for SPMD-mode assumptions.
-    if (HasAssumption(Callee, "ompx_spmd_amenable"))
+    if (HasAssumption(CB, "ompx_spmd_amenable")) {
       SPMDCompatibilityTracker.indicateOptimisticFixpoint();
+      indicateOptimisticFixpoint();
+    }
 
     // First weed out calls we do not care about, that is readonly/readnone
     // calls, intrinsics, and "no_openmp" calls. Neither of these can reach a
@@ -3738,8 +3740,8 @@ struct AAKernelInfoCallSite : AAKernelInfo {
 
         // Unknown callees might contain parallel regions, except if they have
         // an appropriate assumption attached.
-        if (!(HasAssumption(Callee, "omp_no_openmp") ||
-              HasAssumption(Callee, "omp_no_parallelism")))
+        if (!(HasAssumption(CB, "omp_no_openmp") ||
+              HasAssumption(CB, "omp_no_parallelism")))
           ReachedUnknownParallelRegions.insert(&CB);
 
         // If SPMDCompatibilityTracker is not fixed, we need to give up on the
