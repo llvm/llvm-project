@@ -1465,7 +1465,7 @@ public:
   DenseMap<std::pair<Type *, ElementCount>, VectorType*> VectorTypes;
   // TODO: clean up the following after we no longer support non-opaque pointer
   // types.
-  bool ForceOpaquePointers;
+  bool OpaquePointers;
   DenseMap<Type*, PointerType*> PointerTypes;  // Pointers in AddrSpace = 0
   DenseMap<std::pair<Type*, unsigned>, PointerType*> ASPointerTypes;
 

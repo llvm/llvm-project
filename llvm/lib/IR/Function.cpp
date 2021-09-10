@@ -1446,11 +1446,6 @@ static bool matchIntrinsicType(
       if (!PT->isOpaque())
         return matchIntrinsicType(PT->getElementType(), Infos, ArgTys,
                                   DeferredChecks, IsDeferredCheck);
-      // If typed pointers are supported, do not allow using opaque pointer in
-      // place of fixed pointer type. This would make the intrinsic signature
-      // non-unique.
-      if (Ty->getContext().supportsTypedPointers())
-        return true;
       // Consume IIT descriptors relating to the pointer element type.
       while (Infos.front().Kind == IITDescriptor::Pointer)
         Infos = Infos.slice(1);
@@ -1568,11 +1563,8 @@ static bool matchIntrinsicType(
 
       if (!ThisArgType || !ReferenceType)
         return true;
-      if (!ThisArgType->isOpaque())
-        return ThisArgType->getElementType() != ReferenceType->getElementType();
-      // If typed pointers are supported, do not allow opaque pointer to ensure
-      // uniqueness.
-      return Ty->getContext().supportsTypedPointers();
+      return !ThisArgType->isOpaqueOrPointeeTypeMatches(
+          ReferenceType->getElementType());
     }
     case IITDescriptor::VecOfAnyPtrsToElt: {
       unsigned RefArgNumber = D.getRefArgNumber();

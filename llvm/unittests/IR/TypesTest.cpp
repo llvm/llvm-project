@@ -35,9 +35,10 @@ TEST(TypesTest, LayoutIdenticalEmptyStructs) {
 }
 
 TEST(TypesTest, CopyPointerType) {
-  LLVMContext C;
+  LLVMContext COpaquePointers;
+  COpaquePointers.enableOpaquePointers();
 
-  PointerType *P1 = PointerType::get(C, 1);
+  PointerType *P1 = PointerType::get(COpaquePointers, 1);
   EXPECT_TRUE(P1->isOpaque());
   PointerType *P1C = PointerType::getWithSamePointeeType(P1, 1);
   EXPECT_EQ(P1, P1C);
@@ -46,7 +47,8 @@ TEST(TypesTest, CopyPointerType) {
   EXPECT_NE(P1, P1C0);
   EXPECT_TRUE(P1C0->isOpaque());
 
-  Type *Int8 = Type::getInt8Ty(C);
+  LLVMContext CTypedPointers;
+  Type *Int8 = Type::getInt8Ty(CTypedPointers);
   PointerType *P2 = PointerType::get(Int8, 1);
   EXPECT_FALSE(P2->isOpaque());
   PointerType *P2C = PointerType::getWithSamePointeeType(P2, 1);
