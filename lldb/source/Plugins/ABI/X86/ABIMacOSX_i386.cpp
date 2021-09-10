@@ -471,5 +471,3 @@ lldb_private::ConstString ABIMacOSX_i386::GetPluginNameStatic() {
 lldb_private::ConstString ABIMacOSX_i386::GetPluginName() {
   return GetPluginNameStatic();
 }
-
-uint32_t ABIMacOSX_i386::GetPluginVersion() { return 1; }

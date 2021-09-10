@@ -49,8 +49,6 @@ public:
   // PluginInterface protocol
   lldb_private::ConstString GetPluginName() override;
 
-  uint32_t GetPluginVersion() override;
-
 protected:
   /// Runtime linker rendezvous structure.
   HexagonDYLDRendezvous m_rendezvous;

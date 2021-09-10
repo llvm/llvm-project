@@ -854,5 +854,3 @@ lldb_private::ConstString ABISysV_arm64::GetPluginNameStatic() {
 // PluginInterface protocol
 
 ConstString ABISysV_arm64::GetPluginName() { return GetPluginNameStatic(); }
-
-uint32_t ABISysV_arm64::GetPluginVersion() { return 1; }

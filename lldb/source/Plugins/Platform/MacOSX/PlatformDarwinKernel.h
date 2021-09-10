@@ -46,8 +46,6 @@ public:
     return GetPluginNameStatic();
   }
 
-  uint32_t GetPluginVersion() override { return 1; }
-
   // lldb_private::Platform functions
   const char *GetDescription() override { return GetDescriptionStatic(); }
 

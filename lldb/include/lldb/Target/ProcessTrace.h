@@ -42,8 +42,6 @@ public:
 
   ConstString GetPluginName() override;
 
-  uint32_t GetPluginVersion() override;
-
   Status DoDestroy() override;
 
   void RefreshStateAfterStop() override;

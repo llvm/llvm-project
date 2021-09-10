@@ -727,5 +727,3 @@ lldb_private::ConstString ABISysV_s390x::GetPluginNameStatic() {
 lldb_private::ConstString ABISysV_s390x::GetPluginName() {
   return GetPluginNameStatic();
 }
-
-uint32_t ABISysV_s390x::GetPluginVersion() { return 1; }

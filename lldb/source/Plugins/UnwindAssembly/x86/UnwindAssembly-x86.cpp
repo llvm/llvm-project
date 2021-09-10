@@ -245,8 +245,6 @@ ConstString UnwindAssembly_x86::GetPluginName() {
   return GetPluginNameStatic();
 }
 
-uint32_t UnwindAssembly_x86::GetPluginVersion() { return 1; }
-
 void UnwindAssembly_x86::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 GetPluginDescriptionStatic(), CreateInstance);

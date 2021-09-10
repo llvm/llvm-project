@@ -39,8 +39,6 @@ public:
   // lldb_private::PluginInterface functions
   ConstString GetPluginName() override { return GetPluginNameStatic(); }
 
-  uint32_t GetPluginVersion() override { return 1; }
-
   // lldb_private::Platform functions
   Status
   ResolveExecutable(const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,

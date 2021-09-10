@@ -294,8 +294,6 @@ public:
   // PluginInterface protocol
   lldb_private::ConstString GetPluginName() override;
 
-  uint32_t GetPluginVersion() override;
-
   class Locker : public ScriptInterpreterLocker {
   public:
     enum OnEntry {

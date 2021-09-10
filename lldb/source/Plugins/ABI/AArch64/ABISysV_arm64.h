@@ -83,8 +83,6 @@ public:
 
   lldb_private::ConstString GetPluginName() override;
 
-  uint32_t GetPluginVersion() override;
-
   lldb::addr_t FixCodeAddress(lldb::addr_t pc) override;
   lldb::addr_t FixDataAddress(lldb::addr_t pc) override;
 
