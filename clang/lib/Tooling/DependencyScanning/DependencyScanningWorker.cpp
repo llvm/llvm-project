@@ -321,32 +321,39 @@ llvm::Error DependencyScanningWorker::computeDependencies(
     const std::string &Input, StringRef WorkingDirectory,
     const CompilationDatabase &CDB, DependencyConsumer &Consumer,
     llvm::Optional<StringRef> ModuleName) {
+  // Reset what might have been modified in the previous worker invocation.
   RealFS->setCurrentWorkingDirectory(WorkingDirectory);
+  if (Files)
+    Files->setVirtualFileSystem(RealFS);
+
+  llvm::IntrusiveRefCntPtr<FileManager> CurrentFiles =
+      Files ? Files : new FileManager(FileSystemOptions(), RealFS);
+
+  // FIXME: Avoid this copy.
+  std::vector<CompileCommand> CompileCommands = CDB.getCompileCommands(Input);
+  const std::vector<std::string> &CommandLine =
+      CompileCommands.front().CommandLine;
+
+  Optional<std::vector<std::string>> ModifiedCommandLine;
+  if (ModuleName.hasValue()) {
+    ModifiedCommandLine = CommandLine;
+    InMemoryFS->addFile(*ModuleName, 0, llvm::MemoryBuffer::getMemBuffer(""));
+    ModifiedCommandLine->emplace_back(*ModuleName);
+  }
+
+  const std::vector<std::string> &FinalCommandLine =
+      ModifiedCommandLine ? *ModifiedCommandLine : CommandLine;
+
   return runWithDiags(DiagOpts.get(), [&](DiagnosticConsumer &DC) {
-    /// Create the tool that uses the underlying file system to ensure that any
-    /// file system requests that are made by the driver do not go through the
-    /// dependency scanning filesystem.
-    tooling::ClangTool Tool(CDB,
-                            ModuleName.hasValue() ? ModuleName->str() : Input,
-                            PCHContainerOps, RealFS, Files);
-    Tool.clearArgumentsAdjusters();
-    Tool.setRestoreWorkingDir(false);
-    Tool.setPrintErrorMessage(false);
-    Tool.setDiagnosticConsumer(&DC);
     DependencyScanningAction Action(WorkingDirectory, Consumer, DepFS,
                                     PPSkipMappings.get(), Format, ModuleName);
-
-    if (ModuleName.hasValue()) {
-      InMemoryFS->addFile(*ModuleName, 0, llvm::MemoryBuffer::getMemBuffer(""));
-      Tool.appendArgumentsAdjuster(
-          [&](const tooling::CommandLineArguments &Args, StringRef FileName) {
-            tooling::CommandLineArguments AdjustedArgs(Args);
-            AdjustedArgs.emplace_back(*ModuleName);
-            return AdjustedArgs;
-          });
-    }
-
-    return !Tool.run(&Action);
+    // Create an invocation that uses the underlying file system to ensure that
+    // any file system requests that are made by the driver do not go through
+    // the dependency scanning filesystem.
+    ToolInvocation Invocation(FinalCommandLine, &Action, CurrentFiles.get(),
+                              PCHContainerOps);
+    Invocation.setDiagnosticConsumer(&DC);
+    return Invocation.run();
   });
 }
 
