@@ -95,9 +95,9 @@ attributes #3 = { nounwind }
 ; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   19                              # BTF_KIND_TAG(id = 6)
-; CHECK-NEXT:        .long   2432696320                      # 0x91000000
+; CHECK-NEXT:        .long   285212672                       # 0x11000000
 ; CHECK-NEXT:        .long   4
-; CHECK-NEXT:        .long   0
+; CHECK-NEXT:        .long   4294967295
 ; CHECK-NEXT:        .long   0                               # BTF_KIND_FUNC_PROTO(id = 7)
 ; CHECK-NEXT:        .long   218103810                       # 0xd000002
 ; CHECK-NEXT:        .long   1
@@ -109,12 +109,13 @@ attributes #3 = { nounwind }
 ; CHECK-NEXT:        .long   201326594                       # 0xc000002
 ; CHECK-NEXT:        .long   7
 ; CHECK-NEXT:        .long   19                              # BTF_KIND_TAG(id = 9)
-; CHECK-NEXT:        .long   2432696320                      # 0x91000000
+; CHECK-NEXT:        .long   285212672                       # 0x11000000
 ; CHECK-NEXT:        .long   8
-; CHECK-NEXT:        .long   0
+; CHECK-NEXT:        .long   4294967295
 ; CHECK-NEXT:        .long   76                              # BTF_KIND_TAG(id = 10)
-; CHECK-NEXT:        .long   2432696320                      # 0x91000000
+; CHECK-NEXT:        .long   285212672                       # 0x11000000
 ; CHECK-NEXT:        .long   8
+; CHECK-NEXT:        .long   4294967295
 
 ; CHECK:             .ascii  "int"                           # string offset=1
 ; CHECK:             .ascii  "arg1"                          # string offset=5
