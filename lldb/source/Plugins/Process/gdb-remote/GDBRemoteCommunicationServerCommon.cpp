@@ -789,6 +789,9 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_FStat(
 #if !defined(_WIN32)
   data.gdb_st_blksize = file_stats.st_blksize;
   data.gdb_st_blocks = file_stats.st_blocks;
+#else
+  data.gdb_st_blksize = 0;
+  data.gdb_st_blocks = 0;
 #endif
   fill_clamp(data.gdb_st_atime, file_stats.st_atime, 0);
   fill_clamp(data.gdb_st_mtime, file_stats.st_mtime, 0);
