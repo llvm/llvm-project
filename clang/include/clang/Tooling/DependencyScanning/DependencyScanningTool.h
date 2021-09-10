@@ -83,8 +83,8 @@ public:
   /// \returns A \c StringError with the diagnostic output if clang errors
   /// occurred, dependency file contents otherwise.
   llvm::Expected<std::string>
-  getDependencyFile(const tooling::CompilationDatabase &Compilations,
-                    StringRef CWD, llvm::Optional<StringRef> ModuleName = None);
+  getDependencyFile(const std::vector<std::string> &CommandLine, StringRef CWD,
+                    llvm::Optional<StringRef> ModuleName = None);
 
   /// Collect the full module dependency graph for the input, ignoring any
   /// modules which have already been seen. If \p ModuleName isn't empty, this
@@ -99,7 +99,7 @@ public:
   /// \returns a \c StringError with the diagnostic output if clang errors
   /// occurred, \c FullDependencies otherwise.
   llvm::Expected<FullDependenciesResult>
-  getFullDependencies(const tooling::CompilationDatabase &Compilations,
+  getFullDependencies(const std::vector<std::string> &CommandLine,
                       StringRef CWD, const llvm::StringSet<> &AlreadySeen,
                       llvm::Optional<StringRef> ModuleName = None);
 
