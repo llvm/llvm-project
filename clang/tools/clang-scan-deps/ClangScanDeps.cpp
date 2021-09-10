@@ -544,22 +544,19 @@ int main(int argc, const char **argv) {
           Filename = std::move(Input->Filename);
           CWD = std::move(Input->Directory);
         }
+        Optional<StringRef> MaybeModuleName;
+        if (!ModuleName.empty())
+          MaybeModuleName = ModuleName;
         // Run the tool on it.
         if (Format == ScanningOutputFormat::Make) {
           auto MaybeFile = WorkerTools[I]->getDependencyFile(
-              Input->CommandLine, CWD,
-              ModuleName.empty()
-                  ? None
-                  : llvm::Optional<StringRef>(ModuleName.c_str()));
+              Input->CommandLine, CWD, MaybeModuleName);
           if (handleMakeDependencyToolResult(Filename, MaybeFile, DependencyOS,
                                              Errs))
             HadErrors = true;
         } else {
           auto MaybeFullDeps = WorkerTools[I]->getFullDependencies(
-              Input->CommandLine, CWD, AlreadySeenModules,
-              ModuleName.empty()
-                  ? None
-                  : llvm::Optional<StringRef>(ModuleName.c_str()));
+              Input->CommandLine, CWD, AlreadySeenModules, MaybeModuleName);
           if (handleFullDependencyToolResult(Filename, MaybeFullDeps, FD,
                                              LocalIndex, DependencyOS, Errs))
             HadErrors = true;
