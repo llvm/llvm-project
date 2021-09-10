@@ -276,8 +276,6 @@ private:
 DependencyScanningWorker::DependencyScanningWorker(
     DependencyScanningService &Service)
     : Format(Service.getFormat()) {
-  DiagOpts = new DiagnosticOptions();
-
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
   PCHContainerOps->registerReader(
       std::make_unique<ObjectFilePCHContainerReader>());
@@ -302,16 +300,20 @@ DependencyScanningWorker::DependencyScanningWorker(
     Files = new FileManager(FileSystemOptions(), RealFS);
 }
 
-static llvm::Error runWithDiags(
-    DiagnosticOptions *DiagOpts,
-    llvm::function_ref<bool(DiagnosticConsumer &DC)> BodyShouldSucceed) {
+static llvm::Error
+runWithDiags(DiagnosticOptions *DiagOpts,
+             llvm::function_ref<bool(DiagnosticConsumer &, DiagnosticOptions &)>
+                 BodyShouldSucceed) {
+  // Avoid serializing diagnostics.
+  DiagOpts->DiagnosticSerializationFile.clear();
+
   // Capture the emitted diagnostics and report them to the client
   // in the case of a failure.
   std::string DiagnosticOutput;
   llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
   TextDiagnosticPrinter DiagPrinter(DiagnosticsOS, DiagOpts);
 
-  if (BodyShouldSucceed(DiagPrinter))
+  if (BodyShouldSucceed(DiagPrinter, *DiagOpts))
     return llvm::Error::success();
   return llvm::make_error<llvm::StringError>(DiagnosticsOS.str(),
                                              llvm::inconvertibleErrorCode());
@@ -338,15 +340,24 @@ llvm::Error DependencyScanningWorker::computeDependencies(
   const std::vector<std::string> &FinalCommandLine =
       ModifiedCommandLine ? *ModifiedCommandLine : CommandLine;
 
-  return runWithDiags(DiagOpts.get(), [&](DiagnosticConsumer &DC) {
-    DependencyScanningAction Action(WorkingDirectory, Consumer, DepFS,
-                                    PPSkipMappings.get(), Format, ModuleName);
-    // Create an invocation that uses the underlying file system to ensure that
-    // any file system requests that are made by the driver do not go through
-    // the dependency scanning filesystem.
-    ToolInvocation Invocation(FinalCommandLine, &Action, CurrentFiles.get(),
-                              PCHContainerOps);
-    Invocation.setDiagnosticConsumer(&DC);
-    return Invocation.run();
-  });
+  std::vector<const char *> FinalCCommandLine(CommandLine.size(), nullptr);
+  llvm::transform(CommandLine, FinalCCommandLine.begin(),
+                  [](const std::string &Str) { return Str.c_str(); });
+
+  return runWithDiags(CreateAndPopulateDiagOpts(FinalCCommandLine).release(),
+                      [&](DiagnosticConsumer &DC, DiagnosticOptions &DiagOpts) {
+                        DependencyScanningAction Action(
+                            WorkingDirectory, Consumer, DepFS,
+                            PPSkipMappings.get(), Format, ModuleName);
+                        // Create an invocation that uses the underlying file
+                        // system to ensure that any file system requests that
+                        // are made by the driver do not go through the
+                        // dependency scanning filesystem.
+                        ToolInvocation Invocation(FinalCommandLine, &Action,
+                                                  CurrentFiles.get(),
+                                                  PCHContainerOps);
+                        Invocation.setDiagnosticConsumer(&DC);
+                        Invocation.setDiagnosticOptions(&DiagOpts);
+                        return Invocation.run();
+                      });
 }

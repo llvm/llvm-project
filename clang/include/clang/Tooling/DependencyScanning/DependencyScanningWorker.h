@@ -72,7 +72,6 @@ public:
   llvm::StringSet<> AlreadySeen;
 
 private:
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
   std::unique_ptr<ExcludedPreprocessorDirectiveSkipMapping> PPSkipMappings;
 
