@@ -1250,6 +1250,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             self.assertEqual(read_value, expected_reg_values[thread_index])
             thread_index += 1
 
+    @skipIfWindows # No pty support to test any inferior output
     @add_test_categories(["llgs"])
     def test_launch_via_A(self):
         self.build()
@@ -1274,6 +1275,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assertEqual(context["O_content"],
                          b'arg1\r\narg2\r\narg3\r\n')
 
+    @skipIfWindows # No pty support to test any inferior output
     @add_test_categories(["llgs"])
     def test_launch_via_vRun(self):
         self.build()
@@ -1292,6 +1294,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
              "send packet: $W00#00"],
             True)
         context = self.expect_gdbremote_sequence()
+        self.assertEqual(context["O_content"],
+                         b'arg1\r\narg2\r\narg3\r\n')
 
     @add_test_categories(["llgs"])
     def test_launch_via_vRun_no_args(self):
@@ -1311,6 +1315,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             True)
         self.expect_gdbremote_sequence()
 
+    @skipIfWindows # No pty support to test any inferior output
     @add_test_categories(["llgs"])
     def test_QEnvironment(self):
         self.build()
@@ -1338,6 +1343,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         context = self.expect_gdbremote_sequence()
         self.assertEqual(context["O_content"], b"test\r\na=z\r\n")
 
+    @skipIfWindows # No pty support to test any inferior output
     @add_test_categories(["llgs"])
     def test_QEnvironmentHexEncoded(self):
         self.build()
