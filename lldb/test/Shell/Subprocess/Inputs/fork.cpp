@@ -28,19 +28,8 @@ void wait_for_parent() {
   assert(ret == 0);
 }
 
-int child_func(void *argv0_ptr) {
-  const char *argv0 = static_cast<char*>(argv0_ptr);
-
-  // NB: when using vfork(), the parent may be suspended while running
-  // this function, so do not rely on any synchronization until we exec
-#if defined(TEST_FORK)
-  if (TEST_FORK != vfork)
-#endif
-    wait_for_parent();
-
-  int ret = close(parent_done[1]);
-  assert(ret == 0);
-
+// This is the function we set breakpoint on.
+int child_func(const char *argv0) {
   // we need to avoid memory modifications for vfork(), yet we want
   // to be able to test watchpoints, so do the next best thing
   // and restore the original value
@@ -49,6 +38,22 @@ int child_func(void *argv0_ptr) {
   execl(argv0, argv0, parent_done_str, NULL);
   assert(0 && "this should not be reached");
   return 1;
+}
+
+int child_top_func(void *argv0_ptr) {
+  const char *argv0 = static_cast<char*>(argv0_ptr);
+
+  int ret = close(parent_done[1]);
+  assert(ret == 0);
+
+  // NB: when using vfork(), the parent may be suspended while running
+  // this function, so do not rely on any synchronization until we exec
+#if defined(TEST_FORK)
+  if (TEST_FORK != vfork)
+#endif
+    wait_for_parent();
+
+  return child_func(argv0);
 }
 
 int main(int argc, char* argv[]) {
@@ -77,12 +82,12 @@ int main(int argc, char* argv[]) {
   assert(ret != -1);
 
 #if defined(TEST_CLONE)
-  pid_t pid = clone(child_func, &stack[sizeof(stack)], 0, argv[0]);
+  pid_t pid = clone(child_top_func, &stack[sizeof(stack)], 0, argv[0]);
 #elif defined(TEST_FORK)
   pid_t pid = TEST_FORK();
   // NB: this must be equivalent to the clone() call above
   if (pid == 0)
-    _exit(child_func(argv[0]));
+    _exit(child_top_func(argv[0]));
 #endif
   assert(pid != -1);
 
