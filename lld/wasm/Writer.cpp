@@ -1513,8 +1513,6 @@ void Writer::run() {
     log("Global Imports   : " + Twine(out.importSec->getNumImportedGlobals()));
     log("Tag Imports      : " + Twine(out.importSec->getNumImportedTags()));
     log("Table Imports    : " + Twine(out.importSec->getNumImportedTables()));
-    for (ObjFile *file : symtab->objectFiles)
-      file->dumpInfo();
   }
 
   createHeader();
