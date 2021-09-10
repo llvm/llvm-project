@@ -50,7 +50,7 @@ DependencyScanningTool::DependencyScanningTool(
     : Worker(Service) {}
 
 llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
-    const tooling::CompilationDatabase &Compilations, StringRef CWD,
+    const std::vector<std::string> &CommandLine, StringRef CWD,
     llvm::Optional<StringRef> ModuleName) {
   /// Prints out all of the gathered dependencies into a string.
   class MakeDependencyPrinterConsumer : public DependencyConsumer {
@@ -103,17 +103,6 @@ llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
     std::vector<std::string> Dependencies;
   };
 
-  // We expect a single command here because if a source file occurs multiple
-  // times in the original CDB, then `computeDependencies` would run the
-  // `DependencyScanningAction` once for every time the input occured in the
-  // CDB. Instead we split up the CDB into single command chunks to avoid this
-  // behavior.
-  assert(Compilations.getAllCompileCommands().size() == 1 &&
-         "Expected a compilation database with a single command!");
-  // FIXME: Avoid this copy.
-  std::vector<std::string> CommandLine =
-      Compilations.getAllCompileCommands().front().CommandLine;
-
   MakeDependencyPrinterConsumer Consumer;
   auto Result =
       Worker.computeDependencies(CWD, CommandLine, Consumer, ModuleName);
@@ -126,7 +115,7 @@ llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
 
 llvm::Expected<FullDependenciesResult>
 DependencyScanningTool::getFullDependencies(
-    const tooling::CompilationDatabase &Compilations, StringRef CWD,
+    const std::vector<std::string> &CommandLine, StringRef CWD,
     const llvm::StringSet<> &AlreadySeen,
     llvm::Optional<StringRef> ModuleName) {
   class FullDependencyPrinterConsumer : public DependencyConsumer {
@@ -190,17 +179,6 @@ DependencyScanningTool::getFullDependencies(
     std::vector<std::string> OutputPaths;
     const llvm::StringSet<> &AlreadySeen;
   };
-
-  // We expect a single command here because if a source file occurs multiple
-  // times in the original CDB, then `computeDependencies` would run the
-  // `DependencyScanningAction` once for every time the input occured in the
-  // CDB. Instead we split up the CDB into single command chunks to avoid this
-  // behavior.
-  assert(Compilations.getAllCompileCommands().size() == 1 &&
-         "Expected a compilation database with a single command!");
-  // FIXME: Avoid this copy.
-  std::vector<std::string> CommandLine =
-      Compilations.getAllCompileCommands().front().CommandLine;
 
   FullDependencyPrinterConsumer Consumer(AlreadySeen);
   llvm::Error Result =

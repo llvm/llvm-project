@@ -14,7 +14,6 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Lex/PreprocessorExcludedConditionalDirectiveSkipMapping.h"
-#include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "llvm/Support/Error.h"
@@ -29,24 +28,6 @@ namespace tooling {
 namespace dependencies {
 
 class DependencyScanningWorkerFilesystem;
-
-/// Compilation database that holds and reports a single compile command.
-class SingleCommandCompilationDatabase : public CompilationDatabase {
-  CompileCommand Command;
-
-public:
-  SingleCommandCompilationDatabase(CompileCommand Cmd)
-      : Command(std::move(Cmd)) {}
-
-  std::vector<CompileCommand>
-  getCompileCommands(StringRef FilePath) const override {
-    return {Command};
-  }
-
-  std::vector<CompileCommand> getAllCompileCommands() const override {
-    return {Command};
-  }
-};
 
 class DependencyConsumer {
 public:
