@@ -13,6 +13,7 @@
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
@@ -308,6 +309,55 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
     auto extended =
         rewriter.create<ZeroExtendIOp>(loc, resultTypes, shouldRound);
     return rewriter.create<mlir::AddIOp>(loc, resultTypes, result, extended);
+  }
+
+  // tosa::ClzOp
+  if (isa<tosa::ClzOp>(op) && elementTy.isa<IntegerType>()) {
+    int bitWidth = elementTy.getIntOrFloatBitWidth();
+    auto zero =
+        rewriter.create<mlir::ConstantOp>(loc, IntegerAttr::get(elementTy, 0));
+    auto leadingZeros = rewriter.create<mlir::ConstantOp>(
+        loc, IntegerAttr::get(elementTy, bitWidth));
+
+    SmallVector<Value> operands = {args[0], leadingZeros, zero};
+    SmallVector<Type> types = {elementTy, elementTy, elementTy};
+
+    auto whileOp = rewriter.create<scf::WhileOp>(loc, types, operands);
+    Block *before = rewriter.createBlock(&whileOp.before(), {}, types);
+    Block *after = rewriter.createBlock(&whileOp.after(), {}, types);
+
+    // The conditional block of the while loop.
+    {
+      rewriter.setInsertionPointToStart(&whileOp.before().front());
+      Value input = before->getArgument(0);
+      Value zero = before->getArgument(2);
+
+      Value inputLargerThanZero =
+          rewriter.create<CmpIOp>(loc, CmpIPredicate::ne, input, zero);
+      rewriter.create<scf::ConditionOp>(loc, inputLargerThanZero,
+                                        before->getArguments());
+    }
+
+    // The body of the while loop: shift right until reaching a value of 0.
+    {
+      rewriter.setInsertionPointToStart(&whileOp.after().front());
+      Value input = after->getArgument(0);
+      Value leadingZeros = after->getArgument(1);
+
+      auto one = rewriter.create<mlir::ConstantOp>(
+          loc, IntegerAttr::get(elementTy, 1));
+      auto shifted = rewriter.create<mlir::UnsignedShiftRightOp>(
+          loc, resultTypes, input, one);
+      auto leadingZerosMinusOne =
+          rewriter.create<mlir::SubIOp>(loc, resultTypes, leadingZeros, one);
+
+      rewriter.create<scf::YieldOp>(
+          loc,
+          ValueRange({shifted, leadingZerosMinusOne, after->getArgument(2)}));
+    }
+
+    rewriter.setInsertionPointAfter(whileOp);
+    return whileOp->getResult(1);
   }
 
   // tosa::LogicalAnd
@@ -2905,6 +2955,7 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       PointwiseConverter<tosa::LogicalLeftShiftOp>,
       PointwiseConverter<tosa::LogicalRightShiftOp>,
       PointwiseConverter<tosa::ArithmeticRightShiftOp>,
+      PointwiseConverter<tosa::ClzOp>,
       PointwiseConverter<tosa::SelectOp>,
       PointwiseConverter<tosa::GreaterOp>,
       PointwiseConverter<tosa::GreaterEqualOp>,
