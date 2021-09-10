@@ -566,3 +566,23 @@ class GDBRemoteTestBase(TestBase):
         if i < len(packets):
             self.fail(u"Did not receive: %s\nLast 10 packets:\n\t%s" %
                     (packets[i], u'\n\t'.join(log)))
+
+
+class GDBPlatformClientTestBase(GDBRemoteTestBase):
+    """
+    Base class for platform server clients.
+
+    This class extends GDBRemoteTestBase by automatically connecting
+    via "platform connect" in the setUp() method.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.runCmd("platform select remote-gdb-server")
+        self.runCmd("platform connect connect://" +
+                    self.server.get_connect_address())
+        self.assertTrue(self.dbg.GetSelectedPlatform().IsConnected())
+
+    def tearDown(self):
+        self.dbg.GetSelectedPlatform().DisconnectRemote()
+        super().tearDown()
