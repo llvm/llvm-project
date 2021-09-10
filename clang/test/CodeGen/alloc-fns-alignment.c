@@ -48,13 +48,14 @@ void *aligned_alloc_large_constant_test(size_t n) {
 // ALIGN16: align 16 i8* @realloc
 
 // CHECK-LABEL: @aligned_alloc_variable_test
-// ALIGN16: align 16 i8* @aligned_alloc
+// ALIGN16:      %[[ALLOCATED:.*]] = call align 16 i8* @aligned_alloc({{i32|i64}} %[[ALIGN:.*]], {{i32|i64}} %[[NBYTES:.*]])
+// ALIGN16-NEXT: call void @llvm.assume(i1 true) [ "align"(i8* %[[ALLOCATED]], {{i32|i64}} %[[ALIGN]]) ]
 
 // CHECK-LABEL: @aligned_alloc_constant_test
 // ALIGN16: align 16 i8* @aligned_alloc
 
 // CHECK-LABEL: @aligned_alloc_large_constant_test
-// ALIGN16: align 16 i8* @aligned_alloc
+// ALIGN16: align 4096 i8* @aligned_alloc
 
 // CHECK-LABEL: @malloc_test
 // ALIGN8: align 8 i8* @malloc
@@ -72,7 +73,7 @@ void *aligned_alloc_large_constant_test(size_t n) {
 // ALIGN8: align 8 i8* @aligned_alloc
 
 // CHECK-LABEL: @aligned_alloc_large_constant_test
-// ALIGN8: align 8 i8* @aligned_alloc
+// ALIGN8: align 4096 i8* @aligned_alloc
 
 // NOBUILTIN-MALLOC: declare i8* @malloc
 // NOBUILTIN-CALLOC: declare i8* @calloc
