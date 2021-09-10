@@ -422,8 +422,15 @@ bool PerfReaderBase::extractLBRStack(TraceStream &TraceIt,
     Token.split(Addresses, "/");
     uint64_t Src;
     uint64_t Dst;
-    Addresses[0].substr(2).getAsInteger(16, Src);
-    Addresses[1].substr(2).getAsInteger(16, Dst);
+
+    // Stop at broken LBR records.
+    if (Addresses[0].substr(2).getAsInteger(16, Src) ||
+        Addresses[1].substr(2).getAsInteger(16, Dst)) {
+      WithColor::warning() << "Invalid address in LBR record at line "
+                           << TraceIt.getLineNumber() << ": "
+                           << TraceIt.getCurrentLine() << "\n";
+      break;
+    }
 
     bool SrcIsInternal = Binary->addressIsCode(Src);
     bool DstIsInternal = Binary->addressIsCode(Dst);
@@ -635,11 +642,8 @@ void LBRPerfReader::computeCounterFromLBR(const PerfSample *Sample,
     // If this not the first LBR, update the range count between TO of current
     // LBR and FROM of next LBR.
     uint64_t StartOffset = TargetOffset;
-    if (EndOffeset != 0) {
-      assert(StartOffset <= EndOffeset &&
-             "Bogus range should be filtered ealier!");
+    if (EndOffeset != 0)
       Counter.recordRangeCount(StartOffset, EndOffeset, Repeat);
-    }
     EndOffeset = SourceOffset;
   }
 }
