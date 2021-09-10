@@ -6,8 +6,9 @@
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full 2>&1 >> %t/result.json
 // RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck %s
 
-// Check that the scanner injects '-Wno-error' option and invalid command-line
-// arguments like '-target i386-apple-ios14.0-simulator' do not result in error.
+// Check that the '-Wno-error=invalid-ios-deployment-target' option is being
+// respected and invalid arguments like '-target i386-apple-ios14.0-simulator'
+// do not result in an error.
 
 // CHECK-NOT:  error:
 // CHECK:      -[[PREFIX:.*]]
