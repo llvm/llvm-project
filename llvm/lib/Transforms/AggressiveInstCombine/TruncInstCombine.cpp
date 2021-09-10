@@ -65,6 +65,8 @@ static void getRelevantOperands(Instruction *I, SmallVectorImpl<Value *> &Ops) {
   case Instruction::Shl:
   case Instruction::LShr:
   case Instruction::AShr:
+  case Instruction::UDiv:
+  case Instruction::URem:
     Ops.push_back(I->getOperand(0));
     Ops.push_back(I->getOperand(1));
     break;
@@ -134,6 +136,8 @@ bool TruncInstCombine::buildTruncExpressionDag() {
     case Instruction::Shl:
     case Instruction::LShr:
     case Instruction::AShr:
+    case Instruction::UDiv:
+    case Instruction::URem:
     case Instruction::Select: {
       SmallVector<Value *, 2> Operands;
       getRelevantOperands(I, Operands);
@@ -143,7 +147,7 @@ bool TruncInstCombine::buildTruncExpressionDag() {
     default:
       // TODO: Can handle more cases here:
       // 1. shufflevector, extractelement, insertelement
-      // 2. udiv, urem
+      // 2. sdiv, srem
       // 3. phi node(and loop handling)
       // ...
       return false;
@@ -306,6 +310,18 @@ Type *TruncInstCombine::getBestTruncatedType() {
         return nullptr;
       Itr.second.MinBitWidth = MinBitWidth;
     }
+    if (I->getOpcode() == Instruction::UDiv ||
+        I->getOpcode() == Instruction::URem) {
+      unsigned MinBitWidth = 0;
+      for (const auto &Op : I->operands()) {
+        KnownBits Known = computeKnownBits(Op);
+        MinBitWidth =
+            std::max(Known.getMaxValue().getActiveBits(), MinBitWidth);
+        if (MinBitWidth >= OrigBitWidth)
+          return nullptr;
+      }
+      Itr.second.MinBitWidth = MinBitWidth;
+    }
   }
 
   // Calculate minimum allowed bit-width allowed for shrinking the currently
@@ -397,7 +413,9 @@ void TruncInstCombine::ReduceExpressionDag(Type *SclTy) {
     case Instruction::Xor:
     case Instruction::Shl:
     case Instruction::LShr:
-    case Instruction::AShr: {
+    case Instruction::AShr:
+    case Instruction::UDiv:
+    case Instruction::URem: {
       Value *LHS = getReducedOperand(I->getOperand(0), SclTy);
       Value *RHS = getReducedOperand(I->getOperand(1), SclTy);
       Res = Builder.CreateBinOp((Instruction::BinaryOps)Opc, LHS, RHS);
