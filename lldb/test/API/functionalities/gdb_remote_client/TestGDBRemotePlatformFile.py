@@ -100,3 +100,48 @@ class TestGDBRemotePlatformFile(GDBPlatformClientTestBase):
             "vFile:fstat:5",
             "vFile:close:5",
             ])
+
+    def test_file_permissions(self):
+        """Test 'platform get-permissions'"""
+
+        class Responder(MockGDBServerResponder):
+            def vFile(self, packet):
+                return "F1a4"
+
+        self.server.responder = Responder()
+
+        self.match("platform get-permissions /some/file.txt",
+                   [r"File permissions of /some/file\.txt \(remote\): 0o0644"])
+        self.assertPacketLogContains([
+            "vFile:mode:2f736f6d652f66696c652e747874",
+            ])
+
+    def test_file_exists(self):
+        """Test 'platform file-exists'"""
+
+        class Responder(MockGDBServerResponder):
+            def vFile(self, packet):
+                return "F,1"
+
+        self.server.responder = Responder()
+
+        self.match("platform file-exists /some/file.txt",
+                   [r"File /some/file\.txt \(remote\) exists"])
+        self.assertPacketLogContains([
+            "vFile:exists:2f736f6d652f66696c652e747874",
+            ])
+
+    def test_file_exists_not(self):
+        """Test 'platform file-exists' with non-existing file"""
+
+        class Responder(MockGDBServerResponder):
+            def vFile(self, packet):
+                return "F,0"
+
+        self.server.responder = Responder()
+
+        self.match("platform file-exists /some/file.txt",
+                   [r"File /some/file\.txt \(remote\) does not exist"])
+        self.assertPacketLogContains([
+            "vFile:exists:2f736f6d652f66696c652e747874",
+            ])
