@@ -1,5 +1,7 @@
 from gdbclientutils import *
 
+from lldbsuite.test.decorators import *
+
 class TestGDBRemotePlatformFile(GDBPlatformClientTestBase):
 
     def test_file(self):
@@ -103,6 +105,7 @@ class TestGDBRemotePlatformFile(GDBPlatformClientTestBase):
             "vFile:close:5",
             ])
 
+    @skipIfWindows
     def test_file_permissions(self):
         """Test 'platform get-permissions'"""
 
@@ -118,6 +121,7 @@ class TestGDBRemotePlatformFile(GDBPlatformClientTestBase):
             "vFile:mode:2f736f6d652f66696c652e747874",
             ])
 
+    @skipIfWindows
     def test_file_permissions_fallback(self):
         """Test 'platform get-permissions' fallback to fstat"""
 
