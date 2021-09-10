@@ -4803,6 +4803,13 @@ SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_SUBVECTOR(SDNode *N) {
       return DAG.getNode(ISD::ANY_EXTEND, dl, NOutVT, Step2);
     }
 
+    // Try and extract from a widened type.
+    if (getTypeAction(InVT) == TargetLowering::TypeWidenVector) {
+      SDValue Ops[] = {GetWidenedVector(InOp0), BaseIdx};
+      SDValue Ext = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(N), OutVT, Ops);
+      return DAG.getNode(ISD::ANY_EXTEND, dl, NOutVT, Ext);
+    }
+
     // Promote operands and see if this is handled by target lowering,
     // Otherwise, use the BUILD_VECTOR approach below
     if (getTypeAction(InVT) == TargetLowering::TypePromoteInteger) {
