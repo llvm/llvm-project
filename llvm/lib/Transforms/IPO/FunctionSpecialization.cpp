@@ -659,6 +659,12 @@ private:
       if (!isa<CallInst>(U) && !isa<InvokeInst>(U))
         continue;
       auto &CS = *cast<CallBase>(U);
+      // If the call site has attribute minsize set, that callsite won't be
+      // specialized.
+      if (CS.hasFnAttr(Attribute::MinSize)) {
+        AllConstant = false;
+        continue;
+      }
 
       // If the parent of the call site will never be executed, we don't need
       // to worry about the passed value.
@@ -688,6 +694,9 @@ private:
   /// This function modifies calls to function \p F whose argument at index \p
   /// ArgNo is equal to constant \p C. The calls are rewritten to call function
   /// \p Clone instead.
+  ///
+  /// Callsites that have been marked with the MinSize function attribute won't
+  /// be specialized and rewritten.
   void rewriteCallSites(Function *F, Function *Clone, Argument &Arg,
                         Constant *C) {
     unsigned ArgNo = Arg.getArgNo();
