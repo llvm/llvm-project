@@ -258,3 +258,96 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         self.assertPacketLogContains([
           "vRun;%s;61726731;61726732;61726733" % (exe_hex,)
         ])
+
+    def test_launch_QEnvironment(self):
+        class MyResponder(MockGDBServerResponder):
+            def qC(self):
+                return "E42"
+
+            def qfThreadInfo(self):
+               return "E42"
+
+            def vRun(self, packet):
+                self.started = True
+                return "E28"
+
+        self.server.responder = MyResponder()
+
+        target = self.createTarget("a.yaml")
+        process = self.connect(target)
+        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
+                                      [lldb.eStateConnected])
+
+        target.Launch(lldb.SBListener(),
+                      [],  # argv
+                      ["PLAIN=foo",
+                       "NEEDSENC=frob$",
+                       "NEEDSENC2=fr*ob",
+                       "NEEDSENC3=fro}b",
+                       "NEEDSENC4=f#rob",
+                       "EQUALS=foo=bar",
+                       ],  # envp
+                      None,  # stdin_path
+                      None,  # stdout_path
+                      None,  # stderr_path
+                      None,  # working_directory
+                      0,  # launch_flags
+                      True,  # stop_at_entry
+                      lldb.SBError())  # error
+
+        self.assertPacketLogContains([
+          "QEnvironment:PLAIN=foo",
+          "QEnvironmentHexEncoded:4e45454453454e433d66726f6224",
+          "QEnvironmentHexEncoded:4e45454453454e43323d66722a6f62",
+          "QEnvironmentHexEncoded:4e45454453454e43333d66726f7d62",
+          "QEnvironmentHexEncoded:4e45454453454e43343d6623726f62",
+          "QEnvironment:EQUALS=foo=bar",
+        ])
+
+    def test_launch_QEnvironmentHexEncoded_only(self):
+        class MyResponder(MockGDBServerResponder):
+            def qC(self):
+                return "E42"
+
+            def qfThreadInfo(self):
+               return "E42"
+
+            def vRun(self, packet):
+                self.started = True
+                return "E28"
+
+            def QEnvironment(self, packet):
+                return ""
+
+        self.server.responder = MyResponder()
+
+        target = self.createTarget("a.yaml")
+        process = self.connect(target)
+        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
+                                      [lldb.eStateConnected])
+
+        target.Launch(lldb.SBListener(),
+                      [],  # argv
+                      ["PLAIN=foo",
+                       "NEEDSENC=frob$",
+                       "NEEDSENC2=fr*ob",
+                       "NEEDSENC3=fro}b",
+                       "NEEDSENC4=f#rob",
+                       "EQUALS=foo=bar",
+                       ],  # envp
+                      None,  # stdin_path
+                      None,  # stdout_path
+                      None,  # stderr_path
+                      None,  # working_directory
+                      0,  # launch_flags
+                      True,  # stop_at_entry
+                      lldb.SBError())  # error
+
+        self.assertPacketLogContains([
+          "QEnvironmentHexEncoded:504c41494e3d666f6f",
+          "QEnvironmentHexEncoded:4e45454453454e433d66726f6224",
+          "QEnvironmentHexEncoded:4e45454453454e43323d66722a6f62",
+          "QEnvironmentHexEncoded:4e45454453454e43333d66726f7d62",
+          "QEnvironmentHexEncoded:4e45454453454e43343d6623726f62",
+          "QEnvironmentHexEncoded:455155414c533d666f6f3d626172",
+        ])
