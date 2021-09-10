@@ -156,9 +156,19 @@ bool ValueObjectChild::UpdateValue() {
             m_value.SetValueType(Value::ValueType::FileAddress);
         } break;
         case eAddressTypeLoad:
-          m_value.SetValueType(is_instance_ptr_base
-                                   ? Value::ValueType::Scalar
-                                   : Value::ValueType::LoadAddress);
+          // BEGIN SWIFT MOD
+          // We need to detect when we cross TypeSystem boundaries,
+          // e.g. when we try to print Obj-C fields of a Swift object.
+          if (parent->GetCompilerType().GetTypeSystem()->SupportsLanguage(
+                  lldb::eLanguageTypeSwift) &&
+              GetCompilerType().GetTypeSystem()->SupportsLanguage(
+                  lldb::eLanguageTypeSwift))
+            m_value.SetValueType(is_instance_ptr_base
+                                     ? Value::ValueType::Scalar
+                                     : Value::ValueType::LoadAddress);
+          else
+            m_value.SetValueType(Value::ValueType::LoadAddress);
+          // END SWIFT MOD
           break;
         case eAddressTypeHost:
           m_value.SetValueType(Value::ValueType::HostAddress);
