@@ -17,6 +17,7 @@
 #include "flang/Runtime/stop.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstring>
+#include <string_view>
 
 using namespace Fortran::runtime::io;
 
@@ -445,4 +446,71 @@ TEST(ExternalIOTests, TestSequentialVariableFormatted) {
   ASSERT_TRUE(IONAME(SetStatus)(io, "DELETE", 6)) << "SetStatus(DELETE)";
   ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
       << "EndIoStatement() for Close";
+}
+
+TEST(ExternalIOTests, TestNonAvancingInput) {
+  // OPEN(NEWUNIT=unit,ACCESS='SEQUENTIAL',ACTION='READWRITE',&
+  //   FORM='FORMATTED',STATUS='SCRATCH')
+  auto *io{IONAME(BeginOpenNewUnit)(__FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(SetAccess)(io, "SEQUENTIAL", 10))
+      << "SetAccess(SEQUENTIAL)";
+  ASSERT_TRUE(IONAME(SetAction)(io, "READWRITE", 9)) << "SetAction(READWRITE)";
+  ASSERT_TRUE(IONAME(SetForm)(io, "FORMATTED", 9)) << "SetForm(FORMATTED)";
+  ASSERT_TRUE(IONAME(SetStatus)(io, "SCRATCH", 7)) << "SetStatus(SCRATCH)";
+
+  int unit{-1};
+  ASSERT_TRUE(IONAME(GetNewUnit)(io, unit)) << "GetNewUnit()";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for OpenNewUnit";
+
+  // Write the file to be used for the input test.
+  static constexpr std::string_view records[] = {
+      "ABCDEFGH", "IJKLMNOP", "QRSTUVWX"};
+  static constexpr std::string_view fmt{"(A)"};
+  for (const auto &record : records) {
+    // WRITE(UNIT=unit,FMT=fmt) record
+    io = IONAME(BeginExternalFormattedOutput)(
+        fmt.data(), fmt.length(), unit, __FILE__, __LINE__);
+    ASSERT_TRUE(IONAME(OutputAscii)(io, record.data(), record.length()))
+        << "OutputAscii()";
+    ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+        << "EndIoStatement() for OutputAscii";
+  }
+
+  // REWIND(UNIT=unit)
+  io = IONAME(BeginRewind)(unit, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Rewind";
+
+  struct TestItems {
+    std::string item;
+    int expectedIoStat;
+    std::string expectedItemValue;
+  };
+  // Actual non advancing input IO test
+  TestItems inputItems[]{
+      {std::string(4, '+'), IostatOk, "ABCD"},
+      {std::string(4, '+'), IostatOk, "EFGH"},
+      {std::string(4, '+'), IostatEor, "    "},
+      {std::string(2, '+'), IostatOk, "IJ"},
+      {std::string(8, '+'), IostatEor, "KLMNOP  "},
+      {std::string(10, '+'), IostatEor, "QRSTUVWX  "},
+  };
+
+  int j{0};
+  for (auto &inputItem : inputItems) {
+    // READ(UNIT=unit, FMT=fmt, ADVANCE='NO', IOSTAT=iostat) inputItem
+    io = IONAME(BeginExternalFormattedInput)(
+        fmt.data(), fmt.length(), unit, __FILE__, __LINE__);
+    IONAME(EnableHandlers)(io, true, false, false, false, false);
+    ASSERT_TRUE(IONAME(SetAdvance)(io, "NO", 2)) << "SetAdvance(NO)" << j;
+    ASSERT_TRUE(
+        IONAME(InputAscii)(io, inputItem.item.data(), inputItem.item.length()))
+        << "InputAscii() " << j;
+    ASSERT_EQ(IONAME(EndIoStatement)(io), inputItem.expectedIoStat)
+        << "EndIoStatement() for Read " << j;
+    ASSERT_EQ(inputItem.item, inputItem.expectedItemValue)
+        << "Input-item value after non advancing read " << j;
+    j++;
+  }
 }
