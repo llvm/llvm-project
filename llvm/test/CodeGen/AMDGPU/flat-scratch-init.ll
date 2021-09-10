@@ -46,11 +46,11 @@ define amdgpu_kernel void @stack_object_in_kernel_no_calls() {
 define amdgpu_kernel void @kernel_calls_no_stack() {
 ; GCN-LABEL: kernel_calls_no_stack:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_add_u32 s0, s0, s3
+; GCN-NEXT:    s_add_u32 s6, s6, s11
 ; GCN-NEXT:    s_mov_b32 s32, 0
-; GCN-NEXT:    s_addc_u32 s1, s1, 0
-; GCN-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
-; GCN-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
+; GCN-NEXT:    s_addc_u32 s7, s7, 0
+; GCN-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s6
+; GCN-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s7
 ; GCN-NEXT:    s_getpc_b64 s[0:1]
 ; GCN-NEXT:    s_add_u32 s0, s0, extern_func@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s1, s1, extern_func@gotpcrel32@hi+12

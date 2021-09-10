@@ -75,10 +75,10 @@ define hidden i32 @use_workitem_id_x(i32 %arg0) #0 {
 }
 
 ; GCN-LABEL: {{^}}test_bitcast_use_workitem_id_x:
+; GCN: v_mov_b32_e32 v1, v0
 ; GCN: s_getpc_b64
 ; GCN: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, use_workitem_id_x@rel32@lo+4
 ; GCN: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, use_workitem_id_x@rel32@hi+12
-; GCN: v_or_b32_e32 v1, v0
 ; GCN: v_mov_b32_e32 v0, 9
 ; GCN: s_swappc_b64
 ; GCN: v_add_f32_e32

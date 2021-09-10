@@ -46,7 +46,7 @@ define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
 ; CHECK-LABEL: {{^}}name: ps_shader
 ; CHECK: machineFunctionInfo:
 ; CHECK-NEXT: explicitKernArgSize: 0
-; CHECK-NEXT: maxKernArgAlign: 1
+; CHECK-NEXT: maxKernArgAlign: 4
 ; CHECK-NEXT: ldsSize: 0
 ; CHECK-NEXT: dynLDSAlign: 1
 ; CHECK-NEXT: isEntryFunction: true
