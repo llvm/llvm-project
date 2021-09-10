@@ -16,7 +16,6 @@ define void @insertelt_v4i64(<4 x i64>* %x, i64 %y) {
 ; RV32-NEXT:    vslide1up.vx v28, v30, a1
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, tu, mu
 ; RV32-NEXT:    vslideup.vi v26, v28, 3
-; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
 ; RV32-NEXT:    vse64.v v26, (a0)
 ; RV32-NEXT:    ret
 ;
@@ -27,7 +26,6 @@ define void @insertelt_v4i64(<4 x i64>* %x, i64 %y) {
 ; RV64-NEXT:    vmv.s.x v28, a1
 ; RV64-NEXT:    vsetvli zero, zero, e64, m2, tu, mu
 ; RV64-NEXT:    vslideup.vi v26, v28, 3
-; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
 ; RV64-NEXT:    vse64.v v26, (a0)
 ; RV64-NEXT:    ret
   %a = load <4 x i64>, <4 x i64>* %x
@@ -168,7 +166,6 @@ define void @insertelt_v8i64_0(<8 x i64>* %x) {
 ; CHECK-NEXT:    addi a1, zero, -1
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, tu, mu
 ; CHECK-NEXT:    vmv.s.x v28, a1
-; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
 ; CHECK-NEXT:    vse64.v v28, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i64>, <8 x i64>* %x
@@ -218,7 +215,6 @@ define void @insertelt_c6_v8i64_0(<8 x i64>* %x) {
 ; CHECK-NEXT:    addi a1, zero, 6
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, tu, mu
 ; CHECK-NEXT:    vmv.s.x v28, a1
-; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
 ; CHECK-NEXT:    vse64.v v28, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i64>, <8 x i64>* %x

@@ -133,6 +133,16 @@ deduceDepTarget(const std::string &OutputFile,
   return makeObjFileName(InputFiles.front().getFile());
 }
 
+/// Sanitize diagnostic options for dependency scan.
+static void sanitizeDiagOpts(DiagnosticOptions &DiagOpts) {
+  // Don't print 'X warnings and Y errors generated'.
+  DiagOpts.ShowCarets = false;
+  // Don't write out diagnostic file.
+  DiagOpts.DiagnosticSerializationFile.clear();
+  // Don't treat warnings as errors.
+  DiagOpts.Warnings.push_back("no-error");
+}
+
 /// A clang tool that runs the preprocessor in a mode that's optimized for
 /// dependency scanning for the given compiler invocation.
 class DependencyScanningAction : public tooling::ToolAction {
@@ -157,13 +167,8 @@ public:
     CompilerInstance Compiler(std::move(PCHContainerOps));
     Compiler.setInvocation(std::move(Invocation));
 
-    // Don't print 'X warnings and Y errors generated'.
-    Compiler.getDiagnosticOpts().ShowCarets = false;
-    // Don't write out diagnostic file.
-    Compiler.getDiagnosticOpts().DiagnosticSerializationFile.clear();
-    // Don't treat warnings as errors.
-    Compiler.getDiagnosticOpts().Warnings.push_back("no-error");
     // Create the compiler's actual diagnostics engine.
+    sanitizeDiagOpts(Compiler.getDiagnosticOpts());
     Compiler.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
     if (!Compiler.hasDiagnostics())
       return false;
@@ -304,8 +309,7 @@ static llvm::Error
 runWithDiags(DiagnosticOptions *DiagOpts,
              llvm::function_ref<bool(DiagnosticConsumer &, DiagnosticOptions &)>
                  BodyShouldSucceed) {
-  // Avoid serializing diagnostics.
-  DiagOpts->DiagnosticSerializationFile.clear();
+  sanitizeDiagOpts(*DiagOpts);
 
   // Capture the emitted diagnostics and report them to the client
   // in the case of a failure.

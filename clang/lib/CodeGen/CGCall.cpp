@@ -2066,24 +2066,6 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       // allows it to work on indirect virtual function calls.
       if (AttrOnCallSite && TargetDecl->hasAttr<NoMergeAttr>())
         FuncAttrs.addAttribute(llvm::Attribute::NoMerge);
-
-      // Add known guaranteed alignment for allocation functions.
-      if (unsigned BuiltinID = Fn->getBuiltinID()) {
-        switch (BuiltinID) {
-        case Builtin::BIaligned_alloc:
-        case Builtin::BIcalloc:
-        case Builtin::BImalloc:
-        case Builtin::BImemalign:
-        case Builtin::BIrealloc:
-        case Builtin::BIstrdup:
-        case Builtin::BIstrndup:
-          RetAttrs.addAlignmentAttr(Context.getTargetInfo().getNewAlign() /
-                                    Context.getTargetInfo().getCharWidth());
-          break;
-        default:
-          break;
-        }
-      }
     }
 
     // 'const', 'pure' and 'noalias' attributed functions are also nounwind.

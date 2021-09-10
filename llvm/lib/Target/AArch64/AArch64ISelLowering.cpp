@@ -13333,6 +13333,9 @@ static SDValue performSVEAndCombine(SDNode *N,
 
     SDLoc DL(N);
     ConstantSDNode *C = dyn_cast<ConstantSDNode>(Dup->getOperand(0));
+    if (!C)
+      return SDValue();
+
     uint64_t ExtVal = C->getZExtValue();
 
     // If the mask is fully covered by the unpack, we don't need to push

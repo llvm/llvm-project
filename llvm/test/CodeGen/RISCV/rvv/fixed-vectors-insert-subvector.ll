@@ -132,7 +132,6 @@ define void @insert_v4i32_v2i32_2(<4 x i32>* %vp, <2 x i32>* %svp) {
 ; CHECK-NEXT:    vle32.v v26, (a0)
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vslideup.vi v26, v25, 2
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vse32.v v26, (a0)
 ; CHECK-NEXT:    ret
   %sv = load <2 x i32>, <2 x i32>* %svp
@@ -212,7 +211,6 @@ define void @insert_v8i32_v2i32_2(<8 x i32>* %vp, <2 x i32>* %svp) {
 ; LMULMAX1-NEXT:    vle32.v v26, (a0)
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; LMULMAX1-NEXT:    vslideup.vi v26, v25, 2
-; LMULMAX1-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
 ; LMULMAX1-NEXT:    vse32.v v26, (a0)
 ; LMULMAX1-NEXT:    ret
   %sv = load <2 x i32>, <2 x i32>* %svp
@@ -231,7 +229,6 @@ define void @insert_v8i32_v2i32_6(<8 x i32>* %vp, <2 x i32>* %svp) {
 ; LMULMAX2-NEXT:    vle32.v v28, (a0)
 ; LMULMAX2-NEXT:    vsetvli zero, zero, e32, m2, tu, mu
 ; LMULMAX2-NEXT:    vslideup.vi v28, v26, 6
-; LMULMAX2-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
 ; LMULMAX2-NEXT:    vse32.v v28, (a0)
 ; LMULMAX2-NEXT:    ret
 ;
@@ -244,7 +241,6 @@ define void @insert_v8i32_v2i32_6(<8 x i32>* %vp, <2 x i32>* %svp) {
 ; LMULMAX1-NEXT:    vle32.v v26, (a0)
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; LMULMAX1-NEXT:    vslideup.vi v26, v25, 2
-; LMULMAX1-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
 ; LMULMAX1-NEXT:    vse32.v v26, (a0)
 ; LMULMAX1-NEXT:    ret
   %sv = load <2 x i32>, <2 x i32>* %svp
@@ -307,7 +303,6 @@ define void @insert_v4i16_v2i16_2(<4 x i16>* %vp, <2 x i16>* %svp) {
 ; CHECK-NEXT:    vle16.v v26, (a1)
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, tu, mu
 ; CHECK-NEXT:    vslideup.vi v25, v26, 2
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vse16.v v25, (a0)
 ; CHECK-NEXT:    ret
   %v = load <4 x i16>, <4 x i16>* %vp

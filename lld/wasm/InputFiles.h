@@ -116,8 +116,6 @@ public:
   // Returns the underlying wasm file.
   const WasmObjectFile *getWasmObj() const { return wasmObj.get(); }
 
-  void dumpInfo() const;
-
   uint32_t calcNewIndex(const WasmRelocation &reloc) const;
   uint64_t calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
                         const InputChunk *chunk) const;

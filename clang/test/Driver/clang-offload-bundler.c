@@ -401,11 +401,6 @@
 // RUN: cat %t-archive-gfx803-empty.a | FileCheck %s -check-prefix=EMPTYARCHIVE
 // EMPTYARCHIVE: !<arch>
 
-// Tests to check compatibility between Bundle Entry ID formats i.e. between presence/absence of extra hyphen in case of missing environment field
-// RUN: clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa--gfx906,openmp-amdgcn-amd-amdhsa-gfx908 -inputs=%t.input-archive.a -outputs=%t-archive-gfx906-simple.a,%t-archive-gfx908-simple.a -debug-only=CodeObjectCompatibility 2>&1 | FileCheck %s -check-prefix=BUNDLECOMPATIBILITY
-// BUNDLECOMPATIBILITY: Compatible: Exact match:        [CodeObject: openmp-amdgcn-amd-amdhsa-gfx906]   :       [Target: openmp-amdgcn-amd-amdhsa--gfx906]
-// BUNDLECOMPATIBILITY: Compatible: Exact match:        [CodeObject: openmp-amdgcn-amd-amdhsa--gfx908]  :       [Target: openmp-amdgcn-amd-amdhsa-gfx908]
-
 // Some code so that we can create a binary out of this file.
 int A = 0;
 void test_func(void) {

@@ -1,5 +1,6 @@
 import lldb
 import binascii
+import os.path
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 from gdbclientutils import *
@@ -181,7 +182,8 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         self.server.responder = MyResponder()
 
         target = self.createTarget("a.yaml")
-        exe_path = self.getBuildArtifact("a")
+        # NB: apparently GDB packets are using "/" on Windows too
+        exe_path = self.getBuildArtifact("a").replace(os.path.sep, '/')
         exe_hex = binascii.b2a_hex(exe_path.encode()).decode()
         process = self.connect(target)
         lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
@@ -236,7 +238,8 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         self.server.responder = MyResponder()
 
         target = self.createTarget("a.yaml")
-        exe_path = self.getBuildArtifact("a")
+        # NB: apparently GDB packets are using "/" on Windows too
+        exe_path = self.getBuildArtifact("a").replace(os.path.sep, '/')
         exe_hex = binascii.b2a_hex(exe_path.encode()).decode()
         process = self.connect(target)
         lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
