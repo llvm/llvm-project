@@ -458,3 +458,7 @@ The possible clang invocation to compile the example is as follows:
 Note that `type_traits` is a header only library and therefore no extra
 linking step against the standard libraries is required. See full example
 in `Compiler Explorer <https://godbolt.org/z/5WbnTfb65>`_.
+
+More OpenCL specific C++ library implementations built on top of libcxx
+are available in `libclcxx <https://github.com/KhronosGroup/libclcxx>`_
+project.
