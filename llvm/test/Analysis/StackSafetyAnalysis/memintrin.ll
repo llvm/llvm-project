@@ -1,5 +1,5 @@
 ; RUN: opt -S -passes="print<stack-safety-local>" -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt -S -passes="print-stack-safety" -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes="print-stack-safety" -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -14,6 +14,8 @@ define void @MemsetInBounds() {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,4){{$}}
+; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: call void @llvm.memset.p0i8.i32(i8* %x1, i8 42, i32 4, i1 false)
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
@@ -28,6 +30,8 @@ define void @VolatileMemsetInBounds() {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,4){{$}}
+; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: call void @llvm.memset.p0i8.i32(i8* %x1, i8 42, i32 4, i1 true)
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
@@ -41,6 +45,7 @@ define void @MemsetOutOfBounds() {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,5){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
@@ -54,6 +59,7 @@ define void @MemsetNonConst(i32 %size) {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,4294967295){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
@@ -69,6 +75,7 @@ define void @MemsetNonConstInBounds(i1 zeroext %z) {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,7){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
@@ -84,6 +91,7 @@ define void @MemsetNonConstSize() {
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,4294967295){{$}}
 ; CHECK-NEXT: y[4]: empty-set{{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
@@ -102,6 +110,8 @@ define void @MemcpyInBounds() {
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,4){{$}}
 ; CHECK-NEXT: y[4]: [0,4){{$}}
+; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: call void @llvm.memcpy.p0i8.p0i8.i32(i8* %x1, i8* %y1, i32 4, i1 false)
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
@@ -118,6 +128,7 @@ define void @MemcpySrcOutOfBounds() {
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[8]: [0,5){{$}}
 ; CHECK-NEXT: y[4]: [0,5){{$}}
+; GLOBAL-NEXT: safe accesses
 ; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
@@ -134,6 +145,7 @@ define void @MemcpyDstOutOfBounds() {
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,5){{$}}
 ; CHECK-NEXT: y[8]: [0,5){{$}}
+; GLOBAL-NEXT: safe accesses
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
@@ -150,6 +162,7 @@ define void @MemcpyBothOutOfBounds() {
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,9){{$}}
 ; CHECK-NEXT: y[8]: [0,9){{$}}
+; GLOBAL-NEXT: safe accesses
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
@@ -165,6 +178,8 @@ define void @MemcpySelfInBounds() {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[8]: [0,8){{$}}
+; GLOBAL-NEXT: safe accesses
+; GLOBAL-NEXT: call void @llvm.memcpy.p0i8.p0i8.i32(i8* %x1, i8* %x2, i32 3, i1 false)
 ; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
@@ -179,6 +194,7 @@ define void @MemcpySelfSrcOutOfBounds() {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[8]: [0,9){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
@@ -193,6 +209,7 @@ define void @MemcpySelfDstOutOfBounds() {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[8]: [0,9){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
@@ -207,6 +224,7 @@ define void @MemmoveSelfBothOutOfBounds() {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[8]: [0,14){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
