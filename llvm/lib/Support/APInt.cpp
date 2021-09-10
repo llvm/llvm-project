@@ -137,7 +137,7 @@ void APInt::reallocate(unsigned NewBitWidth) {
     U.pVal = getMemory(getNumWords());
 }
 
-void APInt::AssignSlowCase(const APInt& RHS) {
+void APInt::assignSlowCase(const APInt &RHS) {
   // Don't do anything for X = X
   if (this == &RHS)
     return;
@@ -235,19 +235,19 @@ APInt APInt::operator*(const APInt& RHS) const {
   return Result;
 }
 
-void APInt::AndAssignSlowCase(const APInt &RHS) {
+void APInt::andAssignSlowCase(const APInt &RHS) {
   WordType *dst = U.pVal, *rhs = RHS.U.pVal;
   for (size_t i = 0, e = getNumWords(); i != e; ++i)
     dst[i] &= rhs[i];
 }
 
-void APInt::OrAssignSlowCase(const APInt &RHS) {
+void APInt::orAssignSlowCase(const APInt &RHS) {
   WordType *dst = U.pVal, *rhs = RHS.U.pVal;
   for (size_t i = 0, e = getNumWords(); i != e; ++i)
     dst[i] |= rhs[i];
 }
 
-void APInt::XorAssignSlowCase(const APInt &RHS) {
+void APInt::xorAssignSlowCase(const APInt &RHS) {
   WordType *dst = U.pVal, *rhs = RHS.U.pVal;
   for (size_t i = 0, e = getNumWords(); i != e; ++i)
     dst[i] ^= rhs[i];
@@ -268,7 +268,7 @@ APInt& APInt::operator*=(uint64_t RHS) {
   return clearUnusedBits();
 }
 
-bool APInt::EqualSlowCase(const APInt& RHS) const {
+bool APInt::equalSlowCase(const APInt &RHS) const {
   return std::equal(U.pVal, U.pVal + getNumWords(), RHS.U.pVal);
 }
 
@@ -337,6 +337,17 @@ static void tcComplement(APInt::WordType *dst, unsigned parts) {
 void APInt::flipAllBitsSlowCase() {
   tcComplement(U.pVal, getNumWords());
   clearUnusedBits();
+}
+
+/// Concatenate the bits from "NewLSB" onto the bottom of *this.  This is
+/// equivalent to:
+///   (this->zext(NewWidth) << NewLSB.getBitWidth()) | NewLSB.zext(NewWidth)
+/// In the slow case, we know the result is large.
+APInt APInt::concatSlowCase(const APInt &NewLSB) const {
+  unsigned NewWidth = getBitWidth() + NewLSB.getBitWidth();
+  APInt Result = NewLSB.zext(NewWidth);
+  Result.insertBits(*this, NewLSB.getBitWidth());
+  return Result;
 }
 
 /// Toggle a given bit to its opposite value whose position is given
@@ -1064,7 +1075,7 @@ void APInt::shlSlowCase(unsigned ShiftAmt) {
 
 // Calculate the rotate amount modulo the bit width.
 static unsigned rotateModulo(unsigned BitWidth, const APInt &rotateAmt) {
-  if (BitWidth == 0)
+  if (LLVM_UNLIKELY(BitWidth == 0))
     return 0;
   unsigned rotBitWidth = rotateAmt.getBitWidth();
   APInt rot = rotateAmt;
@@ -1082,7 +1093,7 @@ APInt APInt::rotl(const APInt &rotateAmt) const {
 }
 
 APInt APInt::rotl(unsigned rotateAmt) const {
-  if (BitWidth == 0)
+  if (LLVM_UNLIKELY(BitWidth == 0))
     return *this;
   rotateAmt %= BitWidth;
   if (rotateAmt == 0)
