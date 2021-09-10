@@ -4127,6 +4127,8 @@ static const SCEV *MatchNotExpr(const SCEV *Expr) {
 
 /// Return a SCEV corresponding to ~V = -1-V
 const SCEV *ScalarEvolution::getNotSCEV(const SCEV *V) {
+  assert(!V->getType()->isPointerTy() && "Can't negate pointer");
+
   if (const SCEVConstant *VC = dyn_cast<SCEVConstant>(V))
     return getConstant(
                 cast<ConstantInt>(ConstantExpr::getNot(VC->getValue())));
@@ -10672,15 +10674,21 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
     if (!isa<SCEVConstant>(FoundRHS) && !isa<SCEVAddRecExpr>(FoundLHS))
       return isImpliedCondOperands(Pred, LHS, RHS, FoundRHS, FoundLHS, Context);
 
-    // Don't try to getNotSCEV pointers.
-    if (LHS->getType()->isPointerTy() || FoundLHS->getType()->isPointerTy())
-      return false;
+    // There's no clear preference between forms 3. and 4., try both.  Avoid
+    // forming getNotSCEV of pointer values as the resulting subtract is
+    // not legal.
+    if (!LHS->getType()->isPointerTy() && !RHS->getType()->isPointerTy() &&
+        isImpliedCondOperands(FoundPred, getNotSCEV(LHS), getNotSCEV(RHS),
+                              FoundLHS, FoundRHS, Context))
+      return true;
 
-    // There's no clear preference between forms 3. and 4., try both.
-    return isImpliedCondOperands(FoundPred, getNotSCEV(LHS), getNotSCEV(RHS),
-                                 FoundLHS, FoundRHS, Context) ||
-           isImpliedCondOperands(Pred, LHS, RHS, getNotSCEV(FoundLHS),
-                                 getNotSCEV(FoundRHS), Context);
+    if (!FoundLHS->getType()->isPointerTy() &&
+        !FoundRHS->getType()->isPointerTy() &&
+        isImpliedCondOperands(Pred, LHS, RHS, getNotSCEV(FoundLHS),
+                              getNotSCEV(FoundRHS), Context))
+      return true;
+
+    return false;
   }
 
   // Unsigned comparison is the same as signed comparison when both the operands
