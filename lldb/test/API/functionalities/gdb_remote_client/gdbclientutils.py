@@ -190,6 +190,10 @@ class MockGDBServerResponder:
             return self.qPathComplete()
         if packet.startswith("vFile:"):
             return self.vFile(packet)
+        if packet.startswith("vRun;"):
+            return self.vRun(packet)
+        if packet.startswith("qLaunchSuccess"):
+            return self.qLaunchSuccess()
 
         return self.other(packet)
 
@@ -301,6 +305,12 @@ class MockGDBServerResponder:
         return ""
 
     def vFile(self, packet):
+        return ""
+
+    def vRun(self, packet):
+        return ""
+
+    def qLaunchSuccess(self):
         return ""
 
     """
