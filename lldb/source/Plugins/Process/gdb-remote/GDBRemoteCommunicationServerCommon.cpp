@@ -157,9 +157,6 @@ GDBRemoteCommunicationServerCommon::GDBRemoteCommunicationServerCommon(
       StringExtractorGDBRemote::eServerPacketType_vFile_size,
       &GDBRemoteCommunicationServerCommon::Handle_vFile_Size);
   RegisterMemberFunctionHandler(
-      StringExtractorGDBRemote::eServerPacketType_vFile_fstat,
-      &GDBRemoteCommunicationServerCommon::Handle_vFile_FStat);
-  RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_vFile_stat,
       &GDBRemoteCommunicationServerCommon::Handle_vFile_Stat);
   RegisterMemberFunctionHandler(
@@ -755,46 +752,6 @@ GDBRemoteCommunicationServerCommon::Handle_qPlatform_shell(
     }
   }
   return SendErrorResponse(24);
-}
-
-template <typename T, typename U>
-static void fill_clamp(T &dest, U src, typename T::value_type fallback) {
-  dest = src <= std::numeric_limits<typename T::value_type>::max() ? src
-                                                                   : fallback;
-}
-
-GDBRemoteCommunication::PacketResult
-GDBRemoteCommunicationServerCommon::Handle_vFile_FStat(
-    StringExtractorGDBRemote &packet) {
-  StreamGDBRemote response;
-  packet.SetFilePos(::strlen("vFile:fstat:"));
-  int fd = packet.GetS32(-1, 16);
-
-  struct stat file_stats;
-  if (::fstat(fd, &file_stats) == -1) {
-    const int save_errno = errno;
-    response.Printf("F-1,%x", save_errno);
-    return SendPacketNoLock(response.GetString());
-  }
-
-  GDBRemoteFStatData data;
-  fill_clamp(data.gdb_st_dev, file_stats.st_dev, 0);
-  fill_clamp(data.gdb_st_ino, file_stats.st_ino, 0);
-  data.gdb_st_mode = file_stats.st_mode;
-  fill_clamp(data.gdb_st_nlink, file_stats.st_nlink, UINT32_MAX);
-  fill_clamp(data.gdb_st_uid, file_stats.st_uid, 0);
-  fill_clamp(data.gdb_st_gid, file_stats.st_gid, 0);
-  fill_clamp(data.gdb_st_rdev, file_stats.st_rdev, 0);
-  data.gdb_st_size = file_stats.st_size;
-  data.gdb_st_blksize = file_stats.st_blksize;
-  data.gdb_st_blocks = file_stats.st_blocks;
-  fill_clamp(data.gdb_st_atime, file_stats.st_atime, 0);
-  fill_clamp(data.gdb_st_mtime, file_stats.st_mtime, 0);
-  fill_clamp(data.gdb_st_ctime, file_stats.st_ctime, 0);
-
-  response.Printf("F%zx;", sizeof(data));
-  response.PutEscapedBytes(&data, sizeof(data));
-  return SendPacketNoLock(response.GetString());
 }
 
 GDBRemoteCommunication::PacketResult
