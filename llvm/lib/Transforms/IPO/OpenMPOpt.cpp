@@ -102,6 +102,11 @@ static cl::opt<bool> AlwaysInlineDeviceFunctions(
     cl::desc("Inline all applicible functions on the device."), cl::Hidden,
     cl::init(false));
 
+static cl::opt<bool>
+    EnableVerboseRemarks("openmp-opt-verbose-remarks", cl::ZeroOrMore,
+                         cl::desc("Enables more verbose remarks."), cl::Hidden,
+                         cl::init(false));
+
 STATISTIC(NumOpenMPRuntimeCallsDeduplicated,
           "Number of OpenMP runtime calls deduplicated");
 STATISTIC(NumOpenMPParallelRegionsDeleted,
@@ -4034,11 +4039,25 @@ struct AAFoldRuntimeCallCallSiteReturned : AAFoldRuntimeCall {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
 
     if (SimplifiedValue.hasValue() && SimplifiedValue.getValue()) {
-      Instruction &CB = *getCtxI();
-      A.changeValueAfterManifest(CB, **SimplifiedValue);
-      A.deleteAfterManifest(CB);
+      Instruction &I = *getCtxI();
+      A.changeValueAfterManifest(I, **SimplifiedValue);
+      A.deleteAfterManifest(I);
 
-      LLVM_DEBUG(dbgs() << TAG << "Folding runtime call: " << CB << " with "
+      CallBase *CB = dyn_cast<CallBase>(&I);
+      auto Remark = [&](OptimizationRemark OR) {
+        if (auto *C = dyn_cast<ConstantInt>(*SimplifiedValue))
+          return OR << "Replacing OpenMP runtime call "
+                    << CB->getCalledFunction()->getName() << " with "
+                    << ore::NV("FoldedValue", C->getZExtValue()) << ".";
+        else
+          return OR << "Replacing OpenMP runtime call "
+                    << CB->getCalledFunction()->getName() << ".";
+      };
+
+      if (CB && EnableVerboseRemarks)
+        A.emitRemark<OptimizationRemark>(CB, "OMP180", Remark);
+
+      LLVM_DEBUG(dbgs() << TAG << "Replacing runtime call: " << I << " with "
                         << **SimplifiedValue << "\n");
 
       Changed = ChangeStatus::CHANGED;
