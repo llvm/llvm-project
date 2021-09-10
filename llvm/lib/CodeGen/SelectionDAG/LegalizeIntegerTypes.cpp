@@ -4786,6 +4786,23 @@ SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_SUBVECTOR(SDNode *N) {
     SDValue InOp0 = N->getOperand(0);
     EVT InVT = InOp0.getValueType();
 
+    // Try and extract from a smaller type so that it eventually falls
+    // into the promotion code below.
+    if (getTypeAction(InVT) == TargetLowering::TypeSplitVector ||
+        getTypeAction(InVT) == TargetLowering::TypeLegal) {
+      EVT NInVT = InVT.getHalfNumVectorElementsVT(*DAG.getContext());
+      unsigned NElts = NInVT.getVectorMinNumElements();
+      uint64_t IdxVal = cast<ConstantSDNode>(BaseIdx)->getZExtValue();
+
+      SDValue Step1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, NInVT, InOp0,
+                                  DAG.getConstant(alignDown(IdxVal, NElts), dl,
+                                                  BaseIdx.getValueType()));
+      SDValue Step2 = DAG.getNode(
+          ISD::EXTRACT_SUBVECTOR, dl, OutVT, Step1,
+          DAG.getConstant(IdxVal % NElts, dl, BaseIdx.getValueType()));
+      return DAG.getNode(ISD::ANY_EXTEND, dl, NOutVT, Step2);
+    }
+
     // Promote operands and see if this is handled by target lowering,
     // Otherwise, use the BUILD_VECTOR approach below
     if (getTypeAction(InVT) == TargetLowering::TypePromoteInteger) {
