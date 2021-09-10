@@ -695,9 +695,7 @@ public:
   /// \return
   ///     true if saved successfully, false if saving the core dump
   ///     is not supported by the plugin, error otherwise.
-  virtual llvm::Expected<bool> SaveCore(llvm::StringRef outfile) {
-    return false;
-  }
+  virtual llvm::Expected<bool> SaveCore(llvm::StringRef outfile);
 
 protected:
   virtual JITLoaderList &GetJITLoaders();
