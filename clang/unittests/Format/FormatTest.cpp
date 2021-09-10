@@ -8253,6 +8253,12 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
   verifyFormat("int\n"
                "f(a)",
                Style);
+  verifyFormat("bool\n"
+               "f(size_t = 0, bool b = false)\n"
+               "{\n"
+               "  return !b;\n"
+               "}",
+               Style);
 
   // The return breaking style doesn't affect:
   // * function and object definitions with attribute-like macros
