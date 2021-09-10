@@ -105,9 +105,6 @@ public:
   }
 
   bool isNoopAddrSpaceCast(unsigned, unsigned) const { return false; }
-  bool canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const {
-    return AS == 0;
-  };
 
   unsigned getAssumedAddrSpace(const Value *V) const { return -1; }
 

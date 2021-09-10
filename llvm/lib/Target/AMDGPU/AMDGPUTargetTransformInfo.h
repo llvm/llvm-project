@@ -182,12 +182,6 @@ public:
 
   bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                   Intrinsic::ID IID) const;
-
-  bool canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const {
-    return AS != AMDGPUAS::LOCAL_ADDRESS && AS != AMDGPUAS::REGION_ADDRESS &&
-           AS != AMDGPUAS::PRIVATE_ADDRESS;
-  }
-
   Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
                                           Value *NewV) const;
 

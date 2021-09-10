@@ -259,11 +259,6 @@ bool TargetTransformInfo::isNoopAddrSpaceCast(unsigned FromAS,
   return TTIImpl->isNoopAddrSpaceCast(FromAS, ToAS);
 }
 
-bool TargetTransformInfo::canHaveNonUndefGlobalInitializerInAddressSpace(
-    unsigned AS) const {
-  return TTIImpl->canHaveNonUndefGlobalInitializerInAddressSpace(AS);
-}
-
 unsigned TargetTransformInfo::getAssumedAddrSpace(const Value *V) const {
   return TTIImpl->getAssumedAddrSpace(V);
 }
