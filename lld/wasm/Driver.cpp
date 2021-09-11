@@ -651,7 +651,7 @@ static void createSyntheticSymbols() {
     WasmSym::stackPointer->markLive();
   }
 
-  if (config->sharedMemory && !config->relocatable) {
+  if (config->sharedMemory) {
     WasmSym::tlsBase = createGlobalVariable("__tls_base", true);
     WasmSym::tlsSize = createGlobalVariable("__tls_size", false);
     WasmSym::tlsAlign = createGlobalVariable("__tls_align", false);

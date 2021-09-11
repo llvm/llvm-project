@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-complex-to-llvm -convert-std-to-llvm | FileCheck %s
+// RUN: mlir-opt %s -convert-complex-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts | FileCheck %s
 
 // CHECK-LABEL: llvm.func @complex_div
 // CHECK-SAME:    %[[LHS:.*]]: ![[C_TY:.*>]], %[[RHS:.*]]: ![[C_TY]]) -> ![[C_TY]]

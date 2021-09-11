@@ -1139,7 +1139,7 @@ RISCVInstrInfo::getOutliningType(MachineBasicBlock::iterator &MBBI,
 
   // Make sure the operands don't reference something unsafe.
   for (const auto &MO : MI.operands())
-    if (MO.isMBB() || MO.isBlockAddress() || MO.isCPI())
+    if (MO.isMBB() || MO.isBlockAddress() || MO.isCPI() || MO.isJTI())
       return outliner::InstrType::Illegal;
 
   // Don't allow instructions which won't be materialized to impact outlining

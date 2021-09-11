@@ -1996,6 +1996,12 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
                                StringRef BitcodeSuffix,
                                const llvm::Triple &Triple) {
   SmallVector<StringRef, 8> LibraryPaths;
+
+  // Add path to clang lib / lib64 folder.
+  SmallString<256> DefaultLibPath = llvm::sys::path::parent_path(D.Dir);
+  llvm::sys::path::append(DefaultLibPath, Twine("lib") + CLANG_LIBDIR_SUFFIX);
+  LibraryPaths.emplace_back(DefaultLibPath.c_str());
+
   // Add user defined library paths from LIBRARY_PATH.
   llvm::Optional<std::string> LibPath =
       llvm::sys::Process::GetEnv("LIBRARY_PATH");
@@ -2006,11 +2012,6 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
     for (StringRef Path : Frags)
       LibraryPaths.emplace_back(Path.trim());
   }
-
-  // Add path to lib / lib64 folder.
-  SmallString<256> DefaultLibPath = llvm::sys::path::parent_path(D.Dir);
-  llvm::sys::path::append(DefaultLibPath, Twine("lib") + CLANG_LIBDIR_SUFFIX);
-  LibraryPaths.emplace_back(DefaultLibPath.c_str());
 
   OptSpecifier LibomptargetBCPathOpt =
       Triple.isAMDGCN() ? options::OPT_libomptarget_amdgcn_bc_path_EQ

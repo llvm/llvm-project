@@ -58,6 +58,17 @@ if(compiler_rt_path)
   endif()
 endif()
 
+# If building standalone by pointing CMake at this runtimes directory,
+# LLVM_BINARY_DIR isn't set, find_package(LLVM) will fail and these
+# intermediate paths are unset.
+if (LLVM_BINARY_DIR STREQUAL "")
+  set(LLVM_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+endif()
+if (NOT LLVM_FOUND)
+  set(LLVM_TOOLS_BINARY_DIR ${LLVM_BINARY_DIR}/bin)
+  set(LLVM_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib)
+endif()
+
 # Setting these variables will allow the sub-build to put their outputs into
 # the library and bin directories of the top-level build.
 set(LLVM_LIBRARY_OUTPUT_INTDIR ${LLVM_LIBRARY_DIR})

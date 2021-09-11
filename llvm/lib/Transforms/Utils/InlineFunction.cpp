@@ -1671,10 +1671,11 @@ void llvm::updateProfileCallee(
 /// 3. Otherwise, a call to objc_retain is inserted if the call in the caller is
 ///    a retainRV call.
 static void
-inlineRetainOrClaimRVCalls(CallBase &CB,
+inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
                            const SmallVectorImpl<ReturnInst *> &Returns) {
   Module *Mod = CB.getModule();
-  bool IsRetainRV = objcarc::hasAttachedCallOpBundle(&CB, true),
+  assert(objcarc::isRetainOrClaimRV(RVCallKind) && "unexpected ARC function");
+  bool IsRetainRV = RVCallKind == objcarc::ARCInstKind::RetainRV,
        IsClaimRV = !IsRetainRV;
 
   for (auto *RI : Returns) {
@@ -1727,9 +1728,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB,
 
       // If we've found an unannotated call that defines RetOpnd, add a
       // "clang.arc.attachedcall" operand bundle.
-      Value *BundleArgs[] = {ConstantInt::get(
-          Builder.getInt64Ty(),
-          objcarc::getAttachedCallOperandBundleEnum(IsRetainRV))};
+      Value *BundleArgs[] = {*objcarc::getAttachedARCFunction(&CB)};
       OperandBundleDef OB("clang.arc.attachedcall", BundleArgs);
       auto *NewCall = CallBase::addOperandBundle(
           CI, LLVMContext::OB_clang_arc_attachedcall, OB, CI);
@@ -1965,8 +1964,9 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     FirstNewBlock = LastBlock; ++FirstNewBlock;
 
     // Insert retainRV/clainRV runtime calls.
-    if (objcarc::hasAttachedCallOpBundle(&CB))
-      inlineRetainOrClaimRVCalls(CB, Returns);
+    objcarc::ARCInstKind RVCallKind = objcarc::getAttachedARCFunctionKind(&CB);
+    if (RVCallKind != objcarc::ARCInstKind::None)
+      inlineRetainOrClaimRVCalls(CB, RVCallKind, Returns);
 
     // Updated caller/callee profiles only when requested. For sample loader
     // inlining, the context-sensitive inlinee profile doesn't need to be

@@ -1419,26 +1419,6 @@ TEST(APIntTest, Log2) {
   EXPECT_EQ(APInt(15, 9).exactLogBase2(), -1);
 }
 
-TEST(APIntTest, magic) {
-  EXPECT_EQ(APInt(32, 3).magic().m, APInt(32, "55555556", 16));
-  EXPECT_EQ(APInt(32, 3).magic().s, 0U);
-  EXPECT_EQ(APInt(32, 5).magic().m, APInt(32, "66666667", 16));
-  EXPECT_EQ(APInt(32, 5).magic().s, 1U);
-  EXPECT_EQ(APInt(32, 7).magic().m, APInt(32, "92492493", 16));
-  EXPECT_EQ(APInt(32, 7).magic().s, 2U);
-}
-
-TEST(APIntTest, magicu) {
-  EXPECT_EQ(APInt(32, 3).magicu().m, APInt(32, "AAAAAAAB", 16));
-  EXPECT_EQ(APInt(32, 3).magicu().s, 1U);
-  EXPECT_EQ(APInt(32, 5).magicu().m, APInt(32, "CCCCCCCD", 16));
-  EXPECT_EQ(APInt(32, 5).magicu().s, 2U);
-  EXPECT_EQ(APInt(32, 7).magicu().m, APInt(32, "24924925", 16));
-  EXPECT_EQ(APInt(32, 7).magicu().s, 3U);
-  EXPECT_EQ(APInt(64, 25).magicu(1).m, APInt(64, "A3D70A3D70A3D70B", 16));
-  EXPECT_EQ(APInt(64, 25).magicu(1).s, 4U);
-}
-
 #ifdef GTEST_HAS_DEATH_TEST
 #ifndef NDEBUG
 TEST(APIntTest, StringDeath) {

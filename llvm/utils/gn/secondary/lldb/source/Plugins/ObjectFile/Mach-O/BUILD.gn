@@ -11,6 +11,10 @@ static_library("Mach-O") {
     "//llvm/lib/Support",
   ]
 
+  if (current_os == "win") {
+    defines = [ "_ENABLE_EXTENDED_ALIGNED_STORAGE" ]
+  }
+
   # Reaches into Plugins/Process/Utility.
   include_dirs = [ "//lldb/source" ]
   sources = [ "ObjectFileMachO.cpp" ]

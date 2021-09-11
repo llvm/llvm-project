@@ -664,12 +664,11 @@ Value *stripIntegerCast(Value *V);
 /// If necessary this method will version the stride of the pointer according
 /// to \p PtrToStride and therefore add further predicates to \p PSE.
 ///
-/// If \p OrigPtr is not null, use it to look up the stride value instead of \p
-/// Ptr.  \p PtrToStride provides the mapping between the pointer value and its
+/// \p PtrToStride provides the mapping between the pointer value and its
 /// stride as collected by LoopVectorizationLegality::collectStridedAccess.
 const SCEV *replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
                                       const ValueToValueMap &PtrToStride,
-                                      Value *Ptr, Value *OrigPtr = nullptr);
+                                      Value *Ptr);
 
 /// If the pointer has a constant stride return it in units of its
 /// element size.  Otherwise return zero.

@@ -14,6 +14,9 @@
     bit synopsis
 
 namespace std {
+    // [bit.cast], bit_cast
+    template<class To, class From>
+      constexpr To bit_cast(const From& from) noexcept; // C++20
 
   // [bit.pow.two], integral powers of 2
   template <class T>
@@ -54,8 +57,9 @@ namespace std {
 
 */
 
-#include <__config>
+#include <__bit/bit_cast.h>
 #include <__bits> // __libcpp_clz
+#include <__config>
 #include <__debug>
 #include <limits>
 #include <type_traits>

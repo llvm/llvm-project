@@ -53,6 +53,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/Delinearization.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -895,7 +896,7 @@ ScopDetection::getDelinearizationTerms(DetectionContext &Context,
     if (auto *AF = dyn_cast<SCEVAddExpr>(Pair.second)) {
       for (auto Op : AF->operands()) {
         if (auto *AF2 = dyn_cast<SCEVAddRecExpr>(Op))
-          SE.collectParametricTerms(AF2, Terms);
+          collectParametricTerms(SE, AF2, Terms);
         if (auto *AF2 = dyn_cast<SCEVMulExpr>(Op)) {
           SmallVector<const SCEV *, 0> Operands;
 
@@ -918,7 +919,7 @@ ScopDetection::getDelinearizationTerms(DetectionContext &Context,
       }
     }
     if (Terms.empty())
-      SE.collectParametricTerms(Pair.second, Terms);
+      collectParametricTerms(SE, Pair.second, Terms);
   }
   return Terms;
 }
@@ -1012,8 +1013,8 @@ bool ScopDetection::computeAccessFunctions(
       if (Shape->DelinearizedSizes.size() == 0) {
         Acc->DelinearizedSubscripts.push_back(AF);
       } else {
-        SE.computeAccessFunctions(AF, Acc->DelinearizedSubscripts,
-                                  Shape->DelinearizedSizes);
+        llvm::computeAccessFunctions(SE, AF, Acc->DelinearizedSubscripts,
+                                     Shape->DelinearizedSizes);
         if (Acc->DelinearizedSubscripts.size() == 0)
           IsNonAffine = true;
       }
@@ -1047,8 +1048,8 @@ bool ScopDetection::hasBaseAffineAccesses(DetectionContext &Context,
 
   auto Terms = getDelinearizationTerms(Context, BasePointer);
 
-  SE.findArrayDimensions(Terms, Shape->DelinearizedSizes,
-                         Context.ElementSize[BasePointer]);
+  findArrayDimensions(SE, Terms, Shape->DelinearizedSizes,
+                      Context.ElementSize[BasePointer]);
 
   if (!hasValidArraySizes(Context, Shape->DelinearizedSizes, BasePointer,
                           Scope))

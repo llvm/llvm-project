@@ -370,7 +370,8 @@ struct BarePtrFuncOpConversion : public FuncOpConversionBase {
       // MemRef descriptor instructions. We may want to have a utility in the
       // rewriter to properly handle this use case.
       Location loc = funcOp.getLoc();
-      auto placeholder = rewriter.create<LLVM::UndefOp>(loc, memrefTy);
+      auto placeholder = rewriter.create<LLVM::UndefOp>(
+          loc, getTypeConverter()->convertType(memrefTy));
       rewriter.replaceUsesOfBlockArgument(arg, placeholder);
 
       Value desc = MemRefDescriptor::fromStaticShape(
@@ -1188,7 +1189,6 @@ void mlir::populateStdToLLVMConversionPatterns(LLVMTypeConverter &converter,
       UnsignedRemIOpLowering,
       UnsignedShiftRightOpLowering,
       XOrOpLowering,
-      UnrealizedConversionCastOpLowering,
       ZeroExtendIOpLowering>(converter);
   // clang-format on
 }
@@ -1241,7 +1241,6 @@ struct LLVMLoweringPass : public ConvertStandardToLLVMBase<LLVMLoweringPass> {
     populateStdToLLVMConversionPatterns(typeConverter, patterns);
 
     LLVMConversionTarget target(getContext());
-    target.addIllegalOp<UnrealizedConversionCastOp>();
     if (failed(applyPartialConversion(m, target, std::move(patterns))))
       signalPassFailure();
 

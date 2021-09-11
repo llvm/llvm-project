@@ -120,6 +120,12 @@ void scanRelocations(InputChunk *chunk) {
       // merged with normal data and allowing TLS relocation in non-TLS
       // segments.
       if (config->sharedMemory) {
+        if (!sym->isTLS()) {
+          error(toString(file) + ": relocation " +
+                relocTypeToString(reloc.Type) +
+                " cannot be used against non-TLS symbol `" + toString(*sym) +
+                "`");
+        }
         if (auto *D = dyn_cast<DefinedData>(sym)) {
           if (!D->segment->outputSeg->isTLS()) {
             error(toString(file) + ": relocation " +
@@ -133,6 +139,12 @@ void scanRelocations(InputChunk *chunk) {
     }
 
     if (config->isPic) {
+      if (sym->isTLS() && sym->isUndefined()) {
+        error(toString(file) +
+              ": TLS symbol is undefined, but TLS symbols cannot yet be "
+              "imported: `" +
+              toString(*sym) + "`");
+      }
       switch (reloc.Type) {
       case R_WASM_TABLE_INDEX_SLEB:
       case R_WASM_TABLE_INDEX_SLEB64:
@@ -145,15 +157,6 @@ void scanRelocations(InputChunk *chunk) {
         error(toString(file) + ": relocation " + relocTypeToString(reloc.Type) +
               " cannot be used against symbol " + toString(*sym) +
               "; recompile with -fPIC");
-        break;
-      case R_WASM_MEMORY_ADDR_TLS_SLEB:
-      case R_WASM_MEMORY_ADDR_TLS_SLEB64:
-        if (!sym->isDefined()) {
-          error(toString(file) +
-                ": TLS symbol is undefined, but TLS symbols cannot yet be "
-                "imported: `" +
-                toString(*sym) + "`");
-        }
         break;
       case R_WASM_TABLE_INDEX_I32:
       case R_WASM_TABLE_INDEX_I64:

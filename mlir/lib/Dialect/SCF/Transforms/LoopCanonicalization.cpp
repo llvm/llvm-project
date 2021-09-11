@@ -25,6 +25,37 @@
 using namespace mlir;
 using namespace mlir::scf;
 
+/// A simple, conservative analysis to determine if the loop is shape
+/// conserving. I.e., the type of the arg-th yielded value is the same as the
+/// type of the corresponding basic block argument of the loop.
+/// Note: This function handles only simple cases. Expand as needed.
+static bool isShapePreserving(ForOp forOp, int64_t arg) {
+  auto yieldOp = cast<YieldOp>(forOp.getBody()->getTerminator());
+  assert(arg < static_cast<int64_t>(yieldOp.results().size()) &&
+         "arg is out of bounds");
+  Value value = yieldOp.results()[arg];
+  while (value) {
+    if (value == forOp.getRegionIterArgs()[arg])
+      return true;
+    OpResult opResult = value.dyn_cast<OpResult>();
+    if (!opResult)
+      return false;
+
+    using tensor::InsertSliceOp;
+    value =
+        llvm::TypeSwitch<Operation *, Value>(opResult.getOwner())
+            .template Case<InsertSliceOp>(
+                [&](InsertSliceOp op) { return op.dest(); })
+            .template Case<ForOp>([&](ForOp forOp) {
+              return isShapePreserving(forOp, opResult.getResultNumber())
+                         ? forOp.getIterOperands()[opResult.getResultNumber()]
+                         : Value();
+            })
+            .Default([&](auto op) { return Value(); });
+  }
+  return false;
+}
+
 namespace {
 /// Fold dim ops of iter_args to dim ops of their respective init args. E.g.:
 ///
@@ -52,37 +83,6 @@ template <typename OpTy>
 struct DimOfIterArgFolder : public OpRewritePattern<OpTy> {
   using OpRewritePattern<OpTy>::OpRewritePattern;
 
-  /// A simple, conservative analysis to determine if the loop is shape
-  /// conserving. I.e., the type of the arg-th yielded value is the same as the
-  /// type of the corresponding basic block argument of the loop.
-  /// Note: This function handles only simple cases. Expand as needed.
-  static bool isShapePreserving(ForOp forOp, int64_t arg) {
-    auto yieldOp = cast<YieldOp>(forOp.getBody()->getTerminator());
-    assert(arg < static_cast<int64_t>(yieldOp.results().size()) &&
-           "arg is out of bounds");
-    Value value = yieldOp.results()[arg];
-    while (value) {
-      if (value == forOp.getRegionIterArgs()[arg])
-        return true;
-      OpResult opResult = value.dyn_cast<OpResult>();
-      if (!opResult)
-        return false;
-
-      using tensor::InsertSliceOp;
-      value =
-          llvm::TypeSwitch<Operation *, Value>(opResult.getOwner())
-              .template Case<InsertSliceOp>(
-                  [&](InsertSliceOp op) { return op.dest(); })
-              .template Case<ForOp>([&](ForOp forOp) {
-                return isShapePreserving(forOp, opResult.getResultNumber())
-                           ? forOp.getIterOperands()[opResult.getResultNumber()]
-                           : Value();
-              })
-              .Default([&](auto op) { return Value(); });
-    }
-    return false;
-  }
-
   LogicalResult matchAndRewrite(OpTy dimOp,
                                 PatternRewriter &rewriter) const override {
     auto blockArg = dimOp.source().template dyn_cast<BlockArgument>();
@@ -100,6 +100,48 @@ struct DimOfIterArgFolder : public OpRewritePattern<OpTy> {
 
     return success();
   };
+};
+
+/// Fold dim ops of loop results to dim ops of their respective init args. E.g.:
+///
+/// ```
+/// %0 = ... : tensor<?x?xf32>
+/// %r = scf.for ... iter_args(%arg0 = %0) -> (tensor<?x?xf32>) {
+///   ...
+/// }
+/// %1 = tensor.dim %r, %c0 : tensor<?x?xf32>
+/// ```
+///
+/// is folded to:
+///
+/// ```
+/// %0 = ... : tensor<?x?xf32>
+/// %r = scf.for ... iter_args(%arg0 = %0) -> (tensor<?x?xf32>) {
+///   ...
+/// }
+/// %1 = tensor.dim %0, %c0 : tensor<?x?xf32>
+/// ```
+///
+/// Note: Dim ops are folded only if it can be proven that the runtime type of
+/// the iter arg does not change with loop iterations.
+template <typename OpTy>
+struct DimOfLoopResultFolder : public OpRewritePattern<OpTy> {
+  using OpRewritePattern<OpTy>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(OpTy dimOp,
+                                PatternRewriter &rewriter) const override {
+    auto forOp = dimOp.source().template getDefiningOp<scf::ForOp>();
+    if (!forOp)
+      return failure();
+    auto opResult = dimOp.source().template cast<OpResult>();
+    unsigned resultNumber = opResult.getResultNumber();
+    if (!isShapePreserving(forOp, resultNumber))
+      return failure();
+    rewriter.updateRootInPlace(dimOp, [&](){
+      dimOp.sourceMutable().assign(forOp.getIterOperands()[resultNumber]);
+    });
+    return success();
+  }
 };
 
 /// Canonicalize AffineMinOp/AffineMaxOp operations in the context of scf.for
@@ -156,7 +198,9 @@ void mlir::scf::populateSCFForLoopCanonicalizationPatterns(
       .insert<AffineOpSCFCanonicalizationPattern<AffineMinOp, /*IsMin=*/true>,
               AffineOpSCFCanonicalizationPattern<AffineMaxOp, /*IsMin=*/false>,
               DimOfIterArgFolder<tensor::DimOp>,
-              DimOfIterArgFolder<memref::DimOp>>(ctx);
+              DimOfIterArgFolder<memref::DimOp>,
+              DimOfLoopResultFolder<tensor::DimOp>,
+              DimOfLoopResultFolder<memref::DimOp>>(ctx);
 }
 
 std::unique_ptr<Pass> mlir::createSCFForLoopCanonicalizationPass() {

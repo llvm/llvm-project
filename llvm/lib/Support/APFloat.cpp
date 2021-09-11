@@ -1288,6 +1288,23 @@ IEEEFloat::compareAbsoluteValue(const IEEEFloat &rhs) const {
     return cmpEqual;
 }
 
+/* Set the least significant BITS bits of a bignum, clear the
+   rest.  */
+static void tcSetLeastSignificantBits(APInt::WordType *dst, unsigned parts,
+                                      unsigned bits) {
+  unsigned i = 0;
+  while (bits > APInt::APINT_BITS_PER_WORD) {
+    dst[i++] = ~(APInt::WordType)0;
+    bits -= APInt::APINT_BITS_PER_WORD;
+  }
+
+  if (bits)
+    dst[i++] = ~(APInt::WordType)0 >> (APInt::APINT_BITS_PER_WORD - bits);
+
+  while (i < parts)
+    dst[i++] = 0;
+}
+
 /* Handle overflow.  Sign is preserved.  We either become infinity or
    the largest finite number.  */
 IEEEFloat::opStatus IEEEFloat::handleOverflow(roundingMode rounding_mode) {
@@ -1303,8 +1320,8 @@ IEEEFloat::opStatus IEEEFloat::handleOverflow(roundingMode rounding_mode) {
   /* Otherwise we become the largest finite number.  */
   category = fcNormal;
   exponent = semantics->maxExponent;
-  APInt::tcSetLeastSignificantBits(significandParts(), partCount(),
-                                   semantics->precision);
+  tcSetLeastSignificantBits(significandParts(), partCount(),
+                            semantics->precision);
 
   return opInexact;
 }
@@ -2412,7 +2429,7 @@ IEEEFloat::convertToInteger(MutableArrayRef<integerPart> parts,
     else
       bits = width - isSigned;
 
-    APInt::tcSetLeastSignificantBits(parts.data(), dstPartsCount, bits);
+    tcSetLeastSignificantBits(parts.data(), dstPartsCount, bits);
     if (sign && isSigned)
       APInt::tcShiftLeft(parts.data(), dstPartsCount, width - 1);
   }

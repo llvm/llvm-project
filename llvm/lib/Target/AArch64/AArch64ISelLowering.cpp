@@ -14517,20 +14517,20 @@ static bool isAllActivePredicate(SDValue N) {
 // or unpredicated operation, which potentially allows better isel (perhaps
 // using immediate forms) or relaxing register reuse requirements.
 static SDValue convertMergedOpToPredOp(SDNode *N, unsigned Opc,
-                                       SelectionDAG &DAG,
-                                       bool UnpredOp = false) {
+                                       SelectionDAG &DAG, bool UnpredOp = false,
+                                       bool SwapOperands = false) {
   assert(N->getOpcode() == ISD::INTRINSIC_WO_CHAIN && "Expected intrinsic!");
   assert(N->getNumOperands() == 4 && "Expected 3 operand intrinsic!");
   SDValue Pg = N->getOperand(1);
+  SDValue Op1 = N->getOperand(SwapOperands ? 3 : 2);
+  SDValue Op2 = N->getOperand(SwapOperands ? 2 : 3);
 
   // ISD way to specify an all active predicate.
   if (isAllActivePredicate(Pg)) {
     if (UnpredOp)
-      return DAG.getNode(Opc, SDLoc(N), N->getValueType(0), N->getOperand(2),
-                         N->getOperand(3));
-    else
-      return DAG.getNode(Opc, SDLoc(N), N->getValueType(0), Pg,
-                         N->getOperand(2), N->getOperand(3));
+      return DAG.getNode(Opc, SDLoc(N), N->getValueType(0), Op1, Op2);
+
+    return DAG.getNode(Opc, SDLoc(N), N->getValueType(0), Pg, Op1, Op2);
   }
 
   // FUTURE: SplatVector(true)
@@ -14652,6 +14652,8 @@ static SDValue performIntrinsicCombine(SDNode *N,
     return convertMergedOpToPredOp(N, ISD::ADD, DAG, true);
   case Intrinsic::aarch64_sve_sub:
     return convertMergedOpToPredOp(N, ISD::SUB, DAG, true);
+  case Intrinsic::aarch64_sve_subr:
+    return convertMergedOpToPredOp(N, ISD::SUB, DAG, true, true);
   case Intrinsic::aarch64_sve_and:
     return convertMergedOpToPredOp(N, ISD::AND, DAG, true);
   case Intrinsic::aarch64_sve_bic:

@@ -4493,28 +4493,18 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-emit-llvm-uselists");
 
     if (IsUsingLTO) {
-      if (!IsDeviceOffloadAction) {
-        if (Args.hasArg(options::OPT_flto))
-          CmdArgs.push_back("-flto");
-        else {
-          if (D.getLTOMode() == LTOK_Thin)
-            CmdArgs.push_back("-flto=thin");
-          else
-            CmdArgs.push_back("-flto=full");
-        }
-        CmdArgs.push_back("-flto-unit");
-      } else if (Triple.isAMDGPU()) {
-        // Only AMDGPU supports device-side LTO
-        assert(LTOMode == LTOK_Full || LTOMode == LTOK_Thin);
-        CmdArgs.push_back(Args.MakeArgString(
-            Twine("-flto=") + (LTOMode == LTOK_Thin ? "thin" : "full")));
-        CmdArgs.push_back("-flto-unit");
-      } else {
+      // Only AMDGPU supports device-side LTO.
+      if (IsDeviceOffloadAction && !Triple.isAMDGPU()) {
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Args.getLastArg(options::OPT_foffload_lto,
                                options::OPT_foffload_lto_EQ)
                    ->getAsString(Args)
             << Triple.getTriple();
+      } else {
+        assert(LTOMode == LTOK_Full || LTOMode == LTOK_Thin);
+        CmdArgs.push_back(Args.MakeArgString(
+            Twine("-flto=") + (LTOMode == LTOK_Thin ? "thin" : "full")));
+        CmdArgs.push_back("-flto-unit");
       }
     }
   }

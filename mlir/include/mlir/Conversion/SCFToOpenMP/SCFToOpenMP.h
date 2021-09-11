@@ -12,11 +12,11 @@
 #include <memory>
 
 namespace mlir {
-class FuncOp;
+class ModuleOp;
 template <typename T>
 class OperationPass;
 
-std::unique_ptr<OperationPass<FuncOp>> createConvertSCFToOpenMPPass();
+std::unique_ptr<OperationPass<ModuleOp>> createConvertSCFToOpenMPPass();
 
 } // namespace mlir
 

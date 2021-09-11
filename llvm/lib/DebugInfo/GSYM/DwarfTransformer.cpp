@@ -392,11 +392,11 @@ void DwarfTransformer::handleDie(raw_ostream &OS, CUInfo &CUI, DWARFDie Die) {
         if (Range.LowPC != 0) {
           if (!Gsym.isQuiet()) {
             // Unexpected invalid address, emit a warning
-            Log << "warning: DIE has an address range whose start address is "
-                   "not in any executable sections ("
-                << *Gsym.GetValidTextRanges()
-                << ") and will not be processed:\n";
-            Die.dump(Log, 0, DIDumpOptions::getForSingleDIE());
+            OS << "warning: DIE has an address range whose start address is "
+                  "not in any executable sections ("
+               << *Gsym.GetValidTextRanges()
+               << ") and will not be processed:\n";
+            Die.dump(OS, 0, DIDumpOptions::getForSingleDIE());
           }
         }
         break;

@@ -2470,14 +2470,26 @@ for further details.
 ObjC ARC Attached Call Operand Bundles
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A ``"clang.arc.attachedcall`` operand bundle on a call indicates the call is
+A ``"clang.arc.attachedcall"`` operand bundle on a call indicates the call is
 implicitly followed by a marker instruction and a call to an ObjC runtime
-function that uses the result of the call. If the argument passed to the operand
-bundle is 0, ``@objc_retainAutoreleasedReturnValue`` is called. If 1 is passed,
-``@objc_unsafeClaimAutoreleasedReturnValue`` is called. The return value of a
-call with this bundle is used by a call to ``@llvm.objc.clang.arc.noop.use``
-unless the called function's return type is void, in which case the operand
-bundle is ignored.
+function that uses the result of the call. The operand bundle takes either the
+pointer to the runtime function (``@objc_retainAutoreleasedReturnValue`` or
+``@objc_unsafeClaimAutoreleasedReturnValue``) or no arguments. If the bundle
+doesn't take any arguments, only the marker instruction has to be emitted after
+the call; the runtime function calls don't have to be emitted since they already
+have been emitted. The return value of a call with this bundle is used by a call
+to ``@llvm.objc.clang.arc.noop.use`` unless the called function's return type is
+void, in which case the operand bundle is ignored.
+
+.. code-block:: llvm
+
+   ; The marker instruction and a runtime function call are inserted after the call
+   ; to @foo.
+   call i8* @foo() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
+   call i8* @foo() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_unsafeClaimAutoreleasedReturnValue) ]
+
+   ; Only the marker instruction is inserted after the call to @foo.
+   call i8* @foo() [ "clang.arc.attachedcall"() ]
 
 The operand bundle is needed to ensure the call is immediately followed by the
 marker instruction or the ObjC runtime call in the final output.

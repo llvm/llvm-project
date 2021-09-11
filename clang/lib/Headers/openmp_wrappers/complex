@@ -48,7 +48,7 @@
 #ifndef _GLIBCXX_COMPLEX
 
 #pragma omp begin declare variant match(                                       \
-    device = {arch(__ARCHTYPES__)},                                            \
+    device = {arch(amdgcn, nvptx, nvptx64)},                                   \
     implementation = {extension(match_any, allow_templates)})
 
 #include <complex_cmath.h>

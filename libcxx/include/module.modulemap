@@ -335,6 +335,10 @@ module std [system] {
   module bit {
     header "bit"
     export *
+
+    module __bit {
+      module bit_cast { private header "__bit/bit_cast.h" }
+    }
   }
   module bitset {
     header "bitset"
