@@ -3481,7 +3481,8 @@ VerifyInitializationSequenceCXX98(const Sema &S,
 ExprResult Sema::PerformMoveOrCopyInitialization(
     const InitializedEntity &Entity, const NamedReturnInfo &NRInfo, Expr *Value,
     bool SupressSimplerImplicitMoves) {
-  if ((!getLangOpts().CPlusPlus2b || SupressSimplerImplicitMoves) &&
+  if (getLangOpts().CPlusPlus &&
+      (!getLangOpts().CPlusPlus2b || SupressSimplerImplicitMoves) &&
       NRInfo.isMoveEligible()) {
     ImplicitCastExpr AsRvalue(ImplicitCastExpr::OnStack, Value->getType(),
                               CK_NoOp, Value, VK_XValue, FPOptionsOverride());
