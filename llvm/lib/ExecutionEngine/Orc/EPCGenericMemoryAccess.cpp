@@ -14,30 +14,32 @@ namespace orc {
 
 /// Create from a ExecutorProcessControl instance.
 Expected<std::unique_ptr<EPCGenericMemoryAccess>>
-EPCGenericMemoryAccess::CreateUsingOrcRTFuncs(ExecutionSession &ES,
-                                              JITDylib &OrcRuntimeJD) {
+EPCGenericMemoryAccess::CreateUsingOrcRTFuncs(ExecutorProcessControl &EPC) {
+
+  auto H = EPC.loadDylib("");
+  if (!H)
+    return H.takeError();
 
   StringRef GlobalPrefix = "";
-  if (ES.getExecutorProcessControl().getTargetTriple().isOSBinFormatMachO())
+  if (EPC.getTargetTriple().isOSBinFormatMachO())
     GlobalPrefix = "_";
 
   FuncAddrs FAs;
   if (auto Err = lookupAndRecordAddrs(
-          ES, LookupKind::Static, makeJITDylibSearchOrder(&OrcRuntimeJD),
-          {{ES.intern((GlobalPrefix + "__orc_rt_write_uint8s_wrapper").str()),
+          EPC, *H,
+          {{EPC.intern((GlobalPrefix + "__orc_rt_write_uint8s_wrapper").str()),
             &FAs.WriteUInt8s},
-           {ES.intern((GlobalPrefix + "__orc_rt_write_uint16s_wrapper").str()),
+           {EPC.intern((GlobalPrefix + "__orc_rt_write_uint16s_wrapper").str()),
             &FAs.WriteUInt16s},
-           {ES.intern((GlobalPrefix + "__orc_rt_write_uint32s_wrapper").str()),
+           {EPC.intern((GlobalPrefix + "__orc_rt_write_uint32s_wrapper").str()),
             &FAs.WriteUInt32s},
-           {ES.intern((GlobalPrefix + "__orc_rt_write_uint64s_wrapper").str()),
+           {EPC.intern((GlobalPrefix + "__orc_rt_write_uint64s_wrapper").str()),
             &FAs.WriteUInt64s},
-           {ES.intern((GlobalPrefix + "__orc_rt_write_buffers_wrapper").str()),
+           {EPC.intern((GlobalPrefix + "__orc_rt_write_buffers_wrapper").str()),
             &FAs.WriteBuffers}}))
     return std::move(Err);
 
-  return std::make_unique<EPCGenericMemoryAccess>(
-      ES.getExecutorProcessControl(), FAs);
+  return std::make_unique<EPCGenericMemoryAccess>(EPC, std::move(FAs));
 }
 
 } // end namespace orc
