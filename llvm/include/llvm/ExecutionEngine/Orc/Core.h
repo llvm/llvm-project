@@ -1302,7 +1302,8 @@ public:
   /// object.
   ExecutionSession(std::unique_ptr<ExecutorProcessControl> EPC);
 
-  /// End the session. Closes all JITDylibs.
+  /// End the session. Closes all JITDylibs and disconnects from the
+  /// executor.
   Error endSession();
 
   /// Get the ExecutorProcessControl object associated with this
