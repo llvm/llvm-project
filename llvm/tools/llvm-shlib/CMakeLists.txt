@@ -124,7 +124,7 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
   list(REMOVE_DUPLICATES LIB_NAMES)
 
   # The python script needs to know whether symbols are prefixed with underscores or not.
-  if(LLVM_HOST_TRIPLE STREQUAL "i686-pc-win32")
+  if(LLVM_HOST_TRIPLE MATCHES "i?86-.*win.*")
     set(GEN_UNDERSCORE "--underscore")
   else()
     set(GEN_UNDERSCORE "")
