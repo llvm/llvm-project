@@ -1,7 +1,6 @@
 add_llvm_component_library(LLVMOrcTargetProcess
   JITLoaderGDB.cpp
   RegisterEHFrames.cpp
-  SimpleRemoteEPCServer.cpp
   TargetExecutionUtils.cpp
 
   ADDITIONAL_HEADER_DIRS
