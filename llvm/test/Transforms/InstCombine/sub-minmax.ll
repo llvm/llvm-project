@@ -394,10 +394,10 @@ define void @umin3_not_all_ops_extra_uses_invert_subs(i8 %x, i8 %y, i8 %z) {
 }
 
 ; Handle this pattern with extra uses because it shows up in benchmarks.
-; ~X - Min/Max(~X, O) -> Max/Min(X, ~O) - X
-; ~X - Min/Max(O, ~X) -> Max/Min(X, ~O) - X
-; Min/Max(~X, O) - ~X -> A - Max/Min(X, ~O)
-; Min/Max(O, ~X) - ~X -> A - Max/Min(X, ~O)
+; ~X - Min/Max(~X, Y) -> ~Min/Max(X, ~Y) - X
+; ~X - Min/Max(Y, ~X) -> ~Min/Max(X, ~Y) - X
+; Min/Max(~X, Y) - ~X -> X - ~Min/Max(X, ~Y)
+; Min/Max(Y, ~X) - ~X -> X - ~Min/Max(X, ~Y)
 
 define i8 @umin_not_sub_intrinsic_commute0(i8 %x, i8 %y) {
 ; CHECK-LABEL: @umin_not_sub_intrinsic_commute0(
