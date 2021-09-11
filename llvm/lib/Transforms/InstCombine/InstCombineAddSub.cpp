@@ -2057,11 +2057,11 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     return BinaryOperator::CreateAnd(
         Op0, Builder.CreateNot(Y, Y->getName() + ".not"));
 
-  // ~X - Min/Max(~X, O) -> Max/Min(X, ~O) - X
-  // ~X - Min/Max(O, ~X) -> Max/Min(X, ~O) - X
-  // Min/Max(~X, O) - ~X -> A - Max/Min(X, ~O)
-  // Min/Max(O, ~X) - ~X -> A - Max/Min(X, ~O)
-  // So long as O here is freely invertible, this will be neutral or a win.
+  // ~X - Min/Max(~X, Y) -> ~Min/Max(X, ~Y) - X
+  // ~X - Min/Max(Y, ~X) -> ~Min/Max(X, ~Y) - X
+  // Min/Max(~X, Y) - ~X -> X - ~Min/Max(X, ~Y)
+  // Min/Max(Y, ~X) - ~X -> X - ~Min/Max(X, ~Y)
+  // As long as Y is freely invertible, this will be neutral or a win.
   // Note: We don't generate the inverse max/min, just create the 'not' of
   // it and let other folds do the rest.
   if (match(Op0, m_Not(m_Value(X))) &&
@@ -2094,7 +2094,7 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
         match(NotA, m_Not(m_Value(A))) && (NotA == LHS || NotA == RHS)) {
       if (NotA == LHS)
         std::swap(LHS, RHS);
-      // LHS is now O above and expected to have at least 2 uses (the min/max)
+      // LHS is now Y above and expected to have at least 2 uses (the min/max)
       // NotA is expected to have 2 uses from the min/max and 1 from the sub.
       if (isFreeToInvert(LHS, !LHS->hasNUsesOrMore(3)) &&
           !NotA->hasNUsesOrMore(4)) {
