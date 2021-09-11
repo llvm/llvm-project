@@ -393,7 +393,7 @@ define void @umin3_not_all_ops_extra_uses_invert_subs(i8 %x, i8 %y, i8 %z) {
   ret void
 }
 
-; TODO: Handle this pattern with extra uses because it shows up in benchmarks.
+; Handle this pattern with extra uses because it shows up in benchmarks.
 ; ~X - Min/Max(~X, O) -> Max/Min(X, ~O) - X
 ; ~X - Min/Max(O, ~X) -> Max/Min(X, ~O) - X
 ; Min/Max(~X, O) - ~X -> A - Max/Min(X, ~O)
@@ -401,12 +401,12 @@ define void @umin3_not_all_ops_extra_uses_invert_subs(i8 %x, i8 %y, i8 %z) {
 
 define i8 @umin_not_sub_intrinsic_commute0(i8 %x, i8 %y) {
 ; CHECK-LABEL: @umin_not_sub_intrinsic_commute0(
-; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[NY:%.*]] = xor i8 [[Y:%.*]], -1
 ; CHECK-NEXT:    call void @use8(i8 [[NY]])
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[NX]], i8 [[NY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 [[Y]])
+; CHECK-NEXT:    [[M:%.*]] = xor i8 [[TMP1]], -1
 ; CHECK-NEXT:    call void @use8(i8 [[M]])
-; CHECK-NEXT:    [[SUBX:%.*]] = sub i8 [[NX]], [[M]]
+; CHECK-NEXT:    [[SUBX:%.*]] = sub i8 [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i8 [[SUBX]]
 ;
   %nx = xor i8 %x, -1
@@ -420,12 +420,12 @@ define i8 @umin_not_sub_intrinsic_commute0(i8 %x, i8 %y) {
 
 define i8 @umax_not_sub_intrinsic_commute1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @umax_not_sub_intrinsic_commute1(
-; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[NY:%.*]] = xor i8 [[Y:%.*]], -1
 ; CHECK-NEXT:    call void @use8(i8 [[NY]])
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[NY]], i8 [[NX]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[X:%.*]], i8 [[Y]])
+; CHECK-NEXT:    [[M:%.*]] = xor i8 [[TMP1]], -1
 ; CHECK-NEXT:    call void @use8(i8 [[M]])
-; CHECK-NEXT:    [[SUBX:%.*]] = sub i8 [[NX]], [[M]]
+; CHECK-NEXT:    [[SUBX:%.*]] = sub i8 [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i8 [[SUBX]]
 ;
   %nx = xor i8 %x, -1
@@ -439,12 +439,12 @@ define i8 @umax_not_sub_intrinsic_commute1(i8 %x, i8 %y) {
 
 define i8 @smin_not_sub_intrinsic_commute2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @smin_not_sub_intrinsic_commute2(
-; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[NY:%.*]] = xor i8 [[Y:%.*]], -1
 ; CHECK-NEXT:    call void @use8(i8 [[NY]])
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[NX]], i8 [[NY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 [[Y]])
+; CHECK-NEXT:    [[M:%.*]] = xor i8 [[TMP1]], -1
 ; CHECK-NEXT:    call void @use8(i8 [[M]])
-; CHECK-NEXT:    [[SUBX:%.*]] = sub i8 [[M]], [[NX]]
+; CHECK-NEXT:    [[SUBX:%.*]] = sub i8 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[SUBX]]
 ;
   %nx = xor i8 %x, -1
@@ -458,12 +458,12 @@ define i8 @smin_not_sub_intrinsic_commute2(i8 %x, i8 %y) {
 
 define i8 @smax_not_sub_intrinsic_commute3(i8 %x, i8 %y) {
 ; CHECK-LABEL: @smax_not_sub_intrinsic_commute3(
-; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[NY:%.*]] = xor i8 [[Y:%.*]], -1
 ; CHECK-NEXT:    call void @use8(i8 [[NY]])
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[NY]], i8 [[NX]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[X:%.*]], i8 [[Y]])
+; CHECK-NEXT:    [[M:%.*]] = xor i8 [[TMP1]], -1
 ; CHECK-NEXT:    call void @use8(i8 [[M]])
-; CHECK-NEXT:    [[SUBX:%.*]] = sub i8 [[M]], [[NX]]
+; CHECK-NEXT:    [[SUBX:%.*]] = sub i8 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[SUBX]]
 ;
   %nx = xor i8 %x, -1
@@ -474,6 +474,8 @@ define i8 @smax_not_sub_intrinsic_commute3(i8 %x, i8 %y) {
   %subx = sub i8 %m, %nx
   ret i8 %subx
 }
+
+; negative test - don't increase instruction count
 
 define i8 @umin_not_sub_intrinsic_uses(i8 %x, i8 %y) {
 ; CHECK-LABEL: @umin_not_sub_intrinsic_uses(
