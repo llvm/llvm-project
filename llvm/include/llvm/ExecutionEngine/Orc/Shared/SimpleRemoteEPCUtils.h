@@ -21,6 +21,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
 #include "llvm/Support/Error.h"
 
+#include <mutex>
 #include <string>
 #include <thread>
 
