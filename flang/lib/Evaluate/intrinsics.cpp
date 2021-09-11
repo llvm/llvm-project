@@ -189,7 +189,9 @@ ENUM_CLASS(Rank,
     shaped, // rank is length of SHAPE vector
 )
 
-ENUM_CLASS(Optionality, required, optional, missing,
+ENUM_CLASS(Optionality, required,
+    optional, // unless DIM= for SIZE(assumedSize)
+    missing, // for DIM= cases like FINDLOC
     defaultsToSameKind, // for MatchingDefaultKIND
     defaultsToDefaultForResult, // for DefaultingKIND
     defaultsToSizeKind, // for SizeDefaultKIND
@@ -722,7 +724,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"sind", {{"x", SameFloating}}, SameFloating},
     {"sinh", {{"x", SameFloating}}, SameFloating},
     {"size",
-        {{"array", AnyData, Rank::anyOrAssumedRank}, OptionalDIM,
+        {{"array", AnyData, Rank::anyOrAssumedRank},
+            OptionalDIM, // unless array is assumed-size
             SizeDefaultKIND},
         KINDInt, Rank::scalar, IntrinsicClass::inquiryFunction},
     {"sizeof", {{"a", AnyData, Rank::anyOrAssumedRank}}, SubscriptInt,
@@ -1372,7 +1375,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   for (std::size_t j{0}; j < dummies; ++j) {
     const IntrinsicDummyArgument &d{dummy[std::min(j, dummyArgPatterns - 1)]};
     if (const ActualArgument * arg{actualForDummy[j]}) {
-      if (IsAssumedRank(*arg) && d.rank != Rank::anyOrAssumedRank) {
+      bool isAssumedRank{IsAssumedRank(*arg)};
+      if (isAssumedRank && d.rank != Rank::anyOrAssumedRank) {
         messages.Say("Assumed-rank array cannot be forwarded to "
                      "'%s=' argument"_err_en_US,
             d.keyword);
@@ -1443,6 +1447,31 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         argOk = rank == knownArg->Rank();
         break;
       case Rank::anyOrAssumedRank:
+        if (!hasDimArg && rank > 0 && !isAssumedRank &&
+            (std::strcmp(name, "shape") == 0 ||
+                std::strcmp(name, "size") == 0 ||
+                std::strcmp(name, "ubound") == 0)) {
+          // Check for an assumed-size array argument.
+          // These are disallowed for SHAPE, and require DIM= for
+          // SIZE and UBOUND.
+          // (A previous error message for UBOUND will take precedence
+          // over this one, as this error is caught by the second entry
+          // for UBOUND.)
+          if (std::optional<Shape> shape{GetShape(context, *arg)}) {
+            if (!shape->empty() && !shape->back().has_value()) {
+              if (strcmp(name, "shape") == 0) {
+                messages.Say(
+                    "The '%s=' argument to the intrinsic function '%s' may not be assumed-size"_err_en_US,
+                    d.keyword, name);
+              } else {
+                messages.Say(
+                    "A dim= argument is required for '%s' when the array is assumed-size"_err_en_US,
+                    name);
+              }
+              return std::nullopt;
+            }
+          }
+        }
         argOk = true;
         break;
       case Rank::conformable: // arg must be conformable with previous arrayArg
@@ -1450,7 +1479,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         CHECK(arrayArgName);
         if (const std::optional<Shape> &arrayArgShape{
                 GetShape(context, *arrayArg)}) {
-          if (const std::optional<Shape> &argShape{GetShape(context, *arg)}) {
+          if (std::optional<Shape> argShape{GetShape(context, *arg)}) {
             std::string arrayArgMsg{"'"};
             arrayArgMsg = arrayArgMsg + arrayArgName + "='" + " argument";
             std::string argMsg{"'"};
