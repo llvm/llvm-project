@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
-#include "llvm/ExecutionEngine/Orc/LLVMSPSSerializers.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;

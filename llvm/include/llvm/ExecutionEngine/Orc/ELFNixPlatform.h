@@ -16,7 +16,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
-#include "llvm/ExecutionEngine/Orc/LLVMSPSSerializers.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 
