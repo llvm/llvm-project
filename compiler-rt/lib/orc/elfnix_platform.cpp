@@ -62,6 +62,10 @@ Error runInitArray(const std::vector<ExecutorAddressRange> &InitArraySections,
 
   return Error::success();
 }
+struct TLSInfoEntry {
+  unsigned long Key = 0;
+  unsigned long DataAddress = 0;
+};
 
 class ELFNixPlatformRuntimeState {
 private:
@@ -104,11 +108,17 @@ public:
   int registerAtExit(void (*F)(void *), void *Arg, void *DSOHandle);
   void runAtExits(void *DSOHandle);
 
+  /// Returns the base address of the section containing ThreadData.
+  Expected<std::pair<const char *, size_t>>
+  getThreadDataSectionFor(const char *ThreadData);
+
 private:
   PerJITDylibState *getJITDylibStateByHeaderAddr(void *DSOHandle);
   PerJITDylibState *getJITDylibStateByName(string_view Path);
   PerJITDylibState &
   getOrCreateJITDylibState(ELFNixJITDylibInitializers &MOJDIs);
+
+  Error registerThreadDataSection(span<const char> ThreadDataSection);
 
   Expected<ExecutorAddress> lookupSymbolInJITDylib(void *DSOHandle,
                                                    string_view Symbol);
@@ -132,6 +142,9 @@ private:
   std::recursive_mutex JDStatesMutex;
   std::unordered_map<void *, PerJITDylibState> JDStates;
   std::unordered_map<std::string, void *> JDNameToHeader;
+
+  std::mutex ThreadDataSectionsMutex;
+  std::map<const char *, size_t> ThreadDataSections;
 };
 
 ELFNixPlatformRuntimeState *ELFNixPlatformRuntimeState::MOPS = nullptr;
@@ -156,7 +169,11 @@ Error ELFNixPlatformRuntimeState::registerObjectSections(
   if (POSR.EHFrameSection.StartAddress)
     __register_frame(POSR.EHFrameSection.StartAddress.toPtr<const char *>());
 
-  // TODO: Register thread data sections.
+  if (POSR.ThreadDataSection.StartAddress) {
+    if (auto Err = registerThreadDataSection(
+            POSR.ThreadDataSection.toSpan<const char>()))
+      return Err;
+  }
 
   return Error::success();
 }
@@ -235,6 +252,19 @@ void ELFNixPlatformRuntimeState::runAtExits(void *DSOHandle) {
   }
 }
 
+Expected<std::pair<const char *, size_t>>
+ELFNixPlatformRuntimeState::getThreadDataSectionFor(const char *ThreadData) {
+  std::lock_guard<std::mutex> Lock(ThreadDataSectionsMutex);
+  auto I = ThreadDataSections.upper_bound(ThreadData);
+  // Check that we have a valid entry conovering this address.
+  if (I == ThreadDataSections.begin())
+    return make_error<StringError>("No thread local data section for key");
+  I = std::prev(I);
+  if (ThreadData >= I->first + I->second)
+    return make_error<StringError>("No thread local data section for key");
+  return *I;
+}
+
 ELFNixPlatformRuntimeState::PerJITDylibState *
 ELFNixPlatformRuntimeState::getJITDylibStateByHeaderAddr(void *DSOHandle) {
   auto I = JDStates.find(DSOHandle);
@@ -272,6 +302,20 @@ ELFNixPlatformRuntimeState::getOrCreateJITDylibState(
   }
 
   return JDS;
+}
+
+Error ELFNixPlatformRuntimeState::registerThreadDataSection(
+    span<const char> ThreadDataSection) {
+  std::lock_guard<std::mutex> Lock(ThreadDataSectionsMutex);
+  auto I = ThreadDataSections.upper_bound(ThreadDataSection.data());
+  if (I != ThreadDataSections.begin()) {
+    auto J = std::prev(I);
+    if (J->first + J->second > ThreadDataSection.data())
+      return make_error<StringError>("Overlapping .tdata sections");
+  }
+  ThreadDataSections.insert(
+      I, std::make_pair(ThreadDataSection.data(), ThreadDataSection.size()));
+  return Error::success();
 }
 
 Expected<ExecutorAddress>
@@ -344,6 +388,42 @@ Error ELFNixPlatformRuntimeState::initializeJITDylib(
 
   return Error::success();
 }
+class ELFNixPlatformRuntimeTLVManager {
+public:
+  void *getInstance(const char *ThreadData);
+
+private:
+  std::unordered_map<const char *, char *> Instances;
+  std::unordered_map<const char *, std::unique_ptr<char[]>> AllocatedSections;
+};
+
+void *ELFNixPlatformRuntimeTLVManager::getInstance(const char *ThreadData) {
+  auto I = Instances.find(ThreadData);
+  if (I != Instances.end())
+    return I->second;
+  auto TDS =
+      ELFNixPlatformRuntimeState::get().getThreadDataSectionFor(ThreadData);
+  if (!TDS) {
+    __orc_rt_log_error(toString(TDS.takeError()).c_str());
+    return nullptr;
+  }
+
+  auto &Allocated = AllocatedSections[TDS->first];
+  if (!Allocated) {
+    Allocated = std::make_unique<char[]>(TDS->second);
+    memcpy(Allocated.get(), TDS->first, TDS->second);
+  }
+  size_t ThreadDataDelta = ThreadData - TDS->first;
+  assert(ThreadDataDelta <= TDS->second && "ThreadData outside section bounds");
+
+  char *Instance = Allocated.get() + ThreadDataDelta;
+  Instances[ThreadData] = Instance;
+  return Instance;
+}
+
+void destroyELFNixTLVMgr(void *ELFNixTLVMgr) {
+  delete static_cast<ELFNixPlatformRuntimeTLVManager *>(ELFNixTLVMgr);
+}
 
 } // end anonymous namespace
 
@@ -385,6 +465,39 @@ __orc_rt_elfnix_deregister_object_sections(char *ArgData, size_t ArgSize) {
                    .deregisterObjectSections(std::move(POSR));
              })
           .release();
+}
+
+//------------------------------------------------------------------------------
+//                           TLV support
+//------------------------------------------------------------------------------
+
+ORC_RT_INTERFACE void *__orc_rt_elfnix_tls_get_addr_impl(TLSInfoEntry *D) {
+  auto *TLVMgr = static_cast<ELFNixPlatformRuntimeTLVManager *>(
+      pthread_getspecific(D->Key));
+  if (!TLVMgr)
+    TLVMgr = new ELFNixPlatformRuntimeTLVManager();
+  if (pthread_setspecific(D->Key, TLVMgr)) {
+    __orc_rt_log_error("Call to pthread_setspecific failed");
+    return nullptr;
+  }
+
+  return TLVMgr->getInstance(
+      reinterpret_cast<char *>(static_cast<uintptr_t>(D->DataAddress)));
+}
+
+ORC_RT_INTERFACE __orc_rt_CWrapperFunctionResult
+__orc_rt_elfnix_create_pthread_key(char *ArgData, size_t ArgSize) {
+  return WrapperFunction<SPSExpected<uint64_t>(void)>::handle(
+             ArgData, ArgSize,
+             []() -> Expected<uint64_t> {
+               pthread_key_t Key;
+               if (int Err = pthread_key_create(&Key, destroyELFNixTLVMgr)) {
+                 __orc_rt_log_error("Call to pthread_key_create failed");
+                 return make_error<StringError>(strerror(Err));
+               }
+               return static_cast<uint64_t>(Key);
+             })
+      .release();
 }
 
 //------------------------------------------------------------------------------
