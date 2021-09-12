@@ -883,8 +883,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
     if (!LoopNestMode && inSubLoop(BB, CurLoop, LI))
       continue;
 
-    for (BasicBlock::iterator II = BB->begin(), E = BB->end(); II != E;) {
-      Instruction &I = *II++;
+    for (Instruction &I : llvm::make_early_inc_range(*BB)) {
       // Try constant folding this instruction.  If all the operands are
       // constants, it is technically hoistable, but it would be better to
       // just fold it.
