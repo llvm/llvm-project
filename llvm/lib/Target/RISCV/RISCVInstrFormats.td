@@ -409,3 +409,135 @@ class RVInstJ<RISCVOpcode opcode, dag outs, dag ins, string opcodestr,
   let Inst{11-7} = rd;
   let Opcode = opcode.Value;
 }
+
+//===----------------------------------------------------------------------===//
+// Instruction classes for .insn directives
+//===----------------------------------------------------------------------===//
+
+class DirectiveInsnR<dag outs, dag ins, string argstr>
+  : RVInst<outs, ins, "", "", [], InstFormatR> {
+  bits<7> opcode;
+  bits<7> funct7;
+  bits<3> funct3;
+
+  bits<5> rs2;
+  bits<5> rs1;
+  bits<5> rd;
+
+  let Inst{31-25} = funct7;
+  let Inst{24-20} = rs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = funct3;
+  let Inst{11-7} = rd;
+  let Opcode = opcode;
+
+  let AsmString = ".insn r " # argstr;
+}
+
+class DirectiveInsnR4<dag outs, dag ins, string argstr>
+  : RVInst<outs, ins, "", "", [], InstFormatR4> {
+  bits<7> opcode;
+  bits<2> funct2;
+  bits<3> funct3;
+
+  bits<5> rs3;
+  bits<5> rs2;
+  bits<5> rs1;
+  bits<5> rd;
+
+  let Inst{31-27} = rs3;
+  let Inst{26-25} = funct2;
+  let Inst{24-20} = rs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = funct3;
+  let Inst{11-7} = rd;
+  let Opcode = opcode;
+
+  let AsmString = ".insn r4 " # argstr;
+}
+
+class DirectiveInsnI<dag outs, dag ins, string argstr>
+  : RVInst<outs, ins, "", "", [], InstFormatI> {
+  bits<7> opcode;
+  bits<3> funct3;
+
+  bits<12> imm12;
+  bits<5> rs1;
+  bits<5> rd;
+
+  let Inst{31-20} = imm12;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = funct3;
+  let Inst{11-7} = rd;
+  let Opcode = opcode;
+
+  let AsmString = ".insn i " # argstr;
+}
+
+class DirectiveInsnS<dag outs, dag ins, string argstr>
+  : RVInst<outs, ins, "", "", [], InstFormatS> {
+  bits<7> opcode;
+  bits<3> funct3;
+
+  bits<12> imm12;
+  bits<5> rs2;
+  bits<5> rs1;
+
+  let Inst{31-25} = imm12{11-5};
+  let Inst{24-20} = rs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = funct3;
+  let Inst{11-7} = imm12{4-0};
+  let Opcode = opcode;
+
+  let AsmString = ".insn s " # argstr;
+}
+
+class DirectiveInsnB<dag outs, dag ins, string argstr>
+  : RVInst<outs, ins, "", "", [], InstFormatB> {
+  bits<7> opcode;
+  bits<3> funct3;
+
+  bits<12> imm12;
+  bits<5> rs2;
+  bits<5> rs1;
+
+  let Inst{31} = imm12{11};
+  let Inst{30-25} = imm12{9-4};
+  let Inst{24-20} = rs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = funct3;
+  let Inst{11-8} = imm12{3-0};
+  let Inst{7} = imm12{10};
+  let Opcode = opcode;
+
+  let AsmString = ".insn b " # argstr;
+}
+
+class DirectiveInsnU<dag outs, dag ins, string argstr>
+  : RVInst<outs, ins, "", "", [], InstFormatU> {
+  bits<7> opcode;
+
+  bits<20> imm20;
+  bits<5> rd;
+
+  let Inst{31-12} = imm20;
+  let Inst{11-7} = rd;
+  let Opcode = opcode;
+
+  let AsmString = ".insn u " # argstr;
+}
+
+class DirectiveInsnJ<dag outs, dag ins, string argstr>
+  : RVInst<outs, ins, "", "", [], InstFormatJ> {
+  bits<7> opcode;
+
+  bits<20> imm20;
+  bits<5> rd;
+
+  let Inst{31-12} = imm20;
+  let Inst{11-7} = rd;
+  let Opcode = opcode;
+
+  let AsmString = ".insn j " # argstr;
+}
