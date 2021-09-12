@@ -233,7 +233,7 @@ namespace llvm {
     /// Control when and how the Swift async frame pointer bit should
     /// be set.
     SwiftAsyncFramePointerMode SwiftAsyncFramePointer =
-        SwiftAsyncFramePointerMode::DeploymentBased;
+        SwiftAsyncFramePointerMode::Always;
 
     /// UseInitArray - Use .init_array instead of .ctors for static
     /// constructors.
