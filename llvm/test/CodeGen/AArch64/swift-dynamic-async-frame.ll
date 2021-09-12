@@ -10,7 +10,7 @@
 ; RUN: llc -mtriple arm64-apple-macosx11.9.0 %s -o - | FileCheck %s --check-prefix=CHECK-STATIC
 ; RUN: llc -mtriple arm64_32-apple-watchos8.0.0 %s -o - | FileCheck %s --check-prefix=CHECK-STATIC
 ; RUN: llc -mtriple arm64_32-apple-watchos7.9.0 %s -o - | FileCheck %s --check-prefix=CHECK-STATIC
-; RUN: llc -mtriple -swift-async-fp=auto arm64_32-apple-watchos7.9.0 %s -o - | FileCheck %s --check-prefix=CHECK-DYNAMIC-32
+; RUN: llc -mtriple arm64_32-apple-watchos7.9.0 -swift-async-fp=auto %s -o - | FileCheck %s --check-prefix=CHECK-DYNAMIC-32
 
 ; CHECK-STATIC-LABEL: foo:
 ; CHECK-STATIC: orr x29, x29, #0x1000000000000000
