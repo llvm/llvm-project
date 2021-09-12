@@ -45,27 +45,6 @@ struct SimpleRemoteEPCExecutorInfo {
   std::string TargetTriple;
   uint64_t PageSize;
   StringMap<ExecutorAddress> BootstrapSymbols;
-
-  Expected<ExecutorAddress> getBootstrapSymbol(StringRef Name) const {
-    auto I = BootstrapSymbols.find(Name);
-    if (I == BootstrapSymbols.end())
-      return make_error<StringError>("Symbol \"" + Name +
-                                         "\" not found in "
-                                         "bootstrap symbols map",
-                                     inconvertibleErrorCode());
-    return I->second;
-  }
-
-  Error getBootstrapSymbols(
-      ArrayRef<std::pair<ExecutorAddress &, StringRef>> Pairs) const {
-    for (auto &KV : Pairs) {
-      if (auto A = getBootstrapSymbol(KV.second))
-        KV.first = *A;
-      else
-        return A.takeError();
-    }
-    return Error::success();
-  }
 };
 
 using SimpleRemoteEPCArgBytesVector = SmallVector<char, 128>;

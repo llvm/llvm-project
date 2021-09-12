@@ -64,40 +64,6 @@ SimpleRemoteEPC::~SimpleRemoteEPC() {
   assert(Disconnected && "Destroyed without disconnection");
 }
 
-Error SimpleRemoteEPC::setup(std::unique_ptr<SimpleRemoteEPCTransport> T,
-                             const SimpleRemoteEPCExecutorInfo &EI) {
-  using namespace SimpleRemoteEPCDefaultBootstrapSymbolNames;
-  LLVM_DEBUG({
-    dbgs() << "SimpleRemoteEPC received setup message:\n"
-           << "  Triple: " << EI.TargetTriple << "\n"
-           << "  Page size: " << EI.PageSize << "\n"
-           << "  Bootstrap symbols:\n";
-    for (const auto &KV : EI.BootstrapSymbols)
-      dbgs() << "    " << KV.first() << ": "
-             << formatv("{0:x16}", KV.second.getValue()) << "\n";
-  });
-  this->T = std::move(T);
-  TargetTriple = Triple(EI.TargetTriple);
-  PageSize = EI.PageSize;
-
-  if (auto Err = EI.getBootstrapSymbols(
-          {{JDI.JITDispatchContextAddress, ExecutorSessionObjectName},
-           {JDI.JITDispatchFunctionAddress, DispatchFnName},
-           {LoadDylibAddr, "__llvm_orc_load_dylib"},
-           {LookupSymbolsAddr, "__llvm_orc_lookup_symbols"},
-           {RunAsMainAddr, "__llvm_orc_run_as_main"}}))
-    return Err;
-
-  if (!MemMgr)
-    if (auto Err = setupDefaultMemoryManager(EI))
-      return Err;
-  if (!MemAccess)
-    if (auto Err = setupDefaultMemoryAccess(EI))
-      return Err;
-
-  return Error::success();
-}
-
 Expected<tpctypes::DylibHandle>
 SimpleRemoteEPC::loadDylib(const char *DylibPath) {
   Expected<tpctypes::DylibHandle> H((tpctypes::DylibHandle()));
@@ -201,37 +167,22 @@ void SimpleRemoteEPC::handleDisconnect(Error Err) {
   }
 }
 
-void SimpleRemoteEPC::setMemoryManager(
-    std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr) {
-  OwnedMemMgr = std::move(MemMgr);
-  this->MemMgr = OwnedMemMgr.get();
-}
-
-void SimpleRemoteEPC::setMemoryAccess(std::unique_ptr<MemoryAccess> MemAccess) {
-  OwnedMemAccess = std::move(MemAccess);
-  this->MemAccess = OwnedMemAccess.get();
-}
-
-Error SimpleRemoteEPC::setupDefaultMemoryManager(
-    const SimpleRemoteEPCExecutorInfo &EI) {
-
+Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+SimpleRemoteEPC::createMemoryManager() {
   EPCGenericJITLinkMemoryManager::FuncAddrs FAs;
-
-  if (auto Err = EI.getBootstrapSymbols(
+  if (auto Err = getBootstrapSymbols(
           {{FAs.Reserve, "__llvm_orc_memory_reserve"},
            {FAs.Finalize, "__llvm_orc_memory_finalize"},
            {FAs.Deallocate, "__llvm_orc_memory_deallocate"}}))
-    return Err;
+    return std::move(Err);
 
-  setMemoryManager(
-      std::make_unique<EPCGenericJITLinkMemoryManager>(*this, FAs));
-  return Error::success();
+  return std::make_unique<EPCGenericJITLinkMemoryManager>(*this, FAs);
 }
 
-Error SimpleRemoteEPC::setupDefaultMemoryAccess(
-    const SimpleRemoteEPCExecutorInfo &EI) {
+Expected<std::unique_ptr<ExecutorProcessControl::MemoryAccess>>
+SimpleRemoteEPC::createMemoryAccess() {
 
-  return Error::success();
+  return nullptr;
 }
 
 Error SimpleRemoteEPC::handleSetup(uint64_t SeqNo, ExecutorAddress TagAddr,
@@ -277,6 +228,46 @@ void SimpleRemoteEPC::prepareToReceiveSetupMessage(
           ExecInfoP.set_value(make_error<StringError>(
               "Could not deserialize setup message", inconvertibleErrorCode()));
       };
+}
+
+Error SimpleRemoteEPC::setup(std::unique_ptr<SimpleRemoteEPCTransport> T,
+                             SimpleRemoteEPCExecutorInfo EI) {
+  using namespace SimpleRemoteEPCDefaultBootstrapSymbolNames;
+  LLVM_DEBUG({
+    dbgs() << "SimpleRemoteEPC received setup message:\n"
+           << "  Triple: " << EI.TargetTriple << "\n"
+           << "  Page size: " << EI.PageSize << "\n"
+           << "  Bootstrap symbols:\n";
+    for (const auto &KV : EI.BootstrapSymbols)
+      dbgs() << "    " << KV.first() << ": "
+             << formatv("{0:x16}", KV.second.getValue()) << "\n";
+  });
+  this->T = std::move(T);
+  TargetTriple = Triple(EI.TargetTriple);
+  PageSize = EI.PageSize;
+  BootstrapSymbols = std::move(EI.BootstrapSymbols);
+
+  if (auto Err = getBootstrapSymbols(
+          {{JDI.JITDispatchContextAddress, ExecutorSessionObjectName},
+           {JDI.JITDispatchFunctionAddress, DispatchFnName},
+           {LoadDylibAddr, "__llvm_orc_load_dylib"},
+           {LookupSymbolsAddr, "__llvm_orc_lookup_symbols"},
+           {RunAsMainAddr, "__llvm_orc_run_as_main"}}))
+    return Err;
+
+  if (auto MemMgr = createMemoryManager()) {
+    OwnedMemMgr = std::move(*MemMgr);
+    this->MemMgr = OwnedMemMgr.get();
+  } else
+    return MemMgr.takeError();
+
+  if (auto MemAccess = createMemoryAccess()) {
+    OwnedMemAccess = std::move(*MemAccess);
+    this->MemAccess = OwnedMemAccess.get();
+  } else
+    return MemAccess.takeError();
+
+  return Error::success();
 }
 
 Error SimpleRemoteEPC::handleResult(uint64_t SeqNo, ExecutorAddress TagAddr,
