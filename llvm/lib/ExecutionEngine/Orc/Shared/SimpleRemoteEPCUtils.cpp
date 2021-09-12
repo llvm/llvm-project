@@ -60,7 +60,7 @@ FDSimpleRemoteEPCTransport::Create(SimpleRemoteEPCTransportClient &C, int InFD,
                                    inconvertibleErrorCode());
   std::unique_ptr<FDSimpleRemoteEPCTransport> FDT(
       new FDSimpleRemoteEPCTransport(C, InFD, OutFD));
-  return FDT;
+  return std::move(FDT);
 #else
   return make_error<StringError>("FD-based SimpleRemoteEPC transport requires "
                                  "thread support, but llvm was built with "
