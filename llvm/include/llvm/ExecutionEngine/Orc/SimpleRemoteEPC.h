@@ -61,14 +61,6 @@ public:
   SimpleRemoteEPC &operator=(SimpleRemoteEPC &&) = delete;
   ~SimpleRemoteEPC();
 
-  /// Called at the end of the construction process to set up the instance.
-  ///
-  /// Override to set up custom memory manager and/or memory access objects.
-  /// This method must be called at the *end* of the subclass's
-  /// implementation.
-  virtual Error setup(std::unique_ptr<SimpleRemoteEPCTransport> T,
-                      const SimpleRemoteEPCExecutorInfo &EI);
-
   Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override;
 
   Expected<std::vector<tpctypes::LookupResult>>
@@ -91,20 +83,20 @@ public:
   void handleDisconnect(Error Err) override;
 
 protected:
-  void setMemoryManager(std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr);
-  void setMemoryAccess(std::unique_ptr<MemoryAccess> MemAccess);
+  virtual Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+  createMemoryManager();
+  virtual Expected<std::unique_ptr<MemoryAccess>> createMemoryAccess();
 
 private:
   SimpleRemoteEPC(std::shared_ptr<SymbolStringPool> SSP)
       : ExecutorProcessControl(std::move(SSP)) {}
 
-  Error setupDefaultMemoryManager(const SimpleRemoteEPCExecutorInfo &EI);
-  Error setupDefaultMemoryAccess(const SimpleRemoteEPCExecutorInfo &EI);
-
   Error handleSetup(uint64_t SeqNo, ExecutorAddress TagAddr,
                     SimpleRemoteEPCArgBytesVector ArgBytes);
   void prepareToReceiveSetupMessage(
       std::promise<MSVCPExpected<SimpleRemoteEPCExecutorInfo>> &ExecInfoP);
+  Error setup(std::unique_ptr<SimpleRemoteEPCTransport> T,
+              SimpleRemoteEPCExecutorInfo EI);
 
   Error handleResult(uint64_t SeqNo, ExecutorAddress TagAddr,
                      SimpleRemoteEPCArgBytesVector ArgBytes);
