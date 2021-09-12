@@ -58,7 +58,7 @@ public:
   SimpleRemoteEPC(const SimpleRemoteEPC &) = delete;
   SimpleRemoteEPC &operator=(const SimpleRemoteEPC &) = delete;
   SimpleRemoteEPC(SimpleRemoteEPC &&) = delete;
-  SimpleRemoteEPC &operator=(SimpleRemoteEPC &) = delete;
+  SimpleRemoteEPC &operator=(SimpleRemoteEPC &&) = delete;
   ~SimpleRemoteEPC();
 
   /// Called at the end of the construction process to set up the instance.
