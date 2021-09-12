@@ -169,6 +169,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
 
   bool parseDirectiveOption();
   bool parseDirectiveAttribute();
+  bool parseDirectiveInsn(SMLoc L);
 
   void setFeatureBits(uint64_t Feature, StringRef FeatureString) {
     if (!(getSTI().getFeatureBits()[Feature])) {
@@ -504,6 +505,24 @@ public:
     return (isRV64() && isUInt<5>(Imm)) || isUInt<4>(Imm);
   }
 
+  bool isUImm2() const {
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    if (!isImm())
+      return false;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && isUInt<2>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
+  }
+
+  bool isUImm3() const {
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    if (!isImm())
+      return false;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && isUInt<3>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
+  }
+
   bool isUImm5() const {
     int64_t Imm;
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
@@ -511,6 +530,15 @@ public:
       return false;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
     return IsConstantImm && isUInt<5>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
+  }
+
+  bool isUImm7() const {
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    if (!isImm())
+      return false;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && isUInt<7>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
   }
 
   bool isSImm5() const {
@@ -1835,8 +1863,10 @@ bool RISCVAsmParser::ParseDirective(AsmToken DirectiveID) {
 
   if (IDVal == ".option")
     return parseDirectiveOption();
-  else if (IDVal == ".attribute")
+  if (IDVal == ".attribute")
     return parseDirectiveAttribute();
+  if (IDVal == ".insn")
+    return parseDirectiveInsn(DirectiveID.getLoc());
 
   return true;
 }
@@ -2198,6 +2228,37 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
   }
 
   return false;
+}
+
+/// parseDirectiveInsn
+/// ::= .insn [ format encoding, (operands (, operands)*) ]
+bool RISCVAsmParser::parseDirectiveInsn(SMLoc L) {
+  MCAsmParser &Parser = getParser();
+
+  // Expect instruction format as identifier.
+  StringRef Format;
+  SMLoc ErrorLoc = Parser.getTok().getLoc();
+  if (Parser.parseIdentifier(Format))
+    return Error(ErrorLoc, "expected instruction format");
+
+  if (Format != "r" && Format != "r4" && Format != "i" && Format != "b" &&
+      Format != "sb" && Format != "u" && Format != "j" && Format != "uj" &&
+      Format != "s")
+    return Error(ErrorLoc, "invalid instruction format");
+
+  std::string FormatName = (".insn_" + Format).str();
+
+  ParseInstructionInfo Info;
+  SmallVector<std::unique_ptr<MCParsedAsmOperand>, 8> Operands;
+
+  if (ParseInstruction(Info, FormatName, L, Operands))
+    return true;
+
+  unsigned Opcode;
+  uint64_t ErrorInfo;
+  return MatchAndEmitInstruction(L, Opcode, Operands, Parser.getStreamer(),
+                                 ErrorInfo,
+                                 /*MatchingInlineAsm=*/false);
 }
 
 void RISCVAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
