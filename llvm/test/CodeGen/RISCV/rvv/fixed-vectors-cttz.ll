@@ -2721,7 +2721,6 @@ define void @cttz_v2i64(<2 x i64>* %x, <2 x i64>* %y) {
 ; LMULMAX2-RV64-NEXT:    srli a1, a1, 56
 ; LMULMAX2-RV64-NEXT:    vsetvli zero, zero, e64, m1, tu, mu
 ; LMULMAX2-RV64-NEXT:    vmv.s.x v26, a1
-; LMULMAX2-RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
 ; LMULMAX2-RV64-NEXT:    vse64.v v26, (a0)
 ; LMULMAX2-RV64-NEXT:    ret
 ;
@@ -2905,7 +2904,6 @@ define void @cttz_v2i64(<2 x i64>* %x, <2 x i64>* %y) {
 ; LMULMAX1-RV64-NEXT:    srli a1, a1, 56
 ; LMULMAX1-RV64-NEXT:    vsetvli zero, zero, e64, m1, tu, mu
 ; LMULMAX1-RV64-NEXT:    vmv.s.x v26, a1
-; LMULMAX1-RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
 ; LMULMAX1-RV64-NEXT:    vse64.v v26, (a0)
 ; LMULMAX1-RV64-NEXT:    ret
   %a = load <2 x i64>, <2 x i64>* %x
@@ -8294,7 +8292,6 @@ define void @cttz_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX1-RV64-NEXT:    srli a1, a1, 56
 ; LMULMAX1-RV64-NEXT:    vsetvli zero, zero, e64, m1, tu, mu
 ; LMULMAX1-RV64-NEXT:    vmv.s.x v26, a1
-; LMULMAX1-RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
 ; LMULMAX1-RV64-NEXT:    vse64.v v26, (a0)
 ; LMULMAX1-RV64-NEXT:    vse64.v v27, (a6)
 ; LMULMAX1-RV64-NEXT:    ret

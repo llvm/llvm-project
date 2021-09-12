@@ -115,6 +115,11 @@ static cl::opt<bool> AlwaysInlineDeviceFunctions(
     cl::desc("Inline all applicible functions on the device."), cl::Hidden,
     cl::init(false));
 
+static cl::opt<bool>
+    EnableVerboseRemarks("openmp-opt-verbose-remarks", cl::ZeroOrMore,
+                         cl::desc("Enables more verbose remarks."), cl::Hidden,
+                         cl::init(false));
+
 STATISTIC(NumOpenMPRuntimeCallsDeduplicated,
           "Number of OpenMP runtime calls deduplicated");
 STATISTIC(NumOpenMPParallelRegionsDeleted,
@@ -3201,6 +3206,34 @@ struct AAKernelInfoFunction : AAKernelInfo {
             ->setDebugLoc(DL);
     };
 
+    auto &AllocSharedRFI = OMPInfoCache.RFIs[OMPRTL___kmpc_alloc_shared];
+    SmallPtrSet<BasicBlock *, 8> Visited;
+    for (Instruction *GuardedI : SPMDCompatibilityTracker) {
+      BasicBlock *BB = GuardedI->getParent();
+      if (!Visited.insert(BB).second)
+        continue;
+
+      SmallVector<std::pair<Instruction *, Instruction *>> Reorders;
+      Instruction *LastEffect = nullptr;
+      BasicBlock::reverse_iterator IP = BB->rbegin(), IPEnd = BB->rend();
+      while (++IP != IPEnd) {
+        if (!IP->mayHaveSideEffects() && !IP->mayReadFromMemory())
+          continue;
+        Instruction *I = &*IP;
+        if (OpenMPOpt::getCallIfRegularCall(*I, &AllocSharedRFI))
+          continue;
+        if (!I->user_empty() || !SPMDCompatibilityTracker.contains(I)) {
+          LastEffect = nullptr;
+          continue;
+        }
+        if (LastEffect)
+          Reorders.push_back({I, LastEffect});
+        LastEffect = &*IP;
+      }
+      for (auto &Reorder : Reorders)
+        Reorder.first->moveBefore(Reorder.second);
+    }
+
     SmallVector<std::pair<Instruction *, Instruction *>, 4> GuardedRegions;
 
     for (Instruction *GuardedI : SPMDCompatibilityTracker) {
@@ -3729,13 +3762,15 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     Function *Callee = getAssociatedFunction();
 
     // Helper to lookup an assumption string.
-    auto HasAssumption = [](Function *Fn, StringRef AssumptionStr) {
-      return Fn && hasAssumption(*Fn, AssumptionStr);
+    auto HasAssumption = [](CallBase &CB, StringRef AssumptionStr) {
+      return hasAssumption(CB, AssumptionStr);
     };
 
     // Check for SPMD-mode assumptions.
-    if (HasAssumption(Callee, "ompx_spmd_amenable"))
+    if (HasAssumption(CB, "ompx_spmd_amenable")) {
       SPMDCompatibilityTracker.indicateOptimisticFixpoint();
+      indicateOptimisticFixpoint();
+    }
 
     // First weed out calls we do not care about, that is readonly/readnone
     // calls, intrinsics, and "no_openmp" calls. Neither of these can reach a
@@ -3757,8 +3792,8 @@ struct AAKernelInfoCallSite : AAKernelInfo {
 
         // Unknown callees might contain parallel regions, except if they have
         // an appropriate assumption attached.
-        if (!(HasAssumption(Callee, "omp_no_openmp") ||
-              HasAssumption(Callee, "omp_no_parallelism")))
+        if (!(HasAssumption(CB, "omp_no_openmp") ||
+              HasAssumption(CB, "omp_no_parallelism")))
           ReachedUnknownParallelRegions.insert(&CB);
 
         // If SPMDCompatibilityTracker is not fixed, we need to give up on the
@@ -4023,11 +4058,25 @@ struct AAFoldRuntimeCallCallSiteReturned : AAFoldRuntimeCall {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
 
     if (SimplifiedValue.hasValue() && SimplifiedValue.getValue()) {
-      Instruction &CB = *getCtxI();
-      A.changeValueAfterManifest(CB, **SimplifiedValue);
-      A.deleteAfterManifest(CB);
+      Instruction &I = *getCtxI();
+      A.changeValueAfterManifest(I, **SimplifiedValue);
+      A.deleteAfterManifest(I);
 
-      LLVM_DEBUG(dbgs() << TAG << "Folding runtime call: " << CB << " with "
+      CallBase *CB = dyn_cast<CallBase>(&I);
+      auto Remark = [&](OptimizationRemark OR) {
+        if (auto *C = dyn_cast<ConstantInt>(*SimplifiedValue))
+          return OR << "Replacing OpenMP runtime call "
+                    << CB->getCalledFunction()->getName() << " with "
+                    << ore::NV("FoldedValue", C->getZExtValue()) << ".";
+        else
+          return OR << "Replacing OpenMP runtime call "
+                    << CB->getCalledFunction()->getName() << ".";
+      };
+
+      if (CB && EnableVerboseRemarks)
+        A.emitRemark<OptimizationRemark>(CB, "OMP180", Remark);
+
+      LLVM_DEBUG(dbgs() << TAG << "Replacing runtime call: " << I << " with "
                         << **SimplifiedValue << "\n");
 
       Changed = ChangeStatus::CHANGED;
@@ -4260,7 +4309,6 @@ void OpenMPOpt::registerAAs(bool IsModulePass) {
           IRPosition::function(*Kernel), /* QueryingAA */ nullptr,
           DepClassTy::NONE, /* ForceUpdate */ false,
           /* UpdateAfterInit */ false);
-
 
     registerFoldRuntimeCall(OMPRTL___kmpc_is_generic_main_thread_id);
     registerFoldRuntimeCall(OMPRTL___kmpc_is_spmd_exec_mode);

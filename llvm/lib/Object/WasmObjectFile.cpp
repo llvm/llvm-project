@@ -286,9 +286,9 @@ WasmObjectFile::WasmObjectFile(MemoryBufferRef Buffer, Error &Err)
     return;
   }
 
-  WasmSection Sec;
   WasmSectionOrderChecker Checker;
   while (Ctx.Ptr < Ctx.End) {
+    WasmSection Sec;
     if ((Err = readSection(Sec, Ctx, Checker)))
       return;
     if ((Err = parseSection(Sec)))

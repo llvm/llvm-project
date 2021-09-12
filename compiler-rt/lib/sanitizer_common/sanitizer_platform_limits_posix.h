@@ -715,6 +715,13 @@ struct __sanitizer_protoent {
   int p_proto;
 };
 
+struct __sanitizer_netent {
+  char *n_name;
+  char **n_aliases;
+  int n_addrtype;
+  u32 n_net;
+};
+
 struct __sanitizer_addrinfo {
   int ai_flags;
   int ai_family;

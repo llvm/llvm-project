@@ -172,9 +172,8 @@ namespace llvm {
     /// getGlobalVal - Get a value with the specified name or ID, creating a
     /// forward reference record if needed.  This can return null if the value
     /// exists but does not have the right type.
-    GlobalValue *getGlobalVal(const std::string &N, Type *Ty, LocTy Loc,
-                              bool IsCall);
-    GlobalValue *getGlobalVal(unsigned ID, Type *Ty, LocTy Loc, bool IsCall);
+    GlobalValue *getGlobalVal(const std::string &N, Type *Ty, LocTy Loc);
+    GlobalValue *getGlobalVal(unsigned ID, Type *Ty, LocTy Loc);
 
     /// Get a Comdat with the specified name, creating a forward reference
     /// record if needed.
@@ -423,8 +422,8 @@ namespace llvm {
       /// GetVal - Get a value with the specified name or ID, creating a
       /// forward reference record if needed.  This can return null if the value
       /// exists but does not have the right type.
-      Value *getVal(const std::string &Name, Type *Ty, LocTy Loc, bool IsCall);
-      Value *getVal(unsigned ID, Type *Ty, LocTy Loc, bool IsCall);
+      Value *getVal(const std::string &Name, Type *Ty, LocTy Loc);
+      Value *getVal(unsigned ID, Type *Ty, LocTy Loc);
 
       /// setInstName - After an instruction is parsed and inserted into its
       /// basic block, this installs its name.
@@ -446,10 +445,10 @@ namespace llvm {
     };
 
     bool convertValIDToValue(Type *Ty, ValID &ID, Value *&V,
-                             PerFunctionState *PFS, bool IsCall);
+                             PerFunctionState *PFS);
 
     Value *checkValidVariableType(LocTy Loc, const Twine &Name, Type *Ty,
-                                  Value *Val, bool IsCall);
+                                  Value *Val);
 
     bool parseConstantValue(Type *Ty, Constant *&C);
     bool parseValue(Type *Ty, Value *&V, PerFunctionState *PFS);

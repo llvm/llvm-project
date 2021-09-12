@@ -2475,10 +2475,10 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
     // FIXME: Redundant check, but even less readable when factored out.
     if (isFP) {
-      if (Ty != s32 && Ty != s64 && Ty != s128) {
+      if (Ty != s16 && Ty != s32 && Ty != s64 && Ty != s128) {
         LLVM_DEBUG(dbgs() << "Unable to materialize FP " << Ty
-                          << " constant, expected: " << s32 << " or " << s64
-                          << " or " << s128 << '\n');
+                          << " constant, expected: " << s16 << " or " << s32
+                          << " or " << s64 << " or " << s128 << '\n');
         return false;
       }
 
@@ -2512,23 +2512,20 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       }
     }
 
-    // We allow G_CONSTANT of types < 32b.
-    const unsigned MovOpc =
-        DefSize == 64 ? AArch64::MOVi64imm : AArch64::MOVi32imm;
-
     if (isFP) {
-      // Either emit a FMOV, or emit a copy to emit a normal mov.
-      const TargetRegisterClass &GPRRC =
-          DefSize == 32 ? AArch64::GPR32RegClass : AArch64::GPR64RegClass;
-      const TargetRegisterClass &FPRRC = 
-          DefSize == 32 ? AArch64::FPR32RegClass 
-                        : (DefSize == 64 ? AArch64::FPR64RegClass 
-                                         : AArch64::FPR128RegClass);
-
-      // For 64b values, emit a constant pool load instead.
-      // For s32, use a cp load if we have optsize/minsize.
-      if (DefSize == 64 || DefSize == 128 ||
-          (DefSize == 32 && shouldOptForSize(&MF))) {
+      const TargetRegisterClass &FPRRC = *getMinClassForRegBank(RB, DefSize);
+      // For 16, 64, and 128b values, emit a constant pool load.
+      switch (DefSize) {
+      default:
+        llvm_unreachable("Unexpected destination size for G_FCONSTANT?");
+      case 32:
+        // For s32, use a cp load if we have optsize/minsize.
+        if (!shouldOptForSize(&MF))
+          break;
+        LLVM_FALLTHROUGH;
+      case 16:
+      case 64:
+      case 128: {
         auto *FPImm = I.getOperand(1).getFPImm();
         auto *LoadMI = emitLoadFromConstantPool(FPImm, MIB);
         if (!LoadMI) {
@@ -2539,9 +2536,13 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
         I.eraseFromParent();
         return RBI.constrainGenericRegister(DefReg, FPRRC, MRI);
       }
+      }
 
-      // Nope. Emit a copy and use a normal mov instead.
-      const Register DefGPRReg = MRI.createVirtualRegister(&GPRRC);
+      // Either emit a FMOV, or emit a copy to emit a normal mov.
+      assert(DefSize == 32 &&
+             "Expected constant pool loads for all sizes other than 32!");
+      const Register DefGPRReg =
+          MRI.createVirtualRegister(&AArch64::GPR32RegClass);
       MachineOperand &RegOp = I.getOperand(0);
       RegOp.setReg(DefGPRReg);
       MIB.setInsertPt(MIB.getMBB(), std::next(I.getIterator()));
@@ -2564,6 +2565,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       I.getOperand(1).ChangeToImmediate(Val);
     }
 
+    const unsigned MovOpc =
+        DefSize == 64 ? AArch64::MOVi64imm : AArch64::MOVi32imm;
     I.setDesc(TII.get(MovOpc));
     constrainSelectedInstRegOperands(I, TII, TRI, RBI);
     return true;
@@ -4233,6 +4236,13 @@ MachineInstr *AArch64InstructionSelector::emitLoadFromConstantPool(
     LoadMI =
         &*MIRBuilder
               .buildInstr(AArch64::LDRSui, {&AArch64::FPR32RegClass}, {Adrp})
+              .addConstantPoolIndex(CPIdx, 0,
+                                    AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
+    break;
+  case 2:
+    LoadMI =
+        &*MIRBuilder
+              .buildInstr(AArch64::LDRHui, {&AArch64::FPR16RegClass}, {Adrp})
               .addConstantPoolIndex(CPIdx, 0,
                                     AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
     break;

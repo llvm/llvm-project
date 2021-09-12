@@ -500,7 +500,6 @@ define void @si2fp_v8i64_v8f16(<8 x i64>* %x, <8 x half>* %y) {
 ; LMULMAX1-NEXT:    vfncvt.f.f.w v25, v26
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, tu, mu
 ; LMULMAX1-NEXT:    vslideup.vi v29, v25, 6
-; LMULMAX1-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
 ; LMULMAX1-NEXT:    vse16.v v29, (a1)
 ; LMULMAX1-NEXT:    ret
   %a = load <8 x i64>, <8 x i64>* %x
@@ -557,7 +556,6 @@ define void @ui2fp_v8i64_v8f16(<8 x i64>* %x, <8 x half>* %y) {
 ; LMULMAX1-NEXT:    vfncvt.f.f.w v25, v26
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, tu, mu
 ; LMULMAX1-NEXT:    vslideup.vi v29, v25, 6
-; LMULMAX1-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
 ; LMULMAX1-NEXT:    vse16.v v29, (a1)
 ; LMULMAX1-NEXT:    ret
   %a = load <8 x i64>, <8 x i64>* %x

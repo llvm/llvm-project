@@ -1492,14 +1492,14 @@ public:
   /// Returns true if the target machine supports masked store operation
   /// for the given \p DataType and kind of access to \p Ptr.
   bool isLegalMaskedStore(Type *DataType, Value *Ptr, Align Alignment) const {
-    return Legal->isConsecutivePtr(Ptr) &&
+    return Legal->isConsecutivePtr(DataType, Ptr) &&
            TTI.isLegalMaskedStore(DataType, Alignment);
   }
 
   /// Returns true if the target machine supports masked load operation
   /// for the given \p DataType and kind of access to \p Ptr.
   bool isLegalMaskedLoad(Type *DataType, Value *Ptr, Align Alignment) const {
-    return Legal->isConsecutivePtr(Ptr) &&
+    return Legal->isConsecutivePtr(DataType, Ptr) &&
            TTI.isLegalMaskedLoad(DataType, Alignment);
   }
 
@@ -4765,6 +4765,14 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
             Builder, ConstantInt::get(PtrInd->getType(), Part), VF);
 
         if (NeedsVectorIndex) {
+          // Here we cache the whole vector, which means we can support the
+          // extraction of any lane. However, in some cases the extractelement
+          // instruction that is generated for scalar uses of this vector (e.g.
+          // a load instruction) is not folded away. Therefore we still
+          // calculate values for the first n lanes to avoid redundant moves
+          // (when extracting the 0th element) and to produce scalar code (i.e.
+          // additional add/gep instructions instead of expensive extractelement
+          // instructions) when extracting higher-order elements.
           Value *PartStartSplat = Builder.CreateVectorSplat(VF, PartStart);
           Value *Indices = Builder.CreateAdd(PartStartSplat, UnitStepVec);
           Value *GlobalIndices = Builder.CreateAdd(PtrIndSplat, Indices);
@@ -4772,9 +4780,6 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
               emitTransformedIndex(Builder, GlobalIndices, PSE.getSE(), DL, II);
           SclrGep->setName("next.gep");
           State.set(PhiR, SclrGep, Part);
-          // We've cached the whole vector, which means we can support the
-          // extraction of any lane.
-          continue;
         }
 
         for (unsigned Lane = 0; Lane < Lanes; ++Lane) {
@@ -5324,14 +5329,13 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
 bool LoopVectorizationCostModel::memoryInstructionCanBeWidened(
     Instruction *I, ElementCount VF) {
   // Get and ensure we have a valid memory instruction.
-  LoadInst *LI = dyn_cast<LoadInst>(I);
-  StoreInst *SI = dyn_cast<StoreInst>(I);
-  assert((LI || SI) && "Invalid memory instruction");
+  assert((isa<LoadInst, StoreInst>(I)) && "Invalid memory instruction");
 
   auto *Ptr = getLoadStorePointerOperand(I);
+  auto *ScalarTy = getLoadStoreType(I);
 
   // In order to be widened, the pointer should be consecutive, first of all.
-  if (!Legal->isConsecutivePtr(Ptr))
+  if (!Legal->isConsecutivePtr(ScalarTy, Ptr))
     return false;
 
   // If the instruction is a store located in a predicated block, it will be
@@ -5342,7 +5346,6 @@ bool LoopVectorizationCostModel::memoryInstructionCanBeWidened(
   // If the instruction's allocated size doesn't equal it's type size, it
   // requires padding and will be scalarized.
   auto &DL = I->getModule()->getDataLayout();
-  auto *ScalarTy = LI ? LI->getType() : SI->getValueOperand()->getType();
   if (hasIrregularType(ScalarTy, DL))
     return false;
 
@@ -7083,7 +7086,7 @@ LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
   auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
   Value *Ptr = getLoadStorePointerOperand(I);
   unsigned AS = getLoadStoreAddressSpace(I);
-  int ConsecutiveStride = Legal->isConsecutivePtr(Ptr);
+  int ConsecutiveStride = Legal->isConsecutivePtr(ValTy, Ptr);
   enum TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
   assert((ConsecutiveStride == 1 || ConsecutiveStride == -1) &&
@@ -7469,8 +7472,8 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       // We assume that widening is the best solution when possible.
       if (memoryInstructionCanBeWidened(&I, VF)) {
         InstructionCost Cost = getConsecutiveMemOpCost(&I, VF);
-        int ConsecutiveStride =
-               Legal->isConsecutivePtr(getLoadStorePointerOperand(&I));
+        int ConsecutiveStride = Legal->isConsecutivePtr(
+            getLoadStoreType(&I), getLoadStorePointerOperand(&I));
         assert((ConsecutiveStride == 1 || ConsecutiveStride == -1) &&
                "Expected consecutive stride.");
         InstWidening Decision =
@@ -7970,7 +7973,7 @@ bool LoopVectorizationCostModel::isConsecutiveLoadOrStore(Instruction *Inst) {
   // Check if the pointer operand of a load or store instruction is
   // consecutive.
   if (auto *Ptr = getLoadStorePointerOperand(Inst))
-    return Legal->isConsecutivePtr(Ptr);
+    return Legal->isConsecutivePtr(getLoadStoreType(Inst), Ptr);
   return false;
 }
 

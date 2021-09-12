@@ -97,6 +97,11 @@ _mm512_set_ph(_Float16 __h1, _Float16 __h2, _Float16 __h3, _Float16 __h4,
                 (h14), (h13), (h12), (h11), (h10), (h9), (h8), (h7), (h6),     \
                 (h5), (h4), (h3), (h2), (h1))
 
+static __inline __m512h __DEFAULT_FN_ATTRS512
+_mm512_set1_pch(_Float16 _Complex h) {
+  return (__m512h)_mm512_set1_ps(__builtin_bit_cast(float, h));
+}
+
 static __inline__ __m128 __DEFAULT_FN_ATTRS128 _mm_castph_ps(__m128h __a) {
   return (__m128)__a;
 }
