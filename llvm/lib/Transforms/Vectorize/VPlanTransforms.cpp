@@ -234,12 +234,15 @@ bool VPlanTransforms::mergeReplicateRegions(VPlan &Plan) {
     for (VPRecipeBase &Phi1ToMove : make_early_inc_range(reverse(*Merge1))) {
       VPValue *PredInst1 =
           cast<VPPredInstPHIRecipe>(&Phi1ToMove)->getOperand(0);
-      for (VPUser *U : Phi1ToMove.getVPSingleValue()->users()) {
+      VPValue *Phi1ToMoveV = Phi1ToMove.getVPSingleValue();
+      SmallVector<VPUser *> Users(Phi1ToMoveV->user_begin(),
+                                  Phi1ToMoveV->user_end());
+      for (VPUser *U : Users) {
         auto *UI = dyn_cast<VPRecipeBase>(U);
         if (!UI || UI->getParent() != Then2)
           continue;
         for (unsigned I = 0, E = U->getNumOperands(); I != E; ++I) {
-          if (Phi1ToMove.getVPSingleValue() != U->getOperand(I))
+          if (Phi1ToMoveV != U->getOperand(I))
             continue;
           U->setOperand(I, PredInst1);
         }
