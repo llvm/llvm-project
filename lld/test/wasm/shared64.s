@@ -128,7 +128,7 @@ get_local_func_address:
 
 # CHECK:      Sections:
 # CHECK-NEXT:   - Type:            CUSTOM
-# CHECK-NEXT:     Name:            dylink
+# CHECK-NEXT:     Name:            dylink.0
 # CHECK-NEXT:     MemorySize:      36
 # CHECK-NEXT:     MemoryAlignment: 2
 # CHECK-NEXT:     TableSize:       2

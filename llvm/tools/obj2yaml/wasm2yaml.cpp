@@ -51,7 +51,7 @@ static WasmYAML::Table makeTable(uint32_t Index,
 std::unique_ptr<WasmYAML::CustomSection>
 WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
   std::unique_ptr<WasmYAML::CustomSection> CustomSec;
-  if (WasmSec.Name == "dylink") {
+  if (WasmSec.Name == "dylink" || WasmSec.Name == "dylink.0") {
     std::unique_ptr<WasmYAML::DylinkSection> DylinkSec =
         std::make_unique<WasmYAML::DylinkSection>();
     const wasm::WasmDylinkInfo& Info = Obj.dylinkInfo();
