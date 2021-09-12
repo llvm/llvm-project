@@ -932,6 +932,18 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
     }
   }
 
+  // Above, we registered emscripten_longjmp function only when it SjLj is
+  // actually used. But there is a case we need emscripten_longjmp when we
+  // rethrow longjmps after checking for an Emscripten exception. Refer to
+  // runEHOnFunction for details.
+  if (EnableEmEH && EnableEmSjLj && !EmLongjmpF) {
+    // Register emscripten_longjmp function
+    FunctionType *FTy = FunctionType::get(
+        IRB.getVoidTy(), {getAddrIntType(&M), IRB.getInt32Ty()}, false);
+    EmLongjmpF = getEmscriptenFunction(FTy, "emscripten_longjmp", &M);
+    EmLongjmpF->addFnAttr(Attribute::NoReturn);
+  }
+
   // Exception handling transformation
   if (EnableEmEH) {
     for (Function &F : M) {
@@ -1009,6 +1021,11 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runEHOnFunction(Function &F) {
       // value is 0 when nothing happened, 1 when an exception is thrown, and
       // other values when longjmp is thrown.
       //
+      // Note that we do this whenever -enable-emscripten-sjlj is on, regardless
+      // of whether there is actual usage of setjmp/longjmp within the module.
+      // Because we use wasm-ld to link files, what we see here is not the whole
+      // program, and there can be a longjmp call in another file.
+      //
       // if (%__THREW__.val == 0 || %__THREW__.val == 1)
       //   goto %tail
       // else
@@ -1020,8 +1037,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runEHOnFunction(Function &F) {
       //
       // tail: ;; Nothing happened or an exception is thrown
       //   ... Continue exception handling ...
-      if (DoSjLj && EnableEmSjLj && !SetjmpUsers.count(&F) &&
-          canLongjmp(Callee)) {
+      if (EnableEmSjLj && !SetjmpUsers.count(&F) && canLongjmp(Callee)) {
         // Create longjmp.rethrow BB once and share it within the function
         if (!RethrowLongjmpBB) {
           RethrowLongjmpBB = BasicBlock::Create(C, "rethrow.longjmp", &F);
