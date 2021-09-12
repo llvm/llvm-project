@@ -15,3 +15,6 @@
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(loop-mssa(indvars))' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-4
 ; CHECK-4: function(loop-mssa(indvars))
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='cgscc(argpromotion,require<no-op-cgscc>,no-op-cgscc,devirt<7>(inline,no-op-cgscc)),function(loop(require<no-op-loop>))' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-5
+; CHECK-5: cgscc(argpromotion,require<no-op-cgscc>,no-op-cgscc,devirt<7>(inline,no-op-cgscc)),function(loop(require<no-op-loop>))

@@ -4902,8 +4902,7 @@ _mm256_setr_m128i (__m128i __lo, __m128i __hi)
 static __inline __m256 __DEFAULT_FN_ATTRS
 _mm256_loadu2_m128(float const *__addr_hi, float const *__addr_lo)
 {
-  __m256 __v256 = _mm256_castps128_ps256(_mm_loadu_ps(__addr_lo));
-  return _mm256_insertf128_ps(__v256, _mm_loadu_ps(__addr_hi), 1);
+  return _mm256_set_m128(_mm_loadu_ps(__addr_hi), _mm_loadu_ps(__addr_lo));
 }
 
 /// Loads two 128-bit floating-point vectors of [2 x double] from
@@ -4930,8 +4929,7 @@ _mm256_loadu2_m128(float const *__addr_hi, float const *__addr_lo)
 static __inline __m256d __DEFAULT_FN_ATTRS
 _mm256_loadu2_m128d(double const *__addr_hi, double const *__addr_lo)
 {
-  __m256d __v256 = _mm256_castpd128_pd256(_mm_loadu_pd(__addr_lo));
-  return _mm256_insertf128_pd(__v256, _mm_loadu_pd(__addr_hi), 1);
+  return _mm256_set_m128d(_mm_loadu_pd(__addr_hi), _mm_loadu_pd(__addr_lo));
 }
 
 /// Loads two 128-bit integer vectors from unaligned memory locations and
@@ -4955,8 +4953,7 @@ _mm256_loadu2_m128d(double const *__addr_hi, double const *__addr_lo)
 static __inline __m256i __DEFAULT_FN_ATTRS
 _mm256_loadu2_m128i(__m128i_u const *__addr_hi, __m128i_u const *__addr_lo)
 {
-  __m256i __v256 = _mm256_castsi128_si256(_mm_loadu_si128(__addr_lo));
-  return _mm256_insertf128_si256(__v256, _mm_loadu_si128(__addr_hi), 1);
+   return _mm256_set_m128i(_mm_loadu_si128(__addr_hi), _mm_loadu_si128(__addr_lo));
 }
 
 /* SIMD store ops (unaligned) */

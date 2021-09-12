@@ -88,6 +88,7 @@ public:
     eServerPacketType_vFile_mode,
     eServerPacketType_vFile_exists,
     eServerPacketType_vFile_md5,
+    eServerPacketType_vFile_fstat,
     eServerPacketType_vFile_stat,
     eServerPacketType_vFile_symlink,
     eServerPacketType_vFile_unlink,

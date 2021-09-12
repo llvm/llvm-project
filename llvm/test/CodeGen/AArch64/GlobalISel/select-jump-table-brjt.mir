@@ -65,7 +65,7 @@ body:             |
   ; CHECK: bb.1.entry:
   ; CHECK:   successors: %bb.3(0x2aaaaaab), %bb.4(0x2aaaaaab), %bb.2(0x2aaaaaab)
   ; CHECK:   [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
-  ; CHECK:   [[MOVaddrJT:%[0-9]+]]:gpr64 = MOVaddrJT target-flags(aarch64-page) %jump-table.0, target-flags(aarch64-pageoff, aarch64-nc) %jump-table.0
+  ; CHECK:   [[MOVaddrJT:%[0-9]+]]:gpr64common = MOVaddrJT target-flags(aarch64-page) %jump-table.0, target-flags(aarch64-pageoff, aarch64-nc) %jump-table.0
   ; CHECK:   early-clobber %18:gpr64, early-clobber %19:gpr64sp = JumpTableDest32 [[MOVaddrJT]], [[SUBREG_TO_REG]], %jump-table.0
   ; CHECK:   BR %18
   ; CHECK: bb.2.sw.bb:

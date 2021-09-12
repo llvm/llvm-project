@@ -577,10 +577,14 @@ bool DWARFUnit::parseDWO() {
 }
 
 void DWARFUnit::clearDIEs(bool KeepCUDie) {
-  if (DieArray.size() > (unsigned)KeepCUDie) {
-    DieArray.resize((unsigned)KeepCUDie);
-    DieArray.shrink_to_fit();
-  }
+  // Do not use resize() + shrink_to_fit() to free memory occupied by dies.
+  // shrink_to_fit() is a *non-binding* request to reduce capacity() to size().
+  // It depends on the implementation whether the request is fulfilled.
+  // Create a new vector with a small capacity and assign it to the DieArray to
+  // have previous contents freed.
+  DieArray = (KeepCUDie && !DieArray.empty())
+                 ? std::vector<DWARFDebugInfoEntry>({DieArray[0]})
+                 : std::vector<DWARFDebugInfoEntry>();
 }
 
 Expected<DWARFAddressRangesVector>

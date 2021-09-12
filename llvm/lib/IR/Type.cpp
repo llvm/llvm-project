@@ -296,9 +296,7 @@ IntegerType *IntegerType::get(LLVMContext &C, unsigned NumBits) {
   return Entry;
 }
 
-APInt IntegerType::getMask() const {
-  return APInt::getAllOnesValue(getBitWidth());
-}
+APInt IntegerType::getMask() const { return APInt::getAllOnes(getBitWidth()); }
 
 //===----------------------------------------------------------------------===//
 //                       FunctionType Implementation

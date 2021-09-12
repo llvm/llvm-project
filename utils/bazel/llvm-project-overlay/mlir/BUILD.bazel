@@ -6497,6 +6497,7 @@ cc_library(
         ":LinalgOps",
         ":MathDialect",
         ":Pass",
+        ":SCFDialect",
         ":StandardOps",
         ":TensorDialect",
         ":TosaDialect",

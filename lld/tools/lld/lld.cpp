@@ -39,6 +39,7 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PluginLoader.h"
+#include "llvm/Support/Process.h"
 #include <cstdlib>
 
 using namespace lld;
@@ -199,6 +200,7 @@ static unsigned inTestVerbosity() {
 
 int main(int argc, const char **argv) {
   InitLLVM x(argc, argv);
+  sys::Process::UseANSIEscapeCodes(true);
 
   // Not running in lit tests, just take the shortest codepath with global
   // exception handling and no memory cleanup on exit.

@@ -2325,7 +2325,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   LLVM_DEBUG(dbgs() << "starting gcd\n");
   ++GCDapplications;
   unsigned BitWidth = SE->getTypeSizeInBits(Src->getType());
-  APInt RunningGCD = APInt::getNullValue(BitWidth);
+  APInt RunningGCD = APInt::getZero(BitWidth);
 
   // Examine Src coefficients.
   // Compute running GCD and record source constant.
@@ -2365,7 +2365,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   }
   const SCEV *DstConst = Coefficients;
 
-  APInt ExtraGCD = APInt::getNullValue(BitWidth);
+  APInt ExtraGCD = APInt::getZero(BitWidth);
   const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
   LLVM_DEBUG(dbgs() << "    Delta = " << *Delta << "\n");
   const SCEVConstant *Constant = dyn_cast<SCEVConstant>(Delta);

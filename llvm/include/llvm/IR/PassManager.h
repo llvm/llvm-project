@@ -377,14 +377,13 @@ template <typename DerivedT> struct PassInfoMixin {
     static_assert(std::is_base_of<PassInfoMixin, DerivedT>::value,
                   "Must pass the derived type as the template argument!");
     StringRef Name = getTypeName<DerivedT>();
-    if (Name.startswith("llvm::"))
-      Name = Name.drop_front(strlen("llvm::"));
+    Name.consume_front("llvm::");
     return Name;
   }
 
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
-    auto ClassName = name();
+    StringRef ClassName = DerivedT::name();
     auto PassName = MapClassName2PassName(ClassName);
     OS << PassName;
   }

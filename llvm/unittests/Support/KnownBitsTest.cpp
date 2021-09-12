@@ -464,8 +464,8 @@ TEST(KnownBitsTest, SExtInReg) {
   unsigned Bits = 4;
   for (unsigned FromBits = 1; FromBits <= Bits; ++FromBits) {
     ForeachKnownBits(Bits, [&](const KnownBits &Known) {
-      APInt CommonOne = APInt::getAllOnesValue(Bits);
-      APInt CommonZero = APInt::getAllOnesValue(Bits);
+      APInt CommonOne = APInt::getAllOnes(Bits);
+      APInt CommonZero = APInt::getAllOnes(Bits);
       unsigned ExtBits = Bits - FromBits;
       ForeachNumInKnownBits(Known, [&](const APInt &N) {
         APInt Ext = N << ExtBits;

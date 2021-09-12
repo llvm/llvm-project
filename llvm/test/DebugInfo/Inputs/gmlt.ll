@@ -42,12 +42,7 @@
 
 ; CHECK: DW_TAG_subprogram
 ; CHECK-NEXT:     DW_AT_name {{.*}} "f3"
-
-; FIXME: We don't really need DW_AT_inline, consumers can ignore this due to
-; the absence of high_pc/low_pc/ranges and know that they just need it for
-; retrieving the name of a concrete inlined instance
-
-; CHECK-NOT: {{DW_TAG|DW_AT|NULL}}
+; CHECK-NEXT:     DW_AT_inline
 
 ; Check that we only provide the minimal attributes on a subprogram to save space.
 ; CHECK:   DW_TAG_subprogram
