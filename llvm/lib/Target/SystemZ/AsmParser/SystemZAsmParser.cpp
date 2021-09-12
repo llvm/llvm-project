@@ -9,6 +9,7 @@
 #include "MCTargetDesc/SystemZInstPrinter.h"
 #include "MCTargetDesc/SystemZMCAsmInfo.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
+#include "SystemZTargetStreamer.h"
 #include "TargetInfo/SystemZTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -405,6 +406,13 @@ private:
     SMLoc StartLoc, EndLoc;
   };
 
+  SystemZTargetStreamer &getTargetStreamer() {
+    assert(getParser().getStreamer().getTargetStreamer() &&
+           "do not have a target streamer");
+    MCTargetStreamer &TS = *getParser().getStreamer().getTargetStreamer();
+    return static_cast<SystemZTargetStreamer &>(TS);
+  }
+
   bool parseRegister(Register &Reg, bool RestoreOnFailure = false);
 
   bool parseIntegerRegister(Register &Reg, RegisterGroup Group);
@@ -420,6 +428,7 @@ private:
   bool parseAddressRegister(Register &Reg);
 
   bool ParseDirectiveInsn(SMLoc L);
+  bool ParseDirectiveMachine(SMLoc L);
 
   OperandMatchResultTy parseAddress(OperandVector &Operands,
                                     MemoryKind MemKind,
@@ -1210,6 +1219,8 @@ bool SystemZAsmParser::ParseDirective(AsmToken DirectiveID) {
 
   if (IDVal == ".insn")
     return ParseDirectiveInsn(DirectiveID.getLoc());
+  if (IDVal == ".machine")
+    return ParseDirectiveMachine(DirectiveID.getLoc());
 
   return true;
 }
@@ -1318,6 +1329,28 @@ bool SystemZAsmParser::ParseDirectiveInsn(SMLoc L) {
 
   // Emit as a regular instruction.
   Parser.getStreamer().emitInstruction(Inst, getSTI());
+
+  return false;
+}
+
+/// ParseDirectiveMachine
+/// ::= .machine [ mcpu ]
+bool SystemZAsmParser::ParseDirectiveMachine(SMLoc L) {
+  MCAsmParser &Parser = getParser();
+  if (Parser.getTok().isNot(AsmToken::Identifier) &&
+      Parser.getTok().isNot(AsmToken::String))
+    return Error(L, "unexpected token in '.machine' directive");
+
+  StringRef CPU = Parser.getTok().getIdentifier();
+  Parser.Lex();
+  if (parseToken(AsmToken::EndOfStatement))
+    return addErrorSuffix(" in '.machine' directive");
+
+  MCSubtargetInfo &STI = copySTI();
+  STI.setDefaultFeatures(CPU, /*TuneCPU*/ CPU, "");
+  setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
+
+  getTargetStreamer().emitMachine(CPU);
 
   return false;
 }

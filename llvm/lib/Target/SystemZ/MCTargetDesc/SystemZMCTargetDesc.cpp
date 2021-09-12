@@ -9,6 +9,7 @@
 #include "SystemZMCTargetDesc.h"
 #include "SystemZInstPrinter.h"
 #include "SystemZMCAsmInfo.h"
+#include "SystemZTargetStreamer.h"
 #include "TargetInfo/SystemZTargetInfo.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -182,6 +183,38 @@ static MCInstPrinter *createSystemZMCInstPrinter(const Triple &T,
   return new SystemZInstPrinter(MAI, MII, MRI);
 }
 
+namespace {
+class SystemZTargetAsmStreamer : public SystemZTargetStreamer {
+  formatted_raw_ostream &OS;
+
+public:
+  SystemZTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS)
+      : SystemZTargetStreamer(S), OS(OS) {}
+  void emitMachine(StringRef CPU) override {
+    OS << "\t.machine " << CPU << "\n";
+  }
+};
+
+class SystemZTargetELFStreamer : public SystemZTargetStreamer {
+public:
+  SystemZTargetELFStreamer(MCStreamer &S) : SystemZTargetStreamer(S) {}
+  void emitMachine(StringRef CPU) override {}
+};
+} // end namespace
+
+static MCTargetStreamer *
+createAsmTargetStreamer(MCStreamer &S,
+                        formatted_raw_ostream &OS,
+                        MCInstPrinter *InstPrint,
+                        bool isVerboseAsm) {
+  return new SystemZTargetAsmStreamer(S, OS);
+}
+
+static MCTargetStreamer *
+createObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
+  return new SystemZTargetELFStreamer(S);
+}
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTargetMC() {
   // Register the MCAsmInfo.
   TargetRegistry::RegisterMCAsmInfo(getTheSystemZTarget(),
@@ -210,4 +243,12 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTargetMC() {
   // Register the MCInstPrinter.
   TargetRegistry::RegisterMCInstPrinter(getTheSystemZTarget(),
                                         createSystemZMCInstPrinter);
+
+  // Register the asm streamer.
+  TargetRegistry::RegisterAsmTargetStreamer(getTheSystemZTarget(),
+                                            createAsmTargetStreamer);
+
+  // Register the obj streamer
+  TargetRegistry::RegisterObjectTargetStreamer(getTheSystemZTarget(),
+                                               createObjectTargetStreamer);
 }
