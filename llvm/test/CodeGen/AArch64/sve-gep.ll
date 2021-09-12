@@ -74,8 +74,8 @@ define <vscale x 2 x i8*> @scalable_of_fixed_2(<vscale x 2 x i8*> %base) {
   ret <vscale x 2 x i8*> %d
 }
 
-define <vscale x 2 x i8*> @scalable_of_fixed_3(i8* %base, <vscale x 2 x i64> %idx) {
-; CHECK-LABEL: scalable_of_fixed_3:
+define <vscale x 2 x i8*> @scalable_of_fixed_3_i8(i8* %base, <vscale x 2 x i64> %idx) {
+; CHECK-LABEL: scalable_of_fixed_3_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z1.d, x0
 ; CHECK-NEXT:    add z0.d, z1.d, z0.d
@@ -84,8 +84,41 @@ define <vscale x 2 x i8*> @scalable_of_fixed_3(i8* %base, <vscale x 2 x i64> %id
   ret <vscale x 2 x i8*> %d
 }
 
-define <vscale x 2 x i8*> @scalable_of_fixed_4(i8* %base, <vscale x 2 x i32> %idx) {
-; CHECK-LABEL: scalable_of_fixed_4:
+define <vscale x 2 x i16*> @scalable_of_fixed_3_i16(i16* %base, <vscale x 2 x i64> %idx) {
+; CHECK-LABEL: scalable_of_fixed_3_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.d, z0.d, #1
+; CHECK-NEXT:    mov z1.d, x0
+; CHECK-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-NEXT:    ret
+  %d = getelementptr i16, i16* %base, <vscale x 2 x i64> %idx
+  ret <vscale x 2 x i16*> %d
+}
+
+define <vscale x 2 x i32*> @scalable_of_fixed_3_i32(i32* %base, <vscale x 2 x i64> %idx) {
+; CHECK-LABEL: scalable_of_fixed_3_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.d, z0.d, #2
+; CHECK-NEXT:    mov z1.d, x0
+; CHECK-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-NEXT:    ret
+  %d = getelementptr i32, i32* %base, <vscale x 2 x i64> %idx
+  ret <vscale x 2 x i32*> %d
+}
+
+define <vscale x 2 x i64*> @scalable_of_fixed_3_i64(i64* %base, <vscale x 2 x i64> %idx) {
+; CHECK-LABEL: scalable_of_fixed_3_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.d, z0.d, #3
+; CHECK-NEXT:    mov z1.d, x0
+; CHECK-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-NEXT:    ret
+  %d = getelementptr i64, i64* %base, <vscale x 2 x i64> %idx
+  ret <vscale x 2 x i64*> %d
+}
+
+define <vscale x 2 x i8*> @scalable_of_fixed_4_i8(i8* %base, <vscale x 2 x i32> %idx) {
+; CHECK-LABEL: scalable_of_fixed_4_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    sxtw z0.d, p0/m, z0.d
@@ -94,6 +127,97 @@ define <vscale x 2 x i8*> @scalable_of_fixed_4(i8* %base, <vscale x 2 x i32> %id
 ; CHECK-NEXT:    ret
   %d = getelementptr i8, i8* %base, <vscale x 2 x i32> %idx
   ret <vscale x 2 x i8*> %d
+}
+
+define <vscale x 2 x i16*> @scalable_of_fixed_4_i16(i16* %base, <vscale x 2 x i32> %idx) {
+; CHECK-LABEL: scalable_of_fixed_4_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    sxtw z0.d, p0/m, z0.d
+; CHECK-NEXT:    lsl z0.d, z0.d, #1
+; CHECK-NEXT:    mov z1.d, x0
+; CHECK-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-NEXT:    ret
+  %d = getelementptr i16, i16* %base, <vscale x 2 x i32> %idx
+  ret <vscale x 2 x i16*> %d
+}
+
+define <vscale x 2 x i32*> @scalable_of_fixed_4_i32(i32* %base, <vscale x 2 x i32> %idx) {
+; CHECK-LABEL: scalable_of_fixed_4_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    sxtw z0.d, p0/m, z0.d
+; CHECK-NEXT:    lsl z0.d, z0.d, #2
+; CHECK-NEXT:    mov z1.d, x0
+; CHECK-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-NEXT:    ret
+  %d = getelementptr i32, i32* %base, <vscale x 2 x i32> %idx
+  ret <vscale x 2 x i32*> %d
+}
+
+define <vscale x 2 x i64*> @scalable_of_fixed_4_i64(i64* %base, <vscale x 2 x i32> %idx) {
+; CHECK-LABEL: scalable_of_fixed_4_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    sxtw z0.d, p0/m, z0.d
+; CHECK-NEXT:    lsl z0.d, z0.d, #3
+; CHECK-NEXT:    mov z1.d, x0
+; CHECK-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-NEXT:    ret
+  %d = getelementptr i64, i64* %base, <vscale x 2 x i32> %idx
+  ret <vscale x 2 x i64*> %d
+}
+
+define <vscale x 2 x i8*> @scalable_of_fixed_5(i8* %base, <vscale x 2 x i32> %idx) {
+; CHECK-LABEL: scalable_of_fixed_5:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.d, x0
+; CHECK-NEXT:    and z0.d, z0.d, #0xffffffff
+; CHECK-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-NEXT:    ret
+  %idxZext = zext <vscale x 2 x i32> %idx to <vscale x 2 x i64>
+  %d = getelementptr i8, i8* %base, <vscale x 2 x i64> %idxZext
+  ret <vscale x 2 x i8*> %d
+}
+
+define <vscale x 2 x i16*> @scalable_of_fixed_5_i16(i16* %base, <vscale x 2 x i32> %idx) {
+; CHECK-LABEL: scalable_of_fixed_5_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and z0.d, z0.d, #0xffffffff
+; CHECK-NEXT:    mov z1.d, x0
+; CHECK-NEXT:    lsl z0.d, z0.d, #1
+; CHECK-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-NEXT:    ret
+  %idxZext = zext <vscale x 2 x i32> %idx to <vscale x 2 x i64>
+  %d = getelementptr i16, i16* %base, <vscale x 2 x i64> %idxZext
+  ret <vscale x 2 x i16*> %d
+}
+
+define <vscale x 2 x i32*> @scalable_of_fixed_5_i32(i32* %base, <vscale x 2 x i32> %idx) {
+; CHECK-LABEL: scalable_of_fixed_5_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and z0.d, z0.d, #0xffffffff
+; CHECK-NEXT:    mov z1.d, x0
+; CHECK-NEXT:    lsl z0.d, z0.d, #2
+; CHECK-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-NEXT:    ret
+  %idxZext = zext <vscale x 2 x i32> %idx to <vscale x 2 x i64>
+  %d = getelementptr i32, i32* %base, <vscale x 2 x i64> %idxZext
+  ret <vscale x 2 x i32*> %d
+}
+
+
+define <vscale x 2 x i64*> @scalable_of_fixed_5_i64(i64* %base, <vscale x 2 x i32> %idx) {
+; CHECK-LABEL: scalable_of_fixed_5_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and z0.d, z0.d, #0xffffffff
+; CHECK-NEXT:    mov z1.d, x0
+; CHECK-NEXT:    lsl z0.d, z0.d, #3
+; CHECK-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-NEXT:    ret
+  %idxZext = zext <vscale x 2 x i32> %idx to <vscale x 2 x i64>
+  %d = getelementptr i64, i64* %base, <vscale x 2 x i64> %idxZext
+  ret <vscale x 2 x i64*> %d
 }
 
 define <vscale x 2 x <vscale x 2 x i64>*> @scalable_of_scalable_1(<vscale x 2 x i64>* %base) {
