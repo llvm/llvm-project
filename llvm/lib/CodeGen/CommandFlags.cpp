@@ -281,7 +281,7 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
   static cl::opt<SwiftAsyncFramePointerMode> SwiftAsyncFramePointer(
       "swift-async-fp",
       cl::desc("Determine when the Swift async frame pointer should be set"),
-      cl::init(SwiftAsyncFramePointerMode::DeploymentBased),
+      cl::init(SwiftAsyncFramePointerMode::Always),
       cl::values(clEnumValN(SwiftAsyncFramePointerMode::DeploymentBased, "auto",
                             "Determine based on deployment target"),
                  clEnumValN(SwiftAsyncFramePointerMode::Always, "always",
