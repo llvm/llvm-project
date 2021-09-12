@@ -34,8 +34,7 @@ extern const char *DispatchFnName;
 } // end namespace SimpleRemoteEPCDefaultBootstrapSymbolNames
 
 enum class SimpleRemoteEPCOpcode : uint8_t {
-  FirstOpC,
-  Setup = FirstOpC,
+  Setup,
   Hangup,
   Result,
   CallWrapper,

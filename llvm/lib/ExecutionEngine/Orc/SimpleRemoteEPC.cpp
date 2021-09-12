@@ -157,8 +157,7 @@ SimpleRemoteEPC::handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
                                ExecutorAddress TagAddr,
                                SimpleRemoteEPCArgBytesVector ArgBytes) {
   using UT = std::underlying_type_t<SimpleRemoteEPCOpcode>;
-  if (static_cast<UT>(OpC) < static_cast<UT>(SimpleRemoteEPCOpcode::FirstOpC) ||
-      static_cast<UT>(OpC) > static_cast<UT>(SimpleRemoteEPCOpcode::LastOpC))
+  if (static_cast<UT>(OpC) > static_cast<UT>(SimpleRemoteEPCOpcode::LastOpC))
     return make_error<StringError>("Unexpected opcode",
                                    inconvertibleErrorCode());
 
