@@ -873,12 +873,10 @@ static bool runImpl(Function &F, const TargetTransformInfo &TTI,
   auto &DL = F.getParent()->getDataLayout();
   while (MadeChange) {
     MadeChange = false;
-    for (Function::iterator I = F.begin(); I != F.end();) {
-      BasicBlock *BB = &*I++;
+    for (BasicBlock &BB : llvm::make_early_inc_range(F)) {
       bool ModifiedDTOnIteration = false;
-      MadeChange |= optimizeBlock(*BB, ModifiedDTOnIteration, TTI, DL,
+      MadeChange |= optimizeBlock(BB, ModifiedDTOnIteration, TTI, DL,
                                   DTU.hasValue() ? DTU.getPointer() : nullptr);
-
 
       // Restart BB iteration if the dominator tree of the Function was changed
       if (ModifiedDTOnIteration)
