@@ -836,3 +836,69 @@ loop:
 exit:
   ret void
 }
+
+define void @update_multiple_users(i16* noalias %src, i8* noalias %dst, i1 %c) {
+; CHECK-LABEL: LV: Checking a loop in "update_multiple_users"
+; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK-NEXT: loop.header:
+; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
+; CHECK-NEXT: Successor(s): loop.then
+; CHECK-EMPTY:
+; CHECK-NEXT: loop.then:
+; CHECK-NEXT: Successor(s): loop.then.0
+; CHECK-EMPTY:
+; CHECK-NEXT: loop.then.0:
+; CHECK-NEXT: Successor(s): pred.store
+; CHECK-EMPTY:
+; CHECK-NEXT: <xVFxUF> pred.store: {
+; CHECK-NEXT:   pred.store.entry:
+; CHECK-NEXT:     BRANCH-ON-MASK ir<%c>
+; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
+; CHECK-NEXT:   CondBit: ir<%c>
+; CHECK-EMPTY:
+; CHECK-NEXT:   pred.store.if:
+; CHECK-NEXT:     REPLICATE ir<%l1> = load ir<%src>
+; CHECK-NEXT:     REPLICATE ir<%cmp> = icmp ir<%l1>, ir<0>
+; CHECK-NEXT:     REPLICATE ir<%l2> = trunc ir<%l1>
+; CHECK-NEXT:     REPLICATE ir<%sel> = select ir<%cmp>, ir<5>, ir<%l2>
+; CHECK-NEXT:     REPLICATE store ir<%sel>, ir<%dst>
+; CHECK-NEXT:   Successor(s): pred.store.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:   pred.store.continue:
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%6> = ir<%l1>
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): loop.then.1
+; CHECK-EMPTY:
+; CHECK-NEXT: loop.then.1:
+; CHECK-NEXT:   WIDEN ir<%sext.l1> = sext vp<%6>
+; CHECK-NEXT: Successor(s): loop.latch
+; CHECK-EMPTY:
+; CHECK-NEXT: loop.latch:
+; CHECK-NEXT: No successors
+; CHECK-NEXT: }
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  br i1 %c, label %loop.then, label %loop.latch
+
+loop.then:
+  %l1 = load i16, i16* %src, align 2
+  %l2 = trunc i16 %l1 to i8
+  %cmp = icmp eq i16 %l1, 0
+  %sel = select i1 %cmp, i8 5, i8 %l2
+  store i8 %sel, i8* %dst, align 1
+  %sext.l1 = sext i16 %l1 to i32
+  br label %loop.latch
+
+loop.latch:
+  %iv.next = add nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 999
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}
