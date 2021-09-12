@@ -1,5 +1,5 @@
 ; RUN: opt < %s -passes='always-inline,cgscc(coro-split)' -S | FileCheck %s
-; RUN: opt < %s -sample-profile-file=%S/Inputs/sample.text.prof -pgo-kind=pgo-sample-use-pipeline -passes='sample-profile,cgscc(coro-split)' -disable-inlining=true -S | FileCheck %s
+; RUN: opt < %s -sample-profile-file=%S/Inputs/sample.text.prof -pgo-kind=pgo-sample-use-pipeline -passes='sample-profile,cgscc(coro-split)' -S | FileCheck %s
 
 ; Function Attrs: alwaysinline ssp uwtable
 define void @ff() #0 {
