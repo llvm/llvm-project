@@ -9472,9 +9472,9 @@ struct AACallEdgesFunction : public AACallEdgesImpl {
       auto &CBEdges = A.getAAFor<AACallEdges>(
           *this, IRPosition::callsite_function(CB), DepClassTy::REQUIRED);
       if (CBEdges.hasNonAsmUnknownCallee())
-        setHasUnknownCallee(false, Change);
-      if (CBEdges.hasUnknownCallee())
         setHasUnknownCallee(true, Change);
+      if (CBEdges.hasUnknownCallee())
+        setHasUnknownCallee(false, Change);
 
       for (Function *F : CBEdges.getOptimisticEdges())
         addCalledFunction(F, Change);
