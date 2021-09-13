@@ -55,8 +55,6 @@ public:
                                         lldb::offset_t length,
                                         lldb_private::ModuleSpecList &specs);
 
-  uint32_t GetPluginVersion() override { return 1; }
-
   // Saves dump in Minidump file format
   static bool SaveCore(const lldb::ProcessSP &process_sp,
                        const lldb_private::FileSpec &outfile,

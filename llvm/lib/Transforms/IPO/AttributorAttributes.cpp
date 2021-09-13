@@ -9347,102 +9347,12 @@ struct AANoUndefCallSiteReturned final
   void trackStatistics() const override { STATS_DECLTRACK_CSRET_ATTR(noundef) }
 };
 
-struct AACallEdgesFunction : public AACallEdges {
-  AACallEdgesFunction(const IRPosition &IRP, Attributor &A)
-      : AACallEdges(IRP, A) {}
-
-  /// See AbstractAttribute::updateImpl(...).
-  ChangeStatus updateImpl(Attributor &A) override {
-    ChangeStatus Change = ChangeStatus::UNCHANGED;
-    bool OldHasUnknownCallee = HasUnknownCallee;
-    bool OldHasUnknownCalleeNonAsm = HasUnknownCalleeNonAsm;
-
-    auto AddCalledFunction = [&](Function *Fn) {
-      if (CalledFunctions.insert(Fn)) {
-        Change = ChangeStatus::CHANGED;
-        LLVM_DEBUG(dbgs() << "[AACallEdges] New call edge: " << Fn->getName()
-                          << "\n");
-      }
-    };
-
-    auto VisitValue = [&](Value &V, const Instruction *CtxI, bool &HasUnknown,
-                          bool Stripped) -> bool {
-      if (Function *Fn = dyn_cast<Function>(&V)) {
-        AddCalledFunction(Fn);
-      } else {
-        LLVM_DEBUG(dbgs() << "[AACallEdges] Unrecognized value: " << V << "\n");
-        HasUnknown = true;
-        HasUnknownCalleeNonAsm = true;
-      }
-
-      // Explore all values.
-      return true;
-    };
-
-    // Process any value that we might call.
-    auto ProcessCalledOperand = [&](Value *V, Instruction *Ctx) {
-      if (!genericValueTraversal<bool>(A, IRPosition::value(*V), *this,
-                                       HasUnknownCallee, VisitValue, nullptr,
-                                       false)) {
-        // If we haven't gone through all values, assume that there are unknown
-        // callees.
-        HasUnknownCallee = true;
-        HasUnknownCalleeNonAsm = true;
-      }
-    };
-
-    auto ProcessCallInst = [&](Instruction &Inst) {
-      CallBase &CB = static_cast<CallBase &>(Inst);
-      if (CB.isInlineAsm()) {
-        HasUnknownCallee = true;
-        return true;
-      }
-
-      // Process callee metadata if available.
-      if (auto *MD = Inst.getMetadata(LLVMContext::MD_callees)) {
-        for (auto &Op : MD->operands()) {
-          Function *Callee = mdconst::extract_or_null<Function>(Op);
-          if (Callee)
-            AddCalledFunction(Callee);
-        }
-        // Callees metadata grantees that the called function is one of its
-        // operands, So we are done.
-        return true;
-      }
-
-      // The most simple case.
-      ProcessCalledOperand(CB.getCalledOperand(), &Inst);
-
-      // Process callback functions.
-      SmallVector<const Use *, 4u> CallbackUses;
-      AbstractCallSite::getCallbackUses(CB, CallbackUses);
-      for (const Use *U : CallbackUses)
-        ProcessCalledOperand(U->get(), &Inst);
-
-      return true;
-    };
-
-    // Visit all callable instructions.
-    bool UsedAssumedInformation = false;
-    if (!A.checkForAllCallLikeInstructions(ProcessCallInst, *this,
-                                           UsedAssumedInformation)) {
-      // If we haven't looked at all call like instructions, assume that there
-      // are unknown callees.
-      HasUnknownCallee = true;
-      HasUnknownCalleeNonAsm = true;
-    }
-
-    // Track changes.
-    if (OldHasUnknownCallee != HasUnknownCallee ||
-        OldHasUnknownCalleeNonAsm != HasUnknownCalleeNonAsm)
-      Change = ChangeStatus::CHANGED;
-
-    return Change;
-  }
+struct AACallEdgesImpl : public AACallEdges {
+  AACallEdgesImpl(const IRPosition &IRP, Attributor &A) : AACallEdges(IRP, A) {}
 
   virtual const SetVector<Function *> &getOptimisticEdges() const override {
     return CalledFunctions;
-  };
+  }
 
   virtual bool hasUnknownCallee() const override { return HasUnknownCallee; }
 
@@ -9457,7 +9367,26 @@ struct AACallEdgesFunction : public AACallEdges {
 
   void trackStatistics() const override {}
 
-  /// Optimistic set of functions that might be called by this function.
+protected:
+  void addCalledFunction(Function *Fn, ChangeStatus &Change) {
+    if (CalledFunctions.insert(Fn)) {
+      Change = ChangeStatus::CHANGED;
+      LLVM_DEBUG(dbgs() << "[AACallEdges] New call edge: " << Fn->getName()
+                        << "\n");
+    }
+  }
+
+  void setHasUnknownCallee(bool NonAsm, ChangeStatus &Change) {
+    if (!HasUnknownCallee)
+      Change = ChangeStatus::CHANGED;
+    if (NonAsm && !HasUnknownCalleeNonAsm)
+      Change = ChangeStatus::CHANGED;
+    HasUnknownCalleeNonAsm |= NonAsm;
+    HasUnknownCallee = true;
+  }
+
+private:
+  /// Optimistic set of functions that might be called by this position.
   SetVector<Function *> CalledFunctions;
 
   /// Is there any call with a unknown callee.
@@ -9467,116 +9396,280 @@ struct AACallEdgesFunction : public AACallEdges {
   bool HasUnknownCalleeNonAsm = false;
 };
 
+struct AACallEdgesCallSite : public AACallEdgesImpl {
+  AACallEdgesCallSite(const IRPosition &IRP, Attributor &A)
+      : AACallEdgesImpl(IRP, A) {}
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    ChangeStatus Change = ChangeStatus::UNCHANGED;
+
+    auto VisitValue = [&](Value &V, const Instruction *CtxI, bool &HasUnknown,
+                          bool Stripped) -> bool {
+      if (Function *Fn = dyn_cast<Function>(&V)) {
+        addCalledFunction(Fn, Change);
+      } else {
+        LLVM_DEBUG(dbgs() << "[AACallEdges] Unrecognized value: " << V << "\n");
+        setHasUnknownCallee(true, Change);
+      }
+
+      // Explore all values.
+      return true;
+    };
+
+    // Process any value that we might call.
+    auto ProcessCalledOperand = [&](Value *V) {
+      bool DummyValue = false;
+      if (!genericValueTraversal<bool>(A, IRPosition::value(*V), *this,
+                                       DummyValue, VisitValue, nullptr,
+                                       false)) {
+        // If we haven't gone through all values, assume that there are unknown
+        // callees.
+        setHasUnknownCallee(true, Change);
+      }
+    };
+
+    CallBase *CB = static_cast<CallBase *>(getCtxI());
+
+    if (CB->isInlineAsm()) {
+      setHasUnknownCallee(false, Change);
+      return Change;
+    }
+
+    // Process callee metadata if available.
+    if (auto *MD = getCtxI()->getMetadata(LLVMContext::MD_callees)) {
+      for (auto &Op : MD->operands()) {
+        Function *Callee = mdconst::extract_or_null<Function>(Op);
+        if (Callee)
+          addCalledFunction(Callee, Change);
+      }
+      return Change;
+    }
+
+    // The most simple case.
+    ProcessCalledOperand(CB->getCalledOperand());
+
+    // Process callback functions.
+    SmallVector<const Use *, 4u> CallbackUses;
+    AbstractCallSite::getCallbackUses(*CB, CallbackUses);
+    for (const Use *U : CallbackUses)
+      ProcessCalledOperand(U->get());
+
+    return Change;
+  }
+};
+
+struct AACallEdgesFunction : public AACallEdgesImpl {
+  AACallEdgesFunction(const IRPosition &IRP, Attributor &A)
+      : AACallEdgesImpl(IRP, A) {}
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    ChangeStatus Change = ChangeStatus::UNCHANGED;
+
+    auto ProcessCallInst = [&](Instruction &Inst) {
+      CallBase &CB = static_cast<CallBase &>(Inst);
+
+      auto &CBEdges = A.getAAFor<AACallEdges>(
+          *this, IRPosition::callsite_function(CB), DepClassTy::REQUIRED);
+      if (CBEdges.hasNonAsmUnknownCallee())
+        setHasUnknownCallee(true, Change);
+      if (CBEdges.hasUnknownCallee())
+        setHasUnknownCallee(false, Change);
+
+      for (Function *F : CBEdges.getOptimisticEdges())
+        addCalledFunction(F, Change);
+
+      return true;
+    };
+
+    // Visit all callable instructions.
+    bool UsedAssumedInformation = false;
+    if (!A.checkForAllCallLikeInstructions(ProcessCallInst, *this,
+                                           UsedAssumedInformation)) {
+      // If we haven't looked at all call like instructions, assume that there
+      // are unknown callees.
+      setHasUnknownCallee(true, Change);
+    }
+
+    return Change;
+  }
+};
+
 struct AAFunctionReachabilityFunction : public AAFunctionReachability {
+private:
+  struct QuerySet {
+    void markReachable(Function *Fn) {
+      Reachable.insert(Fn);
+      Unreachable.erase(Fn);
+    }
+
+    ChangeStatus update(Attributor &A, const AAFunctionReachability &AA,
+                        ArrayRef<const AACallEdges *> AAEdgesList) {
+      ChangeStatus Change = ChangeStatus::UNCHANGED;
+
+      for (auto *AAEdges : AAEdgesList) {
+        if (AAEdges->hasUnknownCallee()) {
+          if (!CanReachUnknownCallee)
+            Change = ChangeStatus::CHANGED;
+          CanReachUnknownCallee = true;
+          return Change;
+        }
+      }
+
+      for (Function *Fn : make_early_inc_range(Unreachable)) {
+        if (checkIfReachable(A, AA, AAEdgesList, Fn)) {
+          Change = ChangeStatus::CHANGED;
+          markReachable(Fn);
+        }
+      }
+      return Change;
+    }
+
+    bool isReachable(Attributor &A, const AAFunctionReachability &AA,
+                     ArrayRef<const AACallEdges *> AAEdgesList, Function *Fn) {
+      // Assume that we can reach the function.
+      // TODO: Be more specific with the unknown callee.
+      if (CanReachUnknownCallee)
+        return true;
+
+      if (Reachable.count(Fn))
+        return true;
+
+      if (Unreachable.count(Fn))
+        return false;
+
+      // We need to assume that this function can't reach Fn to prevent
+      // an infinite loop if this function is recursive.
+      Unreachable.insert(Fn);
+
+      bool Result = checkIfReachable(A, AA, AAEdgesList, Fn);
+      if (Result)
+        markReachable(Fn);
+      return Result;
+    }
+
+    bool checkIfReachable(Attributor &A, const AAFunctionReachability &AA,
+                          ArrayRef<const AACallEdges *> AAEdgesList,
+                          Function *Fn) const {
+
+      // Handle the most trivial case first.
+      for (auto *AAEdges : AAEdgesList) {
+        const SetVector<Function *> &Edges = AAEdges->getOptimisticEdges();
+
+        if (Edges.count(Fn))
+          return true;
+      }
+
+      SmallVector<const AAFunctionReachability *, 8> Deps;
+      for (auto &AAEdges : AAEdgesList) {
+        const SetVector<Function *> &Edges = AAEdges->getOptimisticEdges();
+
+        for (Function *Edge : Edges) {
+          // We don't need a dependency if the result is reachable.
+          const AAFunctionReachability &EdgeReachability =
+              A.getAAFor<AAFunctionReachability>(
+                  AA, IRPosition::function(*Edge), DepClassTy::NONE);
+          Deps.push_back(&EdgeReachability);
+
+          if (EdgeReachability.canReach(A, Fn))
+            return true;
+        }
+      }
+
+      // The result is false for now, set dependencies and leave.
+      for (auto Dep : Deps)
+        A.recordDependence(AA, *Dep, DepClassTy::REQUIRED);
+
+      return false;
+    }
+
+    /// Set of functions that we know for sure is reachable.
+    DenseSet<Function *> Reachable;
+
+    /// Set of functions that are unreachable, but might become reachable.
+    DenseSet<Function *> Unreachable;
+
+    /// If we can reach a function with a call to a unknown function we assume
+    /// that we can reach any function.
+    bool CanReachUnknownCallee = false;
+  };
+
+public:
   AAFunctionReachabilityFunction(const IRPosition &IRP, Attributor &A)
       : AAFunctionReachability(IRP, A) {}
 
   bool canReach(Attributor &A, Function *Fn) const override {
-    // Assume that we can reach any function if we can reach a call with
-    // unknown callee.
-    if (CanReachUnknownCallee)
-      return true;
-
-    if (ReachableQueries.count(Fn))
-      return true;
-
-    if (UnreachableQueries.count(Fn))
-      return false;
-
     const AACallEdges &AAEdges =
         A.getAAFor<AACallEdges>(*this, getIRPosition(), DepClassTy::REQUIRED);
-
-    const SetVector<Function *> &Edges = AAEdges.getOptimisticEdges();
-    bool Result = checkIfReachable(A, Edges, Fn);
 
     // Attributor returns attributes as const, so this function has to be
     // const for users of this attribute to use it without having to do
     // a const_cast.
     // This is a hack for us to be able to cache queries.
     auto *NonConstThis = const_cast<AAFunctionReachabilityFunction *>(this);
+    bool Result =
+        NonConstThis->WholeFunction.isReachable(A, *this, {&AAEdges}, Fn);
 
-    if (Result)
-      NonConstThis->ReachableQueries.insert(Fn);
-    else
-      NonConstThis->UnreachableQueries.insert(Fn);
+    return Result;
+  }
+
+  /// Can \p CB reach \p Fn
+  bool canReach(Attributor &A, CallBase &CB, Function *Fn) const override {
+    const AACallEdges &AAEdges = A.getAAFor<AACallEdges>(
+        *this, IRPosition::callsite_function(CB), DepClassTy::REQUIRED);
+
+    // Attributor returns attributes as const, so this function has to be
+    // const for users of this attribute to use it without having to do
+    // a const_cast.
+    // This is a hack for us to be able to cache queries.
+    auto *NonConstThis = const_cast<AAFunctionReachabilityFunction *>(this);
+    QuerySet &CBQuery = NonConstThis->CBQueries[&CB];
+
+    bool Result = CBQuery.isReachable(A, *this, {&AAEdges}, Fn);
 
     return Result;
   }
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
-    if (CanReachUnknownCallee)
-      return ChangeStatus::UNCHANGED;
-
     const AACallEdges &AAEdges =
         A.getAAFor<AACallEdges>(*this, getIRPosition(), DepClassTy::REQUIRED);
-    const SetVector<Function *> &Edges = AAEdges.getOptimisticEdges();
     ChangeStatus Change = ChangeStatus::UNCHANGED;
 
-    if (AAEdges.hasUnknownCallee()) {
-      bool OldCanReachUnknown = CanReachUnknownCallee;
-      CanReachUnknownCallee = true;
-      return OldCanReachUnknown ? ChangeStatus::UNCHANGED
-                                : ChangeStatus::CHANGED;
-    }
+    Change |= WholeFunction.update(A, *this, {&AAEdges});
 
-    // Check if any of the unreachable functions become reachable.
-    for (auto Current = UnreachableQueries.begin();
-         Current != UnreachableQueries.end();) {
-      if (!checkIfReachable(A, Edges, *Current)) {
-        Current++;
-        continue;
-      }
-      ReachableQueries.insert(*Current);
-      UnreachableQueries.erase(*Current++);
-      Change = ChangeStatus::CHANGED;
+    for (auto CBPair : CBQueries) {
+      const AACallEdges &AAEdges = A.getAAFor<AACallEdges>(
+          *this, IRPosition::callsite_function(*CBPair.first),
+          DepClassTy::REQUIRED);
+
+      Change |= CBPair.second.update(A, *this, {&AAEdges});
     }
 
     return Change;
   }
 
   const std::string getAsStr() const override {
-    size_t QueryCount = ReachableQueries.size() + UnreachableQueries.size();
+    size_t QueryCount =
+        WholeFunction.Reachable.size() + WholeFunction.Unreachable.size();
 
-    return "FunctionReachability [" + std::to_string(ReachableQueries.size()) +
-           "," + std::to_string(QueryCount) + "]";
+    return "FunctionReachability [" +
+           std::to_string(WholeFunction.Reachable.size()) + "," +
+           std::to_string(QueryCount) + "]";
   }
 
   void trackStatistics() const override {}
-
 private:
-  bool canReachUnknownCallee() const override { return CanReachUnknownCallee; }
-
-  bool checkIfReachable(Attributor &A, const SetVector<Function *> &Edges,
-                        Function *Fn) const {
-    if (Edges.count(Fn))
-      return true;
-
-    for (Function *Edge : Edges) {
-      // We don't need a dependency if the result is reachable.
-      const AAFunctionReachability &EdgeReachability =
-          A.getAAFor<AAFunctionReachability>(*this, IRPosition::function(*Edge),
-                                             DepClassTy::NONE);
-
-      if (EdgeReachability.canReach(A, Fn))
-        return true;
-    }
-    for (Function *Fn : Edges)
-      A.getAAFor<AAFunctionReachability>(*this, IRPosition::function(*Fn),
-                                         DepClassTy::REQUIRED);
-
-    return false;
+  bool canReachUnknownCallee() const override {
+    return WholeFunction.CanReachUnknownCallee;
   }
 
-  /// Set of functions that we know for sure is reachable.
-  SmallPtrSet<Function *, 8> ReachableQueries;
+  /// Used to answer if a the whole function can reacha a specific function.
+  QuerySet WholeFunction;
 
-  /// Set of functions that are unreachable, but might become reachable.
-  SmallPtrSet<Function *, 8> UnreachableQueries;
-
-  /// If we can reach a function with a call to a unknown function we assume
-  /// that we can reach any function.
-  bool CanReachUnknownCallee = false;
+  /// Used to answer if a call base inside this function can reach a specific
+  /// function.
+  DenseMap<CallBase *, QuerySet> CBQueries;
 };
 
 } // namespace
@@ -9715,6 +9808,7 @@ CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAWillReturn)
 CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoReturn)
 CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAReturnedValues)
 CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAMemoryLocation)
+CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AACallEdges)
 
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANonNull)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoAlias)
@@ -9734,7 +9828,6 @@ CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoFree)
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAHeapToStack)
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAReachability)
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAUndefinedBehavior)
-CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AACallEdges)
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAFunctionReachability)
 
 CREATE_NON_RET_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAMemoryBehavior)

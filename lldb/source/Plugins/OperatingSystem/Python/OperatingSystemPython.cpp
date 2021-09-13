@@ -146,8 +146,6 @@ ConstString OperatingSystemPython::GetPluginName() {
   return GetPluginNameStatic();
 }
 
-uint32_t OperatingSystemPython::GetPluginVersion() { return 1; }
-
 bool OperatingSystemPython::UpdateThreadList(ThreadList &old_thread_list,
                                              ThreadList &core_thread_list,
                                              ThreadList &new_thread_list) {

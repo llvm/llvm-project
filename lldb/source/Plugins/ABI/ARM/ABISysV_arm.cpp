@@ -45,7 +45,7 @@ static const RegisterInfo g_register_infos[] = {
     //  ======================= ====================== ==========
     //  ===============
     {"r0",
-     "arg1",
+     nullptr,
      4,
      0,
      eEncodingUint,
@@ -57,7 +57,7 @@ static const RegisterInfo g_register_infos[] = {
      nullptr,
      0},
     {"r1",
-     "arg2",
+     nullptr,
      4,
      0,
      eEncodingUint,
@@ -69,7 +69,7 @@ static const RegisterInfo g_register_infos[] = {
      nullptr,
      0},
     {"r2",
-     "arg3",
+     nullptr,
      4,
      0,
      eEncodingUint,
@@ -81,7 +81,7 @@ static const RegisterInfo g_register_infos[] = {
      nullptr,
      0},
     {"r3",
-     "arg4",
+     nullptr,
      4,
      0,
      eEncodingUint,
@@ -2142,5 +2142,3 @@ lldb_private::ConstString ABISysV_arm::GetPluginNameStatic() {
 lldb_private::ConstString ABISysV_arm::GetPluginName() {
   return GetPluginNameStatic();
 }
-
-uint32_t ABISysV_arm::GetPluginVersion() { return 1; }

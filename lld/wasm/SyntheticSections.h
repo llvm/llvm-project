@@ -74,7 +74,7 @@ protected:
 // https://github.com/WebAssembly/tool-conventions/blob/master/DynamicLinking.md
 class DylinkSection : public SyntheticSection {
 public:
-  DylinkSection() : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, "dylink") {}
+  DylinkSection() : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, "dylink.0") {}
   bool isNeeded() const override { return config->isPic; }
   void writeBody() override;
 

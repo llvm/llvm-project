@@ -2460,10 +2460,8 @@ bool GVN::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
   // Merge unconditional branches, allowing PRE to catch more
   // optimization opportunities.
-  for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; ) {
-    BasicBlock *BB = &*FI++;
-
-    bool removedBlock = MergeBlockIntoPredecessor(BB, &DTU, LI, MSSAU, MD);
+  for (BasicBlock &BB : llvm::make_early_inc_range(F)) {
+    bool removedBlock = MergeBlockIntoPredecessor(&BB, &DTU, LI, MSSAU, MD);
     if (removedBlock)
       ++NumGVNBlocks;
 

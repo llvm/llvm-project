@@ -339,15 +339,11 @@ public:
         LangOpts(AST.getLangOpts()) {}
 
   HighlightingToken &addToken(SourceLocation Loc, HighlightingKind Kind) {
-    Loc = getHighlightableSpellingToken(Loc, SourceMgr);
-    if (Loc.isInvalid())
+    auto Range = getRangeForSourceLocation(Loc);
+    if (!Range)
       return InvalidHighlightingToken;
-    const auto *Tok = TB.spelledTokenAt(Loc);
-    assert(Tok);
-    return addToken(
-        halfOpenToRange(SourceMgr,
-                        Tok->range(SourceMgr).toCharRange(SourceMgr)),
-        Kind);
+
+    return addToken(*Range, Kind);
   }
 
   HighlightingToken &addToken(Range R, HighlightingKind Kind) {
@@ -356,6 +352,11 @@ public:
     HT.Kind = Kind;
     Tokens.push_back(std::move(HT));
     return Tokens.back();
+  }
+
+  void addExtraModifier(SourceLocation Loc, HighlightingModifier Modifier) {
+    if (auto Range = getRangeForSourceLocation(Loc))
+      ExtraModifiers[*Range].push_back(Modifier);
   }
 
   std::vector<HighlightingToken> collect(ParsedAST &AST) && {
@@ -377,12 +378,22 @@ public:
             // this predicate would never fire.
             return T.R == TokRef.front().R;
           });
-      if (auto Resolved = resolveConflict(Conflicting))
+      if (auto Resolved = resolveConflict(Conflicting)) {
+        // Apply extra collected highlighting modifiers
+        auto Modifiers = ExtraModifiers.find(Resolved->R);
+        if (Modifiers != ExtraModifiers.end()) {
+          for (HighlightingModifier Mod : Modifiers->second) {
+            Resolved->addModifier(Mod);
+          }
+        }
+
         NonConflicting.push_back(*Resolved);
+      }
       // TokRef[Conflicting.size()] is the next token with a different range (or
       // the end of the Tokens).
       TokRef = TokRef.drop_front(Conflicting.size());
     }
+
     const auto &SM = AST.getSourceManager();
     StringRef MainCode = SM.getBufferOrFake(SM.getMainFileID()).getBuffer();
 
@@ -440,10 +451,23 @@ public:
   const HeuristicResolver *getResolver() const { return Resolver; }
 
 private:
+  llvm::Optional<Range> getRangeForSourceLocation(SourceLocation Loc) {
+    Loc = getHighlightableSpellingToken(Loc, SourceMgr);
+    if (Loc.isInvalid())
+      return llvm::None;
+
+    const auto *Tok = TB.spelledTokenAt(Loc);
+    assert(Tok);
+
+    return halfOpenToRange(SourceMgr,
+                           Tok->range(SourceMgr).toCharRange(SourceMgr));
+  }
+
   const syntax::TokenBuffer &TB;
   const SourceManager &SourceMgr;
   const LangOptions &LangOpts;
   std::vector<HighlightingToken> Tokens;
+  std::map<Range, llvm::SmallVector<HighlightingModifier, 1>> ExtraModifiers;
   const HeuristicResolver *Resolver;
   // returned from addToken(InvalidLoc)
   HighlightingToken InvalidHighlightingToken;
@@ -495,6 +519,71 @@ class CollectExtraHighlightings
     : public RecursiveASTVisitor<CollectExtraHighlightings> {
 public:
   CollectExtraHighlightings(HighlightingsBuilder &H) : H(H) {}
+
+  bool VisitCXXConstructExpr(CXXConstructExpr *E) {
+    highlightMutableReferenceArguments(E->getConstructor(),
+                                       {E->getArgs(), E->getNumArgs()});
+
+    return true;
+  }
+
+  bool VisitCallExpr(CallExpr *E) {
+    // Highlighting parameters passed by non-const reference does not really
+    // make sense for literals...
+    if (isa<UserDefinedLiteral>(E))
+      return true;
+
+    // FIXME ...here it would make sense though.
+    if (isa<CXXOperatorCallExpr>(E))
+      return true;
+
+    highlightMutableReferenceArguments(
+        dyn_cast_or_null<FunctionDecl>(E->getCalleeDecl()),
+        {E->getArgs(), E->getNumArgs()});
+
+    return true;
+  }
+
+  void
+  highlightMutableReferenceArguments(const FunctionDecl *FD,
+                                     llvm::ArrayRef<const Expr *const> Args) {
+    if (!FD)
+      return;
+
+    if (auto *ProtoType = FD->getType()->getAs<FunctionProtoType>()) {
+      // Iterate over the types of the function parameters.
+      // If any of them are non-const reference paramteres, add it as a
+      // highlighting modifier to the corresponding expression
+      for (size_t I = 0;
+           I < std::min(size_t(ProtoType->getNumParams()), Args.size()); ++I) {
+        auto T = ProtoType->getParamType(I);
+
+        // Is this parameter passed by non-const reference?
+        // FIXME The condition !T->idDependentType() could be relaxed a bit,
+        // e.g. std::vector<T>& is dependent but we would want to highlight it
+        if (T->isLValueReferenceType() &&
+            !T.getNonReferenceType().isConstQualified() &&
+            !T->isDependentType()) {
+          if (auto *Arg = Args[I]) {
+            llvm::Optional<SourceLocation> Location;
+
+            // FIXME Add "unwrapping" for ArraySubscriptExpr and UnaryOperator,
+            //  e.g. highlight `a` in `a[i]`
+            // FIXME Handle dependent expression types
+            if (auto *DR = dyn_cast<DeclRefExpr>(Arg)) {
+              Location = DR->getLocation();
+            } else if (auto *M = dyn_cast<MemberExpr>(Arg)) {
+              Location = M->getMemberLoc();
+            }
+
+            if (Location)
+              H.addExtraModifier(*Location,
+                                 HighlightingModifier::UsedAsMutableReference);
+          }
+        }
+      }
+    }
+  }
 
   bool VisitDecltypeTypeLoc(DecltypeTypeLoc L) {
     if (auto K = kindForType(L.getTypePtr(), H.getResolver())) {
@@ -912,6 +1001,8 @@ llvm::StringRef toSemanticTokenModifier(HighlightingModifier Modifier) {
     return "dependentName"; // nonstandard
   case HighlightingModifier::DefaultLibrary:
     return "defaultLibrary";
+  case HighlightingModifier::UsedAsMutableReference:
+    return "usedAsMutableReference"; // nonstandard
   case HighlightingModifier::FunctionScope:
     return "functionScope"; // nonstandard
   case HighlightingModifier::ClassScope:

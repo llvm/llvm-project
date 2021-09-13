@@ -265,6 +265,15 @@ static BranchInst *findSplitCandidate(const Loop &L, ScalarEvolution &SE,
         SplitCandidateCond.BoundSCEV->getType())
       continue;
 
+    // After transformation, we assume the split condition of the pre-loop is
+    // always true. In order to guarantee it, we need to check the start value
+    // of the split cond AddRec satisfies the split condition.
+    const SCEV *SplitAddRecStartSCEV =
+        cast<SCEVAddRecExpr>(SplitCandidateCond.AddRecSCEV)->getStart();
+    if (!SE.isKnownPredicate(SplitCandidateCond.Pred, SplitAddRecStartSCEV,
+                             SplitCandidateCond.BoundSCEV))
+      continue;
+
     SplitCandidateCond.BI = BI;
     return BI;
   }

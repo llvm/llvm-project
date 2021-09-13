@@ -102,8 +102,6 @@ ConstString AppleObjCRuntimeV1::GetPluginName() {
   return GetPluginNameStatic();
 }
 
-uint32_t AppleObjCRuntimeV1::GetPluginVersion() { return 1; }
-
 BreakpointResolverSP
 AppleObjCRuntimeV1::CreateExceptionResolver(const BreakpointSP &bkpt,
                                             bool catch_bp, bool throw_bp) {

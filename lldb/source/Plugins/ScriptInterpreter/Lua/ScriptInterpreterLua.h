@@ -72,8 +72,6 @@ public:
   // PluginInterface protocol
   lldb_private::ConstString GetPluginName() override;
 
-  uint32_t GetPluginVersion() override;
-
   Lua &GetLua();
 
   llvm::Error EnterSession(lldb::user_id_t debugger_id);

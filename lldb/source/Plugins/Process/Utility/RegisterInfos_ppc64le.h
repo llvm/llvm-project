@@ -64,16 +64,16 @@
 // EH_Frame, Generic, Process Plugin
 #define POWERPC_REGS                                                           \
   DEFINE_GPR(r0, NULL, LLDB_INVALID_REGNUM)                                    \
-  , DEFINE_GPR(r1, "sp", LLDB_REGNUM_GENERIC_SP),                              \
+  , DEFINE_GPR(r1, NULL, LLDB_REGNUM_GENERIC_SP),                              \
       DEFINE_GPR(r2, NULL, LLDB_INVALID_REGNUM),                               \
-      DEFINE_GPR(r3, "arg1", LLDB_REGNUM_GENERIC_ARG1),                        \
-      DEFINE_GPR(r4, "arg2", LLDB_REGNUM_GENERIC_ARG2),                        \
-      DEFINE_GPR(r5, "arg3", LLDB_REGNUM_GENERIC_ARG3),                        \
-      DEFINE_GPR(r6, "arg4", LLDB_REGNUM_GENERIC_ARG4),                        \
-      DEFINE_GPR(r7, "arg5", LLDB_REGNUM_GENERIC_ARG5),                        \
-      DEFINE_GPR(r8, "arg6", LLDB_REGNUM_GENERIC_ARG6),                        \
-      DEFINE_GPR(r9, "arg7", LLDB_REGNUM_GENERIC_ARG7),                        \
-      DEFINE_GPR(r10, "arg8", LLDB_REGNUM_GENERIC_ARG8),                       \
+      DEFINE_GPR(r3, NULL, LLDB_REGNUM_GENERIC_ARG1),                          \
+      DEFINE_GPR(r4, NULL, LLDB_REGNUM_GENERIC_ARG2),                          \
+      DEFINE_GPR(r5, NULL, LLDB_REGNUM_GENERIC_ARG3),                          \
+      DEFINE_GPR(r6, NULL, LLDB_REGNUM_GENERIC_ARG4),                          \
+      DEFINE_GPR(r7, NULL, LLDB_REGNUM_GENERIC_ARG5),                          \
+      DEFINE_GPR(r8, NULL, LLDB_REGNUM_GENERIC_ARG6),                          \
+      DEFINE_GPR(r9, NULL, LLDB_REGNUM_GENERIC_ARG7),                          \
+      DEFINE_GPR(r10, NULL, LLDB_REGNUM_GENERIC_ARG8),                         \
       DEFINE_GPR(r11, NULL, LLDB_INVALID_REGNUM),                              \
       DEFINE_GPR(r12, NULL, LLDB_INVALID_REGNUM),                              \
       DEFINE_GPR(r13, NULL, LLDB_INVALID_REGNUM),                              \
@@ -95,15 +95,15 @@
       DEFINE_GPR(r29, NULL, LLDB_INVALID_REGNUM),                              \
       DEFINE_GPR(r30, NULL, LLDB_INVALID_REGNUM),                              \
       DEFINE_GPR(r31, NULL, LLDB_INVALID_REGNUM),                              \
-      DEFINE_GPR(pc, "pc", LLDB_REGNUM_GENERIC_PC),                            \
-      DEFINE_GPR(msr, "msr", LLDB_INVALID_REGNUM),                             \
+      DEFINE_GPR(pc, NULL, LLDB_REGNUM_GENERIC_PC),                            \
+      DEFINE_GPR(msr, NULL, LLDB_INVALID_REGNUM),                              \
       DEFINE_GPR(origr3, "orig_r3", LLDB_INVALID_REGNUM),                      \
-      DEFINE_GPR(ctr, "ctr", LLDB_INVALID_REGNUM),                             \
-      DEFINE_GPR(lr, "lr", LLDB_REGNUM_GENERIC_RA),                            \
-      DEFINE_GPR(xer, "xer", LLDB_INVALID_REGNUM),                             \
-      DEFINE_GPR(cr, "cr", LLDB_REGNUM_GENERIC_FLAGS),                         \
-      DEFINE_GPR(softe, "softe", LLDB_INVALID_REGNUM),                         \
-      DEFINE_GPR(trap, "trap", LLDB_INVALID_REGNUM),                           \
+      DEFINE_GPR(ctr, NULL, LLDB_INVALID_REGNUM),                              \
+      DEFINE_GPR(lr, NULL, LLDB_REGNUM_GENERIC_RA),                            \
+      DEFINE_GPR(xer, NULL, LLDB_INVALID_REGNUM),                              \
+      DEFINE_GPR(cr, NULL, LLDB_REGNUM_GENERIC_FLAGS),                         \
+      DEFINE_GPR(softe, NULL, LLDB_INVALID_REGNUM),                            \
+      DEFINE_GPR(trap, NULL, LLDB_INVALID_REGNUM),                             \
       DEFINE_FPR(f0, NULL, LLDB_INVALID_REGNUM),                               \
       DEFINE_FPR(f1, NULL, LLDB_INVALID_REGNUM),                               \
       DEFINE_FPR(f2, NULL, LLDB_INVALID_REGNUM),                               \

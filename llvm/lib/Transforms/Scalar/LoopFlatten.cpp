@@ -424,8 +424,8 @@ static bool checkIVUsers(FlattenInfo &FI) {
 
     LLVM_DEBUG(dbgs() << "Found use of inner induction variable: "; U->dump());
 
-    Value *MatchedMul;
-    Value *MatchedItCount;
+    Value *MatchedMul = nullptr;
+    Value *MatchedItCount = nullptr;
     bool IsAdd = match(U, m_c_Add(m_Specific(FI.InnerInductionPHI),
                                   m_Value(MatchedMul))) &&
                  match(MatchedMul, m_c_Mul(m_Specific(FI.OuterInductionPHI),

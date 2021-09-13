@@ -34,7 +34,7 @@ declare void @external_func()
 
 ;      CHECK: Sections:
 ; CHECK-NEXT:   - Type:            CUSTOM
-; CHECK-NEXT:     Name:            dylink
+; CHECK-NEXT:     Name:            dylink.0
 ; CHECK-NEXT:     MemorySize:      16
 ; CHECK-NEXT:     MemoryAlignment: 2
 ; CHECK-NEXT:     TableSize:       1

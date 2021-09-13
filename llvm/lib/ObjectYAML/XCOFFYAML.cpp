@@ -143,7 +143,7 @@ void MappingTraits<XCOFFYAML::Section>::mapping(IO &IO,
 }
 
 void MappingTraits<XCOFFYAML::Symbol>::mapping(IO &IO, XCOFFYAML::Symbol &S) {
-  IO.mapRequired("Name", S.SymbolName);
+  IO.mapOptional("Name", S.SymbolName);
   IO.mapOptional("Value", S.Value);
   IO.mapOptional("Section", S.SectionName);
   IO.mapOptional("Type", S.Type);
@@ -151,11 +151,19 @@ void MappingTraits<XCOFFYAML::Symbol>::mapping(IO &IO, XCOFFYAML::Symbol &S) {
   IO.mapOptional("NumberOfAuxEntries", S.NumberOfAuxEntries);
 }
 
+void MappingTraits<XCOFFYAML::StringTable>::mapping(IO &IO, XCOFFYAML::StringTable &Str) {
+  IO.mapOptional("ContentSize", Str.ContentSize);
+  IO.mapOptional("Length", Str.Length);
+  IO.mapOptional("Strings", Str.Strings);
+  IO.mapOptional("RawContent", Str.RawContent);
+}
+
 void MappingTraits<XCOFFYAML::Object>::mapping(IO &IO, XCOFFYAML::Object &Obj) {
   IO.mapTag("!XCOFF", true);
   IO.mapRequired("FileHeader", Obj.Header);
   IO.mapOptional("Sections", Obj.Sections);
   IO.mapOptional("Symbols", Obj.Symbols);
+  IO.mapOptional("StringTable", Obj.StrTbl);
 }
 
 } // namespace yaml

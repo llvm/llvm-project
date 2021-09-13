@@ -17,12 +17,14 @@
 
 // CHECK-LABEL: @test_svdup_n_bf16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x bfloat> @llvm.aarch64.sve.dup.x.nxv8bf16(bfloat [[OP:%.*]])
+// CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x bfloat> poison, bfloat [[OP:%.*]], i32 0
+// CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <vscale x 8 x bfloat> [[DOTSPLATINSERT]], <vscale x 8 x bfloat> poison, <vscale x 8 x i32> zeroinitializer
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svdup_n_bf16u6__bf16(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x bfloat> @llvm.aarch64.sve.dup.x.nxv8bf16(bfloat [[OP:%.*]])
+// CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x bfloat> poison, bfloat [[OP:%.*]], i32 0
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <vscale x 8 x bfloat> [[DOTSPLATINSERT]], <vscale x 8 x bfloat> poison, <vscale x 8 x i32> zeroinitializer
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
 svbfloat16_t test_svdup_n_bf16(bfloat16_t op) {
@@ -83,13 +85,15 @@ svbfloat16_t test_svdup_n_bf16_x(svbool_t pg, bfloat16_t op) {
 
 // CHECK-LABEL: @test_svdup_lane_bf16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.x.nxv8i16(i16 [[INDEX:%.*]])
+// CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[INDEX:%.*]], i32 0
+// CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <vscale x 8 x i16> [[DOTSPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x bfloat> @llvm.aarch64.sve.tbl.nxv8bf16(<vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 8 x i16> [[TMP0]])
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svdup_lane_bf16u14__SVBFloat16_tt(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.x.nxv8i16(i16 [[INDEX:%.*]])
+// CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[INDEX:%.*]], i32 0
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <vscale x 8 x i16> [[DOTSPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x bfloat> @llvm.aarch64.sve.tbl.nxv8bf16(<vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 8 x i16> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //

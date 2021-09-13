@@ -851,14 +851,14 @@ void GDBRemoteDynamicRegisterInfo::HardcodeARMRegisters(bool from_scratch) {
     static RegisterInfo g_register_infos[] = {
 //   NAME     ALT     SZ   OFF  ENCODING          FORMAT          EH_FRAME             DWARF                GENERIC                 PROCESS PLUGIN  LLDB    VALUE REGS    INVALIDATE REGS SIZE EXPR SIZE LEN
 //   ======   ======  ===  ===  =============     ==========      ===================  ===================  ======================  =============   ====    ==========    =============== ========= ========
-    { "r0",   "arg1",   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r0,          dwarf_r0,            LLDB_REGNUM_GENERIC_ARG1,0,               0 },     nullptr,           nullptr,  nullptr,       0 },
-    { "r1",   "arg2",   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r1,          dwarf_r1,            LLDB_REGNUM_GENERIC_ARG2,1,               1 },     nullptr,           nullptr,  nullptr,       0 },
-    { "r2",   "arg3",   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r2,          dwarf_r2,            LLDB_REGNUM_GENERIC_ARG3,2,               2 },     nullptr,           nullptr,  nullptr,       0 },
-    { "r3",   "arg4",   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r3,          dwarf_r3,            LLDB_REGNUM_GENERIC_ARG4,3,               3 },     nullptr,           nullptr,  nullptr,       0 },
+    { "r0",  nullptr,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r0,          dwarf_r0,            LLDB_REGNUM_GENERIC_ARG1,0,               0 },     nullptr,           nullptr,  nullptr,       0 },
+    { "r1",  nullptr,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r1,          dwarf_r1,            LLDB_REGNUM_GENERIC_ARG2,1,               1 },     nullptr,           nullptr,  nullptr,       0 },
+    { "r2",  nullptr,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r2,          dwarf_r2,            LLDB_REGNUM_GENERIC_ARG3,2,               2 },     nullptr,           nullptr,  nullptr,       0 },
+    { "r3",  nullptr,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r3,          dwarf_r3,            LLDB_REGNUM_GENERIC_ARG4,3,               3 },     nullptr,           nullptr,  nullptr,       0 },
     { "r4",  nullptr,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r4,          dwarf_r4,            LLDB_INVALID_REGNUM,     4,               4 },     nullptr,           nullptr,  nullptr,       0 },
     { "r5",  nullptr,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r5,          dwarf_r5,            LLDB_INVALID_REGNUM,     5,               5 },     nullptr,           nullptr,  nullptr,       0 },
     { "r6",  nullptr,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r6,          dwarf_r6,            LLDB_INVALID_REGNUM,     6,               6 },     nullptr,           nullptr,  nullptr,       0 },
-    { "r7",     "fp",   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r7,          dwarf_r7,            LLDB_REGNUM_GENERIC_FP,  7,               7 },     nullptr,           nullptr,  nullptr,       0 },
+    { "r7",  nullptr,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r7,          dwarf_r7,            LLDB_REGNUM_GENERIC_FP,  7,               7 },     nullptr,           nullptr,  nullptr,       0 },
     { "r8",  nullptr,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r8,          dwarf_r8,            LLDB_INVALID_REGNUM,     8,               8 },     nullptr,           nullptr,  nullptr,       0 },
     { "r9",  nullptr,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r9,          dwarf_r9,            LLDB_INVALID_REGNUM,     9,               9 },     nullptr,           nullptr,  nullptr,       0 },
     { "r10", nullptr,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r10,         dwarf_r10,           LLDB_INVALID_REGNUM,    10,              10 },     nullptr,           nullptr,  nullptr,       0 },

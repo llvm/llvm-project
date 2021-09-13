@@ -86,29 +86,6 @@ private:
   SegInfoMap Segs;
 };
 
-/// Create from a ExecutorProcessControl instance.
-Expected<std::unique_ptr<EPCGenericJITLinkMemoryManager>>
-EPCGenericJITLinkMemoryManager::CreateUsingOrcRTFuncs(ExecutionSession &ES,
-                                                      JITDylib &OrcRuntimeJD) {
-
-  StringRef GlobalPrefix = "";
-  if (ES.getExecutorProcessControl().getTargetTriple().isOSBinFormatMachO())
-    GlobalPrefix = "_";
-
-  FuncAddrs FAs;
-  if (auto Err = lookupAndRecordAddrs(
-          ES, LookupKind::Static, makeJITDylibSearchOrder(&OrcRuntimeJD),
-          {{ES.intern((GlobalPrefix + "__orc_rt_reserve").str()), &FAs.Reserve},
-           {ES.intern((GlobalPrefix + "__orc_rt_finalize").str()),
-            &FAs.Finalize},
-           {ES.intern((GlobalPrefix + "__orc_rt_deallocate").str()),
-            &FAs.Deallocate}}))
-    return std::move(Err);
-
-  return std::make_unique<EPCGenericJITLinkMemoryManager>(
-      ES.getExecutorProcessControl(), FAs);
-}
-
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager::Allocation>>
 EPCGenericJITLinkMemoryManager::allocate(const jitlink::JITLinkDylib *JD,
                                          const SegmentsRequestMap &Request) {

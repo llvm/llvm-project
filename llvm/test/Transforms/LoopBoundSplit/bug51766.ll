@@ -7,16 +7,13 @@
 define i16 @main(i16 %qqq) {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[ENTRY_SPLIT:%.*]]
-; CHECK:       entry.split:
-; CHECK-NEXT:    [[NEW_BOUND:%.*]] = call i16 @llvm.umin.i16(i16 [[QQQ:%.*]], i16 2)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[T0:%.*]] = phi i16 [ 0, [[ENTRY_SPLIT]] ], [ [[T8:%.*]], [[CONT19:%.*]] ]
+; CHECK-NEXT:    [[T0:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[T8:%.*]], [[CONT19:%.*]] ]
 ; CHECK-NEXT:    [[T1:%.*]] = shl nuw nsw i16 [[T0]], 1
-; CHECK-NEXT:    [[T2:%.*]] = add i16 [[T1]], [[QQQ]]
+; CHECK-NEXT:    [[T2:%.*]] = add i16 [[T1]], [[QQQ:%.*]]
 ; CHECK-NEXT:    [[DOTNOT9:%.*]] = icmp ult i16 [[T2]], [[QQQ]]
-; CHECK-NEXT:    br i1 true, label [[HANDLER_POINTER_OVERFLOW:%.*]], label [[CONT15_CRITEDGE:%.*]]
+; CHECK-NEXT:    br i1 [[DOTNOT9]], label [[HANDLER_POINTER_OVERFLOW:%.*]], label [[CONT15_CRITEDGE:%.*]]
 ; CHECK:       handler.pointer_overflow:
 ; CHECK-NEXT:    call void @__ubsan_handle_pointer_overflow()
 ; CHECK-NEXT:    br label [[CONT19]]
@@ -24,31 +21,8 @@ define i16 @main(i16 %qqq) {
 ; CHECK-NEXT:    br label [[CONT19]]
 ; CHECK:       cont19:
 ; CHECK-NEXT:    [[T8]] = add nuw nsw i16 [[T0]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i16 [[T8]], [[NEW_BOUND]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[ENTRY_SPLIT_SPLIT:%.*]], label [[FOR_BODY]]
-; CHECK:       entry.split.split:
-; CHECK-NEXT:    [[T8_LCSSA:%.*]] = phi i16 [ [[T8]], [[CONT19]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne i16 [[T8_LCSSA]], 3
-; CHECK-NEXT:    br i1 [[TMP0]], label [[FOR_BODY_SPLIT_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
-; CHECK:       for.body.split.preheader:
-; CHECK-NEXT:    br label [[FOR_BODY_SPLIT:%.*]]
-; CHECK:       for.body.split:
-; CHECK-NEXT:    [[T0_SPLIT:%.*]] = phi i16 [ [[T8_SPLIT:%.*]], [[CONT19_SPLIT:%.*]] ], [ [[NEW_BOUND]], [[FOR_BODY_SPLIT_PREHEADER]] ]
-; CHECK-NEXT:    [[T1_SPLIT:%.*]] = shl nuw nsw i16 [[T0_SPLIT]], 1
-; CHECK-NEXT:    [[T2_SPLIT:%.*]] = add i16 [[T1_SPLIT]], [[QQQ]]
-; CHECK-NEXT:    [[DOTNOT9_SPLIT:%.*]] = icmp ult i16 [[T2_SPLIT]], [[QQQ]]
-; CHECK-NEXT:    br i1 false, label [[HANDLER_POINTER_OVERFLOW_SPLIT:%.*]], label [[CONT15_CRITEDGE_SPLIT:%.*]]
-; CHECK:       cont15.critedge.split:
-; CHECK-NEXT:    br label [[CONT19_SPLIT]]
-; CHECK:       handler.pointer_overflow.split:
-; CHECK-NEXT:    call void @__ubsan_handle_pointer_overflow()
-; CHECK-NEXT:    br label [[CONT19_SPLIT]]
-; CHECK:       cont19.split:
-; CHECK-NEXT:    [[T8_SPLIT]] = add nuw nsw i16 [[T0_SPLIT]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT_SPLIT:%.*]] = icmp eq i16 [[T8_SPLIT]], 3
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT_SPLIT]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY_SPLIT]]
-; CHECK:       for.cond.cleanup.loopexit:
-; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i16 [[T8]], 3
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret i16 0
 ;

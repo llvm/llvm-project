@@ -208,6 +208,7 @@ cc_library(
         "lib/Dialect/Test/TestAttributes.h",
         "lib/Dialect/Test/TestDialect.h",
         "lib/Dialect/Test/TestInterfaces.h",
+        "lib/Dialect/Test/TestTraits.h",
         "lib/Dialect/Test/TestTypes.h",
     ],
     includes = [

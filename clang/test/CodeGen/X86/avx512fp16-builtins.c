@@ -81,6 +81,29 @@ __m512h test_mm512_set1_ph(_Float16 h) {
   return _mm512_set1_ph(h);
 }
 
+__m512h test_mm512_set1_pch(_Float16 _Complex h) {
+  // CHECK-LABEL: @test_mm512_set1_pch
+  // CHECK: bitcast { half, half }{{.*}} to float
+  // CHECK: insertelement <16 x float> {{.*}}, i32 0
+  // CHECK: insertelement <16 x float> {{.*}}, i32 1
+  // CHECK: insertelement <16 x float> {{.*}}, i32 2
+  // CHECK: insertelement <16 x float> {{.*}}, i32 3
+  // CHECK: insertelement <16 x float> {{.*}}, i32 4
+  // CHECK: insertelement <16 x float> {{.*}}, i32 5
+  // CHECK: insertelement <16 x float> {{.*}}, i32 6
+  // CHECK: insertelement <16 x float> {{.*}}, i32 7
+  // CHECK: insertelement <16 x float> {{.*}}, i32 8
+  // CHECK: insertelement <16 x float> {{.*}}, i32 9
+  // CHECK: insertelement <16 x float> {{.*}}, i32 10
+  // CHECK: insertelement <16 x float> {{.*}}, i32 11
+  // CHECK: insertelement <16 x float> {{.*}}, i32 12
+  // CHECK: insertelement <16 x float> {{.*}}, i32 13
+  // CHECK: insertelement <16 x float> {{.*}}, i32 14
+  // CHECK: insertelement <16 x float> {{.*}}, i32 15
+  // CHECK: bitcast <16 x float>{{.*}} to <32 x half>
+  return _mm512_set1_pch(h);
+}
+
 __m512h test_mm512_set_ph(_Float16 __h1, _Float16 __h2, _Float16 __h3, _Float16 __h4,
                           _Float16 __h5, _Float16 __h6, _Float16 __h7, _Float16 __h8,
                           _Float16 __h9, _Float16 __h10, _Float16 __h11, _Float16 __h12,

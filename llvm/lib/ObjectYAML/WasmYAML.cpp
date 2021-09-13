@@ -177,7 +177,7 @@ void MappingTraits<std::unique_ptr<WasmYAML::Section>>::mapping(
     } else {
       IO.mapRequired("Name", SectionName);
     }
-    if (SectionName == "dylink") {
+    if (SectionName == "dylink" || SectionName == "dylink.0") {
       if (!IO.outputting())
         Section.reset(new WasmYAML::DylinkSection());
       sectionMapping(IO, *cast<WasmYAML::DylinkSection>(Section.get()));

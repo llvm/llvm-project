@@ -157,13 +157,24 @@ void WasmWriter::writeInitExpr(raw_ostream &OS,
 void WasmWriter::writeSectionContent(raw_ostream &OS,
                                      WasmYAML::DylinkSection &Section) {
   writeStringRef(Section.Name, OS);
-  encodeULEB128(Section.MemorySize, OS);
-  encodeULEB128(Section.MemoryAlignment, OS);
-  encodeULEB128(Section.TableSize, OS);
-  encodeULEB128(Section.TableAlignment, OS);
-  encodeULEB128(Section.Needed.size(), OS);
-  for (StringRef Needed : Section.Needed)
-    writeStringRef(Needed, OS);
+
+  writeUint8(OS, wasm::WASM_DYLINK_MEM_INFO);
+  SubSectionWriter SubSection(OS);
+  raw_ostream &SubOS = SubSection.getStream();
+  encodeULEB128(Section.MemorySize, SubOS);
+  encodeULEB128(Section.MemoryAlignment, SubOS);
+  encodeULEB128(Section.TableSize, SubOS);
+  encodeULEB128(Section.TableAlignment, SubOS);
+  SubSection.done();
+
+  if (Section.Needed.size()) {
+    writeUint8(OS, wasm::WASM_DYLINK_NEEDED);
+    raw_ostream &SubOS = SubSection.getStream();
+    encodeULEB128(Section.Needed.size(), SubOS);
+    for (StringRef Needed : Section.Needed)
+      writeStringRef(Needed, SubOS);
+    SubSection.done();
+  }
 }
 
 void WasmWriter::writeSectionContent(raw_ostream &OS,
