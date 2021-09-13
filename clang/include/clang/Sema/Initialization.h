@@ -335,8 +335,15 @@ public:
   }
 
   /// Create the initialization entity for a temporary.
-  static InitializedEntity InitializeTemporary(TypeSourceInfo *TypeInfo) {
-    return InitializeTemporary(TypeInfo, TypeInfo->getType());
+  static InitializedEntity InitializeTemporary(ASTContext &Context,
+                                               TypeSourceInfo *TypeInfo) {
+    QualType Type = TypeInfo->getType();
+    if (Context.getLangOpts().OpenCLCPlusPlus) {
+      assert(!Type.hasAddressSpace() && "Temporary already has address space!");
+      Type = Context.getAddrSpaceQualType(Type, LangAS::opencl_private);
+    }
+
+    return InitializeTemporary(TypeInfo, Type);
   }
 
   /// Create the initialization entity for a temporary.
