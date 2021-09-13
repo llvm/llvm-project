@@ -6204,8 +6204,6 @@ lldb_private::ConstString ObjectFileMachO::GetPluginName() {
   return GetPluginNameStatic();
 }
 
-uint32_t ObjectFileMachO::GetPluginVersion() { return 1; }
-
 Section *ObjectFileMachO::GetMachHeaderSection() {
   // Find the first address of the mach header which is the first non-zero file
   // sized section whose file offset is zero. This is the base file address of

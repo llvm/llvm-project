@@ -37,8 +37,6 @@ namespace lldb_private {
     
     virtual lldb::InstrumentationRuntimeType GetType() { return GetTypeStatic(); }
     
-    uint32_t GetPluginVersion() override { return 1; }
-    
     lldb::ThreadCollectionSP
     GetBacktracesFromExtendedStopInfo(StructuredData::ObjectSP info) override;
     

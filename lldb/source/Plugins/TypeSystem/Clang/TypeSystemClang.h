@@ -140,8 +140,6 @@ public:
   // PluginInterface functions
   ConstString GetPluginName() override;
 
-  uint32_t GetPluginVersion() override;
-
   static ConstString GetPluginNameStatic();
 
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,

@@ -2020,8 +2020,6 @@ lldb_private::ConstString SwiftLanguageRuntime::GetPluginName() {
   return GetPluginNameStatic();
 }
 
-uint32_t SwiftLanguageRuntime::GetPluginVersion() { return 1; }
-
 #define FORWARD(METHOD, ...)                                                   \
   assert(m_impl || m_stub);                                                    \
   return m_impl ? m_impl->METHOD(__VA_ARGS__) : m_stub->METHOD(__VA_ARGS__);

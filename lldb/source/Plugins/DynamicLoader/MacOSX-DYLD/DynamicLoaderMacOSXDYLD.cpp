@@ -1151,8 +1151,6 @@ lldb_private::ConstString DynamicLoaderMacOSXDYLD::GetPluginName() {
   return GetPluginNameStatic();
 }
 
-uint32_t DynamicLoaderMacOSXDYLD::GetPluginVersion() { return 1; }
-
 uint32_t DynamicLoaderMacOSXDYLD::AddrByteSize() {
   std::lock_guard<std::recursive_mutex> baseclass_guard(GetMutex());
 

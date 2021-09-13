@@ -64,7 +64,6 @@ public:
 
   // PluginInterface functions
   ConstString GetPluginName() override;
-  uint32_t GetPluginVersion() override;
 
   bool SupportsLanguage(lldb::LanguageType language) override;
   Status IsCompatible() override;

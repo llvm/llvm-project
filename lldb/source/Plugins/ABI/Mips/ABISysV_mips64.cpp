@@ -1211,5 +1211,3 @@ lldb_private::ConstString ABISysV_mips64::GetPluginNameStatic() {
 lldb_private::ConstString ABISysV_mips64::GetPluginName() {
   return GetPluginNameStatic();
 }
-
-uint32_t ABISysV_mips64::GetPluginVersion() { return 1; }

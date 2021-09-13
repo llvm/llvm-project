@@ -416,7 +416,6 @@ def main():
 
     whitelist = [
         'GetPluginName',
-        'GetPluginVersion',
         'HasFatalErrors',
         'GetFatalErrors',
         'PrintDiagnostics',

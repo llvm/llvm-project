@@ -59,8 +59,6 @@ ProcessTrace::~ProcessTrace() {
 
 ConstString ProcessTrace::GetPluginName() { return GetPluginNameStatic(); }
 
-uint32_t ProcessTrace::GetPluginVersion() { return 1; }
-
 void ProcessTrace::DidAttach(ArchSpec &process_arch) {
   ListenerSP listener_sp(
       Listener::MakeListener("lldb.process_trace.did_attach_listener"));

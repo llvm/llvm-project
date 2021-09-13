@@ -1276,7 +1276,6 @@ Module *TypeSystemSwiftTypeRef::GetModule() const {
 ConstString TypeSystemSwiftTypeRef::GetPluginName() {
   return ConstString("TypeSystemSwiftTypeRef");
 }
-uint32_t TypeSystemSwiftTypeRef::GetPluginVersion() { return 1; }
 
 bool TypeSystemSwiftTypeRef::SupportsLanguage(lldb::LanguageType language) {
   return language == eLanguageTypeSwift;

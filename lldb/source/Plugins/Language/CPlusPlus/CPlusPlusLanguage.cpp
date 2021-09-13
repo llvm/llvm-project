@@ -99,8 +99,6 @@ lldb_private::ConstString CPlusPlusLanguage::GetPluginName() {
   return GetPluginNameStatic();
 }
 
-uint32_t CPlusPlusLanguage::GetPluginVersion() { return 1; }
-
 // Static Functions
 
 Language *CPlusPlusLanguage::CreateInstance(lldb::LanguageType language) {

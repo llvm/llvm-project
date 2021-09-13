@@ -57,8 +57,6 @@ public:
 
   lldb_private::ConstString GetPluginName() override;
 
-  uint32_t GetPluginVersion() override { return 1; }
-
   bool SetTargetTriple(const lldb_private::ArchSpec &arch) override;
 
   EmulateInstructionMIPS(const lldb_private::ArchSpec &arch);

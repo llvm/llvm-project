@@ -148,8 +148,6 @@ public:
   // PluginInterface protocol
   lldb_private::ConstString GetPluginName() override;
 
-  uint32_t GetPluginVersion() override;
-
 protected:
   static lldb_private::UUID
   GetUUID(const llvm::MachO::mach_header &header,

@@ -113,8 +113,6 @@ ProcessElfCore::~ProcessElfCore() {
 // PluginInterface
 ConstString ProcessElfCore::GetPluginName() { return GetPluginNameStatic(); }
 
-uint32_t ProcessElfCore::GetPluginVersion() { return 1; }
-
 lldb::addr_t ProcessElfCore::AddAddressRangeFromLoadSegment(
     const elf::ELFProgramHeader &header) {
   const lldb::addr_t addr = header.p_vaddr;

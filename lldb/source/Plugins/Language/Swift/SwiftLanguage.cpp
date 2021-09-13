@@ -1509,8 +1509,6 @@ lldb_private::ConstString SwiftLanguage::GetPluginName() {
   return GetPluginNameStatic();
 }
 
-uint32_t SwiftLanguage::GetPluginVersion() { return 1; }
-
 //------------------------------------------------------------------
 // Static Functions
 //------------------------------------------------------------------

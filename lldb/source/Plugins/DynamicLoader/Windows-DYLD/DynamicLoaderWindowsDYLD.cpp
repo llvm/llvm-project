@@ -178,8 +178,6 @@ ConstString DynamicLoaderWindowsDYLD::GetPluginName() {
   return GetPluginNameStatic();
 }
 
-uint32_t DynamicLoaderWindowsDYLD::GetPluginVersion() { return 1; }
-
 ThreadPlanSP
 DynamicLoaderWindowsDYLD::GetStepThroughTrampolinePlan(Thread &thread,
                                                        bool stop) {

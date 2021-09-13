@@ -1085,5 +1085,3 @@ lldb_private::ConstString ABISysV_ppc64::GetPluginNameStatic() {
 lldb_private::ConstString ABISysV_ppc64::GetPluginName() {
   return GetPluginNameStatic();
 }
-
-uint32_t ABISysV_ppc64::GetPluginVersion() { return 1; }

@@ -1214,8 +1214,6 @@ ObjectFile::Strata ObjectFilePECOFF::CalculateStrata() { return eStrataUser; }
 // PluginInterface protocol
 ConstString ObjectFilePECOFF::GetPluginName() { return GetPluginNameStatic(); }
 
-uint32_t ObjectFilePECOFF::GetPluginVersion() { return 1; }
-
 llvm::StringRef ObjectFilePECOFF::GetReflectionSectionIdentifier(
     swift::ReflectionSectionKind section) {
 #ifdef LLDB_ENABLE_SWIFT
@@ -1225,3 +1223,4 @@ llvm::StringRef ObjectFilePECOFF::GetReflectionSectionIdentifier(
   llvm_unreachable("Swift support disabled");
 #endif //LLDB_ENABLE_SWIFT
 }
+

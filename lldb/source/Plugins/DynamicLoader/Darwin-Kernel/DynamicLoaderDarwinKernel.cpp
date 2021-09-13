@@ -1569,8 +1569,6 @@ lldb_private::ConstString DynamicLoaderDarwinKernel::GetPluginName() {
   return GetPluginNameStatic();
 }
 
-uint32_t DynamicLoaderDarwinKernel::GetPluginVersion() { return 1; }
-
 lldb::ByteOrder
 DynamicLoaderDarwinKernel::GetByteOrderFromMagic(uint32_t magic) {
   switch (magic) {

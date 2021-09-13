@@ -93,7 +93,6 @@ public:
   static void Initialize();
   static void Terminate();
   ConstString GetPluginName() override;
-  uint32_t GetPluginVersion() override;
   static ConstString GetPluginNameStatic();
   /// \}
 

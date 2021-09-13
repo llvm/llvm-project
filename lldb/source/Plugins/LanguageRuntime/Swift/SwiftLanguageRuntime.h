@@ -109,7 +109,6 @@ public:
 
   /// PluginInterface protocol.
   lldb_private::ConstString GetPluginName() override;
-  uint32_t GetPluginVersion() override;
 
   bool GetObjectDescription(Stream &str, Value &value,
                             ExecutionContextScope *exe_scope) override {

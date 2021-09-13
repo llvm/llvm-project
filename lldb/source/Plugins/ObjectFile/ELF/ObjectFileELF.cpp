@@ -643,7 +643,6 @@ lldb_private::ConstString ObjectFileELF::GetPluginName() {
   return GetPluginNameStatic();
 }
 
-uint32_t ObjectFileELF::GetPluginVersion() { return m_plugin_version; }
 // ObjectFile protocol
 
 ObjectFileELF::ObjectFileELF(const lldb::ModuleSP &module_sp,

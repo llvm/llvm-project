@@ -338,8 +338,6 @@ ConstString UnwindAssemblyInstEmulation::GetPluginName() {
   return GetPluginNameStatic();
 }
 
-uint32_t UnwindAssemblyInstEmulation::GetPluginVersion() { return 1; }
-
 void UnwindAssemblyInstEmulation::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 GetPluginDescriptionStatic(), CreateInstance);

@@ -1253,8 +1253,6 @@ lldb_private::ConstString SymbolFileDWARFDebugMap::GetPluginName() {
   return GetPluginNameStatic();
 }
 
-uint32_t SymbolFileDWARFDebugMap::GetPluginVersion() { return 1; }
-
 lldb::CompUnitSP
 SymbolFileDWARFDebugMap::GetCompileUnit(SymbolFileDWARF *oso_dwarf) {
   if (oso_dwarf) {

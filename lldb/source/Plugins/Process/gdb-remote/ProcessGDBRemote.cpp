@@ -333,8 +333,6 @@ ProcessGDBRemote::~ProcessGDBRemote() {
 // PluginInterface
 ConstString ProcessGDBRemote::GetPluginName() { return GetPluginNameStatic(); }
 
-uint32_t ProcessGDBRemote::GetPluginVersion() { return 1; }
-
 bool ProcessGDBRemote::ParsePythonTargetDefinition(
     const FileSpec &target_definition_fspec) {
   ScriptInterpreter *interpreter =

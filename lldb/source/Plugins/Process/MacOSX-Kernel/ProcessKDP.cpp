@@ -181,8 +181,6 @@ lldb_private::ConstString ProcessKDP::GetPluginName() {
   return GetPluginNameStatic();
 }
 
-uint32_t ProcessKDP::GetPluginVersion() { return 1; }
-
 Status ProcessKDP::WillLaunch(Module *module) {
   Status error;
   error.SetErrorString("launching not supported in kdp-remote plug-in");

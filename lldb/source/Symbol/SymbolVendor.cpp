@@ -83,8 +83,6 @@ lldb_private::ConstString SymbolVendor::GetPluginName() {
   return g_name;
 }
 
-uint32_t SymbolVendor::GetPluginVersion() { return 1; }
-
 std::vector<DataBufferSP>
 SymbolVendor::GetASTData(lldb::LanguageType language) {
   std::vector<DataBufferSP> ast_datas;

@@ -1575,5 +1575,3 @@ ConstString SymbolFileNativePDB::GetPluginName() {
   static ConstString g_name("pdb");
   return g_name;
 }
-
-uint32_t SymbolFileNativePDB::GetPluginVersion() { return 1; }

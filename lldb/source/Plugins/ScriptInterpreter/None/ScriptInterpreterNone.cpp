@@ -69,5 +69,3 @@ const char *ScriptInterpreterNone::GetPluginDescriptionStatic() {
 lldb_private::ConstString ScriptInterpreterNone::GetPluginName() {
   return GetPluginNameStatic();
 }
-
-uint32_t ScriptInterpreterNone::GetPluginVersion() { return 1; }

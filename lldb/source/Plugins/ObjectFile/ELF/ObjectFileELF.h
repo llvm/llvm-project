@@ -87,8 +87,6 @@ public:
   // PluginInterface protocol
   lldb_private::ConstString GetPluginName() override;
 
-  uint32_t GetPluginVersion() override;
-
   // LLVM RTTI support
   static char ID;
   bool isA(const void *ClassID) const override {

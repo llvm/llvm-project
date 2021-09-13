@@ -68,8 +68,6 @@ ConstString TypeSystemSwift::GetPluginName() {
   return TypeSystemSwift::GetPluginNameStatic();
 }
 
-uint32_t TypeSystemSwift::GetPluginVersion() { return 1; }
-
 /// \}
 
 void TypeSystemSwift::DumpValue(
