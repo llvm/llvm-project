@@ -65,6 +65,7 @@ CGOPT(DenormalMode::DenormalModeKind, DenormalFP32Math)
 CGOPT(bool, EnableHonorSignDependentRoundingFPMath)
 CGOPT(FloatABI::ABIType, FloatABIForCalls)
 CGOPT(FPOpFusion::FPOpFusionMode, FuseFPOps)
+CGOPT(SwiftAsyncFramePointerMode, SwiftAsyncFramePointer)
 CGOPT(bool, DontPlaceZerosInBSS)
 CGOPT(bool, EnableGuaranteedTailCallOpt)
 CGOPT(bool, DisableTailCalls)
@@ -276,6 +277,18 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
           clEnumValN(FPOpFusion::Strict, "off",
                      "Only fuse FP ops when the result won't be affected.")));
   CGBINDOPT(FuseFPOps);
+
+  static cl::opt<SwiftAsyncFramePointerMode> SwiftAsyncFramePointer(
+      "swift-async-fp",
+      cl::desc("Determine when the Swift async frame pointer should be set"),
+      cl::init(SwiftAsyncFramePointerMode::Always),
+      cl::values(clEnumValN(SwiftAsyncFramePointerMode::DeploymentBased, "auto",
+                            "Determine based on deployment target"),
+                 clEnumValN(SwiftAsyncFramePointerMode::Always, "always",
+                            "Always set the bit"),
+                 clEnumValN(SwiftAsyncFramePointerMode::Never, "never",
+                            "Never set the bit")));
+  CGBINDOPT(SwiftAsyncFramePointer);
 
   static cl::opt<bool> DontPlaceZerosInBSS(
       "nozero-initialized-in-bss",
@@ -533,7 +546,7 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.ThreadModel = getThreadModel();
   Options.EABIVersion = getEABIVersion();
   Options.DebuggerTuning = getDebuggerTuningOpt();
-
+  Options.SwiftAsyncFramePointer = getSwiftAsyncFramePointer();
   return Options;
 }
 
