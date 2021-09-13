@@ -89,3 +89,50 @@ define i32 @ctpop2_multiuse(i32 %0) {
   %6 = add i32 %5, %4
   ret i32 %6
 }
+
+; PR51784
+; __builtin_popcount((i & -i) - 1) -> __builtin_cttz(i, false)
+define i32 @ctpop3(i32 %0) {
+; CHECK-LABEL: @ctpop3(
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 0, [[TMP0:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP3]], -1
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[TMP4]]), !range [[RNG0]]
+; CHECK-NEXT:    ret i32 [[TMP5]]
+;
+  %2 = sub i32 0, %0
+  %3 = and i32 %2, %0
+  %4 = add i32 %3, -1
+  %5 = tail call i32 @llvm.ctpop.i32(i32 %4)
+  ret i32 %5
+}
+
+define <2 x i32> @ctpop3v(<2 x i32> %0) {
+; CHECK-LABEL: @ctpop3v(
+; CHECK-NEXT:    [[TMP2:%.*]] = sub <2 x i32> zeroinitializer, [[TMP0:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i32> [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP3]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[TMP4]])
+; CHECK-NEXT:    ret <2 x i32> [[TMP5]]
+;
+  %2 = sub <2 x i32> zeroinitializer, %0
+  %3 = and <2 x i32> %2, %0
+  %4 = add <2 x i32> %3, <i32 -1, i32 -1>
+  %5 = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %4)
+  ret <2 x i32> %5
+}
+
+define <2 x i32> @ctpop3v_undef(<2 x i32> %0) {
+; CHECK-LABEL: @ctpop3v_undef(
+; CHECK-NEXT:    [[TMP2:%.*]] = sub <2 x i32> zeroinitializer, [[TMP0:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i32> [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP3]], <i32 -1, i32 undef>
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[TMP4]])
+; CHECK-NEXT:    ret <2 x i32> [[TMP5]]
+;
+  %2 = sub <2 x i32> zeroinitializer, %0
+  %3 = and <2 x i32> %2, %0
+  %4 = add <2 x i32> %3, <i32 -1, i32 undef>
+  %5 = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %4)
+  ret <2 x i32> %5
+}
