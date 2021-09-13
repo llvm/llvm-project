@@ -165,7 +165,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
 
     // If we have exactly 32 leading zeros and Zba, we can try using zext.w at
     // the end of the sequence.
-    if (LeadingZeros == 32 && ActiveFeatures[RISCV::FeatureExtZba]) {
+    if (LeadingZeros == 32 && ActiveFeatures[RISCV::FeatureStdExtZba]) {
       // Try replacing upper bits with 1.
       uint64_t LeadingOnesVal = Val | maskLeadingOnes<uint64_t>(LeadingZeros);
       TmpSeq.clear();
