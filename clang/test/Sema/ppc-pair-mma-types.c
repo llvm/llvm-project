@@ -249,6 +249,7 @@ void testVPLocal(int *ptr, vector unsigned char vc) {
   __vector_pair vp1 = *vpp;
   __vector_pair vp2;
   __builtin_vsx_assemble_pair(&vp2, vc, vc);
+  __builtin_vsx_build_pair(&vp2, vc, vc);
   __vector_pair vp3;
   __vector_quad vq;
   __builtin_mma_xvf64ger(&vq, vp3, vc);
