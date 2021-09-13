@@ -569,6 +569,52 @@ namespace PR52139 {
     virtual void f() = 0;
   };
 }
+
+namespace function_prototypes {
+  template<class T> using fptr1 = void (*) (T);
+  template<class T> using fptr2 = fptr1<fptr1<T>>;
+
+  template<class T> void foo0(fptr1<T>) {
+    static_assert(__is_same(T, const char*));
+  }
+  void bar0(const char *const volatile __restrict);
+  void t0() { foo0(&bar0); }
+
+  template<class T> void foo1(fptr1<const T *>) {
+     static_assert(__is_same(T, char));  
+  }
+  void bar1(const char * __restrict);
+  void t1() { foo1(&bar1); }
+
+  template<class T> void foo2(fptr2<const T *>) {
+    static_assert(__is_same(T, char));
+  }
+  void bar2(fptr1<const char * __restrict>);
+  void t2() { foo2(&bar2); }
+
+  template<class T> void foo3(fptr1<const T *>) {}
+  void bar3(char * __restrict);
+  void t3() { foo3(&bar3); }
+  // expected-error@-1 {{no matching function for call to 'foo3'}}
+  // expected-note@-4  {{candidate template ignored: cannot deduce a type for 'T' that would make 'const T' equal 'char'}}
+
+  template<class T> void foo4(fptr2<const T *>) {}
+  void bar4(fptr1<char * __restrict>);
+  void t4() { foo4(&bar4); }
+  // expected-error@-1 {{no matching function for call to 'foo4'}}
+  // expected-note@-4  {{candidate template ignored: cannot deduce a type for 'T' that would make 'const T' equal 'char'}}
+
+  template<typename T> void foo5(T(T)) {}
+  const int bar5(int);
+  void t5() { foo5(bar5); }
+  // expected-error@-1 {{no matching function for call to 'foo5'}}
+  // expected-note@-4  {{candidate template ignored: deduced conflicting types for parameter 'T' ('const int' vs. 'int')}}
+
+  struct Foo6 {};
+  template<typename T> void foo6(void(*)(struct Foo6, T)) {}
+  void bar6(Foo6, int);
+  void t6() { foo6(bar6); }
+}
 #else
 
 // expected-no-diagnostics
