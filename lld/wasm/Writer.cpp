@@ -1022,22 +1022,17 @@ void Writer::createInitMemoryFunction() {
     // initialized. The generated code is as follows:
     //
     // (func $__wasm_init_memory
-    //  (if
-    //   (i32.atomic.rmw.cmpxchg align=2 offset=0
-    //    (i32.const $__init_memory_flag)
-    //    (i32.const 0)
-    //    (i32.const 1)
-    //   )
-    //   (then
-    //    (drop
-    //     (i32.atomic.wait align=2 offset=0
-    //      (i32.const $__init_memory_flag)
-    //      (i32.const 1)
-    //      (i32.const -1)
+    //  (block $drop
+    //   (block $wait
+    //    (block $init
+    //     (br_table $init $wait $drop
+    //      (i32.atomic.rmw.cmpxchg align=2 offset=0
+    //       (i32.const $__init_memory_flag)
+    //       (i32.const 0)
+    //       (i32.const 1)
+    //      )
     //     )
-    //    )
-    //   )
-    //   (else
+    //    ) ;; $init
     //    ( ... initialize data segments ... )
     //    (i32.atomic.store align=2 offset=0
     //     (i32.const $__init_memory_flag)
@@ -1049,8 +1044,16 @@ void Writer::createInitMemoryFunction() {
     //      (i32.const -1u)
     //     )
     //    )
+    //    (br $drop)
+    //   ) ;; $wait
+    //   (drop
+    //    (i32.atomic.wait align=2 offset=0
+    //     (i32.const $__init_memory_flag)
+    //     (i32.const 1)
+    //     (i32.const -1)
+    //    )
     //   )
-    //  )
+    //  ) ;; $drop
     //  ( ... drop data segments ... )
     // )
     //
@@ -1084,29 +1087,31 @@ void Writer::createInitMemoryFunction() {
       }
     };
 
-    // Atomically check whether this is the main thread.
+    // Set up destination blocks
+    writeU8(os, WASM_OPCODE_BLOCK, "block $drop");
+    writeU8(os, WASM_TYPE_NORESULT, "block type");
+    writeU8(os, WASM_OPCODE_BLOCK, "block $wait");
+    writeU8(os, WASM_TYPE_NORESULT, "block type");
+    writeU8(os, WASM_OPCODE_BLOCK, "block $init");
+    writeU8(os, WASM_TYPE_NORESULT, "block type");
+
+    // Atomically check whether we win the race.
     writeGetFlagAddress();
     writeI32Const(os, 0, "expected flag value");
-    writeI32Const(os, 1, "flag value");
+    writeI32Const(os, 1, "new flag value");
     writeU8(os, WASM_OPCODE_ATOMICS_PREFIX, "atomics prefix");
     writeUleb128(os, WASM_OPCODE_I32_RMW_CMPXCHG, "i32.atomic.rmw.cmpxchg");
     writeMemArg(os, 2, 0);
-    writeU8(os, WASM_OPCODE_IF, "IF");
-    writeU8(os, WASM_TYPE_NORESULT, "blocktype");
 
-    // Did not increment 0, so wait for main thread to initialize memory
-    writeGetFlagAddress();
-    writeI32Const(os, 1, "expected flag value");
-    writeI64Const(os, -1, "timeout");
+    // Based on the value, decide what to do next.
+    writeU8(os, WASM_OPCODE_BR_TABLE, "br_table");
+    writeUleb128(os, 2, "label vector length");
+    writeUleb128(os, 0, "label $init");
+    writeUleb128(os, 1, "label $wait");
+    writeUleb128(os, 2, "default label $drop");
 
-    writeU8(os, WASM_OPCODE_ATOMICS_PREFIX, "atomics prefix");
-    writeUleb128(os, WASM_OPCODE_I32_ATOMIC_WAIT, "i32.atomic.wait");
-    writeMemArg(os, 2, 0);
-    writeU8(os, WASM_OPCODE_DROP, "drop");
-
-    writeU8(os, WASM_OPCODE_ELSE, "ELSE");
-
-    // Did increment 0, so conditionally initialize passive data segments
+    // Initialize passive data segments
+    writeU8(os, WASM_OPCODE_END, "end $init");
     for (const OutputSegment *s : segments) {
       if (needsPassiveInitialization(s)) {
         // destination address
@@ -1145,9 +1150,23 @@ void Writer::createInitMemoryFunction() {
     writeMemArg(os, 2, 0);
     writeU8(os, WASM_OPCODE_DROP, "drop");
 
-    writeU8(os, WASM_OPCODE_END, "END");
+    // Branch to drop the segments
+    writeU8(os, WASM_OPCODE_BR, "br");
+    writeUleb128(os, 1, "label $drop");
+
+    // Wait for the winning thread to initialize memory
+    writeU8(os, WASM_OPCODE_END, "end $wait");
+    writeGetFlagAddress();
+    writeI32Const(os, 1, "expected flag value");
+    writeI64Const(os, -1, "timeout");
+
+    writeU8(os, WASM_OPCODE_ATOMICS_PREFIX, "atomics prefix");
+    writeUleb128(os, WASM_OPCODE_I32_ATOMIC_WAIT, "i32.atomic.wait");
+    writeMemArg(os, 2, 0);
+    writeU8(os, WASM_OPCODE_DROP, "drop");
 
     // Unconditionally drop passive data segments
+    writeU8(os, WASM_OPCODE_END, "end $drop");
     for (const OutputSegment *s : segments) {
       if (needsPassiveInitialization(s)) {
         // data.drop instruction
@@ -1156,6 +1175,8 @@ void Writer::createInitMemoryFunction() {
         writeUleb128(os, s->index, "segment index immediate");
       }
     }
+
+    // End the function
     writeU8(os, WASM_OPCODE_END, "END");
   }
 

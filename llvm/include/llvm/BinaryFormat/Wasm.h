@@ -284,8 +284,10 @@ enum : unsigned {
 
 // Opcodes used in synthetic functions.
 enum : unsigned {
-  WASM_OPCODE_IF = 0x04,
-  WASM_OPCODE_ELSE = 0x05,
+  WASM_OPCODE_BLOCK = 0x02,
+  WASM_OPCODE_BR = 0x0c,
+  WASM_OPCODE_BR_TABLE = 0x0e,
+  WASM_OPCODE_RETURN = 0x0f,
   WASM_OPCODE_DROP = 0x1a,
   WASM_OPCODE_MISC_PREFIX = 0xfc,
   WASM_OPCODE_MEMORY_INIT = 0x08,
