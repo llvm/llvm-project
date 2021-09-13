@@ -351,14 +351,16 @@ static void ShowHeapOrGlobalCandidate(uptr untagged_addr, tag_t *candidate,
       uptr size = GetGlobalSizeFromDescriptor(mem);
       if (size == 0)
         // We couldn't find the size of the global from the descriptors.
-        Printf("%p is located to the %s of a global variable in (%s+0x%x)\n",
-               untagged_addr, candidate == left ? "right" : "left", module_name,
-               module_address);
+        Printf(
+            "%p is located to the %s of a global variable in "
+            "\n    #0 0x%x (%s+0x%x)\n",
+            untagged_addr, candidate == left ? "right" : "left", mem,
+            module_name, module_address);
       else
         Printf(
             "%p is located to the %s of a %zd-byte global variable in "
-            "(%s+0x%x)\n",
-            untagged_addr, candidate == left ? "right" : "left", size,
+            "\n    #0 0x%x (%s+0x%x)\n",
+            untagged_addr, candidate == left ? "right" : "left", size, mem,
             module_name, module_address);
     }
     Printf("%s", d.Default());
