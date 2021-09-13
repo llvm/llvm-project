@@ -8,7 +8,6 @@ settings set target.process.stop-on-exec false
 b child_func
 b parent_func
 process launch
-# CHECK: function run in parent
 # CHECK: stop reason = breakpoint
 # CHECK-NEXT: child_func
 continue
