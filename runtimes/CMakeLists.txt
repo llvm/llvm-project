@@ -104,6 +104,11 @@ include(HandleLLVMOptions)
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
+if (NOT LLVM_DEFAULT_TARGET_TRIPLE)
+  include(GetHostTriple)
+  get_host_triple(LLVM_DEFAULT_TARGET_TRIPLE)
+endif()
+
 # Use libtool instead of ar if you are both on an Apple host, and targeting Apple.
 if(CMAKE_HOST_APPLE AND APPLE)
   include(UseLibtool)
