@@ -629,7 +629,8 @@ void MipsSEInstrInfo::adjustStackPtr(unsigned SP, int64_t Amount,
   if (Amount == 0)
     return;
 
-  if (isInt<16>(Amount)) {
+  bool IsNanoMips = Subtarget.hasNanoMips();
+  if ((isInt<16>(Amount) && !IsNanoMips) || (isInt<32>(Amount) && IsNanoMips)) {
     // addi sp, sp, amount
     BuildMI(MBB, I, DL, get(ADDiu), SP).addReg(SP).addImm(Amount);
   } else {
