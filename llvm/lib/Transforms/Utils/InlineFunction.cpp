@@ -539,12 +539,10 @@ static Value *getUnwindDestToken(Instruction *EHPad,
 static BasicBlock *HandleCallsInBlockInlinedThroughInvoke(
     BasicBlock *BB, BasicBlock *UnwindEdge,
     UnwindDestMemoTy *FuncletUnwindMap = nullptr) {
-  for (BasicBlock::iterator BBI = BB->begin(), E = BB->end(); BBI != E; ) {
-    Instruction *I = &*BBI++;
-
+  for (Instruction &I : llvm::make_early_inc_range(*BB)) {
     // We only need to check for function calls: inlined invoke
     // instructions require no special handling.
-    CallInst *CI = dyn_cast<CallInst>(I);
+    CallInst *CI = dyn_cast<CallInst>(&I);
 
     if (!CI || CI->doesNotThrow())
       continue;
@@ -2129,8 +2127,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
     for (Function::iterator BB = FirstNewBlock, E = Caller->end(); BB != E;
          ++BB) {
-      for (auto II = BB->begin(); II != BB->end();) {
-        Instruction &I = *II++;
+      for (Instruction &I : llvm::make_early_inc_range(*BB)) {
         CallInst *CI = dyn_cast<CallInst>(&I);
         if (!CI)
           continue;

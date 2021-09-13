@@ -1,4 +1,6 @@
 // RUN: %clangxx -O0 -g %s -o %t && %run %t
+//
+// REQUIRES: linux, freebsd, netbsd
 
 #include <stdlib.h>
 #include <unistd.h>

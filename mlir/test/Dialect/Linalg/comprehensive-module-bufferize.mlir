@@ -57,7 +57,7 @@ func @not_inplace(%A : tensor<?xf32>) -> tensor<?xf32> {
   %f0 = constant 0.0 : f32
 
   //     CHECK: %[[D0:.*]] = memref.dim %[[A]], {{.*}} : memref<?xf32, #[[$map_1d_dyn]]>
-  //     CHECK: %[[ALLOC:.*]] = memref.alloc(%[[D0]]) : memref<?xf32>
+  //     CHECK: %[[ALLOC:.*]] = memref.alloc(%[[D0]]) {alignment = 128 : i64} : memref<?xf32>
   //     CHECK: linalg.fill(%[[F0]], %[[ALLOC]]) : f32, memref<?xf32>
   %r = linalg.fill(%f0, %A) : f32, tensor<?xf32> -> tensor<?xf32>
 
@@ -133,6 +133,7 @@ func @vec_not_inplace(%A : tensor<?xf32> {linalg.inplaceable = true}, %vec : vec
 
   /// Cross-op multiple uses of %A, the first vector.transfer which has interfering reads must alloc.
   //      CHECK: %[[ALLOC:.*]] = memref.alloc
+  //      CHECK: linalg.copy({{.*}}, %[[ALLOC]])
   // CHECK-NEXT: vector.transfer_write {{.*}}, %[[ALLOC]]
   %r0 = vector.transfer_write %vec, %A[%c0] : vector<4xf32>, tensor<?xf32>
 
@@ -161,22 +162,24 @@ func @insert_slice_fun(%A0 : tensor<?xf32>,
                        %t1 : tensor<4xf32> {linalg.inplaceable = true})
   ->  (tensor<?xf32>, tensor<?xf32>, tensor<?xf32>, tensor<?xf32>)
 {
-  // Alloc and copy the whole result tensor. Copy the tensor.extract_slice.
+  // Hoisted allocs.
+  //      CHECK: %[[REALLOC_A1:.*]] = memref.alloc
+  //      CHECK: %[[REALLOC_A0_2:.*]] = memref.alloc
   //      CHECK: %[[REALLOC_A0:.*]] = memref.alloc
+
+  // Alloc and copy the whole result tensor. Copy the tensor.extract_slice.
   //      CHECK: linalg.copy(%[[A0]], %[[REALLOC_A0]]
   //      CHECK: %[[SV_A0:.*]] = memref.subview %[[REALLOC_A0]]
   //      CHECK: linalg.copy(%[[t0]], %[[SV_A0]])
   %r0 = tensor.insert_slice %t0 into %A0[0][4][1] : tensor<4xf32> into tensor<?xf32>
 
   // Alloc and copy the whole result tensor. Copy the tensor.extract_slice.
-  //      CHECK: %[[REALLOC_A0_2:.*]] = memref.alloc
   //      CHECK: linalg.copy(%[[A0]]
   //      CHECK: %[[SV_A0_2:.*]] = memref.subview %[[REALLOC_A0_2]]
   //      CHECK: linalg.copy(%[[t1]], %[[SV_A0_2]])
   %r1 = tensor.insert_slice %t1 into %A0[0][4][1] : tensor<4xf32> into tensor<?xf32>
 
   //  Still alloc the large tensor because %A1 is read after. Copy the tensor.extract_slice.
-  //      CHECK: %[[REALLOC_A1:.*]] = memref.alloc
   //      CHECK: linalg.copy(%[[A1]]
   //      CHECK: %[[SV_A1:.*]] = memref.subview %[[REALLOC_A1]]
   //      CHECK: linalg.copy(%[[t0]], %[[SV_A1]])
@@ -255,7 +258,7 @@ func @insert_slice_fun(%A : tensor<?xf32> {linalg.inplaceable = true}, %t : tens
 func @insert_slice_fun_not_inplace(%A : tensor<?xf32>, %t : tensor<4xf32>)
   -> tensor<?xf32>
 {
-  //      CHECK: %[[ALLOC:.*]] = memref.alloc(%{{.*}}) : memref<?xf32>
+  //      CHECK: %[[ALLOC:.*]] = memref.alloc(%{{.*}}) {alignment = 128 : i64} : memref<?xf32>
   //      CHECK: linalg.copy(%[[A]], %[[ALLOC]]) : memref<?xf32{{.*}}, memref<?xf32>
   //      CHECK: %[[SV:.*]] = memref.subview %[[ALLOC]][0] [4] [1] : memref<?xf32> to memref<4xf32>
   //      CHECK: linalg.copy(%[[t]], %[[SV]]) : memref<4xf32, #map>, memref<4xf32>
@@ -285,7 +288,7 @@ func @insert_slice_fun_not_inplace(%A : tensor<?xf32> {linalg.inplaceable = true
 
   // fill would interfere with %r0 that is also being returned.
   // So we need to bufferize it out of place and make a new alloc.
-  //  CHECK-DAG: %[[ALLOC:.*]] = memref.alloc({{.*}}) : memref<?xf32>
+  //  CHECK-DAG: %[[ALLOC:.*]] = memref.alloc({{.*}}) {alignment = 128 : i64} : memref<?xf32>
   //      CHECK: linalg.fill(%{{.*}}, %[[ALLOC]]
   %r1 = linalg.fill(%f0, %A) : f32, tensor<?xf32> -> tensor<?xf32>
 
@@ -489,9 +492,9 @@ func @main() {
   %v1 = constant 1.0 : f32
   %v2 = constant 2.0 : f32
 
-  // CHECK-NEXT:   %[[A:.*]] = memref.alloc() : memref<64xf32>
-  // CHECK-NEXT:   %[[B:.*]] = memref.alloc() : memref<64xf32>
-  // CHECK-NEXT:   %[[C:.*]] = memref.alloc() : memref<f32>
+  // CHECK-NEXT:   %[[C:.*]] = memref.alloc() {alignment = 128 : i64} : memref<f32>
+  // CHECK-NEXT:   %[[B:.*]] = memref.alloc() {alignment = 128 : i64} : memref<64xf32>
+  // CHECK-NEXT:   %[[A:.*]] = memref.alloc() {alignment = 128 : i64} : memref<64xf32>
   %A = linalg.init_tensor [64] : tensor<64xf32>
   %B = linalg.init_tensor [64] : tensor<64xf32>
   %C = linalg.init_tensor [] : tensor<f32>
@@ -686,6 +689,9 @@ func @matmul(
   %c8 = constant 8 : index
   %c16 = constant 16 : index
 
+  // Hoisted alloc.
+  // CHECK: %[[ALLOC:.*]] = memref.alloc() {alignment = 128 : i64} : memref<8x16xf32>
+
   // CHECK: scf.for %[[I:.*]] =
   %0 = scf.for %arg3 = %c0 to %c128 step %c8 iter_args(%arg4 = %C) -> (tensor<128x192xf32>) {
     %1 = tensor.extract_slice %A[%arg3, 0] [8, 256] [1, 1] :
@@ -697,7 +703,6 @@ func @matmul(
         tensor<256x192xf32> to tensor<256x16xf32>
 
       // %4 does not match an insert_slice, it cannot be bufferized inplace and needs to alloc.
-      // CHECK: %[[ALLOC:.*]] = memref.alloc() : memref<8x16xf32>
       // CHECK: %[[T:.*]] = memref.subview %[[C]][%[[I]], %[[J]]] [8, 16] [1, 1]
       // TODO: %4 is never read but just overwritten, this copy can be elided.
       // CHECK: linalg.copy(%[[T]], %[[ALLOC]])

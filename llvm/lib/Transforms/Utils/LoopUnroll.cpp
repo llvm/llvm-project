@@ -224,13 +224,12 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
   const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
   SmallVector<WeakTrackingVH, 16> DeadInsts;
   for (BasicBlock *BB : L->getBlocks()) {
-    for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E;) {
-      Instruction *Inst = &*I++;
-      if (Value *V = SimplifyInstruction(Inst, {DL, nullptr, DT, AC}))
-        if (LI->replacementPreservesLCSSAForm(Inst, V))
-          Inst->replaceAllUsesWith(V);
-      if (isInstructionTriviallyDead(Inst))
-        DeadInsts.emplace_back(Inst);
+    for (Instruction &Inst : llvm::make_early_inc_range(*BB)) {
+      if (Value *V = SimplifyInstruction(&Inst, {DL, nullptr, DT, AC}))
+        if (LI->replacementPreservesLCSSAForm(&Inst, V))
+          Inst.replaceAllUsesWith(V);
+      if (isInstructionTriviallyDead(&Inst))
+        DeadInsts.emplace_back(&Inst);
     }
     // We can't do recursive deletion until we're done iterating, as we might
     // have a phi which (potentially indirectly) uses instructions later in
