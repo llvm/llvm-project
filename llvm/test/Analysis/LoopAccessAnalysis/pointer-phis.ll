@@ -5,7 +5,7 @@
 define i32 @load_with_pointer_phi_no_runtime_checks(%s1* %data) {
 ; CHECK-LABEL: load_with_pointer_phi_no_runtime_checks
 ; CHECK-NEXT:  loop.header:
-; CHECK-NEXT:    Report: cannot identify array bounds
+; CHECK-NEXT:    Memory dependences are safe
 ;
 entry:
   br label %loop.header
@@ -40,7 +40,7 @@ exit:                                             ; preds = %loop.latch
 define i32 @store_with_pointer_phi_no_runtime_checks(%s1* %data) {
 ; CHECK-LABEL: 'store_with_pointer_phi_no_runtime_checks'
 ; CHECK-NEXT:  loop.header:
-; CHECK-NEXT:    Report: cannot identify array bounds
+; CHECK-NEXT:    Memory dependences are safe
 ;
 entry:
   br label %loop.header
@@ -75,7 +75,23 @@ exit:                                             ; preds = %loop.latch
 define i32 @store_with_pointer_phi_runtime_checks(double* %A, double* %B, double* %C) {
 ; CHECK-LABEL: 'store_with_pointer_phi_runtime_checks'
 ; CHECK-NEXT:  loop.header:
-; CHECK-NEXT:    Report: cannot identify array bounds
+; CHECK-NEXT:    Memory dependences are safe with run-time checks
+; CHECK:         Run-time memory checks:
+; CHECK-NEXT:    Check 0:
+; CHECK-NEXT:      Comparing group ([[GROUP_B:.+]]):
+; CHECK-NEXT:        %gep.1 = getelementptr inbounds double, double* %B, i64 %iv
+; CHECK-NEXT:      Against group ([[GROUP_C:.+]]):
+; CHECK-NEXT:        %gep.2 = getelementptr inbounds double, double* %C, i64 %iv
+; CHECK-NEXT:    Check 1:
+; CHECK-NEXT:      Comparing group ([[GROUP_B]]):
+; CHECK-NEXT:        %gep.1 = getelementptr inbounds double, double* %B, i64 %iv
+; CHECK-NEXT:      Against group ([[GROUP_A:.+]]):
+; CHECK-NEXT:        %arrayidx = getelementptr inbounds double, double* %A, i64 %iv
+; CHECK-NEXT:    Check 2:
+; CHECK-NEXT:      Comparing group ([[GROUP_C]]):
+; CHECK-NEXT:        %gep.2 = getelementptr inbounds double, double* %C, i64 %iv
+; CHECK-NEXT:      Against group ([[GROUP_A]]):
+; CHECK-NEXT:        %arrayidx = getelementptr inbounds double, double* %A, i64 %iv
 ;
 entry:
   br label %loop.header
@@ -184,10 +200,41 @@ exit:                                             ; preds = %loop.latch
 define i32 @store_with_pointer_phi_incoming_phi(double* %A, double* %B, double* %C, i1 %c.0, i1 %c.1) {
 ; CHECK-LABEL: 'store_with_pointer_phi_incoming_phi'
 ; CHECK-NEXT:  loop.header:
-; CHECK-NEXT:     Report: cannot identify array bounds
-; CHECK-NEXT:     Dependences:
-; CHECK-NEXT:     Run-time memory checks:
-; CHECK-NEXT:     Grouped accesses:
+; CHECK-NEXT:    Report: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:    Dependences:
+; CHECK-NEXT:      Unknown:
+; CHECK-NEXT:          %v8 = load double, double* %arrayidx, align 8 ->
+; CHECK-NEXT:          store double %mul16, double* %ptr.2, align 8
+; CHECK-EMPTY:
+; CHECK-NEXT:    Run-time memory checks:
+; CHECK-NEXT:    Check 0:
+; CHECK-NEXT:      Comparing group ([[GROUP_C:.+]]):
+; CHECK-NEXT:      double* %C
+; CHECK-NEXT:      Against group ([[GROUP_B:.+]]):
+; CHECK-NEXT:      double* %B
+; CHECK-NEXT:    Check 1:
+; CHECK-NEXT:      Comparing group ([[GROUP_C]]):
+; CHECK-NEXT:      double* %C
+; CHECK-NEXT:      Against group ([[GROUP_A:.+]]):
+; CHECK-NEXT:        %arrayidx = getelementptr inbounds double, double* %A, i64 %iv
+; CHECK-NEXT:      double* %A
+; CHECK-NEXT:    Check 2:
+; CHECK-NEXT:      Comparing group ([[GROUP_B]]):
+; CHECK-NEXT:      double* %B
+; CHECK-NEXT:      Against group ([[GROUP_A]]):
+; CHECK-NEXT:        %arrayidx = getelementptr inbounds double, double* %A, i64 %iv
+; CHECK-NEXT:      double* %A
+; CHECK-NEXT:    Grouped accesses:
+; CHECK-NEXT:      Group [[GROUP_C]]:
+; CHECK-NEXT:        (Low: %C High: (8 + %C))
+; CHECK-NEXT:          Member: %C
+; CHECK-NEXT:      Group [[GROUP_B]]:
+; CHECK-NEXT:        (Low: %B High: (8 + %B))
+; CHECK-NEXT:          Member: %B
+; CHECK-NEXT:      Group [[GROUP_A]]:
+; CHECK-NEXT:        (Low: %A High: (256000 + %A))
+; CHECK-NEXT:          Member: {%A,+,8}<nuw><%loop.header>
+; CHECK-NEXT:          Member: %A
 ; CHECK-EMPTY
 entry:
   br label %loop.header
@@ -229,10 +276,41 @@ exit:                                             ; preds = %loop.latch
 define i32 @store_with_pointer_phi_incoming_phi_irreducible_cycle(double* %A, double* %B, double* %C, i1 %c.0, i1 %c.1) {
 ; CHECK-LABEL: 'store_with_pointer_phi_incoming_phi_irreducible_cycle'
 ; CHECK-NEXT:  loop.header:
-; CHECK-NEXT:     Report: cannot identify array bounds
-; CHECK-NEXT:     Dependences:
-; CHECK-NEXT:     Run-time memory checks:
-; CHECK-NEXT:     Grouped accesses:
+; CHECK-NEXT:    Report: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:    Dependences:
+; CHECK-NEXT:      Unknown:
+; CHECK-NEXT:          %v8 = load double, double* %arrayidx, align 8 ->
+; CHECK-NEXT:          store double %mul16, double* %ptr.3, align 8
+; CHECK-EMPTY:
+; CHECK-NEXT:    Run-time memory checks:
+; CHECK-NEXT:    Check 0:
+; CHECK-NEXT:      Comparing group ([[GROUP_C:.+]]):
+; CHECK-NEXT:      double* %C
+; CHECK-NEXT:      Against group ([[GROUP_B:.+]]):
+; CHECK-NEXT:      double* %B
+; CHECK-NEXT:    Check 1:
+; CHECK-NEXT:      Comparing group ([[GROUP_C]]):
+; CHECK-NEXT:      double* %C
+; CHECK-NEXT:      Against group ([[GROUP_A:.+]]):
+; CHECK-NEXT:        %arrayidx = getelementptr inbounds double, double* %A, i64 %iv
+; CHECK-NEXT:      double* %A
+; CHECK-NEXT:    Check 2:
+; CHECK-NEXT:      Comparing group ([[GROUP_B]]):
+; CHECK-NEXT:      double* %B
+; CHECK-NEXT:      Against group ([[GROUP_A]]):
+; CHECK-NEXT:        %arrayidx = getelementptr inbounds double, double* %A, i64 %iv
+; CHECK-NEXT:      double* %A
+; CHECK-NEXT:    Grouped accesses:
+; CHECK-NEXT:      Group [[GROUP_C]]
+; CHECK-NEXT:        (Low: %C High: (8 + %C))
+; CHECK-NEXT:          Member: %C
+; CHECK-NEXT:      Group [[GROUP_B]]
+; CHECK-NEXT:        (Low: %B High: (8 + %B))
+; CHECK-NEXT:          Member: %B
+; CHECK-NEXT:      Group [[GROUP_A]]
+; CHECK-NEXT:        (Low: %A High: (256000 + %A))
+; CHECK-NEXT:          Member: {%A,+,8}<nuw><%loop.header>
+; CHECK-NEXT:          Member: %A
 ; CHECK-EMPTY
 entry:
   br label %loop.header
@@ -334,10 +412,59 @@ exit:                                             ; preds = %loop.latch
 define void @phi_load_store_memdep_check(i1 %c, i16* %A, i16* %B, i16* %C) {
 ; CHECK-LABEL: Loop access info in function 'phi_load_store_memdep_check':
 ; CHECK-NEXT:   for.body:
-; CHECK-NEXT:     Report: cannot identify array bounds
-; CHECK-NEXT:     Dependences:
-; CHECK-NEXT:     Run-time memory checks:
-; CHECK-NEXT:     Grouped accesses:
+; CHECK-NEXT:    Report: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:    Dependences:
+; CHECK-NEXT:      Unknown:
+; CHECK-NEXT:          %lv3 = load i16, i16* %c.sink, align 2 ->
+; CHECK-NEXT:          store i16 %add, i16* %c.sink, align 1
+; CHECK-EMPTY:
+; CHECK-NEXT:      Unknown:
+; CHECK-NEXT:          %lv3 = load i16, i16* %c.sink, align 2 ->
+; CHECK-NEXT:          store i16 %add, i16* %c.sink, align 1
+; CHECK-EMPTY:
+; CHECK-NEXT:      Unknown:
+; CHECK-NEXT:          %lv = load i16, i16* %A, align 1 ->
+; CHECK-NEXT:          store i16 %lv, i16* %A, align 1
+; CHECK-EMPTY:
+; CHECK-NEXT:      Unknown:
+; CHECK-NEXT:          store i16 %lv, i16* %A, align 1 ->
+; CHECK-NEXT:          %lv2 = load i16, i16* %A, align 1
+; CHECK-EMPTY:
+; CHECK-NEXT:    Run-time memory checks:
+; CHECK-NEXT:    Check 0:
+; CHECK-NEXT:      Comparing group ([[GROUP_A:.+]]):
+; CHECK-NEXT:      i16* %A
+; CHECK-NEXT:      i16* %A
+; CHECK-NEXT:      Against group ([[GROUP_C:.+]]):
+; CHECK-NEXT:      i16* %C
+; CHECK-NEXT:      i16* %C
+; CHECK-NEXT:    Check 1:
+; CHECK-NEXT:      Comparing group ([[GROUP_A]]):
+; CHECK-NEXT:      i16* %A
+; CHECK-NEXT:      i16* %A
+; CHECK-NEXT:      Against group ([[GROUP_B:.+]]):
+; CHECK-NEXT:      i16* %B
+; CHECK-NEXT:      i16* %B
+; CHECK-NEXT:    Check 2:
+; CHECK-NEXT:      Comparing group ([[GROUP_C]]):
+; CHECK-NEXT:      i16* %C
+; CHECK-NEXT:      i16* %C
+; CHECK-NEXT:      Against group ([[GROUP_B]]):
+; CHECK-NEXT:      i16* %B
+; CHECK-NEXT:      i16* %B
+; CHECK-NEXT:    Grouped accesses:
+; CHECK-NEXT:      Group [[GROUP_A]]
+; CHECK-NEXT:        (Low: %A High: (2 + %A))
+; CHECK-NEXT:          Member: %A
+; CHECK-NEXT:          Member: %A
+; CHECK-NEXT:      Group [[GROUP_C]]
+; CHECK-NEXT:        (Low: %C High: (2 + %C))
+; CHECK-NEXT:          Member: %C
+; CHECK-NEXT:          Member: %C
+; CHECK-NEXT:      Group [[GROUP_B]]
+; CHECK-NEXT:        (Low: %B High: (2 + %B))
+; CHECK-NEXT:          Member: %B
+; CHECK-NEXT:          Member: %B
 ; CHECK-EMPTY:
 ;
 entry:

@@ -1263,6 +1263,47 @@ bool llvm::isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
   return Diff && *Diff == 1;
 }
 
+static void visitPointers(Value *StartPtr, const Loop &InnermostLoop,
+                          function_ref<void(Value *)> AddPointer) {
+  SmallPtrSet<Value *, 8> Visited;
+  SmallVector<Value *> WorkList;
+  WorkList.push_back(StartPtr);
+
+  while (!WorkList.empty()) {
+    Value *Ptr = WorkList.pop_back_val();
+    if (!Visited.insert(Ptr).second)
+      continue;
+    auto *PN = dyn_cast<PHINode>(Ptr);
+    // SCEV does not look through non-header PHIs inside the loop. Such phis
+    // can be analyzed by adding separate accesses for each incoming pointer
+    // value.
+    if (PN && InnermostLoop.contains(PN->getParent()) &&
+        PN->getParent() != InnermostLoop.getHeader()) {
+      for (const Use &Inc : PN->incoming_values())
+        WorkList.push_back(Inc);
+    } else
+      AddPointer(Ptr);
+  }
+}
+
+void MemoryDepChecker::addAccess(StoreInst *SI) {
+  visitPointers(SI->getPointerOperand(), *InnermostLoop,
+                [this, SI](Value *Ptr) {
+                  Accesses[MemAccessInfo(Ptr, true)].push_back(AccessIdx);
+                  InstMap.push_back(SI);
+                  ++AccessIdx;
+                });
+}
+
+void MemoryDepChecker::addAccess(LoadInst *LI) {
+  visitPointers(LI->getPointerOperand(), *InnermostLoop,
+                [this, LI](Value *Ptr) {
+                  Accesses[MemAccessInfo(Ptr, false)].push_back(AccessIdx);
+                  InstMap.push_back(LI);
+                  ++AccessIdx;
+                });
+}
+
 MemoryDepChecker::VectorizationSafetyStatus
 MemoryDepChecker::Dependence::isSafeForVectorization(DepType Type) {
   switch (Type) {
@@ -1962,7 +2003,11 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
       if (blockNeedsPredication(ST->getParent(), TheLoop, DT))
         Loc.AATags.TBAA = nullptr;
 
-      Accesses.addStore(Loc);
+      visitPointers(const_cast<Value *>(Loc.Ptr), *TheLoop,
+                    [&Accesses, Loc](Value *Ptr) {
+                      MemoryLocation NewLoc = Loc.getWithNewPtr(Ptr);
+                      Accesses.addStore(NewLoc);
+                    });
     }
   }
 
@@ -2006,7 +2051,11 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
     if (blockNeedsPredication(LD->getParent(), TheLoop, DT))
       Loc.AATags.TBAA = nullptr;
 
-    Accesses.addLoad(Loc, IsReadOnlyPtr);
+    visitPointers(const_cast<Value *>(Loc.Ptr), *TheLoop,
+                  [&Accesses, Loc, IsReadOnlyPtr](Value *Ptr) {
+                    MemoryLocation NewLoc = Loc.getWithNewPtr(Ptr);
+                    Accesses.addLoad(NewLoc, IsReadOnlyPtr);
+                  });
   }
 
   // If we write (or read-write) to a single destination and there are no
