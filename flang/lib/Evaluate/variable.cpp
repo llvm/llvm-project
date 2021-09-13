@@ -245,7 +245,7 @@ DescriptorInquiry::DescriptorInquiry(
     : base_{base}, field_{field}, dimension_{dim} {
   const Symbol &last{base_.GetLastSymbol()};
   CHECK(IsDescriptor(last));
-  CHECK((field == Field::Len && dim == 0) ||
+  CHECK(((field == Field::Len || field == Field::Rank) && dim == 0) ||
       (field != Field::Len && dim >= 0 && dim < last.Rank()));
 }
 

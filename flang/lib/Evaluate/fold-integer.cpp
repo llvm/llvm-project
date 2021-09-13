@@ -612,7 +612,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     if (const auto *array{UnwrapExpr<Expr<SomeType>>(args[0])}) {
       if (auto named{ExtractNamedEntity(*array)}) {
         const Symbol &symbol{named->GetLastSymbol()};
-        if (semantics::IsAssumedRankArray(symbol)) {
+        if (IsAssumedRank(symbol)) {
           // DescriptorInquiry can only be placed in expression of kind
           // DescriptorInquiry::Result::kind.
           return ConvertToType<T>(Expr<
@@ -667,7 +667,13 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
         if (auto dim{GetInt64Arg(args[1])}) {
           int rank{GetRank(*shape)};
           if (*dim >= 1 && *dim <= rank) {
-            if (auto &extent{shape->at(*dim - 1)}) {
+            const Symbol *symbol{UnwrapWholeSymbolDataRef(args[0])};
+            if (symbol && IsAssumedSizeArray(*symbol) && *dim == rank) {
+              context.messages().Say(
+                  "size(array,dim=%jd) of last dimension is not available for rank-%d assumed-size array dummy argument"_err_en_US,
+                  *dim, rank);
+              return MakeInvalidIntrinsic<T>(std::move(funcRef));
+            } else if (auto &extent{shape->at(*dim - 1)}) {
               return Fold(context, ConvertToType<T>(std::move(*extent)));
             }
           } else {
@@ -705,7 +711,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   } else if (name == "ubound") {
     return UBOUND(context, std::move(funcRef));
   }
-  // TODO: count(w/ dim), dot_product, findloc, ibits, image_status, ishftc,
+  // TODO: dot_product, findloc, ibits, image_status, ishftc,
   // matmul, maxloc, minloc, sign, transfer
   return Expr<T>{std::move(funcRef)};
 }

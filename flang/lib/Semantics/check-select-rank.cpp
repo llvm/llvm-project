@@ -32,7 +32,7 @@ void SelectRankConstructChecker::Leave(
   const Symbol *saveSelSymbol{nullptr};
   if (const auto selExpr{GetExprFromSelector(selectRankStmtSel)}) {
     if (const Symbol * sel{evaluate::UnwrapWholeSymbolDataRef(*selExpr)}) {
-      if (!IsAssumedRankArray(*sel)) { // C1150
+      if (!evaluate::IsAssumedRank(*sel)) { // C1150
         context_.Say(parser::FindSourceLocation(selectRankStmtSel),
             "Selector '%s' is not an assumed-rank array variable"_err_en_US,
             sel->name().ToString());

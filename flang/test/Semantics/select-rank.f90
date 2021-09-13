@@ -145,11 +145,13 @@ contains
     Rank(2)
       print *, "Now it's rank 2 "
     RANK (*)
-      print *, "Going for a other rank"
+      print *, "Going for another rank"
+      !ERROR: 'kind=' argument must be a constant scalar integer whose value is a supported kind for the intrinsic result type
       j = INT(0, KIND=MERGE(KIND(0), -1, RANK(x) == 1))
     !ERROR: Not more than one of the selectors of SELECT RANK statement may be '*'
     RANK (*)
       print *, "This is Wrong"
+      !ERROR: 'kind=' argument must be a constant scalar integer whose value is a supported kind for the intrinsic result type
       j = INT(0, KIND=MERGE(KIND(0), -1, RANK(x) == 1))
     END SELECT
    end subroutine
