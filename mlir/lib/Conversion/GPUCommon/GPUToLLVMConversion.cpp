@@ -348,7 +348,6 @@ void GpuToLLVMConversionPass::runOnOperation() {
   LLVMConversionTarget target(getContext());
 
   target.addIllegalDialect<gpu::GPUDialect>();
-  target.addIllegalOp<UnrealizedConversionCastOp>();
 
   populateVectorToLLVMConversionPatterns(converter, patterns);
   populateMemRefToLLVMConversionPatterns(converter, patterns);
@@ -752,10 +751,10 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
   auto kernelParams = generateParamsArray(launchOp, operands, rewriter);
   auto nullpointer = rewriter.create<LLVM::NullOp>(loc, llvmPointerPointerType);
   launchKernelCallBuilder.create(loc, rewriter,
-                                 {function.getResult(0), launchOp.gridSizeX(),
-                                  launchOp.gridSizeY(), launchOp.gridSizeZ(),
-                                  launchOp.blockSizeX(), launchOp.blockSizeY(),
-                                  launchOp.blockSizeZ(),
+                                 {function.getResult(0), adaptor.gridSizeX(),
+                                  adaptor.gridSizeY(), adaptor.gridSizeZ(),
+                                  adaptor.blockSizeX(), adaptor.blockSizeY(),
+                                  adaptor.blockSizeZ(),
                                   /*sharedMemBytes=*/zero, stream, kernelParams,
                                   /*extra=*/nullpointer});
 

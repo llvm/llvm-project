@@ -311,10 +311,17 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
         MemoryLocation::UnknownSize, MFI.getObjectAlign(FI));
 
     MFI.setStackID(FI, TargetStackID::ScalableVector);
-    auto MIB = BuildMI(MBB, I, DL, get(Opcode))
-                   .addReg(SrcReg, getKillRegState(IsKill))
-                   .addFrameIndex(FI)
-                   .addMemOperand(MMO);
+    auto MIB = BuildMI(MBB, I, DL, get(Opcode));
+    if (IsZvlsseg) {
+      // We need a GPR register to hold the incremented address for each subreg
+      // after expansion.
+      Register AddrInc =
+          MF->getRegInfo().createVirtualRegister(&RISCV::GPRRegClass);
+      MIB.addReg(AddrInc, RegState::Define);
+    }
+    MIB.addReg(SrcReg, getKillRegState(IsKill))
+        .addFrameIndex(FI)
+        .addMemOperand(MMO);
     if (IsZvlsseg) {
       // For spilling/reloading Zvlsseg registers, append the dummy field for
       // the scaled vector length. The argument will be used when expanding
@@ -405,9 +412,15 @@ void RISCVInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
         MemoryLocation::UnknownSize, MFI.getObjectAlign(FI));
 
     MFI.setStackID(FI, TargetStackID::ScalableVector);
-    auto MIB = BuildMI(MBB, I, DL, get(Opcode), DstReg)
-                   .addFrameIndex(FI)
-                   .addMemOperand(MMO);
+    auto MIB = BuildMI(MBB, I, DL, get(Opcode), DstReg);
+    if (IsZvlsseg) {
+      // We need a GPR register to hold the incremented address for each subreg
+      // after expansion.
+      Register AddrInc =
+          MF->getRegInfo().createVirtualRegister(&RISCV::GPRRegClass);
+      MIB.addReg(AddrInc, RegState::Define);
+    }
+    MIB.addFrameIndex(FI).addMemOperand(MMO);
     if (IsZvlsseg) {
       // For spilling/reloading Zvlsseg registers, append the dummy field for
       // the scaled vector length. The argument will be used when expanding
@@ -1126,7 +1139,7 @@ RISCVInstrInfo::getOutliningType(MachineBasicBlock::iterator &MBBI,
 
   // Make sure the operands don't reference something unsafe.
   for (const auto &MO : MI.operands())
-    if (MO.isMBB() || MO.isBlockAddress() || MO.isCPI())
+    if (MO.isMBB() || MO.isBlockAddress() || MO.isCPI() || MO.isJTI())
       return outliner::InstrType::Illegal;
 
   // Don't allow instructions which won't be materialized to impact outlining

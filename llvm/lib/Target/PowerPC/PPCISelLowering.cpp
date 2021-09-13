@@ -3509,7 +3509,7 @@ SDValue PPCTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
     // Leave comparisons against 0 and -1 alone for now, since they're usually
     // optimized.  FIXME: revisit this when we can custom lower all setcc
     // optimizations.
-    if (C->isAllOnesValue() || C->isNullValue())
+    if (C->isAllOnes() || C->isZero())
       return SDValue();
   }
 
@@ -14853,8 +14853,8 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     break;
   case PPCISD::SRA:
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(N->getOperand(0))) {
-      if (C->isNullValue() ||   //  0 >>s V -> 0.
-          C->isAllOnesValue())    // -1 >>s V -> -1.
+      if (C->isZero() ||  //  0 >>s V -> 0.
+          C->isAllOnes()) // -1 >>s V -> -1.
         return N->getOperand(0);
     }
     break;
@@ -15226,7 +15226,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
         int Bits = 4 /* 16 byte alignment */;
 
         if (DAG.MaskedValueIsZero(Add->getOperand(1),
-                                  APInt::getAllOnesValue(Bits /* alignment */)
+                                  APInt::getAllOnes(Bits /* alignment */)
                                       .zext(Add.getScalarValueSizeInBits()))) {
           SDNode *BasePtr = Add->getOperand(0).getNode();
           for (SDNode::use_iterator UI = BasePtr->use_begin(),
@@ -17357,6 +17357,14 @@ static void computeFlagsForAddressComputation(SDValue N, unsigned &FlagSet,
   }
 }
 
+static bool isPCRelNode(SDValue N) {
+  return (N.getOpcode() == PPCISD::MAT_PCREL_ADDR ||
+      isValidPCRelNode<ConstantPoolSDNode>(N) ||
+      isValidPCRelNode<GlobalAddressSDNode>(N) ||
+      isValidPCRelNode<JumpTableSDNode>(N) ||
+      isValidPCRelNode<BlockAddressSDNode>(N));
+}
+
 /// computeMOFlags - Given a node N and it's Parent (a MemSDNode), compute
 /// the address flags of the load/store instruction that is to be matched.
 unsigned PPCTargetLowering::computeMOFlags(const SDNode *Parent, SDValue N,
@@ -17373,6 +17381,10 @@ unsigned PPCTargetLowering::computeMOFlags(const SDNode *Parent, SDValue N,
   }
   if (Subtarget.hasSPE())
     FlagSet |= PPC::MOF_SubtargetSPE;
+
+  // Check if we have a PCRel node and return early.
+  if ((FlagSet & PPC::MOF_SubtargetP10) && isPCRelNode(N))
+    return FlagSet;
 
   // Mark this as something we don't want to handle here if it is atomic
   // or pre-increment instruction.
@@ -17518,6 +17530,14 @@ PPC::AddrMode PPCTargetLowering::SelectOptimalAddrMode(const SDNode *Parent,
   // Select an X-Form load if it is not.
   setXFormForUnalignedFI(N, Flags, Mode);
 
+  // Set the mode to PC-Relative addressing mode if we have a valid PC-Rel node.
+  if ((Mode == PPC::AM_XForm) && isPCRelNode(N)) {
+    assert(Subtarget.isUsingPCRelativeCalls() &&
+           "Must be using PC-Relative calls when a valid PC-Relative node is "
+           "present!");
+    Mode = PPC::AM_PCRel;
+  }
+
   // Set Base and Disp accordingly depending on the address mode.
   switch (Mode) {
   case PPC::AM_DForm:
@@ -17587,6 +17607,12 @@ PPC::AddrMode PPCTargetLowering::SelectOptimalAddrMode(const SDNode *Parent,
       fixupFuncForFI(DAG, FI->getIndex(), N.getValueType());
     } else
       Base = N;
+    break;
+  }
+  case PPC::AM_PCRel: {
+    // When selecting PC-Relative instructions, "Base" is not utilized as
+    // we select the address as [PC+imm].
+    Disp = N;
     break;
   }
   case PPC::AM_None:

@@ -1150,7 +1150,7 @@ SDValue MSP430TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   // lowering & isel wouldn't diverge.
   bool andCC = false;
   if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS)) {
-    if (RHSC->isNullValue() && LHS.hasOneUse() &&
+    if (RHSC->isZero() && LHS.hasOneUse() &&
         (LHS.getOpcode() == ISD::AND ||
          (LHS.getOpcode() == ISD::TRUNCATE &&
           LHS.getOperand(0).getOpcode() == ISD::AND))) {

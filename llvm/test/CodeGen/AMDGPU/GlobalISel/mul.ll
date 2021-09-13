@@ -352,6 +352,57 @@ define <2 x i32> @v_mul_v2i32(<2 x i32> %num, <2 x i32> %den) {
   ret <2 x i32> %result
 }
 
+define amdgpu_cs i33 @s_mul_i33(i33 inreg %num,  i33 inreg %den) {
+; GFX7-LABEL: s_mul_i33:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    v_mov_b32_e32 v0, s2
+; GFX7-NEXT:    v_mul_hi_u32 v0, s0, v0
+; GFX7-NEXT:    s_mul_i32 s4, s0, s2
+; GFX7-NEXT:    s_mul_i32 s1, s1, s2
+; GFX7-NEXT:    s_mul_i32 s0, s0, s3
+; GFX7-NEXT:    s_add_i32 s1, s1, s0
+; GFX7-NEXT:    v_add_i32_e32 v0, vcc, s1, v0
+; GFX7-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX7-NEXT:    s_mov_b32 s0, s4
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: s_mul_i33:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    v_mov_b32_e32 v0, s2
+; GFX8-NEXT:    v_mul_hi_u32 v0, s0, v0
+; GFX8-NEXT:    s_mul_i32 s4, s0, s2
+; GFX8-NEXT:    s_mul_i32 s1, s1, s2
+; GFX8-NEXT:    s_mul_i32 s0, s0, s3
+; GFX8-NEXT:    s_add_i32 s1, s1, s0
+; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s1, v0
+; GFX8-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX8-NEXT:    s_mov_b32 s0, s4
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: s_mul_i33:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mul_i32 s1, s1, s2
+; GFX9-NEXT:    s_mul_i32 s3, s0, s3
+; GFX9-NEXT:    s_mul_i32 s4, s0, s2
+; GFX9-NEXT:    s_mul_hi_u32 s0, s0, s2
+; GFX9-NEXT:    s_add_i32 s1, s1, s3
+; GFX9-NEXT:    s_add_i32 s1, s1, s0
+; GFX9-NEXT:    s_mov_b32 s0, s4
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: s_mul_i33:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_mul_i32 s1, s1, s2
+; GFX10-NEXT:    s_mul_i32 s3, s0, s3
+; GFX10-NEXT:    s_mul_hi_u32 s4, s0, s2
+; GFX10-NEXT:    s_add_i32 s1, s1, s3
+; GFX10-NEXT:    s_mul_i32 s0, s0, s2
+; GFX10-NEXT:    s_add_i32 s1, s1, s4
+; GFX10-NEXT:    ; return to shader part epilog
+  %result = mul i33 %num, %den
+  ret i33 %result
+}
+
 define amdgpu_ps i64 @s_mul_i64(i64 inreg %num, i64 inreg %den) {
 ; GFX7-LABEL: s_mul_i64:
 ; GFX7:       ; %bb.0:

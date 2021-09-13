@@ -1864,9 +1864,9 @@ SelectionDAGISel::FinishBasicBlock() {
       // test, and delete the last bit test.
 
       MachineBasicBlock *NextMBB;
-      if (BTB.ContiguousRange && j + 2 == ej) {
-        // Second-to-last bit-test with contiguous range: fall through to the
-        // target of the final bit test.
+      if ((BTB.ContiguousRange || BTB.FallthroughUnreachable) && j + 2 == ej) {
+        // Second-to-last bit-test with contiguous range or omitted range
+        // check: fall through to the target of the final bit test.
         NextMBB = BTB.Cases[j + 1].TargetBB;
       } else if (j + 1 == ej) {
         // For the last bit test, fall through to Default.
@@ -1883,7 +1883,7 @@ SelectionDAGISel::FinishBasicBlock() {
       SDB->clear();
       CodeGenAndEmitDAG();
 
-      if (BTB.ContiguousRange && j + 2 == ej) {
+      if ((BTB.ContiguousRange || BTB.FallthroughUnreachable) && j + 2 == ej) {
         // Since we're not going to use the final bit test, remove it.
         BTB.Cases.pop_back();
         break;

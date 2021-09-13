@@ -93,7 +93,7 @@ EXTERN void __tgt_target_data_begin_mapper(ident_t *loc, int64_t device_id,
   TIMESCOPE_WITH_IDENT(loc);
   DP("Entering data begin region for device %" PRId64 " with %d mappings\n",
      device_id, arg_num);
-  if (checkDeviceAndCtors(device_id, loc) != OFFLOAD_SUCCESS) {
+  if (checkDeviceAndCtors(device_id, loc)) {
     DP("Not offloading to device %" PRId64 "\n", device_id);
     return;
   }
@@ -162,7 +162,7 @@ EXTERN void __tgt_target_data_end_mapper(ident_t *loc, int64_t device_id,
                                          void **arg_mappers) {
   TIMESCOPE_WITH_IDENT(loc);
   DP("Entering data end region with %d mappings\n", arg_num);
-  if (checkDeviceAndCtors(device_id, loc) != OFFLOAD_SUCCESS) {
+  if (checkDeviceAndCtors(device_id, loc)) {
     DP("Not offloading to device %" PRId64 "\n", device_id);
     return;
   }
@@ -226,7 +226,7 @@ EXTERN void __tgt_target_data_update_mapper(ident_t *loc, int64_t device_id,
                                             void **arg_mappers) {
   TIMESCOPE_WITH_IDENT(loc);
   DP("Entering data update with %d mappings\n", arg_num);
-  if (checkDeviceAndCtors(device_id, loc) != OFFLOAD_SUCCESS) {
+  if (checkDeviceAndCtors(device_id, loc)) {
     DP("Not offloading to device %" PRId64 "\n", device_id);
     return;
   }
@@ -282,7 +282,7 @@ EXTERN int __tgt_target_mapper(ident_t *loc, int64_t device_id, void *host_ptr,
   DP("Entering target region with entry point " DPxMOD " and device Id %" PRId64
      "\n",
      DPxPTR(host_ptr), device_id);
-  if (checkDeviceAndCtors(device_id, loc) != OFFLOAD_SUCCESS) {
+  if (checkDeviceAndCtors(device_id, loc)) {
     DP("Not offloading to device %" PRId64 "\n", device_id);
     return OFFLOAD_FAIL;
   }
@@ -355,7 +355,7 @@ EXTERN int __tgt_target_teams_mapper(ident_t *loc, int64_t device_id,
   DP("Entering target region with entry point " DPxMOD " and device Id %" PRId64
      "\n",
      DPxPTR(host_ptr), device_id);
-  if (checkDeviceAndCtors(device_id, loc) != OFFLOAD_SUCCESS) {
+  if (checkDeviceAndCtors(device_id, loc)) {
     DP("Not offloading to device %" PRId64 "\n", device_id);
     return OFFLOAD_FAIL;
   }
@@ -429,7 +429,7 @@ EXTERN void __kmpc_push_target_tripcount(int64_t device_id,
 EXTERN void __kmpc_push_target_tripcount_mapper(ident_t *loc, int64_t device_id,
                                                 uint64_t loop_tripcount) {
   TIMESCOPE_WITH_IDENT(loc);
-  if (checkDeviceAndCtors(device_id, loc) != OFFLOAD_SUCCESS) {
+  if (checkDeviceAndCtors(device_id, loc)) {
     DP("Not offloading to device %" PRId64 "\n", device_id);
     return;
   }

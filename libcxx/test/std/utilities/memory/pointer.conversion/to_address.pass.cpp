@@ -139,6 +139,18 @@ constexpr bool test() {
     assert(std::to_address(p8b) == p8_nil);
     ASSERT_SAME_TYPE(decltype(std::to_address(p8b)), decltype(p8_nil));
 
+    int p9[2] = {};
+    assert(std::to_address(p9) == p9);
+    ASSERT_SAME_TYPE(decltype(std::to_address(p9)), int*);
+
+    const int p10[2] = {};
+    assert(std::to_address(p10) == p10);
+    ASSERT_SAME_TYPE(decltype(std::to_address(p10)), const int*);
+
+    int (*p11)() = nullptr;
+    assert(std::to_address(&p11) == &p11);
+    ASSERT_SAME_TYPE(decltype(std::to_address(&p11)), int(**)());
+
     return true;
 }
 

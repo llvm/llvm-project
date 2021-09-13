@@ -2080,8 +2080,7 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
           // least if they are loop invariant.
           // TODO: Loop variant strides should in theory work, too, but
           // this requires further testing.
-          const SCEV *PtrScev =
-              replaceSymbolicStrideSCEV(PSE, llvm::ValueToValueMap(), Ptr);
+          const SCEV *PtrScev = PSE.getSE()->getSCEV(Ptr);
           if (auto AR = dyn_cast<SCEVAddRecExpr>(PtrScev)) {
             const SCEV *Step = AR->getStepRecurrence(*PSE.getSE());
             if (PSE.getSE()->isLoopInvariant(Step, L))

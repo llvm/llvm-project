@@ -92,7 +92,8 @@ public:
                             const MCAsmLayout &Layout) const override;
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;
-  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
+  bool writeNopData(raw_ostream &OS, uint64_t Count,
+                    const MCSubtargetInfo *STI) const override;
 
   unsigned getFixupKindContainereSizeInBytes(unsigned Kind) const;
 
@@ -456,7 +457,8 @@ void AArch64AsmBackend::relaxInstruction(MCInst &Inst,
   llvm_unreachable("AArch64AsmBackend::relaxInstruction() unimplemented");
 }
 
-bool AArch64AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
+bool AArch64AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
+                                     const MCSubtargetInfo *STI) const {
   // If the count is not 4-byte aligned, we must be writing data into the text
   // section (otherwise we have unaligned instructions, and thus have far
   // bigger problems), so just write zeros instead.

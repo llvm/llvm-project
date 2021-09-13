@@ -699,7 +699,7 @@ static Constant *stripAndComputeConstantOffsets(const DataLayout &DL, Value *&V,
   assert(V->getType()->isPtrOrPtrVectorTy());
 
   Type *IntIdxTy = DL.getIndexType(V->getType())->getScalarType();
-  APInt Offset = APInt::getNullValue(IntIdxTy->getIntegerBitWidth());
+  APInt Offset = APInt::getZero(IntIdxTy->getIntegerBitWidth());
 
   V = V->stripAndAccumulateConstantOffsets(DL, Offset, AllowNonInbounds);
   // As that strip may trace through `addrspacecast`, need to sext or trunc
@@ -1765,7 +1765,7 @@ static Value *simplifyAndOrOfICmpsWithLimitConst(ICmpInst *Cmp0, ICmpInst *Cmp1,
   if (match(Cmp0->getOperand(1), m_APInt(C)))
     MinMaxC = HasNotOp ? ~*C : *C;
   else if (isa<ConstantPointerNull>(Cmp0->getOperand(1)))
-    MinMaxC = APInt::getNullValue(8);
+    MinMaxC = APInt::getZero(8);
   else
     return nullptr;
 
@@ -3672,7 +3672,7 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
         Constant *NewLHS = ConstantExpr::getGetElementPtr(
             GLHS->getSourceElementType(), Null, IndicesLHS);
 
-        SmallVector<Value *, 4> IndicesRHS(GRHS->idx_begin(), GRHS->idx_end());
+        SmallVector<Value *, 4> IndicesRHS(GRHS->indices());
         Constant *NewRHS = ConstantExpr::getGetElementPtr(
             GLHS->getSourceElementType(), Null, IndicesRHS);
         Constant *NewICmp = ConstantExpr::getICmp(Pred, NewLHS, NewRHS);

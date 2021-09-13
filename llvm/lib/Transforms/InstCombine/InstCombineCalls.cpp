@@ -953,7 +953,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   if (auto *IIFVTy = dyn_cast<FixedVectorType>(II->getType())) {
     auto VWidth = IIFVTy->getNumElements();
     APInt UndefElts(VWidth, 0);
-    APInt AllOnesEltMask(APInt::getAllOnesValue(VWidth));
+    APInt AllOnesEltMask(APInt::getAllOnes(VWidth));
     if (Value *V = SimplifyDemandedVectorElts(II, AllOnesEltMask, UndefElts)) {
       if (V != II)
         return replaceInstUsesWith(*II, V);
@@ -2884,7 +2884,7 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
     // that are compatible with being a vararg call argument.
     unsigned SRetIdx;
     if (CallerPAL.hasAttrSomewhere(Attribute::StructRet, &SRetIdx) &&
-        SRetIdx > FT->getNumParams())
+        SRetIdx - AttributeList::FirstArgIndex >= FT->getNumParams())
       return false;
   }
 

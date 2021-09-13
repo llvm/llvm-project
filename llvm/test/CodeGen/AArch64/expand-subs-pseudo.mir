@@ -1,0 +1,21 @@
+# RUN: llc -run-pass=aarch64-expand-pseudo -mtriple=aarch64-unknown-linux-gnu -o - %s | FileCheck %s
+
+---
+# CHECK-LABEL:  name: test
+# CHECK-LABEL:  bb.0:
+# CHECK:          $w5 = SUBSWrs renamable $w3, renamable $w2, 0, implicit-def dead $nzcv
+# CHECK-NEXT:     $w6 = SUBSWrs renamable $w5, renamable $w3, 0, implicit-def $nzcv
+# CHECK-NEXT:     RET undef $lr
+#
+name:            test
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w5, $w6, $x2, $x3
+
+    renamable $w5 = nsw SUBSWrr renamable $w3, renamable $w2, implicit-def dead $nzcv
+    renamable $w6 = nsw SUBSWrr renamable $w5, renamable $w3, implicit-def $nzcv
+    RET_ReallyLR
+
+...

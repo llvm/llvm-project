@@ -28,8 +28,9 @@
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
-#include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -200,6 +201,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::UADDSAT, MVT::i32, Custom);
     setOperationAction(ISD::USUBSAT, MVT::i32, Custom);
   } else {
+    setLibcallName(RTLIB::SHL_I128, nullptr);
+    setLibcallName(RTLIB::SRL_I128, nullptr);
+    setLibcallName(RTLIB::SRA_I128, nullptr);
     setLibcallName(RTLIB::MUL_I128, nullptr);
     setLibcallName(RTLIB::MULO_I64, nullptr);
   }
@@ -557,6 +561,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::MGATHER, VT, Custom);
       setOperationAction(ISD::MSCATTER, VT, Custom);
 
+      setOperationAction(ISD::VP_LOAD, VT, Custom);
+      setOperationAction(ISD::VP_STORE, VT, Custom);
+      setOperationAction(ISD::VP_GATHER, VT, Custom);
+      setOperationAction(ISD::VP_SCATTER, VT, Custom);
+
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
@@ -620,6 +629,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::MSTORE, VT, Custom);
       setOperationAction(ISD::MGATHER, VT, Custom);
       setOperationAction(ISD::MSCATTER, VT, Custom);
+
+      setOperationAction(ISD::VP_LOAD, VT, Custom);
+      setOperationAction(ISD::VP_STORE, VT, Custom);
+      setOperationAction(ISD::VP_GATHER, VT, Custom);
+      setOperationAction(ISD::VP_SCATTER, VT, Custom);
 
       setOperationAction(ISD::SELECT, VT, Custom);
       setOperationAction(ISD::SELECT_CC, VT, Expand);
@@ -730,6 +744,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::MSTORE, VT, Custom);
         setOperationAction(ISD::MGATHER, VT, Custom);
         setOperationAction(ISD::MSCATTER, VT, Custom);
+
+        setOperationAction(ISD::VP_LOAD, VT, Custom);
+        setOperationAction(ISD::VP_STORE, VT, Custom);
+        setOperationAction(ISD::VP_GATHER, VT, Custom);
+        setOperationAction(ISD::VP_SCATTER, VT, Custom);
+
         setOperationAction(ISD::ADD, VT, Custom);
         setOperationAction(ISD::MUL, VT, Custom);
         setOperationAction(ISD::SUB, VT, Custom);
@@ -805,6 +825,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::MSTORE, VT, Custom);
         setOperationAction(ISD::MGATHER, VT, Custom);
         setOperationAction(ISD::MSCATTER, VT, Custom);
+
+        setOperationAction(ISD::VP_LOAD, VT, Custom);
+        setOperationAction(ISD::VP_STORE, VT, Custom);
+        setOperationAction(ISD::VP_GATHER, VT, Custom);
+        setOperationAction(ISD::VP_SCATTER, VT, Custom);
+
         setOperationAction(ISD::FADD, VT, Custom);
         setOperationAction(ISD::FSUB, VT, Custom);
         setOperationAction(ISD::FMUL, VT, Custom);
@@ -873,6 +899,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine(ISD::FCOPYSIGN);
     setTargetDAGCombine(ISD::MGATHER);
     setTargetDAGCombine(ISD::MSCATTER);
+    setTargetDAGCombine(ISD::VP_GATHER);
+    setTargetDAGCombine(ISD::VP_SCATTER);
     setTargetDAGCombine(ISD::SRA);
     setTargetDAGCombine(ISD::SRL);
     setTargetDAGCombine(ISD::SHL);
@@ -1001,6 +1029,59 @@ bool RISCVTargetLowering::isCheapToSpeculateCttz() const {
 
 bool RISCVTargetLowering::isCheapToSpeculateCtlz() const {
   return Subtarget.hasStdExtZbb();
+}
+
+/// Check if sinking \p I's operands to I's basic block is profitable, because
+/// the operands can be folded into a target instruction, e.g.
+/// splats of scalars can fold into vector instructions.
+bool RISCVTargetLowering::shouldSinkOperands(
+    Instruction *I, SmallVectorImpl<Use *> &Ops) const {
+  using namespace llvm::PatternMatch;
+
+  if (!I->getType()->isVectorTy() || !Subtarget.hasStdExtV())
+    return false;
+
+  auto IsSinker = [&](Instruction *I, int Operand) {
+    switch (I->getOpcode()) {
+    case Instruction::Add:
+    case Instruction::Sub:
+    case Instruction::Mul:
+      return true;
+    case Instruction::Shl:
+    case Instruction::LShr:
+    case Instruction::AShr:
+      return Operand == 1;
+    default:
+      return false;
+    }
+  };
+
+  for (auto OpIdx : enumerate(I->operands())) {
+    if (!IsSinker(I, OpIdx.index()))
+      continue;
+
+    Instruction *Op = dyn_cast<Instruction>(OpIdx.value().get());
+    // Make sure we are not already sinking this operand
+    if (!Op || any_of(Ops, [&](Use *U) { return U->get() == Op; }))
+      continue;
+
+    // We are looking for a splat that can be sunk.
+    if (!match(Op, m_Shuffle(m_InsertElt(m_Undef(), m_Value(), m_ZeroInt()),
+                             m_Undef(), m_ZeroMask())))
+      continue;
+
+    // All uses of the shuffle should be sunk to avoid duplicating it across gpr
+    // and vector registers
+    for (Use &U : Op->uses()) {
+      Instruction *Insn = cast<Instruction>(U.getUser());
+      if (!IsSinker(Insn, U.getOperandNo()))
+        return false;
+    }
+
+    Ops.push_back(&Op->getOperandUse(0));
+    Ops.push_back(&OpIdx.value());
+  }
+  return true;
 }
 
 bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
@@ -2630,9 +2711,11 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       return lowerFixedLengthVectorStoreToRVV(Op, DAG);
     return Op;
   case ISD::MLOAD:
-    return lowerMLOAD(Op, DAG);
+  case ISD::VP_LOAD:
+    return lowerMaskedLoad(Op, DAG);
   case ISD::MSTORE:
-    return lowerMSTORE(Op, DAG);
+  case ISD::VP_STORE:
+    return lowerMaskedStore(Op, DAG);
   case ISD::SETCC:
     return lowerFixedLengthVectorSetccToRVV(Op, DAG);
   case ISD::ADD:
@@ -2714,9 +2797,11 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FCOPYSIGN:
     return lowerFixedLengthVectorFCOPYSIGNToRVV(Op, DAG);
   case ISD::MGATHER:
-    return lowerMGATHER(Op, DAG);
+  case ISD::VP_GATHER:
+    return lowerMaskedGather(Op, DAG);
   case ISD::MSCATTER:
-    return lowerMSCATTER(Op, DAG);
+  case ISD::VP_SCATTER:
+    return lowerMaskedScatter(Op, DAG);
   case ISD::FLT_ROUNDS_:
     return lowerGET_ROUNDING(Op, DAG);
   case ISD::SET_ROUNDING:
@@ -4430,16 +4515,29 @@ RISCVTargetLowering::lowerFixedLengthVectorStoreToRVV(SDValue Op,
       Store->getMemoryVT(), Store->getMemOperand());
 }
 
-SDValue RISCVTargetLowering::lowerMLOAD(SDValue Op, SelectionDAG &DAG) const {
-  auto *Load = cast<MaskedLoadSDNode>(Op);
-
+SDValue RISCVTargetLowering::lowerMaskedLoad(SDValue Op,
+                                             SelectionDAG &DAG) const {
   SDLoc DL(Op);
   MVT VT = Op.getSimpleValueType();
-  MVT XLenVT = Subtarget.getXLenVT();
 
-  SDValue Mask = Load->getMask();
-  SDValue PassThru = Load->getPassThru();
-  SDValue VL;
+  const auto *MemSD = cast<MemSDNode>(Op);
+  EVT MemVT = MemSD->getMemoryVT();
+  MachineMemOperand *MMO = MemSD->getMemOperand();
+  SDValue Chain = MemSD->getChain();
+  SDValue BasePtr = MemSD->getBasePtr();
+
+  SDValue Mask, PassThru, VL;
+  if (const auto *VPLoad = dyn_cast<VPLoadSDNode>(Op)) {
+    Mask = VPLoad->getMask();
+    PassThru = DAG.getUNDEF(VT);
+    VL = VPLoad->getVectorLength();
+  } else {
+    const auto *MLoad = cast<MaskedLoadSDNode>(Op);
+    Mask = MLoad->getMask();
+    PassThru = MLoad->getPassThru();
+  }
+
+  MVT XLenVT = Subtarget.getXLenVT();
 
   MVT ContainerVT = VT;
   if (VT.isFixedLengthVector()) {
@@ -4448,18 +4546,17 @@ SDValue RISCVTargetLowering::lowerMLOAD(SDValue Op, SelectionDAG &DAG) const {
 
     Mask = convertToScalableVector(MaskVT, Mask, DAG, Subtarget);
     PassThru = convertToScalableVector(ContainerVT, PassThru, DAG, Subtarget);
-    VL = DAG.getConstant(VT.getVectorNumElements(), DL, XLenVT);
-  } else
-    VL = DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, XLenVT);
+  }
+
+  if (!VL)
+    VL = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).second;
 
   SDVTList VTs = DAG.getVTList({ContainerVT, MVT::Other});
   SDValue IntID = DAG.getTargetConstant(Intrinsic::riscv_vle_mask, DL, XLenVT);
-  SDValue Ops[] = {Load->getChain(),   IntID, PassThru,
-                   Load->getBasePtr(), Mask,  VL};
+  SDValue Ops[] = {Chain, IntID, PassThru, BasePtr, Mask, VL};
   SDValue Result =
-      DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops,
-                              Load->getMemoryVT(), Load->getMemOperand());
-  SDValue Chain = Result.getValue(1);
+      DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops, MemVT, MMO);
+  Chain = Result.getValue(1);
 
   if (VT.isFixedLengthVector())
     Result = convertFromScalableVector(VT, Result, DAG, Subtarget);
@@ -4467,15 +4564,29 @@ SDValue RISCVTargetLowering::lowerMLOAD(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getMergeValues({Result, Chain}, DL);
 }
 
-SDValue RISCVTargetLowering::lowerMSTORE(SDValue Op, SelectionDAG &DAG) const {
-  auto *Store = cast<MaskedStoreSDNode>(Op);
-
+SDValue RISCVTargetLowering::lowerMaskedStore(SDValue Op,
+                                              SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  SDValue Val = Store->getValue();
-  SDValue Mask = Store->getMask();
+
+  const auto *MemSD = cast<MemSDNode>(Op);
+  EVT MemVT = MemSD->getMemoryVT();
+  MachineMemOperand *MMO = MemSD->getMemOperand();
+  SDValue Chain = MemSD->getChain();
+  SDValue BasePtr = MemSD->getBasePtr();
+  SDValue Val, Mask, VL;
+
+  if (const auto *VPStore = dyn_cast<VPStoreSDNode>(Op)) {
+    Val = VPStore->getValue();
+    Mask = VPStore->getMask();
+    VL = VPStore->getVectorLength();
+  } else {
+    const auto *MStore = cast<MaskedStoreSDNode>(Op);
+    Val = MStore->getValue();
+    Mask = MStore->getMask();
+  }
+
   MVT VT = Val.getSimpleValueType();
   MVT XLenVT = Subtarget.getXLenVT();
-  SDValue VL;
 
   MVT ContainerVT = VT;
   if (VT.isFixedLengthVector()) {
@@ -4484,15 +4595,15 @@ SDValue RISCVTargetLowering::lowerMSTORE(SDValue Op, SelectionDAG &DAG) const {
 
     Val = convertToScalableVector(ContainerVT, Val, DAG, Subtarget);
     Mask = convertToScalableVector(MaskVT, Mask, DAG, Subtarget);
-    VL = DAG.getConstant(VT.getVectorNumElements(), DL, XLenVT);
-  } else
-    VL = DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, XLenVT);
+  }
+
+  if (!VL)
+    VL = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).second;
 
   SDValue IntID = DAG.getTargetConstant(Intrinsic::riscv_vse_mask, DL, XLenVT);
   return DAG.getMemIntrinsicNode(
       ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other),
-      {Store->getChain(), IntID, Val, Store->getBasePtr(), Mask, VL},
-      Store->getMemoryVT(), Store->getMemOperand());
+      {Chain, IntID, Val, BasePtr, Mask, VL}, MemVT, MMO);
 }
 
 SDValue
@@ -4688,36 +4799,57 @@ SDValue RISCVTargetLowering::lowerVPOp(SDValue Op, SelectionDAG &DAG,
   return convertFromScalableVector(VT, VPOp, DAG, Subtarget);
 }
 
-// Custom lower MGATHER to a legalized form for RVV. It will then be matched to
-// a RVV indexed load. The RVV indexed load instructions only support the
-// "unsigned unscaled" addressing mode; indices are implicitly zero-extended or
-// truncated to XLEN and are treated as byte offsets. Any signed or scaled
-// indexing is extended to the XLEN value type and scaled accordingly.
-SDValue RISCVTargetLowering::lowerMGATHER(SDValue Op, SelectionDAG &DAG) const {
-  auto *MGN = cast<MaskedGatherSDNode>(Op.getNode());
+// Custom lower MGATHER/VP_GATHER to a legalized form for RVV. It will then be
+// matched to a RVV indexed load. The RVV indexed load instructions only
+// support the "unsigned unscaled" addressing mode; indices are implicitly
+// zero-extended or truncated to XLEN and are treated as byte offsets. Any
+// signed or scaled indexing is extended to the XLEN value type and scaled
+// accordingly.
+SDValue RISCVTargetLowering::lowerMaskedGather(SDValue Op,
+                                               SelectionDAG &DAG) const {
   SDLoc DL(Op);
-
-  SDValue Index = MGN->getIndex();
-  SDValue Mask = MGN->getMask();
-  SDValue PassThru = MGN->getPassThru();
-
   MVT VT = Op.getSimpleValueType();
+
+  const auto *MemSD = cast<MemSDNode>(Op.getNode());
+  EVT MemVT = MemSD->getMemoryVT();
+  MachineMemOperand *MMO = MemSD->getMemOperand();
+  SDValue Chain = MemSD->getChain();
+  SDValue BasePtr = MemSD->getBasePtr();
+
+  ISD::LoadExtType LoadExtType;
+  SDValue Index, Mask, PassThru, VL;
+
+  if (auto *VPGN = dyn_cast<VPGatherSDNode>(Op.getNode())) {
+    Index = VPGN->getIndex();
+    Mask = VPGN->getMask();
+    PassThru = DAG.getUNDEF(VT);
+    VL = VPGN->getVectorLength();
+    // VP doesn't support extending loads.
+    LoadExtType = ISD::NON_EXTLOAD;
+  } else {
+    // Else it must be a MGATHER.
+    auto *MGN = cast<MaskedGatherSDNode>(Op.getNode());
+    Index = MGN->getIndex();
+    Mask = MGN->getMask();
+    PassThru = MGN->getPassThru();
+    LoadExtType = MGN->getExtensionType();
+  }
+
   MVT IndexVT = Index.getSimpleValueType();
   MVT XLenVT = Subtarget.getXLenVT();
 
   assert(VT.getVectorElementCount() == IndexVT.getVectorElementCount() &&
          "Unexpected VTs!");
-  assert(MGN->getBasePtr().getSimpleValueType() == XLenVT &&
-         "Unexpected pointer type");
+  assert(BasePtr.getSimpleValueType() == XLenVT && "Unexpected pointer type");
   // Targets have to explicitly opt-in for extending vector loads.
-  assert(MGN->getExtensionType() == ISD::NON_EXTLOAD &&
-         "Unexpected extending MGATHER");
+  assert(LoadExtType == ISD::NON_EXTLOAD &&
+         "Unexpected extending MGATHER/VP_GATHER");
+  (void)LoadExtType;
 
   // If the mask is known to be all ones, optimize to an unmasked intrinsic;
   // the selection of the masked intrinsics doesn't do this for us.
   bool IsUnmasked = ISD::isConstantSplatVectorAllOnes(Mask.getNode());
 
-  SDValue VL;
   MVT ContainerVT = VT;
   if (VT.isFixedLengthVector()) {
     // We need to use the larger of the result and index type to determine the
@@ -4740,18 +4872,17 @@ SDValue RISCVTargetLowering::lowerMGATHER(SDValue Op, SelectionDAG &DAG) const {
       Mask = convertToScalableVector(MaskVT, Mask, DAG, Subtarget);
       PassThru = convertToScalableVector(ContainerVT, PassThru, DAG, Subtarget);
     }
+  }
 
-    VL = DAG.getConstant(VT.getVectorNumElements(), DL, XLenVT);
-  } else
-    VL = DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, XLenVT);
+  if (!VL)
+    VL = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).second;
 
   unsigned IntID =
       IsUnmasked ? Intrinsic::riscv_vluxei : Intrinsic::riscv_vluxei_mask;
-  SmallVector<SDValue, 8> Ops{MGN->getChain(),
-                              DAG.getTargetConstant(IntID, DL, XLenVT)};
+  SmallVector<SDValue, 8> Ops{Chain, DAG.getTargetConstant(IntID, DL, XLenVT)};
   if (!IsUnmasked)
     Ops.push_back(PassThru);
-  Ops.push_back(MGN->getBasePtr());
+  Ops.push_back(BasePtr);
   Ops.push_back(Index);
   if (!IsUnmasked)
     Ops.push_back(Mask);
@@ -4759,9 +4890,8 @@ SDValue RISCVTargetLowering::lowerMGATHER(SDValue Op, SelectionDAG &DAG) const {
 
   SDVTList VTs = DAG.getVTList({ContainerVT, MVT::Other});
   SDValue Result =
-      DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops,
-                              MGN->getMemoryVT(), MGN->getMemOperand());
-  SDValue Chain = Result.getValue(1);
+      DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops, MemVT, MMO);
+  Chain = Result.getValue(1);
 
   if (VT.isFixedLengthVector())
     Result = convertFromScalableVector(VT, Result, DAG, Subtarget);
@@ -4769,18 +4899,39 @@ SDValue RISCVTargetLowering::lowerMGATHER(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getMergeValues({Result, Chain}, DL);
 }
 
-// Custom lower MSCATTER to a legalized form for RVV. It will then be matched to
-// a RVV indexed store. The RVV indexed store instructions only support the
-// "unsigned unscaled" addressing mode; indices are implicitly zero-extended or
-// truncated to XLEN and are treated as byte offsets. Any signed or scaled
-// indexing is extended to the XLEN value type and scaled accordingly.
-SDValue RISCVTargetLowering::lowerMSCATTER(SDValue Op,
-                                           SelectionDAG &DAG) const {
-  auto *MSN = cast<MaskedScatterSDNode>(Op.getNode());
+// Custom lower MSCATTER/VP_SCATTER to a legalized form for RVV. It will then be
+// matched to a RVV indexed store. The RVV indexed store instructions only
+// support the "unsigned unscaled" addressing mode; indices are implicitly
+// zero-extended or truncated to XLEN and are treated as byte offsets. Any
+// signed or scaled indexing is extended to the XLEN value type and scaled
+// accordingly.
+SDValue RISCVTargetLowering::lowerMaskedScatter(SDValue Op,
+                                                SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  SDValue Index = MSN->getIndex();
-  SDValue Mask = MSN->getMask();
-  SDValue Val = MSN->getValue();
+  const auto *MemSD = cast<MemSDNode>(Op.getNode());
+  EVT MemVT = MemSD->getMemoryVT();
+  MachineMemOperand *MMO = MemSD->getMemOperand();
+  SDValue Chain = MemSD->getChain();
+  SDValue BasePtr = MemSD->getBasePtr();
+
+  bool IsTruncatingStore = false;
+  SDValue Index, Mask, Val, VL;
+
+  if (auto *VPSN = dyn_cast<VPScatterSDNode>(Op.getNode())) {
+    Index = VPSN->getIndex();
+    Mask = VPSN->getMask();
+    Val = VPSN->getValue();
+    VL = VPSN->getVectorLength();
+    // VP doesn't support truncating stores.
+    IsTruncatingStore = false;
+  } else {
+    // Else it must be a MSCATTER.
+    auto *MSN = cast<MaskedScatterSDNode>(Op.getNode());
+    Index = MSN->getIndex();
+    Mask = MSN->getMask();
+    Val = MSN->getValue();
+    IsTruncatingStore = MSN->isTruncatingStore();
+  }
 
   MVT VT = Val.getSimpleValueType();
   MVT IndexVT = Index.getSimpleValueType();
@@ -4788,21 +4939,20 @@ SDValue RISCVTargetLowering::lowerMSCATTER(SDValue Op,
 
   assert(VT.getVectorElementCount() == IndexVT.getVectorElementCount() &&
          "Unexpected VTs!");
-  assert(MSN->getBasePtr().getSimpleValueType() == XLenVT &&
-         "Unexpected pointer type");
+  assert(BasePtr.getSimpleValueType() == XLenVT && "Unexpected pointer type");
   // Targets have to explicitly opt-in for extending vector loads and
   // truncating vector stores.
-  assert(!MSN->isTruncatingStore() && "Unexpected extending MSCATTER");
+  assert(!IsTruncatingStore && "Unexpected truncating MSCATTER/VP_SCATTER");
+  (void)IsTruncatingStore;
 
   // If the mask is known to be all ones, optimize to an unmasked intrinsic;
   // the selection of the masked intrinsics doesn't do this for us.
   bool IsUnmasked = ISD::isConstantSplatVectorAllOnes(Mask.getNode());
 
-  SDValue VL;
+  MVT ContainerVT = VT;
   if (VT.isFixedLengthVector()) {
     // We need to use the larger of the value and index type to determine the
     // scalable type to use so we don't increase LMUL for any operand/result.
-    MVT ContainerVT;
     if (VT.bitsGE(IndexVT)) {
       ContainerVT = getContainerForFixedLengthVector(VT);
       IndexVT = MVT::getVectorVT(IndexVT.getVectorElementType(),
@@ -4821,24 +4971,23 @@ SDValue RISCVTargetLowering::lowerMSCATTER(SDValue Op,
           MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
       Mask = convertToScalableVector(MaskVT, Mask, DAG, Subtarget);
     }
+  }
 
-    VL = DAG.getConstant(VT.getVectorNumElements(), DL, XLenVT);
-  } else
-    VL = DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, XLenVT);
+  if (!VL)
+    VL = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).second;
 
   unsigned IntID =
       IsUnmasked ? Intrinsic::riscv_vsoxei : Intrinsic::riscv_vsoxei_mask;
-  SmallVector<SDValue, 8> Ops{MSN->getChain(),
-                              DAG.getTargetConstant(IntID, DL, XLenVT)};
+  SmallVector<SDValue, 8> Ops{Chain, DAG.getTargetConstant(IntID, DL, XLenVT)};
   Ops.push_back(Val);
-  Ops.push_back(MSN->getBasePtr());
+  Ops.push_back(BasePtr);
   Ops.push_back(Index);
   if (!IsUnmasked)
     Ops.push_back(Mask);
   Ops.push_back(VL);
 
-  return DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, DL, MSN->getVTList(), Ops,
-                                 MSN->getMemoryVT(), MSN->getMemOperand());
+  return DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, DL,
+                                 DAG.getVTList(MVT::Other), Ops, MemVT, MMO);
 }
 
 SDValue RISCVTargetLowering::lowerGET_ROUNDING(SDValue Op,
@@ -6336,18 +6485,33 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                        DAG.getNode(ISD::FNEG, DL, VT, NewFPExtRound));
   }
   case ISD::MGATHER:
-  case ISD::MSCATTER: {
+  case ISD::MSCATTER:
+  case ISD::VP_GATHER:
+  case ISD::VP_SCATTER: {
     if (!DCI.isBeforeLegalize())
       break;
-    MaskedGatherScatterSDNode *MGSN = cast<MaskedGatherScatterSDNode>(N);
-    SDValue Index = MGSN->getIndex();
+    SDValue Index, ScaleOp;
+    bool IsIndexScaled = false;
+    bool IsIndexSigned = false;
+    if (const auto *VPGSN = dyn_cast<VPGatherScatterSDNode>(N)) {
+      Index = VPGSN->getIndex();
+      ScaleOp = VPGSN->getScale();
+      IsIndexScaled = VPGSN->isIndexScaled();
+      IsIndexSigned = VPGSN->isIndexSigned();
+    } else {
+      const auto *MGSN = cast<MaskedGatherScatterSDNode>(N);
+      Index = MGSN->getIndex();
+      ScaleOp = MGSN->getScale();
+      IsIndexScaled = MGSN->isIndexScaled();
+      IsIndexSigned = MGSN->isIndexSigned();
+    }
     EVT IndexVT = Index.getValueType();
     MVT XLenVT = Subtarget.getXLenVT();
     // RISCV indexed loads only support the "unsigned unscaled" addressing
     // mode, so anything else must be manually legalized.
-    bool NeedsIdxLegalization = MGSN->isIndexScaled() ||
-                                (MGSN->isIndexSigned() &&
-                                 IndexVT.getVectorElementType().bitsLT(XLenVT));
+    bool NeedsIdxLegalization =
+        IsIndexScaled ||
+        (IsIndexSigned && IndexVT.getVectorElementType().bitsLT(XLenVT));
     if (!NeedsIdxLegalization)
       break;
 
@@ -6356,36 +6520,48 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // Any index legalization should first promote to XLenVT, so we don't lose
     // bits when scaling. This may create an illegal index type so we let
     // LLVM's legalization take care of the splitting.
+    // FIXME: LLVM can't split VP_GATHER or VP_SCATTER yet.
     if (IndexVT.getVectorElementType().bitsLT(XLenVT)) {
       IndexVT = IndexVT.changeVectorElementType(XLenVT);
-      Index = DAG.getNode(MGSN->isIndexSigned() ? ISD::SIGN_EXTEND
-                                                : ISD::ZERO_EXTEND,
+      Index = DAG.getNode(IsIndexSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND,
                           DL, IndexVT, Index);
     }
 
-    unsigned Scale = N->getConstantOperandVal(5);
-    if (MGSN->isIndexScaled() && Scale != 1) {
+    unsigned Scale = cast<ConstantSDNode>(ScaleOp)->getZExtValue();
+    if (IsIndexScaled && Scale != 1) {
       // Manually scale the indices by the element size.
       // TODO: Sanitize the scale operand here?
+      // TODO: For VP nodes, should we use VP_SHL here?
       assert(isPowerOf2_32(Scale) && "Expecting power-of-two types");
       SDValue SplatScale = DAG.getConstant(Log2_32(Scale), DL, IndexVT);
       Index = DAG.getNode(ISD::SHL, DL, IndexVT, Index, SplatScale);
     }
 
     ISD::MemIndexType NewIndexTy = ISD::UNSIGNED_UNSCALED;
-    if (const auto *MGN = dyn_cast<MaskedGatherSDNode>(N)) {
+    if (const auto *VPGN = dyn_cast<VPGatherSDNode>(N))
+      return DAG.getGatherVP(N->getVTList(), VPGN->getMemoryVT(), DL,
+                             {VPGN->getChain(), VPGN->getBasePtr(), Index,
+                              VPGN->getScale(), VPGN->getMask(),
+                              VPGN->getVectorLength()},
+                             VPGN->getMemOperand(), NewIndexTy);
+    if (const auto *VPSN = dyn_cast<VPScatterSDNode>(N))
+      return DAG.getScatterVP(N->getVTList(), VPSN->getMemoryVT(), DL,
+                              {VPSN->getChain(), VPSN->getValue(),
+                               VPSN->getBasePtr(), Index, VPSN->getScale(),
+                               VPSN->getMask(), VPSN->getVectorLength()},
+                              VPSN->getMemOperand(), NewIndexTy);
+    if (const auto *MGN = dyn_cast<MaskedGatherSDNode>(N))
       return DAG.getMaskedGather(
-          N->getVTList(), MGSN->getMemoryVT(), DL,
-          {MGSN->getChain(), MGN->getPassThru(), MGSN->getMask(),
-           MGSN->getBasePtr(), Index, MGN->getScale()},
+          N->getVTList(), MGN->getMemoryVT(), DL,
+          {MGN->getChain(), MGN->getPassThru(), MGN->getMask(),
+           MGN->getBasePtr(), Index, MGN->getScale()},
           MGN->getMemOperand(), NewIndexTy, MGN->getExtensionType());
-    }
     const auto *MSN = cast<MaskedScatterSDNode>(N);
     return DAG.getMaskedScatter(
-        N->getVTList(), MGSN->getMemoryVT(), DL,
-        {MGSN->getChain(), MSN->getValue(), MGSN->getMask(), MGSN->getBasePtr(),
-         Index, MGSN->getScale()},
-        MGSN->getMemOperand(), NewIndexTy, MSN->isTruncatingStore());
+        N->getVTList(), MSN->getMemoryVT(), DL,
+        {MSN->getChain(), MSN->getValue(), MSN->getMask(), MSN->getBasePtr(),
+         Index, MSN->getScale()},
+        MSN->getMemOperand(), NewIndexTy, MSN->isTruncatingStore());
   }
   case RISCVISD::SRA_VL:
   case RISCVISD::SRL_VL:

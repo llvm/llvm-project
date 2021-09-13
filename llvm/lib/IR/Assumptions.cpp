@@ -11,12 +11,13 @@
 #include "llvm/IR/Assumptions.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
 
 using namespace llvm;
 
-bool llvm::hasAssumption(Function &F,
-                         const KnownAssumptionString &AssumptionStr) {
-  const Attribute &A = F.getFnAttribute(AssumptionAttrKey);
+namespace {
+bool hasAssumption(const Attribute &A,
+                   const KnownAssumptionString &AssumptionStr) {
   if (!A.isValid())
     return false;
   assert(A.isStringAttribute() && "Expected a string attribute!");
@@ -27,6 +28,23 @@ bool llvm::hasAssumption(Function &F,
   return llvm::any_of(Strings, [=](StringRef Assumption) {
     return Assumption == AssumptionStr;
   });
+}
+} // namespace
+
+bool llvm::hasAssumption(Function &F,
+                         const KnownAssumptionString &AssumptionStr) {
+  const Attribute &A = F.getFnAttribute(AssumptionAttrKey);
+  return ::hasAssumption(A, AssumptionStr);
+}
+
+bool llvm::hasAssumption(CallBase &CB,
+                         const KnownAssumptionString &AssumptionStr) {
+  if (Function *F = CB.getCalledFunction())
+    if (hasAssumption(*F, AssumptionStr))
+      return true;
+
+  const Attribute &A = CB.getFnAttr(AssumptionAttrKey);
+  return ::hasAssumption(A, AssumptionStr);
 }
 
 StringSet<> llvm::KnownAssumptionStrings({

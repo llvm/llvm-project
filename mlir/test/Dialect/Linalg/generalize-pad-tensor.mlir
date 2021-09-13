@@ -19,11 +19,11 @@ func @generalize_pad_tensor_static_shape(%arg0: tensor<1x28x28x1xf32>) -> tensor
 // CHECK-LABEL:   func @generalize_pad_tensor_dynamic_shape(
 // CHECK-SAME:                                              %[[IN:.*]]: tensor<4x?x2x?xf32>,
 // CHECK-SAME:                                              %[[OFFSET:.*]]: index) -> tensor<4x?x?x?xf32> {
-// CHECK:           %[[C0:.*]] = constant 0 : index
-// CHECK:           %[[CST:.*]] = constant 0.000000e+00 : f32
-// CHECK:           %[[C2:.*]] = constant 2 : index
-// CHECK:           %[[C1:.*]] = constant 1 : index
-// CHECK:           %[[C3:.*]] = constant 3 : index
+// CHECK-DAG:       %[[C0:.*]] = constant 0 : index
+// CHECK-DAG:       %[[CST:.*]] = constant 0.000000e+00 : f32
+// CHECK-DAG:       %[[C2:.*]] = constant 2 : index
+// CHECK-DAG:       %[[C1:.*]] = constant 1 : index
+// CHECK-DAG:       %[[C3:.*]] = constant 3 : index
 // CHECK:           %[[DIM1:.*]] = tensor.dim %[[IN]], %[[C1]] : tensor<4x?x2x?xf32>
 // CHECK:           %[[OUT_DIM2:.*]] = addi %[[OFFSET]], %[[C2]] : index
 // CHECK:           %[[DIM3:.*]] = tensor.dim %[[IN]], %[[C3]] : tensor<4x?x2x?xf32>

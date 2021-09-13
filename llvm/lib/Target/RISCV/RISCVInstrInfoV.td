@@ -667,7 +667,7 @@ multiclass VCMP_IV_X_I<string opcodestr, bits<6> funct6, Operand optype = simm5,
            Sched<[WriteVICmpI, ReadVICmpV, ReadVMask]>;
 }
 
-multiclass VCMP_IV_V_X<string opcodestr, bits<6> funct6, Operand optype = simm5, string vw = "v"> {
+multiclass VCMP_IV_V_X<string opcodestr, bits<6> funct6, string vw = "v"> {
   def V  : VALUVV<funct6, OPIVV, opcodestr # "." # vw # "v">,
            Sched<[WriteVICmpV, ReadVICmpV, ReadVICmpV, ReadVMask]>;
   def X  : VALUVX<funct6, OPIVX, opcodestr # "." # vw # "x">,

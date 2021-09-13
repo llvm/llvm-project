@@ -171,7 +171,6 @@ define void @fpround_v8f32_v8f16(<8 x float>* %x, <8 x half>* %y) {
 ; LMULMAX1-NEXT:    vfncvt.f.f.w v27, v26
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, tu, mu
 ; LMULMAX1-NEXT:    vslideup.vi v25, v27, 4
-; LMULMAX1-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
 ; LMULMAX1-NEXT:    vse16.v v25, (a1)
 ; LMULMAX1-NEXT:    ret
   %a = load <8 x float>, <8 x float>* %x
@@ -228,7 +227,6 @@ define void @fpround_v8f64_v8f16(<8 x double>* %x, <8 x half>* %y) {
 ; LMULMAX1-NEXT:    vfncvt.f.f.w v25, v26
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, tu, mu
 ; LMULMAX1-NEXT:    vslideup.vi v29, v25, 6
-; LMULMAX1-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
 ; LMULMAX1-NEXT:    vse16.v v29, (a1)
 ; LMULMAX1-NEXT:    ret
   %a = load <8 x double>, <8 x double>* %x

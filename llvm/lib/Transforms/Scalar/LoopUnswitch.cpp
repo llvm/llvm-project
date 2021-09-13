@@ -1307,8 +1307,7 @@ void LoopUnswitch::splitExitEdges(
 
   for (unsigned I = 0, E = ExitBlocks.size(); I != E; ++I) {
     BasicBlock *ExitBlock = ExitBlocks[I];
-    SmallVector<BasicBlock *, 4> Preds(pred_begin(ExitBlock),
-                                       pred_end(ExitBlock));
+    SmallVector<BasicBlock *, 4> Preds(predecessors(ExitBlock));
 
     // Although SplitBlockPredecessors doesn't preserve loop-simplify in
     // general, if we call it on all predecessors of all exits then it does.

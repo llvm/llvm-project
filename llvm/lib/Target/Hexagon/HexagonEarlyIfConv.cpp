@@ -364,7 +364,7 @@ bool HexagonEarlyIfConversion::isValidCandidate(const MachineBasicBlock *B)
     return true;
   if (B->isEHPad() || B->hasAddressTaken())
     return false;
-  if (B->succ_size() == 0)
+  if (B->succ_empty())
     return false;
 
   for (auto &MI : *B) {
@@ -570,12 +570,12 @@ bool HexagonEarlyIfConversion::isProfitable(const FlowPattern &FP) const {
     TotalPh = computePhiCost(FP.JoinB, FP);
     PredDefs += countPredicateDefs(FP.JoinB);
   } else {
-    if (FP.TrueB && FP.TrueB->succ_size() > 0) {
+    if (FP.TrueB && !FP.TrueB->succ_empty()) {
       MachineBasicBlock *SB = *FP.TrueB->succ_begin();
       TotalPh += computePhiCost(SB, FP);
       PredDefs += countPredicateDefs(SB);
     }
-    if (FP.FalseB && FP.FalseB->succ_size() > 0) {
+    if (FP.FalseB && !FP.FalseB->succ_empty()) {
       MachineBasicBlock *SB = *FP.FalseB->succ_begin();
       TotalPh += computePhiCost(SB, FP);
       PredDefs += countPredicateDefs(SB);
@@ -877,7 +877,7 @@ void HexagonEarlyIfConversion::convert(const FlowPattern &FP) {
   // existing terminators/successors from the split block.
   MachineBasicBlock *SSB = nullptr;
   FP.SplitB->erase(OldTI, FP.SplitB->end());
-  while (FP.SplitB->succ_size() > 0) {
+  while (!FP.SplitB->succ_empty()) {
     MachineBasicBlock *T = *FP.SplitB->succ_begin();
     // It's possible that the split block had a successor that is not a pre-
     // dicated block. This could only happen if there was only one block to
@@ -970,7 +970,7 @@ void HexagonEarlyIfConversion::removeBlock(MachineBasicBlock *B) {
     }
   }
 
-  while (B->succ_size() > 0)
+  while (!B->succ_empty())
     B->removeSuccessor(B->succ_begin());
 
   for (auto I = B->pred_begin(), E = B->pred_end(); I != E; ++I)

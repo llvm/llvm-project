@@ -2384,7 +2384,6 @@ class VPatTernaryNoMask<string intrinsic,
                         ValueType result_type,
                         ValueType op1_type,
                         ValueType op2_type,
-                        ValueType mask_type,
                         int sew,
                         LMULInfo vlmul,
                         VReg result_reg_class,
@@ -2407,7 +2406,6 @@ class VPatTernaryNoMaskWithPolicy<string intrinsic,
                                   ValueType result_type,
                                   ValueType op1_type,
                                   ValueType op2_type,
-                                  ValueType mask_type,
                                   int sew,
                                   LMULInfo vlmul,
                                   VReg result_reg_class,
@@ -3014,8 +3012,8 @@ multiclass VPatTernary<string intrinsic,
                        RegisterClass op1_reg_class,
                        DAGOperand op2_kind> {
   def : VPatTernaryNoMask<intrinsic, inst, kind, result_type, op1_type, op2_type,
-                    mask_type, sew, vlmul, result_reg_class, op1_reg_class,
-                    op2_kind>;
+                          sew, vlmul, result_reg_class, op1_reg_class,
+                          op2_kind>;
   def : VPatTernaryMask<intrinsic, inst, kind, result_type, op1_type, op2_type,
                         mask_type, sew, vlmul, result_reg_class, op1_reg_class,
                         op2_kind>;
@@ -3034,8 +3032,8 @@ multiclass VPatTernaryWithPolicy<string intrinsic,
                                  RegisterClass op1_reg_class,
                                  DAGOperand op2_kind> {
   def : VPatTernaryNoMaskWithPolicy<intrinsic, inst, kind, result_type, op1_type,
-                                    op2_type, mask_type, sew, vlmul,
-                                    result_reg_class, op1_reg_class, op2_kind>;
+                                    op2_type, sew, vlmul, result_reg_class,
+                                    op1_reg_class, op2_kind>;
   def : VPatTernaryMask<intrinsic, inst, kind, result_type, op1_type, op2_type,
                         mask_type, sew, vlmul, result_reg_class, op1_reg_class,
                         op2_kind>;
@@ -3356,11 +3354,11 @@ foreach lmul = MxList.m in {
     defvar vreg = SegRegClass<lmul, nf>.RC;
     let hasSideEffects = 0, mayLoad = 0, mayStore = 1, isCodeGenOnly = 1 in {
       def "PseudoVSPILL" # nf # "_" # lmul.MX :
-        Pseudo<(outs), (ins vreg:$rs1, GPR:$rs2, GPR:$vlenb), []>;
+        Pseudo<(outs GPR:$addrinc), (ins vreg:$rs1, GPR:$rs2, GPR:$vlenb), []>;
     }
     let hasSideEffects = 0, mayLoad = 1, mayStore = 0, isCodeGenOnly = 1 in {
       def "PseudoVRELOAD" # nf # "_" # lmul.MX :
-        Pseudo<(outs vreg:$rs1), (ins GPR:$rs2, GPR:$vlenb), []>;
+        Pseudo<(outs vreg:$rs1, GPR:$addrinc), (ins GPR:$rs2, GPR:$vlenb), []>;
     }
   }
 }

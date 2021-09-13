@@ -681,11 +681,11 @@ void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
       GetCurrentThread()->stack_allocations());
 
   Decorator d;
-  Printf("%s", d.Error());
   uptr untagged_addr = UntagAddr(tagged_addr);
   // TODO: when possible, try to print heap-use-after-free, etc.
   const char *bug_type = "tag-mismatch";
   uptr pc = GetTopPc(stack);
+  Printf("%s", d.Error());
   Report("ERROR: %s: %s on address %p at pc %p\n", SanitizerToolName, bug_type,
          untagged_addr, pc);
 

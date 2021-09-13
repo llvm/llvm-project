@@ -2348,7 +2348,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__rehash(size_type __nbc)
             size_type __chash = __constrain_hash(__cp->__hash(), __nbc);
             __bucket_list_[__chash] = __pp;
             size_type __phash = __chash;
-            for (__pp = __cp, __cp = __cp->__next_; __cp != nullptr;
+            for (__pp = __cp, void(), __cp = __cp->__next_; __cp != nullptr;
                                                            __cp = __pp->__next_)
             {
                 __chash = __constrain_hash(__cp->__hash(), __nbc);
@@ -2758,7 +2758,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::bucket_size(size_type __n) const
     {
         for (__np = __np->__next_; __np != nullptr &&
                                    __constrain_hash(__np->__hash(), __bc) == __n;
-                                                    __np = __np->__next_, ++__r)
+                                                    __np = __np->__next_, (void) ++__r)
             ;
     }
     return __r;

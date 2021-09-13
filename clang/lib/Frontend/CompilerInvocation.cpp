@@ -1419,7 +1419,7 @@ void CompilerInvocation::GenerateCodeGenArgs(
   }
 
   if (Opts.PrepareForLTO && !Opts.PrepareForThinLTO)
-    GenerateArg(Args, OPT_flto, SA);
+    GenerateArg(Args, OPT_flto_EQ, "full", SA);
 
   if (Opts.PrepareForThinLTO)
     GenerateArg(Args, OPT_flto_EQ, "thin", SA);
@@ -1706,9 +1706,10 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     }
   }
 
-  Opts.PrepareForLTO = Args.hasArg(OPT_flto, OPT_flto_EQ);
+  Opts.PrepareForLTO = false;
   Opts.PrepareForThinLTO = false;
   if (Arg *A = Args.getLastArg(OPT_flto_EQ)) {
+    Opts.PrepareForLTO = true;
     StringRef S = A->getValue();
     if (S == "thin")
       Opts.PrepareForThinLTO = true;

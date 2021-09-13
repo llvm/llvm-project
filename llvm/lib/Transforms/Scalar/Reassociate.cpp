@@ -140,7 +140,7 @@ XorOpnd::XorOpnd(Value *V) {
 
   // view the operand as "V | 0"
   SymbolicPart = V;
-  ConstPart = APInt::getNullValue(V->getType()->getScalarSizeInBits());
+  ConstPart = APInt::getZero(V->getType()->getScalarSizeInBits());
   isOr = true;
 }
 
@@ -1361,7 +1361,7 @@ bool ReassociatePass::CombineXorOpnd(Instruction *I, XorOpnd *Opnd1,
     APInt C3((~C1) ^ C2);
 
     // Do not increase code size!
-    if (!C3.isNullValue() && !C3.isAllOnesValue()) {
+    if (!C3.isZero() && !C3.isAllOnes()) {
       int NewInstNum = ConstOpnd.getBoolValue() ? 1 : 2;
       if (NewInstNum > DeadInstNum)
         return false;
@@ -1377,7 +1377,7 @@ bool ReassociatePass::CombineXorOpnd(Instruction *I, XorOpnd *Opnd1,
     APInt C3 = C1 ^ C2;
 
     // Do not increase code size
-    if (!C3.isNullValue() && !C3.isAllOnesValue()) {
+    if (!C3.isZero() && !C3.isAllOnes()) {
       int NewInstNum = ConstOpnd.getBoolValue() ? 1 : 2;
       if (NewInstNum > DeadInstNum)
         return false;

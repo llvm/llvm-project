@@ -347,6 +347,12 @@ public:
   /// Add return value attributes to this function.
   void addRetAttr(Attribute::AttrKind Kind);
 
+  /// Add return value attributes to this function.
+  void addRetAttr(Attribute Attr);
+
+  /// Add return value attributes to this function.
+  void addRetAttrs(const AttrBuilder &Attrs);
+
   /// adds the attribute to the list of attributes for the given arg.
   void addParamAttr(unsigned ArgNo, Attribute::AttrKind Kind);
 
@@ -470,6 +476,11 @@ public:
   /// Extract the byref type for a parameter.
   Type *getParamByRefType(unsigned ArgNo) const {
     return AttributeSets.getParamByRefType(ArgNo);
+  }
+
+  /// Extract the preallocated type for a parameter.
+  Type *getParamPreallocatedType(unsigned ArgNo) const {
+    return AttributeSets.getParamPreallocatedType(ArgNo);
   }
 
   /// Extract the number of dereferenceable bytes for a parameter.
@@ -848,13 +859,14 @@ public:
   /// hasAddressTaken - returns true if there are any uses of this function
   /// other than direct calls or invokes to it, or blockaddress expressions.
   /// Optionally passes back an offending user for diagnostic purposes,
-  /// ignores callback uses, assume like pointer annotation calls, and
-  /// references in llvm.used and llvm.compiler.used variables.
-  ///
+  /// ignores callback uses, assume like pointer annotation calls, references in
+  /// llvm.used and llvm.compiler.used variables, and operand bundle
+  /// "clang.arc.attachedcall".
   bool hasAddressTaken(const User ** = nullptr,
                        bool IgnoreCallbackUses = false,
                        bool IgnoreAssumeLikeCalls = true,
-                       bool IngoreLLVMUsed = false) const;
+                       bool IngoreLLVMUsed = false,
+                       bool IgnoreARCAttachedCall = false) const;
 
   /// isDefTriviallyDead - Return true if it is trivially safe to remove
   /// this function definition from the module (because it isn't externally

@@ -274,7 +274,8 @@ namespace {
       llvm_unreachable("relaxInstruction() unimplemented");
     }
 
-    bool writeNopData(raw_ostream &OS, uint64_t Count) const override {
+    bool writeNopData(raw_ostream &OS, uint64_t Count,
+                      const MCSubtargetInfo *STI) const override {
       // Cannot emit NOP with size not multiple of 32 bits.
       if (Count % 4 != 0)
         return false;

@@ -2258,9 +2258,9 @@ bool EmulateInstructionMIPS64::Emulate_MSA_Branch_V(llvm::MCInst &insn,
                                                     bool bnz) {
   bool success = false;
   int64_t target = 0;
-  llvm::APInt wr_val = llvm::APInt::getNullValue(128);
+  llvm::APInt wr_val = llvm::APInt::getZero(128);
   llvm::APInt fail_value = llvm::APInt::getMaxValue(128);
-  llvm::APInt zero_value = llvm::APInt::getNullValue(128);
+  llvm::APInt zero_value = llvm::APInt::getZero(128);
   RegisterValue reg_value;
 
   uint32_t wt = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());

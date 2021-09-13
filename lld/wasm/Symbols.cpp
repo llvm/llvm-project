@@ -205,6 +205,8 @@ bool Symbol::isHidden() const {
   return (flags & WASM_SYMBOL_VISIBILITY_MASK) == WASM_SYMBOL_VISIBILITY_HIDDEN;
 }
 
+bool Symbol::isTLS() const { return flags & WASM_SYMBOL_TLS; }
+
 void Symbol::setHidden(bool isHidden) {
   LLVM_DEBUG(dbgs() << "setHidden: " << name << " -> " << isHidden << "\n");
   flags &= ~WASM_SYMBOL_VISIBILITY_MASK;

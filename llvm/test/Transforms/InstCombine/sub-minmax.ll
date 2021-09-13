@@ -4,6 +4,11 @@
 declare i5 @llvm.umin.i5(i5, i5)
 declare <2 x i8> @llvm.umin.v2i8(<2 x i8>, <2 x i8>)
 
+declare i8 @llvm.smax.i8(i8, i8)
+declare i8 @llvm.smin.i8(i8, i8)
+declare i8 @llvm.umax.i8(i8, i8)
+declare i8 @llvm.umin.i8(i8, i8)
+
 define i32 @max_na_b_minux_na(i32 %A, i32 %B) {
 ; CHECK-LABEL: @max_na_b_minux_na(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[A:%.*]], -1
@@ -386,6 +391,109 @@ define void @umin3_not_all_ops_extra_uses_invert_subs(i8 %x, i8 %y, i8 %z) {
   call void @use8(i8 %ymin)
   call void @use8(i8 %zmin)
   ret void
+}
+
+; TODO: Handle this pattern with extra uses because it shows up in benchmarks.
+; ~X - Min/Max(~X, O) -> Max/Min(X, ~O) - X
+; ~X - Min/Max(O, ~X) -> Max/Min(X, ~O) - X
+; Min/Max(~X, O) - ~X -> A - Max/Min(X, ~O)
+; Min/Max(O, ~X) - ~X -> A - Max/Min(X, ~O)
+
+define i8 @umin_not_sub_intrinsic_commute0(i8 %x, i8 %y) {
+; CHECK-LABEL: @umin_not_sub_intrinsic_commute0(
+; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[NY:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    call void @use8(i8 [[NY]])
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[NX]], i8 [[NY]])
+; CHECK-NEXT:    call void @use8(i8 [[M]])
+; CHECK-NEXT:    [[SUBX:%.*]] = sub i8 [[NX]], [[M]]
+; CHECK-NEXT:    ret i8 [[SUBX]]
+;
+  %nx = xor i8 %x, -1
+  %ny = xor i8 %y, -1
+  call void @use8(i8 %ny)
+  %m = call i8 @llvm.umin.i8(i8 %nx, i8 %ny)
+  call void @use8(i8 %m)
+  %subx = sub i8 %nx, %m
+  ret i8 %subx
+}
+
+define i8 @umax_not_sub_intrinsic_commute1(i8 %x, i8 %y) {
+; CHECK-LABEL: @umax_not_sub_intrinsic_commute1(
+; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[NY:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    call void @use8(i8 [[NY]])
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[NY]], i8 [[NX]])
+; CHECK-NEXT:    call void @use8(i8 [[M]])
+; CHECK-NEXT:    [[SUBX:%.*]] = sub i8 [[NX]], [[M]]
+; CHECK-NEXT:    ret i8 [[SUBX]]
+;
+  %nx = xor i8 %x, -1
+  %ny = xor i8 %y, -1
+  call void @use8(i8 %ny)
+  %m = call i8 @llvm.umax.i8(i8 %ny, i8 %nx)
+  call void @use8(i8 %m)
+  %subx = sub i8 %nx, %m
+  ret i8 %subx
+}
+
+define i8 @smin_not_sub_intrinsic_commute2(i8 %x, i8 %y) {
+; CHECK-LABEL: @smin_not_sub_intrinsic_commute2(
+; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[NY:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    call void @use8(i8 [[NY]])
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[NX]], i8 [[NY]])
+; CHECK-NEXT:    call void @use8(i8 [[M]])
+; CHECK-NEXT:    [[SUBX:%.*]] = sub i8 [[M]], [[NX]]
+; CHECK-NEXT:    ret i8 [[SUBX]]
+;
+  %nx = xor i8 %x, -1
+  %ny = xor i8 %y, -1
+  call void @use8(i8 %ny)
+  %m = call i8 @llvm.smin.i8(i8 %nx, i8 %ny)
+  call void @use8(i8 %m)
+  %subx = sub i8 %m, %nx
+  ret i8 %subx
+}
+
+define i8 @smax_not_sub_intrinsic_commute3(i8 %x, i8 %y) {
+; CHECK-LABEL: @smax_not_sub_intrinsic_commute3(
+; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[NY:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    call void @use8(i8 [[NY]])
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[NY]], i8 [[NX]])
+; CHECK-NEXT:    call void @use8(i8 [[M]])
+; CHECK-NEXT:    [[SUBX:%.*]] = sub i8 [[M]], [[NX]]
+; CHECK-NEXT:    ret i8 [[SUBX]]
+;
+  %nx = xor i8 %x, -1
+  %ny = xor i8 %y, -1
+  call void @use8(i8 %ny)
+  %m = call i8 @llvm.smax.i8(i8 %ny, i8 %nx)
+  call void @use8(i8 %m)
+  %subx = sub i8 %m, %nx
+  ret i8 %subx
+}
+
+define i8 @umin_not_sub_intrinsic_uses(i8 %x, i8 %y) {
+; CHECK-LABEL: @umin_not_sub_intrinsic_uses(
+; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use8(i8 [[NX]])
+; CHECK-NEXT:    [[NY:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    call void @use8(i8 [[NY]])
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[NX]], i8 [[NY]])
+; CHECK-NEXT:    call void @use8(i8 [[M]])
+; CHECK-NEXT:    [[SUBX:%.*]] = sub i8 [[NX]], [[M]]
+; CHECK-NEXT:    ret i8 [[SUBX]]
+;
+  %nx = xor i8 %x, -1
+  call void @use8(i8 %nx)
+  %ny = xor i8 %y, -1
+  call void @use8(i8 %ny)
+  %m = call i8 @llvm.umin.i8(i8 %nx, i8 %ny)
+  call void @use8(i8 %m)
+  %subx = sub i8 %nx, %m
+  ret i8 %subx
 }
 
 declare void @use8(i8)

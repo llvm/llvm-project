@@ -4,12 +4,14 @@
 # RUN: %clangxx_host -g %p/Inputs/fork.cpp -DTEST_CLONE -o %t
 # RUN: %lldb -b -s %s %t | FileCheck %s
 settings set target.process.follow-fork-mode child
+settings set target.process.stop-on-exec false
 process launch -s
 watchpoint set variable -w write g_val
 # CHECK: Watchpoint created:
 continue
+# CHECK: function run in parent
 # CHECK: stop reason = watchpoint
 continue
 # CHECK: stop reason = watchpoint
 continue
-# CHECK: child exited: 0
+# CHECK: function run in exec'd child

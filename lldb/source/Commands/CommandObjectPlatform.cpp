@@ -498,8 +498,7 @@ public:
                 lldb::eFilePermissionsWorldRead;
       lldb::user_id_t fd = platform_sp->OpenFile(
           FileSpec(cmd_line),
-          File::eOpenOptionReadWrite | File::eOpenOptionAppend |
-               File::eOpenOptionCanCreate,
+          File::eOpenOptionReadWrite | File::eOpenOptionCanCreate,
           perms, error);
       if (error.Success()) {
         result.AppendMessageWithFormat("File Descriptor = %" PRIu64 "\n", fd);
@@ -589,11 +588,15 @@ public:
       }
       std::string buffer(m_options.m_count, 0);
       Status error;
-      uint32_t retcode = platform_sp->ReadFile(
+      uint64_t retcode = platform_sp->ReadFile(
           fd, m_options.m_offset, &buffer[0], m_options.m_count, error);
-      result.AppendMessageWithFormat("Return = %d\n", retcode);
-      result.AppendMessageWithFormat("Data = \"%s\"\n", buffer.c_str());
-      result.SetStatus(eReturnStatusSuccessFinishResult);
+      if (retcode != UINT64_MAX) {
+        result.AppendMessageWithFormat("Return = %" PRIu64 "\n", retcode);
+        result.AppendMessageWithFormat("Data = \"%s\"\n", buffer.c_str());
+        result.SetStatus(eReturnStatusSuccessFinishResult);
+      } else {
+        result.AppendError(error.AsCString());
+      }
     } else {
       result.AppendError("no platform currently selected\n");
     }
@@ -678,11 +681,15 @@ public:
                                       cmd_line);
         return result.Succeeded();
       }
-      uint32_t retcode =
+      uint64_t retcode =
           platform_sp->WriteFile(fd, m_options.m_offset, &m_options.m_data[0],
                                  m_options.m_data.size(), error);
-      result.AppendMessageWithFormat("Return = %d\n", retcode);
-      result.SetStatus(eReturnStatusSuccessFinishResult);
+      if (retcode != UINT64_MAX) {
+        result.AppendMessageWithFormat("Return = %" PRIu64 "\n", retcode);
+        result.SetStatus(eReturnStatusSuccessFinishResult);
+      } else {
+        result.AppendError(error.AsCString());
+      }
     } else {
       result.AppendError("no platform currently selected\n");
     }
@@ -912,6 +919,141 @@ public:
             "Error getting file size of %s (remote)\n",
             remote_file_path.c_str());
       }
+    } else {
+      result.AppendError("no platform currently selected\n");
+    }
+    return result.Succeeded();
+  }
+};
+
+// "platform get-permissions remote-file-path"
+class CommandObjectPlatformGetPermissions : public CommandObjectParsed {
+public:
+  CommandObjectPlatformGetPermissions(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "platform get-permissions",
+                            "Get the file permission bits from the remote end.",
+                            "platform get-permissions <remote-file-spec>", 0) {
+    SetHelpLong(
+        R"(Examples:
+
+(lldb) platform get-permissions /the/remote/file/path
+
+    Get the file permissions from the remote end with path /the/remote/file/path.)");
+
+    CommandArgumentEntry arg1;
+    CommandArgumentData file_arg_remote;
+
+    // Define the first (and only) variant of this arg.
+    file_arg_remote.arg_type = eArgTypeFilename;
+    file_arg_remote.arg_repetition = eArgRepeatPlain;
+    // There is only one variant this argument could be; put it into the
+    // argument entry.
+    arg1.push_back(file_arg_remote);
+
+    // Push the data for the first argument into the m_arguments vector.
+    m_arguments.push_back(arg1);
+  }
+
+  ~CommandObjectPlatformGetPermissions() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (request.GetCursorIndex() != 0)
+      return;
+
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eRemoteDiskFileCompletion,
+        request, nullptr);
+  }
+
+  bool DoExecute(Args &args, CommandReturnObject &result) override {
+    // If the number of arguments is incorrect, issue an error message.
+    if (args.GetArgumentCount() != 1) {
+      result.AppendError("required argument missing; specify the source file "
+                         "path as the only argument");
+      return false;
+    }
+
+    PlatformSP platform_sp(
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
+    if (platform_sp) {
+      std::string remote_file_path(args.GetArgumentAtIndex(0));
+      uint32_t permissions;
+      Status error = platform_sp->GetFilePermissions(FileSpec(remote_file_path),
+                                                     permissions);
+      if (error.Success()) {
+        result.AppendMessageWithFormat(
+            "File permissions of %s (remote): 0o%04" PRIo32 "\n",
+            remote_file_path.c_str(), permissions);
+        result.SetStatus(eReturnStatusSuccessFinishResult);
+      } else
+        result.AppendError(error.AsCString());
+    } else {
+      result.AppendError("no platform currently selected\n");
+    }
+    return result.Succeeded();
+  }
+};
+
+// "platform file-exists remote-file-path"
+class CommandObjectPlatformFileExists : public CommandObjectParsed {
+public:
+  CommandObjectPlatformFileExists(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "platform file-exists",
+                            "Check if the file exists on the remote end.",
+                            "platform file-exists <remote-file-spec>", 0) {
+    SetHelpLong(
+        R"(Examples:
+
+(lldb) platform file-exists /the/remote/file/path
+
+    Check if /the/remote/file/path exists on the remote end.)");
+
+    CommandArgumentEntry arg1;
+    CommandArgumentData file_arg_remote;
+
+    // Define the first (and only) variant of this arg.
+    file_arg_remote.arg_type = eArgTypeFilename;
+    file_arg_remote.arg_repetition = eArgRepeatPlain;
+    // There is only one variant this argument could be; put it into the
+    // argument entry.
+    arg1.push_back(file_arg_remote);
+
+    // Push the data for the first argument into the m_arguments vector.
+    m_arguments.push_back(arg1);
+  }
+
+  ~CommandObjectPlatformFileExists() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (request.GetCursorIndex() != 0)
+      return;
+
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eRemoteDiskFileCompletion,
+        request, nullptr);
+  }
+
+  bool DoExecute(Args &args, CommandReturnObject &result) override {
+    // If the number of arguments is incorrect, issue an error message.
+    if (args.GetArgumentCount() != 1) {
+      result.AppendError("required argument missing; specify the source file "
+                         "path as the only argument");
+      return false;
+    }
+
+    PlatformSP platform_sp(
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
+    if (platform_sp) {
+      std::string remote_file_path(args.GetArgumentAtIndex(0));
+      bool exists = platform_sp->GetFileExists(FileSpec(remote_file_path));
+      result.AppendMessageWithFormat(
+          "File %s (remote) %s\n",
+          remote_file_path.c_str(), exists ? "exists" : "does not exist");
+      result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
       result.AppendError("no platform currently selected\n");
     }
@@ -1752,8 +1894,12 @@ CommandObjectPlatform::CommandObjectPlatform(CommandInterpreter &interpreter)
                  CommandObjectSP(new CommandObjectPlatformMkDir(interpreter)));
   LoadSubCommand("file",
                  CommandObjectSP(new CommandObjectPlatformFile(interpreter)));
+  LoadSubCommand("file-exists",
+      CommandObjectSP(new CommandObjectPlatformFileExists(interpreter)));
   LoadSubCommand("get-file", CommandObjectSP(new CommandObjectPlatformGetFile(
                                  interpreter)));
+  LoadSubCommand("get-permissions",
+      CommandObjectSP(new CommandObjectPlatformGetPermissions(interpreter)));
   LoadSubCommand("get-size", CommandObjectSP(new CommandObjectPlatformGetSize(
                                  interpreter)));
   LoadSubCommand("put-file", CommandObjectSP(new CommandObjectPlatformPutFile(

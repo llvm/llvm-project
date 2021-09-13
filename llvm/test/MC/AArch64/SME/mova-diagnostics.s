@@ -158,6 +158,31 @@ mova z0.q, p0/m, za0h.q[w12, #0]
 // CHECK-NEXT: mova z0.q, p0/m, za0h.q[w12, #0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
+mov z0.b, p0/m, za0h.b[w12, #16]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 15].
+// CHECK-NEXT: mov z0.b, p0/m, za0h.b[w12, #16]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov z0.h, p0/m, za0h.h[w12, #8]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 7].
+// CHECK-NEXT: mov z0.h, p0/m, za0h.h[w12, #8]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov z0.s, p0/m, za0h.s[w12, #4]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 3].
+// CHECK-NEXT: mov z0.s, p0/m, za0h.s[w12, #4]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov z0.d, p0/m, za0h.d[w12, #2]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 1].
+// CHECK-NEXT: mov z0.d, p0/m, za0h.d[w12, #2]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov z0.q, p0/m, za0h.q[w12, #0]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mov z0.q, p0/m, za0h.q[w12, #0]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
 // vector-to-tile
 
 mova za0h.b[w12, #16], p0/m, z0.b
@@ -183,6 +208,31 @@ mova za0h.d[w12, #2], p0/m, z0.d
 mova za0h.q[w12, #0], p0/m, z0.q
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: mova za0h.q[w12, #0], p0/m, z0.q
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov za0h.b[w12, #16], p0/m, z0.b
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 15].
+// CHECK-NEXT: mov za0h.b[w12, #16], p0/m, z0.b
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov za0h.h[w12, #8], p0/m, z0.h
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 7].
+// CHECK-NEXT: mov za0h.h[w12, #8], p0/m, z0.h
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov za0h.s[w12, #4], p0/m, z0.s
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 3].
+// CHECK-NEXT: mov za0h.s[w12, #4], p0/m, z0.s
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov za0h.d[w12, #2], p0/m, z0.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 1].
+// CHECK-NEXT: mov za0h.d[w12, #2], p0/m, z0.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov za0h.q[w12, #0], p0/m, z0.q
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mov za0h.q[w12, #0], p0/m, z0.q
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // ------------------------------------------------------------------------- //

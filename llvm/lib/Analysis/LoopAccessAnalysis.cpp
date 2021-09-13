@@ -142,13 +142,12 @@ Value *llvm::stripIntegerCast(Value *V) {
 
 const SCEV *llvm::replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
                                             const ValueToValueMap &PtrToStride,
-                                            Value *Ptr, Value *OrigPtr) {
+                                            Value *Ptr) {
   const SCEV *OrigSCEV = PSE.getSCEV(Ptr);
 
   // If there is an entry in the map return the SCEV of the pointer with the
   // symbolic stride replaced by one.
-  ValueToValueMap::const_iterator SI =
-      PtrToStride.find(OrigPtr ? OrigPtr : Ptr);
+  ValueToValueMap::const_iterator SI = PtrToStride.find(Ptr);
   if (SI == PtrToStride.end())
     // For a non-symbolic stride, just return the original expression.
     return OrigSCEV;

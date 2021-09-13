@@ -18,6 +18,7 @@
 #include "llvm-c/Transforms/AggressiveInstCombine.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -205,8 +206,8 @@ struct MaskOps {
   bool FoundAnd1;
 
   MaskOps(unsigned BitWidth, bool MatchAnds)
-      : Root(nullptr), Mask(APInt::getNullValue(BitWidth)),
-        MatchAndChain(MatchAnds), FoundAnd1(false) {}
+      : Root(nullptr), Mask(APInt::getZero(BitWidth)), MatchAndChain(MatchAnds),
+        FoundAnd1(false) {}
 };
 
 /// This is a recursive helper for foldAnyOrAllBitsSet() that walks through a
@@ -394,10 +395,11 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT) {
 
 /// This is the entry point for all transforms. Pass manager differences are
 /// handled in the callers of this function.
-static bool runImpl(Function &F, TargetLibraryInfo &TLI, DominatorTree &DT) {
+static bool runImpl(Function &F, AssumptionCache &AC, TargetLibraryInfo &TLI,
+                    DominatorTree &DT) {
   bool MadeChange = false;
   const DataLayout &DL = F.getParent()->getDataLayout();
-  TruncInstCombine TIC(TLI, DL, DT);
+  TruncInstCombine TIC(AC, TLI, DL, DT);
   MadeChange |= TIC.run(F);
   MadeChange |= foldUnusualPatterns(F, DT);
   return MadeChange;
@@ -406,6 +408,7 @@ static bool runImpl(Function &F, TargetLibraryInfo &TLI, DominatorTree &DT) {
 void AggressiveInstCombinerLegacyPass::getAnalysisUsage(
     AnalysisUsage &AU) const {
   AU.setPreservesCFG();
+  AU.addRequired<AssumptionCacheTracker>();
   AU.addRequired<DominatorTreeWrapperPass>();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
   AU.addPreserved<AAResultsWrapperPass>();
@@ -415,16 +418,18 @@ void AggressiveInstCombinerLegacyPass::getAnalysisUsage(
 }
 
 bool AggressiveInstCombinerLegacyPass::runOnFunction(Function &F) {
+  auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  return runImpl(F, TLI, DT);
+  return runImpl(F, AC, TLI, DT);
 }
 
 PreservedAnalyses AggressiveInstCombinePass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
+  auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  if (!runImpl(F, TLI, DT)) {
+  if (!runImpl(F, AC, TLI, DT)) {
     // No changes, all analyses are preserved.
     return PreservedAnalyses::all();
   }
@@ -438,6 +443,7 @@ char AggressiveInstCombinerLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(AggressiveInstCombinerLegacyPass,
                       "aggressive-instcombine",
                       "Combine pattern based expressions", false, false)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(AggressiveInstCombinerLegacyPass, "aggressive-instcombine",

@@ -1039,7 +1039,8 @@ public:
   // updated if a new clobber is found by this SkipSelf search. If this
   // additional query becomes heavily used we may decide to cache the result.
   // Walker instantiations will decide how to set the SkipSelf bool.
-  MemoryAccess *getClobberingMemoryAccessBase(MemoryAccess *, unsigned &, bool);
+  MemoryAccess *getClobberingMemoryAccessBase(MemoryAccess *, unsigned &, bool,
+                                              bool UseInvariantGroup = true);
 };
 
 /// A MemorySSAWalker that does AA walks to disambiguate accesses. It no
@@ -1063,6 +1064,11 @@ public:
                                           const MemoryLocation &Loc,
                                           unsigned &UWL) {
     return Walker->getClobberingMemoryAccessBase(MA, Loc, UWL);
+  }
+  // This method is not accessible outside of this file.
+  MemoryAccess *getClobberingMemoryAccessWithoutInvariantGroup(MemoryAccess *MA,
+                                                               unsigned &UWL) {
+    return Walker->getClobberingMemoryAccessBase(MA, UWL, false, false);
   }
 
   MemoryAccess *getClobberingMemoryAccess(MemoryAccess *MA) override {
@@ -1460,10 +1466,13 @@ void MemorySSA::OptimizeUses::optimizeUsesInBlock(
     unsigned UpwardWalkLimit = MaxCheckLimit;
     while (UpperBound > LocInfo.LowerBound) {
       if (isa<MemoryPhi>(VersionStack[UpperBound])) {
-        // For phis, use the walker, see where we ended up, go there
+        // For phis, use the walker, see where we ended up, go there.
+        // The invariant.group handling in MemorySSA is ad-hoc and doesn't
+        // support updates, so don't use it to optimize uses.
         MemoryAccess *Result =
-            Walker->getClobberingMemoryAccess(MU, UpwardWalkLimit);
-        // We are guaranteed to find it or something is wrong
+            Walker->getClobberingMemoryAccessWithoutInvariantGroup(
+                MU, UpwardWalkLimit);
+        // We are guaranteed to find it or something is wrong.
         while (VersionStack[UpperBound] != Result) {
           assert(UpperBound != 0);
           --UpperBound;
@@ -2469,14 +2478,87 @@ MemorySSA::ClobberWalkerBase<AliasAnalysisType>::getClobberingMemoryAccessBase(
   return Clobber;
 }
 
+static const Instruction *
+getInvariantGroupClobberingInstruction(Instruction &I, DominatorTree &DT) {
+  if (!I.hasMetadata(LLVMContext::MD_invariant_group) || I.isVolatile())
+    return nullptr;
+
+  // We consider bitcasts and zero GEPs to be the same pointer value. Start by
+  // stripping bitcasts and zero GEPs, then we will recursively look at loads
+  // and stores through bitcasts and zero GEPs.
+  Value *PointerOperand = getLoadStorePointerOperand(&I)->stripPointerCasts();
+
+  // It's not safe to walk the use list of a global value because function
+  // passes aren't allowed to look outside their functions.
+  // FIXME: this could be fixed by filtering instructions from outside of
+  // current function.
+  if (isa<Constant>(PointerOperand))
+    return nullptr;
+
+  // Queue to process all pointers that are equivalent to load operand.
+  SmallVector<const Value *, 8> PointerUsesQueue;
+  PointerUsesQueue.push_back(PointerOperand);
+
+  const Instruction *MostDominatingInstruction = &I;
+
+  // FIXME: This loop is O(n^2) because dominates can be O(n) and in worst case
+  // we will see all the instructions. It may not matter in practice. If it
+  // does, we will have to support MemorySSA construction and updates.
+  while (!PointerUsesQueue.empty()) {
+    const Value *Ptr = PointerUsesQueue.pop_back_val();
+    assert(Ptr && !isa<GlobalValue>(Ptr) &&
+           "Null or GlobalValue should not be inserted");
+
+    for (const User *Us : Ptr->users()) {
+      auto *U = dyn_cast<Instruction>(Us);
+      if (!U || U == &I || !DT.dominates(U, MostDominatingInstruction))
+        continue;
+
+      // Add bitcasts and zero GEPs to queue.
+      if (isa<BitCastInst>(U)) {
+        PointerUsesQueue.push_back(U);
+        continue;
+      }
+      if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
+        if (GEP->hasAllZeroIndices())
+          PointerUsesQueue.push_back(U);
+        continue;
+      }
+
+      // If we hit a load/store with an invariant.group metadata and the same
+      // pointer operand, we can assume that value pointed to by the pointer
+      // operand didn't change.
+      if (U->hasMetadata(LLVMContext::MD_invariant_group) &&
+          getLoadStorePointerOperand(U) == Ptr && !U->isVolatile()) {
+        MostDominatingInstruction = U;
+      }
+    }
+  }
+  return MostDominatingInstruction == &I ? nullptr : MostDominatingInstruction;
+}
+
 template <typename AliasAnalysisType>
 MemoryAccess *
 MemorySSA::ClobberWalkerBase<AliasAnalysisType>::getClobberingMemoryAccessBase(
-    MemoryAccess *MA, unsigned &UpwardWalkLimit, bool SkipSelf) {
+    MemoryAccess *MA, unsigned &UpwardWalkLimit, bool SkipSelf,
+    bool UseInvariantGroup) {
   auto *StartingAccess = dyn_cast<MemoryUseOrDef>(MA);
   // If this is a MemoryPhi, we can't do anything.
   if (!StartingAccess)
     return MA;
+
+  if (UseInvariantGroup) {
+    if (auto *I = getInvariantGroupClobberingInstruction(
+            *StartingAccess->getMemoryInst(), MSSA->getDomTree())) {
+      assert(isa<LoadInst>(I) || isa<StoreInst>(I));
+
+      auto *ClobberMA = MSSA->getMemoryAccess(I);
+      assert(ClobberMA);
+      if (isa<MemoryUse>(ClobberMA))
+        return ClobberMA->getDefiningAccess();
+      return ClobberMA;
+    }
+  }
 
   bool IsOptimized = false;
 

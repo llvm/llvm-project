@@ -786,6 +786,8 @@ private:
   virtual std::error_code verifySPMagic(uint64_t Magic) override;
   virtual std::error_code
   readCustomSection(const SecHdrTableEntry &Entry) override {
+    // Update the data reader pointer to the end of the section.
+    Data += Entry.Size;
     return sampleprof_error::success;
   };
 

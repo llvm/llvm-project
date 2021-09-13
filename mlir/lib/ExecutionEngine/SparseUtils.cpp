@@ -60,7 +60,7 @@
 //      to interact with MLIR compiler-generated code.
 //
 // In both cases (I) and (II), the SparseTensorStorage format is externally
-// only visible as an opague pointer.
+// only visible as an opaque pointer.
 //
 //===----------------------------------------------------------------------===//
 
@@ -739,7 +739,7 @@ void *convertToMLIRSparseTensor(uint64_t rank, uint64_t nse, uint64_t *shape,
     tensor->add(idx, values[i]);
     base += rank;
   }
-  // Return sparse tensor storage format as opague pointer.
+  // Return sparse tensor storage format as opaque pointer.
   return SparseTensorStorage<uint64_t, uint64_t, double>::newSparseTensor(
       tensor, sparse.data(), perm.data());
 }

@@ -173,7 +173,9 @@ _Tp* __to_address(_Tp* __p) _NOEXCEPT {
 }
 
 // enable_if is needed here to avoid instantiating checks for fancy pointers on raw pointers
-template <class _Pointer, class = _EnableIf<!is_pointer<_Pointer>::value> >
+template <class _Pointer, class = __enable_if_t<
+    !is_pointer<_Pointer>::value && !is_array<_Pointer>::value && !is_function<_Pointer>::value
+> >
 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
 typename decay<decltype(__to_address_helper<_Pointer>::__call(declval<const _Pointer&>()))>::type
 __to_address(const _Pointer& __p) _NOEXCEPT {
@@ -199,6 +201,12 @@ struct __to_address_helper<_Pointer, decltype((void)pointer_traits<_Pointer>::to
 };
 
 #if _LIBCPP_STD_VER > 17
+template <class _Tp>
+inline _LIBCPP_INLINE_VISIBILITY constexpr
+auto to_address(_Tp *__p) noexcept {
+    return _VSTD::__to_address(__p);
+}
+
 template <class _Pointer>
 inline _LIBCPP_INLINE_VISIBILITY constexpr
 auto to_address(const _Pointer& __p) noexcept {

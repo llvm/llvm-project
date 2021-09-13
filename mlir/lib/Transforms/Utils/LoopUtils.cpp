@@ -2045,7 +2045,7 @@ void mlir::coalesceLoops(MutableArrayRef<scf::ForOp> loops) {
 
   builder.setInsertionPointToStart(outermost.getBody());
 
-  // 3. Remap induction variables.  For each original loop, the value of the
+  // 3. Remap induction variables. For each original loop, the value of the
   // induction variable can be obtained by dividing the induction variable of
   // the linearized loop by the total number of iterations of the loops nested
   // in it modulo the number of iterations in this loop (remove the values
@@ -2075,6 +2075,120 @@ void mlir::coalesceLoops(MutableArrayRef<scf::ForOp> loops) {
       Block::iterator(second.getOperation()),
       innermost.getBody()->getOperations());
   second.erase();
+}
+
+LogicalResult mlir::coalesceLoops(MutableArrayRef<AffineForOp> loops) {
+  if (loops.size() < 2)
+    return success();
+
+  AffineForOp innermost = loops.back();
+  AffineForOp outermost = loops.front();
+  AffineBound ub = outermost.getUpperBound();
+  AffineMap origUbMap = ub.getMap();
+  Location loc = outermost.getLoc();
+  OpBuilder builder(outermost);
+  for (AffineForOp loop : loops) {
+    // We only work on normalized loops.
+    if (loop.getStep() != 1 || !loop.hasConstantLowerBound() ||
+        loop.getConstantLowerBound() != 0)
+      return failure();
+  }
+  SmallVector<Value, 4> upperBoundSymbols;
+  SmallVector<Value, 4> ubOperands(ub.getOperands().begin(),
+                                   ub.getOperands().end());
+
+  // 1. Store the upper bound of the outermost loop in a variable.
+  Value prev;
+  if (!llvm::hasSingleElement(origUbMap.getResults()))
+    prev = builder.create<AffineMinOp>(loc, origUbMap, ubOperands);
+  else
+    prev = builder.create<AffineApplyOp>(loc, origUbMap, ubOperands);
+  upperBoundSymbols.push_back(prev);
+
+  // 2. Emit code computing the upper bound of the coalesced loop as product of
+  // the number of iterations of all loops.
+  for (AffineForOp loop : loops.drop_front()) {
+    ub = loop.getUpperBound();
+    origUbMap = ub.getMap();
+    ubOperands = ub.getOperands();
+    Value upperBound;
+    // If upper bound map has more than one result, take their minimum.
+    if (!llvm::hasSingleElement(origUbMap.getResults()))
+      upperBound = builder.create<AffineMinOp>(loc, origUbMap, ubOperands);
+    else
+      upperBound = builder.create<AffineApplyOp>(loc, origUbMap, ubOperands);
+    upperBoundSymbols.push_back(upperBound);
+    SmallVector<Value, 4> operands;
+    operands.push_back(prev);
+    operands.push_back(upperBound);
+    // Maintain running product of loop upper bounds.
+    prev = builder.create<AffineApplyOp>(
+        loc,
+        AffineMap::get(/*numDims=*/1,
+                       /*numSymbols=*/1,
+                       builder.getAffineDimExpr(0) *
+                           builder.getAffineSymbolExpr(0)),
+        operands);
+  }
+  // Set upper bound of the coalesced loop.
+  AffineMap newUbMap = AffineMap::get(
+      /*numDims=*/0,
+      /*numSymbols=*/1, builder.getAffineSymbolExpr(0), builder.getContext());
+  outermost.setUpperBound(prev, newUbMap);
+
+  builder.setInsertionPointToStart(outermost.getBody());
+
+  // 3. Remap induction variables. For each original loop, the value of the
+  // induction variable can be obtained by dividing the induction variable of
+  // the linearized loop by the total number of iterations of the loops nested
+  // in it modulo the number of iterations in this loop (remove the values
+  // related to the outer loops):
+  //   iv_i = floordiv(iv_linear, product-of-loop-ranges-until-i) mod range_i.
+  // Compute these iteratively from the innermost loop by creating a "running
+  // quotient" of division by the range.
+  Value previous = outermost.getInductionVar();
+  for (unsigned idx = loops.size(); idx > 0; --idx) {
+    if (idx != loops.size()) {
+      SmallVector<Value, 4> operands;
+      operands.push_back(previous);
+      operands.push_back(upperBoundSymbols[idx]);
+      previous = builder.create<AffineApplyOp>(
+          loc,
+          AffineMap::get(
+              /*numDims=*/1, /*numSymbols=*/1,
+              builder.getAffineDimExpr(0).floorDiv(
+                  builder.getAffineSymbolExpr(0))),
+          operands);
+    }
+    // Modified value of the induction variables of the nested loops after
+    // coalescing.
+    Value inductionVariable;
+    if (idx == 1) {
+      inductionVariable = previous;
+    } else {
+      SmallVector<Value, 4> applyOperands;
+      applyOperands.push_back(previous);
+      applyOperands.push_back(upperBoundSymbols[idx - 1]);
+      inductionVariable = builder.create<AffineApplyOp>(
+          loc,
+          AffineMap::get(
+              /*numDims=*/1, /*numSymbols=*/1,
+              builder.getAffineDimExpr(0) % builder.getAffineSymbolExpr(0)),
+          applyOperands);
+    }
+    replaceAllUsesInRegionWith(loops[idx - 1].getInductionVar(),
+                               inductionVariable, loops.back().region());
+  }
+
+  // 4. Move the operations from the innermost just above the second-outermost
+  // loop, delete the extra terminator and the second-outermost loop.
+  AffineForOp secondOutermostLoop = loops[1];
+  innermost.getBody()->back().erase();
+  outermost.getBody()->getOperations().splice(
+      Block::iterator(secondOutermostLoop.getOperation()),
+      innermost.getBody()->getOperations());
+  secondOutermostLoop.erase();
+  return success();
 }
 
 void mlir::collapseParallelLoops(

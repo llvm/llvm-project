@@ -193,6 +193,7 @@ private:
   bool selectBrJT(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectTLSGlobalValue(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectReduction(MachineInstr &I, MachineRegisterInfo &MRI);
+  bool selectUSMovFromExtend(MachineInstr &I, MachineRegisterInfo &MRI);
 
   unsigned emitConstantPoolEntry(const Constant *CPVal,
                                  MachineFunction &MF) const;
@@ -2166,6 +2167,12 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     I.eraseFromParent();
     return true;
   }
+  case TargetOpcode::G_SEXT:
+    // Check for i64 sext(i32 vector_extract) prior to tablegen to select SMOV
+    // over a normal extend.
+    if (selectUSMovFromExtend(I, MRI))
+      return true;
+    return false;
   case TargetOpcode::G_BR:
     return false;
   case TargetOpcode::G_SHL:
@@ -3054,6 +3061,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   }
 
   case TargetOpcode::G_ANYEXT: {
+    if (selectUSMovFromExtend(I, MRI))
+      return true;
+
     const Register DstReg = I.getOperand(0).getReg();
     const Register SrcReg = I.getOperand(1).getReg();
 
@@ -3100,6 +3110,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_SEXT_INREG:
   case TargetOpcode::G_SEXT: {
+    if (selectUSMovFromExtend(I, MRI))
+      return true;
+
     unsigned Opcode = I.getOpcode();
     const bool IsSigned = Opcode != TargetOpcode::G_ZEXT;
     const Register DefReg = I.getOperand(0).getReg();
@@ -4849,6 +4862,68 @@ MachineInstr *AArch64InstructionSelector::emitLaneInsert(
 
   constrainSelectedInstRegOperands(*InsElt, TII, TRI, RBI);
   return InsElt;
+}
+
+bool AArch64InstructionSelector::selectUSMovFromExtend(
+    MachineInstr &MI, MachineRegisterInfo &MRI) {
+  if (MI.getOpcode() != TargetOpcode::G_SEXT &&
+      MI.getOpcode() != TargetOpcode::G_ZEXT &&
+      MI.getOpcode() != TargetOpcode::G_ANYEXT)
+    return false;
+  bool IsSigned = MI.getOpcode() == TargetOpcode::G_SEXT;
+  const Register DefReg = MI.getOperand(0).getReg();
+  const LLT DstTy = MRI.getType(DefReg);
+  unsigned DstSize = DstTy.getSizeInBits();
+
+  MachineInstr *Extract = getOpcodeDef(TargetOpcode::G_EXTRACT_VECTOR_ELT,
+                                       MI.getOperand(1).getReg(), MRI);
+  int64_t Lane;
+  if (!Extract || !mi_match(Extract->getOperand(2).getReg(), MRI, m_ICst(Lane)))
+    return false;
+  Register Src0 = Extract->getOperand(1).getReg();
+
+  const LLT &VecTy = MRI.getType(Src0);
+
+  if (VecTy.getSizeInBits() != 128) {
+    const MachineInstr *ScalarToVector = emitScalarToVector(
+        VecTy.getSizeInBits(), &AArch64::FPR128RegClass, Src0, MIB);
+    assert(ScalarToVector && "Didn't expect emitScalarToVector to fail!");
+    Src0 = ScalarToVector->getOperand(0).getReg();
+  }
+
+  unsigned Opcode;
+  if (DstSize == 64 && VecTy.getScalarSizeInBits() == 32)
+    Opcode = IsSigned ? AArch64::SMOVvi32to64 : AArch64::UMOVvi32;
+  else if (DstSize == 64 && VecTy.getScalarSizeInBits() == 16)
+    Opcode = IsSigned ? AArch64::SMOVvi16to64 : AArch64::UMOVvi16;
+  else if (DstSize == 64 && VecTy.getScalarSizeInBits() == 8)
+    Opcode = IsSigned ? AArch64::SMOVvi8to64 : AArch64::UMOVvi8;
+  else if (DstSize == 32 && VecTy.getScalarSizeInBits() == 16)
+    Opcode = IsSigned ? AArch64::SMOVvi16to32 : AArch64::UMOVvi16;
+  else if (DstSize == 32 && VecTy.getScalarSizeInBits() == 8)
+    Opcode = IsSigned ? AArch64::SMOVvi8to32 : AArch64::UMOVvi8;
+  else
+    llvm_unreachable("Unexpected type combo for S/UMov!");
+
+  // We may need to generate one of these, depending on the type and sign of the
+  // input:
+  //  DstReg = SMOV Src0, Lane;
+  //  NewReg = UMOV Src0, Lane; DstReg = SUBREG_TO_REG NewReg, sub_32;
+  MachineInstr *ExtI = nullptr;
+  if (DstSize == 64 && !IsSigned) {
+    Register NewReg = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
+    MIB.buildInstr(Opcode, {NewReg}, {Src0}).addImm(Lane);
+    ExtI = MIB.buildInstr(AArch64::SUBREG_TO_REG, {DefReg}, {})
+               .addImm(0)
+               .addUse(NewReg)
+               .addImm(AArch64::sub_32);
+    RBI.constrainGenericRegister(DefReg, AArch64::GPR64RegClass, MRI);
+  } else
+    ExtI = MIB.buildInstr(Opcode, {DefReg}, {Src0}).addImm(Lane);
+
+  constrainSelectedInstRegOperands(*ExtI, TII, TRI, RBI);
+  MI.eraseFromParent();
+  return true;
 }
 
 bool AArch64InstructionSelector::selectInsertElt(MachineInstr &I,

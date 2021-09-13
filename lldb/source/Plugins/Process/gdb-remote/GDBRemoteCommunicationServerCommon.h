@@ -71,6 +71,8 @@ protected:
 
   PacketResult Handle_vFile_unlink(StringExtractorGDBRemote &packet);
 
+  PacketResult Handle_vFile_FStat(StringExtractorGDBRemote &packet);
+
   PacketResult Handle_vFile_Stat(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_vFile_MD5(StringExtractorGDBRemote &packet);

@@ -599,6 +599,12 @@ struct KernelInfoState : AbstractState {
     return true;
   }
 
+  /// Returns true if this kernel contains any OpenMP parallel regions.
+  bool mayContainParallelRegion() {
+    return !ReachedKnownParallelRegions.empty() ||
+           !ReachedUnknownParallelRegions.empty();
+  }
+
   /// Return empty set as the best state of potential values.
   static KernelInfoState getBestState() { return KernelInfoState(true); }
 
@@ -1642,7 +1648,7 @@ private:
     // valid at the new location. For now we just pick a global one, either
     // existing and used by one of the calls, or created from scratch.
     if (CallBase *CI = dyn_cast<CallBase>(ReplVal)) {
-      if (CI->getNumArgOperands() > 0 &&
+      if (!CI->arg_empty() &&
           CI->getArgOperand(0)->getType() == OMPInfoCache.OMPBuilder.IdentPtr) {
         Value *Ident = getCombinedIdentFromCallUsesIn(RFI, F,
                                                       /* GlobalOnly */ true);
@@ -3003,7 +3009,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
     // If we can we change the execution mode to SPMD-mode otherwise we build a
     // custom state machine.
-    if (!changeToSPMDMode(A))
+    if (!mayContainParallelRegion() || !changeToSPMDMode(A))
       buildCustomStateMachine(A);
 
     return ChangeStatus::CHANGED;
@@ -3308,8 +3314,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
     // happen if there simply are no parallel regions. In the resulting kernel
     // all worker threads will simply exit right away, leaving the main thread
     // to do the work alone.
-    if (ReachedKnownParallelRegions.empty() &&
-        ReachedUnknownParallelRegions.empty()) {
+    if (!mayContainParallelRegion()) {
       ++NumOpenMPTargetRegionKernelsWithoutStateMachine;
 
       auto Remark = [&](OptimizationRemark OR) {
@@ -3705,13 +3710,15 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     Function *Callee = getAssociatedFunction();
 
     // Helper to lookup an assumption string.
-    auto HasAssumption = [](Function *Fn, StringRef AssumptionStr) {
-      return Fn && hasAssumption(*Fn, AssumptionStr);
+    auto HasAssumption = [](CallBase &CB, StringRef AssumptionStr) {
+      return hasAssumption(CB, AssumptionStr);
     };
 
     // Check for SPMD-mode assumptions.
-    if (HasAssumption(Callee, "ompx_spmd_amenable"))
+    if (HasAssumption(CB, "ompx_spmd_amenable")) {
       SPMDCompatibilityTracker.indicateOptimisticFixpoint();
+      indicateOptimisticFixpoint();
+    }
 
     // First weed out calls we do not care about, that is readonly/readnone
     // calls, intrinsics, and "no_openmp" calls. Neither of these can reach a
@@ -3733,8 +3740,8 @@ struct AAKernelInfoCallSite : AAKernelInfo {
 
         // Unknown callees might contain parallel regions, except if they have
         // an appropriate assumption attached.
-        if (!(HasAssumption(Callee, "omp_no_openmp") ||
-              HasAssumption(Callee, "omp_no_parallelism")))
+        if (!(HasAssumption(CB, "omp_no_openmp") ||
+              HasAssumption(CB, "omp_no_parallelism")))
           ReachedUnknownParallelRegions.insert(&CB);
 
         // If SPMDCompatibilityTracker is not fixed, we need to give up on the

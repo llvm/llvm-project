@@ -1109,7 +1109,7 @@ TEST_F(AArch64GISelMITest, TestMetadata) {
   KnownBits Res = Info.getKnownBits(And->getOperand(1).getReg());
 
   // We don't know what the result of the load is, so we don't know any ones.
-  EXPECT_TRUE(Res.One.isNullValue());
+  EXPECT_TRUE(Res.One.isZero());
 
   // We know that the value is in [0, 2). So, we don't know if the first bit
   // is 0 or not. However, we do know that every other bit must be 0.
@@ -1601,11 +1601,11 @@ TEST_F(AArch64GISelMITest, TestInvalidQueries) {
 
 
   // We don't know what the result of the shift is, but we should not crash
-  EXPECT_TRUE(EqSizeRes.One.isNullValue());
-  EXPECT_TRUE(EqSizeRes.Zero.isNullValue());
+  EXPECT_TRUE(EqSizeRes.One.isZero());
+  EXPECT_TRUE(EqSizeRes.Zero.isZero());
 
-  EXPECT_TRUE(BiggerSizeRes.One.isNullValue());
-  EXPECT_TRUE(BiggerSizeRes.Zero.isNullValue());
+  EXPECT_TRUE(BiggerSizeRes.One.isZero());
+  EXPECT_TRUE(BiggerSizeRes.Zero.isZero());
 }
 
 TEST_F(AArch64GISelMITest, TestKnownBitsAssertZext) {

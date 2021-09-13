@@ -924,7 +924,7 @@ formatted_size(locale __loc, wstring_view __fmt, const _Args&... __args) {
       .size();
 }
 
-#endif
+#endif // _LIBCPP_HAS_NO_LOCALIZATION
 
 #endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 #endif //_LIBCPP_STD_VER > 17

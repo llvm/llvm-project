@@ -1,0 +1,88 @@
+static_library("Utility") {
+  output_name = "lldbUtility"
+  configs += [ "//llvm/utils/gn/build:lldb_code" ]
+  deps = [
+    "//llvm/lib/BinaryFormat",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "ArchSpec.cpp",
+    "Args.cpp",
+    "Baton.cpp",
+    "Broadcaster.cpp",
+    "CompletionRequest.cpp",
+    "Connection.cpp",
+    "ConstString.cpp",
+    "DataBufferHeap.cpp",
+    "DataBufferLLVM.cpp",
+    "DataEncoder.cpp",
+    "DataExtractor.cpp",
+    "Environment.cpp",
+    "Event.cpp",
+    "FileSpec.cpp",
+    "GDBRemote.cpp",
+    "IOObject.cpp",
+    "LLDBAssert.cpp",
+    "Listener.cpp",
+    "Log.cpp",
+    "Logging.cpp",
+    "NameMatches.cpp",
+    "ProcessInfo.cpp",
+    "RegisterValue.cpp",
+    "RegularExpression.cpp",
+    "Reproducer.cpp",
+    "ReproducerInstrumentation.cpp",
+    "ReproducerProvider.cpp",
+    "Scalar.cpp",
+    "SelectHelper.cpp",
+    "State.cpp",
+    "Status.cpp",
+    "Stream.cpp",
+    "StreamCallback.cpp",
+    "StreamString.cpp",
+    "StringExtractor.cpp",
+    "StringExtractorGDBRemote.cpp",
+    "StringLexer.cpp",
+    "StringList.cpp",
+    "StructuredData.cpp",
+    "TildeExpressionResolver.cpp",
+    "Timer.cpp",
+    "TraceGDBRemotePackets.cpp",
+    "TraceIntelPTGDBRemotePackets.cpp",
+    "UUID.cpp",
+    "UnimplementedError.cpp",
+    "UriParser.cpp",
+    "UserID.cpp",
+    "UserIDResolver.cpp",
+    "VASprintf.cpp",
+    "VMRange.cpp",
+    "XcodeSDK.cpp",
+  ]
+
+  if (current_os == "win") {
+    libs = [
+      "rpcrt4.lib",
+      "ws2_32.lib",
+    ]
+  }
+
+  # FIXME:
+  # if (APPLE)
+  #   list(APPEND LLDB_SYSTEM_LIBS
+  #        ${FOUNDATION_LIBRARY}
+  #        ${CORE_FOUNDATION_LIBRARY}
+  #        ${CORE_SERVICES_LIBRARY}
+  #        ${SECURITY_LIBRARY}
+  #        ${DEBUG_SYMBOLS_LIBRARY})
+  # endif()
+  #
+  # if(NOT PURE_WINDOWS)
+  #   list(APPEND LLDB_SYSTEM_LIBS ${CMAKE_THREAD_LIBS_INIT})
+  # endif()
+  #
+  # list(APPEND LLDB_SYSTEM_LIBS ${CMAKE_DL_LIBS})
+  #
+  # if (NOT HAVE_CXX_ATOMICS64_WITHOUT_LIB )
+  #     list(APPEND LLDB_SYSTEM_LIBS atomic)
+  # endif()
+}

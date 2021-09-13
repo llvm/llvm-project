@@ -14,7 +14,6 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Lex/PreprocessorExcludedConditionalDirectiveSkipMapping.h"
-#include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "llvm/Support/Error.h"
@@ -29,24 +28,6 @@ namespace tooling {
 namespace dependencies {
 
 class DependencyScanningWorkerFilesystem;
-
-/// Compilation database that holds and reports a single compile command.
-class SingleCommandCompilationDatabase : public CompilationDatabase {
-  CompileCommand Command;
-
-public:
-  SingleCommandCompilationDatabase(CompileCommand Cmd)
-      : Command(std::move(Cmd)) {}
-
-  std::vector<CompileCommand>
-  getCompileCommands(StringRef FilePath) const override {
-    return {Command};
-  }
-
-  std::vector<CompileCommand> getAllCompileCommands() const override {
-    return {Command};
-  }
-};
 
 class DependencyConsumer {
 public:
@@ -74,23 +55,26 @@ class DependencyScanningWorker {
 public:
   DependencyScanningWorker(DependencyScanningService &Service);
 
-  /// Run the dependency scanning tool for a given clang driver invocation (as
-  /// specified for the given Input in the CDB), and report the discovered
-  /// dependencies to the provided consumer.
+  /// Run the dependency scanning tool for a given clang driver command-line,
+  /// and report the discovered dependencies to the provided consumer. If \p
+  /// ModuleName isn't empty, this function reports the dependencies of module
+  /// \p ModuleName.
   ///
   /// \returns A \c StringError with the diagnostic output if clang errors
   /// occurred, success otherwise.
-  llvm::Error computeDependencies(const std::string &Input,
-                                  StringRef WorkingDirectory,
-                                  const CompilationDatabase &CDB,
-                                  DependencyConsumer &Consumer);
+  llvm::Error computeDependencies(StringRef WorkingDirectory,
+                                  const std::vector<std::string> &CommandLine,
+                                  DependencyConsumer &Consumer,
+                                  llvm::Optional<StringRef> ModuleName = None);
 
 private:
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
   std::unique_ptr<ExcludedPreprocessorDirectiveSkipMapping> PPSkipMappings;
 
+  /// The physical filesystem overlaid by `InMemoryFS`.
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> RealFS;
+  /// The in-memory filesystem laid on top the physical filesystem in `RealFS`.
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFS;
   /// The file system that is used by each worker when scanning for
   /// dependencies. This filesystem persists accross multiple compiler
   /// invocations.

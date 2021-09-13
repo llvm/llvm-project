@@ -190,6 +190,14 @@ class MockGDBServerResponder:
             return self.qPathComplete()
         if packet.startswith("vFile:"):
             return self.vFile(packet)
+        if packet.startswith("vRun;"):
+            return self.vRun(packet)
+        if packet.startswith("qLaunchSuccess"):
+            return self.qLaunchSuccess()
+        if packet.startswith("QEnvironment:"):
+            return self.QEnvironment(packet)
+        if packet.startswith("QEnvironmentHexEncoded:"):
+            return self.QEnvironmentHexEncoded(packet)
 
         return self.other(packet)
 
@@ -302,6 +310,18 @@ class MockGDBServerResponder:
 
     def vFile(self, packet):
         return ""
+
+    def vRun(self, packet):
+        return ""
+
+    def qLaunchSuccess(self):
+        return ""
+
+    def QEnvironment(self, packet):
+        return "OK"
+
+    def QEnvironmentHexEncoded(self, packet):
+        return "OK"
 
     """
     Raised when we receive a packet for which there is no default action.
@@ -566,3 +586,23 @@ class GDBRemoteTestBase(TestBase):
         if i < len(packets):
             self.fail(u"Did not receive: %s\nLast 10 packets:\n\t%s" %
                     (packets[i], u'\n\t'.join(log)))
+
+
+class GDBPlatformClientTestBase(GDBRemoteTestBase):
+    """
+    Base class for platform server clients.
+
+    This class extends GDBRemoteTestBase by automatically connecting
+    via "platform connect" in the setUp() method.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.runCmd("platform select remote-gdb-server")
+        self.runCmd("platform connect connect://" +
+                    self.server.get_connect_address())
+        self.assertTrue(self.dbg.GetSelectedPlatform().IsConnected())
+
+    def tearDown(self):
+        self.dbg.GetSelectedPlatform().DisconnectRemote()
+        super().tearDown()

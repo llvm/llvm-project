@@ -54,8 +54,11 @@ public:
 private:
   enum RegSetKind {
     GPRegSet,
+    FPRegSet,
   };
-  std::array<uint8_t, sizeof(reg)> m_reg_data;
+  std::array<uint8_t, sizeof(reg) + sizeof(fpreg)> m_reg_data;
+
+  llvm::Optional<RegSetKind> GetSetForNativeRegNum(uint32_t reg_num) const;
 
   Status ReadRegisterSet(RegSetKind set);
   Status WriteRegisterSet(RegSetKind set);

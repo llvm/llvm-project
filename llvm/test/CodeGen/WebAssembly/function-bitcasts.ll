@@ -1,5 +1,5 @@
 ; RUN: llc < %s -asm-verbose=false -wasm-disable-explicit-locals -wasm-keep-registers -enable-emscripten-cxx-exceptions | FileCheck %s --check-prefixes=CHECK,TYPED
-; RUN: llc < %s -asm-verbose=false -wasm-disable-explicit-locals -wasm-keep-registers -enable-emscripten-cxx-exceptions -force-opaque-pointers | FileCheck %s --check-prefixes=CHECK,OPAQUE
+; RUN: llc < %s -asm-verbose=false -wasm-disable-explicit-locals -wasm-keep-registers -enable-emscripten-cxx-exceptions -opaque-pointers | FileCheck %s --check-prefixes=CHECK,OPAQUE
 
 ; Test that function pointer casts are replaced with wrappers.
 

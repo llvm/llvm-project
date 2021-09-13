@@ -15,8 +15,8 @@ define amdgpu_kernel void @stack_object_addrspacecast_in_kernel_no_calls() {
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_lshl_b32 s0, s0, 16
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, -1, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v1, 0, s0, vcc_lo
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
+; GCN-NEXT:    v_cndmask_b32_e64 v1, 0, s0, vcc_lo
 ; GCN-NEXT:    flat_store_dword v[0:1], v2
 ; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_endpgm
@@ -46,11 +46,11 @@ define amdgpu_kernel void @stack_object_in_kernel_no_calls() {
 define amdgpu_kernel void @kernel_calls_no_stack() {
 ; GCN-LABEL: kernel_calls_no_stack:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_add_u32 s0, s0, s3
+; GCN-NEXT:    s_add_u32 s6, s6, s11
 ; GCN-NEXT:    s_mov_b32 s32, 0
-; GCN-NEXT:    s_addc_u32 s1, s1, 0
-; GCN-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
-; GCN-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
+; GCN-NEXT:    s_addc_u32 s7, s7, 0
+; GCN-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s6
+; GCN-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s7
 ; GCN-NEXT:    s_getpc_b64 s[0:1]
 ; GCN-NEXT:    s_add_u32 s0, s0, extern_func@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s1, s1, extern_func@gotpcrel32@hi+12

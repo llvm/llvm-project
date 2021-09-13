@@ -91,7 +91,6 @@ define void @buildvec_dominant0_v2f32(<2 x float>* %x) {
 ; CHECK-NEXT:    fmv.w.x ft0, zero
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
 ; CHECK-NEXT:    vfmv.s.f v25, ft0
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
 ; CHECK-NEXT:    vse32.v v25, (a0)
 ; CHECK-NEXT:    ret
   store <2 x float> <float 0.0, float 1.0>, <2 x float>* %x
