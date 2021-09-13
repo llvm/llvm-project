@@ -379,7 +379,7 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySymbols() {
     if (Sym.isDefined() &&
         (Sym.getType() == ELF::STT_NOTYPE || Sym.getType() == ELF::STT_FUNC ||
          Sym.getType() == ELF::STT_OBJECT ||
-         Sym.getType() == ELF::STT_SECTION)) {
+         Sym.getType() == ELF::STT_SECTION || Sym.getType() == ELF::STT_TLS)) {
 
       // FIXME: Handle extended tables.
       if (auto *GraphSec = getGraphSection(Sym.st_shndx)) {
