@@ -28,6 +28,8 @@
 
 #include "Plugins/Process/minidump/MinidumpTypes.h"
 
+#include <cinttypes>
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::minidump;
@@ -729,7 +731,7 @@ Status MinidumpFileBuilder::Dump(lldb::FileUP &core_file) const {
   if (error.Fail() || bytes_written != header_size) {
     if (bytes_written != header_size)
       error.SetErrorStringWithFormat(
-          "Unable to write the header. (written %ld/%ld).", bytes_written,
+          "unable to write the header (written %zd/%zd)", bytes_written,
           header_size);
     return error;
   }
@@ -740,7 +742,7 @@ Status MinidumpFileBuilder::Dump(lldb::FileUP &core_file) const {
   if (error.Fail() || bytes_written != m_data.GetByteSize()) {
     if (bytes_written != m_data.GetByteSize())
       error.SetErrorStringWithFormat(
-          "Unable to write the data. (written %ld/%llu).", bytes_written,
+          "unable to write the data (written %zd/%" PRIu64 ")", bytes_written,
           m_data.GetByteSize());
     return error;
   }
@@ -752,7 +754,7 @@ Status MinidumpFileBuilder::Dump(lldb::FileUP &core_file) const {
     if (error.Fail() || bytes_written != directory_size) {
       if (bytes_written != directory_size)
         error.SetErrorStringWithFormat(
-            "Unable to write the directory. (written %ld/%ld).", bytes_written,
+            "unable to write the directory (written %zd/%zd)", bytes_written,
             directory_size);
       return error;
     }
