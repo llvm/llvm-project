@@ -10,6 +10,10 @@
 #ifndef __EMMINTRIN_H
 #define __EMMINTRIN_H
 
+#if !defined(__i386__) && !defined(__x86_64__)
+#error "This header is only meant to be used on x86 and x64 architecture"
+#endif
+
 #include <xmmintrin.h>
 
 typedef double __m128d __attribute__((__vector_size__(16), __aligned__(16)));
