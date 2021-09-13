@@ -167,30 +167,26 @@ entry:
 define void @test_ldst_3(<256 x i1>* %vpp, <256 x i1>* %vp2)  {
 ; CHECK-LABEL: test_ldst_3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li r5, 18
-; CHECK-NEXT:    lxvpx vsp34, r3, r5
-; CHECK-NEXT:    stxvpx vsp34, r4, r5
+; CHECK-NEXT:    plxvp vsp34, 18(r3), 0
+; CHECK-NEXT:    pstxvp vsp34, 18(r4), 0
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-NOMMA-LABEL: test_ldst_3:
 ; CHECK-NOMMA:       # %bb.0: # %entry
-; CHECK-NOMMA-NEXT:    li r5, 18
-; CHECK-NOMMA-NEXT:    lxvpx vsp34, r3, r5
-; CHECK-NOMMA-NEXT:    stxvpx vsp34, r4, r5
+; CHECK-NOMMA-NEXT:    plxvp vsp34, 18(r3), 0
+; CHECK-NOMMA-NEXT:    pstxvp vsp34, 18(r4), 0
 ; CHECK-NOMMA-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test_ldst_3:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    li r5, 18
-; CHECK-BE-NEXT:    lxvpx vsp34, r3, r5
-; CHECK-BE-NEXT:    stxvpx vsp34, r4, r5
+; CHECK-BE-NEXT:    plxvp vsp34, 18(r3), 0
+; CHECK-BE-NEXT:    pstxvp vsp34, 18(r4), 0
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-BE-NOMMA-LABEL: test_ldst_3:
 ; CHECK-BE-NOMMA:       # %bb.0: # %entry
-; CHECK-BE-NOMMA-NEXT:    li r5, 18
-; CHECK-BE-NOMMA-NEXT:    lxvpx vsp34, r3, r5
-; CHECK-BE-NOMMA-NEXT:    stxvpx vsp34, r4, r5
+; CHECK-BE-NOMMA-NEXT:    plxvp vsp34, 18(r3), 0
+; CHECK-BE-NOMMA-NEXT:    pstxvp vsp34, 18(r4), 0
 ; CHECK-BE-NOMMA-NEXT:    blr
 entry:
   %0 = bitcast <256 x i1>* %vpp to i8*
@@ -205,30 +201,26 @@ entry:
 define void @test_ldst_4(<256 x i1>* %vpp, <256 x i1>* %vp2)  {
 ; CHECK-LABEL: test_ldst_4:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li r5, 1
-; CHECK-NEXT:    lxvpx vsp34, r3, r5
-; CHECK-NEXT:    stxvpx vsp34, r4, r5
+; CHECK-NEXT:    plxvp vsp34, 1(r3), 0
+; CHECK-NEXT:    pstxvp vsp34, 1(r4), 0
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-NOMMA-LABEL: test_ldst_4:
 ; CHECK-NOMMA:       # %bb.0: # %entry
-; CHECK-NOMMA-NEXT:    li r5, 1
-; CHECK-NOMMA-NEXT:    lxvpx vsp34, r3, r5
-; CHECK-NOMMA-NEXT:    stxvpx vsp34, r4, r5
+; CHECK-NOMMA-NEXT:    plxvp vsp34, 1(r3), 0
+; CHECK-NOMMA-NEXT:    pstxvp vsp34, 1(r4), 0
 ; CHECK-NOMMA-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test_ldst_4:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    li r5, 1
-; CHECK-BE-NEXT:    lxvpx vsp34, r3, r5
-; CHECK-BE-NEXT:    stxvpx vsp34, r4, r5
+; CHECK-BE-NEXT:    plxvp vsp34, 1(r3), 0
+; CHECK-BE-NEXT:    pstxvp vsp34, 1(r4), 0
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-BE-NOMMA-LABEL: test_ldst_4:
 ; CHECK-BE-NOMMA:       # %bb.0: # %entry
-; CHECK-BE-NOMMA-NEXT:    li r5, 1
-; CHECK-BE-NOMMA-NEXT:    lxvpx vsp34, r3, r5
-; CHECK-BE-NOMMA-NEXT:    stxvpx vsp34, r4, r5
+; CHECK-BE-NOMMA-NEXT:    plxvp vsp34, 1(r3), 0
+; CHECK-BE-NOMMA-NEXT:    pstxvp vsp34, 1(r4), 0
 ; CHECK-BE-NOMMA-NEXT:    blr
 entry:
   %0 = bitcast <256 x i1>* %vpp to i8*
@@ -243,30 +235,26 @@ entry:
 define void @test_ldst_5(<256 x i1>* %vpp, <256 x i1>* %vp2)  {
 ; CHECK-LABEL: test_ldst_5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li r5, 42
-; CHECK-NEXT:    lxvpx vsp34, r3, r5
-; CHECK-NEXT:    stxvpx vsp34, r4, r5
+; CHECK-NEXT:    plxvp vsp34, 42(r3), 0
+; CHECK-NEXT:    pstxvp vsp34, 42(r4), 0
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-NOMMA-LABEL: test_ldst_5:
 ; CHECK-NOMMA:       # %bb.0: # %entry
-; CHECK-NOMMA-NEXT:    li r5, 42
-; CHECK-NOMMA-NEXT:    lxvpx vsp34, r3, r5
-; CHECK-NOMMA-NEXT:    stxvpx vsp34, r4, r5
+; CHECK-NOMMA-NEXT:    plxvp vsp34, 42(r3), 0
+; CHECK-NOMMA-NEXT:    pstxvp vsp34, 42(r4), 0
 ; CHECK-NOMMA-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test_ldst_5:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    li r5, 42
-; CHECK-BE-NEXT:    lxvpx vsp34, r3, r5
-; CHECK-BE-NEXT:    stxvpx vsp34, r4, r5
+; CHECK-BE-NEXT:    plxvp vsp34, 42(r3), 0
+; CHECK-BE-NEXT:    pstxvp vsp34, 42(r4), 0
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-BE-NOMMA-LABEL: test_ldst_5:
 ; CHECK-BE-NOMMA:       # %bb.0: # %entry
-; CHECK-BE-NOMMA-NEXT:    li r5, 42
-; CHECK-BE-NOMMA-NEXT:    lxvpx vsp34, r3, r5
-; CHECK-BE-NOMMA-NEXT:    stxvpx vsp34, r4, r5
+; CHECK-BE-NOMMA-NEXT:    plxvp vsp34, 42(r3), 0
+; CHECK-BE-NOMMA-NEXT:    pstxvp vsp34, 42(r4), 0
 ; CHECK-BE-NOMMA-NEXT:    blr
 entry:
   %0 = bitcast <256 x i1>* %vpp to i8*
@@ -317,30 +305,26 @@ define void @test_ldst_7(<256 x i1>* %vpp, <256 x i1>* %vp2)  {
 ; test case is a constant that fits within 34-bits.
 ; CHECK-LABEL: test_ldst_7:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pli r5, 32799
-; CHECK-NEXT:    lxvpx vsp34, r3, r5
-; CHECK-NEXT:    stxvpx vsp34, r4, r5
+; CHECK-NEXT:    plxvp vsp34, 32799(r3), 0
+; CHECK-NEXT:    pstxvp vsp34, 32799(r4), 0
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-NOMMA-LABEL: test_ldst_7:
 ; CHECK-NOMMA:       # %bb.0: # %entry
-; CHECK-NOMMA-NEXT:    pli r5, 32799
-; CHECK-NOMMA-NEXT:    lxvpx vsp34, r3, r5
-; CHECK-NOMMA-NEXT:    stxvpx vsp34, r4, r5
+; CHECK-NOMMA-NEXT:    plxvp vsp34, 32799(r3), 0
+; CHECK-NOMMA-NEXT:    pstxvp vsp34, 32799(r4), 0
 ; CHECK-NOMMA-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test_ldst_7:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    pli r5, 32799
-; CHECK-BE-NEXT:    lxvpx vsp34, r3, r5
-; CHECK-BE-NEXT:    stxvpx vsp34, r4, r5
+; CHECK-BE-NEXT:    plxvp vsp34, 32799(r3), 0
+; CHECK-BE-NEXT:    pstxvp vsp34, 32799(r4), 0
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-BE-NOMMA-LABEL: test_ldst_7:
 ; CHECK-BE-NOMMA:       # %bb.0: # %entry
-; CHECK-BE-NOMMA-NEXT:    pli r5, 32799
-; CHECK-BE-NOMMA-NEXT:    lxvpx vsp34, r3, r5
-; CHECK-BE-NOMMA-NEXT:    stxvpx vsp34, r4, r5
+; CHECK-BE-NOMMA-NEXT:    plxvp vsp34, 32799(r3), 0
+; CHECK-BE-NOMMA-NEXT:    pstxvp vsp34, 32799(r4), 0
 ; CHECK-BE-NOMMA-NEXT:    blr
 entry:
   %0 = bitcast <256 x i1>* %vpp to i8*
