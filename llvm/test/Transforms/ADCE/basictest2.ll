@@ -1,5 +1,5 @@
-; RUN: opt < %s -adce -disable-output
-; RUN: opt < %s -adce -adce-remove-loops -S | FileCheck %s
+; RUN: opt < %s -passes=adce -disable-output
+; RUN: opt < %s -passes=adce -adce-remove-loops -S | FileCheck %s
 
 	%FILE = type { i32, i8*, i8*, i8, i8, i32, i32, i32 }
 	%spec_fd_t = type { i32, i32, i32, i8* }

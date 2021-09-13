@@ -1,8 +1,8 @@
-; Check that we can run WPD export using opt -wholeprogramdevirt while
+; Check that we can run WPD export using opt -passes=wholeprogramdevirt while
 ; loading/saving index from/to bitcode
 ; RUN: llvm-as %s -o %t.bc
 ; RUN: llvm-as %p/Inputs/devirt-single-impl2-index.ll -o %t.index.bc
-; RUN: opt %s -S -wholeprogramdevirt -whole-program-visibility -wholeprogramdevirt-read-summary=%t.index.bc \
+; RUN: opt %s -S -passes=wholeprogramdevirt -whole-program-visibility -wholeprogramdevirt-read-summary=%t.index.bc \
 ; RUN:     -wholeprogramdevirt-summary-action=export \
 ; RUN:     -wholeprogramdevirt-write-summary=%t2.index.bc -o /dev/null
 ; RUN: llvm-dis %t2.index.bc -o - | FileCheck %s
@@ -10,7 +10,7 @@
 ; Check that opt fails to use summaries which don't contain regular LTO module
 ; when performing export.
 ; RUN: llvm-as %p/Inputs/devirt-bad-index.ll -o %t-bad.index.bc
-; RUN: not opt %s -S -wholeprogramdevirt -whole-program-visibility -wholeprogramdevirt-read-summary=%t-bad.index.bc \
+; RUN: not opt %s -S -passes=wholeprogramdevirt -whole-program-visibility -wholeprogramdevirt-read-summary=%t-bad.index.bc \
 ; RUN:     -wholeprogramdevirt-summary-action=export -o /dev/null 2>&1 | FileCheck %s --check-prefix=MISSING-MODULE
 
 ; Check single impl devirtulation in summary

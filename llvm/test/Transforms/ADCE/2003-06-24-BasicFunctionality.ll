@@ -1,5 +1,5 @@
-; RUN: opt < %s -adce -S | FileCheck %s
-; RUN: opt < %s -adce -adce-remove-loops -S | FileCheck %s
+; RUN: opt < %s -passes=adce -S | FileCheck %s
+; RUN: opt < %s -passes=adce -adce-remove-loops -S | FileCheck %s
 
 define void @dead_test8(i32* %data.1, i32 %idx.1) {
 entry:

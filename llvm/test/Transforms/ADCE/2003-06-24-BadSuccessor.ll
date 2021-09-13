@@ -1,5 +1,5 @@
-; RUN: opt < %s -adce -disable-output
-; RUN: opt < %s -adce -adce-remove-loops=true -disable-output
+; RUN: opt < %s -passes=adce -disable-output
+; RUN: opt < %s -passes=adce -adce-remove-loops=true -disable-output
 
 target datalayout = "e-p:32:32"
 	%struct..CppObjTypeDesc = type { i32, i16, i16 }

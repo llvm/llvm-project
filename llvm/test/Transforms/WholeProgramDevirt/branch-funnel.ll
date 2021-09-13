@@ -1,9 +1,9 @@
-; RUN: opt -S -wholeprogramdevirt -whole-program-visibility %s | FileCheck --check-prefixes=CHECK,RETP %s
-; RUN: sed -e 's,+retpoline,-retpoline,g' %s | opt -S -wholeprogramdevirt -whole-program-visibility | FileCheck --check-prefixes=CHECK,NORETP %s
+; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility %s | FileCheck --check-prefixes=CHECK,RETP %s
+; RUN: sed -e 's,+retpoline,-retpoline,g' %s | opt -S -passes=wholeprogramdevirt -whole-program-visibility | FileCheck --check-prefixes=CHECK,NORETP %s
 
-; RUN: opt -wholeprogramdevirt -whole-program-visibility -wholeprogramdevirt-summary-action=export -wholeprogramdevirt-read-summary=%S/Inputs/export.yaml -wholeprogramdevirt-write-summary=%t -S -o - %s | FileCheck --check-prefixes=CHECK,RETP %s
+; RUN: opt -passes=wholeprogramdevirt -whole-program-visibility -wholeprogramdevirt-summary-action=export -wholeprogramdevirt-read-summary=%S/Inputs/export.yaml -wholeprogramdevirt-write-summary=%t -S -o - %s | FileCheck --check-prefixes=CHECK,RETP %s
 
-; RUN: opt -wholeprogramdevirt -whole-program-visibility -wholeprogramdevirt-summary-action=export -wholeprogramdevirt-read-summary=%S/Inputs/export.yaml -wholeprogramdevirt-write-summary=%t  -O3 -S -o - %s | FileCheck --check-prefixes=CHECK %s
+; RUN: opt -passes='wholeprogramdevirt,default<O3>' -whole-program-visibility -wholeprogramdevirt-summary-action=export -wholeprogramdevirt-read-summary=%S/Inputs/export.yaml -wholeprogramdevirt-write-summary=%t  -S -o - %s | FileCheck --check-prefixes=CHECK %s
 
 ; RUN: FileCheck --check-prefix=SUMMARY %s < %t
 
