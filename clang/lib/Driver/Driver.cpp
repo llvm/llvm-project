@@ -2149,11 +2149,10 @@ bool Driver::DiagnoseInputExistence(const DerivedArgList &Args, StringRef Value,
     }
   }
 
-  // Don't error on apparently non-existent linker inputs, because they
-  // can be influenced by linker flags the clang driver might not understand.
+  // In CL mode, don't error on apparently non-existent linker inputs, because
+  // they can be influenced by linker flags the clang driver might not
+  // understand.
   // Examples:
-  // - `clang -fuse-ld=lld -Wl,--chroot,some/dir /file.o` will make lld look
-  //   for some/dir/file.o
   // - `clang-cl main.cc ole32.lib` in a a non-MSVC shell will make the driver
   //   module look for an MSVC installation in the registry. (We could ask
   //   the MSVCToolChain object if it can find `ole32.lib`, but the logic to
@@ -2172,9 +2171,19 @@ bool Driver::DiagnoseInputExistence(const DerivedArgList &Args, StringRef Value,
   // flag. (Users can use `-Wl,` or `/linker` to launder the flag past the
   // driver in the unlikely case they run into this.)
   //
-  // Don't do this skip in clang-cl mode for inputs that start with a '/' --
-  // else we'd pass options like /libpath: through to the linker silently.
-  if (Ty == types::TY_Object && !(IsCLMode() && Value.startswith("/")))
+  // Don't do this for inputs that start with a '/', else we'd pass options
+  // like /libpath: through to the linker silently.
+  //
+  // Emitting an error for linker inputs can also cause incorrect diagnostics
+  // with the gcc driver. The command
+  //     clang -fuse-ld=lld -Wl,--chroot,some/dir /file.o
+  // will make lld look for some/dir/file.o, while we will diagnose here that
+  // `/file.o` does not exist. However, configure scripts check if
+  // `clang /GR-` compiles without error to see if the compiler is cl.exe,
+  // so we can't downgrade diagnostics for `/GR-` from an error to a warning
+  // in cc mode. (We can in cl mode because cl.exe itself only warns on
+  // unknown flags.)
+  if (IsCLMode() && Ty == types::TY_Object && !Value.startswith("/"))
     return true;
 
   Diag(clang::diag::err_drv_no_such_file) << Value;
