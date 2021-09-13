@@ -409,5 +409,11 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
                    ["x0 = 0x0807060504030201"])
         self.match("register read arg2",
                    ["x1 = 0x1817161514131211"])
+        self.match("register read fp",
+                   ["x29 = 0x3837363534333231"])
+        self.match("register read lr",
+                   ["x30 = 0x4847464544434241"])
+        self.match("register read ra",
+                   ["x30 = 0x4847464544434241"])
         self.match("register read flags",
                    ["cpsr = 0x74737271"])
