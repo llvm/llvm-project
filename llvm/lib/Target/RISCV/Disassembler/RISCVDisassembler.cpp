@@ -449,7 +449,7 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       }
     }
 
-    if (STI.getFeatureBits()[RISCV::FeatureExtZbproposedc] &&
+    if (STI.getFeatureBits()[RISCV::FeatureStdExtZbproposedc] &&
         STI.getFeatureBits()[RISCV::FeatureStdExtC]) {
       LLVM_DEBUG(
           dbgs() << "Trying RVBC32 table (BitManip 16-bit Instruction):\n");
