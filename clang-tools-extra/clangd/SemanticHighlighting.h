@@ -69,6 +69,7 @@ enum class HighlightingModifier {
   Virtual,
   DependentName,
   DefaultLibrary,
+  UsedAsMutableReference,
 
   FunctionScope,
   ClassScope,
