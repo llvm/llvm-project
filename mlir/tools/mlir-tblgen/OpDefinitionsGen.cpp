@@ -850,16 +850,10 @@ static void generateNamedOperandGetters(const Operator &op, Class &opClass,
 
   // Then we emit nicer named getter methods by redirecting to the "sink" getter
   // method.
-  // Keep track of the operand names to find duplicates.
-  SmallDenseSet<StringRef> operandNames;
   for (int i = 0; i != numOperands; ++i) {
     const auto &operand = op.getOperand(i);
     if (operand.name.empty())
       continue;
-    if (!operandNames.insert(operand.name).second)
-      PrintFatalError(op.getLoc(), "op has two operands with the same name: '" +
-                                       operand.name + "'");
-
     if (operand.isOptional()) {
       m = opClass.addMethodAndPrune("::mlir::Value", operand.name);
       m->body()
@@ -992,15 +986,10 @@ void OpEmitter::genNamedResultGetters() {
   m->body() << formatv(valueRangeReturnCode, "getOperation()->result_begin()",
                        "getODSResultIndexAndLength(index)");
 
-  SmallDenseSet<StringRef> resultNames;
   for (int i = 0; i != numResults; ++i) {
     const auto &result = op.getResult(i);
     if (result.name.empty())
       continue;
-    if (!resultNames.insert(result.name).second)
-      PrintFatalError(op.getLoc(), "op has two results with the same name: '" +
-                                       result.name + "'");
-
     if (result.isOptional()) {
       m = opClass.addMethodAndPrune("::mlir::Value", result.name);
       m->body()
