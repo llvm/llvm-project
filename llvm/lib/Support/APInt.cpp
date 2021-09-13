@@ -2948,6 +2948,40 @@ llvm::APIntOps::GetMostSignificantDifferentBit(const APInt &A, const APInt &B) {
   return A.getBitWidth() - ((A ^ B).countLeadingZeros() + 1);
 }
 
+APInt llvm::APIntOps::ScaleBitMask(const APInt &A, unsigned NewBitWidth) {
+  unsigned OldBitWidth = A.getBitWidth();
+  assert((((OldBitWidth % NewBitWidth) == 0) ||
+          ((NewBitWidth % OldBitWidth) == 0)) &&
+         "One size should be a multiple of the other one. "
+         "Can't do fractional scaling.");
+
+  // Check for matching bitwidths.
+  if (OldBitWidth == NewBitWidth)
+    return A;
+
+  APInt NewA = APInt::getNullValue(NewBitWidth);
+
+  // Check for null input.
+  if (A.isNullValue())
+    return NewA;
+
+  if (NewBitWidth > OldBitWidth) {
+    // Repeat bits.
+    unsigned Scale = NewBitWidth / OldBitWidth;
+    for (unsigned i = 0; i != OldBitWidth; ++i)
+      if (A[i])
+        NewA.setBits(i * Scale, (i + 1) * Scale);
+  } else {
+    // Merge bits - if any old bit is set, then set scale equivalent new bit.
+    unsigned Scale = OldBitWidth / NewBitWidth;
+    for (unsigned i = 0; i != NewBitWidth; ++i)
+      if (!A.extractBits(Scale, i * Scale).isNullValue())
+        NewA.setBit(i);
+  }
+
+  return NewA;
+}
+
 /// StoreIntToMemory - Fills the StoreBytes bytes of memory starting from Dst
 /// with the integer held in IntVal.
 void llvm::StoreIntToMemory(const APInt &IntVal, uint8_t *Dst,

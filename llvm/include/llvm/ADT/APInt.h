@@ -2206,6 +2206,15 @@ Optional<APInt> SolveQuadraticEquationWrap(APInt A, APInt B, APInt C,
 Optional<unsigned> GetMostSignificantDifferentBit(const APInt &A,
                                                   const APInt &B);
 
+/// Splat/Merge neighboring bits to widen/narrow the bitmask represented
+/// by \param A to \param NewBitWidth bits.
+///
+/// e.g. ScaleBitMask(0b0101, 8) -> 0b00110011
+/// e.g. ScaleBitMask(0b00011011, 4) -> 0b0111
+/// A.getBitwidth() or NewBitWidth must be a whole multiples of the other.
+///
+/// TODO: Do we need a mode where all bits must be set when merging down?
+APInt ScaleBitMask(const APInt &A, unsigned NewBitWidth);
 } // namespace APIntOps
 
 // See friend declaration above. This additional declaration is required in
