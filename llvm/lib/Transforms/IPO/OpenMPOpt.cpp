@@ -1996,7 +1996,8 @@ bool OpenMPOpt::rewriteDeviceCodeStateMachine() {
         UndefValue::get(Int8Ty), F->getName() + ".ID");
 
     for (Use *U : ToBeReplacedStateMachineUses)
-      U->set(ConstantExpr::getBitCast(ID, U->get()->getType()));
+      U->set(ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+          ID, U->get()->getType()));
 
     ++NumOpenMPParallelRegionsReplacedInGPUStateMachine;
 
@@ -3183,10 +3184,14 @@ struct AAKernelInfoFunction : AAKernelInfo {
     IsWorker->setDebugLoc(DLoc);
     BranchInst::Create(StateMachineBeginBB, UserCodeEntryBB, IsWorker, InitBB);
 
+    Module &M = *Kernel->getParent();
+
     // Create local storage for the work function pointer.
+    const DataLayout &DL = M.getDataLayout();
     Type *VoidPtrTy = Type::getInt8PtrTy(Ctx);
-    AllocaInst *WorkFnAI = new AllocaInst(VoidPtrTy, 0, "worker.work_fn.addr",
-                                          &Kernel->getEntryBlock().front());
+    Instruction *WorkFnAI =
+        new AllocaInst(VoidPtrTy, DL.getAllocaAddrSpace(), nullptr,
+                       "worker.work_fn.addr", &Kernel->getEntryBlock().front());
     WorkFnAI->setDebugLoc(DLoc);
 
     auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
@@ -3199,12 +3204,22 @@ struct AAKernelInfoFunction : AAKernelInfo {
     Value *Ident = KernelInitCB->getArgOperand(0);
     Value *GTid = KernelInitCB;
 
-    Module &M = *Kernel->getParent();
     FunctionCallee BarrierFn =
         OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
             M, OMPRTL___kmpc_barrier_simple_spmd);
     CallInst::Create(BarrierFn, {Ident, GTid}, "", StateMachineBeginBB)
         ->setDebugLoc(DLoc);
+
+    if (WorkFnAI->getType()->getPointerAddressSpace() !=
+        (unsigned int)AddressSpace::Generic) {
+      WorkFnAI = new AddrSpaceCastInst(
+          WorkFnAI,
+          PointerType::getWithSamePointeeType(
+              cast<PointerType>(WorkFnAI->getType()),
+              (unsigned int)AddressSpace::Generic),
+          WorkFnAI->getName() + ".generic", StateMachineBeginBB);
+      WorkFnAI->setDebugLoc(DLoc);
+    }
 
     FunctionCallee KernelParallelFn =
         OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
