@@ -17,7 +17,8 @@
 include "TestOps.td"
 
 // All of the attributes will extend this class.
-class Test_Attr<string name> : AttrDef<Test_Dialect, name>;
+class Test_Attr<string name, list<Trait> traits = []>
+    : AttrDef<Test_Dialect, name, traits>;
 
 def SimpleAttrA : Test_Attr<"SimpleA"> {
   let mnemonic = "smpla";
@@ -52,6 +53,14 @@ def AttrWithTypeBuilder : Test_Attr<"AttrWithTypeBuilder"> {
   let mnemonic = "attr_with_type_builder";
   let parameters = (ins "::mlir::IntegerAttr":$attr);
   let typeBuilder = "$_attr.getType()";
+}
+
+def TestAttrTrait : NativeAttrTrait<"TestAttrTrait">;
+
+// The definition of a singleton attribute that has a trait.
+def AttrWithTrait : Test_Attr<"AttrWithTrait", [TestAttrTrait]> {
+  let mnemonic = "attr_with_trait";
+  let parameters = (ins );
 }
 
 #endif // TEST_ATTRDEFS
