@@ -1371,10 +1371,12 @@ vector double test_vec_vec_splatid(void) {
 }
 
 vector signed int test_vec_vec_splati_ins_si(void) {
+  // CHECK-BE: [[T0:%.+]] = and i32 %{{.+}}, 1
   // CHECK-BE: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 %{{.+}}
   // CHECK-BE:  [[T1:%.+]] = add i32 2, %{{.+}}
   // CHECK-BE: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 [[T1]]
   // CHECK-BE: ret <4 x i32>
+  // CHECK-LE: [[T0:%.+]] = and i32 %{{.+}}, 1
   // CHECK-LE:  [[T1:%.+]] = sub i32 1, %{{.+}}
   // CHECK-LE: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 [[T1]]
   // CHECK-LE:  [[T2:%.+]] = sub i32 3, %{{.+}}
@@ -1384,10 +1386,12 @@ vector signed int test_vec_vec_splati_ins_si(void) {
 }
 
 vector unsigned int test_vec_vec_splati_ins_ui(void) {
+  // CHECK-BE: [[T0:%.+]] = and i32 %{{.+}}, 1
   // CHECK-BE: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 %{{.+}}
   // CHECK-BE:  [[T1:%.+]] = add i32 2, %{{.+}}
   // CHECK-BE: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 [[T1]]
   // CHECK-BE: ret <4 x i32>
+  // CHECK-LE: [[T0:%.+]] = and i32 %{{.+}}, 1
   // CHECK-LE:  [[T1:%.+]] = sub i32 1, %{{.+}}
   // CHECK-LE: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 [[T1]]
   // CHECK-LE:  [[T2:%.+]] = sub i32 3, %{{.+}}
@@ -1397,16 +1401,36 @@ vector unsigned int test_vec_vec_splati_ins_ui(void) {
 }
 
 vector float test_vec_vec_splati_ins_f(void) {
+  // CHECK-BE: [[T0:%.+]] = and i32 %{{.+}}, 1
   // CHECK-BE: insertelement <4 x float> %{{.+}}, float %{{.+}}, i32 %{{.+}}
   // CHECK-BE:  [[T1:%.+]] = add i32 2, %{{.+}}
   // CHECK-BE: insertelement <4 x float> %{{.+}}, float %{{.+}}, i32 [[T1]]
   // CHECK-BE: ret <4 x float>
+  // CHECK-LE: [[T0:%.+]] = and i32 %{{.+}}, 1
   // CHECK-LE:  [[T1:%.+]] = sub i32 1, %{{.+}}
   // CHECK-LE: insertelement <4 x float> %{{.+}}, float %{{.+}}, i32 [[T1]]
   // CHECK-LE:  [[T2:%.+]] = sub i32 3, %{{.+}}
   // CHECK-LE: insertelement <4 x float> %{{.+}}, float %{{.+}}, i32 [[T2]]
   // CHECK-LE: ret <4 x float>
   return vec_splati_ins(vfa, 0, 1.0f);
+}
+
+// In this test case, the second argument of vec_splati_ins is outside of the 
+// expected range [0,1]. A mask of 0x01 is applied to obtain an in-range value 
+// for the second argument.
+vector signed int test_vec_vec_splati_ins_range(void) {
+  // CHECK-BE: [[T0:%.+]] = and i32 %{{.+}}, 1
+  // CHECK-BE: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 %{{.+}}
+  // CHECK-BE:  [[T1:%.+]] = add i32 2, %{{.+}}
+  // CHECK-BE: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 [[T1]]
+  // CHECK-BE: ret <4 x i32>
+  // CHECK-LE: [[T0:%.+]] = and i32 %{{.+}}, 1
+  // CHECK-LE:  [[T1:%.+]] = sub i32 1, %{{.+}}
+  // CHECK-LE: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 [[T1]]
+  // CHECK-LE:  [[T2:%.+]] = sub i32 3, %{{.+}}
+  // CHECK-LE: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 [[T2]]
+  // CHECK-LE: ret <4 x i32>
+  return vec_splati_ins(vsia, 2, -17);
 }
 
 void test_vec_xst_trunc_sc(vector signed __int128 __a, signed long long __b,
