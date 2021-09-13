@@ -324,6 +324,9 @@ enum EdgeKind_x86_64 : Edge::Kind {
   ///
   PCRel32TLVPLoadREXRelaxable,
 
+  /// TODO: Explain the generic edge kind
+  RequestTLSDescInGOTAndTransformToDelta32,
+
   /// A TLVP entry getter/constructor, transformed to
   /// Delta32ToTLVPLoadREXRelaxable.
   ///

@@ -1810,6 +1810,40 @@ class PredTrait<string descr, Pred pred> : Trait {
 }
 
 //===----------------------------------------------------------------------===//
+// TypeTrait definitions
+//===----------------------------------------------------------------------===//
+
+// TypeTrait represents a trait regarding a type.
+// TODO: Remove this class in favor of using Trait.
+class TypeTrait;
+
+// These classes are used to define type specific traits.
+class NativeTypeTrait<string name> : NativeTrait<name, "Type">, TypeTrait;
+class ParamNativeTypeTrait<string prop, string params>
+    : ParamNativeTrait<prop, params, "Type">, TypeTrait;
+class GenInternalTypeTrait<string prop>
+    : GenInternalTrait<prop, "Type">, TypeTrait;
+class PredTypeTrait<string descr, Pred pred>
+    : PredTrait<descr, pred>, TypeTrait;
+
+//===----------------------------------------------------------------------===//
+// AttrTrait definitions
+//===----------------------------------------------------------------------===//
+
+// AttrTrait represents a trait regarding an attribute.
+// TODO: Remove this class in favor of using Trait.
+class AttrTrait;
+
+// These classes are used to define attribute specific traits.
+class NativeAttrTrait<string name> : NativeTrait<name, "Attribute">, AttrTrait;
+class ParamNativeAttrTrait<string prop, string params>
+    : ParamNativeTrait<prop, params, "Attribute">, AttrTrait;
+class GenInternalAttrTrait<string prop>
+    : GenInternalTrait<prop, "Attribute">, AttrTrait;
+class PredAttrTrait<string descr, Pred pred>
+    : PredTrait<descr, pred>, AttrTrait;
+
+//===----------------------------------------------------------------------===//
 // OpTrait definitions
 //===----------------------------------------------------------------------===//
 

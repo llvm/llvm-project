@@ -200,11 +200,11 @@ struct CustomSection : Section {
 };
 
 struct DylinkSection : CustomSection {
-  DylinkSection() : CustomSection("dylink") {}
+  DylinkSection() : CustomSection("dylink.0") {}
 
   static bool classof(const Section *S) {
     auto C = dyn_cast<CustomSection>(S);
-    return C && C->Name == "dylink";
+    return C && C->Name == "dylink.0";
   }
 
   uint32_t MemorySize;

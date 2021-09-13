@@ -564,3 +564,39 @@ func @graph_region_cant_have_blocks() {
     "terminator"() : () -> ()
   }
 }
+
+// -----
+
+// Check that we can query traits in types
+func @succeeded_type_traits() {
+  // CHECK: "test.result_type_with_trait"() : () -> !test.test_type_with_trait
+  "test.result_type_with_trait"() : () -> !test.test_type_with_trait
+  return
+}
+
+// -----
+
+// Check that we can query traits in types
+func @failed_type_traits() {
+  // expected-error@+1 {{result type should have trait 'TestTypeTrait'}}
+  "test.result_type_with_trait"() : () -> i32
+  return
+}
+
+// -----
+
+// Check that we can query traits in attributes
+func @succeeded_attr_traits() {
+  // CHECK: "test.attr_with_trait"() {attr = #test.attr_with_trait} : () -> ()
+  "test.attr_with_trait"() {attr = #test.attr_with_trait} : () -> ()
+  return
+}
+
+// -----
+
+// Check that we can query traits in attributes
+func @failed_attr_traits() {
+  // expected-error@+1 {{'attr' attribute should have trait 'TestAttrTrait'}}
+  "test.attr_with_trait"() {attr = 42 : i32} : () -> ()
+  return
+}

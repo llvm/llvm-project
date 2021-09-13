@@ -5756,6 +5756,19 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                        options::OPT_fno_openmp_cuda_mode, /*Default=*/false))
         CmdArgs.push_back("-fopenmp-cuda-mode");
 
+      // When in OpenMP offloading mode, enable or disable the new device
+      // runtime.
+      if (Args.hasFlag(options::OPT_fopenmp_target_new_runtime,
+                       options::OPT_fno_openmp_target_new_runtime,
+                       /*Default=*/false))
+        CmdArgs.push_back("-fopenmp-target-new-runtime");
+
+      // When in OpenMP offloading mode, enable debugging on the device.
+      Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_target_debug_EQ);
+      if (Args.hasFlag(options::OPT_fopenmp_target_debug,
+                       options::OPT_fno_openmp_target_debug, /*Default=*/false))
+        CmdArgs.push_back("-fopenmp-target-debug");
+
       // When in OpenMP offloading mode with NVPTX target, check if full runtime
       // is required.
       if (Args.hasFlag(options::OPT_fopenmp_cuda_force_full_runtime,

@@ -1048,49 +1048,48 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
   // blocks.
   for (BasicBlock *BB : depth_first(&F.getEntryBlock())) {
     bool BBChanged = false;
-    for (BasicBlock::iterator BI = BB->begin(), BE = BB->end(); BI != BE;) {
-      Instruction *II = &*BI++;
-      switch (II->getOpcode()) {
+    for (Instruction &II : llvm::make_early_inc_range(*BB)) {
+      switch (II.getOpcode()) {
       case Instruction::Select:
-        BBChanged |= processSelect(cast<SelectInst>(II), LVI);
+        BBChanged |= processSelect(cast<SelectInst>(&II), LVI);
         break;
       case Instruction::PHI:
-        BBChanged |= processPHI(cast<PHINode>(II), LVI, DT, SQ);
+        BBChanged |= processPHI(cast<PHINode>(&II), LVI, DT, SQ);
         break;
       case Instruction::ICmp:
       case Instruction::FCmp:
-        BBChanged |= processCmp(cast<CmpInst>(II), LVI);
+        BBChanged |= processCmp(cast<CmpInst>(&II), LVI);
         break;
       case Instruction::Load:
       case Instruction::Store:
-        BBChanged |= processMemAccess(II, LVI);
+        BBChanged |= processMemAccess(&II, LVI);
         break;
       case Instruction::Call:
       case Instruction::Invoke:
-        BBChanged |= processCallSite(cast<CallBase>(*II), LVI);
+        BBChanged |= processCallSite(cast<CallBase>(II), LVI);
         break;
       case Instruction::SRem:
       case Instruction::SDiv:
-        BBChanged |= processSDivOrSRem(cast<BinaryOperator>(II), LVI);
+        BBChanged |= processSDivOrSRem(cast<BinaryOperator>(&II), LVI);
         break;
       case Instruction::UDiv:
       case Instruction::URem:
-        BBChanged |= processUDivOrURem(cast<BinaryOperator>(II), LVI);
+        BBChanged |= processUDivOrURem(cast<BinaryOperator>(&II), LVI);
         break;
       case Instruction::AShr:
-        BBChanged |= processAShr(cast<BinaryOperator>(II), LVI);
+        BBChanged |= processAShr(cast<BinaryOperator>(&II), LVI);
         break;
       case Instruction::SExt:
-        BBChanged |= processSExt(cast<SExtInst>(II), LVI);
+        BBChanged |= processSExt(cast<SExtInst>(&II), LVI);
         break;
       case Instruction::Add:
       case Instruction::Sub:
       case Instruction::Mul:
       case Instruction::Shl:
-        BBChanged |= processBinOp(cast<BinaryOperator>(II), LVI);
+        BBChanged |= processBinOp(cast<BinaryOperator>(&II), LVI);
         break;
       case Instruction::And:
-        BBChanged |= processAnd(cast<BinaryOperator>(II), LVI);
+        BBChanged |= processAnd(cast<BinaryOperator>(&II), LVI);
         break;
       }
     }

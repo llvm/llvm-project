@@ -1,0 +1,19 @@
+// RUN: %clang_cc1 %s -pedantic -ast-dump | FileCheck %s
+
+struct X {
+  X() __private = default;
+};
+
+// CHECK: VarDecl {{.*}} gx
+// CHECK: CXXTemporaryObjectExpr {{.*}} '__private X'
+__global X gx = X();
+
+void k() {
+  // CHECK: VarDecl {{.*}} x1
+  // CHECK: CXXTemporaryObjectExpr {{.*}} '__private X'
+  X x1 = X();
+
+  // CHECK: VarDecl {{.*}} x2
+  // CHECK: CXXConstructExpr {{.*}} 'const __private X'
+  const X x2;
+}

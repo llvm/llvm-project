@@ -29,14 +29,18 @@ class MLIRContext;
 /// a registered Type.
 class AbstractType {
 public:
+  using HasTraitFn = llvm::unique_function<bool(TypeID) const>;
+
   /// Look up the specified abstract type in the MLIRContext and return a
   /// reference to it.
   static const AbstractType &lookup(TypeID typeID, MLIRContext *context);
 
   /// This method is used by Dialect objects when they register the list of
   /// types they contain.
-  template <typename T> static AbstractType get(Dialect &dialect) {
-    return AbstractType(dialect, T::getInterfaceMap(), T::getTypeID());
+  template <typename T>
+  static AbstractType get(Dialect &dialect) {
+    return AbstractType(dialect, T::getInterfaceMap(), T::getHasTraitFn(),
+                        T::getTypeID());
   }
 
   /// This method is used by Dialect objects to register types with
@@ -44,8 +48,9 @@ public:
   /// The use of this method is in general discouraged in favor of
   /// 'get<CustomType>(dialect)';
   static AbstractType get(Dialect &dialect, detail::InterfaceMap &&interfaceMap,
-                          TypeID typeID) {
-    return AbstractType(dialect, std::move(interfaceMap), typeID);
+                          HasTraitFn &&hasTrait, TypeID typeID) {
+    return AbstractType(dialect, std::move(interfaceMap), std::move(hasTrait),
+                        typeID);
   }
 
   /// Return the dialect this type was registered to.
@@ -63,14 +68,23 @@ public:
     return interfaceMap.contains(interfaceID);
   }
 
+  /// Returns true if the type has a particular trait.
+  template <template <typename T> class Trait>
+  bool hasTrait() const {
+    return hasTraitFn(TypeID::get<Trait>());
+  }
+
+  /// Returns true if the type has a particular trait.
+  bool hasTrait(TypeID traitID) const { return hasTraitFn(traitID); }
+
   /// Return the unique identifier representing the concrete type class.
   TypeID getTypeID() const { return typeID; }
 
 private:
   AbstractType(Dialect &dialect, detail::InterfaceMap &&interfaceMap,
-               TypeID typeID)
+               HasTraitFn &&hasTrait, TypeID typeID)
       : dialect(dialect), interfaceMap(std::move(interfaceMap)),
-        typeID(typeID) {}
+        hasTraitFn(std::move(hasTrait)), typeID(typeID) {}
 
   /// Give StorageUserBase access to the mutable lookup.
   template <typename ConcreteT, typename BaseT, typename StorageT,
@@ -87,6 +101,9 @@ private:
 
   /// This is a collection of the interfaces registered to this type.
   detail::InterfaceMap interfaceMap;
+
+  /// Function to check if the type has a particular trait.
+  HasTraitFn hasTraitFn;
 
   /// The unique identifier of the derived Type class.
   const TypeID typeID;

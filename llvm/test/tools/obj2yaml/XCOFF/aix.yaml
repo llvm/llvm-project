@@ -77,4 +77,4 @@
 # CHECK-NEXT:     Type:      0x0
 # CHECK-NEXT:     StorageClass:    C_HIDEXT
 # CHECK-NEXT:     NumberOfAuxEntries: 1
-# CHECK-NEXT: ...
+## TODO: Dump the string table.

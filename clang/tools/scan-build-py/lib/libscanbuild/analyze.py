@@ -39,8 +39,10 @@ from libscanbuild.shell import decode
 
 __all__ = ['scan_build', 'analyze_build', 'analyze_compiler_wrapper']
 
-COMPILER_WRAPPER_CC = 'analyze-cc'
-COMPILER_WRAPPER_CXX = 'analyze-c++'
+scanbuild_dir = os.path.dirname(__import__('sys').argv[0])
+
+COMPILER_WRAPPER_CC = os.path.join(scanbuild_dir, '..', 'libexec', 'analyze-cc')
+COMPILER_WRAPPER_CXX = os.path.join(scanbuild_dir, '..', 'libexec', 'analyze-c++')
 
 CTU_EXTDEF_MAP_FILENAME = 'externalDefMap.txt'
 CTU_TEMP_DEFMAP_FOLDER = 'tmpExternalDefMaps'

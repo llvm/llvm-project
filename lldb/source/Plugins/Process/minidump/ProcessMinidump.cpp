@@ -64,7 +64,6 @@ public:
     return ConstString("placeholder");
   }
   ConstString GetPluginName() override { return GetStaticPluginName(); }
-  uint32_t GetPluginVersion() override { return 1; }
   bool ParseHeader() override { return true; }
   Type CalculateType() override { return eTypeUnknown; }
   Strata CalculateStrata() override { return eStrataUnknown; }
@@ -306,8 +305,6 @@ Status ProcessMinidump::DoLoadCore() {
 }
 
 ConstString ProcessMinidump::GetPluginName() { return GetPluginNameStatic(); }
-
-uint32_t ProcessMinidump::GetPluginVersion() { return 1; }
 
 Status ProcessMinidump::DoDestroy() { return Status(); }
 

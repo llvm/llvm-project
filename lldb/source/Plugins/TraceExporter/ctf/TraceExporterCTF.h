@@ -31,8 +31,6 @@ public:
   static void Terminate();
 
   static ConstString GetPluginNameStatic();
-
-  uint32_t GetPluginVersion() override;
   /// \}
 };
 

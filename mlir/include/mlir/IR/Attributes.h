@@ -84,6 +84,12 @@ public:
 
   friend ::llvm::hash_code hash_value(Attribute arg);
 
+  /// Returns true if the type was registered with a particular trait.
+  template <template <typename T> class Trait>
+  bool hasTrait() {
+    return getAbstractAttribute().hasTrait<Trait>();
+  }
+
   /// Return the abstract descriptor for this attribute.
   const AbstractTy &getAbstractAttribute() const {
     return impl->getAbstractAttribute();

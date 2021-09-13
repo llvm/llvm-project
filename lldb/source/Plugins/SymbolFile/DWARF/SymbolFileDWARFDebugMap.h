@@ -142,8 +142,6 @@ public:
   // PluginInterface protocol
   lldb_private::ConstString GetPluginName() override;
 
-  uint32_t GetPluginVersion() override;
-
 protected:
   enum { kHaveInitializedOSOs = (1 << 0), kNumFlags };
 

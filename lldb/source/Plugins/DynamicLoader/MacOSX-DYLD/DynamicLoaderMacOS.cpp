@@ -518,5 +518,3 @@ const char *DynamicLoaderMacOS::GetPluginDescriptionStatic() {
 lldb_private::ConstString DynamicLoaderMacOS::GetPluginName() {
   return GetPluginNameStatic();
 }
-
-uint32_t DynamicLoaderMacOS::GetPluginVersion() { return 1; }

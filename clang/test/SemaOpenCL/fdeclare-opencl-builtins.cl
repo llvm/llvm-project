@@ -122,6 +122,27 @@ void test_atomic_fetch(volatile __generic atomic_int *a_int,
 }
 #endif
 
+#if !defined(NO_HEADER) && !defined(NO_FP64) && __OPENCL_C_VERSION__ >= 200
+// Check added atomic_fetch_ functions by cl_ext_float_atomics
+// extension can be called
+void test_atomic_fetch_with_address_space(volatile __generic atomic_float *a_float,
+                                          volatile __generic atomic_double *a_double,
+                                          volatile __local atomic_float *a_float_local,
+                                          volatile __local atomic_double *a_double_local,
+                                          volatile __global atomic_float *a_float_global,
+                                          volatile __global atomic_double *a_double_global) {
+  float f1, resf1;
+  double d1, resd1;
+  resf1 = atomic_fetch_min(a_float, f1);
+  resf1 = atomic_fetch_max_explicit(a_float_local, f1, memory_order_seq_cst);
+  resf1 = atomic_fetch_add_explicit(a_float_global, f1, memory_order_seq_cst, memory_scope_work_group);
+
+  resd1 = atomic_fetch_min(a_double, d1);
+  resd1 = atomic_fetch_max_explicit(a_double_local, d1, memory_order_seq_cst);
+  resd1 = atomic_fetch_add_explicit(a_double_global, d1, memory_order_seq_cst, memory_scope_work_group);
+}
+#endif // !defined(NO_HEADER) && __OPENCL_C_VERSION__ >= 200
+
 // Test old atomic overloaded with generic address space in C++ for OpenCL.
 #if __OPENCL_C_VERSION__ >= 200
 void test_legacy_atomics_cpp(__generic volatile unsigned int *a) {

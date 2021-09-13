@@ -451,7 +451,9 @@ Error ELFNixPlatform::bootstrapELFNixRuntime(JITDylib &PlatformJD) {
       {"__orc_rt_elfnix_platform_bootstrap", &orc_rt_elfnix_platform_bootstrap},
       {"__orc_rt_elfnix_platform_shutdown", &orc_rt_elfnix_platform_shutdown},
       {"__orc_rt_elfnix_register_object_sections",
-       &orc_rt_elfnix_register_object_sections}};
+       &orc_rt_elfnix_register_object_sections},
+      {"__orc_rt_elfnix_create_pthread_key",
+       &orc_rt_elfnix_create_pthread_key}};
 
   SymbolLookupSet RuntimeSymbols;
   std::vector<std::pair<SymbolStringPtr, ExecutorAddress *>> AddrsToRecord;
@@ -546,6 +548,20 @@ Error ELFNixPlatform::registerPerObjectSections(
   return ErrResult;
 }
 
+Expected<uint64_t> ELFNixPlatform::createPThreadKey() {
+  if (!orc_rt_elfnix_create_pthread_key)
+    return make_error<StringError>(
+        "Attempting to create pthread key in target, but runtime support has "
+        "not been loaded yet",
+        inconvertibleErrorCode());
+
+  Expected<uint64_t> Result(0);
+  if (auto Err = ES.callSPSWrapper<SPSExpected<uint64_t>(void)>(
+          orc_rt_elfnix_create_pthread_key.getValue(), Result))
+    return std::move(Err);
+  return Result;
+}
+
 void ELFNixPlatform::ELFNixPlatformPlugin::modifyPassConfig(
     MaterializationResponsibility &MR, jitlink::LinkGraph &LG,
     jitlink::PassConfiguration &Config) {
@@ -624,8 +640,10 @@ void ELFNixPlatform::ELFNixPlatformPlugin::addEHAndTLVSupportPasses(
 
   // Insert TLV lowering at the start of the PostPrunePasses, since we want
   // it to run before GOT/PLT lowering.
-  Config.PostPrunePasses.insert(
-      Config.PostPrunePasses.begin(),
+
+  // TODO: Check that before the fixTLVSectionsAndEdges pass, the GOT/PLT build
+  // pass has done. Because the TLS descriptor need to be allocate in GOT.
+  Config.PostPrunePasses.push_back(
       [this, &JD = MR.getTargetJITDylib()](jitlink::LinkGraph &G) {
         return fixTLVSectionsAndEdges(G, JD);
       });
@@ -754,6 +772,40 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::fixTLVSectionsAndEdges(
     jitlink::LinkGraph &G, JITDylib &JD) {
 
   // TODO implement TLV support
+  for (auto *Sym : G.external_symbols())
+    if (Sym->getName() == "__tls_get_addr") {
+      Sym->setName("___orc_rt_elfnix_tls_get_addr");
+    }
+
+  auto *TLSInfoEntrySection = G.findSectionByName("$__TLSINFO");
+
+  if (TLSInfoEntrySection) {
+    Optional<uint64_t> Key;
+    {
+      std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
+      auto I = MP.JITDylibToPThreadKey.find(&JD);
+      if (I != MP.JITDylibToPThreadKey.end())
+        Key = I->second;
+    }
+    if (!Key) {
+      if (auto KeyOrErr = MP.createPThreadKey())
+        Key = *KeyOrErr;
+      else
+        return KeyOrErr.takeError();
+    }
+
+    uint64_t PlatformKeyBits =
+        support::endian::byte_swap(*Key, G.getEndianness());
+
+    for (auto *B : TLSInfoEntrySection->blocks()) {
+      // FIXME: The TLS descriptor byte length may different with different
+      // ISA
+      assert(B->getSize() == (G.getPointerSize() * 2) &&
+             "TLS descriptor must be 2 words length");
+      auto TLSInfoEntryContent = B->getMutableContent(G);
+      memcpy(TLSInfoEntryContent.data(), &PlatformKeyBits, G.getPointerSize());
+    }
+  }
 
   return Error::success();
 }

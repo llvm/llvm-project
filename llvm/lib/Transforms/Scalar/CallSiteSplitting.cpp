@@ -505,8 +505,7 @@ static bool doCallSiteSplitting(Function &F, TargetLibraryInfo &TLI,
 
   DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Lazy);
   bool Changed = false;
-  for (Function::iterator BI = F.begin(), BE = F.end(); BI != BE;) {
-    BasicBlock &BB = *BI++;
+  for (BasicBlock &BB : llvm::make_early_inc_range(F)) {
     auto II = BB.getFirstNonPHIOrDbg()->getIterator();
     auto IE = BB.getTerminator()->getIterator();
     // Iterate until we reach the terminator instruction. tryToSplitCallSite

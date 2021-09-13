@@ -412,8 +412,6 @@ public:
   // PluginInterface protocol
   lldb_private::ConstString GetPluginName() override;
 
-  uint32_t GetPluginVersion() override;
-
   static bool GetKernelCoordinate(lldb_renderscript::RSCoordinate &coord,
                                   Thread *thread_ptr);
 

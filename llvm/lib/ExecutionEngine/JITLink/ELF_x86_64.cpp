@@ -21,6 +21,7 @@
 #include "ELFLinkGraphBuilder.h"
 #include "JITLinkGeneric.h"
 #include "PerGraphGOTAndPLTStubsBuilder.h"
+#include "PerGraphTLSInfoEntryBuilder.h"
 
 #define DEBUG_TYPE "jitlink"
 
@@ -32,6 +33,56 @@ namespace {
 
 constexpr StringRef ELFGOTSectionName = "$__GOT";
 constexpr StringRef ELFGOTSymbolName = "_GLOBAL_OFFSET_TABLE_";
+constexpr StringRef ELFTLSInfoSectionName = "$__TLSINFO";
+
+class PerGraphTLSInfoBuilder_ELF_x86_64
+    : public PerGraphTLSInfoEntryBuilder<PerGraphTLSInfoBuilder_ELF_x86_64> {
+public:
+  static const uint8_t TLSInfoEntryContent[16];
+  using PerGraphTLSInfoEntryBuilder<
+      PerGraphTLSInfoBuilder_ELF_x86_64>::PerGraphTLSInfoEntryBuilder;
+
+  bool isTLSEdgeToFix(Edge &E) {
+    return E.getKind() == x86_64::RequestTLSDescInGOTAndTransformToDelta32;
+  }
+
+  Symbol &createTLSInfoEntry(Symbol &Target) {
+    // the TLS Info entry's key value will be written by the fixTLVSectionByName
+    // pass, so create mutable content.
+    auto &TLSInfoEntry = G.createMutableContentBlock(
+        getTLSInfoSection(), G.allocateContent(getTLSInfoEntryContent()), 0, 8,
+        0);
+    TLSInfoEntry.addEdge(x86_64::Pointer64, 8, Target, 0);
+    return G.addAnonymousSymbol(TLSInfoEntry, 0, 16, false, false);
+  }
+
+  void fixTLSEdge(Edge &E, Symbol &Target) {
+    if (E.getKind() == x86_64::RequestTLSDescInGOTAndTransformToDelta32) {
+      E.setTarget(Target);
+      E.setKind(x86_64::Delta32);
+    }
+  }
+
+  Section &getTLSInfoSection() const {
+    if (!TLSInfoSection)
+      TLSInfoSection =
+          &G.createSection(ELFTLSInfoSectionName, sys::Memory::MF_READ);
+    return *TLSInfoSection;
+  }
+
+private:
+  ArrayRef<char> getTLSInfoEntryContent() {
+    return {reinterpret_cast<const char *>(TLSInfoEntryContent),
+            sizeof(TLSInfoEntryContent)};
+  }
+
+  mutable Section *TLSInfoSection = nullptr;
+};
+
+const uint8_t PerGraphTLSInfoBuilder_ELF_x86_64::TLSInfoEntryContent[16] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /*pthread key */
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  /*data address*/
+};
 
 class PerGraphGOTAndPLTStubsBuilder_ELF_x86_64
     : public PerGraphGOTAndPLTStubsBuilder<
@@ -199,6 +250,8 @@ private:
       return ELF_x86_64_Edges::ELFX86RelocationKind::GOTOFF64;
     case ELF::R_X86_64_PLT32:
       return ELF_x86_64_Edges::ELFX86RelocationKind::Branch32;
+    case ELF::R_X86_64_TLSGD:
+      return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel32TLV;
     }
     return make_error<JITLinkError>("Unsupported x86-64 relocation type " +
                                     formatv("{0:d}: ", Type) +
@@ -313,6 +366,10 @@ private:
         case PCRel32REXGOTLoadRelaxable: {
           Kind = x86_64::RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable;
           Addend = 0;
+          break;
+        }
+        case PCRel32TLV: {
+          Kind = x86_64::RequestTLSDescInGOTAndTransformToDelta32;
           break;
         }
         case PCRel32GOTLoadRelaxable: {
@@ -481,6 +538,8 @@ void link_ELF_x86_64(std::unique_ptr<LinkGraph> G,
       Config.PrePrunePasses.push_back(markAllSymbolsLive);
 
     // Add an in-place GOT/Stubs pass.
+
+    Config.PostPrunePasses.push_back(PerGraphTLSInfoBuilder_ELF_x86_64::asPass);
     Config.PostPrunePasses.push_back(
         PerGraphGOTAndPLTStubsBuilder_ELF_x86_64::asPass);
 

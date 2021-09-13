@@ -58,8 +58,6 @@ public:
   CreateInstanceForLiveProcess(Process &process);
 
   static ConstString GetPluginNameStatic();
-
-  uint32_t GetPluginVersion() override;
   /// \}
 
   lldb::CommandObjectSP

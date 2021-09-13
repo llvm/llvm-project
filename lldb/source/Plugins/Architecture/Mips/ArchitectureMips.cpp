@@ -43,7 +43,6 @@ std::unique_ptr<Architecture> ArchitectureMips::Create(const ArchSpec &arch) {
 }
 
 ConstString ArchitectureMips::GetPluginName() { return GetPluginNameStatic(); }
-uint32_t ArchitectureMips::GetPluginVersion() { return 1; }
 
 addr_t ArchitectureMips::GetCallableLoadAddress(addr_t code_addr,
                                                 AddressClass addr_class) const {

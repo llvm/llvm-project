@@ -1068,8 +1068,6 @@ ConstString StructuredDataDarwinLog::GetPluginName() {
   return GetStaticPluginName();
 }
 
-uint32_t StructuredDataDarwinLog::GetPluginVersion() { return 1; }
-
 #pragma mark -
 #pragma mark StructuredDataPlugin API
 

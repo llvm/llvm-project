@@ -64,8 +64,6 @@ StringRef TraceIntelPT::GetSchema() {
 
 ConstString TraceIntelPT::GetPluginName() { return GetPluginNameStatic(); }
 
-uint32_t TraceIntelPT::GetPluginVersion() { return 1; }
-
 void TraceIntelPT::Dump(Stream *s) const {}
 
 llvm::Error TraceIntelPT::SaveLiveTraceToDisk(FileSpec directory) {

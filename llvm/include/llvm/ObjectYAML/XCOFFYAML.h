@@ -59,10 +59,19 @@ struct Symbol {
   uint8_t NumberOfAuxEntries;
 };
 
+struct StringTable {
+  Optional<uint32_t> ContentSize; // The total size of the string table.
+  Optional<uint32_t> Length;      // The value of the length field for the first
+                                  // 4 bytes of the table.
+  Optional<std::vector<StringRef>> Strings;
+  Optional<yaml::BinaryRef> RawContent;
+};
+
 struct Object {
   FileHeader Header;
   std::vector<Section> Sections;
   std::vector<Symbol> Symbols;
+  StringTable StrTbl;
   Object();
 };
 } // namespace XCOFFYAML
@@ -98,6 +107,10 @@ template <> struct MappingTraits<XCOFFYAML::Relocation> {
 
 template <> struct MappingTraits<XCOFFYAML::Section> {
   static void mapping(IO &IO, XCOFFYAML::Section &Sec);
+};
+
+template <> struct MappingTraits<XCOFFYAML::StringTable> {
+  static void mapping(IO &IO, XCOFFYAML::StringTable &Str);
 };
 
 template <> struct MappingTraits<XCOFFYAML::Object> {

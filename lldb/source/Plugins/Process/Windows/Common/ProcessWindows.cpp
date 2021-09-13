@@ -148,8 +148,6 @@ lldb_private::ConstString ProcessWindows::GetPluginName() {
   return GetPluginNameStatic();
 }
 
-uint32_t ProcessWindows::GetPluginVersion() { return 1; }
-
 Status ProcessWindows::EnableBreakpointSite(BreakpointSite *bp_site) {
   if (bp_site->HardwareRequired())
     return Status("Hardware breakpoints are not supported.");

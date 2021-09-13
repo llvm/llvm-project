@@ -47,7 +47,6 @@ public:
 
   // lldb_private::Process overrides
   ConstString GetPluginName() override;
-  uint32_t GetPluginVersion() override;
 
   Status EnableBreakpointSite(BreakpointSite *bp_site) override;
   Status DisableBreakpointSite(BreakpointSite *bp_site) override;
