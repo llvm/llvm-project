@@ -164,8 +164,7 @@ entry:
   ; SAFETY: call {{.*}}__hwasan_generate_tag
   ; SAFETY-NOT: call {{.*}}__hwasan_store
   ; NOSTACK-NOT: call {{.*}}__hwasan_generate_tag
-  ; TODO: Do not emit this store.
-  ; NOSTACK: call {{.*}}__hwasan_store
+  ; NOSTACK-NOT: call {{.*}}__hwasan_store
   %buf.sroa.0 = alloca i8, align 4
   call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull %buf.sroa.0)
   %ptr = call i8* @retptr(i8* %buf.sroa.0)
