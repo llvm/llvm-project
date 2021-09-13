@@ -90,7 +90,7 @@ their semantics via a special [TableGen backend][TableGenBackend]:
 *   The `OpTrait` class hierarchy: They are used to specify special properties
     and constraints of the operation, including whether the operation has side
     effect or whether its output has the same shape as the input.
-*   The `ins`/`outs` marker: These are two special makers builtin to the
+*   The `ins`/`outs` marker: These are two special markers builtin to the
     `OpDefinitionsGen` backend. They lead the definitions of operands/attributes
     and results respectively.
 *   The `TypeConstraint` class hierarchy: They are used to specify the
@@ -354,7 +354,7 @@ various traits in the `mlir::OpTrait` namespace.
 
 Both operation traits, [interfaces](Interfaces.md/#utilizing-the-ods-framework),
 and constraints involving multiple operands/attributes/results are provided as
-the second template parameter to the `Op` class. They should be deriving from
+the third template parameter to the `Op` class. They should be deriving from
 the `OpTrait` class. See [Constraints](#constraints) for more information.
 
 ### Builder methods
@@ -1026,7 +1026,7 @@ Constraint is a core concept in table-driven operation definition: operation
 verification and graph operation matching are all based on satisfying
 constraints. So both the operation definition and rewrite rules specification
 significantly involve writing constraints. We have the `Constraint` class in
-[`OpBase.td`][OpBase] has the common base class for all constraints.
+[`OpBase.td`][OpBase] as the common base class for all constraints.
 
 An operation's constraint can cover different range; it may
 
@@ -1111,15 +1111,15 @@ is used. They serve as "hooks" to the enclosing environment. This includes
     information of the current operation.
 *   `$_self` will be replaced with the entity this predicate is attached to.
     E.g., `BoolAttr` is an attribute constraint that wraps a
-    `CPred<"$_self.isa<BoolAttr>()">`. Then for `F32:$attr`,`$_self` will be
+    `CPred<"$_self.isa<BoolAttr>()">`. Then for `F32Attr:$attr`,`$_self` will be
     replaced by `$attr`. For type constraints, it's a little bit special since
     we want the constraints on each type definition reads naturally and we want
     to attach type constraints directly to an operand/result, `$_self` will be
     replaced by the operand/result's type. E.g., for `F32` in `F32:$operand`,
-    its `$_self` will be expanded as `getOperand(...).getType()`.
+    its `$_self` will be expanded as `operand(...).getType()`.
 
 TODO: Reconsider the leading symbol for special placeholders. Eventually we want
-to allow referencing operand/result $-names; such $-names can start with
+to allow referencing operand/result `$-name`s; such `$-name`s can start with
 underscore.
 
 For example, to write an attribute `attr` is an `IntegerAttr`, in C++ you can
@@ -1195,7 +1195,7 @@ bitwidth.
 
 ODS attributes are defined as having a storage type (corresponding to a backing
 `mlir::Attribute` that _stores_ the attribute), a return type (corresponding to
-the C++ _return_ type of the generated of the helper getters) as well as method
+the C++ _return_ type of the generated helper getters) as well as a method
 to convert between the internal storage and the helper method.
 
 ### Attribute decorators
@@ -1424,8 +1424,8 @@ llvm::Optional<MyBitEnum> symbolizeMyBitEnum(uint32_t value) {
 
 ## Type Definitions
 
-MLIR defines the TypeDef class hierarchy to enable generation of data types from
-their specifications. A type is defined by specializing the TypeDef class with
+MLIR defines the `TypeDef` class hierarchy to enable generation of data types from
+their specifications. A type is defined by specializing the `TypeDef` class with
 concrete contents for all the fields it requires. For example, an integer type
 could be defined as:
 
@@ -1482,7 +1482,7 @@ should be a longer explanation.
 
 ### Type parameters
 
-The `parameters` field is a list of the types parameters. If no parameters are
+The `parameters` field is a list of the type's parameters. If no parameters are
 specified (the default), this type is considered a singleton type. Parameters
 are in the `"c++Type":$paramName` format. To use C++ types as parameters which
 need allocation in the storage constructor, there are two options:
@@ -1627,7 +1627,7 @@ that they should not be generated.
 
 The default build methods may cover a majority of the simple cases related to
 type construction, but when they cannot satisfy a type's needs, you can define
-additional convenience get methods in the `builders` field as follows:
+additional convenience 'get' methods in the `builders` field as follows:
 
 ```tablegen
 def MyType : ... {
@@ -1650,10 +1650,10 @@ def MyType : ... {
 ```
 
 The `builders` field is a list of custom builders that are added to the type
-class. In this example, we provide a several different convenience builders that
+class. In this example, we provide several different convenience builders that
 are useful in different scenarios. The `ins` prefix is common to many function
 declarations in ODS, which use a TableGen [`dag`](#tablegen-syntax). What
-follows is a comma-separated list of types (quoted string or CArg) and names
+follows is a comma-separated list of types (quoted string or `CArg`) and names
 prefixed with the `$` sign. The use of `CArg` allows for providing a default
 value to that argument. Let's take a look at each of these builders individually
 
@@ -1675,10 +1675,10 @@ class MyType : /*...*/ {
 
 This builder is identical to the one that will be automatically generated for
 `MyType`. The `context` parameter is implicitly added by the generator, and is
-used when building the file Type instance (with `Base::get`). The distinction
+used when building the Type instance (with `Base::get`). The distinction
 here is that we can provide the implementation of this `get` method. With this
 style of builder definition only the declaration is generated, the implementor
-of MyType will need to provide a definition of `MyType::get`.
+of `MyType` will need to provide a definition of `MyType::get`.
 
 The second builder will generate the declaration of a builder method that looks
 like:
@@ -1755,8 +1755,8 @@ MyType MyType::get(Type typeParam) {
 ```
 
 In this builder example, the main difference from the third builder example
-three is that the `MLIRContext` parameter is no longer added. This is because
-the builder type used `TypeBuilderWithInferredContext` implies that the context
+there is that the `MLIRContext` parameter is no longer added. This is because
+the type builder used `TypeBuilderWithInferredContext` implies that the context
 parameter is not necessary as it can be inferred from the arguments to the
 builder.
 
@@ -1794,7 +1794,7 @@ mlir-tblgen --gen-op-interface-doc -I /path/to/mlir/include /path/to/input/td/fi
 
 ### Requirements and existing mechanisms analysis
 
-The op description should as declarative as possible to allow a wide range of
+The op description should be as declarative as possible to allow a wide range of
 tools to work with them and query methods generated from them. In particular
 this means specifying traits, constraints and shape inference information in a
 way that is easily analyzable (e.g., avoid opaque calls to C++ functions where
