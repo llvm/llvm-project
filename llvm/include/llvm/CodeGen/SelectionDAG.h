@@ -531,7 +531,7 @@ public:
   }
 
 #ifndef NDEBUG
-  void VerifyDAGDiverence();
+  void VerifyDAGDivergence();
 #endif
 
   /// This iterates over the nodes in the SelectionDAG, folding
