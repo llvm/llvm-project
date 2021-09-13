@@ -648,6 +648,30 @@ def DefaultDialectOp : TEST_Op<"default_dialect", [OpAsmOpInterface]> {
   let assemblyFormat = "regions attr-dict-with-keyword";
 }
 
+// This operation requires its return type to have the trait 'TestTypeTrait'.
+def ResultTypeWithTraitOp : TEST_Op<"result_type_with_trait", []> {
+  let results = (outs AnyType);
+
+  let verifier = [{
+    if((*this)->getResultTypes()[0].hasTrait<TypeTrait::TestTypeTrait>())
+      return success();
+    return this->emitError("result type should have trait 'TestTypeTrait'");
+  }];
+}
+
+// This operation requires its "attr" attribute to have the
+// trait 'TestAttrTrait'.
+def AttrWithTraitOp : TEST_Op<"attr_with_trait", []> {
+  let arguments = (ins AnyAttr:$attr);
+
+  let verifier = [{
+    if (this->attr().hasTrait<AttributeTrait::TestAttrTrait>())
+      return success();
+    return this->emitError("'attr' attribute should have trait 'TestAttrTrait'");
+  }];
+}
+
+
 //===----------------------------------------------------------------------===//
 // Test Locations
 //===----------------------------------------------------------------------===//
