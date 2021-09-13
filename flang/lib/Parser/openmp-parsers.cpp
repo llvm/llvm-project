@@ -203,6 +203,8 @@ TYPE_PARSER(
                  parenthesized(Parser<OmpMapClause>{}))) ||
     "MERGEABLE" >> construct<OmpClause>(construct<OmpClause::Mergeable>()) ||
     "NOGROUP" >> construct<OmpClause>(construct<OmpClause::Nogroup>()) ||
+    "NONTEMPORAL" >> construct<OmpClause>(construct<OmpClause::Nontemporal>(
+                         parenthesized(nonemptyList(name)))) ||
     "NOTINBRANCH" >>
         construct<OmpClause>(construct<OmpClause::Notinbranch>()) ||
     "NOWAIT" >> construct<OmpClause>(construct<OmpClause::Nowait>()) ||
