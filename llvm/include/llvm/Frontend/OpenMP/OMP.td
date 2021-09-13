@@ -261,6 +261,8 @@ def OMPC_Allocate : Clause<"allocate"> {
 }
 def OMPC_NonTemporal : Clause<"nontemporal"> {
   let clangClass = "OMPNontemporalClause";
+  let flangClass = "Name";
+  let isValueList = true; 
 }
 
 def OMP_ORDER_concurrent : ClauseVal<"default",2,0> { let isDefault = 1; }
