@@ -500,6 +500,8 @@ auto GetShapeHelper::operator()(const Symbol &symbol) const -> Result {
           [&](const semantics::ObjectEntityDetails &object) {
             if (IsImpliedShape(symbol) && object.init()) {
               return (*this)(object.init());
+            } else if (IsAssumedRank(symbol)) {
+              return Result{};
             } else {
               int n{object.shape().Rank()};
               NamedEntity base{symbol};
@@ -517,12 +519,12 @@ auto GetShapeHelper::operator()(const Symbol &symbol) const -> Result {
             }
           },
           [&](const semantics::AssocEntityDetails &assoc) {
-            if (!assoc.rank()) {
-              return (*this)(assoc.expr());
-            } else {
+            if (assoc.rank()) { // SELECT RANK case
               int n{assoc.rank().value()};
               NamedEntity base{symbol};
               return Result{CreateShape(n, base)};
+            } else {
+              return (*this)(assoc.expr());
             }
           },
           [&](const semantics::SubprogramDetails &subp) {
