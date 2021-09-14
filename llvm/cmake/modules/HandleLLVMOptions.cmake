@@ -458,9 +458,6 @@ if( MSVC )
     -D_UNICODE
   )
 
-  # Allow setting clang-cl's /winsysroot flag.
-  set(LLVM_WINSYSROOT "" CACHE STRING
-    "If set, argument to clang-cl's /winsysroot")
   if (LLVM_WINSYSROOT)
     if (NOT CLANG_CL)
       message(ERROR "LLVM_WINSYSROOT requires clang-cl")

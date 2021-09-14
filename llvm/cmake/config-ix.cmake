@@ -503,10 +503,19 @@ if( MSVC )
   set(stricmp "_stricmp")
   set(strdup "_strdup")
 
-  # See if the DIA SDK is available and usable.
-  set(MSVC_DIA_SDK_DIR "$ENV{VSINSTALLDIR}DIA SDK" CACHE PATH
-      "Path to the DIA SDK")
+  # Allow setting clang-cl's /winsysroot flag.
+  set(LLVM_WINSYSROOT "" CACHE STRING
+    "If set, argument to clang-cl's /winsysroot")
 
+  if (LLVM_WINSYSROOT)
+    set(MSVC_DIA_SDK_DIR "${LLVM_WINSYSROOT}/DIA SDK" CACHE PATH
+        "Path to the DIA SDK")
+  else()
+    set(MSVC_DIA_SDK_DIR "$ENV{VSINSTALLDIR}DIA SDK" CACHE PATH
+        "Path to the DIA SDK")
+  endif()
+
+  # See if the DIA SDK is available and usable.
   # Due to a bug in MSVC 2013's installation software, it is possible
   # for MSVC 2013 to write the DIA SDK into the Visual Studio 2012
   # install directory.  If this happens, the installation is corrupt

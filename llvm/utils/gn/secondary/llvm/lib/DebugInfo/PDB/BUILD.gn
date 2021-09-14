@@ -1,4 +1,5 @@
 import("//llvm/lib/DebugInfo/PDB/enable_dia.gni")
+import("//llvm/utils/gn/build/sysroot.gni")
 
 static_library("PDB") {
   output_name = "LLVMDebugInfoPDB"
@@ -122,6 +123,22 @@ static_library("PDB") {
       "DIA/DIASourceFile.cpp",
       "DIA/DIATable.cpp",
     ]
-    libs = [ "diaguids.lib" ]
+
+    dia_lib_path = ""
+    if (sysroot != "") {
+      assert(gn_version >= 1937,
+             "Building with sysroot and DIA requires a newer GN. " +
+                 "Run `python3 llvm\utils\gn\get.py` to update.")
+      include_dirs = [ "$sysroot/DIA SDK/include" ]
+      dia_lib_path = "$sysroot/DIA SDK/lib/"  # x86 .lib file is here.
+      if (current_cpu == "arm") {
+        dia_lib_path += "arm/"
+      } else if (current_cpu == "arm64") {
+        dia_lib_path += "arm64/"
+      } else if (current_cpu == "x64") {
+        dia_lib_path += "amd64/"
+      }
+    }
+    libs = [ "${dia_lib_path}diaguids.lib" ]
   }
 }
