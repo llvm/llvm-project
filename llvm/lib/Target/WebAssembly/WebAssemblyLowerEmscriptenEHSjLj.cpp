@@ -832,7 +832,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
   Function *LongjmpF = M.getFunction("longjmp");
 
   // In some platforms _setjmp and _longjmp are used instead. Change these to
-  // use setjmp/longjmp instead, because we laster detect these functions by
+  // use setjmp/longjmp instead, because we later detect these functions by
   // their names.
   Function *SetjmpF2 = M.getFunction("_setjmp");
   Function *LongjmpF2 = M.getFunction("_longjmp");
