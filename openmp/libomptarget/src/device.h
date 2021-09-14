@@ -49,6 +49,8 @@ struct HostDataToTargetTy {
 
   const uintptr_t TgtPtrBegin; // target info.
 
+  const bool IsUSMAlloc; // used to track maps under USM mode (optional)
+
 private:
   static const uint64_t INFRefCount = ~(uint64_t)0;
   static std::string refCountToStr(uint64_t RefCount) {
@@ -90,14 +92,15 @@ private:
 public:
   HostDataToTargetTy(uintptr_t BP, uintptr_t B, uintptr_t E, uintptr_t TB,
                      bool UseHoldRefCount, map_var_info_t Name = nullptr,
-                     bool IsINF = false)
+                     bool IsINF = false, bool IsUSMAlloc = false)
       : HstPtrBase(BP), HstPtrBegin(B), HstPtrEnd(E), HstPtrName(Name),
-        TgtPtrBegin(TB), States(std::make_unique<StatesTy>(UseHoldRefCount ? 0
-                                                           : IsINF ? INFRefCount
-                                                                   : 1,
-                                                           !UseHoldRefCount ? 0
-                                                           : IsINF ? INFRefCount
-                                                                   : 1)) {}
+        TgtPtrBegin(TB), IsUSMAlloc(IsUSMAlloc),
+        States(std::make_unique<StatesTy>(UseHoldRefCount ? 0
+                                          : IsINF         ? INFRefCount
+                                                          : 1,
+                                          !UseHoldRefCount ? 0
+                                          : IsINF          ? INFRefCount
+                                                           : 1)) {}
 
   /// Get the total reference count.  This is smarter than just getDynRefCount()
   /// + getHoldRefCount() because it handles the case where at least one is

@@ -219,8 +219,8 @@ DeviceTy::getTargetPointer(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
     // In addition to the mapping rules above, the close map modifier forces the
     // mapping of the variable to the device.
     if (Size) {
-      if (!PM->RTLs.NoMaps) {
-	// When allocating under unified_shared_memory, amdgpu plugin
+      if (!PM->RTLs.NoUSMMapChecks) {
+        // When allocating under unified_shared_memory, amdgpu plugin
 	// can optimize memory access latency by registering allocated
 	// memory as coarse_grain
 	if (HstPtrBegin && RTL->set_coarse_grain_mem_region)
@@ -228,9 +228,13 @@ DeviceTy::getTargetPointer(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
 
 	// even under unified_shared_memory need to check for correctness of
 	// use of map clauses. device pointer is same as host ptr in this case
-	HostDataToTargetMap.emplace(
-            (uintptr_t)HstPtrBase, (uintptr_t)HstPtrBegin,
-            (uintptr_t)HstPtrBegin + Size, (uintptr_t)HstPtrBegin, HstPtrName);
+        Entry =
+            HostDataToTargetMap
+                .emplace((uintptr_t)HstPtrBase, (uintptr_t)HstPtrBegin,
+                         (uintptr_t)HstPtrBegin + Size, (uintptr_t)HstPtrBegin,
+                         HasHoldModifier, HstPtrName, /*IsInf=*/true,
+                         /*IsUSMAlloc=*/true)
+                .first;
       }
       DP("Return HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
          "memory\n",
@@ -309,9 +313,13 @@ void *DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
   DataMapMtx.lock();
   LookupResult lr = lookupMapping(HstPtrBegin, Size);
 
-  if (lr.Flags.IsContained ||
-      (!MustContain && (lr.Flags.ExtendsBefore || lr.Flags.ExtendsAfter))) {
+  // When map checks are enabled under USM mode, mapped host pointers are
+  // tracked in the map table but should be treated as in the USM case
+  if ((lr.Flags.IsContained ||
+       (!MustContain && (lr.Flags.ExtendsBefore || lr.Flags.ExtendsAfter))) &&
+      !lr.Entry->IsUSMAlloc) {
     auto &HT = *lr.Entry;
+
     // We do not zero the total reference count here.  deallocTgtPtr does that
     // atomically with removing the mapping.  Otherwise, before this thread
     // removed the mapping in deallocTgtPtr, another thread could retrieve the
@@ -347,9 +355,10 @@ void *DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
          DynRefCountAction, HT.holdRefCountToStr().c_str(), HoldRefCountAction);
     rc = (void *)tp;
   } else if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) {
-    // If the value isn't found in the mapping and unified shared memory
-    // is on then it means we have stumbled upon a value which we need to
-    // use directly from the host.
+    // If the value isn't found in the mapping or if the value is found but it
+    // is related to a USM mapping and unified shared memory is on then it means
+    // we have stumbled upon a value which we need to use directly from the
+    // host.
     DP("Get HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
        "memory\n",
        DPxPTR((uintptr_t)HstPtrBegin), Size);
@@ -384,19 +393,19 @@ int DeviceTy::deallocTgtPtr(void *HstPtrBegin, int64_t Size,
   if (lr.Flags.IsContained || lr.Flags.ExtendsBefore || lr.Flags.ExtendsAfter) {
     auto &HT = *lr.Entry;
     if (HT.decRefCount(HasHoldModifier) == 0) {
-      DP("Deleting tgt data " DPxMOD " of size %" PRId64 "\n",
-         DPxPTR(HT.TgtPtrBegin), Size);
-      if (!(PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
-	    !HasHoldModifier))
-	deleteData((void *)HT.TgtPtrBegin);
+      if (!HT.IsUSMAlloc) {
+        DP("Deleting tgt data " DPxMOD " of size %" PRId64 "\n",
+           DPxPTR(HT.TgtPtrBegin), Size);
+        deleteData((void *)HT.TgtPtrBegin);
+      }
       INFO(OMP_INFOTYPE_MAPPING_CHANGED, DeviceID,
            "Removing map entry with HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD
            ", Size=%" PRId64 ", Name=%s\n",
            DPxPTR(HT.HstPtrBegin), DPxPTR(HT.TgtPtrBegin), Size,
            (HT.HstPtrName) ? getNameFromMapping(HT.HstPtrName).c_str()
                            : "unknown");
-      if (!PM->RTLs.NoMaps)
-	HostDataToTargetMap.erase(lr.Entry);
+      if (!PM->RTLs.NoUSMMapChecks)
+        HostDataToTargetMap.erase(lr.Entry);
     }
     rc = OFFLOAD_SUCCESS;
   } else {

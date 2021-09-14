@@ -132,7 +132,7 @@ struct RTLsTy {
 
   // Set by OMPX_DISABLE_MAPS environment variable.
   // When active, maps are ignored by the runtime
-  bool NoMaps = false;
+  bool NoUSMMapChecks = false;
 
   explicit RTLsTy() = default;
 
