@@ -314,7 +314,7 @@ class LDMATRIX_OPS<list<string> Geom, list<string> Frags, list<string> Types> {
 
 // Creates list of valid combinations of fragments. This is the master list that
 // drives generation of corresponding intrinsics and instructions.
-class NVVM_MMA_OPS<int _ = 0> {
+class NVVM_MMA_OPS {
   list<list<WMMA_REGS>> tf32_wmma_ops = MMA_OPS<
             ["m16n16k8"],
             ["tf32"], [], ["f32"], []>.ret;
