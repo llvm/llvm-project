@@ -711,7 +711,6 @@ body: |
     ; CHECK: [[LOAD65:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD63]](p5) :: (load (s32) from unknown-address + 244, addrspace 5)
     ; CHECK: [[LOAD66:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD64]](p5) :: (load (s32) from unknown-address + 248, align 8, addrspace 5)
     ; CHECK: [[LOAD67:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD65]](p5) :: (load (s32) from unknown-address + 252, addrspace 5)
-    ; CHECK: [[COPY65:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[LOAD4]](s32), [[LOAD5]](s32), [[LOAD6]](s32), [[LOAD7]](s32)
     ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[LOAD8]](s32), [[LOAD9]](s32), [[LOAD10]](s32), [[LOAD11]](s32)
     ; CHECK: [[BUILD_VECTOR2:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[LOAD12]](s32), [[LOAD13]](s32), [[LOAD14]](s32), [[LOAD15]](s32)
@@ -728,6 +727,7 @@ body: |
     ; CHECK: [[BUILD_VECTOR13:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[LOAD56]](s32), [[LOAD57]](s32), [[LOAD58]](s32), [[LOAD59]](s32)
     ; CHECK: [[BUILD_VECTOR14:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[LOAD60]](s32), [[LOAD61]](s32), [[LOAD62]](s32), [[LOAD63]](s32)
     ; CHECK: [[BUILD_VECTOR15:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[LOAD64]](s32), [[LOAD65]](s32), [[LOAD66]](s32), [[LOAD67]](s32)
+    ; CHECK: [[COPY65:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; CHECK: G_STORE [[BUILD_VECTOR]](<4 x s32>), [[COPY65]](p1) :: (store (<4 x s32>), align 4, addrspace 1)
     ; CHECK: [[C68:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; CHECK: [[PTR_ADD67:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY65]], [[C68]](s64)

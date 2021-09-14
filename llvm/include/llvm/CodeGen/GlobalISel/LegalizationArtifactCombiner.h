@@ -821,6 +821,12 @@ public:
 
     Builder.setInstrAndDebugLoc(MI);
 
+    ArtifactValueFinder Finder(MRI, Builder, LI);
+    if (Finder.tryCombineUnmergeDefs(MI, Observer, UpdatedDefs)) {
+      markInstAndDefDead(MI, *SrcDef, DeadInsts, SrcDefIdx);
+      return true;
+    }
+
     if (auto *SrcUnmerge = dyn_cast<GUnmerge>(SrcDef)) {
       // %0:_(<4 x s16>) = G_FOO
       // %1:_(<2 x s16>), %2:_(<2 x s16>) = G_UNMERGE_VALUES %0
@@ -844,14 +850,8 @@ public:
         if (ActionStep.TypeIdx == 1)
           return false;
         break;
-      default: {
-        ArtifactValueFinder Finder(MRI, Builder, LI);
-        if (Finder.tryCombineUnmergeDefs(MI, Observer, UpdatedDefs)) {
-          markInstAndDefDead(MI, *SrcDef, DeadInsts, SrcDefIdx);
-          return true;
-        }
+      default:
         return false;
-      }
       }
 
       auto NewUnmerge = Builder.buildUnmerge(DestTy, SrcUnmergeSrc);
@@ -883,16 +883,7 @@ public:
                                        ConvertOp, OpTy, DestTy)) {
       // We might have a chance to combine later by trying to combine
       // unmerge(cast) first
-      if (tryFoldUnmergeCast(MI, *SrcDef, DeadInsts, UpdatedDefs))
-        return true;
-
-      // Try using the value finder.
-      ArtifactValueFinder Finder(MRI, Builder, LI);
-      if (Finder.tryCombineUnmergeDefs(MI, Observer, UpdatedDefs)) {
-        markInstAndDefDead(MI, *SrcDef, DeadInsts, SrcDefIdx);
-        return true;
-      }
-      return false;
+      return tryFoldUnmergeCast(MI, *SrcDef, DeadInsts, UpdatedDefs);
     }
 
     const unsigned NumMergeRegs = MergeI->getNumOperands() - 1;
