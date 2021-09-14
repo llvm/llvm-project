@@ -1077,8 +1077,7 @@ defm FCMLA : SIMDThreeSameVectorTiedComplexHSD<1, 0b110, complexrotateop,
                                                "fcmla", null_frag>;
 defm FCADD : SIMDThreeSameVectorComplexHSD<1, 0b111, complexrotateopodd,
                                            "fcadd", null_frag>;
-defm FCMLA : SIMDIndexedTiedComplexHSD<1, 0, 1, complexrotateop, "fcmla",
-                                       null_frag>;
+defm FCMLA : SIMDIndexedTiedComplexHSD<0, 1, complexrotateop, "fcmla">;
 
 let Predicates = [HasComplxNum, HasNEON, HasFullFP16] in {
   def : Pat<(v4f16 (int_aarch64_neon_vcadd_rot90 (v4f16 V64:$Rn), (v4f16 V64:$Rm))),
@@ -1751,8 +1750,8 @@ def : ShiftAlias<"rorv", RORVXr, GPR64>;
 
 // Multiply-add
 let AddedComplexity = 5 in {
-defm MADD : MulAccum<0, "madd", add>;
-defm MSUB : MulAccum<1, "msub", sub>;
+defm MADD : MulAccum<0, "madd">;
+defm MSUB : MulAccum<1, "msub">;
 
 def : Pat<(i32 (mul GPR32:$Rn, GPR32:$Rm)),
           (MADDWrrr GPR32:$Rn, GPR32:$Rm, WZR)>;
@@ -3245,7 +3244,7 @@ defm STRB : Store8RO< 0b00,  1, 0b00, FPR8Op,   "str", untyped, store>;
 defm STRH : Store16RO<0b01,  1, 0b00, FPR16Op,  "str", f16,     store>;
 defm STRS : Store32RO<0b10,  1, 0b00, FPR32Op,  "str", f32,     store>;
 defm STRD : Store64RO<0b11,  1, 0b00, FPR64Op,  "str", f64,     store>;
-defm STRQ : Store128RO<0b00, 1, 0b10, FPR128Op, "str", f128,    store>;
+defm STRQ : Store128RO<0b00, 1, 0b10, FPR128Op, "str">;
 
 let Predicates = [UseSTRQro], AddedComplexity = 10 in {
   def : Pat<(store (f128 FPR128:$Rt),
