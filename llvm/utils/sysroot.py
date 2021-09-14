@@ -13,6 +13,10 @@ def make_fake_sysroot(out_dir):
         return subprocess.check_output(cmd).decode(sys.stdout.encoding).strip()
 
     if sys.platform == 'win32':
+        def mkjunction(dst, src):
+            subprocess.check_call(['mklink', '/j', dst, src], shell=True)
+
+        os.mkdir(out_dir)
         p = os.getenv('ProgramFiles(x86)', 'C:\\Program Files (x86)')
 
         winsdk = os.getenv('WindowsSdkDir')
@@ -20,6 +24,8 @@ def make_fake_sysroot(out_dir):
             winsdk = os.path.join(p, 'Windows Kits', '10')
             print('%WindowsSdkDir% not set. You might want to run this from')
             print('a Visual Studio cmd prompt. Defaulting to', winsdk)
+        os.mkdir(os.path.join(out_dir, 'Windows Kits'))
+        mkjunction(os.path.join(out_dir, 'Windows Kits', '10'), winsdk)
 
         vswhere = os.path.join(
                 p, 'Microsoft Visual Studio', 'Installer', 'vswhere')
@@ -28,13 +34,12 @@ def make_fake_sysroot(out_dir):
                 [vswhere, '-latest', '-products', '*', '-requires', vcid,
                     '-property', 'installationPath'])
 
-        def mkjunction(dst, src):
-            subprocess.check_call(['mklink', '/j', dst, src], shell=True)
-        os.mkdir(out_dir)
         mkjunction(os.path.join(out_dir, 'VC'),
                    os.path.join(vsinstalldir, 'VC'))
-        os.mkdir(os.path.join(out_dir, 'Windows Kits'))
-        mkjunction(os.path.join(out_dir, 'Windows Kits', '10'), winsdk)
+        # Not all MSVC versions ship the DIA SDK, so the junction destination
+        # might not exist. That's fine.
+        mkjunction(os.path.join(out_dir, 'DIA SDK'),
+                   os.path.join(vsinstalldir, 'DIA SDK'))
     elif sys.platform == 'darwin':
         # The SDKs used by default in compiler-rt/cmake/base-config-ix.cmake.
         # COMPILER_RT_ENABLE_IOS defaults to on.

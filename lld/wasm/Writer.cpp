@@ -63,6 +63,7 @@ private:
   void createStartFunction();
   void createApplyDataRelocationsFunction();
   void createApplyGlobalRelocationsFunction();
+  void createApplyGlobalTLSRelocationsFunction();
   void createCallCtorsFunction();
   void createInitTLSFunction();
   void createCommandExportWrappers();
@@ -639,12 +640,6 @@ void Writer::calculateExports() {
     } else if (auto *t = dyn_cast<DefinedTag>(sym)) {
       export_ = {name, WASM_EXTERNAL_TAG, t->getTagIndex()};
     } else if (auto *d = dyn_cast<DefinedData>(sym)) {
-      if (sym->isTLS()) {
-        // We can't currenly export TLS data symbols.
-        if (sym->isExportedExplicit())
-          error("TLS symbols cannot yet be exported: `" + toString(*sym) + "`");
-        continue;
-      }
       out.globalSec->dataAddressGlobals.push_back(d);
       export_ = {name, WASM_EXTERNAL_GLOBAL, globalIndex++};
     } else {
@@ -991,6 +986,13 @@ void Writer::createSyntheticInitFunctions() {
           "__wasm_apply_global_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
           make<SyntheticFunction>(nullSignature, "__wasm_apply_global_relocs"));
       WasmSym::applyGlobalRelocs->markLive();
+      if (config->sharedMemory) {
+        WasmSym::applyGlobalTLSRelocs = symtab->addSyntheticFunction(
+            "__wasm_apply_global_tls_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
+            make<SyntheticFunction>(nullSignature,
+                                    "__wasm_apply_global_tls_relocs"));
+        WasmSym::applyGlobalTLSRelocs->markLive();
+      }
     }
   }
 
@@ -1235,11 +1237,27 @@ void Writer::createApplyGlobalRelocationsFunction() {
   {
     raw_string_ostream os(bodyContent);
     writeUleb128(os, 0, "num locals");
-    out.globalSec->generateRelocationCode(os);
+    out.globalSec->generateRelocationCode(os, false);
     writeU8(os, WASM_OPCODE_END, "END");
   }
 
   createFunction(WasmSym::applyGlobalRelocs, bodyContent);
+}
+
+// Similar to createApplyGlobalRelocationsFunction but for
+// TLS symbols.  This cannot be run during the start function
+// but must be delayed until __wasm_init_tls is called.
+void Writer::createApplyGlobalTLSRelocationsFunction() {
+  // First write the body's contents to a string.
+  std::string bodyContent;
+  {
+    raw_string_ostream os(bodyContent);
+    writeUleb128(os, 0, "num locals");
+    out.globalSec->generateRelocationCode(os, true);
+    writeU8(os, WASM_OPCODE_END, "END");
+  }
+
+  createFunction(WasmSym::applyGlobalTLSRelocs, bodyContent);
 }
 
 // Create synthetic "__wasm_call_ctors" function based on ctor functions
@@ -1351,6 +1369,12 @@ void Writer::createInitTLSFunction() {
       writeUleb128(os, WASM_OPCODE_MEMORY_INIT, "MEMORY.INIT");
       writeUleb128(os, tlsSeg->index, "segment index immediate");
       writeU8(os, 0, "memory index immediate");
+    }
+
+    if (WasmSym::applyGlobalTLSRelocs) {
+      writeU8(os, WASM_OPCODE_CALL, "CALL");
+      writeUleb128(os, WasmSym::applyGlobalTLSRelocs->getFunctionIndex(),
+                   "function index");
     }
     writeU8(os, WASM_OPCODE_END, "end function");
   }
@@ -1486,6 +1510,8 @@ void Writer::run() {
       createApplyDataRelocationsFunction();
     if (WasmSym::applyGlobalRelocs)
       createApplyGlobalRelocationsFunction();
+    if (WasmSym::applyGlobalTLSRelocs)
+      createApplyGlobalTLSRelocationsFunction();
     if (WasmSym::initMemory)
       createInitMemoryFunction();
     createStartFunction();

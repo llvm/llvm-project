@@ -59,9 +59,9 @@ define amdgpu_kernel void @frem_f16(half addrspace(1)* %out, half addrspace(1)* 
 ; CI-NEXT:    s_mov_b32 s9, s5
 ; CI-NEXT:    s_mov_b32 s4, s6
 ; CI-NEXT:    s_mov_b32 s5, s7
-; CI-NEXT:    s_mov_b32 s3, s11
 ; CI-NEXT:    s_mov_b32 s6, s10
 ; CI-NEXT:    s_mov_b32 s7, s11
+; CI-NEXT:    s_mov_b32 s3, s11
 ; CI-NEXT:    buffer_load_ushort v0, off, s[4:7], 0
 ; CI-NEXT:    buffer_load_ushort v1, off, s[0:3], 0 offset:8
 ; CI-NEXT:    s_waitcnt vmcnt(1)
@@ -1393,9 +1393,9 @@ define amdgpu_kernel void @frem_v2f16(<2 x half> addrspace(1)* %out, <2 x half> 
 ; CI-NEXT:    s_mov_b32 s1, s5
 ; CI-NEXT:    s_mov_b32 s4, s6
 ; CI-NEXT:    s_mov_b32 s5, s7
-; CI-NEXT:    s_mov_b32 s11, s3
 ; CI-NEXT:    s_mov_b32 s6, s2
 ; CI-NEXT:    s_mov_b32 s7, s3
+; CI-NEXT:    s_mov_b32 s11, s3
 ; CI-NEXT:    buffer_load_dword v0, off, s[4:7], 0
 ; CI-NEXT:    buffer_load_dword v2, off, s[8:11], 0 offset:16
 ; CI-NEXT:    s_mov_b32 s6, 3

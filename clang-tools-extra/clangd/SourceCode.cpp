@@ -945,9 +945,9 @@ llvm::Optional<SpelledWord> SpelledWord::touching(SourceLocation SpelledLoc,
   if (Invalid)
     return llvm::None;
   unsigned B = Offset, E = Offset;
-  while (B > 0 && isIdentifierBody(Code[B - 1]))
+  while (B > 0 && isAsciiIdentifierContinue(Code[B - 1]))
     --B;
-  while (E < Code.size() && isIdentifierBody(Code[E]))
+  while (E < Code.size() && isAsciiIdentifierContinue(Code[E]))
     ++E;
   if (B == E)
     return llvm::None;

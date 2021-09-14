@@ -1144,7 +1144,7 @@ static bool AttributesMatch(const Decl *Decl1, const Decl *Decl2,
 
 static bool IsValidIdentifier(ASTContext &Ctx,
                               const char *Name) {
-  if (!isIdentifierHead(Name[0]))
+  if (!isAsciiIdentifierStart(Name[0]))
     return false;
   std::string NameString = Name;
   NameString[0] = toLowercase(NameString[0]);

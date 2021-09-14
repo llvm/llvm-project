@@ -22,13 +22,13 @@ define void @parent_func_missing_inputs() #0 {
 ; VARABI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
 ; VARABI-NEXT:    s_mov_b64 exec, s[4:5]
 ; VARABI-NEXT:    v_writelane_b32 v40, s33, 2
-; VARABI-NEXT:    v_writelane_b32 v40, s30, 0
 ; VARABI-NEXT:    s_mov_b32 s33, s32
 ; VARABI-NEXT:    s_addk_i32 s32, 0x400
+; VARABI-NEXT:    v_writelane_b32 v40, s30, 0
+; VARABI-NEXT:    v_writelane_b32 v40, s31, 1
 ; VARABI-NEXT:    s_getpc_b64 s[4:5]
 ; VARABI-NEXT:    s_add_u32 s4, s4, requires_all_inputs@rel32@lo+4
 ; VARABI-NEXT:    s_addc_u32 s5, s5, requires_all_inputs@rel32@hi+12
-; VARABI-NEXT:    v_writelane_b32 v40, s31, 1
 ; VARABI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; VARABI-NEXT:    v_readlane_b32 s4, v40, 0
 ; VARABI-NEXT:    v_readlane_b32 s5, v40, 1
@@ -47,13 +47,13 @@ define void @parent_func_missing_inputs() #0 {
 ; FIXEDABI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
 ; FIXEDABI-NEXT:    s_mov_b64 exec, s[16:17]
 ; FIXEDABI-NEXT:    v_writelane_b32 v40, s33, 2
-; FIXEDABI-NEXT:    v_writelane_b32 v40, s30, 0
 ; FIXEDABI-NEXT:    s_mov_b32 s33, s32
 ; FIXEDABI-NEXT:    s_addk_i32 s32, 0x400
+; FIXEDABI-NEXT:    v_writelane_b32 v40, s30, 0
+; FIXEDABI-NEXT:    v_writelane_b32 v40, s31, 1
 ; FIXEDABI-NEXT:    s_getpc_b64 s[16:17]
 ; FIXEDABI-NEXT:    s_add_u32 s16, s16, requires_all_inputs@rel32@lo+4
 ; FIXEDABI-NEXT:    s_addc_u32 s17, s17, requires_all_inputs@rel32@hi+12
-; FIXEDABI-NEXT:    v_writelane_b32 v40, s31, 1
 ; FIXEDABI-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; FIXEDABI-NEXT:    v_readlane_b32 s4, v40, 0
 ; FIXEDABI-NEXT:    v_readlane_b32 s5, v40, 1
@@ -75,11 +75,11 @@ define amdgpu_kernel void @parent_kernel_missing_inputs() #0 {
 ; VARABI-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
 ; VARABI-NEXT:    s_add_u32 s0, s0, s9
 ; VARABI-NEXT:    s_addc_u32 s1, s1, 0
+; VARABI-NEXT:    s_mov_b32 s32, 0
 ; VARABI-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; VARABI-NEXT:    s_getpc_b64 s[4:5]
 ; VARABI-NEXT:    s_add_u32 s4, s4, requires_all_inputs@rel32@lo+4
 ; VARABI-NEXT:    s_addc_u32 s5, s5, requires_all_inputs@rel32@hi+12
-; VARABI-NEXT:    s_mov_b32 s32, 0
 ; VARABI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; VARABI-NEXT:    s_endpgm
 ;
@@ -96,10 +96,10 @@ define amdgpu_kernel void @parent_kernel_missing_inputs() #0 {
 ; FIXEDABI-SDAG-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; FIXEDABI-SDAG-NEXT:    v_or_b32_e32 v31, v0, v2
 ; FIXEDABI-SDAG-NEXT:    s_mov_b64 s[8:9], 0
+; FIXEDABI-SDAG-NEXT:    s_mov_b32 s32, 0
 ; FIXEDABI-SDAG-NEXT:    s_getpc_b64 s[16:17]
 ; FIXEDABI-SDAG-NEXT:    s_add_u32 s16, s16, requires_all_inputs@rel32@lo+4
 ; FIXEDABI-SDAG-NEXT:    s_addc_u32 s17, s17, requires_all_inputs@rel32@hi+12
-; FIXEDABI-SDAG-NEXT:    s_mov_b32 s32, 0
 ; FIXEDABI-SDAG-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; FIXEDABI-SDAG-NEXT:    s_endpgm
 ;
@@ -116,10 +116,10 @@ define amdgpu_kernel void @parent_kernel_missing_inputs() #0 {
 ; FIXEDABI-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; FIXEDABI-GISEL-NEXT:    v_or_b32_e32 v31, v0, v1
 ; FIXEDABI-GISEL-NEXT:    s_mov_b64 s[8:9], 0
+; FIXEDABI-GISEL-NEXT:    s_mov_b32 s32, 0
 ; FIXEDABI-GISEL-NEXT:    s_getpc_b64 s[16:17]
 ; FIXEDABI-GISEL-NEXT:    s_add_u32 s16, s16, requires_all_inputs@rel32@lo+4
 ; FIXEDABI-GISEL-NEXT:    s_addc_u32 s17, s17, requires_all_inputs@rel32@hi+12
-; FIXEDABI-GISEL-NEXT:    s_mov_b32 s32, 0
 ; FIXEDABI-GISEL-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; FIXEDABI-GISEL-NEXT:    s_endpgm
   call void @requires_all_inputs()
@@ -401,14 +401,14 @@ define void @addrspacecast_requires_queue_ptr(i32 addrspace(5)* %ptr.private, i3
 ; VARABI:       ; %bb.0:
 ; VARABI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VARABI-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
+; VARABI-NEXT:    v_mov_b32_e32 v3, 0
 ; VARABI-NEXT:    v_cndmask_b32_e32 v2, 0, v0, vcc
 ; VARABI-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v1
-; VARABI-NEXT:    v_mov_b32_e32 v3, 0
 ; VARABI-NEXT:    v_mov_b32_e32 v4, 1
 ; VARABI-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
+; VARABI-NEXT:    v_mov_b32_e32 v1, v3
 ; VARABI-NEXT:    flat_store_dword v[2:3], v4
 ; VARABI-NEXT:    s_waitcnt vmcnt(0)
-; VARABI-NEXT:    v_mov_b32_e32 v1, v3
 ; VARABI-NEXT:    v_mov_b32_e32 v2, 2
 ; VARABI-NEXT:    flat_store_dword v[0:1], v2
 ; VARABI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -424,13 +424,13 @@ define void @addrspacecast_requires_queue_ptr(i32 addrspace(5)* %ptr.private, i3
 ; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v2, s5
 ; FIXEDABI-SDAG-NEXT:    v_cndmask_b32_e32 v3, 0, v2, vcc
 ; FIXEDABI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v0, vcc
-; FIXEDABI-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v1
 ; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v0, s4
+; FIXEDABI-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v1
 ; FIXEDABI-SDAG-NEXT:    v_cndmask_b32_e32 v5, 0, v0, vcc
 ; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v0, 1
+; FIXEDABI-SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v1, vcc
 ; FIXEDABI-SDAG-NEXT:    flat_store_dword v[2:3], v0
 ; FIXEDABI-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; FIXEDABI-SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v1, vcc
 ; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v0, 2
 ; FIXEDABI-SDAG-NEXT:    flat_store_dword v[4:5], v0
 ; FIXEDABI-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -446,8 +446,8 @@ define void @addrspacecast_requires_queue_ptr(i32 addrspace(5)* %ptr.private, i3
 ; FIXEDABI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v3, s4
 ; FIXEDABI-GISEL-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
-; FIXEDABI-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v1
 ; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v4, s5
+; FIXEDABI-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v1
 ; FIXEDABI-GISEL-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; FIXEDABI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v4, vcc
 ; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v4, 1

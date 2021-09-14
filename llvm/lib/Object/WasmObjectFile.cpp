@@ -384,6 +384,13 @@ Error WasmObjectFile::parseDylink0Section(ReadContext &Ctx) {
         DylinkInfo.Needed.push_back(readString(Ctx));
       }
       break;
+    case wasm::WASM_DYLINK_EXPORT_INFO: {
+      uint32_t Count = readVaruint32(Ctx);
+      while (Count--) {
+        DylinkInfo.ExportInfo.push_back({readString(Ctx), readVaruint32(Ctx)});
+      }
+      break;
+    }
     default:
       return make_error<GenericBinaryError>("unknown dylink.0 sub-section",
                                             object_error::parse_failed);

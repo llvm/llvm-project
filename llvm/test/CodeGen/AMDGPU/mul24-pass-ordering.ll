@@ -82,8 +82,8 @@ define void @lsr_order_mul24_1(i32 %arg, i32 %arg1, i32 %arg2, float addrspace(3
 ; GFX9-NEXT:    v_mul_lo_u32 v8, v8, v15
 ; GFX9-NEXT:    v_sub_u32_e32 v19, v9, v18
 ; GFX9-NEXT:    v_cmp_lt_u32_e64 s[6:7], v19, v14
-; GFX9-NEXT:    s_and_b64 s[4:5], s[4:5], s[6:7]
 ; GFX9-NEXT:    v_sub_u32_e32 v12, v12, v18
+; GFX9-NEXT:    s_and_b64 s[4:5], s[4:5], s[6:7]
 ; GFX9-NEXT:    v_add_u32_e32 v8, v12, v8
 ; GFX9-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
 ; GFX9-NEXT:    v_mov_b32_e32 v9, 0
@@ -151,8 +151,8 @@ define void @slsr1_0(i32 %b.arg, i32 %s.arg) #0 {
 ; GFX9-LABEL: slsr1_0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mul_u32_u24_e32 v3, v0, v1
 ; GFX9-NEXT:    v_and_b32_e32 v2, 0xffffff, v1
+; GFX9-NEXT:    v_mul_u32_u24_e32 v3, v0, v1
 ; GFX9-NEXT:    global_store_dword v[0:1], v3, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mad_u32_u24 v0, v0, v1, v2

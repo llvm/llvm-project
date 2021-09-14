@@ -373,6 +373,7 @@ struct SampleCounter {
   BranchSample BranchCounter;
 
   void recordRangeCount(uint64_t Start, uint64_t End, uint64_t Repeat) {
+    assert(Start <= End && "Invalid instruction range");
     RangeCounter[{Start, End}] += Repeat;
   }
   void recordBranchCount(uint64_t Source, uint64_t Target, uint64_t Repeat) {

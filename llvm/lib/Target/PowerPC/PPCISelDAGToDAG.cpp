@@ -270,6 +270,13 @@ namespace {
                                                 None) == PPC::AM_PCRel;
     }
 
+    /// SelectPDForm - Returns true if address N can be represented by Prefixed
+    /// DForm addressing mode (a base register, plus a signed 34-bit immediate.
+    bool SelectPDForm(SDNode *Parent, SDValue N, SDValue &Disp, SDValue &Base) {
+      return PPCLowering->SelectOptimalAddrMode(Parent, N, Disp, Base, *CurDAG,
+                                                None) == PPC::AM_PrefixDForm;
+    }
+
     /// SelectXForm - Returns true if address N can be represented by the
     /// addressing mode of XForm instructions (an indexed [r+r] operation).
     bool SelectXForm(SDNode *Parent, SDValue N, SDValue &Disp, SDValue &Base) {

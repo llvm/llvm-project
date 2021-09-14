@@ -28,7 +28,7 @@ void VLATest(_ExtInt(3) A, _ExtInt(99) B, _ExtInt(123456) C) {
 
 struct S {
   _ExtInt(17) A;
-  _ExtInt(16777200) B;
+  _ExtInt(8388600) B;
   _ExtInt(17) C;
 };
 
@@ -41,9 +41,9 @@ void OffsetOfTest() {
   // LIN32: store i32 4, i32* %{{.+}}
   // WINCHECK32: store i32 8, i32* %{{.+}}
   int C = __builtin_offsetof(struct S,C);
-  // CHECK64: store i32 2097160, i32* %{{.+}}
-  // LIN32: store i32 2097156, i32* %{{.+}}
-  // WIN32: store i32 2097160, i32* %{{.+}}
+  // CHECK64: store i32 1048584, i32* %{{.+}}
+  // LIN32: store i32 1048580, i32* %{{.+}}
+  // WIN32: store i32 1048584, i32* %{{.+}}
 }
 
 void Size1ExtIntParam(unsigned _ExtInt(1) A) {

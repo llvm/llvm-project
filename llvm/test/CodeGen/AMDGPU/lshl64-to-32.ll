@@ -113,10 +113,10 @@ define amdgpu_kernel void @muli24_shl64(i64 addrspace(1)* nocapture %arg, i32 ad
 ; GCN-LABEL: muli24_shl64:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
+; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b64 s[0:1], s[6:7]
 ; GCN-NEXT:    buffer_load_dword v1, v[1:2], s[0:3], 0 addr64

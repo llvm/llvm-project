@@ -164,8 +164,7 @@ void simplifyExternals(Module &M) {
   FunctionType *EmptyFT =
       FunctionType::get(Type::getVoidTy(M.getContext()), false);
 
-  for (auto I = M.begin(), E = M.end(); I != E;) {
-    Function &F = *I++;
+  for (Function &F : llvm::make_early_inc_range(M)) {
     if (F.isDeclaration() && F.use_empty()) {
       F.eraseFromParent();
       continue;

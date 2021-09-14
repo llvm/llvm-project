@@ -196,10 +196,10 @@ define hidden void @use_workgroup_id_yz() #1 {
 
 ; GCN-NOT: s6
 ; GCN: s_mov_b32 s4, s6
-; GCN-NEXT: s_getpc_b64 s[6:7]
+; GCN: s_mov_b32 s32, 0
+; GCN: s_getpc_b64 s[6:7]
 ; GCN-NEXT: s_add_u32 s6, s6, use_workgroup_id_x@rel32@lo+4
 ; GCN-NEXT: s_addc_u32 s7, s7, use_workgroup_id_x@rel32@hi+12
-; GCN: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @kern_indirect_use_workgroup_id_x() #1 {
@@ -254,8 +254,8 @@ define amdgpu_kernel void @kern_indirect_use_workgroup_id_xy() #1 {
 ; GCN: enable_sgpr_workgroup_id_y = 1
 ; GCN: enable_sgpr_workgroup_id_z = 1
 
-; GCN: s_mov_b32 s4, s6
 ; GCN: s_mov_b32 s5, s7
+; GCN: s_mov_b32 s4, s6
 ; GCN: s_mov_b32 s6, s8
 
 ; GCN: s_mov_b32 s32, 0
@@ -285,8 +285,8 @@ define amdgpu_kernel void @kern_indirect_use_workgroup_id_xz() #1 {
 ; GCN: enable_sgpr_workgroup_id_y = 1
 ; GCN: enable_sgpr_workgroup_id_z = 1
 
-; GCN: s_mov_b32 s4, s7
 ; GCN: s_mov_b32 s5, s8
+; GCN: s_mov_b32 s4, s7
 
 ; GCN: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64
@@ -449,8 +449,8 @@ define hidden void @use_every_sgpr_input() #1 {
 ; GCN: enable_sgpr_dispatch_id = 1
 ; GCN: enable_sgpr_flat_scratch_init = 1
 
-; GCN: s_mov_b32 s12, s14
 ; GCN: s_mov_b32 s13, s15
+; GCN: s_mov_b32 s12, s14
 ; GCN: s_mov_b32 s14, s16
 ; GCN: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64
@@ -550,18 +550,14 @@ define hidden void @func_use_every_sgpr_input_call_use_workgroup_id_xyz() #1 {
 ; GCN-DAG: s_mov_b64 s{{\[}}[[LO_X:[0-9]+]]{{\:}}[[HI_X:[0-9]+]]{{\]}}, s[4:5]
 ; GCN-DAG: s_mov_b64 s{{\[}}[[LO_Y:[0-9]+]]{{\:}}[[HI_Y:[0-9]+]]{{\]}}, s[6:7]
 
-
 ; GCN: s_mov_b32 s4, s12
 ; GCN: s_mov_b32 s5, s13
 ; GCN: s_mov_b32 s6, s14
 
-; GCN: s_mov_b64 s{{\[}}[[LO_Z:[0-9]+]]{{\:}}[[HI_Z:[0-9]+]]{{\]}}, s[8:9]
-
-; GCN-DAG: s_mov_b32 [[SAVE_X:s[0-57-9][0-9]*]], s12
-; GCN-DAG: s_mov_b32 [[SAVE_Y:s[0-57-9][0-9]*]], s13
 ; GCN-DAG: s_mov_b32 [[SAVE_Z:s[0-68-9][0-9]*]], s14
-
-
+; GCN-DAG: s_mov_b32 [[SAVE_Y:s[0-57-9][0-9]*]], s13
+; GCN-DAG: s_mov_b32 [[SAVE_X:s[0-57-9][0-9]*]], s12
+; GCN: s_mov_b64 s{{\[}}[[LO_Z:[0-9]+]]{{\:}}[[HI_Z:[0-9]+]]{{\]}}, s[8:9]
 
 ; GCN: s_swappc_b64
 
