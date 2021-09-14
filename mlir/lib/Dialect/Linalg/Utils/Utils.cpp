@@ -28,6 +28,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopUtils.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "linalg-utils"
@@ -192,6 +193,48 @@ IntegerAttr getSmallestBoundingIndex(Value size) {
   if (boundingConst && *boundingConst >= 0)
     return Builder(size.getContext()).getIndexAttr(*boundingConst);
   return nullptr;
+}
+
+tensor::ExtractSliceOp makeComposedExtractSliceOp(
+    OpBuilder &b, Location loc, Value source, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, ArrayRef<OpFoldResult> strides) {
+  assert(source && "expect source to be nonzero");
+
+  // Do not fold if the producer is not an ExtractSliceOp.
+  auto producerOp = source.getDefiningOp<tensor::ExtractSliceOp>();
+  if (!producerOp)
+    return b.create<tensor::ExtractSliceOp>(loc, source, offsets, sizes,
+                                            strides);
+
+  // Do not fold if the producer is rank reducing or if there are any non-unit
+  // strides. Supporting non-unit strides complicates the offset computation
+  // since the consumer offsets need to be multiplied by the producer strides.
+  // TODO: support non-unit strides once there are use cases.
+  SmallVector<OpFoldResult> allStrides = producerOp.getMixedStrides();
+  allStrides.append(strides.begin(), strides.end());
+  bool hasNonUnitStride = any_of(allStrides, [](OpFoldResult ofr) {
+    return getConstantIntValue(ofr) != static_cast<int64_t>(1);
+  });
+  if (hasNonUnitStride ||
+      producerOp.getSourceType().getRank() !=
+          producerOp.getResult().getType().cast<ShapedType>().getRank())
+    return b.create<tensor::ExtractSliceOp>(loc, source, offsets, sizes,
+                                            strides);
+
+  // Fold the producer by adding the offests and extracting the slice directly
+  // from the producer source tensor.
+  SmallVector<OpFoldResult> foldedOffsets(offsets.begin(), offsets.end());
+  AffineExpr dim1, dim2;
+  bindDims(b.getContext(), dim1, dim2);
+  for (auto en : enumerate(producerOp.getMixedOffsets())) {
+    SmallVector<Value> offsetValues = {
+        getValueOrCreateConstantIndexOp(b, loc, foldedOffsets[en.index()]),
+        getValueOrCreateConstantIndexOp(b, loc, en.value())};
+    foldedOffsets[en.index()] =
+        makeComposedAffineApply(b, loc, dim1 + dim2, offsetValues).getResult();
+  }
+  return b.create<tensor::ExtractSliceOp>(loc, producerOp.source(),
+                                          foldedOffsets, sizes, strides);
 }
 
 /// Specialization to build an scf "for" nest.
@@ -603,15 +646,18 @@ Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
     strides.push_back(builder.getIndexAttr(1));
   }
 
-  Operation *sliceOp = shapedType.isa<MemRefType>()
-                           ? builder
-                                 .create<memref::SubViewOp>(
-                                     loc, valueToTile, offsets, sizes, strides)
-                                 .getOperation()
-                           : builder
-                                 .create<tensor::ExtractSliceOp>(
-                                     loc, valueToTile, offsets, sizes, strides)
-                                 .getOperation();
+  auto *sliceOp = TypeSwitch<ShapedType, Operation *>(shapedType)
+                      .Case([&](MemRefType) {
+                        return builder.create<memref::SubViewOp>(
+                            loc, valueToTile, offsets, sizes, strides);
+                      })
+                      .Case([&](RankedTensorType) {
+                        return makeComposedExtractSliceOp(
+                            builder, loc, valueToTile, offsets, sizes, strides);
+                      })
+                      .Default([](ShapedType) -> Operation * {
+                        llvm_unreachable("Unexpected shaped type");
+                      });
   return sliceOp->getResult(0);
 }
 
