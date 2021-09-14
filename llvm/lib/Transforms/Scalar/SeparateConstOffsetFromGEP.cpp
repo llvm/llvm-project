@@ -1164,6 +1164,9 @@ bool SeparateConstOffsetFromGEP::run(Function &F) {
   DL = &F.getParent()->getDataLayout();
   bool Changed = false;
   for (BasicBlock &B : F) {
+    if (!DT->isReachableFromEntry(&B))
+      continue;
+
     for (BasicBlock::iterator I = B.begin(), IE = B.end(); I != IE;)
       if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(I++))
         Changed |= splitGEP(GEP);
