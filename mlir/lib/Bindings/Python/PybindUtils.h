@@ -262,7 +262,8 @@ public:
 
   /// Binds the indexing and length methods in the Python class.
   static void bind(pybind11::module &m) {
-    auto clazz = pybind11::class_<Derived>(m, Derived::pyClassName)
+    auto clazz = pybind11::class_<Derived>(m, Derived::pyClassName,
+                                           pybind11::module_local())
                      .def("__len__", &Sliceable::dunderLen)
                      .def("__getitem__", &Sliceable::dunderGetItem)
                      .def("__getitem__", &Sliceable::dunderGetItemSlice);
