@@ -963,6 +963,33 @@ TEST(Error, FileErrorTest) {
   });
 }
 
+TEST(Error, FileErrorErrorCode) {
+  for (std::error_code EC : {
+           make_error_code(std::errc::not_supported),
+           make_error_code(std::errc::invalid_argument),
+           make_error_code(std::errc::no_such_file_or_directory),
+       }) {
+    EXPECT_EQ(EC, errorToErrorCode(
+                      createFileError("file.bin", EC)));
+    EXPECT_EQ(EC, errorToErrorCode(
+                      createFileError("file.bin", /*Line=*/5, EC)));
+    EXPECT_EQ(EC, errorToErrorCode(
+                      createFileError("file.bin", errorCodeToError(EC))));
+    EXPECT_EQ(EC, errorToErrorCode(
+                      createFileError("file.bin", /*Line=*/5, errorCodeToError(EC))));
+  }
+
+  // inconvertibleErrorCode() should be wrapped to avoid a fatal error.
+  EXPECT_EQ(
+      "A file error occurred.",
+      errorToErrorCode(createFileError("file.bin", inconvertibleErrorCode()))
+          .message());
+  EXPECT_EQ(
+      "A file error occurred.",
+      errorToErrorCode(createFileError("file.bin", /*Line=*/5, inconvertibleErrorCode()))
+          .message());
+}
+
 enum class test_error_code {
   unspecified = 1,
   error_1,

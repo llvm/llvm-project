@@ -80,8 +80,11 @@ std::error_code inconvertibleErrorCode() {
 }
 
 std::error_code FileError::convertToErrorCode() const {
-  return std::error_code(static_cast<int>(ErrorErrorCode::FileError),
-                         *ErrorErrorCat);
+  std::error_code NestedEC = Err->convertToErrorCode();
+  if (NestedEC == inconvertibleErrorCode())
+    return std::error_code(static_cast<int>(ErrorErrorCode::FileError),
+                           *ErrorErrorCat);
+  return NestedEC;
 }
 
 Error errorCodeToError(std::error_code EC) {
