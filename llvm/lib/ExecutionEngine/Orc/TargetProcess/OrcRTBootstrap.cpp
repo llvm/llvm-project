@@ -20,57 +20,6 @@ namespace llvm {
 namespace orc {
 namespace rt_bootstrap {
 
-static llvm::orc::shared::detail::CWrapperFunctionResult
-reserveWrapper(const char *ArgData, size_t ArgSize) {
-  return WrapperFunction<rt::SPSMemoryReserveSignature>::handle(
-             ArgData, ArgSize,
-             [](uint64_t Size) -> Expected<ExecutorAddress> {
-               std::error_code EC;
-               auto MB = sys::Memory::allocateMappedMemory(
-                   Size, 0, sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC);
-               if (EC)
-                 return errorCodeToError(EC);
-               return ExecutorAddress::fromPtr(MB.base());
-             })
-      .release();
-}
-
-static llvm::orc::shared::detail::CWrapperFunctionResult
-finalizeWrapper(const char *ArgData, size_t ArgSize) {
-  return WrapperFunction<rt::SPSMemoryFinalizeSignature>::handle(
-             ArgData, ArgSize,
-             [](const tpctypes::FinalizeRequest &FR) -> Error {
-               for (auto &Seg : FR) {
-                 char *Mem = Seg.Addr.toPtr<char *>();
-                 memcpy(Mem, Seg.Content.data(), Seg.Content.size());
-                 memset(Mem + Seg.Content.size(), 0,
-                        Seg.Size - Seg.Content.size());
-                 assert(Seg.Size <= std::numeric_limits<size_t>::max());
-                 if (auto EC = sys::Memory::protectMappedMemory(
-                         {Mem, static_cast<size_t>(Seg.Size)},
-                         tpctypes::fromWireProtectionFlags(Seg.Prot)))
-                   return errorCodeToError(EC);
-                 if (Seg.Prot & tpctypes::WPF_Exec)
-                   sys::Memory::InvalidateInstructionCache(Mem, Seg.Size);
-               }
-               return Error::success();
-             })
-      .release();
-}
-
-static llvm::orc::shared::detail::CWrapperFunctionResult
-deallocateWrapper(const char *ArgData, size_t ArgSize) {
-  return WrapperFunction<rt::SPSMemoryDeallocateSignature>::handle(
-             ArgData, ArgSize,
-             [](ExecutorAddress Base, uint64_t Size) -> Error {
-               sys::MemoryBlock MB(Base.toPtr<void *>(), Size);
-               if (auto EC = sys::Memory::releaseMappedMemory(MB))
-                 return errorCodeToError(EC);
-               return Error::success();
-             })
-      .release();
-}
-
 template <typename WriteT, typename SPSWriteT>
 static llvm::orc::shared::detail::CWrapperFunctionResult
 writeUIntsWrapper(const char *ArgData, size_t ArgSize) {
@@ -108,10 +57,6 @@ runAsMainWrapper(const char *ArgData, size_t ArgSize) {
 }
 
 void addTo(StringMap<ExecutorAddress> &M) {
-  M[rt::MemoryReserveWrapperName] = ExecutorAddress::fromPtr(&reserveWrapper);
-  M[rt::MemoryFinalizeWrapperName] = ExecutorAddress::fromPtr(&finalizeWrapper);
-  M[rt::MemoryDeallocateWrapperName] =
-      ExecutorAddress::fromPtr(&deallocateWrapper);
   M[rt::MemoryWriteUInt8sWrapperName] = ExecutorAddress::fromPtr(
       &writeUIntsWrapper<tpctypes::UInt8Write,
                          shared::SPSMemoryAccessUInt8Write>);

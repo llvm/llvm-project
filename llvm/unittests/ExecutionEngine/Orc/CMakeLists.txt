@@ -30,6 +30,7 @@ add_llvm_unittest(OrcJITTests
   ResourceTrackerTest.cpp
   RPCUtilsTest.cpp
   RTDyldObjectLinkingLayerTest.cpp
+  SimpleExecutorMemoryManagerTest.cpp
   SimplePackedSerializationTest.cpp
   SymbolStringPoolTest.cpp
   ThreadSafeModuleTest.cpp

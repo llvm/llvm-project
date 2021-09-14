@@ -9,12 +9,16 @@
 #include "OrcTestCommon.h"
 
 #include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
+
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Testing/Support/Error.h"
 
 #include <limits>
+#include <vector>
 
 using namespace llvm;
 using namespace llvm::orc;
@@ -22,66 +26,95 @@ using namespace llvm::orc::shared;
 
 namespace {
 
+class SimpleAllocator {
+public:
+  Expected<ExecutorAddress> reserve(uint64_t Size) {
+    std::error_code EC;
+    auto MB = sys::Memory::allocateMappedMemory(
+        Size, 0, sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC);
+    if (EC)
+      return errorCodeToError(EC);
+    Blocks[MB.base()] = sys::OwningMemoryBlock(std::move(MB));
+    return ExecutorAddress::fromPtr(MB.base());
+  }
+
+  Error finalize(tpctypes::FinalizeRequest FR) {
+    for (auto &Seg : FR.Segments) {
+      char *Mem = Seg.Addr.toPtr<char *>();
+      memcpy(Mem, Seg.Content.data(), Seg.Content.size());
+      memset(Mem + Seg.Content.size(), 0, Seg.Size - Seg.Content.size());
+      assert(Seg.Size <= std::numeric_limits<size_t>::max());
+      if (auto EC = sys::Memory::protectMappedMemory(
+              {Mem, static_cast<size_t>(Seg.Size)},
+              tpctypes::fromWireProtectionFlags(Seg.Prot)))
+        return errorCodeToError(EC);
+      if (Seg.Prot & tpctypes::WPF_Exec)
+        sys::Memory::InvalidateInstructionCache(Mem, Seg.Size);
+    }
+    return Error::success();
+  }
+
+  Error deallocate(std::vector<ExecutorAddress> &Bases) {
+    Error Err = Error::success();
+    for (auto &Base : Bases) {
+      auto I = Blocks.find(Base.toPtr<void *>());
+      if (I == Blocks.end()) {
+        Err = joinErrors(
+            std::move(Err),
+            make_error<StringError>("No allocation for " +
+                                        formatv("{0:x}", Base.getValue()),
+                                    inconvertibleErrorCode()));
+        continue;
+      }
+      auto MB = std::move(I->second);
+      Blocks.erase(I);
+      auto MBToRelease = MB.getMemoryBlock();
+      if (auto EC = sys::Memory::releaseMappedMemory(MBToRelease))
+        Err = joinErrors(std::move(Err), errorCodeToError(EC));
+    }
+    return Err;
+  }
+
+private:
+  DenseMap<void *, sys::OwningMemoryBlock> Blocks;
+};
+
 llvm::orc::shared::detail::CWrapperFunctionResult
 testReserve(const char *ArgData, size_t ArgSize) {
-  return WrapperFunction<rt::SPSMemoryReserveSignature>::handle(
-             ArgData, ArgSize,
-             [](uint64_t Size) -> Expected<ExecutorAddress> {
-               std::error_code EC;
-               auto MB = sys::Memory::allocateMappedMemory(
-                   Size, 0, sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC);
-               if (EC)
-                 return errorCodeToError(EC);
-               return ExecutorAddress::fromPtr(MB.base());
-             })
-      .release();
+  return WrapperFunction<rt::SPSSimpleExecutorMemoryManagerReserveSignature>::
+      handle(ArgData, ArgSize,
+             makeMethodWrapperHandler(&SimpleAllocator::reserve))
+          .release();
 }
 
 llvm::orc::shared::detail::CWrapperFunctionResult
 testFinalize(const char *ArgData, size_t ArgSize) {
-  return WrapperFunction<rt::SPSMemoryFinalizeSignature>::handle(
-             ArgData, ArgSize,
-             [](const tpctypes::FinalizeRequest &FR) -> Error {
-               for (auto &Seg : FR) {
-                 char *Mem = Seg.Addr.toPtr<char *>();
-                 memcpy(Mem, Seg.Content.data(), Seg.Content.size());
-                 memset(Mem + Seg.Content.size(), 0,
-                        Seg.Size - Seg.Content.size());
-                 assert(Seg.Size <= std::numeric_limits<size_t>::max());
-                 if (auto EC = sys::Memory::protectMappedMemory(
-                         {Mem, static_cast<size_t>(Seg.Size)},
-                         tpctypes::fromWireProtectionFlags(Seg.Prot)))
-                   return errorCodeToError(EC);
-                 if (Seg.Prot & tpctypes::WPF_Exec)
-                   sys::Memory::InvalidateInstructionCache(Mem, Seg.Size);
-               }
-               return Error::success();
-             })
-      .release();
+  return WrapperFunction<rt::SPSSimpleExecutorMemoryManagerFinalizeSignature>::
+      handle(ArgData, ArgSize,
+             makeMethodWrapperHandler(&SimpleAllocator::finalize))
+          .release();
 }
 
 llvm::orc::shared::detail::CWrapperFunctionResult
 testDeallocate(const char *ArgData, size_t ArgSize) {
-  return WrapperFunction<rt::SPSMemoryDeallocateSignature>::handle(
-             ArgData, ArgSize,
-             [](ExecutorAddress Base, uint64_t Size) -> Error {
-               sys::MemoryBlock MB(Base.toPtr<void *>(), Size);
-               if (auto EC = sys::Memory::releaseMappedMemory(MB))
-                 return errorCodeToError(EC);
-               return Error::success();
-             })
-      .release();
+  return WrapperFunction<
+             rt::SPSSimpleExecutorMemoryManagerDeallocateSignature>::
+      handle(ArgData, ArgSize,
+             makeMethodWrapperHandler(&SimpleAllocator::deallocate))
+          .release();
 }
 
 TEST(EPCGenericJITLinkMemoryManagerTest, AllocFinalizeFree) {
   auto SelfEPC = cantFail(SelfExecutorProcessControl::Create());
+  SimpleAllocator SA;
 
-  EPCGenericJITLinkMemoryManager::FuncAddrs FAs;
-  FAs.Reserve = ExecutorAddress::fromPtr(&testReserve);
-  FAs.Finalize = ExecutorAddress::fromPtr(&testFinalize);
-  FAs.Deallocate = ExecutorAddress::fromPtr(&testDeallocate);
+  EPCGenericJITLinkMemoryManager::SymbolAddrs SAs;
+  SAs.Allocator = ExecutorAddress::fromPtr(&SA);
+  SAs.Reserve = ExecutorAddress::fromPtr(&testReserve);
+  SAs.Finalize = ExecutorAddress::fromPtr(&testFinalize);
+  SAs.Deallocate = ExecutorAddress::fromPtr(&testDeallocate);
 
-  auto MemMgr = std::make_unique<EPCGenericJITLinkMemoryManager>(*SelfEPC, FAs);
+  auto MemMgr = std::make_unique<EPCGenericJITLinkMemoryManager>(*SelfEPC, SAs);
 
   jitlink::JITLinkMemoryManager::SegmentsRequestMap SRM;
   StringRef Hello = "hello";

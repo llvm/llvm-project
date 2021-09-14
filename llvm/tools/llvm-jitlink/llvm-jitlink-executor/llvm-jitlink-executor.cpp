@@ -14,6 +14,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/FDRawByteChannel.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleExecutorMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleRemoteEPCServer.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
@@ -138,8 +139,16 @@ int main(int argc, char *argv[]) {
 
   auto Server =
       ExitOnErr(SimpleRemoteEPCServer::Create<FDSimpleRemoteEPCTransport>(
-          std::make_unique<SimpleRemoteEPCServer::ThreadDispatcher>(),
-          SimpleRemoteEPCServer::defaultBootstrapSymbols(), InFD, OutFD));
+          [](SimpleRemoteEPCServer::Setup &S) -> Error {
+            S.setDispatcher(
+                std::make_unique<SimpleRemoteEPCServer::ThreadDispatcher>());
+            S.bootstrapSymbols() =
+                SimpleRemoteEPCServer::defaultBootstrapSymbols();
+            S.services().push_back(
+                std::make_unique<rt_bootstrap::SimpleExecutorMemoryManager>());
+            return Error::success();
+          },
+          InFD, OutFD));
 
   ExitOnErr(Server->waitForDisconnect());
   return 0;

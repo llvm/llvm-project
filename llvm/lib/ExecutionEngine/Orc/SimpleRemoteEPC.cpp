@@ -170,14 +170,16 @@ void SimpleRemoteEPC::handleDisconnect(Error Err) {
 
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
 SimpleRemoteEPC::createMemoryManager() {
-  EPCGenericJITLinkMemoryManager::FuncAddrs FAs;
+  EPCGenericJITLinkMemoryManager::SymbolAddrs SAs;
   if (auto Err = getBootstrapSymbols(
-          {{FAs.Reserve, rt::MemoryReserveWrapperName},
-           {FAs.Finalize, rt::MemoryFinalizeWrapperName},
-           {FAs.Deallocate, rt::MemoryDeallocateWrapperName}}))
+          {{SAs.Allocator, rt::SimpleExecutorMemoryManagerInstanceName},
+           {SAs.Reserve, rt::SimpleExecutorMemoryManagerReserveWrapperName},
+           {SAs.Finalize, rt::SimpleExecutorMemoryManagerFinalizeWrapperName},
+           {SAs.Deallocate,
+            rt::SimpleExecutorMemoryManagerDeallocateWrapperName}}))
     return std::move(Err);
 
-  return std::make_unique<EPCGenericJITLinkMemoryManager>(*this, FAs);
+  return std::make_unique<EPCGenericJITLinkMemoryManager>(*this, SAs);
 }
 
 Expected<std::unique_ptr<ExecutorProcessControl::MemoryAccess>>
