@@ -1,5 +1,5 @@
 # Test that linking without shared memory causes __tls_base to be
-# internalized
+# internalized.
 
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
 
@@ -13,6 +13,12 @@ get_tls1:
   i32.add
   end_function
 
+.globl get_tls1_got
+get_tls1_got:
+  .functype get_tls1_got () -> (i32)
+  global.get tls1@GOT@TLS
+  end_function
+
 .section  .data.no_tls,"",@
 .globl  no_tls
 .p2align  2
@@ -20,7 +26,7 @@ no_tls:
   .int32  42
   .size no_tls, 4
 
-.section  .tdata.tls1,"",@
+.section  .tdata.tls1,"T",@
 .globl  tls1
 .p2align  2
 tls1:
@@ -53,6 +59,13 @@ tls1:
 # CHECK-NEXT:           Value:           66576
 # __tls_base
 # CHECK-NEXT:       - Index:           1
+# CHECK-NEXT:         Type:            I32
+# CHECK-NEXT:         Mutable:         false
+# CHECK-NEXT:         InitExpr:
+# CHECK-NEXT:           Opcode:          I32_CONST
+# CHECK-NEXT:           Value:           1024
+# GOT.data.internal.tls1
+# CHECK-NEXT:       - Index:           2
 # CHECK-NEXT:         Type:            I32
 # CHECK-NEXT:         Mutable:         false
 # CHECK-NEXT:         InitExpr:

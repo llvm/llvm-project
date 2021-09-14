@@ -73,6 +73,37 @@ void DylinkSection::writeBody() {
       writeStr(sub.os, llvm::sys::path::filename(so->getName()), "so name");
     sub.writeTo(os);
   }
+
+  // Under certain circumstances we need to include extra information about the
+  // exports we are providing to the dynamic linker.  Currently this is only the
+  // case for TLS symbols where the exported value is relative to __tls_base
+  // rather than __memory_base.
+  std::vector<const Symbol *> exportInfo;
+  for (const Symbol *sym : symtab->getSymbols()) {
+    if (sym->isExported() && sym->isLive() && sym->isTLS() &&
+        isa<DefinedData>(sym)) {
+      exportInfo.push_back(sym);
+    }
+  }
+
+  if (!exportInfo.empty()) {
+    SubSection sub(WASM_DYLINK_EXPORT_INFO);
+    writeUleb128(sub.os, exportInfo.size(), "num exports");
+
+    for (const Symbol *sym : exportInfo) {
+      LLVM_DEBUG(llvm::dbgs() << "export info: " << toString(*sym) << "\n");
+      StringRef name = sym->getName();
+      if (auto *f = dyn_cast<DefinedFunction>(sym)) {
+        if (Optional<StringRef> exportName = f->function->getExportName()) {
+          name = *exportName;
+        }
+      }
+      writeStr(sub.os, name, "sym name");
+      writeUleb128(sub.os, sym->flags, "sym flags");
+    }
+
+    sub.writeTo(os);
+  }
 }
 
 uint32_t TypeSection::registerType(const WasmSignature &sig) {
@@ -345,7 +376,7 @@ void GlobalSection::addInternalGOTEntry(Symbol *sym) {
   internalGotSymbols.push_back(sym);
 }
 
-void GlobalSection::generateRelocationCode(raw_ostream &os) const {
+void GlobalSection::generateRelocationCode(raw_ostream &os, bool TLS) const {
   bool is64 = config->is64.getValueOr(false);
   unsigned opcode_ptr_const = is64 ? WASM_OPCODE_I64_CONST
                                    : WASM_OPCODE_I32_CONST;
@@ -353,10 +384,17 @@ void GlobalSection::generateRelocationCode(raw_ostream &os) const {
                                  : WASM_OPCODE_I32_ADD;
 
   for (const Symbol *sym : internalGotSymbols) {
+    if (TLS != sym->isTLS())
+      continue;
+
     if (auto *d = dyn_cast<DefinedData>(sym)) {
       // Get __memory_base
       writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
-      writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(), "__memory_base");
+      if (sym->isTLS())
+        writeUleb128(os, WasmSym::tlsBase->getGlobalIndex(), "__tls_base");
+      else
+        writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(),
+                     "__memory_base");
 
       // Add the virtual address of the data symbol
       writeU8(os, opcode_ptr_const, "CONST");

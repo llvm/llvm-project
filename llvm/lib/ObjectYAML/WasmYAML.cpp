@@ -55,6 +55,7 @@ static void sectionMapping(IO &IO, WasmYAML::DylinkSection &Section) {
   IO.mapRequired("TableSize", Section.TableSize);
   IO.mapRequired("TableAlignment", Section.TableAlignment);
   IO.mapRequired("Needed", Section.Needed);
+  IO.mapRequired("ExportInfo", Section.ExportInfo);
 }
 
 static void sectionMapping(IO &IO, WasmYAML::NameSection &Section) {
@@ -529,6 +530,12 @@ void MappingTraits<WasmYAML::Tag>::mapping(IO &IO, WasmYAML::Tag &Tag) {
   IO.mapRequired("Index", Tag.Index);
   IO.mapRequired("Attribute", Tag.Attribute);
   IO.mapRequired("SigIndex", Tag.SigIndex);
+}
+
+void MappingTraits<WasmYAML::DylinkExport>::mapping(
+    IO &IO, WasmYAML::DylinkExport &Export) {
+  IO.mapRequired("Name", Export.Name);
+  IO.mapRequired("Flags", Export.Flags);
 }
 
 void ScalarBitSetTraits<WasmYAML::LimitFlags>::bitset(

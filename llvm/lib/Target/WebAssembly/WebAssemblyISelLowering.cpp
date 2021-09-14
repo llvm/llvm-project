@@ -1539,7 +1539,6 @@ WebAssemblyTargetLowering::LowerGlobalTLSAddress(SDValue Op,
                                                  SelectionDAG &DAG) const {
   SDLoc DL(Op);
   const auto *GA = cast<GlobalAddressSDNode>(Op);
-  MVT PtrVT = getPointerTy(DAG.getDataLayout());
 
   MachineFunction &MF = DAG.getMachineFunction();
   if (!MF.getSubtarget<WebAssemblySubtarget>().hasBulkMemory())
@@ -1561,21 +1560,43 @@ WebAssemblyTargetLowering::LowerGlobalTLSAddress(SDValue Op,
                        false);
   }
 
-  auto GlobalGet = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
-                                     : WebAssembly::GLOBAL_GET_I32;
-  const char *BaseName = MF.createExternalSymbolName("__tls_base");
+  auto model = GV->getThreadLocalMode();
 
-  SDValue BaseAddr(
-      DAG.getMachineNode(GlobalGet, DL, PtrVT,
-                         DAG.getTargetExternalSymbol(BaseName, PtrVT)),
-      0);
+  // Unsupported TLS modes
+  assert(model != GlobalValue::NotThreadLocal);
+  assert(model != GlobalValue::InitialExecTLSModel);
 
-  SDValue TLSOffset = DAG.getTargetGlobalAddress(
-      GV, DL, PtrVT, GA->getOffset(), WebAssemblyII::MO_TLS_BASE_REL);
-  SDValue SymOffset =
-      DAG.getNode(WebAssemblyISD::WrapperREL, DL, PtrVT, TLSOffset);
+  if (model == GlobalValue::LocalExecTLSModel ||
+      model == GlobalValue::LocalDynamicTLSModel ||
+      (model == GlobalValue::GeneralDynamicTLSModel &&
+       getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV))) {
+    // For DSO-local TLS variables we use offset from __tls_base
 
-  return DAG.getNode(ISD::ADD, DL, PtrVT, BaseAddr, SymOffset);
+    MVT PtrVT = getPointerTy(DAG.getDataLayout());
+    auto GlobalGet = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
+                                       : WebAssembly::GLOBAL_GET_I32;
+    const char *BaseName = MF.createExternalSymbolName("__tls_base");
+
+    SDValue BaseAddr(
+        DAG.getMachineNode(GlobalGet, DL, PtrVT,
+                           DAG.getTargetExternalSymbol(BaseName, PtrVT)),
+        0);
+
+    SDValue TLSOffset = DAG.getTargetGlobalAddress(
+        GV, DL, PtrVT, GA->getOffset(), WebAssemblyII::MO_TLS_BASE_REL);
+    SDValue SymOffset =
+        DAG.getNode(WebAssemblyISD::WrapperREL, DL, PtrVT, TLSOffset);
+
+    return DAG.getNode(ISD::ADD, DL, PtrVT, BaseAddr, SymOffset);
+  }
+
+  assert(model == GlobalValue::GeneralDynamicTLSModel);
+
+  EVT VT = Op.getValueType();
+  return DAG.getNode(WebAssemblyISD::Wrapper, DL, VT,
+                     DAG.getTargetGlobalAddress(GA->getGlobal(), DL, VT,
+                                                GA->getOffset(),
+                                                WebAssemblyII::MO_GOT_TLS));
 }
 
 SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,

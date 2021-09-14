@@ -139,12 +139,6 @@ void scanRelocations(InputChunk *chunk) {
     }
 
     if (config->isPic) {
-      if (sym->isTLS() && sym->isUndefined()) {
-        error(toString(file) +
-              ": TLS symbol is undefined, but TLS symbols cannot yet be "
-              "imported: `" +
-              toString(*sym) + "`");
-      }
       switch (reloc.Type) {
       case R_WASM_TABLE_INDEX_SLEB:
       case R_WASM_TABLE_INDEX_SLEB64:

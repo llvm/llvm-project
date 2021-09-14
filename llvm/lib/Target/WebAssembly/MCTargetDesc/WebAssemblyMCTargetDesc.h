@@ -95,6 +95,9 @@ enum TOF {
   // platforms.
   MO_GOT,
 
+  // Same as MO_GOT but the address stored in the global is a TLS address.
+  MO_GOT_TLS,
+
   // On a symbol operand this indicates that the immediate is the symbol
   // address relative the __memory_base wasm global.
   // Only applicable to data symbols.
