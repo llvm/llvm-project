@@ -218,15 +218,44 @@ void AIX::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   addSystemInclude(DriverArgs, CC1Args, UP.str());
 }
 
+void AIX::AddClangCXXStdlibIncludeArgs(
+    const llvm::opt::ArgList &DriverArgs,
+    llvm::opt::ArgStringList &CC1Args) const {
+
+  if (DriverArgs.hasArg(options::OPT_nostdinc) ||
+      DriverArgs.hasArg(options::OPT_nostdincxx) ||
+      DriverArgs.hasArg(options::OPT_nostdlibinc))
+    return;
+
+  switch (GetCXXStdlibType(DriverArgs)) {
+  case ToolChain::CST_Libstdcxx:
+    llvm::report_fatal_error(
+        "picking up libstdc++ headers is unimplemented on AIX");
+  case ToolChain::CST_Libcxx: {
+    llvm::StringRef Sysroot = GetHeaderSysroot(DriverArgs);
+    SmallString<128> PathCPP(Sysroot);
+    llvm::sys::path::append(PathCPP, "opt/IBM/openxlCSDK", "include", "c++",
+                            "v1");
+    addSystemInclude(DriverArgs, CC1Args, PathCPP.str());
+    // Required in order to suppress conflicting C++ overloads in the system
+    // libc headers that were used by XL C++.
+    CC1Args.push_back("-D__LIBC_NO_CPP_MATH_OVERLOADS__");
+    return;
+  }
+  }
+
+  llvm_unreachable("Unexpected C++ library type; only libc++ is supported.");
+}
+
 void AIX::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
                               llvm::opt::ArgStringList &CmdArgs) const {
   switch (GetCXXStdlibType(Args)) {
+  case ToolChain::CST_Libstdcxx:
+    llvm::report_fatal_error("linking libstdc++ unimplemented on AIX");
   case ToolChain::CST_Libcxx:
     CmdArgs.push_back("-lc++");
     CmdArgs.push_back("-lc++abi");
     return;
-  case ToolChain::CST_Libstdcxx:
-    llvm::report_fatal_error("linking libstdc++ unimplemented on AIX");
   }
 
   llvm_unreachable("Unexpected C++ library type; only libc++ is supported.");

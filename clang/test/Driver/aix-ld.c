@@ -584,14 +584,14 @@
 // Check powerpc-ibm-aix7.1.0.0, 32-bit. -stdlib=libstdc++ invokes fatal error.
 // RUN: not --crash %clangxx -no-canonical-prefixes %s 2>&1 -### \
 // RUN:        -target powerpc-ibm-aix7.1.0.0 \
-// RUN:        -stdlib=libstdc++ \
+// RUN:        -stdlib=libstdc++ -nostdinc++ \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-LIBSTDCXX %s
 
 // Check powerpc64-ibm-aix7.1.0.0, 64-bit. -stdlib=libstdc++ invokes fatal error.
 // RUN: not --crash %clangxx -no-canonical-prefixes %s 2>&1 -### \
 // RUN:        -target powerpc64-ibm-aix7.1.0.0 \
-// RUN:        -stdlib=libstdc++ \
+// RUN:        -stdlib=libstdc++ -nostdinc++ \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-LIBSTDCXX %s
 // CHECK-LD-LIBSTDCXX: LLVM ERROR: linking libstdc++ unimplemented on AIX
