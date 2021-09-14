@@ -5984,6 +5984,50 @@ attribute requires a string literal argument to identify the handle being releas
   }];
 }
 
+def DiagnoseAsBuiltinDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``diagnose_as_builtin` attribute indicates that Fortify diagnostics are to
+be applied to the declared function as if it were the function specified by the
+attribute. The builtin function whose diagnostics are to be mimicked should be
+given. In addition, the order in which arguments should be applied must also
+be given.
+
+For example, the attribute can be used as follows.
+
+  .. code-block:: c
+
+    __attribute__((diagnose_as_builtin(__builtin_memset, 3, 2, 1)))
+    void *mymemset(int n, int c, void *s) {
+      // ...
+    }
+
+This indicates that calls to ``mymemset`` should be diagnosed as if they were
+calls to ``__builtin_memset``. The arguments ``3, 2, 1`` indicate by index the
+order in which arguments of ``mymemset`` should be applied to
+``__builtin_memset``. The third argument should be applied first, then the
+second, and then the first. Thus (when Fortify warnings are enabled) the call
+``mymemset(n, c, s)`` will diagnose overflows as if it were the call
+``__builtin_memset(s, c, n)``.
+
+For variadic functions, the variadic arguments must come in the same order as
+they would to the builtin function, after all normal arguments. For instance,
+to diagnose a new function as if it were `sscanf`, we can use the attribute as
+follows.
+
+  .. code-block:: c
+  __attribute__((diagnose_as_builtin(sscanf, 1, 2)))
+  int mysscanf(const char *str, const char *format, ...)  {
+    // ...
+  }
+
+Then the call `mysscanf("abc def", "%4s %4s", buf1, buf2)` will be diagnosed as
+if it were the call `sscanf("abc def", "%4s %4s", buf1, buf2)`.
+
+This attribute cannot be applied to non-static member functions.
+}];
+}
+
 def ArmSveVectorBitsDocs : Documentation {
   let Category = DocCatType;
   let Content = [{

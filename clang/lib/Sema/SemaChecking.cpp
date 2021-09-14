@@ -446,14 +446,14 @@ public:
       break;
     }
 
-    auto OptionalFW = FS.getFieldWidth();
-    if (OptionalFW.getHowSpecified() !=
+    analyze_format_string::OptionalAmount FW = FS.getFieldWidth();
+    if (FW.getHowSpecified() !=
         analyze_format_string::OptionalAmount::HowSpecified::Constant)
       return true;
 
-    unsigned SourceSize = OptionalFW.getConstantAmount() + NulByte;
+    unsigned SourceSize = FW.getConstantAmount() + NulByte;
 
-    auto DestSizeAPS = ComputeSizeArgument(FS.getArgIndex());
+    Optional<llvm::APSInt> DestSizeAPS = ComputeSizeArgument(FS.getArgIndex());
     if (!DestSizeAPS)
       return true;
 
@@ -652,20 +652,53 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
       isConstantEvaluated())
     return;
 
-  unsigned BuiltinID = FD->getBuiltinID(/*ConsiderWrappers=*/true);
+  bool UseDABAttr = false;
+  const FunctionDecl *UseDecl = FD;
+
+  const auto *DABAttr = FD->getAttr<DiagnoseAsBuiltinAttr>();
+  if (DABAttr) {
+    UseDecl = DABAttr->getFunction();
+    assert(UseDecl && "Missing FunctionDecl in DiagnoseAsBuiltin attribute!");
+    UseDABAttr = true;
+  }
+
+  unsigned BuiltinID = UseDecl->getBuiltinID(/*ConsiderWrappers=*/true);
+
   if (!BuiltinID)
     return;
 
   const TargetInfo &TI = getASTContext().getTargetInfo();
   unsigned SizeTypeWidth = TI.getTypeWidth(TI.getSizeType());
 
+  auto TranslateIndex = [&](unsigned Index) -> Optional<unsigned> {
+    // If we refer to a diagnose_as_builtin attribute, we need to change the
+    // argument index to refer to the arguments of the called function. Unless
+    // the index is out of bounds, which presumably means it's a variadic
+    // function.
+    if (!UseDABAttr)
+      return Index;
+    unsigned DABIndices = DABAttr->argIndices_size();
+    unsigned NewIndex = Index < DABIndices
+                            ? DABAttr->argIndices_begin()[Index]
+                            : Index - DABIndices + FD->getNumParams();
+    if (NewIndex >= TheCall->getNumArgs())
+      return llvm::None;
+    return NewIndex;
+  };
+
   auto ComputeExplicitObjectSizeArgument =
       [&](unsigned Index) -> Optional<llvm::APSInt> {
+    Optional<unsigned> IndexOptional = TranslateIndex(Index);
+    if (!IndexOptional)
+      return llvm::None;
+    unsigned NewIndex = IndexOptional.getValue();
     Expr::EvalResult Result;
-    Expr *SizeArg = TheCall->getArg(Index);
+    Expr *SizeArg = TheCall->getArg(NewIndex);
     if (!SizeArg->EvaluateAsInt(Result, getASTContext()))
       return llvm::None;
-    return Result.Val.getInt();
+    llvm::APSInt Integer = Result.Val.getInt();
+    Integer.setIsUnsigned(true);
+    return Integer;
   };
 
   auto ComputeSizeArgument = [&](unsigned Index) -> Optional<llvm::APSInt> {
@@ -680,7 +713,12 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
         BOSType = POS->getType();
     }
 
-    const Expr *ObjArg = TheCall->getArg(Index);
+    Optional<unsigned> IndexOptional = TranslateIndex(Index);
+    if (!IndexOptional)
+      return llvm::None;
+    unsigned NewIndex = IndexOptional.getValue();
+
+    const Expr *ObjArg = TheCall->getArg(NewIndex);
     uint64_t Result;
     if (!ObjArg->tryEvaluateObjectSize(Result, getASTContext(), BOSType))
       return llvm::None;
@@ -690,7 +728,12 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   };
 
   auto ComputeStrLenArgument = [&](unsigned Index) -> Optional<llvm::APSInt> {
-    Expr *ObjArg = TheCall->getArg(Index);
+    Optional<unsigned> IndexOptional = TranslateIndex(Index);
+    if (!IndexOptional)
+      return llvm::None;
+    unsigned NewIndex = IndexOptional.getValue();
+
+    const Expr *ObjArg = TheCall->getArg(NewIndex);
     uint64_t Result;
     if (!ObjArg->tryEvaluateStrLen(Result, getASTContext()))
       return llvm::None;
@@ -898,7 +941,8 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   }
 
   if (!SourceSize || !DestinationSize ||
-      SourceSize.getValue().ule(DestinationSize.getValue()))
+      llvm::APSInt::compareValues(SourceSize.getValue(),
+                                  DestinationSize.getValue()) <= 0)
     return;
 
   StringRef FunctionName = GetFunctionName();

@@ -2956,6 +2956,17 @@ def err_attribute_invalid_argument : Error<
 def err_attribute_wrong_number_arguments : Error<
   "%0 attribute %plural{0:takes no arguments|1:takes one argument|"
   ":requires exactly %1 arguments}1">;
+def err_attribute_wrong_number_arguments_for : Error <
+  "%0 attribute references function %1, which %plural{0:takes no arguments|1:takes one argument|"
+  ":takes exactly %2 arguments}2">;
+def err_attribute_bounds_for_function : Error<
+  "%0 attribute references parameter %1, but the function %2 has only %3 parameters">;
+def err_attribute_no_member_function : Error<
+  "%0 attribute cannot be applied to non-static member functions">;
+def err_attribute_parameter_types : Error<
+  "%0 attribute parameter types do not match: parameter %1 of function %2 has type %3, "
+  "but parameter %4 of function %5 has type %6">;
+
 def err_attribute_too_many_arguments : Error<
   "%0 attribute takes no more than %1 argument%s1">;
 def err_attribute_too_few_arguments : Error<
@@ -3013,7 +3024,7 @@ def err_attribute_sizeless_type : Error<
   "%0 attribute cannot be applied to sizeless type %1">;
 def err_attribute_argument_n_type : Error<
   "%0 attribute requires parameter %1 to be %select{int or bool|an integer "
-  "constant|a string|an identifier|a constant expression}2">;
+  "constant|a string|an identifier|a constant expression|a builtin function}2">;
 def err_attribute_argument_type : Error<
   "%0 attribute requires %select{int or bool|an integer "
   "constant|a string|an identifier}1">;
