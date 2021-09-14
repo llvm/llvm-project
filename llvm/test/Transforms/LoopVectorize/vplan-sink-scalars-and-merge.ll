@@ -902,3 +902,68 @@ loop.latch:
 exit:
   ret void
 }
+
+define void @sinking_requires_duplication(float* %addr) {
+; CHECK-LABEL: LV: Checking a loop in "sinking_requires_duplication"
+; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK-NEXT: loop.header:
+; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
+; CHECK-NEXT:   REPLICATE ir<%gep> = getelementptr ir<%addr>, ir<%iv>
+; CHECK-NEXT: Successor(s): loop.body
+; CHECK-EMPTY:
+; CHECK-NEXT: loop.body:
+; CHECK-NEXT:   WIDEN ir<%0> = load ir<%gep>
+; CHECK-NEXT:   WIDEN ir<%pred> = fcmp ir<%0>, ir<0.000000e+00>
+; CHECK-NEXT: Successor(s): then
+; CHECK-EMPTY:
+; CHECK-NEXT: then:
+; CHECK-NEXT:   EMIT vp<%4> = not ir<%pred>
+; CHECK-NEXT: Successor(s): pred.store
+; CHECK-EMPTY:
+; CHECK-NEXT: <xVFxUF> pred.store: {
+; CHECK-NEXT:   pred.store.entry:
+; CHECK-NEXT:     BRANCH-ON-MASK vp<%4>
+; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
+; CHECK-NEXT:   CondBit: vp<%4> (then)
+; CHECK-EMPTY:
+; CHECK-NEXT:   pred.store.if:
+; CHECK-NEXT:     REPLICATE store ir<1.000000e+01>, ir<%gep>
+; CHECK-NEXT:   Successor(s): pred.store.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:   pred.store.continue:
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): then.0
+; CHECK-EMPTY:
+; CHECK-NEXT: then.0:
+; CHECK-NEXT: Successor(s): loop.latch
+; CHECK-EMPTY:
+; CHECK-NEXT: loop.latch:
+; CHECK-NEXT: No successors
+; CHECK-NEXT: }
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %gep = getelementptr float, float* %addr, i64 %iv
+  %exitcond.not = icmp eq i64 %iv, 200
+  br i1 %exitcond.not, label %exit, label %loop.body
+
+loop.body:
+  %0 = load float, float* %gep, align 4
+  %pred = fcmp oeq float %0, 0.0
+  br i1 %pred, label %loop.latch, label %then
+
+then:
+  store float 10.0, float* %gep, align 4
+  br label %loop.latch
+
+loop.latch:
+  %iv.next = add nuw nsw i64 %iv, 1
+  br label %loop.header
+
+exit:
+  ret void
+}
