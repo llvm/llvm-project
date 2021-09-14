@@ -1383,8 +1383,8 @@ llvm::DIType *CGDebugInfo::CreateType(const FunctionType *Ty,
   }
 
   llvm::DITypeRefArray EltTypeArray = DBuilder.getOrCreateTypeArray(EltTys);
-  llvm::DIType *F = DBuilder.createSubroutineType(EltTypeArray, Flags,
-                                       getDwarfCC(Ty->getCallConv()));
+  llvm::DIType *F = DBuilder.createSubroutineType(
+      EltTypeArray, Flags, getDwarfCC(Ty->getCallConv()));
   return F;
 }
 
