@@ -12,6 +12,7 @@ declare void @llvm.memmove.p0i8.p0i8.i32(i8* %dest, i8* %src, i32 %len, i1 %isvo
 declare void @llvm.memset.p0i8.i64(i8* %dest, i8 %val, i64 %len, i1 %isvolatile)
 
 declare void @unknown_call(i8* %dest)
+declare i8* @retptr(i8* returned)
 
 ; Address leaked.
 define void @LeakAddress() {
@@ -90,6 +91,23 @@ entry:
   ret void
 }
 
+define void @StoreInBounds6() {
+; CHECK-LABEL: @StoreInBounds6 dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; GLOBAL-NEXT: x[4]: full-set, @retptr(arg0, [0,1)){{$}}
+; LOCAL-NEXT: x[4]: [0,1), @retptr(arg0, [0,1)){{$}}
+; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: store i8 0, i8* %x2, align 1
+; CHECK-EMPTY:
+entry:
+  %x = alloca i32, align 4
+  %x1 = bitcast i32* %x to i8*
+  %x2 = call i8* @retptr(i8* %x1)
+  store i8 0, i8* %x2, align 1
+  ret void
+}
+
 define dso_local void @WriteMinMax(i8* %p) {
 ; CHECK-LABEL: @WriteMinMax{{$}}
 ; CHECK-NEXT: args uses:
@@ -132,6 +150,24 @@ entry:
   %x2 = getelementptr i8, i8* %x1, i64 2
   %x3 = bitcast i8* %x2 to i32*
   store i32 0, i32* %x3, align 1
+  ret void
+}
+
+define void @StoreOutOfBounds2() {
+; CHECK-LABEL: @StoreOutOfBounds2 dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; GLOBAL-NEXT: x[4]: full-set, @retptr(arg0, [2,3)){{$}}
+; LOCAL-NEXT: x[4]: [2,6), @retptr(arg0, [2,3)){{$}}
+; GLOBAL-NEXT: safe accesses:
+; CHECK-EMPTY:
+entry:
+  %x = alloca i32, align 4
+  %x1 = bitcast i32* %x to i8*
+  %x2 = getelementptr i8, i8* %x1, i64 2
+  %x3 = call i8* @retptr(i8* %x2)
+  %x4 = bitcast i8* %x3 to i32*
+  store i32 0, i32* %x4, align 1
   ret void
 }
 
