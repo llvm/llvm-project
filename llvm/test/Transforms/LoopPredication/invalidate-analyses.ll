@@ -1,6 +1,5 @@
 ; RUN: opt -S -passes='require<scalar-evolution>,loop-mssa(loop-predication)' -debug-pass-manager < %s 2>&1 | FileCheck %s
 
-; FIXME: We should invalidate PreservedCFGCheckerAnalysis after LoopPredicationPass!
 ; NOTE: PreservedCFGCheckerAnalysis is an arbitrary analysis that just happens
 ;       to be calculated before this pass and isn't preserved by it. If after
 ;       your change this analysis is preserved by the pass, please update this
@@ -8,9 +7,10 @@
 
 ; CHECK: Running analysis: PreservedCFGCheckerAnalysis on drop_a_wc_and_leave_early
 ; CHECK: Running pass: LoopPredicationPass on Loop at depth 1 containing: %loop<header><exiting>,%guarded<exiting>,%guarded2<latch><exiting>
+; CHECK-NEXT: Invalidating analysis: PreservedCFGCheckerAnalysis on drop_a_wc_and_leave_early
 ; CHECK-NEXT: Running analysis: PreservedCFGCheckerAnalysis on drop_a_wc_and_leave
 ; CHECK: Running pass: LoopPredicationPass on Loop at depth 1 containing: %loop<header><exiting>,%guarded<exiting>,%guarded2<latch><exiting>
-; CHECK-NEXT: Running pass: VerifierPass
+; CHECK-NEXT: Invalidating analysis: PreservedCFGCheckerAnalysis on drop_a_wc_and_leave
 
 
 ; This test makes the pass drop its attempts to optimize the exit condition in
