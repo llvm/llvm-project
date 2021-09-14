@@ -81,6 +81,8 @@ bool FileExists(const char *filename);
 char *FindPathToBinary(const char *name);
 bool IsPathSeparator(const char c);
 bool IsAbsolutePath(const char *path);
+// Returns true on success, false on failure.
+bool CreateDir(const char *pathname);
 // Starts a subprocess and returs its pid.
 // If *_fd parameters are not kInvalidFd their corresponding input/output
 // streams will be redirect to the file. The files will always be closed

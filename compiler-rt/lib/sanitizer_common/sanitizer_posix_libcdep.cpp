@@ -151,6 +151,8 @@ int Atexit(void (*function)(void)) {
 #endif
 }
 
+bool CreateDir(const char *pathname) { return mkdir(pathname, 0755) == 0; }
+
 bool SupportsColoredOutput(fd_t fd) {
   return isatty(fd) != 0;
 }
