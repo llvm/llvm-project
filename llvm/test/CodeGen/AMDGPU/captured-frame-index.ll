@@ -14,8 +14,8 @@ entry:
 
 ; GCN-LABEL: {{^}}stored_fi_to_lds:
 ; GCN: s_load_dword [[LDSPTR:s[0-9]+]]
-; GCN: buffer_store_dword v{{[0-9]+}}, off,
 ; GCN: v_mov_b32_e32 [[ZERO0:v[0-9]+]], 4{{$}}
+; GCN: buffer_store_dword v{{[0-9]+}}, off,
 ; GCN: v_mov_b32_e32 [[VLDSPTR:v[0-9]+]], [[LDSPTR]]
 ; GCN: ds_write_b32  [[VLDSPTR]], [[ZERO0]]
 define amdgpu_kernel void @stored_fi_to_lds(float addrspace(5)* addrspace(3)* %ptr) #0 {

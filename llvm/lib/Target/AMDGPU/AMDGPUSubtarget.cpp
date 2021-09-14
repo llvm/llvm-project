@@ -1103,6 +1103,11 @@ void GCNSubtarget::getPostRAMutations(
   Mutations.push_back(std::make_unique<FillMFMAShadowMutation>(&InstrInfo));
 }
 
+std::unique_ptr<ScheduleDAGMutation>
+GCNSubtarget::createFillMFMAShadowMutation(const TargetInstrInfo *TII) const {
+  return std::make_unique<FillMFMAShadowMutation>(&InstrInfo);
+}
+
 const AMDGPUSubtarget &AMDGPUSubtarget::get(const MachineFunction &MF) {
   if (MF.getTarget().getTargetTriple().getArch() == Triple::amdgcn)
     return static_cast<const AMDGPUSubtarget&>(MF.getSubtarget<GCNSubtarget>());

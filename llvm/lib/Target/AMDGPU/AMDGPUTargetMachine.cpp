@@ -809,6 +809,7 @@ public:
     // allow calls without EnableAMDGPUFunctionCalls if they are marked
     // noinline, so this is always required.
     setRequiresCodeGenSCCOrder(true);
+    substitutePass(&PostRASchedulerID, &PostMachineSchedulerID);
   }
 
   GCNTargetMachine &getGCNTargetMachine() const {
@@ -817,6 +818,14 @@ public:
 
   ScheduleDAGInstrs *
   createMachineScheduler(MachineSchedContext *C) const override;
+
+  ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const override {
+    ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
+    const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
+    DAG->addMutation(ST.createFillMFMAShadowMutation(DAG->TII));
+    return DAG;
+  }
 
   bool addPreISel() override;
   void addMachineSSAOptimization() override;

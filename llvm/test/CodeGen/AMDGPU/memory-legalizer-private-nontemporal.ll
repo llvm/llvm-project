@@ -85,9 +85,9 @@ define amdgpu_kernel void @private_nontemporal_load_0(
 ; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s8, s8, s3
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s9, s9, 0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
 ; SKIP-CACHE-INV-NEXT:    buffer_load_dword v0, v0, s[8:11], 0 offen glc slc
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
@@ -125,8 +125,6 @@ define amdgpu_kernel void @private_nontemporal_load_0(
 ; GFX90A-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-TGSPLIT-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX90A-TGSPLIT-NEXT:    s_endpgm
-;
-;
     i32 addrspace(5)* %in, i32 addrspace(1)* %out) {
 entry:
   %val = load i32, i32 addrspace(5)* %in, align 4, !nontemporal !0
@@ -215,9 +213,9 @@ define amdgpu_kernel void @private_nontemporal_load_1(
 ; SKIP-CACHE-INV-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    v_add_i32_e32 v0, vcc, s4, v0
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s8, s8, s3
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s9, s9, 0
-; SKIP-CACHE-INV-NEXT:    v_add_i32_e32 v0, vcc, s4, v0
 ; SKIP-CACHE-INV-NEXT:    buffer_load_dword v0, v0, s[8:11], 0 offen glc slc
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
@@ -255,8 +253,6 @@ define amdgpu_kernel void @private_nontemporal_load_1(
 ; GFX90A-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-TGSPLIT-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX90A-TGSPLIT-NEXT:    s_endpgm
-;
-;
     i32 addrspace(5)* %in, i32 addrspace(1)* %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -382,8 +378,6 @@ define amdgpu_kernel void @private_nontemporal_store_0(
 ; GFX90A-TGSPLIT-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX90A-TGSPLIT-NEXT:    buffer_store_dword v0, v1, s[8:11], 0 offen glc slc
 ; GFX90A-TGSPLIT-NEXT:    s_endpgm
-;
-;
     i32 addrspace(1)* %in, i32 addrspace(5)* %out) {
 entry:
   %val = load i32, i32 addrspace(1)* %in, align 4
@@ -400,9 +394,9 @@ define amdgpu_kernel void @private_nontemporal_store_1(
 ; GFX6-NEXT:    s_load_dword s2, s[4:5], 0x2
 ; GFX6-NEXT:    s_add_u32 s8, s8, s7
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX6-NEXT:    s_addc_u32 s9, s9, 0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s0, s[0:1], 0x0
+; GFX6-NEXT:    s_addc_u32 s9, s9, 0
 ; GFX6-NEXT:    v_add_i32_e32 v0, vcc, s2, v0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s0
@@ -417,9 +411,9 @@ define amdgpu_kernel void @private_nontemporal_store_1(
 ; GFX7-NEXT:    s_load_dword s2, s[4:5], 0x2
 ; GFX7-NEXT:    s_add_u32 s8, s8, s7
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX7-NEXT:    s_addc_u32 s9, s9, 0
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_load_dword s0, s[0:1], 0x0
+; GFX7-NEXT:    s_addc_u32 s9, s9, 0
 ; GFX7-NEXT:    v_add_i32_e32 v0, vcc, s2, v0
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s0
@@ -510,8 +504,6 @@ define amdgpu_kernel void @private_nontemporal_store_1(
 ; GFX90A-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX90A-TGSPLIT-NEXT:    buffer_store_dword v1, v0, s[8:11], 0 offen glc slc
 ; GFX90A-TGSPLIT-NEXT:    s_endpgm
-;
-;
     i32 addrspace(1)* %in, i32 addrspace(5)* %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

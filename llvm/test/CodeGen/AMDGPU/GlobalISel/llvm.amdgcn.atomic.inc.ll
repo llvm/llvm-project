@@ -512,8 +512,8 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32_offset_addr64(i32 addrspa
 ; CI-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
-; CI-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
 ; CI-NEXT:    v_mov_b32_e32 v1, s1
+; CI-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
 ; CI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; CI-NEXT:    v_add_i32_e32 v0, vcc, 20, v0
 ; CI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -527,8 +527,8 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32_offset_addr64(i32 addrspa
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, 20, v0
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -599,8 +599,8 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i32(i32 addrspace(1)* %out,
 ;
 ; GFX9-LABEL: atomic_inc_shl_base_lds_0_i32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_add_u32_e32 v1, 2, v0
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GFX9-NEXT:    v_add_u32_e32 v1, 2, v0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 9
 ; GFX9-NEXT:    ds_inc_rtn_u32 v0, v0, v2 offset:8
@@ -1086,11 +1086,11 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64_offset_addr64(i64 addrspace
 ; CI-NEXT:    v_add_i32_e32 v4, vcc, v0, v2
 ; CI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
-; CI-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
 ; CI-NEXT:    v_mov_b32_e32 v1, s1
+; CI-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
 ; CI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; CI-NEXT:    v_add_i32_e32 v4, vcc, 40, v4
 ; CI-NEXT:    v_mov_b32_e32 v2, 42
+; CI-NEXT:    v_add_i32_e32 v4, vcc, 40, v4
 ; CI-NEXT:    v_mov_b32_e32 v3, 0
 ; CI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v5, vcc
 ; CI-NEXT:    flat_atomic_inc_x2 v[2:3], v[4:5], v[2:3] glc
@@ -1108,11 +1108,11 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64_offset_addr64(i64 addrspace
 ; VI-NEXT:    v_add_u32_e32 v4, vcc, v0, v2
 ; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    v_add_u32_e32 v4, vcc, 40, v4
 ; VI-NEXT:    v_mov_b32_e32 v2, 42
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 40, v4
 ; VI-NEXT:    v_mov_b32_e32 v3, 0
 ; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v5, vcc
 ; VI-NEXT:    flat_atomic_inc_x2 v[2:3], v[4:5], v[2:3] glc
@@ -1162,8 +1162,8 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64_offset_addr64(i64 addrspa
 ; CI-NEXT:    v_mov_b32_e32 v1, s1
 ; CI-NEXT:    v_add_i32_e32 v2, vcc, v0, v2
 ; CI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; CI-NEXT:    v_add_i32_e32 v2, vcc, 40, v2
 ; CI-NEXT:    v_mov_b32_e32 v0, 42
+; CI-NEXT:    v_add_i32_e32 v2, vcc, 40, v2
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
 ; CI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; CI-NEXT:    flat_atomic_inc_x2 v[0:1], v[2:3], v[0:1] glc
@@ -1178,8 +1178,8 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64_offset_addr64(i64 addrspa
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, v0, v2
 ; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; VI-NEXT:    v_add_u32_e32 v2, vcc, 40, v2
 ; VI-NEXT:    v_mov_b32_e32 v0, 42
+; VI-NEXT:    v_add_u32_e32 v2, vcc, 40, v2
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI-NEXT:    flat_atomic_inc_x2 v[0:1], v[2:3], v[0:1] glc
@@ -1412,9 +1412,9 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset_addr64(i32* %out, i32*
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v4, 2, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v4
+; GFX9-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX9-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v4
@@ -1461,8 +1461,8 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_addr64(i32* %ptr) #0
 ; CI-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
-; CI-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
 ; CI-NEXT:    v_mov_b32_e32 v1, s1
+; CI-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
 ; CI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; CI-NEXT:    v_add_i32_e32 v0, vcc, 20, v0
 ; CI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -1476,8 +1476,8 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_addr64(i32* %ptr) #0
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, 20, v0
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -1491,8 +1491,8 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_addr64(i32* %ptr) #0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 42
 ; GFX9-NEXT:    flat_atomic_inc v0, v[0:1], v2 offset:20 glc
@@ -1506,8 +1506,8 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_addr64(i32* %ptr) #0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
-; GFX10-NEXT:    v_mov_b32_e32 v2, 42
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX10-NEXT:    v_mov_b32_e32 v2, 42
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 20
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    flat_atomic_inc v0, v[0:1], v2 glc
@@ -1561,8 +1561,8 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i64(i64 addrspace(1)* %out,
 ; GFX9-LABEL: atomic_inc_shl_base_lds_0_i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 9
-; GFX9-NEXT:    v_add_u32_e32 v3, 2, v0
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GFX9-NEXT:    v_add_u32_e32 v3, 2, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX9-NEXT:    ds_inc_rtn_u64 v[0:1], v0, v[1:2] offset:16
@@ -1575,8 +1575,8 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i64(i64 addrspace(1)* %out,
 ; GFX10-LABEL: atomic_inc_shl_base_lds_0_i64:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 9
-; GFX10-NEXT:    v_lshlrev_b32_e32 v3, 3, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
+; GFX10-NEXT:    v_lshlrev_b32_e32 v3, 3, v0
 ; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX10-NEXT:    v_add_nc_u32_e32 v0, 2, v0
 ; GFX10-NEXT:    ds_inc_rtn_u64 v[1:2], v3, v[1:2] offset:16
@@ -1767,11 +1767,11 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_addr64(i64* %out, i64*
 ; CI-NEXT:    v_add_i32_e32 v4, vcc, v0, v2
 ; CI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
-; CI-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
 ; CI-NEXT:    v_mov_b32_e32 v1, s1
+; CI-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
 ; CI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; CI-NEXT:    v_add_i32_e32 v4, vcc, 40, v4
 ; CI-NEXT:    v_mov_b32_e32 v2, 42
+; CI-NEXT:    v_add_i32_e32 v4, vcc, 40, v4
 ; CI-NEXT:    v_mov_b32_e32 v3, 0
 ; CI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v5, vcc
 ; CI-NEXT:    flat_atomic_inc_x2 v[2:3], v[4:5], v[2:3] glc
@@ -1789,11 +1789,11 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_addr64(i64* %out, i64*
 ; VI-NEXT:    v_add_u32_e32 v4, vcc, v0, v2
 ; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    v_add_u32_e32 v4, vcc, 40, v4
 ; VI-NEXT:    v_mov_b32_e32 v2, 42
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 40, v4
 ; VI-NEXT:    v_mov_b32_e32 v3, 0
 ; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v5, vcc
 ; VI-NEXT:    flat_atomic_inc_x2 v[2:3], v[4:5], v[2:3] glc
@@ -1831,8 +1831,8 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_addr64(i64* %out, i64*
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v0, v4
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
-; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 40
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX10-NEXT:    flat_atomic_inc_x2 v[0:1], v[2:3], v[0:1] glc
 ; GFX10-NEXT:    v_mov_b32_e32 v3, s1
@@ -1861,8 +1861,8 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset_addr64(i64* %ptr) #0
 ; CI-NEXT:    v_mov_b32_e32 v1, s1
 ; CI-NEXT:    v_add_i32_e32 v2, vcc, v0, v2
 ; CI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; CI-NEXT:    v_add_i32_e32 v2, vcc, 40, v2
 ; CI-NEXT:    v_mov_b32_e32 v0, 42
+; CI-NEXT:    v_add_i32_e32 v2, vcc, 40, v2
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
 ; CI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; CI-NEXT:    flat_atomic_inc_x2 v[0:1], v[2:3], v[0:1] glc
@@ -1877,8 +1877,8 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset_addr64(i64* %ptr) #0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, v0, v2
 ; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; VI-NEXT:    v_add_u32_e32 v2, vcc, 40, v2
 ; VI-NEXT:    v_mov_b32_e32 v0, 42
+; VI-NEXT:    v_add_u32_e32 v2, vcc, 40, v2
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI-NEXT:    flat_atomic_inc_x2 v[0:1], v[2:3], v[0:1] glc
@@ -1908,8 +1908,8 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset_addr64(i64* %ptr) #0
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v0, v2
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
-; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 40
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX10-NEXT:    flat_atomic_inc_x2 v[0:1], v[2:3], v[0:1] glc
 ; GFX10-NEXT:    s_endpgm

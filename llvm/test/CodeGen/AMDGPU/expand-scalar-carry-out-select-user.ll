@@ -14,8 +14,8 @@ define i32 @s_add_co_select_user() {
 ; GFX7-NEXT:    s_or_b32 s4, s4, s5
 ; GFX7-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX7-NEXT:    s_addc_u32 s4, s6, 0
-; GFX7-NEXT:    s_cselect_b64 vcc, 1, 0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s4
+; GFX7-NEXT:    s_cselect_b64 vcc, 1, 0
 ; GFX7-NEXT:    s_cmp_gt_u32 s6, 31
 ; GFX7-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX7-NEXT:    s_cselect_b64 vcc, -1, 0
@@ -31,8 +31,8 @@ define i32 @s_add_co_select_user() {
 ; GFX9-NEXT:    v_add_co_u32_e64 v0, s[4:5], s6, s6
 ; GFX9-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX9-NEXT:    s_addc_u32 s4, s6, 0
-; GFX9-NEXT:    s_cselect_b64 vcc, 1, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s4
+; GFX9-NEXT:    s_cselect_b64 vcc, 1, 0
 ; GFX9-NEXT:    s_cmp_gt_u32 s6, 31
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX9-NEXT:    s_cselect_b64 vcc, -1, 0

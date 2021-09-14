@@ -338,9 +338,9 @@ define amdgpu_ps void @mubuf_store_vgpr_ptr_sgpr_offset256_offset(i32 addrspace(
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_mov_b64 s[4:5], 0x400
 ; GFX6-NEXT:    v_mov_b32_e32 v2, s4
-; GFX6-NEXT:    s_bfe_i64 s[0:1], s[2:3], 0x200000
-; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
 ; GFX6-NEXT:    v_mov_b32_e32 v3, s5
+; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
+; GFX6-NEXT:    s_bfe_i64 s[0:1], s[2:3], 0x200000
 ; GFX6-NEXT:    v_addc_u32_e32 v1, vcc, v1, v3, vcc
 ; GFX6-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
 ; GFX6-NEXT:    v_mov_b32_e32 v2, 0
@@ -353,9 +353,9 @@ define amdgpu_ps void @mubuf_store_vgpr_ptr_sgpr_offset256_offset(i32 addrspace(
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0x400
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s4
-; GFX7-NEXT:    s_bfe_i64 s[0:1], s[2:3], 0x200000
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s5
+; GFX7-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
+; GFX7-NEXT:    s_bfe_i64 s[0:1], s[2:3], 0x200000
 ; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, v1, v3, vcc
 ; GFX7-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
 ; GFX7-NEXT:    v_mov_b32_e32 v2, 0
@@ -792,9 +792,9 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset256_offset(float addrspac
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_mov_b64 s[4:5], 0x400
 ; GFX6-NEXT:    v_mov_b32_e32 v2, s4
-; GFX6-NEXT:    s_bfe_i64 s[0:1], s[2:3], 0x200000
 ; GFX6-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
+; GFX6-NEXT:    s_bfe_i64 s[0:1], s[2:3], 0x200000
 ; GFX6-NEXT:    v_addc_u32_e32 v1, vcc, v1, v3, vcc
 ; GFX6-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
@@ -807,9 +807,9 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset256_offset(float addrspac
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0x400
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s4
-; GFX7-NEXT:    s_bfe_i64 s[0:1], s[2:3], 0x200000
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX7-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
+; GFX7-NEXT:    s_bfe_i64 s[0:1], s[2:3], 0x200000
 ; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, v1, v3, vcc
 ; GFX7-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000

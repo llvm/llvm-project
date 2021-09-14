@@ -138,9 +138,9 @@ define amdgpu_ps <2 x float> @xor3_multiuse_inner(i32 %a, i32 %b, i32 %c) {
 define amdgpu_ps float @xor3_uniform_vgpr(float inreg %a, float inreg %b, float inreg %c) {
 ; GFX9-LABEL: xor3_uniform_vgpr:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0x40400000
 ; GFX9-NEXT:    v_add_f32_e64 v0, s2, 1.0
 ; GFX9-NEXT:    v_add_f32_e64 v1, s3, 2.0
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0x40400000
 ; GFX9-NEXT:    v_add_f32_e32 v2, s4, v2
 ; GFX9-NEXT:    v_xor_b32_e32 v0, v0, v1
 ; GFX9-NEXT:    v_xor_b32_e32 v0, v0, v2
