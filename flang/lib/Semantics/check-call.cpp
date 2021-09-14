@@ -502,13 +502,14 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
 }
 
 static void CheckProcedureArg(evaluate::ActualArgument &arg,
-    const characteristics::DummyProcedure &proc, const std::string &dummyName,
+    const characteristics::Procedure &proc,
+    const characteristics::DummyProcedure &dummy, const std::string &dummyName,
     evaluate::FoldingContext &context) {
   parser::ContextualMessages &messages{context.messages()};
-  const characteristics::Procedure &interface{proc.procedure.value()};
+  const characteristics::Procedure &interface { dummy.procedure.value() };
   if (const auto *expr{arg.UnwrapExpr()}) {
     bool dummyIsPointer{
-        proc.attrs.test(characteristics::DummyProcedure::Attr::Pointer)};
+        dummy.attrs.test(characteristics::DummyProcedure::Attr::Pointer)};
     const auto *argProcDesignator{
         std::get_if<evaluate::ProcedureDesignator>(&expr->u)};
     const auto *argProcSymbol{
@@ -549,6 +550,10 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
                     "Actual procedure argument has interface incompatible with %s"_err_en_US,
                     dummyName);
                 return;
+              } else if (proc.IsPure()) {
+                messages.Say(
+                    "Actual procedure argument for %s of a PURE procedure must have an explicit interface"_err_en_US,
+                    dummyName);
               } else {
                 messages.Say(
                     "Actual procedure argument has an implicit interface "
@@ -594,7 +599,7 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
       }
     }
     if (interface.HasExplicitInterface() && dummyIsPointer &&
-        proc.intent != common::Intent::In) {
+        dummy.intent != common::Intent::In) {
       const Symbol *last{GetLastSymbol(*expr)};
       if (!(last && IsProcedurePointer(*last))) {
         // 15.5.2.9(5) -- dummy procedure POINTER
@@ -661,8 +666,8 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
               }
             }
           },
-          [&](const characteristics::DummyProcedure &proc) {
-            CheckProcedureArg(arg, proc, dummyName, context);
+          [&](const characteristics::DummyProcedure &dummy) {
+            CheckProcedureArg(arg, proc, dummy, dummyName, context);
           },
           [&](const characteristics::AlternateReturn &) {
             // All semantic checking is done elsewhere
