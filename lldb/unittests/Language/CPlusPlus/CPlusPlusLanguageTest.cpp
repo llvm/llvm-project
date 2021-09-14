@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/CPlusPlus/CPlusPlusNameParser.h"
+#include "TestingSupport/SubsystemRAII.h"
+#include "lldb/lldb-enumerations.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -185,29 +187,32 @@ TEST(CPlusPlusLanguage, ExtractContextAndIdentifier) {
       "operator<=><A::B>", context, basename));
 }
 
-static std::set<std::string> FindAlternate(llvm::StringRef Name) {
-  std::set<ConstString> Results;
-  uint32_t Count = CPlusPlusLanguage::FindAlternateFunctionManglings(
-      ConstString(Name), Results);
-  EXPECT_EQ(Count, Results.size());
-  std::set<std::string> Strings;
-  for (ConstString Str : Results)
-    Strings.insert(std::string(Str.GetStringRef()));
+static std::vector<std::string> GenerateAlternate(llvm::StringRef Name) {
+  std::vector<std::string> Strings;
+  if (Language *CPlusPlusLang =
+          Language::FindPlugin(lldb::eLanguageTypeC_plus_plus)) {
+    std::vector<ConstString> Results =
+        CPlusPlusLang->GenerateAlternateFunctionManglings(ConstString(Name));
+    for (ConstString Str : Results)
+      Strings.push_back(std::string(Str.GetStringRef()));
+  }
   return Strings;
 }
 
-TEST(CPlusPlusLanguage, FindAlternateFunctionManglings) {
+TEST(CPlusPlusLanguage, GenerateAlternateFunctionManglings) {
   using namespace testing;
 
-  EXPECT_THAT(FindAlternate("_ZN1A1fEv"),
+  SubsystemRAII<CPlusPlusLanguage> lang;
+
+  EXPECT_THAT(GenerateAlternate("_ZN1A1fEv"),
               UnorderedElementsAre("_ZNK1A1fEv", "_ZLN1A1fEv"));
-  EXPECT_THAT(FindAlternate("_ZN1A1fEa"), Contains("_ZN1A1fEc"));
-  EXPECT_THAT(FindAlternate("_ZN1A1fEx"), Contains("_ZN1A1fEl"));
-  EXPECT_THAT(FindAlternate("_ZN1A1fEy"), Contains("_ZN1A1fEm"));
-  EXPECT_THAT(FindAlternate("_ZN1A1fEai"), Contains("_ZN1A1fEci"));
-  EXPECT_THAT(FindAlternate("_ZN1AC1Ev"), Contains("_ZN1AC2Ev"));
-  EXPECT_THAT(FindAlternate("_ZN1AD1Ev"), Contains("_ZN1AD2Ev"));
-  EXPECT_THAT(FindAlternate("_bogus"), IsEmpty());
+  EXPECT_THAT(GenerateAlternate("_ZN1A1fEa"), Contains("_ZN1A1fEc"));
+  EXPECT_THAT(GenerateAlternate("_ZN1A1fEx"), Contains("_ZN1A1fEl"));
+  EXPECT_THAT(GenerateAlternate("_ZN1A1fEy"), Contains("_ZN1A1fEm"));
+  EXPECT_THAT(GenerateAlternate("_ZN1A1fEai"), Contains("_ZN1A1fEci"));
+  EXPECT_THAT(GenerateAlternate("_ZN1AC1Ev"), Contains("_ZN1AC2Ev"));
+  EXPECT_THAT(GenerateAlternate("_ZN1AD1Ev"), Contains("_ZN1AD2Ev"));
+  EXPECT_THAT(GenerateAlternate("_bogus"), IsEmpty());
 }
 
 TEST(CPlusPlusLanguage, CPlusPlusNameParser) {

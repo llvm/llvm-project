@@ -127,11 +127,8 @@ public:
                                           llvm::StringRef &context,
                                           llvm::StringRef &identifier);
 
-  // Given a mangled function name, calculates some alternative manglings since
-  // the compiler mangling may not line up with the symbol we are expecting
-  static uint32_t
-  FindAlternateFunctionManglings(const ConstString mangled,
-                                 std::set<ConstString> &candidates);
+  std::vector<ConstString>
+  GenerateAlternateFunctionManglings(const ConstString mangled) const override;
 
   // PluginInterface protocol
   ConstString GetPluginName() override;
