@@ -84,9 +84,9 @@ struct TestLinalgTransforms
       llvm::cl::desc("Test a set of patterns that rewrite a linalg contraction "
                      "in vector.contract form"),
       llvm::cl::init(false)};
-  Option<bool> testTileAndPadPattern{
-      *this, "test-tile-and-pad-pattern",
-      llvm::cl::desc("Test tile and pad pattern"), llvm::cl::init(false)};
+  Option<bool> testTilePattern{*this, "test-tile-pattern",
+                               llvm::cl::desc("Test tile pattern"),
+                               llvm::cl::init(false)};
   Option<int> testHoistPadding{*this, "test-hoist-padding",
                                llvm::cl::desc("Test hoist padding"),
                                llvm::cl::init(0)};
@@ -103,10 +103,17 @@ struct TestLinalgTransforms
       llvm::cl::desc("Test rewrite of subtensor(pad_tensor) into "
                      "pad_tensor(subtensor)"),
       llvm::cl::init(false)};
-  ListOption<int64_t> tileSizesForPadding{
-      *this, "tile-sizes-for-padding",
-      llvm::cl::desc("Linalg tile sizes when tile+pad"), llvm::cl::ZeroOrMore,
-      llvm::cl::MiscFlags::CommaSeparated};
+  Option<bool> padTiles{*this, "pad-tiles",
+                        llvm::cl::desc("Pad tiles when test-tile-pattern"),
+                        llvm::cl::init(false)};
+  ListOption<int64_t> peeledLoops{
+      *this, "peeled-loops",
+      llvm::cl::desc("Loops to be peeled when test-tile-pattern"),
+      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
+  ListOption<int64_t> tileSizes{
+      *this, "tile-sizes",
+      llvm::cl::desc("Linalg tile sizes for test-tile-pattern"),
+      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
   ListOption<unsigned> testInterchangePattern{
       *this, "test-interchange-pattern", llvm::cl::MiscFlags::CommaSeparated,
       llvm::cl::desc("Test the interchange pattern.")};
@@ -558,18 +565,22 @@ static Value getNeutralOfLinalgOp(OpBuilder &b, OpOperand &op) {
   return b.create<ConstantOp>(op.getOwner()->getLoc(), t, b.getZeroAttr(t));
 }
 
-static void applyTileAndPadPattern(FuncOp funcOp, ArrayRef<int64_t> tileSizes) {
+static void applyTilePattern(FuncOp funcOp, ArrayRef<int64_t> tileSizes,
+                             bool padTiles, ArrayRef<int64_t> peeledLoops) {
   MLIRContext *context = funcOp.getContext();
   RewritePatternSet tilingPattern(context);
   auto linalgTilingOptions =
-      linalg::LinalgTilingOptions()
-          .setTileSizes(tileSizes)
-          .setPaddingValueComputationFunction(getNeutralOfLinalgOp);
-  tilingPattern.add<linalg::LinalgTilingPattern<linalg::MatmulI8I8I32Op>,
+      linalg::LinalgTilingOptions().setTileSizes(tileSizes).setPeeledLoops(
+          peeledLoops);
+  if (padTiles)
+    linalgTilingOptions.setPaddingValueComputationFunction(
+        getNeutralOfLinalgOp);
+
+  tilingPattern.add<linalg::LinalgTilingPattern<linalg::MatmulOp>,
+                    linalg::LinalgTilingPattern<linalg::MatmulI8I8I32Op>,
                     linalg::LinalgTilingPattern<linalg::GenericOp>>(
       context, linalgTilingOptions,
-      linalg::LinalgTransformationFilter(
-          Identifier::get("tile-and-pad", context)));
+      linalg::LinalgTransformationFilter(Identifier::get("tile", context)));
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(tilingPattern));
 }
 
@@ -697,8 +708,8 @@ void TestLinalgTransforms::runOnFunction() {
   if (testTiledLoopPeeling.hasValue())
     return applyTiledLoopPeelingPattern(getFunction(), testTiledLoopPeeling,
                                         skipPartial);
-  if (testTileAndPadPattern)
-    return applyTileAndPadPattern(getFunction(), tileSizesForPadding);
+  if (testTilePattern)
+    return applyTilePattern(getFunction(), tileSizes, padTiles, peeledLoops);
   if (testHoistPadding) {
     getFunction().walk([&](linalg::PadTensorOp padTensorOp) {
       (void)linalg::hoistPaddingOnTensors(padTensorOp, testHoistPadding);
