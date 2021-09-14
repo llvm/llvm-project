@@ -29,8 +29,8 @@ _ExtInt(33) Declarations(_ExtInt(48) &Param) { // Useable in params and returns.
   constexpr _ExtInt(7) o = 33;
 
   // Check LLVM imposed max size.
-  _ExtInt(0xFFFFFFFFFF) p; // expected-error {{signed _ExtInt of bit sizes greater than 16777215 not supported}}
-  unsigned _ExtInt(0xFFFFFFFFFF) q; // expected-error {{unsigned _ExtInt of bit sizes greater than 16777215 not supported}}
+  _ExtInt(8388609) p; // expected-error {{signed _ExtInt of bit sizes greater than 8388608 not supported}}
+  unsigned _ExtInt(0xFFFFFFFFFF) q; // expected-error {{unsigned _ExtInt of bit sizes greater than 8388608 not supported}}
 
 // Ensure template params are instantiated correctly.
   // expected-error@5{{signed _ExtInt must have a bit size of at least 2}}

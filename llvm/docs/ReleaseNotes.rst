@@ -59,6 +59,7 @@ Changes to the LLVM IR
 * Using the legacy pass manager for the optimization pipeline is deprecated and
   will be removed after LLVM 14. In the meantime, only minimal effort will be
   made to maintain the legacy pass manager for the optimization pipeline.
+* Max allowed integer type was reduced from 2^24-1 bits to 2^23 bits.
 
 Changes to building LLVM
 ------------------------
