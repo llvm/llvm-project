@@ -2825,4 +2825,115 @@ define { i16, i1 } @cmpxchg_i16(i16* %ptr, i16 %desired, i16 %new) {
   ret { i16, i1 } %res
 }
 
+define internal double @bitcast_to_double(i64* %ptr) {
+; CHECK-NOLSE-LABEL: bitcast_to_double:
+; CHECK-NOLSE:       ; %bb.0:
+; CHECK-NOLSE-NEXT:    ldar x8, [x0]
+; CHECK-NOLSE-NEXT:    fmov d0, x8
+; CHECK-NOLSE-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: bitcast_to_double:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    ldar x8, [x0]
+; CHECK-LSE-O1-NEXT:    fmov d0, x8
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: bitcast_to_double:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    ldar x8, [x0]
+; CHECK-LSE-O0-NEXT:    fmov d0, x8
+; CHECK-LSE-O0-NEXT:    ret
+  %load = load atomic i64, i64* %ptr seq_cst, align 8
+  %bitcast = bitcast i64 %load to double
+  ret double %bitcast
+}
+
+define internal float @bitcast_to_float(i32* %ptr) {
+; CHECK-NOLSE-LABEL: bitcast_to_float:
+; CHECK-NOLSE:       ; %bb.0:
+; CHECK-NOLSE-NEXT:    ldar w8, [x0]
+; CHECK-NOLSE-NEXT:    fmov s0, w8
+; CHECK-NOLSE-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: bitcast_to_float:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    ldar w8, [x0]
+; CHECK-LSE-O1-NEXT:    fmov s0, w8
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: bitcast_to_float:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    ldar w8, [x0]
+; CHECK-LSE-O0-NEXT:    fmov s0, w8
+; CHECK-LSE-O0-NEXT:    ret
+  %load = load atomic i32, i32* %ptr seq_cst, align 8
+  %bitcast = bitcast i32 %load to float
+  ret float %bitcast
+}
+
+define internal half @bitcast_to_half(i16* %ptr) {
+; CHECK-NOLSE-LABEL: bitcast_to_half:
+; CHECK-NOLSE:       ; %bb.0:
+; CHECK-NOLSE-NEXT:    ldarh w8, [x0]
+; CHECK-NOLSE-NEXT:    fmov s0, w8
+; CHECK-NOLSE-NEXT:    ; kill: def $h0 killed $h0 killed $s0
+; CHECK-NOLSE-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: bitcast_to_half:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    ldarh w8, [x0]
+; CHECK-LSE-O1-NEXT:    fmov s0, w8
+; CHECK-LSE-O1-NEXT:    ; kill: def $h0 killed $h0 killed $s0
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: bitcast_to_half:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    ldarh w8, [x0]
+; CHECK-LSE-O0-NEXT:    fmov s0, w8
+; CHECK-LSE-O0-NEXT:    ; kill: def $h0 killed $h0 killed $s0
+; CHECK-LSE-O0-NEXT:    ret
+  %load = load atomic i16, i16* %ptr seq_cst, align 8
+  %bitcast = bitcast i16 %load to half
+  ret half %bitcast
+}
+
+define internal i64* @inttoptr(i64* %ptr) {
+; CHECK-NOLSE-LABEL: inttoptr:
+; CHECK-NOLSE:       ; %bb.0:
+; CHECK-NOLSE-NEXT:    ldar x0, [x0]
+; CHECK-NOLSE-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: inttoptr:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    ldar x0, [x0]
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: inttoptr:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    ldar x0, [x0]
+; CHECK-LSE-O0-NEXT:    ret
+  %load = load atomic i64, i64* %ptr seq_cst, align 8
+  %bitcast = inttoptr i64 %load to i64*
+  ret i64* %bitcast
+}
+
+define internal i64* @load_ptr(i64** %ptr) {
+; CHECK-NOLSE-LABEL: load_ptr:
+; CHECK-NOLSE:       ; %bb.0:
+; CHECK-NOLSE-NEXT:    ldar x0, [x0]
+; CHECK-NOLSE-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: load_ptr:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    ldar x0, [x0]
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: load_ptr:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    ldar x0, [x0]
+; CHECK-LSE-O0-NEXT:    ret
+  %load = load atomic i64*, i64** %ptr seq_cst, align 8
+  ret i64* %load
+}
+
 attributes #0 = { nounwind }
