@@ -2,9 +2,6 @@
 ; RUN: llc -disable-lsr -ppc-asm-full-reg-names -verify-machineinstrs \
 ; RUN:   -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 < %s | FileCheck %s
 
-; FIXME: PPCLoopInstrFormPrep should be able to common base for "(unsigned long long *)(p + j + 5)"
-; and "(unsigned long long *)(p + j + 9)", thus we only have two DS form load inside the loop.
-
 ; long long foo(char *p, int n, int count) {
 ;   int j = 0;
 ;   long long sum = 0;
@@ -22,31 +19,26 @@ define i64 @foo(i8* %p, i32 signext %n, i32 signext %count) {
 ; CHECK-NEXT:    cmpwi r4, 1
 ; CHECK-NEXT:    blt cr0, .LBB0_4
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    addi r4, r4, -1
+; CHECK-NEXT:    addi r6, r3, 5
+; CHECK-NEXT:    addi r3, r4, -1
 ; CHECK-NEXT:    extsw r5, r5
-; CHECK-NEXT:    li r6, 0
-; CHECK-NEXT:    li r7, 5
-; CHECK-NEXT:    li r8, 9
-; CHECK-NEXT:    clrldi r4, r4, 32
-; CHECK-NEXT:    addi r4, r4, 1
-; CHECK-NEXT:    mtctr r4
-; CHECK-NEXT:    li r4, 0
+; CHECK-NEXT:    clrldi r3, r3, 32
+; CHECK-NEXT:    addi r3, r3, 1
+; CHECK-NEXT:    mtctr r3
+; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_2: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    add r9, r3, r6
+; CHECK-NEXT:    ld r4, 0(r6)
+; CHECK-NEXT:    add r3, r4, r3
+; CHECK-NEXT:    ld r4, 4(r6)
 ; CHECK-NEXT:    add r6, r6, r5
-; CHECK-NEXT:    ldx r10, r9, r7
-; CHECK-NEXT:    ldx r9, r9, r8
-; CHECK-NEXT:    add r4, r10, r4
-; CHECK-NEXT:    add r4, r4, r9
+; CHECK-NEXT:    add r3, r3, r4
 ; CHECK-NEXT:    bdnz .LBB0_2
 ; CHECK-NEXT:  # %bb.3: # %for.cond.cleanup
-; CHECK-NEXT:    mr r3, r4
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    li r4, 0
-; CHECK-NEXT:    mr r3, r4
+; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    blr
 entry:
   %cmp16 = icmp sgt i32 %n, 0
