@@ -20,14 +20,17 @@ module attributes {gpu.container_module} {
   func @foo(%buffer: memref<?xf32>) {
     %c8 = constant 8 : index
     %c32 = constant 32 : i32
+    %c256 = constant 256 : i32
     gpu.launch_func @kernel_module::@kernel
         blocks in (%c8, %c8, %c8)
         threads in (%c8, %c8, %c8)
+        dynamic_shared_memory_size %c256
         args(%c32 : i32, %buffer : memref<?xf32>)
     return
   }
 
-  // CHECK: [[C8:%.*]] = llvm.mlir.constant(8 : index) : i64
+  // CHECK-DAG: [[C256:%.*]] = llvm.mlir.constant(256 : i32) : i32
+  // CHECK-DAG: [[C8:%.*]] = llvm.mlir.constant(8 : index) : i64
   // CHECK: [[ADDRESSOF:%.*]] = llvm.mlir.addressof @[[GLOBAL]]
   // CHECK: [[C0:%.*]] = llvm.mlir.constant(0 : index)
   // CHECK: [[BINARY:%.*]] = llvm.getelementptr [[ADDRESSOF]]{{\[}}[[C0]], [[C0]]]
@@ -36,7 +39,6 @@ module attributes {gpu.container_module} {
   // CHECK: [[MODULE:%.*]] = llvm.call @mgpuModuleLoad([[BINARY]])
   // CHECK: [[FUNC:%.*]] = llvm.call @mgpuModuleGetFunction([[MODULE]], {{.*}})
 
-  // CHECK: [[C0_I32:%.*]] = llvm.mlir.constant(0 : i32)
   // CHECK: [[STREAM:%.*]] = llvm.call @mgpuStreamCreate
 
   // CHECK: [[NUM_PARAMS:%.*]] = llvm.mlir.constant(6 : i32) : i32
@@ -45,7 +47,7 @@ module attributes {gpu.container_module} {
   // CHECK: [[EXTRA_PARAMS:%.*]] = llvm.mlir.null : !llvm.ptr<ptr<i8>>
 
   // CHECK: llvm.call @mgpuLaunchKernel([[FUNC]], [[C8]], [[C8]], [[C8]],
-  // CHECK-SAME: [[C8]], [[C8]], [[C8]], [[C0_I32]], [[STREAM]],
+  // CHECK-SAME: [[C8]], [[C8]], [[C8]], [[C256]], [[STREAM]],
   // CHECK-SAME: [[PARAMS]], [[EXTRA_PARAMS]])
   // CHECK: llvm.call @mgpuStreamSynchronize
   // CHECK: llvm.call @mgpuStreamDestroy

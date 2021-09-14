@@ -1,7 +1,7 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s
 
 func @not_enough_sizes(%sz : index) {
-  // expected-error@+1 {{expected 6 operands, but found 5}}
+  // expected-error@+1 {{expected 6 or more operands, but found 5}}
   "gpu.launch"(%sz, %sz, %sz, %sz, %sz) ({
     gpu.return
   }) : (index, index, index, index, index) -> ()
@@ -56,7 +56,7 @@ module attributes {gpu.container_module} {
   func @launch_func_missing_callee_attribute(%sz : index) {
     // expected-error@+1 {{'gpu.launch_func' op requires attribute 'kernel'}}
     "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz, %sz)
-        {operand_segment_sizes = dense<[0, 1, 1, 1, 1, 1, 1, 0]> : vector<8xi32>}
+        {operand_segment_sizes = dense<[0, 1, 1, 1, 1, 1, 1, 0, 0]> : vector<9xi32>}
         : (index, index, index, index, index, index) -> ()
     return
   }
