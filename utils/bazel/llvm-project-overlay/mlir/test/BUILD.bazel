@@ -33,20 +33,14 @@ cc_library(
 
 td_library(
     name = "TestOpTdFiles",
-    srcs = [
-        "lib/Dialect/Test/TestInterfaces.td",
-        "lib/Dialect/Test/TestOps.td",
-        "//mlir:include/mlir/Dialect/DLTI/DLTIBase.td",
-        "//mlir:include/mlir/IR/OpAsmInterface.td",
-        "//mlir:include/mlir/IR/RegionKindInterface.td",
-        "//mlir:include/mlir/IR/SymbolInterfaces.td",
-        "//mlir:include/mlir/Interfaces/CallInterfaces.td",
-        "//mlir:include/mlir/Interfaces/ControlFlowInterfaces.td",
-        "//mlir:include/mlir/Interfaces/CopyOpInterface.td",
-        "//mlir:include/mlir/Interfaces/DataLayoutInterfaces.td",
-        "//mlir:include/mlir/Interfaces/InferTypeOpInterface.td",
-    ],
+    srcs = glob(["lib/Dialect/Test/*.td"]),
     deps = [
+        "//mlir:CallInterfacesTdFiles",
+        "//mlir:ControlFlowInterfacesTdFiles",
+        "//mlir:CopyOpInterfaceTdFiles",
+        "//mlir:DLTIDialectTdFiles",
+        "//mlir:DataLayoutInterfacesTdFiles",
+        "//mlir:InferTypeOpInterfaceTdFiles",
         "//mlir:OpBaseTdFiles",
         "//mlir:SideEffectTdFiles",
     ],
@@ -196,21 +190,8 @@ gentbl_cc_library(
 
 cc_library(
     name = "TestDialect",
-    srcs = [
-        "lib/Dialect/Test/TestAttributes.cpp",
-        "lib/Dialect/Test/TestDialect.cpp",
-        "lib/Dialect/Test/TestInterfaces.cpp",
-        "lib/Dialect/Test/TestPatterns.cpp",
-        "lib/Dialect/Test/TestTraits.cpp",
-        "lib/Dialect/Test/TestTypes.cpp",
-    ],
-    hdrs = [
-        "lib/Dialect/Test/TestAttributes.h",
-        "lib/Dialect/Test/TestDialect.h",
-        "lib/Dialect/Test/TestInterfaces.h",
-        "lib/Dialect/Test/TestTraits.h",
-        "lib/Dialect/Test/TestTypes.h",
-    ],
+    srcs = glob(["lib/Dialect/Test/*.cpp"]),
+    hdrs = glob(["lib/Dialect/Test/*.h"]),
     includes = [
         "lib/Dialect/Test",
     ],
