@@ -15,13 +15,16 @@ define i1 @kill_backedge_and_phis(i8* align 1 %lhs, i8* align 1 %rhs, i32 %len) 
 ; CHECK:       loop_preheader:
 ; CHECK-NEXT:    br label %loop
 ; CHECK:       loop:
-; CHECK-NEXT:    %iv.next = add nuw nsw i32 0, 1
-; CHECK-NEXT:    %left_ptr = getelementptr inbounds i8, i8* %lhs, i32 0
-; CHECK-NEXT:    %right_ptr = getelementptr inbounds i8, i8* %rhs, i32 0
+; CHECK-NEXT:    %iv = phi i32 [ 0, %loop_preheader ], [ %iv.next, %exiting_3 ]
+; CHECK-NEXT:    %iv.wide = phi i64 [ 0, %loop_preheader ], [ %iv.wide.next, %exiting_3 ]
+; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, 1
+; CHECK-NEXT:    %iv.wide.next = add nuw nsw i64 %iv.wide, 1
+; CHECK-NEXT:    %left_ptr = getelementptr inbounds i8, i8* %lhs, i32 %iv
+; CHECK-NEXT:    %right_ptr = getelementptr inbounds i8, i8* %rhs, i32 %iv
 ; CHECK-NEXT:    %result = call i1 @foo(i8* %left_ptr, i8* %right_ptr)
 ; CHECK-NEXT:    br i1 %result, label %exiting_1, label %exit.loopexit
 ; CHECK:       exiting_1:
-; CHECK-NEXT:    %iv.wide.is_not_zero = icmp ne i64 0, 0
+; CHECK-NEXT:    %iv.wide.is_not_zero = icmp ne i64 %iv.wide, 0
 ; CHECK-NEXT:    br i1 false, label %exiting_2, label %exit.loopexit
 ; CHECK:       exiting_2:
 ; CHECK-NEXT:    %bar_ret = call i1 @bar()

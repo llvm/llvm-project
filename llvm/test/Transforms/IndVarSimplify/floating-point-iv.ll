@@ -65,7 +65,9 @@ define void @test3() nounwind {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo(double 0.000000e+00) #[[ATTR0]]
+; CHECK-NEXT:    [[IV:%.*]] = phi double [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[TMP1:%.*]], [[BB]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo(double [[IV]]) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1]] = fadd double [[IV]], 1.000000e+00
 ; CHECK-NEXT:    br i1 false, label [[BB]], label [[RETURN:%.*]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
