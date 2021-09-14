@@ -11,10 +11,10 @@ import imp
 import os
 import sys
 from pathlib import PurePath
-from collections import defaultdict, namedtuple
+from collections import namedtuple
+from collections import defaultdict
 
-from dex.command.CommandBase import StepExpectInfo
-from dex.debugger.DebuggerBase import DebuggerBase, watch_is_active
+from dex.debugger.DebuggerBase import DebuggerBase
 from dex.dextIR import FrameIR, LocIR, StepIR, StopReason, ValueIR
 from dex.dextIR import StackFrame, SourceLocation, ProgramState
 from dex.utils.Exceptions import Error, LoadDebuggerException
@@ -244,9 +244,6 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
         state_frames = []
 
 
-        loc = LocIR(**self._location)
-        valid_loc_for_watch = loc.path and os.path.exists(loc.path)
-
         for idx, sf in enumerate(stackframes):
             frame = FrameIR(
                 function=self._sanitize_function_name(sf.FunctionName),
@@ -257,20 +254,20 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
             if any(name in fname for name in self.frames_below_main):
                 break
 
+
             state_frame = StackFrame(function=frame.function,
                                      is_inlined=frame.is_inlined,
                                      watches={})
 
-            if valid_loc_for_watch and idx == 0:
-                for watch_info in watches:
-                    if watch_is_active(watch_info, loc.path, idx, loc.lineno):
-                        watch_expr = watch_info.expression
-                        state_frame.watches[watch_expr] = self.evaluate_expression(watch_expr, idx)
+            for watch in watches:
+                state_frame.watches[watch] = self.evaluate_expression(
+                    watch, idx)
 
 
             state_frames.append(state_frame)
             frames.append(frame)
 
+        loc = LocIR(**self._location)
         if frames:
             frames[0].loc = loc
             state_frames[0].location = SourceLocation(**self._location)
@@ -301,11 +298,9 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
         ]
 
     def evaluate_expression(self, expression, frame_idx=0) -> ValueIR:
-        if frame_idx != 0:
-            self.set_current_stack_frame(frame_idx)
+        self.set_current_stack_frame(frame_idx)
         result = self._debugger.GetExpression(expression)
-        if frame_idx != 0:
-            self.set_current_stack_frame(0)
+        self.set_current_stack_frame(0)
         value = result.Value
 
         is_optimized_away = any(s in value for s in [
