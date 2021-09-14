@@ -99,6 +99,10 @@ template("unix_toolchain") {
                  "Update it, perhaps by running llvm/utils/gn/get.py")
     }
 
+    # Make these apply to all tools below.
+    lib_switch = "-l"
+    lib_dir_switch = "-L"
+
     tool("solink") {
       outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
       if (current_os == "ios" || current_os == "mac") {
@@ -110,7 +114,6 @@ template("unix_toolchain") {
       }
       description = "SOLINK $outfile"
       outputs = [ outfile ]
-      lib_switch = "-l"
       output_prefix = "lib"
       default_output_dir = "{{root_out_dir}}/lib"
     }
@@ -126,7 +129,6 @@ template("unix_toolchain") {
       }
       description = "SOLINK $outfile"
       outputs = [ outfile ]
-      lib_switch = "-l"
       default_output_dir = "{{root_out_dir}}/lib"
     }
 
@@ -140,7 +142,6 @@ template("unix_toolchain") {
       }
       description = "LINK $outfile"
       outputs = [ outfile ]
-      lib_switch = "-l"
 
       # Setting this allows targets to override the default executable output by
       # setting output_dir.
@@ -290,6 +291,10 @@ template("win_toolchain") {
       default_output_dir = "{{root_out_dir}}/lib"
     }
 
+    # Make these apply to all tools below.
+    lib_switch = ""
+    lib_dir_switch = "/LIBPATH:"
+
     tool("solink") {
       outprefix = "{{output_dir}}/{{target_output_name}}"
       dllfile = "$outprefix{{output_extension}}"
@@ -304,7 +309,6 @@ template("win_toolchain") {
         dllfile,
         libfile,
       ]
-      lib_switch = ""
       default_output_extension = ".dll"
       restat = true
 
@@ -325,7 +329,6 @@ template("win_toolchain") {
       command = "$link /nologo /dll {{ldflags}} /out:$dllfile /pdb:$pdbfile {{inputs}} {{libs}} "
       description = "LINK_MODULE $dllfile"
       outputs = [ dllfile ]
-      lib_switch = ""
       runtime_outputs = outputs
       default_output_extension = ".dll"
 
@@ -339,7 +342,6 @@ template("win_toolchain") {
       command = "$link /nologo {{ldflags}} /out:$outfile /pdb:$pdbfile {{inputs}} {{libs}}"
       description = "LINK $outfile"
       outputs = [ outfile ]
-      lib_switch = ""
       default_output_extension = ".exe"
 
       # Setting this allows targets to override the default executable output by
