@@ -72,6 +72,9 @@ New Compiler Flags
 - ``-Wreserved-identifier`` emits warning when user code uses reserved
   identifiers.
 
+- ``Wunused-but-set-parameter`` and ``-Wunused-but-set-variable`` emit warnings
+  when a parameter or a variable is set but not used.
+
 - ``-fstack-usage`` generates an extra .su file per input source file. The .su
   file contains frame size information for each function defined in the source
   file.
