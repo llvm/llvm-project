@@ -248,6 +248,48 @@ ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   return None;
 }
 
+Optional<Value *> ARMTTIImpl::simplifyDemandedVectorEltsIntrinsic(
+    InstCombiner &IC, IntrinsicInst &II, APInt OrigDemandedElts,
+    APInt &UndefElts, APInt &UndefElts2, APInt &UndefElts3,
+    std::function<void(Instruction *, unsigned, APInt, APInt &)>
+        SimplifyAndSetOp) const {
+
+  // Compute the demanded bits for a narrowing MVE intrinsic. The TopOpc is the
+  // opcode specifying a Top/Bottom instruction, which can change between
+  // instructions.
+  auto SimplifyNarrowInstrTopBottom =[&](unsigned TopOpc) {
+    unsigned NumElts = cast<FixedVectorType>(II.getType())->getNumElements();
+    unsigned IsTop = cast<ConstantInt>(II.getOperand(TopOpc))->getZExtValue();
+
+    // The only odd/even lanes of operand 0 will only be demanded depending
+    // on whether this is a top/bottom instruction.
+    APInt DemandedElts =
+        APInt::getSplat(NumElts, IsTop ? APInt::getLowBitsSet(2, 1)
+                                       : APInt::getHighBitsSet(2, 1));
+    SimplifyAndSetOp(&II, 0, OrigDemandedElts & DemandedElts, UndefElts);
+    // The other lanes will be defined from the inserted elements.
+    UndefElts &= APInt::getSplat(NumElts, !IsTop ? APInt::getLowBitsSet(2, 1)
+                                                 : APInt::getHighBitsSet(2, 1));
+    return None;
+  };
+
+  switch (II.getIntrinsicID()) {
+  default:
+    break;
+  case Intrinsic::arm_mve_vcvt_narrow:
+    SimplifyNarrowInstrTopBottom(2);
+    break;
+  case Intrinsic::arm_mve_vqmovn:
+    SimplifyNarrowInstrTopBottom(4);
+    break;
+  case Intrinsic::arm_mve_vshrn:
+    SimplifyNarrowInstrTopBottom(7);
+    break;
+  }
+
+  return None;
+}
+
 InstructionCost ARMTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
                                           TTI::TargetCostKind CostKind) {
   assert(Ty->isIntegerTy());
