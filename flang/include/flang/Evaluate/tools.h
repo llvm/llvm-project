@@ -89,6 +89,23 @@ template <typename A> bool IsAssumedRank(const std::optional<A> &x) {
   return x && IsAssumedRank(*x);
 }
 
+// Predicate: true when an expression is a coarray (corank > 0)
+bool IsCoarray(const ActualArgument &);
+template <typename A> bool IsCoarray(const A &) { return false; }
+template <typename A> bool IsCoarray(const Designator<A> &designator) {
+  if (const auto *symbol{std::get_if<SymbolRef>(&designator.u)}) {
+    return IsCoarray(symbol->get());
+  } else {
+    return false;
+  }
+}
+template <typename T> bool IsCoarray(const Expr<T> &expr) {
+  return std::visit([](const auto &x) { return IsCoarray(x); }, expr.u);
+}
+template <typename A> bool IsCoarray(const std::optional<A> &x) {
+  return x && IsCoarray(*x);
+}
+
 // Generalizing packagers: these take operations and expressions of more
 // specific types and wrap them in Expr<> containers of more abstract types.
 

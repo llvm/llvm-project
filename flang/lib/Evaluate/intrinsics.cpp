@@ -16,6 +16,7 @@
 #include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
+#include "flang/Semantics/tools.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <map>
@@ -176,6 +177,7 @@ ENUM_CLASS(Rank,
     shape, // INTEGER vector of known length and no negative element
     matrix,
     array, // not scalar, rank is known and greater than zero
+    coarray, // rank is known and can be scalar; has nonzero corank
     known, // rank is known and can be scalar
     anyOrAssumedRank, // rank can be unknown; assumed-type TYPE(*) allowed
     conformable, // scalar, or array of same rank & shape as "array" argument
@@ -741,6 +743,12 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"tan", {{"x", SameFloating}}, SameFloating},
     {"tand", {{"x", SameFloating}}, SameFloating},
     {"tanh", {{"x", SameFloating}}, SameFloating},
+    // optional team dummy arguments needed to complete the following
+    // this_image versions
+    {"this_image", {{"coarray", AnyData, Rank::coarray}, OptionalDIM},
+        DefaultInt, Rank::scalar, IntrinsicClass::transformationalFunction},
+    {"this_image", {}, DefaultInt, Rank::scalar,
+        IntrinsicClass::transformationalFunction},
     {"tiny", {{"x", SameReal, Rank::anyOrAssumedRank}}, SameReal, Rank::scalar,
         IntrinsicClass::inquiryFunction},
     {"trailz", {{"i", AnyInt}}, DefaultInt},
@@ -814,8 +822,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
 
 // TODO: Coarray intrinsic functions
 //   LCOBOUND, UCOBOUND, FAILED_IMAGES, GET_TEAM, IMAGE_INDEX,
-//   STOPPED_IMAGES, TEAM_NUMBER, THIS_IMAGE,
-//   COSHAPE
+//   STOPPED_IMAGES, TEAM_NUMBER, COSHAPE
 // TODO: Non-standard intrinsic functions
 //  AND, OR, XOR, LSHIFT, RSHIFT, SHIFT, ZEXT, IZEXT,
 //  COMPL, EQV, NEQV, INT8, JINT, JNINT, KNINT,
@@ -1420,6 +1427,15 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
           argOk &= rank == arrayArg->Rank();
         }
         break;
+      case Rank::coarray:
+        argOk = IsCoarray(*arg);
+        if (!argOk) {
+          messages.Say(
+              "'coarray=' argument must have corank > 0 for intrinsic '%s'"_err_en_US,
+              name);
+          return std::nullopt;
+        }
+        break;
       case Rank::known:
         if (!knownArg) {
           knownArg = arg;
@@ -1634,6 +1650,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   case Rank::elementalOrBOZ:
   case Rank::shape:
   case Rank::array:
+  case Rank::coarray:
   case Rank::known:
   case Rank::anyOrAssumedRank:
   case Rank::reduceOperation:
