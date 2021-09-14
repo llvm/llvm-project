@@ -139,6 +139,9 @@ using namespace tensor;
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
 #define LDBG(X) LLVM_DEBUG(DBGS() << X)
 
+// TODO: from some HW description.
+static constexpr int64_t kBufferAlignments = 128;
+
 // Forward declarations.
 static std::string printOperationInfo(Operation *, bool prefix = true);
 static std::string printValueInfo(Value, bool prefix = true);
@@ -1412,6 +1415,21 @@ static FunctionType getOrCreateBufferizedFunctionType(
 // Bufferization-specific scoped alloc/dealloc insertion support.
 //===----------------------------------------------------------------------===//
 
+template <typename... Args>
+Operation *getFirstParentOfType(Value v) {
+  Operation *parent;
+  if (auto bbArg = v.dyn_cast<BlockArgument>())
+    parent = bbArg.getOwner()->getParentOp();
+  else
+    parent = v.getDefiningOp()->getParentOp();
+  while (parent) {
+    if (isa<Args...>(parent))
+      return parent;
+    parent = parent->getParentOp();
+  }
+  return nullptr;
+}
+
 /// Create an Allocop/DeAllocOp pair, where the AllocOp is after
 /// `shapedValue.getDefiningOp` (or at the top of the block in case of a
 /// bbArg) and the DeallocOp is at the end of the block.
@@ -1446,8 +1464,27 @@ createNewAllocDeallocPairForShapedValue(OpBuilder &b, Location loc,
     if (dim.value() == ShapedType::kDynamicSize)
       dynShape.push_back(createOrFoldDimOp(b, loc, shapedValue, dim.index()));
 
-  Value allocated = b.create<memref::AllocOp>(loc, allocMemRefType, dynShape);
-  aliasInfo.createAliasInfoEntry(allocated);
+  // If the buffer is statically shaped, try to hoist it to the first enclosing
+  // parallel region.
+  // TODO: this concept of parallel region and threadlocal needs interfaces.
+  // TODO: also hoist in the dynamic case. For now this relies on subsequent
+  // calls to LICM and buffer hoisting which will most likely not succeed.
+  // TODO: when packing, allocate a static bounding box which will enable more
+  // hoisting.
+  Value allocated;
+  { // Guarded insertion point to potentially hoist the AllocOp.
+    OpBuilder::InsertionGuard g(b);
+    if (dynShape.empty()) {
+      Operation *parent =
+          getFirstParentOfType<FuncOp, TiledLoopOp, scf::ParallelOp,
+                               AffineParallelOp>(shapedValue);
+      if (parent)
+        b.setInsertionPointToStart(&(parent->getRegion(0).front()));
+    }
+    allocated = b.create<memref::AllocOp>(
+        loc, allocMemRefType, dynShape, b.getI64IntegerAttr(kBufferAlignments));
+    aliasInfo.createAliasInfoEntry(allocated);
+  }
   Value casted = allocated;
   if (memRefType != allocMemRefType) {
     casted = b.create<memref::CastOp>(loc, memRefType, allocated);
@@ -1476,6 +1513,7 @@ static void allocateBuffersForResults(OpBuilder &b, Location loc, LinalgOp op,
                                       BufferizationAliasInfo &aliasInfo) {
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
+  b.setInsertionPointAfter(op);
 
   // TODO: provide the proper interface to iterate on OpResults and get the
   // matching OpOperands.
@@ -1498,7 +1536,6 @@ static void allocateBuffersForResults(OpBuilder &b, Location loc, LinalgOp op,
     Value dimTensor = bvm.lookupOrDefault(output);
     Value alloc =
         createNewAllocDeallocPairForShapedValue(b, loc, dimTensor, aliasInfo);
-    b.setInsertionPointAfter(alloc.getDefiningOp());
     resultBuffers.push_back(alloc);
 
     // Additionally, if the output buffer is used, clone its value for now.
@@ -1785,8 +1822,12 @@ static LogicalResult bufferize(OpBuilder &b, scf::ForOp forOp,
     if (getInPlace(opResult) != InPlaceSpec::True) {
       resultBuffer =
           createNewAllocDeallocPairForShapedValue(b, loc, operand, aliasInfo);
-      // If the tensor comes from `linalg::InitTensorOp`, the value is
-      // unitialized and we do not need to copy.
+      // If the tensor comes from either:
+      //   - linalg.init_tensor
+      //   - tensor.cast(linalg.init_tensor())
+      // Then the value is unitialized and we do not need to copy. This is a
+      // pragmatic simplification of "matching bbArg does not bufferize to a
+      // read".
       // TODO: "matching bbArg does not bufferize to a read" is a more general
       // check.
       if (!isInitTensorOp(operand))
@@ -1870,6 +1911,10 @@ static LogicalResult bufferize(OpBuilder &b, ReturnOp returnOp,
 static LogicalResult bufferize(OpBuilder &b, TiledLoopOp tiledLoopOp,
                                BlockAndValueMapping &bvm,
                                BufferizationAliasInfo &aliasInfo) {
+  // Take a guard before anything else.
+  OpBuilder::InsertionGuard g(b);
+  b.setInsertionPoint(tiledLoopOp);
+
   // Allocate output buffers if needed, forward output tensor args to the
   // terminator.
   Operation *yieldOp = tiledLoopOp.getBody()->getTerminator();
@@ -1912,8 +1957,12 @@ static LogicalResult bufferize(OpBuilder &b, TiledLoopOp tiledLoopOp,
       auto loc = tiledLoopOp.getLoc();
       Value alloc = createNewAllocDeallocPairForShapedValue(
           b, loc, oldOutputTensor, aliasInfo);
-      // If the tensor comes from `linalg::InitTensorOp`, the value is
-      // unitialized and we do not need to copy.
+      // If the tensor comes from either:
+      //   - linalg.init_tensor
+      //   - tensor.cast(linalg.init_tensor())
+      // Then the value is unitialized and we do not need to copy. This is a
+      // pragmatic simplification of "matching bbArg does not bufferize to a
+      // read".
       // TODO: "matching bbArg does not bufferize to a read" is a more general
       // check.
       if (!isInitTensorOp(oldOutputTensor)) {
@@ -2021,11 +2070,9 @@ static LogicalResult bufferize(OpBuilder &b, ExtractSliceOp extractSliceOp,
   // If not inplaceable, alloc.
   Value alloc;
   auto inPlace = getInPlace(extractSliceOp->getResult(0));
-  if (inPlace != InPlaceSpec::True) {
+  if (inPlace != InPlaceSpec::True)
     alloc = createNewAllocDeallocPairForShapedValue(
         b, loc, extractSliceOp.result(), aliasInfo);
-    b.setInsertionPointAfter(alloc.getDefiningOp());
-  }
 
   // Bufferize to subview.
   auto subviewMemRefType =
@@ -2070,9 +2117,10 @@ static LogicalResult bufferize(OpBuilder &b, InsertSliceOp insertSliceOp,
     // cloning the whole tensor on every single iteration and is a symptom
     // of a catastrophically bad scheduling decision.
     // TODO: be very loud about it or even consider failing the pass.
+    // Alloc a copy for `insertSliceOp.dest()`, it will become the result
+    // buffer.
     Value newDstMemref = createNewAllocDeallocPairForShapedValue(
-        b, loc, insertSliceOp.result(), aliasInfo);
-    b.setInsertionPointAfter(newDstMemref.getDefiningOp());
+        b, loc, insertSliceOp.dest(), aliasInfo);
     b.create<CopyOp>(insertSliceOp.getLoc(), dstMemref, newDstMemref);
     dstMemref = newDstMemref;
   }
@@ -2138,10 +2186,11 @@ static LogicalResult bufferize(OpBuilder &b, VectorTransferOpInterface op,
   // If transfer_write is not inPlace, allocate a new buffer.
   Value newInputBuffer;
   if (inPlace != InPlaceSpec::True) {
+    // Alloc a copy for `writeOp.source()`, it will become the result buffer.
     newInputBuffer = createNewAllocDeallocPairForShapedValue(
-        b, loc, writeOp.result(), aliasInfo);
-    b.setInsertionPointAfter(newInputBuffer.getDefiningOp());
-    map(bvm, writeOp.result(), newInputBuffer);
+        b, loc, writeOp.source(), aliasInfo);
+    Value v = lookup(bvm, writeOp.source());
+    b.create<CopyOp>(loc, v, newInputBuffer);
   } else {
     // InPlace write will result in memref.tensor_load(x) which must
     // canonicalize away with one of it uses.
