@@ -1267,7 +1267,7 @@ def fswift_async_fp_EQ : Joined<["-"], "fswift-async-fp=">,
     Values<"auto,always,never">,
     NormalizedValuesScope<"CodeGenOptions::SwiftAsyncFramePointerKind">,
     NormalizedValues<["Auto", "Always", "Never"]>,
-    MarshallingInfoEnum<CodeGenOpts<"SwiftAsyncFramePointer">, "Auto">;
+    MarshallingInfoEnum<CodeGenOpts<"SwiftAsyncFramePointer">, "Always">;
 
 defm apinotes : BoolOption<"f", "apinotes",
   LangOpts<"APINotes">, DefaultFalse,

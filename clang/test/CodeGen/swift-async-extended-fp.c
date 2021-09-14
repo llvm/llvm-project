@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -mframe-pointer=all -triple x86_64-apple-darwin10 -target-cpu core2 -S -o - %s | FileCheck %s --check-prefix=AUTO-X86
+// RUN: %clang_cc1 -mframe-pointer=all -triple x86_64-apple-darwin10 -target-cpu core2 -S -o - %s | FileCheck %s --check-prefix=ALWAYS-X86
 // RUN: %clang_cc1 -mframe-pointer=all -triple x86_64-apple-darwin12 -target-cpu core2 -S -o - %s | FileCheck %s --check-prefix=ALWAYS-X86
 // RUN: %clang_cc1 -fswift-async-fp=never -mframe-pointer=all -triple x86_64-apple-darwin10 -target-cpu core2 -S -o - %s | FileCheck %s --check-prefix=NEVER-X86
 // RUN: %clang_cc1 -fswift-async-fp=never -mframe-pointer=all -triple x86_64-apple-darwin12 -target-cpu core2 -S -o - %s | FileCheck %s --check-prefix=NEVER-X86
@@ -7,10 +7,14 @@
 // RUN: %clang_cc1 -fswift-async-fp=always -mframe-pointer=all -triple x86_64-apple-darwin10 -target-cpu core2 -S -o - %s | FileCheck %s --check-prefix=ALWAYS-X86
 // RUN: %clang_cc1 -fswift-async-fp=always -mframe-pointer=all -triple x86_64-apple-darwin12 -target-cpu core2 -S -o - %s | FileCheck %s --check-prefix=ALWAYS-X86
 
-// RUN: %clang_cc1 -mframe-pointer=all -triple arm64-apple-ios9 -target-cpu cyclone -S -o - %s | FileCheck %s --check-prefix=AUTO-ARM64
+// RUN: %clang_cc1 -mframe-pointer=all -triple arm64-apple-ios9 -target-cpu cyclone -S -o - %s | FileCheck %s --check-prefix=ALWAYS-ARM64
 // RUN: %clang_cc1 -mframe-pointer=all -triple arm64-apple-ios15 -target-cpu cyclone -S -o - %s | FileCheck %s --check-prefix=ALWAYS-ARM64
+// RUN: %clang_cc1 -fswift-async-fp=auto -mframe-pointer=all -triple arm64-apple-ios9 -target-cpu cyclone -S -o - %s | FileCheck %s --check-prefix=AUTO-ARM64
+// RUN: %clang_cc1 -fswift-async-fp=auto -mframe-pointer=all -triple arm64-apple-ios15 -target-cpu cyclone -S -o - %s | FileCheck %s --check-prefix=ALWAYS-ARM64
 // RUN: %clang_cc1 -fswift-async-fp=never -mframe-pointer=all -triple arm64-apple-ios9 -target-cpu cyclone -S -o - %s | FileCheck %s --check-prefix=NEVER-ARM64
 // RUN: %clang_cc1 -fswift-async-fp=never -mframe-pointer=all -triple arm64-apple-ios15 -target-cpu cyclone -S -o - %s | FileCheck %s --check-prefix=NEVER-ARM64
+// RUN: %clang_cc1 -fswift-async-fp=always -mframe-pointer=all -triple arm64-apple-ios9 -target-cpu cyclone -S -o - %s | FileCheck %s --check-prefix=ALWAYS-ARM64
+// RUN: %clang_cc1 -fswift-async-fp=always -mframe-pointer=all -triple arm64-apple-ios15 -target-cpu cyclone -S -o - %s | FileCheck %s --check-prefix=ALWAYS-ARM64
 
 // REQUIRES: aarch64-registered-target,x86-registered-target
 

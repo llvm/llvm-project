@@ -130,7 +130,7 @@ public:
     Auto, // Choose Swift async extended frame info based on deployment target.
     Always, // Unconditionally emit Swift async extended frame info.
     Never,  // Don't emit Swift async extended frame info.
-    Default = Auto,
+    Default = Always,
   };
 
   enum FiniteLoopsKind {
