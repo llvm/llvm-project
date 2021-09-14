@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -test-linalg-transform-patterns="test-tile-and-pad-pattern tile-sizes-for-padding=2,3,4" -canonicalize | FileCheck %s
-// RUN: mlir-opt %s -test-linalg-transform-patterns="test-tile-and-pad-pattern tile-sizes-for-padding=2,3" -canonicalize | FileCheck %s -check-prefix=CHECK-1DIM-TILE
+// RUN: mlir-opt %s -test-linalg-transform-patterns="test-tile-pattern pad-tiles tile-sizes=2,3,4" -canonicalize | FileCheck %s
+// RUN: mlir-opt %s -test-linalg-transform-patterns="test-tile-pattern pad-tiles tile-sizes=2,3" -canonicalize | FileCheck %s -check-prefix=CHECK-1DIM-TILE
 
 // CHECK-LABEL: func @matmul_tensors(
 // CHECK-SAME:    %[[TA:[0-9a-z]+]]: tensor<?x?xi8>
@@ -33,7 +33,7 @@ func @matmul_tensors(
 //      CHECK:       scf.yield %[[TD]] : tensor<?x?xi32>
 //      CHECK:     scf.yield %[[TD2]] : tensor<?x?xi32>
 //      CHECK:   scf.yield %[[TD1]] : tensor<?x?xi32>
-  %0 = linalg.matmul_i8_i8_i32 {__internal_linalg_transform__ = "tile-and-pad"}
+  %0 = linalg.matmul_i8_i8_i32 {__internal_linalg_transform__ = "tile"}
       ins(%arg0, %arg1: tensor<?x?xi8>, tensor<?x?xi8>)
      outs(%arg2: tensor<?x?xi32>)
     -> tensor<?x?xi32>
@@ -68,7 +68,7 @@ func @generic_scalar_and_tensor(
       indexing_maps =  [ affine_map<(d0, d1, d2) -> ()>,
                         affine_map<(d0, d1, d2) -> (d0, d1, d2)> ],
       iterator_types = ["parallel", "parallel", "parallel"]}
-      {__internal_linalg_transform__ = "tile-and-pad"}
+      {__internal_linalg_transform__ = "tile"}
      ins(%arg1 : f32)
     outs(%arg0: tensor<?x?x?xf32>) {
       ^bb(%0: f32, %1: f32) :
@@ -87,7 +87,7 @@ func @generic_scalar_and_tensor(
 func @matmul_partially_padded_tensors(
   %arg0: tensor<?x8xi8>, %arg1: tensor<8x?xi8>, %arg2: tensor<?x?xi32>)
     -> tensor<?x?xi32> {
-  %0 = linalg.matmul_i8_i8_i32 {__internal_linalg_transform__ = "tile-and-pad"}
+  %0 = linalg.matmul_i8_i8_i32 {__internal_linalg_transform__ = "tile"}
       ins(%arg0, %arg1: tensor<?x8xi8>, tensor<8x?xi8>)
      outs(%arg2: tensor<?x?xi32>)
     -> tensor<?x?xi32>

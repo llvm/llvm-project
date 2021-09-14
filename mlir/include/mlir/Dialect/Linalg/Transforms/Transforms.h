@@ -524,6 +524,15 @@ struct LinalgTilingOptions {
     paddingValueComputationFunction = std::move(fun);
     return *this;
   }
+
+  /// Peel the specified loops.
+  SmallVector<int64_t> peeledLoops;
+
+  LinalgTilingOptions &setPeeledLoops(ArrayRef<int64_t> loops) {
+    peeledLoops.clear();
+    peeledLoops.append(loops.begin(), loops.end());
+    return *this;
+  }
 };
 
 /// Canonicalization patterns relevant to apply after tiling patterns. These are
