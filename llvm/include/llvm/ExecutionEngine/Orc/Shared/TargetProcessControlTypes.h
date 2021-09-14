@@ -222,9 +222,6 @@ public:
   }
 };
 
-using SPSOrcTargetProcessAllocate = SPSExpected<SPSExecutorAddress>(uint64_t);
-using SPSOrcTargetProcessFinalize = SPSError(SPSFinalizeRequest);
-using SPSOrcTargetProcessDeallocate = SPSError(SPSExecutorAddress, uint64_t);
 
 } // end namespace shared
 } // end namespace orc

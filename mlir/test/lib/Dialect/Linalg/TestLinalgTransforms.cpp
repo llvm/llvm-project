@@ -84,9 +84,13 @@ struct TestLinalgTransforms
       llvm::cl::desc("Test a set of patterns that rewrite a linalg contraction "
                      "in vector.contract form"),
       llvm::cl::init(false)};
-  Option<bool> testTileAndPadPattern{
-      *this, "test-tile-and-pad-pattern",
-      llvm::cl::desc("Test tile and pad pattern"), llvm::cl::init(false)};
+  Option<bool> testTilePattern{*this, "test-tile-pattern",
+                               llvm::cl::desc("Test tile pattern"),
+                               llvm::cl::init(false)};
+  Option<bool> testTileScalarizeDynamicDims{
+      *this, "test-tile-scalarize-dynamic-dims",
+      llvm::cl::desc("Test tiling of dynamic dims by 1"),
+      llvm::cl::init(false)};
   Option<int> testHoistPadding{*this, "test-hoist-padding",
                                llvm::cl::desc("Test hoist padding"),
                                llvm::cl::init(0)};
@@ -103,10 +107,17 @@ struct TestLinalgTransforms
       llvm::cl::desc("Test rewrite of subtensor(pad_tensor) into "
                      "pad_tensor(subtensor)"),
       llvm::cl::init(false)};
-  ListOption<int64_t> tileSizesForPadding{
-      *this, "tile-sizes-for-padding",
-      llvm::cl::desc("Linalg tile sizes when tile+pad"), llvm::cl::ZeroOrMore,
-      llvm::cl::MiscFlags::CommaSeparated};
+  Option<bool> padTiles{*this, "pad-tiles",
+                        llvm::cl::desc("Pad tiles when test-tile-pattern"),
+                        llvm::cl::init(false)};
+  ListOption<int64_t> peeledLoops{
+      *this, "peeled-loops",
+      llvm::cl::desc("Loops to be peeled when test-tile-pattern"),
+      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
+  ListOption<int64_t> tileSizes{
+      *this, "tile-sizes",
+      llvm::cl::desc("Linalg tile sizes for test-tile-pattern"),
+      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
   ListOption<unsigned> testInterchangePattern{
       *this, "test-interchange-pattern", llvm::cl::MiscFlags::CommaSeparated,
       llvm::cl::desc("Test the interchange pattern.")};
@@ -114,6 +125,10 @@ struct TestLinalgTransforms
       *this, "test-tiled-loop-peeling",
       llvm::cl::desc("Test peeling of linalg.tiled_loop ops"),
       llvm::cl::OneOrMore, llvm::cl::MiscFlags::CommaSeparated};
+  Option<bool> skipPartial{
+      *this, "skip-partial",
+      llvm::cl::desc("Skip loops inside partial iterations during peeling"),
+      llvm::cl::init(false)};
 };
 } // end anonymous namespace
 
@@ -554,18 +569,29 @@ static Value getNeutralOfLinalgOp(OpBuilder &b, OpOperand &op) {
   return b.create<ConstantOp>(op.getOwner()->getLoc(), t, b.getZeroAttr(t));
 }
 
-static void applyTileAndPadPattern(FuncOp funcOp, ArrayRef<int64_t> tileSizes) {
+static void applyTilePattern(FuncOp funcOp, ArrayRef<int64_t> tileSizes,
+                             bool padTiles, ArrayRef<int64_t> peeledLoops,
+                             bool scalarizeDynamicDims) {
   MLIRContext *context = funcOp.getContext();
   RewritePatternSet tilingPattern(context);
   auto linalgTilingOptions =
-      linalg::LinalgTilingOptions()
-          .setTileSizes(tileSizes)
-          .setPaddingValueComputationFunction(getNeutralOfLinalgOp);
-  tilingPattern.add<linalg::LinalgTilingPattern<linalg::MatmulI8I8I32Op>,
+      linalg::LinalgTilingOptions().setPeeledLoops(peeledLoops);
+  if (scalarizeDynamicDims) {
+    linalgTilingOptions.scalarizeDynamicDims();
+    assert(tileSizes.empty() &&
+           "tileSizes and scalarizeDynamicDims is mutually exclusive");
+  } else {
+    linalgTilingOptions.setTileSizes(tileSizes);
+  }
+  if (padTiles)
+    linalgTilingOptions.setPaddingValueComputationFunction(
+        getNeutralOfLinalgOp);
+
+  tilingPattern.add<linalg::LinalgTilingPattern<linalg::MatmulOp>,
+                    linalg::LinalgTilingPattern<linalg::MatmulI8I8I32Op>,
                     linalg::LinalgTilingPattern<linalg::GenericOp>>(
       context, linalgTilingOptions,
-      linalg::LinalgTransformationFilter(
-          Identifier::get("tile-and-pad", context)));
+      linalg::LinalgTransformationFilter(Identifier::get("tile", context)));
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(tilingPattern));
 }
 
@@ -581,14 +607,16 @@ static void applyInterchangePattern(FuncOp funcOp,
 }
 
 static constexpr char kPeeledLoopsLabel[] = "__peeled_loops__";
+static constexpr char kPartialIterationLabel[] = "__partial_iteration__";
 
 namespace {
 /// Peel TiledLoopOps, i.e., split them into two loops: One loop where the
 /// `idx`-th loop contains only "full" iterations and a second loop for the
 /// remaining partial iteration (if any).
 struct TiledLoopPeelingPattern : public OpRewritePattern<TiledLoopOp> {
-  TiledLoopPeelingPattern(MLIRContext *ctx, int64_t idx)
-      : OpRewritePattern<TiledLoopOp>(ctx), idx(idx) {}
+  TiledLoopPeelingPattern(MLIRContext *ctx, int64_t idx, bool skipPartial)
+      : OpRewritePattern<TiledLoopOp>(ctx), idx(idx), skipPartial(skipPartial) {
+  }
 
   LogicalResult matchAndRewrite(TiledLoopOp loopOp,
                                 PatternRewriter &rewriter) const override {
@@ -603,6 +631,9 @@ struct TiledLoopPeelingPattern : public OpRewritePattern<TiledLoopOp> {
       if (llvm::find(peeledLoops, idx) != peeledLoops.end())
         return failure();
     }
+    if (skipPartial && loopOp->hasAttr(kPartialIterationLabel))
+      // No peeling of loop nests with a partial iteration.
+      return failure();
 
     if (static_cast<int64_t>(loopOp.iterator_types().size()) <= idx)
       return failure();
@@ -612,31 +643,40 @@ struct TiledLoopPeelingPattern : public OpRewritePattern<TiledLoopOp> {
     if (failed(linalg::peelAndCanonicalizeTiledLoop(rewriter, loopOp, idx,
                                                     result)))
       return failure();
-    peeledLoops.push_back(idx);
 
     // Apply label, so that the same loop is not rewritten a second time.
+    peeledLoops.push_back(idx);
     rewriter.updateRootInPlace(loopOp, [&]() {
       loopOp->setAttr(kPeeledLoopsLabel, rewriter.getI64ArrayAttr(peeledLoops));
     });
     result->setAttr(kPeeledLoopsLabel, rewriter.getI64ArrayAttr(peeledLoops));
+    result->setAttr(kPartialIterationLabel, rewriter.getUnitAttr());
+
     return success();
   }
 
   /// Index of loop to peel.
   int64_t idx;
+
+  /// If set to true, do not peel TiledLoopOps with a partial iteration.
+  bool skipPartial;
 };
 } // namespace
 
 static void applyTiledLoopPeelingPattern(FuncOp funcOp,
-                                         ArrayRef<unsigned> loops) {
+                                         ArrayRef<unsigned> loops,
+                                         bool skipPartial) {
   MLIRContext *ctx = funcOp.getContext();
   RewritePatternSet patterns(ctx);
   for (unsigned idx : loops)
-    patterns.add<TiledLoopPeelingPattern>(ctx, idx);
+    patterns.add<TiledLoopPeelingPattern>(ctx, idx, skipPartial);
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 
-  // Drop the marker.
-  funcOp.walk([](TiledLoopOp op) { op->removeAttr(kPeeledLoopsLabel); });
+  // Drop the markers.
+  funcOp.walk([](TiledLoopOp op) {
+    op->removeAttr(kPeeledLoopsLabel);
+    op->removeAttr(kPartialIterationLabel);
+  });
 }
 
 /// Apply transformations specified as patterns.
@@ -677,9 +717,14 @@ void TestLinalgTransforms::runOnFunction() {
   if (testSwapSubTensorPadTensor)
     return applyExtractSliceOfPadTensorSwapPattern(getFunction());
   if (testTiledLoopPeeling.hasValue())
-    return applyTiledLoopPeelingPattern(getFunction(), testTiledLoopPeeling);
-  if (testTileAndPadPattern)
-    return applyTileAndPadPattern(getFunction(), tileSizesForPadding);
+    return applyTiledLoopPeelingPattern(getFunction(), testTiledLoopPeeling,
+                                        skipPartial);
+  if (testTilePattern)
+    return applyTilePattern(getFunction(), tileSizes, padTiles, peeledLoops,
+                            /*scalarizeDynamicDims=*/false);
+  if (testTileScalarizeDynamicDims)
+    return applyTilePattern(getFunction(), tileSizes, padTiles,
+                            /*peeledLoops=*/{}, /*scalarizeDynamicDims=*/true);
   if (testHoistPadding) {
     getFunction().walk([&](linalg::PadTensorOp padTensorOp) {
       (void)linalg::hoistPaddingOnTensors(padTensorOp, testHoistPadding);
