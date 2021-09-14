@@ -740,7 +740,7 @@ Status MinidumpFileBuilder::Dump(lldb::FileUP &core_file) const {
   if (error.Fail() || bytes_written != m_data.GetByteSize()) {
     if (bytes_written != m_data.GetByteSize())
       error.SetErrorStringWithFormat(
-          "Unable to write the data. (written %ld/%ld).", bytes_written,
+          "Unable to write the data. (written %ld/%llu).", bytes_written,
           m_data.GetByteSize());
     return error;
   }
