@@ -10,6 +10,10 @@
 #ifndef __IMMINTRIN_H
 #define __IMMINTRIN_H
 
+#if !defined(__i386__) && !defined(__x86_64__)
+#error "This header is only meant to be used on x86 and x64 architecture"
+#endif
+
 #include <x86gprintrin.h>
 
 #if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \
