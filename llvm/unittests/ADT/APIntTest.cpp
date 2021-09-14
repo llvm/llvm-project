@@ -2587,6 +2587,18 @@ TEST(APIntTest, truncOrSelf) {
   EXPECT_EQ(0xFFFFFFFF, val.truncOrSelf(64));
 }
 
+TEST(APIntTest, concatMSB) {
+  APInt Int1(4, 0x1ULL);
+  APInt Int3(4, 0x3ULL);
+
+  EXPECT_EQ(0x31, Int3.concat(Int1));
+  EXPECT_EQ(APInt(12, 0x313), Int3.concat(Int1).concat(Int3));
+  EXPECT_EQ(APInt(16, 0x3313), Int3.concat(Int3).concat(Int1).concat(Int3));
+
+  APInt I64(64, 0x3ULL);
+  EXPECT_EQ(I64, I64.concat(I64).lshr(64).trunc(64));
+}
+
 TEST(APIntTest, multiply) {
   APInt i64(64, 1234);
 

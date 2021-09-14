@@ -348,9 +348,10 @@ public:
   /// Determine if all bits are set.
   bool isAllOnes() const {
     if (isSingleWord()) {
-      if (BitWidth == 0)
-        return false;
-      return U.VAL == WORDTYPE_MAX >> (APINT_BITS_PER_WORD - BitWidth);
+      // Calculate the shift amount, handling the zero-bit wide case without UB.
+      unsigned ShiftAmt =
+          (APINT_BITS_PER_WORD - BitWidth) % APINT_BITS_PER_WORD;
+      return U.VAL == WORDTYPE_MAX >> ShiftAmt;
     }
     return countTrailingOnesSlowCase() == BitWidth;
   }
@@ -580,7 +581,7 @@ public:
       return *this;
     }
 
-    AssignSlowCase(RHS);
+    assignSlowCase(RHS);
     return *this;
   }
 
@@ -632,7 +633,7 @@ public:
     if (isSingleWord())
       U.VAL &= RHS.U.VAL;
     else
-      AndAssignSlowCase(RHS);
+      andAssignSlowCase(RHS);
     return *this;
   }
 
@@ -662,7 +663,7 @@ public:
     if (isSingleWord())
       U.VAL |= RHS.U.VAL;
     else
-      OrAssignSlowCase(RHS);
+      orAssignSlowCase(RHS);
     return *this;
   }
 
@@ -691,7 +692,7 @@ public:
     if (isSingleWord())
       U.VAL ^= RHS.U.VAL;
     else
-      XorAssignSlowCase(RHS);
+      xorAssignSlowCase(RHS);
     return *this;
   }
 
@@ -877,6 +878,17 @@ public:
   /// Rotate right by rotateAmt.
   APInt rotr(const APInt &rotateAmt) const;
 
+  /// Concatenate the bits from "NewLSB" onto the bottom of *this.  This is
+  /// equivalent to:
+  ///   (this->zext(NewWidth) << NewLSB.getBitWidth()) | NewLSB.zext(NewWidth)
+  APInt concat(const APInt &NewLSB) const {
+    /// If the result will be small, then both the merged values are small.
+    unsigned NewWidth = getBitWidth() + NewLSB.getBitWidth();
+    if (NewWidth <= APINT_BITS_PER_WORD)
+      return APInt(NewWidth, (U.VAL << NewLSB.getBitWidth()) | NewLSB.U.VAL);
+    return concatSlowCase(NewLSB);
+  }
+
   /// Unsigned division operation.
   ///
   /// Perform an unsigned divide operation on this APInt by RHS. Both this and
@@ -971,7 +983,7 @@ public:
     assert(BitWidth == RHS.BitWidth && "Comparison requires equal bit widths");
     if (isSingleWord())
       return U.VAL == RHS.U.VAL;
-    return EqualSlowCase(RHS);
+    return equalSlowCase(RHS);
   }
 
   /// Equality operator.
@@ -1491,7 +1503,7 @@ public:
   /// of 1 bits from the most significant to the least
   unsigned countLeadingOnes() const {
     if (isSingleWord()) {
-      if (BitWidth == 0)
+      if (LLVM_UNLIKELY(BitWidth == 0))
         return 0;
       return llvm::countLeadingOnes(U.VAL << (APINT_BITS_PER_WORD - BitWidth));
     }
@@ -1799,7 +1811,6 @@ private:
   unsigned BitWidth; ///< The number of bits in this APInt.
 
   friend struct DenseMapInfo<APInt>;
-
   friend class APSInt;
 
   /// This constructor is used only internally for speed of construction of
@@ -1841,7 +1852,7 @@ private:
 
     // Mask out the high bits.
     uint64_t mask = WORDTYPE_MAX >> (APINT_BITS_PER_WORD - WordBits);
-    if (BitWidth == 0)
+    if (LLVM_UNLIKELY(BitWidth == 0))
       mask = 0;
 
     if (isSingleWord())
@@ -1905,10 +1916,10 @@ private:
   void ashrSlowCase(unsigned ShiftAmt);
 
   /// out-of-line slow case for operator=
-  void AssignSlowCase(const APInt &RHS);
+  void assignSlowCase(const APInt &RHS);
 
   /// out-of-line slow case for operator==
-  bool EqualSlowCase(const APInt &RHS) const LLVM_READONLY;
+  bool equalSlowCase(const APInt &RHS) const LLVM_READONLY;
 
   /// out-of-line slow case for countLeadingZeros
   unsigned countLeadingZerosSlowCase() const LLVM_READONLY;
@@ -1937,14 +1948,17 @@ private:
   /// out-of-line slow case for flipAllBits.
   void flipAllBitsSlowCase();
 
+  /// out-of-line slow case for concat.
+  APInt concatSlowCase(const APInt &NewLSB) const;
+
   /// out-of-line slow case for operator&=.
-  void AndAssignSlowCase(const APInt &RHS);
+  void andAssignSlowCase(const APInt &RHS);
 
   /// out-of-line slow case for operator|=.
-  void OrAssignSlowCase(const APInt &RHS);
+  void orAssignSlowCase(const APInt &RHS);
 
   /// out-of-line slow case for operator^=.
-  void XorAssignSlowCase(const APInt &RHS);
+  void xorAssignSlowCase(const APInt &RHS);
 
   /// Unsigned comparison. Returns -1, 0, or 1 if this APInt is less than, equal
   /// to, or greater than RHS.
