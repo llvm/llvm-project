@@ -91,11 +91,6 @@ New checks
   variables and function parameters only.
 
 
-- New :doc:`readability-data-pointer <clang-tidy/checks/readability-data-pointer` check.
-
-  Finds cases where code could use ``data()`` rather than the address of the
-  element at index 0 in a container.
-
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
