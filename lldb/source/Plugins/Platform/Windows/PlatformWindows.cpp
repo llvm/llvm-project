@@ -312,3 +312,38 @@ ConstString PlatformWindows::GetFullNameForDylib(ConstString basename) {
   stream.Printf("%s.dll", basename.GetCString());
   return ConstString(stream.GetString());
 }
+
+size_t
+PlatformWindows::GetSoftwareBreakpointTrapOpcode(Target &target,
+                                                 BreakpointSite *bp_site) {
+  ArchSpec arch = target.GetArchitecture();
+  assert(arch.IsValid());
+  const uint8_t *trap_opcode = nullptr;
+  size_t trap_opcode_size = 0;
+
+  switch (arch.GetMachine()) {
+  case llvm::Triple::aarch64: {
+    static const uint8_t g_aarch64_opcode[] = {0x00, 0x00, 0x3e, 0xd4}; // brk #0xf000
+    trap_opcode = g_aarch64_opcode;
+    trap_opcode_size = sizeof(g_aarch64_opcode);
+
+    if (bp_site->SetTrapOpcode(trap_opcode, trap_opcode_size))
+      return trap_opcode_size;
+    return 0;
+  } break;
+
+  case llvm::Triple::arm:
+  case llvm::Triple::thumb: {
+    static const uint8_t g_thumb_opcode[] = {0xfe, 0xde}; // udf #0xfe
+    trap_opcode = g_thumb_opcode;
+    trap_opcode_size = sizeof(g_thumb_opcode);
+
+    if (bp_site->SetTrapOpcode(trap_opcode, trap_opcode_size))
+      return trap_opcode_size;
+    return 0;
+  } break;
+
+  default:
+    return Platform::GetSoftwareBreakpointTrapOpcode(target, bp_site);
+  }
+}
