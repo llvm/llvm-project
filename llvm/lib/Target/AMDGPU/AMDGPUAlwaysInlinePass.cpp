@@ -122,7 +122,7 @@ static bool alwaysInlineImpl(Module &M, bool GlobalOpt) {
     unsigned AS = GV.getAddressSpace();
     if ((AS == AMDGPUAS::REGION_ADDRESS) ||
         (AS == AMDGPUAS::LOCAL_ADDRESS &&
-         !AMDGPUTargetMachine::EnableLowerModuleLDS))
+         (!AMDGPUTargetMachine::EnableLowerModuleLDS || !GV.hasInitializer())))
       recursivelyVisitUsers(GV, FuncsToAlwaysInline);
   }
 
