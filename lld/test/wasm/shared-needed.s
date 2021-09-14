@@ -29,7 +29,6 @@ data:
 # SO1-NEXT:     TableSize:       0
 # SO1-NEXT:     TableAlignment:  0
 # SO1-NEXT:     Needed:          []
-# SO1-NEXT:     ExportInfo:      []
 # SO1-NEXT:   - Type:            TYPE
 
 # SO2:      Sections:
@@ -41,5 +40,4 @@ data:
 # SO2-NEXT:     TableAlignment:  0
 # SO2-NEXT:     Needed:
 # SO2-NEXT:       - shared-needed.s.tmp1.so
-# SO2-NEXT:     ExportInfo:      []
 # SO2-NEXT:   - Type:            TYPE

@@ -55,7 +55,7 @@ static void sectionMapping(IO &IO, WasmYAML::DylinkSection &Section) {
   IO.mapRequired("TableSize", Section.TableSize);
   IO.mapRequired("TableAlignment", Section.TableAlignment);
   IO.mapRequired("Needed", Section.Needed);
-  IO.mapRequired("ExportInfo", Section.ExportInfo);
+  IO.mapOptional("ExportInfo", Section.ExportInfo);
 }
 
 static void sectionMapping(IO &IO, WasmYAML::NameSection &Section) {
