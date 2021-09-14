@@ -16,19 +16,19 @@ use omp_lib
   CHARACTER(LEN=32) :: w
   INTEGER, DIMENSION(:), ALLOCATABLE :: y
   
-  !ERROR: A type parameter inquiry cannot appear in an ALLOCATE directive
+  !ERROR: A type parameter inquiry cannot appear on the ALLOCATE directive
   !$omp allocate(x%KIND)
   
-  !ERROR: A type parameter inquiry cannot appear in an ALLOCATE directive
+  !ERROR: A type parameter inquiry cannot appear on the ALLOCATE directive
   !$omp allocate(w%LEN)
 
-  !ERROR: A type parameter inquiry cannot appear in an ALLOCATE directive
+  !ERROR: A type parameter inquiry cannot appear on the ALLOCATE directive
   !$omp allocate(y%KIND)
   
-  !ERROR: A type parameter inquiry cannot appear in an ALLOCATE directive
+  !ERROR: A type parameter inquiry cannot appear on the ALLOCATE directive
   !$omp allocate(my_var%kind_param)
  
-  !ERROR: A type parameter inquiry cannot appear in an ALLOCATE directive
+  !ERROR: A type parameter inquiry cannot appear on the ALLOCATE directive
   !$omp allocate(my_var%len_param)
 
 end subroutine allocate

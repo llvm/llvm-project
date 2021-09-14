@@ -151,6 +151,8 @@ public:
   void Leave(const parser::OpenMPDeclareTargetConstruct &);
   void Enter(const parser::OpenMPExecutableAllocate &);
   void Leave(const parser::OpenMPExecutableAllocate &);
+  void Enter(const parser::OpenMPThreadprivate &);
+  void Leave(const parser::OpenMPThreadprivate &);
 
   void Enter(const parser::OpenMPSimpleStandaloneConstruct &);
   void Leave(const parser::OpenMPSimpleStandaloneConstruct &);
