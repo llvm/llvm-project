@@ -223,7 +223,7 @@ write_cmake_config("Plugins.def") {
 }
 
 config("AllLldbPlugins_config") {
-  visibility = [ ":AllLldbPlugins" ]
+  visibility = [ ":LldbAllPlugins" ]
 
   # To pick up Plugins.def.
   include_dirs = [ "$root_gen_dir/lldb/source" ]
