@@ -358,9 +358,9 @@ namespace AMDGPUAS {
 
     BUFFER_FAT_POINTER = 7, ///< Address space for 160-bit buffer fat pointers.
 
-    /// Address space for direct addressible parameter memory (CONST0).
+    /// Address space for direct addressable parameter memory (CONST0).
     PARAM_D_ADDRESS = 6,
-    /// Address space for indirect addressible parameter memory (VTX1).
+    /// Address space for indirect addressable parameter memory (VTX1).
     PARAM_I_ADDRESS = 7,
 
     // Do not re-order the CONSTANT_BUFFER_* enums.  Several places depend on

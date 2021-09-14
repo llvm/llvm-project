@@ -124,7 +124,7 @@ public:
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 
   /// Check if a pass is enabled given \p Opt option. The option always
-  /// overrides defaults if explicitely used. Otherwise its default will
+  /// overrides defaults if explicitly used. Otherwise its default will
   /// be used given that a pass shall work at an optimization \p Level
   /// minimum.
   bool isPassEnabled(const cl::opt<bool> &Opt,

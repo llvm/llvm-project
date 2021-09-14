@@ -54,7 +54,7 @@ class GCNMaxOccupancySchedStrategy final : public GenericScheduler {
   // before a region scheduling to know if the region had such clusters.
   bool HasClusteredNodes;
 
-  // schedule() have seen a an excess register pressure and had to track
+  // schedule() have seen an excess register pressure and had to track
   // register pressure for actual scheduling heuristics.
   bool HasExcessPressure;
 
