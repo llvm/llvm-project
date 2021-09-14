@@ -23,6 +23,9 @@
 // RUN: not %clang -cc1asphalt -help 2>&1 | \
 // RUN:     FileCheck %s --check-prefix=UNKNOWN-INTEGRATED
 
+// This needs to exit non-0, for configure scripts.
+// RUN: not %clang /GR-
+
 // CHECK: error: unknown argument: '-cake-is-lie'
 // CHECK: error: unknown argument: '-%0'
 // CHECK: error: unknown argument: '-%d'
