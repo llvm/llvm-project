@@ -25,3 +25,50 @@ func @matmul_partly_dynamic_tensor(%arg0: tensor<?x?xf32>, %arg1: tensor<?x2000x
       outs(%out: tensor<?x2000xf32>) -> tensor<?x2000xf32>
   return %r : tensor<?x2000xf32>
 }
+
+// -----
+
+// The input IR of this test case is a tiled and peeled linalg.matmul op.
+
+// CHECK-LABEL: func @tiled_and_peeled_matmul(
+//       CHECK:   linalg.matmul ins({{.*}} : tensor<32x259xf32>, tensor<259x258xf32>) outs({{.*}} : tensor<32x258xf32>) -> tensor<32x258xf32>
+//       CHECK:   linalg.matmul ins({{.*}} : tensor<1x259xf32>, tensor<259x258xf32>) outs({{.*}} : tensor<1x258xf32>) -> tensor<1x258xf32>
+#map0 = affine_map<(d0) -> (64, -d0 + 257)>
+#map1 = affine_map<()[s0] -> ((s0 floordiv 32) * 32)>
+#map2 = affine_map<(d0)[s0] -> (d0 - (s0 floordiv 32) * 32)>
+
+func @tiled_and_peeled_matmul(%arg0: tensor<257x259xf32>, %arg1: tensor<259x258xf32>, %arg2: tensor<257x258xf32>) -> tensor<257x258xf32> {
+  %c257 = constant 257 : index
+  %c64 = constant 64 : index
+  %cst = constant 0.000000e+00 : f32
+  %c0 = constant 0 : index
+  %c32 = constant 32 : index
+  %0 = linalg.fill(%cst, %arg2) : f32, tensor<257x258xf32> -> tensor<257x258xf32>
+  %1 = scf.for %arg3 = %c0 to %c257 step %c64 iter_args(%arg4 = %0) -> (tensor<257x258xf32>) {
+    %2 = affine.min #map0(%arg3)
+    %3 = tensor.extract_slice %arg0[%arg3, 0] [%2, 259] [1, 1] : tensor<257x259xf32> to tensor<?x259xf32>
+    %4 = tensor.extract_slice %arg4[%arg3, 0] [%2, 258] [1, 1] : tensor<257x258xf32> to tensor<?x258xf32>
+    %5 = affine.apply #map1()[%2]
+    %6 = scf.for %arg5 = %c0 to %5 step %c32 iter_args(%arg6 = %4) -> (tensor<?x258xf32>) {
+      %10 = tensor.extract_slice %3[%arg5, 0] [32, 259] [1, 1] : tensor<?x259xf32> to tensor<32x259xf32>
+      %11 = tensor.extract_slice %arg6[%arg5, 0] [32, 258] [1, 1] : tensor<?x258xf32> to tensor<32x258xf32>
+      %12 = linalg.matmul {__internal_linalg_transform__ = "tile"} ins(%10, %arg1 : tensor<32x259xf32>, tensor<259x258xf32>) outs(%11 : tensor<32x258xf32>) -> tensor<32x258xf32>
+      %13 = tensor.insert_slice %12 into %arg6[%arg5, 0] [32, 258] [1, 1] : tensor<32x258xf32> into tensor<?x258xf32>
+      scf.yield %13 : tensor<?x258xf32>
+    }
+    %7 = cmpi slt, %5, %2 : index
+    %8 = scf.if %7 -> (tensor<?x258xf32>) {
+      %10 = affine.apply #map2(%2)[%2]
+      %11 = tensor.extract_slice %3[%5, 0] [%10, 259] [1, 1] : tensor<?x259xf32> to tensor<?x259xf32>
+      %12 = tensor.extract_slice %6[%5, 0] [%10, 258] [1, 1] : tensor<?x258xf32> to tensor<?x258xf32>
+      %13 = linalg.matmul {__internal_linalg_transform__ = "tile"} ins(%11, %arg1 : tensor<?x259xf32>, tensor<259x258xf32>) outs(%12 : tensor<?x258xf32>) -> tensor<?x258xf32>
+      %14 = tensor.insert_slice %13 into %6[%5, 0] [%10, 258] [1, 1] : tensor<?x258xf32> into tensor<?x258xf32>
+      scf.yield %14 : tensor<?x258xf32>
+    } else {
+      scf.yield %6 : tensor<?x258xf32>
+    }
+    %9 = tensor.insert_slice %8 into %arg4[%arg3, 0] [%2, 258] [1, 1] : tensor<?x258xf32> into tensor<257x258xf32>
+    scf.yield %9 : tensor<257x258xf32>
+  }
+  return %1 : tensor<257x258xf32>
+}
