@@ -387,8 +387,23 @@ bool XCOFFWriter::writeSymbols() {
       }
       W.write<uint32_t>(YamlSym.Value);
     }
-    W.write<int16_t>(
-        YamlSym.SectionName.size() ? SectionIndexMap[YamlSym.SectionName] : 0);
+    if (YamlSym.SectionName) {
+      if (!SectionIndexMap.count(*YamlSym.SectionName)) {
+        ErrHandler("the SectionName " + *YamlSym.SectionName +
+                   " specified in the symbol does not exist");
+        return false;
+      }
+      if (YamlSym.SectionIndex &&
+          SectionIndexMap[*YamlSym.SectionName] != *YamlSym.SectionIndex) {
+        ErrHandler("the SectionName " + *YamlSym.SectionName +
+                   " and the SectionIndex (" + Twine(*YamlSym.SectionIndex) +
+                   ") refer to different sections");
+        return false;
+      }
+      W.write<int16_t>(SectionIndexMap[*YamlSym.SectionName]);
+    } else {
+      W.write<int16_t>(YamlSym.SectionIndex ? *YamlSym.SectionIndex : 0);
+    }
     W.write<uint16_t>(YamlSym.Type);
     W.write<uint8_t>(YamlSym.StorageClass);
     W.write<uint8_t>(YamlSym.NumberOfAuxEntries);

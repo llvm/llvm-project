@@ -146,6 +146,7 @@ void MappingTraits<XCOFFYAML::Symbol>::mapping(IO &IO, XCOFFYAML::Symbol &S) {
   IO.mapOptional("Name", S.SymbolName);
   IO.mapOptional("Value", S.Value);
   IO.mapOptional("Section", S.SectionName);
+  IO.mapOptional("SectionIndex", S.SectionIndex);
   IO.mapOptional("Type", S.Type);
   IO.mapOptional("StorageClass", S.StorageClass);
   IO.mapOptional("NumberOfAuxEntries", S.NumberOfAuxEntries);
