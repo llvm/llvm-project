@@ -536,7 +536,8 @@ public:
                                          bool SkipTrailingWhitespaceAndNewLine);
 
   /// Returns true if the given character could appear in an identifier.
-  static bool isIdentifierBodyChar(char c, const LangOptions &LangOpts);
+  static bool isAsciiIdentifierContinueChar(char c,
+                                            const LangOptions &LangOpts);
 
   /// Checks whether new line pointed by Str is preceded by escape
   /// sequence.
@@ -573,10 +574,7 @@ private:
 
   bool CheckUnicodeWhitespace(Token &Result, uint32_t C, const char *CurPtr);
 
-  /// Given that a token begins with the Unicode character \p C, figure out
-  /// what kind of token it is and dispatch to the appropriate lexing helper
-  /// function.
-  bool LexUnicode(Token &Result, uint32_t C, const char *CurPtr);
+  bool LexUnicodeIdentifierStart(Token &Result, uint32_t C, const char *CurPtr);
 
   /// FormTokenWithChars - When we lex a token, we have identified a span
   /// starting at BufferPtr, going to TokEnd that forms the token.  This method
@@ -701,7 +699,11 @@ private:
                           bool IsStringLiteral);
 
   // Helper functions to lex the remainder of a token of the specific type.
-  bool LexIdentifier         (Token &Result, const char *CurPtr);
+
+  // This function handles both ASCII and Unicode identifiers after
+  // the first codepoint of the identifyier has been parsed.
+  bool LexIdentifierContinue(Token &Result, const char *CurPtr);
+
   bool LexNumericConstant    (Token &Result, const char *CurPtr);
   bool LexStringLiteral      (Token &Result, const char *CurPtr,
                               tok::TokenKind Kind);

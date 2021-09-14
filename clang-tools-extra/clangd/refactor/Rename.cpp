@@ -478,10 +478,10 @@ static bool mayBeValidIdentifier(llvm::StringRef Ident) {
   // We don't check all the rules for non-ascii characters (most are allowed).
   bool AllowDollar = true; // lenient
   if (llvm::isASCII(Ident.front()) &&
-      !isIdentifierHead(Ident.front(), AllowDollar))
+      !isAsciiIdentifierStart(Ident.front(), AllowDollar))
     return false;
   for (char C : Ident) {
-    if (llvm::isASCII(C) && !isIdentifierBody(C, AllowDollar))
+    if (llvm::isASCII(C) && !isAsciiIdentifierContinue(C, AllowDollar))
       return false;
   }
   return true;
