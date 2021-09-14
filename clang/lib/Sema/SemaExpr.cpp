@@ -366,10 +366,10 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
 
   diagnoseUseOfInternalDeclInInlineFunction(*this, D, Loc);
 
-  if (auto *VD = dyn_cast<ValueDecl>(D))
-    checkTypeSupport(VD->getType(), Loc, VD);
-
   if (LangOpts.SYCLIsDevice || (LangOpts.OpenMP && LangOpts.OpenMPIsDevice)) {
+    if (auto *VD = dyn_cast<ValueDecl>(D))
+      checkDeviceDecl(VD, Loc);
+
     if (!Context.getTargetInfo().isTLSSupported())
       if (const auto *VD = dyn_cast<VarDecl>(D))
         if (VD->getTLSKind() != VarDecl::TLS_None)
@@ -14230,9 +14230,6 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
       return ExprError();
     }
   }
-
-  checkTypeSupport(LHSExpr->getType(), OpLoc, /*ValueDecl*/ nullptr);
-  checkTypeSupport(RHSExpr->getType(), OpLoc, /*ValueDecl*/ nullptr);
 
   switch (Opc) {
   case BO_Assign:
