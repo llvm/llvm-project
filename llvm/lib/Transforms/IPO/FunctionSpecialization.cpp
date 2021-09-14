@@ -208,15 +208,14 @@ static void constantArgPropagation(SmallVectorImpl<Function *> &WorkList,
 // interfere with the constantArgPropagation optimization.
 static void removeSSACopy(Function &F) {
   for (BasicBlock &BB : F) {
-    for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E;) {
-      Instruction *Inst = &*BI++;
-      auto *II = dyn_cast<IntrinsicInst>(Inst);
+    for (Instruction &Inst : llvm::make_early_inc_range(BB)) {
+      auto *II = dyn_cast<IntrinsicInst>(&Inst);
       if (!II)
         continue;
       if (II->getIntrinsicID() != Intrinsic::ssa_copy)
         continue;
-      Inst->replaceAllUsesWith(II->getOperand(0));
-      Inst->eraseFromParent();
+      Inst.replaceAllUsesWith(II->getOperand(0));
+      Inst.eraseFromParent();
     }
   }
 }

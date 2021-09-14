@@ -1956,11 +1956,9 @@ OptimizeFunctions(Module &M,
   bool Changed = false;
 
   std::vector<Function *> AllCallsCold;
-  for (Module::iterator FI = M.begin(), E = M.end(); FI != E;) {
-    Function *F = &*FI++;
-    if (hasOnlyColdCalls(*F, GetBFI))
-      AllCallsCold.push_back(F);
-  }
+  for (Function &F : llvm::make_early_inc_range(M))
+    if (hasOnlyColdCalls(F, GetBFI))
+      AllCallsCold.push_back(&F);
 
   // Optimize functions.
   for (Function &F : llvm::make_early_inc_range(M)) {
