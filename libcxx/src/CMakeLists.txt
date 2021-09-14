@@ -98,6 +98,8 @@ elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "SunOS")
     )
 elseif(ZOS)
   list(APPEND LIBCXX_SOURCES
+    support/ibm/mbsnrtowcs.cpp
+    support/ibm/wcsnrtombs.cpp
     support/ibm/xlocale_zos.cpp
     )
 endif()
