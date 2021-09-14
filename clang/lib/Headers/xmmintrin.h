@@ -10,6 +10,10 @@
 #ifndef __XMMINTRIN_H
 #define __XMMINTRIN_H
 
+#if !defined(__i386__) && !defined(__x86_64__)
+#error "This header is only meant to be used on x86 and x64 architecture"
+#endif
+
 #include <mmintrin.h>
 
 typedef int __v4si __attribute__((__vector_size__(16)));

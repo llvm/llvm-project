@@ -238,22 +238,27 @@ ErrorOr<SymbolRef> Decoder::getRelocatedSymbol(const COFFObjectFile &,
   return inconvertibleErrorCode();
 }
 
-SymbolRef Decoder::getPreferredSymbol(const COFFObjectFile &COFF,
-                                      SymbolRef Sym) {
+SymbolRef Decoder::getPreferredSymbol(const COFFObjectFile &COFF, SymbolRef Sym,
+                                      uint64_t &SymbolOffset) {
   // The symbol resolved by getRelocatedSymbol can be any internal
   // nondescriptive symbol; try to resolve a more descriptive one.
   COFFSymbolRef CoffSym = COFF.getCOFFSymbol(Sym);
-  if (CoffSym.getStorageClass() != COFF::IMAGE_SYM_CLASS_LABEL)
+  if (CoffSym.getStorageClass() != COFF::IMAGE_SYM_CLASS_LABEL &&
+      CoffSym.getSectionDefinition() == nullptr)
     return Sym;
   for (const auto &S : COFF.symbols()) {
     COFFSymbolRef CS = COFF.getCOFFSymbol(S);
     if (CS.getSectionNumber() == CoffSym.getSectionNumber() &&
-        CS.getValue() == CoffSym.getValue()) {
-      if (CS.isExternal())
-        return S;
-      if (CS.getStorageClass() != COFF::IMAGE_SYM_CLASS_LABEL) {
+        CS.getValue() <= CoffSym.getValue() + SymbolOffset &&
+        CS.getStorageClass() != COFF::IMAGE_SYM_CLASS_LABEL &&
+        CS.getSectionDefinition() == nullptr) {
+      uint32_t Offset = CoffSym.getValue() + SymbolOffset - CS.getValue();
+      if (Offset <= SymbolOffset) {
+        SymbolOffset = Offset;
         Sym = S;
         CoffSym = CS;
+        if (CS.isExternal() && SymbolOffset == 0)
+          return Sym;
       }
     }
   }
@@ -283,6 +288,9 @@ ErrorOr<SymbolRef> Decoder::getSymbolForLocation(
     // We apply SymbolOffset here directly. We return it separately to allow
     // the caller to print it as an offset on the symbol name.
     SymbolAddress = *AddressOrErr + SymbolOffset;
+
+    if (FunctionOnly) // Resolve label/section symbols into function names.
+      SymOrErr = getPreferredSymbol(COFF, *SymOrErr, SymbolOffset);
   } else {
     // No matching relocation found; operating on a linked image. Try to
     // find a descriptive symbol if possible. The immediate offset contains
@@ -292,8 +300,6 @@ ErrorOr<SymbolRef> Decoder::getSymbolForLocation(
     SymbolOffset = 0;
     SymOrErr = getSymbol(COFF, SymbolAddress, FunctionOnly);
   }
-  if (SymOrErr && FunctionOnly) // Resolve label symbols into function names
-    SymOrErr = getPreferredSymbol(COFF, *SymOrErr);
   return SymOrErr;
 }
 

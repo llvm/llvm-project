@@ -144,8 +144,8 @@ static void EmitRuntimeFunction(MCStreamer &streamer,
   MCContext &context = streamer.getContext();
 
   streamer.emitValueToAlignment(4);
-  EmitSymbolRefWithOfs(streamer, info->Function, info->Begin);
-  EmitSymbolRefWithOfs(streamer, info->Function, info->End);
+  EmitSymbolRefWithOfs(streamer, info->Begin, info->Begin);
+  EmitSymbolRefWithOfs(streamer, info->Begin, info->End);
   streamer.emitValue(MCSymbolRefExpr::create(info->Symbol,
                                              MCSymbolRefExpr::VK_COFF_IMGREL32,
                                              context), 4);
@@ -1073,7 +1073,7 @@ static void ARM64EmitRuntimeFunction(MCStreamer &streamer,
   MCContext &context = streamer.getContext();
 
   streamer.emitValueToAlignment(4);
-  EmitSymbolRefWithOfs(streamer, info->Function, info->Begin);
+  EmitSymbolRefWithOfs(streamer, info->Begin, info->Begin);
   if (info->PackedInfo)
     streamer.emitInt32(info->PackedInfo);
   else
