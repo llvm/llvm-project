@@ -323,6 +323,35 @@ TEST(LinkGraphTest, TransferDefinedSymbol) {
   EXPECT_EQ(S1.getSize(), 16U) << "Size was not updated";
 }
 
+TEST(LinkGraphTest, TransferDefinedSymbolAcrossSections) {
+  // Check that we can transfer a defined symbol from an existing block in one
+  // section to another.
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
+              getGenericEdgeKindName);
+  auto &Sec1 = G.createSection("__data.1", RWFlags);
+  auto &Sec2 = G.createSection("__data.2", RWFlags);
+
+  // Create blocks in each section.
+  auto &B1 = G.createContentBlock(Sec1, BlockContent, 0x1000, 8, 0);
+  auto &B2 = G.createContentBlock(Sec2, BlockContent, 0x2000, 8, 0);
+
+  // Add a symbol to section 1.
+  auto &S1 = G.addDefinedSymbol(B1, 0, "S1", B1.getSize(), Linkage::Strong,
+                                Scope::Default, false, false);
+
+  // Transfer with zero offset, explicit size to section 2.
+  G.transferDefinedSymbol(S1, B2, 0, 64);
+
+  EXPECT_EQ(&S1.getBlock(), &B2) << "Block was not updated";
+  EXPECT_EQ(S1.getOffset(), 0U) << "Unexpected offset";
+  EXPECT_EQ(S1.getSize(), 64U) << "Size was not updated";
+
+  EXPECT_EQ(Sec1.symbols_size(), 0u) << "Symbol was not removed from Sec1";
+  EXPECT_EQ(Sec2.symbols_size(), 1u) << "Symbol was not added to Sec2";
+  if (Sec2.symbols_size() == 1)
+    EXPECT_EQ(*Sec2.symbols().begin(), &S1) << "Unexpected symbol";
+}
+
 TEST(LinkGraphTest, TransferBlock) {
   // Check that we can transfer a block (and all associated symbols) from one
   // section to another.

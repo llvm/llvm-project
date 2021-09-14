@@ -1237,6 +1237,7 @@ public:
   void transferDefinedSymbol(Symbol &Sym, Block &DestBlock,
                              JITTargetAddress NewOffset,
                              Optional<JITTargetAddress> ExplicitNewSize) {
+    auto &OldSection = Sym.getBlock().getSection();
     Sym.setBlock(DestBlock);
     Sym.setOffset(NewOffset);
     if (ExplicitNewSize)
@@ -1245,6 +1246,10 @@ public:
       JITTargetAddress RemainingBlockSize = DestBlock.getSize() - NewOffset;
       if (Sym.getSize() > RemainingBlockSize)
         Sym.setSize(RemainingBlockSize);
+    }
+    if (&DestBlock.getSection() != &OldSection) {
+      OldSection.removeSymbol(Sym);
+      DestBlock.getSection().addSymbol(Sym);
     }
   }
 
