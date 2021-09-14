@@ -87,6 +87,10 @@ struct TestLinalgTransforms
   Option<bool> testTilePattern{*this, "test-tile-pattern",
                                llvm::cl::desc("Test tile pattern"),
                                llvm::cl::init(false)};
+  Option<bool> testTileScalarizeDynamicDims{
+      *this, "test-tile-scalarize-dynamic-dims",
+      llvm::cl::desc("Test tiling of dynamic dims by 1"),
+      llvm::cl::init(false)};
   Option<int> testHoistPadding{*this, "test-hoist-padding",
                                llvm::cl::desc("Test hoist padding"),
                                llvm::cl::init(0)};
@@ -566,12 +570,19 @@ static Value getNeutralOfLinalgOp(OpBuilder &b, OpOperand &op) {
 }
 
 static void applyTilePattern(FuncOp funcOp, ArrayRef<int64_t> tileSizes,
-                             bool padTiles, ArrayRef<int64_t> peeledLoops) {
+                             bool padTiles, ArrayRef<int64_t> peeledLoops,
+                             bool scalarizeDynamicDims) {
   MLIRContext *context = funcOp.getContext();
   RewritePatternSet tilingPattern(context);
   auto linalgTilingOptions =
-      linalg::LinalgTilingOptions().setTileSizes(tileSizes).setPeeledLoops(
-          peeledLoops);
+      linalg::LinalgTilingOptions().setPeeledLoops(peeledLoops);
+  if (scalarizeDynamicDims) {
+    linalgTilingOptions.scalarizeDynamicDims();
+    assert(tileSizes.empty() &&
+           "tileSizes and scalarizeDynamicDims is mutually exclusive");
+  } else {
+    linalgTilingOptions.setTileSizes(tileSizes);
+  }
   if (padTiles)
     linalgTilingOptions.setPaddingValueComputationFunction(
         getNeutralOfLinalgOp);
@@ -709,7 +720,11 @@ void TestLinalgTransforms::runOnFunction() {
     return applyTiledLoopPeelingPattern(getFunction(), testTiledLoopPeeling,
                                         skipPartial);
   if (testTilePattern)
-    return applyTilePattern(getFunction(), tileSizes, padTiles, peeledLoops);
+    return applyTilePattern(getFunction(), tileSizes, padTiles, peeledLoops,
+                            /*scalarizeDynamicDims=*/false);
+  if (testTileScalarizeDynamicDims)
+    return applyTilePattern(getFunction(), tileSizes, padTiles,
+                            /*peeledLoops=*/{}, /*scalarizeDynamicDims=*/true);
   if (testHoistPadding) {
     getFunction().walk([&](linalg::PadTensorOp padTensorOp) {
       (void)linalg::hoistPaddingOnTensors(padTensorOp, testHoistPadding);
