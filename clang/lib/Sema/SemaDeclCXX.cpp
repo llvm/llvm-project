@@ -15262,8 +15262,17 @@ Sema::BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
   //       can be omitted by constructing the temporary object
   //       directly into the target of the omitted copy/move
   if (ConstructKind == CXXConstructExpr::CK_Complete && Constructor &&
+      // FIXME: Converting constructors should also be accepted.
+      // But to fix this, the logic that digs down into a CXXConstructExpr
+      // to find the source object needs to handle it.
+      // Right now it assumes the source object is passed directly as the
+      // first argument.
       Constructor->isCopyOrMoveConstructor() && hasOneRealArgument(ExprArgs)) {
     Expr *SubExpr = ExprArgs[0];
+    // FIXME: Per above, this is also incorrect if we want to accept
+    //        converting constructors, as isTemporaryObject will
+    //        reject temporaries with different type from the
+    //        CXXRecord itself.
     Elidable = SubExpr->isTemporaryObject(
         Context, cast<CXXRecordDecl>(FoundDecl->getDeclContext()));
   }
