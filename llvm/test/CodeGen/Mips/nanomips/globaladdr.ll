@@ -12,8 +12,8 @@ define i8* @foo() {
 @n = global i32 5
 
 define i32 @load_value() {
-; CHECK: li $a0, n
-; CHECK: lw $a0, 0($a0)
+; CHECK: li $t4, n
+; CHECK: lw $a0, 0($t4)
 ; CHECK-GP: lw $a0, %gp_rel(n)($gp)
   %r = load i32, i32* @n
   ret i32 %r

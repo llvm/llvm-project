@@ -8,7 +8,7 @@ define i8 @brind(i8 %p) {
   %element = getelementptr inbounds [2 x i8*], [2 x i8*]* @brind_opts, i16 0, i16 %index
   %address = load i8*, i8** %element
 ; AFTER-ISEL: PseudoIndirectBranchNM
-; CHECK: jrc $a0
+; CHECK: jrc $t4
 ; CHECK: JRC_NM
   indirectbr i8* %address, [label %block1, label %block2]
 block1:

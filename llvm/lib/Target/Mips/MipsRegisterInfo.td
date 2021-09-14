@@ -316,10 +316,12 @@ class GPR32ClassNM<list<ValueType> regTypes> :
   RegisterClass<"Mips", regTypes, 32, (add
   // Reserved
   ZERO_NM, AT_NM,
+  // Not preserved across procedure calls
+  T4_NM, T5_NM,
   // Return Values and Arguments
   A0_NM, A1_NM, A2_NM, A3_NM, A4_NM, A5_NM, A6_NM, A7_NM,
   // Not preserved across procedure calls
-  T0_NM, T1_NM, T2_NM, T3_NM, T4_NM, T5_NM, T8_NM, T9_NM,
+  T0_NM, T1_NM, T2_NM, T3_NM,
   // Callee save
   S0_NM, S1_NM, S2_NM, S3_NM, S4_NM, S5_NM, S6_NM, S7_NM,
   // Not preserved across procedure calls
