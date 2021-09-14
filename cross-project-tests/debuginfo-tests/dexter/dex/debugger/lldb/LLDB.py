@@ -12,7 +12,7 @@ import os
 from subprocess import CalledProcessError, check_output, STDOUT
 import sys
 
-from dex.debugger.DebuggerBase import DebuggerBase
+from dex.debugger.DebuggerBase import DebuggerBase, watch_is_active
 from dex.dextIR import FrameIR, LocIR, StepIR, StopReason, ValueIR
 from dex.dextIR import StackFrame, SourceLocation, ProgramState
 from dex.utils.Exceptions import DebuggerException, LoadDebuggerException
@@ -208,6 +208,7 @@ class LLDB(DebuggerBase):
                 'column': sb_line.GetColumn()
             }
             loc = LocIR(**loc_dict)
+            valid_loc_for_watch = loc.path and os.path.exists(loc.path)
 
             frame = FrameIR(
                 function=function, is_inlined=sb_frame.IsInlined(), loc=loc)
@@ -223,11 +224,18 @@ class LLDB(DebuggerBase):
                                      is_inlined=frame.is_inlined,
                                      location=SourceLocation(**loc_dict),
                                      watches={})
-            for expr in map(
-                lambda watch, idx=i: self.evaluate_expression(watch, idx),
-                watches):
-                state_frame.watches[expr.expression] = expr
-            state_frames.append(state_frame)
+            if valid_loc_for_watch:
+                for expr in map(
+                    # Filter out watches that are not active in the current frame,
+                    # and then evaluate all the active watches.
+                    lambda watch_info, idx=i:
+                        self.evaluate_expression(watch_info.expression, idx),
+                    filter(
+                        lambda watch_info, idx=i, line_no=loc.lineno, loc_path=loc.path:
+                            watch_is_active(watch_info, loc_path, idx, line_no),
+                        watches)):
+                    state_frame.watches[expr.expression] = expr
+                state_frames.append(state_frame)
 
         if len(frames) == 1 and frames[0].function is None:
             frames = []
