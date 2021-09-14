@@ -12,11 +12,9 @@
 import abc
 import difflib
 import os
-from collections import namedtuple
 
-from dex.command.CommandBase import CommandBase, StepExpectInfo
+from dex.command.CommandBase import CommandBase
 from dex.command.StepValueInfo import StepValueInfo
-
 
 
 class DexExpectWatchBase(CommandBase):
@@ -70,7 +68,7 @@ class DexExpectWatchBase(CommandBase):
 
 
     def get_watches(self):
-        return [StepExpectInfo(self.expression, self.path, 0, range(self._from_line, self._to_line + 1))]
+        return [self.expression]
 
     @property
     def line_range(self):
@@ -151,11 +149,11 @@ class DexExpectWatchBase(CommandBase):
         return differences
 
     def eval(self, step_collection):
-        assert os.path.exists(self.path)
         for step in step_collection.steps:
             loc = step.current_location
 
             if (loc.path and os.path.exists(loc.path) and
+                os.path.exists(self.path) and
                 os.path.samefile(loc.path, self.path) and
                 loc.lineno in self.line_range):
                 try:

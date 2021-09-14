@@ -10,7 +10,7 @@ during execution.
 
 from itertools import chain
 
-from dex.command.CommandBase import CommandBase, StepExpectInfo
+from dex.command.CommandBase import CommandBase
 from dex.dextIR import ProgramState, SourceLocation, StackFrame, DextIR
 
 def frame_from_dict(source: dict) -> StackFrame:
@@ -56,23 +56,9 @@ class DexExpectProgramState(CommandBase):
         return __class__.__name__
 
     def get_watches(self):
-        frame_expects = set()
-        for idx, frame in enumerate(self.expected_program_state.frames):
-            path = (frame.location.path if
-                    frame.location and frame.location.path else self.path)
-            line_range = (
-                range(frame.location.lineno, frame.location.lineno + 1)
-                if frame.location and frame.location.lineno else None)
-            for watch in frame.watches:
-                frame_expects.add(
-                    StepExpectInfo(
-                        expression=watch,
-                        path=path,
-                        frame_idx=idx,
-                        line_range=line_range
-                    )
-                )
-        return frame_expects
+        frame_expects = chain.from_iterable(frame.watches
+            for frame in self.expected_program_state.frames)
+        return set(frame_expects)
 
     def eval(self, step_collection: DextIR) -> bool:
         for step in step_collection.steps:
