@@ -107,6 +107,7 @@ void mlir::linalg::LinalgTransformationFilter::
 
 LinalgTilingOptions &
 mlir::linalg::LinalgTilingOptions::setTileSizes(ArrayRef<int64_t> ts) {
+  assert(!tileSizeComputationFunction && "tile sizes already set");
   SmallVector<int64_t, 4> tileSizes(ts.begin(), ts.end());
   tileSizeComputationFunction = [tileSizes](OpBuilder &b, Operation *op) {
     OpBuilder::InsertionGuard guard(b);
@@ -116,6 +117,30 @@ mlir::linalg::LinalgTilingOptions::setTileSizes(ArrayRef<int64_t> ts) {
       Value v = b.create<ConstantIndexOp>(op->getLoc(), s);
       return v;
     }));
+  };
+  return *this;
+}
+
+LinalgTilingOptions &mlir::linalg::LinalgTilingOptions::scalarizeDynamicDims() {
+  assert(!tileSizeComputationFunction && "tile sizes already set");
+  tileSizeComputationFunction = [](OpBuilder &b, Operation *op) {
+    SmallVector<Value, 4> tileSizes;
+    auto linalgOp = dyn_cast<LinalgOp>(op);
+    if (!linalgOp)
+      return tileSizes;
+    Location loc = linalgOp.getLoc();
+    auto allShapeSizes = linalgOp.createFlatListOfOperandDims(b, loc);
+    AffineMap map = linalgOp.getShapesToLoopsMap();
+    if (!map)
+      return tileSizes;
+    auto shapeSizes = applyMapToValues(b, loc, map, allShapeSizes);
+    // If the shape size is dynamic, tile by 1. Otherwise, do not tile (tile
+    // size 0).
+    for (Value shapeSize : shapeSizes)
+      tileSizes.push_back(getConstantIntValue(shapeSize).hasValue()
+                              ? b.create<ConstantIndexOp>(loc, 0)
+                              : b.create<ConstantIndexOp>(loc, 1));
+    return tileSizes;
   };
   return *this;
 }
