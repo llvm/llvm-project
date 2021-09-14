@@ -36,24 +36,40 @@ entry:
 define i32 @test_encodekey128_u32(i32 %htype, <2 x i64> %key, <2 x i64>* nocapture %h0, <2 x i64>* nocapture %h1, <2 x i64>* nocapture %h2, <2 x i64>* nocapture %h3, <2 x i64>* nocapture %h4, <2 x i64>* nocapture %h5) nounwind {
 ; X64-LABEL: test_encodekey128_u32:
 ; X64:       # %bb.0: # %entry
+; X64-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; X64-NEXT:    encodekey128 %edi, %eax
 ; X64-NEXT:    movaps %xmm0, (%rsi)
 ; X64-NEXT:    movaps %xmm1, (%rdx)
 ; X64-NEXT:    movaps %xmm2, (%rcx)
+; X64-NEXT:    movaps %xmm4, (%r8)
+; X64-NEXT:    movaps %xmm5, (%r9)
+; X64-NEXT:    movaps %xmm6, (%r10)
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_encodekey128_u32:
 ; X32:       # %bb.0: # %entry
+; X32-NEXT:    pushl %ebp
+; X32-NEXT:    pushl %ebx
+; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    encodekey128 %eax, %eax
-; X32-NEXT:    vmovaps %xmm0, (%esi)
-; X32-NEXT:    vmovaps %xmm1, (%edx)
-; X32-NEXT:    vmovaps %xmm2, (%ecx)
+; X32-NEXT:    vmovaps %xmm0, (%ebp)
+; X32-NEXT:    vmovaps %xmm1, (%ebx)
+; X32-NEXT:    vmovaps %xmm2, (%edi)
+; X32-NEXT:    vmovaps %xmm4, (%esi)
+; X32-NEXT:    vmovaps %xmm5, (%edx)
+; X32-NEXT:    vmovaps %xmm6, (%ecx)
 ; X32-NEXT:    popl %esi
+; X32-NEXT:    popl %edi
+; X32-NEXT:    popl %ebx
+; X32-NEXT:    popl %ebp
 ; X32-NEXT:    retl
 entry:
   %0 = tail call { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey128(i32 %htype, <2 x i64> %key)
@@ -63,36 +79,53 @@ entry:
   store <2 x i64> %2, <2 x i64>* %h1, align 16
   %3 = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 3
   store <2 x i64> %3, <2 x i64>* %h2, align 16
-  %4 = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 0
-  ret i32 %4
+  %4 = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 4
+  store <2 x i64> %4, <2 x i64>* %h3, align 16
+  %5 = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 5
+  store <2 x i64> %5, <2 x i64>* %h4, align 16
+  %6 = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 6
+  store <2 x i64> %6, <2 x i64>* %h5, align 16
+  %7 = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 0
+  ret i32 %7
 }
 
 define i32 @test_encodekey256_u32(i32 %htype, <2 x i64> %key_lo, <2 x i64> %key_hi, <2 x i64>* nocapture %h0, <2 x i64>* nocapture %h1, <2 x i64>* nocapture %h2, <2 x i64>* nocapture %h3, <2 x i64>* nocapture %h4, <2 x i64>* nocapture %h5, <2 x      i64>* nocapture readnone %h6) nounwind {
 ; X64-LABEL: test_encodekey256_u32:
 ; X64:       # %bb.0: # %entry
+; X64-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; X64-NEXT:    encodekey256 %edi, %eax
 ; X64-NEXT:    movaps %xmm0, (%rsi)
 ; X64-NEXT:    movaps %xmm1, (%rdx)
 ; X64-NEXT:    movaps %xmm2, (%rcx)
 ; X64-NEXT:    movaps %xmm3, (%r8)
+; X64-NEXT:    movaps %xmm4, (%r9)
+; X64-NEXT:    movaps %xmm5, (%r10)
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_encodekey256_u32:
 ; X32:       # %bb.0: # %entry
+; X32-NEXT:    pushl %ebp
+; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    encodekey256 %eax, %eax
-; X32-NEXT:    vmovaps %xmm0, (%edi)
-; X32-NEXT:    vmovaps %xmm1, (%esi)
-; X32-NEXT:    vmovaps %xmm2, (%edx)
-; X32-NEXT:    vmovaps %xmm3, (%ecx)
+; X32-NEXT:    vmovaps %xmm0, (%ebp)
+; X32-NEXT:    vmovaps %xmm1, (%ebx)
+; X32-NEXT:    vmovaps %xmm2, (%edi)
+; X32-NEXT:    vmovaps %xmm3, (%esi)
+; X32-NEXT:    vmovaps %xmm4, (%edx)
+; X32-NEXT:    vmovaps %xmm5, (%ecx)
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
+; X32-NEXT:    popl %ebx
+; X32-NEXT:    popl %ebp
 ; X32-NEXT:    retl
 entry:
   %0 = tail call { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey256(i32 %htype, <2 x i64> %key_lo, <2 x i64> %key_hi)
@@ -104,8 +137,12 @@ entry:
   store <2 x i64> %3, <2 x i64>* %h2, align 16
   %4 = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 4
   store <2 x i64> %4, <2 x i64>* %h3, align 16
-  %5 = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 0
-  ret i32 %5
+  %5 = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 5
+  store <2 x i64> %5, <2 x i64>* %h4, align 16
+  %6 = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 6
+  store <2 x i64> %6, <2 x i64>* %h5, align 16
+  %7 = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 0
+  ret i32 %7
 }
 
 define i8 @test_mm_aesenc128kl_u8(<2 x i64> %data, i8* %h, <2 x i64>* %out) {
