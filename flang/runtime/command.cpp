@@ -8,6 +8,7 @@
 
 #include "flang/Runtime/command.h"
 #include "environment.h"
+#include "stat.h"
 #include "flang/Runtime/descriptor.h"
 #include <limits>
 
@@ -58,13 +59,13 @@ std::int32_t RTNAME(ArgumentValue)(
   }
 
   if (n < 0 || n >= executionEnvironment.argc) {
-    return 1;
+    return ToErrmsg(errmsg, StatInvalidArgumentNumber);
   }
 
   if (IsValidCharDescriptor(value)) {
     std::int64_t argLen{ArgumentLength(n)};
     if (argLen <= 0) {
-      return 2;
+      return ToErrmsg(errmsg, StatMissingArgument);
     }
 
     std::int64_t toCopy{
@@ -72,9 +73,10 @@ std::int32_t RTNAME(ArgumentValue)(
     std::strncpy(value->OffsetElement(), executionEnvironment.argv[n], toCopy);
 
     if (argLen > toCopy) {
-      return -1;
+      return ToErrmsg(errmsg, StatValueTooShort);
     }
   }
-  return 0;
+
+  return StatOk;
 }
 } // namespace Fortran::runtime
