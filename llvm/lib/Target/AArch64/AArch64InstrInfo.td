@@ -5357,7 +5357,7 @@ def : Pat<(v16i8 (int_aarch64_neon_tbx1 (v16i8 V128:$Rd),
 // AdvSIMD scalar CPY instruction
 //----------------------------------------------------------------------------
 
-defm CPY : SIMDScalarCPY<"cpy">;
+defm CPY : SIMDScalarCPY<"mov">;
 
 //----------------------------------------------------------------------------
 // AdvSIMD scalar pairwise instructions

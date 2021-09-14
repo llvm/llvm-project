@@ -7667,8 +7667,8 @@ multiclass SIMDTableLookupTied<bit op, string asm> {
 //----------------------------------------------------------------------------
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in
 class BaseSIMDScalarCPY<RegisterClass regtype, RegisterOperand vectype,
-                        string kind, Operand idxtype>
-  : I<(outs regtype:$dst), (ins vectype:$src, idxtype:$idx), "mov",
+                        string asm, string kind, Operand idxtype>
+  : I<(outs regtype:$dst), (ins vectype:$src, idxtype:$idx), asm,
        "{\t$dst, $src" # kind # "$idx" #
        "|\t$dst, $src$idx}", "", []>,
     Sched<[WriteV]> {
@@ -7688,22 +7688,22 @@ class SIMDScalarCPYAlias<string asm, string size, Instruction inst,
 
 
 multiclass SIMDScalarCPY<string asm> {
-  def i8  : BaseSIMDScalarCPY<FPR8,  V128, ".b", VectorIndexB> {
+  def i8  : BaseSIMDScalarCPY<FPR8,  V128, asm, ".b", VectorIndexB> {
     bits<4> idx;
     let Inst{20-17} = idx;
     let Inst{16} = 1;
   }
-  def i16 : BaseSIMDScalarCPY<FPR16, V128, ".h", VectorIndexH> {
+  def i16 : BaseSIMDScalarCPY<FPR16, V128, asm, ".h", VectorIndexH> {
     bits<3> idx;
     let Inst{20-18} = idx;
     let Inst{17-16} = 0b10;
   }
-  def i32 : BaseSIMDScalarCPY<FPR32, V128, ".s", VectorIndexS> {
+  def i32 : BaseSIMDScalarCPY<FPR32, V128, asm, ".s", VectorIndexS> {
     bits<2> idx;
     let Inst{20-19} = idx;
     let Inst{18-16} = 0b100;
   }
-  def i64 : BaseSIMDScalarCPY<FPR64, V128, ".d", VectorIndexD> {
+  def i64 : BaseSIMDScalarCPY<FPR64, V128, asm, ".d", VectorIndexD> {
     bits<1> idx;
     let Inst{20} = idx;
     let Inst{19-16} = 0b1000;
