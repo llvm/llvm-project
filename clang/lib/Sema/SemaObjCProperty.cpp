@@ -1467,8 +1467,7 @@ Decl *Sema::ActOnPropertyImplDecl(Scope *S,
                                       LoadSelfExpr, true, true);
       ExprResult Res = PerformCopyInitialization(
           InitializedEntity::InitializeResult(PropertyDiagLoc,
-                                              getterMethod->getReturnType(),
-                                              /*NRVO=*/false),
+                                              getterMethod->getReturnType()),
           PropertyDiagLoc, IvarRefExpr);
       if (!Res.isInvalid()) {
         Expr *ResExpr = Res.getAs<Expr>();

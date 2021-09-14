@@ -298,8 +298,8 @@ public:
 
   /// Create the initialization entity for the result of a function.
   static InitializedEntity InitializeResult(SourceLocation ReturnLoc,
-                                            QualType Type, bool NRVO) {
-    return InitializedEntity(EK_Result, ReturnLoc, Type, NRVO);
+                                            QualType Type) {
+    return InitializedEntity(EK_Result, ReturnLoc, Type);
   }
 
   static InitializedEntity InitializeStmtExprResult(SourceLocation ReturnLoc,
@@ -308,20 +308,20 @@ public:
   }
 
   static InitializedEntity InitializeBlock(SourceLocation BlockVarLoc,
-                                           QualType Type, bool NRVO) {
-    return InitializedEntity(EK_BlockElement, BlockVarLoc, Type, NRVO);
+                                           QualType Type) {
+    return InitializedEntity(EK_BlockElement, BlockVarLoc, Type);
   }
 
   static InitializedEntity InitializeLambdaToBlock(SourceLocation BlockVarLoc,
-                                                   QualType Type, bool NRVO) {
+                                                   QualType Type) {
     return InitializedEntity(EK_LambdaToBlockConversionBlockElement,
-                             BlockVarLoc, Type, NRVO);
+                             BlockVarLoc, Type);
   }
 
   /// Create the initialization entity for an exception object.
   static InitializedEntity InitializeException(SourceLocation ThrowLoc,
-                                               QualType Type, bool NRVO) {
-    return InitializedEntity(EK_Exception, ThrowLoc, Type, NRVO);
+                                               QualType Type) {
+    return InitializedEntity(EK_Exception, ThrowLoc, Type);
   }
 
   /// Create the initialization entity for an object allocated via new.

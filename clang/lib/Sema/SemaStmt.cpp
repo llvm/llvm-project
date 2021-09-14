@@ -3653,8 +3653,8 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
 
     // In C++ the return statement is handled via a copy initialization.
     // the C version of which boils down to CheckSingleAssignmentConstraints.
-    InitializedEntity Entity = InitializedEntity::InitializeResult(
-        ReturnLoc, FnRetType, NRVOCandidate != nullptr);
+    InitializedEntity Entity =
+        InitializedEntity::InitializeResult(ReturnLoc, FnRetType);
     ExprResult Res = PerformMoveOrCopyInitialization(
         Entity, NRInfo, RetValExp, SupressSimplerImplicitMoves);
     if (Res.isInvalid()) {
@@ -4085,8 +4085,8 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp) {
     // the C version of which boils down to CheckSingleAssignmentConstraints.
     if (!HasDependentReturnType && !RetValExp->isTypeDependent()) {
       // we have a non-void function with an expression, continue checking
-      InitializedEntity Entity = InitializedEntity::InitializeResult(
-          ReturnLoc, RetType, NRVOCandidate != nullptr);
+      InitializedEntity Entity =
+          InitializedEntity::InitializeResult(ReturnLoc, RetType);
       ExprResult Res = PerformMoveOrCopyInitialization(
           Entity, NRInfo, RetValExp, SupressSimplerImplicitMoves);
       if (Res.isInvalid()) {
