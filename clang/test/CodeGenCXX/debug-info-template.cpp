@@ -215,3 +215,22 @@ void f1() {
 template void f1<>();
 // CHECK: !DISubprogram(name: "f1<int>",
 } // namespace EmptyInnerPack
+
+namespace RawFuncQual {
+struct t1; // use this to ensure the type parameter doesn't shift due to other test cases in this file
+template<typename T1, typename T2>
+void f1() { }
+template void f1<t1 () volatile, t1 () const volatile>();
+// CHECK: !DISubprogram(name: "f1<RawFuncQual::t1 () volatile, RawFuncQual::t1 () const volatile>", 
+// CHECK-SAME: templateParams: ![[RAW_FUNC_QUAL_ARGS:[0-9]*]],
+
+// CHECK: ![[RAW_FUNC_QUAL_ARGS]] = !{![[RAW_FUNC_QUAL_T1:[0-9]*]], ![[RAW_FUNC_QUAL_T2:[0-9]*]]}
+// CHECK: ![[RAW_FUNC_QUAL_T1]] = !DITemplateTypeParameter(name: "T1", type: ![[RAW_FUNC_QUAL_VOL:[0-9]*]]) 
+// CHECK: ![[RAW_FUNC_QUAL_VOL]] = !DIDerivedType(tag: DW_TAG_volatile_type, baseType: ![[RAW_FUNC_QUAL_TYPE:[0-9]*]])
+// CHECK: ![[RAW_FUNC_QUAL_TYPE]] = !DISubroutineType(types: ![[RAW_FUNC_QUAL_LIST:[0-9]*]]
+// CHECK: ![[RAW_FUNC_QUAL_LIST]] = !{![[RAW_FUNC_QUAL_STRUCT:[0-9]*]]}
+// CHECK: ![[RAW_FUNC_QUAL_STRUCT]] = !DICompositeType(tag: DW_TAG_structure_type, name: "t1"
+// CHECK: ![[RAW_FUNC_QUAL_T2]] = !DITemplateTypeParameter(name: "T2", type: ![[RAW_FUNC_QUAL_CNST:[0-9]*]]) 
+// CHECK: ![[RAW_FUNC_QUAL_CNST]] = !DIDerivedType(tag: DW_TAG_const_type, baseType: ![[RAW_FUNC_QUAL_TYPE:[0-9]*]])
+
+} // namespace RawFuncQual
