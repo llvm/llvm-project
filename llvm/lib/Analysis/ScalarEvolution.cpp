@@ -13495,6 +13495,11 @@ public:
 const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
   auto CollectCondition = [&](ICmpInst::Predicate Predicate, const SCEV *LHS,
                               const SCEV *RHS, ValueToSCEVMapTy &RewriteMap) {
+    // WARNING: It is generally unsound to apply any wrap flags to the proposed
+    // replacement SCEV which isn't directly implied by the structure of that
+    // SCEV.  In particular, using contextual facts to imply flags is *NOT*
+    // legal.  See the scoping rules for flags in the header to understand why.
+
     // If we have LHS == 0, check if LHS is computing a property of some unknown
     // SCEV %v which we can rewrite %v to express explicitly.
     const SCEVConstant *RHSC = dyn_cast<SCEVConstant>(RHS);
@@ -13507,10 +13512,7 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       if (matchURem(LHS, URemLHS, URemRHS)) {
         if (const SCEVUnknown *LHSUnknown = dyn_cast<SCEVUnknown>(URemLHS)) {
           Value *V = LHSUnknown->getValue();
-          auto Multiple =
-              getMulExpr(getUDivExpr(URemLHS, URemRHS), URemRHS,
-                         (SCEV::NoWrapFlags)(SCEV::FlagNUW | SCEV::FlagNSW));
-          RewriteMap[V] = Multiple;
+          RewriteMap[V] = getMulExpr(getUDivExpr(URemLHS, URemRHS), URemRHS);
           return;
         }
       }
