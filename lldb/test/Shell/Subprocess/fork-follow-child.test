@@ -7,5 +7,4 @@ settings set target.process.follow-fork-mode child
 settings set target.process.stop-on-exec false
 b parent_func
 process launch
-# CHECK: function run in parent
 # CHECK: function run in exec'd child
