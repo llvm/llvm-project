@@ -177,21 +177,11 @@ public:
 
   /// Register the location (instructions are given increasing numbers)
   /// of a write access.
-  void addAccess(StoreInst *SI) {
-    Value *Ptr = SI->getPointerOperand();
-    Accesses[MemAccessInfo(Ptr, true)].push_back(AccessIdx);
-    InstMap.push_back(SI);
-    ++AccessIdx;
-  }
+  void addAccess(StoreInst *SI);
 
   /// Register the location (instructions are given increasing numbers)
   /// of a write access.
-  void addAccess(LoadInst *LI) {
-    Value *Ptr = LI->getPointerOperand();
-    Accesses[MemAccessInfo(Ptr, false)].push_back(AccessIdx);
-    InstMap.push_back(LI);
-    ++AccessIdx;
-  }
+  void addAccess(LoadInst *LI);
 
   /// Check whether the dependencies between the accesses are safe.
   ///

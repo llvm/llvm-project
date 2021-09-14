@@ -87,12 +87,19 @@ endif()
 
 include(CheckLibraryExists)
 include(CheckCCompilerFlag)
+include(CheckCXXCompilerFlag)
 
-# Disable use of the installed C++ standard library when building runtimes. If
-# MSVC is true, we must be using the clang-cl driver, which doesn't understand
-# these flags.
-if (NOT MSVC)
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdinc++ -nostdlib++")
+# Disable use of the installed C++ standard library when building runtimes.
+# Check for -nostdlib++ first; if there's no C++ standard library yet,
+# all check_cxx_compiler_flag commands will fail until we add -nostdlib++
+# (or -nodefaultlibs).
+check_c_compiler_flag(-nostdlib++ LLVM_RUNTIMES_SUPPORT_NOSTDLIBXX_FLAG)
+if (LLVM_RUNTIMES_SUPPORT_NOSTDLIBXX_FLAG)
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
+endif()
+check_cxx_compiler_flag(-nostdinc++ LLVM_RUNTIMES_SUPPORT_NOSTDINCXX_FLAG)
+if (LLVM_RUNTIMES_SUPPORT_NOSTDINCXX_FLAG)
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdinc++")
 endif()
 
 # Avoid checking whether the compiler is working.

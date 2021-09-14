@@ -72,6 +72,12 @@ public:
   }
 };
 
+/// Converts an OpFoldResult to a Value. Returns the fold result if it casts to
+/// a Value or creates a ConstantIndexOp if it casts to an IntegerAttribute.
+/// Other attribute types are not supported.
+Value getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
+                                      OpFoldResult ofr);
+
 /// Helper struct to build simple arithmetic quantities with minimal type
 /// inference support.
 struct ArithBuilder {
