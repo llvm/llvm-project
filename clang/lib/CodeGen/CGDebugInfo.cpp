@@ -1345,6 +1345,15 @@ static unsigned getDwarfCC(CallingConv CC) {
   return 0;
 }
 
+static llvm::DINode::DIFlags getRefFlags(const FunctionProtoType *Func) {
+  llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
+  if (Func->getExtProtoInfo().RefQualifier == RQ_LValue)
+    Flags |= llvm::DINode::FlagLValueReference;
+  if (Func->getExtProtoInfo().RefQualifier == RQ_RValue)
+    Flags |= llvm::DINode::FlagRValueReference;
+  return Flags;
+}
+
 llvm::DIType *CGDebugInfo::CreateType(const FunctionType *Ty,
                                       llvm::DIFile *Unit) {
   const auto *FPT = dyn_cast<FunctionProtoType>(Ty);
@@ -1360,11 +1369,13 @@ llvm::DIType *CGDebugInfo::CreateType(const FunctionType *Ty,
   // Add the result type at least.
   EltTys.push_back(getOrCreateType(Ty->getReturnType(), Unit));
 
+  llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
   // Set up remainder of arguments if there is a prototype.
   // otherwise emit it as a variadic function.
   if (!FPT)
     EltTys.push_back(DBuilder.createUnspecifiedParameter());
   else {
+    Flags = getRefFlags(FPT);
     for (const QualType &ParamType : FPT->param_types())
       EltTys.push_back(getOrCreateType(ParamType, Unit));
     if (FPT->isVariadic())
@@ -1372,7 +1383,7 @@ llvm::DIType *CGDebugInfo::CreateType(const FunctionType *Ty,
   }
 
   llvm::DITypeRefArray EltTypeArray = DBuilder.getOrCreateTypeArray(EltTys);
-  llvm::DIType *F = DBuilder.createSubroutineType(EltTypeArray, llvm::DINode::FlagZero,
+  llvm::DIType *F = DBuilder.createSubroutineType(EltTypeArray, Flags,
                                        getDwarfCC(Ty->getCallConv()));
   return F;
 }
@@ -1647,15 +1658,17 @@ CGDebugInfo::getOrCreateInstanceMethodType(QualType ThisPtr,
   Qc.removeUnaligned();
   // Keep the removed qualifiers in sync with
   // CreateQualifiedType(const FunctionPrototype*, DIFile *Unit)
+  // on a 'real' member function type, these qualifiers are carried on the type
+  // of the first parameter, not as separate DW_TAG_const_type (etc) decorator
+  // tags around them. (but in the raw function types with qualifiers, they have
+  // to use wrapper types)
 
   // Add "this" pointer.
-  llvm::DITypeRefArray Args(
-      cast<llvm::DISubroutineType>(
-          getOrCreateType(
-              CGM.getContext().getFunctionType(Func->getReturnType(),
-                                               Func->getParamTypes(), EPI),
-              Unit))
-          ->getTypeArray());
+  const auto *OriginalFunc = cast<llvm::DISubroutineType>(
+      getOrCreateType(CGM.getContext().getFunctionType(
+                          Func->getReturnType(), Func->getParamTypes(), EPI),
+                      Unit));
+  llvm::DITypeRefArray Args = OriginalFunc->getTypeArray();
   assert(Args.size() && "Invalid number of arguments!");
 
   SmallVector<llvm::Metadata *, 16> Elts;
@@ -1697,13 +1710,7 @@ CGDebugInfo::getOrCreateInstanceMethodType(QualType ThisPtr,
 
   llvm::DITypeRefArray EltTypeArray = DBuilder.getOrCreateTypeArray(Elts);
 
-  llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
-  if (Func->getExtProtoInfo().RefQualifier == RQ_LValue)
-    Flags |= llvm::DINode::FlagLValueReference;
-  if (Func->getExtProtoInfo().RefQualifier == RQ_RValue)
-    Flags |= llvm::DINode::FlagRValueReference;
-
-  return DBuilder.createSubroutineType(EltTypeArray, Flags,
+  return DBuilder.createSubroutineType(EltTypeArray, OriginalFunc->getFlags(),
                                        getDwarfCC(Func->getCallConv()));
 }
 
