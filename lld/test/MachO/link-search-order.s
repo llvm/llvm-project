@@ -48,6 +48,10 @@
 # RUN:     -L%tD       -L%t -lhello -lgoodbye -lSystem %t/test.o -search_dylibs_first
 # RUN: llvm-objdump --macho --dylibs-used %t/test | FileCheck --check-prefix=DYLIB %s
 
+################ Test that we try the tbd file before the binary for frameworks too.
+# RUN: not %lld -dylib -F %t -framework Foo -o %t --print-dylib-search \
+# RUN:     | FileCheck --check-prefix=FRAMEWORKSEARCH -DPATH=%t %s
+
 # DYLIB: @executable_path/libhello.dylib
 # DYLIB: @executable_path/libgoodbye.dylib
 # DYLIB: /usr/lib/libSystem.dylib
@@ -71,6 +75,9 @@
 # ARCHIVESEARCH-NEXT: searched [[PATH]]A{{[/\\]}}libhello.a, not found
 # ARCHIVESEARCH:      searched [[PATH]]{{[/\\]}}libhello.dylib, found
 # ARCHIVESEARCH:      searched [[PATH]]A{{[/\\]}}libgoodbye.a, found
+
+# FRAMEWORKSEARCH:      searched [[PATH]]{{[/\\]}}Foo.framework{{[/\\]}}Foo.tbd, not found
+# FRAMEWORKSEARCH-NEXT: searched [[PATH]]{{[/\\]}}Foo.framework{{[/\\]}}Foo, not found
 
 .section __TEXT,__text
 .global _main
