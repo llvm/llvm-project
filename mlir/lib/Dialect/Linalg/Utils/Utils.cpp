@@ -519,6 +519,15 @@ void GenerateLoopNest<scf::ParallelOp>::doit(
   assert(ivs.size() == iteratorTypes.size() && "did not generate enough loops");
 }
 
+static Value fullyComposeAndAffineApply(OpBuilder &b, Location loc,
+                                        AffineExpr expr, ValueRange operands) {
+  AffineMap map = AffineMap::inferFromExprList({expr}).front();
+  SmallVector<Value> normalizedOperands(operands.begin(), operands.end());
+  mlir::fullyComposeAffineMapAndOperands(&map, &normalizedOperands);
+  canonicalizeMapAndOperands(&map, &normalizedOperands);
+  return b.createOrFold<AffineApplyOp>(loc, map, normalizedOperands);
+}
+
 Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
                      ValueRange tileSizes, AffineMap map, ValueRange lbs,
                      ValueRange ubs, ValueRange subShapeSizes) {
@@ -554,16 +563,21 @@ Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
         applyMapToValues(builder, loc, m, subShapeSizes).front();
     // Resulting size needs to be made half open interval again.
     AffineExpr s0 = getAffineSymbolExpr(0, builder.getContext());
-    Value size = makeComposedAffineApply(builder, loc, s0 + 1, closedIntSize);
+    Value size =
+        fullyComposeAndAffineApply(builder, loc, s0 + 1, closedIntSize);
     LLVM_DEBUG(llvm::dbgs() << "makeTiledShape: raw size: " << size << "\n");
 
     // The size of the subview / extract_slice should be trimmed to avoid
-    // out-of-bounds accesses, unless we statically know the subshape size
-    // divides the shape size evenly.
+    // out-of-bounds accesses, unless:
+    // a. We statically know the subshape size divides the shape size evenly.
+    // b. The subshape size is 1. According to the way the loops are set up,
+    //    tensors with "0" dimensions would never be constructed.
     int64_t shapeSize = shape[r];
     auto sizeCst = size.getDefiningOp<ConstantIndexOp>();
-    if (ShapedType::isDynamic(shapeSize) || !sizeCst ||
-        (shapeSize % sizeCst.getValue()) != 0) {
+    auto hasTileSizeOne = sizeCst && sizeCst.getValue() == 1;
+    auto dividesEvenly = sizeCst && !ShapedType::isDynamic(shapeSize) &&
+                         ((shapeSize % sizeCst.getValue()) == 0);
+    if (!hasTileSizeOne && !dividesEvenly) {
       LLVM_DEBUG(llvm::dbgs() << "makeTiledShape: shapeSize=" << shapeSize
                               << ", size: " << size
                               << ": make sure in bound with affine.min\n");
@@ -577,6 +591,7 @@ Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
       Value d = applyMapToValues(builder, loc, m, ubs).front();
       SmallVector<Value, 4> operands{size, d, offset};
       fullyComposeAffineMapAndOperands(&minMap, &operands);
+      canonicalizeMapAndOperands(&minMap, &operands);
       size = builder.create<AffineMinOp>(loc, builder.getIndexType(), minMap,
                                          operands);
     }
@@ -623,7 +638,7 @@ SmallVector<Value> computeTileSizes(OpBuilder &b, Location loc, ValueRange ivs,
     // Before composing, we need to make range a closed interval.
     Value size = isTiled ? tileSizes[idx] : sizeBounds[idx];
     AffineExpr d0 = getAffineDimExpr(0, b.getContext());
-    sizes.push_back(makeComposedAffineApply(b, loc, d0 - 1, size));
+    sizes.push_back(fullyComposeAndAffineApply(b, loc, d0 - 1, size));
     LLVM_DEBUG(llvm::dbgs() << "computeTileSizes: " << sizes.back() << "\n");
   }
   return sizes;
