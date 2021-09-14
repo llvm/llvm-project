@@ -112,6 +112,24 @@ public:
   /// Note that NUW and NSW are also valid properties of a recurrence, and
   /// either implies NW. For convenience, NW will be set for a recurrence
   /// whenever either NUW or NSW are set.
+  ///
+  /// We require that the flag on a SCEV apply to the entire scope in which
+  /// that SCEV is defined.  A SCEV's scope is set of locations dominated by
+  /// a defining location, which is in turn described by the following rules:
+  /// * A SCEVUnknown is at the point of definition of the Value.
+  /// * A SCEVConstant is defined at all points.
+  /// * A SCEVAddRec is defined starting with the header of the associated
+  ///   loop.
+  /// * All other SCEVs are defined at the earlest point all operands are
+  ///   defined.
+  ///
+  /// The above rules describe a maximally hoisted form (without regards to
+  /// potential control dependence).  A SCEV is defined anywhere a
+  /// corresponding instruction could be defined in said maximally hoisted
+  /// form.  Note that SCEVUDivExpr (currently the only expression type which
+  /// can trap) can be defined per these rules in regions where it would trap
+  /// at runtime.  A SCEV being defined does not require the existence of any
+  /// instruction within the defined scope.
   enum NoWrapFlags {
     FlagAnyWrap = 0,    // No guarantee.
     FlagNW = (1 << 0),  // No self-wrap.
