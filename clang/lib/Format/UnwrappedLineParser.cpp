@@ -431,7 +431,7 @@ void UnwrappedLineParser::parseLevel(bool HasOpeningBrace) {
       }
       LLVM_FALLTHROUGH;
     default:
-      parseStructuralElement(/*IsTopLevel=*/true);
+      parseStructuralElement(!HasOpeningBrace);
       break;
     }
   } while (!eof());
