@@ -110,6 +110,31 @@ protected:
   Error graphifySections();
   Error graphifySymbols();
 
+  /// Traverse all matching relocation records in the given section. The handler
+  /// function Func should be callable with this signature:
+  ///   Error(const typename ELFT::Rela &,
+  ///         const typename ELFT::Shdr &, Section &)
+  ///
+  template <typename RelocHandlerFunction>
+  Error forEachRelocation(const typename ELFT::Shdr &RelSect,
+                          RelocHandlerFunction &&Func,
+                          bool ProcessDebugSections = false);
+
+  /// Traverse all matching relocation records in the given section. Convenience
+  /// wrapper to allow passing a member function for the handler.
+  ///
+  template <typename ClassT, typename RelocHandlerMethod>
+  Error forEachRelocation(const typename ELFT::Shdr &RelSect, ClassT *Instance,
+                          RelocHandlerMethod &&Method,
+                          bool ProcessDebugSections = false) {
+    return forEachRelocation(
+        RelSect,
+        [Instance, Method](const auto &Rel, const auto &Target, auto &GS) {
+          return (Instance->*Method)(Rel, Target, GS);
+        },
+        ProcessDebugSections);
+  }
+
   const ELFFile &Obj;
 
   typename ELFFile::Elf_Shdr_Range Sections;
@@ -423,6 +448,54 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySymbols() {
     }
   }
 
+  return Error::success();
+}
+
+template <typename ELFT>
+template <typename RelocHandlerFunction>
+Error ELFLinkGraphBuilder<ELFT>::forEachRelocation(
+    const typename ELFT::Shdr &RelSect, RelocHandlerFunction &&Func,
+    bool ProcessDebugSections) {
+
+  // Only look into sections that store relocation entries.
+  if (RelSect.sh_type != ELF::SHT_RELA && RelSect.sh_type != ELF::SHT_REL)
+    return Error::success();
+
+  // sh_info contains the section header index of the target (FixupSection),
+  // which is the section to which all relocations in RelSect apply.
+  auto FixupSection = Obj.getSection(RelSect.sh_info);
+  if (!FixupSection)
+    return FixupSection.takeError();
+
+  // Target sections have names in valid ELF object files.
+  Expected<StringRef> Name = Obj.getSectionName(**FixupSection);
+  if (!Name)
+    return Name.takeError();
+  LLVM_DEBUG(dbgs() << "  " << *Name << ":\n");
+
+  // Consider skipping these relocations.
+  if (!ProcessDebugSections && isDwarfSection(*Name)) {
+    LLVM_DEBUG(dbgs() << "    skipped (dwarf section)\n\n");
+    return Error::success();
+  }
+
+  // Lookup the link-graph node corresponding to the target section name.
+  Section *GraphSect = G->findSectionByName(*Name);
+  if (!GraphSect)
+    return make_error<StringError>(
+        "Refencing a section that wasn't added to the graph: " + *Name,
+        inconvertibleErrorCode());
+
+  auto RelEntries = Obj.relas(RelSect);
+  if (!RelEntries)
+    return RelEntries.takeError();
+
+  // Let the callee process relocation entries one by one.
+  for (const typename ELFT::Rela &R : *RelEntries)
+    if (Error Err = Func(R, **FixupSection, *GraphSect))
+      return Err;
+
+  LLVM_DEBUG(dbgs() << "\n");
   return Error::success();
 }
 
