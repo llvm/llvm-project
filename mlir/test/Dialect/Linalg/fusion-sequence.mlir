@@ -212,7 +212,6 @@ module {
   }
 }
 
-//       CHaECK: #[[MAP0:.+]] = affine_map<(d0, d1) -> (16, d0 - d1)>
 //       CHECK: #[[MAP0:.+]] = affine_map<(d0)[s0] -> (16, -d0 + s0)>
 //       CHECK: #[[MAP1:.+]] = affine_map<(d0)[s0, s1] -> (-d0 + s0, 16, -d0 + s1)>
 
