@@ -717,6 +717,7 @@ namespace llvm {
       AM_DForm,
       AM_DSForm,
       AM_DQForm,
+      AM_PrefixDForm,
       AM_XForm,
       AM_PCRel
     };
