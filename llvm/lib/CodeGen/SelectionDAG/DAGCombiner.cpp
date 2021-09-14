@@ -10876,7 +10876,7 @@ static SDValue tryToFoldExtOfMaskedLoad(SelectionDAG &DAG,
   if (!Ld || Ld->getExtensionType() != ISD::NON_EXTLOAD)
     return SDValue();
 
-  if (!TLI.isLoadExtLegal(ExtLoadType, VT, Ld->getValueType(0)))
+  if (!TLI.isLoadExtLegalOrCustom(ExtLoadType, VT, Ld->getValueType(0)))
     return SDValue();
 
   if (!TLI.isVectorLoadExtDesirable(SDValue(N, 0)))
