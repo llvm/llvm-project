@@ -876,7 +876,8 @@ for.end:
 }
 
 ; CHECK-LABEL: @smin_intrinsic(
-; CHECK-NOT: <2 x i32> @llvm.smin.v2i32
+; CHECK: <2 x i32> @llvm.smin.v2i32
+; CHECK: i32 @llvm.vector.reduce.smin.v2i32
 define i32 @smin_intrinsic(i32* nocapture readonly %x) {
 entry:
   br label %for.body
@@ -896,7 +897,8 @@ for.cond.cleanup:                                 ; preds = %for.body
 }
 
 ; CHECK-LABEL: @smax_intrinsic(
-; CHECK-NOT: <2 x i32> @llvm.smax.v2i32
+; CHECK: <2 x i32> @llvm.smax.v2i32
+; CHECK: i32 @llvm.vector.reduce.smax.v2i32
 define i32 @smax_intrinsic(i32* nocapture readonly %x) {
 entry:
   br label %for.body
@@ -916,7 +918,8 @@ for.cond.cleanup:                                 ; preds = %for.body
 }
 
 ; CHECK-LABEL: @umin_intrinsic(
-; CHECK-NOT: <2 x i32> @llvm.umin.v2i32
+; CHECK: <2 x i32> @llvm.umin.v2i32
+; CHECK: i32 @llvm.vector.reduce.umin.v2i32
 define i32 @umin_intrinsic(i32* nocapture readonly %x) {
 entry:
   br label %for.body
@@ -936,7 +939,8 @@ for.cond.cleanup:                                 ; preds = %for.body
 }
 
 ; CHECK-LABEL: @umax_intrinsic(
-; CHECK-NOT: <2 x i32> @llvm.umax.v2i32
+; CHECK: <2 x i32> @llvm.umax.v2i32
+; CHECK: i32 @llvm.vector.reduce.umax.v2i32
 define i32 @umax_intrinsic(i32* nocapture readonly %x) {
 entry:
   br label %for.body
@@ -956,7 +960,8 @@ for.cond.cleanup:                                 ; preds = %for.body
 }
 
 ; CHECK-LABEL: @fmin_intrinsic(
-; CHECK-NOT: nnan nsz <2 x float> @llvm.minnum.v2f32
+; CHECK: nnan nsz <2 x float> @llvm.minnum.v2f32
+; CHECK: nnan nsz float @llvm.vector.reduce.fmin.v2f32
 define float @fmin_intrinsic(float* nocapture readonly %x) {
 entry:
   br label %for.body
@@ -976,7 +981,8 @@ for.body:                                         ; preds = %entry, %for.body
 }
 
 ; CHECK-LABEL: @fmax_intrinsic(
-; CHECK-NOT: fast <2 x float> @llvm.maxnum.v2f32
+; CHECK: fast <2 x float> @llvm.maxnum.v2f32
+; CHECK: fast float @llvm.vector.reduce.fmax.v2f32
 define float @fmax_intrinsic(float* nocapture readonly %x) {
 entry:
   br label %for.body
@@ -1060,8 +1066,9 @@ for.body:                                         ; preds = %entry, %for.body
 }
 
 ; CHECK-LABEL: @sminmin(
-; CHECK-NOT: <2 x i32> @llvm.smin.v2i32
-; CHECK-NOT: <2 x i32> @llvm.smin.v2i32
+; CHECK: <2 x i32> @llvm.smin.v2i32
+; CHECK: <2 x i32> @llvm.smin.v2i32
+; CHECK: i32 @llvm.vector.reduce.smin.v2i32
 define i32 @sminmin(i32* nocapture readonly %x, i32* nocapture readonly %y) {
 entry:
   br label %for.body
