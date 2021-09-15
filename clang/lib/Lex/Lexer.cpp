@@ -3112,6 +3112,10 @@ uint32_t Lexer::tryReadUCN(const char *&StartPtr, const char *SlashLoc,
                            Token *Result) {
   unsigned CharSize;
   char Kind = getCharAndSize(StartPtr, CharSize);
+  bool Delimited = false;
+  bool FoundEndDelimiter = false;
+  unsigned Count = 0;
+  bool Diagnose = Result && !isLexingRawMode();
 
   unsigned NumHexDigits;
   if (Kind == 'u')
@@ -3122,7 +3126,7 @@ uint32_t Lexer::tryReadUCN(const char *&StartPtr, const char *SlashLoc,
     return 0;
 
   if (!LangOpts.CPlusPlus && !LangOpts.C99) {
-    if (Result && !isLexingRawMode())
+    if (Diagnose)
       Diag(SlashLoc, diag::warn_ucn_not_valid_in_c89);
     return 0;
   }
@@ -3131,39 +3135,70 @@ uint32_t Lexer::tryReadUCN(const char *&StartPtr, const char *SlashLoc,
   const char *KindLoc = &CurPtr[-1];
 
   uint32_t CodePoint = 0;
-  for (unsigned i = 0; i < NumHexDigits; ++i) {
+  while (Count != NumHexDigits || Delimited) {
     char C = getCharAndSize(CurPtr, CharSize);
+    if (!Delimited && C == '{') {
+      Delimited = true;
+      CurPtr += CharSize;
+      continue;
+    }
+
+    if (Delimited && C == '}') {
+      CurPtr += CharSize;
+      FoundEndDelimiter = true;
+      break;
+    }
 
     unsigned Value = llvm::hexDigitValue(C);
     if (Value == -1U) {
-      if (Result && !isLexingRawMode()) {
-        if (i == 0) {
-          Diag(BufferPtr, diag::warn_ucn_escape_no_digits)
-            << StringRef(KindLoc, 1);
-        } else {
-          Diag(BufferPtr, diag::warn_ucn_escape_incomplete);
+      if (!Delimited)
+        break;
+      if (Diagnose)
+        Diag(BufferPtr, diag::warn_delimited_ucn_incomplete)
+            << StringRef(&C, 1);
+      return 0;
+    }
 
-          // If the user wrote \U1234, suggest a fixit to \u.
-          if (i == 4 && NumHexDigits == 8) {
-            CharSourceRange URange = makeCharRange(*this, KindLoc, KindLoc + 1);
-            Diag(KindLoc, diag::note_ucn_four_not_eight)
-              << FixItHint::CreateReplacement(URange, "u");
-          }
-        }
-      }
-
+    if (CodePoint & 0xF000'0000) {
+      if (Diagnose)
+        Diag(KindLoc, diag::err_escape_too_large) << 0;
       return 0;
     }
 
     CodePoint <<= 4;
-    CodePoint += Value;
-
+    CodePoint |= Value;
     CurPtr += CharSize;
+    Count++;
+  }
+
+  if (Count == 0) {
+    if (Diagnose)
+      Diag(StartPtr, FoundEndDelimiter ? diag::warn_delimited_ucn_empty
+                                       : diag::warn_ucn_escape_no_digits)
+          << StringRef(KindLoc, 1);
+    return 0;
+  }
+
+  if (!Delimited && Count != NumHexDigits) {
+    if (Diagnose) {
+      Diag(BufferPtr, diag::warn_ucn_escape_incomplete);
+      // If the user wrote \U1234, suggest a fixit to \u.
+      if (Count == 4 && NumHexDigits == 8) {
+        CharSourceRange URange = makeCharRange(*this, KindLoc, KindLoc + 1);
+        Diag(KindLoc, diag::note_ucn_four_not_eight)
+            << FixItHint::CreateReplacement(URange, "u");
+      }
+    }
+    return 0;
+  }
+
+  if (Delimited && PP) {
+    Diag(BufferPtr, diag::ext_delimited_escape_sequence);
   }
 
   if (Result) {
     Result->setFlag(Token::HasUCN);
-    if (CurPtr - StartPtr == (ptrdiff_t)NumHexDigits + 2)
+    if (CurPtr - StartPtr == (ptrdiff_t)(Count + 2 + (Delimited ? 2 : 0)))
       StartPtr = CurPtr;
     else
       while (StartPtr != CurPtr)
