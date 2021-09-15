@@ -7804,9 +7804,21 @@ private:
            DCK == DefaultedComparisonKind::Relational) &&
           !Best->RewriteKind) {
         if (Diagnose == ExplainDeleted) {
-          S.Diag(Best->Function->getLocation(),
-                 diag::note_defaulted_comparison_not_rewritten_callee)
-              << FD;
+          if (Best->Function) {
+            S.Diag(Best->Function->getLocation(),
+                   diag::note_defaulted_comparison_not_rewritten_callee)
+                << FD;
+          } else {
+            assert(Best->Conversions.size() == 2 &&
+                   Best->Conversions[0].isUserDefined() &&
+                   "non-user-defined conversion from class to built-in "
+                   "comparison");
+            S.Diag(Best->Conversions[0]
+                       .UserDefined.FoundConversionFunction.getDecl()
+                       ->getLocation(),
+                   diag::note_defaulted_comparison_not_rewritten_conversion)
+                << FD;
+          }
         }
         return Result::deleted();
       }
@@ -7962,7 +7974,7 @@ private:
 
       if (Diagnose == ExplainDeleted) {
         S.Diag(Subobj.Loc, diag::note_defaulted_comparison_no_viable_function)
-            << FD << Subobj.Kind << Subobj.Decl;
+            << FD << (OO == OO_ExclaimEqual) << Subobj.Kind << Subobj.Decl;
 
         // For a three-way comparison, list both the candidates for the
         // original operator and the candidates for the synthesized operator.
