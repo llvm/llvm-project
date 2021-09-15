@@ -267,9 +267,6 @@ struct MemInfoBlock {
   }
 };
 
-static u32 AccessCount = 0;
-static u32 MissCount = 0;
-
 struct SetEntry {
   SetEntry() : id(0), MIB() {}
   bool Empty() { return id == 0; }
@@ -293,8 +290,8 @@ struct CacheSet {
     }
   }
   void insertOrMerge(u64 new_id, MemInfoBlock &newMIB) {
+    SpinMutexLock l(&SetMutex);
     AccessCount++;
-    SetAccessCount++;
 
     for (int i = 0; i < kSetSize; i++) {
       auto id = Entries[i].id;
@@ -321,7 +318,6 @@ struct CacheSet {
 
     // Miss
     MissCount++;
-    SetMissCount++;
 
     // We try to find the entries with the lowest alloc count to be evicted:
     int min_idx = 0;
@@ -347,14 +343,15 @@ struct CacheSet {
   }
 
   void PrintMissRate(int i) {
-    u64 p = SetAccessCount ? SetMissCount * 10000ULL / SetAccessCount : 0;
-    Printf("Set %d miss rate: %d / %d = %5d.%02d%%\n", i, SetMissCount,
-           SetAccessCount, p / 100, p % 100);
+    u64 p = AccessCount ? MissCount * 10000ULL / AccessCount : 0;
+    Printf("Set %d miss rate: %d / %d = %5d.%02d%%\n", i, MissCount,
+           AccessCount, p / 100, p % 100);
   }
 
   SetEntry Entries[kSetSize];
-  u32 SetAccessCount = 0;
-  u32 SetMissCount = 0;
+  u32 AccessCount = 0;
+  u32 MissCount = 0;
+  SpinMutex SetMutex;
 };
 
 struct MemInfoBlockCache {
@@ -389,9 +386,15 @@ struct MemInfoBlockCache {
   void PrintMissRate() {
     if (!flags()->print_mem_info_cache_miss_rate)
       return;
-    u64 p = AccessCount ? MissCount * 10000ULL / AccessCount : 0;
-    Printf("Overall miss rate: %d / %d = %5d.%02d%%\n", MissCount, AccessCount,
-           p / 100, p % 100);
+    u64 MissCountSum = 0;
+    u64 AccessCountSum = 0;
+    for (int i = 0; i < flags()->mem_info_cache_entries; i++) {
+      MissCountSum += Sets[i].MissCount;
+      AccessCountSum += Sets[i].AccessCount;
+    }
+    u64 p = AccessCountSum ? MissCountSum * 10000ULL / AccessCountSum : 0;
+    Printf("Overall miss rate: %d / %d = %5d.%02d%%\n", MissCountSum,
+           AccessCountSum, p / 100, p % 100);
     if (flags()->print_mem_info_cache_miss_rate_details)
       for (int i = 0; i < flags()->mem_info_cache_entries; i++)
         Sets[i].PrintMissRate(i);
@@ -628,10 +631,7 @@ struct Allocator {
 
       MemInfoBlock newMIB(user_requested_size, c, m->timestamp_ms, curtime,
                           m->cpu_id, GetCpuId());
-      {
-        SpinMutexLock l(&fallback_mutex);
         MemInfoBlockTable.insertOrMerge(m->alloc_context_id, newMIB);
-      }
     }
 
     MemprofStats &thread_stats = GetCurrentThreadStats();
