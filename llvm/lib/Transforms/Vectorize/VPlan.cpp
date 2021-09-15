@@ -1420,6 +1420,9 @@ void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
     getCondOp()->printAsOperand(O, SlotTracker);
   }
   O << ")";
+  if (RdxDesc->IntermediateStore)
+    O << " (with final reduction value stored in invariant address sank "
+         "outside of loop)";
 }
 
 void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,

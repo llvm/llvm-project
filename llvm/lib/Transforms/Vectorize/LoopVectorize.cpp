@@ -3998,6 +3998,17 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
   // Set the resume value for this reduction
   ReductionResumeValues.insert({&RdxDesc, BCBlockPhi});
 
+  // If there were stores of the reduction value to a uniform memory address
+  // inside the loop, create the final store here.
+  if (StoreInst *SI = RdxDesc.IntermediateStore) {
+    StoreInst *NewSI =
+        Builder.CreateStore(ReducedPartRdx, SI->getPointerOperand());
+    propagateMetadata(NewSI, SI);
+
+    // If the reduction value is used in other places,
+    // then let the code below create PHI's for that.
+  }
+
   // Now, we need to fix the users of the reduction variable
   // inside and outside of the scalar remainder loop.
 
@@ -7340,6 +7351,16 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
   // Ignore ephemeral values.
   CodeMetrics::collectEphemeralValues(TheLoop, AC, ValuesToIgnore);
 
+  // Find all stores to invariant variables. Since they are going to sink
+  // outside the loop we do not need calculate cost for them.
+  for (BasicBlock *BB : TheLoop->blocks())
+    for (Instruction &I : *BB) {
+      StoreInst *SI;
+      if ((SI = dyn_cast<StoreInst>(&I)) &&
+          Legal->isInvariantAddressOfReduction(SI->getPointerOperand()))
+        ValuesToIgnore.insert(&I);
+    }
+
   // Ignore type-promoting instructions we identified during reduction
   // detection.
   for (auto &Reduction : Legal->getReductionVars()) {
@@ -8844,6 +8865,13 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
         VPBB->appendRecipe(Recipe);
         continue;
       }
+
+      // Invariant stores inside loop will be deleted and a single store
+      // with the final reduction value will be added to the exit block
+      StoreInst *SI;
+      if ((SI = dyn_cast<StoreInst>(&I)) &&
+          Legal->isInvariantAddressOfReduction(SI->getPointerOperand()))
+        continue;
 
       // Otherwise, if all widening options failed, Instruction is to be
       // replicated. This may create a successor for VPBB.

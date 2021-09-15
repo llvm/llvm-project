@@ -441,6 +441,26 @@ static bool hasOutsideLoopUser(const Loop *TheLoop, Instruction *Inst,
   return false;
 }
 
+/// Returns true if A and B have same pointer operands or same SCEVs addresses
+static bool storeToSameAddress(ScalarEvolution *SE, StoreInst *A,
+                               StoreInst *B) {
+  // Compare store
+  if (A == B)
+    return true;
+
+  // Otherwise Compare pointers
+  Value *APtr = A->getPointerOperand();
+  Value *BPtr = B->getPointerOperand();
+  if (APtr == BPtr)
+    return true;
+
+  // Otherwise compare address SCEVs
+  if (SE->getSCEV(APtr) == SE->getSCEV(BPtr))
+    return true;
+
+  return false;
+}
+
 int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
                                                 Value *Ptr) const {
   const ValueToValueMap &Strides =
@@ -678,7 +698,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
 
         RecurrenceDescriptor RedDes;
         if (RecurrenceDescriptor::isReductionPHI(Phi, TheLoop, RedDes, DB, AC,
-                                                 DT)) {
+                                                 DT, PSE.getSE())) {
           Requirements->addExactFPMathInst(RedDes.getExactFPMathInst());
           AllowedExit.insert(RedDes.getLoopExitInstr());
           Reductions[Phi] = RedDes;
@@ -913,11 +933,66 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
   if (!LAI->canVectorizeMemory())
     return false;
 
-  if (LAI->hasDependenceInvolvingLoopInvariantAddress()) {
-    reportVectorizationFailure("Stores to a uniform address",
-        "write to a loop invariant address could not be vectorized",
-        "CantVectorizeStoreToLoopInvariantAddress", ORE, TheLoop);
-    return false;
+  // We can vectorize stores to invariant address when final reduction value is
+  // guaranteed to be stored at the end of the loop. Also, if decision to
+  // vectorize loop is made, runtime checks are added so as to make sure that
+  // invariant address won't alias with any other objects.
+  if (!LAI->getStoresToInvariantAddresses().empty()) {
+    // For each invariant address, check its last stored value is unconditional.
+    for (StoreInst *SI : LAI->getStoresToInvariantAddresses()) {
+      if (isInvariantStoreOfReduction(SI) &&
+          blockNeedsPredication(SI->getParent())) {
+        reportVectorizationFailure(
+            "We don't allow storing to uniform addresses",
+            "write of conditional recurring variant value to a loop "
+            "invariant address could not be vectorized",
+            "CantVectorizeStoreToLoopInvariantAddress", ORE, TheLoop);
+        return false;
+      }
+    }
+
+    if (LAI->hasDependenceInvolvingLoopInvariantAddress()) {
+      // For each invariant address, check its last stored value is the result
+      // of one of our reductions.
+      //
+      // We do not check if dependence with loads exists because they are
+      // currently rejected earlier in LoopAccessInfo::analyzeLoop. In case this
+      // behaviour changes we have to modify this code.
+      ScalarEvolution *SE = PSE.getSE();
+      SmallVector<StoreInst *, 4> UnhandledStores;
+      for (StoreInst *SI : LAI->getStoresToInvariantAddresses()) {
+        if (isInvariantStoreOfReduction(SI)) {
+          // Earlier stores to this address are effectively deadcode.
+          // With opaque pointers it is possible for one pointer to be used with
+          // different sizes of stored values:
+          //    store i32 0, ptr %x
+          //    store i8 0, ptr %x
+          // The latest store doesn't complitely overwrite the first one in the
+          // example. That is why we have to make sure that types of stored
+          // values are same.
+          // TODO: Check that bitwidth of unhandled store is smaller then the
+          // one that overwrites it and add a test.
+          erase_if(UnhandledStores, [SE, SI](StoreInst *I) {
+            return storeToSameAddress(SE, SI, I) &&
+                   I->getValueOperand()->getType() ==
+                       SI->getValueOperand()->getType();
+          });
+          continue;
+        }
+        UnhandledStores.push_back(SI);
+      }
+
+      bool IsOK = UnhandledStores.empty();
+      // TODO: we should also validate against InvariantMemSets.
+      if (!IsOK) {
+        reportVectorizationFailure(
+            "We don't allow storing to uniform addresses",
+            "write to a loop invariant address could not "
+            "be vectorized",
+            "CantVectorizeStoreToLoopInvariantAddress", ORE, TheLoop);
+        return false;
+      }
+    }
   }
 
   Requirements->addRuntimePointerChecks(LAI->getNumRuntimePointerChecks());
@@ -944,11 +1019,32 @@ bool LoopVectorizationLegality::canVectorizeFPMath(
 
   // We can now only vectorize if all reductions with Exact FP math also
   // have the isOrdered flag set, which indicates that we can move the
-  // reduction operations in-loop.
+  // reduction operations in-loop, and do not have intermediate store.
   return (all_of(getReductionVars(), [&](auto &Reduction) -> bool {
     const RecurrenceDescriptor &RdxDesc = Reduction.second;
-    return !RdxDesc.hasExactFPMath() || RdxDesc.isOrdered();
+    return !RdxDesc.hasExactFPMath() ||
+           (RdxDesc.isOrdered() && !RdxDesc.IntermediateStore);
   }));
+}
+
+bool LoopVectorizationLegality::isInvariantStoreOfReduction(StoreInst *SI) {
+  return any_of(getReductionVars(), [&](auto &Reduction) -> bool {
+    const RecurrenceDescriptor &RdxDesc = Reduction.second;
+    return RdxDesc.IntermediateStore == SI;
+  });
+}
+
+bool LoopVectorizationLegality::isInvariantAddressOfReduction(Value *V) {
+  return any_of(getReductionVars(), [&](auto &Reduction) -> bool {
+    const RecurrenceDescriptor &RdxDesc = Reduction.second;
+    if (!RdxDesc.IntermediateStore)
+      return false;
+
+    ScalarEvolution *SE = PSE.getSE();
+    Value *InvariantAddress = RdxDesc.IntermediateStore->getPointerOperand();
+    return V == InvariantAddress ||
+           SE->getSCEV(V) == SE->getSCEV(InvariantAddress);
+  });
 }
 
 bool LoopVectorizationLegality::isInductionPhi(const Value *V) const {
