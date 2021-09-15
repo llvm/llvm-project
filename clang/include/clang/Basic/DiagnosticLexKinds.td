@@ -127,6 +127,15 @@ def warn_utf8_symbol_zero_width : Warning<
   "identifier contains Unicode character <U+%0> that is invisible in "
   "some environments">, InGroup<DiagGroup<"unicode-zero-width">>;
 
+def ext_delimited_escape_sequence : Extension<
+  "delimited escape sequences are a Clang extension">,
+  InGroup<DiagGroup<"delimited-escape-sequence-extension">>;
+def err_delimited_escape_empty : Error<
+  "delimited escape sequence cannot be empty">;
+def err_delimited_escape_missing_brace: Error<
+  "expected '{' after '\\%0' escape sequence">;
+def err_delimited_escape_invalid : Error<
+  "invalid digit '%0' in escape sequence">;
 def err_hex_escape_no_digits : Error<
   "\\%0 used with no following hex digits">;
 def warn_ucn_escape_no_digits : Warning<
@@ -134,6 +143,12 @@ def warn_ucn_escape_no_digits : Warning<
   "treating as '\\' followed by identifier">, InGroup<Unicode>;
 def err_ucn_escape_incomplete : Error<
   "incomplete universal character name">;
+def warn_delimited_ucn_incomplete : Warning<
+  "incomplete delimited universal character name; "
+  "treating as '\\' 'u' '{' identifier">, InGroup<Unicode>;
+def warn_delimited_ucn_empty : Warning<
+  "empty delimited universal character name; "
+  "treating as '\\' 'u' '{' '}'">, InGroup<Unicode>;
 def warn_ucn_escape_incomplete : Warning<
   "incomplete universal character name; "
   "treating as '\\' followed by identifier">, InGroup<Unicode>;
