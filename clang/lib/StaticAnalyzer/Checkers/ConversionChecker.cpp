@@ -49,7 +49,8 @@ private:
 
   bool isLossOfSign(const ImplicitCastExpr *Cast, CheckerContext &C) const;
 
-  void reportBug(ExplodedNode *N, CheckerContext &C, const char Msg[]) const;
+  void reportBug(ExplodedNode *N, const Expr *E, CheckerContext &C,
+                 const char Msg[]) const;
 };
 }
 
@@ -108,20 +109,21 @@ void ConversionChecker::checkPreStmt(const ImplicitCastExpr *Cast,
     if (!N)
       return;
     if (LossOfSign)
-      reportBug(N, C, "Loss of sign in implicit conversion");
+      reportBug(N, Cast, C, "Loss of sign in implicit conversion");
     if (LossOfPrecision)
-      reportBug(N, C, "Loss of precision in implicit conversion");
+      reportBug(N, Cast, C, "Loss of precision in implicit conversion");
   }
 }
 
-void ConversionChecker::reportBug(ExplodedNode *N, CheckerContext &C,
-                                  const char Msg[]) const {
+void ConversionChecker::reportBug(ExplodedNode *N, const Expr *E,
+                                  CheckerContext &C, const char Msg[]) const {
   if (!BT)
     BT.reset(
         new BuiltinBug(this, "Conversion", "Possible loss of sign/precision."));
 
   // Generate a report for this bug.
   auto R = std::make_unique<PathSensitiveBugReport>(*BT, Msg, N);
+  bugreporter::trackExpressionValue(N, E, *R);
   C.emitReport(std::move(R));
 }
 
