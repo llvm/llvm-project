@@ -434,7 +434,7 @@ struct GlobalMemrefOpLowering
   LogicalResult
   matchAndRewrite(memref::GlobalOp global, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    MemRefType type = global.type().cast<MemRefType>();
+    MemRefType type = global.type();
     if (!isConvertibleAndHasIdentityMaps(type))
       return failure();
 
