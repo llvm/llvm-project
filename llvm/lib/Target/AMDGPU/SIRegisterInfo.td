@@ -126,10 +126,6 @@ class SIReg <string n, bits<16> regIdx = 0> :
   let HWEncoding = regIdx;
 }
 
-class SIRegWithSubRegs <string n, list<Register> subregs, bits<16> regIdx> :
-  RegisterWithSubRegs<n, subregs> {
-}
-
 // For register classes that use TSFlags.
 class SIRegisterClass <string n, list<ValueType> rTypes, int Align, dag rList>
   : RegisterClass <n, rTypes, Align, rList> {

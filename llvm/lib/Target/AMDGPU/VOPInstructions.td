@@ -57,8 +57,7 @@ class VOP_Pseudo <string opName, string suffix, VOPProfile P, dag outs, dag ins,
 }
 
 class VOP3Common <dag outs, dag ins, string asm = "",
-                  list<dag> pattern = [], bit HasMods = 0,
-                  bit VOP3Only = 0> :
+                  list<dag> pattern = [], bit HasMods = 0> :
   VOPAnyCommon <outs, ins, asm, pattern> {
 
   // Using complex patterns gives VOP3 patterns a very high complexity rating,
@@ -83,7 +82,7 @@ class VOP3Common <dag outs, dag ins, string asm = "",
 }
 
 class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern = [],
-                   bit VOP3Only = 0, bit isVOP3P = 0, bit isVop3OpSel = 0> :
+                   bit isVOP3P = 0, bit isVop3OpSel = 0> :
   VOP_Pseudo <opName, "_e64", P, P.Outs64,
               !if(isVop3OpSel,
                   P.InsVOP3OpSel,
@@ -136,7 +135,7 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern = [],
 }
 
 class VOP3P_Pseudo <string opName, VOPProfile P, list<dag> pattern = []> :
-  VOP3_Pseudo<opName, P, pattern, 1, 1> {
+  VOP3_Pseudo<opName, P, pattern, 1> {
   let VOP3P = 1;
 }
 

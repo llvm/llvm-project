@@ -55,10 +55,6 @@ class MTBUFGetBaseOpcode<string Op> {
     !subst("FORMAT_XYZW", "FORMAT_X", Op)));
 }
 
-class getMTBUFElements<string Op> {
-  int ret = 1;
-}
-
 
 class MTBUF_Pseudo <string opName, dag outs, dag ins,
                     string asmOps, list<dag> pattern=[]> :
@@ -223,8 +219,7 @@ class MTBUF_Load_Pseudo <string opName,
 }
 
 multiclass MTBUF_Pseudo_Loads<string opName, RegisterClass vdataClass,
-                              int elems, ValueType load_vt = i32,
-                              SDPatternOperator ld = null_frag> {
+                              int elems> {
 
   def _OFFSET : MTBUF_Load_Pseudo <opName, BUFAddrKind.Offset, vdataClass, elems>,
                 MTBUFAddr64Table<0, NAME>;
@@ -265,8 +260,7 @@ class MTBUF_Store_Pseudo <string opName,
 }
 
 multiclass MTBUF_Pseudo_Stores<string opName, RegisterClass vdataClass,
-                               int elems, ValueType store_vt = i32,
-                               SDPatternOperator st = null_frag> {
+                               int elems> {
 
   def _OFFSET : MTBUF_Store_Pseudo <opName, BUFAddrKind.Offset, vdataClass, elems>,
     MTBUFAddr64Table<0, NAME>;
@@ -541,7 +535,6 @@ multiclass MUBUF_Pseudo_Load_Pats<string BaseInst, ValueType load_vt = i32, SDPa
 // opcode because it needs an N+1 register class dest register.
 multiclass MUBUF_Pseudo_Loads<string opName,
                               ValueType load_vt = i32,
-                              SDPatternOperator ld = null_frag,
                               bit TiedDest = 0,
                               bit isLds = 0> {
 
@@ -565,11 +558,9 @@ multiclass MUBUF_Pseudo_Loads<string opName,
   }
 }
 
-multiclass MUBUF_Pseudo_Loads_Lds<string opName, ValueType load_vt = i32,
-                                  SDPatternOperator ld_nolds = null_frag,
-                                  SDPatternOperator ld_lds = null_frag> {
-  defm NAME : MUBUF_Pseudo_Loads<opName, load_vt, ld_nolds>;
-  defm _LDS : MUBUF_Pseudo_Loads<opName, load_vt, ld_lds, 0, 1>;
+multiclass MUBUF_Pseudo_Loads_Lds<string opName, ValueType load_vt = i32> {
+  defm NAME : MUBUF_Pseudo_Loads<opName, load_vt>;
+  defm _LDS : MUBUF_Pseudo_Loads<opName, load_vt, 0, 1>;
 }
 
 class MUBUF_Store_Pseudo <string opName,
@@ -742,7 +733,6 @@ class MUBUF_AtomicRet_Pseudo<string opName, int addrKind,
 multiclass MUBUF_Pseudo_Atomics_NO_RTN <string opName,
                                         RegisterClass vdataClass,
                                         ValueType vdataType,
-                                        SDPatternOperator atomic,
                                         bit isFP = isFloatType<vdataType>.ret> {
   let FPAtomic = isFP in
   def _OFFSET : MUBUF_AtomicNoRet_Pseudo <opName, BUFAddrKind.Offset, vdataClass>,
@@ -796,7 +786,7 @@ multiclass MUBUF_Pseudo_Atomics <string opName,
                                  RegisterClass vdataClass,
                                  ValueType vdataType,
                                  SDPatternOperator atomic> :
-  MUBUF_Pseudo_Atomics_NO_RTN<opName, vdataClass, vdataType, atomic>,
+  MUBUF_Pseudo_Atomics_NO_RTN<opName, vdataClass, vdataType>,
   MUBUF_Pseudo_Atomics_RTN<opName, vdataClass, vdataType, atomic>;
 
 
@@ -924,13 +914,13 @@ defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_DWORDX4", v4i32, load_global>;
 // in at least GFX8+ chips. See Bug 37653.
 let SubtargetPredicate = isGFX8GFX9 in {
 defm BUFFER_LOAD_DWORDX2_LDS : MUBUF_Pseudo_Loads <
-  "buffer_load_dwordx2", v2i32, null_frag, 0, 1
+  "buffer_load_dwordx2", v2i32, 0, 1
 >;
 defm BUFFER_LOAD_DWORDX3_LDS : MUBUF_Pseudo_Loads <
-  "buffer_load_dwordx3", v3i32, null_frag, 0, 1
+  "buffer_load_dwordx3", v3i32, 0, 1
 >;
 defm BUFFER_LOAD_DWORDX4_LDS : MUBUF_Pseudo_Loads <
-  "buffer_load_dwordx4", v4i32, null_frag, 0, 1
+  "buffer_load_dwordx4", v4i32, 0, 1
 >;
 }
 
@@ -1076,27 +1066,27 @@ defm BUFFER_ATOMIC_FMAX_X2 : MUBUF_Pseudo_Atomics <
 let SubtargetPredicate = HasD16LoadStore in {
 
 defm BUFFER_LOAD_UBYTE_D16 : MUBUF_Pseudo_Loads <
-  "buffer_load_ubyte_d16", i32, null_frag, 1
+  "buffer_load_ubyte_d16", i32, 1
 >;
 
 defm BUFFER_LOAD_UBYTE_D16_HI : MUBUF_Pseudo_Loads <
-  "buffer_load_ubyte_d16_hi", i32, null_frag, 1
+  "buffer_load_ubyte_d16_hi", i32, 1
 >;
 
 defm BUFFER_LOAD_SBYTE_D16 : MUBUF_Pseudo_Loads <
-  "buffer_load_sbyte_d16", i32, null_frag, 1
+  "buffer_load_sbyte_d16", i32, 1
 >;
 
 defm BUFFER_LOAD_SBYTE_D16_HI : MUBUF_Pseudo_Loads <
-  "buffer_load_sbyte_d16_hi", i32, null_frag, 1
+  "buffer_load_sbyte_d16_hi", i32, 1
 >;
 
 defm BUFFER_LOAD_SHORT_D16 : MUBUF_Pseudo_Loads <
-  "buffer_load_short_d16", i32, null_frag, 1
+  "buffer_load_short_d16", i32, 1
 >;
 
 defm BUFFER_LOAD_SHORT_D16_HI : MUBUF_Pseudo_Loads <
-  "buffer_load_short_d16_hi", i32, null_frag, 1
+  "buffer_load_short_d16_hi", i32, 1
 >;
 
 defm BUFFER_STORE_BYTE_D16_HI : MUBUF_Pseudo_Stores <
@@ -1121,10 +1111,10 @@ def BUFFER_WBINVL1 : MUBUF_Invalidate <"buffer_wbinvl1",
 
 let SubtargetPredicate = HasAtomicFaddInsts in {
 defm BUFFER_ATOMIC_ADD_F32 : MUBUF_Pseudo_Atomics_NO_RTN <
-  "buffer_atomic_add_f32", VGPR_32, f32, atomic_load_fadd_global_noret_32
+  "buffer_atomic_add_f32", VGPR_32, f32
 >;
 defm BUFFER_ATOMIC_PK_ADD_F16 : MUBUF_Pseudo_Atomics_NO_RTN <
-  "buffer_atomic_pk_add_f16", VGPR_32, v2f16, atomic_load_fadd_v2f16_global_noret_32
+  "buffer_atomic_pk_add_f16", VGPR_32, v2f16
 >;
 
 let OtherPredicates = [isGFX90APlus] in {
