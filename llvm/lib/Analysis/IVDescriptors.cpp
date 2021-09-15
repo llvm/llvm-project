@@ -423,7 +423,8 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurKind Kind,
                  ((!isa<FCmpInst>(UI) && !isa<ICmpInst>(UI) &&
                    !isa<SelectInst>(UI)) ||
                   (!isConditionalRdxPattern(Kind, UI).isRecurrence() &&
-                   !isMinMaxSelectCmpPattern(UI, IgnoredVal).isRecurrence())))
+                   !isMinMaxPattern(UI, Kind, IgnoredVal)
+                        .isRecurrence())))
         return false;
 
       // Remember that we completed the cycle.
@@ -435,8 +436,10 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurKind Kind,
   }
 
   // This means we have seen one but not the other instruction of the
-  // pattern or more than just a select and cmp.
-  if (isMinMaxRecurrenceKind(Kind) && NumCmpSelectPatternInst != 2)
+  // pattern or more than just a select and cmp. Zero implies that we saw a
+  // llvm.min/max instrinsic, which is always OK.
+  if (isMinMaxRecurrenceKind(Kind) && NumCmpSelectPatternInst != 2 &&
+      NumCmpSelectPatternInst != 0)
     return false;
 
   if (!FoundStartPHI || !FoundReduxOp || !ExitInstruction)
@@ -506,10 +509,12 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurKind Kind,
 }
 
 RecurrenceDescriptor::InstDesc
-RecurrenceDescriptor::isMinMaxSelectCmpPattern(Instruction *I,
-                                               const InstDesc &Prev) {
-  assert((isa<CmpInst>(I) || isa<SelectInst>(I)) &&
-         "Expected a cmp or select instruction");
+RecurrenceDescriptor::isMinMaxPattern(Instruction *I, RecurKind Kind,
+                                      const InstDesc &Prev) {
+  assert((isa<CmpInst>(I) || isa<SelectInst>(I) || isa<CallInst>(I)) &&
+         "Expected a cmp or select or call instruction");
+  if (!isMinMaxRecurrenceKind(Kind))
+    return InstDesc(false, I);
 
   // We must handle the select(cmp()) as a single instruction. Advance to the
   // select.
@@ -519,28 +524,33 @@ RecurrenceDescriptor::isMinMaxSelectCmpPattern(Instruction *I,
       return InstDesc(Select, Prev.getRecKind());
   }
 
-  // Only match select with single use cmp condition.
-  if (!match(I, m_Select(m_OneUse(m_Cmp(Pred, m_Value(), m_Value())), m_Value(),
+  // Only match select with single use cmp condition, or a min/max intrinsic.
+  if (!isa<IntrinsicInst>(I) &&
+      !match(I, m_Select(m_OneUse(m_Cmp(Pred, m_Value(), m_Value())), m_Value(),
                          m_Value())))
     return InstDesc(false, I);
 
   // Look for a min/max pattern.
   if (match(I, m_UMin(m_Value(), m_Value())))
-    return InstDesc(I, RecurKind::UMin);
+    return InstDesc(Kind == RecurKind::UMin, I);
   if (match(I, m_UMax(m_Value(), m_Value())))
-    return InstDesc(I, RecurKind::UMax);
+    return InstDesc(Kind == RecurKind::UMax, I);
   if (match(I, m_SMax(m_Value(), m_Value())))
-    return InstDesc(I, RecurKind::SMax);
+    return InstDesc(Kind == RecurKind::SMax, I);
   if (match(I, m_SMin(m_Value(), m_Value())))
-    return InstDesc(I, RecurKind::SMin);
+    return InstDesc(Kind == RecurKind::SMin, I);
   if (match(I, m_OrdFMin(m_Value(), m_Value())))
-    return InstDesc(I, RecurKind::FMin);
+    return InstDesc(Kind == RecurKind::FMin, I);
   if (match(I, m_OrdFMax(m_Value(), m_Value())))
-    return InstDesc(I, RecurKind::FMax);
+    return InstDesc(Kind == RecurKind::FMax, I);
   if (match(I, m_UnordFMin(m_Value(), m_Value())))
-    return InstDesc(I, RecurKind::FMin);
+    return InstDesc(Kind == RecurKind::FMin, I);
   if (match(I, m_UnordFMax(m_Value(), m_Value())))
-    return InstDesc(I, RecurKind::FMax);
+    return InstDesc(Kind == RecurKind::FMax, I);
+  if (match(I, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_Value())))
+    return InstDesc(Kind == RecurKind::FMin, I);
+  if (match(I, m_Intrinsic<Intrinsic::maxnum>(m_Value(), m_Value())))
+    return InstDesc(Kind == RecurKind::FMax, I);
 
   return InstDesc(false, I);
 }
@@ -593,7 +603,8 @@ RecurrenceDescriptor::isConditionalRdxPattern(RecurKind Kind, Instruction *I) {
 
 RecurrenceDescriptor::InstDesc
 RecurrenceDescriptor::isRecurrenceInstr(Instruction *I, RecurKind Kind,
-                                        InstDesc &Prev, FastMathFlags FMF) {
+                                        InstDesc &Prev, FastMathFlags FuncFMF) {
+  assert(Prev.getRecKind() == RecurKind::None || Prev.getRecKind() == Kind);
   switch (I->getOpcode()) {
   default:
     return InstDesc(false, I);
@@ -624,9 +635,13 @@ RecurrenceDescriptor::isRecurrenceInstr(Instruction *I, RecurKind Kind,
     LLVM_FALLTHROUGH;
   case Instruction::FCmp:
   case Instruction::ICmp:
+  case Instruction::Call:
     if (isIntMinMaxRecurrenceKind(Kind) ||
-        (FMF.noNaNs() && FMF.noSignedZeros() && isFPMinMaxRecurrenceKind(Kind)))
-      return isMinMaxSelectCmpPattern(I, Prev);
+        (((FuncFMF.noNaNs() && FuncFMF.noSignedZeros()) ||
+          (isa<FPMathOperator>(I) && I->hasNoNaNs() &&
+           I->hasNoSignedZeros())) &&
+         isFPMinMaxRecurrenceKind(Kind)))
+      return isMinMaxPattern(I, Kind, Prev);
     return InstDesc(false, I);
   }
 }

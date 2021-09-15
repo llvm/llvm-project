@@ -1732,7 +1732,12 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
 
   if (S.getLangOpts().OpenCL) {
     const auto &OpenCLOptions = S.getOpenCLOptions();
+    // FIXME: both variables IsOpenCLC30 and IsOpenCLC30Compatible should be
+    // unified into one when __opencl_c_3d_image_writes option is enabled in
+    // C++ for OpenCL 2021
     bool IsOpenCLC30 = (S.getLangOpts().OpenCLVersion == 300);
+    bool IsOpenCLC30Compatible =
+        S.getLangOpts().getOpenCLCompatibleVersion() == 300;
     // OpenCL C v3.0 s6.3.3 - OpenCL image types require __opencl_c_images
     // support.
     // OpenCL C v3.0 s6.2.1 - OpenCL 3d image write types requires support
@@ -1741,7 +1746,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     // that support OpenCL 3.0, cl_khr_3d_image_writes must be returned when and
     // only when the optional feature is supported
     if ((Result->isImageType() || Result->isSamplerT()) &&
-        (IsOpenCLC30 &&
+        (IsOpenCLC30Compatible &&
          !OpenCLOptions.isSupported("__opencl_c_images", S.getLangOpts()))) {
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_opencl_requires_extension)
           << 0 << Result << "__opencl_c_images";
