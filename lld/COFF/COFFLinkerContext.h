@@ -73,13 +73,13 @@ public:
   // PDB timers.
   Timer totalPdbLinkTimer;
   Timer addObjectsTimer;
-  Timer symbolMergingTimer;
   Timer typeMergingTimer;
-  Timer tpiStreamLayoutTimer;
-  Timer publicsLayoutTimer;
-  Timer diskCommitTimer;
   Timer loadGHashTimer;
   Timer mergeGHashTimer;
+  Timer symbolMergingTimer;
+  Timer publicsLayoutTimer;
+  Timer tpiStreamLayoutTimer;
+  Timer diskCommitTimer;
 };
 
 } // namespace coff

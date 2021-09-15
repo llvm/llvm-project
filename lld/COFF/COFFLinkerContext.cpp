@@ -25,17 +25,17 @@ COFFLinkerContext::COFFLinkerContext()
       outputCommitTimer("Commit Output File", rootTimer),
       totalMapTimer("MAP Emission (Cumulative)", rootTimer),
       symbolGatherTimer("Gather Symbols", totalMapTimer),
-      symbolStringsTimer("Build Symbol strings", totalMapTimer),
+      symbolStringsTimer("Build Symbol Strings", totalMapTimer),
       writeTimer("Write to File", totalMapTimer),
       totalPdbLinkTimer("PDB Emission (Cumulative)", rootTimer),
       addObjectsTimer("Add Objects", totalPdbLinkTimer),
-      symbolMergingTimer("Symbol Merging", addObjectsTimer),
       typeMergingTimer("Type Merging", addObjectsTimer),
-      tpiStreamLayoutTimer("TPI Stream Layout", totalPdbLinkTimer),
-      publicsLayoutTimer("Publics Stream Layout", totalPdbLinkTimer),
-      diskCommitTimer("Commit to Disk", totalPdbLinkTimer),
       loadGHashTimer("Global Type Hashing", addObjectsTimer),
-      mergeGHashTimer("GHash Type Merging", addObjectsTimer) {}
+      mergeGHashTimer("GHash Type Merging", addObjectsTimer),
+      symbolMergingTimer("Symbol Merging", addObjectsTimer),
+      publicsLayoutTimer("Publics Stream Layout", totalPdbLinkTimer),
+      tpiStreamLayoutTimer("TPI Stream Layout", totalPdbLinkTimer),
+      diskCommitTimer("Commit to Disk", totalPdbLinkTimer) {}
 
 COFFLinkerContext::~COFFLinkerContext() { clearGHashes(); }
 
