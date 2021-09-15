@@ -691,15 +691,15 @@ define void @PR14241(i32* %s, i64 %size) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S1:%.*]] = bitcast i32* [[S:%.*]] to i8*
 ; CHECK-NEXT:    [[END_IDX:%.*]] = add i64 [[SIZE:%.*]], -1
-; CHECK-NEXT:    [[END_PTR:%.*]] = getelementptr inbounds i32, i32* [[S:%.*]], i64 [[END_IDX]]
+; CHECK-NEXT:    [[END_PTR:%.*]] = getelementptr inbounds i32, i32* [[S]], i64 [[END_IDX]]
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i32, i32* [[S]], i64 1
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = bitcast i32* [[SCEVGEP]] to i8*
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[SIZE]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], -8
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], 4
-; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 [[S1]], i8* align 4 [[SCEVGEP2]], i64 [[TMP5]], i1 false)
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[SIZE]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], -8
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 4
+; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 [[S1]], i8* align 4 [[SCEVGEP2]], i64 [[TMP4]], i1 false)
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[PHI_PTR:%.*]] = phi i32* [ [[S]], [[ENTRY:%.*]] ], [ [[NEXT_PTR:%.*]], [[WHILE_BODY]] ]
@@ -1083,7 +1083,7 @@ define void @PR46179_positive_stride(i8* %Src, i64 %Size) {
 ; CHECK-NEXT:    [[DESTI:%.*]] = getelementptr i8, i8* [[SRC]], i64 [[INDVAR]]
 ; CHECK-NEXT:    [[V:%.*]] = load i8, i8* [[SRCI]], align 1
 ; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[INDVAR]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVAR_NEXT]], [[SIZE:%.*]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVAR_NEXT]], [[SIZE]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -1117,13 +1117,15 @@ define void @PR46179_negative_stride(i8* %Src, i64 %Size) {
 ; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i64(i8* align 1 [[SCEVGEP]], i8* align 1 [[SRC]], i64 [[SIZE]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[STEP]], [[FOR_BODY]] ], [ [[SIZE]], [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[STEP:%.*]] = add nsw i64 [[INDVAR]], -1
-; CHECK-NEXT:    [[SRCI:%.*]] = getelementptr inbounds i8, i8* [[SRC:%.*]], i64 [[STEP]]
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[STEP:%.*]], [[FOR_BODY]] ], [ [[SIZE]], [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[STEP]] = add nsw i64 [[INDVAR]], -1
+; CHECK-NEXT:    [[SRCI:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 [[STEP]]
 ; CHECK-NEXT:    [[V:%.*]] = load i8, i8* [[SRCI]], align 1
 ; CHECK-NEXT:    [[DESTI:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 [[INDVAR]]
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp sgt i64 [[INDVAR]], 1
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
+; CHECK:       for.end.loopexit:
+; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -1190,15 +1192,17 @@ define void @do_not_form_memmove2(i8* %Src, i64 %Size) {
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT]], [[FOR_BODY]] ], [ [[SIZE]], [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ], [ [[SIZE]], [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[STEP:%.*]] = add nuw nsw i64 [[INDVAR]], 1
 ; CHECK-NEXT:    [[SRCI:%.*]] = getelementptr inbounds i8, i8* [[SRC:%.*]], i64 [[STEP]]
 ; CHECK-NEXT:    [[V:%.*]] = load i8, i8* [[SRCI]], align 1
 ; CHECK-NEXT:    [[DESTI:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 [[INDVAR]]
 ; CHECK-NEXT:    store i8 [[V]], i8* [[DESTI]], align 1
-; CHECK-NEXT:    [[INDVAR_NEXT:%.*]] = add nsw i64 [[INDVAR]], -1
+; CHECK-NEXT:    [[INDVAR_NEXT]] = add nsw i64 [[INDVAR]], -1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp sgt i64 [[INDVAR]], 1
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
+; CHECK:       for.end.loopexit:
+; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -1274,7 +1278,7 @@ define void @do_not_form_memmove4(i8* %Src, i64 %Size) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[BB_NPH:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP:%.*]] = add nuw nsw i64 [[INDVAR]], 1
-; CHECK-NEXT:    [[SRCI:%.*]] = getelementptr i8, i8* [[SRC]], i64 [[STEP]]
+; CHECK-NEXT:    [[SRCI:%.*]] = getelementptr i8, i8* [[SRC:%.*]], i64 [[STEP]]
 ; CHECK-NEXT:    [[DESTI:%.*]] = getelementptr i8, i8* [[SRC]], i64 [[INDVAR]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 [[DESTI]], i8* align 1 [[SRCI]], i64 1, i1 false)
 ; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[INDVAR]], 1
@@ -1316,11 +1320,11 @@ define i32 @do_not_form_memmove5(i32* %p) {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[INDEX]] to i64
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    store i32 [[TMP1]], i32* [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[ADD]] = add nsw i32 [[TMP1]], [[SUM:%.*]]
+; CHECK-NEXT:    [[ADD]] = add nsw i32 [[TMP1]], [[SUM]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[INDEX]], 1
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP:%.*]]
 ;
 entry:
   br label %for.body
@@ -1382,5 +1386,3 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 ; Validate that "memset_pattern" has the proper attributes.
-; CHECK: declare void @memset_pattern16(i8* nocapture writeonly, i8* nocapture readonly, i64) [[ATTRS:#[0-9]+]]
-; CHECK: [[ATTRS]] = { argmemonly nofree }
