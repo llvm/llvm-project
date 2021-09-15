@@ -204,25 +204,25 @@ struct MemInfoBlock {
     u64 p;
     if (flags()->print_terse) {
       p = total_size * 100 / alloc_count;
-      Printf("MIB:%llu/%u/%d.%02d/%u/%u/", id, alloc_count, p / 100, p % 100,
+      Printf("MIB:%llu/%u/%llu.%02llu/%u/%u/", id, alloc_count, p / 100, p % 100,
              min_size, max_size);
       p = total_access_count * 100 / alloc_count;
-      Printf("%d.%02d/%u/%u/", p / 100, p % 100, min_access_count,
+      Printf("%llu.%02llu/%llu/%llu/", p / 100, p % 100, min_access_count,
              max_access_count);
       p = total_lifetime * 100 / alloc_count;
-      Printf("%d.%02d/%u/%u/", p / 100, p % 100, min_lifetime, max_lifetime);
+      Printf("%llu.%02llu/%u/%u/", p / 100, p % 100, min_lifetime, max_lifetime);
       Printf("%u/%u/%u/%u\n", num_migrated_cpu, num_lifetime_overlaps,
              num_same_alloc_cpu, num_same_dealloc_cpu);
     } else {
       p = total_size * 100 / alloc_count;
       Printf("Memory allocation stack id = %llu\n", id);
-      Printf("\talloc_count %u, size (ave/min/max) %d.%02d / %u / %u\n",
+      Printf("\talloc_count %u, size (ave/min/max) %llu.%02llu / %u / %u\n",
              alloc_count, p / 100, p % 100, min_size, max_size);
       p = total_access_count * 100 / alloc_count;
-      Printf("\taccess_count (ave/min/max): %d.%02d / %u / %u\n", p / 100,
+      Printf("\taccess_count (ave/min/max): %llu.%02llu / %llu / %llu\n", p / 100,
              p % 100, min_access_count, max_access_count);
       p = total_lifetime * 100 / alloc_count;
-      Printf("\tlifetime (ave/min/max): %d.%02d / %u / %u\n", p / 100, p % 100,
+      Printf("\tlifetime (ave/min/max): %llu.%02llu / %u / %u\n", p / 100, p % 100,
              min_lifetime, max_lifetime);
       Printf("\tnum migrated: %u, num lifetime overlaps: %u, num same alloc "
              "cpu: %u, num same dealloc_cpu: %u\n",
@@ -344,7 +344,7 @@ struct CacheSet {
 
   void PrintMissRate(int i) {
     u64 p = AccessCount ? MissCount * 10000ULL / AccessCount : 0;
-    Printf("Set %d miss rate: %d / %d = %5d.%02d%%\n", i, MissCount,
+    Printf("Set %d miss rate: %d / %d = %5llu.%02llu%%\n", i, MissCount,
            AccessCount, p / 100, p % 100);
   }
 
@@ -393,7 +393,7 @@ struct MemInfoBlockCache {
       AccessCountSum += Sets[i].AccessCount;
     }
     u64 p = AccessCountSum ? MissCountSum * 10000ULL / AccessCountSum : 0;
-    Printf("Overall miss rate: %d / %d = %5d.%02d%%\n", MissCountSum,
+    Printf("Overall miss rate: %llu / %llu = %5llu.%02llu%%\n", MissCountSum,
            AccessCountSum, p / 100, p % 100);
     if (flags()->print_mem_info_cache_miss_rate_details)
       for (int i = 0; i < flags()->mem_info_cache_entries; i++)
@@ -544,8 +544,7 @@ struct Allocator {
     if (size > kMaxAllowedMallocSize || needed_size > kMaxAllowedMallocSize ||
         size > max_user_defined_malloc_size) {
       if (AllocatorMayReturnNull()) {
-        Report("WARNING: MemProfiler failed to allocate 0x%zx bytes\n",
-               (void *)size);
+        Report("WARNING: MemProfiler failed to allocate 0x%zx bytes\n", size);
         return nullptr;
       }
       uptr malloc_limit =
