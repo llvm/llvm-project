@@ -87,7 +87,7 @@ template <typename V>
 struct SparseTensorCOO {
 public:
   SparseTensorCOO(const std::vector<uint64_t> &szs, uint64_t capacity)
-      : sizes(szs), pos(0) {
+      : sizes(szs) {
     if (capacity)
       elements.reserve(capacity);
   }
@@ -100,8 +100,6 @@ public:
   }
   /// Sorts elements lexicographically by index.
   void sort() { std::sort(elements.begin(), elements.end(), lexOrder); }
-  /// Primitive one-time iteration.
-  const Element<V> &next() { return elements[pos++]; }
   /// Returns rank.
   uint64_t getRank() const { return sizes.size(); }
   /// Getter for sizes array.
@@ -135,7 +133,6 @@ private:
   }
   std::vector<uint64_t> sizes; // per-rank dimension sizes
   std::vector<Element<V>> elements;
-  uint64_t pos;
 };
 
 /// Abstract base class of sparse tensor storage. Note that we use
@@ -216,15 +213,22 @@ public:
 
   virtual ~SparseTensorStorage() {}
 
+  /// Get the rank of the tensor.
   uint64_t getRank() const { return sizes.size(); }
 
-  uint64_t getDimSize(uint64_t d) override { return sizes[d]; }
+  /// Get the size in the given dimension of the tensor.
+  uint64_t getDimSize(uint64_t d) override {
+    assert(d < getRank());
+    return sizes[d];
+  }
 
   // Partially specialize these three methods based on template types.
   void getPointers(std::vector<P> **out, uint64_t d) override {
+    assert(d < getRank());
     *out = &pointers[d];
   }
   void getIndices(std::vector<I> **out, uint64_t d) override {
+    assert(d < getRank());
     *out = &indices[d];
   }
   void getValues(std::vector<V> **out) override { *out = &values; }
@@ -248,6 +252,7 @@ public:
       reord[r] = perm[rev[r]];
     std::vector<uint64_t> idx(size);
     toCOO(tensor, reord, idx, 0, 0);
+    assert(tensor->getElements().size() == values.size());
     return tensor;
   }
 
@@ -271,12 +276,15 @@ private:
     const std::vector<Element<V>> &elements = tensor->getElements();
     // Once dimensions are exhausted, insert the numerical values.
     if (d == getRank()) {
+      assert(lo >= hi || lo < elements.size());
       values.push_back(lo < hi ? elements[lo].value : 0);
       return;
     }
+    assert(d < getRank());
     // Visit all elements in this interval.
     uint64_t full = 0;
     while (lo < hi) {
+      assert(lo < elements.size() && hi <= elements.size());
       // Find segment in interval with same index elements in this dimension.
       unsigned idx = elements[lo].indices[d];
       unsigned seg = lo + 1;
@@ -312,7 +320,9 @@ private:
   /// tensor in coordinate scheme.
   void toCOO(SparseTensorCOO<V> *tensor, std::vector<uint64_t> &reord,
              std::vector<uint64_t> &idx, uint64_t pos, uint64_t d) {
+    assert(d <= getRank());
     if (d == getRank()) {
+      assert(pos < values.size());
       tensor->add(idx, values[pos]);
     } else if (pointers[d].empty()) {
       // Dense dimension.
