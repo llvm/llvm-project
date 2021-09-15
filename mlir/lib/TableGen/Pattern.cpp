@@ -54,9 +54,7 @@ bool DagLeaf::isEnumAttrCase() const {
   return isSubClassOf("EnumAttrCaseInfo");
 }
 
-bool DagLeaf::isStringAttr() const {
-  return isa<llvm::StringInit>(def);
-}
+bool DagLeaf::isStringAttr() const { return isa<llvm::StringInit>(def); }
 
 Constraint DagLeaf::getAsConstraint() const {
   assert((isOperandMatcher() || isAttrMatcher()) &&
@@ -114,7 +112,8 @@ bool DagNode::isNativeCodeCall() const {
 }
 
 bool DagNode::isOperation() const {
-  return !isNativeCodeCall() && !isReplaceWithValue() && !isLocationDirective();
+  return !isNativeCodeCall() && !isReplaceWithValue() &&
+         !isLocationDirective() && !isReturnTypeDirective();
 }
 
 llvm::StringRef DagNode::getNativeCodeTemplate() const {
@@ -178,6 +177,11 @@ bool DagNode::isReplaceWithValue() const {
 bool DagNode::isLocationDirective() const {
   auto *dagOpDef = cast<llvm::DefInit>(node->getOperator())->getDef();
   return dagOpDef->getName() == "location";
+}
+
+bool DagNode::isReturnTypeDirective() const {
+  auto *dagOpDef = cast<llvm::DefInit>(node->getOperator())->getDef();
+  return dagOpDef->getName() == "returnType";
 }
 
 void DagNode::print(raw_ostream &os) const {
@@ -753,14 +757,18 @@ void Pattern::collectBoundSymbols(DagNode tree, SymbolInfoMap &infoMap,
     auto &op = getDialectOp(tree);
     auto numOpArgs = op.getNumArgs();
 
-    // The pattern might have the last argument specifying the location.
-    bool hasLocDirective = false;
-    if (numTreeArgs != 0) {
-      if (auto lastArg = tree.getArgAsNestedDag(numTreeArgs - 1))
-        hasLocDirective = lastArg.isLocationDirective();
+    // The pattern might have trailing directives.
+    int numDirectives = 0;
+    for (int i = numTreeArgs - 1; i >= 0; --i) {
+      if (auto dagArg = tree.getArgAsNestedDag(i)) {
+        if (dagArg.isLocationDirective() || dagArg.isReturnTypeDirective())
+          ++numDirectives;
+        else
+          break;
+      }
     }
 
-    if (numOpArgs != numTreeArgs - hasLocDirective) {
+    if (numOpArgs != numTreeArgs - numDirectives) {
       auto err = formatv("op '{0}' argument number mismatch: "
                          "{1} in pattern vs. {2} in definition",
                          op.getOperationName(), numTreeArgs, numOpArgs);
