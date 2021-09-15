@@ -158,6 +158,29 @@ public:
     return *MemMgr;
   }
 
+  /// Returns the bootstrap symbol map.
+  const StringMap<ExecutorAddress> &getBootstrapSymbolsMap() const {
+    return BootstrapSymbols;
+  }
+
+  /// For each (ExecutorAddress&, StringRef) pair, looks up the string in the
+  /// bootstrap symbols map and writes its address to the ExecutorAddress if
+  /// found. If any symbol is not found then the function returns an error.
+  Error getBootstrapSymbols(
+      ArrayRef<std::pair<ExecutorAddress &, StringRef>> Pairs) const {
+    for (auto &KV : Pairs) {
+      auto I = BootstrapSymbols.find(KV.second);
+      if (I == BootstrapSymbols.end())
+        return make_error<StringError>("Symbol \"" + KV.second +
+                                           "\" not found "
+                                           "in bootstrap symbols map",
+                                       inconvertibleErrorCode());
+
+      KV.first = I->second;
+    }
+    return Error::success();
+  }
+
   /// Load the dynamic library at the given path and return a handle to it.
   /// If LibraryPath is null this function will return the global handle for
   /// the target process.
@@ -252,6 +275,7 @@ protected:
   JITDispatchInfo JDI;
   MemoryAccess *MemAccess = nullptr;
   jitlink::JITLinkMemoryManager *MemMgr = nullptr;
+  StringMap<ExecutorAddress> BootstrapSymbols;
 };
 
 /// A ExecutorProcessControl instance that asserts if any of its methods are

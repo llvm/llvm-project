@@ -316,3 +316,16 @@ func @vector_transfer(%in: tensor<4xf32>, %out: tensor<4xf32>) {
   // CHECK: vector.transfer_read {{.*}} : memref<4xf32>, vector<4xf32>
   // CHECK: vector.transfer_write {{.*}} : vector<4xf32>, memref<4xf32>
 }
+
+// -----
+
+// CHECK-LABEL:   func @bufferize_dot
+func @bufferize_dot(%in: tensor<4xf32>, %out: tensor<f32>) -> tensor<f32> {
+  %dot = linalg.dot ins(%in, %in : tensor<4xf32>, tensor<4xf32>)
+                          outs(%out : tensor<f32>) -> tensor<f32>
+  return %dot : tensor<f32>
+  // CHECK: linalg.dot ins(%{{.*}}, %{{.*}} : memref<4xf32>, memref<4xf32>)
+  // CHECK-SAME:       outs(%[[OUT:.*]] : memref<f32>)
+  // CHECK: %[[OUT_TENSOR:.*]] = memref.tensor_load %[[OUT]] : memref<f32>
+  // CHECK: return %[[OUT_TENSOR]]
+}

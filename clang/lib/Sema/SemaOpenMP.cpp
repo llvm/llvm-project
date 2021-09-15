@@ -3214,7 +3214,7 @@ Sema::ActOnOpenMPRequiresDirective(SourceLocation Loc,
 
 void Sema::ActOnOpenMPAssumesDirective(SourceLocation Loc,
                                        OpenMPDirectiveKind DKind,
-                                       ArrayRef<StringRef> Assumptions,
+                                       ArrayRef<std::string> Assumptions,
                                        bool SkippedClauses) {
   if (!SkippedClauses && Assumptions.empty())
     Diag(Loc, diag::err_omp_no_clause_for_directive)

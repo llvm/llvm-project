@@ -534,6 +534,17 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Open(
   return SendErrorResponse(18);
 }
 
+static GDBErrno system_errno_to_gdb(int err) {
+  switch (err) {
+#define HANDLE_ERRNO(name, value)                                              \
+  case name:                                                                   \
+    return GDB_##name;
+#include "Plugins/Process/gdb-remote/GDBRemoteErrno.def"
+  default:
+    return GDB_EUNKNOWN;
+  }
+}
+
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerCommon::Handle_vFile_Close(
     StringExtractorGDBRemote &packet) {
@@ -553,7 +564,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Close(
   response.PutChar('F');
   response.Printf("%x", err);
   if (save_errno)
-    response.Printf(",%x", save_errno);
+    response.Printf(",%x", system_errno_to_gdb(save_errno));
   return SendPacketNoLock(response.GetString());
 }
 
@@ -584,7 +595,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_pRead(
       } else {
         response.PutCString("-1");
         if (save_errno)
-          response.Printf(",%x", save_errno);
+          response.Printf(",%x", system_errno_to_gdb(save_errno));
       }
       return SendPacketNoLock(response.GetString());
     }
@@ -616,7 +627,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_pWrite(
         else {
           response.PutCString("-1");
           if (save_errno)
-            response.Printf(",%x", save_errno);
+            response.Printf(",%x", system_errno_to_gdb(save_errno));
         }
       } else {
         response.Printf("-1,%x", EINVAL);
@@ -661,9 +672,10 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Mode(
     std::error_code ec;
     const uint32_t mode = FileSystem::Instance().GetPermissions(file_spec, ec);
     StreamString response;
-    response.Printf("F%x", mode);
-    if (mode == 0 || ec)
-      response.Printf(",%x", (int)Status(ec).GetError());
+    if (mode != llvm::sys::fs::perms_not_known)
+      response.Printf("F%x", mode);
+    else
+      response.Printf("F-1,%x", (int)Status(ec).GetError());
     return SendPacketNoLock(response.GetString());
   }
   return SendErrorResponse(23);
@@ -773,7 +785,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_FStat(
   struct stat file_stats;
   if (::fstat(fd, &file_stats) == -1) {
     const int save_errno = errno;
-    response.Printf("F-1,%x", save_errno);
+    response.Printf("F-1,%x", system_errno_to_gdb(save_errno));
     return SendPacketNoLock(response.GetString());
   }
 

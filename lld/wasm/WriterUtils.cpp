@@ -80,9 +80,11 @@ std::string toString(const WasmTableType &type) {
 }
 
 namespace wasm {
+#ifdef LLVM_DEBUG
 void debugWrite(uint64_t offset, const Twine &msg) {
   LLVM_DEBUG(dbgs() << format("  | %08lld: ", offset) << msg << "\n");
 }
+#endif
 
 void writeUleb128(raw_ostream &os, uint64_t number, const Twine &msg) {
   debugWrite(os.tell(), msg + "[" + utohexstr(number) + "]");

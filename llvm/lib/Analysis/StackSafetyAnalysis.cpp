@@ -30,6 +30,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <memory>
+#include <tuple>
 
 using namespace llvm;
 
@@ -116,6 +117,7 @@ template <typename CalleeTy> struct UseInfo {
   // Access range if the address (alloca or parameters).
   // It is allowed to be empty-set when there are no known accesses.
   ConstantRange Range;
+  std::map<const Instruction *, ConstantRange> Accesses;
 
   // List of calls which pass address as an argument.
   // Value is offset range of address from base address (alloca or calling
@@ -130,6 +132,9 @@ template <typename CalleeTy> struct UseInfo {
 
   void updateRange(const ConstantRange &R) { Range = unionNoWrap(Range, R); }
   void addRange(const Instruction *I, const ConstantRange &R) {
+    auto Ins = Accesses.emplace(I, R);
+    if (!Ins.second)
+      Ins.first->second = unionNoWrap(Ins.first->second, R);
     updateRange(R);
   }
 };
@@ -225,6 +230,7 @@ struct StackSafetyInfo::InfoTy {
 struct StackSafetyGlobalInfo::InfoTy {
   GVToSSI Info;
   SmallPtrSet<const AllocaInst *, 8> SafeAllocas;
+  SmallPtrSet<const Instruction *, 8> SafeAccesses;
 };
 
 namespace {
@@ -351,7 +357,7 @@ void StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
       case Instruction::Load: {
         if (AI && !SL.isAliveAfter(AI, I)) {
           US.addRange(I, UnknownRange);
-          return;
+          break;
         }
         US.addRange(I,
                     getAccessRange(UI, Ptr, DL.getTypeStoreSize(I->getType())));
@@ -365,11 +371,11 @@ void StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
         if (V == I->getOperand(0)) {
           // Stored the pointer - conservatively assume it may be unsafe.
           US.addRange(I, UnknownRange);
-          return;
+          break;
         }
         if (AI && !SL.isAliveAfter(AI, I)) {
           US.addRange(I, UnknownRange);
-          return;
+          break;
         }
         US.addRange(
             I, getAccessRange(
@@ -382,7 +388,7 @@ void StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
         // FIXME: Process parameters correctly. This is a leak only if we return
         // alloca.
         US.addRange(I, UnknownRange);
-        return;
+        break;
 
       case Instruction::Call:
       case Instruction::Invoke: {
@@ -391,7 +397,7 @@ void StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
 
         if (AI && !SL.isAliveAfter(AI, I)) {
           US.addRange(I, UnknownRange);
-          return;
+          break;
         }
 
         if (const MemIntrinsic *MI = dyn_cast<MemIntrinsic>(I)) {
@@ -402,7 +408,7 @@ void StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
         const auto &CB = cast<CallBase>(*I);
         if (!CB.isArgOperand(&UI)) {
           US.addRange(I, UnknownRange);
-          return;
+          break;
         }
 
         unsigned ArgNo = CB.getArgOperandNo(&UI);
@@ -420,7 +426,7 @@ void StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
             dyn_cast<GlobalValue>(CB.getCalledOperand()->stripPointerCasts());
         if (!Callee) {
           US.addRange(I, UnknownRange);
-          return;
+          break;
         }
 
         assert(isa<Function>(Callee) || isa<GlobalAlias>(Callee));
@@ -808,17 +814,27 @@ const StackSafetyGlobalInfo::InfoTy &StackSafetyGlobalInfo::getInfo() const {
       }
     }
     Info.reset(new InfoTy{
-        createGlobalStackSafetyInfo(std::move(Functions), Index), {}});
+        createGlobalStackSafetyInfo(std::move(Functions), Index), {}, {}});
+
+    std::map<const Instruction *, bool> AccessIsUnsafe;
     for (auto &FnKV : Info->Info) {
       for (auto &KV : FnKV.second.Allocas) {
         ++NumAllocaTotal;
         const AllocaInst *AI = KV.first;
-        if (getStaticAllocaSizeRange(*AI).contains(KV.second.Range)) {
+        auto AIRange = getStaticAllocaSizeRange(*AI);
+        if (AIRange.contains(KV.second.Range)) {
           Info->SafeAllocas.insert(AI);
           ++NumAllocaStackSafe;
         }
+        for (const auto &A : KV.second.Accesses)
+          AccessIsUnsafe[A.first] |= !AIRange.contains(A.second);
       }
     }
+
+    for (const auto &KV : AccessIsUnsafe)
+      if (!KV.second)
+        Info->SafeAccesses.insert(KV.first);
+
     if (StackSafetyPrint)
       print(errs());
   }
@@ -888,6 +904,11 @@ bool StackSafetyGlobalInfo::isSafe(const AllocaInst &AI) const {
   return Info.SafeAllocas.count(&AI);
 }
 
+bool StackSafetyGlobalInfo::accessIsSafe(const Instruction &I) const {
+  const auto &Info = getInfo();
+  return Info.SafeAccesses.count(&I);
+}
+
 void StackSafetyGlobalInfo::print(raw_ostream &O) const {
   auto &SSI = getInfo().Info;
   if (SSI.empty())
@@ -896,7 +917,13 @@ void StackSafetyGlobalInfo::print(raw_ostream &O) const {
   for (auto &F : M.functions()) {
     if (!F.isDeclaration()) {
       SSI.find(&F)->second.print(O, F.getName(), &F);
-      O << "\n";
+      O << "    safe accesses:"
+        << "\n";
+      for (const auto &I : instructions(F)) {
+        if (accessIsSafe(I)) {
+          O << "     " << I << "\n";
+        }
+      }
       O << "\n";
     }
   }

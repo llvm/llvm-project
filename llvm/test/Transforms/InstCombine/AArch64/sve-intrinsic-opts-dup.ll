@@ -40,6 +40,17 @@ define <vscale x 8 x i16> @dup_insertelement_0_convert(<vscale x 8 x i16> %v, i1
   ret <vscale x 8 x i16> %insert
 }
 
+define <vscale x 8 x i16> @dupx_splat_convert(i16 %s) #0 {
+; CHECK-LABEL: @dupx_splat_convert(
+; CHECK-NEXT: %.splatinsert = insertelement <vscale x 8 x i16> poison, i16 %s, i32 0
+; CHECK-NEXT: %splat = shufflevector <vscale x 8 x i16> %.splatinsert, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+; CHECK-NEXT: ret <vscale x 8 x i16> %splat
+  %splat = tail call <vscale x 8 x i16> @llvm.aarch64.sve.dup.x.nxv8i16(i16 %s)
+  ret <vscale x 8 x i16> %splat
+}
+
+declare <vscale x 8 x i16> @llvm.aarch64.sve.dup.x.nxv8i16(i16)
+
 declare <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i1>, i8)
 declare <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i1>, i16)
 

@@ -339,12 +339,12 @@ enabled sub-projects. Nearly all of these variable names begin with
   This option is not available on Windows.
 
 **LLVM_BUILD_TESTS**:BOOL
-  Build LLVM unit tests. Defaults to OFF. Targets for building each unit test
-  are generated in any case. You can build a specific unit test using the
-  targets defined under *unittests*, such as ADTTests, IRTests, SupportTests,
-  etc. (Search for ``add_llvm_unittest`` in the subdirectories of *unittests*
-  for a complete list of unit tests.) It is possible to build all unit tests
-  with the target *UnitTests*.
+  Include LLVM unit tests in the 'all' build target. Defaults to OFF. Targets
+  for building each unit test are generated in any case. You can build a
+  specific unit test using the targets defined under *unittests*, such as
+  ADTTests, IRTests, SupportTests, etc. (Search for ``add_llvm_unittest`` in
+  the subdirectories of *unittests* for a complete list of unit tests.) It is
+  possible to build all unit tests with the target *UnitTests*.
 
 **LLVM_BUILD_TOOLS**:BOOL
   Build LLVM tools. Defaults to ON. Targets for building each tool are generated

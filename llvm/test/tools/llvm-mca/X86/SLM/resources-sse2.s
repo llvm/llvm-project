@@ -586,8 +586,8 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      8     2.00    *                   pmuludq	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        por	%xmm0, %xmm2
 # CHECK-NEXT:  1      4     1.00    *                   por	(%rax), %xmm2
-# CHECK-NEXT:  1      4     1.00                        psadbw	%xmm0, %xmm2
-# CHECK-NEXT:  1      7     1.00    *                   psadbw	(%rax), %xmm2
+# CHECK-NEXT:  1      5     2.00                        psadbw	%xmm0, %xmm2
+# CHECK-NEXT:  1      8     2.00    *                   psadbw	(%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                        pshufd	$1, %xmm0, %xmm2
 # CHECK-NEXT:  1      4     1.00    *                   pshufd	$1, (%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                        pshufhw	$1, %xmm0, %xmm2
@@ -687,7 +687,7 @@ xorpd       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT:  -     412.00 12.00  233.50 77.50  3.00   3.00   134.00
+# CHECK-NEXT:  -     412.00 12.00  235.50 77.50  3.00   3.00   134.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
@@ -870,8 +870,8 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  -      -      -     2.00    -      -      -     1.00   pmuludq	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     por	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   por	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     psadbw	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -     1.00    -      -      -     1.00   psadbw	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -      -     psadbw	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -     1.00   psadbw	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     pshufd	$1, %xmm0, %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -     1.00   pshufd	$1, (%rax), %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     pshufhw	$1, %xmm0, %xmm2

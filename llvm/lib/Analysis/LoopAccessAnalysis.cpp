@@ -658,7 +658,8 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE,
   if (PSE.getSE()->isLoopInvariant(PtrScev, L))
     return true;
 
-  int64_t Stride = getPtrStride(PSE, Ptr, L, Strides);
+  Type *AccessTy = Ptr->getType()->getPointerElementType();
+  int64_t Stride = getPtrStride(PSE, AccessTy, Ptr, L, Strides);
   if (Stride == 1 || PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW))
     return true;
 
@@ -1025,15 +1026,17 @@ static bool isNoWrapAddRec(Value *Ptr, const SCEVAddRecExpr *AR,
 }
 
 /// Check whether the access through \p Ptr has a constant stride.
-int64_t llvm::getPtrStride(PredicatedScalarEvolution &PSE, Value *Ptr,
-                           const Loop *Lp, const ValueToValueMap &StridesMap,
-                           bool Assume, bool ShouldCheckWrap) {
+int64_t llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy,
+                           Value *Ptr, const Loop *Lp,
+                           const ValueToValueMap &StridesMap, bool Assume,
+                           bool ShouldCheckWrap) {
   Type *Ty = Ptr->getType();
   assert(Ty->isPointerTy() && "Unexpected non-ptr");
+  unsigned AddrSpace = Ty->getPointerAddressSpace();
 
-  // Make sure that the pointer does not point to aggregate types.
-  auto *PtrTy = cast<PointerType>(Ty);
-  if (PtrTy->getElementType()->isAggregateType()) {
+  // Make sure we're not accessing an aggregate type.
+  // TODO: Why? This doesn't make any sense.
+  if (AccessTy->isAggregateType()) {
     LLVM_DEBUG(dbgs() << "LAA: Bad stride - Not a pointer to a scalar type"
                       << *Ptr << "\n");
     return 0;
@@ -1070,8 +1073,7 @@ int64_t llvm::getPtrStride(PredicatedScalarEvolution &PSE, Value *Ptr,
     PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW) ||
     isNoWrapAddRec(Ptr, AR, PSE, Lp);
   if (!IsNoWrapAddRec && !IsInBoundsGEP &&
-      NullPointerIsDefined(Lp->getHeader()->getParent(),
-                           PtrTy->getAddressSpace())) {
+      NullPointerIsDefined(Lp->getHeader()->getParent(), AddrSpace)) {
     if (Assume) {
       PSE.setNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
       IsNoWrapAddRec = true;
@@ -1099,7 +1101,7 @@ int64_t llvm::getPtrStride(PredicatedScalarEvolution &PSE, Value *Ptr,
   }
 
   auto &DL = Lp->getHeader()->getModule()->getDataLayout();
-  int64_t Size = DL.getTypeAllocSize(PtrTy->getElementType());
+  int64_t Size = DL.getTypeAllocSize(AccessTy);
   const APInt &APStepVal = C->getAPInt();
 
   // Huge step value - give up.
@@ -1119,7 +1121,7 @@ int64_t llvm::getPtrStride(PredicatedScalarEvolution &PSE, Value *Ptr,
   // zero we know that this won't happen without triggering undefined behavior.
   if (!IsNoWrapAddRec && Stride != 1 && Stride != -1 &&
       (IsInBoundsGEP || !NullPointerIsDefined(Lp->getHeader()->getParent(),
-                                              PtrTy->getAddressSpace()))) {
+                                              AddrSpace))) {
     if (Assume) {
       // We can avoid this case by adding a run-time check.
       LLVM_DEBUG(dbgs() << "LAA: Non unit strided pointer which is not either "
@@ -1477,6 +1479,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   Value *BPtr = B.getPointer();
   bool AIsWrite = A.getInt();
   bool BIsWrite = B.getInt();
+  Type *ATy = APtr->getType()->getPointerElementType();
+  Type *BTy = BPtr->getType()->getPointerElementType();
 
   // Two reads are independent.
   if (!AIsWrite && !BIsWrite)
@@ -1487,8 +1491,10 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
       BPtr->getType()->getPointerAddressSpace())
     return Dependence::Unknown;
 
-  int64_t StrideAPtr = getPtrStride(PSE, APtr, InnermostLoop, Strides, true);
-  int64_t StrideBPtr = getPtrStride(PSE, BPtr, InnermostLoop, Strides, true);
+  int64_t StrideAPtr =
+      getPtrStride(PSE, ATy, APtr, InnermostLoop, Strides, true);
+  int64_t StrideBPtr =
+      getPtrStride(PSE, BTy, BPtr, InnermostLoop, Strides, true);
 
   const SCEV *Src = PSE.getSCEV(APtr);
   const SCEV *Sink = PSE.getSCEV(BPtr);
@@ -1497,6 +1503,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // dependence.
   if (StrideAPtr < 0) {
     std::swap(APtr, BPtr);
+    std::swap(ATy, BTy);
     std::swap(Src, Sink);
     std::swap(AIsWrite, BIsWrite);
     std::swap(AIdx, BIdx);
@@ -1518,8 +1525,6 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     return Dependence::Unknown;
   }
 
-  Type *ATy = APtr->getType()->getPointerElementType();
-  Type *BTy = BPtr->getType()->getPointerElementType();
   auto &DL = InnermostLoop->getHeader()->getModule()->getDataLayout();
   uint64_t TypeByteSize = DL.getTypeAllocSize(ATy);
   uint64_t Stride = std::abs(StrideAPtr);
@@ -1981,7 +1986,7 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
     // words may be written to the same address.
     bool IsReadOnlyPtr = false;
     if (Seen.insert(Ptr).second ||
-        !getPtrStride(*PSE, Ptr, TheLoop, SymbolicStrides)) {
+        !getPtrStride(*PSE, LD->getType(), Ptr, TheLoop, SymbolicStrides)) {
       ++NumReads;
       IsReadOnlyPtr = true;
     }

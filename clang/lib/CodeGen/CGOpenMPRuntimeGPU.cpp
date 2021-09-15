@@ -1277,6 +1277,10 @@ CGOpenMPRuntimeGPU::CGOpenMPRuntimeGPU(CodeGenModule &CGM)
     : CGOpenMPRuntime(CGM, "_", "$") {
   if (!CGM.getLangOpts().OpenMPIsDevice)
     llvm_unreachable("OpenMP NVPTX can only handle device code.");
+
+  llvm::OpenMPIRBuilder &OMPBuilder = getOMPBuilder();
+  if (CGM.getLangOpts().OpenMPTargetNewRuntime)
+    OMPBuilder.createDebugKind(CGM.getLangOpts().OpenMPTargetDebug);
 }
 
 void CGOpenMPRuntimeGPU::emitProcBindClause(CodeGenFunction &CGF,

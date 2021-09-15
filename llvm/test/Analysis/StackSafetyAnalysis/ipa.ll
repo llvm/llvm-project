@@ -126,6 +126,7 @@ define void @f1() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[4]: empty-set, @Write8(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: x[4]: [0,8), @Write8(arg0, [0,1)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
@@ -141,6 +142,7 @@ define void @f2() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[4]: empty-set, @Write1(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: x[4]: [0,1), @Write1(arg0, [0,1)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
@@ -156,6 +158,7 @@ define void @f3() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[4]: empty-set, @Write4(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: x[4]: [0,4), @Write4(arg0, [0,1)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
@@ -171,6 +174,7 @@ define void @f4() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[4]: empty-set, @Write1(arg0, [1,2)){{$}}
 ; GLOBAL-NEXT: x[4]: [1,2), @Write1(arg0, [1,2)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
@@ -187,6 +191,7 @@ define void @f5() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: empty-set, @Write4(arg0, [1,2)){{$}}
 ; GLOBAL-NEXT: [1,5), @Write4(arg0, [1,2)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
@@ -203,6 +208,7 @@ define void @f6() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[4]: empty-set, @ExternalCall(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: x[4]: full-set, @ExternalCall(arg0, [0,1)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
@@ -218,6 +224,7 @@ define void @PreemptableCall() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[4]: empty-set, @PreemptableWrite1(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: x[4]: full-set, @PreemptableWrite1(arg0, [0,1)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
@@ -234,6 +241,7 @@ define void @InterposableCall() #0 {
 ; LOCAL-NEXT: x[4]: empty-set, @InterposableWrite1(arg0, [0,1)){{$}}
 ; NOLTO-NEXT: x[4]: full-set, @InterposableWrite1(arg0, [0,1)){{$}}
 ; LTO-NEXT: x[4]: [0,1), @InterposableWrite1(arg0, [0,1)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
@@ -249,6 +257,7 @@ define void @PrivateCall() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[4]: empty-set, @PrivateWrite1(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: x[4]: [0,1), @PrivateWrite1(arg0, [0,1)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
@@ -262,6 +271,7 @@ define private void @PrivateWrite1(i8* %p) #0 {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: p[]: [0,1){{$}}
 ; CHECK-NEXT: allocas uses:
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   store i8 0, i8* %p, align 1
@@ -276,6 +286,7 @@ define void @f7() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[4]: empty-set, @ReturnDependent(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: x[4]: full-set, @ReturnDependent(arg0, [0,1)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
@@ -290,6 +301,7 @@ define void @f8left() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[8]: empty-set, @Rec2(arg0, [2,3)){{$}}
 ; GLOBAL-NEXT: x[8]: [0,4), @Rec2(arg0, [2,3)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
@@ -306,6 +318,7 @@ define void @f8right() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[8]: empty-set, @Rec2(arg0, [6,7)){{$}}
 ; GLOBAL-NEXT: x[8]: [4,8), @Rec2(arg0, [6,7)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
@@ -322,6 +335,7 @@ define void @f8oobleft() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[8]: empty-set, @Rec2(arg0, [1,2)){{$}}
 ; GLOBAL-NEXT: x[8]: [-1,3), @Rec2(arg0, [1,2)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
@@ -338,6 +352,7 @@ define void @f8oobright() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[8]: empty-set, @Rec2(arg0, [7,8)){{$}}
 ; GLOBAL-NEXT: x[8]: [5,9), @Rec2(arg0, [7,8)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
@@ -354,6 +369,7 @@ define void @TwoArguments() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[8]: empty-set, @Write4_2(arg0, [4,5)), @Write4_2(arg1, [0,1)){{$}}
 ; GLOBAL-NEXT: x[8]: [0,8), @Write4_2(arg0, [4,5)), @Write4_2(arg1, [0,1)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
@@ -369,6 +385,7 @@ define void @TwoArgumentsOOBOne() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[8]: empty-set, @Write4_2(arg0, [5,6)), @Write4_2(arg1, [0,1)){{$}}
 ; GLOBAL-NEXT: x[8]: [0,9), @Write4_2(arg0, [5,6)), @Write4_2(arg1, [0,1)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
@@ -384,6 +401,7 @@ define void @TwoArgumentsOOBOther() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[8]: empty-set, @Write4_2(arg0, [4,5)), @Write4_2(arg1, [-1,0)){{$}}
 ; GLOBAL-NEXT: x[8]: [-1,8), @Write4_2(arg0, [4,5)), @Write4_2(arg1, [-1,0)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
@@ -400,6 +418,7 @@ define void @TwoArgumentsOOBBoth() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[8]: empty-set, @Write4_2(arg0, [5,6)), @Write4_2(arg1, [-1,0)){{$}}
 ; GLOBAL-NEXT: x[8]: [-1,9), @Write4_2(arg0, [5,6)), @Write4_2(arg1, [-1,0)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
@@ -417,6 +436,9 @@ define i32 @TestRecursiveNoOffset(i32* %p, i32 %size) #0 {
 ; GLOBAL-NEXT: p[]: full-set, @RecursiveNoOffset(arg0, [0,1)){{$}}
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: sum[4]: [0,4), @RecursiveNoOffset(arg2, [0,1)){{$}}
+; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: store i32 0, i32* %sum, align 4
+; GLOBAL-NEXT: %1 = load i32, i32* %sum, align 4
 ; CHECK-EMPTY:
 entry:
   %sum = alloca i32, align 4
@@ -433,6 +455,7 @@ define void @TestRecursiveWithOffset(i32 %size) #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: sum[64]: empty-set, @RecursiveWithOffset(arg1, [0,1)){{$}}
 ; GLOBAL-NEXT: sum[64]: full-set, @RecursiveWithOffset(arg1, [0,1)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %sum = alloca i32, i64 16, align 4
@@ -447,6 +470,7 @@ define void @TestUpdateArg() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[16]: empty-set, @WriteAndReturn8(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: x[16]: full-set, @WriteAndReturn8(arg0, [0,1)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i8, i64 16, align 4
@@ -460,6 +484,7 @@ define void @TestCrossModuleOnce() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: y[1]: empty-set, @Write1SameModule(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: y[1]: [0,1), @Write1SameModule(arg0, [0,1)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %y = alloca i8, align 4
@@ -473,6 +498,7 @@ define void @TestCrossModuleTwice() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: z[1]: empty-set, @Write1DiffModule(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: z[1]: [0,1), @Write1DiffModule(arg0, [0,1)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %z = alloca i8, align 4
@@ -486,6 +512,7 @@ define void @TestCrossModuleConflict() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[1]: empty-set, @Write1Private(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: x[1]: [-1,0), @Write1Private(arg0, [0,1)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i8, align 4
@@ -501,6 +528,7 @@ define void @TestCrossModuleWeak() #0 {
 ; LOCAL-NEXT: x[1]: empty-set, @Write1Weak(arg0, [0,1)){{$}}
 ; NOLTO-NEXT: x[1]: [1,2), @Write1Weak(arg0, [0,1)){{$}}
 ; LTO-NEXT: x[1]: full-set, @Write1Weak(arg0, [0,1)){{$}}
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 entry:
   %x = alloca i8, align 4
@@ -534,12 +562,14 @@ entry:
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: p[]: [0,1){{$}}
 ; CHECK-NEXT: allocas uses:
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 
 ; CHECK-LABEL: @Write4{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: p[]: [0,4){{$}}
 ; CHECK-NEXT: allocas uses:
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 
 ; CHECK-LABEL: @Write4_2{{$}}
@@ -547,36 +577,42 @@ entry:
 ; CHECK-NEXT: p[]: [0,4){{$}}
 ; CHECK-NEXT: q[]: [0,4){{$}}
 ; CHECK-NEXT: allocas uses:
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 
 ; CHECK-LABEL: @Write8{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: p[]: [0,8){{$}}
 ; CHECK-NEXT: allocas uses:
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 
 ; CHECK-LABEL: @WriteAndReturn8{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: p[]: full-set{{$}}
 ; CHECK-NEXT: allocas uses:
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 
 ; CHECK-LABEL: @PreemptableWrite1 dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: p[]: [0,1){{$}}
 ; CHECK-NEXT: allocas uses:
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 
 ; CHECK-LABEL: @InterposableWrite1 interposable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: p[]: [0,1){{$}}
 ; CHECK-NEXT: allocas uses:
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 
 ; CHECK-LABEL: @ReturnDependent{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: p[]: full-set{{$}}
 ; CHECK-NEXT: allocas uses:
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 
 ; CHECK-LABEL: @Rec0{{$}}
@@ -584,6 +620,7 @@ entry:
 ; LOCAL-NEXT: p[]: empty-set, @Write4(arg0, [2,3)){{$}}
 ; GLOBAL-NEXT: p[]: [2,6)
 ; CHECK-NEXT: allocas uses:
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 
 ; CHECK-LABEL: @Rec1{{$}}
@@ -591,6 +628,7 @@ entry:
 ; LOCAL-NEXT: p[]: empty-set, @Rec0(arg0, [1,2)){{$}}
 ; GLOBAL-NEXT: p[]: [3,7)
 ; CHECK-NEXT: allocas uses:
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 
 ; CHECK-LABEL: @Rec2{{$}}
@@ -598,6 +636,7 @@ entry:
 ; LOCAL-NEXT: p[]: empty-set, @Rec1(arg0, [-5,-4)){{$}}
 ; GLOBAL-NEXT: p[]: [-2,2)
 ; CHECK-NEXT: allocas uses:
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 
 ; CHECK-LABEL: @RecursiveNoOffset{{$}}
@@ -606,6 +645,7 @@ entry:
 ; GLOBAL-NEXT: p[]: full-set, @RecursiveNoOffset(arg0, [4,5)){{$}}
 ; CHECK-NEXT: acc[]: [0,4), @RecursiveNoOffset(arg2, [0,1)){{$}}
 ; CHECK-NEXT: allocas uses:
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 
 ; CHECK-LABEL: @RecursiveWithOffset{{$}}
@@ -613,12 +653,14 @@ entry:
 ; LOCAL-NEXT: acc[]: [0,4), @RecursiveWithOffset(arg1, [4,5)){{$}}
 ; GLOBAL-NEXT: acc[]: full-set, @RecursiveWithOffset(arg1, [4,5)){{$}}
 ; CHECK-NEXT: allocas uses:
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 
 ; CHECK-LABEL: @ReturnAlloca
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[8]: full-set
+; GLOBAL-NEXT: safe accesses:
 ; CHECK-EMPTY:
 
 ; INDEX-LABEL: ^0 = module:

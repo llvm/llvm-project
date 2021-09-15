@@ -1,4 +1,4 @@
-//===- ReoncileUnrealizedCasts.cpp - Eliminate noop unrealized casts ------===//
+//===- ReconcileUnrealizedCasts.cpp - Eliminate noop unrealized casts -----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -32,15 +32,16 @@ struct UnrealizedConversionCastPassthrough
 
   LogicalResult matchAndRewrite(UnrealizedConversionCastOp op,
                                 PatternRewriter &rewriter) const override {
+    // Match the casts that are _only_ used by other casts, with the overall
+    // cast being a trivial noop: A->B->A.
     auto users = op->getUsers();
     if (!llvm::all_of(users, [&](Operation *user) {
-          if (auto other = dyn_cast<UnrealizedConversionCastOp>(user)) {
+          if (auto other = dyn_cast<UnrealizedConversionCastOp>(user))
             return other.getResultTypes() == op.inputs().getTypes() &&
                    other.inputs() == op.outputs();
-          }
           return false;
         })) {
-      return rewriter.notifyMatchFailure(op, "live unrealized conversion");
+      return rewriter.notifyMatchFailure(op, "live unrealized conversion cast");
     }
 
     for (Operation *user : users)
@@ -52,8 +53,9 @@ struct UnrealizedConversionCastPassthrough
 };
 
 /// Pass to simplify and eliminate unrealized conversion casts.
-struct FinalizeToLLVM : public ReconcileUnrealizedCastsBase<FinalizeToLLVM> {
-  FinalizeToLLVM() = default;
+struct ReconcileUnrealizedCasts
+    : public ReconcileUnrealizedCastsBase<ReconcileUnrealizedCasts> {
+  ReconcileUnrealizedCasts() = default;
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
@@ -74,5 +76,5 @@ void mlir::populateReconcileUnrealizedCastsPatterns(
 }
 
 std::unique_ptr<Pass> mlir::createReconcileUnrealizedCastsPass() {
-  return std::make_unique<FinalizeToLLVM>();
+  return std::make_unique<ReconcileUnrealizedCasts>();
 }

@@ -23,6 +23,7 @@
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/DenseMap.h"
 
 using namespace mlir;
 using namespace mlir::tosa;
@@ -1437,11 +1438,50 @@ LogicalResult IfOp::inferReturnTypeComponents(
   }
 
   for (const ValueKnowledge &result : resultKnowledge) {
-    if (result.hasRank) {
-      inferredReturnShapes.push_back(ShapedTypeComponents(result.sizes));
-    } else {
-      inferredReturnShapes.push_back(ShapedTypeComponents());
+    inferredReturnShapes.push_back(result.getShapedTypeComponents());
+  }
+
+  return success();
+}
+
+LogicalResult WhileOp::inferReturnTypeComponents(
+    MLIRContext *context, ::llvm::Optional<Location> location,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  llvm::SmallVector<tosa::YieldOp> yieldOps;
+  for (auto &block : *regions[1])
+    if (auto returnOp = dyn_cast<tosa::YieldOp>(block.getTerminator()))
+      yieldOps.push_back(returnOp);
+
+  // TOSA's while must have a tosa.yield as its terminator. If not found this
+  // tosa.while is invalid.
+  if (yieldOps.empty())
+    return failure();
+
+  // Get the initial type information from the operand types.
+  llvm::SmallVector<ValueKnowledge> resultKnowledge;
+  resultKnowledge.reserve(yieldOps.front().getNumOperands());
+  for (auto operand : yieldOps.front().getOperands()) {
+    resultKnowledge.push_back(
+        ValueKnowledge::getKnowledgeFromType(operand.getType()));
+  }
+
+  for (auto yieldOp : yieldOps) {
+    if (resultKnowledge.size() != yieldOp.getNumOperands())
+      return failure();
+
+    for (auto it : llvm::enumerate(yieldOp.getOperands())) {
+      int32_t index = it.index();
+      if (auto meet = ValueKnowledge::meet(
+              resultKnowledge[index],
+              ValueKnowledge::getKnowledgeFromType(it.value().getType()))) {
+        resultKnowledge[index] = meet;
+      };
     }
+  }
+
+  for (const ValueKnowledge &result : resultKnowledge) {
+    inferredReturnShapes.push_back(result.getShapedTypeComponents());
   }
 
   return success();

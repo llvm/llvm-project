@@ -784,10 +784,18 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
 
     // If path-equivalence was given and is a comma seperated pair then set
     // PathRemapping.
-    auto EquivPair = StringRef(PathRemap).split(',');
-    if (!(EquivPair.first.empty() && EquivPair.second.empty()))
+    if (!PathRemap.empty()) {
+      auto EquivPair = StringRef(PathRemap).split(',');
+      if (EquivPair.first.empty() || EquivPair.second.empty()) {
+        error("invalid argument '" + PathRemap +
+                  "', must be in format 'from,to'",
+              "-path-equivalence");
+        return 1;
+      }
+
       PathRemapping = {std::string(EquivPair.first),
                        std::string(EquivPair.second)};
+    }
 
     // If a demangler is supplied, check if it exists and register it.
     if (!DemanglerOpts.empty()) {

@@ -2398,7 +2398,7 @@ void TokenAnnotator::annotate(AnnotatedLine &Line) {
 
 // This function heuristically determines whether 'Current' starts the name of a
 // function declaration.
-static bool isFunctionDeclarationName(const FormatToken &Current,
+static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
                                       const AnnotatedLine &Line) {
   auto skipOperatorName = [](const FormatToken *Next) -> const FormatToken * {
     for (; Next; Next = Next->Next) {
@@ -2476,14 +2476,21 @@ static bool isFunctionDeclarationName(const FormatToken &Current,
   if (Next->MatchingParen->Next &&
       Next->MatchingParen->Next->is(TT_PointerOrReference))
     return true;
-  // Check for K&R C function definitions, e.g.:
+
+  // Check for K&R C function definitions (and C++ function definitions with
+  // unnamed parameters), e.g.:
   //   int f(i)
   //   {
   //     return i + 1;
   //   }
-  if (Next->Next && Next->Next->is(tok::identifier) &&
+  //   bool g(size_t = 0, bool b = false)
+  //   {
+  //     return !b;
+  //   }
+  if (IsCpp && Next->Next && Next->Next->is(tok::identifier) &&
       !Line.endsWith(tok::semi))
     return true;
+
   for (const FormatToken *Tok = Next->Next; Tok && Tok != Next->MatchingParen;
        Tok = Tok->Next) {
     if (Tok->is(TT_TypeDeclarationParen))
@@ -2544,7 +2551,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) {
     calculateArrayInitializerColumnList(Line);
 
   while (Current) {
-    if (isFunctionDeclarationName(*Current, Line))
+    if (isFunctionDeclarationName(Style.isCpp(), *Current, Line))
       Current->setType(TT_FunctionDeclarationName);
     if (Current->is(TT_LineComment)) {
       if (Current->Previous->is(BK_BracedInit) &&

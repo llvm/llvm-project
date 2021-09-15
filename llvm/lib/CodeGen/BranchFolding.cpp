@@ -611,7 +611,7 @@ ProfitableToMerge(MachineBasicBlock *MBB1, MachineBasicBlock *MBB2,
   // there are fallthroughs, and we don't know until after layout.
   if (AfterPlacement && FullBlockTail1 && FullBlockTail2) {
     auto BothFallThrough = [](MachineBasicBlock *MBB) {
-      if (MBB->succ_size() != 0 && !MBB->canFallThrough())
+      if (!MBB->succ_empty() && !MBB->canFallThrough())
         return false;
       MachineFunction::iterator I(MBB);
       MachineFunction *MF = MBB->getParent();

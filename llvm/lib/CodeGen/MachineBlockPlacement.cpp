@@ -1185,7 +1185,7 @@ bool MachineBlockPlacement::canTailDuplicateUnplacedPreds(
   // The integrated tail duplication is really designed for increasing
   // fallthrough from predecessors from Succ to its successors. We may need
   // other machanism to handle different cases.
-  if (Succ->succ_size() == 0)
+  if (Succ->succ_empty())
     return true;
 
   // Plus the already placed predecessor.

@@ -635,16 +635,13 @@ static Error loadDylibs(Session &S) {
   return Error::success();
 }
 
-Expected<std::unique_ptr<ExecutorProcessControl>>
-LLVMJITLinkRemoteExecutorProcessControl::LaunchExecutor() {
+static Expected<std::unique_ptr<ExecutorProcessControl>> launchExecutor() {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add support for Windows.
   return make_error<StringError>("-" + OutOfProcessExecutor.ArgStr +
                                      " not supported on non-unix platforms",
                                  inconvertibleErrorCode());
 #else
-
-  shared::registerStringError<LLVMJITLinkChannel>();
 
   constexpr int ReadEnd = 0;
   constexpr int WriteEnd = 1;
@@ -697,24 +694,8 @@ LLVMJITLinkRemoteExecutorProcessControl::LaunchExecutor() {
   close(ToExecutor[ReadEnd]);
   close(FromExecutor[WriteEnd]);
 
-  // Return an RPC channel connected to our end of the pipes.
-  auto SSP = std::make_shared<SymbolStringPool>();
-  auto Channel = std::make_unique<shared::FDRawByteChannel>(
+  return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
       FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
-  auto Endpoint = std::make_unique<LLVMJITLinkRPCEndpoint>(*Channel, true);
-
-  auto ReportError = [](Error Err) {
-    logAllUnhandledErrors(std::move(Err), errs(), "");
-  };
-
-  Error Err = Error::success();
-  std::unique_ptr<LLVMJITLinkRemoteExecutorProcessControl> REPC(
-      new LLVMJITLinkRemoteExecutorProcessControl(
-          std::move(SSP), std::move(Channel), std::move(Endpoint),
-          std::move(ReportError), Err));
-  if (Err)
-    return std::move(Err);
-  return std::move(REPC);
 #endif
 }
 
@@ -764,16 +745,13 @@ static Expected<int> connectTCPSocket(std::string Host, std::string PortStr) {
 }
 #endif
 
-Expected<std::unique_ptr<ExecutorProcessControl>>
-LLVMJITLinkRemoteExecutorProcessControl::ConnectToExecutor() {
+static Expected<std::unique_ptr<ExecutorProcessControl>> connectToExecutor() {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add TCP support for Windows.
   return make_error<StringError>("-" + OutOfProcessExecutorConnect.ArgStr +
                                      " not supported on non-unix platforms",
                                  inconvertibleErrorCode());
 #else
-
-  shared::registerStringError<LLVMJITLinkChannel>();
 
   StringRef Host, PortStr;
   std::tie(Host, PortStr) = StringRef(OutOfProcessExecutorConnect).split(':');
@@ -794,35 +772,8 @@ LLVMJITLinkRemoteExecutorProcessControl::ConnectToExecutor() {
   if (!SockFD)
     return SockFD.takeError();
 
-  auto SSP = std::make_shared<SymbolStringPool>();
-  auto Channel = std::make_unique<shared::FDRawByteChannel>(*SockFD, *SockFD);
-  auto Endpoint = std::make_unique<LLVMJITLinkRPCEndpoint>(*Channel, true);
-
-  auto ReportError = [](Error Err) {
-    logAllUnhandledErrors(std::move(Err), errs(), "");
-  };
-
-  Error Err = Error::success();
-  std::unique_ptr<LLVMJITLinkRemoteExecutorProcessControl> REPC(
-      new LLVMJITLinkRemoteExecutorProcessControl(
-          std::move(SSP), std::move(Channel), std::move(Endpoint),
-          std::move(ReportError), Err));
-  if (Err)
-    return std::move(Err);
-  return std::move(REPC);
+  return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(*SockFD, *SockFD);
 #endif
-}
-
-Error LLVMJITLinkRemoteExecutorProcessControl::disconnect() {
-  std::promise<MSVCPError> P;
-  auto F = P.get_future();
-  auto Err = closeConnection([&](Error Err) -> Error {
-    P.set_value(std::move(Err));
-    Finished = true;
-    return Error::success();
-  });
-  ListenerThread.join();
-  return joinErrors(std::move(Err), F.get());
 }
 
 class PhonyExternalsGenerator : public DefinitionGenerator {
@@ -846,14 +797,13 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT) {
   std::unique_ptr<ExecutorProcessControl> EPC;
   if (OutOfProcessExecutor.getNumOccurrences()) {
     /// If -oop-executor is passed then launch the executor.
-    if (auto REPC = LLVMJITLinkRemoteExecutorProcessControl::LaunchExecutor())
+    if (auto REPC = launchExecutor())
       EPC = std::move(*REPC);
     else
       return REPC.takeError();
   } else if (OutOfProcessExecutorConnect.getNumOccurrences()) {
     /// If -oop-executor-connect is passed then connect to the executor.
-    if (auto REPC =
-            LLVMJITLinkRemoteExecutorProcessControl::ConnectToExecutor())
+    if (auto REPC = connectToExecutor())
       EPC = std::move(*REPC);
     else
       return REPC.takeError();

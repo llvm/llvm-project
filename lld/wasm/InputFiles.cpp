@@ -88,15 +88,6 @@ InputFile *createObjectFile(MemoryBufferRef mb, StringRef archiveName) {
   fatal("unknown file type: " + mb.getBufferIdentifier());
 }
 
-void ObjFile::dumpInfo() const {
-  log("info for: " + toString(this) +
-      "\n              Symbols : " + Twine(symbols.size()) +
-      "\n     Function Imports : " + Twine(wasmObj->getNumImportedFunctions()) +
-      "\n       Global Imports : " + Twine(wasmObj->getNumImportedGlobals()) +
-      "\n          Tag Imports : " + Twine(wasmObj->getNumImportedTags()) +
-      "\n        Table Imports : " + Twine(wasmObj->getNumImportedTables()));
-}
-
 // Relocations contain either symbol or type indices.  This function takes a
 // relocation and returns relocated index (i.e. translates from the input
 // symbol/type space to the output symbol/type space).

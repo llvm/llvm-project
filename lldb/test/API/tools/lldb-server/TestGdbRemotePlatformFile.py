@@ -178,6 +178,23 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
 
     @skipIfWindows
     @add_test_categories(["llgs"])
+    def test_platform_file_mode_fail(self):
+        server = self.connect_to_debug_monitor()
+        self.assertIsNotNone(server)
+
+        temp_path = self.getBuildArtifact("nonexist")
+
+        self.do_handshake()
+        self.test_sequence.add_log_lines(
+            ["read packet: $vFile:mode:%s#00" % (
+                binascii.b2a_hex(temp_path.encode()).decode(),),
+             {"direction": "send",
+             "regex": r"^\$F-1,0*2+#[0-9a-fA-F]{2}$"}],
+            True)
+        self.expect_gdbremote_sequence()
+
+    @skipIfWindows
+    @add_test_categories(["llgs"])
     def test_platform_file_exists(self):
         server = self.connect_to_debug_monitor()
         self.assertIsNotNone(server)

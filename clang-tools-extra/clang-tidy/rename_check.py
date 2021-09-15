@@ -8,6 +8,8 @@
 #
 #===-----------------------------------------------------------------------===#
 
+from __future__ import unicode_literals
+
 import argparse
 import glob
 import io
@@ -117,7 +119,7 @@ def adapt_cmake(module_path, check_name_camel):
       return False
 
   print('Updating %s...' % filename)
-  with io.open(filename, 'wb', encoding='utf8') as f:
+  with io.open(filename, 'w', encoding='utf8') as f:
     cpp_found = False
     file_added = False
     for line in lines:
@@ -125,21 +127,23 @@ def adapt_cmake(module_path, check_name_camel):
       if (not file_added) and (cpp_line or cpp_found):
         cpp_found = True
         if (line.strip() > cpp_file) or (not cpp_line):
-          f.write(('  ' + cpp_file + '\n').encode())
+          f.write('  ' + cpp_file + '\n')
           file_added = True
-      f.write(line.encode())
+      f.write(line)
 
   return True
 
 # Modifies the module to include the new check.
 def adapt_module(module_path, module, check_name, check_name_camel):
-  modulecpp = next(filter(lambda p: p.lower() == module.lower() + 'tidymodule.cpp', os.listdir(module_path)))
+  modulecpp = next(iter(filter(
+      lambda p: p.lower() == module.lower() + 'tidymodule.cpp',
+      os.listdir(module_path))))
   filename = os.path.join(module_path, modulecpp)
   with io.open(filename, 'r', encoding='utf8') as f:
     lines = f.readlines()
 
   print('Updating %s...' % filename)
-  with io.open(filename, 'wb', encoding='utf8') as f:
+  with io.open(filename, 'w', encoding='utf8') as f:
     header_added = False
     header_found = False
     check_added = False
@@ -153,21 +157,21 @@ def adapt_module(module_path, module, check_name, check_name_camel):
           header_found = True
           if match.group(1) > check_name_camel:
             header_added = True
-            f.write(('#include "' + check_name_camel + '.h"\n').encode())
+            f.write('#include "' + check_name_camel + '.h"\n')
         elif header_found:
           header_added = True
-          f.write(('#include "' + check_name_camel + '.h"\n').encode())
+          f.write('#include "' + check_name_camel + '.h"\n')
 
       if not check_added:
         if line.strip() == '}':
           check_added = True
-          f.write(check_decl.encode())
+          f.write(check_decl)
         else:
           match = re.search('registerCheck<(.*)>', line)
           if match and match.group(1) > check_name_camel:
             check_added = True
-            f.write(check_decl.encode())
-      f.write(line.encode())
+            f.write(check_decl)
+      f.write(line)
 
 
 # Adds a release notes entry.
@@ -182,7 +186,7 @@ def add_release_notes(clang_tidy_path, old_check_name, new_check_name):
   checkMatcher = re.compile('- The \'(.*)')
 
   print('Updating %s...' % filename)
-  with io.open(filename, 'wb', encoding='utf8') as f:
+  with io.open(filename, 'w', encoding='utf8') as f:
     note_added = False
     header_found = False
     add_note_here = False
@@ -202,22 +206,22 @@ def add_release_notes(clang_tidy_path, old_check_name, new_check_name):
 
         if match:
           header_found = True
-          f.write(line.encode())
+          f.write(line)
           continue
 
         if line.startswith('^^^^'):
-          f.write(line.encode())
+          f.write(line)
           continue
 
         if header_found and add_note_here:
           if not line.startswith('^^^^'):
-            f.write(("""- The '%s' check was renamed to :doc:`%s
+            f.write("""- The '%s' check was renamed to :doc:`%s
   <clang-tidy/checks/%s>`
 
-""" % (old_check_name, new_check_name, new_check_name)).encode())
+""" % (old_check_name, new_check_name, new_check_name))
             note_added = True
 
-      f.write(line.encode())
+      f.write(line)
 
 def main():
   parser = argparse.ArgumentParser(description='Rename clang-tidy check.')
@@ -263,9 +267,9 @@ def main():
             (check_name_camel, cmake_lists))
       return 1
 
-    modulecpp = next(filter(
+    modulecpp = next(iter(filter(
         lambda p: p.lower() == old_module.lower() + 'tidymodule.cpp',
-        os.listdir(old_module_path)))
+        os.listdir(old_module_path))))
     deleteMatchingLines(os.path.join(old_module_path, modulecpp),
                       '\\b' + check_name_camel + '|\\b' + args.old_check_name)
 

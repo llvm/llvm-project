@@ -1376,12 +1376,12 @@ def Tosa_ConcatOp : Tosa_Op<"concat", [
   }];
 
   let arguments = (ins
-    Variadic<Tosa_RankedTensor>:$input1,
+    Variadic<Tosa_Tensor>:$input1,
     I64Attr:$axis
   );
 
   let results = (outs
-    Tosa_RankedTensor:$output
+    Tosa_Tensor:$output
   );
 
   let hasCanonicalizer = 1;
@@ -1846,6 +1846,8 @@ def Tosa_IfOp : Tosa_Op<"cond_if", [
 //===----------------------------------------------------------------------===//
 def Tosa_WhileOp : Tosa_Op<"while_loop", [
        DeclareOpInterfaceMethods<LoopLikeOpInterface>,
+       DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+                                 ["inferReturnTypeComponents"]>,
        SingleBlockImplicitTerminator<"YieldOp">,
        RecursiveSideEffects]> {
   let summary = "output = input; While (Cond(output)) {output = Body(output)}";

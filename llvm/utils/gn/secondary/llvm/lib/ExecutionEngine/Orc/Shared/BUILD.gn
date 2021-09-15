@@ -4,5 +4,6 @@ static_library("Shared") {
   sources = [
     "OrcError.cpp",
     "RPCError.cpp",
+    "SimpleRemoteEPCUtils.cpp",
   ]
 }

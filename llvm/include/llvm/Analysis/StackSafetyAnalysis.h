@@ -75,7 +75,12 @@ public:
   StackSafetyGlobalInfo &operator=(StackSafetyGlobalInfo &&);
   ~StackSafetyGlobalInfo();
 
+  // Whether we can prove that all accesses to this Alloca are in-range and
+  // during its lifetime.
   bool isSafe(const AllocaInst &AI) const;
+  // Whether we can prove that an instruction only accesses a live alloca in
+  // range.
+  bool accessIsSafe(const Instruction &I) const;
   void print(raw_ostream &O) const;
   void dump() const;
 };

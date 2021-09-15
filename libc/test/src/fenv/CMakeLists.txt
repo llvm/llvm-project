@@ -71,6 +71,18 @@ add_libc_unittest(
     libc.src.__support.FPUtil.fputil
 )
 
+add_libc_unittest(
+  feenableexcept_test
+  SUITE
+    libc_fenv_unittests
+  SRCS
+    feenableexcept_test.cpp
+  DEPENDS
+    libc.src.fenv.fedisableexcept
+    libc.src.fenv.feenableexcept
+    libc.src.fenv.fegetexcept
+)
+
 if (NOT (LLVM_USE_SANITIZER OR (${LIBC_TARGET_OS} STREQUAL "windows")))
   # Sanitizers don't like SIGFPE. So, we will run the 
   # tests which raise SIGFPE only in non-sanitizer builds.

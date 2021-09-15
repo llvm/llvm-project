@@ -71,6 +71,12 @@ struct GDBRemoteFStatData {
 static_assert(sizeof(GDBRemoteFStatData) == 64,
               "size of GDBRemoteFStatData is not 64");
 
+enum GDBErrno {
+#define HANDLE_ERRNO(name, value) GDB_##name = value,
+#include "Plugins/Process/gdb-remote/GDBRemoteErrno.def"
+  GDB_EUNKNOWN = 9999
+};
+
 class ProcessGDBRemote;
 
 class GDBRemoteCommunication : public Communication {

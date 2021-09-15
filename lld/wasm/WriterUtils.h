@@ -16,7 +16,11 @@
 namespace lld {
 namespace wasm {
 
+#ifdef LLVM_DEBUG
 void debugWrite(uint64_t offset, const Twine &msg);
+#else
+#define debugWrite(...) (void *)0
+#endif
 
 void writeUleb128(raw_ostream &os, uint64_t number, const Twine &msg);
 

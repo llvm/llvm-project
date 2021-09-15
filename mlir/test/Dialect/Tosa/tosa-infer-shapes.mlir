@@ -1043,14 +1043,16 @@ func @resize_fp_offsetted(%arg0: tensor<1x2x4x1xi32>) {
 
 // CHECK-LABEL: @if_test_simple
 func @if_test_simple(%arg0 : tensor<f32>, %arg1 : tensor<f32>, %arg2 : tensor<i1>) -> () {
+  %a = "tosa.log"(%arg0) : (tensor<f32>) -> tensor<*xf32>
+  %b = "tosa.log"(%arg1) : (tensor<f32>) -> tensor<*xf32>
   // CHECK: (tensor<i1>, tensor<f32>, tensor<f32>) -> tensor<f32>
-  %0 = "tosa.cond_if"(%arg2, %arg0, %arg1) ({
-  ^bb1(%arg3 : tensor<f32>, %arg4 : tensor<f32>):
-    "tosa.yield"(%arg3) : (tensor<f32>) -> ()
+  %0 = "tosa.cond_if"(%arg2, %a, %b) ({
+  ^bb1(%arg3 : tensor<*xf32>, %arg4 : tensor<*xf32>):
+    "tosa.yield"(%arg3) : (tensor<*xf32>) -> ()
   }, {
-  ^bb1(%arg5 : tensor<f32>, %arg6 : tensor<f32>):
-    "tosa.yield"(%arg6) : (tensor<f32>) -> ()
-  }) : (tensor<i1>, tensor<f32>, tensor<f32>) -> (tensor<*xf32>)
+  ^bb1(%arg5 : tensor<*xf32>, %arg6 : tensor<*xf32>):
+    "tosa.yield"(%arg6) : (tensor<*xf32>) -> ()
+  }) : (tensor<i1>, tensor<*xf32>, tensor<*xf32>) -> (tensor<*xf32>)
   return
 }
 
@@ -1098,5 +1100,90 @@ func @if_test_propagate(%arg0 : tensor<f32>, %arg1 : tensor<f32>, %arg2 : tensor
     %1 = "tosa.sub"(%arg5, %arg6) : (tensor<*xf32>, tensor<*xf32>) -> tensor<*xf32>
     "tosa.yield"(%1) : (tensor<*xf32>) -> ()
   }) : (tensor<i1>, tensor<f32>, tensor<f32>) -> (tensor<*xf32>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @while_test
+func @while_test(%arg0 : tensor<i32>) -> (tensor<*xi32>) {
+  // CHECK:      "tosa.add" 
+  // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i32>
+  %0 = "tosa.add"(%arg0, %arg0) : (tensor<i32>, tensor<i32>) -> tensor<*xi32>
+
+  // CHECK:      "tosa.while_loop"
+  %1 = "tosa.while_loop"(%0) ( {
+
+  // CHECK:      ^bb0
+  // CHECK-SAME: tensor<i32>
+  ^bb0(%arg2: tensor<*xi32>):
+    %2 = "tosa.const"() {value = dense<3> : tensor<i32>} : () -> tensor<i32>
+    // CHECK:       "tosa.greater_equal"
+    // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i1>
+    %3 = "tosa.greater_equal"(%2, %arg2) : (tensor<i32>, tensor<*xi32>) -> tensor<*xi1>
+    // CHECK:      "tosa.yield"
+    // CHECK-SAME: tensor<i1>
+    "tosa.yield"(%3) : (tensor<*xi1>) -> ()
+  },  {
+  // CHECK:      ^bb0
+  // CHECK-SAME: tensor<i32>
+  ^bb0(%arg2: tensor<*xi32>):
+    %2 = "tosa.const"() {value = dense<1> : tensor<i32>} : () -> tensor<i32>
+
+    // CHECK:     "tosa.add"
+    // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i32>
+    %3 = "tosa.add"(%arg2, %2) : (tensor<*xi32>, tensor<i32>) -> tensor<*xi32>
+
+    // CHECK:      "tosa.yield"
+    // CHECK-SAME: tensor<i32>
+    "tosa.yield"(%3) : (tensor<*xi32>) -> ()
+
+  // CHECK:      (tensor<i32>) -> tensor<i32>
+  }) : (tensor<*xi32>) -> (tensor<*xi32>)
+
+  // CHECK:      tensor.cast
+  return %1 : tensor<*xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @while_test
+func @while_test(%arg0 : tensor<i32>, %arg1 : tensor<1xi32>) -> () {
+  // CHECK:      "tosa.while_loop"
+  %1:2 = "tosa.while_loop"(%arg0, %arg1) ( {
+
+  // CHECK:      ^bb0
+  // CHECK-SAME: tensor<i32>
+  // CHECK-SAME: tensor<?xi32>
+  ^bb0(%arg2: tensor<*xi32>, %arg3: tensor<*xi32>):
+    %2 = "tosa.const"() {value = dense<3> : tensor<i32>} : () -> tensor<i32>
+
+    // CHECK:       "tosa.greater_equal"
+    // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i1>
+    %3 = "tosa.greater_equal"(%2, %arg2) : (tensor<i32>, tensor<*xi32>) -> tensor<*xi1>
+    "tosa.yield"(%3) : (tensor<*xi1>) -> ()
+  },  {
+
+  // CHECK:      ^bb0
+  // CHECK-SAME: tensor<i32>
+  // CHECK-SAME: tensor<?xi32>
+  ^bb0(%arg2: tensor<*xi32>, %arg3: tensor<*xi32>):
+    %2 = "tosa.const"() {value = dense<1> : tensor<i32>} : () -> tensor<i32>
+
+    // CHECK:     "tosa.add"
+    // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i32>
+    %3 = "tosa.add"(%arg2, %2) : (tensor<*xi32>, tensor<i32>) -> tensor<*xi32>
+
+    // CHECK:      "tosa.concat"
+    // CHECK-SAME: (tensor<?xi32>, tensor<?xi32>) -> tensor<?xi32>
+    %4 = "tosa.concat"(%arg3, %arg3) { axis = 0 : i64 } : (tensor<*xi32>, tensor<*xi32>) -> (tensor<*xi32>)
+
+    // CHECK:      "tosa.yield"
+    // CHECK-SAME: tensor<i32>
+    // CHECK-SAME: tensor<?xi32>
+    "tosa.yield"(%3, %4) : (tensor<*xi32>, tensor<*xi32>) -> ()
+
+  // CHECK:      (tensor<i32>, tensor<1xi32>) -> (tensor<i32>, tensor<?xi32>)
+  }) : (tensor<i32>, tensor<1xi32>) -> (tensor<*xi32>, tensor<*xi32>)
   return
 }

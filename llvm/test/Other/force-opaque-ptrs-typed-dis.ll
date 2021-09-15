@@ -1,13 +1,10 @@
-; RUN: llvm-as --force-opaque-pointers < %s | llvm-dis | FileCheck %s
+; RUN: llvm-as --opaque-pointers < %s | not llvm-dis 2>&1 | FileCheck %s
 
-; CHECK: @g = external global i16
+; CHECK: error: Opaque pointers are only supported in -opaque-pointers mode
+
 @g = external global i16
 
 define void @f(i32* %p) {
-; CHECK-LABEL: @f(
-; CHECK-NEXT:    [[A:%.*]] = alloca i17, align 4
-; CHECK-NEXT:    ret void
-;
   %a = alloca i17
   ret void
 }

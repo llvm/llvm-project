@@ -583,8 +583,10 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       // Can't use Intrinsic::getDeclaration here as the return types might
       // then only be structurally equal.
       FunctionType* fType = FunctionType::get(F->getReturnType(), Tys, false);
+      StringRef Suffix =
+          F->getContext().supportsTypedPointers() ? "p0i8" : "p0";
       NewFn = Function::Create(fType, F->getLinkage(), F->getAddressSpace(),
-                               "llvm." + Name + ".p0i8", F->getParent());
+                               "llvm." + Name + "." + Suffix, F->getParent());
       return true;
     }
     static const Regex vstRegex("^arm\\.neon\\.vst([1234]|[234]lane)\\.v[a-z0-9]*$");

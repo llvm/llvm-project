@@ -363,48 +363,6 @@ hsa_status_t addKernArgPool(hsa_amd_memory_pool_t MemoryPool, void *Data) {
   return HSA_STATUS_SUCCESS;
 }
 
-std::pair<hsa_status_t, bool>
-isValidMemoryPool(hsa_amd_memory_pool_t MemoryPool) {
-  bool AllocAllowed = false;
-  hsa_status_t Err = hsa_amd_memory_pool_get_info(
-      MemoryPool, HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED,
-      &AllocAllowed);
-  if (Err != HSA_STATUS_SUCCESS) {
-    DP("Alloc allowed in memory pool check failed: %s\n",
-       get_error_string(Err));
-    return {Err, false};
-  }
-
-  return {HSA_STATUS_SUCCESS, AllocAllowed};
-}
-
-template <typename AccumulatorFunc>
-hsa_status_t collectMemoryPools(const std::vector<hsa_agent_t> &Agents,
-                                AccumulatorFunc Func) {
-  for (int DeviceId = 0; DeviceId < Agents.size(); DeviceId++) {
-    hsa_status_t Err = hsa::amd_agent_iterate_memory_pools(
-        Agents[DeviceId], [&](hsa_amd_memory_pool_t MemoryPool) {
-          hsa_status_t Err;
-          bool Valid = false;
-          std::tie(Err, Valid) = isValidMemoryPool(MemoryPool);
-          if (Err != HSA_STATUS_SUCCESS) {
-            return Err;
-          }
-          if (Valid)
-            Func(MemoryPool, DeviceId);
-          return HSA_STATUS_SUCCESS;
-        });
-
-    if (Err != HSA_STATUS_SUCCESS) {
-      DP("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
-         "Iterate all memory pools", get_error_string(Err));
-      return Err;
-    }
-  }
-
-  return HSA_STATUS_SUCCESS;
-}
-
 std::pair<hsa_status_t, hsa_amd_memory_pool_t>
 FindKernargPool(const std::vector<hsa_agent_t> &HSAAgents) {
   std::vector<hsa_amd_memory_pool_t> KernArgPools;
@@ -674,22 +632,30 @@ public:
     return HSA_STATUS_SUCCESS;
   }
 
-  hsa_status_t setupMemoryPools() {
-    using namespace std::placeholders;
-    hsa_status_t Err;
-    Err = core::collectMemoryPools(
-        CPUAgents, std::bind(&RTLDeviceInfoTy::addHostMemoryPool, this, _1, _2));
-    if (Err != HSA_STATUS_SUCCESS) {
-      DP("HSA error in collecting memory pools for CPU: %s\n",
-         get_error_string(Err));
-      return Err;
-    }
-    Err = core::collectMemoryPools(
-        HSAAgents, std::bind(&RTLDeviceInfoTy::addDeviceMemoryPool, this, _1, _2));
-    if (Err != HSA_STATUS_SUCCESS) {
-      DP("HSA error in collecting memory pools for offload devices: %s\n",
-         get_error_string(Err));
-      return Err;
+  hsa_status_t setupDevicePools(const std::vector<hsa_agent_t> &Agents) {
+    for (int DeviceId = 0; DeviceId < Agents.size(); DeviceId++) {
+      hsa_status_t Err = hsa::amd_agent_iterate_memory_pools(
+          Agents[DeviceId], [&](hsa_amd_memory_pool_t MemoryPool) {
+            bool AllocAllowed = false;
+            hsa_status_t Err_get_info = hsa_amd_memory_pool_get_info(
+                MemoryPool, HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED,
+                &AllocAllowed);
+            if (Err_get_info != HSA_STATUS_SUCCESS) {
+              DP("Alloc allowed in memory pool check failed: %s\n",
+                 get_error_string(Err_get_info));
+              return Err_get_info;
+            }
+            if (AllocAllowed) {
+              addDeviceMemoryPool(MemoryPool, DeviceId);
+            }
+            return HSA_STATUS_SUCCESS;
+          });
+
+      if (Err != HSA_STATUS_SUCCESS) {
+        DP("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
+           "Iterate all memory pools", get_error_string(Err));
+        return Err;
+      }
     }
     return HSA_STATUS_SUCCESS;
   }
@@ -844,6 +810,13 @@ public:
     KernelInfoTable.resize(NumberOfDevices);
     SymbolInfoTable.resize(NumberOfDevices);
     DeviceCoarseGrainedMemoryPools.resize(NumberOfDevices);
+    DeviceFineGrainedMemoryPools.resize(NumberOfDevices);
+
+    hsa_status_t sdperr = setupDevicePools(HSAAgents);
+    if (sdperr != HSA_STATUS_SUCCESS) {
+      DP("Setup for Device Memory Pools failed\n");
+      return;
+    }
 
     for (int i = 0; i < NumberOfDevices; i++) {
       HSAQueues[i] = nullptr;
@@ -1289,7 +1262,7 @@ const Elf64_Sym *elf_lookup(Elf *elf, char *base, Elf64_Shdr *section_hash,
   return nullptr;
 }
 
-typedef struct {
+typedef struct symbol_info {
   void *addr = nullptr;
   uint32_t size = UINT32_MAX;
   uint32_t sh_type = SHT_NULL;

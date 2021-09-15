@@ -65,7 +65,8 @@ GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
       m_supports_QEnvironmentHexEncoded(true), m_supports_qSymbol(true),
       m_qSymbol_requests_done(false), m_supports_qModuleInfo(true),
       m_supports_jThreadsInfo(true), m_supports_jModulesInfo(true),
-      m_supports_vFileSize(true),
+      m_supports_vFileSize(true), m_supports_vFileMode(true),
+      m_supports_vFileExists(true), m_supports_vRun(true),
 
       m_host_arch(), m_process_arch(), m_os_build(), m_os_kernel(),
       m_hostname(), m_gdb_server_name(), m_default_packet_timeout(0),
@@ -793,6 +794,11 @@ bool GDBRemoteCommunicationClient::GetLaunchSuccess(std::string &error_str) {
       PacketResult::Success) {
     if (response.IsOKResponse())
       return true;
+    // GDB does not implement qLaunchSuccess -- but if we used vRun,
+    // then we already received a successful launch indication via stop
+    // reason.
+    if (response.IsUnsupportedResponse() && m_supports_vRun)
+      return true;
     if (response.GetChar() == 'E') {
       // A string the describes what failed when launching...
       error_str = std::string(response.GetStringRef().substr(1));
@@ -831,6 +837,36 @@ int GDBRemoteCommunicationClient::SendArgumentsPacket(
     }
   }
   if (!argv.empty()) {
+    // try vRun first
+    if (m_supports_vRun) {
+      StreamString packet;
+      packet.PutCString("vRun");
+      for (const char *arg : argv) {
+        packet.PutChar(';');
+        packet.PutBytesAsRawHex8(arg, strlen(arg));
+      }
+
+      StringExtractorGDBRemote response;
+      if (SendPacketAndWaitForResponse(packet.GetString(), response) !=
+          PacketResult::Success)
+        return -1;
+
+      if (response.IsErrorResponse()) {
+        uint8_t error = response.GetError();
+        if (error)
+          return error;
+        return -1;
+      }
+      // vRun replies with a stop reason packet
+      // FIXME: right now we just discard the packet and LLDB queries
+      // for stop reason again
+      if (!response.IsUnsupportedResponse())
+        return 0;
+
+      m_supports_vRun = false;
+    }
+
+    // fallback to A
     StreamString packet;
     packet.PutChar('A');
     for (size_t i = 0, n = argv.size(); i < n; ++i) {
@@ -867,7 +903,6 @@ int GDBRemoteCommunicationClient::SendEnvironment(const Environment &env) {
 int GDBRemoteCommunicationClient::SendEnvironmentPacket(
     char const *name_equal_value) {
   if (name_equal_value && name_equal_value[0]) {
-    StreamString packet;
     bool send_hex_encoding = false;
     for (const char *p = name_equal_value; *p != '\0' && !send_hex_encoding;
          ++p) {
@@ -889,33 +924,43 @@ int GDBRemoteCommunicationClient::SendEnvironmentPacket(
     }
 
     StringExtractorGDBRemote response;
-    if (send_hex_encoding) {
-      if (m_supports_QEnvironmentHexEncoded) {
-        packet.PutCString("QEnvironmentHexEncoded:");
-        packet.PutBytesAsRawHex8(name_equal_value, strlen(name_equal_value));
-        if (SendPacketAndWaitForResponse(packet.GetString(), response) ==
-            PacketResult::Success) {
-          if (response.IsOKResponse())
-            return 0;
-          uint8_t error = response.GetError();
-          if (error)
-            return error;
-          if (response.IsUnsupportedResponse())
-            m_supports_QEnvironmentHexEncoded = false;
-        }
-      }
-
-    } else if (m_supports_QEnvironment) {
+    // Prefer sending unencoded, if possible and the server supports it.
+    if (!send_hex_encoding && m_supports_QEnvironment) {
+      StreamString packet;
       packet.Printf("QEnvironment:%s", name_equal_value);
-      if (SendPacketAndWaitForResponse(packet.GetString(), response) ==
-          PacketResult::Success) {
-        if (response.IsOKResponse())
-          return 0;
+      if (SendPacketAndWaitForResponse(packet.GetString(), response) !=
+          PacketResult::Success)
+        return -1;
+
+      if (response.IsOKResponse())
+        return 0;
+      if (response.IsUnsupportedResponse())
+        m_supports_QEnvironment = false;
+      else {
         uint8_t error = response.GetError();
         if (error)
           return error;
-        if (response.IsUnsupportedResponse())
-          m_supports_QEnvironment = false;
+        return -1;
+      }
+    }
+
+    if (m_supports_QEnvironmentHexEncoded) {
+      StreamString packet;
+      packet.PutCString("QEnvironmentHexEncoded:");
+      packet.PutBytesAsRawHex8(name_equal_value, strlen(name_equal_value));
+      if (SendPacketAndWaitForResponse(packet.GetString(), response) !=
+          PacketResult::Success)
+        return -1;
+
+      if (response.IsOKResponse())
+        return 0;
+      if (response.IsUnsupportedResponse())
+        m_supports_QEnvironmentHexEncoded = false;
+      else {
+        uint8_t error = response.GetError();
+        if (error)
+          return error;
+        return -1;
       }
     }
   }
@@ -3017,6 +3062,17 @@ GDBRemoteCommunicationClient::SetFilePermissions(const FileSpec &file_spec,
   return Status(response.GetHexMaxU32(false, UINT32_MAX), eErrorTypePOSIX);
 }
 
+static int gdb_errno_to_system(int err) {
+  switch (err) {
+#define HANDLE_ERRNO(name, value)                                              \
+  case GDB_##name:                                                             \
+    return name;
+#include "Plugins/Process/gdb-remote/GDBRemoteErrno.def"
+  default:
+    return -1;
+  }
+}
+
 static uint64_t ParseHostIOPacketResponse(StringExtractorGDBRemote &response,
                                           uint64_t fail_result, Status &error) {
   response.SetFilePos(0);
@@ -3026,8 +3082,8 @@ static uint64_t ParseHostIOPacketResponse(StringExtractorGDBRemote &response,
   if (result == -2)
     return fail_result;
   if (response.GetChar() == ',') {
-    int result_errno = response.GetS32(-2, 16);
-    if (result_errno != -2)
+    int result_errno = gdb_errno_to_system(response.GetS32(-1, 16));
+    if (result_errno != -1)
       error.SetError(result_errno, eErrorTypePOSIX);
     else
       error.SetError(-1, eErrorTypeGeneric);
@@ -3159,37 +3215,50 @@ void GDBRemoteCommunicationClient::AutoCompleteDiskFileOrDirectory(
 Status
 GDBRemoteCommunicationClient::GetFilePermissions(const FileSpec &file_spec,
                                                  uint32_t &file_permissions) {
-  std::string path{file_spec.GetPath(false)};
-  Status error;
-  lldb_private::StreamString stream;
-  stream.PutCString("vFile:mode:");
-  stream.PutStringAsRawHex8(path);
-  StringExtractorGDBRemote response;
-  if (SendPacketAndWaitForResponse(stream.GetString(), response) ==
-      PacketResult::Success) {
-    if (response.GetChar() != 'F') {
-      error.SetErrorStringWithFormat("invalid response to '%s' packet",
+  if (m_supports_vFileMode) {
+    std::string path{file_spec.GetPath(false)};
+    Status error;
+    lldb_private::StreamString stream;
+    stream.PutCString("vFile:mode:");
+    stream.PutStringAsRawHex8(path);
+    StringExtractorGDBRemote response;
+    if (SendPacketAndWaitForResponse(stream.GetString(), response) !=
+        PacketResult::Success) {
+      error.SetErrorStringWithFormat("failed to send '%s' packet",
                                      stream.GetData());
-    } else {
-      const uint32_t mode = response.GetS32(-1, 16);
-      if (static_cast<int32_t>(mode) == -1) {
-        if (response.GetChar() == ',') {
-          int response_errno = response.GetS32(-1, 16);
-          if (response_errno > 0)
-            error.SetError(response_errno, lldb::eErrorTypePOSIX);
-          else
-            error.SetErrorToGenericError();
-        } else
-          error.SetErrorToGenericError();
-      } else {
-        file_permissions = mode & (S_IRWXU | S_IRWXG | S_IRWXO);
-      }
+      return error;
     }
-  } else {
-    error.SetErrorStringWithFormat("failed to send '%s' packet",
-                                   stream.GetData());
+    if (!response.IsUnsupportedResponse()) {
+      if (response.GetChar() != 'F') {
+        error.SetErrorStringWithFormat("invalid response to '%s' packet",
+                                       stream.GetData());
+      } else {
+        const uint32_t mode = response.GetS32(-1, 16);
+        if (static_cast<int32_t>(mode) == -1) {
+          if (response.GetChar() == ',') {
+            int response_errno = gdb_errno_to_system(response.GetS32(-1, 16));
+            if (response_errno > 0)
+              error.SetError(response_errno, lldb::eErrorTypePOSIX);
+            else
+              error.SetErrorToGenericError();
+          } else
+            error.SetErrorToGenericError();
+        } else {
+          file_permissions = mode & (S_IRWXU | S_IRWXG | S_IRWXO);
+        }
+      }
+      return error;
+    } else { // response.IsUnsupportedResponse()
+      m_supports_vFileMode = false;
+    }
   }
-  return error;
+
+  // Fallback to fstat.
+  if (llvm::Optional<GDBRemoteFStatData> st = Stat(file_spec)) {
+    file_permissions = st->gdb_st_mode & (S_IRWXU | S_IRWXG | S_IRWXO);
+    return Status();
+  }
+  return Status("fstat failed");
 }
 
 uint64_t GDBRemoteCommunicationClient::ReadFile(lldb::user_id_t fd,
@@ -3208,7 +3277,7 @@ uint64_t GDBRemoteCommunicationClient::ReadFile(lldb::user_id_t fd,
     if (retcode == -1) {
       error.SetErrorToGenericError();
       if (response.GetChar() == ',') {
-        int response_errno = response.GetS32(-1, 16);
+        int response_errno = gdb_errno_to_system(response.GetS32(-1, 16));
         if (response_errno > 0)
           error.SetError(response_errno, lldb::eErrorTypePOSIX);
       }
@@ -3251,7 +3320,7 @@ uint64_t GDBRemoteCommunicationClient::WriteFile(lldb::user_id_t fd,
     if (bytes_written == -1) {
       error.SetErrorToGenericError();
       if (response.GetChar() == ',') {
-        int response_errno = response.GetS32(-1, 16);
+        int response_errno = gdb_errno_to_system(response.GetS32(-1, 16));
         if (response_errno > 0)
           error.SetError(response_errno, lldb::eErrorTypePOSIX);
       }
@@ -3283,7 +3352,7 @@ Status GDBRemoteCommunicationClient::CreateSymlink(const FileSpec &src,
       if (result != 0) {
         error.SetErrorToGenericError();
         if (response.GetChar() == ',') {
-          int response_errno = response.GetS32(-1, 16);
+          int response_errno = gdb_errno_to_system(response.GetS32(-1, 16));
           if (response_errno > 0)
             error.SetError(response_errno, lldb::eErrorTypePOSIX);
         }
@@ -3314,7 +3383,7 @@ Status GDBRemoteCommunicationClient::Unlink(const FileSpec &file_spec) {
       if (result != 0) {
         error.SetErrorToGenericError();
         if (response.GetChar() == ',') {
-          int response_errno = response.GetS32(-1, 16);
+          int response_errno = gdb_errno_to_system(response.GetS32(-1, 16));
           if (response_errno > 0)
             error.SetError(response_errno, lldb::eErrorTypePOSIX);
         }
@@ -3332,21 +3401,33 @@ Status GDBRemoteCommunicationClient::Unlink(const FileSpec &file_spec) {
 // Extension of host I/O packets to get whether a file exists.
 bool GDBRemoteCommunicationClient::GetFileExists(
     const lldb_private::FileSpec &file_spec) {
-  std::string path(file_spec.GetPath(false));
-  lldb_private::StreamString stream;
-  stream.PutCString("vFile:exists:");
-  stream.PutStringAsRawHex8(path);
-  StringExtractorGDBRemote response;
-  if (SendPacketAndWaitForResponse(stream.GetString(), response) ==
-      PacketResult::Success) {
-    if (response.GetChar() != 'F')
+  if (m_supports_vFileExists) {
+    std::string path(file_spec.GetPath(false));
+    lldb_private::StreamString stream;
+    stream.PutCString("vFile:exists:");
+    stream.PutStringAsRawHex8(path);
+    StringExtractorGDBRemote response;
+    if (SendPacketAndWaitForResponse(stream.GetString(), response) !=
+        PacketResult::Success)
       return false;
-    if (response.GetChar() != ',')
-      return false;
-    bool retcode = (response.GetChar() != '0');
-    return retcode;
+    if (!response.IsUnsupportedResponse()) {
+      if (response.GetChar() != 'F')
+        return false;
+      if (response.GetChar() != ',')
+        return false;
+      bool retcode = (response.GetChar() != '0');
+      return retcode;
+    } else
+      m_supports_vFileExists = false;
   }
-  return false;
+
+  // Fallback to open.
+  Status error;
+  lldb::user_id_t fd = OpenFile(file_spec, File::eOpenOptionReadOnly, 0, error);
+  if (fd == UINT64_MAX)
+    return false;
+  CloseFile(fd, error);
+  return true;
 }
 
 bool GDBRemoteCommunicationClient::CalculateMD5(

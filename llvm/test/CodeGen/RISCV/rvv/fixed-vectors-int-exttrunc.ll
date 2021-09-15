@@ -223,7 +223,6 @@ define void @trunc_v8i8_v8i32(<8 x i32>* %x, <8 x i8>* %z) {
 ; LMULMAX1-NEXT:    vnsrl.wi v25, v25, 0
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, tu, mu
 ; LMULMAX1-NEXT:    vslideup.vi v27, v25, 4
-; LMULMAX1-NEXT:    vsetvli zero, zero, e8, mf2, ta, mu
 ; LMULMAX1-NEXT:    vse8.v v27, (a1)
 ; LMULMAX1-NEXT:    ret
   %a = load <8 x i32>, <8 x i32>* %x

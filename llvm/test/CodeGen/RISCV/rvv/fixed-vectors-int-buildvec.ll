@@ -388,7 +388,6 @@ define void @buildvec_dominant0_v2i32(<2 x i64>* %x) {
 ; RV64-NEXT:    addi a1, a1, -910
 ; RV64-NEXT:    vsetvli zero, zero, e64, m1, tu, mu
 ; RV64-NEXT:    vmv.s.x v25, a1
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
 ; RV64-NEXT:    vse64.v v25, (a0)
 ; RV64-NEXT:    ret
   store <2 x i64> <i64 2049638230412172402, i64 -1>, <2 x i64>* %x
@@ -575,7 +574,6 @@ define void @buildvec_vid_step1o2_v4i32(<4 x i32>* %z0, <4 x i32>* %z1, <4 x i32
 ; CHECK-NEXT:    vmv.v.i v26, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vslideup.vi v26, v25, 3
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vse32.v v26, (a6)
 ; CHECK-NEXT:    ret
   store <4 x i32> <i32 0, i32 0, i32 1, i32 1>, <4 x i32>* %z0
@@ -614,7 +612,6 @@ define void @buildvec_vid_step1o2_add3_v4i16(<4 x i16>* %z0, <4 x i16>* %z1, <4 
 ; CHECK-NEXT:    vmv.v.i v26, 3
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, tu, mu
 ; CHECK-NEXT:    vslideup.vi v26, v25, 3
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vse16.v v26, (a6)
 ; CHECK-NEXT:    ret
   store <4 x i16> <i16 3, i16 3, i16 4, i16 4>, <4 x i16>* %z0

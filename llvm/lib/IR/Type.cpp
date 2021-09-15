@@ -694,8 +694,8 @@ PointerType *PointerType::get(Type *EltTy, unsigned AddressSpace) {
 
   LLVMContextImpl *CImpl = EltTy->getContext().pImpl;
 
-  // Create opaque pointer for pointer to opaque pointer.
-  if (CImpl->ForceOpaquePointers || EltTy->isOpaquePointerTy())
+  // Automatically convert typed pointers to opaque pointers.
+  if (CImpl->OpaquePointers)
     return get(EltTy->getContext(), AddressSpace);
 
   // Since AddressSpace #0 is the common case, we special case it.
@@ -709,6 +709,8 @@ PointerType *PointerType::get(Type *EltTy, unsigned AddressSpace) {
 
 PointerType *PointerType::get(LLVMContext &C, unsigned AddressSpace) {
   LLVMContextImpl *CImpl = C.pImpl;
+  assert(CImpl->OpaquePointers &&
+         "Can only create opaque pointers in opaque pointer mode");
 
   // Since AddressSpace #0 is the common case, we special case it.
   PointerType *&Entry =

@@ -30,6 +30,18 @@
 // Don't format out enums and structs.
 // clang-format off
 
+/// return flags of __tgt_target_XXX public APIs
+enum __tgt_target_return_t : int {
+  /// successful offload executed on a target device
+  OMP_TGT_SUCCESS = 0,
+  /// offload may not execute on the requested target device
+  /// this scenario can be caused by the device not available or unsupported
+  /// as described in the Execution Model in the specifcation
+  /// this status may not be used for target device execution failure
+  /// which should be handled internally in libomptarget
+  OMP_TGT_FAIL = ~0
+};
+
 /// Data attributes for each data reference used in an OpenMP target region.
 enum tgt_map_type {
   // No flags

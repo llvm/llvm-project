@@ -328,6 +328,11 @@ defm : MultiPat<mul, MPY_rrr, MPY_rru6, MPY_rrlimm>;
 defm : MultiPat<mulhs, MPYM_rrr, MPYM_rru6, MPYM_rrlimm>;
 defm : MultiPat<mulhu, MPYMU_rrr, MPYMU_rru6, MPYMU_rrlimm>;
 
+defm : MultiPat<addc, ADD_f_rrr, ADD_f_rru6, ADD_f_rrlimm>;
+defm : MultiPat<adde, ADC_f_rrr, ADC_f_rru6, ADC_f_rrlimm>;
+defm : MultiPat<subc, SUB_f_rrr, SUB_f_rru6, SUB_f_rrlimm>;
+defm : MultiPat<sube, SBC_f_rrr, SBC_f_rru6, SBC_f_rrlimm>;
+
 // ---------------------------------------------------------------------------
 // Unary Instruction definitions.
 // ---------------------------------------------------------------------------

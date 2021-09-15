@@ -1532,7 +1532,7 @@ bool Parser::parseOMPDeclareVariantMatchClause(SourceLocation Loc,
 ///
 void Parser::ParseOpenMPAssumesDirective(OpenMPDirectiveKind DKind,
                                          SourceLocation Loc) {
-  SmallVector<StringRef, 4> Assumptions;
+  SmallVector<std::string, 4> Assumptions;
   bool SkippedClauses = false;
 
   auto SkipBraces = [&](llvm::StringRef Spelling, bool IssueNote) {
@@ -1599,9 +1599,11 @@ void Parser::ParseOpenMPAssumesDirective(OpenMPDirectiveKind DKind,
     }
 
     assert(II && "Expected an identifier clause!");
-    StringRef Assumption = II->getName();
+    std::string Assumption = II->getName().str();
     if (ACMI.StartsWith)
-      Assumption = Assumption.substr(ACMI.Identifier.size());
+      Assumption = "ompx_" + Assumption.substr(ACMI.Identifier.size());
+    else
+      Assumption = "omp_" + Assumption;
     Assumptions.push_back(Assumption);
   }
 

@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=aarch64-none-unknown-linuxeabi -consthoist-gep %s -o - | FileCheck %s
-; RUN: llc -mtriple=aarch64-none-unknown-linuxeabi -consthoist-gep -force-opaque-pointers %s -o - | FileCheck %s
+; RUN: llc -mtriple=aarch64-none-unknown-linuxeabi -consthoist-gep -opaque-pointers %s -o - | FileCheck %s
 
 ; CHECK-NOT: adrp    x10, global+332
 ; CHECK-NOT: add     x10, x10, :lo12:global+332

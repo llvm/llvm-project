@@ -478,6 +478,11 @@ public:
     return AttributeSets.getParamByRefType(ArgNo);
   }
 
+  /// Extract the preallocated type for a parameter.
+  Type *getParamPreallocatedType(unsigned ArgNo) const {
+    return AttributeSets.getParamPreallocatedType(ArgNo);
+  }
+
   /// Extract the number of dereferenceable bytes for a parameter.
   /// @param ArgNo Index of an argument, with 0 being the first function arg.
   uint64_t getParamDereferenceableBytes(unsigned ArgNo) const {

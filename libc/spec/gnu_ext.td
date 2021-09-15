@@ -41,9 +41,33 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
       ]
   >;
 
+  HeaderSpec FEnv = HeaderSpec<
+      "fenv.h",
+      [], // Macros
+      [], // Types
+      [], // Enumerations
+      [
+        FunctionSpec<
+            "fedisableexcept",
+            RetValSpec<IntType>,
+            [ArgSpec<IntType>]
+        >,
+        FunctionSpec<
+            "feenableexcept",
+            RetValSpec<IntType>,
+            [ArgSpec<IntType>]
+        >,
+        FunctionSpec<
+            "fegetexcept",
+            RetValSpec<IntType>,
+            []
+        >
+      ]
+  >;
 
   let Headers = [
     CType,
+    FEnv,
     Math, 
     String,
   ];

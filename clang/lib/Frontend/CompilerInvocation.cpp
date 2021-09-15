@@ -3461,6 +3461,13 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
       GenerateArg(Args, OPT_fopenmp_version_EQ, Twine(Opts.OpenMP), SA);
   }
 
+  if (Opts.OpenMPTargetNewRuntime)
+    GenerateArg(Args, OPT_fopenmp_target_new_runtime, SA);
+
+  if (Opts.OpenMPTargetDebug != 0)
+    GenerateArg(Args, OPT_fopenmp_target_debug_EQ,
+                Twine(Opts.OpenMPTargetDebug), SA);
+
   if (Opts.OpenMPCUDANumSMs != 0)
     GenerateArg(Args, OPT_fopenmp_cuda_number_of_sm_EQ,
                 Twine(Opts.OpenMPCUDANumSMs), SA);
@@ -3839,6 +3846,9 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Opts.OpenMP && Args.hasArg(options::OPT_fopenmp_enable_irbuilder);
   bool IsTargetSpecified =
       Opts.OpenMPIsDevice || Args.hasArg(options::OPT_fopenmp_targets_EQ);
+  Opts.OpenMPTargetNewRuntime =
+      Opts.OpenMPIsDevice &&
+      Args.hasArg(options::OPT_fopenmp_target_new_runtime);
 
   Opts.ConvergentFunctions = Opts.ConvergentFunctions || Opts.OpenMPIsDevice;
 
@@ -3866,6 +3876,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   // handling code for those requiring so.
   if ((Opts.OpenMPIsDevice && (T.isNVPTX() || T.isAMDGCN())) ||
       Opts.OpenCLCPlusPlus) {
+
     Opts.Exceptions = 0;
     Opts.CXXExceptions = 0;
   }
@@ -3879,6 +3890,20 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     Opts.OpenMPCUDAReductionBufNum = getLastArgIntValue(
         Args, options::OPT_fopenmp_cuda_teams_reduction_recs_num_EQ,
         Opts.OpenMPCUDAReductionBufNum, Diags);
+  }
+
+  // Set the value of the debugging flag used in the new offloading device RTL.
+  // Set either by a specific value or to a default if not specified.
+  if (Opts.OpenMPIsDevice && (Args.hasArg(OPT_fopenmp_target_debug) ||
+                              Args.hasArg(OPT_fopenmp_target_debug_EQ))) {
+    if (Opts.OpenMPTargetNewRuntime) {
+      Opts.OpenMPTargetDebug = getLastArgIntValue(
+          Args, OPT_fopenmp_target_debug_EQ, Opts.OpenMPTargetDebug, Diags);
+      if (!Opts.OpenMPTargetDebug && Args.hasArg(OPT_fopenmp_target_debug))
+        Opts.OpenMPTargetDebug = 1;
+    } else {
+      Diags.Report(diag::err_drv_debug_no_new_runtime);
+    }
   }
 
   // Get the OpenMP target triples if any.
