@@ -702,3 +702,29 @@ builtin.func @matmul_on_tensors(
 
   return %r : tensor<256x256xf32>
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Insert point issue cases.
+//===----------------------------------------------------------------------===//
+
+// Only test IR validity wrt dominance.
+// CHECK-LABEL: func @ip
+func @ip(%t: tensor<10x20xf32> {linalg.inplaceable = true},
+         %x: index, %y: index, %v: vector<5x6xf32>)
+  -> tensor<10x20xf32>
+{
+  %c0 = constant 0 : index
+  %c256 = constant 256 : index
+  %c257 = constant 257 : index
+  %r = scf.for %arg0 = %c0 to %c257 step %c256 iter_args(%arg1 = %t) -> (tensor<10x20xf32>) {
+    %t1 = tensor.extract_slice %arg1[%x, 0] [5, %y] [1, 1] : tensor<10x20xf32> to tensor<5x?xf32>
+    %t11 = tensor.extract_slice %t1[0, 0] [5, %y] [1, 1] : tensor<5x?xf32> to tensor<5x?xf32>
+    %t2 = vector.transfer_write %v, %t11[%c0, %c0] : vector<5x6xf32>, tensor<5x?xf32>
+    %t3 = tensor.insert_slice %t2 into %arg1[%x, 0] [5, %y] [1, 1] : tensor<5x?xf32> into tensor<10x20xf32>
+    scf.yield %t3 : tensor<10x20xf32>
+  }
+ return %r : tensor<10x20xf32>
+}
+
