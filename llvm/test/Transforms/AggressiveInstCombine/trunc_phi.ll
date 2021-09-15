@@ -4,18 +4,17 @@
 define i16 @trunc_phi(i8 %x) {
 ; CHECK-LABEL: @trunc_phi(
 ; CHECK-NEXT:  LoopHeader:
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X:%.*]] to i16
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       Loop:
-; CHECK-NEXT:    [[ZEXT2:%.*]] = phi i32 [ [[ZEXT]], [[LOOPHEADER:%.*]] ], [ [[SHL:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ZEXT2:%.*]] = phi i16 [ [[ZEXT]], [[LOOPHEADER:%.*]] ], [ [[SHL:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, [[LOOPHEADER]] ], [ [[I:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[SHL]] = shl i32 [[ZEXT2]], 1
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[SHL]] to i16
+; CHECK-NEXT:    [[SHL]] = shl i16 [[ZEXT2]], 1
 ; CHECK-NEXT:    [[I]] = add i32 [[J]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I]], 10
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOPEND:%.*]], label [[LOOP]]
 ; CHECK:       LoopEnd:
-; CHECK-NEXT:    ret i16 [[TRUNC]]
+; CHECK-NEXT:    ret i16 [[SHL]]
 ;
 LoopHeader:
   %zext = zext i8 %x to i32
@@ -37,22 +36,21 @@ LoopEnd:
 define i16 @trunc_phi2(i8 %x, i32 %sw) {
 ; CHECK-LABEL: @trunc_phi2(
 ; CHECK-NEXT:  LoopHeader:
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X:%.*]] to i16
 ; CHECK-NEXT:    switch i32 [[SW:%.*]], label [[LOOPEND:%.*]] [
 ; CHECK-NEXT:    i32 0, label [[LOOP:%.*]]
 ; CHECK-NEXT:    i32 1, label [[LOOP]]
 ; CHECK-NEXT:    ]
 ; CHECK:       Loop:
-; CHECK-NEXT:    [[ZEXT2:%.*]] = phi i32 [ [[ZEXT]], [[LOOPHEADER:%.*]] ], [ [[ZEXT]], [[LOOPHEADER]] ], [ [[SHL:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ZEXT2:%.*]] = phi i16 [ [[ZEXT]], [[LOOPHEADER:%.*]] ], [ [[ZEXT]], [[LOOPHEADER]] ], [ [[SHL:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, [[LOOPHEADER]] ], [ 0, [[LOOPHEADER]] ], [ [[I:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[SHL]] = shl i32 [[ZEXT2]], 1
+; CHECK-NEXT:    [[SHL]] = shl i16 [[ZEXT2]], 1
 ; CHECK-NEXT:    [[I]] = add i32 [[J]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I]], 10
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOPEND]], label [[LOOP]]
 ; CHECK:       LoopEnd:
-; CHECK-NEXT:    [[ZEXT3:%.*]] = phi i32 [ [[ZEXT]], [[LOOPHEADER]] ], [ [[ZEXT2]], [[LOOP]] ]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[ZEXT3]] to i16
-; CHECK-NEXT:    ret i16 [[TRUNC]]
+; CHECK-NEXT:    [[ZEXT3:%.*]] = phi i16 [ [[ZEXT]], [[LOOPHEADER]] ], [ [[ZEXT2]], [[LOOP]] ]
+; CHECK-NEXT:    ret i16 [[ZEXT3]]
 ;
 LoopHeader:
   %zext = zext i8 %x to i32
