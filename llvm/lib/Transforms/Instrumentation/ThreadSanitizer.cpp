@@ -206,8 +206,8 @@ PreservedAnalyses ThreadSanitizerPass::run(Function &F,
   return PreservedAnalyses::all();
 }
 
-PreservedAnalyses ThreadSanitizerPass::run(Module &M,
-                                           ModuleAnalysisManager &MAM) {
+PreservedAnalyses ModuleThreadSanitizerPass::run(Module &M,
+                                                 ModuleAnalysisManager &MAM) {
   insertModuleCtor(M);
   return PreservedAnalyses::none();
 }
