@@ -5201,17 +5201,6 @@ bool AArch64InstructionSelector::selectBuildVector(MachineInstr &I,
   return true;
 }
 
-/// Helper function to find an intrinsic ID on an a MachineInstr. Returns the
-/// ID if it exists, and 0 otherwise.
-static unsigned findIntrinsicID(MachineInstr &I) {
-  auto IntrinOp = find_if(I.operands(), [&](const MachineOperand &Op) {
-    return Op.isIntrinsicID();
-  });
-  if (IntrinOp == I.operands_end())
-    return 0;
-  return IntrinOp->getIntrinsicID();
-}
-
 bool AArch64InstructionSelector::selectVectorLoadIntrinsic(unsigned Opc,
                                                            unsigned NumVecs,
                                                            MachineInstr &I) {
@@ -5244,9 +5233,7 @@ bool AArch64InstructionSelector::selectVectorLoadIntrinsic(unsigned Opc,
 bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
     MachineInstr &I, MachineRegisterInfo &MRI) {
   // Find the intrinsic ID.
-  unsigned IntrinID = findIntrinsicID(I);
-  if (!IntrinID)
-    return false;
+  unsigned IntrinID = I.getIntrinsicID();
 
   const LLT S8 = LLT::scalar(8);
   const LLT S16 = LLT::scalar(16);
@@ -5365,9 +5352,7 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
 
 bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
                                                  MachineRegisterInfo &MRI) {
-  unsigned IntrinID = findIntrinsicID(I);
-  if (!IntrinID)
-    return false;
+  unsigned IntrinID = I.getIntrinsicID();
 
   switch (IntrinID) {
   default:

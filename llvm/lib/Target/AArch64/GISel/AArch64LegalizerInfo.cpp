@@ -933,18 +933,9 @@ bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(
   return true;
 }
 
-static unsigned findIntrinsicID(MachineInstr &I) {
-  auto IntrinOp = find_if(I.operands(), [&](const MachineOperand &Op) {
-    return Op.isIntrinsicID();
-  });
-  if (IntrinOp == I.operands_end())
-    return 0;
-  return IntrinOp->getIntrinsicID();
-}
-
 bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                              MachineInstr &MI) const {
-  switch (findIntrinsicID(MI)) {
+  switch (MI.getIntrinsicID()) {
   case Intrinsic::vacopy: {
     unsigned PtrSize = ST->isTargetILP32() ? 4 : 8;
     unsigned VaListSize =
