@@ -10,7 +10,7 @@ define i32 @div(i32 %val, i32 %num) nounwind {
 ; CHECK-NEXT:    %tmp1 = udiv i32 %val, %num
 ; CHECK-NEXT:    -->  (%val /u %num) U: full-set S: full-set
 ; CHECK-NEXT:    %tmp2 = mul i32 %tmp1, %num
-; CHECK-NEXT:    -->  ((%val /u %num) * %num) U: full-set S: full-set
+; CHECK-NEXT:    -->  ((%val /u %num) * %num)<nuw> U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @div
 ;
   %tmp1 = udiv i32 %val, %num
