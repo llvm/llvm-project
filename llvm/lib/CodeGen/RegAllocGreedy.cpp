@@ -2504,17 +2504,6 @@ unsigned RAGreedy::trySplit(LiveInterval &VirtReg, AllocationOrder &Order,
 
   SA->analyze(&VirtReg);
 
-  // FIXME: SplitAnalysis may repair broken live ranges coming from the
-  // coalescer. That may cause the range to become allocatable which means that
-  // tryRegionSplit won't be making progress. This check should be replaced with
-  // an assertion when the coalescer is fixed.
-  if (SA->didRepairRange()) {
-    // VirtReg has changed, so all cached queries are invalid.
-    Matrix->invalidateVirtRegs();
-    if (Register PhysReg = tryAssign(VirtReg, Order, NewVRegs, FixedRegisters))
-      return PhysReg;
-  }
-
   // First try to split around a region spanning multiple blocks. RS_Split2
   // ranges already made dubious progress with region splitting, so they go
   // straight to single block splitting.
