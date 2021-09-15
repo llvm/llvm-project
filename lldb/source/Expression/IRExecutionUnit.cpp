@@ -708,51 +708,27 @@ void IRExecutionUnit::CollectCandidateCNames(std::vector<ConstString> &C_names,
 void IRExecutionUnit::CollectCandidateCPlusPlusNames(
     std::vector<ConstString> &CPP_names,
     const std::vector<ConstString> &C_names, const SymbolContext &sc) {
-  for (const ConstString &name : C_names) {
-    if (CPlusPlusLanguage::IsCPPMangledName(name.GetCString())) {
+  if (auto *cpp_lang = Language::FindPlugin(lldb::eLanguageTypeC_plus_plus)) {
+    for (const ConstString &name : C_names) {
       Mangled mangled(name);
-      ConstString demangled = mangled.GetDemangledName();
-
-      if (demangled) {
-        ConstString best_alternate_mangled_name =
-            FindBestAlternateMangledName(demangled, sc);
-
-        if (best_alternate_mangled_name) {
-          CPP_names.push_back(best_alternate_mangled_name);
+      if (cpp_lang->SymbolNameFitsToLanguage(mangled)) {
+        if (ConstString demangled = mangled.GetDemangledName()) {
+          if (ConstString best_alternate_mangled_name =
+                  FindBestAlternateMangledName(demangled, sc))
+            CPP_names.push_back(best_alternate_mangled_name);
         }
       }
-    }
 
-    if (auto *cpp_lang = Language::FindPlugin(lldb::eLanguageTypeC_plus_plus)) {
       std::vector<ConstString> alternates =
           cpp_lang->GenerateAlternateFunctionManglings(name);
       CPP_names.insert(CPP_names.end(), alternates.begin(), alternates.end());
+
+      // As a last-ditch fallback, try the base name for C++ names.  It's
+      // terrible, but the DWARF doesn't always encode "extern C" correctly.
+      ConstString basename =
+          cpp_lang->GetDemangledFunctionNameWithoutArguments(mangled);
+      CPP_names.push_back(basename);
     }
-  }
-}
-
-void IRExecutionUnit::CollectFallbackNames(
-    std::vector<ConstString> &fallback_names,
-    const std::vector<ConstString> &C_names) {
-  // As a last-ditch fallback, try the base name for C++ names.  It's terrible,
-  // but the DWARF doesn't always encode "extern C" correctly.
-
-  for (const ConstString &name : C_names) {
-    if (!CPlusPlusLanguage::IsCPPMangledName(name.GetCString()))
-      continue;
-
-    Mangled mangled_name(name);
-    ConstString demangled_name = mangled_name.GetDemangledName();
-    if (demangled_name.IsEmpty())
-      continue;
-
-    const char *demangled_cstr = demangled_name.AsCString();
-    const char *lparen_loc = strchr(demangled_cstr, '(');
-    if (!lparen_loc)
-      continue;
-
-    llvm::StringRef base_name(demangled_cstr, lparen_loc - demangled_cstr);
-    fallback_names.push_back(ConstString(base_name));
   }
 }
 
@@ -950,14 +926,6 @@ lldb::addr_t IRExecutionUnit::FindSymbol(lldb_private::ConstString name,
   CollectCandidateCPlusPlusNames(candidate_CPlusPlus_names, candidate_C_names,
                                  m_sym_ctx);
   ret = FindInSymbols(candidate_CPlusPlus_names, m_sym_ctx, missing_weak);
-  if (ret != LLDB_INVALID_ADDRESS)
-    return ret;
-
-  std::vector<ConstString> candidate_fallback_names;
-
-  CollectFallbackNames(candidate_fallback_names, candidate_C_names);
-  ret = FindInSymbols(candidate_fallback_names, m_sym_ctx, missing_weak);
-
   return ret;
 }
 
