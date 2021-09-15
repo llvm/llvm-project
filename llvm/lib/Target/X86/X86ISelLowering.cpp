@@ -35823,7 +35823,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
 
   // See if the shuffle is a hidden identity shuffle - repeated args in HOPs
   // etc. can be simplified.
-  if (VT1 == VT2 && VT1.getSizeInBits() == RootSizeInBits) {
+  if (VT1 == VT2 && VT1.getSizeInBits() == RootSizeInBits && VT1.isVector()) {
     SmallVector<int> ScaledMask, IdentityMask;
     unsigned NumElts = VT1.getVectorNumElements();
     if (BaseMask.size() <= NumElts &&
