@@ -1921,8 +1921,10 @@ void Sema::DiagnoseUnusedDecl(const NamedDecl *D) {
 }
 
 void Sema::DiagnoseUnusedButSetDecl(const VarDecl *VD) {
-  // If it's not referenced, it can't be set.
-  if (!VD->isReferenced() || !VD->getDeclName() || VD->hasAttr<UnusedAttr>())
+  // If it's not referenced, it can't be set. If it has the Cleanup attribute,
+  // it's not really unused.
+  if (!VD->isReferenced() || !VD->getDeclName() || VD->hasAttr<UnusedAttr>() ||
+      VD->hasAttr<CleanupAttr>())
     return;
 
   const auto *Ty = VD->getType().getTypePtr()->getBaseElementTypeUnsafe();
