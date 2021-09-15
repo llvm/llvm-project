@@ -172,3 +172,46 @@ subroutine s12()
       local1 = local5 ! mismatched constant LEN type parameter
     end subroutine sub
 end subroutine s12
+
+subroutine s13()
+  interface assignment(=)
+    procedure :: cToR, cToRa, cToI
+  end interface
+  real :: x(1)
+  integer :: n(1)
+  x='0' ! fine
+  n='0' ! fine
+  !ERROR: Defined assignment in WHERE must be elemental, but 'ctora' is not
+  where ([1==1]) x='*'
+  where ([1==1]) n='*' ! fine
+  forall (j=1:1)
+    where (j==1)
+      !ERROR: Defined assignment in WHERE must be elemental, but 'ctor' is not
+      x(j)='?'
+      n(j)='?' ! fine
+    elsewhere (.false.)
+      !ERROR: Defined assignment in WHERE must be elemental, but 'ctor' is not
+      x(j)='1'
+      n(j)='1' ! fine
+    elsewhere
+      !ERROR: Defined assignment in WHERE must be elemental, but 'ctor' is not
+      x(j)='9'
+      n(j)='9' ! fine
+    end where
+  end forall
+  x='0' ! still fine
+  n='0' ! still fine
+ contains
+  subroutine cToR(x, c)
+    real, intent(out) :: x
+    character, intent(in) :: c
+  end subroutine
+  subroutine cToRa(x, c)
+    real, intent(out) :: x(:)
+    character, intent(in) :: c
+  end subroutine
+  elemental subroutine cToI(n, c)
+    integer, intent(out) :: n
+    character, intent(in) :: c
+  end subroutine
+end subroutine s13

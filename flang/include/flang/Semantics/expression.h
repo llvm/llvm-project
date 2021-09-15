@@ -105,9 +105,11 @@ public:
   explicit ExpressionAnalyzer(semantics::SemanticsContext &sc) : context_{sc} {}
   ExpressionAnalyzer(semantics::SemanticsContext &sc, FoldingContext &fc)
       : context_{sc}, foldingContext_{fc} {}
-  ExpressionAnalyzer(ExpressionAnalyzer &) = default;
+  ExpressionAnalyzer(const ExpressionAnalyzer &) = default;
 
   semantics::SemanticsContext &context() const { return context_; }
+  bool inWhereBody() const { return inWhereBody_; }
+  void set_inWhereBody(bool yes = true) { inWhereBody_ = yes; }
 
   FoldingContext &GetFoldingContext() const { return foldingContext_; }
 
@@ -366,6 +368,7 @@ private:
   std::map<parser::CharBlock, int> impliedDos_; // values are INTEGER kinds
   bool isWholeAssumedSizeArrayOk_{false};
   bool useSavedTypedExprs_{true};
+  bool inWhereBody_{false};
   friend class ArgumentAnalyzer;
 };
 
@@ -401,12 +404,6 @@ std::optional<evaluate::Expr<evaluate::SomeType>> AnalyzeExpr(
 evaluate::Expr<evaluate::SubscriptInteger> AnalyzeKindSelector(
     SemanticsContext &, common::TypeCategory,
     const std::optional<parser::KindSelector> &);
-
-void AnalyzeCallStmt(SemanticsContext &, const parser::CallStmt &);
-const evaluate::Assignment *AnalyzeAssignmentStmt(
-    SemanticsContext &, const parser::AssignmentStmt &);
-const evaluate::Assignment *AnalyzePointerAssignmentStmt(
-    SemanticsContext &, const parser::PointerAssignmentStmt &);
 
 // Semantic analysis of all expressions in a parse tree, which becomes
 // decorated with typed representations for top-level expressions.
@@ -445,16 +442,36 @@ public:
   bool Pre(const parser::DataImpliedDo &);
 
   bool Pre(const parser::CallStmt &x) {
-    AnalyzeCallStmt(context_, x);
+    exprAnalyzer_.Analyze(x);
     return false;
   }
   bool Pre(const parser::AssignmentStmt &x) {
-    AnalyzeAssignmentStmt(context_, x);
+    exprAnalyzer_.Analyze(x);
     return false;
   }
   bool Pre(const parser::PointerAssignmentStmt &x) {
-    AnalyzePointerAssignmentStmt(context_, x);
+    exprAnalyzer_.Analyze(x);
     return false;
+  }
+
+  // Track whether we're in a WHERE statement or construct body
+  bool Pre(const parser::WhereStmt &) {
+    ++whereDepth_;
+    exprAnalyzer_.set_inWhereBody(InWhereBody());
+    return true;
+  }
+  void Post(const parser::WhereStmt &) {
+    --whereDepth_;
+    exprAnalyzer_.set_inWhereBody(InWhereBody());
+  }
+  bool Pre(const parser::WhereBodyConstruct &) {
+    ++whereDepth_;
+    exprAnalyzer_.set_inWhereBody(InWhereBody());
+    return true;
+  }
+  void Post(const parser::WhereBodyConstruct &) {
+    --whereDepth_;
+    exprAnalyzer_.set_inWhereBody(InWhereBody());
   }
 
   template <typename A> bool Pre(const parser::Scalar<A> &x) {
@@ -479,8 +496,11 @@ public:
   }
 
 private:
+  bool InWhereBody() const { return whereDepth_ > 0; }
+
   SemanticsContext &context_;
   evaluate::ExpressionAnalyzer exprAnalyzer_{context_};
+  int whereDepth_{0}; // nesting of WHERE statements & constructs
 };
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_EXPRESSION_H_

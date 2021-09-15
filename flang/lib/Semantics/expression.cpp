@@ -3338,6 +3338,11 @@ std::optional<ProcedureRef> ArgumentAnalyzer::TryDefinedAssignment() {
   }
   auto restorer{context_.GetContextualMessages().SetLocation(source_)};
   if (std::optional<ProcedureRef> procRef{GetDefinedAssignmentProc()}) {
+    if (context_.inWhereBody() && !procRef->proc().IsElemental()) { // C1032
+      context_.Say(
+          "Defined assignment in WHERE must be elemental, but '%s' is not"_err_en_US,
+          DEREF(procRef->proc().GetSymbol()).name());
+    }
     context_.CheckCall(source_, procRef->proc(), procRef->arguments());
     return std::move(*procRef);
   }
@@ -3625,19 +3630,6 @@ evaluate::Expr<evaluate::SubscriptInteger> AnalyzeKindSelector(
   auto restorer{
       analyzer.GetContextualMessages().SetLocation(context.location().value())};
   return analyzer.AnalyzeKindSelector(category, selector);
-}
-
-void AnalyzeCallStmt(SemanticsContext &context, const parser::CallStmt &call) {
-  evaluate::ExpressionAnalyzer{context}.Analyze(call);
-}
-
-const evaluate::Assignment *AnalyzeAssignmentStmt(
-    SemanticsContext &context, const parser::AssignmentStmt &stmt) {
-  return evaluate::ExpressionAnalyzer{context}.Analyze(stmt);
-}
-const evaluate::Assignment *AnalyzePointerAssignmentStmt(
-    SemanticsContext &context, const parser::PointerAssignmentStmt &stmt) {
-  return evaluate::ExpressionAnalyzer{context}.Analyze(stmt);
 }
 
 ExprChecker::ExprChecker(SemanticsContext &context) : context_{context} {}
