@@ -783,9 +783,10 @@ public:
   /// dominates Use \p B.
   bool dominates(const MemoryAccess *A, const Use &B) const;
 
+  enum class VerificationLevel { Fast, Full };
   /// Verify that MemorySSA is self consistent (IE definitions dominate
   /// all uses, uses appear in the right places).  This is used by unit tests.
-  void verifyMemorySSA() const;
+  void verifyMemorySSA(VerificationLevel = VerificationLevel::Fast) const;
 
   /// Used in various insertion functions to specify whether we are talking
   /// about the beginning or end of a block.
@@ -796,7 +797,8 @@ protected:
   friend class MemorySSAPrinterLegacyPass;
   friend class MemorySSAUpdater;
 
-  void verifyOrderingDominationAndDefUses(Function &F) const;
+  void verifyOrderingDominationAndDefUses(
+      Function &F, VerificationLevel = VerificationLevel::Fast) const;
   void verifyDominationNumbers(const Function &F) const;
   void verifyPrevDefInPhis(Function &F) const;
 

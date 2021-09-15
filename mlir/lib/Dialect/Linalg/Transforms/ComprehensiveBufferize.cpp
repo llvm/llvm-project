@@ -1464,6 +1464,7 @@ createNewAllocDeallocPairForShapedValue(OpBuilder &b, Location loc,
   }
   b.setInsertionPoint(allocated.getParentBlock()->getTerminator());
   b.create<memref::DeallocOp>(loc, allocated);
+
   return casted;
 }
 
@@ -1485,7 +1486,7 @@ static void allocateBuffersForResults(OpBuilder &b, Location loc, LinalgOp op,
                                       BufferizationAliasInfo &aliasInfo) {
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
-  b.setInsertionPointAfter(op);
+  b.setInsertionPoint(op);
 
   // TODO: provide the proper interface to iterate on OpResults and get the
   // matching OpOperands.
@@ -1533,7 +1534,6 @@ static LogicalResult bufferize(OpBuilder &b, LinalgOp op,
   if (!op.hasTensorSemantics())
     return op->emitError() << "op does not have tensor semantics";
 
-  b.setInsertionPoint(op);
   Location loc = op.getLoc();
   SmallVector<Value> newInputBuffers;
   newInputBuffers.reserve(op.getNumInputs());
@@ -1552,6 +1552,9 @@ static LogicalResult bufferize(OpBuilder &b, LinalgOp op,
   // Clone the newly bufferized op.
   SmallVector<Value> newOperands = newInputBuffers;
   newOperands.append(newOutputBuffers.begin(), newOutputBuffers.end());
+
+  // Set insertion point now that potential alloc/dealloc are introduced.
+  b.setInsertionPoint(op);
   op.clone(b, loc, /*resultTypes=*/TypeRange{}, newOperands);
 
   // Replace the results of the old op with the new output buffers.
@@ -1775,11 +1778,10 @@ static LogicalResult bufferize(OpBuilder &b, scf::ForOp forOp,
                                BufferizationAliasInfo &aliasInfo) {
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
-  Location loc = forOp.getLoc();
 
   // If inPlace, just forward the buffer.
   // Otherwise alloc and copy.
-  b.setInsertionPoint(forOp);
+  Location loc = forOp.getLoc();
   for (OpResult opResult : forOp->getResults()) {
     if (!opResult.getType().isa<TensorType>())
       continue;
@@ -1802,8 +1804,13 @@ static LogicalResult bufferize(OpBuilder &b, scf::ForOp forOp,
       // read".
       // TODO: "matching bbArg does not bufferize to a read" is a more general
       // check.
-      if (!isInitTensorOp(operand))
+      if (!isInitTensorOp(operand)) {
+        OpBuilder::InsertionGuard g(b);
+        // Set insertion point now that potential alloc/dealloc are introduced.
+        // Copy is inserted just before the forOp.
+        b.setInsertionPoint(forOp);
         b.create<linalg::CopyOp>(forOp.getLoc(), operandBuffer, resultBuffer);
+      }
     }
     BlockArgument bbArg = forOp.getRegionIterArgForOpOperand(opOperand);
     aliasInfo.createAliasInfoEntry(resultBuffer);
@@ -1861,6 +1868,7 @@ static LogicalResult bufferize(OpBuilder &b, ReturnOp returnOp,
                                BufferizationAliasInfo &aliasInfo) {
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
+  // Cannot insert after returnOp.
   b.setInsertionPoint(returnOp);
 
   assert(isa<FuncOp>(returnOp->getParentOp()) &&
@@ -1885,7 +1893,6 @@ static LogicalResult bufferize(OpBuilder &b, TiledLoopOp tiledLoopOp,
                                BufferizationAliasInfo &aliasInfo) {
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
-  b.setInsertionPoint(tiledLoopOp);
 
   // Allocate output buffers if needed, forward output tensor args to the
   // terminator.
@@ -1938,7 +1945,10 @@ static LogicalResult bufferize(OpBuilder &b, TiledLoopOp tiledLoopOp,
       // TODO: "matching bbArg does not bufferize to a read" is a more general
       // check.
       if (!isInitTensorOp(oldOutputTensor)) {
-        b.setInsertionPointAfter(alloc.getDefiningOp());
+        OpBuilder::InsertionGuard g(b);
+        // Set insertion point now that potential alloc/dealloc are introduced.
+        // Copy is inserted just before the tiledLoopOp.
+        b.setInsertionPoint(tiledLoopOp);
         b.create<linalg::CopyOp>(loc, outputBuffer, alloc);
       }
       outputBuffer = alloc;
@@ -2024,11 +2034,10 @@ static LogicalResult bufferize(OpBuilder &b, TiledLoopOp tiledLoopOp,
 static LogicalResult bufferize(OpBuilder &b, ExtractSliceOp extractSliceOp,
                                BlockAndValueMapping &bvm,
                                BufferizationAliasInfo &aliasInfo) {
-  LDBG("bufferize: " << *extractSliceOp << '\n');
-
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
-  b.setInsertionPoint(extractSliceOp);
+
+  LDBG("bufferize: " << *extractSliceOp << '\n');
 
   Location loc = extractSliceOp.getLoc();
   // Bail if source was not bufferized.
@@ -2045,6 +2054,9 @@ static LogicalResult bufferize(OpBuilder &b, ExtractSliceOp extractSliceOp,
   if (inPlace != InPlaceSpec::True)
     alloc = createNewAllocDeallocPairForShapedValue(
         b, loc, extractSliceOp.result(), aliasInfo);
+
+  // Set insertion point now that potential alloc/dealloc are introduced.
+  b.setInsertionPoint(extractSliceOp);
 
   // Bufferize to subview.
   auto subviewMemRefType =
@@ -2072,13 +2084,13 @@ static LogicalResult bufferize(OpBuilder &b, ExtractSliceOp extractSliceOp,
 static LogicalResult bufferize(OpBuilder &b, InsertSliceOp insertSliceOp,
                                BlockAndValueMapping &bvm,
                                BufferizationAliasInfo &aliasInfo) {
-  LDBG("bufferize: " << *insertSliceOp << '\n');
-
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
   b.setInsertionPoint(insertSliceOp);
-  Location loc = insertSliceOp.getLoc();
 
+  LDBG("bufferize: " << *insertSliceOp << '\n');
+
+  Location loc = insertSliceOp.getLoc();
   Value dstMemref = lookup(bvm, insertSliceOp.dest());
   if (!dstMemref)
     return failure();
@@ -2093,6 +2105,8 @@ static LogicalResult bufferize(OpBuilder &b, InsertSliceOp insertSliceOp,
     // buffer.
     Value newDstMemref = createNewAllocDeallocPairForShapedValue(
         b, loc, insertSliceOp.dest(), aliasInfo);
+    // Set insertion point now that potential alloc/dealloc are introduced.
+    b.setInsertionPoint(insertSliceOp);
     b.create<CopyOp>(insertSliceOp.getLoc(), dstMemref, newDstMemref);
     dstMemref = newDstMemref;
   }
@@ -2138,7 +2152,6 @@ static LogicalResult bufferize(OpBuilder &b, VectorTransferOpInterface op,
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
   b.setInsertionPoint(op);
-  Location loc = op.getLoc();
 
   if (op.getShapedType().isa<MemRefType>())
     return failure();
@@ -2157,13 +2170,17 @@ static LogicalResult bufferize(OpBuilder &b, VectorTransferOpInterface op,
 
   // If transfer_write is not inPlace, allocate a new buffer.
   Value newInputBuffer;
+  Location loc = op.getLoc();
   if (inPlace != InPlaceSpec::True) {
     // Alloc a copy for `writeOp.source()`, it will become the result buffer.
     newInputBuffer = createNewAllocDeallocPairForShapedValue(
         b, loc, writeOp.source(), aliasInfo);
     Value v = lookup(bvm, writeOp.source());
-    if (!isInitTensorOp(writeOp.source()))
+    if (!isInitTensorOp(writeOp.source())) {
+      // Set insertion point now that potential alloc/dealloc are introduced.
+      b.setInsertionPoint(op);
       b.create<CopyOp>(loc, v, newInputBuffer);
+    }
   } else {
     // InPlace write will result in memref.tensor_load(x) which must
     // canonicalize away with one of it uses.
@@ -2189,6 +2206,7 @@ static LogicalResult bufferize(OpBuilder &b, scf::YieldOp yieldOp,
                                BufferizationAliasInfo &aliasInfo) {
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
+  // Cannot create IR past a yieldOp.
   b.setInsertionPoint(yieldOp);
 
   scf::ForOp forOp = dyn_cast<scf::ForOp>(yieldOp->getParentOp());
@@ -2226,7 +2244,9 @@ static LogicalResult bufferize(OpBuilder &b, linalg::YieldOp yieldOp,
                                BufferizationAliasInfo &aliasInfo) {
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
+  // Cannot create IR past a yieldOp.
   b.setInsertionPoint(yieldOp);
+
   // No tensors -> success.
   if (!llvm::any_of(yieldOp.getOperandTypes(), isaTensor))
     return success();

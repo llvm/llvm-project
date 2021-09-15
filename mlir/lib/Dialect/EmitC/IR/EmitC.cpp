@@ -9,6 +9,7 @@
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
@@ -201,7 +202,9 @@ void EmitCDialect::printAttribute(Attribute attr, DialectAsmPrinter &os) const {
 }
 
 void emitc::OpaqueAttr::print(DialectAsmPrinter &printer) const {
-  printer << "opaque<\"" << getValue() << "\">";
+  printer << "opaque<\"";
+  llvm::printEscapedString(getValue(), printer.getStream());
+  printer << "\">";
 }
 
 //===----------------------------------------------------------------------===//
@@ -245,5 +248,7 @@ void EmitCDialect::printType(Type type, DialectAsmPrinter &os) const {
 }
 
 void emitc::OpaqueType::print(DialectAsmPrinter &printer) const {
-  printer << "opaque<\"" << getValue() << "\">";
+  printer << "opaque<\"";
+  llvm::printEscapedString(getValue(), printer.getStream());
+  printer << "\">";
 }

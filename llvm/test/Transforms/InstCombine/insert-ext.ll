@@ -6,9 +6,8 @@ declare void @usevec(<2 x i32>)
 
 define <2 x double> @fpext_fpext(<2 x half> %x, half %y, i32 %index) {
 ; CHECK-LABEL: @fpext_fpext(
-; CHECK-NEXT:    [[V:%.*]] = fpext <2 x half> [[X:%.*]] to <2 x double>
-; CHECK-NEXT:    [[S:%.*]] = fpext half [[Y:%.*]] to double
-; CHECK-NEXT:    [[I:%.*]] = insertelement <2 x double> [[V]], double [[S]], i32 [[INDEX:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x half> [[X:%.*]], half [[Y:%.*]], i32 [[INDEX:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = fpext <2 x half> [[TMP1]] to <2 x double>
 ; CHECK-NEXT:    ret <2 x double> [[I]]
 ;
   %v = fpext <2 x half> %x to <2 x double>
@@ -19,9 +18,8 @@ define <2 x double> @fpext_fpext(<2 x half> %x, half %y, i32 %index) {
 
 define <2 x i32> @sext_sext(<2 x i8> %x, i8 %y, i32 %index) {
 ; CHECK-LABEL: @sext_sext(
-; CHECK-NEXT:    [[V:%.*]] = sext <2 x i8> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[S:%.*]] = sext i8 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[I:%.*]] = insertelement <2 x i32> [[V]], i32 [[S]], i32 [[INDEX:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> [[X:%.*]], i8 [[Y:%.*]], i32 [[INDEX:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = sext <2 x i8> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[I]]
 ;
   %v = sext <2 x i8> %x to <2 x i32>
@@ -32,9 +30,8 @@ define <2 x i32> @sext_sext(<2 x i8> %x, i8 %y, i32 %index) {
 
 define <2 x i12> @zext_zext(<2 x i8> %x, i8 %y, i32 %index) {
 ; CHECK-LABEL: @zext_zext(
-; CHECK-NEXT:    [[V:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i12>
-; CHECK-NEXT:    [[S:%.*]] = zext i8 [[Y:%.*]] to i12
-; CHECK-NEXT:    [[I:%.*]] = insertelement <2 x i12> [[V]], i12 [[S]], i32 [[INDEX:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> [[X:%.*]], i8 [[Y:%.*]], i32 [[INDEX:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = zext <2 x i8> [[TMP1]] to <2 x i12>
 ; CHECK-NEXT:    ret <2 x i12> [[I]]
 ;
   %v = zext <2 x i8> %x to <2 x i12>
@@ -42,6 +39,8 @@ define <2 x i12> @zext_zext(<2 x i8> %x, i8 %y, i32 %index) {
   %i = insertelement <2 x i12> %v, i12 %s, i32 %index
   ret <2 x i12> %i
 }
+
+; negative test - need same source type
 
 define <2 x double> @fpext_fpext_types(<2 x half> %x, float %y, i32 %index) {
 ; CHECK-LABEL: @fpext_fpext_types(
@@ -56,6 +55,8 @@ define <2 x double> @fpext_fpext_types(<2 x half> %x, float %y, i32 %index) {
   ret <2 x double> %i
 }
 
+; negative test - need same source type
+
 define <2 x i32> @sext_sext_types(<2 x i16> %x, i8 %y, i32 %index) {
 ; CHECK-LABEL: @sext_sext_types(
 ; CHECK-NEXT:    [[V:%.*]] = sext <2 x i16> [[X:%.*]] to <2 x i32>
@@ -69,6 +70,8 @@ define <2 x i32> @sext_sext_types(<2 x i16> %x, i8 %y, i32 %index) {
   ret <2 x i32> %i
 }
 
+; negative test - need same extend opcode
+
 define <2 x i12> @sext_zext(<2 x i8> %x, i8 %y, i32 %index) {
 ; CHECK-LABEL: @sext_zext(
 ; CHECK-NEXT:    [[V:%.*]] = sext <2 x i8> [[X:%.*]] to <2 x i12>
@@ -81,6 +84,8 @@ define <2 x i12> @sext_zext(<2 x i8> %x, i8 %y, i32 %index) {
   %i = insertelement <2 x i12> %v, i12 %s, i32 %index
   ret <2 x i12> %i
 }
+
+; negative test - don't trade scalar extend for vector extend
 
 define <2 x i32> @sext_sext_use1(<2 x i8> %x, i8 %y, i32 %index) {
 ; CHECK-LABEL: @sext_sext_use1(
@@ -99,10 +104,10 @@ define <2 x i32> @sext_sext_use1(<2 x i8> %x, i8 %y, i32 %index) {
 
 define <2 x i32> @zext_zext_use2(<2 x i8> %x, i8 %y, i32 %index) {
 ; CHECK-LABEL: @zext_zext_use2(
-; CHECK-NEXT:    [[V:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i32>
 ; CHECK-NEXT:    [[S:%.*]] = zext i8 [[Y:%.*]] to i32
 ; CHECK-NEXT:    call void @use(i32 [[S]])
-; CHECK-NEXT:    [[I:%.*]] = insertelement <2 x i32> [[V]], i32 [[S]], i32 [[INDEX:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> [[X:%.*]], i8 [[Y]], i32 [[INDEX:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = zext <2 x i8> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[I]]
 ;
   %v = zext <2 x i8> %x to <2 x i32>
@@ -111,6 +116,8 @@ define <2 x i32> @zext_zext_use2(<2 x i8> %x, i8 %y, i32 %index) {
   %i = insertelement <2 x i32> %v, i32 %s, i32 %index
   ret <2 x i32> %i
 }
+
+; negative test - don't create an extra extend
 
 define <2 x i32> @zext_zext_use3(<2 x i8> %x, i8 %y, i32 %index) {
 ; CHECK-LABEL: @zext_zext_use3(

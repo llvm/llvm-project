@@ -7,7 +7,7 @@ define i8 @test(i8 %x, i8 %y) {
 ; CHECK-NEXT:    %udiv = udiv i8 %x, %y
 ; CHECK-NEXT:    --> (%x /u %y) U: full-set S: full-set
 ; CHECK-NEXT:    %res = mul i8 %udiv, %y
-; CHECK-NEXT:    --> ((%x /u %y) * %y) U: full-set S: full-set
+; CHECK-NEXT:    --> ((%x /u %y) * %y)<nuw> U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @test
 ;
   %udiv = udiv i8 %x, %y
@@ -65,7 +65,7 @@ define i8 @test5(i8 %x, i32 %y32) {
 ; CHECK-NEXT:    %udiv = udiv i8 %x, %y
 ; CHECK-NEXT:    --> (%x /u (trunc i32 %y32 to i8)) U: full-set S: full-set
 ; CHECK-NEXT:    %res = mul i8 %udiv, %y
-; CHECK-NEXT:    --> ((trunc i32 %y32 to i8) * (%x /u (trunc i32 %y32 to i8))) U: full-set S: full-set
+; CHECK-NEXT:    --> ((trunc i32 %y32 to i8) * (%x /u (trunc i32 %y32 to i8)))<nuw> U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @test5
 ;
   %y = trunc i32 %y32 to i8
