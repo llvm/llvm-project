@@ -1651,10 +1651,10 @@ CGDebugInfo::getOrCreateInstanceMethodType(QualType ThisPtr,
   Qc.removeUnaligned();
   // Keep the removed qualifiers in sync with
   // CreateQualifiedType(const FunctionPrototype*, DIFile *Unit)
-  // on a 'real' member function type, these qualifiers are carried on the type
+  // On a 'real' member function type, these qualifiers are carried on the type
   // of the first parameter, not as separate DW_TAG_const_type (etc) decorator
-  // tags around them. (but in the raw function types with qualifiers, they have
-  // to use wrapper types)
+  // tags around them. (But, in the raw function types with qualifiers, they have
+  // to use wrapper types.)
 
   // Add "this" pointer.
   const auto *OriginalFunc = cast<llvm::DISubroutineType>(
