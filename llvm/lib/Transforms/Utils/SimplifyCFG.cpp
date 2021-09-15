@@ -3486,10 +3486,7 @@ static bool mergeConditionalStoreToAddress(
                                       /*BranchWeights=*/nullptr, DTU);
   QB.SetInsertPoint(T);
   StoreInst *SI = cast<StoreInst>(QB.CreateStore(QPHI, Address));
-  AAMDNodes AAMD;
-  PStore->getAAMetadata(AAMD, /*Merge=*/false);
-  PStore->getAAMetadata(AAMD, /*Merge=*/true);
-  SI->setAAMetadata(AAMD);
+  SI->setAAMetadata(PStore->getAAMetadata().merge(QStore->getAAMetadata()));
   // Choose the minimum alignment. If we could prove both stores execute, we
   // could use biggest one.  In this case, though, we only know that one of the
   // stores executes.  And we don't know it's safe to take the alignment from a

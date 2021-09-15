@@ -1147,8 +1147,7 @@ bool ScopDetection::isValidAccess(Instruction *Inst, const SCEV *AF,
 
   // Check if the base pointer of the memory access does alias with
   // any other pointer. This cannot be handled at the moment.
-  AAMDNodes AATags;
-  Inst->getAAMetadata(AATags);
+  AAMDNodes AATags = Inst->getAAMetadata();
   AliasSet &AS = Context.AST.getAliasSetFor(
       MemoryLocation::getBeforeOrAfter(BP->getValue(), AATags));
 

@@ -313,9 +313,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
               IRB.CreateLoad(OrigLoad->getType(), V, V->getName() + ".val");
           newLoad->setAlignment(OrigLoad->getAlign());
           // Transfer the AA info too.
-          AAMDNodes AAInfo;
-          OrigLoad->getAAMetadata(AAInfo);
-          newLoad->setAAMetadata(AAInfo);
+          newLoad->setAAMetadata(OrigLoad->getAAMetadata());
 
           Args.push_back(newLoad);
           ArgAttrVec.push_back(AttributeSet());

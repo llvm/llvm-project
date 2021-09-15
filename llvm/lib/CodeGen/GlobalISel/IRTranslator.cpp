@@ -1295,11 +1295,9 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
 
     MachinePointerInfo Ptr(LI.getPointerOperand(), Offsets[i] / 8);
     Align BaseAlign = getMemOpAlign(LI);
-    AAMDNodes AAMetadata;
-    LI.getAAMetadata(AAMetadata);
     auto MMO = MF->getMachineMemOperand(
         Ptr, Flags, MRI->getType(Regs[i]),
-        commonAlignment(BaseAlign, Offsets[i] / 8), AAMetadata, Ranges,
+        commonAlignment(BaseAlign, Offsets[i] / 8), LI.getAAMetadata(), Ranges,
         LI.getSyncScopeID(), LI.getOrdering());
     MIRBuilder.buildLoad(Regs[i], Addr, *MMO);
   }
@@ -1337,11 +1335,9 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
 
     MachinePointerInfo Ptr(SI.getPointerOperand(), Offsets[i] / 8);
     Align BaseAlign = getMemOpAlign(SI);
-    AAMDNodes AAMetadata;
-    SI.getAAMetadata(AAMetadata);
     auto MMO = MF->getMachineMemOperand(
         Ptr, Flags, MRI->getType(Vals[i]),
-        commonAlignment(BaseAlign, Offsets[i] / 8), AAMetadata, nullptr,
+        commonAlignment(BaseAlign, Offsets[i] / 8), SI.getAAMetadata(), nullptr,
         SI.getSyncScopeID(), SI.getOrdering());
     MIRBuilder.buildStore(Vals[i], Addr, *MMO);
   }
@@ -2768,14 +2764,11 @@ bool IRTranslator::translateAtomicCmpXchg(const User &U,
   Register Cmp = getOrCreateVReg(*I.getCompareOperand());
   Register NewVal = getOrCreateVReg(*I.getNewValOperand());
 
-  AAMDNodes AAMetadata;
-  I.getAAMetadata(AAMetadata);
-
   MIRBuilder.buildAtomicCmpXchgWithSuccess(
       OldValRes, SuccessRes, Addr, Cmp, NewVal,
       *MF->getMachineMemOperand(
           MachinePointerInfo(I.getPointerOperand()), Flags, MRI->getType(Cmp),
-          getMemOpAlign(I), AAMetadata, nullptr, I.getSyncScopeID(),
+          getMemOpAlign(I), I.getAAMetadata(), nullptr, I.getSyncScopeID(),
           I.getSuccessOrdering(), I.getFailureOrdering()));
   return true;
 }
@@ -2835,14 +2828,11 @@ bool IRTranslator::translateAtomicRMW(const User &U,
     break;
   }
 
-  AAMDNodes AAMetadata;
-  I.getAAMetadata(AAMetadata);
-
   MIRBuilder.buildAtomicRMW(
       Opcode, Res, Addr, Val,
       *MF->getMachineMemOperand(MachinePointerInfo(I.getPointerOperand()),
                                 Flags, MRI->getType(Val), getMemOpAlign(I),
-                                AAMetadata, nullptr, I.getSyncScopeID(),
+                                I.getAAMetadata(), nullptr, I.getSyncScopeID(),
                                 I.getOrdering()));
   return true;
 }
