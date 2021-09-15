@@ -93,7 +93,7 @@ __riscv_restore_0:
 __riscv_restore_12:
   ld      s11, 8(sp)
   addi    sp, sp, 16
-  // fallthrough into __riscv_restore_11/10/9/8
+  // fallthrough into __riscv_restore_11/10
 
   .globl  __riscv_restore_11
   .type   __riscv_restore_11,@function
