@@ -673,8 +673,8 @@ PreservedAnalyses MemorySanitizerPass::run(Function &F,
   return PreservedAnalyses::all();
 }
 
-PreservedAnalyses MemorySanitizerPass::run(Module &M,
-                                           ModuleAnalysisManager &AM) {
+PreservedAnalyses
+ModuleMemorySanitizerPass::run(Module &M, ModuleAnalysisManager &AM) {
   if (Options.Kernel)
     return PreservedAnalyses::all();
   insertModuleCtor(M);

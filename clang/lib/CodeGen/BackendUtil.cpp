@@ -1119,7 +1119,7 @@ static void addSanitizers(const Triple &TargetTriple,
         bool Recover = CodeGenOpts.SanitizeRecover.has(Mask);
 
         MPM.addPass(
-            MemorySanitizerPass({TrackOrigins, Recover, CompileKernel}));
+            ModuleMemorySanitizerPass({TrackOrigins, Recover, CompileKernel}));
         FunctionPassManager FPM;
         FPM.addPass(
             MemorySanitizerPass({TrackOrigins, Recover, CompileKernel}));
