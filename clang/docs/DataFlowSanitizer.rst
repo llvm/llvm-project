@@ -137,6 +137,20 @@ For example:
   fun:memcpy=uninstrumented
   fun:memcpy=custom
 
+For instrumented functions, the ABI list supports a ``force_zero_labels``
+category, which will make all stores and return values set zero labels.
+Functions should never be labelled with both ``force_zero_labels``
+and ``uninstrumented`` or any of the unistrumented wrapper kinds.
+
+For example:
+
+.. code-block:: none
+
+  # e.g. void writes_data(char* out_buf, int out_buf_len) {...}
+  # Applying force_zero_labels will force out_buf shadow to zero.
+  fun:writes_data=force_zero_labels
+
+
 Compilation Flags
 -----------------
 
