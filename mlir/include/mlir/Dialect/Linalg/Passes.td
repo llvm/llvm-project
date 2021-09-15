@@ -37,7 +37,10 @@ def LinalgComprehensiveModuleBufferize :
   let options = [
     Option<"testAnalysisOnly", "test-analysis-only", "bool",
             /*default=*/"false",
-           "Only runs inplaceability analysis (for testing purposes only)">
+           "Only runs inplaceability analysis (for testing purposes only)">,
+    Option<"allowReturnMemref", "allow-return-memref", "bool",
+            /*default=*/"false",
+           "Allows the return of memrefs (for testing purposes only)">
   ];
   let constructor = "mlir::createLinalgComprehensiveModuleBufferizePass()";
 }

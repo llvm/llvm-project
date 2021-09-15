@@ -2914,6 +2914,14 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
       signalPassFailure();
       return;
     }
+    if (!allowReturnMemref &&
+        llvm::any_of(funcOp.getType().getResults(), [](Type t) {
+          return t.isa<MemRefType, UnrankedMemRefType>();
+        })) {
+      funcOp->emitError("memref return type is unsupported");
+      signalPassFailure();
+      return;
+    }
   }
 
   // Perform a post-processing pass of layout modification at function boundary
