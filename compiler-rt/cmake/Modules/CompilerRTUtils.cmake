@@ -430,12 +430,6 @@ macro(construct_compiler_rt_default_triple)
           "Default triple for which compiler-rt runtimes will be built.")
   endif()
 
-  if(DEFINED COMPILER_RT_TEST_TARGET_TRIPLE)
-    # Backwards compatibility: this variable used to be called
-    # COMPILER_RT_TEST_TARGET_TRIPLE.
-    set(COMPILER_RT_DEFAULT_TARGET_TRIPLE ${COMPILER_RT_TEST_TARGET_TRIPLE})
-  endif()
-
   string(REPLACE "-" ";" TARGET_TRIPLE_LIST ${COMPILER_RT_DEFAULT_TARGET_TRIPLE})
   list(GET TARGET_TRIPLE_LIST 0 COMPILER_RT_DEFAULT_TARGET_ARCH)
 

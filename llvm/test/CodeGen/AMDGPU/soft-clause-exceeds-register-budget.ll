@@ -1,6 +1,5 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 < %s | FileCheck %s
 
-; FIXME: The wide loads and bundles introduce so much spilling.
 define protected amdgpu_kernel void @excess_soft_clause_reg_pressure(float addrspace(4)* %wei_ptr, float addrspace(1)* %out_ptr, float addrspace(1)* %in) {
 ; CHECK-LABEL: excess_soft_clause_reg_pressure:
 ; CHECK:  BB0_1: ; %for.cond28.preheader
@@ -14,78 +13,15 @@ define protected amdgpu_kernel void @excess_soft_clause_reg_pressure(float addrs
 ; CHECK-NEXT:    s_load_dwordx16
 ; CHECK-NEXT:    s_load_dwordx16
 
-; CHECK:         v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    s_load_dwordx16
-
-; CHECK:         v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-; CHECK-NEXT:    v_writelane_b32
-
-; CHECK:         v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
+; CHECK-NOT: v_writelane_b32
+; CHECK-NOT: v_readlane_b32
 
 ; CHECK:         s_load_dwordx16
 ; CHECK:         s_load_dwordx16
 ; CHECK:         s_load_dwordx16
 
-; CHECK:         v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
-; CHECK-NEXT:    v_readlane_b32
+; CHECK-NOT: v_writelane_b32
+; CHECK-NOT: v_readlane_b32
 entry:
   %i = tail call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
   %i1 = bitcast i8 addrspace(4)* %i to i64 addrspace(4)*

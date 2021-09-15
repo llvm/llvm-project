@@ -184,3 +184,82 @@ body:             |
     G_STORE %ptr_to_int(s64), %10(p0) :: (store 8)
     $w0 = COPY %7(s32)
     RET_ReallyLR implicit $w0
+...
+---
+name:            reassoc_cst_inner_lhs
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$w0' }
+  - { reg: '$x1' }
+  - { reg: '$x2' }
+  - { reg: '$x3' }
+body:             |
+  bb.1:
+    liveins: $w0, $x1, $x2, $x3
+
+    ; CHECK-LABEL: name: reassoc_cst_inner_lhs
+    ; CHECK: liveins: $w0, $x1, $x2, $x3
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x2
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 40
+    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY1]], [[C1]](s64)
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[SHL]](s64)
+    ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s64)
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s32))
+    ; CHECK: $w0 = COPY [[LOAD]](s32)
+    ; CHECK: RET_ReallyLR
+    %1:_(p0) = COPY $x1
+    %2:_(p0) = COPY $x2
+    %3:_(s64) = COPY $x3
+    %8:_(s64) = G_CONSTANT i64 40
+    %9:_(p0) = G_PTR_ADD %2, %8(s64)
+    %10:_(s64) = G_CONSTANT i64 2
+    %11:_(s64) = G_SHL %3, %10
+    %12:_(p0) = G_PTR_ADD %9, %11(s64)
+    %14:_(s32) = G_LOAD %12(p0) :: (load (s32))
+    $w0 = COPY %14
+    RET_ReallyLR
+
+...
+---
+name:            reassoc_cst_inner_lhs_multiuse
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$w0' }
+  - { reg: '$x1' }
+  - { reg: '$x2' }
+  - { reg: '$x3' }
+body:             |
+  bb.1:
+    liveins: $w0, $x1, $x2, $x3
+
+    ; CHECK-LABEL: name: reassoc_cst_inner_lhs_multiuse
+    ; CHECK: liveins: $w0, $x1, $x2, $x3
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x2
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 40
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
+    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY1]], [[C1]](s64)
+    ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[SHL]](s64)
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s32))
+    ; CHECK: $w0 = COPY [[LOAD]](s32)
+    ; CHECK: $x0 = COPY [[PTR_ADD]](p0)
+    ; CHECK: RET_ReallyLR
+    %1:_(p0) = COPY $x1
+    %2:_(p0) = COPY $x2
+    %3:_(s64) = COPY $x3
+    %8:_(s64) = G_CONSTANT i64 40
+    %9:_(p0) = G_PTR_ADD %2, %8(s64)
+    %10:_(s64) = G_CONSTANT i64 2
+    %11:_(s64) = G_SHL %3, %10
+    %12:_(p0) = G_PTR_ADD %9, %11(s64)
+    %14:_(s32) = G_LOAD %12(p0) :: (load (s32))
+    $w0 = COPY %14
+    $x0 = COPY %9
+    RET_ReallyLR
+
+...

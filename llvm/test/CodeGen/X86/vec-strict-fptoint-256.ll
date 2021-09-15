@@ -377,36 +377,36 @@ define <4 x i64> @strict_vector_fptoui_v4f64_to_v4i64(<4 x double> %a) #0 {
 ; AVX512F-32-NEXT:    andl $-8, %esp
 ; AVX512F-32-NEXT:    subl $40, %esp
 ; AVX512F-32-NEXT:    .cfi_offset %ebx, -12
-; AVX512F-32-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX512F-32-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
-; AVX512F-32-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
+; AVX512F-32-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX512F-32-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm2[1,0]
+; AVX512F-32-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; AVX512F-32-NEXT:    xorl %eax, %eax
-; AVX512F-32-NEXT:    vcomisd %xmm3, %xmm2
+; AVX512F-32-NEXT:    vcomisd %xmm1, %xmm3
 ; AVX512F-32-NEXT:    setae %al
 ; AVX512F-32-NEXT:    kmovw %eax, %k1
-; AVX512F-32-NEXT:    vmovsd %xmm3, %xmm3, %xmm4 {%k1} {z}
-; AVX512F-32-NEXT:    vsubsd %xmm4, %xmm2, %xmm2
-; AVX512F-32-NEXT:    vmovsd %xmm2, (%esp)
+; AVX512F-32-NEXT:    vmovsd %xmm1, %xmm1, %xmm4 {%k1} {z}
+; AVX512F-32-NEXT:    vsubsd %xmm4, %xmm3, %xmm3
+; AVX512F-32-NEXT:    vmovsd %xmm3, (%esp)
 ; AVX512F-32-NEXT:    xorl %edx, %edx
-; AVX512F-32-NEXT:    vcomisd %xmm3, %xmm1
+; AVX512F-32-NEXT:    vcomisd %xmm1, %xmm2
 ; AVX512F-32-NEXT:    setae %dl
 ; AVX512F-32-NEXT:    kmovw %edx, %k1
-; AVX512F-32-NEXT:    vmovsd %xmm3, %xmm3, %xmm2 {%k1} {z}
-; AVX512F-32-NEXT:    vsubsd %xmm2, %xmm1, %xmm1
-; AVX512F-32-NEXT:    vmovsd %xmm1, {{[0-9]+}}(%esp)
-; AVX512F-32-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512F-32-NEXT:    vmovsd %xmm1, %xmm1, %xmm3 {%k1} {z}
+; AVX512F-32-NEXT:    vsubsd %xmm3, %xmm2, %xmm2
+; AVX512F-32-NEXT:    vmovsd %xmm2, {{[0-9]+}}(%esp)
+; AVX512F-32-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX512F-32-NEXT:    xorl %ecx, %ecx
-; AVX512F-32-NEXT:    vcomisd %xmm3, %xmm1
+; AVX512F-32-NEXT:    vcomisd %xmm1, %xmm2
 ; AVX512F-32-NEXT:    setae %cl
 ; AVX512F-32-NEXT:    kmovw %ecx, %k1
-; AVX512F-32-NEXT:    vmovsd %xmm3, %xmm3, %xmm2 {%k1} {z}
-; AVX512F-32-NEXT:    vsubsd %xmm2, %xmm1, %xmm1
-; AVX512F-32-NEXT:    vmovsd %xmm1, {{[0-9]+}}(%esp)
+; AVX512F-32-NEXT:    vmovsd %xmm1, %xmm1, %xmm3 {%k1} {z}
+; AVX512F-32-NEXT:    vsubsd %xmm3, %xmm2, %xmm2
+; AVX512F-32-NEXT:    vmovsd %xmm2, {{[0-9]+}}(%esp)
 ; AVX512F-32-NEXT:    xorl %ebx, %ebx
-; AVX512F-32-NEXT:    vcomisd %xmm3, %xmm0
+; AVX512F-32-NEXT:    vcomisd %xmm1, %xmm0
 ; AVX512F-32-NEXT:    setae %bl
 ; AVX512F-32-NEXT:    kmovw %ebx, %k1
-; AVX512F-32-NEXT:    vmovsd %xmm3, %xmm3, %xmm1 {%k1} {z}
+; AVX512F-32-NEXT:    vmovsd %xmm1, %xmm1, %xmm1 {%k1} {z}
 ; AVX512F-32-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
 ; AVX512F-32-NEXT:    vmovsd %xmm0, {{[0-9]+}}(%esp)
 ; AVX512F-32-NEXT:    fldl (%esp)
@@ -470,36 +470,36 @@ define <4 x i64> @strict_vector_fptoui_v4f64_to_v4i64(<4 x double> %a) #0 {
 ; AVX512VL-32-NEXT:    andl $-8, %esp
 ; AVX512VL-32-NEXT:    subl $40, %esp
 ; AVX512VL-32-NEXT:    .cfi_offset %ebx, -12
-; AVX512VL-32-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX512VL-32-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
-; AVX512VL-32-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
+; AVX512VL-32-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX512VL-32-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm2[1,0]
+; AVX512VL-32-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; AVX512VL-32-NEXT:    xorl %eax, %eax
-; AVX512VL-32-NEXT:    vcomisd %xmm3, %xmm2
+; AVX512VL-32-NEXT:    vcomisd %xmm1, %xmm3
 ; AVX512VL-32-NEXT:    setae %al
 ; AVX512VL-32-NEXT:    kmovw %eax, %k1
-; AVX512VL-32-NEXT:    vmovsd %xmm3, %xmm3, %xmm4 {%k1} {z}
-; AVX512VL-32-NEXT:    vsubsd %xmm4, %xmm2, %xmm2
-; AVX512VL-32-NEXT:    vmovsd %xmm2, (%esp)
+; AVX512VL-32-NEXT:    vmovsd %xmm1, %xmm1, %xmm4 {%k1} {z}
+; AVX512VL-32-NEXT:    vsubsd %xmm4, %xmm3, %xmm3
+; AVX512VL-32-NEXT:    vmovsd %xmm3, (%esp)
 ; AVX512VL-32-NEXT:    xorl %edx, %edx
-; AVX512VL-32-NEXT:    vcomisd %xmm3, %xmm1
+; AVX512VL-32-NEXT:    vcomisd %xmm1, %xmm2
 ; AVX512VL-32-NEXT:    setae %dl
 ; AVX512VL-32-NEXT:    kmovw %edx, %k1
-; AVX512VL-32-NEXT:    vmovsd %xmm3, %xmm3, %xmm2 {%k1} {z}
-; AVX512VL-32-NEXT:    vsubsd %xmm2, %xmm1, %xmm1
-; AVX512VL-32-NEXT:    vmovsd %xmm1, {{[0-9]+}}(%esp)
-; AVX512VL-32-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512VL-32-NEXT:    vmovsd %xmm1, %xmm1, %xmm3 {%k1} {z}
+; AVX512VL-32-NEXT:    vsubsd %xmm3, %xmm2, %xmm2
+; AVX512VL-32-NEXT:    vmovsd %xmm2, {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX512VL-32-NEXT:    xorl %ecx, %ecx
-; AVX512VL-32-NEXT:    vcomisd %xmm3, %xmm1
+; AVX512VL-32-NEXT:    vcomisd %xmm1, %xmm2
 ; AVX512VL-32-NEXT:    setae %cl
 ; AVX512VL-32-NEXT:    kmovw %ecx, %k1
-; AVX512VL-32-NEXT:    vmovsd %xmm3, %xmm3, %xmm2 {%k1} {z}
-; AVX512VL-32-NEXT:    vsubsd %xmm2, %xmm1, %xmm1
-; AVX512VL-32-NEXT:    vmovsd %xmm1, {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    vmovsd %xmm1, %xmm1, %xmm3 {%k1} {z}
+; AVX512VL-32-NEXT:    vsubsd %xmm3, %xmm2, %xmm2
+; AVX512VL-32-NEXT:    vmovsd %xmm2, {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    xorl %ebx, %ebx
-; AVX512VL-32-NEXT:    vcomisd %xmm3, %xmm0
+; AVX512VL-32-NEXT:    vcomisd %xmm1, %xmm0
 ; AVX512VL-32-NEXT:    setae %bl
 ; AVX512VL-32-NEXT:    kmovw %ebx, %k1
-; AVX512VL-32-NEXT:    vmovsd %xmm3, %xmm3, %xmm1 {%k1} {z}
+; AVX512VL-32-NEXT:    vmovsd %xmm1, %xmm1, %xmm1 {%k1} {z}
 ; AVX512VL-32-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
 ; AVX512VL-32-NEXT:    vmovsd %xmm0, {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fldl (%esp)
@@ -908,36 +908,36 @@ define <4 x i64> @strict_vector_fptoui_v4f32_to_v4i64(<4 x float> %a) #0 {
 ; AVX512F-32-NEXT:    andl $-8, %esp
 ; AVX512F-32-NEXT:    subl $40, %esp
 ; AVX512F-32-NEXT:    .cfi_offset %ebx, -12
-; AVX512F-32-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,3,3,3]
-; AVX512F-32-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; AVX512F-32-NEXT:    vpermilps {{.*#+}} xmm2 = xmm0[3,3,3,3]
+; AVX512F-32-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; AVX512F-32-NEXT:    xorl %eax, %eax
-; AVX512F-32-NEXT:    vcomiss %xmm2, %xmm1
+; AVX512F-32-NEXT:    vcomiss %xmm1, %xmm2
 ; AVX512F-32-NEXT:    setae %al
 ; AVX512F-32-NEXT:    kmovw %eax, %k1
-; AVX512F-32-NEXT:    vmovss %xmm2, %xmm2, %xmm3 {%k1} {z}
-; AVX512F-32-NEXT:    vsubss %xmm3, %xmm1, %xmm1
-; AVX512F-32-NEXT:    vmovss %xmm1, (%esp)
-; AVX512F-32-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512F-32-NEXT:    vmovss %xmm1, %xmm1, %xmm3 {%k1} {z}
+; AVX512F-32-NEXT:    vsubss %xmm3, %xmm2, %xmm2
+; AVX512F-32-NEXT:    vmovss %xmm2, (%esp)
+; AVX512F-32-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX512F-32-NEXT:    xorl %edx, %edx
-; AVX512F-32-NEXT:    vcomiss %xmm2, %xmm1
+; AVX512F-32-NEXT:    vcomiss %xmm1, %xmm2
 ; AVX512F-32-NEXT:    setae %dl
 ; AVX512F-32-NEXT:    kmovw %edx, %k1
-; AVX512F-32-NEXT:    vmovss %xmm2, %xmm2, %xmm3 {%k1} {z}
-; AVX512F-32-NEXT:    vsubss %xmm3, %xmm1, %xmm1
-; AVX512F-32-NEXT:    vmovss %xmm1, {{[0-9]+}}(%esp)
-; AVX512F-32-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512F-32-NEXT:    vmovss %xmm1, %xmm1, %xmm3 {%k1} {z}
+; AVX512F-32-NEXT:    vsubss %xmm3, %xmm2, %xmm2
+; AVX512F-32-NEXT:    vmovss %xmm2, {{[0-9]+}}(%esp)
+; AVX512F-32-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; AVX512F-32-NEXT:    xorl %ecx, %ecx
-; AVX512F-32-NEXT:    vcomiss %xmm2, %xmm1
+; AVX512F-32-NEXT:    vcomiss %xmm1, %xmm2
 ; AVX512F-32-NEXT:    setae %cl
 ; AVX512F-32-NEXT:    kmovw %ecx, %k1
-; AVX512F-32-NEXT:    vmovss %xmm2, %xmm2, %xmm3 {%k1} {z}
-; AVX512F-32-NEXT:    vsubss %xmm3, %xmm1, %xmm1
-; AVX512F-32-NEXT:    vmovss %xmm1, {{[0-9]+}}(%esp)
+; AVX512F-32-NEXT:    vmovss %xmm1, %xmm1, %xmm3 {%k1} {z}
+; AVX512F-32-NEXT:    vsubss %xmm3, %xmm2, %xmm2
+; AVX512F-32-NEXT:    vmovss %xmm2, {{[0-9]+}}(%esp)
 ; AVX512F-32-NEXT:    xorl %ebx, %ebx
-; AVX512F-32-NEXT:    vcomiss %xmm2, %xmm0
+; AVX512F-32-NEXT:    vcomiss %xmm1, %xmm0
 ; AVX512F-32-NEXT:    setae %bl
 ; AVX512F-32-NEXT:    kmovw %ebx, %k1
-; AVX512F-32-NEXT:    vmovss %xmm2, %xmm2, %xmm1 {%k1} {z}
+; AVX512F-32-NEXT:    vmovss %xmm1, %xmm1, %xmm1 {%k1} {z}
 ; AVX512F-32-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVX512F-32-NEXT:    vmovss %xmm0, {{[0-9]+}}(%esp)
 ; AVX512F-32-NEXT:    flds (%esp)
@@ -1001,36 +1001,36 @@ define <4 x i64> @strict_vector_fptoui_v4f32_to_v4i64(<4 x float> %a) #0 {
 ; AVX512VL-32-NEXT:    andl $-8, %esp
 ; AVX512VL-32-NEXT:    subl $40, %esp
 ; AVX512VL-32-NEXT:    .cfi_offset %ebx, -12
-; AVX512VL-32-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,3,3,3]
-; AVX512VL-32-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; AVX512VL-32-NEXT:    vpermilps {{.*#+}} xmm2 = xmm0[3,3,3,3]
+; AVX512VL-32-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; AVX512VL-32-NEXT:    xorl %eax, %eax
-; AVX512VL-32-NEXT:    vcomiss %xmm2, %xmm1
+; AVX512VL-32-NEXT:    vcomiss %xmm1, %xmm2
 ; AVX512VL-32-NEXT:    setae %al
 ; AVX512VL-32-NEXT:    kmovw %eax, %k1
-; AVX512VL-32-NEXT:    vmovss %xmm2, %xmm2, %xmm3 {%k1} {z}
-; AVX512VL-32-NEXT:    vsubss %xmm3, %xmm1, %xmm1
-; AVX512VL-32-NEXT:    vmovss %xmm1, (%esp)
-; AVX512VL-32-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512VL-32-NEXT:    vmovss %xmm1, %xmm1, %xmm3 {%k1} {z}
+; AVX512VL-32-NEXT:    vsubss %xmm3, %xmm2, %xmm2
+; AVX512VL-32-NEXT:    vmovss %xmm2, (%esp)
+; AVX512VL-32-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX512VL-32-NEXT:    xorl %edx, %edx
-; AVX512VL-32-NEXT:    vcomiss %xmm2, %xmm1
+; AVX512VL-32-NEXT:    vcomiss %xmm1, %xmm2
 ; AVX512VL-32-NEXT:    setae %dl
 ; AVX512VL-32-NEXT:    kmovw %edx, %k1
-; AVX512VL-32-NEXT:    vmovss %xmm2, %xmm2, %xmm3 {%k1} {z}
-; AVX512VL-32-NEXT:    vsubss %xmm3, %xmm1, %xmm1
-; AVX512VL-32-NEXT:    vmovss %xmm1, {{[0-9]+}}(%esp)
-; AVX512VL-32-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512VL-32-NEXT:    vmovss %xmm1, %xmm1, %xmm3 {%k1} {z}
+; AVX512VL-32-NEXT:    vsubss %xmm3, %xmm2, %xmm2
+; AVX512VL-32-NEXT:    vmovss %xmm2, {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; AVX512VL-32-NEXT:    xorl %ecx, %ecx
-; AVX512VL-32-NEXT:    vcomiss %xmm2, %xmm1
+; AVX512VL-32-NEXT:    vcomiss %xmm1, %xmm2
 ; AVX512VL-32-NEXT:    setae %cl
 ; AVX512VL-32-NEXT:    kmovw %ecx, %k1
-; AVX512VL-32-NEXT:    vmovss %xmm2, %xmm2, %xmm3 {%k1} {z}
-; AVX512VL-32-NEXT:    vsubss %xmm3, %xmm1, %xmm1
-; AVX512VL-32-NEXT:    vmovss %xmm1, {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    vmovss %xmm1, %xmm1, %xmm3 {%k1} {z}
+; AVX512VL-32-NEXT:    vsubss %xmm3, %xmm2, %xmm2
+; AVX512VL-32-NEXT:    vmovss %xmm2, {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    xorl %ebx, %ebx
-; AVX512VL-32-NEXT:    vcomiss %xmm2, %xmm0
+; AVX512VL-32-NEXT:    vcomiss %xmm1, %xmm0
 ; AVX512VL-32-NEXT:    setae %bl
 ; AVX512VL-32-NEXT:    kmovw %ebx, %k1
-; AVX512VL-32-NEXT:    vmovss %xmm2, %xmm2, %xmm1 {%k1} {z}
+; AVX512VL-32-NEXT:    vmovss %xmm1, %xmm1, %xmm1 {%k1} {z}
 ; AVX512VL-32-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVX512VL-32-NEXT:    vmovss %xmm0, {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    flds (%esp)
