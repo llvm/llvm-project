@@ -459,13 +459,6 @@ public:
     return const_cast<Value *>(this)->getSingleUndroppableUse();
   }
 
-  /// Return true if there is exactly one unique user of this value that cannot be
-  /// dropped (that user can have multiple uses of this value).
-  User *getUniqueUndroppableUser();
-  const User *getUniqueUndroppableUser() const {
-    return const_cast<Value *>(this)->getUniqueUndroppableUser();
-  }
-
   /// Return true if there this value.
   ///
   /// This is specialized because it is a common request and does not require
