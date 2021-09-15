@@ -420,3 +420,12 @@ MergedLoadStoreMotionPass::run(Function &F, FunctionAnalysisManager &AM) {
     PA.preserveSet<CFGAnalyses>();
   return PA;
 }
+
+void MergedLoadStoreMotionPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<MergedLoadStoreMotionPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << "<";
+  OS << (Options.SplitFooterBB ? "" : "no-") << "split-footer-bb";
+  OS << ">";
+}

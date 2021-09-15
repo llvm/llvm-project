@@ -504,6 +504,17 @@ PreservedAnalyses HWAddressSanitizerPass::run(Module &M,
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
 }
+void HWAddressSanitizerPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<HWAddressSanitizerPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << "<";
+  if (Options.CompileKernel)
+    OS << "kernel;";
+  if (Options.Recover)
+    OS << "recover";
+  OS << ">";
+}
 
 void HWAddressSanitizer::createHwasanCtorComdat() {
   std::tie(HwasanCtorFunction, std::ignore) =

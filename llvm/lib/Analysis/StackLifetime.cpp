@@ -398,3 +398,19 @@ PreservedAnalyses StackLifetimePrinterPass::run(Function &F,
   SL.print(OS);
   return PreservedAnalyses::all();
 }
+
+void StackLifetimePrinterPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<StackLifetimePrinterPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << "<";
+  switch (Type) {
+  case StackLifetime::LivenessType::May:
+    OS << "may";
+    break;
+  case StackLifetime::LivenessType::Must:
+    OS << "must";
+    break;
+  }
+  OS << ">";
+}

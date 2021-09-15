@@ -48,6 +48,8 @@ public:
   MergedLoadStoreMotionPass(const MergedLoadStoreMotionOptions &PassOptions)
       : Options(PassOptions) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 }
 

@@ -2263,6 +2263,16 @@ PreservedAnalyses LowerMatrixIntrinsicsPass::run(Function &F,
   return PreservedAnalyses::all();
 }
 
+void LowerMatrixIntrinsicsPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<LowerMatrixIntrinsicsPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << "<";
+  if (Minimal)
+    OS << "minimal";
+  OS << ">";
+}
+
 namespace {
 
 class LowerMatrixIntrinsicsLegacyPass : public FunctionPass {

@@ -191,6 +191,8 @@ public:
   StackLifetimePrinterPass(raw_ostream &OS, StackLifetime::LivenessType Type)
       : Type(Type), OS(OS) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
 } // end namespace llvm

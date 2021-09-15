@@ -1273,6 +1273,16 @@ PreservedAnalyses AddressSanitizerPass::run(Function &F,
   return PreservedAnalyses::all();
 }
 
+void AddressSanitizerPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<AddressSanitizerPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << "<";
+  if (Options.CompileKernel)
+    OS << "kernel";
+  OS << ">";
+}
+
 ModuleAddressSanitizerPass::ModuleAddressSanitizerPass(
     bool CompileKernel, bool Recover, bool UseGlobalGC, bool UseOdrIndicator,
     AsanDtorKind DestructorKind)

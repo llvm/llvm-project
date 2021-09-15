@@ -1642,6 +1642,16 @@ PreservedAnalyses EarlyCSEPass::run(Function &F,
   return PA;
 }
 
+void EarlyCSEPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<EarlyCSEPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << "<";
+  if (UseMemorySSA)
+    OS << "memssa";
+  OS << ">";
+}
+
 namespace {
 
 /// A simple and fast domtree-based CSE pass.

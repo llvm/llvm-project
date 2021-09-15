@@ -18,3 +18,46 @@
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='cgscc(argpromotion,require<no-op-cgscc>,no-op-cgscc,devirt<7>(inline,no-op-cgscc)),function(loop(require<no-op-loop>))' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-5
 ; CHECK-5: cgscc(argpromotion,require<no-op-cgscc>,no-op-cgscc,devirt<7>(inline,no-op-cgscc)),function(loop(require<no-op-loop>))
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(ee-instrument<>,ee-instrument<post-inline>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-6
+; CHECK-6: function(ee-instrument<>,ee-instrument<post-inline>)
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='loop(simple-loop-unswitch<nontrivial;trivial>,simple-loop-unswitch<no-nontrivial;no-trivial>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-7
+; CHECK-7: function(loop(simple-loop-unswitch<nontrivial;trivial>,simple-loop-unswitch<no-nontrivial;no-trivial>))
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(mldst-motion<split-footer-bb>,mldst-motion<no-split-footer-bb>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-8
+; CHECK-8: function(mldst-motion<split-footer-bb>,mldst-motion<no-split-footer-bb>)
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(lower-matrix-intrinsics<>,lower-matrix-intrinsics<minimal>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-9
+; CHECK-9: function(lower-matrix-intrinsics<>,lower-matrix-intrinsics<minimal>)
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(loop-unroll<>,loop-unroll<partial;peeling;runtime;upperbound;profile-peeling;full-unroll-max=5;O1>,loop-unroll<no-partial;no-peeling;no-runtime;no-upperbound;no-profile-peeling;full-unroll-max=7;O1>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-10
+; CHECK-10: function(loop-unroll<O2>,loop-unroll<partial;peeling;runtime;upperbound;profile-peeling;full-unroll-max=5;O1>,loop-unroll<no-partial;no-peeling;no-runtime;no-upperbound;no-profile-peeling;full-unroll-max=7;O1>)
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(gvn<>,gvn<pre;load-pre;split-backedge-load-pre;memdep>,gvn<no-pre;no-load-pre;no-split-backedge-load-pre;no-memdep>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-11
+; CHECK-11: function(gvn<>,gvn<pre;load-pre;split-backedge-load-pre;memdep>,gvn<no-pre;no-load-pre;no-split-backedge-load-pre;no-memdep>)
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(early-cse<>,early-cse<memssa>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-12
+; CHECK-12: function(early-cse<>,early-cse<memssa>)
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(msan<>,msan<recover;kernel;track-origins=5>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-13
+;;; XXX: msan-module? this is one of the places where the ClassName to pass-name mapping fails.
+; CHECK-13: function(msan-module<track-origins=0>,msan-module<recover;kernel;track-origins=5>)
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='module(hwasan<>,hwasan<kernel;recover>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-14
+; CHECK-14: hwasan<>,hwasan<kernel;recover>
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(asan<>,asan<kernel>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-15
+; CHECK-15: function(asan<>,asan<kernel>)
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='module(loop-extract<>,loop-extract<single>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-16
+; CHECK-16: loop-extract<>,loop-extract<single>
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(print<stack-lifetime><may>,print<stack-lifetime><must>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-17
+; CHECK-17: function(print<stack-lifetime><may>,print<stack-lifetime><must>)
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(simplifycfg<bonus-inst-threshold=5;forward-switch-cond;switch-to-lookup;keep-loops;hoist-common-insts;sink-common-insts>,simplifycfg<bonus-inst-threshold=7;no-forward-switch-cond;no-switch-to-lookup;no-keep-loops;no-hoist-common-insts;no-sink-common-insts>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-18
+; CHECK-18: function(simplifycfg<bonus-inst-threshold=5;forward-switch-cond;switch-to-lookup;keep-loops;hoist-common-insts;sink-common-insts>,simplifycfg<bonus-inst-threshold=7;no-forward-switch-cond;no-switch-to-lookup;no-keep-loops;no-hoist-common-insts;no-sink-common-insts>)
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(loop-vectorize<no-interleave-forced-only;no-vectorize-forced-only>,loop-vectorize<interleave-forced-only;vectorize-forced-only>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-19
+; CHECK-19: function(loop-vectorize<no-interleave-forced-only;no-vectorize-forced-only;>,loop-vectorize<interleave-forced-only;vectorize-forced-only;>)
