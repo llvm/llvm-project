@@ -6105,7 +6105,7 @@ validateSwiftFunctionName(Sema &S, const ParsedAttr &AL, SourceLocation Loc,
   if (BaseName.empty()) {
     BaseName = ContextName;
     ContextName = StringRef();
-  } else if (ContextName.empty() || !isValidIdentifier(ContextName)) {
+  } else if (ContextName.empty() || !isValidAsciiIdentifier(ContextName)) {
     S.Diag(Loc, diag::warn_attr_swift_name_invalid_identifier)
         << AL << /*context*/ 1;
     return false;
@@ -6113,7 +6113,7 @@ validateSwiftFunctionName(Sema &S, const ParsedAttr &AL, SourceLocation Loc,
     IsMember = true;
   }
 
-  if (!isValidIdentifier(BaseName) || BaseName == "_") {
+  if (!isValidAsciiIdentifier(BaseName) || BaseName == "_") {
     S.Diag(Loc, diag::warn_attr_swift_name_invalid_identifier)
         << AL << /*basename*/ 0;
     return false;
@@ -6163,7 +6163,7 @@ validateSwiftFunctionName(Sema &S, const ParsedAttr &AL, SourceLocation Loc,
   do {
     std::tie(CurrentParam, Parameters) = Parameters.split(':');
 
-    if (!isValidIdentifier(CurrentParam)) {
+    if (!isValidAsciiIdentifier(CurrentParam)) {
       S.Diag(Loc, diag::warn_attr_swift_name_invalid_identifier)
           << AL << /*parameter*/2;
       return false;
@@ -6332,13 +6332,13 @@ bool Sema::DiagnoseSwiftName(Decl *D, StringRef Name, SourceLocation Loc,
     if (BaseName.empty()) {
       BaseName = ContextName;
       ContextName = StringRef();
-    } else if (!isValidIdentifier(ContextName)) {
+    } else if (!isValidAsciiIdentifier(ContextName)) {
       Diag(Loc, diag::warn_attr_swift_name_invalid_identifier) << AL
           << /*context*/1;
       return false;
     }
 
-    if (!isValidIdentifier(BaseName)) {
+    if (!isValidAsciiIdentifier(BaseName)) {
       Diag(Loc, diag::warn_attr_swift_name_invalid_identifier) << AL
           << /*basename*/0;
       return false;

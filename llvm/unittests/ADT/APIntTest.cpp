@@ -2587,6 +2587,18 @@ TEST(APIntTest, truncOrSelf) {
   EXPECT_EQ(0xFFFFFFFF, val.truncOrSelf(64));
 }
 
+TEST(APIntTest, concatMSB) {
+  APInt Int1(4, 0x1ULL);
+  APInt Int3(4, 0x3ULL);
+
+  EXPECT_EQ(0x31, Int3.concat(Int1));
+  EXPECT_EQ(APInt(12, 0x313), Int3.concat(Int1).concat(Int3));
+  EXPECT_EQ(APInt(16, 0x3313), Int3.concat(Int3).concat(Int1).concat(Int3));
+
+  APInt I64(64, 0x3ULL);
+  EXPECT_EQ(I64, I64.concat(I64).lshr(64).trunc(64));
+}
+
 TEST(APIntTest, multiply) {
   APInt i64(64, 1234);
 
@@ -2980,6 +2992,26 @@ TEST(APIntTest, ZeroWidth) {
   // Move Assignment
   MZW1 = std::move(ZW2);
   EXPECT_EQ(0U, MZW1.getBitWidth());
+}
+
+TEST(APIntTest, ScaleBitMask) {
+  EXPECT_EQ(APIntOps::ScaleBitMask(APInt(2, 0x00), 8), APInt(8, 0x00));
+  EXPECT_EQ(APIntOps::ScaleBitMask(APInt(2, 0x01), 8), APInt(8, 0x0F));
+  EXPECT_EQ(APIntOps::ScaleBitMask(APInt(2, 0x02), 8), APInt(8, 0xF0));
+  EXPECT_EQ(APIntOps::ScaleBitMask(APInt(2, 0x03), 8), APInt(8, 0xFF));
+
+  EXPECT_EQ(APIntOps::ScaleBitMask(APInt(8, 0x00), 4), APInt(4, 0x00));
+  EXPECT_EQ(APIntOps::ScaleBitMask(APInt(8, 0xFF), 4), APInt(4, 0x0F));
+  EXPECT_EQ(APIntOps::ScaleBitMask(APInt(8, 0xE4), 4), APInt(4, 0x0E));
+
+  EXPECT_EQ(APIntOps::ScaleBitMask(APInt(8, 0x00), 8), APInt(8, 0x00));
+
+  EXPECT_EQ(APIntOps::ScaleBitMask(APInt::getNullValue(1024), 4096),
+            APInt::getNullValue(4096));
+  EXPECT_EQ(APIntOps::ScaleBitMask(APInt::getAllOnes(4096), 256),
+            APInt::getAllOnes(256));
+  EXPECT_EQ(APIntOps::ScaleBitMask(APInt::getOneBitSet(4096, 32), 256),
+            APInt::getOneBitSet(256, 2));
 }
 
 } // end anonymous namespace

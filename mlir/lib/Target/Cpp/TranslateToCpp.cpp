@@ -677,14 +677,16 @@ bool CppEmitter::hasBlockLabel(Block &block) {
 }
 
 LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
-  auto printInt = [&](APInt val, bool isSigned) {
+  auto printInt = [&](APInt val, bool isUnsigned) {
     if (val.getBitWidth() == 1) {
       if (val.getBoolValue())
         os << "true";
       else
         os << "false";
     } else {
-      val.print(os, isSigned);
+      SmallString<128> strValue;
+      val.toString(strValue, 10, !isUnsigned, false);
+      os << strValue;
     }
   };
 

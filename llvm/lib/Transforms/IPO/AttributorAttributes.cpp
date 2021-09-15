@@ -9438,7 +9438,7 @@ struct AACallEdgesCallSite : public AACallEdgesImpl {
     // Process callee metadata if available.
     if (auto *MD = getCtxI()->getMetadata(LLVMContext::MD_callees)) {
       for (auto &Op : MD->operands()) {
-        Function *Callee = mdconst::extract_or_null<Function>(Op);
+        Function *Callee = mdconst::dyn_extract_or_null<Function>(Op);
         if (Callee)
           addCalledFunction(Callee, Change);
       }

@@ -3813,51 +3813,62 @@ bool InstCombinerImpl::run() {
 
     // See if we can trivially sink this instruction to its user if we can
     // prove that the successor is not executed more frequently than our block.
-    if (EnableCodeSinking)
-      if (Use *SingleUse = I->getSingleUndroppableUse()) {
-        BasicBlock *BB = I->getParent();
-        Instruction *UserInst = cast<Instruction>(SingleUse->getUser());
-        BasicBlock *UserParent;
+    // Return the UserBlock if successful.
+    auto getOptionalSinkBlockForInst =
+        [this](Instruction *I) -> Optional<BasicBlock *> {
+      if (!EnableCodeSinking)
+        return None;
+      Use *SingleUse = I->getSingleUndroppableUse();
+      if (!SingleUse)
+        return None;
 
-        // Get the block the use occurs in.
-        if (PHINode *PN = dyn_cast<PHINode>(UserInst))
-          UserParent = PN->getIncomingBlock(*SingleUse);
-        else
-          UserParent = UserInst->getParent();
+      BasicBlock *BB = I->getParent();
+      Instruction *UserInst = cast<Instruction>(SingleUse->getUser());
+      BasicBlock *UserParent;
 
-        // Try sinking to another block. If that block is unreachable, then do
-        // not bother. SimplifyCFG should handle it.
-        if (UserParent != BB && DT.isReachableFromEntry(UserParent)) {
-          // See if the user is one of our successors that has only one
-          // predecessor, so that we don't have to split the critical edge.
-          bool ShouldSink = UserParent->getUniquePredecessor() == BB;
-          // Another option where we can sink is a block that ends with a
-          // terminator that does not pass control to other block (such as
-          // return or unreachable). In this case:
-          //   - I dominates the User (by SSA form);
-          //   - the User will be executed at most once.
-          // So sinking I down to User is always profitable or neutral.
-          if (!ShouldSink) {
-            auto *Term = UserParent->getTerminator();
-            ShouldSink = isa<ReturnInst>(Term) || isa<UnreachableInst>(Term);
-          }
-          if (ShouldSink) {
-            assert(DT.dominates(BB, UserParent) &&
-                   "Dominance relation broken?");
-            // Okay, the CFG is simple enough, try to sink this instruction.
-            if (TryToSinkInstruction(I, UserParent)) {
-              LLVM_DEBUG(dbgs() << "IC: Sink: " << *I << '\n');
-              MadeIRChange = true;
-              // We'll add uses of the sunk instruction below, but since sinking
-              // can expose opportunities for it's *operands* add them to the
-              // worklist
-              for (Use &U : I->operands())
-                if (Instruction *OpI = dyn_cast<Instruction>(U.get()))
-                  Worklist.push(OpI);
-            }
-          }
-        }
+      // Get the block the use occurs in.
+      if (PHINode *PN = dyn_cast<PHINode>(UserInst))
+        UserParent = PN->getIncomingBlock(*SingleUse);
+      else
+        UserParent = UserInst->getParent();
+
+      // Try sinking to another block. If that block is unreachable, then do
+      // not bother. SimplifyCFG should handle it.
+      if (UserParent == BB || !DT.isReachableFromEntry(UserParent))
+        return None;
+
+      auto *Term = UserParent->getTerminator();
+      // See if the user is one of our successors that has only one
+      // predecessor, so that we don't have to split the critical edge.
+      // Another option where we can sink is a block that ends with a
+      // terminator that does not pass control to other block (such as
+      // return or unreachable). In this case:
+      //   - I dominates the User (by SSA form);
+      //   - the User will be executed at most once.
+      // So sinking I down to User is always profitable or neutral.
+      if (UserParent->getUniquePredecessor() == BB ||
+          (isa<ReturnInst>(Term) || isa<UnreachableInst>(Term))) {
+        assert(DT.dominates(BB, UserParent) && "Dominance relation broken?");
+        return UserParent;
       }
+      return None;
+    };
+
+    auto OptBB = getOptionalSinkBlockForInst(I);
+    if (OptBB) {
+      auto *UserParent = *OptBB;
+      // Okay, the CFG is simple enough, try to sink this instruction.
+      if (TryToSinkInstruction(I, UserParent)) {
+        LLVM_DEBUG(dbgs() << "IC: Sink: " << *I << '\n');
+        MadeIRChange = true;
+        // We'll add uses of the sunk instruction below, but since
+        // sinking can expose opportunities for it's *operands* add
+        // them to the worklist
+        for (Use &U : I->operands())
+          if (Instruction *OpI = dyn_cast<Instruction>(U.get()))
+            Worklist.push(OpI);
+      }
+    }
 
     // Now that we have an instruction, try combining it to simplify it.
     Builder.SetInsertPoint(I);

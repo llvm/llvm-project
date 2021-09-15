@@ -626,8 +626,7 @@ define void @test_ldst_1(i8* nocapture readonly %vqp, <256 x i1>* %vpp, <16 x i8
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
-; CHECK-NEXT:    li r3, 8
-; CHECK-NEXT:    lxvpx vsp36, r4, r3
+; CHECK-NEXT:    plxvp vsp36, 8(r4), 0
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    pmxvf64gernn acc0, vsp36, v2, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
@@ -643,8 +642,7 @@ define void @test_ldst_1(i8* nocapture readonly %vqp, <256 x i1>* %vpp, <16 x i8
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
-; CHECK-BE-NEXT:    li r3, 8
-; CHECK-BE-NEXT:    lxvpx vsp36, r4, r3
+; CHECK-BE-NEXT:    plxvp vsp36, 8(r4), 0
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    pmxvf64gernn acc0, vsp36, v2, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0

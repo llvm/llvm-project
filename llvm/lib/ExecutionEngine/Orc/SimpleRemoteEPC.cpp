@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccess.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #define DEBUG_TYPE "orc"
@@ -89,7 +90,7 @@ SimpleRemoteEPC::lookupSymbols(ArrayRef<LookupRequest> Request) {
 Expected<int32_t> SimpleRemoteEPC::runAsMain(JITTargetAddress MainFnAddr,
                                              ArrayRef<std::string> Args) {
   int64_t Result = 0;
-  if (auto Err = callSPSWrapper<shared::SPSRunAsMainSignature>(
+  if (auto Err = callSPSWrapper<rt::SPSRunAsMainSignature>(
           RunAsMainAddr.getValue(), Result, ExecutorAddress(MainFnAddr), Args))
     return std::move(Err);
   return Result;
@@ -171,9 +172,9 @@ Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
 SimpleRemoteEPC::createMemoryManager() {
   EPCGenericJITLinkMemoryManager::FuncAddrs FAs;
   if (auto Err = getBootstrapSymbols(
-          {{FAs.Reserve, "__llvm_orc_memory_reserve"},
-           {FAs.Finalize, "__llvm_orc_memory_finalize"},
-           {FAs.Deallocate, "__llvm_orc_memory_deallocate"}}))
+          {{FAs.Reserve, rt::MemoryReserveWrapperName},
+           {FAs.Finalize, rt::MemoryFinalizeWrapperName},
+           {FAs.Deallocate, rt::MemoryDeallocateWrapperName}}))
     return std::move(Err);
 
   return std::make_unique<EPCGenericJITLinkMemoryManager>(*this, FAs);
@@ -252,7 +253,7 @@ Error SimpleRemoteEPC::setup(std::unique_ptr<SimpleRemoteEPCTransport> T,
            {JDI.JITDispatchFunctionAddress, DispatchFnName},
            {LoadDylibAddr, "__llvm_orc_load_dylib"},
            {LookupSymbolsAddr, "__llvm_orc_lookup_symbols"},
-           {RunAsMainAddr, "__llvm_orc_run_as_main"}}))
+           {RunAsMainAddr, rt::RunAsMainWrapperName}}))
     return Err;
 
   if (auto MemMgr = createMemoryManager()) {

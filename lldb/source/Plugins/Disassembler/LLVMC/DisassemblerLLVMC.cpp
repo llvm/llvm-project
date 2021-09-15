@@ -61,6 +61,8 @@ public:
   bool CanBranch(llvm::MCInst &mc_inst) const;
   bool HasDelaySlot(llvm::MCInst &mc_inst) const;
   bool IsCall(llvm::MCInst &mc_inst) const;
+  bool IsLoad(llvm::MCInst &mc_inst) const;
+  bool IsAuthenticated(llvm::MCInst &mc_inst) const;
 
 private:
   MCDisasmInstance(std::unique_ptr<llvm::MCInstrInfo> &&instr_info_up,
@@ -100,6 +102,16 @@ public:
   bool HasDelaySlot() override {
     VisitInstruction();
     return m_has_delay_slot;
+  }
+
+  bool IsLoad() override {
+    VisitInstruction();
+    return m_is_load;
+  }
+
+  bool IsAuthenticated() override {
+    VisitInstruction();
+    return m_is_authenticated;
   }
 
   DisassemblerLLVMC::MCDisasmInstance *GetDisasmToUse(bool &is_alternate_isa) {
@@ -817,9 +829,13 @@ protected:
   //   - Might branch
   //   - Does not have a delay slot
   //   - Is not a call
+  //   - Is not a load
+  //   - Is not an authenticated instruction
   bool m_does_branch = true;
   bool m_has_delay_slot = false;
   bool m_is_call = false;
+  bool m_is_load = false;
+  bool m_is_authenticated = false;
 
   void VisitInstruction() {
     if (m_has_visited_instruction)
@@ -849,6 +865,8 @@ protected:
     m_does_branch = mc_disasm_ptr->CanBranch(inst);
     m_has_delay_slot = mc_disasm_ptr->HasDelaySlot(inst);
     m_is_call = mc_disasm_ptr->IsCall(inst);
+    m_is_load = mc_disasm_ptr->IsLoad(inst);
+    m_is_authenticated = mc_disasm_ptr->IsAuthenticated(inst);
   }
 
 private:
@@ -1025,6 +1043,27 @@ bool DisassemblerLLVMC::MCDisasmInstance::HasDelaySlot(
 
 bool DisassemblerLLVMC::MCDisasmInstance::IsCall(llvm::MCInst &mc_inst) const {
   return m_instr_info_up->get(mc_inst.getOpcode()).isCall();
+}
+
+bool DisassemblerLLVMC::MCDisasmInstance::IsLoad(llvm::MCInst &mc_inst) const {
+  return m_instr_info_up->get(mc_inst.getOpcode()).mayLoad();
+}
+
+bool DisassemblerLLVMC::MCDisasmInstance::IsAuthenticated(
+    llvm::MCInst &mc_inst) const {
+  auto InstrDesc = m_instr_info_up->get(mc_inst.getOpcode());
+
+  // Treat software auth traps (brk 0xc470 + aut key, where 0x70 == 'p', 0xc4
+  // == 'a' + 'c') as authenticated instructions for reporting purposes, in
+  // addition to the standard authenticated instructions specified in ARMv8.3.
+  bool IsBrkC47x = false;
+  if (InstrDesc.isTrap() && mc_inst.getNumOperands() == 1) {
+    const llvm::MCOperand &Op0 = mc_inst.getOperand(0);
+    if (Op0.isImm() && Op0.getImm() >= 0xc470 && Op0.getImm() <= 0xc474)
+      IsBrkC47x = true;
+  }
+
+  return InstrDesc.isAuthenticated() || IsBrkC47x;
 }
 
 DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,

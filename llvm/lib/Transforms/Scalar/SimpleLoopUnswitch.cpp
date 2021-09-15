@@ -3121,6 +3121,17 @@ PreservedAnalyses SimpleLoopUnswitchPass::run(Loop &L, LoopAnalysisManager &AM,
   return PA;
 }
 
+void SimpleLoopUnswitchPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<SimpleLoopUnswitchPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+
+  OS << "<";
+  OS << (NonTrivial ? "" : "no-") << "nontrivial;";
+  OS << (Trivial ? "" : "no-") << "trivial";
+  OS << ">";
+}
+
 namespace {
 
 class SimpleLoopUnswitchLegacyPass : public LoopPass {

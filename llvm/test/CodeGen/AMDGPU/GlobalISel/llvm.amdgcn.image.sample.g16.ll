@@ -39,12 +39,12 @@ define amdgpu_ps <4 x float> @sample_d_3d(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GCN-NEXT:    v_mov_b32_e32 v9, v2
 ; GCN-NEXT:    v_mov_b32_e32 v10, v3
 ; GCN-NEXT:    v_mov_b32_e32 v11, 0xffff
-; GCN-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GCN-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
 ; GCN-NEXT:    s_lshl_b32 s12, s0, 16
 ; GCN-NEXT:    v_and_or_b32 v3, v9, v11, s12
-; GCN-NEXT:    v_and_or_b32 v4, v10, v11, v4
 ; GCN-NEXT:    v_and_or_b32 v2, v0, v11, v1
+; GCN-NEXT:    v_and_or_b32 v4, v10, v11, v4
 ; GCN-NEXT:    v_and_or_b32 v5, v5, v11, s12
 ; GCN-NEXT:    image_sample_d_g16 v[0:3], v[2:8], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_3D
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -155,14 +155,14 @@ define amdgpu_ps float @sample_c_d_o_2darray_V1(<8 x i32> inreg %rsrc, <4 x i32>
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    v_mov_b32_e32 v9, v3
 ; GCN-NEXT:    v_mov_b32_e32 v10, v2
+; GCN-NEXT:    v_mov_b32_e32 v11, v4
 ; GCN-NEXT:    v_mov_b32_e32 v2, v0
 ; GCN-NEXT:    v_mov_b32_e32 v3, v1
-; GCN-NEXT:    v_mov_b32_e32 v11, v4
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0xffff
-; GCN-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 16, v9
-; GCN-NEXT:    v_and_or_b32 v5, v11, v0, v5
+; GCN-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
 ; GCN-NEXT:    v_and_or_b32 v4, v10, v0, v1
+; GCN-NEXT:    v_and_or_b32 v5, v11, v0, v5
 ; GCN-NEXT:    image_sample_c_d_o_g16 v0, v[2:8], s[0:7], s[8:11] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
@@ -176,14 +176,14 @@ define amdgpu_ps <2 x float> @sample_c_d_o_2darray_V2(<8 x i32> inreg %rsrc, <4 
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    v_mov_b32_e32 v9, v3
 ; GCN-NEXT:    v_mov_b32_e32 v10, v2
+; GCN-NEXT:    v_mov_b32_e32 v11, v4
 ; GCN-NEXT:    v_mov_b32_e32 v2, v0
 ; GCN-NEXT:    v_mov_b32_e32 v3, v1
-; GCN-NEXT:    v_mov_b32_e32 v11, v4
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0xffff
-; GCN-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 16, v9
-; GCN-NEXT:    v_and_or_b32 v5, v11, v0, v5
+; GCN-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
 ; GCN-NEXT:    v_and_or_b32 v4, v10, v0, v1
+; GCN-NEXT:    v_and_or_b32 v5, v11, v0, v5
 ; GCN-NEXT:    image_sample_c_d_o_g16 v[0:1], v[2:8], s[0:7], s[8:11] dmask:0x6 dim:SQ_RSRC_IMG_2D_ARRAY
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog

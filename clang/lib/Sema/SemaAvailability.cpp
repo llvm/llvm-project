@@ -268,7 +268,7 @@ tryParseObjCMethodName(StringRef Name, SmallVectorImpl<StringRef> &SlotNames,
   for (StringRef S : SlotNames) {
     if (S.empty())
       continue;
-    if (!isValidIdentifier(S, AllowDollar))
+    if (!isValidAsciiIdentifier(S, AllowDollar))
       return None;
   }
   return NumParams;

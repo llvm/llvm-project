@@ -53,7 +53,8 @@ struct Section {
 struct Symbol {
   StringRef SymbolName;
   llvm::yaml::Hex64 Value; // Symbol value; storage class-dependent.
-  StringRef SectionName;
+  Optional<StringRef> SectionName;
+  Optional<uint16_t> SectionIndex;
   llvm::yaml::Hex16 Type;
   XCOFF::StorageClass StorageClass;
   uint8_t NumberOfAuxEntries;

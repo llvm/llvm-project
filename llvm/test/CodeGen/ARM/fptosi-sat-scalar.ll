@@ -2500,54 +2500,54 @@ define i100 @test_signed_i100_f64(double %f) nounwind {
 ; FP16-NEXT:    mov r4, r1
 ; FP16-NEXT:    mov r5, r0
 ; FP16-NEXT:    bl __fixdfti
-; FP16-NEXT:    vldr d0, .LCPI18_0
-; FP16-NEXT:    vmov d1, r5, r4
-; FP16-NEXT:    vldr d2, .LCPI18_1
-; FP16-NEXT:    vcmp.f64 d1, d0
+; FP16-NEXT:    vldr d2, .LCPI18_0
+; FP16-NEXT:    vmov d0, r5, r4
+; FP16-NEXT:    vldr d1, .LCPI18_1
+; FP16-NEXT:    vcmp.f64 d0, d2
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    it lt
 ; FP16-NEXT:    movlt r0, #0
-; FP16-NEXT:    vcmp.f64 d1, d2
+; FP16-NEXT:    vcmp.f64 d0, d1
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    it gt
 ; FP16-NEXT:    movgt.w r0, #-1
-; FP16-NEXT:    vcmp.f64 d1, d1
+; FP16-NEXT:    vcmp.f64 d0, d0
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    it vs
 ; FP16-NEXT:    movvs r0, #0
-; FP16-NEXT:    vcmp.f64 d1, d0
+; FP16-NEXT:    vcmp.f64 d0, d2
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    it lt
 ; FP16-NEXT:    movlt r1, #0
-; FP16-NEXT:    vcmp.f64 d1, d2
+; FP16-NEXT:    vcmp.f64 d0, d1
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    it gt
 ; FP16-NEXT:    movgt.w r1, #-1
-; FP16-NEXT:    vcmp.f64 d1, d1
+; FP16-NEXT:    vcmp.f64 d0, d0
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    it vs
 ; FP16-NEXT:    movvs r1, #0
-; FP16-NEXT:    vcmp.f64 d1, d0
+; FP16-NEXT:    vcmp.f64 d0, d2
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    it lt
 ; FP16-NEXT:    movlt r2, #0
-; FP16-NEXT:    vcmp.f64 d1, d2
+; FP16-NEXT:    vcmp.f64 d0, d1
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    it gt
 ; FP16-NEXT:    movgt.w r2, #-1
-; FP16-NEXT:    vcmp.f64 d1, d1
+; FP16-NEXT:    vcmp.f64 d0, d0
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    it vs
 ; FP16-NEXT:    movvs r2, #0
-; FP16-NEXT:    vcmp.f64 d1, d0
+; FP16-NEXT:    vcmp.f64 d0, d2
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    it lt
 ; FP16-NEXT:    mvnlt r3, #7
-; FP16-NEXT:    vcmp.f64 d1, d2
+; FP16-NEXT:    vcmp.f64 d0, d1
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    it gt
 ; FP16-NEXT:    movgt r3, #7
-; FP16-NEXT:    vcmp.f64 d1, d1
+; FP16-NEXT:    vcmp.f64 d0, d0
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    it vs
 ; FP16-NEXT:    movvs r3, #0
@@ -2809,54 +2809,54 @@ define i128 @test_signed_i128_f64(double %f) nounwind {
 ; FP16-NEXT:    mov r4, r1
 ; FP16-NEXT:    mov r5, r0
 ; FP16-NEXT:    bl __fixdfti
-; FP16-NEXT:    vldr d0, .LCPI19_0
-; FP16-NEXT:    vmov d1, r5, r4
-; FP16-NEXT:    vldr d2, .LCPI19_1
-; FP16-NEXT:    vcmp.f64 d1, d0
+; FP16-NEXT:    vldr d2, .LCPI19_0
+; FP16-NEXT:    vmov d0, r5, r4
+; FP16-NEXT:    vldr d1, .LCPI19_1
+; FP16-NEXT:    vcmp.f64 d0, d2
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    it lt
 ; FP16-NEXT:    movlt r0, #0
-; FP16-NEXT:    vcmp.f64 d1, d2
+; FP16-NEXT:    vcmp.f64 d0, d1
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    it gt
 ; FP16-NEXT:    movgt.w r0, #-1
-; FP16-NEXT:    vcmp.f64 d1, d1
+; FP16-NEXT:    vcmp.f64 d0, d0
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    it vs
 ; FP16-NEXT:    movvs r0, #0
-; FP16-NEXT:    vcmp.f64 d1, d0
+; FP16-NEXT:    vcmp.f64 d0, d2
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    it lt
 ; FP16-NEXT:    movlt r1, #0
-; FP16-NEXT:    vcmp.f64 d1, d2
+; FP16-NEXT:    vcmp.f64 d0, d1
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    it gt
 ; FP16-NEXT:    movgt.w r1, #-1
-; FP16-NEXT:    vcmp.f64 d1, d1
+; FP16-NEXT:    vcmp.f64 d0, d0
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    it vs
 ; FP16-NEXT:    movvs r1, #0
-; FP16-NEXT:    vcmp.f64 d1, d0
+; FP16-NEXT:    vcmp.f64 d0, d2
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    it lt
 ; FP16-NEXT:    movlt r2, #0
-; FP16-NEXT:    vcmp.f64 d1, d2
+; FP16-NEXT:    vcmp.f64 d0, d1
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    it gt
 ; FP16-NEXT:    movgt.w r2, #-1
-; FP16-NEXT:    vcmp.f64 d1, d1
+; FP16-NEXT:    vcmp.f64 d0, d0
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    it vs
 ; FP16-NEXT:    movvs r2, #0
-; FP16-NEXT:    vcmp.f64 d1, d0
+; FP16-NEXT:    vcmp.f64 d0, d2
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    it lt
 ; FP16-NEXT:    movlt.w r3, #-2147483648
-; FP16-NEXT:    vcmp.f64 d1, d2
+; FP16-NEXT:    vcmp.f64 d0, d1
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    it gt
 ; FP16-NEXT:    mvngt r3, #-2147483648
-; FP16-NEXT:    vcmp.f64 d1, d1
+; FP16-NEXT:    vcmp.f64 d0, d0
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    it vs
 ; FP16-NEXT:    movvs r3, #0

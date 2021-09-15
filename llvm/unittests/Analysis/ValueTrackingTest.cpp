@@ -2256,6 +2256,22 @@ const FindAllocaForValueTestParams FindAllocaForValueTests[] = {
         ret void
       })",
      false, false},
+    {R"(
+      declare i32* @retptr(i32* returned)
+      define void @test(i1 %cond) {
+        %a = alloca i32
+        %r = call i32* @retptr(i32* %a)
+        ret void
+      })",
+     true, true},
+    {R"(
+      declare i32* @fun(i32*)
+      define void @test(i1 %cond) {
+        %a = alloca i32
+        %r = call i32* @fun(i32* %a)
+        ret void
+      })",
+     false, false},
 };
 
 TEST_P(FindAllocaForValueTest, findAllocaForValue) {

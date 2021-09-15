@@ -17,6 +17,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/StandardOps/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -98,10 +99,7 @@ static SmallVector<Value> getAsValues(OpBuilder &b, Location loc,
                                       ArrayRef<OpFoldResult> valueOrAttrVec) {
   return llvm::to_vector<4>(
       llvm::map_range(valueOrAttrVec, [&](OpFoldResult value) -> Value {
-        if (auto attr = value.dyn_cast<Attribute>())
-          return b.create<ConstantIndexOp>(loc,
-                                           attr.cast<IntegerAttr>().getInt());
-        return value.get<Value>();
+        return getValueOrCreateConstantIndexOp(b, loc, value);
       }));
 }
 
@@ -1195,16 +1193,6 @@ LogicalResult PadTensorOp::reifyResultShapes(
 // Methods related to PadTensor tiling.
 //===----------------------------------------------------------------------===//
 
-/// Given an OpFoldResult, return a Value. If the OpFoldResult is an Attribute,
-/// it must be of type Integer.
-static Value getAsValue(OpBuilder &builder, Location loc, OpFoldResult ofr) {
-  if (auto val = ofr.dyn_cast<Value>())
-    return val;
-  auto intVal = getConstantIntValue(ofr);
-  assert(intVal && "expected Value or IntegerAttr");
-  return builder.create<ConstantIndexOp>(loc, *intVal);
-}
-
 SmallVector<Value> PadTensorOp::getDestinationOperands(OpBuilder &b) {
   ReifiedRankedShapedTypeDims reifiedShapes;
   (void)reifyResultShapes(b, reifiedShapes);
@@ -1292,12 +1280,12 @@ Operation *PadTensorOp::getTiledImplementation(OpBuilder &b, ValueRange dest,
 
   int64_t rank = getSourceType().getRank();
   for (unsigned dim = 0; dim < rank; ++dim) {
-    auto low = getAsValue(b, loc, getMixedLowPad()[dim]);
+    auto low = getValueOrCreateConstantIndexOp(b, loc, getMixedLowPad()[dim]);
     bool hasLowPad = getConstantIntValue(low) != static_cast<int64_t>(0);
-    auto high = getAsValue(b, loc, getMixedHighPad()[dim]);
+    auto high = getValueOrCreateConstantIndexOp(b, loc, getMixedHighPad()[dim]);
     bool hasHighPad = getConstantIntValue(high) != static_cast<int64_t>(0);
-    auto offset = getAsValue(b, loc, offsets[dim]);
-    auto length = getAsValue(b, loc, sizes[dim]);
+    auto offset = getValueOrCreateConstantIndexOp(b, loc, offsets[dim]);
+    auto length = getValueOrCreateConstantIndexOp(b, loc, sizes[dim]);
     auto srcSize = b.createOrFold<tensor::DimOp>(loc, source(), dim);
 
     // The new amount of low padding is `low - offset`. Except for the case

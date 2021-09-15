@@ -137,6 +137,10 @@
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-FRM
 // RUN: %clang_cc1 %s -E -dM -o - -x cl -cl-std=clc++ \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-CLCPP10
+// RUN: %clang_cc1 %s -E -dM -o - -x cl -cl-std=clc++1.0 \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-CLCPP10
+// RUN: %clang_cc1 %s -E -dM -o - -x cl -cl-std=clc++2021 \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-CLCPP2021
 // CHECK-CL10: #define CL_VERSION_1_0 100
 // CHECK-CL10: #define CL_VERSION_1_1 110
 // CHECK-CL10: #define CL_VERSION_1_2 120
@@ -174,9 +178,15 @@
 // CHECK-CL30-NOT: #define __FAST_RELAXED_MATH__ 1
 // CHECK-FRM: #define __FAST_RELAXED_MATH__ 1
 // CHECK-CLCPP10: #define __CL_CPP_VERSION_1_0__ 100
+// CHECK-CLCPP10: #define __CL_CPP_VERSION_2021__ 202100
 // CHECK-CLCPP10: #define __OPENCL_CPP_VERSION__ 100
 // CHECK-CLCPP10-NOT: #define __FAST_RELAXED_MATH__ 1
 // CHECK-CLCPP10-NOT: #define __ENDIAN_LITTLE__ 1
+// CHECK-CLCPP2021: #define __CL_CPP_VERSION_1_0__ 100
+// CHECK-CLCPP2021: #define __CL_CPP_VERSION_2021__ 202100
+// CHECK-CLCPP2021: #define __OPENCL_CPP_VERSION__ 202100
+// CHECK-CLCPP2021-NOT: #define __FAST_RELAXED_MATH__ 1
+// CHECK-CLCPP2021-NOT: #define __ENDIAN_LITTLE__ 1
 
 // RUN: %clang_cc1 %s -E -dM -o - -x cl \
 // RUN:   | FileCheck %s --check-prefix=MSCOPE

@@ -373,9 +373,10 @@ define amdgpu_kernel void @ds12align1(<3 x i32> addrspace(3)* %in, <3 x i32> add
 ; ALIGNED-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; ALIGNED-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 24, v4
 ; ALIGNED-GISEL-NEXT:    v_or3_b32 v0, v0, v3, v4
+; ALIGNED-GISEL-NEXT:    s_waitcnt lgkmcnt(2)
+; ALIGNED-GISEL-NEXT:    v_lshlrev_b32_sdwa v3, s3, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; ALIGNED-GISEL-NEXT:    s_waitcnt lgkmcnt(1)
 ; ALIGNED-GISEL-NEXT:    v_and_b32_e32 v4, v8, v1
-; ALIGNED-GISEL-NEXT:    v_lshlrev_b32_sdwa v3, s3, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; ALIGNED-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; ALIGNED-GISEL-NEXT:    v_and_b32_e32 v1, v9, v1
 ; ALIGNED-GISEL-NEXT:    v_and_or_b32 v3, v6, s2, v3

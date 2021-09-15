@@ -36,13 +36,13 @@ void Test() {
   // CHECK-NEXT:  |   |-value: ComplexFloat 3.141500e+00 + 4.200000e+01i
 
   constexpr _Complex int ArrayOfComplexInt[10] = {ComplexInt, ComplexInt, ComplexInt, ComplexInt};
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} ArrayOfComplexInt '_Complex int const[10]' constexpr cinit
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} ArrayOfComplexInt 'const _Complex int [10]' constexpr cinit
   // CHECK-NEXT:  |   |-value: Array size=10
   // CHECK-NEXT:  |   | |-elements: ComplexInt 42 + 24i, ComplexInt 42 + 24i, ComplexInt 42 + 24i, ComplexInt 42 + 24i
   // CHECK-NEXT:  |   | `-filler: 6 x ComplexInt 0 + 0i
 
   constexpr _Complex float ArrayOfComplexFloat[10] = {ComplexFloat, ComplexFloat, ComplexInt, ComplexInt};
-  // CHECK:    `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} ArrayOfComplexFloat '_Complex float const[10]' constexpr cinit
+  // CHECK:    `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} ArrayOfComplexFloat 'const _Complex float [10]' constexpr cinit
   // CHECK-NEXT:      |-value: Array size=10
   // CHECK-NEXT:      | |-elements: ComplexFloat 3.141500e+00 + 4.200000e+01i, ComplexFloat 3.141500e+00 + 4.200000e+01i, ComplexFloat 4.200000e+01 + 2.400000e+01i, ComplexFloat 4.200000e+01 + 2.400000e+01i
   // CHECK-NEXT:      | `-filler: 6 x ComplexFloat 0.000000e+00 + 0.000000e+00i

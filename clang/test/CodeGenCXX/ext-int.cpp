@@ -223,23 +223,23 @@ void TakesVarargs(int i, ...) {
   // WIN: %[[LOADV4:.+]] = load i129, i129* %[[LOADP4]]
   // WIN: store i129 %[[LOADV4]], i129*
 
-  _ExtInt(16777200) E = __builtin_va_arg(args, _ExtInt(16777200));
+  _ExtInt(8388600) E = __builtin_va_arg(args, _ExtInt(8388600));
   // LIN: %[[AD5:.+]] = getelementptr inbounds [1 x %struct.__va_list_tag], [1 x %struct.__va_list_tag]* %[[ARGS]]
   // LIN: %[[OFA_P5:.+]] = getelementptr inbounds %struct.__va_list_tag, %struct.__va_list_tag* %[[AD5]], i32 0, i32 2
   // LIN: %[[OFA5:.+]] = load i8*, i8** %[[OFA_P5]]
-  // LIN: %[[BC5:.+]] = bitcast i8* %[[OFA5]] to i16777200*
-  // LIN: %[[OFANEXT5:.+]] = getelementptr i8, i8* %[[OFA5]], i32 2097152
+  // LIN: %[[BC5:.+]] = bitcast i8* %[[OFA5]] to i8388600*
+  // LIN: %[[OFANEXT5:.+]] = getelementptr i8, i8* %[[OFA5]], i32 1048576
   // LIN: store i8* %[[OFANEXT5]], i8** %[[OFA_P5]]
-  // LIN: %[[LOAD5:.+]] = load i16777200, i16777200* %[[BC5]]
-  // LIN: store i16777200 %[[LOAD5]], i16777200*
+  // LIN: %[[LOAD5:.+]] = load i8388600, i8388600* %[[BC5]]
+  // LIN: store i8388600 %[[LOAD5]], i8388600*
 
   // WIN: %[[CUR5:.+]] = load i8*, i8** %[[ARGS]]
   // WIN: %[[NEXT5:.+]] = getelementptr inbounds i8, i8* %[[CUR5]], i64 8
   // WIN: store i8* %[[NEXT5]], i8** %[[ARGS]]
-  // WIN: %[[BC5:.+]] = bitcast i8* %[[CUR5]] to i16777200**
-  // WIN: %[[LOADP5:.+]] = load i16777200*, i16777200** %[[BC5]]
-  // WIN: %[[LOADV5:.+]] = load i16777200, i16777200* %[[LOADP5]]
-  // WIN: store i16777200 %[[LOADV5]], i16777200*
+  // WIN: %[[BC5:.+]] = bitcast i8* %[[CUR5]] to i8388600**
+  // WIN: %[[LOADP5:.+]] = load i8388600*, i8388600** %[[BC5]]
+  // WIN: %[[LOADV5:.+]] = load i8388600, i8388600* %[[LOADP5]]
+  // WIN: store i8388600 %[[LOADV5]], i8388600*
 
   __builtin_va_end(args);
   // LIN: %[[ENDAD:.+]] = getelementptr inbounds [1 x %struct.__va_list_tag], [1 x %struct.__va_list_tag]* %[[ARGS]]
@@ -295,7 +295,7 @@ void ExplicitCasts() {
 
 struct S {
   _ExtInt(17) A;
-  _ExtInt(16777200) B;
+  _ExtInt(8388600) B;
   _ExtInt(17) C;
 };
 
@@ -308,7 +308,7 @@ void OffsetOfTest() {
   auto B = __builtin_offsetof(S,B);
   // CHECK: store i64 8, i64* %{{.+}}
   auto C = __builtin_offsetof(S,C);
-  // CHECK: store i64 2097160, i64* %{{.+}}
+  // CHECK: store i64 1048584, i64* %{{.+}}
 }
 
 

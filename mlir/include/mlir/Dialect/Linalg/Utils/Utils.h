@@ -56,6 +56,25 @@ SmallVector<Value, 4> getDynOperands(Location loc, Value val, OpBuilder &b);
 /// Otherwise return nullptr.
 IntegerAttr getSmallestBoundingIndex(Value size);
 
+/// Create an ExtractSliceOp and, if `source` is defined by an ExtractSliceOp,
+/// fold it by adding the offsets.
+///
+/// Example:
+/// ```
+///   %0 = tensor.extract_slice %arg0[3, 4][3, 32][1, 1] : tensor<64x64xf32> to
+///                                                        tensor<3x32xf32>
+///   %1 = tensor.extract_slice %0[0, 5][3, 4][1, 1] : tensor<3x32xf32> to
+///                                                    tensor<3x4xf32>
+/// ```
+/// folds into:
+/// ```
+///   %1 = tensor.extract_slice %arg0[3, 9][3, 4][1, 1] : tensor<64x64xf32> to
+///                                                         tensor<3x4xf32>
+/// ```
+tensor::ExtractSliceOp makeComposedExtractSliceOp(
+    OpBuilder &b, Location loc, Value source, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, ArrayRef<OpFoldResult> strides);
+
 //===----------------------------------------------------------------------===//
 // Fusion utilities
 //===----------------------------------------------------------------------===//

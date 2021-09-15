@@ -2813,11 +2813,14 @@ void SITargetLowering::passSpecialInputs(
 
     if (IncomingArg) {
       InputReg = loadInputValue(DAG, ArgRC, ArgVT, DL, *IncomingArg);
-    } else {
+    } else if (InputID == AMDGPUFunctionArgInfo::IMPLICIT_ARG_PTR) {
       // The implicit arg ptr is special because it doesn't have a corresponding
       // input for kernels, and is computed from the kernarg segment pointer.
-      assert(InputID == AMDGPUFunctionArgInfo::IMPLICIT_ARG_PTR);
       InputReg = getImplicitArgPtr(DAG, DL);
+    } else {
+      // We may have proven the input wasn't needed, although the ABI is
+      // requiring it. We just need to allocate the register appropriately.
+      InputReg = DAG.getUNDEF(ArgVT);
     }
 
     if (OutgoingArg->isRegister()) {

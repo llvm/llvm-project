@@ -55,21 +55,6 @@ for.end.loopexit:                                 ; preds = %if.end
 define void @phi_load_distribute(i1 %c, i16* %A, i16* %B, i16* %C) {
 ; CHECK-LABEL: @phi_load_distribute(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[IF_END:%.*]] ]
-; CHECK-NEXT:    [[LV:%.*]] = load i16, i16* [[A:%.*]], align 1
-; CHECK-NEXT:    store i16 [[LV]], i16* [[A]], align 1
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_END]]
-; CHECK:       if.then:
-; CHECK-NEXT:    [[LV2:%.*]] = load i16, i16* [[A]], align 1
-; CHECK-NEXT:    br label [[IF_END]]
-; CHECK:       if.end:
-; CHECK-NEXT:    [[C_SINK:%.*]] = phi i16* [ [[B:%.*]], [[IF_THEN]] ], [ [[C:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[LV3:%.*]] = load i16, i16* [[C_SINK]], align 2
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i16 [[IV]], 1
-; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i16 [[IV_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[FOR_END_LOOPEXIT:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    ret void
 ;

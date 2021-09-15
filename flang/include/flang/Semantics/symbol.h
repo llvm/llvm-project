@@ -511,7 +511,7 @@ public:
       // OpenMP data-copying attribute
       OmpCopyIn, OmpCopyPrivate,
       // OpenMP miscellaneous flags
-      OmpCommonBlock, OmpReduction, OmpAligned, OmpAllocate,
+      OmpCommonBlock, OmpReduction, OmpAligned, OmpNontemporal, OmpAllocate,
       OmpDeclarativeAllocateDirective, OmpExecutableAllocateDirective,
       OmpDeclareSimd, OmpDeclareTarget, OmpThreadprivate, OmpDeclareReduction,
       OmpFlushed, OmpCriticalLock, OmpIfSpecified, OmpNone, OmpPreDetermined);

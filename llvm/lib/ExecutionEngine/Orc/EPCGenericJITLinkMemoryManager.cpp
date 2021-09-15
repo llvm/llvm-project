@@ -8,6 +8,7 @@
 
 #include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 
 #include <limits>
 
@@ -58,7 +59,7 @@ public:
           {WorkingMem, static_cast<size_t>(KV.second.ContentSize)}});
       WorkingMem += KV.second.ContentSize;
     }
-    Parent.EPC.callSPSWrapperAsync<shared::SPSOrcTargetProcessFinalize>(
+    Parent.EPC.callSPSWrapperAsync<rt::SPSMemoryFinalizeSignature>(
         [OnFinalize = std::move(OnFinalize)](Error SerializationErr,
                                              Error FinalizeErr) {
           if (SerializationErr)
@@ -71,9 +72,8 @@ public:
 
   Error deallocate() override {
     Error Err = Error::success();
-    if (auto E2 =
-            Parent.EPC.callSPSWrapper<shared::SPSOrcTargetProcessDeallocate>(
-                Parent.FAs.Deallocate.getValue(), Err, TargetAddr, TargetSize))
+    if (auto E2 = Parent.EPC.callSPSWrapper<rt::SPSMemoryDeallocateSignature>(
+            Parent.FAs.Deallocate.getValue(), Err, TargetAddr, TargetSize))
       return E2;
     return Err;
   }
@@ -111,7 +111,7 @@ EPCGenericJITLinkMemoryManager::allocate(const jitlink::JITLinkDylib *JD,
   if (WorkingSize > 0)
     WorkingBuffer = std::make_unique<char[]>(WorkingSize);
   Expected<ExecutorAddress> TargetAllocAddr((ExecutorAddress()));
-  if (auto Err = EPC.callSPSWrapper<shared::SPSOrcTargetProcessAllocate>(
+  if (auto Err = EPC.callSPSWrapper<rt::SPSMemoryReserveSignature>(
           FAs.Reserve.getValue(), TargetAllocAddr, AllocSize))
     return std::move(Err);
   if (!TargetAllocAddr)

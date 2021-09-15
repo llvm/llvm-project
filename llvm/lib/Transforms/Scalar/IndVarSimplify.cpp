@@ -1309,17 +1309,6 @@ static void foldExit(const Loop *L, BasicBlock *ExitingBB, bool IsTaken,
   replaceExitCond(BI, NewCond, DeadInsts);
 }
 
-static void replaceLoopPHINodesWithPreheaderValues(
-    Loop *L, SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
-  auto *LoopPreheader = L->getLoopPreheader();
-  auto *LoopHeader = L->getHeader();
-  for (auto &PN : LoopHeader->phis()) {
-    auto *PreheaderIncoming = PN.getIncomingValueForBlock(LoopPreheader);
-    PN.replaceAllUsesWith(PreheaderIncoming);
-    DeadInsts.emplace_back(&PN);
-  }
-}
-
 static void replaceWithInvariantCond(
     const Loop *L, BasicBlock *ExitingBB, ICmpInst::Predicate InvariantPred,
     const SCEV *InvariantLHS, const SCEV *InvariantRHS, SCEVExpander &Rewriter,
@@ -1465,15 +1454,8 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
 
   bool Changed = false;
   bool SkipLastIter = false;
-  bool ExitsOnFirstIter = false;
   SmallSet<const SCEV*, 8> DominatingExitCounts;
   for (BasicBlock *ExitingBB : ExitingBlocks) {
-    if (ExitsOnFirstIter) {
-      // If proved that some earlier exit is taken
-      // on 1st iteration, then fold this one.
-      foldExit(L, ExitingBB, true, DeadInsts);
-      continue;
-    }
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
     if (isa<SCEVCouldNotCompute>(ExitCount)) {
       // Okay, we do not know the exit count here. Can we at least prove that it
@@ -1517,13 +1499,11 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     // If we know we'd exit on the first iteration, rewrite the exit to
     // reflect this.  This does not imply the loop must exit through this
     // exit; there may be an earlier one taken on the first iteration.
-    // We know that the backedge can't be taken, so we replace all
-    // the header PHIs with values coming from the preheader.
+    // TODO: Given we know the backedge can't be taken, we should go ahead
+    // and break it.  Or at least, kill all the header phis and simplify.
     if (ExitCount->isZero()) {
       foldExit(L, ExitingBB, true, DeadInsts);
-      replaceLoopPHINodesWithPreheaderValues(L, DeadInsts);
       Changed = true;
-      ExitsOnFirstIter = true;
       continue;
     }
 

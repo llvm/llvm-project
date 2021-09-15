@@ -352,7 +352,7 @@ def BufferResultsToOutParams : Pass<"buffer-results-to-out-params", "ModuleOp"> 
     works for static shaped memrefs.
   }];
   let constructor = "mlir::createBufferResultsToOutParamsPass()";
-  let dependentDialects = ["linalg::LinalgDialect", "memref::MemRefDialect"];
+  let dependentDialects = ["memref::MemRefDialect"];
 }
 
 def Canonicalizer : Pass<"canonicalize"> {

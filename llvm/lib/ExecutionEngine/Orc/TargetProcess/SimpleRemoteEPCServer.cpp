@@ -9,10 +9,11 @@
 #include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleRemoteEPCServer.h"
 
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
-#include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/Process.h"
+
+#include "OrcRTBootstrap.h"
 
 #define DEBUG_TYPE "orc"
 
@@ -20,93 +21,6 @@ using namespace llvm::orc::shared;
 
 namespace llvm {
 namespace orc {
-
-static llvm::orc::shared::detail::CWrapperFunctionResult
-reserveWrapper(const char *ArgData, size_t ArgSize) {
-  return WrapperFunction<SPSOrcTargetProcessAllocate>::handle(
-             ArgData, ArgSize,
-             [](uint64_t Size) -> Expected<ExecutorAddress> {
-               std::error_code EC;
-               auto MB = sys::Memory::allocateMappedMemory(
-                   Size, 0, sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC);
-               if (EC)
-                 return errorCodeToError(EC);
-               return ExecutorAddress::fromPtr(MB.base());
-             })
-      .release();
-}
-
-static llvm::orc::shared::detail::CWrapperFunctionResult
-finalizeWrapper(const char *ArgData, size_t ArgSize) {
-  return WrapperFunction<SPSOrcTargetProcessFinalize>::handle(
-             ArgData, ArgSize,
-             [](const tpctypes::FinalizeRequest &FR) -> Error {
-               for (auto &Seg : FR) {
-                 char *Mem = Seg.Addr.toPtr<char *>();
-                 memcpy(Mem, Seg.Content.data(), Seg.Content.size());
-                 memset(Mem + Seg.Content.size(), 0,
-                        Seg.Size - Seg.Content.size());
-                 assert(Seg.Size <= std::numeric_limits<size_t>::max());
-                 if (auto EC = sys::Memory::protectMappedMemory(
-                         {Mem, static_cast<size_t>(Seg.Size)},
-                         tpctypes::fromWireProtectionFlags(Seg.Prot)))
-                   return errorCodeToError(EC);
-                 if (Seg.Prot & tpctypes::WPF_Exec)
-                   sys::Memory::InvalidateInstructionCache(Mem, Seg.Size);
-               }
-               return Error::success();
-             })
-      .release();
-}
-
-static llvm::orc::shared::detail::CWrapperFunctionResult
-deallocateWrapper(const char *ArgData, size_t ArgSize) {
-  return WrapperFunction<SPSOrcTargetProcessDeallocate>::handle(
-             ArgData, ArgSize,
-             [](ExecutorAddress Base, uint64_t Size) -> Error {
-               sys::MemoryBlock MB(Base.toPtr<void *>(), Size);
-               if (auto EC = sys::Memory::releaseMappedMemory(MB))
-                 return errorCodeToError(EC);
-               return Error::success();
-             })
-      .release();
-}
-
-template <typename WriteT, typename SPSWriteT>
-static llvm::orc::shared::detail::CWrapperFunctionResult
-writeUIntsWrapper(const char *ArgData, size_t ArgSize) {
-  return WrapperFunction<void(SPSSequence<SPSWriteT>)>::handle(
-             ArgData, ArgSize,
-             [](std::vector<WriteT> Ws) {
-               for (auto &W : Ws)
-                 *jitTargetAddressToPointer<decltype(W.Value) *>(W.Address) =
-                     W.Value;
-             })
-      .release();
-}
-
-static llvm::orc::shared::detail::CWrapperFunctionResult
-writeBuffersWrapper(const char *ArgData, size_t ArgSize) {
-  return WrapperFunction<void(SPSSequence<SPSMemoryAccessBufferWrite>)>::handle(
-             ArgData, ArgSize,
-             [](std::vector<tpctypes::BufferWrite> Ws) {
-               for (auto &W : Ws)
-                 memcpy(jitTargetAddressToPointer<char *>(W.Address),
-                        W.Buffer.data(), W.Buffer.size());
-             })
-      .release();
-}
-
-static llvm::orc::shared::detail::CWrapperFunctionResult
-runAsMainWrapper(const char *ArgData, size_t ArgSize) {
-  return WrapperFunction<SPSRunAsMainSignature>::handle(
-             ArgData, ArgSize,
-             [](ExecutorAddress MainAddr,
-                std::vector<std::string> Args) -> int64_t {
-               return runAsMain(MainAddr.toPtr<int (*)(int, char *[])>(), Args);
-             })
-      .release();
-}
 
 SimpleRemoteEPCServer::Dispatcher::~Dispatcher() {}
 
@@ -137,27 +51,7 @@ void SimpleRemoteEPCServer::ThreadDispatcher::shutdown() {
 
 StringMap<ExecutorAddress> SimpleRemoteEPCServer::defaultBootstrapSymbols() {
   StringMap<ExecutorAddress> DBS;
-
-  DBS["__llvm_orc_memory_reserve"] = ExecutorAddress::fromPtr(&reserveWrapper);
-  DBS["__llvm_orc_memory_finalize"] =
-      ExecutorAddress::fromPtr(&finalizeWrapper);
-  DBS["__llvm_orc_memory_deallocate"] =
-      ExecutorAddress::fromPtr(&deallocateWrapper);
-  DBS["__llvm_orc_memory_write_uint8s"] = ExecutorAddress::fromPtr(
-      &writeUIntsWrapper<tpctypes::UInt8Write,
-                         shared::SPSMemoryAccessUInt8Write>);
-  DBS["__llvm_orc_memory_write_uint16s"] = ExecutorAddress::fromPtr(
-      &writeUIntsWrapper<tpctypes::UInt16Write,
-                         shared::SPSMemoryAccessUInt16Write>);
-  DBS["__llvm_orc_memory_write_uint32s"] = ExecutorAddress::fromPtr(
-      &writeUIntsWrapper<tpctypes::UInt32Write,
-                         shared::SPSMemoryAccessUInt32Write>);
-  DBS["__llvm_orc_memory_write_uint64s"] = ExecutorAddress::fromPtr(
-      &writeUIntsWrapper<tpctypes::UInt64Write,
-                         shared::SPSMemoryAccessUInt64Write>);
-  DBS["__llvm_orc_memory_write_buffers"] =
-      ExecutorAddress::fromPtr(&writeBuffersWrapper);
-  DBS["__llvm_orc_run_as_main"] = ExecutorAddress::fromPtr(&runAsMainWrapper);
+  rt_bootstrap::addTo(DBS);
   DBS["__llvm_orc_load_dylib"] = ExecutorAddress::fromPtr(&loadDylibWrapper);
   DBS["__llvm_orc_lookup_symbols"] =
       ExecutorAddress::fromPtr(&lookupSymbolsWrapper);

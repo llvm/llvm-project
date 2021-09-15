@@ -8,5 +8,4 @@ settings set target.process.stop-on-exec false
 b child_func
 b parent_func
 process launch
-# CHECK: function run in parent
 # CHECK: function run in exec'd child

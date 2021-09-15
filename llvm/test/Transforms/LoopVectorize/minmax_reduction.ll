@@ -875,8 +875,230 @@ for.end:
   ret float %max.red.0
 }
 
+; CHECK-LABEL: @smin_intrinsic(
+; CHECK: <2 x i32> @llvm.smin.v2i32
+; CHECK: i32 @llvm.vector.reduce.smin.v2i32
+define i32 @smin_intrinsic(i32* nocapture readonly %x) {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.012 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %s.011 = phi i32 [ 100, %entry ], [ %1, %for.body ]
+  %arrayidx = getelementptr inbounds i32, i32* %x, i32 %i.012
+  %0 = load i32, i32* %arrayidx, align 4
+  %1 = tail call i32 @llvm.smin.i32(i32 %s.011, i32 %0)
+  %inc = add nuw nsw i32 %i.012, 1
+  %exitcond.not = icmp eq i32 %inc, 1024
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body
+  ret i32 %1
+}
+
+; CHECK-LABEL: @smax_intrinsic(
+; CHECK: <2 x i32> @llvm.smax.v2i32
+; CHECK: i32 @llvm.vector.reduce.smax.v2i32
+define i32 @smax_intrinsic(i32* nocapture readonly %x) {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.012 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %s.011 = phi i32 [ 100, %entry ], [ %1, %for.body ]
+  %arrayidx = getelementptr inbounds i32, i32* %x, i32 %i.012
+  %0 = load i32, i32* %arrayidx, align 4
+  %1 = tail call i32 @llvm.smax.i32(i32 %s.011, i32 %0)
+  %inc = add nuw nsw i32 %i.012, 1
+  %exitcond.not = icmp eq i32 %inc, 1024
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body
+  ret i32 %1
+}
+
+; CHECK-LABEL: @umin_intrinsic(
+; CHECK: <2 x i32> @llvm.umin.v2i32
+; CHECK: i32 @llvm.vector.reduce.umin.v2i32
+define i32 @umin_intrinsic(i32* nocapture readonly %x) {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.012 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %s.011 = phi i32 [ 100, %entry ], [ %1, %for.body ]
+  %arrayidx = getelementptr inbounds i32, i32* %x, i32 %i.012
+  %0 = load i32, i32* %arrayidx, align 4
+  %1 = tail call i32 @llvm.umin.i32(i32 %s.011, i32 %0)
+  %inc = add nuw nsw i32 %i.012, 1
+  %exitcond.not = icmp eq i32 %inc, 1024
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body
+  ret i32 %1
+}
+
+; CHECK-LABEL: @umax_intrinsic(
+; CHECK: <2 x i32> @llvm.umax.v2i32
+; CHECK: i32 @llvm.vector.reduce.umax.v2i32
+define i32 @umax_intrinsic(i32* nocapture readonly %x) {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.012 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %s.011 = phi i32 [ 100, %entry ], [ %1, %for.body ]
+  %arrayidx = getelementptr inbounds i32, i32* %x, i32 %i.012
+  %0 = load i32, i32* %arrayidx, align 4
+  %1 = tail call i32 @llvm.umax.i32(i32 %s.011, i32 %0)
+  %inc = add nuw nsw i32 %i.012, 1
+  %exitcond.not = icmp eq i32 %inc, 1024
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body
+  ret i32 %1
+}
+
+; CHECK-LABEL: @fmin_intrinsic(
+; CHECK: nnan nsz <2 x float> @llvm.minnum.v2f32
+; CHECK: nnan nsz float @llvm.vector.reduce.fmin.v2f32
+define float @fmin_intrinsic(float* nocapture readonly %x) {
+entry:
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body
+  ret float %1
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.012 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %s.011 = phi float [ 0.000000e+00, %entry ], [ %1, %for.body ]
+  %arrayidx = getelementptr inbounds float, float* %x, i32 %i.012
+  %0 = load float, float* %arrayidx, align 4
+  %1 = tail call nnan nsz float @llvm.minnum.f32(float %s.011, float %0)
+  %inc = add nuw nsw i32 %i.012, 1
+  %exitcond.not = icmp eq i32 %inc, 1024
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: @fmax_intrinsic(
+; CHECK: fast <2 x float> @llvm.maxnum.v2f32
+; CHECK: fast float @llvm.vector.reduce.fmax.v2f32
+define float @fmax_intrinsic(float* nocapture readonly %x) {
+entry:
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body
+  ret float %1
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.012 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %s.011 = phi float [ 0.000000e+00, %entry ], [ %1, %for.body ]
+  %arrayidx = getelementptr inbounds float, float* %x, i32 %i.012
+  %0 = load float, float* %arrayidx, align 4
+  %1 = tail call fast float @llvm.maxnum.f32(float %s.011, float %0)
+  %inc = add nuw nsw i32 %i.012, 1
+  %exitcond.not = icmp eq i32 %inc, 1024
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: @fmin_intrinsic_nofast(
+; CHECK-NOT: <2 x float> @llvm.minnum.v2f32
+define float @fmin_intrinsic_nofast(float* nocapture readonly %x) {
+entry:
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body
+  ret float %1
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.012 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %s.011 = phi float [ 0.000000e+00, %entry ], [ %1, %for.body ]
+  %arrayidx = getelementptr inbounds float, float* %x, i32 %i.012
+  %0 = load float, float* %arrayidx, align 4
+  %1 = tail call float @llvm.minnum.f32(float %s.011, float %0)
+  %inc = add nuw nsw i32 %i.012, 1
+  %exitcond.not = icmp eq i32 %inc, 1024
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: @fmax_intrinsic_nofast(
+; CHECK-NOT: <2 x float> @llvm.maxnum.v2f32
+define float @fmax_intrinsic_nofast(float* nocapture readonly %x) {
+entry:
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body
+  ret float %1
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.012 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %s.011 = phi float [ 0.000000e+00, %entry ], [ %1, %for.body ]
+  %arrayidx = getelementptr inbounds float, float* %x, i32 %i.012
+  %0 = load float, float* %arrayidx, align 4
+  %1 = tail call float @llvm.maxnum.f32(float %s.011, float %0)
+  %inc = add nuw nsw i32 %i.012, 1
+  %exitcond.not = icmp eq i32 %inc, 1024
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: @sminmax(
+; Min and max intrinsics - don't vectorize
+; CHECK-NOT: <2 x i32>
+define i32 @sminmax(i32* nocapture readonly %x, i32* nocapture readonly %y) {
+entry:
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body
+  ret i32 %cond9
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.025 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %s.024 = phi i32 [ 0, %entry ], [ %cond9, %for.body ]
+  %arrayidx = getelementptr inbounds i32, i32* %x, i32 %i.025
+  %0 = load i32, i32* %arrayidx, align 4
+  %s.0. = tail call i32 @llvm.smin.i32(i32 %s.024, i32 %0)
+  %arrayidx3 = getelementptr inbounds i32, i32* %y, i32 %i.025
+  %1 = load i32, i32* %arrayidx3, align 4
+  %cond9 = tail call i32 @llvm.smax.i32(i32 %s.0., i32 %1)
+  %inc = add nuw nsw i32 %i.025, 1
+  %exitcond.not = icmp eq i32 %inc, 1024
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: @sminmin(
+; CHECK: <2 x i32> @llvm.smin.v2i32
+; CHECK: <2 x i32> @llvm.smin.v2i32
+; CHECK: i32 @llvm.vector.reduce.smin.v2i32
+define i32 @sminmin(i32* nocapture readonly %x, i32* nocapture readonly %y) {
+entry:
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body
+  ret i32 %cond9
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.025 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %s.024 = phi i32 [ 0, %entry ], [ %cond9, %for.body ]
+  %arrayidx = getelementptr inbounds i32, i32* %x, i32 %i.025
+  %0 = load i32, i32* %arrayidx, align 4
+  %s.0. = tail call i32 @llvm.smin.i32(i32 %s.024, i32 %0)
+  %arrayidx3 = getelementptr inbounds i32, i32* %y, i32 %i.025
+  %1 = load i32, i32* %arrayidx3, align 4
+  %cond9 = tail call i32 @llvm.smin.i32(i32 %s.0., i32 %1)
+  %inc = add nuw nsw i32 %i.025, 1
+  %exitcond.not = icmp eq i32 %inc, 1024
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
 ; Make sure any check-not directives are not triggered by function declarations.
 ; CHECK: declare
+
+declare i32 @llvm.smin.i32(i32, i32)
+declare i32 @llvm.smax.i32(i32, i32)
+declare i32 @llvm.umin.i32(i32, i32)
+declare i32 @llvm.umax.i32(i32, i32)
+declare float @llvm.minnum.f32(float, float)
+declare float @llvm.maxnum.f32(float, float)
 
 attributes #0 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" }
 attributes #1 = { "no-nans-fp-math"="true" }

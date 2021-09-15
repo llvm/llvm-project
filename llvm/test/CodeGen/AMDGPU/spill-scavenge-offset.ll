@@ -49,15 +49,15 @@ entry:
 ; GFX6: s_add_i32 s32, s32, 0x[[OFFSET:[0-9a-f]+]]
 ; GFX6: s_add_i32 s32, s32, 0x[[OFFSET:[0-9a-f]+]]
 ; GFX6: s_add_i32 s32, s32, 0x[[OFFSET:[0-9a-f]+]]
-; GFX6-NEXT: s_waitcnt expcnt(0)
+; GFX6: s_waitcnt expcnt(0)
 ; GFX6-NEXT: buffer_load_dword v{{[0-9]+}}, off, s[{{[0-9:]+}}], s32
 ; GFX6-NEXT: s_add_i32 s32, s32, 0x[[OFFSET:[0-9a-f]+]]
 ; GFX6: NumSgprs: 48
 ; GFX6: ScratchSize: 8608
 
 ; FLATSCR:           s_movk_i32 [[SOFF1:s[0-9]+]], 0x
-; GFX9-FLATSCR-NEXT: s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:      scratch_store_dwordx4 off, v[{{[0-9:]+}}], [[SOFF1]] ; 16-byte Folded Spill
+; GFX9-FLATSCR:      s_waitcnt vmcnt(0)
+; FLATSCR:           scratch_store_dwordx4 off, v[{{[0-9:]+}}], [[SOFF1]] ; 16-byte Folded Spill
 ; FLATSCR:           s_movk_i32 [[SOFF2:s[0-9]+]], 0x
 ; FLATSCR:           scratch_load_dwordx4 v[{{[0-9:]+}}], off, [[SOFF2]] ; 16-byte Folded Reload
 define amdgpu_kernel void @test_limited_sgpr(<64 x i32> addrspace(1)* %out, <64 x i32> addrspace(1)* %in) #0 {

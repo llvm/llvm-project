@@ -687,6 +687,8 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
 
     // Walk the instructions in the block to look for start/end ops.
     for (MachineInstr &MI : *MBB) {
+      if (MI.isDebugInstr())
+        continue;
       if (MI.getOpcode() == TargetOpcode::LIFETIME_START ||
           MI.getOpcode() == TargetOpcode::LIFETIME_END) {
         int Slot = getStartOrEndSlot(MI);

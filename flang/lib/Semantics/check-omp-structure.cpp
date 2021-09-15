@@ -816,6 +816,19 @@ void OmpStructureChecker::Leave(const parser::OmpEndSectionsDirective &x) {
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OpenMPThreadprivate &c) {
+  const auto &dir{std::get<parser::Verbatim>(c.t)};
+  PushContextAndClauseSets(
+      dir.source, llvm::omp::Directive::OMPD_threadprivate);
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPThreadprivate &c) {
+  const auto &dir{std::get<parser::Verbatim>(c.t)};
+  const auto &objectList{std::get<parser::OmpObjectList>(c.t)};
+  CheckIsVarPartOfAnotherVar(dir.source, objectList);
+  dirContext_.pop_back();
+}
+
 void OmpStructureChecker::Enter(const parser::OpenMPDeclareSimdConstruct &x) {
   const auto &dir{std::get<parser::Verbatim>(x.t)};
   PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_declare_simd);
@@ -1518,7 +1531,8 @@ bool OmpStructureChecker::IsDataRefTypeParamInquiry(
 
 void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
     const parser::CharBlock &source, const parser::OmpObjectList &objList) {
-
+  OmpDirectiveSet nonPartialVarSet{llvm::omp::Directive::OMPD_allocate,
+      llvm::omp::Directive::OMPD_threadprivate};
   for (const auto &ompObject : objList.v) {
     std::visit(
         common::visitors{
@@ -1527,14 +1541,24 @@ void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
                       std::get_if<parser::DataRef>(&designator.u)}) {
                 if (IsDataRefTypeParamInquiry(dataRef)) {
                   context_.Say(source,
-                      "A type parameter inquiry cannot appear in an ALLOCATE directive"_err_en_US);
+                      "A type parameter inquiry cannot appear on the %s "
+                      "directive"_err_en_US,
+                      ContextDirectiveAsFortran());
                 } else if (parser::Unwrap<parser::StructureComponent>(
                                ompObject) ||
                     parser::Unwrap<parser::ArrayElement>(ompObject)) {
-                  context_.Say(source,
-                      "A variable that is part of another variable (as an "
-                      "array or structure element)"
-                      " cannot appear in a PRIVATE or SHARED clause or on the ALLOCATE directive."_err_en_US);
+                  if (nonPartialVarSet.test(GetContext().directive)) {
+                    context_.Say(source,
+                        "A variable that is part of another variable (as an "
+                        "array or structure element) cannot appear on the %s "
+                        "directive"_err_en_US,
+                        ContextDirectiveAsFortran());
+                  } else {
+                    context_.Say(source,
+                        "A variable that is part of another variable (as an "
+                        "array or structure element) cannot appear in a "
+                        "PRIVATE or SHARED clause"_err_en_US);
+                  }
                 }
               }
             },

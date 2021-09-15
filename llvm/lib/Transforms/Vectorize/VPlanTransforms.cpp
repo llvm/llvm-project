@@ -106,44 +106,76 @@ bool VPlanTransforms::sinkScalarOperands(VPlan &Plan) {
   bool Changed = false;
   // First, collect the operands of all predicated replicate recipes as seeds
   // for sinking.
-  SetVector<VPValue *> WorkList;
+  SetVector<std::pair<VPBasicBlock *, VPValue *>> WorkList;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
     for (auto &Recipe : *VPBB) {
       auto *RepR = dyn_cast<VPReplicateRecipe>(&Recipe);
       if (!RepR || !RepR->isPredicated())
         continue;
-      WorkList.insert(RepR->op_begin(), RepR->op_end());
+      for (VPValue *Op : RepR->operands())
+        WorkList.insert(std::make_pair(RepR->getParent(), Op));
     }
   }
 
   // Try to sink each replicate recipe in the worklist.
   while (!WorkList.empty()) {
-    auto *C = WorkList.pop_back_val();
+    VPBasicBlock *SinkTo;
+    VPValue *C;
+    std::tie(SinkTo, C) = WorkList.pop_back_val();
     auto *SinkCandidate = dyn_cast_or_null<VPReplicateRecipe>(C->Def);
-    if (!SinkCandidate || SinkCandidate->isUniform())
-      continue;
-
-    // All users of SinkCandidate must be in the same block in order to perform
-    // sinking. Therefore the destination block for sinking must match the block
-    // containing the first user.
-    auto *FirstUser = dyn_cast<VPRecipeBase>(*SinkCandidate->user_begin());
-    if (!FirstUser)
-      continue;
-    VPBasicBlock *SinkTo = FirstUser->getParent();
-    if (SinkCandidate->getParent() == SinkTo ||
+    if (!SinkCandidate || SinkCandidate->isUniform() ||
+        SinkCandidate->getParent() == SinkTo ||
         SinkCandidate->mayHaveSideEffects() ||
         SinkCandidate->mayReadOrWriteMemory())
       continue;
 
-    // All recipe users of the sink candidate must be in the same block SinkTo.
-    if (any_of(SinkCandidate->users(), [SinkTo](VPUser *U) {
-          auto *UI = dyn_cast<VPRecipeBase>(U);
-          return !UI || UI->getParent() != SinkTo;
-        }))
+    bool NeedsDuplicating = false;
+    // All recipe users of the sink candidate must be in the same block SinkTo
+    // or all users outside of SinkTo must be uniform-after-vectorization (
+    // i.e., only first lane is used) . In the latter case, we need to duplicate
+    // SinkCandidate. At the moment, we identify such UAV's by looking for the
+    // address operands of widened memory recipes.
+    auto CanSinkWithUser = [SinkTo, &NeedsDuplicating,
+                            SinkCandidate](VPUser *U) {
+      auto *UI = dyn_cast<VPRecipeBase>(U);
+      if (!UI)
+        return false;
+      if (UI->getParent() == SinkTo)
+        return true;
+      auto *WidenI = dyn_cast<VPWidenMemoryInstructionRecipe>(UI);
+      if (WidenI && WidenI->getAddr() == SinkCandidate) {
+        NeedsDuplicating = true;
+        return true;
+      }
+      return false;
+    };
+    if (!all_of(SinkCandidate->users(), CanSinkWithUser))
       continue;
 
+    if (NeedsDuplicating) {
+      Instruction *I = cast<Instruction>(SinkCandidate->getUnderlyingValue());
+      auto *Clone =
+          new VPReplicateRecipe(I, SinkCandidate->operands(), true, false);
+      // TODO: add ".cloned" suffix to name of Clone's VPValue.
+
+      Clone->insertBefore(SinkCandidate);
+      SmallVector<VPUser *, 4> Users(SinkCandidate->user_begin(),
+                                     SinkCandidate->user_end());
+      for (auto *U : Users) {
+        auto *UI = cast<VPRecipeBase>(U);
+        if (UI->getParent() == SinkTo)
+          continue;
+
+        for (unsigned Idx = 0; Idx != UI->getNumOperands(); Idx++) {
+          if (UI->getOperand(Idx) != SinkCandidate)
+            continue;
+          UI->setOperand(Idx, Clone);
+        }
+      }
+    }
     SinkCandidate->moveBefore(*SinkTo, SinkTo->getFirstNonPhi());
-    WorkList.insert(SinkCandidate->op_begin(), SinkCandidate->op_end());
+    for (VPValue *Op : SinkCandidate->operands())
+      WorkList.insert(std::make_pair(SinkTo, Op));
     Changed = true;
   }
   return Changed;

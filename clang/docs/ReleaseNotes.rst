@@ -56,7 +56,8 @@ Improvements to Clang's diagnostics
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
-- ...
+- Maximum _ExtInt size was decreased from 16,777,215 bits to 8,388,608 bits.
+  Motivation for this was discussed in PR51829.
 
 New Compiler Flags
 ------------------

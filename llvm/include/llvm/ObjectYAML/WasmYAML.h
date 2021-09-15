@@ -199,6 +199,11 @@ struct CustomSection : Section {
   yaml::BinaryRef Payload;
 };
 
+struct DylinkExport {
+  StringRef Name;
+  SymbolFlags Flags;
+};
+
 struct DylinkSection : CustomSection {
   DylinkSection() : CustomSection("dylink.0") {}
 
@@ -212,6 +217,7 @@ struct DylinkSection : CustomSection {
   uint32_t TableSize;
   uint32_t TableAlignment;
   std::vector<StringRef> Needed;
+  std::vector<DylinkExport> ExportInfo;
 };
 
 struct NameSection : CustomSection {
@@ -426,6 +432,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::InitFunction)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::ComdatEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::Comdat)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::Tag)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::DylinkExport)
 
 namespace llvm {
 namespace yaml {
@@ -572,6 +579,10 @@ template <> struct ScalarEnumerationTraits<WasmYAML::RelocType> {
 
 template <> struct MappingTraits<WasmYAML::Tag> {
   static void mapping(IO &IO, WasmYAML::Tag &Tag);
+};
+
+template <> struct MappingTraits<WasmYAML::DylinkExport> {
+  static void mapping(IO &IO, WasmYAML::DylinkExport &Export);
 };
 
 } // end namespace yaml

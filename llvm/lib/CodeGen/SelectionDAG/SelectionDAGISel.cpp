@@ -798,7 +798,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 
 #ifndef NDEBUG
   if (TTI.hasBranchDivergence())
-    CurDAG->VerifyDAGDiverence();
+    CurDAG->VerifyDAGDivergence();
 #endif
 
   if (ViewDAGCombine1 && MatchFilterBB)
@@ -818,7 +818,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 
 #ifndef NDEBUG
   if (TTI.hasBranchDivergence())
-    CurDAG->VerifyDAGDiverence();
+    CurDAG->VerifyDAGDivergence();
 #endif
 
   // Second step, hack on the DAG until it only uses operations and types that
@@ -840,7 +840,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 
 #ifndef NDEBUG
   if (TTI.hasBranchDivergence())
-    CurDAG->VerifyDAGDiverence();
+    CurDAG->VerifyDAGDivergence();
 #endif
 
   // Only allow creation of legal node types.
@@ -864,7 +864,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 
 #ifndef NDEBUG
     if (TTI.hasBranchDivergence())
-      CurDAG->VerifyDAGDiverence();
+      CurDAG->VerifyDAGDivergence();
 #endif
   }
 
@@ -882,7 +882,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 
 #ifndef NDEBUG
     if (TTI.hasBranchDivergence())
-      CurDAG->VerifyDAGDiverence();
+      CurDAG->VerifyDAGDivergence();
 #endif
 
     {
@@ -898,7 +898,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 
 #ifndef NDEBUG
     if (TTI.hasBranchDivergence())
-      CurDAG->VerifyDAGDiverence();
+      CurDAG->VerifyDAGDivergence();
 #endif
 
     if (ViewDAGCombineLT && MatchFilterBB)
@@ -918,7 +918,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 
 #ifndef NDEBUG
     if (TTI.hasBranchDivergence())
-      CurDAG->VerifyDAGDiverence();
+      CurDAG->VerifyDAGDivergence();
 #endif
   }
 
@@ -938,7 +938,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 
 #ifndef NDEBUG
   if (TTI.hasBranchDivergence())
-    CurDAG->VerifyDAGDiverence();
+    CurDAG->VerifyDAGDivergence();
 #endif
 
   if (ViewDAGCombine2 && MatchFilterBB)
@@ -958,7 +958,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 
 #ifndef NDEBUG
   if (TTI.hasBranchDivergence())
-    CurDAG->VerifyDAGDiverence();
+    CurDAG->VerifyDAGDivergence();
 #endif
 
   if (OptLevel != CodeGenOpt::None)

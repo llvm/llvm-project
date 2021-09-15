@@ -102,6 +102,9 @@ MCOperand WebAssemblyMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
   switch (TargetFlags) {
     case WebAssemblyII::MO_NO_FLAG:
       break;
+    case WebAssemblyII::MO_GOT_TLS:
+      Kind = MCSymbolRefExpr::VK_WASM_GOT_TLS;
+      break;
     case WebAssemblyII::MO_GOT:
       Kind = MCSymbolRefExpr::VK_GOT;
       break;

@@ -1,10 +1,6 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
-# RUN: wasm-ld -no-gc-sections --shared-memory --no-entry -o %t.wasm %t.o
-# RUN: not wasm-ld --shared-memory --no-entry --export=tls1 -o %t.wasm %t.o 2>&1 | FileCheck %s
-# With --export-all we ignore TLS symbols so we don't expect an error here
-# RUN: wasm-ld --shared-memory --no-entry --export-all -o %t.wasm %t.o
-
-# CHECK: error: TLS symbols cannot yet be exported: `tls1`
+# RUN: wasm-ld -shared --experimental-pic -o %t.so %t.o
+# RUN: obj2yaml %t.so | FileCheck %s
 
 .section  .tdata.tls1,"",@
 .globl  tls1
@@ -24,3 +20,26 @@ tls1:
   .int8 43
   .int8 15
   .ascii "mutable-globals"
+
+#      CHECK:    ExportInfo:
+# CHECK-NEXT:      - Name:            tls1
+# CHECK-NEXT:        Flags:           [ TLS ]
+# CHECK-NEXT:  - Type:            TYPE
+
+#      CHECK:  - Type:            GLOBAL
+# CHECK-NEXT:    Globals:
+# CHECK-NEXT:      - Index:           2
+# CHECK-NEXT:        Type:            I32
+# CHECK-NEXT:        Mutable:         false
+# CHECK-NEXT:        InitExpr:
+# CHECK-NEXT:          Opcode:          I32_CONST
+# CHECK-NEXT:          Value:           0
+
+#      CHECK:  - Type:            EXPORT
+# CHECK-NEXT:    Exports:
+# CHECK-NEXT:      - Name:            __wasm_call_ctors
+# CHECK-NEXT:        Kind:            FUNCTION
+# CHECK-NEXT:        Index:           0
+# CHECK-NEXT:      - Name:            tls1
+# CHECK-NEXT:        Kind:            GLOBAL
+# CHECK-NEXT:        Index:           2

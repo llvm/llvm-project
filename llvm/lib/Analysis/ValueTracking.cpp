@@ -4533,6 +4533,12 @@ AllocaInst *llvm::findAllocaForValue(Value *V, bool OffsetZero) {
       if (OffsetZero && !GEP->hasAllZeroIndices())
         return nullptr;
       AddWork(GEP->getPointerOperand());
+    } else if (CallBase *CB = dyn_cast<CallBase>(V)) {
+      Value *Returned = CB->getReturnedArgOperand();
+      if (Returned)
+        AddWork(Returned);
+      else
+        return nullptr;
     } else {
       return nullptr;
     }

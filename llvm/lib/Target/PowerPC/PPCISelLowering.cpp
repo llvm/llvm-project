@@ -1518,10 +1518,9 @@ void PPCTargetLowering::initializeAddrModeMap() {
       PPC::MOF_RPlusSImm16Mult16 | PPC::MOF_Vector | PPC::MOF_SubtargetP9,
       PPC::MOF_NotAddNorCst | PPC::MOF_Vector | PPC::MOF_SubtargetP9,
       PPC::MOF_AddrIsSImm32 | PPC::MOF_Vector | PPC::MOF_SubtargetP9,
-      PPC::MOF_RPlusSImm16Mult16 | PPC::MOF_Vector256 | PPC::MOF_SubtargetP10,
-      PPC::MOF_NotAddNorCst | PPC::MOF_Vector256 | PPC::MOF_SubtargetP10,
-      PPC::MOF_AddrIsSImm32 | PPC::MOF_Vector256 | PPC::MOF_SubtargetP10,
   };
+  AddrModesMap[PPC::AM_PrefixDForm] = {PPC::MOF_RPlusSImm34 |
+                                       PPC::MOF_SubtargetP10};
   // TODO: Add mapping for quadword load/store.
 }
 
@@ -17267,6 +17266,9 @@ PPC::AddrMode PPCTargetLowering::getAddrModeForFlags(unsigned Flags) const {
   for (auto FlagSet : AddrModesMap.at(PPC::AM_DQForm))
     if ((Flags & FlagSet) == FlagSet)
       return PPC::AM_DQForm;
+  for (auto FlagSet : AddrModesMap.at(PPC::AM_PrefixDForm))
+    if ((Flags & FlagSet) == FlagSet)
+      return PPC::AM_PrefixDForm;
   // If no other forms are selected, return an X-Form as it is the most
   // general addressing mode.
   return PPC::AM_XForm;
@@ -17386,6 +17388,22 @@ unsigned PPCTargetLowering::computeMOFlags(const SDNode *Parent, SDValue N,
   if ((FlagSet & PPC::MOF_SubtargetP10) && isPCRelNode(N))
     return FlagSet;
 
+  // If the node is the paired load/store intrinsics, compute flags for
+  // address computation and return early.
+  unsigned ParentOp = Parent->getOpcode();
+  if (Subtarget.isISA3_1() && ((ParentOp == ISD::INTRINSIC_W_CHAIN) ||
+                               (ParentOp == ISD::INTRINSIC_VOID))) {
+    unsigned ID = cast<ConstantSDNode>(Parent->getOperand(1))->getZExtValue();
+    assert(
+        ((ID == Intrinsic::ppc_vsx_lxvp) || (ID == Intrinsic::ppc_vsx_stxvp)) &&
+        "Only the paired load and store (lxvp/stxvp) intrinsics are valid.");
+    SDValue IntrinOp = (ID == Intrinsic::ppc_vsx_lxvp) ? Parent->getOperand(2)
+                                                       : Parent->getOperand(3);
+    computeFlagsForAddressComputation(IntrinOp, FlagSet, DAG);
+    FlagSet |= PPC::MOF_Vector;
+    return FlagSet;
+  }
+
   // Mark this as something we don't want to handle here if it is atomic
   // or pre-increment instruction.
   if (const LSBaseSDNode *LSB = dyn_cast<LSBaseSDNode>(Parent))
@@ -17410,9 +17428,12 @@ unsigned PPCTargetLowering::computeMOFlags(const SDNode *Parent, SDValue N,
   } else if (MemVT.isVector() && !MemVT.isFloatingPoint()) { // Integer vectors.
     if (Size == 128)
       FlagSet |= PPC::MOF_Vector;
-    else if (Size == 256)
-      FlagSet |= PPC::MOF_Vector256;
-    else
+    else if (Size == 256) {
+      assert(Subtarget.pairedVectorMemops() &&
+             "256-bit vectors are only available when paired vector memops is "
+             "enabled!");
+      FlagSet |= PPC::MOF_Vector;
+    } else
       llvm_unreachable("Not expecting illegal vectors!");
   } else { // Floating point type: can be scalar, f128 or vector types.
     if (Size == 32 || Size == 64)
@@ -17607,6 +17628,24 @@ PPC::AddrMode PPCTargetLowering::SelectOptimalAddrMode(const SDNode *Parent,
       fixupFuncForFI(DAG, FI->getIndex(), N.getValueType());
     } else
       Base = N;
+    break;
+  }
+  case PPC::AM_PrefixDForm: {
+    int64_t Imm34 = 0;
+    unsigned Opcode = N.getOpcode();
+    if (((Opcode == ISD::ADD) || (Opcode == ISD::OR)) &&
+        (isIntS34Immediate(N.getOperand(1), Imm34))) {
+      // N is an Add/OR Node, and it's operand is a 34-bit signed immediate.
+      Disp = DAG.getTargetConstant(Imm34, DL, N.getValueType());
+      if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(N.getOperand(0)))
+        Base = DAG.getTargetFrameIndex(FI->getIndex(), N.getValueType());
+      else
+        Base = N.getOperand(0);
+    } else if (isIntS34Immediate(N, Imm34)) {
+      // The address is a 34-bit signed immediate.
+      Disp = DAG.getTargetConstant(Imm34, DL, N.getValueType());
+      Base = DAG.getRegister(PPC::ZERO8, N.getValueType());
+    }
     break;
   }
   case PPC::AM_PCRel: {

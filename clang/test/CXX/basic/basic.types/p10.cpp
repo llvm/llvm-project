@@ -32,7 +32,7 @@ struct Incomplete; // expected-note 2{{forward declaration of 'Incomplete'}}
 template<class T> struct ClassTemp {};
 
 constexpr Incomplete incomplete = {}; // expected-error {{constexpr variable cannot have non-literal type 'const Incomplete'}} expected-note {{incomplete type 'const Incomplete' is not a literal type}}
-constexpr Incomplete incomplete2[] = {}; // expected-error {{constexpr variable cannot have non-literal type 'Incomplete const[]'}} expected-note {{incomplete type 'Incomplete const[]' is not a literal type}}
+constexpr Incomplete incomplete2[] = {}; // expected-error {{constexpr variable cannot have non-literal type 'const Incomplete []'}} expected-note {{incomplete type 'const Incomplete []' is not a literal type}}
 constexpr ClassTemp<int> classtemplate = {};
 constexpr ClassTemp<int> classtemplate2[] = {};
 

@@ -592,7 +592,9 @@ uint16_t XCOFFObjectFile::getMagic() const {
 
 Expected<DataRefImpl> XCOFFObjectFile::getSectionByNum(int16_t Num) const {
   if (Num <= 0 || Num > getNumberOfSections())
-    return errorCodeToError(object_error::invalid_section_index);
+    return createStringError(object_error::invalid_section_index,
+                             "the section index (" + Twine(Num) +
+                                 ") is invalid");
 
   DataRefImpl DRI;
   DRI.p = getWithOffset(getSectionHeaderTableAddress(),

@@ -661,13 +661,15 @@ sizeof...($TemplateParameter[[Elements]]);
         @interface $Class_decl[[Foo]]
         @end
         @interface $Class_decl[[Bar]] : $Class[[Foo]]
-        -($Class[[id]]) $Method_decl[[x]]:(int)$Parameter_decl[[a]] $Method_decl[[y]]:(int)$Parameter_decl[[b]];
+        -(id) $Method_decl[[x]]:(int)$Parameter_decl[[a]] $Method_decl[[y]]:(int)$Parameter_decl[[b]];
+        +(instancetype)$StaticMethod_decl_static[[sharedInstance]];
         +(void) $StaticMethod_decl_static[[explode]];
         @end
         @implementation $Class_decl[[Bar]]
-        -($Class[[id]]) $Method_decl[[x]]:(int)$Parameter_decl[[a]] $Method_decl[[y]]:(int)$Parameter_decl[[b]] {
+        -(id) $Method_decl[[x]]:(int)$Parameter_decl[[a]] $Method_decl[[y]]:(int)$Parameter_decl[[b]] {
           return self;
         }
+        +(instancetype)$StaticMethod_decl_static[[sharedInstance]] { return 0; }
         +(void) $StaticMethod_decl_static[[explode]] {}
         @end
 

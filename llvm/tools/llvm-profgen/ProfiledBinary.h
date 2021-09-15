@@ -299,7 +299,11 @@ public:
   }
 
   uint64_t getCallAddrFromFrameAddr(uint64_t FrameAddr) const {
-    return getAddressforIndex(getIndexForAddr(FrameAddr) - 1);
+    auto I = getIndexForAddr(FrameAddr);
+    FrameAddr = I ? getAddressforIndex(I - 1) : 0;
+    if (FrameAddr && addressIsCall(FrameAddr))
+      return FrameAddr;
+    return 0;
   }
 
   StringRef getFuncFromStartOffset(uint64_t Offset) {

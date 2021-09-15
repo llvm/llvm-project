@@ -1057,15 +1057,16 @@ define void @scalar_predication(float* %addr) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP5]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    store float 1.000000e+01, float* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr float, float* [[ADDR]], i64 [[TMP0]]
+; CHECK-NEXT:    store float 1.000000e+01, float* [[TMP7]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP5]], i32 1
-; CHECK-NEXT:    br i1 [[TMP7]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP5]], i32 1
+; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2]]
 ; CHECK:       pred.store.if1:
-; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr float, float* [[ADDR]], i64 [[TMP8]]
-; CHECK-NEXT:    store float 1.000000e+01, float* [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr float, float* [[ADDR]], i64 [[TMP9]]
+; CHECK-NEXT:    store float 1.000000e+01, float* [[TMP10]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; CHECK:       pred.store.continue2:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
