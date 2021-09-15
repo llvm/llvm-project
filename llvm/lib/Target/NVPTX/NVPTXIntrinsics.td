@@ -1232,7 +1232,7 @@ multiclass F_ATOMIC_2<NVPTXRegClass regclass, string SpaceStr, string TypeStr,
 // has 2 operands, neg the second one
 multiclass F_ATOMIC_2_NEG_imp<NVPTXRegClass ptrclass, NVPTXRegClass regclass,
   string SpaceStr, string TypeStr, string OpcStr, PatFrag IntOp,
-  Operand IMMType, list<Predicate> Pred> {
+  list<Predicate> Pred> {
   def reg : NVPTXInst<(outs regclass:$dst), (ins ptrclass:$addr, regclass:$b),
     !strconcat(
       "{{ \n\t",
@@ -1244,12 +1244,11 @@ multiclass F_ATOMIC_2_NEG_imp<NVPTXRegClass ptrclass, NVPTXRegClass regclass,
   Requires<Pred>;
 }
 multiclass F_ATOMIC_2_NEG<NVPTXRegClass regclass, string SpaceStr,
-  string TypeStr, string OpcStr, PatFrag IntOp, Operand IMMType,
-  list<Predicate> Pred = []> {
+  string TypeStr, string OpcStr, PatFrag IntOp, list<Predicate> Pred = []> {
  defm p32: F_ATOMIC_2_NEG_imp<Int32Regs, regclass, SpaceStr, TypeStr, OpcStr,
-   IntOp, IMMType, Pred> ;
+   IntOp, Pred> ;
  defm p64: F_ATOMIC_2_NEG_imp<Int64Regs, regclass, SpaceStr, TypeStr, OpcStr,
-   IntOp, IMMType, Pred> ;
+   IntOp, Pred> ;
 }
 
 // has 3 operands
@@ -1357,21 +1356,21 @@ def atomic_load_sub_64_gen: ATOMIC_GENERIC_CHK<(ops node:$a, node:$b),
   (atomic_load_sub_64 node:$a, node:$b)>;
 
 defm INT_PTX_ATOM_SUB_G_32 : F_ATOMIC_2_NEG<Int32Regs, ".global", "32", ".add",
-  atomic_load_sub_32_g, i32imm>;
+  atomic_load_sub_32_g>;
 defm INT_PTX_ATOM_SUB_G_64 : F_ATOMIC_2_NEG<Int64Regs, ".global", "64", ".add",
-  atomic_load_sub_64_g, i64imm>;
+  atomic_load_sub_64_g>;
 defm INT_PTX_ATOM_SUB_GEN_32 : F_ATOMIC_2_NEG<Int32Regs, "", "32", ".add",
-  atomic_load_sub_32_gen, i32imm>;
+  atomic_load_sub_32_gen>;
 defm INT_PTX_ATOM_SUB_GEN_32_USE_G : F_ATOMIC_2_NEG<Int32Regs, ".global", "32",
-  ".add", atomic_load_sub_32_gen, i32imm>;
+  ".add", atomic_load_sub_32_gen>;
 defm INT_PTX_ATOM_SUB_S_32 : F_ATOMIC_2_NEG<Int32Regs, ".shared", "32", ".add",
-  atomic_load_sub_32_s, i32imm>;
+  atomic_load_sub_32_s>;
 defm INT_PTX_ATOM_SUB_S_64 : F_ATOMIC_2_NEG<Int64Regs, ".shared", "64", ".add",
-  atomic_load_sub_64_s, i64imm>;
+  atomic_load_sub_64_s>;
 defm INT_PTX_ATOM_SUB_GEN_64 : F_ATOMIC_2_NEG<Int64Regs, "", "64", ".add",
-  atomic_load_sub_64_gen, i64imm>;
+  atomic_load_sub_64_gen>;
 defm INT_PTX_ATOM_SUB_GEN_64_USE_G : F_ATOMIC_2_NEG<Int64Regs, ".global", "64",
-  ".add", atomic_load_sub_64_gen, i64imm>;
+  ".add", atomic_load_sub_64_gen>;
 
 // atom_swap
 
