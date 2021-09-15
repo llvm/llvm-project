@@ -2841,6 +2841,26 @@ public:
         break;
       }
 
+      // Swift may insert note diagnostics after an error diagnostic with fixits
+      // related to that error. Check if the latest inserted diagnostic is an
+      // error one, and that the diagnostic being processed is a note one that
+      // points to the same error, and if so, copy the fixits from the note
+      // diagnostic to the error one. There may be subsequent notes with fixits
+      // related to the same error, but we only copy the first one as the fixits
+      // are mutually exclusive (for example, one may suggest inserting a '?'
+      // and the next may suggest inserting '!')
+      if (!m_raw_diagnostics.empty() &&
+          info.Kind == swift::DiagnosticKind::Note) {
+        auto &last_diagnostic = m_raw_diagnostics.back();
+        if (last_diagnostic.kind == swift::DiagnosticKind::Error &&
+            last_diagnostic.fixits.empty() &&
+            last_diagnostic.bufferID == bufferID &&
+            last_diagnostic.column == line_col.second &&
+            last_diagnostic.line == line_col.first)
+          last_diagnostic.fixits.insert(last_diagnostic.fixits.end(),
+                                        info.FixIts.begin(), info.FixIts.end());
+      }
+
       // Translate ranges.
       llvm::SmallVector<llvm::SMRange, 2> ranges;
       for (auto R : info.Ranges)
