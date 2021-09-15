@@ -9,6 +9,7 @@ import("//llvm/utils/gn/build/libs/zlib/enable.gni")
 import("//llvm/utils/gn/build/mac_sdk.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("//llvm/utils/llvm-lit/lit_path_function.gni")
+import("//llvm/version.gni")
 import("llvm_lit_site_cfg_files.gni")
 
 template("write_lit_config") {
@@ -66,6 +67,8 @@ write_lit_config("lit_site_cfg") {
     "LLVM_NATIVE_ARCH=$native_target",
     "LLVM_USE_INTEL_JITEVENTS=0",
     "LLVM_USE_SANITIZER=",
+    "LLVM_VERSION_MAJOR=$llvm_version_major",
+    "LLVM_VERSION_SUFFIX=git",
     "Python3_EXECUTABLE=$python_path",
     "TARGETS_TO_BUILD=$llvm_targets_to_build_string",
     "TARGET_TRIPLE=$llvm_target_triple",
