@@ -3894,8 +3894,9 @@ static bool AdjustFunctionParmAndArgTypesForDeduction(
     //   "lvalue reference to A" is used in place of A for type deduction.
     if (isForwardingReference(QualType(ParamRefType, 0), FirstInnerIndex) &&
         Arg->isLValue()) {
-      if (S.getLangOpts().OpenCL  && !ArgType.hasAddressSpace())
-        ArgType = S.Context.getAddrSpaceQualType(ArgType, LangAS::opencl_generic);
+      if (S.getLangOpts().OpenCL && !ArgType.hasAddressSpace())
+        ArgType = S.Context.getAddrSpaceQualType(
+            ArgType, S.Context.getDefaultOpenCLPointeeAddrSpace());
       ArgType = S.Context.getLValueReferenceType(ArgType);
     }
   } else {

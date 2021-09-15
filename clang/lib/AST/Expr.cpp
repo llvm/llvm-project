@@ -3779,11 +3779,8 @@ Expr::isNullPointerConstant(ASTContext &Ctx,
         // has non-default address space it is not treated as nullptr.
         // (__generic void*)0 in OpenCL 2.0 should not be treated as nullptr
         // since it cannot be assigned to a pointer to constant address space.
-        if ((Ctx.getLangOpts().OpenCLVersion >= 200 &&
-             Pointee.getAddressSpace() == LangAS::opencl_generic) ||
-            (Ctx.getLangOpts().OpenCL &&
-             Ctx.getLangOpts().OpenCLVersion < 200 &&
-             Pointee.getAddressSpace() == LangAS::opencl_private))
+        if (Ctx.getLangOpts().OpenCL &&
+            Pointee.getAddressSpace() == Ctx.getDefaultOpenCLPointeeAddrSpace())
           Qs.removeAddressSpace();
 
         if (Pointee->isVoidType() && Qs.empty() && // to void*
