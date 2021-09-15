@@ -32,6 +32,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/ToolOutputFile.h"
 
 using namespace mlir;
@@ -93,19 +94,22 @@ static LogicalResult performActions(raw_ostream &os, bool verifyDiagnostics,
 
 /// Parses the memory buffer.  If successfully, run a series of passes against
 /// it and print the result.
-static LogicalResult processBuffer(raw_ostream &os,
-                                   std::unique_ptr<MemoryBuffer> ownedBuffer,
-                                   bool verifyDiagnostics, bool verifyPasses,
-                                   bool allowUnregisteredDialects,
-                                   bool preloadDialectsInContext,
-                                   const PassPipelineCLParser &passPipeline,
-                                   DialectRegistry &registry) {
+static LogicalResult
+processBuffer(raw_ostream &os, std::unique_ptr<MemoryBuffer> ownedBuffer,
+              bool verifyDiagnostics, bool verifyPasses,
+              bool allowUnregisteredDialects, bool preloadDialectsInContext,
+              const PassPipelineCLParser &passPipeline,
+              DialectRegistry &registry, llvm::ThreadPool &threadPool) {
   // Tell sourceMgr about this buffer, which is what the parser will pick up.
   SourceMgr sourceMgr;
   sourceMgr.AddNewSourceBuffer(std::move(ownedBuffer), SMLoc());
 
+  // Create a context just for the current buffer. Disable threading on creation
+  // since we'll inject the thread-pool separately.
+  MLIRContext context(registry, MLIRContext::Threading::DISABLED);
+  context.setThreadPool(threadPool);
+
   // Parse the input file.
-  MLIRContext context(registry);
   if (preloadDialectsInContext)
     context.loadAllAvailableDialects();
   context.allowUnregisteredDialects(allowUnregisteredDialects);
@@ -143,20 +147,24 @@ LogicalResult mlir::MlirOptMain(raw_ostream &outputStream,
                                 bool preloadDialectsInContext) {
   // The split-input-file mode is a very specific mode that slices the file
   // up into small pieces and checks each independently.
+  // We use an explicit threadpool to avoid creating and joining/destroying
+  // threads for each of the split.
+  llvm::ThreadPool threadPool;
   if (splitInputFile)
     return splitAndProcessBuffer(
         std::move(buffer),
         [&](std::unique_ptr<MemoryBuffer> chunkBuffer, raw_ostream &os) {
           return processBuffer(os, std::move(chunkBuffer), verifyDiagnostics,
                                verifyPasses, allowUnregisteredDialects,
-                               preloadDialectsInContext, passPipeline,
-                               registry);
+                               preloadDialectsInContext, passPipeline, registry,
+                               threadPool);
         },
         outputStream);
 
   return processBuffer(outputStream, std::move(buffer), verifyDiagnostics,
                        verifyPasses, allowUnregisteredDialects,
-                       preloadDialectsInContext, passPipeline, registry);
+                       preloadDialectsInContext, passPipeline, registry,
+                       threadPool);
 }
 
 LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
