@@ -18,6 +18,12 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 
+/// A TypeAttr for memref types.
+def MemRefTypeAttr
+    : TypeAttrBase<"::mlir::MemRefType", "memref type attribute"> {
+  let constBuilderCall = "::mlir::TypeAttr::get($0)";
+}
+
 class MemRef_Op<string mnemonic, list<OpTrait> traits = []>
     : Op<MemRef_Dialect, mnemonic, traits> {
   let printer = [{ return ::print(p, *this); }];
@@ -597,14 +603,14 @@ def MemRef_GetGlobalOp : MemRef_Op<"get_global",
 def MemRef_GlobalOp : MemRef_Op<"global", [Symbol]> {
   let summary = "declare or define a global memref variable";
   let description = [{
-    The `memref.global` operation declares or defines a named global variable.
-    The backing memory for the variable is allocated statically and is described
-    by the type of the variable (which should be a statically shaped memref
-    type). The operation is a declaration if no `inital_value` is specified,
-    else it is a definition. The `initial_value` can either be a unit attribute
-    to represent a definition of an uninitialized global variable, or an
-    elements attribute to represent the definition of a global variable with an
-    initial value. The global variable can also be marked constant using the
+    The `memref.global` operation declares or defines a named global memref
+    variable. The backing memory for the variable is allocated statically and is
+    described by the type of the variable (which should be a statically shaped
+    memref type). The operation is a declaration if no `inital_value` is
+    specified, else it is a definition. The `initial_value` can either be a unit
+    attribute to represent a definition of an uninitialized global variable, or
+    an elements attribute to represent the definition of a global variable with
+    an initial value. The global variable can also be marked constant using the
     `constant` unit attribute. Writing to such constant global variables is
     undefined.
 
@@ -633,7 +639,7 @@ def MemRef_GlobalOp : MemRef_Op<"global", [Symbol]> {
   let arguments = (ins
       SymbolNameAttr:$sym_name,
       OptionalAttr<StrAttr>:$sym_visibility,
-      TypeAttr:$type,
+      MemRefTypeAttr:$type,
       OptionalAttr<AnyAttr>:$initial_value,
       UnitAttr:$constant
   );
