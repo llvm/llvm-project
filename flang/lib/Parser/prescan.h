@@ -150,6 +150,7 @@ private:
   }
 
   void LabelField(TokenSequence &);
+  void EnforceStupidEndStatementRules(const TokenSequence &);
   void SkipToEndOfLine();
   bool MustSkipToEndOfLine() const;
   void NextChar();

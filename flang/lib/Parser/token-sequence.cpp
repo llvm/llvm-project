@@ -286,10 +286,14 @@ llvm::raw_ostream &TokenSequence::Dump(llvm::raw_ostream &o) const {
   return o;
 }
 
+Provenance TokenSequence::GetCharProvenance(std::size_t offset) const {
+  ProvenanceRange range{provenances_.Map(offset)};
+  return range.start();
+}
+
 Provenance TokenSequence::GetTokenProvenance(
     std::size_t token, std::size_t offset) const {
-  ProvenanceRange range{provenances_.Map(start_[token] + offset)};
-  return range.start();
+  return GetCharProvenance(start_[token] + offset);
 }
 
 ProvenanceRange TokenSequence::GetTokenProvenanceRange(
