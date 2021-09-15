@@ -152,12 +152,16 @@ private:
 
 /// Options to control the application of late transformations.
 struct LateCodegenStrategyOptions {
+  /// Hoisting transformations are always deemed beneficial and must disabled
+  /// explicitly.
   bool enableLICM = true;
   bool enableHoistRedundantVectorTransfers = true;
   bool enableHoistRedundantVectorTransfersOnTensor = true;
-  bool enableVectorTransferPartialRewrite = true;
-  bool enableVectorContractLowering = true;
-  bool enableVectorToSCFConversion = true;
+  /// Vector lowering operations may result in surprising behavior when
+  /// composing multiple codegen strategies and must be enabled explicitly.
+  bool enableVectorTransferPartialRewrite = false;
+  bool enableVectorContractLowering = false;
+  bool enableVectorToSCFConversion = false;
 };
 
 /// Codegen strategy controls how a Linalg op is progressively lowered.

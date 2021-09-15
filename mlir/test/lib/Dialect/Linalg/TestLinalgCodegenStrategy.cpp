@@ -148,6 +148,9 @@ void TestLinalgCodegenStrategy::runStrategy<LinalgOp>(
               .setAlignment(16)
               .setUseFullTileBuffersByDefault(registerPromoteFullTile))
       .vectorizeIf(vectorize, anchorOpName)
+      .setEnableVectorTransferPartialRewrite(true)
+      .setEnableVectorContractLowering(true)
+      .setEnableVectorToSCFConversion(true)
       .setVectorTransformsOptions(
           vector::VectorTransformsOptions()
               .setVectorTransformsOptions(vectorContractLowering)
@@ -177,6 +180,9 @@ void TestLinalgCodegenStrategy::runStrategy(
               .setAlignment(16)
               .setUseFullTileBuffersByDefault(registerPromoteFullTile))
       .template vectorizeIf<OpType>(vectorize)
+      .setEnableVectorTransferPartialRewrite(true)
+      .setEnableVectorContractLowering(true)
+      .setEnableVectorToSCFConversion(true)
       .setVectorTransformsOptions(
           vector::VectorTransformsOptions()
               .setVectorTransformsOptions(vectorContractLowering)
