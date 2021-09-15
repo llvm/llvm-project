@@ -107,7 +107,7 @@ INTERCEPTOR(void, siglongjmp, __hw_sigjmp_buf env, int val) {
   if (env[0].__magic != kHwJmpBufMagic) {
     Printf(
         "WARNING: Unexpected bad jmp_buf. Either setjmp was not called or "
-        "there is a bug in HWASan.");
+        "there is a bug in HWASan.\n");
     return REAL(siglongjmp)(env, val);
   }
 
@@ -131,7 +131,7 @@ INTERCEPTOR(void, longjmp, __hw_jmp_buf env, int val) {
   if (env[0].__magic != kHwJmpBufMagic) {
     Printf(
         "WARNING: Unexpected bad jmp_buf. Either setjmp was not called or "
-        "there is a bug in HWASan.");
+        "there is a bug in HWASan.\n");
     return REAL(longjmp)(env, val);
   }
   InternalLongjmp(env[0].__jmpbuf, val);
