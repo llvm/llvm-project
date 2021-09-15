@@ -237,7 +237,9 @@ void TestIntrinsics() {
   TestCall{defaults, table, "conjg"}
       .Push(Const(Scalar<Complex8>{}))
       .DoCall(Complex8::GetType());
-  TestCall{defaults, table, "dconjg"}.Push(Const(Scalar<Complex4>{})).DoCall();
+  TestCall{defaults, table, "dconjg"}
+      .Push(Const(Scalar<Complex4>{}))
+      .DoCall(Complex8::GetType());
   TestCall{defaults, table, "dconjg"}
       .Push(Const(Scalar<Complex8>{}))
       .DoCall(Complex8::GetType());
