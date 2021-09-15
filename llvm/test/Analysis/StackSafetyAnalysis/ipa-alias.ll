@@ -136,4 +136,5 @@ entry:
 ; CHECK-NEXT: p[]: [0,1){{$}}
 ; CHECK-NEXT: allocas uses:
 ; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: store i8 0, i8* %p, align 1
 ; CHECK-EMPTY:
