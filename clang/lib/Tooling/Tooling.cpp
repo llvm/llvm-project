@@ -343,23 +343,27 @@ bool ToolInvocation::run() {
   for (const std::string &Str : CommandLine)
     Argv.push_back(Str.c_str());
   const char *const BinaryName = Argv[0];
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
-  unsigned MissingArgIndex, MissingArgCount;
-  llvm::opt::InputArgList ParsedArgs = driver::getDriverOptTable().ParseArgs(
-      ArrayRef<const char *>(Argv).slice(1), MissingArgIndex, MissingArgCount);
-  ParseDiagnosticArgs(*DiagOpts, ParsedArgs);
-  TextDiagnosticPrinter DiagnosticPrinter(
-      llvm::errs(), &*DiagOpts);
-  DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), &*DiagOpts,
-      DiagConsumer ? DiagConsumer : &DiagnosticPrinter, false);
+
+  // Parse diagnostic options from the driver command-line only if none were
+  // explicitly set.
+  IntrusiveRefCntPtr<DiagnosticOptions> ParsedDiagOpts;
+  DiagnosticOptions *DiagOpts = this->DiagOpts;
+  if (!DiagOpts) {
+    ParsedDiagOpts = CreateAndPopulateDiagOpts(Argv);
+    DiagOpts = &*ParsedDiagOpts;
+  }
+
+  TextDiagnosticPrinter DiagnosticPrinter(llvm::errs(), DiagOpts);
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diagnostics =
+      CompilerInstance::createDiagnostics(
+          &*DiagOpts, DiagConsumer ? DiagConsumer : &DiagnosticPrinter, false);
   // Although `Diagnostics` are used only for command-line parsing, the custom
   // `DiagConsumer` might expect a `SourceManager` to be present.
-  SourceManager SrcMgr(Diagnostics, *Files);
-  Diagnostics.setSourceManager(&SrcMgr);
+  SourceManager SrcMgr(*Diagnostics, *Files);
+  Diagnostics->setSourceManager(&SrcMgr);
 
   const std::unique_ptr<driver::Driver> Driver(
-      newDriver(&Diagnostics, BinaryName, &Files->getVirtualFileSystem()));
+      newDriver(&*Diagnostics, BinaryName, &Files->getVirtualFileSystem()));
   // The "input file not found" diagnostics from the driver are useful.
   // The driver is only aware of the VFS working directory, but some clients
   // change this at the FileManager level instead.
@@ -371,11 +375,11 @@ bool ToolInvocation::run() {
   if (!Compilation)
     return false;
   const llvm::opt::ArgStringList *const CC1Args = getCC1Arguments(
-      &Diagnostics, Compilation.get());
+      &*Diagnostics, Compilation.get());
   if (!CC1Args)
     return false;
   std::unique_ptr<CompilerInvocation> Invocation(
-      newInvocation(&Diagnostics, *CC1Args, BinaryName));
+      newInvocation(&*Diagnostics, *CC1Args, BinaryName));
   return runInvocation(BinaryName, Compilation.get(), std::move(Invocation),
                        std::move(PCHContainerOps));
 }

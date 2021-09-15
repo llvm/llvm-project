@@ -38,21 +38,6 @@ public:
   }
 };
 
-// This lets us create the DiagnosticsEngine with a properly-filled-out
-// DiagnosticOptions instance.
-static DiagnosticOptions *
-CreateAndPopulateDiagOpts(ArrayRef<const char *> ArgV) {
-  auto *DiagOpts = new DiagnosticOptions;
-  unsigned MissingArgIndex, MissingArgCount;
-  llvm::opt::InputArgList Args = clang::driver::getDriverOptTable().ParseArgs(
-      ArgV.slice(1), MissingArgIndex, MissingArgCount);
-  // We ignore MissingArgCount and the return value of ParseDiagnosticArgs.
-  // Any errors that would be diagnosed here will also be diagnosed later,
-  // when the DiagnosticsEngine actually exists.
-  (void)ParseDiagnosticArgs(*DiagOpts, Args);
-  return DiagOpts;
-}
-
 CXExternalActionList *
 clang_Driver_getExternalActionsForCommand_v0(int ArgC, const char **ArgV,
                                              const char **Environment,
@@ -70,9 +55,9 @@ clang_Driver_getExternalActionsForCommand_v0(int ArgC, const char **ArgV,
     return nullptr;
 
   CXDiagnosticSetDiagnosticConsumer DiagConsumer;
-  auto Diags = CompilerInstance::createDiagnostics(
-      CreateAndPopulateDiagOpts(llvm::makeArrayRef(ArgV, ArgC)), &DiagConsumer,
-      false);
+  auto DiagOpts = CreateAndPopulateDiagOpts(llvm::makeArrayRef(ArgV, ArgC));
+  auto Diags = CompilerInstance::createDiagnostics(DiagOpts.release(),
+                                                   &DiagConsumer, false);
 
   // Use createPhysicalFileSystem instead of getRealFileSystem so that
   // setCurrentWorkingDirectory doesn't change the working directory of the

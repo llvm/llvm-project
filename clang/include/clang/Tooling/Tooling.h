@@ -268,9 +268,15 @@ public:
 
   ~ToolInvocation();
 
-  /// Set a \c DiagnosticConsumer to use during parsing.
+  /// Set a \c DiagnosticConsumer to use during driver command-line parsing and
+  /// the action invocation itself.
   void setDiagnosticConsumer(DiagnosticConsumer *DiagConsumer) {
     this->DiagConsumer = DiagConsumer;
+  }
+
+  /// Set a \c DiagnosticOptions to use during driver command-line parsing.
+  void setDiagnosticOptions(DiagnosticOptions *DiagOpts) {
+    this->DiagOpts = DiagOpts;
   }
 
   /// Run the clang invocation.
@@ -290,6 +296,7 @@ public:
   FileManager *Files;
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
   DiagnosticConsumer *DiagConsumer = nullptr;
+  DiagnosticOptions *DiagOpts = nullptr;
 };
 
 /// Utility to run a FrontendAction over a set of files.
