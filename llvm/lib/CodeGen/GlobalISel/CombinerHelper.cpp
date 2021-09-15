@@ -639,7 +639,7 @@ bool CombinerHelper::isPredecessor(const MachineInstr &DefMI,
          "shouldn't consider debug uses");
   assert(DefMI.getParent() == UseMI.getParent());
   if (&DefMI == &UseMI)
-    return false;
+    return true;
   const MachineBasicBlock &MBB = *DefMI.getParent();
   auto DefOrUse = find_if(MBB, [&DefMI, &UseMI](const MachineInstr &MI) {
     return &MI == &DefMI || &MI == &UseMI;
