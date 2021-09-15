@@ -199,12 +199,17 @@ struct __hw_jmp_buf_struct {
   // assume that a `__hw_jmp_buf' begins with a `__hw_register_buf' and that
   // `__mask_was_saved' follows it.  Do not move these members or add others
   // before it.
+  //
+  // We add a __magic field to our struct to catch cases where libc's setjmp
+  // populated the jmp_buf instead of our interceptor.
   __hw_register_buf __jmpbuf; // Calling environment.
-  int __mask_was_saved;       // Saved the signal mask?
+  unsigned __mask_was_saved : 1;  // Saved the signal mask?
+  unsigned __magic : 31;      // Used to distinguish __hw_jmp_buf from jmp_buf.
   __hw_sigset_t __saved_mask; // Saved signal mask.
 };
 typedef struct __hw_jmp_buf_struct __hw_jmp_buf[1];
 typedef struct __hw_jmp_buf_struct __hw_sigjmp_buf[1];
+constexpr unsigned kHwJmpBufMagic = 0x248ACE77;
 #endif // HWASAN_WITH_INTERCEPTORS && __aarch64__
 
 #define ENSURE_HWASAN_INITED()      \
