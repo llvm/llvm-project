@@ -723,6 +723,58 @@ static Instruction *foldSetClearBits(SelectInst &Sel,
   return nullptr;
 }
 
+//   select (x == 0), 0, x * y --> freeze(y) * x
+//   select (y == 0), 0, x * y --> freeze(x) * y
+//   select (x == 0), undef, x * y --> freeze(y) * x
+//   select (x == undef), 0, x * y --> freeze(y) * x
+// Usage of mul instead of 0 will make the result more poisonous,
+// so the operand that was not checked in the condition should be frozen.
+// The latter folding is applied only when a constant compared with x is
+// is a vector consisting of 0 and undefs. If a constant compared with x
+// is a scalar undefined value or undefined vector then an expression
+// should be already folded into a constant.
+static Instruction *foldSelectZeroOrMul(SelectInst &SI, InstCombinerImpl &IC) {
+  auto *CondVal = SI.getCondition();
+  auto *TrueVal = SI.getTrueValue();
+  auto *FalseVal = SI.getFalseValue();
+  Value *X, *Y;
+  ICmpInst::Predicate Predicate;
+
+  // Assuming that constant compared with zero is not undef (but it may be
+  // a vector with some undef elements). Otherwise (when a constant is undef)
+  // the select expression should be already simplified.
+  if (!match(CondVal, m_ICmp(Predicate, m_Value(X), m_Zero())) ||
+      !ICmpInst::isEquality(Predicate))
+    return nullptr;
+
+  if (Predicate == ICmpInst::ICMP_NE)
+    std::swap(TrueVal, FalseVal);
+
+  // Check that TrueVal is a constant instead of matching it with m_Zero()
+  // to handle the case when it is a scalar undef value or a vector containing
+  // non-zero elements that are masked by undef elements in the compare
+  // constant.
+  auto *TrueValC = dyn_cast<Constant>(TrueVal);
+  if (TrueValC == nullptr ||
+      !match(FalseVal, m_c_Mul(m_Specific(X), m_Value(Y))) ||
+      !isa<Instruction>(FalseVal))
+    return nullptr;
+
+  auto *ZeroC = cast<Constant>(cast<Instruction>(CondVal)->getOperand(1));
+  auto *MergedC = Constant::mergeUndefsWith(TrueValC, ZeroC);
+  // If X is compared with 0 then TrueVal could be either zero or undef.
+  // m_Zero match vectors containing some undef elements, but for scalars
+  // m_Undef should be used explicitly.
+  if (!match(MergedC, m_Zero()) && !match(MergedC, m_Undef()))
+    return nullptr;
+
+  auto *FalseValI = cast<Instruction>(FalseVal);
+  auto *FrY = IC.InsertNewInstBefore(new FreezeInst(Y, Y->getName() + ".fr"),
+                                     *FalseValI);
+  IC.replaceOperand(*FalseValI, FalseValI->getOperand(0) == Y ? 0 : 1, FrY);
+  return IC.replaceInstUsesWith(SI, FalseValI);
+}
+
 /// Transform patterns such as (a > b) ? a - b : 0 into usub.sat(a, b).
 /// There are 8 commuted/swapped variants of this pattern.
 /// TODO: Also support a - UMIN(a,b) patterns.
@@ -2930,6 +2982,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     return Add;
   if (Instruction *Or = foldSetClearBits(SI, Builder))
     return Or;
+  if (Instruction *Mul = foldSelectZeroOrMul(SI, *this))
+    return Mul;
 
   // Turn (select C, (op X, Y), (op X, Z)) -> (op X, (select C, Y, Z))
   auto *TI = dyn_cast<Instruction>(TrueVal);
