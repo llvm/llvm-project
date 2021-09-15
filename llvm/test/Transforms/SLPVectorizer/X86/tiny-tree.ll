@@ -313,21 +313,18 @@ define void @tiny_vector_with_diff_opcode(i16 *%a, i16 *%v1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, i16* [[V1:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 undef to i16
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr inbounds i16, i16* [[A:%.*]], i64 0
-; CHECK-NEXT:    store i16 [[TMP1]], i16* [[PTR0]], align 16
 ; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr inbounds i16, i16* [[A]], i64 1
-; CHECK-NEXT:    store i16 [[TMP2]], i16* [[PTR1]], align 4
 ; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i16, i16* [[A]], i64 2
-; CHECK-NEXT:    store i16 [[TMP1]], i16* [[PTR2]], align 8
 ; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr inbounds i16, i16* [[A]], i64 3
-; CHECK-NEXT:    store i16 [[TMP2]], i16* [[PTR3]], align 4
 ; CHECK-NEXT:    [[PTR4:%.*]] = getelementptr inbounds i16, i16* [[A]], i64 4
-; CHECK-NEXT:    store i16 [[TMP1]], i16* [[PTR4]], align 16
 ; CHECK-NEXT:    [[PTR5:%.*]] = getelementptr inbounds i16, i16* [[A]], i64 5
-; CHECK-NEXT:    store i16 [[TMP2]], i16* [[PTR5]], align 4
 ; CHECK-NEXT:    [[PTR6:%.*]] = getelementptr inbounds i16, i16* [[A]], i64 6
-; CHECK-NEXT:    store i16 [[TMP1]], i16* [[PTR6]], align 8
 ; CHECK-NEXT:    [[PTR7:%.*]] = getelementptr inbounds i16, i16* [[A]], i64 7
-; CHECK-NEXT:    store i16 [[TMP2]], i16* [[PTR7]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i16> poison, i16 [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i16> [[TMP3]], i16 [[TMP2]], i32 1
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i16> [[TMP4]], <8 x i16> poison, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i16* [[PTR0]] to <8 x i16>*
+; CHECK-NEXT:    store <8 x i16> [[SHUFFLE]], <8 x i16>* [[TMP5]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %1 = load i16, i16* %v1, align 4
