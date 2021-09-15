@@ -109,10 +109,8 @@ MODULE_PASS("synthetic-counts-propagation", SyntheticCountsPropagation())
 MODULE_PASS("verify", VerifierPass())
 MODULE_PASS("wholeprogramdevirt", WholeProgramDevirtPass())
 MODULE_PASS("dfsan", DataFlowSanitizerPass())
-MODULE_PASS("asan-module", ModuleAddressSanitizerPass(/*CompileKernel=*/false, false, true, false))
 MODULE_PASS("msan-module", ModuleMemorySanitizerPass({}))
 MODULE_PASS("tsan-module", ModuleThreadSanitizerPass())
-MODULE_PASS("kasan-module", ModuleAddressSanitizerPass(/*CompileKernel=*/true, false, true, false))
 MODULE_PASS("sancov-module", ModuleSanitizerCoveragePass())
 MODULE_PASS("memprof-module", ModuleMemProfilerPass())
 MODULE_PASS("poison-checking", PoisonCheckingPass())
@@ -138,6 +136,15 @@ MODULE_PASS_WITH_PARAMS("hwasan",
                         },
                         parseHWASanPassOptions,
                         "kernel;recover")
+MODULE_PASS_WITH_PARAMS("asan-module",
+                        "ModuleAddressSanitizerPass",
+                        [](bool CompileKernel) {
+                          return ModuleAddressSanitizerPass(CompileKernel,
+                                                            false, true,
+                                                            false);
+                        },
+                        parseModuleAddressSanitizerPassOptions,
+                        "kernel")
 #undef MODULE_PASS_WITH_PARAMS
 
 #ifndef CGSCC_ANALYSIS
