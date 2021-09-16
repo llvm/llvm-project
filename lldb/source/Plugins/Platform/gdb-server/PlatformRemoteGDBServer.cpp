@@ -475,11 +475,10 @@ Status PlatformRemoteGDBServer::KillProcess(const lldb::pid_t pid) {
   return Status();
 }
 
-lldb::ProcessSP PlatformRemoteGDBServer::DebugProcess(
-    ProcessLaunchInfo &launch_info, Debugger &debugger,
-    Target *target, // Can be NULL, if NULL create a new target, else use
-                    // existing one
-    Status &error) {
+lldb::ProcessSP
+PlatformRemoteGDBServer::DebugProcess(ProcessLaunchInfo &launch_info,
+                                      Debugger &debugger, Target &target,
+                                      Status &error) {
   lldb::ProcessSP process_sp;
   if (IsRemote()) {
     if (IsConnected()) {
@@ -489,32 +488,21 @@ lldb::ProcessSP PlatformRemoteGDBServer::DebugProcess(
         error.SetErrorStringWithFormat("unable to launch a GDB server on '%s'",
                                        GetHostname());
       } else {
-        if (target == nullptr) {
-          TargetSP new_target_sp;
+        // The darwin always currently uses the GDB remote debugger plug-in
+        // so even when debugging locally we are debugging remotely!
+        process_sp = target.CreateProcess(launch_info.GetListener(),
+                                          "gdb-remote", nullptr, true);
 
-          error = debugger.GetTargetList().CreateTarget(
-              debugger, "", "", eLoadDependentsNo, nullptr, new_target_sp);
-          target = new_target_sp.get();
-        } else
-          error.Clear();
-
-        if (target && error.Success()) {
-          // The darwin always currently uses the GDB remote debugger plug-in
-          // so even when debugging locally we are debugging remotely!
-          process_sp = target->CreateProcess(launch_info.GetListener(),
-                                             "gdb-remote", nullptr, true);
-
-          if (process_sp) {
+        if (process_sp) {
+          error = process_sp->ConnectRemote(connect_url.c_str());
+          // Retry the connect remote one time...
+          if (error.Fail())
             error = process_sp->ConnectRemote(connect_url.c_str());
-            // Retry the connect remote one time...
-            if (error.Fail())
-              error = process_sp->ConnectRemote(connect_url.c_str());
-            if (error.Success())
-              error = process_sp->Launch(launch_info);
-            else if (debugserver_pid != LLDB_INVALID_PROCESS_ID) {
-              printf("error: connect remote failed (%s)\n", error.AsCString());
-              KillSpawnedProcess(debugserver_pid);
-            }
+          if (error.Success())
+            error = process_sp->Launch(launch_info);
+          else if (debugserver_pid != LLDB_INVALID_PROCESS_ID) {
+            printf("error: connect remote failed (%s)\n", error.AsCString());
+            KillSpawnedProcess(debugserver_pid);
           }
         }
       }

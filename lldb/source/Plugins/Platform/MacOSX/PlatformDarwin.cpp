@@ -1226,12 +1226,9 @@ PlatformDarwin::GetResumeCountForLaunchInfo(ProcessLaunchInfo &launch_info) {
     return 1;
 }
 
-lldb::ProcessSP
-PlatformDarwin::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
-                             Target *target, // Can be NULL, if NULL create
-                                             // a new target, else use existing
-                                             // one
-                             Status &error) {
+lldb::ProcessSP PlatformDarwin::DebugProcess(ProcessLaunchInfo &launch_info,
+                                             Debugger &debugger, Target &target,
+                                             Status &error) {
   ProcessSP process_sp;
 
   if (IsHost()) {

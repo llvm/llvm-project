@@ -47,11 +47,7 @@ public:
 
   lldb::ProcessSP DebugProcess(lldb_private::ProcessLaunchInfo &launch_info,
                                lldb_private::Debugger &debugger,
-                               lldb_private::Target *target, // Can be nullptr,
-                                                             // if nullptr
-                                                             // create a new
-                                                             // target, else use
-                                                             // existing one
+                               lldb_private::Target &target,
                                lldb_private::Status &error) override;
 
   std::string GetPlatformSpecificConnectionInformation() override;

@@ -71,7 +71,7 @@ public:
 
   lldb::ProcessSP DebugProcess(lldb_private::ProcessLaunchInfo &launch_info,
                                lldb_private::Debugger &debugger,
-                               lldb_private::Target *target,
+                               lldb_private::Target &target,
                                lldb_private::Status &error) override;
 
   void CalculateTrapHandlerSymbolNames() override;

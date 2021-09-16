@@ -198,7 +198,7 @@ Status PlatformWindows::DisconnectRemote() {
 }
 
 ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
-                                        Debugger &debugger, Target *target,
+                                        Debugger &debugger, Target &target,
                                         Status &error) {
   // Windows has special considerations that must be followed when launching or
   // attaching to a process.  The key requirement is that when launching or
@@ -230,9 +230,9 @@ ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
   if (launch_info.GetProcessID() != LLDB_INVALID_PROCESS_ID) {
     // This is a process attach.  Don't need to launch anything.
     ProcessAttachInfo attach_info(launch_info);
-    return Attach(attach_info, debugger, target, error);
+    return Attach(attach_info, debugger, &target, error);
   } else {
-    ProcessSP process_sp = target->CreateProcess(
+    ProcessSP process_sp = target.CreateProcess(
         launch_info.GetListener(), launch_info.GetProcessPluginName(), nullptr,
         false);
 

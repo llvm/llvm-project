@@ -410,13 +410,11 @@ lldb::ProcessSP PlatformPOSIX::Attach(ProcessAttachInfo &attach_info,
   return process_sp;
 }
 
-lldb::ProcessSP
-PlatformPOSIX::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
-                            Target *target, // Can be NULL, if NULL create a new
-                                            // target, else use existing one
-                            Status &error) {
+lldb::ProcessSP PlatformPOSIX::DebugProcess(ProcessLaunchInfo &launch_info,
+                                            Debugger &debugger, Target &target,
+                                            Status &error) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
-  LLDB_LOG(log, "target {0}", target);
+  LLDB_LOG(log, "target {0}", &target);
 
   ProcessSP process_sp;
 
@@ -442,29 +440,10 @@ PlatformPOSIX::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
   // worry about the target getting them as well.
   launch_info.SetLaunchInSeparateProcessGroup(true);
 
-  // Ensure we have a target.
-  if (target == nullptr) {
-    LLDB_LOG(log, "creating new target");
-    TargetSP new_target_sp;
-    error = debugger.GetTargetList().CreateTarget(
-        debugger, "", "", eLoadDependentsNo, nullptr, new_target_sp);
-    if (error.Fail()) {
-      LLDB_LOG(log, "failed to create new target: {0}", error);
-      return process_sp;
-    }
-
-    target = new_target_sp.get();
-    if (!target) {
-      error.SetErrorString("CreateTarget() returned nullptr");
-      LLDB_LOG(log, "error: {0}", error);
-      return process_sp;
-    }
-  }
-
   // Now create the gdb-remote process.
   LLDB_LOG(log, "having target create process with gdb-remote plugin");
   process_sp =
-      target->CreateProcess(launch_info.GetListener(), "gdb-remote", nullptr,
+      target.CreateProcess(launch_info.GetListener(), "gdb-remote", nullptr,
                             true);
 
   if (!process_sp) {
@@ -518,8 +497,8 @@ PlatformPOSIX::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
       LLDB_LOG(log, "not using process STDIO pty");
   } else {
     LLDB_LOG(log, "{0}", error);
-    // FIXME figure out appropriate cleanup here.  Do we delete the target? Do
-    // we delete the process?  Does our caller do that?
+    // FIXME figure out appropriate cleanup here. Do we delete the process?
+    // Does our caller do that?
   }
 
   return process_sp;

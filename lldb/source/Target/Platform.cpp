@@ -1088,14 +1088,11 @@ Status Platform::KillProcess(const lldb::pid_t pid) {
   return Status();
 }
 
-lldb::ProcessSP
-Platform::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
-                       Target *target, // Can be nullptr, if nullptr create a
-                                       // new target, else use existing one
-                       Status &error) {
+lldb::ProcessSP Platform::DebugProcess(ProcessLaunchInfo &launch_info,
+                                       Debugger &debugger, Target &target,
+                                       Status &error) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
-  LLDB_LOGF(log, "Platform::%s entered (target %p)", __FUNCTION__,
-            static_cast<void *>(target));
+  LLDB_LOG(log, "target = {0})", &target);
 
   ProcessSP process_sp;
   // Make sure we stop at the entry point
@@ -1117,7 +1114,7 @@ Platform::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
        filter_callback = get_filter_func(++i, iteration_complete)) {
     if (filter_callback) {
       // Give this ProcessLaunchInfo filter a chance to adjust the launch info.
-      error = (*filter_callback)(launch_info, target);
+      error = (*filter_callback)(launch_info, &target);
       if (!error.Success()) {
         LLDB_LOGF(log,
                   "Platform::%s() StructuredDataPlugin launch "
@@ -1135,7 +1132,7 @@ Platform::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
               __FUNCTION__, launch_info.GetProcessID());
     if (launch_info.GetProcessID() != LLDB_INVALID_PROCESS_ID) {
       ProcessAttachInfo attach_info(launch_info);
-      process_sp = Attach(attach_info, debugger, target, error);
+      process_sp = Attach(attach_info, debugger, &target, error);
       if (process_sp) {
         LLDB_LOGF(log, "Platform::%s Attach() succeeded, Process plugin: %s",
                   __FUNCTION__, process_sp->GetPluginName().AsCString());

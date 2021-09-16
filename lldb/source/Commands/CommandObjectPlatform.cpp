@@ -1171,7 +1171,7 @@ protected:
           target->GetRunArguments(m_options.launch_info.GetArguments());
 
         ProcessSP process_sp(platform_sp->DebugProcess(
-            m_options.launch_info, debugger, target, error));
+            m_options.launch_info, debugger, *target, error));
         if (process_sp && process_sp->IsAlive()) {
           result.SetStatus(eReturnStatusSuccessFinishNoResult);
           return true;
