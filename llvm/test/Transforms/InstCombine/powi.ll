@@ -8,8 +8,7 @@ declare double @llvm.copysign.f64(double, double)
 define double @powi_fneg_even_int(double %x) {
 ; CHECK-LABEL: @powi_fneg_even_int(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[FNEG:%.*]] = fneg double [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = tail call double @llvm.powi.f64.i32(double [[FNEG]], i32 4)
+; CHECK-NEXT:    [[R:%.*]] = tail call double @llvm.powi.f64.i32(double [[X:%.*]], i32 4)
 ; CHECK-NEXT:    ret double [[R]]
 ;
 entry:
@@ -21,8 +20,7 @@ entry:
 define double @powi_fabs_even_int(double %x) {
 ; CHECK-LABEL: @powi_fabs_even_int(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[F:%.*]] = tail call double @llvm.fabs.f64(double [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = tail call double @llvm.powi.f64.i32(double [[F]], i32 4)
+; CHECK-NEXT:    [[R:%.*]] = tail call double @llvm.powi.f64.i32(double [[X:%.*]], i32 4)
 ; CHECK-NEXT:    ret double [[R]]
 ;
 entry:
@@ -34,8 +32,7 @@ entry:
 define double @powi_copysign_even_int(double %x, double %y) {
 ; CHECK-LABEL: @powi_copysign_even_int(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CS:%.*]] = tail call double @llvm.copysign.f64(double [[X:%.*]], double [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = tail call double @llvm.powi.f64.i32(double [[CS]], i32 4)
+; CHECK-NEXT:    [[R:%.*]] = tail call double @llvm.powi.f64.i32(double [[X:%.*]], i32 4)
 ; CHECK-NEXT:    ret double [[R]]
 ;
 entry:
