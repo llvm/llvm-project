@@ -128,6 +128,18 @@ define i32 @insert_extract_element_same_vec_idx_4() {
   ret i32 %r
 }
 
+; Known values of vscale intrinsic
+
+define i64 @vscale64_range4_4() vscale_range(4,4) {
+; CHECK-LABEL: @vscale64_range4_4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i64 4
+;
+entry:
+  %vscale = call i64 @llvm.vscale.i64()
+  ret i64 %vscale
+}
+
 ; more complicated expressions
 
 define <vscale x 2 x i1> @cmp_le_smax_always_true(<vscale x 2 x i64> %x) {
@@ -217,3 +229,6 @@ define i32 @extractelement_splat_variable_index(i32 %v, i32 %idx) {
   %r = extractelement <vscale x 4 x i32> %splat, i32 %idx
   ret i32 %r
 }
+
+
+declare i64 @llvm.vscale.i64()
