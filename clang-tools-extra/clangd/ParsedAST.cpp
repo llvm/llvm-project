@@ -283,15 +283,21 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
 
   llvm::Optional<PreamblePatch> Patch;
   bool PreserveDiags = true;
+  // We might use an ignoring diagnostic consumer if they are going to be
+  // dropped later on to not pay for extra latency by processing them.
+  DiagnosticConsumer *DiagConsumer = &ASTDiags;
+  IgnoreDiagnostics DropDiags;
   if (Preamble) {
     Patch = PreamblePatch::createFullPatch(Filename, Inputs, *Preamble);
     Patch->apply(*CI);
     PreserveDiags = Patch->preserveDiagnostics();
+    if (!PreserveDiags)
+      DiagConsumer = &DropDiags;
   }
   auto Clang = prepareCompilerInstance(
       std::move(CI), PreamblePCH,
       llvm::MemoryBuffer::getMemBufferCopy(Inputs.Contents, Filename), VFS,
-      ASTDiags);
+      *DiagConsumer);
   if (!Clang) {
     // The last diagnostic contains information about the reason of this
     // failure.
@@ -300,6 +306,10 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
          !Diags.empty() ? static_cast<DiagBase &>(Diags.back()).Message
                         : "unknown error");
     return None;
+  }
+  if (!PreserveDiags) {
+    // Skips some analysis.
+    Clang->getDiagnosticOpts().IgnoreWarnings = true;
   }
 
   auto Action = std::make_unique<ClangdFrontendAction>();
@@ -329,7 +339,10 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   std::vector<std::unique_ptr<tidy::ClangTidyCheck>> CTChecks;
   ast_matchers::MatchFinder CTFinder;
   llvm::Optional<tidy::ClangTidyContext> CTContext;
-  {
+  llvm::Optional<IncludeFixer> FixIncludes;
+  // No need to run clang-tidy or IncludeFixerif we are not going to surface
+  // diagnostics.
+  if (PreserveDiags) {
     trace::Span Tracer("ClangTidyInit");
     tidy::ClangTidyOptions ClangTidyOpts =
         getTidyOptionsForFile(Inputs.ClangTidyProvider, Filename);
@@ -389,28 +402,28 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
       }
       return DiagLevel;
     });
-  }
 
-  // Add IncludeFixer which can recover diagnostics caused by missing includes
-  // (e.g. incomplete type) and attach include insertion fixes to diagnostics.
-  llvm::Optional<IncludeFixer> FixIncludes;
-  auto BuildDir = VFS->getCurrentWorkingDirectory();
-  if (Inputs.Index && !BuildDir.getError()) {
-    auto Style = getFormatStyleForFile(Filename, Inputs.Contents, *Inputs.TFS);
-    auto Inserter = std::make_shared<IncludeInserter>(
-        Filename, Inputs.Contents, Style, BuildDir.get(),
-        &Clang->getPreprocessor().getHeaderSearchInfo());
-    if (Preamble) {
-      for (const auto &Inc : Preamble->Includes.MainFileIncludes)
-        Inserter->addExisting(Inc);
+    // Add IncludeFixer which can recover diagnostics caused by missing includes
+    // (e.g. incomplete type) and attach include insertion fixes to diagnostics.
+    auto BuildDir = VFS->getCurrentWorkingDirectory();
+    if (Inputs.Index && !BuildDir.getError()) {
+      auto Style =
+          getFormatStyleForFile(Filename, Inputs.Contents, *Inputs.TFS);
+      auto Inserter = std::make_shared<IncludeInserter>(
+          Filename, Inputs.Contents, Style, BuildDir.get(),
+          &Clang->getPreprocessor().getHeaderSearchInfo());
+      if (Preamble) {
+        for (const auto &Inc : Preamble->Includes.MainFileIncludes)
+          Inserter->addExisting(Inc);
+      }
+      FixIncludes.emplace(Filename, Inserter, *Inputs.Index,
+                          /*IndexRequestLimit=*/5);
+      ASTDiags.contributeFixes([&FixIncludes](DiagnosticsEngine::Level DiagLevl,
+                                              const clang::Diagnostic &Info) {
+        return FixIncludes->fix(DiagLevl, Info);
+      });
+      Clang->setExternalSemaSource(FixIncludes->unresolvedNameRecorder());
     }
-    FixIncludes.emplace(Filename, Inserter, *Inputs.Index,
-                        /*IndexRequestLimit=*/5);
-    ASTDiags.contributeFixes([&FixIncludes](DiagnosticsEngine::Level DiagLevl,
-                                            const clang::Diagnostic &Info) {
-      return FixIncludes->fix(DiagLevl, Info);
-    });
-    Clang->setExternalSemaSource(FixIncludes->unresolvedNameRecorder());
   }
 
   IncludeStructure Includes;
