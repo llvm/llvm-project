@@ -272,3 +272,129 @@ Lastly, you can use `! REQUIRES: <feature>` for tests that will only work when
 test as only available on Unix-like systems (i.e. systems that contain a Unix
 shell). In practice this means that the corresponding test is skipped on
 Windows.
+
+# Frontend Driver Plugins
+Plugins are an extension to the frontend driver that make it possible to run
+extra user defined frontend actions, in the form of a specialization of a
+`PluginParseTreeAction`. These actions are run during compilation, after
+semantic checks. Similarly to Clang, Flang leverages `LoadLibraryPermanently`
+from LLVM's `llvm::sys::DynamicLibrary` to load dynamic objects that implement
+plugins. The process for using plugins includes:
+* [Creating a plugin](#creating-a-plugin)
+* [Loading and running a plugin](#loading-and-running-a-plugin)
+
+Flang plugins are limited to `flang-new -fc1` and are currently only available /
+been tested on Linux.
+
+## Creating a Plugin
+There are three parts required for plugins to work:
+1. [`PluginParseTreeAction` subclass](#a-pluginparsetreeaction-subclass)
+1. [Implementation of `ExecuteAction`](#implementation-of-executeaction)
+1. [Plugin registration](#plugin-registration)
+
+There is an example plugin located in `flang/example/PrintFlangFunctionNames`
+that demonstrates these points by using the `ParseTree` API to print out
+function and subroutine names declared in the input file.
+
+### A `PluginParseTreeAction` Subclass
+This subclass will wrap everything together and represent the `FrontendAction`
+corresponding to your plugin. It will need to inherit from
+`PluginParseTreeAction` (defined in `flang/include/flang/FrontendActions.h`), in
+order to have access to the parse tree post semantic checks, and also so that it
+can be registered, e.g.
+```cpp
+class PrintFunctionNamesAction : public PluginParseTreeAction
+```
+
+### Implementation of `ExecuteAction`
+Like in other frontend actions, the driver looks for an `ExecuteAction` function
+to run, so in order for your plugin to do something, you will need to implement
+the `ExecuteAction` method in your plugin class. This method will contain the
+implementation of what the plugin actually does, for example:
+```cpp
+void ExecuteAction() override {
+  auto &parseTree{instance().parsing().parseTree()};
+  ParseTreeVisitor visitor;
+  Fortran::parser::Walk(parseTree, visitor);
+}
+```
+In the example plugin, the `ExecuteAction` method first gets a reference to the
+parse tree, `instance().parsing().parseTree()`, then declares a `visitor`
+struct, before passing both of these to the `Fortran::parser::Walk` function
+that will traverse the parse tree. Implementation and details of the `Walk`
+function can be found in `flang/include/flang/Parser/parse-tree-visitor.h`.
+
+A `visitor` struct should define different `Pre` and `Post` functions that take
+the type of a specific `ParseTree` node as an argument. When the `Walk` function
+is traversing the parse tree, these functions will be run before/after a node
+of that type is visited. Template functions for `Pre`/`Post` are defined so that
+when a node is visited that you have not defined a function for, it will still
+be able to continue. `Pre` returns a `bool` indicating whether to visit that
+node's children or not. For example:
+```cpp
+struct ParseTreeVisitor {
+  template <typename A> bool Pre(const A&) { return true; }
+  template <typename A> void Post(const A&) {}
+  void Post(const Fortran::parser::FunctionStmt &f) {
+    llvm::outs() << std::get<Fortran::parser::Name>(f.t).ToString() << "\n" ;
+  }
+}
+```
+The different types of nodes and also what each node structure contains are
+defined in `flang/include/flang/Parser/parse-tree.h`. In the example, there is a
+`Post` function, with a line that gets the `Name` element from a tuple `t` in
+the `FunctionStmt` struct and prints it. This function will be run after every
+`FunctionStmt` node is visited in the parse tree.
+
+### Plugin Registration
+A plugin registry is used to store names and descriptions of a collection of
+plugins. The Flang plugin registry, defined in
+`flang/include/flang/Frontend/FrontendPluginRegistry.h`, is an alias of
+`llvm::Registry` of type `PluginParseTreeAction`.
+
+The plugin will need to be registered, which will add the Plugin to the registry
+and allow it to be used. The format is as follows, with `print-fns` being the
+plugin name that is used later to call the plugin and `Print Function names`
+being the description:
+```cpp
+static FrontendPluginRegistry::Add<PrintFunctionNamesAction> X(
+    "print-fns", "Print Function names");
+```
+
+## Loading and Running a Plugin
+In order to use plugins, there are 2 command line options made available to the
+frontend driver, `flang-new -fc1`:
+* [`-load <dsopath>`](#the--load-dsopath-option) for loading the dynamic shared
+  object of the plugin
+* [`-plugin <name>`](#the--plugin-name-option) for calling the registered plugin
+
+Invocation of the example plugin is done through:
+```bash
+flang-new -fc1 -load flangPrintFunctionNames.so -plugin print-fns file.f90
+```
+
+Both these options are parsed in `flang/lib/Frontend/CompilerInvocation.cpp` and
+fulfil their actions in
+`flang/lib/FrontendTool/ExecuteCompilerInvocation.cpp`
+
+### The `-load <dsopath>` option
+This loads the plugin shared object library, with the path given at `<dsopath>`,
+using `LoadLibraryPermantly` from LLVM's `llvm::sys::DynamicLibrary`, which
+itself uses `dlopen`. During this stage, the plugin is registered with the
+registration line from the plugin, storing the name and description.
+
+### The `-plugin <name>` option
+This sets `frontend::ActionKind programAction` in `FrontendOptions` to
+`PluginAction`, through which it searches the plugin registry for the plugin
+name from `<name>`. If found, it returns the instantiated plugin, otherwise it
+reports an error diagnostic and returns `nullptr`.
+
+## Enabling In-Tree Plugins
+For in-tree plugins, there is the CMake flag `FLANG_PLUGIN_SUPPORT`, enabled by
+default, that controls the exporting of executable symbols from `flang-new`,
+which plugins need access to. Additionally, there is the CMake flag
+`FLANG_BUILD_EXAMPLES`, turned off by default, that is used to control if the
+example programs are built. This includes plugins that are in the
+`flang/example` directory and added as a `sub_directory` to the
+`flang/examples/CMakeLists.txt`, for example, the `PrintFlangFunctionNames`
+plugin. It is also possible to develop plugins out-of-tree.
