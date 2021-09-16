@@ -129,6 +129,9 @@ int operator""_\U00010000(char) {} // expected-error {{redefinition of 'operator
 int operator""_℮""_\u212e""_\U0000212e""(const char*, size_t);
 int operator""_\u212e""_\U0000212e""_℮""(const char*, size_t);
 int operator""_\U0000212e""_℮""_\u212e""(const char*, size_t);
+
+int operator""_\u{212f}(char);
+
 int mix_ucn_utf8 = ""_℮""_\u212e""_\U0000212e"";
 
 void operator""_℮""_ℯ(unsigned long long) {} // expected-error {{differing user-defined suffixes ('_℮' and '_ℯ') in string literal concatenation}}
