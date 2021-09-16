@@ -1182,6 +1182,19 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       if (Power->equalsInt(2))
         return BinaryOperator::CreateFMulFMF(II->getArgOperand(0),
                                              II->getArgOperand(0), II);
+
+      if (!Power->getValue()[0]) {
+        Value *X;
+        // If power is even:
+        // powi(-x, p) -> powi(x, p)
+        // powi(fabs(x), p) -> powi(x, p)
+        // powi(copysign(x, y), p) -> powi(x, p)
+        if (match(II->getArgOperand(0), m_FNeg(m_Value(X))) ||
+            match(II->getArgOperand(0), m_FAbs(m_Value(X))) ||
+            match(II->getArgOperand(0),
+                  m_Intrinsic<Intrinsic::copysign>(m_Value(X), m_Value())))
+          return replaceOperand(*II, 0, X);
+      }
     }
     break;
 

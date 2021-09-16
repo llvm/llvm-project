@@ -160,6 +160,13 @@ static cl::opt<unsigned>
                         cl::desc("Maximum cost of combining conditions when "
                                  "folding branches"));
 
+static cl::opt<unsigned> BranchFoldToCommonDestVectorMultiplier(
+    "simplifycfg-branch-fold-common-dest-vector-multiplier", cl::Hidden,
+    cl::init(2),
+    cl::desc("Multiplier to apply to threshold when determining whether or not "
+             "to fold branch to common destination when vector operations are "
+             "present"));
+
 STATISTIC(NumBitMaps, "Number of switch instructions turned into bitmaps");
 STATISTIC(NumLinearMaps,
           "Number of switch instructions turned into linear mapping");
@@ -3144,6 +3151,14 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
   return true;
 }
 
+/// Return if an instruction's type or any of its operands' types are a vector
+/// type.
+static bool isVectorOp(Instruction &I) {
+  return I.getType()->isVectorTy() || any_of(I.operands(), [](Use &U) {
+           return U->getType()->isVectorTy();
+         });
+}
+
 /// If this basic block is simple enough, and if a predecessor branches to us
 /// and one of our successors, fold the block into the predecessor and use
 /// logical operations to pick the right destination.
@@ -3228,6 +3243,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
   // number of the bonus instructions we'll need to create when cloning into
   // each predecessor does not exceed a certain threshold.
   unsigned NumBonusInsts = 0;
+  bool SawVectorOp = false;
   const unsigned PredCount = Preds.size();
   for (Instruction &I : *BB) {
     // Don't check the branch condition comparison itself.
@@ -3239,12 +3255,15 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
     // I must be safe to execute unconditionally.
     if (!isSafeToSpeculativelyExecute(&I))
       return false;
+    SawVectorOp |= isVectorOp(I);
 
     // Account for the cost of duplicating this instruction into each
     // predecessor.
     NumBonusInsts += PredCount;
+
     // Early exits once we reach the limit.
-    if (NumBonusInsts > BonusInstThreshold)
+    if (NumBonusInsts >
+        BonusInstThreshold * BranchFoldToCommonDestVectorMultiplier)
       return false;
 
     auto IsBCSSAUse = [BB, &I](Use &U) {
@@ -3258,6 +3277,10 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
     if (!all_of(I.uses(), IsBCSSAUse))
       return false;
   }
+  if (NumBonusInsts >
+      BonusInstThreshold *
+          (SawVectorOp ? BranchFoldToCommonDestVectorMultiplier : 1))
+    return false;
 
   // Ok, we have the budget. Perform the transformation.
   for (BasicBlock *PredBlock : Preds) {

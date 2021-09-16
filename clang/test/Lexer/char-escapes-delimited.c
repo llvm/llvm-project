@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -pedantic -verify %s
-// RUN: %clang_cc1 -x c -fsyntax-only -pedantic -verify %s
-// RUN: %clang_cc1 -fwchar-type=short -fno-signed-wchar -fsyntax-only -pedantic -verify %s
-// RUN: %clang_cc1 -x c -fwchar-type=short -fno-signed-wchar -fsyntax-only -pedantic -verify %s
+// RUN: %clang_cc1 -x c++ -std=gnu++11 -fsyntax-only -pedantic -verify %s
+// RUN: %clang_cc1 -x c -std=gnu11 -fsyntax-only -pedantic -verify %s
+// RUN: %clang_cc1 -x c++ -std=gnu++11 -fwchar-type=short -fno-signed-wchar -fsyntax-only -pedantic -verify %s
+// RUN: %clang_cc1 -x c -std=gnu11 -fwchar-type=short -fno-signed-wchar -fsyntax-only -pedantic -verify %s
 
 const char *errors =
     "\u{}"  //expected-error {{delimited escape sequence cannot be empty}}
