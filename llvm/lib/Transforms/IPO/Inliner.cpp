@@ -1053,3 +1053,11 @@ PreservedAnalyses ModuleInlinerWrapperPass::run(Module &M,
   // The ModulePassManager has already taken care of invalidating analyses.
   return PreservedAnalyses::all();
 }
+
+void InlinerPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<InlinerPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  if (OnlyMandatory)
+    OS << "<only-mandatory>";
+}
