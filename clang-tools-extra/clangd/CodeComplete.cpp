@@ -1874,9 +1874,10 @@ CodeCompleteResult codeComplete(PathRef FileName, Position Pos,
              ? std::move(Flow).runWithoutSema(ParseInput.Contents, *Offset,
                                               *ParseInput.TFS)
              : std::move(Flow).run({FileName, *Offset, *Preamble,
-                                    // We want to serve code completions with
-                                    // low latency, so don't bother patching.
-                                    /*PreamblePatch=*/llvm::None, ParseInput});
+                                    /*PreamblePatch=*/
+                                    PreamblePatch::createMacroPatch(
+                                        FileName, ParseInput, *Preamble),
+                                    ParseInput});
 }
 
 SignatureHelp signatureHelp(PathRef FileName, Position Pos,
@@ -1898,7 +1899,8 @@ SignatureHelp signatureHelp(PathRef FileName, Position Pos,
                                                Result),
       Options,
       {FileName, *Offset, Preamble,
-       PreamblePatch::create(FileName, ParseInput, Preamble), ParseInput});
+       PreamblePatch::createFullPatch(FileName, ParseInput, Preamble),
+       ParseInput});
   return Result;
 }
 

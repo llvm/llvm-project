@@ -284,7 +284,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   llvm::Optional<PreamblePatch> Patch;
   bool PreserveDiags = true;
   if (Preamble) {
-    Patch = PreamblePatch::create(Filename, Inputs, *Preamble);
+    Patch = PreamblePatch::createFullPatch(Filename, Inputs, *Preamble);
     Patch->apply(*CI);
     PreserveDiags = Patch->preserveDiagnostics();
   }

@@ -142,10 +142,11 @@ struct TextualPPDirective {
   unsigned DirectiveLine;
   // Full text that's representing the directive, including the `#`.
   std::string Text;
+  unsigned Offset;
 
   bool operator==(const TextualPPDirective &RHS) const {
-    return std::tie(DirectiveLine, Text) ==
-           std::tie(RHS.DirectiveLine, RHS.Text);
+    return std::tie(DirectiveLine, Offset, Text) ==
+           std::tie(RHS.DirectiveLine, RHS.Offset, RHS.Text);
   }
 };
 
@@ -155,7 +156,7 @@ struct TextualPPDirective {
 std::string spellDirective(llvm::StringRef Prefix,
                            CharSourceRange DirectiveRange,
                            const LangOptions &LangOpts, const SourceManager &SM,
-                           unsigned &DirectiveLine) {
+                           unsigned &DirectiveLine, unsigned &Offset) {
   std::string SpelledDirective;
   llvm::raw_string_ostream OS(SpelledDirective);
   OS << Prefix;
@@ -169,6 +170,7 @@ std::string spellDirective(llvm::StringRef Prefix,
 
   auto DecompLoc = SM.getDecomposedLoc(DirectiveRange.getBegin());
   DirectiveLine = SM.getLineNumber(DecompLoc.first, DecompLoc.second);
+  Offset = DecompLoc.second;
   auto TargetColumn = SM.getColumnNumber(DecompLoc.first, DecompLoc.second) - 1;
 
   // Pad with spaces before DirectiveRange to make sure it will be on right
@@ -217,7 +219,7 @@ struct DirectiveCollector : public PPCallbacks {
         spellDirective("#define ",
                        CharSourceRange::getTokenRange(
                            MI->getDefinitionLoc(), MI->getDefinitionEndLoc()),
-                       LangOpts, SM, TD.DirectiveLine);
+                       LangOpts, SM, TD.DirectiveLine, TD.Offset);
   }
 
 private:
@@ -426,7 +428,8 @@ void escapeBackslashAndQuotes(llvm::StringRef Text, llvm::raw_ostream &OS) {
 
 PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
                                     const ParseInputs &Modified,
-                                    const PreambleData &Baseline) {
+                                    const PreambleData &Baseline,
+                                    PatchType PatchType) {
   trace::Span Tracer("CreatePreamblePatch");
   SPAN_ATTACH(Tracer, "File", FileName);
   assert(llvm::sys::path::is_absolute(FileName) && "relative FileName!");
@@ -475,7 +478,7 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
   escapeBackslashAndQuotes(FileName, Patch);
   Patch << "\"\n";
 
-  if (IncludesChanged) {
+  if (IncludesChanged && PatchType == PatchType::All) {
     // We are only interested in newly added includes, record the ones in
     // Baseline for exclusion.
     llvm::DenseMap<std::pair<tok::PPKeywordKind, llvm::StringRef>,
@@ -526,6 +529,18 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
   dlog("Created preamble patch: {0}", Patch.str());
   Patch.flush();
   return PP;
+}
+
+PreamblePatch PreamblePatch::createFullPatch(llvm::StringRef FileName,
+                                             const ParseInputs &Modified,
+                                             const PreambleData &Baseline) {
+  return create(FileName, Modified, Baseline, PatchType::All);
+}
+
+PreamblePatch PreamblePatch::createMacroPatch(llvm::StringRef FileName,
+                                              const ParseInputs &Modified,
+                                              const PreambleData &Baseline) {
+  return create(FileName, Modified, Baseline, PatchType::MacroDirectives);
 }
 
 void PreamblePatch::apply(CompilerInvocation &CI) const {

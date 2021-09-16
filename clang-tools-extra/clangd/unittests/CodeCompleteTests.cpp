@@ -3262,6 +3262,23 @@ TEST(CompletionTest, ObjCCategoryDecls) {
     EXPECT_THAT(Results.Completions, UnorderedElementsAre(Labeled("BarExt")));
   }
 }
+
+TEST(CompletionTest, PreambleCodeComplete) {
+  llvm::StringLiteral Baseline = "\n#define MACRO 12\nint num = MACRO;";
+  llvm::StringLiteral ModifiedCC =
+      "#include \"header.h\"\n#define MACRO 12\nint num = MACRO; int num2 = M^";
+
+  Annotations Test(ModifiedCC);
+  auto BaselineTU = TestTU::withCode(Baseline);
+  auto ModifiedTU = TestTU::withCode(Test.code());
+
+  MockFS FS;
+  auto Inputs = ModifiedTU.inputs(FS);
+  auto Result = codeComplete(testPath(ModifiedTU.Filename), Test.point(),
+                             BaselineTU.preamble().get(), Inputs, {});
+  EXPECT_THAT(Result.Completions, Not(testing::IsEmpty()));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
