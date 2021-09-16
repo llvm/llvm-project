@@ -18,23 +18,29 @@
 using namespace _OMP;
 
 struct DeviceEnvironmentTy {
-  int32_t DebugLevel;
+  uint32_t DebugLevel;
+  uint32_t NumDevices;
+  uint32_t DeviceNum;
 };
 
 #pragma omp declare target
+
+extern uint32_t __omp_rtl_debug_kind;
 
 // TOOD: We want to change the name as soon as the old runtime is gone.
 DeviceEnvironmentTy CONSTANT(omptarget_device_environment)
     __attribute__((used));
 
-int32_t config::getDebugLevel() {
-  // TODO: Implement libomptarget initialization of DeviceEnvironmentTy
-  return 0;
+uint32_t config::getDebugLevel() {
+  return __omp_rtl_debug_kind & omptarget_device_environment.DebugLevel;
 }
 
 uint32_t config::getNumDevices() {
-  // TODO: Implement libomptarget initialization of DeviceEnvironmentTy
-  return 1;
+  return omptarget_device_environment.NumDevices;
+}
+
+uint32_t config::getDeviceNum() {
+  return omptarget_device_environment.DeviceNum;
 }
 
 bool config::isDebugMode(config::DebugLevel Level) {
