@@ -69,6 +69,29 @@ struct FileDescriptorCloser {
   int FD;
 };
 
+TEST(is_style_Style, Works) {
+  using namespace llvm::sys::path;
+  // Check platform-independent results.
+  EXPECT_TRUE(is_style_posix(Style::posix));
+  EXPECT_TRUE(is_style_windows(Style::windows));
+  EXPECT_FALSE(is_style_posix(Style::windows));
+  EXPECT_FALSE(is_style_windows(Style::posix));
+
+  // Check platform-dependent results.
+#if defined(_WIN32)
+  EXPECT_FALSE(is_style_posix(Style::native));
+  EXPECT_TRUE(is_style_windows(Style::native));
+#else
+  EXPECT_TRUE(is_style_posix(Style::native));
+  EXPECT_FALSE(is_style_windows(Style::native));
+#endif
+
+  // Check is_style_native().
+  EXPECT_TRUE(is_style_native(Style::native));
+  EXPECT_EQ(is_style_posix(Style::native), is_style_native(Style::posix));
+  EXPECT_EQ(is_style_windows(Style::native), is_style_native(Style::windows));
+}
+
 TEST(is_separator, Works) {
   EXPECT_TRUE(path::is_separator('/'));
   EXPECT_FALSE(path::is_separator('\0'));
@@ -78,11 +101,8 @@ TEST(is_separator, Works) {
   EXPECT_TRUE(path::is_separator('\\', path::Style::windows));
   EXPECT_FALSE(path::is_separator('\\', path::Style::posix));
 
-#ifdef _WIN32
-  EXPECT_TRUE(path::is_separator('\\'));
-#else
-  EXPECT_FALSE(path::is_separator('\\'));
-#endif
+  EXPECT_EQ(path::is_style_windows(path::Style::native),
+            path::is_separator('\\'));
 }
 
 TEST(is_absolute_gnu, Works) {
@@ -107,6 +127,10 @@ TEST(is_absolute_gnu, Works) {
               std::get<1>(Path));
     EXPECT_EQ(path::is_absolute_gnu(std::get<0>(Path), path::Style::windows),
               std::get<2>(Path));
+
+    constexpr int Native = is_style_posix(path::Style::native) ? 1 : 2;
+    EXPECT_EQ(path::is_absolute_gnu(std::get<0>(Path), path::Style::native),
+              std::get<Native>(Path));
   }
 }
 
