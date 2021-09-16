@@ -1624,9 +1624,9 @@ static void computeUberSets(std::vector<UberRegSet> &UberSets,
     assert(USetID && "register number 0 is invalid");
 
     AllocatableRegs.insert((*Regs.begin())->EnumValue);
-    for (auto I = std::next(Regs.begin()), E = Regs.end(); I != E; ++I) {
-      AllocatableRegs.insert((*I)->EnumValue);
-      UberSetIDs.join(USetID, (*I)->EnumValue);
+    for (const CodeGenRegister *CGR : llvm::drop_begin(Regs)) {
+      AllocatableRegs.insert(CGR->EnumValue);
+      UberSetIDs.join(USetID, CGR->EnumValue);
     }
   }
   // Combine non-allocatable regs.

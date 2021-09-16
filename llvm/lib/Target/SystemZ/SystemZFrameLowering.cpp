@@ -566,8 +566,8 @@ void SystemZELFFrameLowering::emitPrologue(MachineFunction &MF,
     // Mark the FramePtr as live at the beginning of every block except
     // the entry block.  (We'll have marked R11 as live on entry when
     // saving the GPRs.)
-    for (auto I = std::next(MF.begin()), E = MF.end(); I != E; ++I)
-      I->addLiveIn(SystemZ::R11D);
+    for (MachineBasicBlock &MBBJ : llvm::drop_begin(MF))
+      MBBJ.addLiveIn(SystemZ::R11D);
   }
 
   // Skip over the FPR/VR saves.
