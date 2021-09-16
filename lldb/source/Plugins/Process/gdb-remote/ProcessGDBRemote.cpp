@@ -578,13 +578,14 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
         }
 
         reg_info.name = reg_name.AsCString();
+        reg_info.alt_name = alt_name.AsCString();
         // We have to make a temporary ABI here, and not use the GetABI because
         // this code gets called in DidAttach, when the target architecture
         // (and consequently the ABI we'll get from the process) may be wrong.
         if (ABISP abi_sp = ABI::FindPlugin(shared_from_this(), arch_to_use))
           abi_sp->AugmentRegisterInfo(reg_info);
 
-        m_register_info_sp->AddRegister(reg_info, reg_name, alt_name, set_name);
+        m_register_info_sp->AddRegister(reg_info, set_name);
       } else {
         break; // ensure exit before reg_num is incremented
       }
@@ -4554,9 +4555,10 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
         reg_num_remote = reg_info.kinds[eRegisterKindProcessPlugin] + 1;
         ++reg_num_local;
         reg_info.name = reg_name.AsCString();
+        reg_info.alt_name = alt_name.AsCString();
         if (abi_sp)
           abi_sp->AugmentRegisterInfo(reg_info);
-        dyn_reg_info.AddRegister(reg_info, reg_name, alt_name, set_name);
+        dyn_reg_info.AddRegister(reg_info, set_name);
 
         return true; // Keep iterating through all "reg" elements
       });
