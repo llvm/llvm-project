@@ -398,3 +398,20 @@ example programs are built. This includes plugins that are in the
 `flang/example` directory and added as a `sub_directory` to the
 `flang/examples/CMakeLists.txt`, for example, the `PrintFlangFunctionNames`
 plugin. It is also possible to develop plugins out-of-tree.
+
+## Limitations
+Note that the traversal API presented here is under active development and
+might change in the future. We expect it to evolve as support for new
+language features are added. This document and the examples will be updated
+accordingly.
+
+The current `ParseTree` structure is not suitable for modifications. The
+copy constructors are not available and hence duplicating code might not be
+trivial. Please take this into consideration when designing your plugin. In
+particular, creating a transformation plugin will be noticeably harder than
+analysis plugins that just consume (rather than edit) `ParseTree`.
+
+Lastly, if `ParseTree` modifications are performed, then it might be necessary
+to re-analyze expressions and modify scope or symbols. You can check
+[Semantics.md](Semantics.md) for more details on how `ParseTree` is edited
+e.g. during the semantic checks.
