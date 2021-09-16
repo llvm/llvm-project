@@ -1155,7 +1155,7 @@ static void addSanitizers(const Triple &TargetTriple,
     MSanPass(SanitizerKind::KernelMemory, true);
 
     if (LangOpts.Sanitize.has(SanitizerKind::Thread)) {
-      MPM.addPass(ThreadSanitizerPass());
+      MPM.addPass(ModuleThreadSanitizerPass());
       MPM.addPass(createModuleToFunctionPassAdaptor(ThreadSanitizerPass()));
     }
 
