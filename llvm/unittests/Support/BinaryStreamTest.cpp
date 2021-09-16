@@ -25,25 +25,24 @@ namespace {
 
 class BrokenStream : public WritableBinaryStream {
 public:
-  BrokenStream(MutableArrayRef<uint8_t> Data, endianness Endian,
-                      uint32_t Align)
+  BrokenStream(MutableArrayRef<uint8_t> Data, endianness Endian, uint32_t Align)
       : Data(Data), PartitionIndex(alignDown(Data.size() / 2, Align)),
         Endian(Endian) {}
 
   endianness getEndian() const override { return Endian; }
 
-  Error readBytes(uint32_t Offset, uint32_t Size,
+  Error readBytes(uint64_t Offset, uint64_t Size,
                   ArrayRef<uint8_t> &Buffer) override {
     if (auto EC = checkOffsetForRead(Offset, Size))
       return EC;
-    uint32_t S = startIndex(Offset);
+    uint64_t S = startIndex(Offset);
     auto Ref = Data.drop_front(S);
     if (Ref.size() >= Size) {
       Buffer = Ref.take_front(Size);
       return Error::success();
     }
 
-    uint32_t BytesLeft = Size - Ref.size();
+    uint64_t BytesLeft = Size - Ref.size();
     uint8_t *Ptr = Allocator.Allocate<uint8_t>(Size);
     ::memcpy(Ptr, Ref.data(), Ref.size());
     ::memcpy(Ptr + Ref.size(), Data.data(), BytesLeft);
@@ -51,24 +50,24 @@ public:
     return Error::success();
   }
 
-  Error readLongestContiguousChunk(uint32_t Offset,
+  Error readLongestContiguousChunk(uint64_t Offset,
                                    ArrayRef<uint8_t> &Buffer) override {
     if (auto EC = checkOffsetForRead(Offset, 1))
       return EC;
-    uint32_t S = startIndex(Offset);
+    uint64_t S = startIndex(Offset);
     Buffer = Data.drop_front(S);
     return Error::success();
   }
 
-  uint32_t getLength() override { return Data.size(); }
+  uint64_t getLength() override { return Data.size(); }
 
-  Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> SrcData) override {
+  Error writeBytes(uint64_t Offset, ArrayRef<uint8_t> SrcData) override {
     if (auto EC = checkOffsetForWrite(Offset, SrcData.size()))
       return EC;
     if (SrcData.empty())
       return Error::success();
 
-    uint32_t S = startIndex(Offset);
+    uint64_t S = startIndex(Offset);
     MutableArrayRef<uint8_t> Ref(Data);
     Ref = Ref.drop_front(S);
     if (Ref.size() >= SrcData.size()) {
@@ -76,7 +75,7 @@ public:
       return Error::success();
     }
 
-    uint32_t BytesLeft = SrcData.size() - Ref.size();
+    uint64_t BytesLeft = SrcData.size() - Ref.size();
     ::memcpy(Ref.data(), SrcData.data(), Ref.size());
     ::memcpy(&Data[0], SrcData.data() + Ref.size(), BytesLeft);
     return Error::success();
@@ -84,11 +83,11 @@ public:
   Error commit() override { return Error::success(); }
 
 private:
-  uint32_t startIndex(uint32_t Offset) const {
+  uint64_t startIndex(uint64_t Offset) const {
     return (Offset + PartitionIndex) % Data.size();
   }
 
-  uint32_t endIndex(uint32_t Offset, uint32_t Size) const {
+  uint64_t endIndex(uint64_t Offset, uint64_t Size) const {
     return (startIndex(Offset) + Size - 1) % Data.size();
   }
 
@@ -134,9 +133,9 @@ protected:
 
     BrokenInputData.resize(InputData.size());
     if (!Input.empty()) {
-      uint32_t PartitionIndex = alignDown(InputData.size() / 2, Align);
-      uint32_t RightBytes = InputData.size() - PartitionIndex;
-      uint32_t LeftBytes = PartitionIndex;
+      uint64_t PartitionIndex = alignDown(InputData.size() / 2, Align);
+      uint64_t RightBytes = InputData.size() - PartitionIndex;
+      uint64_t LeftBytes = PartitionIndex;
       if (RightBytes > 0)
         ::memcpy(&BrokenInputData[PartitionIndex], Input.data(), RightBytes);
       if (LeftBytes > 0)
@@ -154,7 +153,7 @@ protected:
     }
   }
 
-  void initializeOutput(uint32_t Size, uint32_t Align) {
+  void initializeOutput(uint64_t Size, uint32_t Align) {
     OutputData.resize(Size);
     BrokenOutputData.resize(Size);
 
@@ -368,7 +367,7 @@ TEST_F(BinaryStreamTest, MutableBinaryByteStreamBounds) {
     // from the middle.
     uint32_t Offsets[] = {0, 3};
     for (auto Offset : Offsets) {
-      uint32_t ExpectedSize = Stream.Input->getLength() - Offset;
+      uint64_t ExpectedSize = Stream.Input->getLength() - Offset;
 
       // Read everything from Offset until the end of the input data.
       ArrayRef<uint8_t> Data;
