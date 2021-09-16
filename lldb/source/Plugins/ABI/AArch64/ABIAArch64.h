@@ -31,6 +31,8 @@ protected:
 
   uint32_t GetGenericNum(llvm::StringRef name) override;
 
+  void AugmentRegisterInfo(lldb_private::RegisterInfo &info) override;
+
   using lldb_private::MCBasedABI::MCBasedABI;
 };
 #endif

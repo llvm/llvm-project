@@ -6228,6 +6228,8 @@ def _SLASH_TC : CLCompileFlag<"TC">, HelpText<"Treat all source files as C">;
 def _SLASH_Tp : CLCompileJoinedOrSeparate<"Tp">,
   HelpText<"Treat <file> as C++ source file">, MetaVarName<"<file>">;
 def _SLASH_TP : CLCompileFlag<"TP">, HelpText<"Treat all source files as C++">;
+def _SLASH_diasdkdir : CLJoinedOrSeparate<"diasdkdir">,
+  HelpText<"Path to the DIA SDK">, MetaVarName<"<dir>">;
 def _SLASH_vctoolsdir : CLJoinedOrSeparate<"vctoolsdir">,
   HelpText<"Path to the VCToolChain">, MetaVarName<"<dir>">;
 def _SLASH_vctoolsversion : CLJoinedOrSeparate<"vctoolsversion">,
@@ -6237,7 +6239,7 @@ def _SLASH_winsdkdir : CLJoinedOrSeparate<"winsdkdir">,
 def _SLASH_winsdkversion : CLJoinedOrSeparate<"winsdkversion">,
   HelpText<"Full version of the Windows SDK, defaults to newest found">;
 def _SLASH_winsysroot : CLJoinedOrSeparate<"winsysroot">,
-  HelpText<"Same as /vctoolsdir <dir>/VC/Tools/MSVC/<vctoolsversion> /winsdkdir <dir>/Windows Kits/10">,
+  HelpText<"Same as \"/diasdkdir <dir>/DIA SDK\" /vctoolsdir <dir>/VC/Tools/MSVC/<vctoolsversion> \"/winsdkdir <dir>/Windows Kits/10\"">,
   MetaVarName<"<dir>">;
 def _SLASH_volatile_iso : Option<["/", "-"], "volatile:iso", KIND_FLAG>,
   Group<_SLASH_volatile_Group>, Flags<[CLOption, NoXarchOption]>,

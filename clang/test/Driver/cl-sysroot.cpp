@@ -1,17 +1,26 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 
-// RUN: %clang_cl /winsysroot %t -### -- %t/foo.cpp 2>&1 | FileCheck %s
-// RUN: %clang_cl /vctoolsdir %t/VC/Tools/MSVC/27.1828.18284 \
-// RUN:           /winsdkdir "%t/Windows Kits/10" \
-// RUN:           -### -- %t/foo.cpp 2>&1 | FileCheck %s
+// RUN: %clang_cl -m64 /winsysroot %t -### -- %t/foo.cpp 2>&1 | FileCheck %s
+// RUN: %clang_cl -m64 \
+// RUN:     /diasdkdir "%t/DIA SDK" \
+// RUN:     /vctoolsdir %t/VC/Tools/MSVC/27.1828.18284 \
+// RUN:     /winsdkdir "%t/Windows Kits/10" \
+// RUN:     -### -- %t/foo.cpp 2>&1 | FileCheck %s
 
-// CHECK: "-internal-isystem" "[[ROOT:[^"]*]]{{/|\\\\}}VC{{/|\\\\}}Tools{{/|\\\\}}MSVC{{/|\\\\}}27.1828.18284{{/|\\\\}}include"
+// CHECK: "-internal-isystem" "[[ROOT:[^"]*]]{{/|\\\\}}DIA SDK{{/|\\\\}}include"
+// CHECK: "-internal-isystem" "[[ROOT]]{{/|\\\\}}VC{{/|\\\\}}Tools{{/|\\\\}}MSVC{{/|\\\\}}27.1828.18284{{/|\\\\}}include"
 // CHECK: "-internal-isystem" "[[ROOT]]{{/|\\\\}}VC{{/|\\\\}}Tools{{/|\\\\}}MSVC{{/|\\\\}}27.1828.18284{{/|\\\\}}atlmfc{{/|\\\\}}include"
 // CHECK: "-internal-isystem" "[[ROOT]]{{/|\\\\}}Windows Kits{{/|\\\\}}10{{/|\\\\}}Include{{/|\\\\}}10.0.19041.0{{/|\\\\}}ucrt"
 // CHECK: "-internal-isystem" "[[ROOT]]{{/|\\\\}}Windows Kits{{/|\\\\}}10{{/|\\\\}}Include{{/|\\\\}}10.0.19041.0{{/|\\\\}}shared"
 // CHECK: "-internal-isystem" "[[ROOT]]{{/|\\\\}}Windows Kits{{/|\\\\}}10{{/|\\\\}}Include{{/|\\\\}}10.0.19041.0{{/|\\\\}}um"
 // CHECK: "-internal-isystem" "[[ROOT]]{{/|\\\\}}Windows Kits{{/|\\\\}}10{{/|\\\\}}Include{{/|\\\\}}10.0.19041.0{{/|\\\\}}winrt"
+
+// CHECK: "-libpath:[[ROOT]]{{/|\\\\}}DIA SDK{{/|\\\\}}lib{{/|\\\\}}amd64"
+// CHECK: "-libpath:[[ROOT]]{{/|\\\\}}VC{{/|\\\\}}Tools{{/|\\\\}}MSVC{{/|\\\\}}27.1828.18284{{/|\\\\}}lib{{/|\\\\}}x64"
+// CHECK: "-libpath:[[ROOT]]{{/|\\\\}}VC{{/|\\\\}}Tools{{/|\\\\}}MSVC{{/|\\\\}}27.1828.18284{{/|\\\\}}atlmfc{{/|\\\\}}lib{{/|\\\\}}x64"
+// CHECK: "-libpath:[[ROOT]]{{/|\\\\}}Windows Kits{{/|\\\\}}10{{/|\\\\}}Lib{{/|\\\\}}10.0.19041.0{{/|\\\\}}ucrt{{/|\\\\}}x64"
+// CHECK: "-libpath:[[ROOT]]{{/|\\\\}}Windows Kits{{/|\\\\}}10{{/|\\\\}}Lib{{/|\\\\}}10.0.19041.0{{/|\\\\}}um{{/|\\\\}}x64"
 
 #--- VC/Tools/MSVC/27.1828.18284/include/string
 namespace std {
@@ -23,6 +32,9 @@ public:
 
 #--- Windows Kits/10/Include/10.0.19041.0/ucrt/assert.h
 #define myassert(X)
+
+#--- DIA SDK/include/cvconst.h
+#define myotherassert(X)
 
 #--- foo.cpp
 #include <assert.h>
