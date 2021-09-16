@@ -53,7 +53,7 @@ define i32 @fold_srem_positive_odd(i32 %x) nounwind {
 ; RV64IM-NEXT:    srli a1, a1, 32
 ; RV64IM-NEXT:    addw a1, a1, a0
 ; RV64IM-NEXT:    srliw a2, a1, 31
-; RV64IM-NEXT:    srli a1, a1, 6
+; RV64IM-NEXT:    sraiw a1, a1, 6
 ; RV64IM-NEXT:    addw a1, a1, a2
 ; RV64IM-NEXT:    addi a2, zero, 95
 ; RV64IM-NEXT:    mulw a1, a1, a2

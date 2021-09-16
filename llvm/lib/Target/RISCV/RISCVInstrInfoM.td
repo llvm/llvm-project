@@ -72,9 +72,8 @@ def : PatGprGpr<urem, REMU>;
 } // Predicates = [HasStdExtM]
 
 let Predicates = [HasStdExtM, IsRV64] in {
-// Select W instructions without sext_inreg if only the lower 32-bits of the
-// result are used.
-def : PatGprGpr<overflowingbinopw<mul>, MULW>;
+// Select W instructions if only the lower 32-bits of the result are used.
+def : PatGprGpr<binop_allwusers<mul>, MULW>;
 
 def : PatGprGpr<riscv_divw, DIVW>;
 def : PatGprGpr<riscv_divuw, DIVUW>;
