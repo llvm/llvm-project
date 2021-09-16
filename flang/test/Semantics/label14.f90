@@ -3,7 +3,7 @@
 !            Block Construct
 
 ! RUN: %flang_fc1 -fsyntax-only %s 2>&1 | FileCheck %s
-! CHECK: Label '20' is not in scope
+! CHECK: Label '20' is in a construct that prevents its use as a branch target here
 
 subroutine s1
   block
