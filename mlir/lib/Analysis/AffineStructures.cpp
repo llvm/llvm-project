@@ -311,29 +311,41 @@ unsigned FlatAffineConstraints::insertLocalId(unsigned pos, unsigned num) {
 
 unsigned FlatAffineConstraints::insertId(IdKind kind, unsigned pos,
                                          unsigned num) {
-  if (kind == IdKind::Dimension)
-    assert(pos <= getNumDimIds());
-  else if (kind == IdKind::Symbol)
-    assert(pos <= getNumSymbolIds());
-  else
-    assert(pos <= getNumLocalIds());
+  assertAtMostNumIdKind(pos, kind);
 
-  unsigned absolutePos;
-  if (kind == IdKind::Dimension) {
-    absolutePos = pos;
+  unsigned absolutePos = getIdKindOffset(kind) + pos;
+  if (kind == IdKind::Dimension)
     numDims += num;
-  } else if (kind == IdKind::Symbol) {
-    absolutePos = pos + getNumDimIds();
+  else if (kind == IdKind::Symbol)
     numSymbols += num;
-  } else {
-    absolutePos = pos + getNumDimIds() + getNumSymbolIds();
-  }
   numIds += num;
 
   inequalities.insertColumns(absolutePos, num);
   equalities.insertColumns(absolutePos, num);
 
   return absolutePos;
+}
+
+void FlatAffineConstraints::assertAtMostNumIdKind(unsigned val,
+                                                  IdKind kind) const {
+  if (kind == IdKind::Dimension)
+    assert(val <= getNumDimIds());
+  else if (kind == IdKind::Symbol)
+    assert(val <= getNumSymbolIds());
+  else if (kind == IdKind::Local)
+    assert(val <= getNumLocalIds());
+  else
+    llvm_unreachable("IdKind expected to be Dimension, Symbol or Local!");
+}
+
+unsigned FlatAffineConstraints::getIdKindOffset(IdKind kind) const {
+  if (kind == IdKind::Dimension)
+    return 0;
+  if (kind == IdKind::Symbol)
+    return getNumDimIds();
+  if (kind == IdKind::Local)
+    return getNumDimAndSymbolIds();
+  llvm_unreachable("IdKind expected to be Dimension, Symbol or Local!");
 }
 
 unsigned FlatAffineValueConstraints::insertId(IdKind kind, unsigned pos,
@@ -363,6 +375,17 @@ bool FlatAffineValueConstraints::hasValues() const {
   return llvm::find_if(values, [](Optional<Value> id) {
            return id.hasValue();
          }) != values.end();
+}
+
+void FlatAffineConstraints::removeId(IdKind kind, unsigned pos) {
+  removeIdRange(kind, pos, pos + 1);
+}
+
+void FlatAffineConstraints::removeIdRange(IdKind kind, unsigned idStart,
+                                          unsigned idLimit) {
+  assertAtMostNumIdKind(idLimit, kind);
+  removeIdRange(getIdKindOffset(kind) + idStart,
+                getIdKindOffset(kind) + idLimit);
 }
 
 /// Checks if two constraint systems are in the same space, i.e., if they are
