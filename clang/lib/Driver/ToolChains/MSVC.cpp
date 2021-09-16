@@ -63,6 +63,61 @@ using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
+// Windows SDKs and VC Toolchains group their contents into subdirectories based
+// on the target architecture. This function converts an llvm::Triple::ArchType
+// to the corresponding subdirectory name.
+static const char *llvmArchToWindowsSDKArch(llvm::Triple::ArchType Arch) {
+  using ArchType = llvm::Triple::ArchType;
+  switch (Arch) {
+  case ArchType::x86:
+    return "x86";
+  case ArchType::x86_64:
+    return "x64";
+  case ArchType::arm:
+    return "arm";
+  case ArchType::aarch64:
+    return "arm64";
+  default:
+    return "";
+  }
+}
+
+// Similar to the above function, but for Visual Studios before VS2017.
+static const char *llvmArchToLegacyVCArch(llvm::Triple::ArchType Arch) {
+  using ArchType = llvm::Triple::ArchType;
+  switch (Arch) {
+  case ArchType::x86:
+    // x86 is default in legacy VC toolchains.
+    // e.g. x86 libs are directly in /lib as opposed to /lib/x86.
+    return "";
+  case ArchType::x86_64:
+    return "amd64";
+  case ArchType::arm:
+    return "arm";
+  case ArchType::aarch64:
+    return "arm64";
+  default:
+    return "";
+  }
+}
+
+// Similar to the above function, but for DevDiv internal builds.
+static const char *llvmArchToDevDivInternalArch(llvm::Triple::ArchType Arch) {
+  using ArchType = llvm::Triple::ArchType;
+  switch (Arch) {
+  case ArchType::x86:
+    return "i386";
+  case ArchType::x86_64:
+    return "amd64";
+  case ArchType::arm:
+    return "arm";
+  case ArchType::aarch64:
+    return "arm64";
+  default:
+    return "";
+  }
+}
+
 static bool canExecute(llvm::vfs::FileSystem &VFS, StringRef Path) {
   auto Status = VFS.status(Path);
   if (!Status)
@@ -396,6 +451,20 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // the environment variable is set however, assume the user knows what
   // they're doing. If the user passes /vctoolsdir or /winsdkdir, trust that
   // over env vars.
+  if (const Arg *A = Args.getLastArg(options::OPT__SLASH_diasdkdir,
+                                     options::OPT__SLASH_winsysroot)) {
+    // cl.exe doesn't find the DIA SDK automatically, so this too requires
+    // explicit flags and doesn't automatically look in "DIA SDK" relative
+    // to the path we found for VCToolChainPath.
+    llvm::SmallString<128> DIAPath(A->getValue());
+    if (A->getOption().getID() == options::OPT__SLASH_winsysroot)
+      llvm::sys::path::append(DIAPath, "DIA SDK");
+
+    // The DIA SDK always uses the legacy vc arch, even in new MSVC versions.
+    llvm::sys::path::append(DIAPath, "lib",
+                            llvmArchToLegacyVCArch(TC.getArch()));
+    CmdArgs.push_back(Args.MakeArgString(Twine("-libpath:") + DIAPath));
+  }
   if (!llvm::sys::Process::GetEnv("LIB") ||
       Args.getLastArg(options::OPT__SLASH_vctoolsdir,
                       options::OPT__SLASH_winsysroot)) {
@@ -750,61 +819,6 @@ void MSVCToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
 void MSVCToolChain::printVerboseInfo(raw_ostream &OS) const {
   CudaInstallation.print(OS);
   RocmInstallation.print(OS);
-}
-
-// Windows SDKs and VC Toolchains group their contents into subdirectories based
-// on the target architecture. This function converts an llvm::Triple::ArchType
-// to the corresponding subdirectory name.
-static const char *llvmArchToWindowsSDKArch(llvm::Triple::ArchType Arch) {
-  using ArchType = llvm::Triple::ArchType;
-  switch (Arch) {
-  case ArchType::x86:
-    return "x86";
-  case ArchType::x86_64:
-    return "x64";
-  case ArchType::arm:
-    return "arm";
-  case ArchType::aarch64:
-    return "arm64";
-  default:
-    return "";
-  }
-}
-
-// Similar to the above function, but for Visual Studios before VS2017.
-static const char *llvmArchToLegacyVCArch(llvm::Triple::ArchType Arch) {
-  using ArchType = llvm::Triple::ArchType;
-  switch (Arch) {
-  case ArchType::x86:
-    // x86 is default in legacy VC toolchains.
-    // e.g. x86 libs are directly in /lib as opposed to /lib/x86.
-    return "";
-  case ArchType::x86_64:
-    return "amd64";
-  case ArchType::arm:
-    return "arm";
-  case ArchType::aarch64:
-    return "arm64";
-  default:
-    return "";
-  }
-}
-
-// Similar to the above function, but for DevDiv internal builds.
-static const char *llvmArchToDevDivInternalArch(llvm::Triple::ArchType Arch) {
-  using ArchType = llvm::Triple::ArchType;
-  switch (Arch) {
-  case ArchType::x86:
-    return "i386";
-  case ArchType::x86_64:
-    return "amd64";
-  case ArchType::arm:
-    return "arm";
-  case ArchType::aarch64:
-    return "arm64";
-  default:
-    return "";
-  }
 }
 
 // Get the path to a specific subdirectory in the current toolchain for
@@ -1261,6 +1275,19 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   for (const auto &Var :
        DriverArgs.getAllArgValues(options::OPT__SLASH_external_env)) {
     AddSystemIncludesFromEnv(Var);
+  }
+
+  // Add DIA SDK include if requested.
+  if (const Arg *A = DriverArgs.getLastArg(options::OPT__SLASH_diasdkdir,
+                                           options::OPT__SLASH_winsysroot)) {
+    // cl.exe doesn't find the DIA SDK automatically, so this too requires
+    // explicit flags and doesn't automatically look in "DIA SDK" relative
+    // to the path we found for VCToolChainPath.
+    llvm::SmallString<128> DIASDKPath(A->getValue());
+    if (A->getOption().getID() == options::OPT__SLASH_winsysroot)
+      llvm::sys::path::append(DIASDKPath, "DIA SDK");
+    AddSystemIncludeWithSubfolder(DriverArgs, CC1Args, std::string(DIASDKPath),
+                                  "include");
   }
 
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
