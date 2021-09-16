@@ -807,7 +807,7 @@ define amdgpu_kernel void @sdiv_i16(i16 addrspace(1)* %out, i16 %x, i16 %y) {
 ; GFX9-NEXT:    v_mad_f32 v2, -v3, v0, v2
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v3, v3
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v2|, |v0|
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX9-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX9-NEXT:    s_cselect_b32 s0, s4, 0
 ; GFX9-NEXT:    v_add_u32_e32 v0, s0, v3
 ; GFX9-NEXT:    global_store_short v1, v0, s[2:3]
@@ -832,7 +832,7 @@ define amdgpu_kernel void @sdiv_i16(i16 addrspace(1)* %out, i16 %x, i16 %y) {
 ; GFX90A-NEXT:    v_mad_f32 v2, -v3, v0, v2
 ; GFX90A-NEXT:    v_cvt_i32_f32_e32 v3, v3
 ; GFX90A-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v2|, |v0|
-; GFX90A-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX90A-NEXT:    s_cselect_b32 s0, s4, 0
 ; GFX90A-NEXT:    v_add_u32_e32 v0, s0, v3
 ; GFX90A-NEXT:    global_store_short v1, v0, s[2:3]
@@ -916,7 +916,7 @@ define amdgpu_kernel void @srem_i16(i16 addrspace(1)* %out, i16 %x, i16 %y) {
 ; GFX9-NEXT:    v_mad_f32 v1, -v2, v0, v1
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v2, v2
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 s[2:3], |v1|, |v0|
-; GFX9-NEXT:    s_cmp_lg_u64 s[2:3], 0
+; GFX9-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GFX9-NEXT:    s_cselect_b32 s2, s6, 0
 ; GFX9-NEXT:    v_add_u32_e32 v0, s2, v2
 ; GFX9-NEXT:    v_mul_lo_u32 v0, v0, s5
@@ -945,7 +945,7 @@ define amdgpu_kernel void @srem_i16(i16 addrspace(1)* %out, i16 %x, i16 %y) {
 ; GFX90A-NEXT:    v_mad_f32 v2, -v3, v0, v2
 ; GFX90A-NEXT:    v_cvt_i32_f32_e32 v3, v3
 ; GFX90A-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v2|, |v0|
-; GFX90A-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX90A-NEXT:    s_cselect_b32 s0, s6, 0
 ; GFX90A-NEXT:    v_add_u32_e32 v0, s0, v3
 ; GFX90A-NEXT:    v_mul_lo_u32 v0, v0, s5
@@ -1202,7 +1202,7 @@ define amdgpu_kernel void @sdiv_i8(i8 addrspace(1)* %out, i8 %x, i8 %y) {
 ; GFX9-NEXT:    v_mad_f32 v2, -v3, v0, v2
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v3, v3
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v2|, |v0|
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX9-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX9-NEXT:    s_cselect_b32 s0, s4, 0
 ; GFX9-NEXT:    v_add_u32_e32 v0, s0, v3
 ; GFX9-NEXT:    global_store_byte v1, v0, s[2:3]
@@ -1227,7 +1227,7 @@ define amdgpu_kernel void @sdiv_i8(i8 addrspace(1)* %out, i8 %x, i8 %y) {
 ; GFX90A-NEXT:    v_mad_f32 v2, -v3, v0, v2
 ; GFX90A-NEXT:    v_cvt_i32_f32_e32 v3, v3
 ; GFX90A-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v2|, |v0|
-; GFX90A-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX90A-NEXT:    s_cselect_b32 s0, s4, 0
 ; GFX90A-NEXT:    v_add_u32_e32 v0, s0, v3
 ; GFX90A-NEXT:    global_store_byte v1, v0, s[2:3]
@@ -1312,7 +1312,7 @@ define amdgpu_kernel void @srem_i8(i8 addrspace(1)* %out, i8 %x, i8 %y) {
 ; GFX9-NEXT:    v_mad_f32 v1, -v2, v0, v1
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v2, v2
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 s[2:3], |v1|, |v0|
-; GFX9-NEXT:    s_cmp_lg_u64 s[2:3], 0
+; GFX9-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GFX9-NEXT:    s_cselect_b32 s2, s6, 0
 ; GFX9-NEXT:    v_add_u32_e32 v0, s2, v2
 ; GFX9-NEXT:    v_mul_lo_u32 v0, v0, s5
@@ -1343,7 +1343,7 @@ define amdgpu_kernel void @srem_i8(i8 addrspace(1)* %out, i8 %x, i8 %y) {
 ; GFX90A-NEXT:    v_mad_f32 v2, -v3, v1, v2
 ; GFX90A-NEXT:    v_cvt_i32_f32_e32 v3, v3
 ; GFX90A-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v2|, |v1|
-; GFX90A-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX90A-NEXT:    s_cselect_b32 s0, s6, 0
 ; GFX90A-NEXT:    v_add_u32_e32 v1, s0, v3
 ; GFX90A-NEXT:    v_mul_lo_u32 v1, v1, s5
@@ -3915,7 +3915,7 @@ define amdgpu_kernel void @sdiv_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; GFX9-NEXT:    v_trunc_f32_e32 v3, v3
 ; GFX9-NEXT:    v_mad_f32 v1, -v3, v0, v1
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v1|, |v0|
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX9-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX9-NEXT:    s_cselect_b32 s0, s8, 0
 ; GFX9-NEXT:    s_ashr_i32 s1, s6, 16
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v0, s1
@@ -3931,8 +3931,8 @@ define amdgpu_kernel void @sdiv_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; GFX9-NEXT:    v_mad_f32 v1, -v4, v0, v1
 ; GFX9-NEXT:    s_or_b32 s4, s0, 1
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v1|, |v0|
+; GFX9-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v4, v4
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX9-NEXT:    s_sext_i32_i16 s1, s7
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v0, s1
 ; GFX9-NEXT:    s_cselect_b32 s0, s4, 0
@@ -3947,7 +3947,7 @@ define amdgpu_kernel void @sdiv_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; GFX9-NEXT:    v_trunc_f32_e32 v5, v5
 ; GFX9-NEXT:    v_mad_f32 v1, -v5, v0, v1
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v1|, |v0|
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX9-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v5, v5
 ; GFX9-NEXT:    s_cselect_b32 s0, s4, 0
 ; GFX9-NEXT:    s_ashr_i32 s1, s7, 16
@@ -3964,7 +3964,7 @@ define amdgpu_kernel void @sdiv_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; GFX9-NEXT:    v_mad_f32 v5, -v6, v0, v5
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v6, v6
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v5|, |v0|
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX9-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX9-NEXT:    s_cselect_b32 s0, s4, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v5, 0xffff
 ; GFX9-NEXT:    v_add_u32_e32 v0, s0, v6
@@ -3993,7 +3993,7 @@ define amdgpu_kernel void @sdiv_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; GFX90A-NEXT:    v_trunc_f32_e32 v3, v3
 ; GFX90A-NEXT:    v_mad_f32 v1, -v3, v0, v1
 ; GFX90A-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v1|, |v0|
-; GFX90A-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX90A-NEXT:    s_cselect_b32 s0, s8, 0
 ; GFX90A-NEXT:    s_ashr_i32 s1, s6, 16
 ; GFX90A-NEXT:    v_cvt_f32_i32_e32 v0, s1
@@ -4009,8 +4009,8 @@ define amdgpu_kernel void @sdiv_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; GFX90A-NEXT:    v_mad_f32 v1, -v4, v0, v1
 ; GFX90A-NEXT:    s_or_b32 s4, s0, 1
 ; GFX90A-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v1|, |v0|
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX90A-NEXT:    v_cvt_i32_f32_e32 v4, v4
-; GFX90A-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX90A-NEXT:    s_sext_i32_i16 s1, s7
 ; GFX90A-NEXT:    v_cvt_f32_i32_e32 v0, s1
 ; GFX90A-NEXT:    s_cselect_b32 s0, s4, 0
@@ -4025,7 +4025,7 @@ define amdgpu_kernel void @sdiv_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; GFX90A-NEXT:    v_trunc_f32_e32 v5, v5
 ; GFX90A-NEXT:    v_mad_f32 v1, -v5, v0, v1
 ; GFX90A-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v1|, |v0|
-; GFX90A-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX90A-NEXT:    v_cvt_i32_f32_e32 v5, v5
 ; GFX90A-NEXT:    s_cselect_b32 s0, s4, 0
 ; GFX90A-NEXT:    s_ashr_i32 s1, s7, 16
@@ -4042,7 +4042,7 @@ define amdgpu_kernel void @sdiv_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; GFX90A-NEXT:    v_mad_f32 v5, -v6, v0, v5
 ; GFX90A-NEXT:    v_cvt_i32_f32_e32 v6, v6
 ; GFX90A-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v5|, |v0|
-; GFX90A-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX90A-NEXT:    s_cselect_b32 s0, s4, 0
 ; GFX90A-NEXT:    v_mov_b32_e32 v5, 0xffff
 ; GFX90A-NEXT:    v_add_u32_e32 v0, s0, v6
@@ -4273,7 +4273,7 @@ define amdgpu_kernel void @srem_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; GFX9-NEXT:    v_trunc_f32_e32 v3, v3
 ; GFX9-NEXT:    v_mad_f32 v1, -v3, v0, v1
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v1|, |v0|
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX9-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX9-NEXT:    s_cselect_b32 s0, s8, 0
 ; GFX9-NEXT:    s_ashr_i32 s9, s6, 16
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v3, v3
@@ -4291,7 +4291,7 @@ define amdgpu_kernel void @srem_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v4, v4
 ; GFX9-NEXT:    s_or_b32 s6, s0, 1
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v3|, |v0|
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX9-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX9-NEXT:    s_cselect_b32 s0, s6, 0
 ; GFX9-NEXT:    v_add_u32_e32 v0, s0, v4
 ; GFX9-NEXT:    s_sext_i32_i16 s0, s7
@@ -4308,7 +4308,7 @@ define amdgpu_kernel void @srem_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; GFX9-NEXT:    v_mad_f32 v4, -v5, v3, v4
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v4|, |v3|
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v5, v5
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX9-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX9-NEXT:    s_cselect_b32 s0, s6, 0
 ; GFX9-NEXT:    s_ashr_i32 s6, s7, 16
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v4, s6
@@ -4325,7 +4325,7 @@ define amdgpu_kernel void @srem_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; GFX9-NEXT:    v_mad_f32 v5, -v6, v4, v5
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v6, v6
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v5|, |v4|
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX9-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX9-NEXT:    s_cselect_b32 s0, s9, 0
 ; GFX9-NEXT:    v_add_u32_e32 v4, s0, v6
 ; GFX9-NEXT:    v_mul_lo_u32 v4, v4, s6
@@ -4360,7 +4360,7 @@ define amdgpu_kernel void @srem_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; GFX90A-NEXT:    v_mad_f32 v1, -v3, v0, v1
 ; GFX90A-NEXT:    v_cvt_i32_f32_e32 v3, v3
 ; GFX90A-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v1|, |v0|
-; GFX90A-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX90A-NEXT:    s_cselect_b32 s0, s8, 0
 ; GFX90A-NEXT:    s_ashr_i32 s8, s6, 16
 ; GFX90A-NEXT:    v_cvt_f32_i32_e32 v1, s8
@@ -4378,7 +4378,7 @@ define amdgpu_kernel void @srem_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; GFX90A-NEXT:    v_mad_f32 v3, -v4, v1, v3
 ; GFX90A-NEXT:    v_cvt_i32_f32_e32 v4, v4
 ; GFX90A-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v3|, |v1|
-; GFX90A-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX90A-NEXT:    s_cselect_b32 s0, s6, 0
 ; GFX90A-NEXT:    v_add_u32_e32 v1, s0, v4
 ; GFX90A-NEXT:    s_sext_i32_i16 s0, s7
@@ -4396,7 +4396,7 @@ define amdgpu_kernel void @srem_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; GFX90A-NEXT:    v_mad_f32 v1, -v5, v3, v1
 ; GFX90A-NEXT:    v_cvt_i32_f32_e32 v5, v5
 ; GFX90A-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v1|, |v3|
-; GFX90A-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX90A-NEXT:    s_cselect_b32 s0, s4, 0
 ; GFX90A-NEXT:    s_ashr_i32 s4, s7, 16
 ; GFX90A-NEXT:    v_cvt_f32_i32_e32 v3, s4
@@ -4414,7 +4414,7 @@ define amdgpu_kernel void @srem_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; GFX90A-NEXT:    v_mad_f32 v5, -v6, v3, v5
 ; GFX90A-NEXT:    v_cvt_i32_f32_e32 v6, v6
 ; GFX90A-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v5|, |v3|
-; GFX90A-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX90A-NEXT:    s_cselect_b32 s0, s6, 0
 ; GFX90A-NEXT:    v_add_u32_e32 v3, s0, v6
 ; GFX90A-NEXT:    v_mul_lo_u32 v3, v3, s4
@@ -4695,7 +4695,7 @@ define amdgpu_kernel void @sdiv_i3(i3 addrspace(1)* %out, i3 %x, i3 %y) {
 ; GFX9-NEXT:    v_mad_f32 v2, -v3, v0, v2
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v3, v3
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v2|, |v0|
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX9-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX9-NEXT:    s_cselect_b32 s0, s4, 0
 ; GFX9-NEXT:    v_add_u32_e32 v0, s0, v3
 ; GFX9-NEXT:    v_and_b32_e32 v0, 7, v0
@@ -4721,7 +4721,7 @@ define amdgpu_kernel void @sdiv_i3(i3 addrspace(1)* %out, i3 %x, i3 %y) {
 ; GFX90A-NEXT:    v_mad_f32 v2, -v3, v0, v2
 ; GFX90A-NEXT:    v_cvt_i32_f32_e32 v3, v3
 ; GFX90A-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v2|, |v0|
-; GFX90A-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX90A-NEXT:    s_cselect_b32 s0, s4, 0
 ; GFX90A-NEXT:    v_add_u32_e32 v0, s0, v3
 ; GFX90A-NEXT:    v_and_b32_e32 v0, 7, v0
@@ -4808,7 +4808,7 @@ define amdgpu_kernel void @srem_i3(i3 addrspace(1)* %out, i3 %x, i3 %y) {
 ; GFX9-NEXT:    v_mad_f32 v1, -v2, v0, v1
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v2, v2
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 s[2:3], |v1|, |v0|
-; GFX9-NEXT:    s_cmp_lg_u64 s[2:3], 0
+; GFX9-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GFX9-NEXT:    s_cselect_b32 s2, s6, 0
 ; GFX9-NEXT:    v_add_u32_e32 v0, s2, v2
 ; GFX9-NEXT:    v_mul_lo_u32 v0, v0, s5
@@ -4840,7 +4840,7 @@ define amdgpu_kernel void @srem_i3(i3 addrspace(1)* %out, i3 %x, i3 %y) {
 ; GFX90A-NEXT:    v_mad_f32 v2, -v3, v1, v2
 ; GFX90A-NEXT:    v_cvt_i32_f32_e32 v3, v3
 ; GFX90A-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v2|, |v1|
-; GFX90A-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX90A-NEXT:    s_cselect_b32 s0, s6, 0
 ; GFX90A-NEXT:    v_add_u32_e32 v1, s0, v3
 ; GFX90A-NEXT:    v_mul_lo_u32 v1, v1, s5
@@ -5464,7 +5464,7 @@ define amdgpu_kernel void @sdiv_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; GFX9-NEXT:    v_trunc_f32_e32 v3, v3
 ; GFX9-NEXT:    v_mad_f32 v2, -v3, v0, v2
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v2|, |v0|
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX9-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX9-NEXT:    s_cselect_b32 s0, s8, 0
 ; GFX9-NEXT:    s_ashr_i32 s1, s6, 16
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v3, v3
@@ -5480,8 +5480,8 @@ define amdgpu_kernel void @sdiv_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; GFX9-NEXT:    v_trunc_f32_e32 v4, v4
 ; GFX9-NEXT:    v_mad_f32 v3, -v4, v0, v3
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v3|, |v0|
+; GFX9-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v4, v4
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX9-NEXT:    s_sext_i32_i16 s1, s7
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v0, s1
 ; GFX9-NEXT:    s_cselect_b32 s0, s4, 0
@@ -5497,7 +5497,7 @@ define amdgpu_kernel void @sdiv_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; GFX9-NEXT:    v_mad_f32 v4, -v5, v0, v4
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v5, v5
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v4|, |v0|
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX9-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX9-NEXT:    s_cselect_b32 s0, s4, 0
 ; GFX9-NEXT:    v_add_u32_e32 v0, s0, v5
 ; GFX9-NEXT:    v_and_b32_e32 v2, 0xffff, v2
@@ -5525,7 +5525,7 @@ define amdgpu_kernel void @sdiv_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; GFX90A-NEXT:    v_trunc_f32_e32 v3, v3
 ; GFX90A-NEXT:    v_mad_f32 v2, -v3, v0, v2
 ; GFX90A-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v2|, |v0|
-; GFX90A-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX90A-NEXT:    s_cselect_b32 s0, s8, 0
 ; GFX90A-NEXT:    s_ashr_i32 s1, s6, 16
 ; GFX90A-NEXT:    v_cvt_i32_f32_e32 v3, v3
@@ -5541,8 +5541,8 @@ define amdgpu_kernel void @sdiv_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; GFX90A-NEXT:    v_trunc_f32_e32 v4, v4
 ; GFX90A-NEXT:    v_mad_f32 v3, -v4, v0, v3
 ; GFX90A-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v3|, |v0|
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX90A-NEXT:    v_cvt_i32_f32_e32 v4, v4
-; GFX90A-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX90A-NEXT:    s_sext_i32_i16 s1, s7
 ; GFX90A-NEXT:    v_cvt_f32_i32_e32 v0, s1
 ; GFX90A-NEXT:    s_cselect_b32 s0, s4, 0
@@ -5558,7 +5558,7 @@ define amdgpu_kernel void @sdiv_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; GFX90A-NEXT:    v_mad_f32 v4, -v5, v0, v4
 ; GFX90A-NEXT:    v_cvt_i32_f32_e32 v5, v5
 ; GFX90A-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v4|, |v0|
-; GFX90A-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX90A-NEXT:    s_cselect_b32 s0, s4, 0
 ; GFX90A-NEXT:    v_add_u32_e32 v0, s0, v5
 ; GFX90A-NEXT:    v_and_b32_e32 v2, 0xffff, v2
@@ -5745,7 +5745,7 @@ define amdgpu_kernel void @srem_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; GFX9-NEXT:    v_trunc_f32_e32 v2, v2
 ; GFX9-NEXT:    v_mad_f32 v1, -v2, v0, v1
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v1|, |v0|
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX9-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX9-NEXT:    s_cselect_b32 s0, s10, 0
 ; GFX9-NEXT:    s_ashr_i32 s2, s2, 16
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v2, v2
@@ -5763,7 +5763,7 @@ define amdgpu_kernel void @srem_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v3, v3
 ; GFX9-NEXT:    s_or_b32 s8, s0, 1
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v2|, |v0|
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX9-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v2, s3
 ; GFX9-NEXT:    s_cselect_b32 s0, s8, 0
 ; GFX9-NEXT:    v_add_u32_e32 v0, s0, v3
@@ -5779,7 +5779,7 @@ define amdgpu_kernel void @srem_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; GFX9-NEXT:    v_mad_f32 v3, -v4, v2, v3
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v4, v4
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v3|, |v2|
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX9-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX9-NEXT:    s_cselect_b32 s0, s7, 0
 ; GFX9-NEXT:    v_add_u32_e32 v2, s0, v4
 ; GFX9-NEXT:    v_mul_lo_u32 v2, v2, s3
@@ -5812,7 +5812,7 @@ define amdgpu_kernel void @srem_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; GFX90A-NEXT:    v_trunc_f32_e32 v3, v3
 ; GFX90A-NEXT:    v_mad_f32 v2, -v3, v0, v2
 ; GFX90A-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v2|, |v0|
-; GFX90A-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX90A-NEXT:    s_cselect_b32 s0, s10, 0
 ; GFX90A-NEXT:    s_ashr_i32 s6, s6, 16
 ; GFX90A-NEXT:    v_cvt_i32_f32_e32 v3, v3
@@ -5830,7 +5830,7 @@ define amdgpu_kernel void @srem_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; GFX90A-NEXT:    v_cvt_i32_f32_e32 v4, v4
 ; GFX90A-NEXT:    s_or_b32 s8, s0, 1
 ; GFX90A-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v3|, |v2|
-; GFX90A-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX90A-NEXT:    s_cselect_b32 s0, s8, 0
 ; GFX90A-NEXT:    v_add_u32_e32 v2, s0, v4
 ; GFX90A-NEXT:    v_mul_lo_u32 v2, v2, s6
@@ -5848,7 +5848,7 @@ define amdgpu_kernel void @srem_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; GFX90A-NEXT:    v_mad_f32 v4, -v5, v3, v4
 ; GFX90A-NEXT:    v_cvt_i32_f32_e32 v5, v5
 ; GFX90A-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v4|, |v3|
-; GFX90A-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX90A-NEXT:    s_cselect_b32 s0, s5, 0
 ; GFX90A-NEXT:    v_add_u32_e32 v3, s0, v5
 ; GFX90A-NEXT:    v_sub_u32_e32 v0, s9, v0
@@ -6542,7 +6542,7 @@ define amdgpu_kernel void @sdiv_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; GFX9-NEXT:    v_trunc_f32_e32 v5, v5
 ; GFX9-NEXT:    v_mad_f32 v4, -v5, v3, v4
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v4|, |v3|
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX9-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v5, v5
 ; GFX9-NEXT:    s_cselect_b32 s0, s5, 0
 ; GFX9-NEXT:    s_bfe_i32 s1, s6, 0xf000f
@@ -6563,7 +6563,7 @@ define amdgpu_kernel void @sdiv_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v6, v6
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v5|, |v3|
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v3, v1
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX9-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX9-NEXT:    s_cselect_b32 s0, s4, 0
 ; GFX9-NEXT:    v_bfe_i32 v0, v0, 0, 15
 ; GFX9-NEXT:    v_add_u32_e32 v5, s0, v6
@@ -6612,7 +6612,7 @@ define amdgpu_kernel void @sdiv_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; GFX90A-NEXT:    v_trunc_f32_e32 v5, v5
 ; GFX90A-NEXT:    v_mad_f32 v4, -v5, v3, v4
 ; GFX90A-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v4|, |v3|
-; GFX90A-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX90A-NEXT:    v_cvt_i32_f32_e32 v5, v5
 ; GFX90A-NEXT:    s_cselect_b32 s0, s5, 0
 ; GFX90A-NEXT:    s_bfe_i32 s1, s6, 0xf000f
@@ -6633,7 +6633,7 @@ define amdgpu_kernel void @sdiv_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; GFX90A-NEXT:    v_cvt_i32_f32_e32 v6, v6
 ; GFX90A-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v5|, |v3|
 ; GFX90A-NEXT:    v_cvt_f32_i32_e32 v3, v1
-; GFX90A-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX90A-NEXT:    s_cselect_b32 s0, s4, 0
 ; GFX90A-NEXT:    v_bfe_i32 v0, v0, 0, 15
 ; GFX90A-NEXT:    v_add_u32_e32 v5, s0, v6
@@ -6864,7 +6864,7 @@ define amdgpu_kernel void @srem_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; GFX9-NEXT:    s_bfe_u32 s10, s6, 0xf000f
 ; GFX9-NEXT:    s_or_b32 s11, s0, 1
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v3|, |v2|
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX9-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX9-NEXT:    s_cselect_b32 s0, s11, 0
 ; GFX9-NEXT:    v_add_u32_e32 v2, s0, v4
 ; GFX9-NEXT:    s_bfe_i32 s0, s10, 0xf0000
@@ -6881,7 +6881,7 @@ define amdgpu_kernel void @srem_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; GFX9-NEXT:    v_mad_f32 v4, -v5, v3, v4
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v5, v5
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v4|, |v3|
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX9-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX9-NEXT:    s_cselect_b32 s0, s5, 0
 ; GFX9-NEXT:    v_bfe_i32 v4, v1, 0, 15
 ; GFX9-NEXT:    v_add_u32_e32 v3, s0, v5
@@ -6949,7 +6949,7 @@ define amdgpu_kernel void @srem_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; GFX90A-NEXT:    s_bfe_u32 s10, s6, 0xf000f
 ; GFX90A-NEXT:    s_or_b32 s11, s0, 1
 ; GFX90A-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v4|, |v3|
-; GFX90A-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX90A-NEXT:    s_cselect_b32 s0, s11, 0
 ; GFX90A-NEXT:    v_add_u32_e32 v3, s0, v5
 ; GFX90A-NEXT:    s_bfe_i32 s0, s10, 0xf0000
@@ -6968,7 +6968,7 @@ define amdgpu_kernel void @srem_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; GFX90A-NEXT:    s_or_b32 s4, s0, 1
 ; GFX90A-NEXT:    v_cmp_ge_f32_e64 s[0:1], |v5|, |v4|
 ; GFX90A-NEXT:    v_and_b32_e32 v1, s8, v1
-; GFX90A-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX90A-NEXT:    s_cselect_b32 s0, s4, 0
 ; GFX90A-NEXT:    v_bfe_i32 v5, v1, 0, 15
 ; GFX90A-NEXT:    v_add_u32_e32 v4, s0, v6
