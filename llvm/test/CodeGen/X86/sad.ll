@@ -733,7 +733,7 @@ define dso_local i32 @sad_nonloop_8i8(<8 x i8>* nocapture readonly %p, i64, <8 x
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
   %v1 = load <8 x i8>, <8 x i8>* %p, align 1
