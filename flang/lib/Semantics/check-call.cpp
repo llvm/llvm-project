@@ -764,8 +764,8 @@ parser::Messages CheckExplicitInterface(const characteristics::Procedure &proc,
 bool CheckInterfaceForGeneric(const characteristics::Procedure &proc,
     evaluate::ActualArguments &actuals,
     const evaluate::FoldingContext &context) {
-  return CheckExplicitInterface(proc, actuals, context, nullptr, nullptr)
-      .empty();
+  return !CheckExplicitInterface(proc, actuals, context, nullptr, nullptr)
+              .AnyFatalError();
 }
 
 void CheckArguments(const characteristics::Procedure &proc,

@@ -735,18 +735,23 @@ bool IsObjectPointer(const Expr<SomeType> &expr, FoldingContext &context) {
 }
 
 // IsNullPointer()
-struct IsNullPointerHelper : public AllTraverse<IsNullPointerHelper, false> {
-  using Base = AllTraverse<IsNullPointerHelper, false>;
-  IsNullPointerHelper() : Base(*this) {}
-  using Base::operator();
-  bool operator()(const ProcedureRef &call) const {
-    auto *intrinsic{call.proc().GetSpecificIntrinsic()};
+struct IsNullPointerHelper {
+  template <typename A> bool operator()(const A &) const { return false; }
+  template <typename T> bool operator()(const FunctionRef<T> &call) const {
+    const auto *intrinsic{call.proc().GetSpecificIntrinsic()};
     return intrinsic &&
         intrinsic->characteristics.value().attrs.test(
             characteristics::Procedure::Attr::NullPointer);
   }
   bool operator()(const NullPointer &) const { return true; }
+  template <typename T> bool operator()(const Parentheses<T> &x) const {
+    return (*this)(x.left());
+  }
+  template <typename T> bool operator()(const Expr<T> &x) const {
+    return std::visit(*this, x.u);
+  }
 };
+
 bool IsNullPointer(const Expr<SomeType> &expr) {
   return IsNullPointerHelper{}(expr);
 }
