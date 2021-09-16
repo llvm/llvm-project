@@ -11612,9 +11612,7 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.ptrVal = I.getArgOperand(1);
     Info.offset = 0;
     Info.align = DL.getABITypeAlign(PtrTy->getElementType());
-    Info.flags = MachineMemOperand::MOLoad;
-    if (Intrinsic == Intrinsic::aarch64_sve_ldnt1)
-      Info.flags |= MachineMemOperand::MONonTemporal;
+    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MONonTemporal;
     return true;
   }
   case Intrinsic::aarch64_sve_stnt1: {
@@ -11624,9 +11622,7 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.ptrVal = I.getArgOperand(2);
     Info.offset = 0;
     Info.align = DL.getABITypeAlign(PtrTy->getElementType());
-    Info.flags = MachineMemOperand::MOStore;
-    if (Intrinsic == Intrinsic::aarch64_sve_stnt1)
-      Info.flags |= MachineMemOperand::MONonTemporal;
+    Info.flags = MachineMemOperand::MOStore | MachineMemOperand::MONonTemporal;
     return true;
   }
   default:
