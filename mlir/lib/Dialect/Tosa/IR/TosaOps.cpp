@@ -350,8 +350,8 @@ static void buildMatMulOpWithQuantInfo(OpBuilder &builder,
   if (quantAttr) {
     result.addAttribute("quantization_info", quantAttr);
 
-    auto inputType = a.getType().dyn_cast<RankedTensorType>();
-    assert(inputType && "Input must be a ranked tensor type!");
+    auto inputType = a.getType().dyn_cast<ShapedType>();
+    assert(inputType && "Input must be a shaped tensor type!");
 
     auto inputQType = inputType.getElementType()
                           .dyn_cast<mlir::quant::UniformQuantizedType>();
@@ -359,17 +359,15 @@ static void buildMatMulOpWithQuantInfo(OpBuilder &builder,
 
     unsigned inputBits = inputQType.getStorageTypeIntegralWidth();
 
-    auto outputShapedType = outputType.dyn_cast<RankedTensorType>();
-    assert(outputShapedType && "Output must be a ranked tensor type");
-
-    auto outputShape = outputShapedType.getShape();
+    auto outputShapedType = outputType.dyn_cast<ShapedType>();
+    assert(outputShapedType && "Output must be a shaped type");
 
     IntegerType accElementType;
     if (inputBits == 16)
       accElementType = builder.getIntegerType(48);
     else
       accElementType = builder.getI32Type();
-    auto accType = RankedTensorType::get(outputShape, accElementType);
+    auto accType = outputShapedType.clone(accElementType);
     result.addTypes(accType);
   } else {
     result.addTypes(outputType);

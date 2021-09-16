@@ -307,10 +307,8 @@ public:
     Value::getAllMetadata(MDs);
   }
 
-  /// Fills the AAMDNodes structure with AA metadata from this instruction.
-  /// When Merge is true, the existing AA metadata is merged with that from this
-  /// instruction providing the most-general result.
-  void getAAMetadata(AAMDNodes &N, bool Merge = false) const;
+  /// Returns the AA metadata for this instruction.
+  AAMDNodes getAAMetadata() const;
 
   /// Set the metadata of the specified kind to the specified node. This updates
   /// or replaces metadata if already present, or removes it if Node is null.

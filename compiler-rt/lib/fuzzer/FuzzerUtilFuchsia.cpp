@@ -52,6 +52,12 @@ void CrashTrampolineAsm() __asm__("CrashTrampolineAsm");
 
 namespace {
 
+// The signal handler thread uses Zircon exceptions to resume crashed threads
+// into libFuzzer's POSIX signal handlers. The associated event is used to
+// signal when the thread is running, and when it should stop.
+std::thread SignalHandler;
+zx_handle_t SignalHandlerEvent = ZX_HANDLE_INVALID;
+
 // Helper function to handle Zircon syscall failures.
 void ExitOnErr(zx_status_t Status, const char *Syscall) {
   if (Status != ZX_OK) {
@@ -209,7 +215,9 @@ void MakeTrampoline() {
         [StaticCrashHandler] "i"(StaticCrashHandler));
 }
 
-void CrashHandler(zx_handle_t *Event) {
+void CrashHandler() {
+  assert(SignalHandlerEvent != ZX_HANDLE_INVALID);
+
   // This structure is used to ensure we close handles to objects we create in
   // this handler.
   struct ScopedHandle {
@@ -227,16 +235,30 @@ void CrashHandler(zx_handle_t *Event) {
                 Self, ZX_EXCEPTION_CHANNEL_DEBUGGER, &Channel.Handle),
             "_zx_task_create_exception_channel");
 
-  ExitOnErr(_zx_object_signal(*Event, 0, ZX_USER_SIGNAL_0),
+  ExitOnErr(_zx_object_signal(SignalHandlerEvent, 0, ZX_USER_SIGNAL_0),
             "_zx_object_signal");
 
   // This thread lives as long as the process in order to keep handling
   // crashes.  In practice, the first crashed thread to reach the end of the
   // StaticCrashHandler will end the process.
   while (true) {
-    ExitOnErr(_zx_object_wait_one(Channel.Handle, ZX_CHANNEL_READABLE,
-                                  ZX_TIME_INFINITE, nullptr),
-              "_zx_object_wait_one");
+    zx_wait_item_t WaitItems[] = {
+        {
+            .handle = SignalHandlerEvent,
+            .waitfor = ZX_SIGNAL_HANDLE_CLOSED,
+            .pending = 0,
+        },
+        {
+            .handle = Channel.Handle,
+            .waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+            .pending = 0,
+        },
+    };
+    auto Status = _zx_object_wait_many(
+        WaitItems, sizeof(WaitItems) / sizeof(WaitItems[0]), ZX_TIME_INFINITE);
+    if (Status != ZX_OK || (WaitItems[1].pending & ZX_CHANNEL_READABLE) == 0) {
+      break;
+    }
 
     zx_exception_info_t ExceptionInfo;
     ScopedHandle Exception;
@@ -306,6 +328,13 @@ void CrashHandler(zx_handle_t *Event) {
   }
 }
 
+void StopSignalHandler() {
+  _zx_handle_close(SignalHandlerEvent);
+  if (SignalHandler.joinable()) {
+    SignalHandler.join();
+  }
+}
+
 } // namespace
 
 // Platform specific functions.
@@ -335,16 +364,14 @@ void SetSignalHandler(const FuzzingOptions &Options) {
     return;
 
   // Set up the crash handler and wait until it is ready before proceeding.
-  zx_handle_t Event;
-  ExitOnErr(_zx_event_create(0, &Event), "_zx_event_create");
+  ExitOnErr(_zx_event_create(0, &SignalHandlerEvent), "_zx_event_create");
 
-  std::thread T(CrashHandler, &Event);
-  zx_status_t Status =
-      _zx_object_wait_one(Event, ZX_USER_SIGNAL_0, ZX_TIME_INFINITE, nullptr);
-  _zx_handle_close(Event);
+  SignalHandler = std::thread(CrashHandler);
+  zx_status_t Status = _zx_object_wait_one(SignalHandlerEvent, ZX_USER_SIGNAL_0,
+                                           ZX_TIME_INFINITE, nullptr);
   ExitOnErr(Status, "_zx_object_wait_one");
 
-  T.detach();
+  std::atexit(StopSignalHandler);
 }
 
 void SleepSeconds(int Seconds) {
