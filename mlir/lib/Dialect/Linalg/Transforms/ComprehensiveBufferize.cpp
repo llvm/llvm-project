@@ -2190,7 +2190,8 @@ static LogicalResult bufferize(OpBuilder &b, VectorTransferOpInterface op,
     newInputBuffer = createNewAllocDeallocPairForShapedValue(
         b, loc, writeOp.source(), aliasInfo);
     Value v = lookup(bvm, writeOp.source());
-    b.create<CopyOp>(loc, v, newInputBuffer);
+    if (!isInitTensorOp(writeOp.source()))
+      b.create<CopyOp>(loc, v, newInputBuffer);
   } else {
     // InPlace write will result in memref.tensor_load(x) which must
     // canonicalize away with one of it uses.
