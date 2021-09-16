@@ -459,7 +459,8 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
   bool IncludesChanged = BaselineScan->Includes != ModifiedScan->Includes;
   bool DirectivesChanged =
       BaselineScan->TextualDirectives != ModifiedScan->TextualDirectives;
-  if (!IncludesChanged && !DirectivesChanged)
+  if ((PatchType == PatchType::MacroDirectives || !IncludesChanged) &&
+      !DirectivesChanged)
     return PreamblePatch::unmodified(Baseline);
 
   PreamblePatch PP;
