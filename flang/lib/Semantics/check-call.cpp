@@ -722,6 +722,41 @@ static void RearrangeArguments(const characteristics::Procedure &proc,
   }
 }
 
+// The actual argument arrays to an ELEMENTAL procedure must conform.
+static bool CheckElementalConformance(parser::ContextualMessages &messages,
+    const characteristics::Procedure &proc, evaluate::ActualArguments &actuals,
+    evaluate::FoldingContext &context) {
+  std::optional<evaluate::Shape> shape;
+  std::string shapeName;
+  int index{0};
+  for (const auto &arg : actuals) {
+    const auto &dummy{proc.dummyArguments.at(index++)};
+    if (arg) {
+      if (const auto *expr{arg->UnwrapExpr()}) {
+        if (auto argShape{evaluate::GetShape(context, *expr)}) {
+          if (GetRank(*argShape) > 0) {
+            std::string argName{"actual argument ("s + expr->AsFortran() +
+                ") corresponding to dummy argument #" + std::to_string(index) +
+                " ('" + dummy.name + "')"};
+            if (shape) {
+              auto tristate{evaluate::CheckConformance(messages, *shape,
+                  *argShape, evaluate::CheckConformanceFlags::None,
+                  shapeName.c_str(), argName.c_str())};
+              if (tristate && !*tristate) {
+                return false;
+              }
+            } else {
+              shape = std::move(argShape);
+              shapeName = argName;
+            }
+          }
+        }
+      }
+    }
+  }
+  return true;
+}
+
 static parser::Messages CheckExplicitInterface(
     const characteristics::Procedure &proc, evaluate::ActualArguments &actuals,
     const evaluate::FoldingContext &context, const Scope *scope,
@@ -750,6 +785,9 @@ static parser::Messages CheckExplicitInterface(
               dummy.name, index);
         }
       }
+    }
+    if (proc.IsElemental() && !buffer.AnyFatalError()) {
+      CheckElementalConformance(messages, proc, actuals, localContext);
     }
   }
   return buffer;
