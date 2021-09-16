@@ -19,7 +19,6 @@
 // RUN:   --std-bufferize --finalizing-bufferize --lower-affine \
 // RUN:   --convert-vector-to-llvm --convert-memref-to-llvm \
 // RUN:   --convert-std-to-llvm --reconcile-unrealized-casts | \
-// RUN: TENSOR0="%mlir_integration_test_dir/data/test.mtx" \
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \
 // RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
