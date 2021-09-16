@@ -1617,3 +1617,25 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
 
   return getLoopPassPreservedAnalyses();
 }
+
+void LoopUnrollPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<LoopUnrollPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << "<";
+  if (UnrollOpts.AllowPartial != None)
+    OS << (UnrollOpts.AllowPartial.getValue() ? "" : "no-") << "partial;";
+  if (UnrollOpts.AllowPeeling != None)
+    OS << (UnrollOpts.AllowPeeling.getValue() ? "" : "no-") << "peeling;";
+  if (UnrollOpts.AllowRuntime != None)
+    OS << (UnrollOpts.AllowRuntime.getValue() ? "" : "no-") << "runtime;";
+  if (UnrollOpts.AllowUpperBound != None)
+    OS << (UnrollOpts.AllowUpperBound.getValue() ? "" : "no-") << "upperbound;";
+  if (UnrollOpts.AllowProfileBasedPeeling != None)
+    OS << (UnrollOpts.AllowProfileBasedPeeling.getValue() ? "" : "no-")
+       << "profile-peeling;";
+  if (UnrollOpts.FullUnrollMaxCount != None)
+    OS << "full-unroll-max=" << UnrollOpts.FullUnrollMaxCount << ";";
+  OS << "O" << UnrollOpts.OptLevel;
+  OS << ">";
+}

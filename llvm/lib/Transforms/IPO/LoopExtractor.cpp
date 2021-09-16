@@ -283,3 +283,13 @@ PreservedAnalyses LoopExtractorPass::run(Module &M, ModuleAnalysisManager &AM) {
   PA.preserve<LoopAnalysis>();
   return PA;
 }
+
+void LoopExtractorPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<LoopExtractorPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << "<";
+  if (NumLoops == 1)
+    OS << "single";
+  OS << ">";
+}
