@@ -575,6 +575,26 @@ enum OpenMPSchedType {
   OMP_sch_modifier_nonmonotonic = (1 << 30),
 };
 
+/// Hint enum values for atomic and critical constructs (these enumerators are
+/// taken from the enum omp_sync_hint_t in omp.h).
+enum OpenMPSyncHintExpr {
+  OMP_sync_hint_none = 0,
+  OMP_lock_hint_none = OMP_sync_hint_none,
+  OMP_sync_hint_uncontended = 1,
+  OMP_lock_hint_uncontended = OMP_sync_hint_uncontended,
+  OMP_sync_hint_contended = (1 << 1),
+  OMP_lock_hint_contended = OMP_sync_hint_contended,
+  OMP_sync_hint_nonspeculative = (1 << 2),
+  OMP_lock_hint_nonspeculative = OMP_sync_hint_nonspeculative,
+  OMP_sync_hint_speculative = (1 << 3),
+  OMP_lock_hint_speculative = OMP_sync_hint_speculative,
+  kmp_lock_hint_hle = (1 << 16),
+  kmp_lock_hint_rtm = (1 << 17),
+  kmp_lock_hint_adaptive = (1 << 18),
+  AMD_fast_fp_atomics = (1 << 19),
+  AMD_safe_fp_atomics = (1 << 20)
+};
+
 /// A basic class for pre|post-action for advanced codegen sequence for OpenMP
 /// region.
 class CleanupTy final : public EHScopeStack::Cleanup {

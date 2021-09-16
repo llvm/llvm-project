@@ -66,7 +66,6 @@ add_library(omptarget.rtl.amdgpu SHARED
       impl/impl_interop_hsa.cpp
       impl/data.cpp
       impl/get_elf_mach_gfx_name.cpp
-      impl/machine.cpp
       impl/system.cpp
       impl/msgpack.cpp
       src/rtl.cpp

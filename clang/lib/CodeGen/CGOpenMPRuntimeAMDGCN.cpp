@@ -59,3 +59,33 @@ llvm::Value *CGOpenMPRuntimeAMDGCN::getGPUNumThreads(CodeGenFunction &CGF) {
   }
   return Bld.CreateCall(F, llvm::None, "nvptx_num_threads");
 }
+
+std::pair<bool, RValue> CGOpenMPRuntimeAMDGCN::emitFastFPAtomicCall(
+    CodeGenFunction &CGF, LValue X, RValue Update, BinaryOperatorKind BO) {
+  CGBuilderTy &Bld = CGF.Builder;
+  unsigned int IID = -1;
+  RValue UpdateFixed = Update;
+  switch (BO) {
+  case BO_Sub:
+    UpdateFixed = RValue::get(Bld.CreateFNeg(Update.getScalarVal()));
+    [[fallthrough]];
+  case BO_Add:
+    IID = llvm::Intrinsic::amdgcn_global_atomic_fadd;
+    break;
+  default:
+    // remaining operations are not supported yet
+    return std::make_pair(false, RValue::get(nullptr));
+  }
+
+  SmallVector<llvm::Value *> FPAtomicArgs;
+  FPAtomicArgs.reserve(2);
+  FPAtomicArgs.push_back(X.getPointer(CGF));
+  FPAtomicArgs.push_back(UpdateFixed.getScalarVal());
+
+  llvm::Function *AtomicF = CGM.getIntrinsic(IID, {FPAtomicArgs[1]->getType(),
+                                                   FPAtomicArgs[0]->getType(),
+                                                   FPAtomicArgs[1]->getType()});
+  auto CallInst = CGF.EmitNounwindRuntimeCall(AtomicF, FPAtomicArgs);
+
+  return std::make_pair(true, RValue::get(CallInst));
+}

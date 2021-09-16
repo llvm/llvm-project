@@ -29,7 +29,6 @@
 #include "rt.h"
 
 #include "get_elf_mach_gfx_name.h"
-#include "machine.h"
 #include "omptargetplugin.h"
 #include "print_tracing.h"
 #include "trace.h"
@@ -37,8 +36,9 @@
 
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
-
 #include "MemoryManager.h"
+
+#include "utils.h"
 
 // hostrpc interface, FIXME: consider moving to its own include these are
 // statically linked into amdgpu/plugin if present from hostrpc_services.a,
@@ -320,69 +320,38 @@ uint16_t create_header() {
   return header;
 }
 
-hsa_status_t addKernArgPool(hsa_amd_memory_pool_t MemoryPool, void *Data) {
-  std::vector<hsa_amd_memory_pool_t> *Result =
-      static_cast<std::vector<hsa_amd_memory_pool_t> *>(Data);
+std::pair<hsa_status_t, bool>
+isValidMemoryPool(hsa_amd_memory_pool_t MemoryPool) {
   bool AllocAllowed = false;
-  hsa_status_t err = hsa_amd_memory_pool_get_info(
+  hsa_status_t Err = hsa_amd_memory_pool_get_info(
       MemoryPool, HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED,
       &AllocAllowed);
-  if (err != HSA_STATUS_SUCCESS) {
+  if (Err != HSA_STATUS_SUCCESS) {
     DP("Alloc allowed in memory pool check failed: %s\n",
-       get_error_string(err));
-    return err;
+       get_error_string(Err));
+    return {Err, false};
   }
 
-  if (!AllocAllowed) {
-    // nothing needs to be done here.
-    return HSA_STATUS_SUCCESS;
+  return {HSA_STATUS_SUCCESS, AllocAllowed};
+}
+
+hsa_status_t addMemoryPool(hsa_amd_memory_pool_t MemoryPool, void *Data) {
+  std::vector<hsa_amd_memory_pool_t> *Result =
+      static_cast<std::vector<hsa_amd_memory_pool_t> *>(Data);
+  bool IsValid = false;
+  hsa_status_t Err;
+  std::tie(Err, IsValid) = isValidMemoryPool(MemoryPool);
+  if (Err != HSA_STATUS_SUCCESS) {
+    DP("isValidMemoryPool failed: %s\n",
+       get_error_string(Err));
+    return Err;
   }
 
-  uint32_t GlobalFlags = 0;
-  err = hsa_amd_memory_pool_get_info(
-      MemoryPool, HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS, &GlobalFlags);
-  if (err != HSA_STATUS_SUCCESS) {
-    DP("Get memory pool info failed: %s\n", get_error_string(err));
-    return err;
-  }
-
-  size_t size = 0;
-  err = hsa_amd_memory_pool_get_info(MemoryPool, HSA_AMD_MEMORY_POOL_INFO_SIZE,
-                                     &size);
-  if (err != HSA_STATUS_SUCCESS) {
-    DP("Get memory pool size failed: %s\n", get_error_string(err));
-    return err;
-  }
-
-  if ((GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED) &&
-      (GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT) &&
-      size > 0) {
+  if (IsValid) {
     Result->push_back(MemoryPool);
   }
 
   return HSA_STATUS_SUCCESS;
-}
-
-std::pair<hsa_status_t, hsa_amd_memory_pool_t>
-FindKernargPool(const std::vector<hsa_agent_t> &HSAAgents) {
-  std::vector<hsa_amd_memory_pool_t> KernArgPools;
-  for (const auto &Agent : HSAAgents) {
-    hsa_status_t err = HSA_STATUS_SUCCESS;
-    err = hsa_amd_agent_iterate_memory_pools(
-        Agent, addKernArgPool, static_cast<void *>(&KernArgPools));
-    if (err != HSA_STATUS_SUCCESS) {
-      DP("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
-         "Iterate all memory pools", get_error_string(err));
-      return {err, hsa_amd_memory_pool_t{}};
-    }
-  }
-
-  if (KernArgPools.empty()) {
-    DP("Unable to find any valid kernarg pool\n");
-    return {HSA_STATUS_ERROR, hsa_amd_memory_pool_t{}};
-  }
-
-  return {HSA_STATUS_SUCCESS, KernArgPools[0]};
 }
 
 } // namespace
@@ -508,7 +477,8 @@ public:
   static const int Default_WG_Size = getGridValue<64>().GV_Default_WG_Size;
 
   using MemcpyFunc = hsa_status_t (*)(hsa_signal_t, void *, const void *,
-                                      size_t size, hsa_agent_t);
+                                      size_t size, hsa_agent_t,
+                                      hsa_amd_memory_pool_t);
   hsa_status_t freesignalpool_memcpy(void *dest, const void *src, size_t size,
                                      MemcpyFunc Func, int32_t deviceId) {
     hsa_agent_t agent = HSAAgents[deviceId];
@@ -516,7 +486,7 @@ public:
     if (s.handle == 0) {
       return HSA_STATUS_ERROR;
     }
-    hsa_status_t r = Func(s, dest, src, size, agent);
+    hsa_status_t r = Func(s, dest, src, size, agent, HostFineGrainedMemoryPool);
     FreeSignalPool.push(s);
     return r;
   }
@@ -617,7 +587,7 @@ public:
       return Err;
     }
 
-    uint32_t Size;
+    uint32_t Size = 0;
     Err = hsa_amd_memory_pool_get_info(MemoryPool,
                                        HSA_AMD_MEMORY_POOL_INFO_SIZE, &Size);
     if (Err != HSA_STATUS_SUCCESS) {
@@ -628,7 +598,6 @@ public:
         Size > 0) {
       HostFineGrainedMemoryPool = MemoryPool;
     }
-
     return HSA_STATUS_SUCCESS;
   }
 
@@ -637,17 +606,17 @@ public:
       hsa_status_t Err = hsa::amd_agent_iterate_memory_pools(
           Agents[DeviceId], [&](hsa_amd_memory_pool_t MemoryPool) {
             bool AllocAllowed = false;
-            hsa_status_t Err_get_info = hsa_amd_memory_pool_get_info(
-                MemoryPool, HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED,
-                &AllocAllowed);
-            if (Err_get_info != HSA_STATUS_SUCCESS) {
+            hsa_status_t ErrGetInfo;
+            std::tie(ErrGetInfo, AllocAllowed) = core::isValidMemoryPool(MemoryPool);
+            if (ErrGetInfo != HSA_STATUS_SUCCESS) {
               DP("Alloc allowed in memory pool check failed: %s\n",
-                 get_error_string(Err_get_info));
-              return Err_get_info;
+                 get_error_string(ErrGetInfo));
+              return ErrGetInfo;
             }
             if (AllocAllowed) {
-              addDeviceMemoryPool(MemoryPool, DeviceId);
+              return addDeviceMemoryPool(MemoryPool, DeviceId);
             }
+
             return HSA_STATUS_SUCCESS;
           });
 
@@ -657,6 +626,54 @@ public:
         return Err;
       }
     }
+    return HSA_STATUS_SUCCESS;
+  }
+
+  hsa_status_t
+  setupHostMemoryPools(std::vector<hsa_agent_t> &Agents) {
+    std::vector<hsa_amd_memory_pool_t> HostPools;
+
+    // collect all the "valid" pools for all the given agents.
+    for (const auto &Agent : Agents) {
+      hsa_status_t Err = hsa_amd_agent_iterate_memory_pools(
+           Agent, core::addMemoryPool, static_cast<void *>(&HostPools));
+      if (Err != HSA_STATUS_SUCCESS) {
+        DP("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
+           "Iterate all memory pools", get_error_string(Err));
+        return Err;
+      }
+    }
+
+    // We need two fine-grained pools.
+    //  1. One with kernarg flag set for storing kernel arguments
+    //  2. Second for host allocations
+    for (const auto &MemoryPool : HostPools) {
+      hsa_status_t Err = HSA_STATUS_SUCCESS;
+      uint32_t GlobalFlags = 0;
+      Err = hsa_amd_memory_pool_get_info(
+          MemoryPool, HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS, &GlobalFlags);
+      if (Err != HSA_STATUS_SUCCESS) {
+        DP("Get memory pool info failed: %s\n", get_error_string(Err));
+        return Err;
+      }
+
+      size_t Size = 0;
+      Err = hsa_amd_memory_pool_get_info(MemoryPool, HSA_AMD_MEMORY_POOL_INFO_SIZE,
+                                         &Size);
+      if (Err != HSA_STATUS_SUCCESS) {
+        DP("Get memory pool size failed: %s\n", get_error_string(Err));
+        return Err;
+      }
+
+      if ((GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED) &&
+          Size > 0) {
+        if (GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT)
+          KernArgPool = MemoryPool;
+        else
+          HostFineGrainedMemoryPool = MemoryPool;
+      }
+    }
+
     return HSA_STATUS_SUCCESS;
   }
 
@@ -698,7 +715,7 @@ public:
       case TARGET_ALLOC_DEFAULT:
       case TARGET_ALLOC_DEVICE: {
 	void *devPtr;
-	hsa_status_t err = core::Runtime::DeviceMalloc(&devPtr, size, device_id);
+	hsa_status_t err = device_malloc(&devPtr, size, device_id);
 	ptr = (err == HSA_STATUS_SUCCESS) ? devPtr : nullptr;
 	if (!ptr)
 	  REPORT("Error allocating device memory");
@@ -790,11 +807,6 @@ public:
     } else {
       DP("There are %d devices supporting HSA.\n", NumberOfDevices);
     }
-    std::tie(err, KernArgPool) = core::FindKernargPool(CPUAgents);
-    if (err != HSA_STATUS_SUCCESS) {
-      DP("Error when reading memory pools\n");
-      return;
-    }
 
     // Init the device info
     HSAQueues.resize(NumberOfDevices);
@@ -812,9 +824,15 @@ public:
     DeviceCoarseGrainedMemoryPools.resize(NumberOfDevices);
     DeviceFineGrainedMemoryPools.resize(NumberOfDevices);
 
-    hsa_status_t sdperr = setupDevicePools(HSAAgents);
-    if (sdperr != HSA_STATUS_SUCCESS) {
+    err = setupDevicePools(HSAAgents);
+    if (err != HSA_STATUS_SUCCESS) {
       DP("Setup for Device Memory Pools failed\n");
+      return;
+    }
+
+    err = setupHostMemoryPools(CPUAgents);
+    if (err != HSA_STATUS_SUCCESS) {
+      DP("Setup for Host Memory Pools failed\n");
       return;
     }
 
@@ -1488,7 +1506,8 @@ struct device_environment {
 static hsa_status_t impl_calloc(void **ret_ptr, size_t size, int DeviceId) {
   uint64_t rounded = 4 * ((size + 3) / 4);
   void *ptr;
-  hsa_status_t err = core::Runtime::DeviceMalloc(&ptr, rounded, DeviceId);
+  hsa_amd_memory_pool_t MemoryPool = DeviceInfo.getDeviceMemoryPool(DeviceId);
+  hsa_status_t err = hsa_amd_memory_pool_allocate(MemoryPool, rounded, 0, &ptr);
   if (err != HSA_STATUS_SUCCESS) {
     return err;
   }
@@ -1887,6 +1906,8 @@ void *__tgt_rtl_data_alloc(int device_id, int64_t size, void *, int32_t kind) {
     __tgt_rtl_set_coarse_grain_mem_region(ptr, size);
   }
 
+  hsa_amd_memory_pool_t MemoryPool = DeviceInfo.getDeviceMemoryPool(device_id);
+  hsa_status_t err = hsa_amd_memory_pool_allocate(MemoryPool, size, 0, &ptr);
   DP("Tgt alloc data %ld bytes, (tgt:%016llx).\n", size,
      (long long unsigned)(Elf64_Addr)ptr);
   return ptr;
@@ -2353,7 +2374,7 @@ hsa_status_t allow_access_to_all_gpu_agents(void *ptr) {
 extern "C" {
 // following are some utility functions used by hostrpc
 hsa_status_t host_malloc(void **mem, size_t size) {
-  return core::Runtime::HostMalloc(mem, size);
+  return core::Runtime::HostMalloc(mem, size, DeviceInfo.HostFineGrainedMemoryPool);
 }
 
 hsa_status_t device_malloc(void **mem, size_t size, int device_id) {
@@ -2378,11 +2399,12 @@ hsa_status_t impl_memcpy_no_signal(void *dest, const void *src, size_t size,
 
   const int deviceId = 0;
   hsa_agent_t agent = DeviceInfo.HSAAgents[deviceId];
+  auto MemoryPool = DeviceInfo.HostFineGrainedMemoryPool;
   hsa_status_t r;
   if (host2Device)
-    r = impl_memcpy_h2d(sig, dest, src, size, agent);
+    r = impl_memcpy_h2d(sig, dest, src, size, agent, MemoryPool);
   else
-    r = impl_memcpy_d2h(sig, dest, src, size, agent);
+    r = impl_memcpy_d2h(sig, dest, src, size, agent, MemoryPool);
 
   hsa_status_t rc = hsa_signal_destroy(sig);
 

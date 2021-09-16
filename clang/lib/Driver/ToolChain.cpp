@@ -1148,6 +1148,10 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
 
   // Handle -Xopenmp-target flags
   for (auto *A : Args) {
+    // -munsafe-fp-atomics applies to device toolchain
+    if (A->getOption().matches(options::OPT_munsafe_fp_atomics))
+      DAL->append(A);
+
     // Exclude flags which may only apply to the host toolchain.
     // Do not exclude flags when the host triple (AuxTriple)
     // matches the current toolchain triple. If it is not present
