@@ -3228,6 +3228,10 @@ Reserve the r9 register (ARM only)
 
 Allow use of CMSE (Armv8-M Security Extensions)
 
+.. option:: -mfix-cmse-cve-2021-35465, -mno-fix-cmse-cve-2021-35465
+
+Enable the cve-2021-35465 security vulnerability mitigation (ARM only).
+
 .. option:: -mexecute-only, -mno-execute-only, -mpure-code
 
 Disallow generation of data access to code sections (ARM only)
