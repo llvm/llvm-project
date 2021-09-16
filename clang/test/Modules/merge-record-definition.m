@@ -1,3 +1,4 @@
+// UNSUPPORTED: -zos, -aix
 // RUN: rm -rf %t
 // RUN: mkdir %t
 // RUN: %clang_cc1 -emit-llvm -o %t/test.bc -F%S/Inputs/merge-record-definition %s \
