@@ -45,7 +45,7 @@ cl::opt<bool> EnableCSPreInliner(
              "estimated global top-down inline decisions"));
 
 cl::opt<bool> UseContextCostForPreInliner(
-    "use-context-cost-for-preinliner", cl::Hidden, cl::init(false),
+    "use-context-cost-for-preinliner", cl::Hidden, cl::init(true),
     cl::desc("Use context-sensitive byte size cost for preinliner decisions"));
 
 static cl::opt<bool> SamplePreInlineReplay(
