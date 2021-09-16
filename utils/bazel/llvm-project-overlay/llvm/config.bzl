@@ -69,6 +69,7 @@ win32_defines = [
 os_defines = select({
     "@bazel_tools//src/conditions:windows": win32_defines,
     "@bazel_tools//src/conditions:darwin": macos_defines,
+    "@bazel_tools//src/conditions:freebsd": posix_defines,
     "//conditions:default": linux_defines,
 })
 
