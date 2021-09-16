@@ -111,9 +111,8 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
       .setMIFlag(MachineInstr::FrameSetup);
 
   // Mark the FramePtr as live-in in every block except the entry.
-  for (MachineFunction::iterator I = std::next(MF.begin()), E = MF.end();
-       I != E; ++I) {
-    I->addLiveIn(AVR::R29R28);
+  for (MachineBasicBlock &MBBJ : llvm::drop_begin(MF)) {
+    MBBJ.addLiveIn(AVR::R29R28);
   }
 
   if (!FrameSize) {

@@ -279,18 +279,17 @@ bool TailDuplicator::tailDuplicateBlocks() {
     VerifyPHIs(*MF, true);
   }
 
-  for (MachineFunction::iterator I = ++MF->begin(), E = MF->end(); I != E;) {
-    MachineBasicBlock *MBB = &*I++;
-
+  for (MachineBasicBlock &MBB :
+       llvm::make_early_inc_range(llvm::drop_begin(*MF))) {
     if (NumTails == TailDupLimit)
       break;
 
-    bool IsSimple = isSimpleBB(MBB);
+    bool IsSimple = isSimpleBB(&MBB);
 
-    if (!shouldTailDuplicate(IsSimple, *MBB))
+    if (!shouldTailDuplicate(IsSimple, MBB))
       continue;
 
-    MadeChange |= tailDuplicateAndUpdate(IsSimple, MBB, nullptr);
+    MadeChange |= tailDuplicateAndUpdate(IsSimple, &MBB, nullptr);
   }
 
   if (PreRegAlloc && TailDupVerify)
