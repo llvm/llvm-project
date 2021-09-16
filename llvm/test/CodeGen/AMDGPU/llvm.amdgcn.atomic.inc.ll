@@ -27,7 +27,9 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i32(i32 addrspace(1)* %out, i32 ad
   ret void
 }
 
-!0 = distinct !{!0, !"noalias-scope"}
+!0 = !{!1}
+!1 = distinct !{!1, !2}
+!2 = distinct !{!2}
 
 ; GCN-LABEL: {{^}}lds_atomic_inc_ret_i32_offset:
 ; CIVI-DAG: s_mov_b32 m0

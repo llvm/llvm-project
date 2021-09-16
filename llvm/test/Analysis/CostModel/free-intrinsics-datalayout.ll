@@ -82,6 +82,6 @@ declare void @llvm.var.annotation(i8*, i8*, i8*, i32, i8*)
 !1 = distinct !DISubprogram(name: "dummy", line: 79, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true)
 !2 = !DILabel(scope: !1, name: "label", file: !3, line: 7)
 !3 = !DIFile(filename: "debug-label.c", directory: "./")
-!4 = !{ !4 }
+!4 = !{ !5 }
 !5 = distinct !{ !5, !6, !"foo: var" }
 !6 = distinct !{ !6, !"foo" }

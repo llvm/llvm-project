@@ -158,17 +158,18 @@
 
   attributes #1 = { nounwind uwtable }
 
-  !9 = distinct !{!9, !10, !"some scope"}
-  !10 = distinct !{!10, !"some domain"}
+  !9 = !{!10}
+  !10 = distinct !{!10, !11, !"some scope"}
+  !11 = distinct !{!11, !"some domain"}
 
   define zeroext i1 @range_metadata(i8* %x) {
   entry:
-    %0 = load i8, i8* %x, align 1, !range !11
+    %0 = load i8, i8* %x, align 1, !range !12
     %tobool = trunc i8 %0 to i1
     ret i1 %tobool
   }
 
-  !11 = !{i8 0, i8 2}
+  !12 = !{i8 0, i8 2}
 
   %st = type { i32, i32 }
 

@@ -8,7 +8,7 @@ define i32 @test_load_cast_combine_tbaa(float* %ptr) {
 ; CHECK-LABEL: @test_load_cast_combine_tbaa(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[PTR:%.*]] to i32*
-; CHECK-NEXT:    [[L1:%.*]] = load i32, i32* [[TMP0]], align 4, [[TBAA0:!tbaa !.*]]
+; CHECK-NEXT:    [[L1:%.*]] = load i32, i32* [[TMP0]], align 4, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[L1]]
 ;
 entry:
@@ -22,11 +22,11 @@ define i32 @test_load_cast_combine_noalias(float* %ptr) {
 ; CHECK-LABEL: @test_load_cast_combine_noalias(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[PTR:%.*]] to i32*
-; CHECK-NEXT:    [[L1:%.*]] = load i32, i32* [[TMP0]], align 4, !alias.scope !3, !noalias !4
+; CHECK-NEXT:    [[L1:%.*]] = load i32, i32* [[TMP0]], align 4, !alias.scope !3, !noalias !3
 ; CHECK-NEXT:    ret i32 [[L1]]
 ;
 entry:
-  %l = load float, float* %ptr, !alias.scope !3, !noalias !4
+  %l = load float, float* %ptr, !alias.scope !3, !noalias !3
   %c = bitcast float %l to i32
   ret i32 %c
 }
@@ -42,7 +42,7 @@ define float @test_load_cast_combine_range(i32* %ptr) {
 ; CHECK-NEXT:    ret float [[L1]]
 ;
 entry:
-  %l = load i32, i32* %ptr, !range !5
+  %l = load i32, i32* %ptr, !range !6
   %c = bitcast i32 %l to float
   ret float %c
 }
@@ -52,11 +52,11 @@ define i32 @test_load_cast_combine_invariant(float* %ptr) {
 ; CHECK-LABEL: @test_load_cast_combine_invariant(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[PTR:%.*]] to i32*
-; CHECK-NEXT:    [[L1:%.*]] = load i32, i32* [[TMP0]], align 4, !invariant.load !7
+; CHECK-NEXT:    [[L1:%.*]] = load i32, i32* [[TMP0]], align 4, !invariant.load !6
 ; CHECK-NEXT:    ret i32 [[L1]]
 ;
 entry:
-  %l = load float, float* %ptr, !invariant.load !6
+  %l = load float, float* %ptr, !invariant.load !7
   %c = bitcast float %l to i32
   ret i32 %c
 }
@@ -67,11 +67,11 @@ define i32 @test_load_cast_combine_nontemporal(float* %ptr) {
 ; CHECK-LABEL: @test_load_cast_combine_nontemporal(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[PTR:%.*]] to i32*
-; CHECK-NEXT:    [[L1:%.*]] = load i32, i32* [[TMP0]], align 4, !nontemporal !8
+; CHECK-NEXT:    [[L1:%.*]] = load i32, i32* [[TMP0]], align 4, !nontemporal !7
 ; CHECK-NEXT:    ret i32 [[L1]]
 ;
 entry:
-  %l = load float, float* %ptr, !nontemporal !7
+  %l = load float, float* %ptr, !nontemporal !8
   %c = bitcast float %l to i32
   ret i32 %c
 }
@@ -82,11 +82,11 @@ define i8* @test_load_cast_combine_align(i32** %ptr) {
 ; CHECK-LABEL: @test_load_cast_combine_align(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32** [[PTR:%.*]] to i8**
-; CHECK-NEXT:    [[L1:%.*]] = load i8*, i8** [[TMP0]], align 8, !align !9
+; CHECK-NEXT:    [[L1:%.*]] = load i8*, i8** [[TMP0]], align 8, !align !8
 ; CHECK-NEXT:    ret i8* [[L1]]
 ;
 entry:
-  %l = load i32*, i32** %ptr, !align !8
+  %l = load i32*, i32** %ptr, !align !9
   %c = bitcast i32* %l to i8*
   ret i8* %c
 }
@@ -97,11 +97,11 @@ define i8* @test_load_cast_combine_deref(i32** %ptr) {
 ; CHECK-LABEL: @test_load_cast_combine_deref(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32** [[PTR:%.*]] to i8**
-; CHECK-NEXT:    [[L1:%.*]] = load i8*, i8** [[TMP0]], align 8, !dereferenceable !9
+; CHECK-NEXT:    [[L1:%.*]] = load i8*, i8** [[TMP0]], align 8, !dereferenceable !8
 ; CHECK-NEXT:    ret i8* [[L1]]
 ;
 entry:
-  %l = load i32*, i32** %ptr, !dereferenceable !8
+  %l = load i32*, i32** %ptr, !dereferenceable !9
   %c = bitcast i32* %l to i8*
   ret i8* %c
 }
@@ -112,11 +112,11 @@ define i8* @test_load_cast_combine_deref_or_null(i32** %ptr) {
 ; CHECK-LABEL: @test_load_cast_combine_deref_or_null(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32** [[PTR:%.*]] to i8**
-; CHECK-NEXT:    [[L1:%.*]] = load i8*, i8** [[TMP0]], align 8, !dereferenceable_or_null !9
+; CHECK-NEXT:    [[L1:%.*]] = load i8*, i8** [[TMP0]], align 8, !dereferenceable_or_null !8
 ; CHECK-NEXT:    ret i8* [[L1]]
 ;
 entry:
-  %l = load i32*, i32** %ptr, !dereferenceable_or_null !8
+  %l = load i32*, i32** %ptr, !dereferenceable_or_null !9
   %c = bitcast i32* %l to i8*
   ret i8* %c
 }
@@ -134,11 +134,11 @@ define void @test_load_cast_combine_loop(float* %src, i32* %dst, i32 %n) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[I]] to i64
 ; CHECK-NEXT:    [[DST_GEP:%.*]] = getelementptr inbounds i32, i32* [[DST:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float* [[SRC_GEP]] to i32*
-; CHECK-NEXT:    [[L1:%.*]] = load i32, i32* [[TMP2]], align 4, !llvm.access.group !6
+; CHECK-NEXT:    [[L1:%.*]] = load i32, i32* [[TMP2]], align 4, !llvm.access.group !9
 ; CHECK-NEXT:    store i32 [[L1]], i32* [[DST_GEP]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_NEXT]], [[N:%.*]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]], [[LOOP1:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]], !llvm.loop [[LOOP1:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -149,7 +149,7 @@ loop:
   %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
   %src.gep = getelementptr inbounds float, float* %src, i32 %i
   %dst.gep = getelementptr inbounds i32, i32* %dst, i32 %i
-  %l = load float, float* %src.gep, !llvm.access.group !9
+  %l = load float, float* %src.gep, !llvm.access.group !10
   %c = bitcast float %l to i32
   store i32 %c, i32* %dst.gep
   %i.next = add i32 %i, 1
@@ -163,7 +163,7 @@ exit:
 define void @test_load_cast_combine_nonnull(float** %ptr) {
 ; CHECK-LABEL: @test_load_cast_combine_nonnull(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P:%.*]] = load float*, float** [[PTR:%.*]], align 8, !nonnull !7
+; CHECK-NEXT:    [[P:%.*]] = load float*, float** [[PTR:%.*]], align 8, !nonnull !10
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr float*, float** [[PTR]], i64 42
 ; CHECK-NEXT:    store float* [[P]], float** [[GEP]], align 8
 ; CHECK-NEXT:    ret void
@@ -178,10 +178,11 @@ entry:
 !0 = !{!1, !1, i64 0}
 !1 = !{!"scalar type", !2}
 !2 = !{!"root"}
-!3 = distinct !{!3, !4}
-!4 = distinct !{!4, !{!"llvm.loop.parallel_accesses", !9}}
-!5 = !{i32 0, i32 42}
-!6 = !{}
-!7 = !{i32 1}
-!8 = !{i64 8}
-!9 = distinct !{}
+!3 = !{!4}
+!4 = distinct !{!4, !5}
+!5 = distinct !{!5}
+!6 = !{i32 0, i32 42}
+!7 = !{}
+!8 = !{i32 1}
+!9 = !{i64 8}
+!10 = distinct !{}

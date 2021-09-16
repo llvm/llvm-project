@@ -79,7 +79,9 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i32(i32 addrspace(1)* %out, i32 ad
   ret void
 }
 
-!0 = distinct !{!0, !"noalias-scope"}
+!0 = !{!1}
+!1 = distinct !{!1, !2}
+!2 = distinct !{!2}
 
 define amdgpu_kernel void @lds_atomic_inc_ret_i32_offset(i32 addrspace(1)* %out, i32 addrspace(3)* %ptr) #0 {
 ; CI-LABEL: lds_atomic_inc_ret_i32_offset:
