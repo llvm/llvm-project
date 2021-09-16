@@ -49,13 +49,13 @@ public:
   }
 
   void formatBinary(StringRef Label, ArrayRef<uint8_t> Data,
-                    uint32_t StartOffset);
+                    uint64_t StartOffset);
   void formatBinary(StringRef Label, ArrayRef<uint8_t> Data, uint64_t BaseAddr,
-                    uint32_t StartOffset);
+                    uint64_t StartOffset);
 
   void formatMsfStreamData(StringRef Label, PDBFile &File, uint32_t StreamIdx,
-                           StringRef StreamPurpose, uint32_t Offset,
-                           uint32_t Size);
+                           StringRef StreamPurpose, uint64_t Offset,
+                           uint64_t Size);
   void formatMsfStreamData(StringRef Label, PDBFile &File,
                            const msf::MSFStreamLayout &Stream,
                            BinarySubstreamRef Substream);
@@ -66,7 +66,7 @@ public:
   int getIndentLevel() const { return CurrentIndent; }
 
   bool IsClassExcluded(const ClassLayout &Class);
-  bool IsTypeExcluded(llvm::StringRef TypeName, uint32_t Size);
+  bool IsTypeExcluded(llvm::StringRef TypeName, uint64_t Size);
   bool IsSymbolExcluded(llvm::StringRef SymbolName);
   bool IsCompilandExcluded(llvm::StringRef CompilandName);
 
