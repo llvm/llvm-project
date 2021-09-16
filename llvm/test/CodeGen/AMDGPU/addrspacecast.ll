@@ -10,22 +10,22 @@
 ; CI-DAG: s_load_dword [[PTR:s[0-9]+]], s[6:7], 0x0{{$}}
 ; CI-DAG: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x10{{$}}
 ; CI-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], [[APERTURE]]
-; CI-DAG: v_cmp_ne_u32_e64 vcc, [[PTR]], -1
+; CI-DAG: s_cmp_lg_u32 [[PTR]], -1
+; CI-DAG: s_cselect_b64 vcc, -1, 0
 ; CI-DAG: v_cndmask_b32_e32 v[[HI:[0-9]+]], 0, [[VAPERTURE]], vcc
 ; CI-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
 ; CI-DAG: v_cndmask_b32_e32 v[[LO:[0-9]+]], 0, [[VPTR]]
 
 ; HSA-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7
-; GFX9-DAG: s_load_dword [[PTR:s[0-9]+]], s[4:5], 0x0{{$}}
+; GFX9-DAG: s_load_dword s[[PTR:[0-9]+]], s[4:5], 0x0{{$}}
 ; GFX9-DAG: s_getreg_b32 [[SSRC_SHARED:s[0-9]+]], hwreg(HW_REG_SH_MEM_BASES, 16, 16)
-; GFX9-DAG: s_lshl_b32 [[SSRC_SHARED_BASE:s[0-9]+]], [[SSRC_SHARED]], 16
-; GFX9-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], [[SSRC_SHARED_BASE]]
+; GFX9-DAG: s_lshl_b32 s[[SSRC_SHARED_BASE:[0-9]+]], [[SSRC_SHARED]], 16
 
 ; GFX9-XXX: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], src_shared_base
-; GFX9: v_cmp_ne_u32_e64 vcc, [[PTR]], -1
-; GFX9: v_cndmask_b32_e32 v[[HI:[0-9]+]], 0, [[VAPERTURE]], vcc
-; GFX9-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
-; GFX9-DAG: v_cndmask_b32_e32 v[[LO:[0-9]+]], 0, [[VPTR]]
+; GFX9: s_cmp_lg_u32 s[[PTR]], -1
+; GFX9: s_cselect_b64 s{{\[}}[[SEL_LO:[0-9]+]]:[[SEL_HI:[0-9]+]]{{\]}}, s{{\[}}[[PTR]]:[[SSRC_SHARED_BASE]]{{\]}}, 0
+; GFX9-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], s[[SEL_LO]]
+; GFX9-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], s[[SEL_HI]]
 
 ; HSA: flat_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}, [[K]]
 
@@ -76,23 +76,23 @@ define void @use_group_to_flat_addrspacecast_func(i32 addrspace(3)* %ptr) #0 {
 ; CI-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], [[APERTURE]]
 
 ; CI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7
-; CI-DAG: v_cmp_ne_u32_e64 vcc, [[PTR]], -1
+; CI-DAG: s_cmp_lg_u32 [[PTR]], -1
+; CI-DAG: s_cselect_b64 vcc, -1, 0
 ; CI-DAG: v_cndmask_b32_e32 v[[HI:[0-9]+]], 0, [[VAPERTURE]], vcc
 ; CI-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
 ; CI-DAG: v_cndmask_b32_e32 v[[LO:[0-9]+]], 0, [[VPTR]]
 
-; GFX9-DAG: s_load_dword [[PTR:s[0-9]+]], s[4:5], 0x0{{$}}
+; GFX9-DAG: s_load_dword s[[PTR:[0-9]+]], s[4:5], 0x0{{$}}
 ; GFX9-DAG: s_getreg_b32 [[SSRC_PRIVATE:s[0-9]+]], hwreg(HW_REG_SH_MEM_BASES, 0, 16)
-; GFX9-DAG: s_lshl_b32 [[SSRC_PRIVATE_BASE:s[0-9]+]], [[SSRC_PRIVATE]], 16
-; GFX9-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], [[SSRC_PRIVATE_BASE]]
+; GFX9-DAG: s_lshl_b32 s[[SSRC_PRIVATE_BASE:[0-9]+]], [[SSRC_PRIVATE]], 16
 
 ; GFX9-XXX: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], src_private_base
 
 ; GFX9-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7
-; GFX9: v_cmp_ne_u32_e64 vcc, [[PTR]], -1
-; GFX9: v_cndmask_b32_e32 v[[HI:[0-9]+]], 0, [[VAPERTURE]], vcc
-; GFX9: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
-; GFX9-DAG: v_cndmask_b32_e32 v[[LO:[0-9]+]], 0, [[VPTR]]
+; GFX9: s_cmp_lg_u32 s[[PTR]], -1
+; GFX9: s_cselect_b64 s{{\[}}[[SEL_LO:[0-9]+]]:[[SEL_HI:[0-9]+]]{{\]}}, s{{\[}}[[PTR]]:[[SSRC_PRIVATE_BASE]]{{\]}}, 0
+; GFX9-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], s[[SEL_LO]]
+; GFX9-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], s[[SEL_HI]]
 
 ; HSA: flat_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}, [[K]]
 

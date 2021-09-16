@@ -15,8 +15,8 @@ define amdgpu_kernel void @stack_object_addrspacecast_in_kernel_no_calls() {
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_lshl_b32 s0, s0, 16
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, -1, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v1, 0, s0, vcc_lo
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
+; GCN-NEXT:    v_cndmask_b32_e64 v1, 0, s0, vcc_lo
 ; GCN-NEXT:    flat_store_dword v[0:1], v2
 ; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_endpgm

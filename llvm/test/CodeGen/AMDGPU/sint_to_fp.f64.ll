@@ -16,14 +16,15 @@ define amdgpu_kernel void @sint_to_fp_i32_to_f64(double addrspace(1)* %out, i32 
 
 ; GCN-LABEL: {{^}}sint_to_fp_i1_f64:
 ; VI-DAG: s_cmp_eq_u32
-; VI-DAG: s_cselect_b32 s[[SSEL:[0-9]+]], 0xbff00000, 0
-; VI-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
-; VI-DAG: v_mov_b32_e32 v[[SEL:[0-9]+]], s[[SSEL]]
-; VI: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[ZERO]]:[[SEL]]{{\]}}
+; VI-DAG: s_cselect_b64 s{{\[}}[[S_LO:[0-9]+]]:[[S_HI:[0-9]+]]{{\]}}, -1.0, 0
+; VI-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[S_LO]]
+; VI-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], s[[S_HI]]
+; VI: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[V_LO]]:[[V_HI]]{{\]}}
 ; VI: s_endpgm
 
-; SI-DAG: v_cmp_eq_u32_e64 vcc,
-; SI-DAG: v_cndmask_b32_e32 v[[SEL:[0-9]+]], 0, v{{[0-9]+}}
+; SI-DAG: s_cmp_eq_u32
+; SI-DAG: s_cselect_b64 vcc, -1, 0
+; SI-DAG: v_cndmask_b32_e32 v[[SEL:[0-9]+]], 0, v{{[0-9]+}}, vcc
 ; SI-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
 ; SI: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[ZERO]]:[[SEL]]{{\]}}
 ; SI: s_endpgm

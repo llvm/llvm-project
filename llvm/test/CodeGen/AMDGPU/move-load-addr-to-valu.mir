@@ -19,9 +19,9 @@ body:             |
   ; GCN:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
   ; GCN:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY2]], 0, implicit $exec
   ; GCN:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
-  ; GCN:   V_CMP_NE_U64_e32 0, [[REG_SEQUENCE]], implicit-def $vcc, implicit $exec
+  ; GCN:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE]], 0, implicit $exec
   ; GCN:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]], implicit $exec
-  ; GCN:   $vcc = S_AND_B64 $exec, $vcc, implicit-def $scc
+  ; GCN:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U64_e64_]], implicit-def $scc
   ; GCN:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; GCN: bb.2:
   ; GCN:   S_ENDPGM 0
@@ -63,9 +63,9 @@ body:             |
   ; GCN:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
   ; GCN:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY2]], 0, implicit $exec
   ; GCN:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
-  ; GCN:   V_CMP_NE_U64_e32 0, [[REG_SEQUENCE1]], implicit-def $vcc, implicit $exec
+  ; GCN:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE1]], 0, implicit $exec
   ; GCN:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]], implicit $exec
-  ; GCN:   $vcc = S_AND_B64 $exec, $vcc, implicit-def $scc
+  ; GCN:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U64_e64_]], implicit-def $scc
   ; GCN:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; GCN: bb.2:
   ; GCN:   S_ENDPGM 0
@@ -107,9 +107,9 @@ body:             |
   ; GCN:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
   ; GCN:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY2]], 0, implicit $exec
   ; GCN:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
-  ; GCN:   V_CMP_NE_U64_e32 0, [[REG_SEQUENCE1]], implicit-def $vcc, implicit $exec
+  ; GCN:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE1]], 0, implicit $exec
   ; GCN:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]], implicit $exec
-  ; GCN:   $vcc = S_AND_B64 $exec, $vcc, implicit-def $scc
+  ; GCN:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U64_e64_]], implicit-def $scc
   ; GCN:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; GCN: bb.2:
   ; GCN:   S_ENDPGM 0
@@ -147,9 +147,9 @@ body:             |
   ; GCN:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
   ; GCN:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY2]], 0, implicit $exec
   ; GCN:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
-  ; GCN:   V_CMP_NE_U64_e32 0, [[REG_SEQUENCE]], implicit-def $vcc, implicit $exec
+  ; GCN:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE]], 0, implicit $exec
   ; GCN:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]], implicit $exec
-  ; GCN:   $vcc = S_AND_B64 $exec, $vcc, implicit-def $scc
+  ; GCN:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U64_e64_]], implicit-def $scc
   ; GCN:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; GCN: bb.2:
   ; GCN:   S_ENDPGM 0
@@ -191,9 +191,9 @@ body:             |
   ; GCN:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
   ; GCN:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY2]], 0, implicit $exec
   ; GCN:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
-  ; GCN:   V_CMP_NE_U64_e32 0, [[REG_SEQUENCE1]], implicit-def $vcc, implicit $exec
+  ; GCN:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE1]], 0, implicit $exec
   ; GCN:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]], implicit $exec
-  ; GCN:   $vcc = S_AND_B64 $exec, $vcc, implicit-def $scc
+  ; GCN:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U64_e64_]], implicit-def $scc
   ; GCN:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; GCN: bb.2:
   ; GCN:   S_ENDPGM 0
@@ -234,9 +234,9 @@ body:             |
   ; GCN:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
   ; GCN:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY2]], 0, implicit $exec
   ; GCN:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
-  ; GCN:   V_CMP_NE_U64_e32 0, [[REG_SEQUENCE1]], implicit-def $vcc, implicit $exec
+  ; GCN:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE1]], 0, implicit $exec
   ; GCN:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]], implicit $exec
-  ; GCN:   $vcc = S_AND_B64 $exec, $vcc, implicit-def $scc
+  ; GCN:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U64_e64_]], implicit-def $scc
   ; GCN:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; GCN: bb.2:
   ; GCN:   S_ENDPGM 0
@@ -275,9 +275,9 @@ body:             |
   ; GCN:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
   ; GCN:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY2]], 0, implicit $exec
   ; GCN:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
-  ; GCN:   V_CMP_NE_U64_e32 0, [[REG_SEQUENCE]], implicit-def $vcc, implicit $exec
+  ; GCN:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE]], 0, implicit $exec
   ; GCN:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]], implicit $exec
-  ; GCN:   $vcc = S_AND_B64 $exec, $vcc, implicit-def $scc
+  ; GCN:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U64_e64_]], implicit-def $scc
   ; GCN:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; GCN: bb.2:
   ; GCN:   S_ENDPGM 0
@@ -316,9 +316,9 @@ body:             |
   ; GCN:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
   ; GCN:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY2]], 0, implicit $exec
   ; GCN:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
-  ; GCN:   V_CMP_NE_U64_e32 0, [[REG_SEQUENCE]], implicit-def $vcc, implicit $exec
+  ; GCN:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE]], 0, implicit $exec
   ; GCN:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]], implicit $exec
-  ; GCN:   $vcc = S_AND_B64 $exec, $vcc, implicit-def $scc
+  ; GCN:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U64_e64_]], implicit-def $scc
   ; GCN:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; GCN: bb.2:
   ; GCN:   S_ENDPGM 0
@@ -352,9 +352,9 @@ body:             |
   ; GCN:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY]], %bb.0, %6, %bb.1
   ; GCN:   [[SCRATCH_LOAD_DWORD:%[0-9]+]]:vgpr_32 = SCRATCH_LOAD_DWORD [[PHI]], 0, 0, implicit $exec, implicit $flat_scr
   ; GCN:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[PHI]], 1, implicit $exec
-  ; GCN:   V_CMP_NE_U32_e32 0, [[V_AND_B32_e64_]], implicit-def $vcc, implicit $exec
+  ; GCN:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 [[V_AND_B32_e64_]], 0, implicit $exec
   ; GCN:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_AND_B32_e64_]], implicit $exec
-  ; GCN:   $vcc = S_AND_B64 $exec, $vcc, implicit-def $scc
+  ; GCN:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U32_e64_]], implicit-def $scc
   ; GCN:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; GCN: bb.2:
   ; GCN:   S_ENDPGM 0
@@ -388,9 +388,9 @@ body:             |
   ; GCN:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; GCN:   SCRATCH_STORE_DWORD [[DEF]], [[PHI]], 0, 0, implicit $exec, implicit $flat_scr
   ; GCN:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[PHI]], 1, implicit $exec
-  ; GCN:   V_CMP_NE_U32_e32 0, [[V_AND_B32_e64_]], implicit-def $vcc, implicit $exec
+  ; GCN:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 [[V_AND_B32_e64_]], 0, implicit $exec
   ; GCN:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_AND_B32_e64_]], implicit $exec
-  ; GCN:   $vcc = S_AND_B64 $exec, $vcc, implicit-def $scc
+  ; GCN:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U32_e64_]], implicit-def $scc
   ; GCN:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; GCN: bb.2:
   ; GCN:   S_ENDPGM 0

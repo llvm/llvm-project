@@ -16,8 +16,7 @@ declare double @llvm.amdgcn.div.fmas.f64(double, double, double, i1) nounwind re
 ; VI-DAG: s_load_dword [[SB:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x70
 ; VI-DAG: s_load_dword [[SC:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x94
 
-; GCN-DAG: s_and_b32 [[AND_I1:s[0-9]+]], 1, s{{[0-9]+}}
-; GCN: v_cmp_eq_u32_e64 vcc, [[AND_I1]], 1
+; GCN-DAG: s_bitcmp1_b32 s{{[0-9]+}}, 0
 
 ; GCN-DAG: v_mov_b32_e32 [[VC:v[0-9]+]], [[SC]]
 ; GCN-DAG: v_mov_b32_e32 [[VB:v[0-9]+]], [[SB]]
@@ -86,7 +85,7 @@ define amdgpu_kernel void @test_div_fmas_f64(double addrspace(1)* %out, double %
 }
 
 ; GCN-LABEL: {{^}}test_div_fmas_f32_cond_to_vcc:
-; GCN: v_cmp_eq_u32_e64 vcc, s{{[0-9]+}}, 0{{$}}
+; GCN: s_cmp_eq_u32 s{{[0-9]+}}, 0{{$}}
 ; GCN: v_div_fmas_f32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
 define amdgpu_kernel void @test_div_fmas_f32_cond_to_vcc(float addrspace(1)* %out, float %a, float %b, float %c, i32 %i) nounwind {
   %cmp = icmp eq i32 %i, 0
@@ -119,7 +118,8 @@ define amdgpu_kernel void @test_div_fmas_f32_imm_true_cond_to_vcc(float addrspac
 ; SI-DAG: buffer_load_dword [[C:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8 glc{{$}}
 
 ; SI-DAG: v_cmp_eq_u32_e32 [[CMP0:vcc]], 0, v{{[0-9]+}}
-; SI-DAG: v_cmp_ne_u32_e64 [[CMP1:s\[[0-9]+:[0-9]+\]]], s{{[0-9]+}}, 0{{$}}
+; SI-DAG: s_cmp_lg_u32 s{{[0-9]+}}, 0{{$}}
+; SI-DAG: s_cselect_b64 [[CMP1:s\[[0-9]+:[0-9]+\]]], -1, 0
 ; SI: s_and_b64 vcc, [[CMP0]], [[CMP1]]
 ; SI: v_div_fmas_f32 {{v[0-9]+}}, [[A]], [[B]], [[C]]
 ; SI: s_endpgm
