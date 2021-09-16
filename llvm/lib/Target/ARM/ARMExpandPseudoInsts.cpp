@@ -1333,7 +1333,7 @@ void ARMExpandPseudo::CMSESaveClearFPRegs(
     const LivePhysRegs &LiveRegs, SmallVectorImpl<unsigned> &ScratchRegs) {
   if (STI->hasV8_1MMainlineOps())
     CMSESaveClearFPRegsV81(MBB, MBBI, DL, LiveRegs);
-  else
+  else if (STI->hasV8MMainlineOps())
     CMSESaveClearFPRegsV8(MBB, MBBI, DL, LiveRegs, ScratchRegs);
 }
 
@@ -1341,8 +1341,6 @@ void ARMExpandPseudo::CMSESaveClearFPRegs(
 void ARMExpandPseudo::CMSESaveClearFPRegsV8(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, DebugLoc &DL,
     const LivePhysRegs &LiveRegs, SmallVectorImpl<unsigned> &ScratchRegs) {
-  if (!STI->hasFPRegs())
-    return;
 
   // Store an available register for FPSCR clearing
   assert(!ScratchRegs.empty());
@@ -1396,7 +1394,11 @@ void ARMExpandPseudo::CMSESaveClearFPRegsV8(
 
   bool passesFPReg = (!NonclearedFPRegs.empty() || !ClearedFPRegs.empty());
 
-  // Lazy store all fp registers to the stack
+  if (passesFPReg)
+    assert(STI->hasFPRegs() && "Subtarget needs fpregs");
+
+  // Lazy store all fp registers to the stack.
+  // This executes as NOP in the absence of floating-point support.
   MachineInstrBuilder VLSTM = BuildMI(MBB, MBBI, DL, TII->get(ARM::VLSTM))
                                   .addReg(ARM::SP)
                                   .add(predOps(ARMCC::AL));
@@ -1524,15 +1526,18 @@ void ARMExpandPseudo::CMSERestoreFPRegs(
     SmallVectorImpl<unsigned> &AvailableRegs) {
   if (STI->hasV8_1MMainlineOps())
     CMSERestoreFPRegsV81(MBB, MBBI, DL, AvailableRegs);
-  else
+  else if (STI->hasV8MMainlineOps())
     CMSERestoreFPRegsV8(MBB, MBBI, DL, AvailableRegs);
 }
 
 void ARMExpandPseudo::CMSERestoreFPRegsV8(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, DebugLoc &DL,
     SmallVectorImpl<unsigned> &AvailableRegs) {
-  if (!STI->hasFPRegs())
-    return;
+
+  // Keep a scratch register for the mitigation sequence.
+  unsigned ScratchReg = ARM::NoRegister;
+  if (STI->fixCMSE_CVE_2021_35465())
+    ScratchReg = AvailableRegs.pop_back_val();
 
   // Use AvailableRegs to store the fp regs
   std::vector<std::tuple<unsigned, unsigned, unsigned>> ClearedFPRegs;
@@ -1574,24 +1579,64 @@ void ARMExpandPseudo::CMSERestoreFPRegsV8(
     }
   }
 
+  bool returnsFPReg = (!NonclearedFPRegs.empty() || !ClearedFPRegs.empty());
+
+  if (returnsFPReg)
+    assert(STI->hasFPRegs() && "Subtarget needs fpregs");
+
   // Push FP regs that cannot be restored via normal registers on the stack
   for (unsigned Reg : NonclearedFPRegs) {
     if (ARM::DPR_VFP2RegClass.contains(Reg))
-      BuildMI(MBB, MBBI, DL, TII->get(ARM::VSTRD), Reg)
+      BuildMI(MBB, MBBI, DL, TII->get(ARM::VSTRD))
+          .addReg(Reg)
           .addReg(ARM::SP)
           .addImm((Reg - ARM::D0) * 2)
           .add(predOps(ARMCC::AL));
     else if (ARM::SPRRegClass.contains(Reg))
-      BuildMI(MBB, MBBI, DL, TII->get(ARM::VSTRS), Reg)
+      BuildMI(MBB, MBBI, DL, TII->get(ARM::VSTRS))
+          .addReg(Reg)
           .addReg(ARM::SP)
           .addImm(Reg - ARM::S0)
           .add(predOps(ARMCC::AL));
   }
 
-  // Lazy load fp regs from stack
-  BuildMI(MBB, MBBI, DL, TII->get(ARM::VLLDM))
-      .addReg(ARM::SP)
-      .add(predOps(ARMCC::AL));
+  // Lazy load fp regs from stack.
+  // This executes as NOP in the absence of floating-point support.
+  MachineInstrBuilder VLLDM = BuildMI(MBB, MBBI, DL, TII->get(ARM::VLLDM))
+                                  .addReg(ARM::SP)
+                                  .add(predOps(ARMCC::AL));
+
+  if (STI->fixCMSE_CVE_2021_35465()) {
+    auto Bundler = MIBundleBuilder(MBB, VLLDM);
+    // Read the CONTROL register.
+    Bundler.append(BuildMI(*MBB.getParent(), DL, TII->get(ARM::t2MRS_M))
+                       .addReg(ScratchReg, RegState::Define)
+                       .addImm(20)
+                       .add(predOps(ARMCC::AL)));
+    // Check bit 3 (SFPA).
+    Bundler.append(BuildMI(*MBB.getParent(), DL, TII->get(ARM::t2TSTri))
+                       .addReg(ScratchReg)
+                       .addImm(8)
+                       .add(predOps(ARMCC::AL)));
+    // Emit the IT block.
+    Bundler.append(BuildMI(*MBB.getParent(), DL, TII->get(ARM::t2IT))
+                       .addImm(ARMCC::NE)
+                       .addImm(8));
+    // If SFPA is clear jump over to VLLDM, otherwise execute an instruction
+    // which has no functional effect apart from causing context creation:
+    // vmovne s0, s0. In the absence of FPU we emit .inst.w 0xeeb00a40,
+    // which is defined as NOP if not executed.
+    if (STI->hasFPRegs())
+      Bundler.append(BuildMI(*MBB.getParent(), DL, TII->get(ARM::VMOVS))
+                         .addReg(ARM::S0, RegState::Define)
+                         .addReg(ARM::S0, RegState::Undef)
+                         .add(predOps(ARMCC::NE)));
+    else
+      Bundler.append(BuildMI(*MBB.getParent(), DL, TII->get(ARM::INLINEASM))
+                         .addExternalSymbol(".inst.w 0xeeb00a40")
+                         .addImm(InlineAsm::Extra_HasSideEffects));
+    finalizeBundle(MBB, Bundler.begin(), Bundler.end());
+  }
 
   // Restore all FP registers via normal registers
   for (const auto &Regs : ClearedFPRegs) {
@@ -1632,6 +1677,12 @@ void ARMExpandPseudo::CMSERestoreFPRegsV81(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, DebugLoc &DL,
     SmallVectorImpl<unsigned> &AvailableRegs) {
   if (!definesOrUsesFPReg(*MBBI)) {
+    if (STI->fixCMSE_CVE_2021_35465()) {
+      BuildMI(MBB, MBBI, DL, TII->get(ARM::VSCCLRMS))
+          .add(predOps(ARMCC::AL))
+          .addReg(ARM::VPR, RegState::Define);
+    }
+
     // Load FP registers from stack.
     BuildMI(MBB, MBBI, DL, TII->get(ARM::VLLDM))
         .addReg(ARM::SP)

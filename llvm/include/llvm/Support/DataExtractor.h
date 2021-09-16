@@ -70,6 +70,9 @@ public:
     /// the position of the Cursor before the first error was encountered.
     uint64_t tell() const { return Offset; }
 
+    /// Set the cursor to the new offset. This does not impact the error state.
+    void seek(uint64_t NewOffSet) { Offset = NewOffSet; }
+
     /// Return error contained inside this Cursor, if any. Clears the internal
     /// Cursor state.
     Error takeError() { return std::move(Err); }

@@ -1119,7 +1119,7 @@ static void addSanitizers(const Triple &TargetTriple,
         bool Recover = CodeGenOpts.SanitizeRecover.has(Mask);
 
         MPM.addPass(
-            MemorySanitizerPass({TrackOrigins, Recover, CompileKernel}));
+            ModuleMemorySanitizerPass({TrackOrigins, Recover, CompileKernel}));
         FunctionPassManager FPM;
         FPM.addPass(
             MemorySanitizerPass({TrackOrigins, Recover, CompileKernel}));
@@ -1142,7 +1142,7 @@ static void addSanitizers(const Triple &TargetTriple,
     MSanPass(SanitizerKind::KernelMemory, true);
 
     if (LangOpts.Sanitize.has(SanitizerKind::Thread)) {
-      MPM.addPass(ThreadSanitizerPass());
+      MPM.addPass(ModuleThreadSanitizerPass());
       MPM.addPass(createModuleToFunctionPassAdaptor(ThreadSanitizerPass()));
     }
 
