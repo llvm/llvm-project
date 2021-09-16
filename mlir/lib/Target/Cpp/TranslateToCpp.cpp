@@ -668,6 +668,7 @@ bool CppEmitter::shouldMapToUnsigned(IntegerType::SignednessSemantics val) {
   case IntegerType::Unsigned:
     return true;
   }
+  llvm_unreachable("Unexpected IntegerType::SignednessSemantics");
 }
 
 bool CppEmitter::hasValueInScope(Value val) { return valueMapper.count(val); }
