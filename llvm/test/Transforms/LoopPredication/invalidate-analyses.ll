@@ -1,16 +1,15 @@
-; RUN: opt -S -passes='require<scalar-evolution>,loop-mssa(loop-predication)' -debug-pass-manager < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes='require<scalar-evolution>,require<lazy-value-info>,loop-mssa(loop-predication)' -debug-pass-manager < %s 2>&1 | FileCheck %s
 
-; NOTE: PreservedCFGCheckerAnalysis is an arbitrary analysis that just happens
-;       to be calculated before this pass and isn't preserved by it. If after
-;       your change this analysis is preserved by the pass, please update this
-;       test some other analysis that isn't preserved.
+; NOTE: LazyValueAnalysis is an arbitrary analysis that just isn't preserved by
+;       this pass. If after your change this analysis is preserved by the pass,
+;       please update this test some other analysis that isn't preserved.
 
-; CHECK: Running analysis: PreservedCFGCheckerAnalysis on drop_a_wc_and_leave_early
+; CHECK: Running analysis: LazyValueAnalysis on drop_a_wc_and_leave_early
 ; CHECK: Running pass: LoopPredicationPass on Loop at depth 1 containing: %loop<header><exiting>,%guarded<exiting>,%guarded2<latch><exiting>
-; CHECK-NEXT: Invalidating analysis: PreservedCFGCheckerAnalysis on drop_a_wc_and_leave_early
-; CHECK-NEXT: Running analysis: PreservedCFGCheckerAnalysis on drop_a_wc_and_leave
+; CHECK: Invalidating analysis: LazyValueAnalysis on drop_a_wc_and_leave_early
+; CHECK: Running analysis: LazyValueAnalysis on drop_a_wc_and_leave
 ; CHECK: Running pass: LoopPredicationPass on Loop at depth 1 containing: %loop<header><exiting>,%guarded<exiting>,%guarded2<latch><exiting>
-; CHECK-NEXT: Invalidating analysis: PreservedCFGCheckerAnalysis on drop_a_wc_and_leave
+; CHECK: Invalidating analysis: LazyValueAnalysis on drop_a_wc_and_leave
 
 
 ; This test makes the pass drop its attempts to optimize the exit condition in
