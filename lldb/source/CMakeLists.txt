@@ -8,7 +8,7 @@ set(lldbBase_SOURCES
 find_first_existing_vc_file("${LLDB_SOURCE_DIR}" lldb_vc)
 
 set(version_inc "${CMAKE_CURRENT_BINARY_DIR}/VCSVersion.inc")
-set(generate_vcs_version_script "${LLVM_CMAKE_PATH}/GenerateVersionFromVCS.cmake")
+set(generate_vcs_version_script "${LLVM_CMAKE_DIR}/GenerateVersionFromVCS.cmake")
 
 if(lldb_vc AND LLVM_APPEND_VC_REV)
   set(lldb_source_dir ${LLDB_SOURCE_DIR})
