@@ -4649,24 +4649,22 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(
       }
     }
 
-    // If the target.xml includes an architecture entry like
+    // gdbserver does not implement the LLDB packets used to determine host
+    // or process architecture.  If that is the case, attempt to use
+    // the <architecture/> field from target.xml, e.g.:
+    //
     //   <architecture>i386:x86-64</architecture> (seen from VMWare ESXi)
-    //   <architecture>arm</architecture> (seen from Segger JLink on unspecified arm board)
-    // use that if we don't have anything better.
+    //   <architecture>arm</architecture> (seen from Segger JLink on unspecified
+    //   arm board)
     if (!arch_to_use.IsValid() && !target_info.arch.empty()) {
-      if (target_info.arch == "i386:x86-64") {
-        // We don't have any information about vendor or OS.
-        arch_to_use.SetTriple("x86_64--");
-        GetTarget().MergeArchitecture(arch_to_use);
-      }
+      // We don't have any information about vendor or OS.
+      arch_to_use.SetTriple(llvm::StringSwitch<std::string>(target_info.arch)
+                                .Case("i386:x86-64", "x86_64")
+                                .Default(target_info.arch) +
+                            "--");
 
-      // SEGGER J-Link jtag boards send this very-generic arch name,
-      // we'll need to use this if we have absolutely nothing better
-      // to work with or the register definitions won't be accepted.
-      if (target_info.arch == "arm") {
-        arch_to_use.SetTriple("arm--");
+      if (arch_to_use.IsValid())
         GetTarget().MergeArchitecture(arch_to_use);
-      }
     }
 
     if (arch_to_use.IsValid()) {
