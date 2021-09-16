@@ -3172,9 +3172,7 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
       Instruction *NL = Builder.CreateLoad(EV.getType(), GEP);
       // Whatever aliasing information we had for the orignal load must also
       // hold for the smaller load, so propagate the annotations.
-      AAMDNodes Nodes;
-      L->getAAMetadata(Nodes);
-      NL->setAAMetadata(Nodes);
+      NL->setAAMetadata(L->getAAMetadata());
       // Returning the load directly will cause the main loop to insert it in
       // the wrong spot, so use replaceInstUsesWith().
       return replaceInstUsesWith(EV, NL);
