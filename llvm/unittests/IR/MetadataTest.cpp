@@ -3042,6 +3042,25 @@ TEST_F(DIImportedEntityTest, get) {
 
   TempDIImportedEntity Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
+
+  MDTuple *Elements1 = getTuple();
+  MDTuple *Elements2 = getTuple();
+  auto *Ne = DIImportedEntity::get(Context, Tag, Scope, Entity, File, Line,
+                                   Name, Elements1);
+
+  EXPECT_EQ(Elements1, Ne->getElements().get());
+
+  EXPECT_EQ(Ne, DIImportedEntity::get(Context, Tag, Scope, Entity, File, Line,
+                                      Name, Elements1));
+  EXPECT_NE(Ne, DIImportedEntity::get(Context, Tag, Scope, Entity, File, Line,
+                                      "ModOther", Elements1));
+  EXPECT_NE(Ne, DIImportedEntity::get(Context, Tag, Scope, Entity, File, Line,
+                                      Name, Elements2));
+  EXPECT_NE(
+      Ne, DIImportedEntity::get(Context, Tag, Scope, Entity, File, Line, Name));
+
+  TempDIImportedEntity Tempe = Ne->clone();
+  EXPECT_EQ(Ne, MDNode::replaceWithUniqued(std::move(Tempe)));
 }
 
 typedef MetadataTest MetadataAsValueTest;

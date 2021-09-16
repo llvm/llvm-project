@@ -2044,17 +2044,19 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_IMPORTED_ENTITY: {
-    if (Record.size() != 6 && Record.size() != 7)
+    if (Record.size() < 6 && Record.size() > 8)
       return error("Invalid record");
 
     IsDistinct = Record[0];
-    bool HasFile = (Record.size() == 7);
+    bool HasFile = (Record.size() >= 7);
+    bool HasElements = (Record.size() >= 8);
     MetadataList.assignValue(
         GET_OR_DISTINCT(DIImportedEntity,
                         (Context, Record[1], getMDOrNull(Record[2]),
                          getDITypeRefOrNull(Record[3]),
                          HasFile ? getMDOrNull(Record[6]) : nullptr,
-                         HasFile ? Record[4] : 0, getMDString(Record[5]))),
+                         HasFile ? Record[4] : 0, getMDString(Record[5]),
+                         HasElements ? getMDOrNull(Record[7]) : nullptr)),
         NextMetadataNo);
     NextMetadataNo++;
     break;

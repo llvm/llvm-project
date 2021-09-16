@@ -738,8 +738,7 @@ void CoroCloner::replaceEntryBlock() {
   // entry needs to be moved to the new entry.
   Function *F = OldEntry->getParent();
   DominatorTree DT{*F};
-  for (auto IT = inst_begin(F), End = inst_end(F); IT != End;) {
-    Instruction &I = *IT++;
+  for (Instruction &I : llvm::make_early_inc_range(instructions(F))) {
     auto *Alloca = dyn_cast<AllocaInst>(&I);
     if (!Alloca || I.use_empty())
       continue;
