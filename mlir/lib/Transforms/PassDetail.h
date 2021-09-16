@@ -18,10 +18,6 @@ class AffineDialect;
 template <typename ConcreteDialect>
 void registerDialect(DialectRegistry &registry);
 
-namespace linalg {
-class LinalgDialect;
-} // end namespace linalg
-
 namespace memref {
 class MemRefDialect;
 } // end namespace memref
