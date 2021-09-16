@@ -119,7 +119,6 @@ module lldb_Wrapper {
     requires cplusplus
 
     umbrella "Target"
-    textual header "Target/AppleArm64ExceptionClass.def"
     module * { export * }
   }
 }

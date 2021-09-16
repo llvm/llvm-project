@@ -745,14 +745,13 @@ public:
       PrintRegisterValue(reg_ctx, "sp", nullptr, 8, data);
       PrintRegisterValue(reg_ctx, "pc", nullptr, 8, data);
       PrintRegisterValue(reg_ctx, "cpsr", nullptr, 4, data);
-      data.PutHex32(0); // uint32_t pad at the end
 
       // Write out the EXC registers
-      data.PutHex32(EXCRegSet);
-      data.PutHex32(EXCWordCount);
-      PrintRegisterValue(reg_ctx, "far", NULL, 8, data);
-      PrintRegisterValue(reg_ctx, "esr", NULL, 4, data);
-      PrintRegisterValue(reg_ctx, "exception", NULL, 4, data);
+      //            data.PutHex32 (EXCRegSet);
+      //            data.PutHex32 (EXCWordCount);
+      //            WriteRegister (reg_ctx, "far", NULL, 8, data);
+      //            WriteRegister (reg_ctx, "esr", NULL, 4, data);
+      //            WriteRegister (reg_ctx, "exception", NULL, 4, data);
       return true;
     }
     return false;
