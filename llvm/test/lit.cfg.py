@@ -240,6 +240,14 @@ else:
 if not config.build_shared_libs and not config.link_llvm_dylib:
     config.available_features.add('static-libs')
 
+if config.link_llvm_dylib:
+    config.available_features.add('llvm-dylib')
+    config.substitutions.append(
+        ('%llvmdylib',
+         '{}/libLLVM-{}{}'.format(config.llvm_shlib_dir,
+                                  config.llvm_dylib_version,
+                                  config.llvm_shlib_ext)))
+
 if config.have_tf_aot:
     config.available_features.add("have_tf_aot")
 
