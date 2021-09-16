@@ -58,6 +58,7 @@ extern "C" int sigprocmask(int __how, const __hw_sigset_t *__restrict __set,
 #define SIG_BLOCK 0
 #define SIG_SETMASK 2
 extern "C" int __sigjmp_save(__hw_sigjmp_buf env, int savemask) {
+  env[0].__magic = kHwJmpBufMagic;
   env[0].__mask_was_saved =
       (savemask && sigprocmask(SIG_BLOCK, (__hw_sigset_t *)0,
                                &env[0].__saved_mask) == 0);
@@ -103,6 +104,13 @@ InternalLongjmp(__hw_register_buf env, int retval) {
 }
 
 INTERCEPTOR(void, siglongjmp, __hw_sigjmp_buf env, int val) {
+  if (env[0].__magic != kHwJmpBufMagic) {
+    Printf(
+        "WARNING: Unexpected bad jmp_buf. Either setjmp was not called or "
+        "there is a bug in HWASan.");
+    return REAL(siglongjmp)(env, val);
+  }
+
   if (env[0].__mask_was_saved)
     // Restore the saved signal mask.
     (void)sigprocmask(SIG_SETMASK, &env[0].__saved_mask,
@@ -114,10 +122,18 @@ INTERCEPTOR(void, siglongjmp, __hw_sigjmp_buf env, int val) {
 // _setjmp on start_thread.  Hence we have to intercept the longjmp on
 // pthread_exit so the __hw_jmp_buf order matches.
 INTERCEPTOR(void, __libc_longjmp, __hw_jmp_buf env, int val) {
+  if (env[0].__magic != kHwJmpBufMagic)
+    return REAL(__libc_longjmp)(env, val);
   InternalLongjmp(env[0].__jmpbuf, val);
 }
 
 INTERCEPTOR(void, longjmp, __hw_jmp_buf env, int val) {
+  if (env[0].__magic != kHwJmpBufMagic) {
+    Printf(
+        "WARNING: Unexpected bad jmp_buf. Either setjmp was not called or "
+        "there is a bug in HWASan.");
+    return REAL(longjmp)(env, val);
+  }
   InternalLongjmp(env[0].__jmpbuf, val);
 }
 #undef SIG_BLOCK
@@ -142,6 +158,11 @@ void InitializeInterceptors() {
 
 #if HWASAN_WITH_INTERCEPTORS
 #if defined(__linux__)
+#      if defined(__aarch64__)
+  INTERCEPT_FUNCTION(__libc_longjmp);
+  INTERCEPT_FUNCTION(longjmp);
+  INTERCEPT_FUNCTION(siglongjmp);
+#      endif  // __aarch64__
   INTERCEPT_FUNCTION(vfork);
 #endif  // __linux__
   INTERCEPT_FUNCTION(pthread_create);
