@@ -230,6 +230,7 @@ public:
                  Value v1);
 
 private:
+  bool isZero(unsigned e) const;
   bool maybeZero(unsigned e) const;
   bool isInvariant(unsigned e) const;
   Type inferType(unsigned e, Value src);
