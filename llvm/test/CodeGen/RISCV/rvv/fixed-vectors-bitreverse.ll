@@ -1325,30 +1325,30 @@ define void @bitreverse_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX1-RV64-NEXT:    vsrl.vx v27, v26, t0
 ; LMULMAX1-RV64-NEXT:    addi t1, zero, 40
 ; LMULMAX1-RV64-NEXT:    vsrl.vx v28, v26, t1
-; LMULMAX1-RV64-NEXT:    lui a4, 16
-; LMULMAX1-RV64-NEXT:    addiw t2, a4, -256
+; LMULMAX1-RV64-NEXT:    lui a1, 16
+; LMULMAX1-RV64-NEXT:    addiw t2, a1, -256
 ; LMULMAX1-RV64-NEXT:    vand.vx v28, v28, t2
 ; LMULMAX1-RV64-NEXT:    vor.vv v27, v28, v27
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v28, v26, 24
 ; LMULMAX1-RV64-NEXT:    lui a7, 4080
 ; LMULMAX1-RV64-NEXT:    vand.vx v28, v28, a7
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v29, v26, 8
-; LMULMAX1-RV64-NEXT:    addi a1, zero, 255
-; LMULMAX1-RV64-NEXT:    slli t4, a1, 24
+; LMULMAX1-RV64-NEXT:    addi a3, zero, 255
+; LMULMAX1-RV64-NEXT:    slli t4, a3, 24
 ; LMULMAX1-RV64-NEXT:    vand.vx v29, v29, t4
 ; LMULMAX1-RV64-NEXT:    vor.vv v28, v29, v28
 ; LMULMAX1-RV64-NEXT:    vor.vv v27, v28, v27
 ; LMULMAX1-RV64-NEXT:    vsll.vi v28, v26, 8
-; LMULMAX1-RV64-NEXT:    slli a2, a1, 32
-; LMULMAX1-RV64-NEXT:    vand.vx v28, v28, a2
+; LMULMAX1-RV64-NEXT:    slli a5, a3, 32
+; LMULMAX1-RV64-NEXT:    vand.vx v28, v28, a5
 ; LMULMAX1-RV64-NEXT:    vsll.vi v29, v26, 24
-; LMULMAX1-RV64-NEXT:    slli a3, a1, 40
-; LMULMAX1-RV64-NEXT:    vand.vx v29, v29, a3
+; LMULMAX1-RV64-NEXT:    slli a2, a3, 40
+; LMULMAX1-RV64-NEXT:    vand.vx v29, v29, a2
 ; LMULMAX1-RV64-NEXT:    vor.vv v28, v29, v28
 ; LMULMAX1-RV64-NEXT:    vsll.vx v29, v26, t0
 ; LMULMAX1-RV64-NEXT:    vsll.vx v26, v26, t1
-; LMULMAX1-RV64-NEXT:    slli a1, a1, 48
-; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, a1
+; LMULMAX1-RV64-NEXT:    slli a3, a3, 48
+; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, a3
 ; LMULMAX1-RV64-NEXT:    vor.vv v26, v29, v26
 ; LMULMAX1-RV64-NEXT:    vor.vv v26, v26, v28
 ; LMULMAX1-RV64-NEXT:    vor.vv v26, v26, v27
@@ -1379,16 +1379,16 @@ define void @bitreverse_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX1-RV64-NEXT:    vsll.vi v26, v26, 2
 ; LMULMAX1-RV64-NEXT:    vor.vv v26, v27, v26
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v27, v26, 1
-; LMULMAX1-RV64-NEXT:    lui a5, 21845
-; LMULMAX1-RV64-NEXT:    addiw a5, a5, 1365
-; LMULMAX1-RV64-NEXT:    slli a5, a5, 12
-; LMULMAX1-RV64-NEXT:    addi a5, a5, 1365
-; LMULMAX1-RV64-NEXT:    slli a5, a5, 12
-; LMULMAX1-RV64-NEXT:    addi a5, a5, 1365
-; LMULMAX1-RV64-NEXT:    slli a5, a5, 12
-; LMULMAX1-RV64-NEXT:    addi a5, a5, 1365
-; LMULMAX1-RV64-NEXT:    vand.vx v27, v27, a5
-; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, a5
+; LMULMAX1-RV64-NEXT:    lui a1, 21845
+; LMULMAX1-RV64-NEXT:    addiw a1, a1, 1365
+; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
+; LMULMAX1-RV64-NEXT:    addi a1, a1, 1365
+; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
+; LMULMAX1-RV64-NEXT:    addi a1, a1, 1365
+; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
+; LMULMAX1-RV64-NEXT:    addi a1, a1, 1365
+; LMULMAX1-RV64-NEXT:    vand.vx v27, v27, a1
+; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX1-RV64-NEXT:    vadd.vv v26, v26, v26
 ; LMULMAX1-RV64-NEXT:    vor.vv v26, v27, v26
 ; LMULMAX1-RV64-NEXT:    vsrl.vx v27, v25, t0
@@ -1402,13 +1402,13 @@ define void @bitreverse_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX1-RV64-NEXT:    vor.vv v28, v29, v28
 ; LMULMAX1-RV64-NEXT:    vor.vv v27, v28, v27
 ; LMULMAX1-RV64-NEXT:    vsll.vi v28, v25, 8
-; LMULMAX1-RV64-NEXT:    vand.vx v28, v28, a2
+; LMULMAX1-RV64-NEXT:    vand.vx v28, v28, a5
 ; LMULMAX1-RV64-NEXT:    vsll.vi v29, v25, 24
-; LMULMAX1-RV64-NEXT:    vand.vx v29, v29, a3
+; LMULMAX1-RV64-NEXT:    vand.vx v29, v29, a2
 ; LMULMAX1-RV64-NEXT:    vor.vv v28, v29, v28
 ; LMULMAX1-RV64-NEXT:    vsll.vx v29, v25, t0
 ; LMULMAX1-RV64-NEXT:    vsll.vx v25, v25, t1
-; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, a1
+; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, a3
 ; LMULMAX1-RV64-NEXT:    vor.vv v25, v29, v25
 ; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v28
 ; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v27
@@ -1423,8 +1423,8 @@ define void @bitreverse_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX1-RV64-NEXT:    vsll.vi v25, v25, 2
 ; LMULMAX1-RV64-NEXT:    vor.vv v25, v27, v25
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v27, v25, 1
-; LMULMAX1-RV64-NEXT:    vand.vx v27, v27, a5
-; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, a5
+; LMULMAX1-RV64-NEXT:    vand.vx v27, v27, a1
+; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, a1
 ; LMULMAX1-RV64-NEXT:    vadd.vv v25, v25, v25
 ; LMULMAX1-RV64-NEXT:    vor.vv v25, v27, v25
 ; LMULMAX1-RV64-NEXT:    vse64.v v25, (a0)
