@@ -365,7 +365,13 @@ static bool CanGenerateTest(Loop *L, Value *Count) {
     return false;
   };
 
-  if (!IsCompareZero(ICmp, Count, 0) && !IsCompareZero(ICmp, Count, 1))
+  // Check if Count is a zext.
+  Value *CountBefZext =
+      isa<ZExtInst>(Count) ? cast<ZExtInst>(Count)->getOperand(0) : nullptr;
+
+  if (!IsCompareZero(ICmp, Count, 0) && !IsCompareZero(ICmp, Count, 1) &&
+      !IsCompareZero(ICmp, CountBefZext, 0) &&
+      !IsCompareZero(ICmp, CountBefZext, 1))
     return false;
 
   unsigned SuccIdx = ICmp->getPredicate() == ICmpInst::ICMP_NE ? 0 : 1;
