@@ -3659,7 +3659,7 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
 /// instruction past all of the instructions between it and the end of its
 /// block.
 static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
-  assert(I->getUniqueUndroppableUser() && "Invariants didn't hold!");
+  assert(I->getSingleUndroppableUse() && "Invariants didn't hold!");
   BasicBlock *SrcBlock = I->getParent();
 
   // Cannot move control-flow-involving, volatile loads, vaarg, etc.
@@ -3818,27 +3818,18 @@ bool InstCombinerImpl::run() {
         [this](Instruction *I) -> Optional<BasicBlock *> {
       if (!EnableCodeSinking)
         return None;
-      auto *UserInst = cast_or_null<Instruction>(I->getUniqueUndroppableUser());
-      if (!UserInst)
+      Use *SingleUse = I->getSingleUndroppableUse();
+      if (!SingleUse)
         return None;
 
       BasicBlock *BB = I->getParent();
-      BasicBlock *UserParent = nullptr;
+      Instruction *UserInst = cast<Instruction>(SingleUse->getUser());
+      BasicBlock *UserParent;
 
-      // Special handling for Phi nodes - get the block the use occurs in.
-      if (PHINode *PN = dyn_cast<PHINode>(UserInst)) {
-        for (unsigned i = 0; i < PN->getNumIncomingValues(); i++) {
-          if (PN->getIncomingValue(i) == I) {
-            // Bail out if we have uses in different blocks. We don't do any
-            // sophisticated analysis (i.e finding NearestCommonDominator of these
-            // use blocks).
-            if (UserParent && UserParent != PN->getIncomingBlock(i))
-              return None;
-            UserParent = PN->getIncomingBlock(i);
-          }
-        }
-        assert(UserParent && "expected to find user block!");
-      } else
+      // Get the block the use occurs in.
+      if (PHINode *PN = dyn_cast<PHINode>(UserInst))
+        UserParent = PN->getIncomingBlock(*SingleUse);
+      else
         UserParent = UserInst->getParent();
 
       // Try sinking to another block. If that block is unreachable, then do
