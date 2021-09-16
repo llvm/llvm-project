@@ -101,7 +101,6 @@ public:
   // chunk has a back pointer to an output section.
   void setOutputSectionIdx(uint16_t o) { osidx = o; }
   uint16_t getOutputSectionIdx() const { return osidx; }
-  OutputSection *getOutputSection() const;
 
   // Windows-specific.
   // Collect all locations that contain absolute addresses for base relocations.
@@ -415,7 +414,7 @@ inline StringRef Chunk::getDebugName() const {
 class MergeChunk : public NonSectionChunk {
 public:
   MergeChunk(uint32_t alignment);
-  static void addSection(SectionChunk *c);
+  static void addSection(COFFLinkerContext &ctx, SectionChunk *c);
   void finalizeContents();
   void assignSubsectionRVAs();
 
@@ -424,7 +423,6 @@ public:
   size_t getSize() const override;
   void writeTo(uint8_t *buf) const override;
 
-  static MergeChunk *instances[Log2MaxSectionAlignment + 1];
   std::vector<SectionChunk *> sections;
 
 private:

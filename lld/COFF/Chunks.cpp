@@ -7,10 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "Chunks.h"
+#include "COFFLinkerContext.h"
 #include "InputFiles.h"
+#include "SymbolTable.h"
 #include "Symbols.h"
 #include "Writer.h"
-#include "SymbolTable.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
@@ -385,7 +386,7 @@ void SectionChunk::applyRelocation(uint8_t *off,
   // section is needed to compute SECREL and SECTION relocations used in debug
   // info.
   Chunk *c = sym ? sym->getChunk() : nullptr;
-  OutputSection *os = c ? c->getOutputSection() : nullptr;
+  OutputSection *os = c ? file->ctx.getOutputSection(c) : nullptr;
 
   // Skip the relocation if it refers to a discarded section, and diagnose it
   // as an error if appropriate. If a symbol was discarded early, it may be
@@ -938,18 +939,16 @@ uint8_t Baserel::getDefaultType() {
   }
 }
 
-MergeChunk *MergeChunk::instances[Log2MaxSectionAlignment + 1] = {};
-
 MergeChunk::MergeChunk(uint32_t alignment)
     : builder(StringTableBuilder::RAW, alignment) {
   setAlignment(alignment);
 }
 
-void MergeChunk::addSection(SectionChunk *c) {
+void MergeChunk::addSection(COFFLinkerContext &ctx, SectionChunk *c) {
   assert(isPowerOf2_32(c->getAlignment()));
   uint8_t p2Align = llvm::Log2_32(c->getAlignment());
-  assert(p2Align < array_lengthof(instances));
-  auto *&mc = instances[p2Align];
+  assert(p2Align < array_lengthof(ctx.mergeChunkInstances));
+  auto *&mc = ctx.mergeChunkInstances[p2Align];
   if (!mc)
     mc = make<MergeChunk>(c->getAlignment());
   mc->sections.push_back(c);
