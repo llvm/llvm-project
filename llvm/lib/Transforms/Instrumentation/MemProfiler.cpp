@@ -19,6 +19,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
@@ -107,6 +108,10 @@ static cl::opt<int>
                          cl::desc("granularity of memprof shadow mapping"),
                          cl::Hidden, cl::init(DefaultShadowGranularity));
 
+static cl::opt<bool> ClStack("memprof-instrument-stack",
+                             cl::desc("Instrument scalar stack variables"),
+                             cl::Hidden, cl::init(false));
+
 // Debug flags.
 
 static cl::opt<int> ClDebug("memprof-debug", cl::desc("debug"), cl::Hidden,
@@ -123,6 +128,8 @@ static cl::opt<int> ClDebugMax("memprof-debug-max", cl::desc("Debug max inst"),
 
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
 STATISTIC(NumInstrumentedWrites, "Number of instrumented writes");
+STATISTIC(NumSkippedStackReads, "Number of non-instrumented stack reads");
+STATISTIC(NumSkippedStackWrites, "Number of non-instrumented stack writes");
 
 namespace {
 
@@ -446,6 +453,15 @@ void MemProfiler::instrumentMaskedLoadOrStore(const DataLayout &DL, Value *Mask,
 
 void MemProfiler::instrumentMop(Instruction *I, const DataLayout &DL,
                                 InterestingMemoryAccess &Access) {
+  // Skip instrumentation of stack accesses unless requested.
+  if (!ClStack && isa<AllocaInst>(getUnderlyingObject(Access.Addr))) {
+    if (Access.IsWrite)
+      ++NumSkippedStackWrites;
+    else
+      ++NumSkippedStackReads;
+    return;
+  }
+
   if (Access.IsWrite)
     NumInstrumentedWrites++;
   else
