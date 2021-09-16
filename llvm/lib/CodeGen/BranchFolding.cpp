@@ -1198,14 +1198,13 @@ bool BranchFolder::OptimizeBranches(MachineFunction &MF) {
   // Renumbering blocks alters EH scope membership, recalculate it.
   EHScopeMembership = getEHScopeMembership(MF);
 
-  for (MachineFunction::iterator I = std::next(MF.begin()), E = MF.end();
-       I != E; ) {
-    MachineBasicBlock *MBB = &*I++;
-    MadeChange |= OptimizeBlock(MBB);
+  for (MachineBasicBlock &MBB :
+       llvm::make_early_inc_range(llvm::drop_begin(MF))) {
+    MadeChange |= OptimizeBlock(&MBB);
 
     // If it is dead, remove it.
-    if (MBB->pred_empty()) {
-      RemoveDeadBlock(MBB);
+    if (MBB.pred_empty()) {
+      RemoveDeadBlock(&MBB);
       MadeChange = true;
       ++NumDeadBlocks;
     }
