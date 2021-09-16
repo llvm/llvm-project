@@ -3474,8 +3474,10 @@ void Sema::AddMethodToGlobalPool(ObjCMethodDecl *Method, bool impl,
 
   GlobalMethodPool::iterator Pos = MethodPool.find(Method->getSelector());
   if (Pos == MethodPool.end())
-    Pos = MethodPool.insert(std::make_pair(Method->getSelector(),
-                                           GlobalMethods())).first;
+    Pos = MethodPool
+              .insert(std::make_pair(Method->getSelector(),
+                                     GlobalMethodPool::Lists()))
+              .first;
 
   Method->setDefined(impl);
 
@@ -3683,7 +3685,7 @@ ObjCMethodDecl *Sema::LookupImplementedMethodInGlobalPool(Selector Sel) {
   if (Pos == MethodPool.end())
     return nullptr;
 
-  GlobalMethods &Methods = Pos->second;
+  GlobalMethodPool::Lists &Methods = Pos->second;
   for (const ObjCMethodList *Method = &Methods.first; Method;
        Method = Method->getNext())
     if (Method->getMethod() &&
