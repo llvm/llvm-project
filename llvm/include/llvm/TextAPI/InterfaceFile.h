@@ -445,7 +445,7 @@ bool operator==(const DenseMapBase<DerivedT, SymbolsMapKey, MachO::Symbol *,
                                    KeyInfoT, BucketT> &RHS) {
   if (LHS.size() != RHS.size())
     return false;
-  for (auto KV : LHS) {
+  for (const auto &KV : LHS) {
     auto I = RHS.find(KV.first);
     if (I == RHS.end() || *I->second != *KV.second)
       return false;
