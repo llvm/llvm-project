@@ -10,13 +10,14 @@
 #define LLD_COFF_MARKLIVE_H
 
 #include "lld/Common/LLVM.h"
+#include "llvm/ADT/ArrayRef.h"
 
 namespace lld {
 namespace coff {
 
-class COFFLinkerContext;
+class Chunk;
 
-void markLive(COFFLinkerContext &ctx);
+void markLive(ArrayRef<Chunk *> chunks);
 
 } // namespace coff
 } // namespace lld

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MinGW.h"
-#include "COFFLinkerContext.h"
 #include "Driver.h"
 #include "InputFiles.h"
 #include "SymbolTable.h"
@@ -123,8 +122,7 @@ void AutoExporter::addWholeArchive(StringRef path) {
   excludeLibs.erase(libName);
 }
 
-bool AutoExporter::shouldExport(const COFFLinkerContext &ctx,
-                                Defined *sym) const {
+bool AutoExporter::shouldExport(Defined *sym) const {
   if (!sym || !sym->getChunk())
     return false;
 
@@ -143,7 +141,7 @@ bool AutoExporter::shouldExport(const COFFLinkerContext &ctx,
       return false;
 
   // If a corresponding __imp_ symbol exists and is defined, don't export it.
-  if (ctx.symtab.find(("__imp_" + sym->getName()).str()))
+  if (symtab->find(("__imp_" + sym->getName()).str()))
     return false;
 
   // Check that file is non-null before dereferencing it, symbols not
@@ -194,7 +192,7 @@ static StringRef mangle(Twine sym) {
 // like they are not being used at all, so we explicitly set some flags so
 // that LTO won't eliminate them.
 std::vector<WrappedSymbol>
-lld::coff::addWrappedSymbols(COFFLinkerContext &ctx, opt::InputArgList &args) {
+lld::coff::addWrappedSymbols(opt::InputArgList &args) {
   std::vector<WrappedSymbol> v;
   DenseSet<StringRef> seen;
 
@@ -203,18 +201,18 @@ lld::coff::addWrappedSymbols(COFFLinkerContext &ctx, opt::InputArgList &args) {
     if (!seen.insert(name).second)
       continue;
 
-    Symbol *sym = ctx.symtab.findUnderscore(name);
+    Symbol *sym = symtab->findUnderscore(name);
     if (!sym)
       continue;
 
-    Symbol *real = ctx.symtab.addUndefined(mangle("__real_" + name));
-    Symbol *wrap = ctx.symtab.addUndefined(mangle("__wrap_" + name));
+    Symbol *real = symtab->addUndefined(mangle("__real_" + name));
+    Symbol *wrap = symtab->addUndefined(mangle("__wrap_" + name));
     v.push_back({sym, real, wrap});
 
     // These symbols may seem undefined initially, but don't bail out
-    // at symtab.reportUnresolvable() due to them, but let wrapSymbols
+    // at symtab->reportUnresolvable() due to them, but let wrapSymbols
     // below sort things out before checking finally with
-    // symtab.resolveRemainingUndefines().
+    // symtab->resolveRemainingUndefines().
     sym->deferUndefined = true;
     real->deferUndefined = true;
     // We want to tell LTO not to inline symbols to be overwritten
@@ -235,14 +233,13 @@ lld::coff::addWrappedSymbols(COFFLinkerContext &ctx, opt::InputArgList &args) {
 // When this function is executed, only InputFiles and symbol table
 // contain pointers to symbol objects. We visit them to replace pointers,
 // so that wrapped symbols are swapped as instructed by the command line.
-void lld::coff::wrapSymbols(COFFLinkerContext &ctx,
-                            ArrayRef<WrappedSymbol> wrapped) {
+void lld::coff::wrapSymbols(ArrayRef<WrappedSymbol> wrapped) {
   DenseMap<Symbol *, Symbol *> map;
   for (const WrappedSymbol &w : wrapped) {
     map[w.sym] = w.wrap;
     map[w.real] = w.sym;
     if (Defined *d = dyn_cast<Defined>(w.wrap)) {
-      Symbol *imp = ctx.symtab.find(("__imp_" + w.sym->getName()).str());
+      Symbol *imp = symtab->find(("__imp_" + w.sym->getName()).str());
       // Create a new defined local import for the wrap symbol. If
       // no imp prefixed symbol existed, there's no need for it.
       // (We can't easily distinguish whether any object file actually
@@ -250,14 +247,14 @@ void lld::coff::wrapSymbols(COFFLinkerContext &ctx,
       if (imp) {
         DefinedLocalImport *wrapimp = make<DefinedLocalImport>(
             saver.save("__imp_" + w.wrap->getName()), d);
-        ctx.symtab.localImportChunks.push_back(wrapimp->getChunk());
+        symtab->localImportChunks.push_back(wrapimp->getChunk());
         map[imp] = wrapimp;
       }
     }
   }
 
   // Update pointers in input files.
-  parallelForEach(ctx.objFileInstances, [&](ObjFile *file) {
+  parallelForEach(ObjFile::instances, [&](ObjFile *file) {
     MutableArrayRef<Symbol *> syms = file->getMutableSymbols();
     for (size_t i = 0, e = syms.size(); i != e; ++i)
       if (Symbol *s = map.lookup(syms[i]))

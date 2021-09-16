@@ -14,10 +14,8 @@
 namespace lld {
 namespace coff {
 class SectionChunk;
-class COFFLinkerContext;
 
-llvm::DenseMap<const SectionChunk *, int>
-computeCallGraphProfileOrder(const COFFLinkerContext &ctx);
+llvm::DenseMap<const SectionChunk *, int> computeCallGraphProfileOrder();
 } // namespace coff
 } // namespace lld
 

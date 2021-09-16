@@ -31,8 +31,13 @@ Timer::Timer(llvm::StringRef name, Timer &parent) : name(std::string(name)) {
   parent.children.push_back(this);
 }
 
+Timer &Timer::root() {
+  static Timer rootTimer("Total Link Time");
+  return rootTimer;
+}
+
 void Timer::print() {
-  double totalDuration = static_cast<double>(millis());
+  double totalDuration = static_cast<double>(root().millis());
 
   // We want to print the grand total under all the intermediate phases, so we
   // print all children first, then print the total under that.
@@ -42,7 +47,7 @@ void Timer::print() {
 
   message(std::string(50, '-'));
 
-  print(0, millis(), false);
+  root().print(0, root().millis(), false);
 }
 
 double Timer::millis() const {

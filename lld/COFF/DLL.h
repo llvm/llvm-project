@@ -40,7 +40,7 @@ class DelayLoadContents {
 public:
   void add(DefinedImportData *sym) { imports.push_back(sym); }
   bool empty() { return imports.empty(); }
-  void create(COFFLinkerContext &ctx, Defined *helper);
+  void create(Defined *helper);
   std::vector<Chunk *> getChunks();
   std::vector<Chunk *> getDataChunks();
   ArrayRef<Chunk *> getCodeChunks() { return thunks; }

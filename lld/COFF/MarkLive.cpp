@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "COFFLinkerContext.h"
 #include "Chunks.h"
 #include "Symbols.h"
 #include "lld/Common/Timer.h"
@@ -16,11 +15,13 @@
 namespace lld {
 namespace coff {
 
+static Timer gctimer("GC", Timer::root());
+
 // Set live bit on for each reachable chunk. Unmarked (unreachable)
 // COMDAT chunks will be ignored by Writer, so they will be excluded
 // from the final output.
-void markLive(COFFLinkerContext &ctx) {
-  ScopedTimer t(ctx.gcTimer);
+void markLive(ArrayRef<Chunk *> chunks) {
+  ScopedTimer t(gctimer);
 
   // We build up a worklist of sections which have been marked as live. We only
   // push into the worklist when we discover an unmarked section, and we mark
@@ -30,7 +31,7 @@ void markLive(COFFLinkerContext &ctx) {
   // COMDAT section chunks are dead by default. Add non-COMDAT chunks. Do not
   // traverse DWARF sections. They are live, but they should not keep other
   // sections alive.
-  for (Chunk *c : ctx.symtab.getChunks())
+  for (Chunk *c : chunks)
     if (auto *sc = dyn_cast<SectionChunk>(c))
       if (sc->live && !sc->isDWARF())
         worklist.push_back(sc);
@@ -69,5 +70,6 @@ void markLive(COFFLinkerContext &ctx) {
       enqueue(&c);
   }
 }
+
 }
 }

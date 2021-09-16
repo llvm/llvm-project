@@ -19,7 +19,6 @@
 
 namespace lld {
 namespace coff {
-class COFFLinkerContext;
 
 // Logic for deciding what symbols to export, when exporting all
 // symbols for MinGW.
@@ -35,7 +34,7 @@ public:
   llvm::StringSet<> excludeLibs;
   llvm::StringSet<> excludeObjects;
 
-  bool shouldExport(const COFFLinkerContext &ctx, Defined *sym) const;
+  bool shouldExport(Defined *sym) const;
 };
 
 void writeDefFile(StringRef name);
@@ -54,10 +53,9 @@ struct WrappedSymbol {
   Symbol *wrap;
 };
 
-std::vector<WrappedSymbol> addWrappedSymbols(COFFLinkerContext &ctx,
-                                             llvm::opt::InputArgList &args);
+std::vector<WrappedSymbol> addWrappedSymbols(llvm::opt::InputArgList &args);
 
-void wrapSymbols(COFFLinkerContext &ctx, ArrayRef<WrappedSymbol> wrapped);
+void wrapSymbols(ArrayRef<WrappedSymbol> wrapped);
 
 } // namespace coff
 } // namespace lld

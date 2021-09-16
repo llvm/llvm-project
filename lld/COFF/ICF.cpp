@@ -18,7 +18,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ICF.h"
-#include "COFFLinkerContext.h"
 #include "Chunks.h"
 #include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
@@ -37,10 +36,12 @@ using namespace llvm;
 namespace lld {
 namespace coff {
 
+static Timer icfTimer("ICF", Timer::root());
+
 class ICF {
 public:
-  ICF(COFFLinkerContext &c, ICFLevel icfLevel) : icfLevel(icfLevel), ctx(c){};
-  void run();
+  ICF(ICFLevel icfLevel) : icfLevel(icfLevel){};
+  void run(ArrayRef<Chunk *> v);
 
 private:
   void segregate(size_t begin, size_t end, bool constant);
@@ -63,8 +64,6 @@ private:
   int cnt = 0;
   std::atomic<bool> repeat = {false};
   ICFLevel icfLevel = ICFLevel::All;
-
-  COFFLinkerContext &ctx;
 };
 
 // Returns true if section S is subject of ICF.
@@ -247,12 +246,12 @@ void ICF::forEachClass(std::function<void(size_t, size_t)> fn) {
 // Merge identical COMDAT sections.
 // Two sections are considered the same if their section headers,
 // contents and relocations are all the same.
-void ICF::run() {
-  ScopedTimer t(ctx.icfTimer);
+void ICF::run(ArrayRef<Chunk *> vec) {
+  ScopedTimer t(icfTimer);
 
   // Collect only mergeable sections and group by hash value.
   uint32_t nextId = 1;
-  for (Chunk *c : ctx.symtab.getChunks()) {
+  for (Chunk *c : vec) {
     if (auto *sc = dyn_cast<SectionChunk>(c)) {
       if (isEligible(sc))
         chunks.push_back(sc);
@@ -263,7 +262,7 @@ void ICF::run() {
 
   // Make sure that ICF doesn't merge sections that are being handled by string
   // tail merging.
-  for (MergeChunk *mc : ctx.mergeChunkInstances)
+  for (MergeChunk *mc : MergeChunk::instances)
     if (mc)
       for (SectionChunk *sc : mc->sections)
         sc->eqClass[0] = nextId++;
@@ -318,8 +317,8 @@ void ICF::run() {
 }
 
 // Entry point to ICF.
-void doICF(COFFLinkerContext &ctx, ICFLevel icfLevel) {
-  ICF(ctx, icfLevel).run();
+void doICF(ArrayRef<Chunk *> chunks, ICFLevel icfLevel) {
+  ICF(icfLevel).run(chunks);
 }
 
 } // namespace coff

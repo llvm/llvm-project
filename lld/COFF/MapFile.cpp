@@ -28,7 +28,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MapFile.h"
-#include "COFFLinkerContext.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "Writer.h"
@@ -42,6 +41,11 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace lld;
 using namespace lld::coff;
+
+static Timer totalMapTimer("MAP emission (Cumulative)", Timer::root());
+static Timer symbolGatherTimer("Gather symbols", totalMapTimer);
+static Timer symbolStringsTimer("Build symbol strings", totalMapTimer);
+static Timer writeTimer("Write to file", totalMapTimer);
 
 // Print out the first two columns of a line.
 static void writeHeader(raw_ostream &os, uint32_t sec, uint64_t addr) {
@@ -95,10 +99,9 @@ static void sortUniqueSymbols(std::vector<Defined *> &syms) {
 
 // Returns the lists of all symbols that we want to print out.
 static void getSymbols(std::vector<Defined *> &syms,
-                       std::vector<Defined *> &staticSyms,
-                       const COFFLinkerContext &ctx) {
+                       std::vector<Defined *> &staticSyms) {
 
-  for (ObjFile *file : ctx.objFileInstances)
+  for (ObjFile *file : ObjFile::instances)
     for (Symbol *b : file->getSymbols()) {
       if (!b || !b->isLive())
         continue;
@@ -116,7 +119,7 @@ static void getSymbols(std::vector<Defined *> &syms,
       }
     }
 
-  for (ImportFile *file : ctx.importFileInstances) {
+  for (ImportFile *file : ImportFile::instances) {
     if (!file->live)
       continue;
 
@@ -139,7 +142,7 @@ static void getSymbols(std::vector<Defined *> &syms,
 
 // Construct a map from symbols to their stringified representations.
 static DenseMap<Defined *, std::string>
-getSymbolStrings(const COFFLinkerContext &ctx, ArrayRef<Defined *> syms) {
+getSymbolStrings(ArrayRef<Defined *> syms) {
   std::vector<std::string> str(syms.size());
   parallelForEachN((size_t)0, syms.size(), [&](size_t i) {
     raw_string_ostream os(str[i]);
@@ -158,7 +161,7 @@ getSymbolStrings(const COFFLinkerContext &ctx, ArrayRef<Defined *> syms) {
       fileDescr = "<common>";
     } else if (Chunk *chunk = sym->getChunk()) {
       address = sym->getRVA();
-      if (OutputSection *sec = ctx.getOutputSection(chunk))
+      if (OutputSection *sec = chunk->getOutputSection())
         address -= sec->header.VirtualAddress;
 
       sectionIdx = chunk->getOutputSectionIdx();
@@ -198,7 +201,7 @@ getSymbolStrings(const COFFLinkerContext &ctx, ArrayRef<Defined *> syms) {
   return ret;
 }
 
-void lld::coff::writeMapFile(COFFLinkerContext &ctx) {
+void lld::coff::writeMapFile(ArrayRef<OutputSection *> outputSections) {
   if (config->mapFile.empty())
     return;
 
@@ -207,22 +210,21 @@ void lld::coff::writeMapFile(COFFLinkerContext &ctx) {
   if (ec)
     fatal("cannot open " + config->mapFile + ": " + ec.message());
 
-  ScopedTimer t1(ctx.totalMapTimer);
+  ScopedTimer t1(totalMapTimer);
 
   // Collect symbol info that we want to print out.
-  ScopedTimer t2(ctx.symbolGatherTimer);
+  ScopedTimer t2(symbolGatherTimer);
   std::vector<Defined *> syms;
   std::vector<Defined *> staticSyms;
-  getSymbols(syms, staticSyms, ctx);
+  getSymbols(syms, staticSyms);
   t2.stop();
 
-  ScopedTimer t3(ctx.symbolStringsTimer);
-  DenseMap<Defined *, std::string> symStr = getSymbolStrings(ctx, syms);
-  DenseMap<Defined *, std::string> staticSymStr =
-      getSymbolStrings(ctx, staticSyms);
+  ScopedTimer t3(symbolStringsTimer);
+  DenseMap<Defined *, std::string> symStr = getSymbolStrings(syms);
+  DenseMap<Defined *, std::string> staticSymStr = getSymbolStrings(staticSyms);
   t3.stop();
 
-  ScopedTimer t4(ctx.writeTimer);
+  ScopedTimer t4(writeTimer);
   SmallString<128> AppName = sys::path::filename(config->outputFile);
   sys::path::replace_extension(AppName, "");
 
@@ -246,7 +248,7 @@ void lld::coff::writeMapFile(COFFLinkerContext &ctx) {
   // Print out section table.
   os << " Start         Length     Name                   Class\n";
 
-  for (OutputSection *sec : ctx.outputSections) {
+  for (OutputSection *sec : outputSections) {
     // Merge display of chunks with same sectionName
     std::vector<std::pair<SectionChunk *, SectionChunk *>> ChunkRanges;
     for (Chunk *c : sec->chunks) {
@@ -301,7 +303,7 @@ void lld::coff::writeMapFile(COFFLinkerContext &ctx) {
       Chunk *chunk = entry->getChunk();
       entrySecIndex = chunk->getOutputSectionIdx();
       entryAddress =
-          entry->getRVA() - ctx.getOutputSection(chunk)->header.VirtualAddress;
+          entry->getRVA() - chunk->getOutputSection()->header.VirtualAddress;
     }
   }
   os << " entry point at         ";

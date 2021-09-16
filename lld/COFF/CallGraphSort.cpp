@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CallGraphSort.h"
-#include "COFFLinkerContext.h"
 #include "InputFiles.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
@@ -49,7 +48,7 @@ struct Cluster {
 
 class CallGraphSort {
 public:
-  CallGraphSort(const COFFLinkerContext &ctx);
+  CallGraphSort();
 
   DenseMap<const SectionChunk *, int> run();
 
@@ -71,7 +70,7 @@ using SectionPair = std::pair<const SectionChunk *, const SectionChunk *>;
 // Take the edge list in Config->CallGraphProfile, resolve symbol names to
 // Symbols, and generate a graph between InputSections with the provided
 // weights.
-CallGraphSort::CallGraphSort(const COFFLinkerContext &ctx) {
+CallGraphSort::CallGraphSort() {
   MapVector<SectionPair, uint64_t> &profile = config->callGraphProfile;
   DenseMap<const SectionChunk *, int> secToCluster;
 
@@ -96,7 +95,7 @@ CallGraphSort::CallGraphSort(const COFFLinkerContext &ctx) {
     // output.  This messes with the cluster size and density calculations.  We
     // would also end up moving input sections in other output sections without
     // moving them closer to what calls them.
-    if (ctx.getOutputSection(fromSec) != ctx.getOutputSection(toSec))
+    if (fromSec->getOutputSection() != toSec->getOutputSection())
       continue;
 
     int from = getOrCreateNode(fromSec);
@@ -241,7 +240,6 @@ DenseMap<const SectionChunk *, int> CallGraphSort::run() {
 // This first builds a call graph based on the profile data then merges sections
 // according to the C³ heuristic. All clusters are then sorted by a density
 // metric to further improve locality.
-DenseMap<const SectionChunk *, int>
-coff::computeCallGraphProfileOrder(const COFFLinkerContext &ctx) {
-  return CallGraphSort(ctx).run();
+DenseMap<const SectionChunk *, int> coff::computeCallGraphProfileOrder() {
+  return CallGraphSort().run();
 }
