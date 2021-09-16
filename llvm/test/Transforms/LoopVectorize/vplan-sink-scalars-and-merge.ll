@@ -908,7 +908,7 @@ define void @sinking_requires_duplication(float* %addr) {
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: loop.header:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
-; CHECK-NEXT:   REPLICATE ir<%gep> = getelementptr ir<%addr>, ir<%iv>
+; CHECK-NEXT:   CLONE ir<%gep> = getelementptr ir<%addr>, ir<%iv>
 ; CHECK-NEXT: Successor(s): loop.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.body:
@@ -927,6 +927,7 @@ define void @sinking_requires_duplication(float* %addr) {
 ; CHECK-NEXT:   CondBit: vp<%4> (then)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
+; CHECK-NEXT:     REPLICATE ir<%gep> = getelementptr ir<%addr>, ir<%iv>
 ; CHECK-NEXT:     REPLICATE store ir<1.000000e+01>, ir<%gep>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
