@@ -397,6 +397,12 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
                    ["x0 = 0x0807060504030201"])
         self.match("register read x1",
                    ["x1 = 0x1817161514131211"])
+        self.match("register read x29",
+                   ["x29 = 0x3837363534333231"])
+        self.match("register read x30",
+                   ["x30 = 0x4847464544434241"])
+        self.match("register read x31",
+                   ["sp = 0x5857565554535251"])
         self.match("register read sp",
                    ["sp = 0x5857565554535251"])
         self.match("register read pc",

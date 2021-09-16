@@ -52,6 +52,7 @@ std::string ABIAArch64::GetMCName(std::string reg) {
   MapRegisterName(reg, "x30", "lr");
   return reg;
 }
+
 uint32_t ABIAArch64::GetGenericNum(llvm::StringRef name) {
   return llvm::StringSwitch<uint32_t>(name)
       .Case("pc", LLDB_REGNUM_GENERIC_PC)
@@ -68,4 +69,12 @@ uint32_t ABIAArch64::GetGenericNum(llvm::StringRef name) {
       .Case("x6", LLDB_REGNUM_GENERIC_ARG7)
       .Case("x7", LLDB_REGNUM_GENERIC_ARG8)
       .Default(LLDB_INVALID_REGNUM);
+}
+
+void ABIAArch64::AugmentRegisterInfo(lldb_private::RegisterInfo &info) {
+  lldb_private::MCBasedABI::AugmentRegisterInfo(info);
+
+  // GDB sends x31 as "sp".  Add the "x31" alt_name for convenience.
+  if (!strcmp(info.name, "sp") && !info.alt_name)
+    info.alt_name = "x31";
 }
