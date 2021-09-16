@@ -200,19 +200,18 @@ ModRefInfo AAResults::getModRefInfo(Instruction *I, const CallBase *Call2,
   if (const auto *Call1 = dyn_cast<CallBase>(I)) {
     // Check if the two calls modify the same memory.
     return getModRefInfo(Call1, Call2, AAQI);
-  } else if (I->isFenceLike()) {
-    // If this is a fence, just return ModRef.
-    return ModRefInfo::ModRef;
-  } else {
-    // Otherwise, check if the call modifies or references the
-    // location this memory access defines.  The best we can say
-    // is that if the call references what this instruction
-    // defines, it must be clobbered by this location.
-    const MemoryLocation DefLoc = MemoryLocation::get(I);
-    ModRefInfo MR = getModRefInfo(Call2, DefLoc, AAQI);
-    if (isModOrRefSet(MR))
-      return setModAndRef(MR);
   }
+  // If this is a fence, just return ModRef.
+  if (I->isFenceLike())
+    return ModRefInfo::ModRef;
+  // Otherwise, check if the call modifies or references the
+  // location this memory access defines.  The best we can say
+  // is that if the call references what this instruction
+  // defines, it must be clobbered by this location.
+  const MemoryLocation DefLoc = MemoryLocation::get(I);
+  ModRefInfo MR = getModRefInfo(Call2, DefLoc, AAQI);
+  if (isModOrRefSet(MR))
+    return setModAndRef(MR);
   return ModRefInfo::NoModRef;
 }
 
@@ -807,11 +806,6 @@ AAResults::Concept::~Concept() = default;
 
 // Provide a definition for the static object used to identify passes.
 AnalysisKey AAManager::Key;
-
-namespace {
-
-
-} // end anonymous namespace
 
 ExternalAAWrapperPass::ExternalAAWrapperPass() : ImmutablePass(ID) {
   initializeExternalAAWrapperPassPass(*PassRegistry::getPassRegistry());
