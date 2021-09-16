@@ -739,6 +739,7 @@ public:
       for (llvm::omp::TraitProperty Trait : llvm::reverse(Traits)) {
         llvm::omp::TraitProperty Top = ConstructTraits.pop_back_val();
         assert(Top == Trait && "Something left a trait on the stack!");
+        (void)Top;
       }
   }
 
