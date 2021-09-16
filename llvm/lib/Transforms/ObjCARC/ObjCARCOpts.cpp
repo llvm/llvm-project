@@ -2229,13 +2229,12 @@ void ObjCARCOpt::OptimizeWeakCalls(Function &F) {
 
   // Then, for each destroyWeak with an alloca operand, check to see if
   // the alloca and all its users can be zapped.
-  for (inst_iterator I = inst_begin(&F), E = inst_end(&F); I != E; ) {
-    Instruction *Inst = &*I++;
-    ARCInstKind Class = GetBasicARCInstKind(Inst);
+  for (Instruction &Inst : llvm::make_early_inc_range(instructions(F))) {
+    ARCInstKind Class = GetBasicARCInstKind(&Inst);
     if (Class != ARCInstKind::DestroyWeak)
       continue;
 
-    CallInst *Call = cast<CallInst>(Inst);
+    CallInst *Call = cast<CallInst>(&Inst);
     Value *Arg = Call->getArgOperand(0);
     if (AllocaInst *Alloca = dyn_cast<AllocaInst>(Arg)) {
       for (User *U : Alloca->users()) {
@@ -2250,8 +2249,8 @@ void ObjCARCOpt::OptimizeWeakCalls(Function &F) {
         }
       }
       Changed = true;
-      for (auto UI = Alloca->user_begin(), UE = Alloca->user_end(); UI != UE;) {
-        CallInst *UserInst = cast<CallInst>(*UI++);
+      for (User *U : llvm::make_early_inc_range(Alloca->users())) {
+        CallInst *UserInst = cast<CallInst>(U);
         switch (GetBasicARCInstKind(UserInst)) {
         case ARCInstKind::InitWeak:
         case ARCInstKind::StoreWeak:

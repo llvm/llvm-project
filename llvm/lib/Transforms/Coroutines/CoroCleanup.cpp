@@ -56,8 +56,7 @@ static void lowerSubFn(IRBuilder<> &Builder, CoroSubFnInst *SubFn) {
 bool Lowerer::lowerRemainingCoroIntrinsics(Function &F) {
   bool Changed = false;
 
-  for (auto IB = inst_begin(F), E = inst_end(F); IB != E;) {
-    Instruction &I = *IB++;
+  for (Instruction &I : llvm::make_early_inc_range(instructions(F))) {
     if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
       switch (II->getIntrinsicID()) {
       default:

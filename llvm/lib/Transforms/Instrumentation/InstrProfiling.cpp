@@ -446,13 +446,12 @@ bool InstrProfiling::lowerIntrinsics(Function *F) {
   bool MadeChange = false;
   PromotionCandidates.clear();
   for (BasicBlock &BB : *F) {
-    for (auto I = BB.begin(), E = BB.end(); I != E;) {
-      auto Instr = I++;
-      InstrProfIncrementInst *Inc = castToIncrementInst(&*Instr);
+    for (Instruction &Instr : llvm::make_early_inc_range(BB)) {
+      InstrProfIncrementInst *Inc = castToIncrementInst(&Instr);
       if (Inc) {
         lowerIncrement(Inc);
         MadeChange = true;
-      } else if (auto *Ind = dyn_cast<InstrProfValueProfileInst>(Instr)) {
+      } else if (auto *Ind = dyn_cast<InstrProfValueProfileInst>(&Instr)) {
         lowerValueProfileInst(Ind);
         MadeChange = true;
       }

@@ -150,8 +150,7 @@ bool Lowerer::lowerEarlyIntrinsics(Function &F) {
   CoroIdInst *CoroId = nullptr;
   SmallVector<CoroFreeInst *, 4> CoroFrees;
   bool HasCoroSuspend = false;
-  for (auto IB = inst_begin(F), IE = inst_end(F); IB != IE;) {
-    Instruction &I = *IB++;
+  for (Instruction &I : llvm::make_early_inc_range(instructions(F))) {
     if (auto *CB = dyn_cast<CallBase>(&I)) {
       switch (CB->getIntrinsicID()) {
       default:
