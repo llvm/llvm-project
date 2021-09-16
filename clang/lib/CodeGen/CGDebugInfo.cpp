@@ -385,7 +385,7 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
   } else {
     PresumedLoc PLoc = SM.getPresumedLoc(Loc);
     FileName = PLoc.getFilename();
-    
+
     if (FileName.empty()) {
       FileName = TheCU->getFile()->getFilename();
     } else {
