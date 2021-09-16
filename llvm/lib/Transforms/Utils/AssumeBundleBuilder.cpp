@@ -161,8 +161,9 @@ struct AssumeBuilderState {
       if (wouldInstructionBeTriviallyDead(Inst)) {
         if (RK.WasOn->use_empty())
           return false;
-        Use *SingleUse = RK.WasOn->getSingleUndroppableUse();
-        if (SingleUse && SingleUse->getUser() == InstBeingModified)
+        auto *UniqueUser =
+            RK.WasOn->getUniqueUndroppableUser();
+        if (UniqueUser == InstBeingModified)
           return false;
       }
     return true;
