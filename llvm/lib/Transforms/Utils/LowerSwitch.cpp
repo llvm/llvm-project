@@ -524,16 +524,14 @@ bool LowerSwitch(Function &F, LazyValueInfo *LVI, AssumptionCache *AC) {
   bool Changed = false;
   SmallPtrSet<BasicBlock *, 8> DeleteList;
 
-  for (Function::iterator I = F.begin(), E = F.end(); I != E;) {
-    BasicBlock *Cur =
-        &*I++; // Advance over block so we don't traverse new blocks
-
+  // We use make_early_inc_range here so that we don't traverse new blocks.
+  for (BasicBlock &Cur : llvm::make_early_inc_range(F)) {
     // If the block is a dead Default block that will be deleted later, don't
     // waste time processing it.
-    if (DeleteList.count(Cur))
+    if (DeleteList.count(&Cur))
       continue;
 
-    if (SwitchInst *SI = dyn_cast<SwitchInst>(Cur->getTerminator())) {
+    if (SwitchInst *SI = dyn_cast<SwitchInst>(Cur.getTerminator())) {
       Changed = true;
       ProcessSwitchInst(SI, DeleteList, AC, LVI);
     }
