@@ -951,7 +951,6 @@ bool BufferizationAliasInfo::aliasesInPlaceWrite(Value value) const {
 }
 
 /// Set the inPlace bufferization spec to true.
-/// Merge result's and operand's aliasing sets and iterates to a fixed point.
 void BufferizationAliasInfo::bufferizeInPlace(OpResult result,
                                               OpOperand &operand,
                                               BufferRelation bufferRelation) {
@@ -975,8 +974,8 @@ void BufferizationAliasInfo::bufferizeOutOfPlace(OpResult result) {
 /// such that W and R interfere.
 /// Such a (W, R) pair is an interference to the inplace bufferization of
 /// rootWrite when:
-///   1. R is not known properly dominate W (i.e. the effects of the write may
-///      be visible from R).
+///   1. R is not known to properly dominate W (i.e. the effects of the write
+///      may be visible from R).
 ///   2. one cannot find an intermediate clobbering write `C` to W, such that
 ///      C interleaved between W and R (i.e. W -> C -> R where -> denotes
 ///      dominance).
@@ -987,43 +986,53 @@ bool BufferizationAliasInfo::wouldCreateReadAfterWriteInterference(
     return false;
 
   Operation *opToBufferize = result.getDefiningOp();
-  Value root = (*maybeAliasingOperand)->get();
-  LDBG("----Start wouldCreateReadAfterWriteInterference\n");
-  LDBG("--------aliasing rootValue: " << printValueInfo(root) << "\n");
+  Value rootWrite = result;
+  Value rootRead = (*maybeAliasingOperand)->get();
 
-  // Collect:
-  //   1. all the inplace write uses of some alias of `root`.
-  //   2. all the write uses that belong to `opToBufferize`.
-  // opToBufferize is not yet inplace, we want to determine if it can be inplace
-  // so we also consider all its write uses, not just the inplace ones.
-  DenseSet<OpOperand *> usesWrite;
-  for (Value vWrite : getAliases(root)) {
-    for (auto &uWrite : vWrite.getUses()) {
-      if (!bufferizesToMemoryWrite(uWrite))
-        continue;
-      if (uWrite.getOwner() == opToBufferize ||
-          bufferizesToMemoryWrite(uWrite, InPlaceSpec::True))
-        usesWrite.insert(&uWrite);
+  LDBG("----Start wouldCreateReadAfterWriteInterference\n");
+  LDBG("--------consider all aliases to root read: " << printValueInfo(rootRead)
+                                                     << "\n");
+  LDBG("--------consider all aliases to root write: "
+       << printValueInfo(rootWrite) << "\n");
+
+  // If `result` were to be bufferized in place, all the aliases of `rootRead`
+  // and `rootWrite` would immediately alias with each other and could create
+  // RaW hazards.
+  // Therefore, for each alias of either `rootRead` or `rootWrite`, we collect:
+  //   1. all of the reads of any alias.
+  //   2. all the write uses of any alias that are already known to bufferize
+  //      inplace.
+  //   3. all the write uses of any alias that belong to `opToBufferize`: as if
+  //      `opToBufferize` were bufferized inplace.
+  DenseSet<OpOperand *> usesRead, usesWrite;
+  for (Value v : {rootRead, rootWrite}) {
+    for (Value alias : getAliases(v)) {
+      for (auto &use : alias.getUses()) {
+        // Read to a value that aliases v.
+        if (bufferizesToMemoryRead(use)) {
+          LDBG("------------bufferizesToMemoryRead: "
+               << use.getOwner()->getName().getStringRef() << "\n");
+          usesRead.insert(&use);
+        }
+        // Inplace write to a value that aliases v.
+        if (bufferizesToMemoryWrite(use, InPlaceSpec::True)) {
+          LDBG("------------bufferizesToMemoryWrite: "
+               << use.getOwner()->getName().getStringRef() << "\n");
+          usesWrite.insert(&use);
+        }
+      }
     }
   }
-  for (Value vWrite : getAliases(result))
-    for (auto &uWrite : vWrite.getUses())
-      if (bufferizesToMemoryWrite(uWrite, InPlaceSpec::True))
-        usesWrite.insert(&uWrite);
-
-  // Collect all the reads of some alias of `root`.
-  // opToBufferize is not yet inplace, we want to determine if it can be inplace
-  // so we also consider all read uses of its result.
-  DenseSet<OpOperand *> usesRead;
-  auto aliasListRead = getAliases(root);
-  for (Value vRead : aliasListRead)
-    for (auto &uRead : vRead.getUses())
-      if (bufferizesToMemoryRead(uRead))
-        usesRead.insert(&uRead);
-  for (Value vRead : getAliases(result))
-    for (auto &uRead : vRead.getUses())
-      if (bufferizesToMemoryRead(uRead))
-        usesRead.insert(&uRead);
+  // Additionally: consider writes to a value that aliases rootRead and belongs
+  // to opToBufferize. This simulates that opToBufferize bufferizes inplace.
+  for (OpOperand &use : opToBufferize->getOpOperands()) {
+    if (aliasInfo.isEquivalent(rootRead, use.get()) &&
+        bufferizesToMemoryWrite(use)) {
+      LDBG("------------bufferizesToMemoryWrite: "
+           << use.getOwner()->getName().getStringRef() << "\n");
+      usesWrite.insert(&use);
+    }
+  }
 
   for (OpOperand *uRead : usesRead) {
     Operation *aliasingReadOp = uRead->getOwner();
@@ -1031,6 +1040,7 @@ bool BufferizationAliasInfo::wouldCreateReadAfterWriteInterference(
          << uRead->getOperandNumber()
          << " in: " << printOperationInfo(aliasingReadOp) << '\n');
     for (OpOperand *uWrite : usesWrite) {
+      // The same operand may both read and write.
       // Don't consider self-use of the same operand for interference.
       // Multiple different uses within the same op is fair game though.
       if (uWrite == uRead)
@@ -1050,13 +1060,14 @@ bool BufferizationAliasInfo::wouldCreateReadAfterWriteInterference(
         continue;
       // At this point, aliasingWriteOp properly dominates aliasingReadOp or
       // there is no clear dominance and we need to be conservative.
-      LDBG("---->found RaW interference\n");
-      LDBG("     Interfering  read -> #" << uRead->getOperandNumber() << ":"
-                                         << printOperationInfo(aliasingReadOp)
-                                         << '\n');
-      LDBG("     Interfering write -> #" << uWrite->getOperandNumber() << ":"
-                                         << printOperationInfo(aliasingWriteOp)
-                                         << '\n');
+      LDBG("---->found RaW interference between:\n");
+      LDBG("       Source value -> " << printValueInfo(rootRead) << '\n');
+      LDBG("       Interfering write -> #"
+           << uWrite->getOperandNumber() << ":"
+           << printOperationInfo(aliasingWriteOp) << '\n');
+      LDBG("       Target read -> #" << uRead->getOperandNumber() << ":"
+                                     << printOperationInfo(aliasingReadOp)
+                                     << '\n');
       LDBG("---->opportunity to clobber RaW interference\n");
       if (isClobberedWriteBeforeRead(opToBufferize, *uRead, *uWrite, domInfo)) {
         LDBG("---->clobbered! -> skip\n");
@@ -1114,7 +1125,7 @@ void BufferizationAliasInfo::printAliases(raw_ostream &os) const {
     for (auto mit = aliasInfo.member_begin(it), meit = aliasInfo.member_end();
          mit != meit; ++mit) {
       Value v = static_cast<Value>(*mit);
-      os << "| ---- equivalent member: " << printValueInfo(v, /*prefix=*/false)
+      os << "| ---- aliasing member: " << printValueInfo(v, /*prefix=*/false)
          << '\n';
     }
   }
