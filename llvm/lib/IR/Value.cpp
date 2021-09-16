@@ -164,6 +164,18 @@ bool Value::hasOneUser() const {
 
 static bool isUnDroppableUser(const User *U) { return !U->isDroppable(); }
 
+Use *Value::getSingleUndroppableUse() {
+  Use *Result = nullptr;
+  for (Use &U : uses()) {
+    if (!U.getUser()->isDroppable()) {
+      if (Result)
+        return nullptr;
+      Result = &U;
+    }
+  }
+  return Result;
+}
+
 User *Value::getUniqueUndroppableUser() {
   User *Result = nullptr;
   for (auto *U : users()) {

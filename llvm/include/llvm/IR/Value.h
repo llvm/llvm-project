@@ -452,6 +452,13 @@ public:
   /// in the worst case, the whole use list of a value.
   bool hasOneUser() const;
 
+  /// Return true if there is exactly one use of this value that cannot be
+  /// dropped.
+  Use *getSingleUndroppableUse();
+  const Use *getSingleUndroppableUse() const {
+    return const_cast<Value *>(this)->getSingleUndroppableUse();
+  }
+
   /// Return true if there is exactly one unique user of this value that cannot be
   /// dropped (that user can have multiple uses of this value).
   User *getUniqueUndroppableUser();
