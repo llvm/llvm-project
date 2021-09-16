@@ -204,25 +204,25 @@ struct MemInfoBlock {
     u64 p;
     if (flags()->print_terse) {
       p = total_size * 100 / alloc_count;
-      Printf("MIB:%llu/%u/%d.%02d/%u/%u/", id, alloc_count, p / 100, p % 100,
+      Printf("MIB:%llu/%u/%llu.%02llu/%u/%u/", id, alloc_count, p / 100, p % 100,
              min_size, max_size);
       p = total_access_count * 100 / alloc_count;
-      Printf("%d.%02d/%u/%u/", p / 100, p % 100, min_access_count,
+      Printf("%llu.%02llu/%llu/%llu/", p / 100, p % 100, min_access_count,
              max_access_count);
       p = total_lifetime * 100 / alloc_count;
-      Printf("%d.%02d/%u/%u/", p / 100, p % 100, min_lifetime, max_lifetime);
+      Printf("%llu.%02llu/%u/%u/", p / 100, p % 100, min_lifetime, max_lifetime);
       Printf("%u/%u/%u/%u\n", num_migrated_cpu, num_lifetime_overlaps,
              num_same_alloc_cpu, num_same_dealloc_cpu);
     } else {
       p = total_size * 100 / alloc_count;
       Printf("Memory allocation stack id = %llu\n", id);
-      Printf("\talloc_count %u, size (ave/min/max) %d.%02d / %u / %u\n",
+      Printf("\talloc_count %u, size (ave/min/max) %llu.%02llu / %u / %u\n",
              alloc_count, p / 100, p % 100, min_size, max_size);
       p = total_access_count * 100 / alloc_count;
-      Printf("\taccess_count (ave/min/max): %d.%02d / %u / %u\n", p / 100,
+      Printf("\taccess_count (ave/min/max): %llu.%02llu / %llu / %llu\n", p / 100,
              p % 100, min_access_count, max_access_count);
       p = total_lifetime * 100 / alloc_count;
-      Printf("\tlifetime (ave/min/max): %d.%02d / %u / %u\n", p / 100, p % 100,
+      Printf("\tlifetime (ave/min/max): %llu.%02llu / %u / %u\n", p / 100, p % 100,
              min_lifetime, max_lifetime);
       Printf("\tnum migrated: %u, num lifetime overlaps: %u, num same alloc "
              "cpu: %u, num same dealloc_cpu: %u\n",
@@ -267,9 +267,6 @@ struct MemInfoBlock {
   }
 };
 
-static u32 AccessCount = 0;
-static u32 MissCount = 0;
-
 struct SetEntry {
   SetEntry() : id(0), MIB() {}
   bool Empty() { return id == 0; }
@@ -293,8 +290,8 @@ struct CacheSet {
     }
   }
   void insertOrMerge(u64 new_id, MemInfoBlock &newMIB) {
+    SpinMutexLock l(&SetMutex);
     AccessCount++;
-    SetAccessCount++;
 
     for (int i = 0; i < kSetSize; i++) {
       auto id = Entries[i].id;
@@ -321,7 +318,6 @@ struct CacheSet {
 
     // Miss
     MissCount++;
-    SetMissCount++;
 
     // We try to find the entries with the lowest alloc count to be evicted:
     int min_idx = 0;
@@ -347,14 +343,15 @@ struct CacheSet {
   }
 
   void PrintMissRate(int i) {
-    u64 p = SetAccessCount ? SetMissCount * 10000ULL / SetAccessCount : 0;
-    Printf("Set %d miss rate: %d / %d = %5d.%02d%%\n", i, SetMissCount,
-           SetAccessCount, p / 100, p % 100);
+    u64 p = AccessCount ? MissCount * 10000ULL / AccessCount : 0;
+    Printf("Set %d miss rate: %d / %d = %5llu.%02llu%%\n", i, MissCount,
+           AccessCount, p / 100, p % 100);
   }
 
   SetEntry Entries[kSetSize];
-  u32 SetAccessCount = 0;
-  u32 SetMissCount = 0;
+  u32 AccessCount = 0;
+  u32 MissCount = 0;
+  SpinMutex SetMutex;
 };
 
 struct MemInfoBlockCache {
@@ -389,9 +386,15 @@ struct MemInfoBlockCache {
   void PrintMissRate() {
     if (!flags()->print_mem_info_cache_miss_rate)
       return;
-    u64 p = AccessCount ? MissCount * 10000ULL / AccessCount : 0;
-    Printf("Overall miss rate: %d / %d = %5d.%02d%%\n", MissCount, AccessCount,
-           p / 100, p % 100);
+    u64 MissCountSum = 0;
+    u64 AccessCountSum = 0;
+    for (int i = 0; i < flags()->mem_info_cache_entries; i++) {
+      MissCountSum += Sets[i].MissCount;
+      AccessCountSum += Sets[i].AccessCount;
+    }
+    u64 p = AccessCountSum ? MissCountSum * 10000ULL / AccessCountSum : 0;
+    Printf("Overall miss rate: %llu / %llu = %5llu.%02llu%%\n", MissCountSum,
+           AccessCountSum, p / 100, p % 100);
     if (flags()->print_mem_info_cache_miss_rate_details)
       for (int i = 0; i < flags()->mem_info_cache_entries; i++)
         Sets[i].PrintMissRate(i);
@@ -541,8 +544,7 @@ struct Allocator {
     if (size > kMaxAllowedMallocSize || needed_size > kMaxAllowedMallocSize ||
         size > max_user_defined_malloc_size) {
       if (AllocatorMayReturnNull()) {
-        Report("WARNING: MemProfiler failed to allocate 0x%zx bytes\n",
-               (void *)size);
+        Report("WARNING: MemProfiler failed to allocate 0x%zx bytes\n", size);
         return nullptr;
       }
       uptr malloc_limit =
@@ -628,10 +630,7 @@ struct Allocator {
 
       MemInfoBlock newMIB(user_requested_size, c, m->timestamp_ms, curtime,
                           m->cpu_id, GetCpuId());
-      {
-        SpinMutexLock l(&fallback_mutex);
         MemInfoBlockTable.insertOrMerge(m->alloc_context_id, newMIB);
-      }
     }
 
     MemprofStats &thread_stats = GetCurrentThreadStats();

@@ -10,5 +10,5 @@
 # RUN: llvm-nm -C %llvmdylib | FileCheck %s
 # RUN: llvm-nm -C %llvmdylib | FileCheck %s --check-prefix=SAFETY-CHECK
 
-# CHECK-NOT: {{[^V]}} llvm::Any::TypeId
-# SAFETY-CHECK: V llvm::Any::TypeId
+# CHECK-NOT: {{[^uvV]}} llvm::Any::TypeId
+# SAFETY-CHECK: {{[uvV]}} llvm::Any::TypeId

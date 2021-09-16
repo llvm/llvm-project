@@ -992,19 +992,12 @@ void GDBRemoteDynamicRegisterInfo::HardcodeARMRegisters(bool from_scratch) {
       }
     }
     for (i = 0; i < num_registers; ++i) {
-      ConstString name;
-      ConstString alt_name;
-      if (g_register_infos[i].name && g_register_infos[i].name[0])
-        name.SetCString(g_register_infos[i].name);
-      if (g_register_infos[i].alt_name && g_register_infos[i].alt_name[0])
-        alt_name.SetCString(g_register_infos[i].alt_name);
-
       if (i <= 15 || i == 25)
-        AddRegister(g_register_infos[i], name, alt_name, gpr_reg_set);
+        AddRegister(g_register_infos[i], gpr_reg_set);
       else if (i <= 24)
-        AddRegister(g_register_infos[i], name, alt_name, sfp_reg_set);
+        AddRegister(g_register_infos[i], sfp_reg_set);
       else
-        AddRegister(g_register_infos[i], name, alt_name, vfp_reg_set);
+        AddRegister(g_register_infos[i], vfp_reg_set);
     }
   } else {
     // Add composite registers to our primordial registers, then.
@@ -1040,8 +1033,6 @@ void GDBRemoteDynamicRegisterInfo::HardcodeARMRegisters(bool from_scratch) {
     // If "match" is true, then we can add extra registers.
     if (match) {
       for (i = 0; i < num_composites; ++i) {
-        ConstString name;
-        ConstString alt_name;
         const uint32_t first_primordial_reg =
             g_comp_register_infos[i].value_regs[0];
         const char *reg_name = g_register_infos[first_primordial_reg].name;
@@ -1054,9 +1045,7 @@ void GDBRemoteDynamicRegisterInfo::HardcodeARMRegisters(bool from_scratch) {
               // The name matches the existing primordial entry. Find and
               // assign the offset, and then add this composite register entry.
               g_comp_register_infos[i].byte_offset = reg_info->byte_offset;
-              name.SetCString(g_comp_register_infos[i].name);
-              AddRegister(g_comp_register_infos[i], name, alt_name,
-                          vfp_reg_set);
+              AddRegister(g_comp_register_infos[i], vfp_reg_set);
             }
           }
         }

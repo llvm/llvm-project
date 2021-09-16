@@ -396,14 +396,10 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
 }
 
 void DynamicRegisterInfo::AddRegister(RegisterInfo &reg_info,
-                                      ConstString &reg_name,
-                                      ConstString &reg_alt_name,
                                       ConstString &set_name) {
   assert(!m_finalized);
   const uint32_t reg_num = m_regs.size();
-  reg_info.name = reg_name.AsCString();
   assert(reg_info.name);
-  reg_info.alt_name = reg_alt_name.AsCString(nullptr);
   uint32_t i;
   if (reg_info.value_regs) {
     for (i = 0; reg_info.value_regs[i] != LLDB_INVALID_REGNUM; ++i)

@@ -387,7 +387,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i8(i8 addrspace(1)* noalias %out, i
 ; GFX9-GISEL-NEXT:    global_load_ubyte v0, v[0:1], off
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-GISEL-NEXT:    v_ffbh_u32_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
+; GFX9-GISEL-NEXT:    v_ffbh_u32_e32 v0, v0
 ; GFX9-GISEL-NEXT:    v_subrev_u32_e32 v0, 24, v0
 ; GFX9-GISEL-NEXT:    global_store_byte v1, v0, s[2:3]
 ; GFX9-GISEL-NEXT:    s_endpgm
@@ -945,7 +945,6 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i8_sel_eq_neg1(i8 addrspace(1)* noa
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v2, v3, vcc
 ; GFX9-GISEL-NEXT:    global_load_ubyte v0, v[0:1], off
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX9-GISEL-NEXT:    v_ffbh_u32_e32 v1, v0
 ; GFX9-GISEL-NEXT:    v_subrev_u32_e32 v1, 24, v1
 ; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
