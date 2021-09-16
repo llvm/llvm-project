@@ -397,6 +397,24 @@ void ProfileGenerator::populateBodySamplesForAllFunctions(
   }
 }
 
+static bool isOutlinedFunction(StringRef CalleeName) {
+  // Check whether it's from hot-cold func split or coro split.
+  return CalleeName.find(".resume") != StringRef::npos ||
+         CalleeName.find(".cold") != StringRef::npos;
+}
+
+StringRef ProfileGeneratorBase::getCalleeNameForOffset(uint64_t TargetOffset) {
+  // Get the callee name by branch target if it's a call branch.
+  StringRef CalleeName = FunctionSamples::getCanonicalFnName(
+      Binary->getFuncFromStartOffset(TargetOffset));
+
+  // We won't accumulate sample count againt outlined function.
+  if (CalleeName.size() == 0 || isOutlinedFunction(CalleeName))
+    return StringRef();
+
+  return CalleeName;
+}
+
 void ProfileGenerator::populateBoundarySamplesForAllFunctions(
     const BranchSample &BranchCounters) {
   for (auto Entry : BranchCounters) {
@@ -405,9 +423,7 @@ void ProfileGenerator::populateBoundarySamplesForAllFunctions(
     uint64_t Count = Entry.second;
     assert(Count != 0 && "Unexpected zero weight branch");
 
-    // Get the callee name by branch target if it's a call branch.
-    StringRef CalleeName = FunctionSamples::getCanonicalFnName(
-        Binary->getFuncFromStartOffset(TargetOffset));
+    StringRef CalleeName = getCalleeNameForOffset(TargetOffset);
     if (CalleeName.size() == 0)
       continue;
     // Record called target sample and its count.
@@ -551,9 +567,7 @@ void CSProfileGenerator::populateBoundarySamplesForFunction(
     uint64_t Count = Entry.second;
     assert(Count != 0 && "Unexpected zero weight branch");
 
-    // Get the callee name by branch target if it's a call branch
-    StringRef CalleeName = FunctionSamples::getCanonicalFnName(
-        Binary->getFuncFromStartOffset(TargetOffset));
+    StringRef CalleeName = getCalleeNameForOffset(TargetOffset);
     if (CalleeName.size() == 0)
       continue;
 
@@ -804,8 +818,7 @@ void CSProfileGenerator::populateBoundarySamplesWithProbes(
         getFunctionProfileForLeafProbe(ContextStack, CallProbe);
     FunctionProfile.addBodySamples(CallProbe->getIndex(), 0, Count);
     FunctionProfile.addTotalSamples(Count);
-    StringRef CalleeName = FunctionSamples::getCanonicalFnName(
-        Binary->getFuncFromStartOffset(TargetOffset));
+    StringRef CalleeName = getCalleeNameForOffset(TargetOffset);
     if (CalleeName.size() == 0)
       continue;
     FunctionProfile.addCalledTargetSamples(CallProbe->getIndex(), 0, CalleeName,
