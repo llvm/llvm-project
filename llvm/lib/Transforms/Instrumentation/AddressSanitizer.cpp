@@ -1283,6 +1283,16 @@ void AddressSanitizerPass::printPipeline(
   OS << ">";
 }
 
+void ModuleAddressSanitizerPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<ModuleAddressSanitizerPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << "<";
+  if (CompileKernel)
+    OS << "kernel";
+  OS << ">";
+}
+
 ModuleAddressSanitizerPass::ModuleAddressSanitizerPass(
     bool CompileKernel, bool Recover, bool UseGlobalGC, bool UseOdrIndicator,
     AsanDtorKind DestructorKind)
