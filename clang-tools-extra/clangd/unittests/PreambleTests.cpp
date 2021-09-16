@@ -554,6 +554,20 @@ TEST(PreamblePatch, MacroLoc) {
   auto AST = createPatchedAST(Baseline, Modified);
   ASSERT_TRUE(AST);
 }
+
+TEST(PreamblePatch, NoopWhenNotRequested) {
+  llvm::StringLiteral Baseline = "#define M\nint num = M;";
+  llvm::StringLiteral Modified = "#define M\n#include <foo.h>\nint num = M;";
+  auto TU = TestTU::withCode(Baseline);
+  auto BaselinePreamble = TU.preamble();
+  ASSERT_TRUE(BaselinePreamble);
+
+  TU.Code = Modified.str();
+  MockFS FS;
+  auto PP = PreamblePatch::createMacroPatch(testPath(TU.Filename),
+                                            TU.inputs(FS), *BaselinePreamble);
+  EXPECT_TRUE(PP.text().empty());
+}
 } // namespace
 } // namespace clangd
 } // namespace clang
