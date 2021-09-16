@@ -176,6 +176,9 @@ public:
   // Returns whether this DAG represents the location of an op creation.
   bool isLocationDirective() const;
 
+  // Returns whether this DAG is a return type specifier.
+  bool isReturnTypeDirective() const;
+
   // Returns true if this DAG node is wrapping native code call.
   bool isNativeCodeCall() const;
 
