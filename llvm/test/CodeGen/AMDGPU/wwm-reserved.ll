@@ -105,14 +105,14 @@ define hidden i32 @called(i32 %a) noinline {
 ; GFX9-LABEL: {{^}}call:
 define amdgpu_kernel void @call(<4 x i32> inreg %tmp14, i32 inreg %arg) {
 ; GFX9-DAG: s_load_dword [[ARG:s[0-9]+]]
-; GFX9-O0-DAG: s_mov_b32 s0, 0{{$}}
+; GFX9-O0-DAG: s_mov_b32 s4, 0{{$}}
 ; GFX9-O0-DAG: v_mov_b32_e32 v0, [[ARG]]
 ; GFX9-O0-DAG: v_mov_b32_e32 v2, v0
 
 ; GFX9-O3: v_mov_b32_e32 v2, [[ARG]]
 
 ; GFX9-NEXT: s_not_b64 exec, exec
-; GFX9-O0-NEXT: v_mov_b32_e32 v2, s0
+; GFX9-O0-NEXT: v_mov_b32_e32 v2, s4
 ; GFX9-O3-NEXT: v_mov_b32_e32 v2, 0
 ; GFX9-NEXT: s_not_b64 exec, exec
   %tmp107 = tail call i32 @llvm.amdgcn.set.inactive.i32(i32 %arg, i32 0)
@@ -299,14 +299,14 @@ define hidden i32 @strict_wwm_called(i32 %a) noinline {
 ; GFX9-LABEL: {{^}}strict_wwm_call:
 define amdgpu_kernel void @strict_wwm_call(<4 x i32> inreg %tmp14, i32 inreg %arg) {
 ; GFX9-DAG: s_load_dword [[ARG:s[0-9]+]]
-; GFX9-O0-DAG: s_mov_b32 s0, 0{{$}}
+; GFX9-O0-DAG: s_mov_b32 s4, 0{{$}}
 ; GFX9-O0-DAG: v_mov_b32_e32 v0, [[ARG]]
 ; GFX9-O0-DAG: v_mov_b32_e32 v2, v0
 
 ; GFX9-O3: v_mov_b32_e32 v2, [[ARG]]
 
 ; GFX9-NEXT: s_not_b64 exec, exec
-; GFX9-O0-NEXT: v_mov_b32_e32 v2, s0
+; GFX9-O0-NEXT: v_mov_b32_e32 v2, s4
 ; GFX9-O3-NEXT: v_mov_b32_e32 v2, 0
 ; GFX9-NEXT: s_not_b64 exec, exec
   %tmp107 = tail call i32 @llvm.amdgcn.set.inactive.i32(i32 %arg, i32 0)
