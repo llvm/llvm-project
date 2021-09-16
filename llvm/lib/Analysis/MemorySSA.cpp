@@ -1934,6 +1934,8 @@ void MemorySSA::verifyPrevDefInPhis(Function &F) const {
               auto *LastAcc = &*(--DefList->end());
               assert(LastAcc == IncAcc &&
                      "Incorrect incoming access into phi.");
+              (void)IncAcc;
+              (void)LastAcc;
               break;
             }
             DTNode = DTNode->getIDom();
@@ -1979,6 +1981,7 @@ void MemorySSA::verifyDominationNumbers(const Function &F) const {
       unsigned long ThisNumber = ThisNumberIter->second;
       assert(ThisNumber > LastNumber &&
              "Domination numbers should be strictly increasing!");
+      (void)LastNumber;
       LastNumber = ThisNumber;
     }
   }
@@ -2009,8 +2012,10 @@ void MemorySSA::verifyOrderingDominationAndDefUses(Function &F,
       ActualAccesses.push_back(Phi);
       ActualDefs.push_back(Phi);
       // Verify domination
-      for (const Use &U : Phi->uses())
+      for (const Use &U : Phi->uses()) {
         assert(dominates(Phi, U) && "Memory PHI does not dominate it's uses");
+        (void)U;
+      }
       // Verify def-uses for full verify.
       if (VL == VerificationLevel::Full) {
         assert(Phi->getNumOperands() == static_cast<unsigned>(std::distance(
@@ -2037,9 +2042,11 @@ void MemorySSA::verifyOrderingDominationAndDefUses(Function &F,
           // Verify ordering.
           ActualDefs.push_back(MA);
           // Verify domination.
-          for (const Use &U : MD->uses())
+          for (const Use &U : MD->uses()) {
             assert(dominates(MD, U) &&
                    "Memory Def does not dominate it's uses");
+            (void)U;
+          }
         }
         // Verify def-uses for full verify.
         if (VL == VerificationLevel::Full)
