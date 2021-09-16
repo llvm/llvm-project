@@ -633,6 +633,76 @@ void CombinerHelper::applyCombineExtendingLoads(MachineInstr &MI,
   Observer.changedInstr(MI);
 }
 
+bool CombinerHelper::matchCombineLoadWithAndMask(MachineInstr &MI,
+                                                 BuildFnTy &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_AND);
+
+  // If we have the following code:
+  //  %mask = G_CONSTANT 255
+  //  %ld   = G_LOAD %ptr, (load s16)
+  //  %and  = G_AND %ld, %mask
+  //
+  // Try to fold it into
+  //   %ld = G_ZEXTLOAD %ptr, (load s8)
+
+  Register Dst = MI.getOperand(0).getReg();
+  if (MRI.getType(Dst).isVector())
+    return false;
+
+  auto MaybeMask =
+      getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
+  if (!MaybeMask)
+    return false;
+
+  APInt MaskVal = MaybeMask->Value;
+
+  if (!MaskVal.isMask())
+    return false;
+
+  Register SrcReg = MI.getOperand(1).getReg();
+  GAnyLoad *LoadMI = getOpcodeDef<GAnyLoad>(SrcReg, MRI);
+  if (!LoadMI || !MRI.hasOneNonDBGUse(LoadMI->getDstReg()) ||
+      !LoadMI->isSimple())
+    return false;
+
+  Register LoadReg = LoadMI->getDstReg();
+  LLT LoadTy = MRI.getType(LoadReg);
+  Register PtrReg = LoadMI->getPointerReg();
+  uint64_t LoadSizeBits = LoadMI->getMemSizeInBits();
+  unsigned MaskSizeBits = MaskVal.countTrailingOnes();
+
+  // The mask may not be larger than the in-memory type, as it might cover sign
+  // extended bits
+  if (MaskSizeBits > LoadSizeBits)
+    return false;
+
+  // If the mask covers the whole destination register, there's nothing to
+  // extend
+  if (MaskSizeBits >= LoadTy.getSizeInBits())
+    return false;
+
+  // Most targets cannot deal with loads of size < 8 and need to re-legalize to
+  // at least byte loads. Avoid creating such loads here
+  if (MaskSizeBits < 8 || !isPowerOf2_32(MaskSizeBits))
+    return false;
+
+  const MachineMemOperand &MMO = LoadMI->getMMO();
+  LegalityQuery::MemDesc MemDesc(MMO);
+  MemDesc.MemoryTy = LLT::scalar(MaskSizeBits);
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_ZEXTLOAD, {LoadTy, MRI.getType(PtrReg)}, {MemDesc}}))
+    return false;
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    B.setInstrAndDebugLoc(*LoadMI);
+    auto &MF = B.getMF();
+    auto PtrInfo = MMO.getPointerInfo();
+    auto *NewMMO = MF.getMachineMemOperand(&MMO, PtrInfo, MaskSizeBits / 8);
+    B.buildLoadInstr(TargetOpcode::G_ZEXTLOAD, Dst, PtrReg, *NewMMO);
+  };
+  return true;
+}
+
 bool CombinerHelper::isPredecessor(const MachineInstr &DefMI,
                                    const MachineInstr &UseMI) {
   assert(!DefMI.isDebugInstr() && !UseMI.isDebugInstr() &&
