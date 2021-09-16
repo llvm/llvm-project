@@ -12,7 +12,6 @@
 #include "AvoidConstParamsInDecls.h"
 #include "BracesAroundStatementsCheck.h"
 #include "ConstReturnTypeCheck.h"
-#include "ContainerDataPointerCheck.h"
 #include "ContainerSizeEmptyCheck.h"
 #include "ConvertMemberFunctionsToStatic.h"
 #include "DeleteNullPointerCheck.h"
@@ -63,8 +62,6 @@ public:
         "readability-braces-around-statements");
     CheckFactories.registerCheck<ConstReturnTypeCheck>(
         "readability-const-return-type");
-    CheckFactories.registerCheck<ContainerDataPointerCheck>(
-        "readability-container-data-pointer");
     CheckFactories.registerCheck<ContainerSizeEmptyCheck>(
         "readability-container-size-empty");
     CheckFactories.registerCheck<ConvertMemberFunctionsToStatic>(
