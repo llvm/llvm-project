@@ -17,6 +17,8 @@
 /// {
 extern "C" {
 void __assert_assume(bool cond, const char *exp, const char *file, int line);
+void __assert_fail(const char *assertion, const char *file, unsigned line,
+                   const char *function);
 }
 
 #define ASSERT(e) __assert_assume(e, #e, __FILE__, __LINE__)

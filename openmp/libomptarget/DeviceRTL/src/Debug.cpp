@@ -26,6 +26,13 @@ void __assert_assume(bool cond, const char *exp, const char *file, int line) {
 
   __builtin_assume(cond);
 }
+
+void __assert_fail(const char *assertion, const char *file, unsigned line,
+                   const char *function) {
+  PRINTF("%s:%u: %s: Assertion `%s' failed.\n", file, line, function,
+         assertion);
+  __builtin_trap();
+}
 }
 
 #pragma omp end declare target
