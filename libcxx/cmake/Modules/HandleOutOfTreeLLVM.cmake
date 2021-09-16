@@ -13,16 +13,16 @@ endif()
 set(LLVM_INCLUDE_DIR ${LLVM_PATH}/include CACHE PATH "Path to llvm/include")
 set(LLVM_PATH ${LLVM_PATH} CACHE PATH "Path to LLVM source tree")
 set(LLVM_MAIN_SRC_DIR ${LLVM_PATH})
-set(LLVM_CMAKE_PATH "${LLVM_PATH}/cmake/modules")
+set(LLVM_CMAKE_DIR "${LLVM_PATH}/cmake/modules")
 set(LLVM_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 set(LLVM_LIBRARY_OUTPUT_INTDIR "${CMAKE_CURRENT_BINARY_DIR}/lib")
 
-if (EXISTS "${LLVM_CMAKE_PATH}")
-  list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_PATH}")
+if (EXISTS "${LLVM_CMAKE_DIR}")
+  list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 elseif (EXISTS "${LLVM_MAIN_SRC_DIR}/cmake/modules")
   list(APPEND CMAKE_MODULE_PATH "${LLVM_MAIN_SRC_DIR}/cmake/modules")
 else()
-  message(FATAL_ERROR "Neither ${LLVM_CMAKE_PATH} nor ${LLVM_MAIN_SRC_DIR}/cmake/modules found. "
+  message(FATAL_ERROR "Neither ${LLVM_CMAKE_DIR} nor ${LLVM_MAIN_SRC_DIR}/cmake/modules found. "
                       "This is not a supported configuration.")
 endif()
 

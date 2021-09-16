@@ -13,13 +13,13 @@ macro(compiler_rt_mock_llvm_cmake_config)
 endmacro()
 
 macro(compiler_rt_mock_llvm_cmake_config_set_cmake_path)
-  # Point `LLVM_CMAKE_PATH` at the source tree in the monorepo.
-  set(LLVM_CMAKE_PATH "${LLVM_MAIN_SRC_DIR}/cmake/modules")
-  if (NOT EXISTS "${LLVM_CMAKE_PATH}")
-    message(FATAL_ERROR "LLVM_CMAKE_PATH (${LLVM_CMAKE_PATH}) does not exist")
+  # Point `LLVM_CMAKE_DIR` at the source tree in the monorepo.
+  set(LLVM_CMAKE_DIR "${LLVM_MAIN_SRC_DIR}/cmake/modules")
+  if (NOT EXISTS "${LLVM_CMAKE_DIR}")
+    message(FATAL_ERROR "LLVM_CMAKE_DIR (${LLVM_CMAKE_DIR}) does not exist")
   endif()
-  list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_PATH}")
-  message(STATUS "LLVM_CMAKE_PATH: \"${LLVM_CMAKE_PATH}\"")
+  list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
+  message(STATUS "LLVM_CMAKE_DIR: \"${LLVM_CMAKE_DIR}\"")
 endmacro()
 
 function(compiler_rt_mock_llvm_cmake_config_set_target_triple)
@@ -71,5 +71,5 @@ endfunction()
 
 macro(compiler_rt_mock_llvm_cmake_config_include_cmake_files)
   # Some compiler-rt CMake code needs to call code in this file.
-  include("${LLVM_CMAKE_PATH}/AddLLVM.cmake")
+  include("${LLVM_CMAKE_DIR}/AddLLVM.cmake")
 endmacro()

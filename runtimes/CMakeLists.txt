@@ -76,7 +76,7 @@ set(LLVM_RUNTIME_OUTPUT_INTDIR ${LLVM_TOOLS_BINARY_DIR})
 
 # This variable makes sure that e.g. llvm-lit is found.
 set(LLVM_MAIN_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../llvm)
-set(LLVM_CMAKE_PATH ${LLVM_MAIN_SRC_DIR}/cmake/modules)
+set(LLVM_CMAKE_DIR ${LLVM_MAIN_SRC_DIR}/cmake/modules)
 
 # This variable is used by individual runtimes to locate LLVM files.
 set(LLVM_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../llvm)
