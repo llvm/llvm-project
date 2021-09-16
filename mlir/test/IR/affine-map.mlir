@@ -189,6 +189,9 @@
 // CHECK: #map{{[0-9]+}} = affine_map<(d0, d1) -> (d0 * 3, (d0 + d1) * 2, d0 mod 2)>
 #map58 = affine_map<(d0, d1) -> (4*d0 - 2*d0 + d0, (d0 + d1) + (d0 + d1), 2 * (d0 mod 2) - d0 mod 2)>
 
+// CHECK: #map{{[0-9]+}} = affine_map<(d0, d1) -> (d0 mod 5, (d1 mod 35) mod 4)>
+#map59 = affine_map<(d0, d1) -> ((d0 mod 35) mod 5, (d1 mod 35) mod 4)>
+
 // Single identity maps are removed.
 // CHECK: @f0(memref<2x4xi8, 1>)
 func private @f0(memref<2x4xi8, #map0, 1>)
@@ -373,3 +376,6 @@ func private @f56(memref<1x1xi8, #map56>)
 
 // CHECK: "f58"() {map = #map{{[0-9]+}}} : () -> ()
 "f58"() {map = #map58} : () -> ()
+
+// CHECK: "f59"() {map = #map{{[0-9]+}}} : () -> ()
+"f59"() {map = #map59} : () -> ()

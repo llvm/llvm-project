@@ -829,6 +829,15 @@ static AffineExpr simplifyMod(AffineExpr lhs, AffineExpr rhs) {
       return lBin.getLHS() % rhsConst.getValue();
   }
 
+  // Simplify (e % a) % b to e % b when b evenly divides a
+  if (lBin && lBin.getKind() == AffineExprKind::Mod) {
+    auto intermediate = lBin.getRHS().dyn_cast<AffineConstantExpr>();
+    if (intermediate && intermediate.getValue() >= 1 &&
+        mod(intermediate.getValue(), rhsConst.getValue()) == 0) {
+      return lBin.getLHS() % rhsConst.getValue();
+    }
+  }
+
   return nullptr;
 }
 

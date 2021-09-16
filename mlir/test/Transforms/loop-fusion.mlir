@@ -1,6 +1,6 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-fusion -split-input-file | FileCheck %s
 
-// Part II of fusion tests in  mlir/test/Transforms/loop-fusion=2.mlir. 
+// Part II of fusion tests in  mlir/test/Transforms/loop-fusion=2.mlir.
 // Part III of fusion tests in mlir/test/Transforms/loop-fusion-3.mlir
 // Part IV of fusion tests in mlir/test/Transforms/loop-fusion-4.mlir
 
@@ -737,15 +737,15 @@ func @R6_to_R2_reshape_square() -> memref<64x9xi32> {
 //
 // CHECK-DAG: [[$MAP0:#map[0-9]+]] = affine_map<(d0, d1) -> ((d0 * 9 + d1) floordiv 288)>
 // CHECK-DAG: [[$MAP1:#map[0-9]+]] = affine_map<(d0, d1) -> (((d0 * 9 + d1) mod 288) floordiv 144)>
-// CHECK-DAG: [[$MAP2:#map[0-9]+]] = affine_map<(d0, d1) -> ((((d0 * 9 + d1) mod 288) mod 144) floordiv 48)>
-// CHECK-DAG: [[$MAP3:#map[0-9]+]] = affine_map<(d0, d1) -> (((((d0 * 9 + d1) mod 288) mod 144) mod 48) floordiv 16)>
-// CHECK-DAG: [[$MAP4:#map[0-9]+]] = affine_map<(d0, d1) -> (((((d0 * 9 + d1) mod 288) mod 144) mod 48) mod 16)>
+// CHECK-DAG: [[$MAP2:#map[0-9]+]] = affine_map<(d0, d1) -> (((d0 * 9 + d1) mod 144) floordiv 48)>
+// CHECK-DAG: [[$MAP3:#map[0-9]+]] = affine_map<(d0, d1) -> (((d0 * 9 + d1) mod 48) floordiv 16)>
+// CHECK-DAG: [[$MAP4:#map[0-9]+]] = affine_map<(d0, d1) -> ((d0 * 9 + d1) mod 16)>
 // CHECK-DAG: [[$MAP11:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 9 + d1)>
 // CHECK-DAG: [[$MAP12:#map[0-9]+]] = affine_map<(d0) -> (d0 floordiv 288)>
 // CHECK-DAG: [[$MAP13:#map[0-9]+]] = affine_map<(d0) -> ((d0 mod 288) floordiv 144)>
-// CHECK-DAG: [[$MAP14:#map[0-9]+]] = affine_map<(d0) -> (((d0 mod 288) mod 144) floordiv 48)>
-// CHECK-DAG: [[$MAP15:#map[0-9]+]] = affine_map<(d0) -> ((((d0 mod 288) mod 144) mod 48) floordiv 16)>
-// CHECK-DAG: [[$MAP16:#map[0-9]+]] = affine_map<(d0) -> ((((d0 mod 288) mod 144) mod 48) mod 16)>
+// CHECK-DAG: [[$MAP14:#map[0-9]+]] = affine_map<(d0) -> ((d0 mod 144) floordiv 48)>
+// CHECK-DAG: [[$MAP15:#map[0-9]+]] = affine_map<(d0) -> ((d0 mod 48) floordiv 16)>
+// CHECK-DAG: [[$MAP16:#map[0-9]+]] = affine_map<(d0) -> (d0 mod 16)>
 // CHECK-DAG: [[$MAP17:#map[0-9]+]] = affine_map<(d0) -> (0)>
 
 //
@@ -761,7 +761,7 @@ func @R6_to_R2_reshape_square() -> memref<64x9xi32> {
 // CHECK-NEXT:      affine.apply [[$MAP3]](%{{.*}}, %{{.*}})
 // CHECK-NEXT:      affine.apply [[$MAP4]](%{{.*}}, %{{.*}})
 // CHECK-NEXT:      "foo"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (index, index, index, index, index, index) -> i32
-// CHECK-NEXT:      affine.store %{{.*}}, %{{.*}}[0, ((%{{.*}} * 9 + %{{.*}}) mod 288) floordiv 144, (((%{{.*}} * 9 + %{{.*}}) mod 288) mod 144) floordiv 48, ((((%{{.*}} * 9 + %{{.*}}) mod 288) mod 144) mod 48) floordiv 16, ((((%{{.*}} * 9 + %{{.*}}) mod 288) mod 144) mod 48) mod 16, 0] : memref<1x2x3x3x16x1xi32>
+// CHECK-NEXT:      affine.store %{{.*}}, %{{.*}}[0, ((%{{.*}} * 9 + %{{.*}}) mod 288) floordiv 144, ((%{{.*}} * 9 + %{{.*}}) mod 144) floordiv 48, ((%{{.*}} * 9 + %{{.*}}) mod 48) floordiv 16, (%{{.*}} * 9 + %{{.*}}) mod 16, 0] : memref<1x2x3x3x16x1xi32>
 // CHECK-NEXT:      affine.apply [[$MAP11]](%{{.*}}, %{{.*}})
 // CHECK-NEXT:      affine.apply [[$MAP12]](%{{.*}})
 // CHECK-NEXT:      affine.apply [[$MAP13]](%{{.*}})
@@ -769,7 +769,7 @@ func @R6_to_R2_reshape_square() -> memref<64x9xi32> {
 // CHECK-NEXT:      affine.apply [[$MAP15]](%{{.*}})
 // CHECK-NEXT:      affine.apply [[$MAP16]](%{{.*}})
 // CHECK-NEXT:      affine.apply [[$MAP17]](%{{.*}})
-// CHECK-NEXT:      affine.load %{{.*}}[0, ((%{{.*}} * 9 + %{{.*}}) mod 288) floordiv 144, (((%{{.*}} * 9 + %{{.*}}) mod 288) mod 144) floordiv 48, ((((%{{.*}} * 9 + %{{.*}}) mod 288) mod 144) mod 48) floordiv 16, ((((%{{.*}} * 9 + %{{.*}}) mod 288) mod 144) mod 48) mod 16, 0] : memref<1x2x3x3x16x1xi32>
+// CHECK-NEXT:      affine.load %{{.*}}[0, ((%{{.*}} * 9 + %{{.*}}) mod 288) floordiv 144, ((%{{.*}} * 9 + %{{.*}}) mod 144) floordiv 48, ((%{{.*}} * 9 + %{{.*}}) mod 48) floordiv 16, (%{{.*}} * 9 + %{{.*}}) mod 16, 0] : memref<1x2x3x3x16x1xi32>
 // CHECK-NEXT:      affine.store %{{.*}}, %{{.*}}[0, 0] : memref<1x1xi32>
 // CHECK-NEXT:      affine.load %{{.*}}[0, 0] : memref<1x1xi32>
 // CHECK-NEXT:      muli %{{.*}}, %{{.*}} : i32
