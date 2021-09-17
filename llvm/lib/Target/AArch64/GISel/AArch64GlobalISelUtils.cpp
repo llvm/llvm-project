@@ -26,7 +26,7 @@ AArch64GISelUtils::getAArch64VectorSplat(const MachineInstr &MI,
     return None;
   Register Src = MI.getOperand(1).getReg();
   if (auto ValAndVReg =
-          getConstantVRegValWithLookThrough(MI.getOperand(1).getReg(), MRI))
+          getAnyConstantVRegValWithLookThrough(MI.getOperand(1).getReg(), MRI))
     return RegOrConstant(ValAndVReg->Value.getSExtValue());
   return RegOrConstant(Src);
 }
@@ -56,7 +56,7 @@ bool AArch64GISelUtils::isCMN(const MachineInstr *MaybeSub,
       !CmpInst::isEquality(Pred))
     return false;
   auto MaybeZero =
-      getConstantVRegValWithLookThrough(MaybeSub->getOperand(1).getReg(), MRI);
+      getIConstantVRegValWithLookThrough(MaybeSub->getOperand(1).getReg(), MRI);
   return MaybeZero && MaybeZero->Value.getZExtValue() == 0;
 }
 
@@ -68,7 +68,8 @@ bool AArch64GISelUtils::tryEmitBZero(MachineInstr &MI,
   auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
   if (!TLI.getLibcallName(RTLIB::BZERO))
     return false;
-  auto Zero = getConstantVRegValWithLookThrough(MI.getOperand(1).getReg(), MRI);
+  auto Zero =
+      getIConstantVRegValWithLookThrough(MI.getOperand(1).getReg(), MRI);
   if (!Zero || Zero->Value.getSExtValue() != 0)
     return false;
 
@@ -78,8 +79,8 @@ bool AArch64GISelUtils::tryEmitBZero(MachineInstr &MI,
   if (!MinSize) {
     // If the size is known, check it. If it is not known, assume using bzero is
     // better.
-    if (auto Size =
-            getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI)) {
+    if (auto Size = getIConstantVRegValWithLookThrough(
+            MI.getOperand(2).getReg(), MRI)) {
       if (Size->Value.getSExtValue() <= 256)
         return false;
     }

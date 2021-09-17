@@ -267,10 +267,10 @@ void llvm::reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
   reportGISelFailure(MF, TPC, MORE, R);
 }
 
-Optional<APInt> llvm::getConstantVRegVal(Register VReg,
-                                         const MachineRegisterInfo &MRI) {
-  Optional<ValueAndVReg> ValAndVReg =
-      getConstantVRegValWithLookThrough(VReg, MRI, /*LookThroughInstrs*/ false);
+Optional<APInt> llvm::getIConstantVRegVal(Register VReg,
+                                          const MachineRegisterInfo &MRI) {
+  Optional<ValueAndVReg> ValAndVReg = getIConstantVRegValWithLookThrough(
+      VReg, MRI, /*LookThroughInstrs*/ false);
   assert((!ValAndVReg || ValAndVReg->VReg == VReg) &&
          "Value found while looking through instrs");
   if (!ValAndVReg)
@@ -278,41 +278,27 @@ Optional<APInt> llvm::getConstantVRegVal(Register VReg,
   return ValAndVReg->Value;
 }
 
-Optional<int64_t> llvm::getConstantVRegSExtVal(Register VReg,
-                                               const MachineRegisterInfo &MRI) {
-  Optional<APInt> Val = getConstantVRegVal(VReg, MRI);
+Optional<int64_t>
+llvm::getIConstantVRegSExtVal(Register VReg, const MachineRegisterInfo &MRI) {
+  Optional<APInt> Val = getIConstantVRegVal(VReg, MRI);
   if (Val && Val->getBitWidth() <= 64)
     return Val->getSExtValue();
   return None;
 }
 
-Optional<ValueAndVReg> llvm::getConstantVRegValWithLookThrough(
-    Register VReg, const MachineRegisterInfo &MRI, bool LookThroughInstrs,
-    bool HandleFConstant, bool LookThroughAnyExt) {
+namespace {
+
+typedef std::function<bool(const MachineInstr *)> IsOpcodeFn;
+typedef std::function<Optional<APInt>(const MachineInstr *MI)> GetAPCstFn;
+
+Optional<ValueAndVReg> getConstantVRegValWithLookThrough(
+    Register VReg, const MachineRegisterInfo &MRI, IsOpcodeFn IsConstantOpcode,
+    GetAPCstFn getAPCstValue, bool LookThroughInstrs = true,
+    bool LookThroughAnyExt = false) {
   SmallVector<std::pair<unsigned, unsigned>, 4> SeenOpcodes;
   MachineInstr *MI;
-  auto IsConstantOpcode = [HandleFConstant](unsigned Opcode) {
-    return Opcode == TargetOpcode::G_CONSTANT ||
-           (HandleFConstant && Opcode == TargetOpcode::G_FCONSTANT);
-  };
-  auto GetImmediateValue = [HandleFConstant,
-                            &MRI](const MachineInstr &MI) -> Optional<APInt> {
-    const MachineOperand &CstVal = MI.getOperand(1);
-    if (!CstVal.isImm() && !CstVal.isCImm() &&
-        (!HandleFConstant || !CstVal.isFPImm()))
-      return None;
-    if (!CstVal.isFPImm()) {
-      unsigned BitWidth =
-          MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
-      APInt Val = CstVal.isImm() ? APInt(BitWidth, CstVal.getImm())
-                                 : CstVal.getCImm()->getValue();
-      assert(Val.getBitWidth() == BitWidth &&
-             "Value bitwidth doesn't match definition type");
-      return Val;
-    }
-    return CstVal.getFPImm()->getValueAPF().bitcastToAPInt();
-  };
-  while ((MI = MRI.getVRegDef(VReg)) && !IsConstantOpcode(MI->getOpcode()) &&
+
+  while ((MI = MRI.getVRegDef(VReg)) && !IsConstantOpcode(MI) &&
          LookThroughInstrs) {
     switch (MI->getOpcode()) {
     case TargetOpcode::G_ANYEXT:
@@ -339,10 +325,10 @@ Optional<ValueAndVReg> llvm::getConstantVRegValWithLookThrough(
       return None;
     }
   }
-  if (!MI || !IsConstantOpcode(MI->getOpcode()))
+  if (!MI || !IsConstantOpcode(MI))
     return None;
 
-  Optional<APInt> MaybeVal = GetImmediateValue(*MI);
+  Optional<APInt> MaybeVal = getAPCstValue(MI);
   if (!MaybeVal)
     return None;
   APInt &Val = *MaybeVal;
@@ -365,12 +351,65 @@ Optional<ValueAndVReg> llvm::getConstantVRegValWithLookThrough(
   return ValueAndVReg{Val, VReg};
 }
 
-const ConstantInt *llvm::getConstantIntVRegVal(Register VReg,
-                                               const MachineRegisterInfo &MRI) {
-  MachineInstr *MI = MRI.getVRegDef(VReg);
-  if (MI->getOpcode() != TargetOpcode::G_CONSTANT)
-    return nullptr;
-  return MI->getOperand(1).getCImm();
+bool isIConstant(const MachineInstr *MI) {
+  if (!MI)
+    return false;
+  return MI->getOpcode() == TargetOpcode::G_CONSTANT;
+}
+
+bool isFConstant(const MachineInstr *MI) {
+  if (!MI)
+    return false;
+  return MI->getOpcode() == TargetOpcode::G_FCONSTANT;
+}
+
+bool isAnyConstant(const MachineInstr *MI) {
+  if (!MI)
+    return false;
+  unsigned Opc = MI->getOpcode();
+  return Opc == TargetOpcode::G_CONSTANT || Opc == TargetOpcode::G_FCONSTANT;
+}
+
+Optional<APInt> getCImmAsAPInt(const MachineInstr *MI) {
+  const MachineOperand &CstVal = MI->getOperand(1);
+  if (CstVal.isCImm())
+    return CstVal.getCImm()->getValue();
+  return None;
+}
+
+Optional<APInt> getCImmOrFPImmAsAPInt(const MachineInstr *MI) {
+  const MachineOperand &CstVal = MI->getOperand(1);
+  if (CstVal.isCImm())
+    return CstVal.getCImm()->getValue();
+  if (CstVal.isFPImm())
+    return CstVal.getFPImm()->getValueAPF().bitcastToAPInt();
+  return None;
+}
+
+} // end anonymous namespace
+
+Optional<ValueAndVReg> llvm::getIConstantVRegValWithLookThrough(
+    Register VReg, const MachineRegisterInfo &MRI, bool LookThroughInstrs) {
+  return getConstantVRegValWithLookThrough(VReg, MRI, isIConstant,
+                                           getCImmAsAPInt, LookThroughInstrs);
+}
+
+Optional<ValueAndVReg> llvm::getAnyConstantVRegValWithLookThrough(
+    Register VReg, const MachineRegisterInfo &MRI, bool LookThroughInstrs,
+    bool LookThroughAnyExt) {
+  return getConstantVRegValWithLookThrough(
+      VReg, MRI, isAnyConstant, getCImmOrFPImmAsAPInt, LookThroughInstrs,
+      LookThroughAnyExt);
+}
+
+Optional<FPValueAndVReg> llvm::getFConstantVRegValWithLookThrough(
+    Register VReg, const MachineRegisterInfo &MRI, bool LookThroughInstrs) {
+  auto Reg = getConstantVRegValWithLookThrough(
+      VReg, MRI, isFConstant, getCImmOrFPImmAsAPInt, LookThroughInstrs);
+  if (!Reg)
+    return None;
+  return FPValueAndVReg{getConstantFPVRegVal(Reg->VReg, MRI)->getValueAPF(),
+                        Reg->VReg};
 }
 
 const ConstantFP *
@@ -437,16 +476,16 @@ APFloat llvm::getAPFloatFromSize(double Val, unsigned Size) {
 Optional<APInt> llvm::ConstantFoldBinOp(unsigned Opcode, const Register Op1,
                                         const Register Op2,
                                         const MachineRegisterInfo &MRI) {
-  auto MaybeOp2Cst = getConstantVRegVal(Op2, MRI);
+  auto MaybeOp2Cst = getAnyConstantVRegValWithLookThrough(Op2, MRI, false);
   if (!MaybeOp2Cst)
     return None;
 
-  auto MaybeOp1Cst = getConstantVRegVal(Op1, MRI);
+  auto MaybeOp1Cst = getAnyConstantVRegValWithLookThrough(Op1, MRI, false);
   if (!MaybeOp1Cst)
     return None;
 
-  const APInt &C1 = *MaybeOp1Cst;
-  const APInt &C2 = *MaybeOp2Cst;
+  const APInt &C1 = MaybeOp1Cst->Value;
+  const APInt &C2 = MaybeOp2Cst->Value;
   switch (Opcode) {
   default:
     break;
@@ -659,7 +698,7 @@ Register llvm::getFunctionLiveInPhysReg(MachineFunction &MF,
 Optional<APInt> llvm::ConstantFoldExtOp(unsigned Opcode, const Register Op1,
                                         uint64_t Imm,
                                         const MachineRegisterInfo &MRI) {
-  auto MaybeOp1Cst = getConstantVRegVal(Op1, MRI);
+  auto MaybeOp1Cst = getIConstantVRegVal(Op1, MRI);
   if (MaybeOp1Cst) {
     switch (Opcode) {
     default:
@@ -677,7 +716,7 @@ Optional<APFloat> llvm::ConstantFoldIntToFloat(unsigned Opcode, LLT DstTy,
                                                Register Src,
                                                const MachineRegisterInfo &MRI) {
   assert(Opcode == TargetOpcode::G_SITOFP || Opcode == TargetOpcode::G_UITOFP);
-  if (auto MaybeSrcVal = getConstantVRegVal(Src, MRI)) {
+  if (auto MaybeSrcVal = getIConstantVRegVal(Src, MRI)) {
     APFloat DstVal(getFltSemanticForLLT(DstTy));
     DstVal.convertFromAPInt(*MaybeSrcVal, Opcode == TargetOpcode::G_SITOFP,
                             APFloat::rmNearestTiesToEven);
@@ -707,7 +746,7 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
     // shifting the bit off the end is undefined.
 
     // TODO: Constant splat
-    if (auto ConstLHS = getConstantVRegVal(MI.getOperand(1).getReg(), MRI)) {
+    if (auto ConstLHS = getIConstantVRegVal(MI.getOperand(1).getReg(), MRI)) {
       if (*ConstLHS == 1)
         return true;
     }
@@ -715,7 +754,7 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
     break;
   }
   case TargetOpcode::G_LSHR: {
-    if (auto ConstLHS = getConstantVRegVal(MI.getOperand(1).getReg(), MRI)) {
+    if (auto ConstLHS = getIConstantVRegVal(MI.getOperand(1).getReg(), MRI)) {
       if (ConstLHS->isSignMask())
         return true;
     }
@@ -737,7 +776,7 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
     // zeros is greater than the truncation amount.
     const unsigned BitWidth = Ty.getScalarSizeInBits();
     for (unsigned I = 1, E = MI.getNumOperands(); I != E; ++I) {
-      auto Const = getConstantVRegVal(MI.getOperand(I).getReg(), MRI);
+      auto Const = getIConstantVRegVal(MI.getOperand(I).getReg(), MRI);
       if (!Const || !Const->zextOrTrunc(BitWidth).isPowerOf2())
         return false;
     }

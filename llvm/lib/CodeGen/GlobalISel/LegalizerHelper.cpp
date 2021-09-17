@@ -4075,9 +4075,7 @@ LegalizerHelper::fewerElementsVectorExtractInsertVectorElt(MachineInstr &MI,
   // If the index is a constant, we can really break this down as you would
   // expect, and index into the target size pieces.
   int64_t IdxVal;
-  auto MaybeCst =
-      getConstantVRegValWithLookThrough(Idx, MRI, /*LookThroughInstrs*/ true,
-                                        /*HandleFConstants*/ false);
+  auto MaybeCst = getIConstantVRegValWithLookThrough(Idx, MRI);
   if (MaybeCst) {
     IdxVal = MaybeCst->Value.getSExtValue();
     // Avoid out of bounds indexing the pieces.
@@ -4931,8 +4929,7 @@ LegalizerHelper::narrowScalarShift(MachineInstr &MI, unsigned TypeIdx,
   const LLT HalfTy = LLT::scalar(NewBitSize);
   const LLT CondTy = LLT::scalar(1);
 
-  if (auto VRegAndVal =
-          getConstantVRegValWithLookThrough(Amt, MRI, true, false)) {
+  if (auto VRegAndVal = getIConstantVRegValWithLookThrough(Amt, MRI)) {
     return narrowScalarShiftByConstant(MI, VRegAndVal->Value, HalfTy,
                                        ShiftAmtTy);
   }
@@ -7536,7 +7533,7 @@ static Type *getTypeForLLT(LLT Ty, LLVMContext &C) {
 static Register getMemsetValue(Register Val, LLT Ty, MachineIRBuilder &MIB) {
   MachineRegisterInfo &MRI = *MIB.getMRI();
   unsigned NumBits = Ty.getScalarSizeInBits();
-  auto ValVRegAndVal = getConstantVRegValWithLookThrough(Val, MRI);
+  auto ValVRegAndVal = getIConstantVRegValWithLookThrough(Val, MRI);
   if (!Ty.isVector() && ValVRegAndVal) {
     APInt Scalar = ValVRegAndVal->Value.truncOrSelf(8);
     APInt SplatVal = APInt::getSplat(NumBits, Scalar);
@@ -7590,7 +7587,7 @@ LegalizerHelper::lowerMemset(MachineInstr &MI, Register Dst, Register Val,
   const auto &DstMMO = **MI.memoperands_begin();
   MachinePointerInfo DstPtrInfo = DstMMO.getPointerInfo();
 
-  auto ValVRegAndVal = getConstantVRegValWithLookThrough(Val, MRI);
+  auto ValVRegAndVal = getIConstantVRegValWithLookThrough(Val, MRI);
   bool IsZeroVal = ValVRegAndVal && ValVRegAndVal->Value == 0;
 
   if (!findGISelOptimalMemOpLowering(MemOps, Limit,
@@ -7691,7 +7688,7 @@ LegalizerHelper::lowerMemcpyInline(MachineInstr &MI) {
   bool IsVolatile = MemOp->isVolatile();
 
   // See if this is a constant length copy
-  auto LenVRegAndVal = getConstantVRegValWithLookThrough(Len, MRI);
+  auto LenVRegAndVal = getIConstantVRegValWithLookThrough(Len, MRI);
   // FIXME: support dynamically sized G_MEMCPY_INLINE
   assert(LenVRegAndVal.hasValue() &&
          "inline memcpy with dynamic size is not yet supported");
@@ -7954,7 +7951,7 @@ LegalizerHelper::lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
   }
 
   // See if this is a constant length copy
-  auto LenVRegAndVal = getConstantVRegValWithLookThrough(Len, MRI);
+  auto LenVRegAndVal = getIConstantVRegValWithLookThrough(Len, MRI);
   if (!LenVRegAndVal)
     return UnableToLegalize;
   uint64_t KnownLen = LenVRegAndVal->Value.getZExtValue();

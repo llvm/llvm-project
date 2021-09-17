@@ -650,7 +650,7 @@ bool CombinerHelper::matchCombineLoadWithAndMask(MachineInstr &MI,
     return false;
 
   auto MaybeMask =
-      getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
+      getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
   if (!MaybeMask)
     return false;
 
@@ -1281,7 +1281,7 @@ bool CombinerHelper::matchPtrAddImmedChain(MachineInstr &MI,
 
   Register Add2 = MI.getOperand(1).getReg();
   Register Imm1 = MI.getOperand(2).getReg();
-  auto MaybeImmVal = getConstantVRegValWithLookThrough(Imm1, MRI);
+  auto MaybeImmVal = getIConstantVRegValWithLookThrough(Imm1, MRI);
   if (!MaybeImmVal)
     return false;
 
@@ -1291,7 +1291,7 @@ bool CombinerHelper::matchPtrAddImmedChain(MachineInstr &MI,
 
   Register Base = Add2Def->getOperand(1).getReg();
   Register Imm2 = Add2Def->getOperand(2).getReg();
-  auto MaybeImm2Val = getConstantVRegValWithLookThrough(Imm2, MRI);
+  auto MaybeImm2Val = getIConstantVRegValWithLookThrough(Imm2, MRI);
   if (!MaybeImm2Val)
     return false;
 
@@ -1360,7 +1360,7 @@ bool CombinerHelper::matchShiftImmedChain(MachineInstr &MI,
 
   Register Shl2 = MI.getOperand(1).getReg();
   Register Imm1 = MI.getOperand(2).getReg();
-  auto MaybeImmVal = getConstantVRegValWithLookThrough(Imm1, MRI);
+  auto MaybeImmVal = getIConstantVRegValWithLookThrough(Imm1, MRI);
   if (!MaybeImmVal)
     return false;
 
@@ -1370,7 +1370,7 @@ bool CombinerHelper::matchShiftImmedChain(MachineInstr &MI,
 
   Register Base = Shl2Def->getOperand(1).getReg();
   Register Imm2 = Shl2Def->getOperand(2).getReg();
-  auto MaybeImm2Val = getConstantVRegValWithLookThrough(Imm2, MRI);
+  auto MaybeImm2Val = getIConstantVRegValWithLookThrough(Imm2, MRI);
   if (!MaybeImm2Val)
     return false;
 
@@ -1454,7 +1454,7 @@ bool CombinerHelper::matchShiftOfShiftedLogic(MachineInstr &MI,
 
   // Find a matching one-use shift by constant.
   const Register C1 = MI.getOperand(2).getReg();
-  auto MaybeImmVal = getConstantVRegValWithLookThrough(C1, MRI);
+  auto MaybeImmVal = getIConstantVRegValWithLookThrough(C1, MRI);
   if (!MaybeImmVal)
     return false;
 
@@ -1468,7 +1468,7 @@ bool CombinerHelper::matchShiftOfShiftedLogic(MachineInstr &MI,
 
     // Must be a constant.
     auto MaybeImmVal =
-        getConstantVRegValWithLookThrough(MI->getOperand(2).getReg(), MRI);
+        getIConstantVRegValWithLookThrough(MI->getOperand(2).getReg(), MRI);
     if (!MaybeImmVal)
       return false;
 
@@ -1540,7 +1540,7 @@ bool CombinerHelper::matchCombineMulToShl(MachineInstr &MI,
                                           unsigned &ShiftVal) {
   assert(MI.getOpcode() == TargetOpcode::G_MUL && "Expected a G_MUL");
   auto MaybeImmVal =
-      getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
+      getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
   if (!MaybeImmVal)
     return false;
 
@@ -1575,7 +1575,7 @@ bool CombinerHelper::matchCombineShlOfExtend(MachineInstr &MI,
 
   // TODO: Should handle vector splat.
   Register RHS = MI.getOperand(2).getReg();
-  auto MaybeShiftAmtVal = getConstantVRegValWithLookThrough(RHS, MRI);
+  auto MaybeShiftAmtVal = getIConstantVRegValWithLookThrough(RHS, MRI);
   if (!MaybeShiftAmtVal)
     return false;
 
@@ -1836,7 +1836,7 @@ bool CombinerHelper::matchCombineShiftToUnmerge(MachineInstr &MI,
     return false;
 
   auto MaybeImmVal =
-    getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
+      getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
   if (!MaybeImmVal)
     return false;
 
@@ -2010,7 +2010,7 @@ bool CombinerHelper::matchCombineConstPtrAddToI2P(MachineInstr &MI,
   Register RHS = PtrAdd.getOffsetReg();
   MachineRegisterInfo &MRI = Builder.getMF().getRegInfo();
 
-  if (auto RHSCst = getConstantVRegSExtVal(RHS, MRI)) {
+  if (auto RHSCst = getIConstantVRegSExtVal(RHS, MRI)) {
     int64_t Cst;
     if (mi_match(LHS, MRI, m_GIntToPtr(m_ICst(Cst)))) {
       NewCst = Cst + *RHSCst;
@@ -2241,7 +2241,7 @@ bool CombinerHelper::matchUndefSelectCmp(MachineInstr &MI) {
 bool CombinerHelper::matchConstantSelectCmp(MachineInstr &MI, unsigned &OpIdx) {
   assert(MI.getOpcode() == TargetOpcode::G_SELECT);
   if (auto MaybeCstCmp =
-          getConstantVRegValWithLookThrough(MI.getOperand(1).getReg(), MRI)) {
+          getIConstantVRegValWithLookThrough(MI.getOperand(1).getReg(), MRI)) {
     OpIdx = MaybeCstCmp->Value.isNullValue() ? 3 : 2;
     return true;
   }
@@ -2341,7 +2341,7 @@ bool CombinerHelper::matchConstantOp(const MachineOperand &MOP, int64_t C) {
   if (!MOP.isReg())
     return false;
   // MIPatternMatch doesn't let us look through G_ZEXT etc.
-  auto ValAndVReg = getConstantVRegValWithLookThrough(MOP.getReg(), MRI);
+  auto ValAndVReg = getIConstantVRegValWithLookThrough(MOP.getReg(), MRI);
   return ValAndVReg && ValAndVReg->Value == C;
 }
 
@@ -2962,7 +2962,7 @@ bool CombinerHelper::matchPtrAddZero(MachineInstr &MI) {
     return false;
 
   if (Ty.isPointer()) {
-    auto ConstVal = getConstantVRegVal(PtrAdd.getBaseReg(), MRI);
+    auto ConstVal = getIConstantVRegVal(PtrAdd.getBaseReg(), MRI);
     return ConstVal && *ConstVal == 0;
   }
 
@@ -3715,7 +3715,7 @@ bool CombinerHelper::matchExtractVecEltBuildVec(MachineInstr &MI,
           {TargetOpcode::G_BUILD_VECTOR, {SrcTy, SrcTy.getElementType()}}))
     return false;
 
-  auto Cst = getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
+  auto Cst = getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
   if (!Cst || Cst->Value.getZExtValue() >= SrcTy.getNumElements())
     return false;
 
@@ -3788,7 +3788,7 @@ bool CombinerHelper::matchExtractAllEltsFromBuildVector(
                              MRI.use_instr_nodbg_end())) {
     if (II.getOpcode() != TargetOpcode::G_EXTRACT_VECTOR_ELT)
       return false;
-    auto Cst = getConstantVRegVal(II.getOperand(2).getReg(), MRI);
+    auto Cst = getIConstantVRegVal(II.getOperand(2).getReg(), MRI);
     if (!Cst)
       return false;
     unsigned Idx = Cst.getValue().getZExtValue();
@@ -4106,10 +4106,10 @@ bool CombinerHelper::reassociationCanBreakAddressingModePattern(
   if (MRI.hasOneNonDBGUse(Src1Reg))
     return false;
 
-  auto C1 = getConstantVRegVal(Src1Def->getOperand(2).getReg(), MRI);
+  auto C1 = getIConstantVRegVal(Src1Def->getOperand(2).getReg(), MRI);
   if (!C1)
     return false;
-  auto C2 = getConstantVRegVal(Src2Reg, MRI);
+  auto C2 = getIConstantVRegVal(Src2Reg, MRI);
   if (!C2)
     return false;
 
@@ -4167,7 +4167,7 @@ bool CombinerHelper::matchReassocConstantInnerRHS(GPtrAdd &MI,
   Register Src1Reg = MI.getOperand(1).getReg();
   if (RHS->getOpcode() != TargetOpcode::G_ADD)
     return false;
-  auto C2 = getConstantVRegVal(RHS->getOperand(2).getReg(), MRI);
+  auto C2 = getIConstantVRegVal(RHS->getOperand(2).getReg(), MRI);
   if (!C2)
     return false;
 
@@ -4191,9 +4191,9 @@ bool CombinerHelper::matchReassocConstantInnerLHS(GPtrAdd &MI,
   // G_PTR_ADD (G_PTR_ADD X, C), Y) -> (G_PTR_ADD (G_PTR_ADD(X, Y), C)
   // if and only if (G_PTR_ADD X, C) has one use.
   Register LHSBase;
-  Register LHSCstOff;
+  Optional<ValueAndVReg> LHSCstOff;
   if (!mi_match(MI.getBaseReg(), MRI,
-                m_OneNonDBGUse(m_GPtrAdd(m_Reg(LHSBase), m_ICst(LHSCstOff)))))
+                m_OneNonDBGUse(m_GPtrAdd(m_Reg(LHSBase), m_GCst(LHSCstOff)))))
     return false;
 
   auto *LHSPtrAdd = cast<GPtrAdd>(LHS);
@@ -4204,7 +4204,7 @@ bool CombinerHelper::matchReassocConstantInnerLHS(GPtrAdd &MI,
     LHSPtrAdd->moveBefore(&MI);
     Register RHSReg = MI.getOffsetReg();
     Observer.changingInstr(MI);
-    MI.getOperand(2).setReg(LHSCstOff);
+    MI.getOperand(2).setReg(LHSCstOff->VReg);
     Observer.changedInstr(MI);
     Observer.changingInstr(*LHSPtrAdd);
     LHSPtrAdd->getOperand(2).setReg(RHSReg);
@@ -4225,10 +4225,10 @@ bool CombinerHelper::matchReassocFoldConstantsInSubTree(GPtrAdd &MI,
   Register Src2Reg = MI.getOperand(2).getReg();
   Register LHSSrc1 = LHSPtrAdd->getBaseReg();
   Register LHSSrc2 = LHSPtrAdd->getOffsetReg();
-  auto C1 = getConstantVRegVal(LHSSrc2, MRI);
+  auto C1 = getIConstantVRegVal(LHSSrc2, MRI);
   if (!C1)
     return false;
-  auto C2 = getConstantVRegVal(Src2Reg, MRI);
+  auto C2 = getIConstantVRegVal(Src2Reg, MRI);
   if (!C2)
     return false;
 
@@ -4337,7 +4337,7 @@ bool CombinerHelper::matchNarrowBinopFeedingAnd(
   }
 
   // Find the mask on the RHS.
-  auto Cst = getConstantVRegValWithLookThrough(AndRHS, MRI);
+  auto Cst = getIConstantVRegValWithLookThrough(AndRHS, MRI);
   if (!Cst)
     return false;
   auto Mask = Cst->Value;

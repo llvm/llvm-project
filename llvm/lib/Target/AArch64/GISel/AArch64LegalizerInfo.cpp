@@ -978,7 +978,7 @@ bool AArch64LegalizerInfo::legalizeShlAshrLshr(
   // If the shift amount is a G_CONSTANT, promote it to a 64 bit type so the
   // imported patterns can select it later. Either way, it will be legal.
   Register AmtReg = MI.getOperand(2).getReg();
-  auto VRegAndVal = getConstantVRegValWithLookThrough(AmtReg, MRI);
+  auto VRegAndVal = getIConstantVRegValWithLookThrough(AmtReg, MRI);
   if (!VRegAndVal)
     return true;
   // Check the shift amount is in range for an immediate form.
@@ -1085,8 +1085,8 @@ bool AArch64LegalizerInfo::legalizeBitfieldExtract(
     MachineInstr &MI, MachineRegisterInfo &MRI, LegalizerHelper &Helper) const {
   // Only legal if we can select immediate forms.
   // TODO: Lower this otherwise.
-  return getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI) &&
-         getConstantVRegValWithLookThrough(MI.getOperand(3).getReg(), MRI);
+  return getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI) &&
+         getIConstantVRegValWithLookThrough(MI.getOperand(3).getReg(), MRI);
 }
 
 bool AArch64LegalizerInfo::legalizeCTPOP(MachineInstr &MI,

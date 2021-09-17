@@ -146,8 +146,8 @@ static bool matchFoldGlobalOffset(MachineInstr &MI, MachineRegisterInfo &MRI,
   for (auto &UseInstr : MRI.use_nodbg_instructions(Dst)) {
     if (UseInstr.getOpcode() != TargetOpcode::G_PTR_ADD)
       return false;
-    auto Cst =
-        getConstantVRegValWithLookThrough(UseInstr.getOperand(2).getReg(), MRI);
+    auto Cst = getIConstantVRegValWithLookThrough(
+        UseInstr.getOperand(2).getReg(), MRI);
     if (!Cst)
       return false;
     MinOffset = std::min(MinOffset, Cst->Value.getZExtValue());

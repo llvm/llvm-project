@@ -55,7 +55,7 @@ bool matchExtractVecEltPairwiseAdd(
   Register Src2 = MI.getOperand(2).getReg();
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
 
-  auto Cst = getConstantVRegValWithLookThrough(Src2, MRI);
+  auto Cst = getIConstantVRegValWithLookThrough(Src2, MRI);
   if (!Cst || Cst->Value != 0)
     return false;
   // SDAG also checks for FullFP16, but this looks to be beneficial anyway.
@@ -129,7 +129,7 @@ bool matchAArch64MulConstCombine(
   const LLT Ty = MRI.getType(LHS);
 
   // The below optimizations require a constant RHS.
-  auto Const = getConstantVRegValWithLookThrough(RHS, MRI);
+  auto Const = getIConstantVRegValWithLookThrough(RHS, MRI);
   if (!Const)
     return false;
 

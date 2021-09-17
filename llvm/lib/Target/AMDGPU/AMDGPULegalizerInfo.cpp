@@ -2224,9 +2224,9 @@ bool AMDGPULegalizerInfo::legalizeExtractVectorElt(
 
   // FIXME: Artifact combiner probably should have replaced the truncated
   // constant before this, so we shouldn't need
-  // getConstantVRegValWithLookThrough.
+  // getIConstantVRegValWithLookThrough.
   Optional<ValueAndVReg> MaybeIdxVal =
-      getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
+      getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
   if (!MaybeIdxVal) // Dynamic case will be selected to register indexing.
     return true;
   const int64_t IdxVal = MaybeIdxVal->Value.getSExtValue();
@@ -2256,9 +2256,9 @@ bool AMDGPULegalizerInfo::legalizeInsertVectorElt(
 
   // FIXME: Artifact combiner probably should have replaced the truncated
   // constant before this, so we shouldn't need
-  // getConstantVRegValWithLookThrough.
+  // getIConstantVRegValWithLookThrough.
   Optional<ValueAndVReg> MaybeIdxVal =
-      getConstantVRegValWithLookThrough(MI.getOperand(3).getReg(), MRI);
+      getIConstantVRegValWithLookThrough(MI.getOperand(3).getReg(), MRI);
   if (!MaybeIdxVal) // Dynamic case will be selected to register indexing.
     return true;
 
@@ -2811,7 +2811,7 @@ bool AMDGPULegalizerInfo::legalizeCTLZ_CTTZ(MachineInstr &MI,
 static bool isNot(const MachineRegisterInfo &MRI, const MachineInstr &MI) {
   if (MI.getOpcode() != TargetOpcode::G_XOR)
     return false;
-  auto ConstVal = getConstantVRegSExtVal(MI.getOperand(2).getReg(), MRI);
+  auto ConstVal = getIConstantVRegSExtVal(MI.getOperand(2).getReg(), MRI);
   return ConstVal && *ConstVal == -1;
 }
 
@@ -3777,11 +3777,11 @@ void AMDGPULegalizerInfo::updateBufferMMO(MachineMemOperand *MMO,
                                           unsigned ImmOffset, Register VIndex,
                                           MachineRegisterInfo &MRI) const {
   Optional<ValueAndVReg> MaybeVOffsetVal =
-      getConstantVRegValWithLookThrough(VOffset, MRI);
+      getIConstantVRegValWithLookThrough(VOffset, MRI);
   Optional<ValueAndVReg> MaybeSOffsetVal =
-      getConstantVRegValWithLookThrough(SOffset, MRI);
+      getIConstantVRegValWithLookThrough(SOffset, MRI);
   Optional<ValueAndVReg> MaybeVIndexVal =
-      getConstantVRegValWithLookThrough(VIndex, MRI);
+      getIConstantVRegValWithLookThrough(VIndex, MRI);
   // If the combined VOffset + SOffset + ImmOffset + strided VIndex is constant,
   // update the MMO with that offset. The stride is unknown so we can only do
   // this if VIndex is constant 0.

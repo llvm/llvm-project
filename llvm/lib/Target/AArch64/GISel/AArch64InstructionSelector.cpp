@@ -666,7 +666,7 @@ static Optional<uint64_t> getImmedFromMO(const MachineOperand &Root) {
     Immed = Root.getCImm()->getZExtValue();
   else if (Root.isReg()) {
     auto ValAndVReg =
-        getConstantVRegValWithLookThrough(Root.getReg(), MRI, true);
+        getIConstantVRegValWithLookThrough(Root.getReg(), MRI, true);
     if (!ValAndVReg)
       return None;
     Immed = ValAndVReg->Value.getSExtValue();
@@ -1209,8 +1209,8 @@ AArch64InstructionSelector::emitSelect(Register Dst, Register True,
                           &Optimized]() {
     if (Optimized)
       return false;
-    auto TrueCst = getConstantVRegValWithLookThrough(True, MRI);
-    auto FalseCst = getConstantVRegValWithLookThrough(False, MRI);
+    auto TrueCst = getIConstantVRegValWithLookThrough(True, MRI);
+    auto FalseCst = getIConstantVRegValWithLookThrough(False, MRI);
     if (!TrueCst && !FalseCst)
       return false;
 
@@ -1352,13 +1352,13 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
     case TargetOpcode::G_XOR: {
       TestReg = MI->getOperand(1).getReg();
       Register ConstantReg = MI->getOperand(2).getReg();
-      auto VRegAndVal = getConstantVRegValWithLookThrough(ConstantReg, MRI);
+      auto VRegAndVal = getIConstantVRegValWithLookThrough(ConstantReg, MRI);
       if (!VRegAndVal) {
         // AND commutes, check the other side for a constant.
         // FIXME: Can we canonicalize the constant so that it's always on the
         // same side at some point earlier?
         std::swap(ConstantReg, TestReg);
-        VRegAndVal = getConstantVRegValWithLookThrough(ConstantReg, MRI);
+        VRegAndVal = getIConstantVRegValWithLookThrough(ConstantReg, MRI);
       }
       if (VRegAndVal) {
         if (HasZext)
@@ -1373,7 +1373,7 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
     case TargetOpcode::G_SHL: {
       TestReg = MI->getOperand(1).getReg();
       auto VRegAndVal =
-          getConstantVRegValWithLookThrough(MI->getOperand(2).getReg(), MRI);
+          getIConstantVRegValWithLookThrough(MI->getOperand(2).getReg(), MRI);
       if (VRegAndVal)
         C = VRegAndVal->Value.getSExtValue();
       break;
@@ -1501,7 +1501,7 @@ bool AArch64InstructionSelector::tryOptAndIntoCompareBranch(
   // Check if the AND has a constant on its RHS which we can use as a mask.
   // If it's a power of 2, then it's the same as checking a specific bit.
   // (e.g, ANDing with 8 == ANDing with 000...100 == testing if bit 3 is set)
-  auto MaybeBit = getConstantVRegValWithLookThrough(
+  auto MaybeBit = getIConstantVRegValWithLookThrough(
       AndInst.getOperand(2).getReg(), *MIB.getMRI());
   if (!MaybeBit)
     return false;
@@ -1577,7 +1577,7 @@ bool AArch64InstructionSelector::tryOptCompareBranchFedByICmp(
   Register RHS = ICmp.getOperand(3).getReg();
 
   // We're allowed to emit a TB(N)Z/CB(N)Z. Try to do that.
-  auto VRegAndVal = getConstantVRegValWithLookThrough(RHS, MRI);
+  auto VRegAndVal = getIConstantVRegValWithLookThrough(RHS, MRI);
   MachineInstr *AndInst = getOpcodeDef(TargetOpcode::G_AND, LHS, MRI);
 
   // When we can emit a TB(N)Z, prefer that.
@@ -1612,7 +1612,7 @@ bool AArch64InstructionSelector::tryOptCompareBranchFedByICmp(
   if (ICmpInst::isEquality(Pred)) {
     if (!VRegAndVal) {
       std::swap(RHS, LHS);
-      VRegAndVal = getConstantVRegValWithLookThrough(RHS, MRI);
+      VRegAndVal = getIConstantVRegValWithLookThrough(RHS, MRI);
       AndInst = getOpcodeDef(TargetOpcode::G_AND, LHS, MRI);
     }
 
@@ -2071,7 +2071,7 @@ bool AArch64InstructionSelector::earlySelectSHL(MachineInstr &I,
   // selector which will match the register variant.
   assert(I.getOpcode() == TargetOpcode::G_SHL && "unexpected op");
   const auto &MO = I.getOperand(2);
-  auto VRegAndVal = getConstantVRegVal(MO.getReg(), MRI);
+  auto VRegAndVal = getIConstantVRegVal(MO.getReg(), MRI);
   if (!VRegAndVal)
     return false;
 
@@ -2153,7 +2153,7 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     // Before selecting a DUP instruction, check if it is better selected as a
     // MOV or load from a constant pool.
     Register Src = I.getOperand(1).getReg();
-    auto ValAndVReg = getConstantVRegValWithLookThrough(Src, MRI);
+    auto ValAndVReg = getIConstantVRegValWithLookThrough(Src, MRI);
     if (!ValAndVReg)
       return false;
     LLVMContext &Ctx = MF.getFunction().getContext();
@@ -2371,10 +2371,10 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     unsigned Size = Ty.getSizeInBits();
     unsigned Opc = OpcTable[IsSigned][Size == 64];
     auto Cst1 =
-        getConstantVRegValWithLookThrough(I.getOperand(2).getReg(), MRI);
+        getIConstantVRegValWithLookThrough(I.getOperand(2).getReg(), MRI);
     assert(Cst1 && "Should have gotten a constant for src 1?");
     auto Cst2 =
-        getConstantVRegValWithLookThrough(I.getOperand(3).getReg(), MRI);
+        getIConstantVRegValWithLookThrough(I.getOperand(3).getReg(), MRI);
     assert(Cst2 && "Should have gotten a constant for src 2?");
     auto LSB = Cst1->Value.getZExtValue();
     auto Width = Cst2->Value.getZExtValue();
@@ -2840,9 +2840,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
     // If we're storing a 0, use WZR/XZR.
     if (Opcode == TargetOpcode::G_STORE) {
-      auto CVal = getConstantVRegValWithLookThrough(
-          LoadStore->getOperand(0).getReg(), MRI, /*LookThroughInstrs = */ true,
-          /*HandleFConstants = */ false);
+      auto CVal = getIConstantVRegValWithLookThrough(
+          LoadStore->getOperand(0).getReg(), MRI);
       if (CVal && CVal->Value == 0) {
         switch (LoadStore->getOpcode()) {
         case AArch64::STRWui:
@@ -2972,7 +2971,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
   case TargetOpcode::G_PTRMASK: {
     Register MaskReg = I.getOperand(2).getReg();
-    Optional<int64_t> MaskVal = getConstantVRegSExtVal(MaskReg, MRI);
+    Optional<int64_t> MaskVal = getIConstantVRegSExtVal(MaskReg, MRI);
     // TODO: Implement arbitrary cases
     if (!MaskVal || !isShiftedMask_64(*MaskVal))
       return false;
@@ -4017,7 +4016,7 @@ bool AArch64InstructionSelector::selectExtractElt(
   }
 
   // Find the index to extract from.
-  auto VRegAndVal = getConstantVRegValWithLookThrough(LaneIdxOp.getReg(), MRI);
+  auto VRegAndVal = getIConstantVRegValWithLookThrough(LaneIdxOp.getReg(), MRI);
   if (!VRegAndVal)
     return false;
   unsigned LaneIdx = VRegAndVal->Value.getSExtValue();
@@ -4408,7 +4407,7 @@ AArch64InstructionSelector::emitTST(MachineOperand &LHS, MachineOperand &RHS,
                                    {AArch64::ANDSXrr, AArch64::ANDSWrr}};
   // ANDS needs a logical immediate for its immediate form. Check if we can
   // fold one in.
-  if (auto ValAndVReg = getConstantVRegValWithLookThrough(RHS.getReg(), MRI)) {
+  if (auto ValAndVReg = getIConstantVRegValWithLookThrough(RHS.getReg(), MRI)) {
     int64_t Imm = ValAndVReg->Value.getSExtValue();
 
     if (AArch64_AM::isLogicalImmediate(Imm, RegSize)) {
@@ -4753,7 +4752,7 @@ MachineInstr *AArch64InstructionSelector::tryFoldIntegerCompare(
   if (!CmpInst::isUnsigned(P) && LHSDef &&
       LHSDef->getOpcode() == TargetOpcode::G_AND) {
     // Make sure that the RHS is 0.
-    auto ValAndVReg = getConstantVRegValWithLookThrough(RHS.getReg(), MRI);
+    auto ValAndVReg = getIConstantVRegValWithLookThrough(RHS.getReg(), MRI);
     if (!ValAndVReg || ValAndVReg->Value != 0)
       return nullptr;
 
@@ -4955,7 +4954,7 @@ bool AArch64InstructionSelector::selectInsertElt(MachineInstr &I,
   // Find the definition of the index. Bail out if it's not defined by a
   // G_CONSTANT.
   Register IdxReg = I.getOperand(3).getReg();
-  auto VRegAndVal = getConstantVRegValWithLookThrough(IdxReg, MRI);
+  auto VRegAndVal = getIConstantVRegValWithLookThrough(IdxReg, MRI);
   if (!VRegAndVal)
     return false;
   unsigned LaneIdx = VRegAndVal->Value.getSExtValue();
@@ -5653,7 +5652,7 @@ AArch64InstructionSelector::selectExtendedSHL(
   // constant is the RHS.
   Register OffsetReg = OffsetInst->getOperand(1).getReg();
   Register ConstantReg = OffsetInst->getOperand(2).getReg();
-  auto ValAndVReg = getConstantVRegValWithLookThrough(ConstantReg, MRI);
+  auto ValAndVReg = getIConstantVRegValWithLookThrough(ConstantReg, MRI);
   if (!ValAndVReg) {
     // We didn't get a constant on the RHS. If the opcode is a shift, then
     // we're done.
@@ -5662,7 +5661,7 @@ AArch64InstructionSelector::selectExtendedSHL(
 
     // If we have a G_MUL, we can use either register. Try looking at the RHS.
     std::swap(OffsetReg, ConstantReg);
-    ValAndVReg = getConstantVRegValWithLookThrough(ConstantReg, MRI);
+    ValAndVReg = getIConstantVRegValWithLookThrough(ConstantReg, MRI);
     if (!ValAndVReg)
       return None;
   }
@@ -5830,7 +5829,7 @@ AArch64InstructionSelector::selectAddrModeXRO(MachineOperand &Root,
   // mov x0, wide
   // ldr x2, [base, x0]
   auto ValAndVReg =
-      getConstantVRegValWithLookThrough(PtrAdd->getOperand(2).getReg(), MRI);
+      getIConstantVRegValWithLookThrough(PtrAdd->getOperand(2).getReg(), MRI);
   if (ValAndVReg) {
     unsigned Scale = Log2_32(SizeInBytes);
     int64_t ImmOff = ValAndVReg->Value.getSExtValue();
@@ -6295,7 +6294,7 @@ void AArch64InstructionSelector::renderTruncImm(MachineInstrBuilder &MIB,
   assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
          "Expected G_CONSTANT");
   Optional<int64_t> CstVal =
-      getConstantVRegSExtVal(MI.getOperand(0).getReg(), MRI);
+      getIConstantVRegSExtVal(MI.getOperand(0).getReg(), MRI);
   assert(CstVal && "Expected constant value");
   MIB.addImm(CstVal.getValue());
 }
