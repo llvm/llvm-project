@@ -58,4 +58,4 @@ class MachCoreTestCase(TestBase):
 
         # Verify that the correct thread is selected
         thread = process.GetSelectedThread()
-        self.assertEqual(thread.GetThreadID(), 0x333333333)
+        self.assertEqual(thread.GetThreadID(), 0x111111111)

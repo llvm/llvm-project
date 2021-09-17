@@ -792,6 +792,21 @@ static Optional<Instruction *> instCombineSVETBL(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, VectorSplat);
 }
 
+static Optional<Instruction *> instCombineSVEZip(InstCombiner &IC,
+                                                 IntrinsicInst &II) {
+  // zip1(uzp1(A, B), uzp2(A, B)) --> A
+  // zip2(uzp1(A, B), uzp2(A, B)) --> B
+  Value *A, *B;
+  if (match(II.getArgOperand(0),
+            m_Intrinsic<Intrinsic::aarch64_sve_uzp1>(m_Value(A), m_Value(B))) &&
+      match(II.getArgOperand(1), m_Intrinsic<Intrinsic::aarch64_sve_uzp2>(
+                                     m_Specific(A), m_Specific(B))))
+    return IC.replaceInstUsesWith(
+        II, (II.getIntrinsicID() == Intrinsic::aarch64_sve_zip1 ? A : B));
+
+  return None;
+}
+
 Optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -835,6 +850,9 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_sunpkhi:
   case Intrinsic::aarch64_sve_sunpklo:
     return instCombineSVEUnpack(IC, II);
+  case Intrinsic::aarch64_sve_zip1:
+  case Intrinsic::aarch64_sve_zip2:
+    return instCombineSVEZip(IC, II);
   }
 
   return None;
