@@ -1377,23 +1377,25 @@ static void readConfigs(opt::InputArgList &args) {
       error(arg->getSpelling() + ": " + toString(pat.takeError()));
   }
 
-  // When producing an executable, --dynamic-list specifies non-local defined
-  // symbols which are required to be exported. When producing a shared object,
-  // symbols not specified by --dynamic-list are non-preemptible.
+  // For -no-pie and -pie, --export-dynamic-symbol specifies defined symbols
+  // which should be exported. For -shared, references to matched non-local
+  // STV_DEFAULT symbols are not bound to definitions within the shared object,
+  // even if other options express a symbolic intention: -Bsymbolic,
+  // -Bsymbolic-functions (if STT_FUNC), --dynamic-list.
+  for (auto *arg : args.filtered(OPT_export_dynamic_symbol))
+    config->dynamicList.push_back(
+        {arg->getValue(), /*isExternCpp=*/false,
+         /*hasWildcard=*/hasWildcard(arg->getValue())});
+
+  // --export-dynamic-symbol-list specifies a list of --export-dynamic-symbol
+  // patterns. --dynamic-list is --export-dynamic-symbol-list plus -Bsymbolic
+  // like semantics.
   config->symbolic =
       config->bsymbolic == BsymbolicKind::All || args.hasArg(OPT_dynamic_list);
   for (auto *arg :
        args.filtered(OPT_dynamic_list, OPT_export_dynamic_symbol_list))
     if (Optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
       readDynamicList(*buffer);
-
-  // --export-dynamic-symbol specifies additional --dynamic-list symbols if any
-  // other option expresses a symbolic intention: -no-pie, -pie, -Bsymbolic,
-  // -Bsymbolic-functions (if STT_FUNC), --dynamic-list.
-  for (auto *arg : args.filtered(OPT_export_dynamic_symbol))
-    config->dynamicList.push_back(
-        {arg->getValue(), /*isExternCpp=*/false,
-         /*hasWildcard=*/hasWildcard(arg->getValue())});
 
   for (auto *arg : args.filtered(OPT_version_script))
     if (Optional<std::string> path = searchScript(arg->getValue())) {
