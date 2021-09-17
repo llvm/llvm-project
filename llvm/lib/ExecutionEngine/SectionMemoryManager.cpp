@@ -13,6 +13,7 @@
 
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/Config/config.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Process.h"
 
@@ -264,10 +265,10 @@ public:
   }
 };
 
-DefaultMMapper DefaultMMapperInstance;
+ManagedStatic<DefaultMMapper> DefaultMMapperInstance;
 } // namespace
 
 SectionMemoryManager::SectionMemoryManager(MemoryMapper *MM)
-    : MMapper(MM ? *MM : DefaultMMapperInstance) {}
+    : MMapper(MM ? *MM : *DefaultMMapperInstance) {}
 
 } // namespace llvm
