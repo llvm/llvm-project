@@ -212,10 +212,10 @@ AMDGPUPropagateAttributes::findFunction(const FnProperties &PropsNeeded,
 
 bool AMDGPUPropagateAttributes::process(Module &M) {
   for (auto &F : M.functions())
-    if (AMDGPU::isEntryFunctionCC(F.getCallingConv()))
+    if (AMDGPU::isKernel(F.getCallingConv()))
       Roots.insert(&F);
 
-  return process();
+  return Roots.empty() ? false : process();
 }
 
 bool AMDGPUPropagateAttributes::process(Function &F) {
@@ -228,8 +228,7 @@ bool AMDGPUPropagateAttributes::process() {
   SmallSet<Function *, 32> NewRoots;
   SmallSet<Function *, 32> Replaced;
 
-  if (Roots.empty())
-    return false;
+  assert(!Roots.empty());
   Module &M = *(*Roots.begin())->getParent();
 
   do {
@@ -383,7 +382,7 @@ bool AMDGPUPropagateAttributesEarly::runOnFunction(Function &F) {
     TM = &TPC->getTM<TargetMachine>();
   }
 
-  if (!AMDGPU::isEntryFunctionCC(F.getCallingConv()))
+  if (!AMDGPU::isKernel(F.getCallingConv()))
     return false;
 
   return AMDGPUPropagateAttributes(TM, false).process(F);
