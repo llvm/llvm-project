@@ -81,6 +81,10 @@ static cl::opt<unsigned>
                           cl::desc("Average loop iteration count cost"),
                           cl::init(10));
 
+static cl::opt<bool> SpecializeOnAddresses(
+    "func-specialization-on-address", cl::init(false), cl::Hidden,
+    cl::desc("Enable function specialization on the address of global values"));
+
 // TODO: This needs checking to see the impact on compile-times, which is why
 // this is off by default for now.
 static cl::opt<bool> EnableSpecializationForLiteralConstant(
@@ -672,9 +676,16 @@ private:
 
       auto *V = CS.getArgOperand(A->getArgNo());
       // TrackValueOfGlobalVariable only tracks scalar global variables.
-      if (auto *GV = dyn_cast<GlobalVariable>(V))
+      if (auto *GV = dyn_cast<GlobalVariable>(V)) {
+        // Check if we want to specialize on the address of non-constant
+        // global values.
+        if (!GV->isConstant())
+          if (!SpecializeOnAddresses)
+            return false;
+
         if (!GV->getValueType()->isSingleValueType())
           return false;
+      }
 
       if (isa<Constant>(V) && (Solver.getLatticeValueFor(V).isConstant() ||
                                EnableSpecializationForLiteralConstant))
