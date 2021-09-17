@@ -457,7 +457,7 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
       if (!dom.properlyDominates(transferRead.getOperation(), transferWrite))
         return WalkResult::advance();
       for (auto &use : transferRead.source().getUses()) {
-        if (!dom.properlyDominates(loop, use.getOwner()))
+        if (!loop->isAncestor(use.getOwner()))
           continue;
         if (use.getOwner() == transferRead.getOperation() ||
             use.getOwner() == transferWrite.getOperation())
