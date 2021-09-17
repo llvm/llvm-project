@@ -323,7 +323,7 @@ bool X86PreTileConfig::runOnMachineFunction(MachineFunction &MF) {
       ST.getTileConfigSize(), ST.getTileConfigAlignment(), false);
 
   // Try to insert for the tile config live in points.
-  for (auto I : CfgNeedInsert) {
+  for (const auto &I : CfgNeedInsert) {
     SmallSet<MIRef, 8> InsertPoints;
     SmallVector<MIRef, 8> WorkList({I});
     while (!WorkList.empty()) {
