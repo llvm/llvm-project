@@ -576,30 +576,6 @@ public:
     return HSA_STATUS_SUCCESS;
   }
 
-  hsa_status_t addHostMemoryPool(hsa_amd_memory_pool_t MemoryPool,
-                                 int DeviceId) {
-    uint32_t GlobalFlags = 0;
-    hsa_status_t Err = hsa_amd_memory_pool_get_info(
-        MemoryPool, HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS, &GlobalFlags);
-
-    if (Err != HSA_STATUS_SUCCESS) {
-      return Err;
-    }
-
-    uint32_t Size = 0;
-    Err = hsa_amd_memory_pool_get_info(MemoryPool,
-                                       HSA_AMD_MEMORY_POOL_INFO_SIZE, &Size);
-    if (Err != HSA_STATUS_SUCCESS) {
-      return Err;
-    }
-
-    if (GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED &&
-        Size > 0) {
-      HostFineGrainedMemoryPool = MemoryPool;
-    }
-    return HSA_STATUS_SUCCESS;
-  }
-
   hsa_status_t setupDevicePools(const std::vector<hsa_agent_t> &Agents) {
     for (int DeviceId = 0; DeviceId < Agents.size(); DeviceId++) {
       hsa_status_t Err = hsa::amd_agent_iterate_memory_pools(
@@ -646,6 +622,8 @@ public:
     // We need two fine-grained pools.
     //  1. One with kernarg flag set for storing kernel arguments
     //  2. Second for host allocations
+    bool FineGrainedMemoryPoolSet = false;
+    bool KernArgPoolSet = false;
     for (const auto &MemoryPool : HostPools) {
       hsa_status_t Err = HSA_STATUS_SUCCESS;
       uint32_t GlobalFlags = 0;
@@ -666,14 +644,19 @@ public:
 
       if ((GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED) &&
           Size > 0) {
-        if (GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT)
+        if (GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT) {
           KernArgPool = MemoryPool;
-        else
-          HostFineGrainedMemoryPool = MemoryPool;
+          KernArgPoolSet = true;
+        }
+        HostFineGrainedMemoryPool = MemoryPool;
+        FineGrainedMemoryPoolSet = true;
       }
     }
 
-    return HSA_STATUS_SUCCESS;
+    if (FineGrainedMemoryPoolSet && KernArgPoolSet)
+      return HSA_STATUS_SUCCESS;
+
+    return HSA_STATUS_ERROR;
   }
 
   hsa_amd_memory_pool_t getDeviceMemoryPool(int DeviceId) {
