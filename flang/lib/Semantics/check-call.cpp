@@ -48,8 +48,10 @@ static void CheckImplicitInterfaceArg(
   if (const auto *expr{arg.UnwrapExpr()}) {
     if (IsBOZLiteral(*expr)) {
       messages.Say("BOZ argument requires an explicit interface"_err_en_US);
-    }
-    if (auto named{evaluate::ExtractNamedEntity(*expr)}) {
+    } else if (evaluate::IsNullPointer(*expr)) {
+      messages.Say(
+          "Null pointer argument requires an explicit interface"_err_en_US);
+    } else if (auto named{evaluate::ExtractNamedEntity(*expr)}) {
       const Symbol &symbol{named->GetLastSymbol()};
       if (symbol.Corank() > 0) {
         messages.Say(
@@ -499,6 +501,16 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       }
     }
   }
+
+  // NULL(MOLD=) checking for non-intrinsic procedures
+  bool dummyIsOptional{
+      dummy.attrs.test(characteristics::DummyDataObject::Attr::Optional)};
+  bool actualIsNull{evaluate::IsNullPointer(actual)};
+  if (!intrinsic && !dummyIsPointer && !dummyIsOptional && actualIsNull) {
+    messages.Say(
+        "Actual argument associated with %s may not be null pointer %s"_err_en_US,
+        dummyName, actual.AsFortran());
+  }
 }
 
 static void CheckProcedureArg(evaluate::ActualArgument &arg,
@@ -641,8 +653,10 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
               } else if (object.type.type().IsTypelessIntrinsicArgument() &&
                   evaluate::IsNullPointer(*expr)) {
                 // ok, ASSOCIATED(NULL())
-              } else if (object.attrs.test(
-                             characteristics::DummyDataObject::Attr::Pointer) &&
+              } else if ((object.attrs.test(characteristics::DummyDataObject::
+                                  Attr::Pointer) ||
+                             object.attrs.test(characteristics::
+                                     DummyDataObject::Attr::Optional)) &&
                   evaluate::IsNullPointer(*expr)) {
                 // ok, FOO(NULL())
               } else {
