@@ -174,8 +174,7 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
     if (!lhsType_->IsCompatibleWith(context_.messages(), *frTypeAndShape,
             "pointer", "function result", false /*elemental*/,
             evaluate::CheckConformanceFlags::BothDeferredShape)) {
-      msg = "%s is associated with the result of a reference to function '%s'"
-            " whose pointer result has an incompatible type or shape"_err_en_US;
+      return false; // IsCompatibleWith() emitted message
     }
   }
   if (msg) {
