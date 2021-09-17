@@ -166,4 +166,29 @@ TEST(MatrixTest, insertRows) {
       EXPECT_EQ(mat(row, col), row == 5 ? 0 : 10 * row + col);
 }
 
+TEST(MatrixTest, resize) {
+  Matrix mat(5, 5);
+  EXPECT_EQ(mat.getNumRows(), 5u);
+  EXPECT_EQ(mat.getNumColumns(), 5u);
+  for (unsigned row = 0; row < 5; ++row)
+    for (unsigned col = 0; col < 5; ++col)
+      mat(row, col) = 10 * row + col;
+
+  mat.resize(3, 3);
+  ASSERT_TRUE(mat.hasConsistentState());
+  EXPECT_EQ(mat.getNumRows(), 3u);
+  EXPECT_EQ(mat.getNumColumns(), 3u);
+  for (unsigned row = 0; row < 3; ++row)
+    for (unsigned col = 0; col < 3; ++col)
+      EXPECT_EQ(mat(row, col), int(10 * row + col));
+
+  mat.resize(7, 7);
+  ASSERT_TRUE(mat.hasConsistentState());
+  EXPECT_EQ(mat.getNumRows(), 7u);
+  EXPECT_EQ(mat.getNumColumns(), 7u);
+  for (unsigned row = 0; row < 7; ++row)
+    for (unsigned col = 0; col < 7; ++col)
+      EXPECT_EQ(mat(row, col), row >= 3 || col >= 3 ? 0 : int(10 * row + col));
+}
+
 } // namespace mlir

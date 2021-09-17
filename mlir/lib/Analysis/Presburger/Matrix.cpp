@@ -65,6 +65,18 @@ unsigned Matrix::appendExtraRow() {
   return nRows - 1;
 }
 
+void Matrix::resizeHorizontally(unsigned newNColumns) {
+  if (newNColumns < nColumns)
+    removeColumns(newNColumns, nColumns - newNColumns);
+  if (newNColumns > nColumns)
+    insertColumns(nColumns, newNColumns - nColumns);
+}
+
+void Matrix::resize(unsigned newNRows, unsigned newNColumns) {
+  resizeHorizontally(newNColumns);
+  resizeVertically(newNRows);
+}
+
 void Matrix::resizeVertically(unsigned newNRows) {
   nRows = newNRows;
   data.resize(nRows * nReservedColumns);
