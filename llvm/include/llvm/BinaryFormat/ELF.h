@@ -503,6 +503,17 @@ enum {
 #include "ELFRelocs/AVR.def"
 };
 
+// M88k Specific e_flags
+enum : unsigned {
+  EF_88K_NABI = 0x80000000,   // Not ABI compliant
+  EF_88K_M88110 = 0x00000004  // File uses 88110-specific features
+};
+
+// M88k relocations.
+enum {
+#include "ELFRelocs/M88k.def"
+};
+
 // Mips Specific e_flags
 enum : unsigned {
   EF_MIPS_NOREORDER = 0x00000001, // Don't reorder instructions
