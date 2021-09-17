@@ -294,6 +294,10 @@ public:
   void removeEquality(unsigned pos);
   void removeInequality(unsigned pos);
 
+  /// Remove the (in)equalities at positions [start, end).
+  void removeEqualityRange(unsigned start, unsigned end);
+  void removeInequalityRange(unsigned start, unsigned end);
+
   /// Sets the `values.size()` identifiers starting at `po`s to the specified
   /// values and removes them.
   void setAndEliminate(unsigned pos, ArrayRef<int64_t> values);

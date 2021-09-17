@@ -2335,6 +2335,19 @@ void FlatAffineConstraints::removeInequality(unsigned pos) {
   inequalities.removeRow(pos);
 }
 
+void FlatAffineConstraints::removeEqualityRange(unsigned begin, unsigned end) {
+  if (begin >= end)
+    return;
+  equalities.removeRows(begin, end - begin);
+}
+
+void FlatAffineConstraints::removeInequalityRange(unsigned begin,
+                                                  unsigned end) {
+  if (begin >= end)
+    return;
+  inequalities.removeRows(begin, end - begin);
+}
+
 /// Finds an equality that equates the specified identifier to a constant.
 /// Returns the position of the equality row. If 'symbolic' is set to true,
 /// symbols are also treated like a constant, i.e., an affine function of the

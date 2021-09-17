@@ -17,6 +17,8 @@
 
 namespace mlir {
 
+using testing::ElementsAre;
+
 enum class TestFunction { Sample, Empty };
 
 /// If fn is TestFunction::Sample (default):
@@ -461,7 +463,7 @@ TEST(FlatAffineConstraintsTest, removeRedundantConstraintsTest) {
   // The second inequality is redundant and should have been removed. The
   // remaining inequality should be the first one.
   EXPECT_EQ(fac2.getNumInequalities(), 1u);
-  EXPECT_THAT(fac2.getInequality(0), testing::ElementsAre(1, 0, -3));
+  EXPECT_THAT(fac2.getInequality(0), ElementsAre(1, 0, -3));
   EXPECT_EQ(fac2.getNumEqualities(), 1u);
 
   FlatAffineConstraints fac3 =
@@ -573,6 +575,44 @@ TEST(FlatAffineConstraintsTest, addConstantLowerBound) {
   EXPECT_EQ(fac.atIneq(1, 0), 1);
   EXPECT_EQ(fac.atIneq(1, 1), 2);
   EXPECT_EQ(fac.atIneq(1, 2), 2);
+}
+
+TEST(FlatAffineConstraintsTest, removeInequality) {
+  FlatAffineConstraints fac =
+      makeFACFromConstraints(1, {{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}}, {});
+
+  fac.removeInequalityRange(0, 0);
+  EXPECT_EQ(fac.getNumInequalities(), 5u);
+
+  fac.removeInequalityRange(1, 3);
+  EXPECT_EQ(fac.getNumInequalities(), 3u);
+  EXPECT_THAT(fac.getInequality(0), ElementsAre(0, 0));
+  EXPECT_THAT(fac.getInequality(1), ElementsAre(3, 3));
+  EXPECT_THAT(fac.getInequality(2), ElementsAre(4, 4));
+
+  fac.removeInequality(1);
+  EXPECT_EQ(fac.getNumInequalities(), 2u);
+  EXPECT_THAT(fac.getInequality(0), ElementsAre(0, 0));
+  EXPECT_THAT(fac.getInequality(1), ElementsAre(4, 4));
+}
+
+TEST(FlatAffineConstraintsTest, removeEquality) {
+  FlatAffineConstraints fac =
+      makeFACFromConstraints(1, {}, {{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}});
+
+  fac.removeEqualityRange(0, 0);
+  EXPECT_EQ(fac.getNumEqualities(), 5u);
+
+  fac.removeEqualityRange(1, 3);
+  EXPECT_EQ(fac.getNumEqualities(), 3u);
+  EXPECT_THAT(fac.getEquality(0), ElementsAre(0, 0));
+  EXPECT_THAT(fac.getEquality(1), ElementsAre(3, 3));
+  EXPECT_THAT(fac.getEquality(2), ElementsAre(4, 4));
+
+  fac.removeEquality(1);
+  EXPECT_EQ(fac.getNumEqualities(), 2u);
+  EXPECT_THAT(fac.getEquality(0), ElementsAre(0, 0));
+  EXPECT_THAT(fac.getEquality(1), ElementsAre(4, 4));
 }
 
 TEST(FlatAffineConstraintsTest, clearConstraints) {
