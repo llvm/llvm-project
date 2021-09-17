@@ -497,24 +497,14 @@ bool Platform::GetOSBuildString(std::string &s) {
   s.clear();
 
   if (IsHost())
-#if !defined(__linux__)
     return HostInfo::GetOSBuildString(s);
-#else
-    return false;
-#endif
-  else
-    return GetRemoteOSBuildString(s);
+  return GetRemoteOSBuildString(s);
 }
 
 bool Platform::GetOSKernelDescription(std::string &s) {
   if (IsHost())
-#if !defined(__linux__)
     return HostInfo::GetOSKernelDescription(s);
-#else
-    return false;
-#endif
-  else
-    return GetRemoteOSKernelDescription(s);
+  return GetRemoteOSKernelDescription(s);
 }
 
 void Platform::AddClangModuleCompilationOptions(
