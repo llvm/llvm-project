@@ -3,11 +3,11 @@
 ; not replaced. The whole call instruction can be removed by instruction
 ; reduction instead.
 
-; RUN: llvm-reduce --test FileCheck --test-arg --check-prefixes=ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+; RUN: llvm-reduce --delta-passes=functions,instructions --test FileCheck --test-arg --check-prefixes=ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
 ; RUN: FileCheck -implicit-check-not=uninteresting --check-prefixes=ALL,CHECK-FINAL %s < %t
 
 ; Check that the call is removed by instruction reduction passes
-; RUN: llvm-reduce --test FileCheck --test-arg --check-prefix=ALL --test-arg %s --test-arg --input-file %s -o %t
+; RUN: llvm-reduce --delta-passes=functions,instructions --test FileCheck --test-arg --check-prefix=ALL --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: FileCheck -implicit-check-not=uninteresting --check-prefixes=ALL,CHECK-NOCALL %s < %t
 
 

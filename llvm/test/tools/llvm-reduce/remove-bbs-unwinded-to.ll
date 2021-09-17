@@ -1,4 +1,4 @@
-; RUN: llvm-reduce --test FileCheck --test-arg --check-prefixes=CHECK-ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+; RUN: llvm-reduce --delta-passes=basic-blocks --test FileCheck --test-arg --check-prefixes=CHECK-ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: cat %t | FileCheck --check-prefixes=CHECK-ALL,CHECK-FINAL %s
 
 declare i32 @maybe_throwing_callee()

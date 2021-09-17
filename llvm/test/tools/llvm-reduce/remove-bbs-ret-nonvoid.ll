@@ -1,14 +1,14 @@
 ; Test that llvm-reduce inserts valid return instructions for functions with
 ; on-void return types.
 ;
-; RUN: llvm-reduce --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+; RUN: llvm-reduce --delta-passes=basic-blocks --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: cat %t | FileCheck %s
 
 ; CHECK-INTERESTINGNESS: interesting:
 ; CHECK-INTERESTINGNESS: interesting2:
 
 define i32 @main(i1 %c) {
-; CHECK-LABEL: define i32 @main() {
+; CHECK-LABEL: define i32 @main(i1 %c) {
 ; CHECK-LABEL: interesting:
 ; CHECK-NEXT:    br label %interesting2
 
