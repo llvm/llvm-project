@@ -1,4 +1,4 @@
-//===-- hwasan_setjmp.S --------------------------------------------------------===//
+//===-- hwasan_setjmp_aarch64.S -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -29,7 +29,7 @@
 // Hence we have to write this function in assembly.
 
 .section .text
-.file "hwasan_setjmp.S"
+.file "hwasan_setjmp_aarch64.S"
 
 .global __interceptor_setjmp
 ASM_TYPE_FUNCTION(__interceptor_setjmp)

@@ -187,13 +187,17 @@ void HwasanTagMismatch(uptr addr, uptr access_info, uptr *registers_frame,
     RunFreeHooks(ptr);            \
   } while (false)
 
-#if HWASAN_WITH_INTERCEPTORS && defined(__aarch64__)
+#if HWASAN_WITH_INTERCEPTORS
 // For both bionic and glibc __sigset_t is an unsigned long.
 typedef unsigned long __hw_sigset_t;
 // Setjmp and longjmp implementations are platform specific, and hence the
-// interception code is platform specific too.  As yet we've only implemented
-// the interception for AArch64.
-typedef unsigned long long __hw_register_buf[22];
+// interception code is platform specific too.
+#  if defined(__aarch64__)
+constexpr size_t kHwRegisterBufSize = 22;
+#  elif defined(__x86_64__)
+constexpr size_t kHwRegisterBufSize = 8;
+#  endif
+typedef unsigned long long __hw_register_buf[kHwRegisterBufSize];
 struct __hw_jmp_buf_struct {
   // NOTE: The machine-dependent definition of `__sigsetjmp'
   // assume that a `__hw_jmp_buf' begins with a `__hw_register_buf' and that
@@ -210,7 +214,7 @@ struct __hw_jmp_buf_struct {
 typedef struct __hw_jmp_buf_struct __hw_jmp_buf[1];
 typedef struct __hw_jmp_buf_struct __hw_sigjmp_buf[1];
 constexpr unsigned kHwJmpBufMagic = 0x248ACE77;
-#endif // HWASAN_WITH_INTERCEPTORS && __aarch64__
+#endif  // HWASAN_WITH_INTERCEPTORS
 
 #define ENSURE_HWASAN_INITED()      \
   do {                              \

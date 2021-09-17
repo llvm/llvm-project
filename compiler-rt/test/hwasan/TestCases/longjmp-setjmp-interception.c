@@ -1,8 +1,7 @@
 // RUN: %clang_hwasan -g %s -o %t
 // RUN: not %run %t 0 2>&1 | FileCheck %s
 // RUN: not %run %t -33 2>&1 | FileCheck %s
-// Only implemented for interceptor ABI on AArch64.
-// REQUIRES: aarch64-target-arch
+// REQUIRES: pointer-tagging
 
 #include <assert.h>
 #include <setjmp.h>
