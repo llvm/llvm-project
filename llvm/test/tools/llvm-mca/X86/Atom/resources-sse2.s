@@ -597,7 +597,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                        pslld	$1, %xmm2
 # CHECK-NEXT:  1      2     1.00                        pslld	%xmm0, %xmm2
 # CHECK-NEXT:  1      3     2.00    *                   pslld	(%rax), %xmm2
-# CHECK-NEXT:  1      1     0.50                        pslldq	$1, %xmm2
+# CHECK-NEXT:  1      1     1.00                        pslldq	$1, %xmm2
 # CHECK-NEXT:  1      1     1.00                        psllq	$1, %xmm2
 # CHECK-NEXT:  1      2     1.00                        psllq	%xmm0, %xmm2
 # CHECK-NEXT:  1      3     2.00    *                   psllq	(%rax), %xmm2
@@ -613,7 +613,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                        psrld	$1, %xmm2
 # CHECK-NEXT:  1      2     1.00                        psrld	%xmm0, %xmm2
 # CHECK-NEXT:  1      3     2.00    *                   psrld	(%rax), %xmm2
-# CHECK-NEXT:  1      1     0.50                        psrldq	$1, %xmm2
+# CHECK-NEXT:  1      1     1.00                        psrldq	$1, %xmm2
 # CHECK-NEXT:  1      1     1.00                        psrlq	$1, %xmm2
 # CHECK-NEXT:  1      2     1.00                        psrlq	%xmm0, %xmm2
 # CHECK-NEXT:  1      3     2.00    *                   psrlq	(%rax), %xmm2
@@ -681,7 +681,7 @@ xorpd       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]
-# CHECK-NEXT: 912.00 774.00
+# CHECK-NEXT: 913.00 773.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    Instructions:
@@ -875,7 +875,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT: 1.00    -     pslld	$1, %xmm2
 # CHECK-NEXT: 1.00   1.00   pslld	%xmm0, %xmm2
 # CHECK-NEXT: 2.00   2.00   pslld	(%rax), %xmm2
-# CHECK-NEXT: 0.50   0.50   pslldq	$1, %xmm2
+# CHECK-NEXT: 1.00    -     pslldq	$1, %xmm2
 # CHECK-NEXT: 1.00    -     psllq	$1, %xmm2
 # CHECK-NEXT: 1.00   1.00   psllq	%xmm0, %xmm2
 # CHECK-NEXT: 2.00   2.00   psllq	(%rax), %xmm2
@@ -891,7 +891,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT: 1.00    -     psrld	$1, %xmm2
 # CHECK-NEXT: 1.00   1.00   psrld	%xmm0, %xmm2
 # CHECK-NEXT: 2.00   2.00   psrld	(%rax), %xmm2
-# CHECK-NEXT: 0.50   0.50   psrldq	$1, %xmm2
+# CHECK-NEXT: 1.00    -     psrldq	$1, %xmm2
 # CHECK-NEXT: 1.00    -     psrlq	$1, %xmm2
 # CHECK-NEXT: 1.00   1.00   psrlq	%xmm0, %xmm2
 # CHECK-NEXT: 2.00   2.00   psrlq	(%rax), %xmm2
