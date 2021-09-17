@@ -96,8 +96,8 @@ public:
     ~lock_guard() _LIBCPP_THREAD_SAFETY_ANNOTATION(release_capability()) {__m_.unlock();}
 
 private:
-    lock_guard(lock_guard const&) _LIBCPP_EQUAL_DELETE;
-    lock_guard& operator=(lock_guard const&) _LIBCPP_EQUAL_DELETE;
+    lock_guard(lock_guard const&) = delete;
+    lock_guard& operator=(lock_guard const&) = delete;
 };
 
 template <class _Mutex>
