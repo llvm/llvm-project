@@ -156,8 +156,8 @@ psignw      (%rax), %xmm2
 # CHECK-NEXT:  1      5     2.00    *                   pmulhrsw	(%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                        pshufb	%mm0, %mm2
 # CHECK-NEXT:  1      1     1.00    *                   pshufb	(%rax), %mm2
-# CHECK-NEXT:  1      4     3.00                        pshufb	%xmm0, %xmm2
-# CHECK-NEXT:  1      5     4.00    *                   pshufb	(%rax), %xmm2
+# CHECK-NEXT:  4      4     3.00                        pshufb	%xmm0, %xmm2
+# CHECK-NEXT:  5      5     4.00    *                   pshufb	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        psignb	%mm0, %mm2
 # CHECK-NEXT:  1      1     1.00    *                   psignb	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        psignb	%xmm0, %xmm2

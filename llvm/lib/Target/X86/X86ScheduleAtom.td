@@ -424,7 +424,7 @@ defm : AtomWriteResPair<WriteShuffleX,      [AtomPort0],  [AtomPort0], 1, 1>;
 defm : X86WriteResPairUnsupported<WriteShuffleY>;
 defm : X86WriteResPairUnsupported<WriteShuffleZ>;
 defm : AtomWriteResPair<WriteVarShuffle,    [AtomPort0],  [AtomPort0], 1, 1>;
-defm : AtomWriteResPair<WriteVarShuffleX,  [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 4, 5, [3,3], [4,4]>;
+defm : AtomWriteResPair<WriteVarShuffleX,  [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 4, 5, [3,3], [4,4], 4, 5>;
 defm : X86WriteResPairUnsupported<WriteVarShuffleY>;
 defm : X86WriteResPairUnsupported<WriteVarShuffleZ>;
 defm : X86WriteResPairUnsupported<WriteBlend>;
@@ -558,10 +558,7 @@ def AtomWrite01_1 : SchedWriteRes<[AtomPort01]> {
 def : InstRW<[AtomWrite01_1], (instrs FDECSTP, FFREE, FFREEP, FINCSTP, WAIT,
                                       LFENCE,
                                       STOSB, STOSL, STOSQ, STOSW,
-                                      MOVSSrr, MOVSSrr_REV,
-                                      PSLLDQri, PSRLDQri)>;
-def : InstRW<[AtomWrite01_1], (instregex "MMX_PACK(SSDW|SSWB|USWB)irr",
-                                         "MMX_PUNPCKH(BW|DQ|WD)irr")>;
+                                      MOVSSrr, MOVSSrr_REV)>;
 
 def AtomWrite01_2 : SchedWriteRes<[AtomPort01]> {
   let Latency = 2;
