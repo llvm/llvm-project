@@ -260,7 +260,15 @@ auto GetLowerBoundHelper::operator()(const Symbol &symbol0) -> Result {
     }
   } else if (const auto *assoc{
                  symbol.detailsIf<semantics::AssocEntityDetails>()}) {
-    return (*this)(assoc->expr());
+    if (assoc->rank()) { // SELECT RANK case
+      const Symbol &resolved{ResolveAssociations(symbol)};
+      if (IsDescriptor(resolved) && dimension_ < *assoc->rank()) {
+        return ExtentExpr{DescriptorInquiry{NamedEntity{symbol0},
+            DescriptorInquiry::Field::LowerBound, dimension_}};
+      }
+    } else {
+      return (*this)(assoc->expr());
+    }
   }
   return Default();
 }
@@ -338,7 +346,20 @@ static MaybeExtentExpr GetNonNegativeExtent(
 
 MaybeExtentExpr GetExtent(const NamedEntity &base, int dimension) {
   CHECK(dimension >= 0);
-  const Symbol &symbol{ResolveAssociations(base.GetLastSymbol())};
+  const Symbol &last{base.GetLastSymbol()};
+  const Symbol &symbol{ResolveAssociations(last)};
+  if (const auto *assoc{last.detailsIf<semantics::AssocEntityDetails>()}) {
+    if (assoc->rank()) { // SELECT RANK case
+      if (semantics::IsDescriptor(symbol) && dimension < *assoc->rank()) {
+        return ExtentExpr{DescriptorInquiry{
+            NamedEntity{base}, DescriptorInquiry::Field::Extent, dimension}};
+      }
+    } else if (auto shape{GetShape(assoc->expr())}) {
+      if (dimension < static_cast<int>(shape->size())) {
+        return std::move(shape->at(dimension));
+      }
+    }
+  }
   if (const auto *details{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
     if (IsImpliedShape(symbol) && details->init()) {
       if (auto shape{GetShape(symbol)}) {
@@ -367,13 +388,6 @@ MaybeExtentExpr GetExtent(const NamedEntity &base, int dimension) {
                 DescriptorInquiry::Field::Extent, dimension}};
           }
         }
-      }
-    }
-  } else if (const auto *assoc{
-                 symbol.detailsIf<semantics::AssocEntityDetails>()}) {
-    if (auto shape{GetShape(assoc->expr())}) {
-      if (dimension < static_cast<int>(shape->size())) {
-        return std::move(shape->at(dimension));
       }
     }
   }
