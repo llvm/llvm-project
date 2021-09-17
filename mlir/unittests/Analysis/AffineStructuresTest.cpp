@@ -711,4 +711,22 @@ TEST(FlatAffineConstraintsTest, computeLocalReprRecursive) {
   checkDivisionRepresentation(fac, divisions, denoms);
 }
 
+TEST(FlatAffineConstraintsTest, removeIdRange) {
+  FlatAffineConstraints fac(3, 2, 1);
+
+  fac.addInequality({10, 11, 12, 20, 21, 30, 40});
+  fac.removeId(FlatAffineConstraints::IdKind::Symbol, 1);
+  EXPECT_THAT(fac.getInequality(0),
+              testing::ElementsAre(10, 11, 12, 20, 30, 40));
+
+  fac.removeIdRange(FlatAffineConstraints::IdKind::Dimension, 0, 2);
+  EXPECT_THAT(fac.getInequality(0), testing::ElementsAre(12, 20, 30, 40));
+
+  fac.removeIdRange(FlatAffineConstraints::IdKind::Local, 1, 1);
+  EXPECT_THAT(fac.getInequality(0), testing::ElementsAre(12, 20, 30, 40));
+
+  fac.removeIdRange(FlatAffineConstraints::IdKind::Local, 0, 1);
+  EXPECT_THAT(fac.getInequality(0), testing::ElementsAre(12, 20, 40));
+}
+
 } // namespace mlir
