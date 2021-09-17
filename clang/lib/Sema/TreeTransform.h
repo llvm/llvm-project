@@ -8506,15 +8506,6 @@ StmtResult TreeTransform<Derived>::TransformOMPExecutableDirective(
 
 template <typename Derived>
 StmtResult
-TreeTransform<Derived>::TransformOMPMetaDirective(OMPMetaDirective *D) {
-  // TODO: Fix This
-  SemaRef.Diag(D->getBeginLoc(), diag::err_omp_instantiation_not_supported)
-      << getOpenMPDirectiveName(D->getDirectiveKind());
-  return StmtError();
-}
-
-template <typename Derived>
-StmtResult
 TreeTransform<Derived>::TransformOMPParallelDirective(OMPParallelDirective *D) {
   DeclarationNameInfo DirName;
   getDerived().getSema().StartOpenMPDSABlock(OMPD_parallel, DirName, nullptr,
