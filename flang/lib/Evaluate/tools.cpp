@@ -50,6 +50,15 @@ Expr<SomeType> Parenthesize(Expr<SomeType> &&expr) {
       std::move(expr.u));
 }
 
+std::optional<DataRef> ExtractDataRef(
+    const ActualArgument &arg, bool intoSubstring) {
+  if (const Expr<SomeType> *expr{arg.UnwrapExpr()}) {
+    return ExtractDataRef(*expr, intoSubstring);
+  } else {
+    return std::nullopt;
+  }
+}
+
 std::optional<DataRef> ExtractSubstringBase(const Substring &substring) {
   return std::visit(
       common::visitors{
@@ -665,6 +674,11 @@ std::optional<Expr<SomeType>> ConvertToType(
 }
 
 bool IsAssumedRank(const Symbol &original) {
+  if (const auto *assoc{original.detailsIf<semantics::AssocEntityDetails>()}) {
+    if (assoc->rank()) {
+      return false; // in SELECT RANK case
+    }
+  }
   const Symbol &symbol{semantics::ResolveAssociations(original)};
   if (const auto *details{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
     return details->IsAssumedRank();

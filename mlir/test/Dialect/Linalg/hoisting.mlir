@@ -39,9 +39,11 @@ func @hoist_vector_transfer_pairs(
 // CHECK:     scf.yield {{.*}} : vector<1xf32>, vector<2xf32>
 // CHECK:   }
 // CHECK:   vector.transfer_write %{{.*}} : vector<2xf32>, memref<?x?xf32>
+// CHECK:   "unrelated_use"(%[[MEMREF0]]) : (memref<?x?xf32>) -> ()
 // CHECK:   scf.yield {{.*}} : vector<1xf32>
 // CHECK: }
 // CHECK: vector.transfer_write %{{.*}} : vector<1xf32>, memref<?x?xf32>
+// CHECK: "unrelated_use"(%[[MEMREF1]]) : (memref<?x?xf32>) -> ()
   scf.for %i = %lb to %ub step %step {
     scf.for %j = %lb to %ub step %step {
       %r0 = vector.transfer_read %memref1[%c0, %c0], %cst: memref<?x?xf32>, vector<1xf32>
@@ -66,7 +68,9 @@ func @hoist_vector_transfer_pairs(
       vector.transfer_write %u5, %memref5[%c0, %c0] : vector<6xf32>, memref<?x?xf32>
       "some_crippling_use"(%memref3) : (memref<?x?xf32>) -> ()
     }
+    "unrelated_use"(%memref0) : (memref<?x?xf32>) -> ()
   }
+  "unrelated_use"(%memref1) : (memref<?x?xf32>) -> ()
   return
 }
 

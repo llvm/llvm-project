@@ -491,7 +491,8 @@ static bool __kmp_check_deps(kmp_int32 gtid, kmp_depnode_t *node,
   // Filter deps in dep_list
   // TODO: Different algorithm for large dep_list ( > 10 ? )
   for (i = 0; i < ndeps; i++) {
-    if (dep_list[i].base_addr != 0 && dep_list[i].base_addr != KMP_SIZE_T_MAX) {
+    if (dep_list[i].base_addr != 0 &&
+        dep_list[i].base_addr != (kmp_intptr_t)KMP_SIZE_T_MAX) {
       KMP_DEBUG_ASSERT(
           dep_list[i].flag == KMP_DEP_IN || dep_list[i].flag == KMP_DEP_OUT ||
           dep_list[i].flag == KMP_DEP_INOUT ||
@@ -514,7 +515,7 @@ static bool __kmp_check_deps(kmp_int32 gtid, kmp_depnode_t *node,
         }
       }
     } else if (dep_list[i].flag == KMP_DEP_ALL ||
-               dep_list[i].base_addr == KMP_SIZE_T_MAX) {
+               dep_list[i].base_addr == (kmp_intptr_t)KMP_SIZE_T_MAX) {
       // omp_all_memory dependence can be marked by compiler by either
       // (addr=0 && flag=0x80) (flag KMP_DEP_ALL), or (addr=-1).
       // omp_all_memory overrides all other dependences if any

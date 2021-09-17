@@ -298,6 +298,9 @@ std::optional<DataRef> ExtractDataRef(const A *p, bool intoSubstring = false) {
     return std::nullopt;
   }
 }
+std::optional<DataRef> ExtractDataRef(
+    const ActualArgument &, bool intoSubstring = false);
+
 std::optional<DataRef> ExtractSubstringBase(const Substring &);
 
 // Predicate: is an expression is an array element reference?
