@@ -217,6 +217,9 @@ void Prescanner::Statement() {
     if (line.kind == LineClassification::Kind::CompilerDirective) {
       SourceFormChange(tokens.ToString());
     }
+    if (inFixedForm_ && line.kind == LineClassification::Kind::Source) {
+      EnforceStupidEndStatementRules(tokens);
+    }
     tokens.CheckBadFortranCharacters(messages_).Emit(cooked_);
   }
   if (omitNewline_) {
@@ -285,6 +288,67 @@ void Prescanner::LabelField(TokenSequence &token) {
   if (IsDecimalDigit(*at_)) {
     Say(GetProvenance(at_),
         "Label digit is not in fixed-form label field"_en_US);
+  }
+}
+
+// 6.3.3.5: A program unit END statement, or any other statement whose
+// initial line resembles an END statement, shall not be continued in
+// fixed form source.
+void Prescanner::EnforceStupidEndStatementRules(const TokenSequence &tokens) {
+  CharBlock cBlock{tokens.ToCharBlock()};
+  const char *str{cBlock.begin()};
+  std::size_t n{cBlock.size()};
+  if (n < 3) {
+    return;
+  }
+  std::size_t j{0};
+  for (; j < n && (str[j] == ' ' || (str[j] >= '0' && str[j] <= '9')); ++j) {
+  }
+  if (j + 3 > n || std::memcmp(str + j, "end", 3) != 0) {
+    return;
+  }
+  // It starts with END, possibly after a label.
+  auto start{allSources_.GetSourcePosition(tokens.GetCharProvenance(j))};
+  auto end{allSources_.GetSourcePosition(tokens.GetCharProvenance(n - 1))};
+  if (!start || !end) {
+    return;
+  }
+  if (&start->file == &end->file && start->line == end->line) {
+    return; // no continuation
+  }
+  j += 3;
+  static const char *const prefixes[]{"program", "subroutine", "function",
+      "blockdata", "module", "submodule", nullptr};
+  CharBlock stmt{tokens.ToCharBlock()};
+  bool isPrefix{j == n || !IsLegalInIdentifier(str[j])}; // prefix is END
+  std::size_t endOfPrefix{j - 1};
+  for (const char *const *p{prefixes}; *p; ++p) {
+    std::size_t pLen{std::strlen(*p)};
+    if (j + pLen <= n && std::memcmp(str + j, *p, pLen) == 0) {
+      isPrefix = true; // END thing as prefix
+      j += pLen;
+      endOfPrefix = j - 1;
+      for (; j < n && IsLegalInIdentifier(str[j]); ++j) {
+      }
+      break;
+    }
+  }
+  if (isPrefix) {
+    auto range{tokens.GetTokenProvenanceRange(1)};
+    if (j == n) { // END or END thing [name]
+      Say(range,
+          "Program unit END statement may not be continued in fixed form source"_err_en_US);
+    } else {
+      auto endOfPrefixPos{
+          allSources_.GetSourcePosition(tokens.GetCharProvenance(endOfPrefix))};
+      auto next{allSources_.GetSourcePosition(tokens.GetCharProvenance(j))};
+      if (endOfPrefixPos && next && &endOfPrefixPos->file == &start->file &&
+          endOfPrefixPos->line == start->line &&
+          (&next->file != &start->file || next->line != start->line)) {
+        Say(range,
+            "Initial line of continued statement must not appear to be a program unit END in fixed form source"_err_en_US);
+      }
+    }
   }
 }
 
