@@ -856,9 +856,9 @@ static bool runImpl(Function &F, const TargetLibraryInfo &TLI,
 
   bool MadeChange = false;
 
-  for (auto BBIt = ++F.begin(); BBIt != F.end(); ++BBIt) {
+  for (BasicBlock &BB : llvm::drop_begin(F)) {
     // A Phi operation is always first in a basic block.
-    if (auto *const Phi = dyn_cast<PHINode>(&*BBIt->begin()))
+    if (auto *const Phi = dyn_cast<PHINode>(&*BB.begin()))
       MadeChange |= processPhi(*Phi, TLI, AA, DTU);
   }
 
