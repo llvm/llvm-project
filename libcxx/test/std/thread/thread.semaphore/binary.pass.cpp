@@ -18,9 +18,12 @@
 #include <semaphore>
 #include <chrono>
 #include <thread>
+#include <type_traits>
 
 #include "make_test_thread.h"
 #include "test_macros.h"
+
+static_assert(std::is_same<std::binary_semaphore, std::counting_semaphore<1>>::value, "");
 
 int main(int, char**)
 {
