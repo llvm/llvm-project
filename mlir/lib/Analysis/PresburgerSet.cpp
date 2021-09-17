@@ -133,7 +133,8 @@ static SmallVector<int64_t, 8> getNegatedCoeffs(ArrayRef<int64_t> coeffs) {
 /// Return the complement of the given inequality.
 ///
 /// The complement of a_1 x_1 + ... + a_n x_ + c >= 0 is
-/// a_1 x_1 + ... + a_n x_ + c < 0, i.e., -a_1 x_1 - ... - a_n x_ - c - 1 >= 0.
+/// a_1 x_1 + ... + a_n x_ + c < 0, i.e., -a_1 x_1 - ... - a_n x_ - c - 1 >= 0,
+/// since all the variables are constrained to be integers.
 static SmallVector<int64_t, 8> getComplementIneq(ArrayRef<int64_t> ineq) {
   SmallVector<int64_t, 8> coeffs;
   coeffs.reserve(ineq.size());
@@ -146,22 +147,26 @@ static SmallVector<int64_t, 8> getComplementIneq(ArrayRef<int64_t> ineq) {
 /// Return the set difference b \ s and accumulate the result into `result`.
 /// `simplex` must correspond to b.
 ///
-/// In the following, V denotes union, ^ denotes intersection, \ denotes set
+/// In the following, U denotes union, ^ denotes intersection, \ denotes set
 /// difference and ~ denotes complement.
-/// Let b be the FlatAffineConstraints and s = (V_i s_i) be the set. We want
-/// b \ (V_i s_i).
+/// Let b be the FlatAffineConstraints and s = (U_i s_i) be the set. We want
+/// b \ (U_i s_i).
 ///
 /// Let s_i = ^_j s_ij, where each s_ij is a single inequality. To compute
 /// b \ s_i = b ^ ~s_i, we partition s_i based on the first violated inequality:
-/// ~s_i = (~s_i1) V (s_i1 ^ ~s_i2) V (s_i1 ^ s_i2 ^ ~s_i3) V ...
-/// And the required result is (b ^ ~s_i1) V (b ^ s_i1 ^ ~s_i2) V ...
-/// We recurse by subtracting V_{j > i} S_j from each of these parts and
+/// ~s_i = (~s_i1) U (s_i1 ^ ~s_i2) U (s_i1 ^ s_i2 ^ ~s_i3) U ...
+/// And the required result is (b ^ ~s_i1) U (b ^ s_i1 ^ ~s_i2) U ...
+/// We recurse by subtracting U_{j > i} S_j from each of these parts and
 /// returning the union of the results. Each equality is handled as a
 /// conjunction of two inequalities.
 ///
 /// As a heuristic, we try adding all the constraints and check if simplex
-/// says that the intersection is empty. Also, in the process we find out that
-/// some constraints are redundant. These redundant constraints are ignored.
+/// says that the intersection is empty. If it is, then subtracting this FAC is
+/// a no-op and we just skip it. Also, in the process we find out that some
+/// constraints are redundant. These redundant constraints are ignored.
+///
+/// b and simplex are callee saved, i.e., their values on return are
+/// semantically equivalent to their values when the function is called.
 static void subtractRecursively(FlatAffineConstraints &b, Simplex &simplex,
                                 const PresburgerSet &s, unsigned i,
                                 PresburgerSet &result) {
@@ -279,7 +284,7 @@ PresburgerSet PresburgerSet::complement() const {
 PresburgerSet PresburgerSet::subtract(const PresburgerSet &set) const {
   assertDimensionsCompatible(set, *this);
   PresburgerSet result(nDim, nSym);
-  // We compute (V_i t_i) \ (V_i set_i) as V_i (t_i \ V_i set_i).
+  // We compute (U_i t_i) \ (U_i set_i) as U_i (t_i \ V_i set_i).
   for (const FlatAffineConstraints &fac : flatAffineConstraints)
     result.unionSetInPlace(getSetDifference(fac, set));
   return result;
