@@ -480,8 +480,6 @@ use omp_lib
   ! !$omp target enter data map(to:arrayA) map(alloc:arrayB)
   ! !$omp target update from(arrayA) to(arrayB)
   ! !$omp target exit data map(from:arrayA) map(delete:arrayB)
-  !$omp ordered depend(source)
-  ! !$omp ordered depend(sink:i-1)
   !$omp flush (c)
   !$omp flush acq_rel
   !$omp flush release
