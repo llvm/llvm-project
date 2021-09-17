@@ -47662,22 +47662,37 @@ static SDValue combineFMulcFCMulc(SDNode *N, SelectionDAG &DAG,
   return Res;
 }
 
-//  Try to combine the following nodes
-//  t21: v16f32 = X86ISD::VFMULC/VFCMULC t7, t8
-//  t15: v32f16 = bitcast t21
-//  t16: v32f16 = fadd nnan ninf nsz arcp contract afn reassoc t15, t2
-//  into X86ISD::VFMADDC/VFCMADDC if possible:
-//  t22: v16f32 = bitcast t2
-//  t23: v16f32 = nnan ninf nsz arcp contract afn reassoc
-//                X86ISD::VFMADDC/VFCMADDC t7, t8, t22
-//  t24: v32f16 = bitcast t23
+//  Try to combine the following nodes:
+//  FADD(A, FMA(B, C, 0)) and FADD(A, FMUL(B, C)) to FMA(B, C, A)
 static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
                                 const X86Subtarget &Subtarget) {
-  auto AllowContract = [&DAG](SDNode *N) {
+  auto AllowContract = [&DAG](const SDNodeFlags &Flags) {
     return DAG.getTarget().Options.AllowFPOpFusion == FPOpFusion::Fast ||
-           N->getFlags().hasAllowContract();
+           Flags.hasAllowContract();
   };
-  if (N->getOpcode() != ISD::FADD || !Subtarget.hasFP16() || !AllowContract(N))
+
+  auto HasNoSignedZero = [&DAG](const SDNodeFlags &Flags) {
+    return DAG.getTarget().Options.NoSignedZerosFPMath ||
+           Flags.hasNoSignedZeros();
+  };
+  auto IsVectorAllNegativeZero = [](const SDNode *N) {
+    if (N->getOpcode() != X86ISD::VBROADCAST_LOAD)
+      return false;
+    assert(N->getSimpleValueType(0).getScalarType() == MVT::f32 &&
+           "Unexpected vector type!");
+    if (ConstantPoolSDNode *CP =
+            dyn_cast<ConstantPoolSDNode>(N->getOperand(1)->getOperand(0))) {
+      APInt AI = APInt(32, 0x80008000, true);
+      if (const auto *CI = dyn_cast<ConstantInt>(CP->getConstVal()))
+        return CI->getValue() == AI;
+      if (const auto *CF = dyn_cast<ConstantFP>(CP->getConstVal()))
+        return CF->getValue() == APFloat(APFloat::IEEEsingle(), AI);
+    }
+    return false;
+  };
+
+  if (N->getOpcode() != ISD::FADD || !Subtarget.hasFP16() ||
+      !AllowContract(N->getFlags()))
     return SDValue();
 
   EVT VT = N->getValueType(0);
@@ -47686,16 +47701,33 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
 
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
-  SDValue CFmul, FAddOp1;
-  auto GetCFmulFrom = [&CFmul, &AllowContract](SDValue N) -> bool {
+  bool IsConj;
+  SDValue FAddOp1, MulOp0, MulOp1;
+  auto GetCFmulFrom = [&MulOp0, &MulOp1, &IsConj, &AllowContract,
+                       &IsVectorAllNegativeZero,
+                       &HasNoSignedZero](SDValue N) -> bool {
     if (!N.hasOneUse() || N.getOpcode() != ISD::BITCAST)
-        return false;
+      return false;
     SDValue Op0 = N.getOperand(0);
     unsigned Opcode = Op0.getOpcode();
-    if (Op0.hasOneUse() && AllowContract(Op0.getNode()) &&
-        (Opcode == X86ISD::VFMULC || Opcode == X86ISD::VFCMULC))
-      CFmul = Op0;
-    return !!CFmul;
+    if (Op0.hasOneUse() && AllowContract(Op0->getFlags())) {
+      if ((Opcode == X86ISD::VFMULC || Opcode == X86ISD::VFCMULC)) {
+        MulOp0 = Op0.getOperand(0);
+        MulOp1 = Op0.getOperand(1);
+        IsConj = Opcode == X86ISD::VFCMULC;
+        return true;
+      }
+      if ((Opcode == X86ISD::VFMADDC || Opcode == X86ISD::VFCMADDC) &&
+          ((ISD::isBuildVectorAllZeros(Op0->getOperand(2).getNode()) &&
+            HasNoSignedZero(Op0->getFlags())) ||
+           IsVectorAllNegativeZero(Op0->getOperand(2).getNode()))) {
+        MulOp0 = Op0.getOperand(0);
+        MulOp1 = Op0.getOperand(1);
+        IsConj = Opcode == X86ISD::VFCMADDC;
+        return true;
+      }
+    }
+    return false;
   };
 
   if (GetCFmulFrom(LHS))
@@ -47706,14 +47738,12 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   MVT CVT = MVT::getVectorVT(MVT::f32, VT.getVectorNumElements() / 2);
-  assert(CFmul->getValueType(0) == CVT && "Complex type mismatch");
   FAddOp1 = DAG.getBitcast(CVT, FAddOp1);
-  unsigned newOp = CFmul.getOpcode() == X86ISD::VFMULC ? X86ISD::VFMADDC
-                                                       : X86ISD::VFCMADDC;
+  unsigned NewOp = IsConj ? X86ISD::VFCMADDC : X86ISD::VFMADDC;
   // FIXME: How do we handle when fast math flags of FADD are different from
   // CFMUL's?
-  CFmul = DAG.getNode(newOp, SDLoc(N), CVT, FAddOp1, CFmul.getOperand(0),
-                      CFmul.getOperand(1), N->getFlags());
+  SDValue CFmul =
+      DAG.getNode(NewOp, SDLoc(N), CVT, FAddOp1, MulOp0, MulOp1, N->getFlags());
   return DAG.getBitcast(VT, CFmul);
 }
 
