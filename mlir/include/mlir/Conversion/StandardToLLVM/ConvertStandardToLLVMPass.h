@@ -16,6 +16,7 @@ class LowerToLLVMOptions;
 class ModuleOp;
 template <typename T>
 class OperationPass;
+class Pass;
 
 /// Creates a pass to convert the Standard dialect into the LLVMIR dialect.
 /// stdlib malloc/free is used by default for allocating memrefs allocated with

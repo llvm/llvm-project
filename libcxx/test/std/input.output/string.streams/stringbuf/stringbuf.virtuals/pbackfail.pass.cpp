@@ -36,9 +36,10 @@ struct testbuf
 
 int main(int, char**)
 {
-    {  // sanity check
-    testbuf<char> tb("");
-    tb.pbackfail();
+    // sanity check
+    {
+        testbuf<char> tb("");
+        tb.pbackfail();
     }
     {
         testbuf<char> sb("123", std::ios_base::in);

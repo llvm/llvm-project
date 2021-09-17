@@ -12,5 +12,5 @@
 
 // RUN: %clang -### -target amdgcn-amd-amdhsa -mcpu=gfx906 -nogpulib \
 // RUN:   -flto %s 2>&1 | FileCheck -check-prefix=LTO %s
-// LTO: clang{{.*}} "-flto"
+// LTO: clang{{.*}} "-flto=full"
 // LTO: ld.lld{{.*}}

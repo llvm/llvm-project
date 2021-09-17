@@ -671,15 +671,13 @@ entry:
 define <2 x double> @testDoubleImm4(<2 x double> %a, i32* %b) {
 ; CHECK-LABEL: testDoubleImm4:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lis r3, 4
-; CHECK-NEXT:    lfdx f0, r5, r3
+; CHECK-NEXT:    plfd f0, 262144(r5), 0
 ; CHECK-NEXT:    xxmrghd v2, v2, vs0
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: testDoubleImm4:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lis r3, 4
-; CHECK-BE-NEXT:    lfdx f0, r5, r3
+; CHECK-BE-NEXT:    plfd f0, 262144(r5), 0
 ; CHECK-BE-NEXT:    xxpermdi v2, vs0, v2, 1
 ; CHECK-BE-NEXT:    blr
 ;

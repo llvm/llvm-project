@@ -4122,10 +4122,10 @@ define void @mulhu_v16i16(<16 x i16>* %x) {
 ; LMULMAX2-RV32-NEXT:    lui a1, 4
 ; LMULMAX2-RV32-NEXT:    addi a1, a1, 64
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
-; LMULMAX2-RV32-NEXT:    vmv.s.x v0, a1
+; LMULMAX2-RV32-NEXT:    vmv.s.x v25, a1
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
+; LMULMAX2-RV32-NEXT:    vmv1r.v v0, v25
 ; LMULMAX2-RV32-NEXT:    vmerge.vim v28, v28, 1, v0
-; LMULMAX2-RV32-NEXT:    vmv1r.v v12, v0
 ; LMULMAX2-RV32-NEXT:    addi a1, zero, 257
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
 ; LMULMAX2-RV32-NEXT:    vmv.s.x v0, a1
@@ -4136,7 +4136,7 @@ define void @mulhu_v16i16(<16 x i16>* %x) {
 ; LMULMAX2-RV32-NEXT:    vle16.v v8, (a1)
 ; LMULMAX2-RV32-NEXT:    lui a1, 1048568
 ; LMULMAX2-RV32-NEXT:    vmerge.vxm v10, v30, a1, v0
-; LMULMAX2-RV32-NEXT:    vmv1r.v v0, v12
+; LMULMAX2-RV32-NEXT:    vmv1r.v v0, v25
 ; LMULMAX2-RV32-NEXT:    vmerge.vim v30, v30, 1, v0
 ; LMULMAX2-RV32-NEXT:    vsrl.vv v30, v26, v30
 ; LMULMAX2-RV32-NEXT:    vmulhu.vv v30, v30, v8
@@ -4161,10 +4161,10 @@ define void @mulhu_v16i16(<16 x i16>* %x) {
 ; LMULMAX2-RV64-NEXT:    lui a1, 4
 ; LMULMAX2-RV64-NEXT:    addiw a1, a1, 64
 ; LMULMAX2-RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
-; LMULMAX2-RV64-NEXT:    vmv.s.x v0, a1
+; LMULMAX2-RV64-NEXT:    vmv.s.x v25, a1
 ; LMULMAX2-RV64-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
+; LMULMAX2-RV64-NEXT:    vmv1r.v v0, v25
 ; LMULMAX2-RV64-NEXT:    vmerge.vim v28, v28, 1, v0
-; LMULMAX2-RV64-NEXT:    vmv1r.v v12, v0
 ; LMULMAX2-RV64-NEXT:    addi a1, zero, 257
 ; LMULMAX2-RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
 ; LMULMAX2-RV64-NEXT:    vmv.s.x v0, a1
@@ -4175,7 +4175,7 @@ define void @mulhu_v16i16(<16 x i16>* %x) {
 ; LMULMAX2-RV64-NEXT:    vle16.v v8, (a1)
 ; LMULMAX2-RV64-NEXT:    lui a1, 1048568
 ; LMULMAX2-RV64-NEXT:    vmerge.vxm v10, v30, a1, v0
-; LMULMAX2-RV64-NEXT:    vmv1r.v v0, v12
+; LMULMAX2-RV64-NEXT:    vmv1r.v v0, v25
 ; LMULMAX2-RV64-NEXT:    vmerge.vim v30, v30, 1, v0
 ; LMULMAX2-RV64-NEXT:    vsrl.vv v30, v26, v30
 ; LMULMAX2-RV64-NEXT:    vmulhu.vv v30, v30, v8

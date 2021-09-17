@@ -480,7 +480,7 @@ multiclass sme_vector_to_tile_aliases<Instruction inst,
                                       MatrixTileVectorOperand tile_ty,
                                       ZPRRegOp zpr_ty, Operand imm_ty> {
   def : InstAlias<"mov\t$ZAd[$Rv, $imm], $Pg/m, $Zn",
-                  (inst tile_ty:$ZAd, MatrixIndexGPR32Op12_15:$Rv, imm0_15:$imm, PPR3bAny:$Pg, zpr_ty:$Zn), 1>;
+                  (inst tile_ty:$ZAd, MatrixIndexGPR32Op12_15:$Rv, imm_ty:$imm, PPR3bAny:$Pg, zpr_ty:$Zn), 1>;
 }
 
 multiclass sme_vector_v_to_tile<string mnemonic, bit is_col> {

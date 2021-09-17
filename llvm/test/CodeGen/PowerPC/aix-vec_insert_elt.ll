@@ -667,7 +667,7 @@ define <2 x double> @testDouble2(<2 x double> %a, i8* %b, i32 zeroext %idx1, i32
 ; CHECK-32-P10-NEXT:    rlwinm 5, 5, 3, 28, 28
 ; CHECK-32-P10-NEXT:    stfdx 0, 6, 4
 ; CHECK-32-P10-NEXT:    lxv 0, -32(1)
-; CHECK-32-P10-NEXT:    lfd 1, 1(3)
+; CHECK-32-P10-NEXT:    plfd 1, 1(3), 0
 ; CHECK-32-P10-NEXT:    addi 3, 1, -16
 ; CHECK-32-P10-NEXT:    stxv 0, -16(1)
 ; CHECK-32-P10-NEXT:    stfdx 1, 3, 5
@@ -737,12 +737,11 @@ define <2 x double> @testDouble3(<2 x double> %a, i8* %b, i32 zeroext %idx1, i32
 ;
 ; CHECK-32-P10-LABEL: testDouble3:
 ; CHECK-32-P10:       # %bb.0: # %entry
-; CHECK-32-P10-NEXT:    lis 6, 1
-; CHECK-32-P10-NEXT:    rlwinm 4, 4, 3, 28, 28
-; CHECK-32-P10-NEXT:    rlwinm 5, 5, 3, 28, 28
-; CHECK-32-P10-NEXT:    lfdx 0, 3, 6
-; CHECK-32-P10-NEXT:    addi 6, 1, -32
+; CHECK-32-P10-NEXT:    plfd 0, 65536(3), 0
+; CHECK-32-P10-DAG:     addi 6, 1, -32
+; CHECK-32-P10-DAG:     rlwinm 4, 4, 3, 28, 28
 ; CHECK-32-P10-NEXT:    stxv 34, -32(1)
+; CHECK-32-P10-NEXT:    rlwinm 5, 5, 3, 28, 28
 ; CHECK-32-P10-NEXT:    stfdx 0, 6, 4
 ; CHECK-32-P10-NEXT:    lxv 0, -32(1)
 ; CHECK-32-P10-NEXT:    lfd 1, 0(3)
@@ -874,15 +873,13 @@ define <2 x double> @testDoubleImm4(<2 x double> %a, i32* %b) {
 ;
 ; CHECK-64-P10-LABEL: testDoubleImm4:
 ; CHECK-64-P10:       # %bb.0: # %entry
-; CHECK-64-P10-NEXT:    lis 4, 4
-; CHECK-64-P10-NEXT:    lfdx 0, 3, 4
+; CHECK-64-P10-NEXT:    plfd 0, 262144(3), 0
 ; CHECK-64-P10-NEXT:    xxpermdi 34, 0, 34, 1
 ; CHECK-64-P10-NEXT:    blr
 ;
 ; CHECK-32-P10-LABEL: testDoubleImm4:
 ; CHECK-32-P10:       # %bb.0: # %entry
-; CHECK-32-P10-NEXT:    lis 4, 4
-; CHECK-32-P10-NEXT:    lfdx 0, 3, 4
+; CHECK-32-P10-NEXT:    plfd 0, 262144(3), 0
 ; CHECK-32-P10-NEXT:    xxpermdi 34, 0, 34, 1
 ; CHECK-32-P10-NEXT:    blr
 entry:

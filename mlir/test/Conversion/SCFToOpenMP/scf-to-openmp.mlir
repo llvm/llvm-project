@@ -27,7 +27,6 @@ func @nested_loops(%arg0: index, %arg1: index, %arg2: index,
     scf.parallel (%j) = (%arg1) to (%arg3) step (%arg5) {
       // CHECK: "test.payload"(%[[LVAR_OUT1]], %[[LVAR_IN1]]) : (index, index) -> ()
       "test.payload"(%i, %j) : (index, index) -> ()
-      // CHECK:   omp.yield
       // CHECK: }
     }
     // CHECK:   omp.yield
@@ -38,6 +37,7 @@ func @nested_loops(%arg0: index, %arg1: index, %arg2: index,
   return
 }
 
+// CHECK-LABEL: @adjacent_loops
 func @adjacent_loops(%arg0: index, %arg1: index, %arg2: index,
                      %arg3: index, %arg4: index, %arg5: index) {
   // CHECK: omp.parallel {

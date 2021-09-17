@@ -12,12 +12,11 @@
 
 // template <class T1, class T2> struct pair
 
-// template<class U, class V> pair(U&& x, V&& y);
-
+// template<class U = T1, class V = T2> pair(U&&, V&&);
 
 #include <utility>
-#include <memory>
 #include <cassert>
+#include <memory>
 
 #include "archetypes.h"
 #include "test_convertible.h"
@@ -46,7 +45,6 @@ struct ImplicitT {
   constexpr ImplicitT(int x) : value(x) {}
   int value;
 };
-
 
 int main(int, char**)
 {
@@ -99,5 +97,48 @@ int main(int, char**)
     }
 #endif
 
-  return 0;
+    // Test support for http://wg21.link/P1951, default arguments for pair's constructor.
+    // Basically, this turns copies for brace initialization into moves. Note that libc++
+    // applies this in all standard modes.
+#if TEST_STD_VER > 20 || defined(_LIBCPP_VERSION)
+    {
+        struct TrackInit {
+            TrackInit() = default;
+            constexpr TrackInit(TrackInit const&) : wasCopyInit(true) { }
+            constexpr TrackInit(TrackInit&&) : wasMoveInit(true) { }
+            bool wasMoveInit = false;
+            bool wasCopyInit = false;
+        };
+
+        // Explicit constructor
+        {
+            {
+                std::pair<TrackInit, int> p({}, 3);
+                assert( p.first.wasMoveInit);
+                assert(!p.first.wasCopyInit);
+            }
+            {
+                std::pair<int, TrackInit> p(3, {});
+                assert( p.second.wasMoveInit);
+                assert(!p.second.wasCopyInit);
+            }
+        }
+
+        // Implicit constructor
+        {
+            {
+                std::pair<TrackInit, int> p = {{}, 3};
+                assert( p.first.wasMoveInit);
+                assert(!p.first.wasCopyInit);
+            }
+            {
+                std::pair<int, TrackInit> p = {3, {}};
+                assert( p.second.wasMoveInit);
+                assert(!p.second.wasCopyInit);
+            }
+        }
+    }
+#endif
+
+    return 0;
 }

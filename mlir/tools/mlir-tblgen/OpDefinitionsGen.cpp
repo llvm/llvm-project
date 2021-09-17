@@ -854,7 +854,6 @@ static void generateNamedOperandGetters(const Operator &op, Class &opClass,
     const auto &operand = op.getOperand(i);
     if (operand.name.empty())
       continue;
-
     if (operand.isOptional()) {
       m = opClass.addMethodAndPrune("::mlir::Value", operand.name);
       m->body()
@@ -991,7 +990,6 @@ void OpEmitter::genNamedResultGetters() {
     const auto &result = op.getResult(i);
     if (result.name.empty())
       continue;
-
     if (result.isOptional()) {
       m = opClass.addMethodAndPrune("::mlir::Value", result.name);
       m->body()

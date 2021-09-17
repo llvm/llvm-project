@@ -182,4 +182,11 @@ def TestMemRefElementType : Test_Type<"TestMemRefElementType",
   let mnemonic = "memref_element";
 }
 
+def TestTypeTrait : NativeTypeTrait<"TestTypeTrait">;
+
+// The definition of a singleton type that has a trait.
+def TestTypeWithTrait : Test_Type<"TestTypeWithTrait", [TestTypeTrait]> {
+  let mnemonic = "test_type_with_trait";
+}
+
 #endif // TEST_TYPEDEFS

@@ -1188,6 +1188,9 @@ public:
       std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations)
       const override;
 
+  std::unique_ptr<ScheduleDAGMutation>
+  createFillMFMAShadowMutation(const TargetInstrInfo *TII) const;
+
   bool isWave32() const {
     return getWavefrontSize() == 32;
   }

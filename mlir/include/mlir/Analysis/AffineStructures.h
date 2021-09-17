@@ -156,7 +156,14 @@ public:
   /// otherwise.
   bool containsPoint(ArrayRef<int64_t> point) const;
 
-  /// Clones this object.
+  /// Find pairs of inequalities identified by their position indices, using
+  /// which an explicit representation for each local variable can be computed
+  /// The pairs are stored as indices of upperbound, lowerbound
+  /// inequalities. If no such pair can be found, it is stored as llvm::None.
+  void getLocalReprLbUbPairs(
+      std::vector<llvm::Optional<std::pair<unsigned, unsigned>>> &repr) const;
+
+  // Clones this object.
   std::unique_ptr<FlatAffineConstraints> clone() const;
 
   /// Returns the value at the specified equality row and column.

@@ -50,13 +50,13 @@
 ; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .long   32                              # 0x20
 ; CHECK-NEXT:        .long   10                              # BTF_KIND_TAG(id = 2)
-; CHECK-NEXT:        .long   2432696320                      # 0x91000000
+; CHECK-NEXT:        .long   285212672                       # 0x11000000
 ; CHECK-NEXT:        .long   1
-; CHECK-NEXT:        .long   0
+; CHECK-NEXT:        .long   4294967295
 ; CHECK-NEXT:        .long   15                              # BTF_KIND_TAG(id = 3)
-; CHECK-NEXT:        .long   2432696320                      # 0x91000000
+; CHECK-NEXT:        .long   285212672                       # 0x11000000
 ; CHECK-NEXT:        .long   1
-; CHECK-NEXT:        .long   0
+; CHECK-NEXT:        .long   4294967295
 ; CHECK-NEXT:        .long   20                              # BTF_KIND_INT(id = 4)
 ; CHECK-NEXT:        .long   16777216                        # 0x1000000
 ; CHECK-NEXT:        .long   4
@@ -74,13 +74,13 @@
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   10                              # BTF_KIND_TAG(id = 8)
-; CHECK-NEXT:        .long   2432696320                      # 0x91000000
+; CHECK-NEXT:        .long   285212672                       # 0x11000000
 ; CHECK-NEXT:        .long   7
-; CHECK-NEXT:        .long   0
+; CHECK-NEXT:        .long   4294967295
 ; CHECK-NEXT:        .long   15                              # BTF_KIND_TAG(id = 9)
-; CHECK-NEXT:        .long   2432696320                      # 0x91000000
+; CHECK-NEXT:        .long   285212672                       # 0x11000000
 ; CHECK-NEXT:        .long   7
-; CHECK-NEXT:        .long   0
+; CHECK-NEXT:        .long   4294967295
 
 ; CHECK:             .ascii  "t1"                            # string offset=1
 ; CHECK:             .ascii  "a1"                            # string offset=4

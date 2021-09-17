@@ -426,10 +426,30 @@ static constexpr const llvm::omp::GV &getGridValue() {
   return llvm::omp::getAMDGPUGridValues<wavesize>();
 }
 
+struct HSALifetime {
+  // Wrapper around HSA used to ensure it is constructed before other types
+  // and destructed after, which means said other types can use raii for
+  // cleanup without risking running outside of the lifetime of HSA
+  const hsa_status_t S;
+
+  bool success() { return S == HSA_STATUS_SUCCESS; }
+  HSALifetime() : S(hsa_init()) {}
+
+  ~HSALifetime() {
+    if (S == HSA_STATUS_SUCCESS) {
+      hsa_status_t Err = hsa_shut_down();
+      if (Err != HSA_STATUS_SUCCESS) {
+        // Can't call into HSA to get a string from the integer
+        DP("Shutting down HSA failed: %d\n", Err);
+      }
+    }
+  }
+};
+
 /// Class containing all the device information
 class RTLDeviceInfoTy {
+  HSALifetime HSA; // First field => constructed first and destructed last
   std::vector<std::list<FuncOrGblEntryTy>> FuncGblEntries;
-  bool HSAInitializeSucceeded = false;
 
 public:
   // load binary populates symbol tables and mutates various global state
@@ -680,21 +700,26 @@ public:
   }
 
   RTLDeviceInfoTy() {
+    DP("Start initializing " GETNAME(TARGET_NAME) "\n");
+
     // LIBOMPTARGET_KERNEL_TRACE provides a kernel launch trace to stderr
     // anytime. You do not need a debug library build.
     //  0 => no tracing
     //  1 => tracing dispatch only
     // >1 => verbosity increase
+
+    if (!HSA.success()) {
+      DP("Error when initializing HSA in " GETNAME(TARGET_NAME) "\n");
+      return;
+    }
+
     if (char *envStr = getenv("LIBOMPTARGET_KERNEL_TRACE"))
       print_kernel_trace = atoi(envStr);
     else
       print_kernel_trace = 0;
 
-    DP("Start initializing " GETNAME(TARGET_NAME) "\n");
     hsa_status_t err = core::atl_init_gpu_context();
-    if (err == HSA_STATUS_SUCCESS) {
-      HSAInitializeSucceeded = true;
-    } else {
+    if (err != HSA_STATUS_SUCCESS) {
       DP("Error when initializing " GETNAME(TARGET_NAME) "\n");
       return;
     }
@@ -798,7 +823,7 @@ public:
 
   ~RTLDeviceInfoTy() {
     DP("Finalizing the " GETNAME(TARGET_NAME) " DeviceInfo.\n");
-    if (!HSAInitializeSucceeded) {
+    if (!HSA.success()) {
       // Then none of these can have been set up and they can't be torn down
       return;
     }
@@ -816,12 +841,6 @@ public:
         DP("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
            "Destroying executable", get_error_string(Err));
       }
-    }
-
-    Err = hsa_shut_down();
-    if (Err != HSA_STATUS_SUCCESS) {
-      DP("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, "Shutting down HSA",
-         get_error_string(Err));
     }
   }
 };

@@ -1,0 +1,296 @@
+## Check that the default NumberOfRvaAndSize is as expected.
+# RUN: yaml2obj --docnum=1 %s -o %t
+# RUN: llvm-readobj --file-headers %t | FileCheck %s --check-prefix=CHECK16
+# RUN: obj2yaml %t | FileCheck %s --check-prefix=ROUNDTRIP16
+
+# CHECK16:       NumberOfRvaAndSize: 16
+# CHECK16-NEXT:  DataDirectory {
+# CHECK16-NEXT:    ExportTableRVA: 0x0
+# CHECK16-NEXT:    ExportTableSize: 0x0
+# CHECK16-NEXT:    ImportTableRVA: 0x0
+# CHECK16-NEXT:    ImportTableSize: 0x0
+# CHECK16-NEXT:    ResourceTableRVA: 0x0
+# CHECK16-NEXT:    ResourceTableSize: 0x0
+# CHECK16-NEXT:    ExceptionTableRVA: 0x0
+# CHECK16-NEXT:    ExceptionTableSize: 0x0
+# CHECK16-NEXT:    CertificateTableRVA: 0x0
+# CHECK16-NEXT:    CertificateTableSize: 0x0
+# CHECK16-NEXT:    BaseRelocationTableRVA: 0x0
+# CHECK16-NEXT:    BaseRelocationTableSize: 0x0
+# CHECK16-NEXT:    DebugRVA: 0x0
+# CHECK16-NEXT:    DebugSize: 0x0
+# CHECK16-NEXT:    ArchitectureRVA: 0x0
+# CHECK16-NEXT:    ArchitectureSize: 0x0
+# CHECK16-NEXT:    GlobalPtrRVA: 0x0
+# CHECK16-NEXT:    GlobalPtrSize: 0x0
+# CHECK16-NEXT:    TLSTableRVA: 0x0
+# CHECK16-NEXT:    TLSTableSize: 0x0
+# CHECK16-NEXT:    LoadConfigTableRVA: 0x0
+# CHECK16-NEXT:    LoadConfigTableSize: 0x0
+# CHECK16-NEXT:    BoundImportRVA: 0x0
+# CHECK16-NEXT:    BoundImportSize: 0x0
+# CHECK16-NEXT:    IATRVA: 0x0
+# CHECK16-NEXT:    IATSize: 0x0
+# CHECK16-NEXT:    DelayImportDescriptorRVA: 0x0
+# CHECK16-NEXT:    DelayImportDescriptorSize: 0x0
+# CHECK16-NEXT:    CLRRuntimeHeaderRVA: 0x0
+# CHECK16-NEXT:    CLRRuntimeHeaderSize: 0x0
+# CHECK16-NEXT:    ReservedRVA: 0x0
+# CHECK16-NEXT:    ReservedSize: 0x0
+# CHECK16-NEXT:  }
+
+# ROUNDTRIP16:        ExportTable:
+# ROUNDTRIP16-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP16-NEXT:     Size:            0
+# ROUNDTRIP16-NEXT:   ImportTable:
+# ROUNDTRIP16-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP16-NEXT:     Size:            0
+# ROUNDTRIP16-NEXT:   ResourceTable:
+# ROUNDTRIP16-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP16-NEXT:     Size:            0
+# ROUNDTRIP16-NEXT:   ExceptionTable:
+# ROUNDTRIP16-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP16-NEXT:     Size:            0
+# ROUNDTRIP16-NEXT:   CertificateTable:
+# ROUNDTRIP16-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP16-NEXT:     Size:            0
+# ROUNDTRIP16-NEXT:   BaseRelocationTable:
+# ROUNDTRIP16-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP16-NEXT:     Size:            0
+# ROUNDTRIP16-NEXT:   Debug:
+# ROUNDTRIP16-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP16-NEXT:     Size:            0
+# ROUNDTRIP16-NEXT:   Architecture:
+# ROUNDTRIP16-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP16-NEXT:     Size:            0
+# ROUNDTRIP16-NEXT:   GlobalPtr:
+# ROUNDTRIP16-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP16-NEXT:     Size:            0
+# ROUNDTRIP16-NEXT:   TlsTable:
+# ROUNDTRIP16-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP16-NEXT:     Size:            0
+# ROUNDTRIP16-NEXT:   LoadConfigTable:
+# ROUNDTRIP16-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP16-NEXT:     Size:            0
+# ROUNDTRIP16-NEXT:   BoundImport:
+# ROUNDTRIP16-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP16-NEXT:     Size:            0
+# ROUNDTRIP16-NEXT:   IAT:
+# ROUNDTRIP16-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP16-NEXT:     Size:            0
+# ROUNDTRIP16-NEXT:   DelayImportDescriptor:
+# ROUNDTRIP16-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP16-NEXT:     Size:            0
+# ROUNDTRIP16-NEXT:   ClrRuntimeHeader:
+# ROUNDTRIP16-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP16-NEXT:     Size:            0
+# ROUNDTRIP16-NEXT: header:
+
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 4096
+  ImageBase:       0
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 0
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 0
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_EFI_APPLICATION
+  DLLCharacteristics: [  ]
+  SizeOfStackReserve: 0
+  SizeOfStackCommit: 0
+  SizeOfHeapReserve: 0
+  SizeOfHeapCommit: 0
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ ]
+sections:
+  - Name:            foo
+    Characteristics: [ ]
+    Alignment:       4
+symbols:
+...
+
+## Check setting NumberOfRvaAndSize equal to the default (output should
+## be the same as when unset).
+# RUN: yaml2obj --docnum=2 %s -o %t -DNUMRVA=16
+# RUN: llvm-readobj --file-headers %t | FileCheck %s --check-prefix=CHECK16
+# RUN: obj2yaml %t | FileCheck %s --check-prefix=ROUNDTRIP16
+
+## Check that NumberOfRvaAndSize can be zero.
+# RUN: yaml2obj --docnum=2 %s -o %t -DNUMRVA=0
+# RUN: llvm-readobj --file-headers %t | FileCheck %s --check-prefix=CHECK0
+# RUN: obj2yaml %t | FileCheck %s --check-prefix=ROUNDTRIP0
+
+# CHECK0:      NumberOfRvaAndSize: 0
+# CHECK0-NOT:  DataDirectory
+
+# ROUNDTRIP0:      NumberOfRvaAndSize: 0
+# ROUNDTRIP0-NOT:  ExportTable
+
+## Check setting NumberOfRvaAndSize to number below default.
+# RUN: yaml2obj --docnum=2 %s -o %t -DNUMRVA=6
+# RUN: llvm-readobj --file-headers %t | FileCheck %s --check-prefix=CHECK6
+# RUN: obj2yaml %t | FileCheck %s --check-prefix=ROUNDTRIP6
+
+# CHECK6:       NumberOfRvaAndSize: 6
+# CHECK6-NEXT:  DataDirectory {
+# CHECK6-NEXT:    ExportTableRVA: 0x0
+# CHECK6-NEXT:    ExportTableSize: 0x0
+# CHECK6-NEXT:    ImportTableRVA: 0x0
+# CHECK6-NEXT:    ImportTableSize: 0x0
+# CHECK6-NEXT:    ResourceTableRVA: 0x0
+# CHECK6-NEXT:    ResourceTableSize: 0x0
+# CHECK6-NEXT:    ExceptionTableRVA: 0x0
+# CHECK6-NEXT:    ExceptionTableSize: 0x0
+# CHECK6-NEXT:    CertificateTableRVA: 0x0
+# CHECK6-NEXT:    CertificateTableSize: 0x0
+# CHECK6-NEXT:    BaseRelocationTableRVA: 0x0
+# CHECK6-NEXT:    BaseRelocationTableSize: 0x0
+# CHECK6-NEXT:  }
+
+# ROUNDTRIP6:        NumberOfRvaAndSize: 6
+# ROUNDTRIP6-NEXT:   ExportTable:
+# ROUNDTRIP6-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP6-NEXT:     Size:            0
+# ROUNDTRIP6-NEXT:   ImportTable:
+# ROUNDTRIP6-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP6-NEXT:     Size:            0
+# ROUNDTRIP6-NEXT:   ResourceTable:
+# ROUNDTRIP6-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP6-NEXT:     Size:            0
+# ROUNDTRIP6-NEXT:   ExceptionTable:
+# ROUNDTRIP6-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP6-NEXT:     Size:            0
+# ROUNDTRIP6-NEXT:   CertificateTable:
+# ROUNDTRIP6-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP6-NEXT:     Size:            0
+# ROUNDTRIP6-NEXT:   BaseRelocationTable:
+# ROUNDTRIP6-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP6-NEXT:     Size:            0
+# ROUNDTRIP6-NEXT: header:
+
+## Check setting NumberOfRvaAndSize to number above default.
+# RUN: yaml2obj --docnum=2 %s -o %t -DNUMRVA=18
+# RUN: llvm-readobj --file-headers %t | FileCheck %s --check-prefix=CHECK18
+# RUN: obj2yaml %t | FileCheck %s --check-prefix=ROUNDTRIP18
+
+# CHECK18:       NumberOfRvaAndSize: 18
+# CHECK18-NEXT:  DataDirectory {
+# CHECK18-NEXT:    ExportTableRVA: 0x0
+# CHECK18-NEXT:    ExportTableSize: 0x0
+# CHECK18-NEXT:    ImportTableRVA: 0x0
+# CHECK18-NEXT:    ImportTableSize: 0x0
+# CHECK18-NEXT:    ResourceTableRVA: 0x0
+# CHECK18-NEXT:    ResourceTableSize: 0x0
+# CHECK18-NEXT:    ExceptionTableRVA: 0x0
+# CHECK18-NEXT:    ExceptionTableSize: 0x0
+# CHECK18-NEXT:    CertificateTableRVA: 0x0
+# CHECK18-NEXT:    CertificateTableSize: 0x0
+# CHECK18-NEXT:    BaseRelocationTableRVA: 0x0
+# CHECK18-NEXT:    BaseRelocationTableSize: 0x0
+# CHECK18-NEXT:    DebugRVA: 0x0
+# CHECK18-NEXT:    DebugSize: 0x0
+# CHECK18-NEXT:    ArchitectureRVA: 0x0
+# CHECK18-NEXT:    ArchitectureSize: 0x0
+# CHECK18-NEXT:    GlobalPtrRVA: 0x0
+# CHECK18-NEXT:    GlobalPtrSize: 0x0
+# CHECK18-NEXT:    TLSTableRVA: 0x0
+# CHECK18-NEXT:    TLSTableSize: 0x0
+# CHECK18-NEXT:    LoadConfigTableRVA: 0x0
+# CHECK18-NEXT:    LoadConfigTableSize: 0x0
+# CHECK18-NEXT:    BoundImportRVA: 0x0
+# CHECK18-NEXT:    BoundImportSize: 0x0
+# CHECK18-NEXT:    IATRVA: 0x0
+# CHECK18-NEXT:    IATSize: 0x0
+# CHECK18-NEXT:    DelayImportDescriptorRVA: 0x0
+# CHECK18-NEXT:    DelayImportDescriptorSize: 0x0
+# CHECK18-NEXT:    CLRRuntimeHeaderRVA: 0x0
+# CHECK18-NEXT:    CLRRuntimeHeaderSize: 0x0
+# CHECK18-NEXT:    ReservedRVA: 0x0
+# CHECK18-NEXT:    ReservedSize: 0x0
+# CHECK18-NEXT:    UnknownRVA: 0x0
+# CHECK18-NEXT:    UnknownSize: 0x0
+# CHECK18-NEXT:    UnknownRVA: 0x0
+# CHECK18-NEXT:    UnknownSize: 0x0
+# CHECK18-NEXT:  }
+
+# ROUNDTRIP18:        NumberOfRvaAndSize: 18
+# ROUNDTRIP18-NEXT:   ExportTable:
+# ROUNDTRIP18-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP18-NEXT:     Size:            0
+# ROUNDTRIP18-NEXT:   ImportTable:
+# ROUNDTRIP18-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP18-NEXT:     Size:            0
+# ROUNDTRIP18-NEXT:   ResourceTable:
+# ROUNDTRIP18-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP18-NEXT:     Size:            0
+# ROUNDTRIP18-NEXT:   ExceptionTable:
+# ROUNDTRIP18-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP18-NEXT:     Size:            0
+# ROUNDTRIP18-NEXT:   CertificateTable:
+# ROUNDTRIP18-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP18-NEXT:     Size:            0
+# ROUNDTRIP18-NEXT:   BaseRelocationTable:
+# ROUNDTRIP18-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP18-NEXT:     Size:            0
+# ROUNDTRIP18-NEXT:   Debug:
+# ROUNDTRIP18-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP18-NEXT:     Size:            0
+# ROUNDTRIP18-NEXT:   Architecture:
+# ROUNDTRIP18-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP18-NEXT:     Size:            0
+# ROUNDTRIP18-NEXT:   GlobalPtr:
+# ROUNDTRIP18-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP18-NEXT:     Size:            0
+# ROUNDTRIP18-NEXT:   TlsTable:
+# ROUNDTRIP18-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP18-NEXT:     Size:            0
+# ROUNDTRIP18-NEXT:   LoadConfigTable:
+# ROUNDTRIP18-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP18-NEXT:     Size:            0
+# ROUNDTRIP18-NEXT:   BoundImport:
+# ROUNDTRIP18-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP18-NEXT:     Size:            0
+# ROUNDTRIP18-NEXT:   IAT:
+# ROUNDTRIP18-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP18-NEXT:     Size:            0
+# ROUNDTRIP18-NEXT:   DelayImportDescriptor:
+# ROUNDTRIP18-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP18-NEXT:     Size:            0
+# ROUNDTRIP18-NEXT:   ClrRuntimeHeader:
+# ROUNDTRIP18-NEXT:     RelativeVirtualAddress: 0
+# ROUNDTRIP18-NEXT:     Size:            0
+# ROUNDTRIP18-NEXT: header:
+
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 4096
+  ImageBase:       0
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 0
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 0
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_EFI_APPLICATION
+  DLLCharacteristics: [  ]
+  SizeOfStackReserve: 0
+  SizeOfStackCommit: 0
+  SizeOfHeapReserve: 0
+  SizeOfHeapCommit: 0
+  NumberOfRvaAndSize: [[NUMRVA]]
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ ]
+sections:
+  - Name:            foo
+    Characteristics: [ ]
+    Alignment:       4
+symbols:
+...

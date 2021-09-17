@@ -759,7 +759,7 @@ class GdbRemoteTestSequence(object):
 
                     # Compile the regex.
                     if regex and (isinstance(regex, str)):
-                        regex = re.compile(regex)
+                        regex = re.compile(regex, re.DOTALL)
 
                     if _is_packet_lldb_gdbserver_input(
                             direction, remote_input_is_read):

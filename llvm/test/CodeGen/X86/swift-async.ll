@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-apple-darwin %s -o - | FileCheck %s
+; RUN: llc -mtriple=x86_64-apple-macosx12.0 %s -o - | FileCheck %s
 ; RUN: llc -mtriple=i686-apple-darwin %s -o - | FileCheck %s --check-prefix=CHECK-32
 
 

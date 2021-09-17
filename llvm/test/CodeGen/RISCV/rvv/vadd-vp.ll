@@ -4,6 +4,20 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-v -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,RV64
 
+declare <vscale x 8 x i7> @llvm.vp.add.nxv8i7(<vscale x 8 x i7>, <vscale x 8 x i7>, <vscale x 8 x i1>, i32)
+
+define <vscale x 8 x i7> @vadd_vx_nxv8i7(<vscale x 8 x i7> %a, i7 signext %b, <vscale x 8 x i1> %mask, i32 zeroext %evl) {
+; CHECK-LABEL: vadd_vx_nxv8i7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vadd.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 8 x i7> undef, i7 %b, i32 0
+  %vb = shufflevector <vscale x 8 x i7> %elt.head, <vscale x 8 x i7> undef, <vscale x 8 x i32> zeroinitializer
+  %v = call <vscale x 8 x i7> @llvm.vp.add.nxv8i7(<vscale x 8 x i7> %a, <vscale x 8 x i7> %vb, <vscale x 8 x i1> %mask, i32 %evl)
+  ret <vscale x 8 x i7> %v
+}
+
 declare <vscale x 1 x i8> @llvm.vp.add.nxv1i8(<vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i1>, i32)
 
 define <vscale x 1 x i8> @vadd_vv_nxv1i8(<vscale x 1 x i8> %va, <vscale x 1 x i8> %b, <vscale x 1 x i1> %m, i32 zeroext %evl) {
@@ -622,20 +636,20 @@ define <vscale x 128 x i8> @vadd_vi_nxv128i8(<vscale x 128 x i8> %va, <vscale x 
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 3
 ; CHECK-NEXT:    mv a3, a1
-; CHECK-NEXT:    bltu a1, a2, .LBB48_2
+; CHECK-NEXT:    bltu a1, a2, .LBB49_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a3, a2
-; CHECK-NEXT:  .LBB48_2:
+; CHECK-NEXT:  .LBB49_2:
 ; CHECK-NEXT:    mv a4, zero
 ; CHECK-NEXT:    vsetvli a5, zero, e8, m8, ta, mu
 ; CHECK-NEXT:    vle1.v v25, (a0)
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, mu
 ; CHECK-NEXT:    sub a0, a1, a2
 ; CHECK-NEXT:    vadd.vi v8, v8, -1, v0.t
-; CHECK-NEXT:    bltu a1, a0, .LBB48_4
+; CHECK-NEXT:    bltu a1, a0, .LBB49_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mv a4, a0
-; CHECK-NEXT:  .LBB48_4:
+; CHECK-NEXT:  .LBB49_4:
 ; CHECK-NEXT:    vsetvli zero, a4, e8, m8, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    vadd.vi v16, v16, -1, v0.t
@@ -652,18 +666,18 @@ define <vscale x 128 x i8> @vadd_vi_nxv128i8_unmasked(<vscale x 128 x i8> %va, i
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    mv a2, a0
-; CHECK-NEXT:    bltu a0, a1, .LBB49_2
+; CHECK-NEXT:    bltu a0, a1, .LBB50_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, a1
-; CHECK-NEXT:  .LBB49_2:
+; CHECK-NEXT:  .LBB50_2:
 ; CHECK-NEXT:    mv a3, zero
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, mu
 ; CHECK-NEXT:    sub a1, a0, a1
 ; CHECK-NEXT:    vadd.vi v8, v8, -1
-; CHECK-NEXT:    bltu a0, a1, .LBB49_4
+; CHECK-NEXT:    bltu a0, a1, .LBB50_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mv a3, a1
-; CHECK-NEXT:  .LBB49_4:
+; CHECK-NEXT:  .LBB50_4:
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, mu
 ; CHECK-NEXT:    vadd.vi v16, v16, -1
 ; CHECK-NEXT:    ret
@@ -1518,24 +1532,24 @@ declare <vscale x 32 x i32> @llvm.vp.add.nxv32i32(<vscale x 32 x i32>, <vscale x
 define <vscale x 32 x i32> @vadd_vi_nxv32i32(<vscale x 32 x i32> %va, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vi_nxv32i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmv1r.v v25, v0
 ; CHECK-NEXT:    mv a2, zero
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a4, a1, 2
 ; CHECK-NEXT:    vsetvli a3, zero, e8, mf2, ta, mu
 ; CHECK-NEXT:    slli a1, a1, 1
 ; CHECK-NEXT:    sub a3, a0, a1
-; CHECK-NEXT:    vmv1r.v v25, v0
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a4
-; CHECK-NEXT:    bltu a0, a3, .LBB116_2
+; CHECK-NEXT:    bltu a0, a3, .LBB117_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, a3
-; CHECK-NEXT:  .LBB116_2:
+; CHECK-NEXT:  .LBB117_2:
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, mu
 ; CHECK-NEXT:    vadd.vi v16, v16, -1, v0.t
-; CHECK-NEXT:    bltu a0, a1, .LBB116_4
+; CHECK-NEXT:    bltu a0, a1, .LBB117_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:  .LBB116_4:
+; CHECK-NEXT:  .LBB117_4:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    vadd.vi v8, v8, -1, v0.t
@@ -1559,20 +1573,19 @@ define <vscale x 32 x i32> @vadd_vi_nxv32i32_unmasked(<vscale x 32 x i32> %va, i
 ; CHECK-NEXT:    vsetvli a3, zero, e8, mf2, ta, mu
 ; CHECK-NEXT:    slli a1, a1, 1
 ; CHECK-NEXT:    sub a3, a0, a1
-; CHECK-NEXT:    vmv1r.v v26, v25
 ; CHECK-NEXT:    vslidedown.vx v0, v25, a4
-; CHECK-NEXT:    bltu a0, a3, .LBB117_2
+; CHECK-NEXT:    bltu a0, a3, .LBB118_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, a3
-; CHECK-NEXT:  .LBB117_2:
+; CHECK-NEXT:  .LBB118_2:
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, mu
 ; CHECK-NEXT:    vadd.vi v16, v16, -1, v0.t
-; CHECK-NEXT:    bltu a0, a1, .LBB117_4
+; CHECK-NEXT:    bltu a0, a1, .LBB118_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:  .LBB117_4:
+; CHECK-NEXT:  .LBB118_4:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, mu
-; CHECK-NEXT:    vmv1r.v v0, v26
+; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    vadd.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 32 x i32> undef, i32 -1, i32 0
@@ -1593,24 +1606,24 @@ declare i32 @llvm.vscale.i32()
 define <vscale x 32 x i32> @vadd_vi_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, <vscale x 32 x i1> %m) {
 ; CHECK-LABEL: vadd_vi_nxv32i32_evl_nx8:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmv1r.v v25, v0
 ; CHECK-NEXT:    mv a2, zero
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a4, a0, 2
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, mu
 ; CHECK-NEXT:    slli a1, a0, 1
 ; CHECK-NEXT:    sub a3, a0, a1
-; CHECK-NEXT:    vmv1r.v v25, v0
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a4
-; CHECK-NEXT:    bltu a0, a3, .LBB118_2
+; CHECK-NEXT:    bltu a0, a3, .LBB119_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, a3
-; CHECK-NEXT:  .LBB118_2:
+; CHECK-NEXT:  .LBB119_2:
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, mu
 ; CHECK-NEXT:    vadd.vi v16, v16, -1, v0.t
-; CHECK-NEXT:    bltu a0, a1, .LBB118_4
+; CHECK-NEXT:    bltu a0, a1, .LBB119_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:  .LBB118_4:
+; CHECK-NEXT:  .LBB119_4:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    vadd.vi v8, v8, -1, v0.t

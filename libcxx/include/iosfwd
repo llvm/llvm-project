@@ -227,7 +227,7 @@ typedef fpos<mbstate_t>    u8streampos;
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
 typedef fpos<mbstate_t>    u16streampos;
 typedef fpos<mbstate_t>    u32streampos;
-#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
+#endif
 
 #if defined(_NEWLIB_VERSION)
 // On newlib, off_t is 'long int'

@@ -4,7 +4,8 @@
 
 define i32 @load_with_pointer_phi_no_runtime_checks(%s1* %data) {
 ; CHECK-LABEL: @load_with_pointer_phi_no_runtime_checks
-; CHECK-NOT: vector.body
+; CHECK-NOT: memcheck
+; CHECK:     vector.body:
 ;
 entry:
   br label %loop.header
@@ -38,7 +39,8 @@ exit:                                             ; preds = %loop.latch
 
 define i32 @store_with_pointer_phi_no_runtime_checks(%s1* %data) {
 ; CHECK-LABEL: @store_with_pointer_phi_no_runtime_checks
-; CHECK-NOT: vector.body
+; CHECK-NOT: memcheck
+; CHECK:     vector.body
 ;
 entry:
   br label %loop.header
@@ -72,7 +74,8 @@ exit:                                             ; preds = %loop.latch
 
 define i32 @store_with_pointer_phi_runtime_checks(double* %A, double* %B, double* %C) {
 ; CHECK-LABEL: @store_with_pointer_phi_runtime_checks
-; CHECK-NOT: vector.body
+; CHECK:     memcheck
+; CHECK:     vector.body
 ;
 entry:
   br label %loop.header

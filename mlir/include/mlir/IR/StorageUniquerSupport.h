@@ -57,6 +57,25 @@ protected:
 // StorageUserBase
 //===----------------------------------------------------------------------===//
 
+namespace storage_user_base_impl {
+/// Returns true if this given Trait ID matches the IDs of any of the provided
+/// trait types `Traits`.
+template <template <typename T> class... Traits>
+bool hasTrait(TypeID traitID) {
+  TypeID traitIDs[] = {TypeID::get<Traits>()...};
+  for (unsigned i = 0, e = sizeof...(Traits); i != e; ++i)
+    if (traitIDs[i] == traitID)
+      return true;
+  return false;
+}
+
+// We specialize for the empty case to not define an empty array.
+template <>
+inline bool hasTrait(TypeID traitID) {
+  return false;
+}
+} // namespace storage_user_base_impl
+
 /// Utility class for implementing users of storage classes uniqued by a
 /// StorageUniquer. Clients are not expected to interact with this class
 /// directly.
@@ -69,6 +88,7 @@ public:
   /// Utility declarations for the concrete attribute class.
   using Base = StorageUserBase<ConcreteT, BaseT, StorageT, UniquerT, Traits...>;
   using ImplType = StorageT;
+  using HasTraitFn = bool (*)(TypeID);
 
   /// Return a unique identifier for the concrete type.
   static TypeID getTypeID() { return TypeID::get<ConcreteT>(); }
@@ -85,6 +105,14 @@ public:
   /// user. This should not be used directly.
   static detail::InterfaceMap getInterfaceMap() {
     return detail::InterfaceMap::template get<Traits<ConcreteT>...>();
+  }
+
+  /// Returns the function that returns true if the given Trait ID matches the
+  /// IDs of any of the traits defined by the storage user.
+  static HasTraitFn getHasTraitFn() {
+    return [](TypeID id) {
+      return storage_user_base_impl::hasTrait<Traits...>(id);
+    };
   }
 
   /// Attach the given models as implementations of the corresponding interfaces

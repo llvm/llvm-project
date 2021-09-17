@@ -2911,6 +2911,7 @@ void ExecutionSession::dumpDispatchInfo(Task &T) {
   runSessionLocked([&]() {
     dbgs() << "Dispatching: ";
     T.printDescription(dbgs());
+    dbgs() << "\n";
   });
 }
 #endif // NDEBUG

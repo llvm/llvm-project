@@ -277,6 +277,12 @@ struct DominatorTreeVerifierPass : PassInfoMixin<DominatorTreeVerifierPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
+/// Enables verification of dominator trees.
+///
+/// This check is expensive and is disabled by default.  `-verify-dom-info`
+/// allows selectively enabling the check without needing to recompile.
+extern bool VerifyDomInfo;
+
 /// Legacy analysis pass which computes a \c DominatorTree.
 class DominatorTreeWrapperPass : public FunctionPass {
   DominatorTree DT;

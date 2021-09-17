@@ -762,7 +762,7 @@ void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
       PointerType *Int8PtrTy = Type::getInt8PtrTy(*Ctx,
           cast<PointerType>(Ty)->getAddressSpace());
       Base = new BitCastInst(Base, Int8PtrTy, "base_bitcast", InsertionPt);
-      Mat = GetElementPtrInst::Create(Int8PtrTy->getElementType(), Base,
+      Mat = GetElementPtrInst::Create(Type::getInt8Ty(*Ctx), Base,
           Offset, "mat_gep", InsertionPt);
       Mat = new BitCastInst(Mat, Ty, "mat_bitcast", InsertionPt);
     } else

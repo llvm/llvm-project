@@ -37,7 +37,7 @@ struct __not_fn_t : __perfect_forward<__not_fn_op, _Fn> {
     using __perfect_forward<__not_fn_op, _Fn>::__perfect_forward;
 };
 
-template <class _Fn, class = _EnableIf<
+template <class _Fn, class = enable_if_t<
     is_constructible_v<decay_t<_Fn>, _Fn> &&
     is_move_constructible_v<decay_t<_Fn>>
 >>

@@ -595,8 +595,6 @@ lldb_private::ConstString ScriptInterpreterPythonImpl::GetPluginName() {
   return GetPluginNameStatic();
 }
 
-uint32_t ScriptInterpreterPythonImpl::GetPluginVersion() { return 1; }
-
 void ScriptInterpreterPythonImpl::IOHandlerActivated(IOHandler &io_handler,
                                                      bool interactive) {
   const char *instructions = nullptr;

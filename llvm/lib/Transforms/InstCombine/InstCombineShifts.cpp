@@ -41,7 +41,7 @@ bool canTryToConstantAddTwoShiftAmounts(Value *Sh0, Value *ShAmt0, Value *Sh1,
       (Sh0->getType()->getScalarSizeInBits() - 1) +
       (Sh1->getType()->getScalarSizeInBits() - 1);
   APInt MaximalRepresentableShiftAmount =
-      APInt::getAllOnesValue(ShAmt0->getType()->getScalarSizeInBits());
+      APInt::getAllOnes(ShAmt0->getType()->getScalarSizeInBits());
   return MaximalRepresentableShiftAmount.uge(MaximalPossibleTotalShiftAmount);
 }
 

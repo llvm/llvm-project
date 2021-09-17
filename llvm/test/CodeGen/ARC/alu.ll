@@ -253,3 +253,20 @@ define i64 @muls64(i32 %a, i32 %b) nounwind {
   ret i64 %v
 }
 
+; CHECK-LABEL: long_long_add
+; CHECK:      add.f %r0, %r0, %r2
+; CHECK-NEXT: adc.f %r1, %r1, %r3
+define i64 @long_long_add(i64 inreg %a, i64 inreg %b) #0 {
+entry:
+  %add = add nsw i64 %a, %b
+  ret i64 %add
+}
+
+; CHECK-LABEL: long_long_sub
+; CHECK:      sub.f %r0, %r0, %r2
+; CHECK-NEXT: sbc.f %r1, %r1, %r3
+define i64 @long_long_sub(i64 inreg %a, i64 inreg %b) #0 {
+entry:
+  %sub = sub nsw i64 %a, %b
+  ret i64 %sub
+}

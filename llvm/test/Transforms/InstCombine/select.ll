@@ -2844,6 +2844,171 @@ define <2 x i1> @partial_false_undef_condval(<2 x i1> %x) {
   ret <2 x i1> %r
 }
 
+; select (x == 0), 0, x * y --> freeze(y) * x
+define i32 @mul_select_eq_zero(i32 %x, i32 %y) {
+; CHECK-LABEL: @mul_select_eq_zero(
+; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i32 [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[Y_FR]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[M]]
+;
+  %c = icmp eq i32 %x, 0
+  %m = mul i32 %x, %y
+  %r = select i1 %c, i32 0, i32 %m
+  ret i32 %r
+}
+
+; select (y == 0), 0, x * y --> freeze(x) * y
+define i32 @mul_select_eq_zero_commute(i32 %x, i32 %y) {
+; CHECK-LABEL: @mul_select_eq_zero_commute(
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X_FR]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[M]]
+;
+  %c = icmp eq i32 %y, 0
+  %m = mul i32 %x, %y
+  %r = select i1 %c, i32 0, i32 %m
+  ret i32 %r
+}
+
+; Check that mul's flags preserved during the transformation.
+define i32 @mul_select_eq_zero_copy_flags(i32 %x, i32 %y) {
+; CHECK-LABEL: @mul_select_eq_zero_copy_flags(
+; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i32 [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[Y_FR]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[M]]
+;
+  %c = icmp eq i32 %x, 0
+  %m = mul nuw nsw i32 %x, %y
+  %r = select i1 %c, i32 0, i32 %m
+  ret i32 %r
+}
+
+; Check that the transformation could be applied after condition's inversion.
+; select (x != 0), x * y, 0 --> freeze(y) * x
+define i32 @mul_select_ne_zero(i32 %x, i32 %y) {
+; CHECK-LABEL: @mul_select_ne_zero(
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i32 [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[Y_FR]], [[X]]
+; CHECK-NEXT:    call void @use(i1 [[C]])
+; CHECK-NEXT:    ret i32 [[M]]
+;
+  %c = icmp ne i32 %x, 0
+  %m = mul i32 %x, %y
+  %r = select i1 %c, i32 %m, i32 0
+  call void @use(i1 %c)
+  ret i32 %r
+}
+
+; Check that if one of a select's branches returns undef then
+; an expression could be folded into mul as if there was a 0 instead of undef.
+; select (x == 0), undef, x * y --> freeze(y) * x
+define i32 @mul_select_eq_zero_sel_undef(i32 %x, i32 %y) {
+; CHECK-LABEL: @mul_select_eq_zero_sel_undef(
+; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i32 [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[Y_FR]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[M]]
+;
+  %c = icmp eq i32 %x, 0
+  %m = mul i32 %x, %y
+  %r = select i1 %c, i32 undef, i32 %m
+  ret i32 %r
+}
+
+; Check that the transformation is applied disregard to a number
+; of expression's users.
+define i32 @mul_select_eq_zero_multiple_users(i32 %x, i32 %y) {
+; CHECK-LABEL: @mul_select_eq_zero_multiple_users(
+; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i32 [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[Y_FR]], [[X:%.*]]
+; CHECK-NEXT:    call void @use_i32(i32 [[M]])
+; CHECK-NEXT:    call void @use_i32(i32 [[M]])
+; CHECK-NEXT:    call void @use_i32(i32 [[M]])
+; CHECK-NEXT:    ret i32 [[M]]
+;
+  %m = mul i32 %x, %y
+  call void @use_i32(i32 %m)
+  %c = icmp eq i32 %x, 0
+  %r = select i1 %c, i32 0, i32 %m
+  call void @use_i32(i32 %m)
+  call void @use_i32(i32 %r)
+  ret i32 %r
+}
+
+; Negative test: select's condition is unrelated to multiplied values,
+; so the transformation should not be applied.
+define i32 @mul_select_eq_zero_unrelated_condition(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @mul_select_eq_zero_unrelated_condition(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[Z:%.*]], 0
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 0, i32 [[M]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %c = icmp eq i32 %z, 0
+  %m = mul i32 %x, %y
+  %r = select i1 %c, i32 0, i32 %m
+  ret i32 %r
+}
+
+; select (<k x elt> x == 0), <k x elt> 0, <k x elt> x * y --> freeze(y) * x
+define <4 x i32> @mul_select_eq_zero_vector(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @mul_select_eq_zero_vector(
+; CHECK-NEXT:    [[Y_FR:%.*]] = freeze <4 x i32> [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = mul <4 x i32> [[Y_FR]], [[X:%.*]]
+; CHECK-NEXT:    ret <4 x i32> [[M]]
+;
+  %c = icmp eq <4 x i32> %x, zeroinitializer
+  %m = mul <4 x i32> %x, %y
+  %r = select <4 x i1> %c, <4 x i32> zeroinitializer, <4 x i32> %m
+  ret <4 x i32> %r
+}
+
+; Check that a select is folded into multiplication if condition's operand
+; is a vector consisting of zeros and undefs.
+; select (<k x elt> x == {0, undef, ...}), <k x elt> 0, <k x elt> x * y --> freeze(y) * x
+define <2 x i32> @mul_select_eq_undef_vector(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @mul_select_eq_undef_vector(
+; CHECK-NEXT:    [[Y_FR:%.*]] = freeze <2 x i32> [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = mul <2 x i32> [[Y_FR]], [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[M]]
+;
+  %c = icmp eq <2 x i32> %x, <i32 0, i32 undef>
+  %m = mul <2 x i32> %x, %y
+  %r = select <2 x i1> %c, <2 x i32> <i32 0, i32 42>, <2 x i32> %m
+  ret <2 x i32> %r
+}
+
+; Check that a select is folded into multiplication if other select's operand
+; is a vector consisting of zeros and undefs.
+; select (<k x elt> x == 0), <k x elt> {0, undef, ...}, <k x elt> x * y --> freeze(y) * x
+define <2 x i32> @mul_select_eq_zero_sel_undef_vector(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @mul_select_eq_zero_sel_undef_vector(
+; CHECK-NEXT:    [[Y_FR:%.*]] = freeze <2 x i32> [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = mul <2 x i32> [[Y_FR]], [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[M]]
+;
+  %c = icmp eq <2 x i32> %x, zeroinitializer
+  %m = mul <2 x i32> %x, %y
+  %r = select <2 x i1> %c, <2 x i32> <i32 0, i32 undef>, <2 x i32> %m
+  ret <2 x i32> %r
+}
+
+; Negative test: select should not be folded into mul because
+; condition's operand and select's operand do not merge into zero vector.
+define <2 x i32> @mul_select_eq_undef_vector_not_merging_to_zero(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @mul_select_eq_undef_vector_not_merging_to_zero(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[X:%.*]], <i32 0, i32 undef>
+; CHECK-NEXT:    [[M:%.*]] = mul <2 x i32> [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C]], <2 x i32> <i32 1, i32 0>, <2 x i32> [[M]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %c = icmp eq <2 x i32> %x, <i32 0, i32 undef>
+  %m = mul <2 x i32> %x, %y
+  %r = select <2 x i1> %c, <2 x i32> <i32 1, i32 0>, <2 x i32> %m
+  ret <2 x i32> %r
+}
+
 declare void @use(i1)
 declare void @use_i8(i8)
+declare void @use_i32(i32)
 declare i32 @llvm.cttz.i32(i32, i1 immarg)

@@ -56,6 +56,25 @@ SmallVector<Value, 4> getDynOperands(Location loc, Value val, OpBuilder &b);
 /// Otherwise return nullptr.
 IntegerAttr getSmallestBoundingIndex(Value size);
 
+/// Create an ExtractSliceOp and, if `source` is defined by an ExtractSliceOp,
+/// fold it by adding the offsets.
+///
+/// Example:
+/// ```
+///   %0 = tensor.extract_slice %arg0[3, 4][3, 32][1, 1] : tensor<64x64xf32> to
+///                                                        tensor<3x32xf32>
+///   %1 = tensor.extract_slice %0[0, 5][3, 4][1, 1] : tensor<3x32xf32> to
+///                                                    tensor<3x4xf32>
+/// ```
+/// folds into:
+/// ```
+///   %1 = tensor.extract_slice %arg0[3, 9][3, 4][1, 1] : tensor<64x64xf32> to
+///                                                         tensor<3x4xf32>
+/// ```
+tensor::ExtractSliceOp makeComposedExtractSliceOp(
+    OpBuilder &b, Location loc, Value source, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, ArrayRef<OpFoldResult> strides);
+
 //===----------------------------------------------------------------------===//
 // Fusion utilities
 //===----------------------------------------------------------------------===//
@@ -91,7 +110,7 @@ SmallVector<Value> computeTileSizes(OpBuilder &b, Location loc, ValueRange ivs,
 /// at offsets `lbs` and with sizes `subShapeSizes`.
 Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
                      ValueRange tileSizes, AffineMap map, ValueRange lbs,
-                     ValueRange subShapeSizes);
+                     ValueRange ubs, ValueRange subShapeSizes);
 
 /// Creates extract_slice/subview ops for all `valuesToTile` of the given
 /// `linalgOp` with `builder`, assuming `linalgOp` is being fused into a loop
@@ -263,7 +282,7 @@ struct RegionMatcher {
 /// Utility class used to generate nested loops with ranges described by
 /// `loopRanges` and loop type described by the `iteratorTypes`. `bodyBuilderFn`
 /// is used to generate the body of the innermost loop. It is passed a range
-/// of loop induction variables and a range of iterArgs.
+/// of loop induction variables and a range of operand values to use.
 template <typename LoopTy>
 struct GenerateLoopNest {
   static void doit(OpBuilder &b, Location loc, ArrayRef<Range> loopRanges,

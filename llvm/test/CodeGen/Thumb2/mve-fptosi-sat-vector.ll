@@ -1028,12 +1028,12 @@ define arm_aapcs_vfpcc <6 x i32> @test_signed_v6f64_v6i32(<6 x double> %f) {
 ; CHECK-NEXT:    vldr d0, .LCPI13_0
 ; CHECK-NEXT:    vmov r9, r4, d5
 ; CHECK-NEXT:    vmov r2, r6, d0
-; CHECK-NEXT:    vmov.f32 s20, s8
-; CHECK-NEXT:    vmov.f32 s22, s6
+; CHECK-NEXT:    vmov.f32 s22, s8
+; CHECK-NEXT:    vmov.f32 s20, s6
 ; CHECK-NEXT:    vmov.f32 s18, s4
 ; CHECK-NEXT:    vmov.f32 s24, s2
-; CHECK-NEXT:    vmov.f32 s21, s9
-; CHECK-NEXT:    vmov.f32 s23, s7
+; CHECK-NEXT:    vmov.f32 s23, s9
+; CHECK-NEXT:    vmov.f32 s21, s7
 ; CHECK-NEXT:    vmov.f32 s19, s5
 ; CHECK-NEXT:    vmov.f32 s25, s3
 ; CHECK-NEXT:    str r2, [sp, #24] @ 4-byte Spill
@@ -1054,11 +1054,11 @@ define arm_aapcs_vfpcc <6 x i32> @test_signed_v6f64_v6i32(<6 x double> %f) {
 ; CHECK-NEXT:    mov r1, r4
 ; CHECK-NEXT:    bl __aeabi_d2lz
 ; CHECK-NEXT:    mov r10, r0
-; CHECK-NEXT:    vmov r8, r0, d11
+; CHECK-NEXT:    vmov r8, r0, d10
 ; CHECK-NEXT:    cmp.w r11, #0
 ; CHECK-NEXT:    mov r2, r9
 ; CHECK-NEXT:    mov r3, r4
-; CHECK-NEXT:    vmov r7, r5, d10
+; CHECK-NEXT:    vmov r7, r5, d11
 ; CHECK-NEXT:    str r0, [sp, #8] @ 4-byte Spill
 ; CHECK-NEXT:    vmov r1, r0, d12
 ; CHECK-NEXT:    strd r1, r0, [sp, #12] @ 8-byte Folded Spill

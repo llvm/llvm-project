@@ -187,6 +187,12 @@ static inline int disableExcept(int excepts) {
   return internal::exceptionStatusToMacro(oldExcepts);
 }
 
+static inline int getExcept() {
+  uint16_t x87CW = internal::getX87ControlWord();
+  uint16_t enabledExcepts = ~x87CW & 0x3F;
+  return internal::exceptionStatusToMacro(enabledExcepts);
+}
+
 static inline int clearExcept(int excepts) {
   internal::X87StateDescriptor state;
   internal::getX87StateDescriptor(state);

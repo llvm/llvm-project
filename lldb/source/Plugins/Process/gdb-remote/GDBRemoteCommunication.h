@@ -51,6 +51,32 @@ enum class CompressionType {
   LZMA, // Lempel–Ziv–Markov chain algorithm
 };
 
+// Data included in the vFile:fstat packet.
+// https://sourceware.org/gdb/onlinedocs/gdb/struct-stat.html#struct-stat
+struct GDBRemoteFStatData {
+  llvm::support::ubig32_t gdb_st_dev;
+  llvm::support::ubig32_t gdb_st_ino;
+  llvm::support::ubig32_t gdb_st_mode;
+  llvm::support::ubig32_t gdb_st_nlink;
+  llvm::support::ubig32_t gdb_st_uid;
+  llvm::support::ubig32_t gdb_st_gid;
+  llvm::support::ubig32_t gdb_st_rdev;
+  llvm::support::ubig64_t gdb_st_size;
+  llvm::support::ubig64_t gdb_st_blksize;
+  llvm::support::ubig64_t gdb_st_blocks;
+  llvm::support::ubig32_t gdb_st_atime;
+  llvm::support::ubig32_t gdb_st_mtime;
+  llvm::support::ubig32_t gdb_st_ctime;
+};
+static_assert(sizeof(GDBRemoteFStatData) == 64,
+              "size of GDBRemoteFStatData is not 64");
+
+enum GDBErrno {
+#define HANDLE_ERRNO(name, value) GDB_##name = value,
+#include "Plugins/Process/gdb-remote/GDBRemoteErrno.def"
+  GDB_EUNKNOWN = 9999
+};
+
 class ProcessGDBRemote;
 
 class GDBRemoteCommunication : public Communication {

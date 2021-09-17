@@ -1233,30 +1233,24 @@ __m256i test_mm256_loadu_si256(__m256i* A) {
 __m256 test_mm256_loadu2_m128(float* A, float* B) {
   // CHECK-LABEL: test_mm256_loadu2_m128
   // CHECK: load <4 x float>, <4 x float>* %{{.*}}, align 1{{$}}
-  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   // CHECK: load <4 x float>, <4 x float>* %{{.*}}, align 1{{$}}
-  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   return _mm256_loadu2_m128(A, B);
 }
 
 __m256d test_mm256_loadu2_m128d(double* A, double* B) {
   // CHECK-LABEL: test_mm256_loadu2_m128d
   // CHECK: load <2 x double>, <2 x double>* %{{.*}}, align 1{{$}}
-  // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   // CHECK: load <2 x double>, <2 x double>* %{{.*}}, align 1{{$}}
-  // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm256_loadu2_m128d(A, B);
 }
 
 __m256i test_mm256_loadu2_m128i(__m128i* A, __m128i* B) {
   // CHECK-LABEL: test_mm256_loadu2_m128i
   // CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 1{{$}}
-  // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   // CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 1{{$}}
-  // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  // CHECK: shufflevector <8 x i32> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+  // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm256_loadu2_m128i(A, B);
 }
 

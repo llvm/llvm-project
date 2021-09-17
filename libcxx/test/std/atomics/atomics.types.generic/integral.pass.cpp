@@ -182,7 +182,7 @@ int main(int, char**)
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
     test<std::atomic_char16_t, char16_t>();
     test<std::atomic_char32_t, char32_t>();
-#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
+#endif
     test<std::atomic_wchar_t, wchar_t>();
 
     test<std::atomic_int8_t,    int8_t>();
@@ -208,7 +208,7 @@ int main(int, char**)
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
     test<volatile std::atomic_char16_t, char16_t>();
     test<volatile std::atomic_char32_t, char32_t>();
-#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
+#endif
     test<volatile std::atomic_wchar_t, wchar_t>();
 
     test<volatile std::atomic_int8_t,    int8_t>();

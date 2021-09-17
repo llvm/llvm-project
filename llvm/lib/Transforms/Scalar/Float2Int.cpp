@@ -256,7 +256,7 @@ void Float2IntPass::walkForwards() {
       Op = [](ArrayRef<ConstantRange> Ops) {
         assert(Ops.size() == 1 && "FNeg is a unary operator!");
         unsigned Size = Ops[0].getBitWidth();
-        auto Zero = ConstantRange(APInt::getNullValue(Size));
+        auto Zero = ConstantRange(APInt::getZero(Size));
         return Zero.sub(Ops[0]);
       };
       break;

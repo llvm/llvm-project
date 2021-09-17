@@ -193,12 +193,12 @@ define i32 @needs_align1024_stack_args_used_inside_loop(%struct.Data addrspace(5
 
 ; GCN-LABEL: needs_align1024_stack_args_used_inside_loop:
 ; GCN: s_mov_b32 [[FP_COPY:s[0-9]+]], s33
-; GCN-NEXT: s_add_i32 s33, s32, 0xffc0
 ; GCN-NEXT: s_mov_b32 [[BP_COPY:s[0-9]+]], s34
+; GCN-NEXT: s_add_i32 s33, s32, 0xffc0
 ; GCN-NEXT: s_mov_b32 s34, s32
 ; GCN-NEXT: s_and_b32 s33, s33, 0xffff0000
-; GCN-NEXT: v_mov_b32_e32 v{{[0-9]+}}, 0
 ; GCN-NEXT: v_lshrrev_b32_e64 [[VGPR_REG:v[0-9]+]], 6, s34
+; GCN-NEXT: v_mov_b32_e32 v{{[0-9]+}}, 0
 ; GCN: s_add_i32 s32, s32, 0x30000
 ; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s33 offset:1024
 ; GCN: buffer_load_dword v{{[0-9]+}}, [[VGPR_REG]], s[0:3], 0 offen

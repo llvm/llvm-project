@@ -14,7 +14,7 @@ class TestGuiBasicDebugCommandTest(PExpectTest):
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
     @skipIfAsan
-    @skipIf(oslist=["linux"], archs=["arm","aarch64"])
+    @skipIf(bugnumber="llvm.org/pr51833")
     @skipIfCursesSupportMissing
     def test_gui(self):
         self.build()

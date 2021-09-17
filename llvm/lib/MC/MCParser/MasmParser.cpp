@@ -1319,7 +1319,7 @@ bool MasmParser::enabledGenDwarfForAssembly() {
 bool MasmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   // Create the initial section, if requested.
   if (!NoInitialTextSection)
-    Out.InitSections(false);
+    Out.initSections(false, getTargetParser().getSTI());
 
   // Prime the lexer.
   Lex();
@@ -1437,7 +1437,7 @@ bool MasmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
 
 bool MasmParser::checkForValidSection() {
   if (!ParsingMSInlineAsm && !getStreamer().getCurrentSectionOnly()) {
-    Out.InitSections(false);
+    Out.initSections(false, getTargetParser().getSTI());
     return Error(getTok().getLoc(),
                  "expected section directive before assembly directive");
   }
@@ -4772,7 +4772,8 @@ bool MasmParser::emitAlignTo(int64_t Alignment) {
     const MCSection *Section = getStreamer().getCurrentSectionOnly();
     assert(Section && "must have section to emit alignment");
     if (Section->UseCodeAlign()) {
-      getStreamer().emitCodeAlignment(Alignment, /*MaxBytesToEmit=*/0);
+      getStreamer().emitCodeAlignment(Alignment, &getTargetParser().getSTI(),
+                                      /*MaxBytesToEmit=*/0);
     } else {
       // FIXME: Target specific behavior about how the "extra" bytes are filled.
       getStreamer().emitValueToAlignment(Alignment, /*Value=*/0,

@@ -5,6 +5,12 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-unknown \
 ; RUN:     -mcpu=pwr9 -ppc-asm-full-reg-names \
 ; RUN:     -ppc-vsr-nums-as-vr < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-unknown \
+; RUN:     -mcpu=pwr10 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
+; RUN:     < %s | FileCheck %s --check-prefixes=CHECK,CHECK-P10
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-unknown \
+; RUN:     -mcpu=pwr10 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
+; RUN:     < %s | FileCheck %s --check-prefixes=CHECK,CHECK-P10-BE
 
 ; Function Attrs: norecurse nounwind readonly
 define dso_local <2 x double> @test1(<2 x float>* nocapture readonly %Ptr) {
@@ -74,4 +80,31 @@ entry:
   %sub = fmul <2 x float> %0, %1
   %2 = fpext <2 x float> %sub to <2 x double>
   ret <2 x double> %2
+}
+
+@G = dso_local local_unnamed_addr global <2 x float> <float 3.000000e+00, float 0x3FF3333340000000>, align 8
+
+; Function Attrs: mustprogress nofree norecurse nosync nounwind readonly uwtable willreturn
+define dso_local <2 x double> @test5(<2 x double> %a) {
+; CHECK-P10-LABEL: test5:
+; CHECK-P10:       # %bb.0: # %entry
+; CHECK-P10-NEXT:    plfd f0, G@PCREL(0), 1
+; CHECK-P10-NEXT:    xxmrghw vs0, vs0, vs0
+; CHECK-P10-NEXT:    xvcvspdp vs0, vs0
+; CHECK-P10-NEXT:    xvadddp v2, vs0, v2
+; CHECK-P10-NEXT:    blr
+;
+; CHECK-P10-BE-LABEL: test5:
+; CHECK-P10-BE:       # %bb.0: # %entry
+; CHECK-P10-BE-NEXT:    addis r3, r2, G@toc@ha
+; CHECK-P10-BE-NEXT:    lfd f0, G@toc@l(r3)
+; CHECK-P10-BE-NEXT:    xxmrghw vs0, vs0, vs0
+; CHECK-P10-BE-NEXT:    xvcvspdp vs0, vs0
+; CHECK-P10-BE-NEXT:    xvadddp v2, vs0, v2
+; CHECK-P10-BE-NEXT:    blr
+entry:
+  %0 = load <2 x float>, <2 x float>* @G, align 8
+  %1 = fpext <2 x float> %0 to <2 x double>
+  %add = fadd <2 x double> %1, %a
+  ret <2 x double> %add
 }

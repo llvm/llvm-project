@@ -135,8 +135,6 @@ public:
 
   // PluginInterface protocol
   ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
 };
 
 } // namespace lldb_private

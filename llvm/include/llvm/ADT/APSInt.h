@@ -58,7 +58,7 @@ public:
   /// that 0 is not a positive value.
   ///
   /// \returns true if this APSInt is positive.
-  bool isStrictlyPositive() const { return isNonNegative() && !isNullValue(); }
+  bool isStrictlyPositive() const { return isNonNegative() && !isZero(); }
 
   APSInt &operator=(APInt RHS) {
     // Retain our current sign.

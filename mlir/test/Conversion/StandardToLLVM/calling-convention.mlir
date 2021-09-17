@@ -1,5 +1,5 @@
-// RUN: mlir-opt -convert-memref-to-llvm -convert-std-to-llvm='emit-c-wrappers=1' %s | FileCheck %s
-// RUN: mlir-opt -convert-memref-to-llvm -convert-std-to-llvm %s | FileCheck %s --check-prefix=EMIT_C_ATTRIBUTE
+// RUN: mlir-opt -convert-memref-to-llvm -convert-std-to-llvm='emit-c-wrappers=1' -reconcile-unrealized-casts %s | FileCheck %s
+// RUN: mlir-opt -convert-memref-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts %s | FileCheck %s --check-prefix=EMIT_C_ATTRIBUTE
 
 // This tests the default memref calling convention and the emission of C
 // wrappers. We don't need to separate runs because the wrapper-emission

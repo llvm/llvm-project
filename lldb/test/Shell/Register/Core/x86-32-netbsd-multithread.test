@@ -1,0 +1,24 @@
+# RUN: %lldb -b -s %s -c %p/Inputs/x86-32-netbsd-multithread.core | FileCheck %s
+
+thread list
+# CHECK: * thread #1: tid = 2, 0x08048db9, stop reason = signal SIGSEGV 
+# CHECK-NEXT:   thread #2: tid = 4, 0x08048dbf, stop reason = signal 0 
+# CHECK-NEXT:   thread #3: tid = 3, 0x08048dbf, stop reason = signal 0 
+# CHECK-NEXT:   thread #4: tid = 1, 0xf876a147, stop reason = signal 0 
+
+
+register read --all
+# CHECK-DAG: ecx = 0x03030303
+# CHECK-DAG: ebx = 0x04040404
+
+thread select 3
+# CHECK: (lldb) thread select 3
+register read --all
+# CHECK-DAG: ecx = 0x13131313
+# CHECK-DAG: ebx = 0x14141414
+
+thread select 2
+# CHECK: (lldb) thread select 2
+register read --all
+# CHECK-DAG: ecx = 0x23232323
+# CHECK-DAG: ebx = 0x24242424

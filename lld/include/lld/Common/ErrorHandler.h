@@ -124,6 +124,8 @@ private:
   using Colors = raw_ostream::Colors;
 
   std::string getLocation(const Twine &msg);
+  void reportDiagnostic(StringRef location, Colors c, StringRef diagKind,
+                        const Twine &msg);
 };
 
 /// Returns the default error handler.

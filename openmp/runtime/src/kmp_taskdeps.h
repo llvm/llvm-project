@@ -73,6 +73,8 @@ static inline void __kmp_dephash_free_entries(kmp_info_t *thread,
       h->buckets[i] = 0;
     }
   }
+  __kmp_node_deref(thread, h->last_all);
+  h->last_all = NULL;
 }
 
 static inline void __kmp_dephash_free(kmp_info_t *thread, kmp_dephash_t *h) {

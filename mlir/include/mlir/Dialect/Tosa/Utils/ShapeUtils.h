@@ -15,6 +15,7 @@
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -59,6 +60,10 @@ struct ValueKnowledge {
   // about the IR.
   static ValueKnowledge getPessimisticValueState() {
     return ValueKnowledge(false, {}, Type());
+  }
+
+  ShapedTypeComponents getShapedTypeComponents() const {
+    return hasRank ? ShapedTypeComponents(sizes) : ShapedTypeComponents();
   }
 
   Type getType() const {

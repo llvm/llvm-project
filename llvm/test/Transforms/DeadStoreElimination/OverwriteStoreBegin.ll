@@ -21,26 +21,6 @@ entry:
   ret void
 }
 
-define void @write4to7_opaque_ptr(ptr nocapture %p) {
-; CHECK-LABEL: @write4to7_opaque_ptr(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast ptr [[ARRAYIDX0]] to i8*
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, i8* [[TMP0]], i64 4
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[TMP1]] to ptr
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[TMP2]], i8 0, i64 24, i1 false)
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 1
-; CHECK-NEXT:    store i32 1, ptr [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    ret void
-;
-entry:
-  %arrayidx0 = getelementptr inbounds i32, ptr %p, i64 1
-  call void @llvm.memset.p0.i64(ptr align 4 %arrayidx0, i8 0, i64 28, i1 false)
-  %arrayidx1 = getelementptr inbounds i32, ptr %p, i64 1
-  store i32 1, ptr %arrayidx1, align 4
-  ret void
-}
-
 define void @write4to7_weird_element_type(i32* nocapture %p) {
 ; CHECK-LABEL: @write4to7_weird_element_type(
 ; CHECK-NEXT:  entry:
@@ -452,7 +432,6 @@ entry:
 
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
 declare void @llvm.memset.p0i32.i64(i32* nocapture, i8, i64, i1) nounwind
-declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind
 declare void @llvm.memset.p1i8.i64(i8 addrspace(1)* nocapture, i8, i64, i1) nounwind
 declare void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* nocapture, i8, i64, i32) nounwind
 

@@ -55,7 +55,8 @@ public:
   /// Give the target a chance to manipulate state related to instruction
   /// alignment (e.g. padding for optimization), instruction relaxablility, etc.
   /// before and after actually emitting the instruction.
-  virtual void emitInstructionBegin(MCObjectStreamer &OS, const MCInst &Inst) {}
+  virtual void emitInstructionBegin(MCObjectStreamer &OS, const MCInst &Inst,
+                                    const MCSubtargetInfo &STI) {}
   virtual void emitInstructionEnd(MCObjectStreamer &OS, const MCInst &Inst) {}
 
   /// lifetime management
@@ -185,13 +186,16 @@ public:
 
   /// Returns the maximum size of a nop in bytes on this target.
   ///
-  virtual unsigned getMaximumNopSize() const { return 0; }
+  virtual unsigned getMaximumNopSize(const MCSubtargetInfo &STI) const {
+    return 0;
+  }
 
   /// Write an (optimal) nop sequence of Count bytes to the given output. If the
   /// target cannot generate such a sequence, it should return an error.
   ///
   /// \return - True on success.
-  virtual bool writeNopData(raw_ostream &OS, uint64_t Count) const = 0;
+  virtual bool writeNopData(raw_ostream &OS, uint64_t Count,
+                            const MCSubtargetInfo *STI) const = 0;
 
   /// Give backend an opportunity to finish layout after relaxation
   virtual void finishLayout(MCAssembler const &Asm,

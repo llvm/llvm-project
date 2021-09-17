@@ -30,9 +30,10 @@ registers:
 body:             |
   ; CHECK-LABEL: name: test_blockaddress
   ; CHECK: bb.0 (%ir-block.0):
-  ; CHECK:   [[MOVaddrBA:%[0-9]+]]:gpr64 = MOVaddrBA target-flags(aarch64-page) blockaddress(@test_blockaddress, %ir-block.block), target-flags(aarch64-pageoff, aarch64-nc) blockaddress(@test_blockaddress, %ir-block.block)
+  ; CHECK:   [[MOVaddrBA:%[0-9]+]]:gpr64common = MOVaddrBA target-flags(aarch64-page) blockaddress(@test_blockaddress, %ir-block.block), target-flags(aarch64-pageoff, aarch64-nc) blockaddress(@test_blockaddress, %ir-block.block)
   ; CHECK:   [[MOVaddr:%[0-9]+]]:gpr64common = MOVaddr target-flags(aarch64-page) @addr, target-flags(aarch64-pageoff, aarch64-nc) @addr
-  ; CHECK:   STRXui [[MOVaddrBA]], [[MOVaddr]], 0 :: (store (p0) into @addr)
+  ; CHECK:   [[COPY:%[0-9]+]]:gpr64 = COPY [[MOVaddrBA]]
+  ; CHECK:   STRXui [[COPY]], [[MOVaddr]], 0 :: (store (p0) into @addr)
   ; CHECK:   BR [[MOVaddrBA]]
   ; CHECK: bb.1.block (address-taken):
   ; CHECK:   RET_ReallyLR

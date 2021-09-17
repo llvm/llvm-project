@@ -210,14 +210,6 @@ struct CommonConfig {
   // Repeated options
   std::vector<StringRef> AddSection;
   std::vector<StringRef> DumpSection;
-  std::vector<StringRef> RPathToAdd;
-  std::vector<StringRef> RPathToPrepend;
-  DenseMap<StringRef, StringRef> RPathsToUpdate;
-  DenseMap<StringRef, StringRef> InstallNamesToUpdate;
-  DenseSet<StringRef> RPathsToRemove;
-
-  // install-name-tool's id option
-  Optional<StringRef> SharedLibId;
 
   // Section matchers
   NameMatcher KeepSection;
@@ -239,23 +231,13 @@ struct CommonConfig {
   StringMap<SectionFlagsUpdate> SetSectionFlags;
   StringMap<StringRef> SymbolsToRename;
 
-  // ELF entry point address expression. The input parameter is an entry point
-  // address in the input ELF file. The entry address in the output file is
-  // calculated with EntryExpr(input_address), when either --set-start or
-  // --change-start is used.
-  std::function<uint64_t(uint64_t)> EntryExpr;
-
   // Symbol info specified by --add-symbol option.
   std::vector<NewSymbolInfo> SymbolsToAdd;
 
   // Boolean options
-  bool AllowBrokenLinks = false;
   bool DeterministicArchives = true;
   bool ExtractDWO = false;
   bool ExtractMainPartition = false;
-  bool KeepFileSymbols = false;
-  bool KeepUndefined = false;
-  bool LocalizeHidden = false;
   bool OnlyKeepDebug = false;
   bool PreserveDates = false;
   bool StripAll = false;
@@ -264,12 +246,9 @@ struct CommonConfig {
   bool StripDebug = false;
   bool StripNonAlloc = false;
   bool StripSections = false;
-  bool StripSwiftSymbols = false;
   bool StripUnneeded = false;
   bool Weaken = false;
   bool DecompressDebugSections = false;
-  // install-name-tool's --delete_all_rpaths
-  bool RemoveAllRpaths = false;
 
   DebugCompressionType CompressionType = DebugCompressionType::None;
 };

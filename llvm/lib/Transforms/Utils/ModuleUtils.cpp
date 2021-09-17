@@ -165,7 +165,7 @@ llvm::getOrCreateSanitizerCtorAndInitFunctions(
   if (Function *Ctor = M.getFunction(CtorName))
     // FIXME: Sink this logic into the module, similar to the handling of
     // globals. This will make moving to a concurrent model much easier.
-    if (Ctor->arg_size() == 0 ||
+    if (Ctor->arg_empty() ||
         Ctor->getReturnType() == Type::getVoidTy(M.getContext()))
       return {Ctor, declareSanitizerInitFunction(M, InitName, InitArgTypes)};
 

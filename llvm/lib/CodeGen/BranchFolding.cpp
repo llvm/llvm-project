@@ -611,7 +611,7 @@ ProfitableToMerge(MachineBasicBlock *MBB1, MachineBasicBlock *MBB2,
   // there are fallthroughs, and we don't know until after layout.
   if (AfterPlacement && FullBlockTail1 && FullBlockTail2) {
     auto BothFallThrough = [](MachineBasicBlock *MBB) {
-      if (MBB->succ_size() != 0 && !MBB->canFallThrough())
+      if (!MBB->succ_empty() && !MBB->canFallThrough())
         return false;
       MachineFunction::iterator I(MBB);
       MachineFunction *MF = MBB->getParent();
@@ -1198,14 +1198,13 @@ bool BranchFolder::OptimizeBranches(MachineFunction &MF) {
   // Renumbering blocks alters EH scope membership, recalculate it.
   EHScopeMembership = getEHScopeMembership(MF);
 
-  for (MachineFunction::iterator I = std::next(MF.begin()), E = MF.end();
-       I != E; ) {
-    MachineBasicBlock *MBB = &*I++;
-    MadeChange |= OptimizeBlock(MBB);
+  for (MachineBasicBlock &MBB :
+       llvm::make_early_inc_range(llvm::drop_begin(MF))) {
+    MadeChange |= OptimizeBlock(&MBB);
 
     // If it is dead, remove it.
-    if (MBB->pred_empty()) {
-      RemoveDeadBlock(MBB);
+    if (MBB.pred_empty()) {
+      RemoveDeadBlock(&MBB);
       MadeChange = true;
       ++NumDeadBlocks;
     }

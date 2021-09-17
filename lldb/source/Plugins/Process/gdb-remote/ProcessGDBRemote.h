@@ -104,8 +104,6 @@ public:
   // PluginInterface protocol
   ConstString GetPluginName() override;
 
-  uint32_t GetPluginVersion() override;
-
   // Process Control
   Status WillResume() override;
 

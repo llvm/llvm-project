@@ -18,6 +18,7 @@
 // be listed in `UsingLibcxx.rst` in the documentation for the extension.
 
 #include <algorithm>
+#include <bit> // bit_cast
 #include <cstddef> // to_integer
 #include <functional> // identity
 #include <iterator>
@@ -165,13 +166,13 @@ void test_template_cast_wrappers(LV&& lv, RV&& rv) {
 
 void test_nontemplate_cast_wrappers()
 {
-#if TEST_STD_VER >= 17
+#if TEST_STD_VER > 14
   std::byte b{42};
   std::to_integer<int>(b);
 #endif
 
-#if TEST_STD_VER >= 20
-  // std::bit_cast<unsigned int>(42);
+#if TEST_STD_VER > 17
+  std::bit_cast<unsigned int>(42);
 #endif
 
 #if TEST_STD_VER > 20

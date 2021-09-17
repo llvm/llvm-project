@@ -217,6 +217,12 @@ struct RequireAnalysisPass<AnalysisT, Loop, LoopAnalysisManager,
     (void)AM.template getResult<AnalysisT>(L, AR);
     return PreservedAnalyses::all();
   }
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName) {
+    auto ClassName = AnalysisT::name();
+    auto PassName = MapClassName2PassName(ClassName);
+    OS << "require<" << PassName << ">";
+  }
 };
 
 /// An alias template to easily name a require analysis loop pass.

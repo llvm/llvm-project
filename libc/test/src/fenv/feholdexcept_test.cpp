@@ -15,6 +15,20 @@
 #include <fenv.h>
 
 TEST(LlvmLibcFEnvTest, RaiseAndCrash) {
+#ifdef __aarch64__
+  // Few aarch64 HW implementations do not trap exceptions. We skip this test
+  // completely on such HW.
+  //
+  // Whether HW supports trapping exceptions or not is deduced by enabling an
+  // exception and reading back to see if the exception got enabled. If the
+  // exception did not get enabled, then it means that the HW does not support
+  // trapping exceptions.
+  __llvm_libc::fputil::disableExcept(FE_ALL_EXCEPT);
+  __llvm_libc::fputil::enableExcept(FE_DIVBYZERO);
+  if (__llvm_libc::fputil::getExcept() == 0)
+    return;
+#endif
+
   int excepts[] = {FE_DIVBYZERO, FE_INVALID, FE_INEXACT, FE_OVERFLOW,
                    FE_UNDERFLOW};
 

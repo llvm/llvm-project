@@ -44,8 +44,6 @@ lldb_private::ConstString ObjCPlusPlusLanguage::GetPluginName() {
   return GetPluginNameStatic();
 }
 
-uint32_t ObjCPlusPlusLanguage::GetPluginVersion() { return 1; }
-
 // Static Functions
 Language *ObjCPlusPlusLanguage::CreateInstance(lldb::LanguageType language) {
   switch (language) {

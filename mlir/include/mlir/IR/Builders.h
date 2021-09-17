@@ -10,6 +10,7 @@
 #define MLIR_IR_BUILDERS_H
 
 #include "mlir/IR/OpDefinition.h"
+#include "llvm/Support/Compiler.h"
 
 namespace mlir {
 
@@ -388,14 +389,24 @@ public:
   /// Creates an operation given the fields represented as an OperationState.
   Operation *createOperation(const OperationState &state);
 
+private:
+  /// Helper for sanity checking preconditions for create* methods below.
+  void checkHasAbstractOperation(const OperationName &name) {
+    if (LLVM_UNLIKELY(!name.getAbstractOperation()))
+      llvm::report_fatal_error(
+          "Building op `" + name.getStringRef().str() +
+          "` but it isn't registered in this MLIRContext: the dialect may not "
+          "be loaded or this operation isn't registered by the dialect. See "
+          "also https://mlir.llvm.org/getting_started/Faq/"
+          "#registered-loaded-dependent-whats-up-with-dialects-management");
+  }
+
+public:
   /// Create an operation of specific op type at the current insertion point.
   template <typename OpTy, typename... Args>
   OpTy create(Location location, Args &&...args) {
     OperationState state(location, OpTy::getOperationName());
-    if (!state.name.getAbstractOperation())
-      llvm::report_fatal_error("Building op `" +
-                               state.name.getStringRef().str() +
-                               "` but it isn't registered in this MLIRContext");
+    checkHasAbstractOperation(state.name);
     OpTy::build(*this, state, std::forward<Args>(args)...);
     auto *op = createOperation(state);
     auto result = dyn_cast<OpTy>(op);
@@ -412,10 +423,7 @@ public:
     // Create the operation without using 'createOperation' as we don't want to
     // insert it yet.
     OperationState state(location, OpTy::getOperationName());
-    if (!state.name.getAbstractOperation())
-      llvm::report_fatal_error("Building op `" +
-                               state.name.getStringRef().str() +
-                               "` but it isn't registered in this MLIRContext");
+    checkHasAbstractOperation(state.name);
     OpTy::build(*this, state, std::forward<Args>(args)...);
     Operation *op = Operation::create(state);
 

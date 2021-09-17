@@ -127,11 +127,30 @@ private:
   // Returns the symbol of the old value serving as the replacement.
   StringRef handleReplaceWithValue(DagNode tree);
 
+  // Trailing directives are used at the end of DAG node argument lists to
+  // specify additional behaviour for op matchers and creators, etc.
+  struct TrailingDirectives {
+    // DAG node containing the `location` directive. Null if there is none.
+    DagNode location;
+
+    // DAG node containing the `returnType` directive. Null if there is none.
+    DagNode returnType;
+
+    // Number of found trailing directives.
+    int numDirectives;
+  };
+
+  // Collect any trailing directives.
+  TrailingDirectives getTrailingDirectives(DagNode tree);
+
   // Returns the location value to use.
-  std::pair<bool, std::string> getLocation(DagNode tree);
+  std::string getLocation(TrailingDirectives &tail);
 
   // Returns the location value to use.
   std::string handleLocationDirective(DagNode tree);
+
+  // Emit return type argument.
+  std::string handleReturnTypeArg(DagNode returnType, int i, int depth);
 
   // Emits the C++ statement to build a new op out of the given DAG `tree` and
   // returns the variable name that this op is assigned to. If the root op in
@@ -271,9 +290,10 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
     capture.push_back(std::move(argName));
   }
 
-  bool hasLocationDirective;
-  std::string locToUse;
-  std::tie(hasLocationDirective, locToUse) = getLocation(tree);
+  auto tail = getTrailingDirectives(tree);
+  if (tail.returnType)
+    PrintFatalError(loc, "`NativeCodeCall` cannot have return type specifier");
+  auto locToUse = getLocation(tail);
 
   auto fmt = tree.getNativeCodeTemplate();
   if (fmt.count("$_self") != 1)
@@ -286,14 +306,14 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
   emitMatchCheck(opName, formatv("!failed({0})", nativeCodeCall),
                  formatv("\"{0} return failure\"", nativeCodeCall));
 
-  for (int i = 0, e = tree.getNumArgs(); i != e; ++i) {
+  for (int i = 0, e = tree.getNumArgs() - tail.numDirectives; i != e; ++i) {
     auto name = tree.getArgName(i);
     if (!name.empty() && name != "_") {
       os << formatv("{0} = {1};\n", name, capture[i]);
     }
   }
 
-  for (int i = 0, e = tree.getNumArgs(); i != e; ++i) {
+  for (int i = 0, e = tree.getNumArgs() - tail.numDirectives; i != e; ++i) {
     std::string argName = capture[i];
 
     // Handle nested DAG construct first
@@ -884,6 +904,24 @@ std::string PatternEmitter::handleLocationDirective(DagNode tree) {
   return os.str();
 }
 
+std::string PatternEmitter::handleReturnTypeArg(DagNode returnType, int i,
+                                                int depth) {
+  // Nested NativeCodeCall.
+  if (auto dagNode = returnType.getArgAsNestedDag(i)) {
+    if (!dagNode.isNativeCodeCall())
+      PrintFatalError(loc, "nested DAG in `returnType` must be a native code "
+                           "call");
+    return handleReplaceWithNativeCodeCall(dagNode, depth);
+  }
+  // String literal.
+  auto dagLeaf = returnType.getArgAsLeaf(i);
+  if (dagLeaf.isStringAttr())
+    return tgfmt(dagLeaf.getStringAttr(), &fmtCtx);
+  return tgfmt(
+      "$0.getType()", &fmtCtx,
+      handleOpArgument(returnType.getArgAsLeaf(i), returnType.getArgName(i)));
+}
+
 std::string PatternEmitter::handleOpArgument(DagLeaf leaf,
                                              StringRef patArgName) {
   if (leaf.isStringAttr())
@@ -929,11 +967,12 @@ std::string PatternEmitter::handleReplaceWithNativeCodeCall(DagNode tree,
 
   SmallVector<std::string, 16> attrs;
 
-  bool hasLocationDirective;
-  std::string locToUse;
-  std::tie(hasLocationDirective, locToUse) = getLocation(tree);
+  auto tail = getTrailingDirectives(tree);
+  if (tail.returnType)
+    PrintFatalError(loc, "`NativeCodeCall` cannot have return type specifier");
+  auto locToUse = getLocation(tail);
 
-  for (int i = 0, e = tree.getNumArgs() - hasLocationDirective; i != e; ++i) {
+  for (int i = 0, e = tree.getNumArgs() - tail.numDirectives; i != e; ++i) {
     if (tree.isNestedDagArg(i)) {
       attrs.push_back(
           handleResultPattern(tree.getArgAsNestedDag(i), i, depth + 1));
@@ -1002,18 +1041,49 @@ int PatternEmitter::getNodeValueCount(DagNode node) {
   return 1;
 }
 
-std::pair<bool, std::string> PatternEmitter::getLocation(DagNode tree) {
-  auto numPatArgs = tree.getNumArgs();
+PatternEmitter::TrailingDirectives
+PatternEmitter::getTrailingDirectives(DagNode tree) {
+  TrailingDirectives tail = {DagNode(nullptr), DagNode(nullptr), 0};
 
-  if (numPatArgs != 0) {
-    if (auto lastArg = tree.getArgAsNestedDag(numPatArgs - 1))
-      if (lastArg.isLocationDirective()) {
-        return std::make_pair(true, handleLocationDirective(lastArg));
-      }
+  // Look backwards through the arguments.
+  auto numPatArgs = tree.getNumArgs();
+  for (int i = numPatArgs - 1; i >= 0; --i) {
+    auto dagArg = tree.getArgAsNestedDag(i);
+    // A leaf is not a directive. Stop looking.
+    if (!dagArg)
+      break;
+
+    auto isLocation = dagArg.isLocationDirective();
+    auto isReturnType = dagArg.isReturnTypeDirective();
+    // If encountered a DAG node that isn't a trailing directive, stop looking.
+    if (!(isLocation || isReturnType))
+      break;
+    // Save the directive, but error if one of the same type was already
+    // found.
+    ++tail.numDirectives;
+    if (isLocation) {
+      if (tail.location)
+        PrintFatalError(loc, "`location` directive can only be specified "
+                             "once");
+      tail.location = dagArg;
+    } else if (isReturnType) {
+      if (tail.returnType)
+        PrintFatalError(loc, "`returnType` directive can only be specified "
+                             "once");
+      tail.returnType = dagArg;
+    }
   }
 
+  return tail;
+}
+
+std::string
+PatternEmitter::getLocation(PatternEmitter::TrailingDirectives &tail) {
+  if (tail.location)
+    return handleLocationDirective(tail.location);
+
   // If no explicit location is given, use the default, all fused, location.
-  return std::make_pair(false, "odsLoc");
+  return "odsLoc";
 }
 
 std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
@@ -1026,11 +1096,10 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
   auto numOpArgs = resultOp.getNumArgs();
   auto numPatArgs = tree.getNumArgs();
 
-  bool hasLocationDirective;
-  std::string locToUse;
-  std::tie(hasLocationDirective, locToUse) = getLocation(tree);
+  auto tail = getTrailingDirectives(tree);
+  auto locToUse = getLocation(tail);
 
-  auto inPattern = numPatArgs - hasLocationDirective;
+  auto inPattern = numPatArgs - tail.numDirectives;
   if (numOpArgs != inPattern) {
     PrintFatalError(loc,
                     formatv("resultant op '{0}' argument number mismatch: "
@@ -1045,7 +1114,7 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
   // First go through all the child nodes who are nested DAG constructs to
   // create ops for them and remember the symbol names for them, so that we can
   // use the results in the current node. This happens in a recursive manner.
-  for (int i = 0, e = tree.getNumArgs() - hasLocationDirective; i != e; ++i) {
+  for (int i = 0, e = tree.getNumArgs() - tail.numDirectives; i != e; ++i) {
     if (auto child = tree.getArgAsNestedDag(i))
       childNodeNames[i] = handleResultPattern(child, i, depth + 1);
   }
@@ -1080,7 +1149,7 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
   bool useFirstAttr =
       resultOp.getTrait("::mlir::OpTrait::FirstAttrDerivedResultType");
 
-  if (isSameOperandsAndResultType || useFirstAttr) {
+  if (!tail.returnType && (isSameOperandsAndResultType || useFirstAttr)) {
     // We know how to deduce the result type for ops with these traits and we've
     // generated builders taking aggregate parameters. Use those builders to
     // create the ops.
@@ -1097,7 +1166,7 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
 
   bool usePartialResults = valuePackName != resultValue;
 
-  if (usePartialResults || depth > 0 || resultIndex < 0) {
+  if (!tail.returnType && (usePartialResults || depth > 0 || resultIndex < 0)) {
     // For these cases (broadcastable ops, op results used both as auxiliary
     // values and replacement values, ops in nested patterns, auxiliary ops), we
     // still need to supply the result types when building the op. But because
@@ -1115,10 +1184,14 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
     return resultValue;
   }
 
-  // If depth == 0 and resultIndex >= 0, it means we are replacing the values
-  // generated from the source pattern root op. Then we can use the source
-  // pattern's value types to determine the value type of the generated op
-  // here.
+  // If we are provided explicit return types, use them to build the op.
+  // However, if depth == 0 and resultIndex >= 0, it means we are replacing
+  // the values generated from the source pattern root op. Then we must use the
+  // source pattern's value types to determine the value type of the generated
+  // op here.
+  if (depth == 0 && resultIndex >= 0 && tail.returnType)
+    PrintFatalError(loc, "Cannot specify explicit return types in an op whose "
+                         "return values replace the source pattern's root op");
 
   // First prepare local variables for op arguments used in builder call.
   createAggregateLocalVarsForOpArgs(tree, childNodeNames, depth);
@@ -1128,11 +1201,20 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
   os.indent() << formatv("::mlir::SmallVector<::mlir::Type, 4> tblgen_types; "
                          "(void)tblgen_types;\n");
   int numResults = resultOp.getNumResults();
-  if (numResults != 0) {
-    for (int i = 0; i < numResults; ++i)
-      os << formatv("for (auto v: castedOp0.getODSResults({0})) {{\n"
-                    "  tblgen_types.push_back(v.getType());\n}\n",
-                    resultIndex + i);
+  if (tail.returnType) {
+    auto numRetTys = tail.returnType.getNumArgs();
+    for (int i = 0; i < numRetTys; ++i) {
+      auto varName = handleReturnTypeArg(tail.returnType, i, depth + 1);
+      os << "tblgen_types.push_back(" << varName << ");\n";
+    }
+  } else {
+    if (numResults != 0) {
+      // Copy the result types from the source pattern.
+      for (int i = 0; i < numResults; ++i)
+        os << formatv("for (auto v: castedOp0.getODSResults({0})) {{\n"
+                      "  tblgen_types.push_back(v.getType());\n}\n",
+                      resultIndex + i);
+    }
   }
   os << formatv("{0} = rewriter.create<{1}>({2}, tblgen_types, "
                 "tblgen_values, tblgen_attrs);\n",

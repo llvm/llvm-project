@@ -455,6 +455,15 @@ using bool_constant = integral_constant<bool, __b>;
 #define _LIBCPP_BOOL_CONSTANT(__b) integral_constant<bool,(__b)>
 #endif
 
+template <bool, class _Tp = void> struct _LIBCPP_TEMPLATE_VIS enable_if {};
+template <class _Tp> struct _LIBCPP_TEMPLATE_VIS enable_if<true, _Tp> {typedef _Tp type;};
+
+template <bool _Bp, class _Tp = void> using __enable_if_t _LIBCPP_NODEBUG = typename enable_if<_Bp, _Tp>::type;
+
+#if _LIBCPP_STD_VER > 11
+template <bool _Bp, class _Tp = void> using enable_if_t = typename enable_if<_Bp, _Tp>::type;
+#endif
+
 typedef _LIBCPP_BOOL_CONSTANT(true)  true_type;
 typedef _LIBCPP_BOOL_CONSTANT(false) false_type;
 
@@ -472,8 +481,6 @@ struct _MetaBase<true> {
   using _FirstImpl _LIBCPP_NODEBUG = _First;
   template <class, class _Second, class...>
   using _SecondImpl _LIBCPP_NODEBUG = _Second;
-  template <class _Tp = void>
-  using _EnableIfImpl _LIBCPP_NODEBUG = _Tp;
   template <class _Result, class _First, class ..._Rest>
   using _OrImpl _LIBCPP_NODEBUG = typename _MetaBase<_First::value != true && sizeof...(_Rest) != 0>::template _OrImpl<_First, _Rest...>;
 };
@@ -487,8 +494,6 @@ struct _MetaBase<false> {
   template <class _Result, class ...>
   using _OrImpl _LIBCPP_NODEBUG = _Result;
 };
-template <bool _Cond, class _Ret = void>
-using _EnableIf _LIBCPP_NODEBUG = typename _MetaBase<_Cond>::template _EnableIfImpl<_Ret>;
 template <bool _Cond, class _IfRes, class _ElseRes>
 using _If _LIBCPP_NODEBUG = typename _MetaBase<_Cond>::template _SelectImpl<_IfRes, _ElseRes>;
 template <class ..._Rest>
@@ -502,7 +507,7 @@ using _SecondType _LIBCPP_NODEBUG = typename _MetaBase<(sizeof...(_Args) >= 2)>:
 
 template <class ...> using __expand_to_true = true_type;
 template <class ..._Pred>
-__expand_to_true<_EnableIf<_Pred::value>...> __and_helper(int);
+__expand_to_true<__enable_if_t<_Pred::value>...> __and_helper(int);
 template <class ...>
 false_type __and_helper(...);
 template <class ..._Pred>
@@ -541,13 +546,6 @@ template <class _If, class _Then>
 
 #if _LIBCPP_STD_VER > 11
 template <bool _Bp, class _If, class _Then> using conditional_t = typename conditional<_Bp, _If, _Then>::type;
-#endif
-
-template <bool, class _Tp = void> struct _LIBCPP_TEMPLATE_VIS enable_if {};
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS enable_if<true, _Tp> {typedef _Tp type;};
-
-#if _LIBCPP_STD_VER > 11
-template <bool _Bp, class _Tp = void> using enable_if_t = typename enable_if<_Bp, _Tp>::type;
 #endif
 
 // is_same
@@ -595,7 +593,7 @@ using _IsNotSame = _BoolConstant<
 
 
 template <class _Tp>
-using __test_for_primary_template = _EnableIf<
+using __test_for_primary_template = __enable_if_t<
     _IsSame<_Tp, typename _Tp::__primary_template>::value
   >;
 template <class _Tp>

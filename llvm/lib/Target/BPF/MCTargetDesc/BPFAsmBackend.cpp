@@ -43,12 +43,14 @@ public:
 
   unsigned getNumFixupKinds() const override { return 1; }
 
-  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
+  bool writeNopData(raw_ostream &OS, uint64_t Count,
+                    const MCSubtargetInfo *STI) const override;
 };
 
 } // end anonymous namespace
 
-bool BPFAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
+bool BPFAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
+                                 const MCSubtargetInfo *STI) const {
   if ((Count % 8) != 0)
     return false;
 

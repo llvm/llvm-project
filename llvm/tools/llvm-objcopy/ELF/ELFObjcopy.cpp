@@ -233,7 +233,8 @@ static bool isUnneededSymbol(const Symbol &Sym) {
          Sym.Type != STT_SECTION;
 }
 
-static Error updateAndRemoveSymbols(const CommonConfig &Config, Object &Obj) {
+static Error updateAndRemoveSymbols(const CommonConfig &Config,
+                                    const ELFConfig &ELFConfig, Object &Obj) {
   // TODO: update or remove symbols only if there is an option that affects
   // them.
   if (!Obj.SymbolTable)
@@ -243,7 +244,7 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config, Object &Obj) {
     // Common and undefined symbols don't make sense as local symbols, and can
     // even cause crashes if we localize those, so skip them.
     if (!Sym.isCommon() && Sym.getShndx() != SHN_UNDEF &&
-        ((Config.LocalizeHidden &&
+        ((ELFConfig.LocalizeHidden &&
           (Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL)) ||
          Config.SymbolsToLocalize.matches(Sym.Name)))
       Sym.Binding = STB_LOCAL;
@@ -293,7 +294,7 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config, Object &Obj) {
 
   auto RemoveSymbolsPred = [&](const Symbol &Sym) {
     if (Config.SymbolsToKeep.matches(Sym.Name) ||
-        (Config.KeepFileSymbols && Sym.Type == STT_FILE))
+        (ELFConfig.KeepFileSymbols && Sym.Type == STT_FILE))
       return false;
 
     if ((Config.DiscardMode == DiscardType::All ||
@@ -328,7 +329,8 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config, Object &Obj) {
   return Obj.removeSymbols(RemoveSymbolsPred);
 }
 
-static Error replaceAndRemoveSections(const CommonConfig &Config, Object &Obj) {
+static Error replaceAndRemoveSections(const CommonConfig &Config,
+                                      const ELFConfig &ELFConfig, Object &Obj) {
   SectionPred RemovePred = [](const SectionBase &) { return false; };
 
   // Removes:
@@ -454,7 +456,7 @@ static Error replaceAndRemoveSections(const CommonConfig &Config, Object &Obj) {
   // and at least one of those symbols is present
   // (equivalently, the updated symbol table is not empty)
   // the symbol table and the string table should not be removed.
-  if ((!Config.SymbolsToKeep.empty() || Config.KeepFileSymbols) &&
+  if ((!Config.SymbolsToKeep.empty() || ELFConfig.KeepFileSymbols) &&
       Obj.SymbolTable && !Obj.SymbolTable->empty()) {
     RemovePred = [&Obj, RemovePred](const SectionBase &Sec) {
       if (&Sec == Obj.SymbolTable || &Sec == Obj.SymbolTable->getStrTab())
@@ -463,7 +465,7 @@ static Error replaceAndRemoveSections(const CommonConfig &Config, Object &Obj) {
     };
   }
 
-  if (Error E = Obj.removeSections(Config.AllowBrokenLinks, RemovePred))
+  if (Error E = Obj.removeSections(ELFConfig.AllowBrokenLinks, RemovePred))
     return E;
 
   if (Config.CompressionType != DebugCompressionType::None) {
@@ -562,7 +564,7 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
 
   if (!Config.SplitDWO.empty() && Config.ExtractDWO) {
     return Obj.removeSections(
-        Config.AllowBrokenLinks,
+        ELFConfig.AllowBrokenLinks,
         [&Obj](const SectionBase &Sec) { return onlyKeepDWOPred(Obj, Sec); });
   }
 
@@ -579,10 +581,10 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
   // remove the relocation sections before removing the symbols. That allows
   // us to avoid reporting the inappropriate errors about removing symbols
   // named in relocations.
-  if (Error E = replaceAndRemoveSections(Config, Obj))
+  if (Error E = replaceAndRemoveSections(Config, ELFConfig, Obj))
     return E;
 
-  if (Error E = updateAndRemoveSymbols(Config, Obj))
+  if (Error E = updateAndRemoveSymbols(Config, ELFConfig, Obj))
     return E;
 
   if (!Config.SectionsToRename.empty()) {
@@ -697,8 +699,8 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
     }
   }
 
-  if (Config.EntryExpr)
-    Obj.Entry = Config.EntryExpr(Obj.Entry);
+  if (ELFConfig.EntryExpr)
+    Obj.Entry = ELFConfig.EntryExpr(Obj.Entry);
   return Error::success();
 }
 

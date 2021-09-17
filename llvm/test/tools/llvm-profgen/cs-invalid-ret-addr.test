@@ -1,0 +1,4 @@
+; REQUIRES: x86_64-linux
+; RUN: llvm-profgen --format=text  --perfscript=%S/Inputs/cs-invalid-ret-addr.perfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t 2>&1 |  FileCheck %s
+
+; CHECK: warning: Truncated stack sample due to invalid return address at 0x400686, likely caused by frame pointer omission

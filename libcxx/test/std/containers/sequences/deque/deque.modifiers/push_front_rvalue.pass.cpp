@@ -55,7 +55,7 @@ test(C& c1, int x)
     I i = c1.begin();
     assert(*i == MoveOnly(x));
     ++i;
-    for (int j = 0; static_cast<std::size_t>(j) < c1_osize; ++j, ++i)
+    for (int j = 0; static_cast<std::size_t>(j) < c1_osize; ++j, (void) ++i)
         assert(*i == MoveOnly(j));
 }
 

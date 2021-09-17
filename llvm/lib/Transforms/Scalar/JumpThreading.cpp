@@ -1363,8 +1363,7 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
 
   // If all of the loads and stores that feed the value have the same AA tags,
   // then we can propagate them onto any newly inserted loads.
-  AAMDNodes AATags;
-  LoadI->getAAMetadata(AATags);
+  AAMDNodes AATags = LoadI->getAAMetadata();
 
   SmallPtrSet<BasicBlock*, 8> PredsScanned;
 

@@ -16,6 +16,10 @@
 #error "This should never happen"
 #endif
 
+#if a\u{FD}() //expected-warning {{Clang extension}}
+#error "This should never happen"
+#endif
+
 #if \uarecool // expected-warning{{incomplete universal character name; treating as '\' followed by identifier}} expected-error {{invalid token at start of a preprocessor expression}}
 #endif
 #if \uwerecool // expected-warning{{\u used with no following hex digits; treating as '\' followed by identifier}} expected-error {{invalid token at start of a preprocessor expression}}
@@ -27,6 +31,7 @@
 #define \ufffe // expected-error {{macro name must be an identifier}}
 #define \U10000000  // expected-error {{macro name must be an identifier}}
 #define \u0061  // expected-error {{character 'a' cannot be specified by a universal character name}} expected-error {{macro name must be an identifier}}
+#define \u{fffe} // expected-error {{macro name must be an identifier}} expected-warning {{Clang extension}}
 
 #define a\u0024
 
@@ -103,3 +108,8 @@ C 1
 // CHECK-NEXT:   #define capital_u_\U00FC
 // CHECK-NEXT: {{^                   \^}}
 // CHECK-NEXT: {{^                   u}}
+
+#define \u{}           // expected-warning {{empty delimited universal character name; treating as '\' 'u' '{' '}'}} expected-error {{macro name must be an identifier}}
+#define \u{123456789}  // expected-error {{hex escape sequence out of range}} expected-error {{macro name must be an identifier}}
+#define \u{            // expected-warning {{incomplete delimited universal character name; treating as '\' 'u' '{' identifier}} expected-error {{macro name must be an identifier}}
+#define \u{fgh}        // expected-warning {{incomplete delimited universal character name; treating as '\' 'u' '{' identifier}} expected-error {{macro name must be an identifier}}

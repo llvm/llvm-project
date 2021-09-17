@@ -305,11 +305,10 @@ define <vscale x 4 x double> @scvtf_d_nxv4i32(<vscale x 4 x i32> %a) {
 define <vscale x 4 x double> @scvtf_d_nxv4i1(<vscale x 4 x i1> %a) {
 ; CHECK-LABEL: scvtf_d_nxv4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    pfalse p1.b
-; CHECK-NEXT:    zip1 p3.s, p0.s, p1.s
-; CHECK-NEXT:    zip2 p0.s, p0.s, p1.s
+; CHECK-NEXT:    punpklo p1.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    ptrue p2.d
-; CHECK-NEXT:    mov z0.d, p3/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    mov z1.d, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    scvtf z0.d, p2/m, z0.d
 ; CHECK-NEXT:    scvtf z1.d, p2/m, z1.d
@@ -366,11 +365,10 @@ define <vscale x 4 x double> @ucvtf_d_nxv4i32(<vscale x 4 x i32> %a) {
 define <vscale x 4 x double> @ucvtf_d_nxv4i1(<vscale x 4 x i1> %a) {
 ; CHECK-LABEL: ucvtf_d_nxv4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    pfalse p1.b
-; CHECK-NEXT:    zip1 p3.s, p0.s, p1.s
-; CHECK-NEXT:    zip2 p0.s, p0.s, p1.s
+; CHECK-NEXT:    punpklo p1.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    ptrue p2.d
-; CHECK-NEXT:    mov z0.d, p3/z, #1 // =0x1
+; CHECK-NEXT:    mov z0.d, p1/z, #1 // =0x1
 ; CHECK-NEXT:    mov z1.d, p0/z, #1 // =0x1
 ; CHECK-NEXT:    ucvtf z0.d, p2/m, z0.d
 ; CHECK-NEXT:    ucvtf z1.d, p2/m, z1.d

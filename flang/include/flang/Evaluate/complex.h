@@ -77,6 +77,11 @@ public:
   ValueWithRealFlags<Complex> Divide(
       const Complex &, Rounding rounding = defaultRounding) const;
 
+  // ABS/CABS = HYPOT(re_, imag_) = SQRT(re_**2 + im_**2)
+  ValueWithRealFlags<Part> ABS(Rounding rounding = defaultRounding) const {
+    return re_.HYPOT(im_, rounding);
+  }
+
   constexpr Complex FlushSubnormalToZero() const {
     return {re_.FlushSubnormalToZero(), im_.FlushSubnormalToZero()};
   }
@@ -88,7 +93,6 @@ public:
   std::string DumpHexadecimal() const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &, int kind) const;
 
-  // TODO: (C)ABS once Real::HYPOT is done
   // TODO: unit testing
 
 private:

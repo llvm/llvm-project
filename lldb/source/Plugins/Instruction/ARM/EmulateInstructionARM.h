@@ -87,8 +87,6 @@ public:
     return GetPluginNameStatic();
   }
 
-  uint32_t GetPluginVersion() override { return 1; }
-
   bool SetTargetTriple(const ArchSpec &arch) override;
 
   enum Mode { eModeInvalid = -1, eModeARM, eModeThumb };

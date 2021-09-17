@@ -42,4 +42,3 @@ ArchitectureAArch64::Create(const ArchSpec &arch) {
 ConstString ArchitectureAArch64::GetPluginName() {
   return GetPluginNameStatic();
 }
-uint32_t ArchitectureAArch64::GetPluginVersion() { return 1; }

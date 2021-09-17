@@ -902,7 +902,7 @@ void MipsTargetELFStreamer::finish() {
       if (Alignment) {
         OS.SwitchSection(&Section);
         if (Section.UseCodeAlign())
-          OS.emitCodeAlignment(Alignment, Alignment);
+          OS.emitCodeAlignment(Alignment, &STI, Alignment);
         else
           OS.emitValueToAlignment(Alignment, 0, 1, Alignment);
       }

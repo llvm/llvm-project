@@ -102,23 +102,15 @@ define dso_local void @testUnalignedLdSt() {
 ; BE-PAIRED-LABEL: testUnalignedLdSt:
 ; BE-PAIRED:       # %bb.0: # %entry
 ; BE-PAIRED-NEXT:    addis r3, r2, f@toc@ha
-; BE-PAIRED-NEXT:    li r4, 11
 ; BE-PAIRED-NEXT:    addi r3, r3, f@toc@l
-; BE-PAIRED-NEXT:    lxvx vs0, r3, r4
-; BE-PAIRED-NEXT:    li r4, 27
-; BE-PAIRED-NEXT:    lxvx vs1, r3, r4
-; BE-PAIRED-NEXT:    li r4, 43
-; BE-PAIRED-NEXT:    lxvx vs2, r3, r4
-; BE-PAIRED-NEXT:    li r4, 59
-; BE-PAIRED-NEXT:    lxvx vs3, r3, r4
-; BE-PAIRED-NEXT:    li r4, 35
-; BE-PAIRED-NEXT:    stxvx vs1, r3, r4
-; BE-PAIRED-NEXT:    li r4, 19
-; BE-PAIRED-NEXT:    stxvx vs0, r3, r4
-; BE-PAIRED-NEXT:    li r4, 67
-; BE-PAIRED-NEXT:    stxvx vs3, r3, r4
-; BE-PAIRED-NEXT:    li r4, 51
-; BE-PAIRED-NEXT:    stxvx vs2, r3, r4
+; BE-PAIRED-NEXT:    plxv vs1, 27(r3), 0
+; BE-PAIRED-NEXT:    plxv vs0, 11(r3), 0
+; BE-PAIRED-NEXT:    plxv vs3, 59(r3), 0
+; BE-PAIRED-NEXT:    plxv vs2, 43(r3), 0
+; BE-PAIRED-NEXT:    pstxv vs1, 35(r3), 0
+; BE-PAIRED-NEXT:    pstxv vs0, 19(r3), 0
+; BE-PAIRED-NEXT:    pstxv vs3, 67(r3), 0
+; BE-PAIRED-NEXT:    pstxv vs2, 51(r3), 0
 ; BE-PAIRED-NEXT:    blr
 entry:
   %0 = bitcast <512 x i1>* @f to i8*
@@ -204,15 +196,11 @@ define dso_local void @testUnalignedLdStPair() {
 ; BE-PAIRED-LABEL: testUnalignedLdStPair:
 ; BE-PAIRED:       # %bb.0: # %entry
 ; BE-PAIRED-NEXT:    addis r3, r2, g@toc@ha
-; BE-PAIRED-NEXT:    li r4, 11
 ; BE-PAIRED-NEXT:    addi r3, r3, g@toc@l
-; BE-PAIRED-NEXT:    lxvx v2, r3, r4
-; BE-PAIRED-NEXT:    li r4, 27
-; BE-PAIRED-NEXT:    lxvx v3, r3, r4
-; BE-PAIRED-NEXT:    li r4, 35
-; BE-PAIRED-NEXT:    stxvx v3, r3, r4
-; BE-PAIRED-NEXT:    li r4, 19
-; BE-PAIRED-NEXT:    stxvx v2, r3, r4
+; BE-PAIRED-NEXT:    plxv v3, 27(r3), 0
+; BE-PAIRED-NEXT:    plxv v2, 11(r3), 0
+; BE-PAIRED-NEXT:    pstxv v3, 35(r3), 0
+; BE-PAIRED-NEXT:    pstxv v2, 19(r3), 0
 ; BE-PAIRED-NEXT:    blr
 entry:
   %0 = bitcast <256 x i1>* @g to i8*

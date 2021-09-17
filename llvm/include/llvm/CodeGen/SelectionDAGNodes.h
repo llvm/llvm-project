@@ -1363,11 +1363,10 @@ public:
     case ISD::STORE:
     case ISD::VP_STORE:
     case ISD::MSTORE:
+    case ISD::VP_SCATTER:
       return getOperand(2);
     case ISD::MGATHER:
     case ISD::MSCATTER:
-    case ISD::VP_GATHER:
-    case ISD::VP_SCATTER:
       return getOperand(3);
     default:
       return getOperand(1);
@@ -1578,8 +1577,12 @@ public:
   Align getAlignValue() const { return Value->getAlignValue(); }
 
   bool isOne() const { return Value->isOne(); }
-  bool isNullValue() const { return Value->isZero(); }
-  bool isAllOnesValue() const { return Value->isMinusOne(); }
+  bool isZero() const { return Value->isZero(); }
+  // NOTE: This is soft-deprecated.  Please use `isZero()` instead.
+  bool isNullValue() const { return isZero(); }
+  bool isAllOnes() const { return Value->isMinusOne(); }
+  // NOTE: This is soft-deprecated.  Please use `isAllOnes()` instead.
+  bool isAllOnesValue() const { return isAllOnes(); }
   bool isMaxSignedValue() const { return Value->isMaxValue(true); }
   bool isMinSignedValue() const { return Value->isMinValue(true); }
 

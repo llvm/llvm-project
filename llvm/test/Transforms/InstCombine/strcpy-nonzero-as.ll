@@ -35,6 +35,19 @@ entry:
   ret void
 }
 
+define void @test_stpcpy_to_strcpy(i8 addrspace(200)* %dst, i8 addrspace(200)* %src) addrspace(200) nounwind {
+; CHECK-LABEL: define {{[^@]+}}@test_stpcpy_to_strcpy
+; CHECK-SAME: (i8 addrspace(200)* [[DST:%.*]], i8 addrspace(200)* [[SRC:%.*]]) addrspace(200) #[[ATTR1]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[STRCPY:%.*]] = call addrspace(200) i8 addrspace(200)* @strcpy(i8 addrspace(200)* noundef [[DST]], i8 addrspace(200)* noundef [[SRC]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %call = call i8 addrspace(200)* @stpcpy(i8 addrspace(200)* %dst, i8 addrspace(200)* %src)
+  ret void
+}
+
+
 define void @test_strncpy_to_memcpy(i8 addrspace(200)* %dst) addrspace(200) nounwind {
 ; CHECK-LABEL: define {{[^@]+}}@test_strncpy_to_memcpy
 ; CHECK-SAME: (i8 addrspace(200)* [[DST:%.*]]) addrspace(200) #[[ATTR1]] {

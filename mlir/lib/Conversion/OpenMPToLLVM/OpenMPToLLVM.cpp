@@ -47,7 +47,8 @@ struct RegionOpConversion : public ConvertOpToLLVMPattern<OpType> {
 
 void mlir::populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                                   RewritePatternSet &patterns) {
-  patterns.add<RegionOpConversion<omp::ParallelOp>,
+  patterns.add<RegionOpConversion<omp::MasterOp>,
+               RegionOpConversion<omp::ParallelOp>,
                RegionOpConversion<omp::WsLoopOp>>(converter);
 }
 
@@ -69,7 +70,7 @@ void ConvertOpenMPToLLVMPass::runOnOperation() {
   populateOpenMPToLLVMConversionPatterns(converter, patterns);
 
   LLVMConversionTarget target(getContext());
-  target.addDynamicallyLegalOp<omp::ParallelOp, omp::WsLoopOp>(
+  target.addDynamicallyLegalOp<omp::MasterOp, omp::ParallelOp, omp::WsLoopOp>(
       [&](Operation *op) { return converter.isLegal(&op->getRegion(0)); });
   target.addLegalOp<omp::TerminatorOp, omp::TaskyieldOp, omp::FlushOp,
                     omp::BarrierOp, omp::TaskwaitOp>();

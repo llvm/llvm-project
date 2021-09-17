@@ -1144,14 +1144,14 @@ private:
 #if _LIBCPP_STD_VER >= 17
 template<class _InputIterator,
          class _Alloc = allocator<__iter_value_type<_InputIterator>>,
-         class = _EnableIf<__is_allocator<_Alloc>::value>
+         class = enable_if_t<__is_allocator<_Alloc>::value>
          >
 list(_InputIterator, _InputIterator)
   -> list<__iter_value_type<_InputIterator>, _Alloc>;
 
 template<class _InputIterator,
          class _Alloc,
-         class = _EnableIf<__is_allocator<_Alloc>::value>
+         class = enable_if_t<__is_allocator<_Alloc>::value>
          >
 list(_InputIterator, _InputIterator, _Alloc)
   -> list<__iter_value_type<_InputIterator>, _Alloc>;
@@ -1408,7 +1408,7 @@ list<_Tp, _Alloc>::assign(_InpIter __f, _InpIter __l,
 {
     iterator __i = begin();
     iterator __e = end();
-    for (; __f != __l && __i != __e; ++__f, ++__i)
+    for (; __f != __l && __i != __e; ++__f, (void) ++__i)
         *__i = *__f;
     if (__i == __e)
         insert(__e, __f, __l);
@@ -1425,7 +1425,7 @@ list<_Tp, _Alloc>::assign(size_type __n, const value_type& __x)
 {
     iterator __i = begin();
     iterator __e = end();
-    for (; __n > 0 && __i != __e; --__n, ++__i)
+    for (; __n > 0 && __i != __e; --__n, (void) ++__i)
         *__i = __x;
     if (__i == __e)
         insert(__e, __n, __x);
@@ -1495,7 +1495,7 @@ list<_Tp, _Alloc>::insert(const_iterator __p, size_type __n, const value_type& _
         try
         {
 #endif // _LIBCPP_NO_EXCEPTIONS
-            for (--__n; __n != 0; --__n, ++__e, ++__ds)
+            for (--__n; __n != 0; --__n, (void) ++__e, ++__ds)
             {
                 __hold.reset(__node_alloc_traits::allocate(__na, 1));
                 __node_alloc_traits::construct(__na, _VSTD::addressof(__hold->__value_), __x);
@@ -1561,7 +1561,7 @@ list<_Tp, _Alloc>::insert(const_iterator __p, _InpIter __f, _InpIter __l,
         try
         {
 #endif // _LIBCPP_NO_EXCEPTIONS
-            for (++__f; __f != __l; ++__f, (void) ++__e, (void) ++__ds)
+            for (++__f; __f != __l; ++__f, (void) ++__e, ++__ds)
             {
                 __hold.reset(__node_alloc_traits::allocate(__na, 1));
                 __node_alloc_traits::construct(__na, _VSTD::addressof(__hold->__value_), *__f);
@@ -1909,7 +1909,7 @@ list<_Tp, _Alloc>::resize(size_type __n)
         try
         {
 #endif // _LIBCPP_NO_EXCEPTIONS
-            for (--__n; __n != 0; --__n, ++__e, ++__ds)
+            for (--__n; __n != 0; --__n, (void) ++__e, ++__ds)
             {
                 __hold.reset(__node_alloc_traits::allocate(__na, 1));
                 __node_alloc_traits::construct(__na, _VSTD::addressof(__hold->__value_));
@@ -1967,7 +1967,7 @@ list<_Tp, _Alloc>::resize(size_type __n, const value_type& __x)
         try
         {
 #endif // _LIBCPP_NO_EXCEPTIONS
-            for (--__n; __n != 0; --__n, ++__e, ++__ds)
+            for (--__n; __n != 0; --__n, (void) ++__e, ++__ds)
             {
                 __hold.reset(__node_alloc_traits::allocate(__na, 1));
                 __node_alloc_traits::construct(__na, _VSTD::addressof(__hold->__value_), __x);
@@ -2244,7 +2244,7 @@ list<_Tp, _Alloc>::merge(list& __c, _Comp __comp)
             {
                 size_type __ds = 1;
                 iterator __m2 = _VSTD::next(__f2);
-                for (; __m2 != __e2 && __comp(*__m2, *__f1); ++__m2, ++__ds)
+                for (; __m2 != __e2 && __comp(*__m2, *__f1); ++__m2, (void) ++__ds)
                     ;
                 base::__sz() += __ds;
                 __c.__sz() -= __ds;

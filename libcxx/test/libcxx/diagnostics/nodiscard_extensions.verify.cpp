@@ -19,6 +19,7 @@
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_NODISCARD
 
 #include <algorithm>
+#include <bit> // bit_cast
 #include <cstddef> // to_integer
 #include <functional> // identity
 #include <iterator>
@@ -323,14 +324,15 @@ void test_template_cast_wrappers(LV&& lv, RV&& rv) {
 
 void test_nontemplate_cast_wrappers()
 {
-#if TEST_STD_VER >= 17
+#if TEST_STD_VER > 14
   std::byte b{42};
   // expected-warning-re@+1 {{ignoring return value of function declared with {{'nodiscard'|warn_unused_result}} attribute}}
   std::to_integer<int>(b);
 #endif
 
-#if TEST_STD_VER >= 20
-  // std::bit_cast<unsigned int>(42);
+#if TEST_STD_VER > 17
+  // expected-warning-re@+1 {{ignoring return value of function declared with {{'nodiscard'|warn_unused_result}} attribute}}
+  std::bit_cast<unsigned int>(42);
 #endif
 
 #if TEST_STD_VER > 20

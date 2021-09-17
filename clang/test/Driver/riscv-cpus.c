@@ -45,12 +45,59 @@
 // RUN: %clang -target riscv64 -### -c %s 2>&1 -mtune=sifive-7-series | FileCheck -check-prefix=MTUNE-SIFIVE7-SERIES-64 %s
 // MTUNE-SIFIVE7-SERIES-64: "-tune-cpu" "sifive-7-rv64"
 
+// mcpu with default march
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-e20 | FileCheck -check-prefix=MCPU-SIFIVE-E20 %s
+// MCPU-SIFIVE-E20: "-nostdsysteminc" "-target-cpu" "sifive-e20"
+// MCPU-SIFIVE-E20: "-target-feature" "+m" "-target-feature" "+c"
+// MCPU-SIFIVE-E20: "-target-abi" "ilp32"
+
+// mcpu with default march
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-e21 | FileCheck -check-prefix=MCPU-SIFIVE-E21 %s
+// MCPU-SIFIVE-E21: "-nostdsysteminc" "-target-cpu" "sifive-e21"
+// MCPU-SIFIVE-E21: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+c"
+// MCPU-SIFIVE-E21: "-target-abi" "ilp32"
+
+// mcpu with default march
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-e24 | FileCheck -check-prefix=MCPU-SIFIVE-E24 %s
+// MCPU-SIFIVE-E24: "-nostdsysteminc" "-target-cpu" "sifive-e24"
+// MCPU-SIFIVE-E24: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f"
+// MCPU-SIFIVE-E24: "-target-feature" "+c"
+// MCPU-SIFIVE-E24: "-target-abi" "ilp32"
+
+// mcpu with default march
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-e34 | FileCheck -check-prefix=MCPU-SIFIVE-E34 %s
+// MCPU-SIFIVE-E34: "-nostdsysteminc" "-target-cpu" "sifive-e34"
+// MCPU-SIFIVE-E34: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f"
+// MCPU-SIFIVE-E34: "-target-feature" "+c"
+// MCPU-SIFIVE-E34: "-target-abi" "ilp32"
+
+// mcpu with mabi option
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-s21 -mabi=lp64 | FileCheck -check-prefix=MCPU-ABI-SIFIVE-S21 %s
+// MCPU-ABI-SIFIVE-S21: "-nostdsysteminc" "-target-cpu" "sifive-s21"
+// MCPU-ABI-SIFIVE-S21: "-target-feature" "+m" "-target-feature" "+a"
+// MCPU-ABI-SIFIVE-S21: "-target-feature" "+c" "-target-feature" "+64bit"
+// MCPU-ABI-SIFIVE-S21: "-target-abi" "lp64"
+
 // mcpu with mabi option
 // RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-s51 -mabi=lp64 | FileCheck -check-prefix=MCPU-ABI-SIFIVE-S51 %s
 // MCPU-ABI-SIFIVE-S51: "-nostdsysteminc" "-target-cpu" "sifive-s51"
 // MCPU-ABI-SIFIVE-S51: "-target-feature" "+m" "-target-feature" "+a"
 // MCPU-ABI-SIFIVE-S51: "-target-feature" "+c" "-target-feature" "+64bit"
 // MCPU-ABI-SIFIVE-S51: "-target-abi" "lp64"
+
+// mcpu with default march
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-s54 | FileCheck -check-prefix=MCPU-SIFIVE-S54 %s
+// MCPU-SIFIVE-S54: "-nostdsysteminc" "-target-cpu" "sifive-s54"
+// MCPU-SIFIVE-S54: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
+// MCPU-SIFIVE-S54: "-target-feature" "+c" "-target-feature" "+64bit"
+// MCPU-SIFIVE-S54: "-target-abi" "lp64d"
+
+// mcpu with mabi option
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-s76 | FileCheck -check-prefix=MCPU-SIFIVE-S76 %s
+// MCPU-SIFIVE-S76: "-nostdsysteminc" "-target-cpu" "sifive-s76"
+// MCPU-SIFIVE-S76: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
+// MCPU-SIFIVE-S76: "-target-feature" "+c" "-target-feature" "+64bit"
+// MCPU-SIFIVE-S76: "-target-abi" "lp64d"
 
 // mcpu with default march
 // RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-u54 | FileCheck -check-prefix=MCPU-SIFIVE-U54 %s

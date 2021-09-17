@@ -287,9 +287,10 @@ bool RISCVExpandPseudo::expandVSPILL(MachineBasicBlock &MBB,
   const TargetRegisterInfo *TRI =
       MBB.getParent()->getSubtarget().getRegisterInfo();
   DebugLoc DL = MBBI->getDebugLoc();
-  Register SrcReg = MBBI->getOperand(0).getReg();
-  Register Base = MBBI->getOperand(1).getReg();
-  Register VL = MBBI->getOperand(2).getReg();
+  Register AddrInc = MBBI->getOperand(0).getReg();
+  Register SrcReg = MBBI->getOperand(1).getReg();
+  Register Base = MBBI->getOperand(2).getReg();
+  Register VL = MBBI->getOperand(3).getReg();
   auto ZvlssegInfo = TII->isRVVSpillForZvlsseg(MBBI->getOpcode());
   if (!ZvlssegInfo)
     return false;
@@ -318,10 +319,12 @@ bool RISCVExpandPseudo::expandVSPILL(MachineBasicBlock &MBB,
         .addReg(TRI->getSubReg(SrcReg, SubRegIdx + I))
         .addReg(Base)
         .addMemOperand(*(MBBI->memoperands_begin()));
-    if (I != NF - 1)
-      BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADD), Base)
+    if (I != NF - 1) {
+      BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADD), AddrInc)
           .addReg(Base)
           .addReg(VL);
+      Base = AddrInc;
+    }
   }
   MBBI->eraseFromParent();
   return true;
@@ -333,8 +336,9 @@ bool RISCVExpandPseudo::expandVRELOAD(MachineBasicBlock &MBB,
       MBB.getParent()->getSubtarget().getRegisterInfo();
   DebugLoc DL = MBBI->getDebugLoc();
   Register DestReg = MBBI->getOperand(0).getReg();
-  Register Base = MBBI->getOperand(1).getReg();
-  Register VL = MBBI->getOperand(2).getReg();
+  Register AddrInc = MBBI->getOperand(1).getReg();
+  Register Base = MBBI->getOperand(2).getReg();
+  Register VL = MBBI->getOperand(3).getReg();
   auto ZvlssegInfo = TII->isRVVSpillForZvlsseg(MBBI->getOpcode());
   if (!ZvlssegInfo)
     return false;
@@ -363,10 +367,12 @@ bool RISCVExpandPseudo::expandVRELOAD(MachineBasicBlock &MBB,
             TRI->getSubReg(DestReg, SubRegIdx + I))
         .addReg(Base)
         .addMemOperand(*(MBBI->memoperands_begin()));
-    if (I != NF - 1)
-      BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADD), Base)
+    if (I != NF - 1) {
+      BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADD), AddrInc)
           .addReg(Base)
           .addReg(VL);
+      Base = AddrInc;
+    }
   }
   MBBI->eraseFromParent();
   return true;

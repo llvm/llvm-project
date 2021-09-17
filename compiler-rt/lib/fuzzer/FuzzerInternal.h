@@ -73,7 +73,8 @@ public:
 
   // Merge Corpora[1:] into Corpora[0].
   void Merge(const std::vector<std::string> &Corpora);
-  void CrashResistantMergeInternalStep(const std::string &ControlFilePath);
+  void CrashResistantMergeInternalStep(const std::string &ControlFilePath,
+                                       bool IsSetCoverMerge);
   MutationDispatcher &GetMD() { return MD; }
   void PrintFinalStats();
   void SetMaxInputLen(size_t MaxInputLen);

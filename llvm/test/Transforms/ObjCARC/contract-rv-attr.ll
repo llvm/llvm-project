@@ -2,30 +2,30 @@
 ; RUN: opt -passes=objc-arc-contract -S < %s | FileCheck %s
 
 ; CHECK-LABEL: define void @test0() {
-; CHECK: %[[CALL:.*]] = notail call i8* @foo() [ "clang.arc.attachedcall"(i64 0) ]
+; CHECK: %[[CALL:.*]] = notail call i8* @foo() [ "clang.arc.attachedcall"() ]
 ; CHECK: call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %[[CALL]])
 
 define void @test0() {
-  %call1 = call i8* @foo() [ "clang.arc.attachedcall"(i64 0) ]
+  %call1 = call i8* @foo() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
   ret void
 }
 
 ; CHECK-LABEL: define void @test1() {
-; CHECK: %[[CALL:.*]] = notail call i8* @foo() [ "clang.arc.attachedcall"(i64 1) ]
+; CHECK: %[[CALL:.*]] = notail call i8* @foo() [ "clang.arc.attachedcall"() ]
 ; CHECK: call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* %[[CALL]])
 
 define void @test1() {
-  %call1 = call i8* @foo() [ "clang.arc.attachedcall"(i64 1) ]
+  %call1 = call i8* @foo() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
   ret void
 }
 
 ; CHECK-LABEL:define i8* @test2(
-; CHECK: %[[CALL1:.*]] = invoke i8* @foo() [ "clang.arc.attachedcall"(i64 0) ]
+; CHECK: %[[CALL1:.*]] = invoke i8* @foo() [ "clang.arc.attachedcall"() ]
 
 ; CHECK: %[[V0:.*]] = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %[[CALL1]])
 ; CHECK-NEXT: br
 
-; CHECK: %[[CALL3:.*]] = invoke i8* @foo() [ "clang.arc.attachedcall"(i64 0) ]
+; CHECK: %[[CALL3:.*]] = invoke i8* @foo() [ "clang.arc.attachedcall"() ]
 
 ; CHECK: %[[V2:.*]] = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %[[CALL3]])
 ; CHECK-NEXT: br
@@ -38,7 +38,7 @@ entry:
   br i1 %b, label %if.then, label %if.end
 
 if.then:
-  %call1 = invoke i8* @foo() [ "clang.arc.attachedcall"(i64 0) ]
+  %call1 = invoke i8* @foo() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
           to label %cleanup unwind label %lpad
 
 lpad:
@@ -47,7 +47,7 @@ lpad:
   resume { i8*, i32 } undef
 
 if.end:
-  %call3 = invoke i8* @foo() [ "clang.arc.attachedcall"(i64 0) ]
+  %call3 = invoke i8* @foo() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
           to label %cleanup unwind label %lpad
 
 cleanup:
@@ -55,18 +55,21 @@ cleanup:
   ret i8* %retval.0
 }
 
+; "clang.arc.attachedcall" is ignored if the return type of the called function is void.
 ; CHECK-LABEL: define void @test3(
-; CHECK: call void @foo2() #[[ATTR1:.*]] [ "clang.arc.attachedcall"(i64 0) ]
+; CHECK: call void @foo2() #[[ATTR1:.*]] [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
 ; CHECK-NEXT: ret void
 
 define void @test3() {
-  call void @foo2() #0 [ "clang.arc.attachedcall"(i64 0) ]
+  call void @foo2() #0 [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
   ret void
 }
 
 declare i8* @foo()
 declare void @foo2()
 declare i32 @__gxx_personality_v0(...)
+declare i8* @llvm.objc.retainAutoreleasedReturnValue(i8*)
+declare i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8*)
 
 !llvm.module.flags = !{!0}
 

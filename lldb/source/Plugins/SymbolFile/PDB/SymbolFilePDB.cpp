@@ -1712,8 +1712,6 @@ lldb_private::ConstString SymbolFilePDB::GetPluginName() {
   return g_name;
 }
 
-uint32_t SymbolFilePDB::GetPluginVersion() { return 1; }
-
 IPDBSession &SymbolFilePDB::GetPDBSession() { return *m_session_up; }
 
 const IPDBSession &SymbolFilePDB::GetPDBSession() const {

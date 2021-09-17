@@ -177,19 +177,18 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
   auto one = b.create<ConstantIndexOp>(loc, 1);
 
   for (unsigned i = 0, e = producer.getNumLoops(); i < e; ++i) {
+    auto shapeDim = getShapeDefiningLoopRange(producer, i);
+    Value dim = createOrFoldDimOp(b, loc, shapeDim.shape, shapeDim.dimension);
+    sizeBounds.push_back(dim);
     auto it = fusedLoopsAndRanges.find(i);
     if (it != fusedLoopsAndRanges.end()) {
       ivs.push_back(it->second.offset);
       tileSizes.push_back(it->second.size);
-      sizeBounds.push_back(nullptr);
       loopRanges.push_back(it->second);
       LLVM_DEBUG(llvm::dbgs() << "tiled loop#" << i << " with LoopRange "
                               << loopRanges.back() << "\n");
     } else {
-      auto shapeDim = getShapeDefiningLoopRange(producer, i);
-      Value dim = createOrFoldDimOp(b, loc, shapeDim.shape, shapeDim.dimension);
       tileSizes.push_back(zero);
-      sizeBounds.push_back(dim);
       loopRanges.push_back(Range{zero, dim, one});
       LLVM_DEBUG(llvm::dbgs() << "full loop#" << i << " with LoopRange "
                               << loopRanges.back() << "\n");

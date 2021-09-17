@@ -287,14 +287,14 @@ void LanaiDAGToDAGISel::Select(SDNode *Node) {
       ConstantSDNode *ConstNode = cast<ConstantSDNode>(Node);
       // Materialize zero constants as copies from R0. This allows the coalescer
       // to propagate these into other instructions.
-      if (ConstNode->isNullValue()) {
+      if (ConstNode->isZero()) {
         SDValue New = CurDAG->getCopyFromReg(CurDAG->getEntryNode(),
                                              SDLoc(Node), Lanai::R0, MVT::i32);
         return ReplaceNode(Node, New.getNode());
       }
       // Materialize all ones constants as copies from R1. This allows the
       // coalescer to propagate these into other instructions.
-      if (ConstNode->isAllOnesValue()) {
+      if (ConstNode->isAllOnes()) {
         SDValue New = CurDAG->getCopyFromReg(CurDAG->getEntryNode(),
                                              SDLoc(Node), Lanai::R1, MVT::i32);
         return ReplaceNode(Node, New.getNode());

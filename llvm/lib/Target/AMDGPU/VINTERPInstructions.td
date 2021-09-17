@@ -46,7 +46,7 @@ class VINTERPe_gfx11 <bits<7> op, VOPProfile P> : Enc64 {
 //===----------------------------------------------------------------------===//
 
 class VINTERP_Pseudo <string OpName, VOPProfile P, list<dag> pattern = []> :
-  VOP3_Pseudo<OpName, P, pattern, 1, 0, 0> {
+  VOP3_Pseudo<OpName, P, pattern, 0, 0> {
   let AsmMatchConverter = "cvtVINTERP";
   let mayRaiseFPException = 0;
 

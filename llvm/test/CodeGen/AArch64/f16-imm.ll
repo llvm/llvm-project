@@ -11,7 +11,7 @@ define half @Const0() {
 ;
 ; CHECK-ZCZ-LABEL: Const0:
 ; CHECK-ZCZ:       // %bb.0: // %entry
-; CHECK-ZCZ-NEXT:    movi d0, #0
+; CHECK-ZCZ-NEXT:    movi d0, #0000000000000000
 ; CHECK-ZCZ-NEXT:    ret
 ;
 ; CHECK-NOFP16-LABEL: Const0:

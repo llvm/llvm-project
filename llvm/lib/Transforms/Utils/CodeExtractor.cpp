@@ -434,6 +434,7 @@ CodeExtractor::findOrCreateBlockForHoisting(BasicBlock *CommonExitBlock) {
   }
   // Now add the old exit block to the outline region.
   Blocks.insert(CommonExitBlock);
+  OldTargets.push_back(NewExitBlock);
   return CommonExitBlock;
 }
 
@@ -1248,45 +1249,57 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
   // not in the region to be extracted.
   std::map<BasicBlock *, BasicBlock *> ExitBlockMap;
 
+  // Iterate over the previously collected targets, and create new blocks inside
+  // the function to branch to.
   unsigned switchVal = 0;
+  for (BasicBlock *OldTarget : OldTargets) {
+    if (Blocks.count(OldTarget))
+      continue;
+    BasicBlock *&NewTarget = ExitBlockMap[OldTarget];
+    if (NewTarget)
+      continue;
+
+    // If we don't already have an exit stub for this non-extracted
+    // destination, create one now!
+    NewTarget = BasicBlock::Create(Context,
+                                    OldTarget->getName() + ".exitStub",
+                                    newFunction);
+    unsigned SuccNum = switchVal++;
+
+    Value *brVal = nullptr;
+    assert(NumExitBlocks < 0xffff && "too many exit blocks for switch");
+    switch (NumExitBlocks) {
+    case 0:
+    case 1: break;  // No value needed.
+    case 2:         // Conditional branch, return a bool
+      brVal = ConstantInt::get(Type::getInt1Ty(Context), !SuccNum);
+      break;
+    default:
+      brVal = ConstantInt::get(Type::getInt16Ty(Context), SuccNum);
+      break;
+    }
+
+    ReturnInst::Create(Context, brVal, NewTarget);
+
+    // Update the switch instruction.
+    TheSwitch->addCase(ConstantInt::get(Type::getInt16Ty(Context),
+                                        SuccNum),
+                        OldTarget);
+  }
+
   for (BasicBlock *Block : Blocks) {
     Instruction *TI = Block->getTerminator();
-    for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
-      if (!Blocks.count(TI->getSuccessor(i))) {
-        BasicBlock *OldTarget = TI->getSuccessor(i);
-        // add a new basic block which returns the appropriate value
-        BasicBlock *&NewTarget = ExitBlockMap[OldTarget];
-        if (!NewTarget) {
-          // If we don't already have an exit stub for this non-extracted
-          // destination, create one now!
-          NewTarget = BasicBlock::Create(Context,
-                                         OldTarget->getName() + ".exitStub",
-                                         newFunction);
-          unsigned SuccNum = switchVal++;
+    for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i) {
+      if (Blocks.count(TI->getSuccessor(i)))
+        continue;
+      BasicBlock *OldTarget = TI->getSuccessor(i);
+      // add a new basic block which returns the appropriate value
+      BasicBlock *NewTarget = ExitBlockMap[OldTarget];
+      assert(NewTarget && "Unknown target block!");
 
-          Value *brVal = nullptr;
-          switch (NumExitBlocks) {
-          case 0:
-          case 1: break;  // No value needed.
-          case 2:         // Conditional branch, return a bool
-            brVal = ConstantInt::get(Type::getInt1Ty(Context), !SuccNum);
-            break;
-          default:
-            brVal = ConstantInt::get(Type::getInt16Ty(Context), SuccNum);
-            break;
-          }
-
-          ReturnInst::Create(Context, brVal, NewTarget);
-
-          // Update the switch instruction.
-          TheSwitch->addCase(ConstantInt::get(Type::getInt16Ty(Context),
-                                              SuccNum),
-                             OldTarget);
-        }
-
-        // rewrite the original branch instruction with this new target
-        TI->setSuccessor(i, NewTarget);
-      }
+      // rewrite the original branch instruction with this new target
+      TI->setSuccessor(i, NewTarget);
+   }
   }
 
   // Store the arguments right after the definition of output value.
@@ -1639,6 +1652,16 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     }
   }
   NumExitBlocks = ExitBlocks.size();
+
+  for (BasicBlock *Block : Blocks) {
+    Instruction *TI = Block->getTerminator();
+    for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i) {
+      if (Blocks.count(TI->getSuccessor(i)))
+        continue;
+      BasicBlock *OldTarget = TI->getSuccessor(i);
+      OldTargets.push_back(OldTarget);
+    }
+  }
 
   // If we have to split PHI nodes of the entry or exit blocks, do so now.
   severSplitPHINodesOfEntry(header);

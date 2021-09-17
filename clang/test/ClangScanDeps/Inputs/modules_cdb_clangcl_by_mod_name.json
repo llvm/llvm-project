@@ -1,0 +1,12 @@
+[
+{
+  "directory": "DIR",
+  "command": "clang-cl /E /IInputs /D INCLUDE_HEADER2 /clang:-MD /clang:-MF /clang:DIR/modules_cdb2_clangcl.d /clang:-fmodules /clang:-fcxx-modules /clang:-fmodules-cache-path=DIR/module-cache_clangcl /clang:-fimplicit-modules /clang:-fimplicit-module-maps /clang:-x /clang:c++ --",
+  "file": ""
+},
+{
+  "directory": "DIR",
+  "command": "clang-cl /E /IInputs /clang:-fmodules /clang:-fcxx-modules /clang:-fmodules-cache-path=DIR/module-cache_clangcl /clang:-fimplicit-modules /clang:-fimplicit-module-maps /clang:-x /clang:c++ --",
+  "file": ""
+},
+]

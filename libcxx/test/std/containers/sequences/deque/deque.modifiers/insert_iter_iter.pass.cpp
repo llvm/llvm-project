@@ -246,7 +246,7 @@ test_move()
         c.insert(c.end(), std::move_iterator<I>(&mo), std::move_iterator<I>(&mo+1));
     }
     int j = 0;
-    for (CI i = c.begin(); i != c.end(); ++i, ++j)
+    for (CI i = c.begin(); i != c.end(); ++i, (void) ++j)
         assert(*i == MoveOnly(j));
     {
         MoveOnly mo(1);
@@ -254,7 +254,7 @@ test_move()
         c.insert(c.end(), std::move_iterator<I>(I(&mo)), std::move_iterator<I>(I(&mo+1)));
     }
     j = 0;
-    for (CI i = c.begin(); i != c.end(); ++i, ++j)
+    for (CI i = c.begin(); i != c.end(); ++i, (void) ++j)
         assert(*i == MoveOnly(j));
 #endif
 }

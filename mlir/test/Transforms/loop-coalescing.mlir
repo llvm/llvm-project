@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect -loop-coalescing %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -allow-unregistered-dialect -loop-coalescing %s | FileCheck %s
 
 // CHECK-LABEL: @one_3d_nest
 func @one_3d_nest() {
@@ -191,3 +191,170 @@ func @two_bands() {
   }
   return
 }
+
+// -----
+
+// Check coalescing of affine.for loops when all the loops have constant upper bound.
+// CHECK-DAG: #[[SIXTEEN:.*]] = affine_map<() -> (16)>
+// CHECK-DAG: #[[SIXTY_FOUR:.*]] = affine_map<() -> (64)>
+// CHECK-DAG: #[[PRODUCT:.*]] = affine_map<(d0)[s0] -> (d0 * s0)>
+// CHECK-DAG: #[[EIGHT:.*]] = affine_map<() -> (8)>
+// CHECK-DAG: #[[MOD:.*]] = affine_map<(d0)[s0] -> (d0 mod s0)>
+// CHECK-DAG: #[[DIV:.*]] = affine_map<(d0)[s0] -> (d0 floordiv s0)>
+func @coalesce_affine_for() {
+  affine.for %i = 0 to 16 {
+    affine.for %j = 0 to 64 {
+      affine.for %k = 0 to 8 {
+        "test.foo"(%i, %j, %k) : (index, index, index) -> ()
+      }
+    }
+  }
+  return
+}
+// CHECK-DAG: %[[T0:.*]] = affine.apply #[[SIXTEEN]]()
+// CHECK-DAG: %[[T1:.*]] = affine.apply #[[SIXTY_FOUR]]()
+// CHECK-DAG: %[[T2:.*]] = affine.apply #[[PRODUCT]](%[[T0]])[%[[T1]]]
+// CHECK-DAG: %[[T3:.*]] = affine.apply #[[EIGHT]]()
+// CHECK-DAG: %[[T4:.*]] = affine.apply #[[PRODUCT]](%[[T2]])[%[[T3]]]
+// CHECK:       affine.for %[[IV:.*]] = 0 to %[[T4]]
+// CHECK-DAG:    %[[K:.*]] =  affine.apply #[[MOD]](%[[IV]])[%[[T3]]]
+// CHECK-DAG:    %[[T6:.*]] = affine.apply #[[DIV]](%[[IV]])[%[[T3]]]
+// CHECK-DAG:    %[[J:.*]] =  affine.apply #[[MOD]](%[[T6]])[%[[T1]]]
+// CHECK-DAG:    %[[I:.*]] =  affine.apply #[[DIV]](%[[T6]])[%[[T1]]]
+// CHECK-NEXT:    "test.foo"(%[[I]], %[[J]], %[[K]])
+// CHECK-NEXT:  }
+// CHECK-NEXT:  return
+
+// -----
+
+// Check coalescing of affine.for loops when all the loops have non constant upper bounds.
+// CHECK-DAG: #[[IDENTITY:.*]] = affine_map<()[s0] -> (s0)>
+// CHECK-DAG: #[[PRODUCT:.*]] = affine_map<(d0)[s0] -> (d0 * s0)>
+// CHECK-DAG: #[[MOD:.*]] = affine_map<(d0)[s0] -> (d0 mod s0)>
+// CHECK-DAG: #[[FLOOR:.*]] = affine_map<(d0)[s0] -> (d0 floordiv s0)>
+func @coalesce_affine_for(%arg0: memref<?x?xf32>) {
+  %c0 = constant 0 : index
+  %M = memref.dim %arg0, %c0 : memref<?x?xf32>
+  %N = memref.dim %arg0, %c0 : memref<?x?xf32>
+  %K = memref.dim %arg0, %c0 : memref<?x?xf32>
+  affine.for %i = 0 to %M {
+    affine.for %j = 0 to %N {
+      affine.for %k = 0 to %K {
+      "test.foo"(%i, %j, %k) : (index, index, index) -> ()
+      }
+    }
+  }
+  return
+}
+// CHECK: %[[T0:.*]] = memref.dim %arg{{.*}}, %c{{.*}} : memref<?x?xf32>
+// CHECK: %[[T1:.*]] = memref.dim %arg{{.*}}, %c{{.*}} : memref<?x?xf32>
+// CHECK: %[[T2:.*]] = memref.dim %arg{{.*}}, %c{{.*}} : memref<?x?xf32>
+// CHECK-DAG: %[[T3:.*]] = affine.apply #[[IDENTITY]]()[%[[T0]]]
+// CHECK-DAG: %[[T4:.*]] = affine.apply #[[IDENTITY]]()[%[[T1]]]
+// CHECK-DAG: %[[T5:.*]] = affine.apply #[[PRODUCT]](%[[T3]])[%[[T4]]]
+// CHECK-DAG: %[[T6:.*]] = affine.apply #[[IDENTITY]]()[%[[T2]]]
+// CHECK-DAG: %[[T7:.*]] = affine.apply #[[PRODUCT]](%[[T5]])[%[[T6]]]
+// CHECK: affine.for %[[IV:.*]] = 0 to %[[T7]]
+// CHECK-DAG:    %[[K:.*]] = affine.apply #[[MOD]](%[[IV]])[%[[T6]]]
+// CHECK-DAG:    %[[T9:.*]] = affine.apply #[[FLOOR]](%[[IV]])[%[[T6]]]
+// CHECK-DAG:    %[[J:.*]] = affine.apply #[[MOD]](%[[T9]])[%[[T4]]]
+// CHECK-DAG:    %[[I:.*]] = affine.apply #[[FLOOR]](%[[T9]])[%[[T4]]]
+// CHECK-NEXT:    "test.foo"(%[[I]], %[[J]], %[[K]])
+// CHECK-NEXT:  }
+// CHECK-NEXT:  return
+
+// -----
+
+// Check coalescing of affine.for loops when some of the loop has constant upper bounds while others have nin constant upper bounds.
+// CHECK-DAG: #[[IDENTITY:.*]] = affine_map<()[s0] -> (s0)>
+// CHECK-DAG: #[[PRODUCT:.*]] = affine_map<(d0)[s0] -> (d0 * s0)>
+// CHECK-DAG: #[[SIXTY_FOUR:.*]] = affine_map<() -> (64)>
+// CHECK-DAG: #[[MOD:.*]] = affine_map<(d0)[s0] -> (d0 mod s0)>
+// CHECK-DAG: #[[DIV:.*]] = affine_map<(d0)[s0] -> (d0 floordiv s0)>
+func @coalesce_affine_for(%arg0: memref<?x?xf32>) {
+  %c0 = constant 0 : index
+  %M = memref.dim %arg0, %c0 : memref<?x?xf32>
+  %N = memref.dim %arg0, %c0 : memref<?x?xf32>
+  affine.for %i = 0 to %M {
+    affine.for %j = 0 to %N {
+      affine.for %k = 0 to 64 {
+      "test.foo"(%i, %j, %k) : (index, index, index) -> ()
+      }
+    }
+  }
+  return
+}
+// CHECK: %[[T0:.*]] = memref.dim %arg{{.*}}, %c{{.*}} : memref<?x?xf32>
+// CHECK: %[[T1:.*]] = memref.dim %arg{{.*}}, %c{{.*}} : memref<?x?xf32>
+// CHECK-DAG: %[[T2:.*]] = affine.apply #[[IDENTITY]]()[%[[T0]]]
+// CHECK-DAG: %[[T3:.*]] = affine.apply #[[IDENTITY]]()[%[[T1]]]
+// CHECK-DAG: %[[T4:.*]] = affine.apply #[[PRODUCT]](%[[T2]])[%[[T3]]]
+// CHECK-DAG: %[[T5:.*]] = affine.apply #[[SIXTY_FOUR]]()
+// CHECK-DAG: %[[T6:.*]] = affine.apply #[[PRODUCT]](%[[T4]])[%[[T5]]]
+// CHECK: affine.for %[[IV:.*]] = 0 to %[[T6]]
+// CHECK-DAG:    %[[K:.*]] = affine.apply #[[MOD]](%[[IV]])[%[[T5]]]
+// CHECK-DAG:    %[[T8:.*]] = affine.apply #[[DIV]](%[[IV]])[%[[T5]]]
+// CHECK-DAG:    %[[J:.*]] = affine.apply #[[MOD]](%[[T8]])[%[[T3]]]
+// CHECK-DAG:    %[[I:.*]] = affine.apply #[[DIV]](%[[T8]])[%[[T3]]]
+// CHECK-NEXT:    "test.foo"(%[[I]], %[[J]], %[[K]])
+// CHECK-NEXT:  }
+// CHECK-NEXT:  return
+
+// -----
+
+// Check coalescing of affine.for loops when upper bound contains multi result upper bound map.
+// CHECK-DAG: #[[MAP0:.*]] = affine_map<()[s0] -> (s0, -s0)>
+// CHECK-DAG: #[[IDENTITY:.*]] = affine_map<()[s0] -> (s0)>
+// CHECK-DAG: #[[PRODUCT:.*]] = affine_map<(d0)[s0] -> (d0 * s0)>
+// CHECK-DAG: #[[MOD:.*]] = affine_map<(d0)[s0] -> (d0 mod s0)>
+// CHECK-DAG: #[[DIV:.*]] = affine_map<(d0)[s0] -> (d0 floordiv s0)>
+#myMap = affine_map<()[s1] -> (s1, -s1)>
+func @coalesce_affine_for(%arg0: memref<?x?xf32>) {
+ %c0 = constant 0 : index
+ %M = memref.dim %arg0, %c0 : memref<?x?xf32>
+ %N = memref.dim %arg0, %c0 : memref<?x?xf32>
+ %K = memref.dim %arg0, %c0 : memref<?x?xf32>
+ affine.for %i = 0 to min #myMap()[%M] {
+   affine.for %j = 0 to %N {
+     affine.for %k = 0 to %K {
+     "test.foo"(%i, %j, %k) : (index, index, index) -> ()
+     }
+   }
+ }
+ return
+}
+// CHECK: %[[T0:.*]] = memref.dim %arg{{.*}}, %c{{.*}} : memref<?x?xf32>
+// CHECK: %[[T1:.*]] = memref.dim %arg{{.*}}, %c{{.*}} : memref<?x?xf32>
+// CHECK: %[[T2:.*]] = memref.dim %arg{{.*}}, %c{{.*}} : memref<?x?xf32>
+// CHECK-DAG: %[[T3:.*]] = affine.min #[[MAP0]]()[%[[T0]]]
+// CHECK-DAG: %[[T4:.*]] = affine.apply #[[IDENTITY]]()[%[[T1]]]
+// CHECK-DAG: %[[T5:.*]] = affine.apply #[[PRODUCT]](%[[T3]])[%[[T4]]]
+// CHECK-DAG: %[[T6:.*]] = affine.apply #[[IDENTITY]]()[%[[T2]]]
+// CHECK-DAG: %[[T7:.*]] = affine.apply #[[PRODUCT]](%[[T5]])[%[[T6]]]
+// CHECK: affine.for %[[IV:.*]] = 0 to %[[T7]]
+// CHECK-DAG:    %[[K:.*]] = affine.apply #[[MOD]](%[[IV]])[%[[T6]]]
+// CHECK-DAG:    %[[T9:.*]] = affine.apply #[[DIV]](%[[IV]])[%[[T6]]]
+// CHECK-DAG:    %[[J:.*]] = affine.apply #[[MOD]](%[[T9]])[%[[T4]]]
+// CHECK-DAG:    %[[I:.*]] = affine.apply #[[DIV]](%[[T9]])[%[[T4]]]
+// CHECK-NEXT:    "test.foo"(%[[I]], %[[J]], %[[K]])
+// CHECK-NEXT:  }
+// CHECK-NEXT:  return
+
+// -----
+
+// CHECK-DAG: #[[MAP0:.*]] = affine_map<(d0) -> (d0 * 110)>
+// CHECK-DAG: #[[MAP1:.*]] = affine_map<(d0) -> (696, d0 * 110 + 110)>
+#map0 = affine_map<(d0) -> (d0 * 110)>
+#map1 = affine_map<(d0) -> (696, d0 * 110 + 110)>
+func @test_loops_do_not_get_coalesced() {
+  affine.for %i = 0 to 7 {
+    affine.for %j = #map0(%i) to min #map1(%i) {
+    }
+  }
+  return
+}
+// CHECK: affine.for %[[IV0:.*]] = 0 to 7
+// CHECK-NEXT: affine.for %[[IV1:.*]] = #[[MAP0]](%[[IV0]]) to min #[[MAP1]](%[[IV0]])
+// CHECK-NEXT: }
+// CHECK-NEXT: }
+// CHECK-NEXT: return

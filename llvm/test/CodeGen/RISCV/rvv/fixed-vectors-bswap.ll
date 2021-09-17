@@ -681,7 +681,6 @@ define void @bswap_v2i64(<2 x i64>* %x, <2 x i64>* %y) {
 ; LMULMAX2-RV64-NEXT:    or a1, a1, a2
 ; LMULMAX2-RV64-NEXT:    vsetvli zero, zero, e64, m1, tu, mu
 ; LMULMAX2-RV64-NEXT:    vmv.s.x v26, a1
-; LMULMAX2-RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
 ; LMULMAX2-RV64-NEXT:    vse64.v v26, (a0)
 ; LMULMAX2-RV64-NEXT:    ret
 ;
@@ -813,7 +812,6 @@ define void @bswap_v2i64(<2 x i64>* %x, <2 x i64>* %y) {
 ; LMULMAX1-RV64-NEXT:    or a1, a1, a2
 ; LMULMAX1-RV64-NEXT:    vsetvli zero, zero, e64, m1, tu, mu
 ; LMULMAX1-RV64-NEXT:    vmv.s.x v26, a1
-; LMULMAX1-RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
 ; LMULMAX1-RV64-NEXT:    vse64.v v26, (a0)
 ; LMULMAX1-RV64-NEXT:    ret
   %a = load <2 x i64>, <2 x i64>* %x
@@ -2133,16 +2131,16 @@ define void @bswap_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX1-RV32-NEXT:    sw a1, 44(sp)
 ; LMULMAX1-RV32-NEXT:    addi a7, zero, 32
 ; LMULMAX1-RV32-NEXT:    vsrl.vx v26, v26, a7
-; LMULMAX1-RV32-NEXT:    vmv.x.s a4, v26
-; LMULMAX1-RV32-NEXT:    srli a5, a4, 8
+; LMULMAX1-RV32-NEXT:    vmv.x.s a1, v26
+; LMULMAX1-RV32-NEXT:    srli a5, a1, 8
 ; LMULMAX1-RV32-NEXT:    and a5, a5, a2
-; LMULMAX1-RV32-NEXT:    srli a1, a4, 24
-; LMULMAX1-RV32-NEXT:    or a1, a5, a1
-; LMULMAX1-RV32-NEXT:    slli a5, a4, 8
+; LMULMAX1-RV32-NEXT:    srli a4, a1, 24
+; LMULMAX1-RV32-NEXT:    or a4, a5, a4
+; LMULMAX1-RV32-NEXT:    slli a5, a1, 8
 ; LMULMAX1-RV32-NEXT:    and a5, a5, a3
-; LMULMAX1-RV32-NEXT:    slli a4, a4, 24
-; LMULMAX1-RV32-NEXT:    or a4, a4, a5
-; LMULMAX1-RV32-NEXT:    or a1, a4, a1
+; LMULMAX1-RV32-NEXT:    slli a1, a1, 24
+; LMULMAX1-RV32-NEXT:    or a1, a1, a5
+; LMULMAX1-RV32-NEXT:    or a1, a1, a4
 ; LMULMAX1-RV32-NEXT:    sw a1, 32(sp)
 ; LMULMAX1-RV32-NEXT:    vsrl.vx v26, v27, a7
 ; LMULMAX1-RV32-NEXT:    vmv.x.s a1, v26
@@ -2328,7 +2326,6 @@ define void @bswap_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX1-RV64-NEXT:    or a1, a1, a2
 ; LMULMAX1-RV64-NEXT:    vsetvli zero, zero, e64, m1, tu, mu
 ; LMULMAX1-RV64-NEXT:    vmv.s.x v27, a1
-; LMULMAX1-RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
 ; LMULMAX1-RV64-NEXT:    vse64.v v27, (a0)
 ; LMULMAX1-RV64-NEXT:    vse64.v v26, (a6)
 ; LMULMAX1-RV64-NEXT:    ret

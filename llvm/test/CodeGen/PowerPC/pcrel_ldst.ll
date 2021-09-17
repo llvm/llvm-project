@@ -42,6 +42,7 @@
 @GlobSt11 = dso_local local_unnamed_addr global [20 x <16 x i8>] zeroinitializer, align 16
 @GlobLd12 = dso_local local_unnamed_addr global [20 x <16 x i8>] zeroinitializer, align 16
 @GlobSt12 = dso_local local_unnamed_addr global [20 x <16 x i8>] zeroinitializer, align 16
+@GlobF128 = dso_local local_unnamed_addr global [20 x fp128] zeroinitializer, align 16
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn
 define dso_local void @testGlob1PtrPlus0() {
@@ -1037,12 +1038,11 @@ define dso_local void @testGlob7PtrPlus3() {
 ; CHECK-P10-BE-LABEL: testGlob7PtrPlus3:
 ; CHECK-P10-BE:       # %bb.0: # %entry
 ; CHECK-P10-BE-NEXT:    addis r3, r2, GlobLd7@toc@ha
-; CHECK-P10-BE-NEXT:    li r4, 3
-; CHECK-P10-BE-NEXT:    addis r5, r2, GlobSt7@toc@ha
+; CHECK-P10-BE-NEXT:    addis r4, r2, GlobSt7@toc@ha
 ; CHECK-P10-BE-NEXT:    addi r3, r3, GlobLd7@toc@l
-; CHECK-P10-BE-NEXT:    addi r5, r5, GlobSt7@toc@l
-; CHECK-P10-BE-NEXT:    ldx r3, r3, r4
-; CHECK-P10-BE-NEXT:    stdx r3, r5, r4
+; CHECK-P10-BE-NEXT:    addi r4, r4, GlobSt7@toc@l
+; CHECK-P10-BE-NEXT:    pld r3, 3(r3), 0
+; CHECK-P10-BE-NEXT:    pstd r3, 3(r4), 0
 ; CHECK-P10-BE-NEXT:    blr
 ;
 ; CHECK-LABEL: testGlob7PtrPlus3:
@@ -1223,12 +1223,11 @@ define dso_local void @testGlob8PtrPlus3() {
 ; CHECK-P10-BE-LABEL: testGlob8PtrPlus3:
 ; CHECK-P10-BE:       # %bb.0: # %entry
 ; CHECK-P10-BE-NEXT:    addis r3, r2, GlobLd8@toc@ha
-; CHECK-P10-BE-NEXT:    li r4, 3
-; CHECK-P10-BE-NEXT:    addis r5, r2, GlobSt8@toc@ha
+; CHECK-P10-BE-NEXT:    addis r4, r2, GlobSt8@toc@ha
 ; CHECK-P10-BE-NEXT:    addi r3, r3, GlobLd8@toc@l
-; CHECK-P10-BE-NEXT:    addi r5, r5, GlobSt8@toc@l
-; CHECK-P10-BE-NEXT:    ldx r3, r3, r4
-; CHECK-P10-BE-NEXT:    stdx r3, r5, r4
+; CHECK-P10-BE-NEXT:    addi r4, r4, GlobSt8@toc@l
+; CHECK-P10-BE-NEXT:    pld r3, 3(r3), 0
+; CHECK-P10-BE-NEXT:    pstd r3, 3(r4), 0
 ; CHECK-P10-BE-NEXT:    blr
 ;
 ; CHECK-LABEL: testGlob8PtrPlus3:
@@ -1565,12 +1564,11 @@ define dso_local void @testGlob10PtrPlus3() {
 ; CHECK-P10-BE-LABEL: testGlob10PtrPlus3:
 ; CHECK-P10-BE:       # %bb.0: # %entry
 ; CHECK-P10-BE-NEXT:    addis r3, r2, GlobLd10@toc@ha
-; CHECK-P10-BE-NEXT:    li r4, 3
-; CHECK-P10-BE-NEXT:    addis r5, r2, GlobSt10@toc@ha
+; CHECK-P10-BE-NEXT:    addis r4, r2, GlobSt10@toc@ha
 ; CHECK-P10-BE-NEXT:    addi r3, r3, GlobLd10@toc@l
-; CHECK-P10-BE-NEXT:    addi r5, r5, GlobSt10@toc@l
-; CHECK-P10-BE-NEXT:    ldx r3, r3, r4
-; CHECK-P10-BE-NEXT:    stdx r3, r5, r4
+; CHECK-P10-BE-NEXT:    addi r4, r4, GlobSt10@toc@l
+; CHECK-P10-BE-NEXT:    pld r3, 3(r3), 0
+; CHECK-P10-BE-NEXT:    pstd r3, 3(r4), 0
 ; CHECK-P10-BE-NEXT:    blr
 ;
 ; CHECK-LABEL: testGlob10PtrPlus3:
@@ -1767,12 +1765,11 @@ define dso_local void @testGlob11PtrPlus3() {
 ; CHECK-P10-BE-LABEL: testGlob11PtrPlus3:
 ; CHECK-P10-BE:       # %bb.0: # %entry
 ; CHECK-P10-BE-NEXT:    addis r3, r2, GlobLd11@toc@ha
-; CHECK-P10-BE-NEXT:    li r4, 3
 ; CHECK-P10-BE-NEXT:    addi r3, r3, GlobLd11@toc@l
-; CHECK-P10-BE-NEXT:    lxvx vs0, r3, r4
+; CHECK-P10-BE-NEXT:    plxv vs0, 3(r3), 0
 ; CHECK-P10-BE-NEXT:    addis r3, r2, GlobSt11@toc@ha
 ; CHECK-P10-BE-NEXT:    addi r3, r3, GlobSt11@toc@l
-; CHECK-P10-BE-NEXT:    stxvx vs0, r3, r4
+; CHECK-P10-BE-NEXT:    pstxv vs0, 3(r3), 0
 ; CHECK-P10-BE-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: testGlob11PtrPlus3:
@@ -1824,12 +1821,11 @@ define dso_local void @testGlob11PtrPlus4() {
 ; CHECK-P10-BE-LABEL: testGlob11PtrPlus4:
 ; CHECK-P10-BE:       # %bb.0: # %entry
 ; CHECK-P10-BE-NEXT:    addis r3, r2, GlobLd11@toc@ha
-; CHECK-P10-BE-NEXT:    li r4, 4
 ; CHECK-P10-BE-NEXT:    addi r3, r3, GlobLd11@toc@l
-; CHECK-P10-BE-NEXT:    lxvx vs0, r3, r4
+; CHECK-P10-BE-NEXT:    plxv vs0, 4(r3), 0
 ; CHECK-P10-BE-NEXT:    addis r3, r2, GlobSt11@toc@ha
 ; CHECK-P10-BE-NEXT:    addi r3, r3, GlobSt11@toc@l
-; CHECK-P10-BE-NEXT:    stxvx vs0, r3, r4
+; CHECK-P10-BE-NEXT:    pstxv vs0, 4(r3), 0
 ; CHECK-P10-BE-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: testGlob11PtrPlus4:
@@ -2051,12 +2047,11 @@ define dso_local void @testGlob12PtrPlus3() {
 ; CHECK-P10-BE-LABEL: testGlob12PtrPlus3:
 ; CHECK-P10-BE:       # %bb.0: # %entry
 ; CHECK-P10-BE-NEXT:    addis r3, r2, GlobLd12@toc@ha
-; CHECK-P10-BE-NEXT:    li r4, 3
 ; CHECK-P10-BE-NEXT:    addi r3, r3, GlobLd12@toc@l
-; CHECK-P10-BE-NEXT:    lxvx vs0, r3, r4
+; CHECK-P10-BE-NEXT:    plxv vs0, 3(r3), 0
 ; CHECK-P10-BE-NEXT:    addis r3, r2, GlobSt12@toc@ha
 ; CHECK-P10-BE-NEXT:    addi r3, r3, GlobSt12@toc@l
-; CHECK-P10-BE-NEXT:    stxvx vs0, r3, r4
+; CHECK-P10-BE-NEXT:    pstxv vs0, 3(r3), 0
 ; CHECK-P10-BE-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: testGlob12PtrPlus3:
@@ -2108,12 +2103,11 @@ define dso_local void @testGlob12PtrPlus4() {
 ; CHECK-P10-BE-LABEL: testGlob12PtrPlus4:
 ; CHECK-P10-BE:       # %bb.0: # %entry
 ; CHECK-P10-BE-NEXT:    addis r3, r2, GlobLd12@toc@ha
-; CHECK-P10-BE-NEXT:    li r4, 4
 ; CHECK-P10-BE-NEXT:    addi r3, r3, GlobLd12@toc@l
-; CHECK-P10-BE-NEXT:    lxvx vs0, r3, r4
+; CHECK-P10-BE-NEXT:    plxv vs0, 4(r3), 0
 ; CHECK-P10-BE-NEXT:    addis r3, r2, GlobSt12@toc@ha
 ; CHECK-P10-BE-NEXT:    addi r3, r3, GlobSt12@toc@l
-; CHECK-P10-BE-NEXT:    stxvx vs0, r3, r4
+; CHECK-P10-BE-NEXT:    pstxv vs0, 4(r3), 0
 ; CHECK-P10-BE-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: testGlob12PtrPlus4:
@@ -2268,5 +2262,325 @@ entry:
   %0 = load <16 x i8>, <16 x i8>* %arrayidx, align 16
   %arrayidx1 = getelementptr inbounds [20 x <16 x i8>], [20 x <16 x i8>]* @GlobSt12, i64 0, i64 %Idx
   store <16 x i8> %0, <16 x i8>* %arrayidx1, align 16
+  ret void
+}
+
+; Function Attrs: nofree norecurse nounwind uwtable willreturn
+define dso_local void @Atomic_LdSt_i8() {
+; CHECK-P10-LE-LABEL: Atomic_LdSt_i8:
+; CHECK-P10-LE:       # %bb.0: # %entry
+; CHECK-P10-LE-NEXT:    plbz r3, GlobLd1@PCREL(0), 1
+; CHECK-P10-LE-NEXT:    pstb r3, GlobSt1@PCREL(0), 1
+; CHECK-P10-LE-NEXT:    blr
+;
+; CHECK-P10-BE-LABEL: Atomic_LdSt_i8:
+; CHECK-P10-BE:       # %bb.0: # %entry
+; CHECK-P10-BE-NEXT:    addis r3, r2, GlobLd1@toc@ha
+; CHECK-P10-BE-NEXT:    addis r4, r2, GlobSt1@toc@ha
+; CHECK-P10-BE-NEXT:    lbz r3, GlobLd1@toc@l(r3)
+; CHECK-P10-BE-NEXT:    stb r3, GlobSt1@toc@l(r4)
+; CHECK-P10-BE-NEXT:    blr
+;
+; CHECK-LABEL: Atomic_LdSt_i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addis r3, r2, GlobLd1@toc@ha
+; CHECK-NEXT:    addis r4, r2, GlobSt1@toc@ha
+; CHECK-NEXT:    lbz r3, GlobLd1@toc@l(r3)
+; CHECK-NEXT:    stb r3, GlobSt1@toc@l(r4)
+; CHECK-NEXT:    blr
+entry:
+  %0 = load atomic i8, i8* getelementptr inbounds ([20 x i8], [20 x i8]* @GlobLd1, i64 0, i64 0) monotonic, align 1
+  store atomic i8 %0, i8* getelementptr inbounds ([20 x i8], [20 x i8]* @GlobSt1, i64 0, i64 0) monotonic, align 1
+  ret void
+}
+
+; Function Attrs: nofree norecurse nounwind uwtable willreturn
+define dso_local void @Atomic_LdSt_i16() {
+; CHECK-P10-LE-LABEL: Atomic_LdSt_i16:
+; CHECK-P10-LE:       # %bb.0: # %entry
+; CHECK-P10-LE-NEXT:    plhz r3, GlobLd3@PCREL(0), 1
+; CHECK-P10-LE-NEXT:    psth r3, GlobSt3@PCREL(0), 1
+; CHECK-P10-LE-NEXT:    blr
+;
+; CHECK-P10-BE-LABEL: Atomic_LdSt_i16:
+; CHECK-P10-BE:       # %bb.0: # %entry
+; CHECK-P10-BE-NEXT:    addis r3, r2, GlobLd3@toc@ha
+; CHECK-P10-BE-NEXT:    addis r4, r2, GlobSt3@toc@ha
+; CHECK-P10-BE-NEXT:    lhz r3, GlobLd3@toc@l(r3)
+; CHECK-P10-BE-NEXT:    sth r3, GlobSt3@toc@l(r4)
+; CHECK-P10-BE-NEXT:    blr
+;
+; CHECK-LABEL: Atomic_LdSt_i16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addis r3, r2, GlobLd3@toc@ha
+; CHECK-NEXT:    addis r4, r2, GlobSt3@toc@ha
+; CHECK-NEXT:    lhz r3, GlobLd3@toc@l(r3)
+; CHECK-NEXT:    sth r3, GlobSt3@toc@l(r4)
+; CHECK-NEXT:    blr
+entry:
+  %0 = load atomic i16, i16* getelementptr inbounds ([20 x i16], [20 x i16]* @GlobLd3, i64 0, i64 0) monotonic, align 2
+  store atomic i16 %0, i16* getelementptr inbounds ([20 x i16], [20 x i16]* @GlobSt3, i64 0, i64 0) monotonic, align 2
+  ret void
+}
+
+; Function Attrs: nofree norecurse nounwind uwtable willreturn
+define dso_local void @Atomic_LdSt_i32() {
+; CHECK-P10-LE-LABEL: Atomic_LdSt_i32:
+; CHECK-P10-LE:       # %bb.0: # %entry
+; CHECK-P10-LE-NEXT:    plwz r3, GlobLd5@PCREL(0), 1
+; CHECK-P10-LE-NEXT:    pstw r3, GlobSt5@PCREL(0), 1
+; CHECK-P10-LE-NEXT:    blr
+;
+; CHECK-P10-BE-LABEL: Atomic_LdSt_i32:
+; CHECK-P10-BE:       # %bb.0: # %entry
+; CHECK-P10-BE-NEXT:    addis r3, r2, GlobLd5@toc@ha
+; CHECK-P10-BE-NEXT:    addis r4, r2, GlobSt5@toc@ha
+; CHECK-P10-BE-NEXT:    lwz r3, GlobLd5@toc@l(r3)
+; CHECK-P10-BE-NEXT:    stw r3, GlobSt5@toc@l(r4)
+; CHECK-P10-BE-NEXT:    blr
+;
+; CHECK-LABEL: Atomic_LdSt_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addis r3, r2, GlobLd5@toc@ha
+; CHECK-NEXT:    addis r4, r2, GlobSt5@toc@ha
+; CHECK-NEXT:    lwz r3, GlobLd5@toc@l(r3)
+; CHECK-NEXT:    stw r3, GlobSt5@toc@l(r4)
+; CHECK-NEXT:    blr
+entry:
+  %0 = load atomic i32, i32* getelementptr inbounds ([20 x i32], [20 x i32]* @GlobLd5, i64 0, i64 0) monotonic, align 4
+  store atomic i32 %0, i32* getelementptr inbounds ([20 x i32], [20 x i32]* @GlobSt5, i64 0, i64 0) monotonic, align 4
+  ret void
+}
+
+; Function Attrs: nofree norecurse nounwind uwtable willreturn
+define dso_local void @Atomic_LdSt_i64() {
+; CHECK-P10-LE-LABEL: Atomic_LdSt_i64:
+; CHECK-P10-LE:       # %bb.0: # %entry
+; CHECK-P10-LE-NEXT:    pld r3, GlobLd7@PCREL(0), 1
+; CHECK-P10-LE-NEXT:    pstd r3, GlobSt7@PCREL(0), 1
+; CHECK-P10-LE-NEXT:    blr
+;
+; CHECK-P10-BE-LABEL: Atomic_LdSt_i64:
+; CHECK-P10-BE:       # %bb.0: # %entry
+; CHECK-P10-BE-NEXT:    addis r3, r2, GlobLd7@toc@ha
+; CHECK-P10-BE-NEXT:    addis r4, r2, GlobSt7@toc@ha
+; CHECK-P10-BE-NEXT:    ld r3, GlobLd7@toc@l(r3)
+; CHECK-P10-BE-NEXT:    std r3, GlobSt7@toc@l(r4)
+; CHECK-P10-BE-NEXT:    blr
+;
+; CHECK-P9-LABEL: Atomic_LdSt_i64:
+; CHECK-P9:       # %bb.0: # %entry
+; CHECK-P9-NEXT:    addis r3, r2, GlobLd7@toc@ha
+; CHECK-P9-NEXT:    addis r4, r2, GlobSt7@toc@ha
+; CHECK-P9-NEXT:    ld r3, GlobLd7@toc@l(r3)
+; CHECK-P9-NEXT:    std r3, GlobSt7@toc@l(r4)
+; CHECK-P9-NEXT:    blr
+;
+; CHECK-P8-LABEL: Atomic_LdSt_i64:
+; CHECK-P8:       # %bb.0: # %entry
+; CHECK-P8-NEXT:    addis r3, r2, GlobLd7@toc@ha
+; CHECK-P8-NEXT:    ld r3, GlobLd7@toc@l(r3)
+; CHECK-P8-NEXT:    addis r4, r2, GlobSt7@toc@ha
+; CHECK-P8-NEXT:    std r3, GlobSt7@toc@l(r4)
+; CHECK-P8-NEXT:    blr
+entry:
+  %0 = load atomic i64, i64* getelementptr inbounds ([20 x i64], [20 x i64]* @GlobLd7, i64 0, i64 0) monotonic, align 8
+  store atomic i64 %0, i64* getelementptr inbounds ([20 x i64], [20 x i64]* @GlobSt7, i64 0, i64 0) monotonic, align 8
+  ret void
+}
+
+; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
+define dso_local void @store_double_f64_to_uint(double %str) local_unnamed_addr #0 {
+; CHECK-P10-LE-LABEL: store_double_f64_to_uint:
+; CHECK-P10-LE:       # %bb.0: # %entry
+; CHECK-P10-LE-NEXT:    xscvdpuxds v2, f1
+; CHECK-P10-LE-NEXT:    pstxsd v2, GlobSt10@PCREL(0), 1
+; CHECK-P10-LE-NEXT:    blr
+;
+; CHECK-P10-BE-LABEL: store_double_f64_to_uint:
+; CHECK-P10-BE:       # %bb.0: # %entry
+; CHECK-P10-BE-NEXT:    xscvdpuxds v2, f1
+; CHECK-P10-BE-NEXT:    addis r3, r2, GlobSt10@toc@ha
+; CHECK-P10-BE-NEXT:    addi r3, r3, GlobSt10@toc@l
+; CHECK-P10-BE-NEXT:    stxsd v2, 0(r3)
+; CHECK-P10-BE-NEXT:    blr
+;
+; CHECK-P9-LABEL: store_double_f64_to_uint:
+; CHECK-P9:       # %bb.0: # %entry
+; CHECK-P9-NEXT:    xscvdpuxds v2, f1
+; CHECK-P9-NEXT:    addis r3, r2, GlobSt10@toc@ha
+; CHECK-P9-NEXT:    addi r3, r3, GlobSt10@toc@l
+; CHECK-P9-NEXT:    stxsd v2, 0(r3)
+; CHECK-P9-NEXT:    blr
+;
+; CHECK-P8-LABEL: store_double_f64_to_uint:
+; CHECK-P8:       # %bb.0: # %entry
+; CHECK-P8-NEXT:    xscvdpuxds f0, f1
+; CHECK-P8-NEXT:    addis r3, r2, GlobSt10@toc@ha
+; CHECK-P8-NEXT:    addi r3, r3, GlobSt10@toc@l
+; CHECK-P8-NEXT:    stxsdx f0, 0, r3
+; CHECK-P8-NEXT:    blr
+entry:
+  %conv = fptoui double %str to i64
+  store i64 %conv, i64* bitcast ([20 x double]* @GlobSt10 to i64*), align 8
+  ret void
+}
+
+; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
+define dso_local void @store_double_f64_to_sint(double %str) local_unnamed_addr #0 {
+; CHECK-P10-LE-LABEL: store_double_f64_to_sint:
+; CHECK-P10-LE:       # %bb.0: # %entry
+; CHECK-P10-LE-NEXT:    xscvdpsxds v2, f1
+; CHECK-P10-LE-NEXT:    pstxsd v2, GlobSt10@PCREL(0), 1
+; CHECK-P10-LE-NEXT:    blr
+;
+; CHECK-P10-BE-LABEL: store_double_f64_to_sint:
+; CHECK-P10-BE:       # %bb.0: # %entry
+; CHECK-P10-BE-NEXT:    xscvdpsxds v2, f1
+; CHECK-P10-BE-NEXT:    addis r3, r2, GlobSt10@toc@ha
+; CHECK-P10-BE-NEXT:    addi r3, r3, GlobSt10@toc@l
+; CHECK-P10-BE-NEXT:    stxsd v2, 0(r3)
+; CHECK-P10-BE-NEXT:    blr
+;
+; CHECK-P9-LABEL: store_double_f64_to_sint:
+; CHECK-P9:       # %bb.0: # %entry
+; CHECK-P9-NEXT:    xscvdpsxds v2, f1
+; CHECK-P9-NEXT:    addis r3, r2, GlobSt10@toc@ha
+; CHECK-P9-NEXT:    addi r3, r3, GlobSt10@toc@l
+; CHECK-P9-NEXT:    stxsd v2, 0(r3)
+; CHECK-P9-NEXT:    blr
+;
+; CHECK-P8-LABEL: store_double_f64_to_sint:
+; CHECK-P8:       # %bb.0: # %entry
+; CHECK-P8-NEXT:    xscvdpsxds f0, f1
+; CHECK-P8-NEXT:    addis r3, r2, GlobSt10@toc@ha
+; CHECK-P8-NEXT:    addi r3, r3, GlobSt10@toc@l
+; CHECK-P8-NEXT:    stxsdx f0, 0, r3
+; CHECK-P8-NEXT:    blr
+entry:
+  %conv = fptosi double %str to i64
+  store i64 %conv, i64* bitcast ([20 x double]* @GlobSt10 to i64*), align 8
+  ret void
+}
+
+; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
+define dso_local void @store_f128_to_uint(fp128 %str) local_unnamed_addr #0 {
+; CHECK-P10-LE-LABEL: store_f128_to_uint:
+; CHECK-P10-LE:       # %bb.0: # %entry
+; CHECK-P10-LE-NEXT:    xscvqpudz v2, v2
+; CHECK-P10-LE-NEXT:    pstxsd v2, GlobF128@PCREL(0), 1
+; CHECK-P10-LE-NEXT:    blr
+;
+; CHECK-P10-BE-LABEL: store_f128_to_uint:
+; CHECK-P10-BE:       # %bb.0: # %entry
+; CHECK-P10-BE-NEXT:    xscvqpudz v2, v2
+; CHECK-P10-BE-NEXT:    addis r3, r2, GlobF128@toc@ha
+; CHECK-P10-BE-NEXT:    addi r3, r3, GlobF128@toc@l
+; CHECK-P10-BE-NEXT:    stxsd v2, 0(r3)
+; CHECK-P10-BE-NEXT:    blr
+;
+; CHECK-P9-LABEL: store_f128_to_uint:
+; CHECK-P9:       # %bb.0: # %entry
+; CHECK-P9-NEXT:    xscvqpudz v2, v2
+; CHECK-P9-NEXT:    addis r3, r2, GlobF128@toc@ha
+; CHECK-P9-NEXT:    addi r3, r3, GlobF128@toc@l
+; CHECK-P9-NEXT:    stxsd v2, 0(r3)
+; CHECK-P9-NEXT:    blr
+;
+; CHECK-P8-LE-LABEL: store_f128_to_uint:
+; CHECK-P8-LE:       # %bb.0: # %entry
+; CHECK-P8-LE-NEXT:    mflr r0
+; CHECK-P8-LE-NEXT:    std r0, 16(r1)
+; CHECK-P8-LE-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-LE-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-LE-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-LE-NEXT:    bl __fixunskfdi
+; CHECK-P8-LE-NEXT:    nop
+; CHECK-P8-LE-NEXT:    addis r4, r2, GlobF128@toc@ha
+; CHECK-P8-LE-NEXT:    std r3, GlobF128@toc@l(r4)
+; CHECK-P8-LE-NEXT:    addi r1, r1, 32
+; CHECK-P8-LE-NEXT:    ld r0, 16(r1)
+; CHECK-P8-LE-NEXT:    mtlr r0
+; CHECK-P8-LE-NEXT:    blr
+;
+; CHECK-P8-BE-LABEL: store_f128_to_uint:
+; CHECK-P8-BE:       # %bb.0: # %entry
+; CHECK-P8-BE-NEXT:    mflr r0
+; CHECK-P8-BE-NEXT:    std r0, 16(r1)
+; CHECK-P8-BE-NEXT:    stdu r1, -112(r1)
+; CHECK-P8-BE-NEXT:    .cfi_def_cfa_offset 112
+; CHECK-P8-BE-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-BE-NEXT:    bl __fixunskfdi
+; CHECK-P8-BE-NEXT:    nop
+; CHECK-P8-BE-NEXT:    addis r4, r2, GlobF128@toc@ha
+; CHECK-P8-BE-NEXT:    std r3, GlobF128@toc@l(r4)
+; CHECK-P8-BE-NEXT:    addi r1, r1, 112
+; CHECK-P8-BE-NEXT:    ld r0, 16(r1)
+; CHECK-P8-BE-NEXT:    mtlr r0
+; CHECK-P8-BE-NEXT:    blr
+entry:
+  %conv = fptoui fp128 %str to i64
+  store i64 %conv, i64* bitcast ([20 x fp128]* @GlobF128 to i64*), align 16
+  ret void
+}
+
+; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
+define dso_local void @store_f128_to_sint(fp128 %str) local_unnamed_addr #0 {
+; CHECK-P10-LE-LABEL: store_f128_to_sint:
+; CHECK-P10-LE:       # %bb.0: # %entry
+; CHECK-P10-LE-NEXT:    xscvqpsdz v2, v2
+; CHECK-P10-LE-NEXT:    pstxsd v2, GlobF128@PCREL(0), 1
+; CHECK-P10-LE-NEXT:    blr
+;
+; CHECK-P10-BE-LABEL: store_f128_to_sint:
+; CHECK-P10-BE:       # %bb.0: # %entry
+; CHECK-P10-BE-NEXT:    xscvqpsdz v2, v2
+; CHECK-P10-BE-NEXT:    addis r3, r2, GlobF128@toc@ha
+; CHECK-P10-BE-NEXT:    addi r3, r3, GlobF128@toc@l
+; CHECK-P10-BE-NEXT:    stxsd v2, 0(r3)
+; CHECK-P10-BE-NEXT:    blr
+;
+; CHECK-P9-LABEL: store_f128_to_sint:
+; CHECK-P9:       # %bb.0: # %entry
+; CHECK-P9-NEXT:    xscvqpsdz v2, v2
+; CHECK-P9-NEXT:    addis r3, r2, GlobF128@toc@ha
+; CHECK-P9-NEXT:    addi r3, r3, GlobF128@toc@l
+; CHECK-P9-NEXT:    stxsd v2, 0(r3)
+; CHECK-P9-NEXT:    blr
+;
+; CHECK-P8-LE-LABEL: store_f128_to_sint:
+; CHECK-P8-LE:       # %bb.0: # %entry
+; CHECK-P8-LE-NEXT:    mflr r0
+; CHECK-P8-LE-NEXT:    std r0, 16(r1)
+; CHECK-P8-LE-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-LE-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-LE-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-LE-NEXT:    bl __fixkfdi
+; CHECK-P8-LE-NEXT:    nop
+; CHECK-P8-LE-NEXT:    addis r4, r2, GlobF128@toc@ha
+; CHECK-P8-LE-NEXT:    std r3, GlobF128@toc@l(r4)
+; CHECK-P8-LE-NEXT:    addi r1, r1, 32
+; CHECK-P8-LE-NEXT:    ld r0, 16(r1)
+; CHECK-P8-LE-NEXT:    mtlr r0
+; CHECK-P8-LE-NEXT:    blr
+;
+; CHECK-P8-BE-LABEL: store_f128_to_sint:
+; CHECK-P8-BE:       # %bb.0: # %entry
+; CHECK-P8-BE-NEXT:    mflr r0
+; CHECK-P8-BE-NEXT:    std r0, 16(r1)
+; CHECK-P8-BE-NEXT:    stdu r1, -112(r1)
+; CHECK-P8-BE-NEXT:    .cfi_def_cfa_offset 112
+; CHECK-P8-BE-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-BE-NEXT:    bl __fixkfdi
+; CHECK-P8-BE-NEXT:    nop
+; CHECK-P8-BE-NEXT:    addis r4, r2, GlobF128@toc@ha
+; CHECK-P8-BE-NEXT:    std r3, GlobF128@toc@l(r4)
+; CHECK-P8-BE-NEXT:    addi r1, r1, 112
+; CHECK-P8-BE-NEXT:    ld r0, 16(r1)
+; CHECK-P8-BE-NEXT:    mtlr r0
+; CHECK-P8-BE-NEXT:    blr
+entry:
+  %conv = fptosi fp128 %str to i64
+  store i64 %conv, i64* bitcast ([20 x fp128]* @GlobF128 to i64*), align 16
   ret void
 }

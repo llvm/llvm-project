@@ -91,6 +91,10 @@ struct OutlinableRegion {
   /// call.
   bool ChangedArgOrder = false;
 
+  /// Marks whether this region ends in a branch, there is special handling
+  /// required for the following basic blocks in this case.
+  bool EndsInBranch = false;
+
   /// Mapping of the argument number in the deduplicated function
   /// to a given constant, which is used when creating the arguments to the call
   /// to the newly created deduplicated function.  This is handled separately
@@ -151,6 +155,14 @@ struct OutlinableRegion {
   /// function has been extracted, the start and end of the BasicBlock
   /// containing the called function.
   void reattachCandidate();
+
+  /// Find a corresponding value for \p V in similar OutlinableRegion \p Other.
+  ///
+  /// \param Other [in] - The OutlinableRegion to find the corresponding Value
+  /// in.
+  /// \param V [in] - The Value to look for in the other region.
+  /// \return The corresponding Value to \p V if it exists, otherwise nullptr.
+  Value *findCorrespondingValueIn(const OutlinableRegion &Other, Value *V);
 
   /// Get the size of the code removed from the region.
   ///
@@ -316,8 +328,9 @@ private:
   struct InstructionAllowed : public InstVisitor<InstructionAllowed, bool> {
     InstructionAllowed() {}
 
-    // TODO: Determine a scheme to resolve when the label is similar enough.
-    bool visitBranchInst(BranchInst &BI) { return false; }
+    bool visitBranchInst(BranchInst &BI) { 
+      return EnableBranches;
+    }
     // TODO: Determine a scheme to resolve when the labels are similar enough.
     bool visitPHINode(PHINode &PN) { return false; }
     // TODO: Handle allocas.
@@ -356,6 +369,10 @@ private:
     // TODO: Handle interblock similarity.
     bool visitTerminator(Instruction &I) { return false; }
     bool visitInstruction(Instruction &I) { return true; }
+
+    // The flag variable that marks whether we should allow branch instructions
+    // to be outlined.
+    bool EnableBranches = false;
   };
 
   /// A InstVisitor used to exclude certain instructions from being outlined.

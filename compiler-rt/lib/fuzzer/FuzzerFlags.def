@@ -58,12 +58,21 @@ FUZZER_FLAG_INT(max_total_time, 0, "If positive, indicates the maximal total "
 FUZZER_FLAG_INT(help, 0, "Print help.")
 FUZZER_FLAG_INT(fork, 0, "Experimental mode where fuzzing happens "
                 "in a subprocess")
+FUZZER_FLAG_INT(fork_corpus_groups, 0, "For fork mode, enable the corpus-group "
+		"strategy, The main corpus will be grouped according to size, "
+		"and each sub-process will randomly select seeds from different "
+		"groups as the sub-corpus.")
 FUZZER_FLAG_INT(ignore_timeouts, 1, "Ignore timeouts in fork mode")
 FUZZER_FLAG_INT(ignore_ooms, 1, "Ignore OOMs in fork mode")
 FUZZER_FLAG_INT(ignore_crashes, 0, "Ignore crashes in fork mode")
 FUZZER_FLAG_INT(merge, 0, "If 1, the 2-nd, 3-rd, etc corpora will be "
   "merged into the 1-st corpus. Only interesting units will be taken. "
   "This flag can be used to minimize a corpus.")
+FUZZER_FLAG_INT(set_cover_merge, 0, "If 1, the 2-nd, 3-rd, etc corpora will be "
+  "merged into the 1-st corpus. Same as the 'merge' flag, but uses the "
+  "standard greedy algorithm for the set cover problem to "
+  "compute an approximation of the minimum set of testcases that "
+  "provide the same coverage as the initial corpora")
 FUZZER_FLAG_STRING(stop_file, "Stop fuzzing ASAP if this file exists")
 FUZZER_FLAG_STRING(merge_inner, "internal flag")
 FUZZER_FLAG_STRING(merge_control_file,

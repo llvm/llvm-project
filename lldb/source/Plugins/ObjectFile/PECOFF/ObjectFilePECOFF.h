@@ -132,8 +132,6 @@ public:
   // PluginInterface protocol
   lldb_private::ConstString GetPluginName() override;
 
-  uint32_t GetPluginVersion() override;
-
   bool IsWindowsSubsystem();
 
   uint32_t GetRVA(const lldb_private::Address &addr) const;

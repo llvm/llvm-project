@@ -69,6 +69,11 @@ struct Merger {
                std::set<uint32_t> *NewFeatures,
                const std::set<uint32_t> &InitialCov, std::set<uint32_t> *NewCov,
                std::vector<std::string> *NewFiles);
+  size_t SetCoverMerge(const std::set<uint32_t> &InitialFeatures,
+                       std::set<uint32_t> *NewFeatures,
+                       const std::set<uint32_t> &InitialCov,
+                       std::set<uint32_t> *NewCov,
+                       std::vector<std::string> *NewFiles);
   size_t ApproximateMemoryConsumption() const;
   std::set<uint32_t> AllFeatures() const;
 };
@@ -81,7 +86,7 @@ void CrashResistantMerge(const std::vector<std::string> &Args,
                          std::set<uint32_t> *NewFeatures,
                          const std::set<uint32_t> &InitialCov,
                          std::set<uint32_t> *NewCov, const std::string &CFPath,
-                         bool Verbose);
+                         bool Verbose, bool IsSetCoverMerge);
 
 }  // namespace fuzzer
 

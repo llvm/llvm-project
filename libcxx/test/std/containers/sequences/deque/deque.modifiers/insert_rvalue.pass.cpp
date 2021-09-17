@@ -54,11 +54,11 @@ test(int P, C& c1, int x)
     assert(c1.size() == c1_osize + 1);
     assert(static_cast<std::size_t>(distance(c1.begin(), c1.end())) == c1.size());
     i = c1.begin();
-    for (int j = 0; j < P; ++j, ++i)
+    for (int j = 0; j < P; ++j, (void) ++i)
         assert(*i == MoveOnly(j));
     assert(*i == MoveOnly(x));
     ++i;
-    for (int j = P; static_cast<std::size_t>(j) < c1_osize; ++j, ++i)
+    for (int j = P; static_cast<std::size_t>(j) < c1_osize; ++j, (void) ++i)
         assert(*i == MoveOnly(j));
 }
 

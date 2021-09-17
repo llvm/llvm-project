@@ -272,7 +272,7 @@ ExternalIoStatementState<DIR>::ExternalIoStatementState(
 template <Direction DIR> int ExternalIoStatementState<DIR>::EndIoStatement() {
   if constexpr (DIR == Direction::Input) {
     BeginReadingRecord(); // in case there were no I/O items
-    if (!mutableModes().nonAdvancing) {
+    if (!mutableModes().nonAdvancing || GetIoStat() == IostatEor) {
       FinishReadingRecord();
     }
   } else {
@@ -559,18 +559,17 @@ std::optional<char32_t> IoStatementState::NextInField(
       return next;
     }
     const ConnectionState &connection{GetConnectionState()};
-    if (!connection.IsAtEOF() && connection.isFixedRecordLength &&
-        connection.recordLength &&
+    if (!connection.IsAtEOF() && connection.recordLength &&
         connection.positionInRecord >= *connection.recordLength) {
-      if (connection.modes.pad) { // PAD='YES'
-        --*remaining;
-        return std::optional<char32_t>{' '};
-      }
       IoErrorHandler &handler{GetIoErrorHandler()};
       if (mutableModes().nonAdvancing) {
         handler.SignalEor();
-      } else {
+      } else if (connection.isFixedRecordLength && !connection.modes.pad) {
         handler.SignalError(IostatRecordReadOverrun);
+      }
+      if (connection.modes.pad) { // PAD='YES'
+        --*remaining;
+        return std::optional<char32_t>{' '};
       }
     }
   }

@@ -2,6 +2,7 @@ import("//clang-tools-extra/clangd/test/clangd_lit_site_cfg_files.gni")
 import("//clang-tools-extra/test/clang_tools_extra_lit_site_cfg_files.gni")
 import("//clang/test/clang_lit_site_cfg_files.gni")
 import("//lld/test/lld_lit_site_cfg_files.gni")
+import("//lldb/test/lldb_lit_site_cfg_files.gni")
 import("//llvm/test/llvm_lit_site_cfg_files.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("//llvm/utils/llvm-lit/lit_path_function.gni")
@@ -25,6 +26,10 @@ write_cmake_config("llvm-lit") {
     "//clang/test:lit_unit_site_cfg",
     "//lld/test:lit_site_cfg",
     "//lld/test:lit_unit_site_cfg",
+    "//lldb/test:lit_api_site_cfg",
+    "//lldb/test:lit_shell_site_cfg",
+    "//lldb/test:lit_site_cfg",
+    "//lldb/test:lit_unit_site_cfg",
     "//llvm/test:lit_site_cfg",
     "//llvm/test:lit_unit_site_cfg",
   ]
@@ -61,6 +66,22 @@ write_cmake_config("llvm-lit") {
     [
       "//lld/test/Unit/lit.cfg.py",
       lld_lit_unit_site_cfg_file,
+    ],
+    [
+      "//lldb/test/lit.cfg.py",
+      lldb_lit_site_cfg_file,
+    ],
+    [
+      "//lldb/test/API/lit.cfg.py",
+      lldb_lit_api_site_cfg_file,
+    ],
+    [
+      "//lldb/test/Shell/lit.cfg.py",
+      lldb_lit_shell_site_cfg_file,
+    ],
+    [
+      "//lldb/test/Unit/lit.cfg.py",
+      lldb_lit_unit_site_cfg_file,
     ],
     [
       "//llvm/test/lit.cfg.py",

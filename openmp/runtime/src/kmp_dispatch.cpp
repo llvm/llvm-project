@@ -72,8 +72,8 @@ void __kmp_dispatch_dxo_error(int *gtid_ref, int *cid_ref, ident_t *loc_ref) {
 static inline int __kmp_get_monotonicity(ident_t *loc, enum sched_type schedule,
                                          bool use_hier = false) {
   // Pick up the nonmonotonic/monotonic bits from the scheduling type
-  // TODO: make nonmonotonic when static_steal is fixed
-  int monotonicity = SCHEDULE_MONOTONIC;
+  // Nonmonotonic as default for dynamic schedule when no modifier is specified
+  int monotonicity = SCHEDULE_NONMONOTONIC;
 
   // Let default be monotonic for executables
   // compiled with OpenMP* 4.5 or less compilers

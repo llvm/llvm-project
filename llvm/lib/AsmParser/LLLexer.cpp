@@ -849,7 +849,15 @@ lltok::Kind LLLexer::LexIdentifier() {
   TYPEKEYWORD("x86_mmx",   Type::getX86_MMXTy(Context));
   TYPEKEYWORD("x86_amx",   Type::getX86_AMXTy(Context));
   TYPEKEYWORD("token",     Type::getTokenTy(Context));
-  TYPEKEYWORD("ptr", PointerType::getUnqual(Context));
+
+  if (Keyword == "ptr") {
+    if (Context.supportsTypedPointers()) {
+      Warning("ptr type is only supported in -opaque-pointers mode");
+      return lltok::Error;
+    }
+    TyVal = PointerType::getUnqual(Context);
+    return lltok::Type;
+  }
 
 #undef TYPEKEYWORD
 

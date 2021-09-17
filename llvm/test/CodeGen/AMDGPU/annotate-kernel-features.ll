@@ -27,11 +27,17 @@ define amdgpu_kernel void @use_tgid_x(i32 addrspace(1)* %ptr) #1 {
 }
 
 define amdgpu_kernel void @use_tgid_y(i32 addrspace(1)* %ptr) #1 {
-; CHECK-LABEL: define {{[^@]+}}@use_tgid_y
-; CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tgid.y()
-; CHECK-NEXT:    store i32 [[VAL]], i32 addrspace(1)* [[PTR]], align 4
-; CHECK-NEXT:    ret void
+; AKF_CHECK-LABEL: define {{[^@]+}}@use_tgid_y
+; AKF_CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR1]] {
+; AKF_CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tgid.y()
+; AKF_CHECK-NEXT:    store i32 [[VAL]], i32 addrspace(1)* [[PTR]], align 4
+; AKF_CHECK-NEXT:    ret void
+;
+; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@use_tgid_y
+; ATTRIBUTOR_CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR2:[0-9]+]] {
+; ATTRIBUTOR_CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tgid.y()
+; ATTRIBUTOR_CHECK-NEXT:    store i32 [[VAL]], i32 addrspace(1)* [[PTR]], align 4
+; ATTRIBUTOR_CHECK-NEXT:    ret void
 ;
   %val = call i32 @llvm.r600.read.tgid.y()
   store i32 %val, i32 addrspace(1)* %ptr
@@ -39,13 +45,21 @@ define amdgpu_kernel void @use_tgid_y(i32 addrspace(1)* %ptr) #1 {
 }
 
 define amdgpu_kernel void @multi_use_tgid_y(i32 addrspace(1)* %ptr) #1 {
-; CHECK-LABEL: define {{[^@]+}}@multi_use_tgid_y
-; CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.y()
-; CHECK-NEXT:    store volatile i32 [[VAL0]], i32 addrspace(1)* [[PTR]], align 4
-; CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.y()
-; CHECK-NEXT:    store volatile i32 [[VAL1]], i32 addrspace(1)* [[PTR]], align 4
-; CHECK-NEXT:    ret void
+; AKF_CHECK-LABEL: define {{[^@]+}}@multi_use_tgid_y
+; AKF_CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR1]] {
+; AKF_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.y()
+; AKF_CHECK-NEXT:    store volatile i32 [[VAL0]], i32 addrspace(1)* [[PTR]], align 4
+; AKF_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.y()
+; AKF_CHECK-NEXT:    store volatile i32 [[VAL1]], i32 addrspace(1)* [[PTR]], align 4
+; AKF_CHECK-NEXT:    ret void
+;
+; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@multi_use_tgid_y
+; ATTRIBUTOR_CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR2]] {
+; ATTRIBUTOR_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.y()
+; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL0]], i32 addrspace(1)* [[PTR]], align 4
+; ATTRIBUTOR_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.y()
+; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL1]], i32 addrspace(1)* [[PTR]], align 4
+; ATTRIBUTOR_CHECK-NEXT:    ret void
 ;
   %val0 = call i32 @llvm.r600.read.tgid.y()
   store volatile i32 %val0, i32 addrspace(1)* %ptr
@@ -55,13 +69,21 @@ define amdgpu_kernel void @multi_use_tgid_y(i32 addrspace(1)* %ptr) #1 {
 }
 
 define amdgpu_kernel void @use_tgid_x_y(i32 addrspace(1)* %ptr) #1 {
-; CHECK-LABEL: define {{[^@]+}}@use_tgid_x_y
-; CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.x()
-; CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.y()
-; CHECK-NEXT:    store volatile i32 [[VAL0]], i32 addrspace(1)* [[PTR]], align 4
-; CHECK-NEXT:    store volatile i32 [[VAL1]], i32 addrspace(1)* [[PTR]], align 4
-; CHECK-NEXT:    ret void
+; AKF_CHECK-LABEL: define {{[^@]+}}@use_tgid_x_y
+; AKF_CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR1]] {
+; AKF_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.x()
+; AKF_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.y()
+; AKF_CHECK-NEXT:    store volatile i32 [[VAL0]], i32 addrspace(1)* [[PTR]], align 4
+; AKF_CHECK-NEXT:    store volatile i32 [[VAL1]], i32 addrspace(1)* [[PTR]], align 4
+; AKF_CHECK-NEXT:    ret void
+;
+; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@use_tgid_x_y
+; ATTRIBUTOR_CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR2]] {
+; ATTRIBUTOR_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.x()
+; ATTRIBUTOR_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.y()
+; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL0]], i32 addrspace(1)* [[PTR]], align 4
+; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL1]], i32 addrspace(1)* [[PTR]], align 4
+; ATTRIBUTOR_CHECK-NEXT:    ret void
 ;
   %val0 = call i32 @llvm.r600.read.tgid.x()
   %val1 = call i32 @llvm.r600.read.tgid.y()
@@ -71,11 +93,17 @@ define amdgpu_kernel void @use_tgid_x_y(i32 addrspace(1)* %ptr) #1 {
 }
 
 define amdgpu_kernel void @use_tgid_z(i32 addrspace(1)* %ptr) #1 {
-; CHECK-LABEL: define {{[^@]+}}@use_tgid_z
-; CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR3:[0-9]+]] {
-; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tgid.z()
-; CHECK-NEXT:    store i32 [[VAL]], i32 addrspace(1)* [[PTR]], align 4
-; CHECK-NEXT:    ret void
+; AKF_CHECK-LABEL: define {{[^@]+}}@use_tgid_z
+; AKF_CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR1]] {
+; AKF_CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tgid.z()
+; AKF_CHECK-NEXT:    store i32 [[VAL]], i32 addrspace(1)* [[PTR]], align 4
+; AKF_CHECK-NEXT:    ret void
+;
+; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@use_tgid_z
+; ATTRIBUTOR_CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR3:[0-9]+]] {
+; ATTRIBUTOR_CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tgid.z()
+; ATTRIBUTOR_CHECK-NEXT:    store i32 [[VAL]], i32 addrspace(1)* [[PTR]], align 4
+; ATTRIBUTOR_CHECK-NEXT:    ret void
 ;
   %val = call i32 @llvm.r600.read.tgid.z()
   store i32 %val, i32 addrspace(1)* %ptr
@@ -83,13 +111,21 @@ define amdgpu_kernel void @use_tgid_z(i32 addrspace(1)* %ptr) #1 {
 }
 
 define amdgpu_kernel void @use_tgid_x_z(i32 addrspace(1)* %ptr) #1 {
-; CHECK-LABEL: define {{[^@]+}}@use_tgid_x_z
-; CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.x()
-; CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.z()
-; CHECK-NEXT:    store volatile i32 [[VAL0]], i32 addrspace(1)* [[PTR]], align 4
-; CHECK-NEXT:    store volatile i32 [[VAL1]], i32 addrspace(1)* [[PTR]], align 4
-; CHECK-NEXT:    ret void
+; AKF_CHECK-LABEL: define {{[^@]+}}@use_tgid_x_z
+; AKF_CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR1]] {
+; AKF_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.x()
+; AKF_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.z()
+; AKF_CHECK-NEXT:    store volatile i32 [[VAL0]], i32 addrspace(1)* [[PTR]], align 4
+; AKF_CHECK-NEXT:    store volatile i32 [[VAL1]], i32 addrspace(1)* [[PTR]], align 4
+; AKF_CHECK-NEXT:    ret void
+;
+; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@use_tgid_x_z
+; ATTRIBUTOR_CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR3]] {
+; ATTRIBUTOR_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.x()
+; ATTRIBUTOR_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.z()
+; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL0]], i32 addrspace(1)* [[PTR]], align 4
+; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL1]], i32 addrspace(1)* [[PTR]], align 4
+; ATTRIBUTOR_CHECK-NEXT:    ret void
 ;
   %val0 = call i32 @llvm.r600.read.tgid.x()
   %val1 = call i32 @llvm.r600.read.tgid.z()
@@ -99,13 +135,21 @@ define amdgpu_kernel void @use_tgid_x_z(i32 addrspace(1)* %ptr) #1 {
 }
 
 define amdgpu_kernel void @use_tgid_y_z(i32 addrspace(1)* %ptr) #1 {
-; CHECK-LABEL: define {{[^@]+}}@use_tgid_y_z
-; CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR4:[0-9]+]] {
-; CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.y()
-; CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.z()
-; CHECK-NEXT:    store volatile i32 [[VAL0]], i32 addrspace(1)* [[PTR]], align 4
-; CHECK-NEXT:    store volatile i32 [[VAL1]], i32 addrspace(1)* [[PTR]], align 4
-; CHECK-NEXT:    ret void
+; AKF_CHECK-LABEL: define {{[^@]+}}@use_tgid_y_z
+; AKF_CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR1]] {
+; AKF_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.y()
+; AKF_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.z()
+; AKF_CHECK-NEXT:    store volatile i32 [[VAL0]], i32 addrspace(1)* [[PTR]], align 4
+; AKF_CHECK-NEXT:    store volatile i32 [[VAL1]], i32 addrspace(1)* [[PTR]], align 4
+; AKF_CHECK-NEXT:    ret void
+;
+; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@use_tgid_y_z
+; ATTRIBUTOR_CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR4:[0-9]+]] {
+; ATTRIBUTOR_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.y()
+; ATTRIBUTOR_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.z()
+; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL0]], i32 addrspace(1)* [[PTR]], align 4
+; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL1]], i32 addrspace(1)* [[PTR]], align 4
+; ATTRIBUTOR_CHECK-NEXT:    ret void
 ;
   %val0 = call i32 @llvm.r600.read.tgid.y()
   %val1 = call i32 @llvm.r600.read.tgid.z()
@@ -115,15 +159,25 @@ define amdgpu_kernel void @use_tgid_y_z(i32 addrspace(1)* %ptr) #1 {
 }
 
 define amdgpu_kernel void @use_tgid_x_y_z(i32 addrspace(1)* %ptr) #1 {
-; CHECK-LABEL: define {{[^@]+}}@use_tgid_x_y_z
-; CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.x()
-; CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.y()
-; CHECK-NEXT:    [[VAL2:%.*]] = call i32 @llvm.r600.read.tgid.z()
-; CHECK-NEXT:    store volatile i32 [[VAL0]], i32 addrspace(1)* [[PTR]], align 4
-; CHECK-NEXT:    store volatile i32 [[VAL1]], i32 addrspace(1)* [[PTR]], align 4
-; CHECK-NEXT:    store volatile i32 [[VAL2]], i32 addrspace(1)* [[PTR]], align 4
-; CHECK-NEXT:    ret void
+; AKF_CHECK-LABEL: define {{[^@]+}}@use_tgid_x_y_z
+; AKF_CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR1]] {
+; AKF_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.x()
+; AKF_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.y()
+; AKF_CHECK-NEXT:    [[VAL2:%.*]] = call i32 @llvm.r600.read.tgid.z()
+; AKF_CHECK-NEXT:    store volatile i32 [[VAL0]], i32 addrspace(1)* [[PTR]], align 4
+; AKF_CHECK-NEXT:    store volatile i32 [[VAL1]], i32 addrspace(1)* [[PTR]], align 4
+; AKF_CHECK-NEXT:    store volatile i32 [[VAL2]], i32 addrspace(1)* [[PTR]], align 4
+; AKF_CHECK-NEXT:    ret void
+;
+; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@use_tgid_x_y_z
+; ATTRIBUTOR_CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR4]] {
+; ATTRIBUTOR_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tgid.x()
+; ATTRIBUTOR_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.y()
+; ATTRIBUTOR_CHECK-NEXT:    [[VAL2:%.*]] = call i32 @llvm.r600.read.tgid.z()
+; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL0]], i32 addrspace(1)* [[PTR]], align 4
+; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL1]], i32 addrspace(1)* [[PTR]], align 4
+; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL2]], i32 addrspace(1)* [[PTR]], align 4
+; ATTRIBUTOR_CHECK-NEXT:    ret void
 ;
   %val0 = call i32 @llvm.r600.read.tgid.x()
   %val1 = call i32 @llvm.r600.read.tgid.y()
@@ -147,11 +201,17 @@ define amdgpu_kernel void @use_tidig_x(i32 addrspace(1)* %ptr) #1 {
 }
 
 define amdgpu_kernel void @use_tidig_y(i32 addrspace(1)* %ptr) #1 {
-; CHECK-LABEL: define {{[^@]+}}@use_tidig_y
-; CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR5:[0-9]+]] {
-; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tidig.y()
-; CHECK-NEXT:    store i32 [[VAL]], i32 addrspace(1)* [[PTR]], align 4
-; CHECK-NEXT:    ret void
+; AKF_CHECK-LABEL: define {{[^@]+}}@use_tidig_y
+; AKF_CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR1]] {
+; AKF_CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tidig.y()
+; AKF_CHECK-NEXT:    store i32 [[VAL]], i32 addrspace(1)* [[PTR]], align 4
+; AKF_CHECK-NEXT:    ret void
+;
+; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@use_tidig_y
+; ATTRIBUTOR_CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR5:[0-9]+]] {
+; ATTRIBUTOR_CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tidig.y()
+; ATTRIBUTOR_CHECK-NEXT:    store i32 [[VAL]], i32 addrspace(1)* [[PTR]], align 4
+; ATTRIBUTOR_CHECK-NEXT:    ret void
 ;
   %val = call i32 @llvm.r600.read.tidig.y()
   store i32 %val, i32 addrspace(1)* %ptr
@@ -159,11 +219,17 @@ define amdgpu_kernel void @use_tidig_y(i32 addrspace(1)* %ptr) #1 {
 }
 
 define amdgpu_kernel void @use_tidig_z(i32 addrspace(1)* %ptr) #1 {
-; CHECK-LABEL: define {{[^@]+}}@use_tidig_z
-; CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR6:[0-9]+]] {
-; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tidig.z()
-; CHECK-NEXT:    store i32 [[VAL]], i32 addrspace(1)* [[PTR]], align 4
-; CHECK-NEXT:    ret void
+; AKF_CHECK-LABEL: define {{[^@]+}}@use_tidig_z
+; AKF_CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR1]] {
+; AKF_CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tidig.z()
+; AKF_CHECK-NEXT:    store i32 [[VAL]], i32 addrspace(1)* [[PTR]], align 4
+; AKF_CHECK-NEXT:    ret void
+;
+; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@use_tidig_z
+; ATTRIBUTOR_CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR6:[0-9]+]] {
+; ATTRIBUTOR_CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.r600.read.tidig.z()
+; ATTRIBUTOR_CHECK-NEXT:    store i32 [[VAL]], i32 addrspace(1)* [[PTR]], align 4
+; ATTRIBUTOR_CHECK-NEXT:    ret void
 ;
   %val = call i32 @llvm.r600.read.tidig.z()
   store i32 %val, i32 addrspace(1)* %ptr
@@ -187,13 +253,21 @@ define amdgpu_kernel void @use_tidig_x_tgid_x(i32 addrspace(1)* %ptr) #1 {
 }
 
 define amdgpu_kernel void @use_tidig_y_tgid_y(i32 addrspace(1)* %ptr) #1 {
-; CHECK-LABEL: define {{[^@]+}}@use_tidig_y_tgid_y
-; CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR7:[0-9]+]] {
-; CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tidig.y()
-; CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.y()
-; CHECK-NEXT:    store volatile i32 [[VAL0]], i32 addrspace(1)* [[PTR]], align 4
-; CHECK-NEXT:    store volatile i32 [[VAL1]], i32 addrspace(1)* [[PTR]], align 4
-; CHECK-NEXT:    ret void
+; AKF_CHECK-LABEL: define {{[^@]+}}@use_tidig_y_tgid_y
+; AKF_CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR1]] {
+; AKF_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tidig.y()
+; AKF_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.y()
+; AKF_CHECK-NEXT:    store volatile i32 [[VAL0]], i32 addrspace(1)* [[PTR]], align 4
+; AKF_CHECK-NEXT:    store volatile i32 [[VAL1]], i32 addrspace(1)* [[PTR]], align 4
+; AKF_CHECK-NEXT:    ret void
+;
+; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@use_tidig_y_tgid_y
+; ATTRIBUTOR_CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR7:[0-9]+]] {
+; ATTRIBUTOR_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tidig.y()
+; ATTRIBUTOR_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tgid.y()
+; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL0]], i32 addrspace(1)* [[PTR]], align 4
+; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL1]], i32 addrspace(1)* [[PTR]], align 4
+; ATTRIBUTOR_CHECK-NEXT:    ret void
 ;
   %val0 = call i32 @llvm.r600.read.tidig.y()
   %val1 = call i32 @llvm.r600.read.tgid.y()
@@ -203,15 +277,25 @@ define amdgpu_kernel void @use_tidig_y_tgid_y(i32 addrspace(1)* %ptr) #1 {
 }
 
 define amdgpu_kernel void @use_tidig_x_y_z(i32 addrspace(1)* %ptr) #1 {
-; CHECK-LABEL: define {{[^@]+}}@use_tidig_x_y_z
-; CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR8:[0-9]+]] {
-; CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tidig.x()
-; CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tidig.y()
-; CHECK-NEXT:    [[VAL2:%.*]] = call i32 @llvm.r600.read.tidig.z()
-; CHECK-NEXT:    store volatile i32 [[VAL0]], i32 addrspace(1)* [[PTR]], align 4
-; CHECK-NEXT:    store volatile i32 [[VAL1]], i32 addrspace(1)* [[PTR]], align 4
-; CHECK-NEXT:    store volatile i32 [[VAL2]], i32 addrspace(1)* [[PTR]], align 4
-; CHECK-NEXT:    ret void
+; AKF_CHECK-LABEL: define {{[^@]+}}@use_tidig_x_y_z
+; AKF_CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR1]] {
+; AKF_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tidig.x()
+; AKF_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tidig.y()
+; AKF_CHECK-NEXT:    [[VAL2:%.*]] = call i32 @llvm.r600.read.tidig.z()
+; AKF_CHECK-NEXT:    store volatile i32 [[VAL0]], i32 addrspace(1)* [[PTR]], align 4
+; AKF_CHECK-NEXT:    store volatile i32 [[VAL1]], i32 addrspace(1)* [[PTR]], align 4
+; AKF_CHECK-NEXT:    store volatile i32 [[VAL2]], i32 addrspace(1)* [[PTR]], align 4
+; AKF_CHECK-NEXT:    ret void
+;
+; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@use_tidig_x_y_z
+; ATTRIBUTOR_CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR8:[0-9]+]] {
+; ATTRIBUTOR_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tidig.x()
+; ATTRIBUTOR_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tidig.y()
+; ATTRIBUTOR_CHECK-NEXT:    [[VAL2:%.*]] = call i32 @llvm.r600.read.tidig.z()
+; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL0]], i32 addrspace(1)* [[PTR]], align 4
+; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL1]], i32 addrspace(1)* [[PTR]], align 4
+; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL2]], i32 addrspace(1)* [[PTR]], align 4
+; ATTRIBUTOR_CHECK-NEXT:    ret void
 ;
   %val0 = call i32 @llvm.r600.read.tidig.x()
   %val1 = call i32 @llvm.r600.read.tidig.y()
@@ -223,21 +307,37 @@ define amdgpu_kernel void @use_tidig_x_y_z(i32 addrspace(1)* %ptr) #1 {
 }
 
 define amdgpu_kernel void @use_all_workitems(i32 addrspace(1)* %ptr) #1 {
-; CHECK-LABEL: define {{[^@]+}}@use_all_workitems
-; CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR9:[0-9]+]] {
-; CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tidig.x()
-; CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tidig.y()
-; CHECK-NEXT:    [[VAL2:%.*]] = call i32 @llvm.r600.read.tidig.z()
-; CHECK-NEXT:    [[VAL3:%.*]] = call i32 @llvm.r600.read.tgid.x()
-; CHECK-NEXT:    [[VAL4:%.*]] = call i32 @llvm.r600.read.tgid.y()
-; CHECK-NEXT:    [[VAL5:%.*]] = call i32 @llvm.r600.read.tgid.z()
-; CHECK-NEXT:    store volatile i32 [[VAL0]], i32 addrspace(1)* [[PTR]], align 4
-; CHECK-NEXT:    store volatile i32 [[VAL1]], i32 addrspace(1)* [[PTR]], align 4
-; CHECK-NEXT:    store volatile i32 [[VAL2]], i32 addrspace(1)* [[PTR]], align 4
-; CHECK-NEXT:    store volatile i32 [[VAL3]], i32 addrspace(1)* [[PTR]], align 4
-; CHECK-NEXT:    store volatile i32 [[VAL4]], i32 addrspace(1)* [[PTR]], align 4
-; CHECK-NEXT:    store volatile i32 [[VAL5]], i32 addrspace(1)* [[PTR]], align 4
-; CHECK-NEXT:    ret void
+; AKF_CHECK-LABEL: define {{[^@]+}}@use_all_workitems
+; AKF_CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR1]] {
+; AKF_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tidig.x()
+; AKF_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tidig.y()
+; AKF_CHECK-NEXT:    [[VAL2:%.*]] = call i32 @llvm.r600.read.tidig.z()
+; AKF_CHECK-NEXT:    [[VAL3:%.*]] = call i32 @llvm.r600.read.tgid.x()
+; AKF_CHECK-NEXT:    [[VAL4:%.*]] = call i32 @llvm.r600.read.tgid.y()
+; AKF_CHECK-NEXT:    [[VAL5:%.*]] = call i32 @llvm.r600.read.tgid.z()
+; AKF_CHECK-NEXT:    store volatile i32 [[VAL0]], i32 addrspace(1)* [[PTR]], align 4
+; AKF_CHECK-NEXT:    store volatile i32 [[VAL1]], i32 addrspace(1)* [[PTR]], align 4
+; AKF_CHECK-NEXT:    store volatile i32 [[VAL2]], i32 addrspace(1)* [[PTR]], align 4
+; AKF_CHECK-NEXT:    store volatile i32 [[VAL3]], i32 addrspace(1)* [[PTR]], align 4
+; AKF_CHECK-NEXT:    store volatile i32 [[VAL4]], i32 addrspace(1)* [[PTR]], align 4
+; AKF_CHECK-NEXT:    store volatile i32 [[VAL5]], i32 addrspace(1)* [[PTR]], align 4
+; AKF_CHECK-NEXT:    ret void
+;
+; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@use_all_workitems
+; ATTRIBUTOR_CHECK-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR9:[0-9]+]] {
+; ATTRIBUTOR_CHECK-NEXT:    [[VAL0:%.*]] = call i32 @llvm.r600.read.tidig.x()
+; ATTRIBUTOR_CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.r600.read.tidig.y()
+; ATTRIBUTOR_CHECK-NEXT:    [[VAL2:%.*]] = call i32 @llvm.r600.read.tidig.z()
+; ATTRIBUTOR_CHECK-NEXT:    [[VAL3:%.*]] = call i32 @llvm.r600.read.tgid.x()
+; ATTRIBUTOR_CHECK-NEXT:    [[VAL4:%.*]] = call i32 @llvm.r600.read.tgid.y()
+; ATTRIBUTOR_CHECK-NEXT:    [[VAL5:%.*]] = call i32 @llvm.r600.read.tgid.z()
+; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL0]], i32 addrspace(1)* [[PTR]], align 4
+; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL1]], i32 addrspace(1)* [[PTR]], align 4
+; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL2]], i32 addrspace(1)* [[PTR]], align 4
+; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL3]], i32 addrspace(1)* [[PTR]], align 4
+; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL4]], i32 addrspace(1)* [[PTR]], align 4
+; ATTRIBUTOR_CHECK-NEXT:    store volatile i32 [[VAL5]], i32 addrspace(1)* [[PTR]], align 4
+; ATTRIBUTOR_CHECK-NEXT:    ret void
 ;
   %val0 = call i32 @llvm.r600.read.tidig.x()
   %val1 = call i32 @llvm.r600.read.tidig.y()
@@ -316,14 +416,6 @@ attributes #1 = { nounwind }
 ;.
 ; AKF_CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind readnone speculatable willreturn }
 ; AKF_CHECK: attributes #[[ATTR1]] = { nounwind }
-; AKF_CHECK: attributes #[[ATTR2]] = { nounwind "amdgpu-work-group-id-y" }
-; AKF_CHECK: attributes #[[ATTR3]] = { nounwind "amdgpu-work-group-id-z" }
-; AKF_CHECK: attributes #[[ATTR4]] = { nounwind "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" }
-; AKF_CHECK: attributes #[[ATTR5]] = { nounwind "amdgpu-work-item-id-y" }
-; AKF_CHECK: attributes #[[ATTR6]] = { nounwind "amdgpu-work-item-id-z" }
-; AKF_CHECK: attributes #[[ATTR7]] = { nounwind "amdgpu-work-group-id-y" "amdgpu-work-item-id-y" }
-; AKF_CHECK: attributes #[[ATTR8]] = { nounwind "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" }
-; AKF_CHECK: attributes #[[ATTR9]] = { nounwind "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" }
 ;.
 ; ATTRIBUTOR_CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind readnone speculatable willreturn }
 ; ATTRIBUTOR_CHECK: attributes #[[ATTR1]] = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }

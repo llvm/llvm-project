@@ -409,6 +409,11 @@ TEST(RegisterContextFreeBSDTest, arm64) {
   EXPECT_THAT(GetRegParams(reg_ctx, gpr_##lldb_reg##_mips64),                  \
               ::testing::Pair(offsetof(reg, r_regs[fbsd_regno]),               \
                               sizeof(reg::r_regs[fbsd_regno])))
+#define EXPECT_FPU_MIPS64(lldb_reg, fbsd_regno)                                \
+  EXPECT_THAT(                                                                 \
+      GetRegParams(reg_ctx, fpr_##lldb_reg##_mips64),                          \
+      ::testing::Pair(offsetof(fpreg, r_regs[fbsd_regno]) + base_offset,       \
+                      sizeof(fpreg::r_regs[fbsd_regno])))
 
 TEST(RegisterContextFreeBSDTest, mips64) {
   ArchSpec arch{"mips64-unknown-freebsd"};
@@ -457,6 +462,10 @@ TEST(RegisterContextFreeBSDTest, mips64) {
   EXPECT_GPR_MIPS64(pc, 37);
   EXPECT_GPR_MIPS64(ic, 38);
   EXPECT_GPR_MIPS64(dummy, 39);
+
+  size_t base_offset = reg_ctx.GetRegisterInfo()[fpr_f0_mips64].byte_offset;
+
+  EXPECT_FPU_MIPS64(f0, 0);
 }
 
 #endif // defined(__mips64__)

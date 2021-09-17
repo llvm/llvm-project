@@ -46,9 +46,7 @@
 #include <locale>
 #include <string>
 #if defined(_WIN32)
-#   define WIN32_LEAN_AND_MEAN // Reduce overhead of including windows.h
 #   include <io.h> // _mktemp_s
-#   include <windows.h> // MAX_PATH, GetTempPath, GetTempFileName
 #else
 #   include <unistd.h> // close
 #endif
@@ -63,13 +61,7 @@ extern "C" {
 inline
 std::string get_temp_file_name()
 {
-#if defined(__MINGW32__)
-    char Path[MAX_PATH + 1];
-    char FN[MAX_PATH + 1];
-    do { } while (0 == GetTempPath(MAX_PATH+1, Path));
-    do { } while (0 == GetTempFileName(Path, "libcxx", 0, FN));
-    return FN;
-#elif defined(_WIN32)
+#if defined(_WIN32)
     char Name[] = "libcxx.XXXXXX";
     if (_mktemp_s(Name, sizeof(Name)) != 0) abort();
     return Name;

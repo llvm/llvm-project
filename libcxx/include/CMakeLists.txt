@@ -94,6 +94,7 @@ set(files
   __algorithm/upper_bound.h
   __availability
   __bit_reference
+  __bit/bit_cast.h
   __bits
   __bsd_locale_defaults.h
   __bsd_locale_fallbacks.h

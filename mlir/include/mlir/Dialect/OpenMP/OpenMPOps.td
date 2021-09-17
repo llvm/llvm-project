@@ -317,12 +317,12 @@ def TargetOp : OpenMP_Op<"target",[AttrSizedOperandSegments]> {
     The optional $device parameter specifies the device number for the target region.
 
     The optional $thread_limit specifies the limit on the number of threads
-    
+
     The optional $nowait elliminates the implicit barrier so the parent task can make progress
     even if the target task is not yet completed.
-    
+
     TODO:  private, map, is_device_ptr, firstprivate, depend, defaultmap, in_reduction
-    
+
   }];
 
   let arguments = (ins Optional<I1>:$if_expr,

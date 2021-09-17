@@ -52,6 +52,16 @@ public:
   InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,
                                 TTI::TargetCostKind CostKind) {
     assert(Ty->isIntegerTy());
+    unsigned BitSize = Ty->getPrimitiveSizeInBits();
+    // There is no cost model for constants with a bit size of 0. Return
+    // TCC_Free here, so that constant hoisting will ignore this constant.
+    if (BitSize == 0)
+      return TTI::TCC_Free;
+    // No cost model for operations on integers larger than 64 bit implemented
+    // yet.
+    if (BitSize > 64)
+      return TTI::TCC_Free;
+
     if (Imm == 0)
       return TTI::TCC_Free;
     if (isInt<16>(Imm.getSExtValue()))

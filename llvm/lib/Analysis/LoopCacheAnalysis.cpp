@@ -30,6 +30,7 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/Delinearization.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -344,8 +345,8 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
     LLVM_DEBUG(dbgs().indent(2) << "In Loop '" << L->getName()
                                 << "', AccessFn: " << *AccessFn << "\n");
 
-    SE.delinearize(AccessFn, Subscripts, Sizes,
-                   SE.getElementSize(&StoreOrLoadInst));
+    llvm::delinearize(SE, AccessFn, Subscripts, Sizes,
+                      SE.getElementSize(&StoreOrLoadInst));
 
     if (Subscripts.empty() || Sizes.empty() ||
         Subscripts.size() != Sizes.size()) {

@@ -48,9 +48,10 @@ public:
 } // end anonymous namespace
 
 Optional<MCFixupKind> ARMAsmBackend::getFixupKind(StringRef Name) const {
-  if (!STI.getTargetTriple().isOSBinFormatELF())
-    return None;
+  return None;
+}
 
+Optional<MCFixupKind> ARMAsmBackendELF::getFixupKind(StringRef Name) const {
   unsigned Type = llvm::StringSwitch<unsigned>(Name)
 #define ELF_RELOC(X, Y) .Case(#X, Y)
 #include "llvm/BinaryFormat/ELFRelocs/ARM.def"
@@ -357,14 +358,15 @@ void ARMAsmBackend::relaxInstruction(MCInst &Inst,
   Inst.setOpcode(RelaxedOp);
 }
 
-bool ARMAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
+bool ARMAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
+                                 const MCSubtargetInfo *STI) const {
   const uint16_t Thumb1_16bitNopEncoding = 0x46c0; // using MOV r8,r8
   const uint16_t Thumb2_16bitNopEncoding = 0xbf00; // NOP
   const uint32_t ARMv4_NopEncoding = 0xe1a00000;   // using MOV r0,r0
   const uint32_t ARMv6T2_NopEncoding = 0xe320f000; // NOP
   if (isThumb()) {
     const uint16_t nopEncoding =
-        hasNOP() ? Thumb2_16bitNopEncoding : Thumb1_16bitNopEncoding;
+        hasNOP(STI) ? Thumb2_16bitNopEncoding : Thumb1_16bitNopEncoding;
     uint64_t NumNops = Count / 2;
     for (uint64_t i = 0; i != NumNops; ++i)
       support::endian::write(OS, nopEncoding, Endian);
@@ -374,7 +376,7 @@ bool ARMAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
   }
   // ARM mode
   const uint32_t nopEncoding =
-      hasNOP() ? ARMv6T2_NopEncoding : ARMv4_NopEncoding;
+      hasNOP(STI) ? ARMv6T2_NopEncoding : ARMv4_NopEncoding;
   uint64_t NumNops = Count / 4;
   for (uint64_t i = 0; i != NumNops; ++i)
     support::endian::write(OS, nopEncoding, Endian);
@@ -1300,11 +1302,12 @@ static MCAsmBackend *createARMAsmBackend(const Target &T,
     return new ARMAsmBackendDarwin(T, STI, MRI);
   case Triple::COFF:
     assert(TheTriple.isOSWindows() && "non-Windows ARM COFF is not supported");
-    return new ARMAsmBackendWinCOFF(T, STI);
+    return new ARMAsmBackendWinCOFF(T, STI.getTargetTriple().isThumb());
   case Triple::ELF:
     assert(TheTriple.isOSBinFormatELF() && "using ELF for non-ELF target");
     uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
-    return new ARMAsmBackendELF(T, STI, OSABI, Endian);
+    return new ARMAsmBackendELF(T, STI.getTargetTriple().isThumb(), OSABI,
+                                Endian);
   }
 }
 

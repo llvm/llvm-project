@@ -68,7 +68,7 @@ namespace __data {
 } // end namespace __data
 
 inline namespace __cpo {
-  inline constexpr const auto data = __data::__fn{};
+  inline constexpr auto data = __data::__fn{};
 } // namespace __cpo
 } // namespace ranges
 

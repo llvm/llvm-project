@@ -153,8 +153,6 @@ public:
 
   ConstString GetPluginName() override;
 
-  uint32_t GetPluginVersion() override;
-
   llvm::pdb::PDBFile &GetPDBFile() { return m_index->pdb(); }
   const llvm::pdb::PDBFile &GetPDBFile() const { return m_index->pdb(); }
 

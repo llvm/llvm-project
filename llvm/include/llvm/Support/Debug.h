@@ -78,27 +78,6 @@ void setCurrentDebugTypes(const char **Types, unsigned Count);
 ///
 extern bool DebugFlag;
 
-/// \name Verification flags.
-///
-/// These flags turns on/off that are expensive and are turned off by default,
-/// unless macro EXPENSIVE_CHECKS is defined. The flags allow selectively
-/// turning the checks on without need to recompile.
-/// \{
-
-/// Enables verification of dominator trees.
-///
-extern bool VerifyDomInfo;
-
-/// Enables verification of loop info.
-///
-extern bool VerifyLoopInfo;
-
-/// Enables verification of MemorySSA.
-///
-extern bool VerifyMemorySSA;
-
-///\}
-
 /// EnableDebugBuffering - This defaults to false.  If true, the debug
 /// stream will install signal handlers to dump any buffered debug
 /// output.  It allows clients to selectively allow the debug stream

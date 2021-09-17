@@ -169,6 +169,12 @@ public:
     return Type(reinterpret_cast<ImplType *>(const_cast<void *>(pointer)));
   }
 
+  /// Returns true if the type was registered with a particular trait.
+  template <template <typename T> class Trait>
+  bool hasTrait() {
+    return getAbstractType().hasTrait<Trait>();
+  }
+
   /// Return the abstract type descriptor for this type.
   const AbstractTy &getAbstractType() { return impl->getAbstractType(); }
 

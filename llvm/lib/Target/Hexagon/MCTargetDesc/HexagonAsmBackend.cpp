@@ -686,10 +686,11 @@ public:
     assert(Update && "Didn't find relaxation target");
   }
 
-  bool writeNopData(raw_ostream &OS, uint64_t Count) const override {
-    static const uint32_t Nopcode  = 0x7f000000, // Hard-coded NOP.
-                          ParseIn  = 0x00004000, // In packet parse-bits.
-                          ParseEnd = 0x0000c000; // End of packet parse-bits.
+  bool writeNopData(raw_ostream &OS, uint64_t Count,
+                    const MCSubtargetInfo *STI) const override {
+    static const uint32_t Nopcode = 0x7f000000, // Hard-coded NOP.
+        ParseIn = 0x00004000,                   // In packet parse-bits.
+        ParseEnd = 0x0000c000;                  // End of packet parse-bits.
 
     while (Count % HEXAGON_INSTR_SIZE) {
       LLVM_DEBUG(dbgs() << "Alignment not a multiple of the instruction size:"

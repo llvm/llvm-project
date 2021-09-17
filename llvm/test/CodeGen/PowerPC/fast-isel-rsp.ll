@@ -2,6 +2,10 @@
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefix=GENERIC
 ; RUN: llc -mcpu=ppc -mtriple=powerpc64le-unknown-unknown -O0 < %s \
 ; RUN:   -verify-machineinstrs | FileCheck %s
+; RUN: llc -mcpu=pwr7 -mtriple=powerpc64-ibm-aix-xcoff -O0 < %s \
+; RUN:   -verify-machineinstrs | FileCheck %s
+
+
 
 define float @testRSP(double %x) {
 entry:

@@ -156,7 +156,6 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_bit_cast",
     "values": { "c++20": 201806 },
     "headers": ["bit"],
-    "unimplemented": True,
   }, {
     "name": "__cpp_lib_bitops",
     "values": { "c++20": 201907 },

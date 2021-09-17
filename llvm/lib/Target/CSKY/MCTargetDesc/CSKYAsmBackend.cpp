@@ -145,7 +145,8 @@ void CSKYAsmBackend::relaxInstruction(MCInst &Inst,
   llvm_unreachable("CSKYAsmBackend::relaxInstruction() unimplemented");
 }
 
-bool CSKYAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
+bool CSKYAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
+                                  const MCSubtargetInfo *STI) const {
   if (Count % 2)
     return false;
 

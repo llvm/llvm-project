@@ -67,6 +67,11 @@ public:
     modifyFlags(wasm::WASM_SYMBOL_NO_STRIP, wasm::WASM_SYMBOL_NO_STRIP);
   }
 
+  bool isTLS() const { return getFlags() & wasm::WASM_SYMBOL_TLS; }
+  void setTLS() const {
+    modifyFlags(wasm::WASM_SYMBOL_TLS, wasm::WASM_SYMBOL_TLS);
+  }
+
   bool isWeak() const { return IsWeak; }
   void setWeak(bool isWeak) { IsWeak = isWeak; }
 

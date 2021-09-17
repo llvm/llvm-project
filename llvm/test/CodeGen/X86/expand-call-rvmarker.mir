@@ -52,7 +52,7 @@ body:             |
   bb.0 (%ir-block.0):
     frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 16
-    CALL64pcrel32_RVMARKER 0, @fn, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
+    CALL64pcrel32_RVMARKER @objc_retainAutoreleasedReturnValue, @fn, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
     $rcx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     RET 0, $rax
 
@@ -83,7 +83,7 @@ body:             |
   bb.0 (%ir-block.0):
     frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 16
-    CALL64pcrel32_RVMARKER 1, @fn, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
+    CALL64pcrel32_RVMARKER @objc_unsafeClaimAutoreleasedReturnValue, @fn, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
     $rcx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     RET 0, $rax
 
@@ -120,7 +120,7 @@ body:             |
     $rax = MOV64rr $rdi
     $rdi = MOV64rr killed $rdx
     $rdx = MOV64rr killed $rax
-    CALL64pcrel32_RVMARKER 0, @fn, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
+    CALL64pcrel32_RVMARKER @objc_retainAutoreleasedReturnValue, @fn, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
     $rax = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     RET 0, $rax
 
@@ -150,6 +150,6 @@ body:             |
   bb.0 (%ir-block.0):
     frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 16
-    CALL64pcrel32_RVMARKER 0, @fn, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
+    CALL64pcrel32_RVMARKER @objc_retainAutoreleasedReturnValue, @fn, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
     $rax = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     RET 0

@@ -313,3 +313,38 @@ func @tensor_dim_of_iter_arg_no_canonicalize(%t : tensor<?x?xf32>,
   }
   return %1 : index
 }
+
+// -----
+
+// CHECK-LABEL: func @tensor_dim_of_loop_result(
+//  CHECK-SAME:     %[[t:.*]]: tensor<?x?xf32>
+//       CHECK:   tensor.dim %[[t]]
+func @tensor_dim_of_loop_result(%t : tensor<?x?xf32>) -> index {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c10 = constant 10 : index
+  %0 = scf.for %i = %c0 to %c10 step %c1 iter_args(%arg0 = %t)
+      -> (tensor<?x?xf32>) {
+    scf.yield %arg0 : tensor<?x?xf32>
+  }
+  %dim = tensor.dim %0, %c0 : tensor<?x?xf32>
+  return %dim : index
+}
+
+// -----
+
+// CHECK-LABEL: func @tensor_dim_of_loop_result_no_canonicalize(
+//       CHECK:   %[[loop:.*]]:2 = scf.for
+//       CHECK:   tensor.dim %[[loop]]#1
+func @tensor_dim_of_loop_result_no_canonicalize(%t : tensor<?x?xf32>,
+                                                %u : tensor<?x?xf32>) -> index {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c10 = constant 10 : index
+  %0, %1 = scf.for %i = %c0 to %c10 step %c1 iter_args(%arg0 = %t, %arg1 = %u)
+      -> (tensor<?x?xf32>, tensor<?x?xf32>) {
+    scf.yield %arg0, %u : tensor<?x?xf32>, tensor<?x?xf32>
+  }
+  %dim = tensor.dim %1, %c0 : tensor<?x?xf32>
+  return %dim : index
+}

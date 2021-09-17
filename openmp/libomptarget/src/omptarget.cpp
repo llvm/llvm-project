@@ -270,18 +270,19 @@ static bool isOffloadDisabled() {
 // If offload is enabled, ensure that device DeviceID has been initialized,
 // global ctors have been executed, and global data has been mapped.
 //
+// The return bool indicates if the offload is to the host device
 // There are three possible results:
-// - Return OFFLOAD_SUCCESS if the device is ready for offload.
-// - Return OFFLOAD_FAIL without reporting a runtime error if offload is
+// - Return false if the taregt device is ready for offload
+// - Return true without reporting a runtime error if offload is
 //   disabled, perhaps because the initial device was specified.
-// - Report a runtime error and return OFFLOAD_FAIL.
+// - Report a runtime error and return true.
 //
 // If DeviceID == OFFLOAD_DEVICE_DEFAULT, set DeviceID to the default device.
 // This step might be skipped if offload is disabled.
-int checkDeviceAndCtors(int64_t &DeviceID, ident_t *Loc) {
+bool checkDeviceAndCtors(int64_t &DeviceID, ident_t *Loc) {
   if (isOffloadDisabled()) {
     DP("Offload is disabled\n");
-    return OFFLOAD_FAIL;
+    return true;
   }
 
   if (DeviceID == OFFLOAD_DEVICE_DEFAULT) {
@@ -293,20 +294,20 @@ int checkDeviceAndCtors(int64_t &DeviceID, ident_t *Loc) {
   if (omp_get_num_devices() == 0) {
     DP("omp_get_num_devices() == 0 but offload is manadatory\n");
     handleTargetOutcome(false, Loc);
-    return OFFLOAD_FAIL;
+    return true;
   }
 
   if (DeviceID == omp_get_initial_device()) {
     DP("Device is host (%" PRId64 "), returning as if offload is disabled\n",
        DeviceID);
-    return OFFLOAD_FAIL;
+    return true;
   }
 
   // Is device ready?
   if (!device_is_ready(DeviceID)) {
     REPORT("Device %" PRId64 " is not ready.\n", DeviceID);
     handleTargetOutcome(false, Loc);
-    return OFFLOAD_FAIL;
+    return true;
   }
 
   // Get device info.
@@ -319,10 +320,10 @@ int checkDeviceAndCtors(int64_t &DeviceID, ident_t *Loc) {
   if (hasPendingGlobals && InitLibrary(Device) != OFFLOAD_SUCCESS) {
     REPORT("Failed to init globals on device %" PRId64 "\n", DeviceID);
     handleTargetOutcome(false, Loc);
-    return OFFLOAD_FAIL;
+    return true;
   }
 
-  return OFFLOAD_SUCCESS;
+  return false;
 }
 
 static int32_t getParentIndex(int64_t type) {

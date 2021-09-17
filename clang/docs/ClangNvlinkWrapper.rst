@@ -14,7 +14,7 @@ This tool works as a wrapper over the ``nvlink`` program. It is required
 because ``nvlink`` does not support linking of archive files implicitly. It
 transparently passes every input option and object to ``nvlink`` except archive
 files. It reads each input archive file to extract the archived cubin files as
-temporary files. These temporary (*.cubin) files are passed to ``nvlink``.
+temporary files. These temporary (\*.cubin) files are passed to ``nvlink``.
 
 Use Case
 ========

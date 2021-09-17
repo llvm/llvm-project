@@ -111,7 +111,7 @@ define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 ; CHECK-LABEL: icmpasrne:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    csel w0, w1, w2, gt
+; CHECK-NEXT:    csel w0, w1, w2, ge
 ; CHECK-NEXT:    ret
   %sh = ashr i32 %input, 31
   %c = icmp ne i32 %sh, -1

@@ -76,14 +76,14 @@ define i256 @test1(i256 %a) nounwind {
 ; HYBRID-NEXT:    movl %r10d, %ecx
 ; HYBRID-NEXT:    shldq %cl, %rdi, %r11
 ; HYBRID-NEXT:    addb $-125, %sil
-; HYBRID-NEXT:    xorl %edx, %edx
+; HYBRID-NEXT:    xorl %ebx, %ebx
 ; HYBRID-NEXT:    movl %esi, %ecx
-; HYBRID-NEXT:    shldq %cl, %rdi, %rdx
-; HYBRID-NEXT:    movl $1, %ebx
-; HYBRID-NEXT:    shlq %cl, %rbx
+; HYBRID-NEXT:    shldq %cl, %rdi, %rbx
+; HYBRID-NEXT:    movl $1, %edx
+; HYBRID-NEXT:    shlq %cl, %rdx
 ; HYBRID-NEXT:    testb $64, %sil
-; HYBRID-NEXT:    cmovneq %rbx, %rdx
-; HYBRID-NEXT:    cmovneq %r8, %rbx
+; HYBRID-NEXT:    cmovneq %rdx, %rbx
+; HYBRID-NEXT:    cmovneq %r8, %rdx
 ; HYBRID-NEXT:    movl %r10d, %ecx
 ; HYBRID-NEXT:    shlq %cl, %rdi
 ; HYBRID-NEXT:    testb $64, %r10b
@@ -94,12 +94,12 @@ define i256 @test1(i256 %a) nounwind {
 ; HYBRID-NEXT:    movq %r11, 8(%rax)
 ; HYBRID-NEXT:    cmovsq %r8, %rdi
 ; HYBRID-NEXT:    movq %rdi, (%rax)
-; HYBRID-NEXT:    cmovnsq %r8, %rdx
-; HYBRID-NEXT:    cmoveq %r8, %rdx
-; HYBRID-NEXT:    movq %rdx, 24(%rax)
-; HYBRID-NEXT:    cmovnsq %r9, %rbx
+; HYBRID-NEXT:    cmovnsq %r8, %rbx
 ; HYBRID-NEXT:    cmoveq %r8, %rbx
-; HYBRID-NEXT:    movq %rbx, 16(%rax)
+; HYBRID-NEXT:    movq %rbx, 24(%rax)
+; HYBRID-NEXT:    cmovnsq %r9, %rdx
+; HYBRID-NEXT:    cmoveq %r8, %rdx
+; HYBRID-NEXT:    movq %rdx, 16(%rax)
 ; HYBRID-NEXT:    popq %rbx
 ; HYBRID-NEXT:    retq
 ;
@@ -121,14 +121,14 @@ define i256 @test1(i256 %a) nounwind {
 ; BURR-NEXT:    movl %r10d, %ecx
 ; BURR-NEXT:    shldq %cl, %rdi, %r11
 ; BURR-NEXT:    addb $-125, %sil
-; BURR-NEXT:    xorl %edx, %edx
+; BURR-NEXT:    xorl %ebx, %ebx
 ; BURR-NEXT:    movl %esi, %ecx
-; BURR-NEXT:    shldq %cl, %rdi, %rdx
-; BURR-NEXT:    movl $1, %ebx
-; BURR-NEXT:    shlq %cl, %rbx
+; BURR-NEXT:    shldq %cl, %rdi, %rbx
+; BURR-NEXT:    movl $1, %edx
+; BURR-NEXT:    shlq %cl, %rdx
 ; BURR-NEXT:    testb $64, %sil
-; BURR-NEXT:    cmovneq %rbx, %rdx
-; BURR-NEXT:    cmovneq %r8, %rbx
+; BURR-NEXT:    cmovneq %rdx, %rbx
+; BURR-NEXT:    cmovneq %r8, %rdx
 ; BURR-NEXT:    movl %r10d, %ecx
 ; BURR-NEXT:    shlq %cl, %rdi
 ; BURR-NEXT:    testb $64, %r10b
@@ -139,12 +139,12 @@ define i256 @test1(i256 %a) nounwind {
 ; BURR-NEXT:    movq %r11, 8(%rax)
 ; BURR-NEXT:    cmovsq %r8, %rdi
 ; BURR-NEXT:    movq %rdi, (%rax)
-; BURR-NEXT:    cmovnsq %r8, %rdx
-; BURR-NEXT:    cmoveq %r8, %rdx
-; BURR-NEXT:    movq %rdx, 24(%rax)
-; BURR-NEXT:    cmovnsq %r9, %rbx
+; BURR-NEXT:    cmovnsq %r8, %rbx
 ; BURR-NEXT:    cmoveq %r8, %rbx
-; BURR-NEXT:    movq %rbx, 16(%rax)
+; BURR-NEXT:    movq %rbx, 24(%rax)
+; BURR-NEXT:    cmovnsq %r9, %rdx
+; BURR-NEXT:    cmoveq %r8, %rdx
+; BURR-NEXT:    movq %rdx, 16(%rax)
 ; BURR-NEXT:    popq %rbx
 ; BURR-NEXT:    retq
 ;

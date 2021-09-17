@@ -38,5 +38,6 @@ static_library("cppcoreguidelines") {
     "ProTypeVarargCheck.cpp",
     "SlicingCheck.cpp",
     "SpecialMemberFunctionsCheck.cpp",
+    "VirtualClassDestructorCheck.cpp",
   ]
 }

@@ -36,7 +36,8 @@ namespace exegesis {
 // A helper class to analyze benchmark results for a target.
 class Analysis {
 public:
-  Analysis(const Target &Target, std::unique_ptr<MCInstrInfo> InstrInfo,
+  Analysis(const Target &Target, std::unique_ptr<MCSubtargetInfo> SubtargetInfo,
+           std::unique_ptr<MCInstrInfo> InstrInfo,
            const InstructionBenchmarkClustering &Clustering,
            double AnalysisInconsistencyEpsilon,
            bool AnalysisDisplayUnstableOpcodes,

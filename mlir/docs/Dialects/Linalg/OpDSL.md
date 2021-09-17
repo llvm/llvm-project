@@ -14,19 +14,20 @@ The tool is bundled with the MLIR Python bindings. To use from the CMake build
 tree, MLIR must be build with Python bindings enabled
 (`-DMLIR_ENALBE_BINDINGS_PYTHON=ON`). Then add the `python` directory in the
 build tree to your `PYTHONPATH` environment variable (i.e. `export
-PYTHONPATH=$PWD/build/python`). Optionally, use an installed MLIR package, if
-available, to avoid building.
+PYTHONPATH=$PWD/build/tools/mlir/python_packages/mlir_core`). Optionally, use an
+installed MLIR package, if available, to avoid building.
 
 ```shell
 # Dump the `core_named_ops.py` module as YAML.
 python -m mlir.dialects.linalg.opdsl.dump_oplib .ops.core_named_ops
 ```
 
-The tool is meant for use during both development and runtime, but not as a
-build tool of the core compiler: in order to export static named op definitions
-to be built as part of the compiler, the corresponding Linalg dialect YAML file
-must be updated and reviewed. TODO: Develop a script to automate op updates to
-these files.
+Alternatively, run the `$PWD/build/bin/update_core_linalg_named_ops.sh` script,
+which is available after building the `mlir-linalg-ods-gen` target. The tool is
+meant for use during both development and runtime, but not as a build tool of
+the core compiler: in order to export static named op definitions to be built as
+part of the compiler, the corresponding Linalg dialect YAML file must be updated
+and reviewed. TODO: Develop a script to automate op updates to these files.
 
 ## Language Guide
 

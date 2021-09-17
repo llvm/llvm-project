@@ -698,29 +698,17 @@ static ConstString FindBestAlternateMangledName(ConstString demangled,
     return ConstString();
 }
 
-struct IRExecutionUnit::SearchSpec {
-  ConstString name;
-  lldb::FunctionNameType mask;
-
-  SearchSpec(ConstString n,
-             lldb::FunctionNameType m = lldb::eFunctionNameTypeFull)
-      : name(n), mask(m) {}
-};
-
-void IRExecutionUnit::CollectCandidateCNames(
-    std::vector<IRExecutionUnit::SearchSpec> &C_specs,
-    ConstString name) {
+void IRExecutionUnit::CollectCandidateCNames(std::vector<ConstString> &C_names,
+                                             ConstString name) {
   if (m_strip_underscore && name.AsCString()[0] == '_')
-    C_specs.insert(C_specs.begin(), ConstString(&name.AsCString()[1]));
-  C_specs.push_back(SearchSpec(name));
+    C_names.insert(C_names.begin(), ConstString(&name.AsCString()[1]));
+  C_names.push_back(name);
 }
 
 void IRExecutionUnit::CollectCandidateCPlusPlusNames(
-    std::vector<IRExecutionUnit::SearchSpec> &CPP_specs,
-    const std::vector<SearchSpec> &C_specs, const SymbolContext &sc) {
-  for (const SearchSpec &C_spec : C_specs) {
-    ConstString name = C_spec.name;
-
+    std::vector<ConstString> &CPP_names,
+    const std::vector<ConstString> &C_names, const SymbolContext &sc) {
+  for (const ConstString &name : C_names) {
     if (CPlusPlusLanguage::IsCPPMangledName(name.GetCString())) {
       Mangled mangled(name);
       ConstString demangled = mangled.GetDemangledName();
@@ -730,26 +718,24 @@ void IRExecutionUnit::CollectCandidateCPlusPlusNames(
             FindBestAlternateMangledName(demangled, sc);
 
         if (best_alternate_mangled_name) {
-          CPP_specs.push_back(best_alternate_mangled_name);
+          CPP_names.push_back(best_alternate_mangled_name);
         }
       }
     }
 
     std::set<ConstString> alternates;
     CPlusPlusLanguage::FindAlternateFunctionManglings(name, alternates);
-    CPP_specs.insert(CPP_specs.end(), alternates.begin(), alternates.end());
+    CPP_names.insert(CPP_names.end(), alternates.begin(), alternates.end());
   }
 }
 
 void IRExecutionUnit::CollectFallbackNames(
-    std::vector<SearchSpec> &fallback_specs,
-    const std::vector<SearchSpec> &C_specs) {
+    std::vector<ConstString> &fallback_names,
+    const std::vector<ConstString> &C_names) {
   // As a last-ditch fallback, try the base name for C++ names.  It's terrible,
   // but the DWARF doesn't always encode "extern C" correctly.
 
-  for (const SearchSpec &C_spec : C_specs) {
-    ConstString name = C_spec.name;
-
+  for (const ConstString &name : C_names) {
     if (!CPlusPlusLanguage::IsCPPMangledName(name.GetCString()))
       continue;
 
@@ -763,9 +749,8 @@ void IRExecutionUnit::CollectFallbackNames(
     if (!lparen_loc)
       continue;
 
-    llvm::StringRef base_name(demangled_cstr,
-                              lparen_loc - demangled_cstr);
-    fallback_specs.push_back(ConstString(base_name));
+    llvm::StringRef base_name(demangled_cstr, lparen_loc - demangled_cstr);
+    fallback_names.push_back(ConstString(base_name));
   }
 }
 
@@ -843,9 +828,10 @@ private:
   lldb::addr_t m_best_internal_load_address = LLDB_INVALID_ADDRESS;
 };
 
-lldb::addr_t IRExecutionUnit::FindInSymbols(
-    const std::vector<IRExecutionUnit::SearchSpec> &specs,
-    const lldb_private::SymbolContext &sc, bool &symbol_was_missing_weak) {
+lldb::addr_t
+IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
+                               const lldb_private::SymbolContext &sc,
+                               bool &symbol_was_missing_weak) {
   symbol_was_missing_weak = false;
 
   Target *target = sc.target_sp.get();
@@ -860,18 +846,19 @@ lldb::addr_t IRExecutionUnit::FindInSymbols(
   function_options.include_symbols = true;
   function_options.include_inlines = false;
 
-  for (const SearchSpec &spec : specs) {
+  for (const ConstString &name : names) {
     if (sc.module_sp) {
       SymbolContextList sc_list;
-      sc.module_sp->FindFunctions(spec.name, CompilerDeclContext(), spec.mask,
-                                  function_options, sc_list);
+      sc.module_sp->FindFunctions(name, CompilerDeclContext(),
+                                  lldb::eFunctionNameTypeFull, function_options,
+                                  sc_list);
       if (auto load_addr = resolver.Resolve(sc_list))
         return *load_addr;
     }
 
     if (sc.target_sp) {
       SymbolContextList sc_list;
-      sc.target_sp->GetImages().FindFunctions(spec.name, spec.mask,
+      sc.target_sp->GetImages().FindFunctions(name, lldb::eFunctionNameTypeFull,
                                               function_options, sc_list);
       if (auto load_addr = resolver.Resolve(sc_list))
         return *load_addr;
@@ -880,7 +867,7 @@ lldb::addr_t IRExecutionUnit::FindInSymbols(
     if (sc.target_sp) {
       SymbolContextList sc_list;
       sc.target_sp->GetImages().FindSymbolsWithNameAndType(
-          spec.name, lldb::eSymbolTypeAny, sc_list);
+          name, lldb::eSymbolTypeAny, sc_list);
       if (auto load_addr = resolver.Resolve(sc_list))
         return *load_addr;
     }
@@ -895,7 +882,7 @@ lldb::addr_t IRExecutionUnit::FindInSymbols(
 }
 
 lldb::addr_t
-IRExecutionUnit::FindInRuntimes(const std::vector<SearchSpec> &specs,
+IRExecutionUnit::FindInRuntimes(const std::vector<ConstString> &names,
                                 const lldb_private::SymbolContext &sc) {
   lldb::TargetSP target_sp = sc.target_sp;
 
@@ -909,9 +896,9 @@ IRExecutionUnit::FindInRuntimes(const std::vector<SearchSpec> &specs,
     return LLDB_INVALID_ADDRESS;
   }
 
-  for (const SearchSpec &spec : specs) {
+  for (const ConstString &name : names) {
     for (LanguageRuntime *runtime : process_sp->GetLanguageRuntimes()) {
-      lldb::addr_t symbol_load_addr = runtime->LookupRuntimeSymbol(spec.name);
+      lldb::addr_t symbol_load_addr = runtime->LookupRuntimeSymbol(name);
 
       if (symbol_load_addr != LLDB_INVALID_ADDRESS)
         return symbol_load_addr;
@@ -922,12 +909,12 @@ IRExecutionUnit::FindInRuntimes(const std::vector<SearchSpec> &specs,
 }
 
 lldb::addr_t IRExecutionUnit::FindInUserDefinedSymbols(
-    const std::vector<SearchSpec> &specs,
+    const std::vector<ConstString> &names,
     const lldb_private::SymbolContext &sc) {
   lldb::TargetSP target_sp = sc.target_sp;
 
-  for (const SearchSpec &spec : specs) {
-    lldb::addr_t symbol_load_addr = target_sp->GetPersistentSymbol(spec.name);
+  for (const ConstString &name : names) {
+    lldb::addr_t symbol_load_addr = target_sp->GetPersistentSymbol(name);
 
     if (symbol_load_addr != LLDB_INVALID_ADDRESS)
       return symbol_load_addr;
@@ -936,18 +923,18 @@ lldb::addr_t IRExecutionUnit::FindInUserDefinedSymbols(
   return LLDB_INVALID_ADDRESS;
 }
 
-lldb::addr_t
-IRExecutionUnit::FindSymbol(lldb_private::ConstString name, bool &missing_weak) {
-  std::vector<SearchSpec> candidate_C_names;
-  std::vector<SearchSpec> candidate_CPlusPlus_names;
+lldb::addr_t IRExecutionUnit::FindSymbol(lldb_private::ConstString name,
+                                         bool &missing_weak) {
+  std::vector<ConstString> candidate_C_names;
+  std::vector<ConstString> candidate_CPlusPlus_names;
 
   CollectCandidateCNames(candidate_C_names, name);
-  
+
   lldb::addr_t ret = FindInSymbols(candidate_C_names, m_sym_ctx, missing_weak);
   if (ret != LLDB_INVALID_ADDRESS)
     return ret;
-  
-  // If we find the symbol in runtimes or user defined symbols it can't be 
+
+  // If we find the symbol in runtimes or user defined symbols it can't be
   // a missing weak symbol.
   missing_weak = false;
   ret = FindInRuntimes(candidate_C_names, m_sym_ctx);
@@ -964,7 +951,7 @@ IRExecutionUnit::FindSymbol(lldb_private::ConstString name, bool &missing_weak) 
   if (ret != LLDB_INVALID_ADDRESS)
     return ret;
 
-  std::vector<SearchSpec> candidate_fallback_names;
+  std::vector<ConstString> candidate_fallback_names;
 
   CollectFallbackNames(candidate_fallback_names, candidate_C_names);
   ret = FindInSymbols(candidate_fallback_names, m_sym_ctx, missing_weak);

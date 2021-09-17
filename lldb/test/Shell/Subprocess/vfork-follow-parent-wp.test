@@ -11,4 +11,4 @@ continue
 # CHECK: stop reason = watchpoint
 continue
 # CHECK: function run in parent
-# CHECK: child exited: 0
+# CHECK: function run in exec'd child

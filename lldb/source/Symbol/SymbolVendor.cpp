@@ -75,5 +75,3 @@ lldb_private::ConstString SymbolVendor::GetPluginName() {
   static ConstString g_name("vendor-default");
   return g_name;
 }
-
-uint32_t SymbolVendor::GetPluginVersion() { return 1; }

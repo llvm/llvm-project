@@ -168,11 +168,28 @@ std::string ErrorHandler::getLocation(const Twine &msg) {
   return std::string(logName);
 }
 
+void ErrorHandler::reportDiagnostic(StringRef location, Colors c,
+                                    StringRef diagKind, const Twine &msg) {
+  SmallString<256> buf;
+  raw_svector_ostream os(buf);
+  os << sep << location << ": ";
+  if (!diagKind.empty()) {
+    if (lld::errs().colors_enabled()) {
+      os.enable_colors(true);
+      os << c << diagKind << ": " << Colors::RESET;
+    } else {
+      os << diagKind << ": ";
+    }
+  }
+  os << msg << '\n';
+  lld::errs() << buf;
+}
+
 void ErrorHandler::log(const Twine &msg) {
   if (!verbose || disableOutput)
     return;
   std::lock_guard<std::mutex> lock(mu);
-  lld::errs() << logName << ": " << msg << "\n";
+  reportDiagnostic(logName, Colors::RESET, "", msg);
 }
 
 void ErrorHandler::message(const Twine &msg) {
@@ -190,8 +207,7 @@ void ErrorHandler::warn(const Twine &msg) {
   }
 
   std::lock_guard<std::mutex> lock(mu);
-  lld::errs() << sep << getLocation(msg) << ": " << Colors::MAGENTA
-              << "warning: " << Colors::RESET << msg << "\n";
+  reportDiagnostic(getLocation(msg), Colors::MAGENTA, "warning", msg);
   sep = getSeparator(msg);
 }
 
@@ -217,12 +233,9 @@ void ErrorHandler::error(const Twine &msg) {
     std::lock_guard<std::mutex> lock(mu);
 
     if (errorLimit == 0 || errorCount < errorLimit) {
-      lld::errs() << sep << getLocation(msg) << ": " << Colors::RED
-                  << "error: " << Colors::RESET << msg << "\n";
+      reportDiagnostic(getLocation(msg), Colors::RED, "error", msg);
     } else if (errorCount == errorLimit) {
-      lld::errs() << sep << getLocation(msg) << ": " << Colors::RED
-                  << "error: " << Colors::RESET << errorLimitExceededMsg
-                  << "\n";
+      reportDiagnostic(logName, Colors::RED, "error", errorLimitExceededMsg);
       exit = exitEarly;
     }
 

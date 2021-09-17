@@ -246,7 +246,7 @@ protected:
   int loopendPatternMatch();
   int mergeLoop(MachineLoop *LoopRep);
 
-  /// return true iff src1Blk->succ_size() == 0 && src1Blk and src2Blk are in
+  /// return true iff src1Blk->succ_empty() && src1Blk and src2Blk are in
   /// the same loop with LoopLandInfo without explicitly keeping track of
   /// loopContBlks and loopBreakBlks, this is a method to get the information.
   bool isSameloopDetachedContbreak(MachineBasicBlock *Src1MBB,
@@ -618,7 +618,7 @@ MachineInstr *AMDGPUCFGStructurizer::getReturnInstr(MachineBasicBlock *MBB) {
 
 bool AMDGPUCFGStructurizer::isReturnBlock(MachineBasicBlock *MBB) {
   MachineInstr *MI = getReturnInstr(MBB);
-  bool IsReturn = (MBB->succ_size() == 0);
+  bool IsReturn = MBB->succ_empty();
   if (MI)
     assert(IsReturn);
   else if (IsReturn)
@@ -809,7 +809,7 @@ bool AMDGPUCFGStructurizer::run() {
 
     MachineBasicBlock *EntryMBB =
         *GraphTraits<MachineFunction *>::nodes_begin(FuncRep);
-    if (EntryMBB->succ_size() == 0) {
+    if (EntryMBB->succ_empty()) {
       Finish = true;
       LLVM_DEBUG(dbgs() << "Reduce to one block\n";);
     } else {
@@ -1055,7 +1055,7 @@ int AMDGPUCFGStructurizer::mergeLoop(MachineLoop *LoopRep) {
 
 bool AMDGPUCFGStructurizer::isSameloopDetachedContbreak(
     MachineBasicBlock *Src1MBB, MachineBasicBlock *Src2MBB) {
-  if (Src1MBB->succ_size() == 0) {
+  if (Src1MBB->succ_empty()) {
     MachineLoop *LoopRep = MLI->getLoopFor(Src1MBB);
     if (LoopRep&& LoopRep == MLI->getLoopFor(Src2MBB)) {
       MachineBasicBlock *&TheEntry = LLInfoMap[LoopRep];
@@ -1394,7 +1394,7 @@ void AMDGPUCFGStructurizer::mergeIfthenelseBlock(MachineInstr *BranchMI,
     MBB->splice(I, FalseMBB, FalseMBB->begin(),
                    FalseMBB->end());
     MBB->removeSuccessor(FalseMBB, true);
-    if (LandMBB && FalseMBB->succ_size() != 0)
+    if (LandMBB && !FalseMBB->succ_empty())
       FalseMBB->removeSuccessor(LandMBB, true);
     retireBlock(FalseMBB);
     MLI->removeBlock(FalseMBB);
@@ -1640,8 +1640,7 @@ void AMDGPUCFGStructurizer::retireBlock(MachineBasicBlock *MBB) {
     SrcBlkInfo = new BlockInformation();
 
   SrcBlkInfo->IsRetired = true;
-  assert(MBB->succ_size() == 0 && MBB->pred_size() == 0
-         && "can't retire block yet");
+  assert(MBB->succ_empty() && MBB->pred_empty() && "can't retire block yet");
 }
 
 INITIALIZE_PASS_BEGIN(AMDGPUCFGStructurizer, "amdgpustructurizer",

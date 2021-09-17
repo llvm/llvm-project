@@ -2650,6 +2650,10 @@ DynamicLoader *Process::GetDynamicLoader() {
 
 DataExtractor Process::GetAuxvData() { return DataExtractor(); }
 
+llvm::Expected<bool> Process::SaveCore(llvm::StringRef outfile) {
+  return false;
+}
+
 JITLoaderList &Process::GetJITLoaders() {
   if (!m_jit_loaders_up) {
     m_jit_loaders_up = std::make_unique<JITLoaderList>();

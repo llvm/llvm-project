@@ -1,4 +1,6 @@
-int main() {
+#include <sys/prctl.h>
+
+void write_sve_regs() {
   asm volatile("setffr\n\t");
   asm volatile("ptrue p0.b\n\t");
   asm volatile("ptrue p1.h\n\t");
@@ -49,5 +51,20 @@ int main() {
   asm volatile("cpy  z29.b, p5/z, #30\n\t");
   asm volatile("cpy  z30.b, p10/z, #31\n\t");
   asm volatile("cpy  z31.b, p15/z, #32\n\t");
+}
+
+// This function will be called using jitted expression call. We change vector
+// length and write SVE registers. Our program context should restore to
+// orignal vector length and register values after expression evaluation.
+int expr_eval_func() {
+  prctl(PR_SVE_SET_VL, 8 * 2);
+  write_sve_regs();
+  prctl(PR_SVE_SET_VL, 8 * 4);
+  write_sve_regs();
+  return 1;
+}
+
+int main() {
+  write_sve_regs();
   return 0; // Set a break point here.
 }

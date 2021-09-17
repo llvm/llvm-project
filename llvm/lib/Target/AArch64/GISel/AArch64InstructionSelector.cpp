@@ -193,6 +193,7 @@ private:
   bool selectBrJT(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectTLSGlobalValue(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectReduction(MachineInstr &I, MachineRegisterInfo &MRI);
+  bool selectUSMovFromExtend(MachineInstr &I, MachineRegisterInfo &MRI);
 
   unsigned emitConstantPoolEntry(const Constant *CPVal,
                                  MachineFunction &MF) const;
@@ -2166,6 +2167,12 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     I.eraseFromParent();
     return true;
   }
+  case TargetOpcode::G_SEXT:
+    // Check for i64 sext(i32 vector_extract) prior to tablegen to select SMOV
+    // over a normal extend.
+    if (selectUSMovFromExtend(I, MRI))
+      return true;
+    return false;
   case TargetOpcode::G_BR:
     return false;
   case TargetOpcode::G_SHL:
@@ -2468,10 +2475,10 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
     // FIXME: Redundant check, but even less readable when factored out.
     if (isFP) {
-      if (Ty != s32 && Ty != s64 && Ty != s128) {
+      if (Ty != s16 && Ty != s32 && Ty != s64 && Ty != s128) {
         LLVM_DEBUG(dbgs() << "Unable to materialize FP " << Ty
-                          << " constant, expected: " << s32 << " or " << s64
-                          << " or " << s128 << '\n');
+                          << " constant, expected: " << s16 << " or " << s32
+                          << " or " << s64 << " or " << s128 << '\n');
         return false;
       }
 
@@ -2505,23 +2512,20 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       }
     }
 
-    // We allow G_CONSTANT of types < 32b.
-    const unsigned MovOpc =
-        DefSize == 64 ? AArch64::MOVi64imm : AArch64::MOVi32imm;
-
     if (isFP) {
-      // Either emit a FMOV, or emit a copy to emit a normal mov.
-      const TargetRegisterClass &GPRRC =
-          DefSize == 32 ? AArch64::GPR32RegClass : AArch64::GPR64RegClass;
-      const TargetRegisterClass &FPRRC = 
-          DefSize == 32 ? AArch64::FPR32RegClass 
-                        : (DefSize == 64 ? AArch64::FPR64RegClass 
-                                         : AArch64::FPR128RegClass);
-
-      // For 64b values, emit a constant pool load instead.
-      // For s32, use a cp load if we have optsize/minsize.
-      if (DefSize == 64 || DefSize == 128 ||
-          (DefSize == 32 && shouldOptForSize(&MF))) {
+      const TargetRegisterClass &FPRRC = *getMinClassForRegBank(RB, DefSize);
+      // For 16, 64, and 128b values, emit a constant pool load.
+      switch (DefSize) {
+      default:
+        llvm_unreachable("Unexpected destination size for G_FCONSTANT?");
+      case 32:
+        // For s32, use a cp load if we have optsize/minsize.
+        if (!shouldOptForSize(&MF))
+          break;
+        LLVM_FALLTHROUGH;
+      case 16:
+      case 64:
+      case 128: {
         auto *FPImm = I.getOperand(1).getFPImm();
         auto *LoadMI = emitLoadFromConstantPool(FPImm, MIB);
         if (!LoadMI) {
@@ -2532,9 +2536,13 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
         I.eraseFromParent();
         return RBI.constrainGenericRegister(DefReg, FPRRC, MRI);
       }
+      }
 
-      // Nope. Emit a copy and use a normal mov instead.
-      const Register DefGPRReg = MRI.createVirtualRegister(&GPRRC);
+      // Either emit a FMOV, or emit a copy to emit a normal mov.
+      assert(DefSize == 32 &&
+             "Expected constant pool loads for all sizes other than 32!");
+      const Register DefGPRReg =
+          MRI.createVirtualRegister(&AArch64::GPR32RegClass);
       MachineOperand &RegOp = I.getOperand(0);
       RegOp.setReg(DefGPRReg);
       MIB.setInsertPt(MIB.getMBB(), std::next(I.getIterator()));
@@ -2557,6 +2565,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       I.getOperand(1).ChangeToImmediate(Val);
     }
 
+    const unsigned MovOpc =
+        DefSize == 64 ? AArch64::MOVi64imm : AArch64::MOVi32imm;
     I.setDesc(TII.get(MovOpc));
     constrainSelectedInstRegOperands(I, TII, TRI, RBI);
     return true;
@@ -3054,6 +3064,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   }
 
   case TargetOpcode::G_ANYEXT: {
+    if (selectUSMovFromExtend(I, MRI))
+      return true;
+
     const Register DstReg = I.getOperand(0).getReg();
     const Register SrcReg = I.getOperand(1).getReg();
 
@@ -3100,6 +3113,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_SEXT_INREG:
   case TargetOpcode::G_SEXT: {
+    if (selectUSMovFromExtend(I, MRI))
+      return true;
+
     unsigned Opcode = I.getOpcode();
     const bool IsSigned = Opcode != TargetOpcode::G_ZEXT;
     const Register DefReg = I.getOperand(0).getReg();
@@ -4223,6 +4239,13 @@ MachineInstr *AArch64InstructionSelector::emitLoadFromConstantPool(
               .addConstantPoolIndex(CPIdx, 0,
                                     AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
     break;
+  case 2:
+    LoadMI =
+        &*MIRBuilder
+              .buildInstr(AArch64::LDRHui, {&AArch64::FPR16RegClass}, {Adrp})
+              .addConstantPoolIndex(CPIdx, 0,
+                                    AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
+    break;
   default:
     LLVM_DEBUG(dbgs() << "Could not load from constant pool of type "
                       << *CPVal->getType());
@@ -4851,6 +4874,68 @@ MachineInstr *AArch64InstructionSelector::emitLaneInsert(
   return InsElt;
 }
 
+bool AArch64InstructionSelector::selectUSMovFromExtend(
+    MachineInstr &MI, MachineRegisterInfo &MRI) {
+  if (MI.getOpcode() != TargetOpcode::G_SEXT &&
+      MI.getOpcode() != TargetOpcode::G_ZEXT &&
+      MI.getOpcode() != TargetOpcode::G_ANYEXT)
+    return false;
+  bool IsSigned = MI.getOpcode() == TargetOpcode::G_SEXT;
+  const Register DefReg = MI.getOperand(0).getReg();
+  const LLT DstTy = MRI.getType(DefReg);
+  unsigned DstSize = DstTy.getSizeInBits();
+
+  MachineInstr *Extract = getOpcodeDef(TargetOpcode::G_EXTRACT_VECTOR_ELT,
+                                       MI.getOperand(1).getReg(), MRI);
+  int64_t Lane;
+  if (!Extract || !mi_match(Extract->getOperand(2).getReg(), MRI, m_ICst(Lane)))
+    return false;
+  Register Src0 = Extract->getOperand(1).getReg();
+
+  const LLT &VecTy = MRI.getType(Src0);
+
+  if (VecTy.getSizeInBits() != 128) {
+    const MachineInstr *ScalarToVector = emitScalarToVector(
+        VecTy.getSizeInBits(), &AArch64::FPR128RegClass, Src0, MIB);
+    assert(ScalarToVector && "Didn't expect emitScalarToVector to fail!");
+    Src0 = ScalarToVector->getOperand(0).getReg();
+  }
+
+  unsigned Opcode;
+  if (DstSize == 64 && VecTy.getScalarSizeInBits() == 32)
+    Opcode = IsSigned ? AArch64::SMOVvi32to64 : AArch64::UMOVvi32;
+  else if (DstSize == 64 && VecTy.getScalarSizeInBits() == 16)
+    Opcode = IsSigned ? AArch64::SMOVvi16to64 : AArch64::UMOVvi16;
+  else if (DstSize == 64 && VecTy.getScalarSizeInBits() == 8)
+    Opcode = IsSigned ? AArch64::SMOVvi8to64 : AArch64::UMOVvi8;
+  else if (DstSize == 32 && VecTy.getScalarSizeInBits() == 16)
+    Opcode = IsSigned ? AArch64::SMOVvi16to32 : AArch64::UMOVvi16;
+  else if (DstSize == 32 && VecTy.getScalarSizeInBits() == 8)
+    Opcode = IsSigned ? AArch64::SMOVvi8to32 : AArch64::UMOVvi8;
+  else
+    llvm_unreachable("Unexpected type combo for S/UMov!");
+
+  // We may need to generate one of these, depending on the type and sign of the
+  // input:
+  //  DstReg = SMOV Src0, Lane;
+  //  NewReg = UMOV Src0, Lane; DstReg = SUBREG_TO_REG NewReg, sub_32;
+  MachineInstr *ExtI = nullptr;
+  if (DstSize == 64 && !IsSigned) {
+    Register NewReg = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
+    MIB.buildInstr(Opcode, {NewReg}, {Src0}).addImm(Lane);
+    ExtI = MIB.buildInstr(AArch64::SUBREG_TO_REG, {DefReg}, {})
+               .addImm(0)
+               .addUse(NewReg)
+               .addImm(AArch64::sub_32);
+    RBI.constrainGenericRegister(DefReg, AArch64::GPR64RegClass, MRI);
+  } else
+    ExtI = MIB.buildInstr(Opcode, {DefReg}, {Src0}).addImm(Lane);
+
+  constrainSelectedInstRegOperands(*ExtI, TII, TRI, RBI);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AArch64InstructionSelector::selectInsertElt(MachineInstr &I,
                                                  MachineRegisterInfo &MRI) {
   assert(I.getOpcode() == TargetOpcode::G_INSERT_VECTOR_ELT);
@@ -5116,17 +5201,6 @@ bool AArch64InstructionSelector::selectBuildVector(MachineInstr &I,
   return true;
 }
 
-/// Helper function to find an intrinsic ID on an a MachineInstr. Returns the
-/// ID if it exists, and 0 otherwise.
-static unsigned findIntrinsicID(MachineInstr &I) {
-  auto IntrinOp = find_if(I.operands(), [&](const MachineOperand &Op) {
-    return Op.isIntrinsicID();
-  });
-  if (IntrinOp == I.operands_end())
-    return 0;
-  return IntrinOp->getIntrinsicID();
-}
-
 bool AArch64InstructionSelector::selectVectorLoadIntrinsic(unsigned Opc,
                                                            unsigned NumVecs,
                                                            MachineInstr &I) {
@@ -5159,9 +5233,7 @@ bool AArch64InstructionSelector::selectVectorLoadIntrinsic(unsigned Opc,
 bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
     MachineInstr &I, MachineRegisterInfo &MRI) {
   // Find the intrinsic ID.
-  unsigned IntrinID = findIntrinsicID(I);
-  if (!IntrinID)
-    return false;
+  unsigned IntrinID = I.getIntrinsicID();
 
   const LLT S8 = LLT::scalar(8);
   const LLT S16 = LLT::scalar(16);
@@ -5280,9 +5352,7 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
 
 bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
                                                  MachineRegisterInfo &MRI) {
-  unsigned IntrinID = findIntrinsicID(I);
-  if (!IntrinID)
-    return false;
+  unsigned IntrinID = I.getIntrinsicID();
 
   switch (IntrinID) {
   default:

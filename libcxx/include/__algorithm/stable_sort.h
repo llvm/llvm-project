@@ -38,14 +38,14 @@ __merge_move_construct(_InputIterator1 __first1, _InputIterator1 __last1,
     {
         if (__first1 == __last1)
         {
-            for (; __first2 != __last2; ++__first2, ++__result, (void)__d.template __incr<value_type>())
+            for (; __first2 != __last2; ++__first2, (void) ++__result, __d.template __incr<value_type>())
                 ::new ((void*)__result) value_type(_VSTD::move(*__first2));
             __h.release();
             return;
         }
         if (__first2 == __last2)
         {
-            for (; __first1 != __last1; ++__first1, ++__result, (void)__d.template __incr<value_type>())
+            for (; __first1 != __last1; ++__first1, (void) ++__result, __d.template __incr<value_type>())
                 ::new ((void*)__result) value_type(_VSTD::move(*__first1));
             __h.release();
             return;

@@ -389,48 +389,48 @@ LLVMDIBuilderCreateImportedModuleFromNamespace(LLVMDIBuilderRef Builder,
  * \param ImportedEntity Previous imported entity to alias.
  * \param File           File where the declaration is located.
  * \param Line           Line number of the declaration.
+ * \param Elements       Renamed elements.
+ * \param NumElements    Number of renamed elements.
  */
-LLVMMetadataRef
-LLVMDIBuilderCreateImportedModuleFromAlias(LLVMDIBuilderRef Builder,
-                                           LLVMMetadataRef Scope,
-                                           LLVMMetadataRef ImportedEntity,
-                                           LLVMMetadataRef File,
-                                           unsigned Line);
+LLVMMetadataRef LLVMDIBuilderCreateImportedModuleFromAlias(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope,
+    LLVMMetadataRef ImportedEntity, LLVMMetadataRef File, unsigned Line,
+    LLVMMetadataRef *Elements, unsigned NumElements);
 
 /**
  * Create a descriptor for an imported module.
- * \param Builder    The \c DIBuilder.
- * \param Scope      The scope this module is imported into
- * \param M          The module being imported here
- * \param File       File where the declaration is located.
- * \param Line       Line number of the declaration.
+ * \param Builder        The \c DIBuilder.
+ * \param Scope          The scope this module is imported into
+ * \param M              The module being imported here
+ * \param File           File where the declaration is located.
+ * \param Line           Line number of the declaration.
+ * \param Elements       Renamed elements.
+ * \param NumElements    Number of renamed elements.
  */
-LLVMMetadataRef
-LLVMDIBuilderCreateImportedModuleFromModule(LLVMDIBuilderRef Builder,
-                                            LLVMMetadataRef Scope,
-                                            LLVMMetadataRef M,
-                                            LLVMMetadataRef File,
-                                            unsigned Line);
+LLVMMetadataRef LLVMDIBuilderCreateImportedModuleFromModule(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, LLVMMetadataRef M,
+    LLVMMetadataRef File, unsigned Line, LLVMMetadataRef *Elements,
+    unsigned NumElements);
 
 /**
  * Create a descriptor for an imported function, type, or variable.  Suitable
  * for e.g. FORTRAN-style USE declarations.
- * \param Builder    The DIBuilder.
- * \param Scope      The scope this module is imported into.
- * \param Decl       The declaration (or definition) of a function, type,
-                     or variable.
- * \param File       File where the declaration is located.
- * \param Line       Line number of the declaration.
- * \param Name       A name that uniquely identifies this imported declaration.
- * \param NameLen    The length of the C string passed to \c Name.
+ * \param Builder        The DIBuilder.
+ * \param Scope          The scope this module is imported into.
+ * \param Decl           The declaration (or definition) of a function, type,
+                         or variable.
+ * \param File           File where the declaration is located.
+ * \param Line           Line number of the declaration.
+ * \param Name           A name that uniquely identifies this imported
+ declaration.
+ * \param NameLen        The length of the C string passed to \c Name.
+ * \param Elements       Renamed elements.
+ * \param NumElements    Number of renamed elements.
  */
-LLVMMetadataRef
-LLVMDIBuilderCreateImportedDeclaration(LLVMDIBuilderRef Builder,
-                                       LLVMMetadataRef Scope,
-                                       LLVMMetadataRef Decl,
-                                       LLVMMetadataRef File,
-                                       unsigned Line,
-                                       const char *Name, size_t NameLen);
+LLVMMetadataRef LLVMDIBuilderCreateImportedDeclaration(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, LLVMMetadataRef Decl,
+    LLVMMetadataRef File, unsigned Line, const char *Name, size_t NameLen,
+    LLVMMetadataRef *Elements, unsigned NumElements);
 
 /**
  * Creates a new DebugLocation that describes a source location.

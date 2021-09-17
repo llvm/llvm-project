@@ -143,7 +143,7 @@ int main() {
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
   test_uchars<char16_t>();
   test_uchars<char32_t>();
-#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
+#endif
 
   return 0;
 }

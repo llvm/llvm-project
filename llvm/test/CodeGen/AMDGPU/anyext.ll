@@ -14,7 +14,8 @@ define amdgpu_kernel void @anyext_i1_i32(i32 addrspace(1)* %out, i32 %cond) #0 {
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_cmp_ne_u32_e64 s[0:1], s0, 0
+; GCN-NEXT:    s_cmp_lg_u32 s0, 0
+; GCN-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
@@ -26,7 +27,8 @@ define amdgpu_kernel void @anyext_i1_i32(i32 addrspace(1)* %out, i32 %cond) #0 {
 ; GFX8-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX8-NEXT:    s_mov_b32 s6, -1
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    v_cmp_eq_u32_e64 s[0:1], s0, 0
+; GFX8-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX8-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; GFX8-NEXT:    v_not_b32_e32 v0, v0
 ; GFX8-NEXT:    v_and_b32_e32 v0, 1, v0
@@ -40,7 +42,8 @@ define amdgpu_kernel void @anyext_i1_i32(i32 addrspace(1)* %out, i32 %cond) #0 {
 ; GFX9-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s6, -1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_cmp_eq_u32_e64 s[0:1], s2, 0
+; GFX9-NEXT:    s_cmp_eq_u32 s2, 0
+; GFX9-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; GFX9-NEXT:    v_not_b32_e32 v0, v0
 ; GFX9-NEXT:    v_and_b32_e32 v0, 1, v0
@@ -62,11 +65,11 @@ define amdgpu_kernel void @s_anyext_i16_i32(i32 addrspace(1)* %out, i16 addrspac
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xd
 ; GCN-NEXT:    s_mov_b32 s11, 0xf000
-; GCN-NEXT:    v_lshlrev_b32_e32 v2, 1, v0
 ; GCN-NEXT:    s_mov_b32 s14, 0
 ; GCN-NEXT:    s_mov_b32 s15, s11
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b64 s[12:13], s[6:7]
+; GCN-NEXT:    v_lshlrev_b32_e32 v2, 1, v0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 1, v1
 ; GCN-NEXT:    s_mov_b64 s[2:3], s[14:15]
@@ -91,10 +94,10 @@ define amdgpu_kernel void @s_anyext_i16_i32(i32 addrspace(1)* %out, i16 addrspac
 ; GFX8-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX8-NEXT:    s_mov_b32 s2, -1
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v2, vcc, s6, v0
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s7
-; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 1, v1
+; GFX8-NEXT:    v_add_u32_e32 v2, vcc, s6, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
+; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 1, v1
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s9
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s8, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc

@@ -63,17 +63,6 @@ public:
               static_cast<const GlobalIndirectSymbol *>(this)->getBaseObject());
   }
 
-  const GlobalObject *getBaseObject(const DataLayout &DL, APInt &Offset) const {
-    return dyn_cast<GlobalObject>(
-        getIndirectSymbol()->stripAndAccumulateInBoundsConstantOffsets(DL,
-                                                                       Offset));
-  }
-  GlobalObject *getBaseObject(const DataLayout &DL, APInt &Offset) {
-    return const_cast<GlobalObject *>(
-                                 static_cast<const GlobalIndirectSymbol *>(this)
-                                   ->getBaseObject(DL, Offset));
-  }
-
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
     return V->getValueID() == Value::GlobalAliasVal ||

@@ -198,7 +198,7 @@ def PS_callr_nr: InstHexagon<(outs), (ins IntRegs:$Rs),
 let isCall = 1, hasSideEffects = 1,
     isExtended = 0, isExtendable = 1, opExtendable = 0, isCodeGenOnly = 1,
     BaseOpcode = "PS_call_nr", isExtentSigned = 1, opExtentAlign = 2 in
-class Call_nr<bits<5> nbits, bit isPred, bit isFalse, dag iops,
+class Call_nr<bits<5> nbits, bit isFalse, dag iops,
               InstrItinClass itin>
   : Pseudo<(outs), iops, "">, PredRel {
     bits<2> Pu;
@@ -210,7 +210,7 @@ class Call_nr<bits<5> nbits, bit isPred, bit isFalse, dag iops,
     let Itinerary = itin;
 }
 
-def PS_call_nr : Call_nr<24, 0, 0, (ins s32_0Imm:$Ii), J2_call.Itinerary>;
+def PS_call_nr : Call_nr<24, 0, (ins s32_0Imm:$Ii), J2_call.Itinerary>;
 //def PS_call_nrt: Call_nr<17, 1, 0, (ins PredRegs:$Pu, s32_0Imm:$dst),
 //                         J2_callt.Itinerary>;
 //def PS_call_nrf: Call_nr<17, 1, 1, (ins PredRegs:$Pu, s32_0Imm:$dst),
@@ -267,7 +267,7 @@ let isMoveImm = 1, isAsCheapAsAMove = 1, isReMaterializable = 1,
 class CondStr<string CReg, bit True, bit New> {
   string S = "if (" # !if(True,"","!") # CReg # !if(New,".new","") # ") ";
 }
-class JumpOpcStr<string Mnemonic, bit New, bit Taken> {
+class JumpOpcStr<string Mnemonic, bit Taken> {
   string S = Mnemonic # !if(Taken, ":t", ":nt");
 }
 let isBranch = 1, isIndirectBranch = 1, Defs = [PC], isPredicated = 1,
@@ -275,7 +275,7 @@ let isBranch = 1, isIndirectBranch = 1, Defs = [PC], isPredicated = 1,
 class T_JMPr_c <bit PredNot, bit isPredNew, bit isTak, InstHexagon rootInst>
   :  InstHexagon<(outs), (ins PredRegs:$src, IntRegs:$dst),
                  CondStr<"$src", !if(PredNot,0,1), isPredNew>.S #
-                 JumpOpcStr<"jumpr", isPredNew, isTak>.S # " $dst",
+                 JumpOpcStr<"jumpr", isTak>.S # " $dst",
                  [], "", rootInst.Itinerary, rootInst.Type>, OpcodeHexagon {
 
     let isTaken = isTak;

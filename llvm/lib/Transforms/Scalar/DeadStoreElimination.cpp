@@ -1623,11 +1623,10 @@ struct DSEState {
 
       // Find the common post-dominator of all killing blocks.
       BasicBlock *CommonPred = *KillingBlocks.begin();
-      for (auto I = std::next(KillingBlocks.begin()), E = KillingBlocks.end();
-           I != E; I++) {
+      for (BasicBlock *BB : llvm::drop_begin(KillingBlocks)) {
         if (!CommonPred)
           break;
-        CommonPred = PDT.findNearestCommonDominator(CommonPred, *I);
+        CommonPred = PDT.findNearestCommonDominator(CommonPred, BB);
       }
 
       // If CommonPred is in the set of killing blocks, just check if it

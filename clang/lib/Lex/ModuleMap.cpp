@@ -338,7 +338,7 @@ static StringRef sanitizeFilenameAsIdentifier(StringRef Name,
   if (Name.empty())
     return Name;
 
-  if (!isValidIdentifier(Name)) {
+  if (!isValidAsciiIdentifier(Name)) {
     // If we don't already have something with the form of an identifier,
     // create a buffer with the sanitized name.
     Buffer.clear();
@@ -346,7 +346,7 @@ static StringRef sanitizeFilenameAsIdentifier(StringRef Name,
       Buffer.push_back('_');
     Buffer.reserve(Buffer.size() + Name.size());
     for (unsigned I = 0, N = Name.size(); I != N; ++I) {
-      if (isIdentifierBody(Name[I]))
+      if (isAsciiIdentifierContinue(Name[I]))
         Buffer.push_back(Name[I]);
       else
         Buffer.push_back('_');

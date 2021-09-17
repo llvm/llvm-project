@@ -118,8 +118,8 @@ option(LIBCXX_ENABLE_LOCALIZATION
    will be completely unusable, and other parts may be only partly available." ON)
 option(LIBCXX_ENABLE_UNICODE
   "Whether to include support for Unicode in the library. Disabling Unicode can
-  be useful when porting to platforms that don't support UTF-8 encoding (e.g.
-  embedded)." ON)
+   be useful when porting to platforms that don't support UTF-8 encoding (e.g.
+   embedded)." ON)
 option(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS
   "Whether to turn on vendor availability annotations on declarations that depend
    on definitions in a shared library. By default, we assume that we're not building
@@ -414,6 +414,8 @@ if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LLVM_BINARY_DIR}/include/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1")
   set(LIBCXX_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE PATH
       "Path where built libc++ libraries should be installed.")
+  set(LIBCXX_INSTALL_RUNTIME_DIR bin CACHE PATH
+      "Path where built libc++ runtime libraries should be installed.")
   set(LIBCXX_INSTALL_INCLUDE_DIR "include/c++/v1" CACHE PATH
       "Path where target-agnostic libc++ headers should be installed.")
   set(LIBCXX_INSTALL_INCLUDE_TARGET_DIR "include/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1" CACHE PATH
@@ -428,6 +430,8 @@ elseif(LLVM_LIBRARY_OUTPUT_INTDIR)
   set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LIBCXX_GENERATED_INCLUDE_DIR}")
   set(LIBCXX_INSTALL_LIBRARY_DIR lib${LIBCXX_LIBDIR_SUFFIX} CACHE PATH
       "Path where built libc++ libraries should be installed.")
+  set(LIBCXX_INSTALL_RUNTIME_DIR bin CACHE PATH
+      "Path where built libc++ runtime libraries should be installed.")
   set(LIBCXX_INSTALL_INCLUDE_DIR "include/c++/v1" CACHE PATH
       "Path where target-agnostic libc++ headers should be installed.")
   set(LIBCXX_INSTALL_INCLUDE_TARGET_DIR "${LIBCXX_INSTALL_INCLUDE_DIR}" CACHE PATH
@@ -438,6 +442,8 @@ else()
   set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LIBCXX_GENERATED_INCLUDE_DIR}")
   set(LIBCXX_INSTALL_LIBRARY_DIR lib${LIBCXX_LIBDIR_SUFFIX} CACHE PATH
       "Path where built libc++ libraries should be installed.")
+  set(LIBCXX_INSTALL_RUNTIME_DIR bin CACHE PATH
+      "Path where built libc++ runtime libraries should be installed.")
   set(LIBCXX_INSTALL_INCLUDE_DIR "include/c++/v1" CACHE PATH
       "Path where target-agnostic libc++ headers should be installed.")
   set(LIBCXX_INSTALL_INCLUDE_TARGET_DIR "${LIBCXX_INSTALL_INCLUDE_DIR}" CACHE PATH

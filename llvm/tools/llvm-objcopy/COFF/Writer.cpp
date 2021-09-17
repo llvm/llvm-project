@@ -406,7 +406,7 @@ Expected<uint32_t> COFFWriter::virtualAddressToFileAddress(uint32_t RVA) {
 // the debug_directory structs in there, and set the PointerToRawData field
 // in all of them, according to their new physical location in the file.
 Error COFFWriter::patchDebugDirectory() {
-  if (Obj.DataDirectories.size() < DEBUG_DIRECTORY)
+  if (Obj.DataDirectories.size() <= DEBUG_DIRECTORY)
     return Error::success();
   const data_directory *Dir = &Obj.DataDirectories[DEBUG_DIRECTORY];
   if (Dir->Size <= 0)

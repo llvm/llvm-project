@@ -1039,7 +1039,8 @@ public:
   // updated if a new clobber is found by this SkipSelf search. If this
   // additional query becomes heavily used we may decide to cache the result.
   // Walker instantiations will decide how to set the SkipSelf bool.
-  MemoryAccess *getClobberingMemoryAccessBase(MemoryAccess *, unsigned &, bool);
+  MemoryAccess *getClobberingMemoryAccessBase(MemoryAccess *, unsigned &, bool,
+                                              bool UseInvariantGroup = true);
 };
 
 /// A MemorySSAWalker that does AA walks to disambiguate accesses. It no
@@ -1063,6 +1064,11 @@ public:
                                           const MemoryLocation &Loc,
                                           unsigned &UWL) {
     return Walker->getClobberingMemoryAccessBase(MA, Loc, UWL);
+  }
+  // This method is not accessible outside of this file.
+  MemoryAccess *getClobberingMemoryAccessWithoutInvariantGroup(MemoryAccess *MA,
+                                                               unsigned &UWL) {
+    return Walker->getClobberingMemoryAccessBase(MA, UWL, false, false);
   }
 
   MemoryAccess *getClobberingMemoryAccess(MemoryAccess *MA) override {
@@ -1460,10 +1466,13 @@ void MemorySSA::OptimizeUses::optimizeUsesInBlock(
     unsigned UpwardWalkLimit = MaxCheckLimit;
     while (UpperBound > LocInfo.LowerBound) {
       if (isa<MemoryPhi>(VersionStack[UpperBound])) {
-        // For phis, use the walker, see where we ended up, go there
+        // For phis, use the walker, see where we ended up, go there.
+        // The invariant.group handling in MemorySSA is ad-hoc and doesn't
+        // support updates, so don't use it to optimize uses.
         MemoryAccess *Result =
-            Walker->getClobberingMemoryAccess(MU, UpwardWalkLimit);
-        // We are guaranteed to find it or something is wrong
+            Walker->getClobberingMemoryAccessWithoutInvariantGroup(
+                MU, UpwardWalkLimit);
+        // We are guaranteed to find it or something is wrong.
         while (VersionStack[UpperBound] != Result) {
           assert(UpperBound != 0);
           --UpperBound;
@@ -1887,10 +1896,17 @@ void MemorySSA::print(raw_ostream &OS) const {
 LLVM_DUMP_METHOD void MemorySSA::dump() const { print(dbgs()); }
 #endif
 
-void MemorySSA::verifyMemorySSA() const {
-  verifyOrderingDominationAndDefUses(F);
+void MemorySSA::verifyMemorySSA(VerificationLevel VL) const {
+#if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
+  VL = VerificationLevel::Full;
+#endif
+
+#ifndef NDEBUG
+  verifyOrderingDominationAndDefUses(F, VL);
   verifyDominationNumbers(F);
-  verifyPrevDefInPhis(F);
+  if (VL == VerificationLevel::Full)
+    verifyPrevDefInPhis(F);
+#endif
   // Previously, the verification used to also verify that the clobberingAccess
   // cached by MemorySSA is the same as the clobberingAccess found at a later
   // query to AA. This does not hold true in general due to the current fragility
@@ -1904,7 +1920,6 @@ void MemorySSA::verifyMemorySSA() const {
 }
 
 void MemorySSA::verifyPrevDefInPhis(Function &F) const {
-#if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
   for (const BasicBlock &BB : F) {
     if (MemoryPhi *Phi = getMemoryAccess(&BB)) {
       for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
@@ -1919,6 +1934,8 @@ void MemorySSA::verifyPrevDefInPhis(Function &F) const {
               auto *LastAcc = &*(--DefList->end());
               assert(LastAcc == IncAcc &&
                      "Incorrect incoming access into phi.");
+              (void)IncAcc;
+              (void)LastAcc;
               break;
             }
             DTNode = DTNode->getIDom();
@@ -1934,13 +1951,11 @@ void MemorySSA::verifyPrevDefInPhis(Function &F) const {
       }
     }
   }
-#endif
 }
 
 /// Verify that all of the blocks we believe to have valid domination numbers
 /// actually have valid domination numbers.
 void MemorySSA::verifyDominationNumbers(const Function &F) const {
-#ifndef NDEBUG
   if (BlockNumberingValid.empty())
     return;
 
@@ -1966,13 +1981,13 @@ void MemorySSA::verifyDominationNumbers(const Function &F) const {
       unsigned long ThisNumber = ThisNumberIter->second;
       assert(ThisNumber > LastNumber &&
              "Domination numbers should be strictly increasing!");
+      (void)LastNumber;
       LastNumber = ThisNumber;
     }
   }
 
   assert(ValidBlocks.empty() &&
          "All valid BasicBlocks should exist in F -- dangling pointers?");
-#endif
 }
 
 /// Verify ordering: the order and existence of MemoryAccesses matches the
@@ -1981,8 +1996,8 @@ void MemorySSA::verifyDominationNumbers(const Function &F) const {
 /// Verify def-uses: the immediate use information - walk all the memory
 /// accesses and verifying that, for each use, it appears in the appropriate
 /// def's use list
-void MemorySSA::verifyOrderingDominationAndDefUses(Function &F) const {
-#if !defined(NDEBUG)
+void MemorySSA::verifyOrderingDominationAndDefUses(Function &F,
+                                                   VerificationLevel VL) const {
   // Walk all the blocks, comparing what the lookups think and what the access
   // lists think, as well as the order in the blocks vs the order in the access
   // lists.
@@ -1997,19 +2012,21 @@ void MemorySSA::verifyOrderingDominationAndDefUses(Function &F) const {
       ActualAccesses.push_back(Phi);
       ActualDefs.push_back(Phi);
       // Verify domination
-      for (const Use &U : Phi->uses())
+      for (const Use &U : Phi->uses()) {
         assert(dominates(Phi, U) && "Memory PHI does not dominate it's uses");
-#if defined(EXPENSIVE_CHECKS)
-      // Verify def-uses.
-      assert(Phi->getNumOperands() == static_cast<unsigned>(std::distance(
-                                          pred_begin(&B), pred_end(&B))) &&
-             "Incomplete MemoryPhi Node");
-      for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
-        verifyUseInDefs(Phi->getIncomingValue(I), Phi);
-        assert(is_contained(predecessors(&B), Phi->getIncomingBlock(I)) &&
-               "Incoming phi block not a block predecessor");
+        (void)U;
       }
-#endif
+      // Verify def-uses for full verify.
+      if (VL == VerificationLevel::Full) {
+        assert(Phi->getNumOperands() == static_cast<unsigned>(std::distance(
+                                            pred_begin(&B), pred_end(&B))) &&
+               "Incomplete MemoryPhi Node");
+        for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
+          verifyUseInDefs(Phi->getIncomingValue(I), Phi);
+          assert(is_contained(predecessors(&B), Phi->getIncomingBlock(I)) &&
+                 "Incoming phi block not a block predecessor");
+        }
+      }
     }
 
     for (Instruction &I : B) {
@@ -2025,14 +2042,15 @@ void MemorySSA::verifyOrderingDominationAndDefUses(Function &F) const {
           // Verify ordering.
           ActualDefs.push_back(MA);
           // Verify domination.
-          for (const Use &U : MD->uses())
+          for (const Use &U : MD->uses()) {
             assert(dominates(MD, U) &&
                    "Memory Def does not dominate it's uses");
+            (void)U;
+          }
         }
-#if defined(EXPENSIVE_CHECKS)
-        // Verify def-uses.
-        verifyUseInDefs(MA->getDefiningAccess(), MA);
-#endif
+        // Verify def-uses for full verify.
+        if (VL == VerificationLevel::Full)
+          verifyUseInDefs(MA->getDefiningAccess(), MA);
       }
     }
     // Either we hit the assert, really have no accesses, or we have both
@@ -2067,13 +2085,11 @@ void MemorySSA::verifyOrderingDominationAndDefUses(Function &F) const {
     }
     ActualDefs.clear();
   }
-#endif
 }
 
 /// Verify the def-use lists in MemorySSA, by verifying that \p Use
 /// appears in the use list of \p Def.
 void MemorySSA::verifyUseInDefs(MemoryAccess *Def, MemoryAccess *Use) const {
-#ifndef NDEBUG
   // The live on entry use may cause us to get a NULL def here
   if (!Def)
     assert(isLiveOnEntryDef(Use) &&
@@ -2081,7 +2097,6 @@ void MemorySSA::verifyUseInDefs(MemoryAccess *Def, MemoryAccess *Use) const {
   else
     assert(is_contained(Def->users(), Use) &&
            "Did not find use in def's use list");
-#endif
 }
 
 /// Perform a local numbering on blocks so that instruction ordering can be
@@ -2469,14 +2484,87 @@ MemorySSA::ClobberWalkerBase<AliasAnalysisType>::getClobberingMemoryAccessBase(
   return Clobber;
 }
 
+static const Instruction *
+getInvariantGroupClobberingInstruction(Instruction &I, DominatorTree &DT) {
+  if (!I.hasMetadata(LLVMContext::MD_invariant_group) || I.isVolatile())
+    return nullptr;
+
+  // We consider bitcasts and zero GEPs to be the same pointer value. Start by
+  // stripping bitcasts and zero GEPs, then we will recursively look at loads
+  // and stores through bitcasts and zero GEPs.
+  Value *PointerOperand = getLoadStorePointerOperand(&I)->stripPointerCasts();
+
+  // It's not safe to walk the use list of a global value because function
+  // passes aren't allowed to look outside their functions.
+  // FIXME: this could be fixed by filtering instructions from outside of
+  // current function.
+  if (isa<Constant>(PointerOperand))
+    return nullptr;
+
+  // Queue to process all pointers that are equivalent to load operand.
+  SmallVector<const Value *, 8> PointerUsesQueue;
+  PointerUsesQueue.push_back(PointerOperand);
+
+  const Instruction *MostDominatingInstruction = &I;
+
+  // FIXME: This loop is O(n^2) because dominates can be O(n) and in worst case
+  // we will see all the instructions. It may not matter in practice. If it
+  // does, we will have to support MemorySSA construction and updates.
+  while (!PointerUsesQueue.empty()) {
+    const Value *Ptr = PointerUsesQueue.pop_back_val();
+    assert(Ptr && !isa<GlobalValue>(Ptr) &&
+           "Null or GlobalValue should not be inserted");
+
+    for (const User *Us : Ptr->users()) {
+      auto *U = dyn_cast<Instruction>(Us);
+      if (!U || U == &I || !DT.dominates(U, MostDominatingInstruction))
+        continue;
+
+      // Add bitcasts and zero GEPs to queue.
+      if (isa<BitCastInst>(U)) {
+        PointerUsesQueue.push_back(U);
+        continue;
+      }
+      if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
+        if (GEP->hasAllZeroIndices())
+          PointerUsesQueue.push_back(U);
+        continue;
+      }
+
+      // If we hit a load/store with an invariant.group metadata and the same
+      // pointer operand, we can assume that value pointed to by the pointer
+      // operand didn't change.
+      if (U->hasMetadata(LLVMContext::MD_invariant_group) &&
+          getLoadStorePointerOperand(U) == Ptr && !U->isVolatile()) {
+        MostDominatingInstruction = U;
+      }
+    }
+  }
+  return MostDominatingInstruction == &I ? nullptr : MostDominatingInstruction;
+}
+
 template <typename AliasAnalysisType>
 MemoryAccess *
 MemorySSA::ClobberWalkerBase<AliasAnalysisType>::getClobberingMemoryAccessBase(
-    MemoryAccess *MA, unsigned &UpwardWalkLimit, bool SkipSelf) {
+    MemoryAccess *MA, unsigned &UpwardWalkLimit, bool SkipSelf,
+    bool UseInvariantGroup) {
   auto *StartingAccess = dyn_cast<MemoryUseOrDef>(MA);
   // If this is a MemoryPhi, we can't do anything.
   if (!StartingAccess)
     return MA;
+
+  if (UseInvariantGroup) {
+    if (auto *I = getInvariantGroupClobberingInstruction(
+            *StartingAccess->getMemoryInst(), MSSA->getDomTree())) {
+      assert(isa<LoadInst>(I) || isa<StoreInst>(I));
+
+      auto *ClobberMA = MSSA->getMemoryAccess(I);
+      assert(ClobberMA);
+      if (isa<MemoryUse>(ClobberMA))
+        return ClobberMA->getDefiningAccess();
+      return ClobberMA;
+    }
+  }
 
   bool IsOptimized = false;
 

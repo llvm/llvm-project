@@ -81,7 +81,7 @@ private:
   SystemZInstrInfo InstrInfo;
   SystemZTargetLowering TLInfo;
   SystemZSelectionDAGInfo TSInfo;
-  SystemZFrameLowering FrameLowering;
+  std::unique_ptr<const SystemZFrameLowering> FrameLowering;
 
   SystemZSubtarget &initializeSubtargetDependencies(StringRef CPU,
                                                     StringRef FS);
@@ -97,8 +97,13 @@ public:
   }
 
   const TargetFrameLowering *getFrameLowering() const override {
-    return &FrameLowering;
+    return FrameLowering.get();
   }
+
+  template <class TFL> const TFL *getFrameLowering() const {
+    return static_cast<const TFL *>(getFrameLowering());
+  }
+
   const SystemZInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const SystemZRegisterInfo *getRegisterInfo() const override {
     return &InstrInfo.getRegisterInfo();

@@ -2917,7 +2917,7 @@ class MVE_shift_imm_partial<Operand imm, string iname, string suffix>
 }
 
 class MVE_VxSHRN<string iname, string suffix, bit bit_12, bit bit_28,
-                 Operand imm, list<dag> pattern=[]>
+                 Operand imm>
   : MVE_shift_imm_partial<imm, iname, suffix> {
   bits<5> imm;
 
@@ -2960,7 +2960,7 @@ def MVE_VSHRNi32th : MVE_VxSHRN<"vshrnt", "i32", 0b1, 0b0, shr_imm16> {
 }
 
 class MVE_VxQRSHRUN<string iname, string suffix, bit bit_28, bit bit_12,
-                    Operand imm, list<dag> pattern=[]>
+                    Operand imm>
   : MVE_shift_imm_partial<imm, iname, suffix> {
   bits<5> imm;
 
@@ -3011,7 +3011,7 @@ def MVE_VQSHRUNs32th : MVE_VxQRSHRUN<
 }
 
 class MVE_VxQRSHRN<string iname, string suffix, bit bit_0, bit bit_12,
-                   Operand imm, list<dag> pattern=[]>
+                   Operand imm>
   : MVE_shift_imm_partial<imm, iname, suffix> {
   bits<5> imm;
 
@@ -3612,7 +3612,7 @@ class MVE_VMUL_fp<string iname, string suffix, bit size, list<dag> pattern=[]>
   let validForTailPredication = 1;
 }
 
-multiclass MVE_VMULT_fp_m<string iname, bit bit_21, MVEVectorVTInfo VTI,
+multiclass MVE_VMULT_fp_m<string iname, MVEVectorVTInfo VTI,
                             SDNode Op, Intrinsic PredInt> {
   def "" : MVE_VMUL_fp<iname, VTI.Suffix, VTI.Size{0}>;
   defvar Inst = !cast<Instruction>(NAME);
@@ -3623,7 +3623,7 @@ multiclass MVE_VMULT_fp_m<string iname, bit bit_21, MVEVectorVTInfo VTI,
 }
 
 multiclass MVE_VMUL_fp_m<MVEVectorVTInfo VTI>
-  : MVE_VMULT_fp_m<"vmul", 0, VTI, fmul, int_arm_mve_mul_predicated>;
+  : MVE_VMULT_fp_m<"vmul", VTI, fmul, int_arm_mve_mul_predicated>;
 
 defm MVE_VMULf32 : MVE_VMUL_fp_m<MVE_v4f32>;
 defm MVE_VMULf16 : MVE_VMUL_fp_m<MVE_v8f16>;
@@ -5138,9 +5138,8 @@ defm MVE_VQDMULLs32 : MVE_VQDMULL_halves<MVE_v4s32, 0b1, "@earlyclobber $Qd">;
 
 // start of mve_qDest_rSrc
 
-class MVE_qr_base<dag oops, dag iops, InstrItinClass itin, string iname,
-                  string suffix, string ops, vpred_ops vpred, string cstr,
-                  list<dag> pattern=[]>
+class MVE_qr_base<dag oops, dag iops, string iname, string suffix, string ops,
+                  vpred_ops vpred, string cstr, list<dag> pattern=[]>
    : MVE_p<oops, iops, NoItinerary, iname, suffix, ops, vpred, cstr, pattern> {
   bits<4> Qd;
   bits<4> Qn;
@@ -5159,12 +5158,12 @@ class MVE_qr_base<dag oops, dag iops, InstrItinClass itin, string iname,
 
 class MVE_qDest_rSrc<string iname, string suffix, string cstr="", list<dag> pattern=[]>
   : MVE_qr_base<(outs MQPR:$Qd), (ins MQPR:$Qn, rGPR:$Rm),
-          NoItinerary, iname, suffix, "$Qd, $Qn, $Rm", vpred_r, cstr,
+           iname, suffix, "$Qd, $Qn, $Rm", vpred_r, cstr,
            pattern>;
 
 class MVE_qDestSrc_rSrc<string iname, string suffix, list<dag> pattern=[]>
   : MVE_qr_base<(outs MQPR:$Qd), (ins MQPR:$Qd_src, MQPR:$Qn, rGPR:$Rm),
-          NoItinerary, iname, suffix, "$Qd, $Qn, $Rm", vpred_n, "$Qd = $Qd_src",
+           iname, suffix, "$Qd, $Qn, $Rm", vpred_n, "$Qd = $Qd_src",
            pattern>;
 
 class MVE_qDest_single_rSrc<string iname, string suffix, list<dag> pattern=[]>
@@ -6179,6 +6178,8 @@ class MVE_VLDRSTR_cs<MVE_ldst_direction dir, MVE_memsz memsz, bit P, bit W,
   let Inst{19-16} = addr{11-8};
   let Inst{8-7} = memsz.encoding;
   let Inst{6-0} = addr{6-0};
+
+  let IM = im;
 }
 
 // Contiguous, widening/narrowing

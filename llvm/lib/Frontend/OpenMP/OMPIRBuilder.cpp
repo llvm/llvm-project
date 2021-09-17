@@ -34,6 +34,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/CodeExtractor.h"
 #include "llvm/Transforms/Utils/LoopPeel.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 
 #include <sstream>
@@ -244,6 +245,18 @@ OpenMPIRBuilder::~OpenMPIRBuilder() {
   assert(OutlineInfos.empty() && "There must be no outstanding outlinings");
 }
 
+GlobalValue *OpenMPIRBuilder::createDebugKind(unsigned DebugKind) {
+  IntegerType *I32Ty = Type::getInt32Ty(M.getContext());
+  auto *GV = new GlobalVariable(
+      M, I32Ty,
+      /* isConstant = */ true, GlobalValue::PrivateLinkage,
+      ConstantInt::get(I32Ty, DebugKind), "__omp_rtl_debug_kind");
+
+  llvm::appendToUsed(M, {GV});
+
+  return GV;
+}
+
 Value *OpenMPIRBuilder::getOrCreateIdent(Constant *SrcLocStr,
                                          IdentFlag LocFlags,
                                          unsigned Reserve2Flags) {
@@ -257,17 +270,17 @@ Value *OpenMPIRBuilder::getOrCreateIdent(Constant *SrcLocStr,
     Constant *IdentData[] = {
         I32Null, ConstantInt::get(Int32, uint32_t(LocFlags)),
         ConstantInt::get(Int32, Reserve2Flags), I32Null, SrcLocStr};
-    Constant *Initializer = ConstantStruct::get(
-        cast<StructType>(IdentPtr->getPointerElementType()), IdentData);
+    Constant *Initializer =
+        ConstantStruct::get(OpenMPIRBuilder::Ident, IdentData);
 
     // Look for existing encoding of the location + flags, not needed but
     // minimizes the difference to the existing solution while we transition.
     for (GlobalVariable &GV : M.getGlobalList())
-      if (GV.getType() == IdentPtr && GV.hasInitializer())
+      if (GV.getValueType() == OpenMPIRBuilder::Ident && GV.hasInitializer())
         if (GV.getInitializer() == Initializer)
           return Ident = &GV;
 
-    auto *GV = new GlobalVariable(M, IdentPtr->getPointerElementType(),
+    auto *GV = new GlobalVariable(M, OpenMPIRBuilder::Ident,
                                   /* isConstant = */ true,
                                   GlobalValue::PrivateLinkage, Initializer);
     GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);

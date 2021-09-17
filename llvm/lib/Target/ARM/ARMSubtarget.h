@@ -468,6 +468,9 @@ protected:
   /// cannot be encoded. For example, ADD r0, r1, #FFFFFFFF -> SUB r0, r1, #1.
   bool NegativeImmediates = true;
 
+  /// Mitigate against the cve-2021-35465 security vulnurability.
+  bool FixCMSE_CVE_2021_35465 = false;
+
   /// Harden against Straight Line Speculation for Returns and Indirect
   /// Branches.
   bool HardenSlsRetBr = false;
@@ -933,6 +936,8 @@ public:
   bool ignoreCSRForAllocationOrder(const MachineFunction &MF,
                                    unsigned PhysReg) const override;
   unsigned getGPRAllocationOrder(const MachineFunction &MF) const;
+
+  bool fixCMSE_CVE_2021_35465() const { return FixCMSE_CVE_2021_35465; }
 
   bool hardenSlsRetBr() const { return HardenSlsRetBr; }
   bool hardenSlsBlr() const { return HardenSlsBlr; }

@@ -709,7 +709,10 @@ void COFFDumper::printPEHeader(const PEHeader *Hdr) {
     };
 
     for (uint32_t i = 0; i < Hdr->NumberOfRvaAndSize; ++i)
-      printDataDirectory(i, directory[i]);
+      if (i < sizeof(directory) / sizeof(char *))
+        printDataDirectory(i, directory[i]);
+      else
+        printDataDirectory(i, "Unknown");
   }
 }
 

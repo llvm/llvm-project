@@ -995,6 +995,20 @@ TEST_F(TargetDeclTest, ObjC) {
     }
   )cpp";
   EXPECT_DECLS("ObjCPropertyRefExpr", "+ (id)sharedInstance");
+
+  Code = R"cpp(
+    @interface Foo
+    + ([[id]])sharedInstance;
+    @end
+  )cpp";
+  EXPECT_DECLS("TypedefTypeLoc");
+
+  Code = R"cpp(
+    @interface Foo
+    + ([[instancetype]])sharedInstance;
+    @end
+  )cpp";
+  EXPECT_DECLS("TypedefTypeLoc");
 }
 
 class FindExplicitReferencesTest : public ::testing::Test {

@@ -523,7 +523,7 @@ void Merge(Fuzzer *F, FuzzingOptions &Options,
   std::vector<std::string> NewFiles;
   std::set<uint32_t> NewFeatures, NewCov;
   CrashResistantMerge(Args, OldCorpus, NewCorpus, &NewFiles, {}, &NewFeatures,
-                      {}, &NewCov, CFPath, true);
+                      {}, &NewCov, CFPath, true, Flags.set_cover_merge);
   for (auto &Path : NewFiles)
     F->WriteToOutputCorpus(FileToVector(Path, Options.MaxLen));
   // We are done, delete the control file if it was a temporary one.
@@ -797,7 +797,8 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   if (Flags.verbosity)
     Printf("INFO: Seed: %u\n", Seed);
 
-  if (Flags.collect_data_flow && !Flags.fork && !Flags.merge) {
+  if (Flags.collect_data_flow && !Flags.fork &&
+      !(Flags.merge || Flags.set_cover_merge)) {
     if (RunIndividualFiles)
       return CollectDataFlow(Flags.collect_data_flow, Flags.data_flow_trace,
                         ReadCorpora({}, *Inputs));
@@ -869,10 +870,11 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     exit(0);
   }
 
+  Options.ForkCorpusGroups = Flags.fork_corpus_groups;
   if (Flags.fork)
     FuzzWithFork(F->GetMD().GetRand(), Options, Args, *Inputs, Flags.fork);
 
-  if (Flags.merge)
+  if (Flags.merge || Flags.set_cover_merge)
     Merge(F, Options, Args, *Inputs, Flags.merge_control_file);
 
   if (Flags.merge_inner) {
@@ -880,7 +882,8 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     if (Options.MaxLen == 0)
       F->SetMaxInputLen(kDefaultMaxMergeLen);
     assert(Flags.merge_control_file);
-    F->CrashResistantMergeInternalStep(Flags.merge_control_file);
+    F->CrashResistantMergeInternalStep(Flags.merge_control_file,
+                                       !strncmp(Flags.merge_inner, "2", 1));
     exit(0);
   }
 

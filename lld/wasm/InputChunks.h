@@ -81,12 +81,7 @@ public:
   void writeRelocations(llvm::raw_ostream &os) const;
   void generateRelocationCode(raw_ostream &os) const;
 
-  bool isTLS() const {
-    // Older object files don't include WASM_SEG_FLAG_TLS and instead
-    // relied on the naming convention.
-    return flags & llvm::wasm::WASM_SEG_FLAG_TLS || name.startswith(".tdata") ||
-           name.startswith(".tbss");
-  }
+  bool isTLS() const { return flags & llvm::wasm::WASM_SEG_FLAG_TLS; }
 
   ObjFile *file;
   OutputSection *outputSec = nullptr;
@@ -113,11 +108,15 @@ public:
   // Signals the chunk was discarded by COMDAT handling.
   unsigned discarded : 1;
 
+  // Signals that the chuck was implicitly marked as TLS based on its name
+  // alone. This is a compatibility mechanism to support older object files.
+  unsigned implicitTLS : 1;
+
 protected:
   InputChunk(ObjFile *f, Kind k, StringRef name, uint32_t alignment = 0,
              uint32_t flags = 0)
       : name(name), file(f), alignment(alignment), flags(flags), sectionKind(k),
-        live(!config->gcSections), discarded(false) {}
+        live(!config->gcSections), discarded(false), implicitTLS(false) {}
   ArrayRef<uint8_t> data() const { return rawData; }
   uint64_t getTombstone() const;
 

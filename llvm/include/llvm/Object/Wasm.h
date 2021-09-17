@@ -260,6 +260,7 @@ private:
 
   // Custom section types
   Error parseDylinkSection(ReadContext &Ctx);
+  Error parseDylink0Section(ReadContext &Ctx);
   Error parseNameSection(ReadContext &Ctx);
   Error parseLinkingSection(ReadContext &Ctx);
   Error parseLinkingSectionSymtab(ReadContext &Ctx);

@@ -926,6 +926,9 @@ public:
 //--------------------------------------------------
 // parser<bool>
 //
+
+extern template class basic_parser<bool>;
+
 template <> class parser<bool> : public basic_parser<bool> {
 public:
   parser(Option &O) : basic_parser(O) {}
@@ -949,10 +952,11 @@ public:
   void anchor() override;
 };
 
-extern template class basic_parser<bool>;
-
 //--------------------------------------------------
 // parser<boolOrDefault>
+
+extern template class basic_parser<boolOrDefault>;
+
 template <> class parser<boolOrDefault> : public basic_parser<boolOrDefault> {
 public:
   parser(Option &O) : basic_parser(O) {}
@@ -974,11 +978,12 @@ public:
   void anchor() override;
 };
 
-extern template class basic_parser<boolOrDefault>;
-
 //--------------------------------------------------
 // parser<int>
 //
+
+extern template class basic_parser<int>;
+
 template <> class parser<int> : public basic_parser<int> {
 public:
   parser(Option &O) : basic_parser(O) {}
@@ -996,11 +1001,12 @@ public:
   void anchor() override;
 };
 
-extern template class basic_parser<int>;
-
 //--------------------------------------------------
 // parser<long>
 //
+
+extern template class basic_parser<long>;
+
 template <> class parser<long> final : public basic_parser<long> {
 public:
   parser(Option &O) : basic_parser(O) {}
@@ -1018,11 +1024,12 @@ public:
   void anchor() override;
 };
 
-extern template class basic_parser<long>;
-
 //--------------------------------------------------
 // parser<long long>
 //
+
+extern template class basic_parser<long long>;
+
 template <> class parser<long long> : public basic_parser<long long> {
 public:
   parser(Option &O) : basic_parser(O) {}
@@ -1040,11 +1047,12 @@ public:
   void anchor() override;
 };
 
-extern template class basic_parser<long long>;
-
 //--------------------------------------------------
 // parser<unsigned>
 //
+
+extern template class basic_parser<unsigned>;
+
 template <> class parser<unsigned> : public basic_parser<unsigned> {
 public:
   parser(Option &O) : basic_parser(O) {}
@@ -1062,11 +1070,12 @@ public:
   void anchor() override;
 };
 
-extern template class basic_parser<unsigned>;
-
 //--------------------------------------------------
 // parser<unsigned long>
 //
+
+extern template class basic_parser<unsigned long>;
+
 template <>
 class parser<unsigned long> final : public basic_parser<unsigned long> {
 public:
@@ -1085,11 +1094,12 @@ public:
   void anchor() override;
 };
 
-extern template class basic_parser<unsigned long>;
-
 //--------------------------------------------------
 // parser<unsigned long long>
 //
+
+extern template class basic_parser<unsigned long long>;
+
 template <>
 class parser<unsigned long long> : public basic_parser<unsigned long long> {
 public:
@@ -1109,11 +1119,12 @@ public:
   void anchor() override;
 };
 
-extern template class basic_parser<unsigned long long>;
-
 //--------------------------------------------------
 // parser<double>
 //
+
+extern template class basic_parser<double>;
+
 template <> class parser<double> : public basic_parser<double> {
 public:
   parser(Option &O) : basic_parser(O) {}
@@ -1131,11 +1142,12 @@ public:
   void anchor() override;
 };
 
-extern template class basic_parser<double>;
-
 //--------------------------------------------------
 // parser<float>
 //
+
+extern template class basic_parser<float>;
+
 template <> class parser<float> : public basic_parser<float> {
 public:
   parser(Option &O) : basic_parser(O) {}
@@ -1153,11 +1165,12 @@ public:
   void anchor() override;
 };
 
-extern template class basic_parser<float>;
-
 //--------------------------------------------------
 // parser<std::string>
 //
+
+extern template class basic_parser<std::string>;
+
 template <> class parser<std::string> : public basic_parser<std::string> {
 public:
   parser(Option &O) : basic_parser(O) {}
@@ -1178,11 +1191,12 @@ public:
   void anchor() override;
 };
 
-extern template class basic_parser<std::string>;
-
 //--------------------------------------------------
 // parser<char>
 //
+
+extern template class basic_parser<char>;
+
 template <> class parser<char> : public basic_parser<char> {
 public:
   parser(Option &O) : basic_parser(O) {}
@@ -1202,8 +1216,6 @@ public:
   // An out-of-line virtual method to provide a 'home' for this class.
   void anchor() override;
 };
-
-extern template class basic_parser<char>;
 
 //--------------------------------------------------
 // PrintOptionDiff

@@ -108,8 +108,7 @@ define <2 x i1> @ror_eq_vec(<2 x i5> %x, <2 x i5> %y, <2 x i5> %z) {
 
 define i1 @rol_eq_cst(i8 %x) {
 ; CHECK-LABEL: @rol_eq_cst(
-; CHECK-NEXT:    [[F:%.*]] = tail call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[X]], i8 3)
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[F]], 2
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X:%.*]], 64
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %f = tail call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 3)
@@ -119,8 +118,7 @@ define i1 @rol_eq_cst(i8 %x) {
 
 define i1 @rol_ne_cst(i8 %x) {
 ; CHECK-LABEL: @rol_ne_cst(
-; CHECK-NEXT:    [[F:%.*]] = tail call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[X]], i8 3)
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[F]], 2
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X:%.*]], 64
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %f = tail call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 3)
@@ -132,7 +130,7 @@ define i1 @rol_eq_cst_use(i8 %x) {
 ; CHECK-LABEL: @rol_eq_cst_use(
 ; CHECK-NEXT:    [[F:%.*]] = tail call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[X]], i8 3)
 ; CHECK-NEXT:    call void @use(i8 [[F]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[F]], 2
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X]], 64
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %f = tail call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 3)
@@ -143,8 +141,7 @@ define i1 @rol_eq_cst_use(i8 %x) {
 
 define i1 @ror_eq_cst(i8 %x) {
 ; CHECK-LABEL: @ror_eq_cst(
-; CHECK-NEXT:    [[F:%.*]] = call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[X]], i8 6)
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[F]], 3
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X:%.*]], 12
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %f = tail call i8 @llvm.fshr.i8(i8 %x, i8 %x, i8 2)
@@ -154,8 +151,7 @@ define i1 @ror_eq_cst(i8 %x) {
 
 define i1 @ror_ne_cst(i8 %x) {
 ; CHECK-LABEL: @ror_ne_cst(
-; CHECK-NEXT:    [[F:%.*]] = call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[X]], i8 6)
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[F]], 3
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X:%.*]], 12
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %f = tail call i8 @llvm.fshr.i8(i8 %x, i8 %x, i8 2)
@@ -165,8 +161,7 @@ define i1 @ror_ne_cst(i8 %x) {
 
 define <2 x i1> @rol_eq_cst_vec(<2 x i5> %x) {
 ; CHECK-LABEL: @rol_eq_cst_vec(
-; CHECK-NEXT:    [[F:%.*]] = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5> [[X:%.*]], <2 x i5> [[X]], <2 x i5> <i5 3, i5 3>)
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i5> [[F]], <i5 2, i5 2>
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i5> [[X:%.*]], <i5 8, i5 8>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %f = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5> %x, <2 x i5> %x, <2 x i5> <i5 3, i5 3>)

@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 // <iostream>
 
 // istream wcout;
+
+// XFAIL: LIBCXX-WINDOWS-FIXME
 
 // FILE_DEPENDENCIES: ../check-stdout.sh
 // RUN: %{build}

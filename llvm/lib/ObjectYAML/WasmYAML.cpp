@@ -55,6 +55,7 @@ static void sectionMapping(IO &IO, WasmYAML::DylinkSection &Section) {
   IO.mapRequired("TableSize", Section.TableSize);
   IO.mapRequired("TableAlignment", Section.TableAlignment);
   IO.mapRequired("Needed", Section.Needed);
+  IO.mapOptional("ExportInfo", Section.ExportInfo);
 }
 
 static void sectionMapping(IO &IO, WasmYAML::NameSection &Section) {
@@ -177,7 +178,7 @@ void MappingTraits<std::unique_ptr<WasmYAML::Section>>::mapping(
     } else {
       IO.mapRequired("Name", SectionName);
     }
-    if (SectionName == "dylink") {
+    if (SectionName == "dylink" || SectionName == "dylink.0") {
       if (!IO.outputting())
         Section.reset(new WasmYAML::DylinkSection());
       sectionMapping(IO, *cast<WasmYAML::DylinkSection>(Section.get()));
@@ -531,6 +532,12 @@ void MappingTraits<WasmYAML::Tag>::mapping(IO &IO, WasmYAML::Tag &Tag) {
   IO.mapRequired("SigIndex", Tag.SigIndex);
 }
 
+void MappingTraits<WasmYAML::DylinkExport>::mapping(
+    IO &IO, WasmYAML::DylinkExport &Export) {
+  IO.mapRequired("Name", Export.Name);
+  IO.mapRequired("Flags", Export.Flags);
+}
+
 void ScalarBitSetTraits<WasmYAML::LimitFlags>::bitset(
     IO &IO, WasmYAML::LimitFlags &Value) {
 #define BCase(X) IO.bitSetCase(Value, #X, wasm::WASM_LIMITS_FLAG_##X)
@@ -561,6 +568,7 @@ void ScalarBitSetTraits<WasmYAML::SymbolFlags>::bitset(
   BCaseMask(EXPORTED, EXPORTED);
   BCaseMask(EXPLICIT_NAME, EXPLICIT_NAME);
   BCaseMask(NO_STRIP, NO_STRIP);
+  BCaseMask(TLS, TLS);
 #undef BCaseMask
 }
 

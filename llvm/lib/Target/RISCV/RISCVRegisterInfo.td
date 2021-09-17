@@ -372,7 +372,7 @@ class NFList<int lmul> {
 }
 
 // Generate [start, end) SubRegIndex list.
-class SubRegSet<list<SubRegIndex> LIn, int start, int nf, int lmul> {
+class SubRegSet<int nf, int lmul> {
   list<SubRegIndex> L = !foldl([]<SubRegIndex>,
                                [0, 1, 2, 3, 4, 5, 6, 7],
                                AccList, i,
@@ -463,10 +463,10 @@ let RegAltNameIndices = [ABIRegAltName] in {
 foreach m = [1, 2, 4] in {
   foreach n = NFList<m>.L in {
     def "VN" # n # "M" # m # "NoV0": RegisterTuples<
-                                       SubRegSet<[], 0, n, m>.L,
+                                       SubRegSet<n, m>.L,
                                        VRegList<[], 0, n, m, 1>.L>;
     def "VN" # n # "M" # m # "V0" : RegisterTuples<
-                                       SubRegSet<[], 0, n, m>.L,
+                                       SubRegSet<n, m>.L,
                                        VRegList<[], 0, n, m, 0>.L>;
   }
 }
@@ -557,3 +557,15 @@ foreach m = LMULList.m in {
 def FFLAGS : RISCVReg<0, "fflags">;
 def FRM    : RISCVReg<0, "frm">;
 def FCSR   : RISCVReg<0, "fcsr">;
+
+// Any type register. Used for .insn directives when we don't know what the
+// register types could be.
+// NOTE: The alignment and size are bogus values. The Size needs to be non-zero
+// or tablegen will use "untyped" to determine the size which will assert.
+let isAllocatable = 0 in
+def AnyReg : RegisterClass<"RISCV", [untyped], 32,
+                           (add (sequence "X%u", 0, 31),
+                                (sequence "F%u_D", 0, 31),
+                                (sequence "V%u", 0, 31))> {
+  let Size = 32;
+}

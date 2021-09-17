@@ -63,6 +63,16 @@ LegalizeMutation LegalizeMutations::widenScalarOrEltToNextPow2(unsigned TypeIdx,
   };
 }
 
+LegalizeMutation
+LegalizeMutations::widenScalarOrEltToNextMultipleOf(unsigned TypeIdx,
+                                                    unsigned Size) {
+  return [=](const LegalityQuery &Query) {
+    const LLT Ty = Query.Types[TypeIdx];
+    unsigned NewEltSizeInBits = alignTo(Ty.getScalarSizeInBits(), Size);
+    return std::make_pair(TypeIdx, Ty.changeElementSize(NewEltSizeInBits));
+  };
+}
+
 LegalizeMutation LegalizeMutations::moreElementsToNextPow2(unsigned TypeIdx,
                                                            unsigned Min) {
   return [=](const LegalityQuery &Query) {

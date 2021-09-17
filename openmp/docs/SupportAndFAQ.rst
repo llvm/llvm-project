@@ -105,9 +105,9 @@ OpenMP's perspective. Rocr is an implementation of `HSA
   INSTALL_PREFIX=same-as-llvm-install
   
   cd $SOURCE_DIR
-  git clone git@github.com:RadeonOpenCompute/ROCT-Thunk-Interface.git -b roc-4.1.x \
+  git clone git@github.com:RadeonOpenCompute/ROCT-Thunk-Interface.git -b roc-4.2.x \
     --single-branch
-  git clone git@github.com:RadeonOpenCompute/ROCR-Runtime.git -b rocm-4.1.x \
+  git clone git@github.com:RadeonOpenCompute/ROCR-Runtime.git -b rocm-4.2.x \
     --single-branch
   
   cd $BUILD_DIR && mkdir roct && cd roct
@@ -136,12 +136,10 @@ With those libraries installed, then LLVM build and installed, try:
 
 Q: What are the known limitations of OpenMP AMDGPU offload?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-LD_LIBRARY_PATH is presently required to find the openmp libraries.
+LD_LIBRARY_PATH or rpath/runpath are required to find libomp.so and libomptarget.so
 
-There is no libc. That is, malloc and printf do not exist. Also no libm, so
-functions like cos(double) will not work from target regions.
-
-Cards from the gfx10 line, 'navi', that use wave32 are not yet implemented.
+There is no libc. That is, malloc and printf do not exist. Libm is implemented in terms
+of the rocm device library, which will be searched for if linking with '-lm'.
 
 Some versions of the driver for the radeon vii (gfx906) will error unless the
 environment variable 'export HSA_IGNORE_SRAMECC_MISREPORT=1' is set.

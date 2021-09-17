@@ -129,6 +129,8 @@ public:
   bool isMultithreadingEnabled();
 
   /// Set the flag specifying if multi-threading is disabled by the context.
+  /// The command line debugging flag `--mlir-disable-threading` is overriding
+  /// this call and making it a no-op!
   void disableMultithreading(bool disable = true);
   void enableMultithreading(bool enable = true) {
     disableMultithreading(!enable);
@@ -140,6 +142,9 @@ public:
   /// decoupling the lifetime of the threads from the contexts. The thread pool
   /// must outlive the context. Multi-threading will be enabled as part of this
   /// method.
+  /// The command line debugging flag `--mlir-disable-threading` will still
+  /// prevent threading from being enabled and threading won't be enabled after
+  /// this call in this case.
   void setThreadPool(llvm::ThreadPool &pool);
 
   /// Return the thread pool used by this context. This method requires that

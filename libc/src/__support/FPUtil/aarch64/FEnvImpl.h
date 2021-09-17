@@ -89,6 +89,13 @@ static inline int disableExcept(int excepts) {
   return FEnv::exceptionStatusToMacro(oldExcepts);
 }
 
+static inline int getExcept() {
+  uint32_t controlWord = FEnv::getControlWord();
+  int enabledExcepts =
+      (controlWord >> FEnv::ExceptionControlFlagsBitPosition) & 0x1F;
+  return FEnv::exceptionStatusToMacro(enabledExcepts);
+}
+
 static inline int clearExcept(int excepts) {
   uint32_t statusWord = FEnv::getStatusWord();
   uint32_t toClear = FEnv::getStatusValueForExcept(excepts);

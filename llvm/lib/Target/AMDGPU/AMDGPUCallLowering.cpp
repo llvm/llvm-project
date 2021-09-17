@@ -753,6 +753,11 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
                                            CallLoweringInfo &Info) const {
   MachineFunction &MF = MIRBuilder.getMF();
 
+  // If there's no call site, this doesn't correspond to a call from the IR and
+  // doesn't need implicit inputs.
+  if (!Info.CB)
+    return true;
+
   const AMDGPUFunctionArgInfo *CalleeArgInfo
     = &AMDGPUArgumentUsageInfo::FixedABIFunctionInfo;
 
@@ -773,16 +778,31 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
     AMDGPUFunctionArgInfo::WORKGROUP_ID_Z
   };
 
+  static constexpr StringLiteral ImplicitAttrNames[] = {
+    "amdgpu-no-dispatch-ptr",
+    "amdgpu-no-queue-ptr",
+    "amdgpu-no-implicitarg-ptr",
+    "amdgpu-no-dispatch-id",
+    "amdgpu-no-workgroup-id-x",
+    "amdgpu-no-workgroup-id-y",
+    "amdgpu-no-workgroup-id-z"
+  };
+
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const AMDGPULegalizerInfo *LI
     = static_cast<const AMDGPULegalizerInfo*>(ST.getLegalizerInfo());
 
+  unsigned I = 0;
   for (auto InputID : InputRegs) {
     const ArgDescriptor *OutgoingArg;
     const TargetRegisterClass *ArgRC;
     LLT ArgTy;
+
+    // If the callee does not use the attribute value, skip copying the value.
+    if (Info.CB->hasFnAttr(ImplicitAttrNames[I++]))
+      continue;
 
     std::tie(OutgoingArg, ArgRC, ArgTy) =
         CalleeArgInfo->getPreloadedValue(InputID);
@@ -843,16 +863,22 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
   const ArgDescriptor *IncomingArgZ = std::get<0>(WorkitemIDZ);
   const LLT S32 = LLT::scalar(32);
 
+  const bool NeedWorkItemIDX = !Info.CB->hasFnAttr("amdgpu-no-workitem-id-x");
+  const bool NeedWorkItemIDY = !Info.CB->hasFnAttr("amdgpu-no-workitem-id-y");
+  const bool NeedWorkItemIDZ = !Info.CB->hasFnAttr("amdgpu-no-workitem-id-z");
+
   // If incoming ids are not packed we need to pack them.
   // FIXME: Should consider known workgroup size to eliminate known 0 cases.
   Register InputReg;
-  if (IncomingArgX && !IncomingArgX->isMasked() && CalleeArgInfo->WorkItemIDX) {
+  if (IncomingArgX && !IncomingArgX->isMasked() && CalleeArgInfo->WorkItemIDX &&
+      NeedWorkItemIDX) {
     InputReg = MRI.createGenericVirtualRegister(S32);
     LI->loadInputValue(InputReg, MIRBuilder, IncomingArgX,
                        std::get<1>(WorkitemIDX), std::get<2>(WorkitemIDX));
   }
 
-  if (IncomingArgY && !IncomingArgY->isMasked() && CalleeArgInfo->WorkItemIDY) {
+  if (IncomingArgY && !IncomingArgY->isMasked() && CalleeArgInfo->WorkItemIDY &&
+      NeedWorkItemIDY) {
     Register Y = MRI.createGenericVirtualRegister(S32);
     LI->loadInputValue(Y, MIRBuilder, IncomingArgY, std::get<1>(WorkitemIDY),
                        std::get<2>(WorkitemIDY));
@@ -861,7 +887,8 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
     InputReg = InputReg ? MIRBuilder.buildOr(S32, InputReg, Y).getReg(0) : Y;
   }
 
-  if (IncomingArgZ && !IncomingArgZ->isMasked() && CalleeArgInfo->WorkItemIDZ) {
+  if (IncomingArgZ && !IncomingArgZ->isMasked() && CalleeArgInfo->WorkItemIDZ &&
+      NeedWorkItemIDZ) {
     Register Z = MRI.createGenericVirtualRegister(S32);
     LI->loadInputValue(Z, MIRBuilder, IncomingArgZ, std::get<1>(WorkitemIDZ),
                        std::get<2>(WorkitemIDZ));
@@ -870,7 +897,7 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
     InputReg = InputReg ? MIRBuilder.buildOr(S32, InputReg, Z).getReg(0) : Z;
   }
 
-  if (!InputReg) {
+  if (!InputReg && (NeedWorkItemIDX || NeedWorkItemIDY || NeedWorkItemIDZ)) {
     InputReg = MRI.createGenericVirtualRegister(S32);
 
     // Workitem ids are already packed, any of present incoming arguments will
@@ -883,7 +910,9 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
   }
 
   if (OutgoingArg->isRegister()) {
-    ArgRegs.emplace_back(OutgoingArg->getRegister(), InputReg);
+    if (InputReg)
+      ArgRegs.emplace_back(OutgoingArg->getRegister(), InputReg);
+
     if (!CCInfo.AllocateReg(OutgoingArg->getRegister()))
       report_fatal_error("failed to allocate implicit input argument");
   } else {

@@ -16,7 +16,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
-#include "llvm/ExecutionEngine/Orc/LLVMSPSSerializers.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 
@@ -215,6 +214,8 @@ private:
                          ArrayRef<jitlink::Section *> InitSections);
 
   Error registerPerObjectSections(const ELFPerObjectSectionsToRegister &POSR);
+
+  Expected<uint64_t> createPThreadKey();
 
   ExecutionSession &ES;
   ObjectLinkingLayer &ObjLinkingLayer;

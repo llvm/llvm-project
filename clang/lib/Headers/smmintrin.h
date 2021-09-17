@@ -10,6 +10,10 @@
 #ifndef __SMMINTRIN_H
 #define __SMMINTRIN_H
 
+#if !defined(__i386__) && !defined(__x86_64__)
+#error "This header is only meant to be used on x86 and x64 architecture"
+#endif
+
 #include <tmmintrin.h>
 
 /* Define the default attributes for the functions in this file. */

@@ -84,7 +84,7 @@ llvm::JITSymbolFlags::fromObjectSymbol(const object::SymbolRef &Symbol) {
   if (!SymbolType)
     return SymbolType.takeError();
 
-  if (*SymbolType & object::SymbolRef::ST_Function)
+  if (*SymbolType == object::SymbolRef::ST_Function)
     Flags |= JITSymbolFlags::Callable;
 
   return Flags;

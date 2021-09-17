@@ -117,7 +117,7 @@ define i32 @icmpasreq(i32 %input, i32 %a, i32 %b) {
 define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 ; CHECK-LABEL: icmpasrne:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmpwi 3, 0
+; CHECK-NEXT:    cmpwi 3, -1
 ; CHECK-NEXT:    iselgt 3, 4, 5
 ; CHECK-NEXT:    blr
   %sh = ashr i32 %input, 31

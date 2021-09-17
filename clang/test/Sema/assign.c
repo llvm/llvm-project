@@ -13,7 +13,7 @@ typedef int arr[10];
 void test3() {
   const arr b;      // expected-note {{variable 'b' declared const here}}
   const int b2[10]; // expected-note {{variable 'b2' declared const here}}
-  b[4] = 1;         // expected-error {{cannot assign to variable 'b' with const-qualified type 'const arr' (aka 'int const[10]')}}
+  b[4] = 1;         // expected-error {{cannot assign to variable 'b' with const-qualified type 'const arr' (aka 'const int [10]')}}
   b2[4] = 1;        // expected-error {{cannot assign to variable 'b2' with const-qualified type 'const int [10]'}}
 }
 

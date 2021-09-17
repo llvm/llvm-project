@@ -8,7 +8,7 @@ find_first_existing_vc_file("${LLVM_MAIN_SRC_DIR}" llvm_vc)
 find_first_existing_vc_file("${LLD_SOURCE_DIR}" lld_vc)
 
 set(version_inc "${CMAKE_CURRENT_BINARY_DIR}/VCSVersion.inc")
-set(generate_vcs_version_script "${LLVM_CMAKE_PATH}/GenerateVersionFromVCS.cmake")
+set(generate_vcs_version_script "${LLVM_CMAKE_DIR}/GenerateVersionFromVCS.cmake")
 
 if(lld_vc AND LLVM_APPEND_VC_REV)
   set(lld_source_dir ${LLD_SOURCE_DIR})

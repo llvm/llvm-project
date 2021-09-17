@@ -105,9 +105,7 @@ static bool simplifyLoopInst(Loop &L, DominatorTree &DT, LoopInfo &LI,
         if (!V || !LI.replacementPreservesLCSSAForm(&I, V))
           continue;
 
-        for (Value::use_iterator UI = I.use_begin(), UE = I.use_end();
-             UI != UE;) {
-          Use &U = *UI++;
+        for (Use &U : llvm::make_early_inc_range(I.uses())) {
           auto *UserI = cast<Instruction>(U.getUser());
           U.set(V);
 

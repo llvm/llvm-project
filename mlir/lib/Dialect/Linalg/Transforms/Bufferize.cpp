@@ -79,38 +79,17 @@ LinalgOp
 mlir::linalg::createLinalgOpOnBuffers(ConversionPatternRewriter &rewriter,
                                       LinalgOp linalgOp, ValueRange inputs,
                                       ValueRange outputs) {
-  if (auto genericOp = mlir::dyn_cast<GenericOp>(*linalgOp)) {
-    // Generate a new linalg operation that works on buffers.
-    auto newGenericOp = rewriter.create<GenericOp>(
-        genericOp.getLoc(),
-        /*resultTensorTypes=*/llvm::None,
-        /*inputs=*/inputs,
-        /*outputs=*/outputs, genericOp.indexing_maps(),
-        genericOp.iterator_types(), genericOp.docAttr(),
-        genericOp.library_callAttr());
-
-    // Create a new block in the region of the new Generic Op.
-    Block *oldBlock = genericOp.getBody();
-    Region &newRegion = newGenericOp.region();
-    Block *newBlock = rewriter.createBlock(&newRegion, newRegion.begin(),
-                                           oldBlock->getArgumentTypes());
-
-    // Clone the body of the old block to the new block.
-    BlockAndValueMapping mapping;
-    mapping.map(oldBlock->getArguments(), newBlock->getArguments());
-
-    OpBuilder::InsertionGuard guard(rewriter);
-    rewriter.setInsertionPointToEnd(newBlock);
-    for (auto &op : oldBlock->getOperations()) {
-      Operation *clonedOp = rewriter.clone(op, mapping);
-      mapping.map(op.getResults(), clonedOp->getResults());
-    }
-    return newGenericOp;
-  }
   SmallVector<Value, 8> newOperands = inputs;
   newOperands.append(outputs.begin(), outputs.end());
-  return linalgOp.clone(rewriter, linalgOp.getLoc(),
-                        /*resultTypes=*/ArrayRef<Type>{}, newOperands);
+  auto *newOp = linalgOp.cloneWithoutRegions(rewriter, linalgOp.getLoc(),
+                                             /*resultTypes=*/ArrayRef<Type>{},
+                                             newOperands);
+  for (auto regions : llvm::zip(linalgOp->getRegions(), newOp->getRegions())) {
+    auto &oldRegion = std::get<0>(regions);
+    auto &newRegion = std::get<1>(regions);
+    rewriter.inlineRegionBefore(oldRegion, newRegion, newRegion.begin());
+  }
+  return newOp;
 }
 
 //===----------------------------------------------------------------------===//
@@ -344,9 +323,8 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
     BufferizeTypeConverter typeConverter;
 
     // Mark all Standard operations legal.
-    target.addLegalDialect<AffineDialect, math::MathDialect,
-                           memref::MemRefDialect, StandardOpsDialect,
-                           tensor::TensorDialect>();
+    target.addLegalDialect<AffineDialect, memref::MemRefDialect,
+                           StandardOpsDialect, tensor::TensorDialect>();
     target.addIllegalOp<InitTensorOp, tensor::ExtractSliceOp,
                         tensor::InsertSliceOp, PadTensorOp>();
 

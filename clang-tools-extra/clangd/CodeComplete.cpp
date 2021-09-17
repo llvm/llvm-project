@@ -1842,14 +1842,14 @@ CompletionPrefix guessCompletionPrefix(llvm::StringRef Content,
   CompletionPrefix Result;
 
   // Consume the unqualified name. We only handle ASCII characters.
-  // isIdentifierBody will let us match "0invalid", but we don't mind.
-  while (!Rest.empty() && isIdentifierBody(Rest.back()))
+  // isAsciiIdentifierContinue will let us match "0invalid", but we don't mind.
+  while (!Rest.empty() && isAsciiIdentifierContinue(Rest.back()))
     Rest = Rest.drop_back();
   Result.Name = Content.slice(Rest.size(), Offset);
 
   // Consume qualifiers.
   while (Rest.consume_back("::") && !Rest.endswith(":")) // reject ::::
-    while (!Rest.empty() && isIdentifierBody(Rest.back()))
+    while (!Rest.empty() && isAsciiIdentifierContinue(Rest.back()))
       Rest = Rest.drop_back();
   Result.Qualifier =
       Content.slice(Rest.size(), Result.Name.begin() - Content.begin());
@@ -1874,9 +1874,10 @@ CodeCompleteResult codeComplete(PathRef FileName, Position Pos,
              ? std::move(Flow).runWithoutSema(ParseInput.Contents, *Offset,
                                               *ParseInput.TFS)
              : std::move(Flow).run({FileName, *Offset, *Preamble,
-                                    // We want to serve code completions with
-                                    // low latency, so don't bother patching.
-                                    /*PreamblePatch=*/llvm::None, ParseInput});
+                                    /*PreamblePatch=*/
+                                    PreamblePatch::createMacroPatch(
+                                        FileName, ParseInput, *Preamble),
+                                    ParseInput});
 }
 
 SignatureHelp signatureHelp(PathRef FileName, Position Pos,
@@ -1898,7 +1899,8 @@ SignatureHelp signatureHelp(PathRef FileName, Position Pos,
                                                Result),
       Options,
       {FileName, *Offset, Preamble,
-       PreamblePatch::create(FileName, ParseInput, Preamble), ParseInput});
+       PreamblePatch::createFullPatch(FileName, ParseInput, Preamble),
+       ParseInput});
   return Result;
 }
 
@@ -2057,8 +2059,8 @@ bool allowImplicitCompletion(llvm::StringRef Content, unsigned Offset) {
     return true;
 
   // Complete words. Give non-ascii characters the benefit of the doubt.
-  return !Content.empty() &&
-         (isIdentifierBody(Content.back()) || !llvm::isASCII(Content.back()));
+  return !Content.empty() && (isAsciiIdentifierContinue(Content.back()) ||
+                              !llvm::isASCII(Content.back()));
 }
 
 } // namespace clangd

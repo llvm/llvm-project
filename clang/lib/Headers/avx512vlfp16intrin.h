@@ -52,6 +52,16 @@ _mm_set_ph(_Float16 __h1, _Float16 __h2, _Float16 __h3, _Float16 __h4,
 }
 
 static __inline __m256h __DEFAULT_FN_ATTRS256
+_mm256_set1_pch(_Float16 _Complex h) {
+  return (__m256h)_mm256_set1_ps(__builtin_bit_cast(float, h));
+}
+
+static __inline __m128h __DEFAULT_FN_ATTRS128
+_mm_set1_pch(_Float16 _Complex h) {
+  return (__m128h)_mm_set1_ps(__builtin_bit_cast(float, h));
+}
+
+static __inline __m256h __DEFAULT_FN_ATTRS256
 _mm256_set_ph(_Float16 __h1, _Float16 __h2, _Float16 __h3, _Float16 __h4,
               _Float16 __h5, _Float16 __h6, _Float16 __h7, _Float16 __h8,
               _Float16 __h9, _Float16 __h10, _Float16 __h11, _Float16 __h12,

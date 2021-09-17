@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple powerpc64le-unknown-unknown -fsyntax-only \
-// RUN:   -target-cpu future %s -verify
+// RUN:   -target-cpu pwr10 %s -verify
+// RUN: %clang_cc1 -triple powerpc64-unknown-unknown -fsyntax-only \
+// RUN:   -target-cpu pwr10 %s -verify
 
 // The use of PPC MMA types is strongly restricted. Non-pointer MMA variables
 // can only be declared in functions and a limited number of operations are

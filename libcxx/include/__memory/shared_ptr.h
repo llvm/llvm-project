@@ -437,7 +437,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR shared_ptr(nullptr_t) _NOEXCEPT;
 
-    template<class _Yp, class = _EnableIf<
+    template<class _Yp, class = __enable_if_t<
         _And<
             __compatible_with<_Yp, _Tp>
             // In C++03 we get errors when trying to do SFINAE with the
@@ -1093,7 +1093,7 @@ shared_ptr<_Tp>::reset(_Yp* __p, _Dp __d, _Alloc __a)
 //
 // std::allocate_shared and std::make_shared
 //
-template<class _Tp, class _Alloc, class ..._Args, class = _EnableIf<!is_array<_Tp>::value> >
+template<class _Tp, class _Alloc, class ..._Args, class = __enable_if_t<!is_array<_Tp>::value> >
 _LIBCPP_HIDE_FROM_ABI
 shared_ptr<_Tp> allocate_shared(const _Alloc& __a, _Args&& ...__args)
 {
@@ -1105,7 +1105,7 @@ shared_ptr<_Tp> allocate_shared(const _Alloc& __a, _Args&& ...__args)
     return shared_ptr<_Tp>::__create_with_control_block((*__control_block).__get_elem(), _VSTD::addressof(*__control_block));
 }
 
-template<class _Tp, class ..._Args, class = _EnableIf<!is_array<_Tp>::value> >
+template<class _Tp, class ..._Args, class = __enable_if_t<!is_array<_Tp>::value> >
 _LIBCPP_HIDE_FROM_ABI
 shared_ptr<_Tp> make_shared(_Args&& ...__args)
 {

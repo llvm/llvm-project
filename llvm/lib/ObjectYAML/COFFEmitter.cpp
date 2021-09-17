@@ -170,8 +170,8 @@ static bool layoutOptionalHeader(COFFParser &CP) {
   unsigned PEHeaderSize = CP.is64Bit() ? sizeof(object::pe32plus_header)
                                        : sizeof(object::pe32_header);
   CP.Obj.Header.SizeOfOptionalHeader =
-      PEHeaderSize +
-      sizeof(object::data_directory) * (COFF::NUM_DATA_DIRECTORIES + 1);
+      PEHeaderSize + sizeof(object::data_directory) *
+                         CP.Obj.OptionalHeader->Header.NumberOfRvaAndSize;
   return true;
 }
 
@@ -397,7 +397,7 @@ static uint32_t initializeOptionalHeader(COFFParser &CP, uint16_t Magic,
   Header->SizeOfStackCommit = CP.Obj.OptionalHeader->Header.SizeOfStackCommit;
   Header->SizeOfHeapReserve = CP.Obj.OptionalHeader->Header.SizeOfHeapReserve;
   Header->SizeOfHeapCommit = CP.Obj.OptionalHeader->Header.SizeOfHeapCommit;
-  Header->NumberOfRvaAndSize = COFF::NUM_DATA_DIRECTORIES + 1;
+  Header->NumberOfRvaAndSize = CP.Obj.OptionalHeader->Header.NumberOfRvaAndSize;
   return BaseOfData;
 }
 
@@ -458,18 +458,20 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
       PEH.BaseOfData = BaseOfData;
       OS.write(reinterpret_cast<char *>(&PEH), sizeof(PEH));
     }
-    for (const Optional<COFF::DataDirectory> &DD :
-         CP.Obj.OptionalHeader->DataDirectories) {
-      if (!DD.hasValue()) {
+    for (uint32_t I = 0; I < CP.Obj.OptionalHeader->Header.NumberOfRvaAndSize;
+         ++I) {
+      const Optional<COFF::DataDirectory> *DataDirectories =
+          CP.Obj.OptionalHeader->DataDirectories;
+      uint32_t NumDataDir = sizeof(CP.Obj.OptionalHeader->DataDirectories) /
+                            sizeof(Optional<COFF::DataDirectory>);
+      if (I >= NumDataDir || !DataDirectories[I].hasValue()) {
         OS << zeros(uint32_t(0));
         OS << zeros(uint32_t(0));
       } else {
-        OS << binary_le(DD->RelativeVirtualAddress);
-        OS << binary_le(DD->Size);
+        OS << binary_le(DataDirectories[I]->RelativeVirtualAddress);
+        OS << binary_le(DataDirectories[I]->Size);
       }
     }
-    OS << zeros(uint32_t(0));
-    OS << zeros(uint32_t(0));
   }
 
   assert(OS.tell() == CP.SectionTableStart);

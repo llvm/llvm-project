@@ -1,5 +1,4 @@
 ; RUN: opt -passes='lto<O3>' -S %s | FileCheck %s
-; RUN: opt -std-link-opts -enable-new-pm=false -S %s | FileCheck %s
 
 target triple = "arm64e-apple-darwin"
 

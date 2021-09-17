@@ -166,5 +166,3 @@ const char *DynamicLoaderStatic::GetPluginDescriptionStatic() {
 lldb_private::ConstString DynamicLoaderStatic::GetPluginName() {
   return GetPluginNameStatic();
 }
-
-uint32_t DynamicLoaderStatic::GetPluginVersion() { return 1; }

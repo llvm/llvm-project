@@ -452,10 +452,10 @@ struct ConstModifier: public Modifier {
       switch (getRandom() % 7) {
       case 0:
         return PT->push_back(ConstantInt::get(
-            Ty, APInt::getAllOnesValue(Ty->getPrimitiveSizeInBits())));
+            Ty, APInt::getAllOnes(Ty->getPrimitiveSizeInBits())));
       case 1:
-        return PT->push_back(ConstantInt::get(
-            Ty, APInt::getNullValue(Ty->getPrimitiveSizeInBits())));
+        return PT->push_back(
+            ConstantInt::get(Ty, APInt::getZero(Ty->getPrimitiveSizeInBits())));
       case 2:
       case 3:
       case 4:

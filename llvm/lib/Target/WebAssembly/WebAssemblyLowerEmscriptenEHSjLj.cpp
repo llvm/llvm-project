@@ -831,6 +831,33 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
   Function *SetjmpF = M.getFunction("setjmp");
   Function *LongjmpF = M.getFunction("longjmp");
 
+  // In some platforms _setjmp and _longjmp are used instead. Change these to
+  // use setjmp/longjmp instead, because we later detect these functions by
+  // their names.
+  Function *SetjmpF2 = M.getFunction("_setjmp");
+  Function *LongjmpF2 = M.getFunction("_longjmp");
+  if (SetjmpF2) {
+    if (SetjmpF) {
+      if (SetjmpF->getFunctionType() != SetjmpF2->getFunctionType())
+        report_fatal_error("setjmp and _setjmp have different function types");
+    } else {
+      SetjmpF = Function::Create(SetjmpF2->getFunctionType(),
+                                 GlobalValue::ExternalLinkage, "setjmp", M);
+    }
+    SetjmpF2->replaceAllUsesWith(SetjmpF);
+  }
+  if (LongjmpF2) {
+    if (LongjmpF) {
+      if (LongjmpF->getFunctionType() != LongjmpF2->getFunctionType())
+        report_fatal_error(
+            "longjmp and _longjmp have different function types");
+    } else {
+      LongjmpF = Function::Create(LongjmpF2->getFunctionType(),
+                                  GlobalValue::ExternalLinkage, "setjmp", M);
+    }
+    LongjmpF2->replaceAllUsesWith(LongjmpF);
+  }
+
   auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
   assert(TPC && "Expected a TargetPassConfig");
   auto &TM = TPC->getTM<WebAssemblyTargetMachine>();
@@ -867,13 +894,19 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
   if ((EnableEmSjLj || EnableWasmSjLj) && SetjmpF) {
     // Precompute setjmp users
     for (User *U : SetjmpF->users()) {
-      if (auto *UI = dyn_cast<Instruction>(U)) {
-        auto *UserF = UI->getFunction();
+      if (auto *CB = dyn_cast<CallBase>(U)) {
+        auto *UserF = CB->getFunction();
         // If a function that calls setjmp does not contain any other calls that
         // can longjmp, we don't need to do any transformation on that function,
         // so can ignore it
         if (containsLongjmpableCalls(UserF))
           SetjmpUsers.insert(UserF);
+      } else {
+        std::string S;
+        raw_string_ostream SS(S);
+        SS << *U;
+        report_fatal_error(Twine("Indirect use of setjmp is not supported: ") +
+                           SS.str());
       }
     }
   }
@@ -1217,9 +1250,10 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
   Function *SetjmpF = M.getFunction("setjmp");
   for (User *U : SetjmpF->users()) {
     auto *CI = dyn_cast<CallInst>(U);
+    // FIXME 'invoke' to setjmp can happen when we use Wasm EH + Wasm SjLj, but
+    // we don't support two being used together yet.
     if (!CI)
-      report_fatal_error("Does not support indirect calls to setjmp");
-
+      report_fatal_error("Wasm EH + Wasm SjLj is not fully supported yet");
     BasicBlock *BB = CI->getParent();
     if (BB->getParent() != &F) // in other function
       continue;

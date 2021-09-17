@@ -177,9 +177,7 @@ static bool convertToRelativeLookupTables(
 
   bool Changed = false;
 
-  for (auto GVI = M.global_begin(), E = M.global_end(); GVI != E;) {
-    GlobalVariable &GV = *GVI++;
-
+  for (GlobalVariable &GV : llvm::make_early_inc_range(M.globals())) {
     if (!shouldConvertToRelLookupTable(M, GV))
       continue;
 

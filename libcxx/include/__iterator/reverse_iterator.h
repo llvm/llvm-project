@@ -75,7 +75,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
     explicit reverse_iterator(_Iter __x) : __t(__x), current(__x) {}
 
-    template <class _Up, class = _EnableIf<
+    template <class _Up, class = __enable_if_t<
         !is_same<_Up, _Iter>::value && is_convertible<_Up const&, _Iter>::value
     > >
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
@@ -83,7 +83,7 @@ public:
         : __t(__u.base()), current(__u.base())
     { }
 
-    template <class _Up, class = _EnableIf<
+    template <class _Up, class = __enable_if_t<
         !is_same<_Up, _Iter>::value &&
         is_convertible<_Up const&, _Iter>::value &&
         is_assignable<_Up const&, _Iter>::value
@@ -100,7 +100,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
     explicit reverse_iterator(_Iter __x) : current(__x) {}
 
-    template <class _Up, class = _EnableIf<
+    template <class _Up, class = __enable_if_t<
         !is_same<_Up, _Iter>::value && is_convertible<_Up const&, _Iter>::value
     > >
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
@@ -108,7 +108,7 @@ public:
         : current(__u.base())
     { }
 
-    template <class _Up, class = _EnableIf<
+    template <class _Up, class = __enable_if_t<
         !is_same<_Up, _Iter>::value &&
         is_convertible<_Up const&, _Iter>::value &&
         is_assignable<_Up const&, _Iter>::value

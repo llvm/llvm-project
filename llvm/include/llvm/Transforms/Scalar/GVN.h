@@ -126,6 +126,9 @@ public:
   /// Run the pass over the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+
   /// This removes the specified instruction from
   /// our various maps and marks it for deletion.
   void markInstructionForDeletion(Instruction *I) {

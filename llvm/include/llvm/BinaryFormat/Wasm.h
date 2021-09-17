@@ -36,12 +36,18 @@ struct WasmObjectHeader {
   uint32_t Version;
 };
 
+struct WasmDylinkExport {
+  StringRef Name;
+  uint32_t Flags;
+};
+
 struct WasmDylinkInfo {
   uint32_t MemorySize; // Memory size in bytes
   uint32_t MemoryAlignment;  // P2 alignment of memory
   uint32_t TableSize;  // Table size in elements
   uint32_t TableAlignment;  // P2 alignment of table
   std::vector<StringRef> Needed; // Shared library dependencies
+  std::vector<WasmDylinkExport> ExportInfo; // Shared library dependencies
 };
 
 struct WasmProducerInfo {
@@ -284,8 +290,10 @@ enum : unsigned {
 
 // Opcodes used in synthetic functions.
 enum : unsigned {
-  WASM_OPCODE_IF = 0x04,
-  WASM_OPCODE_ELSE = 0x05,
+  WASM_OPCODE_BLOCK = 0x02,
+  WASM_OPCODE_BR = 0x0c,
+  WASM_OPCODE_BR_TABLE = 0x0e,
+  WASM_OPCODE_RETURN = 0x0f,
   WASM_OPCODE_DROP = 0x1a,
   WASM_OPCODE_MISC_PREFIX = 0xfc,
   WASM_OPCODE_MEMORY_INIT = 0x08,
@@ -339,6 +347,13 @@ enum : unsigned {
   WASM_SYMBOL_TABLE = 0x8,
 };
 
+// Kind codes used in the custom "dylink" section
+enum : unsigned {
+  WASM_DYLINK_MEM_INFO = 0x1,
+  WASM_DYLINK_NEEDED = 0x2,
+  WASM_DYLINK_EXPORT_INFO = 0x3,
+};
+
 // Kind codes used in the custom "linking" section in the WASM_COMDAT_INFO
 enum : unsigned {
   WASM_COMDAT_DATA = 0x0,
@@ -379,6 +394,7 @@ const unsigned WASM_SYMBOL_UNDEFINED = 0x10;
 const unsigned WASM_SYMBOL_EXPORTED = 0x20;
 const unsigned WASM_SYMBOL_EXPLICIT_NAME = 0x40;
 const unsigned WASM_SYMBOL_NO_STRIP = 0x80;
+const unsigned WASM_SYMBOL_TLS = 0x100;
 
 #define WASM_RELOC(name, value) name = value,
 

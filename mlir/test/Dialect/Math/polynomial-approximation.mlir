@@ -5,20 +5,20 @@
 
 // CHECK-LABEL:   func @exp_scalar(
 // CHECK-SAME:                     %[[VAL_0:.*]]: f32) -> f32 {
-// CHECK:           %[[VAL_1:.*]] = constant 0.693147182 : f32
-// CHECK:           %[[VAL_2:.*]] = constant 1.44269502 : f32
-// CHECK:           %[[VAL_3:.*]] = constant 1.000000e+00 : f32
-// CHECK:           %[[VAL_4:.*]] = constant 0.499705136 : f32
-// CHECK:           %[[VAL_5:.*]] = constant 0.168738902 : f32
-// CHECK:           %[[VAL_6:.*]] = constant 0.0366896503 : f32
-// CHECK:           %[[VAL_7:.*]] = constant 1.314350e-02 : f32
-// CHECK:           %[[VAL_8:.*]] = constant 23 : i32
-// CHECK:           %[[VAL_9:.*]] = constant 0.000000e+00 : f32
-// CHECK:           %[[VAL_10:.*]] = constant 0x7F800000 : f32
-// CHECK:           %[[VAL_11:.*]] = constant 0xFF800000 : f32
-// CHECK:           %[[VAL_12:.*]] = constant 1.17549435E-38 : f32
-// CHECK:           %[[VAL_13:.*]] = constant 127 : i32
-// CHECK:           %[[VAL_14:.*]] = constant -127 : i32
+// CHECK-DAG:           %[[VAL_1:.*]] = constant 0.693147182 : f32
+// CHECK-DAG:           %[[VAL_2:.*]] = constant 1.44269502 : f32
+// CHECK-DAG:           %[[VAL_3:.*]] = constant 1.000000e+00 : f32
+// CHECK-DAG:           %[[VAL_4:.*]] = constant 0.499705136 : f32
+// CHECK-DAG:           %[[VAL_5:.*]] = constant 0.168738902 : f32
+// CHECK-DAG:           %[[VAL_6:.*]] = constant 0.0366896503 : f32
+// CHECK-DAG:           %[[VAL_7:.*]] = constant 1.314350e-02 : f32
+// CHECK-DAG:           %[[VAL_8:.*]] = constant 23 : i32
+// CHECK-DAG:           %[[VAL_9:.*]] = constant 0.000000e+00 : f32
+// CHECK-DAG:           %[[VAL_10:.*]] = constant 0x7F800000 : f32
+// CHECK-DAG:           %[[VAL_11:.*]] = constant 0xFF800000 : f32
+// CHECK-DAG:           %[[VAL_12:.*]] = constant 1.17549435E-38 : f32
+// CHECK-DAG:           %[[VAL_13:.*]] = constant 127 : i32
+// CHECK-DAG:           %[[VAL_14:.*]] = constant -127 : i32
 // CHECK:           %[[VAL_15:.*]] = mulf %[[VAL_0]], %[[VAL_2]] : f32
 // CHECK:           %[[VAL_16:.*]] = floorf %[[VAL_15]] : f32
 // CHECK:           %[[VAL_17:.*]] = mulf %[[VAL_16]], %[[VAL_1]] : f32
@@ -65,9 +65,9 @@ func @exp_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
 
 // CHECK-LABEL:   func @expm1_scalar(
 // CHECK-SAME:                       %[[X:.*]]: f32) -> f32 {
-// CHECK:           %[[CST_MINUSONE:.*]] = constant -1.000000e+00 : f32
-// CHECK:           %[[CST_LOG2E:.*]] = constant 1.44269502 : f32
-// CHECK:           %[[CST_ONE:.*]] = constant 1.000000e+00 : f32
+// CHECK-DAG:           %[[CST_MINUSONE:.*]] = constant -1.000000e+00 : f32
+// CHECK-DAG:           %[[CST_LOG2E:.*]] = constant 1.44269502 : f32
+// CHECK-DAG:           %[[CST_ONE:.*]] = constant 1.000000e+00 : f32
 // CHECK:           %[[BEGIN_EXP_X:.*]] = mulf %[[X]], %[[CST_LOG2E]] : f32
 // CHECK-NOT:       exp
 // CHECK-COUNT-2:   select

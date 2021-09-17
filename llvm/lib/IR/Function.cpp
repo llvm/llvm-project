@@ -158,7 +158,7 @@ bool Argument::hasPointeeInMemoryValueAttr() const {
 
 /// For a byval, sret, inalloca, or preallocated parameter, get the in-memory
 /// parameter type.
-static Type *getMemoryParamAllocType(AttributeSet ParamAttrs, Type *ArgTy) {
+static Type *getMemoryParamAllocType(AttributeSet ParamAttrs) {
   // FIXME: All the type carrying attributes are mutually exclusive, so there
   // should be a single query to get the stored type that handles any of them.
   if (Type *ByValTy = ParamAttrs.getByValType())
@@ -178,7 +178,7 @@ static Type *getMemoryParamAllocType(AttributeSet ParamAttrs, Type *ArgTy) {
 uint64_t Argument::getPassPointeeByValueCopySize(const DataLayout &DL) const {
   AttributeSet ParamAttrs =
       getParent()->getAttributes().getParamAttrs(getArgNo());
-  if (Type *MemTy = getMemoryParamAllocType(ParamAttrs, getType()))
+  if (Type *MemTy = getMemoryParamAllocType(ParamAttrs))
     return DL.getTypeAllocSize(MemTy);
   return 0;
 }
@@ -186,7 +186,7 @@ uint64_t Argument::getPassPointeeByValueCopySize(const DataLayout &DL) const {
 Type *Argument::getPointeeInMemoryValueType() const {
   AttributeSet ParamAttrs =
       getParent()->getAttributes().getParamAttrs(getArgNo());
-  return getMemoryParamAllocType(ParamAttrs, getType());
+  return getMemoryParamAllocType(ParamAttrs);
 }
 
 unsigned Argument::getParamAlignment() const {
@@ -551,6 +551,14 @@ void Function::addFnAttrs(const AttrBuilder &Attrs) {
 
 void Function::addRetAttr(Attribute::AttrKind Kind) {
   AttributeSets = AttributeSets.addRetAttribute(getContext(), Kind);
+}
+
+void Function::addRetAttr(Attribute Attr) {
+  AttributeSets = AttributeSets.addRetAttribute(getContext(), Attr);
+}
+
+void Function::addRetAttrs(const AttrBuilder &Attrs) {
+  AttributeSets = AttributeSets.addRetAttributes(getContext(), Attrs);
 }
 
 void Function::addParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
@@ -1438,11 +1446,6 @@ static bool matchIntrinsicType(
       if (!PT->isOpaque())
         return matchIntrinsicType(PT->getElementType(), Infos, ArgTys,
                                   DeferredChecks, IsDeferredCheck);
-      // If typed pointers are supported, do not allow using opaque pointer in
-      // place of fixed pointer type. This would make the intrinsic signature
-      // non-unique.
-      if (Ty->getContext().supportsTypedPointers())
-        return true;
       // Consume IIT descriptors relating to the pointer element type.
       while (Infos.front().Kind == IITDescriptor::Pointer)
         Infos = Infos.slice(1);
@@ -1560,11 +1563,8 @@ static bool matchIntrinsicType(
 
       if (!ThisArgType || !ReferenceType)
         return true;
-      if (!ThisArgType->isOpaque())
-        return ThisArgType->getElementType() != ReferenceType->getElementType();
-      // If typed pointers are supported, do not allow opaque pointer to ensure
-      // uniqueness.
-      return Ty->getContext().supportsTypedPointers();
+      return !ThisArgType->isOpaqueOrPointeeTypeMatches(
+          ReferenceType->getElementType());
     }
     case IITDescriptor::VecOfAnyPtrsToElt: {
       unsigned RefArgNumber = D.getRefArgNumber();
@@ -1737,8 +1737,8 @@ Optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
 /// and llvm.compiler.used variables.
 bool Function::hasAddressTaken(const User **PutOffender,
                                bool IgnoreCallbackUses,
-                               bool IgnoreAssumeLikeCalls,
-                               bool IgnoreLLVMUsed) const {
+                               bool IgnoreAssumeLikeCalls, bool IgnoreLLVMUsed,
+                               bool IgnoreARCAttachedCall) const {
   for (const Use &U : uses()) {
     const User *FU = U.getUser();
     if (isa<BlockAddress>(FU))
@@ -1782,6 +1782,11 @@ bool Function::hasAddressTaken(const User **PutOffender,
       return true;
     }
     if (!Call->isCallee(&U)) {
+      if (IgnoreARCAttachedCall &&
+          Call->isOperandBundleOfType(LLVMContext::OB_clang_arc_attachedcall,
+                                      U.getOperandNo()))
+        continue;
+
       if (PutOffender)
         *PutOffender = FU;
       return true;

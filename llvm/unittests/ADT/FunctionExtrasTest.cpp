@@ -291,4 +291,23 @@ TEST(UniqueFunctionTest, IncompleteTypes) {
   unique_function<Templated<Incomplete> *()> IncompleteResultPointer;
 }
 
+// Incomplete function returning an incomplete type
+Incomplete incompleteFunction();
+const Incomplete incompleteFunctionConst();
+
+// Check that we can assign a callable to a unique_function when the
+// callable return value is incomplete.
+TEST(UniqueFunctionTest, IncompleteCallableType) {
+  unique_function<Incomplete()> IncompleteReturnInCallable{incompleteFunction};
+  unique_function<const Incomplete()> IncompleteReturnInCallableConst{
+      incompleteFunctionConst};
+  unique_function<const Incomplete()> IncompleteReturnInCallableConstConversion{
+      incompleteFunction};
+}
+
+// Define the incomplete function
+class Incomplete {};
+Incomplete incompleteFunction() { return {}; }
+const Incomplete incompleteFunctionConst() { return {}; }
+
 } // anonymous namespace

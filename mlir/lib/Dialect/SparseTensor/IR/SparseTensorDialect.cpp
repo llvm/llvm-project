@@ -230,6 +230,12 @@ static LogicalResult verify(ConvertOp op) {
   return op.emitError("unexpected type in convert");
 }
 
+OpFoldResult ConvertOp::fold(ArrayRef<Attribute> operands) {
+  if (getType() == source().getType())
+    return source();
+  return {};
+}
+
 static LogicalResult verify(ToPointersOp op) {
   if (auto e = getSparseTensorEncoding(op.tensor().getType())) {
     if (failed(isInBounds(op.dim(), op.tensor())))

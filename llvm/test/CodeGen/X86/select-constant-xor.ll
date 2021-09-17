@@ -124,7 +124,7 @@ define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    cmovlel %edx, %eax
+; CHECK-NEXT:    cmovsl %edx, %eax
 ; CHECK-NEXT:    retq
   %sh = ashr i32 %input, 31
   %c = icmp ne i32 %sh, -1

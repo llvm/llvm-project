@@ -24,9 +24,9 @@
 // CHECK-HIR-SAME:                 %[[VAL_0:.*]]: tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
 // CHECK-HIR-SAME:                 %[[VAL_1:.*]]: tensor<64xf64>,
 // CHECK-HIR-SAME:                 %[[VAL_2:.*]]: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
-// CHECK-HIR:           %[[VAL_3:.*]] = constant 32 : index
-// CHECK-HIR:           %[[VAL_4:.*]] = constant 0 : index
-// CHECK-HIR:           %[[VAL_5:.*]] = constant 1 : index
+// CHECK-HIR-DAG:       %[[VAL_3:.*]] = constant 32 : index
+// CHECK-HIR-DAG:       %[[VAL_4:.*]] = constant 0 : index
+// CHECK-HIR-DAG:       %[[VAL_5:.*]] = constant 1 : index
 // CHECK-HIR:           %[[VAL_6:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_5]] : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK-HIR:           %[[VAL_7:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_5]] : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK-HIR:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xf64>
@@ -55,9 +55,9 @@
 // CHECK-MIR-SAME:                 %[[VAL_0:.*]]: !llvm.ptr<i8>,
 // CHECK-MIR-SAME:                 %[[VAL_1:.*]]: tensor<64xf64>,
 // CHECK-MIR-SAME:                 %[[VAL_2:.*]]: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
-// CHECK-MIR:           %[[VAL_3:.*]] = constant 32 : index
-// CHECK-MIR:           %[[VAL_4:.*]] = constant 0 : index
-// CHECK-MIR:           %[[VAL_5:.*]] = constant 1 : index
+// CHECK-MIR-DAG:       %[[VAL_3:.*]] = constant 32 : index
+// CHECK-MIR-DAG:       %[[VAL_4:.*]] = constant 0 : index
+// CHECK-MIR-DAG:       %[[VAL_5:.*]] = constant 1 : index
 // CHECK-MIR:           %[[VAL_6:.*]] = call @sparsePointers(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 // CHECK-MIR:           %[[VAL_7:.*]] = call @sparseIndices(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 // CHECK-MIR:           %[[VAL_8:.*]] = call @sparseValuesF64(%[[VAL_0]]) : (!llvm.ptr<i8>) -> memref<?xf64>
@@ -86,9 +86,9 @@
 // CHECK-LIR-SAME:                 %[[VAL_0:.*]]: !llvm.ptr<i8>,
 // CHECK-LIR-SAME:                 %[[VAL_1:.*]]: memref<64xf64>,
 // CHECK-LIR-SAME:                 %[[VAL_2:.*]]: memref<32xf64> {linalg.inplaceable = true}) -> memref<32xf64> {
-// CHECK-LIR:           %[[VAL_3:.*]] = constant 32 : index
-// CHECK-LIR:           %[[VAL_4:.*]] = constant 0 : index
-// CHECK-LIR:           %[[VAL_5:.*]] = constant 1 : index
+// CHECK-LIR-DAG:       %[[VAL_3:.*]] = constant 32 : index
+// CHECK-LIR-DAG:       %[[VAL_4:.*]] = constant 0 : index
+// CHECK-LIR-DAG:       %[[VAL_5:.*]] = constant 1 : index
 // CHECK-LIR:           %[[VAL_6:.*]] = call @sparsePointers(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 // CHECK-LIR:           %[[VAL_7:.*]] = call @sparseIndices(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 // CHECK-LIR:           %[[VAL_8:.*]] = call @sparseValuesF64(%[[VAL_0]]) : (!llvm.ptr<i8>) -> memref<?xf64>

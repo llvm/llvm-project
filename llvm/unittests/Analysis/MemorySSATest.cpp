@@ -1726,3 +1726,49 @@ TEST_F(MemorySSATest, TestLoopInvariantEntryBlockPointer) {
     }
   }
 }
+
+TEST_F(MemorySSATest, TestInvariantGroup) {
+  SMDiagnostic E;
+  auto M = parseAssemblyString("declare void @f(i8*)\n"
+                               "define i8 @test(i8* %p) {\n"
+                               "entry:\n"
+                               "  store i8 42, i8* %p, !invariant.group !0\n"
+                               "  call void @f(i8* %p)\n"
+                               "  %v = load i8, i8* %p, !invariant.group !0\n"
+                               "  ret i8 %v\n"
+                               "}\n"
+                               "!0 = !{}",
+                               E, C);
+  ASSERT_TRUE(M);
+  F = M->getFunction("test");
+  ASSERT_TRUE(F);
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+  MemorySSAWalker *Walker = Analyses->Walker;
+
+  auto &BB = F->getEntryBlock();
+  auto &SI = cast<StoreInst>(*BB.begin());
+  auto &Call = cast<CallBase>(*std::next(BB.begin()));
+  auto &LI = cast<LoadInst>(*std::next(std::next(BB.begin())));
+
+  {
+    MemoryAccess *SAccess = MSSA.getMemoryAccess(&SI);
+    MemoryAccess *LAccess = MSSA.getMemoryAccess(&LI);
+    MemoryAccess *SClobber = Walker->getClobberingMemoryAccess(SAccess);
+    EXPECT_TRUE(MSSA.isLiveOnEntryDef(SClobber));
+    MemoryAccess *LClobber = Walker->getClobberingMemoryAccess(LAccess);
+    EXPECT_EQ(SAccess, LClobber);
+  }
+
+  // remove store and verify that the memory accesses still make sense
+  MemorySSAUpdater Updater(&MSSA);
+  Updater.removeMemoryAccess(&SI);
+  SI.eraseFromParent();
+
+  {
+    MemoryAccess *CallAccess = MSSA.getMemoryAccess(&Call);
+    MemoryAccess *LAccess = MSSA.getMemoryAccess(&LI);
+    MemoryAccess *LClobber = Walker->getClobberingMemoryAccess(LAccess);
+    EXPECT_EQ(CallAccess, LClobber);
+  }
+}

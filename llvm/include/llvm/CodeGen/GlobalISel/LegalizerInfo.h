@@ -301,6 +301,10 @@ LegalityPredicate scalarOrEltNarrowerThan(unsigned TypeIdx, unsigned Size);
 /// type that's wider than the given size.
 LegalityPredicate scalarOrEltWiderThan(unsigned TypeIdx, unsigned Size);
 
+/// True iff the specified type index is a scalar whose size is not a multiple
+/// of Size.
+LegalityPredicate sizeNotMultipleOf(unsigned TypeIdx, unsigned Size);
+
 /// True iff the specified type index is a scalar whose size is not a power of
 /// 2.
 LegalityPredicate sizeNotPow2(unsigned TypeIdx);
@@ -355,6 +359,11 @@ LegalizeMutation changeElementSizeTo(unsigned TypeIdx, unsigned FromTypeIdx);
 /// Widen the scalar type or vector element type for the given type index to the
 /// next power of 2.
 LegalizeMutation widenScalarOrEltToNextPow2(unsigned TypeIdx, unsigned Min = 0);
+
+/// Widen the scalar type or vector element type for the given type index to
+/// next multiple of \p Size.
+LegalizeMutation widenScalarOrEltToNextMultipleOf(unsigned TypeIdx,
+                                                  unsigned Size);
 
 /// Add more elements to the type for the given type index to the next power of
 /// 2.
@@ -834,6 +843,16 @@ public:
     return actionIf(
         LegalizeAction::WidenScalar, sizeNotPow2(typeIdx(TypeIdx)),
         LegalizeMutations::widenScalarOrEltToNextPow2(TypeIdx, MinSize));
+  }
+
+  /// Widen the scalar to the next multiple of Size. No effect if the
+  /// type is not a scalar or is a multiple of Size.
+  LegalizeRuleSet &widenScalarToNextMultipleOf(unsigned TypeIdx,
+                                               unsigned Size) {
+    using namespace LegalityPredicates;
+    return actionIf(
+        LegalizeAction::WidenScalar, sizeNotMultipleOf(typeIdx(TypeIdx), Size),
+        LegalizeMutations::widenScalarOrEltToNextMultipleOf(TypeIdx, Size));
   }
 
   /// Widen the scalar or vector element type to the next power of two that is

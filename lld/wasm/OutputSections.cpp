@@ -101,8 +101,8 @@ void CodeSection::finalizeContents() {
 }
 
 void CodeSection::writeTo(uint8_t *buf) {
-  log("writing " + toString(*this));
-  log(" size=" + Twine(getSize()));
+  log("writing " + toString(*this) + " offset=" + Twine(offset) +
+      " size=" + Twine(getSize()));
   log(" headersize=" + Twine(header.size()));
   log(" codeheadersize=" + Twine(codeSectionHeader.size()));
   buf += offset;
@@ -187,8 +187,8 @@ void DataSection::finalizeContents() {
 }
 
 void DataSection::writeTo(uint8_t *buf) {
-  log("writing " + toString(*this) + " size=" + Twine(getSize()) +
-      " body=" + Twine(bodySize));
+  log("writing " + toString(*this) + " offset=" + Twine(offset) +
+      " size=" + Twine(getSize()) + " body=" + Twine(bodySize));
   buf += offset;
 
   // Write section header
@@ -279,8 +279,8 @@ void CustomSection::finalizeContents() {
 }
 
 void CustomSection::writeTo(uint8_t *buf) {
-  log("writing " + toString(*this) + " size=" + Twine(getSize()) +
-      " chunks=" + Twine(inputSections.size()));
+  log("writing " + toString(*this) + " offset=" + Twine(offset) +
+      " size=" + Twine(getSize()) + " chunks=" + Twine(inputSections.size()));
 
   assert(offset);
   buf += offset;

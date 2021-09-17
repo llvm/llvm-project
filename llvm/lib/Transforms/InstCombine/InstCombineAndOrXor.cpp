@@ -3456,13 +3456,13 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       // canonicalize to a 'not' before the shift to help SCEV and codegen:
       // (X << C) ^ RHSC --> ~X << C
       if (match(Op0, m_OneUse(m_Shl(m_Value(X), m_APInt(C)))) &&
-          *RHSC == APInt::getAllOnesValue(Ty->getScalarSizeInBits()).shl(*C)) {
+          *RHSC == APInt::getAllOnes(Ty->getScalarSizeInBits()).shl(*C)) {
         Value *NotX = Builder.CreateNot(X);
         return BinaryOperator::CreateShl(NotX, ConstantInt::get(Ty, *C));
       }
       // (X >>u C) ^ RHSC --> ~X >>u C
       if (match(Op0, m_OneUse(m_LShr(m_Value(X), m_APInt(C)))) &&
-          *RHSC == APInt::getAllOnesValue(Ty->getScalarSizeInBits()).lshr(*C)) {
+          *RHSC == APInt::getAllOnes(Ty->getScalarSizeInBits()).lshr(*C)) {
         Value *NotX = Builder.CreateNot(X);
         return BinaryOperator::CreateLShr(NotX, ConstantInt::get(Ty, *C));
       }

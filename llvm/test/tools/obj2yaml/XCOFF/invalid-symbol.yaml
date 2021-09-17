@@ -1,0 +1,30 @@
+## Check that obj2yaml reports a suitable error when it encounters
+## invalid content in Symbol.
+
+## Error1: failed to get the section name for a symbol.
+# RUN: yaml2obj %s --docnum=1 -o %t1
+# RUN: not obj2yaml %t1 2>&1 | FileCheck %s --check-prefix=ERROR1
+
+# ERROR1: Invalid section index
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x01DF
+Sections:
+  - Name: .text
+Symbols:
+  - SectionIndex: 2
+
+## Error2: failed to get the symbol name.
+# RUN: yaml2obj %s --docnum=2 -o %t2
+# RUN: not obj2yaml %t2 2>&1 | FileCheck %s --check-prefix=ERROR2
+
+# ERROR2: Invalid data was encountered while parsing the file
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x01DF
+Symbols:
+  - Name: nameInStrTbl
+StringTable:
+  Length: 0

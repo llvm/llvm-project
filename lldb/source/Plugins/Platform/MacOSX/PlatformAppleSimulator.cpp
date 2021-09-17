@@ -177,11 +177,10 @@ Status PlatformAppleSimulator::DisconnectRemote() {
 #endif
 }
 
-lldb::ProcessSP PlatformAppleSimulator::DebugProcess(
-    ProcessLaunchInfo &launch_info, Debugger &debugger,
-    Target *target, // Can be NULL, if NULL create a new target, else use
-                    // existing one
-    Status &error) {
+lldb::ProcessSP
+PlatformAppleSimulator::DebugProcess(ProcessLaunchInfo &launch_info,
+                                     Debugger &debugger, Target &target,
+                                     Status &error) {
 #if defined(__APPLE__)
   ProcessSP process_sp;
   // Make sure we stop at the entry point
@@ -195,7 +194,7 @@ lldb::ProcessSP PlatformAppleSimulator::DebugProcess(
   if (error.Success()) {
     if (launch_info.GetProcessID() != LLDB_INVALID_PROCESS_ID) {
       ProcessAttachInfo attach_info(launch_info);
-      process_sp = Attach(attach_info, debugger, target, error);
+      process_sp = Attach(attach_info, debugger, &target, error);
       if (process_sp) {
         launch_info.SetHijackListener(attach_info.GetHijackListener());
 

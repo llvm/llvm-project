@@ -2735,8 +2735,11 @@ class N3VDIntnp<bits<5> op27_23, bits<2> op21_20, bits<4> op11_8, bit op6,
                 string Dt, ValueType ResTy, ValueType OpTy,
                 SDPatternOperator IntOp, bit Commutable>
   : N3Vnp<op27_23, op21_20, op11_8, op6, op4,
-          (outs DPR:$Vd), (ins DPR:$Vn, DPR:$Vm), N3RegFrm, itin, OpcodeStr, Dt,
-          [(set DPR:$Vd, (ResTy (IntOp (OpTy DPR:$Vn), (OpTy DPR:$Vm))))]>;
+          (outs DPR:$Vd), (ins DPR:$Vn, DPR:$Vm), f, itin, OpcodeStr, Dt,
+          [(set DPR:$Vd, (ResTy (IntOp (OpTy DPR:$Vn), (OpTy DPR:$Vm))))]> {
+  let isCommutable = Commutable;
+}
+
 
 class N3VDIntSL<bits<2> op21_20, bits<4> op11_8, InstrItinClass itin,
                 string OpcodeStr, string Dt, ValueType Ty, SDPatternOperator IntOp>
@@ -2789,19 +2792,22 @@ class N3VQIntnp<bits<5> op27_23, bits<2> op21_20, bits<4> op11_8, bit op6,
                 SDPatternOperator IntOp, bit Commutable>
   : N3Vnp<op27_23, op21_20, op11_8, op6, op4,
           (outs QPR:$Vd), (ins QPR:$Vn, QPR:$Vm), f, itin, OpcodeStr, Dt,
-          [(set QPR:$Vd, (ResTy (IntOp (OpTy QPR:$Vn), (OpTy QPR:$Vm))))]>;
+          [(set QPR:$Vd, (ResTy (IntOp (OpTy QPR:$Vn), (OpTy QPR:$Vm))))]> {
+  let isCommutable = Commutable;
+}
 
 // Same as N3VQIntnp but with Vd as a src register.
 class N3VQInt3np<bits<5> op27_23, bits<2> op21_20, bits<4> op11_8, bit op6,
                 bit op4, Format f, InstrItinClass itin, string OpcodeStr,
                 string Dt, ValueType ResTy, ValueType OpTy,
-                SDPatternOperator IntOp, bit Commutable>
+                SDPatternOperator IntOp>
   : N3Vnp<op27_23, op21_20, op11_8, op6, op4,
           (outs QPR:$Vd), (ins QPR:$src, QPR:$Vn, QPR:$Vm),
           f, itin, OpcodeStr, Dt,
           [(set QPR:$Vd, (ResTy (IntOp (OpTy QPR:$src), (OpTy QPR:$Vn),
                                        (OpTy QPR:$Vm))))]> {
   let Constraints = "$src = $Vd";
+  let isCommutable = 0;
 }
 
 class N3VQIntSL<bits<2> op21_20, bits<4> op11_8, InstrItinClass itin,
@@ -3118,7 +3124,10 @@ class N3VLIntnp<bits<5> op27_23, bits<2> op21_20, bits<4> op11_8, bit op6,
                 SDPatternOperator IntOp, bit Commutable>
   : N3Vnp<op27_23, op21_20, op11_8, op6, op4,
           (outs QPR:$Vd), (ins DPR:$Vn, DPR:$Vm), N3RegFrm, itin, OpcodeStr, Dt,
-          [(set QPR:$Vd, (ResTy (IntOp (OpTy DPR:$Vn), (OpTy DPR:$Vm))))]>;
+          [(set QPR:$Vd, (ResTy (IntOp (OpTy DPR:$Vn), (OpTy DPR:$Vm))))]> {
+  let isCommutable = Commutable;
+}
+
 
 class N3VLIntSL<bit op24, bits<2> op21_20, bits<4> op11_8, InstrItinClass itin,
                 string OpcodeStr, string Dt,
@@ -4041,7 +4050,7 @@ multiclass N2VShL_QHSD<bit op24, bit op23, bits<4> op11_8, bit op4,
 }
 multiclass N2VShR_QHSD<bit op24, bit op23, bits<4> op11_8, bit op4,
                        InstrItinClass itin, string OpcodeStr, string Dt,
-                       string baseOpc, SDNode OpNode> {
+                       SDNode OpNode> {
   // 64-bit vector types.
   def v8i8  : N2VDSh<op24, op23, op11_8, 0, op4, N2RegVShRFrm, itin, shr_imm8,
                      OpcodeStr, !strconcat(Dt, "8"), v8i8, OpNode> {
@@ -4987,7 +4996,7 @@ class BaseN3VCP8ComplexTiedLane64<bit op4, bit s, bit q, InstrItinClass itin,
 }
 
 multiclass N3VCP8ComplexTied<bit op21, bit op4,
-                       string OpcodeStr, SDPatternOperator Op> {
+                       string OpcodeStr> {
   let Predicates = [HasNEON,HasV8_3a,HasFullFP16] in {
   def v4f16 : BaseN3VCP8ComplexTied<op21, op4, 0, 0, IIC_VMACD, (outs DPR:$Vd),
               (ins DPR:$src1, DPR:$Vn, DPR:$Vm, complexrotateop:$rot),
@@ -5007,7 +5016,7 @@ multiclass N3VCP8ComplexTied<bit op21, bit op4,
 }
 
 multiclass N3VCP8ComplexOdd<bit op23, bit op21, bit op4,
-                       string OpcodeStr, SDPatternOperator Op> {
+                       string OpcodeStr> {
   let Predicates = [HasNEON,HasV8_3a,HasFullFP16] in {
   def v4f16 : BaseN3VCP8ComplexOdd<op23, op21, op4, 0, 0, IIC_VMACD,
               (outs DPR:$Vd),
@@ -5032,8 +5041,7 @@ multiclass N3VCP8ComplexOdd<bit op23, bit op21, bit op4,
 
 // These instructions index by pairs of lanes, so the VectorIndexes are twice
 // as wide as the data types.
-multiclass N3VCP8ComplexTiedLane<bit op4, string OpcodeStr,
-                                 SDPatternOperator Op> {
+multiclass N3VCP8ComplexTiedLane<bit op4, string OpcodeStr> {
   let Predicates = [HasNEON,HasV8_3a,HasFullFP16] in {
   def v4f16_indexed : BaseN3VCP8ComplexTiedLane32<op4, 0, 0, IIC_VMACD,
                       (outs DPR:$Vd),
@@ -5060,9 +5068,9 @@ multiclass N3VCP8ComplexTiedLane<bit op4, string OpcodeStr,
   }
 }
 
-defm VCMLA : N3VCP8ComplexTied<1, 0, "vcmla", null_frag>;
-defm VCADD : N3VCP8ComplexOdd<1, 0, 0, "vcadd", null_frag>;
-defm VCMLA : N3VCP8ComplexTiedLane<0, "vcmla", null_frag>;
+defm VCMLA : N3VCP8ComplexTied<1, 0, "vcmla">;
+defm VCADD : N3VCP8ComplexOdd<1, 0, 0, "vcadd">;
+defm VCMLA : N3VCP8ComplexTiedLane<0, "vcmla">;
 
 let Predicates = [HasNEON,HasV8_3a,HasFullFP16] in {
   def : Pat<(v4f16 (int_arm_neon_vcadd_rot90 (v4f16 DPR:$Rn), (v4f16 DPR:$Rm))),
@@ -5991,9 +5999,9 @@ def : Pat<(v2i64 (ARMvshlu (v2i64 QPR:$Dn), (v2i64 QPR:$Dm))),
 defm VSHLi    : N2VShL_QHSD<0, 1, 0b0101, 1, IIC_VSHLiD, "vshl", "i", ARMvshlImm>;
 
 //   VSHR     : Vector Shift Right (Immediate)
-defm VSHRs    : N2VShR_QHSD<0, 1, 0b0000, 1, IIC_VSHLiD, "vshr", "s", "VSHRs",
+defm VSHRs    : N2VShR_QHSD<0, 1, 0b0000, 1, IIC_VSHLiD, "vshr", "s",
                             ARMvshrsImm>;
-defm VSHRu    : N2VShR_QHSD<1, 1, 0b0000, 1, IIC_VSHLiD, "vshr", "u", "VSHRu",
+defm VSHRu    : N2VShR_QHSD<1, 1, 0b0000, 1, IIC_VSHLiD, "vshr", "u",
                             ARMvshruImm>;
 
 //   VSHLL    : Vector Shift Left Long
@@ -6061,9 +6069,9 @@ defm VRSHLu   : N3VInt_QHSDSh<1, 0, 0b0101, 0, N3RegVShFrm,
                             IIC_VSHLi4D, IIC_VSHLi4D, IIC_VSHLi4Q, IIC_VSHLi4Q,
                             "vrshl", "u", int_arm_neon_vrshiftu>;
 //   VRSHR    : Vector Rounding Shift Right
-defm VRSHRs   : N2VShR_QHSD<0,1,0b0010,1, IIC_VSHLi4D, "vrshr", "s", "VRSHRs",
+defm VRSHRs   : N2VShR_QHSD<0,1,0b0010,1, IIC_VSHLi4D, "vrshr", "s",
                             NEONvrshrsImm>;
-defm VRSHRu   : N2VShR_QHSD<1,1,0b0010,1, IIC_VSHLi4D, "vrshr", "u", "VRSHRu",
+defm VRSHRu   : N2VShR_QHSD<1,1,0b0010,1, IIC_VSHLi4D, "vrshr", "u",
                             NEONvrshruImm>;
 
 //   VRSHRN   : Vector Rounding Shift Right and Narrow
@@ -7074,7 +7082,7 @@ class VEXTd<string OpcodeStr, string Dt, ValueType Ty, Operand immTy>
 
 class VEXTq<string OpcodeStr, string Dt, ValueType Ty, Operand immTy>
   : N3V<0,1,0b11,{?,?,?,?},1,0, (outs QPR:$Vd),
-        (ins QPR:$Vn, QPR:$Vm, imm0_15:$index), NVExtFrm,
+        (ins QPR:$Vn, QPR:$Vm, immTy:$index), NVExtFrm,
         IIC_VEXTQ, OpcodeStr, Dt, "$Vd, $Vn, $Vm, $index", "",
         [(set QPR:$Vd, (Ty (NEONvext (Ty QPR:$Vn),
                                      (Ty QPR:$Vm), imm:$index)))]> {
@@ -7337,7 +7345,7 @@ let PostEncoderMethod = "NEONThumb2DataIPostEncoder",
                  !strconcat("sha", op), "32", v4i32, v4i32, Int>;
   class N3SHA3Op<string op, bits<5> op27_23, bits<2> op21_20, SDPatternOperator Int>
     : N3VQInt3np<op27_23, op21_20, 0b1100, 1, 0, N3RegFrm, NoItinerary,
-                !strconcat("sha", op), "32", v4i32, v4i32, Int, 0>;
+                !strconcat("sha", op), "32", v4i32, v4i32, Int>;
 }
 
 let Predicates = [HasV8, HasAES] in {

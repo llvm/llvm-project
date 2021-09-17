@@ -24,7 +24,7 @@
 # To update the image, rebuild it and push it to ldionne/libcxx-builder (which
 # will obviously only work if you have permission to do so).
 #
-#   $ docker build -t ldionne/libcxx-builder .
+#   $ docker build -t ldionne/libcxx-builder libcxx/utils/ci
 #   $ docker push ldionne/libcxx-builder
 #
 
@@ -32,6 +32,12 @@ FROM ubuntu:bionic
 
 # Make sure apt-get doesn't try to prompt for stuff like our time zone, etc.
 ENV DEBIAN_FRONTEND=noninteractive
+
+# This dummy command is meant to be edited from time to time, which causes the
+# CI builders to rebuild their copy of the Docker image. This is not a great
+# solution, however without that, the CI builders will keep the same cached
+# Docker image forever.
+RUN echo 1
 
 RUN apt-get update && apt-get install -y bash curl
 

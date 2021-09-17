@@ -556,9 +556,10 @@ private:
           unsigned Base = Loc.SpillLocation.SpillBase;
           auto *TRI = MF.getSubtarget().getRegisterInfo();
           if (MI.isNonListDebugValue()) {
-            DIExpr =
-                TRI->prependOffsetExpression(DIExpr, DIExpression::ApplyOffset,
-                                             Loc.SpillLocation.SpillOffset);
+            auto Deref = Indirect ? DIExpression::DerefAfter : 0;
+            DIExpr = TRI->prependOffsetExpression(
+                DIExpr, DIExpression::ApplyOffset | Deref,
+                Loc.SpillLocation.SpillOffset);
             Indirect = true;
           } else {
             SmallVector<uint64_t, 4> Ops;

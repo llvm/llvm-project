@@ -14,8 +14,12 @@ define void @eggs(i1 %arg, i1 %arg16, %0* %arg17, %0* %arg18, %0* %arg19) {
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb21:
 ; CHECK-NEXT:    [[I:%.*]] = icmp eq %0* [[ARG17:%.*]], null
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[I]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
 ; CHECK-NEXT:    call void @hoge()
-; CHECK-NEXT:    [[I27:%.*]] = getelementptr inbounds [[TMP0:%.*]], %0* [[ARG19:%.*]], i64 0, i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[ARG16:%.*]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
+; CHECK-NEXT:    [[I27:%.*]] = getelementptr inbounds [[TMP0]], %0* [[ARG19:%.*]], i64 0, i32 0
 ; CHECK-NEXT:    [[I28:%.*]] = load %1*, %1** [[I27]], align 8
 ; CHECK-NEXT:    call void @pluto.1(%1* [[I28]])
 ; CHECK-NEXT:    call void @pluto()

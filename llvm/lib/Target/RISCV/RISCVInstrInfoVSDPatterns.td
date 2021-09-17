@@ -103,11 +103,9 @@ class VPatBinarySDNode_VV<SDNode vop,
                           string instruction_name,
                           ValueType result_type,
                           ValueType op_type,
-                          ValueType mask_type,
                           int sew,
                           LMULInfo vlmul,
                           OutPatFrag avl,
-                          VReg RetClass,
                           VReg op_reg_class> :
     Pat<(result_type (vop
                      (op_type op_reg_class:$rs1),
@@ -122,11 +120,9 @@ class VPatBinarySDNode_XI<SDNode vop,
                           string suffix,
                           ValueType result_type,
                           ValueType vop_type,
-                          ValueType mask_type,
                           int sew,
                           LMULInfo vlmul,
                           OutPatFrag avl,
-                          VReg RetClass,
                           VReg vop_reg_class,
                           ComplexPattern SplatPatKind,
                           DAGOperand xop_kind> :
@@ -141,11 +137,11 @@ class VPatBinarySDNode_XI<SDNode vop,
 multiclass VPatBinarySDNode_VV_VX<SDNode vop, string instruction_name> {
   foreach vti = AllIntegerVectors in {
     def : VPatBinarySDNode_VV<vop, instruction_name,
-                              vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                              vti.LMul, vti.AVL, vti.RegClass, vti.RegClass>;
+                              vti.Vector, vti.Vector, vti.Log2SEW,
+                              vti.LMul, vti.AVL, vti.RegClass>;
     def : VPatBinarySDNode_XI<vop, instruction_name, "VX",
-                              vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                              vti.LMul, vti.AVL, vti.RegClass, vti.RegClass,
+                              vti.Vector, vti.Vector, vti.Log2SEW,
+                              vti.LMul, vti.AVL, vti.RegClass,
                               SplatPat, GPR>;
   }
 }
@@ -155,8 +151,8 @@ multiclass VPatBinarySDNode_VV_VX_VI<SDNode vop, string instruction_name,
     : VPatBinarySDNode_VV_VX<vop, instruction_name> {
   foreach vti = AllIntegerVectors in {
     def : VPatBinarySDNode_XI<vop, instruction_name, "VI",
-                              vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                              vti.LMul, vti.AVL, vti.RegClass, vti.RegClass,
+                              vti.Vector, vti.Vector, vti.Log2SEW,
+                              vti.LMul, vti.AVL, vti.RegClass,
                               !cast<ComplexPattern>(SplatPat#_#ImmType),
                               ImmType>;
   }
@@ -167,11 +163,9 @@ class VPatBinarySDNode_VF<SDNode vop,
                           ValueType result_type,
                           ValueType vop_type,
                           ValueType xop_type,
-                          ValueType mask_type,
                           int sew,
                           LMULInfo vlmul,
                           OutPatFrag avl,
-                          VReg RetClass,
                           VReg vop_reg_class,
                           DAGOperand xop_kind> :
     Pat<(result_type (vop (vop_type vop_reg_class:$rs1),
@@ -184,11 +178,11 @@ class VPatBinarySDNode_VF<SDNode vop,
 multiclass VPatBinaryFPSDNode_VV_VF<SDNode vop, string instruction_name> {
   foreach vti = AllFloatVectors in {
     def : VPatBinarySDNode_VV<vop, instruction_name,
-                              vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                              vti.LMul, vti.AVL, vti.RegClass, vti.RegClass>;
+                              vti.Vector, vti.Vector, vti.Log2SEW,
+                              vti.LMul, vti.AVL, vti.RegClass>;
     def : VPatBinarySDNode_VF<vop, instruction_name#"_V"#vti.ScalarSuffix,
-                              vti.Vector, vti.Vector, vti.Scalar, vti.Mask,
-                              vti.Log2SEW, vti.LMul, vti.AVL, vti.RegClass, vti.RegClass,
+                              vti.Vector, vti.Vector, vti.Scalar,
+                              vti.Log2SEW, vti.LMul, vti.AVL, vti.RegClass,
                               vti.ScalarRegClass>;
   }
 }
@@ -521,21 +515,21 @@ foreach vti = AllIntegerVectors in {
 
 // 12.15. Vector Integer Merge Instructions
 foreach vti = AllIntegerVectors in {
-  def : Pat<(vti.Vector (vselect (vti.Mask VMV0:$vm), vti.RegClass:$rs1,
+  def : Pat<(vti.Vector (vselect (vti.Mask V0), vti.RegClass:$rs1,
                                                       vti.RegClass:$rs2)),
             (!cast<Instruction>("PseudoVMERGE_VVM_"#vti.LMul.MX)
-                 vti.RegClass:$rs2, vti.RegClass:$rs1, VMV0:$vm,
+                 vti.RegClass:$rs2, vti.RegClass:$rs1, (vti.Mask V0),
                  vti.AVL, vti.Log2SEW)>;
 
-  def : Pat<(vti.Vector (vselect (vti.Mask VMV0:$vm), (SplatPat XLenVT:$rs1),
+  def : Pat<(vti.Vector (vselect (vti.Mask V0), (SplatPat XLenVT:$rs1),
                                                       vti.RegClass:$rs2)),
             (!cast<Instruction>("PseudoVMERGE_VXM_"#vti.LMul.MX)
-                 vti.RegClass:$rs2, GPR:$rs1, VMV0:$vm, vti.AVL, vti.Log2SEW)>;
+                 vti.RegClass:$rs2, GPR:$rs1, (vti.Mask V0), vti.AVL, vti.Log2SEW)>;
 
-  def : Pat<(vti.Vector (vselect (vti.Mask VMV0:$vm), (SplatPat_simm5 simm5:$rs1),
+  def : Pat<(vti.Vector (vselect (vti.Mask V0), (SplatPat_simm5 simm5:$rs1),
                                                       vti.RegClass:$rs2)),
             (!cast<Instruction>("PseudoVMERGE_VIM_"#vti.LMul.MX)
-                 vti.RegClass:$rs2, simm5:$rs1, VMV0:$vm, vti.AVL, vti.Log2SEW)>;
+                 vti.RegClass:$rs2, simm5:$rs1, (vti.Mask V0), vti.AVL, vti.Log2SEW)>;
 }
 
 // 12.1. Vector Single-Width Saturating Add and Subtract
@@ -711,25 +705,25 @@ defm : VPatFPSetCCSDNode_VV_VF_FV<SETOLE, "PseudoVMFLE", "PseudoVMFGE">;
 // 12.15. Vector Integer Merge Instructions
 // 14.15. Vector Floating-Point Merge Instruction
 foreach fvti = AllFloatVectors in {
-  def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm), fvti.RegClass:$rs1,
+  def : Pat<(fvti.Vector (vselect (fvti.Mask V0), fvti.RegClass:$rs1,
                                                         fvti.RegClass:$rs2)),
             (!cast<Instruction>("PseudoVMERGE_VVM_"#fvti.LMul.MX)
-                 fvti.RegClass:$rs2, fvti.RegClass:$rs1, VMV0:$vm,
+                 fvti.RegClass:$rs2, fvti.RegClass:$rs1, (fvti.Mask V0),
                  fvti.AVL, fvti.Log2SEW)>;
 
-  def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm),
+  def : Pat<(fvti.Vector (vselect (fvti.Mask V0),
                                   (splat_vector fvti.ScalarRegClass:$rs1),
                                   fvti.RegClass:$rs2)),
             (!cast<Instruction>("PseudoVFMERGE_V"#fvti.ScalarSuffix#"M_"#fvti.LMul.MX)
                  fvti.RegClass:$rs2,
                  (fvti.Scalar fvti.ScalarRegClass:$rs1),
-                 VMV0:$vm, fvti.AVL, fvti.Log2SEW)>;
+                 (fvti.Mask V0), fvti.AVL, fvti.Log2SEW)>;
 
-  def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm),
+  def : Pat<(fvti.Vector (vselect (fvti.Mask V0),
                                   (splat_vector (fvti.Scalar fpimm0)),
                                   fvti.RegClass:$rs2)),
             (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX)
-                 fvti.RegClass:$rs2, 0, VMV0:$vm, fvti.AVL, fvti.Log2SEW)>;
+                 fvti.RegClass:$rs2, 0, (fvti.Mask V0), fvti.AVL, fvti.Log2SEW)>;
 }
 
 // 14.17. Vector Single-Width Floating-Point/Integer Type-Convert Instructions

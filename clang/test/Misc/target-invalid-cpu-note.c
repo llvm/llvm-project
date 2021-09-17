@@ -188,20 +188,24 @@
 // AVR-SAME: atxmega256a3, atxmega256a3u, atxmega256a3b, atxmega256a3bu, atxmega256c3,
 // AVR-SAME: atxmega256d3, atxmega384c3, atxmega384d3, atxmega128a1, atxmega128a1u,
 // AVR-SAME: atxmega128a4u, attiny4, attiny5, attiny9, attiny10, attiny20, attiny40,
-// AVR-SAME: attiny102, attiny104
+// AVR-SAME: attiny102, attiny104, attiny202, attiny402, attiny204, attiny404, attiny804,
+// AVR-SAME: attiny1604, attiny406, attiny806, attiny1606, attiny807, attiny1607,
+// AVR-SAME: attiny212, attiny412, attiny214, attiny414, attiny814, attiny1614,
+// AVR-SAME: attiny416, attiny816, attiny1616, attiny3216, attiny417, attiny817,
+// AVR-SAME: attiny1617, attiny3217
 
 // RUN: not %clang_cc1 -triple riscv32 -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix RISCV32
 // RISCV32: error: unknown target CPU 'not-a-cpu'
-// RISCV32: note: valid target CPU values are: generic-rv32, rocket-rv32, sifive-7-rv32, sifive-e31, sifive-e76
+// RISCV32: note: valid target CPU values are: generic-rv32, rocket-rv32, sifive-7-rv32, sifive-e20, sifive-e21, sifive-e24, sifive-e31, sifive-e34, sifive-e76
 
 // RUN: not %clang_cc1 -triple riscv64 -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix RISCV64
 // RISCV64: error: unknown target CPU 'not-a-cpu'
-// RISCV64: note: valid target CPU values are: generic-rv64, rocket-rv64, sifive-7-rv64, sifive-s51, sifive-u54, sifive-u74
+// RISCV64: note: valid target CPU values are: generic-rv64, rocket-rv64, sifive-7-rv64, sifive-s21, sifive-s51, sifive-s54, sifive-s76, sifive-u54, sifive-u74
 
 // RUN: not %clang_cc1 -triple riscv32 -tune-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix TUNE-RISCV32
 // TUNE-RISCV32: error: unknown target CPU 'not-a-cpu'
-// TUNE-RISCV32: note: valid target CPU values are: generic-rv32, rocket-rv32, sifive-7-rv32, sifive-e31, sifive-e76, generic, rocket, sifive-7-series
+// TUNE-RISCV32: note: valid target CPU values are: generic-rv32, rocket-rv32, sifive-7-rv32, sifive-e20, sifive-e21, sifive-e24, sifive-e31, sifive-e34, sifive-e76, generic, rocket, sifive-7-series
 
 // RUN: not %clang_cc1 -triple riscv64 -tune-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix TUNE-RISCV64
 // TUNE-RISCV64: error: unknown target CPU 'not-a-cpu'
-// TUNE-RISCV64: note: valid target CPU values are: generic-rv64, rocket-rv64, sifive-7-rv64, sifive-s51, sifive-u54, sifive-u74, generic, rocket, sifive-7-series
+// TUNE-RISCV64: note: valid target CPU values are: generic-rv64, rocket-rv64, sifive-7-rv64, sifive-s21, sifive-s51, sifive-s54, sifive-s76, sifive-u54, sifive-u74, generic, rocket, sifive-7-series

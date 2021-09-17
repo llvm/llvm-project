@@ -1056,7 +1056,7 @@ inline void ARMELFStreamer::SwitchToEHSection(StringRef Prefix,
 
   // Switch to .ARM.extab or .ARM.exidx section
   SwitchSection(EHSection);
-  emitCodeAlignment(4);
+  emitValueToAlignment(4, 0, 1, 0);
 }
 
 inline void ARMELFStreamer::SwitchToExTabSection(const MCSymbol &FnStart) {

@@ -598,6 +598,31 @@ public:
     }
   }
 
+  /// Return whether FrameLowering should always set the "extended frame
+  /// present" bit in FP, or set it based on a symbol in the runtime.
+  bool swiftAsyncContextIsDynamicallySet() const {
+    // Older OS versions (particularly system unwinders) are confused by the
+    // Swift extended frame, so when building code that might be run on them we
+    // must dynamically query the concurrency library to determine whether
+    // extended frames should be flagged as present.
+    const Triple &TT = getTargetTriple();
+
+    unsigned Major, Minor, Micro;
+    TT.getOSVersion(Major, Minor, Micro);
+    switch(TT.getOS()) {
+    default:
+      return false;
+    case Triple::IOS:
+    case Triple::TvOS:
+      return Major < 15;
+    case Triple::WatchOS:
+      return Major < 8;
+    case Triple::MacOSX:
+    case Triple::Darwin:
+      return Major < 12;
+    }
+  }
+
   void mirFileLoaded(MachineFunction &MF) const override;
 
   // Return the known range for the bit length of SVE data registers. A value

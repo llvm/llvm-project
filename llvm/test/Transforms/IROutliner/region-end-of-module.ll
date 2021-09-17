@@ -21,18 +21,6 @@ for.end:
   %inc3 = add nsw i32 2, 1
   br label %for.cond1
 }
-; CHECK-LABEL: @foo(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[FOR_COND1:%.*]]
-; CHECK:       for.cond1:
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 2, 1
-; CHECK-NEXT:    br label [[FOR_COND1]]
-; CHECK:       for.end:
-; CHECK-NEXT:    [[INC3:%.*]] = add nsw i32 2, 1
-; CHECK-NEXT:    br label [[FOR_COND1]]
-;
 
 ; These are for testing if return instructions or unreachable instructions are
 ; matched for similarity.
@@ -67,3 +55,58 @@ for.end:
   %inc3 = add nsw i32 2, 1
   unreachable
 }
+
+; CHECK-LABEL: @foo(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_COND1:%.*]]
+; CHECK:       for.cond1:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    call void @outlined_ir_func_1()
+; CHECK-NEXT:    br label [[FOR_COND1]]
+; CHECK:       for.end:
+; CHECK-NEXT:    call void @outlined_ir_func_1()
+; CHECK-NEXT:    br label [[FOR_COND1]]
+;
+;
+; CHECK-LABEL: @foo1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @outlined_ir_func_0()
+; CHECK-NEXT:    ret void
+; CHECK:       for.end:
+; CHECK-NEXT:    [[INC3:%.*]] = add nsw i32 2, 1
+; CHECK-NEXT:    ret void
+;
+;
+; CHECK-LABEL: @foo2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @outlined_ir_func_0()
+; CHECK-NEXT:    unreachable
+; CHECK:       for.end:
+; CHECK-NEXT:    [[INC3:%.*]] = add nsw i32 2, 1
+; CHECK-NEXT:    unreachable
+;
+;
+; CHECK: define internal void @outlined_ir_func_0(
+; CHECK-NEXT:  newFuncRoot:
+; CHECK-NEXT:    br label [[ENTRY_TO_OUTLINE:%.*]]
+; CHECK:       entry_to_outline:
+; CHECK-NEXT:    br label [[FOR_COND1:%.*]]
+; CHECK:       for.cond1:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 2, 1
+; CHECK-NEXT:    br label [[ENTRY_AFTER_OUTLINE_EXITSTUB:%.*]]
+; CHECK:       entry_after_outline.exitStub:
+; CHECK-NEXT:    ret void
+;
+;
+; CHECK: define internal void @outlined_ir_func_1(
+; CHECK-NEXT:  newFuncRoot:
+; CHECK-NEXT:    br label [[FOR_BODY_TO_OUTLINE:%.*]]
+; CHECK:       for.body_to_outline:
+; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 2, 1
+; CHECK-NEXT:    br label [[FOR_COND1_EXITSTUB:%.*]]
+; CHECK:       for.cond1.exitStub:
+; CHECK-NEXT:    ret void
+;

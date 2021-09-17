@@ -1,5 +1,18 @@
 // RUN: mlir-opt -convert-openmp-to-llvm %s  -split-input-file | FileCheck %s
 
+// CHECK-LABEL: llvm.func @master_block_arg
+func @master_block_arg() {
+  // CHECK: omp.master
+  omp.master {
+  // CHECK-NEXT: ^[[BB0:.*]](%[[ARG1:.*]]: i64, %[[ARG2:.*]]: i64):
+  ^bb0(%arg1: index, %arg2: index):
+    // CHECK-NEXT: "test.payload"(%[[ARG1]], %[[ARG2]]) : (i64, i64) -> ()
+    "test.payload"(%arg1, %arg2) : (index, index) -> ()
+    omp.terminator
+  }
+  return
+}
+
 // CHECK-LABEL: llvm.func @branch_loop
 func @branch_loop() {
   %start = constant 0 : index

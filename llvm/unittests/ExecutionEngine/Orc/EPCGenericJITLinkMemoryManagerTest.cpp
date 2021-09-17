@@ -9,6 +9,7 @@
 #include "OrcTestCommon.h"
 
 #include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Testing/Support/Error.h"
@@ -23,7 +24,7 @@ namespace {
 
 llvm::orc::shared::detail::CWrapperFunctionResult
 testReserve(const char *ArgData, size_t ArgSize) {
-  return WrapperFunction<SPSOrcTargetProcessAllocate>::handle(
+  return WrapperFunction<rt::SPSMemoryReserveSignature>::handle(
              ArgData, ArgSize,
              [](uint64_t Size) -> Expected<ExecutorAddress> {
                std::error_code EC;
@@ -38,7 +39,7 @@ testReserve(const char *ArgData, size_t ArgSize) {
 
 llvm::orc::shared::detail::CWrapperFunctionResult
 testFinalize(const char *ArgData, size_t ArgSize) {
-  return WrapperFunction<SPSOrcTargetProcessFinalize>::handle(
+  return WrapperFunction<rt::SPSMemoryFinalizeSignature>::handle(
              ArgData, ArgSize,
              [](const tpctypes::FinalizeRequest &FR) -> Error {
                for (auto &Seg : FR) {
@@ -61,7 +62,7 @@ testFinalize(const char *ArgData, size_t ArgSize) {
 
 llvm::orc::shared::detail::CWrapperFunctionResult
 testDeallocate(const char *ArgData, size_t ArgSize) {
-  return WrapperFunction<SPSOrcTargetProcessDeallocate>::handle(
+  return WrapperFunction<rt::SPSMemoryDeallocateSignature>::handle(
              ArgData, ArgSize,
              [](ExecutorAddress Base, uint64_t Size) -> Error {
                sys::MemoryBlock MB(Base.toPtr<void *>(), Size);

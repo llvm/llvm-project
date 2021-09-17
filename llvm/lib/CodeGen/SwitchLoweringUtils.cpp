@@ -405,7 +405,7 @@ bool SwitchCG::SwitchLowering::buildBitTests(CaseClusterVector &Clusters,
   if (Low.isStrictlyPositive() && High.slt(BitWidth)) {
     // Optimize the case where all the case values fit in a word without having
     // to subtract minValue. In this case, we can optimize away the subtraction.
-    LowBound = APInt::getNullValue(Low.getBitWidth());
+    LowBound = APInt::getZero(Low.getBitWidth());
     CmpRange = High;
     ContiguousRange = false;
   } else {
