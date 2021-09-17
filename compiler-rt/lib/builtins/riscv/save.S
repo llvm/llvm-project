@@ -174,6 +174,8 @@ __riscv_save_2:
   .type   __riscv_save_1,@function
   .globl  __riscv_save_0
   .type   __riscv_save_0,@function
+__riscv_save_1:
+__riscv_save_0:
   addi   sp, sp, -16
   sd     s0, 0(sp)
   sd     ra, 8(sp)

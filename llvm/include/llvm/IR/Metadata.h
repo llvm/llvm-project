@@ -707,6 +707,10 @@ struct AAMDNodes {
     Result.NoAlias = NoAlias;
     return Result;
   }
+
+  /// Given two sets of AAMDNodes applying to potentially different locations,
+  /// determine the best AAMDNodes that apply to both.
+  AAMDNodes merge(const AAMDNodes &Other) const;
 };
 
 // Specialize DenseMapInfo for AAMDNodes.

@@ -173,7 +173,7 @@ struct DWARFTypePrinter {
   }
 
   void appendPointerLikeTypeBefore(DWARFDie D, DWARFDie Inner, StringRef Ptr) {
-    appendUnqualifiedTypeNameBefore(Inner);
+    appendUnqualifiedNameBefore(Inner);
     bool NeedsParens =
         Inner && (Inner.getTag() == llvm::dwarf::DW_TAG_subroutine_type ||
                   Inner.getTag() == llvm::dwarf::DW_TAG_array_type);
@@ -185,7 +185,7 @@ struct DWARFTypePrinter {
     Word = false;
   }
 
-  DWARFDie appendUnqualifiedTypeNameBefore(DWARFDie D) {
+  DWARFDie appendUnqualifiedNameBefore(DWARFDie D) {
     Word = true;
     if (!D) {
       OS << "void";
@@ -204,7 +204,7 @@ struct DWARFTypePrinter {
       break;
     }
     case DW_TAG_subroutine_type: {
-      appendUnqualifiedTypeNameBefore(Inner);
+      appendUnqualifiedNameBefore(Inner);
       if (Word) {
         OS << ' ';
       }
@@ -212,7 +212,7 @@ struct DWARFTypePrinter {
       break;
     }
     case DW_TAG_array_type: {
-      appendUnqualifiedTypeNameBefore(Inner);
+      appendUnqualifiedNameBefore(Inner);
       if (Word)
         OS << ' ';
       Word = false;
@@ -225,7 +225,7 @@ struct DWARFTypePrinter {
       appendPointerLikeTypeBefore(D, Inner, "&&");
       break;
     case DW_TAG_ptr_to_member_type: {
-      appendUnqualifiedTypeNameBefore(Inner);
+      appendUnqualifiedNameBefore(Inner);
       bool NeedsParens =
           Inner && (Inner.getTag() == llvm::dwarf::DW_TAG_subroutine_type ||
                     Inner.getTag() == llvm::dwarf::DW_TAG_array_type);
@@ -235,7 +235,7 @@ struct DWARFTypePrinter {
         OS << ' ';
       if (DWARFDie Cont =
               D.getAttributeValueAsReferencedDie(DW_AT_containing_type)) {
-        appendUnqualifiedTypeName(Cont);
+        appendUnqualifiedName(Cont);
         OS << "::";
       }
       OS << "*";
@@ -244,13 +244,13 @@ struct DWARFTypePrinter {
     }
     default:
       appendTypeTagName(T);
-      appendUnqualifiedTypeNameBefore(Inner);
+      appendUnqualifiedNameBefore(Inner);
       break;
     }
     return Inner;
   }
 
-  void appendUnqualifiedTypeNameAfter(DWARFDie D, DWARFDie Inner,
+  void appendUnqualifiedNameAfter(DWARFDie D, DWARFDie Inner,
                                       bool SkipFirstParamIfArtificial = false) {
     if (!D)
       return;
@@ -269,7 +269,7 @@ struct DWARFTypePrinter {
           if (!First)
             OS << ", ";
           First = false;
-          appendUnqualifiedTypeName(
+          appendUnqualifiedName(
               C.getAttributeValueAsReferencedDie(DW_AT_type));
         }
       }
@@ -289,7 +289,7 @@ struct DWARFTypePrinter {
                     Inner.getTag() == llvm::dwarf::DW_TAG_array_type);
       if (NeedsParens)
         OS << ')';
-      appendUnqualifiedTypeNameAfter(
+      appendUnqualifiedNameAfter(
           Inner, D.getAttributeValueAsReferencedDie(DW_AT_type),
           /*SkipFirstParamIfArtificial=*/D.getTag() ==
               DW_TAG_ptr_to_member_type);
@@ -301,15 +301,15 @@ struct DWARFTypePrinter {
   }
 
   /// Recursively append the DIE type name when applicable.
-  void appendUnqualifiedTypeName(const DWARFDie &D,
+  void appendUnqualifiedName(const DWARFDie &D,
                                  bool SkipFirstParamIfArtificial = false) {
     if (!D.isValid() || D.isNULL())
       return;
 
     // FIXME: We should have pretty printers per language. Currently we print
     // everything as if it was C++ and fall back to the TAG type name.
-    DWARFDie Inner = appendUnqualifiedTypeNameBefore(D);
-    appendUnqualifiedTypeNameAfter(D, Inner, SkipFirstParamIfArtificial);
+    DWARFDie Inner = appendUnqualifiedNameBefore(D);
+    appendUnqualifiedNameAfter(D, Inner, SkipFirstParamIfArtificial);
   }
 };
 } // anonymous namespace
@@ -398,7 +398,7 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
       OS << Space << "\"" << Name << '\"';
   } else if (Attr == DW_AT_type) {
     OS << Space << "\"";
-    DWARFTypePrinter(OS).appendUnqualifiedTypeName(
+    DWARFTypePrinter(OS).appendUnqualifiedName(
         Die.getAttributeValueAsReferencedDie(FormValue));
     OS << '"';
   } else if (Attr == DW_AT_APPLE_property_attribute) {

@@ -125,6 +125,13 @@ public:
     All,         // Keep all frame pointers.
   };
 
+  enum class SwiftAsyncFramePointerKind {
+    Auto, // Choose Swift async extended frame info based on deployment target.
+    Always, // Unconditionally emit Swift async extended frame info.
+    Never,  // Don't emit Swift async extended frame info.
+    Default = Always,
+  };
+
   enum FiniteLoopsKind {
     Language, // Not specified, use language standard.
     Always,   // All loops are assumed to be finite.

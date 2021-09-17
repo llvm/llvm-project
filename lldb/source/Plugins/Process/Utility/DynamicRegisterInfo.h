@@ -36,8 +36,6 @@ public:
                          const lldb_private::ArchSpec &arch);
 
   void AddRegister(lldb_private::RegisterInfo &reg_info,
-                   lldb_private::ConstString &reg_name,
-                   lldb_private::ConstString &reg_alt_name,
                    lldb_private::ConstString &set_name);
 
   void Finalize(const lldb_private::ArchSpec &arch);

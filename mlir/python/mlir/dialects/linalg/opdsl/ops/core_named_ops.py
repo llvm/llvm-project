@@ -146,7 +146,7 @@ def dot(
 
 @linalg_structured_op
 def conv_1d(
-    I=TensorDef(T1, S.IW),
+    I=TensorDef(T1, S.OW + S.KW),
     K=TensorDef(T2, S.KW),
     O=TensorDef(U, S.OW, output=True)):
   """Performs 1-D convolution with no channels.
@@ -160,7 +160,7 @@ def conv_1d(
 
 @linalg_structured_op
 def conv_2d(
-    I=TensorDef(T1, S.IH, S.IW),
+    I=TensorDef(T1, S.OH + S.KH, S.OW + S.KW),
     K=TensorDef(T2, S.KH, S.KW),
     O=TensorDef(U, S.OH, S.OW, output=True)):
   """Performs 2-D convolution with no channels.
@@ -174,7 +174,7 @@ def conv_2d(
 
 @linalg_structured_op
 def conv_3d(
-    I=TensorDef(T1, S.ID, S.IH, S.IW),
+    I=TensorDef(T1, S.OD + S.KD, S.OH + S.KH, S.OW + S.KW),
     K=TensorDef(T2, S.KD, S.KH, S.KW),
     O=TensorDef(U, S.OD, S.OH, S.OW, output=True)):
   """Performs 3-D convolution with no channels.
@@ -188,7 +188,7 @@ def conv_3d(
 
 @linalg_structured_op
 def conv_1d_nwc_wcf(
-    I=TensorDef(T1, S.N, S.IW, S.C),
+    I=TensorDef(T1, S.N, S.OW * S.SW + S.KW * S.DW, S.C),
     K=TensorDef(T2, S.KW, S.C, S.F),
     O=TensorDef(U, S.N, S.OW, S.F, output=True),
     strides=AttributeDef(S.SW),
@@ -205,7 +205,7 @@ def conv_1d_nwc_wcf(
 
 @linalg_structured_op
 def conv_2d_nhwc_hwcf(
-    I=TensorDef(T1, S.N, S.IH, S.IW, S.C),
+    I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.C),
     K=TensorDef(T2, S.KH, S.KW, S.C, S.F),
     O=TensorDef(U, S.N, S.OH, S.OW, S.F, output=True),
     strides=AttributeDef(S.SH, S.SW),
@@ -226,7 +226,7 @@ def conv_2d_nhwc_hwcf(
 
 @linalg_structured_op
 def conv_2d_nhwc_hwcf_q(
-    I=TensorDef(T1, S.N, S.IH, S.IW, S.C),
+    I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.C),
     K=TensorDef(T2, S.KH, S.KW, S.C, S.F),
     IZp=ScalarDef(I32),
     KZp=ScalarDef(I32),
@@ -250,7 +250,7 @@ def conv_2d_nhwc_hwcf_q(
 
 @linalg_structured_op
 def conv_2d_nchw_fchw(
-    I=TensorDef(T1, S.N, S.C, S.IH, S.IW),
+    I=TensorDef(T1, S.N, S.C, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW),
     K=TensorDef(T2, S.F, S.C, S.KH, S.KW),
     O=TensorDef(U, S.N, S.F, S.OH, S.OW, output=True),
     strides=AttributeDef(S.SH, S.SW),
@@ -271,7 +271,8 @@ def conv_2d_nchw_fchw(
 
 @linalg_structured_op
 def conv_3d_ndhwc_dhwcf(
-    I=TensorDef(T1, S.N, S.ID, S.IH, S.IW, S.C),
+    I=TensorDef(T1, S.N, S.OD * S.SD + S.KD * S.DD,
+                S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.C),
     K=TensorDef(T2, S.KD, S.KH, S.KW, S.C, S.F),
     O=TensorDef(U, S.N, S.OD, S.OH, S.OW, S.F, output=True),
     strides=AttributeDef(S.SD, S.SH, S.SW),
@@ -288,7 +289,7 @@ def conv_3d_ndhwc_dhwcf(
 
 @linalg_structured_op
 def depthwise_conv2D_nhw(
-    I=TensorDef(T1, S.N, S.IH, S.IW, S.IC),
+    I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.IC),
     K=TensorDef(T2, S.KH, S.KW, S.IC),
     O=TensorDef(U, S.N, S.OH, S.OW, S.IC, output=True),
     strides=AttributeDef(S.SH, S.SW),
@@ -306,7 +307,7 @@ def depthwise_conv2D_nhw(
 
 @linalg_structured_op
 def depthwise_conv2D_nhw_q(
-    I=TensorDef(T1, S.N, S.IH, S.IW, S.IC),
+    I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.IC),
     K=TensorDef(T2, S.KH, S.KW, S.IC),
     IZp=ScalarDef(I32),
     KZp=ScalarDef(I32),
@@ -326,7 +327,7 @@ def depthwise_conv2D_nhw_q(
 
 @linalg_structured_op
 def depthwise_conv2D_nhwc(
-    I=TensorDef(T1, S.N, S.IH, S.IW, S.IC),
+    I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.IC),
     K=TensorDef(T2, S.KH, S.KW, S.IC, S.CM),
     O=TensorDef(U, S.N, S.OH, S.OW, S.IC, S.CM, output=True),
     strides=AttributeDef(S.SH, S.SW),
@@ -343,7 +344,7 @@ def depthwise_conv2D_nhwc(
 
 @linalg_structured_op
 def depthwise_conv2D_nhwc_q(
-    I=TensorDef(T1, S.N, S.IH, S.IW, S.IC),
+    I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.IC),
     K=TensorDef(T2, S.KH, S.KW, S.IC, S.CM),
     IZp=ScalarDef(I32),
     KZp=ScalarDef(I32),
@@ -364,7 +365,7 @@ def depthwise_conv2D_nhwc_q(
 
 @linalg_structured_op
 def pooling_nhwc_sum(
-    I=TensorDef(T1, S.N, S.H, S.W, S.C),
+    I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.C),
     K=TensorDef(T2, S.KH, S.KW, index_dims=[D.kh, D.kw]),
     O=TensorDef(U, S.N, S.OH, S.OW, S.C, output=True),
     strides=AttributeDef(S.SH, S.SW),
@@ -381,7 +382,7 @@ def pooling_nhwc_sum(
 
 @linalg_structured_op
 def pooling_nhwc_max(
-    I=TensorDef(T1, S.N, S.H, S.W, S.C),
+    I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.C),
     K=TensorDef(T2, S.KH, S.KW, index_dims=[D.kh, D.kw]),
     O=TensorDef(U, S.N, S.OH, S.OW, S.C, output=True),
     strides=AttributeDef(S.SH, S.SW),
@@ -398,7 +399,7 @@ def pooling_nhwc_max(
 
 @linalg_structured_op
 def pooling_nchw_max(
-    I=TensorDef(T1, S.N, S.C, S.H, S.W),
+    I=TensorDef(T1, S.N, S.C, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW),
     K=TensorDef(T2, S.KH, S.KW, index_dims=[D.kh, D.kw]),
     O=TensorDef(U, S.N, S.C, S.OH, S.OW, output=True),
     strides=AttributeDef(S.SH, S.SW),
@@ -415,7 +416,7 @@ def pooling_nchw_max(
 
 @linalg_structured_op
 def pooling_nhwc_min(
-    I=TensorDef(T1, S.N, S.H, S.W, S.C),
+    I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.C),
     K=TensorDef(T2, S.KH, S.KW, index_dims=[D.kh, D.kw]),
     O=TensorDef(U, S.N, S.OH, S.OW, S.C, output=True),
     strides=AttributeDef(S.SH, S.SW),
@@ -433,7 +434,8 @@ def pooling_nhwc_min(
 
 @linalg_structured_op
 def pooling_ndhwc_sum(
-    I=TensorDef(T1, S.N, S.D, S.H, S.W, S.C),
+    I=TensorDef(T1, S.N, S.OD * S.SD + S.KD * S.DD, S.OH * S.SH + S.KH * S.DH,
+                S.OW * S.SW + S.KW * S.DW, S.C),
     K=TensorDef(T2, S.KD, S.KH, S.KW, index_dims=[D.kd, D.kh, D.kw]),
     O=TensorDef(U, S.N, S.OD, S.OH, S.OW, S.C, output=True),
     strides=AttributeDef(S.SD, S.SH, S.SW),
@@ -451,7 +453,8 @@ def pooling_ndhwc_sum(
 
 @linalg_structured_op
 def pooling_ndhwc_max(
-    I=TensorDef(T1, S.N, S.D, S.H, S.W, S.C),
+    I=TensorDef(T1, S.N, S.OD * S.SD + S.KD * S.DD, S.OH * S.SH + S.KH * S.DH,
+                S.OW * S.SW + S.KW * S.DW, S.C),
     K=TensorDef(T2, S.KD, S.KH, S.KW, index_dims=[D.kd, D.kh, D.kw]),
     O=TensorDef(U, S.N, S.OD, S.OH, S.OW, S.C, output=True),
     strides=AttributeDef(S.SD, S.SH, S.SW),
@@ -470,7 +473,8 @@ def pooling_ndhwc_max(
 
 @linalg_structured_op
 def pooling_ndhwc_min(
-    I=TensorDef(T1, S.N, S.D, S.H, S.W, S.C),
+    I=TensorDef(T1, S.N, S.OD * S.SD + S.KD * S.DD, S.OH * S.SH + S.KH * S.DH,
+                S.OW * S.SW + S.KW * S.DW, S.C),
     K=TensorDef(T2, S.KD, S.KH, S.KW, index_dims=[D.kd, D.kh, D.kw]),
     O=TensorDef(U, S.N, S.OD, S.OH, S.OW, S.C, output=True),
     strides=AttributeDef(S.SD, S.SH, S.SW),

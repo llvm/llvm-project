@@ -2825,9 +2825,7 @@ static Instruction *tryToMoveFreeBeforeNullTest(CallInst &FI,
 
   // At this point, we know that everything in FreeInstrBB can be moved
   // before TI.
-  for (BasicBlock::iterator It = FreeInstrBB->begin(), End = FreeInstrBB->end();
-       It != End;) {
-    Instruction &Instr = *It++;
+  for (Instruction &Instr : llvm::make_early_inc_range(*FreeInstrBB)) {
     if (&Instr == FreeInstrBBTerminator)
       break;
     Instr.moveBefore(TI);
@@ -3174,9 +3172,7 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
       Instruction *NL = Builder.CreateLoad(EV.getType(), GEP);
       // Whatever aliasing information we had for the orignal load must also
       // hold for the smaller load, so propagate the annotations.
-      AAMDNodes Nodes;
-      L->getAAMetadata(Nodes);
-      NL->setAAMetadata(Nodes);
+      NL->setAAMetadata(L->getAAMetadata());
       // Returning the load directly will cause the main loop to insert it in
       // the wrong spot, so use replaceInstUsesWith().
       return replaceInstUsesWith(EV, NL);
@@ -4013,25 +4009,23 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
     if (!Visited.insert(BB).second)
       continue;
 
-    for (BasicBlock::iterator BBI = BB->begin(), E = BB->end(); BBI != E; ) {
-      Instruction *Inst = &*BBI++;
-
+    for (Instruction &Inst : llvm::make_early_inc_range(*BB)) {
       // ConstantProp instruction if trivially constant.
-      if (!Inst->use_empty() &&
-          (Inst->getNumOperands() == 0 || isa<Constant>(Inst->getOperand(0))))
-        if (Constant *C = ConstantFoldInstruction(Inst, DL, TLI)) {
-          LLVM_DEBUG(dbgs() << "IC: ConstFold to: " << *C << " from: " << *Inst
+      if (!Inst.use_empty() &&
+          (Inst.getNumOperands() == 0 || isa<Constant>(Inst.getOperand(0))))
+        if (Constant *C = ConstantFoldInstruction(&Inst, DL, TLI)) {
+          LLVM_DEBUG(dbgs() << "IC: ConstFold to: " << *C << " from: " << Inst
                             << '\n');
-          Inst->replaceAllUsesWith(C);
+          Inst.replaceAllUsesWith(C);
           ++NumConstProp;
-          if (isInstructionTriviallyDead(Inst, TLI))
-            Inst->eraseFromParent();
+          if (isInstructionTriviallyDead(&Inst, TLI))
+            Inst.eraseFromParent();
           MadeIRChange = true;
           continue;
         }
 
       // See if we can constant fold its operands.
-      for (Use &U : Inst->operands()) {
+      for (Use &U : Inst.operands()) {
         if (!isa<ConstantVector>(U) && !isa<ConstantExpr>(U))
           continue;
 
@@ -4041,7 +4035,7 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
           FoldRes = ConstantFoldConstant(C, DL, TLI);
 
         if (FoldRes != C) {
-          LLVM_DEBUG(dbgs() << "IC: ConstFold operand of: " << *Inst
+          LLVM_DEBUG(dbgs() << "IC: ConstFold operand of: " << Inst
                             << "\n    Old = " << *C
                             << "\n    New = " << *FoldRes << '\n');
           U = FoldRes;
@@ -4052,9 +4046,9 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
       // Skip processing debug and pseudo intrinsics in InstCombine. Processing
       // these call instructions consumes non-trivial amount of time and
       // provides no value for the optimization.
-      if (!Inst->isDebugOrPseudoInst()) {
-        InstrsForInstCombineWorklist.push_back(Inst);
-        SeenAliasScopes.analyse(Inst);
+      if (!Inst.isDebugOrPseudoInst()) {
+        InstrsForInstCombineWorklist.push_back(&Inst);
+        SeenAliasScopes.analyse(&Inst);
       }
     }
 

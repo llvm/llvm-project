@@ -20,7 +20,16 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
         cmd = ['xcrun', 'simctl', 'list', '-j', 'devices']
         self.trace(' '.join(cmd))
         sim_devices_str = subprocess.check_output(cmd).decode("utf-8")
-        sim_devices = json.loads(sim_devices_str)['devices']
+
+        # xcodebuild, which is invoked by the apple_simulator_test decorator,
+        # may return a successful status even if it was unable to run due to 
+        # the authorization agent denying it. Try to parse the json that lists 
+        # the simulators but if that fails skip the test.
+        try:
+            sim_devices = json.loads(sim_devices_str)['devices']
+        except json.decoder.JSONDecodeError:
+            self.skipTest("Could not parse JSON of simulators available")
+
         # Find an available simulator for the requested platform
         deviceUDID = None
         deviceRuntime = None

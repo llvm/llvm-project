@@ -348,3 +348,32 @@ do.body:
 if.end:                                           ; preds = %do.body, %entry
   ret void
 }
+
+; CHECK-LABEL: test12
+; CHECK: entry:
+; CHECK-EXIT:   [[TEST:%[^ ]+]] = call i1 @llvm.test.set.loop.iterations.i32(i32 %conv)
+; CHECK-LATCH:  [[TEST1:%[^ ]+]] = call { i32, i1 } @llvm.test.start.loop.iterations.i32(i32 %conv)
+; CHECK-LATCH:  [[TEST:%[^ ]+]] = extractvalue { i32, i1 } [[TEST1]], 1
+; CHECK:   br i1 [[TEST]], label %for.body.preheader, label %for.end
+; CHECK: for.body.preheader:
+; CHECK:   br label %for.body
+
+define void @test12(i32* nocapture %a, i32* nocapture readonly %b, i16 zeroext %length) {
+entry:
+  %conv = zext i16 %length to i32
+  %cmp8.not = icmp eq i16 %length, 0
+  br i1 %cmp8.not, label %for.end, label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.09 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, i32* %b, i32 %i.09
+  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, i32* %a, i32 %i.09
+  store i32 %0, i32* %arrayidx2, align 4
+  %inc = add nuw nsw i32 %i.09, 1
+  %exitcond.not = icmp eq i32 %inc, %conv
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}

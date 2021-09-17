@@ -578,13 +578,14 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
         }
 
         reg_info.name = reg_name.AsCString();
+        reg_info.alt_name = alt_name.AsCString();
         // We have to make a temporary ABI here, and not use the GetABI because
         // this code gets called in DidAttach, when the target architecture
         // (and consequently the ABI we'll get from the process) may be wrong.
         if (ABISP abi_sp = ABI::FindPlugin(shared_from_this(), arch_to_use))
           abi_sp->AugmentRegisterInfo(reg_info);
 
-        m_register_info_sp->AddRegister(reg_info, reg_name, alt_name, set_name);
+        m_register_info_sp->AddRegister(reg_info, set_name);
       } else {
         break; // ensure exit before reg_num is incremented
       }
@@ -4554,9 +4555,10 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
         reg_num_remote = reg_info.kinds[eRegisterKindProcessPlugin] + 1;
         ++reg_num_local;
         reg_info.name = reg_name.AsCString();
+        reg_info.alt_name = alt_name.AsCString();
         if (abi_sp)
           abi_sp->AugmentRegisterInfo(reg_info);
-        dyn_reg_info.AddRegister(reg_info, reg_name, alt_name, set_name);
+        dyn_reg_info.AddRegister(reg_info, set_name);
 
         return true; // Keep iterating through all "reg" elements
       });
@@ -4649,24 +4651,22 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(
       }
     }
 
-    // If the target.xml includes an architecture entry like
+    // gdbserver does not implement the LLDB packets used to determine host
+    // or process architecture.  If that is the case, attempt to use
+    // the <architecture/> field from target.xml, e.g.:
+    //
     //   <architecture>i386:x86-64</architecture> (seen from VMWare ESXi)
-    //   <architecture>arm</architecture> (seen from Segger JLink on unspecified arm board)
-    // use that if we don't have anything better.
+    //   <architecture>arm</architecture> (seen from Segger JLink on unspecified
+    //   arm board)
     if (!arch_to_use.IsValid() && !target_info.arch.empty()) {
-      if (target_info.arch == "i386:x86-64") {
-        // We don't have any information about vendor or OS.
-        arch_to_use.SetTriple("x86_64--");
-        GetTarget().MergeArchitecture(arch_to_use);
-      }
+      // We don't have any information about vendor or OS.
+      arch_to_use.SetTriple(llvm::StringSwitch<std::string>(target_info.arch)
+                                .Case("i386:x86-64", "x86_64")
+                                .Default(target_info.arch) +
+                            "--");
 
-      // SEGGER J-Link jtag boards send this very-generic arch name,
-      // we'll need to use this if we have absolutely nothing better
-      // to work with or the register definitions won't be accepted.
-      if (target_info.arch == "arm") {
-        arch_to_use.SetTriple("arm--");
+      if (arch_to_use.IsValid())
         GetTarget().MergeArchitecture(arch_to_use);
-      }
     }
 
     if (arch_to_use.IsValid()) {

@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_SHARED_WRAPPERFUNCTIONUTILS_H
 #define LLVM_EXECUTIONENGINE_ORC_SHARED_WRAPPERFUNCTIONUTILS_H
 
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
 #include "llvm/Support/Error.h"
 
@@ -565,6 +566,47 @@ public:
   using WrapperFunction<SPSEmpty(SPSTagTs...)>::handle;
   using WrapperFunction<SPSEmpty(SPSTagTs...)>::handleAsync;
 };
+
+/// A function object that takes an ExecutorAddress as its first argument,
+/// casts that address to a ClassT*, then calls the given method on that
+/// pointer passing in the remaining function arguments. This utility
+/// removes some of the boilerplate from writing wrappers for method calls.
+///
+///   @code{.cpp}
+///   class MyClass {
+///   public:
+///     void myMethod(uint32_t, bool) { ... }
+///   };
+///
+///   // SPS Method signature -- note MyClass object address as first argument.
+///   using SPSMyMethodWrapperSignature =
+///     SPSTuple<SPSExecutorAddress, uint32_t, bool>;
+///
+///   WrapperFunctionResult
+///   myMethodCallWrapper(const char *ArgData, size_t ArgSize) {
+///     return WrapperFunction<SPSMyMethodWrapperSignature>::handle(
+///        ArgData, ArgSize, makeMethodWrapperHandler(&MyClass::myMethod));
+///   }
+///   @endcode
+///
+template <typename RetT, typename ClassT, typename... ArgTs>
+class MethodWrapperHandler {
+public:
+  using MethodT = RetT (ClassT::*)(ArgTs...);
+  MethodWrapperHandler(MethodT M) : M(M) {}
+  RetT operator()(ExecutorAddress ObjAddr, ArgTs &... Args) {
+    return (ObjAddr.toPtr<ClassT*>()->*M)(std::forward<ArgTs>(Args)...);
+  }
+private:
+  MethodT M;
+};
+
+/// Create a MethodWrapperHandler object from the given method pointer.
+template <typename RetT, typename ClassT, typename... ArgTs>
+MethodWrapperHandler<RetT, ClassT, ArgTs...>
+makeMethodWrapperHandler(RetT (ClassT::*Method)(ArgTs...)) {
+  return MethodWrapperHandler<RetT, ClassT, ArgTs...>(Method);
+}
 
 } // end namespace shared
 } // end namespace orc

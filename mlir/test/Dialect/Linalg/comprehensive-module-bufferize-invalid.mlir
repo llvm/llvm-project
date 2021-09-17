@@ -130,3 +130,13 @@ func @unknown_op(%A : tensor<4xf32>) -> tensor<4xf32>
   %r = "marklar"(%A) : (tensor<4xf32>) -> (tensor<4xf32>)
   return %r: tensor<4xf32>
 }
+
+// -----
+
+// expected-error @+1 {{memref return type is unsupported}}
+func @mini_test_case1() -> tensor<10x20xf32> {
+  %f0 = constant 0.0 : f32
+  %t = linalg.init_tensor [10, 20] : tensor<10x20xf32>
+  %r = linalg.fill(%f0, %t) : f32, tensor<10x20xf32> -> tensor<10x20xf32>
+  return %r : tensor<10x20xf32>
+}

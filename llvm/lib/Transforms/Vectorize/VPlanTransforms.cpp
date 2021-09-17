@@ -31,19 +31,18 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
 
     VPBasicBlock *VPBB = Base->getEntryBasicBlock();
     // Introduce each ingredient into VPlan.
-    for (auto I = VPBB->begin(), E = VPBB->end(); I != E;) {
-      VPRecipeBase *Ingredient = &*I++;
-      VPValue *VPV = Ingredient->getVPSingleValue();
+    for (VPRecipeBase &Ingredient : llvm::make_early_inc_range(*VPBB)) {
+      VPValue *VPV = Ingredient.getVPSingleValue();
       Instruction *Inst = cast<Instruction>(VPV->getUnderlyingValue());
       if (DeadInstructions.count(Inst)) {
         VPValue DummyValue;
         VPV->replaceAllUsesWith(&DummyValue);
-        Ingredient->eraseFromParent();
+        Ingredient.eraseFromParent();
         continue;
       }
 
       VPRecipeBase *NewRecipe = nullptr;
-      if (auto *VPPhi = dyn_cast<VPWidenPHIRecipe>(Ingredient)) {
+      if (auto *VPPhi = dyn_cast<VPWidenPHIRecipe>(&Ingredient)) {
         auto *Phi = cast<PHINode>(VPPhi->getUnderlyingValue());
         InductionDescriptor II = Inductions.lookup(Phi);
         if (II.getKind() == InductionDescriptor::IK_IntInduction ||
@@ -55,7 +54,7 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
           continue;
         }
       } else {
-        assert(isa<VPInstruction>(Ingredient) &&
+        assert(isa<VPInstruction>(&Ingredient) &&
                "only VPInstructions expected here");
         assert(!isa<PHINode>(Inst) && "phis should be handled above");
         // Create VPWidenMemoryInstructionRecipe for loads and stores.
@@ -85,13 +84,13 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         }
       }
 
-      NewRecipe->insertBefore(Ingredient);
+      NewRecipe->insertBefore(&Ingredient);
       if (NewRecipe->getNumDefinedValues() == 1)
         VPV->replaceAllUsesWith(NewRecipe->getVPSingleValue());
       else
         assert(NewRecipe->getNumDefinedValues() == 0 &&
                "Only recpies with zero or one defined values expected");
-      Ingredient->eraseFromParent();
+      Ingredient.eraseFromParent();
       Plan->removeVPValueFor(Inst);
       for (auto *Def : NewRecipe->definedValues()) {
         Plan->addVPValue(Inst, Def);

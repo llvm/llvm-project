@@ -1342,6 +1342,64 @@ def : Pat<(TestLocationSrcOp:$res1
             (location "fused", $res2, $res3))>;
 
 //===----------------------------------------------------------------------===//
+// Test Patterns (Type Builders)
+
+def SourceOp : TEST_Op<"source_op"> {
+  let arguments = (ins AnyInteger:$arg, AnyI32Attr:$tag);
+  let results = (outs AnyInteger);
+}
+
+// An op without return type deduction.
+def OpX : TEST_Op<"op_x"> {
+  let arguments = (ins AnyInteger:$input);
+  let results = (outs AnyInteger);
+}
+
+// Test that ops without built-in type deduction can be created in the
+// replacement DAG with an explicitly specified type.
+def : Pat<(SourceOp $val, ConstantAttr<I32Attr, "11">:$attr),
+          (OpX (OpX $val, (returnType "$_builder.getI32Type()")))>;
+// Test NativeCodeCall type builder can accept arguments.
+def SameTypeAs : NativeCodeCall<"$0.getType()">;
+
+def : Pat<(SourceOp $val, ConstantAttr<I32Attr, "22">:$attr),
+          (OpX (OpX $val, (returnType (SameTypeAs $val))))>;
+
+// Test multiple return types.
+def MakeI64Type : NativeCodeCall<"$_builder.getI64Type()">;
+def MakeI32Type : NativeCodeCall<"$_builder.getI32Type()">;
+
+def OneToTwo : TEST_Op<"one_to_two"> {
+  let arguments = (ins AnyInteger);
+  let results = (outs AnyInteger, AnyInteger);
+}
+
+def TwoToOne : TEST_Op<"two_to_one"> {
+  let arguments = (ins AnyInteger, AnyInteger);
+  let results = (outs AnyInteger);
+}
+
+def : Pat<(SourceOp $val, ConstantAttr<I32Attr, "33">:$attr),
+          (TwoToOne (OpX (OneToTwo:$res__0 $val, (returnType (MakeI64Type), (MakeI32Type))), (returnType (MakeI32Type))),
+                    (OpX $res__1, (returnType (MakeI64Type))))>;
+
+// Test copy value return type.
+def : Pat<(SourceOp $val, ConstantAttr<I32Attr, "44">:$attr),
+          (OpX (OpX $val, (returnType $val)))>;
+
+// Test create multiple return types with different methods.
+def : Pat<(SourceOp $val, ConstantAttr<I32Attr, "55">:$attr),
+          (TwoToOne (OneToTwo:$res__0 $val, (returnType $val, "$_builder.getI64Type()")), $res__1)>;
+
+//===----------------------------------------------------------------------===//
+// Test Patterns (Trailing Directives)
+
+// Test that we can specify both `location` and `returnType` directives.
+def : Pat<(SourceOp $val, ConstantAttr<I32Attr, "66">:$attr),
+          (TwoToOne (OpX $val, (returnType $val), (location "loc1")),
+                    (OpX $val, (location "loc2"), (returnType $val)))>;
+
+//===----------------------------------------------------------------------===//
 // Test Legalization
 //===----------------------------------------------------------------------===//
 

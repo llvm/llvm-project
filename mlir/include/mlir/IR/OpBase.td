@@ -2637,15 +2637,49 @@ def ConstantLikeMatcher : NativeCodeCall<"success(matchPattern($_self->getResult
 // Rewrite directives
 //===----------------------------------------------------------------------===//
 
-// Directive used in result pattern to specify the location of the generated
-// op. This directive must be used as the last argument to the op creation
-// DAG construct. The arguments to location must be previously captured symbol.
-def location;
-
 // Directive used in result pattern to indicate that no new op are generated,
 // so to replace the matched DAG with an existing SSA value.
 def replaceWithValue;
 
+// Directive used in result patterns to specify the location of the generated
+// op. This directive must be used as a trailing argument to op creation or
+// native code calls.
+//
+// Usage:
+// * Create a named location: `(location "myLocation")`
+// * Copy the location of a captured symbol: `(location $arg)`
+// * Create a fused location: `(location "metadata", $arg0, $arg1)`
+
+def location;
+
+// Directive used in result patterns to specify return types for a created op.
+// This allows ops to be created without relying on type inference with
+// `OpTraits` or an op builder with deduction.
+//
+// This directive must be used as a trailing argument to op creation.
+//
+// Specify one return type with a string literal:
+//
+// ```
+// (AnOp $val, (returnType "$_builder.getI32Type()"))
+// ```
+//
+// Pass a captured value to copy its return type:
+//
+// ```
+// (AnOp $val, (returnType $val));
+// ```
+//
+// Pass a native code call inside a DAG to create a new type with arguments.
+//
+// ```
+// (AnOp $val,
+//       (returnType (NativeCodeCall<"$_builder.getTupleType({$0})"> $val)));
+// ```
+//
+// Specify multiple return types with multiple of any of the above.
+
+def returnType;
 
 //===----------------------------------------------------------------------===//
 // Attribute and Type generation

@@ -130,7 +130,13 @@ def extending_loads : GICombineRule<
   (match (wip_match_opcode G_LOAD, G_SEXTLOAD, G_ZEXTLOAD):$root,
          [{ return Helper.matchCombineExtendingLoads(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineExtendingLoads(*${root}, ${matchinfo}); }])>;
-def combines_for_extload: GICombineGroup<[extending_loads]>;
+
+def load_and_mask : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_AND):$root,
+        [{ return Helper.matchCombineLoadWithAndMask(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+def combines_for_extload: GICombineGroup<[extending_loads, load_and_mask]>;
 
 def sext_trunc_sextload : GICombineRule<
   (defs root:$d),

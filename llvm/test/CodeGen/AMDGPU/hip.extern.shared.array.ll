@@ -135,4 +135,25 @@ define amdgpu_kernel void @dynamic_shared_array_6(i32 %idx) {
   ret void
 }
 
+; CHECK-LABEL: dynamic_shared_array_with_call:
+; CHECK-NOT: s_swappc_b64
+define amdgpu_kernel void @dynamic_shared_array_with_call(float addrspace(1)* nocapture readnone %out) local_unnamed_addr {
+  %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %1 = sext i32 %tid.x to i64
+  %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds0, i64 0, i64 %1
+  %val0 = load float, float addrspace(3)* %arrayidx0, align 4
+  tail call void @store_value(float %val0)
+  ret void
+}
+
+; CHECK-NOT: store_value
+define linkonce_odr hidden void @store_value(float %val1) local_unnamed_addr {
+entry:
+  %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %0 = sext i32 %tid.x to i64
+  %arrayidx1 = getelementptr inbounds [0 x float], [0 x float] addrspace(3)* @dynamic_shared0, i64 0, i64 %0
+  store float %val1, float addrspace(3)* %arrayidx1, align 4
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x()

@@ -46,7 +46,7 @@ memref::GlobalOp GlobalCreator::getGlobalFor(ConstantOp constantOp) {
   auto global = globalBuilder.create<memref::GlobalOp>(
       constantOp.getLoc(), (Twine("__constant_") + os.str()).str(),
       /*sym_visibility=*/globalBuilder.getStringAttr("private"),
-      /*type=*/typeConverter.convertType(type),
+      /*type=*/typeConverter.convertType(type).cast<MemRefType>(),
       /*initial_value=*/constantOp.getValue().cast<ElementsAttr>(),
       /*constant=*/true);
   symbolTable.insert(global);
