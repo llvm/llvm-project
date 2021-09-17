@@ -430,7 +430,7 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
 
   if (!IsObjectFile || IsMachOObject || Die.getTag() != DW_TAG_compile_unit) {
     bool DumpDieAfterError = false;
-    for (auto Range : Ranges) {
+    for (const auto &Range : Ranges) {
       if (!Range.valid()) {
         ++NumErrors;
         error() << "Invalid address range " << Range << "\n";
@@ -1515,7 +1515,7 @@ unsigned DWARFVerifier::verifyDebugNames(const DWARFSection &AccelSection,
   if (NumErrors > 0)
     return NumErrors;
   for (const auto &NI : AccelTable)
-    for (DWARFDebugNames::NameTableEntry NTE : NI)
+    for (const DWARFDebugNames::NameTableEntry &NTE : NI)
       NumErrors += verifyNameIndexEntries(NI, NTE);
 
   if (NumErrors > 0)
