@@ -3137,7 +3137,6 @@ clang::Decl *DWARFASTParserClang::GetClangDeclForDIE(const DWARFDIE &die) {
   if (DWARFDIE spec_die = die.GetReferencedDIE(DW_AT_specification)) {
     clang::Decl *decl = GetClangDeclForDIE(spec_die);
     m_die_to_decl[die.GetDIE()] = decl;
-    m_decl_to_die[decl].insert(die.GetDIE());
     return decl;
   }
 
@@ -3145,7 +3144,6 @@ clang::Decl *DWARFASTParserClang::GetClangDeclForDIE(const DWARFDIE &die) {
           die.GetReferencedDIE(DW_AT_abstract_origin)) {
     clang::Decl *decl = GetClangDeclForDIE(abstract_origin_die);
     m_die_to_decl[die.GetDIE()] = decl;
-    m_decl_to_die[decl].insert(die.GetDIE());
     return decl;
   }
 
@@ -3210,7 +3208,6 @@ clang::Decl *DWARFASTParserClang::GetClangDeclForDIE(const DWARFDIE &die) {
   }
 
   m_die_to_decl[die.GetDIE()] = decl;
-  m_decl_to_die[decl].insert(die.GetDIE());
 
   return decl;
 }

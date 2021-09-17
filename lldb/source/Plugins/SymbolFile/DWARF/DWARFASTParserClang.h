@@ -73,7 +73,6 @@ protected:
   class DelayedAddObjCClassProperty;
   typedef std::vector<DelayedAddObjCClassProperty> DelayedPropertyList;
 
-  typedef llvm::SmallPtrSet<const DWARFDebugInfoEntry *, 4> DIEPointerSet;
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, clang::DeclContext *>
       DIEToDeclContextMap;
   typedef std::multimap<const clang::DeclContext *, const DWARFDIE>
@@ -83,11 +82,9 @@ protected:
       DIEToModuleMap;
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, clang::Decl *>
       DIEToDeclMap;
-  typedef llvm::DenseMap<const clang::Decl *, DIEPointerSet> DeclToDIEMap;
 
   lldb_private::TypeSystemClang &m_ast;
   DIEToDeclMap m_die_to_decl;
-  DeclToDIEMap m_decl_to_die;
   DIEToDeclContextMap m_die_to_decl_ctx;
   DeclContextToDIEMap m_decl_ctx_to_die;
   DIEToModuleMap m_die_to_module;
