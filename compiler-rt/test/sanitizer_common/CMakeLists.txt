@@ -77,6 +77,9 @@ foreach(tool ${SUPPORTED_TOOLS})
     # required to get a complete stacktrace.
     if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND NOT ANDROID)
       list(APPEND SANITIZER_COMMON_TEST_TARGET_CFLAGS -funwind-tables)
+      if(CMAKE_SYSROOT)
+        list(APPEND SANITIZER_COMMON_TEST_TARGET_CFLAGS "--sysroot=${CMAKE_SYSROOT}")
+      endif()
       string(REPLACE ";" " " SANITIZER_COMMON_TEST_TARGET_CFLAGS
                              "${SANITIZER_COMMON_TEST_TARGET_CFLAGS}")
     endif()
