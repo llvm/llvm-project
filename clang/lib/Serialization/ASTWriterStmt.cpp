@@ -2206,13 +2206,6 @@ void ASTStmtWriter::VisitOMPLoopDirective(OMPLoopDirective *D) {
   VisitOMPLoopBasedDirective(D);
 }
 
-void ASTStmtWriter::VisitOMPMetaDirective(OMPMetaDirective *D) {
-  VisitStmt(D);
-  Record.push_back(D->getNumClauses());
-  VisitOMPExecutableDirective(D);
-  Code = serialization::STMT_OMP_META_DIRECTIVE;
-}
-
 void ASTStmtWriter::VisitOMPParallelDirective(OMPParallelDirective *D) {
   VisitStmt(D);
   VisitOMPExecutableDirective(D);
