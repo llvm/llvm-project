@@ -361,7 +361,7 @@ func @unit_dim_for_reduction(%arg0: tensor<1x?x1x?xf32>) -> tensor<1x?xf32> {
 
 // -----
 
-func @unit_dim_for_reduction_keep_one(%arg0: tensor<1x?x1x1xf32>) -> tensor<1x1xf32> {
+func @unit_dim_for_both_reduction(%arg0: tensor<1x?x1x1xf32>) -> tensor<1x1xf32> {
   %cst = constant 1.000000e+00 : f32
   %c3 = constant 3 : index
   %1 = linalg.init_tensor [1, 1] : tensor<1x1xf32>
@@ -378,17 +378,16 @@ func @unit_dim_for_reduction_keep_one(%arg0: tensor<1x?x1x1xf32>) -> tensor<1x1x
   } -> tensor<1x1xf32>
   return %3 : tensor<1x1xf32>
 }
-//  CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1) -> (d0, d1)>
-//  CHECK-DAG: #[[MAP3:.+]] = affine_map<(d0, d1) -> (d0)>
-//      CHECK: func @unit_dim_for_reduction_keep_one
+//  CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0) -> (d0)>
+//      CHECK: func @unit_dim_for_both_reduction
 // CHECK-SAME:   %[[ARG0:.+]]: tensor<1x?x1x1xf32>
-//  CHECK-DAG:   %[[RESHAPE:.+]] = linalg.tensor_collapse_shape %[[ARG0]] {{\[}}[0, 1, 2], [3]]
+//  CHECK-DAG:   %[[RESHAPE:.+]] = linalg.tensor_collapse_shape %[[ARG0]] {{\[}}[0, 1, 2, 3]
 //      CHECK:   %[[INIT:.+]] = linalg.init_tensor [1] : tensor<1xf32>
 //      CHECK:   %[[FILL:.+]] = linalg.fill(%{{.+}}, %[[INIT]])
 //      CHECK:   %[[RESULT:.+]] = linalg.generic
-// CHECK-SAME:     indexing_maps = [#[[MAP2]], #[[MAP3]]]
-// CHECK-SAME:     iterator_types = ["parallel", "reduction"]
-// CHECK-SAME:     ins(%[[RESHAPE]] : tensor<?x1xf32>)
+// CHECK-SAME:     indexing_maps = [#[[MAP2]], #[[MAP2]]]
+// CHECK-SAME:     iterator_types = ["parallel"]
+// CHECK-SAME:     ins(%[[RESHAPE]] : tensor<?xf32>)
 // CHECK-SAME:     outs(%[[FILL]] : tensor<1xf32>)
 //      CHECK:   %[[RESULT_RESHAPE:.+]] = linalg.tensor_expand_shape %[[RESULT]] {{\[}}[0, 1]]
 //      CHECK:   return %[[RESULT_RESHAPE]]
