@@ -1436,6 +1436,9 @@ def warn_omp51_compat_attributes : Warning<
   "specifying OpenMP directives with [[]] is incompatible with OpenMP "
   "standards before OpenMP 5.1">,
   InGroup<OpenMPPre51Compat>, DefaultIgnore;
+def err_omp_expected_colon : Error<"missing ':' in %0">;
+def err_omp_expected_context_selector
+    : Error<"expected valid context selector in %0">;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<
