@@ -729,7 +729,6 @@ public:
       DenseMap<unsigned, DenseSet<unsigned>> &FromSourceMapping);
 
   /// \param [in,out] BBSet - The set to track the basic blocks.
-  /// \returns The BasicBlock the IRSimilarityCandidate ends in.
   void getBasicBlocks(DenseSet<BasicBlock *> &BBSet) const {
     for (IRInstructionData &ID : *this) {
       BasicBlock *BB = ID.Inst->getParent();
@@ -741,7 +740,6 @@ public:
 
   /// \param [in,out] BBSet - The set to track the basic blocks.
   /// \param [in,out] BBList - A list in order of use to track the basic blocks.
-  /// \returns The BasicBlock the IRSimilarityCandidate ends in.
   void getBasicBlocks(DenseSet<BasicBlock *> &BBSet,
                       SmallVector<BasicBlock *> &BBList) const {
     for (IRInstructionData &ID : *this) {
