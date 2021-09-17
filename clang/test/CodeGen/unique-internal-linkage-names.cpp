@@ -59,7 +59,7 @@ void test() {
 // PLAIN: @_ZN12_GLOBAL__N_16anon_mE = internal global
 // PLAIN: define internal i32 @_ZL3foov()
 // PLAIN: define internal i32 @_ZN12_GLOBAL__N_14getMEv
-// PLAIN: define weak_odr i32 ()* @_ZL4mverv.resolver()
+// PLAIN: define internal i32 ()* @_ZL4mverv.resolver()
 // PLAIN: define internal void @_ZN12_GLOBAL__N_11AC1Ev
 // PLAIN: define internal void @_ZN12_GLOBAL__N_11AD1Ev
 // PLAIN: define internal i32 @_ZL4mverv()
@@ -70,7 +70,7 @@ void test() {
 // UNIQUE: @_ZN12_GLOBAL__N_16anon_mE = internal global
 // UNIQUE: define internal i32 @_ZL3foov.[[MODHASH:__uniq.[0-9]+]]() #[[#ATTR:]] {
 // UNIQUE: define internal i32 @_ZN12_GLOBAL__N_14getMEv.[[MODHASH]]
-// UNIQUE: define weak_odr i32 ()* @_ZL4mverv.[[MODHASH]].resolver()
+// UNIQUE: define internal i32 ()* @_ZL4mverv.[[MODHASH]].resolver()
 // UNIQUE: define internal void @_ZN12_GLOBAL__N_11AC1Ev.__uniq.68358509610070717889884130747296293671
 // UNIQUE: define internal void @_ZN12_GLOBAL__N_11AD1Ev.__uniq.68358509610070717889884130747296293671
 // UNIQUE: define internal i32 @_ZL4mverv.[[MODHASH]]()

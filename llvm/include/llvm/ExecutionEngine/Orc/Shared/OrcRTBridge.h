@@ -21,9 +21,11 @@ namespace llvm {
 namespace orc {
 namespace rt {
 
-extern const char *MemoryReserveWrapperName;
-extern const char *MemoryFinalizeWrapperName;
-extern const char *MemoryDeallocateWrapperName;
+extern const char *SimpleExecutorMemoryManagerInstanceName;
+extern const char *SimpleExecutorMemoryManagerReserveWrapperName;
+extern const char *SimpleExecutorMemoryManagerFinalizeWrapperName;
+extern const char *SimpleExecutorMemoryManagerDeallocateWrapperName;
+
 extern const char *MemoryWriteUInt8sWrapperName;
 extern const char *MemoryWriteUInt16sWrapperName;
 extern const char *MemoryWriteUInt32sWrapperName;
@@ -31,11 +33,15 @@ extern const char *MemoryWriteUInt64sWrapperName;
 extern const char *MemoryWriteBuffersWrapperName;
 extern const char *RunAsMainWrapperName;
 
-using SPSMemoryReserveSignature =
-    shared::SPSExpected<shared::SPSExecutorAddress>(uint64_t);
-using SPSMemoryFinalizeSignature = shared::SPSError(shared::SPSFinalizeRequest);
-using SPSMemoryDeallocateSignature =
-    shared::SPSError(shared::SPSExecutorAddress, uint64_t);
+using SPSSimpleExecutorMemoryManagerReserveSignature =
+    shared::SPSExpected<shared::SPSExecutorAddress>(shared::SPSExecutorAddress,
+                                                    uint64_t);
+using SPSSimpleExecutorMemoryManagerFinalizeSignature =
+    shared::SPSError(shared::SPSExecutorAddress, shared::SPSFinalizeRequest);
+using SPSSimpleExecutorMemoryManagerDeallocateSignature =
+    shared::SPSError(shared::SPSExecutorAddress,
+                     shared::SPSSequence<shared::SPSExecutorAddress>);
+
 using SPSRunAsMainSignature = int64_t(shared::SPSExecutorAddress,
                                       shared::SPSSequence<shared::SPSString>);
 

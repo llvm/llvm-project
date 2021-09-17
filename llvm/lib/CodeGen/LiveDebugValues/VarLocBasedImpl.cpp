@@ -627,7 +627,7 @@ private:
     /// add each of them to \p Regs and return true.
     bool getDescribingRegs(SmallVectorImpl<uint32_t> &Regs) const {
       bool AnyRegs = false;
-      for (auto Loc : Locs)
+      for (const auto &Loc : Locs)
         if (Loc.Kind == MachineLocKind::RegisterKind) {
           Regs.push_back(Loc.Value.RegNo);
           AnyRegs = true;

@@ -135,6 +135,7 @@ public:
 
   void Enter(const parser::OpenMPBlockConstruct &);
   void Leave(const parser::OpenMPBlockConstruct &);
+  void Leave(const parser::OmpBeginBlockDirective &);
   void Enter(const parser::OmpEndBlockDirective &);
   void Leave(const parser::OmpEndBlockDirective &);
 
@@ -238,7 +239,9 @@ private:
       const parser::DefinedOperator::IntrinsicOperator &);
   void CheckReductionTypeList(const parser::OmpClause::Reduction &);
   void CheckMasterNesting(const parser::OpenMPBlockConstruct &x);
+  void ChecksOnOrderedAsBlock();
   void CheckBarrierNesting(const parser::OpenMPSimpleStandaloneConstruct &x);
+  void ChecksOnOrderedAsStandalone();
   void CheckReductionArraySection(const parser::OmpObjectList &ompObjectList);
   void CheckIntentInPointerAndDefinable(
       const parser::OmpObjectList &, const llvm::omp::Clause);

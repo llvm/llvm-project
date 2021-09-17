@@ -266,7 +266,7 @@ public:
     return (Generation)Gen;
   }
 
-  /// Return the number of high bits known to be zero fror a frame index.
+  /// Return the number of high bits known to be zero for a frame index.
   unsigned getKnownHighZeroBitsForFrameIndex() const {
     return countLeadingZeros(MaxWaveScratchSize) + getWavefrontSizeLog2();
   }
@@ -606,7 +606,7 @@ public:
   }
 
   /// Return if most LDS instructions have an m0 use that require m0 to be
-  /// iniitalized.
+  /// initialized.
   bool ldsRequiresM0Init() const {
     return getGeneration() < GFX9;
   }
@@ -747,7 +747,7 @@ public:
   }
 
   // Scratch is allocated in 256 dword per wave blocks for the entire
-  // wavefront. When viewed from the perspecive of an arbitrary workitem, this
+  // wavefront. When viewed from the perspective of an arbitrary workitem, this
   // is 4-byte aligned.
   //
   // Only 4-byte alignment is really needed to access anything. Transformations

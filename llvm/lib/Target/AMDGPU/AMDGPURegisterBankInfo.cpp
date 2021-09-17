@@ -1336,7 +1336,7 @@ static unsigned setBufferOffsets(MachineIRBuilder &B,
   const LLT S32 = LLT::scalar(32);
   MachineRegisterInfo *MRI = B.getMRI();
 
-  if (Optional<int64_t> Imm = getConstantVRegSExtVal(CombinedOffset, *MRI)) {
+  if (Optional<int64_t> Imm = getIConstantVRegSExtVal(CombinedOffset, *MRI)) {
     uint32_t SOffset, ImmOffset;
     if (AMDGPU::splitMUBUFOffset(*Imm, SOffset, ImmOffset, &RBI.Subtarget,
                                  Alignment)) {
@@ -1569,7 +1569,7 @@ bool AMDGPURegisterBankInfo::applyMappingBFE(const OperandsMapper &OpdMapper,
 
     // A 64-bit bitfield extract uses the 32-bit bitfield extract instructions
     // if the width is a constant.
-    if (auto ConstWidth = getConstantVRegValWithLookThrough(WidthReg, MRI)) {
+    if (auto ConstWidth = getIConstantVRegValWithLookThrough(WidthReg, MRI)) {
       // Use the 32-bit bitfield extract instruction if the width is a constant.
       // Depending on the width size, use either the low or high 32-bits.
       auto Zero = B.buildConstant(S32, 0);

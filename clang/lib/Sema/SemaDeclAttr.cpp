@@ -7552,18 +7552,17 @@ static void handleOpenCLAccessAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // OpenCL v3.0 s6.8 - For OpenCL C 2.0, or with the
   // __opencl_c_read_write_images feature, image objects specified as arguments
   // to a kernel can additionally be declared to be read-write.
-  // C++ for OpenCL inherits rule from OpenCL C v2.0.
+  // C++ for OpenCL 1.0 inherits rule from OpenCL C v2.0.
+  // C++ for OpenCL 2021 inherits rule from OpenCL C v3.0.
   if (const auto *PDecl = dyn_cast<ParmVarDecl>(D)) {
     const Type *DeclTy = PDecl->getType().getCanonicalType().getTypePtr();
     if (AL.getAttrName()->getName().find("read_write") != StringRef::npos) {
-      bool ReadWriteImagesUnsupportedForOCLC =
-          (S.getLangOpts().OpenCLVersion < 200) ||
-          (S.getLangOpts().OpenCLVersion == 300 &&
+      bool ReadWriteImagesUnsupported =
+          (S.getLangOpts().getOpenCLCompatibleVersion() < 200) ||
+          (S.getLangOpts().getOpenCLCompatibleVersion() == 300 &&
            !S.getOpenCLOptions().isSupported("__opencl_c_read_write_images",
                                              S.getLangOpts()));
-      if ((!S.getLangOpts().OpenCLCPlusPlus &&
-           ReadWriteImagesUnsupportedForOCLC) ||
-          DeclTy->isPipeType()) {
+      if (ReadWriteImagesUnsupported || DeclTy->isPipeType()) {
         S.Diag(AL.getLoc(), diag::err_opencl_invalid_read_write)
             << AL << PDecl->getType() << DeclTy->isImageType();
         D->setInvalidDecl(true);

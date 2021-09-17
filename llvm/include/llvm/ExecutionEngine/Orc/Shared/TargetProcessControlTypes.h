@@ -19,6 +19,7 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
+#include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/Support/Memory.h"
 
 #include <vector>
@@ -68,6 +69,31 @@ inline std::string getWireProtectionFlagsStr(WireProtectionFlags WPF) {
   return Result;
 }
 
+struct SupportFunctionCall {
+  using FnTy = shared::detail::CWrapperFunctionResult(const char *ArgData,
+                                                      size_t ArgSize);
+  ExecutorAddress Func;
+  ExecutorAddress ArgData;
+  uint64_t ArgSize;
+
+  Error run() {
+    shared::WrapperFunctionResult WFR(
+        Func.toPtr<FnTy *>()(ArgData.toPtr<const char *>(), ArgSize));
+    if (const char *ErrMsg = WFR.getOutOfBandError())
+      return make_error<StringError>(ErrMsg, inconvertibleErrorCode());
+    if (!WFR.empty())
+      return make_error<StringError>("Unexpected result bytes from "
+                                     "support function call",
+                                     inconvertibleErrorCode());
+    return Error::success();
+  }
+};
+
+struct AllocationActionsPair {
+  SupportFunctionCall Finalize;
+  SupportFunctionCall Deallocate;
+};
+
 struct SegFinalizeRequest {
   WireProtectionFlags Prot;
   ExecutorAddress Addr;
@@ -75,7 +101,10 @@ struct SegFinalizeRequest {
   ArrayRef<char> Content;
 };
 
-using FinalizeRequest = std::vector<SegFinalizeRequest>;
+struct FinalizeRequest {
+  std::vector<SegFinalizeRequest> Segments;
+  std::vector<AllocationActionsPair> Actions;
+};
 
 template <typename T> struct UIntWrite {
   UIntWrite() = default;
@@ -120,11 +149,18 @@ namespace shared {
 
 class SPSMemoryProtectionFlags {};
 
+using SPSSupportFunctionCall =
+    SPSTuple<SPSExecutorAddress, SPSExecutorAddress, uint64_t>;
+
 using SPSSegFinalizeRequest =
     SPSTuple<SPSMemoryProtectionFlags, SPSExecutorAddress, uint64_t,
              SPSSequence<char>>;
 
-using SPSFinalizeRequest = SPSSequence<SPSSegFinalizeRequest>;
+using SPSAllocationActionsPair =
+    SPSTuple<SPSSupportFunctionCall, SPSSupportFunctionCall>;
+
+using SPSFinalizeRequest = SPSTuple<SPSSequence<SPSSegFinalizeRequest>,
+                                    SPSSequence<SPSAllocationActionsPair>>;
 
 template <typename T>
 using SPSMemoryAccessUIntWrite = SPSTuple<SPSExecutorAddress, T>;
@@ -161,6 +197,48 @@ public:
 };
 
 template <>
+class SPSSerializationTraits<SPSSupportFunctionCall,
+                             tpctypes::SupportFunctionCall> {
+  using AL = SPSSupportFunctionCall::AsArgList;
+
+public:
+  static size_t size(const tpctypes::SupportFunctionCall &SFC) {
+    return AL::size(SFC.Func, SFC.ArgData, SFC.ArgSize);
+  }
+
+  static bool serialize(SPSOutputBuffer &OB,
+                        const tpctypes::SupportFunctionCall &SFC) {
+    return AL::serialize(OB, SFC.Func, SFC.ArgData, SFC.ArgSize);
+  }
+
+  static bool deserialize(SPSInputBuffer &IB,
+                          tpctypes::SupportFunctionCall &SFC) {
+    return AL::deserialize(IB, SFC.Func, SFC.ArgData, SFC.ArgSize);
+  }
+};
+
+template <>
+class SPSSerializationTraits<SPSAllocationActionsPair,
+                             tpctypes::AllocationActionsPair> {
+  using AL = SPSAllocationActionsPair::AsArgList;
+
+public:
+  static size_t size(const tpctypes::AllocationActionsPair &AAP) {
+    return AL::size(AAP.Finalize, AAP.Deallocate);
+  }
+
+  static bool serialize(SPSOutputBuffer &OB,
+                        const tpctypes::AllocationActionsPair &AAP) {
+    return AL::serialize(OB, AAP.Finalize, AAP.Deallocate);
+  }
+
+  static bool deserialize(SPSInputBuffer &IB,
+                          tpctypes::AllocationActionsPair &AAP) {
+    return AL::deserialize(IB, AAP.Finalize, AAP.Deallocate);
+  }
+};
+
+template <>
 class SPSSerializationTraits<SPSSegFinalizeRequest,
                              tpctypes::SegFinalizeRequest> {
   using SFRAL = SPSSegFinalizeRequest::AsArgList;
@@ -178,6 +256,25 @@ public:
   static bool deserialize(SPSInputBuffer &IB,
                           tpctypes::SegFinalizeRequest &SFR) {
     return SFRAL::deserialize(IB, SFR.Prot, SFR.Addr, SFR.Size, SFR.Content);
+  }
+};
+
+template <>
+class SPSSerializationTraits<SPSFinalizeRequest, tpctypes::FinalizeRequest> {
+  using FRAL = SPSFinalizeRequest::AsArgList;
+
+public:
+  static size_t size(const tpctypes::FinalizeRequest &FR) {
+    return FRAL::size(FR.Segments, FR.Actions);
+  }
+
+  static bool serialize(SPSOutputBuffer &OB,
+                        const tpctypes::FinalizeRequest &FR) {
+    return FRAL::serialize(OB, FR.Segments, FR.Actions);
+  }
+
+  static bool deserialize(SPSInputBuffer &IB, tpctypes::FinalizeRequest &FR) {
+    return FRAL::deserialize(IB, FR.Segments, FR.Actions);
   }
 };
 

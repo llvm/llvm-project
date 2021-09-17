@@ -2653,7 +2653,7 @@ void Record::checkRecordAssertions() {
   RecordResolver R(*this);
   R.setFinal(true);
 
-  for (auto Assertion : getAssertions()) {
+  for (const auto &Assertion : getAssertions()) {
     Init *Condition = Assertion.Condition->resolveReferences(R);
     Init *Message = Assertion.Message->resolveReferences(R);
     CheckAssert(Assertion.Loc, Condition, Message);

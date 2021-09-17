@@ -184,7 +184,6 @@ module m
   pure subroutine s14
     integer :: img, nimgs, i[*], tmp
                                    ! implicit sync all
-    !ERROR: Procedure 'this_image' referenced in pure subprogram 's14' must be pure too
     img = this_image()
     nimgs = num_images()
     i = img                       ! i is ready to use
