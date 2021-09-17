@@ -222,26 +222,12 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
   }
 
   Operation *clonedOp = producer.clone(b, loc, resultTypes, clonedShapes);
-  // When the producer has index semantics, we have to transform the indices of
-  // the producer according to the tiling of the consumer, i.e. offset them by
-  // the values computed in `loopRanges`.
-  if (producer.hasIndexSemantics()) {
-    assert(clonedOp->getNumRegions() == 1 &&
-           clonedOp->getRegion(0).getBlocks().size() == 1 &&
-           "expected producer to have one block.");
-    // Shift all indices by the tile offset.
-    Block &block = clonedOp->getRegion(0).front();
-    for (IndexOp indexOp : block.getOps<IndexOp>()) {
-      OpBuilder::InsertionGuard g(b);
-      b.setInsertionPointAfter(indexOp);
-      AffineExpr index, offset;
-      bindDims(b.getContext(), index, offset);
-      AffineApplyOp applyOp = b.create<AffineApplyOp>(
-          indexOp.getLoc(), index + offset,
-          ValueRange{indexOp.getResult(), loopRanges[indexOp.dim()].offset});
-      indexOp.getResult().replaceAllUsesExcept(applyOp, applyOp);
-    }
-  }
+
+  // Shift all IndexOp results by the tile offset.
+  SmallVector<Value> allIvs;
+  transform(loopRanges, std::back_inserter(allIvs),
+            [](Range range) { return range.offset; });
+  addTileLoopIvsToIndexOpResults(b, clonedOp, allIvs);
 
   return clonedOp;
 }

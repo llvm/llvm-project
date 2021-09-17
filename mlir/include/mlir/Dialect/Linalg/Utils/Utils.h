@@ -127,6 +127,11 @@ SmallVector<Value, 4> makeTiledShapes(OpBuilder &builder, Location loc,
                                       ValueRange ivs, ValueRange tileSizes,
                                       ArrayRef<Value> sizeBounds);
 
+/// Add the tile loop induction variables `ivs` to the IndexOp results found in
+/// the body of the `tiledOp` to account for the tile offset.
+void addTileLoopIvsToIndexOpResults(OpBuilder &b, LinalgOp tiledOp,
+                                    ArrayRef<Value> ivs);
+
 using FusableOpDependencesTy = llvm::MapVector<
     Operation *,
     SmallVector<LinalgDependenceGraph::LinalgDependenceGraphElem, 1>>;
