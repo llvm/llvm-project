@@ -188,6 +188,9 @@ void freeShared(void *Ptr, uint64_t Bytes, const char *Reason);
 /// Alloca \p Size bytes in global memory, if possible, for \p Reason.
 void *allocGlobal(uint64_t Size, const char *Reason);
 
+/// Return a pointer to the dynamic shared memory buffer.
+void *getDynamicBuffer();
+
 /// Free \p Ptr, alloated via allocGlobal, for \p Reason.
 void freeGlobal(void *Ptr, const char *Reason);
 

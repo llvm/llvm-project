@@ -25,6 +25,13 @@ using namespace _OMP;
 ///
 ///{
 
+/// Add worst-case padding so that future allocations are properly aligned.
+constexpr const uint32_t Alignment = 8;
+
+/// External symbol to access dynamic shared memory.
+extern unsigned char DynamicSharedBuffer[] __attribute__((aligned(Alignment)));
+#pragma omp allocate(DynamicSharedBuffer) allocator(omp_pteam_mem_alloc)
+
 namespace {
 
 /// Fallback implementations are missing to trigger a link time error.
@@ -56,9 +63,6 @@ void free(void *Ptr) {}
 
 #pragma omp end declare variant
 ///}
-
-/// Add worst-case padding so that future allocations are properly aligned.
-constexpr const uint32_t Alignment = 8;
 
 /// A "smart" stack in shared memory.
 ///
@@ -146,6 +150,8 @@ void SharedMemorySmartStackTy::pop(void *Ptr, uint32_t Bytes) {
 }
 
 } // namespace
+
+void *memory::getDynamicBuffer() { return DynamicSharedBuffer; }
 
 void *memory::allocShared(uint64_t Bytes, const char *Reason) {
   return SharedMemorySmartStack.push(Bytes);
@@ -495,6 +501,10 @@ __attribute__((noinline)) void *__kmpc_alloc_shared(uint64_t Bytes) {
 
 __attribute__((noinline)) void __kmpc_free_shared(void *Ptr, uint64_t Bytes) {
   memory::freeShared(Ptr, Bytes, "Frontend free shared");
+}
+
+__attribute__((noinline)) void *__kmpc_get_dynamic_shared() {
+  return memory::getDynamicBuffer();
 }
 
 /// Allocate storage in shared memory to communicate arguments from the main

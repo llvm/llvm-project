@@ -31,6 +31,9 @@ uint32_t getDeviceNum();
 /// Return the user choosen debug level.
 uint32_t getDebugLevel();
 
+/// Return the amount of dynamic shared memory that was allocated at launch.
+uint64_t getDynamicMemorySize();
+
 bool isDebugMode(DebugLevel Level);
 
 } // namespace config
