@@ -319,7 +319,6 @@ void Prescanner::EnforceStupidEndStatementRules(const TokenSequence &tokens) {
   j += 3;
   static const char *const prefixes[]{"program", "subroutine", "function",
       "blockdata", "module", "submodule", nullptr};
-  CharBlock stmt{tokens.ToCharBlock()};
   bool isPrefix{j == n || !IsLegalInIdentifier(str[j])}; // prefix is END
   std::size_t endOfPrefix{j - 1};
   for (const char *const *p{prefixes}; *p; ++p) {
