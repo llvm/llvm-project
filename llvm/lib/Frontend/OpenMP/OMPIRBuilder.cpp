@@ -249,10 +249,8 @@ GlobalValue *OpenMPIRBuilder::createDebugKind(unsigned DebugKind) {
   IntegerType *I32Ty = Type::getInt32Ty(M.getContext());
   auto *GV = new GlobalVariable(
       M, I32Ty,
-      /* isConstant = */ true, GlobalValue::PrivateLinkage,
+      /* isConstant = */ true, GlobalValue::WeakODRLinkage,
       ConstantInt::get(I32Ty, DebugKind), "__omp_rtl_debug_kind");
-
-  llvm::appendToUsed(M, {GV});
 
   return GV;
 }
