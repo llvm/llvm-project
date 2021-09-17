@@ -1521,6 +1521,12 @@ void CodeGenFunction::EmitCaseStmt(const CaseStmt &S,
     NextCase = dyn_cast<CaseStmt>(CurCase->getSubStmt());
   }
 
+  // Generate a stop point for debug info if the case statement is
+  // followed by a default statement. A fallthrough case before a
+  // default case gets its own branch target.
+  if (CurCase->getSubStmt()->getStmtClass() == Stmt::DefaultStmtClass)
+    EmitStopPoint(CurCase);
+
   // Normal default recursion for non-cases.
   EmitStmt(CurCase->getSubStmt());
 }
