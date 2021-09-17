@@ -4034,56 +4034,82 @@ static void emitMaster(CodeGenFunction &CGF, const OMPExecutableDirective &S) {
 }
 
 void CodeGenFunction::EmitOMPMasterDirective(const OMPMasterDirective &S) {
-  llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
-  using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+  if (CGM.getLangOpts().OpenMPIRBuilder) {
+    llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
+    using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
 
-  const Stmt *MasterRegionBodyStmt = S.getAssociatedStmt();
+    const Stmt *MasterRegionBodyStmt = S.getAssociatedStmt();
 
-  auto FiniCB = [this](InsertPointTy IP) {
-    OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
-  };
+    auto FiniCB = [this](InsertPointTy IP) {
+      OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
+    };
 
-  auto BodyGenCB = [MasterRegionBodyStmt, this](InsertPointTy AllocaIP,
-                                                InsertPointTy CodeGenIP,
-                                                llvm::BasicBlock &FiniBB) {
-    OMPBuilderCBHelpers::InlinedRegionBodyRAII IRB(*this, AllocaIP, FiniBB);
-    OMPBuilderCBHelpers::EmitOMPRegionBody(*this, MasterRegionBodyStmt,
-                                           CodeGenIP, FiniBB);
-  };
+    auto BodyGenCB = [MasterRegionBodyStmt, this](InsertPointTy AllocaIP,
+                                                  InsertPointTy CodeGenIP,
+                                                  llvm::BasicBlock &FiniBB) {
+      OMPBuilderCBHelpers::InlinedRegionBodyRAII IRB(*this, AllocaIP, FiniBB);
+      OMPBuilderCBHelpers::EmitOMPRegionBody(*this, MasterRegionBodyStmt,
+                                             CodeGenIP, FiniBB);
+    };
 
+    LexicalScope Scope(*this, S.getSourceRange());
+    EmitStopPoint(&S);
+    Builder.restoreIP(OMPBuilder.createMaster(Builder, BodyGenCB, FiniCB));
+
+    return;
+  }
   LexicalScope Scope(*this, S.getSourceRange());
   EmitStopPoint(&S);
-  Builder.restoreIP(OMPBuilder.createMaster(Builder, BodyGenCB, FiniCB));
+  emitMaster(*this, S);
+}
+
+static void emitMasked(CodeGenFunction &CGF, const OMPExecutableDirective &S) {
+  auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    Action.Enter(CGF);
+    CGF.EmitStmt(S.getRawStmt());
+  };
+  Expr *Filter = nullptr;
+  if (const auto *FilterClause = S.getSingleClause<OMPFilterClause>())
+    Filter = FilterClause->getThreadID();
+  CGF.CGM.getOpenMPRuntime().emitMaskedRegion(CGF, CodeGen, S.getBeginLoc(),
+                                              Filter);
 }
 
 void CodeGenFunction::EmitOMPMaskedDirective(const OMPMaskedDirective &S) {
-  llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
-  using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+  if (CGM.getLangOpts().OpenMPIRBuilder) {
+    llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
+    using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
 
-  const Stmt *MaskedRegionBodyStmt = S.getAssociatedStmt();
-  const Expr *Filter = nullptr;
-  if (const auto *FilterClause = S.getSingleClause<OMPFilterClause>())
-    Filter = FilterClause->getThreadID();
-  llvm::Value *FilterVal = Filter
-                               ? EmitScalarExpr(Filter, CGM.Int32Ty)
-                               : llvm::ConstantInt::get(CGM.Int32Ty, /*V=*/0);
+    const Stmt *MaskedRegionBodyStmt = S.getAssociatedStmt();
+    const Expr *Filter = nullptr;
+    if (const auto *FilterClause = S.getSingleClause<OMPFilterClause>())
+      Filter = FilterClause->getThreadID();
+    llvm::Value *FilterVal = Filter
+                                 ? EmitScalarExpr(Filter, CGM.Int32Ty)
+                                 : llvm::ConstantInt::get(CGM.Int32Ty, /*V=*/0);
 
-  auto FiniCB = [this](InsertPointTy IP) {
-    OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
-  };
+    auto FiniCB = [this](InsertPointTy IP) {
+      OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
+    };
 
-  auto BodyGenCB = [MaskedRegionBodyStmt, this](InsertPointTy AllocaIP,
-                                                InsertPointTy CodeGenIP,
-                                                llvm::BasicBlock &FiniBB) {
-    OMPBuilderCBHelpers::InlinedRegionBodyRAII IRB(*this, AllocaIP, FiniBB);
-    OMPBuilderCBHelpers::EmitOMPRegionBody(*this, MaskedRegionBodyStmt,
-                                           CodeGenIP, FiniBB);
-  };
+    auto BodyGenCB = [MaskedRegionBodyStmt, this](InsertPointTy AllocaIP,
+                                                  InsertPointTy CodeGenIP,
+                                                  llvm::BasicBlock &FiniBB) {
+      OMPBuilderCBHelpers::InlinedRegionBodyRAII IRB(*this, AllocaIP, FiniBB);
+      OMPBuilderCBHelpers::EmitOMPRegionBody(*this, MaskedRegionBodyStmt,
+                                             CodeGenIP, FiniBB);
+    };
 
+    LexicalScope Scope(*this, S.getSourceRange());
+    EmitStopPoint(&S);
+    Builder.restoreIP(
+        OMPBuilder.createMasked(Builder, BodyGenCB, FiniCB, FilterVal));
+
+    return;
+  }
   LexicalScope Scope(*this, S.getSourceRange());
   EmitStopPoint(&S);
-  Builder.restoreIP(
-      OMPBuilder.createMasked(Builder, BodyGenCB, FiniCB, FilterVal));
+  emitMasked(*this, S);
 }
 
 void CodeGenFunction::EmitOMPCriticalDirective(const OMPCriticalDirective &S) {
