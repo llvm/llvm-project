@@ -54,7 +54,7 @@ class SwiftDynamicValueTest(TestBase):
                 "z = ",
                 "Derived<Int>) aBase = 0x",
                 "Base<Int>)",
-                ".Base = {",
+                ".Base<Swift.Int> = {",
                 "v = 449493530",
                 "q = 3735928559"])
         self.runCmd("continue")
@@ -76,6 +76,6 @@ class SwiftDynamicValueTest(TestBase):
                 "z = ",
                 "Derived<Int>) aBase = 0x",
                 "Base<Int>)",
-                ".Base = {",
+                ".Base<Swift.Int> = {",
                 "v = 449493530",
                 "q = 3735928559"])

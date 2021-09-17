@@ -1575,23 +1575,6 @@ bool SwiftLanguageRuntimeImpl::ForEachSuperClassType(
     return false;
 
   lldb::addr_t pointer = instance.GetPointerValue();
-  // Maybe this belongs into GetPointerValue, but on the other hand it
-  // is also nice to not hide the existence of reference storage
-  // types. Perhaps they should even be modelled in the ValueObject
-  // hierarchy. This also partially papers over the fact that
-  // libReflection cannot tell up how many bits to strip from
-  // multi-payload enum values.
-  auto addr_deref =
-    FixupPointerValue(pointer, instance_type);
-  pointer = addr_deref.first;
-  if (addr_deref.second) {
-      // This is a reference storage object.
-      if (!reflection_ctx->getReader().readInteger(
-              swift::reflection::RemoteAddress(addr_deref.first),
-              &pointer))
-        return false;
-  }
-
   auto md_ptr = reflection_ctx->readMetadataFromInstance(pointer);
   if (!md_ptr)
     return false;
@@ -1670,6 +1653,21 @@ static bool IsScratchContextLocked(TargetSP target) {
   return target ? IsScratchContextLocked(*target) : true;
 }
 
+static bool IsPrivateNSClass(NodePointer node) {
+  if (!node || node->getKind() != Node::Kind::Type ||
+      node->getNumChildren() == 0)
+    return false;
+  NodePointer classNode = node->getFirstChild();
+  if (!classNode || classNode->getKind() != Node::Kind::Class ||
+      classNode->getNumChildren() < 2)
+    return false;
+  for (NodePointer child : *classNode)
+    if (child->getKind() == Node::Kind::Identifier && child->hasText())
+      return child->getText().startswith("__NS") ||
+             child->getText().startswith("NSTaggedPointer");
+  return false;
+}
+
 bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Class(
     ValueObject &in_value, SwiftASTContextForExpressions &scratch_ctx,
     lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
@@ -1678,37 +1676,86 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Class(
   lldb::addr_t class_metadata_ptr = in_value.GetPointerValue(&address_type);
   if (class_metadata_ptr == LLDB_INVALID_ADDRESS || class_metadata_ptr == 0)
     return false;
+
+  CompilerType static_type = in_value.GetCompilerType();
+  auto *tss =
+      llvm::dyn_cast_or_null<TypeSystemSwift>(static_type.GetTypeSystem());
+  if (!tss)
+    return false;
   address.SetRawAddress(class_metadata_ptr);
-
+  auto &ts = tss->GetTypeSystemSwiftTypeRef();
+  // Ask the Objective-C runtime about Objective-C types.
+  if (tss->IsImportedType(static_type.GetOpaqueQualType(), nullptr))
+    if (auto *objc_runtime = SwiftLanguageRuntime::GetObjCRuntime(m_process)) {
+      Value::ValueType value_type;
+      if (objc_runtime->GetDynamicTypeAndAddress(
+              in_value, use_dynamic, class_type_or_name, address, value_type)) {
+        bool found = false;
+        // Return the most specific class which we can get the typeref.
+        ForEachSuperClassType(in_value, [&](SuperClassType sc) -> bool {
+          if (auto *tr = sc.get_typeref()) {
+            swift::Demangle::Demangler dem;
+            swift::Demangle::NodePointer node = tr->getDemangling(dem);
+            // Skip private Foundation types since it's unlikely that would be 
+            // useful to users.
+            if (IsPrivateNSClass(node))
+              return false;
+            class_type_or_name.SetCompilerType(ts.RemangleAsType(dem, node));
+            found = true;
+            return true;
+          }
+          return false;
+        });
+        return found;
+      }
+      return false;
+    }
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
-  auto &remote_ast = GetRemoteASTContext(scratch_ctx);
+  auto *reflection_ctx = GetReflectionContext();
   swift::remote::RemoteAddress instance_address(class_metadata_ptr);
-  auto metadata_address = remote_ast.getHeapMetadataForObject(instance_address);
+  auto metadata_address =
+      reflection_ctx->readMetadataFromInstance(class_metadata_ptr);
   if (!metadata_address) {
-    if (log) {
-      log->Printf("could not read heap metadata for object at %llu: %s\n",
-                  class_metadata_ptr,
-                  metadata_address.getFailure().render().c_str());
-    }
-
+    if (log)
+      log->Printf("could not read heap metadata for object at %llu\n",
+                  class_metadata_ptr);
     return false;
   }
 
-  auto instance_type =
-      remote_ast.getTypeForRemoteTypeMetadata(metadata_address.getValue(),
-                                              /*skipArtificial=*/true);
-  if (!instance_type) {
-    if (log) {
-      log->Printf("could not get type metadata from address %" PRIu64 " : %s\n",
-                  metadata_address.getValue().getAddressData(),
-                  instance_type.getFailure().render().c_str());
-    }
+  const auto *typeref =
+      reflection_ctx->readTypeFromMetadata(*metadata_address,
+                                           /*skipArtificial=*/false);
+  if (!typeref)
     return false;
+  swift::Demangle::Demangler dem;
+  swift::Demangle::NodePointer node = typeref->getDemangling(dem);
+  class_type_or_name.SetCompilerType(ts.RemangleAsType(dem, node));
+
+#ifndef NDEBUG
+  auto &remote_ast = GetRemoteASTContext(scratch_ctx);
+  auto remote_ast_metadata_address =
+      remote_ast.getHeapMetadataForObject(instance_address);
+  if (remote_ast_metadata_address) {
+    auto instance_type = remote_ast.getTypeForRemoteTypeMetadata(
+        remote_ast_metadata_address.getValue(),
+        /*skipArtificial=*/true);
+    if (instance_type) {
+      auto ref_type = ToCompilerType(instance_type.getValue());
+      ConstString a = ref_type.GetMangledTypeName();
+      ConstString b = class_type_or_name.GetCompilerType().GetMangledTypeName();
+      if (a != b)
+        llvm::dbgs() << "RemoteAST and runtime diverge " << a << " != " << b
+                     << "\n";
+    } else {
+      if (log) {
+        log->Printf(
+            "could not get type metadata from address %" PRIu64 " : %s\n",
+            *metadata_address, instance_type.getFailure().render().c_str());
+      }
+    }
   }
 
-  // The read lock must have been acquired by the caller.
-  class_type_or_name.SetCompilerType(
-      {&scratch_ctx, instance_type.getValue().getPointer()});
+#endif
   return true;
 }
 
