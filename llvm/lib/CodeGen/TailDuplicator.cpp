@@ -100,12 +100,11 @@ void TailDuplicator::initMF(MachineFunction &MFin, bool PreRegAlloc,
 }
 
 static void VerifyPHIs(MachineFunction &MF, bool CheckExtra) {
-  for (MachineFunction::iterator I = ++MF.begin(), E = MF.end(); I != E; ++I) {
-    MachineBasicBlock *MBB = &*I;
-    SmallSetVector<MachineBasicBlock *, 8> Preds(MBB->pred_begin(),
-                                                 MBB->pred_end());
-    MachineBasicBlock::iterator MI = MBB->begin();
-    while (MI != MBB->end()) {
+  for (MachineBasicBlock &MBB : llvm::drop_begin(MF)) {
+    SmallSetVector<MachineBasicBlock *, 8> Preds(MBB.pred_begin(),
+                                                 MBB.pred_end());
+    MachineBasicBlock::iterator MI = MBB.begin();
+    while (MI != MBB.end()) {
       if (!MI->isPHI())
         break;
       for (MachineBasicBlock *PredBB : Preds) {
@@ -118,7 +117,7 @@ static void VerifyPHIs(MachineFunction &MF, bool CheckExtra) {
           }
         }
         if (!Found) {
-          dbgs() << "Malformed PHI in " << printMBBReference(*MBB) << ": "
+          dbgs() << "Malformed PHI in " << printMBBReference(MBB) << ": "
                  << *MI;
           dbgs() << "  missing input from predecessor "
                  << printMBBReference(*PredBB) << '\n';
@@ -129,14 +128,14 @@ static void VerifyPHIs(MachineFunction &MF, bool CheckExtra) {
       for (unsigned i = 1, e = MI->getNumOperands(); i != e; i += 2) {
         MachineBasicBlock *PHIBB = MI->getOperand(i + 1).getMBB();
         if (CheckExtra && !Preds.count(PHIBB)) {
-          dbgs() << "Warning: malformed PHI in " << printMBBReference(*MBB)
+          dbgs() << "Warning: malformed PHI in " << printMBBReference(MBB)
                  << ": " << *MI;
           dbgs() << "  extra input from predecessor "
                  << printMBBReference(*PHIBB) << '\n';
           llvm_unreachable(nullptr);
         }
         if (PHIBB->getNumber() < 0) {
-          dbgs() << "Malformed PHI in " << printMBBReference(*MBB) << ": "
+          dbgs() << "Malformed PHI in " << printMBBReference(MBB) << ": "
                  << *MI;
           dbgs() << "  non-existing " << printMBBReference(*PHIBB) << '\n';
           llvm_unreachable(nullptr);
