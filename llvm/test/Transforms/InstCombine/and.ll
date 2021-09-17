@@ -587,6 +587,19 @@ define i64 @test36(i32 %X) {
   ret i64 %res
 }
 
+define <2 x i64> @test36_uniform(<2 x i32> %X) {
+; CHECK-LABEL: @test36_uniform(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i32> [[X:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[ZSUB:%.*]] = add nuw nsw <2 x i64> [[ZEXT]], <i64 7, i64 7>
+; CHECK-NEXT:    [[RES:%.*]] = and <2 x i64> [[ZSUB]], <i64 240, i64 240>
+; CHECK-NEXT:    ret <2 x i64> [[RES]]
+;
+  %zext = zext <2 x i32> %X to <2 x i64>
+  %zsub = add <2 x i64> %zext, <i64 7, i64 7>
+  %res = and <2 x i64> %zsub, <i64 240, i64 240>
+  ret <2 x i64> %res
+}
+
 define <2 x i64> @test36_undef(<2 x i32> %X) {
 ; CHECK-LABEL: @test36_undef(
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i32> [[X:%.*]] to <2 x i64>
@@ -611,6 +624,19 @@ define i64 @test37(i32 %X) {
   %zsub = mul i64 %zext, 7
   %res = and i64 %zsub, 240
   ret i64 %res
+}
+
+define <2 x i64> @test37_uniform(<2 x i32> %X) {
+; CHECK-LABEL: @test37_uniform(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i32> [[X:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[ZSUB:%.*]] = mul nuw nsw <2 x i64> [[ZEXT]], <i64 7, i64 7>
+; CHECK-NEXT:    [[RES:%.*]] = and <2 x i64> [[ZSUB]], <i64 240, i64 240>
+; CHECK-NEXT:    ret <2 x i64> [[RES]]
+;
+  %zext = zext <2 x i32> %X to <2 x i64>
+  %zsub = mul <2 x i64> %zext, <i64 7, i64 7>
+  %res = and <2 x i64> %zsub, <i64 240, i64 240>
+  ret <2 x i64> %res
 }
 
 define <2 x i64> @test37_nonuniform(<2 x i32> %X) {
