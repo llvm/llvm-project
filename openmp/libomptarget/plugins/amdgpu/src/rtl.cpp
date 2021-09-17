@@ -29,10 +29,10 @@
 #include "rt.h"
 
 #include "get_elf_mach_gfx_name.h"
+#include "memtype.h"
 #include "omptargetplugin.h"
 #include "print_tracing.h"
 #include "trace.h"
-#include "memtype.h"
 
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
@@ -87,13 +87,13 @@ int print_kernel_trace;
 #include "elf_common.h"
 
 namespace core {
-  hsa_status_t RegisterModuleFromMemory(
-     std::map<std::string, atl_kernel_info_t> &KernelInfo,
-     std::map<std::string, atl_symbol_info_t> &SymbolInfoTable, void *, size_t,
-     hsa_agent_t agent,
-     hsa_status_t (*on_deserialized_data)(void *data, size_t size,
-                                          void *cb_state),
-     void *cb_state, std::vector<hsa_executable_t> &HSAExecutables);
+hsa_status_t RegisterModuleFromMemory(
+    std::map<std::string, atl_kernel_info_t> &KernelInfo,
+    std::map<std::string, atl_symbol_info_t> &SymbolInfoTable, void *, size_t,
+    hsa_agent_t agent,
+    hsa_status_t (*on_deserialized_data)(void *data, size_t size,
+                                         void *cb_state),
+    void *cb_state, std::vector<hsa_executable_t> &HSAExecutables);
 }
 
 namespace hsa {
@@ -342,8 +342,7 @@ hsa_status_t addMemoryPool(hsa_amd_memory_pool_t MemoryPool, void *Data) {
   hsa_status_t Err;
   std::tie(Err, IsValid) = isValidMemoryPool(MemoryPool);
   if (Err != HSA_STATUS_SUCCESS) {
-    DP("isValidMemoryPool failed: %s\n",
-       get_error_string(Err));
+    DP("isValidMemoryPool failed: %s\n", get_error_string(Err));
     return Err;
   }
 
@@ -607,7 +606,8 @@ public:
           Agents[DeviceId], [&](hsa_amd_memory_pool_t MemoryPool) {
             bool AllocAllowed = false;
             hsa_status_t ErrGetInfo;
-            std::tie(ErrGetInfo, AllocAllowed) = core::isValidMemoryPool(MemoryPool);
+            std::tie(ErrGetInfo, AllocAllowed) =
+                core::isValidMemoryPool(MemoryPool);
             if (ErrGetInfo != HSA_STATUS_SUCCESS) {
               DP("Alloc allowed in memory pool check failed: %s\n",
                  get_error_string(ErrGetInfo));
@@ -629,14 +629,13 @@ public:
     return HSA_STATUS_SUCCESS;
   }
 
-  hsa_status_t
-  setupHostMemoryPools(std::vector<hsa_agent_t> &Agents) {
+  hsa_status_t setupHostMemoryPools(std::vector<hsa_agent_t> &Agents) {
     std::vector<hsa_amd_memory_pool_t> HostPools;
 
     // collect all the "valid" pools for all the given agents.
     for (const auto &Agent : Agents) {
       hsa_status_t Err = hsa_amd_agent_iterate_memory_pools(
-           Agent, core::addMemoryPool, static_cast<void *>(&HostPools));
+          Agent, core::addMemoryPool, static_cast<void *>(&HostPools));
       if (Err != HSA_STATUS_SUCCESS) {
         DP("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
            "Iterate all memory pools", get_error_string(Err));
@@ -658,8 +657,8 @@ public:
       }
 
       size_t Size = 0;
-      Err = hsa_amd_memory_pool_get_info(MemoryPool, HSA_AMD_MEMORY_POOL_INFO_SIZE,
-                                         &Size);
+      Err = hsa_amd_memory_pool_get_info(MemoryPool,
+                                         HSA_AMD_MEMORY_POOL_INFO_SIZE, &Size);
       if (Err != HSA_STATUS_SUCCESS) {
         DP("Get memory pool size failed: %s\n", get_error_string(Err));
         return Err;
@@ -714,19 +713,19 @@ public:
       switch (kind) {
       case TARGET_ALLOC_DEFAULT:
       case TARGET_ALLOC_DEVICE: {
-	void *devPtr;
-	hsa_status_t err = device_malloc(&devPtr, size, device_id);
-	ptr = (err == HSA_STATUS_SUCCESS) ? devPtr : nullptr;
-	if (!ptr)
-	  REPORT("Error allocating device memory");
+        void *devPtr;
+        hsa_status_t err = device_malloc(&devPtr, size, device_id);
+        ptr = (err == HSA_STATUS_SUCCESS) ? devPtr : nullptr;
+        if (!ptr)
+          REPORT("Error allocating device memory");
         break;
       }
       case TARGET_ALLOC_HOST:
       case TARGET_ALLOC_SHARED:
         ptr = malloc(size);
-	if (!ptr)
-	  REPORT("Error allocating host memory");
-	HostAllocations[ptr] = kind;
+        if (!ptr)
+          REPORT("Error allocating host memory");
+        HostAllocations[ptr] = kind;
         break;
       }
 
@@ -734,24 +733,23 @@ public:
     }
 
     int alloc_free(void *ptr) override {
-      TargetAllocTy kind =
-          (HostAllocations.find(ptr) == HostAllocations.end())
-              ? TARGET_ALLOC_DEFAULT
-              : TARGET_ALLOC_HOST;
+      TargetAllocTy kind = (HostAllocations.find(ptr) == HostAllocations.end())
+                               ? TARGET_ALLOC_DEFAULT
+                               : TARGET_ALLOC_HOST;
       switch (kind) {
       case TARGET_ALLOC_DEFAULT:
       case TARGET_ALLOC_DEVICE: {
-	hsa_status_t err;
-	err = core::Runtime::Memfree(ptr);
-	if (err != HSA_STATUS_SUCCESS) {
-	  DP("Error when freeing device memory\n");
-	  return OFFLOAD_FAIL;
-	}
+        hsa_status_t err;
+        err = core::Runtime::Memfree(ptr);
+        if (err != HSA_STATUS_SUCCESS) {
+          DP("Error when freeing device memory\n");
+          return OFFLOAD_FAIL;
+        }
         break;
       }
       case TARGET_ALLOC_HOST:
       case TARGET_ALLOC_SHARED:
-	free(ptr);
+        free(ptr);
         break;
       }
       return OFFLOAD_SUCCESS;
@@ -1587,11 +1585,13 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
       const char *ElfName = get_elf_mach_gfx_name(elf_e_flags(image));
 
       if (strcmp(DeviceName, ElfName) != 0) {
-        fprintf(stderr, "Possible gpu arch mismatch: device:%s, image:%s please check"
-           " compiler flag: -march=<gpu>\n",
-           DeviceName, ElfName);
+        fprintf(stderr,
+                "Possible gpu arch mismatch: device:%s, image:%s please check"
+                " compiler flag: -march=<gpu>\n",
+                DeviceName, ElfName);
       } else {
-        fprintf(stderr, "Error loading image onto GPU: %s\n", get_error_string(err));
+        fprintf(stderr, "Error loading image onto GPU: %s\n",
+                get_error_string(err));
       }
 
       return NULL;
@@ -1901,7 +1901,8 @@ void *__tgt_rtl_data_alloc(int device_id, int64_t size, void *, int32_t kind) {
   void *ptr = nullptr;
   assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
 
-  ptr = DeviceInfo.DeviceAllocators[device_id].allocate(size, nullptr, (TargetAllocTy) kind);
+  ptr = DeviceInfo.DeviceAllocators[device_id].allocate(size, nullptr,
+                                                        (TargetAllocTy)kind);
   if (kind == TARGET_ALLOC_SHARED) {
     __tgt_rtl_set_coarse_grain_mem_region(ptr, size);
   }
@@ -1965,10 +1966,9 @@ int32_t __tgt_rtl_data_delete(int device_id, void *tgt_ptr) {
 // Inputs: Max_Teams, Max_WG_Size, Warp_Size, ExecutionMode,
 //         EnvTeamLimit, EnvNumTeams, num_teams, thread_limit,
 //         loop_tripcount.
-void getLaunchVals(int &threadsPerGroup, int &num_groups,
-		   int WarpSize, EnvironmentVariables Env,
-                   int ConstWGSize, int ExecutionMode, int num_teams,
-                   int thread_limit, uint64_t loop_tripcount,
+void getLaunchVals(int &threadsPerGroup, int &num_groups, int WarpSize,
+                   EnvironmentVariables Env, int ConstWGSize, int ExecutionMode,
+                   int num_teams, int thread_limit, uint64_t loop_tripcount,
                    int DeviceNumTeams) {
 
   threadsPerGroup = RTLDeviceInfoTy::Default_WG_Size;
@@ -2187,9 +2187,9 @@ int32_t __tgt_rtl_run_target_team_region_locked(
 
   int threadsPerGroup = RTLDeviceInfoTy::Default_WG_Size;
 
-  getLaunchVals(threadsPerGroup, num_groups,
-		DeviceInfo.WarpSize[device_id], DeviceInfo.Env,
-                KernelInfo->ConstWGSize, KernelInfo->ExecutionMode,
+  getLaunchVals(threadsPerGroup, num_groups, DeviceInfo.WarpSize[device_id],
+                DeviceInfo.Env, KernelInfo->ConstWGSize,
+                KernelInfo->ExecutionMode,
                 num_teams,      // From run_region arg
                 thread_limit,   // From run_region arg
                 loop_tripcount, // From run_region arg
@@ -2374,7 +2374,8 @@ hsa_status_t allow_access_to_all_gpu_agents(void *ptr) {
 extern "C" {
 // following are some utility functions used by hostrpc
 hsa_status_t host_malloc(void **mem, size_t size) {
-  return core::Runtime::HostMalloc(mem, size, DeviceInfo.HostFineGrainedMemoryPool);
+  return core::Runtime::HostMalloc(mem, size,
+                                   DeviceInfo.HostFineGrainedMemoryPool);
 }
 
 hsa_status_t device_malloc(void **mem, size_t size, int device_id) {
