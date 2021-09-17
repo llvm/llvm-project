@@ -492,7 +492,7 @@ Expr<TR> FoldElementalIntrinsicHelper(FoldingContext &context,
     // Build and return constant result
     if constexpr (TR::category == TypeCategory::Character) {
       auto len{static_cast<ConstantSubscript>(
-          results.size() ? results[0].length() : 0)};
+          results.empty() ? 0 : results[0].length())};
       return Expr<TR>{Constant<TR>{len, std::move(results), std::move(shape)}};
     } else {
       return Expr<TR>{Constant<TR>{std::move(results), std::move(shape)}};
@@ -944,7 +944,7 @@ Expr<T> FoldMINorMAX(
   if (constantArgs.size() != funcRef.arguments().size()) {
     return Expr<T>(std::move(funcRef));
   }
-  CHECK(constantArgs.size() > 0);
+  CHECK(!constantArgs.empty());
   Expr<T> result{std::move(*constantArgs[0])};
   for (std::size_t i{1}; i < constantArgs.size(); ++i) {
     Extremum<T> extremum{order, result, Expr<T>{std::move(*constantArgs[i])}};
@@ -1075,7 +1075,7 @@ private:
     Expr<T> folded{Fold(context_, common::Clone(expr.value()))};
     if (const auto *c{UnwrapConstantValue<T>(folded)}) {
       // Copy elements in Fortran array element order
-      if (c->size() > 0) {
+      if (!c->empty()) {
         ConstantSubscripts index{c->lbounds()};
         do {
           elements_.emplace_back(c->At(index));
@@ -1156,7 +1156,7 @@ template <typename T>
 std::optional<Expr<T>> AsFlatArrayConstructor(const Expr<T> &expr) {
   if (const auto *c{UnwrapConstantValue<T>(expr)}) {
     ArrayConstructor<T> result{expr};
-    if (c->size() > 0) {
+    if (!c->empty()) {
       ConstantSubscripts at{c->lbounds()};
       do {
         result.Push(Expr<T>{Constant<T>{c->At(at)}});
