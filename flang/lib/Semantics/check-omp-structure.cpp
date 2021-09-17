@@ -771,6 +771,25 @@ void OmpStructureChecker::Leave(const parser::OpenMPBlockConstruct &) {
   dirContext_.pop_back();
 }
 
+void OmpStructureChecker::ChecksOnOrderedAsBlock() {
+  if (FindClause(llvm::omp::Clause::OMPC_depend)) {
+    context_.Say(GetContext().clauseSource,
+        "DEPEND(*) clauses are not allowed when ORDERED construct is a block"
+        " construct with an ORDERED region"_err_en_US);
+  }
+}
+
+void OmpStructureChecker::Leave(const parser::OmpBeginBlockDirective &) {
+  switch (GetContext().directive) {
+  case llvm::omp::Directive::OMPD_ordered:
+    // [5.1] 2.19.9 Ordered Construct Restriction
+    ChecksOnOrderedAsBlock();
+    break;
+  default:
+    break;
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OpenMPSectionsConstruct &x) {
   const auto &beginSectionsDir{
       std::get<parser::OmpBeginSectionsDirective>(x.t)};
@@ -911,6 +930,48 @@ void OmpStructureChecker::CheckBarrierNesting(
   }
 }
 
+void OmpStructureChecker::ChecksOnOrderedAsStandalone() {
+  if (FindClause(llvm::omp::Clause::OMPC_threads) ||
+      FindClause(llvm::omp::Clause::OMPC_simd)) {
+    context_.Say(GetContext().clauseSource,
+        "THREADS, SIMD clauses are not allowed when ORDERED construct is a "
+        "standalone construct with no ORDERED region"_err_en_US);
+  }
+
+  bool isSinkPresent{false};
+  int dependSourceCount{0};
+  auto clauseAll = FindClauses(llvm::omp::Clause::OMPC_depend);
+  for (auto itr = clauseAll.first; itr != clauseAll.second; ++itr) {
+    const auto &dependClause{
+        std::get<parser::OmpClause::Depend>(itr->second->u)};
+    if (std::get_if<parser::OmpDependClause::Source>(&dependClause.v.u)) {
+      dependSourceCount++;
+      if (isSinkPresent) {
+        context_.Say(itr->second->source,
+            "DEPEND(SOURCE) is not allowed when DEPEND(SINK: vec) is present "
+            "on ORDERED directive"_err_en_US);
+      }
+      if (dependSourceCount > 1) {
+        context_.Say(itr->second->source,
+            "At most one DEPEND(SOURCE) clause can appear on the ORDERED "
+            "directive"_err_en_US);
+      }
+    } else if (std::get_if<parser::OmpDependClause::Sink>(&dependClause.v.u)) {
+      isSinkPresent = true;
+      if (dependSourceCount > 0) {
+        context_.Say(itr->second->source,
+            "DEPEND(SINK: vec) is not allowed when DEPEND(SOURCE) is present "
+            "on ORDERED directive"_err_en_US);
+      }
+    } else {
+      context_.Say(itr->second->source,
+          "Only DEPEND(SOURCE) or DEPEND(SINK: vec) are allowed when ORDERED "
+          "construct is a standalone construct with no ORDERED "
+          "region"_err_en_US);
+    }
+  }
+}
+
 void OmpStructureChecker::Enter(
     const parser::OpenMPSimpleStandaloneConstruct &x) {
   const auto &dir{std::get<parser::OmpSimpleStandaloneDirective>(x.t)};
@@ -920,6 +981,14 @@ void OmpStructureChecker::Enter(
 
 void OmpStructureChecker::Leave(
     const parser::OpenMPSimpleStandaloneConstruct &) {
+  switch (GetContext().directive) {
+  case llvm::omp::Directive::OMPD_ordered:
+    // [5.1] 2.19.9 Ordered Construct Restriction
+    ChecksOnOrderedAsStandalone();
+    break;
+  default:
+    break;
+  }
   dirContext_.pop_back();
 }
 
