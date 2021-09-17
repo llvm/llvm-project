@@ -4514,29 +4514,29 @@ public:
 Command Based stop-hooks:
 -------------------------
   Stop hooks can run a list of lldb commands by providing one or more
-  --one-line-command options.  The commands will get run in the order they are 
+  --one-line-command options.  The commands will get run in the order they are
   added.  Or you can provide no commands, in which case you will enter a
   command editor where you can enter the commands to be run.
-  
+
 Python Based Stop Hooks:
 ------------------------
   Stop hooks can be implemented with a suitably defined Python class, whose name
   is passed in the --python-class option.
-  
+
   When the stop hook is added, the class is initialized by calling:
-  
+
     def __init__(self, target, extra_args, internal_dict):
-    
+
     target: The target that the stop hook is being added to.
-    extra_args: An SBStructuredData Dictionary filled with the -key -value 
-                option pairs passed to the command.     
+    extra_args: An SBStructuredData Dictionary filled with the -key -value
+                option pairs passed to the command.
     dict: An implementation detail provided by lldb.
 
-  Then when the stop-hook triggers, lldb will run the 'handle_stop' method. 
+  Then when the stop-hook triggers, lldb will run the 'handle_stop' method.
   The method has the signature:
-  
+
     def handle_stop(self, exe_ctx, stream):
-    
+
     exe_ctx: An SBExecutionContext for the thread that has stopped.
     stream: An SBStream, anything written to this stream will be printed in the
             the stop message when the process stops.
@@ -4545,12 +4545,12 @@ Python Based Stop Hooks:
                   from all the stop hook executions on threads that stopped
                   with a reason, then the process will continue.  Note that this
                   will happen only after all the stop hooks are run.
-    
+
 Filter Options:
 ---------------
   Stop hooks can be set to always run, or to only run when the stopped thread
   matches the filter options passed on the command line.  The available filter
-  options include a shared library or a thread or queue specification, 
+  options include a shared library or a thread or queue specification,
   a line range in a source file, a function name or a class name.
             )");
     m_all_options.Append(&m_python_class_options,
