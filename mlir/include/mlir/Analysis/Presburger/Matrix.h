@@ -116,8 +116,14 @@ public:
   void negateColumn(unsigned column);
 
   /// Resize the matrix to the specified dimensions. If a dimension is smaller,
-  /// the values are truncated; if it is bigger, the new values are default
-  /// initialized.
+  /// the values are truncated; if it is bigger, the new values are initialized
+  /// to zero.
+  ///
+  /// Due to the representation of the matrix, resizing vertically (adding rows)
+  /// is less expensive than increasing the number of columns beyond
+  /// nReservedColumns.
+  void resize(unsigned newNRows, unsigned newNColumns);
+  void resizeHorizontally(unsigned newNColumns);
   void resizeVertically(unsigned newNRows);
 
   /// Add an extra row at the bottom of the matrix and return its position.
