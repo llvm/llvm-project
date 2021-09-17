@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MD5.h"
 #include <cassert>
@@ -34,7 +35,6 @@ namespace llvm {
 template <typename T> class ArrayRef;
 class MCAsmBackend;
 class MCContext;
-class MCDwarfLineStr;
 class MCObjectStreamer;
 class MCStreamer;
 class MCSymbol;
@@ -46,6 +46,24 @@ namespace mcdwarf {
 // Emit the common part of the DWARF 5 range/locations list tables header.
 MCSymbol *emitListsTableHeaderStart(MCStreamer &S);
 } // namespace mcdwarf
+
+/// Manage the .debug_line_str section contents, if we use it.
+class MCDwarfLineStr {
+  MCSymbol *LineStrLabel = nullptr;
+  StringTableBuilder LineStrings{StringTableBuilder::DWARF};
+  bool UseRelocs = false;
+
+public:
+  /// Construct an instance that can emit .debug_line_str (for use in a normal
+  /// v5 line table).
+  explicit MCDwarfLineStr(MCContext &Ctx);
+
+  /// Emit a reference to the string.
+  void emitRef(MCStreamer *MCOS, StringRef Path);
+
+  /// Emit the .debug_line_str section if appropriate.
+  void emitSection(MCStreamer *MCOS);
+};
 
 /// Instances of this class represent the name of the dwarf .file directive and
 /// its associated dwarf file number in the MC file. MCDwarfFile's are created
@@ -316,6 +334,11 @@ public:
   // This emits the Dwarf file and the line tables for a given Compile Unit.
   void emitCU(MCStreamer *MCOS, MCDwarfLineTableParams Params,
               Optional<MCDwarfLineStr> &LineStr) const;
+
+  // This emits a single line table associated with a given Section.
+  static void
+  emitOne(MCStreamer *MCOS, MCSection *Section,
+          const MCLineSection::MCDwarfLineEntryCollection &LineEntries);
 
   Expected<unsigned> tryGetFile(StringRef &Directory, StringRef &FileName,
                                 Optional<MD5::MD5Result> Checksum,
