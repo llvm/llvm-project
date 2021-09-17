@@ -79,6 +79,76 @@ exit:
   ret i32 1
 }
 
+; FIXME: iv <u b, b >=s 0 --> iv <s b. We should be able to remove the 2nd check.
+define i32 @test_01a(i32 %a, i32 %b) {
+; CHECK-LABEL: @test_01a(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B_IS_NON_NEGATIVE:%.*]] = icmp sge i32 [[B:%.*]], 0
+; CHECK-NEXT:    br i1 [[B_IS_NON_NEGATIVE]], label [[OUTER_PREHEADER:%.*]], label [[FAILURE:%.*]]
+; CHECK:       outer.preheader:
+; CHECK-NEXT:    br label [[OUTER:%.*]]
+; CHECK:       outer:
+; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ], [ 0, [[OUTER_PREHEADER]] ]
+; CHECK-NEXT:    br label [[INNER:%.*]]
+; CHECK:       inner:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp ult i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
+; CHECK:       inner.1:
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp slt i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK:       inner.backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[INNER_LOOP_COND]], label [[INNER]], label [[OUTER_BACKEDGE]]
+; CHECK:       outer.backedge:
+; CHECK-NEXT:    [[IV_NEXT_LCSSA]] = phi i32 [ [[IV_NEXT]], [[INNER_BACKEDGE]] ]
+; CHECK-NEXT:    [[OUTER_LOOP_COND:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[OUTER_LOOP_COND]], label [[OUTER]], label [[EXIT:%.*]]
+; CHECK:       failure:
+; CHECK-NEXT:    unreachable
+; CHECK:       side.exit:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 1
+;
+entry:
+  %b_is_non_negative = icmp sge i32 %b, 0
+  br i1 %b_is_non_negative, label %outer, label %failure
+
+outer:
+  %outer.iv = phi i32 [0, %entry], [%iv.next, %outer.backedge]
+  br label %inner
+
+
+inner:
+  %iv = phi i32 [%outer.iv, %outer], [%iv.next, %inner.backedge]
+  %signed_cond = icmp ult i32 %iv, %b
+  br i1 %signed_cond, label %inner.1, label %side.exit
+
+inner.1:
+  %unsigned_cond = icmp slt i32 %iv, %b
+  br i1 %unsigned_cond, label %inner.backedge, label %side.exit
+
+inner.backedge:
+  %iv.next = add nuw nsw i32 %iv, 1
+  %inner.loop.cond = call i1 @cond()
+  br i1 %inner.loop.cond, label %inner, label %outer.backedge
+
+outer.backedge:
+  %outer.loop.cond = call i1 @cond()
+  br i1 %outer.loop.cond, label %outer, label %exit
+
+failure:
+  unreachable
+
+side.exit:
+  ret i32 0
+
+exit:
+  ret i32 1
+}
+
 define i32 @test_02(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_02(
 ; CHECK-NEXT:  entry:
