@@ -19,3 +19,16 @@ add_libc_unittest(
   DEPENDS
     libc.src.inttypes.strtoumax
 )
+
+add_libc_unittest(
+  imaxdiv_test
+  SUITE
+    libc_inttypes_unittests
+  SRCS
+    imaxdiv_test.cpp
+  HDRS
+    ../stdlib/DivTest.h
+  DEPENDS
+    libc.include.stdlib
+    libc.src.inttypes.imaxdiv
+)
