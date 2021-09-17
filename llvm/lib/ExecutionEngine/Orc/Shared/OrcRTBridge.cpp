@@ -12,12 +12,14 @@ namespace llvm {
 namespace orc {
 namespace rt {
 
-const char *MemoryReserveWrapperName =
-    "__llvm_orc_bootstrap_mem_reserve_wrapper";
-const char *MemoryFinalizeWrapperName =
-    "__llvm_orc_bootstrap_mem_finalize_wrapper";
-const char *MemoryDeallocateWrapperName =
-    "__llvm_orc_bootstrap_mem_deallocate_wrapper";
+const char *SimpleExecutorMemoryManagerInstanceName =
+    "__llvm_orc_SimpleExecutorMemoryManager_Instance";
+const char *SimpleExecutorMemoryManagerReserveWrapperName =
+    "__llvm_orc_SimpleExecutorMemoryManager_reserve_wrapper";
+const char *SimpleExecutorMemoryManagerFinalizeWrapperName =
+    "__llvm_orc_SimpleExecutorMemoryManager_finalize_wrapper";
+const char *SimpleExecutorMemoryManagerDeallocateWrapperName =
+    "__llvm_orc_SimpleExecutorMemoryManager_deallocate_wrapper";
 const char *MemoryWriteUInt8sWrapperName =
     "__llvm_orc_bootstrap_mem_write_uint8s_wrapper";
 const char *MemoryWriteUInt16sWrapperName =
