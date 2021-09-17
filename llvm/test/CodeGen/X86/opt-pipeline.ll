@@ -116,7 +116,7 @@
 ; CHECK-NEXT:       X86 speculative load hardening
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       X86 EFLAGS copy lowering
-; CHECK-NEXT:       X86 WinAlloca Expander
+; CHECK-NEXT:       X86 DynAlloca Expander
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       Machine Natural Loop Construction
 ; CHECK-NEXT:       Tile Register Pre-configure

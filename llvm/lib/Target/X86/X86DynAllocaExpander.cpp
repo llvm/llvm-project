@@ -1,4 +1,4 @@
-//===----- X86WinAllocaExpander.cpp - Expand WinAlloca pseudo instruction -===//
+//===----- X86DynAllocaExpander.cpp - Expand DynAlloca pseudo instruction -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines a pass that expands WinAlloca pseudo-instructions.
+// This file defines a pass that expands DynAlloca pseudo-instructions.
 //
 // It performs a conservative analysis to determine whether each allocation
 // falls within a region of the stack that is safe to use, or whether stack
@@ -33,26 +33,26 @@ using namespace llvm;
 
 namespace {
 
-class X86WinAllocaExpander : public MachineFunctionPass {
+class X86DynAllocaExpander : public MachineFunctionPass {
 public:
-  X86WinAllocaExpander() : MachineFunctionPass(ID) {}
+  X86DynAllocaExpander() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 private:
-  /// Strategies for lowering a WinAlloca.
+  /// Strategies for lowering a DynAlloca.
   enum Lowering { TouchAndSub, Sub, Probe };
 
-  /// Deterministic-order map from WinAlloca instruction to desired lowering.
+  /// Deterministic-order map from DynAlloca instruction to desired lowering.
   typedef MapVector<MachineInstr*, Lowering> LoweringMap;
 
-  /// Compute which lowering to use for each WinAlloca instruction.
+  /// Compute which lowering to use for each DynAlloca instruction.
   void computeLowerings(MachineFunction &MF, LoweringMap& Lowerings);
 
   /// Get the appropriate lowering based on current offset and amount.
   Lowering getLowering(int64_t CurrentOffset, int64_t AllocaAmount);
 
-  /// Lower a WinAlloca instruction.
+  /// Lower a DynAlloca instruction.
   void lower(MachineInstr* MI, Lowering L);
 
   MachineRegisterInfo *MRI = nullptr;
@@ -64,22 +64,22 @@ private:
   int64_t StackProbeSize = 0;
   bool NoStackArgProbe = false;
 
-  StringRef getPassName() const override { return "X86 WinAlloca Expander"; }
+  StringRef getPassName() const override { return "X86 DynAlloca Expander"; }
   static char ID;
 };
 
-char X86WinAllocaExpander::ID = 0;
+char X86DynAllocaExpander::ID = 0;
 
 } // end anonymous namespace
 
-FunctionPass *llvm::createX86WinAllocaExpander() {
-  return new X86WinAllocaExpander();
+FunctionPass *llvm::createX86DynAllocaExpander() {
+  return new X86DynAllocaExpander();
 }
 
-/// Return the allocation amount for a WinAlloca instruction, or -1 if unknown.
-static int64_t getWinAllocaAmount(MachineInstr *MI, MachineRegisterInfo *MRI) {
-  assert(MI->getOpcode() == X86::WIN_ALLOCA_32 ||
-         MI->getOpcode() == X86::WIN_ALLOCA_64);
+/// Return the allocation amount for a DynAlloca instruction, or -1 if unknown.
+static int64_t getDynAllocaAmount(MachineInstr *MI, MachineRegisterInfo *MRI) {
+  assert(MI->getOpcode() == X86::DYN_ALLOCA_32 ||
+         MI->getOpcode() == X86::DYN_ALLOCA_64);
   assert(MI->getOperand(0).isReg());
 
   Register AmountReg = MI->getOperand(0).getReg();
@@ -93,8 +93,8 @@ static int64_t getWinAllocaAmount(MachineInstr *MI, MachineRegisterInfo *MRI) {
   return Def->getOperand(1).getImm();
 }
 
-X86WinAllocaExpander::Lowering
-X86WinAllocaExpander::getLowering(int64_t CurrentOffset,
+X86DynAllocaExpander::Lowering
+X86DynAllocaExpander::getLowering(int64_t CurrentOffset,
                                   int64_t AllocaAmount) {
   // For a non-constant amount or a large amount, we have to probe.
   if (AllocaAmount < 0 || AllocaAmount > StackProbeSize)
@@ -128,11 +128,11 @@ static bool isPushPop(const MachineInstr &MI) {
   }
 }
 
-void X86WinAllocaExpander::computeLowerings(MachineFunction &MF,
+void X86DynAllocaExpander::computeLowerings(MachineFunction &MF,
                                             LoweringMap &Lowerings) {
   // Do a one-pass reverse post-order walk of the CFG to conservatively estimate
   // the offset between the stack pointer and the lowest touched part of the
-  // stack, and use that to decide how to lower each WinAlloca instruction.
+  // stack, and use that to decide how to lower each DynAlloca instruction.
 
   // Initialize OutOffset[B], the stack offset at exit from B, to something big.
   DenseMap<MachineBasicBlock *, int64_t> OutOffset;
@@ -153,10 +153,10 @@ void X86WinAllocaExpander::computeLowerings(MachineFunction &MF,
     if (Offset == -1) Offset = INT32_MAX;
 
     for (MachineInstr &MI : *MBB) {
-      if (MI.getOpcode() == X86::WIN_ALLOCA_32 ||
-          MI.getOpcode() == X86::WIN_ALLOCA_64) {
-        // A WinAlloca moves StackPtr, and potentially touches it.
-        int64_t Amount = getWinAllocaAmount(&MI, MRI);
+      if (MI.getOpcode() == X86::DYN_ALLOCA_32 ||
+          MI.getOpcode() == X86::DYN_ALLOCA_64) {
+        // A DynAlloca moves StackPtr, and potentially touches it.
+        int64_t Amount = getDynAllocaAmount(&MI, MRI);
         Lowering L = getLowering(Offset, Amount);
         Lowerings[&MI] = L;
         switch (L) {
@@ -195,12 +195,12 @@ static unsigned getSubOpcode(bool Is64Bit, int64_t Amount) {
   return isInt<8>(Amount) ? X86::SUB32ri8 : X86::SUB32ri;
 }
 
-void X86WinAllocaExpander::lower(MachineInstr* MI, Lowering L) {
+void X86DynAllocaExpander::lower(MachineInstr *MI, Lowering L) {
   const DebugLoc &DL = MI->getDebugLoc();
   MachineBasicBlock *MBB = MI->getParent();
   MachineBasicBlock::iterator I = *MI;
 
-  int64_t Amount = getWinAllocaAmount(MI, MRI);
+  int64_t Amount = getDynAllocaAmount(MI, MRI);
   if (Amount == 0) {
     MI->eraseFromParent();
     return;
@@ -209,7 +209,7 @@ void X86WinAllocaExpander::lower(MachineInstr* MI, Lowering L) {
   // These two variables differ on x32, which is a 64-bit target with a
   // 32-bit alloca.
   bool Is64Bit = STI->is64Bit();
-  bool Is64BitAlloca = MI->getOpcode() == X86::WIN_ALLOCA_64;
+  bool Is64BitAlloca = MI->getOpcode() == X86::DYN_ALLOCA_64;
   assert(SlotSize == 4 || SlotSize == 8);
 
   switch (L) {
@@ -271,8 +271,8 @@ void X86WinAllocaExpander::lower(MachineInstr* MI, Lowering L) {
       AmountDef->eraseFromParent();
 }
 
-bool X86WinAllocaExpander::runOnMachineFunction(MachineFunction &MF) {
-  if (!MF.getInfo<X86MachineFunctionInfo>()->hasWinAlloca())
+bool X86DynAllocaExpander::runOnMachineFunction(MachineFunction &MF) {
+  if (!MF.getInfo<X86MachineFunctionInfo>()->hasDynAlloca())
     return false;
 
   MRI = &MF.getRegInfo();
