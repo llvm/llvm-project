@@ -1892,8 +1892,10 @@ void Sema::checkDeviceDecl(ValueDecl *D, SourceLocation Loc) {
     bool LongDoubleMismatched = false;
     if (Ty->isRealFloatingType() && Context.getTypeSize(Ty) == 128) {
       const llvm::fltSemantics &Sem = Context.getFloatTypeSemantics(Ty);
-      if (!Ty->isIbm128Type() && !Ty->isFloat128Type() &&
-          &Sem != &Context.getTargetInfo().getLongDoubleFormat())
+      if ((&Sem != &llvm::APFloat::PPCDoubleDouble() &&
+           !Context.getTargetInfo().hasFloat128Type()) ||
+          (&Sem == &llvm::APFloat::PPCDoubleDouble() &&
+           !Context.getTargetInfo().hasIbm128Type()))
         LongDoubleMismatched = true;
     }
 
