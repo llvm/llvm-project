@@ -65,7 +65,7 @@ void X86EVEX2VEXTablesEmitter::printTable(const std::vector<Entry> &Table,
      << "  // EVEX scalar with corresponding VEX.\n";
 
   // Print all entries added to the table
-  for (auto Pair : Table) {
+  for (const auto &Pair : Table) {
     OS << "  { X86::" << Pair.first->TheDef->getName()
        << ", X86::" << Pair.second->TheDef->getName() << " },\n";
   }
@@ -80,7 +80,7 @@ void X86EVEX2VEXTablesEmitter::printCheckPredicate(
      << "  unsigned Opc = MI.getOpcode();\n"
      << "  switch (Opc) {\n"
      << "    default: return true;\n";
-  for (auto Pair : Predicates)
+  for (const auto &Pair : Predicates)
     OS << "    case X86::" << Pair.first << ": return " << Pair.second << ";\n";
   OS << "  }\n"
      << "}\n\n";
