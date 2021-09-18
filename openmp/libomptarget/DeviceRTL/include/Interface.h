@@ -174,6 +174,10 @@ void *__kmpc_alloc_shared(uint64_t Bytes);
 /// allocated by __kmpc_alloc_shared by the same thread.
 void __kmpc_free_shared(void *Ptr, uint64_t Bytes);
 
+/// Get a pointer to the memory buffer containing dynamically allocated shared
+/// memory configured at launch.
+void *__kmpc_get_dynamic_shared();
+
 /// Allocate sufficient space for \p NumArgs sequential `void*` and store the
 /// allocation address in \p GlobalArgs.
 ///

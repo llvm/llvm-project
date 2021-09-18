@@ -19,8 +19,9 @@
 namespace lld {
 namespace coff {
 static const int pageSize = 4096;
+class COFFLinkerContext;
 
-void writeResult();
+void writeResult(COFFLinkerContext &ctx);
 
 class PartialSection {
 public:
@@ -49,9 +50,6 @@ public:
   uint64_t getFileOff() { return header.PointerToRawData; }
   void writeHeaderTo(uint8_t *buf);
   void addContributingPartialSection(PartialSection *sec);
-
-  // Clear the output sections static container.
-  static void clear();
 
   // Returns the size of this section in an executable memory image.
   // This may be smaller than the raw size (the raw size is multiple

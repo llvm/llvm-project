@@ -26,18 +26,14 @@ void ScopedTimer::stop() {
 
 ScopedTimer::~ScopedTimer() { stop(); }
 
-Timer::Timer(llvm::StringRef name) : name(std::string(name)) {}
-Timer::Timer(llvm::StringRef name, Timer &parent) : name(std::string(name)) {
+Timer::Timer(llvm::StringRef name) : total(0), name(std::string(name)) {}
+Timer::Timer(llvm::StringRef name, Timer &parent)
+    : total(0), name(std::string(name)) {
   parent.children.push_back(this);
 }
 
-Timer &Timer::root() {
-  static Timer rootTimer("Total Link Time");
-  return rootTimer;
-}
-
 void Timer::print() {
-  double totalDuration = static_cast<double>(root().millis());
+  double totalDuration = static_cast<double>(millis());
 
   // We want to print the grand total under all the intermediate phases, so we
   // print all children first, then print the total under that.
@@ -47,7 +43,7 @@ void Timer::print() {
 
   message(std::string(50, '-'));
 
-  root().print(0, root().millis(), false);
+  print(0, millis(), false);
 }
 
 double Timer::millis() const {
