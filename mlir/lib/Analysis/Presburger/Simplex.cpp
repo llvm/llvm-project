@@ -391,8 +391,8 @@ void Simplex::addEquality(ArrayRef<int64_t> coeffs) {
   addInequality(negatedCoeffs);
 }
 
-unsigned Simplex::numVariables() const { return var.size(); }
-unsigned Simplex::numConstraints() const { return con.size(); }
+unsigned Simplex::getNumVariables() const { return var.size(); }
+unsigned Simplex::getNumConstraints() const { return con.size(); }
 
 /// Return a snapshot of the current state. This is just the current size of the
 /// undo log.
@@ -497,7 +497,7 @@ void Simplex::appendVariable(unsigned count) {
 
 /// Add all the constraints from the given FlatAffineConstraints.
 void Simplex::intersectFlatAffineConstraints(const FlatAffineConstraints &fac) {
-  assert(fac.getNumIds() == numVariables() &&
+  assert(fac.getNumIds() == getNumVariables() &&
          "FlatAffineConstraints must have same dimensionality as simplex");
   for (unsigned i = 0, e = fac.getNumInequalities(); i < e; ++i)
     addInequality(fac.getInequality(i));
@@ -654,8 +654,8 @@ bool Simplex::isUnbounded() {
 /// It has column layout:
 ///   denominator, constant, A's columns, B's columns.
 Simplex Simplex::makeProduct(const Simplex &a, const Simplex &b) {
-  unsigned numVar = a.numVariables() + b.numVariables();
-  unsigned numCon = a.numConstraints() + b.numConstraints();
+  unsigned numVar = a.getNumVariables() + b.getNumVariables();
+  unsigned numCon = a.getNumConstraints() + b.getNumConstraints();
   Simplex result(numVar);
 
   result.tableau.resizeVertically(numCon);
@@ -672,8 +672,8 @@ Simplex Simplex::makeProduct(const Simplex &a, const Simplex &b) {
   result.var = concat(a.var, b.var);
 
   auto indexFromBIndex = [&](int index) {
-    return index >= 0 ? a.numVariables() + index
-                      : ~(a.numConstraints() + ~index);
+    return index >= 0 ? a.getNumVariables() + index
+                      : ~(a.getNumConstraints() + ~index);
   };
 
   result.colUnknown.assign(2, nullIndex);
@@ -777,7 +777,7 @@ class GBRSimplex {
 public:
   GBRSimplex(const Simplex &originalSimplex)
       : simplex(Simplex::makeProduct(originalSimplex, originalSimplex)),
-        simplexConstraintOffset(simplex.numConstraints()) {}
+        simplexConstraintOffset(simplex.getNumConstraints()) {}
 
   /// Add an equality dotProduct(dir, x - y) == 0.
   /// First pushes a snapshot for the current simplex state to the stack so
@@ -869,7 +869,7 @@ private:
   ///       - dir_1 * y_1 - dir_2 * y_2 - ... - dir_n * y_n,
   /// where n is the dimension of the original polytope.
   SmallVector<int64_t, 8> getCoeffsForDirection(ArrayRef<int64_t> dir) {
-    assert(2 * dir.size() == simplex.numVariables() &&
+    assert(2 * dir.size() == simplex.getNumVariables() &&
            "Direction vector has wrong dimensionality");
     SmallVector<int64_t, 8> coeffs(dir.begin(), dir.end());
     coeffs.reserve(2 * dir.size());
