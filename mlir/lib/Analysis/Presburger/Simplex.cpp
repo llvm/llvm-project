@@ -345,6 +345,16 @@ void Simplex::swapRows(unsigned i, unsigned j) {
   unknownFromRow(j).pos = j;
 }
 
+void Simplex::swapColumns(unsigned i, unsigned j) {
+  assert(i < nCol && j < nCol && "Invalid columns provided!");
+  if (i == j)
+    return;
+  tableau.swapColumns(i, j);
+  std::swap(colUnknown[i], colUnknown[j]);
+  unknownFromColumn(i).pos = i;
+  unknownFromColumn(j).pos = j;
+}
+
 /// Mark this tableau empty and push an entry to the undo stack.
 void Simplex::markEmpty() {
   undoLog.push_back(UndoLogEntry::UnmarkEmpty);
@@ -434,6 +444,26 @@ void Simplex::undo(UndoLogEntry entry) {
     nRow--;
     rowUnknown.pop_back();
     con.pop_back();
+  } else if (entry == UndoLogEntry::RemoveLastVariable) {
+    // Whenever we are rolling back the addition of a variable, it is guaranteed
+    // that the variable will be in column position.
+    //
+    // We can see this as follows: any constraint that depends on this variable
+    // was added after this variable was added, so the addition of such
+    // constraints should already have been rolled back by the time we get to
+    // rolling back the addition of the variable. Therefore, no constraint
+    // currently has a component along the variable, so the variable itself must
+    // be part of the basis.
+    assert(var.back().orientation == Orientation::Column &&
+           "Variable to be removed must be in column orientation!");
+
+    // Move this variable to the last column and remove the column from the
+    // tableau.
+    swapColumns(var.back().pos, nCol - 1);
+    tableau.resizeHorizontally(nCol - 1);
+    var.pop_back();
+    colUnknown.pop_back();
+    nCol--;
   } else if (entry == UndoLogEntry::UnmarkEmpty) {
     empty = false;
   } else if (entry == UndoLogEntry::UnmarkLastRedundant) {
@@ -450,6 +480,19 @@ void Simplex::rollback(unsigned snapshot) {
     undo(undoLog.back());
     undoLog.pop_back();
   }
+}
+
+void Simplex::appendVariable(unsigned count) {
+  var.reserve(var.size() + count);
+  colUnknown.reserve(colUnknown.size() + count);
+  for (unsigned i = 0; i < count; ++i) {
+    nCol++;
+    var.emplace_back(Orientation::Column, /*restricted=*/false,
+                     /*pos=*/nCol - 1);
+    colUnknown.push_back(var.size() - 1);
+  }
+  tableau.resizeHorizontally(nCol);
+  undoLog.insert(undoLog.end(), count, UndoLogEntry::RemoveLastVariable);
 }
 
 /// Add all the constraints from the given FlatAffineConstraints.

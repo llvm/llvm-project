@@ -383,4 +383,30 @@ TEST(SimplexTest, addInequality_already_redundant) {
   EXPECT_TRUE(simplex.isMarkedRedundant(1));
 }
 
+TEST(SimplexTest, appendVariable) {
+  Simplex simplex(1);
+
+  unsigned snapshot1 = simplex.getSnapshot();
+  simplex.appendVariable();
+  EXPECT_EQ(simplex.numVariables(), 2u);
+
+  int64_t yMin = 2, yMax = 5;
+  simplex.addInequality({0, 1, -yMin}); // y >= 2.
+  simplex.addInequality({0, -1, yMax}); // y <= 5.
+
+  unsigned snapshot2 = simplex.getSnapshot();
+  simplex.appendVariable(2);
+  EXPECT_EQ(simplex.numVariables(), 4u);
+  simplex.rollback(snapshot2);
+
+  EXPECT_EQ(simplex.numVariables(), 2u);
+  EXPECT_EQ(simplex.numConstraints(), 2u);
+  EXPECT_EQ(simplex.computeIntegerBounds({0, 1, 0}),
+            std::make_pair(yMin, yMax));
+
+  simplex.rollback(snapshot1);
+  EXPECT_EQ(simplex.numVariables(), 1u);
+  EXPECT_EQ(simplex.numConstraints(), 0u);
+}
+
 } // namespace mlir
