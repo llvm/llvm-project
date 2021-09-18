@@ -245,6 +245,7 @@ OpenMP Support in Clang
   other OpenMP loop associated constructs as in
 
   .. code-block:: c
+
     #pragma omp parallel for
     #pragma omp unroll partial(4)
     for (int i = 0; i < n; ++i)
@@ -253,6 +254,7 @@ OpenMP Support in Clang
   user-defined tile size.
 
   .. code-block:: c
+
     #pragma omp tile sizes(8,8)
     for (int i = 0; i < m; ++i)
       for (int j = 0; j < n; ++j)
