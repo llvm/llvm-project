@@ -643,9 +643,6 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::OMPCanonicalLoopClass:
     K = CXCursor_OMPCanonicalLoop;
     break;
-  case Stmt::OMPMetaDirectiveClass:
-    K = CXCursor_OMPMetaDirective;
-    break;
   case Stmt::OMPParallelDirectiveClass:
     K = CXCursor_OMPParallelDirective;
     break;
