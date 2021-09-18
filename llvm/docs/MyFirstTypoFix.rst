@@ -72,7 +72,7 @@ As an example, on Ubuntu:
 
 .. code:: console
 
-   $ sudo apt-get install git clang cmake ninja-build python arcanist subversion
+   $ sudo apt-get install git clang cmake ninja-build python arcanist
 
 
 Building LLVM
