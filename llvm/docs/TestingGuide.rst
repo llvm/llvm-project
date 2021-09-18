@@ -184,7 +184,7 @@ or the :doc:`lit man page <CommandGuide/lit>`.
 Debugging Information tests
 ---------------------------
 
-To run debugging information tests simply add the ``debuginfo-tests``
+To run debugging information tests simply add the ``cross-project-tests``
 project to your ``LLVM_ENABLE_PROJECTS`` define on the cmake
 command-line.
 
