@@ -969,6 +969,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::USUBSAT,            MVT::v4i32, Custom);
     setOperationAction(ISD::USUBSAT,            MVT::v2i64, Custom);
 
+    setOperationAction(ISD::INSERT_VECTOR_ELT,  MVT::v16i8, Custom);
     setOperationAction(ISD::INSERT_VECTOR_ELT,  MVT::v8i16, Custom);
     setOperationAction(ISD::INSERT_VECTOR_ELT,  MVT::v4i32, Custom);
     setOperationAction(ISD::INSERT_VECTOR_ELT,  MVT::v4f32, Custom);
@@ -1174,10 +1175,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setLoadExtAction(LoadExtOp, MVT::v2i64, MVT::v2i16, Legal);
       setLoadExtAction(LoadExtOp, MVT::v2i64, MVT::v2i32, Legal);
     }
-
-    // i8 vectors are custom because the source register and source
-    // source memory operand types are not the same width.
-    setOperationAction(ISD::INSERT_VECTOR_ELT,  MVT::v16i8, Custom);
 
     if (Subtarget.is64Bit() && !Subtarget.hasAVX512()) {
       // We need to scalarize v4i64->v432 uint_to_fp using cvtsi2ss, but we can
@@ -19310,17 +19307,28 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
   bool IsZeroElt = X86::isZeroNode(N1);
   bool IsAllOnesElt = VT.isInteger() && llvm::isAllOnesConstant(N1);
 
-  // If we are inserting a element, see if we can do this more efficiently with
-  // a blend shuffle with a rematerializable vector than a costly integer
-  // insertion.
-  if ((IsZeroElt || IsAllOnesElt) && Subtarget.hasSSE41() &&
-      (16 <= EltSizeInBits || (IsZeroElt && !VT.is128BitVector()))) {
-    SmallVector<int, 8> BlendMask;
-    for (unsigned i = 0; i != NumElts; ++i)
-      BlendMask.push_back(i == IdxVal ? i + NumElts : i);
-    SDValue CstVector = IsZeroElt ? getZeroVector(VT, Subtarget, DAG, dl)
-                                  : getOnesVector(VT, DAG, dl);
-    return DAG.getVectorShuffle(VT, dl, N0, CstVector, BlendMask);
+  if (IsZeroElt || IsAllOnesElt) {
+    // Lower insertion of i8 -1 as an 'OR' blend.
+    // We don't deal with i8 0 since it appears to be handled elsewhere.
+    if (IsAllOnesElt && EltSizeInBits == 8 && !Subtarget.hasSSE41()) {
+      SDValue ZeroCst = DAG.getConstant(0, dl, VT.getScalarType());
+      SDValue OnesCst = DAG.getAllOnesConstant(dl, VT.getScalarType());
+      SmallVector<SDValue, 8> CstVectorElts(NumElts, ZeroCst);
+      CstVectorElts[IdxVal] = OnesCst;
+      SDValue CstVector = DAG.getBuildVector(VT, dl, CstVectorElts);
+      return DAG.getNode(ISD::OR, dl, VT, N0, CstVector);
+    }
+    // See if we can do this more efficiently with a blend shuffle with a
+    // rematerializable vector.
+    if (Subtarget.hasSSE41() &&
+        (EltSizeInBits >= 16 || (IsZeroElt && !VT.is128BitVector()))) {
+      SmallVector<int, 8> BlendMask;
+      for (unsigned i = 0; i != NumElts; ++i)
+        BlendMask.push_back(i == IdxVal ? i + NumElts : i);
+      SDValue CstVector = IsZeroElt ? getZeroVector(VT, Subtarget, DAG, dl)
+                                    : getOnesVector(VT, DAG, dl);
+      return DAG.getVectorShuffle(VT, dl, N0, CstVector, BlendMask);
+    }
   }
 
   // If the vector is wider than 128 bits, extract the 128-bit subvector, insert
