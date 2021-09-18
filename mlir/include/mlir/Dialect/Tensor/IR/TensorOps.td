@@ -308,7 +308,7 @@ def Tensor_FromElementsOp : Tensor_Op<"from_elements", [
     Example:
 
     ```mlir
-    tensor.from_elements(i_1, ..., i_N) :  tensor<Nxindex>
+    tensor.from_elements i_1, ..., i_N :  tensor<Nxindex>
     ```
   }];
 
