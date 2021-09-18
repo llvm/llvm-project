@@ -1050,7 +1050,7 @@ public:
                       const CFGBlock* PredBlock,
                       const CFGBlock *CurrBlock);
 
-  bool join(const FactEntry &a, const FactEntry &b);
+  bool join(const FactEntry &a, const FactEntry &b, bool CanModify);
 
   void intersectAndWarn(FactSet &EntrySet, const FactSet &ExitSet,
                         SourceLocation JoinLoc, LockErrorKind EntryLEK,
@@ -2188,25 +2188,28 @@ void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
   }
 }
 
-/// Given two facts merging on a join point, decide whether to warn and which
-/// one to keep.
+/// Given two facts merging on a join point, possibly warn and decide whether to
+/// keep or replace.
 ///
-/// \return  false if we should keep \p A, true if we should keep \p B.
-bool ThreadSafetyAnalyzer::join(const FactEntry &A, const FactEntry &B) {
+/// \param CanModify Whether we can replace \p A by \p B.
+/// \return  false if we should keep \p A, true if we should take \p B.
+bool ThreadSafetyAnalyzer::join(const FactEntry &A, const FactEntry &B,
+                                bool CanModify) {
   if (A.kind() != B.kind()) {
     // For managed capabilities, the destructor should unlock in the right mode
     // anyway. For asserted capabilities no unlocking is needed.
     if ((A.managed() || A.asserted()) && (B.managed() || B.asserted())) {
-      // The shared capability subsumes the exclusive capability.
-      return B.kind() == LK_Shared;
-    } else {
-      Handler.handleExclusiveAndShared("mutex", B.toString(), B.loc(), A.loc());
-      // Take the exclusive capability to reduce further warnings.
-      return B.kind() == LK_Exclusive;
+      // The shared capability subsumes the exclusive capability, if possible.
+      bool ShouldTakeB = B.kind() == LK_Shared;
+      if (CanModify || !ShouldTakeB)
+        return ShouldTakeB;
     }
+    Handler.handleExclusiveAndShared("mutex", B.toString(), B.loc(), A.loc());
+    // Take the exclusive capability to reduce further warnings.
+    return CanModify && B.kind() == LK_Exclusive;
   } else {
     // The non-asserted capability is the one we want to track.
-    return A.asserted() && !B.asserted();
+    return CanModify && A.asserted() && !B.asserted();
   }
 }
 
@@ -2237,8 +2240,8 @@ void ThreadSafetyAnalyzer::intersectAndWarn(FactSet &EntrySet,
 
     FactSet::iterator EntryIt = EntrySet.findLockIter(FactMan, ExitFact);
     if (EntryIt != EntrySet.end()) {
-      if (join(FactMan[*EntryIt], ExitFact) &&
-          EntryLEK == LEK_LockedSomePredecessors)
+      if (join(FactMan[*EntryIt], ExitFact,
+               EntryLEK != LEK_LockedSomeLoopIterations))
         *EntryIt = Fact;
     } else if (!ExitFact.managed()) {
       ExitFact.handleRemovalFromIntersection(ExitSet, FactMan, JoinLoc,
