@@ -1752,10 +1752,8 @@ ReoptimizeBlock:
 
 bool BranchFolder::HoistCommonCode(MachineFunction &MF) {
   bool MadeChange = false;
-  for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E; ) {
-    MachineBasicBlock *MBB = &*I++;
-    MadeChange |= HoistCommonCodeInSuccs(MBB);
-  }
+  for (MachineBasicBlock &MBB : llvm::make_early_inc_range(MF))
+    MadeChange |= HoistCommonCodeInSuccs(&MBB);
 
   return MadeChange;
 }
