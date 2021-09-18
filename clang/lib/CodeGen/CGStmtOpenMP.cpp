@@ -1784,10 +1784,6 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
   checkForLastprivateConditionalUpdate(*this, S);
 }
 
-void CodeGenFunction::EmitOMPMetaDirective(const OMPMetaDirective &S) {
-  EmitStmt(S.getIfStmt());
-}
-
 namespace {
 /// RAII to handle scopes for loop transformation directives.
 class OMPTransformDirectiveScopeRAII {
@@ -5990,7 +5986,6 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
   case OMPC_novariants:
   case OMPC_nocontext:
   case OMPC_filter:
-  case OMPC_when:
     llvm_unreachable("Clause is not allowed in 'omp atomic'.");
   }
 }
