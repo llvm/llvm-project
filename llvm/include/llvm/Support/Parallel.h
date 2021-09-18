@@ -40,7 +40,10 @@ class Latch {
 
 public:
   explicit Latch(uint32_t Count = 0) : Count(Count) {}
-  ~Latch() { sync(); }
+  ~Latch() {
+    // Ensure at least that sync() was called.
+    assert(Count == 0);
+  }
 
   void inc() {
     std::lock_guard<std::mutex> lock(Mutex);

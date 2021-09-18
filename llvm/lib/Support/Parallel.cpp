@@ -151,7 +151,12 @@ static std::atomic<int> TaskGroupInstances;
 // lock, only allow the first TaskGroup to run tasks parallelly. In the scenario
 // of nested parallel_for_each(), only the outermost one runs parallelly.
 TaskGroup::TaskGroup() : Parallel(TaskGroupInstances++ == 0) {}
-TaskGroup::~TaskGroup() { --TaskGroupInstances; }
+TaskGroup::~TaskGroup() {
+  // We must ensure that all the workloads have finished before decrementing the
+  // instances count.
+  L.sync();
+  --TaskGroupInstances;
+}
 
 void TaskGroup::spawn(std::function<void()> F) {
   if (Parallel) {
