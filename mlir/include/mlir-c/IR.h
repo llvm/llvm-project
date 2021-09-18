@@ -162,6 +162,11 @@ MLIR_CAPI_EXPORTED MlirLocation mlirLocationFileLineColGet(
 MLIR_CAPI_EXPORTED MlirLocation mlirLocationCallSiteGet(MlirLocation callee,
                                                         MlirLocation caller);
 
+/// Creates a fused location with an array of locations and metadata.
+MLIR_CAPI_EXPORTED MlirLocation
+mlirLocationFusedGet(MlirContext ctx, intptr_t nLocations,
+                     MlirLocation const *locations, MlirAttribute metadata);
+
 /// Creates a name location owned by the given context. Providing null location
 /// for childLoc is allowed and if childLoc is null location, then the behavior
 /// is the same as having unknown child location.

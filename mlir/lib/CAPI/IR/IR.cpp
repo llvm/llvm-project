@@ -132,6 +132,14 @@ MlirLocation mlirLocationCallSiteGet(MlirLocation callee, MlirLocation caller) {
   return wrap(Location(CallSiteLoc::get(unwrap(callee), unwrap(caller))));
 }
 
+MlirLocation mlirLocationFusedGet(MlirContext ctx, intptr_t nLocations,
+                                  MlirLocation const *locations,
+                                  MlirAttribute metadata) {
+  SmallVector<Location, 4> locs;
+  ArrayRef<Location> unwrappedLocs = unwrapList(nLocations, locations, locs);
+  return wrap(FusedLoc::get(unwrappedLocs, unwrap(metadata), unwrap(ctx)));
+}
+
 MlirLocation mlirLocationNameGet(MlirContext context, MlirStringRef name,
                                  MlirLocation childLoc) {
   if (mlirLocationIsNull(childLoc))
