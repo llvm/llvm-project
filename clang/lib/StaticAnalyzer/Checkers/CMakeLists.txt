@@ -49,6 +49,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   IdenticalExprChecker.cpp
   InnerPointerChecker.cpp
   InvalidatedIteratorChecker.cpp
+  cert/InvalidPtrChecker.cpp
   Iterator.cpp
   IteratorModeling.cpp
   IteratorRangeChecker.cpp

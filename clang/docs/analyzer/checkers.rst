@@ -2075,10 +2075,63 @@ Finds calls to the ``putenv`` function which pass a pointer to an automatic vari
     if (retval < 0 || (size_t)retval >= sizeof(env)) {
         /* Handle error */
     }
- 
+
     return putenv(env); // putenv function should not be called with auto variables
   }
-  
+
+alpha.security.cert.env
+^^^^^^^^^^^^^^^^^^^^^^^
+
+SEI CERT checkers of `POSIX C coding rules <https://wiki.sei.cmu.edu/confluence/x/JdcxBQ>`_.
+
+.. _alpha-security-cert-env-InvalidPtr:
+
+alpha.security.cert.env.InvalidPtr
+"""""""""""""""""""""""""""
+
+Corresponds to SEI CERT Rules ENV31-C and ENV34-C.
+
+ENV31-C:
+Rule is about the possible problem with `main` function's third argument, environment pointer,
+"envp". When enviornment array is modified using some modification function
+such as putenv, setenv or others, It may happen that memory is reallocated,
+however "envp" is not updated to reflect the changes and points to old memory
+region.
+
+ENV34-C:
+Some functions return a pointer to a statically allocated buffer.
+Consequently, subsequent call of these functions will invalidate previous
+pointer. These functions include: getenv, localeconv, asctime, setlocale, strerror
+
+.. code-block:: c
+
+  int main(int argc, const char *argv[], const char *envp[]) {
+    if (setenv("MY_NEW_VAR", "new_value", 1) != 0) {
+      // setenv call may invalidate 'envp'
+      /* Handle error */
+    }
+    if (envp != NULL) {
+      for (size_t i = 0; envp[i] != NULL; ++i) {
+        puts(envp[i]);
+        // envp may no longer point to the current environment
+        // this program has unanticipated behavior, since envp
+        // does not reflect changes made by setenv function.
+      }
+    }
+    return 0;
+  }
+
+  void previous_call_invalidation() {
+    char *p, *pp;
+
+    p = getenv("VAR");
+    pp = getenv("VAR2");
+    // subsequent call to 'getenv' invalidated previous one
+
+    *p;
+    // dereferencing invalid pointer
+  }
+
 .. _alpha-security-ArrayBound:
 
 alpha.security.ArrayBound (C)
