@@ -12946,7 +12946,7 @@ static SDValue PerformVQDMULHCombine(SDNode *N, SelectionDAG &DAG) {
   SDValue Shft;
   ConstantSDNode *Clamp;
 
-  if (!VT.isVector())
+  if (!VT.isVector() || VT.getScalarSizeInBits() > 64)
     return SDValue();
 
   if (N->getOpcode() == ISD::SMIN) {
