@@ -24,8 +24,12 @@ enum DebugLevel : int32_t { Assertion };
 /// host by omp_get_num_devices.
 uint32_t getNumDevices();
 
+/// Return the number of devices in the system, same number as returned on the
+/// host by omp_get_num_devices.
+uint32_t getDeviceNum();
+
 /// Return the user choosen debug level.
-int32_t getDebugLevel();
+uint32_t getDebugLevel();
 
 bool isDebugMode(DebugLevel Level);
 
