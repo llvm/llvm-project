@@ -10794,8 +10794,6 @@ def err_omp_dispatch_statement_call
 def err_omp_unroll_full_variable_trip_count : Error<
   "loop to be fully unrolled must have a constant trip count">;
 def note_omp_directive_here : Note<"'%0' directive found here">;
-def err_omp_instantiation_not_supported
-    : Error<"instantiation of '%0' not supported yet">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

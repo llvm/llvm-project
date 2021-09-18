@@ -36,8 +36,9 @@ and ``llvm/test`` respectively and are expected to always pass -- they should be
 run before every commit.
 
 The whole programs tests are referred to as the "LLVM test suite" (or
-"test-suite") and are in the ``test-suite`` module in subversion. For
-historical reasons, these tests are also referred to as the "nightly
+"test-suite") and are in the ``test-suite``
+`repository on GitHub <https://github.com/llvm/llvm-test-suite.git>`_.
+For historical reasons, these tests are also referred to as the "nightly
 tests" in places, which is less ambiguous than "test-suite" and remains
 in use although we run them much more often than nightly.
 
@@ -94,7 +95,8 @@ serve as a way of benchmarking LLVM performance, both in terms of the
 efficiency of the programs generated as well as the speed with which
 LLVM compiles, optimizes, and generates code.
 
-The test-suite is located in the ``test-suite`` Subversion module.
+The test-suite is located in the ``test-suite``
+`repository on GitHub <https://github.com/llvm/llvm-test-suite.git>`_.
 
 See the :doc:`TestSuiteGuide` for details.
 
@@ -112,8 +114,8 @@ test suite for more information. This test suite is located in the
 Quick start
 ===========
 
-The tests are located in two separate Subversion modules. The unit and
-regression tests are in the main "llvm" module under the directories
+The tests are located in two separate repositories. The unit and
+regression tests are in the main "llvm"/ directory under the directories
 ``llvm/unittests`` and ``llvm/test`` (so you get these tests for free with the
 main LLVM tree). Use ``make check-all`` to run the unit and regression tests
 after building LLVM.
