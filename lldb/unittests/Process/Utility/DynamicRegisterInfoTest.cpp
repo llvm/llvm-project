@@ -124,3 +124,47 @@ TEST_F(DynamicRegisterInfoTest, no_finalize_regs) {
   ASSERT_REG(i1, LLDB_INVALID_INDEX32);
   ASSERT_REG(i2, LLDB_INVALID_INDEX32);
 }
+
+TEST_F(DynamicRegisterInfoTest, add_supplementary_register) {
+  // Add a base register
+  uint32_t rax = AddTestRegister("rax", 8);
+
+  // Register numbers
+  uint32_t eax = 1;
+  uint32_t ax = 2;
+  uint32_t al = 3;
+
+  ConstString group{"supplementary registers"};
+  uint32_t value_regs[2] = {rax, LLDB_INVALID_REGNUM};
+  struct RegisterInfo eax_reg {
+    "eax", nullptr, 4, LLDB_INVALID_INDEX32, lldb::eEncodingUint,
+        lldb::eFormatUnsigned,
+        {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, eax,
+         eax},
+        value_regs, nullptr, nullptr, 0
+  };
+  info.AddSupplementaryRegister(eax_reg, group);
+
+  struct RegisterInfo ax_reg {
+    "ax", nullptr, 2, LLDB_INVALID_INDEX32, lldb::eEncodingUint,
+        lldb::eFormatUnsigned,
+        {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, ax, ax},
+        value_regs, nullptr, nullptr, 0
+  };
+  info.AddSupplementaryRegister(ax_reg, group);
+
+  struct RegisterInfo al_reg {
+    "al", nullptr, 1, LLDB_INVALID_INDEX32, lldb::eEncodingUint,
+        lldb::eFormatUnsigned,
+        {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, al, al},
+        value_regs, nullptr, nullptr, 0
+  };
+  info.AddSupplementaryRegister(al_reg, group);
+
+  info.Finalize(lldb_private::ArchSpec());
+
+  ASSERT_REG(rax, 0, {}, {eax, ax, al});
+  ASSERT_REG(eax, 0, {rax}, {rax, ax, al});
+  ASSERT_REG(ax, 0, {rax}, {rax, eax, al});
+  ASSERT_REG(al, 0, {rax}, {rax, eax, ax});
+}
