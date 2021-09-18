@@ -21,6 +21,7 @@ struct DeviceEnvironmentTy {
   uint32_t DebugLevel;
   uint32_t NumDevices;
   uint32_t DeviceNum;
+  uint64_t DynamicMemSize;
 };
 
 #pragma omp declare target
@@ -41,6 +42,10 @@ uint32_t config::getNumDevices() {
 
 uint32_t config::getDeviceNum() {
   return omptarget_device_environment.DeviceNum;
+}
+
+uint64_t config::getDynamicMemorySize() {
+  return omptarget_device_environment.DynamicMemSize;
 }
 
 bool config::isDebugMode(config::DebugLevel Level) {

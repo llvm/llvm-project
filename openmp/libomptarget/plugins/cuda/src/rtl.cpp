@@ -103,6 +103,7 @@ struct omptarget_device_environmentTy {
   int32_t debug_level;
   uint32_t num_devices;
   uint32_t device_num;
+  uint64_t dynamic_shared_size;
 };
 
 namespace {
@@ -346,6 +347,8 @@ class DeviceRTLTy {
   int EnvTeamThreadLimit;
   // OpenMP requires flags
   int64_t RequiresFlags;
+  // Amount of dynamic shared memory to use at launch.
+  uint64_t DynamicMemorySize;
 
   static constexpr const int HardTeamLimit = 1U << 16U; // 64k
   static constexpr const int HardThreadLimit = 1024;
@@ -499,7 +502,8 @@ public:
 
   DeviceRTLTy()
       : NumberOfDevices(0), EnvNumTeams(-1), EnvTeamLimit(-1),
-        EnvTeamThreadLimit(-1), RequiresFlags(OMP_REQ_UNDEFINED) {
+        EnvTeamThreadLimit(-1), RequiresFlags(OMP_REQ_UNDEFINED),
+        DynamicMemorySize(0) {
 
     DP("Start initializing CUDA\n");
 
@@ -539,6 +543,11 @@ public:
       // OMP_NUM_TEAMS has been set
       EnvNumTeams = std::stoi(EnvStr);
       DP("Parsed OMP_NUM_TEAMS=%d\n", EnvNumTeams);
+    }
+    if (const char *EnvStr = getenv("LIBOMPTARGET_SHARED_MEMORY_SIZE")) {
+      // LIBOMPTARGET_SHARED_MEMORY_SIZE has been set
+      DynamicMemorySize = std::stoi(EnvStr);
+      DP("Parsed LIBOMPTARGET_SHARED_MEMORY_SIZE", DynamicMemorySize);
     }
 
     StreamManager =
@@ -904,7 +913,7 @@ public:
       // TODO: The device ID used here is not the real device ID used by OpenMP.
       omptarget_device_environmentTy DeviceEnv{
           0, static_cast<uint32_t>(NumberOfDevices),
-          static_cast<uint32_t>(DeviceId)};
+          static_cast<uint32_t>(DeviceId), DynamicMemorySize};
 
 #ifdef OMPTARGET_DEBUG
       if (const char *EnvStr = getenv("LIBOMPTARGET_DEVICE_RTL_DEBUG"))
@@ -1190,7 +1199,7 @@ public:
     Err = cuLaunchKernel(KernelInfo->Func, CudaBlocksPerGrid, /* gridDimY */ 1,
                          /* gridDimZ */ 1, CudaThreadsPerBlock,
                          /* blockDimY */ 1, /* blockDimZ */ 1,
-                         /* sharedMemBytes */ 0, Stream, &Args[0], nullptr);
+                         DynamicMemorySize, Stream, &Args[0], nullptr);
     if (!checkResult(Err, "Error returned from cuLaunchKernel\n"))
       return OFFLOAD_FAIL;
 
