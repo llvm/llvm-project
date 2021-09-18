@@ -21,6 +21,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/FunctionImplementation.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -528,6 +529,49 @@ static ParseResult parseLaunchOp(OpAsmParser &parser, OperationState &result) {
   Region *body = result.addRegion();
   return failure(parser.parseRegion(*body, regionArgs, dataTypes) ||
                  parser.parseOptionalAttrDict(result.attributes));
+}
+
+/// Simplify the gpu.launch when the range of the thread and block IDs is
+/// trivially known to be one.
+struct FoldLaunchArguments : public OpRewritePattern<LaunchOp> {
+  using OpRewritePattern<LaunchOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(LaunchOp op,
+                                PatternRewriter &rewriter) const override {
+    auto isTriviallyOne = [](Value size) {
+      IntegerAttr cst;
+      return matchPattern(size, m_Constant(&cst)) && cst.getInt() == 1;
+    };
+
+    // If the range implies a single value for `id`, replace `id`'s uses by
+    // zero.
+    Value zero;
+    bool simplified = false;
+    auto constPropIdUses = [&](Value id, Value size) {
+      if (!isTriviallyOne(size))
+        return;
+      if (!simplified) {
+        // Create a zero value the first time.
+        OpBuilder::InsertionGuard guard(rewriter);
+        rewriter.setInsertionPointToStart(&op.body().front());
+        zero = rewriter.create<ConstantIndexOp>(op.getLoc(), /*value=*/0);
+      }
+      id.replaceAllUsesWith(zero);
+      simplified = true;
+    };
+    constPropIdUses(op.getBlockIds().x, op.gridSizeX());
+    constPropIdUses(op.getBlockIds().y, op.gridSizeY());
+    constPropIdUses(op.getBlockIds().z, op.gridSizeZ());
+    constPropIdUses(op.getThreadIds().x, op.blockSizeX());
+    constPropIdUses(op.getThreadIds().y, op.blockSizeY());
+    constPropIdUses(op.getThreadIds().z, op.blockSizeZ());
+
+    return success(simplified);
+  }
+};
+
+void LaunchOp::getCanonicalizationPatterns(RewritePatternSet &rewrites,
+                                           MLIRContext *context) {
+  rewrites.add<FoldLaunchArguments>(context);
 }
 
 //===----------------------------------------------------------------------===//
