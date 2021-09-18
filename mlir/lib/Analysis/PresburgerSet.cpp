@@ -178,7 +178,7 @@ static void subtractRecursively(FlatAffineConstraints &b, Simplex &simplex,
   assert(sI.getNumLocalIds() == 0 &&
          "Subtracting sets with divisions is not yet supported!");
   unsigned initialSnapshot = simplex.getSnapshot();
-  unsigned offset = simplex.numConstraints();
+  unsigned offset = simplex.getNumConstraints();
   simplex.intersectFlatAffineConstraints(sI);
 
   if (simplex.isEmpty()) {
