@@ -152,10 +152,10 @@ public:
   void addInequality(ArrayRef<int64_t> coeffs);
 
   /// Returns the number of variables in the tableau.
-  unsigned numVariables() const;
+  unsigned getNumVariables() const;
 
   /// Returns the number of constraints in the tableau.
-  unsigned numConstraints() const;
+  unsigned getNumConstraints() const;
 
   /// Add an equality to the tableau. If coeffs is c_0, c_1, ... c_n, where n
   /// is the current number of variables, then the corresponding equality is

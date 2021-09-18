@@ -72,7 +72,7 @@ TEST(SimplexTest, addInequality_rollback) {
     expectInequalityMakesSetEmpty(simplex, checkCoeffs[1], true);
 
     simplex.rollback(snapshot);
-    EXPECT_EQ(simplex.numConstraints(), 0u);
+    EXPECT_EQ(simplex.getNumConstraints(), 0u);
 
     expectInequalityMakesSetEmpty(simplex, checkCoeffs[0], false);
     expectInequalityMakesSetEmpty(simplex, checkCoeffs[1], false);
@@ -295,7 +295,7 @@ TEST(SimplexTest, isMarkedRedundant_no_redundant) {
   simplex.detectRedundant();
   ASSERT_FALSE(simplex.isEmpty());
 
-  for (unsigned i = 0; i < simplex.numConstraints(); ++i)
+  for (unsigned i = 0; i < simplex.getNumConstraints(); ++i)
     EXPECT_FALSE(simplex.isMarkedRedundant(i)) << "i = " << i << "\n";
 }
 
@@ -388,7 +388,7 @@ TEST(SimplexTest, appendVariable) {
 
   unsigned snapshot1 = simplex.getSnapshot();
   simplex.appendVariable();
-  EXPECT_EQ(simplex.numVariables(), 2u);
+  EXPECT_EQ(simplex.getNumVariables(), 2u);
 
   int64_t yMin = 2, yMax = 5;
   simplex.addInequality({0, 1, -yMin}); // y >= 2.
@@ -396,17 +396,17 @@ TEST(SimplexTest, appendVariable) {
 
   unsigned snapshot2 = simplex.getSnapshot();
   simplex.appendVariable(2);
-  EXPECT_EQ(simplex.numVariables(), 4u);
+  EXPECT_EQ(simplex.getNumVariables(), 4u);
   simplex.rollback(snapshot2);
 
-  EXPECT_EQ(simplex.numVariables(), 2u);
-  EXPECT_EQ(simplex.numConstraints(), 2u);
+  EXPECT_EQ(simplex.getNumVariables(), 2u);
+  EXPECT_EQ(simplex.getNumConstraints(), 2u);
   EXPECT_EQ(simplex.computeIntegerBounds({0, 1, 0}),
             std::make_pair(yMin, yMax));
 
   simplex.rollback(snapshot1);
-  EXPECT_EQ(simplex.numVariables(), 1u);
-  EXPECT_EQ(simplex.numConstraints(), 0u);
+  EXPECT_EQ(simplex.getNumVariables(), 1u);
+  EXPECT_EQ(simplex.getNumConstraints(), 0u);
 }
 
 } // namespace mlir
