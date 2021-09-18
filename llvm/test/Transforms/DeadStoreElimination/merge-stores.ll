@@ -164,7 +164,7 @@ define void @foo(%union.U* nocapture %u) {
 ;
 entry:
   %i = getelementptr inbounds %union.U, %union.U* %u, i64 0, i32 0
-  store i64 0, i64* %i, align 8, !dbg !22, !tbaa !26, !noalias !30, !nontemporal !29
+  store i64 0, i64* %i, align 8, !dbg !22, !tbaa !26, !noalias !32, !nontemporal !29
   %s = bitcast %union.U* %u to i16*
   store i16 42, i16* %s, align 8
   ret void
@@ -231,6 +231,4 @@ define void @PR36129(i32* %P, i32* %Q) {
 ; Domains and scopes which might alias
 !30 = !{!30}
 !31 = !{!31, !30}
-
-!32 = !{!32}
-!33 = !{!33, !32}
+!32 = !{!31}
