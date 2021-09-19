@@ -248,12 +248,14 @@ static LogicalResult printOperation(CppEmitter &emitter, BranchOp branchOp) {
 
 static LogicalResult printOperation(CppEmitter &emitter,
                                     CondBranchOp condBranchOp) {
-  raw_ostream &os = emitter.ostream();
+  raw_indented_ostream &os = emitter.ostream();
   Block &trueSuccessor = *condBranchOp.getTrueDest();
   Block &falseSuccessor = *condBranchOp.getFalseDest();
 
   os << "if (" << emitter.getOrCreateName(condBranchOp.getCondition())
      << ") {\n";
+
+  os.indent();
 
   // If condition is true.
   for (auto pair : llvm::zip(condBranchOp.getTrueOperands(),
@@ -269,7 +271,8 @@ static LogicalResult printOperation(CppEmitter &emitter,
     return condBranchOp.emitOpError("unable to find label for successor block");
   }
   os << emitter.getOrCreateName(trueSuccessor) << ";\n";
-  os << "} else {\n";
+  os.unindent() << "} else {\n";
+  os.indent();
   // If condition is false.
   for (auto pair : llvm::zip(condBranchOp.getFalseOperands(),
                              falseSuccessor.getArguments())) {
@@ -285,7 +288,7 @@ static LogicalResult printOperation(CppEmitter &emitter,
            << "unable to find label for successor block";
   }
   os << emitter.getOrCreateName(falseSuccessor) << ";\n";
-  os << "}";
+  os.unindent() << "}";
   return success();
 }
 
@@ -876,7 +879,9 @@ LogicalResult CppEmitter::emitAssignPrefix(Operation &op) {
 LogicalResult CppEmitter::emitLabel(Block &block) {
   if (!hasBlockLabel(block))
     return block.getParentOp()->emitError("label for block not found");
-  os << getOrCreateName(block) << ":\n";
+  // FIXME: Add feature in `raw_indented_ostream` to ignore indent for block
+  // label instead of using `getOStream`.
+  os.getOStream() << getOrCreateName(block) << ":\n";
   return success();
 }
 
