@@ -284,7 +284,7 @@ define <4 x i64> @vec256_eltty_i64_source_subvec_0_target_subvec_mask_3_unary(<4
 define <4 x i64> @vec256_eltty_i64_source_subvec_0_target_subvec_mask_3_binary(<4 x i64> %x, <4 x i64> %y) nounwind {
 ; CHECK-LABEL: vec256_eltty_i64_source_subvec_0_target_subvec_mask_3_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vbroadcastsd %xmm1, %ymm1
+; CHECK-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[0,1,0,1]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x i64> %x, <4 x i64> %y, <4 x i32> <i32 0, i32 4, i32 2, i32 4>
@@ -741,7 +741,7 @@ define <32 x i8> @vec256_eltty_i8_source_subvec_0_target_subvec_mask_1_unary(<32
 define <32 x i8> @vec256_eltty_i8_source_subvec_0_target_subvec_mask_1_binary(<32 x i8> %x, <32 x i8> %y) nounwind {
 ; CHECK-LABEL: vec256_eltty_i8_source_subvec_0_target_subvec_mask_1_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0]
+; CHECK-NEXT:    vpbroadcastb %xmm1, %ymm1
 ; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; CHECK-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
@@ -763,8 +763,7 @@ define <32 x i8> @vec256_eltty_i8_source_subvec_0_target_subvec_mask_2_unary(<32
 define <32 x i8> @vec256_eltty_i8_source_subvec_0_target_subvec_mask_2_binary(<32 x i8> %x, <32 x i8> %y) nounwind {
 ; CHECK-LABEL: vec256_eltty_i8_source_subvec_0_target_subvec_mask_2_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0]
-; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
+; CHECK-NEXT:    vpbroadcastb %xmm1, %ymm1
 ; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
 ; CHECK-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
@@ -800,7 +799,7 @@ define <32 x i8> @vec256_eltty_i8_source_subvec_1_target_subvec_mask_1_unary(<32
 ; CHECK-LABEL: vec256_eltty_i8_source_subvec_1_target_subvec_mask_1_unary:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; CHECK-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0]
+; CHECK-NEXT:    vpbroadcastb %xmm1, %ymm1
 ; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; CHECK-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
