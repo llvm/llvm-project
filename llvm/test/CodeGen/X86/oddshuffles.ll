@@ -2261,12 +2261,13 @@ define <16 x i32> @splat_v3i32(<3 x i32>* %ptr) {
 ;
 ; AVX1-LABEL: splat_v3i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX1-NEXT:    vpinsrd $2, 8(%rdi), %xmm0, %xmm1
-; AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0],ymm0[1],ymm2[2,3,4,5,6,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
-; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0,1],ymm1[2],ymm2[3,4,5,6,7]
+; AVX1-NEXT:    movq (%rdi), %rax
+; AVX1-NEXT:    vmovq %rax, %xmm0
+; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2,3,4,5,6,7]
+; AVX1-NEXT:    vmovd %eax, %xmm2
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
+; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1],ymm2[2],ymm1[3,4,5,6,7]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-SLOW-LABEL: splat_v3i32:
@@ -2288,12 +2289,13 @@ define <16 x i32> @splat_v3i32(<3 x i32>* %ptr) {
 ;
 ; XOP-LABEL: splat_v3i32:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; XOP-NEXT:    vpinsrd $2, 8(%rdi), %xmm0, %xmm1
-; XOP-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; XOP-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0],ymm0[1],ymm2[2,3,4,5,6,7]
-; XOP-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
-; XOP-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0,1],ymm1[2],ymm2[3,4,5,6,7]
+; XOP-NEXT:    movq (%rdi), %rax
+; XOP-NEXT:    vmovq %rax, %xmm0
+; XOP-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; XOP-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2,3,4,5,6,7]
+; XOP-NEXT:    vmovd %eax, %xmm2
+; XOP-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
+; XOP-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1],ymm2[2],ymm1[3,4,5,6,7]
 ; XOP-NEXT:    retq
   %1 = load <3 x i32>, <3 x i32>* %ptr, align 1
   %2 = shufflevector <3 x i32> %1, <3 x i32> undef, <16 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
