@@ -1924,11 +1924,11 @@ define i8 @smax_offset_uses(i8 %x) {
 
 define <3 x i8> @smin_offset(<3 x i8> %x) {
 ; CHECK-LABEL: @smin_offset(
-; CHECK-NEXT:    [[A:%.*]] = add nsw <3 x i8> [[X:%.*]], <i8 124, i8 124, i8 124>
+; CHECK-NEXT:    [[A:%.*]] = add nuw nsw <3 x i8> [[X:%.*]], <i8 124, i8 124, i8 124>
 ; CHECK-NEXT:    [[M:%.*]] = call <3 x i8> @llvm.smin.v3i8(<3 x i8> [[A]], <3 x i8> <i8 -3, i8 -3, i8 -3>)
 ; CHECK-NEXT:    ret <3 x i8> [[M]]
 ;
-  %a = add nsw <3 x i8> %x, <i8 124, i8 124, i8 124>
+  %a = add nsw nuw <3 x i8> %x, <i8 124, i8 124, i8 124>
   %m = call <3 x i8> @llvm.smin.v3i8(<3 x i8> %a, <3 x i8> <i8 -3, i8 -3, i8 -3>)
   ret <3 x i8> %m
 }
@@ -1977,12 +1977,12 @@ define i8 @smin_offset_uses(i8 %x) {
 
 define <3 x i8> @umax_offset(<3 x i8> %x) {
 ; CHECK-LABEL: @umax_offset(
-; CHECK-NEXT:    [[A:%.*]] = add nuw <3 x i8> [[X:%.*]], <i8 3, i8 3, i8 3>
-; CHECK-NEXT:    [[M:%.*]] = call <3 x i8> @llvm.umax.v3i8(<3 x i8> [[A]], <3 x i8> <i8 4, i8 4, i8 4>)
+; CHECK-NEXT:    [[A:%.*]] = add nuw nsw <3 x i8> [[X:%.*]], <i8 127, i8 127, i8 127>
+; CHECK-NEXT:    [[M:%.*]] = call <3 x i8> @llvm.umax.v3i8(<3 x i8> [[A]], <3 x i8> <i8 -126, i8 -126, i8 -126>)
 ; CHECK-NEXT:    ret <3 x i8> [[M]]
 ;
-  %a = add nuw <3 x i8> %x, <i8 3, i8 3, i8 3>
-  %m = call <3 x i8> @llvm.umax.v3i8(<3 x i8> %a, <3 x i8> <i8 4, i8 4, i8 4>)
+  %a = add nsw nuw <3 x i8> %x, <i8 127, i8 127, i8 127>
+  %m = call <3 x i8> @llvm.umax.v3i8(<3 x i8> %a, <3 x i8> <i8 130, i8 130, i8 130>)
   ret <3 x i8> %m
 }
 
@@ -2081,4 +2081,15 @@ define i8 @umin_offset_uses(i8 %x) {
   call void @use(i8 %a)
   %m = call i8 @llvm.umin.i8(i8 %a, i8 252)
   ret i8 %m
+}
+
+define <3 x i8> @umax_vector_splat_undef(<3 x i8> %x) {
+; CHECK-LABEL: @umax_vector_splat_undef(
+; CHECK-NEXT:    [[A:%.*]] = add nuw <3 x i8> [[X:%.*]], <i8 undef, i8 64, i8 64>
+; CHECK-NEXT:    [[R:%.*]] = call <3 x i8> @llvm.umax.v3i8(<3 x i8> [[A]], <3 x i8> <i8 13, i8 -126, i8 -126>)
+; CHECK-NEXT:    ret <3 x i8> [[R]]
+;
+  %a = add nuw <3 x i8> %x, <i8 undef, i8 64, i8 64>
+  %r = call <3 x i8> @llvm.umax.v3i8(<3 x i8> %a, <3 x i8> <i8 13, i8 130, i8 130>)
+  ret <3 x i8> %r
 }
