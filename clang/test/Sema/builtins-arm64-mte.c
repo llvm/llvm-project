@@ -130,7 +130,7 @@ ptrdiff_t subtract_pointers4(int *a, char *b) {
 
 #ifdef __cplusplus
 ptrdiff_t subtract_pointers5() {
-  // expected-error@+1 {{at least one argument of MTE builtin function must be a pointer ('nullptr_t', 'nullptr_t' invalid)}}
+  // expected-error@+1 {{at least one argument of MTE builtin function must be a pointer ('std::nullptr_t', 'std::nullptr_t' invalid)}}
   return __arm_mte_ptrdiff(nullptr, nullptr);
 }
 #endif

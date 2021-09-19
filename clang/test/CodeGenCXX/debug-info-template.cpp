@@ -238,3 +238,10 @@ template void f1<t1 () volatile, t1 () const volatile, t1 () &, t1 () &&>();
 // CHECK: ![[RAW_FUNC_QUAL_REF_REF]] = !DISubroutineType(flags: DIFlagRValueReference, types: ![[RAW_FUNC_QUAL_LIST]])
 
 } // namespace RawFuncQual
+
+namespace Nullptr_t {
+template <typename T>
+void f1() {}
+template void f1<decltype(nullptr)>();
+// CHECK: !DISubprogram(name: "f1<std::nullptr_t>",
+} // namespace Nullptr_t

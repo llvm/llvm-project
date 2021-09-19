@@ -735,7 +735,7 @@ const int *ptr;
 struct S {
   explicit(sizeof(char[2])) S(char); // expected-error {{explicit specifier argument evaluates to 2, which cannot be narrowed to type 'bool'}}
   explicit(ptr) S(long);             // expected-error {{conversion from 'const int *' to 'bool' is not allowed in a converted constant expression}}
-  explicit(nullptr) S(int);          // expected-error {{conversion from 'nullptr_t' to 'bool' is not allowed in a converted constant expression}}
+  explicit(nullptr) S(int);          // expected-error {{conversion from 'std::nullptr_t' to 'bool' is not allowed in a converted constant expression}}
   explicit(42L) S(int, int);         // expected-error {{explicit specifier argument evaluates to 42, which cannot be narrowed to type 'bool'}}
   explicit(sizeof(char)) S();
   explicit(0) S(char, char);

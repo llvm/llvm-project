@@ -15,7 +15,7 @@ class X {
 // Nullability applies to all pointer types.
 typedef int (X::* _Nonnull member_function_type_1)(int);
 typedef int X::* _Nonnull member_data_type_1;
-typedef nullptr_t _Nonnull nonnull_nullptr_t; // expected-error{{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'nullptr_t'}}
+typedef nullptr_t _Nonnull nonnull_nullptr_t; // expected-error{{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'nullptr_t' (aka 'std::nullptr_t')}}
 
 // Nullability can move into member pointers (this is suppressing a warning).
 typedef _Nonnull int (X::* member_function_type_2)(int);
@@ -26,7 +26,7 @@ typedef _Nonnull int X::* member_data_type_2;
 template<typename T>
 struct AddNonNull {
   typedef _Nonnull T type; // expected-error{{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'int'}}
-  // expected-error@-1{{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'nullptr_t'}}
+  // expected-error@-1{{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'std::nullptr_t'}}
 };
 
 typedef AddNonNull<int *>::type nonnull_int_ptr_1;

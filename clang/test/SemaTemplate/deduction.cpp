@@ -313,7 +313,7 @@ namespace nullptr_deduction {
   }
 
   template<template<typename T, T> class X, typename T, int *P>
-    void f0(X<T, P>) {} // expected-note {{deduced non-type template argument does not have the same type as the corresponding template parameter ('nullptr_t' vs 'int *')}}
+    void f0(X<T, P>) {} // expected-note {{deduced non-type template argument does not have the same type as the corresponding template parameter ('std::nullptr_t' vs 'int *')}}
   void h0() {
     f0(X<int*, nullptr>());
     f0(X<nullptr_t, nullptr>()); // expected-error {{no matching function}}

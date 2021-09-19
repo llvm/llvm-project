@@ -86,7 +86,7 @@ const int *ptr = nullptr;
 void f() noexcept(sizeof(char[2])); // expected-error {{noexcept specifier argument evaluates to 2, which cannot be narrowed to type 'bool'}}
 void g() noexcept(sizeof(char));
 void h() noexcept(ptr);     // expected-error {{conversion from 'const int *' to 'bool' is not allowed in a converted constant expression}}
-void i() noexcept(nullptr); // expected-error {{conversion from 'nullptr_t' to 'bool' is not allowed in a converted constant expression}}
+void i() noexcept(nullptr); // expected-error {{conversion from 'std::nullptr_t' to 'bool' is not allowed in a converted constant expression}}
 void j() noexcept(0);
 void k() noexcept(1);
 void l() noexcept(2); // expected-error {{noexcept specifier argument evaluates to 2, which cannot be narrowed to type 'bool'}}

@@ -489,7 +489,7 @@ namespace anon_union_default_member_init {
 namespace PR45000 {
   template <typename T>
   void f(int x = [](T x = nullptr) -> int { return x; }());
-  // expected-error@-1 {{cannot initialize a parameter of type 'int' with an rvalue of type 'nullptr_t'}}
+  // expected-error@-1 {{cannot initialize a parameter of type 'int' with an rvalue of type 'std::nullptr_t'}}
   // expected-note@-2 {{passing argument to parameter 'x' here}}
 
   void g() { f<int>(); }
