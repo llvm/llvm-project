@@ -72,6 +72,18 @@ static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, uint64_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeGPRF32RegisterClass(MCInst &Inst, uint64_t RegNo,
+                                              uint64_t Address,
+                                              const void *Decoder) {
+  return DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
+}
+
+static DecodeStatus DecodeGPRF64RegisterClass(MCInst &Inst, uint64_t RegNo,
+                                              uint64_t Address,
+                                              const void *Decoder) {
+  return DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
+}
+
 template <unsigned N>
 static DecodeStatus decodeUImmOperand(MCInst &Inst, uint64_t Imm) {
   if (!isUInt<N>(Imm))

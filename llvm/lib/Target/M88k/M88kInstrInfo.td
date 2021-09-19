@@ -394,3 +394,29 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
 
 //
 def : InstAlias<"nop", (ORrr R0, R0, R0)>;
+
+
+// Multiclass for triadic register floating point instructions.
+multiclass FArith<bits<4> Func, string OpcStr, SDNode OpNode,
+                 InstrItinClass itin = NoItinerary> {
+  foreach D = 0-1 in {
+    defvar S1 = D;
+    defvar S2 = D;
+    defvar DPrec = !if(D, "d", "s");
+    defvar DOpnd = !if(D, GPRF64Opnd, GPRF32Opnd);
+    defvar S1Prec = !if(S1, "d", "s");
+    defvar S1Opnd = !if(S1, GPRF64Opnd, GPRF32Opnd);
+    defvar S2Prec = !if(S2, "d", "s");
+    defvar S2Opnd = !if(S2, GPRF64Opnd, GPRF32Opnd);
+    def DPrec # S1Prec #S2Prec :
+             F_SFU1<Func, D, S1, S2,
+                    (outs DOpnd:$rd), (ins S1Opnd:$rs1, S2Opnd:$rs2),
+                    !strconcat(OpcStr, ".", DPrec, S1Prec, S2Prec),
+                    [(set DOpnd:$rd, (OpNode S1Opnd:$rs1, S2Opnd:$rs2))],
+                    itin>;
+  }
+}
+
+defm FMUL : FArith<0b0000, "fmul", fmul>;
+defm FADD : FArith<0b0101, "fadd", fadd>;
+defm FSUB : FArith<0b0110, "fsub", fsub>;

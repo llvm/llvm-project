@@ -207,3 +207,33 @@ class F_BCOND<bits<5> func, bits<1> next,
   let Inst{20-16} = rs1;
   let Inst{15-0}  = d16;
 }
+
+// Category: Floating point.
+
+// Format: Special function unit.
+class F_SFU<bits<3> sfuid,
+               dag outs, dag ins, string asmstr, list<dag> pattern,
+               InstrItinClass itin = NoItinerary>
+   : InstM88k<outs, ins, asmstr, pattern, itin> {
+  bits<5>  rd;
+  bits<5>  rs1;
+  bits<5>  rs2;
+
+  let Inst{31-29} = 0b100;
+  let Inst{28-26} = sfuid;
+  let Inst{25-21} = rd;
+  let Inst{20-16} = rs1;
+  let Inst{4-0} = rs2;
+}
+
+// Format: Triadic register.
+class F_SFU1<bits<4> func, bits<2> td, bits<2> t1, bits<2> t2,
+               dag outs, dag ins, string asmstr, list<dag> pattern,
+               InstrItinClass itin = NoItinerary>
+   : F_SFU<0b001, outs, ins, asmstr, pattern, itin> {
+  let Inst{15} = 0b0; // r
+  let Inst{14-11} = func;
+  let Inst{10-9} = t1;
+  let Inst{8-7} = t2;
+  let Inst{6-5} = td;
+}
