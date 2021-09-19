@@ -420,8 +420,8 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      7     6.00    *                   cmpeqpd	(%rax), %xmm2
 # CHECK-NEXT:  1      5     1.00                        cmpeqsd	%xmm0, %xmm2
 # CHECK-NEXT:  1      5     1.00    *                   cmpeqsd	(%rax), %xmm2
-# CHECK-NEXT:  1      9     4.50                        comisd	%xmm0, %xmm1
-# CHECK-NEXT:  1      10    5.00    *                   comisd	(%rax), %xmm1
+# CHECK-NEXT:  4      9     9.00                        comisd	%xmm0, %xmm1
+# CHECK-NEXT:  5      10    10.00   *                   comisd	(%rax), %xmm1
 # CHECK-NEXT:  1      7     6.00                        cvtdq2pd	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     7.00    *                   cvtdq2pd	(%rax), %xmm2
 # CHECK-NEXT:  1      6     5.00                        cvtdq2ps	%xmm0, %xmm2
@@ -666,8 +666,8 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      7     6.00    *                   subpd	(%rax), %xmm2
 # CHECK-NEXT:  1      5     1.00                        subsd	%xmm0, %xmm2
 # CHECK-NEXT:  1      5     1.00    *                   subsd	(%rax), %xmm2
-# CHECK-NEXT:  1      9     4.50                        ucomisd	%xmm0, %xmm1
-# CHECK-NEXT:  1      10    5.00    *                   ucomisd	(%rax), %xmm1
+# CHECK-NEXT:  4      9     9.00                        ucomisd	%xmm0, %xmm1
+# CHECK-NEXT:  5      10    10.00   *                   ucomisd	(%rax), %xmm1
 # CHECK-NEXT:  1      1     1.00                        unpckhpd	%xmm0, %xmm2
 # CHECK-NEXT:  1      1     1.00    *                   unpckhpd	(%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                        unpcklpd	%xmm0, %xmm2
@@ -681,7 +681,7 @@ xorpd       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]
-# CHECK-NEXT: 913.00 773.00
+# CHECK-NEXT: 932.00 792.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    Instructions:
@@ -698,8 +698,8 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT: 6.00   6.00   cmpeqpd	(%rax), %xmm2
 # CHECK-NEXT:  -     1.00   cmpeqsd	%xmm0, %xmm2
 # CHECK-NEXT: 1.00   1.00   cmpeqsd	(%rax), %xmm2
-# CHECK-NEXT: 4.50   4.50   comisd	%xmm0, %xmm1
-# CHECK-NEXT: 5.00   5.00   comisd	(%rax), %xmm1
+# CHECK-NEXT: 9.00   9.00   comisd	%xmm0, %xmm1
+# CHECK-NEXT: 10.00  10.00  comisd	(%rax), %xmm1
 # CHECK-NEXT: 6.00   6.00   cvtdq2pd	%xmm0, %xmm2
 # CHECK-NEXT: 7.00   7.00   cvtdq2pd	(%rax), %xmm2
 # CHECK-NEXT: 5.00   5.00   cvtdq2ps	%xmm0, %xmm2
@@ -944,8 +944,8 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT: 6.00   6.00   subpd	(%rax), %xmm2
 # CHECK-NEXT:  -     1.00   subsd	%xmm0, %xmm2
 # CHECK-NEXT: 1.00   1.00   subsd	(%rax), %xmm2
-# CHECK-NEXT: 4.50   4.50   ucomisd	%xmm0, %xmm1
-# CHECK-NEXT: 5.00   5.00   ucomisd	(%rax), %xmm1
+# CHECK-NEXT: 9.00   9.00   ucomisd	%xmm0, %xmm1
+# CHECK-NEXT: 10.00  10.00  ucomisd	(%rax), %xmm1
 # CHECK-NEXT: 1.00    -     unpckhpd	%xmm0, %xmm2
 # CHECK-NEXT: 1.00    -     unpckhpd	(%rax), %xmm2
 # CHECK-NEXT: 1.00    -     unpcklpd	%xmm0, %xmm2

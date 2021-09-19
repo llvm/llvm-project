@@ -206,8 +206,8 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      7     6.00    *                   cmpeqps	(%rax), %xmm2
 # CHECK-NEXT:  1      5     1.00                        cmpeqss	%xmm0, %xmm2
 # CHECK-NEXT:  1      5     1.00    *                   cmpeqss	(%rax), %xmm2
-# CHECK-NEXT:  1      9     4.50                        comiss	%xmm0, %xmm1
-# CHECK-NEXT:  1      10    5.00    *                   comiss	(%rax), %xmm1
+# CHECK-NEXT:  4      9     9.00                        comiss	%xmm0, %xmm1
+# CHECK-NEXT:  5      10    10.00   *                   comiss	(%rax), %xmm1
 # CHECK-NEXT:  1      5     5.00                        cvtpi2ps	%mm0, %xmm2
 # CHECK-NEXT:  1      5     5.00    *                   cvtpi2ps	(%rax), %xmm2
 # CHECK-NEXT:  1      5     5.00                        cvtps2pi	%xmm0, %mm2
@@ -310,8 +310,8 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      5     1.00    *                   subps	(%rax), %xmm2
 # CHECK-NEXT:  1      5     1.00                        subss	%xmm0, %xmm2
 # CHECK-NEXT:  1      5     1.00    *                   subss	(%rax), %xmm2
-# CHECK-NEXT:  1      9     4.50                        ucomiss	%xmm0, %xmm1
-# CHECK-NEXT:  1      10    5.00    *                   ucomiss	(%rax), %xmm1
+# CHECK-NEXT:  4      9     9.00                        ucomiss	%xmm0, %xmm1
+# CHECK-NEXT:  5      10    10.00   *                   ucomiss	(%rax), %xmm1
 # CHECK-NEXT:  1      1     1.00                        unpckhps	%xmm0, %xmm2
 # CHECK-NEXT:  1      1     1.00    *                   unpckhps	(%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                        unpcklps	%xmm0, %xmm2
@@ -325,7 +325,7 @@ xorps       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]
-# CHECK-NEXT: 456.00 411.00
+# CHECK-NEXT: 475.00 430.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    Instructions:
@@ -341,8 +341,8 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT: 6.00   6.00   cmpeqps	(%rax), %xmm2
 # CHECK-NEXT:  -     1.00   cmpeqss	%xmm0, %xmm2
 # CHECK-NEXT: 1.00   1.00   cmpeqss	(%rax), %xmm2
-# CHECK-NEXT: 4.50   4.50   comiss	%xmm0, %xmm1
-# CHECK-NEXT: 5.00   5.00   comiss	(%rax), %xmm1
+# CHECK-NEXT: 9.00   9.00   comiss	%xmm0, %xmm1
+# CHECK-NEXT: 10.00  10.00  comiss	(%rax), %xmm1
 # CHECK-NEXT:  -     5.00   cvtpi2ps	%mm0, %xmm2
 # CHECK-NEXT:  -     5.00   cvtpi2ps	(%rax), %xmm2
 # CHECK-NEXT:  -     5.00   cvtps2pi	%xmm0, %mm2
@@ -445,8 +445,8 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT: 1.00   1.00   subps	(%rax), %xmm2
 # CHECK-NEXT:  -     1.00   subss	%xmm0, %xmm2
 # CHECK-NEXT: 1.00   1.00   subss	(%rax), %xmm2
-# CHECK-NEXT: 4.50   4.50   ucomiss	%xmm0, %xmm1
-# CHECK-NEXT: 5.00   5.00   ucomiss	(%rax), %xmm1
+# CHECK-NEXT: 9.00   9.00   ucomiss	%xmm0, %xmm1
+# CHECK-NEXT: 10.00  10.00  ucomiss	(%rax), %xmm1
 # CHECK-NEXT: 1.00    -     unpckhps	%xmm0, %xmm2
 # CHECK-NEXT: 1.00    -     unpckhps	(%rax), %xmm2
 # CHECK-NEXT: 1.00    -     unpcklps	%xmm0, %xmm2

@@ -249,13 +249,13 @@ defm : AtomWriteResPair<WriteFCmp64X,        [AtomPort0,AtomPort1], [AtomPort0,A
 defm : X86WriteResPairUnsupported<WriteFCmp64Y>;
 defm : X86WriteResPairUnsupported<WriteFCmp64Z>;
 defm : AtomWriteResPair<WriteFCom,           [AtomPort0],  [AtomPort0],  5,  5,  [5],  [5]>;
-defm : AtomWriteResPair<WriteFComX,          [AtomPort0],  [AtomPort0],  5,  5,  [5],  [5]>;
+defm : AtomWriteResPair<WriteFComX,          [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  9, 10,  [9,9],[10,10], 4, 5>;
 defm : AtomWriteResPair<WriteFMul,           [AtomPort0],  [AtomPort0],  4,  4,  [2],  [2]>;
 defm : AtomWriteResPair<WriteFMulX,          [AtomPort0],  [AtomPort0],  5,  5,  [2],  [2]>;
 defm : X86WriteResPairUnsupported<WriteFMulY>;
 defm : X86WriteResPairUnsupported<WriteFMulZ>;
 defm : AtomWriteResPair<WriteFMul64,         [AtomPort0],  [AtomPort0],  5,  5,  [2],  [2]>;
-defm : AtomWriteResPair<WriteFMul64X,        [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  9, 10,  [9,9],  [10,10]>;
+defm : AtomWriteResPair<WriteFMul64X,        [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  9, 10,  [9,9],[10,10]>;
 defm : X86WriteResPairUnsupported<WriteFMul64Y>;
 defm : X86WriteResPairUnsupported<WriteFMul64Z>;
 defm : AtomWriteResPair<WriteFRcp,           [AtomPort0],  [AtomPort0],  4,  4,  [4],  [4]>;
@@ -648,7 +648,6 @@ def : InstRW<[AtomWrite01_9], (instrs POPA16, POPA32,
                                       SHLD64rri8, SHRD64rri8,
                                       CMPXCHG8rr)>;
 def : InstRW<[AtomWrite01_9], (instregex "(U)?COM_FI", "TST_F",
-                                         "(U)?COMIS(D|S)rr",
                                          "CVT(T)?SS2SI64rr(_Int)?")>;
 
 def AtomWrite01_10 : SchedWriteRes<[AtomPort01]> {
@@ -656,8 +655,7 @@ def AtomWrite01_10 : SchedWriteRes<[AtomPort01]> {
   let ResourceCycles = [10];
 }
 def : SchedAlias<WriteFLDC, AtomWrite01_10>;
-def : InstRW<[AtomWrite01_10], (instregex "(U)?COMIS(D|S)rm",
-                                          "CVT(T)?SS2SI64rm(_Int)?")>;
+def : InstRW<[AtomWrite01_10], (instregex "CVT(T)?SS2SI64rm(_Int)?")>;
 
 def AtomWrite01_11 : SchedWriteRes<[AtomPort01]> {
   let Latency = 11;
