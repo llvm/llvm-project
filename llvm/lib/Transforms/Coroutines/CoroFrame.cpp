@@ -1868,8 +1868,7 @@ static void cleanupSinglePredPHIs(Function &F) {
     }
   }
   while (!Worklist.empty()) {
-    auto *Phi = Worklist.back();
-    Worklist.pop_back();
+    auto *Phi = Worklist.pop_back_val();
     auto *OriginalValue = Phi->getIncomingValue(0);
     Phi->replaceAllUsesWith(OriginalValue);
   }

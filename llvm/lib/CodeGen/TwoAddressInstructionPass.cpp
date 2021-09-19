@@ -667,8 +667,7 @@ void TwoAddressInstructionPass::scanUses(Register DstReg) {
     unsigned ToReg = VirtRegPairs.back();
     VirtRegPairs.pop_back();
     while (!VirtRegPairs.empty()) {
-      unsigned FromReg = VirtRegPairs.back();
-      VirtRegPairs.pop_back();
+      unsigned FromReg = VirtRegPairs.pop_back_val();
       bool isNew = DstRegMap.insert(std::make_pair(FromReg, ToReg)).second;
       if (!isNew)
         assert(DstRegMap[FromReg] == ToReg &&"Can't map to two dst registers!");
