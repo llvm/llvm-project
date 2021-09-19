@@ -262,7 +262,7 @@ struct DWARFTypePrinter {
   }
 
   void appendUnqualifiedNameAfter(DWARFDie D, DWARFDie Inner,
-                                      bool SkipFirstParamIfArtificial = false) {
+                                  bool SkipFirstParamIfArtificial = false) {
     if (!D)
       return;
     switch (D.getTag()) {
