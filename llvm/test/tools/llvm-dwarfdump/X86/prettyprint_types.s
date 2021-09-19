@@ -60,7 +60,7 @@
 # const reference to a pointer to member function (with const, volatile, rvalue ref qualifiers)
 # CHECK:   DW_AT_type{{.*}}"void (foo::*const &)() const volatile &&")
 
-# CHECK:   DW_AT_type{{.*}}"int *const(&)[1]")
+# CHECK:   DW_AT_type{{.*}}"int *const (&)[1]")
 # CHECK:   DW_AT_type{{.*}}"int *const[1]")
 # CHECK:   DW_AT_type{{.*}}"const int (&)[1]")
 # CHECK:   DW_AT_type{{.*}}"const int [1]")

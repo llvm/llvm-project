@@ -187,10 +187,10 @@ struct DWARFTypePrinter {
 
   void appendPointerLikeTypeBefore(DWARFDie D, DWARFDie Inner, StringRef Ptr) {
     appendUnqualifiedNameBefore(Inner);
+    if (Word)
+      OS << ' ';
     if (needsParens(Inner))
       OS << '(';
-    else if (Word)
-      OS << ' ';
     OS << Ptr;
     Word = false;
   }
