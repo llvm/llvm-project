@@ -896,6 +896,68 @@ int64_t DataLayout::getIndexedOffsetInType(Type *ElemTy,
   return Result;
 }
 
+static void addElementIndex(SmallVectorImpl<APInt> &Indices, TypeSize ElemSize,
+                            APInt &Offset) {
+  // Skip over scalable or zero size elements.
+  if (ElemSize.isScalable() || ElemSize == 0) {
+    Indices.push_back(APInt::getZero(Offset.getBitWidth()));
+    return;
+  }
+
+  APInt Index = Offset.sdiv(ElemSize);
+  Offset -= Index * ElemSize;
+  if (Offset.isNegative()) {
+    // Prefer a positive remaining offset to allow struct indexing.
+    --Index;
+    Offset += ElemSize;
+    assert(Offset.isNonNegative() && "Remaining offset shouldn't be negative");
+  }
+  Indices.push_back(Index);
+}
+
+SmallVector<APInt> DataLayout::getGEPIndicesForOffset(Type *&ElemTy,
+                                                      APInt &Offset) const {
+  assert(ElemTy->isSized() && "Element type must be sized");
+  SmallVector<APInt> Indices;
+  addElementIndex(Indices, getTypeAllocSize(ElemTy), Offset);
+  while (Offset != 0) {
+    if (auto *ArrTy = dyn_cast<ArrayType>(ElemTy)) {
+      ElemTy = ArrTy->getElementType();
+      addElementIndex(Indices, getTypeAllocSize(ElemTy), Offset);
+      continue;
+    }
+
+    if (auto *VecTy = dyn_cast<VectorType>(ElemTy)) {
+      ElemTy = VecTy->getElementType();
+      unsigned ElemSizeInBits = getTypeSizeInBits(ElemTy).getFixedSize();
+      // GEPs over non-multiple of 8 size vector elements are invalid.
+      if (ElemSizeInBits % 8 != 0)
+        break;
+
+      addElementIndex(Indices, TypeSize::Fixed(ElemSizeInBits / 8), Offset);
+      continue;
+    }
+
+    if (auto *STy = dyn_cast<StructType>(ElemTy)) {
+      const StructLayout *SL = getStructLayout(STy);
+      uint64_t IntOffset = Offset.getZExtValue();
+      if (IntOffset >= SL->getSizeInBytes())
+        break;
+
+      unsigned Index = SL->getElementContainingOffset(IntOffset);
+      Offset -= SL->getElementOffset(Index);
+      ElemTy = STy->getElementType(Index);
+      Indices.push_back(APInt(32, Index));
+      continue;
+    }
+
+    // Can't index into non-aggregate type.
+    break;
+  }
+
+  return Indices;
+}
+
 /// getPreferredAlign - Return the preferred alignment of the specified global.
 /// This includes an explicitly requested alignment (if the global has one).
 Align DataLayout::getPreferredAlign(const GlobalVariable *GV) const {

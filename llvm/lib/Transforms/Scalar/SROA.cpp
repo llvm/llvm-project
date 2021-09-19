@@ -1483,76 +1483,6 @@ static Value *getNaturalGEPWithType(IRBuilderTy &IRB, const DataLayout &DL,
   return buildGEP(IRB, BasePtr, Indices, NamePrefix);
 }
 
-/// Recursively compute indices for a natural GEP.
-///
-/// This is the recursive step for getNaturalGEPWithOffset that walks down the
-/// element types adding appropriate indices for the GEP.
-static Value *getNaturalGEPRecursively(IRBuilderTy &IRB, const DataLayout &DL,
-                                       Value *Ptr, Type *Ty, APInt &Offset,
-                                       Type *TargetTy,
-                                       SmallVectorImpl<Value *> &Indices,
-                                       const Twine &NamePrefix) {
-  if (Offset == 0)
-    return getNaturalGEPWithType(IRB, DL, Ptr, Ty, TargetTy, Indices,
-                                 NamePrefix);
-
-  // We can't recurse through pointer types.
-  if (Ty->isPointerTy())
-    return nullptr;
-
-  // We try to analyze GEPs over vectors here, but note that these GEPs are
-  // extremely poorly defined currently. The long-term goal is to remove GEPing
-  // over a vector from the IR completely.
-  if (VectorType *VecTy = dyn_cast<VectorType>(Ty)) {
-    unsigned ElementSizeInBits =
-        DL.getTypeSizeInBits(VecTy->getScalarType()).getFixedSize();
-    if (ElementSizeInBits % 8 != 0) {
-      // GEPs over non-multiple of 8 size vector elements are invalid.
-      return nullptr;
-    }
-    APInt ElementSize(Offset.getBitWidth(), ElementSizeInBits / 8);
-    APInt NumSkippedElements = Offset.sdiv(ElementSize);
-    if (NumSkippedElements.ugt(cast<FixedVectorType>(VecTy)->getNumElements()))
-      return nullptr;
-    Offset -= NumSkippedElements * ElementSize;
-    Indices.push_back(IRB.getInt(NumSkippedElements));
-    return getNaturalGEPRecursively(IRB, DL, Ptr, VecTy->getElementType(),
-                                    Offset, TargetTy, Indices, NamePrefix);
-  }
-
-  if (ArrayType *ArrTy = dyn_cast<ArrayType>(Ty)) {
-    Type *ElementTy = ArrTy->getElementType();
-    APInt ElementSize(Offset.getBitWidth(),
-                      DL.getTypeAllocSize(ElementTy).getFixedSize());
-    APInt NumSkippedElements = Offset.sdiv(ElementSize);
-    if (NumSkippedElements.ugt(ArrTy->getNumElements()))
-      return nullptr;
-
-    Offset -= NumSkippedElements * ElementSize;
-    Indices.push_back(IRB.getInt(NumSkippedElements));
-    return getNaturalGEPRecursively(IRB, DL, Ptr, ElementTy, Offset, TargetTy,
-                                    Indices, NamePrefix);
-  }
-
-  StructType *STy = dyn_cast<StructType>(Ty);
-  if (!STy)
-    return nullptr;
-
-  const StructLayout *SL = DL.getStructLayout(STy);
-  uint64_t StructOffset = Offset.getZExtValue();
-  if (StructOffset >= SL->getSizeInBytes())
-    return nullptr;
-  unsigned Index = SL->getElementContainingOffset(StructOffset);
-  Offset -= APInt(Offset.getBitWidth(), SL->getElementOffset(Index));
-  Type *ElementTy = STy->getElementType(Index);
-  if (Offset.uge(DL.getTypeAllocSize(ElementTy).getFixedSize()))
-    return nullptr; // The offset points into alignment padding.
-
-  Indices.push_back(IRB.getInt32(Index));
-  return getNaturalGEPRecursively(IRB, DL, Ptr, ElementTy, Offset, TargetTy,
-                                  Indices, NamePrefix);
-}
-
 /// Get a natural GEP from a base pointer to a particular offset and
 /// resulting in a particular type.
 ///
@@ -1577,18 +1507,15 @@ static Value *getNaturalGEPWithOffset(IRBuilderTy &IRB, const DataLayout &DL,
   Type *ElementTy = Ty->getElementType();
   if (!ElementTy->isSized())
     return nullptr; // We can't GEP through an unsized element.
-  if (isa<ScalableVectorType>(ElementTy))
-    return nullptr;
-  APInt ElementSize(Offset.getBitWidth(),
-                    DL.getTypeAllocSize(ElementTy).getFixedSize());
-  if (ElementSize == 0)
-    return nullptr; // Zero-length arrays can't help us build a natural GEP.
-  APInt NumSkippedElements = Offset.sdiv(ElementSize);
 
-  Offset -= NumSkippedElements * ElementSize;
-  Indices.push_back(IRB.getInt(NumSkippedElements));
-  return getNaturalGEPRecursively(IRB, DL, Ptr, ElementTy, Offset, TargetTy,
-                                  Indices, NamePrefix);
+  SmallVector<APInt> IntIndices = DL.getGEPIndicesForOffset(ElementTy, Offset);
+  if (Offset != 0)
+    return nullptr;
+
+  for (const APInt &Index : IntIndices)
+    Indices.push_back(IRB.getInt(Index));
+  return getNaturalGEPWithType(IRB, DL, Ptr, ElementTy, TargetTy, Indices,
+                               NamePrefix);
 }
 
 /// Compute an adjusted pointer from Ptr by Offset bytes where the

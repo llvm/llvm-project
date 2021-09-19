@@ -579,6 +579,10 @@ public:
   /// This is used to implement getelementptr.
   int64_t getIndexedOffsetInType(Type *ElemTy, ArrayRef<Value *> Indices) const;
 
+  /// Get GEP indices to access Offset inside ElemTy. ElemTy is updated to be
+  /// the result element type and Offset to be the residual offset.
+  SmallVector<APInt> getGEPIndicesForOffset(Type *&ElemTy, APInt &Offset) const;
+
   /// Returns a StructLayout object, indicating the alignment of the
   /// struct, its size, and the offsets of its fields.
   ///
