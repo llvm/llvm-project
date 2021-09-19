@@ -128,48 +128,49 @@ struct DWARFTypePrinter {
   }
 
   void appendArrayType(const DWARFDie &D) {
-    for (const DWARFDie &C : D.children())
-      if (C.getTag() == DW_TAG_subrange_type) {
-        Optional<uint64_t> LB;
-        Optional<uint64_t> Count;
-        Optional<uint64_t> UB;
-        Optional<unsigned> DefaultLB;
-        if (Optional<DWARFFormValue> L = C.find(DW_AT_lower_bound))
-          LB = L->getAsUnsignedConstant();
-        if (Optional<DWARFFormValue> CountV = C.find(DW_AT_count))
-          Count = CountV->getAsUnsignedConstant();
-        if (Optional<DWARFFormValue> UpperV = C.find(DW_AT_upper_bound))
-          UB = UpperV->getAsUnsignedConstant();
-        if (Optional<DWARFFormValue> LV =
-                D.getDwarfUnit()->getUnitDIE().find(DW_AT_language))
-          if (Optional<uint64_t> LC = LV->getAsUnsignedConstant())
-            if ((DefaultLB = LanguageLowerBound(
-                     static_cast<dwarf::SourceLanguage>(*LC))))
-              if (LB && *LB == *DefaultLB)
-                LB = None;
-        if (!LB && !Count && !UB)
-          OS << "[]";
-        else if (!LB && (Count || UB) && DefaultLB)
-          OS << '[' << (Count ? *Count : *UB - *DefaultLB + 1) << ']';
-        else {
-          OS << "[[";
+    for (const DWARFDie &C : D.children()) {
+      if (C.getTag() != DW_TAG_subrange_type)
+        continue;
+      Optional<uint64_t> LB;
+      Optional<uint64_t> Count;
+      Optional<uint64_t> UB;
+      Optional<unsigned> DefaultLB;
+      if (Optional<DWARFFormValue> L = C.find(DW_AT_lower_bound))
+        LB = L->getAsUnsignedConstant();
+      if (Optional<DWARFFormValue> CountV = C.find(DW_AT_count))
+        Count = CountV->getAsUnsignedConstant();
+      if (Optional<DWARFFormValue> UpperV = C.find(DW_AT_upper_bound))
+        UB = UpperV->getAsUnsignedConstant();
+      if (Optional<DWARFFormValue> LV =
+              D.getDwarfUnit()->getUnitDIE().find(DW_AT_language))
+        if (Optional<uint64_t> LC = LV->getAsUnsignedConstant())
+          if ((DefaultLB =
+                   LanguageLowerBound(static_cast<dwarf::SourceLanguage>(*LC))))
+            if (LB && *LB == *DefaultLB)
+              LB = None;
+      if (!LB && !Count && !UB)
+        OS << "[]";
+      else if (!LB && (Count || UB) && DefaultLB)
+        OS << '[' << (Count ? *Count : *UB - *DefaultLB + 1) << ']';
+      else {
+        OS << "[[";
+        if (LB)
+          OS << *LB;
+        else
+          OS << '?';
+        OS << ", ";
+        if (Count)
           if (LB)
-            OS << *LB;
+            OS << *LB + *Count;
           else
-            OS << '?';
-          OS << ", ";
-          if (Count)
-            if (LB)
-              OS << *LB + *Count;
-            else
-              OS << "? + " << *Count;
-          else if (UB)
-            OS << *UB + 1;
-          else
-            OS << '?';
-          OS << ")]";
-        }
+            OS << "? + " << *Count;
+        else if (UB)
+          OS << *UB + 1;
+        else
+          OS << '?';
+        OS << ")]";
       }
+    }
   }
 
   void appendPointerLikeTypeBefore(DWARFDie D, DWARFDie Inner, StringRef Ptr) {
