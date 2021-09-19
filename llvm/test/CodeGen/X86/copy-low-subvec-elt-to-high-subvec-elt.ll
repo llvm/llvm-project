@@ -284,7 +284,7 @@ define <4 x i64> @vec256_eltty_i64_source_subvec_0_target_subvec_mask_3_unary(<4
 define <4 x i64> @vec256_eltty_i64_source_subvec_0_target_subvec_mask_3_binary(<4 x i64> %x, <4 x i64> %y) nounwind {
 ; CHECK-LABEL: vec256_eltty_i64_source_subvec_0_target_subvec_mask_3_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[0,1,0,1]
+; CHECK-NEXT:    vbroadcastsd %xmm1, %ymm1
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x i64> %x, <4 x i64> %y, <4 x i32> <i32 0, i32 4, i32 2, i32 4>

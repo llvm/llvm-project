@@ -752,9 +752,9 @@ define <4 x i32> @sequential_sum_v4i32_v4i32(<4 x i32> %0, <4 x i32> %1, <4 x i3
 ; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm4 = xmm2[3,3,3,3]
 ; AVX2-SLOW-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm4[0]
 ; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} xmm2 = xmm5[0,1],xmm2[2,3]
-; AVX2-SLOW-NEXT:    vpbroadcastd %xmm3, %xmm4
-; AVX2-SLOW-NEXT:    vpbroadcastq %xmm3, %xmm5
-; AVX2-SLOW-NEXT:    vpaddd %xmm4, %xmm5, %xmm4
+; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm4 = xmm3[1,1,1,1]
+; AVX2-SLOW-NEXT:    vpbroadcastd %xmm3, %xmm5
+; AVX2-SLOW-NEXT:    vpaddd %xmm5, %xmm4, %xmm4
 ; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0,1,2],xmm4[3]
 ; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm4 = xmm3[2,2,2,2]
 ; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1,2],xmm4[3]
