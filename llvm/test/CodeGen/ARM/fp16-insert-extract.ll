@@ -295,3 +295,76 @@ entry:
   ret <8 x half> %r
 }
 
+define i16 @extract_v4i16(<4 x half> %a) {
+; CHECKHARD-LABEL: extract_v4i16:
+; CHECKHARD:       @ %bb.0: @ %entry
+; CHECKHARD-NEXT:    vmov.u16 r0, d0[0]
+; CHECKHARD-NEXT:    bx lr
+;
+; CHECKSOFT-LABEL: extract_v4i16:
+; CHECKSOFT:       @ %bb.0: @ %entry
+; CHECKSOFT-NEXT:    vmov d16, r0, r1
+; CHECKSOFT-NEXT:    vmov.u16 r0, d16[0]
+; CHECKSOFT-NEXT:    bx lr
+entry:
+  %elt = extractelement <4 x half> %a, i32 0
+  %t = bitcast half %elt to i16
+  ret i16 %t
+}
+
+define i16 @extract_v8i16(<8 x half> %a) {
+; CHECKHARD-LABEL: extract_v8i16:
+; CHECKHARD:       @ %bb.0: @ %entry
+; CHECKHARD-NEXT:    vmov.u16 r0, d0[0]
+; CHECKHARD-NEXT:    bx lr
+;
+; CHECKSOFT-LABEL: extract_v8i16:
+; CHECKSOFT:       @ %bb.0: @ %entry
+; CHECKSOFT-NEXT:    vmov d16, r0, r1
+; CHECKSOFT-NEXT:    vmov.u16 r0, d16[0]
+; CHECKSOFT-NEXT:    bx lr
+entry:
+  %elt = extractelement <8 x half> %a, i32 0
+  %t = bitcast half %elt to i16
+  ret i16 %t
+}
+
+define i32 @extract_v4s32(<4 x half> %a) {
+; CHECKHARD-LABEL: extract_v4s32:
+; CHECKHARD:       @ %bb.0: @ %entry
+; CHECKHARD-NEXT:    vmov.u16 r0, d0[0]
+; CHECKHARD-NEXT:    sxth r0, r0
+; CHECKHARD-NEXT:    bx lr
+;
+; CHECKSOFT-LABEL: extract_v4s32:
+; CHECKSOFT:       @ %bb.0: @ %entry
+; CHECKSOFT-NEXT:    vmov d16, r0, r1
+; CHECKSOFT-NEXT:    vmov.u16 r0, d16[0]
+; CHECKSOFT-NEXT:    sxth r0, r0
+; CHECKSOFT-NEXT:    bx lr
+entry:
+  %elt = extractelement <4 x half> %a, i32 0
+  %t = bitcast half %elt to i16
+  %s = sext i16 %t to i32
+  ret i32 %s
+}
+
+define i32 @extract_v8s32(<8 x half> %a) {
+; CHECKHARD-LABEL: extract_v8s32:
+; CHECKHARD:       @ %bb.0: @ %entry
+; CHECKHARD-NEXT:    vmov.u16 r0, d0[0]
+; CHECKHARD-NEXT:    sxth r0, r0
+; CHECKHARD-NEXT:    bx lr
+;
+; CHECKSOFT-LABEL: extract_v8s32:
+; CHECKSOFT:       @ %bb.0: @ %entry
+; CHECKSOFT-NEXT:    vmov d16, r0, r1
+; CHECKSOFT-NEXT:    vmov.u16 r0, d16[0]
+; CHECKSOFT-NEXT:    sxth r0, r0
+; CHECKSOFT-NEXT:    bx lr
+entry:
+  %elt = extractelement <8 x half> %a, i32 0
+  %t = bitcast half %elt to i16
+  %s = sext i16 %t to i32
+  ret i32 %s
+}
