@@ -173,12 +173,13 @@ struct DWARFTypePrinter {
     }
   }
 
+  bool needsParens(DWARFDie D) {
+    return D && (D.getTag() == DW_TAG_subroutine_type || D.getTag() == DW_TAG_array_type);
+  }
+
   void appendPointerLikeTypeBefore(DWARFDie D, DWARFDie Inner, StringRef Ptr) {
     appendUnqualifiedNameBefore(Inner);
-    bool NeedsParens =
-        Inner && (Inner.getTag() == llvm::dwarf::DW_TAG_subroutine_type ||
-                  Inner.getTag() == llvm::dwarf::DW_TAG_array_type);
-    if (NeedsParens)
+    if (needsParens(Inner))
       OS << '(';
     else if (Word)
       OS << ' ';
@@ -227,10 +228,7 @@ struct DWARFTypePrinter {
       break;
     case DW_TAG_ptr_to_member_type: {
       appendUnqualifiedNameBefore(Inner);
-      bool NeedsParens =
-          Inner && (Inner.getTag() == llvm::dwarf::DW_TAG_subroutine_type ||
-                    Inner.getTag() == llvm::dwarf::DW_TAG_array_type);
-      if (NeedsParens)
+      if (needsParens(Inner))
         OS << '(';
       else if (Word)
         OS << ' ';
@@ -285,10 +283,7 @@ struct DWARFTypePrinter {
     case DW_TAG_reference_type:
     case DW_TAG_rvalue_reference_type:
     case DW_TAG_pointer_type: {
-      bool NeedsParens =
-          Inner && (Inner.getTag() == llvm::dwarf::DW_TAG_subroutine_type ||
-                    Inner.getTag() == llvm::dwarf::DW_TAG_array_type);
-      if (NeedsParens)
+      if (needsParens(Inner))
         OS << ')';
       appendUnqualifiedNameAfter(
           Inner, D.getAttributeValueAsReferencedDie(DW_AT_type),
