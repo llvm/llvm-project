@@ -37905,6 +37905,48 @@ static SDValue combineX86ShufflesRecursively(
           Ops, Mask, RootSizeInBits, SDLoc(Root), DAG, Subtarget))
     return DAG.getBitcast(Root.getValueType(), HOp);
 
+  // Try to refine our inputs given our knowledge of target shuffle mask.
+  for (auto I : enumerate(Ops)) {
+    int OpIdx = I.index();
+    SDValue &Op = I.value();
+
+    // What range of shuffle mask element values results in picking from Op?
+    int lo = OpIdx * Mask.size();
+    int hi = lo + Mask.size();
+
+    // Which elements of Op do we demand, given the mask's granularity?
+    APInt OpDemandedElts(Mask.size(), 0);
+    for (int MaskElt : Mask) {
+      if (isInRange(MaskElt, lo, hi)) { // Picks from Op?
+        int OpEltIdx = MaskElt - lo;
+        OpDemandedElts.setBit(OpEltIdx);
+      }
+    }
+
+    // Is the shuffle result smaller than the root?
+    if (Op.getValueSizeInBits() < RootSizeInBits) {
+      // We padded the mask with undefs. But we now need to undo that.
+      unsigned NumExpectedVectorElts = Mask.size();
+      unsigned EltSizeInBits = RootSizeInBits / NumExpectedVectorElts;
+      unsigned NumOpVectorElts = Op.getValueSizeInBits() / EltSizeInBits;
+      assert(!OpDemandedElts.extractBits(
+                 NumExpectedVectorElts - NumOpVectorElts, NumOpVectorElts) &&
+             "Demanding the virtual undef widening padding?");
+      OpDemandedElts = OpDemandedElts.trunc(NumOpVectorElts); // NUW
+    }
+
+    // The Op itself may be of different VT, so we need to scale the mask.
+    unsigned NumOpElts = Op.getValueType().getVectorNumElements();
+    APInt OpScaledDemandedElts = APIntOps::ScaleBitMask(OpDemandedElts, NumOpElts);
+
+    // Can this operand be simplified any further, given it's demanded elements?
+    if (SDValue NewOp =
+            DAG.getTargetLoweringInfo().SimplifyMultipleUseDemandedVectorElts(
+                Op, OpScaledDemandedElts, DAG))
+      Op = NewOp;
+  }
+  // FIXME: should we rerun resolveTargetShuffleInputsAndMask() now?
+
   // Widen any subvector shuffle inputs we've collected.
   if (any_of(Ops, [RootSizeInBits](SDValue Op) {
         return Op.getValueSizeInBits() < RootSizeInBits;
