@@ -39978,6 +39978,12 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     }
   }
 
+  // For broadcasts, unless we *only* demand the 0'th element,
+  // stop attempts at simplification here, we aren't going to improve things,
+  // this is better than any potential shuffle.
+  if (isTargetShuffleSplat(Op) && !DemandedElts.isOneValue())
+    return false;
+
   // Get target/faux shuffle mask.
   APInt OpUndef, OpZero;
   SmallVector<int, 64> OpMask;
