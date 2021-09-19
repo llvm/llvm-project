@@ -731,6 +731,22 @@ define <16 x i16> @test_x86_avx2_mpsadbw(<32 x i8> %a0, <32 x i8> %a1) {
 }
 declare <16 x i16> @llvm.x86.avx2.mpsadbw(<32 x i8>, <32 x i8>, i8) nounwind readnone
 
+; FIXME: We shouldn't commute this operation to fold the load.
+define <16 x i16> @test_x86_avx2_mpsadbw_load_op0(<32 x i8>* %ptr, <32 x i8> %a1) {
+; X86-LABEL: test_x86_avx2_mpsadbw_load_op0:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vmpsadbw $7, (%eax), %ymm0, %ymm0 # encoding: [0xc4,0xe3,0x7d,0x42,0x00,0x07]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_x86_avx2_mpsadbw_load_op0:
+; X64:       # %bb.0:
+; X64-NEXT:    vmpsadbw $7, (%rdi), %ymm0, %ymm0 # encoding: [0xc4,0xe3,0x7d,0x42,0x07,0x07]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %a0 = load <32 x i8>, <32 x i8>* %ptr
+  %res = call <16 x i16> @llvm.x86.avx2.mpsadbw(<32 x i8> %a0, <32 x i8> %a1, i8 7) ; <<16 x i16>> [#uses=1]
+  ret <16 x i16> %res
+}
 
 define <16 x i16> @test_x86_avx2_packusdw(<8 x i32> %a0, <8 x i32> %a1) {
 ; AVX2-LABEL: test_x86_avx2_packusdw:
