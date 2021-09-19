@@ -88,8 +88,8 @@ M88kTargetLowering::M88kTargetLowering(const TargetMachine &TM,
   // How we extend i1 boolean values.
   setBooleanContents(ZeroOrOneBooleanContent);
 
-  setMinFunctionAlignment(Align(8));
-  setPrefFunctionAlignment(Align(8));
+  setMinFunctionAlignment(Align(4));
+  setPrefFunctionAlignment(Align(4));
 
   // setOperationAction(ISD::CTLZ, MVT::i32, Custom);
   setOperationAction(ISD::CTTZ, MVT::i32, Expand);
