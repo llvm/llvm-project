@@ -223,8 +223,7 @@ bool DAGTypeLegalizer::run() {
 #endif
       PerformExpensiveChecks();
 
-    SDNode *N = Worklist.back();
-    Worklist.pop_back();
+    SDNode *N = Worklist.pop_back_val();
     assert(N->getNodeId() == ReadyToProcess &&
            "Node should be ready if on worklist!");
 

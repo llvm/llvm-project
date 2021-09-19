@@ -144,8 +144,7 @@ private:
       Stack.push_back(SIToUnfold);
 
     while (!Stack.empty()) {
-      SelectInstToUnfold SIToUnfold = Stack.back();
-      Stack.pop_back();
+      SelectInstToUnfold SIToUnfold = Stack.pop_back_val();
 
       std::vector<SelectInstToUnfold> NewSIsToUnfold;
       std::vector<BasicBlock *> NewBBs;
@@ -662,8 +661,7 @@ private:
     SmallSet<Value *, 16> SeenValues;
 
     while (!Stack.empty()) {
-      PHINode *CurPhi = Stack.back();
-      Stack.pop_back();
+      PHINode *CurPhi = Stack.pop_back_val();
 
       Res[CurPhi->getParent()] = CurPhi;
       SeenValues.insert(CurPhi);

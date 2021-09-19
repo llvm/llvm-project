@@ -39,8 +39,7 @@ LoopTraversal::TraversalOrder LoopTraversal::traverse(MachineFunction &MF) {
     bool Primary = true;
     Workqueue.push_back(MBB);
     while (!Workqueue.empty()) {
-      MachineBasicBlock *ActiveMBB = &*Workqueue.back();
-      Workqueue.pop_back();
+      MachineBasicBlock *ActiveMBB = Workqueue.pop_back_val();
       bool Done = isBlockDone(ActiveMBB);
       MBBTraversalOrder.push_back(TraversedMBBInfo(ActiveMBB, Primary, Done));
       for (MachineBasicBlock *Succ : ActiveMBB->successors()) {

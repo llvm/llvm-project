@@ -56,9 +56,7 @@ namespace {
 
     SUnit *pop() {
       if (empty()) return nullptr;
-      SUnit *V = Queue.back();
-      Queue.pop_back();
-      return V;
+      return Queue.pop_back_val();
     }
   };
 

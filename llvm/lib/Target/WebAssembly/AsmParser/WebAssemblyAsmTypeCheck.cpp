@@ -89,8 +89,7 @@ bool WebAssemblyAsmTypeCheck::popType(SMLoc ErrorLoc,
                           : StringRef(
                                     "empty stack while popping value"));
   }
-  auto PVT = Stack.back();
-  Stack.pop_back();
+  auto PVT = Stack.pop_back_val();
   if (EVT.hasValue() && EVT.getValue() != PVT) {
     return typeError(
         ErrorLoc, StringRef("popped ") + WebAssembly::typeToString(PVT) +
