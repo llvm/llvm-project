@@ -354,3 +354,46 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
           "QEnvironmentHexEncoded:4e45454453454e43343d6623726f62",
           "QEnvironmentHexEncoded:455155414c533d666f6f3d626172",
         ])
+
+    def test_detach_no_multiprocess(self):
+        class MyResponder(MockGDBServerResponder):
+            def __init__(self):
+                super().__init__()
+                self.detached = None
+
+            def qfThreadInfo(self):
+                return "10200"
+
+            def D(self, packet):
+                self.detached = packet
+                return "OK"
+
+        self.server.responder = MyResponder()
+        target = self.dbg.CreateTarget('')
+        process = self.connect(target)
+        process.Detach()
+        self.assertEqual(self.server.responder.detached, "D")
+
+    def test_detach_pid(self):
+        class MyResponder(MockGDBServerResponder):
+            def __init__(self, test_case):
+                super().__init__()
+                self.test_case = test_case
+                self.detached = None
+
+            def qSupported(self, client_supported):
+                self.test_case.assertIn("multiprocess+", client_supported)
+                return "multiprocess+;" + super().qSupported(client_supported)
+
+            def qfThreadInfo(self):
+                return "mp400.10200"
+
+            def D(self, packet):
+                self.detached = packet
+                return "OK"
+
+        self.server.responder = MyResponder(self)
+        target = self.dbg.CreateTarget('')
+        process = self.connect(target)
+        process.Detach()
+        self.assertRegex(self.server.responder.detached, r"D;0*400")
