@@ -56,7 +56,7 @@ define <4 x float> @pair_sum_v4f32_v4f32(<4 x float> %0, <4 x float> %1, <4 x fl
 ; AVX2-SLOW-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
 ; AVX2-SLOW-NEXT:    vhaddps %xmm2, %xmm2, %xmm1
 ; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[0,2],xmm1[0,3]
-; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,1]
+; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
 ; AVX2-SLOW-NEXT:    vhaddps %xmm3, %xmm3, %xmm1
 ; AVX2-SLOW-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
 ; AVX2-SLOW-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1,2],xmm1[0]
