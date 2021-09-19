@@ -37911,14 +37911,14 @@ static SDValue combineX86ShufflesRecursively(
     SDValue &Op = I.value();
 
     // What range of shuffle mask element values results in picking from Op?
-    int lo = OpIdx * Mask.size();
-    int hi = lo + Mask.size();
+    int Lo = OpIdx * Mask.size();
+    int Hi = Lo + Mask.size();
 
     // Which elements of Op do we demand, given the mask's granularity?
     APInt OpDemandedElts(Mask.size(), 0);
     for (int MaskElt : Mask) {
-      if (isInRange(MaskElt, lo, hi)) { // Picks from Op?
-        int OpEltIdx = MaskElt - lo;
+      if (isInRange(MaskElt, Lo, Hi)) { // Picks from Op?
+        int OpEltIdx = MaskElt - Lo;
         OpDemandedElts.setBit(OpEltIdx);
       }
     }
