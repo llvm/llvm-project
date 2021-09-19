@@ -327,7 +327,7 @@ def CMPrr : F_IRC<0b011111, 0b0, 0b0,
                  NoItinerary>;
 
 // Multiclass for load and store instructions.
-multiclass LoadStore<bits<4> Func, string OpcStr, SDNode OpNode,
+multiclass LoadStore<bits<4> Func, string OpcStr, SDPatternOperator OpNode,
                  InstrItinClass itin = NoItinerary> {
   def riw  : F_LS<Func, 0b01,
                   (outs GPROpnd:$rd), (ins GPROpnd:$rs1, imm32zx16:$si16),
@@ -359,7 +359,7 @@ class LoadUnsigned<bits<1> b, string OpcStr,
        itin>;
 
 defm LD : LoadStore<0b0001, "ld", load>;
-defm ST : LoadStore<0b0010, "st", null_frag>;
+defm ST : LoadStore<0b0010, "st", store>;
 def LDurih : LoadUnsigned<0b0, "ld.hu">;
 def LDurib : LoadUnsigned<0b1, "ld.bu">;
 
