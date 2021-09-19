@@ -792,7 +792,7 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_sse41_mpsadbw         : GCCBuiltin<"__builtin_ia32_mpsadbw128">,
           Intrinsic<[llvm_v8i16_ty], [llvm_v16i8_ty, llvm_v16i8_ty,llvm_i8_ty],
-                    [IntrNoMem, Commutative, ImmArg<ArgIndex<2>>]>;
+                    [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 }
 
 // Test instruction with bitwise comparison.
@@ -1779,7 +1779,7 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
                          llvm_v32i8_ty], [IntrNoMem]>;
   def int_x86_avx2_mpsadbw : GCCBuiltin<"__builtin_ia32_mpsadbw256">,
               Intrinsic<[llvm_v16i16_ty], [llvm_v32i8_ty, llvm_v32i8_ty,
-                         llvm_i8_ty], [IntrNoMem, Commutative, ImmArg<ArgIndex<2>>]>;
+                         llvm_i8_ty], [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 }
 
 //===----------------------------------------------------------------------===//
