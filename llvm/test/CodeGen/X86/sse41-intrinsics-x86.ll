@@ -116,6 +116,44 @@ define <8 x i16> @test_x86_sse41_mpsadbw(<16 x i8> %a0, <16 x i8> %a1) {
 }
 declare <8 x i16> @llvm.x86.sse41.mpsadbw(<16 x i8>, <16 x i8>, i8) nounwind readnone
 
+; FIXME: We shouldn't commute this operation to fold the load.
+define <8 x i16> @test_x86_sse41_mpsadbw_load_op0(<16 x i8>* %ptr, <16 x i8> %a1) {
+; X86-SSE-LABEL: test_x86_sse41_mpsadbw_load_op0:
+; X86-SSE:       ## %bb.0:
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-SSE-NEXT:    mpsadbw $7, (%eax), %xmm0 ## encoding: [0x66,0x0f,0x3a,0x42,0x00,0x07]
+; X86-SSE-NEXT:    retl ## encoding: [0xc3]
+;
+; X86-AVX1-LABEL: test_x86_sse41_mpsadbw_load_op0:
+; X86-AVX1:       ## %bb.0:
+; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-AVX1-NEXT:    vmpsadbw $7, (%eax), %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x42,0x00,0x07]
+; X86-AVX1-NEXT:    retl ## encoding: [0xc3]
+;
+; X86-AVX512-LABEL: test_x86_sse41_mpsadbw_load_op0:
+; X86-AVX512:       ## %bb.0:
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-AVX512-NEXT:    vmpsadbw $7, (%eax), %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x42,0x00,0x07]
+; X86-AVX512-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-SSE-LABEL: test_x86_sse41_mpsadbw_load_op0:
+; X64-SSE:       ## %bb.0:
+; X64-SSE-NEXT:    mpsadbw $7, (%rdi), %xmm0 ## encoding: [0x66,0x0f,0x3a,0x42,0x07,0x07]
+; X64-SSE-NEXT:    retq ## encoding: [0xc3]
+;
+; X64-AVX1-LABEL: test_x86_sse41_mpsadbw_load_op0:
+; X64-AVX1:       ## %bb.0:
+; X64-AVX1-NEXT:    vmpsadbw $7, (%rdi), %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x42,0x07,0x07]
+; X64-AVX1-NEXT:    retq ## encoding: [0xc3]
+;
+; X64-AVX512-LABEL: test_x86_sse41_mpsadbw_load_op0:
+; X64-AVX512:       ## %bb.0:
+; X64-AVX512-NEXT:    vmpsadbw $7, (%rdi), %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x42,0x07,0x07]
+; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
+  %a0 = load <16 x i8>, <16 x i8>* %ptr
+  %res = call <8 x i16> @llvm.x86.sse41.mpsadbw(<16 x i8> %a0, <16 x i8> %a1, i8 7) ; <<8 x i16>> [#uses=1]
+  ret <8 x i16> %res
+}
 
 define <8 x i16> @test_x86_sse41_packusdw(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE-LABEL: test_x86_sse41_packusdw:
