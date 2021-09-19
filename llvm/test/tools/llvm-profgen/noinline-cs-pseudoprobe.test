@@ -24,20 +24,18 @@
 ; CHECK-NEXT: 4: 15
 ; CHECK-NEXT: !CFGChecksum: 72617220756
 
-
-; CHECK-UNWINDER:      Binary(noinline-cs-pseudoprobe.perfbin)'s Range Counter:
-; CHECK-UNWINDER-NEXT: main:2
-; CHECK-UNWINDER-NEXT:   (79e, 7bf): 15
-; CHECK-UNWINDER-NEXT:   (7c4, 7cf): 15
-; CHECK-UNWINDER-NEXT: main:2 @ foo:8
-; CHECK-UNWINDER-NEXT:   (760, 77f): 15
-
-; CHECK-UNWINDER:      Binary(noinline-cs-pseudoprobe.perfbin)'s Branch Counter:
-; CHECK-UNWINDER-NEXT: main:2
-; CHECK-UNWINDER-NEXT:   (7bf, 760): 15
-; CHECK-UNWINDER-NEXT:   (7cf, 79e): 16
-; CHECK-UNWINDER-NEXT: main:2 @ foo:8
-; CHECK-UNWINDER-NEXT:   (77f, 7c4): 17
+; CHECK-UNWINDER:      [main:2]
+; CHECK-UNWINDER-NEXT:   2
+; CHECK-UNWINDER-NEXT:   79e-7bf:15
+; CHECK-UNWINDER-NEXT:   7c4-7cf:15
+; CHECK-UNWINDER-NEXT:   2
+; CHECK-UNWINDER-NEXT:   7bf->760:15
+; CHECK-UNWINDER-NEXT:   7cf->79e:16
+; CHECK-UNWINDER-NEXT: [main:2 @ foo:8]
+; CHECK-UNWINDER-NEXT:   1
+; CHECK-UNWINDER-NEXT:   760-77f:15
+; CHECK-UNWINDER-NEXT:   1
+; CHECK-UNWINDER-NEXT:   77f->7c4:17
 
 
 ; clang -O3 -fexperimental-new-pass-manager -fuse-ld=lld -fpseudo-probe-for-profiling
