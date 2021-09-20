@@ -282,6 +282,11 @@ public:
 
   void untagPointerOperand(Instruction *I, Value *Addr);
   Value *memToShadow(Value *Shadow, IRBuilder<> &IRB);
+
+  int64_t getAccessInfo(bool IsWrite, unsigned AccessSizeIndex);
+  void instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
+                                  unsigned AccessSizeIndex,
+                                  Instruction *InsertBefore);
   void instrumentMemAccessInline(Value *Ptr, bool IsWrite,
                                  unsigned AccessSizeIndex,
                                  Instruction *InsertBefore);
@@ -882,29 +887,37 @@ Value *HWAddressSanitizer::memToShadow(Value *Mem, IRBuilder<> &IRB) {
   return IRB.CreateGEP(Int8Ty, ShadowBase, Shadow);
 }
 
+int64_t HWAddressSanitizer::getAccessInfo(bool IsWrite,
+                                          unsigned AccessSizeIndex) {
+  return (CompileKernel << HWASanAccessInfo::CompileKernelShift) +
+         (HasMatchAllTag << HWASanAccessInfo::HasMatchAllShift) +
+         (MatchAllTag << HWASanAccessInfo::MatchAllShift) +
+         (Recover << HWASanAccessInfo::RecoverShift) +
+         (IsWrite << HWASanAccessInfo::IsWriteShift) +
+         (AccessSizeIndex << HWASanAccessInfo::AccessSizeShift);
+}
+
+void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
+                                                    unsigned AccessSizeIndex,
+                                                    Instruction *InsertBefore) {
+  assert(!UsePageAliases);
+  const int64_t AccessInfo = getAccessInfo(IsWrite, AccessSizeIndex);
+  IRBuilder<> IRB(InsertBefore);
+  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+  Ptr = IRB.CreateBitCast(Ptr, Int8PtrTy);
+  IRB.CreateCall(Intrinsic::getDeclaration(
+                     M, UseShortGranules
+                            ? Intrinsic::hwasan_check_memaccess_shortgranules
+                            : Intrinsic::hwasan_check_memaccess),
+                 {ShadowBase, Ptr, ConstantInt::get(Int32Ty, AccessInfo)});
+}
+
 void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
                                                    unsigned AccessSizeIndex,
                                                    Instruction *InsertBefore) {
   assert(!UsePageAliases);
-  const int64_t AccessInfo =
-      (CompileKernel << HWASanAccessInfo::CompileKernelShift) +
-      (HasMatchAllTag << HWASanAccessInfo::HasMatchAllShift) +
-      (MatchAllTag << HWASanAccessInfo::MatchAllShift) +
-      (Recover << HWASanAccessInfo::RecoverShift) +
-      (IsWrite << HWASanAccessInfo::IsWriteShift) +
-      (AccessSizeIndex << HWASanAccessInfo::AccessSizeShift);
+  const int64_t AccessInfo = getAccessInfo(IsWrite, AccessSizeIndex);
   IRBuilder<> IRB(InsertBefore);
-
-  if (OutlinedChecks) {
-    Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-    Ptr = IRB.CreateBitCast(Ptr, Int8PtrTy);
-    IRB.CreateCall(Intrinsic::getDeclaration(
-                       M, UseShortGranules
-                              ? Intrinsic::hwasan_check_memaccess_shortgranules
-                              : Intrinsic::hwasan_check_memaccess),
-                   {ShadowBase, Ptr, ConstantInt::get(Int32Ty, AccessInfo)});
-    return;
-  }
 
   Value *PtrLong = IRB.CreatePointerCast(Ptr, IntptrTy);
   Value *PtrTag = IRB.CreateTrunc(IRB.CreateLShr(PtrLong, PointerTagShift),
@@ -1016,6 +1029,8 @@ bool HWAddressSanitizer::instrumentMemAccess(InterestingMemoryOperand &O) {
     if (InstrumentWithCalls) {
       IRB.CreateCall(HwasanMemoryAccessCallback[O.IsWrite][AccessSizeIndex],
                      IRB.CreatePointerCast(Addr, IntptrTy));
+    } else if (OutlinedChecks) {
+      instrumentMemAccessOutline(Addr, O.IsWrite, AccessSizeIndex, O.getInsn());
     } else {
       instrumentMemAccessInline(Addr, O.IsWrite, AccessSizeIndex, O.getInsn());
     }
