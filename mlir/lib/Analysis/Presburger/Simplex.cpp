@@ -483,6 +483,8 @@ void Simplex::rollback(unsigned snapshot) {
 }
 
 void Simplex::appendVariable(unsigned count) {
+  if (count == 0)
+    return;
   var.reserve(var.size() + count);
   colUnknown.reserve(colUnknown.size() + count);
   for (unsigned i = 0; i < count; ++i) {
