@@ -416,7 +416,7 @@ struct LinalgTileAndFuseTensorOps
     FuncOp funcOp = getFunction();
     OpBuilder b(funcOp.getContext());
 
-    // Heuristic to find a goor operation to tile and start fusion. Walk all
+    // Heuristic to find a good operation to tile and start fusion. Walk all
     // operations and select the one with the maximal backward slice of fusion
     // candidates.
     LinalgOp rootOp = nullptr;
