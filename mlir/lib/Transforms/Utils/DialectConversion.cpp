@@ -1650,7 +1650,13 @@ OperationLegalizer::OperationLegalizer(ConversionTarget &targetInfo,
 
 bool OperationLegalizer::isIllegal(Operation *op) const {
   // Check if the target explicitly marked this operation as illegal.
-  return target.getOpAction(op->getName()) == LegalizationAction::Illegal;
+  if (auto info = target.getOpAction(op->getName())) {
+    if (*info == LegalizationAction::Dynamic)
+      return !target.isLegal(op);
+    return *info == LegalizationAction::Illegal;
+  }
+
+  return false;
 }
 
 LogicalResult
