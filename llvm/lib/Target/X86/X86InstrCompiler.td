@@ -153,15 +153,15 @@ def STACKALLOC_W_PROBING : I<0, Pseudo, (outs), (ins i64imm:$stacksize),
 // (compared to ordinary calls) like stack pointer change.
 
 let Defs = [EAX, ESP, EFLAGS], Uses = [ESP] in
-def WIN_ALLOCA_32 : I<0, Pseudo, (outs), (ins GR32:$size),
+def DYN_ALLOCA_32 : I<0, Pseudo, (outs), (ins GR32:$size),
                      "# dynamic stack allocation",
-                     [(X86WinAlloca GR32:$size)]>,
+                     [(X86DynAlloca GR32:$size)]>,
                      Requires<[NotLP64]>;
 
 let Defs = [RAX, RSP, EFLAGS], Uses = [RSP] in
-def WIN_ALLOCA_64 : I<0, Pseudo, (outs), (ins GR64:$size),
+def DYN_ALLOCA_64 : I<0, Pseudo, (outs), (ins GR64:$size),
                      "# dynamic stack allocation",
-                     [(X86WinAlloca GR64:$size)]>,
+                     [(X86DynAlloca GR64:$size)]>,
                      Requires<[In64BitMode]>;
 } // SchedRW
 

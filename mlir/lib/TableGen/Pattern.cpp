@@ -230,43 +230,48 @@ std::string SymbolInfoMap::SymbolInfo::getVarName(StringRef name) const {
   return alternativeName.hasValue() ? alternativeName.getValue() : name.str();
 }
 
-std::string SymbolInfoMap::SymbolInfo::getVarDecl(StringRef name) const {
-  LLVM_DEBUG(llvm::dbgs() << "getVarDecl for '" << name << "': ");
+std::string SymbolInfoMap::SymbolInfo::getVarTypeStr(StringRef name) const {
+  LLVM_DEBUG(llvm::dbgs() << "getVarTypeStr for '" << name << "': ");
   switch (kind) {
   case Kind::Attr: {
-    if (op) {
-      auto type = op->getArg(getArgIndex())
-                      .get<NamedAttribute *>()
-                      ->attr.getStorageType();
-      return std::string(formatv("{0} {1};\n", type, name));
-    }
+    if (op)
+      return op->getArg(getArgIndex())
+          .get<NamedAttribute *>()
+          ->attr.getStorageType()
+          .str();
     // TODO(suderman): Use a more exact type when available.
-    return std::string(formatv("Attribute {0};\n", name));
+    return "Attribute";
   }
   case Kind::Operand: {
     // Use operand range for captured operands (to support potential variadic
     // operands).
-    return std::string(
-        formatv("::mlir::Operation::operand_range {0}(op0->getOperands());\n",
-                getVarName(name)));
+    return "::mlir::Operation::operand_range";
   }
   case Kind::Value: {
-    return std::string(formatv("::mlir::Value {0};\n", name));
+    return "::mlir::Value";
   }
   case Kind::MultipleValues: {
-    // This is for the variable used in the source pattern. Each named value in
-    // source pattern will only be bound to a Value. The others in the result
-    // pattern may be associated with multiple Values as we will use `auto` to
-    // do the type inference.
-    return std::string(formatv(
-        "::mlir::Value {0}_raw; ::mlir::ValueRange {0}({0}_raw);\n", name));
+    return "::mlir::ValueRange";
   }
   case Kind::Result: {
     // Use the op itself for captured results.
-    return std::string(formatv("{0} {1};\n", op->getQualCppClassName(), name));
+    return op->getQualCppClassName();
   }
   }
   llvm_unreachable("unknown kind");
+}
+
+std::string SymbolInfoMap::SymbolInfo::getVarDecl(StringRef name) const {
+  LLVM_DEBUG(llvm::dbgs() << "getVarDecl for '" << name << "': ");
+  std::string varInit = kind == Kind::Operand ? "(op0->getOperands())" : "";
+  return std::string(
+      formatv("{0} {1}{2};\n", getVarTypeStr(name), getVarName(name), varInit));
+}
+
+std::string SymbolInfoMap::SymbolInfo::getArgDecl(StringRef name) const {
+  LLVM_DEBUG(llvm::dbgs() << "getArgDecl for '" << name << "': ");
+  return std::string(
+      formatv("{0} &{1}", getVarTypeStr(name), getVarName(name)));
 }
 
 std::string SymbolInfoMap::SymbolInfo::getValueAndRangeUse(
@@ -486,10 +491,13 @@ SymbolInfoMap::const_iterator SymbolInfoMap::find(StringRef key) const {
 SymbolInfoMap::const_iterator
 SymbolInfoMap::findBoundSymbol(StringRef key, DagNode node, const Operator &op,
                                int argIndex) const {
+  return findBoundSymbol(key, SymbolInfo::getOperand(node, &op, argIndex));
+}
+
+SymbolInfoMap::const_iterator
+SymbolInfoMap::findBoundSymbol(StringRef key, SymbolInfo symbolInfo) const {
   std::string name = getValuePackName(key).str();
   auto range = symbolInfoMap.equal_range(name);
-
-  const auto symbolInfo = SymbolInfo::getOperand(node, &op, argIndex);
 
   for (auto it = range.first; it != range.second; ++it)
     if (it->second.dagAndConstant == symbolInfo.dagAndConstant)

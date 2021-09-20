@@ -73,8 +73,8 @@ FunctionPass *createX86AvoidStoreForwardingBlocks();
 /// Return a pass that lowers EFLAGS copy pseudo instructions.
 FunctionPass *createX86FlagsCopyLoweringPass();
 
-/// Return a pass that expands WinAlloca pseudo-instructions.
-FunctionPass *createX86WinAllocaExpander();
+/// Return a pass that expands DynAlloca pseudo-instructions.
+FunctionPass *createX86DynAllocaExpander();
 
 /// Return a pass that config the tile registers.
 FunctionPass *createX86TileConfigPass();
