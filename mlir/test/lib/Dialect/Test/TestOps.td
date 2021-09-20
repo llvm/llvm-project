@@ -20,6 +20,7 @@ include "mlir/Interfaces/CopyOpInterface.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Dialect/Linalg/IR/LinalgInterfaces.td"
 include "TestInterfaces.td"
 
 def Test_Dialect : Dialect {
@@ -2271,5 +2272,57 @@ def OpCrashShort : TEST_Op<"op_crash_short"> {
 }
 
 def : Pat<(OpCrashLong $_, $_, $_), (OpCrashShort)>;
+
+//===----------------------------------------------------------------------===//
+// Test LinalgConvolutionOpInterface.
+//===----------------------------------------------------------------------===//
+
+def TestLinalgConvOpNotLinalgOp : TEST_Op<"conv_op_not_linalg_op", [
+    LinalgConvolutionOpInterface]> {
+  let arguments = (ins
+    AnyType:$image, AnyType:$filter, AnyType:$output);
+  let results = (outs AnyRankedTensor:$result);
+}
+
+def TestLinalgConvOp :
+  TEST_Op<"linalg_conv_op", [AttrSizedOperandSegments,
+      LinalgStructuredInterface, LinalgConvolutionOpInterface]> {
+
+  let arguments = (ins Variadic<AnyType>:$inputs,
+    Variadic<AnyType>:$outputs);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = [{
+    attr-dict (`ins` `(` $inputs^ `:` type($inputs) `)`)?
+    `outs` `(` $outputs `:` type($outputs) `)`
+    $region (`->` type($results)^)?
+  }];
+
+  let extraClassDeclaration = [{
+    bool hasIndexSemantics() { return false; }
+
+    static void regionBuilder(mlir::ImplicitLocOpBuilder &b, mlir::Block &block) {
+      b.create<mlir::linalg::YieldOp>(block.getArguments().back());
+    }
+
+    static std::function<void(mlir::ImplicitLocOpBuilder &b, mlir::Block &block)>
+    getRegionBuilder() {
+      return &regionBuilder;
+    }
+
+    mlir::ArrayAttr iterator_types() {
+      return getOperation()->getAttrOfType<mlir::ArrayAttr>("iterator_types");
+    }
+
+    mlir::ArrayAttr indexing_maps() {
+      return getOperation()->getAttrOfType<mlir::ArrayAttr>("indexing_maps");
+    }
+
+    std::string getLibraryCallName() {
+      return "";
+    }
+  }];
+}
 
 #endif // TEST_OPS

@@ -25,8 +25,8 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // first operands. These may be optionally followed by non-view operands
 // depending on the specific Linalg op.
 class LinalgStructuredBase_Op<string mnemonic, list<OpTrait> props>
-  : Op<Linalg_Dialect, mnemonic, !listconcat(props, [
-       LinalgStructuredInterface, ReifyRankedShapedTypeOpInterface])> {
+  : Op<Linalg_Dialect, mnemonic, !listconcat([
+       LinalgStructuredInterface, ReifyRankedShapedTypeOpInterface], props)> {
   code structuredOpsBaseDecls = [{
     // Return whether the op accesses the iteration indices.
     bool hasIndexSemantics() {
