@@ -1835,7 +1835,7 @@ def BPFPreserveAccessIndex : InheritableAttr,
   let LangOpts = [COnly];
 }
 
-def BTFTag : InheritableAttr {
+def BTFTag : DeclOrTypeAttr {
   let Spellings = [Clang<"btf_tag">];
   let Args = [StringArgument<"BTFTag">];
   let Subjects = SubjectList<[Var, Function, Record, Field], ErrorDiag>;
