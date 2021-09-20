@@ -1531,7 +1531,7 @@ InstructionCost
 AArch64TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
                                       Align Alignment, unsigned AddressSpace,
                                       TTI::TargetCostKind CostKind) {
-  if (useNeonVector(Src))
+  if (!isa<ScalableVectorType>(Src))
     return BaseT::getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                         CostKind);
   auto LT = TLI->getTypeLegalizationCost(DL, Src);
