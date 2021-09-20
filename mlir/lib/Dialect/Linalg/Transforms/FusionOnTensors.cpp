@@ -181,6 +181,9 @@ static LinalgOp getTiledProducer(OpBuilder &b, OpResult producerResult,
                               .getTypes();
   LinalgOp clonedOp = producerOp.clone(b, loc, resultTypes, tiledOperands);
 
+  // Shift all IndexOp results by the tile offset.
+  addTileLoopIvsToIndexOpResults(b, clonedOp, allIvs);
+
   return clonedOp;
 }
 
@@ -323,10 +326,6 @@ FailureOr<LinalgOp> TileLoopNest::fuseProducer(OpBuilder &b,
     producerResult = iterArg->get().dyn_cast<OpResult>();
   }
   if (!producerResult || !isa<LinalgOp>(producerResult.getOwner()))
-    return failure();
-
-  // TODO: support producers that have index semantics.
-  if (cast<LinalgOp>(producerResult.getOwner()).hasIndexSemantics())
     return failure();
 
   // Compute the slice dimensions tiled by `tileLoopNest`.
