@@ -374,15 +374,11 @@ struct DWARFTypePrinter {
   }
 
   /// Recursively append the DIE type name when applicable.
-  void appendUnqualifiedName(const DWARFDie &D,
-                                 bool SkipFirstParamIfArtificial = false) {
-    if (!D.isValid() || D.isNULL())
-      return;
-
+  void appendUnqualifiedName(const DWARFDie &D) {
     // FIXME: We should have pretty printers per language. Currently we print
     // everything as if it was C++ and fall back to the TAG type name.
     DWARFDie Inner = appendUnqualifiedNameBefore(D);
-    appendUnqualifiedNameAfter(D, Inner, SkipFirstParamIfArtificial);
+    appendUnqualifiedNameAfter(D, Inner);
   }
 
   void appendSubroutineNameAfter(DWARFDie D, DWARFDie Inner,
@@ -546,10 +542,12 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
                 DINameKind::LinkageName))
       OS << Space << "\"" << Name << '\"';
   } else if (Attr == DW_AT_type) {
-    OS << Space << "\"";
-    DWARFTypePrinter(OS).appendQualifiedName(
-        Die.getAttributeValueAsReferencedDie(FormValue));
-    OS << '"';
+    DWARFDie D = Die.getAttributeValueAsReferencedDie(FormValue);
+    if (D && !D.isNULL()) {
+      OS << Space << "\"";
+      DWARFTypePrinter(OS).appendQualifiedName(D);
+      OS << '"';
+    }
   } else if (Attr == DW_AT_APPLE_property_attribute) {
     if (Optional<uint64_t> OptVal = FormValue.getAsUnsignedConstant())
       dumpApplePropertyAttribute(OS, *OptVal);
