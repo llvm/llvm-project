@@ -4349,7 +4349,7 @@ void Verifier::visitAliasScopeMetadata(const MDNode *MD) {
   unsigned NumOps = MD->getNumOperands();
   Assert(NumOps >= 2 && NumOps <= 3, "scope must have two or three operands",
          MD);
-  Assert(MD->getOperand(0) == MD || isa<MDString>(MD->getOperand(0)),
+  Assert(MD->getOperand(0).get() == MD || isa<MDString>(MD->getOperand(0)),
          "first scope operand must be self-referential or string", MD);
   if (NumOps == 3)
     Assert(isa<MDString>(MD->getOperand(2)),
@@ -4361,7 +4361,7 @@ void Verifier::visitAliasScopeMetadata(const MDNode *MD) {
   unsigned NumDomainOps = Domain->getNumOperands();
   Assert(NumDomainOps >= 1 && NumDomainOps <= 2,
          "domain must have one or two operands", Domain);
-  Assert(Domain->getOperand(0) == Domain ||
+  Assert(Domain->getOperand(0).get() == Domain ||
              isa<MDString>(Domain->getOperand(0)),
          "first domain operand must be self-referential or string", Domain);
   if (NumDomainOps == 2)
