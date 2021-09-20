@@ -52,7 +52,7 @@ public:
     Current = Tokens[0];
   }
 
-  // Parse the token stream and return the corresonding Definition object.
+  // Parse the token stream and return the corresponding Definition object.
   // Returns an empty definition object with a null-Name on error.
   MacroExpander::Definition parse() {
     if (!Current->is(tok::identifier))

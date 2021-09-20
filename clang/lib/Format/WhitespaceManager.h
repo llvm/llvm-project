@@ -257,7 +257,7 @@ private:
   /// Does this \p Cell contain a split element?
   static bool isSplitCell(const CellDescription &Cell);
 
-  /// Get the width of the preceeding cells from \p Start to \p End.
+  /// Get the width of the preceding cells from \p Start to \p End.
   template <typename I>
   auto getNetWidth(const I &Start, const I &End, unsigned InitialSpaces) const {
     auto NetWidth = InitialSpaces;
