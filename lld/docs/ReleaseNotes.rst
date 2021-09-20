@@ -26,6 +26,8 @@ ELF Improvements
 
 * ``--export-dynamic-symbol-list`` has been added.
   (`D107317 <https://reviews.llvm.org/D107317>`_)
+* ``--why-extract`` has been added to query why archive members/lazy object files are extracted.
+  (`D109572 <https://reviews.llvm.org/D109572>`_)
 * ``e_entry`` no longer falls back to the address of ``.text`` if the entry symbol does not exist.
   Instead, a value of 0 will be written.
   (`D110014 <https://reviews.llvm.org/D110014>`_)
