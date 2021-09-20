@@ -280,12 +280,12 @@ void sls_fun_bad_6() {
 
 void sls_fun_bad_7() {
   sls_mu.Lock();
-  while (getBool()) {
+  while (getBool()) { // \
+        expected-warning{{expecting mutex 'sls_mu' to be held at start of each loop}}
     sls_mu.Unlock();
     if (getBool()) {
       if (getBool()) {
-        continue; // \
-        expected-warning{{expecting mutex 'sls_mu' to be held at start of each loop}}
+        continue;
       }
     }
     sls_mu.Lock(); // expected-note {{mutex acquired here}}
@@ -332,13 +332,14 @@ void sls_fun_bad_12() {
     sls_mu.Unlock();
     if (getBool()) {
       if (getBool()) {
-        break; // expected-warning{{mutex 'sls_mu' is not held on every path through here}}
+        break;
       }
     }
     sls_mu.Lock();
   }
   sls_mu.Unlock(); // \
-    // expected-warning{{releasing mutex 'sls_mu' that was not held}}
+    expected-warning{{mutex 'sls_mu' is not held on every path through here}} \
+    expected-warning{{releasing mutex 'sls_mu' that was not held}}
 }
 
 //-----------------------------------------//
@@ -2086,13 +2087,13 @@ namespace GoingNative {
   mutex m;
   void test() {
     m.lock();
-    while (foo()) {
+    while (foo()) { // expected-warning {{expecting mutex 'm' to be held at start of each loop}}
       m.unlock();
       // ...
       if (bar()) {
         // ...
         if (foo())
-          continue; // expected-warning {{expecting mutex 'm' to be held at start of each loop}}
+          continue;
         //...
       }
       // ...
@@ -2822,11 +2823,11 @@ void loopAcquireContinue() {
 void loopReleaseContinue() {
   RelockableMutexLock scope(&mu, ExclusiveTraits{}); // expected-note {{mutex acquired here}}
   // We have to warn on this join point despite the lock being managed ...
-  for (unsigned i = 1; i < 10; ++i) {
+  for (unsigned i = 1; i < 10; ++i) { // expected-warning {{expecting mutex 'mu' to be held at start of each loop}}
     x = 1; // ... because we might miss that this doesn't always happen under lock.
     if (i == 5) {
       scope.Unlock();
-      continue; // expected-warning {{expecting mutex 'mu' to be held at start of each loop}}
+      continue;
     }
   }
 }
