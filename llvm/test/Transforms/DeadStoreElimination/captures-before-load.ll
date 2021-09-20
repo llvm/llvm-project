@@ -235,6 +235,42 @@ exit:
   ret i32 %p
 }
 
+define i32 @test_only_captured_sibling_path_with_ret_to_load_other_blocks(i32** %in.ptr, i1 %c.1) {
+; CHECK-LABEL: @test_only_captured_sibling_path_with_ret_to_load_other_blocks(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 55, i32* [[A]], align 4
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    call void @escape_writeonly(i32* [[A]])
+; CHECK-NEXT:    ret i32 0
+; CHECK:       else:
+; CHECK-NEXT:    [[IN_LV_1:%.*]] = load i32*, i32** [[IN_PTR:%.*]], align 2
+; CHECK-NEXT:    [[IN_LV_2:%.*]] = load i32, i32* [[IN_LV_1]], align 2
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    store i32 99, i32* [[A]], align 4
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    ret i32 [[IN_LV_2]]
+;
+  %a = alloca i32, align 4
+  store i32 55, i32* %a
+  br i1 %c.1, label %then, label %else
+
+then:
+  call void @escape_writeonly(i32* %a)
+  ret i32 0
+
+else:
+  %in.lv.1 = load i32* , i32** %in.ptr, align 2
+  %in.lv.2 = load i32 , i32* %in.lv.1, align 2
+  br label %exit
+
+exit:
+  store i32 99, i32* %a, align 4
+  call void @clobber()
+  ret i32 %in.lv.2
+}
+
 define i32 @test_captured_before_load_other_blocks_2(i32** %in.ptr, i1 %c.1) {
 ; CHECK-LABEL: @test_captured_before_load_other_blocks_2(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -652,6 +688,31 @@ define i32 @test_not_captured_before_load_same_bb_but_read(i32** %in.ptr) {
   ret i32 %res
 }
 
+define i32 @test_not_captured_before_load_may_alias_same_bb_but_read(i32** %in.ptr, i32* %b, i1 %c) {
+; CHECK-LABEL: @test_not_captured_before_load_may_alias_same_bb_but_read(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 55, i32* [[A]], align 4
+; CHECK-NEXT:    [[IN_LV_1:%.*]] = load i32*, i32** [[IN_PTR:%.*]], align 2
+; CHECK-NEXT:    [[IN_LV_2:%.*]] = load i32, i32* [[IN_LV_1]], align 2
+; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[C:%.*]], i32* [[A]], i32* [[B:%.*]]
+; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[PTR]], align 4
+; CHECK-NEXT:    store i32 99, i32* [[A]], align 4
+; CHECK-NEXT:    call void @escape_and_clobber(i32* [[A]])
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[IN_LV_2]], [[LV]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %a = alloca i32, align 4
+  store i32 55, i32* %a
+  %in.lv.1 = load i32* , i32** %in.ptr, align 2
+  %in.lv.2 = load i32 , i32* %in.lv.1, align 2
+  %ptr = select i1 %c, i32* %a, i32* %b
+  %lv = load i32, i32* %ptr
+  store i32 99, i32* %a, align 4
+  call void @escape_and_clobber(i32* %a)
+  %res = add i32 %in.lv.2, %lv
+  ret i32 %res
+}
+
 define i32 @test_captured_after_loop(i32** %in.ptr, i1 %c.1) {
 ; CHECK-LABEL: @test_captured_after_loop(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -796,4 +857,216 @@ exit:
   store i32 %ext.lv.2, i32* %gep.a.1, align 4
   call void @escape_and_clobber(i32* %gep.a.0)
   ret void
+}
+
+declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #0
+declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) #1
+
+declare void @use.i64(i64)
+
+define i64 @test_a_not_captured_at_all(i64** %ptr, i64** %ptr.2, i1 %c) {
+; CHECK-LABEL: @test_a_not_captured_at_all(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    [[B:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    store i64* [[B]], i64** [[PTR:%.*]], align 8
+; CHECK-NEXT:    [[LV_1:%.*]] = load i64*, i64** [[PTR_2:%.*]], align 8
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EXIT:%.*]], label [[THEN:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[LV_2:%.*]] = load i64, i64* [[LV_1]], align 4
+; CHECK-NEXT:    call void @use.i64(i64 [[LV_2]])
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[A_CAST:%.*]] = bitcast i64* [[A]] to i8*
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[A_CAST]])
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[A_CAST]], i8 0, i64 8, i1 false)
+; CHECK-NEXT:    [[L:%.*]] = load i64, i64* [[A]], align 4
+; CHECK-NEXT:    ret i64 [[L]]
+;
+entry:
+  %a = alloca i64, align 8
+  %b = alloca i64, align 8
+  store i64* %b, i64** %ptr, align 8
+  %lv.1 = load i64*, i64** %ptr.2, align 8
+  br i1 %c, label %exit, label %then
+
+then:
+  %lv.2 = load i64, i64* %lv.1
+  call void @use.i64(i64 %lv.2)
+  br label %exit
+
+exit:
+  %a.cast = bitcast i64* %a to i8*
+  call void @llvm.lifetime.start.p0i8(i64 8, i8* %a.cast)
+  store i64 99, i64* %a
+  call void @clobber()
+  call void @llvm.memset.p0i8.i64(i8* %a.cast, i8 0, i64 8, i1 false)
+  %l = load i64, i64* %a
+  ret i64 %l
+}
+
+define i32 @test_not_captured_both_paths_1(i32** %in.ptr, i1 %c.1) {
+; CHECK-LABEL: @test_not_captured_both_paths_1(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 55, i32* [[A]], align 4
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    store i32 99, i32* [[A]], align 4
+; CHECK-NEXT:    call void @escape_writeonly(i32* [[A]])
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[IN_LV_1:%.*]] = load i32*, i32** [[IN_PTR:%.*]], align 2
+; CHECK-NEXT:    [[IN_LV_2:%.*]] = load i32, i32* [[IN_LV_1]], align 2
+; CHECK-NEXT:    store i32 99, i32* [[A]], align 4
+; CHECK-NEXT:    call void @escape_writeonly(i32* [[A]])
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 0, [[THEN]] ], [ [[IN_LV_2]], [[ELSE]] ]
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    ret i32 [[P]]
+;
+  %a = alloca i32, align 4
+  store i32 55, i32* %a
+  br i1 %c.1, label %then, label %else
+
+then:
+  store i32 99, i32* %a, align 4
+  call void @escape_writeonly(i32* %a)
+  br label %exit
+
+else:
+  %in.lv.1 = load i32* , i32** %in.ptr, align 2
+  %in.lv.2 = load i32 , i32* %in.lv.1, align 2
+  store i32 99, i32* %a, align 4
+  call void @escape_writeonly(i32* %a)
+  br label %exit
+
+exit:
+  %p = phi i32 [ 0, %then ], [ %in.lv.2, %else ]
+  call void @clobber()
+  ret i32 %p
+}
+
+define i32 @test_not_captured_both_paths_2(i32** %in.ptr, i1 %c.1) {
+; CHECK-LABEL: @test_not_captured_both_paths_2(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 55, i32* [[A]], align 4
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[IN_LV_1:%.*]] = load i32*, i32** [[IN_PTR:%.*]], align 2
+; CHECK-NEXT:    [[IN_LV_2:%.*]] = load i32, i32* [[IN_LV_1]], align 2
+; CHECK-NEXT:    store i32 99, i32* [[A]], align 4
+; CHECK-NEXT:    call void @escape_writeonly(i32* [[A]])
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    store i32 99, i32* [[A]], align 4
+; CHECK-NEXT:    call void @escape_writeonly(i32* [[A]])
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[IN_LV_2]], [[THEN]] ], [ 0, [[ELSE]] ]
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    ret i32 [[P]]
+;
+  %a = alloca i32, align 4
+  store i32 55, i32* %a
+  br i1 %c.1, label %then, label %else
+
+then:
+  %in.lv.1 = load i32* , i32** %in.ptr, align 2
+  %in.lv.2 = load i32 , i32* %in.lv.1, align 2
+  store i32 99, i32* %a, align 4
+  call void @escape_writeonly(i32* %a)
+  br label %exit
+
+else:
+  store i32 99, i32* %a, align 4
+  call void @escape_writeonly(i32* %a)
+  br label %exit
+
+exit:
+  %p = phi i32 [ %in.lv.2, %then ], [ 0, %else ]
+  call void @clobber()
+  ret i32 %p
+}
+
+define i32 @test_captured_before_store_both_paths_2(i32** %in.ptr, i1 %c.1) {
+; CHECK-LABEL: @test_captured_before_store_both_paths_2(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 55, i32* [[A]], align 4
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    call void @escape_writeonly(i32* [[A]])
+; CHECK-NEXT:    [[IN_LV_1:%.*]] = load i32*, i32** [[IN_PTR:%.*]], align 2
+; CHECK-NEXT:    [[IN_LV_2:%.*]] = load i32, i32* [[IN_LV_1]], align 2
+; CHECK-NEXT:    store i32 99, i32* [[A]], align 4
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    call void @escape_writeonly(i32* [[A]])
+; CHECK-NEXT:    store i32 99, i32* [[A]], align 4
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[IN_LV_2]], [[THEN]] ], [ 0, [[ELSE]] ]
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    ret i32 [[P]]
+;
+  %a = alloca i32, align 4
+  store i32 55, i32* %a
+  br i1 %c.1, label %then, label %else
+
+then:
+  call void @escape_writeonly(i32* %a)
+  %in.lv.1 = load i32* , i32** %in.ptr, align 2
+  %in.lv.2 = load i32 , i32* %in.lv.1, align 2
+  store i32 99, i32* %a, align 4
+  br label %exit
+
+else:
+  call void @escape_writeonly(i32* %a)
+  store i32 99, i32* %a, align 4
+  br label %exit
+
+exit:
+  %p = phi i32 [ %in.lv.2, %then ], [ 0, %else ]
+  call void @clobber()
+  ret i32 %p
+}
+
+
+declare noalias i32* @alloc() nounwind
+
+define i32 @test_not_captured_before_load_same_bb_noalias_call(i32** %in.ptr) {
+; CHECK-LABEL: @test_not_captured_before_load_same_bb_noalias_call(
+; CHECK-NEXT:    [[A:%.*]] = call i32* @alloc()
+; CHECK-NEXT:    store i32 55, i32* [[A]], align 4
+; CHECK-NEXT:    [[IN_LV_1:%.*]] = load i32*, i32** [[IN_PTR:%.*]], align 2
+; CHECK-NEXT:    [[IN_LV_2:%.*]] = load i32, i32* [[IN_LV_1]], align 2
+; CHECK-NEXT:    store i32 99, i32* [[A]], align 4
+; CHECK-NEXT:    call void @escape_and_clobber(i32* [[A]])
+; CHECK-NEXT:    ret i32 [[IN_LV_2]]
+;
+  %a = call i32* @alloc()
+  store i32 55, i32* %a
+  %in.lv.1 = load i32* , i32** %in.ptr, align 2
+  %in.lv.2 = load i32 , i32* %in.lv.1, align 2
+  store i32 99, i32* %a, align 4
+  call void @escape_and_clobber(i32* %a)
+  ret i32 %in.lv.2
+}
+
+define i32 @test_not_captured_before_load_same_bb_noalias_arg(i32** %in.ptr, i32* noalias %a) {
+; CHECK-LABEL: @test_not_captured_before_load_same_bb_noalias_arg(
+; CHECK-NEXT:    store i32 55, i32* [[A:%.*]], align 4
+; CHECK-NEXT:    [[IN_LV_1:%.*]] = load i32*, i32** [[IN_PTR:%.*]], align 2
+; CHECK-NEXT:    [[IN_LV_2:%.*]] = load i32, i32* [[IN_LV_1]], align 2
+; CHECK-NEXT:    store i32 99, i32* [[A]], align 4
+; CHECK-NEXT:    call void @escape_and_clobber(i32* [[A]])
+; CHECK-NEXT:    ret i32 [[IN_LV_2]]
+;
+  store i32 55, i32* %a
+  %in.lv.1 = load i32* , i32** %in.ptr, align 2
+  %in.lv.2 = load i32 , i32* %in.lv.1, align 2
+  store i32 99, i32* %a, align 4
+  call void @escape_and_clobber(i32* %a)
+  ret i32 %in.lv.2
 }
