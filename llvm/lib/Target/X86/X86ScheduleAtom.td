@@ -84,16 +84,16 @@ def : WriteRes<WriteRMW, [AtomPort0]>;
 defm : AtomWriteResPair<WriteALU,    [AtomPort01], [AtomPort0]>;
 defm : AtomWriteResPair<WriteADC,    [AtomPort01], [AtomPort0]>;
 
-defm : AtomWriteResPair<WriteIMul8,     [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  7,  7,  [7,7],  [7,7]>;
-defm : AtomWriteResPair<WriteIMul16,    [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  7,  8,  [7,7],  [8,8]>;
-defm : AtomWriteResPair<WriteIMul16Imm, [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  6,  7,  [6,6],  [7,7]>;
-defm : AtomWriteResPair<WriteIMul16Reg, [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  6,  7,  [6,6],  [7,7]>;
-defm : AtomWriteResPair<WriteIMul32,    [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  6,  7,  [6,6],  [7,7]>;
+defm : AtomWriteResPair<WriteIMul8,     [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  7,  7,  [7,7],  [7,7], 3, 3>;
+defm : AtomWriteResPair<WriteIMul16,    [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  7,  8,  [7,7],  [8,8], 4, 5>;
+defm : AtomWriteResPair<WriteIMul16Imm, [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  6,  7,  [6,6],  [7,7], 2, 3>;
+defm : AtomWriteResPair<WriteIMul16Reg, [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  6,  7,  [6,6],  [7,7], 2, 3>;
+defm : AtomWriteResPair<WriteIMul32,    [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  6,  7,  [6,6],  [7,7], 3, 4>;
 defm : AtomWriteResPair<WriteIMul32Imm, [AtomPort0],  [AtomPort0],   5,  5,  [5],  [5]>;
 defm : AtomWriteResPair<WriteIMul32Reg, [AtomPort0],  [AtomPort0],   5,  5,  [5],  [5]>;
-defm : AtomWriteResPair<WriteIMul64,    [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 12, 12, [12,12], [12,12]>;
-defm : AtomWriteResPair<WriteIMul64Imm, [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 14, 14, [14,14], [14,14]>;
-defm : AtomWriteResPair<WriteIMul64Reg, [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 12, 12, [12,12], [12,12]>;
+defm : AtomWriteResPair<WriteIMul64,    [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 12, 12, [12,12], [12,12], 8, 8>;
+defm : AtomWriteResPair<WriteIMul64Imm, [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 14, 14, [14,14], [14,14], 7, 7>;
+defm : AtomWriteResPair<WriteIMul64Reg, [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 12, 12, [12,12], [12,12], 6, 6>;
 defm : X86WriteResUnsupported<WriteIMulH>;
 defm : X86WriteResUnsupported<WriteIMulHLd>;
 defm : X86WriteResPairUnsupported<WriteMULX32>;
@@ -105,14 +105,14 @@ defm : X86WriteRes<WriteBSWAP64,     [AtomPort0], 1, [1], 1>;
 defm : AtomWriteResPair<WriteCMPXCHG, [AtomPort01], [AtomPort01], 15, 15, [15]>;
 defm : X86WriteRes<WriteCMPXCHGRMW,   [AtomPort01, AtomPort0], 1, [1, 1], 1>;
 
-defm : AtomWriteResPair<WriteDiv8,   [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 50, 68, [50,50], [68,68]>;
-defm : AtomWriteResPair<WriteDiv16,  [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 50, 50, [50,50], [50,50]>;
-defm : AtomWriteResPair<WriteDiv32,  [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 50, 50, [50,50], [50,50]>;
-defm : AtomWriteResPair<WriteDiv64,  [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],130,130,[130,130],[130,130]>;
-defm : AtomWriteResPair<WriteIDiv8,  [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 62, 62, [62,62], [62,62]>;
-defm : AtomWriteResPair<WriteIDiv16, [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 62, 62, [62,62], [62,62]>;
-defm : AtomWriteResPair<WriteIDiv32, [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 62, 62, [62,62], [62,62]>;
-defm : AtomWriteResPair<WriteIDiv64, [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],130,130,[130,130],[130,130]>;
+defm : AtomWriteResPair<WriteDiv8,   [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 50, 68, [50,50], [68,68],  9,  9>;
+defm : AtomWriteResPair<WriteDiv16,  [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 50, 50, [50,50], [50,50], 12, 12>;
+defm : AtomWriteResPair<WriteDiv32,  [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 50, 50, [50,50], [50,50], 12, 12>;
+defm : AtomWriteResPair<WriteDiv64,  [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],130,130,[130,130],[130,130], 38, 38>;
+defm : AtomWriteResPair<WriteIDiv8,  [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 62, 62, [62,62], [62,62], 26, 26>;
+defm : AtomWriteResPair<WriteIDiv16, [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 62, 62, [62,62], [62,62], 29, 29>;
+defm : AtomWriteResPair<WriteIDiv32, [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 62, 62, [62,62], [62,62], 29, 29>;
+defm : AtomWriteResPair<WriteIDiv64, [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],130,130,[130,130],[130,130], 60, 60>;
 
 defm : X86WriteResPairUnsupported<WriteCRC32>;
 
@@ -237,52 +237,52 @@ defm : AtomWriteResPair<WriteFAddX,          [AtomPort1], [AtomPort0,AtomPort1],
 defm : X86WriteResPairUnsupported<WriteFAddY>;
 defm : X86WriteResPairUnsupported<WriteFAddZ>;
 defm : AtomWriteResPair<WriteFAdd64,         [AtomPort1], [AtomPort0,AtomPort1],  5,  5,  [1],  [1,1]>;
-defm : AtomWriteResPair<WriteFAdd64X,        [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  6,  7,  [5,5],  [6,6]>;
+defm : AtomWriteResPair<WriteFAdd64X,        [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  6,  7,  [5,5],  [6,6], 3, 4>;
 defm : X86WriteResPairUnsupported<WriteFAdd64Y>;
 defm : X86WriteResPairUnsupported<WriteFAdd64Z>;
 defm : AtomWriteResPair<WriteFCmp,           [AtomPort1], [AtomPort0,AtomPort1],  5,  5,  [1],  [1,1]>;
-defm : AtomWriteResPair<WriteFCmpX,          [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  6,  7,  [5,5],  [6,6]>;
+defm : AtomWriteResPair<WriteFCmpX,          [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  6,  7,  [5,5],  [6,6], 3, 4>;
 defm : X86WriteResPairUnsupported<WriteFCmpY>;
 defm : X86WriteResPairUnsupported<WriteFCmpZ>;
 defm : AtomWriteResPair<WriteFCmp64,         [AtomPort1], [AtomPort0,AtomPort1],  5,  5,  [1],  [1,1]>;
-defm : AtomWriteResPair<WriteFCmp64X,        [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  6,  7,  [5,5],  [6,6]>;
+defm : AtomWriteResPair<WriteFCmp64X,        [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  6,  7,  [5,5],  [6,6], 3, 4>;
 defm : X86WriteResPairUnsupported<WriteFCmp64Y>;
 defm : X86WriteResPairUnsupported<WriteFCmp64Z>;
 defm : AtomWriteResPair<WriteFCom,           [AtomPort0],  [AtomPort0],  5,  5,  [5],  [5]>;
-defm : AtomWriteResPair<WriteFComX,          [AtomPort0],  [AtomPort0],  5,  5,  [5],  [5]>;
+defm : AtomWriteResPair<WriteFComX,          [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  9, 10,  [9,9],[10,10], 4, 5>;
 defm : AtomWriteResPair<WriteFMul,           [AtomPort0],  [AtomPort0],  4,  4,  [2],  [2]>;
 defm : AtomWriteResPair<WriteFMulX,          [AtomPort0],  [AtomPort0],  5,  5,  [2],  [2]>;
 defm : X86WriteResPairUnsupported<WriteFMulY>;
 defm : X86WriteResPairUnsupported<WriteFMulZ>;
 defm : AtomWriteResPair<WriteFMul64,         [AtomPort0],  [AtomPort0],  5,  5,  [2],  [2]>;
-defm : AtomWriteResPair<WriteFMul64X,        [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  9, 10,  [9,9],  [10,10]>;
+defm : AtomWriteResPair<WriteFMul64X,        [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  9, 10,  [9,9],[10,10], 6, 7>;
 defm : X86WriteResPairUnsupported<WriteFMul64Y>;
 defm : X86WriteResPairUnsupported<WriteFMul64Z>;
 defm : AtomWriteResPair<WriteFRcp,           [AtomPort0],  [AtomPort0],  4,  4,  [4],  [4]>;
-defm : AtomWriteResPair<WriteFRcpX,         [AtomPort01], [AtomPort01],  9, 10,  [9], [10]>;
+defm : AtomWriteResPair<WriteFRcpX,          [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  9, 10,  [9,9], [10,10], 5, 6>;
 defm : X86WriteResPairUnsupported<WriteFRcpY>;
 defm : X86WriteResPairUnsupported<WriteFRcpZ>;
 defm : AtomWriteResPair<WriteFRsqrt,         [AtomPort0],  [AtomPort0],  4,  4,  [4],  [4]>;
-defm : AtomWriteResPair<WriteFRsqrtX,       [AtomPort01], [AtomPort01],  9, 10,  [9], [10]>;
+defm : AtomWriteResPair<WriteFRsqrtX,        [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  9, 10,  [9,9], [10,10], 5, 6>;
 defm : X86WriteResPairUnsupported<WriteFRsqrtY>;
 defm : X86WriteResPairUnsupported<WriteFRsqrtZ>;
-defm : AtomWriteResPair<WriteFDiv,          [AtomPort01], [AtomPort01], 34, 34, [34], [34]>;
-defm : AtomWriteResPair<WriteFDivX,         [AtomPort01], [AtomPort01], 70, 70, [70], [70]>;
+defm : AtomWriteResPair<WriteFDiv,          [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 34, 34, [34,34], [34,34], 3, 4>;
+defm : AtomWriteResPair<WriteFDivX,         [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 70, 70, [70,70], [70,70], 6, 7>;
 defm : X86WriteResPairUnsupported<WriteFDivY>;
 defm : X86WriteResPairUnsupported<WriteFDivZ>;
-defm : AtomWriteResPair<WriteFDiv64,        [AtomPort01], [AtomPort01], 62, 62, [62], [62]>;
-defm : AtomWriteResPair<WriteFDiv64X,       [AtomPort01], [AtomPort01],125,125,[125],[125]>;
+defm : AtomWriteResPair<WriteFDiv64,        [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 62, 62,  [62,62],  [62,62], 3, 4>;
+defm : AtomWriteResPair<WriteFDiv64X,       [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],125,125,[125,125],[125,125], 6, 7>;
 defm : X86WriteResPairUnsupported<WriteFDiv64Y>;
 defm : X86WriteResPairUnsupported<WriteFDiv64Z>;
-defm : AtomWriteResPair<WriteFSqrt,         [AtomPort01], [AtomPort01], 34, 34, [34], [34]>;
-defm : AtomWriteResPair<WriteFSqrtX,        [AtomPort01], [AtomPort01], 70, 70, [70], [70]>;
+defm : AtomWriteResPair<WriteFSqrt,         [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 34, 34, [34,34], [34,34], 3, 4>;
+defm : AtomWriteResPair<WriteFSqrtX,        [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 70, 70, [70,70], [70,70], 5, 6>;
 defm : X86WriteResPairUnsupported<WriteFSqrtY>;
 defm : X86WriteResPairUnsupported<WriteFSqrtZ>;
-defm : AtomWriteResPair<WriteFSqrt64,       [AtomPort01], [AtomPort01], 62, 62, [62], [62]>;
-defm : AtomWriteResPair<WriteFSqrt64X,      [AtomPort01], [AtomPort01],125,125,[125],[125]>;
+defm : AtomWriteResPair<WriteFSqrt64,       [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 62, 62,  [62,62],  [62,62], 3, 4>;
+defm : AtomWriteResPair<WriteFSqrt64X,      [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],125,125,[125,125],[125,125], 5, 6>;
 defm : X86WriteResPairUnsupported<WriteFSqrt64Y>;
 defm : X86WriteResPairUnsupported<WriteFSqrt64Z>;
-defm : AtomWriteResPair<WriteFSqrt80,       [AtomPort01], [AtomPort01], 71, 71, [71], [71]>;
+defm : AtomWriteResPair<WriteFSqrt80,        [AtomPort0],  [AtomPort0], 71, 71, [71], [71]>;
 defm : AtomWriteResPair<WriteFSign,          [AtomPort1],  [AtomPort1]>;
 defm : AtomWriteResPair<WriteFRnd,           [AtomPort0],  [AtomPort0],  5,  5,  [5],  [5]>;
 defm : X86WriteResPairUnsupported<WriteFRndY>;
@@ -478,11 +478,11 @@ defm : X86WriteResPairUnsupported<WriteAESDecEnc>;
 // Horizontal add/sub  instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : AtomWriteResPair<WriteFHAdd,  [AtomPort01], [AtomPort01], 8, 9, [8], [9]>;
-defm : AtomWriteResPair<WriteFHAddY, [AtomPort01], [AtomPort01], 8, 9, [8], [9]>;
-defm : AtomWriteResPair<WritePHAdd,  [AtomPort01], [AtomPort01], 3, 4, [3], [4]>;
-defm : AtomWriteResPair<WritePHAddX, [AtomPort01], [AtomPort01], 7, 8, [7], [8]>;
-defm : AtomWriteResPair<WritePHAddY, [AtomPort01], [AtomPort01], 7, 8, [7], [8]>;
+defm : AtomWriteResPair<WriteFHAdd,  [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 8, 9, [8,8], [9,9], 5, 6>;
+defm : X86WriteResPairUnsupported<WriteFHAddY>;
+defm : AtomWriteResPair<WritePHAdd,  [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 3, 4, [3,3], [4,4], 3, 4>;
+defm : AtomWriteResPair<WritePHAddX, [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 7, 8, [7,7], [8,8], 3, 4>;
+defm : X86WriteResPairUnsupported<WritePHAddY>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Carry-less multiplication instructions.
@@ -494,8 +494,8 @@ defm : X86WriteResPairUnsupported<WriteCLMul>;
 // Load/store MXCSR.
 ////////////////////////////////////////////////////////////////////////////////
 
-def : WriteRes<WriteLDMXCSR, [AtomPort01]> { let Latency = 5; let ResourceCycles = [5]; }
-def : WriteRes<WriteSTMXCSR, [AtomPort01]> { let Latency = 15; let ResourceCycles = [15]; }
+defm : X86WriteRes<WriteLDMXCSR, [AtomPort0,AtomPort1],  5,   [5,5], 4>;
+defm : X86WriteRes<WriteSTMXCSR, [AtomPort0,AtomPort1], 15, [15,15], 4>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Special Cases.
@@ -648,7 +648,6 @@ def : InstRW<[AtomWrite01_9], (instrs POPA16, POPA32,
                                       SHLD64rri8, SHRD64rri8,
                                       CMPXCHG8rr)>;
 def : InstRW<[AtomWrite01_9], (instregex "(U)?COM_FI", "TST_F",
-                                         "(U)?COMIS(D|S)rr",
                                          "CVT(T)?SS2SI64rr(_Int)?")>;
 
 def AtomWrite01_10 : SchedWriteRes<[AtomPort01]> {
@@ -656,8 +655,7 @@ def AtomWrite01_10 : SchedWriteRes<[AtomPort01]> {
   let ResourceCycles = [10];
 }
 def : SchedAlias<WriteFLDC, AtomWrite01_10>;
-def : InstRW<[AtomWrite01_10], (instregex "(U)?COMIS(D|S)rm",
-                                          "CVT(T)?SS2SI64rm(_Int)?")>;
+def : InstRW<[AtomWrite01_10], (instregex "CVT(T)?SS2SI64rm(_Int)?")>;
 
 def AtomWrite01_11 : SchedWriteRes<[AtomPort01]> {
   let Latency = 11;

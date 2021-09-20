@@ -5913,6 +5913,52 @@ static SDValue combineORToSHFL(SDValue Op, SelectionDAG &DAG,
                      DAG.getConstant(Match1->ShAmt, DL, VT));
 }
 
+// Optimize (add (shl x, c0), (shl y, c1)) ->
+//          (SLLI (SH*ADD x, y), c0), if c1-c0 equals to [1|2|3].
+static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
+                                  const RISCVSubtarget &Subtarget) {
+  // Perform this optimization only in the zba extension.
+  if (!Subtarget.hasStdExtZba())
+    return SDValue();
+
+  // Skip for vector types and larger types.
+  EVT VT = N->getValueType(0);
+  if (VT.isVector() || VT.getSizeInBits() > Subtarget.getXLen())
+    return SDValue();
+
+  // The two operand nodes must be SHL and have no other use.
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  if (N0->getOpcode() != ISD::SHL || N1->getOpcode() != ISD::SHL ||
+      !N0->hasOneUse() || !N1->hasOneUse())
+    return SDValue();
+
+  // Check c0 and c1.
+  auto *N0C = dyn_cast<ConstantSDNode>(N0->getOperand(1));
+  auto *N1C = dyn_cast<ConstantSDNode>(N1->getOperand(1));
+  if (!N0C || !N1C)
+    return SDValue();
+  int64_t C0 = N0C->getSExtValue();
+  int64_t C1 = N1C->getSExtValue();
+  if (C0 <= 0 || C1 <= 0)
+    return SDValue();
+
+  // Skip if SH1ADD/SH2ADD/SH3ADD are not applicable.
+  int64_t Bits = std::min(C0, C1);
+  int64_t Diff = std::abs(C0 - C1);
+  if (Diff != 1 && Diff != 2 && Diff != 3)
+    return SDValue();
+
+  // Build nodes.
+  SDLoc DL(N);
+  SDValue NS = (C0 < C1) ? N0->getOperand(0) : N1->getOperand(0);
+  SDValue NL = (C0 > C1) ? N0->getOperand(0) : N1->getOperand(0);
+  SDValue NA0 =
+      DAG.getNode(ISD::SHL, DL, VT, NL, DAG.getConstant(Diff, DL, VT));
+  SDValue NA1 = DAG.getNode(ISD::ADD, DL, VT, NA0, NS);
+  return DAG.getNode(ISD::SHL, DL, VT, NA1, DAG.getConstant(Bits, DL, VT));
+}
+
 // Combine (GREVI (GREVI x, C2), C1) -> (GREVI x, C1^C2) when C1^C2 is
 // non-zero, and to x when it is. Any repeated GREVI stage undoes itself.
 // Combine (GORCI (GORCI x, C2), C1) -> (GORCI x, C1|C2). Repeated stage does
@@ -6017,7 +6063,12 @@ static SDValue combineSelectAndUseCommutative(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG) {
+static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG,
+                                 const RISCVSubtarget &Subtarget) {
+  // Fold (add (shl x, c0), (shl y, c1)) ->
+  //      (SLLI (SH*ADD x, y), c0), if c1-c0 equals to [1|2|3].
+  if (SDValue V = transformAddShlImm(N, DAG, Subtarget))
+    return V;
   // fold (add (select lhs, rhs, cc, 0, y), x) ->
   //      (select lhs, rhs, cc, x, (add x, y))
   return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false);
@@ -6330,7 +6381,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                        DAG.getConstant(~SignBit, DL, VT));
   }
   case ISD::ADD:
-    return performADDCombine(N, DAG);
+    return performADDCombine(N, DAG, Subtarget);
   case ISD::SUB:
     return performSUBCombine(N, DAG);
   case ISD::AND:

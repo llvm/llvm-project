@@ -731,6 +731,37 @@ define <16 x i16> @test_x86_avx2_mpsadbw(<32 x i8> %a0, <32 x i8> %a1) {
 }
 declare <16 x i16> @llvm.x86.avx2.mpsadbw(<32 x i8>, <32 x i8>, i8) nounwind readnone
 
+; We shouldn't commute this operation to fold the load.
+define <16 x i16> @test_x86_avx2_mpsadbw_load_op0(<32 x i8>* %ptr, <32 x i8> %a1) {
+; X86-AVX-LABEL: test_x86_avx2_mpsadbw_load_op0:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-AVX-NEXT:    vmovdqa (%eax), %ymm1 # encoding: [0xc5,0xfd,0x6f,0x08]
+; X86-AVX-NEXT:    vmpsadbw $7, %ymm0, %ymm1, %ymm0 # encoding: [0xc4,0xe3,0x75,0x42,0xc0,0x07]
+; X86-AVX-NEXT:    retl # encoding: [0xc3]
+;
+; X86-AVX512VL-LABEL: test_x86_avx2_mpsadbw_load_op0:
+; X86-AVX512VL:       # %bb.0:
+; X86-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-AVX512VL-NEXT:    vmovdqa (%eax), %ymm1 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0x08]
+; X86-AVX512VL-NEXT:    vmpsadbw $7, %ymm0, %ymm1, %ymm0 # encoding: [0xc4,0xe3,0x75,0x42,0xc0,0x07]
+; X86-AVX512VL-NEXT:    retl # encoding: [0xc3]
+;
+; X64-AVX-LABEL: test_x86_avx2_mpsadbw_load_op0:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vmovdqa (%rdi), %ymm1 # encoding: [0xc5,0xfd,0x6f,0x0f]
+; X64-AVX-NEXT:    vmpsadbw $7, %ymm0, %ymm1, %ymm0 # encoding: [0xc4,0xe3,0x75,0x42,0xc0,0x07]
+; X64-AVX-NEXT:    retq # encoding: [0xc3]
+;
+; X64-AVX512VL-LABEL: test_x86_avx2_mpsadbw_load_op0:
+; X64-AVX512VL:       # %bb.0:
+; X64-AVX512VL-NEXT:    vmovdqa (%rdi), %ymm1 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0x0f]
+; X64-AVX512VL-NEXT:    vmpsadbw $7, %ymm0, %ymm1, %ymm0 # encoding: [0xc4,0xe3,0x75,0x42,0xc0,0x07]
+; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]
+  %a0 = load <32 x i8>, <32 x i8>* %ptr
+  %res = call <16 x i16> @llvm.x86.avx2.mpsadbw(<32 x i8> %a0, <32 x i8> %a1, i8 7) ; <<16 x i16>> [#uses=1]
+  ret <16 x i16> %res
+}
 
 define <16 x i16> @test_x86_avx2_packusdw(<8 x i32> %a0, <8 x i32> %a1) {
 ; AVX2-LABEL: test_x86_avx2_packusdw:
