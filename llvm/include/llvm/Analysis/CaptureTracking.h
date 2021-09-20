@@ -22,6 +22,7 @@ namespace llvm {
   class DataLayout;
   class Instruction;
   class DominatorTree;
+  class LoopInfo;
 
   /// getDefaultMaxUsesToExploreForCaptureTracking - Return default value of
   /// the maximal number of uses to explore before giving up. It is used by
@@ -55,10 +56,12 @@ namespace llvm {
   /// MaxUsesToExplore specifies how many uses the analysis should explore for
   /// one value before giving up due too "too many uses". If MaxUsesToExplore
   /// is zero, a default value is assumed.
-  bool PointerMayBeCapturedBefore(
-      const Value *V, bool ReturnCaptures, bool StoreCaptures,
-      const Instruction *I, const DominatorTree *DT, bool IncludeI = false,
-      unsigned MaxUsesToExplore = 0);
+  bool PointerMayBeCapturedBefore(const Value *V, bool ReturnCaptures,
+                                  bool StoreCaptures, const Instruction *I,
+                                  const DominatorTree *DT,
+                                  bool IncludeI = false,
+                                  unsigned MaxUsesToExplore = 0,
+                                  const LoopInfo *LI = nullptr);
 
   /// This callback is used in conjunction with PointerMayBeCaptured. In
   /// addition to the interface here, you'll need to provide your own getters
