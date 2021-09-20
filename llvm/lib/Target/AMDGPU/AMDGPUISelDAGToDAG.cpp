@@ -1210,7 +1210,14 @@ void AMDGPUDAGToDAGISel::SelectFMA_W_CHAIN(SDNode *N) {
   Ops[8] = N->getOperand(0);
   Ops[9] = N->getOperand(4);
 
-  CurDAG->SelectNodeTo(N, AMDGPU::V_FMA_F32_e64, N->getVTList(), Ops);
+  // If there are no source modifiers, prefer fmac over fma because it can use
+  // the smaller VOP2 encoding.
+  bool UseFMAC = Subtarget->hasDLInsts() &&
+                 cast<ConstantSDNode>(Ops[0])->isZero() &&
+                 cast<ConstantSDNode>(Ops[2])->isZero() &&
+                 cast<ConstantSDNode>(Ops[4])->isZero();
+  unsigned Opcode = UseFMAC ? AMDGPU::V_FMAC_F32_e64 : AMDGPU::V_FMA_F32_e64;
+  CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), Ops);
 }
 
 void AMDGPUDAGToDAGISel::SelectFMUL_W_CHAIN(SDNode *N) {
