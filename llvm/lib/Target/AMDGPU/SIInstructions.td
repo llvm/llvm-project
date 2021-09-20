@@ -827,10 +827,6 @@ def : Pat <
 
 let OtherPredicates = [UnsafeFPMath] in {
 
-//defm : RsqPat<V_RSQ_F32_e32, f32>;
-
-def : RsqPat<V_RSQ_F32_e32, f32>;
-
 // Convert (x - floor(x)) to fract(x)
 def : GCNPat <
   (f32 (fsub (f32 (VOP3Mods f32:$x, i32:$mods)),

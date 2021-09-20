@@ -712,11 +712,6 @@ class RcpPat<Instruction RcpInst, ValueType vt> : AMDGPUPat <
   (RcpInst $src)
 >;
 
-class RsqPat<Instruction RsqInst, ValueType vt> : AMDGPUPat <
-  (AMDGPUrcp (fsqrt vt:$src)),
-  (RsqInst $src)
->;
-
 // Instructions which select to the same v_min_f*
 def fminnum_like : PatFrags<(ops node:$src0, node:$src1),
   [(fminnum_ieee node:$src0, node:$src1),
