@@ -12,9 +12,7 @@
 #include <cstring>
 #include <cstdint>
 #include <cstddef>
-
-// This includes an implementation file from libc++.
-#include "src/include/refstring.h"
+#include "include/refstring.h" // from libc++
 
 static_assert(sizeof(std::__libcpp_refstring) == sizeof(const char *), "");
 

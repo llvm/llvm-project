@@ -17,7 +17,7 @@
 #include "cxa_handlers.h"
 #include "cxa_exception.h"
 #include "private_typeinfo.h"
-#include "include/atomic_support.h"
+#include "include/atomic_support.h" // from libc++
 
 namespace std
 {

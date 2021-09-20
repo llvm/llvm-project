@@ -72,6 +72,7 @@ class Configuration(LibcxxConfiguration):
             if os.path.isdir(cxx_target_headers):
                 self.cxx.compile_flags += ['-I' + cxx_target_headers]
         self.cxx.compile_flags += ['-I' + cxx_headers]
+        self.cxx.compile_flags += ['-I' + os.path.join(self.libcxx_src_root, 'src')]
 
         libcxxabi_headers = self.get_lit_conf(
             'libcxxabi_headers',
