@@ -484,7 +484,7 @@ class OpInterfaceDef:
 
 
 ContractionOpInterface = OpInterfaceDef("LinalgContractionOpInterface")
-
+ConvolutionOpInterface = OpInterfaceDef("LinalgConvolutionOpInterface")
 
 class OpMetadataDef(YAMLObject):
   """Metadata about the op (generally not behavior impacting)."""

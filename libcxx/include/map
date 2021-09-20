@@ -747,10 +747,10 @@ public:
     }
 
 private:
-    __value_type() _LIBCPP_EQUAL_DELETE;
-    ~__value_type() _LIBCPP_EQUAL_DELETE;
-    __value_type(const __value_type& __v) _LIBCPP_EQUAL_DELETE;
-    __value_type(__value_type&& __v) _LIBCPP_EQUAL_DELETE;
+    __value_type() = delete;
+    ~__value_type() = delete;
+    __value_type(const __value_type&) = delete;
+    __value_type(__value_type&&) = delete;
 };
 
 #else
