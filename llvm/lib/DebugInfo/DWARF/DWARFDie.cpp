@@ -122,9 +122,13 @@ struct DWARFTypePrinter {
   /// Dump the name encoded in the type tag.
   void appendTypeTagName(dwarf::Tag T) {
     StringRef TagStr = TagString(T);
-    if (!TagStr.startswith("DW_TAG_") || !TagStr.endswith("_type"))
+    static constexpr StringRef Prefix = "DW_TAG_";
+    static constexpr StringRef Suffix = "_type";
+    if (!TagStr.startswith(Prefix) || !TagStr.endswith(Suffix))
       return;
-    OS << TagStr.substr(7, TagStr.size() - 12) << " ";
+    OS << TagStr.substr(Prefix.size(),
+                        TagStr.size() - (Prefix.size() + Suffix.size()))
+       << " ";
   }
 
   void appendArrayType(const DWARFDie &D) {
@@ -201,11 +205,6 @@ struct DWARFTypePrinter {
       OS << "void";
       return DWARFDie();
     }
-    if (const char *Name = D.getName(DINameKind::LinkageName)) {
-      OS << Name;
-      return DWARFDie();
-    }
-
     DWARFDie Inner = D.getAttributeValueAsReferencedDie(DW_AT_type);
     const dwarf::Tag T = D.getTag();
     switch (T) {
@@ -260,9 +259,22 @@ struct DWARFTypePrinter {
         OS << "(anonymous namespace)";
       break;
     }
+    case DW_TAG_unspecified_type: {
+      StringRef TypeName = D.getShortName();
+      if (TypeName == "decltype(nullptr)")
+        TypeName = "nullptr_t";
+      Word = true;
+      OS << TypeName;
+      EndedWithTemplate = false;
+      break;
+    }
     default:
-      appendTypeTagName(T);
-      appendQualifiedNameBefore(Inner);
+      const char *NamePtr = dwarf::toString(D.find(DW_AT_name), nullptr);
+      if (!NamePtr) {
+        appendTypeTagName(D.getTag());
+        break;
+      }
+      OS << NamePtr;
       break;
     }
     return Inner;
