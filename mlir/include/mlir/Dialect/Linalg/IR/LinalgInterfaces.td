@@ -87,6 +87,51 @@ def LinalgContractionOpInterface : OpInterface<"ContractionOpInterface"> {
   ];
 }
 
+def LinalgConvolutionOpInterface : OpInterface<"ConvolutionOpInterface"> {
+  let description = [{
+    A convolution is defined in general terms:
+    1. Has an `image` and a `filter` operand.
+    2. Has one `output` operand.
+    3. The indexing maps of the input have expressions that satisfy
+    ```
+       AffineExpr ::== AffineDimExpr | ConvolvedExpr
+       ConvolvedExpr ::== MulExpr (`+` MulExpr)+
+       MulExpr ::== AffineDimExpr (`*` (AffineConstantExpr | AffineSymbolExpr))?
+    ```
+    4. The filter and the output have projected permutation maps.
+    5. Each of the loops can be qualified as one of,
+       - Loop over batch dimension,
+       - Loop over output image dimensions,
+       - Loop over output channel dimensions,
+       - Loop over convolved filter dimensions,
+       - Loop over input channel dimension.
+  }];
+  let cppNamespace = "::mlir::linalg";
+  let verify = [{ return detail::verifyConvolutionInterface($_op); }];
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/"Return the image operand.",
+      /*retTy=*/"Value",
+      /*methodName=*/"image",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return $_op.getOperation()->getOperand(0);
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/"Return the filter operand.",
+      /*retTy=*/"Value",
+      /*methodName=*/"filter",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return $_op.getOperation()->getOperand(1);
+      }]
+    >,
+  ];
+}
+
 // The 'LinalgStructuredInterface' provides access to the 'LinalgOp' interface.
 def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
   let cppNamespace = "::mlir::linalg";
