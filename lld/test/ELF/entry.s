@@ -2,16 +2,17 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t1
 
 # RUN: ld.lld -e foobar %t1 -o %t2 2>&1 | FileCheck -check-prefix=WARN1 %s
-# RUN: llvm-readobj --file-headers %t2 | FileCheck -check-prefix=TEXT %s
+# RUN: llvm-readobj --file-headers %t2 | FileCheck -check-prefix=NOENTRY %s
 
-# WARN1: warning: cannot find entry symbol foobar; defaulting to 0x201120
-# TEXT: Entry: 0x201120
+# WARN1: warning: cannot find entry symbol foobar; not setting start address
 
 # RUN: ld.lld %t1 -o %t2 2>&1 | FileCheck -check-prefix=WARN2 %s
-# WARN2: warning: cannot find entry symbol _start; defaulting to 0x201120
+# RUN: llvm-readobj --file-headers %t2 | FileCheck -check-prefix=NOENTRY %s
+# WARN2: warning: cannot find entry symbol _start; not setting start address
 
 # RUN: ld.lld -shared -e foobar %t1 -o %t2 2>&1 | FileCheck -check-prefix=WARN3 %s
-# WARN3: warning: cannot find entry symbol foobar; defaulting to 0x1238
+# RUN: llvm-readobj --file-headers %t2 | FileCheck -check-prefix=NOENTRY %s
+# WARN3: warning: cannot find entry symbol foobar; not setting start address
 
 # RUN: ld.lld -shared --fatal-warnings -e entry %t1 -o %t2
 # RUN: ld.lld -shared --fatal-warnings %t1 -o %t2

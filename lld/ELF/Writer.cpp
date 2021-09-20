@@ -2833,8 +2833,7 @@ template <class ELFT> void Writer<ELFT>::checkSections() {
 // 2. the ENTRY(symbol) command in a linker control script;
 // 3. the value of the symbol _start, if present;
 // 4. the number represented by the entry symbol, if it is a number;
-// 5. the address of the first byte of the .text section, if present;
-// 6. the address 0.
+// 5. the address 0.
 static uint64_t getEntryAddr() {
   // Case 1, 2 or 3
   if (Symbol *b = symtab->find(config->entry))
@@ -2846,14 +2845,6 @@ static uint64_t getEntryAddr() {
     return addr;
 
   // Case 5
-  if (OutputSection *sec = findSection(".text")) {
-    if (config->warnMissingEntry)
-      warn("cannot find entry symbol " + config->entry + "; defaulting to 0x" +
-           utohexstr(sec->addr));
-    return sec->addr;
-  }
-
-  // Case 6
   if (config->warnMissingEntry)
     warn("cannot find entry symbol " + config->entry +
          "; not setting start address");
