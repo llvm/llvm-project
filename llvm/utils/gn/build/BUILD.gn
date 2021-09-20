@@ -370,6 +370,14 @@ config("no_rtti") {
   cflags_objcc = cflags_cc
 }
 
+config("zdefs") {
+  # -Wl,-z,defs doesn't work with sanitizers.
+  # https://clang.llvm.org/docs/AddressSanitizer.html
+  if (current_os != "ios" && current_os != "mac" && current_os != "win" && !(use_asan || use_tsan || use_ubsan)) {
+    ldflags = [ "-Wl,-z,defs" ]
+  }
+}
+
 # To make an archive that can be distributed, you need to remove this config and
 # set complete_static_lib.
 config("thin_archive") {
