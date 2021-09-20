@@ -300,6 +300,12 @@ public:
     return std::vector<ConstString>();
   }
 
+  virtual ConstString
+  FindBestAlternateFunctionMangledName(const Mangled mangled,
+                                       const SymbolContext &sym_ctx) const {
+    return ConstString();
+  }
+
 protected:
   // Classes that inherit from Language can see and modify these
 
