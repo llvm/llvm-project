@@ -8,6 +8,8 @@
 // RUN: not %clang_cc1 -cl-std=clc++2021 -triple spir-unknown-unknown -cl-ext=+__opencl_c_pipes,-__opencl_c_generic_address_space %s 2>&1 | FileCheck -check-prefix=CHECK-PIPES %s
 // RUN: not %clang_cc1 -cl-std=CL3.0 -triple spir-unknown-unknown -cl-ext=+__opencl_c_3d_image_writes,+__opencl_c_images,-cl_khr_3d_image_writes %s 2>&1 | FileCheck -check-prefix=CHECK-3D-WRITE-IMAGES-DIFF %s
 // RUN: not %clang_cc1 -cl-std=CL3.0 -triple spir-unknown-unknown -cl-ext=+__opencl_c_3d_image_writes,-__opencl_c_images %s 2>&1 | FileCheck -check-prefix=CHECK-3D-WRITE-IMAGES-DEPS %s
+// RUN: not %clang_cc1 -cl-std=clc++2021 -triple spir-unknown-unknown -cl-ext=+__opencl_c_3d_image_writes,+__opencl_c_images,-cl_khr_3d_image_writes %s 2>&1 | FileCheck -check-prefix=CHECK-3D-WRITE-IMAGES-DIFF %s
+// RUN: not %clang_cc1 -cl-std=clc++2021 -triple spir-unknown-unknown -cl-ext=+__opencl_c_3d_image_writes,-__opencl_c_images %s 2>&1 | FileCheck -check-prefix=CHECK-3D-WRITE-IMAGES-DEPS %s
 
 // CHECK-FP64: error: options cl_khr_fp64 and __opencl_c_fp64 are set to different values
 

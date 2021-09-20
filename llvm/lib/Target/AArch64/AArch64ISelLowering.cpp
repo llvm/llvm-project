@@ -785,6 +785,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::LOAD, MVT::i128, Custom);
   setOperationAction(ISD::STORE, MVT::i128, Custom);
 
+  // Aligned 128-bit loads and stores are single-copy atomic according to the
+  // v8.4a spec.
+  if (Subtarget->hasLSE2()) {
+    setOperationAction(ISD::ATOMIC_LOAD, MVT::i128, Custom);
+    setOperationAction(ISD::ATOMIC_STORE, MVT::i128, Custom);
+  }
+
   // 256 bit non-temporal stores can be lowered to STNP. Do this as part of the
   // custom lowering, as there are no un-paired non-temporal stores and
   // legalization will break up 256 bit inputs.
@@ -4681,18 +4688,7 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
       return Result;
     }
   } else if (MemVT == MVT::i128 && StoreNode->isVolatile()) {
-    assert(StoreNode->getValue()->getValueType(0) == MVT::i128);
-    SDValue Lo =
-        DAG.getNode(ISD::EXTRACT_ELEMENT, Dl, MVT::i64, StoreNode->getValue(),
-                    DAG.getConstant(0, Dl, MVT::i64));
-    SDValue Hi =
-        DAG.getNode(ISD::EXTRACT_ELEMENT, Dl, MVT::i64, StoreNode->getValue(),
-                    DAG.getConstant(1, Dl, MVT::i64));
-    SDValue Result = DAG.getMemIntrinsicNode(
-        AArch64ISD::STP, Dl, DAG.getVTList(MVT::Other),
-        {StoreNode->getChain(), Lo, Hi, StoreNode->getBasePtr()},
-        StoreNode->getMemoryVT(), StoreNode->getMemOperand());
-    return Result;
+    return LowerStore128(Op, DAG);
   } else if (MemVT == MVT::i64x8) {
     SDValue Value = StoreNode->getValue();
     assert(Value->getValueType(0) == MVT::i64x8);
@@ -4711,6 +4707,31 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
   }
 
   return SDValue();
+}
+
+/// Lower atomic or volatile 128-bit stores to a single STP instruction.
+SDValue AArch64TargetLowering::LowerStore128(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  MemSDNode *StoreNode = cast<MemSDNode>(Op);
+  assert(StoreNode->getMemoryVT() == MVT::i128);
+  assert(StoreNode->isVolatile() || StoreNode->isAtomic());
+  assert(!StoreNode->isAtomic() ||
+         StoreNode->getMergedOrdering() == AtomicOrdering::Unordered ||
+         StoreNode->getMergedOrdering() == AtomicOrdering::Monotonic);
+
+  SDValue Value = StoreNode->getOpcode() == ISD::STORE
+                      ? StoreNode->getOperand(1)
+                      : StoreNode->getOperand(2);
+  SDLoc DL(Op);
+  SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, Value,
+                           DAG.getConstant(0, DL, MVT::i64));
+  SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, Value,
+                           DAG.getConstant(1, DL, MVT::i64));
+  SDValue Result = DAG.getMemIntrinsicNode(
+      AArch64ISD::STP, DL, DAG.getVTList(MVT::Other),
+      {StoreNode->getChain(), Lo, Hi, StoreNode->getBasePtr()},
+      StoreNode->getMemoryVT(), StoreNode->getMemOperand());
+  return Result;
 }
 
 SDValue AArch64TargetLowering::LowerLOAD(SDValue Op,
@@ -4950,6 +4971,12 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
                                /*OverrideNEON=*/true);
   case ISD::INTRINSIC_WO_CHAIN:
     return LowerINTRINSIC_WO_CHAIN(Op, DAG);
+  case ISD::ATOMIC_STORE:
+    if (cast<MemSDNode>(Op)->getMemoryVT() == MVT::i128) {
+      assert(Subtarget->hasLSE2());
+      return LowerStore128(Op, DAG);
+    }
+    return SDValue();
   case ISD::STORE:
     return LowerSTORE(Op, DAG);
   case ISD::MSTORE:
@@ -17502,12 +17529,14 @@ void AArch64TargetLowering::ReplaceNodeResults(
   case ISD::ATOMIC_CMP_SWAP:
     ReplaceCMP_SWAP_128Results(N, Results, DAG, Subtarget);
     return;
+  case ISD::ATOMIC_LOAD:
   case ISD::LOAD: {
     assert(SDValue(N, 0).getValueType() == MVT::i128 &&
            "unexpected load's value type");
-    LoadSDNode *LoadNode = cast<LoadSDNode>(N);
-    if (!LoadNode->isVolatile() || LoadNode->getMemoryVT() != MVT::i128) {
-      // Non-volatile loads are optimized later in AArch64's load/store
+    MemSDNode *LoadNode = cast<MemSDNode>(N);
+    if ((!LoadNode->isVolatile() && !LoadNode->isAtomic()) ||
+        LoadNode->getMemoryVT() != MVT::i128) {
+      // Non-volatile or atomic loads are optimized later in AArch64's load/store
       // optimizer.
       return;
     }
@@ -17598,12 +17627,37 @@ AArch64TargetLowering::getPreferredVectorAction(MVT VT) const {
   return TargetLoweringBase::getPreferredVectorAction(VT);
 }
 
+// In v8.4a, ldp and stp instructions are guaranteed to be single-copy atomic
+// provided the address is 16-byte aligned.
+bool AArch64TargetLowering::isOpSuitableForLDPSTP(const Instruction *I) const {
+  if (!Subtarget->hasLSE2())
+    return false;
+
+  if (auto LI = dyn_cast<LoadInst>(I))
+    return LI->getType()->getPrimitiveSizeInBits() == 128 &&
+           LI->getAlignment() >= 16;
+
+  if (auto SI = dyn_cast<StoreInst>(I))
+    return SI->getValueOperand()->getType()->getPrimitiveSizeInBits() == 128 &&
+           SI->getAlignment() >= 16;
+
+  return false;
+}
+
+bool AArch64TargetLowering::shouldInsertFencesForAtomic(
+    const Instruction *I) const {
+  return isOpSuitableForLDPSTP(I);
+}
+
 // Loads and stores less than 128-bits are already atomic; ones above that
 // are doomed anyway, so defer to the default libcall and blame the OS when
 // things go wrong.
 bool AArch64TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
   unsigned Size = SI->getValueOperand()->getType()->getPrimitiveSizeInBits();
-  return Size == 128;
+  if (Size != 128)
+    return false;
+
+  return !isOpSuitableForLDPSTP(SI);
 }
 
 // Loads and stores less than 128-bits are already atomic; ones above that
@@ -17612,7 +17666,11 @@ bool AArch64TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 TargetLowering::AtomicExpansionKind
 AArch64TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
   unsigned Size = LI->getType()->getPrimitiveSizeInBits();
-  return Size == 128 ? AtomicExpansionKind::LLSC : AtomicExpansionKind::None;
+
+  if (Size != 128 || isOpSuitableForLDPSTP(LI))
+    return AtomicExpansionKind::None;
+
+  return AtomicExpansionKind::LLSC;
 }
 
 // For the real atomic operations, we have ldxr/stxr up to 128 bits,

@@ -333,8 +333,9 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
       return typeConverter.isLegal(op);
     };
     target.addDynamicallyLegalDialect<linalg::LinalgDialect>(isLegalOperation);
-    target.addDynamicallyLegalOp<ConstantOp, vector::TransferReadOp,
-                                 vector::TransferWriteOp>(isLegalOperation);
+    target
+        .addDynamicallyLegalOp<vector::TransferReadOp, vector::TransferWriteOp>(
+            isLegalOperation);
 
     RewritePatternSet patterns(&context);
     populateLinalgBufferizePatterns(typeConverter, patterns);

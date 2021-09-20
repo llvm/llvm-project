@@ -162,11 +162,22 @@ CGSCC_PASS("argpromotion", ArgumentPromotionPass())
 CGSCC_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 CGSCC_PASS("function-attrs", PostOrderFunctionAttrsPass())
 CGSCC_PASS("attributor-cgscc", AttributorCGSCCPass())
-CGSCC_PASS("inline", InlinerPass())
 CGSCC_PASS("openmp-opt-cgscc", OpenMPOptCGSCCPass())
 CGSCC_PASS("coro-split", CoroSplitPass())
 CGSCC_PASS("no-op-cgscc", NoOpCGSCCPass())
 #undef CGSCC_PASS
+
+#ifndef CGSCC_PASS_WITH_PARAMS
+#define CGSCC_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)
+#endif
+CGSCC_PASS_WITH_PARAMS("inline",
+                       "InlinerPass",
+                       [](bool OnlyMandatory) {
+                         return InlinerPass(OnlyMandatory);
+                       },
+                       parseInlinerPassOptions,
+                       "only-mandatory")
+#undef CGSCC_PASS_WITH_PARAMS
 
 #ifndef FUNCTION_ANALYSIS
 #define FUNCTION_ANALYSIS(NAME, CREATE_PASS)
