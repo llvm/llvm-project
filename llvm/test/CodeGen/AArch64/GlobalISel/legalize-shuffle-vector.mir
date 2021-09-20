@@ -241,36 +241,28 @@ body:             |
     ; CHECK: [[BUILD_VECTOR3:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64)
     ; CHECK: [[COPY6:%[0-9]+]]:_(s64) = COPY $d6
     ; CHECK: [[COPY7:%[0-9]+]]:_(s64) = COPY $d7
-    ; CHECK: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (s64) from %fixed-stack.0, align 16)
-    ; CHECK: [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-    ; CHECK: [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load (s64) from %fixed-stack.1)
-    ; CHECK: [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-    ; CHECK: [[LOAD2:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX2]](p0) :: (invariant load (s64) from %fixed-stack.2, align 16)
-    ; CHECK: [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-    ; CHECK: [[LOAD3:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX3]](p0) :: (invariant load (s64) from %fixed-stack.3)
+    ; CHECK: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (s64) from %fixed-stack.2, align 16)
+    ; CHECK: [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load (s64) from %fixed-stack.3)
     ; CHECK: [[BUILD_VECTOR4:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[COPY6]](s64), [[COPY7]](s64)
-    ; CHECK: [[BUILD_VECTOR5:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[LOAD2]](s64), [[LOAD3]](s64)
+    ; CHECK: [[BUILD_VECTOR5:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[LOAD]](s64), [[LOAD1]](s64)
     ; CHECK: [[COPY8:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK: [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<2 x s64>), [[C1]](s64)
-    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK: [[EVEC1:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR1]](<2 x s64>), [[C3]](s64)
-    ; CHECK: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[EVEC2:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR4]](<2 x s64>), [[C1]](s64)
-    ; CHECK: [[EVEC3:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR2]](<2 x s64>), [[C3]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK: [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<2 x s64>), [[C]](s64)
+    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK: [[EVEC1:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR1]](<2 x s64>), [[C1]](s64)
+    ; CHECK: [[EVEC2:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR4]](<2 x s64>), [[C]](s64)
+    ; CHECK: [[EVEC3:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR2]](<2 x s64>), [[C1]](s64)
     ; CHECK: [[SHUF:%[0-9]+]]:_(<2 x s64>) = G_SHUFFLE_VECTOR [[BUILD_VECTOR3]](<2 x s64>), [[BUILD_VECTOR5]], shufflemask(1, 3)
     ; CHECK: [[BUILD_VECTOR6:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[EVEC]](s64), [[EVEC1]](s64)
     ; CHECK: [[BUILD_VECTOR7:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[EVEC2]](s64), [[EVEC3]](s64)
     ; CHECK: G_STORE [[BUILD_VECTOR6]](<2 x s64>), [[COPY8]](p0) :: (store (<2 x s64>), align 64)
-    ; CHECK: [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY8]], [[C5]](s64)
+    ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY8]], [[C2]](s64)
     ; CHECK: G_STORE [[BUILD_VECTOR7]](<2 x s64>), [[PTR_ADD]](p0) :: (store (<2 x s64>) into unknown-address + 16)
-    ; CHECK: [[C6:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-    ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY8]], [[C6]](s64)
+    ; CHECK: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+    ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY8]], [[C3]](s64)
     ; CHECK: G_STORE [[SHUF]](<2 x s64>), [[PTR_ADD1]](p0) :: (store (<2 x s64>) into unknown-address + 32, align 32)
     ; CHECK: RET_ReallyLR
     %3:_(s64) = COPY $d0
