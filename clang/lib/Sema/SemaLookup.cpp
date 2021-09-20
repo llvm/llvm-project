@@ -3846,7 +3846,7 @@ private:
               : Ctx->noload_lookups(/*PreserveInternalState=*/false)) {
       for (auto *D : R) {
         if (auto *ND = Result.getAcceptableDecl(D)) {
-          // Rather than visit immediatelly, we put ND into a vector and visit
+          // Rather than visit immediately, we put ND into a vector and visit
           // all decls, in order, outside of this loop. The reason is that
           // Consumer.FoundDecl() may invalidate the iterators used in the two
           // loops above.

@@ -5523,7 +5523,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         break;
       case DeclaratorChunk::Function: {
         const DeclaratorChunk::FunctionTypeInfo &FTI = DeclType.Fun;
-        // We supress the warning when there's no LParen location, as this
+        // We suppress the warning when there's no LParen location, as this
         // indicates the declaration was an implicit declaration, which gets
         // warned about separately via -Wimplicit-function-declaration.
         if (FTI.NumParams == 0 && !FTI.isVariadic && FTI.getLParenLoc().isValid())
@@ -5908,7 +5908,7 @@ namespace {
     void VisitObjCInterfaceTypeLoc(ObjCInterfaceTypeLoc TL) {
       TL.setNameLoc(DS.getTypeSpecTypeLoc());
       // FIXME. We should have DS.getTypeSpecTypeEndLoc(). But, it requires
-      // addition field. What we have is good enough for dispay of location
+      // addition field. What we have is good enough for display of location
       // of 'fixit' on interface name.
       TL.setNameEndLoc(DS.getEndLoc());
     }

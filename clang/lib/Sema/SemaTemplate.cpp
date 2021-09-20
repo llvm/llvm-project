@@ -1206,7 +1206,7 @@ static ExprResult formImmediatelyDeclaredConstraint(
 }
 
 /// Attach a type-constraint to a template parameter.
-/// \returns true if an error occured. This can happen if the
+/// \returns true if an error occurred. This can happen if the
 /// immediately-declared constraint could not be formed (e.g. incorrect number
 /// of arguments for the named concept).
 bool Sema::AttachTypeConstraint(NestedNameSpecifierLoc NS,
@@ -8708,7 +8708,7 @@ static SourceLocation DiagLocForExplicitInstantiation(
 ///
 /// \param PrevTSK the kind of the old explicit specialization or instantiatin.
 ///
-/// \param PrevPointOfInstantiation if valid, indicates where the previus
+/// \param PrevPointOfInstantiation if valid, indicates where the previous
 /// declaration was instantiated (either implicitly or explicitly).
 ///
 /// \param HasNoEffect will be set to true to indicate that the new

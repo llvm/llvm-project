@@ -5735,7 +5735,7 @@ processImplicitMapsWithDefaultMappers(Sema &S, DSAStackTy *Stack,
           SubExprs.push_back(BaseExpr);
           continue;
         }
-        // Check for the "default" mapper for data memebers.
+        // Check for the "default" mapper for data members.
         bool FirstIter = true;
         for (FieldDecl *FD : RD->fields()) {
           if (!FD)
@@ -6698,7 +6698,7 @@ void Sema::ActOnFinishedFunctionDefinitionInOpenMPAssumeScope(Decl *D) {
     FD = cast<FunctionDecl>(D);
   assert(FD && "Expected a function declaration!");
 
-  // If we are intantiating templates we do *not* apply scoped assumptions but
+  // If we are instantiating templates we do *not* apply scoped assumptions but
   // only global ones. We apply scoped assumption to the template definition
   // though.
   if (!inTemplateInstantiation()) {

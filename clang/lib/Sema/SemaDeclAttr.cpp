@@ -4775,7 +4775,7 @@ static void handleLifetimeCategoryAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   // To check if earlier decl attributes do not conflict the newly parsed ones
-  // we always add (and check) the attribute to the cannonical decl. We need
+  // we always add (and check) the attribute to the canonical decl. We need
   // to repeat the check for attribute mutual exclusion because we're attaching
   // all of the attributes to the canonical declaration rather than the current
   // declaration.
@@ -7500,7 +7500,7 @@ static void handleNoSanitizeSpecificAttr(Sema &S, Decl *D,
   // index rather than incorrectly assume the index for NoSanitizeSpecificAttr
   // has the same spellings as the index for NoSanitizeAttr. We don't have a
   // general way to "translate" between the two, so this hack attempts to work
-  // around the issue with hard-coded indicies. This is critical for calling
+  // around the issue with hard-coded indices. This is critical for calling
   // getSpelling() or prettyPrint() on the resulting semantic attribute object
   // without failing assertions.
   unsigned TranslatedSpellingIndex = 0;

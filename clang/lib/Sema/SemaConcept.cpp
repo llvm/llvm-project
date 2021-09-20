@@ -234,7 +234,7 @@ static bool calculateConstraintSatisfaction(
             //   ...If substitution results in an invalid type or expression, the
             //   constraint is not satisfied.
             if (!Trap.hasErrorOccurred())
-              // A non-SFINAE error has occured as a result of this
+              // A non-SFINAE error has occurred as a result of this
               // substitution.
               return ExprError();
 
@@ -980,8 +980,8 @@ bool Sema::MaybeEmitAmbiguousAtomicConstraintsDiagnostic(NamedDecl *D1,
         // Not the same source level expression - are the expressions
         // identical?
         llvm::FoldingSetNodeID IDA, IDB;
-        EA->Profile(IDA, Context, /*Cannonical=*/true);
-        EB->Profile(IDB, Context, /*Cannonical=*/true);
+        EA->Profile(IDA, Context, /*Canonical=*/true);
+        EB->Profile(IDB, Context, /*Canonical=*/true);
         if (IDA != IDB)
           return false;
 

@@ -3453,7 +3453,7 @@ const VarDecl *Sema::getCopyElisionCandidate(NamedReturnInfo &Info,
 /// Verify that the initialization sequence that was picked for the
 /// first overload resolution is permissible under C++98.
 ///
-/// Reject (possibly converting) contructors not taking an rvalue reference,
+/// Reject (possibly converting) constructors not taking an rvalue reference,
 /// or user conversion operators which are not ref-qualified.
 static bool
 VerifyInitializationSequenceCXX98(const Sema &S,
@@ -3885,7 +3885,7 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp) {
   if (RetValExp && DiagnoseUnexpandedParameterPack(RetValExp))
     return StmtError();
 
-  // HACK: We supress simpler implicit move here in msvc compatibility mode
+  // HACK: We suppress simpler implicit move here in msvc compatibility mode
   // just as a temporary work around, as the MSVC STL has issues with
   // this change.
   bool SupressSimplerImplicitMoves =

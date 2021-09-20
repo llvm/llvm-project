@@ -4114,7 +4114,7 @@ Sema::ActOnMemInitializer(Decl *ConstructorD,
 namespace {
 
 // Callback to only accept typo corrections that can be a valid C++ member
-// intializer: either a non-static field member or a base class.
+// initializer: either a non-static field member or a base class.
 class MemInitializerValidatorCCC final : public CorrectionCandidateCallback {
 public:
   explicit MemInitializerValidatorCCC(CXXRecordDecl *ClassDecl)
@@ -9823,7 +9823,7 @@ public:
 };
 } // end anonymous namespace
 
-/// Add the most overriden methods from MD to Methods
+/// Add the most overridden methods from MD to Methods
 static void AddMostOverridenMethods(const CXXMethodDecl *MD,
                         llvm::SmallPtrSetImpl<const CXXMethodDecl *>& Methods) {
   if (MD->size_overridden_methods() == 0)
@@ -15451,7 +15451,7 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
 void Sema::FinalizeVarWithDestructor(VarDecl *VD, const RecordType *Record) {
   if (VD->isInvalidDecl()) return;
   // If initializing the variable failed, don't also diagnose problems with
-  // the desctructor, they're likely related.
+  // the destructor, they're likely related.
   if (VD->getInit() && VD->getInit()->containsErrors())
     return;
 

@@ -161,7 +161,7 @@ public:
 
   /// Wether CXXConstructExpr can be skipped when they are implicit.
   /// They will be reconstructed when used if needed.
-  /// This is usefull when the user that cause rebuilding of the
+  /// This is useful when the user that cause rebuilding of the
   /// CXXConstructExpr is outside of the expression at which the TreeTransform
   /// started.
   bool AllowSkippingCXXConstructExpr() { return true; }
@@ -522,7 +522,7 @@ public:
   ///
   /// By default, transforms the types of conversion function, constructor,
   /// and destructor names and then (if needed) rebuilds the declaration name.
-  /// Identifiers and selectors are returned unmodified. Sublcasses may
+  /// Identifiers and selectors are returned unmodified. Subclasses may
   /// override this function to provide alternate behavior.
   DeclarationNameInfo
   TransformDeclarationNameInfo(const DeclarationNameInfo &NameInfo);
