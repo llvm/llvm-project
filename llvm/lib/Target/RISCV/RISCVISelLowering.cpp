@@ -1074,6 +1074,16 @@ bool RISCVTargetLowering::shouldSinkOperands(
     case Instruction::LShr:
     case Instruction::AShr:
       return Operand == 1;
+    case Instruction::Call:
+      if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+        switch (II->getIntrinsicID()) {
+        case Intrinsic::fma:
+          return Operand == 0 || Operand == 1;
+        default:
+          return false;
+        }
+      }
+      return false;
     default:
       return false;
     }
