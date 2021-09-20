@@ -194,7 +194,7 @@ bool PHILinearize::findSourcesFromMBB(MachineBasicBlock *SourceMBB,
 }
 
 void PHILinearize::addDest(unsigned DestReg, const DebugLoc &DL) {
-  assert(findPHIInfoElement(DestReg) == nullptr && "Dest already exsists");
+  assert(findPHIInfoElement(DestReg) == nullptr && "Dest already exists");
   PHISourcesT EmptySet;
   PHIInfoElementT *NewElement = new PHIInfoElementT();
   NewElement->DestReg = DestReg;
@@ -813,7 +813,7 @@ void LinearizedRegion::storeLiveOuts(RegionMRT *Region,
     } else {
       LinearizedRegion *SubRegion = CI->getRegionMRT()->getLinearizedRegion();
       // We should be limited to only store registers that are live out from the
-      // lineaized region
+      // linearized region
       for (auto MBBI : SubRegion->MBBs) {
         storeMBBLiveOuts(MBBI, MRI, TRI, PHIInfo, TopRegion);
       }
@@ -896,7 +896,7 @@ void LinearizedRegion::replaceRegister(unsigned Register,
   assert(Register != NewRegister && "Cannot replace a reg with itself");
 
   LLVM_DEBUG(
-      dbgs() << "Pepareing to replace register (region): "
+      dbgs() << "Preparing to replace register (region): "
              << printReg(Register, MRI->getTargetRegisterInfo()) << " with "
              << printReg(NewRegister, MRI->getTargetRegisterInfo()) << "\n");
 
@@ -1404,7 +1404,7 @@ void AMDGPUMachineCFGStructurizer::extractKilledPHIs(MachineBasicBlock *MBB) {
     MachineInstr &Instr = *I;
     if (Instr.isPHI()) {
       unsigned PHIDestReg = getPHIDestReg(Instr);
-      LLVM_DEBUG(dbgs() << "Extractking killed phi:\n");
+      LLVM_DEBUG(dbgs() << "Extracting killed phi:\n");
       LLVM_DEBUG(Instr.dump());
       PHIs.insert(&Instr);
       PHIInfo.addDest(PHIDestReg, Instr.getDebugLoc());
@@ -1770,7 +1770,7 @@ static void removeExternalCFGSuccessors(MachineBasicBlock *MBB) {
 static void removeExternalCFGEdges(MachineBasicBlock *StartMBB,
                                    MachineBasicBlock *EndMBB) {
 
-  // We have to check against the StartMBB successor becasuse a
+  // We have to check against the StartMBB successor because a
   // structurized region with a loop will have the entry block split,
   // and the backedge will go to the entry successor.
   DenseSet<std::pair<MachineBasicBlock *, MachineBasicBlock *>> Succs;
@@ -2018,7 +2018,7 @@ void AMDGPUMachineCFGStructurizer::rewriteLiveOutRegs(MachineBasicBlock *IfBB,
     LLVM_DEBUG(dbgs() << "LiveOut: " << printReg(LI, TRI));
     if (!containsDef(CodeBB, InnerRegion, LI) ||
         (!IsSingleBB && (getDefInstr(LI)->getParent() == LRegion->getExit()))) {
-      // If the register simly lives through the CodeBB, we don't have
+      // If the register simply lives through the CodeBB, we don't have
       // to rewrite anything since the register is not defined in this
       // part of the code.
       LLVM_DEBUG(dbgs() << "- through");
@@ -2028,14 +2028,14 @@ void AMDGPUMachineCFGStructurizer::rewriteLiveOutRegs(MachineBasicBlock *IfBB,
     unsigned Reg = LI;
     if (/*!PHIInfo.isSource(Reg) &&*/ Reg != InnerRegion->getBBSelectRegOut()) {
       // If the register is live out, we do want to create a phi,
-      // unless it is from the Exit block, becasuse in that case there
+      // unless it is from the Exit block, because in that case there
       // is already a PHI, and no need to create a new one.
 
       // If the register is just a live out def and not part of a phi
       // chain, we need to create a PHI node to handle the if region,
       // and replace all uses outside of the region with the new dest
       // register, unless it is the outgoing BB select register. We have
-      // already creaed phi nodes for these.
+      // already created phi nodes for these.
       const TargetRegisterClass *RegClass = MRI->getRegClass(Reg);
       Register PHIDestReg = MRI->createVirtualRegister(RegClass);
       Register IfSourceReg = MRI->createVirtualRegister(RegClass);

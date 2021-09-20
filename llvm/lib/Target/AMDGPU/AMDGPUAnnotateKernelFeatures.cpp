@@ -76,7 +76,7 @@ bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
         const Function *Callee =
             dyn_cast<Function>(CB->getCalledOperand()->stripPointerCasts());
 
-        // Note the occurence of indirect call.
+        // Note the occurrence of indirect call.
         if (!Callee) {
           if (!CB->isInlineAsm())
             HaveCall = true;

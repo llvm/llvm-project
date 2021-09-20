@@ -58,7 +58,7 @@
 ///
 /// We avoid trying to solve this problem in RegBankSelect. Any VALU G_*
 /// operation should have its source operands all mapped to VGPRs (except for
-/// VCC), inserting copies from any SGPR operands. This the most trival legal
+/// VCC), inserting copies from any SGPR operands. This the most trivial legal
 /// mapping. Anything beyond the simplest 1:1 instruction selection would be too
 /// complicated to solve here. Every optimization pattern or instruction
 /// selected to multiple outputs would have to enforce this rule, and there
@@ -118,7 +118,7 @@ public:
         Opc == AMDGPU::G_SEXT) {
       // LegalizerHelper wants to use the basic legalization artifacts when
       // widening etc. We don't handle selection with vcc in artifact sources,
-      // so we need to use a sslect instead to handle these properly.
+      // so we need to use a select instead to handle these properly.
       Register DstReg = MI.getOperand(0).getReg();
       Register SrcReg = MI.getOperand(1).getReg();
       const RegisterBank *SrcBank = RBI.getRegBank(SrcReg, MRI, *RBI.TRI);
@@ -282,7 +282,7 @@ AMDGPURegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   // VCC-like use.
   if (TRI->isSGPRClass(&RC)) {
     // FIXME: This probably came from a copy from a physical register, which
-    // should be inferrrable from the copied to-type. We don't have many boolean
+    // should be inferable from the copied to-type. We don't have many boolean
     // physical register constraints so just assume a normal SGPR for now.
     if (!Ty.isValid())
       return AMDGPU::SGPRRegBank;
@@ -1430,7 +1430,7 @@ bool AMDGPURegisterBankInfo::applyMappingSBufferLoad(
       OffsetBank == &AMDGPU::SGPRRegBank)
     return true; // Legal mapping
 
-  // FIXME: 96-bit case was widened during legalize. We neeed to narrow it back
+  // FIXME: 96-bit case was widened during legalize. We need to narrow it back
   // here but don't have an MMO.
 
   unsigned LoadSize = Ty.getSizeInBits();
@@ -1455,7 +1455,7 @@ bool AMDGPURegisterBankInfo::applyMappingSBufferLoad(
                                         VOffset, SOffset, ImmOffset, Alignment);
 
   // TODO: 96-bit loads were widened to 128-bit results. Shrink the result if we
-  // can, but we neeed to track an MMO for that.
+  // can, but we need to track an MMO for that.
   const unsigned MemSize = (Ty.getSizeInBits() + 7) / 8;
   const Align MemAlign(4); // FIXME: ABI type alignment?
   MachineMemOperand *BaseMMO = MF.getMachineMemOperand(
@@ -2153,7 +2153,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       // The standard handling only considers the result register bank for
       // phis. For VCC, blindly inserting a copy when the phi is lowered will
       // produce an invalid copy. We can only copy with some kind of compare to
-      // get a vector boolean result. Insert a regitser bank copy that will be
+      // get a vector boolean result. Insert a register bank copy that will be
       // correctly lowered to a compare.
       MachineIRBuilder B(*MI.getParent()->getParent());
 
@@ -3331,7 +3331,7 @@ AMDGPURegisterBankInfo::getImageMapping(const MachineRegisterInfo &MRI,
   return getInstructionMapping(1, 1, getOperandsMapping(OpdsMapping), NumOps);
 }
 
-/// Return the mapping for a pointer arugment.
+/// Return the mapping for a pointer argument.
 const RegisterBankInfo::ValueMapping *
 AMDGPURegisterBankInfo::getValueMappingForPtr(const MachineRegisterInfo &MRI,
                                               Register PtrReg) const {

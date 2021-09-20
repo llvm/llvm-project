@@ -119,7 +119,7 @@ class AMDGPULowerModuleLDS : public ModulePass {
     // The llvm.amdgcn.module.lds instance is implicitly used by all kernels
     // that might call a function which accesses a field within it. This is
     // presently approximated to 'all kernels' if there are any such functions
-    // in the module. This implicit use is reified as an explicit use here so
+    // in the module. This implicit use is redefined as an explicit use here so
     // that later passes, specifically PromoteAlloca, account for the required
     // memory without any knowledge of this transform.
 

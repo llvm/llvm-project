@@ -56,7 +56,7 @@ static bool isNullConstantOrUndef(SDValue V) {
 }
 
 static bool getConstantValue(SDValue N, uint32_t &Out) {
-  // This is only used for packed vectors, where ussing 0 for undef should
+  // This is only used for packed vectors, where using 0 for undef should
   // always be good.
   if (N.isUndef()) {
     Out = 0;

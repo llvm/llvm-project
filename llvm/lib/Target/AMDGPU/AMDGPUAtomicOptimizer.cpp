@@ -541,7 +541,7 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
       if (NeedResult)
         ExclScan = buildShiftRight(B, NewV, Identity);
 
-      // Read the value from the last lane, which has accumlated the values of
+      // Read the value from the last lane, which has accumulated the values of
       // each active lane in the wavefront. This will be our new value which we
       // will provide to the atomic operation.
       Value *const LastLaneIdx = B.getInt32(ST->getWavefrontSize() - 1);

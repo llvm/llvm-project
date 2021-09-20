@@ -816,7 +816,7 @@ bool AMDGPUCodeGenPrepare::visitXor(BinaryOperator &I) {
   if (!RHS || !IntrinsicCall || RHS->getSExtValue() != -1)
     return visitBinaryOperator(I);
 
-  // Check if the Call is an intrinsic intruction to amdgcn_class intrinsic
+  // Check if the Call is an intrinsic instruction to amdgcn_class intrinsic
   // has only one use
   if (IntrinsicCall->getIntrinsicID() != Intrinsic::amdgcn_class ||
       !IntrinsicCall->hasOneUse())
