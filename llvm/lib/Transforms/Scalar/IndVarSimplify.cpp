@@ -1311,6 +1311,7 @@ static void foldExit(const Loop *L, BasicBlock *ExitingBB, bool IsTaken,
 
 static void replaceLoopPHINodesWithPreheaderValues(
     Loop *L, SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+  assert(L->isLoopSimplifyForm() && "Should only do it in simplify form!");
   auto *LoopPreheader = L->getLoopPreheader();
   auto *LoopHeader = L->getHeader();
   for (auto &PN : LoopHeader->phis()) {
