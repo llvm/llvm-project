@@ -35,7 +35,7 @@ public:
   size_t SetRegisterInfo(const lldb_private::StructuredData::Dictionary &dict,
                          const lldb_private::ArchSpec &arch);
 
-  void AddRegister(lldb_private::RegisterInfo &reg_info,
+  void AddRegister(lldb_private::RegisterInfo reg_info,
                    lldb_private::ConstString &set_name);
 
   void Finalize(const lldb_private::ArchSpec &arch);
