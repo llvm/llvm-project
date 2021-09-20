@@ -41,8 +41,9 @@ for.cond.cleanup.loopexit:
 
 ; CHECK-LABEL: @func(
 ; CHECK:         polly.stmt.omp.inner.for.body.us.us.us.preheader:
-; CHECK:         load i32, i32* %scevgep, align 4, !alias.scope !0, !noalias !2
+; CHECK:         load i32, i32* %scevgep, align 4, !alias.scope !0, !noalias !3
 
-; CHECK:       !0 = distinct !{!0, !1, !"polly.alias.scope.MemRef_d"}
-; CHECK:       !1 = distinct !{!1, !"polly.alias.scope.domain"}
-; CHECK:       !2 = !{}
+; CHECK:       !0 = !{!1}
+; CHECK:       !1 = distinct !{!1, !2, !"polly.alias.scope.MemRef_d"}
+; CHECK:       !2 = distinct !{!2, !"polly.alias.scope.domain"}
+; CHECK:       !3 = !{}

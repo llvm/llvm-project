@@ -70,7 +70,7 @@ recursivelyVisitUsers(GlobalValue &GV,
         // and just let us hit the error when we can't handle this.
         //
         // Unfortunately, clang adds noinline to all functions at -O0. We have
-        // to override this here. until that's fixed.
+        // to override this here until that's fixed.
         F->removeFnAttr(Attribute::NoInline);
 
         FuncsToAlwaysInline.insert(F);
