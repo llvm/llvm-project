@@ -187,7 +187,7 @@ define amdgpu_kernel void @test_udiv_3_mulhu(i32 %p) {
 
 ; GCN-LABEL: {{^}}fdiv_test_denormals
 ; VI: v_mad_f32 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; GFX1030: v_fmac_f32_e64 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}
+; GFX1030: v_fma_f32 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 define amdgpu_kernel void @fdiv_test_denormals(i8 addrspace(1)* nocapture readonly %arg) {
 bb:
   %tmp = load i8, i8 addrspace(1)* null, align 1

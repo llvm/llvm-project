@@ -498,7 +498,7 @@ define float @v_fma_f32_fabs_lhs(float %x, float %y, float %z) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_fma_f32 v0, v1, |v0|, v2
+; GFX10-NEXT:    v_fma_f32 v0, |v0|, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %fabs.x = call float @llvm.fabs.f32(float %x)
   %fma = call float @llvm.fma.f32(float %fabs.x, float %y, float %z)
@@ -528,7 +528,7 @@ define float @v_fma_f32_fabs_rhs(float %x, float %y, float %z) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_fma_f32 v0, |v1|, v0, v2
+; GFX10-NEXT:    v_fma_f32 v0, v0, |v1|, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %fabs.y = call float @llvm.fabs.f32(float %y)
   %fma = call float @llvm.fma.f32(float %x, float %fabs.y, float %z)
@@ -558,7 +558,7 @@ define float @v_fma_f32_fabs_lhs_rhs(float %x, float %y, float %z) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_fma_f32 v0, |v1|, |v0|, v2
+; GFX10-NEXT:    v_fma_f32 v0, |v0|, |v1|, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %fabs.x = call float @llvm.fabs.f32(float %x)
   %fabs.y = call float @llvm.fabs.f32(float %y)
@@ -668,7 +668,7 @@ define float @v_fma_f32_fneg_lhs(float %x, float %y, float %z) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_fma_f32 v0, v1, -v0, v2
+; GFX10-NEXT:    v_fma_f32 v0, -v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.x = fneg float %x
   %fma = call float @llvm.fma.f32(float %neg.x, float %y, float %z)
@@ -698,7 +698,7 @@ define float @v_fma_f32_fneg_rhs(float %x, float %y, float %z) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_fma_f32 v0, -v1, v0, v2
+; GFX10-NEXT:    v_fma_f32 v0, v0, -v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.y = fneg float %y
   %fma = call float @llvm.fma.f32(float %x, float %neg.y, float %z)

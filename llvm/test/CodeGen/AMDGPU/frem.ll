@@ -156,7 +156,7 @@ define amdgpu_kernel void @frem_f16(half addrspace(1)* %out, half addrspace(1)* 
 ; GFX10-NEXT:    v_cvt_f16_f32_e32 v3, v3
 ; GFX10-NEXT:    v_div_fixup_f16 v3, v3, v2, v1
 ; GFX10-NEXT:    v_trunc_f16_e32 v3, v3
-; GFX10-NEXT:    v_fmac_f16_e64 v1, -v3, v2
+; GFX10-NEXT:    v_fma_f16 v1, -v3, v2, v1
 ; GFX10-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-NEXT:    s_endpgm
                       half addrspace(1)* %in2) #0 {
@@ -280,7 +280,7 @@ define amdgpu_kernel void @fast_frem_f16(half addrspace(1)* %out, half addrspace
 ; GFX10-NEXT:    v_rcp_f16_e32 v3, v2
 ; GFX10-NEXT:    v_mul_f16_e32 v3, v1, v3
 ; GFX10-NEXT:    v_trunc_f16_e32 v3, v3
-; GFX10-NEXT:    v_fmac_f16_e64 v1, -v3, v2
+; GFX10-NEXT:    v_fma_f16 v1, -v3, v2, v1
 ; GFX10-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-NEXT:    s_endpgm
                       half addrspace(1)* %in2) #0 {
@@ -404,7 +404,7 @@ define amdgpu_kernel void @unsafe_frem_f16(half addrspace(1)* %out, half addrspa
 ; GFX10-NEXT:    v_rcp_f16_e32 v3, v2
 ; GFX10-NEXT:    v_mul_f16_e32 v3, v1, v3
 ; GFX10-NEXT:    v_trunc_f16_e32 v3, v3
-; GFX10-NEXT:    v_fmac_f16_e64 v1, -v3, v2
+; GFX10-NEXT:    v_fma_f16 v1, -v3, v2, v1
 ; GFX10-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-NEXT:    s_endpgm
                              half addrspace(1)* %in2) #1 {
@@ -575,7 +575,7 @@ define amdgpu_kernel void @frem_f32(float addrspace(1)* %out, float addrspace(1)
 ; GFX10-NEXT:    v_div_fmas_f32 v3, v3, v5, v6
 ; GFX10-NEXT:    v_div_fixup_f32 v3, v3, v2, v1
 ; GFX10-NEXT:    v_trunc_f32_e32 v3, v3
-; GFX10-NEXT:    v_fmac_f32_e64 v1, -v3, v2
+; GFX10-NEXT:    v_fma_f32 v1, -v3, v2, v1
 ; GFX10-NEXT:    global_store_dword v0, v1, s[4:5]
 ; GFX10-NEXT:    s_endpgm
                       float addrspace(1)* %in2) #0 {
@@ -691,7 +691,7 @@ define amdgpu_kernel void @fast_frem_f32(float addrspace(1)* %out, float addrspa
 ; GFX10-NEXT:    v_rcp_f32_e32 v3, v2
 ; GFX10-NEXT:    v_mul_f32_e32 v3, v1, v3
 ; GFX10-NEXT:    v_trunc_f32_e32 v3, v3
-; GFX10-NEXT:    v_fmac_f32_e64 v1, -v3, v2
+; GFX10-NEXT:    v_fma_f32 v1, -v3, v2, v1
 ; GFX10-NEXT:    global_store_dword v0, v1, s[4:5]
 ; GFX10-NEXT:    s_endpgm
                       float addrspace(1)* %in2) #0 {
@@ -807,7 +807,7 @@ define amdgpu_kernel void @unsafe_frem_f32(float addrspace(1)* %out, float addrs
 ; GFX10-NEXT:    v_rcp_f32_e32 v3, v2
 ; GFX10-NEXT:    v_mul_f32_e32 v3, v1, v3
 ; GFX10-NEXT:    v_trunc_f32_e32 v3, v3
-; GFX10-NEXT:    v_fmac_f32_e64 v1, -v3, v2
+; GFX10-NEXT:    v_fma_f32 v1, -v3, v2, v1
 ; GFX10-NEXT:    global_store_dword v0, v1, s[4:5]
 ; GFX10-NEXT:    s_endpgm
                              float addrspace(1)* %in2) #1 {
@@ -1534,22 +1534,21 @@ define amdgpu_kernel void @frem_v2f16(<2 x half> addrspace(1)* %out, <2 x half> 
 ; GFX10-NEXT:    v_cvt_f32_f16_e32 v4, v2
 ; GFX10-NEXT:    v_rcp_f32_e32 v4, v4
 ; GFX10-NEXT:    v_mul_f32_e32 v3, v3, v4
-; GFX10-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX10-NEXT:    v_cvt_f16_f32_e32 v3, v3
 ; GFX10-NEXT:    v_div_fixup_f16 v3, v3, v2, v1
-; GFX10-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; GFX10-NEXT:    v_trunc_f16_e32 v3, v3
-; GFX10-NEXT:    v_fmac_f16_e64 v4, -v3, v2
+; GFX10-NEXT:    v_fma_f16 v3, -v3, v2, v1
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
-; GFX10-NEXT:    v_cvt_f32_f16_e32 v3, v1
+; GFX10-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; GFX10-NEXT:    v_cvt_f32_f16_e32 v5, v2
+; GFX10-NEXT:    v_cvt_f32_f16_e32 v4, v1
 ; GFX10-NEXT:    v_rcp_f32_e32 v5, v5
-; GFX10-NEXT:    v_mul_f32_e32 v3, v3, v5
-; GFX10-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX10-NEXT:    v_div_fixup_f16 v3, v3, v2, v1
-; GFX10-NEXT:    v_trunc_f16_e32 v3, v3
-; GFX10-NEXT:    v_fmac_f16_e64 v1, -v3, v2
-; GFX10-NEXT:    v_pack_b32_f16 v1, v4, v1
+; GFX10-NEXT:    v_mul_f32_e32 v4, v4, v5
+; GFX10-NEXT:    v_cvt_f16_f32_e32 v4, v4
+; GFX10-NEXT:    v_div_fixup_f16 v4, v4, v2, v1
+; GFX10-NEXT:    v_trunc_f16_e32 v4, v4
+; GFX10-NEXT:    v_fma_f16 v1, -v4, v2, v1
+; GFX10-NEXT:    v_pack_b32_f16 v1, v3, v1
 ; GFX10-NEXT:    global_store_dword v0, v1, s[4:5]
 ; GFX10-NEXT:    s_endpgm
                         <2 x half> addrspace(1)* %in2) #0 {
@@ -1899,42 +1898,40 @@ define amdgpu_kernel void @frem_v4f16(<4 x half> addrspace(1)* %out, <4 x half> 
 ; GFX10-NEXT:    v_cvt_f32_f16_e32 v6, v3
 ; GFX10-NEXT:    v_rcp_f32_e32 v6, v6
 ; GFX10-NEXT:    v_mul_f32_e32 v5, v5, v6
-; GFX10-NEXT:    v_mov_b32_e32 v6, v1
 ; GFX10-NEXT:    v_cvt_f16_f32_e32 v5, v5
 ; GFX10-NEXT:    v_div_fixup_f16 v5, v5, v3, v1
-; GFX10-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; GFX10-NEXT:    v_trunc_f16_e32 v5, v5
-; GFX10-NEXT:    v_fmac_f16_e64 v6, -v5, v3
+; GFX10-NEXT:    v_fma_f16 v5, -v5, v3, v1
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
-; GFX10-NEXT:    v_cvt_f32_f16_e32 v5, v1
+; GFX10-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; GFX10-NEXT:    v_cvt_f32_f16_e32 v7, v3
+; GFX10-NEXT:    v_cvt_f32_f16_e32 v6, v1
 ; GFX10-NEXT:    v_rcp_f32_e32 v7, v7
-; GFX10-NEXT:    v_mul_f32_e32 v5, v5, v7
-; GFX10-NEXT:    v_cvt_f16_f32_e32 v5, v5
-; GFX10-NEXT:    v_div_fixup_f16 v5, v5, v3, v1
-; GFX10-NEXT:    v_trunc_f16_e32 v5, v5
-; GFX10-NEXT:    v_fmac_f16_e64 v1, -v5, v3
-; GFX10-NEXT:    v_cvt_f32_f16_e32 v5, v2
+; GFX10-NEXT:    v_mul_f32_e32 v6, v6, v7
+; GFX10-NEXT:    v_cvt_f16_f32_e32 v6, v6
+; GFX10-NEXT:    v_div_fixup_f16 v6, v6, v3, v1
+; GFX10-NEXT:    v_trunc_f16_e32 v6, v6
+; GFX10-NEXT:    v_fma_f16 v1, -v6, v3, v1
 ; GFX10-NEXT:    v_cvt_f32_f16_e32 v3, v0
-; GFX10-NEXT:    v_pack_b32_f16 v1, v6, v1
+; GFX10-NEXT:    v_pack_b32_f16 v1, v5, v1
+; GFX10-NEXT:    v_cvt_f32_f16_e32 v5, v2
 ; GFX10-NEXT:    v_rcp_f32_e32 v5, v5
 ; GFX10-NEXT:    v_mul_f32_e32 v3, v3, v5
-; GFX10-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX10-NEXT:    v_cvt_f16_f32_e32 v3, v3
 ; GFX10-NEXT:    v_div_fixup_f16 v3, v3, v2, v0
-; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX10-NEXT:    v_trunc_f16_e32 v3, v3
-; GFX10-NEXT:    v_fmac_f16_e64 v5, -v3, v2
+; GFX10-NEXT:    v_fma_f16 v3, -v3, v2, v0
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
-; GFX10-NEXT:    v_cvt_f32_f16_e32 v3, v0
+; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX10-NEXT:    v_cvt_f32_f16_e32 v6, v2
+; GFX10-NEXT:    v_cvt_f32_f16_e32 v5, v0
 ; GFX10-NEXT:    v_rcp_f32_e32 v6, v6
-; GFX10-NEXT:    v_mul_f32_e32 v3, v3, v6
-; GFX10-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX10-NEXT:    v_div_fixup_f16 v3, v3, v2, v0
-; GFX10-NEXT:    v_trunc_f16_e32 v3, v3
-; GFX10-NEXT:    v_fmac_f16_e64 v0, -v3, v2
-; GFX10-NEXT:    v_pack_b32_f16 v0, v5, v0
+; GFX10-NEXT:    v_mul_f32_e32 v5, v5, v6
+; GFX10-NEXT:    v_cvt_f16_f32_e32 v5, v5
+; GFX10-NEXT:    v_div_fixup_f16 v5, v5, v2, v0
+; GFX10-NEXT:    v_trunc_f16_e32 v5, v5
+; GFX10-NEXT:    v_fma_f16 v0, -v5, v2, v0
+; GFX10-NEXT:    v_pack_b32_f16 v0, v3, v0
 ; GFX10-NEXT:    global_store_dwordx2 v4, v[0:1], s[4:5]
 ; GFX10-NEXT:    s_endpgm
                         <4 x half> addrspace(1)* %in2) #0 {
@@ -2173,7 +2170,7 @@ define amdgpu_kernel void @frem_v2f32(<2 x float> addrspace(1)* %out, <2 x float
 ; GFX10-NEXT:    v_div_fmas_f32 v5, v5, v7, v8
 ; GFX10-NEXT:    v_div_fixup_f32 v5, v5, v3, v1
 ; GFX10-NEXT:    v_trunc_f32_e32 v5, v5
-; GFX10-NEXT:    v_fma_f32 v1, v3, -v5, v1
+; GFX10-NEXT:    v_fma_f32 v1, -v5, v3, v1
 ; GFX10-NEXT:    v_div_scale_f32 v5, s0, v2, v2, v0
 ; GFX10-NEXT:    v_div_scale_f32 v3, vcc_lo, v0, v2, v0
 ; GFX10-NEXT:    v_rcp_f32_e32 v6, v5
@@ -2188,7 +2185,7 @@ define amdgpu_kernel void @frem_v2f32(<2 x float> addrspace(1)* %out, <2 x float
 ; GFX10-NEXT:    v_div_fmas_f32 v3, v3, v6, v7
 ; GFX10-NEXT:    v_div_fixup_f32 v3, v3, v2, v0
 ; GFX10-NEXT:    v_trunc_f32_e32 v3, v3
-; GFX10-NEXT:    v_fmac_f32_e64 v0, -v3, v2
+; GFX10-NEXT:    v_fma_f32 v0, -v3, v2, v0
 ; GFX10-NEXT:    global_store_dwordx2 v4, v[0:1], s[4:5]
 ; GFX10-NEXT:    s_endpgm
                         <2 x float> addrspace(1)* %in2) #0 {
@@ -2547,7 +2544,7 @@ define amdgpu_kernel void @frem_v4f32(<4 x float> addrspace(1)* %out, <4 x float
 ; GFX10-NEXT:    v_div_fmas_f32 v9, v9, v11, v12
 ; GFX10-NEXT:    v_div_fixup_f32 v9, v9, v7, v3
 ; GFX10-NEXT:    v_trunc_f32_e32 v9, v9
-; GFX10-NEXT:    v_fma_f32 v3, v7, -v9, v3
+; GFX10-NEXT:    v_fma_f32 v3, -v9, v7, v3
 ; GFX10-NEXT:    v_div_scale_f32 v9, s0, v6, v6, v2
 ; GFX10-NEXT:    v_div_scale_f32 v7, vcc_lo, v2, v6, v2
 ; GFX10-NEXT:    v_rcp_f32_e32 v10, v9
@@ -2562,7 +2559,7 @@ define amdgpu_kernel void @frem_v4f32(<4 x float> addrspace(1)* %out, <4 x float
 ; GFX10-NEXT:    v_div_fmas_f32 v7, v7, v10, v11
 ; GFX10-NEXT:    v_div_fixup_f32 v7, v7, v6, v2
 ; GFX10-NEXT:    v_trunc_f32_e32 v7, v7
-; GFX10-NEXT:    v_fma_f32 v2, v6, -v7, v2
+; GFX10-NEXT:    v_fma_f32 v2, -v7, v6, v2
 ; GFX10-NEXT:    v_div_scale_f32 v7, s0, v5, v5, v1
 ; GFX10-NEXT:    v_div_scale_f32 v6, vcc_lo, v1, v5, v1
 ; GFX10-NEXT:    v_rcp_f32_e32 v9, v7
@@ -2577,7 +2574,7 @@ define amdgpu_kernel void @frem_v4f32(<4 x float> addrspace(1)* %out, <4 x float
 ; GFX10-NEXT:    v_div_fmas_f32 v6, v6, v9, v10
 ; GFX10-NEXT:    v_div_fixup_f32 v6, v6, v5, v1
 ; GFX10-NEXT:    v_trunc_f32_e32 v6, v6
-; GFX10-NEXT:    v_fma_f32 v1, v5, -v6, v1
+; GFX10-NEXT:    v_fma_f32 v1, -v6, v5, v1
 ; GFX10-NEXT:    v_div_scale_f32 v6, s0, v4, v4, v0
 ; GFX10-NEXT:    v_div_scale_f32 v5, vcc_lo, v0, v4, v0
 ; GFX10-NEXT:    v_rcp_f32_e32 v7, v6
@@ -2592,7 +2589,7 @@ define amdgpu_kernel void @frem_v4f32(<4 x float> addrspace(1)* %out, <4 x float
 ; GFX10-NEXT:    v_div_fmas_f32 v5, v5, v7, v9
 ; GFX10-NEXT:    v_div_fixup_f32 v5, v5, v4, v0
 ; GFX10-NEXT:    v_trunc_f32_e32 v5, v5
-; GFX10-NEXT:    v_fmac_f32_e64 v0, -v5, v4
+; GFX10-NEXT:    v_fma_f32 v0, -v5, v4, v0
 ; GFX10-NEXT:    global_store_dwordx4 v8, v[0:3], s[4:5]
 ; GFX10-NEXT:    s_endpgm
                         <4 x float> addrspace(1)* %in2) #0 {

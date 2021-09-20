@@ -356,7 +356,7 @@ define float @no_mix_simple(float %src0, float %src1, float %src2) #0 {
 ; GCN: s_waitcnt
 ; CIVI-NEXT: v_mad_f32 v0, |v0|, v1, v2
 ; GFX900-NEXT: v_mad_f32 v0, |v0|, v1, v2
-; GFX906-NEXT: v_fma_f32 v0, v1, |v0|, v2
+; GFX906-NEXT: v_fma_f32 v0, |v0|, v1, v2
 ; GCN-NEXT: s_setpc_b64
 define float @no_mix_simple_fabs(float %src0, float %src1, float %src2) #0 {
   %src0.fabs = call float @llvm.fabs.f32(float %src0)

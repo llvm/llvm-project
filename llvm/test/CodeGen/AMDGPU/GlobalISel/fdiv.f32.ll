@@ -90,10 +90,10 @@ define float @v_fdiv_f32(float %a, float %b) {
 ; GFX10-IEEE-NEXT:    v_fma_f32 v4, -v2, v3, 1.0
 ; GFX10-IEEE-NEXT:    v_fmac_f32_e32 v3, v4, v3
 ; GFX10-IEEE-NEXT:    v_mul_f32_e32 v4, v5, v3
-; GFX10-IEEE-NEXT:    v_fma_f32 v6, v4, -v2, v5
+; GFX10-IEEE-NEXT:    v_fma_f32 v6, -v2, v4, v5
 ; GFX10-IEEE-NEXT:    v_fmac_f32_e32 v4, v6, v3
-; GFX10-IEEE-NEXT:    v_fmac_f32_e64 v5, -v2, v4
-; GFX10-IEEE-NEXT:    v_div_fmas_f32 v2, v5, v3, v4
+; GFX10-IEEE-NEXT:    v_fma_f32 v2, -v2, v4, v5
+; GFX10-IEEE-NEXT:    v_div_fmas_f32 v2, v2, v3, v4
 ; GFX10-IEEE-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
 ; GFX10-IEEE-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -108,11 +108,11 @@ define float @v_fdiv_f32(float %a, float %b) {
 ; GFX10-FLUSH-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
 ; GFX10-FLUSH-NEXT:    v_fmac_f32_e32 v3, v5, v3
 ; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v5, v4, v3
-; GFX10-FLUSH-NEXT:    v_fma_f32 v6, v5, -v2, v4
+; GFX10-FLUSH-NEXT:    v_fma_f32 v6, -v2, v5, v4
 ; GFX10-FLUSH-NEXT:    v_fmac_f32_e32 v5, v6, v3
-; GFX10-FLUSH-NEXT:    v_fmac_f32_e64 v4, -v2, v5
+; GFX10-FLUSH-NEXT:    v_fma_f32 v2, -v2, v5, v4
 ; GFX10-FLUSH-NEXT:    s_denorm_mode 0
-; GFX10-FLUSH-NEXT:    v_div_fmas_f32 v2, v4, v3, v5
+; GFX10-FLUSH-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
 ; GFX10-FLUSH-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
 ; GFX10-FLUSH-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv float %a, %b
@@ -194,10 +194,10 @@ define float @v_fdiv_f32_ulp25(float %a, float %b) {
 ; GFX10-IEEE-NEXT:    v_fma_f32 v4, -v2, v3, 1.0
 ; GFX10-IEEE-NEXT:    v_fmac_f32_e32 v3, v4, v3
 ; GFX10-IEEE-NEXT:    v_mul_f32_e32 v4, v5, v3
-; GFX10-IEEE-NEXT:    v_fma_f32 v6, v4, -v2, v5
+; GFX10-IEEE-NEXT:    v_fma_f32 v6, -v2, v4, v5
 ; GFX10-IEEE-NEXT:    v_fmac_f32_e32 v4, v6, v3
-; GFX10-IEEE-NEXT:    v_fmac_f32_e64 v5, -v2, v4
-; GFX10-IEEE-NEXT:    v_div_fmas_f32 v2, v5, v3, v4
+; GFX10-IEEE-NEXT:    v_fma_f32 v2, -v2, v4, v5
+; GFX10-IEEE-NEXT:    v_div_fmas_f32 v2, v2, v3, v4
 ; GFX10-IEEE-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
 ; GFX10-IEEE-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -295,10 +295,10 @@ define float @v_rcp_f32(float %x) {
 ; GFX10-IEEE-NEXT:    v_fma_f32 v3, -v1, v2, 1.0
 ; GFX10-IEEE-NEXT:    v_fmac_f32_e32 v2, v3, v2
 ; GFX10-IEEE-NEXT:    v_mul_f32_e32 v3, v4, v2
-; GFX10-IEEE-NEXT:    v_fma_f32 v5, v3, -v1, v4
+; GFX10-IEEE-NEXT:    v_fma_f32 v5, -v1, v3, v4
 ; GFX10-IEEE-NEXT:    v_fmac_f32_e32 v3, v5, v2
-; GFX10-IEEE-NEXT:    v_fmac_f32_e64 v4, -v1, v3
-; GFX10-IEEE-NEXT:    v_div_fmas_f32 v1, v4, v2, v3
+; GFX10-IEEE-NEXT:    v_fma_f32 v1, -v1, v3, v4
+; GFX10-IEEE-NEXT:    v_div_fmas_f32 v1, v1, v2, v3
 ; GFX10-IEEE-NEXT:    v_div_fixup_f32 v0, v1, v0, 1.0
 ; GFX10-IEEE-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -313,11 +313,11 @@ define float @v_rcp_f32(float %x) {
 ; GFX10-FLUSH-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
 ; GFX10-FLUSH-NEXT:    v_fmac_f32_e32 v2, v4, v2
 ; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v4, v3, v2
-; GFX10-FLUSH-NEXT:    v_fma_f32 v5, v4, -v1, v3
+; GFX10-FLUSH-NEXT:    v_fma_f32 v5, -v1, v4, v3
 ; GFX10-FLUSH-NEXT:    v_fmac_f32_e32 v4, v5, v2
-; GFX10-FLUSH-NEXT:    v_fmac_f32_e64 v3, -v1, v4
+; GFX10-FLUSH-NEXT:    v_fma_f32 v1, -v1, v4, v3
 ; GFX10-FLUSH-NEXT:    s_denorm_mode 0
-; GFX10-FLUSH-NEXT:    v_div_fmas_f32 v1, v3, v2, v4
+; GFX10-FLUSH-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
 ; GFX10-FLUSH-NEXT:    v_div_fixup_f32 v0, v1, v0, 1.0
 ; GFX10-FLUSH-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv float 1.0, %x
@@ -403,10 +403,10 @@ define float @v_rcp_f32_arcp(float %x) {
 ; GFX10-IEEE-NEXT:    v_fma_f32 v3, -v1, v2, 1.0
 ; GFX10-IEEE-NEXT:    v_fmac_f32_e32 v2, v3, v2
 ; GFX10-IEEE-NEXT:    v_mul_f32_e32 v3, v4, v2
-; GFX10-IEEE-NEXT:    v_fma_f32 v5, v3, -v1, v4
+; GFX10-IEEE-NEXT:    v_fma_f32 v5, -v1, v3, v4
 ; GFX10-IEEE-NEXT:    v_fmac_f32_e32 v3, v5, v2
-; GFX10-IEEE-NEXT:    v_fmac_f32_e64 v4, -v1, v3
-; GFX10-IEEE-NEXT:    v_div_fmas_f32 v1, v4, v2, v3
+; GFX10-IEEE-NEXT:    v_fma_f32 v1, -v1, v3, v4
+; GFX10-IEEE-NEXT:    v_div_fmas_f32 v1, v1, v2, v3
 ; GFX10-IEEE-NEXT:    v_div_fixup_f32 v0, v1, v0, 1.0
 ; GFX10-IEEE-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -421,11 +421,11 @@ define float @v_rcp_f32_arcp(float %x) {
 ; GFX10-FLUSH-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
 ; GFX10-FLUSH-NEXT:    v_fmac_f32_e32 v2, v4, v2
 ; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v4, v3, v2
-; GFX10-FLUSH-NEXT:    v_fma_f32 v5, v4, -v1, v3
+; GFX10-FLUSH-NEXT:    v_fma_f32 v5, -v1, v4, v3
 ; GFX10-FLUSH-NEXT:    v_fmac_f32_e32 v4, v5, v2
-; GFX10-FLUSH-NEXT:    v_fmac_f32_e64 v3, -v1, v4
+; GFX10-FLUSH-NEXT:    v_fma_f32 v1, -v1, v4, v3
 ; GFX10-FLUSH-NEXT:    s_denorm_mode 0
-; GFX10-FLUSH-NEXT:    v_div_fmas_f32 v1, v3, v2, v4
+; GFX10-FLUSH-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
 ; GFX10-FLUSH-NEXT:    v_div_fixup_f32 v0, v1, v0, 1.0
 ; GFX10-FLUSH-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv arcp float 1.0, %x
@@ -566,10 +566,10 @@ define float @v_fdiv_f32_arcp_ulp25(float %a, float %b) {
 ; GFX10-IEEE-NEXT:    v_fma_f32 v4, -v2, v3, 1.0
 ; GFX10-IEEE-NEXT:    v_fmac_f32_e32 v3, v4, v3
 ; GFX10-IEEE-NEXT:    v_mul_f32_e32 v4, v5, v3
-; GFX10-IEEE-NEXT:    v_fma_f32 v6, v4, -v2, v5
+; GFX10-IEEE-NEXT:    v_fma_f32 v6, -v2, v4, v5
 ; GFX10-IEEE-NEXT:    v_fmac_f32_e32 v4, v6, v3
-; GFX10-IEEE-NEXT:    v_fmac_f32_e64 v5, -v2, v4
-; GFX10-IEEE-NEXT:    v_div_fmas_f32 v2, v5, v3, v4
+; GFX10-IEEE-NEXT:    v_fma_f32 v2, -v2, v4, v5
+; GFX10-IEEE-NEXT:    v_div_fmas_f32 v2, v2, v3, v4
 ; GFX10-IEEE-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
 ; GFX10-IEEE-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -722,15 +722,15 @@ define <2 x float> @v_fdiv_v2f32(<2 x float> %a, <2 x float> %b) {
 ; GFX10-IEEE-NEXT:    v_fmac_f32_e32 v7, v9, v7
 ; GFX10-IEEE-NEXT:    v_mul_f32_e32 v9, v10, v6
 ; GFX10-IEEE-NEXT:    v_mul_f32_e32 v11, v8, v7
-; GFX10-IEEE-NEXT:    v_fma_f32 v12, v9, -v4, v10
-; GFX10-IEEE-NEXT:    v_fma_f32 v13, v11, -v5, v8
+; GFX10-IEEE-NEXT:    v_fma_f32 v12, -v4, v9, v10
+; GFX10-IEEE-NEXT:    v_fma_f32 v13, -v5, v11, v8
 ; GFX10-IEEE-NEXT:    v_fmac_f32_e32 v9, v12, v6
 ; GFX10-IEEE-NEXT:    v_fmac_f32_e32 v11, v13, v7
-; GFX10-IEEE-NEXT:    v_fmac_f32_e64 v10, -v4, v9
-; GFX10-IEEE-NEXT:    v_fmac_f32_e64 v8, -v5, v11
-; GFX10-IEEE-NEXT:    v_div_fmas_f32 v4, v10, v6, v9
+; GFX10-IEEE-NEXT:    v_fma_f32 v4, -v4, v9, v10
+; GFX10-IEEE-NEXT:    v_fma_f32 v5, -v5, v11, v8
+; GFX10-IEEE-NEXT:    v_div_fmas_f32 v4, v4, v6, v9
 ; GFX10-IEEE-NEXT:    s_mov_b32 vcc_lo, s4
-; GFX10-IEEE-NEXT:    v_div_fmas_f32 v5, v8, v7, v11
+; GFX10-IEEE-NEXT:    v_div_fmas_f32 v5, v5, v7, v11
 ; GFX10-IEEE-NEXT:    v_div_fixup_f32 v0, v4, v2, v0
 ; GFX10-IEEE-NEXT:    v_div_fixup_f32 v1, v5, v3, v1
 ; GFX10-IEEE-NEXT:    s_setpc_b64 s[30:31]
@@ -746,24 +746,24 @@ define <2 x float> @v_fdiv_v2f32(<2 x float> %a, <2 x float> %b) {
 ; GFX10-FLUSH-NEXT:    v_fma_f32 v7, -v4, v5, 1.0
 ; GFX10-FLUSH-NEXT:    v_fmac_f32_e32 v5, v7, v5
 ; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v7, v6, v5
-; GFX10-FLUSH-NEXT:    v_fma_f32 v8, v7, -v4, v6
+; GFX10-FLUSH-NEXT:    v_fma_f32 v8, -v4, v7, v6
 ; GFX10-FLUSH-NEXT:    v_fmac_f32_e32 v7, v8, v5
-; GFX10-FLUSH-NEXT:    v_fmac_f32_e64 v6, -v4, v7
+; GFX10-FLUSH-NEXT:    v_fma_f32 v4, -v4, v7, v6
 ; GFX10-FLUSH-NEXT:    s_denorm_mode 0
-; GFX10-FLUSH-NEXT:    v_div_scale_f32 v4, s4, v3, v3, v1
-; GFX10-FLUSH-NEXT:    v_div_fmas_f32 v5, v6, v5, v7
-; GFX10-FLUSH-NEXT:    v_rcp_f32_e32 v6, v4
-; GFX10-FLUSH-NEXT:    v_div_fixup_f32 v0, v5, v2, v0
+; GFX10-FLUSH-NEXT:    v_div_scale_f32 v6, s4, v3, v3, v1
+; GFX10-FLUSH-NEXT:    v_div_fmas_f32 v4, v4, v5, v7
+; GFX10-FLUSH-NEXT:    v_rcp_f32_e32 v5, v6
+; GFX10-FLUSH-NEXT:    v_div_fixup_f32 v0, v4, v2, v0
 ; GFX10-FLUSH-NEXT:    v_div_scale_f32 v2, vcc_lo, v1, v3, v1
 ; GFX10-FLUSH-NEXT:    s_denorm_mode 3
-; GFX10-FLUSH-NEXT:    v_fma_f32 v5, -v4, v6, 1.0
-; GFX10-FLUSH-NEXT:    v_fmac_f32_e32 v6, v5, v6
-; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v5, v2, v6
-; GFX10-FLUSH-NEXT:    v_fma_f32 v7, v5, -v4, v2
-; GFX10-FLUSH-NEXT:    v_fmac_f32_e32 v5, v7, v6
-; GFX10-FLUSH-NEXT:    v_fmac_f32_e64 v2, -v4, v5
+; GFX10-FLUSH-NEXT:    v_fma_f32 v4, -v6, v5, 1.0
+; GFX10-FLUSH-NEXT:    v_fmac_f32_e32 v5, v4, v5
+; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v4, v2, v5
+; GFX10-FLUSH-NEXT:    v_fma_f32 v7, -v6, v4, v2
+; GFX10-FLUSH-NEXT:    v_fmac_f32_e32 v4, v7, v5
+; GFX10-FLUSH-NEXT:    v_fma_f32 v2, -v6, v4, v2
 ; GFX10-FLUSH-NEXT:    s_denorm_mode 0
-; GFX10-FLUSH-NEXT:    v_div_fmas_f32 v2, v2, v6, v5
+; GFX10-FLUSH-NEXT:    v_div_fmas_f32 v2, v2, v5, v4
 ; GFX10-FLUSH-NEXT:    v_div_fixup_f32 v1, v2, v3, v1
 ; GFX10-FLUSH-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv <2 x float> %a, %b
@@ -884,15 +884,15 @@ define <2 x float> @v_fdiv_v2f32_ulp25(<2 x float> %a, <2 x float> %b) {
 ; GFX10-IEEE-NEXT:    v_fmac_f32_e32 v7, v9, v7
 ; GFX10-IEEE-NEXT:    v_mul_f32_e32 v9, v10, v6
 ; GFX10-IEEE-NEXT:    v_mul_f32_e32 v11, v8, v7
-; GFX10-IEEE-NEXT:    v_fma_f32 v12, v9, -v4, v10
-; GFX10-IEEE-NEXT:    v_fma_f32 v13, v11, -v5, v8
+; GFX10-IEEE-NEXT:    v_fma_f32 v12, -v4, v9, v10
+; GFX10-IEEE-NEXT:    v_fma_f32 v13, -v5, v11, v8
 ; GFX10-IEEE-NEXT:    v_fmac_f32_e32 v9, v12, v6
 ; GFX10-IEEE-NEXT:    v_fmac_f32_e32 v11, v13, v7
-; GFX10-IEEE-NEXT:    v_fmac_f32_e64 v10, -v4, v9
-; GFX10-IEEE-NEXT:    v_fmac_f32_e64 v8, -v5, v11
-; GFX10-IEEE-NEXT:    v_div_fmas_f32 v4, v10, v6, v9
+; GFX10-IEEE-NEXT:    v_fma_f32 v4, -v4, v9, v10
+; GFX10-IEEE-NEXT:    v_fma_f32 v5, -v5, v11, v8
+; GFX10-IEEE-NEXT:    v_div_fmas_f32 v4, v4, v6, v9
 ; GFX10-IEEE-NEXT:    s_mov_b32 vcc_lo, s4
-; GFX10-IEEE-NEXT:    v_div_fmas_f32 v5, v8, v7, v11
+; GFX10-IEEE-NEXT:    v_div_fmas_f32 v5, v5, v7, v11
 ; GFX10-IEEE-NEXT:    v_div_fixup_f32 v0, v4, v2, v0
 ; GFX10-IEEE-NEXT:    v_div_fixup_f32 v1, v5, v3, v1
 ; GFX10-IEEE-NEXT:    s_setpc_b64 s[30:31]
@@ -1054,15 +1054,15 @@ define <2 x float> @v_rcp_v2f32(<2 x float> %x) {
 ; GFX10-IEEE-NEXT:    v_fmac_f32_e32 v5, v7, v5
 ; GFX10-IEEE-NEXT:    v_mul_f32_e32 v7, v8, v4
 ; GFX10-IEEE-NEXT:    v_mul_f32_e32 v9, v6, v5
-; GFX10-IEEE-NEXT:    v_fma_f32 v10, v7, -v2, v8
-; GFX10-IEEE-NEXT:    v_fma_f32 v11, v9, -v3, v6
+; GFX10-IEEE-NEXT:    v_fma_f32 v10, -v2, v7, v8
+; GFX10-IEEE-NEXT:    v_fma_f32 v11, -v3, v9, v6
 ; GFX10-IEEE-NEXT:    v_fmac_f32_e32 v7, v10, v4
 ; GFX10-IEEE-NEXT:    v_fmac_f32_e32 v9, v11, v5
-; GFX10-IEEE-NEXT:    v_fmac_f32_e64 v8, -v2, v7
-; GFX10-IEEE-NEXT:    v_fmac_f32_e64 v6, -v3, v9
-; GFX10-IEEE-NEXT:    v_div_fmas_f32 v2, v8, v4, v7
+; GFX10-IEEE-NEXT:    v_fma_f32 v2, -v2, v7, v8
+; GFX10-IEEE-NEXT:    v_fma_f32 v3, -v3, v9, v6
+; GFX10-IEEE-NEXT:    v_div_fmas_f32 v2, v2, v4, v7
 ; GFX10-IEEE-NEXT:    s_mov_b32 vcc_lo, s4
-; GFX10-IEEE-NEXT:    v_div_fmas_f32 v3, v6, v5, v9
+; GFX10-IEEE-NEXT:    v_div_fmas_f32 v3, v3, v5, v9
 ; GFX10-IEEE-NEXT:    v_div_fixup_f32 v0, v2, v0, 1.0
 ; GFX10-IEEE-NEXT:    v_div_fixup_f32 v1, v3, v1, 1.0
 ; GFX10-IEEE-NEXT:    s_setpc_b64 s[30:31]
@@ -1078,24 +1078,24 @@ define <2 x float> @v_rcp_v2f32(<2 x float> %x) {
 ; GFX10-FLUSH-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
 ; GFX10-FLUSH-NEXT:    v_fmac_f32_e32 v3, v5, v3
 ; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v5, v4, v3
-; GFX10-FLUSH-NEXT:    v_fma_f32 v6, v5, -v2, v4
+; GFX10-FLUSH-NEXT:    v_fma_f32 v6, -v2, v5, v4
 ; GFX10-FLUSH-NEXT:    v_fmac_f32_e32 v5, v6, v3
-; GFX10-FLUSH-NEXT:    v_fmac_f32_e64 v4, -v2, v5
+; GFX10-FLUSH-NEXT:    v_fma_f32 v2, -v2, v5, v4
 ; GFX10-FLUSH-NEXT:    s_denorm_mode 0
-; GFX10-FLUSH-NEXT:    v_div_scale_f32 v2, s4, v1, v1, 1.0
-; GFX10-FLUSH-NEXT:    v_div_fmas_f32 v3, v4, v3, v5
-; GFX10-FLUSH-NEXT:    v_rcp_f32_e32 v4, v2
-; GFX10-FLUSH-NEXT:    v_div_fixup_f32 v0, v3, v0, 1.0
-; GFX10-FLUSH-NEXT:    v_div_scale_f32 v3, vcc_lo, 1.0, v1, 1.0
+; GFX10-FLUSH-NEXT:    v_div_scale_f32 v4, s4, v1, v1, 1.0
+; GFX10-FLUSH-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
+; GFX10-FLUSH-NEXT:    v_rcp_f32_e32 v3, v4
+; GFX10-FLUSH-NEXT:    v_div_fixup_f32 v0, v2, v0, 1.0
+; GFX10-FLUSH-NEXT:    v_div_scale_f32 v2, vcc_lo, 1.0, v1, 1.0
 ; GFX10-FLUSH-NEXT:    s_denorm_mode 3
-; GFX10-FLUSH-NEXT:    v_fma_f32 v5, -v2, v4, 1.0
-; GFX10-FLUSH-NEXT:    v_fmac_f32_e32 v4, v5, v4
-; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v5, v3, v4
-; GFX10-FLUSH-NEXT:    v_fma_f32 v6, v5, -v2, v3
-; GFX10-FLUSH-NEXT:    v_fmac_f32_e32 v5, v6, v4
-; GFX10-FLUSH-NEXT:    v_fmac_f32_e64 v3, -v2, v5
+; GFX10-FLUSH-NEXT:    v_fma_f32 v5, -v4, v3, 1.0
+; GFX10-FLUSH-NEXT:    v_fmac_f32_e32 v3, v5, v3
+; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v5, v2, v3
+; GFX10-FLUSH-NEXT:    v_fma_f32 v6, -v4, v5, v2
+; GFX10-FLUSH-NEXT:    v_fmac_f32_e32 v5, v6, v3
+; GFX10-FLUSH-NEXT:    v_fma_f32 v2, -v4, v5, v2
 ; GFX10-FLUSH-NEXT:    s_denorm_mode 0
-; GFX10-FLUSH-NEXT:    v_div_fmas_f32 v2, v3, v4, v5
+; GFX10-FLUSH-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
 ; GFX10-FLUSH-NEXT:    v_div_fixup_f32 v1, v2, v1, 1.0
 ; GFX10-FLUSH-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv <2 x float> <float 1.0, float 1.0>, %x
@@ -1236,15 +1236,15 @@ define <2 x float> @v_rcp_v2f32_arcp(<2 x float> %x) {
 ; GFX10-IEEE-NEXT:    v_fmac_f32_e32 v5, v7, v5
 ; GFX10-IEEE-NEXT:    v_mul_f32_e32 v7, v8, v4
 ; GFX10-IEEE-NEXT:    v_mul_f32_e32 v9, v6, v5
-; GFX10-IEEE-NEXT:    v_fma_f32 v10, v7, -v2, v8
-; GFX10-IEEE-NEXT:    v_fma_f32 v11, v9, -v3, v6
+; GFX10-IEEE-NEXT:    v_fma_f32 v10, -v2, v7, v8
+; GFX10-IEEE-NEXT:    v_fma_f32 v11, -v3, v9, v6
 ; GFX10-IEEE-NEXT:    v_fmac_f32_e32 v7, v10, v4
 ; GFX10-IEEE-NEXT:    v_fmac_f32_e32 v9, v11, v5
-; GFX10-IEEE-NEXT:    v_fmac_f32_e64 v8, -v2, v7
-; GFX10-IEEE-NEXT:    v_fmac_f32_e64 v6, -v3, v9
-; GFX10-IEEE-NEXT:    v_div_fmas_f32 v2, v8, v4, v7
+; GFX10-IEEE-NEXT:    v_fma_f32 v2, -v2, v7, v8
+; GFX10-IEEE-NEXT:    v_fma_f32 v3, -v3, v9, v6
+; GFX10-IEEE-NEXT:    v_div_fmas_f32 v2, v2, v4, v7
 ; GFX10-IEEE-NEXT:    s_mov_b32 vcc_lo, s4
-; GFX10-IEEE-NEXT:    v_div_fmas_f32 v3, v6, v5, v9
+; GFX10-IEEE-NEXT:    v_div_fmas_f32 v3, v3, v5, v9
 ; GFX10-IEEE-NEXT:    v_div_fixup_f32 v0, v2, v0, 1.0
 ; GFX10-IEEE-NEXT:    v_div_fixup_f32 v1, v3, v1, 1.0
 ; GFX10-IEEE-NEXT:    s_setpc_b64 s[30:31]
@@ -1260,24 +1260,24 @@ define <2 x float> @v_rcp_v2f32_arcp(<2 x float> %x) {
 ; GFX10-FLUSH-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
 ; GFX10-FLUSH-NEXT:    v_fmac_f32_e32 v3, v5, v3
 ; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v5, v4, v3
-; GFX10-FLUSH-NEXT:    v_fma_f32 v6, v5, -v2, v4
+; GFX10-FLUSH-NEXT:    v_fma_f32 v6, -v2, v5, v4
 ; GFX10-FLUSH-NEXT:    v_fmac_f32_e32 v5, v6, v3
-; GFX10-FLUSH-NEXT:    v_fmac_f32_e64 v4, -v2, v5
+; GFX10-FLUSH-NEXT:    v_fma_f32 v2, -v2, v5, v4
 ; GFX10-FLUSH-NEXT:    s_denorm_mode 0
-; GFX10-FLUSH-NEXT:    v_div_scale_f32 v2, s4, v1, v1, 1.0
-; GFX10-FLUSH-NEXT:    v_div_fmas_f32 v3, v4, v3, v5
-; GFX10-FLUSH-NEXT:    v_rcp_f32_e32 v4, v2
-; GFX10-FLUSH-NEXT:    v_div_fixup_f32 v0, v3, v0, 1.0
-; GFX10-FLUSH-NEXT:    v_div_scale_f32 v3, vcc_lo, 1.0, v1, 1.0
+; GFX10-FLUSH-NEXT:    v_div_scale_f32 v4, s4, v1, v1, 1.0
+; GFX10-FLUSH-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
+; GFX10-FLUSH-NEXT:    v_rcp_f32_e32 v3, v4
+; GFX10-FLUSH-NEXT:    v_div_fixup_f32 v0, v2, v0, 1.0
+; GFX10-FLUSH-NEXT:    v_div_scale_f32 v2, vcc_lo, 1.0, v1, 1.0
 ; GFX10-FLUSH-NEXT:    s_denorm_mode 3
-; GFX10-FLUSH-NEXT:    v_fma_f32 v5, -v2, v4, 1.0
-; GFX10-FLUSH-NEXT:    v_fmac_f32_e32 v4, v5, v4
-; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v5, v3, v4
-; GFX10-FLUSH-NEXT:    v_fma_f32 v6, v5, -v2, v3
-; GFX10-FLUSH-NEXT:    v_fmac_f32_e32 v5, v6, v4
-; GFX10-FLUSH-NEXT:    v_fmac_f32_e64 v3, -v2, v5
+; GFX10-FLUSH-NEXT:    v_fma_f32 v5, -v4, v3, 1.0
+; GFX10-FLUSH-NEXT:    v_fmac_f32_e32 v3, v5, v3
+; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v5, v2, v3
+; GFX10-FLUSH-NEXT:    v_fma_f32 v6, -v4, v5, v2
+; GFX10-FLUSH-NEXT:    v_fmac_f32_e32 v5, v6, v3
+; GFX10-FLUSH-NEXT:    v_fma_f32 v2, -v4, v5, v2
 ; GFX10-FLUSH-NEXT:    s_denorm_mode 0
-; GFX10-FLUSH-NEXT:    v_div_fmas_f32 v2, v3, v4, v5
+; GFX10-FLUSH-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
 ; GFX10-FLUSH-NEXT:    v_div_fixup_f32 v1, v2, v1, 1.0
 ; GFX10-FLUSH-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv arcp <2 x float> <float 1.0, float 1.0>, %x
@@ -1475,15 +1475,15 @@ define <2 x float> @v_fdiv_v2f32_arcp_ulp25(<2 x float> %a, <2 x float> %b) {
 ; GFX10-IEEE-NEXT:    v_fmac_f32_e32 v7, v9, v7
 ; GFX10-IEEE-NEXT:    v_mul_f32_e32 v9, v10, v6
 ; GFX10-IEEE-NEXT:    v_mul_f32_e32 v11, v8, v7
-; GFX10-IEEE-NEXT:    v_fma_f32 v12, v9, -v4, v10
-; GFX10-IEEE-NEXT:    v_fma_f32 v13, v11, -v5, v8
+; GFX10-IEEE-NEXT:    v_fma_f32 v12, -v4, v9, v10
+; GFX10-IEEE-NEXT:    v_fma_f32 v13, -v5, v11, v8
 ; GFX10-IEEE-NEXT:    v_fmac_f32_e32 v9, v12, v6
 ; GFX10-IEEE-NEXT:    v_fmac_f32_e32 v11, v13, v7
-; GFX10-IEEE-NEXT:    v_fmac_f32_e64 v10, -v4, v9
-; GFX10-IEEE-NEXT:    v_fmac_f32_e64 v8, -v5, v11
-; GFX10-IEEE-NEXT:    v_div_fmas_f32 v4, v10, v6, v9
+; GFX10-IEEE-NEXT:    v_fma_f32 v4, -v4, v9, v10
+; GFX10-IEEE-NEXT:    v_fma_f32 v5, -v5, v11, v8
+; GFX10-IEEE-NEXT:    v_div_fmas_f32 v4, v4, v6, v9
 ; GFX10-IEEE-NEXT:    s_mov_b32 vcc_lo, s4
-; GFX10-IEEE-NEXT:    v_div_fmas_f32 v5, v8, v7, v11
+; GFX10-IEEE-NEXT:    v_div_fmas_f32 v5, v5, v7, v11
 ; GFX10-IEEE-NEXT:    v_div_fixup_f32 v0, v4, v2, v0
 ; GFX10-IEEE-NEXT:    v_div_fixup_f32 v1, v5, v3, v1
 ; GFX10-IEEE-NEXT:    s_setpc_b64 s[30:31]
