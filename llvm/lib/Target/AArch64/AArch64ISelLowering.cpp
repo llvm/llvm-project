@@ -21903,7 +21903,10 @@ AArch64TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
   if (getTargetMachine().getOptLevel() == CodeGenOpt::None)
     return AtomicExpansionKind::CmpXChg;
 
-  return AtomicExpansionKind::LLSC;
+  // Using CAS for an atomic load has a better chance of succeeding under high
+  // contention situations. So use it if available.
+  return Subtarget->hasLSE() ? AtomicExpansionKind::CmpXChg
+                             : AtomicExpansionKind::LLSC;
 }
 
 // For the real atomic operations, we have ldxr/stxr up to 128 bits,
@@ -21940,8 +21943,10 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   // implement atomicrmw without spilling. If the target address is also on the
   // stack and close enough to the spill slot, this can lead to a situation
   // where the monitor always gets cleared and the atomic operation can never
-  // succeed. So at -O0 lower this operation to a CAS loop.
-  if (getTargetMachine().getOptLevel() == CodeGenOpt::None)
+  // succeed. So at -O0 lower this operation to a CAS loop. Also worthwhile if
+  // we have a single CAS instruction that can replace the loop.
+  if (getTargetMachine().getOptLevel() == CodeGenOpt::None ||
+      Subtarget->hasLSE())
     return AtomicExpansionKind::CmpXChg;
 
   return AtomicExpansionKind::LLSC;

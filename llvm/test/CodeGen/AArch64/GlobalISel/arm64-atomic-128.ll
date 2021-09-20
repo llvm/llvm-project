@@ -360,14 +360,11 @@ define void @atomic_load_relaxed(i64, i64, ptr %p, ptr %p2) {
 ;
 ; CHECK-CAS-O1-LABEL: atomic_load_relaxed:
 ; CHECK-CAS-O1:       // %bb.0:
-; CHECK-CAS-O1-NEXT:  .LBB4_1: // %atomicrmw.start
-; CHECK-CAS-O1-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-CAS-O1-NEXT:    ldxp x9, x8, [x2]
-; CHECK-CAS-O1-NEXT:    stxp w10, x9, x8, [x2]
-; CHECK-CAS-O1-NEXT:    cbnz w10, .LBB4_1
-; CHECK-CAS-O1-NEXT:  // %bb.2: // %atomicrmw.end
-; CHECK-CAS-O1-NEXT:    mov v0.d[0], x9
-; CHECK-CAS-O1-NEXT:    mov v0.d[1], x8
+; CHECK-CAS-O1-NEXT:    mov x0, xzr
+; CHECK-CAS-O1-NEXT:    mov x1, xzr
+; CHECK-CAS-O1-NEXT:    casp x0, x1, x0, x1, [x2]
+; CHECK-CAS-O1-NEXT:    mov v0.d[0], x0
+; CHECK-CAS-O1-NEXT:    mov v0.d[1], x1
 ; CHECK-CAS-O1-NEXT:    str q0, [x3]
 ; CHECK-CAS-O1-NEXT:    ret
 ;
