@@ -925,6 +925,8 @@ bool IONAME(OutputUnformattedBlock)(Cookie cookie, const char *x,
   if (auto *unf{io.get_if<
           ExternalUnformattedIoStatementState<Direction::Output>>()}) {
     return unf->Emit(x, length, elementBytes);
+  } else if (auto *inq{io.get_if<InquireIOLengthState>()}) {
+    return inq->Emit(x, length, elementBytes);
   }
   io.GetIoErrorHandler().Crash("OutputUnformattedBlock() called for an I/O "
                                "statement that is not unformatted output");
@@ -1078,6 +1080,27 @@ bool IONAME(InputLogical)(Cookie cookie, bool &truth) {
   descriptor.Establish(
       TypeCategory::Logical, sizeof truth, reinterpret_cast<void *>(&truth), 0);
   return descr::DescriptorIO<Direction::Input>(*cookie, descriptor);
+}
+
+std::size_t IONAME(GetSize)(Cookie cookie) {
+  IoStatementState &io{*cookie};
+  if (const auto *formatted{
+          io.get_if<FormattedIoStatementState<Direction::Input>>()}) {
+    return formatted->GetEditDescriptorChars();
+  }
+  io.GetIoErrorHandler().Crash(
+      "GetIoSize() called for an I/O statement that is not a formatted READ()");
+  return 0;
+}
+
+std::size_t IONAME(GetIoLength)(Cookie cookie) {
+  IoStatementState &io{*cookie};
+  if (const auto *inq{io.get_if<InquireIOLengthState>()}) {
+    return inq->bytes();
+  }
+  io.GetIoErrorHandler().Crash("GetIoLength() called for an I/O statement that "
+                               "is not INQUIRE(IOLENGTH=)");
+  return 0;
 }
 
 void IONAME(GetIoMsg)(Cookie cookie, char *msg, std::size_t length) {

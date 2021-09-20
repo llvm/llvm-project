@@ -280,10 +280,10 @@ bool IONAME(SetFile)(Cookie, const char *, std::size_t chars);
 bool IONAME(GetNewUnit)(Cookie, int &, int kind = 4);
 
 // READ(SIZE=), after all input items
-bool IONAME(GetSize)(Cookie, std::int64_t, int kind = 8);
+std::size_t IONAME(GetSize)(Cookie);
 
 // INQUIRE(IOLENGTH=), after all output items
-bool IONAME(GetIoLength)(Cookie, std::int64_t, int kind = 8);
+std::size_t IONAME(GetIoLength)(Cookie);
 
 // GetIoMsg() does not modify its argument unless an error or
 // end-of-record/file condition is present.
