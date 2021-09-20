@@ -1326,6 +1326,14 @@ llvm::json::Value toJSON(const InlayHint &H) {
   return llvm::json::Object{
       {"range", H.range}, {"kind", H.kind}, {"label", H.label}};
 }
+bool operator==(const InlayHint &A, const InlayHint &B) {
+  return std::tie(A.kind, A.range, A.label) ==
+         std::tie(B.kind, B.range, B.label);
+}
+bool operator<(const InlayHint &A, const InlayHint &B) {
+  return std::tie(A.kind, A.range, A.label) <
+         std::tie(B.kind, B.range, B.label);
+}
 
 static const char *toString(OffsetEncoding OE) {
   switch (OE) {

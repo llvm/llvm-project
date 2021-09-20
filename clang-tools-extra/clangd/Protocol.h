@@ -1548,6 +1548,8 @@ struct InlayHint {
   std::string label;
 };
 llvm::json::Value toJSON(const InlayHint &);
+bool operator==(const InlayHint &, const InlayHint &);
+bool operator<(const InlayHint &, const InlayHint &);
 
 struct ReferenceContext {
   /// Include the declaration of the current symbol.
