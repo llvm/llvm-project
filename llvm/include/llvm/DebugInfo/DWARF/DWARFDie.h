@@ -236,6 +236,8 @@ public:
   /// for ShortName if LinkageName is not found.
   /// Returns null if no name is found.
   const char *getName(DINameKind Kind) const;
+  void getFullName(raw_string_ostream &,
+                   std::string *OriginalFullName = nullptr) const;
 
   /// Return the DIE short name resolving DW_AT_specification or
   /// DW_AT_abstract_origin references if necessary. Returns null if no name
