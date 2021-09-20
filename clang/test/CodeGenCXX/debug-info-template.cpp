@@ -30,7 +30,7 @@ void func();
 // CHECK: ![[TCNESTED]] ={{.*}}!DICompositeType(tag: DW_TAG_structure_type, name: "nested",
 // CHECK-SAME:             scope: ![[TC:[0-9]+]],
 
-// CHECK: ![[TC]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "TC<unsigned int, 2, &glb, &foo::e, &foo::f, &foo::g, 1, 2, 3>"
+// CHECK: ![[TC]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "TC<unsigned int, 2U, &glb, &foo::e, &foo::f, &foo::g, 1, 2, 3>"
 // CHECK-SAME:                              templateParams: [[TCARGS:![0-9]*]]
 TC
 // CHECK: [[EMPTY:![0-9]*]] = !{}

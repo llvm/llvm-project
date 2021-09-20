@@ -247,6 +247,7 @@ PrintingPolicy CGDebugInfo::getPrintingPolicy() const {
   PP.SuppressInlineNamespace = false;
   PP.PrintCanonicalTypes = true;
   PP.UsePreferredNames = false;
+  PP.UseIntegerTypeSuffixesAlways = true;
 
   // Apply -fdebug-prefix-map.
   PP.Callbacks = &PrintCB;
