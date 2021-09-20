@@ -690,6 +690,92 @@ static LogicalResult verify(DimOp op) {
   return success();
 }
 
+/// Return a map with key being elements in `vals` and data being number of
+/// occurences of it. Use std::map, since the `vals` here are strides and the
+/// dynamic stride value is the same as the tombstone value for
+/// `DenseMap<int64_t>`.
+static std::map<int64_t, unsigned> getNumOccurences(ArrayRef<int64_t> vals) {
+  std::map<int64_t, unsigned> numOccurences;
+  for (auto val : vals)
+    numOccurences[val]++;
+  return numOccurences;
+}
+
+/// Given the type of the un-rank reduced subview result type and the
+/// rank-reduced result type, computes the dropped dimensions. This accounts for
+/// cases where there are multiple unit-dims, but only a subset of those are
+/// dropped. For MemRefTypes these can be disambiguated using the strides. If a
+/// dimension is dropped the stride must be dropped too.
+static llvm::Optional<llvm::SmallDenseSet<unsigned>>
+computeMemRefRankReductionMask(MemRefType originalType, MemRefType reducedType,
+                               ArrayAttr staticSizes) {
+  llvm::SmallDenseSet<unsigned> unusedDims;
+  if (originalType.getRank() == reducedType.getRank())
+    return unusedDims;
+
+  for (auto dim : llvm::enumerate(staticSizes))
+    if (dim.value().cast<IntegerAttr>().getInt() == 1)
+      unusedDims.insert(dim.index());
+  SmallVector<int64_t> originalStrides, candidateStrides;
+  int64_t originalOffset, candidateOffset;
+  if (failed(
+          getStridesAndOffset(originalType, originalStrides, originalOffset)) ||
+      failed(
+          getStridesAndOffset(reducedType, candidateStrides, candidateOffset)))
+    return llvm::None;
+
+  // For memrefs, a dimension is truly dropped if its corresponding stride is
+  // also dropped. This is particularly important when more than one of the dims
+  // is 1. Track the number of occurences of the strides in the original type
+  // and the candidate type. For each unused dim that stride should not be
+  // present in the candidate type. Note that there could be multiple dimensions
+  // that have the same size. We dont need to exactly figure out which dim
+  // corresponds to which stride, we just need to verify that the number of
+  // reptitions of a stride in the original + number of unused dims with that
+  // stride == number of repititions of a stride in the candidate.
+  std::map<int64_t, unsigned> currUnaccountedStrides =
+      getNumOccurences(originalStrides);
+  std::map<int64_t, unsigned> candidateStridesNumOccurences =
+      getNumOccurences(candidateStrides);
+  llvm::SmallDenseSet<unsigned> prunedUnusedDims;
+  for (unsigned dim : unusedDims) {
+    int64_t originalStride = originalStrides[dim];
+    if (currUnaccountedStrides[originalStride] >
+        candidateStridesNumOccurences[originalStride]) {
+      // This dim can be treated as dropped.
+      currUnaccountedStrides[originalStride]--;
+      continue;
+    }
+    if (currUnaccountedStrides[originalStride] ==
+        candidateStridesNumOccurences[originalStride]) {
+      // The stride for this is not dropped. Keep as is.
+      prunedUnusedDims.insert(dim);
+      continue;
+    }
+    if (currUnaccountedStrides[originalStride] <
+        candidateStridesNumOccurences[originalStride]) {
+      // This should never happen. Cant have a stride in the reduced rank type
+      // that wasnt in the original one.
+      return llvm::None;
+    }
+  }
+
+  for (auto prunedDim : prunedUnusedDims)
+    unusedDims.erase(prunedDim);
+  if (unusedDims.size() + reducedType.getRank() != originalType.getRank())
+    return llvm::None;
+  return unusedDims;
+}
+
+llvm::SmallDenseSet<unsigned> SubViewOp::getDroppedDims() {
+  MemRefType sourceType = getSourceType();
+  MemRefType resultType = getType();
+  llvm::Optional<llvm::SmallDenseSet<unsigned>> unusedDims =
+      computeMemRefRankReductionMask(sourceType, resultType, static_sizes());
+  assert(unusedDims && "unable to find unused dims of subview");
+  return *unusedDims;
+}
+
 OpFoldResult DimOp::fold(ArrayRef<Attribute> operands) {
   // All forms of folding require a known index.
   auto index = operands[1].dyn_cast_or_null<IntegerAttr>();
@@ -724,6 +810,25 @@ OpFoldResult DimOp::fold(ArrayRef<Attribute> operands) {
   if (auto view = dyn_cast_or_null<ViewOp>(definingOp))
     return *(view.getDynamicSizes().begin() +
              memrefType.getDynamicDimIndex(unsignedIndex));
+
+  if (auto subview = dyn_cast_or_null<SubViewOp>(definingOp)) {
+    llvm::SmallDenseSet<unsigned> unusedDims = subview.getDroppedDims();
+    unsigned resultIndex = 0;
+    unsigned sourceRank = subview.getSourceType().getRank();
+    unsigned sourceIndex = 0;
+    for (auto i : llvm::seq<unsigned>(0, sourceRank)) {
+      if (unusedDims.count(i))
+        continue;
+      if (resultIndex == unsignedIndex) {
+        sourceIndex = i;
+        break;
+      }
+      resultIndex++;
+    }
+    assert(subview.isDynamicSize(sourceIndex) &&
+           "expected dynamic subview size");
+    return subview.getDynamicSize(sourceIndex);
+  }
 
   if (auto sizeInterface =
           dyn_cast_or_null<OffsetSizeAndStrideOpInterface>(definingOp)) {
@@ -1887,7 +1992,7 @@ enum SubViewVerificationResult {
 /// not matching dimension must be 1.
 static SubViewVerificationResult
 isRankReducedType(Type originalType, Type candidateReducedType,
-                  std::string *errMsg = nullptr) {
+                  ArrayAttr staticSizes, std::string *errMsg = nullptr) {
   if (originalType == candidateReducedType)
     return SubViewVerificationResult::Success;
   if (!originalType.isa<MemRefType>())
@@ -1908,8 +2013,11 @@ isRankReducedType(Type originalType, Type candidateReducedType,
   if (candidateReducedRank > originalRank)
     return SubViewVerificationResult::RankTooLarge;
 
+  MemRefType original = originalType.cast<MemRefType>();
+  MemRefType candidateReduced = candidateReducedType.cast<MemRefType>();
+
   auto optionalUnusedDimsMask =
-      computeRankReductionMask(originalShape, candidateReducedShape);
+      computeMemRefRankReductionMask(original, candidateReduced, staticSizes);
 
   // Sizes cannot be matched in case empty vector is returned.
   if (!optionalUnusedDimsMask.hasValue())
@@ -1920,42 +2028,8 @@ isRankReducedType(Type originalType, Type candidateReducedType,
     return SubViewVerificationResult::ElemTypeMismatch;
 
   // Strided layout logic is relevant for MemRefType only.
-  MemRefType original = originalType.cast<MemRefType>();
-  MemRefType candidateReduced = candidateReducedType.cast<MemRefType>();
   if (original.getMemorySpace() != candidateReduced.getMemorySpace())
     return SubViewVerificationResult::MemSpaceMismatch;
-
-  llvm::SmallDenseSet<unsigned> unusedDims = optionalUnusedDimsMask.getValue();
-  auto inferredType =
-      getProjectedMap(getStridedLinearLayoutMap(original), unusedDims);
-  AffineMap candidateLayout;
-  if (candidateReduced.getAffineMaps().empty())
-    candidateLayout = getStridedLinearLayoutMap(candidateReduced);
-  else
-    candidateLayout = candidateReduced.getAffineMaps().front();
-  assert(inferredType.getNumResults() == 1 &&
-         candidateLayout.getNumResults() == 1);
-  if (inferredType.getNumSymbols() != candidateLayout.getNumSymbols() ||
-      inferredType.getNumDims() != candidateLayout.getNumDims()) {
-    if (errMsg) {
-      llvm::raw_string_ostream os(*errMsg);
-      os << "inferred type: " << inferredType;
-    }
-    return SubViewVerificationResult::AffineMapMismatch;
-  }
-  // Check that the difference of the affine maps simplifies to 0.
-  AffineExpr diffExpr =
-      inferredType.getResult(0) - candidateLayout.getResult(0);
-  diffExpr = simplifyAffineExpr(diffExpr, inferredType.getNumDims(),
-                                inferredType.getNumSymbols());
-  auto cst = diffExpr.dyn_cast<AffineConstantExpr>();
-  if (!(cst && cst.getValue() == 0)) {
-    if (errMsg) {
-      llvm::raw_string_ostream os(*errMsg);
-      os << "inferred type: " << inferredType;
-    }
-    return SubViewVerificationResult::AffineMapMismatch;
-  }
   return SubViewVerificationResult::Success;
 }
 
@@ -2012,7 +2086,8 @@ static LogicalResult verify(SubViewOp op) {
       extractFromI64ArrayAttr(op.static_strides()));
 
   std::string errMsg;
-  auto result = isRankReducedType(expectedType, subViewType, &errMsg);
+  auto result =
+      isRankReducedType(expectedType, subViewType, op.static_sizes(), &errMsg);
   return produceSubViewErrorMsg(result, op, expectedType, errMsg);
 }
 

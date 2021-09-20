@@ -27,35 +27,37 @@ int main(int, char**)
 
     {
       // Make sure conversions don't happen for transparent non-final hasher and key_equal
-      using set_type = const unord_set_type<std::unordered_set, transparent_hash, std::equal_to<> >;
-      test_transparent_count<set_type>(key_type{1},  key_type{2});
+      using S = unord_set_type<std::unordered_set, transparent_hash, std::equal_to<>>;
+      test_transparent_count<S>({1, 2});
+      test_transparent_count<const S>({1, 2});
     }
 
     {
       // Make sure conversions don't happen for transparent final hasher and key_equal
-      using set_type =
-          const unord_set_type<std::unordered_set, transparent_hash_final, transparent_equal_final>;
-      test_transparent_count<set_type>(key_type{1},  key_type{2});
+      using S = unord_set_type<std::unordered_set, transparent_hash_final, transparent_equal_final>;
+      test_transparent_count<S>({1, 2});
+      test_transparent_count<const S>({1, 2});
     }
 
     {
       // Make sure conversions do happen for non-transparent hasher
-      using set_type = const unord_set_type<std::unordered_set, non_transparent_hash, std::equal_to<> >;
-      test_non_transparent_count<set_type>(key_type{1},  key_type{2});
+      using S = unord_set_type<std::unordered_set, non_transparent_hash, std::equal_to<>>;
+      test_non_transparent_count<S>({1, 2});
+      test_non_transparent_count<const S>({1, 2});
     }
 
     {
       // Make sure conversions do happen for non-transparent key_equal
-      using set_type =
-          const unord_set_type<std::unordered_set, transparent_hash, std::equal_to<key_type> >;
-      test_non_transparent_count<set_type>(key_type{1},  key_type{2});
+      using S = unord_set_type<std::unordered_set, transparent_hash, std::equal_to<key_type>>;
+      test_non_transparent_count<S>({1, 2});
+      test_non_transparent_count<const S>({1, 2});
     }
 
     {
       // Make sure conversions do happen for both non-transparent hasher and key_equal
-      using set_type =
-          const unord_set_type<std::unordered_set, non_transparent_hash, std::equal_to<key_type> >;
-      test_non_transparent_count<set_type>(key_type{1},  key_type{2});
+      using S = unord_set_type<std::unordered_set, non_transparent_hash, std::equal_to<key_type>>;
+      test_non_transparent_count<S>({1, 2});
+      test_non_transparent_count<const S>({1, 2});
     }
 
     return 0;
