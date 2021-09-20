@@ -1065,6 +1065,10 @@ bool RISCVTargetLowering::shouldSinkOperands(
     case Instruction::Add:
     case Instruction::Sub:
     case Instruction::Mul:
+    case Instruction::FAdd:
+    case Instruction::FSub:
+    case Instruction::FMul:
+    case Instruction::FDiv:
       return true;
     case Instruction::Shl:
     case Instruction::LShr:
