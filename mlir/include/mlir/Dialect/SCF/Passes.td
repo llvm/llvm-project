@@ -78,39 +78,4 @@ def SCFForLoopRangeFolding
   let constructor = "mlir::createForLoopRangeFoldingPass()";
 }
 
-def SCFForToWhileLoop
-    : FunctionPass<"scf-for-to-while"> {
-  let summary = "Convert SCF for loops to SCF while loops";
-  let constructor = "mlir::createForToWhileLoopPass()";
-  let description = [{
-    This pass transforms SCF.ForOp operations to SCF.WhileOp. The For loop
-    condition is placed in the 'before' region of the while operation, and the
-    induction variable incrementation and loop body in the 'after' region.
-    The loop carried values of the while op are the induction variable (IV) of
-    the for-loop + any iter_args specified for the for-loop.
-    Any 'yield' ops in the for-loop are rewritten to additionally yield the
-    (incremented) induction variable.
-
-    ```mlir
-    # Before:
-      scf.for %i = %c0 to %arg1 step %c1 {
-        %0 = addi %arg2, %arg2 : i32
-        memref.store %0, %arg0[%i] : memref<?xi32>
-      }
-
-    # After:
-      %0 = scf.while (%i = %c0) : (index) -> index {
-        %1 = cmpi slt, %i, %arg1 : index
-        scf.condition(%1) %i : index
-      } do {
-      ^bb0(%i: index):  // no predecessors
-        %1 = addi %i, %c1 : index
-        %2 = addi %arg2, %arg2 : i32
-        memref.store %2, %arg0[%i] : memref<?xi32>
-        scf.yield %1 : index
-      }
-    ```
-  }];
-}
-
 #endif // MLIR_DIALECT_SCF_PASSES
