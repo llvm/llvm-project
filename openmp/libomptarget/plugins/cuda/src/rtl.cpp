@@ -547,7 +547,8 @@ public:
     if (const char *EnvStr = getenv("LIBOMPTARGET_SHARED_MEMORY_SIZE")) {
       // LIBOMPTARGET_SHARED_MEMORY_SIZE has been set
       DynamicMemorySize = std::stoi(EnvStr);
-      DP("Parsed LIBOMPTARGET_SHARED_MEMORY_SIZE", DynamicMemorySize);
+      DP("Parsed LIBOMPTARGET_SHARED_MEMORY_SIZE = %" PRIu64 "\n",
+         DynamicMemorySize);
     }
 
     StreamManager =
