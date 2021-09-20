@@ -29,7 +29,7 @@
 
 ; CHECK-LABEL: polly.stmt.bb4:
 ; CHECK:         %tmp.0.s2a.reload[[R3:[0-9]*]] = load float, float* %tmp.0.s2a
-; CHECK:         %tmp[[R5:[0-9]*]]_p_scalar_ = load float, float* %scevgep, align 4, !alias.scope !0, !noalias !2
+; CHECK:         %tmp[[R5:[0-9]*]]_p_scalar_ = load float, float* %scevgep, align 4, !alias.scope !0, !noalias !3
 ; CHECK:         %p_tmp[[R4:[0-9]*]] = fadd float %tmp.0.s2a.reload[[R3]], %tmp[[R5]]_p_scalar_
 ; CHECK:         store float %p_tmp[[R4]], float* %tmp.0.phiops
 

@@ -3,7 +3,7 @@
 ; CHECK:      polly.stmt.if.then81:                             ; preds = %polly.stmt.if.end75
 ; CHECK-NEXT:   %scevgep = getelementptr [2 x %S], [2 x %S]* %tmp, i64 0, i64 %.147
 ; CHECK-NEXT:   %scevgep1 = bitcast %S* %scevgep to float*
-; CHECK-NEXT:   store float undef, float* %scevgep1, align 4, !alias.scope !0, !noalias !2
+; CHECK-NEXT:   store float undef, float* %scevgep1, align 4, !alias.scope !0, !noalias !3
 ; CHECK-NEXT:   br label %polly.stmt.if.end87.region_exiting
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"

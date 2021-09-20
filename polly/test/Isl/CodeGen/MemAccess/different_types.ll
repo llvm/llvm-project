@@ -14,7 +14,7 @@
 ; CHECK: %[[R2:[._0-9]*]] = add nsw i64 %[[R1]], 99
 ; CHECK: %polly.access.A15 = getelementptr i32, i32* %polly.access.cast.A14, i64 %[[R2]]
 ; CHECK: %[[R3:[._0-9]*]] = bitcast i32* %polly.access.A15 to float*
-; CHECK: %tmp14_p_scalar_ = load float, float* %[[R3]], align 4, !alias.scope !3, !noalias !4
+; CHECK: %tmp14_p_scalar_ = load float, float* %[[R3]], align 4, !alias.scope !3, !noalias !0
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

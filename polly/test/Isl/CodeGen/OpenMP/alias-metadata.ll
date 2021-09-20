@@ -32,8 +32,8 @@ bb5:                                              ; preds = %bb4
   %tmp7 = getelementptr inbounds float, float* %A, i64 %i.0
   %tmp6 = load float, float* %tmp, align 4
   store float %tmp6, float* %tmp7, align 4
-; CHECK: %tmp6_p_scalar_ = load float, float* %scevgep, align 4, !alias.scope !0, !noalias !2
-; CHECK: store float %tmp6_p_scalar_, float* %scevgep8, align 4, !alias.scope !3, !noalias !4
+; CHECK: %tmp6_p_scalar_ = load float, float* %scevgep, align 4, !alias.scope !0, !noalias !3
+; CHECK: store float %tmp6_p_scalar_, float* %scevgep8, align 4, !alias.scope !3, !noalias !0
   br label %bb8
 
 bb8:                                              ; preds = %bb5

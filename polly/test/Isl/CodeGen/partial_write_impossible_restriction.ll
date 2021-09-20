@@ -49,10 +49,10 @@ if.then.i.i1141.loopexit:                         ; preds = %cond.end
 
 ; CHECK-LABEL: polly.stmt.cond.false:
 ; CHECK:         %polly.access..pn{{[0-9]*}} = getelementptr i32, i32* %.pn, i64 %polly.indvar
-; CHECK:         store i32 %cond.in.sroa.speculate.load.cond.false_p_scalar_, i32* %polly.access..pn{{[0-9]*}}, align 4, !alias.scope !0, !noalias !2
+; CHECK:         store i32 %cond.in.sroa.speculate.load.cond.false_p_scalar_, i32* %polly.access..pn{{[0-9]*}}, align 4, !alias.scope !0, !noalias !3
 ; CHECK:         br label %polly.merge
 
 ; CHECK-LABEL: polly.stmt.cond.false{{[0-9]*}}:
 ; CHECK:         %polly.access..pn{{[0-9]*}} = getelementptr i32, i32* %.pn, i64 0
-; CHECK:         store i32 %cond.in.sroa.speculate.load.cond.false_p_scalar_{{[0-9]*}}, i32* %polly.access..pn{{[0-9]*}}, align 4, !alias.scope !0, !noalias !2
+; CHECK:         store i32 %cond.in.sroa.speculate.load.cond.false_p_scalar_{{[0-9]*}}, i32* %polly.access..pn{{[0-9]*}}, align 4, !alias.scope !0, !noalias !3
 ; CHECK:         br label %polly.stmt.cond.end{{[0-9]*}}
