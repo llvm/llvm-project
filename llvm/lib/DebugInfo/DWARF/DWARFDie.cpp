@@ -428,7 +428,7 @@ struct DWARFTypePrinter {
         OS << ", ";
       }
       First = false;
-      appendUnqualifiedName(T);
+      appendQualifiedName(T);
     }
     EndedWithTemplate = false;
     OS << ')';
