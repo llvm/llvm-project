@@ -622,11 +622,12 @@ template <class ELFT> void Writer<ELFT>::run() {
     for (OutputSection *sec : outputSections)
       sec->addr = 0;
 
-  // Handle --print-map(-M)/--Map, --cref and --print-archive-stats=. Dump them
-  // before checkSections() because the files may be useful in case
-  // checkSections() or openFile() fails, for example, due to an erroneous file
-  // size.
+  // Handle --print-map(-M)/--Map, --why-extract=, --cref and
+  // --print-archive-stats=. Dump them before checkSections() because the files
+  // may be useful in case checkSections() or openFile() fails, for example, due
+  // to an erroneous file size.
   writeMapFile();
+  writeWhyExtract();
   writeCrossReferenceTable();
   writeArchiveStats();
 

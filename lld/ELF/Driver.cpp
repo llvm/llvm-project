@@ -94,6 +94,7 @@ bool elf::link(ArrayRef<const char *> args, bool canExitEarly,
     objectFiles.clear();
     sharedFiles.clear();
     backwardReferences.clear();
+    whyExtract.clear();
 
     tar = nullptr;
     memset(&in, 0, sizeof(in));
@@ -1171,6 +1172,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->warnCommon = args.hasFlag(OPT_warn_common, OPT_no_warn_common, false);
   config->warnSymbolOrdering =
       args.hasFlag(OPT_warn_symbol_ordering, OPT_no_warn_symbol_ordering, true);
+  config->whyExtract = args.getLastArgValue(OPT_why_extract);
   config->zCombreloc = getZFlag(args, "combreloc", "nocombreloc", true);
   config->zCopyreloc = getZFlag(args, "copyreloc", "nocopyreloc", true);
   config->zForceBti = hasZOption(args, "force-bti");
@@ -1696,13 +1698,16 @@ static void excludeLibs(opt::InputArgList &args) {
 }
 
 // Force Sym to be entered in the output.
-static void handleUndefined(Symbol *sym) {
+static void handleUndefined(Symbol *sym, const char *option) {
   // Since a symbol may not be used inside the program, LTO may
   // eliminate it. Mark the symbol as "used" to prevent it.
   sym->isUsedInRegularObj = true;
 
-  if (sym->isLazy())
-    sym->fetch();
+  if (!sym->isLazy())
+    return;
+  sym->fetch();
+  if (!config->whyExtract.empty())
+    whyExtract.emplace_back(option, sym->file, *sym);
 }
 
 // As an extension to GNU linkers, lld supports a variant of `-u`
@@ -1725,7 +1730,7 @@ static void handleUndefinedGlob(StringRef arg) {
   }
 
   for (Symbol *sym : syms)
-    handleUndefined(sym);
+    handleUndefined(sym, "--undefined-glob");
 }
 
 static void handleLibcall(StringRef name) {
@@ -2192,6 +2197,9 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
             e.message());
     if (auto e = tryCreateFile(config->mapFile))
       error("cannot open map file " + config->mapFile + ": " + e.message());
+    if (auto e = tryCreateFile(config->whyExtract))
+      error("cannot open --why-extract= file " + config->whyExtract + ": " +
+            e.message());
   }
   if (errorCount())
     return;
@@ -2246,7 +2254,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // If an entry symbol is in a static archive, pull out that file now.
   if (Symbol *sym = symtab->find(config->entry))
-    handleUndefined(sym);
+    handleUndefined(sym, "--entry");
 
   // Handle the `--undefined-glob <pattern>` options.
   for (StringRef pat : args::getStrings(args, OPT_undefined_glob))

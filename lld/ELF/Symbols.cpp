@@ -64,6 +64,8 @@ Defined *ElfSym::riscvGlobalPointer;
 Defined *ElfSym::tlsModuleBase;
 DenseMap<const Symbol *, std::pair<const InputFile *, const InputFile *>>
     elf::backwardReferences;
+SmallVector<std::tuple<std::string, const InputFile *, const Symbol &>, 0>
+    elf::whyExtract;
 
 static uint64_t getSymVA(const Symbol &sym, int64_t &addend) {
   switch (sym.kind()) {
@@ -321,6 +323,11 @@ void elf::printTraceSymbol(const Symbol *sym) {
   message(toString(sym->file) + s + sym->getName());
 }
 
+static void recordWhyExtract(const InputFile *reference,
+                             const InputFile &extracted, const Symbol &sym) {
+  whyExtract.emplace_back(toString(reference), &extracted, sym);
+}
+
 void elf::maybeWarnUnorderableSymbol(const Symbol *sym) {
   if (!config->warnSymbolOrdering)
     return;
@@ -533,6 +540,9 @@ void Symbol::resolveUndefined(const Undefined &other) {
                    file->groupId < other.file->groupId;
     fetch();
 
+    if (!config->whyExtract.empty())
+      recordWhyExtract(other.file, *file, *this);
+
     // We don't report backward references to weak symbols as they can be
     // overridden later.
     //
@@ -742,7 +752,10 @@ template <class LazyT> void Symbol::resolveLazy(const LazyT &other) {
     return;
   }
 
+  const InputFile *oldFile = file;
   other.fetch();
+  if (!config->whyExtract.empty())
+    recordWhyExtract(oldFile, *file, *this);
 }
 
 void Symbol::resolveShared(const SharedSymbol &other) {
