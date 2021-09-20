@@ -61,6 +61,9 @@ def FeatureRAS : SubtargetFeature<"ras", "HasRAS", "true",
 def FeatureLSE : SubtargetFeature<"lse", "HasLSE", "true",
   "Enable ARMv8.1 Large System Extension (LSE) atomic instructions">;
 
+def FeatureLSE2 : SubtargetFeature<"lse2", "HasLSE2", "true",
+  "Enable ARMv8.4 Large System Extension 2 (LSE2) atomicity rules">;
+
 def FeatureOutlineAtomics : SubtargetFeature<"outline-atomics", "OutlineAtomics", "true",
   "Enable out of line atomics to support LSE instructions">;
 
@@ -459,7 +462,7 @@ def HasV8_4aOps : SubtargetFeature<"v8.4a", "HasV8_4aOps", "true",
   "Support ARM v8.4a instructions", [HasV8_3aOps, FeatureDotProd,
   FeatureNV, FeatureMPAM, FeatureDIT,
   FeatureTRACEV8_4, FeatureAM, FeatureSEL2, FeatureTLB_RMI,
-  FeatureFlagM, FeatureRCPC_IMMO]>;
+  FeatureFlagM, FeatureRCPC_IMMO, FeatureLSE2]>;
 
 def HasV8_5aOps : SubtargetFeature<
   "v8.5a", "HasV8_5aOps", "true", "Support ARM v8.5a instructions",
