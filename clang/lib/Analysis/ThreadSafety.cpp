@@ -849,6 +849,11 @@ static void findBlockLocations(CFG *CFGraph,
       // location.
       CurrBlockInfo->EntryLoc = CurrBlockInfo->ExitLoc =
           BlockInfo[(*CurrBlock->pred_begin())->getBlockID()].ExitLoc;
+    } else if (CurrBlock->succ_size() == 1 && *CurrBlock->succ_begin()) {
+      // The block is empty, and has a single successor. Use its entry
+      // location.
+      CurrBlockInfo->EntryLoc = CurrBlockInfo->ExitLoc =
+          BlockInfo[(*CurrBlock->succ_begin())->getBlockID()].EntryLoc;
     }
   }
 }
@@ -2415,7 +2420,6 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
     // union because the real error is probably that we forgot to unlock M on
     // all code paths.
     bool LocksetInitialized = false;
-    SmallVector<CFGBlock *, 8> SpecialBlocks;
     for (CFGBlock::const_pred_iterator PI = CurrBlock->pred_begin(),
          PE  = CurrBlock->pred_end(); PI != PE; ++PI) {
       // if *PI -> CurrBlock is a back edge
@@ -2432,17 +2436,6 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
       // Okay, we can reach this block from the entry.
       CurrBlockInfo->Reachable = true;
 
-      // If the previous block ended in a 'continue' or 'break' statement, then
-      // a difference in locksets is probably due to a bug in that block, rather
-      // than in some other predecessor. In that case, keep the other
-      // predecessor's lockset.
-      if (const Stmt *Terminator = (*PI)->getTerminatorStmt()) {
-        if (isa<ContinueStmt>(Terminator) || isa<BreakStmt>(Terminator)) {
-          SpecialBlocks.push_back(*PI);
-          continue;
-        }
-      }
-
       FactSet PrevLockset;
       getEdgeLockset(PrevLockset, PrevBlockInfo->ExitSet, *PI, CurrBlock);
 
@@ -2450,44 +2443,20 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
         CurrBlockInfo->EntrySet = PrevLockset;
         LocksetInitialized = true;
       } else {
-        intersectAndWarn(CurrBlockInfo->EntrySet, PrevLockset,
-                         CurrBlockInfo->EntryLoc,
-                         LEK_LockedSomePredecessors);
+        // Surprisingly 'continue' doesn't always produce back edges, because
+        // the CFG has empty "transition" blocks where they meet with the end
+        // of the regular loop body. We still want to diagnose them as loop.
+        intersectAndWarn(
+            CurrBlockInfo->EntrySet, PrevLockset, CurrBlockInfo->EntryLoc,
+            isa_and_nonnull<ContinueStmt>((*PI)->getTerminatorStmt())
+                ? LEK_LockedSomeLoopIterations
+                : LEK_LockedSomePredecessors);
       }
     }
 
     // Skip rest of block if it's not reachable.
     if (!CurrBlockInfo->Reachable)
       continue;
-
-    // Process continue and break blocks. Assume that the lockset for the
-    // resulting block is unaffected by any discrepancies in them.
-    for (const auto *PrevBlock : SpecialBlocks) {
-      unsigned PrevBlockID = PrevBlock->getBlockID();
-      CFGBlockInfo *PrevBlockInfo = &BlockInfo[PrevBlockID];
-
-      if (!LocksetInitialized) {
-        CurrBlockInfo->EntrySet = PrevBlockInfo->ExitSet;
-        LocksetInitialized = true;
-      } else {
-        // Determine whether this edge is a loop terminator for diagnostic
-        // purposes. FIXME: A 'break' statement might be a loop terminator, but
-        // it might also be part of a switch. Also, a subsequent destructor
-        // might add to the lockset, in which case the real issue might be a
-        // double lock on the other path.
-        const Stmt *Terminator = PrevBlock->getTerminatorStmt();
-        bool IsLoop = Terminator && isa<ContinueStmt>(Terminator);
-
-        FactSet PrevLockset;
-        getEdgeLockset(PrevLockset, PrevBlockInfo->ExitSet,
-                       PrevBlock, CurrBlock);
-
-        // Do not update EntrySet.
-        intersectAndWarn(
-            CurrBlockInfo->EntrySet, PrevLockset, PrevBlockInfo->ExitLoc,
-            IsLoop ? LEK_LockedSomeLoopIterations : LEK_LockedSomePredecessors);
-      }
-    }
 
     BuildLockset LocksetBuilder(this, *CurrBlockInfo);
 
