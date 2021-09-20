@@ -327,6 +327,10 @@ private:
       Addend = 0;
       break;
     }
+    case PCRel32TLV: {
+      Kind = x86_64::RequestTLSDescInGOTAndTransformToDelta32;
+      break;
+    }
     case PCRel32GOTLoadRelaxable: {
       Kind = x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable;
       Addend = 0;
