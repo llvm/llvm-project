@@ -48,10 +48,10 @@ config.enable_vulkan_runner = @MLIR_ENABLE_VULKAN_RUNNER@
 config.enable_bindings_python = @MLIR_ENABLE_BINDINGS_PYTHON@
 config.mlir_integration_test_dir = "@MLIR_INTEGRATION_TEST_DIR@"
 config.intel_sde_executable = "@INTEL_SDE_EXECUTABLE@"
-config.mlir_run_amx_tests = "@MLIR_RUN_AMX_TESTS@"
-config.mlir_run_x86vector_tests = "@MLIR_RUN_X86VECTOR_TESTS@"
-config.mlir_run_cuda_tensor_core_tests = "@MLIR_RUN_CUDA_TENSOR_CORE_TESTS@"
-config.mlir_include_integration_tests = "@MLIR_INCLUDE_INTEGRATION_TESTS@"
+config.mlir_run_amx_tests = @MLIR_RUN_AMX_TESTS@
+config.mlir_run_x86vector_tests = @MLIR_RUN_X86VECTOR_TESTS@
+config.mlir_run_cuda_tensor_core_tests = @MLIR_RUN_CUDA_TENSOR_CORE_TESTS@
+config.mlir_include_integration_tests = @MLIR_INCLUDE_INTEGRATION_TESTS@
 
 # Support substitution of the tools_dir with user parameters. This is
 # used when we can't determine the tool dir at configuration time.
