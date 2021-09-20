@@ -8,7 +8,7 @@
 %"b" = type { i8 }
 
 define hidden i64 @f1() align 2 {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@f1
 ; IS__TUNIT____-SAME: () #[[ATTR0:[0-9]+]] align 2 {
 ; IS__TUNIT____-NEXT:  entry:
@@ -32,6 +32,8 @@ define internal i64 @f2(%"a"* %this) align 2 {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@f2
 ; IS__CGSCC____-SAME: () #[[ATTR0]] align 2 {
 ; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    [[THIS_ADDR:%.*]] = alloca %a*, align 8
+; IS__CGSCC____-NEXT:    [[THIS1:%.*]] = load %a*, %a** [[THIS_ADDR]], align 8
 ; IS__CGSCC____-NEXT:    ret i64 undef
 ;
 entry:
@@ -92,7 +94,5 @@ entry:
   ret %"a"* %0
 }
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
-;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.

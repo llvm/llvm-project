@@ -8,8 +8,9 @@
 ; argument type between the caller and callee.
 
 define dso_local i16 @foo(i16 %a) {
+; NOT_CGSCC_NPM: Function Attrs: norecurse
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@foo
-; NOT_CGSCC_NPM-SAME: (i16 [[A:%.*]]) {
+; NOT_CGSCC_NPM-SAME: (i16 [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; NOT_CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i16 bitcast (i16 (i16, i16)* @bar to i16 (i16, i32)*)(i16 [[A]], i32 7)
 ; NOT_CGSCC_NPM-NEXT:    ret i16 [[CALL]]
 ;
@@ -24,29 +25,18 @@ define dso_local i16 @foo(i16 %a) {
 }
 
 define internal i16 @bar(i16 %p1, i16 %p2) {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@bar
-; IS__TUNIT____-SAME: (i16 [[P1:%.*]], i16 returned [[P2:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__TUNIT____-NEXT:    ret i16 [[P2]]
-;
-; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@bar
-; IS__CGSCC_OPM-SAME: (i16 [[P1:%.*]], i16 returned [[P2:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    ret i16 [[P2]]
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@bar
-; IS__CGSCC_NPM-SAME: (i16 [[P1:%.*]], i16 returned [[P2:%.*]]) #[[ATTR1:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    ret i16 [[P2]]
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@bar
+; CHECK-SAME: (i16 [[P1:%.*]], i16 returned [[P2:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:    ret i16 [[P2]]
 ;
   ret i16 %p2
 }
 
 
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
-;.
-; IS__CGSCC_OPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; NOT_CGSCC_NPM: attributes #[[ATTR0]] = { norecurse }
+; NOT_CGSCC_NPM: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.
 ; IS__CGSCC_NPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone }
 ; IS__CGSCC_NPM: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }

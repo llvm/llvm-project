@@ -22,17 +22,11 @@ target triple = "x86_64-unknown-linux-gnu"
 ;.
 define void @run() {
 ;
-; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@run
-; NOT_CGSCC_NPM-SAME: () #[[ATTR0:[0-9]+]] {
-; NOT_CGSCC_NPM-NEXT:  entry:
-; NOT_CGSCC_NPM-NEXT:    unreachable
-;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@run
-; IS__CGSCC____-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    unreachable
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@run
+; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    unreachable
 ;
 entry:
   tail call i8 @UseLongDoubleUnsafely(%union.u* byval(%union.u) align 16 bitcast (%struct.s* @b to %union.u*))
@@ -117,7 +111,7 @@ loop:
   br label %loop
 }
 ;.
-; NOT_CGSCC_NPM: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
+; NOT_CGSCC_NPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR1]] = { nofree norecurse noreturn nosync nounwind readnone }

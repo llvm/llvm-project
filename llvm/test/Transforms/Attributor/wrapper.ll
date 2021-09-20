@@ -61,7 +61,8 @@ entry:
 ; CHECK: tail call i32 @2(i32 %0)
 ; CHECK: ret
 ;
-; CHECK-NOT: Function Attrs:
+; FIXME: This is wrong
+; CHECK: Function Attrs: norecurse
 ; CHECK: define internal i32 @2(i32 %0)
 define linkonce i32 @inner3(i32) {
 entry:

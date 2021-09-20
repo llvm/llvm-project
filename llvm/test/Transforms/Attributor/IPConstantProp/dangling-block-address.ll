@@ -72,7 +72,7 @@ indirectgoto:                                     ; preds = %lab0, %entry
 }
 
 define i32 @main() nounwind readnone {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@main
 ; IS__TUNIT____-SAME: () #[[ATTR0:[0-9]+]] {
 ; IS__TUNIT____-NEXT:  entry:
@@ -88,7 +88,7 @@ entry:
   ret i32 0
 }
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
+; IS__TUNIT____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { nounwind readnone }
 ; IS__CGSCC____: attributes #[[ATTR1]] = { nounwind readonly }

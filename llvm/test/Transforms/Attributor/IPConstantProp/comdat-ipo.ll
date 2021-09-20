@@ -7,15 +7,10 @@
 ; See PR26774
 
 define i32 @baz() {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@baz
-; IS__TUNIT____-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__TUNIT____-NEXT:    ret i32 10
-;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@baz
-; IS__CGSCC____-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__CGSCC____-NEXT:    ret i32 10
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@baz
+; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    ret i32 10
 ;
   ret i32 10
 }
@@ -33,7 +28,9 @@ define linkonce_odr i32 @foo() {
 }
 
 define i32 @bar() {
-; CHECK-LABEL: define {{[^@]+}}@bar() {
+; CHECK: Function Attrs: norecurse
+; CHECK-LABEL: define {{[^@]+}}@bar
+; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @foo()
 ; CHECK-NEXT:    ret i32 [[VAL]]
 ;
@@ -42,7 +39,6 @@ define i32 @bar() {
   ret i32 %val
 }
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
-;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; CHECK: attributes #[[ATTR1]] = { norecurse }
 ;.

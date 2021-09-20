@@ -28,23 +28,14 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK: @[[GSH:[a-zA-Z0-9_$"\\.-]+]] = dso_local global i32 0, align 4
 ;.
 define internal i32 @callee(i32* %thread_local_ptr, i32* %shared_ptr) {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readonly willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@callee
-; IS__TUNIT____-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[THREAD_LOCAL_PTR:%.*]], i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[SHARED_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[TMP:%.*]] = load i32, i32* [[THREAD_LOCAL_PTR]], align 4
-; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = load i32, i32* @gsh, align 4
-; IS__TUNIT____-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP]], [[TMP1]]
-; IS__TUNIT____-NEXT:    ret i32 [[ADD]]
-;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readonly willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@callee
-; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[THREAD_LOCAL_PTR:%.*]], i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[SHARED_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[TMP:%.*]] = load i32, i32* [[THREAD_LOCAL_PTR]], align 4
-; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = load i32, i32* @gsh, align 4
-; IS__CGSCC____-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP]], [[TMP1]]
-; IS__CGSCC____-NEXT:    ret i32 [[ADD]]
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readonly willreturn
+; CHECK-LABEL: define {{[^@]+}}@callee
+; CHECK-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[THREAD_LOCAL_PTR:%.*]], i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[SHARED_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP:%.*]] = load i32, i32* [[THREAD_LOCAL_PTR]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* @gsh, align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[ADD]]
 ;
 entry:
   %tmp = load i32, i32* %thread_local_ptr, align 4
@@ -59,7 +50,9 @@ define dso_local void @caller() {
 ; IS__TUNIT____-NEXT:    call void @broker(i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) @gtl, i32 (i32*, i32*)* noundef nonnull @callee, i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) undef)
 ; IS__TUNIT____-NEXT:    ret void
 ;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@caller() {
+; IS__CGSCC____: Function Attrs: norecurse
+; IS__CGSCC____-LABEL: define {{[^@]+}}@caller
+; IS__CGSCC____-SAME: () #[[ATTR1:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    call void @broker(i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) @gtl, i32 (i32*, i32*)* noundef nonnull @callee, i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) @gsh)
 ; IS__CGSCC____-NEXT:    ret void
@@ -74,9 +67,10 @@ declare !callback !0 dso_local void @broker(i32*, i32 (i32*, i32*)*, i32*)
 !1 = !{i64 1, i64 0, i64 2, i1 false}
 !0 = !{!1}
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind readonly willreturn }
+; IS__TUNIT____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readonly willreturn }
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readonly willreturn }
+; IS__CGSCC____: attributes #[[ATTR1]] = { norecurse }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!1}
 ; CHECK: [[META1:![0-9]+]] = !{i64 1, i64 0, i64 2, i1 false}

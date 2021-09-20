@@ -9,20 +9,20 @@
 ; Don't drop 'byval' on %X here.
 define internal i32 @f(%struct.ss* byval(%struct.ss) %b, i32* byval(i32) %X, i32 %i) nounwind {
 ;
-; IS__TUNIT_OPM: Function Attrs: argmemonly nofree nosync nounwind willreturn
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@f
-; IS__TUNIT_OPM-SAME: (%struct.ss* noalias nocapture nofree noundef nonnull byval([[STRUCT_SS:%.*]]) align 8 dereferenceable(12) [[B:%.*]], i32* noalias nocapture nofree noundef nonnull byval(i32) align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__TUNIT_OPM-NEXT:  entry:
-; IS__TUNIT_OPM-NEXT:    [[TMP:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B]], i32 0, i32 0
-; IS__TUNIT_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP]], align 8
-; IS__TUNIT_OPM-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 1
-; IS__TUNIT_OPM-NEXT:    store i32 [[TMP2]], i32* [[TMP]], align 8
-; IS__TUNIT_OPM-NEXT:    store i32 0, i32* [[X]], align 4
-; IS__TUNIT_OPM-NEXT:    [[L:%.*]] = load i32, i32* [[X]], align 4
-; IS__TUNIT_OPM-NEXT:    [[A:%.*]] = add i32 [[L]], [[TMP2]]
-; IS__TUNIT_OPM-NEXT:    ret i32 [[A]]
+; IS________OPM: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn
+; IS________OPM-LABEL: define {{[^@]+}}@f
+; IS________OPM-SAME: (%struct.ss* noalias nocapture nofree noundef nonnull byval([[STRUCT_SS:%.*]]) align 8 dereferenceable(12) [[B:%.*]], i32* noalias nocapture nofree noundef nonnull byval(i32) align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; IS________OPM-NEXT:  entry:
+; IS________OPM-NEXT:    [[TMP:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B]], i32 0, i32 0
+; IS________OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP]], align 8
+; IS________OPM-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 1
+; IS________OPM-NEXT:    store i32 [[TMP2]], i32* [[TMP]], align 8
+; IS________OPM-NEXT:    store i32 0, i32* [[X]], align 4
+; IS________OPM-NEXT:    [[L:%.*]] = load i32, i32* [[X]], align 4
+; IS________OPM-NEXT:    [[A:%.*]] = add i32 [[L]], [[TMP2]]
+; IS________OPM-NEXT:    ret i32 [[A]]
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly nofree nosync nounwind willreturn
+; IS__TUNIT_NPM: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@f
 ; IS__TUNIT_NPM-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]], i32 [[TMP2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS__TUNIT_NPM-NEXT:  entry:
@@ -41,19 +41,6 @@ define internal i32 @f(%struct.ss* byval(%struct.ss) %b, i32* byval(i32) %X, i32
 ; IS__TUNIT_NPM-NEXT:    [[L:%.*]] = load i32, i32* [[X_PRIV]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[A:%.*]] = add i32 [[L]], [[TMP2]]
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[A]]
-;
-; IS__CGSCC_OPM: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@f
-; IS__CGSCC_OPM-SAME: (%struct.ss* noalias nocapture nofree noundef nonnull byval([[STRUCT_SS:%.*]]) align 8 dereferenceable(12) [[B:%.*]], i32* noalias nocapture nofree noundef nonnull byval(i32) align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    [[TMP:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B]], i32 0, i32 0
-; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP]], align 8
-; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 1
-; IS__CGSCC_OPM-NEXT:    store i32 [[TMP2]], i32* [[TMP]], align 8
-; IS__CGSCC_OPM-NEXT:    store i32 0, i32* [[X]], align 4
-; IS__CGSCC_OPM-NEXT:    [[L:%.*]] = load i32, i32* [[X]], align 4
-; IS__CGSCC_OPM-NEXT:    [[A:%.*]] = add i32 [[L]], [[TMP2]]
-; IS__CGSCC_OPM-NEXT:    ret i32 [[A]]
 ;
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@f
@@ -86,7 +73,7 @@ entry:
 ; Also make sure we don't drop the call zeroext attribute.
 define i32 @test(i32* %X) {
 ;
-; IS__TUNIT_OPM: Function Attrs: argmemonly nofree nosync nounwind willreturn
+; IS__TUNIT_OPM: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@test
 ; IS__TUNIT_OPM-SAME: (i32* nocapture nofree readonly [[X:%.*]]) #[[ATTR0]] {
 ; IS__TUNIT_OPM-NEXT:  entry:
@@ -97,7 +84,7 @@ define i32 @test(i32* %X) {
 ; IS__TUNIT_OPM-NEXT:    [[C:%.*]] = call i32 @f(%struct.ss* noalias nocapture nofree noundef nonnull readonly byval([[STRUCT_SS]]) align 8 dereferenceable(12) [[S]], i32* nocapture nofree readonly byval(i32) align 4 [[X]]) #[[ATTR1:[0-9]+]]
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[C]]
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly nofree nosync nounwind willreturn
+; IS__TUNIT_NPM: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@test
 ; IS__TUNIT_NPM-SAME: (i32* nocapture nofree readonly [[X:%.*]]) #[[ATTR0]] {
 ; IS__TUNIT_NPM-NEXT:  entry:
@@ -145,7 +132,7 @@ entry:
   ret i32 %c
 }
 ;.
-; IS__TUNIT____: attributes #[[ATTR0:[0-9]+]] = { argmemonly nofree nosync nounwind willreturn }
+; IS__TUNIT____: attributes #[[ATTR0:[0-9]+]] = { argmemonly nofree norecurse nosync nounwind willreturn }
 ; IS__TUNIT____: attributes #[[ATTR1:[0-9]+]] = { nofree nosync nounwind willreturn }
 ;.
 ; IS__CGSCC_OPM: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind willreturn }

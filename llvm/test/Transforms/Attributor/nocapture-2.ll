@@ -18,21 +18,13 @@ declare i32* @unknown()
 ;
 ; no-capture is missing on %p because it is not dereferenceable
 define i32 @is_null_return(i32* %p) #0 {
-; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@is_null_return
-; IS__TUNIT____-SAME: (i32* nofree readnone [[P:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[CMP:%.*]] = icmp eq i32* [[P]], null
-; IS__TUNIT____-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
-; IS__TUNIT____-NEXT:    ret i32 [[CONV]]
-;
-; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@is_null_return
-; IS__CGSCC____-SAME: (i32* nofree readnone [[P:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CMP:%.*]] = icmp eq i32* [[P]], null
-; IS__CGSCC____-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
-; IS__CGSCC____-NEXT:    ret i32 [[CONV]]
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; CHECK-LABEL: define {{[^@]+}}@is_null_return
+; CHECK-SAME: (i32* nofree readnone [[P:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32* [[P]], null
+; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    ret i32 [[CONV]]
 ;
 entry:
   %cmp = icmp eq i32* %p, null
@@ -52,51 +44,28 @@ entry:
 ;
 ; no-capture is missing on %p because it is not dereferenceable
 define i32 @is_null_control(i32* %p) #0 {
-; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@is_null_control
-; IS__TUNIT____-SAME: (i32* nofree [[P:%.*]]) #[[ATTR0]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-; IS__TUNIT____-NEXT:    [[CMP:%.*]] = icmp eq i32* [[P]], null
-; IS__TUNIT____-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-; IS__TUNIT____:       if.then:
-; IS__TUNIT____-NEXT:    store i32 1, i32* [[RETVAL]], align 4
-; IS__TUNIT____-NEXT:    br label [[RETURN:%.*]]
-; IS__TUNIT____:       if.end:
-; IS__TUNIT____-NEXT:    [[CMP1:%.*]] = icmp eq i32* null, [[P]]
-; IS__TUNIT____-NEXT:    br i1 [[CMP1]], label [[IF_THEN2:%.*]], label [[IF_END3:%.*]]
-; IS__TUNIT____:       if.then2:
-; IS__TUNIT____-NEXT:    store i32 1, i32* [[RETVAL]], align 4
-; IS__TUNIT____-NEXT:    br label [[RETURN]]
-; IS__TUNIT____:       if.end3:
-; IS__TUNIT____-NEXT:    store i32 0, i32* [[RETVAL]], align 4
-; IS__TUNIT____-NEXT:    br label [[RETURN]]
-; IS__TUNIT____:       return:
-; IS__TUNIT____-NEXT:    [[TMP0:%.*]] = load i32, i32* [[RETVAL]], align 4
-; IS__TUNIT____-NEXT:    ret i32 [[TMP0]]
-;
-; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@is_null_control
-; IS__CGSCC____-SAME: (i32* nofree [[P:%.*]]) #[[ATTR0]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-; IS__CGSCC____-NEXT:    [[CMP:%.*]] = icmp eq i32* [[P]], null
-; IS__CGSCC____-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-; IS__CGSCC____:       if.then:
-; IS__CGSCC____-NEXT:    store i32 1, i32* [[RETVAL]], align 4
-; IS__CGSCC____-NEXT:    br label [[RETURN:%.*]]
-; IS__CGSCC____:       if.end:
-; IS__CGSCC____-NEXT:    [[CMP1:%.*]] = icmp eq i32* null, [[P]]
-; IS__CGSCC____-NEXT:    br i1 [[CMP1]], label [[IF_THEN2:%.*]], label [[IF_END3:%.*]]
-; IS__CGSCC____:       if.then2:
-; IS__CGSCC____-NEXT:    store i32 1, i32* [[RETVAL]], align 4
-; IS__CGSCC____-NEXT:    br label [[RETURN]]
-; IS__CGSCC____:       if.end3:
-; IS__CGSCC____-NEXT:    store i32 0, i32* [[RETVAL]], align 4
-; IS__CGSCC____-NEXT:    br label [[RETURN]]
-; IS__CGSCC____:       return:
-; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = load i32, i32* [[RETVAL]], align 4
-; IS__CGSCC____-NEXT:    ret i32 [[TMP0]]
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; CHECK-LABEL: define {{[^@]+}}@is_null_control
+; CHECK-SAME: (i32* nofree [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32* [[P]], null
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    store i32 1, i32* [[RETVAL]], align 4
+; CHECK-NEXT:    br label [[RETURN:%.*]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32* null, [[P]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN2:%.*]], label [[IF_END3:%.*]]
+; CHECK:       if.then2:
+; CHECK-NEXT:    store i32 1, i32* [[RETVAL]], align 4
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       if.end3:
+; CHECK-NEXT:    store i32 0, i32* [[RETVAL]], align 4
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[RETVAL]], align 4
+; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
   %retval = alloca i32, align 4
@@ -132,17 +101,11 @@ return:                                           ; preds = %if.end3, %if.then2,
 ; }
 ;
 define double* @srec0(double* %a) #0 {
-; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@srec0
-; IS__TUNIT____-SAME: (double* nocapture nofree readnone [[A:%.*]]) #[[ATTR0]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    ret double* null
-;
-; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@srec0
-; IS__CGSCC____-SAME: (double* nocapture nofree readnone [[A:%.*]]) #[[ATTR0]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    ret double* null
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; CHECK-LABEL: define {{[^@]+}}@srec0
+; CHECK-SAME: (double* nocapture nofree readnone [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret double* null
 ;
 entry:
   %call = call double* @srec0(double* %a)
@@ -163,17 +126,11 @@ entry:
 ; Other arguments are possible here due to the no-return behavior.
 ;
 define i32* @srec16(i32* %a) #0 {
-; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@srec16
-; IS__TUNIT____-SAME: (i32* nocapture nofree readnone [[A:%.*]]) #[[ATTR0]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    ret i32* undef
-;
-; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@srec16
-; IS__CGSCC____-SAME: (i32* nocapture nofree readnone [[A:%.*]]) #[[ATTR0]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    ret i32* undef
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; CHECK-LABEL: define {{[^@]+}}@srec16
+; CHECK-SAME: (i32* nocapture nofree readnone [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32* undef
 ;
 entry:
   %call = call i32* @srec16(i32* %a)
@@ -405,19 +362,12 @@ declare i32 @printf(i8* nocapture, ...)
 ;
 ; There should *not* be a no-capture attribute on %a
 define i64* @not_captured_but_returned_0(i64* %a) #0 {
-; IS__TUNIT____: Function Attrs: argmemonly nofree noinline nosync nounwind uwtable willreturn writeonly
-; IS__TUNIT____-LABEL: define {{[^@]+}}@not_captured_but_returned_0
-; IS__TUNIT____-SAME: (i64* nofree noundef nonnull returned writeonly align 8 dereferenceable(8) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR3:[0-9]+]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    store i64 0, i64* [[A]], align 8
-; IS__TUNIT____-NEXT:    ret i64* [[A]]
-;
-; IS__CGSCC____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn writeonly
-; IS__CGSCC____-LABEL: define {{[^@]+}}@not_captured_but_returned_0
-; IS__CGSCC____-SAME: (i64* nofree noundef nonnull returned writeonly align 8 dereferenceable(8) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR3:[0-9]+]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    store i64 0, i64* [[A]], align 8
-; IS__CGSCC____-NEXT:    ret i64* [[A]]
+; CHECK: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn writeonly
+; CHECK-LABEL: define {{[^@]+}}@not_captured_but_returned_0
+; CHECK-SAME: (i64* nofree noundef nonnull returned writeonly align 8 dereferenceable(8) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i64 0, i64* [[A]], align 8
+; CHECK-NEXT:    ret i64* [[A]]
 ;
 entry:
   store i64 0, i64* %a, align 8
@@ -433,21 +383,13 @@ entry:
 ;
 ; There should *not* be a no-capture attribute on %a
 define i64* @not_captured_but_returned_1(i64* %a) #0 {
-; IS__TUNIT____: Function Attrs: argmemonly nofree noinline nosync nounwind uwtable willreturn writeonly
-; IS__TUNIT____-LABEL: define {{[^@]+}}@not_captured_but_returned_1
-; IS__TUNIT____-SAME: (i64* nofree nonnull writeonly align 8 dereferenceable(16) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR3]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 1
-; IS__TUNIT____-NEXT:    store i64 1, i64* [[ADD_PTR]], align 8
-; IS__TUNIT____-NEXT:    ret i64* [[ADD_PTR]]
-;
-; IS__CGSCC____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn writeonly
-; IS__CGSCC____-LABEL: define {{[^@]+}}@not_captured_but_returned_1
-; IS__CGSCC____-SAME: (i64* nofree nonnull writeonly align 8 dereferenceable(16) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR3]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 1
-; IS__CGSCC____-NEXT:    store i64 1, i64* [[ADD_PTR]], align 8
-; IS__CGSCC____-NEXT:    ret i64* [[ADD_PTR]]
+; CHECK: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn writeonly
+; CHECK-LABEL: define {{[^@]+}}@not_captured_but_returned_1
+; CHECK-SAME: (i64* nofree nonnull writeonly align 8 dereferenceable(16) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 1
+; CHECK-NEXT:    store i64 1, i64* [[ADD_PTR]], align 8
+; CHECK-NEXT:    ret i64* [[ADD_PTR]]
 ;
 entry:
   %add.ptr = getelementptr inbounds i64, i64* %a, i64 1
@@ -463,7 +405,7 @@ entry:
 ; }
 ;
 define void @test_not_captured_but_returned_calls(i64* %a) #0 {
-; IS__TUNIT____: Function Attrs: argmemonly nofree noinline nosync nounwind uwtable willreturn writeonly
+; IS__TUNIT____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test_not_captured_but_returned_calls
 ; IS__TUNIT____-SAME: (i64* nocapture nofree writeonly align 8 [[A:%.*]]) #[[ATTR3]] {
 ; IS__TUNIT____-NEXT:  entry:
@@ -493,7 +435,7 @@ entry:
 ;
 ; There should *not* be a no-capture attribute on %a
 define i64* @negative_test_not_captured_but_returned_call_0a(i64* %a) #0 {
-; IS__TUNIT____: Function Attrs: argmemonly nofree noinline nosync nounwind uwtable willreturn writeonly
+; IS__TUNIT____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@negative_test_not_captured_but_returned_call_0a
 ; IS__TUNIT____-SAME: (i64* nofree returned writeonly align 8 "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR3]] {
 ; IS__TUNIT____-NEXT:  entry:
@@ -520,7 +462,7 @@ entry:
 ;
 ; There should *not* be a no-capture attribute on %a
 define void @negative_test_not_captured_but_returned_call_0b(i64* %a) #0 {
-; IS__TUNIT____: Function Attrs: argmemonly nofree noinline nosync nounwind uwtable willreturn writeonly
+; IS__TUNIT____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@negative_test_not_captured_but_returned_call_0b
 ; IS__TUNIT____-SAME: (i64* nofree writeonly align 8 [[A:%.*]]) #[[ATTR3]] {
 ; IS__TUNIT____-NEXT:  entry:
@@ -553,7 +495,7 @@ entry:
 ;
 ; There should *not* be a no-capture attribute on %a
 define i64* @negative_test_not_captured_but_returned_call_1a(i64* %a) #0 {
-; IS__TUNIT____: Function Attrs: argmemonly nofree noinline nosync nounwind uwtable willreturn writeonly
+; IS__TUNIT____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@negative_test_not_captured_but_returned_call_1a
 ; IS__TUNIT____-SAME: (i64* nofree writeonly align 8 "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR3]] {
 ; IS__TUNIT____-NEXT:  entry:
@@ -580,7 +522,7 @@ entry:
 ;
 ; There should *not* be a no-capture attribute on %a
 define void @negative_test_not_captured_but_returned_call_1b(i64* %a) #0 {
-; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind uwtable willreturn writeonly
+; IS__TUNIT____: Function Attrs: nofree noinline norecurse nosync nounwind uwtable willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@negative_test_not_captured_but_returned_call_1b
 ; IS__TUNIT____-SAME: (i64* nofree writeonly align 8 [[A:%.*]]) #[[ATTR4:[0-9]+]] {
 ; IS__TUNIT____-NEXT:  entry:
@@ -783,11 +725,11 @@ entry:
 
 attributes #0 = { noinline nounwind uwtable }
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { nofree noinline nosync nounwind readnone uwtable willreturn }
+; IS__TUNIT____: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind readnone uwtable willreturn }
 ; IS__TUNIT____: attributes #[[ATTR1]] = { nofree nosync nounwind readnone }
 ; IS__TUNIT____: attributes #[[ATTR2]] = { noinline nounwind uwtable }
-; IS__TUNIT____: attributes #[[ATTR3]] = { argmemonly nofree noinline nosync nounwind uwtable willreturn writeonly }
-; IS__TUNIT____: attributes #[[ATTR4]] = { nofree noinline nosync nounwind uwtable willreturn writeonly }
+; IS__TUNIT____: attributes #[[ATTR3]] = { argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn writeonly }
+; IS__TUNIT____: attributes #[[ATTR4]] = { nofree noinline norecurse nosync nounwind uwtable willreturn writeonly }
 ; IS__TUNIT____: attributes #[[ATTR5]] = { readonly }
 ; IS__TUNIT____: attributes #[[ATTR6]] = { noinline nounwind readonly uwtable }
 ; IS__TUNIT____: attributes #[[ATTR7]] = { nounwind readonly }

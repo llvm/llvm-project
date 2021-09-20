@@ -7,25 +7,15 @@
 ; FIXME: icmp folding is missing
 
 define i1 @invokecaller(i1 %C) personality i32 (...)* @__gxx_personality_v0 {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@invokecaller
-; IS__TUNIT____-SAME: (i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] personality i32 (...)* @__gxx_personality_v0 {
-; IS__TUNIT____-NEXT:    [[X:%.*]] = call i32 @foo(i1 [[C]]) #[[ATTR1:[0-9]+]]
-; IS__TUNIT____-NEXT:    br label [[OK:%.*]]
-; IS__TUNIT____:       OK:
-; IS__TUNIT____-NEXT:    ret i1 true
-; IS__TUNIT____:       FAIL:
-; IS__TUNIT____-NEXT:    unreachable
-;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@invokecaller
-; IS__CGSCC____-SAME: (i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] personality i32 (...)* @__gxx_personality_v0 {
-; IS__CGSCC____-NEXT:    [[X:%.*]] = call i32 @foo(i1 [[C]]) #[[ATTR1:[0-9]+]]
-; IS__CGSCC____-NEXT:    br label [[OK:%.*]]
-; IS__CGSCC____:       OK:
-; IS__CGSCC____-NEXT:    ret i1 true
-; IS__CGSCC____:       FAIL:
-; IS__CGSCC____-NEXT:    unreachable
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@invokecaller
+; CHECK-SAME: (i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] personality i32 (...)* @__gxx_personality_v0 {
+; CHECK-NEXT:    [[X:%.*]] = call i32 @foo(i1 [[C]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    br label [[OK:%.*]]
+; CHECK:       OK:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       FAIL:
+; CHECK-NEXT:    unreachable
 ;
   %X = invoke i32 @foo( i1 %C ) to label %OK unwind label %FAIL             ; <i32> [#uses=1]
 OK:
@@ -38,23 +28,14 @@ FAIL:
 }
 
 define internal i32 @foo(i1 %C) {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@foo
-; IS__TUNIT____-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
-; IS__TUNIT____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
-; IS__TUNIT____:       T:
-; IS__TUNIT____-NEXT:    ret i32 undef
-; IS__TUNIT____:       F:
-; IS__TUNIT____-NEXT:    ret i32 undef
-;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@foo
-; IS__CGSCC____-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
-; IS__CGSCC____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
-; IS__CGSCC____:       T:
-; IS__CGSCC____-NEXT:    ret i32 undef
-; IS__CGSCC____:       F:
-; IS__CGSCC____-NEXT:    ret i32 undef
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@foo
+; CHECK-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    ret i32 undef
+; CHECK:       F:
+; CHECK-NEXT:    ret i32 undef
 ;
   br i1 %C, label %T, label %F
 
@@ -66,15 +47,10 @@ F:              ; preds = %0
 }
 
 define i1 @caller(i1 %C) {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@caller
-; IS__TUNIT____-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
-; IS__TUNIT____-NEXT:    ret i1 true
-;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@caller
-; IS__CGSCC____-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
-; IS__CGSCC____-NEXT:    ret i1 true
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@caller
+; CHECK-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret i1 true
 ;
   %X = call i32 @foo( i1 %C )             ; <i32> [#uses=1]
   %Y = icmp ne i32 %X, 0          ; <i1> [#uses=1]
@@ -83,9 +59,6 @@ define i1 @caller(i1 %C) {
 
 declare i32 @__gxx_personality_v0(...)
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
-; IS__TUNIT____: attributes #[[ATTR1]] = { nounwind readnone }
-;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR1]] = { nounwind readnone }
+; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; CHECK: attributes #[[ATTR1]] = { nounwind readnone }
 ;.
