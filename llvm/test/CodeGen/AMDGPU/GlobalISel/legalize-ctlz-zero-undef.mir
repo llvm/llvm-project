@@ -196,7 +196,6 @@ body: |
     ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ZEXT]](s64)
     ; CHECK: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C1]](s64)
     ; CHECK: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[UV]], [[UV2]]
-    ; CHECK: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[UV1]], [[UV3]], [[USUBO1]]
     ; CHECK: [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[USUBO]](s32)
     ; CHECK: $vgpr0_vgpr1 = COPY [[ZEXT1]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1

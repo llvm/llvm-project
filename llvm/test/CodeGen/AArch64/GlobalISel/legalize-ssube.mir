@@ -84,10 +84,8 @@ body:             |
     ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
     ; CHECK: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[TRUNC1]], 8
     ; CHECK: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[SEXT_INREG]], [[SEXT_INREG1]], %carry_in
-    ; CHECK: [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[USUBE]](s32)
     ; CHECK: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[USUBE]], 8
     ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[USUBE]](s32), [[SEXT_INREG2]]
-    ; CHECK: %sub:_(s8) = COPY [[TRUNC2]](s8)
     ; CHECK: %sub_ext:_(s64) = G_ANYEXT [[USUBE]](s32)
     ; CHECK: %carry_out_ext:_(s64) = G_ANYEXT [[ICMP]](s32)
     ; CHECK: $x0 = COPY %sub_ext(s64)

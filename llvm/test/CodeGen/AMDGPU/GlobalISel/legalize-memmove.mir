@@ -14,7 +14,6 @@ body:             |
     ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
     ; CHECK: [[MV1:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV1]](p0) :: (load (s8))
     ; CHECK: G_STORE [[LOAD]](s32), [[MV]](p0) :: (store (s8))
     ; CHECK: S_ENDPGM 0

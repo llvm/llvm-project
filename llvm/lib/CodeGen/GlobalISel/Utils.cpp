@@ -1050,3 +1050,37 @@ bool llvm::shouldOptForSize(const MachineBasicBlock &MBB,
   return F.hasOptSize() || F.hasMinSize() ||
          llvm::shouldOptimizeForSize(MBB.getBasicBlock(), PSI, BFI);
 }
+
+void llvm::saveUsesAndErase(MachineInstr &MI, MachineRegisterInfo &MRI,
+                            LostDebugLocObserver *LocObserver,
+                            SmallInstListTy &DeadInstChain) {
+  for (MachineOperand &Op : MI.uses()) {
+    if (Op.isReg() && Op.getReg().isVirtual())
+      DeadInstChain.insert(MRI.getVRegDef(Op.getReg()));
+  }
+  LLVM_DEBUG(dbgs() << MI << "Is dead; erasing.\n");
+  DeadInstChain.remove(&MI);
+  MI.eraseFromParentAndMarkDBGValuesForRemoval();
+  if (LocObserver)
+    LocObserver->checkpoint(false);
+}
+
+void llvm::eraseInstrs(ArrayRef<MachineInstr *> DeadInstrs,
+                       MachineRegisterInfo &MRI,
+                       LostDebugLocObserver *LocObserver) {
+  SmallInstListTy DeadInstChain;
+  for (MachineInstr *MI : DeadInstrs)
+    saveUsesAndErase(*MI, MRI, LocObserver, DeadInstChain);
+
+  while (!DeadInstChain.empty()) {
+    MachineInstr *Inst = DeadInstChain.pop_back_val();
+    if (!isTriviallyDead(*Inst, MRI))
+      continue;
+    saveUsesAndErase(*Inst, MRI, LocObserver, DeadInstChain);
+  }
+}
+
+void llvm::eraseInstr(MachineInstr &MI, MachineRegisterInfo &MRI,
+                      LostDebugLocObserver *LocObserver) {
+  return eraseInstrs({&MI}, MRI, LocObserver);
+}

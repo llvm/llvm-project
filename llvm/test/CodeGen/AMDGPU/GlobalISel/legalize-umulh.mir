@@ -326,7 +326,6 @@ body: |
     ; GFX9: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
     ; GFX9: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[COPY2]](s32)
     ; GFX9: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[DEF]](s32)
-    ; GFX9: [[DEF1:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
     ; GFX9: [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[COPY3]](s32)
     ; GFX9: [[TRUNC5:%[0-9]+]]:_(s16) = G_TRUNC [[COPY4]](s32)
     ; GFX9: [[TRUNC6:%[0-9]+]]:_(s16) = G_TRUNC [[COPY5]](s32)
@@ -366,8 +365,7 @@ body: |
     ; GFX9: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; GFX9: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C2]](s32)
     ; GFX9: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[LSHR1]](<2 x s16>)
-    ; GFX9: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C2]](s32)
-    ; GFX9: [[DEF2:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX9: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; GFX9: [[TRUNC8:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
     ; GFX9: [[AND8:%[0-9]+]]:_(s16) = G_AND [[TRUNC8]], [[C]]
     ; GFX9: [[TRUNC9:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR2]](s32)
@@ -377,7 +375,7 @@ body: |
     ; GFX9: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND8]], [[SHL]]
     ; GFX9: [[TRUNC10:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST1]](s32)
     ; GFX9: [[AND10:%[0-9]+]]:_(s16) = G_AND [[TRUNC10]], [[C]]
-    ; GFX9: [[TRUNC11:%[0-9]+]]:_(s16) = G_TRUNC [[DEF2]](s32)
+    ; GFX9: [[TRUNC11:%[0-9]+]]:_(s16) = G_TRUNC [[DEF1]](s32)
     ; GFX9: [[AND11:%[0-9]+]]:_(s16) = G_AND [[TRUNC11]], [[C]]
     ; GFX9: [[SHL1:%[0-9]+]]:_(s16) = G_SHL [[AND11]], [[C3]](s16)
     ; GFX9: [[OR1:%[0-9]+]]:_(s16) = G_OR [[AND10]], [[SHL1]]

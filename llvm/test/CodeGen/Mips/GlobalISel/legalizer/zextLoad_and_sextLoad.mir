@@ -213,7 +213,6 @@ body:             |
     ; MIPS32: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.px)
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
-    ; MIPS32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; MIPS32: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[LOAD]], [[C]](s32)
     ; MIPS32: $v0 = COPY [[LOAD]](s32)
     ; MIPS32: $v1 = COPY [[ASHR]](s32)

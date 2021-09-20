@@ -33,7 +33,6 @@ body: |
     ; GFX10: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[MV]](p4) :: (load (<4 x s32>), align 4, addrspace 4)
     ; GFX10: [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD]](<4 x s32>), 96
     ; GFX10: [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD]](<4 x s32>), 64
-    ; GFX10: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; GFX10: G_STORE [[EXTRACT1]](s32), [[COPY]](p5) :: (store (s32), align 8, addrspace 5)
     ; GFX10: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; GFX10: [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C]](s32)
@@ -66,7 +65,6 @@ body: |
     ; GFX10: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[MV]](p4) :: (load (<4 x s32>), align 4, addrspace 4)
     ; GFX10: [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD]](<4 x s32>), 96
     ; GFX10: [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD]](<4 x s32>), 64
-    ; GFX10: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; GFX10: G_STORE [[EXTRACT1]](s32), [[COPY]](p5) :: (store (s32), align 8, addrspace 5)
     ; GFX10: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; GFX10: [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C]](s32)
@@ -103,7 +101,6 @@ body: |
     ; GFX10: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[MV]](p4) :: (load (<4 x s32>), align 4, addrspace 4)
     ; GFX10: [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD]](<4 x s32>), 96
     ; GFX10: [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD]](<4 x s32>), 64
-    ; GFX10: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; GFX10: DBG_VALUE $noreg, $noreg, {{.*}}, !DIExpression(), debug-location !DILocation(line: 1, column: 1
     ; GFX10: G_STORE [[EXTRACT1]](s32), [[COPY]](p5) :: (store (s32), align 8, addrspace 5)
     ; GFX10: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4

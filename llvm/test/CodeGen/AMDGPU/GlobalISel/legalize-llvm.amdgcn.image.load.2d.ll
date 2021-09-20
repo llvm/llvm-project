@@ -228,16 +228,8 @@ define amdgpu_ps float @image_load_f32_dmask_0000(<8 x i32> inreg %rsrc, i32 %s,
   ; GCN-LABEL: name: image_load_f32_dmask_0000
   ; GCN: bb.1 (%ir-block.0):
   ; GCN:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1
-  ; GCN:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GCN:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GCN:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GCN:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GCN:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GCN:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GCN:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GCN:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GCN:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GCN:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GCN:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GCN:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GCN:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; GCN:   $vgpr0 = COPY [[DEF]](s32)
   ; GCN:   SI_RETURN_TO_EPILOG implicit $vgpr0
@@ -274,16 +266,8 @@ define amdgpu_ps <2 x float> @image_load_v2f32_dmask_0000(<8 x i32> inreg %rsrc,
   ; GCN-LABEL: name: image_load_v2f32_dmask_0000
   ; GCN: bb.1 (%ir-block.0):
   ; GCN:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1
-  ; GCN:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GCN:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GCN:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GCN:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GCN:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GCN:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GCN:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GCN:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GCN:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GCN:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GCN:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GCN:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GCN:   [[DEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
   ; GCN:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<2 x s32>)
   ; GCN:   $vgpr0 = COPY [[UV]](s32)
@@ -350,16 +334,8 @@ define amdgpu_ps <3 x float> @image_load_v3f32_dmask_0000(<8 x i32> inreg %rsrc,
   ; GCN-LABEL: name: image_load_v3f32_dmask_0000
   ; GCN: bb.1 (%ir-block.0):
   ; GCN:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1
-  ; GCN:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GCN:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GCN:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GCN:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GCN:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GCN:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GCN:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GCN:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GCN:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GCN:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GCN:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GCN:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GCN:   [[DEF:%[0-9]+]]:_(<3 x s32>) = G_IMPLICIT_DEF
   ; GCN:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<3 x s32>)
   ; GCN:   $vgpr0 = COPY [[UV]](s32)
@@ -457,16 +433,8 @@ define amdgpu_ps <4 x float> @image_load_v4f32_dmask_0000(<8 x i32> inreg %rsrc,
   ; GCN-LABEL: name: image_load_v4f32_dmask_0000
   ; GCN: bb.1 (%ir-block.0):
   ; GCN:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1
-  ; GCN:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GCN:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GCN:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GCN:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GCN:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GCN:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GCN:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GCN:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GCN:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GCN:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GCN:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GCN:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GCN:   [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
   ; GCN:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<4 x s32>)
   ; GCN:   $vgpr0 = COPY [[UV]](s32)

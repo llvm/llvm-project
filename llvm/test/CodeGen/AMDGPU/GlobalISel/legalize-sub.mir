@@ -209,7 +209,6 @@ body: |
     ; GFX9: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; GFX9: [[COPY6:%[0-9]+]]:_(s32) = COPY [[DEF]](s32)
     ; GFX9: [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY2]](s32), [[COPY6]](s32)
-    ; GFX9: [[DEF1:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
     ; GFX9: [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY3]](s32), [[COPY4]](s32)
     ; GFX9: [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY5]](s32), [[DEF]](s32)
     ; GFX9: [[SUB:%[0-9]+]]:_(<2 x s16>) = G_SUB [[BUILD_VECTOR_TRUNC]], [[BUILD_VECTOR_TRUNC2]]
@@ -221,7 +220,6 @@ body: |
     ; GFX9: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
     ; GFX9: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[SUB1]](<2 x s16>)
     ; GFX9: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST1]](s32)
-    ; GFX9: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
     ; GFX9: S_ENDPGM 0, implicit [[TRUNC]](s16), implicit [[TRUNC1]](s16), implicit [[TRUNC2]](s16)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1

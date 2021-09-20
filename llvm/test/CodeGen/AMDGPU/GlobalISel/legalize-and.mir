@@ -433,12 +433,10 @@ body: |
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
     ; CHECK: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV5]](<2 x s16>)
-    ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
     ; CHECK: [[UV6:%[0-9]+]]:_(<2 x s16>), [[UV7:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<4 x s16>)
     ; CHECK: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV6]](<2 x s16>)
-    ; CHECK: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
+    ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
     ; CHECK: [[BITCAST3:%[0-9]+]]:_(s32) = G_BITCAST [[UV7]](<2 x s16>)
-    ; CHECK: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST3]], [[C]](s32)
     ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[BITCAST]], [[C1]]
     ; CHECK: [[AND2:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C1]]
@@ -450,7 +448,7 @@ body: |
     ; CHECK: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[AND4]], [[C]](s32)
     ; CHECK: [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND3]], [[SHL1]]
     ; CHECK: [[BITCAST5:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
-    ; CHECK: [[AND5:%[0-9]+]]:_(s32) = G_AND [[LSHR2]], [[C1]]
+    ; CHECK: [[AND5:%[0-9]+]]:_(s32) = G_AND [[LSHR1]], [[C1]]
     ; CHECK: [[AND6:%[0-9]+]]:_(s32) = G_AND [[BITCAST3]], [[C1]]
     ; CHECK: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[AND6]], [[C]](s32)
     ; CHECK: [[OR2:%[0-9]+]]:_(s32) = G_OR [[AND5]], [[SHL2]]
@@ -514,12 +512,10 @@ body: |
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
     ; CHECK: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV17]](<2 x s16>)
-    ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
     ; CHECK: [[UV18:%[0-9]+]]:_(<2 x s16>), [[UV19:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[AND1]](<4 x s16>)
     ; CHECK: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV18]](<2 x s16>)
-    ; CHECK: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
+    ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
     ; CHECK: [[BITCAST3:%[0-9]+]]:_(s32) = G_BITCAST [[UV19]](<2 x s16>)
-    ; CHECK: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST3]], [[C]](s32)
     ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; CHECK: [[AND2:%[0-9]+]]:_(s32) = G_AND [[BITCAST]], [[C1]]
     ; CHECK: [[AND3:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C1]]
@@ -531,7 +527,7 @@ body: |
     ; CHECK: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[AND5]], [[C]](s32)
     ; CHECK: [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND4]], [[SHL1]]
     ; CHECK: [[BITCAST5:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
-    ; CHECK: [[AND6:%[0-9]+]]:_(s32) = G_AND [[LSHR2]], [[C1]]
+    ; CHECK: [[AND6:%[0-9]+]]:_(s32) = G_AND [[LSHR1]], [[C1]]
     ; CHECK: [[AND7:%[0-9]+]]:_(s32) = G_AND [[BITCAST3]], [[C1]]
     ; CHECK: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[AND7]], [[C]](s32)
     ; CHECK: [[OR2:%[0-9]+]]:_(s32) = G_OR [[AND6]], [[SHL2]]
