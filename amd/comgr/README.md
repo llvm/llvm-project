@@ -146,6 +146,7 @@ is incremented for each backwards-compatible change introduced. The major
 version number is incremented, and the minor version is reset to zero, for each
 backwards-incompatible change introduced.
 
+* `2.2`: Introduce `amd_comgr_demangle_symbol_name` API.
 * `2.1`: Add `AMD_COMGR_TIME_STATISTICS` environment variable.
 * `2.0`: Add support for new target feature syntax introduced at [AMDGPUUsage](https://llvm.org/docs/AMDGPUUsage.html).
 * `1.9`: Add gfx1031
