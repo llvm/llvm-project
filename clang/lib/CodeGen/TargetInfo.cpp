@@ -3438,17 +3438,21 @@ llvm::Type *X86_64ABIInfo::
 GetSSETypeAtOffset(llvm::Type *IRType, unsigned IROffset,
                    QualType SourceTy, unsigned SourceOffset) const {
   const llvm::DataLayout &TD = getDataLayout();
+  unsigned SourceSize =
+      (unsigned)getContext().getTypeSize(SourceTy) / 8 - SourceOffset;
   llvm::Type *T0 = getFPTypeAtOffset(IRType, IROffset, TD);
   if (!T0 || T0->isDoubleTy())
     return llvm::Type::getDoubleTy(getVMContext());
 
   // Get the adjacent FP type.
-  llvm::Type *T1 =
-      getFPTypeAtOffset(IRType, IROffset + TD.getTypeAllocSize(T0), TD);
+  llvm::Type *T1 = nullptr;
+  unsigned T0Size = TD.getTypeAllocSize(T0);
+  if (SourceSize > T0Size)
+      T1 = getFPTypeAtOffset(IRType, IROffset + T0Size, TD);
   if (T1 == nullptr) {
     // Check if IRType is a half + float. float type will be in IROffset+4 due
     // to its alignment.
-    if (T0->isHalfTy())
+    if (T0->isHalfTy() && SourceSize > 4)
       T1 = getFPTypeAtOffset(IRType, IROffset + 4, TD);
     // If we can't get a second FP type, return a simple half or float.
     // avx512fp16-abi.c:pr51813_2 shows it works to return float for
@@ -3461,7 +3465,9 @@ GetSSETypeAtOffset(llvm::Type *IRType, unsigned IROffset,
     return llvm::FixedVectorType::get(T0, 2);
 
   if (T0->isHalfTy() && T1->isHalfTy()) {
-    llvm::Type *T2 = getFPTypeAtOffset(IRType, IROffset + 4, TD);
+    llvm::Type *T2 = nullptr;
+    if (SourceSize > 4)
+      T2 = getFPTypeAtOffset(IRType, IROffset + 4, TD);
     if (T2 == nullptr)
       return llvm::FixedVectorType::get(T0, 2);
     return llvm::FixedVectorType::get(T0, 4);

@@ -34,16 +34,16 @@ struct S a[5];
 // CHECK-NEXT:    [[REG_SAVE_AREA:%.*]] = load i8*, i8** [[TMP0]], align 16
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, i8* [[REG_SAVE_AREA]], i32 [[FP_OFFSET]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, i8* [[TMP1]], i64 16
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast %struct.S* [[TMP]] to { <2 x float>, <2 x float> }*
+// CHECK-NEXT:    [[TMP3:%.*]] = bitcast %struct.S* [[TMP]] to { <2 x float>, float }*
 // CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP1]] to <2 x float>*
 // CHECK-NEXT:    [[TMP5:%.*]] = load <2 x float>, <2 x float>* [[TMP4]], align 16
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds { <2 x float>, <2 x float> }, { <2 x float>, <2 x float> }* [[TMP3]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds { <2 x float>, float }, { <2 x float>, float }* [[TMP3]], i32 0, i32 0
 // CHECK-NEXT:    store <2 x float> [[TMP5]], <2 x float>* [[TMP6]], align 4
-// CHECK-NEXT:    [[TMP7:%.*]] = bitcast i8* [[TMP2]] to <2 x float>*
-// CHECK-NEXT:    [[TMP8:%.*]] = load <2 x float>, <2 x float>* [[TMP7]], align 16
-// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds { <2 x float>, <2 x float> }, { <2 x float>, <2 x float> }* [[TMP3]], i32 0, i32 1
-// CHECK-NEXT:    store <2 x float> [[TMP8]], <2 x float>* [[TMP9]], align 4
-// CHECK-NEXT:    [[TMP10:%.*]] = bitcast { <2 x float>, <2 x float> }* [[TMP3]] to %struct.S*
+// CHECK-NEXT:    [[TMP7:%.*]] = bitcast i8* [[TMP2]] to float*
+// CHECK-NEXT:    [[TMP8:%.*]] = load float, float* [[TMP7]], align 16
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds { <2 x float>, float }, { <2 x float>, float }* [[TMP3]], i32 0, i32 1
+// CHECK-NEXT:    store float [[TMP8]], float* [[TMP9]], align 4
+// CHECK-NEXT:    [[TMP10:%.*]] = bitcast { <2 x float>, float }* [[TMP3]] to %struct.S*
 // CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[FP_OFFSET]], 32
 // CHECK-NEXT:    store i32 [[TMP11]], i32* [[FP_OFFSET_P]], align 4
 // CHECK-NEXT:    br label [[VAARG_END:%.*]]
