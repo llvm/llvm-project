@@ -1040,7 +1040,7 @@ extern kmp_real64 __kmp_xchg_real64(volatile kmp_real64 *p, kmp_real64 v);
   if (UNLIKELY(!__kmp_cpuinfo.initialized)) {                                  \
     __kmp_query_cpuid(&__kmp_cpuinfo);                                         \
   }                                                                            \
-  if (__kmp_cpuinfo.sse2) {                                                    \
+  if (__kmp_cpuinfo.flags.sse2) {                                              \
     KMP_MFENCE_();                                                             \
   }
 #define KMP_SFENCE() KMP_SFENCE_()
