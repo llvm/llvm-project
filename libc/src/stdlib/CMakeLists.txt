@@ -124,3 +124,33 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.integer_operations
 )
+
+add_entrypoint_object(
+  div
+  SRCS
+    div.cpp
+  HDRS
+    div.h
+  DEPENDS
+    libc.src.__support.integer_operations
+)
+
+add_entrypoint_object(
+  ldiv
+  SRCS
+    ldiv.cpp
+  HDRS
+    ldiv.h
+  DEPENDS
+    libc.src.__support.integer_operations
+)
+
+add_entrypoint_object(
+  lldiv
+  SRCS
+    lldiv.cpp
+  HDRS
+    lldiv.h
+  DEPENDS
+    libc.src.__support.integer_operations
+)

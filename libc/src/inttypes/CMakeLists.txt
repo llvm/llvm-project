@@ -17,3 +17,13 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.str_conv_utils
 )
+
+add_entrypoint_object(
+  imaxdiv
+  SRCS
+    imaxdiv.cpp
+  HDRS
+    imaxdiv.h
+  DEPENDS
+    libc.src.__support.integer_operations
+)
