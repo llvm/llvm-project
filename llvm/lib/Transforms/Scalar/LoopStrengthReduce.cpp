@@ -6126,13 +6126,13 @@ struct DVIRecoveryRec {
   const llvm::SCEV *SCEV;
 };
 
-static bool RewriteDVIUsingIterCount(DVIRecoveryRec CachedDVI,
+static void RewriteDVIUsingIterCount(DVIRecoveryRec CachedDVI,
                                      const SCEVDbgValueBuilder &IterationCount,
                                      ScalarEvolution &SE) {
   // LSR may add locations to previously single location-op DVIs which
   // are currently not supported.
   if (CachedDVI.DVI->getNumVariableLocationOps() != 1)
-    return false;
+    return;
 
   // SCEVs for SSA values are most frquently of the form
   // {start,+,stride}, but sometimes they are ({start,+,stride} + %a + ..).
@@ -6140,48 +6140,64 @@ static bool RewriteDVIUsingIterCount(DVIRecoveryRec CachedDVI,
   // SCEVs have not been observed to result in debuginfo-lossy optimisations,
   // so its not expected this point will be reached.
   if (!isa<SCEVAddRecExpr>(CachedDVI.SCEV))
-    return false;
+    return;
 
   LLVM_DEBUG(dbgs() << "scev-salvage: Value to salvage SCEV: "
                     << *CachedDVI.SCEV << '\n');
 
   const auto *Rec = cast<SCEVAddRecExpr>(CachedDVI.SCEV);
   if (!Rec->isAffine())
-    return false;
+    return;
 
   // Initialise a new builder with the iteration count expression. In
   // combination with the value's SCEV this enables recovery.
   SCEVDbgValueBuilder RecoverValue(IterationCount);
   if (!RecoverValue.SCEVToValueExpr(*Rec, SE))
-    return false;
+    return;
 
   LLVM_DEBUG(dbgs() << "scev-salvage: Updating: " << *CachedDVI.DVI << '\n');
   RecoverValue.applyExprToDbgValue(*CachedDVI.DVI, CachedDVI.Expr);
   LLVM_DEBUG(dbgs() << "scev-salvage: to: " << *CachedDVI.DVI << '\n');
-  return true;
 }
 
-static bool
+static void RewriteDVIUsingOffset(DVIRecoveryRec &DVIRec, llvm::PHINode &IV,
+                                  int64_t Offset) {
+  assert(!DVIRec.DVI->hasArgList() && "Expected single location-op dbg.value.");
+  DbgValueInst *DVI = DVIRec.DVI;
+  SmallVector<uint64_t, 8> Ops;
+  DIExpression::appendOffset(Ops, Offset);
+  DIExpression *Expr = DIExpression::prependOpcodes(DVIRec.Expr, Ops, true);
+  LLVM_DEBUG(dbgs() << "scev-salvage: Updating: " << *DVIRec.DVI << '\n');
+  DVI->setExpression(Expr);
+  llvm::Value *ValIV = dyn_cast<llvm::Value>(&IV);
+  DVI->replaceVariableLocationOp(
+      0u, llvm::MetadataAsValue::get(DVI->getContext(),
+                                     llvm::ValueAsMetadata::get(ValIV)));
+  LLVM_DEBUG(dbgs() << "scev-salvage: updated with offset to IV: "
+                    << *DVIRec.DVI << '\n');
+}
+
+static void
 DbgRewriteSalvageableDVIs(llvm::Loop *L, ScalarEvolution &SE,
                           llvm::PHINode *LSRInductionVar,
                           SmallVector<DVIRecoveryRec, 2> &DVIToUpdate) {
   if (DVIToUpdate.empty())
-    return false;
+    return;
 
   const llvm::SCEV *SCEVInductionVar = SE.getSCEV(LSRInductionVar);
   assert(SCEVInductionVar &&
          "Anticipated a SCEV for the post-LSR induction variable");
 
-  bool Changed = false;
   if (const SCEVAddRecExpr *IVAddRec =
           dyn_cast<SCEVAddRecExpr>(SCEVInductionVar)) {
     if (!IVAddRec->isAffine())
-      return false;
+      return;
 
+    // The iteratioun count is required to recover location values.
     SCEVDbgValueBuilder IterCountExpr;
     IterCountExpr.pushValue(LSRInductionVar);
     if (!IterCountExpr.SCEVToIterCountExpr(*IVAddRec, SE))
-      return false;
+      return;
 
     LLVM_DEBUG(dbgs() << "scev-salvage: IV SCEV: " << *SCEVInductionVar
                       << '\n');
@@ -6204,10 +6220,21 @@ DbgRewriteSalvageableDVIs(llvm::Loop *L, ScalarEvolution &SE,
         DVIRec.DVI->setExpression(DVIRec.Expr);
       }
 
-      Changed |= RewriteDVIUsingIterCount(DVIRec, IterCountExpr, SE);
+      LLVM_DEBUG(dbgs() << "scev-salvage: value to recover SCEV: "
+                        << *DVIRec.SCEV << '\n');
+
+      // Create a simple expression if the IV and value to salvage SCEVs
+      // start values differ by only a constant value.
+      if (Optional<APInt> Offset =
+              SE.computeConstantDifference(DVIRec.SCEV, SCEVInductionVar)) {
+        if (Offset.getValue().getMinSignedBits() <= 64)
+          RewriteDVIUsingOffset(DVIRec, *LSRInductionVar,
+                                Offset.getValue().getSExtValue());
+      } else {
+        RewriteDVIUsingIterCount(DVIRec, IterCountExpr, SE);
+      }
     }
   }
-  return Changed;
 }
 
 /// Identify and cache salvageable DVI locations and expressions along with the

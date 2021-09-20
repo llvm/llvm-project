@@ -4524,6 +4524,9 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
           } else if (gdb_type == "i387_ext" || gdb_type == "float") {
             reg_info.format = eFormatFloat;
             reg_info.encoding = eEncodingIEEE754;
+          } else if (gdb_type == "aarch64v") {
+            reg_info.format = eFormatVectorOfUInt8;
+            reg_info.encoding = eEncodingVector;
           }
         }
 

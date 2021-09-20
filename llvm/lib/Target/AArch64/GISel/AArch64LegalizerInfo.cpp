@@ -16,6 +16,7 @@
 #include "AArch64Subtarget.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -35,6 +36,7 @@ using namespace llvm;
 using namespace LegalizeActions;
 using namespace LegalizeMutations;
 using namespace LegalityPredicates;
+using namespace MIPatternMatch;
 
 AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
     : ST(&ST) {
@@ -278,6 +280,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   };
 
   getActionDefinitionsBuilder(G_LOAD)
+      .customIf([=](const LegalityQuery &Query) {
+        return Query.Types[0] == s128 &&
+               Query.MMODescrs[0].Ordering != AtomicOrdering::NotAtomic;
+      })
       .legalForTypesWithMemDesc({{s8, p0, s8, 8},
                                  {s16, p0, s16, 8},
                                  {s32, p0, s32, 8},
@@ -316,6 +322,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .scalarizeIf(typeIs(0, v2s16), 0);
 
   getActionDefinitionsBuilder(G_STORE)
+      .customIf([=](const LegalityQuery &Query) {
+        return Query.Types[0] == s128 &&
+               Query.MMODescrs[0].Ordering != AtomicOrdering::NotAtomic;
+      })
       .legalForTypesWithMemDesc({{s8, p0, s8, 8},
                                  {s16, p0, s8, 8}, // truncstorei8 from s16
                                  {s32, p0, s8, 8}, // truncstorei8 from s32
@@ -992,6 +1002,20 @@ bool AArch64LegalizerInfo::legalizeShlAshrLshr(
   return true;
 }
 
+static void matchLDPSTPAddrMode(Register Root, Register &Base, int &Offset,
+                                MachineRegisterInfo &MRI) {
+  Base = Root;
+  Offset = 0;
+
+  Register NewBase;
+  int64_t NewOffset;
+  if (mi_match(Root, MRI, m_GPtrAdd(m_Reg(NewBase), m_ICst(NewOffset))) &&
+      isShiftedInt<7, 3>(NewOffset)) {
+    Base = NewBase;
+    Offset = NewOffset;
+  }
+}
+
 // FIXME: This should be removed and replaced with the generic bitcast legalize
 // action.
 bool AArch64LegalizerInfo::legalizeLoadStore(
@@ -1010,6 +1034,36 @@ bool AArch64LegalizerInfo::legalizeLoadStore(
 
   Register ValReg = MI.getOperand(0).getReg();
   const LLT ValTy = MRI.getType(ValReg);
+
+  if (ValTy == LLT::scalar(128)) {
+    assert((*MI.memoperands_begin())->getSuccessOrdering() ==
+               AtomicOrdering::Monotonic ||
+           (*MI.memoperands_begin())->getSuccessOrdering() ==
+               AtomicOrdering::Unordered);
+    assert(ST->hasLSE2() && "ldp/stp not single copy atomic without +lse2");
+    LLT s64 = LLT::scalar(64);
+    MachineInstrBuilder NewI;
+    if (MI.getOpcode() == TargetOpcode::G_LOAD) {
+      NewI = MIRBuilder.buildInstr(AArch64::LDPXi, {s64, s64}, {});
+      MIRBuilder.buildMerge(ValReg, {NewI->getOperand(0), NewI->getOperand(1)});
+    } else {
+      auto Split = MIRBuilder.buildUnmerge(s64, MI.getOperand(0));
+      NewI = MIRBuilder.buildInstr(
+          AArch64::STPXi, {}, {Split->getOperand(0), Split->getOperand(1)});
+    }
+    Register Base;
+    int Offset;
+    matchLDPSTPAddrMode(MI.getOperand(1).getReg(), Base, Offset, MRI);
+    NewI.addUse(Base);
+    NewI.addImm(Offset / 8);
+
+    NewI.cloneMemRefs(MI);
+    constrainSelectedInstRegOperands(*NewI, *ST->getInstrInfo(),
+                                     *MRI.getTargetRegisterInfo(),
+                                     *ST->getRegBankInfo());
+    MI.eraseFromParent();
+    return true;
+  }
 
   if (!ValTy.isVector() || !ValTy.getElementType().isPointer() ||
       ValTy.getElementType().getAddressSpace() != 0) {

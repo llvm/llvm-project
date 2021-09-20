@@ -645,8 +645,7 @@ define <4 x i32> @pinsrd_from_shufflevector_i32(<4 x i32> %a, <4 x i32>* nocaptu
 ; X86-AVX1-LABEL: pinsrd_from_shufflevector_i32:
 ; X86-AVX1:       ## %bb.0: ## %entry
 ; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; X86-AVX1-NEXT:    vpermilps $0, (%eax), %xmm1 ## encoding: [0xc4,0xe3,0x79,0x04,0x08,0x00]
-; X86-AVX1-NEXT:    ## xmm1 = mem[0,0,0,0]
+; X86-AVX1-NEXT:    vbroadcastss (%eax), %xmm1 ## encoding: [0xc4,0xe2,0x79,0x18,0x08]
 ; X86-AVX1-NEXT:    vblendps $8, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x08]
 ; X86-AVX1-NEXT:    ## xmm0 = xmm0[0,1,2],xmm1[3]
 ; X86-AVX1-NEXT:    retl ## encoding: [0xc3]
@@ -669,8 +668,7 @@ define <4 x i32> @pinsrd_from_shufflevector_i32(<4 x i32> %a, <4 x i32>* nocaptu
 ;
 ; X64-AVX1-LABEL: pinsrd_from_shufflevector_i32:
 ; X64-AVX1:       ## %bb.0: ## %entry
-; X64-AVX1-NEXT:    vpermilps $0, (%rdi), %xmm1 ## encoding: [0xc4,0xe3,0x79,0x04,0x0f,0x00]
-; X64-AVX1-NEXT:    ## xmm1 = mem[0,0,0,0]
+; X64-AVX1-NEXT:    vbroadcastss (%rdi), %xmm1 ## encoding: [0xc4,0xe2,0x79,0x18,0x0f]
 ; X64-AVX1-NEXT:    vblendps $8, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x08]
 ; X64-AVX1-NEXT:    ## xmm0 = xmm0[0,1,2],xmm1[3]
 ; X64-AVX1-NEXT:    retq ## encoding: [0xc3]
