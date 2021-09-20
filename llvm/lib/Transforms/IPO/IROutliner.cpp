@@ -525,7 +525,6 @@ Function *IROutliner::createFunction(Module &M, OutlinableGroup &Group,
 /// \param [in] Old - The function to move the basic blocks from.
 /// \param [in] New - The function to move the basic blocks to.
 /// \param [out] NewEnds - The return blocks of the new overall function.
-/// \returns the first return block for the function in New.
 static void moveFunctionData(Function &Old, Function &New,
                              DenseMap<Value *, BasicBlock *> &NewEnds) {
   Function::iterator CurrBB, NextBB, FinalBB;
@@ -1075,7 +1074,7 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
 // region with the arguments of the function for an OutlinableGroup.
 //
 /// \param [in] Region - The region of extracted code to be changed.
-/// \param [in,out] OutputBB - The BasicBlock for the output stores for this
+/// \param [in,out] OutputBBs - The BasicBlock for the output stores for this
 /// region.
 /// \param [in] FirstFunction - A flag to indicate whether we are using this
 /// function to define the overall outlined function for all the regions, or
@@ -1207,7 +1206,7 @@ void replaceConstants(OutlinableRegion &Region) {
 /// It is possible that there is a basic block that already performs the same
 /// stores. This returns a duplicate block, if it exists
 ///
-/// \param OutputBB [in] the block we are looking for a duplicate of.
+/// \param OutputBBs [in] the blocks we are looking for a duplicate of.
 /// \param OutputStoreBBs [in] The existing output blocks.
 /// \returns an optional value with the number output block if there is a match.
 Optional<unsigned> findDuplicateOutputBlock(
@@ -1306,9 +1305,9 @@ analyzeAndPruneOutputBlocks(DenseMap<Value *, BasicBlock *> &BlocksToPrune,
 ///
 /// \param [in] OG - The OutlinableGroup of regions to be outlined.
 /// \param [in] Region - The OutlinableRegion that is being analyzed.
-/// \param [in,out] OutputBB - the block that stores for this region will be
+/// \param [in,out] OutputBBs - the blocks that stores for this region will be
 /// placed in.
-/// \param [in] EndBB - the final block of the extracted function.
+/// \param [in] EndBBs - the final blocks of the extracted function.
 /// \param [in] OutputMappings - OutputMappings the mapping of values that have
 /// been replaced by a new output value.
 /// \param [in,out] OutputStoreBBs - The existing output blocks.
@@ -1392,7 +1391,7 @@ static void createAndInsertBasicBlocks(DenseMap<Value *, BasicBlock *> &OldMap,
 /// matches the needed stores for the extracted section.
 /// \param [in] M - The module we are outlining from.
 /// \param [in] OG - The group of regions to be outlined.
-/// \param [in] EndBB - The final block of the extracted function.
+/// \param [in] EndBBs - The final blocks of the extracted function.
 /// \param [in,out] OutputStoreBBs - The existing output blocks.
 void createSwitchStatement(
     Module &M, OutlinableGroup &OG, DenseMap<Value *, BasicBlock *> &EndBBs,

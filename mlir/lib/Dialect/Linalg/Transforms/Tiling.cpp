@@ -129,28 +129,14 @@ makeTiledLoopRanges(OpBuilder &b, Location loc, AffineMap map,
 static void
 transformIndexOps(OpBuilder &b, LinalgOp op, SmallVectorImpl<Value> &ivs,
                   const LoopIndexToRangeIndexMap &loopIndexToRangeIndex) {
-  // Skip operations that have no region attached.
-  if (op->getNumRegions() == 0)
-    return;
-  assert(op->getNumRegions() == 1 && op->getRegion(0).getBlocks().size() == 1 &&
-         "expected linalg operation to have one block.");
-  Block &block = op->getRegion(0).front();
-
-  for (IndexOp indexOp : block.getOps<linalg::IndexOp>()) {
-    auto rangeIndex = loopIndexToRangeIndex.find(indexOp.dim());
+  SmallVector<Value> allIvs(op.getNumLoops(), nullptr);
+  for (auto &en : enumerate(allIvs)) {
+    auto rangeIndex = loopIndexToRangeIndex.find(en.index());
     if (rangeIndex == loopIndexToRangeIndex.end())
       continue;
-    // Offset the index by the value of the corresponding induction variable and
-    // replace all uses of the previous value.
-    OpBuilder::InsertionGuard g(b);
-    b.setInsertionPointAfter(indexOp);
-    AffineExpr index, iv;
-    bindDims(b.getContext(), index, iv);
-    AffineApplyOp applyOp = b.create<AffineApplyOp>(
-        indexOp.getLoc(), index + iv,
-        ValueRange{indexOp.getResult(), ivs[rangeIndex->second]});
-    indexOp.getResult().replaceAllUsesExcept(applyOp, applyOp);
+    en.value() = ivs[rangeIndex->second];
   }
+  addTileLoopIvsToIndexOpResults(b, op, allIvs);
 }
 
 // Insert a tile `source` into the destination tensor `dest`. The position at

@@ -1086,28 +1086,26 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   // widen so that we gain ability to analyze it's exit count and perform this
   // transform.  TODO: It'd be nice to know for sure the exit became
   // analyzeable after dropping widenability.
-  {
-    bool Invalidate = false;
+  bool ChangedLoop = false;
 
-    for (auto *ExitingBB : ExitingBlocks) {
-      if (LI->getLoopFor(ExitingBB) != L)
-        continue;
+  for (auto *ExitingBB : ExitingBlocks) {
+    if (LI->getLoopFor(ExitingBB) != L)
+      continue;
 
-      auto *BI = dyn_cast<BranchInst>(ExitingBB->getTerminator());
-      if (!BI)
-        continue;
+    auto *BI = dyn_cast<BranchInst>(ExitingBB->getTerminator());
+    if (!BI)
+      continue;
 
-      Use *Cond, *WC;
-      BasicBlock *IfTrueBB, *IfFalseBB;
-      if (parseWidenableBranch(BI, Cond, WC, IfTrueBB, IfFalseBB) &&
-          L->contains(IfTrueBB)) {
-        WC->set(ConstantInt::getTrue(IfTrueBB->getContext()));
-        Invalidate = true;
-      }
+    Use *Cond, *WC;
+    BasicBlock *IfTrueBB, *IfFalseBB;
+    if (parseWidenableBranch(BI, Cond, WC, IfTrueBB, IfFalseBB) &&
+        L->contains(IfTrueBB)) {
+      WC->set(ConstantInt::getTrue(IfTrueBB->getContext()));
+      ChangedLoop = true;
     }
-    if (Invalidate)
-      SE->forgetLoop(L);
   }
+  if (ChangedLoop)
+    SE->forgetLoop(L);
 
   // The use of umin(all analyzeable exits) instead of latch is subtle, but
   // important for profitability.  We may have a loop which hasn't been fully
@@ -1119,13 +1117,15 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   if (isa<SCEVCouldNotCompute>(MinEC) || MinEC->getType()->isPointerTy() ||
       !SE->isLoopInvariant(MinEC, L) ||
       !isSafeToExpandAt(MinEC, WidenableBR, *SE))
-    return false;
+    return ChangedLoop;
 
   // Subtlety: We need to avoid inserting additional uses of the WC.  We know
   // that it can only have one transitive use at the moment, and thus moving
   // that use to just before the branch and inserting code before it and then
   // modifying the operand is legal.
   auto *IP = cast<Instruction>(WidenableBR->getCondition());
+  // Here we unconditionally modify the IR, so after this point we should return
+  // only `true`!
   IP->moveBefore(WidenableBR);
   if (MSSAU)
     if (auto *MUD = MSSAU->getMemorySSA()->getMemoryAccess(IP))
@@ -1134,7 +1134,7 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   Rewriter.setInsertPoint(IP);
   IRBuilder<> B(IP);
 
-  bool Changed = false;
+  bool InvalidateLoop = false;
   Value *MinECV = nullptr; // lazily generated if needed
   for (BasicBlock *ExitingBB : ExitingBlocks) {
     // If our exiting block exits multiple loops, we can only rewrite the
@@ -1191,16 +1191,18 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
 
     Value *OldCond = BI->getCondition();
     BI->setCondition(ConstantInt::get(OldCond->getType(), !ExitIfTrue));
-    Changed = true;
+    InvalidateLoop = true;
   }
 
-  if (Changed)
+  if (InvalidateLoop)
     // We just mutated a bunch of loop exits changing there exit counts
     // widely.  We need to force recomputation of the exit counts given these
     // changes.  Note that all of the inserted exits are never taken, and
     // should be removed next time the CFG is modified.
     SE->forgetLoop(L);
-  return Changed;
+
+  // Always return `true` since we have moved the WidenableBR's condition.
+  return true;
 }
 
 bool LoopPredication::runOnLoop(Loop *Loop) {

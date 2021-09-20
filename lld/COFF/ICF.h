@@ -17,8 +17,9 @@ namespace lld {
 namespace coff {
 
 class Chunk;
+class COFFLinkerContext;
 
-void doICF(ArrayRef<Chunk *> chunks, ICFLevel);
+void doICF(COFFLinkerContext &ctx, ICFLevel);
 
 } // namespace coff
 } // namespace lld

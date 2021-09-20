@@ -489,6 +489,11 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
     //  ---+---+---+    ---+---+---+
     //  !x | 0 | y |    !x | 0 |-y |
     //   x | x |x+y|     x | x |x-y|
+    //
+    // TODO: remove this zero "folding" in favor of external pass into linalg
+    //
+    if (isZero(tensorExps[e].children.e1))
+      return buildLattices(tensorExps[e].children.e0, i);
     return takeDisj(kind, // take binary disjunction
                     buildLattices(tensorExps[e].children.e0, i),
                     buildLattices(tensorExps[e].children.e1, i));
@@ -511,6 +516,18 @@ Optional<unsigned> Merger::buildTensorExpFromLinalg(linalg::GenericOp op) {
   return buildTensorExp(op, yield->getOperand(0));
 }
 
+/// Only returns true if we are certain this is a zero.
+bool Merger::isZero(unsigned e) const {
+  if (tensorExps[e].kind == kInvariant) {
+    if (auto c = tensorExps[e].val.getDefiningOp<ConstantIntOp>())
+      return c.getValue() == 0;
+    if (auto c = tensorExps[e].val.getDefiningOp<ConstantFloatOp>())
+      return c.getValue().isZero();
+  }
+  return false;
+}
+
+/// Only returns false if we are certain this is a nonzero.
 bool Merger::maybeZero(unsigned e) const {
   if (tensorExps[e].kind == kInvariant) {
     if (auto c = tensorExps[e].val.getDefiningOp<ConstantIntOp>())

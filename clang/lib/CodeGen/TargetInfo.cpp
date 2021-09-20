@@ -3407,52 +3407,18 @@ static bool BitsContainNoUserData(QualType Ty, unsigned StartBit,
   return false;
 }
 
-/// ContainsFloatAtOffset - Return true if the specified LLVM IR type has a
-/// float member at the specified offset.  For example, {int,{float}} has a
-/// float at offset 4.  It is conservatively correct for this routine to return
-/// false.
-static bool ContainsFloatAtOffset(llvm::Type *IRType, unsigned IROffset,
-                                  const llvm::DataLayout &TD) {
-  // Base case if we find a float.
-  if (IROffset == 0 && IRType->isFloatTy())
-    return true;
+/// getFPTypeAtOffset - Return a floating point type at the specified offset.
+static llvm::Type *getFPTypeAtOffset(llvm::Type *IRType, unsigned IROffset,
+                                     const llvm::DataLayout &TD) {
+  if (IROffset == 0 && IRType->isFloatingPointTy())
+    return IRType;
 
   // If this is a struct, recurse into the field at the specified offset.
   if (llvm::StructType *STy = dyn_cast<llvm::StructType>(IRType)) {
     const llvm::StructLayout *SL = TD.getStructLayout(STy);
     unsigned Elt = SL->getElementContainingOffset(IROffset);
     IROffset -= SL->getElementOffset(Elt);
-    return ContainsFloatAtOffset(STy->getElementType(Elt), IROffset, TD);
-  }
-
-  // If this is an array, recurse into the field at the specified offset.
-  if (llvm::ArrayType *ATy = dyn_cast<llvm::ArrayType>(IRType)) {
-    llvm::Type *EltTy = ATy->getElementType();
-    unsigned EltSize = TD.getTypeAllocSize(EltTy);
-    IROffset -= IROffset/EltSize*EltSize;
-    return ContainsFloatAtOffset(EltTy, IROffset, TD);
-  }
-
-  return false;
-}
-
-/// ContainsHalfAtOffset - Return true if the specified LLVM IR type has a
-/// half member at the specified offset.  For example, {int,{half}} has a
-/// half at offset 4.  It is conservatively correct for this routine to return
-/// false.
-/// FIXME: Merge with ContainsFloatAtOffset
-static bool ContainsHalfAtOffset(llvm::Type *IRType, unsigned IROffset,
-                                 const llvm::DataLayout &TD) {
-  // Base case if we find a float.
-  if (IROffset == 0 && IRType->isHalfTy())
-    return true;
-
-  // If this is a struct, recurse into the field at the specified offset.
-  if (llvm::StructType *STy = dyn_cast<llvm::StructType>(IRType)) {
-    const llvm::StructLayout *SL = TD.getStructLayout(STy);
-    unsigned Elt = SL->getElementContainingOffset(IROffset);
-    IROffset -= SL->getElementOffset(Elt);
-    return ContainsHalfAtOffset(STy->getElementType(Elt), IROffset, TD);
+    return getFPTypeAtOffset(STy->getElementType(Elt), IROffset, TD);
   }
 
   // If this is an array, recurse into the field at the specified offset.
@@ -3460,10 +3426,10 @@ static bool ContainsHalfAtOffset(llvm::Type *IRType, unsigned IROffset,
     llvm::Type *EltTy = ATy->getElementType();
     unsigned EltSize = TD.getTypeAllocSize(EltTy);
     IROffset -= IROffset / EltSize * EltSize;
-    return ContainsHalfAtOffset(EltTy, IROffset, TD);
+    return getFPTypeAtOffset(EltTy, IROffset, TD);
   }
 
-  return false;
+  return nullptr;
 }
 
 /// GetSSETypeAtOffset - Return a type that will be passed by the backend in the
@@ -3471,39 +3437,37 @@ static bool ContainsHalfAtOffset(llvm::Type *IRType, unsigned IROffset,
 llvm::Type *X86_64ABIInfo::
 GetSSETypeAtOffset(llvm::Type *IRType, unsigned IROffset,
                    QualType SourceTy, unsigned SourceOffset) const {
-  // If the high 32 bits are not used, we have three choices. Single half,
-  // single float or two halfs.
-  if (BitsContainNoUserData(SourceTy, SourceOffset * 8 + 32,
-                            SourceOffset * 8 + 64, getContext())) {
-    if (ContainsFloatAtOffset(IRType, IROffset, getDataLayout()))
-      return llvm::Type::getFloatTy(getVMContext());
-    if (ContainsHalfAtOffset(IRType, IROffset + 2, getDataLayout()))
-      return llvm::FixedVectorType::get(llvm::Type::getHalfTy(getVMContext()),
-                                        2);
+  const llvm::DataLayout &TD = getDataLayout();
+  llvm::Type *T0 = getFPTypeAtOffset(IRType, IROffset, TD);
+  if (!T0 || T0->isDoubleTy())
+    return llvm::Type::getDoubleTy(getVMContext());
 
-    return llvm::Type::getHalfTy(getVMContext());
+  // Get the adjacent FP type.
+  llvm::Type *T1 =
+      getFPTypeAtOffset(IRType, IROffset + TD.getTypeAllocSize(T0), TD);
+  if (T1 == nullptr) {
+    // Check if IRType is a half + float. float type will be in IROffset+4 due
+    // to its alignment.
+    if (T0->isHalfTy())
+      T1 = getFPTypeAtOffset(IRType, IROffset + 4, TD);
+    // If we can't get a second FP type, return a simple half or float.
+    // avx512fp16-abi.c:pr51813_2 shows it works to return float for
+    // {float, i8} too.
+    if (T1 == nullptr)
+      return T0;
   }
 
-  // We want to pass as <2 x float> if the LLVM IR type contains a float at
-  // offset+0 and offset+4. Walk the LLVM IR type to find out if this is the
-  // case.
-  if (ContainsFloatAtOffset(IRType, IROffset, getDataLayout()) &&
-      ContainsFloatAtOffset(IRType, IROffset + 4, getDataLayout()))
-    return llvm::FixedVectorType::get(llvm::Type::getFloatTy(getVMContext()),
-                                      2);
+  if (T0->isFloatTy() && T1->isFloatTy())
+    return llvm::FixedVectorType::get(T0, 2);
 
-  // We want to pass as <4 x half> if the LLVM IR type contains a half at
-  // offset+0, +2, +4. Walk the LLVM IR type to find out if this is the case.
-  if (ContainsHalfAtOffset(IRType, IROffset, getDataLayout()) &&
-      ContainsHalfAtOffset(IRType, IROffset + 2, getDataLayout()) &&
-      ContainsHalfAtOffset(IRType, IROffset + 4, getDataLayout()))
-    return llvm::FixedVectorType::get(llvm::Type::getHalfTy(getVMContext()), 4);
+  if (T0->isHalfTy() && T1->isHalfTy()) {
+    llvm::Type *T2 = getFPTypeAtOffset(IRType, IROffset + 4, TD);
+    if (T2 == nullptr)
+      return llvm::FixedVectorType::get(T0, 2);
+    return llvm::FixedVectorType::get(T0, 4);
+  }
 
-  // We want to pass as <4 x half> if the LLVM IR type contains a mix of float
-  // and half.
-  // FIXME: Do we have a better representation for the mixed type?
-  if (ContainsFloatAtOffset(IRType, IROffset, getDataLayout()) ||
-      ContainsFloatAtOffset(IRType, IROffset + 4, getDataLayout()))
+  if (T0->isHalfTy() || T1->isHalfTy())
     return llvm::FixedVectorType::get(llvm::Type::getHalfTy(getVMContext()), 4);
 
   return llvm::Type::getDoubleTy(getVMContext());

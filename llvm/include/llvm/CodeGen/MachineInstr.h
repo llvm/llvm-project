@@ -517,7 +517,7 @@ public:
   SmallSet<Register, 4> getUsedDebugRegs() const {
     assert(isDebugValue() && "not a DBG_VALUE*");
     SmallSet<Register, 4> UsedRegs;
-    for (auto MO : debug_operands())
+    for (const auto &MO : debug_operands())
       if (MO.isReg() && MO.getReg())
         UsedRegs.insert(MO.getReg());
     return UsedRegs;

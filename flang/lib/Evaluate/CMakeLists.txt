@@ -24,6 +24,7 @@ add_flang_library(FortranEvaluate
   fold-integer.cpp
   fold-logical.cpp
   fold-real.cpp
+  fold-reduction.cpp
   formatting.cpp
   host.cpp
   initial-image.cpp

@@ -779,7 +779,8 @@ fp16_fml_fallthrough:
     // which raises an alignment fault on unaligned accesses. Linux
     // defaults this bit to 0 and handles it as a system-wide (not
     // per-process) setting. It is therefore safe to assume that ARMv7+
-    // Linux targets support unaligned accesses. The same goes for NaCl.
+    // Linux targets support unaligned accesses. The same goes for NaCl
+    // and Windows.
     //
     // The above behavior is consistent with GCC.
     int VersionNum = getARMSubArchVersionNumber(Triple);
@@ -787,7 +788,8 @@ fp16_fml_fallthrough:
       if (VersionNum < 6 ||
           Triple.getSubArch() == llvm::Triple::SubArchType::ARMSubArch_v6m)
         Features.push_back("+strict-align");
-    } else if (Triple.isOSLinux() || Triple.isOSNaCl()) {
+    } else if (Triple.isOSLinux() || Triple.isOSNaCl() ||
+               Triple.isOSWindows()) {
       if (VersionNum < 7)
         Features.push_back("+strict-align");
     } else

@@ -173,11 +173,11 @@ pxor        (%rax), %mm2
 # CHECK-NEXT:  1      1     1.00    *                   movq	(%rax), %mm2
 # CHECK-NEXT:  1      3     3.00                        movq	%mm0, %rcx
 # CHECK-NEXT:  1      1     1.00           *            movq	%mm0, (%rax)
-# CHECK-NEXT:  1      1     0.50                        packsswb	%mm0, %mm2
+# CHECK-NEXT:  1      1     1.00                        packsswb	%mm0, %mm2
 # CHECK-NEXT:  1      1     1.00    *                   packsswb	(%rax), %mm2
-# CHECK-NEXT:  1      1     0.50                        packssdw	%mm0, %mm2
+# CHECK-NEXT:  1      1     1.00                        packssdw	%mm0, %mm2
 # CHECK-NEXT:  1      1     1.00    *                   packssdw	(%rax), %mm2
-# CHECK-NEXT:  1      1     0.50                        packuswb	%mm0, %mm2
+# CHECK-NEXT:  1      1     1.00                        packuswb	%mm0, %mm2
 # CHECK-NEXT:  1      1     1.00    *                   packuswb	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        paddb	%mm0, %mm2
 # CHECK-NEXT:  1      1     1.00    *                   paddb	(%rax), %mm2
@@ -255,11 +255,11 @@ pxor        (%rax), %mm2
 # CHECK-NEXT:  1      1     1.00    *                   psubusw	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        psubw	%mm0, %mm2
 # CHECK-NEXT:  1      1     1.00    *                   psubw	(%rax), %mm2
-# CHECK-NEXT:  1      1     0.50                        punpckhbw	%mm0, %mm2
+# CHECK-NEXT:  1      1     1.00                        punpckhbw	%mm0, %mm2
 # CHECK-NEXT:  1      1     1.00    *                   punpckhbw	(%rax), %mm2
-# CHECK-NEXT:  1      1     0.50                        punpckhdq	%mm0, %mm2
+# CHECK-NEXT:  1      1     1.00                        punpckhdq	%mm0, %mm2
 # CHECK-NEXT:  1      1     1.00    *                   punpckhdq	(%rax), %mm2
-# CHECK-NEXT:  1      1     0.50                        punpckhwd	%mm0, %mm2
+# CHECK-NEXT:  1      1     1.00                        punpckhwd	%mm0, %mm2
 # CHECK-NEXT:  1      1     1.00    *                   punpckhwd	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        punpcklbw	%mm0, %mm2
 # CHECK-NEXT:  1      1     1.00    *                   punpcklbw	(%rax), %mm2
@@ -276,7 +276,7 @@ pxor        (%rax), %mm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]
-# CHECK-NEXT: 103.50 41.50
+# CHECK-NEXT: 106.50 38.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    Instructions:
@@ -289,11 +289,11 @@ pxor        (%rax), %mm2
 # CHECK-NEXT: 1.00    -     movq	(%rax), %mm2
 # CHECK-NEXT: 3.00    -     movq	%mm0, %rcx
 # CHECK-NEXT: 1.00    -     movq	%mm0, (%rax)
-# CHECK-NEXT: 0.50   0.50   packsswb	%mm0, %mm2
+# CHECK-NEXT: 1.00    -     packsswb	%mm0, %mm2
 # CHECK-NEXT: 1.00    -     packsswb	(%rax), %mm2
-# CHECK-NEXT: 0.50   0.50   packssdw	%mm0, %mm2
+# CHECK-NEXT: 1.00    -     packssdw	%mm0, %mm2
 # CHECK-NEXT: 1.00    -     packssdw	(%rax), %mm2
-# CHECK-NEXT: 0.50   0.50   packuswb	%mm0, %mm2
+# CHECK-NEXT: 1.00    -     packuswb	%mm0, %mm2
 # CHECK-NEXT: 1.00    -     packuswb	(%rax), %mm2
 # CHECK-NEXT: 0.50   0.50   paddb	%mm0, %mm2
 # CHECK-NEXT: 1.00    -     paddb	(%rax), %mm2
@@ -371,11 +371,11 @@ pxor        (%rax), %mm2
 # CHECK-NEXT: 1.00    -     psubusw	(%rax), %mm2
 # CHECK-NEXT: 0.50   0.50   psubw	%mm0, %mm2
 # CHECK-NEXT: 1.00    -     psubw	(%rax), %mm2
-# CHECK-NEXT: 0.50   0.50   punpckhbw	%mm0, %mm2
+# CHECK-NEXT: 1.00    -     punpckhbw	%mm0, %mm2
 # CHECK-NEXT: 1.00    -     punpckhbw	(%rax), %mm2
-# CHECK-NEXT: 0.50   0.50   punpckhdq	%mm0, %mm2
+# CHECK-NEXT: 1.00    -     punpckhdq	%mm0, %mm2
 # CHECK-NEXT: 1.00    -     punpckhdq	(%rax), %mm2
-# CHECK-NEXT: 0.50   0.50   punpckhwd	%mm0, %mm2
+# CHECK-NEXT: 1.00    -     punpckhwd	%mm0, %mm2
 # CHECK-NEXT: 1.00    -     punpckhwd	(%rax), %mm2
 # CHECK-NEXT: 1.00    -     punpcklbw	%mm0, %mm2
 # CHECK-NEXT: 1.00    -     punpcklbw	(%rax), %mm2

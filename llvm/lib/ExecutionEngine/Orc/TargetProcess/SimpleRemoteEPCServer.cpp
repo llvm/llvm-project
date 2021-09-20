@@ -22,6 +22,8 @@ using namespace llvm::orc::shared;
 namespace llvm {
 namespace orc {
 
+ExecutorBootstrapService::~ExecutorBootstrapService() {}
+
 SimpleRemoteEPCServer::Dispatcher::~Dispatcher() {}
 
 #if LLVM_ENABLE_THREADS

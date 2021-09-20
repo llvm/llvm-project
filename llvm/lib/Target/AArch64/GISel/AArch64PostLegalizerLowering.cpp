@@ -527,7 +527,7 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
 
   // If the RHS is not a constant, or the RHS is already a valid arithmetic
   // immediate, then there is nothing to change.
-  auto ValAndVReg = getConstantVRegValWithLookThrough(RHS, MRI);
+  auto ValAndVReg = getIConstantVRegValWithLookThrough(RHS, MRI);
   if (!ValAndVReg)
     return None;
   uint64_t C = ValAndVReg->Value.getZExtValue();
@@ -757,7 +757,7 @@ static unsigned getCmpOperandFoldingProfit(Register CmpOp,
     if (MI.getOpcode() != TargetOpcode::G_AND)
       return false;
     auto ValAndVReg =
-        getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
+        getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
     if (!ValAndVReg)
       return false;
     uint64_t Mask = ValAndVReg->Value.getZExtValue();
@@ -774,7 +774,7 @@ static unsigned getCmpOperandFoldingProfit(Register CmpOp,
     return 0;
 
   auto MaybeShiftAmt =
-      getConstantVRegValWithLookThrough(Def->getOperand(2).getReg(), MRI);
+      getIConstantVRegValWithLookThrough(Def->getOperand(2).getReg(), MRI);
   if (!MaybeShiftAmt)
     return 0;
   uint64_t ShiftAmt = MaybeShiftAmt->Value.getZExtValue();
@@ -814,7 +814,7 @@ static bool trySwapICmpOperands(MachineInstr &MI,
   // Don't swap if there's a constant on the RHS, because we know we can fold
   // that.
   Register RHS = MI.getOperand(3).getReg();
-  auto RHSCst = getConstantVRegValWithLookThrough(RHS, MRI);
+  auto RHSCst = getIConstantVRegValWithLookThrough(RHS, MRI);
   if (RHSCst && isLegalArithImmed(RHSCst->Value.getSExtValue()))
     return false;
 

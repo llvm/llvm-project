@@ -49,9 +49,7 @@ INTERCEPTOR(int, pthread_create, void *th, void *attr, void *(*callback)(void*),
 
 DEFINE_REAL(int, vfork)
 DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(int, vfork)
-#endif // HWASAN_WITH_INTERCEPTORS
 
-#if HWASAN_WITH_INTERCEPTORS && defined(__aarch64__)
 // Get and/or change the set of blocked signals.
 extern "C" int sigprocmask(int __how, const __hw_sigset_t *__restrict __set,
                            __hw_sigset_t *__restrict __oset);
@@ -67,8 +65,14 @@ extern "C" int __sigjmp_save(__hw_sigjmp_buf env, int savemask) {
 
 static void __attribute__((always_inline))
 InternalLongjmp(__hw_register_buf env, int retval) {
+#    if defined(__aarch64__)
+  constexpr size_t kSpIndex = 13;
+#    elif defined(__x86_64__)
+  constexpr size_t kSpIndex = 6;
+#    endif
+
   // Clear all memory tags on the stack between here and where we're going.
-  unsigned long long stack_pointer = env[13];
+  unsigned long long stack_pointer = env[kSpIndex];
   // The stack pointer should never be tagged, so we don't need to clear the
   // tag for this function call.
   __hwasan_handle_longjmp((void *)stack_pointer);
@@ -79,6 +83,7 @@ InternalLongjmp(__hw_register_buf env, int retval) {
   // Must implement this ourselves, since we don't know the order of registers
   // in different libc implementations and many implementations mangle the
   // stack pointer so we can't use it without knowing the demangling scheme.
+#    if defined(__aarch64__)
   register long int retval_tmp asm("x1") = retval;
   register void *env_address asm("x0") = &env[0];
   asm volatile("ldp	x19, x20, [%0, #0<<3];"
@@ -101,6 +106,26 @@ InternalLongjmp(__hw_register_buf env, int retval) {
                "br	x30;"
                : "+r"(env_address)
                : "r"(retval_tmp));
+#    elif defined(__x86_64__)
+  register long int retval_tmp asm("%rsi") = retval;
+  register void *env_address asm("%rdi") = &env[0];
+  asm volatile(
+      // Restore registers.
+      "mov (0*8)(%0),%%rbx;"
+      "mov (1*8)(%0),%%rbp;"
+      "mov (2*8)(%0),%%r12;"
+      "mov (3*8)(%0),%%r13;"
+      "mov (4*8)(%0),%%r14;"
+      "mov (5*8)(%0),%%r15;"
+      "mov (6*8)(%0),%%rsp;"
+      "mov (7*8)(%0),%%rdx;"
+      // Return 1 if retval is 0.
+      "mov $1,%%rax;"
+      "test %1,%1;"
+      "cmovnz %1,%%rax;"
+      "jmp *%%rdx;" ::"r"(env_address),
+      "r"(retval_tmp));
+#    endif
 }
 
 INTERCEPTOR(void, siglongjmp, __hw_sigjmp_buf env, int val) {
@@ -139,7 +164,7 @@ INTERCEPTOR(void, longjmp, __hw_jmp_buf env, int val) {
 #undef SIG_BLOCK
 #undef SIG_SETMASK
 
-#endif // HWASAN_WITH_INTERCEPTORS && __aarch64__
+#  endif  // HWASAN_WITH_INTERCEPTORS
 
 namespace __hwasan {
 
@@ -158,11 +183,9 @@ void InitializeInterceptors() {
 
 #if HWASAN_WITH_INTERCEPTORS
 #if defined(__linux__)
-#      if defined(__aarch64__)
   INTERCEPT_FUNCTION(__libc_longjmp);
   INTERCEPT_FUNCTION(longjmp);
   INTERCEPT_FUNCTION(siglongjmp);
-#      endif  // __aarch64__
   INTERCEPT_FUNCTION(vfork);
 #endif  // __linux__
   INTERCEPT_FUNCTION(pthread_create);

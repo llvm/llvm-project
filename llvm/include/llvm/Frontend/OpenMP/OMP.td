@@ -339,6 +339,7 @@ def OMPC_Filter : Clause<"filter"> {
   let clangClass = "OMPFilterClause";
   let flangClass = "ScalarIntExpr";
 }
+def OMPC_When: Clause<"when"> {}
 
 //===----------------------------------------------------------------------===//
 // Definition of OpenMP directives
@@ -491,9 +492,11 @@ def OMP_Flush : Directive<"flush"> {
 }
 def OMP_Ordered : Directive<"ordered"> {
   let allowedClauses = [
-    VersionedClause<OMPC_Threads>,
-    VersionedClause<OMPC_Simd>,
     VersionedClause<OMPC_Depend>
+  ];
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Threads>,
+    VersionedClause<OMPC_Simd>
   ];
 }
 def OMP_Atomic : Directive<"atomic"> {
@@ -1700,6 +1703,10 @@ def OMP_masked : Directive<"masked"> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_Filter>
   ];
+}
+def OMP_Metadirective : Directive<"metadirective"> {
+  let allowedClauses = [VersionedClause<OMPC_When>];
+  let allowedOnceClauses = [VersionedClause<OMPC_Default>];
 }
 def OMP_Unknown : Directive<"unknown"> {
   let isDefault = true;

@@ -28,6 +28,7 @@ unittest("OrcJITTests") {
     "RPCUtilsTest.cpp",
     "RTDyldObjectLinkingLayerTest.cpp",
     "ResourceTrackerTest.cpp",
+    "SimpleExecutorMemoryManagerTest.cpp",
     "SimplePackedSerializationTest.cpp",
     "SymbolStringPoolTest.cpp",
     "ThreadSafeModuleTest.cpp",

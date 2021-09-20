@@ -1612,6 +1612,9 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
 
     Function &StoreFn =
         const_cast<Function &>(*GS.StoredOnceStore->getFunction());
+    bool CanHaveNonUndefGlobalInitializer =
+        GetTTI(StoreFn).canHaveNonUndefGlobalInitializerInAddressSpace(
+            GV->getType()->getAddressSpace());
     // If the initial value for the global was an undef value, and if only
     // one other value was stored into it, we can just change the
     // initializer to be the stored value, then delete all stores to the
@@ -1621,8 +1624,7 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
     // shared memory (AS 3).
     if (SOVConstant && SOVConstant->getType() == GV->getValueType() &&
         isa<UndefValue>(GV->getInitializer()) &&
-        GetTTI(StoreFn).canHaveNonUndefGlobalInitializerInAddressSpace(
-            GV->getType()->getAddressSpace())) {
+        CanHaveNonUndefGlobalInitializer) {
       // Change the initial value here.
       GV->setInitializer(SOVConstant);
 
@@ -1645,8 +1647,10 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
       return true;
 
     // Otherwise, if the global was not a boolean, we can shrink it to be a
-    // boolean.
-    if (SOVConstant && GS.Ordering == AtomicOrdering::NotAtomic) {
+    // boolean. Skip this optimization for AS that doesn't allow an initializer.
+    if (SOVConstant && GS.Ordering == AtomicOrdering::NotAtomic &&
+        (!isa<UndefValue>(GV->getInitializer()) ||
+         CanHaveNonUndefGlobalInitializer)) {
       if (TryToShrinkGlobalToBoolean(GV, SOVConstant)) {
         ++NumShrunkToBool;
         return true;

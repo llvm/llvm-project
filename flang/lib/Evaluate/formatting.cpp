@@ -739,7 +739,7 @@ llvm::raw_ostream &DescriptorInquiry::AsFortran(llvm::raw_ostream &o) const {
   if (field_ == Field::Len) {
     return o << "%len";
   } else {
-    if (dimension_ >= 0) {
+    if (field_ != Field::Rank && dimension_ >= 0) {
       o << ",dim=" << (dimension_ + 1);
     }
     return o << ')';
