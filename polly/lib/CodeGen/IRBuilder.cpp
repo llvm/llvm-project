@@ -304,7 +304,7 @@ void ScopAnnotator::annotate(Instruction *Inst) {
     return;
   }
 
-  Inst->setMetadata("alias.scope", AliasScope);
+  Inst->setMetadata("alias.scope", MDNode::get(SE->getContext(), AliasScope));
   Inst->setMetadata("noalias", OtherAliasScopeList);
 }
 
