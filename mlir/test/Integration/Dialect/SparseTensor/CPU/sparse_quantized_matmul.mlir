@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN:   --linalg-generalize-named-ops \
+// RUN:   --linalg-generalize-named-ops --linalg-fuse-elementwise-ops \
 // RUN:   --sparsification --sparse-tensor-conversion \
 // RUN:   --convert-vector-to-scf --convert-scf-to-std \
 // RUN:   --func-bufferize --tensor-constant-bufferize --tensor-bufferize \
