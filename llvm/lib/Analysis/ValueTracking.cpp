@@ -1689,6 +1689,32 @@ static void computeKnownBitsFromOperator(const Operator *I,
         if (BitWidth >= 32)
           Known.Zero.setBitsFrom(31);
         break;
+      case Intrinsic::vscale: {
+        if (!II->getFunction()->hasFnAttribute(Attribute::VScaleRange))
+          break;
+
+        auto VScaleRange = II->getFunction()
+                               ->getFnAttribute(Attribute::VScaleRange)
+                               .getVScaleRangeArgs();
+
+        if (VScaleRange.second == 0)
+          break;
+
+        // If vscale min = max then we know the exact value at compile time
+        // and hence we know the exact bits.
+        if (VScaleRange.first == VScaleRange.second) {
+          Known.One = VScaleRange.first;
+          Known.Zero = VScaleRange.first;
+          Known.Zero.flipAllBits();
+          break;
+        }
+
+        unsigned FirstZeroHighBit = 32 - countLeadingZeros(VScaleRange.second);
+        if (FirstZeroHighBit < BitWidth)
+          Known.Zero.setBitsFrom(FirstZeroHighBit);
+
+        break;
+      }
       }
     }
     break;
