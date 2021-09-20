@@ -388,6 +388,7 @@ TEST(SimplexTest, appendVariable) {
 
   unsigned snapshot1 = simplex.getSnapshot();
   simplex.appendVariable();
+  simplex.appendVariable(0);
   EXPECT_EQ(simplex.getNumVariables(), 2u);
 
   int64_t yMin = 2, yMax = 5;
