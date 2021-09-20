@@ -147,7 +147,7 @@ template <> struct ScalarEnumerationTraits<FormatStyle::AlignConsecutiveStyle> {
     IO.enumCase(Value, "AcrossEmptyLinesAndComments",
                 FormatStyle::ACS_AcrossEmptyLinesAndComments);
 
-    // For backward compability.
+    // For backward compatibility.
     IO.enumCase(Value, "true", FormatStyle::ACS_Consecutive);
     IO.enumCase(Value, "false", FormatStyle::ACS_None);
   }
