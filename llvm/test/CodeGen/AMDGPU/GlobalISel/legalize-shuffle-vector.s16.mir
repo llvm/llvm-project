@@ -828,7 +828,6 @@ body: |
     ; GFX8: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; GFX8: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
     ; GFX8: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
-    ; GFX8: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
     ; GFX8: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[BITCAST]], 16
     ; GFX8: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LSHR]], 16
     ; GFX8: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[BITCAST1]], 16
@@ -837,11 +836,10 @@ body: |
     ; GFX8: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT]](<3 x s16>), 0
     ; GFX8: [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT1]](<4 x s16>)
     ; GFX8: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV2]](<2 x s16>)
-    ; GFX8: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
+    ; GFX8: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
     ; GFX8: [[BITCAST3:%[0-9]+]]:_(s32) = G_BITCAST [[UV3]](<2 x s16>)
-    ; GFX8: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST3]], [[C]](s32)
     ; GFX8: [[SEXT_INREG3:%[0-9]+]]:_(s32) = G_SEXT_INREG [[BITCAST2]], 16
-    ; GFX8: [[SEXT_INREG4:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LSHR2]], 16
+    ; GFX8: [[SEXT_INREG4:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LSHR1]], 16
     ; GFX8: [[SEXT_INREG5:%[0-9]+]]:_(s32) = G_SEXT_INREG [[BITCAST3]], 16
     ; GFX8: [[BUILD_VECTOR1:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[SEXT_INREG3]](s32), [[SEXT_INREG4]](s32), [[SEXT_INREG5]](s32)
     ; GFX8: [[EXTRACT3:%[0-9]+]]:_(s32) = G_EXTRACT [[BUILD_VECTOR1]](<3 x s32>), 32
@@ -873,7 +871,6 @@ body: |
     ; GFX9: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; GFX9: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
     ; GFX9: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
-    ; GFX9: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
     ; GFX9: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[BITCAST]], 16
     ; GFX9: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LSHR]], 16
     ; GFX9: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[BITCAST1]], 16
@@ -882,11 +879,10 @@ body: |
     ; GFX9: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT]](<3 x s16>), 0
     ; GFX9: [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT1]](<4 x s16>)
     ; GFX9: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV2]](<2 x s16>)
-    ; GFX9: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
+    ; GFX9: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
     ; GFX9: [[BITCAST3:%[0-9]+]]:_(s32) = G_BITCAST [[UV3]](<2 x s16>)
-    ; GFX9: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST3]], [[C]](s32)
     ; GFX9: [[SEXT_INREG3:%[0-9]+]]:_(s32) = G_SEXT_INREG [[BITCAST2]], 16
-    ; GFX9: [[SEXT_INREG4:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LSHR2]], 16
+    ; GFX9: [[SEXT_INREG4:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LSHR1]], 16
     ; GFX9: [[SEXT_INREG5:%[0-9]+]]:_(s32) = G_SEXT_INREG [[BITCAST3]], 16
     ; GFX9: [[BUILD_VECTOR1:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[SEXT_INREG3]](s32), [[SEXT_INREG4]](s32), [[SEXT_INREG5]](s32)
     ; GFX9: [[EXTRACT3:%[0-9]+]]:_(s32) = G_EXTRACT [[BUILD_VECTOR1]](<3 x s32>), 32

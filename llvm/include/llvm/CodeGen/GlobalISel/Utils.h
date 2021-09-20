@@ -14,6 +14,8 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_UTILS_H
 #define LLVM_CODEGEN_GLOBALISEL_UTILS_H
 
+#include "GISelWorkList.h"
+#include "LostDebugLocObserver.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/Register.h"
@@ -406,6 +408,15 @@ int64_t getICmpTrueVal(const TargetLowering &TLI, bool IsVector, bool IsFP);
 /// Returns true if the given block should be optimized for size.
 bool shouldOptForSize(const MachineBasicBlock &MBB, ProfileSummaryInfo *PSI,
                       BlockFrequencyInfo *BFI);
+
+using SmallInstListTy = GISelWorkList<4>;
+void saveUsesAndErase(MachineInstr &MI, MachineRegisterInfo &MRI,
+                      LostDebugLocObserver *LocObserver,
+                      SmallInstListTy &DeadInstChain);
+void eraseInstrs(ArrayRef<MachineInstr *> DeadInstrs, MachineRegisterInfo &MRI,
+                 LostDebugLocObserver *LocObserver = nullptr);
+void eraseInstr(MachineInstr &MI, MachineRegisterInfo &MRI,
+                LostDebugLocObserver *LocObserver = nullptr);
 
 } // End namespace llvm.
 #endif

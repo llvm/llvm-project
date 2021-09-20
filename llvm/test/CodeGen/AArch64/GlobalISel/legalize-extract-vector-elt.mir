@@ -149,8 +149,6 @@ body: |
     liveins: $q0, $q1, $x0
     ; CHECK-LABEL: name: test_eve_v4s64
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK: %idx:_(s32) = G_CONSTANT i32 1
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; CHECK: [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[COPY]](<2 x s64>), [[C]](s64)
     ; CHECK: $x0 = COPY [[EVEC]](s64)
@@ -201,8 +199,6 @@ body: |
     liveins: $q0, $q1, $x0
     ; CHECK-LABEL: name: test_eve_v8s32
     ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-    ; CHECK: %idx:_(s32) = G_CONSTANT i32 1
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; CHECK: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<4 x s32>), [[C]](s64)
     ; CHECK: $w0 = COPY [[EVEC]](s32)
@@ -222,11 +218,9 @@ body: |
   bb.0:
     liveins: $q0, $q1, $x0
     ; CHECK-LABEL: name: test_eve_v16s16
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
-    ; CHECK: %idx:_(s32) = G_CONSTANT i32 9
+    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q1
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK: [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[COPY1]](<8 x s16>), [[C]](s64)
+    ; CHECK: [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[COPY]](<8 x s16>), [[C]](s64)
     ; CHECK: %ext:_(s32) = G_ANYEXT [[EVEC]](s16)
     ; CHECK: $w0 = COPY %ext(s32)
     ; CHECK: RET_ReallyLR

@@ -100,7 +100,12 @@ macro(add_clang_library name)
       # The Xcode generator doesn't handle object libraries correctly.
       list(APPEND LIBTYPE OBJECT)
     endif()
-    set_property(GLOBAL APPEND PROPERTY CLANG_STATIC_LIBS ${name})
+    if (NOT EXCLUDE_FROM_ALL)
+      # Only include libraries that don't have EXCLUDE_FROM_ALL set. This
+      # ensure that the clang static analyzer libraries are not compiled
+      # as part of clang-shlib if CLANG_ENABLE_STATIC_ANALYZER=OFF.
+      set_property(GLOBAL APPEND PROPERTY CLANG_STATIC_LIBS ${name})
+    endif()
   endif()
   llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs})
 
@@ -110,8 +115,11 @@ macro(add_clang_library name)
   endif()
 
   foreach(lib ${libs})
-    if(TARGET ${lib})
+   if(TARGET ${lib})
       target_link_libraries(${lib} INTERFACE ${LLVM_COMMON_LIBS})
+      if (EXCLUDE_FROM_ALL)
+        continue()
+      endif()
 
       if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ARG_INSTALL_WITH_TOOLCHAIN)
         get_target_export_arg(${name} Clang export_to_clangtargets UMBRELLA clang-libraries)

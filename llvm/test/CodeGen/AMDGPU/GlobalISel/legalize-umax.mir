@@ -332,36 +332,30 @@ body: |
     ; SI-LABEL: name: test_umax_v3s16
     ; SI: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; SI: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; SI: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; SI: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF]](<4 x s16>)
     ; SI: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
     ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; SI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
     ; SI: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
-    ; SI: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
-    ; SI: [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF2]](<4 x s16>)
+    ; SI: [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<4 x s16>)
     ; SI: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV2]](<2 x s16>)
-    ; SI: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
+    ; SI: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
     ; SI: [[BITCAST3:%[0-9]+]]:_(s32) = G_BITCAST [[UV3]](<2 x s16>)
-    ; SI: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST3]], [[C]](s32)
     ; SI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; SI: [[AND:%[0-9]+]]:_(s32) = G_AND [[BITCAST]], [[C1]]
     ; SI: [[AND1:%[0-9]+]]:_(s32) = G_AND [[BITCAST2]], [[C1]]
     ; SI: [[UMAX:%[0-9]+]]:_(s32) = G_UMAX [[AND]], [[AND1]]
     ; SI: [[AND2:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C1]]
-    ; SI: [[AND3:%[0-9]+]]:_(s32) = G_AND [[LSHR2]], [[C1]]
+    ; SI: [[AND3:%[0-9]+]]:_(s32) = G_AND [[LSHR1]], [[C1]]
     ; SI: [[UMAX1:%[0-9]+]]:_(s32) = G_UMAX [[AND2]], [[AND3]]
     ; SI: [[AND4:%[0-9]+]]:_(s32) = G_AND [[BITCAST1]], [[C1]]
     ; SI: [[AND5:%[0-9]+]]:_(s32) = G_AND [[BITCAST3]], [[C1]]
     ; SI: [[UMAX2:%[0-9]+]]:_(s32) = G_UMAX [[AND4]], [[AND5]]
-    ; SI: [[DEF3:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; SI: [[DEF4:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
     ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[UMAX]](s32), [[UMAX1]](s32), [[UMAX2]](s32)
     ; SI: S_NOP 0, implicit [[BUILD_VECTOR]](<3 x s32>)
     ; VI-LABEL: name: test_umax_v3s16
     ; VI: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; VI: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; VI: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; VI: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF]](<4 x s16>)
     ; VI: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
     ; VI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
@@ -370,20 +364,16 @@ body: |
     ; VI: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
     ; VI: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
     ; VI: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST1]](s32)
-    ; VI: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
-    ; VI: [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF2]](<4 x s16>)
+    ; VI: [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<4 x s16>)
     ; VI: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV2]](<2 x s16>)
     ; VI: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST2]](s32)
-    ; VI: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
-    ; VI: [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR2]](s32)
+    ; VI: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
+    ; VI: [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
     ; VI: [[BITCAST3:%[0-9]+]]:_(s32) = G_BITCAST [[UV3]](<2 x s16>)
     ; VI: [[TRUNC5:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST3]](s32)
-    ; VI: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST3]], [[C]](s32)
     ; VI: [[UMAX:%[0-9]+]]:_(s16) = G_UMAX [[TRUNC]], [[TRUNC3]]
     ; VI: [[UMAX1:%[0-9]+]]:_(s16) = G_UMAX [[TRUNC1]], [[TRUNC4]]
     ; VI: [[UMAX2:%[0-9]+]]:_(s16) = G_UMAX [[TRUNC2]], [[TRUNC5]]
-    ; VI: [[DEF3:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; VI: [[DEF4:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
     ; VI: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UMAX]](s16)
     ; VI: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UMAX1]](s16)
     ; VI: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UMAX2]](s16)
@@ -407,7 +397,6 @@ body: |
     ; GFX9: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; GFX9: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
     ; GFX9: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UMAX1]](<2 x s16>)
-    ; GFX9: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
     ; GFX9: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[BITCAST]](s32), [[LSHR]](s32), [[BITCAST1]](s32)
     ; GFX9: S_NOP 0, implicit [[BUILD_VECTOR]](<3 x s32>)
     %0:_(<3 x s16>) = G_IMPLICIT_DEF
