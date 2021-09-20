@@ -105,6 +105,7 @@ add_entrypoint_object(
   HDRS
     div.h
   DEPENDS
+    libc.include.stdlib
     libc.src.__support.integer_operations
 )
 
@@ -115,6 +116,7 @@ add_entrypoint_object(
   HDRS
     ldiv.h
   DEPENDS
+    libc.include.stdlib
     libc.src.__support.integer_operations
 )
 
@@ -125,6 +127,7 @@ add_entrypoint_object(
   HDRS
     lldiv.h
   DEPENDS
+    libc.include.stdlib
     libc.src.__support.integer_operations
 )
 

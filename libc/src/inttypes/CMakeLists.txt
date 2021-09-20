@@ -25,5 +25,6 @@ add_entrypoint_object(
   HDRS
     imaxdiv.h
   DEPENDS
+    libc.include.inttypes
     libc.src.__support.integer_operations
 )
