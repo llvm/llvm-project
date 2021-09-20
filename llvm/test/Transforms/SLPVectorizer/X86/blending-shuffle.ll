@@ -139,9 +139,9 @@ define i8 @k(<4 x i8> %x) {
 
 define i8 @k_bb(<4 x i8> %x) {
 ; CHECK-LABEL: @k_bb(
-; CHECK-NEXT:    [[X0:%.*]] = extractelement <4 x i8> [[X:%.*]], i32 0
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
+; CHECK-NEXT:    [[X0:%.*]] = extractelement <4 x i8> [[X:%.*]], i32 0
 ; CHECK-NEXT:    [[X3:%.*]] = extractelement <4 x i8> [[X]], i32 3
 ; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x i8> [[X]], i32 1
 ; CHECK-NEXT:    [[X2:%.*]] = extractelement <4 x i8> [[X]], i32 2

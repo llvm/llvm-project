@@ -114,13 +114,13 @@ sw.epilog:                                        ; preds = %entry, %sw.bb
 }
 
 declare i32 @foo(i32, i32)
-; TODO: Two uses in a single user. We can still sink the instruction (tmp.9).
+; Two uses in a single user. We can still sink the instruction (tmp.9).
 define i32 @test4(i32 %A, i32 %B, i1 %C) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP_9:%.*]] = add i32 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ENDIF:%.*]]
 ; CHECK:       then:
+; CHECK-NEXT:    [[TMP_9:%.*]] = add i32 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @foo(i32 [[TMP_9]], i32 [[TMP_9]])
 ; CHECK-NEXT:    ret i32 [[RES]]
 ; CHECK:       endif:
@@ -175,16 +175,16 @@ sw.epilog:                                        ; preds = %entry, %sw.bb
   ret i32 %sum.0
 }
 
-; TODO: Multiple uses but from same BB. We can sink.
+; Multiple uses but from same BB. We can sink.
 define i32 @test6(i32* nocapture readonly %P, i32 %i, i1 %cond) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I:%.*]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = shl nsw i32 [[I]], 1
 ; CHECK-NEXT:    br label [[DISPATCHBB:%.*]]
 ; CHECK:       dispatchBB:
+; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I:%.*]] to i64
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    switch i32 [[I]], label [[SW_BB:%.*]] [
 ; CHECK-NEXT:    i32 5, label [[SW_EPILOG:%.*]]
 ; CHECK-NEXT:    i32 2, label [[SW_EPILOG]]
