@@ -24,6 +24,7 @@ add_llvm_target(RISCVCodeGen
   RISCVExpandAtomicPseudoInsts.cpp
   RISCVExpandPseudoInsts.cpp
   RISCVFrameLowering.cpp
+  RISCVGatherScatterLowering.cpp
   RISCVInsertVSETVLI.cpp
   RISCVInstrInfo.cpp
   RISCVInstructionSelector.cpp
@@ -50,6 +51,7 @@ add_llvm_target(RISCVCodeGen
   SelectionDAG
   Support
   Target
+  TransformUtils
   GlobalISel
 
   ADD_TO_COMPONENT
