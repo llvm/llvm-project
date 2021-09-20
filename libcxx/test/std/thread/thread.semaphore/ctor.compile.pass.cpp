@@ -24,7 +24,8 @@ static_assert(!std::is_default_constructible<std::counting_semaphore<>>::value, 
 static_assert(!std::is_convertible<int, std::binary_semaphore>::value, "");
 static_assert(!std::is_convertible<int, std::counting_semaphore<>>::value, "");
 
-#if 0 // TODO FIXME: the ctor should be constexpr when TEST_STD_VER > 17
+#if TEST_STD_VER > 17
+// Test constexpr-constructibility. (But not destructibility.)
 constinit std::binary_semaphore bs(1);
 constinit std::counting_semaphore cs(1);
 #endif
