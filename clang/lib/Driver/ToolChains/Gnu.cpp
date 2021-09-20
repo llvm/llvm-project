@@ -2075,6 +2075,12 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
   // Declare a bunch of static data sets that we'll select between below. These
   // are specifically designed to always refer to string literals to avoid any
   // lifetime or initialization issues.
+  //
+  // The *Triples variables hard code some triples so that, for example,
+  // --target=aarch64 (incomplete triple) can detect lib/aarch64-linux-gnu.
+  // They are not needed when the user has correct LLVM_DEFAULT_TARGET_TRIPLE
+  // and always uses the full --target (e.g. --target=aarch64-linux-gnu).  The
+  // lists should shrink over time. Please don't add more elements to *Triples.
   static const char *const AArch64LibDirs[] = {"/lib64", "/lib"};
   static const char *const AArch64Triples[] = {
       "aarch64-none-linux-gnu", "aarch64-linux-gnu", "aarch64-redhat-linux",
@@ -2182,9 +2188,7 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
   static const char *const RISCV64LibDirs[] = {"/lib64", "/lib"};
   static const char *const RISCV64Triples[] = {"riscv64-unknown-linux-gnu",
                                                "riscv64-linux-gnu",
-                                               "riscv64-unknown-elf",
-                                               "riscv64-redhat-linux",
-                                               "riscv64-suse-linux"};
+                                               "riscv64-unknown-elf"};
 
   static const char *const SPARCv8LibDirs[] = {"/lib32", "/lib"};
   static const char *const SPARCv8Triples[] = {"sparc-linux-gnu",
