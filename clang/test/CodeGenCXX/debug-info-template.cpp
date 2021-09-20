@@ -258,3 +258,15 @@ template void f1<t1>();
 // CHECK: ![[TEMP_TEMP_INL_ARGS]] = !{![[TEMP_TEMP_INL_ARGS_T:[0-9]*]]}
 // CHECK: ![[TEMP_TEMP_INL_ARGS_T]] = !DITemplateValueParameter(tag: DW_TAG_GNU_template_template_param, value: !"TemplateTemplateParamInlineNamespace::inl::t1")
 } // namespace TemplateTemplateParamInlineNamespace
+
+namespace NoPreferredNames {
+template <typename T> struct t1;
+using t1i = t1<int>;
+template <typename T>
+struct __attribute__((__preferred_name__(t1i))) t1 {};
+template <typename T>
+void f1() {}
+template void f1<t1<int>>();
+// CHECK: !DISubprogram(name: "f1<NoPreferredNames::t1<int> >",
+
+} // namespace NoPreferredNames
