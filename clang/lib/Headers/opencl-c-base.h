@@ -348,9 +348,9 @@ typedef enum memory_scope {
   memory_scope_device = __OPENCL_MEMORY_SCOPE_DEVICE,
 #if defined(__opencl_c_atomic_scope_all_devices)
   memory_scope_all_svm_devices = __OPENCL_MEMORY_SCOPE_ALL_SVM_DEVICES,
-#if (__OPENCL_C_VERSION__ >= CL_VERSION_3_0)
+#if (__OPENCL_C_VERSION__ >= CL_VERSION_3_0 || __OPENCL_CPP_VERSION__ >= 202100)
   memory_scope_all_devices = memory_scope_all_svm_devices,
-#endif // __OPENCL_C_VERSION__ >= CL_VERSION_3_0
+#endif // (__OPENCL_C_VERSION__ >= CL_VERSION_3_0 || __OPENCL_CPP_VERSION__ >= 202100)
 #endif // defined(__opencl_c_atomic_scope_all_devices)
 /**
  * Subgroups have different requirements on forward progress, so just test
