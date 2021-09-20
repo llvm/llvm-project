@@ -77,6 +77,9 @@ std::unique_ptr<OperationPass<FuncOp>> createLinalgGeneralizationPass();
 /// work on primitive types, if possible.
 std::unique_ptr<Pass> createLinalgDetensorizePass();
 
+/// Create a pass to tile a LinalgOp and fuse its producers.
+std::unique_ptr<OperationPass<FuncOp>> createLinalgTileAndFuseTensorOpsPass();
+
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//
