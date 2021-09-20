@@ -520,6 +520,7 @@ void CIRContext::Init() {
   using namespace llvm;
 
   mlirCtx = std::make_unique<mlir::MLIRContext>();
+  mlirCtx->getOrLoadDialect<mlir::func::FuncDialect>();
   mlirCtx->getOrLoadDialect<mlir::cir::CIRDialect>();
   builder = std::make_unique<CIRBuildImpl>(*mlirCtx.get(), astCtx);
 
