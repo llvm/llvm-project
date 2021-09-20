@@ -1135,7 +1135,7 @@ public:
 
   /// Checks if moving a specific instruction can break LCSSA in any loop.
   ///
-  /// Return true if moving \p Inst to before \p NewLoc will break LCSSA,
+  /// Return true if moving \p Inst to before \p NewLoc will not break LCSSA,
   /// assuming that the function containing \p Inst and \p NewLoc is currently
   /// in LCSSA form.
   bool movementPreservesLCSSAForm(Instruction *Inst, Instruction *NewLoc) {
