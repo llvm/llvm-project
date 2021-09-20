@@ -743,16 +743,39 @@ public:
   /// Set the inPlace bufferization spec to false.
   void bufferizeOutOfPlace(OpResult result);
 
-  /// Return true if it is possible to find an inplace write W among the uses of
-  /// aliasInfo[result], and a read R among the uses of aliasInfo[result],
-  /// such that W and R interfere.
+  /// Return true if it is possible to find an inplace write W among `usesWrite`
+  /// and a read R among `usesRead`, such that W and R interfere.
   /// Such a (W, R) pair is an interference to the inplace bufferization of
-  /// rootWrite when:
+  /// opResult when:
   ///   1. R is not known properly dominate W (i.e. the effects of the write may
   ///      be visible from R).
   ///   2. one cannot find an intermediate clobbering write `C` to W, such that
   ///      C interleaved between W and R (i.e. W -> C -> R where -> denotes
   ///      dominance).
+  bool wouldCreateReadAfterWriteInterference(
+      Operation *opToBufferize, DenseSet<OpOperand *> &usesRead,
+      DenseSet<OpOperand *> &usesWrite, const DominanceInfo &domInfo) const;
+
+  /// Assume that result bufferizes in-place with one of the operation's
+  /// operands. Return true if it is possible to find an inplace write W (resp.
+  /// a read R) among the uses of `aliasInfo[result]`, and a read R (resp. an
+  /// inplace write W) among the uses of
+  /// `aliasInfo[getAliasingOpOperand(result)]`, such that W and R interfere.
+  /// Interference detection is needed to determine which cases may bufferize
+  /// inplace without interferences. Such cases comprise:
+  ///
+  /// ```
+  ///  %0 = op_to_bufferize(%1)
+  ///  read(%1)
+  ///
+  ///  %0 = op_to_bufferize(%1)
+  ///  write(%0)
+  ///  read(%1)
+  ///
+  ///  %0 = op_to_bufferize(%1)
+  ///  write(%1)
+  ///  read(%0)
+  /// ```
   bool
   wouldCreateReadAfterWriteInterference(OpResult result,
                                         const DominanceInfo &domInfo) const;
@@ -828,29 +851,29 @@ private:
   ///
   /// Case discussion:
   /// ================
-  /// Case 1: rootRead is produced by opToBufferize,
-  /// Case 2: rootWrite is produced by opToBufferize,
+  /// Case 1: opOperand is produced by opToBufferize,
+  /// Case 2: opResult is produced by opToBufferize,
   /// Common case:
-  ///   - aliasingReadOp is a read to an alias of rootRead.
-  ///   - aliasingWriteOp is an inplace write to an alias of rootWrite.
+  ///   - aliasingReadOp is a read to an alias of opOperand.
+  ///   - aliasingWriteOp is an inplace write to an alias of opResult.
   ///   - aliasingWriteOp dominates aliasingReadOp.
   ///
   /// ```
   ///    // Either case 1:
-  ///    %rootRead = opToBufferize(%rootWrite)
-  ///    aliasingWriteOp(%aliasingWrite = alias(%rootWrite)) // inplace
-  ///     aliasingReadOp( %aliasingRead = alias(%rootRead))
+  ///    %opOperand = opToBufferize(%opResult)
+  ///    aliasingWriteOp(%aliasingWrite = alias(%opResult)) // inplace
+  ///     aliasingReadOp( %aliasingRead = alias(%opOperand))
   /// ```
   ///
   /// ```
   ///    // Or case 2:
-  ///    %rootWrite = opToBufferize(%rootRead)
-  ///    aliasingWriteOp(%aliasingWrite = alias(%rootWrite)) // inplace
-  ///     aliasingReadOp( %aliasingRead = alias(%rootRead))
+  ///    %opResult = opToBufferize(%opOperand)
+  ///    aliasingWriteOp(%aliasingWrite = alias(%opResult)) // inplace
+  ///     aliasingReadOp( %aliasingRead = alias(%opOperand))
   /// ```
   ///
-  /// Capture possible cases where `aliasingWriteOp(alias(%rootWrite))` has no
-  /// visible effect on `aliasingReadOp(alias(%rootRead))`.
+  /// Capture possible cases where `aliasingWriteOp(alias(%opResult))` has no
+  /// visible effect on `aliasingReadOp(alias(%opOperand))`.
   bool isClobberedWriteBeforeRead(Operation *opToBufferize,
                                   OpOperand &aliasingRead,
                                   OpOperand &aliasingWrite,
@@ -969,71 +992,11 @@ void BufferizationAliasInfo::bufferizeOutOfPlace(OpResult result) {
   setInPlaceOpResult(result, InPlaceSpec::False);
 }
 
-/// Return true if it is possible to find an inplace write W among the uses of
-/// aliasInfo[result], and a read R among the uses of aliasInfo[result],
-/// such that W and R interfere.
-/// Such a (W, R) pair is an interference to the inplace bufferization of
-/// rootWrite when:
-///   1. R is not known to properly dominate W (i.e. the effects of the write
-///      may be visible from R).
-///   2. one cannot find an intermediate clobbering write `C` to W, such that
-///      C interleaved between W and R (i.e. W -> C -> R where -> denotes
-///      dominance).
+/// Return true if it is possible to find an inplace write W among `usesWrite`
+/// and a read R among `usesRead`, such that W and R interfere.
 bool BufferizationAliasInfo::wouldCreateReadAfterWriteInterference(
-    OpResult result, const DominanceInfo &domInfo) const {
-  Optional<OpOperand *> maybeAliasingOperand = getAliasingOpOperand(result);
-  if (!maybeAliasingOperand)
-    return false;
-
-  Operation *opToBufferize = result.getDefiningOp();
-  Value rootWrite = result;
-  Value rootRead = (*maybeAliasingOperand)->get();
-
-  LDBG("----Start wouldCreateReadAfterWriteInterference\n");
-  LDBG("--------consider all aliases to root read: " << printValueInfo(rootRead)
-                                                     << "\n");
-  LDBG("--------consider all aliases to root write: "
-       << printValueInfo(rootWrite) << "\n");
-
-  // If `result` were to be bufferized in place, all the aliases of `rootRead`
-  // and `rootWrite` would immediately alias with each other and could create
-  // RaW hazards.
-  // Therefore, for each alias of either `rootRead` or `rootWrite`, we collect:
-  //   1. all of the reads of any alias.
-  //   2. all the write uses of any alias that are already known to bufferize
-  //      inplace.
-  //   3. all the write uses of any alias that belong to `opToBufferize`: as if
-  //      `opToBufferize` were bufferized inplace.
-  DenseSet<OpOperand *> usesRead, usesWrite;
-  for (Value v : {rootRead, rootWrite}) {
-    for (Value alias : getAliases(v)) {
-      for (auto &use : alias.getUses()) {
-        // Read to a value that aliases v.
-        if (bufferizesToMemoryRead(use)) {
-          LDBG("------------bufferizesToMemoryRead: "
-               << use.getOwner()->getName().getStringRef() << "\n");
-          usesRead.insert(&use);
-        }
-        // Inplace write to a value that aliases v.
-        if (bufferizesToMemoryWrite(use, InPlaceSpec::True)) {
-          LDBG("------------bufferizesToMemoryWrite: "
-               << use.getOwner()->getName().getStringRef() << "\n");
-          usesWrite.insert(&use);
-        }
-      }
-    }
-  }
-  // Additionally: consider writes to a value that aliases rootRead and belongs
-  // to opToBufferize. This simulates that opToBufferize bufferizes inplace.
-  for (OpOperand &use : opToBufferize->getOpOperands()) {
-    if (aliasInfo.isEquivalent(rootRead, use.get()) &&
-        bufferizesToMemoryWrite(use)) {
-      LDBG("------------bufferizesToMemoryWrite: "
-           << use.getOwner()->getName().getStringRef() << "\n");
-      usesWrite.insert(&use);
-    }
-  }
-
+    Operation *opToBufferize, DenseSet<OpOperand *> &usesRead,
+    DenseSet<OpOperand *> &usesWrite, const DominanceInfo &domInfo) const {
   for (OpOperand *uRead : usesRead) {
     Operation *aliasingReadOp = uRead->getOwner();
     LDBG("----++++aliasRead -> #"
@@ -1061,7 +1024,8 @@ bool BufferizationAliasInfo::wouldCreateReadAfterWriteInterference(
       // At this point, aliasingWriteOp properly dominates aliasingReadOp or
       // there is no clear dominance and we need to be conservative.
       LDBG("---->found RaW interference between:\n");
-      LDBG("       Source value -> " << printValueInfo(rootRead) << '\n');
+      LDBG("       OpToBufferize -> " << printOperationInfo(opToBufferize)
+                                      << '\n');
       LDBG("       Interfering write -> #"
            << uWrite->getOperandNumber() << ":"
            << printOperationInfo(aliasingWriteOp) << '\n');
@@ -1073,13 +1037,117 @@ bool BufferizationAliasInfo::wouldCreateReadAfterWriteInterference(
         LDBG("---->clobbered! -> skip\n");
         continue;
       }
-
       LDBG("---->not clobbered -> found an interference\n");
       return true;
     }
   }
   LDBG("----No interference found\n");
   return false;
+}
+
+/// Return true if it is possible to find an inplace write W among the uses of
+/// aliasInfo[result], and a read R among the uses of aliasInfo[result],
+/// such that W and R interfere.
+/// Such a (W, R) pair is an interference to the inplace bufferization of
+/// opResult when:
+///   1. R is not known to properly dominate W (i.e. the effects of the write
+///      may be visible from R).
+///   2. one cannot find an intermediate clobbering write `C` to W, such that
+///      C interleaved between W and R (i.e. W -> C -> R where -> denotes
+///      dominance).
+bool BufferizationAliasInfo::wouldCreateReadAfterWriteInterference(
+    OpResult result, const DominanceInfo &domInfo) const {
+  Optional<OpOperand *> maybeAliasingOperand = getAliasingOpOperand(result);
+  if (!maybeAliasingOperand)
+    return false;
+
+  Operation *opToBufferize = result.getDefiningOp();
+  Value opResult = result;
+  Value opOperand = (*maybeAliasingOperand)->get();
+
+  LDBG("----Start wouldCreateReadAfterWriteInterference\n");
+  LDBG("--------consider all aliases to root read: "
+       << printValueInfo(opOperand) << "\n");
+  LDBG("--------consider all aliases to root write: "
+       << printValueInfo(opResult) << "\n");
+
+  /// Helper function to iterate on aliases of `root` and capture the reads.
+  auto getAliasingReads = [&](DenseSet<OpOperand *> &res, Value root) {
+    for (Value alias : getAliases(root)) {
+      for (auto &use : alias.getUses()) {
+        // Read to a value that aliases root.
+        if (bufferizesToMemoryRead(use)) {
+          LDBG("------------bufferizesToMemoryRead: "
+               << use.getOwner()->getName().getStringRef() << "\n");
+          res.insert(&use);
+        }
+      }
+    }
+  };
+
+  /// Helper function to iterate on aliases of `root` and capture the writes.
+  auto getAliasingInplaceWrites = [&](DenseSet<OpOperand *> &res, Value root) {
+    for (Value alias : getAliases(root)) {
+      for (auto &use : alias.getUses()) {
+        // Inplace write to a value that aliases root.
+        if (bufferizesToMemoryWrite(use, InPlaceSpec::True)) {
+          LDBG("------------bufferizesToMemoryWrite: "
+               << use.getOwner()->getName().getStringRef() << "\n");
+          res.insert(&use);
+        }
+      }
+    }
+  };
+
+  // Check if we can find any interference between reads to aliases[`opOperand`]
+  // and writes to aliases[`opResult`]. This handles the case:
+  //
+  // ```
+  //  %0 = op_to_bufferize_maybe_inplace(%1)
+  //  %2 = some_alias(%0)
+  //  inplace_write(%2)
+  //  %3 = some_alias(%1)
+  //  read(%3)
+  // ```
+  DenseSet<OpOperand *> usesRead, usesWrite;
+  LDBG("--------\n");
+  LDBG("--------Test reads(opOperand) vs writes(opResult)\n");
+  getAliasingReads(usesRead, opOperand);
+  getAliasingInplaceWrites(usesWrite, opResult);
+  // Additionally, `result` is not yet bufferized and we need to check for
+  // interferences as if it were bufferized inplace: add `maybeAliasingOperand`
+  // if it is a write. This handles the case:
+  //
+  // ```
+  //  %0 = op_to_bufferize_maybe_inplace(%1)
+  //  %2 = some_alias(%1)
+  //  read(%2)
+  // ```
+  if (bufferizesToMemoryWrite(**maybeAliasingOperand))
+    usesWrite.insert(*maybeAliasingOperand);
+  if (wouldCreateReadAfterWriteInterference(opToBufferize, usesRead, usesWrite,
+                                            domInfo))
+    return true;
+
+  // Check if we can find any interference between writes to
+  // aliases[`opOperand`] and reads to aliases[`opResult`]. This handles the
+  // case:
+  //
+  // ```
+  //  %0 = op_to_bufferize_maybe_inplace(%1)
+  //  %2 = some_alias(%1)
+  //  inplace_write(%2)
+  //  %3 = some_alias(%0)
+  //  read(%3)
+  // ```
+  LDBG("--------\n");
+  LDBG("--------Test reads(opResult) vs writes(opOperand)\n");
+  usesRead.clear();
+  usesWrite.clear();
+  getAliasingReads(usesRead, opResult);
+  getAliasingInplaceWrites(usesWrite, opOperand);
+  return wouldCreateReadAfterWriteInterference(opToBufferize, usesRead,
+                                               usesWrite, domInfo);
 }
 
 /// Return true if the source of a `insertSliceOp` bufferizes to an
