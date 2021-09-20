@@ -2225,6 +2225,24 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
 
     return true;
   }
+  case Intrinsic::trap:
+  case Intrinsic::debugtrap:
+  case Intrinsic::ubsantrap: {
+    StringRef TrapFuncName =
+        CI.getAttributes().getFnAttr("trap-func-name").getValueAsString();
+    if (TrapFuncName.empty())
+      break; // Use the default handling.
+    CallLowering::CallLoweringInfo Info;
+    if (ID == Intrinsic::ubsantrap) {
+      Info.OrigArgs.push_back({getOrCreateVRegs(*CI.getArgOperand(0)),
+                               CI.getArgOperand(0)->getType(), 0});
+    }
+    Info.Callee =
+        MachineOperand::CreateES(MF->createExternalSymbolName(TrapFuncName));
+    Info.CB = &CI;
+    Info.OrigRet = {Register(), Type::getVoidTy(CI.getContext()), 0};
+    return CLI->lowerCall(MIRBuilder, Info);
+  }
 #define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)  \
   case Intrinsic::INTRINSIC:
 #include "llvm/IR/ConstrainedOps.def"
