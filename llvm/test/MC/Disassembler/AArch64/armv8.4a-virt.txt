@@ -1,4 +1,5 @@
-# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.4a --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.4a --disassemble < %s | FileCheck %s --check-prefixes=CHECK,V8A
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8r --disassemble < %s | FileCheck %s --check-prefixes=CHECK,V8R
 
 0x40,0x26,0x1c,0xd5
 0x40,0x26,0x3c,0xd5
@@ -21,8 +22,13 @@
 
 #CHECK:   msr   VSTCR_EL2, x0
 #CHECK:   mrs   x0, VSTCR_EL2
-#CHECK:   msr   VSTTBR_EL2, x0
-#CHECK:   mrs   x0, VSTTBR_EL2
+
+#V8A:     msr   VSTTBR_EL2, x0
+#V8A:     mrs   x0, VSTTBR_EL2
+
+#V8R:     msr   S3_4_C2_C6_0, x0
+#V8R:     mrs   x0, S3_4_C2_C6_0
+
 #CHECK:   msr   SDER32_EL2, x12
 #CHECK:   mrs   x12, SDER32_EL2
 #CHECK:   msr   CNTHVS_TVAL_EL2, x0

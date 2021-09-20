@@ -83,6 +83,7 @@ protected:
   /// ARMProcFamily - ARM processor family: Cortex-A53, Cortex-A57, and others.
   ARMProcFamilyEnum ARMProcFamily = Others;
 
+  bool HasV8_0aOps = false;
   bool HasV8_1aOps = false;
   bool HasV8_2aOps = false;
   bool HasV8_3aOps = false;
@@ -93,10 +94,11 @@ protected:
   bool HasV9_0aOps = false;
   bool HasV9_1aOps = false;
   bool HasV9_2aOps = false;
-
   bool HasV8_0rOps = false;
-  bool HasCONTEXTIDREL2 = false;
 
+  bool HasCONTEXTIDREL2 = false;
+  bool HasEL2VMSA = false;
+  bool HasEL3 = false;
   bool HasFPARMv8 = false;
   bool HasNEON = false;
   bool HasCrypto = false;
@@ -349,6 +351,7 @@ public:
     return ARMProcFamily;
   }
 
+  bool hasV8_0aOps() const { return HasV8_0aOps; }
   bool hasV8_1aOps() const { return HasV8_1aOps; }
   bool hasV8_2aOps() const { return HasV8_2aOps; }
   bool hasV8_3aOps() const { return HasV8_3aOps; }
@@ -562,6 +565,8 @@ public:
   bool hasTLB_RMI() const { return HasTLB_RMI; }
   bool hasFlagM() const { return HasFlagM; }
   bool hasRCPC_IMMO() const { return HasRCPC_IMMO; }
+  bool hasEL2VMSA() const { return HasEL2VMSA; }
+  bool hasEL3() const { return HasEL3; }
 
   bool addrSinkUsingGEPs() const override {
     // Keeping GEPs inbounds is important for exploiting AArch64

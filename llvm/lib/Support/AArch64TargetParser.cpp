@@ -120,6 +120,8 @@ bool AArch64::getExtensionFeatures(uint64_t Extensions,
 
 bool AArch64::getArchFeatures(AArch64::ArchKind AK,
                               std::vector<StringRef> &Features) {
+  if (AK == ArchKind::ARMV8A)
+    Features.push_back("+v8a");
   if (AK == ArchKind::ARMV8_1A)
     Features.push_back("+v8.1a");
   if (AK == ArchKind::ARMV8_2A)

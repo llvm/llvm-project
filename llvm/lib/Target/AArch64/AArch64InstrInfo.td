@@ -33,6 +33,15 @@ def HasV9_1a         : Predicate<"Subtarget->hasV9_1aOps()">,
                                  AssemblerPredicate<(all_of HasV9_1aOps), "armv9.1a">;
 def HasV9_2a         : Predicate<"Subtarget->hasV9_2aOps()">,
                                  AssemblerPredicate<(all_of HasV9_2aOps), "armv9.2a">;
+def HasV8_0r         : Predicate<"Subtarget->hasV8_0rOps()">,
+                                 AssemblerPredicate<(all_of HasV8_0rOps), "armv8-r">;
+
+def HasEL2VMSA       : Predicate<"Subtarget->hasEL2VMSA()">,
+                       AssemblerPredicate<(all_of FeatureEL2VMSA), "el2vmsa">;
+
+def HasEL3           : Predicate<"Subtarget->hasEL3()">,
+                       AssemblerPredicate<(all_of FeatureEL3), "el3">;
+
 def HasVH            : Predicate<"Subtarget->hasVH()">,
                        AssemblerPredicate<(all_of FeatureVH), "vh">;
 
@@ -1306,6 +1315,7 @@ def : InstAlias<"clrex", (CLREX 0xf)>;
 def : InstAlias<"isb", (ISB 0xf)>;
 def : InstAlias<"ssbb", (DSB 0)>;
 def : InstAlias<"pssbb", (DSB 4)>;
+def : InstAlias<"dfb", (DSB 0b1100)>, Requires<[HasV8_0r]>;
 
 def MRS    : MRSI;
 def MSR    : MSRI;
@@ -2368,16 +2378,16 @@ def BRK   : ExceptionGeneration<0b001, 0b00, "brk">;
 }
 def DCPS1 : ExceptionGeneration<0b101, 0b01, "dcps1">;
 def DCPS2 : ExceptionGeneration<0b101, 0b10, "dcps2">;
-def DCPS3 : ExceptionGeneration<0b101, 0b11, "dcps3">;
+def DCPS3 : ExceptionGeneration<0b101, 0b11, "dcps3">, Requires<[HasEL3]>;
 def HLT   : ExceptionGeneration<0b010, 0b00, "hlt">;
 def HVC   : ExceptionGeneration<0b000, 0b10, "hvc">;
-def SMC   : ExceptionGeneration<0b000, 0b11, "smc">;
+def SMC   : ExceptionGeneration<0b000, 0b11, "smc">, Requires<[HasEL3]>;
 def SVC   : ExceptionGeneration<0b000, 0b01, "svc">;
 
 // DCPSn defaults to an immediate operand of zero if unspecified.
 def : InstAlias<"dcps1", (DCPS1 0)>;
 def : InstAlias<"dcps2", (DCPS2 0)>;
-def : InstAlias<"dcps3", (DCPS3 0)>;
+def : InstAlias<"dcps3", (DCPS3 0)>, Requires<[HasEL3]>;
 
 def UDF : UDFType<0, "udf">;
 

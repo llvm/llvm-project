@@ -586,6 +586,7 @@ class SysReg<string name, bits<2> op0, bits<3> op1, bits<4> crn, bits<4> crm,
   let EnumValueField = "Encoding";
 
   string Name = name;
+  string AltName = name;
   bits<16> Encoding;
   let Encoding{15-14} = op0;
   let Encoding{13-11} = op1;
@@ -912,13 +913,19 @@ def : RWSysReg<"HSTR_EL2",           0b11, 0b100, 0b0001, 0b0001, 0b011>;
 def : RWSysReg<"HACR_EL2",           0b11, 0b100, 0b0001, 0b0001, 0b111>;
 def : RWSysReg<"MDCR_EL3",           0b11, 0b110, 0b0001, 0b0011, 0b001>;
 def : RWSysReg<"TTBR0_EL1",          0b11, 0b000, 0b0010, 0b0000, 0b000>;
-def : RWSysReg<"TTBR0_EL2",          0b11, 0b100, 0b0010, 0b0000, 0b000>;
 def : RWSysReg<"TTBR0_EL3",          0b11, 0b110, 0b0010, 0b0000, 0b000>;
+
+let Requires = [{ {AArch64::FeatureEL2VMSA} }] in {
+def : RWSysReg<"TTBR0_EL2",          0b11, 0b100, 0b0010, 0b0000, 0b000> {
+  let AltName = "VSCTLR_EL2";
+}
+def : RWSysReg<"VTTBR_EL2",          0b11, 0b100, 0b0010, 0b0001, 0b000>;
+}
+
 def : RWSysReg<"TTBR1_EL1",          0b11, 0b000, 0b0010, 0b0000, 0b001>;
 def : RWSysReg<"TCR_EL1",            0b11, 0b000, 0b0010, 0b0000, 0b010>;
 def : RWSysReg<"TCR_EL2",            0b11, 0b100, 0b0010, 0b0000, 0b010>;
 def : RWSysReg<"TCR_EL3",            0b11, 0b110, 0b0010, 0b0000, 0b010>;
-def : RWSysReg<"VTTBR_EL2",          0b11, 0b100, 0b0010, 0b0001, 0b000>;
 def : RWSysReg<"VTCR_EL2",           0b11, 0b100, 0b0010, 0b0001, 0b010>;
 def : RWSysReg<"DACR32_EL2",         0b11, 0b100, 0b0011, 0b0000, 0b000>;
 def : RWSysReg<"SPSR_EL1",           0b11, 0b000, 0b0100, 0b0000, 0b000>;
@@ -1293,6 +1300,57 @@ def : RWSysReg<"ICH_LR13_EL2",       0b11, 0b100, 0b1100, 0b1101, 0b101>;
 def : RWSysReg<"ICH_LR14_EL2",       0b11, 0b100, 0b1100, 0b1101, 0b110>;
 def : RWSysReg<"ICH_LR15_EL2",       0b11, 0b100, 0b1100, 0b1101, 0b111>;
 
+// v8r system registers
+let Requires = [{ {AArch64::HasV8_0rOps} }] in {
+//Virtualization System Control Register
+//                                 Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"VSCTLR_EL2",       0b11, 0b100, 0b0010, 0b0000, 0b000> {
+  let AltName = "TTBR0_EL2";
+}
+
+//MPU Type Register
+//                                 Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"MPUIR_EL1",        0b11, 0b000, 0b0000, 0b0000, 0b100>;
+def : RWSysReg<"MPUIR_EL2",        0b11, 0b100, 0b0000, 0b0000, 0b100>;
+
+//Protection Region Enable Register
+//                                 Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"PRENR_EL1",        0b11, 0b000, 0b0110, 0b0001, 0b001>;
+def : RWSysReg<"PRENR_EL2",        0b11, 0b100, 0b0110, 0b0001, 0b001>;
+
+//Protection Region Selection Register
+//                                 Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"PRSELR_EL1",       0b11, 0b000, 0b0110, 0b0010, 0b001>;
+def : RWSysReg<"PRSELR_EL2",       0b11, 0b100, 0b0110, 0b0010, 0b001>;
+
+//Protection Region Base Address Register
+//                                 Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"PRBAR_EL1",        0b11, 0b000, 0b0110, 0b1000, 0b000>;
+def : RWSysReg<"PRBAR_EL2",        0b11, 0b100, 0b0110, 0b1000, 0b000>;
+
+//Protection Region Limit Address Register
+//                                 Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"PRLAR_EL1",        0b11, 0b000, 0b0110, 0b1000, 0b001>;
+def : RWSysReg<"PRLAR_EL2",        0b11, 0b100, 0b0110, 0b1000, 0b001>;
+
+foreach n = 0-15 in {
+foreach x = 1-2 in {
+//Direct acces to Protection Region Base Address Register for n th MPU region
+  def : RWSysReg<!strconcat("PRBAR"#n, "_EL"#x),
+    0b11, 0b000, 0b0110, 0b1000, 0b000>{
+    let Encoding{5-2} = n;
+    let Encoding{13} = !add(x,-1);
+  }
+
+  def : RWSysReg<!strconcat("PRLAR"#n, "_EL"#x),
+    0b11, 0b000, 0b0110, 0b1000, 0b001>{
+    let Encoding{5-2} = n;
+    let Encoding{13} = !add(x,-1);
+  }
+} //foreach x = 1-2 in
+} //foreach n = 0-15 in
+} //let Requires = [{ {AArch64::HasV8_0rOps} }] in
+
 // v8.1a "Privileged Access Never" extension-specific system registers
 let Requires = [{ {AArch64::FeaturePAN} }] in
 def : RWSysReg<"PAN", 0b11, 0b000, 0b0100, 0b0010, 0b011>;
@@ -1396,7 +1454,9 @@ let Requires = [{ {AArch64::FeatureSEL2} }] in {
 // v8.4a "Virtualization secure second stage translation" registers
 //                           Op0   Op1    CRn     CRm     Op2
 def : RWSysReg<"VSTCR_EL2" , 0b11, 0b100, 0b0010, 0b0110, 0b010>;
-def : RWSysReg<"VSTTBR_EL2", 0b11, 0b100, 0b0010, 0b0110, 0b000>;
+def : RWSysReg<"VSTTBR_EL2", 0b11, 0b100, 0b0010, 0b0110, 0b000> {
+  let Requires = [{ {AArch64::HasV8_0aOps} }];
+}
 
 // v8.4a "Virtualization timer" registers
 //                                Op0   Op1    CRn     CRm     Op2

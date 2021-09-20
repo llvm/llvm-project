@@ -1,5 +1,7 @@
 # RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.2a -mattr=+rcpc --disassemble < %s | FileCheck %s
 # RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.3a --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8r --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=cortex-r82 --disassemble < %s | FileCheck %s
 # RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=cortex-a55 --disassemble < %s | FileCheck %s
 # RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=cortex-a65 --disassemble < %s | FileCheck %s
 # RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=cortex-a65ae --disassemble < %s | FileCheck %s

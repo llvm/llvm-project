@@ -59,6 +59,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   static const Builtin::Info BuiltinInfo[];
 
   std::string ABI;
+  StringRef getArchProfile() const;
 
 public:
   AArch64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);

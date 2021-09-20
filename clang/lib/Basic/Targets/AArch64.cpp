@@ -51,6 +51,15 @@ static StringRef getArchVersionString(llvm::AArch64::ArchKind Kind) {
   }
 }
 
+StringRef AArch64TargetInfo::getArchProfile() const {
+  switch (ArchKind) {
+  case llvm::AArch64::ArchKind::ARMV8R:
+    return "R";
+  default:
+    return "A";
+  }
+}
+
 AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
                                      const TargetOptions &Opts)
     : TargetInfo(Triple), ABI("aapcs") {
@@ -257,7 +266,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   // ACLE predefines. Many can only have one possible value on v8 AArch64.
   Builder.defineMacro("__ARM_ACLE", "200");
   Builder.defineMacro("__ARM_ARCH", getArchVersionString(ArchKind));
-  Builder.defineMacro("__ARM_ARCH_PROFILE", "'A'");
+  Builder.defineMacro("__ARM_ARCH_PROFILE", "'" + getArchProfile() + "'");
 
   Builder.defineMacro("__ARM_64BIT_STATE", "1");
   Builder.defineMacro("__ARM_PCS_AAPCS64", "1");
@@ -511,7 +520,7 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   HasMatmulFP32 = false;
   HasLSE = false;
 
-  ArchKind = llvm::AArch64::ArchKind::ARMV8A;
+  ArchKind = llvm::AArch64::ArchKind::INVALID;
 
   for (const auto &Feature : Features) {
     if (Feature == "+neon")
@@ -573,6 +582,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSM4 = true;
     if (Feature == "+strict-align")
       HasUnaligned = false;
+    if (Feature == "+v8a")
+      ArchKind = llvm::AArch64::ArchKind::ARMV8A;
     if (Feature == "+v8.1a")
       ArchKind = llvm::AArch64::ArchKind::ARMV8_1A;
     if (Feature == "+v8.2a")
