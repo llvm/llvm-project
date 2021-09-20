@@ -173,6 +173,64 @@ Optional<FusionInfo> fuseProducerOfTensor(OpBuilder &b,
                                           OpOperand &consumerOpOperand);
 
 //===----------------------------------------------------------------------===//
+// Fusion on tensor utilities
+//===----------------------------------------------------------------------===//
+
+/// A struct to manage the tile loop nest specific information.
+class TileLoopNest {
+public:
+  TileLoopNest(LinalgOp rootOp) : rootOp(rootOp) {}
+
+  /// Tile the root operation using the given `tileSizes` and `tileInterchange`.
+  LogicalResult tileRootOp(OpBuilder &b, ArrayRef<int64_t> tileSizes,
+                           ArrayRef<int64_t> tileInterchange);
+
+  /// Fuse the producer of `rootOpOperand` into the tile loop nest. Returns the
+  /// fused producer of fails if fusion is not possible.
+  // TODO: add replace uses callback to support passes and patterns.
+  FailureOr<LinalgOp> fuseProducer(OpBuilder &b, OpOperand *rootOpOperand);
+
+  /// Returns the tiled root operation.
+  LinalgOp getRootOp() { return rootOp; }
+
+private:
+  /// Returns true if the tile loop nest has no tile loops.
+  bool isEmpty();
+
+  /// Returns true if the tile loop nest invariants are satisfied:
+  /// - The number of tile loop operations and dimensions match.
+  /// - The innermost tile loop is the parent of `tiledOp`.
+  /// - The tile loops are directly nested.
+  // TODO: relax to support additional control flow, e.g., IfOp.
+  bool isValid();
+
+  /// Searches the block arguments tied to a block argument `bbArg` of the
+  /// innermost tile loop. Returns the block argument from outermost to
+  /// innermost or an empty vector if none are found.
+  SmallVector<BlockArgument> getTiedBBArgs(BlockArgument bbArg);
+
+  /// Returns the iteration argument of the outermost tile loop mapped to a
+  /// block argument `bbArg` of the innermost tile loop.
+  OpOperand *getTiedIterArg(BlockArgument bbArg);
+
+  /// Returns true if `bbArg` has other used than `sliceOp` and its
+  /// dependencies. Only if there are no other uses, the producer output
+  /// iteration argument may reused to pass the producer result after fusion.
+  bool hasOtherUses(BlockArgument bbArg, tensor::ExtractSliceOp sliceOp);
+
+  LinalgOp rootOp;
+  SmallVector<scf::ForOp> loopOps;
+  SmallVector<int64_t> loopDims;
+};
+
+/// Tiles `consumerOp` and fuses its dependencies if possible. Uses the
+/// `tileSizes` and `tileInterchange` parameters to control the tiling.
+FailureOr<TileLoopNest>
+tileConsumerAndFuseProducers(OpBuilder &b, LinalgOp consumerOp,
+                             ArrayRef<int64_t> tileSizes,
+                             ArrayRef<int64_t> tileInterchange);
+
+//===----------------------------------------------------------------------===//
 // Distribution utilities
 //===----------------------------------------------------------------------===//
 

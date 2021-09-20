@@ -8,13 +8,13 @@
 // CHECK-LABEL: @test_svcntw(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 2
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
 // CHECK-NEXT:    ret i64 [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z11test_svcntwv(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 2
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
 // CPP-CHECK-NEXT:    ret i64 [[TMP1]]
 //
 uint64_t test_svcntw()
@@ -257,13 +257,13 @@ uint64_t test_svcntw_pat_15()
 // CHECK-LABEL: @test_svcntw_pat_16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 2
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
 // CHECK-NEXT:    ret i64 [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svcntw_pat_16v(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 2
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
 // CPP-CHECK-NEXT:    ret i64 [[TMP1]]
 //
 uint64_t test_svcntw_pat_16()

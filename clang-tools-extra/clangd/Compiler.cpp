@@ -83,6 +83,8 @@ void disableUnsupportedOptions(CompilerInvocation &CI) {
 std::unique_ptr<CompilerInvocation>
 buildCompilerInvocation(const ParseInputs &Inputs, clang::DiagnosticConsumer &D,
                         std::vector<std::string> *CC1Args) {
+  if (Inputs.CompileCommand.CommandLine.empty())
+    return nullptr;
   std::vector<const char *> ArgStrs;
   for (const auto &S : Inputs.CompileCommand.CommandLine)
     ArgStrs.push_back(S.c_str());
