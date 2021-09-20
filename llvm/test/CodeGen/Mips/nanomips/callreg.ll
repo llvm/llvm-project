@@ -5,7 +5,5 @@ define void @call_register(void (i32)* %f) {
 ; CHECK: jalrc $ra, $t4
 ; CHECK: JALRC_NM
   call void %f(i32 1)
-; CHECK: jrc $ra
-; CHECK: JRC_NM
   ret void
 }

@@ -164,6 +164,23 @@ class AdjustStack<SDPatternOperator operator> :
   let hasNoSchedulingInfo = 1;
 }
 
+def nmreglist : Operand<i32> {
+  let PrintMethod = "printNanoMipsRegisterList";
+}
+
+class SaveRestore<string opstr> :
+  InstNM<(outs),
+         (ins uimm12_nm:$adj, nmreglist:$regs, variable_ops),
+         !strconcat(opstr, "\t$adj$regs"), []> {
+  let Defs = [SP_NM];
+  let Uses = [SP_NM];
+  let hasSideEffects = 1;
+  let isCodeGenOnly = 1;
+}
+def SAVE_NM : SaveRestore<"save">, InstSize32;
+def RESTORE_NM : SaveRestore<"restore">, InstSize32;
+def RESTOREJRC_NM : SaveRestore<"restore.jrc">, InstSize32;
+
 class EffectiveAddressNM<string opstr, RegisterOperand RO> :
   InstNM<(outs RO:$rt), (ins mem_ea:$addr), !strconcat(opstr, "\t$rt, $addr"),
          [(set RO:$rt, addr:$addr)]> {

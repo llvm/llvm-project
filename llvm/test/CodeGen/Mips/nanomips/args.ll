@@ -4,10 +4,6 @@
 declare i32 @ints9(i32, i32, i32, i32, i32, i32, i32, i32, i32)
 
 define i32 @test_ints9(i32 %a, i32 %b) {
-; CHECK: addiu $sp, $sp, -32
-; CHECK: ADDiu_NM
-; CHECK: sw $ra, 28($sp)
-; CHECK: SW_NM
 ; CHECK: li ${{[ats][0-9]}}, 7
 ; CHECK: Li_NM
 ; CHECK: sw ${{[ats][0-9]}}, 0($sp)

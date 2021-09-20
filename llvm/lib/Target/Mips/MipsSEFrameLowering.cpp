@@ -929,6 +929,31 @@ void MipsSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
   RS->addScavengingFrameIndex(FI);
 }
 
+bool MipsSEFrameLowering::assignCalleeSavedSpillSlots(
+    MachineFunction &MF, const TargetRegisterInfo *TRI,
+    std::vector<CalleeSavedInfo> &CSI) const {
+  if (!STI.hasNanoMips())
+    return false;
+
+  // nanoMIPS save and restore instructions require callee-saved registers to be
+  // saved in particular order on the stack.
+  auto SortCalleeSaves = [](CalleeSavedInfo First, CalleeSavedInfo Second) {
+    std::unordered_map<unsigned, unsigned> Regs{
+        {Mips::GP_NM, 0}, {Mips::FP_NM, 1}, {Mips::RA_NM, 2},  {Mips::S0_NM, 3},
+        {Mips::S1_NM, 4}, {Mips::S2_NM, 5}, {Mips::S3_NM, 6},  {Mips::S4_NM, 7},
+        {Mips::S5_NM, 8}, {Mips::S6_NM, 9}, {Mips::S7_NM, 10},
+    };
+
+    // There should be no callee-saved registers that are not part of the list.
+    assert(Regs.find(First.getReg()) != Regs.end() &&
+           Regs.find(Second.getReg()) != Regs.end());
+
+    return Regs[First.getReg()] < Regs[Second.getReg()];
+  };
+  std::sort(CSI.begin(), CSI.end(), SortCalleeSaves);
+  return false;
+}
+
 const MipsFrameLowering *
 llvm::createMipsSEFrameLowering(const MipsSubtarget &ST) {
   return new MipsSEFrameLowering(ST);

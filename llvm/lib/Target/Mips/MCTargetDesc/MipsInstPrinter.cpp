@@ -286,3 +286,11 @@ printRegisterList(const MCInst *MI, int opNum, raw_ostream &O) {
     printRegName(O, MI->getOperand(i).getReg());
   }
 }
+
+void MipsInstPrinter::printNanoMipsRegisterList(const MCInst *MI, int OpNum,
+                                                raw_ostream &O) {
+  for (size_t I = OpNum; I < MI->getNumOperands(); I++) {
+    O << ", ";
+    printRegName(O, MI->getOperand(I).getReg());
+  }
+}
