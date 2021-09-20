@@ -1272,12 +1272,8 @@ struct SubViewOpLowering : public ConvertOpToLLVMPattern<memref::SubViewOp> {
         extracted);
     targetMemRef.setAlignedPtr(rewriter, loc, bitcastPtr);
 
-    auto shape = viewMemRefType.getShape();
-    auto inferredShape = inferredType.getShape();
-    size_t inferredShapeRank = inferredShape.size();
-    size_t resultShapeRank = shape.size();
-    llvm::SmallDenseSet<unsigned> unusedDims =
-        computeRankReductionMask(inferredShape, shape).getValue();
+    size_t inferredShapeRank = inferredType.getRank();
+    size_t resultShapeRank = viewMemRefType.getRank();
 
     // Extract strides needed to compute offset.
     SmallVector<Value, 4> strideValues;
@@ -1315,6 +1311,7 @@ struct SubViewOpLowering : public ConvertOpToLLVMPattern<memref::SubViewOp> {
     SmallVector<OpFoldResult> mixedStrides = subViewOp.getMixedStrides();
     assert(mixedSizes.size() == mixedStrides.size() &&
            "expected sizes and strides of equal length");
+    llvm::SmallDenseSet<unsigned> unusedDims = subViewOp.getDroppedDims();
     for (int i = inferredShapeRank - 1, j = resultShapeRank - 1;
          i >= 0 && j >= 0; --i) {
       if (unusedDims.contains(i))

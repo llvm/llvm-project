@@ -1379,6 +1379,10 @@ def SubViewOp : BaseOpWithOffsetSizesAndStrides<
     /// Return the number of leading operands before the `offsets`, `sizes` and
     /// and `strides` operands.
     static unsigned getOffsetSizeAndStrideStartOperandIndex() { return 1; }
+
+    /// Return the dimensions of the source type that are dropped when
+    /// the result is rank-reduced.
+    llvm::SmallDenseSet<unsigned> getDroppedDims();
   }];
 
   let hasCanonicalizer = 1;
