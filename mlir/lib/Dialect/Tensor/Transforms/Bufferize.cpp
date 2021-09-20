@@ -175,6 +175,7 @@ struct TensorBufferizePass : public TensorBufferizeBase<TensorBufferizePass> {
     target.addLegalDialect<memref::MemRefDialect>();
     target.addDynamicallyLegalDialect<StandardOpsDialect>(
         [&](Operation *op) { return typeConverter.isLegal(op); });
+    target.addLegalOp<CallOp>();
     target.addLegalOp<ReturnOp>();
     target.addLegalDialect<scf::SCFDialect>();
 
