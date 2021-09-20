@@ -15,6 +15,8 @@
 #  t1<
 #      // base type
 #      int,
+#      // nullptr unspecified type
+#      decltype(nullptr),
 #      // reference type
 #      int &,
 #      // rvalue reference type
@@ -103,7 +105,7 @@
 # CHECK:   DW_AT_type{{.*}}"ns::inner ()"
 # CHECK:   DW_AT_type{{.*}}"ns::inner [1]"
 # CHECK:   DW_AT_type{{.*}}"ns::inner *"
-# CHECK:   DW_AT_type{{.*}}"ns::inner ns::inner::*"
+# CHECK:   DW_AT_type{{.*}}"ns::inner (ns::inner::*)(ns::inner)"
 # CHECK:   DW_AT_type{{.*}}"const ns::inner"
 # CHECK:   DW_AT_type{{.*}}"(anonymous namespace)::anon_ns_mem"
 
@@ -356,7 +358,7 @@
 	.short	4                               # DWARF version number
 	.long	.debug_abbrev                   # Offset Into Abbrev. Section
 	.byte	8                               # Address Size (in bytes)
-	.byte	1                               # Abbrev [1] 0xb:0x251 DW_TAG_compile_unit
+	.byte	1                               # Abbrev [1] 0xb:0x266 DW_TAG_compile_unit
 	.long	.Linfo_string0                  # DW_AT_producer
 	.short	33                              # DW_AT_language
 	.long	.Linfo_string1                  # DW_AT_name
@@ -443,9 +445,9 @@
 	.byte	5                               # Abbrev [5] 0xdc:0x5 DW_TAG_template_type_parameter
 	.long	582                             # DW_AT_type
 	.byte	5                               # Abbrev [5] 0xe1:0x5 DW_TAG_template_type_parameter
-	.long	591                             # DW_AT_type
+	.long	612                             # DW_AT_type
 	.byte	5                               # Abbrev [5] 0xe6:0x5 DW_TAG_template_type_parameter
-	.long	597                             # DW_AT_type
+	.long	618                             # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	6                               # Abbrev [6] 0xed:0x7 DW_TAG_base_type
@@ -612,12 +614,22 @@
 	.byte	10                              # Abbrev [10] 0x241:0x5 DW_TAG_pointer_type
 	.long	554                             # DW_AT_type
 	.byte	15                              # Abbrev [15] 0x246:0x9 DW_TAG_ptr_to_member_type
-	.long	554                             # DW_AT_type
+	.long	591                             # DW_AT_type
 	.long	554                             # DW_AT_containing_type
-	.byte	11                              # Abbrev [11] 0x24f:0x5 DW_TAG_const_type
+	.byte	28                              # Abbrev [28] 0x24f:0x10 DW_TAG_subroutine_type
 	.long	554                             # DW_AT_type
-	.byte	30                              # Abbrev [30] 0x254:0x7 DW_TAG_namespace
-	.byte	16                              # Abbrev [16] 0x255:0x5 DW_TAG_structure_type
+	.byte	18                              # Abbrev [18] 0x254:0x5 DW_TAG_formal_parameter
+	.long	607                             # DW_AT_type
+                                        # DW_AT_artificial
+	.byte	19                              # Abbrev [19] 0x259:0x5 DW_TAG_formal_parameter
+	.long	554                             # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	10                              # Abbrev [10] 0x25f:0x5 DW_TAG_pointer_type
+	.long	554                             # DW_AT_type
+	.byte	11                              # Abbrev [11] 0x264:0x5 DW_TAG_const_type
+	.long	554                             # DW_AT_type
+	.byte	30                              # Abbrev [30] 0x269:0x7 DW_TAG_namespace
+	.byte	16                              # Abbrev [16] 0x26a:0x5 DW_TAG_structure_type
 	.long	.Linfo_string12                 # DW_AT_name
                                         # DW_AT_declaration
 	.byte	0                               # End Of Children Mark
@@ -625,7 +637,7 @@
 .Ldebug_info_end0:
 	.section	.debug_str,"MS",@progbits,1
 .Linfo_string0:
-	.asciz	"clang version 14.0.0 (git@github.com:llvm/llvm-project.git 3d6f4552349be047bc0e631733f3deaf311ea17b)" # string offset=0
+	.asciz	"clang version 14.0.0 (git@github.com:llvm/llvm-project.git 559ab58ca57486621857a630d16dcddb6cceedfb)" # string offset=0
 .Linfo_string1:
 	.asciz	"test.cpp"                      # string offset=101
 .Linfo_string2:
@@ -652,7 +664,7 @@
 	.asciz	"anon_ns_mem"                   # string offset=220
 .Linfo_string13:
 	.asciz	"t1"                            # string offset=232
-	.ident	"clang version 14.0.0 (git@github.com:llvm/llvm-project.git 3d6f4552349be047bc0e631733f3deaf311ea17b)"
+	.ident	"clang version 14.0.0 (git@github.com:llvm/llvm-project.git 559ab58ca57486621857a630d16dcddb6cceedfb)"
 	.section	".note.GNU-stack","",@progbits
 	.addrsig
 	.addrsig_sym v1
