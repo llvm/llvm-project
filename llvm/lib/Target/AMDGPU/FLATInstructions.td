@@ -352,8 +352,6 @@ class FLAT_AtomicNoRet_Pseudo<string opName, dag outs, dag ins,
     let mayStore = 1;
     let has_glc  = 0;
     let glcValue = 0;
-    let has_dlc  = 0;
-    let dlcValue = 0;
     let has_vdst = 0;
     let has_sccb  = 1;
     let sccbValue = 0;
@@ -367,7 +365,6 @@ class FLAT_AtomicRet_Pseudo<string opName, dag outs, dag ins,
   let hasPostISelHook = 1;
   let has_vdst = 1;
   let glcValue = 1;
-  let dlcValue = 0;
   let sccbValue = 0;
   let IsAtomicNoRet = 0;
   let IsAtomicRet = 1;
