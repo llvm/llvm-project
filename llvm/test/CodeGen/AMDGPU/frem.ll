@@ -566,10 +566,10 @@ define amdgpu_kernel void @frem_f32(float addrspace(1)* %out, float addrspace(1)
 ; GFX10-NEXT:    v_rcp_f32_e32 v5, v4
 ; GFX10-NEXT:    s_denorm_mode 15
 ; GFX10-NEXT:    v_fma_f32 v6, -v4, v5, 1.0
-; GFX10-NEXT:    v_fma_f32 v5, v6, v5, v5
+; GFX10-NEXT:    v_fmac_f32_e32 v5, v6, v5
 ; GFX10-NEXT:    v_mul_f32_e32 v6, v3, v5
 ; GFX10-NEXT:    v_fma_f32 v7, -v4, v6, v3
-; GFX10-NEXT:    v_fma_f32 v6, v7, v5, v6
+; GFX10-NEXT:    v_fmac_f32_e32 v6, v7, v5
 ; GFX10-NEXT:    v_fma_f32 v3, -v4, v6, v3
 ; GFX10-NEXT:    s_denorm_mode 12
 ; GFX10-NEXT:    v_div_fmas_f32 v3, v3, v5, v6
@@ -2161,10 +2161,10 @@ define amdgpu_kernel void @frem_v2f32(<2 x float> addrspace(1)* %out, <2 x float
 ; GFX10-NEXT:    v_rcp_f32_e32 v7, v6
 ; GFX10-NEXT:    s_denorm_mode 15
 ; GFX10-NEXT:    v_fma_f32 v8, -v6, v7, 1.0
-; GFX10-NEXT:    v_fma_f32 v7, v8, v7, v7
+; GFX10-NEXT:    v_fmac_f32_e32 v7, v8, v7
 ; GFX10-NEXT:    v_mul_f32_e32 v8, v5, v7
 ; GFX10-NEXT:    v_fma_f32 v9, -v6, v8, v5
-; GFX10-NEXT:    v_fma_f32 v8, v9, v7, v8
+; GFX10-NEXT:    v_fmac_f32_e32 v8, v9, v7
 ; GFX10-NEXT:    v_fma_f32 v5, -v6, v8, v5
 ; GFX10-NEXT:    s_denorm_mode 12
 ; GFX10-NEXT:    v_div_fmas_f32 v5, v5, v7, v8
@@ -2176,10 +2176,10 @@ define amdgpu_kernel void @frem_v2f32(<2 x float> addrspace(1)* %out, <2 x float
 ; GFX10-NEXT:    v_rcp_f32_e32 v6, v5
 ; GFX10-NEXT:    s_denorm_mode 15
 ; GFX10-NEXT:    v_fma_f32 v7, -v5, v6, 1.0
-; GFX10-NEXT:    v_fma_f32 v6, v7, v6, v6
+; GFX10-NEXT:    v_fmac_f32_e32 v6, v7, v6
 ; GFX10-NEXT:    v_mul_f32_e32 v7, v3, v6
 ; GFX10-NEXT:    v_fma_f32 v8, -v5, v7, v3
-; GFX10-NEXT:    v_fma_f32 v7, v8, v6, v7
+; GFX10-NEXT:    v_fmac_f32_e32 v7, v8, v6
 ; GFX10-NEXT:    v_fma_f32 v3, -v5, v7, v3
 ; GFX10-NEXT:    s_denorm_mode 12
 ; GFX10-NEXT:    v_div_fmas_f32 v3, v3, v6, v7
@@ -2535,10 +2535,10 @@ define amdgpu_kernel void @frem_v4f32(<4 x float> addrspace(1)* %out, <4 x float
 ; GFX10-NEXT:    v_rcp_f32_e32 v11, v10
 ; GFX10-NEXT:    s_denorm_mode 15
 ; GFX10-NEXT:    v_fma_f32 v12, -v10, v11, 1.0
-; GFX10-NEXT:    v_fma_f32 v11, v12, v11, v11
+; GFX10-NEXT:    v_fmac_f32_e32 v11, v12, v11
 ; GFX10-NEXT:    v_mul_f32_e32 v12, v9, v11
 ; GFX10-NEXT:    v_fma_f32 v13, -v10, v12, v9
-; GFX10-NEXT:    v_fma_f32 v12, v13, v11, v12
+; GFX10-NEXT:    v_fmac_f32_e32 v12, v13, v11
 ; GFX10-NEXT:    v_fma_f32 v9, -v10, v12, v9
 ; GFX10-NEXT:    s_denorm_mode 12
 ; GFX10-NEXT:    v_div_fmas_f32 v9, v9, v11, v12
@@ -2550,10 +2550,10 @@ define amdgpu_kernel void @frem_v4f32(<4 x float> addrspace(1)* %out, <4 x float
 ; GFX10-NEXT:    v_rcp_f32_e32 v10, v9
 ; GFX10-NEXT:    s_denorm_mode 15
 ; GFX10-NEXT:    v_fma_f32 v11, -v9, v10, 1.0
-; GFX10-NEXT:    v_fma_f32 v10, v11, v10, v10
+; GFX10-NEXT:    v_fmac_f32_e32 v10, v11, v10
 ; GFX10-NEXT:    v_mul_f32_e32 v11, v7, v10
 ; GFX10-NEXT:    v_fma_f32 v12, -v9, v11, v7
-; GFX10-NEXT:    v_fma_f32 v11, v12, v10, v11
+; GFX10-NEXT:    v_fmac_f32_e32 v11, v12, v10
 ; GFX10-NEXT:    v_fma_f32 v7, -v9, v11, v7
 ; GFX10-NEXT:    s_denorm_mode 12
 ; GFX10-NEXT:    v_div_fmas_f32 v7, v7, v10, v11
@@ -2565,10 +2565,10 @@ define amdgpu_kernel void @frem_v4f32(<4 x float> addrspace(1)* %out, <4 x float
 ; GFX10-NEXT:    v_rcp_f32_e32 v9, v7
 ; GFX10-NEXT:    s_denorm_mode 15
 ; GFX10-NEXT:    v_fma_f32 v10, -v7, v9, 1.0
-; GFX10-NEXT:    v_fma_f32 v9, v10, v9, v9
+; GFX10-NEXT:    v_fmac_f32_e32 v9, v10, v9
 ; GFX10-NEXT:    v_mul_f32_e32 v10, v6, v9
 ; GFX10-NEXT:    v_fma_f32 v11, -v7, v10, v6
-; GFX10-NEXT:    v_fma_f32 v10, v11, v9, v10
+; GFX10-NEXT:    v_fmac_f32_e32 v10, v11, v9
 ; GFX10-NEXT:    v_fma_f32 v6, -v7, v10, v6
 ; GFX10-NEXT:    s_denorm_mode 12
 ; GFX10-NEXT:    v_div_fmas_f32 v6, v6, v9, v10
@@ -2580,10 +2580,10 @@ define amdgpu_kernel void @frem_v4f32(<4 x float> addrspace(1)* %out, <4 x float
 ; GFX10-NEXT:    v_rcp_f32_e32 v7, v6
 ; GFX10-NEXT:    s_denorm_mode 15
 ; GFX10-NEXT:    v_fma_f32 v9, -v6, v7, 1.0
-; GFX10-NEXT:    v_fma_f32 v7, v9, v7, v7
+; GFX10-NEXT:    v_fmac_f32_e32 v7, v9, v7
 ; GFX10-NEXT:    v_mul_f32_e32 v9, v5, v7
 ; GFX10-NEXT:    v_fma_f32 v10, -v6, v9, v5
-; GFX10-NEXT:    v_fma_f32 v9, v10, v7, v9
+; GFX10-NEXT:    v_fmac_f32_e32 v9, v10, v7
 ; GFX10-NEXT:    v_fma_f32 v5, -v6, v9, v5
 ; GFX10-NEXT:    s_denorm_mode 12
 ; GFX10-NEXT:    v_div_fmas_f32 v5, v5, v7, v9
