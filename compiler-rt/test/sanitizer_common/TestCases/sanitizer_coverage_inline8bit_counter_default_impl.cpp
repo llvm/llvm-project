@@ -5,7 +5,7 @@
 
 // RUN: %clangxx -O0 %s -fsanitize-coverage=inline-8bit-counters,pc-table -o %t
 // RUN: rm -f %t-counters %t-pcs
-// RUN: env %tool_options="cov_8bit_counters_out=%t-counters cov_pcs_out=%t-pcs" %run %t 2>&1 | FileCheck %s
+// RUN: env %tool_options="cov_8bit_counters_out=%t-counters cov_pcs_out=%t-pcs verbosity=1" %run %t 2>&1 | FileCheck %s
 
 // Check the file sizes
 // RUN: wc -c %t-counters | grep "^2 "
@@ -19,4 +19,6 @@ int main() {
   foo();
   fprintf(stderr, "PASS\n");
   // CHECK: PASS
+  // CHECK: cov_8bit_counters_out: written {{.*}} bytes to {{.*}}-counter
+  // CHECK: cov_pcs_out: written {{.*}} bytes to {{.*}}-pcs
 }
