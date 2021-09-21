@@ -669,11 +669,9 @@ bool BCECmpChain::simplify(const TargetLibraryInfo &TLI, AliasAnalysis &AA,
 
   // Effectively merge blocks. We go in the reverse direction from the phi block
   // so that the next block is always available to branch to.
-  int NumMerged = 1;
   BasicBlock *InsertBefore = EntryBlock_;
   BasicBlock *NextCmpBlock = Phi_.getParent();
   for (const auto &Blocks : reverse(MergedBlocks_)) {
-    NumMerged += Blocks.size() - 1;
     InsertBefore = NextCmpBlock = mergeComparisons(
         Blocks, InsertBefore, NextCmpBlock, Phi_, TLI, AA, DTU);
   }
