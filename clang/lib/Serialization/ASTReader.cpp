@@ -8151,13 +8151,16 @@ namespace serialization {
       if (Reader.DeserializationListener)
         Reader.DeserializationListener->SelectorRead(Data.ID, Sel);
 
-      InstanceMethods.append(Data.Instance.begin(), Data.Instance.end());
-      FactoryMethods.append(Data.Factory.begin(), Data.Factory.end());
+      // Append methods in the reverse order, so that later we can process them
+      // in the order they appear in the source code by iterating through
+      // the vector in the reverse order.
+      InstanceMethods.append(Data.Instance.rbegin(), Data.Instance.rend());
+      FactoryMethods.append(Data.Factory.rbegin(), Data.Factory.rend());
       InstanceBits = Data.InstanceBits;
       FactoryBits = Data.FactoryBits;
       InstanceHasMoreThanOneDecl = Data.InstanceHasMoreThanOneDecl;
       FactoryHasMoreThanOneDecl = Data.FactoryHasMoreThanOneDecl;
-      return true;
+      return false;
     }
 
     /// Retrieve the instance methods found by this visitor.
@@ -8186,9 +8189,8 @@ namespace serialization {
 /// Add the given set of methods to the method list.
 static void addMethodsToPool(Sema &S, ArrayRef<ObjCMethodDecl *> Methods,
                              ObjCMethodList &List) {
-  for (unsigned I = 0, N = Methods.size(); I != N; ++I) {
-    S.addMethodToGlobalList(&List, Methods[I]);
-  }
+  for (auto I = Methods.rbegin(), E = Methods.rend(); I != E; ++I)
+    S.addMethodToGlobalList(&List, *I);
 }
 
 void ASTReader::ReadMethodPool(Selector Sel) {
