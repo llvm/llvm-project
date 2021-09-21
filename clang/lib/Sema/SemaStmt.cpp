@@ -216,9 +216,9 @@ static bool DiagnoseNoDiscard(Sema &S, const WarnUnusedResultAttr *A,
   return S.Diag(Loc, diag::warn_unused_result_msg) << A << Msg << R1 << R2;
 }
 
-void Sema::DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID) {
+void Sema::DiagnoseUnusedExprResult(const Stmt *S) {
   if (const LabelStmt *Label = dyn_cast_or_null<LabelStmt>(S))
-    return DiagnoseUnusedExprResult(Label->getSubStmt(), DiagID);
+    return DiagnoseUnusedExprResult(Label->getSubStmt());
 
   const Expr *E = dyn_cast_or_null<Expr>(S);
   if (!E)
@@ -264,6 +264,7 @@ void Sema::DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID) {
   // Okay, we have an unused result.  Depending on what the base expression is,
   // we might want to make a more specific diagnostic.  Check for one of these
   // cases now.
+  unsigned DiagID = diag::warn_unused_expr;
   if (const FullExpr *Temps = dyn_cast<FullExpr>(E))
     E = Temps->getSubExpr();
   if (const CXXBindTemporaryExpr *TempExpr = dyn_cast<CXXBindTemporaryExpr>(E))
@@ -338,7 +339,7 @@ void Sema::DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID) {
     if (LangOpts.OpenMP && isa<CallExpr>(Source) &&
         POE->getNumSemanticExprs() == 1 &&
         isa<CallExpr>(POE->getSemanticExpr(0)))
-      return DiagnoseUnusedExprResult(POE->getSemanticExpr(0), DiagID);
+      return DiagnoseUnusedExprResult(POE->getSemanticExpr(0));
     if (isa<ObjCSubscriptRefExpr>(Source))
       DiagID = diag::warn_unused_container_subscript_expr;
     else
@@ -378,8 +379,7 @@ void Sema::DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID) {
     return;
   }
 
-  DiagIfReachable(Loc, S ? llvm::makeArrayRef(S) : llvm::None,
-                  PDiag(DiagID) << R1 << R2);
+  DiagRuntimeBehavior(Loc, nullptr, PDiag(DiagID) << R1 << R2);
 }
 
 void Sema::ActOnStartOfCompoundStmt(bool IsStmtExpr) {

@@ -1362,6 +1362,12 @@ public:
   /// Get address space for OpenCL type.
   LangAS getOpenCLTypeAddrSpace(const Type *T) const;
 
+  /// Returns default address space based on OpenCL version and enabled features
+  inline LangAS getDefaultOpenCLPointeeAddrSpace() {
+    return LangOpts.OpenCLGenericAddressSpace ? LangAS::opencl_generic
+                                              : LangAS::opencl_private;
+  }
+
   void setcudaConfigureCallDecl(FunctionDecl *FD) {
     cudaConfigureCallDecl = FD;
   }

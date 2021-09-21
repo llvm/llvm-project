@@ -390,9 +390,11 @@ void test_ds(){
 // CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7test_dsv_l14
 // CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OMP_OUTLINED_ARG_AGG_:%.*]] = alloca [[STRUCT_ANON:%.*]], align 8
 // CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x i8*], align 8
 // CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [2 x i8*], align 8
+// CHECK-NEXT:    [[OMP_OUTLINED_ARG_AGG_1:%.*]] = alloca [[STRUCT_ANON_0:%.*]], align 8
+// CHECK-NEXT:    [[CAPTURED_VARS_ADDRS2:%.*]] = alloca [1 x i8*], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1:[0-9]+]], i1 false, i1 true, i1 true)
 // CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -403,21 +405,32 @@ void test_ds(){
 // CHECK-NEXT:    [[B_ON_STACK:%.*]] = bitcast i8* [[B]] to i32*
 // CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    store i32 10, i32* [[A_ON_STACK]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[CAPTURED_VARS_ADDRS]], i64 0, i64 0
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[A_ON_STACK]] to i8*
-// CHECK-NEXT:    store i8* [[TMP3]], i8** [[TMP2]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast [1 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32*)* @__omp_outlined__ to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined___wrapper to i8*), i8** [[TMP4]], i64 1)
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[OMP_OUTLINED_ARG_AGG_]], i32 0, i32 0
+// CHECK-NEXT:    store i32* [[A_ON_STACK]], i32** [[TMP2]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[CAPTURED_VARS_ADDRS]], i64 0, i64 0
+// CHECK-NEXT:    [[TMP4:%.*]] = call i8* @__kmpc_alloc_shared(i64 8)
+// CHECK-NEXT:    [[TMP5:%.*]] = load [[STRUCT_ANON]], %struct.anon* [[OMP_OUTLINED_ARG_AGG_]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8* [[TMP4]] to %struct.anon*
+// CHECK-NEXT:    store [[STRUCT_ANON]] [[TMP5]], %struct.anon* [[TMP6]], align 8
+// CHECK-NEXT:    store i8* [[TMP4]], i8** [[TMP3]], align 8
+// CHECK-NEXT:    [[TMP7:%.*]] = bitcast [1 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
+// CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, %struct.anon*)* @__omp_outlined__ to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined___wrapper to i8*), i8** [[TMP7]], i64 1)
+// CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[TMP4]], i64 8)
 // CHECK-NEXT:    store i32 100, i32* [[B_ON_STACK]], align 4
 // CHECK-NEXT:    store i32 1000, i32* [[C]], align 4
-// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[CAPTURED_VARS_ADDRS1]], i64 0, i64 0
-// CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[B_ON_STACK]] to i8*
-// CHECK-NEXT:    store i8* [[TMP6]], i8** [[TMP5]], align 8
-// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[CAPTURED_VARS_ADDRS1]], i64 0, i64 1
-// CHECK-NEXT:    [[TMP8:%.*]] = bitcast i32* [[A_ON_STACK]] to i8*
-// CHECK-NEXT:    store i8* [[TMP8]], i8** [[TMP7]], align 8
-// CHECK-NEXT:    [[TMP9:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS1]] to i8**
-// CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32*, i32*)* @__omp_outlined__1 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8** [[TMP9]], i64 2)
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], %struct.anon.0* [[OMP_OUTLINED_ARG_AGG_1]], i32 0, i32 0
+// CHECK-NEXT:    store i32* [[B_ON_STACK]], i32** [[TMP8]], align 8
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], %struct.anon.0* [[OMP_OUTLINED_ARG_AGG_1]], i32 0, i32 1
+// CHECK-NEXT:    store i32* [[A_ON_STACK]], i32** [[TMP9]], align 8
+// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[CAPTURED_VARS_ADDRS2]], i64 0, i64 0
+// CHECK-NEXT:    [[TMP11:%.*]] = call i8* @__kmpc_alloc_shared(i64 16)
+// CHECK-NEXT:    [[TMP12:%.*]] = load [[STRUCT_ANON_0]], %struct.anon.0* [[OMP_OUTLINED_ARG_AGG_1]], align 8
+// CHECK-NEXT:    [[TMP13:%.*]] = bitcast i8* [[TMP11]] to %struct.anon.0*
+// CHECK-NEXT:    store [[STRUCT_ANON_0]] [[TMP12]], %struct.anon.0* [[TMP13]], align 8
+// CHECK-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 8
+// CHECK-NEXT:    [[TMP14:%.*]] = bitcast [1 x i8*]* [[CAPTURED_VARS_ADDRS2]] to i8**
+// CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, %struct.anon.0*)* @__omp_outlined__1 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8** [[TMP14]], i64 1)
+// CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[TMP11]], i64 16)
 // CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[B]], i64 4)
 // CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[A]], i64 4)
 // CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
@@ -427,16 +440,18 @@ void test_ds(){
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@__omp_outlined__
-// CHECK-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.anon* noalias [[__CONTEXT:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32*, align 8
+// CHECK-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon*, align 8
 // CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// CHECK-NEXT:    store i32* [[A]], i32** [[A_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK-NEXT:    store i32 1000, i32* [[TMP0]], align 4
+// CHECK-NEXT:    store %struct.anon* [[__CONTEXT]], %struct.anon** [[__CONTEXT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load %struct.anon*, %struct.anon** [[__CONTEXT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON:%.*]], %struct.anon* [[TMP0]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[TMP1]], align 8
+// CHECK-NEXT:    store i32 1000, i32* [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
 //
@@ -453,31 +468,32 @@ void test_ds(){
 // CHECK-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 // CHECK-NEXT:    [[TMP2:%.*]] = load i8**, i8*** [[GLOBAL_ARGS]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i64 0
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8** [[TMP3]] to i32**
-// CHECK-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[TMP4]], align 8
-// CHECK-NEXT:    call void @__omp_outlined__(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32* [[TMP5]]) #[[ATTR1:[0-9]+]]
+// CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8** [[TMP3]] to %struct.anon**
+// CHECK-NEXT:    [[TMP5:%.*]] = load %struct.anon*, %struct.anon** [[TMP4]], align 8
+// CHECK-NEXT:    call void @__omp_outlined__(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], %struct.anon* [[TMP5]]) #[[ATTR1:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@__omp_outlined__1
-// CHECK-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[B:%.*]], i32* nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.anon.0* noalias [[__CONTEXT:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i32*, align 8
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32*, align 8
+// CHECK-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon.0*, align 8
 // CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[C1:%.*]] = alloca i32*, align 8
 // CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// CHECK-NEXT:    store i32* [[B]], i32** [[B_ADDR]], align 8
-// CHECK-NEXT:    store i32* [[A]], i32** [[A_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[B_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
+// CHECK-NEXT:    store %struct.anon.0* [[__CONTEXT]], %struct.anon.0** [[__CONTEXT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load %struct.anon.0*, %struct.anon.0** [[__CONTEXT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_0:%.*]], %struct.anon.0* [[TMP0]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[TMP1]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], %struct.anon.0* [[TMP0]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP4:%.*]] = load i32*, i32** [[TMP3]], align 8
 // CHECK-NEXT:    store i32* [[C]], i32** [[C1]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 4
-// CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP2]], 10000
-// CHECK-NEXT:    store i32 [[ADD]], i32* [[TMP0]], align 4
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[TMP4]], align 4
+// CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP5]], 10000
+// CHECK-NEXT:    store i32 [[ADD]], i32* [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
 //
@@ -494,11 +510,8 @@ void test_ds(){
 // CHECK-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 // CHECK-NEXT:    [[TMP2:%.*]] = load i8**, i8*** [[GLOBAL_ARGS]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i64 0
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8** [[TMP3]] to i32**
-// CHECK-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[TMP4]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i64 1
-// CHECK-NEXT:    [[TMP7:%.*]] = bitcast i8** [[TMP6]] to i32**
-// CHECK-NEXT:    [[TMP8:%.*]] = load i32*, i32** [[TMP7]], align 8
-// CHECK-NEXT:    call void @__omp_outlined__1(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32* [[TMP5]], i32* [[TMP8]]) #[[ATTR1]]
+// CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8** [[TMP3]] to %struct.anon.0**
+// CHECK-NEXT:    [[TMP5:%.*]] = load %struct.anon.0*, %struct.anon.0** [[TMP4]], align 8
+// CHECK-NEXT:    call void @__omp_outlined__1(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], %struct.anon.0* [[TMP5]]) #[[ATTR1]]
 // CHECK-NEXT:    ret void
 //

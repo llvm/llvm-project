@@ -827,7 +827,8 @@ public:
 /// Idx. \p Idx must access a valid vector element.
 static ScalarizationResult canScalarizeAccess(FixedVectorType *VecTy,
                                               Value *Idx, Instruction *CtxI,
-                                              AssumptionCache &AC) {
+                                              AssumptionCache &AC,
+                                              const DominatorTree &DT) {
   if (auto *C = dyn_cast<ConstantInt>(Idx)) {
     if (C->getValue().ult(VecTy->getNumElements()))
       return ScalarizationResult::safe();
@@ -841,7 +842,7 @@ static ScalarizationResult canScalarizeAccess(FixedVectorType *VecTy,
   ConstantRange IdxRange(IntWidth, true);
 
   if (isGuaranteedNotToBePoison(Idx, &AC)) {
-    if (ValidIndices.contains(computeConstantRange(Idx, true, &AC, CtxI, 0)))
+    if (ValidIndices.contains(computeConstantRange(Idx, true, &AC, CtxI, &DT)))
       return ScalarizationResult::safe();
     return ScalarizationResult::unsafe();
   }
@@ -909,7 +910,7 @@ bool VectorCombine::foldSingleElementStore(Instruction &I) {
         SrcAddr != SI->getPointerOperand()->stripPointerCasts())
       return false;
 
-    auto ScalarizableIdx = canScalarizeAccess(VecTy, Idx, Load, AC);
+    auto ScalarizableIdx = canScalarizeAccess(VecTy, Idx, Load, AC, DT);
     if (ScalarizableIdx.isUnsafe() ||
         isMemModifiedBetween(Load->getIterator(), SI->getIterator(),
                              MemoryLocation::get(SI), AA))
@@ -987,7 +988,7 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
     else if (LastCheckedInst->comesBefore(UI))
       LastCheckedInst = UI;
 
-    auto ScalarIdx = canScalarizeAccess(FixedVT, UI->getOperand(1), &I, AC);
+    auto ScalarIdx = canScalarizeAccess(FixedVT, UI->getOperand(1), &I, AC, DT);
     if (!ScalarIdx.isSafe()) {
       // TODO: Freeze index if it is safe to do so.
       return false;

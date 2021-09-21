@@ -29,16 +29,20 @@ class LinalgDependenceGraph;
 // General utilities
 //===----------------------------------------------------------------------===//
 
+/// Check if `permutation` is a permutation of the range
+/// `[0, permutation.size())`.
+bool isPermutation(ArrayRef<int64_t> permutation);
+
 /// Apply the permutation defined by `permutation` to `inVec`.
 /// Element `i` in `inVec` is mapped to location `j = permutation[i]`.
 /// E.g.: for an input vector `inVec = ['a', 'b', 'c']` and a permutation vector
 /// `permutation = [2, 0, 1]`, this function leaves `inVec = ['c', 'a', 'b']`.
 template <typename T, unsigned N>
 void applyPermutationToVector(SmallVector<T, N> &inVec,
-                              ArrayRef<unsigned> permutation) {
+                              ArrayRef<int64_t> permutation) {
   SmallVector<T, N> auxVec(inVec.size());
-  for (unsigned i = 0; i < permutation.size(); ++i)
-    auxVec[i] = inVec[permutation[i]];
+  for (auto en : enumerate(permutation))
+    auxVec[en.index()] = inVec[en.value()];
   inVec = auxVec;
 }
 

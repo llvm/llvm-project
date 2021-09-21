@@ -7,20 +7,20 @@ int main ()
 	[a ii]; // expected-warning{{not found}}
 	[a if: 1 :2]; // expected-warning{{not found}}
 	[a inout: 1 :2 another:(2,3,4)]; // expected-warning{{not found}} \
-           // expected-warning 2{{left operand of comma operator has no effect}}
+           // expected-warning 2{{expression result unused}}
 	[a inout: 1 :2 another:(2,3,4), 6,6,8]; // expected-warning{{not found}} \
-           // expected-warning 2{{left operand of comma operator has no effect}}
+           // expected-warning 2{{expression result unused}}
 	[a inout: 1 :2 another:(2,3,4), (6,4,5),6,8]; // expected-warning{{not found}} \
-           // expected-warning 4{{left operand of comma operator has no effect}}
+           // expected-warning 4{{expression result unused}}
 	[a inout: 1 :2 another:(i+10), (i,j-1,5),6,8]; // expected-warning{{not found}} \
-           // expected-warning 2{{left operand of comma operator has no effect}}
+           // expected-warning 2{{expression result unused}}
 	[a long: 1 :2 another:(i+10), (i,j-1,5),6,8]; // expected-warning{{not found}} \
-           // expected-warning 2{{left operand of comma operator has no effect}}
+           // expected-warning 2{{expression result unused}}
 	[a : "Hello\n" :2 another:(i+10), (i,j-1,5),6,8]; // expected-warning{{not found}} \
-           // expected-warning 2{{left operand of comma operator has no effect}}
+           // expected-warning 2{{expression result unused}}
 
 	// Comma expression as receiver (rdar://6222856)
 	[a, b, c foo]; // expected-warning{{not found}} \
-           // expected-warning 2{{left operand of comma operator has no effect}}
+           // expected-warning 2{{expression result unused}}
 
 }

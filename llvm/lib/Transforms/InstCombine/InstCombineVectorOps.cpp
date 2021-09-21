@@ -1356,6 +1356,10 @@ static Instruction *foldConstantInsEltIntoShuffle(InsertElementInst &InsElt) {
         NewShufElts[I] = ShufConstVec->getAggregateElement(I);
         NewMaskElts[I] = Mask[I];
       }
+
+      // Bail if we failed to find an element.
+      if (!NewShufElts[I])
+        return nullptr;
     }
 
     // Create new operands for a shuffle that includes the constant of the
