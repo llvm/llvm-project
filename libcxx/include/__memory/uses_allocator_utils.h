@@ -41,7 +41,7 @@ template <class _Tp, class _Alloc, class... _Args>
 constexpr auto uses_allocator_construction_args(const _Alloc& __alloc, _Args&&... __args) noexcept {
     if constexpr (uses_allocator_v<_Tp, _Alloc>) {
         static_assert(is_constructible_v<_Tp, allocator_arg_t, const _Alloc&, _Args...> ||
-                      is_constructible_v<_Tp, _Args..., const Alloc&>);
+                      is_constructible_v<_Tp, _Args..., const _Alloc&>);
         if constexpr (is_constructible_v<_Tp, allocator_arg_t, const _Alloc&, _Args...>) {
             return tuple{allocator_arg, __alloc, _VSTD::forward<_Args>(__args)...};
         } else { // is_constructible_v<_Tp, Args..., const Alloc&>
