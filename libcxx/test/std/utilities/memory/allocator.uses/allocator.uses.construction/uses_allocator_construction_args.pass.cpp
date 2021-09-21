@@ -101,8 +101,8 @@ void test(Args... args) {
     // p<decltype(std::uses_allocator_construction_args<UsesLeadingAllocConstruction>(alloc, args...))> pobj;
     // test_args<UsesLeadingAllocConstruction>(leading_arguments, alloc, args...);
     // test_args<UsesTrailingAllocConstruction>(trailing_arguments, alloc, args...);
-    auto args = std::uses_allocator_construction_args<UsesLeadingAllocConstruction>(alloc, args...);
-    std::cout << std::tuple_size<decltype(args)>::value << std::endl;
+    auto c_args = std::uses_allocator_construction_args<UsesLeadingAllocConstruction>(alloc, args...);
+    std::cout << std::tuple_size<decltype(c_args)>::value << std::endl;
 }
 
 // template <class... Args1, class... Args2>
