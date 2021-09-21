@@ -39,7 +39,7 @@ public:
   // Emit call to fast FP intrinsics
   std::pair<bool, RValue> emitFastFPAtomicCall(CodeGenFunction &CGF, LValue X,
                                                RValue Update,
-                                               BinaryOperatorKind BO);
+                                               BinaryOperatorKind BO) override;
 };
 
 } // namespace CodeGen
