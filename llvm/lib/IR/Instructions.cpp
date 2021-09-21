@@ -1907,6 +1907,32 @@ bool InsertElementInst::isValidOperands(const Value *Vec, const Value *Elt,
 //                      ShuffleVectorInst Implementation
 //===----------------------------------------------------------------------===//
 
+static Value *createPlaceholderForShuffleVector(Value *V) {
+  assert(V && "Cannot create placeholder of nullptr V");
+  return PoisonValue::get(V->getType());
+}
+
+ShuffleVectorInst::ShuffleVectorInst(Value *V1, Value *Mask, const Twine &Name,
+                                     Instruction *InsertBefore)
+    : ShuffleVectorInst(V1, createPlaceholderForShuffleVector(V1), Mask, Name,
+                        InsertBefore) {}
+
+ShuffleVectorInst::ShuffleVectorInst(Value *V1, Value *Mask, const Twine &Name,
+                                     BasicBlock *InsertAtEnd)
+    : ShuffleVectorInst(V1, createPlaceholderForShuffleVector(V1), Mask, Name,
+                        InsertAtEnd) {}
+
+ShuffleVectorInst::ShuffleVectorInst(Value *V1, ArrayRef<int> Mask,
+                                     const Twine &Name,
+                                     Instruction *InsertBefore)
+    : ShuffleVectorInst(V1, createPlaceholderForShuffleVector(V1), Mask, Name,
+                        InsertBefore) {}
+
+ShuffleVectorInst::ShuffleVectorInst(Value *V1, ArrayRef<int> Mask,
+                                     const Twine &Name, BasicBlock *InsertAtEnd)
+    : ShuffleVectorInst(V1, createPlaceholderForShuffleVector(V1), Mask, Name,
+                        InsertAtEnd) {}
+
 ShuffleVectorInst::ShuffleVectorInst(Value *V1, Value *V2, Value *Mask,
                                      const Twine &Name,
                                      Instruction *InsertBefore)
