@@ -78,7 +78,7 @@ template <class T, typename ExpectedArgsTuple, class Alloc, class... Args>
 void test_args(const ExpectedArgsTuple& expected_tuple, const Alloc& alloc, Args&&... args) {
     ASSERT_NOEXCEPT(std::uses_allocator_construction_args<T>(alloc, std::forward<Args>(args)...));
     auto construction_args = std::uses_allocator_construction_args<T>(alloc, std::forward<Args>(args)...);
-    ASSERT_SAME_TYPE(decltype(args), ExpectedArgsTuple);
+    ASSERT_SAME_TYPE(decltype(construction_args), ExpectedArgsTuple);
     assert(construction_args == expected_tuple);
 }
 
