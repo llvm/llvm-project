@@ -83,8 +83,8 @@ func @fold_extract(%arg0 : index) -> (f32, f16, f16, i32) {
   %ext_2 = tensor.extract %1[%const_1, %const_1, %const_1] : tensor<4x4x4xf16>
 
   // Fold an extract into a sparse with a non sparse index.
-  %2 = constant sparse<[[1, 1, 1]],  [-2.0]> : tensor<1x1x1xf16>
-  %ext_3 = tensor.extract %2[%const_0, %const_0, %const_0] : tensor<1x1x1xf16>
+  %2 = constant sparse<[[1, 1, 1]],  [-2.0]> : tensor<2x2x2xf16>
+  %ext_3 = tensor.extract %2[%const_0, %const_0, %const_0] : tensor<2x2x2xf16>
 
   // Fold an extract into a dense tensor.
    %3 = constant dense<[[[1, -2, 1, 36]], [[0, 2, -1, 64]]]> : tensor<2x1x4xi32>

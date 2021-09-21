@@ -893,6 +893,7 @@ ShapedType Parser::parseElementsLiteralType(Type type) {
 
 /// Parse a sparse elements attribute.
 Attribute Parser::parseSparseElementsAttr(Type attrType) {
+  llvm::SMLoc loc = getToken().getLoc();
   consumeToken(Token::kw_sparse);
   if (parseToken(Token::less, "Expected '<' after 'sparse'"))
     return nullptr;
@@ -911,8 +912,8 @@ Attribute Parser::parseSparseElementsAttr(Type attrType) {
     ShapedType indicesType =
         RankedTensorType::get({0, type.getRank()}, indiceEltType);
     ShapedType valuesType = RankedTensorType::get({0}, type.getElementType());
-    return SparseElementsAttr::get(
-        type, DenseElementsAttr::get(indicesType, ArrayRef<Attribute>()),
+    return getChecked<SparseElementsAttr>(
+        loc, type, DenseElementsAttr::get(indicesType, ArrayRef<Attribute>()),
         DenseElementsAttr::get(valuesType, ArrayRef<Attribute>()));
   }
 
@@ -963,22 +964,6 @@ Attribute Parser::parseSparseElementsAttr(Type attrType) {
           : RankedTensorType::get(valuesParser.getShape(), valuesEltType);
   auto values = valuesParser.getAttr(valuesLoc, valuesType);
 
-  /// Sanity check.
-  if (valuesType.getRank() != 1)
-    return (emitError("expected 1-d tensor for values"), nullptr);
-
-  auto sameShape = (indicesType.getRank() == 1) ||
-                   (type.getRank() == indicesType.getDimSize(1));
-  auto sameElementNum = indicesType.getDimSize(0) == valuesType.getDimSize(0);
-  if (!sameShape || !sameElementNum) {
-    emitError() << "expected shape ([" << type.getShape()
-                << "]); inferred shape of indices literal (["
-                << indicesType.getShape()
-                << "]); inferred shape of values literal (["
-                << valuesType.getShape() << "])";
-    return nullptr;
-  }
-
   // Build the sparse elements attribute by the indices and values.
-  return SparseElementsAttr::get(type, indices, values);
+  return getChecked<SparseElementsAttr>(loc, type, indices, values);
 }

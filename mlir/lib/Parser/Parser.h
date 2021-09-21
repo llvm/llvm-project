@@ -140,6 +140,16 @@ public:
   // Type Parsing
   //===--------------------------------------------------------------------===//
 
+  /// Invoke the `getChecked` method of the given Attribute or Type class, using
+  /// the provided location to emit errors in the case of failure. Note that
+  /// unlike `OpBuilder::getType`, this method does not implicitly insert a
+  /// context parameter.
+  template <typename T, typename... ParamsT>
+  T getChecked(llvm::SMLoc loc, ParamsT &&...params) {
+    return T::getChecked([&] { return emitError(loc); },
+                         std::forward<ParamsT>(params)...);
+  }
+
   ParseResult parseFunctionResultTypes(SmallVectorImpl<Type> &elements);
   ParseResult parseTypeListNoParens(SmallVectorImpl<Type> &elements);
   ParseResult parseTypeListParens(SmallVectorImpl<Type> &elements);

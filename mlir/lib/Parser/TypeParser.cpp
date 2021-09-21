@@ -193,6 +193,7 @@ ParseResult Parser::parseStridedLayout(int64_t &offset,
 ///   memory-space ::= integer-literal /* | TODO: address-space-id */
 ///
 Type Parser::parseMemRefType() {
+  llvm::SMLoc loc = getToken().getLoc();
   consumeToken(Token::kw_memref);
 
   if (parseToken(Token::less, "expected '<' in memref type"))
@@ -283,15 +284,11 @@ Type Parser::parseMemRefType() {
     }
   }
 
-  if (isUnranked) {
-    return UnrankedMemRefType::getChecked(
-        [&]() -> InFlightDiagnostic { return emitError(); }, elementType,
-        memorySpace);
-  }
+  if (isUnranked)
+    return getChecked<UnrankedMemRefType>(loc, elementType, memorySpace);
 
-  return MemRefType::getChecked(
-      [&]() -> InFlightDiagnostic { return emitError(); }, dimensions,
-      elementType, affineMapComposition, memorySpace);
+  return getChecked<MemRefType>(loc, dimensions, elementType,
+                                affineMapComposition, memorySpace);
 }
 
 /// Parse any type except the function type.

@@ -897,7 +897,7 @@ func @mi() {
 // -----
 
 func @invalid_tensor_literal() {
-  // expected-error @+1 {{expected 1-d tensor for values}}
+  // expected-error @+1 {{expected 1-d tensor for sparse element values}}
   "foof16"(){bar = sparse<[[0, 0, 0]],  [[-2.0]]> : vector<1x1x1xf16>} : () -> ()
 
 // -----
@@ -905,6 +905,12 @@ func @invalid_tensor_literal() {
 func @invalid_tensor_literal() {
   // expected-error @+1 {{expected element literal of primitive type}}
   "fooi16"(){bar = sparse<[[1, 1, 0], [0, 1, 0], [0,, [[0, 0, 0]], [-2.0]> : tensor<2x2x2xi16>} : () -> ()
+
+// -----
+
+func @invalid_tensor_literal() {
+  // expected-error @+1 {{sparse index #0 is not contained within the value shape, with index=[1, 1], and type='tensor<1x1xi16>'}}
+  "fooi16"(){bar = sparse<1, 10> : tensor<1x1xi16>} : () -> ()
 
 // -----
 

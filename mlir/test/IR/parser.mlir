@@ -810,7 +810,7 @@ func @sparsetensorattr() -> () {
 // CHECK: "fooi32"() {bar = sparse<> : tensor<1x1xi32>} : () -> ()
   "fooi32"(){bar = sparse<> : tensor<1x1xi32>} : () -> ()
 // CHECK: "fooi64"() {bar = sparse<0, -1> : tensor<1xi64>} : () -> ()
-  "fooi64"(){bar = sparse<[[0]], [-1]> : tensor<1xi64>} : () -> ()
+  "fooi64"(){bar = sparse<[0], [-1]> : tensor<1xi64>} : () -> ()
 // CHECK: "foo2"() {bar = sparse<> : tensor<0xi32>} : () -> ()
   "foo2"(){bar = sparse<> : tensor<0xi32>} : () -> ()
 // CHECK: "foo3"() {bar = sparse<> : tensor<i32>} : () -> ()

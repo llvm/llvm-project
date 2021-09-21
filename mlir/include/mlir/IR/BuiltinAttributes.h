@@ -70,6 +70,12 @@ public:
 
   /// Return if the given 'index' refers to a valid element in this attribute.
   bool isValidIndex(ArrayRef<uint64_t> index) const;
+  static bool isValidIndex(ShapedType type, ArrayRef<uint64_t> index);
+
+  /// Returns the 1-dimensional flattened row-major index from the given
+  /// multi-dimensional index.
+  uint64_t getFlattenedIndex(ArrayRef<uint64_t> index) const;
+  static uint64_t getFlattenedIndex(ShapedType type, ArrayRef<uint64_t> index);
 
   /// Returns the number of elements held by this attribute.
   int64_t getNumElements() const;
@@ -94,11 +100,6 @@ public:
 
   /// Method for support type inquiry through isa, cast and dyn_cast.
   static bool classof(Attribute attr);
-
-protected:
-  /// Returns the 1 dimensional flattened row-major index from the given
-  /// multi-dimensional index.
-  uint64_t getFlattenedIndex(ArrayRef<uint64_t> index) const;
 };
 
 namespace detail {
