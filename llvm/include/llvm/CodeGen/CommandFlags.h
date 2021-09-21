@@ -48,7 +48,6 @@ Optional<CodeModel::Model> getExplicitCodeModel();
 
 llvm::ExceptionHandling getExceptionModel();
 
-CodeGenFileType getFileType();
 Optional<CodeGenFileType> getExplicitFileType();
 
 CodeGenFileType getFileType();
