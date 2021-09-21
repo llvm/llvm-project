@@ -41,3 +41,4 @@ end of translation defered stuff).
 - Some data structures used for LLVM codegen can be made more
 generic and be reused from CIRBuilder. Duplicating content right
 now to prevent potential frequent merge conflicts.
+  - Split out into header files all potential common code.
