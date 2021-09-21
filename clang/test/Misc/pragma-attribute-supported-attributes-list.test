@@ -22,7 +22,7 @@
 // CHECK-NEXT: Assumption (SubjectMatchRule_function, SubjectMatchRule_objc_method)
 // CHECK-NEXT: Availability ((SubjectMatchRule_record, SubjectMatchRule_enum, SubjectMatchRule_enum_constant, SubjectMatchRule_field, SubjectMatchRule_function, SubjectMatchRule_namespace, SubjectMatchRule_objc_category, SubjectMatchRule_objc_implementation, SubjectMatchRule_objc_interface, SubjectMatchRule_objc_method, SubjectMatchRule_objc_property, SubjectMatchRule_objc_protocol, SubjectMatchRule_record, SubjectMatchRule_type_alias, SubjectMatchRule_variable))
 // CHECK-NEXT: BPFPreserveAccessIndex (SubjectMatchRule_record)
-// CHECK-NEXT: BTFDeclTag (SubjectMatchRule_variable, SubjectMatchRule_function, SubjectMatchRule_record, SubjectMatchRule_field)
+// CHECK-NEXT: BTFDeclTag (SubjectMatchRule_variable, SubjectMatchRule_function, SubjectMatchRule_record, SubjectMatchRule_field, SubjectMatchRule_type_alias)
 // CHECK-NEXT: BuiltinAlias (SubjectMatchRule_function)
 // CHECK-NEXT: CFAuditedTransfer (SubjectMatchRule_function)
 // CHECK-NEXT: CFConsumed (SubjectMatchRule_variable_is_parameter)
