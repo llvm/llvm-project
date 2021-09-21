@@ -99,6 +99,21 @@ inline GFCstAndRegMatch m_GFCst(Optional<FPValueAndVReg> &FPValReg) {
   return GFCstAndRegMatch(FPValReg);
 }
 
+struct GFCstOrSplatGFCstMatch {
+  Optional<FPValueAndVReg> &FPValReg;
+  GFCstOrSplatGFCstMatch(Optional<FPValueAndVReg> &FPValReg)
+      : FPValReg(FPValReg) {}
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    return (FPValReg = getFConstantSplat(Reg, MRI)) ||
+           (FPValReg = getFConstantVRegValWithLookThrough(Reg, MRI));
+  };
+};
+
+inline GFCstOrSplatGFCstMatch
+m_GFCstOrSplat(Optional<FPValueAndVReg> &FPValReg) {
+  return GFCstOrSplatGFCstMatch(FPValReg);
+}
+
 /// Matcher for a specific constant value.
 struct SpecificConstantMatch {
   int64_t RequestedVal;

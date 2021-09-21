@@ -21,10 +21,12 @@
 ; PREGFX10: s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
 ; GFX10: s_denorm_mode 15
 ; GCN: v_fma_f32 [[A:v[0-9]+]], -[[NUM_SCALE]], [[NUM_RCP]], 1.0
-; GCN: v_fma_f32 [[B:v[0-9]+]], [[A]], [[NUM_RCP]], [[NUM_RCP]]
+; PREGFX10: v_fma_f32 [[B:v[0-9]+]], [[A]], [[NUM_RCP]], [[NUM_RCP]]
+; GFX10: v_fmac_f32_e32 [[B:v[0-9]+]], [[A]], [[NUM_RCP]]
 ; GCN: v_mul_f32_e32 [[C:v[0-9]+]], [[DEN_SCALE]], [[B]]
 ; GCN: v_fma_f32 [[D:v[0-9]+]], -[[NUM_SCALE]], [[C]], [[DEN_SCALE]]
-; GCN: v_fma_f32 [[E:v[0-9]+]], [[D]], [[B]], [[C]]
+; PREGFX10: v_fma_f32 [[E:v[0-9]+]], [[D]], [[B]], [[C]]
+; GFX10: v_fmac_f32_e32 [[E:v[0-9]+]], [[D]], [[B]]
 ; GCN: v_fma_f32 [[F:v[0-9]+]], -[[NUM_SCALE]], [[E]], [[DEN_SCALE]]
 ; PREGFX10: s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
 ; GFX10: s_denorm_mode 12
@@ -59,9 +61,9 @@ entry:
 ; GFX10: v_fmac_f32_e32 [[B:v[0-9]+]], [[A]], [[NUM_RCP]]
 ; GFX10: v_div_scale_f32 [[DEN_SCALE:v[0-9]+]]
 ; GFX10: v_mul_f32_e32 [[C:v[0-9]+]], [[DEN_SCALE]], [[B]]
-; GFX10: v_fma_f32 [[D:v[0-9]+]], [[C]], -[[NUM_SCALE]], [[DEN_SCALE]]
+; GFX10: v_fma_f32 [[D:v[0-9]+]], -[[NUM_SCALE]], [[C]], [[DEN_SCALE]]
 ; GFX10: v_fmac_f32_e32 [[E:v[0-9]+]], [[D]], [[B]]
-; GFX10: v_fmac_f32_e64 [[F:v[0-9]+]], -[[NUM_SCALE]], [[E]]
+; GFX10: v_fma_f32 [[F:v[0-9]+]], -[[NUM_SCALE]], [[E]], [[DEN_SCALE]]
 ; GFX10-NOT: s_denorm_mode
 
 ; GCN: v_div_fmas_f32 [[FMAS:v[0-9]+]], [[F]], [[B]], [[E]]
@@ -293,10 +295,12 @@ define amdgpu_kernel void @fdiv_v4f32_arcp_math(<4 x float> addrspace(1)* %out, 
 ; PREGFX10: s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
 ; GFX10: s_denorm_mode 15
 ; GCN: v_fma_f32 [[A:v[0-9]+]], -[[NUM_SCALE]], [[NUM_RCP]], 1.0
-; GCN: v_fma_f32 [[B:v[0-9]+]], [[A]], [[NUM_RCP]], [[NUM_RCP]]
+; PREGFX10: v_fma_f32 [[B:v[0-9]+]], [[A]], [[NUM_RCP]], [[NUM_RCP]]
+; GFX10: v_fmac_f32_e32 [[B:v[0-9]+]], [[A]], [[NUM_RCP]]
 ; GCN: v_mul_f32_e32 [[C:v[0-9]+]], [[DEN_SCALE]], [[B]]
 ; GCN: v_fma_f32 [[D:v[0-9]+]], -[[NUM_SCALE]], [[C]], [[DEN_SCALE]]
-; GCN: v_fma_f32 [[E:v[0-9]+]], [[D]], [[B]], [[C]]
+; PREGFX10: v_fma_f32 [[E:v[0-9]+]], [[D]], [[B]], [[C]]
+; GFX10: v_fmac_f32_e32 [[E:v[0-9]+]], [[D]], [[B]]
 ; GCN: v_fma_f32 [[F:v[0-9]+]], -[[NUM_SCALE]], [[E]], [[DEN_SCALE]]
 ; PREGFX10: s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
 ; GFX10: s_denorm_mode 12
@@ -331,9 +335,9 @@ entry:
 ; GFX10: v_fmac_f32_e32 [[B:v[0-9]+]], [[A]], [[NUM_RCP]]
 ; GFX10: v_div_scale_f32 [[DEN_SCALE:v[0-9]+]]
 ; GFX10: v_mul_f32_e32 [[C:v[0-9]+]], [[DEN_SCALE]], [[B]]
-; GFX10: v_fma_f32 [[D:v[0-9]+]], [[C]], -[[NUM_SCALE]], [[DEN_SCALE]]
+; GFX10: v_fma_f32 [[D:v[0-9]+]], -[[NUM_SCALE]], [[C]], [[DEN_SCALE]]
 ; GFX10: v_fmac_f32_e32 [[E:v[0-9]+]], [[D]], [[B]]
-; GFX10: v_fmac_f32_e64 [[F:v[0-9]+]], -[[NUM_SCALE]], [[E]]
+; GFX10: v_fma_f32 [[F:v[0-9]+]], -[[NUM_SCALE]], [[E]], [[DEN_SCALE]]
 ; GFX10-NOT: s_denorm_mode
 
 ; GCN: v_div_fmas_f32 [[FMAS:v[0-9]+]], [[F]], [[B]], [[E]]

@@ -176,8 +176,7 @@ define half @v_constained_fma_f16_fpexcept_strict_fneg_fneg(half %x, half %y, ha
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_fmac_f16_e64 v2, -v0, -v1
-; GFX10-NEXT:    v_mov_b32_e32 v0, v2
+; GFX10-NEXT:    v_fma_f16 v0, -v0, -v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.x = fneg half %x
   %neg.y = fneg half %y
@@ -196,8 +195,7 @@ define half @v_constained_fma_f16_fpexcept_strict_fabs_fabs(half %x, half %y, ha
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_fmac_f16_e64 v2, |v0|, |v1|
-; GFX10-NEXT:    v_mov_b32_e32 v0, v2
+; GFX10-NEXT:    v_fma_f16 v0, |v0|, |v1|, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.x = call half @llvm.fabs.f16(half %x)
   %neg.y = call half @llvm.fabs.f16(half %y)
