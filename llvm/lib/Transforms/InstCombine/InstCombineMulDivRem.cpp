@@ -564,6 +564,16 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
         return replaceInstUsesWith(I, NewPow);
       }
 
+      // powi(x, y) * powi(x, z) -> powi(x, y + z)
+      if (match(Op0, m_Intrinsic<Intrinsic::powi>(m_Value(X), m_Value(Y))) &&
+          match(Op1, m_Intrinsic<Intrinsic::powi>(m_Specific(X), m_Value(Z))) &&
+          Y->getType() == Z->getType()) {
+        auto *YZ = Builder.CreateAdd(Y, Z);
+        auto *NewPow = Builder.CreateIntrinsic(
+            Intrinsic::powi, {X->getType(), YZ->getType()}, {X, YZ}, &I);
+        return replaceInstUsesWith(I, NewPow);
+      }
+
       // exp(X) * exp(Y) -> exp(X + Y)
       if (match(Op0, m_Intrinsic<Intrinsic::exp>(m_Value(X))) &&
           match(Op1, m_Intrinsic<Intrinsic::exp>(m_Value(Y)))) {
