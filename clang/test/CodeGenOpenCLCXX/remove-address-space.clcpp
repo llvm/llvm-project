@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 %s -cl-std=clc++ -fdeclare-opencl-builtins -finclude-default-header
+// RUN: %clang_cc1 %s -cl-std=clc++1.0 -fdeclare-opencl-builtins -finclude-default-header
+// RUN: %clang_cc1 %s -cl-std=clc++2021 -fdeclare-opencl-builtins -finclude-default-header
+// RUN: %clang_cc1 %s -cl-std=clc++2021 -cl-ext=-__opencl_c_generic_address_space,-__opencl_c_pipes -fdeclare-opencl-builtins -finclude-default-header
 
 template<typename T, typename U>
 struct is_same {
@@ -19,8 +21,10 @@ void test_is_same() {
 void test_remove_address_space() {
   static_assert(is_same<__remove_address_space<int>::type, int>::value,
                 "type without an address space unexpectedly modified by __remove_address_space");
+#if defined(__opencl_c_generic_address_space)
   static_assert(is_same<__remove_address_space<__generic int>::type, int>::value,
                 "__generic address space not removed by __remove_address_space");
+#endif
   static_assert(is_same<__remove_address_space<__global char>::type, char>::value,
                 "__global address space not removed by __remove_address_space");
   static_assert(is_same<__remove_address_space<__private ulong>::type, ulong>::value,
