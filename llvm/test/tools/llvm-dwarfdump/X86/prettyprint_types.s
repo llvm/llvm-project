@@ -59,7 +59,7 @@
 # accurate and not be ambiguous with some arbitrary ::nullptr_t a user could
 # define. If that change is made, this code/test should be fixed too.
 # nullptr_t unspecified type
-# CHECK:   DW_AT_type{{.*}}"nullptr_t"
+# CHECK:   DW_AT_type{{.*}}"std::nullptr_t"
 
 # reference_type
 # CHECK:   DW_AT_type{{.*}}"int &"

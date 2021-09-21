@@ -264,7 +264,7 @@ struct DWARFTypePrinter {
     case DW_TAG_unspecified_type: {
       StringRef TypeName = D.getShortName();
       if (TypeName == "decltype(nullptr)")
-        TypeName = "nullptr_t";
+        TypeName = "std::nullptr_t";
       Word = true;
       OS << TypeName;
       EndedWithTemplate = false;
