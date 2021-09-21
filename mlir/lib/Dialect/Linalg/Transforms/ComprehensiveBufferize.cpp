@@ -2467,33 +2467,18 @@ inPlaceAnalysisFuncOpBody(FuncOp funcOp, BufferizationAliasInfo &aliasInfo,
   assert(funcOp && funcOp->getNumRegions() > 0 && !funcOp.body().empty() &&
          "expected a funcOp definition with a body");
 
-  // Collect ops so we can build our own traversal.
-  SmallVector<Operation *> otherOps;
-  SmallVector<InsertSliceOp> insertSliceOps;
+  // Collect ops so we can build our own reverse traversal.
+  SmallVector<Operation *> ops;
   funcOp.walk([&](Operation *op) {
-    if (auto insertSliceOp = dyn_cast<InsertSliceOp>(op))
-      return insertSliceOps.push_back(insertSliceOp);
     // No tensors => no buffers.
     if (none_of(op->getOperandTypes(), isaTensor) &&
         none_of(op->getResultTypes(), isaTensor))
       return;
-    otherOps.push_back(op);
+    ops.push_back(op);
   });
 
-  // First, analyze InsertSliceOp greedily: we almost never want to bufferize
-  // the tensor "inserted into" to become out-of-place. This implementation
-  // does not distinguish between different InsertSliceOp. If we want
-  // finer-grained behavior, we could order the InsertSliceOp with some metric.
-  for (InsertSliceOp insertSliceOp : reverse(insertSliceOps)) {
-    OpOperand &destOpOperand = insertSliceOp->getOpOperand(1);
-    if (failed(bufferizableInPlaceAnalysis(
-            destOpOperand, getInplaceableOpResult(destOpOperand), aliasInfo,
-            domInfo)))
-      return failure();
-  }
-
   // Walk ops in reverse for better interference analysis.
-  for (Operation *op : reverse(otherOps)) {
+  for (Operation *op : reverse(ops)) {
     for (OpOperand &opOperand : op->getOpOperands()) {
       if (OpResult result = getInplaceableOpResult(opOperand))
         if (result.getType().isa<TensorType>() &&
