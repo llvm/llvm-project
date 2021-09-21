@@ -964,11 +964,7 @@ void X86FlagsCopyLoweringPass::rewriteSetCC(MachineBasicBlock &TestMBB,
   if (!SetCCI.mayStore()) {
     assert(SetCCI.getOperand(0).isReg() &&
            "Cannot have a non-register defined operand to SETcc!");
-    Register OldReg = SetCCI.getOperand(0).getReg();
-    // Drop Kill flags on the old register before replacing. CondReg may have
-    // a longer live range.
-    MRI->clearKillFlags(OldReg);
-    MRI->replaceRegWith(OldReg, CondReg);
+    MRI->replaceRegWith(SetCCI.getOperand(0).getReg(), CondReg);
     SetCCI.eraseFromParent();
     return;
   }
