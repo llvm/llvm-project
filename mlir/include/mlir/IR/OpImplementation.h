@@ -473,6 +473,47 @@ public:
     return success();
   }
 
+  /// These are the supported delimiters around operand lists and region
+  /// argument lists, used by parseOperandList and parseRegionArgumentList.
+  enum class Delimiter {
+    /// Zero or more operands with no delimiters.
+    None,
+    /// Parens surrounding zero or more operands.
+    Paren,
+    /// Square brackets surrounding zero or more operands.
+    Square,
+    /// <> brackets surrounding zero or more operands.
+    LessGreater,
+    /// {} brackets surrounding zero or more operands.
+    Braces,
+    /// Parens supporting zero or more operands, or nothing.
+    OptionalParen,
+    /// Square brackets supporting zero or more ops, or nothing.
+    OptionalSquare,
+    /// <> brackets supporting zero or more ops, or nothing.
+    OptionalLessGreater,
+    /// {} brackets surrounding zero or more operands, or nothing.
+    OptionalBraces,
+  };
+
+  /// Parse a list of comma-separated items with an optional delimiter.  If a
+  /// delimiter is provided, then an empty list is allowed.  If not, then at
+  /// least one element will be parsed.
+  ///
+  /// contextMessage is an optional message appended to "expected '('" sorts of
+  /// diagnostics when parsing the delimeters.
+  virtual ParseResult
+  parseCommaSeparatedList(Delimiter delimiter,
+                          function_ref<ParseResult()> parseElementFn,
+                          StringRef contextMessage = StringRef()) = 0;
+
+  /// Parse a comma separated list of elements that must have at least one entry
+  /// in it.
+  ParseResult
+  parseCommaSeparatedList(function_ref<ParseResult()> parseElementFn) {
+    return parseCommaSeparatedList(Delimiter::None, parseElementFn);
+  }
+
   //===--------------------------------------------------------------------===//
   // Attribute Parsing
   //===--------------------------------------------------------------------===//
@@ -609,21 +650,6 @@ public:
 
   /// Parse a single operand if present.
   virtual OptionalParseResult parseOptionalOperand(OperandType &result) = 0;
-
-  /// These are the supported delimiters around operand lists and region
-  /// argument lists, used by parseOperandList and parseRegionArgumentList.
-  enum class Delimiter {
-    /// Zero or more operands with no delimiters.
-    None,
-    /// Parens surrounding zero or more operands.
-    Paren,
-    /// Square brackets surrounding zero or more operands.
-    Square,
-    /// Parens supporting zero or more operands, or nothing.
-    OptionalParen,
-    /// Square brackets supporting zero or more ops, or nothing.
-    OptionalSquare,
-  };
 
   /// Parse zero or more SSA comma-separated operand references with a specified
   /// surrounding delimiter, and an optional required operand count.

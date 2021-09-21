@@ -24,6 +24,8 @@ namespace detail {
 /// include state.
 class Parser {
 public:
+  using Delimiter = OpAsmParser::Delimiter;
+
   Builder builder;
 
   Parser(ParserState &state) : builder(state.context), state(state) {}
@@ -39,9 +41,20 @@ public:
                                function_ref<ParseResult()> parseElement,
                                bool allowEmptyList = true);
 
+  /// Parse a list of comma-separated items with an optional delimiter.  If a
+  /// delimiter is provided, then an empty list is allowed.  If not, then at
+  /// least one element will be parsed.
+  ParseResult
+  parseCommaSeparatedList(Delimiter delimiter,
+                          function_ref<ParseResult()> parseElementFn,
+                          StringRef contextMessage = StringRef());
+
   /// Parse a comma separated list of elements that must have at least one entry
   /// in it.
-  ParseResult parseCommaSeparatedList(function_ref<ParseResult()> parseElement);
+  ParseResult
+  parseCommaSeparatedList(function_ref<ParseResult()> parseElementFn) {
+    return parseCommaSeparatedList(Delimiter::None, parseElementFn);
+  }
 
   ParseResult parsePrettyDialectSymbolName(StringRef &prettyName);
 
@@ -276,7 +289,7 @@ public:
   ParseResult
   parseAffineMapOfSSAIds(AffineMap &map,
                          function_ref<ParseResult(bool)> parseElement,
-                         OpAsmParser::Delimiter delimiter);
+                         Delimiter delimiter);
 
   /// Parse an AffineExpr where dim and symbol identifiers are SSA ids.
   ParseResult

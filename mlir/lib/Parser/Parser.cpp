@@ -35,20 +35,90 @@ using llvm::SourceMgr;
 // Parser
 //===----------------------------------------------------------------------===//
 
-/// Parse a comma separated list of elements that must have at least one entry
-/// in it.
+/// Parse a list of comma-separated items with an optional delimiter.  If a
+/// delimiter is provided, then an empty list is allowed.  If not, then at
+/// least one element will be parsed.
 ParseResult
-Parser::parseCommaSeparatedList(function_ref<ParseResult()> parseElement) {
+Parser::parseCommaSeparatedList(Delimiter delimiter,
+                                function_ref<ParseResult()> parseElementFn,
+                                StringRef contextMessage) {
+  switch (delimiter) {
+  case Delimiter::None:
+    break;
+  case Delimiter::OptionalParen:
+    if (getToken().isNot(Token::l_paren))
+      return success();
+    LLVM_FALLTHROUGH;
+  case Delimiter::Paren:
+    if (parseToken(Token::l_paren, "expected '('" + contextMessage))
+      return failure();
+    // Check for empty list.
+    if (consumeIf(Token::r_paren))
+      return success();
+    break;
+  case Delimiter::OptionalLessGreater:
+    // Check for absent list.
+    if (getToken().isNot(Token::less))
+      return success();
+    LLVM_FALLTHROUGH;
+  case Delimiter::LessGreater:
+    if (parseToken(Token::less, "expected '<'" + contextMessage))
+      return success();
+    // Check for empty list.
+    if (consumeIf(Token::greater))
+      return success();
+    break;
+  case Delimiter::OptionalSquare:
+    if (getToken().isNot(Token::l_square))
+      return success();
+    LLVM_FALLTHROUGH;
+  case Delimiter::Square:
+    if (parseToken(Token::l_square, "expected '['" + contextMessage))
+      return failure();
+    // Check for empty list.
+    if (consumeIf(Token::r_square))
+      return success();
+    break;
+  case Delimiter::OptionalBraces:
+    if (getToken().isNot(Token::l_brace))
+      return success();
+    LLVM_FALLTHROUGH;
+  case Delimiter::Braces:
+    if (parseToken(Token::l_brace, "expected '{'" + contextMessage))
+      return failure();
+    // Check for empty list.
+    if (consumeIf(Token::r_brace))
+      return success();
+    break;
+  }
+
   // Non-empty case starts with an element.
-  if (parseElement())
+  if (parseElementFn())
     return failure();
 
   // Otherwise we have a list of comma separated elements.
   while (consumeIf(Token::comma)) {
-    if (parseElement())
+    if (parseElementFn())
       return failure();
   }
-  return success();
+
+  switch (delimiter) {
+  case Delimiter::None:
+    return success();
+  case Delimiter::OptionalParen:
+  case Delimiter::Paren:
+    return parseToken(Token::r_paren, "expected ')'" + contextMessage);
+  case Delimiter::OptionalLessGreater:
+  case Delimiter::LessGreater:
+    return parseToken(Token::greater, "expected '>'" + contextMessage);
+  case Delimiter::OptionalSquare:
+  case Delimiter::Square:
+    return parseToken(Token::r_square, "expected ']'" + contextMessage);
+  case Delimiter::OptionalBraces:
+  case Delimiter::Braces:
+    return parseToken(Token::r_brace, "expected '}'" + contextMessage);
+  }
+  llvm_unreachable("Unknown delimiter");
 }
 
 /// Parse a comma-separated list of elements, terminated with an arbitrary
@@ -1282,6 +1352,15 @@ public:
     return parser.parseOptionalInteger(result);
   }
 
+  /// Parse a list of comma-separated items with an optional delimiter.  If a
+  /// delimiter is provided, then an empty list is allowed.  If not, then at
+  /// least one element will be parsed.
+  ParseResult parseCommaSeparatedList(Delimiter delimiter,
+                                      function_ref<ParseResult()> parseElt,
+                                      StringRef contextMessage) override {
+    return parser.parseCommaSeparatedList(delimiter, parseElt, contextMessage);
+  }
+
   //===--------------------------------------------------------------------===//
   // Attribute Parsing
   //===--------------------------------------------------------------------===//
@@ -1467,67 +1546,37 @@ public:
                               Delimiter delimiter = Delimiter::None) {
     auto startLoc = parser.getToken().getLoc();
 
-    // Handle delimiters.
-    switch (delimiter) {
-    case Delimiter::None:
-      // Don't check for the absence of a delimiter if the number of operands
-      // is unknown (and hence the operand list could be empty).
-      if (requiredOperandCount == -1)
-        break;
-      // Token already matches an identifier and so can't be a delimiter.
-      if (parser.getToken().is(Token::percent_identifier))
-        break;
-      // Test against known delimiters.
-      if (parser.getToken().is(Token::l_paren) ||
-          parser.getToken().is(Token::l_square))
-        return emitError(startLoc, "unexpected delimiter");
-      return emitError(startLoc, "invalid operand");
-    case Delimiter::OptionalParen:
-      if (parser.getToken().isNot(Token::l_paren))
-        return success();
-      LLVM_FALLTHROUGH;
-    case Delimiter::Paren:
-      if (parser.parseToken(Token::l_paren, "expected '(' in operand list"))
-        return failure();
-      break;
-    case Delimiter::OptionalSquare:
-      if (parser.getToken().isNot(Token::l_square))
-        return success();
-      LLVM_FALLTHROUGH;
-    case Delimiter::Square:
-      if (parser.parseToken(Token::l_square, "expected '[' in operand list"))
-        return failure();
-      break;
+    // The no-delimiter case has some special handling for better diagnostics.
+    if (delimiter == Delimiter::None) {
+      // parseCommaSeparatedList doesn't handle the missing case for "none",
+      // so we handle it custom here.
+      if (parser.getToken().isNot(Token::percent_identifier)) {
+        // If we didn't require any operands or required exactly zero (weird)
+        // then this is success.
+        if (requiredOperandCount == -1 || requiredOperandCount == 0)
+          return success();
+
+        // Otherwise, try to produce a nice error message.
+        if (parser.getToken().is(Token::l_paren) ||
+            parser.getToken().is(Token::l_square))
+          return emitError(startLoc, "unexpected delimiter");
+        return emitError(startLoc, "invalid operand");
+      }
     }
 
-    // Check for zero operands.
-    if (parser.getToken().is(Token::percent_identifier)) {
-      do {
-        OperandType operandOrArg;
-        if (isOperandList ? parseOperand(operandOrArg)
-                          : parseRegionArgument(operandOrArg))
-          return failure();
-        result.push_back(operandOrArg);
-      } while (parser.consumeIf(Token::comma));
-    }
-
-    // Handle delimiters.   If we reach here, the optional delimiters were
-    // present, so we need to parse their closing one.
-    switch (delimiter) {
-    case Delimiter::None:
-      break;
-    case Delimiter::OptionalParen:
-    case Delimiter::Paren:
-      if (parser.parseToken(Token::r_paren, "expected ')' in operand list"))
+    auto parseOneOperand = [&]() -> ParseResult {
+      OperandType operandOrArg;
+      if (isOperandList ? parseOperand(operandOrArg)
+                        : parseRegionArgument(operandOrArg))
         return failure();
-      break;
-    case Delimiter::OptionalSquare:
-    case Delimiter::Square:
-      if (parser.parseToken(Token::r_square, "expected ']' in operand list"))
-        return failure();
-      break;
-    }
+      result.push_back(operandOrArg);
+      return success();
+    };
 
+    if (parseCommaSeparatedList(delimiter, parseOneOperand, " in operand list"))
+      return failure();
+
+    // Check that we got the expected # of elements.
     if (requiredOperandCount != -1 &&
         result.size() != static_cast<size_t>(requiredOperandCount))
       return emitError(startLoc, "expected ")

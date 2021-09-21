@@ -82,9 +82,8 @@ ParseResult Parser::parseFusedLocation(LocationAttr &loc) {
     return success();
   };
 
-  if (parseToken(Token::l_square, "expected '[' in fused location") ||
-      parseCommaSeparatedList(parseElt) ||
-      parseToken(Token::r_square, "expected ']' in fused location"))
+  if (parseCommaSeparatedList(Delimiter::Square, parseElt,
+                              " in fused location"))
     return failure();
 
   // Return the fused location.

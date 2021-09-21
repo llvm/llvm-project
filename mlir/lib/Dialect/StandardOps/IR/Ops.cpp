@@ -2197,13 +2197,12 @@ static ParseResult parseSwitchOpCases(
     SmallVectorImpl<Block *> &caseDestinations,
     SmallVectorImpl<SmallVector<OpAsmParser::OperandType>> &caseOperands,
     SmallVectorImpl<SmallVector<Type>> &caseOperandTypes) {
-  if (failed(parser.parseKeyword("default")) || failed(parser.parseColon()) ||
-      failed(parser.parseSuccessor(defaultDestination)))
+  if (parser.parseKeyword("default") || parser.parseColon() ||
+      parser.parseSuccessor(defaultDestination))
     return failure();
   if (succeeded(parser.parseOptionalLParen())) {
-    if (failed(parser.parseRegionArgumentList(defaultOperands)) ||
-        failed(parser.parseColonTypeList(defaultOperandTypes)) ||
-        failed(parser.parseRParen()))
+    if (parser.parseRegionArgumentList(defaultOperands) ||
+        parser.parseColonTypeList(defaultOperandTypes) || parser.parseRParen())
       return failure();
   }
 
