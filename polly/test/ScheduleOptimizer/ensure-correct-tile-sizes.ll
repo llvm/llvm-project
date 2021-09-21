@@ -31,7 +31,6 @@
 ; CHECK-NEXT:            for (int c3 = 0; c3 <= min(31, -32 * c1 + 2999); c3 += 1)
 ; CHECK-NEXT:              Stmt_for_body3(32 * c0 + c2, 32 * c1 + c3);
 ; CHECK-NEXT:        }
-; CHECK-NEXT:      // Inter iteration alias-free
 ; CHECK-NEXT:      // Register tiling - Tiles
 ; CHECK-NEXT:      for (int c0 = 0; c0 <= 23; c0 += 1)
 ; CHECK-NEXT:        for (int c1 = 0; c1 <= 2999; c1 += 1)

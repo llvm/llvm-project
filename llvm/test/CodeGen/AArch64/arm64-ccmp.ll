@@ -367,22 +367,7 @@ declare i32 @foo()
 define void @build_modify_expr() nounwind ssp {
 ; CHECK-LABEL: build_modify_expr:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    cmp w8, #37
-; CHECK-NEXT:    mov w8, #1
-; CHECK-NEXT:    lsl x8, x8, xzr
-; CHECK-NEXT:    mov x9, #31
-; CHECK-NEXT:    movk x9, #48, lsl #32
-; CHECK-NEXT:    and x8, x8, x9
-; CHECK-NEXT:    ccmp x8, #0, #4, ls
-; CHECK-NEXT:    b.eq LBB11_2
-; CHECK-NEXT:  ; %bb.1: ; %if.end85
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  LBB11_2: ; %sw.bb.i.i.preheader
-; CHECK-NEXT:    ; implicit-def: $x8
-; CHECK-NEXT:  LBB11_3: ; %sw.bb.i.i
-; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr x8, [x8, #32]
-; CHECK-NEXT:    b LBB11_3
 entry:
   switch i32 undef, label %sw.bb.i.i [
     i32 69, label %if.end85

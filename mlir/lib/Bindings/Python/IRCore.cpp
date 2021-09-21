@@ -2026,6 +2026,10 @@ void mlir::python::populateIRCore(py::module &m) {
   // Mapping of Operation.
   //----------------------------------------------------------------------------
   py::class_<PyOperationBase>(m, "_OperationBase", py::module_local())
+      .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
+                             [](PyOperationBase &self) {
+                               return self.getOperation().getCapsule();
+                             })
       .def("__eq__",
            [](PyOperationBase &self, PyOperationBase &other) {
              return &self.getOperation() == &other.getOperation();

@@ -429,7 +429,7 @@ def Tosa_AddOp : Tosa_Op<"add", [
 
   let description = [{
     Elementwise addition of input1 and input2. Axis of size 1 will be broadcast,
-    as necessary.  Rank of input tensors must match.
+    as necessary.
   }];
 
   let arguments = (ins
@@ -453,8 +453,7 @@ def Tosa_ArithmeticRightShiftOp : Tosa_Op<"arithmetic_right_shift", [
 
   let description = [{
     Elementwise arithmetic right shift of input1 by the amount specified in
-    input2. Axis of size 1 will be broadcast, as necessary.  Rank of input
-    tensors must match.
+    input2. Axis of size 1 will be broadcast, as necessary.
   }];
 
   let arguments = (ins
@@ -479,7 +478,7 @@ def Tosa_BitwiseAndOp : Tosa_Op<"bitwise_and", [
 
   let description = [{
     Elementwise bitwise AND of input1 and input2. Axis of size 1
-    will be broadcast as necessary. Rank of input tensors must match.
+    will be broadcast as necessary. 
   }];
 
   let arguments = (ins
@@ -503,7 +502,7 @@ def Tosa_BitwiseOrOp : Tosa_Op<"bitwise_or", [
 
   let description = [{
     Elementwise bitwise OR of input1 and input2. Axis of size 1 will be
-    broadcast as necessary. Rank of input tensors must match.
+    broadcast as necessary.
   }];
 
   let arguments = (ins
@@ -527,7 +526,7 @@ def Tosa_BitwiseXorOp : Tosa_Op<"bitwise_xor", [
 
   let description = [{
     Elementwise bitwise XOR of input1 and input2. Axis of size 1 will be
-    broadcast as necessary. Rank of input tensors must match.
+    broadcast as necessary.
   }];
 
   let arguments = (ins
@@ -551,7 +550,7 @@ def Tosa_DivOp : Tosa_Op<"div", [
 
   let description = [{
     Elementwise integer divide operator of input1 by input2. Axis of size 1
-    will be broadcast, as necessary. Rank of input tensors must match.
+    will be broadcast, as necessary.
   }];
 
   let arguments = (ins
@@ -575,7 +574,7 @@ def Tosa_LogicalAndOp : Tosa_Op<"logical_and", [
 
   let description = [{
     Elementwise logical AND of input1 and input2. Axis of size 1 will be
-    broadcast, as necessary.  Rank of input tensors must match.
+    broadcast, as necessary.
   }];
 
   let arguments = (ins
@@ -599,7 +598,7 @@ def Tosa_LogicalLeftShiftOp : Tosa_Op<"logical_left_shift", [
 
   let description = [{
     Elementwise left shift of input1 and input2. Axis of size 1 will be
-    broadcast, as necessary. Rank of input tensors must match.
+    broadcast, as necessary.
   }];
 
   let arguments = (ins
@@ -624,7 +623,6 @@ def Tosa_LogicalRightShiftOp : Tosa_Op<"logical_right_shift", [
   let description = [{
     Elementwise logical right shift of input1 by the amount specified in input2.
     Axis of size 1 will be broadcast, as necessary.
-    Rank of input tensors must match.
   }];
 
   let arguments = (ins
@@ -648,7 +646,7 @@ def Tosa_LogicalOrOp : Tosa_Op<"logical_or", [
 
   let description = [{
     Elementwise logical OR of input1 and input2. Axis of size 1 will be
-    broadcast as necessary. Rank of input tensors must match.
+    broadcast as necessary.
   }];
 
   let arguments = (ins
@@ -672,7 +670,7 @@ def Tosa_LogicalXorOp : Tosa_Op<"logical_xor", [
 
   let description = [{
     Elementwise logical XOR of input1 and input2.  Axis of size 1 will be
-    broadcast as necessary. Rank of input tensors must match.
+    broadcast as necessary.
   }];
 
   let arguments = (ins
@@ -696,7 +694,7 @@ def Tosa_MaximumOp : Tosa_Op<"maximum", [
 
   let description = [{
     Elementwise max of input1 and input2. Axis of size 1 will be broadcast, as
-    necessary.  Rank of input tensors must match.
+    necessary.
   }];
 
   let arguments = (ins
@@ -720,7 +718,7 @@ def Tosa_MinimumOp : Tosa_Op<"minimum", [
 
   let description = [{
     Elementwise minimum of input1 and input2. Axis of size 1
-    will be broadcast, as necessary.  Rank of input tensors must match.
+    will be broadcast, as necessary.
   }];
 
   let arguments = (ins
@@ -745,7 +743,6 @@ def Tosa_MulOp : Tosa_Op<"mul", [
   let description = [{
     Elementwise multiplication (Hadamard product) of input1 and input2.
     Axis of size 1 will be broadcast, as necessary.
-    Rank of input tensors must match.
   }];
 
   let arguments = (ins
@@ -771,7 +768,6 @@ def Tosa_PowOp : Tosa_Op<"pow", [
   let description = [{
     Elementwise input1 raised to the power of input2.
     Axis of size 1 will be broadcast, as necessary.
-    Rank of input tensors must match.
   }];
 
   let arguments = (ins
@@ -795,7 +791,7 @@ def Tosa_SubOp : Tosa_Op<"sub", [
 
   let description = [{
     Elementwise subtraction of input1 and input2. Axis of size 1 will be
-    broadcast as necessary.  Rank of input tensors must match.
+    broadcast as necessary.
   }];
 
   let arguments = (ins

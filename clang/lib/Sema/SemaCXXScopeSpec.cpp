@@ -442,7 +442,7 @@ bool Sema::isNonTypeNestedNameSpecifier(Scope *S, CXXScopeSpec &SS,
 namespace {
 
 // Callback to only accept typo corrections that can be a valid C++ member
-// intializer: either a non-static field member or a base class.
+// initializer: either a non-static field member or a base class.
 class NestedNameSpecifierValidatorCCC final
     : public CorrectionCandidateCallback {
 public:

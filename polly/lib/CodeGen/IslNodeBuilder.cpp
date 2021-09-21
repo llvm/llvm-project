@@ -423,10 +423,6 @@ void IslNodeBuilder::createMark(__isl_take isl_ast_node *Node) {
     isl_id_free(Id);
     return;
   }
-  if (strcmp(isl_id_get_name(Id), "Inter iteration alias-free") == 0) {
-    auto *BasePtr = static_cast<Value *>(isl_id_get_user(Id));
-    Annotator.addInterIterationAliasFreeBasePtr(BasePtr);
-  }
 
   BandAttr *ChildLoopAttr = getLoopAttr(isl::manage_copy(Id));
   BandAttr *AncestorLoopAttr;

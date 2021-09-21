@@ -915,20 +915,6 @@ isolateAndUnrollMatMulInnerLoops(isl::schedule_node Node,
   return Node;
 }
 
-/// Mark @p BasePtr with "Inter iteration alias-free" mark node.
-///
-/// @param Node The child of the mark node to be inserted.
-/// @param BasePtr The pointer to be marked.
-/// @return The modified isl_schedule_node.
-static isl::schedule_node markInterIterationAliasFree(isl::schedule_node Node,
-                                                      Value *BasePtr) {
-  if (!BasePtr)
-    return Node;
-
-  auto Id = isl::id::alloc(Node.ctx(), "Inter iteration alias-free", BasePtr);
-  return Node.insert_mark(Id).child(0);
-}
-
 /// Insert "Loop Vectorizer Disabled" mark node.
 ///
 /// @param Node The child of the mark node to be inserted.
@@ -970,8 +956,6 @@ static isl::schedule_node optimizeMatMulPattern(isl::schedule_node Node,
                                                 const TargetTransformInfo *TTI,
                                                 MatMulInfoTy &MMI) {
   assert(TTI && "The target transform info should be provided.");
-  Node = markInterIterationAliasFree(
-      Node, MMI.WriteToC->getLatestScopArrayInfo()->getBasePtr());
   int DimOutNum = isl_schedule_node_band_n_member(Node.get());
   assert(DimOutNum > 2 && "In case of the matrix multiplication the loop nest "
                           "and, consequently, the corresponding scheduling "

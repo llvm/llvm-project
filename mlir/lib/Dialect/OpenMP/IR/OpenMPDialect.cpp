@@ -77,22 +77,16 @@ static ParseResult
 parseOperandAndTypeList(OpAsmParser &parser,
                         SmallVectorImpl<OpAsmParser::OperandType> &operands,
                         SmallVectorImpl<Type> &types) {
-  if (parser.parseLParen())
-    return failure();
-
-  do {
-    OpAsmParser::OperandType operand;
-    Type type;
-    if (parser.parseOperand(operand) || parser.parseColonType(type))
-      return failure();
-    operands.push_back(operand);
-    types.push_back(type);
-  } while (succeeded(parser.parseOptionalComma()));
-
-  if (parser.parseRParen())
-    return failure();
-
-  return success();
+  return parser.parseCommaSeparatedList(
+      OpAsmParser::Delimiter::Paren, [&]() -> ParseResult {
+        OpAsmParser::OperandType operand;
+        Type type;
+        if (parser.parseOperand(operand) || parser.parseColonType(type))
+          return failure();
+        operands.push_back(operand);
+        types.push_back(type);
+        return success();
+      });
 }
 
 /// Parse an allocate clause with allocators and a list of operands with types.
@@ -108,30 +102,24 @@ static ParseResult parseAllocateAndAllocator(
     SmallVectorImpl<Type> &typesAllocate,
     SmallVectorImpl<OpAsmParser::OperandType> &operandsAllocator,
     SmallVectorImpl<Type> &typesAllocator) {
-  if (parser.parseLParen())
-    return failure();
 
-  do {
-    OpAsmParser::OperandType operand;
-    Type type;
+  return parser.parseCommaSeparatedList(
+      OpAsmParser::Delimiter::Paren, [&]() -> ParseResult {
+        OpAsmParser::OperandType operand;
+        Type type;
+        if (parser.parseOperand(operand) || parser.parseColonType(type))
+          return failure();
+        operandsAllocator.push_back(operand);
+        typesAllocator.push_back(type);
+        if (parser.parseArrow())
+          return failure();
+        if (parser.parseOperand(operand) || parser.parseColonType(type))
+          return failure();
 
-    if (parser.parseOperand(operand) || parser.parseColonType(type))
-      return failure();
-    operandsAllocator.push_back(operand);
-    typesAllocator.push_back(type);
-    if (parser.parseArrow())
-      return failure();
-    if (parser.parseOperand(operand) || parser.parseColonType(type))
-      return failure();
-
-    operandsAllocate.push_back(operand);
-    typesAllocate.push_back(type);
-  } while (succeeded(parser.parseOptionalComma()));
-
-  if (parser.parseRParen())
-    return failure();
-
-  return success();
+        operandsAllocate.push_back(operand);
+        typesAllocate.push_back(type);
+        return success();
+      });
 }
 
 static LogicalResult verifyParallelOp(ParallelOp op) {

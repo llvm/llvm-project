@@ -59,7 +59,7 @@ static LLT getPow2ScalarType(LLT Ty) {
   return LLT::scalar(Pow2Bits);
 }
 
-/// \returs true if this is an odd sized vector which should widen by adding an
+/// \returns true if this is an odd sized vector which should widen by adding an
 /// additional element. This is mostly to handle <3 x s16> -> <4 x s16>. This
 /// excludes s1 vectors, which should always be scalarized.
 static LegalityPredicate isSmallOddVector(unsigned TypeIdx) {
@@ -2487,7 +2487,7 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
   buildPCRelGlobalAddress(GOTAddr, PtrTy, B, GV, 0, SIInstrInfo::MO_GOTPCREL32);
 
   if (Ty.getSizeInBits() == 32) {
-    // Truncate if this is a 32-bit constant adrdess.
+    // Truncate if this is a 32-bit constant address.
     auto Load = B.buildLoad(PtrTy, GOTAddr, *GOTMMO);
     B.buildExtract(DstReg, Load, 0);
   } else
@@ -2989,7 +2989,7 @@ void AMDGPULegalizerInfo::legalizeUnsignedDIV_REM32Impl(MachineIRBuilder &B,
     B.buildSelect(DstRemReg, Cond, B.buildSub(S32, R, Y), R);
 }
 
-// Build integer reciprocal sequence arounud V_RCP_IFLAG_F32
+// Build integer reciprocal sequence around V_RCP_IFLAG_F32
 //
 // Return lo, hi of result
 //
@@ -4322,8 +4322,8 @@ static void convertImageAddrToPacked(MachineIRBuilder &B, MachineInstr &MI,
 /// to exposes all register repacking to the legalizer/combiners. We also don't
 /// want a selected instrution entering RegBankSelect. In order to avoid
 /// defining a multitude of intermediate image instructions, directly hack on
-/// the intrinsic's arguments. In cases like a16 addreses, this requires padding
-/// now unnecessary arguments with $noreg.
+/// the intrinsic's arguments. In cases like a16 addresses, this requires
+/// padding now unnecessary arguments with $noreg.
 bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     MachineInstr &MI, MachineIRBuilder &B, GISelChangeObserver &Observer,
     const AMDGPU::ImageDimIntrinsicInfo *Intr) const {
@@ -4594,7 +4594,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   MI.getOperand(0).setReg(NewResultReg);
 
   // In the IR, TFE is supposed to be used with a 2 element struct return
-  // type. The intruction really returns these two values in one contiguous
+  // type. The instruction really returns these two values in one contiguous
   // register, with one additional dword beyond the loaded data. Rewrite the
   // return type to use a single register result.
 
@@ -4806,7 +4806,7 @@ bool AMDGPULegalizerInfo::legalizeTrapHsa(
 
 bool AMDGPULegalizerInfo::legalizeDebugTrapIntrinsic(
     MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
-  // Is non-HSA path or trap-handler disabled? then, report a warning
+  // Is non-HSA path or trap-handler disabled? Then, report a warning
   // accordingly
   if (!ST.isTrapHandlerEnabled() ||
       ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA) {

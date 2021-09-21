@@ -9929,23 +9929,23 @@ Optional<bool> ScalarEvolution::evaluatePredicate(ICmpInst::Predicate Pred,
 
 bool ScalarEvolution::isKnownPredicateAt(ICmpInst::Predicate Pred,
                                          const SCEV *LHS, const SCEV *RHS,
-                                         const Instruction *Context) {
+                                         const Instruction *CtxI) {
   // TODO: Analyze guards and assumes from Context's block.
   return isKnownPredicate(Pred, LHS, RHS) ||
-         isBasicBlockEntryGuardedByCond(Context->getParent(), Pred, LHS, RHS);
+         isBasicBlockEntryGuardedByCond(CtxI->getParent(), Pred, LHS, RHS);
 }
 
-Optional<bool>
-ScalarEvolution::evaluatePredicateAt(ICmpInst::Predicate Pred, const SCEV *LHS,
-                                     const SCEV *RHS,
-                                     const Instruction *Context) {
+Optional<bool> ScalarEvolution::evaluatePredicateAt(ICmpInst::Predicate Pred,
+                                                    const SCEV *LHS,
+                                                    const SCEV *RHS,
+                                                    const Instruction *CtxI) {
   Optional<bool> KnownWithoutContext = evaluatePredicate(Pred, LHS, RHS);
   if (KnownWithoutContext)
     return KnownWithoutContext;
 
-  if (isBasicBlockEntryGuardedByCond(Context->getParent(), Pred, LHS, RHS))
+  if (isBasicBlockEntryGuardedByCond(CtxI->getParent(), Pred, LHS, RHS))
     return true;
-  else if (isBasicBlockEntryGuardedByCond(Context->getParent(),
+  else if (isBasicBlockEntryGuardedByCond(CtxI->getParent(),
                                           ICmpInst::getInversePredicate(Pred),
                                           LHS, RHS))
     return false;
@@ -10075,7 +10075,7 @@ ScalarEvolution::getLoopInvariantPredicate(ICmpInst::Predicate Pred,
 Optional<ScalarEvolution::LoopInvariantPredicate>
 ScalarEvolution::getLoopInvariantExitCondDuringFirstIterations(
     ICmpInst::Predicate Pred, const SCEV *LHS, const SCEV *RHS, const Loop *L,
-    const Instruction *Context, const SCEV *MaxIter) {
+    const Instruction *CtxI, const SCEV *MaxIter) {
   // Try to prove the following set of facts:
   // - The predicate is monotonic in the iteration space.
   // - If the check does not fail on the 1st iteration:
@@ -10129,7 +10129,7 @@ ScalarEvolution::getLoopInvariantExitCondDuringFirstIterations(
   if (Step == MinusOne)
     NoOverflowPred = CmpInst::getSwappedPredicate(NoOverflowPred);
   const SCEV *Start = AR->getStart();
-  if (!isKnownPredicateAt(NoOverflowPred, Start, Last, Context))
+  if (!isKnownPredicateAt(NoOverflowPred, Start, Last, CtxI))
     return None;
 
   // Everything is fine.
@@ -10466,12 +10466,12 @@ bool ScalarEvolution::isBasicBlockEntryGuardedByCond(const BasicBlock *BB,
 
   // Try to prove (Pred, LHS, RHS) using isImpliedCond.
   auto ProveViaCond = [&](const Value *Condition, bool Inverse) {
-    const Instruction *Context = &BB->front();
-    if (isImpliedCond(Pred, LHS, RHS, Condition, Inverse, Context))
+    const Instruction *CtxI = &BB->front();
+    if (isImpliedCond(Pred, LHS, RHS, Condition, Inverse, CtxI))
       return true;
     if (ProvingStrictComparison) {
       auto ProofFn = [&](ICmpInst::Predicate P) {
-        return isImpliedCond(P, LHS, RHS, Condition, Inverse, Context);
+        return isImpliedCond(P, LHS, RHS, Condition, Inverse, CtxI);
       };
       if (SplitAndProve(ProofFn))
         return true;
@@ -10543,7 +10543,7 @@ bool ScalarEvolution::isLoopEntryGuardedByCond(const Loop *L,
 bool ScalarEvolution::isImpliedCond(ICmpInst::Predicate Pred, const SCEV *LHS,
                                     const SCEV *RHS,
                                     const Value *FoundCondValue, bool Inverse,
-                                    const Instruction *Context) {
+                                    const Instruction *CtxI) {
   // False conditions implies anything. Do not bother analyzing it further.
   if (FoundCondValue ==
       ConstantInt::getBool(FoundCondValue->getContext(), Inverse))
@@ -10559,12 +10559,12 @@ bool ScalarEvolution::isImpliedCond(ICmpInst::Predicate Pred, const SCEV *LHS,
   const Value *Op0, *Op1;
   if (match(FoundCondValue, m_LogicalAnd(m_Value(Op0), m_Value(Op1)))) {
     if (!Inverse)
-      return isImpliedCond(Pred, LHS, RHS, Op0, Inverse, Context) ||
-              isImpliedCond(Pred, LHS, RHS, Op1, Inverse, Context);
+      return isImpliedCond(Pred, LHS, RHS, Op0, Inverse, CtxI) ||
+             isImpliedCond(Pred, LHS, RHS, Op1, Inverse, CtxI);
   } else if (match(FoundCondValue, m_LogicalOr(m_Value(Op0), m_Value(Op1)))) {
     if (Inverse)
-      return isImpliedCond(Pred, LHS, RHS, Op0, Inverse, Context) ||
-              isImpliedCond(Pred, LHS, RHS, Op1, Inverse, Context);
+      return isImpliedCond(Pred, LHS, RHS, Op0, Inverse, CtxI) ||
+             isImpliedCond(Pred, LHS, RHS, Op1, Inverse, CtxI);
   }
 
   const ICmpInst *ICI = dyn_cast<ICmpInst>(FoundCondValue);
@@ -10581,14 +10581,14 @@ bool ScalarEvolution::isImpliedCond(ICmpInst::Predicate Pred, const SCEV *LHS,
   const SCEV *FoundLHS = getSCEV(ICI->getOperand(0));
   const SCEV *FoundRHS = getSCEV(ICI->getOperand(1));
 
-  return isImpliedCond(Pred, LHS, RHS, FoundPred, FoundLHS, FoundRHS, Context);
+  return isImpliedCond(Pred, LHS, RHS, FoundPred, FoundLHS, FoundRHS, CtxI);
 }
 
 bool ScalarEvolution::isImpliedCond(ICmpInst::Predicate Pred, const SCEV *LHS,
                                     const SCEV *RHS,
                                     ICmpInst::Predicate FoundPred,
                                     const SCEV *FoundLHS, const SCEV *FoundRHS,
-                                    const Instruction *Context) {
+                                    const Instruction *CtxI) {
   // Balance the types.
   if (getTypeSizeInBits(LHS->getType()) <
       getTypeSizeInBits(FoundLHS->getType())) {
@@ -10606,7 +10606,7 @@ bool ScalarEvolution::isImpliedCond(ICmpInst::Predicate Pred, const SCEV *LHS,
         const SCEV *TruncFoundLHS = getTruncateExpr(FoundLHS, NarrowType);
         const SCEV *TruncFoundRHS = getTruncateExpr(FoundRHS, NarrowType);
         if (isImpliedCondBalancedTypes(Pred, LHS, RHS, FoundPred, TruncFoundLHS,
-                                       TruncFoundRHS, Context))
+                                       TruncFoundRHS, CtxI))
           return true;
       }
     }
@@ -10633,13 +10633,13 @@ bool ScalarEvolution::isImpliedCond(ICmpInst::Predicate Pred, const SCEV *LHS,
     }
   }
   return isImpliedCondBalancedTypes(Pred, LHS, RHS, FoundPred, FoundLHS,
-                                    FoundRHS, Context);
+                                    FoundRHS, CtxI);
 }
 
 bool ScalarEvolution::isImpliedCondBalancedTypes(
     ICmpInst::Predicate Pred, const SCEV *LHS, const SCEV *RHS,
     ICmpInst::Predicate FoundPred, const SCEV *FoundLHS, const SCEV *FoundRHS,
-    const Instruction *Context) {
+    const Instruction *CtxI) {
   assert(getTypeSizeInBits(LHS->getType()) ==
              getTypeSizeInBits(FoundLHS->getType()) &&
          "Types should be balanced!");
@@ -10665,7 +10665,7 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
 
   // Check whether the found predicate is the same as the desired predicate.
   if (FoundPred == Pred)
-    return isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, Context);
+    return isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI);
 
   // Check whether swapping the found predicate makes it the same as the
   // desired predicate.
@@ -10681,22 +10681,22 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
     // do this if it would break canonical constant/addrec ordering.
     if (!isa<SCEVConstant>(RHS) && !isa<SCEVAddRecExpr>(LHS))
       return isImpliedCondOperands(FoundPred, RHS, LHS, FoundLHS, FoundRHS,
-                                   Context);
+                                   CtxI);
     if (!isa<SCEVConstant>(FoundRHS) && !isa<SCEVAddRecExpr>(FoundLHS))
-      return isImpliedCondOperands(Pred, LHS, RHS, FoundRHS, FoundLHS, Context);
+      return isImpliedCondOperands(Pred, LHS, RHS, FoundRHS, FoundLHS, CtxI);
 
     // There's no clear preference between forms 3. and 4., try both.  Avoid
     // forming getNotSCEV of pointer values as the resulting subtract is
     // not legal.
     if (!LHS->getType()->isPointerTy() && !RHS->getType()->isPointerTy() &&
         isImpliedCondOperands(FoundPred, getNotSCEV(LHS), getNotSCEV(RHS),
-                              FoundLHS, FoundRHS, Context))
+                              FoundLHS, FoundRHS, CtxI))
       return true;
 
     if (!FoundLHS->getType()->isPointerTy() &&
         !FoundRHS->getType()->isPointerTy() &&
         isImpliedCondOperands(Pred, LHS, RHS, getNotSCEV(FoundLHS),
-                              getNotSCEV(FoundRHS), Context))
+                              getNotSCEV(FoundRHS), CtxI))
       return true;
 
     return false;
@@ -10708,7 +10708,7 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
       CmpInst::getSignedPredicate(FoundPred) == Pred &&
       ((isKnownNonNegative(FoundLHS) && isKnownNonNegative(FoundRHS)) ||
        (isKnownNegative(FoundLHS) && isKnownNegative(FoundRHS))))
-    return isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, Context);
+    return isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI);
 
   // Check if we can make progress by sharpening ranges.
   if (FoundPred == ICmpInst::ICMP_NE &&
@@ -10746,7 +10746,7 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
           // We know V `Pred` SharperMin.  If this implies LHS `Pred`
           // RHS, we're done.
           if (isImpliedCondOperands(Pred, LHS, RHS, V, getConstant(SharperMin),
-                                    Context))
+                                    CtxI))
             return true;
           LLVM_FALLTHROUGH;
 
@@ -10761,8 +10761,7 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
           //
           // If V `Pred` Min implies LHS `Pred` RHS, we're done.
 
-          if (isImpliedCondOperands(Pred, LHS, RHS, V, getConstant(Min),
-                                    Context))
+          if (isImpliedCondOperands(Pred, LHS, RHS, V, getConstant(Min), CtxI))
             return true;
           break;
 
@@ -10770,14 +10769,14 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
         case ICmpInst::ICMP_SLE:
         case ICmpInst::ICMP_ULE:
           if (isImpliedCondOperands(CmpInst::getSwappedPredicate(Pred), RHS,
-                                    LHS, V, getConstant(SharperMin), Context))
+                                    LHS, V, getConstant(SharperMin), CtxI))
             return true;
           LLVM_FALLTHROUGH;
 
         case ICmpInst::ICMP_SLT:
         case ICmpInst::ICMP_ULT:
           if (isImpliedCondOperands(CmpInst::getSwappedPredicate(Pred), RHS,
-                                    LHS, V, getConstant(Min), Context))
+                                    LHS, V, getConstant(Min), CtxI))
             return true;
           break;
 
@@ -10791,12 +10790,11 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
   // Check whether the actual condition is beyond sufficient.
   if (FoundPred == ICmpInst::ICMP_EQ)
     if (ICmpInst::isTrueWhenEqual(Pred))
-      if (isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, Context))
+      if (isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI))
         return true;
   if (Pred == ICmpInst::ICMP_NE)
     if (!ICmpInst::isTrueWhenEqual(FoundPred))
-      if (isImpliedCondOperands(FoundPred, LHS, RHS, FoundLHS, FoundRHS,
-                                Context))
+      if (isImpliedCondOperands(FoundPred, LHS, RHS, FoundLHS, FoundRHS, CtxI))
         return true;
 
   // Otherwise assume the worst.
@@ -10877,7 +10875,7 @@ Optional<APInt> ScalarEvolution::computeConstantDifference(const SCEV *More,
 
 bool ScalarEvolution::isImpliedCondOperandsViaAddRecStart(
     ICmpInst::Predicate Pred, const SCEV *LHS, const SCEV *RHS,
-    const SCEV *FoundLHS, const SCEV *FoundRHS, const Instruction *Context) {
+    const SCEV *FoundLHS, const SCEV *FoundRHS, const Instruction *CtxI) {
   // Try to recognize the following pattern:
   //
   //   FoundRHS = ...
@@ -10891,9 +10889,9 @@ bool ScalarEvolution::isImpliedCondOperandsViaAddRecStart(
   // each iteration of this loop, including the first iteration. Therefore, in
   // this case, `FoundLHS Pred FoundRHS` implies `Start Pred FoundRHS`. Try to
   // prove the original pred using this fact.
-  if (!Context)
+  if (!CtxI)
     return false;
-  const BasicBlock *ContextBB = Context->getParent();
+  const BasicBlock *ContextBB = CtxI->getParent();
   // Make sure AR varies in the context block.
   if (auto *AR = dyn_cast<SCEVAddRecExpr>(FoundLHS)) {
     const Loop *L = AR->getLoop();
@@ -11115,7 +11113,7 @@ bool ScalarEvolution::isImpliedCondOperands(ICmpInst::Predicate Pred,
                                             const SCEV *LHS, const SCEV *RHS,
                                             const SCEV *FoundLHS,
                                             const SCEV *FoundRHS,
-                                            const Instruction *Context) {
+                                            const Instruction *CtxI) {
   if (isImpliedCondOperandsViaRanges(Pred, LHS, RHS, FoundLHS, FoundRHS))
     return true;
 
@@ -11123,7 +11121,7 @@ bool ScalarEvolution::isImpliedCondOperands(ICmpInst::Predicate Pred,
     return true;
 
   if (isImpliedCondOperandsViaAddRecStart(Pred, LHS, RHS, FoundLHS, FoundRHS,
-                                          Context))
+                                          CtxI))
     return true;
 
   return isImpliedCondOperandsHelper(Pred, LHS, RHS,

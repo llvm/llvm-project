@@ -285,6 +285,8 @@ public:
 
   ItTy getCurrent() { return this->I; }
 
+  const FuncTy &getFunction() const { return F; }
+
   FuncReturnTy operator*() const { return F(*this->I); }
 
 private:
