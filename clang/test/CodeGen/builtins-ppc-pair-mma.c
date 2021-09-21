@@ -1049,8 +1049,8 @@ void test65(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
 // CHECK-NEXT:    ret void
 //
 void test66(const __vector_pair *vpp, const __vector_pair *vp2) {
-  __vector_pair vp = __builtin_vsx_lxvp(0LL, vpp);
-  __builtin_vsx_stxvp(vp, 0LL, vp2);
+  __vector_pair vp = __builtin_vsx_lxvp(0L, vpp);
+  __builtin_vsx_stxvp(vp, 0L, vp2);
 }
 
 // CHECK-LABEL: @test67(
@@ -1063,7 +1063,7 @@ void test66(const __vector_pair *vpp, const __vector_pair *vp2) {
 // CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
 // CHECK-NEXT:    ret void
 //
-void test67(const __vector_pair *vpp, signed long long offset, const __vector_pair *vp2) {
+void test67(const __vector_pair *vpp, signed long offset, const __vector_pair *vp2) {
   __vector_pair vp = __builtin_vsx_lxvp(offset, vpp);
   __builtin_vsx_stxvp(vp, offset, vp2);
 }
@@ -1079,8 +1079,8 @@ void test67(const __vector_pair *vpp, signed long long offset, const __vector_pa
 // CHECK-NEXT:    ret void
 //
 void test68(const __vector_pair *vpp, const __vector_pair *vp2) {
-  __vector_pair vp = __builtin_vsx_lxvp(18LL, vpp);
-  __builtin_vsx_stxvp(vp, 18LL, vp2);
+  __vector_pair vp = __builtin_vsx_lxvp(18L, vpp);
+  __builtin_vsx_stxvp(vp, 18L, vp2);
 }
 
 // CHECK-LABEL: @test69(
@@ -1094,8 +1094,8 @@ void test68(const __vector_pair *vpp, const __vector_pair *vp2) {
 // CHECK-NEXT:    ret void
 //
 void test69(const __vector_pair *vpp, const __vector_pair *vp2) {
-  __vector_pair vp = __builtin_vsx_lxvp(1LL, vpp);
-  __builtin_vsx_stxvp(vp, 1LL, vp2);
+  __vector_pair vp = __builtin_vsx_lxvp(1L, vpp);
+  __builtin_vsx_stxvp(vp, 1L, vp2);
 }
 
 // CHECK-LABEL: @test70(
@@ -1109,8 +1109,8 @@ void test69(const __vector_pair *vpp, const __vector_pair *vp2) {
 // CHECK-NEXT:    ret void
 //
 void test70(const __vector_pair *vpp, const __vector_pair *vp2) {
-  __vector_pair vp = __builtin_vsx_lxvp(42LL, vpp);
-  __builtin_vsx_stxvp(vp, 42LL, vp2);
+  __vector_pair vp = __builtin_vsx_lxvp(42L, vpp);
+  __builtin_vsx_stxvp(vp, 42L, vp2);
 }
 
 // CHECK-LABEL: @test71(
@@ -1124,8 +1124,8 @@ void test70(const __vector_pair *vpp, const __vector_pair *vp2) {
 // CHECK-NEXT:    ret void
 //
 void test71(const __vector_pair *vpp, const __vector_pair *vp2) {
-  __vector_pair vp = __builtin_vsx_lxvp(32768LL, vpp);
-  __builtin_vsx_stxvp(vp, 32768LL, vp2);
+  __vector_pair vp = __builtin_vsx_lxvp(32768L, vpp);
+  __builtin_vsx_stxvp(vp, 32768L, vp2);
 }
 
 // CHECK-LABEL: @test72(
@@ -1139,8 +1139,8 @@ void test71(const __vector_pair *vpp, const __vector_pair *vp2) {
 // CHECK-NEXT:    ret void
 //
 void test72(const __vector_pair *vpp, const __vector_pair *vp2) {
-  __vector_pair vp = __builtin_vsx_lxvp(32799LL, vpp);
-  __builtin_vsx_stxvp(vp, 32799LL, vp2);
+  __vector_pair vp = __builtin_vsx_lxvp(32799L, vpp);
+  __builtin_vsx_stxvp(vp, 32799L, vp2);
 }
 
 // CHECK-LABEL: @test73(
@@ -1157,7 +1157,7 @@ void test72(const __vector_pair *vpp, const __vector_pair *vp2) {
 //
 void test73(unsigned char *vqp, const __vector_pair *vpp, vector unsigned char vc, unsigned char *resp) {
   __vector_quad vq = *((__vector_quad *)vqp);
-  __vector_pair vp = __builtin_vsx_lxvp(8LL, vpp);
+  __vector_pair vp = __builtin_vsx_lxvp(8L, vpp);
   __builtin_mma_pmxvf64gernn(&vq, vp, vc, 0, 0);
   *((__vector_quad *)resp) = vq;
 }
@@ -1175,7 +1175,7 @@ void test73(unsigned char *vqp, const __vector_pair *vpp, vector unsigned char v
 //
 void test74(unsigned char *vqp, const __vector_pair *vpp, vector unsigned char vc, unsigned char *resp) {
   __vector_quad vq = *((__vector_quad *)vqp);
-  __vector_pair vp = __builtin_vsx_lxvp(0LL, vpp);
+  __vector_pair vp = __builtin_vsx_lxvp(0L, vpp);
   __builtin_mma_xvf64gernp(&vq, vp, vc);
   *((__vector_quad *)resp) = vq;
 }
@@ -1192,7 +1192,7 @@ void test74(unsigned char *vqp, const __vector_pair *vpp, vector unsigned char v
 // CHECK-NEXT:    store <512 x i1> [[TMP5]], <512 x i1>* [[TMP6]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    ret void
 //
-void test75(unsigned char *vqp, signed long long offs, const __vector_pair *vpp, vector unsigned char vc, unsigned char *resp) {
+void test75(unsigned char *vqp, signed long offs, const __vector_pair *vpp, vector unsigned char vc, unsigned char *resp) {
   __vector_quad vq = *((__vector_quad *)vqp);
   __vector_pair vp = __builtin_vsx_lxvp(offs, vpp);
   __builtin_mma_xvf64gernp(&vq, vp, vc);
@@ -1241,8 +1241,8 @@ void test77(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
 // CHECK-NEXT:    ret void
 //
 void test78(const __vector_pair *vpp, const __vector_pair *vp2) {
-  __vector_pair vp = __builtin_mma_lxvp(0LL, vpp);
-  __builtin_mma_stxvp(vp, 0LL, vp2);
+  __vector_pair vp = __builtin_mma_lxvp(0L, vpp);
+  __builtin_mma_stxvp(vp, 0L, vp2);
 }
 
 // CHECK-LABEL: @test79(
@@ -1255,7 +1255,7 @@ void test78(const __vector_pair *vpp, const __vector_pair *vp2) {
 // CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
 // CHECK-NEXT:    ret void
 //
-void test79(const __vector_pair *vpp, signed long long offset, const __vector_pair *vp2) {
+void test79(const __vector_pair *vpp, signed long offset, const __vector_pair *vp2) {
   __vector_pair vp = __builtin_mma_lxvp(offset, vpp);
   __builtin_mma_stxvp(vp, offset, vp2);
 }
@@ -1271,8 +1271,8 @@ void test79(const __vector_pair *vpp, signed long long offset, const __vector_pa
 // CHECK-NEXT:    ret void
 //
 void test80(const __vector_pair *vpp, const __vector_pair *vp2) {
-  __vector_pair vp = __builtin_mma_lxvp(18LL, vpp);
-  __builtin_mma_stxvp(vp, 18LL, vp2);
+  __vector_pair vp = __builtin_mma_lxvp(18L, vpp);
+  __builtin_mma_stxvp(vp, 18L, vp2);
 }
 
 // CHECK-LABEL: @test81(
@@ -1286,8 +1286,8 @@ void test80(const __vector_pair *vpp, const __vector_pair *vp2) {
 // CHECK-NEXT:    ret void
 //
 void test81(const __vector_pair *vpp, const __vector_pair *vp2) {
-  __vector_pair vp = __builtin_mma_lxvp(1LL, vpp);
-  __builtin_mma_stxvp(vp, 1LL, vp2);
+  __vector_pair vp = __builtin_mma_lxvp(1L, vpp);
+  __builtin_mma_stxvp(vp, 1L, vp2);
 }
 
 // CHECK-LABEL: @test82(
@@ -1301,8 +1301,8 @@ void test81(const __vector_pair *vpp, const __vector_pair *vp2) {
 // CHECK-NEXT:    ret void
 //
 void test82(const __vector_pair *vpp, const __vector_pair *vp2) {
-  __vector_pair vp = __builtin_mma_lxvp(42LL, vpp);
-  __builtin_mma_stxvp(vp, 42LL, vp2);
+  __vector_pair vp = __builtin_mma_lxvp(42L, vpp);
+  __builtin_mma_stxvp(vp, 42L, vp2);
 }
 
 // CHECK-LABEL: @test83(
@@ -1316,8 +1316,8 @@ void test82(const __vector_pair *vpp, const __vector_pair *vp2) {
 // CHECK-NEXT:    ret void
 //
 void test83(const __vector_pair *vpp, const __vector_pair *vp2) {
-  __vector_pair vp = __builtin_mma_lxvp(32768LL, vpp);
-  __builtin_mma_stxvp(vp, 32768LL, vp2);
+  __vector_pair vp = __builtin_mma_lxvp(32768L, vpp);
+  __builtin_mma_stxvp(vp, 32768L, vp2);
 }
 
 // CHECK-LABEL: @test84(
@@ -1331,8 +1331,8 @@ void test83(const __vector_pair *vpp, const __vector_pair *vp2) {
 // CHECK-NEXT:    ret void
 //
 void test84(const __vector_pair *vpp, const __vector_pair *vp2) {
-  __vector_pair vp = __builtin_mma_lxvp(32799LL, vpp);
-  __builtin_mma_stxvp(vp, 32799LL, vp2);
+  __vector_pair vp = __builtin_mma_lxvp(32799L, vpp);
+  __builtin_mma_stxvp(vp, 32799L, vp2);
 }
 
 // CHECK-LABEL: @test85(
@@ -1349,7 +1349,7 @@ void test84(const __vector_pair *vpp, const __vector_pair *vp2) {
 //
 void test85(unsigned char *vqp, const __vector_pair *vpp, vector unsigned char vc, unsigned char *resp) {
   __vector_quad vq = *((__vector_quad *)vqp);
-  __vector_pair vp = __builtin_mma_lxvp(8LL, vpp);
+  __vector_pair vp = __builtin_mma_lxvp(8L, vpp);
   __builtin_mma_pmxvf64gernn(&vq, vp, vc, 0, 0);
   *((__vector_quad *)resp) = vq;
 }
@@ -1367,7 +1367,7 @@ void test85(unsigned char *vqp, const __vector_pair *vpp, vector unsigned char v
 //
 void test86(unsigned char *vqp, const __vector_pair *vpp, vector unsigned char vc, unsigned char *resp) {
   __vector_quad vq = *((__vector_quad *)vqp);
-  __vector_pair vp = __builtin_mma_lxvp(0LL, vpp);
+  __vector_pair vp = __builtin_mma_lxvp(0L, vpp);
   __builtin_mma_xvf64gernp(&vq, vp, vc);
   *((__vector_quad *)resp) = vq;
 }
@@ -1384,7 +1384,7 @@ void test86(unsigned char *vqp, const __vector_pair *vpp, vector unsigned char v
 // CHECK-NEXT:    store <512 x i1> [[TMP5]], <512 x i1>* [[TMP6]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    ret void
 //
-void test87(unsigned char *vqp, signed long long offs, const __vector_pair *vpp, vector unsigned char vc, unsigned char *resp) {
+void test87(unsigned char *vqp, signed long offs, const __vector_pair *vpp, vector unsigned char vc, unsigned char *resp) {
   __vector_quad vq = *((__vector_quad *)vqp);
   __vector_pair vp = __builtin_mma_lxvp(offs, vpp);
   __builtin_mma_xvf64gernp(&vq, vp, vc);
