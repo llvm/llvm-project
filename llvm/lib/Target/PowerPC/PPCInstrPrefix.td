@@ -2790,6 +2790,10 @@ let Predicates = [PrefixInstrs] in {
   def : Pat<(atomic_store_16 PDForm:$dst, i32:$RS), (PSTH $RS, memri34:$dst)>;
   def : Pat<(atomic_store_32 PDForm:$dst, i32:$RS), (PSTW $RS, memri34:$dst)>;
   def : Pat<(atomic_store_64 PDForm:$dst, i64:$RS), (PSTD $RS, memri34:$dst)>;
+
+  // Prefixed fpext to v2f64
+  def : Pat<(v4f32 (PPCldvsxlh PDForm:$src)),
+            (SUBREG_TO_REG (i64 1), (PLFD PDForm:$src), sub_64)>;
 }
 
 def InsertEltShift {
