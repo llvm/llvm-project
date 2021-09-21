@@ -1810,6 +1810,11 @@ vec_cmpeq(vector unsigned __int128 __a, vector unsigned __int128 __b) {
   return (vector bool __int128)__builtin_altivec_vcmpequq(
       (vector bool __int128)__a, (vector bool __int128)__b);
 }
+
+static __inline__ vector bool __int128 __ATTRS_o_ai
+vec_cmpeq(vector bool __int128 __a, vector bool  __int128 __b) {
+  return (vector bool __int128)__builtin_altivec_vcmpequq(__a, __b);
+}
 #endif
 
 #ifdef __POWER9_VECTOR__
@@ -1886,6 +1891,11 @@ static __inline__ vector bool __int128 __ATTRS_o_ai
 vec_cmpne(vector signed __int128 __a, vector signed __int128 __b) {
   return (vector bool __int128) ~(__builtin_altivec_vcmpequq(
       (vector bool __int128)__a, (vector bool __int128)__b));
+}
+
+static __inline__ vector bool __int128 __ATTRS_o_ai
+vec_cmpne(vector bool __int128 __a, vector bool __int128 __b) {
+  return (vector bool __int128) ~(__builtin_altivec_vcmpequq(__a, __b));
 }
 #endif
 
@@ -14870,6 +14880,11 @@ static __inline__ int __ATTRS_o_ai vec_all_eq(vector unsigned __int128 __a,
                                               vector unsigned __int128 __b) {
   return __builtin_altivec_vcmpequq_p(__CR6_LT, __a, __b);
 }
+
+static __inline__ int __ATTRS_o_ai vec_all_eq(vector bool __int128 __a,
+                                              vector bool __int128 __b) {
+  return __builtin_altivec_vcmpequq_p(__CR6_LT, __a, __b);
+}
 #endif
 
 /* vec_all_ge */
@@ -15815,6 +15830,11 @@ static __inline__ int __ATTRS_o_ai vec_all_ne(vector unsigned __int128 __a,
                                               vector unsigned __int128 __b) {
   return __builtin_altivec_vcmpequq_p(__CR6_EQ, __a, __b);
 }
+
+static __inline__ int __ATTRS_o_ai vec_all_ne(vector bool __int128 __a,
+                                              vector bool __int128 __b) {
+  return __builtin_altivec_vcmpequq_p(__CR6_EQ, __a, __b);
+}
 #endif
 
 /* vec_all_nge */
@@ -16102,6 +16122,11 @@ static __inline__ int __ATTRS_o_ai vec_any_eq(vector signed __int128 __a,
 
 static __inline__ int __ATTRS_o_ai vec_any_eq(vector unsigned __int128 __a,
                                               vector unsigned __int128 __b) {
+  return __builtin_altivec_vcmpequq_p(__CR6_EQ_REV, __a, __b);
+}
+
+static __inline__ int __ATTRS_o_ai vec_any_eq(vector bool __int128 __a,
+                                              vector bool __int128 __b) {
   return __builtin_altivec_vcmpequq_p(__CR6_EQ_REV, __a, __b);
 }
 #endif
@@ -17077,6 +17102,11 @@ static __inline__ int __ATTRS_o_ai vec_any_ne(vector signed __int128 __a,
 
 static __inline__ int __ATTRS_o_ai vec_any_ne(vector unsigned __int128 __a,
                                               vector unsigned __int128 __b) {
+  return __builtin_altivec_vcmpequq_p(__CR6_LT_REV, __a, __b);
+}
+
+static __inline__ int __ATTRS_o_ai vec_any_ne(vector bool __int128 __a,
+                                              vector bool __int128 __b) {
   return __builtin_altivec_vcmpequq_p(__CR6_LT_REV, __a, __b);
 }
 #endif
