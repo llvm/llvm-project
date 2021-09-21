@@ -74,19 +74,16 @@ bool GenericToNVVM::runOnModule(Module &M) {
   // of original global variable and its clone is placed in the GVMap for later
   // use.
 
-  for (Module::global_iterator I = M.global_begin(), E = M.global_end();
-       I != E;) {
-    GlobalVariable *GV = &*I++;
-    if (GV->getType()->getAddressSpace() == llvm::ADDRESS_SPACE_GENERIC &&
-        !llvm::isTexture(*GV) && !llvm::isSurface(*GV) &&
-        !llvm::isSampler(*GV) && !GV->getName().startswith("llvm.")) {
+  for (GlobalVariable &GV : llvm::make_early_inc_range(M.globals())) {
+    if (GV.getType()->getAddressSpace() == llvm::ADDRESS_SPACE_GENERIC &&
+        !llvm::isTexture(GV) && !llvm::isSurface(GV) && !llvm::isSampler(GV) &&
+        !GV.getName().startswith("llvm.")) {
       GlobalVariable *NewGV = new GlobalVariable(
-          M, GV->getValueType(), GV->isConstant(),
-          GV->getLinkage(),
-          GV->hasInitializer() ? GV->getInitializer() : nullptr,
-          "", GV, GV->getThreadLocalMode(), llvm::ADDRESS_SPACE_GLOBAL);
-      NewGV->copyAttributesFrom(GV);
-      GVMap[GV] = NewGV;
+          M, GV.getValueType(), GV.isConstant(), GV.getLinkage(),
+          GV.hasInitializer() ? GV.getInitializer() : nullptr, "", &GV,
+          GV.getThreadLocalMode(), llvm::ADDRESS_SPACE_GLOBAL);
+      NewGV->copyAttributesFrom(&GV);
+      GVMap[&GV] = NewGV;
     }
   }
 
