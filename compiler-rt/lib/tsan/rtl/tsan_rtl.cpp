@@ -36,6 +36,11 @@ extern "C" void __tsan_resume() {
 
 namespace __tsan {
 
+#if !SANITIZER_GO
+void (*on_initialize)(void);
+int (*on_finalize)(int);
+#endif
+
 #if !SANITIZER_GO && !SANITIZER_MAC
 __attribute__((tls_model("initial-exec")))
 THREADLOCAL char cur_thread_placeholder[sizeof(ThreadState)] ALIGNED(64);
@@ -52,17 +57,16 @@ void OnInitialize();
 SANITIZER_WEAK_CXX_DEFAULT_IMPL
 bool OnFinalize(bool failed) {
 #if !SANITIZER_GO
-  if (auto *ptr = dlsym(RTLD_DEFAULT, "__tsan_on_finalize"))
-    return reinterpret_cast<decltype(&__tsan_on_finalize)>(ptr)(failed);
+  if (on_finalize)
+    return on_finalize(failed);
 #endif
   return failed;
 }
 SANITIZER_WEAK_CXX_DEFAULT_IMPL
 void OnInitialize() {
 #if !SANITIZER_GO
-  if (auto *ptr = dlsym(RTLD_DEFAULT, "__tsan_on_initialize")) {
-    return reinterpret_cast<decltype(&__tsan_on_initialize)>(ptr)();
-  }
+  if (on_initialize)
+    on_initialize();
 #endif
 }
 #endif

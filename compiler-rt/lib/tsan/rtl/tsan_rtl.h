@@ -985,6 +985,11 @@ void TraceTime(ThreadState *thr);
 
 }  // namespace v3
 
+#if !SANITIZER_GO
+extern void (*on_initialize)(void);
+extern int (*on_finalize)(int);
+#endif
+
 }  // namespace __tsan
 
 #endif  // TSAN_RTL_H

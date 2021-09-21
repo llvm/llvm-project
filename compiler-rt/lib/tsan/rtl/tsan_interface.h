@@ -417,12 +417,6 @@ SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic64_compare_exchange(ThreadState *thr, uptr cpc, uptr pc,
                                          u8 *a);
 
-SANITIZER_INTERFACE_ATTRIBUTE
-void __tsan_on_initialize();
-
-SANITIZER_INTERFACE_ATTRIBUTE
-int __tsan_on_finalize(int failed);
-
 }  // extern "C"
 
 }  // namespace __tsan

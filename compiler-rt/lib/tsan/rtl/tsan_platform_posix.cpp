@@ -14,12 +14,14 @@
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_POSIX
 
-#include "sanitizer_common/sanitizer_common.h"
-#include "sanitizer_common/sanitizer_errno.h"
-#include "sanitizer_common/sanitizer_libc.h"
-#include "sanitizer_common/sanitizer_procmaps.h"
-#include "tsan_platform.h"
-#include "tsan_rtl.h"
+#  include <dlfcn.h>
+
+#  include "sanitizer_common/sanitizer_common.h"
+#  include "sanitizer_common/sanitizer_errno.h"
+#  include "sanitizer_common/sanitizer_libc.h"
+#  include "sanitizer_common/sanitizer_procmaps.h"
+#  include "tsan_platform.h"
+#  include "tsan_rtl.h"
 
 namespace __tsan {
 
@@ -70,6 +72,11 @@ void InitializeShadowMemory() {
       meta, meta + meta_size, meta_size >> 30);
 
   InitializeShadowMemoryPlatform();
+
+  on_initialize = reinterpret_cast<void (*)(void)>(
+      dlsym(RTLD_DEFAULT, "__tsan_on_initialize"));
+  on_finalize =
+      reinterpret_cast<int (*)(int)>(dlsym(RTLD_DEFAULT, "__tsan_on_finalize"));
 }
 
 static bool TryProtectRange(uptr beg, uptr end) {
