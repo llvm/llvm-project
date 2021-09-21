@@ -38,12 +38,12 @@ void foo() {
 }
 
 // CHECK-LABEL: void @_Z3foov()
-// CHECK: @__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %{{struct.anon.?[0-9]*}}*)* [[OUTLINED_2:@.+]] to void
-// CHECK: @__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %{{struct.anon.?[0-9]*}}*)* [[OUTLINED_3:@.+]] to void
-// CHECK: @__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %{{struct.anon.?[0-9]*}}*)* [[OUTLINED_4:@.+]] to void
-// CHECK: @__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %{{struct.anon.?[0-9]*}}*)* [[OUTLINED_5:@.+]] to void
-// CHECK: @__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %{{struct.anon.?[0-9]*}}*)* [[OUTLINED_6:@.+]] to void
-// CHECK: @__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %{{struct.anon.?[0-9]*}}*)* [[OUTLINED_7:@.+]] to void
+// CHECK: @__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* [[OUTLINED_2:@.+]] to void
+// CHECK: @__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* [[OUTLINED_3:@.+]] to void
+// CHECK: @__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* [[OUTLINED_4:@.+]] to void
+// CHECK: @__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* [[OUTLINED_5:@.+]] to void
+// CHECK: @__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* [[OUTLINED_6:@.+]] to void
+// CHECK: @__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* [[OUTLINED_7:@.+]] to void
 // CHECK: ret void
 
 // CHECK: define internal void [[OUTLINED_2]](
