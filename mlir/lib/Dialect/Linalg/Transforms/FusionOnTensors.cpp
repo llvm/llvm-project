@@ -301,8 +301,13 @@ LogicalResult TileLoopNest::tileRootOp(OpBuilder &b,
 
 FailureOr<LinalgOp> TileLoopNest::fuseProducer(OpBuilder &b,
                                                OpOperand *rootOpOperand) {
-  // Check the tile loop nest is non-empty and satisfies all invariants.
-  if (isEmpty() || !isValid())
+  assert(rootOpOperand->getOwner() == rootOp &&
+         "expect the root op to be the owner of the operand to fuse");
+  assert(this->isValid() &&
+         "expect the tile loop nest to satisfy all invariants");
+
+  // Check the tile loop nest is non-empty.
+  if (isEmpty())
     return failure();
 
   // Check `rootOpOperand` is defined by an ExtractSliceOp.
@@ -310,9 +315,8 @@ FailureOr<LinalgOp> TileLoopNest::fuseProducer(OpBuilder &b,
   if (!sliceOp)
     return failure();
 
-  // Check `tileLoopNest` tiles `sliceOp` and `rootOpOperand`.
-  if (sliceOp->getParentOp() != rootOp->getParentOp() ||
-      rootOpOperand->getOwner() != rootOp)
+  // Check `sliceOp` is tiled by the tile loop nest.
+  if (sliceOp->getParentOp() != rootOp->getParentOp())
     return failure();
 
   // Check if the producer is a LinalgOp possibly passed by iteration argument.
