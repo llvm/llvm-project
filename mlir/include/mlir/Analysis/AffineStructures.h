@@ -426,6 +426,11 @@ public:
   /// O(VC) time.
   void removeRedundantConstraints();
 
+  /// Merge local ids of `this` and `other`. This is done by appending local ids
+  /// of `other` to `this` and inserting local ids of `this` to `other` at start
+  /// of its local ids.
+  void mergeLocalIds(FlatAffineConstraints &other);
+
   /// Removes all equalities and inequalities.
   void clearConstraints();
 
@@ -840,6 +845,11 @@ public:
     for (unsigned i = start; i < end; ++i)
       setValue(i, values[i - start]);
   }
+
+  /// Merge and align symbols of `this` and `other` such that both get union of
+  /// of symbols that are unique. Symbols with Value as `None` are considered
+  /// to be inequal to all other symbols.
+  void mergeSymbolIds(FlatAffineValueConstraints &other);
 
 protected:
   /// Returns false if the fields corresponding to various identifier counts, or
