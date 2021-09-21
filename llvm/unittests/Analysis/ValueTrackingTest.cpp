@@ -12,6 +12,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
@@ -1595,6 +1596,22 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsAddWithRange) {
   // with the masks of zeros and ones, not the ranges.
   EXPECT_EQ(Known.getMinValue(), 0u);
   EXPECT_EQ(Known.getMaxValue(), 131071);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsUnknownVScale) {
+  Module M("", Context);
+  IRBuilder<> Builder(Context);
+  Function *TheFn =
+      Intrinsic::getDeclaration(&M, Intrinsic::vscale, {Builder.getInt32Ty()});
+  CallInst *CI = Builder.CreateCall(TheFn, {}, {}, "");
+
+  KnownBits Known = computeKnownBits(CI, M.getDataLayout(), /* Depth */ 0);
+  delete CI;
+
+  // There is no parent function so we cannot look up the vscale_range
+  // attribute to determine the number of bits.
+  EXPECT_EQ(Known.One.getZExtValue(), 0u);
+  EXPECT_EQ(Known.Zero.getZExtValue(), 0u);
 }
 
 // 512 + [32, 64) doesn't produce overlapping bits.
