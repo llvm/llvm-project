@@ -70,7 +70,7 @@ define half @v_mad_mixlo_f16_f16lo_f16lo_f32_clamp_post_cvt(half %src0, half %sr
 ; GFX9-NEXT: v_cvt_f16_f32_e32 v0, v0
 ; GFX9-NEXT: s_setpc_b64
 
-; CIVI: v_mac_f32_e64 v{{[0-9]}}, v{{[0-9]}}, v{{[0-9]}} clamp{{$}}
+; CIVI: v_mad_f32 v{{[0-9]}}, v{{[0-9]}}, v{{[0-9]}}, v{{[0-9]}} clamp{{$}}
 define half @v_mad_mixlo_f16_f16lo_f16lo_f32_clamp_pre_cvt(half %src0, half %src1, float %src2) #0 {
   %src0.ext = fpext half %src0 to float
   %src1.ext = fpext half %src1 to float

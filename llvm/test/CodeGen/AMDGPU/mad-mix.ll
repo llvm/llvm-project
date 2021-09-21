@@ -328,8 +328,7 @@ define <2 x float> @v_mad_mix_v2f32_f32imminv2pi(<2 x half> %src0, <2 x half> %s
 ; GCN-LABEL: {{^}}v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt:
 ; GFX900: v_mad_mix_f32 v0, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp ; encoding
 ; GFX906: v_fma_mix_f32 v0, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp ; encoding
-; VI: v_mac_f32_e64 v{{[0-9]}}, v{{[0-9]}}, v{{[0-9]}} clamp{{$}}
-; CI: v_mad_f32 v{{[0-9]}}, v{{[0-9]}}, v{{[0-9]}}, v{{[0-9]}} clamp{{$}}
+; CIVI: v_mad_f32 v{{[0-9]}}, v{{[0-9]}}, v{{[0-9]}}, v{{[0-9]}} clamp{{$}}
 define float @v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) #0 {
   %src0.hi = extractelement <2 x half> %src0, i32 1
   %src1.hi = extractelement <2 x half> %src1, i32 1
