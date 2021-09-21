@@ -1109,7 +1109,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // Split out cold code. Splitting is done late to avoid hiding context from
   // other optimizations and inadvertently regressing performance. The tradeoff
   // is that this has a higher code size cost than splitting early.
-  if (EnableHotColdSplit && !LTOPreLink)
+  if ((EnableHotColdSplit || SplitColdCode) && !LTOPreLink)
     MPM.addPass(HotColdSplittingPass());
 
   // Search the code for similar regions of code. If enough similar regions can
@@ -1578,7 +1578,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
   // Enable splitting late in the FullLTO post-link pipeline. This is done in
   // the same stage in the old pass manager (\ref addLateLTOOptimizationPasses).
-  if (EnableHotColdSplit)
+  if (EnableHotColdSplit || SplitColdCode)
     MPM.addPass(HotColdSplittingPass());
 
   // Add late LTO optimization passes.
