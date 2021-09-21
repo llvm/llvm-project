@@ -52,6 +52,10 @@
 #include "Plugins/Language/CPlusPlus/MSVCUndecoratedNameParser.h"
 #include "Plugins/SymbolFile/NativePDB/SymbolFileNativePDB.h"
 
+#if defined(_WIN32)
+#include "llvm/Config/config.h"
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::pdb;
@@ -83,14 +87,16 @@ bool ShouldAddLine(uint32_t requested_line, uint32_t actual_line,
 
 static bool ShouldUseNativeReader() {
 #if defined(_WIN32)
+#if LLVM_ENABLE_DIA_SDK
   llvm::StringRef use_native = ::getenv("LLDB_USE_NATIVE_PDB_READER");
-  return use_native.equals_insensitive("on") ||
-         use_native.equals_insensitive("yes") ||
-         use_native.equals_insensitive("1") ||
-         use_native.equals_insensitive("true");
-#else
-  return true;
+  if (!use_native.equals_insensitive("on") &&
+      !use_native.equals_insensitive("yes") &&
+      !use_native.equals_insensitive("1") &&
+      !use_native.equals_insensitive("true"))
+    return false;
 #endif
+#endif
+  return true;
 }
 
 void SymbolFilePDB::Initialize() {
