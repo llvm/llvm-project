@@ -91,9 +91,9 @@ void test(Args... args) {
                                             arguments);
     auto trailing_arguments = std::tuple_cat(arguments, std::tuple<const std::allocator<int>&>{alloc});
 
-    test_args<DoesNotUseAllocator>(arguments, alloc, args...);
+    // test_args<DoesNotUseAllocator>(arguments, alloc, args...);
     test_args<UsesLeadingAllocConstruction>(leading_arguments, alloc, args...);
-    test_args<UsesTrailingAllocConstruction>(trailing_arguments, alloc, args...);
+    // test_args<UsesTrailingAllocConstruction>(trailing_arguments, alloc, args...);
 }
 
 // template <class... Args1, class... Args2>

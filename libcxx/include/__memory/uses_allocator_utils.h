@@ -54,50 +54,50 @@ constexpr auto uses_allocator_construction_args(const _Alloc& __alloc, _Args&&..
     }
 }
 
-template <class _Tp, class _Alloc, class _Tuple1, class _Tuple2>
-    requires __is_pair_specialization<_Tp>::value
-constexpr auto uses_allocator_construction_args(const _Alloc& __alloc, piecewise_construct_t, _Tuple1&& __x, _Tuple2&& __y) noexcept {
-    return tuple{piecewise_construct,
-                 apply([&__alloc](auto&&... __args1) {
-                     return uses_allocator_construction_args<_Tp::first_type>(__alloc, _VSTD::forward<decltype(__args1)>(__args1)...);
-                 }, _VSTD::forward<_Tuple1>(__x)),
-                 apply([&__alloc](auto&&... __args2) {
-                     return uses_allocator_construction_args<_Tp::second_type>(__alloc, _VSTD::forward<decltype(__args2)>(__args2)...);
-                 }, _VSTD::forward<_Tuple2>(__y))};
-}
+// template <class _Tp, class _Alloc, class _Tuple1, class _Tuple2>
+//     requires __is_pair_specialization<_Tp>::value
+// constexpr auto uses_allocator_construction_args(const _Alloc& __alloc, piecewise_construct_t, _Tuple1&& __x, _Tuple2&& __y) noexcept {
+//     return tuple{piecewise_construct,
+//                  apply([&__alloc](auto&&... __args1) {
+//                      return uses_allocator_construction_args<_Tp::first_type>(__alloc, _VSTD::forward<decltype(__args1)>(__args1)...);
+//                  }, _VSTD::forward<_Tuple1>(__x)),
+//                  apply([&__alloc](auto&&... __args2) {
+//                      return uses_allocator_construction_args<_Tp::second_type>(__alloc, _VSTD::forward<decltype(__args2)>(__args2)...);
+//                  }, _VSTD::forward<_Tuple2>(__y))};
+// }
 
-template <class _Tp, class _Alloc>
-    requires __is_pair_specialization<_Tp>::value
-constexpr auto uses_allocator_construction_args(const _Alloc& __alloc) noexcept {
-    return uses_allocator_construction_args<_Tp>(__alloc, piecewise_construct, tuple{}, tuple{});
-}
+// template <class _Tp, class _Alloc>
+//     requires __is_pair_specialization<_Tp>::value
+// constexpr auto uses_allocator_construction_args(const _Alloc& __alloc) noexcept {
+//     return uses_allocator_construction_args<_Tp>(__alloc, piecewise_construct, tuple{}, tuple{});
+// }
 
-template <class _Tp, class _Alloc, class _Up, class _Vp>
-    requires __is_pair_specialization<_Tp>::value
-constexpr auto uses_allocator_construction_args(const _Alloc& __alloc, _Up&& __u, _Vp&& __v) noexcept {
-    return uses_allocator_construction_args<_Tp>(__alloc,
-                                                 piecewise_construct,
-                                                 forward_as_tuple(_VSTD::forward<_Up>(__u)),
-                                                 forward_as_tuple(_VSTD::forward<_Vp>(__v)));
-}
+// template <class _Tp, class _Alloc, class _Up, class _Vp>
+//     requires __is_pair_specialization<_Tp>::value
+// constexpr auto uses_allocator_construction_args(const _Alloc& __alloc, _Up&& __u, _Vp&& __v) noexcept {
+//     return uses_allocator_construction_args<_Tp>(__alloc,
+//                                                  piecewise_construct,
+//                                                  forward_as_tuple(_VSTD::forward<_Up>(__u)),
+//                                                  forward_as_tuple(_VSTD::forward<_Vp>(__v)));
+// }
 
-template <class _Tp, class _Alloc, class _Up, class _Vp>
-    requires __is_pair_specialization<_Tp>::value
-constexpr auto uses_allocator_construction_args(const _Alloc& __alloc, const pair<_Up, _Vp>& __pr) noexcept {
-    return uses_allocator_construction_args<_Tp>(__alloc,
-                                                 piecewise_construct,
-                                                 forward_as_tuple(__pr.first),
-                                                 forward_as_tuple(__pr.second));
-}
+// template <class _Tp, class _Alloc, class _Up, class _Vp>
+//     requires __is_pair_specialization<_Tp>::value
+// constexpr auto uses_allocator_construction_args(const _Alloc& __alloc, const pair<_Up, _Vp>& __pr) noexcept {
+//     return uses_allocator_construction_args<_Tp>(__alloc,
+//                                                  piecewise_construct,
+//                                                  forward_as_tuple(__pr.first),
+//                                                  forward_as_tuple(__pr.second));
+// }
 
-template <class _Tp, class _Alloc, class _Up, class _Vp>
-    requires __is_pair_specialization<_Tp>::value
-constexpr auto uses_allocator_construction_args(const _Alloc& __alloc, pair<_Up, _Vp>&& __pr) noexcept {
-    return uses_allocator_construction_args<_Tp>(__alloc,
-                                                 piecewise_construct,
-                                                 forward_as_tuple(get<0>(_VSTD::move(__pr))),
-                                                 forward_as_tuple(get<1>(_VSTD::move(__pr))));
-}
+// template <class _Tp, class _Alloc, class _Up, class _Vp>
+//     requires __is_pair_specialization<_Tp>::value
+// constexpr auto uses_allocator_construction_args(const _Alloc& __alloc, pair<_Up, _Vp>&& __pr) noexcept {
+//     return uses_allocator_construction_args<_Tp>(__alloc,
+//                                                  piecewise_construct,
+//                                                  forward_as_tuple(get<0>(_VSTD::move(__pr))),
+//                                                  forward_as_tuple(get<1>(_VSTD::move(__pr))));
+// }
 
 template <class _Tp, class _Alloc, class... _Args>
 constexpr _Tp make_obj_using_allocator(const _Alloc& __alloc, _Args&&... __args) {
