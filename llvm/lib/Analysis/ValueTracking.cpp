@@ -6989,6 +6989,7 @@ static void setLimitsForSelectPattern(const SelectInst &SI, APInt &Lower,
 ConstantRange llvm::computeConstantRange(const Value *V, bool UseInstrInfo,
                                          AssumptionCache *AC,
                                          const Instruction *CtxI,
+                                         const DominatorTree *DT,
                                          unsigned Depth) {
   assert(V->getType()->isIntOrIntVectorTy() && "Expected integer instruction");
 
@@ -7027,7 +7028,7 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool UseInstrInfo,
       assert(I->getCalledFunction()->getIntrinsicID() == Intrinsic::assume &&
              "must be an assume intrinsic");
 
-      if (!isValidAssumeForContext(I, CtxI, nullptr))
+      if (!isValidAssumeForContext(I, CtxI, DT))
         continue;
       Value *Arg = I->getArgOperand(0);
       ICmpInst *Cmp = dyn_cast<ICmpInst>(Arg);
@@ -7035,7 +7036,7 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool UseInstrInfo,
       if (!Cmp || Cmp->getOperand(0) != V)
         continue;
       ConstantRange RHS = computeConstantRange(Cmp->getOperand(1), UseInstrInfo,
-                                               AC, I, Depth + 1);
+                                               AC, I, DT, Depth + 1);
       CR = CR.intersectWith(
           ConstantRange::makeSatisfyingICmpRegion(Cmp->getPredicate(), RHS));
     }

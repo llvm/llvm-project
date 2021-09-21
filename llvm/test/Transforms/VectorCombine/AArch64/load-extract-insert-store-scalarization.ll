@@ -74,8 +74,8 @@ define void @load_extract_insert_store_var_idx_assume_valid_in_dominating_block(
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul double 2.000000e+01, [[EXT_0]]
 ; CHECK-NEXT:    [[EXT_1:%.*]] = extractelement <225 x double> [[LV]], i64 [[IDX_2]]
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[EXT_1]], [[MUL]]
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <225 x double> [[LV]], double [[SUB]], i64 [[IDX_1]]
-; CHECK-NEXT:    store <225 x double> [[INS]], <225 x double>* [[A]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <225 x double>, <225 x double>* [[A]], i64 0, i64 [[IDX_1]]
+; CHECK-NEXT:    store double [[SUB]], double* [[TMP0]], align 8
 ; CHECK-NEXT:    [[C_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:

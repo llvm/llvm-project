@@ -2097,8 +2097,9 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
 
     // Check the depth cutoff results in a conservative result (full set) by
     // passing Depth == MaxDepth == 6.
-    ConstantRange CR2 = computeConstantRange(X2, true, &AC, I, 6);
+    ConstantRange CR2 = computeConstantRange(X2, true, &AC, I, nullptr, 6);
     EXPECT_TRUE(CR2.isFullSet());
+
   }
 }
 
