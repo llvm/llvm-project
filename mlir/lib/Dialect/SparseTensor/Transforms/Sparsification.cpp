@@ -28,10 +28,17 @@
 using namespace mlir;
 using namespace mlir::sparse_tensor;
 
+//===----------------------------------------------------------------------===//
+// Declarations of data structures.
+//===----------------------------------------------------------------------===//
+
 namespace {
 
 // Iteration graph sorting.
 enum SortMask { kSparseOnly = 0x0, kIncludeDense = 0x1, kIncludeUndef = 0x2 };
+
+// Reduction kinds.
+enum Reduction { kSum, kProduct, kAnd, kOr, kXor };
 
 // Code generation.
 struct CodeGen {
@@ -68,6 +75,7 @@ struct CodeGen {
   // is most effective; we could generalize to more outer and while-loops.
   unsigned redExp;
   Value redVal;
+  Reduction redKind;
   // Current vector length and mask.
   unsigned curVecLength;
   Value curVecMask;
@@ -75,8 +83,12 @@ struct CodeGen {
 
 } // namespace
 
-// Helper method to apply dimension ordering permutation.
-static unsigned perm(SparseTensorEncodingAttr &enc, unsigned d) {
+//===----------------------------------------------------------------------===//
+// Sparse compiler analysis methods.
+//===----------------------------------------------------------------------===//
+
+/// Helper method to apply dimension ordering permutation.
+static unsigned perm(const SparseTensorEncodingAttr &enc, unsigned d) {
   if (enc) {
     auto order = enc.getDimOrdering();
     if (order) {
@@ -87,8 +99,8 @@ static unsigned perm(SparseTensorEncodingAttr &enc, unsigned d) {
   return d;
 }
 
-// Helper method to translate dim level type to internal representation.
-static Dim toDim(SparseTensorEncodingAttr &enc, unsigned d) {
+/// Helper method to translate dim level type to internal representation.
+static Dim toDim(const SparseTensorEncodingAttr &enc, unsigned d) {
   if (enc) {
     SparseTensorEncodingAttr::DimLevelType tp = enc.getDimLevelType()[d];
     if (tp == SparseTensorEncodingAttr::DimLevelType::Compressed)
@@ -281,6 +293,83 @@ static bool isAdmissableTensorExp(Merger &merger, linalg::GenericOp op,
   // Reject for now since this requires changes to the nonzero structure.
   // TODO: implement "workspaces" [Kjolstad2019]
   return false;
+}
+
+//===----------------------------------------------------------------------===//
+// Sparse compiler synthesis methods.
+//===----------------------------------------------------------------------===//
+
+/// Maps reduction kind to name encoding.
+static StringRef getReductionName(Reduction kind) {
+  switch (kind) {
+  case kSum:
+    return "add";
+  case kProduct:
+    return "mul";
+  case kAnd:
+    return "and";
+  case kOr:
+    return "or";
+  case kXor:
+    return "xor";
+  }
+  llvm_unreachable("unknown reduction kind");
+}
+
+/// Maps operation to reduction.
+static Reduction getReduction(Kind kind) {
+  switch (kind) {
+  case Kind::kAddF:
+  case Kind::kAddI:
+  case Kind::kSubF:
+  case Kind::kSubI:
+    return kSum;
+  case Kind::kMulF:
+  case Kind::kMulI:
+    return kProduct;
+  case Kind::kAndI:
+    return kAnd;
+  case Kind::kOrI:
+    return kOr;
+  case Kind::kXorI:
+    return kXor;
+  default:
+    llvm_unreachable("unexpected reduction operator");
+  }
+}
+
+/// Generates an initial value for a vector reductions, following the scheme
+/// given in Chapter 5 of "The Software Vectorization Handbook", where the
+/// initial scalar value is correctly embedded in the vector reduction value,
+/// and a straightforward horizontal reduction will complete the operation.
+static Value genReductionInit(PatternRewriter &rewriter, Location loc,
+                              Reduction kind, VectorType vtp, Value r) {
+  switch (kind) {
+  case kSum:
+  case kXor: {
+    // Initialize reduction vector to: | 0 | .. | 0 | r |
+    Attribute zero = rewriter.getZeroAttr(vtp);
+    Value vec = rewriter.create<ConstantOp>(loc, vtp, zero);
+    return rewriter.create<vector::InsertElementOp>(loc, r, vec, 0);
+  }
+  case kProduct: {
+    // Initialize reduction vector to: | 1 | .. | 1 | r |
+    Type etp = vtp.getElementType();
+    Attribute one;
+    if (etp.isa<FloatType>())
+      one = rewriter.getFloatAttr(etp, 1.0);
+    else
+      one = rewriter.getIntegerAttr(etp, 1);
+    Value vec =
+        rewriter.create<ConstantOp>(loc, vtp, DenseElementsAttr::get(vtp, one));
+    return rewriter.create<vector::InsertElementOp>(loc, r, vec, 0);
+  }
+  case kAnd:
+  case kOr:
+    // Initialize reduction vector to: | r | .. | r | r |
+    return rewriter.create<vector::BroadcastOp>(loc, vtp, r);
+  }
+  llvm_unreachable("unknown reduction kind");
 }
 
 /// Maps sparse integer option to actual integral storage type.
@@ -644,11 +733,15 @@ static Value genReductionStart(Merger &merger, CodeGen &codegen,
                                linalg::GenericOp op) {
   if (codegen.redVal)
     return codegen.redVal; // chained with previous for-loop
-  if (codegen.curVecLength > 1) {
-    // TODO: assumes + reductions for now
+  // Generate vector or scalar start of a reduction.
+  unsigned vl = codegen.curVecLength;
+  if (vl > 1) {
     VectorType vtp = vectorType(codegen, codegen.buffers[codegen.redExp]);
-    return rewriter.create<ConstantOp>(op.getLoc(), vtp,
-                                       rewriter.getZeroAttr(vtp));
+    assert(!merger.exp(codegen.redExp).val);
+    codegen.curVecLength = 1;
+    Value load = genTensorLoad(merger, codegen, rewriter, op, codegen.redExp);
+    codegen.curVecLength = vl;
+    return genReductionInit(rewriter, op.getLoc(), codegen.redKind, vtp, load);
   }
   return genTensorLoad(merger, codegen, rewriter, op, codegen.redExp);
 }
@@ -661,19 +754,12 @@ static void genReductionEnd(Merger &merger, CodeGen &codegen,
     return;
   assert(codegen.curVecLength == 1);
   codegen.redVal = merger.exp(codegen.redExp).val = Value(); // end chain
+  // Generate vector or scalar end of a reduction.
   if (auto vtp = red.getType().dyn_cast<VectorType>()) {
-    // TODO: assumes + reductions for now
-    StringAttr kind = rewriter.getStringAttr("add");
-    Value ld = genTensorLoad(merger, codegen, rewriter, op, codegen.redExp);
-    // Integer reductions don't accept an accumulator.
-    if (vtp.getElementType().isa<IntegerType>()) {
-      red = rewriter.create<vector::ReductionOp>(op.getLoc(), ld.getType(),
-                                                 kind, red, ValueRange{});
-      red = rewriter.create<AddIOp>(op.getLoc(), red, ld);
-    } else {
-      red = rewriter.create<vector::ReductionOp>(op.getLoc(), ld.getType(),
-                                                 kind, red, ld);
-    }
+    StringRef name = getReductionName(codegen.redKind);
+    StringAttr kind = rewriter.getStringAttr(name);
+    red = rewriter.create<vector::ReductionOp>(
+        op.getLoc(), vtp.getElementType(), kind, red, ValueRange{});
   }
   genTensorStore(merger, codegen, rewriter, op, red);
 }
@@ -725,7 +811,8 @@ static bool isInvariantAffine(const CodeGen &codegen, AffineExpr a,
 /// Hoists loop invariant tensor loads for which indices have been exhausted.
 static void genInvariants(Merger &merger, CodeGen &codegen,
                           PatternRewriter &rewriter, linalg::GenericOp op,
-                          unsigned exp, unsigned ldx, bool hoist) {
+                          unsigned exp, unsigned ldx, bool hoist,
+                          Kind last = Kind::kTensor) {
   if (exp == -1u)
     return;
   if (merger.exp(exp).kind == Kind::kTensor) {
@@ -743,6 +830,7 @@ static void genInvariants(Merger &merger, CodeGen &codegen,
     OpOperand *lhs = op.getOutputOperand(0);
     if (lhs == t) {
       codegen.redExp = hoist ? exp : -1u;
+      codegen.redKind = getReduction(last);
     } else if (atLevel) {
       merger.exp(exp).val =
           hoist ? genTensorLoad(merger, codegen, rewriter, op, exp) : Value();
@@ -751,10 +839,11 @@ static void genInvariants(Merger &merger, CodeGen &codegen,
     // Traverse into the binary operations. Note that we only hoist
     // tensor loads, since subsequent MLIR/LLVM passes know how to
     // deal with all other kinds of derived loop invariants.
+    Kind last = merger.exp(exp).kind;
     unsigned e0 = merger.exp(exp).children.e0;
     unsigned e1 = merger.exp(exp).children.e1;
-    genInvariants(merger, codegen, rewriter, op, e0, ldx, hoist);
-    genInvariants(merger, codegen, rewriter, op, e1, ldx, hoist);
+    genInvariants(merger, codegen, rewriter, op, e0, ldx, hoist, last);
+    genInvariants(merger, codegen, rewriter, op, e1, ldx, hoist, last);
   }
 }
 
@@ -1232,6 +1321,10 @@ static void genResult(Merger &merger, CodeGen &codegen,
   }
   rewriter.replaceOp(op, result);
 }
+
+//===----------------------------------------------------------------------===//
+// Sparse compiler rewriting methods.
+//===----------------------------------------------------------------------===//
 
 namespace {
 

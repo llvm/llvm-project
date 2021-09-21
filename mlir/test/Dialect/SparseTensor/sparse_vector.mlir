@@ -210,32 +210,38 @@ func @mul_s(%arga: tensor<1024xf32, #SparseVector>, %argb: tensor<1024xf32>, %ar
 //
 // CHECK-VEC1-LABEL: func @reduction_d
 // CHECK-VEC1-DAG:   %[[c0:.*]] = constant 0 : index
+// CHECK-VEC1-DAG:   %[[i0:.*]] = constant 0 : i32
 // CHECK-VEC1-DAG:   %[[c16:.*]] = constant 16 : index
 // CHECK-VEC1-DAG:   %[[c1024:.*]] = constant 1024 : index
 // CHECK-VEC1-DAG:   %[[v0:.*]] = constant dense<0.000000e+00> : vector<16xf32>
-// CHECK-VEC1:       %[[red:.*]] = scf.for %[[i:.*]] = %[[c0]] to %[[c1024]] step %[[c16]] iter_args(%[[red_in:.*]] = %[[v0]]) -> (vector<16xf32>) {
+// CHECK-VEC1:       %[[l:.*]] = memref.load %{{.*}}[] : memref<f32>
+// CHECK-VEC1:       %[[r:.*]] = vector.insertelement %[[l]], %[[v0]][%[[i0]] : i32] : vector<16xf32>
+// CHECK-VEC1:       %[[red:.*]] = scf.for %[[i:.*]] = %[[c0]] to %[[c1024]] step %[[c16]] iter_args(%[[red_in:.*]] = %[[r]]) -> (vector<16xf32>) {
 // CHECK-VEC1:         %[[la:.*]] = vector.load %{{.*}}[%[[i]]] : memref<?xf32>, vector<16xf32>
 // CHECK-VEC1:         %[[lb:.*]] = vector.load %{{.*}}[%[[i]]] : memref<1024xf32>, vector<16xf32>
 // CHECK-VEC1:         %[[m:.*]] = mulf %[[la]], %[[lb]] : vector<16xf32>
 // CHECK-VEC1:         %[[a:.*]] = addf %[[red_in]], %[[m]] : vector<16xf32>
 // CHECK-VEC1:         scf.yield %[[a]] : vector<16xf32>
 // CHECK-VEC1:       }
-// CHECK-VEC1:       %{{.*}} = vector.reduction "add", %[[red]], %{{.*}} : vector<16xf32> into f32
+// CHECK-VEC1:       %{{.*}} = vector.reduction "add", %[[red]] : vector<16xf32> into f32
 // CHECK-VEC1:       return
 //
 // CHECK-VEC2-LABEL: func @reduction_d
 // CHECK-VEC2-DAG:   %[[c0:.*]] = constant 0 : index
+// CHECK-VEC2-DAG:   %[[i0:.*]] = constant 0 : i32
 // CHECK-VEC2-DAG:   %[[c16:.*]] = constant 16 : index
 // CHECK-VEC2-DAG:   %[[c1024:.*]] = constant 1024 : index
 // CHECK-VEC2-DAG:   %[[v0:.*]] = constant dense<0.000000e+00> : vector<16xf32>
-// CHECK-VEC2:       %[[red:.*]] = scf.for %[[i:.*]] = %[[c0]] to %[[c1024]] step %[[c16]] iter_args(%[[red_in:.*]] = %[[v0]]) -> (vector<16xf32>) {
+// CHECK-VEC2:       %[[l:.*]] = memref.load %{{.*}}[] : memref<f32>
+// CHECK-VEC2:       %[[r:.*]] = vector.insertelement %[[l]], %[[v0]][%[[i0]] : i32] : vector<16xf32>
+// CHECK-VEC2:       %[[red:.*]] = scf.for %[[i:.*]] = %[[c0]] to %[[c1024]] step %[[c16]] iter_args(%[[red_in:.*]] = %[[r]]) -> (vector<16xf32>) {
 // CHECK-VEC2:         %[[la:.*]] = vector.load %{{.*}}[%[[i]]] : memref<?xf32>, vector<16xf32>
 // CHECK-VEC2:         %[[lb:.*]] = vector.load %{{.*}}[%[[i]]] : memref<1024xf32>, vector<16xf32>
 // CHECK-VEC2:         %[[m:.*]] = mulf %[[la]], %[[lb]] : vector<16xf32>
 // CHECK-VEC2:         %[[a:.*]] = addf %[[red_in]], %[[m]] : vector<16xf32>
 // CHECK-VEC2:         scf.yield %[[a]] : vector<16xf32>
 // CHECK-VEC2:       }
-// CHECK-VEC2:       %{{.*}} = vector.reduction "add", %[[red]], %{{.*}} : vector<16xf32> into f32
+// CHECK-VEC2:       %{{.*}} = vector.reduction "add", %[[red]] : vector<16xf32> into f32
 // CHECK-VEC2:       return
 //
 func @reduction_d(%arga: tensor<1024xf32, #DenseVector>, %argb: tensor<1024xf32>, %argx: tensor<f32>) -> tensor<f32> {
