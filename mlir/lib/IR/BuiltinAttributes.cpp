@@ -390,6 +390,8 @@ ShapedType ElementsAttr::getType() const {
   return Attribute::getType().cast<ShapedType>();
 }
 
+Type ElementsAttr::getElementType() const { return getType().getElementType(); }
+
 /// Returns the number of elements held by this attribute.
 int64_t ElementsAttr::getNumElements() const {
   return getType().getNumElements();
@@ -635,7 +637,7 @@ DenseElementsAttr::AttributeElementIterator::AttributeElementIterator(
 
 Attribute DenseElementsAttr::AttributeElementIterator::operator*() const {
   auto owner = getFromOpaquePointer(base).cast<DenseElementsAttr>();
-  Type eltTy = owner.getType().getElementType();
+  Type eltTy = owner.getElementType();
   if (auto intEltTy = eltTy.dyn_cast<IntegerType>())
     return IntegerAttr::get(eltTy, *IntElementIterator(owner, index));
   if (eltTy.isa<IndexType>())
@@ -690,7 +692,7 @@ DenseElementsAttr::IntElementIterator::IntElementIterator(
     DenseElementsAttr attr, size_t dataIndex)
     : DenseElementIndexedIteratorImpl<IntElementIterator, APInt, APInt, APInt>(
           attr.getRawData().data(), attr.isSplat(), dataIndex),
-      bitWidth(getDenseElementBitWidth(attr.getType().getElementType())) {}
+      bitWidth(getDenseElementBitWidth(attr.getElementType())) {}
 
 APInt DenseElementsAttr::IntElementIterator::operator*() const {
   return readBits(getData(),
@@ -707,7 +709,7 @@ DenseElementsAttr::ComplexIntElementIterator::ComplexIntElementIterator(
                                       std::complex<APInt>, std::complex<APInt>,
                                       std::complex<APInt>>(
           attr.getRawData().data(), attr.isSplat(), dataIndex) {
-  auto complexType = attr.getType().getElementType().cast<ComplexType>();
+  auto complexType = attr.getElementType().cast<ComplexType>();
   bitWidth = getDenseElementBitWidth(complexType.getElementType());
 }
 
@@ -930,21 +932,15 @@ DenseElementsAttr DenseElementsAttr::getRawIntOrFloat(ShapedType type,
                                                     isInt, isSigned);
 }
 
-/// A method used to verify specific type invariants that the templatized 'get'
-/// method cannot.
 bool DenseElementsAttr::isValidIntOrFloat(int64_t dataEltSize, bool isInt,
                                           bool isSigned) const {
-  return ::isValidIntOrFloat(getType().getElementType(), dataEltSize, isInt,
-                             isSigned);
+  return ::isValidIntOrFloat(getElementType(), dataEltSize, isInt, isSigned);
 }
-
-/// Check the information for a C++ data type, check if this type is valid for
-/// the current attribute.
 bool DenseElementsAttr::isValidComplex(int64_t dataEltSize, bool isInt,
                                        bool isSigned) const {
   return ::isValidIntOrFloat(
-      getType().getElementType().cast<ComplexType>().getElementType(),
-      dataEltSize / 2, isInt, isSigned);
+      getElementType().cast<ComplexType>().getElementType(), dataEltSize / 2,
+      isInt, isSigned);
 }
 
 /// Returns true if this attribute corresponds to a splat, i.e. if all element
@@ -953,75 +949,68 @@ bool DenseElementsAttr::isSplat() const {
   return static_cast<DenseElementsAttributeStorage *>(impl)->isSplat;
 }
 
-/// Return the held element values as a range of Attributes.
-auto DenseElementsAttr::getAttributeValues() const
-    -> llvm::iterator_range<AttributeElementIterator> {
-  return {attr_value_begin(), attr_value_end()};
-}
-auto DenseElementsAttr::attr_value_begin() const -> AttributeElementIterator {
-  return AttributeElementIterator(*this, 0);
-}
-auto DenseElementsAttr::attr_value_end() const -> AttributeElementIterator {
-  return AttributeElementIterator(*this, getNumElements());
+/// Return if the given complex type has an integer element type.
+static bool isComplexOfIntType(Type type) {
+  return type.cast<ComplexType>().getElementType().isa<IntegerType>();
 }
 
-/// Return the held element values as a range of bool. The element type of
-/// this attribute must be of integer type of bitwidth 1.
-auto DenseElementsAttr::getBoolValues() const
-    -> llvm::iterator_range<BoolElementIterator> {
-  auto eltType = getType().getElementType().dyn_cast<IntegerType>();
-  assert(eltType && eltType.getWidth() == 1 && "expected i1 integer type");
-  (void)eltType;
-  return {BoolElementIterator(*this, 0),
-          BoolElementIterator(*this, getNumElements())};
-}
-
-/// Return the held element values as a range of APInts. The element type of
-/// this attribute must be of integer type.
-auto DenseElementsAttr::getIntValues() const
-    -> llvm::iterator_range<IntElementIterator> {
-  assert(getType().getElementType().isIntOrIndex() && "expected integral type");
-  return {raw_int_begin(), raw_int_end()};
-}
-auto DenseElementsAttr::int_value_begin() const -> IntElementIterator {
-  assert(getType().getElementType().isIntOrIndex() && "expected integral type");
-  return raw_int_begin();
-}
-auto DenseElementsAttr::int_value_end() const -> IntElementIterator {
-  assert(getType().getElementType().isIntOrIndex() && "expected integral type");
-  return raw_int_end();
-}
 auto DenseElementsAttr::getComplexIntValues() const
     -> llvm::iterator_range<ComplexIntElementIterator> {
-  Type eltTy = getType().getElementType().cast<ComplexType>().getElementType();
-  (void)eltTy;
-  assert(eltTy.isa<IntegerType>() && "expected complex integral type");
+  assert(isComplexOfIntType(getElementType()) &&
+         "expected complex integral type");
   return {ComplexIntElementIterator(*this, 0),
           ComplexIntElementIterator(*this, getNumElements())};
+}
+auto DenseElementsAttr::complex_value_begin() const
+    -> ComplexIntElementIterator {
+  assert(isComplexOfIntType(getElementType()) &&
+         "expected complex integral type");
+  return ComplexIntElementIterator(*this, 0);
+}
+auto DenseElementsAttr::complex_value_end() const -> ComplexIntElementIterator {
+  assert(isComplexOfIntType(getElementType()) &&
+         "expected complex integral type");
+  return ComplexIntElementIterator(*this, getNumElements());
 }
 
 /// Return the held element values as a range of APFloat. The element type of
 /// this attribute must be of float type.
 auto DenseElementsAttr::getFloatValues() const
     -> llvm::iterator_range<FloatElementIterator> {
-  auto elementType = getType().getElementType().cast<FloatType>();
+  auto elementType = getElementType().cast<FloatType>();
   const auto &elementSemantics = elementType.getFloatSemantics();
   return {FloatElementIterator(elementSemantics, raw_int_begin()),
           FloatElementIterator(elementSemantics, raw_int_end())};
 }
 auto DenseElementsAttr::float_value_begin() const -> FloatElementIterator {
-  return getFloatValues().begin();
+  auto elementType = getElementType().cast<FloatType>();
+  return FloatElementIterator(elementType.getFloatSemantics(), raw_int_begin());
 }
 auto DenseElementsAttr::float_value_end() const -> FloatElementIterator {
-  return getFloatValues().end();
+  auto elementType = getElementType().cast<FloatType>();
+  return FloatElementIterator(elementType.getFloatSemantics(), raw_int_end());
 }
+
 auto DenseElementsAttr::getComplexFloatValues() const
     -> llvm::iterator_range<ComplexFloatElementIterator> {
-  Type eltTy = getType().getElementType().cast<ComplexType>().getElementType();
+  Type eltTy = getElementType().cast<ComplexType>().getElementType();
   assert(eltTy.isa<FloatType>() && "expected complex float type");
   const auto &semantics = eltTy.cast<FloatType>().getFloatSemantics();
   return {{semantics, {*this, 0}},
           {semantics, {*this, static_cast<size_t>(getNumElements())}}};
+}
+auto DenseElementsAttr::complex_float_value_begin() const
+    -> ComplexFloatElementIterator {
+  Type eltTy = getElementType().cast<ComplexType>().getElementType();
+  assert(eltTy.isa<FloatType>() && "expected complex float type");
+  return {eltTy.cast<FloatType>().getFloatSemantics(), {*this, 0}};
+}
+auto DenseElementsAttr::complex_float_value_end() const
+    -> ComplexFloatElementIterator {
+  Type eltTy = getElementType().cast<ComplexType>().getElementType();
+  assert(eltTy.isa<FloatType>() && "expected complex float type");
+  return {eltTy.cast<FloatType>().getFloatSemantics(),
+          {*this, static_cast<size_t>(getNumElements())}};
 }
 
 /// Return the raw storage data held by this attribute.
@@ -1374,19 +1363,19 @@ Attribute SparseElementsAttr::getValue(ArrayRef<uint64_t> index) const {
 
 /// Get a zero APFloat for the given sparse attribute.
 APFloat SparseElementsAttr::getZeroAPFloat() const {
-  auto eltType = getType().getElementType().cast<FloatType>();
+  auto eltType = getElementType().cast<FloatType>();
   return APFloat(eltType.getFloatSemantics());
 }
 
 /// Get a zero APInt for the given sparse attribute.
 APInt SparseElementsAttr::getZeroAPInt() const {
-  auto eltType = getType().getElementType().cast<IntegerType>();
+  auto eltType = getElementType().cast<IntegerType>();
   return APInt::getZero(eltType.getWidth());
 }
 
 /// Get a zero attribute for the given attribute type.
 Attribute SparseElementsAttr::getZeroAttr() const {
-  auto eltType = getType().getElementType();
+  auto eltType = getElementType();
 
   // Handle floating point elements.
   if (eltType.isa<FloatType>())

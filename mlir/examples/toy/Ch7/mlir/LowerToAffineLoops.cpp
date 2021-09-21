@@ -165,7 +165,7 @@ struct ConstantOpLowering : public OpRewritePattern<toy::ConstantOp> {
     // functor recursively walks the dimensions of the constant shape,
     // generating a store when the recursion hits the base case.
     SmallVector<Value, 2> indices;
-    auto valueIt = constantValue.getValues<FloatAttr>().begin();
+    auto valueIt = constantValue.value_begin<FloatAttr>();
     std::function<void(uint64_t)> storeElements = [&](uint64_t dimension) {
       // The last dimension is the base case of the recursion, at this point
       // we store the element at the given index.

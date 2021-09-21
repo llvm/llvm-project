@@ -294,7 +294,8 @@ Attribute Importer::getConstantAsAttr(llvm::Constant *value) {
       if (!nested)
         return nullptr;
 
-      values.append(nested.attr_value_begin(), nested.attr_value_end());
+      values.append(nested.value_begin<Attribute>(),
+                    nested.value_end<Attribute>());
     }
 
     return DenseElementsAttr::get(outerType, values);

@@ -721,6 +721,8 @@ def Builtin_SparseElementsAttr
     /// 'T'  may be any of Attribute, APInt, APFloat, c++ integer/float types,
     /// etc.
     template <typename T> llvm::iterator_range<iterator<T>> getValues() const;
+    template <typename T> iterator<T> value_begin() const;
+    template <typename T> iterator<T> value_end() const;
 
     /// Return the value of the element at the given index. The 'index' is
     /// expected to refer to a valid element.

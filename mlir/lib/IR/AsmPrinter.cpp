@@ -1825,8 +1825,9 @@ void ModulePrinter::printDenseIntOrFPElementsAttr(DenseIntOrFPElementsAttr attr,
     // and hence was replaced.
     if (complexElementType.isa<IntegerType>()) {
       bool isSigned = !complexElementType.isUnsignedInteger();
+      auto valueIt = attr.value_begin<std::complex<APInt>>();
       printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
-        auto complexValue = *(attr.getComplexIntValues().begin() + index);
+        auto complexValue = *(valueIt + index);
         os << "(";
         printDenseIntElement(complexValue.real(), os, isSigned);
         os << ",";
@@ -1834,8 +1835,9 @@ void ModulePrinter::printDenseIntOrFPElementsAttr(DenseIntOrFPElementsAttr attr,
         os << ")";
       });
     } else {
+      auto valueIt = attr.value_begin<std::complex<APFloat>>();
       printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
-        auto complexValue = *(attr.getComplexFloatValues().begin() + index);
+        auto complexValue = *(valueIt + index);
         os << "(";
         printFloatValue(complexValue.real(), os);
         os << ",";
@@ -1845,15 +1847,15 @@ void ModulePrinter::printDenseIntOrFPElementsAttr(DenseIntOrFPElementsAttr attr,
     }
   } else if (elementType.isIntOrIndex()) {
     bool isSigned = !elementType.isUnsignedInteger();
-    auto intValues = attr.getIntValues();
+    auto valueIt = attr.value_begin<APInt>();
     printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
-      printDenseIntElement(*(intValues.begin() + index), os, isSigned);
+      printDenseIntElement(*(valueIt + index), os, isSigned);
     });
   } else {
     assert(elementType.isa<FloatType>() && "unexpected element type");
-    auto floatValues = attr.getFloatValues();
+    auto valueIt = attr.value_begin<APFloat>();
     printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
-      printFloatValue(*(floatValues.begin() + index), os);
+      printFloatValue(*(valueIt + index), os);
     });
   }
 }

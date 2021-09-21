@@ -1024,7 +1024,7 @@ LogicalResult OpTrait::impl::verifyValueSizeAttr(Operation *op,
     return op->emitOpError("requires 1D i32 elements attribute '")
            << attrName << "'";
 
-  if (llvm::any_of(sizeAttr.getIntValues(), [](const APInt &element) {
+  if (llvm::any_of(sizeAttr.getValues<APInt>(), [](const APInt &element) {
         return !element.isNonNegative();
       }))
     return op->emitOpError("'")

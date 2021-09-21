@@ -337,11 +337,12 @@ void gpu::addAsyncDependency(Operation *op, Value token) {
   auto attrName =
       OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr();
   auto sizeAttr = op->template getAttrOfType<DenseIntElementsAttr>(attrName);
+
+  // Async dependencies is the only variadic operand.
   if (!sizeAttr)
-    return; // Async dependencies is the only variadic operand.
-  SmallVector<int32_t, 8> sizes;
-  for (auto size : sizeAttr.getIntValues())
-    sizes.push_back(size.getSExtValue());
+    return;
+
+  SmallVector<int32_t, 8> sizes(sizeAttr.getValues<int32_t>());
   ++sizes.front();
   op->setAttr(attrName, Builder(op->getContext()).getI32VectorAttr(sizes));
 }

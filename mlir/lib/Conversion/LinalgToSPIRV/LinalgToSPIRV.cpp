@@ -127,7 +127,7 @@ LogicalResult SingleWorkgroupReduction::matchAndRewrite(
 
   if ((*localSize.begin()).getSExtValue() != originalInputType.getDimSize(0))
     return failure();
-  if (llvm::any_of(llvm::drop_begin(localSize.getIntValues(), 1),
+  if (llvm::any_of(llvm::drop_begin(localSize.getValues<APInt>(), 1),
                    [](const APInt &size) { return !size.isOneValue(); }))
     return failure();
 

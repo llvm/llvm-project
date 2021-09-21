@@ -1610,7 +1610,7 @@ public:
 
     SmallVector<AffineExpr, 2> inputExprs;
     inputExprs.resize(resultTy.getRank());
-    for (auto permutation : llvm::enumerate(perms.getIntValues())) {
+    for (auto permutation : llvm::enumerate(perms.getValues<APInt>())) {
       inputExprs[permutation.value().getZExtValue()] =
           rewriter.getAffineDimExpr(permutation.index());
     }
