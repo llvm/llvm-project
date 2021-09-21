@@ -29,117 +29,11 @@ ThreadContext::~ThreadContext() {
 }
 #endif
 
-void ThreadContext::OnDead() {
-  CHECK_EQ(sync.size(), 0);
-}
-
-void ThreadContext::OnJoined(void *arg) {
-  ThreadState *caller_thr = static_cast<ThreadState *>(arg);
-  AcquireImpl(caller_thr, 0, &sync);
-  sync.Reset(&caller_thr->proc()->clock_cache);
-}
-
-struct OnCreatedArgs {
-  ThreadState *thr;
-  uptr pc;
-};
-
-void ThreadContext::OnCreated(void *arg) {
-  thr = 0;
-  if (tid == kMainTid)
-    return;
-  OnCreatedArgs *args = static_cast<OnCreatedArgs *>(arg);
-  if (!args->thr)  // GCD workers don't have a parent thread.
-    return;
-  args->thr->fast_state.IncrementEpoch();
-  // Can't increment epoch w/o writing to the trace as well.
-  TraceAddEvent(args->thr, args->thr->fast_state, EventTypeMop, 0);
-  ReleaseImpl(args->thr, 0, &sync);
-  creation_stack_id = CurrentStackId(args->thr, args->pc);
-}
-
 void ThreadContext::OnReset() {
   CHECK_EQ(sync.size(), 0);
   uptr trace_p = GetThreadTrace(tid);
   ReleaseMemoryPagesToOS(trace_p, trace_p + TraceSize() * sizeof(Event));
   //!!! ReleaseMemoryToOS(GetThreadTraceHeader(tid), sizeof(Trace));
-}
-
-void ThreadContext::OnDetached(void *arg) {
-  ThreadState *thr1 = static_cast<ThreadState*>(arg);
-  sync.Reset(&thr1->proc()->clock_cache);
-}
-
-struct OnStartedArgs {
-  ThreadState *thr;
-  uptr stk_addr;
-  uptr stk_size;
-  uptr tls_addr;
-  uptr tls_size;
-};
-
-void ThreadContext::OnStarted(void *arg) {
-  OnStartedArgs *args = static_cast<OnStartedArgs*>(arg);
-  thr = args->thr;
-  // RoundUp so that one trace part does not contain events
-  // from different threads.
-  epoch0 = RoundUp(epoch1 + 1, kTracePartSize);
-  epoch1 = (u64)-1;
-  new(thr) ThreadState(ctx, tid, unique_id, epoch0, reuse_count,
-      args->stk_addr, args->stk_size, args->tls_addr, args->tls_size);
-#if !SANITIZER_GO
-  thr->shadow_stack = &ThreadTrace(thr->tid)->shadow_stack[0];
-  thr->shadow_stack_pos = thr->shadow_stack;
-  thr->shadow_stack_end = thr->shadow_stack + kShadowStackSize;
-#else
-  // Setup dynamic shadow stack.
-  const int kInitStackSize = 8;
-  thr->shadow_stack = (uptr *)Alloc(kInitStackSize * sizeof(uptr));
-  thr->shadow_stack_pos = thr->shadow_stack;
-  thr->shadow_stack_end = thr->shadow_stack + kInitStackSize;
-#endif
-  if (common_flags()->detect_deadlocks)
-    thr->dd_lt = ctx->dd->CreateLogicalThread(unique_id);
-  thr->fast_state.SetHistorySize(flags()->history_size);
-  // Commit switch to the new part of the trace.
-  // TraceAddEvent will reset stack0/mset0 in the new part for us.
-  TraceAddEvent(thr, thr->fast_state, EventTypeMop, 0);
-
-  thr->fast_synch_epoch = epoch0;
-  AcquireImpl(thr, 0, &sync);
-  sync.Reset(&thr->proc()->clock_cache);
-  thr->is_inited = true;
-  DPrintf("#%d: ThreadStart epoch=%zu stk_addr=%zx stk_size=%zx "
-          "tls_addr=%zx tls_size=%zx\n",
-          tid, (uptr)epoch0, args->stk_addr, args->stk_size,
-          args->tls_addr, args->tls_size);
-}
-
-void ThreadContext::OnFinished() {
-#if SANITIZER_GO
-  Free(thr->shadow_stack);
-  thr->shadow_stack_pos = nullptr;
-  thr->shadow_stack_end = nullptr;
-#endif
-  if (!detached) {
-    thr->fast_state.IncrementEpoch();
-    // Can't increment epoch w/o writing to the trace as well.
-    TraceAddEvent(thr, thr->fast_state, EventTypeMop, 0);
-    ReleaseImpl(thr, 0, &sync);
-  }
-  epoch1 = thr->fast_state.epoch();
-
-  if (common_flags()->detect_deadlocks)
-    ctx->dd->DestroyLogicalThread(thr->dd_lt);
-  thr->clock.ResetCached(&thr->proc()->clock_cache);
-#if !SANITIZER_GO
-  thr->last_sleep_clock.ResetCached(&thr->proc()->clock_cache);
-#endif
-#if !SANITIZER_GO
-  PlatformCleanUpThreadState(thr);
-#endif
-  thr->~ThreadState();
-  thr = 0;
 }
 
 #if !SANITIZER_GO
@@ -217,6 +111,11 @@ int ThreadCount(ThreadState *thr) {
   return (int)result;
 }
 
+struct OnCreatedArgs {
+  ThreadState *thr;
+  uptr pc;
+};
+
 Tid ThreadCreate(ThreadState *thr, uptr pc, uptr uid, bool detached) {
   OnCreatedArgs args = { thr, pc };
   u32 parent_tid = thr ? thr->tid : kInvalidTid;  // No parent for GCD workers.
@@ -224,6 +123,28 @@ Tid ThreadCreate(ThreadState *thr, uptr pc, uptr uid, bool detached) {
   DPrintf("#%d: ThreadCreate tid=%d uid=%zu\n", parent_tid, tid, uid);
   return tid;
 }
+
+void ThreadContext::OnCreated(void *arg) {
+  thr = 0;
+  if (tid == kMainTid)
+    return;
+  OnCreatedArgs *args = static_cast<OnCreatedArgs *>(arg);
+  if (!args->thr)  // GCD workers don't have a parent thread.
+    return;
+  args->thr->fast_state.IncrementEpoch();
+  // Can't increment epoch w/o writing to the trace as well.
+  TraceAddEvent(args->thr, args->thr->fast_state, EventTypeMop, 0);
+  ReleaseImpl(args->thr, 0, &sync);
+  creation_stack_id = CurrentStackId(args->thr, args->pc);
+}
+
+struct OnStartedArgs {
+  ThreadState *thr;
+  uptr stk_addr;
+  uptr stk_size;
+  uptr tls_addr;
+  uptr tls_size;
+};
 
 void ThreadStart(ThreadState *thr, Tid tid, tid_t os_id,
                  ThreadType thread_type) {
@@ -263,6 +184,45 @@ void ThreadStart(ThreadState *thr, Tid tid, tid_t os_id,
 #endif
 }
 
+void ThreadContext::OnStarted(void *arg) {
+  OnStartedArgs *args = static_cast<OnStartedArgs *>(arg);
+  thr = args->thr;
+  // RoundUp so that one trace part does not contain events
+  // from different threads.
+  epoch0 = RoundUp(epoch1 + 1, kTracePartSize);
+  epoch1 = (u64)-1;
+  new (thr)
+      ThreadState(ctx, tid, unique_id, epoch0, reuse_count, args->stk_addr,
+                  args->stk_size, args->tls_addr, args->tls_size);
+#if !SANITIZER_GO
+  thr->shadow_stack = &ThreadTrace(thr->tid)->shadow_stack[0];
+  thr->shadow_stack_pos = thr->shadow_stack;
+  thr->shadow_stack_end = thr->shadow_stack + kShadowStackSize;
+#else
+  // Setup dynamic shadow stack.
+  const int kInitStackSize = 8;
+  thr->shadow_stack = (uptr *)Alloc(kInitStackSize * sizeof(uptr));
+  thr->shadow_stack_pos = thr->shadow_stack;
+  thr->shadow_stack_end = thr->shadow_stack + kInitStackSize;
+#endif
+  if (common_flags()->detect_deadlocks)
+    thr->dd_lt = ctx->dd->CreateLogicalThread(unique_id);
+  thr->fast_state.SetHistorySize(flags()->history_size);
+  // Commit switch to the new part of the trace.
+  // TraceAddEvent will reset stack0/mset0 in the new part for us.
+  TraceAddEvent(thr, thr->fast_state, EventTypeMop, 0);
+
+  thr->fast_synch_epoch = epoch0;
+  AcquireImpl(thr, 0, &sync);
+  sync.Reset(&thr->proc()->clock_cache);
+  thr->is_inited = true;
+  DPrintf(
+      "#%d: ThreadStart epoch=%zu stk_addr=%zx stk_size=%zx "
+      "tls_addr=%zx tls_size=%zx\n",
+      tid, (uptr)epoch0, args->stk_addr, args->stk_size, args->tls_addr,
+      args->tls_size);
+}
+
 void ThreadFinish(ThreadState *thr) {
   ThreadCheckIgnore(thr);
   if (thr->stk_addr && thr->stk_size)
@@ -271,6 +231,33 @@ void ThreadFinish(ThreadState *thr) {
     DontNeedShadowFor(thr->tls_addr, thr->tls_size);
   thr->is_dead = true;
   ctx->thread_registry.FinishThread(thr->tid);
+}
+
+void ThreadContext::OnFinished() {
+#if SANITIZER_GO
+  Free(thr->shadow_stack);
+  thr->shadow_stack_pos = nullptr;
+  thr->shadow_stack_end = nullptr;
+#endif
+  if (!detached) {
+    thr->fast_state.IncrementEpoch();
+    // Can't increment epoch w/o writing to the trace as well.
+    TraceAddEvent(thr, thr->fast_state, EventTypeMop, 0);
+    ReleaseImpl(thr, 0, &sync);
+  }
+  epoch1 = thr->fast_state.epoch();
+
+  if (common_flags()->detect_deadlocks)
+    ctx->dd->DestroyLogicalThread(thr->dd_lt);
+  thr->clock.ResetCached(&thr->proc()->clock_cache);
+#if !SANITIZER_GO
+  thr->last_sleep_clock.ResetCached(&thr->proc()->clock_cache);
+#endif
+#if !SANITIZER_GO
+  PlatformCleanUpThreadState(thr);
+#endif
+  thr->~ThreadState();
+  thr = 0;
 }
 
 struct ConsumeThreadContext {
@@ -310,10 +297,23 @@ void ThreadJoin(ThreadState *thr, uptr pc, Tid tid) {
   ctx->thread_registry.JoinThread(tid, thr);
 }
 
+void ThreadContext::OnJoined(void *arg) {
+  ThreadState *caller_thr = static_cast<ThreadState *>(arg);
+  AcquireImpl(caller_thr, 0, &sync);
+  sync.Reset(&caller_thr->proc()->clock_cache);
+}
+
+void ThreadContext::OnDead() { CHECK_EQ(sync.size(), 0); }
+
 void ThreadDetach(ThreadState *thr, uptr pc, Tid tid) {
   CHECK_GT(tid, 0);
   CHECK_LT(tid, kMaxTid);
   ctx->thread_registry.DetachThread(tid, thr);
+}
+
+void ThreadContext::OnDetached(void *arg) {
+  ThreadState *thr1 = static_cast<ThreadState *>(arg);
+  sync.Reset(&thr1->proc()->clock_cache);
 }
 
 void ThreadNotJoined(ThreadState *thr, uptr pc, Tid tid, uptr uid) {
