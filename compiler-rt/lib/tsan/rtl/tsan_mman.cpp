@@ -218,7 +218,7 @@ void *user_reallocarray(ThreadState *thr, uptr pc, void *p, uptr size, uptr n) {
 }
 
 void OnUserAlloc(ThreadState *thr, uptr pc, uptr p, uptr sz, bool write) {
-  DPrintf("#%d: alloc(%zu) = %p\n", thr->tid, sz, p);
+  DPrintf("#%d: alloc(%zu) = 0x%zx\n", thr->tid, sz, p);
   ctx->metamap.AllocBlock(thr, pc, p, sz);
   if (write && thr->ignore_reads_and_writes == 0)
     MemoryRangeImitateWrite(thr, pc, (uptr)p, sz);
@@ -229,7 +229,7 @@ void OnUserAlloc(ThreadState *thr, uptr pc, uptr p, uptr sz, bool write) {
 void OnUserFree(ThreadState *thr, uptr pc, uptr p, bool write) {
   CHECK_NE(p, (void*)0);
   uptr sz = ctx->metamap.FreeBlock(thr->proc(), p);
-  DPrintf("#%d: free(%p, %zu)\n", thr->tid, p, sz);
+  DPrintf("#%d: free(0x%zx, %zu)\n", thr->tid, p, sz);
   if (write && thr->ignore_reads_and_writes == 0)
     MemoryRangeFreed(thr, pc, (uptr)p, sz);
 }

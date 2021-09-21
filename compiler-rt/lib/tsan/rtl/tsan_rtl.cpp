@@ -303,7 +303,7 @@ void MapShadow(uptr addr, uptr size) {
 }
 
 void MapThreadTrace(uptr addr, uptr size, const char *name) {
-  DPrintf("#0: Mapping trace at %p-%p(0x%zx)\n", addr, addr + size, size);
+  DPrintf("#0: Mapping trace at 0x%zx-0x%zx(0x%zx)\n", addr, addr + size, size);
   CHECK_GE(addr, TraceMemBeg());
   CHECK_LE(addr + size, TraceMemEnd());
   CHECK_EQ(addr, addr & ~((64 << 10) - 1));  // windows wants 64K alignment

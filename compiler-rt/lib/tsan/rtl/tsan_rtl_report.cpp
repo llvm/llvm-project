@@ -538,8 +538,9 @@ bool RestoreStack(Tid tid, EventType type, Sid sid, Epoch epoch, uptr addr,
   // This function restores stack trace and mutex set for the thread/epoch.
   // It does so by getting stack trace and mutex set at the beginning of
   // trace part, and then replaying the trace till the given epoch.
-  DPrintf2("RestoreStack: tid=%u sid=%u@%u addr=0x%zx/%zu typ=%x\n", tid, sid,
-           epoch, addr, size, typ);
+  DPrintf2("RestoreStack: tid=%u sid=%u@%u addr=0x%zx/%zu typ=%x\n", tid,
+           static_cast<int>(sid), static_cast<int>(epoch), addr, size,
+           static_cast<int>(typ));
   ctx->slot_mtx.CheckLocked();  // needed to prevent trace part recycling
   ctx->thread_registry.CheckLocked();
   ThreadContext *tctx =
@@ -582,8 +583,8 @@ bool RestoreStack(Tid tid, EventType type, Sid sid, Epoch epoch, uptr addr,
           uptr ev_pc =
               prev_pc + ev->pc_delta - (1 << (EventAccess::kPCBits - 1));
           prev_pc = ev_pc;
-          DPrintf2("  Access: pc=0x%zx addr=0x%llx/%llu type=%llu/%llu\n",
-                   ev_pc, ev_addr, ev_size, ev->is_read, ev->is_atomic);
+          DPrintf2("  Access: pc=0x%zx addr=0x%zx/%zu type=%u/%u\n", ev_pc,
+                   ev_addr, ev_size, ev->is_read, ev->is_atomic);
           if (match && type == EventType::kAccessExt &&
               IsWithinAccess(addr, size, ev_addr, ev_size) &&
               is_read == ev->is_read && is_atomic == ev->is_atomic && !is_free)
@@ -593,7 +594,7 @@ bool RestoreStack(Tid tid, EventType type, Sid sid, Epoch epoch, uptr addr,
         if (evp->is_func) {
           auto *ev = reinterpret_cast<EventFunc *>(evp);
           if (ev->pc) {
-            DPrintf2("  FuncEnter: pc=0x%zx\n", ev->pc);
+            DPrintf2("  FuncEnter: pc=0x%llx\n", ev->pc);
             stack.PushBack(ev->pc);
           } else {
             DPrintf2("  FuncExit\n");
@@ -608,7 +609,7 @@ bool RestoreStack(Tid tid, EventType type, Sid sid, Epoch epoch, uptr addr,
             uptr ev_addr = RestoreAddr(ev->addr);
             uptr ev_size = 1 << ev->size_log;
             prev_pc = ev->pc;
-            DPrintf2("  AccessExt: pc=0x%zx addr=0x%llx/%llu type=%llu/%llu\n",
+            DPrintf2("  AccessExt: pc=0x%llx addr=0x%zx/%zu type=%u/%u\n",
                      ev->pc, ev_addr, ev_size, ev->is_read, ev->is_atomic);
             if (match && type == EventType::kAccessExt &&
                 IsWithinAccess(addr, size, ev_addr, ev_size) &&
@@ -624,8 +625,8 @@ bool RestoreStack(Tid tid, EventType type, Sid sid, Epoch epoch, uptr addr,
                 (ev->size_hi << EventAccessRange::kSizeLoBits) + ev->size_lo;
             uptr ev_pc = RestoreAddr(ev->pc);
             prev_pc = ev_pc;
-            DPrintf2("  Range: pc=0x%zx addr=0x%llx/%llu type=%llu/%llu\n",
-                     ev_pc, ev_addr, ev_size, ev->is_read, ev->is_free);
+            DPrintf2("  Range: pc=0x%zx addr=0x%zx/%zu type=%u/%u\n", ev_pc,
+                     ev_addr, ev_size, ev->is_read, ev->is_free);
             if (match && type == EventType::kAccessExt &&
                 IsWithinAccess(addr, size, ev_addr, ev_size) &&
                 is_read == ev->is_read && !is_atomic && is_free == ev->is_free)
@@ -641,7 +642,7 @@ bool RestoreStack(Tid tid, EventType type, Sid sid, Epoch epoch, uptr addr,
             uptr ev_pc = RestoreAddr(ev->pc);
             StackID stack_id =
                 (ev->stack_hi << EventLock::kStackIDLoBits) + ev->stack_lo;
-            DPrintf2("  Lock: pc=0x%zx addr=0x%llx stack=%u write=%d\n", ev_pc,
+            DPrintf2("  Lock: pc=0x%zx addr=0x%zx stack=%u write=%d\n", ev_pc,
                      ev_addr, stack_id, is_write);
             mset.AddAddr(ev_addr, stack_id, is_write);
             // Events with ev_pc == 0 are written to the beginning of trace
@@ -653,7 +654,7 @@ bool RestoreStack(Tid tid, EventType type, Sid sid, Epoch epoch, uptr addr,
           case EventType::kUnlock: {
             auto *ev = reinterpret_cast<EventUnlock *>(evp);
             uptr ev_addr = RestoreAddr(ev->addr);
-            DPrintf2("  Unlock: addr=0x%llx\n", ev_addr);
+            DPrintf2("  Unlock: addr=0x%zx\n", ev_addr);
             mset.DelAddr(ev_addr);
             break;
           }
