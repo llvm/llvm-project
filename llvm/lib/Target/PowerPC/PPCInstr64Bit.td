@@ -640,7 +640,7 @@ def XORIS8  : DForm_4<27, (outs g8rc:$dst), (ins g8rc:$src1, u16imm64:$src2),
                    [(set i64:$dst, (xor i64:$src1, imm16ShiftedZExt:$src2))]>;
 
 let isCommutable = 1 in
-defm ADD8  : XOForm_1rx<31, 266, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
+defm ADD8  : XOForm_1rx<31, 266, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                         "add", "$rT, $rA, $rB", IIC_IntSimple,
                         [(set i64:$rT, (add i64:$rA, i64:$rB))]>;
 // ADD8 has a special form: reg = ADD8(reg, sym@tls) for use by the
@@ -719,7 +719,7 @@ defm SUBFC8 : XOForm_1rc<31, 8, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                         "subfc", "$rT, $rA, $rB", IIC_IntGeneral,
                         [(set i64:$rT, (subc i64:$rB, i64:$rA))]>,
                         PPC970_DGroup_Cracked;
-defm SUBF8 : XOForm_1rx<31, 40, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
+defm SUBF8 : XOForm_1rx<31, 40, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                         "subf", "$rT, $rA, $rB", IIC_IntGeneral,
                         [(set i64:$rT, (sub i64:$rB, i64:$rA))]>;
 defm NEG8    : XOForm_3r<31, 104, 0, (outs g8rc:$rT), (ins g8rc:$rA),
@@ -963,7 +963,7 @@ defm DIVDEU : XOForm_1rcr<31, 393, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                           [(set i64:$rT, (int_ppc_divdeu g8rc:$rA, g8rc:$rB))]>,
                           isPPC64, Requires<[HasExtDiv]>;
 let isCommutable = 1 in
-defm MULLD : XOForm_1rx<31, 233, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
+defm MULLD : XOForm_1rx<31, 233, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                         "mulld", "$rT, $rA, $rB", IIC_IntMulHD,
                         [(set i64:$rT, (mul i64:$rA, i64:$rB))]>, isPPC64;
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in

@@ -55,11 +55,17 @@ static bool replaceConditionalBranchesOnConstant(Instruction *II,
                                                  Value *NewValue,
                                                  DomTreeUpdater *DTU) {
   bool HasDeadBlocks = false;
-  SmallSetVector<Instruction *, 8> Worklist;
+  SmallSetVector<Instruction *, 8> UnsimplifiedUsers;
   replaceAndRecursivelySimplify(II, NewValue, nullptr, nullptr, nullptr,
-                                &Worklist);
-  for (auto I : Worklist) {
-    BranchInst *BI = dyn_cast<BranchInst>(I);
+                                &UnsimplifiedUsers);
+  // UnsimplifiedUsers can contain PHI nodes that may be removed when
+  // replacing the branch instructions, so use a value handle worklist
+  // to handle those possibly removed instructions.
+  SmallVector<WeakVH, 8> Worklist(UnsimplifiedUsers.begin(),
+                                  UnsimplifiedUsers.end());
+
+  for (auto &VH : Worklist) {
+    BranchInst *BI = dyn_cast_or_null<BranchInst>(VH);
     if (!BI)
       continue;
     if (BI->isUnconditional())
