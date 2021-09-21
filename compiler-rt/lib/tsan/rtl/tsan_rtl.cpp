@@ -150,11 +150,8 @@ ThreadState::ThreadState(Context *ctx, Tid tid, int unique_id, u64 epoch,
 
 #if !SANITIZER_GO
 static void MemoryProfiler(Context *ctx, fd_t fd, int i) {
-  uptr n_threads;
-  uptr n_running_threads;
-  ctx->thread_registry.GetNumberOfThreads(&n_threads, &n_running_threads);
   InternalMmapVector<char> buf(4096);
-  WriteMemoryProfile(buf.data(), buf.size(), n_threads, n_running_threads);
+  WriteMemoryProfile(buf.data(), buf.size());
   WriteToFile(fd, buf.data(), internal_strlen(buf.data()));
 }
 
