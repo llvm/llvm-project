@@ -477,7 +477,7 @@ static void UpdateSleepClockCallback(ThreadContextBase *tctx_base, void *arg) {
 }
 
 void AfterSleep(ThreadState *thr, uptr pc) {
-  DPrintf("#%d: AfterSleep %zx\n", thr->tid);
+  DPrintf("#%d: AfterSleep\n", thr->tid);
   if (thr->ignore_sync)
     return;
   thr->last_sleep_stack_id = CurrentStackId(thr, pc);
