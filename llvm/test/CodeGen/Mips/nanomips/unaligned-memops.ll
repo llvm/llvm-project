@@ -8,9 +8,9 @@ define i32 @ualw_1(i32* %a) {
 }
 
 define i32 @ualw_2(i32* %a) {
-; CHECK: addiu $t4, $a0, 256
+; CHECK: addiu $a0, $a0, 256
 ; CHECK: ADDiu_NM
-; CHECK: ualw $a0, 0($t4)
+; CHECK: ualw $a0, 0($a0)
 ; CHECK: UALW_NM
   %a1 = getelementptr inbounds i32, i32* %a, i64 64
   %1 = load i32, i32* %a1, align 1
@@ -26,9 +26,9 @@ define i32 @ualw_3(i32* %a) {
 }
 
 define i32 @ualw_4(i32* %a) {
-; CHECK: addiu $t4, $a0, -260
+; CHECK: addiu $a0, $a0, -260
 ; CHECK: ADDiu_NM
-; CHECK: ualw $a0, 0($t4)
+; CHECK: ualw $a0, 0($a0)
 ; CHECK: UALW_NM
   %a1 = getelementptr inbounds i32, i32* %a, i64 -65
   %1 = load i32, i32* %a1, align 1
@@ -44,16 +44,16 @@ define i32 @ualw_5(i32* %a) {
 }
 
 define void @uasw_1(i32* %a) {
-; CHECK: uasw $t4, 0($a0)
+; CHECK: uasw $a1, 0($a0)
 ; CHECK: UASW_NM
   store i32 1, i32* %a, align 1
   ret void
 }
 
 define void @uasw_2(i32* %a) {
-; CHECK: addiu $t4, $a0, 256
+; CHECK: addiu $a0, $a0, 256
 ; CHECK: ADDiu_NM
-; CHECK: uasw $t5, 0($t4)
+; CHECK: uasw $a1, 0($a0)
 ; CHECK: UASW_NM
   %a1 = getelementptr inbounds i32, i32* %a, i64 64
   store i32 1, i32* %a1, align 1
@@ -61,7 +61,7 @@ define void @uasw_2(i32* %a) {
 }
 
 define void @uasw_3(i32* %a) {
-; CHECK: uasw $t4, 252($a0)
+; CHECK: uasw $a1, 252($a0)
 ; CHECK: UASW_NM
   %a1 = getelementptr inbounds i32, i32* %a, i64 63
   store i32 1, i32* %a1, align 1
@@ -69,9 +69,9 @@ define void @uasw_3(i32* %a) {
 }
 
 define void @uasw_4(i32* %a) {
-; CHECK: addiu $t4, $a0, -260
+; CHECK: addiu $a0, $a0, -260
 ; CHECK: ADDiu_NM
-; CHECK: uasw $t5, 0($t4)
+; CHECK: uasw $a1, 0($a0)
 ; CHECK: UASW_NM
   %a1 = getelementptr inbounds i32, i32* %a, i64 -65
   store i32 1, i32* %a1, align 1
@@ -79,7 +79,7 @@ define void @uasw_4(i32* %a) {
 }
 
 define void @uasw_5(i32* %a) {
-; CHECK: uasw $t4, -256($a0)
+; CHECK: uasw $a1, -256($a0)
 ; CHECK: UASW_NM
   %a1 = getelementptr inbounds i32, i32* %a, i64 -64
   store i32 1, i32* %a1, align 1

@@ -327,7 +327,12 @@ class GPR32ClassNM<list<ValueType> regTypes> :
   // Not preserved across procedure calls
   T8_NM, T9_NM,
   // Reserved
-  K0_NM, K1_NM, GP_NM, SP_NM, FP_NM, RA_NM)>;
+  K0_NM, K1_NM, GP_NM, SP_NM, FP_NM, RA_NM)> {
+  let AltOrders = [(add A0_NM, A1_NM, A2_NM, A3_NM, S0_NM, S1_NM, S2_NM, S3_NM,
+                        A4_NM, A5_NM, A6_NM, A7_NM, T0_NM, T1_NM, T2_NM, T3_NM,
+                        T4_NM, T5_NM, T8_NM, T9_NM, S4_NM, S5_NM, S6_NM, S7_NM)];
+  let AltOrderSelect = [{ return 1; }];
+}
 
 def GPR32NM : GPR32ClassNM<[i32]>;
 
