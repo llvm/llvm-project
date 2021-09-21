@@ -114,9 +114,9 @@ define i32 @load_extract_idx_var_i64_known_valid_by_assume_in_dominating_block(<
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[LOOP:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[LV:%.*]] = load <4 x i32>, <4 x i32>* [[X:%.*]], align 16
 ; CHECK-NEXT:    call void @maythrow()
-; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[LV]], i64 [[IDX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <4 x i32>, <4 x i32>* [[X:%.*]], i32 0, i64 [[IDX]]
+; CHECK-NEXT:    [[R:%.*]] = load i32, i32* [[TMP0]], align 4
 ; CHECK-NEXT:    [[C_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:

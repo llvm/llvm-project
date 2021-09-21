@@ -549,6 +549,7 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
   ConstantRange computeConstantRange(const Value *V, bool UseInstrInfo = true,
                                      AssumptionCache *AC = nullptr,
                                      const Instruction *CtxI = nullptr,
+                                     const DominatorTree *DT = nullptr,
                                      unsigned Depth = 0);
 
   /// Return true if this function can prove that the instruction I will
