@@ -92,7 +92,8 @@ func @memref_stride_missing_colon_2(memref<42x42xi8, offset: 0, strides [?, ?]>)
 
 // -----
 
-func @memref_stride_invalid_strides(memref<42x42xi8, offset: 0, strides: ()>) // expected-error {{invalid braces-enclosed stride list}}
+// expected-error @+1 {{expected '['}}
+func @memref_stride_invalid_strides(memref<42x42xi8, offset: 0, strides: ()>)
 
 // -----
 
@@ -633,7 +634,8 @@ func @invalid_bound_map(%N : i32) {
 
 // -----
 
-#set0 = affine_set<(i)[N, M] : )i >= 0)> // expected-error {{expected '(' at start of integer set constraint list}}
+// expected-error @+1 {{expected '(' in integer set constraint list}}
+#set0 = affine_set<(i)[N, M] : )i >= 0)>
 
 // -----
 #set0 = affine_set<(i)[N] : (i >= 0, N - i >= 0)>
