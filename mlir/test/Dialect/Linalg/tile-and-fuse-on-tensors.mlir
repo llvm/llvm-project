@@ -230,3 +230,39 @@ builtin.func @fuse_indexed(%arg0: tensor<24x12xi32>,
   return %1 : tensor<24x25xi32>
 }
 
+// -----
+
+//  CHECK-DAG:  #[[MAP0:.*]] = affine_map<(d0, d1) -> (d0 + d1)>
+//  CHECK-DAG:  #[[MAP1:.*]] = affine_map<(d0, d1) -> (8, -d0 - d1 + 18)>
+//  CHECK-DAG:  #[[MAP2:.*]] = affine_map<(d0, d1, d2) -> (d0, -d1 - d2 + 18)>
+#map0 = affine_map<(d0, d1) -> (d0, d0 + d1)>
+#map1 = affine_map<(d0, d1) -> (d0, d1)>
+
+//      CHECK:  fuse_non_rectangular
+// CHECK-SAME:    %[[ARG0:[0-9a-zA-Z]*]]: tensor<10x18xf32>
+func @fuse_non_rectangular(%arg0: tensor<10x18xf32>,
+                           %arg1: tensor<10x8xf32>) -> tensor<10x8xf32> {
+  %cst = constant 0.000000e+00 : f32
+  %0 = linalg.fill(%cst, %arg0) : f32, tensor<10x18xf32> -> tensor<10x18xf32>
+
+  //      CHECK:  scf.for %[[IV0:[0-9a-zA-Z]*]] =
+  //      CHECK:    scf.for %[[IV1:[0-9a-zA-Z]*]] =
+
+  // Compute producer on a hyper rectangular bounding box. Along the second dimenson,
+  // the offset is set to the sum of the induction variables and the upper bound
+  // to either eight (sum of the tile sizes) or eighteen (sum of the domain sizes)
+  // minus the induction variables.
+  //      CHECK:      %[[SUM:.*]] = affine.apply #[[MAP0]](%[[IV1]], %[[IV0]]
+  //      CHECK:      %[[TS1:.*]] = affine.min #[[MAP1]](%[[IV1]], %[[IV0]]
+  //      CHECK:      %[[UB1:.*]] = affine.min #[[MAP2]](%[[TS1]], %[[IV1]], %[[IV0]]
+  //      CHECK:      %[[T0:.*]] = tensor.extract_slice %[[ARG0]]
+  // CHECK-SAME:                                        %[[IV1]], %[[SUM]]
+  // CHECK-SAME:                                                , %[[UB1]]
+  //      CHECK:      %[[T1:.*]] = linalg.fill(%{{.*}}, %[[T0]])
+  %1 = linalg.generic {indexing_maps = [#map0, #map1], iterator_types = ["parallel", "parallel"]} ins(%0 : tensor<10x18xf32>) outs(%arg1 : tensor<10x8xf32>) {
+  ^bb0(%arg2: f32, %arg3: f32):  // no predecessors
+    %2 = addf %arg2, %arg3 : f32
+    linalg.yield %2 : f32
+  } -> tensor<10x8xf32>
+  return %1 : tensor<10x8xf32>
+}

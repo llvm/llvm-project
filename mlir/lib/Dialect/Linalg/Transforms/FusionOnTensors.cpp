@@ -30,61 +30,26 @@ using namespace linalg;
 // StructuredOp specific helpers.
 //===----------------------------------------------------------------------===//
 
-/// Relate the producer to the consumer loop iterations that access the same
-/// producer result element:
-///  consumerToProducerLoops =
-///   inverse(producerIndexingMap).compose(consumerIndexingMap).
-/// Return `consumerToProducerLoops` or none if the inversion fails.
-static Optional<AffineMap>
-getConsumerToProducerLoopsMap(AffineMap producerIndexingMap,
-                              AffineMap consumerIndexingMap) {
-  assert(consumerIndexingMap.getNumResults() ==
-             producerIndexingMap.getNumResults() &&
-         "expect the number of indexing map results to match");
-  // Ensure the producer indexing map is a projected permutation.
-  if (!producerIndexingMap.isProjectedPermutation())
-    return None;
-  AffineMap inverseIndexingMap =
-      inverseAndBroadcastProjectedPermuation(producerIndexingMap);
-  return inverseIndexingMap.compose(consumerIndexingMap);
-}
-
-/// Returns the producer result slice dimensions tiled by the tile loop nest or
-/// an empty vector if `getConsumerToProducerLoopsMap` returns none.
-// TODO: replace by Fourier-Motzkin and/or compute starting from consumer.
-SmallVector<int64_t> getTiledSliceDims(OpResult producerResult,
-                                       OpOperand *consumerOperand,
+/// Returns the tiled slice dimensions given the tiled consumer loop dimensions.
+/// The slice defines a hyper rectangular iteration space and fusing the
+/// producer is always possible. However, depending on the consumer indexing
+/// map, not all slice elements may be consumed and the tiles may overlap. In
+/// these cases, fusion introduces redundant computation.
+SmallVector<int64_t> getTiledSliceDims(OpOperand *consumerOperand,
                                        ArrayRef<int64_t> tiledLoopDims) {
+  // Get the consumer operand indexing map.
   LinalgOp consumerOp = consumerOperand->getOwner();
-  LinalgOp producerOp = producerResult.getOwner();
-  OpOperand *opOperand =
-      producerOp.getOutputOperand(producerResult.getResultNumber());
+  AffineMap indexingMap = consumerOp.getTiedIndexingMap(consumerOperand);
 
-  // Compute the `consumerToProducerLoopsMap` and exit if the computation fails.
-  AffineMap producerIndexingMap = producerOp.getTiedIndexingMap(opOperand);
-  Optional<AffineMap> consumerToProducerLoopsMap =
-      getConsumerToProducerLoopsMap(
-          producerIndexingMap, consumerOp.getTiedIndexingMap(consumerOperand));
-  if (!consumerToProducerLoopsMap.hasValue())
-    return {};
-
-  // Compute the set of tiled producer loops.
-  DenseSet<int64_t> tiledProducerLoops;
-  for (auto en : enumerate(consumerToProducerLoopsMap->getResults())) {
-    for (int64_t dim : tiledLoopDims) {
-      if (en.value().isFunctionOfDim(dim))
-        tiledProducerLoops.insert(en.index());
+  // Search the slice dimensions tiled by a tile loop dimension.
+  DenseSet<int64_t> tiledSliceDims;
+  for (auto en : enumerate(indexingMap.getResults())) {
+    for (auto tiledLoopDim : tiledLoopDims) {
+      if (en.value().isFunctionOfDim(tiledLoopDim))
+        tiledSliceDims.insert(en.index());
     }
   }
-
-  // Compute the slice dimensions for the tiled producer loops.
-  SmallVector<int64_t> tiledSliceDims;
-  for (auto en : enumerate(producerIndexingMap.getResults())) {
-    auto dimExpr = en.value().dyn_cast<AffineDimExpr>();
-    if (dimExpr && tiledProducerLoops.count(dimExpr.getPosition()) != 0)
-      tiledSliceDims.push_back(en.index());
-  }
-  return tiledSliceDims;
+  return {tiledSliceDims.begin(), tiledSliceDims.end()};
 }
 
 /// Returns the producer fused in place of `sliceOp`. Tile the producer operands
@@ -332,9 +297,10 @@ FailureOr<LinalgOp> TileLoopNest::fuseProducer(OpBuilder &b,
   if (!producerResult || !isa<LinalgOp>(producerResult.getOwner()))
     return failure();
 
-  // Compute the slice dimensions tiled by `tileLoopNest`.
+  // Compute the tiled producer slice dimensions given the tiled root operation
+  // loop dimensions `loopDims`.
   SmallVector<int64_t> tiledSliceDims =
-      getTiledSliceDims(producerResult, rootOpOperand, loopDims);
+      getTiledSliceDims(rootOpOperand, loopDims);
   if (tiledSliceDims.empty())
     return failure();
 
