@@ -140,9 +140,9 @@ define amdgpu_ps i64 @scalar_xnor_v4i16_one_use(<4 x i16> inreg %a, <4 x i16> in
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_mov_b32 s4, 0xffff
 ; GFX8-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GFX8-NEXT:    s_mov_b32 s5, s4
 ; GFX8-NEXT:    s_lshr_b32 s3, s0, 16
 ; GFX8-NEXT:    s_and_b32 s2, s0, s4
-; GFX8-NEXT:    s_mov_b32 s5, s4
 ; GFX8-NEXT:    s_lshr_b32 s7, s1, 16
 ; GFX8-NEXT:    s_and_b32 s6, s1, s4
 ; GFX8-NEXT:    s_xor_b64 s[0:1], s[2:3], s[4:5]
