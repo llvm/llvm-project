@@ -192,7 +192,7 @@ public:
   // Returns the SDNodes which this SDDbgValue depends on.
   SmallVector<SDNode *> getSDNodes() const {
     SmallVector<SDNode *> Dependencies;
-    for (SDDbgOperand DbgOp : getLocationOps())
+    for (const SDDbgOperand &DbgOp : getLocationOps())
       if (DbgOp.getKind() == SDDbgOperand::SDNODE)
         Dependencies.push_back(DbgOp.getSDNode());
     for (SDNode *Node : getAdditionalDependencies())
