@@ -13,7 +13,7 @@
 #include <__config>
 #include <__debug>
 #include <__iterator/iterator_traits.h>
-#include <__memory/pointer_traits.h> // __to_address
+#include <__memory/pointer_traits.h>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -283,12 +283,18 @@ template <class _It>
 struct __is_cpp17_contiguous_iterator<__wrap_iter<_It> > : true_type {};
 #endif
 
-template <class _Iter>
-_LIBCPP_CONSTEXPR
-decltype(_VSTD::__to_address(declval<_Iter>()))
-__to_address(__wrap_iter<_Iter> __w) _NOEXCEPT {
-    return _VSTD::__to_address(__w.base());
-}
+template <class _It>
+struct _LIBCPP_TEMPLATE_VIS pointer_traits<__wrap_iter<_It> >
+{
+    typedef __wrap_iter<_It> pointer;
+    typedef typename pointer_traits<_It>::element_type element_type;
+    typedef typename pointer_traits<_It>::difference_type difference_type;
+
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
+    static element_type *to_address(pointer __w) _NOEXCEPT {
+        return _VSTD::__to_address(__w.base());
+    }
+};
 
 _LIBCPP_END_NAMESPACE_STD
 

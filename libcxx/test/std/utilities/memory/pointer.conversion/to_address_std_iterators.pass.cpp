@@ -10,10 +10,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// TODO: We should enable this test in Debug mode once we fix __wrap_iter
-//       to be a proper contiguous_iterator.
-// UNSUPPORTED: LIBCXX-DEBUG-FIXME
-
 // template <class T> constexpr T* to_address(T* p) noexcept;
 // template <class Ptr> constexpr auto to_address(const Ptr& p) noexcept;
 
