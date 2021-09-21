@@ -123,7 +123,7 @@ std::string BriefParser::Parse() {
         // We found a paragraph end.  This ends the brief description if
         // \command or its equivalent was explicitly used.
         // Stop scanning text because an explicit \paragraph is the
-        // preffered one.
+        // preferred one.
         if (InBrief)
           break;
         // End first paragraph if we found some non-whitespace text.

@@ -184,7 +184,7 @@ struct InlineDescriptor {
 
 /// Bitfield tracking the initialisation status of elements of primitive arrays.
 /// A pointer to this is embedded at the end of all primitive arrays.
-/// If the map was not yet created and nothing was initialied, the pointer to
+/// If the map was not yet created and nothing was initialized, the pointer to
 /// this structure is 0. If the object was fully initialized, the pointer is -1.
 struct InitMap {
 private:
