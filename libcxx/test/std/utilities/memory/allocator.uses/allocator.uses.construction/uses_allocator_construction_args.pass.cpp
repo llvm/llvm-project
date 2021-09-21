@@ -77,9 +77,9 @@ struct DoesNotUseAllocator {
 template <class T, typename ExpectedArgsTuple, class Alloc, class... Args>
 void test_args(const ExpectedArgsTuple& expected_tuple, const Alloc& alloc, Args&&... args) {
     ASSERT_NOEXCEPT(std::uses_allocator_construction_args<T>(alloc, std::forward<Args>(args)...));
-    auto args = std::uses_allocator_construction_args<T>(alloc, std::forward<Args>(args)...);
+    auto construction_args = std::uses_allocator_construction_args<T>(alloc, std::forward<Args>(args)...);
     ASSERT_SAME_TYPE(decltype(args), ExpectedArgsTuple);
-    assert(args == expected_tuple);
+    assert(construction_args == expected_tuple);
 }
 
 template <class... Args>
