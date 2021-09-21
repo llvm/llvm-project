@@ -15,6 +15,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -924,53 +925,81 @@ static bool isBuildVectorOp(unsigned Opcode) {
          Opcode == TargetOpcode::G_BUILD_VECTOR_TRUNC;
 }
 
-// TODO: Handle mixed undef elements.
-static bool isBuildVectorConstantSplat(const MachineInstr &MI,
-                                       const MachineRegisterInfo &MRI,
-                                       int64_t SplatValue) {
-  if (!isBuildVectorOp(MI.getOpcode()))
-    return false;
+namespace {
 
-  const unsigned NumOps = MI.getNumOperands();
-  for (unsigned I = 1; I != NumOps; ++I) {
-    Register Element = MI.getOperand(I).getReg();
-    if (!mi_match(Element, MRI, m_SpecificICst(SplatValue)))
-      return false;
+Optional<ValueAndVReg> getAnyConstantSplat(Register VReg,
+                                           const MachineRegisterInfo &MRI,
+                                           bool AllowUndef) {
+  MachineInstr *MI = getDefIgnoringCopies(VReg, MRI);
+  if (!MI)
+    return None;
+
+  if (!isBuildVectorOp(MI->getOpcode()))
+    return None;
+
+  Optional<ValueAndVReg> SplatValAndReg = None;
+  for (MachineOperand &Op : MI->uses()) {
+    Register Element = Op.getReg();
+    auto ElementValAndReg =
+        getAnyConstantVRegValWithLookThrough(Element, MRI, true, true);
+
+    // If AllowUndef, treat undef as value that will result in a constant splat.
+    if (!ElementValAndReg) {
+      if (AllowUndef && isa<GImplicitDef>(MRI.getVRegDef(Element)))
+        continue;
+      return None;
+    }
+
+    // Record splat value
+    if (!SplatValAndReg)
+      SplatValAndReg = ElementValAndReg;
+
+    // Different constant then the one already recorded, not a constant splat.
+    if (SplatValAndReg->Value != ElementValAndReg->Value)
+      return None;
   }
 
-  return true;
+  return SplatValAndReg;
 }
+
+bool isBuildVectorConstantSplat(const MachineInstr &MI,
+                                const MachineRegisterInfo &MRI,
+                                int64_t SplatValue, bool AllowUndef) {
+  if (auto SplatValAndReg =
+          getAnyConstantSplat(MI.getOperand(0).getReg(), MRI, AllowUndef))
+    return mi_match(SplatValAndReg->VReg, MRI, m_SpecificICst(SplatValue));
+  return false;
+}
+
+} // end anonymous namespace
 
 Optional<int64_t>
 llvm::getBuildVectorConstantSplat(const MachineInstr &MI,
                                   const MachineRegisterInfo &MRI) {
-  if (!isBuildVectorOp(MI.getOpcode()))
-    return None;
+  if (auto SplatValAndReg =
+          getAnyConstantSplat(MI.getOperand(0).getReg(), MRI, false))
+    return getIConstantVRegSExtVal(SplatValAndReg->VReg, MRI);
+  return None;
+}
 
-  const unsigned NumOps = MI.getNumOperands();
-  Optional<int64_t> Scalar;
-  for (unsigned I = 1; I != NumOps; ++I) {
-    Register Element = MI.getOperand(I).getReg();
-    int64_t ElementValue;
-    if (!mi_match(Element, MRI, m_ICst(ElementValue)))
-      return None;
-    if (!Scalar)
-      Scalar = ElementValue;
-    else if (*Scalar != ElementValue)
-      return None;
-  }
-
-  return Scalar;
+Optional<FPValueAndVReg> llvm::getFConstantSplat(Register VReg,
+                                                 const MachineRegisterInfo &MRI,
+                                                 bool AllowUndef) {
+  if (auto SplatValAndReg = getAnyConstantSplat(VReg, MRI, AllowUndef))
+    return getFConstantVRegValWithLookThrough(SplatValAndReg->VReg, MRI);
+  return None;
 }
 
 bool llvm::isBuildVectorAllZeros(const MachineInstr &MI,
-                                 const MachineRegisterInfo &MRI) {
-  return isBuildVectorConstantSplat(MI, MRI, 0);
+                                 const MachineRegisterInfo &MRI,
+                                 bool AllowUndef) {
+  return isBuildVectorConstantSplat(MI, MRI, 0, AllowUndef);
 }
 
 bool llvm::isBuildVectorAllOnes(const MachineInstr &MI,
-                                const MachineRegisterInfo &MRI) {
-  return isBuildVectorConstantSplat(MI, MRI, -1);
+                                const MachineRegisterInfo &MRI,
+                                bool AllowUndef) {
+  return isBuildVectorConstantSplat(MI, MRI, -1, AllowUndef);
 }
 
 Optional<RegOrConstant> llvm::getVectorSplat(const MachineInstr &MI,
