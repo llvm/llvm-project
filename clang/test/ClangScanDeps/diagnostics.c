@@ -1,3 +1,7 @@
+// This test requires special permissions. Temporary disable it
+// by requiring darwin. Ideally we need to implement SWDEV-266003
+// REQUIRES: darwin
+
 // RUN: rm -rf %t && mkdir %t
 // RUN: cp %S/Inputs/diagnostics/* %t
 
