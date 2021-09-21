@@ -20,6 +20,20 @@
 
 #include <cstdint>
 
+#define DI_DEP_TYPE_IN 11
+#define DI_DEP_TYPE_OUT 12
+#define DI_DEP_TYPE_INOUT 13
+
+typedef struct kmp_depend_info {
+  int base_addr;
+  size_t len;
+  struct {
+    bool in : 1;
+    bool out : 1;
+    bool mtx : 1;
+  } flags;
+} kmp_depend_info_t;
+
 extern int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
                            void **args_base, void **args, int64_t *arg_sizes,
                            int64_t *arg_types, map_var_info_t *arg_names,
@@ -93,6 +107,10 @@ extern "C" {
 int omp_get_default_device(void) __attribute__((weak));
 int32_t __kmpc_global_thread_num(void *) __attribute__((weak));
 int __kmpc_get_target_offload(void) __attribute__((weak));
+int32_t __kmpc_omp_task_with_deps(void *loc_ref, int32_t gtid, void *new_task, int32_t depNum,
+                                  void *depList, int32_t noAliasDepNum, void *noAliasDepList);
+int32_t __kmpc_omp_wait_deps(void *loc_ref, int32_t gtid, int32_t depNum,
+                             void *depList, int32_t noAliasDepNum, void *noAliasDepList);
 #ifdef __cplusplus
 }
 #endif
