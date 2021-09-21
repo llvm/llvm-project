@@ -19,11 +19,9 @@ define void @vector_reverse_mask_nxv4i1(double* %a, double* %cond, i64 %N) #0 {
 ; CHECK-LABEL: vector.body:
 ; CHECK: %[[REVERSE6:.*]] = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %{{.*}})
 ; CHECK: %[[WIDEMSKLOAD:.*]] = call <vscale x 4 x double> @llvm.masked.load.nxv4f64.p0nxv4f64(<vscale x 4 x double>* nonnull %{{.*}}, i32 8, <vscale x 4 x i1> %[[REVERSE6]], <vscale x 4 x double> poison)
-; CHECK-NEXT: %[[REVERSE7:.*]] = call <vscale x 4 x double> @llvm.experimental.vector.reverse.nxv4f64(<vscale x 4 x double> %[[WIDEMSKLOAD]])
-; CHECK-NEXT: %[[FADD:.*]] = fadd <vscale x 4 x double> %[[REVERSE7]]
-; CHECK-NEXT: %[[REVERSE8:.*]] = call <vscale x 4 x double> @llvm.experimental.vector.reverse.nxv4f64(<vscale x 4 x double> %[[FADD]])
+; CHECK-NEXT: %[[FADD:.*]] = fadd <vscale x 4 x double> %[[WIDEMSKLOAD]]
 ; CHECK:  %[[REVERSE9:.*]] = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %{{.*}})
-; CHECK: call void @llvm.masked.store.nxv4f64.p0nxv4f64(<vscale x 4 x double> %[[REVERSE8]], <vscale x 4 x double>* %{{.*}}, i32 8, <vscale x 4 x i1> %[[REVERSE9]]
+; CHECK: call void @llvm.masked.store.nxv4f64.p0nxv4f64(<vscale x 4 x double> %[[FADD]], <vscale x 4 x double>* %{{.*}}, i32 8, <vscale x 4 x i1> %[[REVERSE9]]
 
 entry:
   %cmp7 = icmp sgt i64 %N, 0
