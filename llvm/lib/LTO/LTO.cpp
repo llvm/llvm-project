@@ -857,10 +857,14 @@ Error LTO::linkRegularLTO(RegularLTOState::AddedModule Mod,
   for (GlobalValue *GV : Mod.Keep) {
     if (LivenessFromIndex && !ThinLTO.CombinedIndex.isGUIDLive(GV->getGUID())) {
       if (Function *F = dyn_cast<Function>(GV)) {
-        OptimizationRemarkEmitter ORE(F, nullptr);
-        ORE.emit(OptimizationRemark(DEBUG_TYPE, "deadfunction", F)
-                 << ore::NV("Function", F)
-                 << " not added to the combined module ");
+        if (DiagnosticOutputFile) {
+          if (Error Err = F->materialize())
+            return Err;
+          OptimizationRemarkEmitter ORE(F, nullptr);
+          ORE.emit(OptimizationRemark(DEBUG_TYPE, "deadfunction", F)
+                   << ore::NV("Function", F)
+                   << " not added to the combined module ");
+        }
       }
       continue;
     }
@@ -1049,6 +1053,7 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
       Conf.RemarksHotnessThreshold);
   if (!DiagFileOrErr)
     return DiagFileOrErr.takeError();
+  DiagnosticOutputFile = std::move(*DiagFileOrErr);
 
   // Finalize linking of regular LTO modules containing summaries now that
   // we have computed liveness information.
@@ -1137,7 +1142,7 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
       return Err;
   }
 
-  return finalizeOptimizationRemarks(std::move(*DiagFileOrErr));
+  return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 }
 
 static const char *libcallRoutineNames[] = {
