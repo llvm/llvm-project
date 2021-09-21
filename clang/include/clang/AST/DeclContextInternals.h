@@ -237,7 +237,11 @@ public:
 
     // FIXME: Move the assert before the single decl case when we fix the
     // duplication coming from the ASTReader reading builtin types.
-    assert(!llvm::is_contained(getLookupResult(), D) && "Already exists!");
+
+    // SWIFT: FIXME^2: This assertion causes problems in Swift's ClangImporter.
+    // SWIFT: We should probably set its ASTContext to Objective-C++ mode to avoid it.
+    // SWIFT: assert(!llvm::is_contained(getLookupResult(), D) && "Already exists!");
+
     // Determine if this declaration is actually a redeclaration.
     for (DeclListNode *N = getAsList(); /*return in loop*/;
          N = N->Rest.dyn_cast<DeclListNode *>()) {
