@@ -910,7 +910,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
 #ifndef NDEBUG
   VerifyStates();
   LLVM_DEBUG(dbgs() << "States after initialization:\n");
-  for (auto Pair : States) {
+  for (const auto &Pair : States) {
     LLVM_DEBUG(dbgs() << " " << Pair.second << " for " << *Pair.first << "\n");
   }
 #endif
@@ -1002,7 +1002,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
 #ifndef NDEBUG
   VerifyStates();
   LLVM_DEBUG(dbgs() << "States after meet iteration:\n");
-  for (auto Pair : States) {
+  for (const auto &Pair : States) {
     LLVM_DEBUG(dbgs() << " " << Pair.second << " for " << *Pair.first << "\n");
   }
 #endif
