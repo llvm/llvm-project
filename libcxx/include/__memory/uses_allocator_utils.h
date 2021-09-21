@@ -36,20 +36,26 @@ struct __is_pair_specialization<pair<_Tp, _Up>> {
     static constexpr bool value = true;
 };
 
+template <class _Tp> struct print;
+
 template <class _Tp, class _Alloc, class... _Args>
     requires (!__is_pair_specialization<_Tp>::value)
 constexpr auto uses_allocator_construction_args(const _Alloc& __alloc, _Args&&... __args) noexcept {
+
     if constexpr (uses_allocator_v<_Tp, _Alloc>) {
         static_assert(is_constructible_v<_Tp, allocator_arg_t, const _Alloc&, _Args...> ||
                       is_constructible_v<_Tp, _Args..., const _Alloc&>);
         if constexpr (is_constructible_v<_Tp, allocator_arg_t, const _Alloc&, _Args...>) {
+            print<tuple<std::allocator_arg_t, const _Alloc&, _Args&&...>> pobj;
             return tuple<allocator_arg_t, const _Alloc&, _Args&&...>{allocator_arg, __alloc,
                                                                      _VSTD::forward<_Args>(__args)...};
         } else { // is_constructible_v<_Tp, _Args..., const _Alloc&>
+            print<decltype(forward_as_tuple(_VSTD::forward<_Args>(__args)..., __alloc))> pobj;
             return forward_as_tuple(_VSTD::forward<_Args>(__args)..., __alloc);
         }
     } else {
         static_assert(is_constructible_v<_Tp, _Args...>);
+        print<decltype(forward_as_tuple(_VSTD::forward<_Args>(__args)...))> pobj;
         return forward_as_tuple(_VSTD::forward<_Args>(__args)...);
     }
 }
