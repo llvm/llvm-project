@@ -2596,6 +2596,13 @@ static bool isAllocSiteRemovable(Instruction *AI,
           Users.emplace_back(I);
           continue;
         }
+
+        if (isReallocLikeFn(I, TLI, true)) {
+          Users.emplace_back(I);
+          Worklist.push_back(I);
+          continue;
+        }
+
         return false;
 
       case Instruction::Store: {
@@ -2807,6 +2814,15 @@ Instruction *InstCombinerImpl::visitFree(CallInst &FI) {
   // when lots of inlining happens.
   if (isa<ConstantPointerNull>(Op))
     return eraseInstFromFunction(FI);
+
+  // If we had free(realloc(...)) with no intervening uses, then eliminate the
+  // realloc() entirely.
+  if (CallInst *CI = dyn_cast<CallInst>(Op)) {
+    if (CI->hasOneUse() && isReallocLikeFn(CI, &TLI, true)) {
+      return eraseInstFromFunction(
+          *replaceInstUsesWith(*CI, CI->getOperand(0)));
+    }
+  }
 
   // If we optimize for code size, try to move the call to free before the null
   // test so that simplify cfg can remove the empty block and dead code
