@@ -95,6 +95,8 @@ void test(Args... args) {
     // auto trailing_arguments = std::tuple_cat(arguments, std::tuple<const std::allocator<int>&>{alloc});
 
     // test_args<DoesNotUseAllocator>(arguments, alloc, args...);
+    static_assert(std::uses_allocator_v<UsesLeadingAllocConstruction, std::allocator<int>>);
+    static_assert(std::is_constructible_v<UsesLeadingAllocConstruction, std::allocator_arg_t, const std::allocator<int>&>);
     p<decltype(std::uses_allocator_construction_args<UsesLeadingAllocConstruction>(alloc, args...))> pobj;
     // test_args<UsesLeadingAllocConstruction>(leading_arguments, alloc, args...);
     // test_args<UsesTrailingAllocConstruction>(trailing_arguments, alloc, args...);
