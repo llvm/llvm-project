@@ -889,7 +889,7 @@ class XForm_16b<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
 }
 
 class XForm_htm0<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
-                 string asmstr, InstrItinClass itin, list<dag> pattern>
+                 string asmstr, InstrItinClass itin>
   : I<opcode, OOL, IOL, asmstr, itin> {
   bit R;
 
@@ -903,7 +903,7 @@ class XForm_htm0<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
 }
 
 class XForm_htm1<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
-                 string asmstr, InstrItinClass itin, list<dag> pattern>
+                 string asmstr, InstrItinClass itin>
   : I<opcode, OOL, IOL, asmstr, itin> {
   bit A;
 
@@ -916,7 +916,7 @@ class XForm_htm1<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
 }
 
 class XForm_htm2<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
-              InstrItinClass itin, list<dag> pattern>
+              InstrItinClass itin>
   : I<opcode, OOL, IOL, asmstr, itin> {
   bit L;
 
@@ -930,7 +930,7 @@ class XForm_htm2<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
 }
 
 class XForm_htm3<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
-              InstrItinClass itin, list<dag> pattern>
+              InstrItinClass itin>
   : I<opcode, OOL, IOL, asmstr, itin> {
   bits<3> BF;
 
