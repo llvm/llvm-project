@@ -6,9 +6,9 @@ declare void @use8(i8)
 
 define i6 @trunc_lshr(i8 %x) {
 ; CHECK-LABEL: @trunc_lshr(
-; CHECK-NEXT:    [[S:%.*]] = lshr i8 [[X:%.*]], 2
-; CHECK-NEXT:    [[T:%.*]] = trunc i8 [[S]] to i6
-; CHECK-NEXT:    [[R:%.*]] = and i6 [[T]], 14
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i8 [[X:%.*]] to i6
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i6 [[TMP1]], 2
+; CHECK-NEXT:    [[R:%.*]] = and i6 [[TMP2]], 14
 ; CHECK-NEXT:    ret i6 [[R]]
 ;
   %s = lshr i8 %x, 2
@@ -17,18 +17,21 @@ define i6 @trunc_lshr(i8 %x) {
   ret i6 %r
 }
 
+; The 'and' is eliminated.
+
 define i6 @trunc_lshr_exact_mask(i8 %x) {
 ; CHECK-LABEL: @trunc_lshr_exact_mask(
-; CHECK-NEXT:    [[S:%.*]] = lshr i8 [[X:%.*]], 2
-; CHECK-NEXT:    [[T:%.*]] = trunc i8 [[S]] to i6
-; CHECK-NEXT:    [[R:%.*]] = and i6 [[T]], 15
-; CHECK-NEXT:    ret i6 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i8 [[X:%.*]] to i6
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i6 [[TMP1]], 2
+; CHECK-NEXT:    ret i6 [[TMP2]]
 ;
   %s = lshr i8 %x, 2
   %t = trunc i8 %s to i6
   %r = and i6 %t, 15
   ret i6 %r
 }
+
+; negative test - a high bit of x is in the result
 
 define i6 @trunc_lshr_big_mask(i8 %x) {
 ; CHECK-LABEL: @trunc_lshr_big_mask(
@@ -42,6 +45,8 @@ define i6 @trunc_lshr_big_mask(i8 %x) {
   %r = and i6 %t, 31
   ret i6 %r
 }
+
+; negative test - too many uses
 
 define i6 @trunc_lshr_use1(i8 %x) {
 ; CHECK-LABEL: @trunc_lshr_use1(
@@ -58,6 +63,8 @@ define i6 @trunc_lshr_use1(i8 %x) {
   ret i6 %r
 }
 
+; negative test - too many uses
+
 define i6 @trunc_lshr_use2(i8 %x) {
 ; CHECK-LABEL: @trunc_lshr_use2(
 ; CHECK-NEXT:    [[S:%.*]] = lshr i8 [[X:%.*]], 2
@@ -73,11 +80,13 @@ define i6 @trunc_lshr_use2(i8 %x) {
   ret i6 %r
 }
 
+; Splat vectors are ok.
+
 define <2 x i7> @trunc_lshr_vec_splat(<2 x i16> %x) {
 ; CHECK-LABEL: @trunc_lshr_vec_splat(
-; CHECK-NEXT:    [[S:%.*]] = lshr <2 x i16> [[X:%.*]], <i16 5, i16 5>
-; CHECK-NEXT:    [[T:%.*]] = trunc <2 x i16> [[S]] to <2 x i7>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i7> [[T]], <i7 1, i7 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i16> [[X:%.*]] to <2 x i7>
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i7> [[TMP1]], <i7 5, i7 5>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i7> [[TMP2]], <i7 1, i7 1>
 ; CHECK-NEXT:    ret <2 x i7> [[R]]
 ;
   %s = lshr <2 x i16> %x, <i16 5, i16 5>
@@ -86,18 +95,21 @@ define <2 x i7> @trunc_lshr_vec_splat(<2 x i16> %x) {
   ret <2 x i7> %r
 }
 
+; The 'and' is eliminated.
+
 define <2 x i7> @trunc_lshr_vec_splat_exact_mask(<2 x i16> %x) {
 ; CHECK-LABEL: @trunc_lshr_vec_splat_exact_mask(
-; CHECK-NEXT:    [[S:%.*]] = lshr <2 x i16> [[X:%.*]], <i16 6, i16 6>
-; CHECK-NEXT:    [[T:%.*]] = trunc <2 x i16> [[S]] to <2 x i7>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i7> [[T]], <i7 1, i7 1>
-; CHECK-NEXT:    ret <2 x i7> [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i16> [[X:%.*]] to <2 x i7>
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i7> [[TMP1]], <i7 6, i7 6>
+; CHECK-NEXT:    ret <2 x i7> [[TMP2]]
 ;
   %s = lshr <2 x i16> %x, <i16 6, i16 6>
   %t = trunc <2 x i16> %s to <2 x i7>
   %r = and <2 x i7> %t, <i7 1, i7 1>
   ret <2 x i7> %r
 }
+
+; negative test - the shift is too big for the narrow type
 
 define <2 x i7> @trunc_lshr_big_shift(<2 x i16> %x) {
 ; CHECK-LABEL: @trunc_lshr_big_shift(
@@ -112,11 +124,13 @@ define <2 x i7> @trunc_lshr_big_shift(<2 x i16> %x) {
   ret <2 x i7> %r
 }
 
+; High bits could also be set rather than cleared.
+
 define i6 @or_trunc_lshr(i8 %x) {
 ; CHECK-LABEL: @or_trunc_lshr(
-; CHECK-NEXT:    [[S:%.*]] = lshr i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[T:%.*]] = trunc i8 [[S]] to i6
-; CHECK-NEXT:    [[R:%.*]] = or i6 [[T]], -32
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i8 [[X:%.*]] to i6
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i6 [[TMP1]], 1
+; CHECK-NEXT:    [[R:%.*]] = or i6 [[TMP2]], -32
 ; CHECK-NEXT:    ret i6 [[R]]
 ;
   %s = lshr i8 %x, 1
@@ -127,9 +141,9 @@ define i6 @or_trunc_lshr(i8 %x) {
 
 define i6 @or_trunc_lshr_more(i8 %x) {
 ; CHECK-LABEL: @or_trunc_lshr_more(
-; CHECK-NEXT:    [[S:%.*]] = lshr i8 [[X:%.*]], 4
-; CHECK-NEXT:    [[T:%.*]] = trunc i8 [[S]] to i6
-; CHECK-NEXT:    [[R:%.*]] = or i6 [[T]], -4
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i8 [[X:%.*]] to i6
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i6 [[TMP1]], 4
+; CHECK-NEXT:    [[R:%.*]] = or i6 [[TMP2]], -4
 ; CHECK-NEXT:    ret i6 [[R]]
 ;
   %s = lshr i8 %x, 4
@@ -137,6 +151,8 @@ define i6 @or_trunc_lshr_more(i8 %x) {
   %r = or i6 %t, 60 ; 0b111100
   ret i6 %r
 }
+
+; negative test - need all high bits to be undemanded
 
 define i6 @or_trunc_lshr_small_mask(i8 %x) {
 ; CHECK-LABEL: @or_trunc_lshr_small_mask(
