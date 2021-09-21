@@ -639,7 +639,7 @@ builtin.func @matmul_on_tensors(
   //      CHECK: linalg.fill
   // CHECK-SAME: {__inplace_results_attr__ = ["false"]}
   //      CHECK: linalg.fill
-  // CHECK-SAME: {__inplace_results_attr__ = ["false"]}
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
   %8 = linalg.fill(%cst_0, %7) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
   %11 = linalg.fill(%cst_1, %7) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
 
@@ -673,9 +673,9 @@ builtin.func @matmul_on_tensors(
   %7 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
   //     CHECK: linalg.fill
-  // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
+  // CHECK-SAME: {__inplace_results_attr__ = ["false"]}
   //      CHECK: vector.transfer_write
-  // CHECK-SAME: {__inplace_results_attr__ = ["false"]
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]
   %8 = linalg.fill(%cst_0, %7) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
   %9 = vector.transfer_read %arg0[%c0, %c0], %cst_0 {in_bounds = [false, true]} : tensor<518x518xf32>, vector<256x256xf32>
   %10 = vector.transfer_write %9, %8[%c0, %c0] {in_bounds = [true, true]} : vector<256x256xf32>, tensor<256x256xf32>
@@ -683,7 +683,7 @@ builtin.func @matmul_on_tensors(
   //      CHECK: linalg.fill
   // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
   //      CHECK: vector.transfer_write
-  // CHECK-SAME: {__inplace_results_attr__ = ["false"]
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]
   %11 = linalg.fill(%cst_1, %7) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
   %12 = vector.transfer_read %arg1[%c0, %c0], %cst_0 {in_bounds = [false, true]} : tensor<518x518xf32>, vector<256x256xf32>
   %13 = vector.transfer_write %12, %11[%c0, %c0] {in_bounds = [true, true]} : vector<256x256xf32>, tensor<256x256xf32>
