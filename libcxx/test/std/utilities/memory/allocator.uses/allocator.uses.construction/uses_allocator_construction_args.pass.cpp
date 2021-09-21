@@ -91,14 +91,13 @@ void test(Args... args) {
                                             arguments);
     auto trailing_arguments = std::tuple_cat(arguments, std::tuple<const std::allocator<int>&>{alloc});
 
-    static_assert(std::uses_allocator_v<UsesLeadingAllocConstruction, decltype(alloc)>);
     test_args<DoesNotUseAllocator>(arguments, alloc, args...);
     test_args<UsesLeadingAllocConstruction>(leading_arguments, alloc, args...);
     test_args<UsesTrailingAllocConstruction>(trailing_arguments, alloc, args...);
 }
 
-template <class... Args1, class... Args2>
-void test_pair(std::tuple<Args1...> args1, std::tuple<Args2...> args2) {
+// template <class... Args1, class... Args2>
+// void test_pair(std::tuple<Args1...> args1, std::tuple<Args2...> args2) {
     // using DoesNotUsePair = std::pair<DoesNotUseAllocator, DoesNotUseAllocator>;
     // using LeadingDoesNotUsePair = std::pair<UsesLeadingAllocConstruction, DoesNotUseAllocator>;
     // using DoesNotUseLeadingPair = std::pair<DoesNotUseAllocator, UsesLeadingAllocConstruction>;
@@ -167,9 +166,9 @@ void test_pair(std::tuple<Args1...> args1, std::tuple<Args2...> args2) {
     // auto trailing_u_pair = std::tuple{std::tuple_cat(u_pair_tuple, leading)};
     // test_args<DoesNotUsePair>(std::tuple_cat(piecewise_arg, u_pair_tuple, u_pair_tuple), alloc, u_pair);
     // test_args<LeadingDoesNotUsePair>(std::tuple_cat(piecewise_arg, leading_u_pair, u_pair_tuple), alloc, u_pair);
-}
+// }
 
 int main(int, char**) {
     test();
-    test(1);
+    // test(1);
 }
