@@ -241,8 +241,8 @@ body: |
     liveins: $x0
     ; CHECK-LABEL: name: test_eve_v4p0
     ; CHECK: [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
-    ; CHECK: %idx:_(s64) = G_CONSTANT i64 1
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[DEF]](p0), [[DEF]](p0)
+    ; CHECK: %idx:_(s64) = G_CONSTANT i64 1
     ; CHECK: %eve:_(p0) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<2 x p0>), %idx(s64)
     ; CHECK: $x0 = COPY %eve(p0)
     ; CHECK: RET_ReallyLR

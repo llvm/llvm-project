@@ -4,7 +4,6 @@
 
 declare i1 @cond()
 
-; FIXME: 2nd check is implied by the 1st one as both values are negative.
 define i32 @test_01(i32* %p, i32* %s) {
 ; CHECK-LABEL: @test_01(
 ; CHECK-NEXT:  entry:
@@ -16,8 +15,7 @@ define i32 @test_01(i32* %p, i32* %s) {
 ; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[IV]], [[END]]
 ; CHECK-NEXT:    br i1 [[C1]], label [[GUARDED:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       guarded:
-; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[IV]], [[END]]
-; CHECK-NEXT:    br i1 [[C2]], label [[BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = call i1 @cond()

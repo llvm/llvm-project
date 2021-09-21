@@ -612,6 +612,18 @@ TEST(TypeHints, DefaultTemplateArgs) {
                   ExpectedHint{": A<float>", "var"});
 }
 
+TEST(TypeHints, Deduplication) {
+  assertTypeHints(R"cpp(
+    template <typename T>
+    void foo() {
+      auto $var[[var]] = 42;
+    }
+    template void foo<int>();
+    template void foo<float>();
+  )cpp",
+                  ExpectedHint{": int", "var"});
+}
+
 // FIXME: Low-hanging fruit where we could omit a type hint:
 //  - auto x = TypeName(...);
 //  - auto x = (TypeName) (...);

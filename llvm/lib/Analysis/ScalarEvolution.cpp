@@ -10704,8 +10704,13 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
 
   // Unsigned comparison is the same as signed comparison when both the operands
   // are non-negative or negative.
-  if (CmpInst::isUnsigned(FoundPred) &&
-      CmpInst::getSignedPredicate(FoundPred) == Pred &&
+  auto IsSignFlippedPredicate = [](CmpInst::Predicate P1,
+                                   CmpInst::Predicate P2) {
+    assert(P1 != P2 && "Handled earlier!");
+    return CmpInst::isRelational(P2) &&
+           P1 == CmpInst::getFlippedSignednessPredicate(P2);
+  };
+  if (IsSignFlippedPredicate(Pred, FoundPred) &&
       ((isKnownNonNegative(FoundLHS) && isKnownNonNegative(FoundRHS)) ||
        (isKnownNegative(FoundLHS) && isKnownNegative(FoundRHS))))
     return isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI);
@@ -11831,6 +11836,9 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   // so we get a backedge count of zero.
   const SCEV *BECount = nullptr;
   auto *OrigStartMinusStride = getMinusSCEV(OrigStart, Stride);
+  assert(isAvailableAtLoopEntry(OrigStartMinusStride, L) && "Must be!");
+  assert(isAvailableAtLoopEntry(OrigStart, L) && "Must be!");
+  assert(isAvailableAtLoopEntry(OrigRHS, L) && "Must be!");
   // Can we prove (max(RHS,Start) > Start - Stride?
   if (isLoopEntryGuardedByCond(L, Cond, OrigStartMinusStride, OrigStart) &&
       isLoopEntryGuardedByCond(L, Cond, OrigStartMinusStride, OrigRHS)) {

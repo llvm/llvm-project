@@ -176,6 +176,18 @@ Use *Value::getSingleUndroppableUse() {
   return Result;
 }
 
+User *Value::getUniqueUndroppableUser() {
+  User *Result = nullptr;
+  for (auto *U : users()) {
+    if (!U->isDroppable()) {
+      if (Result && Result != U)
+        return nullptr;
+      Result = U;
+    }
+  }
+  return Result;
+}
+
 bool Value::hasNUndroppableUses(unsigned int N) const {
   return hasNItems(user_begin(), user_end(), N, isUnDroppableUser);
 }
