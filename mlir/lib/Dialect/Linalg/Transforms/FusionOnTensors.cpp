@@ -367,6 +367,8 @@ mlir::linalg::tileConsumerAndFuseProducers(OpBuilder &b, LinalgOp consumerOp,
                                            ArrayRef<int64_t> tileInterchange) {
   assert(tileSizes.size() == tileInterchange.size() &&
          "expect the number of tile sizes and interchange dims to match");
+  assert(isPermutation(tileInterchange) &&
+         "expect tile interchange is a permutation");
 
   // Create an empty tile loop nest.
   TileLoopNest tileLoopNest(consumerOp);
@@ -375,9 +377,7 @@ mlir::linalg::tileConsumerAndFuseProducers(OpBuilder &b, LinalgOp consumerOp,
   // inner reduction dimensions.
   SmallVector<StringAttr> iterTypes =
       llvm::to_vector<6>(consumerOp.iterator_types().getAsRange<StringAttr>());
-  applyPermutationToVector(
-      iterTypes,
-      SmallVector<unsigned>(tileInterchange.begin(), tileInterchange.end()));
+  applyPermutationToVector(iterTypes, tileInterchange);
   auto *it = find_if(iterTypes, [&](StringAttr iterType) {
     return !isParallelIterator(iterType);
   });
@@ -459,14 +459,10 @@ struct LinalgTileAndFuseTensorOps
                                    tileInterchange.begin() +
                                        rootOp.getNumLoops());
 
-    // As a tiling can only tile a loop dimension once, `rootInterchange` has to
-    // be a permutation of the `rootOp` loop dimensions.
-    SmallVector<AffineExpr> rootInterchangeExprs;
-    transform(rootInterchange, std::back_inserter(rootInterchangeExprs),
-              [&](int64_t dim) { return b.getAffineDimExpr(dim); });
-    AffineMap rootInterchangeMap = AffineMap::get(
-        rootOp.getNumLoops(), 0, rootInterchangeExprs, funcOp.getContext());
-    if (!rootInterchangeMap.isPermutation())
+    // Check `rootInterchange` is a permutation of the `rootOp` loop dimensions.
+    // It has to be a permutation since the tiling cannot tile the same loop
+    // dimension multiple times.
+    if (!isPermutation(rootInterchange))
       return notifyFailure(
           "expect the tile interchange permutes the root loops");
 

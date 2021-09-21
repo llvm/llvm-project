@@ -206,8 +206,10 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
     invPermutationMap = inversePermutation(
         AffineMap::getPermutationMap(interchangeVector, b.getContext()));
     assert(invPermutationMap);
-    applyPermutationToVector(loopRanges, interchangeVector);
-    applyPermutationToVector(iteratorTypes, interchangeVector);
+    SmallVector<int64_t> permutation(interchangeVector.begin(),
+                                     interchangeVector.end());
+    applyPermutationToVector(loopRanges, permutation);
+    applyPermutationToVector(iteratorTypes, permutation);
   }
 
   // 2. Create the tiled loops.
