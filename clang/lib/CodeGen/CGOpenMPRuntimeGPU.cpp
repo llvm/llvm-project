@@ -1523,14 +1523,12 @@ void CGOpenMPRuntimeGPU::emitParallelCall(CodeGenFunction &CGF,
     // TODO: Is that needed?
     CodeGenFunction::OMPPrivateScope PrivateArgScope(CGF);
 
-    // Store addresses of global arguments to pass to the parallel call.
     Address CapturedVarsAddrs = CGF.CreateDefaultAlignTempAlloca(
         llvm::ArrayType::get(CGM.VoidPtrTy, CapturedVars.size()),
         "captured_vars_addrs");
-
-    // Store globalized values to push, pop through the global stack.
-    llvm::SmallDenseMap<llvm::Value *, unsigned> GlobalValuesToSizeMap;
+    // There's something to share.
     if (!CapturedVars.empty()) {
+      // Prepare for parallel region. Indicate the outlined function.
       ASTContext &Ctx = CGF.getContext();
       unsigned Idx = 0;
       for (llvm::Value *V : CapturedVars) {
@@ -1538,34 +1536,8 @@ void CGOpenMPRuntimeGPU::emitParallelCall(CodeGenFunction &CGF,
         llvm::Value *PtrV;
         if (V->getType()->isIntegerTy())
           PtrV = Bld.CreateIntToPtr(V, CGF.VoidPtrTy);
-        else {
-          assert(V->getType()->isPointerTy() &&
-                 "Expected Pointer Type to globalize.");
-          // Globalize and store pointer.
-          llvm::Type *PtrElemTy = V->getType()->getPointerElementType();
-          auto &DL = CGM.getDataLayout();
-          unsigned GlobalSize = DL.getTypeAllocSize(PtrElemTy);
-
-          // Use shared memory to store globalized pointer values, for now this
-          // should be the outlined args aggregate struct.
-          llvm::Value *GlobalSizeArg[] = {
-              llvm::ConstantInt::get(CGM.SizeTy, GlobalSize)};
-          llvm::Value *GlobalValue = CGF.EmitRuntimeCall(
-              OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
-                                                    OMPRTL___kmpc_alloc_shared),
-              GlobalSizeArg);
-          GlobalValuesToSizeMap[GlobalValue] = GlobalSize;
-
-          llvm::Value *CapturedVarVal = Bld.CreateAlignedLoad(
-              PtrElemTy, V, DL.getABITypeAlign(PtrElemTy));
-          llvm::Value *GlobalValueCast =
-              Bld.CreatePointerBitCastOrAddrSpaceCast(
-                  GlobalValue, PtrElemTy->getPointerTo());
-          Bld.CreateDefaultAlignedStore(CapturedVarVal, GlobalValueCast);
-
-          PtrV = Bld.CreatePointerBitCastOrAddrSpaceCast(GlobalValue,
-                                                         CGF.VoidPtrTy);
-        }
+        else
+          PtrV = Bld.CreatePointerBitCastOrAddrSpaceCast(V, CGF.VoidPtrTy);
         CGF.EmitStoreOfScalar(PtrV, Dst, /*Volatile=*/false,
                               Ctx.getPointerType(Ctx.VoidPtrTy));
         ++Idx;
@@ -1578,9 +1550,8 @@ void CGOpenMPRuntimeGPU::emitParallelCall(CodeGenFunction &CGF,
                                     /* isSigned */ false);
     else
       IfCondVal = llvm::ConstantInt::get(CGF.Int32Ty, 1);
-    assert(IfCondVal && "Expected a value");
 
-    // Create the parallel call.
+    assert(IfCondVal && "Expected a value");
     llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
     llvm::Value *Args[] = {
         RTLoc,
@@ -1596,14 +1567,6 @@ void CGOpenMPRuntimeGPU::emitParallelCall(CodeGenFunction &CGF,
     CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                             CGM.getModule(), OMPRTL___kmpc_parallel_51),
                         Args);
-
-    // Pop any globalized values from the global stack.
-    for (const auto &GV : GlobalValuesToSizeMap) {
-      CGF.EmitRuntimeCall(
-          OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
-                                                OMPRTL___kmpc_free_shared),
-          {GV.first, llvm::ConstantInt::get(CGM.SizeTy, GV.second)});
-    }
   };
 
   RegionCodeGenTy RCG(ParallelGen);
@@ -3514,6 +3477,7 @@ llvm::Function *CGOpenMPRuntimeGPU::createParallelDataSharingWrapper(
                     D.getBeginLoc(), D.getBeginLoc());
 
   const auto *RD = CS.getCapturedRecordDecl();
+  auto CurField = RD->field_begin();
 
   Address ZeroAddr = CGF.CreateDefaultAlignTempAlloca(CGF.Int32Ty,
                                                       /*Name=*/".zero.addr");
@@ -3525,6 +3489,7 @@ llvm::Function *CGOpenMPRuntimeGPU::createParallelDataSharingWrapper(
   Args.emplace_back(ZeroAddr.getPointer());
 
   CGBuilderTy &Bld = CGF.Builder;
+  auto CI = CS.capture_begin();
 
   // Use global memory for data sharing.
   // Handle passing of global args to workers.
@@ -3539,33 +3504,55 @@ llvm::Function *CGOpenMPRuntimeGPU::createParallelDataSharingWrapper(
   // Retrieve the shared variables from the list of references returned
   // by the runtime. Pass the variables to the outlined function.
   Address SharedArgListAddress = Address::invalid();
-  if (CS.capture_size() > 0) {
+  if (CS.capture_size() > 0 ||
+      isOpenMPLoopBoundSharingDirective(D.getDirectiveKind())) {
     SharedArgListAddress = CGF.EmitLoadOfPointer(
         GlobalArgs, CGF.getContext()
                         .getPointerType(CGF.getContext().getPointerType(
                             CGF.getContext().VoidPtrTy))
                         .castAs<PointerType>());
-    const auto *CI = CS.capture_begin();
-    // Load the outlined arg aggregate struct.
-    ASTContext &CGFContext = CGF.getContext();
-    QualType RecordPointerTy =
-        CGFContext.getPointerType(CGFContext.getRecordType(RD));
-    Address Src = Bld.CreateConstInBoundsGEP(SharedArgListAddress, /*Index=*/0);
+  }
+  unsigned Idx = 0;
+  if (isOpenMPLoopBoundSharingDirective(D.getDirectiveKind())) {
+    Address Src = Bld.CreateConstInBoundsGEP(SharedArgListAddress, Idx);
     Address TypedAddress = Bld.CreatePointerBitCastOrAddrSpaceCast(
-        Src, CGF.ConvertTypeForMem(CGFContext.getPointerType(RecordPointerTy)));
-    llvm::Value *Arg = CGF.EmitLoadOfScalar(
+        Src, CGF.SizeTy->getPointerTo());
+    llvm::Value *LB = CGF.EmitLoadOfScalar(
         TypedAddress,
-        /*Volatile=*/false, CGFContext.getPointerType(RecordPointerTy),
-        CI->getLocation());
-    Args.emplace_back(Arg);
-  } else {
-    // If there are no captured arguments, use nullptr.
+        /*Volatile=*/false,
+        CGF.getContext().getPointerType(CGF.getContext().getSizeType()),
+        cast<OMPLoopDirective>(D).getLowerBoundVariable()->getExprLoc());
+    Args.emplace_back(LB);
+    ++Idx;
+    Src = Bld.CreateConstInBoundsGEP(SharedArgListAddress, Idx);
+    TypedAddress = Bld.CreatePointerBitCastOrAddrSpaceCast(
+        Src, CGF.SizeTy->getPointerTo());
+    llvm::Value *UB = CGF.EmitLoadOfScalar(
+        TypedAddress,
+        /*Volatile=*/false,
+        CGF.getContext().getPointerType(CGF.getContext().getSizeType()),
+        cast<OMPLoopDirective>(D).getUpperBoundVariable()->getExprLoc());
+    Args.emplace_back(UB);
+    ++Idx;
+  }
+  if (CS.capture_size() > 0) {
     ASTContext &CGFContext = CGF.getContext();
-    QualType RecordPointerTy =
-        CGFContext.getPointerType(CGFContext.getRecordType(RD));
-    llvm::Value *Arg =
-        llvm::Constant::getNullValue(CGF.ConvertTypeForMem(RecordPointerTy));
-    Args.emplace_back(Arg);
+    for (unsigned I = 0, E = CS.capture_size(); I < E; ++I, ++CI, ++CurField) {
+      QualType ElemTy = CurField->getType();
+      Address Src = Bld.CreateConstInBoundsGEP(SharedArgListAddress, I + Idx);
+      Address TypedAddress = Bld.CreatePointerBitCastOrAddrSpaceCast(
+          Src, CGF.ConvertTypeForMem(CGFContext.getPointerType(ElemTy)));
+      llvm::Value *Arg = CGF.EmitLoadOfScalar(TypedAddress,
+                                              /*Volatile=*/false,
+                                              CGFContext.getPointerType(ElemTy),
+                                              CI->getLocation());
+      if (CI->capturesVariableByCopy() &&
+          !CI->getCapturedVar()->getType()->isAnyPointerType()) {
+        Arg = castValueToType(CGF, Arg, ElemTy, CGFContext.getUIntPtrType(),
+                              CI->getLocation());
+      }
+      Args.emplace_back(Arg);
+    }
   }
 
   emitOutlinedFunctionCall(CGF, D.getBeginLoc(), OutlinedParallelFn, Args);
