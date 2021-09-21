@@ -7,6 +7,11 @@ mlir_tablegen(BuiltinAttributes.h.inc -gen-attrdef-decls)
 mlir_tablegen(BuiltinAttributes.cpp.inc -gen-attrdef-defs)
 add_public_tablegen_target(MLIRBuiltinAttributesIncGen)
 
+set(LLVM_TARGET_DEFINITIONS BuiltinAttributeInterfaces.td)
+mlir_tablegen(BuiltinAttributeInterfaces.h.inc -gen-attr-interface-decls)
+mlir_tablegen(BuiltinAttributeInterfaces.cpp.inc -gen-attr-interface-defs)
+add_public_tablegen_target(MLIRBuiltinAttributeInterfacesIncGen)
+
 set(LLVM_TARGET_DEFINITIONS BuiltinDialect.td)
 mlir_tablegen(BuiltinDialect.h.inc -gen-dialect-decls)
 mlir_tablegen(BuiltinDialect.cpp.inc -gen-dialect-defs)

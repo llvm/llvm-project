@@ -35,6 +35,7 @@ td_library(
     name = "TestOpTdFiles",
     srcs = glob(["lib/Dialect/Test/*.td"]),
     deps = [
+        "//mlir:BuiltinDialectTdFiles",
         "//mlir:CallInterfacesTdFiles",
         "//mlir:ControlFlowInterfacesTdFiles",
         "//mlir:CopyOpInterfaceTdFiles",

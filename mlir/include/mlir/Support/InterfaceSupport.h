@@ -93,6 +93,7 @@ public:
       : BaseType(t), impl(t ? ConcreteType::getInterfaceFor(t) : nullptr) {
     assert((!t || impl) && "expected value to provide interface instance");
   }
+  Interface(std::nullptr_t) : BaseType(ValueT()), impl(nullptr) {}
 
   /// Construct an interface instance from a type that implements this
   /// interface's trait.

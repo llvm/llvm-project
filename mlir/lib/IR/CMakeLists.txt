@@ -5,6 +5,7 @@ add_mlir_library(MLIRIR
   Attributes.cpp
   Block.cpp
   Builders.cpp
+  BuiltinAttributeInterfaces.cpp
   BuiltinAttributes.cpp
   BuiltinDialect.cpp
   BuiltinTypes.cpp
@@ -36,6 +37,7 @@ add_mlir_library(MLIRIR
 
   DEPENDS
   MLIRBuiltinAttributesIncGen
+  MLIRBuiltinAttributeInterfacesIncGen
   MLIRBuiltinDialectIncGen
   MLIRBuiltinLocationAttributesIncGen
   MLIRBuiltinOpsIncGen

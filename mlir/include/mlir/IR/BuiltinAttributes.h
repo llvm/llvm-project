@@ -9,7 +9,8 @@
 #ifndef MLIR_IR_BUILTINATTRIBUTES_H
 #define MLIR_IR_BUILTINATTRIBUTES_H
 
-#include "SubElementInterfaces.h"
+#include "mlir/IR/BuiltinAttributeInterfaces.h"
+#include "mlir/IR/SubElementInterfaces.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Sequence.h"
 #include <complex>
@@ -31,99 +32,8 @@ class ShapedType;
 //===----------------------------------------------------------------------===//
 
 namespace detail {
-template <typename T>
-class ElementsAttrIterator;
-template <typename T>
-class ElementsAttrRange;
-} // namespace detail
-
-/// A base attribute that represents a reference to a static shaped tensor or
-/// vector constant.
-class ElementsAttr : public Attribute {
-public:
-  using Attribute::Attribute;
-  template <typename T>
-  using iterator = detail::ElementsAttrIterator<T>;
-  template <typename T>
-  using iterator_range = detail::ElementsAttrRange<T>;
-
-  /// Return the type of this ElementsAttr, guaranteed to be a vector or tensor
-  /// with static shape.
-  ShapedType getType() const;
-
-  /// Return the element type of this ElementsAttr.
-  Type getElementType() const;
-
-  /// Return the value at the given index. The index is expected to refer to a
-  /// valid element.
-  Attribute getValue(ArrayRef<uint64_t> index) const;
-
-  /// Return the value of type 'T' at the given index, where 'T' corresponds to
-  /// an Attribute type.
-  template <typename T>
-  T getValue(ArrayRef<uint64_t> index) const {
-    return getValue(index).template cast<T>();
-  }
-
-  /// Return the elements of this attribute as a value of type 'T'. Note:
-  /// Aborts if the subclass is OpaqueElementsAttrs, these attrs do not support
-  /// iteration.
-  template <typename T> iterator_range<T> getValues() const;
-  template <typename T> iterator<T> value_begin() const;
-  template <typename T> iterator<T> value_end() const;
-
-  /// Return if the given 'index' refers to a valid element in this attribute.
-  bool isValidIndex(ArrayRef<uint64_t> index) const;
-  static bool isValidIndex(ShapedType type, ArrayRef<uint64_t> index);
-
-  /// Returns the 1-dimensional flattened row-major index from the given
-  /// multi-dimensional index.
-  uint64_t getFlattenedIndex(ArrayRef<uint64_t> index) const;
-  static uint64_t getFlattenedIndex(ShapedType type, ArrayRef<uint64_t> index);
-
-  /// Returns the number of elements held by this attribute.
-  int64_t getNumElements() const;
-
-  /// Returns the number of elements held by this attribute.
-  int64_t size() const { return getNumElements(); }
-
-  /// Returns if the number of elements held by this attribute is 0.
-  bool empty() const { return size() == 0; }
-
-  /// Generates a new ElementsAttr by mapping each int value to a new
-  /// underlying APInt. The new values can represent either an integer or float.
-  /// This ElementsAttr should contain integers.
-  ElementsAttr mapValues(Type newElementType,
-                         function_ref<APInt(const APInt &)> mapping) const;
-
-  /// Generates a new ElementsAttr by mapping each float value to a new
-  /// underlying APInt. The new values can represent either an integer or float.
-  /// This ElementsAttr should contain floats.
-  ElementsAttr mapValues(Type newElementType,
-                         function_ref<APInt(const APFloat &)> mapping) const;
-
-  /// Method for support type inquiry through isa, cast and dyn_cast.
-  static bool classof(Attribute attr);
-};
-
-namespace detail {
-/// DenseElementsAttr data is aligned to uint64_t, so this traits class is
-/// necessary to interop with PointerIntPair.
-class DenseElementDataPointerTypeTraits {
-public:
-  static inline const void *getAsVoidPointer(const char *ptr) { return ptr; }
-  static inline const char *getFromVoidPointer(const void *ptr) {
-    return static_cast<const char *>(ptr);
-  }
-
-  // Note: We could steal more bits if the need arises.
-  static constexpr int NumLowBitsAvailable = 1;
-};
-
 /// Pair of raw pointer and a boolean flag of whether the pointer holds a splat,
-using DenseIterPtrAndSplat =
-    llvm::PointerIntPair<const char *, 1, bool,
-                         DenseElementDataPointerTypeTraits>;
+using DenseIterPtrAndSplat = std::pair<const char *, bool>;
 
 /// Impl iterator for indexed DenseElementsAttr iterators that records a data
 /// pointer and data index that is adjusted for the case of a splat attribute.
@@ -142,12 +52,12 @@ protected:
   /// Return the current index for this iterator, adjusted for the case of a
   /// splat.
   ptrdiff_t getDataIndex() const {
-    bool isSplat = this->base.getInt();
+    bool isSplat = this->base.second;
     return isSplat ? 0 : this->index;
   }
 
   /// Return the data base pointer.
-  const char *getData() const { return this->base.getPointer(); }
+  const char *getData() const { return this->base.first; }
 };
 
 /// Type trait detector that checks if a given type T is a complex type.
@@ -159,9 +69,14 @@ struct is_complex_t<std::complex<T>> : public std::true_type {};
 
 /// An attribute that represents a reference to a dense vector or tensor object.
 ///
-class DenseElementsAttr : public ElementsAttr {
+class DenseElementsAttr : public Attribute {
 public:
-  using ElementsAttr::ElementsAttr;
+  using Attribute::Attribute;
+
+  /// Allow implicit conversion to ElementsAttr.
+  operator ElementsAttr() const {
+    return *this ? cast<ElementsAttr>() : nullptr;
+  }
 
   /// Type trait used to check if the given type T is a potentially valid C++
   /// floating point type that can be used to access the underlying element
@@ -440,7 +355,7 @@ public:
   template <typename T>
   T getValue(ArrayRef<uint64_t> index) const {
     // Skip to the element corresponding to the flattened index.
-    return getFlatValue<T>(getFlattenedIndex(index));
+    return getFlatValue<T>(ElementsAttr::getFlattenedIndex(*this, index));
   }
   /// Return the value at the given flattened index.
   template <typename T> T getFlatValue(uint64_t index) const {
@@ -678,6 +593,22 @@ public:
   /// Return the raw StringRef data held by this attribute.
   ArrayRef<StringRef> getRawStringData() const;
 
+  /// Return the type of this ElementsAttr, guaranteed to be a vector or tensor
+  /// with static shape.
+  ShapedType getType() const;
+
+  /// Return the element type of this DenseElementsAttr.
+  Type getElementType() const;
+
+  /// Returns the number of elements held by this attribute.
+  int64_t getNumElements() const;
+
+  /// Returns the number of elements held by this attribute.
+  int64_t size() const { return getNumElements(); }
+
+  /// Returns if the number of elements held by this attribute is 0.
+  bool empty() const { return size() == 0; }
+
   //===--------------------------------------------------------------------===//
   // Mutation Utilities
   //===--------------------------------------------------------------------===//
@@ -761,7 +692,6 @@ public:
     return denseAttr && denseAttr.isSplat();
   }
 };
-
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//
@@ -954,159 +884,6 @@ template <typename T>
 auto SparseElementsAttr::value_end() const -> iterator<T> {
   return getValues<T>().end();
 }
-
-namespace detail {
-/// This class represents a general iterator over the values of an ElementsAttr.
-/// It supports all subclasses aside from OpaqueElementsAttr.
-template <typename T>
-class ElementsAttrIterator
-    : public llvm::iterator_facade_base<ElementsAttrIterator<T>,
-                                        std::random_access_iterator_tag, T,
-                                        std::ptrdiff_t, T, T> {
-  // NOTE: We use a dummy enable_if here because MSVC cannot use 'decltype'
-  // inside of a conversion operator.
-  using DenseIteratorT = typename std::enable_if<
-      true, decltype(std::declval<DenseElementsAttr>().value_begin<T>())>::type;
-  using SparseIteratorT = SparseElementsAttr::iterator<T>;
-
-  /// A union containing the specific iterators for each derived attribute kind.
-  union Iterator {
-    Iterator(DenseIteratorT &&it) : denseIt(std::move(it)) {}
-    Iterator(SparseIteratorT &&it) : sparseIt(std::move(it)) {}
-    Iterator() {}
-    ~Iterator() {}
-
-    operator const DenseIteratorT &() const { return denseIt; }
-    operator const SparseIteratorT &() const { return sparseIt; }
-    operator DenseIteratorT &() { return denseIt; }
-    operator SparseIteratorT &() { return sparseIt; }
-
-    /// An instance of a dense elements iterator.
-    DenseIteratorT denseIt;
-    /// An instance of a sparse elements iterator.
-    SparseIteratorT sparseIt;
-  };
-
-  /// Utility method to process a functor on each of the internal iterator
-  /// types.
-  template <typename RetT, template <typename> class ProcessFn,
-            typename... Args>
-  RetT process(Args &...args) const {
-    if (attr.isa<DenseElementsAttr>())
-      return ProcessFn<DenseIteratorT>()(args...);
-    if (attr.isa<SparseElementsAttr>())
-      return ProcessFn<SparseIteratorT>()(args...);
-    llvm_unreachable("unexpected attribute kind");
-  }
-
-  /// Utility functors used to generically implement the iterators methods.
-  template <typename ItT>
-  struct PlusAssign {
-    void operator()(ItT &it, ptrdiff_t offset) { it += offset; }
-  };
-  template <typename ItT>
-  struct Minus {
-    ptrdiff_t operator()(const ItT &lhs, const ItT &rhs) { return lhs - rhs; }
-  };
-  template <typename ItT>
-  struct MinusAssign {
-    void operator()(ItT &it, ptrdiff_t offset) { it -= offset; }
-  };
-  template <typename ItT>
-  struct Dereference {
-    T operator()(ItT &it) { return *it; }
-  };
-  template <typename ItT>
-  struct ConstructIter {
-    void operator()(ItT &dest, const ItT &it) { ::new (&dest) ItT(it); }
-  };
-  template <typename ItT>
-  struct DestructIter {
-    void operator()(ItT &it) { it.~ItT(); }
-  };
-
-public:
-  ElementsAttrIterator(const ElementsAttrIterator<T> &rhs) : attr(rhs.attr) {
-    process<void, ConstructIter>(it, rhs.it);
-  }
-  ~ElementsAttrIterator() { process<void, DestructIter>(it); }
-
-  /// Methods necessary to support random access iteration.
-  ptrdiff_t operator-(const ElementsAttrIterator<T> &rhs) const {
-    assert(attr == rhs.attr && "incompatible iterators");
-    return process<ptrdiff_t, Minus>(it, rhs.it);
-  }
-  bool operator==(const ElementsAttrIterator<T> &rhs) const {
-    return rhs.attr == attr && process<bool, std::equal_to>(it, rhs.it);
-  }
-  bool operator<(const ElementsAttrIterator<T> &rhs) const {
-    assert(attr == rhs.attr && "incompatible iterators");
-    return process<bool, std::less>(it, rhs.it);
-  }
-  ElementsAttrIterator<T> &operator+=(ptrdiff_t offset) {
-    process<void, PlusAssign>(it, offset);
-    return *this;
-  }
-  ElementsAttrIterator<T> &operator-=(ptrdiff_t offset) {
-    process<void, MinusAssign>(it, offset);
-    return *this;
-  }
-
-  /// Dereference the iterator at the current index.
-  T operator*() { return process<T, Dereference>(it); }
-
-private:
-  template <typename IteratorT>
-  ElementsAttrIterator(Attribute attr, IteratorT &&it)
-      : attr(attr), it(std::forward<IteratorT>(it)) {}
-
-  /// Allow accessing the constructor.
-  friend ElementsAttr;
-
-  /// The parent elements attribute.
-  Attribute attr;
-
-  /// A union containing the specific iterators for each derived kind.
-  Iterator it;
-};
-
-template <typename T>
-class ElementsAttrRange : public llvm::iterator_range<ElementsAttrIterator<T>> {
-  using llvm::iterator_range<ElementsAttrIterator<T>>::iterator_range;
-};
-} // namespace detail
-
-/// Return the elements of this attribute as a value of type 'T'.
-template <typename T>
-auto ElementsAttr::getValues() const -> iterator_range<T> {
-  if (DenseElementsAttr denseAttr = dyn_cast<DenseElementsAttr>()) {
-    auto values = denseAttr.getValues<T>();
-    return {iterator<T>(*this, values.begin()),
-            iterator<T>(*this, values.end())};
-  }
-  if (SparseElementsAttr sparseAttr = dyn_cast<SparseElementsAttr>()) {
-    auto values = sparseAttr.getValues<T>();
-    return {iterator<T>(*this, values.begin()),
-            iterator<T>(*this, values.end())};
-  }
-  llvm_unreachable("unexpected attribute kind");
-}
-
-template <typename T> auto ElementsAttr::value_begin() const -> iterator<T> {
-  if (DenseElementsAttr denseAttr = dyn_cast<DenseElementsAttr>())
-    return iterator<T>(*this, denseAttr.value_begin<T>());
-  if (SparseElementsAttr sparseAttr = dyn_cast<SparseElementsAttr>())
-    return iterator<T>(*this, sparseAttr.value_begin<T>());
-  llvm_unreachable("unexpected attribute kind");
-}
-template <typename T> auto ElementsAttr::value_end() const -> iterator<T> {
-  if (DenseElementsAttr denseAttr = dyn_cast<DenseElementsAttr>())
-    return iterator<T>(*this, denseAttr.value_end<T>());
-  if (SparseElementsAttr sparseAttr = dyn_cast<SparseElementsAttr>())
-    return iterator<T>(*this, sparseAttr.value_end<T>());
-  llvm_unreachable("unexpected attribute kind");
-}
-
 } // end namespace mlir.
 
 //===----------------------------------------------------------------------===//

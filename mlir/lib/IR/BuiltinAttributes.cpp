@@ -383,92 +383,6 @@ LogicalResult OpaqueAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
-// ElementsAttr
-//===----------------------------------------------------------------------===//
-
-ShapedType ElementsAttr::getType() const {
-  return Attribute::getType().cast<ShapedType>();
-}
-
-Type ElementsAttr::getElementType() const { return getType().getElementType(); }
-
-/// Returns the number of elements held by this attribute.
-int64_t ElementsAttr::getNumElements() const {
-  return getType().getNumElements();
-}
-
-/// Return the value at the given index. If index does not refer to a valid
-/// element, then a null attribute is returned.
-Attribute ElementsAttr::getValue(ArrayRef<uint64_t> index) const {
-  if (auto denseAttr = dyn_cast<DenseElementsAttr>())
-    return denseAttr.getValue(index);
-  if (auto opaqueAttr = dyn_cast<OpaqueElementsAttr>())
-    return opaqueAttr.getValue(index);
-  return cast<SparseElementsAttr>().getValue(index);
-}
-
-bool ElementsAttr::isValidIndex(ArrayRef<uint64_t> index) const {
-  return isValidIndex(getType(), index);
-}
-bool ElementsAttr::isValidIndex(ShapedType type, ArrayRef<uint64_t> index) {
-  // Verify that the rank of the indices matches the held type.
-  int64_t rank = type.getRank();
-  if (rank == 0 && index.size() == 1 && index[0] == 0)
-    return true;
-  if (rank != static_cast<int64_t>(index.size()))
-    return false;
-
-  // Verify that all of the indices are within the shape dimensions.
-  ArrayRef<int64_t> shape = type.getShape();
-  return llvm::all_of(llvm::seq<int>(0, rank), [&](int i) {
-    int64_t dim = static_cast<int64_t>(index[i]);
-    return 0 <= dim && dim < shape[i];
-  });
-}
-
-uint64_t ElementsAttr::getFlattenedIndex(ArrayRef<uint64_t> index) const {
-  return getFlattenedIndex(getType(), index);
-}
-uint64_t ElementsAttr::getFlattenedIndex(ShapedType type,
-                                         ArrayRef<uint64_t> index) {
-  assert(isValidIndex(type, index) && "expected valid multi-dimensional index");
-
-  // Reduce the provided multidimensional index into a flattended 1D row-major
-  // index.
-  auto rank = type.getRank();
-  auto shape = type.getShape();
-  uint64_t valueIndex = 0;
-  uint64_t dimMultiplier = 1;
-  for (int i = rank - 1; i >= 0; --i) {
-    valueIndex += index[i] * dimMultiplier;
-    dimMultiplier *= shape[i];
-  }
-  return valueIndex;
-}
-
-ElementsAttr
-ElementsAttr::mapValues(Type newElementType,
-                        function_ref<APInt(const APInt &)> mapping) const {
-  if (auto intOrFpAttr = dyn_cast<DenseElementsAttr>())
-    return intOrFpAttr.mapValues(newElementType, mapping);
-  llvm_unreachable("unsupported ElementsAttr subtype");
-}
-
-ElementsAttr
-ElementsAttr::mapValues(Type newElementType,
-                        function_ref<APInt(const APFloat &)> mapping) const {
-  if (auto intOrFpAttr = dyn_cast<DenseElementsAttr>())
-    return intOrFpAttr.mapValues(newElementType, mapping);
-  llvm_unreachable("unsupported ElementsAttr subtype");
-}
-
-/// Method for support type inquiry through isa, cast and dyn_cast.
-bool ElementsAttr::classof(Attribute attr) {
-  return attr.isa<DenseIntOrFPElementsAttr, DenseStringElementsAttr,
-                  OpaqueElementsAttr, SparseElementsAttr>();
-}
-
-//===----------------------------------------------------------------------===//
 // DenseElementsAttr Utilities
 //===----------------------------------------------------------------------===//
 
@@ -1065,6 +979,18 @@ DenseElementsAttr DenseElementsAttr::mapValues(
   return cast<DenseFPElementsAttr>().mapValues(newElementType, mapping);
 }
 
+ShapedType DenseElementsAttr::getType() const {
+  return Attribute::getType().cast<ShapedType>();
+}
+
+Type DenseElementsAttr::getElementType() const {
+  return getType().getElementType();
+}
+
+int64_t DenseElementsAttr::getNumElements() const {
+  return getType().getNumElements();
+}
+
 //===----------------------------------------------------------------------===//
 // DenseIntOrFPElementsAttr
 //===----------------------------------------------------------------------===//
@@ -1431,7 +1357,7 @@ SparseElementsAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   // Verify indices shape.
   size_t rank = type.getRank(), indicesRank = indicesType.getRank();
   if (indicesRank == 2) {
-    if (indicesType.getDimSize(1) != rank)
+    if (indicesType.getDimSize(1) != static_cast<int64_t>(rank))
       return emitShapeError();
   } else if (indicesRank != 1 || rank != 1) {
     return emitShapeError();
