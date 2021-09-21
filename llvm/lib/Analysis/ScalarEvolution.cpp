@@ -11836,6 +11836,9 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   // so we get a backedge count of zero.
   const SCEV *BECount = nullptr;
   auto *OrigStartMinusStride = getMinusSCEV(OrigStart, Stride);
+  assert(isLoopInvariant(OrigStartMinusStride, L) && "Must be!");
+  assert(isLoopInvariant(OrigStart, L) && "Must be!");
+  assert(isLoopInvariant(OrigRHS, L) && "Must be!");
   // Can we prove (max(RHS,Start) > Start - Stride?
   if (isLoopEntryGuardedByCond(L, Cond, OrigStartMinusStride, OrigStart) &&
       isLoopEntryGuardedByCond(L, Cond, OrigStartMinusStride, OrigRHS)) {
