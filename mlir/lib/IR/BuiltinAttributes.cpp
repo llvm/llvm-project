@@ -405,23 +405,43 @@ Attribute ElementsAttr::getValue(ArrayRef<uint64_t> index) const {
   return cast<SparseElementsAttr>().getValue(index);
 }
 
-/// Return if the given 'index' refers to a valid element in this attribute.
 bool ElementsAttr::isValidIndex(ArrayRef<uint64_t> index) const {
-  auto type = getType();
-
+  return isValidIndex(getType(), index);
+}
+bool ElementsAttr::isValidIndex(ShapedType type, ArrayRef<uint64_t> index) {
   // Verify that the rank of the indices matches the held type.
-  auto rank = type.getRank();
+  int64_t rank = type.getRank();
   if (rank == 0 && index.size() == 1 && index[0] == 0)
     return true;
   if (rank != static_cast<int64_t>(index.size()))
     return false;
 
   // Verify that all of the indices are within the shape dimensions.
-  auto shape = type.getShape();
+  ArrayRef<int64_t> shape = type.getShape();
   return llvm::all_of(llvm::seq<int>(0, rank), [&](int i) {
     int64_t dim = static_cast<int64_t>(index[i]);
     return 0 <= dim && dim < shape[i];
   });
+}
+
+uint64_t ElementsAttr::getFlattenedIndex(ArrayRef<uint64_t> index) const {
+  return getFlattenedIndex(getType(), index);
+}
+uint64_t ElementsAttr::getFlattenedIndex(ShapedType type,
+                                         ArrayRef<uint64_t> index) {
+  assert(isValidIndex(type, index) && "expected valid multi-dimensional index");
+
+  // Reduce the provided multidimensional index into a flattended 1D row-major
+  // index.
+  auto rank = type.getRank();
+  auto shape = type.getShape();
+  uint64_t valueIndex = 0;
+  uint64_t dimMultiplier = 1;
+  for (int i = rank - 1; i >= 0; --i) {
+    valueIndex += index[i] * dimMultiplier;
+    dimMultiplier *= shape[i];
+  }
+  return valueIndex;
 }
 
 ElementsAttr
@@ -444,25 +464,6 @@ ElementsAttr::mapValues(Type newElementType,
 bool ElementsAttr::classof(Attribute attr) {
   return attr.isa<DenseIntOrFPElementsAttr, DenseStringElementsAttr,
                   OpaqueElementsAttr, SparseElementsAttr>();
-}
-
-/// Returns the 1 dimensional flattened row-major index from the given
-/// multi-dimensional index.
-uint64_t ElementsAttr::getFlattenedIndex(ArrayRef<uint64_t> index) const {
-  assert(isValidIndex(index) && "expected valid multi-dimensional index");
-  auto type = getType();
-
-  // Reduce the provided multidimensional index into a flattended 1D row-major
-  // index.
-  auto rank = type.getRank();
-  auto shape = type.getShape();
-  uint64_t valueIndex = 0;
-  uint64_t dimMultiplier = 1;
-  for (int i = rank - 1; i >= 0; --i) {
-    valueIndex += index[i] * dimMultiplier;
-    dimMultiplier *= shape[i];
-  }
-  return valueIndex;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1419,6 +1420,64 @@ std::vector<ptrdiff_t> SparseElementsAttr::getFlattenedSparseIndices() const {
     flatSparseIndices.push_back(getFlattenedIndex(
         {&*std::next(sparseIndexValues.begin(), i * rank), rank}));
   return flatSparseIndices;
+}
+
+LogicalResult
+SparseElementsAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                           ShapedType type, DenseIntElementsAttr sparseIndices,
+                           DenseElementsAttr values) {
+  ShapedType valuesType = values.getType();
+  if (valuesType.getRank() != 1)
+    return emitError() << "expected 1-d tensor for sparse element values";
+
+  // Verify the indices and values shape.
+  ShapedType indicesType = sparseIndices.getType();
+  auto emitShapeError = [&]() {
+    return emitError() << "expected shape ([" << type.getShape()
+                       << "]); inferred shape of indices literal (["
+                       << indicesType.getShape()
+                       << "]); inferred shape of values literal (["
+                       << valuesType.getShape() << "])";
+  };
+  // Verify indices shape.
+  size_t rank = type.getRank(), indicesRank = indicesType.getRank();
+  if (indicesRank == 2) {
+    if (indicesType.getDimSize(1) != rank)
+      return emitShapeError();
+  } else if (indicesRank != 1 || rank != 1) {
+    return emitShapeError();
+  }
+  // Verify the values shape.
+  int64_t numSparseIndices = indicesType.getDimSize(0);
+  if (numSparseIndices != valuesType.getDimSize(0))
+    return emitShapeError();
+
+  // Verify that the sparse indices are within the value shape.
+  auto emitIndexError = [&](unsigned indexNum, ArrayRef<uint64_t> index) {
+    return emitError()
+           << "sparse index #" << indexNum
+           << " is not contained within the value shape, with index=[" << index
+           << "], and type=" << type;
+  };
+
+  // Handle the case where the index values are a splat.
+  auto sparseIndexValues = sparseIndices.getValues<uint64_t>();
+  if (sparseIndices.isSplat()) {
+    SmallVector<uint64_t> indices(rank, *sparseIndexValues.begin());
+    if (!ElementsAttr::isValidIndex(type, indices))
+      return emitIndexError(0, indices);
+    return success();
+  }
+
+  // Otherwise, reinterpret each index as an ArrayRef.
+  for (size_t i = 0, e = numSparseIndices; i != e; ++i) {
+    ArrayRef<uint64_t> index(&*std::next(sparseIndexValues.begin(), i * rank),
+                             rank);
+    if (!ElementsAttr::isValidIndex(type, index))
+      return emitIndexError(i, index);
+  }
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

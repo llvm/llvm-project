@@ -791,6 +791,7 @@ def Builtin_SparseElementsAttr
 
   public:
   }];
+  let genVerifyDecl = 1;
   let skipDefaultBuilders = 1;
 }
 
