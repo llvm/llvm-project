@@ -6,23 +6,15 @@ declare void @foo_01()
 declare void @foo_02()
 declare void @foo_03()
 
-; TODO: Basing on fact that load(null) is UB, we can remove edge pred->bb.
 define i32 @test_01(i32* %p, i32 %x, i1 %cond) {
 ; CHECK-LABEL: @test_01(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB:%.*]], label [[PRED:%.*]]
-; CHECK:       pred:
-; CHECK-NEXT:    switch i32 [[X:%.*]], label [[COMMON_RET:%.*]] [
-; CHECK-NEXT:    i32 42, label [[BB]]
-; CHECK-NEXT:    i32 123456, label [[BB]]
-; CHECK-NEXT:    i32 -654321, label [[BB]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[R:%.*]], [[BB]] ], [ 0, [[PRED]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[R:%.*]], [[BB]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32* [ null, [[PRED]] ], [ null, [[PRED]] ], [ null, [[PRED]] ], [ [[P:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[R]] = load i32, i32* [[PHI]], align 4
+; CHECK-NEXT:    [[R]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
@@ -42,23 +34,15 @@ other_succ:
   ret i32 0
 }
 
-; TODO: Basing on fact that load(null) is UB, we can remove edge pred->bb.
 define i32 @test_02(i32* %p, i32 %x, i1 %cond) {
 ; CHECK-LABEL: @test_02(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB:%.*]], label [[PRED:%.*]]
-; CHECK:       pred:
-; CHECK-NEXT:    switch i32 [[X:%.*]], label [[BB]] [
-; CHECK-NEXT:    i32 42, label [[COMMON_RET:%.*]]
-; CHECK-NEXT:    i32 123456, label [[COMMON_RET]]
-; CHECK-NEXT:    i32 -654321, label [[COMMON_RET]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[R:%.*]], [[BB]] ], [ 0, [[PRED]] ], [ 0, [[PRED]] ], [ 0, [[PRED]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[R:%.*]], [[BB]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32* [ null, [[PRED]] ], [ [[P:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[R]] = load i32, i32* [[PHI]], align 4
+; CHECK-NEXT:    [[R]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
@@ -78,13 +62,12 @@ other_succ:
   ret i32 0
 }
 
-; TODO: Basing on fact that load(null) is UB, we can remove edge pred->bb.
 define i32 @test_03(i32* %p, i32 %x, i1 %cond) {
 ; CHECK-LABEL: @test_03(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB:%.*]], label [[PRED:%.*]]
 ; CHECK:       pred:
-; CHECK-NEXT:    switch i32 [[X:%.*]], label [[BB]] [
+; CHECK-NEXT:    switch i32 [[X:%.*]], label [[UNREACHABLE:%.*]] [
 ; CHECK-NEXT:    i32 42, label [[COMMON_RET:%.*]]
 ; CHECK-NEXT:    i32 123456, label [[COMMON_RET]]
 ; CHECK-NEXT:    i32 -654321, label [[COMMON_RET]]
@@ -95,9 +78,10 @@ define i32 @test_03(i32* %p, i32 %x, i1 %cond) {
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[R:%.*]], [[BB]] ], [ 1, [[DO_1]] ], [ 1, [[DO_2]] ], [ 1, [[DO_3]] ], [ 0, [[PRED]] ], [ 0, [[PRED]] ], [ 0, [[PRED]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
+; CHECK:       unreachable:
+; CHECK-NEXT:    unreachable
 ; CHECK:       bb:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32* [ null, [[PRED]] ], [ [[P:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[R]] = load i32, i32* [[PHI]], align 4
+; CHECK-NEXT:    [[R]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       do_1:
 ; CHECK-NEXT:    call void @foo_01()
@@ -141,26 +125,21 @@ other_succ:
   ret i32 0
 }
 
-; TODO: Basing on fact that load(null) is UB, we can remove edge pred->bb.
 define i32 @test_04(i32* %p, i32 %x, i1 %cond) {
 ; CHECK-LABEL: @test_04(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB:%.*]], label [[PRED:%.*]]
 ; CHECK:       pred:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[COMMON_RET:%.*]] [
-; CHECK-NEXT:    i32 42, label [[BB]]
-; CHECK-NEXT:    i32 123456, label [[BB]]
-; CHECK-NEXT:    i32 -654321, label [[BB]]
-; CHECK-NEXT:    i32 1, label [[DO_1:%.*]]
-; CHECK-NEXT:    i32 2, label [[DO_2:%.*]]
 ; CHECK-NEXT:    i32 3, label [[DO_3:%.*]]
+; CHECK-NEXT:    i32 2, label [[DO_2:%.*]]
+; CHECK-NEXT:    i32 1, label [[DO_1:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[R:%.*]], [[BB]] ], [ 1, [[DO_1]] ], [ 1, [[DO_2]] ], [ 1, [[DO_3]] ], [ 0, [[PRED]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32* [ null, [[PRED]] ], [ null, [[PRED]] ], [ null, [[PRED]] ], [ [[P:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[R]] = load i32, i32* [[PHI]], align 4
+; CHECK-NEXT:    [[R]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       do_1:
 ; CHECK-NEXT:    call void @foo_01()
