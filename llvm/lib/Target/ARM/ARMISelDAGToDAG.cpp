@@ -410,11 +410,9 @@ void ARMDAGToDAGISel::PreprocessISelDAG() {
     return;
 
   bool isThumb2 = Subtarget->isThumb();
-  for (SelectionDAG::allnodes_iterator I = CurDAG->allnodes_begin(),
-       E = CurDAG->allnodes_end(); I != E; ) {
-    SDNode *N = &*I++; // Preincrement iterator to avoid invalidation issues.
-
-    if (N->getOpcode() != ISD::ADD)
+  // We use make_early_inc_range to avoid invalidation issues.
+  for (SDNode &N : llvm::make_early_inc_range(CurDAG->allnodes())) {
+    if (N.getOpcode() != ISD::ADD)
       continue;
 
     // Look for (add X1, (and (srl X2, c1), c2)) where c2 is constant with
@@ -426,8 +424,8 @@ void ARMDAGToDAGISel::PreprocessISelDAG() {
     // operand of 'add' and the 'and' and 'srl' would become a bits extraction
     // node (UBFX).
 
-    SDValue N0 = N->getOperand(0);
-    SDValue N1 = N->getOperand(1);
+    SDValue N0 = N.getOperand(0);
+    SDValue N1 = N.getOperand(1);
     unsigned And_imm = 0;
     if (!isOpcWithIntImmediate(N1.getNode(), ISD::AND, And_imm)) {
       if (isOpcWithIntImmediate(N0.getNode(), ISD::AND, And_imm))
@@ -484,7 +482,7 @@ void ARMDAGToDAGISel::PreprocessISelDAG() {
                          CurDAG->getConstant(And_imm, SDLoc(Srl), MVT::i32));
     N1 = CurDAG->getNode(ISD::SHL, SDLoc(N1), MVT::i32,
                          N1, CurDAG->getConstant(TZ, SDLoc(Srl), MVT::i32));
-    CurDAG->UpdateNodeOperands(N, N0, N1);
+    CurDAG->UpdateNodeOperands(&N, N0, N1);
   }
 }
 

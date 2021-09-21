@@ -235,18 +235,18 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
       Inst->setMetadata(LLVMContext::MD_tbaa, UpgradedMD);
   }
 
-  // Look for intrinsic functions and CallInst that need to be upgraded
-  for (Module::iterator FI = M->begin(), FE = M->end(); FI != FE; )
-    UpgradeCallsToIntrinsic(&*FI++); // must be post-increment, as we remove
+  // Look for intrinsic functions and CallInst that need to be upgraded.  We use
+  // make_early_inc_range here because we may remove some functions.
+  for (Function &F : llvm::make_early_inc_range(*M))
+    UpgradeCallsToIntrinsic(&F);
 
   // Some types could be renamed during loading if several modules are
   // loaded in the same LLVMContext (LTO scenario). In this case we should
   // remangle intrinsics names as well.
-  for (Module::iterator FI = M->begin(), FE = M->end(); FI != FE; ) {
-    Function *F = &*FI++;
-    if (auto Remangled = Intrinsic::remangleIntrinsicFunction(F)) {
-      F->replaceAllUsesWith(Remangled.getValue());
-      F->eraseFromParent();
+  for (Function &F : llvm::make_early_inc_range(*M)) {
+    if (auto Remangled = Intrinsic::remangleIntrinsicFunction(&F)) {
+      F.replaceAllUsesWith(Remangled.getValue());
+      F.eraseFromParent();
     }
   }
 

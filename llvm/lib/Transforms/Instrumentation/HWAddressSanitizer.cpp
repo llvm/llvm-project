@@ -1609,13 +1609,11 @@ bool HWAddressSanitizer::sanitizeFunction(
   // dynamic allocas.
   if (EntryIRB.GetInsertBlock() != &F.getEntryBlock()) {
     InsertPt = &*F.getEntryBlock().begin();
-    for (auto II = EntryIRB.GetInsertBlock()->begin(),
-              IE = EntryIRB.GetInsertBlock()->end();
-         II != IE;) {
-      Instruction *I = &*II++;
-      if (auto *AI = dyn_cast<AllocaInst>(I))
+    for (Instruction &I :
+         llvm::make_early_inc_range(*EntryIRB.GetInsertBlock())) {
+      if (auto *AI = dyn_cast<AllocaInst>(&I))
         if (isa<ConstantInt>(AI->getArraySize()))
-          I->moveBefore(InsertPt);
+          I.moveBefore(InsertPt);
     }
   }
 

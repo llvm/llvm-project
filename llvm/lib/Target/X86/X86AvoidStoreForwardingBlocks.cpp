@@ -542,9 +542,8 @@ void X86AvoidSFBPass::findPotentiallylBlockedCopies(MachineFunction &MF) {
       int DefVR = MI.getOperand(0).getReg();
       if (!MRI->hasOneNonDBGUse(DefVR))
         continue;
-      for (auto UI = MRI->use_nodbg_begin(DefVR), UE = MRI->use_nodbg_end();
-           UI != UE;) {
-        MachineOperand &StoreMO = *UI++;
+      for (MachineOperand &StoreMO :
+           llvm::make_early_inc_range(MRI->use_nodbg_operands(DefVR))) {
         MachineInstr &StoreMI = *StoreMO.getParent();
         // Skip cases where the memcpy may overlap.
         if (StoreMI.getParent() == MI.getParent() &&

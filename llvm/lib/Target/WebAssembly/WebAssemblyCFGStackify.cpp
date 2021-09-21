@@ -842,8 +842,7 @@ static void unstackifyVRegsUsedInSplitBB(MachineBasicBlock &MBB,
   //    INST ..., TeeReg, ...
   //    INST ..., Reg, ...
   //    INST ..., Reg, ...
-  for (auto I = MBB.begin(), E = MBB.end(); I != E;) {
-    MachineInstr &MI = *I++;
+  for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
     if (!WebAssembly::isTee(MI.getOpcode()))
       continue;
     Register TeeReg = MI.getOperand(0).getReg();

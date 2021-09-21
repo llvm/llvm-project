@@ -96,9 +96,8 @@ static bool replaceDominatedUses(MachineBasicBlock &MBB, MachineInstr &MI,
 
   SmallVector<SlotIndex, 4> Indices;
 
-  for (auto I = MRI.use_nodbg_begin(FromReg), E = MRI.use_nodbg_end();
-       I != E;) {
-    MachineOperand &O = *I++;
+  for (MachineOperand &O :
+       llvm::make_early_inc_range(MRI.use_nodbg_operands(FromReg))) {
     MachineInstr *Where = O.getParent();
 
     // Check that MI dominates the instruction in the normal way.
