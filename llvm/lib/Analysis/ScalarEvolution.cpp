@@ -10704,8 +10704,13 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
 
   // Unsigned comparison is the same as signed comparison when both the operands
   // are non-negative or negative.
-  if (CmpInst::isUnsigned(FoundPred) &&
-      CmpInst::getSignedPredicate(FoundPred) == Pred &&
+  auto IsSignFlippedPredicate = [](CmpInst::Predicate P1,
+                                   CmpInst::Predicate P2) {
+    assert(P1 != P2 && "Handled earlier!");
+    return CmpInst::isRelational(P2) &&
+           P1 == CmpInst::getFlippedSignednessPredicate(P2);
+  };
+  if (IsSignFlippedPredicate(Pred, FoundPred) &&
       ((isKnownNonNegative(FoundLHS) && isKnownNonNegative(FoundRHS)) ||
        (isKnownNegative(FoundLHS) && isKnownNegative(FoundRHS))))
     return isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI);

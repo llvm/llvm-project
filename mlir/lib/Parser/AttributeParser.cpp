@@ -67,15 +67,13 @@ Attribute Parser::parseAttribute(Type type) {
 
   // Parse an array attribute.
   case Token::l_square: {
-    consumeToken(Token::l_square);
-
     SmallVector<Attribute, 4> elements;
     auto parseElt = [&]() -> ParseResult {
       elements.push_back(parseAttribute());
       return elements.back() ? success() : failure();
     };
 
-    if (parseCommaSeparatedListUntil(Token::r_square, parseElt))
+    if (parseCommaSeparatedList(Delimiter::Square, parseElt))
       return nullptr;
     return builder.getArrayAttr(elements);
   }
@@ -262,9 +260,6 @@ OptionalParseResult Parser::parseOptionalAttribute(StringAttr &attribute,
 ///   attribute-entry ::= (bare-id | string-literal) `=` attribute-value
 ///
 ParseResult Parser::parseAttributeDict(NamedAttrList &attributes) {
-  if (parseToken(Token::l_brace, "expected '{' in attribute dictionary"))
-    return failure();
-
   llvm::SmallDenseSet<Identifier> seenKeys;
   auto parseElt = [&]() -> ParseResult {
     // The name of an attribute can either be a bare identifier, or a string.
@@ -300,7 +295,8 @@ ParseResult Parser::parseAttributeDict(NamedAttrList &attributes) {
     return success();
   };
 
-  if (parseCommaSeparatedListUntil(Token::r_brace, parseElt))
+  if (parseCommaSeparatedList(Delimiter::Braces, parseElt,
+                              " in attribute dictionary"))
     return failure();
 
   return success();
@@ -769,8 +765,6 @@ ParseResult TensorLiteralParser::parseElement() {
 ///   parseList([[1, 2], 3]) -> Failure
 ///   parseList([[1, [2, 3]], [4, [5]]]) -> Failure
 ParseResult TensorLiteralParser::parseList(SmallVectorImpl<int64_t> &dims) {
-  p.consumeToken(Token::l_square);
-
   auto checkDims = [&](const SmallVectorImpl<int64_t> &prevDims,
                        const SmallVectorImpl<int64_t> &newDims) -> ParseResult {
     if (prevDims == newDims)
@@ -782,7 +776,7 @@ ParseResult TensorLiteralParser::parseList(SmallVectorImpl<int64_t> &dims) {
   bool first = true;
   SmallVector<int64_t, 4> newDims;
   unsigned size = 0;
-  auto parseCommaSeparatedList = [&]() -> ParseResult {
+  auto parseOneElement = [&]() -> ParseResult {
     SmallVector<int64_t, 4> thisDims;
     if (p.getToken().getKind() == Token::l_square) {
       if (parseList(thisDims))
@@ -797,7 +791,7 @@ ParseResult TensorLiteralParser::parseList(SmallVectorImpl<int64_t> &dims) {
     first = false;
     return success();
   };
-  if (p.parseCommaSeparatedListUntil(Token::r_square, parseCommaSeparatedList))
+  if (p.parseCommaSeparatedList(Parser::Delimiter::Square, parseOneElement))
     return failure();
 
   // Return the sublists' dimensions with 'size' prepended.
