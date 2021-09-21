@@ -10,12 +10,22 @@ class ScopedInterceptor {
  public:
   ScopedInterceptor(ThreadState *thr, const char *fname, uptr pc);
   ~ScopedInterceptor();
-  void DisableIgnores();
-  void EnableIgnores();
+  void DisableIgnores() {
+    if (UNLIKELY(ignoring_))
+      DisableIgnoresImpl();
+  }
+  void EnableIgnores() {
+    if (UNLIKELY(ignoring_))
+      EnableIgnoresImpl();
+  }
+
  private:
   ThreadState *const thr_;
   bool in_ignored_lib_;
   bool ignoring_;
+
+  void DisableIgnoresImpl();
+  void EnableIgnoresImpl();
 };
 
 LibIgnore *libignore();
