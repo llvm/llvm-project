@@ -169,10 +169,6 @@ void ThreadStart(ThreadState *thr, Tid tid, tid_t os_id,
   OnStartedArgs args = { thr, stk_addr, stk_size, tls_addr, tls_size };
   tr->StartThread(tid, os_id, thread_type, &args);
 
-  tr->Lock();
-  thr->tctx = (ThreadContext*)tr->GetThreadLocked(tid);
-  tr->Unlock();
-
   while (!thr->tctx->trace.parts.Empty()) thr->tctx->trace.parts.PopBack();
 
 #if !SANITIZER_GO
@@ -215,6 +211,7 @@ void ThreadContext::OnStarted(void *arg) {
   thr->fast_synch_epoch = epoch0;
   AcquireImpl(thr, 0, &sync);
   sync.Reset(&thr->proc()->clock_cache);
+  thr->tctx = this;
   thr->is_inited = true;
   DPrintf(
       "#%d: ThreadStart epoch=%zu stk_addr=%zx stk_size=%zx "
