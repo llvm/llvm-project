@@ -10,8 +10,7 @@
 ;
 ; Test whether isolation works as expected.
 ;
-; CHECK:   // Inter iteration alias-free
-; CHECK-NEXT:          // 1st level tiling - Tiles
+; CHECK:               // 1st level tiling - Tiles
 ; CHECK-NEXT:          for (int c0 = 0; c0 <= 1; c0 += 1)
 ; CHECK-NEXT:            for (int c1 = 0; c1 <= 6; c1 += 1) {
 ; CHECK-NEXT:              for (int c3 = 1536 * c0; c3 <= min(1999, 1536 * c0 + 1535); c3 += 1)
