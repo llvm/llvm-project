@@ -22,7 +22,7 @@ class TestGuiExpandThreadsTree(PExpectTest):
         self.build()
 
         self.launch(executable=self.getBuildArtifact("a.out"), dimensions=(100,500))
-        self.expect("breakpoint set -r thread_start_routine", substrs=["Breakpoint 1", "address ="])
+        self.expect("breakpoint set -n break_here", substrs=["Breakpoint 1", "address ="])
         self.expect("run", substrs=["stop reason ="])
 
         escape_key = chr(27).encode()
@@ -33,7 +33,7 @@ class TestGuiExpandThreadsTree(PExpectTest):
         self.child.expect_exact("Threads")
 
         # The thread running thread_start_routine should be expanded.
-        self.child.expect_exact("frame #0: thread_start_routine")
+        self.child.expect_exact("frame #0: break_here")
 
         # Exit GUI.
         self.child.send(escape_key)
