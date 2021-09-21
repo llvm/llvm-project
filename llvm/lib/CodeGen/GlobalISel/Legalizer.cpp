@@ -218,9 +218,6 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
   RAIIMFObsDelInstaller Installer(MF, WrapperObserver);
   LegalizerHelper Helper(MF, LI, WrapperObserver, MIRBuilder);
   LegalizationArtifactCombiner ArtCombiner(MIRBuilder, MRI, LI);
-  auto RemoveDeadInstFromLists = [&WrapperObserver](MachineInstr *DeadMI) {
-    WrapperObserver.erasingInstr(*DeadMI);
-  };
   bool Changed = false;
   SmallVector<MachineInstr *, 128> RetryList;
   do {
@@ -232,9 +229,7 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
       assert(isPreISelGenericOpcode(MI.getOpcode()) &&
              "Expecting generic opcode");
       if (isTriviallyDead(MI, MRI)) {
-        LLVM_DEBUG(dbgs() << MI << "Is dead; erasing.\n");
-        MI.eraseFromParentAndMarkDBGValuesForRemoval();
-        LocObserver.checkpoint(false);
+        eraseInstr(MI, MRI, &LocObserver);
         continue;
       }
 
@@ -281,10 +276,7 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
       assert(isPreISelGenericOpcode(MI.getOpcode()) &&
              "Expecting generic opcode");
       if (isTriviallyDead(MI, MRI)) {
-        LLVM_DEBUG(dbgs() << MI << "Is dead\n");
-        RemoveDeadInstFromLists(&MI);
-        MI.eraseFromParentAndMarkDBGValuesForRemoval();
-        LocObserver.checkpoint(false);
+        eraseInstr(MI, MRI, &LocObserver);
         continue;
       }
       SmallVector<MachineInstr *, 4> DeadInstructions;
@@ -292,11 +284,7 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
       if (ArtCombiner.tryCombineInstruction(MI, DeadInstructions,
                                             WrapperObserver)) {
         WorkListObserver.printNewInstrs();
-        for (auto *DeadMI : DeadInstructions) {
-          LLVM_DEBUG(dbgs() << "Is dead: " << *DeadMI);
-          RemoveDeadInstFromLists(DeadMI);
-          DeadMI->eraseFromParentAndMarkDBGValuesForRemoval();
-        }
+        eraseInstrs(DeadInstructions, MRI, &LocObserver);
         LocObserver.checkpoint(
             VerifyDebugLocs ==
             DebugLocVerifyLevel::LegalizationsAndArtifactCombiners);

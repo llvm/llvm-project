@@ -117,7 +117,6 @@ body: |
     ; TAHITI: [[COPY29:%[0-9]+]]:_(s32) = COPY [[C16]](s32)
     ; TAHITI: [[AND29:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C2]]
     ; TAHITI: [[LSHR30:%[0-9]+]]:_(s32) = G_LSHR [[AND29]], [[COPY29]](s32)
-    ; TAHITI: [[DEF1:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
     ; TAHITI: [[AND30:%[0-9]+]]:_(s32) = G_AND [[UV]], [[C1]]
     ; TAHITI: [[AND31:%[0-9]+]]:_(s32) = G_AND [[LSHR1]], [[C1]]
     ; TAHITI: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND31]], [[C1]](s32)
@@ -280,7 +279,6 @@ body: |
     ; FIJI: [[LSHR28:%[0-9]+]]:_(s16) = G_LSHR [[TRUNC1]], [[C13]](s16)
     ; FIJI: [[LSHR29:%[0-9]+]]:_(s16) = G_LSHR [[TRUNC1]], [[C14]](s16)
     ; FIJI: [[LSHR30:%[0-9]+]]:_(s16) = G_LSHR [[TRUNC1]], [[C15]](s16)
-    ; FIJI: [[DEF1:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
     ; FIJI: [[C16:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; FIJI: [[AND:%[0-9]+]]:_(s32) = G_AND [[UV]], [[C16]]
     ; FIJI: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LSHR1]](s16)

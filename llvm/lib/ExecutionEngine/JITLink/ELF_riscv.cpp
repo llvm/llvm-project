@@ -286,93 +286,54 @@ private:
   }
 
   Error addRelocations() override {
+    LLVM_DEBUG(dbgs() << "Processing relocations:\n");
+
     using Base = ELFLinkGraphBuilder<ELFT>;
-    LLVM_DEBUG(dbgs() << "Adding relocations\n");
+    using Self = ELFLinkGraphBuilder_riscv<ELFT>;
+    for (const auto &RelSect : Base::Sections)
+      if (Error Err = Base::forEachRelocation(RelSect, this,
+                                              &Self::addSingleRelocation))
+        return Err;
 
-    // TODO a partern is forming of iterate some sections but only give me
-    // ones I am interested, I should abstract that concept some where
-    for (auto &SecRef : Base::Sections) {
-      if (SecRef.sh_type != ELF::SHT_RELA && SecRef.sh_type != ELF::SHT_REL)
-        continue;
-      auto RelSectName = Base::Obj.getSectionName(SecRef);
-      if (!RelSectName)
-        return RelSectName.takeError();
+    return Error::success();
+  }
 
-      LLVM_DEBUG({
-        dbgs() << "Adding relocations from section " << *RelSectName << "\n";
-      });
+  Error addSingleRelocation(const typename ELFT::Rela &Rel,
+                            const typename ELFT::Shdr &FixupSect,
+                            Section &GraphSection) {
+    using Base = ELFLinkGraphBuilder<ELFT>;
 
-      auto UpdateSection = Base::Obj.getSection(SecRef.sh_info);
-      if (!UpdateSection)
-        return UpdateSection.takeError();
+    uint32_t SymbolIndex = Rel.getSymbol(false);
+    auto ObjSymbol = Base::Obj.getRelocationSymbol(Rel, Base::SymTabSec);
+    if (!ObjSymbol)
+      return ObjSymbol.takeError();
 
-      auto UpdateSectionName = Base::Obj.getSectionName(**UpdateSection);
-      if (!UpdateSectionName)
-        return UpdateSectionName.takeError();
-      // Don't process relocations for debug sections.
-      if (Base::isDwarfSection(*UpdateSectionName)) {
-        LLVM_DEBUG({
-          dbgs() << "  Target is dwarf section " << *UpdateSectionName
-                 << ". Skipping.\n";
-        });
-        continue;
-      } else
-        LLVM_DEBUG({
-          dbgs() << "  For target section " << *UpdateSectionName << "\n";
-        });
+    Symbol *GraphSymbol = Base::getGraphSymbol(SymbolIndex);
+    if (!GraphSymbol)
+      return make_error<StringError>(
+          formatv("Could not find symbol at given index, did you add it to "
+                  "JITSymbolTable? index: {0}, shndx: {1} Size of table: {2}",
+                  SymbolIndex, (*ObjSymbol)->st_shndx,
+                  Base::GraphSymbols.size()),
+          inconvertibleErrorCode());
 
-      auto *JITSection = Base::G->findSectionByName(*UpdateSectionName);
-      if (!JITSection)
-        return make_error<llvm::StringError>(
-            "Refencing a section that wasn't added to graph" +
-                *UpdateSectionName,
-            llvm::inconvertibleErrorCode());
+    uint32_t Type = Rel.getType(false);
+    Expected<riscv::EdgeKind_riscv> Kind = getRelocationKind(Type);
+    if (!Kind)
+      return Kind.takeError();
 
-      auto Relocations = Base::Obj.relas(SecRef);
-      if (!Relocations)
-        return Relocations.takeError();
+    int64_t Addend = Rel.r_addend;
+    Block *BlockToFix = *(GraphSection.blocks().begin());
+    JITTargetAddress FixupAddress = FixupSect.sh_addr + Rel.r_offset;
+    Edge::OffsetT Offset = FixupAddress - BlockToFix->getAddress();
+    Edge GE(*Kind, Offset, *GraphSymbol, Addend);
+    LLVM_DEBUG({
+      dbgs() << "    ";
+      printEdge(dbgs(), *BlockToFix, GE, riscv::getEdgeKindName(*Kind));
+      dbgs() << "\n";
+    });
 
-      for (const auto &Rela : *Relocations) {
-        auto Type = Rela.getType(false);
-
-        LLVM_DEBUG({
-          dbgs() << "Relocation Type: " << Type << "\n"
-                 << "Name: " << Base::Obj.getRelocationTypeName(Type) << "\n";
-        });
-
-        auto SymbolIndex = Rela.getSymbol(false);
-        auto Symbol = Base::Obj.getRelocationSymbol(Rela, Base::SymTabSec);
-        if (!Symbol)
-          return Symbol.takeError();
-
-        auto BlockToFix = *(JITSection->blocks().begin());
-        auto *TargetSymbol = Base::getGraphSymbol(SymbolIndex);
-
-        if (!TargetSymbol) {
-          return make_error<llvm::StringError>(
-              "Could not find symbol at given index, did you add it to "
-              "JITSymbolTable? index: " +
-                  std::to_string(SymbolIndex) + ", shndx: " +
-                  std::to_string((*Symbol)->st_shndx) + " Size of table: " +
-                  std::to_string(Base::GraphSymbols.size()),
-              llvm::inconvertibleErrorCode());
-        }
-        int64_t Addend = Rela.r_addend;
-        JITTargetAddress FixupAddress =
-            (*UpdateSection)->sh_addr + Rela.r_offset;
-
-        LLVM_DEBUG({
-          dbgs() << "Processing relocation at "
-                 << format("0x%016" PRIx64, FixupAddress) << "\n";
-        });
-        auto Kind = getRelocationKind(Type);
-        if (!Kind)
-          return Kind.takeError();
-
-        BlockToFix->addEdge(*Kind, FixupAddress - BlockToFix->getAddress(),
-                            *TargetSymbol, Addend);
-      }
-    }
+    BlockToFix->addEdge(std::move(GE));
     return Error::success();
   }
 

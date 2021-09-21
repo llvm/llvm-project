@@ -4,27 +4,22 @@
 ;
 ; SCOPES-LABEL: polly.stmt.for.body:
 ; SCOPES:      %[[BIdx:[._a-zA-Z0-9]*]] = getelementptr{{.*}} i32* %B, i64 %polly.indvar
-; SCOPES:      load i32, i32* %[[BIdx]], align 4, !alias.scope ![[AliasScopeB:[0-9]*]], !noalias ![[NoAliasB:[0-9]*]]
+; SCOPES:      load i32, i32* %[[BIdx]], align 4, !alias.scope !0, !noalias !3
 ; SCOPES:      %[[CIdx:[._a-zA-Z0-9]*]] = getelementptr{{.*}} float* %C, i64 %polly.indvar
-; SCOPES:      load float, float* %[[CIdx]], align 4, !alias.scope ![[AliasScopeC:[0-9]*]], !noalias ![[NoAliasC:[0-9]*]]
+; SCOPES:      load float, float* %[[CIdx]], align 4, !alias.scope !6, !noalias !7
 ; SCOPES:      %[[AIdx:[._a-zA-Z0-9]*]] = getelementptr{{.*}} i32* %A, i64 %polly.indvar
-; SCOPES:      store i32 %{{[._a-zA-Z0-9]*}}, i32* %[[AIdx]], align 4, !alias.scope ![[AliasScopeA:[0-9]*]], !noalias ![[NoAliasA:[0-9]*]]
+; SCOPES:      store i32 %{{[._a-zA-Z0-9]*}}, i32* %[[AIdx]], align 4, !alias.scope !8, !noalias !9
 ;
-; SCOPES:      ![[AliasScopeB]] = distinct !{![[AliasScopeB]], !{{[0-9]*}}, !"polly.alias.scope.MemRef_B"}
-; SCOPES:      ![[NoAliasB]] = !{
-; SCOPES-DAG:     ![[AliasScopeA]]
-; SCOPES-DAG:     ![[AliasScopeC]]
-; SCOPES:       }
-; SCOPES-DAG:  ![[AliasScopeA]] = distinct !{![[AliasScopeA]], !{{[0-9]*}}, !"polly.alias.scope.MemRef_A"}
-; SCOPES-DAG:  ![[AliasScopeC]] = distinct !{![[AliasScopeC]], !{{[0-9]*}}, !"polly.alias.scope.MemRef_C"}
-; SCOPES:      ![[NoAliasC]] = !{
-; SCOPES-DAG:     ![[AliasScopeA]]
-; SCOPES-DAG:     ![[AliasScopeB]]
-; SCOPES:       }
-; SCOPES:      ![[NoAliasA]] = !{
-; SCOPES-DAG:     ![[AliasScopeB]]
-; SCOPES-DAG:     ![[AliasScopeC]]
-; SCOPES:       }
+; SCOPES: !0 = !{!1}
+; SCOPES: !1 = distinct !{!1, !2, !"polly.alias.scope.MemRef_B"}
+; SCOPES: !2 = distinct !{!2, !"polly.alias.scope.domain"}
+; SCOPES: !3 = !{!4, !5}
+; SCOPES: !4 = distinct !{!4, !2, !"polly.alias.scope.MemRef_C"}
+; SCOPES: !5 = distinct !{!5, !2, !"polly.alias.scope.MemRef_A"}
+; SCOPES: !6 = !{!4}
+; SCOPES: !7 = !{!1, !5}
+; SCOPES: !8 = !{!5}
+; SCOPES: !9 = !{!1, !4}
 ;
 ;    void jd(int *A, int *B, float *C) {
 ;      for (int i = 0; i < 1024; i++)

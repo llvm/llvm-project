@@ -794,7 +794,7 @@ define i32 @test35() nounwind {
 ; Don't treat signed offsets as unsigned.
 define i8* @test36() nounwind {
 ; CHECK-LABEL: @test36(
-; CHECK-NEXT:    ret i8* getelementptr ([11 x i8], [11 x i8]* @array, i64 0, i64 -1)
+; CHECK-NEXT:    ret i8* getelementptr ([11 x i8], [11 x i8]* @array, i64 -1, i64 10)
 ;
   ret i8* getelementptr ([11 x i8], [11 x i8]* @array, i32 0, i64 -1)
 }

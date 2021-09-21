@@ -18,6 +18,7 @@
 #include "mlir/TableGen/Argument.h"
 #include "mlir/TableGen/Operator.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 
@@ -198,6 +199,7 @@ public:
 
 private:
   friend class SymbolInfoMap;
+  friend llvm::DenseMapInfo<DagNode>;
   const void *getAsOpaquePointer() const { return node; }
 
   const llvm::DagInit *node; // nullptr means null DagNode
@@ -242,9 +244,16 @@ public:
   // Class for information regarding a symbol.
   class SymbolInfo {
   public:
+    // Returns a type string of a variable.
+    std::string getVarTypeStr(StringRef name) const;
+
     // Returns a string for defining a variable named as `name` to store the
     // value bound by this symbol.
     std::string getVarDecl(StringRef name) const;
+
+    // Returns a string for defining an argument which passes the reference of
+    // the variable.
+    std::string getArgDecl(StringRef name) const;
 
     // Returns a variable name for the symbol named as `name`.
     std::string getVarName(StringRef name) const;
@@ -383,6 +392,7 @@ public:
   // with index `argIndex` for operator `op`.
   const_iterator findBoundSymbol(StringRef key, DagNode node,
                                  const Operator &op, int argIndex) const;
+  const_iterator findBoundSymbol(StringRef key, SymbolInfo symbolInfo) const;
 
   // Returns the bounds of a range that includes all the elements which
   // bind to the `key`.
@@ -474,14 +484,14 @@ public:
   // pair).
   std::vector<IdentifierLine> getLocation() const;
 
-private:
-  // Helper function to verify variabld binding.
-  void verifyBind(bool result, StringRef symbolName);
-
   // Recursively collects all bound symbols inside the DAG tree rooted
   // at `tree` and updates the given `infoMap`.
   void collectBoundSymbols(DagNode tree, SymbolInfoMap &infoMap,
                            bool isSrcPattern);
+
+private:
+  // Helper function to verify variable binding.
+  void verifyBind(bool result, StringRef symbolName);
 
   // The TableGen definition of this pattern.
   const llvm::Record &def;
@@ -494,5 +504,25 @@ private:
 
 } // end namespace tblgen
 } // end namespace mlir
+
+namespace llvm {
+template <>
+struct DenseMapInfo<mlir::tblgen::DagNode> {
+  static mlir::tblgen::DagNode getEmptyKey() {
+    return mlir::tblgen::DagNode(
+        llvm::DenseMapInfo<llvm::DagInit *>::getEmptyKey());
+  }
+  static mlir::tblgen::DagNode getTombstoneKey() {
+    return mlir::tblgen::DagNode(
+        llvm::DenseMapInfo<llvm::DagInit *>::getTombstoneKey());
+  }
+  static unsigned getHashValue(mlir::tblgen::DagNode node) {
+    return llvm::hash_value(node.getAsOpaquePointer());
+  }
+  static bool isEqual(mlir::tblgen::DagNode lhs, mlir::tblgen::DagNode rhs) {
+    return lhs.node == rhs.node;
+  }
+};
+} // end namespace llvm
 
 #endif // MLIR_TABLEGEN_PATTERN_H_

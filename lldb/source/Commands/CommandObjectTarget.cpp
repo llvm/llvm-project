@@ -4143,6 +4143,110 @@ protected:
     return false;
   }
 
+  bool DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
+                                   CommandReturnObject &result, bool &flush) {
+    if (Symbols::DownloadObjectAndSymbolFile(module_spec)) {
+      if (module_spec.GetSymbolFileSpec())
+        return AddModuleSymbols(m_exe_ctx.GetTargetPtr(), module_spec, flush,
+                                result);
+    }
+    return false;
+  }
+
+  bool AddSymbolsForUUID(CommandReturnObject &result, bool &flush) {
+    assert(m_uuid_option_group.GetOptionValue().OptionWasSet());
+
+    ModuleSpec module_spec;
+    module_spec.GetUUID() =
+        m_uuid_option_group.GetOptionValue().GetCurrentValue();
+
+    if (!DownloadObjectAndSymbolFile(module_spec, result, flush)) {
+      StreamString error_strm;
+      error_strm.PutCString("unable to find debug symbols for UUID ");
+      module_spec.GetUUID().Dump(&error_strm);
+      result.AppendError(error_strm.GetString());
+      return false;
+    }
+
+    return true;
+  }
+
+  bool AddSymbolsForFile(CommandReturnObject &result, bool &flush) {
+    assert(m_file_option.GetOptionValue().OptionWasSet());
+
+    ModuleSpec module_spec;
+    module_spec.GetFileSpec() =
+        m_file_option.GetOptionValue().GetCurrentValue();
+
+    Target *target = m_exe_ctx.GetTargetPtr();
+    ModuleSP module_sp(target->GetImages().FindFirstModule(module_spec));
+    if (module_sp) {
+      module_spec.GetFileSpec() = module_sp->GetFileSpec();
+      module_spec.GetPlatformFileSpec() = module_sp->GetPlatformFileSpec();
+      module_spec.GetUUID() = module_sp->GetUUID();
+      module_spec.GetArchitecture() = module_sp->GetArchitecture();
+    } else {
+      module_spec.GetArchitecture() = target->GetArchitecture();
+    }
+
+    if (!DownloadObjectAndSymbolFile(module_spec, result, flush)) {
+      StreamString error_strm;
+      error_strm.PutCString(
+          "unable to find debug symbols for the executable file ");
+      error_strm << module_spec.GetFileSpec();
+      result.AppendError(error_strm.GetString());
+      return false;
+    }
+
+    return true;
+  }
+
+  bool AddSymbolsForFrame(CommandReturnObject &result, bool &flush) {
+    assert(m_current_frame_option.GetOptionValue().OptionWasSet());
+
+    Process *process = m_exe_ctx.GetProcessPtr();
+    if (!process) {
+      result.AppendError(
+          "a process must exist in order to use the --frame option");
+      return false;
+    }
+
+    const StateType process_state = process->GetState();
+    if (!StateIsStoppedState(process_state, true)) {
+      result.AppendErrorWithFormat("process is not stopped: %s",
+                                   StateAsCString(process_state));
+      return false;
+    }
+
+    StackFrame *frame = m_exe_ctx.GetFramePtr();
+    if (!frame) {
+      result.AppendError("invalid current frame");
+      return false;
+    }
+
+    ModuleSP frame_module_sp(
+        frame->GetSymbolContext(eSymbolContextModule).module_sp);
+    if (!frame_module_sp) {
+      result.AppendError("frame has no module");
+      return false;
+    }
+
+    ModuleSpec module_spec;
+    module_spec.GetUUID() = frame_module_sp->GetUUID();
+
+    if (FileSystem::Instance().Exists(frame_module_sp->GetPlatformFileSpec())) {
+      module_spec.GetArchitecture() = frame_module_sp->GetArchitecture();
+      module_spec.GetFileSpec() = frame_module_sp->GetPlatformFileSpec();
+    }
+
+    if (!DownloadObjectAndSymbolFile(module_spec, result, flush)) {
+      result.AppendError("unable to find debug symbols for the current frame");
+      return false;
+    }
+
+    return true;
+  }
+
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     Target *target = m_exe_ctx.GetTargetPtr();
     result.SetStatus(eReturnStatusFailed);
@@ -4156,97 +4260,15 @@ protected:
     const size_t argc = args.GetArgumentCount();
 
     if (argc == 0) {
-      if (uuid_option_set || file_option_set || frame_option_set) {
-        bool success = false;
-        bool error_set = false;
-        if (frame_option_set) {
-          Process *process = m_exe_ctx.GetProcessPtr();
-          if (process) {
-            const StateType process_state = process->GetState();
-            if (StateIsStoppedState(process_state, true)) {
-              StackFrame *frame = m_exe_ctx.GetFramePtr();
-              if (frame) {
-                ModuleSP frame_module_sp(
-                    frame->GetSymbolContext(eSymbolContextModule).module_sp);
-                if (frame_module_sp) {
-                  if (FileSystem::Instance().Exists(
-                          frame_module_sp->GetPlatformFileSpec())) {
-                    module_spec.GetArchitecture() =
-                        frame_module_sp->GetArchitecture();
-                    module_spec.GetFileSpec() =
-                        frame_module_sp->GetPlatformFileSpec();
-                  }
-                  module_spec.GetUUID() = frame_module_sp->GetUUID();
-                  success = module_spec.GetUUID().IsValid() ||
-                            module_spec.GetFileSpec();
-                } else {
-                  result.AppendError("frame has no module");
-                  error_set = true;
-                }
-              } else {
-                result.AppendError("invalid current frame");
-                error_set = true;
-              }
-            } else {
-              result.AppendErrorWithFormat("process is not stopped: %s",
-                                           StateAsCString(process_state));
-              error_set = true;
-            }
-          } else {
-            result.AppendError(
-                "a process must exist in order to use the --frame option");
-            error_set = true;
-          }
-        } else {
-          if (uuid_option_set) {
-            module_spec.GetUUID() =
-                m_uuid_option_group.GetOptionValue().GetCurrentValue();
-            success |= module_spec.GetUUID().IsValid();
-          } else if (file_option_set) {
-            module_spec.GetFileSpec() =
-                m_file_option.GetOptionValue().GetCurrentValue();
-            ModuleSP module_sp(
-                target->GetImages().FindFirstModule(module_spec));
-            if (module_sp) {
-              module_spec.GetFileSpec() = module_sp->GetFileSpec();
-              module_spec.GetPlatformFileSpec() =
-                  module_sp->GetPlatformFileSpec();
-              module_spec.GetUUID() = module_sp->GetUUID();
-              module_spec.GetArchitecture() = module_sp->GetArchitecture();
-            } else {
-              module_spec.GetArchitecture() = target->GetArchitecture();
-            }
-            success |= module_spec.GetUUID().IsValid() ||
-                       FileSystem::Instance().Exists(module_spec.GetFileSpec());
-          }
-        }
-
-        if (success) {
-          if (Symbols::DownloadObjectAndSymbolFile(module_spec)) {
-            if (module_spec.GetSymbolFileSpec())
-              success = AddModuleSymbols(target, module_spec, flush, result);
-          }
-        }
-
-        if (!success && !error_set) {
-          StreamString error_strm;
-          if (uuid_option_set) {
-            error_strm.PutCString("unable to find debug symbols for UUID ");
-            module_spec.GetUUID().Dump(&error_strm);
-          } else if (file_option_set) {
-            error_strm.PutCString(
-                "unable to find debug symbols for the executable file ");
-            error_strm << module_spec.GetFileSpec();
-          } else if (frame_option_set) {
-            error_strm.PutCString(
-                "unable to find debug symbols for the current frame");
-          }
-          result.AppendError(error_strm.GetString());
-        }
-      } else {
+      if (uuid_option_set)
+        AddSymbolsForUUID(result, flush);
+      else if (file_option_set)
+        AddSymbolsForFile(result, flush);
+      else if (frame_option_set)
+        AddSymbolsForFrame(result, flush);
+      else
         result.AppendError("one or more symbol file paths must be specified, "
                            "or options must be specified");
-      }
     } else {
       if (uuid_option_set) {
         result.AppendError("specify either one or more paths to symbol files "
@@ -4514,29 +4536,29 @@ public:
 Command Based stop-hooks:
 -------------------------
   Stop hooks can run a list of lldb commands by providing one or more
-  --one-line-command options.  The commands will get run in the order they are 
+  --one-line-command options.  The commands will get run in the order they are
   added.  Or you can provide no commands, in which case you will enter a
   command editor where you can enter the commands to be run.
-  
+
 Python Based Stop Hooks:
 ------------------------
   Stop hooks can be implemented with a suitably defined Python class, whose name
   is passed in the --python-class option.
-  
+
   When the stop hook is added, the class is initialized by calling:
-  
+
     def __init__(self, target, extra_args, internal_dict):
-    
+
     target: The target that the stop hook is being added to.
-    extra_args: An SBStructuredData Dictionary filled with the -key -value 
-                option pairs passed to the command.     
+    extra_args: An SBStructuredData Dictionary filled with the -key -value
+                option pairs passed to the command.
     dict: An implementation detail provided by lldb.
 
-  Then when the stop-hook triggers, lldb will run the 'handle_stop' method. 
+  Then when the stop-hook triggers, lldb will run the 'handle_stop' method.
   The method has the signature:
-  
+
     def handle_stop(self, exe_ctx, stream):
-    
+
     exe_ctx: An SBExecutionContext for the thread that has stopped.
     stream: An SBStream, anything written to this stream will be printed in the
             the stop message when the process stops.
@@ -4545,12 +4567,12 @@ Python Based Stop Hooks:
                   from all the stop hook executions on threads that stopped
                   with a reason, then the process will continue.  Note that this
                   will happen only after all the stop hooks are run.
-    
+
 Filter Options:
 ---------------
   Stop hooks can be set to always run, or to only run when the stopped thread
   matches the filter options passed on the command line.  The available filter
-  options include a shared library or a thread or queue specification, 
+  options include a shared library or a thread or queue specification,
   a line range in a source file, a function name or a class name.
             )");
     m_all_options.Append(&m_python_class_options,

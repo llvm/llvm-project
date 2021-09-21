@@ -157,12 +157,12 @@ namespace constexpr_dtor {
     constexpr ~A() { *p = 0; }
   };
   struct Q { int n; constexpr int *get() { return &n; } };
-  static_assert(!__builtin_constant_p((A{}, 123)));
+  static_assert(!__builtin_constant_p(((void)A{}, 123)));
   // FIXME: We should probably accept this. GCC does.
   // However, GCC appears to do so by running the destructors at the end of the
   // enclosing full-expression, which seems broken; running them at the end of
   // the evaluation of the __builtin_constant_p argument would be more
   // defensible.
-  static_assert(!__builtin_constant_p((A{Q().get()}, 123)));
+  static_assert(!__builtin_constant_p(((void)A{Q().get()}, 123)));
 }
 #endif

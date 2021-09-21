@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -x c -std=c99 -ast-print %s -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -triple x86_64-unknown-linux-gnu -x c -std=c99 -ast-print %s -o - | FileCheck %s
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -x c -std=c99 -ast-print %s -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -triple x86_64-unknown-linux-gnu -x c -std=c99 -ast-print %s -o - | FileCheck %s
 // expected-no-diagnostics
 
 #ifndef HEADER

@@ -723,18 +723,14 @@ body:             |
   ; CHECK:   %cond:_(s1) = G_IMPLICIT_DEF
   ; CHECK:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32)
-  ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32)
   ; CHECK:   G_BRCOND %cond(s1), %bb.2
   ; CHECK:   G_BR %bb.1
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK:   [[BUILD_VECTOR2:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[DEF1]](s32), [[DEF1]](s32), [[DEF1]](s32), [[DEF1]](s32)
-  ; CHECK:   [[BUILD_VECTOR3:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[DEF1]](s32), [[DEF1]](s32), [[DEF1]](s32), [[DEF1]](s32)
+  ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[DEF1]](s32), [[DEF1]](s32), [[DEF1]](s32), [[DEF1]](s32)
   ; CHECK: bb.2:
-  ; CHECK:   [[PHI:%[0-9]+]]:_(<4 x s32>) = G_PHI [[BUILD_VECTOR2]](<4 x s32>), %bb.1, [[BUILD_VECTOR]](<4 x s32>), %bb.0
-  ; CHECK:   [[PHI1:%[0-9]+]]:_(<4 x s32>) = G_PHI [[BUILD_VECTOR3]](<4 x s32>), %bb.1, [[BUILD_VECTOR1]](<4 x s32>), %bb.0
-  ; CHECK:   %one:_(s32) = G_CONSTANT i32 1
+  ; CHECK:   [[PHI:%[0-9]+]]:_(<4 x s32>) = G_PHI [[BUILD_VECTOR1]](<4 x s32>), %bb.1, [[BUILD_VECTOR]](<4 x s32>), %bb.0
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   ; CHECK:   %extract:_(s32) = G_EXTRACT_VECTOR_ELT [[PHI]](<4 x s32>), [[C]](s64)
   ; CHECK:   $w0 = COPY %extract(s32)
@@ -767,18 +763,14 @@ body:             |
   ; CHECK:   %cond:_(s1) = G_IMPLICIT_DEF
   ; CHECK:   [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16)
-  ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16)
   ; CHECK:   G_BRCOND %cond(s1), %bb.2
   ; CHECK:   G_BR %bb.1
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   [[DEF1:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-  ; CHECK:   [[BUILD_VECTOR2:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[DEF1]](s16), [[DEF1]](s16), [[DEF1]](s16), [[DEF1]](s16), [[DEF1]](s16), [[DEF1]](s16), [[DEF1]](s16), [[DEF1]](s16)
-  ; CHECK:   [[BUILD_VECTOR3:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[DEF1]](s16), [[DEF1]](s16), [[DEF1]](s16), [[DEF1]](s16), [[DEF1]](s16), [[DEF1]](s16), [[DEF1]](s16), [[DEF1]](s16)
+  ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[DEF1]](s16), [[DEF1]](s16), [[DEF1]](s16), [[DEF1]](s16), [[DEF1]](s16), [[DEF1]](s16), [[DEF1]](s16), [[DEF1]](s16)
   ; CHECK: bb.2:
-  ; CHECK:   [[PHI:%[0-9]+]]:_(<8 x s16>) = G_PHI [[BUILD_VECTOR2]](<8 x s16>), %bb.1, [[BUILD_VECTOR]](<8 x s16>), %bb.0
-  ; CHECK:   [[PHI1:%[0-9]+]]:_(<8 x s16>) = G_PHI [[BUILD_VECTOR3]](<8 x s16>), %bb.1, [[BUILD_VECTOR1]](<8 x s16>), %bb.0
-  ; CHECK:   %one:_(s16) = G_CONSTANT i16 1
+  ; CHECK:   [[PHI:%[0-9]+]]:_(<8 x s16>) = G_PHI [[BUILD_VECTOR1]](<8 x s16>), %bb.1, [[BUILD_VECTOR]](<8 x s16>), %bb.0
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   ; CHECK:   %extract:_(s16) = G_EXTRACT_VECTOR_ELT [[PHI]](<8 x s16>), [[C]](s64)
   ; CHECK:   $h0 = COPY %extract(s16)

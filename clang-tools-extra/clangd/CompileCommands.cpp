@@ -198,22 +198,26 @@ CommandMangler CommandMangler::forTests() { return CommandMangler(); }
 void CommandMangler::adjust(std::vector<std::string> &Cmd,
                             llvm::StringRef File) const {
   trace::Span S("AdjustCompileFlags");
+  // Most of the modifications below assumes the Cmd starts with a driver name.
+  // We might consider injecting a generic driver name like "cc" or "c++", but
+  // a Cmd missing the driver is probably rare enough in practice and errnous.
+  if (Cmd.empty())
+    return;
   auto &OptTable = clang::driver::getDriverOptTable();
   // OriginalArgs needs to outlive ArgList.
   llvm::SmallVector<const char *, 16> OriginalArgs;
   OriginalArgs.reserve(Cmd.size());
   for (const auto &S : Cmd)
     OriginalArgs.push_back(S.c_str());
-  bool IsCLMode =
-      !OriginalArgs.empty() &&
-      driver::IsClangCL(driver::getDriverMode(
-          OriginalArgs[0], llvm::makeArrayRef(OriginalArgs).slice(1)));
+  bool IsCLMode = driver::IsClangCL(driver::getDriverMode(
+      OriginalArgs[0], llvm::makeArrayRef(OriginalArgs).slice(1)));
   // ParseArgs propagates missig arg/opt counts on error, but preserves
   // everything it could parse in ArgList. So we just ignore those counts.
   unsigned IgnoredCount;
   // Drop the executable name, as ParseArgs doesn't expect it. This means
   // indices are actually of by one between ArgList and OriginalArgs.
-  auto ArgList = OptTable.ParseArgs(
+  llvm::opt::InputArgList ArgList;
+  ArgList = OptTable.ParseArgs(
       llvm::makeArrayRef(OriginalArgs).drop_front(), IgnoredCount, IgnoredCount,
       /*FlagsToInclude=*/
       IsCLMode ? (driver::options::CLOption | driver::options::CoreOption)

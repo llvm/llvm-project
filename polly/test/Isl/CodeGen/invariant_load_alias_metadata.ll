@@ -4,13 +4,13 @@
 ; This test case checks whether Polly generates alias metadata in case of
 ; the ublas gemm kernel and polly-invariant-load-hoisting.
 ;
-; CHECK: store float 4.200000e+01, float* %polly.access.A.load, align 4, !alias.scope !3, !noalias !4
+; CHECK: store float 4.200000e+01, float* %polly.access.A.load, align 4, !alias.scope !3, !noalias !0
 ;
-; CHECK: !0 = distinct !{!0, !1, !"polly.alias.scope.MemRef_A"}
-; CHECK-NEXT: !1 = distinct !{!1, !"polly.alias.scope.domain"}
-; CHECK-NEXT: !2 = !{!3}
-; CHECK-NEXT: !3 = distinct !{!3, !1, !"polly.alias.scope.MemRef_ptrA"}
-; CHECK-NEXT: !4 = !{!0}
+; CHECK: !0 = !{!1}
+; CHECK-NEXT: !1 = distinct !{!1, !2, !"polly.alias.scope.MemRef_A"}
+; CHECK-NEXT: !2 = distinct !{!2, !"polly.alias.scope.domain"}
+; CHECK-NEXT: !3 = !{!4}
+; CHECK-NEXT: !4 = distinct !{!4, !2, !"polly.alias.scope.MemRef_ptrA"}
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

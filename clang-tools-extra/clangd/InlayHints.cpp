@@ -366,6 +366,12 @@ std::vector<InlayHint> inlayHints(ParsedAST &AST) {
   std::vector<InlayHint> Results;
   InlayHintVisitor Visitor(Results, AST);
   Visitor.TraverseAST(AST.getASTContext());
+
+  // De-duplicate hints. Duplicates can sometimes occur due to e.g. explicit
+  // template instantiations.
+  llvm::sort(Results);
+  Results.erase(std::unique(Results.begin(), Results.end()), Results.end());
+
   return Results;
 }
 

@@ -1050,3 +1050,59 @@ bool llvm::shouldOptForSize(const MachineBasicBlock &MBB,
   return F.hasOptSize() || F.hasMinSize() ||
          llvm::shouldOptimizeForSize(MBB.getBasicBlock(), PSI, BFI);
 }
+
+/// These artifacts generally don't have any debug users because they don't
+/// directly originate from IR instructions, but instead usually from
+/// legalization. Avoiding checking for debug users improves compile time.
+/// Note that truncates or extends aren't included because they have IR
+/// counterparts which can have debug users after translation.
+static bool shouldSkipDbgValueFor(MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_UNMERGE_VALUES:
+  case TargetOpcode::G_MERGE_VALUES:
+  case TargetOpcode::G_CONCAT_VECTORS:
+  case TargetOpcode::G_BUILD_VECTOR:
+  case TargetOpcode::G_EXTRACT:
+  case TargetOpcode::G_INSERT:
+    return true;
+  default:
+    return false;
+  }
+}
+
+void llvm::saveUsesAndErase(MachineInstr &MI, MachineRegisterInfo &MRI,
+                            LostDebugLocObserver *LocObserver,
+                            SmallInstListTy &DeadInstChain) {
+  for (MachineOperand &Op : MI.uses()) {
+    if (Op.isReg() && Op.getReg().isVirtual())
+      DeadInstChain.insert(MRI.getVRegDef(Op.getReg()));
+  }
+  LLVM_DEBUG(dbgs() << MI << "Is dead; erasing.\n");
+  DeadInstChain.remove(&MI);
+  if (shouldSkipDbgValueFor(MI))
+    MI.eraseFromParent();
+  else
+    MI.eraseFromParentAndMarkDBGValuesForRemoval();
+  if (LocObserver)
+    LocObserver->checkpoint(false);
+}
+
+void llvm::eraseInstrs(ArrayRef<MachineInstr *> DeadInstrs,
+                       MachineRegisterInfo &MRI,
+                       LostDebugLocObserver *LocObserver) {
+  SmallInstListTy DeadInstChain;
+  for (MachineInstr *MI : DeadInstrs)
+    saveUsesAndErase(*MI, MRI, LocObserver, DeadInstChain);
+
+  while (!DeadInstChain.empty()) {
+    MachineInstr *Inst = DeadInstChain.pop_back_val();
+    if (!isTriviallyDead(*Inst, MRI))
+      continue;
+    saveUsesAndErase(*Inst, MRI, LocObserver, DeadInstChain);
+  }
+}
+
+void llvm::eraseInstr(MachineInstr &MI, MachineRegisterInfo &MRI,
+                      LostDebugLocObserver *LocObserver) {
+  return eraseInstrs({&MI}, MRI, LocObserver);
+}

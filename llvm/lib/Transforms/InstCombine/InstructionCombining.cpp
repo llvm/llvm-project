@@ -1269,61 +1269,19 @@ Instruction *InstCombinerImpl::foldBinOpIntoSelectOrPhi(BinaryOperator &I) {
 /// specified offset. If so, fill them into NewIndices and return the resultant
 /// element type, otherwise return null.
 Type *
-InstCombinerImpl::FindElementAtOffset(PointerType *PtrTy, int64_t Offset,
+InstCombinerImpl::FindElementAtOffset(PointerType *PtrTy, int64_t IntOffset,
                                       SmallVectorImpl<Value *> &NewIndices) {
   Type *Ty = PtrTy->getElementType();
   if (!Ty->isSized())
     return nullptr;
 
-  // Start with the index over the outer type.  Note that the type size
-  // might be zero (even if the offset isn't zero) if the indexed type
-  // is something like [0 x {int, int}]
-  Type *IndexTy = DL.getIndexType(PtrTy);
-  int64_t FirstIdx = 0;
-  if (int64_t TySize = DL.getTypeAllocSize(Ty)) {
-    FirstIdx = Offset/TySize;
-    Offset -= FirstIdx*TySize;
+  APInt Offset(DL.getIndexTypeSizeInBits(PtrTy), IntOffset);
+  SmallVector<APInt> Indices = DL.getGEPIndicesForOffset(Ty, Offset);
+  if (!Offset.isZero())
+    return nullptr;
 
-    // Handle hosts where % returns negative instead of values [0..TySize).
-    if (Offset < 0) {
-      --FirstIdx;
-      Offset += TySize;
-      assert(Offset >= 0);
-    }
-    assert((uint64_t)Offset < (uint64_t)TySize && "Out of range offset");
-  }
-
-  NewIndices.push_back(ConstantInt::get(IndexTy, FirstIdx));
-
-  // Index into the types.  If we fail, set OrigBase to null.
-  while (Offset) {
-    // Indexing into tail padding between struct/array elements.
-    if (uint64_t(Offset * 8) >= DL.getTypeSizeInBits(Ty))
-      return nullptr;
-
-    if (StructType *STy = dyn_cast<StructType>(Ty)) {
-      const StructLayout *SL = DL.getStructLayout(STy);
-      assert(Offset < (int64_t)SL->getSizeInBytes() &&
-             "Offset must stay within the indexed type");
-
-      unsigned Elt = SL->getElementContainingOffset(Offset);
-      NewIndices.push_back(ConstantInt::get(Type::getInt32Ty(Ty->getContext()),
-                                            Elt));
-
-      Offset -= SL->getElementOffset(Elt);
-      Ty = STy->getElementType(Elt);
-    } else if (ArrayType *AT = dyn_cast<ArrayType>(Ty)) {
-      uint64_t EltSize = DL.getTypeAllocSize(AT->getElementType());
-      assert(EltSize && "Cannot index into a zero-sized array");
-      NewIndices.push_back(ConstantInt::get(IndexTy,Offset/EltSize));
-      Offset %= EltSize;
-      Ty = AT->getElementType();
-    } else {
-      // Otherwise, we can't index into the middle of this atomic type, bail.
-      return nullptr;
-    }
-  }
-
+  for (const APInt &Index : Indices)
+    NewIndices.push_back(Builder.getInt(Index));
   return Ty;
 }
 

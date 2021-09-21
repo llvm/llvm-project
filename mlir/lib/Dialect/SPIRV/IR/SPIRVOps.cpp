@@ -1778,16 +1778,16 @@ static ParseResult parseEntryPointOp(OpAsmParser &parser,
 
   if (!parser.parseOptionalComma()) {
     // Parse the interface variables
-    do {
-      // The name of the interface variable attribute isnt important
-      auto attrName = "var_symbol";
-      FlatSymbolRefAttr var;
-      NamedAttrList attrs;
-      if (parser.parseAttribute(var, Type(), attrName, attrs)) {
-        return failure();
-      }
-      interfaceVars.push_back(var);
-    } while (!parser.parseOptionalComma());
+    if (parser.parseCommaSeparatedList([&]() -> ParseResult {
+          // The name of the interface variable attribute isnt important
+          FlatSymbolRefAttr var;
+          NamedAttrList attrs;
+          if (parser.parseAttribute(var, Type(), "var_symbol", attrs))
+            return failure();
+          interfaceVars.push_back(var);
+          return success();
+        }))
+      return failure();
   }
   state.addAttribute(kInterfaceAttrName,
                      parser.getBuilder().getArrayAttr(interfaceVars));

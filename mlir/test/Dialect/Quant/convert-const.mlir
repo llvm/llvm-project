@@ -68,15 +68,15 @@ func @const_dense_tensor_i8_fixedpoint() -> tensor<7xf32> {
 // -----
 // Verifies i8 fixedpoint quantization on a sparse tensor, sweeping values.
 // CHECK-LABEL: const_sparse_tensor_i8_fixedpoint
-func @const_sparse_tensor_i8_fixedpoint() -> tensor<7x2xf32> {
+func @const_sparse_tensor_i8_fixedpoint() -> tensor<2x7xf32> {
   // NOTE: Ugly regex match pattern for opening "[[" of indices tensor.
-  // CHECK: %cst = constant sparse<{{\[}}[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6]], [-128, -128, -64, 0, 64, 127, 127]> : tensor<7x2xi8>
+  // CHECK: %cst = constant sparse<{{\[}}[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6]], [-128, -128, -64, 0, 64, 127, 127]> : tensor<2x7xi8>
   %cst = constant sparse<
       [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6]],
-      [-2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0]> : tensor<7x2xf32>
-  %1 = "quant.qcast"(%cst) : (tensor<7x2xf32>) -> tensor<7x2x!quant.uniform<i8:f32, 7.812500e-03>>
-  %2 = "quant.dcast"(%1) : (tensor<7x2x!quant.uniform<i8:f32, 7.812500e-03>>) -> (tensor<7x2xf32>)
-  return %2 : tensor<7x2xf32>
+      [-2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0]> : tensor<2x7xf32>
+  %1 = "quant.qcast"(%cst) : (tensor<2x7xf32>) -> tensor<2x7x!quant.uniform<i8:f32, 7.812500e-03>>
+  %2 = "quant.dcast"(%1) : (tensor<2x7x!quant.uniform<i8:f32, 7.812500e-03>>) -> (tensor<2x7xf32>)
+  return %2 : tensor<2x7xf32>
 }
 
 // -----

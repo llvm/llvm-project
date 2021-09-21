@@ -558,9 +558,9 @@ LogicalResult ConstantCompositeOpPattern::matchAndRewrite(
   if (srcElemType != dstElemType) {
     SmallVector<Attribute, 8> elements;
     if (srcElemType.isa<FloatType>()) {
-      for (Attribute srcAttr : dstElementsAttr.getAttributeValues()) {
-        FloatAttr dstAttr = convertFloatAttr(
-            srcAttr.cast<FloatAttr>(), dstElemType.cast<FloatType>(), rewriter);
+      for (FloatAttr srcAttr : dstElementsAttr.getValues<FloatAttr>()) {
+        FloatAttr dstAttr =
+            convertFloatAttr(srcAttr, dstElemType.cast<FloatType>(), rewriter);
         if (!dstAttr)
           return failure();
         elements.push_back(dstAttr);
@@ -568,10 +568,9 @@ LogicalResult ConstantCompositeOpPattern::matchAndRewrite(
     } else if (srcElemType.isInteger(1)) {
       return failure();
     } else {
-      for (Attribute srcAttr : dstElementsAttr.getAttributeValues()) {
-        IntegerAttr dstAttr =
-            convertIntegerAttr(srcAttr.cast<IntegerAttr>(),
-                               dstElemType.cast<IntegerType>(), rewriter);
+      for (IntegerAttr srcAttr : dstElementsAttr.getValues<IntegerAttr>()) {
+        IntegerAttr dstAttr = convertIntegerAttr(
+            srcAttr, dstElemType.cast<IntegerType>(), rewriter);
         if (!dstAttr)
           return failure();
         elements.push_back(dstAttr);

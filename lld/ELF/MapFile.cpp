@@ -215,6 +215,25 @@ void elf::writeMapFile() {
   }
 }
 
+void elf::writeWhyExtract() {
+  if (config->whyExtract.empty())
+    return;
+
+  std::error_code ec;
+  raw_fd_ostream os(config->whyExtract, ec, sys::fs::OF_None);
+  if (ec) {
+    error("cannot open --why-extract= file " + config->whyExtract + ": " +
+          ec.message());
+    return;
+  }
+
+  os << "reference\textracted\tsymbol\n";
+  for (auto &entry : whyExtract) {
+    os << std::get<0>(entry) << '\t' << toString(std::get<1>(entry)) << '\t'
+       << toString(std::get<2>(entry)) << '\n';
+  }
+}
+
 static void print(StringRef a, StringRef b) {
   lld::outs() << left_justify(a, 49) << " " << b << "\n";
 }

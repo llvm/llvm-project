@@ -66,6 +66,7 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVExpandAtomicPseudoInsts.cpp",
     "RISCVExpandPseudoInsts.cpp",
     "RISCVFrameLowering.cpp",
+    "RISCVGatherScatterLowering.cpp",
     "RISCVISelDAGToDAG.cpp",
     "RISCVISelLowering.cpp",
     "RISCVInsertVSETVLI.cpp",

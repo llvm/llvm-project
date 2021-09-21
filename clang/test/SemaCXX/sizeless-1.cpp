@@ -85,9 +85,9 @@ void func(int sel) {
 
   (void)local_int8;
 
-  local_int8, 0; // expected-warning + {{expression result unused}}
+  local_int8, 0; // expected-warning {{left operand of comma operator has no effect}}
 
-  0, local_int8; // expected-warning + {{expression result unused}}
+  0, local_int8; // expected-warning {{left operand of comma operator has no effect}} expected-warning {{expression result unused}}
 
   svint8_t init_int8 = local_int8;
   svint8_t bad_init_int8 = for; // expected-error {{expected expression}}
