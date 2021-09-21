@@ -28,6 +28,9 @@ public:
   addr_t GetStartAddress() const { return m_start_addr; }
   CompilerType GetElementType() const { return m_elem_type; }
   UnsafePointerKind GetKind() const { return m_kind; }
+  bool HasPointee() const {
+    return m_count == 1 && m_kind == UnsafePointerKind::eSwiftUnsafePointer;
+  }
   virtual bool Update() = 0;
 
   virtual ~SwiftUnsafeType() = default;
@@ -525,6 +528,14 @@ bool lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEnd::Update() {
     DataExtractor buffer_data(m_buffer_sp->GetBytes(),
                               m_buffer_sp->GetByteSize(), m_order, m_ptr_size);
 
+    // UnsafePointer/UnsafeMutablePointer have a `pointee` property.
+    if (m_unsafe_ptr->HasPointee()) {
+      DataExtractor data(buffer_data, 0, m_element_stride);
+      m_children.push_back(CreateValueObjectFromData(
+          "pointee", data, m_exe_ctx_ref, element_type));
+      return true;
+    }
+
     for (size_t i = 0; i < num_children; i++) {
       StreamString idx_name;
       idx_name.Printf("[%zu]", i);
@@ -544,6 +555,8 @@ bool lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEnd::
 
 size_t lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
+  if (m_unsafe_ptr->HasPointee() && name == "pointee")
+    return 0;
   return UINT32_MAX;
 }
 

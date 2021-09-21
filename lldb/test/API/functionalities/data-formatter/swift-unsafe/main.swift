@@ -75,7 +75,12 @@ func main() {
   //% self.expect("frame variable -d run-target unsafe_ptr",
   //%            patterns=[
   //%            '\(UnsafePointer<(.*)\.ColorCode>\) unsafe_ptr = 0[xX][0-9a-fA-F]+ {',
-  //%            '\[0\] = RGB {',
+  //%            'pointee = RGB {',
+  //%            'RGB = \(0 = 155, 1 = 219, 2 = 255\)'
+  //%            ])
+  //% self.expect("frame variable -d run-target unsafe_ptr.pointee",
+  //%            patterns=[
+  //%            'pointee = RGB {',
   //%            'RGB = \(0 = 155, 1 = 219, 2 = 255\)'
   //%            ])
 
@@ -83,7 +88,11 @@ func main() {
   //% self.expect("frame variable -d run-target unsafe_mutable_ptr",
   //%            patterns=[
   //%            '\(UnsafeMutablePointer<(.*)\.ColorCode>\) unsafe_mutable_ptr = 0[xX][0-9a-fA-F]+ {',
-  //%            '\[0\] = Hex \(Hex = 4539903\)'
+  //%            'pointee = Hex \(Hex = 4539903\)'
+  //%            ])
+  //% self.expect("frame variable -d run-target unsafe_mutable_ptr.pointee",
+  //%            patterns=[
+  //%            'pointee = Hex \(Hex = 4539903\)'
   //%            ])
 
   let unsafe_raw_ptr = UnsafeRawPointer(&colors[0])
