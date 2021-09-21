@@ -138,14 +138,13 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         bool OnlyLibstdcxxStatic = Args.hasArg(options::OPT_static_libstdcxx) &&
                                    !Args.hasArg(options::OPT_static);
         CmdArgs.push_back("--push-state");
-        CmdArgs.push_back("--as-needed");
         if (OnlyLibstdcxxStatic)
           CmdArgs.push_back("-Bstatic");
+        else
+          CmdArgs.push_back("--as-needed");
         ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
-        if (OnlyLibstdcxxStatic)
-          CmdArgs.push_back("-Bdynamic");
-        CmdArgs.push_back("-lm");
         CmdArgs.push_back("--pop-state");
+        CmdArgs.push_back("-lm");
       }
     }
 
