@@ -59,9 +59,9 @@ entry:
 ; GFX10: v_fmac_f32_e32 [[B:v[0-9]+]], [[A]], [[NUM_RCP]]
 ; GFX10: v_div_scale_f32 [[DEN_SCALE:v[0-9]+]]
 ; GFX10: v_mul_f32_e32 [[C:v[0-9]+]], [[DEN_SCALE]], [[B]]
-; GFX10: v_fma_f32 [[D:v[0-9]+]], [[C]], -[[NUM_SCALE]], [[DEN_SCALE]]
+; GFX10: v_fma_f32 [[D:v[0-9]+]], -[[NUM_SCALE]], [[C]], [[DEN_SCALE]]
 ; GFX10: v_fmac_f32_e32 [[E:v[0-9]+]], [[D]], [[B]]
-; GFX10: v_fmac_f32_e64 [[F:v[0-9]+]], -[[NUM_SCALE]], [[E]]
+; GFX10: v_fma_f32 [[F:v[0-9]+]], -[[NUM_SCALE]], [[E]], [[DEN_SCALE]]
 ; GFX10-NOT: s_denorm_mode
 
 ; GCN: v_div_fmas_f32 [[FMAS:v[0-9]+]], [[F]], [[B]], [[E]]
@@ -331,9 +331,9 @@ entry:
 ; GFX10: v_fmac_f32_e32 [[B:v[0-9]+]], [[A]], [[NUM_RCP]]
 ; GFX10: v_div_scale_f32 [[DEN_SCALE:v[0-9]+]]
 ; GFX10: v_mul_f32_e32 [[C:v[0-9]+]], [[DEN_SCALE]], [[B]]
-; GFX10: v_fma_f32 [[D:v[0-9]+]], [[C]], -[[NUM_SCALE]], [[DEN_SCALE]]
+; GFX10: v_fma_f32 [[D:v[0-9]+]], -[[NUM_SCALE]], [[C]], [[DEN_SCALE]]
 ; GFX10: v_fmac_f32_e32 [[E:v[0-9]+]], [[D]], [[B]]
-; GFX10: v_fmac_f32_e64 [[F:v[0-9]+]], -[[NUM_SCALE]], [[E]]
+; GFX10: v_fma_f32 [[F:v[0-9]+]], -[[NUM_SCALE]], [[E]], [[DEN_SCALE]]
 ; GFX10-NOT: s_denorm_mode
 
 ; GCN: v_div_fmas_f32 [[FMAS:v[0-9]+]], [[F]], [[B]], [[E]]

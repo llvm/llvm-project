@@ -2305,31 +2305,37 @@ let SubtargetPredicate = NotHasMinMaxDenormModes in {
 
 
 let OtherPredicates = [HasDLInsts] in {
+// Don't allow source modifiers. If there are any source modifiers then it's
+// better to select fma instead of fmac.
 def : GCNPat <
-  (fma (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)),
-       (f32 (VOP3Mods f32:$src1, i32:$src1_modifiers)),
+  (fma (f32 (VOP3NoMods f32:$src0)),
+       (f32 (VOP3NoMods f32:$src1)),
        (f32 (VOP3NoMods f32:$src2))),
-  (V_FMAC_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1,
+  (V_FMAC_F32_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
                   SRCMODS.NONE, $src2)
 >;
 } // End OtherPredicates = [HasDLInsts]
 
 let SubtargetPredicate = isGFX10Plus in
+// Don't allow source modifiers. If there are any source modifiers then it's
+// better to select fma instead of fmac.
 def : GCNPat <
-  (fma (f16 (VOP3Mods f32:$src0, i32:$src0_modifiers)),
-       (f16 (VOP3Mods f32:$src1, i32:$src1_modifiers)),
+  (fma (f16 (VOP3NoMods f32:$src0)),
+       (f16 (VOP3NoMods f32:$src1)),
        (f16 (VOP3NoMods f32:$src2))),
-  (V_FMAC_F16_e64 $src0_modifiers, $src0, $src1_modifiers, $src1,
+  (V_FMAC_F16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
                   SRCMODS.NONE, $src2)
 >;
 
 let SubtargetPredicate = isGFX90APlus in
+// Don't allow source modifiers. If there are any source modifiers then it's
+// better to select fma instead of fmac.
 def : GCNPat <
-  (fma (f64 (VOP3Mods0 f64:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod)),
-       (f64 (VOP3Mods f64:$src1, i32:$src1_modifiers)),
+  (fma (f64 (VOP3NoMods f64:$src0)),
+       (f64 (VOP3NoMods f64:$src1)),
        (f64 (VOP3NoMods f64:$src2))),
-  (V_FMAC_F64_e64 $src0_modifiers, $src0, $src1_modifiers, $src1,
-                  SRCMODS.NONE, $src2, $clamp, $omod)
+  (V_FMAC_F64_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
+                  SRCMODS.NONE, $src2)
 >;
 
 // COPY is workaround tablegen bug from multiple outputs
