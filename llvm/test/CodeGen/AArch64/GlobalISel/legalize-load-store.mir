@@ -314,9 +314,9 @@ body:             |
     ; CHECK-LABEL: name: store_32xs8
     ; CHECK: liveins: $x0
     ; CHECK: [[DEF:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
-    ; CHECK: %ptr:_(p0) = COPY $x0
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s8>) = G_BUILD_VECTOR [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8)
     ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<16 x s8>) = G_BUILD_VECTOR [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8)
+    ; CHECK: %ptr:_(p0) = COPY $x0
     ; CHECK: G_STORE [[BUILD_VECTOR]](<16 x s8>), %ptr(p0) :: (store (<16 x s8>), align 32)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C]](s64)
@@ -338,9 +338,9 @@ body:             |
     ; CHECK-LABEL: name: store_16xs16
     ; CHECK: liveins: $x0
     ; CHECK: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; CHECK: %ptr:_(p0) = COPY $x0
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16)
     ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16)
+    ; CHECK: %ptr:_(p0) = COPY $x0
     ; CHECK: G_STORE [[BUILD_VECTOR]](<8 x s16>), %ptr(p0) :: (store (<8 x s16>), align 32)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C]](s64)
@@ -362,9 +362,9 @@ body:             |
     ; CHECK-LABEL: name: store_8xs32
     ; CHECK: liveins: $x0
     ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK: %ptr:_(p0) = COPY $x0
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32)
     ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32)
+    ; CHECK: %ptr:_(p0) = COPY $x0
     ; CHECK: G_STORE [[BUILD_VECTOR]](<4 x s32>), %ptr(p0) :: (store (<4 x s32>), align 32)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C]](s64)
