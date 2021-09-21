@@ -6759,7 +6759,7 @@ public:
                   SmallVectorImpl<unsigned char> &Output) const {
     for (CharUnits I = Offset, E = Offset + Width; I != E; ++I) {
       // If a byte of an integer is uninitialized, then the whole integer is
-      // uninitalized.
+      // uninitialized.
       if (!Bytes[I.getQuantity()])
         return false;
       Output.push_back(*Bytes[I.getQuantity()]);

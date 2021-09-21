@@ -1954,7 +1954,7 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
 
           // Since the combination of -mms-bitfields together with structs
           // like max_align_t (which contains a long double) for mingw is
-          // quite comon (and GCC handles it silently), just handle it
+          // quite common (and GCC handles it silently), just handle it
           // silently there. For other targets that have ms_struct enabled
           // (most probably via a pragma or attribute), trigger a diagnostic
           // that defaults to an error.
@@ -2631,7 +2631,7 @@ MicrosoftRecordLayoutBuilder::getAdjustedElementInfo(
   // Track zero-sized subobjects here where it's already available.
   EndsWithZeroSizedObject = Layout.endsWithZeroSizedObject();
   // Respect required alignment, this is necessary because we may have adjusted
-  // the alignment in the case of pragam pack.  Note that the required alignment
+  // the alignment in the case of pragma pack.  Note that the required alignment
   // doesn't actually apply to the struct alignment at this point.
   Alignment = std::max(Alignment, Info.Alignment);
   RequiredAlignment = std::max(RequiredAlignment, Layout.getRequiredAlignment());

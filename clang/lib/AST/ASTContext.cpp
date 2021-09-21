@@ -7079,7 +7079,7 @@ ASTContext::getObjCEncodingForFunctionDecl(const FunctionDecl *Decl) const {
 void ASTContext::getObjCEncodingForMethodParameter(Decl::ObjCDeclQualifier QT,
                                                    QualType T, std::string& S,
                                                    bool Extended) const {
-  // Encode type qualifer, 'in', 'inout', etc. for the parameter.
+  // Encode type qualifier, 'in', 'inout', etc. for the parameter.
   getObjCEncodingForTypeQualifier(QT, S);
   // Encode parameter type.
   ObjCEncOptions Options = ObjCEncOptions()
@@ -7784,7 +7784,7 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
                                   .setExpandStructures()),
           FD);
       if (FD || Options.EncodingProperty() || Options.EncodeClassNames()) {
-        // Note that we do extended encoding of protocol qualifer list
+        // Note that we do extended encoding of protocol qualifier list
         // Only when doing ivar or property encoding.
         S += '"';
         for (const auto *I : OPT->quals()) {
@@ -10063,7 +10063,7 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS,
     unsigned LHSBits = LHS->castAs<ExtIntType>()->getNumBits();
     unsigned RHSBits = RHS->castAs<ExtIntType>()->getNumBits();
 
-    // Like unsigned/int, shouldn't have a type if they dont match.
+    // Like unsigned/int, shouldn't have a type if they don't match.
     if (LHSUnsigned != RHSUnsigned)
       return {};
 
@@ -10704,7 +10704,7 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
 }
 
 // On some targets such as PowerPC, some of the builtins are defined with custom
-// type decriptors for target-dependent types. These descriptors are decoded in
+// type descriptors for target-dependent types. These descriptors are decoded in
 // other functions, but it may be useful to be able to fall back to default
 // descriptor decoding to define builtins mixing target-dependent and target-
 // independent types. This function allows decoding one type descriptor with
