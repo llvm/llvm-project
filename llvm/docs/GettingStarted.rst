@@ -615,8 +615,10 @@ used by people developing LLVM.
 |                         | other LLVM subprojects to additionally build. (Only|
 |                         | effective when using a side-by-side project layout |
 |                         | e.g. via git). The default list is empty. Can      |
-|                         | include: clang, libcxx, libcxxabi, libunwind, lldb,|
-|                         | compiler-rt, lld, polly, or debuginfo-tests.       |
+|                         | include: clang, clang-tools-extra, compiler-rt,    |
+|                         | cross-project-tests, flang, libc, libclc, libcxx,  |
+|                         | libcxxabi, libunwind, lld, lldb, mlir, openmp,     |
+|                         | parallel-libs, polly, or pstl.                     |
 +-------------------------+----------------------------------------------------+
 | LLVM_ENABLE_SPHINX      | Build sphinx-based documentation from the source   |
 |                         | code. This is disabled by default because it is    |
