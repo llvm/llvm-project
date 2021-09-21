@@ -51,7 +51,7 @@ void ShapeAdaptor::getDims(SmallVectorImpl<int64_t> &res) const {
     auto dattr = attr.cast<DenseIntElementsAttr>();
     res.clear();
     res.reserve(dattr.size());
-    for (auto it : dattr.getIntValues())
+    for (auto it : dattr.getValues<APInt>())
       res.push_back(it.getSExtValue());
   } else {
     auto vals = val.get<ShapedTypeComponents *>()->getDims();
@@ -71,7 +71,7 @@ int64_t ShapeAdaptor::getDimSize(int index) const {
     return t.cast<ShapedType>().getDimSize(index);
   if (auto attr = val.dyn_cast<Attribute>())
     return attr.cast<DenseIntElementsAttr>()
-        .getValue<APInt>({static_cast<uint64_t>(index)})
+        .getFlatValue<APInt>(index)
         .getSExtValue();
   auto *stc = val.get<ShapedTypeComponents *>();
   return stc->getDims()[index];
@@ -94,7 +94,7 @@ bool ShapeAdaptor::hasStaticShape() const {
     return t.cast<ShapedType>().hasStaticShape();
   if (auto attr = val.dyn_cast<Attribute>()) {
     auto dattr = attr.cast<DenseIntElementsAttr>();
-    for (auto index : dattr.getIntValues())
+    for (auto index : dattr.getValues<APInt>())
       if (ShapedType::isDynamic(index.getSExtValue()))
         return false;
     return true;
@@ -115,7 +115,7 @@ int64_t ShapeAdaptor::getNumElements() const {
   if (auto attr = val.dyn_cast<Attribute>()) {
     auto dattr = attr.cast<DenseIntElementsAttr>();
     int64_t num = 1;
-    for (auto index : dattr.getIntValues()) {
+    for (auto index : dattr.getValues<APInt>()) {
       num *= index.getZExtValue();
       assert(num >= 0 && "integer overflow in element count computation");
     }

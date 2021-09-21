@@ -850,11 +850,9 @@ getRegClassForUnfoldedLoad(MachineFunction &MF, const X86InstrInfo &TII,
 void X86SpeculativeLoadHardeningPass::unfoldCallAndJumpLoads(
     MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF)
-    for (auto MII = MBB.instr_begin(), MIE = MBB.instr_end(); MII != MIE;) {
-      // Grab a reference and increment the iterator so we can remove this
-      // instruction if needed without disturbing the iteration.
-      MachineInstr &MI = *MII++;
-
+    // We use make_early_inc_range here so we can remove instructions if needed
+    // without disturbing the iteration.
+    for (MachineInstr &MI : llvm::make_early_inc_range(MBB.instrs())) {
       // Must either be a call or a branch.
       if (!MI.isCall() && !MI.isBranch())
         continue;
