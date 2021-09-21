@@ -205,7 +205,6 @@ static void *BackgroundThread(void *arg) {
         last_flush = NanoTime();
       }
     }
-    // GetRSS can be expensive on huge programs, so don't do it every 100ms.
     if (flags()->memory_limit_mb > 0) {
       uptr rss = GetRSS();
       uptr limit = uptr(flags()->memory_limit_mb) << 20;
