@@ -373,11 +373,12 @@ private:
       if (auto *I = dyn_cast<Instruction>(U)) {
         if (AliasScope && I->mayReadOrWriteMemory()) {
           MDNode *AS = I->getMetadata(LLVMContext::MD_alias_scope);
-          AS = MDNode::concatenate(AS, AliasScope);
+          AS = (AS ? MDNode::getMostGenericAliasScope(AS, AliasScope)
+                   : AliasScope);
           I->setMetadata(LLVMContext::MD_alias_scope, AS);
 
           MDNode *NA = I->getMetadata(LLVMContext::MD_noalias);
-          NA = MDNode::concatenate(NA, NoAlias);
+          NA = (NA ? MDNode::intersect(NA, NoAlias) : NoAlias);
           I->setMetadata(LLVMContext::MD_noalias, NA);
         }
       }
