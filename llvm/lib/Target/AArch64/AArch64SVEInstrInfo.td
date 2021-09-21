@@ -2000,25 +2000,27 @@ let Predicates = [HasSVEorStreamingSVE] in {
   }
 
   // 2-element contiguous loads
-  defm : pred_load<nxv2i64, nxv2i1, zext_masked_load_i8,   LD1B_D,  LD1B_D_IMM,  am_sve_regreg_lsl0>;
-  defm : pred_load<nxv2i64, nxv2i1, asext_masked_load_i8,  LD1SB_D, LD1SB_D_IMM, am_sve_regreg_lsl0>;
-  defm : pred_load<nxv2i64, nxv2i1, zext_masked_load_i16,  LD1H_D,  LD1H_D_IMM,  am_sve_regreg_lsl1>;
-  defm : pred_load<nxv2i64, nxv2i1, asext_masked_load_i16, LD1SH_D, LD1SH_D_IMM, am_sve_regreg_lsl1>;
-  defm : pred_load<nxv2i64, nxv2i1, zext_masked_load_i32,  LD1W_D,  LD1W_D_IMM,  am_sve_regreg_lsl2>;
-  defm : pred_load<nxv2i64, nxv2i1, asext_masked_load_i32, LD1SW_D, LD1SW_D_IMM, am_sve_regreg_lsl2>;
-  defm : pred_load<nxv2i64, nxv2i1, nonext_masked_load,    LD1D,    LD1D_IMM,    am_sve_regreg_lsl3>;
-  defm : pred_load<nxv2f16, nxv2i1, nonext_masked_load,    LD1H_D,  LD1H_D_IMM,  am_sve_regreg_lsl1>;
-  defm : pred_load<nxv2f32, nxv2i1, nonext_masked_load,    LD1W_D,  LD1W_D_IMM,  am_sve_regreg_lsl2>;
-  defm : pred_load<nxv2f64, nxv2i1, nonext_masked_load,    LD1D,    LD1D_IMM,    am_sve_regreg_lsl3>;
+  defm : pred_load<nxv2i64,  nxv2i1, zext_masked_load_i8,   LD1B_D,  LD1B_D_IMM,  am_sve_regreg_lsl0>;
+  defm : pred_load<nxv2i64,  nxv2i1, asext_masked_load_i8,  LD1SB_D, LD1SB_D_IMM, am_sve_regreg_lsl0>;
+  defm : pred_load<nxv2i64,  nxv2i1, zext_masked_load_i16,  LD1H_D,  LD1H_D_IMM,  am_sve_regreg_lsl1>;
+  defm : pred_load<nxv2i64,  nxv2i1, asext_masked_load_i16, LD1SH_D, LD1SH_D_IMM, am_sve_regreg_lsl1>;
+  defm : pred_load<nxv2i64,  nxv2i1, zext_masked_load_i32,  LD1W_D,  LD1W_D_IMM,  am_sve_regreg_lsl2>;
+  defm : pred_load<nxv2i64,  nxv2i1, asext_masked_load_i32, LD1SW_D, LD1SW_D_IMM, am_sve_regreg_lsl2>;
+  defm : pred_load<nxv2i64,  nxv2i1, nonext_masked_load,    LD1D,    LD1D_IMM,    am_sve_regreg_lsl3>;
+  defm : pred_load<nxv2f16,  nxv2i1, nonext_masked_load,    LD1H_D,  LD1H_D_IMM,  am_sve_regreg_lsl1>;
+  defm : pred_load<nxv2bf16, nxv2i1, nonext_masked_load,    LD1H_D,  LD1H_D_IMM,  am_sve_regreg_lsl1>;
+  defm : pred_load<nxv2f32,  nxv2i1, nonext_masked_load,    LD1W_D,  LD1W_D_IMM,  am_sve_regreg_lsl2>;
+  defm : pred_load<nxv2f64,  nxv2i1, nonext_masked_load,    LD1D,    LD1D_IMM,    am_sve_regreg_lsl3>;
 
   // 4-element contiguous loads
-  defm : pred_load<nxv4i32, nxv4i1, zext_masked_load_i8,   LD1B_S,  LD1B_S_IMM,  am_sve_regreg_lsl0>;
-  defm : pred_load<nxv4i32, nxv4i1, asext_masked_load_i8,  LD1SB_S, LD1SB_S_IMM, am_sve_regreg_lsl0>;
-  defm : pred_load<nxv4i32, nxv4i1, zext_masked_load_i16,  LD1H_S,  LD1H_S_IMM,  am_sve_regreg_lsl1>;
-  defm : pred_load<nxv4i32, nxv4i1, asext_masked_load_i16, LD1SH_S, LD1SH_S_IMM, am_sve_regreg_lsl1>;
-  defm : pred_load<nxv4i32, nxv4i1, nonext_masked_load,    LD1W,    LD1W_IMM,    am_sve_regreg_lsl2>;
-  defm : pred_load<nxv4f16, nxv4i1, nonext_masked_load,    LD1H_S,  LD1H_S_IMM,  am_sve_regreg_lsl1>;
-  defm : pred_load<nxv4f32, nxv4i1, nonext_masked_load,    LD1W,    LD1W_IMM,    am_sve_regreg_lsl2>;
+  defm : pred_load<nxv4i32,  nxv4i1, zext_masked_load_i8,   LD1B_S,  LD1B_S_IMM,  am_sve_regreg_lsl0>;
+  defm : pred_load<nxv4i32,  nxv4i1, asext_masked_load_i8,  LD1SB_S, LD1SB_S_IMM, am_sve_regreg_lsl0>;
+  defm : pred_load<nxv4i32,  nxv4i1, zext_masked_load_i16,  LD1H_S,  LD1H_S_IMM,  am_sve_regreg_lsl1>;
+  defm : pred_load<nxv4i32,  nxv4i1, asext_masked_load_i16, LD1SH_S, LD1SH_S_IMM, am_sve_regreg_lsl1>;
+  defm : pred_load<nxv4i32,  nxv4i1, nonext_masked_load,    LD1W,    LD1W_IMM,    am_sve_regreg_lsl2>;
+  defm : pred_load<nxv4f16,  nxv4i1, nonext_masked_load,    LD1H_S,  LD1H_S_IMM,  am_sve_regreg_lsl1>;
+  defm : pred_load<nxv4bf16, nxv4i1, nonext_masked_load,    LD1H_S,  LD1H_S_IMM,  am_sve_regreg_lsl1>;
+  defm : pred_load<nxv4f32,  nxv4i1, nonext_masked_load,    LD1W,    LD1W_IMM,    am_sve_regreg_lsl2>;
 
   // 8-element contiguous loads
   defm : pred_load<nxv8i16,  nxv8i1, zext_masked_load_i8,  LD1B_H,  LD1B_H_IMM,  am_sve_regreg_lsl0>;
@@ -2045,20 +2047,22 @@ let Predicates = [HasSVEorStreamingSVE] in {
   }
 
   // 2-element contiguous stores
-  defm : pred_store<nxv2i64, nxv2i1, trunc_masked_store_i8,  ST1B_D, ST1B_D_IMM, am_sve_regreg_lsl0>;
-  defm : pred_store<nxv2i64, nxv2i1, trunc_masked_store_i16, ST1H_D, ST1H_D_IMM, am_sve_regreg_lsl1>;
-  defm : pred_store<nxv2i64, nxv2i1, trunc_masked_store_i32, ST1W_D, ST1W_D_IMM, am_sve_regreg_lsl2>;
-  defm : pred_store<nxv2i64, nxv2i1, nontrunc_masked_store,  ST1D,   ST1D_IMM,   am_sve_regreg_lsl3>;
-  defm : pred_store<nxv2f16, nxv2i1, nontrunc_masked_store,  ST1H_D, ST1H_D_IMM, am_sve_regreg_lsl1>;
-  defm : pred_store<nxv2f32, nxv2i1, nontrunc_masked_store,  ST1W_D, ST1W_D_IMM, am_sve_regreg_lsl2>;
-  defm : pred_store<nxv2f64, nxv2i1, nontrunc_masked_store,  ST1D,   ST1D_IMM,   am_sve_regreg_lsl3>;
+  defm : pred_store<nxv2i64,  nxv2i1, trunc_masked_store_i8,  ST1B_D, ST1B_D_IMM, am_sve_regreg_lsl0>;
+  defm : pred_store<nxv2i64,  nxv2i1, trunc_masked_store_i16, ST1H_D, ST1H_D_IMM, am_sve_regreg_lsl1>;
+  defm : pred_store<nxv2i64,  nxv2i1, trunc_masked_store_i32, ST1W_D, ST1W_D_IMM, am_sve_regreg_lsl2>;
+  defm : pred_store<nxv2i64,  nxv2i1, nontrunc_masked_store,  ST1D,   ST1D_IMM,   am_sve_regreg_lsl3>;
+  defm : pred_store<nxv2f16,  nxv2i1, nontrunc_masked_store,  ST1H_D, ST1H_D_IMM, am_sve_regreg_lsl1>;
+  defm : pred_store<nxv2bf16, nxv2i1, nontrunc_masked_store,  ST1H_D, ST1H_D_IMM, am_sve_regreg_lsl1>;
+  defm : pred_store<nxv2f32,  nxv2i1, nontrunc_masked_store,  ST1W_D, ST1W_D_IMM, am_sve_regreg_lsl2>;
+  defm : pred_store<nxv2f64,  nxv2i1, nontrunc_masked_store,  ST1D,   ST1D_IMM,   am_sve_regreg_lsl3>;
 
   // 4-element contiguous stores
-  defm : pred_store<nxv4i32, nxv4i1, trunc_masked_store_i8,  ST1B_S, ST1B_S_IMM, am_sve_regreg_lsl0>;
-  defm : pred_store<nxv4i32, nxv4i1, trunc_masked_store_i16, ST1H_S, ST1H_S_IMM, am_sve_regreg_lsl1>;
-  defm : pred_store<nxv4i32, nxv4i1, nontrunc_masked_store,  ST1W,   ST1W_IMM,   am_sve_regreg_lsl2>;
-  defm : pred_store<nxv4f16, nxv4i1, nontrunc_masked_store,  ST1H_S, ST1H_S_IMM, am_sve_regreg_lsl1>;
-  defm : pred_store<nxv4f32, nxv4i1, nontrunc_masked_store,  ST1W,   ST1W_IMM,   am_sve_regreg_lsl2>;
+  defm : pred_store<nxv4i32,  nxv4i1, trunc_masked_store_i8,  ST1B_S, ST1B_S_IMM, am_sve_regreg_lsl0>;
+  defm : pred_store<nxv4i32,  nxv4i1, trunc_masked_store_i16, ST1H_S, ST1H_S_IMM, am_sve_regreg_lsl1>;
+  defm : pred_store<nxv4i32,  nxv4i1, nontrunc_masked_store,  ST1W,   ST1W_IMM,   am_sve_regreg_lsl2>;
+  defm : pred_store<nxv4f16,  nxv4i1, nontrunc_masked_store,  ST1H_S, ST1H_S_IMM, am_sve_regreg_lsl1>;
+  defm : pred_store<nxv4bf16, nxv4i1, nontrunc_masked_store,  ST1H_S, ST1H_S_IMM, am_sve_regreg_lsl1>;
+  defm : pred_store<nxv4f32,  nxv4i1, nontrunc_masked_store,  ST1W,   ST1W_IMM,   am_sve_regreg_lsl2>;
 
   // 8-element contiguous stores
   defm : pred_store<nxv8i16,  nxv8i1, trunc_masked_store_i8, ST1B_H, ST1B_H_IMM, am_sve_regreg_lsl0>;
@@ -2099,23 +2103,25 @@ let Predicates = [HasSVEorStreamingSVE] in {
               (RegImmInst ZPR:$val, (PTrue 31), GPR64:$base, (i64 0))>;
   }
 
-  defm : unpred_store<         store, nxv16i8,   ST1B,   ST1B_IMM, PTRUE_B, am_sve_regreg_lsl0>;
-  defm : unpred_store< truncstorevi8, nxv8i16, ST1B_H, ST1B_H_IMM, PTRUE_H, am_sve_regreg_lsl0>;
-  defm : unpred_store< truncstorevi8, nxv4i32, ST1B_S, ST1B_S_IMM, PTRUE_S, am_sve_regreg_lsl0>;
-  defm : unpred_store< truncstorevi8, nxv2i64, ST1B_D, ST1B_D_IMM, PTRUE_D, am_sve_regreg_lsl0>;
-  defm : unpred_store<         store, nxv8i16,   ST1H,   ST1H_IMM, PTRUE_H, am_sve_regreg_lsl1>;
-  defm : unpred_store<truncstorevi16, nxv4i32, ST1H_S, ST1H_S_IMM, PTRUE_S, am_sve_regreg_lsl1>;
-  defm : unpred_store<truncstorevi16, nxv2i64, ST1H_D, ST1H_D_IMM, PTRUE_D, am_sve_regreg_lsl1>;
-  defm : unpred_store<         store, nxv4i32,   ST1W,   ST1W_IMM, PTRUE_S, am_sve_regreg_lsl2>;
-  defm : unpred_store<truncstorevi32, nxv2i64, ST1W_D, ST1W_D_IMM, PTRUE_D, am_sve_regreg_lsl2>;
-  defm : unpred_store<         store, nxv2i64,   ST1D,   ST1D_IMM, PTRUE_D, am_sve_regreg_lsl3>;
-  defm : unpred_store<         store, nxv8f16,   ST1H,   ST1H_IMM, PTRUE_H, am_sve_regreg_lsl1>;
-  defm : unpred_store<         store, nxv8bf16,  ST1H,   ST1H_IMM, PTRUE_H, am_sve_regreg_lsl1>;
-  defm : unpred_store<         store, nxv4f16, ST1H_S, ST1H_S_IMM, PTRUE_S, am_sve_regreg_lsl1>;
-  defm : unpred_store<         store, nxv2f16, ST1H_D, ST1H_D_IMM, PTRUE_D, am_sve_regreg_lsl1>;
-  defm : unpred_store<         store, nxv4f32,   ST1W,   ST1W_IMM, PTRUE_S, am_sve_regreg_lsl2>;
-  defm : unpred_store<         store, nxv2f32, ST1W_D, ST1W_D_IMM, PTRUE_D, am_sve_regreg_lsl2>;
-  defm : unpred_store<         store, nxv2f64,   ST1D,   ST1D_IMM, PTRUE_D, am_sve_regreg_lsl3>;
+  defm : unpred_store<         store, nxv16i8,    ST1B,   ST1B_IMM, PTRUE_B, am_sve_regreg_lsl0>;
+  defm : unpred_store< truncstorevi8, nxv8i16,  ST1B_H, ST1B_H_IMM, PTRUE_H, am_sve_regreg_lsl0>;
+  defm : unpred_store< truncstorevi8, nxv4i32,  ST1B_S, ST1B_S_IMM, PTRUE_S, am_sve_regreg_lsl0>;
+  defm : unpred_store< truncstorevi8, nxv2i64,  ST1B_D, ST1B_D_IMM, PTRUE_D, am_sve_regreg_lsl0>;
+  defm : unpred_store<         store, nxv8i16,    ST1H,   ST1H_IMM, PTRUE_H, am_sve_regreg_lsl1>;
+  defm : unpred_store<truncstorevi16, nxv4i32,  ST1H_S, ST1H_S_IMM, PTRUE_S, am_sve_regreg_lsl1>;
+  defm : unpred_store<truncstorevi16, nxv2i64,  ST1H_D, ST1H_D_IMM, PTRUE_D, am_sve_regreg_lsl1>;
+  defm : unpred_store<         store, nxv4i32,    ST1W,   ST1W_IMM, PTRUE_S, am_sve_regreg_lsl2>;
+  defm : unpred_store<truncstorevi32, nxv2i64,  ST1W_D, ST1W_D_IMM, PTRUE_D, am_sve_regreg_lsl2>;
+  defm : unpred_store<         store, nxv2i64,    ST1D,   ST1D_IMM, PTRUE_D, am_sve_regreg_lsl3>;
+  defm : unpred_store<         store, nxv8f16,    ST1H,   ST1H_IMM, PTRUE_H, am_sve_regreg_lsl1>;
+  defm : unpred_store<         store, nxv8bf16,   ST1H,   ST1H_IMM, PTRUE_H, am_sve_regreg_lsl1>;
+  defm : unpred_store<         store, nxv4f16,  ST1H_S, ST1H_S_IMM, PTRUE_S, am_sve_regreg_lsl1>;
+  defm : unpred_store<         store, nxv4bf16, ST1H_S, ST1H_S_IMM, PTRUE_S, am_sve_regreg_lsl1>;
+  defm : unpred_store<         store, nxv2f16,  ST1H_D, ST1H_D_IMM, PTRUE_D, am_sve_regreg_lsl1>;
+  defm : unpred_store<         store, nxv2bf16, ST1H_D, ST1H_D_IMM, PTRUE_D, am_sve_regreg_lsl1>;
+  defm : unpred_store<         store, nxv4f32,    ST1W,   ST1W_IMM, PTRUE_S, am_sve_regreg_lsl2>;
+  defm : unpred_store<         store, nxv2f32,  ST1W_D, ST1W_D_IMM, PTRUE_D, am_sve_regreg_lsl2>;
+  defm : unpred_store<         store, nxv2f64,    ST1D,   ST1D_IMM, PTRUE_D, am_sve_regreg_lsl3>;
 
   multiclass unpred_load<PatFrag Load, ValueType Ty, Instruction RegRegInst,
                          Instruction RegImmInst, Instruction PTrue,
@@ -2162,7 +2168,9 @@ let Predicates = [HasSVEorStreamingSVE] in {
   defm : unpred_load<        load, nxv8f16,    LD1H,    LD1H_IMM, PTRUE_H, am_sve_regreg_lsl1>;
   defm : unpred_load<        load, nxv8bf16,   LD1H,    LD1H_IMM, PTRUE_H, am_sve_regreg_lsl1>;
   defm : unpred_load<        load, nxv4f16,  LD1H_S,  LD1H_S_IMM, PTRUE_S, am_sve_regreg_lsl1>;
+  defm : unpred_load<        load, nxv4bf16, LD1H_S,  LD1H_S_IMM, PTRUE_S, am_sve_regreg_lsl1>;
   defm : unpred_load<        load, nxv2f16,  LD1H_D,  LD1H_D_IMM, PTRUE_D, am_sve_regreg_lsl1>;
+  defm : unpred_load<        load, nxv2bf16, LD1H_D,  LD1H_D_IMM, PTRUE_D, am_sve_regreg_lsl1>;
   defm : unpred_load<        load, nxv4f32,    LD1W,    LD1W_IMM, PTRUE_S, am_sve_regreg_lsl2>;
   defm : unpred_load<        load, nxv2f32,  LD1W_D,  LD1W_D_IMM, PTRUE_D, am_sve_regreg_lsl2>;
   defm : unpred_load<        load, nxv2f64,    LD1D,    LD1D_IMM, PTRUE_D, am_sve_regreg_lsl3>;
