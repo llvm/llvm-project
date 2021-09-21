@@ -73,7 +73,7 @@ constexpr auto uses_allocator_construction_args(const _Alloc& __alloc) noexcept 
 
 template <class _Tp, class _Alloc, class _Up, class _Vp>
     requires __is_pair_specialization<_Tp>::value
-constexpr auto uses_allocator_construction_args(const _Alloc& __alloc, Up&& __u, Vp&& __v) noexcept {
+constexpr auto uses_allocator_construction_args(const _Alloc& __alloc, _Up&& __u, _Vp&& __v) noexcept {
     return uses_allocator_construction_args<_Tp>(__alloc,
                                                  piecewise_construct,
                                                  forward_as_tuple(_VSTD::forward<_Up>(__u)),
