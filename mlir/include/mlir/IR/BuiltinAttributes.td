@@ -15,6 +15,7 @@
 #define BUILTIN_ATTRIBUTES
 
 include "mlir/IR/BuiltinDialect.td"
+include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/SubElementInterfaces.td"
 
 // TODO: Currently the attributes defined in this file are prefixed with
@@ -136,8 +137,9 @@ def Builtin_ArrayAttr : Builtin_Attr<"Array", [
 // DenseIntOrFPElementsAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_DenseIntOrFPElementsAttr
-    : Builtin_Attr<"DenseIntOrFPElements", /*traits=*/[], "DenseElementsAttr"> {
+def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
+    "DenseIntOrFPElements", [ElementsAttrInterface], "DenseElementsAttr"
+  > {
   let summary = "An Attribute containing a dense multi-dimensional array of "
                 "integer or floating-point values";
   let description = [{
@@ -165,6 +167,42 @@ def Builtin_DenseIntOrFPElementsAttr
   let parameters = (ins AttributeSelfTypeParameter<"", "ShapedType">:$type,
                         "ArrayRef<char>":$rawData);
   let extraClassDeclaration = [{
+    using DenseElementsAttr::empty;
+    using DenseElementsAttr::getFlatValue;
+    using DenseElementsAttr::getNumElements;
+    using DenseElementsAttr::getValue;
+    using DenseElementsAttr::getValues;
+    using DenseElementsAttr::isSplat;
+    using DenseElementsAttr::size;
+    using DenseElementsAttr::value_begin;
+
+    /// The set of data types that can be iterated by this attribute.
+    using ContiguousIterableTypesT = std::tuple<
+      // Integer types.
+      uint8_t, uint16_t, uint32_t, uint64_t,
+      int8_t, int16_t, int32_t, int64_t,
+      short, unsigned short, int, unsigned, long, unsigned long,
+      std::complex<uint8_t>, std::complex<uint16_t>, std::complex<uint32_t>,
+      std::complex<uint64_t>,
+      std::complex<int8_t>, std::complex<int16_t>, std::complex<int32_t>,
+      std::complex<int64_t>,
+      // Float types.
+      float, double, std::complex<float>, std::complex<double>
+    >;
+    using NonContiguousIterableTypesT = std::tuple<
+      Attribute,
+      // Integer types.
+      APInt, bool, std::complex<APInt>,
+      // Float types.
+      APFloat, std::complex<APFloat>
+    >;
+
+    /// Provide a `value_begin_impl` to enable iteration within ElementsAttr.
+    template <typename T>
+    auto value_begin_impl(OverloadToken<T>) const {
+      return value_begin<T>();
+    }
+
     /// Convert endianess of input ArrayRef for big-endian(BE) machines. All of
     /// the elements of `inRawData` has `type`. If `inRawData` is little endian
     /// (LE), it is converted to big endian (BE). Conversely, if `inRawData` is
@@ -231,8 +269,9 @@ def Builtin_DenseIntOrFPElementsAttr
 // DenseStringElementsAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_DenseStringElementsAttr
-    : Builtin_Attr<"DenseStringElements", /*traits=*/[], "DenseElementsAttr"> {
+def Builtin_DenseStringElementsAttr : Builtin_Attr<
+    "DenseStringElements", [ElementsAttrInterface], "DenseElementsAttr"
+  > {
   let summary = "An Attribute containing a dense multi-dimensional array of "
                 "strings";
   let description = [{
@@ -267,6 +306,25 @@ def Builtin_DenseStringElementsAttr
     }]>,
   ];
   let extraClassDeclaration = [{
+    using DenseElementsAttr::empty;
+    using DenseElementsAttr::getFlatValue;
+    using DenseElementsAttr::getNumElements;
+    using DenseElementsAttr::getValue;
+    using DenseElementsAttr::getValues;
+    using DenseElementsAttr::isSplat;
+    using DenseElementsAttr::size;
+    using DenseElementsAttr::value_begin;
+
+    /// The set of data types that can be iterated by this attribute.
+    using ContiguousIterableTypesT = std::tuple<StringRef>;
+    using NonContiguousIterableTypesT = std::tuple<Attribute>;
+
+    /// Provide a `value_begin_impl` to enable iteration within ElementsAttr.
+    template <typename T>
+    auto value_begin_impl(OverloadToken<T>) const {
+      return value_begin<T>();
+    }
+
   protected:
     friend DenseElementsAttr;
 
@@ -594,8 +652,9 @@ def Builtin_OpaqueAttr : Builtin_Attr<"Opaque"> {
 // OpaqueElementsAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_OpaqueElementsAttr
-    : Builtin_Attr<"OpaqueElements", /*traits=*/[], "ElementsAttr"> {
+def Builtin_OpaqueElementsAttr : Builtin_Attr<
+    "OpaqueElements", [ElementsAttrInterface]
+  > {
   let summary = "An opaque representation of a multi-dimensional array";
   let description = [{
     Syntax:
@@ -650,7 +709,6 @@ def Builtin_OpaqueElementsAttr
     /// Returns false if decoding is successful. If not, returns true and leaves
     /// 'result' argument unspecified.
     bool decode(ElementsAttr &result);
-
   }];
   let genVerifyDecl = 1;
   let skipDefaultBuilders = 1;
@@ -660,8 +718,9 @@ def Builtin_OpaqueElementsAttr
 // SparseElementsAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_SparseElementsAttr
-    : Builtin_Attr<"SparseElements", /*traits=*/[], "ElementsAttr"> {
+def Builtin_SparseElementsAttr : Builtin_Attr<
+    "SparseElements", [ElementsAttrInterface]
+  > {
   let summary = "An opaque representation of a multi-dimensional array";
   let description = [{
     Syntax:
@@ -712,6 +771,33 @@ def Builtin_SparseElementsAttr
     }]>,
   ];
   let extraClassDeclaration = [{
+    /// The set of data types that can be iterated by this attribute.
+    // FIXME: Realistically, SparseElementsAttr could use ElementsAttr for the
+    // value storage. This would mean dispatching to `values` when accessing
+    // values. For now, we just add the types that can be iterated by
+    // DenseElementsAttr.
+    using NonContiguousIterableTypesT = std::tuple<
+      Attribute,
+      // Integer types.
+      APInt, bool, uint8_t, uint16_t, uint32_t, uint64_t,
+      int8_t, int16_t, int32_t, int64_t,
+      short, unsigned short, int, unsigned, long, unsigned long,
+      std::complex<APInt>, std::complex<uint8_t>, std::complex<uint16_t>,
+      std::complex<uint32_t>, std::complex<uint64_t>, std::complex<int8_t>,
+      std::complex<int16_t>, std::complex<int32_t>, std::complex<int64_t>,
+      // Float types.
+      APFloat, float, double,
+      std::complex<APFloat>, std::complex<float>, std::complex<double>,
+      // String types.
+      StringRef
+    >;
+
+    /// Provide a `value_begin_impl` to enable iteration within ElementsAttr.
+    template <typename T>
+    auto value_begin_impl(OverloadToken<T>) const {
+      return value_begin<T>();
+    }
+
     template <typename T>
     using iterator =
         llvm::mapped_iterator<typename decltype(llvm::seq<ptrdiff_t>(0, 0))::iterator,

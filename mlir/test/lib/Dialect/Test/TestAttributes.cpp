@@ -90,6 +90,48 @@ void CompoundAAttr::print(DialectAsmPrinter &printer) const {
 }
 
 //===----------------------------------------------------------------------===//
+// CompoundAAttr
+//===----------------------------------------------------------------------===//
+
+Attribute TestI64ElementsAttr::parse(MLIRContext *context,
+                                     DialectAsmParser &parser, Type type) {
+  SmallVector<uint64_t> elements;
+  if (parser.parseLess() || parser.parseLSquare())
+    return Attribute();
+  uint64_t intVal;
+  while (succeeded(*parser.parseOptionalInteger(intVal))) {
+    elements.push_back(intVal);
+    if (parser.parseOptionalComma())
+      break;
+  }
+
+  if (parser.parseRSquare() || parser.parseGreater())
+    return Attribute();
+  return parser.getChecked<TestI64ElementsAttr>(
+      context, type.cast<ShapedType>(), elements);
+}
+
+void TestI64ElementsAttr::print(DialectAsmPrinter &printer) const {
+  printer << "i64_elements<[";
+  llvm::interleaveComma(getElements(), printer);
+  printer << "] : " << getType() << ">";
+}
+
+LogicalResult
+TestI64ElementsAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                            ShapedType type, ArrayRef<uint64_t> elements) {
+  if (type.getNumElements() != static_cast<int64_t>(elements.size())) {
+    return emitError()
+           << "number of elements does not match the provided shape type, got: "
+           << elements.size() << ", but expected: " << type.getNumElements();
+  }
+  if (type.getRank() != 1 || !type.getElementType().isSignlessInteger(64))
+    return emitError() << "expected single rank 64-bit shape type, but got: "
+                       << type;
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Tablegen Generated Definitions
 //===----------------------------------------------------------------------===//
 
