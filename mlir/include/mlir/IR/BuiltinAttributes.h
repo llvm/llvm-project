@@ -299,9 +299,6 @@ public:
 
     /// Initializes the float element iterator to the specified iterator.
     FloatElementIterator(const llvm::fltSemantics &smt, IntElementIterator it);
-
-  public:
-    using reference = APFloat;
   };
 
   /// Iterator for walking over complex APFloat values.
@@ -314,9 +311,6 @@ public:
     /// Initializes the float element iterator to the specified iterator.
     ComplexFloatElementIterator(const llvm::fltSemantics &smt,
                                 ComplexIntElementIterator it);
-
-  public:
-    using reference = std::complex<APFloat>;
   };
 
   //===--------------------------------------------------------------------===//

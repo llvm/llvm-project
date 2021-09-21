@@ -128,8 +128,6 @@ class ValueTypeIterator final
   static Type unwrap(Value value) { return value.getType(); }
 
 public:
-  using reference = Type;
-
   /// Provide a const dereference method.
   Type operator*() const { return unwrap(*this->I); }
 
