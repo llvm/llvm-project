@@ -52,7 +52,6 @@ class PredecessorIterator final
   static Block *unwrap(BlockOperand &value);
 
 public:
-  using reference = Block *;
 
   /// Initializes the operand type iterator to the specified operand iterator.
   PredecessorIterator(ValueUseIterator<BlockOperand> it)
@@ -151,7 +150,7 @@ public:
                                                                 &filter) {}
 
   /// Allow implicit conversion to the underlying iterator.
-  operator IteratorT() const { return this->wrapped(); }
+  operator const IteratorT &() const { return this->wrapped(); }
 };
 
 /// This class provides iteration over the held operations of a block for a
@@ -163,7 +162,6 @@ class op_iterator
   static OpT unwrap(Operation &op) { return cast<OpT>(op); }
 
 public:
-  using reference = OpT;
 
   /// Initializes the iterator to the specified filter iterator.
   op_iterator(op_filter_iterator<OpT, IteratorT> it)
@@ -171,7 +169,7 @@ public:
                               OpT (*)(Operation &)>(it, &unwrap) {}
 
   /// Allow implicit conversion to the underlying block iterator.
-  operator IteratorT() const { return this->wrapped(); }
+  operator const IteratorT &() const { return this->wrapped(); }
 };
 } // end namespace detail
 } // end namespace mlir

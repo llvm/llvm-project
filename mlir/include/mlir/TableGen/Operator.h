@@ -84,8 +84,6 @@ public:
   struct VariableDecoratorIterator
       : public llvm::mapped_iterator<llvm::Init *const *,
                                      VariableDecorator (*)(llvm::Init *)> {
-    using reference = VariableDecorator;
-
     /// Initializes the iterator to the specified iterator.
     VariableDecoratorIterator(llvm::Init *const *it)
         : llvm::mapped_iterator<llvm::Init *const *,

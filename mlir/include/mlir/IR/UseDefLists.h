@@ -286,9 +286,6 @@ class ValueUserIterator final
   static Operation *unwrap(OperandType &value) { return value.getOwner(); }
 
 public:
-  using pointer = Operation *;
-  using reference = Operation *;
-
   /// Initializes the user iterator to the specified use iterator.
   ValueUserIterator(UseIteratorT it)
       : llvm::mapped_iterator<UseIteratorT, Operation *(*)(OperandType &)>(

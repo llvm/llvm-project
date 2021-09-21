@@ -272,13 +272,15 @@ template <typename T> auto drop_begin(T &&RangeOrContainer, size_t N = 1) {
 // be applied whenever operator* is invoked on the iterator.
 
 template <typename ItTy, typename FuncTy,
-          typename FuncReturnTy =
-            decltype(std::declval<FuncTy>()(*std::declval<ItTy>()))>
+          typename ReferenceTy =
+              decltype(std::declval<FuncTy>()(*std::declval<ItTy>()))>
 class mapped_iterator
     : public iterator_adaptor_base<
-             mapped_iterator<ItTy, FuncTy>, ItTy,
-             typename std::iterator_traits<ItTy>::iterator_category,
-             typename std::remove_reference<FuncReturnTy>::type> {
+          mapped_iterator<ItTy, FuncTy>, ItTy,
+          typename std::iterator_traits<ItTy>::iterator_category,
+          std::remove_reference_t<ReferenceTy>,
+          typename std::iterator_traits<ItTy>::difference_type,
+          std::remove_reference_t<ReferenceTy> *, ReferenceTy> {
 public:
   mapped_iterator(ItTy U, FuncTy F)
     : mapped_iterator::iterator_adaptor_base(std::move(U)), F(std::move(F)) {}
@@ -287,7 +289,7 @@ public:
 
   const FuncTy &getFunction() const { return F; }
 
-  FuncReturnTy operator*() const { return F(*this->I); }
+  ReferenceTy operator*() const { return F(*this->I); }
 
 private:
   FuncTy F;

@@ -75,8 +75,6 @@ class OperandElementTypeIterator final
     : public llvm::mapped_iterator<Operation::operand_iterator,
                                    Type (*)(Value)> {
 public:
-  using reference = Type;
-
   /// Initializes the result element type iterator to the specified operand
   /// iterator.
   explicit OperandElementTypeIterator(Operation::operand_iterator it);
@@ -92,8 +90,6 @@ class ResultElementTypeIterator final
     : public llvm::mapped_iterator<Operation::result_iterator,
                                    Type (*)(Value)> {
 public:
-  using reference = Type;
-
   /// Initializes the result element type iterator to the specified result
   /// iterator.
   explicit ResultElementTypeIterator(Operation::result_iterator it);
