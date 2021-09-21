@@ -105,6 +105,79 @@ entry:
   ret i32 %r
 }
 
+declare i1 @cond()
+
+define i32 @load_extract_idx_var_i64_known_valid_by_assume_in_dominating_block(<4 x i32>* %x, i64 %idx, i1 %c.1) {
+; CHECK-LABEL: @load_extract_idx_var_i64_known_valid_by_assume_in_dominating_block(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IDX:%.*]], 4
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[LOOP:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[LV:%.*]] = load <4 x i32>, <4 x i32>* [[X:%.*]], align 16
+; CHECK-NEXT:    call void @maythrow()
+; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[LV]], i64 [[IDX]]
+; CHECK-NEXT:    [[C_2:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[R]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[P]]
+;
+entry:
+  %cmp = icmp ult i64 %idx, 4
+  call void @llvm.assume(i1 %cmp)
+  br i1 %c.1, label %loop, label %exit
+
+loop:
+  %lv = load <4 x i32>, <4 x i32>* %x
+  call void @maythrow()
+  %r = extractelement <4 x i32> %lv, i64 %idx
+  %c.2 = call i1 @cond()
+  br i1 %c.2, label %loop, label %exit
+
+exit:
+  %p = phi i32 [ %r, %loop ], [ 0, %entry ]
+  ret i32 %p
+}
+
+define i32 @load_extract_idx_var_i64_known_valid_by_assume_in_non_dominating_block(<4 x i32>* %x, i64 %idx, i1 %c.1, i1 %c.2) {
+; CHECK-LABEL: @load_extract_idx_var_i64_known_valid_by_assume_in_non_dominating_block(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[ASSUME_CHECK:%.*]], label [[LOOP:%.*]]
+; CHECK:       assume_check:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IDX:%.*]], 4
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    br i1 [[C_2:%.*]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[LV:%.*]] = load <4 x i32>, <4 x i32>* [[X:%.*]], align 16
+; CHECK-NEXT:    call void @maythrow()
+; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[LV]], i64 [[IDX]]
+; CHECK-NEXT:    [[C_3:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C_3]], label [[LOOP]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[R]], [[LOOP]] ], [ 0, [[ASSUME_CHECK]] ]
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br i1 %c.1, label %assume_check, label %loop
+
+assume_check:
+  %cmp = icmp ult i64 %idx, 4
+  call void @llvm.assume(i1 %cmp)
+  br i1 %c.2, label %loop, label %exit
+
+loop:
+  %lv = load <4 x i32>, <4 x i32>* %x
+  call void @maythrow()
+  %r = extractelement <4 x i32> %lv, i64 %idx
+  %c.3 = call i1 @cond()
+  br i1 %c.3, label %loop, label %exit
+
+exit:
+  %p = phi i32 [ %r, %loop ], [ 0, %assume_check ]
+  ret i32 0
+}
+
 define i32 @load_extract_idx_var_i64_not_known_valid_by_assume_after_load(<4 x i32>* %x, i64 %idx) {
 ; CHECK-LABEL: @load_extract_idx_var_i64_not_known_valid_by_assume_after_load(
 ; CHECK-NEXT:  entry:
@@ -604,3 +677,4 @@ define i32 @load_multiple_extracts_with_variable_indices_large_vector_all_valid_
   %res = add i32 %e.0, %e.1
   ret i32 %res
 }
+
