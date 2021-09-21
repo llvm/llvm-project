@@ -1514,6 +1514,12 @@ public:
 class VPWidenMemoryInstructionRecipe : public VPRecipeBase {
   Instruction &Ingredient;
 
+  // Whether the loaded-from / stored-to addresses are consecutive.
+  bool Consecutive;
+
+  // Whether the consecutive loaded/stored addresses are in reverse order.
+  bool Reverse;
+
   void setMask(VPValue *Mask) {
     if (!Mask)
       return;
@@ -1525,16 +1531,21 @@ class VPWidenMemoryInstructionRecipe : public VPRecipeBase {
   }
 
 public:
-  VPWidenMemoryInstructionRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask)
-      : VPRecipeBase(VPWidenMemoryInstructionSC, {Addr}), Ingredient(Load) {
+  VPWidenMemoryInstructionRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
+                                 bool Consecutive, bool Reverse)
+      : VPRecipeBase(VPWidenMemoryInstructionSC, {Addr}), Ingredient(Load),
+        Consecutive(Consecutive), Reverse(Reverse) {
+    assert((Consecutive || !Reverse) && "Reverse implies consecutive");
     new VPValue(VPValue::VPVMemoryInstructionSC, &Load, this);
     setMask(Mask);
   }
 
   VPWidenMemoryInstructionRecipe(StoreInst &Store, VPValue *Addr,
-                                 VPValue *StoredValue, VPValue *Mask)
+                                 VPValue *StoredValue, VPValue *Mask,
+                                 bool Consecutive, bool Reverse)
       : VPRecipeBase(VPWidenMemoryInstructionSC, {Addr, StoredValue}),
-        Ingredient(Store) {
+        Ingredient(Store), Consecutive(Consecutive), Reverse(Reverse) {
+    assert((Consecutive || !Reverse) && "Reverse implies consecutive");
     setMask(Mask);
   }
 
@@ -1563,6 +1574,13 @@ public:
     assert(isStore() && "Stored value only available for store instructions");
     return getOperand(1); // Stored value is the 2nd, mandatory operand.
   }
+
+  // Return whether the loaded-from / stored-to addresses are consecutive.
+  bool isConsecutive() const { return Consecutive; }
+
+  // Return whether the consecutive loaded/stored addresses are in reverse
+  // order.
+  bool isReverse() const { return Reverse; }
 
   /// Generate the wide load/store.
   void execute(VPTransformState &State) override;
