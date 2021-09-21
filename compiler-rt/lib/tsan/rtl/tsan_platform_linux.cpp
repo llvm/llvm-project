@@ -127,20 +127,24 @@ void WriteMemoryProfile(char *buf, uptr buf_size) {
   StackDepotStats *stacks = StackDepotGetStats();
   uptr nthread, nlive;
   ctx->thread_registry.GetNumberOfThreads(&nthread, &nlive);
+  uptr internal_stats[AllocatorStatCount];
+  internal_allocator()->GetStats(internal_stats);
   // All these are allocated from the common mmap region.
-  mem[MemMmap] -= meta.mem_block + meta.sync_obj + stacks->allocated;
+  mem[MemMmap] -= meta.mem_block + meta.sync_obj + stacks->allocated +
+                  internal_stats[AllocatorStatMapped];
   if (s64(mem[MemMmap]) < 0)
     mem[MemMmap] = 0;
-  internal_snprintf(buf, buf_size,
-                    "RSS %zd MB: shadow:%zd meta:%zd file:%zd mmap:%zd"
-                    " trace:%zd heap:%zd other:%zd memblocks:%zd syncobj:%zu"
-                    " stacks=%zd[%zd] nthr=%zd/%zd\n",
-                    mem[MemTotal] >> 20, mem[MemShadow] >> 20,
-                    mem[MemMeta] >> 20, mem[MemFile] >> 20, mem[MemMmap] >> 20,
-                    mem[MemTrace] >> 20, mem[MemHeap] >> 20,
-                    mem[MemOther] >> 20, meta.mem_block >> 20,
-                    meta.sync_obj >> 20, stacks->allocated >> 20,
-                    stacks->n_uniq_ids, nlive, nthread);
+  internal_snprintf(
+      buf, buf_size,
+      "RSS %zd MB: shadow:%zd meta:%zd file:%zd mmap:%zd"
+      " trace:%zd heap:%zd other:%zd intalloc:%zd memblocks:%zd syncobj:%zu"
+      " stacks=%zd[%zd] nthr=%zd/%zd\n",
+      mem[MemTotal] >> 20, mem[MemShadow] >> 20, mem[MemMeta] >> 20,
+      mem[MemFile] >> 20, mem[MemMmap] >> 20, mem[MemTrace] >> 20,
+      mem[MemHeap] >> 20, mem[MemOther] >> 20,
+      internal_stats[AllocatorStatMapped] >> 20, meta.mem_block >> 20,
+      meta.sync_obj >> 20, stacks->allocated >> 20, stacks->n_uniq_ids, nlive,
+      nthread);
 }
 
 #  if SANITIZER_LINUX
