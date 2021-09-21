@@ -82,6 +82,9 @@ void test_args(const ExpectedArgsTuple& expected_tuple, const Alloc& alloc, Args
     assert(construction_args == expected_tuple);
 }
 
+template <typename T>
+struct p;
+
 template <class... Args>
 void test(Args... args) {
     std::allocator<int> alloc;
@@ -89,10 +92,11 @@ void test(Args... args) {
     auto leading_arguments = std::tuple_cat(std::tuple<std::allocator_arg_t,
                                                        const std::allocator<int>&>{std::allocator_arg, alloc},
                                             arguments);
-    auto trailing_arguments = std::tuple_cat(arguments, std::tuple<const std::allocator<int>&>{alloc});
+    // auto trailing_arguments = std::tuple_cat(arguments, std::tuple<const std::allocator<int>&>{alloc});
 
     // test_args<DoesNotUseAllocator>(arguments, alloc, args...);
-    test_args<UsesLeadingAllocConstruction>(leading_arguments, alloc, args...);
+    p<decltype(std::uses_allocator_construction_args<DoesNotUseAllocator>(alloc, args...)) pobj;
+    // test_args<UsesLeadingAllocConstruction>(leading_arguments, alloc, args...);
     // test_args<UsesTrailingAllocConstruction>(trailing_arguments, alloc, args...);
 }
 
