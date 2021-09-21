@@ -74,7 +74,7 @@ struct DoesNotUseAllocator {
     ConstructionStatus status;
 };
 
-template <class T, typename ExpectedArgsTuple, class Alloc, class... Args>
+template <class T, class ExpectedArgsTuple, class Alloc, class... Args>
 void test_args(const ExpectedArgsTuple& expected_tuple, const Alloc& alloc, Args&&... args) {
     ASSERT_NOEXCEPT(std::uses_allocator_construction_args<T>(alloc, std::forward<Args>(args)...));
     auto construction_args = std::uses_allocator_construction_args<T>(alloc, std::forward<Args>(args)...);
@@ -91,6 +91,7 @@ void test(Args... args) {
                                             arguments);
     auto trailing_arguments = std::tuple_cat(arguments, std::tuple<const std::allocator<int>&>{alloc});
 
+    static_assert(std::uses_allocator_v<UsesLeadingAllocConstruction, decltype(alloc)>);
     test_args<DoesNotUseAllocator>(arguments, alloc, args...);
     test_args<UsesLeadingAllocConstruction>(leading_arguments, alloc, args...);
     test_args<UsesTrailingAllocConstruction>(trailing_arguments, alloc, args...);
