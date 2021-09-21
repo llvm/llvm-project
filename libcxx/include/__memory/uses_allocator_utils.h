@@ -43,7 +43,8 @@ constexpr auto uses_allocator_construction_args(const _Alloc& __alloc, _Args&&..
         static_assert(is_constructible_v<_Tp, allocator_arg_t, const _Alloc&, _Args...> ||
                       is_constructible_v<_Tp, _Args..., const _Alloc&>);
         if constexpr (is_constructible_v<_Tp, allocator_arg_t, const _Alloc&, _Args...>) {
-            return tuple{allocator_arg, __alloc, _VSTD::forward<_Args>(__args)...};
+            return tuple<allocator_arg_t, const _Alloc&, _Args&&...>{allocator_arg, __alloc,
+                                                                     _VSTD::forward<_Args>(__args)...};
         } else { // is_constructible_v<_Tp, Args..., const Alloc&>
             return forward_as_tuple(_VSTD::forward<_Args>(__args)..., __alloc);
         }
