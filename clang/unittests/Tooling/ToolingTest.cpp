@@ -15,6 +15,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
+#include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Tooling.h"
@@ -224,16 +225,6 @@ TEST(ToolInvocation, TestVirtualModulesCompilation) {
   EXPECT_TRUE(Invocation.run());
 }
 
-struct ErrorCountingDiagnosticConsumer : public DiagnosticConsumer {
-  ErrorCountingDiagnosticConsumer() : NumErrorsSeen(0) {}
-  void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
-                        const Diagnostic &Info) override {
-    if (DiagLevel == DiagnosticsEngine::Level::Error)
-      ++NumErrorsSeen;
-  }
-  unsigned NumErrorsSeen;
-};
-
 TEST(ToolInvocation, DiagnosticsEngineProperlyInitializedForCC1Construction) {
   llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
       new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
@@ -245,24 +236,22 @@ TEST(ToolInvocation, DiagnosticsEngineProperlyInitializedForCC1Construction) {
 
   std::vector<std::string> Args;
   Args.push_back("tool-executable");
-  Args.push_back("-target");
-  // Invalid argument that by default results in an error diagnostic:
-  Args.push_back("i386-apple-ios14.0-simulator");
-  // Argument that downgrades the error into a warning:
-  Args.push_back("-Wno-error=invalid-ios-deployment-target");
-  Args.push_back("-fsyntax-only");
+  // Unknown warning option will result in a warning.
+  Args.push_back("-fexpensive-optimizations");
+  // Argument that will suppress the warning above.
+  Args.push_back("-Wno-ignored-optimization-argument");
+  Args.push_back("-E");
   Args.push_back("test.cpp");
 
   clang::tooling::ToolInvocation Invocation(
       Args, std::make_unique<SyntaxOnlyAction>(), Files.get());
-  InMemoryFileSystem->addFile(
-      "test.cpp", 0, llvm::MemoryBuffer::getMemBuffer("int a() {}\n"));
-  ErrorCountingDiagnosticConsumer Consumer;
+  InMemoryFileSystem->addFile("test.cpp", 0,
+                              llvm::MemoryBuffer::getMemBuffer(""));
+  TextDiagnosticBuffer Consumer;
   Invocation.setDiagnosticConsumer(&Consumer);
   EXPECT_TRUE(Invocation.run());
-  // Check that `-Wno-error=invalid-ios-deployment-target` downgraded the error
-  // into a warning.
-  EXPECT_EQ(Consumer.NumErrorsSeen, 0u);
+  // Check that the warning was ignored due to the '-Wno-xxx' argument.
+  EXPECT_EQ(std::distance(Consumer.warn_begin(), Consumer.warn_end()), 0u);
 }
 
 TEST(ToolInvocation, CustomDiagnosticOptionsOverwriteParsedOnes) {
@@ -276,28 +265,28 @@ TEST(ToolInvocation, CustomDiagnosticOptionsOverwriteParsedOnes) {
 
   std::vector<std::string> Args;
   Args.push_back("tool-executable");
-  Args.push_back("-target");
-  // Invalid argument that by default results in an error diagnostic:
-  Args.push_back("i386-apple-ios14.0-simulator");
-  // Argument that downgrades the error into a warning:
-  Args.push_back("-Wno-error=invalid-ios-deployment-target");
-  Args.push_back("-fsyntax-only");
+  // Unknown warning option will result in a warning.
+  Args.push_back("-fexpensive-optimizations");
+  // Argument that will suppress the warning above.
+  Args.push_back("-Wno-ignored-optimization-argument");
+  Args.push_back("-E");
   Args.push_back("test.cpp");
 
   clang::tooling::ToolInvocation Invocation(
       Args, std::make_unique<SyntaxOnlyAction>(), Files.get());
-  InMemoryFileSystem->addFile(
-      "test.cpp", 0, llvm::MemoryBuffer::getMemBuffer("int a() {}\n"));
-  ErrorCountingDiagnosticConsumer Consumer;
+  InMemoryFileSystem->addFile("test.cpp", 0,
+                              llvm::MemoryBuffer::getMemBuffer(""));
+  TextDiagnosticBuffer Consumer;
   Invocation.setDiagnosticConsumer(&Consumer);
 
+  // Inject custom `DiagnosticOptions` for command-line parsing.
   auto DiagOpts = llvm::makeIntrusiveRefCnt<DiagnosticOptions>();
   Invocation.setDiagnosticOptions(&*DiagOpts);
 
   EXPECT_TRUE(Invocation.run());
-  // Check that `-Wno-error=invalid-ios-deployment-target` didn't downgrade the
-  // error into a warning due to being overwritten by custom diagnostic options.
-  EXPECT_EQ(Consumer.NumErrorsSeen, 1u);
+  // Check that the warning was issued during command-line parsing due to the
+  // custom `DiagnosticOptions` without '-Wno-xxx'.
+  EXPECT_EQ(std::distance(Consumer.warn_begin(), Consumer.warn_end()), 1u);
 }
 
 struct DiagnosticConsumerExpectingSourceManager : public DiagnosticConsumer {
