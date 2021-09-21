@@ -54,7 +54,7 @@ constexpr auto uses_allocator_construction_args(const _Alloc& __alloc, _Args&&..
 }
 
 template <class _Tp, class _Alloc, class _Tuple1, class _Tuple2>
-    requires __is_pair_specialization<_Tp>
+    requires __is_pair_specialization<_Tp>::value
 constexpr auto uses_allocator_construction_args(const _Alloc& __alloc, piecewise_construct_t, _Tuple1&& __x, _Tuple2&& __y) noexcept {
     return tuple{piecewise_construct,
                  apply([&__alloc](auto&&... __args1) {
@@ -66,13 +66,13 @@ constexpr auto uses_allocator_construction_args(const _Alloc& __alloc, piecewise
 }
 
 template <class _Tp, class _Alloc>
-    requires __is_pair_specialization<_Tp>
+    requires __is_pair_specialization<_Tp>::value
 constexpr auto uses_allocator_construction_args(const _Alloc& __alloc) noexcept {
     return uses_allocator_construction_args<_Tp>(__alloc, piecewise_construct, tuple{}, tuple{});
 }
 
 template <class _Tp, class _Alloc, class _Up, class _Vp>
-    requires __is_pair_specialization<_Tp>
+    requires __is_pair_specialization<_Tp>::value
 constexpr auto uses_allocator_construction_args(const _Alloc& __alloc, Up&& __u, Vp&& __v) noexcept {
     return uses_allocator_construction_args<_Tp>(__alloc,
                                                  piecewise_construct,
@@ -81,7 +81,7 @@ constexpr auto uses_allocator_construction_args(const _Alloc& __alloc, Up&& __u,
 }
 
 template <class _Tp, class _Alloc, class _Up, class _Vp>
-    requires __is_pair_specialization<_Tp>
+    requires __is_pair_specialization<_Tp>::value
 constexpr auto uses_allocator_construction_args(const _Alloc& __alloc, const pair<_Up, _Vp>& __pr) noexcept {
     return uses_allocator_construction_args<_Tp>(__alloc,
                                                  piecewise_construct,
@@ -90,7 +90,7 @@ constexpr auto uses_allocator_construction_args(const _Alloc& __alloc, const pai
 }
 
 template <class _Tp, class _Alloc, class _Up, class _Vp>
-    requires __is_pair_specialization<_Tp>
+    requires __is_pair_specialization<_Tp>::value
 constexpr auto uses_allocator_construction_args(const _Alloc& __alloc, pair<_Up, _Vp>&& __pr) noexcept {
     return uses_allocator_construction_args<_Tp>(__alloc,
                                                  piecewise_construct,
