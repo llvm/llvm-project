@@ -49,11 +49,7 @@ class DenseSlabAlloc {
   static_assert(sizeof(T) > sizeof(IndexT),
                 "it doesn't make sense to use dense alloc");
 
-  explicit DenseSlabAlloc(LinkerInitialized, const char *name) {
-    freelist_ = 0;
-    fillpos_ = 0;
-    name_ = name;
-  }
+  DenseSlabAlloc(LinkerInitialized, const char *name) : name_(name) {}
 
   explicit DenseSlabAlloc(const char *name)
       : DenseSlabAlloc(LINKER_INITIALIZED, name) {
@@ -89,6 +85,8 @@ class DenseSlabAlloc {
   }
 
   void FlushCache(Cache *c) {
+    if (!c->pos)
+      return;
     SpinMutexLock lock(&mtx_);
     while (c->pos) {
       IndexT idx = c->cache[--c->pos];
@@ -102,33 +100,39 @@ class DenseSlabAlloc {
     internal_memset(c->cache, 0, sizeof(c->cache));
   }
 
+  uptr AllocatedMemory() const {
+    return atomic_load_relaxed(&fillpos_) * kL2Size * sizeof(T);
+  }
+
  private:
   T *map_[kL1Size];
   SpinMutex mtx_;
-  IndexT freelist_;
-  uptr fillpos_;
-  const char *name_;
+  IndexT freelist_ = {0};
+  atomic_uintptr_t fillpos_ = {0};
+  const char *const name_;
 
   void Refill(Cache *c) {
     SpinMutexLock lock(&mtx_);
     if (freelist_ == 0) {
-      if (fillpos_ == kL1Size) {
+      uptr fillpos = atomic_load_relaxed(&fillpos_);
+      if (fillpos == kL1Size) {
         Printf("ThreadSanitizer: %s overflow (%zu*%zu). Dying.\n",
             name_, kL1Size, kL2Size);
         Die();
       }
-      VPrintf(2, "ThreadSanitizer: growing %s: %zu out of %zu*%zu\n",
-          name_, fillpos_, kL1Size, kL2Size);
+      VPrintf(2, "ThreadSanitizer: growing %s: %zu out of %zu*%zu\n", name_,
+              fillpos, kL1Size, kL2Size);
       T *batch = (T*)MmapOrDie(kL2Size * sizeof(T), name_);
       // Reserve 0 as invalid index.
-      IndexT start = fillpos_ == 0 ? 1 : 0;
+      IndexT start = fillpos == 0 ? 1 : 0;
       for (IndexT i = start; i < kL2Size; i++) {
         new(batch + i) T;
-        *(IndexT*)(batch + i) = i + 1 + fillpos_ * kL2Size;
+        *(IndexT *)(batch + i) = i + 1 + fillpos * kL2Size;
       }
       *(IndexT*)(batch + kL2Size - 1) = 0;
-      freelist_ = fillpos_ * kL2Size + start;
-      map_[fillpos_++] = batch;
+      freelist_ = fillpos * kL2Size + start;
+      map_[fillpos] = batch;
+      atomic_store_relaxed(&fillpos_, fillpos + 1);
     }
     for (uptr i = 0; i < Cache::kSize / 2 && freelist_ != 0; i++) {
       IndexT idx = freelist_;
