@@ -131,6 +131,16 @@ add_entrypoint_object(
     libc.src.__support.integer_operations
 )
 
+add_entrypoint_object(
+  bsearch
+  SRCS
+    bsearch.cpp
+  HDRS
+    bsearch.h
+  DEPENDS
+    libc.include.stdlib
+)
+
 if(NOT LLVM_LIBC_FULL_BUILD)
   return()
 endif()
