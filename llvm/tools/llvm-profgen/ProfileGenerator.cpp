@@ -418,18 +418,12 @@ void CSProfileGenerator::postProcessProfiles() {
       CSProfMergeColdContext.getNumOccurrences()) {
     SampleContextTrimmer(ProfileMap)
         .trimAndMergeColdContextProfiles(
-            ColdCountThreshold, CSProfTrimColdContext, CSProfMergeColdContext,
+            HotCountThreshold, CSProfTrimColdContext, CSProfMergeColdContext,
             CSProfMaxColdContextDepth);
   }
 }
 
 void CSProfileGenerator::computeSummaryAndThreshold() {
-  // Update the default value of cold cutoff for llvm-profgen.
-  // Do it here because we don't want to change the global default,
-  // which would lead CS profile size too large.
-  if (!ProfileSummaryCutoffCold.getNumOccurrences())
-    ProfileSummaryCutoffCold = 999000;
-
   SampleProfileSummaryBuilder Builder(ProfileSummaryBuilder::DefaultCutoffs);
   auto Summary = Builder.computeSummaryForProfiles(ProfileMap);
   HotCountThreshold = ProfileSummaryBuilder::getHotCountThreshold(
