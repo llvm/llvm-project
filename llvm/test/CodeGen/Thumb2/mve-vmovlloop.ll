@@ -10,22 +10,13 @@ define void @vmovl_s32(i32* noalias nocapture %d, i32* nocapture readonly %s, i3
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB0_1: @ %vector.ph
-; CHECK-NEXT:    adds r3, r2, #3
-; CHECK-NEXT:    bic r3, r3, #3
-; CHECK-NEXT:    sub.w r12, r3, #4
-; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    add.w r3, r3, r12, lsr #2
-; CHECK-NEXT:    dls lr, r3
+; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB0_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vctp.32 r2
-; CHECK-NEXT:    subs r2, #4
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vldrwt.u32 q0, [r1], #16
+; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
 ; CHECK-NEXT:    vmovlb.s16 q0, q0
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrwt.32 q0, [r0], #16
-; CHECK-NEXT:    le lr, .LBB0_2
+; CHECK-NEXT:    vstrw.32 q0, [r0], #16
+; CHECK-NEXT:    letp lr, .LBB0_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
@@ -66,22 +57,13 @@ define void @vmovl_u16(i16* noalias nocapture %d, i16* nocapture readonly %s, i3
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB1_1: @ %vector.ph
-; CHECK-NEXT:    adds r3, r2, #7
-; CHECK-NEXT:    bic r3, r3, #7
-; CHECK-NEXT:    sub.w r12, r3, #8
-; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    add.w r3, r3, r12, lsr #3
-; CHECK-NEXT:    dls lr, r3
+; CHECK-NEXT:    dlstp.16 lr, r2
 ; CHECK-NEXT:  .LBB1_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vctp.16 r2
-; CHECK-NEXT:    subs r2, #8
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vldrht.u16 q0, [r1], #16
+; CHECK-NEXT:    vldrh.u16 q0, [r1], #16
 ; CHECK-NEXT:    vmovlb.u8 q0, q0
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrht.16 q0, [r0], #16
-; CHECK-NEXT:    le lr, .LBB1_2
+; CHECK-NEXT:    vstrh.16 q0, [r0], #16
+; CHECK-NEXT:    letp lr, .LBB1_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
@@ -174,35 +156,22 @@ define void @sunken_vmovl(i8* noalias %pTarget, i16 signext %iTargetStride, i8* 
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    ldrsh.w r1, [sp, #8]
 ; CHECK-NEXT:    vmov.i16 q0, #0x100
-; CHECK-NEXT:    cmp r1, #8
-; CHECK-NEXT:    mov r3, r1
-; CHECK-NEXT:    it ge
-; CHECK-NEXT:    movge r3, #8
 ; CHECK-NEXT:    vldrb.u16 q1, [r2], #8
-; CHECK-NEXT:    subs r3, r1, r3
 ; CHECK-NEXT:    vldrb.u16 q2, [r0], #8
-; CHECK-NEXT:    add.w r12, r3, #7
-; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    add.w r12, r3, r12, lsr #3
 ; CHECK-NEXT:    ldr r3, [sp, #12]
-; CHECK-NEXT:    dls lr, r12
+; CHECK-NEXT:    dlstp.16 lr, r1
 ; CHECK-NEXT:  .LBB3_1: @ %do.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vctp.16 r1
-; CHECK-NEXT:    subs r1, #8
 ; CHECK-NEXT:    vmovlb.u8 q1, q1
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vsubt.i16 q3, q0, q1
+; CHECK-NEXT:    vsub.i16 q3, q0, q1
 ; CHECK-NEXT:    vmovlb.u8 q2, q2
-; CHECK-NEXT:    vpstttt
-; CHECK-NEXT:    vmult.i16 q3, q2, q3
-; CHECK-NEXT:    vmlat.u16 q3, q1, r3
-; CHECK-NEXT:    vshrt.u16 q3, q3, #8
-; CHECK-NEXT:    vldrbt.u16 q1, [r2], #8
-; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vldrbt.u16 q2, [r0], #8
-; CHECK-NEXT:    vstrbt.16 q3, [r0, #-16]
-; CHECK-NEXT:    le lr, .LBB3_1
+; CHECK-NEXT:    vmul.i16 q3, q2, q3
+; CHECK-NEXT:    vmla.u16 q3, q1, r3
+; CHECK-NEXT:    vshr.u16 q3, q3, #8
+; CHECK-NEXT:    vldrb.u16 q1, [r2], #8
+; CHECK-NEXT:    vldrb.u16 q2, [r0], #8
+; CHECK-NEXT:    vstrb.16 q3, [r0, #-16]
+; CHECK-NEXT:    letp lr, .LBB3_1
 ; CHECK-NEXT:  @ %bb.2: @ %do.end
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
