@@ -141,6 +141,16 @@ add_entrypoint_object(
     libc.include.stdlib
 )
 
+add_entrypoint_object(
+  qsort
+  SRCS
+    qsort.cpp
+  HDRS
+    qsort.h
+  DEPENDS
+    libc.include.stdlib
+)
+
 if(NOT LLVM_LIBC_FULL_BUILD)
   return()
 endif()

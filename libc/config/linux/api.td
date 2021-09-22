@@ -287,13 +287,20 @@ def BSearchCompareTDefn : TypeDecl<"__bsearchcompare_t"> {
   }];
 }
 
+def QSortCompareTDefn : TypeDecl<"__qsortcompare_t"> {
+  let Decl = [{
+    typedef int(*__qsortcompare_t)(const void *, const void *);
+  }];
+}
+
 def StdlibAPI : PublicAPI<"stdlib.h"> {
   let TypeDeclarations = [
     DivT,
     LDivT,
     LLDivT,
     SizeT,
-    BSearchCompareTDefn
+    BSearchCompareTDefn,
+    QSortCompareTDefn,
   ];
 }
 
