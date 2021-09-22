@@ -373,60 +373,42 @@ define void @atomic_load_relaxed(i64, i64, i128* %p, i128* %p2) {
 ;
 ; CHECK-LLSC-O0-LABEL: atomic_load_relaxed:
 ; CHECK-LLSC-O0:       // %bb.0:
-; CHECK-LLSC-O0-NEXT:    sub sp, sp, #48
-; CHECK-LLSC-O0-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-LLSC-O0-NEXT:    str x2, [sp, #32] // 8-byte Folded Spill
-; CHECK-LLSC-O0-NEXT:    str x3, [sp, #40] // 8-byte Folded Spill
-; CHECK-LLSC-O0-NEXT:    b .LBB4_1
-; CHECK-LLSC-O0-NEXT:  .LBB4_1: // %atomicrmw.start
-; CHECK-LLSC-O0-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-LLSC-O0-NEXT:    ldr x11, [sp, #32] // 8-byte Folded Reload
-; CHECK-LLSC-O0-NEXT:    ldxp x9, x10, [x11]
-; CHECK-LLSC-O0-NEXT:    mov x8, xzr
-; CHECK-LLSC-O0-NEXT:    orr x9, x9, x8
-; CHECK-LLSC-O0-NEXT:    orr x10, x8, x10
+; CHECK-LLSC-O0-NEXT:    mov x11, xzr
+; CHECK-LLSC-O0-NEXT:  .LBB4_1: // =>This Inner Loop Header: Depth=1
+; CHECK-LLSC-O0-NEXT:    ldxp x9, x8, [x2]
+; CHECK-LLSC-O0-NEXT:    cmp x9, x11
+; CHECK-LLSC-O0-NEXT:    cset w10, ne
+; CHECK-LLSC-O0-NEXT:    cmp x8, x11
+; CHECK-LLSC-O0-NEXT:    cinc w10, w10, ne
+; CHECK-LLSC-O0-NEXT:    cbnz w10, .LBB4_3
+; CHECK-LLSC-O0-NEXT:  // %bb.2: // in Loop: Header=BB4_1 Depth=1
+; CHECK-LLSC-O0-NEXT:    stxp w10, x11, x11, [x2]
+; CHECK-LLSC-O0-NEXT:    cbnz w10, .LBB4_1
+; CHECK-LLSC-O0-NEXT:    b .LBB4_4
+; CHECK-LLSC-O0-NEXT:  .LBB4_3: // in Loop: Header=BB4_1 Depth=1
+; CHECK-LLSC-O0-NEXT:    stxp w10, x9, x8, [x2]
+; CHECK-LLSC-O0-NEXT:    cbnz w10, .LBB4_1
+; CHECK-LLSC-O0-NEXT:  .LBB4_4:
 ; CHECK-LLSC-O0-NEXT:    // implicit-def: $q0
 ; CHECK-LLSC-O0-NEXT:    mov v0.d[0], x9
-; CHECK-LLSC-O0-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-LLSC-O0-NEXT:    mov v0.d[1], x10
-; CHECK-LLSC-O0-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
-; CHECK-LLSC-O0-NEXT:    stxp w8, x9, x10, [x11]
-; CHECK-LLSC-O0-NEXT:    cbnz w8, .LBB4_1
-; CHECK-LLSC-O0-NEXT:    b .LBB4_2
-; CHECK-LLSC-O0-NEXT:  .LBB4_2: // %atomicrmw.end
-; CHECK-LLSC-O0-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
-; CHECK-LLSC-O0-NEXT:    ldr x8, [sp, #40] // 8-byte Folded Reload
-; CHECK-LLSC-O0-NEXT:    str q0, [x8]
-; CHECK-LLSC-O0-NEXT:    add sp, sp, #48
+; CHECK-LLSC-O0-NEXT:    mov v0.d[1], x8
+; CHECK-LLSC-O0-NEXT:    str q0, [x3]
 ; CHECK-LLSC-O0-NEXT:    ret
 ;
 ; CHECK-CAS-O0-LABEL: atomic_load_relaxed:
 ; CHECK-CAS-O0:       // %bb.0:
-; CHECK-CAS-O0-NEXT:    sub sp, sp, #48
-; CHECK-CAS-O0-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-CAS-O0-NEXT:    str x2, [sp, #32] // 8-byte Folded Spill
-; CHECK-CAS-O0-NEXT:    str x3, [sp, #40] // 8-byte Folded Spill
-; CHECK-CAS-O0-NEXT:    b .LBB4_1
-; CHECK-CAS-O0-NEXT:  .LBB4_1: // %atomicrmw.start
-; CHECK-CAS-O0-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-CAS-O0-NEXT:    ldr x11, [sp, #32] // 8-byte Folded Reload
-; CHECK-CAS-O0-NEXT:    ldxp x9, x10, [x11]
 ; CHECK-CAS-O0-NEXT:    mov x8, xzr
-; CHECK-CAS-O0-NEXT:    orr x9, x9, x8
-; CHECK-CAS-O0-NEXT:    orr x10, x8, x10
+; CHECK-CAS-O0-NEXT:    mov x0, x8
+; CHECK-CAS-O0-NEXT:    mov x1, x8
+; CHECK-CAS-O0-NEXT:    mov x4, x8
+; CHECK-CAS-O0-NEXT:    mov x5, x8
+; CHECK-CAS-O0-NEXT:    casp x0, x1, x4, x5, [x2]
+; CHECK-CAS-O0-NEXT:    mov x9, x0
+; CHECK-CAS-O0-NEXT:    mov x8, x1
 ; CHECK-CAS-O0-NEXT:    // implicit-def: $q0
 ; CHECK-CAS-O0-NEXT:    mov v0.d[0], x9
-; CHECK-CAS-O0-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-CAS-O0-NEXT:    mov v0.d[1], x10
-; CHECK-CAS-O0-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
-; CHECK-CAS-O0-NEXT:    stxp w8, x9, x10, [x11]
-; CHECK-CAS-O0-NEXT:    cbnz w8, .LBB4_1
-; CHECK-CAS-O0-NEXT:    b .LBB4_2
-; CHECK-CAS-O0-NEXT:  .LBB4_2: // %atomicrmw.end
-; CHECK-CAS-O0-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
-; CHECK-CAS-O0-NEXT:    ldr x8, [sp, #40] // 8-byte Folded Reload
-; CHECK-CAS-O0-NEXT:    str q0, [x8]
-; CHECK-CAS-O0-NEXT:    add sp, sp, #48
+; CHECK-CAS-O0-NEXT:    mov v0.d[1], x8
+; CHECK-CAS-O0-NEXT:    str q0, [x3]
 ; CHECK-CAS-O0-NEXT:    ret
 
     %r = load atomic i128, i128* %p monotonic, align 16
