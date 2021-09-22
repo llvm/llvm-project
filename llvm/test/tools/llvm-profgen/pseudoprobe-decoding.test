@@ -1,4 +1,5 @@
 ; RUN: llvm-profgen --format=text --perfscript=%s  --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t --show-pseudo-probe --show-disassembly-only | FileCheck %s
+; RUN: llvm-profgen --format=text --perfscript=%s  --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t --show-pseudo-probe --show-disassembly-only --disassemble-functions=main,foo  | FileCheck %s -check-prefix=SYM
 
 PERF_RECORD_MMAP2 2854748/2854748: [0x400000(0x1000) @ 0 00:1d 123291722 526021]: r-xp /home/inline-cs-pseudoprobe.perfbin
 
@@ -78,6 +79,11 @@ PERF_RECORD_MMAP2 2854748/2854748: [0x400000(0x1000) @ 0 00:1d 123291722 526021]
 
 ; CHECK:       [Probe]: FUNC: foo Index: 9  Type: DirectCall  Inlined: @ main:2
 ; CHECK-NEXT:      865: callq 0x930
+
+; SYM-NOT: <bar>:
+; SYM: <foo>:
+; SYM: <main>:
+
 
 
 ; clang -O3 -fexperimental-new-pass-manager -fuse-ld=lld -fpseudo-probe-for-profiling
