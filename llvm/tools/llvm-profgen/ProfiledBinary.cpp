@@ -219,11 +219,12 @@ ProfiledBinary::getExpandedContext(const SmallVectorImpl<uint64_t> &Stack,
     ContextVec.append(ExpandedContext);
   }
 
+  assert(ContextVec.size() && "Context length should be at least 1");
+
   // Compress the context string except for the leaf frame
   auto LeafFrame = ContextVec.back();
   LeafFrame.Callsite = LineLocation(0, 0);
   ContextVec.pop_back();
-  assert(ContextVec.size() && "Context length should be at least 1");
   CSProfileGenerator::compressRecursionContext(ContextVec);
   CSProfileGenerator::trimContext(ContextVec);
   ContextVec.push_back(LeafFrame);
