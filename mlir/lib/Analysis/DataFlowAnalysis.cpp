@@ -722,8 +722,7 @@ bool ForwardDataFlowSolver::isBlockExecutable(Block *block) const {
 }
 
 void ForwardDataFlowSolver::markEdgeExecutable(Block *from, Block *to) {
-  if (!executableEdges.insert(std::make_pair(from, to)).second)
-    return;
+  executableEdges.insert(std::make_pair(from, to));
 
   // Mark the destination as executable, and reprocess its arguments if it was
   // already executable.
