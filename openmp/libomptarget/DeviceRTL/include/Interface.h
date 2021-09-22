@@ -206,10 +206,10 @@ uint32_t __kmpc_get_hardware_thread_id_in_block();
 ///{
 int8_t __kmpc_is_spmd_exec_mode();
 
-int32_t __kmpc_target_init(IdentTy *Ident, bool IsSPMD,
+int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
                            bool UseGenericStateMachine, bool);
 
-void __kmpc_target_deinit(IdentTy *Ident, bool IsSPMD, bool);
+void __kmpc_target_deinit(IdentTy *Ident, int8_t Mode, bool);
 
 ///}
 
