@@ -590,11 +590,7 @@ bool TwoAddressInstructionPass::isProfitableToConv3Addr(Register RegA,
 bool TwoAddressInstructionPass::convertInstTo3Addr(
     MachineBasicBlock::iterator &mi, MachineBasicBlock::iterator &nmi,
     Register RegA, Register RegB, unsigned Dist) {
-  // FIXME: Why does convertToThreeAddress() need an iterator reference?
-  MachineFunction::iterator MFI = MBB->getIterator();
-  MachineInstr *NewMI = TII->convertToThreeAddress(MFI, *mi, LV);
-  assert(MBB->getIterator() == MFI &&
-         "convertToThreeAddress changed iterator reference");
+  MachineInstr *NewMI = TII->convertToThreeAddress(*mi, LV);
   if (!NewMI)
     return false;
 

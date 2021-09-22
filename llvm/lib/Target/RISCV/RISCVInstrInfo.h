@@ -160,8 +160,7 @@ public:
                                        unsigned OpIdx1,
                                        unsigned OpIdx2) const override;
 
-  MachineInstr *convertToThreeAddress(MachineFunction::iterator &MBB,
-                                      MachineInstr &MI,
+  MachineInstr *convertToThreeAddress(MachineInstr &MI,
                                       LiveVariables *LV) const override;
 
   Register getVLENFactoredAmount(

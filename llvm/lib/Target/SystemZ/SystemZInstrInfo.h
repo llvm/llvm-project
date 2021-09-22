@@ -271,8 +271,7 @@ public:
                             Register DestReg, int FrameIdx,
                             const TargetRegisterClass *RC,
                             const TargetRegisterInfo *TRI) const override;
-  MachineInstr *convertToThreeAddress(MachineFunction::iterator &MFI,
-                                      MachineInstr &MI,
+  MachineInstr *convertToThreeAddress(MachineInstr &MI,
                                       LiveVariables *LV) const override;
   MachineInstr *
   foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,

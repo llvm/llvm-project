@@ -262,8 +262,7 @@ public:
   /// This method returns a null pointer if the transformation cannot be
   /// performed, otherwise it returns the new instruction.
   ///
-  MachineInstr *convertToThreeAddress(MachineFunction::iterator &MFI,
-                                      MachineInstr &MI,
+  MachineInstr *convertToThreeAddress(MachineInstr &MI,
                                       LiveVariables *LV) const override;
 
   /// Returns true iff the routine could find two commutable operands in the
@@ -592,7 +591,6 @@ private:
   /// We use 32-bit LEA to form 3-address code by promoting to a 32-bit
   /// super-register and then truncating back down to a 8/16-bit sub-register.
   MachineInstr *convertToThreeAddressWithLEA(unsigned MIOpc,
-                                             MachineFunction::iterator &MFI,
                                              MachineInstr &MI,
                                              LiveVariables *LV,
                                              bool Is8BitOp) const;

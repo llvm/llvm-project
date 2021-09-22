@@ -212,8 +212,7 @@ FixupLEAPass::postRAConvertToLEA(MachineBasicBlock &MBB,
     // These instructions are all fine to convert.
     break;
   }
-  MachineFunction::iterator MFI = MBB.getIterator();
-  return TII->convertToThreeAddress(MFI, MI, nullptr);
+  return TII->convertToThreeAddress(MI, nullptr);
 }
 
 FunctionPass *llvm::createX86FixupLEAs() { return new FixupLEAPass(); }
