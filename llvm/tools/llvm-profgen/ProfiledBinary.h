@@ -185,6 +185,9 @@ class ProfiledBinary {
   // String table owning function name strings created from the symbolizer.
   std::unordered_set<std::string> NameStrings;
 
+  // A collection of functions to print disassembly for.
+  StringSet<> DisassembleFunctionSet;
+
   // Pseudo probe decoder
   MCPseudoProbeDecoder ProbeDecoder;
 
