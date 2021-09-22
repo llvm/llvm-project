@@ -760,15 +760,18 @@ void llvm::MergeBasicBlockIntoOnlyPred(BasicBlock *DestBB,
   SmallVector<DominatorTree::UpdateType, 32> Updates;
 
   if (DTU) {
-    SmallPtrSet<BasicBlock *, 2> PredsOfPredBB(pred_begin(PredBB),
-                                               pred_end(PredBB));
-    Updates.reserve(Updates.size() + 2 * PredsOfPredBB.size() + 1);
-    for (BasicBlock *PredOfPredBB : PredsOfPredBB)
+    // To avoid processing the same predecessor more than once.
+    SmallPtrSet<BasicBlock *, 2> SeenPreds;
+    Updates.reserve(Updates.size() + 2 * pred_size(PredBB) + 1);
+    for (BasicBlock *PredOfPredBB : predecessors(PredBB))
       // This predecessor of PredBB may already have DestBB as a successor.
       if (PredOfPredBB != PredBB)
-        Updates.push_back({DominatorTree::Insert, PredOfPredBB, DestBB});
-    for (BasicBlock *PredOfPredBB : PredsOfPredBB)
-      Updates.push_back({DominatorTree::Delete, PredOfPredBB, PredBB});
+        if (SeenPreds.insert(PredOfPredBB).second)
+          Updates.push_back({DominatorTree::Insert, PredOfPredBB, DestBB});
+    SeenPreds.clear();
+    for (BasicBlock *PredOfPredBB : predecessors(PredBB))
+      if (SeenPreds.insert(PredOfPredBB).second)
+        Updates.push_back({DominatorTree::Delete, PredOfPredBB, PredBB});
     Updates.push_back({DominatorTree::Delete, PredBB, DestBB});
   }
 
@@ -1096,16 +1099,20 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
 
   SmallVector<DominatorTree::UpdateType, 32> Updates;
   if (DTU) {
+    // To avoid processing the same predecessor more than once.
+    SmallPtrSet<BasicBlock *, 8> SeenPreds;
     // All predecessors of BB will be moved to Succ.
-    SmallPtrSet<BasicBlock *, 8> PredsOfBB(pred_begin(BB), pred_end(BB));
     SmallPtrSet<BasicBlock *, 8> PredsOfSucc(pred_begin(Succ), pred_end(Succ));
-    Updates.reserve(Updates.size() + 2 * PredsOfBB.size() + 1);
-    for (auto *PredOfBB : PredsOfBB)
+    Updates.reserve(Updates.size() + 2 * pred_size(BB) + 1);
+    for (auto *PredOfBB : predecessors(BB))
       // This predecessor of BB may already have Succ as a successor.
       if (!PredsOfSucc.contains(PredOfBB))
-        Updates.push_back({DominatorTree::Insert, PredOfBB, Succ});
-    for (auto *PredOfBB : PredsOfBB)
-      Updates.push_back({DominatorTree::Delete, PredOfBB, BB});
+        if (SeenPreds.insert(PredOfBB).second)
+          Updates.push_back({DominatorTree::Insert, PredOfBB, Succ});
+    SeenPreds.clear();
+    for (auto *PredOfBB : predecessors(BB))
+      if (SeenPreds.insert(PredOfBB).second)
+        Updates.push_back({DominatorTree::Delete, PredOfBB, BB});
     Updates.push_back({DominatorTree::Delete, BB, Succ});
   }
 
