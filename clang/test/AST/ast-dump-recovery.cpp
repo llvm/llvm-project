@@ -250,7 +250,7 @@ using Escape = decltype([] { return undef(); }());
 // CHECK-NEXT: `-RecoveryExpr {{.*}} '<dependent type>' contains-errors lvalue
 // CHECK-NEXT:   `-InitListExpr
 // CHECK-NEXT:     `-DesignatedInitExpr {{.*}} 'void'
-// CHECK-NEXT:       `-CXXNullPtrLiteralExpr {{.*}} 'nullptr_t'
+// CHECK-NEXT:       `-CXXNullPtrLiteralExpr {{.*}} 'std::nullptr_t'
 struct {
   int& abc;
 } NoCrashOnInvalidInitList = {

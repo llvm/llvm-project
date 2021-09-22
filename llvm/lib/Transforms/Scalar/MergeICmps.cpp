@@ -229,6 +229,8 @@ class BCECmpBlock {
   InstructionSet BlockInsts;
   // The block requires splitting.
   bool RequireSplit = false;
+  // Original order of this block in the chain.
+  unsigned OrigOrder = 0;
 
 private:
   BCECmp Cmp;
@@ -380,38 +382,82 @@ static inline void enqueueBlock(std::vector<BCECmpBlock> &Comparisons,
                     << Comparison.Rhs().BaseId << " + "
                     << Comparison.Rhs().Offset << "\n");
   LLVM_DEBUG(dbgs() << "\n");
+  Comparison.OrigOrder = Comparisons.size();
   Comparisons.push_back(std::move(Comparison));
 }
 
 // A chain of comparisons.
 class BCECmpChain {
- public:
-   BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
-               AliasAnalysis &AA);
+public:
+  using ContiguousBlocks = std::vector<BCECmpBlock>;
 
-   int size() const { return Comparisons_.size(); }
-
-#ifdef MERGEICMPS_DOT_ON
-  void dump() const;
-#endif  // MERGEICMPS_DOT_ON
+  BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
+              AliasAnalysis &AA);
 
   bool simplify(const TargetLibraryInfo &TLI, AliasAnalysis &AA,
                 DomTreeUpdater &DTU);
 
-private:
-  static bool IsContiguous(const BCECmpBlock &First,
-                           const BCECmpBlock &Second) {
-    return First.Lhs().BaseId == Second.Lhs().BaseId &&
-           First.Rhs().BaseId == Second.Rhs().BaseId &&
-           First.Lhs().Offset + First.SizeBits() / 8 == Second.Lhs().Offset &&
-           First.Rhs().Offset + First.SizeBits() / 8 == Second.Rhs().Offset;
+  bool atLeastOneMerged() const {
+    return any_of(MergedBlocks_,
+                  [](const auto &Blocks) { return Blocks.size() > 1; });
   }
 
+private:
   PHINode &Phi_;
-  std::vector<BCECmpBlock> Comparisons_;
+  // The list of all blocks in the chain, grouped by contiguity.
+  std::vector<ContiguousBlocks> MergedBlocks_;
   // The original entry block (before sorting);
   BasicBlock *EntryBlock_;
 };
+
+static bool areContiguous(const BCECmpBlock &First, const BCECmpBlock &Second) {
+  return First.Lhs().BaseId == Second.Lhs().BaseId &&
+         First.Rhs().BaseId == Second.Rhs().BaseId &&
+         First.Lhs().Offset + First.SizeBits() / 8 == Second.Lhs().Offset &&
+         First.Rhs().Offset + First.SizeBits() / 8 == Second.Rhs().Offset;
+}
+
+static unsigned getMinOrigOrder(const BCECmpChain::ContiguousBlocks &Blocks) {
+  unsigned MinOrigOrder = std::numeric_limits<unsigned>::max();
+  for (const BCECmpBlock &Block : Blocks)
+    MinOrigOrder = std::min(MinOrigOrder, Block.OrigOrder);
+  return MinOrigOrder;
+}
+
+/// Given a chain of comparison blocks, groups the blocks into contiguous
+/// ranges that can be merged together into a single comparison.
+static std::vector<BCECmpChain::ContiguousBlocks>
+mergeBlocks(std::vector<BCECmpBlock> &&Blocks) {
+  std::vector<BCECmpChain::ContiguousBlocks> MergedBlocks;
+
+  // Sort to detect continuous offsets.
+  llvm::sort(Blocks,
+             [](const BCECmpBlock &LhsBlock, const BCECmpBlock &RhsBlock) {
+               return std::tie(LhsBlock.Lhs(), LhsBlock.Rhs()) <
+                      std::tie(RhsBlock.Lhs(), RhsBlock.Rhs());
+             });
+
+  BCECmpChain::ContiguousBlocks *LastMergedBlock = nullptr;
+  for (BCECmpBlock &Block : Blocks) {
+    if (!LastMergedBlock || !areContiguous(LastMergedBlock->back(), Block)) {
+      MergedBlocks.emplace_back();
+      LastMergedBlock = &MergedBlocks.back();
+    } else {
+      LLVM_DEBUG(dbgs() << "Merging block " << Block.BB->getName() << " into "
+                        << LastMergedBlock->back().BB->getName() << "\n");
+    }
+    LastMergedBlock->push_back(std::move(Block));
+  }
+
+  // While we allow reordering for merging, do not reorder unmerged comparisons.
+  // Doing so may introduce branch on poison.
+  llvm::sort(MergedBlocks, [](const BCECmpChain::ContiguousBlocks &LhsBlocks,
+                              const BCECmpChain::ContiguousBlocks &RhsBlocks) {
+    return getMinOrigOrder(LhsBlocks) < getMinOrigOrder(RhsBlocks);
+  });
+
+  return MergedBlocks;
+}
 
 BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
                          AliasAnalysis &AA)
@@ -492,46 +538,8 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
     return;
   }
   EntryBlock_ = Comparisons[0].BB;
-  Comparisons_ = std::move(Comparisons);
-#ifdef MERGEICMPS_DOT_ON
-  errs() << "BEFORE REORDERING:\n\n";
-  dump();
-#endif  // MERGEICMPS_DOT_ON
-  // Reorder blocks by LHS. We can do that without changing the
-  // semantics because we are only accessing dereferencable memory.
-  llvm::sort(Comparisons_,
-             [](const BCECmpBlock &LhsBlock, const BCECmpBlock &RhsBlock) {
-               return std::tie(LhsBlock.Lhs(), LhsBlock.Rhs()) <
-                      std::tie(RhsBlock.Lhs(), RhsBlock.Rhs());
-             });
-#ifdef MERGEICMPS_DOT_ON
-  errs() << "AFTER REORDERING:\n\n";
-  dump();
-#endif  // MERGEICMPS_DOT_ON
+  MergedBlocks_ = mergeBlocks(std::move(Comparisons));
 }
-
-#ifdef MERGEICMPS_DOT_ON
-void BCECmpChain::dump() const {
-  errs() << "digraph dag {\n";
-  errs() << " graph [bgcolor=transparent];\n";
-  errs() << " node [color=black,style=filled,fillcolor=lightyellow];\n";
-  errs() << " edge [color=black];\n";
-  for (size_t I = 0; I < Comparisons_.size(); ++I) {
-    const auto &Comparison = Comparisons_[I];
-    errs() << " \"" << I << "\" [label=\"%"
-           << Comparison.Lhs().Base()->getName() << " + "
-           << Comparison.Lhs().Offset << " == %"
-           << Comparison.Rhs().Base()->getName() << " + "
-           << Comparison.Rhs().Offset << " (" << (Comparison.SizeBits() / 8)
-           << " bytes)\"];\n";
-    const Value *const Val = Phi_.getIncomingValueForBlock(Comparison.BB);
-    if (I > 0) errs() << " \"" << (I - 1) << "\" -> \"" << I << "\";\n";
-    errs() << " \"" << I << "\" -> \"Phi\" [label=\"" << *Val << "\"];\n";
-  }
-  errs() << " \"Phi\" [label=\"Phi\"];\n";
-  errs() << "}\n\n";
-}
-#endif  // MERGEICMPS_DOT_ON
 
 namespace {
 
@@ -655,47 +663,18 @@ static BasicBlock *mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
 
 bool BCECmpChain::simplify(const TargetLibraryInfo &TLI, AliasAnalysis &AA,
                            DomTreeUpdater &DTU) {
-  assert(Comparisons_.size() >= 2 && "simplifying trivial BCECmpChain");
-  // First pass to check if there is at least one merge. If not, we don't do
-  // anything and we keep analysis passes intact.
-  const auto AtLeastOneMerged = [this]() {
-    for (size_t I = 1; I < Comparisons_.size(); ++I) {
-      if (IsContiguous(Comparisons_[I - 1], Comparisons_[I]))
-        return true;
-    }
-    return false;
-  };
-  if (!AtLeastOneMerged())
-    return false;
-
+  assert(atLeastOneMerged() && "simplifying trivial BCECmpChain");
   LLVM_DEBUG(dbgs() << "Simplifying comparison chain starting at block "
                     << EntryBlock_->getName() << "\n");
 
   // Effectively merge blocks. We go in the reverse direction from the phi block
   // so that the next block is always available to branch to.
-  const auto mergeRange = [this, &TLI, &AA, &DTU](int I, int Num,
-                                                  BasicBlock *InsertBefore,
-                                                  BasicBlock *Next) {
-    return mergeComparisons(makeArrayRef(Comparisons_).slice(I, Num),
-                            InsertBefore, Next, Phi_, TLI, AA, DTU);
-  };
-  int NumMerged = 1;
+  BasicBlock *InsertBefore = EntryBlock_;
   BasicBlock *NextCmpBlock = Phi_.getParent();
-  for (int I = static_cast<int>(Comparisons_.size()) - 2; I >= 0; --I) {
-    if (IsContiguous(Comparisons_[I], Comparisons_[I + 1])) {
-      LLVM_DEBUG(dbgs() << "Merging block " << Comparisons_[I].BB->getName()
-                        << " into " << Comparisons_[I + 1].BB->getName()
-                        << "\n");
-      ++NumMerged;
-    } else {
-      NextCmpBlock = mergeRange(I + 1, NumMerged, NextCmpBlock, NextCmpBlock);
-      NumMerged = 1;
-    }
+  for (const auto &Blocks : reverse(MergedBlocks_)) {
+    InsertBefore = NextCmpBlock = mergeComparisons(
+        Blocks, InsertBefore, NextCmpBlock, Phi_, TLI, AA, DTU);
   }
-  // Insert the entry block for the new chain before the old entry block.
-  // If the old entry block was the function entry, this ensures that the new
-  // entry can become the function entry.
-  NextCmpBlock = mergeRange(0, NumMerged, EntryBlock_, NextCmpBlock);
 
   // Replace the original cmp chain with the new cmp chain by pointing all
   // predecessors of EntryBlock_ to NextCmpBlock instead. This makes all cmp
@@ -723,13 +702,16 @@ bool BCECmpChain::simplify(const TargetLibraryInfo &TLI, AliasAnalysis &AA,
 
   // Delete merged blocks. This also removes incoming values in phi.
   SmallVector<BasicBlock *, 16> DeadBlocks;
-  for (auto &Cmp : Comparisons_) {
-    LLVM_DEBUG(dbgs() << "Deleting merged block " << Cmp.BB->getName() << "\n");
-    DeadBlocks.push_back(Cmp.BB);
+  for (const auto &Blocks : MergedBlocks_) {
+    for (const BCECmpBlock &Block : Blocks) {
+      LLVM_DEBUG(dbgs() << "Deleting merged block " << Block.BB->getName()
+                        << "\n");
+      DeadBlocks.push_back(Block.BB);
+    }
   }
   DeleteDeadBlocks(DeadBlocks, &DTU);
 
-  Comparisons_.clear();
+  MergedBlocks_.clear();
   return true;
 }
 
@@ -829,8 +811,8 @@ bool processPhi(PHINode &Phi, const TargetLibraryInfo &TLI, AliasAnalysis &AA,
   if (Blocks.empty()) return false;
   BCECmpChain CmpChain(Blocks, Phi, AA);
 
-  if (CmpChain.size() < 2) {
-    LLVM_DEBUG(dbgs() << "skip: only one compare block\n");
+  if (!CmpChain.atLeastOneMerged()) {
+    LLVM_DEBUG(dbgs() << "skip: nothing merged\n");
     return false;
   }
 

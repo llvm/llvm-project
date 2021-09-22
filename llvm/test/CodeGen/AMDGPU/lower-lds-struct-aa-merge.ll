@@ -5,10 +5,10 @@
 @b = internal unnamed_addr addrspace(3) global [64 x i32] undef, align 4
 
 ; CHECK-LABEL: @no_clobber_ds_load_stores_x2_preexisting_aa
-; CHECK: store i32 1, i32 addrspace(3)* %0, align 16, !tbaa !0, !alias.scope !5, !noalias !10
-; CHECK: %val.a = load i32, i32 addrspace(3)* %gep.a, align 4, !tbaa !0, !alias.scope !5, !noalias !10
-; CHECK: store i32 2, i32 addrspace(3)* %1, align 16, !tbaa !0, !alias.scope !10, !noalias !5
-; CHECK: %val.b = load i32, i32 addrspace(3)* %gep.b, align 4, !tbaa !0, !alias.scope !10, !noalias !5
+; CHECK: store i32 1, i32 addrspace(3)* %0, align 16, !tbaa !0, !noalias !5
+; CHECK: %val.a = load i32, i32 addrspace(3)* %gep.a, align 4, !tbaa !0, !noalias !5
+; CHECK: store i32 2, i32 addrspace(3)* %1, align 16, !tbaa !0, !noalias !5
+; CHECK: %val.b = load i32, i32 addrspace(3)* %gep.b, align 4, !tbaa !0, !noalias !5
 
 define amdgpu_kernel void @no_clobber_ds_load_stores_x2_preexisting_aa(i32 addrspace(1)* %arg, i32 %i) {
 bb:
@@ -39,11 +39,4 @@ bb:
 ; CHECK:!2 = !{!"int", !3, i64 0}
 ; CHECK:!3 = !{!"omnipotent char", !4, i64 0}
 ; CHECK:!4 = !{!"Simple C++ TBAA"}
-; CHECK:!5 = !{!6, !8}
-; CHECK:!6 = distinct !{!6, !7}
-; CHECK:!7 = distinct !{!7}
-; CHECK:!8 = distinct !{!8, !9}
-; CHECK:!9 = distinct !{!9}
-; CHECK:!10 = !{!11, !12}
-; CHECK:!11 = distinct !{!11, !7}
-; CHECK:!12 = distinct !{!12, !9}
+; CHECK:!5 = !{}

@@ -444,6 +444,9 @@ private:
   // Identify symbols exported dynamically, and that therefore could be
   // referenced by a shared library not visible to the linker.
   DenseSet<GlobalValue::GUID> DynamicExportSymbols;
+
+  // Diagnostic optimization remarks file
+  std::unique_ptr<ToolOutputFile> DiagnosticOutputFile;
 };
 
 /// The resolution for a symbol. The linker must provide a SymbolResolution for

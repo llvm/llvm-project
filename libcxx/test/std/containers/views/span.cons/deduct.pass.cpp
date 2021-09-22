@@ -28,60 +28,61 @@
 
 
 #include <span>
-#include <algorithm>
 #include <array>
 #include <cassert>
+#include <memory>
 #include <string>
-#include <type_traits>
 
 #include "test_macros.h"
-
-// std::array is explicitly allowed to be initialized with A a = { init-list };.
-// Disable the missing braces warning for this reason.
-#include "disable_missing_braces_warning.h"
 
 int main(int, char**)
 {
     {
     int arr[] = {1,2,3};
     std::span s{arr};
-    using S = decltype(s);
-    ASSERT_SAME_TYPE(S, std::span<int, 3>);
-    assert((std::equal(std::begin(arr), std::end(arr), s.begin(), s.end())));
+    ASSERT_SAME_TYPE(decltype(s), std::span<int, 3>);
+    assert(s.size() == std::size(arr));
+    assert(s.data() == std::data(arr));
+    }
+
+    {
+    const int arr[] = {1,2,3};
+    std::span s{arr};
+    ASSERT_SAME_TYPE(decltype(s), std::span<const int, 3>);
+    assert(s.size() == std::size(arr));
+    assert(s.data() == std::data(arr));
     }
 
     {
     std::array<double, 4> arr = {1.0, 2.0, 3.0, 4.0};
     std::span s{arr};
-    using S = decltype(s);
-    ASSERT_SAME_TYPE(S, std::span<double, 4>);
-    assert((std::equal(std::begin(arr), std::end(arr), s.begin(), s.end())));
+    ASSERT_SAME_TYPE(decltype(s), std::span<double, 4>);
+    assert(s.size() == arr.size());
+    assert(s.data() == arr.data());
     }
 
     {
     const std::array<long, 5> arr = {4, 5, 6, 7, 8};
     std::span s{arr};
-    using S = decltype(s);
-    ASSERT_SAME_TYPE(S, std::span<const long, 5>);
-    assert((std::equal(std::begin(arr), std::end(arr), s.begin(), s.end())));
+    ASSERT_SAME_TYPE(decltype(s), std::span<const long, 5>);
+    assert(s.size() == arr.size());
+    assert(s.data() == arr.data());
     }
 
     {
     std::string str{"ABCDE"};
     std::span s{str};
-    using S = decltype(s);
-    ASSERT_SAME_TYPE(S, std::span<char>);
-    assert((size_t)s.size() == str.size());
-    assert((std::equal(s.begin(), s.end(), std::begin(s), std::end(s))));
+    ASSERT_SAME_TYPE(decltype(s), std::span<char>);
+    assert(s.size() == str.size());
+    assert(s.data() == str.data());
     }
 
     {
     const std::string str{"QWERTYUIOP"};
     std::span s{str};
-    using S = decltype(s);
-    ASSERT_SAME_TYPE(S, std::span<const char>);
-    assert((size_t)s.size() == str.size());
-    assert((std::equal(s.begin(), s.end(), std::begin(s), std::end(s))));
+    ASSERT_SAME_TYPE(decltype(s), std::span<const char>);
+    assert(s.size() == str.size());
+    assert(s.data() == str.data());
     }
 
   return 0;

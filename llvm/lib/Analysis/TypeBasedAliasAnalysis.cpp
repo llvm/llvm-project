@@ -538,15 +538,6 @@ AAMDNodes AAMDNodes::concat(const AAMDNodes &Other) const {
   return Result;
 }
 
-AAMDNodes Instruction::getAAMetadata() const {
-  AAMDNodes Result;
-  Result.TBAA = getMetadata(LLVMContext::MD_tbaa);
-  Result.TBAAStruct = getMetadata(LLVMContext::MD_tbaa_struct);
-  Result.Scope = getMetadata(LLVMContext::MD_alias_scope);
-  Result.NoAlias = getMetadata(LLVMContext::MD_noalias);
-  return Result;
-}
-
 static const MDNode *createAccessTag(const MDNode *AccessType) {
   // If there is no access type or the access type is the root node, then
   // we don't have any useful access tag to return.

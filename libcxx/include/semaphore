@@ -82,7 +82,7 @@ class __atomic_semaphore_base
 
 public:
     _LIBCPP_INLINE_VISIBILITY
-    __atomic_semaphore_base(ptrdiff_t __count) : __a(__count)
+    constexpr explicit __atomic_semaphore_base(ptrdiff_t __count) : __a(__count)
     {
     }
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
@@ -136,7 +136,7 @@ class __platform_semaphore_base
 
 public:
     _LIBCPP_INLINE_VISIBILITY
-    __platform_semaphore_base(ptrdiff_t __count) :
+    explicit __platform_semaphore_base(ptrdiff_t __count) :
         __semaphore()
     {
         __libcpp_semaphore_init(&__semaphore, __count);
@@ -190,7 +190,7 @@ public:
     }
 
     _LIBCPP_INLINE_VISIBILITY
-    counting_semaphore(ptrdiff_t __count = 0) : __semaphore(__count) { }
+    constexpr explicit counting_semaphore(ptrdiff_t __count) : __semaphore(__count) { }
     ~counting_semaphore() = default;
 
     counting_semaphore(const counting_semaphore&) = delete;
