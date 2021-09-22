@@ -260,3 +260,20 @@ cond.end:
   %eq = icmp eq i32 %cond, %conv27
   ret i1 %eq
 }
+
+
+define i16 @extra_use_on_first_shift(i32 %x) {
+; CHECK-LABEL: @extra_use_on_first_shift(
+; CHECK-NEXT:    [[A:%.*]] = ashr i32 [[X:%.*]], 3
+; CHECK-NEXT:    call void @use32(i32 [[A]])
+; CHECK-NEXT:    [[SH1:%.*]] = lshr i32 [[A]], 6
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[SH1]] to i16
+; CHECK-NEXT:    [[SH:%.*]] = and i16 [[TMP1]], 1023
+; CHECK-NEXT:    ret i16 [[SH]]
+;
+  %a = ashr i32 %x, 3
+  call void @use32(i32 %a)
+  %tr = trunc i32 %a to i16
+  %sh = lshr i16 %tr, 6
+  ret i16 %sh
+}
