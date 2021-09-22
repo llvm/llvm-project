@@ -80,8 +80,11 @@ void AArch64Subtarget::initializeProperties() {
     break;
   case CortexA53:
   case CortexA55:
+    PrefFunctionLogAlignment = 4;
+    break;
   case CortexA510:
     PrefFunctionLogAlignment = 4;
+    VScaleForTuning = 1;
     break;
   case CortexA57:
     MaxInterleaveFactor = 4;
@@ -109,6 +112,7 @@ void AArch64Subtarget::initializeProperties() {
     PrefetchDistance = 128;
     MinPrefetchStride = 1024;
     MaxPrefetchIterationsAhead = 4;
+    VScaleForTuning = 4;
     break;
   case AppleA7:
   case AppleA10:
@@ -150,9 +154,15 @@ void AArch64Subtarget::initializeProperties() {
     PrefFunctionLogAlignment = 3;
     break;
   case NeoverseN1:
+    PrefFunctionLogAlignment = 4;
+    break;
   case NeoverseN2:
+    PrefFunctionLogAlignment = 4;
+    VScaleForTuning = 1;
+    break;
   case NeoverseV1:
     PrefFunctionLogAlignment = 4;
+    VScaleForTuning = 2;
     break;
   case Saphira:
     MaxInterleaveFactor = 4;
