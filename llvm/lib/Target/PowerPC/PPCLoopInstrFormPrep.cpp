@@ -532,13 +532,6 @@ bool PPCLoopInstrFormPrep::rewriteLoadStores(Loop *L, Bucket &BucketChain,
     return MadeChange;
   }
 
-  // Now we only handle update form for constant increment.
-  // FIXME: add support for non-constant increment UpdateForm.
-  if (!IsConstantInc && Form == UpdateForm) {
-    LLVM_DEBUG(dbgs() << "not a constant increment for update form!\n");
-    return MadeChange;
-  }
-
   // For some DS form load/store instructions, it can also be an update form,
   // if the stride is constant and is a multipler of 4. Use update form if
   // prefer it.
@@ -547,10 +540,13 @@ bool PPCLoopInstrFormPrep::rewriteLoadStores(Loop *L, Bucket &BucketChain,
        ((Form == DSForm) && IsConstantInc &&
         !BasePtrIncConstantSCEV->getAPInt().urem(4) && PreferUpdateForm));
   const SCEV *BasePtrStartSCEV = nullptr;
-  if (CanPreInc)
-    BasePtrStartSCEV =
-        SE->getMinusSCEV(BasePtrSCEV->getStart(), BasePtrIncConstantSCEV);
-  else
+  if (CanPreInc) {
+    assert(SE->isLoopInvariant(BasePtrIncSCEV, L) &&
+           "Increment is not loop invariant!\n");
+    BasePtrStartSCEV = SE->getMinusSCEV(BasePtrSCEV->getStart(),
+                                        IsConstantInc ? BasePtrIncConstantSCEV
+                                                      : BasePtrIncSCEV);
+  } else
     BasePtrStartSCEV = BasePtrSCEV->getStart();
 
   if (!isSafeToExpand(BasePtrStartSCEV, *SE))
@@ -588,12 +584,10 @@ bool PPCLoopInstrFormPrep::rewriteLoadStores(Loop *L, Bucket &BucketChain,
   Instruction *PtrInc = nullptr;
   Instruction *NewBasePtr = nullptr;
   if (CanPreInc) {
-    assert(BasePtrIncConstantSCEV &&
-           "update form now only supports constant increment.");
     Instruction *InsPoint = &*Header->getFirstInsertionPt();
-    PtrInc = GetElementPtrInst::Create(
-        I8Ty, NewPHI, BasePtrIncConstantSCEV->getValue(),
-        getInstrName(MemI, GEPNodeIncNameSuffix), InsPoint);
+    PtrInc = GetElementPtrInst::Create(I8Ty, NewPHI, IncNode,
+                                       getInstrName(MemI, GEPNodeIncNameSuffix),
+                                       InsPoint);
     cast<GetElementPtrInst>(PtrInc)->setIsInBounds(IsPtrInBounds(BasePtr));
     for (auto PI : predecessors(Header)) {
       if (PI == LoopPredecessor)
