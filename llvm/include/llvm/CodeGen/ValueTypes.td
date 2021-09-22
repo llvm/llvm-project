@@ -244,7 +244,7 @@ def Any        : ValueType<0, 255>;
 /// This class is for targets that want to use pointer types in patterns
 /// with the GlobalISelEmitter.  Targets must define their own pointer
 /// derived from this class.  The scalar argument should be an
-/// integer type with the same bit size as the ponter.
+/// integer type with the same bit size as the pointer.
 /// e.g. def p0 : PtrValueType <i64, 0>;
 
 class PtrValueType <ValueType scalar, int addrspace> :
