@@ -12,6 +12,9 @@ For libc++, please make sure you follow `these instructions <https://www.llvm.or
 for submitting a code review from the command-line using ``arc``, since we have some
 automation (e.g. CI) that depends on the review being submitted that way.
 
+If you plan on contributing to libc++, it can be useful to join the ``#libcxx`` channel
+on `LLVM's Discord server <https://discord.gg/jzUbyP26tQ>`__.
+
 Looking for pre-existing reviews
 ================================
 
