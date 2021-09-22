@@ -388,6 +388,9 @@ module LLVM_Transforms {
   umbrella "Transforms"
 
   module * { export * }
+
+  // Requires DEBUG_TYPE to be defined by including file.
+  exclude header "Transforms/Utils/InstructionWorklist.h"
 }
 
 extern module LLVM_Extern_Utils_DataTypes "module.extern.modulemap"
