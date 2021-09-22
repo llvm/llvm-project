@@ -8,12 +8,11 @@ declare void @g2()
 
 define void @f(i8* %a, i8* %b, i1 %c, i1 %d, i1 %e) {
 ; CHECK-LABEL: @f(
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[L1:%.*]], label [[L3:%.*]]
-; CHECK:       l1:
 ; CHECK-NEXT:    [[A1:%.*]] = call i8* @llvm.strip.invariant.group.p0i8(i8* [[A:%.*]])
 ; CHECK-NEXT:    [[B1:%.*]] = call i8* @llvm.strip.invariant.group.p0i8(i8* [[B:%.*]])
 ; CHECK-NEXT:    [[I:%.*]] = icmp eq i8* [[A1]], [[B1]]
-; CHECK-NEXT:    br i1 [[I]], label [[L2:%.*]], label [[L3]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[C:%.*]], i1 [[I]], i1 false
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[L2:%.*]], label [[L3:%.*]]
 ; CHECK:       l2:
 ; CHECK-NEXT:    call void @g1()
 ; CHECK-NEXT:    br label [[RET:%.*]]
