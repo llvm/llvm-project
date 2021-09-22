@@ -13,12 +13,13 @@ declare void @llvm.riscv.vse.nxv1i64(
 define i64 @test(<vscale x 1 x i64> %0) nounwind {
   ; CHECK-LABEL: name: test
   ; CHECK: bb.0.entry:
-  ; CHECK:   liveins: $v8
-  ; CHECK:   [[COPY:%[0-9]+]]:vr = COPY $v8
-  ; CHECK:   PseudoVSE64_V_M1 [[COPY]], %stack.0.a, 1, 6
-  ; CHECK:   [[LD:%[0-9]+]]:gpr = LD %stack.0.a, 0 :: (dereferenceable load (s64) from %ir.a)
-  ; CHECK:   $x10 = COPY [[LD]]
-  ; CHECK:   PseudoRET implicit $x10
+  ; CHECK-NEXT:   liveins: $v8
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vr = COPY $v8
+  ; CHECK-NEXT:   PseudoVSE64_V_M1 [[COPY]], %stack.0.a, 1, 6
+  ; CHECK-NEXT:   [[LD:%[0-9]+]]:gpr = LD %stack.0.a, 0 :: (dereferenceable load (s64) from %ir.a)
+  ; CHECK-NEXT:   $x10 = COPY [[LD]]
+  ; CHECK-NEXT:   PseudoRET implicit $x10
 entry:
   %a = alloca i64
   %b = bitcast i64* %a to <vscale x 1 x i64>*
