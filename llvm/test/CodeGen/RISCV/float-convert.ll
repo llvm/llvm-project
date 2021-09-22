@@ -72,7 +72,6 @@ define i32 @fcvt_wu_s(float %a) nounwind {
 
 ; Test where the fptoui has multiple uses, one of which causes a sext to be
 ; inserted on RV64.
-; FIXME: We should not have an fcvt.wu.s and an fcvt.lu.s.
 define i32 @fcvt_wu_s_multiple_use(float %x, i32* %y) {
 ; RV32IF-LABEL: fcvt_wu_s_multiple_use:
 ; RV32IF:       # %bb.0:
