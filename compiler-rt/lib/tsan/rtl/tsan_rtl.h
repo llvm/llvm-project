@@ -558,6 +558,7 @@ struct Context {
   ClockAlloc clock_alloc;
 
   Flags flags;
+  fd_t memprof_fd;
 
   Mutex slot_mtx;
 };
