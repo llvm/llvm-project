@@ -107,6 +107,10 @@ template <typename A> int ExpressionBase<A>::Rank() const {
       derived().u);
 }
 
+DynamicType Parentheses<SomeDerived>::GetType() const {
+  return left().GetType().value();
+}
+
 // Equality testing
 
 bool ImpliedDoIndex::operator==(const ImpliedDoIndex &that) const {
