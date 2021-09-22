@@ -1955,6 +1955,13 @@ public:
   const ObjCIvarDecl *getNextIvar() const { return NextIvar; }
   void setNextIvar(ObjCIvarDecl *ivar) { NextIvar = ivar; }
 
+  ObjCIvarDecl *getCanonicalDecl() override {
+    return cast<ObjCIvarDecl>(FieldDecl::getCanonicalDecl());
+  }
+  const ObjCIvarDecl *getCanonicalDecl() const {
+    return const_cast<ObjCIvarDecl *>(this)->getCanonicalDecl();
+  }
+
   void setAccessControl(AccessControl ac) { DeclAccess = ac; }
 
   AccessControl getAccessControl() const { return AccessControl(DeclAccess); }
