@@ -71,6 +71,9 @@ public:
 
   ConstString GetFullNameForDylib(ConstString basename) override;
 
+  size_t GetSoftwareBreakpointTrapOpcode(Target &target,
+                                         BreakpointSite *bp_site) override;
+
 private:
   lldb_private::Status EvaluateLoaderExpression(lldb_private::Process *process,
                                                 const char *expression,
