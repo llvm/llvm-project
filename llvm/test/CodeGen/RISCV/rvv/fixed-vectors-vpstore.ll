@@ -255,3 +255,15 @@ define void @vpstore_v8f64(<8 x double> %val, <8 x double>* %ptr, <8 x i1> %m, i
   call void @llvm.vp.store.v8f64(<8 x double> %val, <8 x double>* %ptr, <8 x i1> %m, i32 %evl)
   ret void
 }
+
+define void @vpstore_v2i8_allones_mask(<2 x i8> %val, <2 x i8>* %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: vpstore_v2i8_allones_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
+; CHECK-NEXT:    vse8.v v8, (a0)
+; CHECK-NEXT:    ret
+  %a = insertelement <2 x i1> undef, i1 true, i32 0
+  %b = shufflevector <2 x i1> %a, <2 x i1> poison, <2 x i32> zeroinitializer
+  call void @llvm.vp.store.v2i8(<2 x i8> %val, <2 x i8>* %ptr, <2 x i1> %b, i32 %evl)
+  ret void
+}
