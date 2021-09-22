@@ -26,7 +26,7 @@ struct _LIBCPP_TEMPLATE_VIS allocator_arg_t { explicit allocator_arg_t() = defau
 #if defined(_LIBCPP_CXX03_LANG) || defined(_LIBCPP_BUILDING_LIBRARY)
 extern _LIBCPP_EXPORTED_FROM_ABI const allocator_arg_t allocator_arg;
 #else
-/* _LIBCPP_INLINE_VAR */ constexpr allocator_arg_t allocator_arg = allocator_arg_t();
+/* inline */ constexpr allocator_arg_t allocator_arg = allocator_arg_t();
 #endif
 
 #ifndef _LIBCPP_CXX03_LANG

@@ -165,7 +165,7 @@ struct _LIBCPP_TEMPLATE_VIS is_error_code_enum
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp>
-_LIBCPP_INLINE_VAR constexpr size_t is_error_code_enum_v = is_error_code_enum<_Tp>::value;
+inline constexpr size_t is_error_code_enum_v = is_error_code_enum<_Tp>::value;
 #endif
 
 // is_error_condition_enum
@@ -176,7 +176,7 @@ struct _LIBCPP_TEMPLATE_VIS is_error_condition_enum
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp>
-_LIBCPP_INLINE_VAR constexpr size_t is_error_condition_enum_v = is_error_condition_enum<_Tp>::value;
+inline constexpr size_t is_error_condition_enum_v = is_error_condition_enum<_Tp>::value;
 #endif
 
 template <>
