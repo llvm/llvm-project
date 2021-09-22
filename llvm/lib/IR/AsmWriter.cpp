@@ -2401,6 +2401,9 @@ static void writeDIExpr(raw_ostream &Out, const DIExpr *N,
               },
               [&](DIOp::Extend Extend) { Out << Extend.getCount(); },
               [&](DIOp::AddrOf AddrOf) { Out << AddrOf.getAddressSpace(); },
+              [&](DIOp::Deref Deref) {
+                WriterCtx.TypePrinter->print(Deref.getResultType(), Out);
+              },
               [&](DIOp::PushLane PushLane) {
                 WriterCtx.TypePrinter->print(PushLane.getResultType(), Out);
               }),

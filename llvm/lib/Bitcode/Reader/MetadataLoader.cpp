@@ -2148,6 +2148,16 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         Elems = Elems.slice(1);
         break;
       }
+      case DIOp::Deref::getBitcodeID(): {
+        if (Elems.size() < 1)
+          return error("Invalid record");
+        Type *Ty = getTypeByID(Elems[0]);
+        if (!Ty || !Ty->isFirstClassType())
+          return error("Invalid record");
+        Builder.append<DIOp::Deref>(Ty);
+        Elems = Elems.slice(1);
+        break;
+      }
       case DIOp::PushLane::getBitcodeID(): {
         if (Elems.size() < 1)
           return error("Invalid record");

@@ -4549,15 +4549,27 @@ llvm::DILocalVariable *CGDebugInfo::EmitDef(const VarDecl *VD,
   if (!Ty)
     return nullptr;
 
+  // FIXME: This was previously hard-coded, but we should be deriving this from
+  // the blocks somehow. Can this differ between the referrer alloca block ref
+  // and the block ref pointed to by __forwarding?
+  unsigned BlockAddressSpace = 0;
+
   llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
   if (Unwritten)
     Flags |= llvm::DINode::FlagArtificial;
 
   auto Align = getDeclAlignIfRequired(VD, CGM.getContext());
+  StringRef Name = VD->getName();
+
+  llvm::Type *VDMemTy = CGM.getTypes().ConvertTypeForMem(VD->getType());
+  llvm::Type *BlockPtrTy =
+      llvm::Type::getInt8PtrTy(CGM.getLLVMContext(), BlockAddressSpace);
 
   llvm::DIExprBuilder ExprBuilder(CGM.getLLVMContext());
   ExprBuilder.append<llvm::DIOp::Referrer>(Storage->getType());
-  ExprBuilder.append<llvm::DIOp::Deref>();
+  llvm::Type *ReferrerPointeeTy =
+      (!Name.empty() && VD->isEscapingByref()) ? BlockPtrTy : VDMemTy;
+  ExprBuilder.append<llvm::DIOp::Deref>(ReferrerPointeeTy);
 
   // If this is implicit parameter of CXXThis or ObjCSelf kind, then give it an
   // object pointer flag.
@@ -4568,29 +4580,25 @@ llvm::DILocalVariable *CGDebugInfo::EmitDef(const VarDecl *VD,
   }
 
   auto *Scope = cast<llvm::DIScope>(LexicalBlockStack.back());
-  StringRef Name = VD->getName();
   if (!Name.empty()) {
     // __block vars are stored on the heap if they are captured by a block that
     // can escape the local scope.
     if (VD->isEscapingByref()) {
-      // Here, we need an offset *into* the alloca.
-      CharUnits offset = CharUnits::fromQuantity(32);
-      // offset of __forwarding field
-      offset = CGM.getContext().toCharUnitsFromBits(
-          CGM.getTarget().getPointerWidth(0));
-      ExprBuilder.append<llvm::DIOp::Constant>(
-          llvm::ConstantInt::get(llvm::Type::getInt64Ty(CGM.getLLVMContext()),
-                                 offset.getQuantity()));
-      ExprBuilder.append<llvm::DIOp::ByteOffset>(
-          llvm::Type::getInt64Ty(CGM.getLLVMContext()));
-      ExprBuilder.append<llvm::DIOp::Deref>();
+      auto ToChars = [&](uint64_t BitSize) {
+        return CGM.getContext().toCharUnitsFromBits(BitSize).getQuantity();
+      };
+      auto *Int64Ty = llvm::Type::getInt64Ty(CGM.getLLVMContext());
+      // offset to __forwarding field
+      ExprBuilder.append<llvm::DIOp::Constant>(llvm::ConstantInt::get(
+          Int64Ty,
+          ToChars(CGM.getTarget().getPointerWidth(BlockAddressSpace))));
+      ExprBuilder.append<llvm::DIOp::ByteOffset>(BlockPtrTy);
+      // follow __forwarding field
+      ExprBuilder.append<llvm::DIOp::Deref>(BlockPtrTy);
       // offset of x field
-      offset = CGM.getContext().toCharUnitsFromBits(XOffset);
       ExprBuilder.append<llvm::DIOp::Constant>(
-          llvm::ConstantInt::get(llvm::Type::getInt64Ty(CGM.getLLVMContext()),
-                                 offset.getQuantity()));
-      ExprBuilder.append<llvm::DIOp::ByteOffset>(
-          llvm::Type::getInt64Ty(CGM.getLLVMContext()));
+          llvm::ConstantInt::get(Int64Ty, ToChars(XOffset)));
+      ExprBuilder.append<llvm::DIOp::ByteOffset>(VDMemTy);
     }
   } else if (const auto *RT = dyn_cast<RecordType>(VD->getType())) {
     // If VD is an anonymous union then Storage represents value for
@@ -4632,7 +4640,7 @@ llvm::DILocalVariable *CGDebugInfo::EmitDef(const VarDecl *VD,
   // Use DW_OP_deref to tell the debugger to load the pointer and treat it as
   // the address of the variable.
   if (UsePointerValue)
-    ExprBuilder.append<llvm::DIOp::Deref>();
+    ExprBuilder.append<llvm::DIOp::Deref>(VDMemTy);
 
   llvm::DILocalVariable *D = nullptr;
   if (ArgNo) {
@@ -5351,7 +5359,7 @@ void CGDebugInfo::EmitGlobalVariableForHeterogeneousDwarf(
     // Create DIExpr.
     llvm::DIExprBuilder ExprBuilder(CGM.getLLVMContext());
     ExprBuilder.append<llvm::DIOp::Arg>(0, Var->getType());
-    ExprBuilder.append<llvm::DIOp::Deref>();
+    ExprBuilder.append<llvm::DIOp::Deref>(Var->getValueType());
 
     // Create DIGlobalVariable.
     GV = DBuilder.createGlobalVariable(

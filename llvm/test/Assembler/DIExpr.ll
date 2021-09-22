@@ -15,7 +15,7 @@
 ; CHECK-SAME: !DIExpr(DIOpExtend(6)),
 ; CHECK-SAME: !DIExpr(DIOpSelect()),
 ; CHECK-SAME: !DIExpr(DIOpAddrOf(1)),
-; CHECK-SAME: !DIExpr(DIOpDeref()),
+; CHECK-SAME: !DIExpr(DIOpDeref(i32)),
 ; CHECK-SAME: !DIExpr(DIOpRead()),
 ; CHECK-SAME: !DIExpr(DIOpAdd()),
 ; CHECK-SAME: !DIExpr(DIOpSub()),
@@ -41,7 +41,7 @@
 !10 = !DIExpr(DIOpExtend(6))
 !11 = !DIExpr(DIOpSelect())
 !12 = !DIExpr(DIOpAddrOf(1))
-!13 = !DIExpr(DIOpDeref())
+!13 = !DIExpr(DIOpDeref(i32))
 !14 = !DIExpr(DIOpRead())
 !15 = !DIExpr(DIOpAdd())
 !16 = !DIExpr(DIOpSub())

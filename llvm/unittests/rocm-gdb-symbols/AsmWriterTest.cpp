@@ -102,8 +102,8 @@ TEST_F(DIExprAsmWriterTest, AddrOf) {
 }
 
 TEST_F(DIExprAsmWriterTest, Deref) {
-  Builder.append<DIOp::Deref>().intoExpr()->print(OS);
-  EXPECT_EQ("!DIExpr(DIOpDeref())", OS.str());
+  Builder.append<DIOp::Deref>(Int64Ty).intoExpr()->print(OS);
+  EXPECT_EQ("!DIExpr(DIOpDeref(i64))", OS.str());
 }
 
 TEST_F(DIExprAsmWriterTest, Read) {

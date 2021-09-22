@@ -1025,15 +1025,15 @@ expression is not well-formed.
 .. code:: llvm
 
    DIOpAddrOf(N:addrspace)
-   { (L:T) -> (L':T addrspace(N)*) }
+   { (L:T) -> (L':ptr addrspace(N)) }
 
 ``L'`` comprises one implicit address location description ``IAL``. ``IAL``
 specifies implicit address location storage ``IALS`` and offset 0.
 
-``IALS`` is ``bitsizeof(T addrspace(N)*)`` bits and conceptually holds a
-reference to the storage that ``L`` denotes. If ``DIOpDeref`` is applied to the
-resulting ``(L':T addrspace(N)*)``, then it will result in ``(L:T)``. If any
-other operation is applied, then the expression is not well-formed.
+``IALS`` is ``bitsizeof(ptr addrspace(N))`` bits and conceptually holds a
+reference to the storage that ``L`` denotes. If ``DIOpDeref(T)`` is applied to
+the resulting ``(L':ptr addrspace(N))``, then it will result in ``(L:T)``. If
+any other operation is applied, then the expression is not well-formed.
 
 *[Note:* ``DIOpAddrOf`` *can be used for any location description kind of*
 ``L``\ *, not just memory location descriptions.]*
@@ -1053,14 +1053,14 @@ situations, or by adding additional DWARF extensions.]*
 
 .. code:: llvm
 
-   DIOpDeref()
-   { (L:T addrspace(N)*) -> (L':T) }
+   DIOpDeref(T:type)
+   { (L:ptr addrspace(N)) -> (L':T) }
 
-If ``(L:T addrspace(N)*)`` was produced by a ``DIOpAddrOf`` operation, then see
-:ref:`amdgpu-llvm-debug-diopaddrof`:.
+If ``(L:ptr addrspace(N))`` was produced by a ``DIOpAddrOf`` operation, then
+see :ref:`amdgpu-llvm-debug-diopaddrof`:.
 
 Otherwise, ``L'`` comprises one memory location description ``MLD``. ``MLD``
-specifies bit offset ``read(L, T addrspace(N)*) * 8`` and the memory location
+specifies bit offset ``read(L, ptr addrspace(N)) * 8`` and the memory location
 storage corresponding to address space ``N``.
 
 ``DIOpRead``
@@ -1274,7 +1274,7 @@ Variable Located In An ``alloca``
 
 The frontend will generate ``alloca``\ s for every variable, and can trivially
 insert a single ``DILifetime`` covering the whole body of the function, with the
-expression ``DIExpr(DIOpReferrer(<type>*), DIOpDeref()``, referring to the
+expression ``DIExpr(DIOpReferrer(<type>*), DIOpDeref(<type>)``, referring to the
 ``alloca``. Walking the debug intrinsics provides the necessary information to
 generate the DWARF ``DW_AT_location`` attributes on variables.
 
@@ -1288,7 +1288,7 @@ generate the DWARF ``DW_AT_location`` attributes on variables.
    call void @llvm.dbg.kill(metadata !2)
 
    !1 = !DILocalVariable("x", ...)
-   !2 = distinct !DILifetime(object: !1, location: !DIExpr(DIOpReferrer(i64 addrspace(5)*), DIOpDeref()))
+   !2 = distinct !DILifetime(object: !1, location: !DIExpr(DIOpReferrer(i64 addrspace(5)*), DIOpDeref(i64)))
 
 Variable Promoted To An SSA Register
 ------------------------------------
@@ -1308,10 +1308,10 @@ An example is ``mem2reg`` where an ``alloca`` can be replaced with an SSA value:
    call void @llvm.dbg.kill(metadata !2)
 
    !1 = !DILocalVariable("x", ...)
-   !2 = distinct !DILifetime(object: !1, location: !DIExpr(DIOpReferrer(i64), DIOpAddrOf(5), DIOpDeref()))
+   !2 = distinct !DILifetime(object: !1, location: !DIExpr(DIOpReferrer(i64), DIOpAddrOf(5), DIOpDeref(i64)))
 
 The canonical form of this is then just ``DIOpReferrer(i64)`` as the pair of
-``DIOpAddrOf(N)``, ``DIOpDeref()`` cancel out:
+``DIOpAddrOf(N)``, ``DIOpDeref(i64)`` cancel out:
 
 .. code:: llvm
    :number-lines:
@@ -1352,9 +1352,9 @@ non-memory object.
    ret i64 %1
 
    !1 = !DILocalVariable("x", ...)
-   !2 = distinct !DILifetime(object: !1, location: !DIExpr(DIOpReferrer(i64 addrspace(5)*), DIOpDeref()))
+   !2 = distinct !DILifetime(object: !1, location: !DIExpr(DIOpReferrer(i64 addrspace(5)*), DIOpDeref(i64)))
    !3 = !DILocalVariable("p", ...)
-   !4 = distinct !DILifetime(object: !3, location: !DIExpr(DIOpReferrer(i64 addrspace(5)* addrspace(5)*), DIOpDeref()))
+   !4 = distinct !DILifetime(object: !3, location: !DIExpr(DIOpReferrer(i64 addrspace(5)* addrspace(5)*), DIOpDeref(i64 addrspace(5)*)))
 
 *[Note: The* ``llvm.dbg.def`` *could either be placed after the* ``alloca`` *or
 after the* ``store`` *that defines the variables initial value. The difference
@@ -1376,9 +1376,9 @@ First round of ``mem2reg`` promotes ``%p.addr`` to an SSA register ``%p``:
    return i64 %0
 
    !1 = !DILocalVariable("x", ...)
-   !2 = distinct !DILifetime(object: !1, location: !DIExpr(DIOpReferrer(i64 addrspace(5)*), DIOpDeref()))
+   !2 = distinct !DILifetime(object: !1, location: !DIExpr(DIOpReferrer(i64 addrspace(5)*), DIOpDeref(i64)))
    !3 = !DILocalVariable("p", ...)
-   !4 = distinct !DILifetime(object: !3, location: !DIExpr(DIOpReferrer(i64 addrspace(5)*), DIOpAddrOf(5), DIOpDeref()))
+   !4 = distinct !DILifetime(object: !3, location: !DIExpr(DIOpReferrer(i64 addrspace(5)*), DIOpAddrOf(5), DIOpDeref(i64 addrspace(5)*)))
 
 Simplify by eliminating ``%p`` and directly using ``%x.addr``:
 
@@ -1393,7 +1393,7 @@ Simplify by eliminating ``%p`` and directly using ``%x.addr``:
    return i64 %0
 
    !1 = !DILocalVariable("x", ...)
-   !2 = distinct !DILifetime(object: !1, location: !DIExpr(DIOpReferrer(i64 addrspace(5)*), DIOpDeref()))
+   !2 = distinct !DILifetime(object: !1, location: !DIExpr(DIOpReferrer(i64 addrspace(5)*), DIOpDeref(i64)))
    !3 = !DILocalVariable("p", ...)
    !4 = distinct !DILifetime(object: !3, location: !DIExpr(DIOpReferrer(i64 addrspace(5)*)))
 
@@ -1409,12 +1409,12 @@ Second round of ``mem2reg`` promotes ``%x.addr`` to an SSA register ``%x``:
    return i64 %0
 
    !1 = !DILocalVariable("x", ...)
-   !2 = distinct !DILifetime(object: !1, location: !DIExpr(DIOpReferrer(i64), DIOpAddrOf(5), DIOpDeref()))
+   !2 = distinct !DILifetime(object: !1, location: !DIExpr(DIOpReferrer(i64), DIOpAddrOf(5), DIOpDeref(i64)))
    !3 = !DILocalVariable("p", ...)
    !4 = distinct !DILifetime(object: !3, location: !DIExpr(DIOpReferrer(i64), DIOpAddrOf(5)))
 
-Simplify by eliminating adjacent ``DIOpAddrOf(5), DIOpDeref()`` and use ``%x``
-directly in the ``return``:
+Simplify by eliminating adjacent ``DIOpAddrOf(5), DIOpDeref(i64)`` and use
+``%x`` directly in the ``return``:
 
 .. code:: llvm
    :number-lines:
@@ -2484,7 +2484,7 @@ spill %x:
    call void @llvm.dbg.kill(metadata !1)
 
    !0 = !DILocalVariable("x")
-   !1 = distinct !DILifetime(object: !0, location: !DIExpr(DIOpReferrer(i32 addrspace(5)*), DIOpDeref()))
+   !1 = distinct !DILifetime(object: !0, location: !DIExpr(DIOpReferrer(i32 addrspace(5)*), DIOpDeref(i32)))
 
 ..
 

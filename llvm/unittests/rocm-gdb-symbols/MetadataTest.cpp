@@ -232,8 +232,9 @@ TEST_F(DIExprOpsTest, AddrOf) {
 }
 
 TEST_F(DIExprOpsTest, Deref) {
-  DIOp::Variant V{in_place_type<DIOp::Deref>};
+  DIOp::Variant V{in_place_type<DIOp::Deref>, Int64Ty};
   ASSERT_TRUE(V.holdsAlternative<DIOp::Deref>());
+  ASSERT_EQ(V.get<DIOp::Deref>().getResultType(), Int64Ty);
 }
 
 TEST_F(DIExprOpsTest, Read) {

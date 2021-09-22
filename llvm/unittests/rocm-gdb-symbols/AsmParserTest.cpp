@@ -126,9 +126,9 @@ TEST_F(DIExprAsmParserTest, AddrOf) {
 }
 
 TEST_F(DIExprAsmParserTest, Deref) {
-  parseNamedDIExpr(R"(!named = !{!DIExpr(DIOpDeref())})");
+  parseNamedDIExpr(R"(!named = !{!DIExpr(DIOpDeref(i32))})");
   ASSERT_EQ(SmallVector<DIOp::Variant>(Expr->builder().range()),
-            SmallVector<DIOp::Variant>({DIOp::Deref()}));
+            SmallVector<DIOp::Variant>({DIOp::Deref(Int32Ty)}));
 }
 
 TEST_F(DIExprAsmParserTest, Read) {

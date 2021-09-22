@@ -5188,6 +5188,11 @@ bool LLParser::parseDIExpr(MDNode *&Result, bool IsDistinct) {
         if (parseUInt32(I))
           return true;
         Builder.append<DIOp::AddrOf>(I);
+      } else if (Name == DIOp::Deref::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::Deref>(Ty);
       } else if (Name == DIOp::PushLane::getAsmName()) {
         Type *Ty = nullptr;
         if (parseFirstClassType(Ty))

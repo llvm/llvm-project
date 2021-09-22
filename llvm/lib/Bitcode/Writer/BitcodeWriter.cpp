@@ -2088,6 +2088,9 @@ void ModuleBitcodeWriter::writeDIExpr(const DIExpr *N,
               [&](DIOp::AddrOf AddrOf) {
                 Record.push_back(AddrOf.getAddressSpace());
               },
+              [&](DIOp::Deref Deref) {
+                Record.push_back(VE.getTypeID(Deref.getResultType()));
+              },
               [&](DIOp::PushLane PushLane) {
                 Record.push_back(VE.getTypeID(PushLane.getResultType()));
               }),
