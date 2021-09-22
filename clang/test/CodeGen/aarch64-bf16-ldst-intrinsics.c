@@ -53,11 +53,11 @@ bfloat16x4_t test_vld1_dup_bf16(bfloat16_t const *ptr) {
 // CHECK-LABEL: test_vld1_dup_bf16
 // CHECK64: %0 = load bfloat, bfloat* %ptr, align 2
 // CHECK64-NEXT: %1 = insertelement <4 x bfloat> undef, bfloat %0, i32 0
-// CHECK64-NEXT: %lane = shufflevector <4 x bfloat> %1, <4 x bfloat> undef, <4 x i32> zeroinitializer
+// CHECK64-NEXT: %lane = shufflevector <4 x bfloat> %1, <4 x bfloat> poison, <4 x i32> zeroinitializer
 // CHECK64-NEXT: ret <4 x bfloat> %lane
 // CHECK32: %0 = load bfloat, bfloat* %ptr, align 2
 // CHECK32-NEXT: %1 = insertelement <4 x bfloat> undef, bfloat %0, i32 0
-// CHECK32-NEXT: %lane = shufflevector <4 x bfloat> %1, <4 x bfloat> undef, <4 x i32> zeroinitializer
+// CHECK32-NEXT: %lane = shufflevector <4 x bfloat> %1, <4 x bfloat> poison, <4 x i32> zeroinitializer
 // CHECK32-NEXT: ret <4 x bfloat> %lane
 
 bfloat16x4x2_t test_vld1_bf16_x2(bfloat16_t const *ptr) {
@@ -108,11 +108,11 @@ bfloat16x8_t test_vld1q_dup_bf16(bfloat16_t const *ptr) {
 // CHECK-LABEL: test_vld1q_dup_bf16
 // CHECK64: %0 = load bfloat, bfloat* %ptr, align 2
 // CHECK64-NEXT: %1 = insertelement <8 x bfloat> undef, bfloat %0, i32 0
-// CHECK64-NEXT: %lane = shufflevector <8 x bfloat> %1, <8 x bfloat> undef, <8 x i32> zeroinitializer
+// CHECK64-NEXT: %lane = shufflevector <8 x bfloat> %1, <8 x bfloat> poison, <8 x i32> zeroinitializer
 // CHECK64-NEXT: ret <8 x bfloat> %lane
 // CHECK32: %0 = load bfloat, bfloat* %ptr, align 2
 // CHECK32-NEXT: %1 = insertelement <8 x bfloat> undef, bfloat %0, i32 0
-// CHECK32-NEXT: %lane = shufflevector <8 x bfloat> %1, <8 x bfloat> undef, <8 x i32> zeroinitializer
+// CHECK32-NEXT: %lane = shufflevector <8 x bfloat> %1, <8 x bfloat> poison, <8 x i32> zeroinitializer
 // CHECK32-NEXT: ret <8 x bfloat> %lane
 
 bfloat16x4x2_t test_vld2_bf16(bfloat16_t const *ptr) {

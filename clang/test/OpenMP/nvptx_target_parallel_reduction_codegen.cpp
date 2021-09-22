@@ -12,9 +12,9 @@
 // CHECK-DAG: [[TRANSFER_STORAGE:@.+]] = weak addrspace([[SHARED_ADDRSPACE:[0-9]+]]) global [32 x i32]
 
 // Check that the execution mode of all 3 target regions is set to Spmd Mode.
-// CHECK-DAG: {{@__omp_offloading_.+l27}}_exec_mode = weak constant i8 0
-// CHECK-DAG: {{@__omp_offloading_.+l32}}_exec_mode = weak constant i8 0
-// CHECK-DAG: {{@__omp_offloading_.+l38}}_exec_mode = weak constant i8 0
+// CHECK-DAG: {{@__omp_offloading_.+l27}}_exec_mode = weak constant i8 2
+// CHECK-DAG: {{@__omp_offloading_.+l32}}_exec_mode = weak constant i8 2
+// CHECK-DAG: {{@__omp_offloading_.+l38}}_exec_mode = weak constant i8 2
 
 template<typename tx>
 tx ftemplate(int n) {
@@ -54,8 +54,8 @@ int bar(int n){
 
 // CHECK: define {{.*}}void {{@__omp_offloading_.+template.+l27}}(
 //
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
-// CHECK: call void @__kmpc_target_deinit({{.*}}, i1 true, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
+// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2, i1 true)
 //
 //
 // define internal void [[PFN]](
@@ -233,8 +233,8 @@ int bar(int n){
 
 // CHECK: define {{.*}}void {{@__omp_offloading_.+template.+l32}}(
 //
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
-// CHECK: call void @__kmpc_target_deinit({{.*}}, i1 true, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
+// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2, i1 true)
 //
 //
 // define internal void [[PFN1]](
@@ -490,8 +490,8 @@ int bar(int n){
 
 // CHECK: define {{.*}}void {{@__omp_offloading_.+template.+l38}}(
 //
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
-// CHECK: call void @__kmpc_target_deinit({{.*}}, i1 true, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
+// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2, i1 true)
 //
 //
 // define internal void [[PFN2]](

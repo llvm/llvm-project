@@ -36,6 +36,11 @@ extern "C" void __tsan_resume() {
 
 namespace __tsan {
 
+#if !SANITIZER_GO
+void (*on_initialize)(void);
+int (*on_finalize)(int);
+#endif
+
 #if !SANITIZER_GO && !SANITIZER_MAC
 __attribute__((tls_model("initial-exec")))
 THREADLOCAL char cur_thread_placeholder[sizeof(ThreadState)] ALIGNED(64);
@@ -52,17 +57,16 @@ void OnInitialize();
 SANITIZER_WEAK_CXX_DEFAULT_IMPL
 bool OnFinalize(bool failed) {
 #if !SANITIZER_GO
-  if (auto *ptr = dlsym(RTLD_DEFAULT, "__tsan_on_finalize"))
-    return reinterpret_cast<decltype(&__tsan_on_finalize)>(ptr)(failed);
+  if (on_finalize)
+    return on_finalize(failed);
 #endif
   return failed;
 }
 SANITIZER_WEAK_CXX_DEFAULT_IMPL
 void OnInitialize() {
 #if !SANITIZER_GO
-  if (auto *ptr = dlsym(RTLD_DEFAULT, "__tsan_on_initialize")) {
-    return reinterpret_cast<decltype(&__tsan_on_initialize)>(ptr)();
-  }
+  if (on_initialize)
+    on_initialize();
 #endif
 }
 #endif
@@ -145,13 +149,35 @@ ThreadState::ThreadState(Context *ctx, Tid tid, int unique_id, u64 epoch,
 }
 
 #if !SANITIZER_GO
-static void MemoryProfiler(Context *ctx, fd_t fd, int i) {
-  uptr n_threads;
-  uptr n_running_threads;
-  ctx->thread_registry.GetNumberOfThreads(&n_threads, &n_running_threads);
+void MemoryProfiler(u64 uptime) {
+  if (ctx->memprof_fd == kInvalidFd)
+    return;
   InternalMmapVector<char> buf(4096);
-  WriteMemoryProfile(buf.data(), buf.size(), n_threads, n_running_threads);
-  WriteToFile(fd, buf.data(), internal_strlen(buf.data()));
+  WriteMemoryProfile(buf.data(), buf.size(), uptime);
+  WriteToFile(ctx->memprof_fd, buf.data(), internal_strlen(buf.data()));
+}
+
+void InitializeMemoryProfiler() {
+  ctx->memprof_fd = kInvalidFd;
+  const char *fname = flags()->profile_memory;
+  if (!fname || !fname[0])
+    return;
+  if (internal_strcmp(fname, "stdout") == 0) {
+    ctx->memprof_fd = 1;
+  } else if (internal_strcmp(fname, "stderr") == 0) {
+    ctx->memprof_fd = 2;
+  } else {
+    InternalScopedString filename;
+    filename.append("%s.%d", fname, (int)internal_getpid());
+    ctx->memprof_fd = OpenFile(filename.data(), WrOnly);
+    if (ctx->memprof_fd == kInvalidFd) {
+      Printf("ThreadSanitizer: failed to open memory profile file '%s'\n",
+             filename.data());
+      return;
+    }
+  }
+  MemoryProfiler(0);
+  MaybeSpawnBackgroundThread();
 }
 
 static void *BackgroundThread(void *arg) {
@@ -162,25 +188,7 @@ static void *BackgroundThread(void *arg) {
   cur_thread_init();
   cur_thread()->ignore_interceptors++;
   const u64 kMs2Ns = 1000 * 1000;
-
-  fd_t mprof_fd = kInvalidFd;
-  if (flags()->profile_memory && flags()->profile_memory[0]) {
-    if (internal_strcmp(flags()->profile_memory, "stdout") == 0) {
-      mprof_fd = 1;
-    } else if (internal_strcmp(flags()->profile_memory, "stderr") == 0) {
-      mprof_fd = 2;
-    } else {
-      InternalScopedString filename;
-      filename.append("%s.%d", flags()->profile_memory, (int)internal_getpid());
-      fd_t fd = OpenFile(filename.data(), WrOnly);
-      if (fd == kInvalidFd) {
-        Printf("ThreadSanitizer: failed to open memory profile file '%s'\n",
-               filename.data());
-      } else {
-        mprof_fd = fd;
-      }
-    }
-  }
+  const u64 start = NanoTime();
 
   u64 last_flush = NanoTime();
   uptr last_rss = 0;
@@ -198,7 +206,6 @@ static void *BackgroundThread(void *arg) {
         last_flush = NanoTime();
       }
     }
-    // GetRSS can be expensive on huge programs, so don't do it every 100ms.
     if (flags()->memory_limit_mb > 0) {
       uptr rss = GetRSS();
       uptr limit = uptr(flags()->memory_limit_mb) << 20;
@@ -214,9 +221,7 @@ static void *BackgroundThread(void *arg) {
       last_rss = rss;
     }
 
-    // Write memory profile if requested.
-    if (mprof_fd != kInvalidFd)
-      MemoryProfiler(ctx, mprof_fd, i);
+    MemoryProfiler(now - start);
 
     // Flush symbolizer cache if requested.
     if (flags()->flush_symbolizer_ms > 0) {
@@ -402,6 +407,7 @@ void Initialize(ThreadState *thr) {
 
 #if !SANITIZER_GO
   Symbolizer::LateInitialize();
+  InitializeMemoryProfiler();
 #endif
 
   if (flags()->stop_on_start) {

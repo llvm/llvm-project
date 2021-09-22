@@ -221,9 +221,6 @@ private:
                                       const std::vector<ConstString> &C_names,
                                       const SymbolContext &sc);
 
-  void CollectFallbackNames(std::vector<ConstString> &fallback_names,
-                            const std::vector<ConstString> &C_names);
-
   lldb::addr_t FindInSymbols(const std::vector<ConstString> &names,
                              const lldb_private::SymbolContext &sc,
                              bool &symbol_was_missing_weak);

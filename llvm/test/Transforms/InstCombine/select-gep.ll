@@ -244,3 +244,16 @@ define i32* @test6(i32* %p, i64 %x, i64 %y) {
   ret i32* %sel
 }
 declare void @use_i32p(i32*)
+
+; We cannot create a select-with-idx with a vector condition but scalar idx.
+
+define <2 x i64*> @test7(<2 x i64*> %p1, i64 %idx, <2 x i1> %cc) {
+; CHECK-LABEL: @test7(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, <2 x i64*> [[P1:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select <2 x i1> [[CC:%.*]], <2 x i64*> [[P1:%.*]], <2 x i64*> [[GEP]]
+; CHECK-NEXT:    ret <2 x i64*> [[SELECT]]
+;
+  %gep = getelementptr i64, <2 x i64*> %p1, i64 %idx
+  %select = select <2 x i1> %cc, <2 x i64*> %p1, <2 x i64*> %gep
+  ret <2 x i64*> %select
+}

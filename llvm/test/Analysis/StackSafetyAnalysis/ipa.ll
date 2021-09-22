@@ -272,6 +272,7 @@ define private void @PrivateWrite1(i8* %p) #0 {
 ; CHECK-NEXT: p[]: [0,1){{$}}
 ; CHECK-NEXT: allocas uses:
 ; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: store i8 0, i8* %p, align 1
 ; CHECK-EMPTY:
 entry:
   store i8 0, i8* %p, align 1
@@ -563,6 +564,7 @@ entry:
 ; CHECK-NEXT: p[]: [0,1){{$}}
 ; CHECK-NEXT: allocas uses:
 ; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: store i8 0, i8* %p, align 1
 ; CHECK-EMPTY:
 
 ; CHECK-LABEL: @Write4{{$}}
@@ -570,6 +572,7 @@ entry:
 ; CHECK-NEXT: p[]: [0,4){{$}}
 ; CHECK-NEXT: allocas uses:
 ; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: store i32 0, i32* %0, align 1
 ; CHECK-EMPTY:
 
 ; CHECK-LABEL: @Write4_2{{$}}
@@ -578,6 +581,8 @@ entry:
 ; CHECK-NEXT: q[]: [0,4){{$}}
 ; CHECK-NEXT: allocas uses:
 ; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: store i32 0, i32* %0, align 1
+; GLOBAL-NEXT: store i32 0, i32* %1, align 1
 ; CHECK-EMPTY:
 
 ; CHECK-LABEL: @Write8{{$}}
@@ -585,6 +590,7 @@ entry:
 ; CHECK-NEXT: p[]: [0,8){{$}}
 ; CHECK-NEXT: allocas uses:
 ; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: store i64 0, i64* %0, align 1
 ; CHECK-EMPTY:
 
 ; CHECK-LABEL: @WriteAndReturn8{{$}}
@@ -592,6 +598,7 @@ entry:
 ; CHECK-NEXT: p[]: full-set{{$}}
 ; CHECK-NEXT: allocas uses:
 ; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: store i8 0, i8* %p, align 1
 ; CHECK-EMPTY:
 
 ; CHECK-LABEL: @PreemptableWrite1 dso_preemptable{{$}}
@@ -599,6 +606,7 @@ entry:
 ; CHECK-NEXT: p[]: [0,1){{$}}
 ; CHECK-NEXT: allocas uses:
 ; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: store i8 0, i8* %p, align 1
 ; CHECK-EMPTY:
 
 ; CHECK-LABEL: @InterposableWrite1 interposable{{$}}
@@ -606,6 +614,7 @@ entry:
 ; CHECK-NEXT: p[]: [0,1){{$}}
 ; CHECK-NEXT: allocas uses:
 ; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: store i8 0, i8* %p, align 1
 ; CHECK-EMPTY:
 
 ; CHECK-LABEL: @ReturnDependent{{$}}
@@ -646,6 +655,9 @@ entry:
 ; CHECK-NEXT: acc[]: [0,4), @RecursiveNoOffset(arg2, [0,1)){{$}}
 ; CHECK-NEXT: allocas uses:
 ; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: %0 = load i32, i32* %p, align 4
+; GLOBAL-NEXT: %1 = load i32, i32* %acc, align 4
+; GLOBAL-NEXT: store i32 %add, i32* %acc, align 4
 ; CHECK-EMPTY:
 
 ; CHECK-LABEL: @RecursiveWithOffset{{$}}
@@ -654,6 +666,7 @@ entry:
 ; GLOBAL-NEXT: acc[]: full-set, @RecursiveWithOffset(arg1, [4,5)){{$}}
 ; CHECK-NEXT: allocas uses:
 ; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: store i32 0, i32* %acc, align 4
 ; CHECK-EMPTY:
 
 ; CHECK-LABEL: @ReturnAlloca

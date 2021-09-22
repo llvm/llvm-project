@@ -437,6 +437,11 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
   MPM.add(createCFGSimplificationPass());      // Merge & remove BBs
   MPM.add(createReassociatePass());           // Reassociate expressions
 
+  // The matrix extension can introduce large vector operations early, which can
+  // benefit from running vector-combine early on.
+  if (EnableMatrix)
+    MPM.add(createVectorCombinePass());
+
   // Begin the loop pass pipeline.
   if (EnableSimpleLoopUnswitch) {
     // The simple loop unswitch pass relies on separate cleanup passes. Schedule

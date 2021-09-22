@@ -75,6 +75,20 @@ void ReportFile::ReopenIfNecessary() {
   fd_pid = pid;
 }
 
+static void RecursiveCreateParentDirs(char *path) {
+  if (path[0] == '\0')
+    return;
+  for (int i = 1; path[i] != '\0'; ++i) {
+    char save = path[i];
+    if (!IsPathSeparator(path[i]))
+      continue;
+    path[i] = '\0';
+    /* Some of these will fail, because the directory exists, ignore it. */
+    CreateDir(path);
+    path[i] = save;
+  }
+}
+
 void ReportFile::SetReportPath(const char *path) {
   if (path) {
     uptr len = internal_strlen(path);
@@ -95,6 +109,7 @@ void ReportFile::SetReportPath(const char *path) {
     fd = kStdoutFd;
   } else {
     internal_snprintf(path_prefix, kMaxPathLength, "%s", path);
+    RecursiveCreateParentDirs(path_prefix);
   }
 }
 

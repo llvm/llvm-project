@@ -138,6 +138,7 @@ set(files
   __format/format_parse_context.h
   __format/format_string.h
   __format/formatter.h
+  __format/parser_std_format_spec.h
   __function_like.h
   __functional_base
   __functional/binary_function.h
@@ -254,7 +255,6 @@ set(files
   __support/fuchsia/xlocale.h
   __support/ibm/gettod_zos.h
   __support/ibm/limits.h
-  __support/ibm/locale_mgmt_aix.h
   __support/ibm/locale_mgmt_zos.h
   __support/ibm/nanosleep.h
   __support/ibm/support.h

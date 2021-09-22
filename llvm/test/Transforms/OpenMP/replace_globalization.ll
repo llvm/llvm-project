@@ -17,30 +17,30 @@ target triple = "nvptx64"
 
 define dso_local void @foo() {
 entry:
-  %c = call i32 @__kmpc_target_init(%struct.ident_t* @1, i1 false, i1 true, i1 true)
+  %c = call i32 @__kmpc_target_init(%struct.ident_t* @1, i8 1, i1 true, i1 true)
   %x = call i8* @__kmpc_alloc_shared(i64 4)
   call void @unknown_no_openmp()
   %x_on_stack = bitcast i8* %x to i32*
   %0 = bitcast i32* %x_on_stack to i8*
   call void @use(i8* %0)
   call void @__kmpc_free_shared(i8* %x, i64 4)
-  call void @__kmpc_target_deinit(%struct.ident_t* @1, i1 false, i1 true)
+  call void @__kmpc_target_deinit(%struct.ident_t* @1, i8 1, i1 true)
   ret void
 }
 
 define void @bar() {
-  %c = call i32 @__kmpc_target_init(%struct.ident_t* @1, i1 false, i1 true, i1 true)
+  %c = call i32 @__kmpc_target_init(%struct.ident_t* @1, i8 1, i1 true, i1 true)
   call void @unknown_no_openmp()
   call void @baz()
   call void @qux()
   call void @negative_qux_spmd()
-  call void @__kmpc_target_deinit(%struct.ident_t* @1, i1 false, i1 true)
+  call void @__kmpc_target_deinit(%struct.ident_t* @1, i8 1, i1 true)
   ret void
 }
 
 define internal void @baz() {
 entry:
-  %call = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @1, i1 false, i1 false, i1 true)
+  %call = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @1, i8 1, i1 false, i1 true)
   call void @unknown_no_openmp()
   %cmp = icmp eq i32 %call, -1
   br i1 %cmp, label %master, label %exit
@@ -57,7 +57,7 @@ exit:
 
 define internal void @qux() {
 entry:
-  %call = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @1, i1 false, i1 true, i1 true)
+  %call = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @1, i8 1, i1 true, i1 true)
   call void @unknown_no_openmp()
   %0 = icmp eq i32 %call, -1
   br i1 %0, label %master, label %exit
@@ -74,7 +74,7 @@ exit:
 
 define internal void @negative_qux_spmd() {
 entry:
-  %call = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @1, i1 true, i1 true, i1 true)
+  %call = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @1, i8 2, i1 true, i1 true)
   call void @unknown_no_openmp()
   %0 = icmp eq i32 %call, -1
   br i1 %0, label %master, label %exit
@@ -106,9 +106,9 @@ declare i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 
 declare i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 
-declare i32 @__kmpc_target_init(%struct.ident_t*, i1, i1, i1)
+declare i32 @__kmpc_target_init(%struct.ident_t*, i8, i1, i1)
 
-declare void @__kmpc_target_deinit(%struct.ident_t*, i1, i1)
+declare void @__kmpc_target_deinit(%struct.ident_t*, i8, i1)
 
 declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 
@@ -138,28 +138,28 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ;.
 ; CHECK-LABEL: define {{[^@]+}}@foo() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i1 false, i1 false, i1 true)
+; CHECK-NEXT:    [[C:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 false, i1 true)
 ; CHECK-NEXT:    [[X:%.*]] = call i8* @__kmpc_alloc_shared(i64 4) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    call void @unknown_no_openmp()
 ; CHECK-NEXT:    call void @use.internalized(i8* nofree writeonly [[X]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[X]], i64 4) #[[ATTR4]]
-; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
+; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define {{[^@]+}}@bar() {
-; CHECK-NEXT:    [[C:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i1 false, i1 true, i1 true)
+; CHECK-NEXT:    [[C:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 true, i1 true)
 ; CHECK-NEXT:    call void @unknown_no_openmp()
 ; CHECK-NEXT:    call void @baz()
 ; CHECK-NEXT:    call void @qux()
 ; CHECK-NEXT:    call void @negative_qux_spmd()
-; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
+; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define {{[^@]+}}@baz() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* noundef nonnull @[[GLOB1]], i1 noundef false, i1 noundef false, i1 noundef true)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* noundef nonnull @[[GLOB1]], i8 noundef 1, i1 noundef false, i1 noundef true)
 ; CHECK-NEXT:    call void @unknown_no_openmp()
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], -1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[MASTER:%.*]], label [[EXIT:%.*]]
@@ -172,7 +172,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ;
 ; CHECK-LABEL: define {{[^@]+}}@qux() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* noundef nonnull @[[GLOB1]], i1 noundef false, i1 noundef true, i1 noundef true)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* noundef nonnull @[[GLOB1]], i8 noundef 1, i1 noundef true, i1 noundef true)
 ; CHECK-NEXT:    call void @unknown_no_openmp()
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[CALL]], -1
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[MASTER:%.*]], label [[EXIT:%.*]]
@@ -185,7 +185,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ;
 ; CHECK-LABEL: define {{[^@]+}}@negative_qux_spmd() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* noundef nonnull @[[GLOB1]], i1 noundef true, i1 noundef true, i1 noundef true)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* noundef nonnull @[[GLOB1]], i8 noundef 2, i1 noundef true, i1 noundef true)
 ; CHECK-NEXT:    call void @unknown_no_openmp()
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[CALL]], -1
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[MASTER:%.*]], label [[EXIT:%.*]]

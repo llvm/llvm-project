@@ -16,6 +16,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #define NOGDI
+#include <direct.h>
 #include <windows.h>
 #include <io.h>
 #include <psapi.h>
@@ -564,6 +565,8 @@ u64 MonotonicNanoTime() { return NanoTime(); }
 void Abort() {
   internal__exit(3);
 }
+
+bool CreateDir(const char *pathname) { return _mkdir(pathname) == 0; }
 
 #if !SANITIZER_GO
 // Read the file to extract the ImageBase field from the PE header. If ASLR is

@@ -39,6 +39,10 @@ public:
   /// Print the given attribute to the stream.
   virtual void printAttribute(Attribute attr) = 0;
 
+  /// Print the given attribute without its type. The corresponding parser must
+  /// provide a valid type for the attribute.
+  virtual void printAttributeWithoutType(Attribute attr) = 0;
+
   /// Print the given floating point value in a stabilized form that can be
   /// roundtripped through the IR. This is the companion to the 'parseFloat'
   /// hook on the DialectAsmParser.

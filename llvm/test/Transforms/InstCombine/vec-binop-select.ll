@@ -16,9 +16,9 @@ define <4 x i32> @and(<4 x i32> %x, <4 x i32> %y) {
 
 define <vscale x 4 x i32> @vscaleand(<vscale x 4 x i32> %x, <vscale x 4 x i32> %y) {
 ; CHECK-LABEL: @vscaleand(
-; CHECK-NEXT:    [[R:%.*]] = and <vscale x 4 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <vscale x 4 x i32> [[R]], <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <vscale x 4 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
 ;
   %sel1 = shufflevector <vscale x 4 x i32> %x, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
   %sel2 = shufflevector <vscale x 4 x i32> %y, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer

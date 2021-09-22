@@ -1743,8 +1743,8 @@ public:
   InstructionCost
   getGEPCost(Type *PointeeType, const Value *Ptr,
              ArrayRef<const Value *> Operands,
-             enum TargetTransformInfo::TargetCostKind CostKind) override {
-    return Impl.getGEPCost(PointeeType, Ptr, Operands);
+             TargetTransformInfo::TargetCostKind CostKind) override {
+    return Impl.getGEPCost(PointeeType, Ptr, Operands, CostKind);
   }
   unsigned getInliningThresholdMultiplier() override {
     return Impl.getInliningThresholdMultiplier();

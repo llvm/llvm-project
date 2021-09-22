@@ -38,7 +38,7 @@
  */
 
 #include "__cxxabi_config.h"
-#include "include/atomic_support.h"
+#include "include/atomic_support.h" // from libc++
 #include <unistd.h>
 #if defined(__has_include)
 #  if __has_include(<sys/syscall.h>)

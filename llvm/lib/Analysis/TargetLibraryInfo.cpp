@@ -760,8 +760,8 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
       return false;
     LLVM_FALLTHROUGH;
   case LibFunc_strlen:
-    return (NumParams == 1 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getReturnType()->isIntegerTy());
+    return NumParams == 1 && FTy.getParamType(0)->isPointerTy() &&
+           IsSizeTTy(FTy.getReturnType());
 
   case LibFunc_strchr:
   case LibFunc_strrchr:
