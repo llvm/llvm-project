@@ -858,11 +858,11 @@ define i64 @test59(i8 %A, i8 %B) {
 
 define <3 x i32> @test60(<4 x i32> %call4) {
 ; BE-LABEL: @test60(
-; BE-NEXT:    [[P10:%.*]] = shufflevector <4 x i32> [[CALL4:%.*]], <4 x i32> undef, <3 x i32> <i32 1, i32 2, i32 3>
+; BE-NEXT:    [[P10:%.*]] = shufflevector <4 x i32> [[CALL4:%.*]], <4 x i32> poison, <3 x i32> <i32 1, i32 2, i32 3>
 ; BE-NEXT:    ret <3 x i32> [[P10]]
 ;
 ; LE-LABEL: @test60(
-; LE-NEXT:    [[P10:%.*]] = shufflevector <4 x i32> [[CALL4:%.*]], <4 x i32> undef, <3 x i32> <i32 0, i32 1, i32 2>
+; LE-NEXT:    [[P10:%.*]] = shufflevector <4 x i32> [[CALL4:%.*]], <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
 ; LE-NEXT:    ret <3 x i32> [[P10]]
 ;
   %p11 = bitcast <4 x i32> %call4 to i128
