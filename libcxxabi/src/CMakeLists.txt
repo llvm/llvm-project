@@ -56,8 +56,8 @@ if (MSVC_IDE OR XCODE)
   endif()
 endif()
 
-# stdlib_stdexcept.cpp depends on libc++ internals.
-include_directories("${LIBCXXABI_LIBCXX_PATH}")
+# Some files depend on libc++ internals.
+include_directories("${LIBCXXABI_LIBCXX_PATH}/src")
 
 if (LIBCXXABI_HAS_CXA_THREAD_ATEXIT_IMPL)
   add_definitions(-DHAVE___CXA_THREAD_ATEXIT_IMPL)
