@@ -108,6 +108,7 @@
 ; CHECK-NEXT:         Dominator Tree Construction
 ; CHECK-NEXT:         Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:         Function Alias Analysis Results
+; CHECK-NEXT:         Optimize scalar/vector ops
 ; CHECK-NEXT:         Memory SSA
 ; CHECK-NEXT:         Natural Loop Information
 ; CHECK-NEXT:         Canonicalize natural loops
