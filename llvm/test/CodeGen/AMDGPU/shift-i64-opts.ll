@@ -245,8 +245,7 @@ define amdgpu_kernel void @trunc_shl_31_i32_i64_multi_use(i32 addrspace(1)* %out
 }
 
 ; GCN-LABEL: {{^}}trunc_shl_and31:
-; GCN:     s_and_b32 s[[AMT:[0-9]+]], s{{[0-9]+}}, 31
-; GCN:     v_lshlrev_b32_e32 v{{[0-9]+}}, s[[AMT]], v{{[0-9]+}}
+; GCN:     v_lshlrev_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
 ; GCN-NOT: v_lshl_b64
 ; GCN-NOT: v_lshlrev_b64
 define amdgpu_kernel void @trunc_shl_and31(i64 addrspace(1)* nocapture readonly %arg, i32 addrspace(1)* nocapture %arg1, i32 %arg2) {
