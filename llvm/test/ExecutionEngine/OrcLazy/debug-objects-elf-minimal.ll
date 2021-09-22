@@ -1,4 +1,4 @@
-; REQUIRES: x86_64
+; REQUIRES: native && target-x86_64
 
 ; In-memory debug-object contains some basic DWARF
 ;
