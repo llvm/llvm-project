@@ -11208,8 +11208,8 @@ def err_multiversion_mismatched_attrs
             "%0 %select{is missing|has different arguments}1">;
 def err_multiversion_diff : Error<
   "multiversioned function declaration has a different %select{calling convention"
-  "|return type|constexpr specification|inline specification|storage class|"
-  "linkage}0">;
+  "|return type|constexpr specification|inline specification|linkage|"
+  "language linkage}0">;
 def err_multiversion_doesnt_support : Error<
   "attribute '%select{target|cpu_specific|cpu_dispatch}0' multiversioned functions do not "
   "yet support %select{function templates|virtual functions|"

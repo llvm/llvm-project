@@ -10322,8 +10322,8 @@ bool Sema::areMultiversionVariantFunctionsCompatible(
     ReturnType = 1,
     ConstexprSpec = 2,
     InlineSpec = 3,
-    StorageClass = 4,
-    Linkage = 5,
+    Linkage = 4,
+    LanguageLinkage = 5,
   };
 
   if (NoProtoDiagID.getDiagID() != 0 && OldFD &&
@@ -10397,11 +10397,11 @@ bool Sema::areMultiversionVariantFunctionsCompatible(
     if (OldFD->isInlineSpecified() != NewFD->isInlineSpecified())
       return Diag(DiffDiagIDAt.first, DiffDiagIDAt.second) << InlineSpec;
 
-    if (OldFD->getStorageClass() != NewFD->getStorageClass())
-      return Diag(DiffDiagIDAt.first, DiffDiagIDAt.second) << StorageClass;
+    if (OldFD->getFormalLinkage() != NewFD->getFormalLinkage())
+      return Diag(DiffDiagIDAt.first, DiffDiagIDAt.second) << Linkage;
 
     if (!CLinkageMayDiffer && OldFD->isExternC() != NewFD->isExternC())
-      return Diag(DiffDiagIDAt.first, DiffDiagIDAt.second) << Linkage;
+      return Diag(DiffDiagIDAt.first, DiffDiagIDAt.second) << LanguageLinkage;
 
     if (CheckEquivalentExceptionSpec(
             OldFD->getType()->getAs<FunctionProtoType>(), OldFD->getLocation(),
