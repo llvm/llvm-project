@@ -320,6 +320,12 @@ CODEGENOPT(DebugFwdTemplateParams, 1, 0) ///< Whether to emit complete
                                          ///< template parameter descriptions in
                                          ///< forward declarations (versus just
                                          ///< including them in the name).
+ENUM_CODEGENOPT(DebugSimpleTemplateNames, codegenoptions::DebugTemplateNamesKind, 2, codegenoptions::DebugTemplateNamesKind::Full) ///< Whether to emit template parameters
+                                           ///< in the textual names of template
+					   ///< specializations.
+					   ///< Implies DebugFwdTemplateNames to
+					   ///< allow decorated names to be
+					   ///< reconstructed when needed.
 CODEGENOPT(EmitLLVMUseLists, 1, 0) ///< Control whether to serialize use-lists.
 
 CODEGENOPT(WholeProgramVTables, 1, 0) ///< Whether to apply whole-program
