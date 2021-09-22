@@ -548,8 +548,6 @@ char *getTensorFilename(uint64_t id) {
   void *_mlir_ciface_##NAME(void *tensor, TYPE value,                          \
                             StridedMemRefType<uint64_t, 1> *iref,              \
                             StridedMemRefType<uint64_t, 1> *pref) {            \
-    if (!value)                                                                \
-      return tensor;                                                           \
     assert(iref->strides[0] == 1 && pref->strides[0] == 1);                    \
     assert(iref->sizes[0] == pref->sizes[0]);                                  \
     const uint64_t *indx = iref->data + iref->offset;                          \
