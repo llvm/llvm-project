@@ -9,31 +9,31 @@ void foo();
 
 // PR4806
 void pr4806() {
-  1,foo();          // expected-warning {{expression result unused}}
+  1,foo();          // expected-warning {{left operand of comma operator has no effect}}
 
   // other
   foo();
   i;                // expected-warning {{expression result unused}}
 
-  i,foo();          // expected-warning {{expression result unused}}
+  i,foo();          // expected-warning {{left operand of comma operator has no effect}}
   foo(),i;          // expected-warning {{expression result unused}}
 
-  i,j,foo();        // expected-warning {{expression result unused}} expected-warning {{expression result unused}}
-  i,foo(),j;        // expected-warning {{expression result unused}} expected-warning {{expression result unused}}
-  foo(),i,j;        // expected-warning {{expression result unused}} expected-warning {{expression result unused}}
+  i,j,foo();        // expected-warning 2{{left operand of comma operator has no effect}}
+  i,foo(),j;        // expected-warning {{left operand of comma operator has no effect}} expected-warning {{expression result unused}}
+  foo(),i,j;        // expected-warning {{expression result unused}} expected-warning {{left operand of comma operator has no effect}}
 
   i++;
 
   i++,foo();
   foo(),i++;
 
-  i++,j,foo();      // expected-warning {{expression result unused}}
+  i++,j,foo();      // expected-warning {{left operand of comma operator has no effect}}
   i++,foo(),j;      // expected-warning {{expression result unused}}
   foo(),i++,j;      // expected-warning {{expression result unused}}
 
-  i,j++,foo();      // expected-warning {{expression result unused}}
-  i,foo(),j++;      // expected-warning {{expression result unused}}
-  foo(),i,j++;      // expected-warning {{expression result unused}}
+  i,j++,foo();      // expected-warning {{left operand of comma operator has no effect}}
+  i,foo(),j++;      // expected-warning {{left operand of comma operator has no effect}}
+  foo(),i,j++;      // expected-warning {{left operand of comma operator has no effect}}
 
   i++,j++,foo();
   i++,foo(),j++;
@@ -86,7 +86,7 @@ struct s0 { int f0; };
 void f0(int a);
 void f1(struct s0 *a) {
   // rdar://8139785
-  f0((int)(a->f0 + 1, 10)); // expected-warning {{expression result unused}}
+  f0((int)(a->f0 + 1, 10)); // expected-warning {{left operand of comma operator has no effect}}
 }
 
 void blah(int a);

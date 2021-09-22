@@ -145,7 +145,7 @@ void test_argument_with_type_tag(struct flock *f)
 void test_tag_expresssion(int b) {
   fcntl(0, b ? F_DUPFD : F_SETLK, 10); // no-warning
   fcntl(0, b + F_DUPFD, 10); // no-warning
-  fcntl(0, (b, F_DUPFD), 10); // expected-warning {{expression result unused}}
+  fcntl(0, (b, F_DUPFD), 10); // expected-warning {{left operand of comma operator has no effect}}
 }
 
 // Check that using 64-bit magic values as tags works and tag values do not
