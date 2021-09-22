@@ -3004,8 +3004,10 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     if (Gep->getNumOperands() != 2 || Gep->getPointerOperand() != Base ||
         !Gep->hasOneUse())
       return nullptr;
-    Type *ElementType = Gep->getResultElementType();
     Value *Idx = Gep->getOperand(1);
+    if (isa<VectorType>(CondVal->getType()) && !isa<VectorType>(Idx->getType()))
+      return nullptr;
+    Type *ElementType = Gep->getResultElementType();
     Value *NewT = Idx;
     Value *NewF = Constant::getNullValue(Idx->getType());
     if (Swap)
