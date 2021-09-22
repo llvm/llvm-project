@@ -1148,7 +1148,6 @@ define i16 @bitcast_i16_h(half %a) nounwind {
 }
 
 ; Make sure we select W version of addi on RV64.
-; FIXME: We should not have an addi and addiw on RV64.
 define signext i32 @fcvt_h_w_demanded_bits(i32 signext %0, half* %1) {
 ; RV32IZFH-LABEL: fcvt_h_w_demanded_bits:
 ; RV32IZFH:       # %bb.0:
@@ -1166,20 +1165,16 @@ define signext i32 @fcvt_h_w_demanded_bits(i32 signext %0, half* %1) {
 ;
 ; RV64IZFH-LABEL: fcvt_h_w_demanded_bits:
 ; RV64IZFH:       # %bb.0:
-; RV64IZFH-NEXT:    addiw a2, a0, 1
-; RV64IZFH-NEXT:    addi a0, a0, 1
+; RV64IZFH-NEXT:    addiw a0, a0, 1
 ; RV64IZFH-NEXT:    fcvt.h.w ft0, a0
 ; RV64IZFH-NEXT:    fsh ft0, 0(a1)
-; RV64IZFH-NEXT:    mv a0, a2
 ; RV64IZFH-NEXT:    ret
 ;
 ; RV64IDZFH-LABEL: fcvt_h_w_demanded_bits:
 ; RV64IDZFH:       # %bb.0:
-; RV64IDZFH-NEXT:    addiw a2, a0, 1
-; RV64IDZFH-NEXT:    addi a0, a0, 1
+; RV64IDZFH-NEXT:    addiw a0, a0, 1
 ; RV64IDZFH-NEXT:    fcvt.h.w ft0, a0
 ; RV64IDZFH-NEXT:    fsh ft0, 0(a1)
-; RV64IDZFH-NEXT:    mv a0, a2
 ; RV64IDZFH-NEXT:    ret
   %3 = add i32 %0, 1
   %4 = sitofp i32 %3 to half
