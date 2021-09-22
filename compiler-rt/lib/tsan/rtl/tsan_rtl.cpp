@@ -149,11 +149,11 @@ ThreadState::ThreadState(Context *ctx, Tid tid, int unique_id, u64 epoch,
 }
 
 #if !SANITIZER_GO
-void MemoryProfiler() {
+void MemoryProfiler(u64 uptime) {
   if (ctx->memprof_fd == kInvalidFd)
     return;
   InternalMmapVector<char> buf(4096);
-  WriteMemoryProfile(buf.data(), buf.size());
+  WriteMemoryProfile(buf.data(), buf.size(), uptime);
   WriteToFile(ctx->memprof_fd, buf.data(), internal_strlen(buf.data()));
 }
 
@@ -176,7 +176,7 @@ void InitializeMemoryProfiler() {
       return;
     }
   }
-  MemoryProfiler();
+  MemoryProfiler(0);
   MaybeSpawnBackgroundThread();
 }
 
@@ -188,6 +188,7 @@ static void *BackgroundThread(void *arg) {
   cur_thread_init();
   cur_thread()->ignore_interceptors++;
   const u64 kMs2Ns = 1000 * 1000;
+  const u64 start = NanoTime();
 
   u64 last_flush = NanoTime();
   uptr last_rss = 0;
@@ -220,7 +221,7 @@ static void *BackgroundThread(void *arg) {
       last_rss = rss;
     }
 
-    MemoryProfiler();
+    MemoryProfiler(now - start);
 
     // Flush symbolizer cache if requested.
     if (flags()->flush_symbolizer_ms > 0) {

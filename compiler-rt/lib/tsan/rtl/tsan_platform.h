@@ -971,7 +971,7 @@ void InitializePlatformEarly();
 void CheckAndProtect();
 void InitializeShadowMemoryPlatform();
 void FlushShadowMemory();
-void WriteMemoryProfile(char *buf, uptr buf_size);
+void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime_ns);
 int ExtractResolvFDs(void *state, int *fds, int nfd);
 int ExtractRecvmsgFDs(void *msg, int *fds, int nfd);
 uptr ExtractLongJmpSp(uptr *env);

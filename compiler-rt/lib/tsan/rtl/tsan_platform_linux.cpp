@@ -119,7 +119,7 @@ void FillProfileCallback(uptr p, uptr rss, bool file,
     mem[MemOther] += rss;
 }
 
-void WriteMemoryProfile(char *buf, uptr buf_size) {
+void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime_ns) {
   uptr mem[MemCount];
   internal_memset(mem, 0, sizeof(mem));
   GetMemoryProfile(FillProfileCallback, mem, 7);
@@ -136,15 +136,15 @@ void WriteMemoryProfile(char *buf, uptr buf_size) {
     mem[MemMmap] = 0;
   internal_snprintf(
       buf, buf_size,
-      "RSS %zd MB: shadow:%zd meta:%zd file:%zd mmap:%zd"
+      "%llus: RSS %zd MB: shadow:%zd meta:%zd file:%zd mmap:%zd"
       " trace:%zd heap:%zd other:%zd intalloc:%zd memblocks:%zd syncobj:%zu"
       " stacks=%zd[%zd] nthr=%zd/%zd\n",
-      mem[MemTotal] >> 20, mem[MemShadow] >> 20, mem[MemMeta] >> 20,
-      mem[MemFile] >> 20, mem[MemMmap] >> 20, mem[MemTrace] >> 20,
-      mem[MemHeap] >> 20, mem[MemOther] >> 20,
-      internal_stats[AllocatorStatMapped] >> 20, meta.mem_block >> 20,
-      meta.sync_obj >> 20, stacks->allocated >> 20, stacks->n_uniq_ids, nlive,
-      nthread);
+      uptime_ns / (1000 * 1000 * 1000), mem[MemTotal] >> 20,
+      mem[MemShadow] >> 20, mem[MemMeta] >> 20, mem[MemFile] >> 20,
+      mem[MemMmap] >> 20, mem[MemTrace] >> 20, mem[MemHeap] >> 20,
+      mem[MemOther] >> 20, internal_stats[AllocatorStatMapped] >> 20,
+      meta.mem_block >> 20, meta.sync_obj >> 20, stacks->allocated >> 20,
+      stacks->n_uniq_ids, nlive, nthread);
 }
 
 #  if SANITIZER_LINUX
