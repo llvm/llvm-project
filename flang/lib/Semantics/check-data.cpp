@@ -70,7 +70,9 @@ public:
                 : IsHostAssociated(symbol, scope)  ? "Host-associated object"
                 : IsUseAssociated(symbol, scope)   ? "USE-associated object"
                 : symbol.has<AssocEntityDetails>() ? "Construct association"
-                                                   : nullptr}) {
+                : IsPointer(symbol) && (hasComponent_ || hasSubscript_)
+                ? "Target of pointer"
+                : nullptr}) {
       context_.Say(source_,
           "%s '%s' must not be initialized in a DATA statement"_err_en_US,
           whyNot, symbol.name());

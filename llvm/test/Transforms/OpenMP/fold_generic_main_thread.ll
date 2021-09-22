@@ -10,7 +10,7 @@
 
 define void @kernel() {
 ; CHECK-LABEL: define {{[^@]+}}@kernel() {
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @[[GLOB1:[0-9]+]], i1 false, i1 false, i1 false)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @[[GLOB1:[0-9]+]], i8 1, i1 false, i1 false)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], -1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
@@ -20,11 +20,11 @@ define void @kernel() {
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* null, i1 false, i1 true)
+; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* null, i8 1, i1 true)
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@kernel() {
-; CHECK-DISABLED-NEXT:    [[CALL:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @[[GLOB1:[0-9]+]], i1 false, i1 false, i1 false)
+; CHECK-DISABLED-NEXT:    [[CALL:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @[[GLOB1:[0-9]+]], i8 1, i1 false, i1 false)
 ; CHECK-DISABLED-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], -1
 ; CHECK-DISABLED-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK-DISABLED:       if.then:
@@ -34,10 +34,10 @@ define void @kernel() {
 ; CHECK-DISABLED-NEXT:    call void @bar()
 ; CHECK-DISABLED-NEXT:    br label [[IF_END]]
 ; CHECK-DISABLED:       if.end:
-; CHECK-DISABLED-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* null, i1 false, i1 true)
+; CHECK-DISABLED-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* null, i8 1, i1 true)
 ; CHECK-DISABLED-NEXT:    ret void
 ;
-  %call = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @1, i1 false, i1 false, i1 false)
+  %call = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @1, i8 1, i1 false, i1 false)
   %cmp = icmp eq i32 %call, -1
   br i1 %cmp, label %if.then, label %if.else
 if.then:
@@ -47,7 +47,7 @@ if.else:
   call void @bar()
   br label %if.end
 if.end:
-  call void @__kmpc_target_deinit(%struct.ident_t* null, i1 false, i1 true)
+  call void @__kmpc_target_deinit(%struct.ident_t* null, i8 1, i1 true)
   ret void
 }
 
@@ -135,9 +135,9 @@ declare i8 @__kmpc_is_generic_main_thread_id(i32)
 
 declare i32 @__kmpc_get_hardware_thread_id()
 
-declare i32 @__kmpc_target_init(%struct.ident_t*, i1, i1, i1)
+declare i32 @__kmpc_target_init(%struct.ident_t*, i8, i1, i1)
 
-declare void @__kmpc_target_deinit(%struct.ident_t*, i1, i1)
+declare void @__kmpc_target_deinit(%struct.ident_t*, i8, i1)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !6}

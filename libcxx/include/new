@@ -164,7 +164,7 @@ enum align_val_t { __zero = 0, __max = (size_t)-1 };
 struct destroying_delete_t {
   explicit destroying_delete_t() = default;
 };
-_LIBCPP_INLINE_VAR constexpr destroying_delete_t destroying_delete{};
+inline constexpr destroying_delete_t destroying_delete{};
 #endif // _LIBCPP_STD_VER > 17
 
 }  // std

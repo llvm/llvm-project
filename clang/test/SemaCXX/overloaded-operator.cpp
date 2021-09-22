@@ -157,7 +157,7 @@ bool& operator,(X, Y);
 
 void test_comma(X x, Y y) {
   bool& b1 = (x, y);
-  X& xr = (x, x); // expected-warning {{expression result unused}}
+  X& xr = (x, x); // expected-warning {{left operand of comma operator has no effect}}
 }
 
 struct Callable {
