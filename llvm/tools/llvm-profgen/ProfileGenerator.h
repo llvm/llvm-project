@@ -190,8 +190,9 @@ public:
 
 protected:
   // Lookup or create FunctionSamples for the context
-  FunctionSamples &getFunctionProfileForContext(SampleContextFrames ContextId,
-                                                bool WasLeafInlined = false);
+  FunctionSamples &
+  getFunctionProfileForContext(const SampleContextFrameVector &Context,
+                               bool WasLeafInlined = false);
   // Post processing for profiles before writing out, such as mermining
   // and trimming cold profiles, running preinliner on profiles.
   void postProcessProfiles();
@@ -202,6 +203,9 @@ protected:
   // Thresholds from profile summary to answer isHotCount/isColdCount queries.
   uint64_t HotCountThreshold;
   uint64_t ColdCountThreshold;
+
+  // Underlying context table serves for sample profile writer.
+  std::unordered_set<SampleContextFrameVector, SampleContextFrameHash> Contexts;
 
 private:
   // Helper function for updating body sample for a leaf location in
@@ -249,9 +253,6 @@ private:
   FunctionSamples &
   getFunctionProfileForLeafProbe(SampleContextFrames ContextStack,
                                  const MCDecodedPseudoProbe *LeafProbe);
-
-  // Underlying context table serves for sample profile writer.
-  std::unordered_set<SampleContextFrameVector, SampleContextFrameHash> Contexts;
 };
 
 } // end namespace sampleprof
