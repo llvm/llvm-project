@@ -139,7 +139,7 @@ static void RegionMemUsage(uptr start, uptr end, uptr *res, uptr *dirty) {
   *dirty = dirty_pages * GetPageSizeCached();
 }
 
-void WriteMemoryProfile(char *buf, uptr buf_size, uptr nthread, uptr nlive) {
+void WriteMemoryProfile(char *buf, uptr buf_size) {
   uptr shadow_res, shadow_dirty;
   uptr meta_res, meta_dirty;
   uptr trace_res, trace_dirty;
@@ -160,6 +160,8 @@ void WriteMemoryProfile(char *buf, uptr buf_size, uptr nthread, uptr nlive) {
 #endif
 
   StackDepotStats *stacks = StackDepotGetStats();
+  uptr nthread, nlive;
+  ctx->thread_registry.GetNumberOfThreads(&nthread, &nlive);
   internal_snprintf(buf, buf_size,
     "shadow   (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
     "meta     (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
@@ -188,7 +190,7 @@ void WriteMemoryProfile(char *buf, uptr buf_size, uptr nthread, uptr nlive) {
     nthread, nlive);
 }
 
-#if !SANITIZER_GO
+#  if !SANITIZER_GO
 void InitializeShadowMemoryPlatform() { }
 
 // On OS X, GCD worker threads are created without a call to pthread_create. We

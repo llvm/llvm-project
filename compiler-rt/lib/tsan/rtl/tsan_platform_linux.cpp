@@ -119,12 +119,14 @@ void FillProfileCallback(uptr p, uptr rss, bool file,
     mem[MemOther] += rss;
 }
 
-void WriteMemoryProfile(char *buf, uptr buf_size, uptr nthread, uptr nlive) {
+void WriteMemoryProfile(char *buf, uptr buf_size) {
   uptr mem[MemCount];
   internal_memset(mem, 0, sizeof(mem));
-  __sanitizer::GetMemoryProfile(FillProfileCallback, mem, 7);
+  GetMemoryProfile(FillProfileCallback, mem, 7);
   auto meta = ctx->metamap.GetMemoryStats();
   StackDepotStats *stacks = StackDepotGetStats();
+  uptr nthread, nlive;
+  ctx->thread_registry.GetNumberOfThreads(&nthread, &nlive);
   // All these are allocated from the common mmap region.
   mem[MemMmap] -= meta.mem_block + meta.sync_obj + stacks->allocated;
   if (s64(mem[MemMmap]) < 0)
@@ -141,7 +143,7 @@ void WriteMemoryProfile(char *buf, uptr buf_size, uptr nthread, uptr nlive) {
                     stacks->n_uniq_ids, nlive, nthread);
 }
 
-#if SANITIZER_LINUX
+#  if SANITIZER_LINUX
 void FlushShadowMemoryCallback(
     const SuspendedThreadsList &suspended_threads_list,
     void *argument) {
