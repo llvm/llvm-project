@@ -1941,7 +1941,7 @@ define <4 x i64> @identity_test_permvar_di_256(<4 x i64> %a0) {
 define <4 x i64> @identity_test_permvar_di_256_mask(<4 x i64> %a0, <4 x i64> %passthru, i8 %mask) {
 ; CHECK-LABEL: @identity_test_permvar_di_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
-; CHECK-NEXT:    [[EXTRACT:%.*]] = shufflevector <8 x i1> [[TMP1]], <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[EXTRACT:%.*]] = shufflevector <8 x i1> [[TMP1]], <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[EXTRACT]], <4 x i64> [[A0:%.*]], <4 x i64> [[PASSTHRU:%.*]]
 ; CHECK-NEXT:    ret <4 x i64> [[TMP2]]
 ;
@@ -1965,7 +1965,7 @@ define <4 x i64> @zero_test_permvar_di_256_mask(<4 x i64> %a0, <4 x i64> %passth
 ; CHECK-LABEL: @zero_test_permvar_di_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i64> [[A0:%.*]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
-; CHECK-NEXT:    [[EXTRACT:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[EXTRACT:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[EXTRACT]], <4 x i64> [[TMP1]], <4 x i64> [[PASSTHRU:%.*]]
 ; CHECK-NEXT:    ret <4 x i64> [[TMP3]]
 ;
@@ -1989,7 +1989,7 @@ define <4 x i64> @shuffle_test_permvar_di_256_mask(<4 x i64> %a0, <4 x i64> %pas
 ; CHECK-LABEL: @shuffle_test_permvar_di_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i64> [[A0:%.*]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
-; CHECK-NEXT:    [[EXTRACT:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[EXTRACT:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[EXTRACT]], <4 x i64> [[TMP1]], <4 x i64> [[PASSTHRU:%.*]]
 ; CHECK-NEXT:    ret <4 x i64> [[TMP3]]
 ;
@@ -2013,7 +2013,7 @@ define <4 x i64> @undef_test_permvar_di_256_mask(<4 x i64> %a0, <4 x i64> %passt
 ; CHECK-LABEL: @undef_test_permvar_di_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i64> [[A0:%.*]], <4 x i64> poison, <4 x i32> <i32 undef, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
-; CHECK-NEXT:    [[EXTRACT:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[EXTRACT:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[EXTRACT]], <4 x i64> [[TMP1]], <4 x i64> [[PASSTHRU:%.*]]
 ; CHECK-NEXT:    ret <4 x i64> [[TMP3]]
 ;
@@ -2037,7 +2037,7 @@ define <4 x double> @identity_test_permvar_df_256(<4 x double> %a0) {
 define <4 x double> @identity_test_permvar_df_256_mask(<4 x double> %a0, <4 x double> %passthru, i8 %mask) {
 ; CHECK-LABEL: @identity_test_permvar_df_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
-; CHECK-NEXT:    [[EXTRACT:%.*]] = shufflevector <8 x i1> [[TMP1]], <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[EXTRACT:%.*]] = shufflevector <8 x i1> [[TMP1]], <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[EXTRACT]], <4 x double> [[A0:%.*]], <4 x double> [[PASSTHRU:%.*]]
 ; CHECK-NEXT:    ret <4 x double> [[TMP2]]
 ;
@@ -2061,7 +2061,7 @@ define <4 x double> @zero_test_permvar_df_256_mask(<4 x double> %a0, <4 x double
 ; CHECK-LABEL: @zero_test_permvar_df_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A0:%.*]], <4 x double> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
-; CHECK-NEXT:    [[EXTRACT:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[EXTRACT:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[EXTRACT]], <4 x double> [[TMP1]], <4 x double> [[PASSTHRU:%.*]]
 ; CHECK-NEXT:    ret <4 x double> [[TMP3]]
 ;
@@ -2085,7 +2085,7 @@ define <4 x double> @shuffle_test_permvar_df_256_mask(<4 x double> %a0, <4 x dou
 ; CHECK-LABEL: @shuffle_test_permvar_df_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A0:%.*]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
-; CHECK-NEXT:    [[EXTRACT:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[EXTRACT:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[EXTRACT]], <4 x double> [[TMP1]], <4 x double> [[PASSTHRU:%.*]]
 ; CHECK-NEXT:    ret <4 x double> [[TMP3]]
 ;
@@ -2109,7 +2109,7 @@ define <4 x double> @undef_test_permvar_df_256_mask(<4 x double> %a0, <4 x doubl
 ; CHECK-LABEL: @undef_test_permvar_df_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A0:%.*]], <4 x double> poison, <4 x i32> <i32 undef, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
-; CHECK-NEXT:    [[EXTRACT:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[EXTRACT:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[EXTRACT]], <4 x double> [[TMP1]], <4 x double> [[PASSTHRU:%.*]]
 ; CHECK-NEXT:    ret <4 x double> [[TMP3]]
 ;

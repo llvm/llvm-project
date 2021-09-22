@@ -713,8 +713,8 @@ define <4 x i32> @shuffle_17mulsplat(<4 x i32> %v) {
 ; Do not reorder shuffle and binop if LHS of shuffles are of different size
 define <2 x i32> @pr19717(<4 x i32> %in0, <2 x i32> %in1) {
 ; CHECK-LABEL: @pr19717(
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[IN0:%.*]], <4 x i32> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[SHUFFLE4:%.*]] = shufflevector <2 x i32> [[IN1:%.*]], <2 x i32> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[IN0:%.*]], <4 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[SHUFFLE4:%.*]] = shufflevector <2 x i32> [[IN1:%.*]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i32> [[SHUFFLE]], [[SHUFFLE4]]
 ; CHECK-NEXT:    ret <2 x i32> [[MUL]]
 ;
@@ -1413,7 +1413,7 @@ define <2 x i8> @insert_subvector_shuffles_narrowing_pow2elts(<4 x i8> %x, <4 x 
 
 define <4 x double> @insert_subvector_shuffles_identity(<2 x double> %x) {
 ; CHECK-LABEL: @insert_subvector_shuffles_identity(
-; CHECK-NEXT:    [[S3:%.*]] = shufflevector <2 x double> [[X:%.*]], <2 x double> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[S3:%.*]] = shufflevector <2 x double> [[X:%.*]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT:    ret <4 x double> [[S3]]
 ;
   %s1 = shufflevector <2 x double> %x, <2 x double> undef, <4 x i32> <i32 undef, i32 1, i32 undef, i32 undef>
@@ -1458,7 +1458,7 @@ define <4 x double> @not_insert_subvector_shuffles_with_same_size(<2 x double> %
 define <4 x float> @insert_subvector_crash_invalid_mask_elt(<2 x float> %x, <4 x float>* %p) {
 ; CHECK-LABEL: @insert_subvector_crash_invalid_mask_elt(
 ; CHECK-NEXT:    [[WIDEN:%.*]] = shufflevector <2 x float> [[X:%.*]], <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    [[I:%.*]] = shufflevector <2 x float> [[X]], <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[I:%.*]] = shufflevector <2 x float> [[X]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT:    store <4 x float> [[I]], <4 x float>* [[P:%.*]], align 16
 ; CHECK-NEXT:    ret <4 x float> [[WIDEN]]
 ;

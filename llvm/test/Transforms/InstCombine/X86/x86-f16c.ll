@@ -11,7 +11,7 @@ declare <8 x float> @llvm.x86.vcvtph2ps.256(<8 x i16>)
 ; Only bottom 4 elements required.
 define <4 x float> @demand_vcvtph2ps_128(<8 x i16> %A) {
 ; CHECK-LABEL: @demand_vcvtph2ps_128(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A:%.*]], <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A:%.*]], <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to <4 x half>
 ; CHECK-NEXT:    [[CVTPH2PS:%.*]] = fpext <4 x half> [[TMP2]] to <4 x float>
 ; CHECK-NEXT:    ret <4 x float> [[CVTPH2PS]]
