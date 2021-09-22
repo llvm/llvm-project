@@ -922,7 +922,7 @@ define <4 x i8> @wide_shuf(<4 x i32> %x) {
 define <4 x i8> @wide_splat1(<4 x i32> %x) {
 ; CHECK-LABEL: @wide_splat1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i32> [[X:%.*]] to <4 x i8>
-; CHECK-NEXT:    [[TRUNC:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> undef, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[TRUNC:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
 ; CHECK-NEXT:    ret <4 x i8> [[TRUNC]]
 ;
   %shuf = shufflevector <4 x i32> %x, <4 x i32> undef, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
@@ -936,7 +936,7 @@ define <4 x i8> @wide_splat1(<4 x i32> %x) {
 define <3 x i31> @wide_splat2(<3 x i33> %x) {
 ; CHECK-LABEL: @wide_splat2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <3 x i33> [[X:%.*]] to <3 x i31>
-; CHECK-NEXT:    [[TRUNC:%.*]] = shufflevector <3 x i31> [[TMP1]], <3 x i31> undef, <3 x i32> <i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TRUNC:%.*]] = shufflevector <3 x i31> [[TMP1]], <3 x i31> poison, <3 x i32> <i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    ret <3 x i31> [[TRUNC]]
 ;
   %shuf = shufflevector <3 x i33> %x, <3 x i33> undef, <3 x i32> <i32 1, i32 1, i32 1>

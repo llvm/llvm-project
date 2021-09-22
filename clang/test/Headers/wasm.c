@@ -825,7 +825,7 @@ v128_t test_u64x2_replace_lane(v128_t a, uint64_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x float> undef, float [[A:%.*]], i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[VECINIT_I]] to <4 x i32>
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> undef, <4 x i32> zeroinitializer
+// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
 v128_t test_f32x4_splat(float a) {
@@ -1598,7 +1598,7 @@ v128_t test_i8x16_popcnt(v128_t a) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[B:%.*]] to i8
 // CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i8> undef, i8 [[TMP1]], i32 0
-// CHECK-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <16 x i8> [[TMP2]], <16 x i8> undef, <16 x i32> zeroinitializer
+// CHECK-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <16 x i8> [[TMP2]], <16 x i8> poison, <16 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHL_I:%.*]] = shl <16 x i8> [[TMP0]], [[SH_PROM_I]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[SHL_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
@@ -1612,7 +1612,7 @@ v128_t test_i8x16_shl(v128_t a, uint32_t b) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[B:%.*]] to i8
 // CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i8> undef, i8 [[TMP1]], i32 0
-// CHECK-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <16 x i8> [[TMP2]], <16 x i8> undef, <16 x i32> zeroinitializer
+// CHECK-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <16 x i8> [[TMP2]], <16 x i8> poison, <16 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR_I:%.*]] = ashr <16 x i8> [[TMP0]], [[SH_PROM_I]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[SHR_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
@@ -1626,7 +1626,7 @@ v128_t test_i8x16_shr(v128_t a, uint32_t b) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[B:%.*]] to i8
 // CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i8> undef, i8 [[TMP1]], i32 0
-// CHECK-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <16 x i8> [[TMP2]], <16 x i8> undef, <16 x i32> zeroinitializer
+// CHECK-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <16 x i8> [[TMP2]], <16 x i8> poison, <16 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR_I:%.*]] = lshr <16 x i8> [[TMP0]], [[SH_PROM_I]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[SHR_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
@@ -1819,7 +1819,7 @@ uint32_t test_i16x8_bitmask(v128_t a) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[B:%.*]] to i16
 // CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i16> undef, i16 [[TMP1]], i32 0
-// CHECK-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <8 x i16> [[TMP2]], <8 x i16> undef, <8 x i32> zeroinitializer
+// CHECK-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <8 x i16> [[TMP2]], <8 x i16> poison, <8 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHL_I:%.*]] = shl <8 x i16> [[TMP0]], [[SH_PROM_I]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[SHL_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
@@ -1833,7 +1833,7 @@ v128_t test_i16x8_shl(v128_t a, uint32_t b) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[B:%.*]] to i16
 // CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i16> undef, i16 [[TMP1]], i32 0
-// CHECK-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <8 x i16> [[TMP2]], <8 x i16> undef, <8 x i32> zeroinitializer
+// CHECK-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <8 x i16> [[TMP2]], <8 x i16> poison, <8 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR_I:%.*]] = ashr <8 x i16> [[TMP0]], [[SH_PROM_I]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[SHR_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
@@ -1847,7 +1847,7 @@ v128_t test_i16x8_shr(v128_t a, uint32_t b) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[B:%.*]] to i16
 // CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i16> undef, i16 [[TMP1]], i32 0
-// CHECK-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <8 x i16> [[TMP2]], <8 x i16> undef, <8 x i32> zeroinitializer
+// CHECK-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <8 x i16> [[TMP2]], <8 x i16> poison, <8 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR_I:%.*]] = lshr <8 x i16> [[TMP0]], [[SH_PROM_I]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[SHR_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
