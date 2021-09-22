@@ -226,4 +226,9 @@ bool mapping::isSPMDMode() { return IsSPMDMode; }
 bool mapping::isGenericMode() { return !isSPMDMode(); }
 ///}
 
+extern "C" {
+uint32_t __kmpc_get_hardware_thread_id_in_block() {
+  return mapping::getThreadIdInBlock();
+}
+}
 #pragma omp end declare target

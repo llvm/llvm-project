@@ -1019,8 +1019,6 @@ lldb_private::ConstString RenderScriptRuntime::GetPluginName() {
   return GetPluginNameStatic();
 }
 
-uint32_t RenderScriptRuntime::GetPluginVersion() { return 1; }
-
 bool RenderScriptRuntime::GetDynamicTypeAndAddress(
     ValueObject &in_value, lldb::DynamicValueType use_dynamic,
     TypeAndOrName &class_type_or_name, Address &address,

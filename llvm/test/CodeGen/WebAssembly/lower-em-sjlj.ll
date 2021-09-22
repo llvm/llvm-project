@@ -282,12 +282,30 @@ entry:
   ret void
 }
 
+; Test if _setjmp and _longjmp calls are treated in the same way as setjmp and
+; longjmp
+define void @_setjmp__longjmp() {
+; CHECK-LABEL: @_setjmp__longjmp
+; These calls should have been transformed away
+; CHECK-NOT: call i32 @_setjmp
+; CHECK-NOT: call void @_longjmp
+entry:
+  %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
+  %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0
+  %call = call i32 @_setjmp(%struct.__jmp_buf_tag* %arraydecay) #0
+  %arraydecay1 = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0
+  call void @_longjmp(%struct.__jmp_buf_tag* %arraydecay1, i32 1) #1
+  unreachable
+}
+
 ; Function Attrs: nounwind
 declare void @foo() #2
 ; Function Attrs: returns_twice
 declare i32 @setjmp(%struct.__jmp_buf_tag*) #0
+declare i32 @_setjmp(%struct.__jmp_buf_tag*) #0
 ; Function Attrs: noreturn
 declare void @longjmp(%struct.__jmp_buf_tag*, i32) #1
+declare void @_longjmp(%struct.__jmp_buf_tag*, i32) #1
 declare i32 @__gxx_personality_v0(...)
 declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()

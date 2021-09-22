@@ -38,11 +38,12 @@ def _find_build_scripts():
 
 
 def add_builder_tool_arguments(parser):
-    parser.add_argument('--binary',
-                        metavar="<file>",
-                        help='provide binary file to override --builder')
+    build_group = parser.add_mutually_exclusive_group(required=True)
+    build_group.add_argument('--binary',
+                             metavar="<file>",
+                             help='provide binary file instead of --builder')
 
-    parser.add_argument(
+    build_group.add_argument(
         '--builder',
         type=str,
         choices=sorted(_find_build_scripts().keys()),

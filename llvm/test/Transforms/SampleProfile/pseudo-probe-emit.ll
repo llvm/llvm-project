@@ -64,6 +64,9 @@ entry:
   ret void
 }
 
+; CHECK-IL: Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn
+; CHECK-IL-NEXT: declare void @llvm.pseudoprobe(i64, i64, i32, i64)
+
 ; CHECK-IL: ![[#FOO:]] = distinct !DISubprogram(name: "foo"
 ; CHECK-IL: ![[#FAKELINE]] = !DILocation(line: 0, scope: ![[#FOO]])
 ; CHECK-IL: ![[#REALLINE]] = !DILocation(line: 2, scope: ![[#FOO]])

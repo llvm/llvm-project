@@ -406,6 +406,11 @@ void StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
         }
 
         const auto &CB = cast<CallBase>(*I);
+        if (CB.getReturnedArgOperand() == V) {
+          if (Visited.insert(I).second)
+            WorkList.push_back(cast<const Instruction>(I));
+        }
+
         if (!CB.isArgOperand(&UI)) {
           US.addRange(I, UnknownRange);
           break;
@@ -595,8 +600,7 @@ void StackSafetyDataFlowAnalysis<CalleeTy>::runDataFlow() {
   updateAllNodes();
 
   while (!WorkList.empty()) {
-    const CalleeTy *Callee = WorkList.back();
-    WorkList.pop_back();
+    const CalleeTy *Callee = WorkList.pop_back_val();
     updateOneNode(Callee);
   }
 }

@@ -206,6 +206,14 @@ public:
   }
 };
 
+/// Represents a G_IMPLICIT_DEF.
+class GImplicitDef : public GenericMachineInstr {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_IMPLICIT_DEF;
+  }
+};
+
 } // namespace llvm
 
 #endif // LLVM_CODEGEN_GLOBALISEL_GENERICMACHINEINSTRS_H

@@ -51,8 +51,6 @@ public:
   // PluginInterface protocol
   lldb_private::ConstString GetPluginName() override;
 
-  uint32_t GetPluginVersion() override;
-
   // Process Control
   lldb_private::Status DoDestroy() override;
 

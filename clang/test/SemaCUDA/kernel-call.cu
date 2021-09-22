@@ -26,3 +26,34 @@ int main(void) {
 
   g1<<<undeclared, 1>>>(42); // expected-error {{use of undeclared identifier 'undeclared'}}
 }
+
+// Make sure we can call static member kernels.
+template <typename > struct a0 {
+  template <typename T> static __global__ void Call(T);
+};
+struct a1 {
+  template <typename T> static __global__ void Call(T);
+};
+template <typename T> struct a2 {
+  static __global__ void Call(T);
+};
+struct a3 {
+  static __global__ void Call(int);
+  static __global__ void Call(void*);
+};
+
+struct b {
+  template <typename c> void d0(c arg) {
+    a0<c>::Call<<<0, 0>>>(arg);
+    a1::Call<<<0,0>>>(arg);
+    a2<c>::Call<<<0,0>>>(arg);
+    a3::Call<<<0, 0>>>(arg);
+  }
+  void d1(void* arg) {
+    a0<void*>::Call<<<0, 0>>>(arg);
+    a1::Call<<<0,0>>>(arg);
+    a2<void*>::Call<<<0,0>>>(arg);
+    a3::Call<<<0, 0>>>(arg);
+  }
+  void e() { d0(1); }
+};

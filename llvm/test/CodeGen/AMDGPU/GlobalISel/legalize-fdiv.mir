@@ -1383,7 +1383,6 @@ body: |
     ; SI-LABEL: name: test_fdiv_v3s16
     ; SI: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; SI: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; SI: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; SI: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF]](<4 x s16>)
     ; SI: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
     ; SI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
@@ -1392,15 +1391,13 @@ body: |
     ; SI: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
     ; SI: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
     ; SI: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST1]](s32)
-    ; SI: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
-    ; SI: [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF2]](<4 x s16>)
+    ; SI: [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<4 x s16>)
     ; SI: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV2]](<2 x s16>)
     ; SI: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST2]](s32)
-    ; SI: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
-    ; SI: [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR2]](s32)
+    ; SI: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
+    ; SI: [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
     ; SI: [[BITCAST3:%[0-9]+]]:_(s32) = G_BITCAST [[UV3]](<2 x s16>)
     ; SI: [[TRUNC5:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST3]](s32)
-    ; SI: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST3]], [[C]](s32)
     ; SI: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
     ; SI: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC3]](s16)
     ; SI: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
@@ -1447,8 +1444,6 @@ body: |
     ; SI: [[INT19:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA14]](s32), [[FMA11]](s32), [[FMA13]](s32), [[INT17]](s1)
     ; SI: [[INT20:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT19]](s32), [[FPEXT5]](s32), [[FPEXT4]](s32)
     ; SI: [[FPTRUNC2:%[0-9]+]]:_(s16) = G_FPTRUNC [[INT20]](s32)
-    ; SI: [[DEF3:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; SI: [[DEF4:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
     ; SI: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
     ; SI: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC1]](s16)
     ; SI: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC2]](s16)
@@ -1457,7 +1452,6 @@ body: |
     ; VI-LABEL: name: test_fdiv_v3s16
     ; VI: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; VI: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; VI: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; VI: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF]](<4 x s16>)
     ; VI: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
     ; VI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
@@ -1466,15 +1460,13 @@ body: |
     ; VI: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
     ; VI: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
     ; VI: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST1]](s32)
-    ; VI: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
-    ; VI: [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF2]](<4 x s16>)
+    ; VI: [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<4 x s16>)
     ; VI: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV2]](<2 x s16>)
     ; VI: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST2]](s32)
-    ; VI: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
-    ; VI: [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR2]](s32)
+    ; VI: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
+    ; VI: [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
     ; VI: [[BITCAST3:%[0-9]+]]:_(s32) = G_BITCAST [[UV3]](<2 x s16>)
     ; VI: [[TRUNC5:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST3]](s32)
-    ; VI: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST3]], [[C]](s32)
     ; VI: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
     ; VI: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC3]](s16)
     ; VI: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[FPEXT1]](s32)
@@ -1493,8 +1485,6 @@ body: |
     ; VI: [[FMUL2:%[0-9]+]]:_(s32) = G_FMUL [[FPEXT4]], [[INT4]]
     ; VI: [[FPTRUNC2:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL2]](s32)
     ; VI: [[INT5:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[FPTRUNC2]](s16), [[TRUNC5]](s16), [[TRUNC2]](s16)
-    ; VI: [[DEF3:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; VI: [[DEF4:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
     ; VI: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[INT1]](s16)
     ; VI: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[INT3]](s16)
     ; VI: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[INT5]](s16)
@@ -1503,7 +1493,6 @@ body: |
     ; GFX9-LABEL: name: test_fdiv_v3s16
     ; GFX9: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; GFX9: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; GFX9: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; GFX9: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF]](<4 x s16>)
     ; GFX9: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
     ; GFX9: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
@@ -1512,15 +1501,13 @@ body: |
     ; GFX9: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
     ; GFX9: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
     ; GFX9: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST1]](s32)
-    ; GFX9: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
-    ; GFX9: [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF2]](<4 x s16>)
+    ; GFX9: [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<4 x s16>)
     ; GFX9: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV2]](<2 x s16>)
     ; GFX9: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST2]](s32)
-    ; GFX9: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
-    ; GFX9: [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR2]](s32)
+    ; GFX9: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
+    ; GFX9: [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
     ; GFX9: [[BITCAST3:%[0-9]+]]:_(s32) = G_BITCAST [[UV3]](<2 x s16>)
     ; GFX9: [[TRUNC5:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST3]](s32)
-    ; GFX9: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST3]], [[C]](s32)
     ; GFX9: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
     ; GFX9: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC3]](s16)
     ; GFX9: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[FPEXT1]](s32)
@@ -1539,8 +1526,6 @@ body: |
     ; GFX9: [[FMUL2:%[0-9]+]]:_(s32) = G_FMUL [[FPEXT4]], [[INT4]]
     ; GFX9: [[FPTRUNC2:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL2]](s32)
     ; GFX9: [[INT5:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[FPTRUNC2]](s16), [[TRUNC5]](s16), [[TRUNC2]](s16)
-    ; GFX9: [[DEF3:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; GFX9: [[DEF4:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
     ; GFX9: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[INT1]](s16)
     ; GFX9: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[INT3]](s16)
     ; GFX9: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[INT5]](s16)
@@ -1549,7 +1534,6 @@ body: |
     ; GFX9-UNSAFE-LABEL: name: test_fdiv_v3s16
     ; GFX9-UNSAFE: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; GFX9-UNSAFE: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; GFX9-UNSAFE: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; GFX9-UNSAFE: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF]](<4 x s16>)
     ; GFX9-UNSAFE: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
     ; GFX9-UNSAFE: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
@@ -1558,23 +1542,19 @@ body: |
     ; GFX9-UNSAFE: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
     ; GFX9-UNSAFE: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
     ; GFX9-UNSAFE: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST1]](s32)
-    ; GFX9-UNSAFE: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
-    ; GFX9-UNSAFE: [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF2]](<4 x s16>)
+    ; GFX9-UNSAFE: [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<4 x s16>)
     ; GFX9-UNSAFE: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV2]](<2 x s16>)
     ; GFX9-UNSAFE: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST2]](s32)
-    ; GFX9-UNSAFE: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
-    ; GFX9-UNSAFE: [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR2]](s32)
+    ; GFX9-UNSAFE: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
+    ; GFX9-UNSAFE: [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
     ; GFX9-UNSAFE: [[BITCAST3:%[0-9]+]]:_(s32) = G_BITCAST [[UV3]](<2 x s16>)
     ; GFX9-UNSAFE: [[TRUNC5:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST3]](s32)
-    ; GFX9-UNSAFE: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST3]], [[C]](s32)
     ; GFX9-UNSAFE: [[INT:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[TRUNC3]](s16)
     ; GFX9-UNSAFE: [[FMUL:%[0-9]+]]:_(s16) = G_FMUL [[TRUNC]], [[INT]]
     ; GFX9-UNSAFE: [[INT1:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[TRUNC4]](s16)
     ; GFX9-UNSAFE: [[FMUL1:%[0-9]+]]:_(s16) = G_FMUL [[TRUNC1]], [[INT1]]
     ; GFX9-UNSAFE: [[INT2:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[TRUNC5]](s16)
     ; GFX9-UNSAFE: [[FMUL2:%[0-9]+]]:_(s16) = G_FMUL [[TRUNC2]], [[INT2]]
-    ; GFX9-UNSAFE: [[DEF3:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; GFX9-UNSAFE: [[DEF4:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
     ; GFX9-UNSAFE: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FMUL]](s16)
     ; GFX9-UNSAFE: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[FMUL1]](s16)
     ; GFX9-UNSAFE: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[FMUL2]](s16)
@@ -1583,7 +1563,6 @@ body: |
     ; GFX10-LABEL: name: test_fdiv_v3s16
     ; GFX10: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; GFX10: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; GFX10: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; GFX10: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF]](<4 x s16>)
     ; GFX10: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
     ; GFX10: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
@@ -1592,15 +1571,13 @@ body: |
     ; GFX10: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
     ; GFX10: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
     ; GFX10: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST1]](s32)
-    ; GFX10: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
-    ; GFX10: [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF2]](<4 x s16>)
+    ; GFX10: [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<4 x s16>)
     ; GFX10: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV2]](<2 x s16>)
     ; GFX10: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST2]](s32)
-    ; GFX10: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
-    ; GFX10: [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR2]](s32)
+    ; GFX10: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
+    ; GFX10: [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
     ; GFX10: [[BITCAST3:%[0-9]+]]:_(s32) = G_BITCAST [[UV3]](<2 x s16>)
     ; GFX10: [[TRUNC5:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST3]](s32)
-    ; GFX10: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST3]], [[C]](s32)
     ; GFX10: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
     ; GFX10: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC3]](s16)
     ; GFX10: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[FPEXT1]](s32)
@@ -1619,8 +1596,6 @@ body: |
     ; GFX10: [[FMUL2:%[0-9]+]]:_(s32) = G_FMUL [[FPEXT4]], [[INT4]]
     ; GFX10: [[FPTRUNC2:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL2]](s32)
     ; GFX10: [[INT5:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[FPTRUNC2]](s16), [[TRUNC5]](s16), [[TRUNC2]](s16)
-    ; GFX10: [[DEF3:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; GFX10: [[DEF4:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
     ; GFX10: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[INT1]](s16)
     ; GFX10: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[INT3]](s16)
     ; GFX10: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[INT5]](s16)

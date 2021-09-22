@@ -186,8 +186,11 @@ namespace {
     /// Check if required PHI node is already exist in Loop \p L.
     bool alreadyPrepared(Loop *L, Instruction *MemI,
                          const SCEV *BasePtrStartSCEV,
-                         const SCEVConstant *BasePtrIncSCEV,
-                         InstrForm Form);
+                         const SCEV *BasePtrIncSCEV, InstrForm Form);
+
+    /// Get the value which defines the increment SCEV \p BasePtrIncSCEV.
+    Value *getNodeForInc(Loop *L, Instruction *MemI,
+                         const SCEV *BasePtrIncSCEV);
 
     /// Collect condition matched(\p isValidCandidate() returns true)
     /// candidates in Loop \p L.
@@ -514,28 +517,49 @@ bool PPCLoopInstrFormPrep::rewriteLoadStores(Loop *L, Bucket &BucketChain,
   if (!SE->isLoopInvariant(BasePtrSCEV->getStart(), L))
     return MadeChange;
 
-  const SCEVConstant *BasePtrIncSCEV =
-    dyn_cast<SCEVConstant>(BasePtrSCEV->getStepRecurrence(*SE));
-  if (!BasePtrIncSCEV)
+  bool IsConstantInc = false;
+  const SCEV *BasePtrIncSCEV = BasePtrSCEV->getStepRecurrence(*SE);
+  Value *IncNode = getNodeForInc(L, MemI, BasePtrIncSCEV);
+
+  const SCEVConstant *BasePtrIncConstantSCEV =
+      dyn_cast<SCEVConstant>(BasePtrIncSCEV);
+  if (BasePtrIncConstantSCEV)
+    IsConstantInc = true;
+
+  // No valid representation for the increment.
+  if (!IncNode) {
+    LLVM_DEBUG(dbgs() << "Loop Increasement can not be represented!\n");
     return MadeChange;
+  }
+
+  // Now we only handle update form for constant increment.
+  // FIXME: add support for non-constant increment UpdateForm.
+  if (!IsConstantInc && Form == UpdateForm) {
+    LLVM_DEBUG(dbgs() << "not a constant increment for update form!\n");
+    return MadeChange;
+  }
 
   // For some DS form load/store instructions, it can also be an update form,
-  // if the stride is a multipler of 4. Use update form if prefer it.
-  bool CanPreInc = (Form == UpdateForm ||
-                    ((Form == DSForm) && !BasePtrIncSCEV->getAPInt().urem(4) &&
-                     PreferUpdateForm));
+  // if the stride is constant and is a multipler of 4. Use update form if
+  // prefer it.
+  bool CanPreInc =
+      (Form == UpdateForm ||
+       ((Form == DSForm) && IsConstantInc &&
+        !BasePtrIncConstantSCEV->getAPInt().urem(4) && PreferUpdateForm));
   const SCEV *BasePtrStartSCEV = nullptr;
   if (CanPreInc)
     BasePtrStartSCEV =
-        SE->getMinusSCEV(BasePtrSCEV->getStart(), BasePtrIncSCEV);
+        SE->getMinusSCEV(BasePtrSCEV->getStart(), BasePtrIncConstantSCEV);
   else
     BasePtrStartSCEV = BasePtrSCEV->getStart();
 
   if (!isSafeToExpand(BasePtrStartSCEV, *SE))
     return MadeChange;
 
-  if (alreadyPrepared(L, MemI, BasePtrStartSCEV, BasePtrIncSCEV, Form))
+  if (alreadyPrepared(L, MemI, BasePtrStartSCEV, BasePtrIncSCEV, Form)) {
+    LLVM_DEBUG(dbgs() << "Instruction form is already prepared!\n");
     return MadeChange;
+  }
 
   LLVM_DEBUG(dbgs() << "PIP: New start is: " << *BasePtrStartSCEV << "\n");
 
@@ -564,9 +588,11 @@ bool PPCLoopInstrFormPrep::rewriteLoadStores(Loop *L, Bucket &BucketChain,
   Instruction *PtrInc = nullptr;
   Instruction *NewBasePtr = nullptr;
   if (CanPreInc) {
+    assert(BasePtrIncConstantSCEV &&
+           "update form now only supports constant increment.");
     Instruction *InsPoint = &*Header->getFirstInsertionPt();
     PtrInc = GetElementPtrInst::Create(
-        I8Ty, NewPHI, BasePtrIncSCEV->getValue(),
+        I8Ty, NewPHI, BasePtrIncConstantSCEV->getValue(),
         getInstrName(MemI, GEPNodeIncNameSuffix), InsPoint);
     cast<GetElementPtrInst>(PtrInc)->setIsInBounds(IsPtrInBounds(BasePtr));
     for (auto PI : predecessors(Header)) {
@@ -593,9 +619,8 @@ bool PPCLoopInstrFormPrep::rewriteLoadStores(Loop *L, Bucket &BucketChain,
       BasicBlock *BB = PI;
       Instruction *InsPoint = BB->getTerminator();
       PtrInc = GetElementPtrInst::Create(
-          I8Ty, NewPHI, BasePtrIncSCEV->getValue(),
-          getInstrName(MemI, GEPNodeIncNameSuffix), InsPoint);
-
+          I8Ty, NewPHI, IncNode, getInstrName(MemI, GEPNodeIncNameSuffix),
+          InsPoint);
       cast<GetElementPtrInst>(PtrInc)->setIsInBounds(IsPtrInBounds(BasePtr));
 
       NewPHI->addIncoming(PtrInc, PI);
@@ -725,14 +750,90 @@ bool PPCLoopInstrFormPrep::dispFormPrep(Loop *L, SmallVector<Bucket, 16> &Bucket
   return MadeChange;
 }
 
+// Find the loop invariant increment node for SCEV BasePtrIncSCEV.
+// bb.loop.preheader:
+//   %start = ...
+// bb.loop.body:
+//   %phinode = phi [ %start, %bb.loop.preheader ], [ %add, %bb.loop.body ]
+//   ...
+//   %add = add %phinode, %inc  ; %inc is what we want to get.
+//
+Value *PPCLoopInstrFormPrep::getNodeForInc(Loop *L, Instruction *MemI,
+                                           const SCEV *BasePtrIncSCEV) {
+  // If the increment is a constant, no definition is needed.
+  // Return the value directly.
+  if (isa<SCEVConstant>(BasePtrIncSCEV))
+    return cast<SCEVConstant>(BasePtrIncSCEV)->getValue();
+
+  if (!SE->isLoopInvariant(BasePtrIncSCEV, L))
+    return nullptr;
+
+  BasicBlock *BB = MemI->getParent();
+  if (!BB)
+    return nullptr;
+
+  BasicBlock *LatchBB = L->getLoopLatch();
+
+  if (!LatchBB)
+    return nullptr;
+
+  // Run through the PHIs and check their operands to find valid representation
+  // for the increment SCEV.
+  iterator_range<BasicBlock::phi_iterator> PHIIter = BB->phis();
+  for (auto &CurrentPHI : PHIIter) {
+    PHINode *CurrentPHINode = dyn_cast<PHINode>(&CurrentPHI);
+    if (!CurrentPHINode)
+      continue;
+
+    if (!SE->isSCEVable(CurrentPHINode->getType()))
+      continue;
+
+    const SCEV *PHISCEV = SE->getSCEVAtScope(CurrentPHINode, L);
+
+    const SCEVAddRecExpr *PHIBasePtrSCEV = dyn_cast<SCEVAddRecExpr>(PHISCEV);
+    if (!PHIBasePtrSCEV)
+      continue;
+
+    const SCEV *PHIBasePtrIncSCEV = PHIBasePtrSCEV->getStepRecurrence(*SE);
+
+    if (!PHIBasePtrIncSCEV || (PHIBasePtrIncSCEV != BasePtrIncSCEV))
+      continue;
+
+    // Get the incoming value from the loop latch and check if the value has
+    // the add form with the required increment.
+    if (Instruction *I = dyn_cast<Instruction>(
+            CurrentPHINode->getIncomingValueForBlock(LatchBB))) {
+      Value *StrippedBaseI = I;
+      while (BitCastInst *BC = dyn_cast<BitCastInst>(StrippedBaseI))
+        StrippedBaseI = BC->getOperand(0);
+
+      Instruction *StrippedI = dyn_cast<Instruction>(StrippedBaseI);
+      if (!StrippedI)
+        continue;
+
+      // LSR pass may add a getelementptr instruction to do the loop increment,
+      // also search in that getelementptr instruction.
+      if (StrippedI->getOpcode() == Instruction::Add ||
+          (StrippedI->getOpcode() == Instruction::GetElementPtr &&
+           StrippedI->getNumOperands() == 2)) {
+        if (SE->getSCEVAtScope(StrippedI->getOperand(0), L) == BasePtrIncSCEV)
+          return StrippedI->getOperand(0);
+        if (SE->getSCEVAtScope(StrippedI->getOperand(1), L) == BasePtrIncSCEV)
+          return StrippedI->getOperand(1);
+      }
+    }
+  }
+  return nullptr;
+}
+
 // In order to prepare for the preferred instruction form, a PHI is added.
 // This function will check to see if that PHI already exists and will return
 // true if it found an existing PHI with the matched start and increment as the
 // one we wanted to create.
 bool PPCLoopInstrFormPrep::alreadyPrepared(Loop *L, Instruction *MemI,
-                                        const SCEV *BasePtrStartSCEV,
-                                        const SCEVConstant *BasePtrIncSCEV,
-                                        InstrForm Form) {
+                                           const SCEV *BasePtrStartSCEV,
+                                           const SCEV *BasePtrIncSCEV,
+                                           InstrForm Form) {
   BasicBlock *BB = MemI->getParent();
   if (!BB)
     return false;

@@ -209,4 +209,3 @@ define <2 x i16> @zext_shl_vec_undef(<2 x i8> %x) {
   %r = and <2 x i16> %b, %z
   ret <2 x i16> %r
 }
-

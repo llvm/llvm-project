@@ -128,3 +128,42 @@ add_libc_unittest(
   DEPENDS
     libc.src.stdlib.llabs
 )
+
+add_libc_unittest(
+  div_test
+  SUITE
+    libc_stdlib_unittests
+  SRCS
+    div_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.include.stdlib
+    libc.src.stdlib.div
+)
+
+add_libc_unittest(
+  ldiv_test
+  SUITE
+    libc_stdlib_unittests
+  SRCS
+    ldiv_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.include.stdlib
+    libc.src.stdlib.ldiv
+)
+
+add_libc_unittest(
+  lldiv_test
+  SUITE
+    libc_stdlib_unittests
+  SRCS
+    lldiv_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.include.stdlib
+    libc.src.stdlib.lldiv
+)

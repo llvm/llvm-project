@@ -44,7 +44,7 @@
 // CHECK-NEXT:     0x28 IMAGE_REL_ARM64_ADDR32NB __C_specific_handler
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section (5) .pdata {
-// CHECK-NEXT:     0x0 IMAGE_REL_ARM64_ADDR32NB func
+// CHECK-NEXT:     0x0 IMAGE_REL_ARM64_ADDR32NB .text
 // CHECK-NEXT:     0x4 IMAGE_REL_ARM64_ADDR32NB .xdata
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]

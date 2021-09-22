@@ -2103,7 +2103,7 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
 
     // Check the depth cutoff results in a conservative result (full set) by
     // passing Depth == MaxDepth == 6.
-    ConstantRange CR3 = computeConstantRange(X2, true, &AC, I, 6);
+    ConstantRange CR3 = computeConstantRange(X2, true, &AC, I, nullptr, 6);
     EXPECT_TRUE(CR3.isFullSet());
   }
   {
@@ -2253,6 +2253,22 @@ const FindAllocaForValueTestParams FindAllocaForValueTests[] = {
         br i1 %cond, label %bb1, label %exit
 
       exit:
+        ret void
+      })",
+     false, false},
+    {R"(
+      declare i32* @retptr(i32* returned)
+      define void @test(i1 %cond) {
+        %a = alloca i32
+        %r = call i32* @retptr(i32* %a)
+        ret void
+      })",
+     true, true},
+    {R"(
+      declare i32* @fun(i32*)
+      define void @test(i1 %cond) {
+        %a = alloca i32
+        %r = call i32* @fun(i32* %a)
         ret void
       })",
      false, false},

@@ -131,8 +131,6 @@ ProcessMachCore::~ProcessMachCore() {
 // PluginInterface
 ConstString ProcessMachCore::GetPluginName() { return GetPluginNameStatic(); }
 
-uint32_t ProcessMachCore::GetPluginVersion() { return 1; }
-
 bool ProcessMachCore::GetDynamicLoaderAddress(lldb::addr_t addr) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER |
                                                   LIBLLDB_LOG_PROCESS));

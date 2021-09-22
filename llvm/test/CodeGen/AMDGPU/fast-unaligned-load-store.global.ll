@@ -69,8 +69,8 @@ define amdgpu_kernel void @global_store_2xi16_align2(i16 addrspace(1)* %p, i16 a
 ; GFX7-ALIGNED-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-ALIGNED-NEXT:    s_add_u32 s2, s0, 2
 ; GFX7-ALIGNED-NEXT:    v_mov_b32_e32 v1, s1
-; GFX7-ALIGNED-NEXT:    flat_store_short v[0:1], v2
 ; GFX7-ALIGNED-NEXT:    s_addc_u32 s3, s1, 0
+; GFX7-ALIGNED-NEXT:    flat_store_short v[0:1], v2
 ; GFX7-ALIGNED-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX7-ALIGNED-NEXT:    v_mov_b32_e32 v2, 2
 ; GFX7-ALIGNED-NEXT:    v_mov_b32_e32 v1, s3
@@ -85,8 +85,8 @@ define amdgpu_kernel void @global_store_2xi16_align2(i16 addrspace(1)* %p, i16 a
 ; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-UNALIGNED-NEXT:    s_add_u32 s2, s0, 2
 ; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v1, s1
-; GFX7-UNALIGNED-NEXT:    flat_store_short v[0:1], v2
 ; GFX7-UNALIGNED-NEXT:    s_addc_u32 s3, s1, 0
+; GFX7-UNALIGNED-NEXT:    flat_store_short v[0:1], v2
 ; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v2, 2
 ; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v1, s3
@@ -192,15 +192,15 @@ define amdgpu_kernel void @global_store_2xi16_align1(i16 addrspace(1)* %p, i16 a
 ; GFX7-ALIGNED-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX7-ALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-ALIGNED-NEXT:    s_add_u32 s2, s0, 2
-; GFX7-ALIGNED-NEXT:    s_addc_u32 s3, s1, 0
 ; GFX7-ALIGNED-NEXT:    v_mov_b32_e32 v0, s0
-; GFX7-ALIGNED-NEXT:    s_add_u32 s4, s0, 1
+; GFX7-ALIGNED-NEXT:    s_addc_u32 s3, s1, 0
 ; GFX7-ALIGNED-NEXT:    v_mov_b32_e32 v1, s1
-; GFX7-ALIGNED-NEXT:    s_addc_u32 s5, s1, 0
+; GFX7-ALIGNED-NEXT:    s_add_u32 s4, s0, 1
 ; GFX7-ALIGNED-NEXT:    flat_store_byte v[0:1], v2
+; GFX7-ALIGNED-NEXT:    s_addc_u32 s5, s1, 0
 ; GFX7-ALIGNED-NEXT:    v_mov_b32_e32 v0, s4
-; GFX7-ALIGNED-NEXT:    s_add_u32 s0, s0, 3
 ; GFX7-ALIGNED-NEXT:    v_mov_b32_e32 v1, s5
+; GFX7-ALIGNED-NEXT:    s_add_u32 s0, s0, 3
 ; GFX7-ALIGNED-NEXT:    flat_store_byte v[0:1], v3
 ; GFX7-ALIGNED-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX7-ALIGNED-NEXT:    v_mov_b32_e32 v0, s0

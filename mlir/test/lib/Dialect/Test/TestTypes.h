@@ -16,6 +16,7 @@
 
 #include <tuple>
 
+#include "TestTraits.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"

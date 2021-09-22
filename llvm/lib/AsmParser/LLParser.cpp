@@ -235,18 +235,18 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
       Inst->setMetadata(LLVMContext::MD_tbaa, UpgradedMD);
   }
 
-  // Look for intrinsic functions and CallInst that need to be upgraded
-  for (Module::iterator FI = M->begin(), FE = M->end(); FI != FE; )
-    UpgradeCallsToIntrinsic(&*FI++); // must be post-increment, as we remove
+  // Look for intrinsic functions and CallInst that need to be upgraded.  We use
+  // make_early_inc_range here because we may remove some functions.
+  for (Function &F : llvm::make_early_inc_range(*M))
+    UpgradeCallsToIntrinsic(&F);
 
   // Some types could be renamed during loading if several modules are
   // loaded in the same LLVMContext (LTO scenario). In this case we should
   // remangle intrinsics names as well.
-  for (Module::iterator FI = M->begin(), FE = M->end(); FI != FE; ) {
-    Function *F = &*FI++;
-    if (auto Remangled = Intrinsic::remangleIntrinsicFunction(F)) {
-      F->replaceAllUsesWith(Remangled.getValue());
-      F->eraseFromParent();
+  for (Function &F : llvm::make_early_inc_range(*M)) {
+    if (auto Remangled = Intrinsic::remangleIntrinsicFunction(&F)) {
+      F.replaceAllUsesWith(Remangled.getValue());
+      F.eraseFromParent();
     }
   }
 
@@ -5114,7 +5114,7 @@ bool LLParser::parseDIObjCProperty(MDNode *&Result, bool IsDistinct) {
 
 /// parseDIImportedEntity:
 ///   ::= !DIImportedEntity(tag: DW_TAG_imported_module, scope: !0, entity: !1,
-///                         line: 7, name: "foo")
+///                         line: 7, name: "foo", elements: !2)
 bool LLParser::parseDIImportedEntity(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   REQUIRED(tag, DwarfTagField, );                                              \
@@ -5122,13 +5122,14 @@ bool LLParser::parseDIImportedEntity(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(entity, MDField, );                                                 \
   OPTIONAL(file, MDField, );                                                   \
   OPTIONAL(line, LineField, );                                                 \
-  OPTIONAL(name, MDStringField, );
+  OPTIONAL(name, MDStringField, );                                             \
+  OPTIONAL(elements, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  Result = GET_OR_DISTINCT(
-      DIImportedEntity,
-      (Context, tag.Val, scope.Val, entity.Val, file.Val, line.Val, name.Val));
+  Result = GET_OR_DISTINCT(DIImportedEntity,
+                           (Context, tag.Val, scope.Val, entity.Val, file.Val,
+                            line.Val, name.Val, elements.Val));
   return false;
 }
 

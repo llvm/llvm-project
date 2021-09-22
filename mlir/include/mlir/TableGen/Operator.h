@@ -64,6 +64,10 @@ public:
   // Returns the name of op's adaptor C++ class.
   std::string getAdaptorName() const;
 
+  // Check invariants (like no duplicated or conflicted names) and abort the
+  // process if any invariant is broken.
+  void assertInvariants() const;
+
   /// A class used to represent the decorators of an operator variable, i.e.
   /// argument or result.
   struct VariableDecorator {
@@ -80,8 +84,6 @@ public:
   struct VariableDecoratorIterator
       : public llvm::mapped_iterator<llvm::Init *const *,
                                      VariableDecorator (*)(llvm::Init *)> {
-    using reference = VariableDecorator;
-
     /// Initializes the iterator to the specified iterator.
     VariableDecoratorIterator(llvm::Init *const *it)
         : llvm::mapped_iterator<llvm::Init *const *,

@@ -32,6 +32,8 @@ kernel void k() {
   __local X lx;
   __private X x;
 
+  __private X tx = X();
+
   __private Y py;
   __constant Y cy1; // expected-error{{variable in constant address space must be initialized}}
   __constant Y cy2(1); // expected-error{{no matching constructor for initialization of '__constant Y'}}

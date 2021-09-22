@@ -2978,15 +2978,6 @@ define amdgpu_ps <4 x float> @getresinfo_dmask0(<8 x i32> inreg %rsrc, <4 x floa
   ; GFX9-LABEL: name: getresinfo_dmask0
   ; GFX9: bb.1.main_body:
   ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
   ; GFX9:   [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
   ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<4 x s32>)
   ; GFX9:   $vgpr0 = COPY [[UV]](s32)
@@ -2997,15 +2988,6 @@ define amdgpu_ps <4 x float> @getresinfo_dmask0(<8 x i32> inreg %rsrc, <4 x floa
   ; GFX10NSA-LABEL: name: getresinfo_dmask0
   ; GFX10NSA: bb.1.main_body:
   ; GFX10NSA:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0
-  ; GFX10NSA:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10NSA:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10NSA:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10NSA:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10NSA:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10NSA:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10NSA:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10NSA:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10NSA:   [[COPY8:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
   ; GFX10NSA:   [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
   ; GFX10NSA:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<4 x s32>)
   ; GFX10NSA:   $vgpr0 = COPY [[UV]](s32)

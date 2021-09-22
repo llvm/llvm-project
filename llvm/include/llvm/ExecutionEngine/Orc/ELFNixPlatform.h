@@ -215,6 +215,8 @@ private:
 
   Error registerPerObjectSections(const ELFPerObjectSectionsToRegister &POSR);
 
+  Expected<uint64_t> createPThreadKey();
+
   ExecutionSession &ES;
   ObjectLinkingLayer &ObjLinkingLayer;
 

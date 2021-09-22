@@ -9,13 +9,15 @@
 #include "ProfileGenerator.h"
 #include "llvm/Support/FileSystem.h"
 
+#define DEBUG_TYPE "perf-reader"
+
 static cl::opt<bool> ShowMmapEvents("show-mmap-events", cl::ReallyHidden,
                                     cl::init(false), cl::ZeroOrMore,
                                     cl::desc("Print binary load events."));
 
 cl::opt<bool> SkipSymbolization("skip-symbolization", cl::ReallyHidden,
                                 cl::init(false), cl::ZeroOrMore,
-                                cl::desc("Dump the unsumbolized profile to the "
+                                cl::desc("Dump the unsymbolized profile to the "
                                          "output file. It will show unwinder "
                                          "output for CS profile generation."));
 
@@ -422,8 +424,15 @@ bool PerfReaderBase::extractLBRStack(TraceStream &TraceIt,
     Token.split(Addresses, "/");
     uint64_t Src;
     uint64_t Dst;
-    Addresses[0].substr(2).getAsInteger(16, Src);
-    Addresses[1].substr(2).getAsInteger(16, Dst);
+
+    // Stop at broken LBR records.
+    if (Addresses[0].substr(2).getAsInteger(16, Src) ||
+        Addresses[1].substr(2).getAsInteger(16, Dst)) {
+      WithColor::warning() << "Invalid address in LBR record at line "
+                           << TraceIt.getLineNumber() << ": "
+                           << TraceIt.getCurrentLine() << "\n";
+      break;
+    }
 
     bool SrcIsInternal = Binary->addressIsCode(Src);
     bool DstIsInternal = Binary->addressIsCode(Dst);
@@ -510,10 +519,17 @@ bool PerfReaderBase::extractCallstack(TraceStream &TraceIt,
     if (!Binary->addressIsCode(FrameAddr))
       break;
 
-    // We need to translate return address to call address
-    // for non-leaf frames
+    // We need to translate return address to call address for non-leaf frames.
     if (!CallStack.empty()) {
-      FrameAddr = Binary->getCallAddrFromFrameAddr(FrameAddr);
+      auto CallAddr = Binary->getCallAddrFromFrameAddr(FrameAddr);
+      if (!CallAddr) {
+        // Stop at an invalid return address caused by bad unwinding. This could
+        // happen to frame-pointer-based unwinding and the callee functions that
+        // do not have the frame pointer chain set up.
+        InvalidReturnAddresses.insert(FrameAddr);
+        break;
+      }
+      FrameAddr = CallAddr;
     }
 
     CallStack.emplace_back(FrameAddr);
@@ -635,11 +651,8 @@ void LBRPerfReader::computeCounterFromLBR(const PerfSample *Sample,
     // If this not the first LBR, update the range count between TO of current
     // LBR and FROM of next LBR.
     uint64_t StartOffset = TargetOffset;
-    if (EndOffeset != 0) {
-      assert(StartOffset <= EndOffeset &&
-             "Bogus range should be filtered ealier!");
+    if (EndOffeset != 0)
       Counter.recordRangeCount(StartOffset, EndOffeset, Repeat);
-    }
     EndOffeset = SourceOffset;
   }
 }
@@ -756,12 +769,22 @@ PerfReaderBase::extractPerfType(cl::list<std::string> &PerfTraceFilenames) {
 
 void HybridPerfReader::generateRawProfile() { unwindSamples(); }
 
+void PerfReaderBase::warnTruncatedStack() {
+  for (auto Address : InvalidReturnAddresses) {
+    WithColor::warning()
+        << "Truncated stack sample due to invalid return address at "
+        << format("0x%" PRIx64, Address)
+        << ", likely caused by frame pointer omission\n";
+  }
+}
+
 void PerfReaderBase::parsePerfTraces(
     cl::list<std::string> &PerfTraceFilenames) {
   // Parse perf traces and do aggregation.
   for (auto Filename : PerfTraceFilenames)
     parseAndAggregateTrace(Filename);
 
+  warnTruncatedStack();
   generateRawProfile();
 }
 

@@ -33,6 +33,8 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
@@ -2054,7 +2056,8 @@ bool OpenMPOpt::rewriteDeviceCodeStateMachine() {
         UndefValue::get(Int8Ty), F->getName() + ".ID");
 
     for (Use *U : ToBeReplacedStateMachineUses)
-      U->set(ConstantExpr::getPointerBitCastOrAddrSpaceCast(ID, U->get()->getType()));
+      U->set(ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+          ID, U->get()->getType()));
 
     ++NumOpenMPParallelRegionsReplacedInGPUStateMachine;
 
@@ -2566,9 +2569,8 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
   auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
   auto &RFI = OMPInfoCache.RFIs[OMPRTL___kmpc_target_init];
 
-  // Check if the edge into the successor block compares the __kmpc_target_init
-  // result with -1. If we are in non-SPMD-mode that signals only the main
-  // thread will execute the edge.
+  // Check if the edge into the successor block contains a condition that only
+  // lets the main thread execute it.
   auto IsInitialThreadOnly = [&](BranchInst *Edge, BasicBlock *SuccessorBB) {
     if (!Edge || !Edge->isConditional())
       return false;
@@ -2583,7 +2585,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
     if (!C)
       return false;
 
-    // Match:  -1 == __kmpc_target_init (for non-SPMD kernels only!)
+    // Match: -1 == __kmpc_target_init (for non-SPMD kernels only!)
     if (C->isAllOnesValue()) {
       auto *CB = dyn_cast<CallBase>(Cmp->getOperand(0));
       CB = CB ? OpenMPOpt::getCallIfRegularCall(*CB, &RFI) : nullptr;
@@ -2593,6 +2595,18 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
       auto *IsSPMDModeCI =
           dyn_cast<ConstantInt>(CB->getOperand(InitIsSPMDArgNo));
       return IsSPMDModeCI && IsSPMDModeCI->isZero();
+    }
+
+    if (C->isZero()) {
+      // Match: 0 == llvm.nvvm.read.ptx.sreg.tid.x()
+      if (auto *II = dyn_cast<IntrinsicInst>(Cmp->getOperand(0)))
+        if (II->getIntrinsicID() == Intrinsic::nvvm_read_ptx_sreg_tid_x)
+          return true;
+
+      // Match: 0 == llvm.amdgcn.workitem.id.x()
+      if (auto *II = dyn_cast<IntrinsicInst>(Cmp->getOperand(0)))
+        if (II->getIntrinsicID() == Intrinsic::amdgcn_workitem_id_x)
+          return true;
     }
 
     return false;
@@ -3468,10 +3482,14 @@ struct AAKernelInfoFunction : AAKernelInfo {
     IsWorker->setDebugLoc(DLoc);
     BranchInst::Create(StateMachineBeginBB, UserCodeEntryBB, IsWorker, InitBB);
 
+    Module &M = *Kernel->getParent();
+
     // Create local storage for the work function pointer.
+    const DataLayout &DL = M.getDataLayout();
     Type *VoidPtrTy = Type::getInt8PtrTy(Ctx);
-    AllocaInst *WorkFnAI = new AllocaInst(VoidPtrTy, (unsigned int)AddressSpace::Local, "worker.work_fn.addr",
-                                          &Kernel->getEntryBlock().front());
+    Instruction *WorkFnAI =
+        new AllocaInst(VoidPtrTy, DL.getAllocaAddrSpace(), nullptr,
+                       "worker.work_fn.addr", &Kernel->getEntryBlock().front());
     WorkFnAI->setDebugLoc(DLoc);
 
     auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
@@ -3484,26 +3502,30 @@ struct AAKernelInfoFunction : AAKernelInfo {
     Value *Ident = KernelInitCB->getArgOperand(0);
     Value *GTid = KernelInitCB;
 
-    Module &M = *Kernel->getParent();
     FunctionCallee BarrierFn =
         OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
             M, OMPRTL___kmpc_barrier_simple_spmd);
     CallInst::Create(BarrierFn, {Ident, GTid}, "", StateMachineBeginBB)
         ->setDebugLoc(DLoc);
 
-    Instruction *WorkFnAI_generic = new AddrSpaceCastInst(WorkFnAI,
-        PointerType::getWithSamePointeeType(cast<PointerType>(WorkFnAI->getType()),
-                                            (unsigned int)AddressSpace::Generic),
-        WorkFnAI->getName() + ".generic", StateMachineBeginBB);
-    WorkFnAI_generic ->setDebugLoc(DLoc);
+    if (WorkFnAI->getType()->getPointerAddressSpace() !=
+        (unsigned int)AddressSpace::Generic) {
+      WorkFnAI = new AddrSpaceCastInst(
+          WorkFnAI,
+          PointerType::getWithSamePointeeType(
+              cast<PointerType>(WorkFnAI->getType()),
+              (unsigned int)AddressSpace::Generic),
+          WorkFnAI->getName() + ".generic", StateMachineBeginBB);
+      WorkFnAI->setDebugLoc(DLoc);
+    }
 
     FunctionCallee KernelParallelFn =
         OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
             M, OMPRTL___kmpc_kernel_parallel);
     Instruction *IsActiveWorker = CallInst::Create(
-        KernelParallelFn, {WorkFnAI_generic}, "worker.is_active", StateMachineBeginBB);
+        KernelParallelFn, {WorkFnAI}, "worker.is_active", StateMachineBeginBB);
     IsActiveWorker->setDebugLoc(DLoc);
-    Instruction *WorkFn = new LoadInst(VoidPtrTy, WorkFnAI_generic, "worker.work_fn",
+    Instruction *WorkFn = new LoadInst(VoidPtrTy, WorkFnAI, "worker.work_fn",
                                        StateMachineBeginBB);
     WorkFn->setDebugLoc(DLoc);
 

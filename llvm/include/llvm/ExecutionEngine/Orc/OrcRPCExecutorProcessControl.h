@@ -401,7 +401,7 @@ protected:
   Error initializeORCRPCEPCBase() {
     if (auto EPI = EP.template callB<orcrpctpc::GetExecutorProcessInfo>()) {
       this->TargetTriple = Triple(EPI->Triple);
-      this->PageSize = PageSize;
+      this->PageSize = EPI->PageSize;
       this->JDI = {ExecutorAddress(EPI->DispatchFuncAddr),
                    ExecutorAddress(EPI->DispatchCtxAddr)};
       return Error::success();

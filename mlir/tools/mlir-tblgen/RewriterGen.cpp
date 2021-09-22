@@ -18,6 +18,7 @@
 #include "mlir/TableGen/Pattern.h"
 #include "mlir/TableGen/Predicate.h"
 #include "mlir/TableGen/Type.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
@@ -54,12 +55,19 @@ struct format_provider<mlir::tblgen::Pattern::IdentifierLine> {
 //===----------------------------------------------------------------------===//
 
 namespace {
+
+class StaticMatcherHelper;
+
 class PatternEmitter {
 public:
-  PatternEmitter(Record *pat, RecordOperatorMap *mapper, raw_ostream &os);
+  PatternEmitter(Record *pat, RecordOperatorMap *mapper, raw_ostream &os,
+                 StaticMatcherHelper &helper);
 
   // Emits the mlir::RewritePattern struct named `rewriteName`.
   void emit(StringRef rewriteName);
+
+  // Emits the static function of DAG matcher.
+  void emitStaticMatcher(DagNode tree, std::string funcName);
 
 private:
   // Emits the code for matching ops.
@@ -74,6 +82,9 @@ private:
 
   // Emits C++ statements for matching the DAG structure.
   void emitMatch(DagNode tree, StringRef name, int depth);
+
+  // Emit C++ function call to static DAG matcher.
+  void emitStaticMatchCall(DagNode tree, StringRef name);
 
   // Emits C++ statements for matching using a native code call.
   void emitNativeCodeMatch(DagNode tree, StringRef name, int depth);
@@ -127,11 +138,30 @@ private:
   // Returns the symbol of the old value serving as the replacement.
   StringRef handleReplaceWithValue(DagNode tree);
 
+  // Trailing directives are used at the end of DAG node argument lists to
+  // specify additional behaviour for op matchers and creators, etc.
+  struct TrailingDirectives {
+    // DAG node containing the `location` directive. Null if there is none.
+    DagNode location;
+
+    // DAG node containing the `returnType` directive. Null if there is none.
+    DagNode returnType;
+
+    // Number of found trailing directives.
+    int numDirectives;
+  };
+
+  // Collect any trailing directives.
+  TrailingDirectives getTrailingDirectives(DagNode tree);
+
   // Returns the location value to use.
-  std::pair<bool, std::string> getLocation(DagNode tree);
+  std::string getLocation(TrailingDirectives &tail);
 
   // Returns the location value to use.
   std::string handleLocationDirective(DagNode tree);
+
+  // Emit return type argument.
+  std::string handleReturnTypeArg(DagNode returnType, int i, int depth);
 
   // Emits the C++ statement to build a new op out of the given DAG `tree` and
   // returns the variable name that this op is assigned to. If the root op in
@@ -197,6 +227,8 @@ private:
   // Map for all bound symbols' info.
   SymbolInfoMap symbolInfoMap;
 
+  StaticMatcherHelper &staticMatcherHelper;
+
   // The next unused ID for newly created values.
   unsigned nextValueId;
 
@@ -204,16 +236,79 @@ private:
 
   // Format contexts containing placeholder substitutions.
   FmtContext fmtCtx;
-
-  // Number of op processed.
-  int opCounter = 0;
 };
+
+// Tracks DagNode's reference multiple times across patterns. Enables generating
+// static matcher functions for DagNode's referenced multiple times rather than
+// inlining them.
+class StaticMatcherHelper {
+public:
+  StaticMatcherHelper(RecordOperatorMap &mapper);
+
+  // Determine if we should inline the match logic or delegate to a static
+  // function.
+  bool useStaticMatcher(DagNode node) {
+    return refStats[node] > kStaticMatcherThreshold;
+  }
+
+  // Get the name of the static DAG matcher function corresponding to the node.
+  std::string getMatcherName(DagNode node) {
+    assert(useStaticMatcher(node));
+    return matcherNames[node];
+  }
+
+  // Collect the `Record`s, i.e., the DRR, so that we can get the information of
+  // the duplicated DAGs.
+  void addPattern(Record *record);
+
+  // Emit all static functions of DAG Matcher.
+  void populateStaticMatchers(raw_ostream &os);
+
+private:
+  static constexpr unsigned kStaticMatcherThreshold = 1;
+
+  // Consider two patterns as down below,
+  //   DagNode_Root_A    DagNode_Root_B
+  //       \                 \
+  //     DagNode_C         DagNode_C
+  //         \                 \
+  //       DagNode_D         DagNode_D
+  //
+  // DagNode_Root_A and DagNode_Root_B share the same subtree which consists of
+  // DagNode_C and DagNode_D. Both DagNode_C and DagNode_D are referenced
+  // multiple times so we'll have static matchers for both of them. When we're
+  // emitting the match logic for DagNode_C, we will check if DagNode_D has the
+  // static matcher generated. If so, then we'll generate a call to the
+  // function, inline otherwise. In this case, inlining is not what we want. As
+  // a result, generate the static matcher in topological order to ensure all
+  // the dependent static matchers are generated and we can avoid accidentally
+  // inlining.
+  //
+  // The topological order of all the DagNodes among all patterns.
+  SmallVector<std::pair<DagNode, Record *>> topologicalOrder;
+
+  RecordOperatorMap &opMap;
+
+  // Records of the static function name of each DagNode
+  DenseMap<DagNode, std::string> matcherNames;
+
+  // After collecting all the DagNode in each pattern, `refStats` records the
+  // number of users for each DagNode. We will generate the static matcher for a
+  // DagNode while the number of users exceeds a certain threshold.
+  DenseMap<DagNode, unsigned> refStats;
+
+  // Number of static matcher generated. This is used to generate a unique name
+  // for each DagNode.
+  int staticMatcherCounter = 0;
+};
+
 } // end anonymous namespace
 
 PatternEmitter::PatternEmitter(Record *pat, RecordOperatorMap *mapper,
-                               raw_ostream &os)
+                               raw_ostream &os, StaticMatcherHelper &helper)
     : loc(pat->getLoc()), opMap(mapper), pattern(pat, mapper),
-      symbolInfoMap(pat->getLoc()), nextValueId(0), os(os) {
+      symbolInfoMap(pat->getLoc()), staticMatcherHelper(helper), nextValueId(0),
+      os(os) {
   fmtCtx.withBuilder("rewriter");
 }
 
@@ -225,6 +320,33 @@ std::string PatternEmitter::handleConstantAttr(Attribute attr,
 
   // TODO: Verify the constants here
   return std::string(tgfmt(attr.getConstBuilderTemplate(), &fmtCtx, value));
+}
+
+void PatternEmitter::emitStaticMatcher(DagNode tree, std::string funcName) {
+  os << formatv(
+      "static ::mlir::LogicalResult {0}(::mlir::PatternRewriter &rewriter, "
+      "::mlir::Operation *op0, ::llvm::SmallVector<::mlir::Operation "
+      "*, 4> &tblgen_ops",
+      funcName);
+
+  // We pass the reference of the variables that need to be captured. Hence we
+  // need to collect all the symbols in the tree first.
+  pattern.collectBoundSymbols(tree, symbolInfoMap, /*isSrcPattern=*/true);
+  symbolInfoMap.assignUniqueAlternativeNames();
+  for (const auto &info : symbolInfoMap)
+    os << formatv(", {0}", info.second.getArgDecl(info.first));
+
+  os << ") {\n";
+  os.indent();
+  os << "(void)tblgen_ops;\n";
+
+  // Note that a static matcher is considered at least one step from the match
+  // entry.
+  emitMatch(tree, "op0", /*depth=*/1);
+
+  os << "return ::mlir::success();\n";
+  os.unindent();
+  os << "}\n\n";
 }
 
 // Helper function to match patterns.
@@ -242,12 +364,57 @@ void PatternEmitter::emitMatch(DagNode tree, StringRef name, int depth) {
   PrintFatalError(loc, "encountered non-op, non-NativeCodeCall match.");
 }
 
+void PatternEmitter::emitStaticMatchCall(DagNode tree, StringRef opName) {
+  std::string funcName = staticMatcherHelper.getMatcherName(tree);
+  os << formatv("if(failed({0}(rewriter, {1}, tblgen_ops", funcName, opName);
+
+  // TODO(chiahungduan): Add a lookupBoundSymbols() to do the subtree lookup in
+  // one pass.
+
+  // In general, bound symbol should have the unique name in the pattern but
+  // for the operand, binding same symbol to multiple operands imply a
+  // constraint at the same time. In this case, we will rename those operands
+  // with different names. As a result, we need to collect all the symbolInfos
+  // from the DagNode then get the updated name of the local variables from the
+  // global symbolInfoMap.
+
+  // Collect all the bound symbols in the Dag
+  SymbolInfoMap localSymbolMap(loc);
+  pattern.collectBoundSymbols(tree, localSymbolMap, /*isSrcPattern=*/true);
+
+  for (const auto &info : localSymbolMap) {
+    auto name = info.first;
+    auto symboInfo = info.second;
+    auto ret = symbolInfoMap.findBoundSymbol(name, symboInfo);
+    os << formatv(", {0}", ret->second.getVarName(name));
+  }
+
+  os << "))) {\n";
+  os.scope().os << "return ::mlir::failure();\n";
+  os << "}\n";
+}
+
 // Helper function to match patterns.
 void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
                                          int depth) {
   LLVM_DEBUG(llvm::dbgs() << "handle NativeCodeCall matcher pattern: ");
   LLVM_DEBUG(tree.print(llvm::dbgs()));
   LLVM_DEBUG(llvm::dbgs() << '\n');
+
+  // The order of generating static matcher follows the topological order so
+  // that for every dependent DagNode already have their static matcher
+  // generated if needed. The reason we check if `getMatcherName(tree).empty()`
+  // is when we are generating the static matcher for a DagNode itself. In this
+  // case, we need to emit the function body rather than a function call.
+  if (staticMatcherHelper.useStaticMatcher(tree) &&
+      !staticMatcherHelper.getMatcherName(tree).empty()) {
+    emitStaticMatchCall(tree, opName);
+
+    // NativeCodeCall will never be at depth 0 so that we don't need to catch
+    // the root operation as emitOpMatch();
+
+    return;
+  }
 
   // TODO(suderman): iterate through arguments, determine their types, output
   // names.
@@ -271,9 +438,10 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
     capture.push_back(std::move(argName));
   }
 
-  bool hasLocationDirective;
-  std::string locToUse;
-  std::tie(hasLocationDirective, locToUse) = getLocation(tree);
+  auto tail = getTrailingDirectives(tree);
+  if (tail.returnType)
+    PrintFatalError(loc, "`NativeCodeCall` cannot have return type specifier");
+  auto locToUse = getLocation(tail);
 
   auto fmt = tree.getNativeCodeTemplate();
   if (fmt.count("$_self") != 1)
@@ -286,14 +454,14 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
   emitMatchCheck(opName, formatv("!failed({0})", nativeCodeCall),
                  formatv("\"{0} return failure\"", nativeCodeCall));
 
-  for (int i = 0, e = tree.getNumArgs(); i != e; ++i) {
+  for (int i = 0, e = tree.getNumArgs() - tail.numDirectives; i != e; ++i) {
     auto name = tree.getArgName(i);
     if (!name.empty() && name != "_") {
       os << formatv("{0} = {1};\n", name, capture[i]);
     }
   }
 
-  for (int i = 0, e = tree.getNumArgs(); i != e; ++i) {
+  for (int i = 0, e = tree.getNumArgs() - tail.numDirectives; i != e; ++i) {
     std::string argName = capture[i];
 
     // Handle nested DAG construct first
@@ -336,7 +504,28 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
                           << op.getOperationName() << "' at depth " << depth
                           << '\n');
 
-  std::string castedName = formatv("castedOp{0}", depth);
+  auto getCastedName = [depth]() -> std::string {
+    return formatv("castedOp{0}", depth);
+  };
+
+  // The order of generating static matcher follows the topological order so
+  // that for every dependent DagNode already have their static matcher
+  // generated if needed. The reason we check if `getMatcherName(tree).empty()`
+  // is when we are generating the static matcher for a DagNode itself. In this
+  // case, we need to emit the function body rather than a function call.
+  if (staticMatcherHelper.useStaticMatcher(tree) &&
+      !staticMatcherHelper.getMatcherName(tree).empty()) {
+    emitStaticMatchCall(tree, opName);
+    // In the codegen of rewriter, we suppose that castedOp0 will capture the
+    // root operation. Manually add it if the root DagNode is a static matcher.
+    if (depth == 0)
+      os << formatv("auto {2} = ::llvm::dyn_cast_or_null<{1}>({0}); "
+                    "(void){2};\n",
+                    opName, op.getQualCppClassName(), getCastedName());
+    return;
+  }
+
+  std::string castedName = getCastedName();
   os << formatv("auto {0} = ::llvm::dyn_cast<{2}>({1}); "
                 "(void){0};\n",
                 castedName, opName, op.getQualCppClassName());
@@ -385,7 +574,7 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
                      formatv("\"Operand {0} of {1} has null definingOp\"",
                              nextOperand++, castedName));
       emitMatch(argTree, argName, depth + 1);
-      os << formatv("tblgen_ops[{0}] = {1};\n", ++opCounter, argName);
+      os << formatv("tblgen_ops.push_back({0});\n", argName);
       os.unindent() << "}\n";
       continue;
     }
@@ -684,13 +873,12 @@ void PatternEmitter::emit(StringRef rewriteName) {
       }
       // TODO: capture ops with consistent numbering so that it can be
       // reused for fused loc.
-      os << formatv("::mlir::Operation *tblgen_ops[{0}];\n\n",
-                    pattern.getSourcePattern().getNumOps());
+      os << "::llvm::SmallVector<::mlir::Operation *, 4> tblgen_ops;\n\n";
       LLVM_DEBUG(llvm::dbgs()
                  << "done creating local variables for capturing matches\n");
 
       os << "// Match\n";
-      os << "tblgen_ops[0] = op0;\n";
+      os << "tblgen_ops.push_back(op0);\n";
       emitMatchLogic(sourceTree, "op0");
 
       os << "\n// Rewrite\n";
@@ -884,6 +1072,24 @@ std::string PatternEmitter::handleLocationDirective(DagNode tree) {
   return os.str();
 }
 
+std::string PatternEmitter::handleReturnTypeArg(DagNode returnType, int i,
+                                                int depth) {
+  // Nested NativeCodeCall.
+  if (auto dagNode = returnType.getArgAsNestedDag(i)) {
+    if (!dagNode.isNativeCodeCall())
+      PrintFatalError(loc, "nested DAG in `returnType` must be a native code "
+                           "call");
+    return handleReplaceWithNativeCodeCall(dagNode, depth);
+  }
+  // String literal.
+  auto dagLeaf = returnType.getArgAsLeaf(i);
+  if (dagLeaf.isStringAttr())
+    return tgfmt(dagLeaf.getStringAttr(), &fmtCtx);
+  return tgfmt(
+      "$0.getType()", &fmtCtx,
+      handleOpArgument(returnType.getArgAsLeaf(i), returnType.getArgName(i)));
+}
+
 std::string PatternEmitter::handleOpArgument(DagLeaf leaf,
                                              StringRef patArgName) {
   if (leaf.isStringAttr())
@@ -929,11 +1135,12 @@ std::string PatternEmitter::handleReplaceWithNativeCodeCall(DagNode tree,
 
   SmallVector<std::string, 16> attrs;
 
-  bool hasLocationDirective;
-  std::string locToUse;
-  std::tie(hasLocationDirective, locToUse) = getLocation(tree);
+  auto tail = getTrailingDirectives(tree);
+  if (tail.returnType)
+    PrintFatalError(loc, "`NativeCodeCall` cannot have return type specifier");
+  auto locToUse = getLocation(tail);
 
-  for (int i = 0, e = tree.getNumArgs() - hasLocationDirective; i != e; ++i) {
+  for (int i = 0, e = tree.getNumArgs() - tail.numDirectives; i != e; ++i) {
     if (tree.isNestedDagArg(i)) {
       attrs.push_back(
           handleResultPattern(tree.getArgAsNestedDag(i), i, depth + 1));
@@ -1002,18 +1209,49 @@ int PatternEmitter::getNodeValueCount(DagNode node) {
   return 1;
 }
 
-std::pair<bool, std::string> PatternEmitter::getLocation(DagNode tree) {
-  auto numPatArgs = tree.getNumArgs();
+PatternEmitter::TrailingDirectives
+PatternEmitter::getTrailingDirectives(DagNode tree) {
+  TrailingDirectives tail = {DagNode(nullptr), DagNode(nullptr), 0};
 
-  if (numPatArgs != 0) {
-    if (auto lastArg = tree.getArgAsNestedDag(numPatArgs - 1))
-      if (lastArg.isLocationDirective()) {
-        return std::make_pair(true, handleLocationDirective(lastArg));
-      }
+  // Look backwards through the arguments.
+  auto numPatArgs = tree.getNumArgs();
+  for (int i = numPatArgs - 1; i >= 0; --i) {
+    auto dagArg = tree.getArgAsNestedDag(i);
+    // A leaf is not a directive. Stop looking.
+    if (!dagArg)
+      break;
+
+    auto isLocation = dagArg.isLocationDirective();
+    auto isReturnType = dagArg.isReturnTypeDirective();
+    // If encountered a DAG node that isn't a trailing directive, stop looking.
+    if (!(isLocation || isReturnType))
+      break;
+    // Save the directive, but error if one of the same type was already
+    // found.
+    ++tail.numDirectives;
+    if (isLocation) {
+      if (tail.location)
+        PrintFatalError(loc, "`location` directive can only be specified "
+                             "once");
+      tail.location = dagArg;
+    } else if (isReturnType) {
+      if (tail.returnType)
+        PrintFatalError(loc, "`returnType` directive can only be specified "
+                             "once");
+      tail.returnType = dagArg;
+    }
   }
 
+  return tail;
+}
+
+std::string
+PatternEmitter::getLocation(PatternEmitter::TrailingDirectives &tail) {
+  if (tail.location)
+    return handleLocationDirective(tail.location);
+
   // If no explicit location is given, use the default, all fused, location.
-  return std::make_pair(false, "odsLoc");
+  return "odsLoc";
 }
 
 std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
@@ -1026,11 +1264,10 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
   auto numOpArgs = resultOp.getNumArgs();
   auto numPatArgs = tree.getNumArgs();
 
-  bool hasLocationDirective;
-  std::string locToUse;
-  std::tie(hasLocationDirective, locToUse) = getLocation(tree);
+  auto tail = getTrailingDirectives(tree);
+  auto locToUse = getLocation(tail);
 
-  auto inPattern = numPatArgs - hasLocationDirective;
+  auto inPattern = numPatArgs - tail.numDirectives;
   if (numOpArgs != inPattern) {
     PrintFatalError(loc,
                     formatv("resultant op '{0}' argument number mismatch: "
@@ -1045,7 +1282,7 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
   // First go through all the child nodes who are nested DAG constructs to
   // create ops for them and remember the symbol names for them, so that we can
   // use the results in the current node. This happens in a recursive manner.
-  for (int i = 0, e = tree.getNumArgs() - hasLocationDirective; i != e; ++i) {
+  for (int i = 0, e = tree.getNumArgs() - tail.numDirectives; i != e; ++i) {
     if (auto child = tree.getArgAsNestedDag(i))
       childNodeNames[i] = handleResultPattern(child, i, depth + 1);
   }
@@ -1080,7 +1317,7 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
   bool useFirstAttr =
       resultOp.getTrait("::mlir::OpTrait::FirstAttrDerivedResultType");
 
-  if (isSameOperandsAndResultType || useFirstAttr) {
+  if (!tail.returnType && (isSameOperandsAndResultType || useFirstAttr)) {
     // We know how to deduce the result type for ops with these traits and we've
     // generated builders taking aggregate parameters. Use those builders to
     // create the ops.
@@ -1097,7 +1334,7 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
 
   bool usePartialResults = valuePackName != resultValue;
 
-  if (usePartialResults || depth > 0 || resultIndex < 0) {
+  if (!tail.returnType && (usePartialResults || depth > 0 || resultIndex < 0)) {
     // For these cases (broadcastable ops, op results used both as auxiliary
     // values and replacement values, ops in nested patterns, auxiliary ops), we
     // still need to supply the result types when building the op. But because
@@ -1115,10 +1352,14 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
     return resultValue;
   }
 
-  // If depth == 0 and resultIndex >= 0, it means we are replacing the values
-  // generated from the source pattern root op. Then we can use the source
-  // pattern's value types to determine the value type of the generated op
-  // here.
+  // If we are provided explicit return types, use them to build the op.
+  // However, if depth == 0 and resultIndex >= 0, it means we are replacing
+  // the values generated from the source pattern root op. Then we must use the
+  // source pattern's value types to determine the value type of the generated
+  // op here.
+  if (depth == 0 && resultIndex >= 0 && tail.returnType)
+    PrintFatalError(loc, "Cannot specify explicit return types in an op whose "
+                         "return values replace the source pattern's root op");
 
   // First prepare local variables for op arguments used in builder call.
   createAggregateLocalVarsForOpArgs(tree, childNodeNames, depth);
@@ -1128,11 +1369,20 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
   os.indent() << formatv("::mlir::SmallVector<::mlir::Type, 4> tblgen_types; "
                          "(void)tblgen_types;\n");
   int numResults = resultOp.getNumResults();
-  if (numResults != 0) {
-    for (int i = 0; i < numResults; ++i)
-      os << formatv("for (auto v: castedOp0.getODSResults({0})) {{\n"
-                    "  tblgen_types.push_back(v.getType());\n}\n",
-                    resultIndex + i);
+  if (tail.returnType) {
+    auto numRetTys = tail.returnType.getNumArgs();
+    for (int i = 0; i < numRetTys; ++i) {
+      auto varName = handleReturnTypeArg(tail.returnType, i, depth + 1);
+      os << "tblgen_types.push_back(" << varName << ");\n";
+    }
+  } else {
+    if (numResults != 0) {
+      // Copy the result types from the source pattern.
+      for (int i = 0; i < numResults; ++i)
+        os << formatv("for (auto v: castedOp0.getODSResults({0})) {{\n"
+                      "  tblgen_types.push_back(v.getType());\n}\n",
+                      resultIndex + i);
+    }
   }
   os << formatv("{0} = rewriter.create<{1}>({2}, tblgen_types, "
                 "tblgen_values, tblgen_attrs);\n",
@@ -1317,17 +1567,67 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
   }
 }
 
+StaticMatcherHelper::StaticMatcherHelper(RecordOperatorMap &mapper)
+    : opMap(mapper) {}
+
+void StaticMatcherHelper::populateStaticMatchers(raw_ostream &os) {
+  // PatternEmitter will use the static matcher if there's one generated. To
+  // ensure that all the dependent static matchers are generated before emitting
+  // the matching logic of the DagNode, we use topological order to achieve it.
+  for (auto &dagInfo : topologicalOrder) {
+    DagNode node = dagInfo.first;
+    if (!useStaticMatcher(node))
+      continue;
+
+    std::string funcName =
+        formatv("static_dag_matcher_{0}", staticMatcherCounter++);
+    assert(matcherNames.find(node) == matcherNames.end());
+    PatternEmitter(dagInfo.second, &opMap, os, *this)
+        .emitStaticMatcher(node, funcName);
+    matcherNames[node] = funcName;
+  }
+}
+
+void StaticMatcherHelper::addPattern(Record *record) {
+  Pattern pat(record, &opMap);
+
+  // While generating the function body of the DAG matcher, it may depends on
+  // other DAG matchers. To ensure the dependent matchers are ready, we compute
+  // the topological order for all the DAGs and emit the DAG matchers in this
+  // order.
+  llvm::unique_function<void(DagNode)> dfs = [&](DagNode node) {
+    ++refStats[node];
+
+    if (refStats[node] != 1)
+      return;
+
+    for (unsigned i = 0, e = node.getNumArgs(); i < e; ++i)
+      if (DagNode sibling = node.getArgAsNestedDag(i))
+        dfs(sibling);
+
+    topologicalOrder.push_back(std::make_pair(node, record));
+  };
+
+  dfs(pat.getSourcePattern());
+}
+
 static void emitRewriters(const RecordKeeper &recordKeeper, raw_ostream &os) {
   emitSourceFileHeader("Rewriters", os);
 
   const auto &patterns = recordKeeper.getAllDerivedDefinitions("Pattern");
-  auto numPatterns = patterns.size();
 
   // We put the map here because it can be shared among multiple patterns.
   RecordOperatorMap recordOpMap;
 
+  // Exam all the patterns and generate static matcher for the duplicated
+  // DagNode.
+  StaticMatcherHelper staticMatcher(recordOpMap);
+  for (Record *p : patterns)
+    staticMatcher.addPattern(p);
+  staticMatcher.populateStaticMatchers(os);
+
   std::vector<std::string> rewriterNames;
-  rewriterNames.reserve(numPatterns);
+  rewriterNames.reserve(patterns.size());
 
   std::string baseRewriterName = "GeneratedConvert";
   int rewriterIndex = 0;
@@ -1343,7 +1643,7 @@ static void emitRewriters(const RecordKeeper &recordKeeper, raw_ostream &os) {
     }
     LLVM_DEBUG(llvm::dbgs()
                << "=== start generating pattern '" << name << "' ===\n");
-    PatternEmitter(p, &recordOpMap, os).emit(name);
+    PatternEmitter(p, &recordOpMap, os, staticMatcher).emit(name);
     LLVM_DEBUG(llvm::dbgs()
                << "=== done generating pattern '" << name << "' ===\n");
     rewriterNames.push_back(std::move(name));

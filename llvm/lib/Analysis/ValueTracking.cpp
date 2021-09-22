@@ -1689,6 +1689,32 @@ static void computeKnownBitsFromOperator(const Operator *I,
         if (BitWidth >= 32)
           Known.Zero.setBitsFrom(31);
         break;
+      case Intrinsic::vscale: {
+        if (!II->getFunction()->hasFnAttribute(Attribute::VScaleRange))
+          break;
+
+        auto VScaleRange = II->getFunction()
+                               ->getFnAttribute(Attribute::VScaleRange)
+                               .getVScaleRangeArgs();
+
+        if (VScaleRange.second == 0)
+          break;
+
+        // If vscale min = max then we know the exact value at compile time
+        // and hence we know the exact bits.
+        if (VScaleRange.first == VScaleRange.second) {
+          Known.One = VScaleRange.first;
+          Known.Zero = VScaleRange.first;
+          Known.Zero.flipAllBits();
+          break;
+        }
+
+        unsigned FirstZeroHighBit = 32 - countLeadingZeros(VScaleRange.second);
+        if (FirstZeroHighBit < BitWidth)
+          Known.Zero.setBitsFrom(FirstZeroHighBit);
+
+        break;
+      }
       }
     }
     break;
@@ -4533,6 +4559,12 @@ AllocaInst *llvm::findAllocaForValue(Value *V, bool OffsetZero) {
       if (OffsetZero && !GEP->hasAllZeroIndices())
         return nullptr;
       AddWork(GEP->getPointerOperand());
+    } else if (CallBase *CB = dyn_cast<CallBase>(V)) {
+      Value *Returned = CB->getReturnedArgOperand();
+      if (Returned)
+        AddWork(Returned);
+      else
+        return nullptr;
     } else {
       return nullptr;
     }
@@ -6999,6 +7031,7 @@ static void setLimitsForSelectPattern(const SelectInst &SI, APInt &Lower,
 ConstantRange llvm::computeConstantRange(const Value *V, bool UseInstrInfo,
                                          AssumptionCache *AC,
                                          const Instruction *CtxI,
+                                         const DominatorTree *DT,
                                          unsigned Depth) {
   assert(V->getType()->isIntOrIntVectorTy() && "Expected integer instruction");
 
@@ -7037,7 +7070,7 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool UseInstrInfo,
       assert(I->getCalledFunction()->getIntrinsicID() == Intrinsic::assume &&
              "must be an assume intrinsic");
 
-      if (!isValidAssumeForContext(I, CtxI, nullptr))
+      if (!isValidAssumeForContext(I, CtxI, DT))
         continue;
       Value *Arg = I->getArgOperand(0);
       ICmpInst *Cmp = dyn_cast<ICmpInst>(Arg);
@@ -7045,7 +7078,7 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool UseInstrInfo,
       if (!Cmp || Cmp->getOperand(0) != V)
         continue;
       ConstantRange RHS = computeConstantRange(Cmp->getOperand(1), UseInstrInfo,
-                                               AC, I, Depth + 1);
+                                               AC, I, DT, Depth + 1);
       CR = CR.intersectWith(
           ConstantRange::makeAllowedICmpRegion(Cmp->getPredicate(), RHS));
     }

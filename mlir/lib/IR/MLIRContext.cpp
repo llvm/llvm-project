@@ -57,7 +57,8 @@ namespace {
 struct MLIRContextOptions {
   llvm::cl::opt<bool> disableThreading{
       "mlir-disable-threading",
-      llvm::cl::desc("Disabling multi-threading within MLIR")};
+      llvm::cl::desc("Disable multi-threading within MLIR, overrides any "
+                     "further call to MLIRContext::enableMultiThreading()")};
 
   llvm::cl::opt<bool> printOpOnDiagnostic{
       "mlir-print-op-on-diagnostic",
@@ -73,6 +74,14 @@ struct MLIRContextOptions {
 } // end anonymous namespace
 
 static llvm::ManagedStatic<MLIRContextOptions> clOptions;
+
+static bool isThreadingGloballyDisabled() {
+#if LLVM_ENABLE_THREADS != 0
+  return clOptions.isConstructed() && clOptions->disableThreading;
+#else
+  return true;
+#endif
+}
 
 /// Register a set of useful command-line options that can be used to configure
 /// various flags within the MLIRContext. These flags are used when constructing
@@ -362,10 +371,10 @@ MLIRContext::MLIRContext(Threading setting)
     : MLIRContext(DialectRegistry(), setting) {}
 
 MLIRContext::MLIRContext(const DialectRegistry &registry, Threading setting)
-    : impl(new MLIRContextImpl(setting == Threading::ENABLED)) {
+    : impl(new MLIRContextImpl(setting == Threading::ENABLED &&
+                               !isThreadingGloballyDisabled())) {
   // Initialize values based on the command line flags if they were provided.
   if (clOptions.isConstructed()) {
-    disableMultithreading(clOptions->disableThreading);
     printOpOnDiagnostic(clOptions->printOpOnDiagnostic);
     printStackTraceOnDiagnostic(clOptions->printStackTraceOnDiagnostic);
   }
@@ -582,6 +591,11 @@ bool MLIRContext::isMultithreadingEnabled() {
 
 /// Set the flag specifying if multi-threading is disabled by the context.
 void MLIRContext::disableMultithreading(bool disable) {
+  // This API can be overridden by the global debugging flag
+  // --mlir-disable-threading
+  if (isThreadingGloballyDisabled())
+    return;
+
   impl->threadingIsEnabled = !disable;
 
   // Update the threading mode for each of the uniquers.

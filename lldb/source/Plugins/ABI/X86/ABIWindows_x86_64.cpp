@@ -836,5 +836,3 @@ lldb_private::ConstString ABIWindows_x86_64::GetPluginNameStatic() {
 lldb_private::ConstString ABIWindows_x86_64::GetPluginName() {
   return GetPluginNameStatic();
 }
-
-uint32_t ABIWindows_x86_64::GetPluginVersion() { return 1; }

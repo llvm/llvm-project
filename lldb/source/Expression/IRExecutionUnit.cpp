@@ -723,9 +723,11 @@ void IRExecutionUnit::CollectCandidateCPlusPlusNames(
       }
     }
 
-    std::set<ConstString> alternates;
-    CPlusPlusLanguage::FindAlternateFunctionManglings(name, alternates);
-    CPP_names.insert(CPP_names.end(), alternates.begin(), alternates.end());
+    if (auto *cpp_lang = Language::FindPlugin(lldb::eLanguageTypeC_plus_plus)) {
+      std::vector<ConstString> alternates =
+          cpp_lang->GenerateAlternateFunctionManglings(name);
+      CPP_names.insert(CPP_names.end(), alternates.begin(), alternates.end());
+    }
   }
 }
 

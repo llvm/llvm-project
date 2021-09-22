@@ -39,7 +39,7 @@ def quantized_matmul(
 
 @linalg_structured_op
 def mmt4d(lhs=TensorDef(TV.LhsType, S.M, S.K, S.M0, S.K0),
-          rhs=TensorDef(TV.RhsType, S.N, S.K, S.K0, S.N0),
+          rhs=TensorDef(TV.RhsType, S.N, S.K, S.N0, S.K0),
           accum=TensorDef(TV.AccumType, S.M, S.N, S.M0, S.N0,
                                   output=True)):
   """Performs a matrix-matrix-transpose multiplication of two 4D inputs.
@@ -52,9 +52,9 @@ def mmt4d(lhs=TensorDef(TV.LhsType, S.M, S.K, S.M0, S.K0),
       '0' suffixes below, for instance the LHS matrix shape (M, K, M0, K0) reads
       as: MxK tiles, each of shape M0xK0.
   """
-  domain(D.m, D.n, D.m0, D.n0, D.k, D.k0)
+  domain(D.m, D.n, D.k, D.m0, D.n0, D.k0)
   implements(ContractionOpInterface)
-  accum[D.m, D.n, D.m0, D.n0] += cast(TV.AccumType, lhs[D.m, D.k, D.m0, D.k0]) * cast(TV.AccumType, rhs[D.n, D.k, D.k0, D.n0])
+  accum[D.m, D.n, D.m0, D.n0] += cast(TV.AccumType, lhs[D.m, D.k, D.m0, D.k0]) * cast(TV.AccumType, rhs[D.n, D.k, D.n0, D.k0])
 
 @linalg_structured_op
 def batch_matmul(
@@ -146,7 +146,7 @@ def dot(
 
 @linalg_structured_op
 def conv_1d(
-    I=TensorDef(T1, S.IW),
+    I=TensorDef(T1, S.OW + S.KW),
     K=TensorDef(T2, S.KW),
     O=TensorDef(U, S.OW, output=True)):
   """Performs 1-D convolution with no channels.
@@ -154,13 +154,14 @@ def conv_1d(
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output.
   """
+  implements(ConvolutionOpInterface)
   domain(D.ow, D.kw)
   O[D.ow] += cast(
       U, I[D.ow + D.kw]) * cast(U, K[D.kw])
 
 @linalg_structured_op
 def conv_2d(
-    I=TensorDef(T1, S.IH, S.IW),
+    I=TensorDef(T1, S.OH + S.KH, S.OW + S.KW),
     K=TensorDef(T2, S.KH, S.KW),
     O=TensorDef(U, S.OH, S.OW, output=True)):
   """Performs 2-D convolution with no channels.
@@ -168,13 +169,14 @@ def conv_2d(
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output.
   """
+  implements(ConvolutionOpInterface)
   domain(D.oh, D.ow, D.kh, D.kw)
   O[D.oh, D.ow] += cast(
       U, I[D.oh + D.kh, D.ow + D.kw]) * cast(U, K[D.kh, D.kw])
 
 @linalg_structured_op
 def conv_3d(
-    I=TensorDef(T1, S.ID, S.IH, S.IW),
+    I=TensorDef(T1, S.OD + S.KD, S.OH + S.KH, S.OW + S.KW),
     K=TensorDef(T2, S.KD, S.KH, S.KW),
     O=TensorDef(U, S.OD, S.OH, S.OW, output=True)):
   """Performs 3-D convolution with no channels.
@@ -182,13 +184,14 @@ def conv_3d(
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output.
   """
+  implements(ConvolutionOpInterface)
   domain(D.od, D.oh, D.ow, D.kd, D.kh, D.kw)
   O[D.od, D.oh, D.ow] += cast(
       U, I[D.od + D.kd, D.oh + D.kh, D.ow + D.kw]) * cast(U, K[D.kd, D.kh, D.kw])
 
 @linalg_structured_op
 def conv_1d_nwc_wcf(
-    I=TensorDef(T1, S.N, S.IW, S.C),
+    I=TensorDef(T1, S.N, S.OW * S.SW + S.KW * S.DW, S.C),
     K=TensorDef(T2, S.KW, S.C, S.F),
     O=TensorDef(U, S.N, S.OW, S.F, output=True),
     strides=AttributeDef(S.SW),
@@ -198,6 +201,7 @@ def conv_1d_nwc_wcf(
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output.
   """
+  implements(ConvolutionOpInterface)
   domain(D.n, D.ow, D.f, D.kw, D.c)
   O[D.n, D.ow, D.f] += cast(
       U, I[D.n, D.ow * S.SW + D.kw * S.DW, D.c
@@ -205,7 +209,7 @@ def conv_1d_nwc_wcf(
 
 @linalg_structured_op
 def conv_2d_nhwc_hwcf(
-    I=TensorDef(T1, S.N, S.IH, S.IW, S.C),
+    I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.C),
     K=TensorDef(T2, S.KH, S.KW, S.C, S.F),
     O=TensorDef(U, S.N, S.OH, S.OW, S.F, output=True),
     strides=AttributeDef(S.SH, S.SW),
@@ -219,6 +223,7 @@ def conv_2d_nhwc_hwcf(
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output.
   """
+  implements(ConvolutionOpInterface)
   domain(D.n, D.oh, D.ow, D.f, D.kh, D.kw, D.c)
   O[D.n, D.oh, D.ow, D.f] += cast(
       U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c
@@ -226,7 +231,7 @@ def conv_2d_nhwc_hwcf(
 
 @linalg_structured_op
 def conv_2d_nhwc_hwcf_q(
-    I=TensorDef(T1, S.N, S.IH, S.IW, S.C),
+    I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.C),
     K=TensorDef(T2, S.KH, S.KW, S.C, S.F),
     IZp=ScalarDef(I32),
     KZp=ScalarDef(I32),
@@ -243,6 +248,7 @@ def conv_2d_nhwc_hwcf_q(
   them to the same data type as the accumulator/output. This includes the zero
   point offsets common to quantized operations.
   """
+  implements(ConvolutionOpInterface)
   domain(D.n, D.oh, D.ow, D.f, D.kh, D.kw, D.c)
   O[D.n, D.oh, D.ow, D.f] += (cast(
       U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c
@@ -250,7 +256,7 @@ def conv_2d_nhwc_hwcf_q(
 
 @linalg_structured_op
 def conv_2d_nchw_fchw(
-    I=TensorDef(T1, S.N, S.C, S.IH, S.IW),
+    I=TensorDef(T1, S.N, S.C, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW),
     K=TensorDef(T2, S.F, S.C, S.KH, S.KW),
     O=TensorDef(U, S.N, S.F, S.OH, S.OW, output=True),
     strides=AttributeDef(S.SH, S.SW),
@@ -264,6 +270,7 @@ def conv_2d_nchw_fchw(
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output.
   """
+  implements(ConvolutionOpInterface)
   domain(D.n, D.f, D.oh, D.ow, D.c, D.kh, D.kw)
   O[D.n, D.f, D.oh, D.ow] += cast(
       U, I[D.n, D.c, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW
@@ -271,7 +278,8 @@ def conv_2d_nchw_fchw(
 
 @linalg_structured_op
 def conv_3d_ndhwc_dhwcf(
-    I=TensorDef(T1, S.N, S.ID, S.IH, S.IW, S.C),
+    I=TensorDef(T1, S.N, S.OD * S.SD + S.KD * S.DD,
+                S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.C),
     K=TensorDef(T2, S.KD, S.KH, S.KW, S.C, S.F),
     O=TensorDef(U, S.N, S.OD, S.OH, S.OW, S.F, output=True),
     strides=AttributeDef(S.SD, S.SH, S.SW),
@@ -281,6 +289,7 @@ def conv_3d_ndhwc_dhwcf(
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output.
   """
+  implements(ConvolutionOpInterface)
   domain(D.n, D.od, D.oh, D.ow, D.f, D.kd, D.kh, D.kw, D.c)
   O[D.n, D.od, D.oh, D.ow, D.f] += cast(
       U, I[D.n, D.od * S.SD + D.kd * S.DD, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c
@@ -288,7 +297,7 @@ def conv_3d_ndhwc_dhwcf(
 
 @linalg_structured_op
 def depthwise_conv2D_nhw(
-    I=TensorDef(T1, S.N, S.IH, S.IW, S.IC),
+    I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.IC),
     K=TensorDef(T2, S.KH, S.KW, S.IC),
     O=TensorDef(U, S.N, S.OH, S.OW, S.IC, output=True),
     strides=AttributeDef(S.SH, S.SW),
@@ -299,6 +308,7 @@ def depthwise_conv2D_nhw(
   them to the same data type as the accumulator/output. Multiplier is set to 1
   which is a special case for most dpethwise convolutions.
   """
+  implements(ConvolutionOpInterface)
   domain(D.n, D.oh, D.ow, D.ic, D.kh, D.kw)
   O[D.n, D.oh, D.ow, D.ic] += cast(
       U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
@@ -306,7 +316,7 @@ def depthwise_conv2D_nhw(
 
 @linalg_structured_op
 def depthwise_conv2D_nhw_q(
-    I=TensorDef(T1, S.N, S.IH, S.IW, S.IC),
+    I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.IC),
     K=TensorDef(T2, S.KH, S.KW, S.IC),
     IZp=ScalarDef(I32),
     KZp=ScalarDef(I32),
@@ -318,6 +328,7 @@ def depthwise_conv2D_nhw_q(
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output.
   """
+  implements(ConvolutionOpInterface)
   domain(D.n, D.oh, D.ow, D.ic, D.kh, D.kw)
   O[D.n, D.oh, D.ow, D.ic] += (
       (cast(U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
@@ -326,7 +337,7 @@ def depthwise_conv2D_nhw_q(
 
 @linalg_structured_op
 def depthwise_conv2D_nhwc(
-    I=TensorDef(T1, S.N, S.IH, S.IW, S.IC),
+    I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.IC),
     K=TensorDef(T2, S.KH, S.KW, S.IC, S.CM),
     O=TensorDef(U, S.N, S.OH, S.OW, S.IC, S.CM, output=True),
     strides=AttributeDef(S.SH, S.SW),
@@ -336,6 +347,7 @@ def depthwise_conv2D_nhwc(
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output.
   """
+  implements(ConvolutionOpInterface)
   domain(D.n, D.oh, D.ow, D.ic, D.cm, D.kh, D.kw)
   O[D.n, D.oh, D.ow, D.ic, D.cm] += cast(
       U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
@@ -343,7 +355,7 @@ def depthwise_conv2D_nhwc(
 
 @linalg_structured_op
 def depthwise_conv2D_nhwc_q(
-    I=TensorDef(T1, S.N, S.IH, S.IW, S.IC),
+    I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.IC),
     K=TensorDef(T2, S.KH, S.KW, S.IC, S.CM),
     IZp=ScalarDef(I32),
     KZp=ScalarDef(I32),
@@ -355,6 +367,7 @@ def depthwise_conv2D_nhwc_q(
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output.
   """
+  implements(ConvolutionOpInterface)
   domain(D.n, D.oh, D.ow, D.ic, D.cm, D.kh, D.kw)
   O[D.n, D.oh, D.ow, D.ic, D.cm] += (
       (cast(U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
@@ -364,7 +377,7 @@ def depthwise_conv2D_nhwc_q(
 
 @linalg_structured_op
 def pooling_nhwc_sum(
-    I=TensorDef(T1, S.N, S.H, S.W, S.C),
+    I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.C),
     K=TensorDef(T2, S.KH, S.KW, index_dims=[D.kh, D.kw]),
     O=TensorDef(U, S.N, S.OH, S.OW, S.C, output=True),
     strides=AttributeDef(S.SH, S.SW),
@@ -374,6 +387,7 @@ def pooling_nhwc_sum(
   Numeric casting is performed on the input operand, promoting it to the same
   data type as the accumulator/output.
   """
+  implements(ConvolutionOpInterface)
   domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
   O[D.n, D.oh, D.ow, D.c] += cast(
       U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c])
@@ -381,7 +395,7 @@ def pooling_nhwc_sum(
 
 @linalg_structured_op
 def pooling_nhwc_max(
-    I=TensorDef(T1, S.N, S.H, S.W, S.C),
+    I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.C),
     K=TensorDef(T2, S.KH, S.KW, index_dims=[D.kh, D.kw]),
     O=TensorDef(U, S.N, S.OH, S.OW, S.C, output=True),
     strides=AttributeDef(S.SH, S.SW),
@@ -391,6 +405,7 @@ def pooling_nhwc_max(
   Numeric casting is performed on the input operand, promoting it to the same
   data type as the accumulator/output.
   """
+  implements(ConvolutionOpInterface)
   domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
   O[D.n, D.oh, D.ow, D.c] = ReduceFn.max(D.kh, D.kw)(
       cast(U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
@@ -398,7 +413,7 @@ def pooling_nhwc_max(
 
 @linalg_structured_op
 def pooling_nchw_max(
-    I=TensorDef(T1, S.N, S.C, S.H, S.W),
+    I=TensorDef(T1, S.N, S.C, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW),
     K=TensorDef(T2, S.KH, S.KW, index_dims=[D.kh, D.kw]),
     O=TensorDef(U, S.N, S.C, S.OH, S.OW, output=True),
     strides=AttributeDef(S.SH, S.SW),
@@ -408,6 +423,7 @@ def pooling_nchw_max(
   Numeric casting is performed on the input operand, promoting it to the same
   data type as the accumulator/output.
   """
+  implements(ConvolutionOpInterface)
   domain(D.n, D.c, D.oh, D.ow, D.kh, D.kw)
   O[D.n, D.c, D.oh, D.ow] = ReduceFn.max(D.kh, D.kw)(
       cast(U, I[D.n, D.c, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
@@ -415,7 +431,7 @@ def pooling_nchw_max(
 
 @linalg_structured_op
 def pooling_nhwc_min(
-    I=TensorDef(T1, S.N, S.H, S.W, S.C),
+    I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.C),
     K=TensorDef(T2, S.KH, S.KW, index_dims=[D.kh, D.kw]),
     O=TensorDef(U, S.N, S.OH, S.OW, S.C, output=True),
     strides=AttributeDef(S.SH, S.SW),
@@ -425,6 +441,7 @@ def pooling_nhwc_min(
   Numeric casting is performed on the input operand, promoting it to the same
   data type as the accumulator/output.
   """
+  implements(ConvolutionOpInterface)
   domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
   O[D.n, D.oh, D.ow, D.c] = ReduceFn.min(D.kh, D.kw)(
       cast(U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
@@ -433,7 +450,8 @@ def pooling_nhwc_min(
 
 @linalg_structured_op
 def pooling_ndhwc_sum(
-    I=TensorDef(T1, S.N, S.D, S.H, S.W, S.C),
+    I=TensorDef(T1, S.N, S.OD * S.SD + S.KD * S.DD, S.OH * S.SH + S.KH * S.DH,
+                S.OW * S.SW + S.KW * S.DW, S.C),
     K=TensorDef(T2, S.KD, S.KH, S.KW, index_dims=[D.kd, D.kh, D.kw]),
     O=TensorDef(U, S.N, S.OD, S.OH, S.OW, S.C, output=True),
     strides=AttributeDef(S.SD, S.SH, S.SW),
@@ -443,6 +461,7 @@ def pooling_ndhwc_sum(
   Numeric casting is performed on the input operand, promoting it to the same
   data type as the accumulator/output.
   """
+  implements(ConvolutionOpInterface)
   domain(D.n, D.od, D.oh, D.ow, D.kd, D.kh, D.kw, D.c)
   O[D.n, D.od, D.oh, D.ow, D.c] += cast(
       U, I[D.n, D.od * S.SD + D.kd * S.DD, D.oh * S.SH + D.kh * S.DH,
@@ -451,7 +470,8 @@ def pooling_ndhwc_sum(
 
 @linalg_structured_op
 def pooling_ndhwc_max(
-    I=TensorDef(T1, S.N, S.D, S.H, S.W, S.C),
+    I=TensorDef(T1, S.N, S.OD * S.SD + S.KD * S.DD, S.OH * S.SH + S.KH * S.DH,
+                S.OW * S.SW + S.KW * S.DW, S.C),
     K=TensorDef(T2, S.KD, S.KH, S.KW, index_dims=[D.kd, D.kh, D.kw]),
     O=TensorDef(U, S.N, S.OD, S.OH, S.OW, S.C, output=True),
     strides=AttributeDef(S.SD, S.SH, S.SW),
@@ -461,6 +481,7 @@ def pooling_ndhwc_max(
   Numeric casting is performed on the input operand, promoting it to the same
   data type as the accumulator/output.
   """
+  implements(ConvolutionOpInterface)
   domain(D.n, D.od, D.oh, D.ow, D.kd, D.kh, D.kw, D.c)
   O[D.n, D.od, D.oh, D.ow, D.c] = ReduceFn.max(D.kd, D.kh, D.kw)(
       cast(
@@ -470,7 +491,8 @@ def pooling_ndhwc_max(
 
 @linalg_structured_op
 def pooling_ndhwc_min(
-    I=TensorDef(T1, S.N, S.D, S.H, S.W, S.C),
+    I=TensorDef(T1, S.N, S.OD * S.SD + S.KD * S.DD, S.OH * S.SH + S.KH * S.DH,
+                S.OW * S.SW + S.KW * S.DW, S.C),
     K=TensorDef(T2, S.KD, S.KH, S.KW, index_dims=[D.kd, D.kh, D.kw]),
     O=TensorDef(U, S.N, S.OD, S.OH, S.OW, S.C, output=True),
     strides=AttributeDef(S.SD, S.SH, S.SW),
@@ -480,6 +502,7 @@ def pooling_ndhwc_min(
   Numeric casting is performed on the input operand, promoting it to the same
   data type as the accumulator/output.
   """
+  implements(ConvolutionOpInterface)
   domain(D.n, D.od, D.oh, D.ow, D.kd, D.kh, D.kw, D.c)
   O[D.n, D.od, D.oh, D.ow, D.c] = ReduceFn.min(D.kd, D.kh, D.kw)(
       cast(

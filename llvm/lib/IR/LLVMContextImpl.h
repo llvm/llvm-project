@@ -1169,23 +1169,26 @@ template <> struct MDNodeKeyImpl<DIImportedEntity> {
   Metadata *File;
   unsigned Line;
   MDString *Name;
+  Metadata *Elements;
 
   MDNodeKeyImpl(unsigned Tag, Metadata *Scope, Metadata *Entity, Metadata *File,
-                unsigned Line, MDString *Name)
+                unsigned Line, MDString *Name, Metadata *Elements)
       : Tag(Tag), Scope(Scope), Entity(Entity), File(File), Line(Line),
-        Name(Name) {}
+        Name(Name), Elements(Elements) {}
   MDNodeKeyImpl(const DIImportedEntity *N)
       : Tag(N->getTag()), Scope(N->getRawScope()), Entity(N->getRawEntity()),
-        File(N->getRawFile()), Line(N->getLine()), Name(N->getRawName()) {}
+        File(N->getRawFile()), Line(N->getLine()), Name(N->getRawName()),
+        Elements(N->getRawElements()) {}
 
   bool isKeyOf(const DIImportedEntity *RHS) const {
     return Tag == RHS->getTag() && Scope == RHS->getRawScope() &&
            Entity == RHS->getRawEntity() && File == RHS->getFile() &&
-           Line == RHS->getLine() && Name == RHS->getRawName();
+           Line == RHS->getLine() && Name == RHS->getRawName() &&
+           Elements == RHS->getRawElements();
   }
 
   unsigned getHashValue() const {
-    return hash_combine(Tag, Scope, Entity, File, Line, Name);
+    return hash_combine(Tag, Scope, Entity, File, Line, Name, Elements);
   }
 };
 

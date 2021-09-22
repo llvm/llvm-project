@@ -165,15 +165,12 @@ ParseResult Parser::parseStridedLayout(int64_t &offset,
     return emitError("expected comma after offset value");
 
   // Parse stride list.
-  if (!consumeIf(Token::kw_strides))
-    return emitError("expected `strides` keyword after offset specification");
-  if (!consumeIf(Token::colon))
-    return emitError("expected colon after `strides` keyword");
-  if (failed(parseStrideList(strides)))
-    return emitError("invalid braces-enclosed stride list");
-  if (llvm::any_of(strides, [](int64_t st) { return st == 0; }))
-    return emitError("invalid memref stride");
+  if (parseToken(Token::kw_strides,
+                 "expected `strides` keyword after offset specification") ||
 
+      parseToken(Token::colon, "expected colon after `strides` keyword") ||
+      parseStrideList(strides))
+    return failure();
   return success();
 }
 
@@ -193,6 +190,7 @@ ParseResult Parser::parseStridedLayout(int64_t &offset,
 ///   memory-space ::= integer-literal /* | TODO: address-space-id */
 ///
 Type Parser::parseMemRefType() {
+  llvm::SMLoc loc = getToken().getLoc();
   consumeToken(Token::kw_memref);
 
   if (parseToken(Token::less, "expected '<' in memref type"))
@@ -283,15 +281,11 @@ Type Parser::parseMemRefType() {
     }
   }
 
-  if (isUnranked) {
-    return UnrankedMemRefType::getChecked(
-        [&]() -> InFlightDiagnostic { return emitError(); }, elementType,
-        memorySpace);
-  }
+  if (isUnranked)
+    return getChecked<UnrankedMemRefType>(loc, elementType, memorySpace);
 
-  return MemRefType::getChecked(
-      [&]() -> InFlightDiagnostic { return emitError(); }, dimensions,
-      elementType, affineMapComposition, memorySpace);
+  return getChecked<MemRefType>(loc, dimensions, elementType,
+                                affineMapComposition, memorySpace);
 }
 
 /// Parse any type except the function type.
@@ -563,31 +557,30 @@ ParseResult Parser::parseXInDimensionList() {
 // Parse a comma-separated list of dimensions, possibly empty:
 //   stride-list ::= `[` (dimension (`,` dimension)*)? `]`
 ParseResult Parser::parseStrideList(SmallVectorImpl<int64_t> &dimensions) {
-  if (!consumeIf(Token::l_square))
-    return failure();
-  // Empty list early exit.
-  if (consumeIf(Token::r_square))
-    return success();
-  while (true) {
-    if (consumeIf(Token::question)) {
-      dimensions.push_back(MemRefType::getDynamicStrideOrOffset());
-    } else {
-      // This must be an integer value.
-      int64_t val;
-      if (getToken().getSpelling().getAsInteger(10, val))
-        return emitError("invalid integer value: ") << getToken().getSpelling();
-      // Make sure it is not the one value for `?`.
-      if (ShapedType::isDynamic(val))
-        return emitError("invalid integer value: ")
-               << getToken().getSpelling()
-               << ", use `?` to specify a dynamic dimension";
-      dimensions.push_back(val);
-      consumeToken(Token::integer);
-    }
-    if (!consumeIf(Token::comma))
-      break;
-  }
-  if (!consumeIf(Token::r_square))
-    return failure();
-  return success();
+  return parseCommaSeparatedList(
+      Delimiter::Square,
+      [&]() -> ParseResult {
+        if (consumeIf(Token::question)) {
+          dimensions.push_back(MemRefType::getDynamicStrideOrOffset());
+        } else {
+          // This must be an integer value.
+          int64_t val;
+          if (getToken().getSpelling().getAsInteger(10, val))
+            return emitError("invalid integer value: ")
+                   << getToken().getSpelling();
+          // Make sure it is not the one value for `?`.
+          if (ShapedType::isDynamic(val))
+            return emitError("invalid integer value: ")
+                   << getToken().getSpelling()
+                   << ", use `?` to specify a dynamic dimension";
+
+          if (val == 0)
+            return emitError("invalid memref stride");
+
+          dimensions.push_back(val);
+          consumeToken(Token::integer);
+        }
+        return success();
+      },
+      " in stride list");
 }

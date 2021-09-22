@@ -29,18 +29,18 @@
 // CHECK-NEXT:       IMAGE_SCN_MEM_READ
 // CHECK-NEXT:     ]
 // CHECK:          Relocations [
-// CHECK-NEXT:       [[BeginDisp:0x[A-F0-9]+]] IMAGE_REL_AMD64_ADDR32NB func
-// CHECK-NEXT:       [[EndDisp:0x[A-F0-9]+]] IMAGE_REL_AMD64_ADDR32NB func
+// CHECK-NEXT:       [[BeginDisp:0x[A-F0-9]+]] IMAGE_REL_AMD64_ADDR32NB .text
+// CHECK-NEXT:       [[EndDisp:0x[A-F0-9]+]] IMAGE_REL_AMD64_ADDR32NB .text
 // CHECK-NEXT:       [[UnwindDisp:0x[A-F0-9]+]] IMAGE_REL_AMD64_ADDR32NB .xdata
 // CHECK-NEXT:     ]
 // CHECK:          SectionData (
-// CHECK-NEXT:       0000: FCFFFFFF 05000000 00000000
+// CHECK-NEXT:       0000: 00000000 09000000 00000000
 // CHECK-NEXT:     )
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 // CHECK:      UnwindInformation [
 // CHECK-NEXT:   RuntimeFunction {
-// CHECK-NEXT:     StartAddress: func {{(\+0x[A-F0-9]+ )?}}([[BeginDisp]])
+// CHECK-NEXT:     StartAddress: .text ([[BeginDisp]])
 // CHECK-NEXT:     EndAddress: func {{(\+0x[A-F0-9]+ )?}}([[EndDisp]])
 // CHECK-NEXT:     UnwindInfoAddress: .xdata {{(\+0x[A-F0-9]+ )?}}([[UnwindDisp]])
 // CHECK-NEXT:     UnwindInfo {

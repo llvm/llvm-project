@@ -1,5 +1,6 @@
 // RUN: mlir-opt %s -allow-unregistered-dialect -test-linalg-transform-patterns=test-tiled-loop-peeling=2 -split-input-file | FileCheck %s -check-prefix=CHECK-TILE-2
 // RUN: mlir-opt %s -allow-unregistered-dialect -test-linalg-transform-patterns=test-tiled-loop-peeling=0,1,2 -split-input-file | FileCheck %s -check-prefix=CHECK-TILE-012
+// RUN: mlir-opt %s -allow-unregistered-dialect -test-linalg-transform-patterns="test-tiled-loop-peeling=0,1,2 skip-partial" -split-input-file | FileCheck %s -check-prefix=CHECK-TILE-012-SKIP-PARTIAL
 
 // CHECK-TILE-2-LABEL: func @tiled_loop_3d_tensor(
 //  CHECK-TILE-2-SAME:     %[[input:.*]]: tensor<?x?x?xf32>, %[[s0:.*]]: index, %[[s1:.*]]: index, %[[s2:.*]]: index
@@ -63,6 +64,21 @@
 //       CHECK-TILE-012:   }
 //   CHECK-TILE-012-NOT: linalg.tiled_loop
 
+//      CHECK-TILE-012-SKIP-PARTIAL: func @tiled_loop_3d_tensor(
+// CHECK-TILE-012-SKIP-PARTIAL-SAME:     %[[input:.*]]: tensor<?x?x?xf32>
+//  CHECK-TILE-012-SKIP-PARTIAL-DAG:   %[[c0:.*]] = constant 0 : index
+//  CHECK-TILE-012-SKIP-PARTIAL-DAG:   %[[c1:.*]] = constant 1 : index
+//  CHECK-TILE-012-SKIP-PARTIAL-DAG:   %[[c2:.*]] = constant 2 : index
+//  CHECK-TILE-012-SKIP-PARTIAL-DAG:   %[[dim0:.*]] = tensor.dim %[[input]], %[[c0]]
+//  CHECK-TILE-012-SKIP-PARTIAL-DAG:   %[[dim1:.*]] = tensor.dim %[[input]], %[[c1]]
+//  CHECK-TILE-012-SKIP-PARTIAL-DAG:   %[[dim2:.*]] = tensor.dim %[[input]], %[[c2]]
+//      CHECK-TILE-012-SKIP-PARTIAL:   %[[p0:.*]] = affine.apply #{{.*}}()[%[[dim0]]
+//      CHECK-TILE-012-SKIP-PARTIAL:   %[[p1:.*]] = affine.apply #{{.*}}()[%[[dim1]]
+//      CHECK-TILE-012-SKIP-PARTIAL:   %[[p2:.*]] = affine.apply #{{.*}}()[%[[dim2]]
+//      CHECK-TILE-012-SKIP-PARTIAL:   linalg.tiled_loop {{.*}} = (%[[c0]], %[[c0]], %[[c0]]) to (%[[p0]], %[[p1]], %[[p2]])
+//      CHECK-TILE-012-SKIP-PARTIAL:   linalg.tiled_loop {{.*}} = (%[[c0]], %[[c0]], %[[p2]]) to (%[[p0]], %[[p1]], %[[dim2]])
+//      CHECK-TILE-012-SKIP-PARTIAL:   linalg.tiled_loop {{.*}} = (%[[c0]], %[[p1]], %[[c0]]) to (%[[p0]], %[[dim1]], %[[dim2]])
+//      CHECK-TILE-012-SKIP-PARTIAL:   linalg.tiled_loop {{.*}} = (%[[p0]], %[[c0]], %[[c0]]) to (%[[dim0]], %[[dim1]], %[[dim2]])
 func @tiled_loop_3d_tensor(%arg0: tensor<?x?x?xf32>, %s0: index, %s1: index,
                            %s2: index) -> tensor<?x?x?xf32> {
   %cst = constant 0.000000e+00 : f32

@@ -21,6 +21,8 @@
 #else
 struct omptarget_device_environmentTy {
   int32_t debug_level;
+  uint32_t num_devices;
+  uint32_t device_num;
 };
 #endif
 

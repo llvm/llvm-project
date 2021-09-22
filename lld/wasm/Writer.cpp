@@ -63,6 +63,7 @@ private:
   void createStartFunction();
   void createApplyDataRelocationsFunction();
   void createApplyGlobalRelocationsFunction();
+  void createApplyGlobalTLSRelocationsFunction();
   void createCallCtorsFunction();
   void createInitTLSFunction();
   void createCommandExportWrappers();
@@ -639,12 +640,6 @@ void Writer::calculateExports() {
     } else if (auto *t = dyn_cast<DefinedTag>(sym)) {
       export_ = {name, WASM_EXTERNAL_TAG, t->getTagIndex()};
     } else if (auto *d = dyn_cast<DefinedData>(sym)) {
-      if (sym->isTLS()) {
-        // We can't currenly export TLS data symbols.
-        if (sym->isExportedExplicit())
-          error("TLS symbols cannot yet be exported: `" + toString(*sym) + "`");
-        continue;
-      }
       out.globalSec->dataAddressGlobals.push_back(d);
       export_ = {name, WASM_EXTERNAL_GLOBAL, globalIndex++};
     } else {
@@ -991,6 +986,13 @@ void Writer::createSyntheticInitFunctions() {
           "__wasm_apply_global_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
           make<SyntheticFunction>(nullSignature, "__wasm_apply_global_relocs"));
       WasmSym::applyGlobalRelocs->markLive();
+      if (config->sharedMemory) {
+        WasmSym::applyGlobalTLSRelocs = symtab->addSyntheticFunction(
+            "__wasm_apply_global_tls_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
+            make<SyntheticFunction>(nullSignature,
+                                    "__wasm_apply_global_tls_relocs"));
+        WasmSym::applyGlobalTLSRelocs->markLive();
+      }
     }
   }
 
@@ -1022,22 +1024,17 @@ void Writer::createInitMemoryFunction() {
     // initialized. The generated code is as follows:
     //
     // (func $__wasm_init_memory
-    //  (if
-    //   (i32.atomic.rmw.cmpxchg align=2 offset=0
-    //    (i32.const $__init_memory_flag)
-    //    (i32.const 0)
-    //    (i32.const 1)
-    //   )
-    //   (then
-    //    (drop
-    //     (i32.atomic.wait align=2 offset=0
-    //      (i32.const $__init_memory_flag)
-    //      (i32.const 1)
-    //      (i32.const -1)
+    //  (block $drop
+    //   (block $wait
+    //    (block $init
+    //     (br_table $init $wait $drop
+    //      (i32.atomic.rmw.cmpxchg align=2 offset=0
+    //       (i32.const $__init_memory_flag)
+    //       (i32.const 0)
+    //       (i32.const 1)
+    //      )
     //     )
-    //    )
-    //   )
-    //   (else
+    //    ) ;; $init
     //    ( ... initialize data segments ... )
     //    (i32.atomic.store align=2 offset=0
     //     (i32.const $__init_memory_flag)
@@ -1049,8 +1046,16 @@ void Writer::createInitMemoryFunction() {
     //      (i32.const -1u)
     //     )
     //    )
+    //    (br $drop)
+    //   ) ;; $wait
+    //   (drop
+    //    (i32.atomic.wait align=2 offset=0
+    //     (i32.const $__init_memory_flag)
+    //     (i32.const 1)
+    //     (i32.const -1)
+    //    )
     //   )
-    //  )
+    //  ) ;; $drop
     //  ( ... drop data segments ... )
     // )
     //
@@ -1084,29 +1089,31 @@ void Writer::createInitMemoryFunction() {
       }
     };
 
-    // Atomically check whether this is the main thread.
+    // Set up destination blocks
+    writeU8(os, WASM_OPCODE_BLOCK, "block $drop");
+    writeU8(os, WASM_TYPE_NORESULT, "block type");
+    writeU8(os, WASM_OPCODE_BLOCK, "block $wait");
+    writeU8(os, WASM_TYPE_NORESULT, "block type");
+    writeU8(os, WASM_OPCODE_BLOCK, "block $init");
+    writeU8(os, WASM_TYPE_NORESULT, "block type");
+
+    // Atomically check whether we win the race.
     writeGetFlagAddress();
     writeI32Const(os, 0, "expected flag value");
-    writeI32Const(os, 1, "flag value");
+    writeI32Const(os, 1, "new flag value");
     writeU8(os, WASM_OPCODE_ATOMICS_PREFIX, "atomics prefix");
     writeUleb128(os, WASM_OPCODE_I32_RMW_CMPXCHG, "i32.atomic.rmw.cmpxchg");
     writeMemArg(os, 2, 0);
-    writeU8(os, WASM_OPCODE_IF, "IF");
-    writeU8(os, WASM_TYPE_NORESULT, "blocktype");
 
-    // Did not increment 0, so wait for main thread to initialize memory
-    writeGetFlagAddress();
-    writeI32Const(os, 1, "expected flag value");
-    writeI64Const(os, -1, "timeout");
+    // Based on the value, decide what to do next.
+    writeU8(os, WASM_OPCODE_BR_TABLE, "br_table");
+    writeUleb128(os, 2, "label vector length");
+    writeUleb128(os, 0, "label $init");
+    writeUleb128(os, 1, "label $wait");
+    writeUleb128(os, 2, "default label $drop");
 
-    writeU8(os, WASM_OPCODE_ATOMICS_PREFIX, "atomics prefix");
-    writeUleb128(os, WASM_OPCODE_I32_ATOMIC_WAIT, "i32.atomic.wait");
-    writeMemArg(os, 2, 0);
-    writeU8(os, WASM_OPCODE_DROP, "drop");
-
-    writeU8(os, WASM_OPCODE_ELSE, "ELSE");
-
-    // Did increment 0, so conditionally initialize passive data segments
+    // Initialize passive data segments
+    writeU8(os, WASM_OPCODE_END, "end $init");
     for (const OutputSegment *s : segments) {
       if (needsPassiveInitialization(s)) {
         // destination address
@@ -1145,9 +1152,23 @@ void Writer::createInitMemoryFunction() {
     writeMemArg(os, 2, 0);
     writeU8(os, WASM_OPCODE_DROP, "drop");
 
-    writeU8(os, WASM_OPCODE_END, "END");
+    // Branch to drop the segments
+    writeU8(os, WASM_OPCODE_BR, "br");
+    writeUleb128(os, 1, "label $drop");
+
+    // Wait for the winning thread to initialize memory
+    writeU8(os, WASM_OPCODE_END, "end $wait");
+    writeGetFlagAddress();
+    writeI32Const(os, 1, "expected flag value");
+    writeI64Const(os, -1, "timeout");
+
+    writeU8(os, WASM_OPCODE_ATOMICS_PREFIX, "atomics prefix");
+    writeUleb128(os, WASM_OPCODE_I32_ATOMIC_WAIT, "i32.atomic.wait");
+    writeMemArg(os, 2, 0);
+    writeU8(os, WASM_OPCODE_DROP, "drop");
 
     // Unconditionally drop passive data segments
+    writeU8(os, WASM_OPCODE_END, "end $drop");
     for (const OutputSegment *s : segments) {
       if (needsPassiveInitialization(s)) {
         // data.drop instruction
@@ -1156,6 +1177,8 @@ void Writer::createInitMemoryFunction() {
         writeUleb128(os, s->index, "segment index immediate");
       }
     }
+
+    // End the function
     writeU8(os, WASM_OPCODE_END, "END");
   }
 
@@ -1214,11 +1237,27 @@ void Writer::createApplyGlobalRelocationsFunction() {
   {
     raw_string_ostream os(bodyContent);
     writeUleb128(os, 0, "num locals");
-    out.globalSec->generateRelocationCode(os);
+    out.globalSec->generateRelocationCode(os, false);
     writeU8(os, WASM_OPCODE_END, "END");
   }
 
   createFunction(WasmSym::applyGlobalRelocs, bodyContent);
+}
+
+// Similar to createApplyGlobalRelocationsFunction but for
+// TLS symbols.  This cannot be run during the start function
+// but must be delayed until __wasm_init_tls is called.
+void Writer::createApplyGlobalTLSRelocationsFunction() {
+  // First write the body's contents to a string.
+  std::string bodyContent;
+  {
+    raw_string_ostream os(bodyContent);
+    writeUleb128(os, 0, "num locals");
+    out.globalSec->generateRelocationCode(os, true);
+    writeU8(os, WASM_OPCODE_END, "END");
+  }
+
+  createFunction(WasmSym::applyGlobalTLSRelocs, bodyContent);
 }
 
 // Create synthetic "__wasm_call_ctors" function based on ctor functions
@@ -1330,6 +1369,12 @@ void Writer::createInitTLSFunction() {
       writeUleb128(os, WASM_OPCODE_MEMORY_INIT, "MEMORY.INIT");
       writeUleb128(os, tlsSeg->index, "segment index immediate");
       writeU8(os, 0, "memory index immediate");
+    }
+
+    if (WasmSym::applyGlobalTLSRelocs) {
+      writeU8(os, WASM_OPCODE_CALL, "CALL");
+      writeUleb128(os, WasmSym::applyGlobalTLSRelocs->getFunctionIndex(),
+                   "function index");
     }
     writeU8(os, WASM_OPCODE_END, "end function");
   }
@@ -1465,6 +1510,8 @@ void Writer::run() {
       createApplyDataRelocationsFunction();
     if (WasmSym::applyGlobalRelocs)
       createApplyGlobalRelocationsFunction();
+    if (WasmSym::applyGlobalTLSRelocs)
+      createApplyGlobalTLSRelocationsFunction();
     if (WasmSym::initMemory)
       createInitMemoryFunction();
     createStartFunction();

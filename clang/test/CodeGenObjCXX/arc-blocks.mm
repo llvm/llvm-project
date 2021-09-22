@@ -1,9 +1,11 @@
 // RUN: %clang_cc1 -std=gnu++98 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -fexceptions -fobjc-arc-exceptions -o - %s | FileCheck -check-prefix CHECK %s
 // RUN: %clang_cc1 -std=gnu++98 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -fexceptions -fobjc-arc-exceptions -O1 -o - %s | FileCheck -check-prefix CHECK-O1 %s
 // RUN: %clang_cc1 -std=gnu++98 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -o - %s | FileCheck -check-prefix CHECK-NOEXCP %s
+// RUN: %clang_cc1 -std=gnu++98 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -fexceptions -fobjc-arc-exceptions -fobjc-avoid-heapify-local-blocks -o - %s | FileCheck -check-prefix CHECK-NOHEAP %s
 
 // CHECK: [[A:.*]] = type { i64, [10 x i8*] }
 // CHECK: %[[STRUCT_BLOCK_DESCRIPTOR:.*]] = type { i64, i64 }
+// CHECK-NOHEAP: %[[STRUCT_BLOCK_DESCRIPTOR:.*]] = type { i64, i64 }
 // CHECK: %[[STRUCT_TEST1_S0:.*]] = type { i32 }
 // CHECK: %[[STRUCT_TRIVIAL_INTERNAL:.*]] = type { i32 }
 
@@ -209,8 +211,8 @@ void foo1(id);
 
 namespace test_block_retain {
 
-// CHECK-LABEL: define{{.*}} void @_ZN17test_block_retain14initializationEP11objc_object(
-// CHECK-NOT: @llvm.objc.retainBlock(
+// CHECK-NOHEAP-LABEL: define{{.*}} void @_ZN17test_block_retain14initializationEP11objc_object(
+// CHECK-NOHEAP-NOT: @llvm.objc.retainBlock(
   void initialization(id a) {
     BlockTy b0 = ^{ foo1(a); };
     BlockTy b1 = (^{ foo1(a); });
@@ -218,23 +220,23 @@ namespace test_block_retain {
     b1();
   }
 
-// CHECK-LABEL: define{{.*}} void @_ZN17test_block_retain20initializationStaticEP11objc_object(
-// CHECK: @llvm.objc.retainBlock(
+// CHECK-NOHEAP-LABEL: define{{.*}} void @_ZN17test_block_retain20initializationStaticEP11objc_object(
+// CHECK-NOHEAP: @llvm.objc.retainBlock(
   void initializationStatic(id a) {
     static BlockTy b0 = ^{ foo1(a); };
     b0();
   }
 
-// CHECK-LABEL: define{{.*}} void @_ZN17test_block_retain15initialization2EP11objc_object
-// CHECK: %[[B0:.*]] = alloca void ()*, align 8
-// CHECK: %[[B1:.*]] = alloca void ()*, align 8
-// CHECK: load void ()*, void ()** %[[B0]], align 8
-// CHECK-NOT: @llvm.objc.retainBlock
-// CHECK: %[[V9:.*]] = load void ()*, void ()** %[[B0]], align 8
-// CHECK: %[[V10:.*]] = bitcast void ()* %[[V9]] to i8*
-// CHECK: %[[V11:.*]] = call i8* @llvm.objc.retainBlock(i8* %[[V10]])
-// CHECK: %[[V12:.*]] = bitcast i8* %[[V11]] to void ()*
-// CHECK: store void ()* %[[V12]], void ()** %[[B1]], align 8
+// CHECK-NOHEAP-LABEL: define{{.*}} void @_ZN17test_block_retain15initialization2EP11objc_object
+// CHECK-NOHEAP: %[[B0:.*]] = alloca void ()*, align 8
+// CHECK-NOHEAP: %[[B1:.*]] = alloca void ()*, align 8
+// CHECK-NOHEAP: load void ()*, void ()** %[[B0]], align 8
+// CHECK-NOHEAP-NOT: @llvm.objc.retainBlock
+// CHECK-NOHEAP: %[[V9:.*]] = load void ()*, void ()** %[[B0]], align 8
+// CHECK-NOHEAP: %[[V10:.*]] = bitcast void ()* %[[V9]] to i8*
+// CHECK-NOHEAP: %[[V11:.*]] = call i8* @llvm.objc.retainBlock(i8* %[[V10]])
+// CHECK-NOHEAP: %[[V12:.*]] = bitcast i8* %[[V11]] to void ()*
+// CHECK-NOHEAP: store void ()* %[[V12]], void ()** %[[B1]], align 8
   void initialization2(id a) {
     BlockTy b0 = ^{ foo1(a); };
     b0();
@@ -242,8 +244,8 @@ namespace test_block_retain {
     b1();
   }
 
-// CHECK-LABEL: define{{.*}} void @_ZN17test_block_retain10assignmentEP11objc_object(
-// CHECK-NOT: @llvm.objc.retainBlock(
+// CHECK-NOHEAP-LABEL: define{{.*}} void @_ZN17test_block_retain10assignmentEP11objc_object(
+// CHECK-NOHEAP-NOT: @llvm.objc.retainBlock(
   void assignment(id a) {
     BlockTy b0;
     (b0) = ^{ foo1(a); };
@@ -252,16 +254,16 @@ namespace test_block_retain {
     b0();
   }
 
-// CHECK-LABEL: define{{.*}} void @_ZN17test_block_retain16assignmentStaticEP11objc_object(
-// CHECK: @llvm.objc.retainBlock(
+// CHECK-NOHEAP-LABEL: define{{.*}} void @_ZN17test_block_retain16assignmentStaticEP11objc_object(
+// CHECK-NOHEAP: @llvm.objc.retainBlock(
   void assignmentStatic(id a) {
     static BlockTy b0;
     b0 = ^{ foo1(a); };
     b0();
   }
 
-// CHECK-LABEL: define{{.*}} void @_ZN17test_block_retain21assignmentConditionalEP11objc_objectb(
-// CHECK: @llvm.objc.retainBlock(
+// CHECK-NOHEAP-LABEL: define{{.*}} void @_ZN17test_block_retain21assignmentConditionalEP11objc_objectb(
+// CHECK-NOHEAP: @llvm.objc.retainBlock(
   void assignmentConditional(id a, bool c) {
     BlockTy b0;
     if (c)
@@ -270,16 +272,16 @@ namespace test_block_retain {
     b0();
   }
 
-// CHECK-LABEL: define{{.*}} void @_ZN17test_block_retain11assignment2EP11objc_object(
-// CHECK: %[[B0:.*]] = alloca void ()*, align 8
-// CHECK: %[[B1:.*]] = alloca void ()*, align 8
-// CHECK-NOT: @llvm.objc.retainBlock
-// CHECK: store void ()* null, void ()** %[[B1]], align 8
-// CHECK: %[[V9:.*]] = load void ()*, void ()** %[[B0]], align 8
-// CHECK: %[[V10:.*]] = bitcast void ()* %[[V9]] to i8*
-// CHECK: %[[V11:.*]] = call i8* @llvm.objc.retainBlock(i8* %[[V10]]
-// CHECK: %[[V12:.*]] = bitcast i8* %[[V11]] to void ()*
-// CHECK: store void ()* %[[V12]], void ()** %[[B1]], align 8
+// CHECK-NOHEAP-LABEL: define{{.*}} void @_ZN17test_block_retain11assignment2EP11objc_object(
+// CHECK-NOHEAP: %[[B0:.*]] = alloca void ()*, align 8
+// CHECK-NOHEAP: %[[B1:.*]] = alloca void ()*, align 8
+// CHECK-NOHEAP-NOT: @llvm.objc.retainBlock
+// CHECK-NOHEAP: store void ()* null, void ()** %[[B1]], align 8
+// CHECK-NOHEAP: %[[V9:.*]] = load void ()*, void ()** %[[B0]], align 8
+// CHECK-NOHEAP: %[[V10:.*]] = bitcast void ()* %[[V9]] to i8*
+// CHECK-NOHEAP: %[[V11:.*]] = call i8* @llvm.objc.retainBlock(i8* %[[V10]]
+// CHECK-NOHEAP: %[[V12:.*]] = bitcast i8* %[[V11]] to void ()*
+// CHECK-NOHEAP: store void ()* %[[V12]], void ()** %[[B1]], align 8
   void assignment2(id a) {
     BlockTy b0 = ^{ foo1(a); };
     b0();
@@ -290,30 +292,30 @@ namespace test_block_retain {
 
 // We cannot remove the call to @llvm.objc.retainBlock if the variable is of type id.
 
-// CHECK: define{{.*}} void @_ZN17test_block_retain21initializationObjCPtrEP11objc_object(
-// CHECK: alloca i8*, align 8
-// CHECK: %[[B0:.*]] = alloca i8*, align 8
-// CHECK: %[[BLOCK:.*]] = alloca <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, align 8
-// CHECK: %[[V3:.*]] = bitcast <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>* %[[BLOCK]] to void ()*
-// CHECK: %[[V4:.*]] = bitcast void ()* %[[V3]] to i8*
-// CHECK: %[[V5:.*]] = call i8* @llvm.objc.retainBlock(i8* %[[V4]])
-// CHECK: %[[V6:.*]] = bitcast i8* %[[V5]] to void ()*
-// CHECK: %[[V7:.*]] = bitcast void ()* %[[V6]] to i8*
-// CHECK: store i8* %[[V7]], i8** %[[B0]], align 8
+// CHECK-NOHEAP: define{{.*}} void @_ZN17test_block_retain21initializationObjCPtrEP11objc_object(
+// CHECK-NOHEAP: alloca i8*, align 8
+// CHECK-NOHEAP: %[[B0:.*]] = alloca i8*, align 8
+// CHECK-NOHEAP: %[[BLOCK:.*]] = alloca <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, align 8
+// CHECK-NOHEAP: %[[V3:.*]] = bitcast <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>* %[[BLOCK]] to void ()*
+// CHECK-NOHEAP: %[[V4:.*]] = bitcast void ()* %[[V3]] to i8*
+// CHECK-NOHEAP: %[[V5:.*]] = call i8* @llvm.objc.retainBlock(i8* %[[V4]])
+// CHECK-NOHEAP: %[[V6:.*]] = bitcast i8* %[[V5]] to void ()*
+// CHECK-NOHEAP: %[[V7:.*]] = bitcast void ()* %[[V6]] to i8*
+// CHECK-NOHEAP: store i8* %[[V7]], i8** %[[B0]], align 8
   void initializationObjCPtr(id a) {
     id b0 = ^{ foo1(a); };
     ((BlockTy)b0)();
   }
 
-// CHECK: define{{.*}} void @_ZN17test_block_retain17assignmentObjCPtrEP11objc_object(
-// CHECK: %[[B0:.*]] = alloca void ()*, align 8
-// CHECK: %[[B1:.*]] = alloca i8*, align 8
-// CHECK: %[[V4:.*]] = load void ()*, void ()** %[[B0]], align 8
-// CHECK: %[[V5:.*]] = bitcast void ()* %[[V4]] to i8*
-// CHECK: %[[V6:.*]] = call i8* @llvm.objc.retainBlock(i8* %[[V5]])
-// CHECK: %[[V7:.*]] = bitcast i8* %[[V6]] to void ()*
-// CHECK: %[[V8:.*]] = bitcast void ()* %[[V7]] to i8*
-// CHECK: store i8* %[[V8]], i8** %[[B1]], align 8
+// CHECK-NOHEAP: define{{.*}} void @_ZN17test_block_retain17assignmentObjCPtrEP11objc_object(
+// CHECK-NOHEAP: %[[B0:.*]] = alloca void ()*, align 8
+// CHECK-NOHEAP: %[[B1:.*]] = alloca i8*, align 8
+// CHECK-NOHEAP: %[[V4:.*]] = load void ()*, void ()** %[[B0]], align 8
+// CHECK-NOHEAP: %[[V5:.*]] = bitcast void ()* %[[V4]] to i8*
+// CHECK-NOHEAP: %[[V6:.*]] = call i8* @llvm.objc.retainBlock(i8* %[[V5]])
+// CHECK-NOHEAP: %[[V7:.*]] = bitcast i8* %[[V6]] to void ()*
+// CHECK-NOHEAP: %[[V8:.*]] = bitcast void ()* %[[V7]] to i8*
+// CHECK-NOHEAP: store i8* %[[V8]], i8** %[[B1]], align 8
   void assignmentObjCPtr(id a) {
     BlockTy b0 = ^{ foo1(a); };
     id b1;

@@ -124,33 +124,34 @@ define i32 @test(i32* nocapture %f) #0 {
 ; VEC:       pred.store.if:
 ; VEC-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 0
 ; VEC-NEXT:    [[TMP7:%.*]] = add nsw i32 [[TMP6]], 20
-; VEC-NEXT:    store i32 [[TMP7]], i32* [[TMP1]], align 4
+; VEC-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[F]], i64 [[TMP0]]
+; VEC-NEXT:    store i32 [[TMP7]], i32* [[TMP8]], align 4
 ; VEC-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; VEC:       pred.store.continue:
-; VEC-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP4]], i32 1
-; VEC-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2]]
+; VEC-NEXT:    [[TMP9:%.*]] = extractelement <2 x i1> [[TMP4]], i32 1
+; VEC-NEXT:    br i1 [[TMP9]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2]]
 ; VEC:       pred.store.if1:
-; VEC-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 1
-; VEC-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, i32* [[F]], i64 [[TMP9]]
+; VEC-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 1
 ; VEC-NEXT:    [[TMP11:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 1
 ; VEC-NEXT:    [[TMP12:%.*]] = add nsw i32 [[TMP11]], 20
-; VEC-NEXT:    store i32 [[TMP12]], i32* [[TMP10]], align 4
+; VEC-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, i32* [[F]], i64 [[TMP10]]
+; VEC-NEXT:    store i32 [[TMP12]], i32* [[TMP13]], align 4
 ; VEC-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; VEC:       pred.store.continue2:
 ; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VEC-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
-; VEC-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; VEC-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; VEC-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VEC:       middle.block:
 ; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 128, 128
 ; VEC-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[FOR_BODY:%.*]]
 ; VEC:       for.body:
 ; VEC-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 128, [[MIDDLE_BLOCK]] ]
 ; VEC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[F]], i64 [[INDVARS_IV]]
-; VEC-NEXT:    [[TMP14:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
-; VEC-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP14]], 100
+; VEC-NEXT:    [[TMP15:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; VEC-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP15]], 100
 ; VEC-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; VEC:       if.then:
-; VEC-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP14]], 20
+; VEC-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP15]], 20
 ; VEC-NEXT:    store i32 [[ADD]], i32* [[ARRAYIDX]], align 4
 ; VEC-NEXT:    br label [[FOR_INC]]
 ; VEC:       for.inc:
@@ -469,23 +470,24 @@ define void @minimal_bit_widths(i1 %c) {
 ; VEC-NEXT:    [[TMP6:%.*]] = extractelement <2 x i8> [[WIDE_LOAD]], i32 0
 ; VEC-NEXT:    [[TMP7:%.*]] = zext i8 [[TMP6]] to i32
 ; VEC-NEXT:    [[TMP8:%.*]] = trunc i32 [[TMP7]] to i8
-; VEC-NEXT:    store i8 [[TMP8]], i8* [[TMP2]], align 1
+; VEC-NEXT:    [[TMP9:%.*]] = getelementptr i8, i8* undef, i64 [[TMP0]]
+; VEC-NEXT:    store i8 [[TMP8]], i8* [[TMP9]], align 1
 ; VEC-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; VEC:       pred.store.continue:
-; VEC-NEXT:    [[TMP9:%.*]] = extractelement <2 x i1> [[BROADCAST_SPLAT]], i32 1
-; VEC-NEXT:    br i1 [[TMP9]], label [[PRED_STORE_IF2:%.*]], label [[PRED_STORE_CONTINUE3]]
+; VEC-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[BROADCAST_SPLAT]], i32 1
+; VEC-NEXT:    br i1 [[TMP10]], label [[PRED_STORE_IF2:%.*]], label [[PRED_STORE_CONTINUE3]]
 ; VEC:       pred.store.if2:
-; VEC-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 1
-; VEC-NEXT:    [[TMP11:%.*]] = getelementptr i8, i8* undef, i64 [[TMP10]]
+; VEC-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 1
 ; VEC-NEXT:    [[TMP12:%.*]] = extractelement <2 x i8> [[WIDE_LOAD]], i32 1
 ; VEC-NEXT:    [[TMP13:%.*]] = zext i8 [[TMP12]] to i32
 ; VEC-NEXT:    [[TMP14:%.*]] = trunc i32 [[TMP13]] to i8
-; VEC-NEXT:    store i8 [[TMP14]], i8* [[TMP11]], align 1
+; VEC-NEXT:    [[TMP15:%.*]] = getelementptr i8, i8* undef, i64 [[TMP11]]
+; VEC-NEXT:    store i8 [[TMP14]], i8* [[TMP15]], align 1
 ; VEC-NEXT:    br label [[PRED_STORE_CONTINUE3]]
 ; VEC:       pred.store.continue3:
 ; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VEC-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], undef
-; VEC-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; VEC-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], undef
+; VEC-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VEC:       middle.block:
 ; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 undef, undef
 ; VEC-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[FOR_BODY:%.*]]

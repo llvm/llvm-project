@@ -163,8 +163,6 @@ public:
 
   lldb_private::ConstString GetPluginName() override;
 
-  uint32_t GetPluginVersion() override;
-
   llvm::pdb::IPDBSession &GetPDBSession();
 
   const llvm::pdb::IPDBSession &GetPDBSession() const;

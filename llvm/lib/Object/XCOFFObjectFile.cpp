@@ -295,8 +295,9 @@ XCOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
 
   const uint8_t * ContentStart = base() + OffsetToRaw;
   uint64_t SectionSize = getSectionSize(Sec);
-  if (checkOffset(Data, reinterpret_cast<uintptr_t>(ContentStart), SectionSize))
-    return make_error<BinaryError>();
+  if (Error E = Binary::checkOffset(
+          Data, reinterpret_cast<uintptr_t>(ContentStart), SectionSize))
+    return std::move(E);
 
   return makeArrayRef(ContentStart,SectionSize);
 }
@@ -591,7 +592,9 @@ uint16_t XCOFFObjectFile::getMagic() const {
 
 Expected<DataRefImpl> XCOFFObjectFile::getSectionByNum(int16_t Num) const {
   if (Num <= 0 || Num > getNumberOfSections())
-    return errorCodeToError(object_error::invalid_section_index);
+    return createStringError(object_error::invalid_section_index,
+                             "the section index (" + Twine(Num) +
+                                 ") is invalid");
 
   DataRefImpl DRI;
   DRI.p = getWithOffset(getSectionHeaderTableAddress(),

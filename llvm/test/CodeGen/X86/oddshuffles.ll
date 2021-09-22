@@ -2261,11 +2261,9 @@ define <16 x i32> @splat_v3i32(<3 x i32>* %ptr) {
 ;
 ; AVX1-LABEL: splat_v3i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX1-NEXT:    vpinsrd $2, 8(%rdi), %xmm0, %xmm1
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
 ; AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0],ymm0[1],ymm2[2,3,4,5,6,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
+; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0],ymm1[1],ymm2[2,3,4,5,6,7]
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0,1],ymm1[2],ymm2[3,4,5,6,7]
 ; AVX1-NEXT:    retq
 ;
@@ -2288,11 +2286,9 @@ define <16 x i32> @splat_v3i32(<3 x i32>* %ptr) {
 ;
 ; XOP-LABEL: splat_v3i32:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; XOP-NEXT:    vpinsrd $2, 8(%rdi), %xmm0, %xmm1
+; XOP-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
 ; XOP-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; XOP-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0],ymm0[1],ymm2[2,3,4,5,6,7]
-; XOP-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
+; XOP-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0],ymm1[1],ymm2[2,3,4,5,6,7]
 ; XOP-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0,1],ymm1[2],ymm2[3,4,5,6,7]
 ; XOP-NEXT:    retq
   %1 = load <3 x i32>, <3 x i32>* %ptr, align 1

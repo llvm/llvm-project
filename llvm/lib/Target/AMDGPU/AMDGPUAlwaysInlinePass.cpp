@@ -70,7 +70,7 @@ recursivelyVisitUsers(GlobalValue &GV,
         // and just let us hit the error when we can't handle this.
         //
         // Unfortunately, clang adds noinline to all functions at -O0. We have
-        // to override this here. until that's fixed.
+        // to override this here until that's fixed.
         F->removeFnAttr(Attribute::NoInline);
 
         FuncsToAlwaysInline.insert(F);
@@ -122,7 +122,7 @@ static bool alwaysInlineImpl(Module &M, bool GlobalOpt) {
     unsigned AS = GV.getAddressSpace();
     if ((AS == AMDGPUAS::REGION_ADDRESS) ||
         (AS == AMDGPUAS::LOCAL_ADDRESS &&
-         !AMDGPUTargetMachine::EnableLowerModuleLDS))
+         (!AMDGPUTargetMachine::EnableLowerModuleLDS || !GV.hasInitializer())))
       recursivelyVisitUsers(GV, FuncsToAlwaysInline);
   }
 

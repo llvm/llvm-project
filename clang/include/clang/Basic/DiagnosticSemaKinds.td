@@ -9147,14 +9147,18 @@ def note_defaulted_comparison_calls_deleted : Note<
   "defaulted %0 is implicitly deleted because it would invoke a deleted "
   "comparison function%select{| for member %2| for base class %2}1">;
 def note_defaulted_comparison_no_viable_function : Note<
-  "defaulted %0 is implicitly deleted because there is no viable three-way "
-  "comparison function for%select{| member| base class}1 %2">;
+  "defaulted %0 is implicitly deleted because there is no viable "
+  "%select{three-way comparison function|'operator=='}1 for "
+  "%select{|member |base class }2%3">;
 def note_defaulted_comparison_no_viable_function_synthesized : Note<
   "three-way comparison cannot be synthesized because there is no viable "
   "function for %select{'=='|'<'}0 comparison">;
 def note_defaulted_comparison_not_rewritten_callee : Note<
   "defaulted %0 is implicitly deleted because this non-rewritten comparison "
   "function would be the best match for the comparison">;
+def note_defaulted_comparison_not_rewritten_conversion : Note<
+  "defaulted %0 is implicitly deleted because a builtin comparison function "
+  "using this conversion would be the best match for the comparison">;
 def note_defaulted_comparison_cannot_deduce : Note<
   "return type of defaulted 'operator<=>' cannot be deduced because "
   "return type %2 of three-way comparison for %select{|member|base class}0 %1 "
@@ -10781,6 +10785,8 @@ def err_omp_dispatch_statement_call
 def err_omp_unroll_full_variable_trip_count : Error<
   "loop to be fully unrolled must have a constant trip count">;
 def note_omp_directive_here : Note<"'%0' directive found here">;
+def err_omp_instantiation_not_supported
+    : Error<"instantiation of '%0' not supported yet">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

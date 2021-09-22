@@ -24,7 +24,7 @@ IP<nullptr> ip2;
 IP<get_nullptr()> ip3;
 IP<(int*)0> ip4;
 IP<np> ip5;
-IP<nonconst_np> ip5; // expected-error{{non-type template argument of type 'std::nullptr_t' (aka 'nullptr_t') is not a constant expression}} \
+IP<nonconst_np> ip5; // expected-error{{non-type template argument of type 'std::nullptr_t' is not a constant expression}} \
 // expected-note{{read of non-constexpr variable 'nonconst_np' is not allowed in a constant expression}}
 IP<(float*)0> ip6; // expected-error{{null non-type template argument of type 'float *' does not match template parameter of type 'int *'}}
 IP<&tl> ip7; // expected-error{{non-type template argument of type 'int *' is not a constant expression}}
@@ -62,6 +62,6 @@ template<std::nullptr_t np> struct NP { // expected-note 2{{template parameter i
 NP<nullptr> np1;
 NP<np> np2;
 NP<get_nullptr()> np3;
-NP<0> np4; // expected-error{{null non-type template argument must be cast to template parameter type 'std::nullptr_t' (aka 'nullptr_t')}}
+NP<0> np4; // expected-error{{null non-type template argument must be cast to template parameter type 'std::nullptr_t'}}
 constexpr int i = 7;
 NP<i> np5; // expected-error{{non-type template argument of type 'const int' cannot be converted to a value of type 'std::nullptr_t'}}

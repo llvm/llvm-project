@@ -8,7 +8,6 @@
 
 // GCC's __builtin_strlen isn't constexpr yet
 // XFAIL: gcc-11 && !(c++11 || c++14 || c++17)
-// UNSUPPORTED: LIBCXX-DEBUG-FIXME
 
 // <string_view>
 

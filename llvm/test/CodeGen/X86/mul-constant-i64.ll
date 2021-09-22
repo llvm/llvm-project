@@ -1479,28 +1479,28 @@ define i64 @test_mul_spec(i64 %x) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl $9, %edx
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    mull %edx
-; X86-NEXT:    movl %eax, %esi
-; X86-NEXT:    leal (%edi,%edi,8), %ebx
-; X86-NEXT:    addl $42, %esi
-; X86-NEXT:    adcl %edx, %ebx
-; X86-NEXT:    movl $5, %edx
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    mull %edx
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    leal (%edi,%edi,4), %edi
-; X86-NEXT:    addl $2, %ecx
-; X86-NEXT:    adcl %edx, %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl $9, %ecx
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    mull %ecx
-; X86-NEXT:    imull %esi, %edi
-; X86-NEXT:    addl %edi, %edx
-; X86-NEXT:    imull %ebx, %ecx
-; X86-NEXT:    addl %ecx, %edx
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    leal (%ebx,%ebx,8), %edi
+; X86-NEXT:    addl $42, %ecx
+; X86-NEXT:    adcl %edx, %edi
+; X86-NEXT:    movl $5, %edx
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    mull %edx
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    leal (%ebx,%ebx,4), %ebx
+; X86-NEXT:    addl $2, %esi
+; X86-NEXT:    adcl %edx, %ebx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    mull %esi
+; X86-NEXT:    imull %ecx, %ebx
+; X86-NEXT:    addl %ebx, %edx
+; X86-NEXT:    imull %edi, %esi
+; X86-NEXT:    addl %esi, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -1511,28 +1511,28 @@ define i64 @test_mul_spec(i64 %x) nounwind {
 ; X86-NOOPT-NEXT:    pushl %ebx
 ; X86-NOOPT-NEXT:    pushl %edi
 ; X86-NOOPT-NEXT:    pushl %esi
-; X86-NOOPT-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NOOPT-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NOOPT-NEXT:    movl $9, %edx
-; X86-NOOPT-NEXT:    movl %ecx, %eax
-; X86-NOOPT-NEXT:    mull %edx
-; X86-NOOPT-NEXT:    movl %eax, %esi
-; X86-NOOPT-NEXT:    leal (%edi,%edi,8), %ebx
-; X86-NOOPT-NEXT:    addl $42, %esi
-; X86-NOOPT-NEXT:    adcl %edx, %ebx
-; X86-NOOPT-NEXT:    movl $5, %edx
-; X86-NOOPT-NEXT:    movl %ecx, %eax
-; X86-NOOPT-NEXT:    mull %edx
-; X86-NOOPT-NEXT:    movl %eax, %ecx
-; X86-NOOPT-NEXT:    leal (%edi,%edi,4), %edi
-; X86-NOOPT-NEXT:    addl $2, %ecx
-; X86-NOOPT-NEXT:    adcl %edx, %edi
+; X86-NOOPT-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NOOPT-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NOOPT-NEXT:    movl $9, %ecx
 ; X86-NOOPT-NEXT:    movl %esi, %eax
 ; X86-NOOPT-NEXT:    mull %ecx
-; X86-NOOPT-NEXT:    imull %esi, %edi
-; X86-NOOPT-NEXT:    addl %edi, %edx
-; X86-NOOPT-NEXT:    imull %ebx, %ecx
-; X86-NOOPT-NEXT:    addl %ecx, %edx
+; X86-NOOPT-NEXT:    movl %eax, %ecx
+; X86-NOOPT-NEXT:    leal (%ebx,%ebx,8), %edi
+; X86-NOOPT-NEXT:    addl $42, %ecx
+; X86-NOOPT-NEXT:    adcl %edx, %edi
+; X86-NOOPT-NEXT:    movl $5, %edx
+; X86-NOOPT-NEXT:    movl %esi, %eax
+; X86-NOOPT-NEXT:    mull %edx
+; X86-NOOPT-NEXT:    movl %eax, %esi
+; X86-NOOPT-NEXT:    leal (%ebx,%ebx,4), %ebx
+; X86-NOOPT-NEXT:    addl $2, %esi
+; X86-NOOPT-NEXT:    adcl %edx, %ebx
+; X86-NOOPT-NEXT:    movl %ecx, %eax
+; X86-NOOPT-NEXT:    mull %esi
+; X86-NOOPT-NEXT:    imull %ecx, %ebx
+; X86-NOOPT-NEXT:    addl %ebx, %edx
+; X86-NOOPT-NEXT:    imull %edi, %esi
+; X86-NOOPT-NEXT:    addl %esi, %edx
 ; X86-NOOPT-NEXT:    popl %esi
 ; X86-NOOPT-NEXT:    popl %edi
 ; X86-NOOPT-NEXT:    popl %ebx

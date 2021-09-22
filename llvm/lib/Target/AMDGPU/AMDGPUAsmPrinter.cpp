@@ -678,7 +678,8 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       GCNSubtarget::MaxWaveScratchSize / STM.getWavefrontSize();
   if (ProgInfo.ScratchSize > MaxScratchPerWorkitem) {
     DiagnosticInfoStackSize DiagStackSize(MF.getFunction(),
-                                          ProgInfo.ScratchSize, DS_Error);
+                                          ProgInfo.ScratchSize,
+                                          MaxScratchPerWorkitem, DS_Error);
     MF.getFunction().getContext().diagnose(DiagStackSize);
   }
 
@@ -697,11 +698,9 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     if (ProgInfo.NumSGPR > MaxAddressableNumSGPRs) {
       // This can happen due to a compiler bug or when using inline asm.
       LLVMContext &Ctx = MF.getFunction().getContext();
-      DiagnosticInfoResourceLimit Diag(MF.getFunction(),
-                                       "addressable scalar registers",
-                                       ProgInfo.NumSGPR, DS_Error,
-                                       DK_ResourceLimit,
-                                       MaxAddressableNumSGPRs);
+      DiagnosticInfoResourceLimit Diag(
+          MF.getFunction(), "addressable scalar registers", ProgInfo.NumSGPR,
+          MaxAddressableNumSGPRs, DS_Error, DK_ResourceLimit);
       Ctx.diagnose(Diag);
       ProgInfo.NumSGPR = MaxAddressableNumSGPRs - 1;
     }
@@ -745,11 +744,9 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       // This can happen due to a compiler bug or when using inline asm to use
       // the registers which are usually reserved for vcc etc.
       LLVMContext &Ctx = MF.getFunction().getContext();
-      DiagnosticInfoResourceLimit Diag(MF.getFunction(),
-                                       "scalar registers",
-                                       ProgInfo.NumSGPR, DS_Error,
-                                       DK_ResourceLimit,
-                                       MaxAddressableNumSGPRs);
+      DiagnosticInfoResourceLimit Diag(MF.getFunction(), "scalar registers",
+                                       ProgInfo.NumSGPR, MaxAddressableNumSGPRs,
+                                       DS_Error, DK_ResourceLimit);
       Ctx.diagnose(Diag);
       ProgInfo.NumSGPR = MaxAddressableNumSGPRs;
       ProgInfo.NumSGPRsForWavesPerEU = MaxAddressableNumSGPRs;
@@ -766,14 +763,16 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   if (MFI->getNumUserSGPRs() > STM.getMaxNumUserSGPRs()) {
     LLVMContext &Ctx = MF.getFunction().getContext();
     DiagnosticInfoResourceLimit Diag(MF.getFunction(), "user SGPRs",
-                                     MFI->getNumUserSGPRs(), DS_Error);
+                                     MFI->getNumUserSGPRs(),
+                                     STM.getMaxNumUserSGPRs(), DS_Error);
     Ctx.diagnose(Diag);
   }
 
   if (MFI->getLDSSize() > static_cast<unsigned>(STM.getLocalMemorySize())) {
     LLVMContext &Ctx = MF.getFunction().getContext();
     DiagnosticInfoResourceLimit Diag(MF.getFunction(), "local memory",
-                                     MFI->getLDSSize(), DS_Error);
+                                     MFI->getLDSSize(),
+                                     STM.getLocalMemorySize(), DS_Error);
     Ctx.diagnose(Diag);
   }
 

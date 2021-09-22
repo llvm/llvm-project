@@ -114,7 +114,13 @@
 
 #if ITT_PLATFORM == ITT_PLATFORM_WIN
 /* use __forceinline (VC++ specific) */
-#define ITT_INLINE __forceinline
+#if defined(__MINGW32__) && !defined(__cplusplus)
+#define ITT_INLINE                                                             \
+  static __inline__ __attribute__((__always_inline__, __gnu_inline__))
+#else
+#define ITT_INLINE static __forceinline
+#endif /* __MINGW32__ */
+
 #define ITT_INLINE_ATTRIBUTE /* nothing */
 #else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
 /*
@@ -140,10 +146,9 @@
 #define ITT_ARCH_IA32E 2
 #endif /* ITT_ARCH_IA32E */
 
-/* Was there a magical reason we didn't have 3 here before? */
-#ifndef ITT_ARCH_AARCH64
-#define ITT_ARCH_AARCH64 3
-#endif /* ITT_ARCH_AARCH64 */
+#ifndef ITT_ARCH_IA64
+#define ITT_ARCH_IA64 3
+#endif /* ITT_ARCH_IA64 */
 
 #ifndef ITT_ARCH_ARM
 #define ITT_ARCH_ARM 4
@@ -153,17 +158,9 @@
 #define ITT_ARCH_PPC64 5
 #endif /* ITT_ARCH_PPC64 */
 
-#ifndef ITT_ARCH_MIPS
-#define ITT_ARCH_MIPS 6
-#endif /* ITT_ARCH_MIPS */
-
-#ifndef ITT_ARCH_MIPS64
-#define ITT_ARCH_MIPS64 6
-#endif /* ITT_ARCH_MIPS64 */
-
-#ifndef ITT_ARCH_RISCV64
-#define ITT_ARCH_RISCV64 7
-#endif /* ITT_ARCH_RISCV64 */
+#ifndef ITT_ARCH_ARM64
+#define ITT_ARCH_ARM64 6
+#endif /* ITT_ARCH_ARM64 */
 
 #ifndef ITT_ARCH
 #if defined _M_IX86 || defined __i386__
@@ -174,16 +171,10 @@
 #define ITT_ARCH ITT_ARCH_IA64
 #elif defined _M_ARM || defined __arm__
 #define ITT_ARCH ITT_ARCH_ARM
+#elif defined __aarch64__
+#define ITT_ARCH ITT_ARCH_ARM64
 #elif defined __powerpc64__
 #define ITT_ARCH ITT_ARCH_PPC64
-#elif defined __aarch64__
-#define ITT_ARCH ITT_ARCH_AARCH64
-#elif defined __mips__ && !defined __mips64
-#define ITT_ARCH ITT_ARCH_MIPS
-#elif defined __mips__ && defined __mips64
-#define ITT_ARCH ITT_ARCH_MIPS64
-#elif defined __riscv && __riscv_xlen == 64
-#define ITT_ARCH ITT_ARCH_RISCV64
 #endif
 #endif
 
@@ -212,10 +203,10 @@
   { 0xED, 0xAB, 0xAB, 0xEC, 0x0D, 0xEE, 0xDA, 0x30 }
 
 /* Replace with snapshot date YYYYMMDD for promotion build. */
-#define API_VERSION_BUILD 20151119
+#define API_VERSION_BUILD 20180723
 
 #ifndef API_VERSION_NUM
-#define API_VERSION_NUM 0.0.0
+#define API_VERSION_NUM 3.20.1
 #endif /* API_VERSION_NUM */
 
 #define API_VERSION                                                            \
@@ -228,8 +219,13 @@
 typedef HMODULE lib_t;
 typedef DWORD TIDT;
 typedef CRITICAL_SECTION mutex_t;
+#ifdef __cplusplus
+#define MUTEX_INITIALIZER                                                      \
+  {}
+#else
 #define MUTEX_INITIALIZER                                                      \
   { 0 }
+#endif
 #define strong_alias(name, aliasname) /* empty for Windows */
 #else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
 #include <dlfcn.h>
@@ -318,7 +314,17 @@ ITT_INLINE long __itt_interlocked_increment(volatile long *ptr) {
 #ifdef SDL_STRNCPY_S
 #define __itt_fstrcpyn(s1, b, s2, l) SDL_STRNCPY_S(s1, b, s2, l)
 #else
-#define __itt_fstrcpyn(s1, b, s2, l) strncpy(s1, s2, l)
+#define __itt_fstrcpyn(s1, b, s2, l)                                           \
+  {                                                                            \
+    if (b > 0) {                                                               \
+      /* 'volatile' is used to suppress the warning that a destination */      \
+      /*  bound depends on the length of the source.                   */      \
+      volatile size_t num_to_copy =                                            \
+          (size_t)(b - 1) < (size_t)(l) ? (size_t)(b - 1) : (size_t)(l);       \
+      strncpy(s1, s2, num_to_copy);                                            \
+      s1[num_to_copy] = 0;                                                     \
+    }                                                                          \
+  }
 #endif /* SDL_STRNCPY_S */
 
 #define __itt_fstrdup(s) strdup(s)
@@ -342,9 +348,7 @@ ITT_INLINE long __TBB_machine_fetchadd4(volatile void *ptr, long addend) {
                        : "memory");
   return result;
 }
-#elif ITT_ARCH == ITT_ARCH_ARM || ITT_ARCH == ITT_ARCH_PPC64 ||                \
-    ITT_ARCH == ITT_ARCH_AARCH64 || ITT_ARCH == ITT_ARCH_MIPS ||               \
-    ITT_ARCH == ITT_ARCH_MIPS64 || ITT_ARCH == ITT_ARCH_RISCV64
+#else
 #define __TBB_machine_fetchadd4(addr, val) __sync_fetch_and_add(addr, val)
 #endif /* ITT_ARCH==ITT_ARCH_IA64 */
 #ifndef ITT_SIMPLE_INIT
@@ -441,6 +445,7 @@ typedef struct __itt_counter_info {
 
 struct ___itt_domain;
 struct ___itt_string_handle;
+struct ___itt_histogram;
 
 typedef struct ___itt_global {
   unsigned char magic[8];
@@ -462,6 +467,8 @@ typedef struct ___itt_global {
   struct ___itt_string_handle *string_list;
   __itt_collection_state state;
   __itt_counter_info_t *counter_list;
+  unsigned int ipt_collect_events;
+  struct ___itt_histogram *histogram_list;
 } __itt_global;
 
 #pragma pack(pop)
@@ -599,6 +606,42 @@ typedef struct ___itt_global {
       h->next = NULL;                                                          \
       if (h_tail == NULL)                                                      \
         (gptr)->counter_list = h;                                              \
+      else                                                                     \
+        h_tail->next = h;                                                      \
+    }                                                                          \
+  }
+
+#define NEW_HISTOGRAM_W(gptr, h, h_tail, domain, name, x_type, y_type)         \
+  {                                                                            \
+    h = (__itt_histogram *)malloc(sizeof(__itt_histogram));                    \
+    if (h != NULL) {                                                           \
+      h->domain = domain;                                                      \
+      h->nameA = NULL;                                                         \
+      h->nameW = name ? _wcsdup(name) : NULL;                                  \
+      h->x_type = x_type;                                                      \
+      h->y_type = y_type;                                                      \
+      h->extra1 = 0;                                                           \
+      h->extra2 = NULL;                                                        \
+      if (h_tail == NULL)                                                      \
+        (gptr)->histogram_list = h;                                            \
+      else                                                                     \
+        h_tail->next = h;                                                      \
+    }                                                                          \
+  }
+
+#define NEW_HISTOGRAM_A(gptr, h, h_tail, domain, name, x_type, y_type)         \
+  {                                                                            \
+    h = (__itt_histogram *)malloc(sizeof(__itt_histogram));                    \
+    if (h != NULL) {                                                           \
+      h->domain = domain;                                                      \
+      h->nameA = name ? __itt_fstrdup(name) : NULL;                            \
+      h->nameW = NULL;                                                         \
+      h->x_type = x_type;                                                      \
+      h->y_type = y_type;                                                      \
+      h->extra1 = 0;                                                           \
+      h->extra2 = NULL;                                                        \
+      if (h_tail == NULL)                                                      \
+        (gptr)->histogram_list = h;                                            \
       else                                                                     \
         h_tail->next = h;                                                      \
     }                                                                          \

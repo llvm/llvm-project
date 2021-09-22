@@ -7,6 +7,10 @@ def StdC : StandardSpec<"stdc"> {
   PtrType StructTmPtr = PtrType<StructTmType>;
   PtrType TimeTTypePtr = PtrType<TimeTType>;
 
+  NamedType DivTType = NamedType<"div_t">;
+  NamedType LDivTType = NamedType<"ldiv_t">;
+  NamedType LLDivTType = NamedType<"lldiv_t">;
+
   HeaderSpec Assert = HeaderSpec<
       "assert.h",
       [
@@ -471,32 +475,48 @@ def StdC : StandardSpec<"stdc"> {
   HeaderSpec StdLib = HeaderSpec<
       "stdlib.h",
       [], // Macros
-      [], // Types
+      [
+          DivTType,
+          LDivTType,
+          LLDivTType,
+      ], // Types
       [], // Enumerations
       [
           FunctionSpec<"abort", RetValSpec<NoReturn>, [ArgSpec<VoidType>]>,
+
           FunctionSpec<"abs", RetValSpec<IntType>, [ArgSpec<IntType>]>,
+          FunctionSpec<"labs", RetValSpec<LongType>, [ArgSpec<LongType>]>,
+          FunctionSpec<"llabs", RetValSpec<LongLongType>, [ArgSpec<LongLongType>]>,
+
           FunctionSpec<"atoi", RetValSpec<IntType>, [ArgSpec<ConstCharPtr>]>,
           FunctionSpec<"atol", RetValSpec<LongType>, [ArgSpec<ConstCharPtr>]>,
           FunctionSpec<"atoll", RetValSpec<LongLongType>, [ArgSpec<ConstCharPtr>]>,
-          FunctionSpec<"labs", RetValSpec<LongType>, [ArgSpec<LongType>]>,
-          FunctionSpec<"llabs", RetValSpec<LongLongType>, [ArgSpec<LongLongType>]>,
+
+          FunctionSpec<"div", RetValSpec<DivTType>, [ArgSpec<IntType>, ArgSpec<IntType>]>,
+          FunctionSpec<"ldiv", RetValSpec<LDivTType>, [ArgSpec<LongType>, ArgSpec<LongType>]>,
+          FunctionSpec<"lldiv", RetValSpec<LLDivTType>, [ArgSpec<LongLongType>, ArgSpec<LongLongType>]>,
+
           FunctionSpec<"strtol", RetValSpec<LongType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<IntType>]>,
           FunctionSpec<"strtoll", RetValSpec<LongLongType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<IntType>]>,
           FunctionSpec<"strtoul", RetValSpec<UnsignedLongType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<IntType>]>,
           FunctionSpec<"strtoull", RetValSpec<UnsignedLongLongType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<IntType>]>,
+
           FunctionSpec<"_Exit", RetValSpec<NoReturn>, [ArgSpec<IntType>]>,
       ]
   >;
 
+  NamedType IMaxDivTType = NamedType<"imaxdiv_t">;
+
   HeaderSpec IntTypes = HeaderSpec<
       "inttypes.h",
       [], // Macros
-      [], // Types
+      [
+        IMaxDivTType,
+      ], // Types
       [], // Enumerations
       [
           FunctionSpec<"imaxabs", RetValSpec<IntMaxTType>, [ArgSpec<IntMaxTType>]>,
-          FunctionSpec<"imaxdiv", RetValSpec<IntMaxTType>, [ArgSpec<IntMaxTType>, ArgSpec<IntMaxTType>]>,
+          FunctionSpec<"imaxdiv", RetValSpec<IMaxDivTType>, [ArgSpec<IntMaxTType>, ArgSpec<IntMaxTType>]>,
           FunctionSpec<"strtoimax", RetValSpec<IntMaxTType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<IntType>]>,
           FunctionSpec<"strtoumax", RetValSpec<UIntMaxTType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<IntType>]>,
       ]

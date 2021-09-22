@@ -173,10 +173,19 @@ Constant *llvm::getPointerAtOffset(Constant *I, uint64_t Offset, Module &M,
     case Instruction::Sub: {
       auto *Operand0 = cast<Constant>(C->getOperand(0));
       auto *Operand1 = cast<Constant>(C->getOperand(1));
-      auto *Operand1TargetGlobal = getPointerAtOffset(Operand1, 0, M);
+
+      auto StripGEP = [](Constant *C) {
+        auto *CE = dyn_cast<ConstantExpr>(C);
+        if (!CE)
+          return C;
+        if (CE->getOpcode() != Instruction::GetElementPtr)
+          return C;
+        return CE->getOperand(0);
+      };
+      auto *Operand1TargetGlobal = StripGEP(getPointerAtOffset(Operand1, 0, M));
 
       // Check that in the "sub (@a, @b)" expression, @b points back to the top
-      // level global that we're processing. Otherwise bail.
+      // level global (or a GEP thereof) that we're processing. Otherwise bail.
       if (Operand1TargetGlobal != TopLevelGlobal)
         return nullptr;
 

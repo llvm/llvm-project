@@ -1607,7 +1607,7 @@ void ContinuationIndenter::moveStatePastScopeCloser(LineState &State) {
   // BreakBeforeParameter is calculated based on an incorrect assumption
   // (it is checked whether the whole expression fits into one line without
   // considering a line break inside a message receiver).
-  // We check whether arguements fit after receiver scope closer (into the same
+  // We check whether arguments fit after receiver scope closer (into the same
   // line).
   if (State.Stack.back().BreakBeforeParameter && Current.MatchingParen &&
       Current.MatchingParen->Previous) {

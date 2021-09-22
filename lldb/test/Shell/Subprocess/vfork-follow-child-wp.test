@@ -9,5 +9,4 @@ process launch -s
 watchpoint set variable -w write g_val
 # CHECK: Watchpoint created:
 continue
-# CHECK: function run in parent
 # CHECK: function run in exec'd child

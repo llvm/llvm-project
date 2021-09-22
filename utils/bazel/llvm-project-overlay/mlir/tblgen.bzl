@@ -169,6 +169,10 @@ def _gentbl_rule_impl(ctx):
         inputs = trans_srcs,
         executable = ctx.executable.tblgen,
         arguments = [args],
+        # Make sure action_env settings are honored so the env is the same as
+        # when the tool was built. Important for locating shared libraries with
+        # a custom LD_LIBRARY_PATH.
+        use_default_shell_env = True,
         mnemonic = "TdGenerate",
     )
 

@@ -6446,6 +6446,18 @@ def : Pat<(ARMvgetlaneu (v8i16 QPR:$src), imm:$lane),
           (VGETLNu16 (v4i16 (EXTRACT_SUBREG QPR:$src,
                              (DSubReg_i16_reg imm:$lane))),
                      (SubReg_i16_lane imm:$lane))>;
+def : Pat<(ARMvgetlaneu (v8f16 QPR:$src), imm:$lane),
+          (VGETLNu16 (v4f16 (EXTRACT_SUBREG QPR:$src,
+                             (DSubReg_i16_reg imm:$lane))),
+                     (SubReg_i16_lane imm:$lane))>;
+def : Pat<(ARMvgetlaneu (v4f16 DPR:$src), imm:$lane),
+          (VGETLNu16 (v4f16 DPR:$src), imm:$lane)>;
+def : Pat<(ARMvgetlaneu (v8bf16 QPR:$src), imm:$lane),
+          (VGETLNu16 (v4bf16 (EXTRACT_SUBREG QPR:$src,
+                             (DSubReg_i16_reg imm:$lane))),
+                     (SubReg_i16_lane imm:$lane))>;
+def : Pat<(ARMvgetlaneu (v4bf16 DPR:$src), imm:$lane),
+          (VGETLNu16 (v4bf16 DPR:$src), imm:$lane)>;
 }
 def : Pat<(extractelt (v4i32 QPR:$src), imm:$lane),
           (VGETLNi32 (v2i32 (EXTRACT_SUBREG QPR:$src,

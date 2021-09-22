@@ -307,11 +307,6 @@ public:
     Value::getAllMetadata(MDs);
   }
 
-  /// Fills the AAMDNodes structure with AA metadata from this instruction.
-  /// When Merge is true, the existing AA metadata is merged with that from this
-  /// instruction providing the most-general result.
-  void getAAMetadata(AAMDNodes &N, bool Merge = false) const;
-
   /// Set the metadata of the specified kind to the specified node. This updates
   /// or replaces metadata if already present, or removes it if Node is null.
   void setMetadata(unsigned KindID, MDNode *Node);
@@ -352,7 +347,10 @@ public:
   /// to the existing node.
   void addAnnotationMetadata(StringRef Annotation);
 
-  /// Sets the metadata on this instruction from the AAMDNodes structure.
+  /// Returns the AA metadata for this instruction.
+  AAMDNodes getAAMetadata() const;
+
+  /// Sets the AA metadata on this instruction from the AAMDNodes structure.
   void setAAMetadata(const AAMDNodes &N);
 
   /// Retrieve the raw weight values of a conditional branch or select.

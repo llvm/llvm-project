@@ -13,6 +13,7 @@ set(ORC_SOURCES
 set(x86_64_SOURCES
 # x86-64 specific assembly files will go here.
   macho_tlv.x86-64.S
+  elfnix_tls.x86-64.S
 )
 
 set(ORC_IMPL_HEADERS

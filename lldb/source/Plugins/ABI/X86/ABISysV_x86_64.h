@@ -82,8 +82,6 @@ public:
 
   lldb_private::ConstString GetPluginName() override;
 
-  uint32_t GetPluginVersion() override;
-
 protected:
   void CreateRegisterMapIfNeeded();
 

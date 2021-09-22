@@ -1291,9 +1291,6 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
   MCTargetStreamer &TS = *OutStreamer->getTargetStreamer();
   ARMTargetStreamer &ATS = static_cast<ARMTargetStreamer &>(TS);
 
-  const MachineFunction &MF = *MI->getParent()->getParent();
-  const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
-
   // If we just ended a constant pool, mark it as such.
   if (InConstantPool && MI->getOpcode() != ARM::CONSTPOOL_ENTRY) {
     OutStreamer->emitDataRegion(MCDR_DataRegionEnd);
@@ -2035,6 +2032,9 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addImm(ARMCC::AL)
       .addReg(0));
 
+    const MachineFunction &MF = *MI->getParent()->getParent();
+    const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
+
     if (STI.isTargetDarwin() || STI.isTargetWindows()) {
       // These platforms always use the same frame register
       EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::LDRi12)
@@ -2079,6 +2079,9 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // bx $scratch
     Register SrcReg = MI->getOperand(0).getReg();
     Register ScratchReg = MI->getOperand(1).getReg();
+
+    const MachineFunction &MF = *MI->getParent()->getParent();
+    const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
 
     EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tLDRi)
       .addReg(ScratchReg)

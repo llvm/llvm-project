@@ -1856,8 +1856,8 @@ class getAsm64 <bit HasDst, int NumSrcArgs, bit HasIntClamp, bit HasModifiers,
 
 // Returns the assembly string for the inputs and outputs of a VOP3P
 // instruction.
-class getAsmVOP3P <bit HasDst, int NumSrcArgs, bit HasModifiers,
-                   bit HasClamp, ValueType DstVT = i32> {
+class getAsmVOP3P <int NumSrcArgs, bit HasModifiers,
+                   bit HasClamp> {
   string dst = "$vdst";
   string src0 = !if(!eq(NumSrcArgs, 1), "$src0", "$src0,");
   string src1 = !if(!eq(NumSrcArgs, 1), "",
@@ -1875,7 +1875,6 @@ class getAsmVOP3P <bit HasDst, int NumSrcArgs, bit HasModifiers,
 
 class getAsmVOP3OpSel <int NumSrcArgs,
                        bit HasClamp,
-                       bit HasOMod,
                        bit Src0HasMods,
                        bit Src1HasMods,
                        bit Src2HasMods> {
@@ -2018,8 +2017,7 @@ class getHasSDWA <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
             );
 }
 
-class getHasDPP <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
-                 ValueType Src1VT = i32> {
+class getHasDPP <int NumSrcArgs> {
   bit ret = !if(!eq(NumSrcArgs, 3),
                 0, // NumSrcArgs == 3 - No DPP for VOP3
                 1);
@@ -2027,14 +2025,14 @@ class getHasDPP <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
 
 class getHasExt64BitDPP <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
                  ValueType Src1VT = i32> {
-  bit ret = !and(getHasDPP<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret,
+  bit ret = !and(getHasDPP<NumSrcArgs>.ret,
                  getHas64BitOps<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret);
 }
 
 // Function that checks if instruction supports DPP and SDWA
 class getHasExt <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
                  ValueType Src1VT = i32> {
-  bit ret = !or(getHasDPP<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret,
+  bit ret = !or(getHasDPP<NumSrcArgs>.ret,
                 getHasSDWA<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret);
 }
 
@@ -2138,7 +2136,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   field bit HasSrc2Mods = !if(HasModifiers, !or(HasSrc2FloatMods, HasSrc2IntMods), 0);
 
   field bit HasExt = getHasExt<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret;
-  field bit HasExtDPP = getHasDPP<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret;
+  field bit HasExtDPP = getHasDPP<NumSrcArgs>.ret;
   field bit HasExt64BitDPP = getHasExt64BitDPP<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret;
   field bit HasExtSDWA = getHasSDWA<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret;
   field bit HasExtSDWA9 = HasExtSDWA;
@@ -2189,9 +2187,9 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
 
   field string Asm32 = getAsm32<HasDst, NumSrcArgs, DstVT>.ret;
   field string Asm64 = getAsm64<HasDst, NumSrcArgs, HasIntClamp, HasModifiers, HasOMod, DstVT>.ret;
-  field string AsmVOP3P = getAsmVOP3P<HasDst, NumSrcArgs, HasModifiers, HasClamp, DstVT>.ret;
+  field string AsmVOP3P = getAsmVOP3P<NumSrcArgs, HasModifiers, HasClamp>.ret;
   field string AsmVOP3OpSel = getAsmVOP3OpSel<NumSrcArgs,
-                                              HasClamp, HasOMod,
+                                              HasClamp,
                                               HasSrc0FloatMods,
                                               HasSrc1FloatMods,
                                               HasSrc2FloatMods>.ret;

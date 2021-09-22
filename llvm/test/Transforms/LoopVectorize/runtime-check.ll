@@ -32,24 +32,22 @@ define i32 @foo(float* nocapture %a, float* nocapture %b, i32 %n) nounwind uwtab
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]], !dbg [[DBG9]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]], !dbg [[DBG9]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[N]], 3, !dbg [[DBG9]]
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = zext i32 [[TMP6]] to i64, !dbg [[DBG9]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub nsw i64 [[TMP2]], [[N_MOD_VF]], !dbg [[DBG9]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 8589934588, !dbg [[DBG9]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]], !dbg [[DBG9]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ], !dbg [[DBG9]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, float* [[B]], i64 [[INDEX]], !dbg [[DBG9]]
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast float* [[TMP7]] to <4 x float>*, !dbg [[DBG9]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, <4 x float>* [[TMP8]], align 4, !dbg [[DBG9]], !alias.scope !10
-; CHECK-NEXT:    [[TMP9:%.*]] = fmul <4 x float> [[WIDE_LOAD]], <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>, !dbg [[DBG9]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[INDEX]], !dbg [[DBG9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast float* [[TMP10]] to <4 x float>*, !dbg [[DBG9]]
-; CHECK-NEXT:    store <4 x float> [[TMP9]], <4 x float>* [[TMP11]], align 4, !dbg [[DBG9]], !alias.scope !13, !noalias !10
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, float* [[B]], i64 [[INDEX]], !dbg [[DBG9]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast float* [[TMP6]] to <4 x float>*, !dbg [[DBG9]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, <4 x float>* [[TMP7]], align 4, !dbg [[DBG9]], !alias.scope !10
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul <4 x float> [[WIDE_LOAD]], <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>, !dbg [[DBG9]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[INDEX]], !dbg [[DBG9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast float* [[TMP9]] to <4 x float>*, !dbg [[DBG9]]
+; CHECK-NEXT:    store <4 x float> [[TMP8]], <4 x float>* [[TMP10]], align 4, !dbg [[DBG9]], !alias.scope !13, !noalias !10
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4, !dbg [[DBG9]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]], !dbg [[DBG9]]
-; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !dbg [[DBG9]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]], !dbg [[DBG9]]
+; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !dbg [[DBG9]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP6]], 0, !dbg [[DBG9]]
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]], !dbg [[DBG9]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[SCALAR_PH]], !dbg [[DBG9]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ], [ 0, [[VECTOR_MEMCHECK]] ], !dbg [[DBG9]]
@@ -57,8 +55,8 @@ define i32 @foo(float* nocapture %a, float* nocapture %b, i32 %n) nounwind uwtab
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], !dbg [[DBG9]]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[B]], i64 [[INDVARS_IV]], !dbg [[DBG9]]
-; CHECK-NEXT:    [[TMP13:%.*]] = load float, float* [[ARRAYIDX]], align 4, !dbg [[DBG9]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP13]], 3.000000e+00, !dbg [[DBG9]]
+; CHECK-NEXT:    [[TMP12:%.*]] = load float, float* [[ARRAYIDX]], align 4, !dbg [[DBG9]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP12]], 3.000000e+00, !dbg [[DBG9]]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[INDVARS_IV]], !dbg [[DBG9]]
 ; CHECK-NEXT:    store float [[MUL]], float* [[ARRAYIDX2]], align 4, !dbg [[DBG9]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1, !dbg [[DBG9]]

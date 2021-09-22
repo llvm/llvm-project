@@ -63,8 +63,6 @@ public:
 
   ConstString GetPluginName() override;
 
-  uint32_t GetPluginVersion() override;
-
   SystemRuntime *GetSystemRuntime() override { return nullptr; }
 
   Status DoLoadCore() override;

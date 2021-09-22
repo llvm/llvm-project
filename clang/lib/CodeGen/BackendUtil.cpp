@@ -582,6 +582,21 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.XRayOmitFunctionIndex = CodeGenOpts.XRayOmitFunctionIndex;
   Options.LoopAlignment = CodeGenOpts.LoopAlignment;
 
+  switch (CodeGenOpts.getSwiftAsyncFramePointer()) {
+  case CodeGenOptions::SwiftAsyncFramePointerKind::Auto:
+    Options.SwiftAsyncFramePointer =
+        SwiftAsyncFramePointerMode::DeploymentBased;
+    break;
+
+  case CodeGenOptions::SwiftAsyncFramePointerKind::Always:
+    Options.SwiftAsyncFramePointer = SwiftAsyncFramePointerMode::Always;
+    break;
+
+  case CodeGenOptions::SwiftAsyncFramePointerKind::Never:
+    Options.SwiftAsyncFramePointer = SwiftAsyncFramePointerMode::Never;
+    break;
+  }
+
   Options.MCOptions.SplitDwarfFile = CodeGenOpts.SplitDwarfFile;
   Options.MCOptions.MCRelaxAll = CodeGenOpts.RelaxAll;
   Options.MCOptions.MCSaveTempLabels = CodeGenOpts.SaveTempLabels;
@@ -1119,7 +1134,7 @@ static void addSanitizers(const Triple &TargetTriple,
         bool Recover = CodeGenOpts.SanitizeRecover.has(Mask);
 
         MPM.addPass(
-            MemorySanitizerPass({TrackOrigins, Recover, CompileKernel}));
+            ModuleMemorySanitizerPass({TrackOrigins, Recover, CompileKernel}));
         FunctionPassManager FPM;
         FPM.addPass(
             MemorySanitizerPass({TrackOrigins, Recover, CompileKernel}));
@@ -1142,7 +1157,7 @@ static void addSanitizers(const Triple &TargetTriple,
     MSanPass(SanitizerKind::KernelMemory, true);
 
     if (LangOpts.Sanitize.has(SanitizerKind::Thread)) {
-      MPM.addPass(ThreadSanitizerPass());
+      MPM.addPass(ModuleThreadSanitizerPass());
       MPM.addPass(createModuleToFunctionPassAdaptor(ThreadSanitizerPass()));
     }
 

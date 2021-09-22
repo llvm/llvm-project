@@ -57,9 +57,9 @@ public:
 
   MinMaxMedOpc getMinMaxPair(unsigned Opc);
 
-  template <class m_Cst>
+  template <class m_Cst, typename CstTy>
   bool matchMed(MachineInstr &MI, MachineRegisterInfo &MRI, MinMaxMedOpc MMMOpc,
-                Register &Val, Register &K0, Register &K1);
+                Register &Val, CstTy &K0, CstTy &K1);
 
   bool matchIntMinMaxToMed3(MachineInstr &MI, Med3MatchInfo &MatchInfo);
   void applyMed3(MachineInstr &MI, Med3MatchInfo &MatchInfo);
@@ -83,11 +83,11 @@ AMDGPURegBankCombinerHelper::getMinMaxPair(unsigned Opc) {
   }
 }
 
-template <class m_Cst>
+template <class m_Cst, typename CstTy>
 bool AMDGPURegBankCombinerHelper::matchMed(MachineInstr &MI,
                                            MachineRegisterInfo &MRI,
                                            MinMaxMedOpc MMMOpc, Register &Val,
-                                           Register &K0, Register &K1) {
+                                           CstTy &K0, CstTy &K1) {
   // 4 operand commutes of: min(max(Val, K0), K1).
   // Find K1 from outer instr: min(max(...), K1) or min(K1, max(...)).
   // Find K0 and Val from inner instr: max(K0, Val) or max(Val, K0).
@@ -115,19 +115,18 @@ bool AMDGPURegBankCombinerHelper::matchIntMinMaxToMed3(
     return false;
 
   MinMaxMedOpc OpcodeTriple = getMinMaxPair(MI.getOpcode());
-  Register Val, K0, K1;
+  Register Val;
+  Optional<ValueAndVReg> K0, K1;
   // Match min(max(Val, K0), K1) or max(min(Val, K1), K0). Then see if K0 <= K1.
-  if (!matchMed<ICstRegMatch>(MI, MRI, OpcodeTriple, Val, K0, K1))
+  if (!matchMed<GCstAndRegMatch>(MI, MRI, OpcodeTriple, Val, K0, K1))
     return false;
 
-  const APInt &K0_Imm = getConstantIntVRegVal(K0, MRI)->getValue();
-  const APInt &K1_Imm = getConstantIntVRegVal(K1, MRI)->getValue();
-  if (OpcodeTriple.Med == AMDGPU::G_AMDGPU_SMED3 && K0_Imm.sgt(K1_Imm))
+  if (OpcodeTriple.Med == AMDGPU::G_AMDGPU_SMED3 && K0->Value.sgt(K1->Value))
     return false;
-  if (OpcodeTriple.Med == AMDGPU::G_AMDGPU_UMED3 && K0_Imm.ugt(K1_Imm))
+  if (OpcodeTriple.Med == AMDGPU::G_AMDGPU_UMED3 && K0->Value.ugt(K1->Value))
     return false;
 
-  MatchInfo = {OpcodeTriple.Med, Val, K0, K1};
+  MatchInfo = {OpcodeTriple.Med, Val, K0->VReg, K1->VReg};
   return true;
 }
 

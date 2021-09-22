@@ -518,8 +518,8 @@ define amdgpu_gfx i64 @strict_wwm_called_i64(i64 %a) noinline {
 ; GFX9-O3-NEXT:    v_add_co_u32_e32 v2, vcc, v0, v0
 ; GFX9-O3-NEXT:    v_addc_co_u32_e32 v3, vcc, v1, v1, vcc
 ; GFX9-O3-NEXT:    v_mul_lo_u32 v4, v3, v0
-; GFX9-O3-NEXT:    v_mul_hi_u32 v5, v2, v0
 ; GFX9-O3-NEXT:    v_mul_lo_u32 v1, v2, v1
+; GFX9-O3-NEXT:    v_mul_hi_u32 v5, v2, v0
 ; GFX9-O3-NEXT:    v_mul_lo_u32 v0, v2, v0
 ; GFX9-O3-NEXT:    v_add3_u32 v1, v5, v1, v4
 ; GFX9-O3-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v2
@@ -823,9 +823,9 @@ define amdgpu_gfx void @strict_wwm_amdgpu_cs_main(<4 x i32> inreg %desc, i32 %in
 ; GFX9-O3-NEXT:    s_not_b64 exec, exec
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v7, v1
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v9, v3
-; GFX9-O3-NEXT:    v_mov_b32_e32 v11, v5
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v8, v2
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v10, v4
+; GFX9-O3-NEXT:    v_mov_b32_e32 v11, v5
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v12, v6
 ; GFX9-O3-NEXT:    buffer_store_dwordx4 v[7:10], v0, s[4:7], 0 offen
 ; GFX9-O3-NEXT:    buffer_store_dwordx2 v[11:12], v0, s[4:7], 0 offen offset:16

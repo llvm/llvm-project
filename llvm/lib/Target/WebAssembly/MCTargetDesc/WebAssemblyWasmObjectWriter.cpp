@@ -74,6 +74,7 @@ unsigned WebAssemblyWasmObjectWriter::getRelocType(
 
   switch (Modifier) {
     case MCSymbolRefExpr::VK_GOT:
+    case MCSymbolRefExpr::VK_WASM_GOT_TLS:
       return wasm::R_WASM_GLOBAL_INDEX_LEB;
     case MCSymbolRefExpr::VK_WASM_TBREL:
       assert(SymA.isFunction());
@@ -88,7 +89,10 @@ unsigned WebAssemblyWasmObjectWriter::getRelocType(
                        : wasm::R_WASM_MEMORY_ADDR_REL_SLEB;
     case MCSymbolRefExpr::VK_WASM_TYPEINDEX:
       return wasm::R_WASM_TYPE_INDEX_LEB;
+    case MCSymbolRefExpr::VK_None:
+      break;
     default:
+      report_fatal_error("unknown VariantKind");
       break;
   }
 

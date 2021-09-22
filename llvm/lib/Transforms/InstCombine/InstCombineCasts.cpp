@@ -1591,6 +1591,18 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &CI) {
     return BinaryOperator::CreateAShr(A, NewShAmt);
   }
 
+  // Splatting a bit of constant-index across a value:
+  // sext (ashr (trunc iN X to iM), M-1) to iN --> ashr (shl X, N-M), N-1
+  // TODO: If the dest type is different, use a cast (adjust use check).
+  if (match(Src, m_OneUse(m_AShr(m_Trunc(m_Value(X)),
+                                 m_SpecificInt(SrcBitSize - 1)))) &&
+      X->getType() == DestTy) {
+    Constant *ShlAmtC = ConstantInt::get(DestTy, DestBitSize - SrcBitSize);
+    Constant *AshrAmtC = ConstantInt::get(DestTy, DestBitSize - 1);
+    Value *Shl = Builder.CreateShl(X, ShlAmtC);
+    return BinaryOperator::CreateAShr(Shl, AshrAmtC);
+  }
+
   if (match(Src, m_VScale(DL))) {
     if (CI.getFunction()->hasFnAttribute(Attribute::VScaleRange)) {
       unsigned MaxVScale = CI.getFunction()

@@ -84,7 +84,250 @@ conformance.</p>
 <h2 id="c99">C99 implementation status</h2>
 
 <p>Clang implements a significant portion of the ISO 9899:1999 (C99) standard, but the status of individual proposals is still under investigation.</p>
+<p>Note, the list of C99 features comes from the C99 committee draft. A list of N-numbered documents for these features does not appear in either the standard or in any available editor's report, so this section does not track document numbers currently.</p>
 <p>You can use Clang in C99 mode with the <code>-std=c99</code> option.</p>
+
+<details>
+<summary>List of features and minimum Clang version with support</summary>
+
+<table width="689" border="1" cellspacing="0">
+ <tr>
+    <th>Language Feature</th>
+<!--    <th>C99 Proposal</th> -->
+    <th>Available in Clang?</th>
+ </tr>
+    <tr>
+      <td>restricted character set support via digraphs and &lt;iso646.h&gt;</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>more precise aliasing rules via effective type</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>restricted pointers</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>variable length arrays</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>flexible array members</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>static and type qualifiers in parameter array declarators</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>more precise aliasing rules via effective type</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>complex and imaginary support in &lt;complex.h&gt;</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>type-generic math macros in &lt;tgmath.h&gt;</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>the long long int type</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>increase minimum translation limits</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>additional floating-point characteristics in &lt;float.h&gt;</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>remove implicit int</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>reliable integer division</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>universal character names (\u and \U)</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>extended identifiers</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>hexadecimal floating-point constants</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>compound literals</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>designated initializers</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>// comments</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>extended integer types and library functions in &lt;inttypes.h&gt; and &lt;stdint.h&gt;</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>remove implicit function declaration</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>preprocessor arithmetic done in intmax_t/uintmax_t</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>mixed declarations and code</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>new block scopes for selection and iteration statements</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>integer constant type rules</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>integer promotion rules</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>macros with a variable number of arguments</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>IEC 60559 support</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>trailing comma allowed in enum declaration</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>inline functions</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>boolean type in &lt;stdbool.h&gt;</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>idempotent type qualifiers</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>empty macro arguments</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>new structure type compatibility (tag compatibility)</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>additional predefined macro names</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>_Pragma preprocessing operator</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>standard pragmas</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>__func__ predefined identifier</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>va_copy macro</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>LIA compatibility annex</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>remove deprecation of aliased array parameters</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>conversion of array to pointer not limited to lvalues</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>relaxed constraints on aggregate and union initialization</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>relaxed restrictions on portable header names</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>return without an expression not permitted in function that returns a value</td>
+<!--      <td><a href="">NXXXX</a></td> -->
+      <td class="full" align="center">Yes</td>
+    </tr>
+</table>
+</details>
 
 <h2 id="c11">C11 implementation status</h2>
 

@@ -211,9 +211,6 @@ public:
   }
 };
 
-using SPSRunAsMainSignature = int64_t(SPSExecutorAddress,
-                                      SPSSequence<SPSString>);
-
 using SPSLoadDylibSignature =
     SPSExpected<SPSExecutorAddress>(SPSExecutorAddress, SPSString, uint64_t);
 

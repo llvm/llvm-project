@@ -14233,6 +14233,7 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
                                            SourceLocation LParenLoc,
                                            MultiExprArg Args,
                                            SourceLocation RParenLoc,
+                                           Expr *ExecConfig, bool IsExecConfig,
                                            bool AllowRecovery) {
   assert(MemExprE->getType() == Context.BoundMemberTy ||
          MemExprE->getType() == Context.OverloadTy);
@@ -14428,8 +14429,8 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
     // If overload resolution picked a static member, build a
     // non-member call based on that function.
     if (Method->isStatic()) {
-      return BuildResolvedCallExpr(MemExprE, Method, LParenLoc, Args,
-                                   RParenLoc);
+      return BuildResolvedCallExpr(MemExprE, Method, LParenLoc, Args, RParenLoc,
+                                   ExecConfig, IsExecConfig);
     }
 
     MemExpr = cast<MemberExpr>(MemExprE->IgnoreParens());

@@ -17,15 +17,15 @@ define void @callee_with_stack_and_call() #0 {
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_mov_b64 exec, s[4:5]
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_writelane_b32 v40, s33, 2
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_mov_b32 s33, s32
-; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_writelane_b32 v40, s30, 0
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_addk_i32 s32, 0x400
+; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_writelane_b32 v40, s30, 0
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_mov_b32_e32 v0, 0
-; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_getpc_b64 s[4:5]
-; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
-; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_addc_u32 s5, s5, external_void_func_void@rel32@hi+12
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_writelane_b32 v40, s31, 1
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    buffer_store_dword v0, off, s[0:3], s33
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0)
+; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_getpc_b64 s[4:5]
+; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
+; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_addc_u32 s5, s5, external_void_func_void@rel32@hi+12
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_readlane_b32 s4, v40, 0
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_readlane_b32 s5, v40, 1
@@ -49,15 +49,15 @@ define void @callee_with_stack_and_call() #0 {
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_writelane_b32 v40, exec_hi, 5
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_writelane_b32 v40, s33, 6
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_mov_b32 s33, s32
-; CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_writelane_b32 v40, s30, 0
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_addk_i32 s32, 0x400
+; CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_writelane_b32 v40, s30, 0
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_mov_b32_e32 v0, 0
-; CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_getpc_b64 s[4:5]
-; CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
-; CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_addc_u32 s5, s5, external_void_func_void@rel32@hi+12
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_writelane_b32 v40, s31, 1
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    buffer_store_dword v0, off, s[0:3], s33
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0)
+; CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_getpc_b64 s[4:5]
+; CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
+; CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_addc_u32 s5, s5, external_void_func_void@rel32@hi+12
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_readlane_b32 s4, v40, 0
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_readlane_b32 s5, v40, 1
@@ -86,11 +86,11 @@ define void @callee_with_stack_and_call() #0 {
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 exec, s[6:7]
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    v_mov_b32_e32 v0, 0
+; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    buffer_store_dword v0, off, s[0:3], s33
+; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_getpc_b64 s[4:5]
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_addc_u32 s5, s5, external_void_func_void@rel32@hi+12
-; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    buffer_store_dword v0, off, s[0:3], s33
-; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 s[6:7], exec
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 exec, 3
@@ -133,11 +133,11 @@ define void @callee_with_stack_and_call() #0 {
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 exec, s[6:7]
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    v_mov_b32_e32 v0, 0
+; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    buffer_store_dword v0, off, s[0:3], s33
+; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_getpc_b64 s[4:5]
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_addc_u32 s5, s5, external_void_func_void@rel32@hi+12
-; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    buffer_store_dword v0, off, s[0:3], s33
-; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 s[6:7], exec
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 exec, 3

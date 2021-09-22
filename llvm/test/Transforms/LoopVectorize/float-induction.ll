@@ -3,8 +3,6 @@
 ; RUN: opt < %s  -loop-vectorize -force-vector-interleave=2 -force-vector-width=1 -dce -instcombine -S | FileCheck --check-prefix VEC1_INTERL2 %s
 ; RUN: opt < %s  -loop-vectorize -force-vector-interleave=1 -force-vector-width=2 -dce -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -instcombine -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -keep-loops=false -S | FileCheck --check-prefix VEC2_INTERL1_PRED_STORE %s
 
-; XFAIL: *
-
 @fp_inc = common global float 0.000000e+00, align 4
 
 ;void fp_iv_loop1(float init, float * __restrict__ A, int N) {
@@ -557,7 +555,8 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i32 0
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br i1 [[TMP5]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; VEC2_INTERL1_PRED_STORE:       [[PRED_STORE_IF]]:
-; VEC2_INTERL1_PRED_STORE-NEXT:    store float [[TMP1]], float* [[TMP2]], align 4
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[GEP0:%.*]] = getelementptr inbounds float, float* %A, i64 [[INDEX]]
+; VEC2_INTERL1_PRED_STORE-NEXT:    store float [[TMP1]], float* [[GEP0]], align 4
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; VEC2_INTERL1_PRED_STORE:       [[PRED_STORE_CONTINUE]]:
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP4]], i32 1

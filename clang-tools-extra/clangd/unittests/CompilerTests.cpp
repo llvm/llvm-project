@@ -102,6 +102,17 @@ TEST(BuildCompilerInvocation, DropsPlugins) {
   EXPECT_EQ(Opts.ProgramAction, frontend::ActionKind::ParseSyntaxOnly);
   EXPECT_TRUE(Opts.ActionName.empty());
 }
+
+TEST(BuildCompilerInvocation, EmptyArgs) {
+  MockFS FS;
+  IgnoreDiagnostics Diags;
+  TestTU TU;
+  auto Inputs = TU.inputs(FS);
+  Inputs.CompileCommand.CommandLine.clear();
+
+  // No crash.
+  EXPECT_EQ(buildCompilerInvocation(Inputs, Diags), nullptr);
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

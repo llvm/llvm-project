@@ -1063,6 +1063,10 @@ public:
   ScheduleHazardRecognizer *
   CreateTargetPostRAHazardRecognizer(const MachineFunction &MF) const override;
 
+  ScheduleHazardRecognizer *
+  CreateTargetMIHazardRecognizer(const InstrItineraryData *II,
+                                 const ScheduleDAGMI *DAG) const override;
+
   bool isBasicBlockPrologue(const MachineInstr &MI) const override;
 
   MachineInstr *createPHIDestinationCopy(MachineBasicBlock &MBB,

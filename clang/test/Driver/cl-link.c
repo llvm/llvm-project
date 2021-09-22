@@ -47,12 +47,20 @@
 // DEBUG: link.exe
 // DEBUG: "-debug"
 
+// Don't pass through /libpath: if it's not after a /link flag:
+// RUN: %clang_cl /Tc%s /libpath:foo -fuse-ld=link -### /link /libpath:bar 2>&1 | FileCheck --check-prefix=LIBPATH %s
+// LIBPATH: error: no such file or directory: '/libpath:foo'
+// LIBPATH: libpath:bar
+
 // PR27234
 // RUN: %clang_cl /Tc%s nonexistent.obj -fuse-ld=link -### /link /libpath:somepath 2>&1 | FileCheck --check-prefix=NONEXISTENT %s
 // RUN: %clang_cl /Tc%s nonexistent.lib -fuse-ld=link -### /link /libpath:somepath 2>&1 | FileCheck --check-prefix=NONEXISTENT %s
+// RUN: %clang_cl /Tc%s nonexistent.obj -fuse-ld=link -### /winsysroot somepath 2>&1 | FileCheck --check-prefix=NONEXISTENT %s
+// RUN: %clang_cl /Tc%s nonexistent.lib -fuse-ld=link -### /winsysroot somepath 2>&1 | FileCheck --check-prefix=NONEXISTENT %s
+// RUN: %clang_cl /Tc%s nonexistent.obj -fuse-ld=link -### 2>&1 | FileCheck --check-prefix=NONEXISTENT %s
+// RUN: %clang_cl /Tc%s nonexistent.lib -fuse-ld=link -### 2>&1 | FileCheck --check-prefix=NONEXISTENT %s
 // NONEXISTENT-NOT: no such file
 // NONEXISTENT: link.exe
-// NONEXISTENT: "/libpath:somepath"
 // NONEXISTENT: nonexistent
 
 // RUN: %clang_cl /Tc%s -fuse-ld=lld -### 2>&1 | FileCheck --check-prefix=USE_LLD %s

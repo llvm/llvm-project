@@ -493,8 +493,8 @@ def DynamicMemoryModeling: Checker<"DynamicMemoryModeling">,
                   "that neither deallocated it, or have taken responsibility "
                   "of the ownership are noted, similarly to "
                   "NoStoreFuncVisitor.",
-                  "false",
-                  InAlpha,
+                  "true",
+                  Released,
                   Hide>
   ]>,
   Dependencies<[CStringModeling]>,

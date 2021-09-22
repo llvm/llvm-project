@@ -727,7 +727,8 @@ LogicalResult OpTrait::impl::verifyAtLeastNOperands(Operation *op,
                                                     unsigned numOperands) {
   if (op->getNumOperands() < numOperands)
     return op->emitOpError()
-           << "expected " << numOperands << " or more operands";
+           << "expected " << numOperands << " or more operands, but found "
+           << op->getNumOperands();
   return success();
 }
 
@@ -1023,7 +1024,7 @@ LogicalResult OpTrait::impl::verifyValueSizeAttr(Operation *op,
     return op->emitOpError("requires 1D i32 elements attribute '")
            << attrName << "'";
 
-  if (llvm::any_of(sizeAttr.getIntValues(), [](const APInt &element) {
+  if (llvm::any_of(sizeAttr.getValues<APInt>(), [](const APInt &element) {
         return !element.isNonNegative();
       }))
     return op->emitOpError("'")

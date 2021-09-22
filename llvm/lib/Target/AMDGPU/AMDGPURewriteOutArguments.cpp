@@ -142,8 +142,8 @@ bool AMDGPURewriteOutArguments::checkArgumentUses(Value &Arg) const {
 
       // Special case handle structs with single members. It is useful to handle
       // some casts between structs and non-structs, but we can't bitcast
-      // directly between them.  directly bitcast between them.  Blender uses
-      // some casts that look like { <3 x float> }* to <4 x float>*
+      // directly between them. Blender uses some casts that look like
+      // { <3 x float> }* to <4 x float>*
       if ((SrcEltTy->isStructTy() && (SrcEltTy->getStructNumElements() != 1)))
         return false;
 
@@ -259,7 +259,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
 
     // Keep retrying if we are able to successfully eliminate an argument. This
     // helps with cases with multiple arguments which may alias, such as in a
-    // sincos implemntation. If we have 2 stores to arguments, on the first
+    // sincos implementation. If we have 2 stores to arguments, on the first
     // attempt the MDA query will succeed for the second store but not the
     // first. On the second iteration we've removed that out clobbering argument
     // (by effectively moving it into another function) and will find the second

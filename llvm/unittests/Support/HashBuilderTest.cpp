@@ -37,7 +37,7 @@ using HasherTAndEndiannessToTest =
                      HasherTAndEndianness<llvm::SHA256, llvm::support::little>,
                      HasherTAndEndianness<llvm::SHA256, llvm::support::native>>;
 template <typename HasherT> class HashBuilderTest : public testing::Test {};
-TYPED_TEST_SUITE(HashBuilderTest, HasherTAndEndiannessToTest);
+TYPED_TEST_SUITE(HashBuilderTest, HasherTAndEndiannessToTest, );
 
 template <typename HasherTAndEndianness>
 using HashBuilder = llvm::HashBuilder<typename HasherTAndEndianness::HasherT,

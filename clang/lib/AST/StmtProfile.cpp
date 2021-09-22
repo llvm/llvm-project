@@ -903,6 +903,10 @@ void StmtProfiler::VisitOMPLoopDirective(const OMPLoopDirective *S) {
   VisitOMPLoopBasedDirective(S);
 }
 
+void StmtProfiler::VisitOMPMetaDirective(const OMPMetaDirective *S) {
+  VisitOMPExecutableDirective(S);
+}
+
 void StmtProfiler::VisitOMPParallelDirective(const OMPParallelDirective *S) {
   VisitOMPExecutableDirective(S);
 }

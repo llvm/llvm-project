@@ -92,8 +92,6 @@ const char *DynamicLoaderHexagonDYLD::GetPluginDescriptionStatic() {
          "loads/unloads in Hexagon processes.";
 }
 
-uint32_t DynamicLoaderHexagonDYLD::GetPluginVersion() { return 1; }
-
 DynamicLoader *DynamicLoaderHexagonDYLD::CreateInstance(Process *process,
                                                         bool force) {
   bool create = force;

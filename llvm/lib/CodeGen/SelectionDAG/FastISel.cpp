@@ -2318,8 +2318,7 @@ FastISel::createMachineMemOperandFor(const Instruction *I) const {
   bool IsDereferenceable = I->hasMetadata(LLVMContext::MD_dereferenceable);
   const MDNode *Ranges = I->getMetadata(LLVMContext::MD_range);
 
-  AAMDNodes AAInfo;
-  I->getAAMetadata(AAInfo);
+  AAMDNodes AAInfo = I->getAAMetadata();
 
   if (!Alignment) // Ensure that codegen never sees alignment 0.
     Alignment = DL.getABITypeAlign(ValTy);

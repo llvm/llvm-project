@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
+#include "mlir/Dialect/SCF/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
@@ -26,6 +27,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <type_traits>
@@ -105,6 +107,7 @@ void mlir::linalg::LinalgTransformationFilter::
 
 LinalgTilingOptions &
 mlir::linalg::LinalgTilingOptions::setTileSizes(ArrayRef<int64_t> ts) {
+  assert(!tileSizeComputationFunction && "tile sizes already set");
   SmallVector<int64_t, 4> tileSizes(ts.begin(), ts.end());
   tileSizeComputationFunction = [tileSizes](OpBuilder &b, Operation *op) {
     OpBuilder::InsertionGuard guard(b);
@@ -114,6 +117,30 @@ mlir::linalg::LinalgTilingOptions::setTileSizes(ArrayRef<int64_t> ts) {
       Value v = b.create<ConstantIndexOp>(op->getLoc(), s);
       return v;
     }));
+  };
+  return *this;
+}
+
+LinalgTilingOptions &mlir::linalg::LinalgTilingOptions::scalarizeDynamicDims() {
+  assert(!tileSizeComputationFunction && "tile sizes already set");
+  tileSizeComputationFunction = [](OpBuilder &b, Operation *op) {
+    SmallVector<Value, 4> tileSizes;
+    auto linalgOp = dyn_cast<LinalgOp>(op);
+    if (!linalgOp)
+      return tileSizes;
+    Location loc = linalgOp.getLoc();
+    auto allShapeSizes = linalgOp.createFlatListOfOperandDims(b, loc);
+    AffineMap map = linalgOp.getShapesToLoopsMap();
+    if (!map)
+      return tileSizes;
+    auto shapeSizes = applyMapToValues(b, loc, map, allShapeSizes);
+    // If the shape size is dynamic, tile by 1. Otherwise, do not tile (tile
+    // size 0).
+    for (Value shapeSize : shapeSizes)
+      tileSizes.push_back(getConstantIntValue(shapeSize).hasValue()
+                              ? b.create<ConstantIndexOp>(loc, 0)
+                              : b.create<ConstantIndexOp>(loc, 1));
+    return tileSizes;
   };
   return *this;
 }
@@ -185,6 +212,13 @@ linalg::rewriteAsPaddedOp(PatternRewriter &rewriter, LinalgOp opToPad,
     newOperands.push_back(paddedOperand ? paddedOperand : opOperand->get());
   }
 
+  SmallVector<SmallVector<Value>> reifiedResultShapes;
+  if (failed(cast<ReifyRankedShapedTypeOpInterface>(opToPad.getOperation())
+                 .reifyResultShapes(rewriter, reifiedResultShapes)))
+    return failure();
+  assert(reifiedResultShapes.size() == opToPad->getNumResults() &&
+         "expected same number of results");
+
   // Clone `opToPad` to operate on the statically padded shapes.
   auto resultTensorTypes =
       ValueRange(newOperands).take_back(opToPad.getNumOutputs()).getTypes();
@@ -192,28 +226,21 @@ linalg::rewriteAsPaddedOp(PatternRewriter &rewriter, LinalgOp opToPad,
 
   // Recover the slice out of the new static results. This keeps the original
   // linalg op around because it uses the dims of the original results.
-  // This later folds away.
   SmallVector<Value> paddedSubviewResults;
   paddedSubviewResults.reserve(opToPad->getNumResults());
-  SetVector<Operation *> newUsersOfOpToPad;
-  for (auto it : llvm::zip(opToPad->getResults(), paddedOp->getResults())) {
-    auto rank = std::get<0>(it).getType().cast<RankedTensorType>().getRank();
+  for (auto en : llvm::enumerate(paddedOp->getResults())) {
+    Value paddedResult = en.value();
+    int64_t resultNumber = en.index();
+    int64_t rank = paddedResult.getType().cast<RankedTensorType>().getRank();
     SmallVector<OpFoldResult> offsets(rank, rewriter.getIndexAttr(0));
-    auto sizes = llvm::to_vector<4>(llvm::map_range(
-        llvm::seq<unsigned>(0, rank), [&](unsigned d) -> OpFoldResult {
-          auto dimOp = rewriter.create<tensor::DimOp>(loc, std::get<0>(it), d);
-          newUsersOfOpToPad.insert(dimOp);
-          return dimOp.getResult();
-        }));
+    SmallVector<OpFoldResult> sizes;
+    for (Value v : reifiedResultShapes[resultNumber])
+      sizes.push_back(v);
     SmallVector<OpFoldResult> strides(rank, rewriter.getIndexAttr(1));
     paddedSubviewResults.push_back(rewriter.create<tensor::ExtractSliceOp>(
-        loc, std::get<1>(it), offsets, sizes, strides));
+        loc, paddedResult, offsets, sizes, strides));
   }
-  // Replace the transient `opToPad` locally, except for uses that we just
-  // created for the purpose of extracting the dims.
-  rewriter.replaceOpWithIf(opToPad, paddedSubviewResults, [&](OpOperand &opOp) {
-    return !newUsersOfOpToPad.contains(opOp.getOwner());
-  });
+  rewriter.replaceOp(opToPad, paddedSubviewResults);
   return success();
 }
 
@@ -230,6 +257,21 @@ mlir::linalg::LinalgBaseTilingPattern::LinalgBaseTilingPattern(
     : RewritePattern(MatchAnyOpTypeTag(), benefit, context), filter(filter),
       options(options) {}
 
+/// Try to peel a loop `op` and return the new result.
+// TODO: Only scf.for loops are supported at the moment.
+static SmallVector<Value, 4> peelLoop(RewriterBase &rewriter, Operation *op) {
+  return llvm::TypeSwitch<Operation *, SmallVector<Value, 4>>(op)
+      .Case<scf::ForOp>([&](scf::ForOp forOp) {
+        scf::ForOp partialIteration;
+        if (succeeded(scf::peelAndCanonicalizeForLoop(rewriter, forOp,
+                                                      partialIteration)))
+          return partialIteration->getResults();
+        assert(!partialIteration && "expected that loop was not peeled");
+        return forOp->getResults();
+      })
+      .Default([&](Operation *op) { return op->getResults(); });
+}
+
 LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
     Operation *op, PatternRewriter &rewriter, TiledLinalgOp &result) const {
   LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
@@ -242,22 +284,28 @@ LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
 
   if (!res)
     return failure();
+  // Clear filter to stop recursive pattern application.
+  filter.replaceLinalgTransformationFilter(rewriter, res->op);
 
-  // Setup RAII guard to return properly.
-  LinalgOp tiledOp = res->op;
-  auto guard = llvm::make_scope_exit([&]() {
-    // Return relevant information to derived pattern.
-    result = *res;
-    // Replace filter on both tiledOp and tiledAndPaddedOp, if necessary.
-    filter.replaceLinalgTransformationFilter(rewriter, tiledOp);
-    if (tiledOp != res->op)
-      filter.replaceLinalgTransformationFilter(rewriter, res->op);
-  });
+  // Peel loops.
+  for (int64_t loop : options.peeledLoops) {
+    assert(loop < static_cast<int64_t>(res->loops.size()) &&
+           "requested peeling of non-existing loop");
+    Operation *loopOp = res->loops[loop];
+    SmallVector<Value, 4> loopResults = peelLoop(rewriter, loopOp);
+    // The result of the loop nest may change with peeling.
+    if (res->tensorResults.size() == loopOp->getNumResults() &&
+        std::equal(res->tensorResults.begin(), res->tensorResults.end(),
+                   loopOp->getResults().begin()))
+      res->tensorResults = loopResults;
+  }
 
   // Consider padding on the fly only if the op has tensor semantics.
   if (!options.paddingValueComputationFunction ||
-      !linalgOp.hasTensorSemantics())
+      !linalgOp.hasTensorSemantics()) {
+    result = *res;
     return success();
+  }
 
   // Try to pad on the fly by rewriting res->op as a padded op. If successful,
   // `res.op` is rewritten in static form with padded operands.
@@ -265,7 +313,9 @@ LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
   if (succeeded(rewriteAsPaddedOp(rewriter, res->op,
                                   options.paddingValueComputationFunction,
                                   paddedOp))) {
+    filter.replaceLinalgTransformationFilter(rewriter, paddedOp);
     res->op = paddedOp;
+    result = *res;
     // Do not perform replacement of `linalgOp`, let the derived patterns
     // do this as they see fit, from the resulting TiledLinalgOp.
     return success();

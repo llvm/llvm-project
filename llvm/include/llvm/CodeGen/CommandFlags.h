@@ -48,7 +48,6 @@ Optional<CodeModel::Model> getExplicitCodeModel();
 
 llvm::ExceptionHandling getExceptionModel();
 
-CodeGenFileType getFileType();
 Optional<CodeGenFileType> getExplicitFileType();
 
 CodeGenFileType getFileType();
@@ -73,6 +72,8 @@ bool getEnableHonorSignDependentRoundingFPMath();
 llvm::FloatABI::ABIType getFloatABIForCalls();
 
 llvm::FPOpFusion::FPOpFusionMode getFuseFPOps();
+
+SwiftAsyncFramePointerMode getSwiftAsyncFramePointer();
 
 bool getDontPlaceZerosInBSS();
 

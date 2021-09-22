@@ -21,6 +21,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/FunctionImplementation.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -336,11 +337,12 @@ void gpu::addAsyncDependency(Operation *op, Value token) {
   auto attrName =
       OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr();
   auto sizeAttr = op->template getAttrOfType<DenseIntElementsAttr>(attrName);
+
+  // Async dependencies is the only variadic operand.
   if (!sizeAttr)
-    return; // Async dependencies is the only variadic operand.
-  SmallVector<int32_t, 8> sizes;
-  for (auto size : sizeAttr.getIntValues())
-    sizes.push_back(size.getSExtValue());
+    return;
+
+  SmallVector<int32_t, 8> sizes(sizeAttr.getValues<int32_t>());
   ++sizes.front();
   op->setAttr(attrName, Builder(op->getContext()).getI32VectorAttr(sizes));
 }
@@ -528,6 +530,45 @@ static ParseResult parseLaunchOp(OpAsmParser &parser, OperationState &result) {
   Region *body = result.addRegion();
   return failure(parser.parseRegion(*body, regionArgs, dataTypes) ||
                  parser.parseOptionalAttrDict(result.attributes));
+}
+
+/// Simplify the gpu.launch when the range of a thread or block ID is
+/// trivially known to be one.
+struct FoldLaunchArguments : public OpRewritePattern<LaunchOp> {
+  using OpRewritePattern<LaunchOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(LaunchOp op,
+                                PatternRewriter &rewriter) const override {
+    // If the range implies a single value for `id`, replace `id`'s uses by
+    // zero.
+    Value zero;
+    bool simplified = false;
+    auto constPropIdUses = [&](Value id, Value size) {
+      // Check if size is trivially one.
+      if (!matchPattern(size, m_One()))
+        return;
+      if (!simplified) {
+        // Create a zero value the first time.
+        OpBuilder::InsertionGuard guard(rewriter);
+        rewriter.setInsertionPointToStart(&op.body().front());
+        zero = rewriter.create<ConstantIndexOp>(op.getLoc(), /*value=*/0);
+      }
+      id.replaceAllUsesWith(zero);
+      simplified = true;
+    };
+    constPropIdUses(op.getBlockIds().x, op.gridSizeX());
+    constPropIdUses(op.getBlockIds().y, op.gridSizeY());
+    constPropIdUses(op.getBlockIds().z, op.gridSizeZ());
+    constPropIdUses(op.getThreadIds().x, op.blockSizeX());
+    constPropIdUses(op.getThreadIds().y, op.blockSizeY());
+    constPropIdUses(op.getThreadIds().z, op.blockSizeZ());
+
+    return success(simplified);
+  }
+};
+
+void LaunchOp::getCanonicalizationPatterns(RewritePatternSet &rewrites,
+                                           MLIRContext *context) {
+  rewrites.add<FoldLaunchArguments>(context);
 }
 
 //===----------------------------------------------------------------------===//

@@ -18,8 +18,6 @@ define void @kernel() {
   %cmp = icmp eq i32 %call, -1
   br i1 %cmp, label %if.then, label %if.else
 if.then:
-  call void @nvptx()
-  call void @amdgcn()
   br label %if.end
 if.else:
   br label %if.end
@@ -31,13 +29,15 @@ if.end:
 ; REMARKS: remark: single_threaded_execution.c:1:0: Could not internalize function. Some optimizations may not be possible.
 ; REMARKS-NOT: remark: single_threaded_execution.c:1:0: Could not internalize function. Some optimizations may not be possible.
 
-; CHECK-DAG: [openmp-opt] Basic block @nvptx entry is executed by a single thread.
+; CHECK-NOT: [openmp-opt] Basic block @nvptx entry is executed by a single thread.
 ; CHECK-DAG: [openmp-opt] Basic block @nvptx if.then is executed by a single thread.
-; CHECK-DAG: [openmp-opt] Basic block @nvptx if.end is executed by a single thread.
+; CHECK-NOT: [openmp-opt] Basic block @nvptx if.end is executed by a single thread.
 ; Function Attrs: noinline
-define internal void @nvptx() {
+define void @nvptx() {
 entry:
-  br i1 true, label %if.then, label %if.end
+  %call = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+  %cmp = icmp eq i32 %call, 0
+  br i1 %cmp, label %if.then, label %if.end
 
 if.then:
   call void @foo()
@@ -50,13 +50,15 @@ if.end:
   ret void
 }
 
-; CHECK-DAG: [openmp-opt] Basic block @amdgcn entry is executed by a single thread.
+; CHECK-NOT: [openmp-opt] Basic block @amdgcn entry is executed by a single thread.
 ; CHECK-DAG: [openmp-opt] Basic block @amdgcn if.then is executed by a single thread.
-; CHECK-DAG: [openmp-opt] Basic block @amdgcn if.end is executed by a single thread.
+; CHECK-NOT: [openmp-opt] Basic block @amdgcn if.end is executed by a single thread.
 ; Function Attrs: noinline
-define internal void @amdgcn() {
+define void @amdgcn() {
 entry:
-  br i1 false, label %if.then, label %if.end
+  %call = call i32 @llvm.amdgcn.workitem.id.x()
+  %cmp = icmp eq i32 %call, 0
+  br i1 %cmp, label %if.then, label %if.end
 
 if.then:
   call void @foo()
@@ -104,6 +106,7 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 declare void @__kmpc_kernel_prepare_parallel(i8*)
 
 declare i32 @__kmpc_target_init(%struct.ident_t*, i1, i1, i1)
+
 declare void @__kmpc_target_deinit(%struct.ident_t*, i1, i1)
 
 attributes #0 = { cold noinline }

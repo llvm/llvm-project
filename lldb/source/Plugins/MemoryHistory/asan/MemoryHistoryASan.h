@@ -33,8 +33,6 @@ public:
     return GetPluginNameStatic();
   }
 
-  uint32_t GetPluginVersion() override { return 1; }
-
   lldb_private::HistoryThreads GetHistoryThreads(lldb::addr_t address) override;
 
 private:

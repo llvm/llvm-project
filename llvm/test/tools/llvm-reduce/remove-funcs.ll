@@ -1,7 +1,7 @@
 ; Test that llvm-reduce can remove uninteresting functions as well as
 ; their InstCalls.
 ;
-; RUN: llvm-reduce --test FileCheck --test-arg --check-prefixes=CHECK-ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+; RUN: llvm-reduce --delta-passes=functions,instructions --test FileCheck --test-arg --check-prefixes=CHECK-ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: cat %t | FileCheck -implicit-check-not=uninteresting --check-prefixes=CHECK-ALL,CHECK-FINAL %s
 
 define i32 @uninteresting1() {

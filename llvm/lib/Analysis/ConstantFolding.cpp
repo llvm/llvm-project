@@ -985,8 +985,6 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   // we eliminate over-indexing of the notional static type array bounds.
   // This makes it easy to determine if the getelementptr is "inbounds".
   // Also, this helps GlobalOpt do SROA on GlobalVariables.
-  SmallVector<Constant *, 32> NewIdxs;
-  Type *Ty = PTy;
 
   // For GEPs of GlobalValues, use the value type even for opaque pointers.
   // Otherwise use an i8 GEP.
@@ -997,68 +995,31 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   else
     SrcElemTy = Type::getInt8Ty(Ptr->getContext());
 
-  do {
-    if (!Ty->isStructTy()) {
-      if (Ty->isPointerTy()) {
-        // The only pointer indexing we'll do is on the first index of the GEP.
-        if (!NewIdxs.empty())
-          break;
+  if (!SrcElemTy->isSized())
+    return nullptr;
 
-        Ty = SrcElemTy;
-
-        // Only handle pointers to sized types, not pointers to functions.
-        if (!Ty->isSized())
-          return nullptr;
-      } else {
-        Type *NextTy = GetElementPtrInst::getTypeAtIndex(Ty, (uint64_t)0);
-        if (!NextTy)
-          break;
-        Ty = NextTy;
-      }
-
-      // Determine which element of the array the offset points into.
-      APInt ElemSize(BitWidth, DL.getTypeAllocSize(Ty));
-      if (ElemSize == 0) {
-        // The element size is 0. This may be [0 x Ty]*, so just use a zero
-        // index for this level and proceed to the next level to see if it can
-        // accommodate the offset.
-        NewIdxs.push_back(ConstantInt::get(IntIdxTy, 0));
-      } else {
-        // The element size is non-zero divide the offset by the element
-        // size (rounding down), to compute the index at this level.
-        bool Overflow;
-        APInt NewIdx = Offset.sdiv_ov(ElemSize, Overflow);
-        if (Overflow)
-          break;
-        Offset -= NewIdx * ElemSize;
-        NewIdxs.push_back(ConstantInt::get(IntIdxTy, NewIdx));
-      }
-    } else {
-      auto *STy = cast<StructType>(Ty);
-      // If we end up with an offset that isn't valid for this struct type, we
-      // can't re-form this GEP in a regular form, so bail out. The pointer
-      // operand likely went through casts that are necessary to make the GEP
-      // sensible.
-      const StructLayout &SL = *DL.getStructLayout(STy);
-      if (Offset.isNegative() || Offset.uge(SL.getSizeInBytes()))
-        break;
-
-      // Determine which field of the struct the offset points into. The
-      // getZExtValue is fine as we've already ensured that the offset is
-      // within the range representable by the StructLayout API.
-      unsigned ElIdx = SL.getElementContainingOffset(Offset.getZExtValue());
-      NewIdxs.push_back(ConstantInt::get(Type::getInt32Ty(Ty->getContext()),
-                                         ElIdx));
-      Offset -= APInt(BitWidth, SL.getElementOffset(ElIdx));
-      Ty = STy->getTypeAtIndex(ElIdx);
-    }
-  } while (Ty != ResElemTy);
-
-  // If we haven't used up the entire offset by descending the static
-  // type, then the offset is pointing into the middle of an indivisible
-  // member, so we can't simplify it.
+  Type *ElemTy = SrcElemTy;
+  SmallVector<APInt> Indices = DL.getGEPIndicesForOffset(ElemTy, Offset);
   if (Offset != 0)
     return nullptr;
+
+  // Try to add additional zero indices to reach the desired result element
+  // type.
+  // TODO: Should we avoid extra zero indices if ResElemTy can't be reached and
+  // we'll have to insert a bitcast anyway?
+  while (ElemTy != ResElemTy) {
+    Type *NextTy = GetElementPtrInst::getTypeAtIndex(ElemTy, (uint64_t)0);
+    if (!NextTy)
+      break;
+
+    Indices.push_back(APInt::getZero(isa<StructType>(ElemTy) ? 32 : BitWidth));
+    ElemTy = NextTy;
+  }
+
+  SmallVector<Constant *, 32> NewIdxs;
+  for (const APInt &Index : Indices)
+    NewIdxs.push_back(ConstantInt::get(
+        Type::getIntNTy(Ptr->getContext(), Index.getBitWidth()), Index));
 
   // Preserve the inrange index from the innermost GEP if possible. We must
   // have calculated the same indices up to and including the inrange index.
@@ -1075,8 +1036,9 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   // Create a GEP.
   Constant *C = ConstantExpr::getGetElementPtr(SrcElemTy, Ptr, NewIdxs,
                                                InBounds, InRangeIndex);
-  assert(cast<PointerType>(C->getType())->isOpaqueOrPointeeTypeMatches(Ty) &&
-         "Computed GetElementPtr has unexpected type!");
+  assert(
+      cast<PointerType>(C->getType())->isOpaqueOrPointeeTypeMatches(ElemTy) &&
+      "Computed GetElementPtr has unexpected type!");
 
   // If we ended up indexing a member with a type that doesn't match
   // the type of what the original indices indexed, add a cast.

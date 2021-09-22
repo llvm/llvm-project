@@ -100,22 +100,39 @@ define amdgpu_ps void @test_kill_depth_var(float %x) #0 {
 
 ; FIXME: Ideally only one early-exit would be emitted
 define amdgpu_ps void @test_kill_depth_var_x2_same(float %x) #0 {
-; WAVE64-LABEL: test_kill_depth_var_x2_same:
-; WAVE64:       ; %bb.0:
-; WAVE64-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v0
-; WAVE64-NEXT:    s_mov_b64 s[0:1], exec
-; WAVE64-NEXT:    s_andn2_b64 s[0:1], s[0:1], vcc
-; WAVE64-NEXT:    s_cbranch_scc0 BB4_2
-; WAVE64-NEXT:  ; %bb.1:
-; WAVE64-NEXT:    s_andn2_b64 exec, exec, vcc
-; WAVE64-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v0
-; WAVE64-NEXT:    s_andn2_b64 s[0:1], s[0:1], vcc
-; WAVE64-NEXT:    s_cbranch_scc0 BB4_2
-; WAVE64-NEXT:    s_endpgm
-; WAVE64-NEXT:  BB4_2:
-; WAVE64-NEXT:    s_mov_b64 exec, 0
-; WAVE64-NEXT:    exp null off, off, off, off done vm
-; WAVE64-NEXT:    s_endpgm
+; SI-LABEL: test_kill_depth_var_x2_same:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_mov_b64 s[0:1], exec
+; SI-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v0
+; SI-NEXT:    s_andn2_b64 s[0:1], s[0:1], vcc
+; SI-NEXT:    s_cbranch_scc0 BB4_2
+; SI-NEXT:  ; %bb.1:
+; SI-NEXT:    s_andn2_b64 exec, exec, vcc
+; SI-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v0
+; SI-NEXT:    s_andn2_b64 s[0:1], s[0:1], vcc
+; SI-NEXT:    s_cbranch_scc0 BB4_2
+; SI-NEXT:    s_endpgm
+; SI-NEXT:  BB4_2:
+; SI-NEXT:    s_mov_b64 exec, 0
+; SI-NEXT:    exp null off, off, off, off done vm
+; SI-NEXT:    s_endpgm
+;
+; GFX10-WAVE64-LABEL: test_kill_depth_var_x2_same:
+; GFX10-WAVE64:       ; %bb.0:
+; GFX10-WAVE64-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v0
+; GFX10-WAVE64-NEXT:    s_mov_b64 s[0:1], exec
+; GFX10-WAVE64-NEXT:    s_andn2_b64 s[0:1], s[0:1], vcc
+; GFX10-WAVE64-NEXT:    s_cbranch_scc0 BB4_2
+; GFX10-WAVE64-NEXT:  ; %bb.1:
+; GFX10-WAVE64-NEXT:    s_andn2_b64 exec, exec, vcc
+; GFX10-WAVE64-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v0
+; GFX10-WAVE64-NEXT:    s_andn2_b64 s[0:1], s[0:1], vcc
+; GFX10-WAVE64-NEXT:    s_cbranch_scc0 BB4_2
+; GFX10-WAVE64-NEXT:    s_endpgm
+; GFX10-WAVE64-NEXT:  BB4_2:
+; GFX10-WAVE64-NEXT:    s_mov_b64 exec, 0
+; GFX10-WAVE64-NEXT:    exp null off, off, off, off done vm
+; GFX10-WAVE64-NEXT:    s_endpgm
 ;
 ; GFX10-WAVE32-LABEL: test_kill_depth_var_x2_same:
 ; GFX10-WAVE32:       ; %bb.0:
@@ -141,22 +158,39 @@ define amdgpu_ps void @test_kill_depth_var_x2_same(float %x) #0 {
 
 ; FIXME: Ideally only one early-exit would be emitted
 define amdgpu_ps void @test_kill_depth_var_x2(float %x, float %y) #0 {
-; WAVE64-LABEL: test_kill_depth_var_x2:
-; WAVE64:       ; %bb.0:
-; WAVE64-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v0
-; WAVE64-NEXT:    s_mov_b64 s[0:1], exec
-; WAVE64-NEXT:    s_andn2_b64 s[0:1], s[0:1], vcc
-; WAVE64-NEXT:    s_cbranch_scc0 BB5_2
-; WAVE64-NEXT:  ; %bb.1:
-; WAVE64-NEXT:    s_andn2_b64 exec, exec, vcc
-; WAVE64-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v1
-; WAVE64-NEXT:    s_andn2_b64 s[0:1], s[0:1], vcc
-; WAVE64-NEXT:    s_cbranch_scc0 BB5_2
-; WAVE64-NEXT:    s_endpgm
-; WAVE64-NEXT:  BB5_2:
-; WAVE64-NEXT:    s_mov_b64 exec, 0
-; WAVE64-NEXT:    exp null off, off, off, off done vm
-; WAVE64-NEXT:    s_endpgm
+; SI-LABEL: test_kill_depth_var_x2:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_mov_b64 s[0:1], exec
+; SI-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v0
+; SI-NEXT:    s_andn2_b64 s[0:1], s[0:1], vcc
+; SI-NEXT:    s_cbranch_scc0 BB5_2
+; SI-NEXT:  ; %bb.1:
+; SI-NEXT:    s_andn2_b64 exec, exec, vcc
+; SI-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v1
+; SI-NEXT:    s_andn2_b64 s[0:1], s[0:1], vcc
+; SI-NEXT:    s_cbranch_scc0 BB5_2
+; SI-NEXT:    s_endpgm
+; SI-NEXT:  BB5_2:
+; SI-NEXT:    s_mov_b64 exec, 0
+; SI-NEXT:    exp null off, off, off, off done vm
+; SI-NEXT:    s_endpgm
+;
+; GFX10-WAVE64-LABEL: test_kill_depth_var_x2:
+; GFX10-WAVE64:       ; %bb.0:
+; GFX10-WAVE64-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v0
+; GFX10-WAVE64-NEXT:    s_mov_b64 s[0:1], exec
+; GFX10-WAVE64-NEXT:    s_andn2_b64 s[0:1], s[0:1], vcc
+; GFX10-WAVE64-NEXT:    s_cbranch_scc0 BB5_2
+; GFX10-WAVE64-NEXT:  ; %bb.1:
+; GFX10-WAVE64-NEXT:    s_andn2_b64 exec, exec, vcc
+; GFX10-WAVE64-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v1
+; GFX10-WAVE64-NEXT:    s_andn2_b64 s[0:1], s[0:1], vcc
+; GFX10-WAVE64-NEXT:    s_cbranch_scc0 BB5_2
+; GFX10-WAVE64-NEXT:    s_endpgm
+; GFX10-WAVE64-NEXT:  BB5_2:
+; GFX10-WAVE64-NEXT:    s_mov_b64 exec, 0
+; GFX10-WAVE64-NEXT:    exp null off, off, off, off done vm
+; GFX10-WAVE64-NEXT:    s_endpgm
 ;
 ; GFX10-WAVE32-LABEL: test_kill_depth_var_x2:
 ; GFX10-WAVE32:       ; %bb.0:
@@ -182,25 +216,45 @@ define amdgpu_ps void @test_kill_depth_var_x2(float %x, float %y) #0 {
 }
 
 define amdgpu_ps void @test_kill_depth_var_x2_instructions(float %x) #0 {
-; WAVE64-LABEL: test_kill_depth_var_x2_instructions:
-; WAVE64:       ; %bb.0:
-; WAVE64-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v0
-; WAVE64-NEXT:    s_mov_b64 s[0:1], exec
-; WAVE64-NEXT:    s_andn2_b64 s[0:1], s[0:1], vcc
-; WAVE64-NEXT:    s_cbranch_scc0 BB6_2
-; WAVE64-NEXT:  ; %bb.1:
-; WAVE64-NEXT:    s_andn2_b64 exec, exec, vcc
-; WAVE64-NEXT:    ;;#ASMSTART
-; WAVE64-NEXT:    v_mov_b32_e64 v7, -1
-; WAVE64-NEXT:    ;;#ASMEND
-; WAVE64-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v7
-; WAVE64-NEXT:    s_andn2_b64 s[0:1], s[0:1], vcc
-; WAVE64-NEXT:    s_cbranch_scc0 BB6_2
-; WAVE64-NEXT:    s_endpgm
-; WAVE64-NEXT:  BB6_2:
-; WAVE64-NEXT:    s_mov_b64 exec, 0
-; WAVE64-NEXT:    exp null off, off, off, off done vm
-; WAVE64-NEXT:    s_endpgm
+; SI-LABEL: test_kill_depth_var_x2_instructions:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_mov_b64 s[0:1], exec
+; SI-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v0
+; SI-NEXT:    s_andn2_b64 s[0:1], s[0:1], vcc
+; SI-NEXT:    s_cbranch_scc0 BB6_2
+; SI-NEXT:  ; %bb.1:
+; SI-NEXT:    s_andn2_b64 exec, exec, vcc
+; SI-NEXT:    ;;#ASMSTART
+; SI-NEXT:    v_mov_b32_e64 v7, -1
+; SI-NEXT:    ;;#ASMEND
+; SI-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v7
+; SI-NEXT:    s_andn2_b64 s[0:1], s[0:1], vcc
+; SI-NEXT:    s_cbranch_scc0 BB6_2
+; SI-NEXT:    s_endpgm
+; SI-NEXT:  BB6_2:
+; SI-NEXT:    s_mov_b64 exec, 0
+; SI-NEXT:    exp null off, off, off, off done vm
+; SI-NEXT:    s_endpgm
+;
+; GFX10-WAVE64-LABEL: test_kill_depth_var_x2_instructions:
+; GFX10-WAVE64:       ; %bb.0:
+; GFX10-WAVE64-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v0
+; GFX10-WAVE64-NEXT:    s_mov_b64 s[0:1], exec
+; GFX10-WAVE64-NEXT:    s_andn2_b64 s[0:1], s[0:1], vcc
+; GFX10-WAVE64-NEXT:    s_cbranch_scc0 BB6_2
+; GFX10-WAVE64-NEXT:  ; %bb.1:
+; GFX10-WAVE64-NEXT:    s_andn2_b64 exec, exec, vcc
+; GFX10-WAVE64-NEXT:    ;;#ASMSTART
+; GFX10-WAVE64-NEXT:    v_mov_b32_e64 v7, -1
+; GFX10-WAVE64-NEXT:    ;;#ASMEND
+; GFX10-WAVE64-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v7
+; GFX10-WAVE64-NEXT:    s_andn2_b64 s[0:1], s[0:1], vcc
+; GFX10-WAVE64-NEXT:    s_cbranch_scc0 BB6_2
+; GFX10-WAVE64-NEXT:    s_endpgm
+; GFX10-WAVE64-NEXT:  BB6_2:
+; GFX10-WAVE64-NEXT:    s_mov_b64 exec, 0
+; GFX10-WAVE64-NEXT:    exp null off, off, off, off done vm
+; GFX10-WAVE64-NEXT:    s_endpgm
 ;
 ; GFX10-WAVE32-LABEL: test_kill_depth_var_x2_instructions:
 ; GFX10-WAVE32:       ; %bb.0:
@@ -231,40 +285,75 @@ define amdgpu_ps void @test_kill_depth_var_x2_instructions(float %x) #0 {
 
 ; FIXME: why does the skip depend on the asm length in the same block?
 define amdgpu_ps float @test_kill_control_flow(i32 inreg %arg) #0 {
-; WAVE64-LABEL: test_kill_control_flow:
-; WAVE64:       ; %bb.0: ; %entry
-; WAVE64-NEXT:    s_cmp_lg_u32 s0, 0
-; WAVE64-NEXT:    s_cbranch_scc0 BB7_2
-; WAVE64-NEXT:  ; %bb.1: ; %exit
-; WAVE64-NEXT:    v_mov_b32_e32 v0, 1.0
-; WAVE64-NEXT:    s_branch BB7_5
-; WAVE64-NEXT:  BB7_2: ; %bb
-; WAVE64-NEXT:    ;;#ASMSTART
-; WAVE64-NEXT:    v_mov_b32_e64 v7, -1
-; WAVE64-NEXT:    v_nop_e64
-; WAVE64-NEXT:    v_nop_e64
-; WAVE64-NEXT:    v_nop_e64
-; WAVE64-NEXT:    v_nop_e64
-; WAVE64-NEXT:    v_nop_e64
-; WAVE64-NEXT:    v_nop_e64
-; WAVE64-NEXT:    v_nop_e64
-; WAVE64-NEXT:    v_nop_e64
-; WAVE64-NEXT:    v_nop_e64
-; WAVE64-NEXT:    v_nop_e64
-; WAVE64-NEXT:    ;;#ASMEND
-; WAVE64-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v7
-; WAVE64-NEXT:    s_mov_b64 s[2:3], exec
-; WAVE64-NEXT:    s_andn2_b64 s[2:3], s[2:3], vcc
-; WAVE64-NEXT:    s_cbranch_scc0 BB7_4
-; WAVE64-NEXT:  ; %bb.3: ; %bb
-; WAVE64-NEXT:    s_andn2_b64 exec, exec, vcc
-; WAVE64-NEXT:    v_mov_b32_e32 v0, 1.0
-; WAVE64-NEXT:    s_branch BB7_5
-; WAVE64-NEXT:  BB7_4:
-; WAVE64-NEXT:    s_mov_b64 exec, 0
-; WAVE64-NEXT:    exp null off, off, off, off done vm
-; WAVE64-NEXT:    s_endpgm
-; WAVE64-NEXT:  BB7_5:
+; SI-LABEL: test_kill_control_flow:
+; SI:       ; %bb.0: ; %entry
+; SI-NEXT:    s_cmp_lg_u32 s0, 0
+; SI-NEXT:    s_cbranch_scc0 BB7_2
+; SI-NEXT:  ; %bb.1: ; %exit
+; SI-NEXT:    v_mov_b32_e32 v0, 1.0
+; SI-NEXT:    s_branch BB7_5
+; SI-NEXT:  BB7_2: ; %bb
+; SI-NEXT:    s_mov_b64 s[2:3], exec
+; SI-NEXT:    ;;#ASMSTART
+; SI-NEXT:    v_mov_b32_e64 v7, -1
+; SI-NEXT:    v_nop_e64
+; SI-NEXT:    v_nop_e64
+; SI-NEXT:    v_nop_e64
+; SI-NEXT:    v_nop_e64
+; SI-NEXT:    v_nop_e64
+; SI-NEXT:    v_nop_e64
+; SI-NEXT:    v_nop_e64
+; SI-NEXT:    v_nop_e64
+; SI-NEXT:    v_nop_e64
+; SI-NEXT:    v_nop_e64
+; SI-NEXT:    ;;#ASMEND
+; SI-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v7
+; SI-NEXT:    s_andn2_b64 s[2:3], s[2:3], vcc
+; SI-NEXT:    s_cbranch_scc0 BB7_4
+; SI-NEXT:  ; %bb.3: ; %bb
+; SI-NEXT:    s_andn2_b64 exec, exec, vcc
+; SI-NEXT:    v_mov_b32_e32 v0, 1.0
+; SI-NEXT:    s_branch BB7_5
+; SI-NEXT:  BB7_4:
+; SI-NEXT:    s_mov_b64 exec, 0
+; SI-NEXT:    exp null off, off, off, off done vm
+; SI-NEXT:    s_endpgm
+; SI-NEXT:  BB7_5:
+;
+; GFX10-WAVE64-LABEL: test_kill_control_flow:
+; GFX10-WAVE64:       ; %bb.0: ; %entry
+; GFX10-WAVE64-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX10-WAVE64-NEXT:    s_cbranch_scc0 BB7_2
+; GFX10-WAVE64-NEXT:  ; %bb.1: ; %exit
+; GFX10-WAVE64-NEXT:    v_mov_b32_e32 v0, 1.0
+; GFX10-WAVE64-NEXT:    s_branch BB7_5
+; GFX10-WAVE64-NEXT:  BB7_2: ; %bb
+; GFX10-WAVE64-NEXT:    ;;#ASMSTART
+; GFX10-WAVE64-NEXT:    v_mov_b32_e64 v7, -1
+; GFX10-WAVE64-NEXT:    v_nop_e64
+; GFX10-WAVE64-NEXT:    v_nop_e64
+; GFX10-WAVE64-NEXT:    v_nop_e64
+; GFX10-WAVE64-NEXT:    v_nop_e64
+; GFX10-WAVE64-NEXT:    v_nop_e64
+; GFX10-WAVE64-NEXT:    v_nop_e64
+; GFX10-WAVE64-NEXT:    v_nop_e64
+; GFX10-WAVE64-NEXT:    v_nop_e64
+; GFX10-WAVE64-NEXT:    v_nop_e64
+; GFX10-WAVE64-NEXT:    v_nop_e64
+; GFX10-WAVE64-NEXT:    ;;#ASMEND
+; GFX10-WAVE64-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v7
+; GFX10-WAVE64-NEXT:    s_mov_b64 s[2:3], exec
+; GFX10-WAVE64-NEXT:    s_andn2_b64 s[2:3], s[2:3], vcc
+; GFX10-WAVE64-NEXT:    s_cbranch_scc0 BB7_4
+; GFX10-WAVE64-NEXT:  ; %bb.3: ; %bb
+; GFX10-WAVE64-NEXT:    s_andn2_b64 exec, exec, vcc
+; GFX10-WAVE64-NEXT:    v_mov_b32_e32 v0, 1.0
+; GFX10-WAVE64-NEXT:    s_branch BB7_5
+; GFX10-WAVE64-NEXT:  BB7_4:
+; GFX10-WAVE64-NEXT:    s_mov_b64 exec, 0
+; GFX10-WAVE64-NEXT:    exp null off, off, off, off done vm
+; GFX10-WAVE64-NEXT:    s_endpgm
+; GFX10-WAVE64-NEXT:  BB7_5:
 ;
 ; GFX10-WAVE32-LABEL: test_kill_control_flow:
 ; GFX10-WAVE32:       ; %bb.0: ; %entry
@@ -332,6 +421,7 @@ define amdgpu_ps void @test_kill_control_flow_remainder(i32 inreg %arg) #0 {
 ; SI-NEXT:    v_mov_b32_e32 v9, 0
 ; SI-NEXT:    s_cbranch_scc1 BB8_3
 ; SI-NEXT:  ; %bb.1: ; %bb
+; SI-NEXT:    s_mov_b64 s[2:3], exec
 ; SI-NEXT:    ;;#ASMSTART
 ; SI-NEXT:    v_mov_b32_e64 v7, -1
 ; SI-NEXT:    v_nop_e64
@@ -347,7 +437,6 @@ define amdgpu_ps void @test_kill_control_flow_remainder(i32 inreg %arg) #0 {
 ; SI-NEXT:    v_nop_e64
 ; SI-NEXT:    ;;#ASMEND
 ; SI-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v7
-; SI-NEXT:    s_mov_b64 s[2:3], exec
 ; SI-NEXT:    s_andn2_b64 s[2:3], s[2:3], vcc
 ; SI-NEXT:    ;;#ASMSTART
 ; SI-NEXT:    v_mov_b32_e64 v8, -1

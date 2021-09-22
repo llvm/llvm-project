@@ -1518,10 +1518,9 @@ void PPCTargetLowering::initializeAddrModeMap() {
       PPC::MOF_RPlusSImm16Mult16 | PPC::MOF_Vector | PPC::MOF_SubtargetP9,
       PPC::MOF_NotAddNorCst | PPC::MOF_Vector | PPC::MOF_SubtargetP9,
       PPC::MOF_AddrIsSImm32 | PPC::MOF_Vector | PPC::MOF_SubtargetP9,
-      PPC::MOF_RPlusSImm16Mult16 | PPC::MOF_Vector256 | PPC::MOF_SubtargetP10,
-      PPC::MOF_NotAddNorCst | PPC::MOF_Vector256 | PPC::MOF_SubtargetP10,
-      PPC::MOF_AddrIsSImm32 | PPC::MOF_Vector256 | PPC::MOF_SubtargetP10,
   };
+  AddrModesMap[PPC::AM_PrefixDForm] = {PPC::MOF_RPlusSImm34 |
+                                       PPC::MOF_SubtargetP10};
   // TODO: Add mapping for quadword load/store.
 }
 
@@ -3884,8 +3883,7 @@ static Align CalculateStackSlotAlignment(EVT ArgVT, EVT OrigVT,
 /// stack slot (instead of being passed in registers).  ArgOffset,
 /// AvailableFPRs, and AvailableVRs must hold the current argument
 /// position, and will be updated to account for this argument.
-static bool CalculateStackSlotUsed(const PPCSubtarget &Subtarget, EVT ArgVT,
-                                   EVT OrigVT, ISD::ArgFlagsTy Flags,
+static bool CalculateStackSlotUsed(EVT ArgVT, EVT OrigVT, ISD::ArgFlagsTy Flags,
                                    unsigned PtrByteSize, unsigned LinkageSize,
                                    unsigned ParamAreaSize, unsigned &ArgOffset,
                                    unsigned &AvailableFPRs,
@@ -3926,13 +3924,7 @@ static bool CalculateStackSlotUsed(const PPCSubtarget &Subtarget, EVT ArgVT,
         --AvailableVRs;
         return false;
       }
-  } else if (Subtarget.isPPC64() && Subtarget.isELFv2ABI() &&
-             Flags.getByValSize() >= 8)
-    // For 64-bit ELF v2, passing by value object whose size is no less than 8
-    // bytes will be copied to parameter save area. This is for compatibility
-    // for other compiler which requires byval parameters to be stored in
-    // caller's parameter save area.
-    return true;
+  }
 
   return UseMemory;
 }
@@ -4275,7 +4267,7 @@ SDValue PPCTargetLowering::LowerFormalArguments_64SVR4(
     if (Ins[i].Flags.isNest())
       continue;
 
-    if (CalculateStackSlotUsed(Subtarget, Ins[i].VT, Ins[i].ArgVT, Ins[i].Flags,
+    if (CalculateStackSlotUsed(Ins[i].VT, Ins[i].ArgVT, Ins[i].Flags,
                                PtrByteSize, LinkageSize, ParamAreaSize,
                                NumBytes, AvailableFPRs, AvailableVRs))
       HasParameterArea = true;
@@ -4736,9 +4728,9 @@ needStackSlotPassParameters(const PPCSubtarget &Subtarget,
   for (const ISD::OutputArg& Param : Outs) {
     if (Param.Flags.isNest()) continue;
 
-    if (CalculateStackSlotUsed(Subtarget, Param.VT, Param.ArgVT, Param.Flags,
-                               PtrByteSize, LinkageSize, ParamAreaSize,
-                               NumBytes, AvailableFPRs, AvailableVRs))
+    if (CalculateStackSlotUsed(Param.VT, Param.ArgVT, Param.Flags, PtrByteSize,
+                               LinkageSize, ParamAreaSize, NumBytes,
+                               AvailableFPRs, AvailableVRs))
       return true;
   }
   return false;
@@ -5974,10 +5966,9 @@ SDValue PPCTargetLowering::LowerCall_64SVR4(
     unsigned NumBytesTmp = NumBytes;
     for (unsigned i = 0; i != NumOps; ++i) {
       if (Outs[i].Flags.isNest()) continue;
-      if (CalculateStackSlotUsed(Subtarget, Outs[i].VT, Outs[i].ArgVT,
-                                 Outs[i].Flags, PtrByteSize, LinkageSize,
-                                 ParamAreaSize, NumBytesTmp, AvailableFPRs,
-                                 AvailableVRs))
+      if (CalculateStackSlotUsed(Outs[i].VT, Outs[i].ArgVT, Outs[i].Flags,
+                                 PtrByteSize, LinkageSize, ParamAreaSize,
+                                 NumBytesTmp, AvailableFPRs, AvailableVRs))
         HasParameterArea = true;
     }
   }
@@ -17267,6 +17258,9 @@ PPC::AddrMode PPCTargetLowering::getAddrModeForFlags(unsigned Flags) const {
   for (auto FlagSet : AddrModesMap.at(PPC::AM_DQForm))
     if ((Flags & FlagSet) == FlagSet)
       return PPC::AM_DQForm;
+  for (auto FlagSet : AddrModesMap.at(PPC::AM_PrefixDForm))
+    if ((Flags & FlagSet) == FlagSet)
+      return PPC::AM_PrefixDForm;
   // If no other forms are selected, return an X-Form as it is the most
   // general addressing mode.
   return PPC::AM_XForm;
@@ -17386,6 +17380,22 @@ unsigned PPCTargetLowering::computeMOFlags(const SDNode *Parent, SDValue N,
   if ((FlagSet & PPC::MOF_SubtargetP10) && isPCRelNode(N))
     return FlagSet;
 
+  // If the node is the paired load/store intrinsics, compute flags for
+  // address computation and return early.
+  unsigned ParentOp = Parent->getOpcode();
+  if (Subtarget.isISA3_1() && ((ParentOp == ISD::INTRINSIC_W_CHAIN) ||
+                               (ParentOp == ISD::INTRINSIC_VOID))) {
+    unsigned ID = cast<ConstantSDNode>(Parent->getOperand(1))->getZExtValue();
+    assert(
+        ((ID == Intrinsic::ppc_vsx_lxvp) || (ID == Intrinsic::ppc_vsx_stxvp)) &&
+        "Only the paired load and store (lxvp/stxvp) intrinsics are valid.");
+    SDValue IntrinOp = (ID == Intrinsic::ppc_vsx_lxvp) ? Parent->getOperand(2)
+                                                       : Parent->getOperand(3);
+    computeFlagsForAddressComputation(IntrinOp, FlagSet, DAG);
+    FlagSet |= PPC::MOF_Vector;
+    return FlagSet;
+  }
+
   // Mark this as something we don't want to handle here if it is atomic
   // or pre-increment instruction.
   if (const LSBaseSDNode *LSB = dyn_cast<LSBaseSDNode>(Parent))
@@ -17410,9 +17420,12 @@ unsigned PPCTargetLowering::computeMOFlags(const SDNode *Parent, SDValue N,
   } else if (MemVT.isVector() && !MemVT.isFloatingPoint()) { // Integer vectors.
     if (Size == 128)
       FlagSet |= PPC::MOF_Vector;
-    else if (Size == 256)
-      FlagSet |= PPC::MOF_Vector256;
-    else
+    else if (Size == 256) {
+      assert(Subtarget.pairedVectorMemops() &&
+             "256-bit vectors are only available when paired vector memops is "
+             "enabled!");
+      FlagSet |= PPC::MOF_Vector;
+    } else
       llvm_unreachable("Not expecting illegal vectors!");
   } else { // Floating point type: can be scalar, f128 or vector types.
     if (Size == 32 || Size == 64)
@@ -17609,6 +17622,24 @@ PPC::AddrMode PPCTargetLowering::SelectOptimalAddrMode(const SDNode *Parent,
       Base = N;
     break;
   }
+  case PPC::AM_PrefixDForm: {
+    int64_t Imm34 = 0;
+    unsigned Opcode = N.getOpcode();
+    if (((Opcode == ISD::ADD) || (Opcode == ISD::OR)) &&
+        (isIntS34Immediate(N.getOperand(1), Imm34))) {
+      // N is an Add/OR Node, and it's operand is a 34-bit signed immediate.
+      Disp = DAG.getTargetConstant(Imm34, DL, N.getValueType());
+      if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(N.getOperand(0)))
+        Base = DAG.getTargetFrameIndex(FI->getIndex(), N.getValueType());
+      else
+        Base = N.getOperand(0);
+    } else if (isIntS34Immediate(N, Imm34)) {
+      // The address is a 34-bit signed immediate.
+      Disp = DAG.getTargetConstant(Imm34, DL, N.getValueType());
+      Base = DAG.getRegister(PPC::ZERO8, N.getValueType());
+    }
+    break;
+  }
   case PPC::AM_PCRel: {
     // When selecting PC-Relative instructions, "Base" is not utilized as
     // we select the address as [PC+imm].
@@ -17651,10 +17682,7 @@ PPCTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
 
 TargetLowering::AtomicExpansionKind
 PPCTargetLowering::shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const {
-  unsigned Size = AI->getPointerOperand()
-                      ->getType()
-                      ->getPointerElementType()
-                      ->getPrimitiveSizeInBits();
+  unsigned Size = AI->getNewValOperand()->getType()->getPrimitiveSizeInBits();
   if (EnableQuadwordAtomics && Subtarget.hasQuadwordAtomics() && Size == 128)
     return AtomicExpansionKind::MaskedIntrinsic;
   return TargetLowering::shouldExpandAtomicCmpXchgInIR(AI);

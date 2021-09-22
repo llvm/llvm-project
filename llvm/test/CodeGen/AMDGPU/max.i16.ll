@@ -122,8 +122,8 @@ define amdgpu_kernel void @v_test_imax_sge_v3i16(<3 x i16> addrspace(1)* %out, <
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
 ; VI-NEXT:    flat_load_dword v7, v[2:3]
 ; VI-NEXT:    flat_load_ushort v8, v[0:1]
-; VI-NEXT:    v_add_u32_e32 v0, vcc, s4, v6
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
+; VI-NEXT:    v_add_u32_e32 v0, vcc, s4, v6
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, 4, v0
 ; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc

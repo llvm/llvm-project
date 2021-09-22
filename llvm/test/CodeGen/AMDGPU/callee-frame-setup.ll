@@ -657,8 +657,8 @@ define void @callee_need_to_spill_fp_to_reg() #1 {
 ; GCN-NOT: v_mov_b32_e32 v0, 0x100c
 ; MUBUF-NEXT: s_add_i32 [[SCRATCH_SGPR:s[0-9]+]], s32, 0x40300
 ; MUBUF: buffer_store_dword v0, off, s[0:3], [[SCRATCH_SGPR]] ; 4-byte Folded Spill
-; FLATSCR: s_add_i32 [[SOFF:s[0-9]+]], s33, 0x1004
 ; FLATSCR: v_mov_b32_e32 v0, 0
+; FLATSCR: s_add_i32 [[SOFF:s[0-9]+]], s33, 0x1004
 ; FLATSCR: scratch_store_dword off, v0, [[SOFF]]
 define void @spill_fp_to_memory_scratch_reg_needed_mubuf_offset([4096 x i8] addrspace(5)* byval([4096 x i8]) align 4 %arg) #3 {
   %alloca = alloca i32, addrspace(5)
