@@ -565,6 +565,8 @@ void Abort() {
   internal__exit(3);
 }
 
+bool CreateDir(const char *pathname) { return _mkdir(pathname) == 0; }
+
 #if !SANITIZER_GO
 // Read the file to extract the ImageBase field from the PE header. If ASLR is
 // disabled and this virtual address is available, the loader will typically
