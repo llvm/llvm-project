@@ -2055,6 +2055,12 @@ public:
   /// Print the given attribute to the stream.
   void printAttribute(Attribute attr) override { printer.printAttribute(attr); }
 
+  /// Print the given attribute without its type. The corresponding parser must
+  /// provide a valid type for the attribute.
+  void printAttributeWithoutType(Attribute attr) override {
+    printer.printAttribute(attr, ModulePrinter::AttrTypeElision::Must);
+  }
+
   /// Print the given floating point value in a stablized form.
   void printFloat(const APFloat &value) override {
     printFloatValue(value, getStream());

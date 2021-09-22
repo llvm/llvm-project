@@ -23,7 +23,7 @@ struct CppComplexLongDouble {
 /* Not all environments define CMPLXF, CMPLX, CMPLXL. */
 
 #ifndef CMPLXF
-#if __clang_major__ >= 12
+#if defined(__clang_major__) && (__clang_major__ >= 12)
 #define CMPLXF __builtin_complex
 #else
 static float_Complex_t CMPLXF(float r, float i) {
@@ -39,7 +39,7 @@ static float_Complex_t CMPLXF(float r, float i) {
 #endif
 
 #ifndef CMPLX
-#if __clang_major__ >= 12
+#if defined(__clang_major__) && (__clang_major__ >= 12)
 #define CMPLX __builtin_complex
 #else
 static double_Complex_t CMPLX(double r, double i) {
@@ -55,7 +55,7 @@ static double_Complex_t CMPLX(double r, double i) {
 #endif
 
 #ifndef CMPLXL
-#if __clang_major__ >= 12
+#if defined(__clang_major__) && (__clang_major__ >= 12)
 #define CMPLXL __builtin_complex
 #else
 static long_double_Complex_t CMPLXL(long double r, long double i) {

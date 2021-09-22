@@ -100,7 +100,6 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
-#include "llvm/Transforms/InstCombine/InstCombineWorklist.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <algorithm>
 #include <cassert>
@@ -109,10 +108,11 @@
 #include <string>
 #include <utility>
 
+#define DEBUG_TYPE "instcombine"
+#include "llvm/Transforms/Utils/InstructionWorklist.h"
+
 using namespace llvm;
 using namespace llvm::PatternMatch;
-
-#define DEBUG_TYPE "instcombine"
 
 STATISTIC(NumWorklistIterations,
           "Number of instruction combining iterations performed");
@@ -3975,13 +3975,13 @@ public:
 /// whose condition is a known constant, we only visit the reachable successors.
 static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
                                           const TargetLibraryInfo *TLI,
-                                          InstCombineWorklist &ICWorklist) {
+                                          InstructionWorklist &ICWorklist) {
   bool MadeIRChange = false;
   SmallPtrSet<BasicBlock *, 32> Visited;
   SmallVector<BasicBlock*, 256> Worklist;
   Worklist.push_back(&F.front());
 
-  SmallVector<Instruction*, 128> InstrsForInstCombineWorklist;
+  SmallVector<Instruction *, 128> InstrsForInstructionWorklist;
   DenseMap<Constant *, Constant *> FoldedConstants;
   AliasScopeTracker SeenAliasScopes;
 
@@ -4030,7 +4030,7 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
       // these call instructions consumes non-trivial amount of time and
       // provides no value for the optimization.
       if (!Inst.isDebugOrPseudoInst()) {
-        InstrsForInstCombineWorklist.push_back(&Inst);
+        InstrsForInstructionWorklist.push_back(&Inst);
         SeenAliasScopes.analyse(&Inst);
       }
     }
@@ -4076,8 +4076,8 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
   // of the function down.  This jives well with the way that it adds all uses
   // of instructions to the worklist after doing a transformation, thus avoiding
   // some N^2 behavior in pathological cases.
-  ICWorklist.reserve(InstrsForInstCombineWorklist.size());
-  for (Instruction *Inst : reverse(InstrsForInstCombineWorklist)) {
+  ICWorklist.reserve(InstrsForInstructionWorklist.size());
+  for (Instruction *Inst : reverse(InstrsForInstructionWorklist)) {
     // DCE instruction if trivially dead. As we iterate in reverse program
     // order here, we will clean up whole chains of dead instructions.
     if (isInstructionTriviallyDead(Inst, TLI) ||
@@ -4097,7 +4097,7 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
 }
 
 static bool combineInstructionsOverFunction(
-    Function &F, InstCombineWorklist &Worklist, AliasAnalysis *AA,
+    Function &F, InstructionWorklist &Worklist, AliasAnalysis *AA,
     AssumptionCache &AC, TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
     DominatorTree &DT, OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
     ProfileSummaryInfo *PSI, unsigned MaxIterations, LoopInfo *LI) {

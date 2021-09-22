@@ -1,4 +1,4 @@
-//===- InstCombineWorklist.h - Worklist for InstCombine pass ----*- C++ -*-===//
+//=== InstructionWorklist.h - Worklist for InstCombine & others -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_INSTCOMBINE_INSTCOMBINEWORKLIST_H
-#define LLVM_TRANSFORMS_INSTCOMBINE_INSTCOMBINEWORKLIST_H
+#ifndef LLVM_TRANSFORMS_UTILS_INSTRUCTIONWORKLIST_H
+#define LLVM_TRANSFORMS_UTILS_INSTRUCTIONWORKLIST_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -18,13 +18,11 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
-#define DEBUG_TYPE "instcombine"
-
 namespace llvm {
 
-/// InstCombineWorklist - This is the worklist management logic for
-/// InstCombine.
-class InstCombineWorklist {
+/// InstructionWorklist - This is the worklist management logic for
+/// InstCombine and other simplification passes.
+class InstructionWorklist {
   SmallVector<Instruction *, 256> Worklist;
   DenseMap<Instruction *, unsigned> WorklistMap;
   /// These instructions will be added in reverse order after the current
@@ -33,10 +31,10 @@ class InstCombineWorklist {
   SmallSetVector<Instruction *, 16> Deferred;
 
 public:
-  InstCombineWorklist() = default;
+  InstructionWorklist() = default;
 
-  InstCombineWorklist(InstCombineWorklist &&) = default;
-  InstCombineWorklist &operator=(InstCombineWorklist &&) = default;
+  InstructionWorklist(InstructionWorklist &&) = default;
+  InstructionWorklist &operator=(InstructionWorklist &&) = default;
 
   bool isEmpty() const { return Worklist.empty() && Deferred.empty(); }
 
@@ -45,7 +43,7 @@ public:
   /// You likely want to use this method.
   void add(Instruction *I) {
     if (Deferred.insert(I))
-      LLVM_DEBUG(dbgs() << "IC: ADD DEFERRED: " << *I << '\n');
+      LLVM_DEBUG(dbgs() << "ADD DEFERRED: " << *I << '\n');
   }
 
   /// Add value to the worklist if it is an instruction.
@@ -62,7 +60,7 @@ public:
     assert(I->getParent() && "Instruction not inserted yet?");
 
     if (WorklistMap.insert(std::make_pair(I, Worklist.size())).second) {
-      LLVM_DEBUG(dbgs() << "IC: ADD: " << *I << '\n');
+      LLVM_DEBUG(dbgs() << "ADD: " << *I << '\n');
       Worklist.push_back(I);
     }
   }
@@ -85,7 +83,7 @@ public:
 
   /// Remove I from the worklist if it exists.
   void remove(Instruction *I) {
-    DenseMap<Instruction*, unsigned>::iterator It = WorklistMap.find(I);
+    DenseMap<Instruction *, unsigned>::iterator It = WorklistMap.find(I);
     if (It != WorklistMap.end()) {
       // Don't bother moving everything down, just null out the slot.
       Worklist[It->second] = nullptr;
@@ -110,7 +108,6 @@ public:
       push(cast<Instruction>(U));
   }
 
-
   /// Check that the worklist is empty and nuke the backing store for the map.
   void zap() {
     assert(WorklistMap.empty() && "Worklist empty, but map not?");
@@ -122,7 +119,5 @@ public:
 };
 
 } // end namespace llvm.
-
-#undef DEBUG_TYPE
 
 #endif

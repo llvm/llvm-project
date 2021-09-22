@@ -465,7 +465,9 @@ define void @insert_store_ptr_strip(<16 x i8>* %q, i8 zeroext %s) {
 ; CHECK-LABEL: @insert_store_ptr_strip(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADDR0:%.*]] = bitcast <16 x i8>* [[Q:%.*]] to <2 x i64>*
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, <16 x i8>* [[Q]], i32 0, i32 3
+; CHECK-NEXT:    [[ADDR1:%.*]] = getelementptr <2 x i64>, <2 x i64>* [[ADDR0]], i64 0
+; CHECK-NEXT:    [[ADDR2:%.*]] = bitcast <2 x i64>* [[ADDR1]] to <16 x i8>*
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, <16 x i8>* [[ADDR2]], i32 0, i32 3
 ; CHECK-NEXT:    store i8 [[S:%.*]], i8* [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
