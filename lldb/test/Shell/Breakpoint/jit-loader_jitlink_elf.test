@@ -6,8 +6,7 @@
 # RUN: %clang -g -S -emit-llvm -fPIC --target=x86_64-unknown-unknown-elf \
 # RUN:        -o %t.ll %p/Inputs/jitbp.cpp
 # RUN: %lldb -b -o 'settings set plugin.jit-loader.gdb.enable on' -o 'b jitbp' \
-# RUN:          -o 'run --jit-kind=orc-lazy --per-module-lazy --jit-linker=jitlink %t.ll' \
-# RUN:          lli | FileCheck %s
+# RUN:          -o 'run --jit-linker=jitlink %t.ll' lli | FileCheck %s
 
 # CHECK: Breakpoint 1: no locations (pending).
 # CHECK: (lldb) run {{.*}}
