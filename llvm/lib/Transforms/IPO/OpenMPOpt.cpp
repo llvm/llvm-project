@@ -1865,6 +1865,8 @@ private:
                                     OMPRTL___kmpc_kernel_end_parallel);
     ExternalizationRAII BarrierSPMD(OMPInfoCache,
                                     OMPRTL___kmpc_barrier_simple_spmd);
+    ExternalizationRAII ThreadId(OMPInfoCache,
+                                 OMPRTL___kmpc_get_hardware_thread_id_in_block);
 
     registerAAs(IsModulePass);
 
