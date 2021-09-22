@@ -4148,7 +4148,14 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   // For local linkage, we also emit the original name separately
   // immediately after the record.
   auto MaybeEmitOriginalName = [&](GlobalValueSummary &S) {
-    if (!GlobalValue::isLocalLinkage(S.linkage()))
+    // We don't need to emit the original name if we are writing the index for
+    // distributed backends (in which case ModuleToSummariesForIndex is
+    // non-null). The original name is only needed during the thin link, since
+    // for SamplePGO the indirect call targets for local functions have
+    // have the original name annotated in profile.
+    // Continue to emit it when writing out the entire combined index, which is
+    // used in testing the thin link via llvm-lto.
+    if (ModuleToSummariesForIndex || !GlobalValue::isLocalLinkage(S.linkage()))
       return;
     NameVals.push_back(S.getOriginalName());
     Stream.EmitRecord(bitc::FS_COMBINED_ORIGINAL_NAME, NameVals);
