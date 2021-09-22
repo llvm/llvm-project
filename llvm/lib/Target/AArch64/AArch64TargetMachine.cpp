@@ -355,10 +355,13 @@ AArch64TargetMachine::~AArch64TargetMachine() = default;
 const AArch64Subtarget *
 AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
+  Attribute TuneAttr = F.getFnAttribute("tune-cpu");
   Attribute FSAttr = F.getFnAttribute("target-features");
 
   std::string CPU =
       CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
+  std::string TuneCPU =
+      TuneAttr.isValid() ? TuneAttr.getValueAsString().str() : CPU;
   std::string FS =
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
 
@@ -399,6 +402,7 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   Key += "SVEMax";
   Key += std::to_string(MaxSVEVectorSize);
   Key += CPU;
+  Key += TuneCPU;
   Key += FS;
 
   auto &I = SubtargetMap[Key];
@@ -407,8 +411,8 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
     // creation will depend on the TM and the code generation flags on the
     // function that reside in TargetOptions.
     resetTargetOptions(F);
-    I = std::make_unique<AArch64Subtarget>(TargetTriple, CPU, FS, *this,
-                                           isLittle, MinSVEVectorSize,
+    I = std::make_unique<AArch64Subtarget>(TargetTriple, CPU, TuneCPU, FS,
+                                           *this, isLittle, MinSVEVectorSize,
                                            MaxSVEVectorSize);
   }
   return I.get();
