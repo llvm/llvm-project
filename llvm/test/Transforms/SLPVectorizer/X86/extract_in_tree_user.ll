@@ -32,7 +32,6 @@ entry:
   ret i32 undef
 }
 
-
 declare float @llvm.powi.f32.i32(float, i32)
 define void @fn2(i32* %a, i32* %b, float* %c) {
 ; CHECK-LABEL: @fn2(
@@ -98,4 +97,38 @@ entry:
   store float %call4, float* %arrayidx10, align 4
   ret void
 
+}
+
+define void @externally_used_ptrs() {
+; CHECK-LABEL: @externally_used_ptrs(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64*, i64** @a, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64*> poison, i64* [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64*> [[TMP1]], i64* [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, <2 x i64*> [[TMP2]], <2 x i64> <i64 56, i64 11>
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint <2 x i64*> [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i64, i64* [[TMP0]], i64 12
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64*> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64* [[TMP5]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x i64>, <2 x i64>* [[TMP6]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64*> [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = add <2 x i64> [[TMP4]], [[TMP7]]
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i64* [[TMP5]] to <2 x i64>*
+; CHECK-NEXT:    store <2 x i64> [[TMP9]], <2 x i64>* [[TMP10]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load i64*, i64** @a, align 8
+  %add.ptr = getelementptr inbounds i64, i64* %0, i64 11
+  %1 = ptrtoint i64* %add.ptr to i64
+  %add.ptr1 = getelementptr inbounds i64, i64* %0, i64 56
+  %2 = ptrtoint i64* %add.ptr1 to i64
+  %arrayidx2 = getelementptr inbounds i64, i64* %0, i64 12
+  %3 = load i64, i64* %arrayidx2, align 8
+  %4 = load i64, i64* %add.ptr, align 8
+  %5 = add i64 %1, %3
+  %6 = add i64 %2, %4
+  store i64 %6, i64* %add.ptr, align 8
+  store i64 %5, i64* %arrayidx2, align 8
+  ret void
 }
