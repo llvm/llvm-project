@@ -1582,7 +1582,7 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
     Value *XY = Builder.CreateBinOp(Opcode, X, Y);
     if (auto *BO = dyn_cast<BinaryOperator>(XY))
       BO->copyIRFlags(&Inst);
-    return new ShuffleVectorInst(XY, UndefValue::get(XY->getType()), M);
+    return new ShuffleVectorInst(XY, M);
   };
 
   // If both arguments of the binary operation are shuffles that use the same
