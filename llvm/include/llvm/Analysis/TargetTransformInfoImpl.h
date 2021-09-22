@@ -47,10 +47,9 @@ public:
 
   const DataLayout &getDataLayout() const { return DL; }
 
-  InstructionCost
-  getGEPCost(Type *PointeeType, const Value *Ptr,
-             ArrayRef<const Value *> Operands,
-             TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency) const {
+  InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
+                             ArrayRef<const Value *> Operands,
+                             TTI::TargetCostKind CostKind) const {
     // In the basic model, we just assume that all-constant GEPs will be folded
     // into their uses via addressing modes.
     for (unsigned Idx = 0, Size = Operands.size(); Idx != Size; ++Idx)
@@ -638,9 +637,10 @@ public:
     return 1;
   }
 
-  InstructionCost getExtendedAddReductionCost(
-      bool IsMLA, bool IsUnsigned, Type *ResTy, VectorType *Ty,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const {
+  InstructionCost
+  getExtendedAddReductionCost(bool IsMLA, bool IsUnsigned, Type *ResTy,
+                              VectorType *Ty,
+                              TTI::TargetCostKind CostKind) const {
     return 1;
   }
 
@@ -862,10 +862,9 @@ protected:
 public:
   using BaseT::getGEPCost;
 
-  InstructionCost
-  getGEPCost(Type *PointeeType, const Value *Ptr,
-             ArrayRef<const Value *> Operands,
-             TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency) {
+  InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
+                             ArrayRef<const Value *> Operands,
+                             TTI::TargetCostKind CostKind) {
     assert(PointeeType && Ptr && "can't get GEPCost of nullptr");
     assert(cast<PointerType>(Ptr->getType()->getScalarType())
                ->isOpaqueOrPointeeTypeMatches(PointeeType) &&
@@ -970,10 +969,10 @@ public:
         return TTI::TCC_Free;
       break;
     case Instruction::GetElementPtr: {
-      const GEPOperator *GEP = cast<GEPOperator>(U);
+      const auto *GEP = cast<GEPOperator>(U);
       return TargetTTI->getGEPCost(GEP->getSourceElementType(),
                                    GEP->getPointerOperand(),
-                                   Operands.drop_front());
+                                   Operands.drop_front(), CostKind);
     }
     case Instruction::Add:
     case Instruction::FAdd:

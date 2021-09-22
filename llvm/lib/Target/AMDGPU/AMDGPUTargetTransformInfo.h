@@ -79,24 +79,21 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
     return TargetTransformInfo::TCC_Basic;
   }
 
-  static inline int getHalfRateInstrCost(
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) {
+  static inline int getHalfRateInstrCost(TTI::TargetCostKind CostKind) {
     return CostKind == TTI::TCK_CodeSize ? 2
                                          : 2 * TargetTransformInfo::TCC_Basic;
   }
 
   // TODO: The size is usually 8 bytes, but takes 4x as many cycles. Maybe
   // should be 2 or 4.
-  static inline int getQuarterRateInstrCost(
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) {
+  static inline int getQuarterRateInstrCost(TTI::TargetCostKind CostKind) {
     return CostKind == TTI::TCK_CodeSize ? 2
                                          : 4 * TargetTransformInfo::TCC_Basic;
   }
 
   // On some parts, normal fp64 operations are half rate, and others
   // quarter. This also applies to some integer operations.
-  int get64BitInstrCost(
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+  int get64BitInstrCost(TTI::TargetCostKind CostKind) const;
 
 public:
   explicit GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F);
@@ -152,8 +149,7 @@ public:
   bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info) const;
 
   InstructionCost getArithmeticInstrCost(
-      unsigned Opcode, Type *Ty,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
       TTI::OperandValueKind Opd2Info = TTI::OK_AnyValue,
       TTI::OperandValueProperties Opd1PropInfo = TTI::OP_None,
@@ -217,13 +213,13 @@ public:
 
   InstructionCost getArithmeticReductionCost(
       unsigned Opcode, VectorType *Ty, Optional<FastMathFlags> FMF,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);
+      TTI::TargetCostKind CostKind);
 
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                         TTI::TargetCostKind CostKind);
   InstructionCost getMinMaxReductionCost(
       VectorType *Ty, VectorType *CondTy, bool IsUnsigned,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);
+      TTI::TargetCostKind CostKind);
 };
 
 } // end namespace llvm
