@@ -15,11 +15,16 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 
 namespace llvm {
 namespace orc {
 namespace rt {
+
+extern const char *SimpleExecutorDylibManagerInstanceName;
+extern const char *SimpleExecutorDylibManagerOpenWrapperName;
+extern const char *SimpleExecutorDylibManagerLookupWrapperName;
 
 extern const char *SimpleExecutorMemoryManagerInstanceName;
 extern const char *SimpleExecutorMemoryManagerReserveWrapperName;
@@ -31,7 +36,16 @@ extern const char *MemoryWriteUInt16sWrapperName;
 extern const char *MemoryWriteUInt32sWrapperName;
 extern const char *MemoryWriteUInt64sWrapperName;
 extern const char *MemoryWriteBuffersWrapperName;
+
 extern const char *RunAsMainWrapperName;
+
+using SPSSimpleExecutorDylibManagerOpenSignature =
+    shared::SPSExpected<uint64_t>(shared::SPSExecutorAddress, shared::SPSString,
+                                  uint64_t);
+
+using SPSSimpleExecutorDylibManagerLookupSignature =
+    shared::SPSExpected<shared::SPSSequence<shared::SPSExecutorAddress>>(
+        shared::SPSExecutorAddress, uint64_t, shared::SPSRemoteSymbolLookupSet);
 
 using SPSSimpleExecutorMemoryManagerReserveSignature =
     shared::SPSExpected<shared::SPSExecutorAddress>(shared::SPSExecutorAddress,

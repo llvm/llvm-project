@@ -16,50 +16,6 @@
 
 namespace llvm {
 namespace orc {
-namespace shared {
-
-template <>
-class SPSSerializationTraits<SPSRemoteSymbolLookupSetElement,
-                             SymbolLookupSet::value_type> {
-public:
-  static size_t size(const SymbolLookupSet::value_type &V) {
-    return SPSArgList<SPSString, bool>::size(
-        *V.first, V.second == SymbolLookupFlags::RequiredSymbol);
-  }
-
-  static bool serialize(SPSOutputBuffer &OB,
-                        const SymbolLookupSet::value_type &V) {
-    return SPSArgList<SPSString, bool>::serialize(
-        OB, *V.first, V.second == SymbolLookupFlags::RequiredSymbol);
-  }
-};
-
-template <>
-class TrivialSPSSequenceSerialization<SPSRemoteSymbolLookupSetElement,
-                                      SymbolLookupSet> {
-public:
-  static constexpr bool available = true;
-};
-
-template <>
-class SPSSerializationTraits<SPSRemoteSymbolLookup,
-                             ExecutorProcessControl::LookupRequest> {
-  using MemberSerialization =
-      SPSArgList<SPSExecutorAddress, SPSRemoteSymbolLookupSet>;
-
-public:
-  static size_t size(const ExecutorProcessControl::LookupRequest &LR) {
-    return MemberSerialization::size(ExecutorAddress(LR.Handle), LR.Symbols);
-  }
-
-  static bool serialize(SPSOutputBuffer &OB,
-                        const ExecutorProcessControl::LookupRequest &LR) {
-    return MemberSerialization::serialize(OB, ExecutorAddress(LR.Handle),
-                                          LR.Symbols);
-  }
-};
-
-} // end namespace shared
 
 SimpleRemoteEPC::~SimpleRemoteEPC() {
   assert(Disconnected && "Destroyed without disconnection");
@@ -67,24 +23,23 @@ SimpleRemoteEPC::~SimpleRemoteEPC() {
 
 Expected<tpctypes::DylibHandle>
 SimpleRemoteEPC::loadDylib(const char *DylibPath) {
-  Expected<tpctypes::DylibHandle> H((tpctypes::DylibHandle()));
-  if (auto Err = callSPSWrapper<shared::SPSLoadDylibSignature>(
-          LoadDylibAddr.getValue(), H, JDI.JITDispatchContextAddress,
-          StringRef(DylibPath), (uint64_t)0))
-    return std::move(Err);
-  return H;
+  return DylibMgr->open(DylibPath, 0);
 }
 
 Expected<std::vector<tpctypes::LookupResult>>
 SimpleRemoteEPC::lookupSymbols(ArrayRef<LookupRequest> Request) {
-  Expected<std::vector<tpctypes::LookupResult>> R(
-      (std::vector<tpctypes::LookupResult>()));
+  std::vector<tpctypes::LookupResult> Result;
 
-  if (auto Err = callSPSWrapper<shared::SPSLookupSymbolsSignature>(
-          LookupSymbolsAddr.getValue(), R, JDI.JITDispatchContextAddress,
-          Request))
-    return std::move(Err);
-  return R;
+  for (auto &Element : Request) {
+    if (auto R = DylibMgr->lookup(Element.Handle, Element.Symbols)) {
+      Result.push_back({});
+      Result.back().reserve(R->size());
+      for (auto Addr : *R)
+        Result.back().push_back(Addr.getValue());
+    } else
+      return R.takeError();
+  }
+  return std::move(Result);
 }
 
 Expected<int32_t> SimpleRemoteEPC::runAsMain(JITTargetAddress MainFnAddr,
@@ -253,10 +208,14 @@ Error SimpleRemoteEPC::setup(std::unique_ptr<SimpleRemoteEPCTransport> T,
   if (auto Err = getBootstrapSymbols(
           {{JDI.JITDispatchContextAddress, ExecutorSessionObjectName},
            {JDI.JITDispatchFunctionAddress, DispatchFnName},
-           {LoadDylibAddr, "__llvm_orc_load_dylib"},
-           {LookupSymbolsAddr, "__llvm_orc_lookup_symbols"},
            {RunAsMainAddr, rt::RunAsMainWrapperName}}))
     return Err;
+
+  if (auto DM =
+          EPCGenericDylibManager::CreateWithDefaultBootstrapSymbols(*this))
+    DylibMgr = std::make_unique<EPCGenericDylibManager>(std::move(*DM));
+  else
+    return DM.takeError();
 
   if (auto MemMgr = createMemoryManager()) {
     OwnedMemMgr = std::move(*MemMgr);

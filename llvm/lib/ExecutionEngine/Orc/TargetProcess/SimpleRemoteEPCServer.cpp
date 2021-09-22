@@ -54,9 +54,6 @@ void SimpleRemoteEPCServer::ThreadDispatcher::shutdown() {
 StringMap<ExecutorAddress> SimpleRemoteEPCServer::defaultBootstrapSymbols() {
   StringMap<ExecutorAddress> DBS;
   rt_bootstrap::addTo(DBS);
-  DBS["__llvm_orc_load_dylib"] = ExecutorAddress::fromPtr(&loadDylibWrapper);
-  DBS["__llvm_orc_lookup_symbols"] =
-      ExecutorAddress::fromPtr(&lookupSymbolsWrapper);
   return DBS;
 }
 
@@ -197,76 +194,6 @@ void SimpleRemoteEPCServer::handleCallWrapper(
                                   {ResultBytes.data(), ResultBytes.size()}))
       ReportError(std::move(Err));
   });
-}
-
-shared::detail::CWrapperFunctionResult
-SimpleRemoteEPCServer::loadDylibWrapper(const char *ArgData, size_t ArgSize) {
-  return shared::WrapperFunction<shared::SPSLoadDylibSignature>::handle(
-             ArgData, ArgSize,
-             [](ExecutorAddress ExecutorSessionObj, std::string Path,
-                uint64_t Flags) -> Expected<uint64_t> {
-               return ExecutorSessionObj.toPtr<SimpleRemoteEPCServer *>()
-                   ->loadDylib(Path, Flags);
-             })
-      .release();
-}
-
-shared::detail::CWrapperFunctionResult
-SimpleRemoteEPCServer::lookupSymbolsWrapper(const char *ArgData,
-                                            size_t ArgSize) {
-  return shared::WrapperFunction<shared::SPSLookupSymbolsSignature>::handle(
-             ArgData, ArgSize,
-             [](ExecutorAddress ExecutorSessionObj,
-                std::vector<RemoteSymbolLookup> Lookup) {
-               return ExecutorSessionObj.toPtr<SimpleRemoteEPCServer *>()
-                   ->lookupSymbols(Lookup);
-             })
-      .release();
-}
-
-Expected<tpctypes::DylibHandle>
-SimpleRemoteEPCServer::loadDylib(const std::string &Path, uint64_t Mode) {
-  std::string ErrMsg;
-  const char *P = Path.empty() ? nullptr : Path.c_str();
-  auto DL = sys::DynamicLibrary::getPermanentLibrary(P, &ErrMsg);
-  if (!DL.isValid())
-    return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
-  std::lock_guard<std::mutex> Lock(ServerStateMutex);
-  uint64_t Id = Dylibs.size();
-  Dylibs.push_back(std::move(DL));
-  return Id;
-}
-
-Expected<std::vector<std::vector<ExecutorAddress>>>
-SimpleRemoteEPCServer::lookupSymbols(const std::vector<RemoteSymbolLookup> &L) {
-  std::vector<std::vector<ExecutorAddress>> Result;
-
-  for (const auto &E : L) {
-    if (E.H >= Dylibs.size())
-      return make_error<StringError>("Unrecognized handle",
-                                     inconvertibleErrorCode());
-    auto &DL = Dylibs[E.H];
-    Result.push_back({});
-
-    for (const auto &Sym : E.Symbols) {
-
-      const char *DemangledSymName = Sym.Name.c_str();
-#ifdef __APPLE__
-      if (*DemangledSymName == '_')
-        ++DemangledSymName;
-#endif
-
-      void *Addr = DL.getAddressOfSymbol(DemangledSymName);
-      if (!Addr && Sym.Required)
-        return make_error<StringError>(Twine("Missing definition for ") +
-                                           DemangledSymName,
-                                       inconvertibleErrorCode());
-
-      Result.back().push_back(ExecutorAddress::fromPtr(Addr));
-    }
-  }
-
-  return std::move(Result);
 }
 
 shared::WrapperFunctionResult

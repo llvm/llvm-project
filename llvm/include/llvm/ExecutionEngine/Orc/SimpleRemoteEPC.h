@@ -15,6 +15,8 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericDylibManager.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
@@ -113,8 +115,7 @@ private:
   std::unique_ptr<jitlink::JITLinkMemoryManager> OwnedMemMgr;
   std::unique_ptr<MemoryAccess> OwnedMemAccess;
 
-  ExecutorAddress LoadDylibAddr;
-  ExecutorAddress LookupSymbolsAddr;
+  std::unique_ptr<EPCGenericDylibManager> DylibMgr;
   ExecutorAddress RunAsMainAddr;
 
   uint64_t NextSeqNo = 0;
