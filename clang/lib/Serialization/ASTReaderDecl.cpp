@@ -1149,6 +1149,12 @@ void ASTDeclReader::ReadObjCDefinitionData(
 
 void ASTDeclReader::MergeDefinitionData(ObjCInterfaceDecl *D,
          struct ObjCInterfaceDecl::DefinitionData &&NewDD) {
+  struct ObjCInterfaceDecl::DefinitionData &DD = D->data();
+  if (DD.Definition != NewDD.Definition) {
+    Reader.MergedDeclContexts.insert(
+        std::make_pair(NewDD.Definition, DD.Definition));
+  }
+
   // FIXME: odr checking?
 }
 
