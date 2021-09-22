@@ -227,7 +227,7 @@ bool mapping::isGenericMode() { return !isSPMDMode(); }
 ///}
 
 extern "C" {
-uint32_t __kmpc_get_hardware_thread_id_in_block() {
+__attribute__((noinline)) uint32_t __kmpc_get_hardware_thread_id_in_block() {
   return mapping::getThreadIdInBlock();
 }
 }

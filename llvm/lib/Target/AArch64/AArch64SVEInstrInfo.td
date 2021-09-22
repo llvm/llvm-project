@@ -1332,6 +1332,24 @@ let Predicates = [HasSVEorStreamingSVE] in {
   def : Pat<(nxv4bf16 (extract_subvector (nxv8bf16 ZPR:$Zs), (i64 4))),
             (UUNPKHI_ZZ_S ZPR:$Zs)>;
 
+  def : Pat<(nxv2f16 (extract_subvector (nxv8f16 ZPR:$Zs), (i64 0))),
+            (UUNPKLO_ZZ_S (UUNPKLO_ZZ_D ZPR:$Zs))>;
+  def : Pat<(nxv2f16 (extract_subvector (nxv8f16 ZPR:$Zs), (i64 2))),
+            (UUNPKHI_ZZ_S (UUNPKLO_ZZ_D ZPR:$Zs))>;
+  def : Pat<(nxv2f16 (extract_subvector (nxv8f16 ZPR:$Zs), (i64 4))),
+            (UUNPKLO_ZZ_S (UUNPKHI_ZZ_D ZPR:$Zs))>;
+  def : Pat<(nxv2f16 (extract_subvector (nxv8f16 ZPR:$Zs), (i64 6))),
+            (UUNPKHI_ZZ_S (UUNPKHI_ZZ_D ZPR:$Zs))>;
+
+  def : Pat<(nxv2bf16 (extract_subvector (nxv8bf16 ZPR:$Zs), (i64 0))),
+            (UUNPKLO_ZZ_S (UUNPKLO_ZZ_D ZPR:$Zs))>;
+  def : Pat<(nxv2bf16 (extract_subvector (nxv8bf16 ZPR:$Zs), (i64 2))),
+            (UUNPKHI_ZZ_S (UUNPKLO_ZZ_D ZPR:$Zs))>;
+  def : Pat<(nxv2bf16 (extract_subvector (nxv8bf16 ZPR:$Zs), (i64 4))),
+            (UUNPKLO_ZZ_S (UUNPKHI_ZZ_D ZPR:$Zs))>;
+  def : Pat<(nxv2bf16 (extract_subvector (nxv8bf16 ZPR:$Zs), (i64 6))),
+            (UUNPKHI_ZZ_S (UUNPKHI_ZZ_D ZPR:$Zs))>;
+
   // Concatenate two predicates.
   def : Pat<(nxv4i1 (concat_vectors nxv2i1:$p1, nxv2i1:$p2)),
             (UZP1_PPP_S $p1, $p2)>;

@@ -308,8 +308,8 @@ define void @tiny_vector_gather(i32 *%a, i32 *%v1, i32 *%v2) {
   ret void
 }
 
-define void @tiny_vector_gather_diff_opcode(i16 *%a, i16 *%v1) {
-; CHECK-LABEL: @tiny_vector_gather_diff_opcode(
+define void @tiny_vector_with_diff_opcode(i16 *%a, i16 *%v1) {
+; CHECK-LABEL: @tiny_vector_with_diff_opcode(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, i16* [[V1:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 undef to i16
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr inbounds i16, i16* [[A:%.*]], i64 0

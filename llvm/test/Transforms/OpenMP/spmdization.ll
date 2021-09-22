@@ -91,10 +91,10 @@
 ;.
 ; AMDGPU: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; AMDGPU: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @[[GLOB0]], i32 0, i32 0) }, align 8
-; AMDGPU: @[[__OMP_OFFLOADING_14_A34CA11_SEQUENTIAL_LOOP_L5_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 2
-; AMDGPU: @[[__OMP_OFFLOADING_14_A34CA11_SEQUENTIAL_LOOP_TO_STACK_VAR_L20_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 2
-; AMDGPU: @[[__OMP_OFFLOADING_14_A34CA11_SEQUENTIAL_LOOP_TO_SHARED_VAR_L35_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 2
-; AMDGPU: @[[__OMP_OFFLOADING_14_A34CA11_SEQUENTIAL_LOOP_TO_SHARED_VAR_GUARDED_L50_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 2
+; AMDGPU: @[[__OMP_OFFLOADING_14_A34CA11_SEQUENTIAL_LOOP_L5_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
+; AMDGPU: @[[__OMP_OFFLOADING_14_A34CA11_SEQUENTIAL_LOOP_TO_STACK_VAR_L20_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
+; AMDGPU: @[[__OMP_OFFLOADING_14_A34CA11_SEQUENTIAL_LOOP_TO_SHARED_VAR_L35_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
+; AMDGPU: @[[__OMP_OFFLOADING_14_A34CA11_SEQUENTIAL_LOOP_TO_SHARED_VAR_GUARDED_L50_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
 ; AMDGPU: @[[__OMP_OFFLOADING_14_A34CA11_DO_NOT_SPMDIZE_TARGET_L65_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
 ; AMDGPU: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [5 x i8*] [i8* @__omp_offloading_14_a34ca11_sequential_loop_l5_exec_mode, i8* @__omp_offloading_14_a34ca11_sequential_loop_to_stack_var_l20_exec_mode, i8* @__omp_offloading_14_a34ca11_sequential_loop_to_shared_var_l35_exec_mode, i8* @__omp_offloading_14_a34ca11_sequential_loop_to_shared_var_guarded_l50_exec_mode, i8* @__omp_offloading_14_a34ca11_do_not_spmdize_target_l65_exec_mode], section "llvm.metadata"
 ; AMDGPU: @[[X:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] undef, align 32
@@ -102,10 +102,10 @@
 ;.
 ; NVPTX: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; NVPTX: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @[[GLOB0]], i32 0, i32 0) }, align 8
-; NVPTX: @[[__OMP_OFFLOADING_14_A34CA11_SEQUENTIAL_LOOP_L5_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 2
-; NVPTX: @[[__OMP_OFFLOADING_14_A34CA11_SEQUENTIAL_LOOP_TO_STACK_VAR_L20_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 2
-; NVPTX: @[[__OMP_OFFLOADING_14_A34CA11_SEQUENTIAL_LOOP_TO_SHARED_VAR_L35_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 2
-; NVPTX: @[[__OMP_OFFLOADING_14_A34CA11_SEQUENTIAL_LOOP_TO_SHARED_VAR_GUARDED_L50_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 2
+; NVPTX: @[[__OMP_OFFLOADING_14_A34CA11_SEQUENTIAL_LOOP_L5_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
+; NVPTX: @[[__OMP_OFFLOADING_14_A34CA11_SEQUENTIAL_LOOP_TO_STACK_VAR_L20_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
+; NVPTX: @[[__OMP_OFFLOADING_14_A34CA11_SEQUENTIAL_LOOP_TO_SHARED_VAR_L35_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
+; NVPTX: @[[__OMP_OFFLOADING_14_A34CA11_SEQUENTIAL_LOOP_TO_SHARED_VAR_GUARDED_L50_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
 ; NVPTX: @[[__OMP_OFFLOADING_14_A34CA11_DO_NOT_SPMDIZE_TARGET_L65_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
 ; NVPTX: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [5 x i8*] [i8* @__omp_offloading_14_a34ca11_sequential_loop_l5_exec_mode, i8* @__omp_offloading_14_a34ca11_sequential_loop_to_stack_var_l20_exec_mode, i8* @__omp_offloading_14_a34ca11_sequential_loop_to_shared_var_l35_exec_mode, i8* @__omp_offloading_14_a34ca11_sequential_loop_to_shared_var_guarded_l50_exec_mode, i8* @__omp_offloading_14_a34ca11_do_not_spmdize_target_l65_exec_mode], section "llvm.metadata"
 ; NVPTX: @[[X:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] undef, align 32

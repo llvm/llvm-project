@@ -420,7 +420,7 @@ struct LinalgTileAndFuseTensorOps
         tileSizes.begin(), tileSizes.begin() + rootOp.getNumLoops());
     SmallVector<int64_t> rootInterchange =
         tileInterchange.empty()
-            ? llvm::to_vector<6>(llvm::seq<int64_t>(0, tileSizes.size()))
+            ? llvm::to_vector<6>(llvm::seq<int64_t>(0, rootOp.getNumLoops()))
             : SmallVector<int64_t>(tileInterchange.begin(),
                                    tileInterchange.begin() +
                                        rootOp.getNumLoops());

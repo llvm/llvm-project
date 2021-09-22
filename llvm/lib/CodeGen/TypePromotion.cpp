@@ -183,6 +183,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
+    AU.setPreservesCFG();
   }
 
   StringRef getPassName() const override { return PASS_NAME; }
