@@ -124,6 +124,10 @@ struct Dependences {
   ///         dependences.
   bool isValidSchedule(Scop &S, const StatementToIslMapTy &NewSchedules) const;
 
+  /// Return true of the schedule @p NewSched is a schedule for @S that does not
+  /// violate any dependences.
+  bool isValidSchedule(Scop &S, isl::schedule NewSched) const;
+
   /// Print the stored dependence information.
   void print(llvm::raw_ostream &OS) const;
 
