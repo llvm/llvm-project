@@ -21,4 +21,3 @@ Misc Tasks
 * Find all sequences of >2 underscores and eradicate them.
 * run clang-tidy on libc++
 * Document the "conditionally-supported" bits of libc++
-* Put a static_assert in std::allocator to deny const/volatile types (LWG 2447)

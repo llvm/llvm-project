@@ -80,6 +80,7 @@ template <class _Tp>
 class _LIBCPP_TEMPLATE_VIS allocator
     : private __non_trivial_if<!is_void<_Tp>::value, allocator<_Tp> >
 {
+    static_assert(!is_volatile<_Tp>::value, "std::allocator does not support volatile types");
 public:
     typedef size_t      size_type;
     typedef ptrdiff_t   difference_type;
@@ -162,6 +163,7 @@ template <class _Tp>
 class _LIBCPP_TEMPLATE_VIS allocator<const _Tp>
     : private __non_trivial_if<!is_void<_Tp>::value, allocator<const _Tp> >
 {
+    static_assert(!is_volatile<_Tp>::value, "std::allocator does not support volatile types");
 public:
     typedef size_t      size_type;
     typedef ptrdiff_t   difference_type;
