@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[CONV:%.*]] = bitcast i64* [[ARGC_ADDR]] to i32*
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK1-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK1-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1:[0-9]+]], i1 true, i1 false, i1 false)
+// CHECK1-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1:[0-9]+]], i8 2, i1 false, i1 false)
 // CHECK1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK1:       user_code.entry:
@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP6:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
 // CHECK1-NEXT:    store i32 [[TMP2]], i32* [[DOTTHREADID_TEMP_]], align 4
 // CHECK1-NEXT:    call void @__omp_outlined__(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i64 [[TMP4]], i32* [[TMP0]], i64 [[TMP6]]) #[[ATTR3:[0-9]+]]
-// CHECK1-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 true, i1 false)
+// CHECK1-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2, i1 false)
 // CHECK1-NEXT:    ret void
 // CHECK1:       worker.exit:
 // CHECK1-NEXT:    ret void
@@ -304,10 +304,10 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP19]], 1
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK1-NEXT:    store i32 [[ADD]], i32* [[I7]], align 4
-// CHECK1-NEXT:    [[CALL:%.*]] = call i32 @_Z3fooPi(i32* [[I7]]) #[[ATTR4:[0-9]+]]
-// CHECK1-NEXT:    [[CALL13:%.*]] = call i32 @_Z3fooPi(i32* [[TMP0]]) #[[ATTR4]]
+// CHECK1-NEXT:    [[CALL:%.*]] = call i32 @_Z3fooPi(i32* [[I7]]) #[[ATTR5:[0-9]+]]
+// CHECK1-NEXT:    [[CALL13:%.*]] = call i32 @_Z3fooPi(i32* [[TMP0]]) #[[ATTR5]]
 // CHECK1-NEXT:    [[ADD14:%.*]] = add nsw i32 [[CALL]], [[CALL13]]
-// CHECK1-NEXT:    [[CALL15:%.*]] = call i32 @_Z3fooPi(i32* [[CONV]]) #[[ATTR4]]
+// CHECK1-NEXT:    [[CALL15:%.*]] = call i32 @_Z3fooPi(i32* [[CONV]]) #[[ATTR5]]
 // CHECK1-NEXT:    [[ADD16:%.*]] = add nsw i32 [[ADD14]], [[CALL15]]
 // CHECK1-NEXT:    store i32 [[ADD16]], i32* [[TMP0]], align 4
 // CHECK1-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
@@ -354,7 +354,7 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    store i32* [[A]], i32** [[A_ADDR]], align 4
 // CHECK2-NEXT:    store i32 [[DOTCAPTURE_EXPR_]], i32* [[DOTCAPTURE_EXPR__ADDR]], align 4
 // CHECK2-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[A_ADDR]], align 4
-// CHECK2-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1:[0-9]+]], i1 true, i1 false, i1 false)
+// CHECK2-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1:[0-9]+]], i8 2, i1 false, i1 false)
 // CHECK2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK2:       user_code.entry:
@@ -367,7 +367,7 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR__CASTED]], align 4
 // CHECK2-NEXT:    store i32 [[TMP2]], i32* [[DOTTHREADID_TEMP_]], align 4
 // CHECK2-NEXT:    call void @__omp_outlined__(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i32 [[TMP4]], i32* [[TMP0]], i32 [[TMP6]]) #[[ATTR3:[0-9]+]]
-// CHECK2-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 true, i1 false)
+// CHECK2-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2, i1 false)
 // CHECK2-NEXT:    ret void
 // CHECK2:       worker.exit:
 // CHECK2-NEXT:    ret void
@@ -598,10 +598,10 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP19]], 1
 // CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK2-NEXT:    store i32 [[ADD]], i32* [[I4]], align 4
-// CHECK2-NEXT:    [[CALL:%.*]] = call i32 @_Z3fooPi(i32* [[I4]]) #[[ATTR4:[0-9]+]]
-// CHECK2-NEXT:    [[CALL8:%.*]] = call i32 @_Z3fooPi(i32* [[TMP0]]) #[[ATTR4]]
+// CHECK2-NEXT:    [[CALL:%.*]] = call i32 @_Z3fooPi(i32* [[I4]]) #[[ATTR5:[0-9]+]]
+// CHECK2-NEXT:    [[CALL8:%.*]] = call i32 @_Z3fooPi(i32* [[TMP0]]) #[[ATTR5]]
 // CHECK2-NEXT:    [[ADD9:%.*]] = add nsw i32 [[CALL]], [[CALL8]]
-// CHECK2-NEXT:    [[CALL10:%.*]] = call i32 @_Z3fooPi(i32* [[ARGC_ADDR]]) #[[ATTR4]]
+// CHECK2-NEXT:    [[CALL10:%.*]] = call i32 @_Z3fooPi(i32* [[ARGC_ADDR]]) #[[ATTR5]]
 // CHECK2-NEXT:    [[ADD11:%.*]] = add nsw i32 [[ADD9]], [[CALL10]]
 // CHECK2-NEXT:    store i32 [[ADD11]], i32* [[TMP0]], align 4
 // CHECK2-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
@@ -648,7 +648,7 @@ int main(int argc, char **argv) {
 // CHECK3-NEXT:    store i32* [[A]], i32** [[A_ADDR]], align 4
 // CHECK3-NEXT:    store i32 [[DOTCAPTURE_EXPR_]], i32* [[DOTCAPTURE_EXPR__ADDR]], align 4
 // CHECK3-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[A_ADDR]], align 4
-// CHECK3-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1:[0-9]+]], i1 true, i1 false, i1 false)
+// CHECK3-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1:[0-9]+]], i8 2, i1 false, i1 false)
 // CHECK3-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK3-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK3:       user_code.entry:
@@ -661,7 +661,7 @@ int main(int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR__CASTED]], align 4
 // CHECK3-NEXT:    store i32 [[TMP2]], i32* [[DOTTHREADID_TEMP_]], align 4
 // CHECK3-NEXT:    call void @__omp_outlined__(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i32 [[TMP4]], i32* [[TMP0]], i32 [[TMP6]]) #[[ATTR3:[0-9]+]]
-// CHECK3-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 true, i1 false)
+// CHECK3-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2, i1 false)
 // CHECK3-NEXT:    ret void
 // CHECK3:       worker.exit:
 // CHECK3-NEXT:    ret void
@@ -892,10 +892,10 @@ int main(int argc, char **argv) {
 // CHECK3-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP19]], 1
 // CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK3-NEXT:    store i32 [[ADD]], i32* [[I4]], align 4
-// CHECK3-NEXT:    [[CALL:%.*]] = call i32 @_Z3fooPi(i32* [[I4]]) #[[ATTR4:[0-9]+]]
-// CHECK3-NEXT:    [[CALL8:%.*]] = call i32 @_Z3fooPi(i32* [[TMP0]]) #[[ATTR4]]
+// CHECK3-NEXT:    [[CALL:%.*]] = call i32 @_Z3fooPi(i32* [[I4]]) #[[ATTR5:[0-9]+]]
+// CHECK3-NEXT:    [[CALL8:%.*]] = call i32 @_Z3fooPi(i32* [[TMP0]]) #[[ATTR5]]
 // CHECK3-NEXT:    [[ADD9:%.*]] = add nsw i32 [[CALL]], [[CALL8]]
-// CHECK3-NEXT:    [[CALL10:%.*]] = call i32 @_Z3fooPi(i32* [[ARGC_ADDR]]) #[[ATTR4]]
+// CHECK3-NEXT:    [[CALL10:%.*]] = call i32 @_Z3fooPi(i32* [[ARGC_ADDR]]) #[[ATTR5]]
 // CHECK3-NEXT:    [[ADD11:%.*]] = add nsw i32 [[ADD9]], [[CALL10]]
 // CHECK3-NEXT:    store i32 [[ADD11]], i32* [[TMP0]], align 4
 // CHECK3-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
@@ -944,7 +944,7 @@ int main(int argc, char **argv) {
 // CHECK4-NEXT:    [[CONV:%.*]] = bitcast i64* [[ARGC_ADDR]] to i32*
 // CHECK4-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK4-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK4-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1:[0-9]+]], i1 true, i1 false, i1 false)
+// CHECK4-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1:[0-9]+]], i8 2, i1 false, i1 false)
 // CHECK4-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK4-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK4:       user_code.entry:
@@ -959,7 +959,7 @@ int main(int argc, char **argv) {
 // CHECK4-NEXT:    [[TMP6:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
 // CHECK4-NEXT:    store i32 [[TMP2]], i32* [[DOTTHREADID_TEMP_]], align 4
 // CHECK4-NEXT:    call void @__omp_outlined__(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i64 [[TMP4]], i32* [[TMP0]], i64 [[TMP6]]) #[[ATTR3:[0-9]+]]
-// CHECK4-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 true, i1 false)
+// CHECK4-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2, i1 false)
 // CHECK4-NEXT:    ret void
 // CHECK4:       worker.exit:
 // CHECK4-NEXT:    ret void
@@ -1202,10 +1202,10 @@ int main(int argc, char **argv) {
 // CHECK4-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP19]], 1
 // CHECK4-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK4-NEXT:    store i32 [[ADD]], i32* [[I7]], align 4
-// CHECK4-NEXT:    [[CALL:%.*]] = call i32 @_Z3fooPi(i32* [[I7]]) #[[ATTR4:[0-9]+]]
-// CHECK4-NEXT:    [[CALL13:%.*]] = call i32 @_Z3fooPi(i32* [[TMP0]]) #[[ATTR4]]
+// CHECK4-NEXT:    [[CALL:%.*]] = call i32 @_Z3fooPi(i32* [[I7]]) #[[ATTR5:[0-9]+]]
+// CHECK4-NEXT:    [[CALL13:%.*]] = call i32 @_Z3fooPi(i32* [[TMP0]]) #[[ATTR5]]
 // CHECK4-NEXT:    [[ADD14:%.*]] = add nsw i32 [[CALL]], [[CALL13]]
-// CHECK4-NEXT:    [[CALL15:%.*]] = call i32 @_Z3fooPi(i32* [[CONV]]) #[[ATTR4]]
+// CHECK4-NEXT:    [[CALL15:%.*]] = call i32 @_Z3fooPi(i32* [[CONV]]) #[[ATTR5]]
 // CHECK4-NEXT:    [[ADD16:%.*]] = add nsw i32 [[ADD14]], [[CALL15]]
 // CHECK4-NEXT:    store i32 [[ADD16]], i32* [[TMP0]], align 4
 // CHECK4-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
@@ -1252,7 +1252,7 @@ int main(int argc, char **argv) {
 // CHECK5-NEXT:    store i32* [[A]], i32** [[A_ADDR]], align 4
 // CHECK5-NEXT:    store i32 [[DOTCAPTURE_EXPR_]], i32* [[DOTCAPTURE_EXPR__ADDR]], align 4
 // CHECK5-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[A_ADDR]], align 4
-// CHECK5-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1:[0-9]+]], i1 true, i1 false, i1 false)
+// CHECK5-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1:[0-9]+]], i8 2, i1 false, i1 false)
 // CHECK5-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK5-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK5:       user_code.entry:
@@ -1265,7 +1265,7 @@ int main(int argc, char **argv) {
 // CHECK5-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR__CASTED]], align 4
 // CHECK5-NEXT:    store i32 [[TMP2]], i32* [[DOTTHREADID_TEMP_]], align 4
 // CHECK5-NEXT:    call void @__omp_outlined__(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i32 [[TMP4]], i32* [[TMP0]], i32 [[TMP6]]) #[[ATTR3:[0-9]+]]
-// CHECK5-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 true, i1 false)
+// CHECK5-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2, i1 false)
 // CHECK5-NEXT:    ret void
 // CHECK5:       worker.exit:
 // CHECK5-NEXT:    ret void
@@ -1496,10 +1496,10 @@ int main(int argc, char **argv) {
 // CHECK5-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP19]], 1
 // CHECK5-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK5-NEXT:    store i32 [[ADD]], i32* [[I4]], align 4
-// CHECK5-NEXT:    [[CALL:%.*]] = call i32 @_Z3fooPi(i32* [[I4]]) #[[ATTR4:[0-9]+]]
-// CHECK5-NEXT:    [[CALL8:%.*]] = call i32 @_Z3fooPi(i32* [[TMP0]]) #[[ATTR4]]
+// CHECK5-NEXT:    [[CALL:%.*]] = call i32 @_Z3fooPi(i32* [[I4]]) #[[ATTR5:[0-9]+]]
+// CHECK5-NEXT:    [[CALL8:%.*]] = call i32 @_Z3fooPi(i32* [[TMP0]]) #[[ATTR5]]
 // CHECK5-NEXT:    [[ADD9:%.*]] = add nsw i32 [[CALL]], [[CALL8]]
-// CHECK5-NEXT:    [[CALL10:%.*]] = call i32 @_Z3fooPi(i32* [[ARGC_ADDR]]) #[[ATTR4]]
+// CHECK5-NEXT:    [[CALL10:%.*]] = call i32 @_Z3fooPi(i32* [[ARGC_ADDR]]) #[[ATTR5]]
 // CHECK5-NEXT:    [[ADD11:%.*]] = add nsw i32 [[ADD9]], [[CALL10]]
 // CHECK5-NEXT:    store i32 [[ADD11]], i32* [[TMP0]], align 4
 // CHECK5-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
@@ -1546,7 +1546,7 @@ int main(int argc, char **argv) {
 // CHECK6-NEXT:    store i32* [[A]], i32** [[A_ADDR]], align 4
 // CHECK6-NEXT:    store i32 [[DOTCAPTURE_EXPR_]], i32* [[DOTCAPTURE_EXPR__ADDR]], align 4
 // CHECK6-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[A_ADDR]], align 4
-// CHECK6-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1:[0-9]+]], i1 true, i1 false, i1 false)
+// CHECK6-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1:[0-9]+]], i8 2, i1 false, i1 false)
 // CHECK6-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK6-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK6:       user_code.entry:
@@ -1559,7 +1559,7 @@ int main(int argc, char **argv) {
 // CHECK6-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR__CASTED]], align 4
 // CHECK6-NEXT:    store i32 [[TMP2]], i32* [[DOTTHREADID_TEMP_]], align 4
 // CHECK6-NEXT:    call void @__omp_outlined__(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i32 [[TMP4]], i32* [[TMP0]], i32 [[TMP6]]) #[[ATTR3:[0-9]+]]
-// CHECK6-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 true, i1 false)
+// CHECK6-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2, i1 false)
 // CHECK6-NEXT:    ret void
 // CHECK6:       worker.exit:
 // CHECK6-NEXT:    ret void
@@ -1790,10 +1790,10 @@ int main(int argc, char **argv) {
 // CHECK6-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP19]], 1
 // CHECK6-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK6-NEXT:    store i32 [[ADD]], i32* [[I4]], align 4
-// CHECK6-NEXT:    [[CALL:%.*]] = call i32 @_Z3fooPi(i32* [[I4]]) #[[ATTR4:[0-9]+]]
-// CHECK6-NEXT:    [[CALL8:%.*]] = call i32 @_Z3fooPi(i32* [[TMP0]]) #[[ATTR4]]
+// CHECK6-NEXT:    [[CALL:%.*]] = call i32 @_Z3fooPi(i32* [[I4]]) #[[ATTR5:[0-9]+]]
+// CHECK6-NEXT:    [[CALL8:%.*]] = call i32 @_Z3fooPi(i32* [[TMP0]]) #[[ATTR5]]
 // CHECK6-NEXT:    [[ADD9:%.*]] = add nsw i32 [[CALL]], [[CALL8]]
-// CHECK6-NEXT:    [[CALL10:%.*]] = call i32 @_Z3fooPi(i32* [[ARGC_ADDR]]) #[[ATTR4]]
+// CHECK6-NEXT:    [[CALL10:%.*]] = call i32 @_Z3fooPi(i32* [[ARGC_ADDR]]) #[[ATTR5]]
 // CHECK6-NEXT:    [[ADD11:%.*]] = add nsw i32 [[ADD9]], [[CALL10]]
 // CHECK6-NEXT:    store i32 [[ADD11]], i32* [[TMP0]], align 4
 // CHECK6-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]

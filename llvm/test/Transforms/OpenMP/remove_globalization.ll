@@ -14,8 +14,8 @@ target triple = "nvptx64"
 
 %struct.ident_t = type { i32, i32, i32, i32, i8* }
 
-declare i32 @__kmpc_target_init(%struct.ident_t*, i1, i1, i1)
-declare void @__kmpc_target_deinit(%struct.ident_t*, i1, i1)
+declare i32 @__kmpc_target_init(%struct.ident_t*, i8, i1, i1)
+declare void @__kmpc_target_deinit(%struct.ident_t*, i8, i1)
 
 ;.
 ; CHECK: @[[S:[a-zA-Z0-9_$"\\.-]+]] = external local_unnamed_addr global i8*
@@ -25,28 +25,28 @@ declare void @__kmpc_target_deinit(%struct.ident_t*, i1, i1)
 define void @kernel() {
 ; CHECK-LABEL: define {{[^@]+}}@kernel() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* nonnull null, i1 false, i1 false, i1 true)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* nonnull null, i8 1, i1 false, i1 true)
 ; CHECK-NEXT:    call void @foo() #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    call void @bar() #[[ATTR4]]
 ; CHECK-NEXT:    call void @unknown_no_openmp()
-; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* nonnull null, i1 false, i1 true)
+; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* nonnull null, i8 1, i1 true)
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@kernel() {
 ; CHECK-DISABLED-NEXT:  entry:
-; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* nonnull null, i1 false, i1 false, i1 true)
+; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* nonnull null, i8 1, i1 false, i1 true)
 ; CHECK-DISABLED-NEXT:    call void @foo() #[[ATTR4:[0-9]+]]
 ; CHECK-DISABLED-NEXT:    call void @bar() #[[ATTR4]]
 ; CHECK-DISABLED-NEXT:    call void @unknown_no_openmp()
-; CHECK-DISABLED-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* nonnull null, i1 false, i1 true)
+; CHECK-DISABLED-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* nonnull null, i8 1, i1 true)
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 entry:
-  %0 = call i32 @__kmpc_target_init(%struct.ident_t* nonnull null, i1 false, i1 true, i1 true)
+  %0 = call i32 @__kmpc_target_init(%struct.ident_t* nonnull null, i8 1, i1 true, i1 true)
   call void @foo()
   call void @bar()
   call void @unknown_no_openmp()
-  call void @__kmpc_target_deinit(%struct.ident_t* nonnull null, i1 false, i1 true)
+  call void @__kmpc_target_deinit(%struct.ident_t* nonnull null, i8 1, i1 true)
   ret void
 }
 

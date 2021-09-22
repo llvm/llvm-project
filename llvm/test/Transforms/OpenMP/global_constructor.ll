@@ -10,7 +10,7 @@
 
 define weak void @__omp_offloading_fd02_85283c04_main_l11(double* nonnull align 8 dereferenceable(8) %X) local_unnamed_addr {
 entry:
-  %0 = tail call i32 @__kmpc_target_init(%struct.ident_t* nonnull @1, i1 true, i1 false, i1 false) #0
+  %0 = tail call i32 @__kmpc_target_init(%struct.ident_t* nonnull @1, i8 2, i1 false, i1 false) #0
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %common.ret
 
@@ -29,13 +29,13 @@ region.guarded:
 
 region.barrier:
   tail call void @__kmpc_barrier_simple_spmd(%struct.ident_t* nonnull @1, i32 %2)
-  tail call void @__kmpc_target_deinit(%struct.ident_t* nonnull @1, i1 true, i1 false) #0
+  tail call void @__kmpc_target_deinit(%struct.ident_t* nonnull @1, i8 2, i1 false) #0
   br label %common.ret
 }
 
-declare i32 @__kmpc_target_init(%struct.ident_t*, i1, i1, i1) local_unnamed_addr
+declare i32 @__kmpc_target_init(%struct.ident_t*, i8, i1, i1) local_unnamed_addr
 
-declare void @__kmpc_target_deinit(%struct.ident_t*, i1, i1) local_unnamed_addr
+declare void @__kmpc_target_deinit(%struct.ident_t*, i8, i1) local_unnamed_addr
 
 define internal void @__omp_offloading__fd02_85283c04_Device_l6_ctor() {
 entry:
@@ -78,7 +78,7 @@ attributes #1 = { convergent nounwind }
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_fd02_85283c04_main_l11
 ; CHECK-SAME: (double* nonnull align 8 dereferenceable(8) [[X:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @__kmpc_target_init(%struct.ident_t* nonnull @[[GLOB1:[0-9]+]], i1 true, i1 false, i1 false) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @__kmpc_target_init(%struct.ident_t* nonnull @[[GLOB1:[0-9]+]], i8 2, i1 false, i1 false) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       common.ret:
@@ -93,6 +93,6 @@ attributes #1 = { convergent nounwind }
 ; CHECK-NEXT:    br label [[REGION_BARRIER]]
 ; CHECK:       region.barrier:
 ; CHECK-NEXT:    tail call void @__kmpc_barrier_simple_spmd(%struct.ident_t* nonnull @[[GLOB1]], i32 [[TMP2]]) #[[ATTR1]]
-; CHECK-NEXT:    tail call void @__kmpc_target_deinit(%struct.ident_t* nonnull @[[GLOB1]], i1 true, i1 false) #[[ATTR1]]
+; CHECK-NEXT:    tail call void @__kmpc_target_deinit(%struct.ident_t* nonnull @[[GLOB1]], i8 2, i1 false) #[[ATTR1]]
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;

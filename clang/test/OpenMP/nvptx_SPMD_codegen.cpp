@@ -21,28 +21,28 @@ int a;
 // CHECK-NOT: @__omp_offloading_{{.+}}_exec_mode = weak constant i8 1
 
 void foo() {
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
 // CHECK-DAG: [[DISTR_LIGHT]]
 // CHECK-DAG: [[FOR_LIGHT]]
 // CHECK-DAG: [[LIGHT]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
 // CHECK-DAG: [[DISTR_LIGHT]]
 // CHECK-DAG: [[FOR_LIGHT]]
 // CHECK-DAG: [[LIGHT]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
 // CHECK-DAG: [[DISTR_LIGHT]]
 // CHECK-DAG: [[FOR_LIGHT]]
 // CHECK-DAG: [[LIGHT]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[DISTR_FULL]]
 // CHECK-DAG: [[FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[DISTR_FULL]]
 // CHECK-DAG: [[FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[DISTR_FULL]]
 // CHECK-DAG: [[FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[DISTR_FULL]]
 // CHECK-DAG: [[FULL]]
 #pragma omp target teams distribute parallel for simd if(a)
@@ -67,28 +67,28 @@ void foo() {
   for (int i = 0; i < 10; ++i)
     ;
 int a;
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
 // CHECK-DAG: [[DISTR_LIGHT]]
 // CHECK-DAG: [[FOR_LIGHT]]
 // CHECK-DAG: [[LIGHT]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
 // CHECK-DAG: [[DISTR_LIGHT]]
 // CHECK-DAG: [[FOR_LIGHT]]
 // CHECK-DAG: [[LIGHT]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
 // CHECK-DAG: [[DISTR_LIGHT]]
 // CHECK-DAG: [[FOR_LIGHT]]
 // CHECK-DAG: [[LIGHT]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[DISTR_FULL]]
 // CHECK-DAG: [[FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[DISTR_FULL]]
 // CHECK-DAG: [[FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[DISTR_FULL]]
 // CHECK-DAG: [[FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[DISTR_FULL]]
 // CHECK-DAG: [[FULL]]
 #pragma omp target teams distribute parallel for lastprivate(a)
@@ -112,25 +112,25 @@ int a;
 #pragma omp target teams distribute parallel for schedule(guided)
   for (int i = 0; i < 10; ++i)
     ;
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
 // CHECK-DAG: [[DISTR_LIGHT]]
 // CHECK-DAG: [[FOR_LIGHT]]
 // CHECK-DAG: [[LIGHT]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
 // CHECK-DAG: [[DISTR_LIGHT]]
 // CHECK-DAG: [[FOR_LIGHT]]
 // CHECK-DAG: [[LIGHT]]
 // CHECK: call i32 @__kmpc_target_init(
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[DISTR_FULL]]
 // CHECK-DAG: [[FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[DISTR_FULL]]
 // CHECK-DAG: [[FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[DISTR_FULL]]
 // CHECK-DAG: [[FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[DISTR_FULL]]
 // CHECK-DAG: [[FULL]]
 #pragma omp target teams
@@ -172,28 +172,28 @@ int a;
 #pragma omp distribute parallel for simd schedule(guided)
   for (int i = 0; i < 10; ++i)
     ;
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
 // CHECK-DAG: [[DISTR_LIGHT]]
 // CHECK-DAG: [[FOR_LIGHT]]
 // CHECK-DAG: [[LIGHT]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
 // CHECK-DAG: [[DISTR_LIGHT]]
 // CHECK-DAG: [[FOR_LIGHT]]
 // CHECK-DAG: [[LIGHT]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
 // CHECK-DAG: [[DISTR_LIGHT]]
 // CHECK-DAG: [[FOR_LIGHT]]
 // CHECK-DAG: [[LIGHT]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[DISTR_FULL]]
 // CHECK-DAG: [[FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[DISTR_FULL]]
 // CHECK-DAG: [[FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[DISTR_FULL]]
 // CHECK-DAG: [[FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[DISTR_FULL]]
 // CHECK-DAG: [[FULL]]
 #pragma omp target teams
@@ -224,28 +224,28 @@ int a;
 #pragma omp distribute parallel for schedule(guided)
   for (int i = 0; i < 10; ++i)
     ;
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
 // CHECK-DAG: [[DISTR_LIGHT]]
 // CHECK-DAG: [[FOR_LIGHT]]
 // CHECK-DAG: [[LIGHT]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
 // CHECK-DAG: [[DISTR_LIGHT]]
 // CHECK-DAG: [[FOR_LIGHT]]
 // CHECK-DAG: [[LIGHT]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
 // CHECK-DAG: [[DISTR_LIGHT]]
 // CHECK-DAG: [[FOR_LIGHT]]
 // CHECK-DAG: [[LIGHT]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[DISTR_FULL]]
 // CHECK-DAG: [[FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[DISTR_FULL]]
 // CHECK-DAG: [[FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[DISTR_FULL]]
 // CHECK-DAG: [[FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[DISTR_FULL]]
 // CHECK-DAG: [[FULL]]
 #pragma omp target
@@ -283,22 +283,22 @@ int a;
 #pragma omp distribute parallel for schedule(guided)
   for (int i = 0; i < 10; ++i)
     ;
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
 // CHECK-DAG: [[FOR_LIGHT]]
 // CHECK-DAG: [[LIGHT]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
 // CHECK-DAG: [[FOR_LIGHT]]
 // CHECK-DAG: [[LIGHT]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
 // CHECK-DAG: [[FOR_LIGHT]]
 // CHECK-DAG: [[LIGHT]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[FULL]]
 #pragma omp target parallel for if(a)
   for (int i = 0; i < 10; ++i)
@@ -321,28 +321,28 @@ int a;
 #pragma omp target parallel for schedule(guided)
   for (int i = 0; i < 10; ++i)
     ;
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
 // CHECK-DAG: [[FOR_LIGHT]]
 // CHECK-DAG: [[LIGHT]]
 // CHECK-DAG: [[BAR_LIGHT]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
 // CHECK-DAG: [[FOR_LIGHT]]
 // CHECK-DAG: [[LIGHT]]
 // CHECK-DAG: [[BAR_LIGHT]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
 // CHECK-DAG: [[FOR_LIGHT]]
 // CHECK-DAG: [[LIGHT]]
 // CHECK-DAG: [[BAR_LIGHT]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[FULL]]
 // CHECK-DAG: [[BAR_FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[FULL]]
 // CHECK-DAG: [[BAR_FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[FULL]]
 // CHECK-DAG: [[BAR_FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[FULL]]
 // CHECK-DAG: [[BAR_FULL]]
 #pragma omp target parallel if(a)
@@ -373,27 +373,27 @@ int a;
 #pragma omp for simd schedule(guided)
   for (int i = 0; i < 10; ++i)
     ;
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[FULL]]
 // CHECK-DAG: [[BAR_FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
 // CHECK-DAG: [[FOR_LIGHT]]
 // CHECK-DAG: [[LIGHT]]
 // CHECK-DAG: [[BAR_LIGHT]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
 // CHECK-DAG: [[FOR_LIGHT]]
 // CHECK-DAG: [[LIGHT]]
 // CHECK-DAG: [[BAR_LIGHT]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[FULL]]
 // CHECK-DAG: [[BAR_FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[FULL]]
 // CHECK-DAG: [[BAR_FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[FULL]]
 // CHECK-DAG: [[BAR_FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[FULL]]
 // CHECK-DAG: [[BAR_FULL]]
 #pragma omp target
@@ -431,22 +431,22 @@ int a;
 #pragma omp for simd schedule(guided)
   for (int i = 0; i < 10; ++i)
     ;
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
 // CHECK-DAG: [[FOR_LIGHT]]
 // CHECK-DAG: [[LIGHT]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
 // CHECK-DAG: [[FOR_LIGHT]]
 // CHECK-DAG: [[LIGHT]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
 // CHECK-DAG: [[FOR_LIGHT]]
 // CHECK-DAG: [[LIGHT]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[FULL]]
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-DAG: [[FULL]]
 #pragma omp target
 #pragma omp parallel for

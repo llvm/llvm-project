@@ -256,7 +256,7 @@ extern uint16_t EXTERN_SHARED(nThreads);
 extern omptarget_nvptx_ThreadPrivateContext *
     EXTERN_SHARED(omptarget_nvptx_threadPrivateContext);
 
-extern uint32_t EXTERN_SHARED(execution_param);
+extern int8_t EXTERN_SHARED(execution_param);
 extern void *EXTERN_SHARED(ReductionScratchpadPtr);
 
 ////////////////////////////////////////////////////////////////////////////////

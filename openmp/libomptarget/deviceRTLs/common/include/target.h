@@ -36,7 +36,7 @@ typedef struct ident ident_t;
 ///
 /// \code
 /// void kernel(...) {
-///   ThreadKind = __kmpc_target_init(Ident, /* IsSPMD */ false,
+///   ThreadKind = __kmpc_target_init(Ident, /* Mode */ 1,
 ///                                   /* UseGenericStateMachine */ true,
 ///                                   /* RequiresFullRuntime */ ... );
 ///   if (ThreadKind == -1) {
@@ -50,7 +50,7 @@ typedef struct ident ident_t;
 ///
 /// \code
 /// void kernel(...) {
-///   ThreadKind = __kmpc_target_init(Ident, /* IsSPMD */ false,
+///   ThreadKind = __kmpc_target_init(Ident, /* Mode */ 1,
 ///                                   /* UseGenericStateMachine */ false,
 ///                                   /* RequiresFullRuntime */ ... );
 ///   if (ThreadKind == -1) {
@@ -72,7 +72,7 @@ typedef struct ident ident_t;
 ///
 /// \param Ident               Source location identification, can be NULL.
 ///
-int32_t __kmpc_target_init(ident_t *Ident, bool IsSPMD,
+int32_t __kmpc_target_init(ident_t *Ident, int8_t Mode,
                            bool UseGenericStateMachine,
                            bool RequiresFullRuntime);
 
@@ -86,7 +86,7 @@ int32_t __kmpc_target_init(ident_t *Ident, bool IsSPMD,
 ///
 /// \param Ident Source location identification, can be NULL.
 ///
-void __kmpc_target_deinit(ident_t *Ident, bool IsSPMD,
+void __kmpc_target_deinit(ident_t *Ident, int8_t Mode,
                           bool RequiresFullRuntime);
 
 ///}

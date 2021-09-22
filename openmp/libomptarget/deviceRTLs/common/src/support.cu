@@ -19,19 +19,18 @@
 // Execution Parameters
 ////////////////////////////////////////////////////////////////////////////////
 
-void setExecutionParameters(ExecutionMode EMode, RuntimeMode RMode) {
+void setExecutionParameters(OMPTgtExecModeFlags EMode,
+                            OMPTgtRuntimeModeFlags RMode) {
   execution_param = EMode;
   execution_param |= RMode;
 }
 
-bool isGenericMode() { return (execution_param & ModeMask) == Generic; }
+bool isGenericMode() { return execution_param & OMP_TGT_EXEC_MODE_GENERIC; }
 
-bool isRuntimeUninitialized() {
-  return (execution_param & RuntimeMask) == RuntimeUninitialized;
-}
+bool isRuntimeUninitialized() { return !isRuntimeInitialized(); }
 
 bool isRuntimeInitialized() {
-  return (execution_param & RuntimeMask) == RuntimeInitialized;
+  return execution_param & OMP_TGT_RUNTIME_INITIALIZED;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

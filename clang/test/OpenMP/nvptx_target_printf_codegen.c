@@ -48,7 +48,7 @@ void CheckAllocaIsInEntryBlock() {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[FMT:%.*]] = alloca i8*, align 8
 // CHECK-64-NEXT:    [[TMP:%.*]] = alloca [[PRINTF_ARGS:%.*]], align 8
-// CHECK-64-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1:[0-9]+]], i1 false, i1 true, i1 true)
+// CHECK-64-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1:[0-9]+]], i8 1, i1 true, i1 true)
 // CHECK-64-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK-64-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-64:       user_code.entry:
@@ -62,7 +62,7 @@ void CheckAllocaIsInEntryBlock() {
 // CHECK-64-NEXT:    store double 3.000000e+00, double* [[TMP4]], align 8
 // CHECK-64-NEXT:    [[TMP5:%.*]] = bitcast %printf_args* [[TMP]] to i8*
 // CHECK-64-NEXT:    [[TMP6:%.*]] = call i32 @vprintf(i8* [[TMP1]], i8* [[TMP5]])
-// CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
+// CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
@@ -71,12 +71,12 @@ void CheckAllocaIsInEntryBlock() {
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_CheckNoArgs_l25
 // CHECK-64-SAME: () #[[ATTR0]] {
 // CHECK-64-NEXT:  entry:
-// CHECK-64-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i1 false, i1 true, i1 true)
+// CHECK-64-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 true, i1 true)
 // CHECK-64-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK-64-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @vprintf(i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str1, i64 0, i64 0), i8* null)
-// CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
+// CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
@@ -89,7 +89,7 @@ void CheckAllocaIsInEntryBlock() {
 // CHECK-64-NEXT:    [[TMP:%.*]] = alloca [[PRINTF_ARGS_0:%.*]], align 8
 // CHECK-64-NEXT:    store i64 [[FOO]], i64* [[FOO_ADDR]], align 8
 // CHECK-64-NEXT:    [[CONV:%.*]] = bitcast i64* [[FOO_ADDR]] to i32*
-// CHECK-64-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i1 false, i1 true, i1 true)
+// CHECK-64-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 true, i1 true)
 // CHECK-64-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK-64-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-64:       user_code.entry:
@@ -105,7 +105,7 @@ void CheckAllocaIsInEntryBlock() {
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       if.end:
-// CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
+// CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK-64-NEXT:    ret void
 //
 //
@@ -117,7 +117,7 @@ void CheckAllocaIsInEntryBlock() {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[FMT:%.*]] = alloca i8*, align 4
 // CHECK-32-NEXT:    [[TMP:%.*]] = alloca [[PRINTF_ARGS:%.*]], align 8
-// CHECK-32-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1:[0-9]+]], i1 false, i1 true, i1 true)
+// CHECK-32-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1:[0-9]+]], i8 1, i1 true, i1 true)
 // CHECK-32-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK-32-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-32:       user_code.entry:
@@ -131,7 +131,7 @@ void CheckAllocaIsInEntryBlock() {
 // CHECK-32-NEXT:    store double 3.000000e+00, double* [[TMP4]], align 8
 // CHECK-32-NEXT:    [[TMP5:%.*]] = bitcast %printf_args* [[TMP]] to i8*
 // CHECK-32-NEXT:    [[TMP6:%.*]] = call i32 @vprintf(i8* [[TMP1]], i8* [[TMP5]])
-// CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
+// CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
@@ -140,12 +140,12 @@ void CheckAllocaIsInEntryBlock() {
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_CheckNoArgs_l25
 // CHECK-32-SAME: () #[[ATTR0]] {
 // CHECK-32-NEXT:  entry:
-// CHECK-32-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i1 false, i1 true, i1 true)
+// CHECK-32-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 true, i1 true)
 // CHECK-32-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK-32-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @vprintf(i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str1, i32 0, i32 0), i8* null)
-// CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
+// CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
@@ -157,7 +157,7 @@ void CheckAllocaIsInEntryBlock() {
 // CHECK-32-NEXT:    [[FOO_ADDR:%.*]] = alloca i32, align 4
 // CHECK-32-NEXT:    [[TMP:%.*]] = alloca [[PRINTF_ARGS_0:%.*]], align 8
 // CHECK-32-NEXT:    store i32 [[FOO]], i32* [[FOO_ADDR]], align 4
-// CHECK-32-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i1 false, i1 true, i1 true)
+// CHECK-32-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 true, i1 true)
 // CHECK-32-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK-32-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-32:       user_code.entry:
@@ -173,6 +173,6 @@ void CheckAllocaIsInEntryBlock() {
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       if.end:
-// CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
+// CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK-32-NEXT:    ret void
 //
