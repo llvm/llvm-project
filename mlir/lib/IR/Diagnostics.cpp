@@ -131,6 +131,14 @@ Diagnostic &Diagnostic::operator<<(Operation &val) {
   return *this << os.str();
 }
 
+/// Stream in a Value.
+Diagnostic &Diagnostic::operator<<(Value val) {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  val.print(os);
+  return *this << os.str();
+}
+
 /// Outputs this diagnostic to a stream.
 void Diagnostic::print(raw_ostream &os) const {
   for (auto &arg : getArguments())

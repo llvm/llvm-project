@@ -4336,6 +4336,7 @@ cc_library(
     hdrs = ["include/mlir/Conversion/SCFToOpenMP/SCFToOpenMP.h"],
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":ConversionPassIncGen",
         ":IR",
         ":LLVMDialect",

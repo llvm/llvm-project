@@ -597,6 +597,19 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
+        Return the output block arguments of the region.
+      }],
+      /*retTy=*/"Block::BlockArgListType",
+      /*methodName=*/"getRegionOutputArgs",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        Block &entryBlock = this->getOperation()->getRegion(0).front();
+        return entryBlock.getArguments().take_back(this->getNumOutputs());
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return the `opOperand` shape or an empty vector for scalars.
       }],
       /*retTy=*/"ArrayRef<int64_t>",
