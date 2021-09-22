@@ -29,7 +29,7 @@ template<class _Tp> struct _LIBCPP_TEMPLATE_VIS is_bind_expression
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp>
-_LIBCPP_INLINE_VAR constexpr size_t is_bind_expression_v = is_bind_expression<_Tp>::value;
+inline constexpr size_t is_bind_expression_v = is_bind_expression<_Tp>::value;
 #endif
 
 template<class _Tp> struct __is_placeholder : public integral_constant<int, 0> {};
@@ -38,7 +38,7 @@ template<class _Tp> struct _LIBCPP_TEMPLATE_VIS is_placeholder
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp>
-_LIBCPP_INLINE_VAR constexpr size_t is_placeholder_v = is_placeholder<_Tp>::value;
+inline constexpr size_t is_placeholder_v = is_placeholder<_Tp>::value;
 #endif
 
 namespace placeholders
@@ -58,16 +58,16 @@ _LIBCPP_FUNC_VIS extern const __ph<8>   _8;
 _LIBCPP_FUNC_VIS extern const __ph<9>   _9;
 _LIBCPP_FUNC_VIS extern const __ph<10> _10;
 #else
-/* _LIBCPP_INLINE_VAR */ constexpr __ph<1>   _1{};
-/* _LIBCPP_INLINE_VAR */ constexpr __ph<2>   _2{};
-/* _LIBCPP_INLINE_VAR */ constexpr __ph<3>   _3{};
-/* _LIBCPP_INLINE_VAR */ constexpr __ph<4>   _4{};
-/* _LIBCPP_INLINE_VAR */ constexpr __ph<5>   _5{};
-/* _LIBCPP_INLINE_VAR */ constexpr __ph<6>   _6{};
-/* _LIBCPP_INLINE_VAR */ constexpr __ph<7>   _7{};
-/* _LIBCPP_INLINE_VAR */ constexpr __ph<8>   _8{};
-/* _LIBCPP_INLINE_VAR */ constexpr __ph<9>   _9{};
-/* _LIBCPP_INLINE_VAR */ constexpr __ph<10> _10{};
+/* inline */ constexpr __ph<1>   _1{};
+/* inline */ constexpr __ph<2>   _2{};
+/* inline */ constexpr __ph<3>   _3{};
+/* inline */ constexpr __ph<4>   _4{};
+/* inline */ constexpr __ph<5>   _5{};
+/* inline */ constexpr __ph<6>   _6{};
+/* inline */ constexpr __ph<7>   _7{};
+/* inline */ constexpr __ph<8>   _8{};
+/* inline */ constexpr __ph<9>   _9{};
+/* inline */ constexpr __ph<10> _10{};
 #endif // defined(_LIBCPP_CXX03_LANG) || defined(_LIBCPP_BUILDING_LIBRARY)
 
 }  // placeholders
