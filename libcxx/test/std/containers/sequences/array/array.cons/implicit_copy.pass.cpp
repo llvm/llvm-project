@@ -15,10 +15,6 @@
 #include <cassert>
 #include "test_macros.h"
 
-// std::array is explicitly allowed to be initialized with A a = { init-list };.
-// Disable the missing braces warning for this reason.
-#include "disable_missing_braces_warning.h"
-
 // In C++03 the copy assignment operator is not deleted when the implicitly
 // generated operator would be ill-formed; like in the case of a struct with a
 // const member.

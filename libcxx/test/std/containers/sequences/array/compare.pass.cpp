@@ -22,10 +22,6 @@
 #include "test_macros.h"
 #include "test_comparisons.h"
 
-// std::array is explicitly allowed to be initialized with A a = { init-list };.
-// Disable the missing braces warning for this reason.
-#include "disable_missing_braces_warning.h"
-
 TEST_CONSTEXPR_CXX20 bool tests()
 {
     {

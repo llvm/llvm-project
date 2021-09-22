@@ -22,10 +22,6 @@
 
 #include "test_macros.h"
 
-// std::array is explicitly allowed to be initialized with A a = { init-list };.
-// Disable the missing braces warning for this reason.
-#include "disable_missing_braces_warning.h"
-
 template <class Array>
 void test_compare(const Array& LHS, const Array& RHS) {
   typedef std::vector<typename Array::value_type> Vector;
