@@ -66,7 +66,8 @@ public:
 
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &info) const override {
-    return false;
+    // return false;
+    return true;
   }
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
