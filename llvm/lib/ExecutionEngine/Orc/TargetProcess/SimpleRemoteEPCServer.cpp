@@ -113,6 +113,13 @@ void SimpleRemoteEPCServer::handleDisconnect(Error Err) {
   // Wait for dispatcher to clear.
   D->shutdown();
 
+  // Shut down services.
+  while (!Services.empty()) {
+    ShutdownErr =
+      joinErrors(std::move(ShutdownErr), Services.back()->shutdown());
+    Services.pop_back();
+  }
+
   std::lock_guard<std::mutex> Lock(ServerStateMutex);
   ShutdownErr = joinErrors(std::move(ShutdownErr), std::move(Err));
   RunState = ServerShutDown;
