@@ -231,9 +231,23 @@ public:
                : (IsUnsigned ? B.CreateUDiv(LHS, RHS) : B.CreateSDiv(LHS, RHS));
   }
 
-  /// Extracts the element at (\p RowIdx, \p ColumnIdx) from \p Matrix.
-  Value *CreateExtractElement(Value *Matrix, Value *RowIdx, Value *ColumnIdx,
-                              unsigned NumRows, Twine const &Name = "") {
+  /// Create an assumption that \p Idx is less than \p NumElements.
+  void CreateIndexAssumption(Value *Idx, unsigned NumElements,
+                             Twine const &Name = "") {
+
+    Value *NumElts =
+        B.getIntN(Idx->getType()->getScalarSizeInBits(), NumElements);
+    auto *Cmp = B.CreateICmpULT(Idx, NumElts);
+    if (auto *ConstCond = dyn_cast<ConstantInt>(Cmp))
+      assert(ConstCond->isOne() && "Index must be valid!");
+    else
+      B.CreateAssumption(Cmp);
+  }
+
+  /// Compute the index to access the element at (\p RowIdx, \p ColumnIdx) from
+  /// a matrix with \p NumRows embedded in a vector.
+  Value *CreateIndex(Value *RowIdx, Value *ColumnIdx, unsigned NumRows,
+                     Twine const &Name = "") {
 
     unsigned MaxWidth = std::max(RowIdx->getType()->getScalarSizeInBits(),
                                  ColumnIdx->getType()->getScalarSizeInBits());
@@ -241,9 +255,7 @@ public:
     RowIdx = B.CreateZExt(RowIdx, IntTy);
     ColumnIdx = B.CreateZExt(ColumnIdx, IntTy);
     Value *NumRowsV = B.getIntN(MaxWidth, NumRows);
-    return B.CreateExtractElement(
-        Matrix, B.CreateAdd(B.CreateMul(ColumnIdx, NumRowsV), RowIdx),
-        "matext");
+    return B.CreateAdd(B.CreateMul(ColumnIdx, NumRowsV), RowIdx);
   }
 };
 
