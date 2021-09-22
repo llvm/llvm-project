@@ -290,6 +290,7 @@ public:
   void instrumentMemAccessInline(Value *Ptr, bool IsWrite,
                                  unsigned AccessSizeIndex,
                                  Instruction *InsertBefore);
+  bool ignoreMemIntrinsic(MemIntrinsic *MI);
   void instrumentMemIntrinsic(MemIntrinsic *MI);
   bool instrumentMemAccess(InterestingMemoryOperand &O);
   bool ignoreAccess(Instruction *Inst, Value *Ptr);
@@ -798,11 +799,11 @@ bool HWAddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
   if (Ptr->isSwiftError())
     return true;
 
-  if (!InstrumentStack) {
-    if (findAllocaForValue(Ptr))
+  if (findAllocaForValue(Ptr)) {
+    if (!InstrumentStack)
       return true;
-  } else if (SSI && SSI->accessIsSafe(*Inst)) {
-    return true;
+    if (SSI && SSI->stackAccessIsSafe(*Inst))
+      return true;
   }
   return false;
 }
@@ -992,6 +993,16 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
   IRB.CreateCall(Asm, PtrLong);
   if (Recover)
     cast<BranchInst>(CheckFailTerm)->setSuccessor(0, CheckTerm->getParent());
+}
+
+bool HWAddressSanitizer::ignoreMemIntrinsic(MemIntrinsic *MI) {
+  if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(MI)) {
+    return (!ClInstrumentWrites || ignoreAccess(MTI, MTI->getDest())) &&
+           (!ClInstrumentReads || ignoreAccess(MTI, MTI->getSource()));
+  }
+  if (isa<MemSetInst>(MI))
+    return !ClInstrumentWrites || ignoreAccess(MI, MI->getDest());
+  return false;
 }
 
 void HWAddressSanitizer::instrumentMemIntrinsic(MemIntrinsic *MI) {
@@ -1542,7 +1553,8 @@ bool HWAddressSanitizer::sanitizeFunction(
       getInterestingMemoryOperands(&Inst, OperandsToInstrument);
 
       if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(&Inst))
-        IntrinToInstrument.push_back(MI);
+        if (!ignoreMemIntrinsic(MI))
+          IntrinToInstrument.push_back(MI);
     }
   }
 
