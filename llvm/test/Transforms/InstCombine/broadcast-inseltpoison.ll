@@ -132,7 +132,7 @@ define <4 x float> @splat_undef3(float %arg) {
 ; CHECK-LABEL: @splat_undef3(
 ; CHECK-NEXT:    [[T:%.*]] = insertelement <4 x float> poison, float [[ARG:%.*]], i32 0
 ; CHECK-NEXT:    [[T4:%.*]] = shufflevector <4 x float> [[T]], <4 x float> poison, <4 x i32> <i32 0, i32 0, i32 undef, i32 undef>
-; CHECK-NEXT:    [[T6:%.*]] = shufflevector <4 x float> [[T]], <4 x float> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[T6:%.*]] = shufflevector <4 x float> [[T]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[T7:%.*]] = fadd <4 x float> [[T6]], [[T4]]
 ; CHECK-NEXT:    ret <4 x float> [[T7]]
 ;

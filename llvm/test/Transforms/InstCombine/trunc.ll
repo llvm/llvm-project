@@ -963,7 +963,7 @@ define <3 x i31> @wide_splat3(<3 x i33> %x) {
 
 define <8 x i8> @wide_lengthening_splat(<4 x i16> %v) {
 ; CHECK-LABEL: @wide_lengthening_splat(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i16> [[V:%.*]], <4 x i16> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i16> [[V:%.*]], <4 x i16> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TR:%.*]] = trunc <8 x i16> [[SHUF]] to <8 x i8>
 ; CHECK-NEXT:    ret <8 x i8> [[TR]]
 ;

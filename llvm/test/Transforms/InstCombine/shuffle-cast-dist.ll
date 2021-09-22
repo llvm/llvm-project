@@ -112,7 +112,7 @@ define <4 x i16> @bc_shuf_elemtype_mismatch(<2 x half> %x, <2 x bfloat> %y) {
 define <2 x float> @bc_shuf_reuse(<4 x i32> %x){
 ; CHECK-LABEL: @bc_shuf_reuse(
 ; CHECK-NEXT:    [[XB:%.*]] = bitcast <4 x i32> [[X:%.*]] to <4 x float>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[XB]], <4 x float> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[XB]], <4 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %xb = bitcast <4 x i32> %x to <4 x float>
@@ -139,7 +139,7 @@ define <4 x float> @bc_shuf_neither_hasoneuse(<4 x i32> %x, <4 x i32> %y){
 ; CHECK-LABEL: @bc_shuf_neither_hasoneuse(
 ; CHECK-NEXT:    [[XB:%.*]] = bitcast <4 x i32> [[X:%.*]] to <4 x float>
 ; CHECK-NEXT:    [[YB:%.*]] = bitcast <4 x i32> [[Y:%.*]] to <4 x float>
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x float> [[XB]], <4 x float> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x float> [[XB]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[SUM:%.*]] = fadd <4 x float> [[XB]], [[YB]]
 ; CHECK-NEXT:    [[R:%.*]] = fadd <4 x float> [[SUM]], [[SHUF]]
 ; CHECK-NEXT:    ret <4 x float> [[R]]
