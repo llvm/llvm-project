@@ -950,7 +950,7 @@ duration_cast(const duration<_Rep, _Period>& __fd)
 template <class _Rep>
 struct _LIBCPP_TEMPLATE_VIS treat_as_floating_point : is_floating_point<_Rep> {};
 
-#if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
+#if _LIBCPP_STD_VER > 14
 template <class _Rep>
 inline constexpr bool treat_as_floating_point_v = treat_as_floating_point<_Rep>::value;
 #endif

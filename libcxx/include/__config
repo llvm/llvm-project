@@ -484,10 +484,6 @@ typedef __char32_t char32_t;
 #  define _LIBCPP_HAS_BLOCKS_RUNTIME
 #endif
 
-#if !(__has_feature(cxx_variable_templates))
-#define _LIBCPP_HAS_NO_VARIABLE_TEMPLATES
-#endif
-
 #if !(__has_feature(cxx_noexcept))
 #define _LIBCPP_HAS_NO_NOEXCEPT
 #endif
@@ -516,11 +512,6 @@ typedef __char32_t char32_t;
 #  define _LIBCPP_NO_EXCEPTIONS
 #endif
 
-// GCC 5 supports variable templates
-#if !defined(__cpp_variable_templates) || __cpp_variable_templates < 201304L
-#define _LIBCPP_HAS_NO_VARIABLE_TEMPLATES
-#endif
-
 #if !defined(__SANITIZE_ADDRESS__)
 #define _LIBCPP_HAS_NO_ASAN
 #endif
@@ -539,7 +530,6 @@ typedef __char32_t char32_t;
 #error "MSVC versions prior to Visual Studio 2015 are not supported"
 #endif
 
-#define _LIBCPP_HAS_NO_VARIABLE_TEMPLATES
 #define __alignof__ __alignof
 #define _LIBCPP_NORETURN __declspec(noreturn)
 #define _ALIGNAS(x) __declspec(align(x))
@@ -563,7 +553,6 @@ typedef __char32_t char32_t;
 #define _LIBCPP_NORETURN __attribute__((noreturn))
 
 #define _LIBCPP_HAS_NO_UNICODE_CHARS
-#define _LIBCPP_HAS_NO_VARIABLE_TEMPLATES
 
 #if defined(_AIX)
 #define __MULTILOCALE_API
