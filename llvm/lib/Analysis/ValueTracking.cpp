@@ -280,8 +280,7 @@ bool llvm::haveNoCommonBitsSet(const Value *LHS, const Value *RHS,
 }
 
 bool llvm::isOnlyUsedInZeroEqualityComparison(const Instruction *I) {
-  // FIXME: Should not return true if there are no users.
-  return all_of(I->users(), [](const User *U) {
+  return !I->user_empty() && all_of(I->users(), [](const User *U) {
     ICmpInst::Predicate P;
     return match(U, m_ICmp(P, m_Value(), m_Zero())) && ICmpInst::isEquality(P);
   });
