@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fenable-matrix -triple x86_64-apple-darwin %s -emit-llvm -disable-llvm-passes -o - -std=c++11 | FileCheck %s
+// RUN: %clang_cc1 -O0 -fenable-matrix -triple x86_64-apple-darwin %s -emit-llvm -disable-llvm-passes -o - -std=c++11 | FileCheck %s
+// RUN: %clang_cc1 -O1 -fenable-matrix -triple x86_64-apple-darwin %s -emit-llvm -disable-llvm-passes -o - -std=c++11 | FileCheck --check-prefixes=CHECK,OPT %s
 
 typedef double dx5x5_t __attribute__((matrix_type(5, 5)));
 using fx2x3_t = float __attribute__((matrix_type(2, 3)));
@@ -94,7 +95,7 @@ struct DoubleWrapper2 {
 
 void test_DoubleWrapper2_Add1(MyMatrix<double, 10, 9> &m) {
   // CHECK-LABEL: define{{.*}} void @_Z24test_DoubleWrapper2_Add1R8MyMatrixIdLj10ELj9EE(
-  // CHECK:       [[MATRIX:%.*]] = load <90 x double>, <90 x double>* %1, align 8
+  // CHECK:       [[MATRIX:%.*]] = load <90 x double>, <90 x double>* {{.+}}, align 8
   // CHECK:       [[SCALAR:%.*]] = call double @_ZN14DoubleWrapper2cvdEv(%struct.DoubleWrapper2* {{[^,]*}} %w2)
   // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> poison, double [[SCALAR]], i32 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <90 x double> [[SCALAR_EMBED]], <90 x double> poison, <90 x i32> zeroinitializer
@@ -109,7 +110,7 @@ void test_DoubleWrapper2_Add1(MyMatrix<double, 10, 9> &m) {
 void test_DoubleWrapper2_Add2(MyMatrix<double, 10, 9> &m) {
   // CHECK-LABEL: define{{.*}} void @_Z24test_DoubleWrapper2_Add2R8MyMatrixIdLj10ELj9EE(
   // CHECK:       [[SCALAR:%.*]] = call double @_ZN14DoubleWrapper2cvdEv(%struct.DoubleWrapper2* {{[^,]*}} %w2)
-  // CHECK:       [[MATRIX:%.*]] = load <90 x double>, <90 x double>* %1, align 8
+  // CHECK:       [[MATRIX:%.*]] = load <90 x double>, <90 x double>* {{.*}}, align 8
   // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> poison, double [[SCALAR]], i32 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <90 x double> [[SCALAR_EMBED]], <90 x double> poison, <90 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fadd <90 x double> [[SCALAR_EMBED1]], [[MATRIX]]
@@ -219,6 +220,8 @@ void test_insert_template1(MyMatrix<unsigned, 2, 2> &Mat, unsigned e, unsigned i
   // CHECK-NEXT:    [[IDX1:%.*]] = mul i64 [[J_EXT]], 2
   // CHECK-NEXT:    [[IDX2:%.*]] = add i64 [[IDX1]], [[I_EXT]]
   // CHECK-NEXT:    [[MAT_ADDR:%.*]] = bitcast [4 x i32]* {{.*}} to <4 x i32>*
+  // OPT-NEXT:      [[CMP:%.*]] = icmp ult i64 [[IDX2]], 4
+  // OPT-NEXT:      call void @llvm.assume(i1 [[CMP]])
   // CHECK-NEXT:    [[MAT:%.*]] = load <4 x i32>, <4 x i32>* [[MAT_ADDR]], align 4
   // CHECK-NEXT:    [[MATINS:%.*]] = insertelement <4 x i32> [[MAT]], i32 [[E]], i64 [[IDX2]]
   // CHECK-NEXT:    store <4 x i32> [[MATINS]], <4 x i32>* [[MAT_ADDR]], align 4
@@ -243,6 +246,8 @@ void test_insert_template2(MyMatrix<float, 3, 8> &Mat, float e) {
   // CHECK-NEXT:    [[IDX1:%.*]] = mul i64 [[J_EXT]], 3
   // CHECK-NEXT:    [[IDX2:%.*]] = add i64 [[IDX1]], [[I_EXT]]
   // CHECK-NEXT:    [[MAT_ADDR:%.*]] = bitcast [24 x float]* {{.*}} to <24 x float>*
+  // OPT-NEXT:      [[CMP:%.*]] = icmp ult i64 [[IDX2]], 24
+  // OPT-NEXT:      call void @llvm.assume(i1 [[CMP]])
   // CHECK-NEXT:    [[MAT:%.*]] = load <24 x float>, <24 x float>* [[MAT_ADDR]], align 4
   // CHECK-NEXT:    [[MATINS:%.*]] = insertelement <24 x float> [[MAT]], float [[E]], i64 [[IDX2]]
   // CHECK-NEXT:    store <24 x float> [[MATINS]], <24 x float>* [[MAT_ADDR]], align 4
@@ -292,10 +297,10 @@ const double &test_matrix_subscript_reference(const double4x4 m) {
   // CHECK-NEXT:    [[REF_TMP:%.*]] = alloca double, align 8
   // CHECK-NEXT:    [[NAMELESS0:%.*]] = bitcast [16 x double]* [[M_ADDR]] to <16 x double>*
   // CHECK-NEXT:    store <16 x double> [[M:%.*]], <16 x double>* [[NAMELESS0]], align 8
-  // CHECK-NEXT:    [[NAMELESS1:%.*]] = load <16 x double>, <16 x double>* [[NAMELESS0]], align 8
+  // CHECK:         [[NAMELESS1:%.*]] = load <16 x double>, <16 x double>* [[NAMELESS0]], align 8
   // CHECK-NEXT:    [[MATEXT:%.*]] = extractelement <16 x double> [[NAMELESS1]], i64 4
   // CHECK-NEXT:    store double [[MATEXT]], double* [[REF_TMP]], align 8
-  // CHECK-NEXT:    ret double* [[REF_TMP]]
+  // CHECK:         ret double* [[REF_TMP]]
 
   return m[0][1];
 }
@@ -315,11 +320,13 @@ double extract_IntWrapper_idx(double4x4 &m, IntWrapper i, UnsignedWrapper j) {
   // CHECK-NEXT:    [[J:%.*]] = call i32 @_ZN15UnsignedWrappercvjEv(%struct.UnsignedWrapper* {{[^,]*}} %j)
   // CHECK-NEXT:    [[J_SUB:%.*]] = sub i32 [[J]], 1
   // CHECK-NEXT:    [[J_SUB_EXT:%.*]] = zext i32 [[J_SUB]] to i64
+  // CHECK-NEXT:    [[IDX1:%.*]] = mul i64 [[J_SUB_EXT]], 4
+  // CHECK-NEXT:    [[IDX2:%.*]] = add i64 [[IDX1]], [[I_ADD_EXT]]
+  // OPT-NEXT:      [[CMP:%.*]] = icmp ult i64 [[IDX2]], 16
+  // OPT-NEXT:      call void @llvm.assume(i1 [[CMP]])
   // CHECK-NEXT:    [[MAT_ADDR:%.*]] = load [16 x double]*, [16 x double]** %m.addr, align 8
   // CHECK-NEXT:    [[MAT_ADDR2:%.*]] = bitcast [16 x double]* [[MAT_ADDR]] to <16 x double>*
   // CHECK-NEXT:    [[MAT:%.*]] = load <16 x double>, <16 x double>* [[MAT_ADDR2]], align 8
-  // CHECK-NEXT:    [[IDX1:%.*]] = mul i64 [[J_SUB_EXT]], 4
-  // CHECK-NEXT:    [[IDX2:%.*]] = add i64 [[IDX1]], [[I_ADD_EXT]]
   // CHECK-NEXT:    [[MATEXT:%.*]]  = extractelement <16 x double> [[MAT]], i64 [[IDX2]]
   // CHECK-NEXT:    ret double [[MATEXT]]
   return m[i + 1][j - 1];
@@ -358,6 +365,8 @@ void test_constexpr1(matrix_type<float, 4, 4> &m) {
   // CHECK-NEXT:   [[IDX1:%.*]] = mul i64 [[I2_EXT]], 4
   // CHECK-NEXT:   [[IDX2:%.*]] = add i64 [[IDX1]], [[I_EXT]]
   // CHECK-NEXT:   [[MAT_ADDR:%.*]] = bitcast [16 x float]* %result to <16 x float>*
+  // OPT-NEXT:     [[CMP:%.*]] = icmp ult i64 [[IDX2]], 16
+  // OPT-NEXT:     call void @llvm.assume(i1 [[CMP]])
   // CHECK-NEXT:   [[MAT:%.*]] = load <16 x float>, <16 x float>* [[MAT_ADDR]], align 4
   // CHECK-NEXT:   [[MATINS:%.*]] = insertelement <16 x float> [[MAT]], float 1.000000e+00, i64 [[IDX2]]
   // CHECK-NEXT:   store <16 x float> [[MATINS]], <16 x float>* [[MAT_ADDR]], align 4
@@ -386,6 +395,8 @@ void test_constexpr2(matrix_type<int, 5, 5> &m) {
   // CHECK-NEXT:   [[IDX1:%.*]] = mul i64 [[I2_EXT]], 5
   // CHECK-NEXT:   [[IDX2:%.*]] = add i64 [[IDX1]], [[I_EXT]]
   // CHECK-NEXT:   [[MAT_ADDR:%.*]] = bitcast [25 x i32]* %result to <25 x i32>*
+  // OPT-NEXT:     [[CMP:%.*]] = icmp ult i64 [[IDX2]], 25
+  // OPT-NEXT:     call void @llvm.assume(i1 [[CMP]])
   // CHECK-NEXT:   [[MAT:%.*]] = load <25 x i32>, <25 x i32>* [[MAT_ADDR]], align 4
   // CHECK-NEXT:   [[MATINS:%.*]] = insertelement <25 x i32> [[MAT]], i32 1, i64 [[IDX2]]
   // CHECK-NEXT:   store <25 x i32> [[MATINS]], <25 x i32>* [[MAT_ADDR]], align 4
