@@ -1578,6 +1578,7 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::STRICT_UINT_TO_FP:  Res = PromoteIntOp_STRICT_UINT_TO_FP(N); break;
   case ISD::ZERO_EXTEND:  Res = PromoteIntOp_ZERO_EXTEND(N); break;
   case ISD::EXTRACT_SUBVECTOR: Res = PromoteIntOp_EXTRACT_SUBVECTOR(N); break;
+  case ISD::INSERT_SUBVECTOR: Res = PromoteIntOp_INSERT_SUBVECTOR(N); break;
 
   case ISD::SHL:
   case ISD::SRA:
@@ -5075,6 +5076,21 @@ SDValue DAGTypeLegalizer::PromoteIntOp_EXTRACT_VECTOR_ELT(SDNode *N) {
   // EXTRACT_VECTOR_ELT can return types which are wider than the incoming
   // element types. If this is the case then we need to expand the outgoing
   // value and not truncate it.
+  return DAG.getAnyExtOrTrunc(Ext, dl, N->getValueType(0));
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_INSERT_SUBVECTOR(SDNode *N) {
+  SDLoc dl(N);
+  // The result type is equal to the first input operand's type, so the
+  // type that needs promoting must be the second source vector.
+  SDValue V0 = N->getOperand(0);
+  SDValue V1 = GetPromotedInteger(N->getOperand(1));
+  SDValue Idx = N->getOperand(2);
+  EVT PromVT = EVT::getVectorVT(*DAG.getContext(),
+                                V1.getValueType().getVectorElementType(),
+                                V0.getValueType().getVectorElementCount());
+  V0 = DAG.getAnyExtOrTrunc(V0, dl, PromVT);
+  SDValue Ext = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, PromVT, V0, V1, Idx);
   return DAG.getAnyExtOrTrunc(Ext, dl, N->getValueType(0));
 }
 
