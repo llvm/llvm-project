@@ -48,12 +48,29 @@ Status NativeThreadWindows::DoResume(lldb::StateType resume_state) {
     return Status();
 
   if (resume_state == eStateStepping) {
+    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
+
     uint32_t flags_index =
         GetRegisterContext().ConvertRegisterKindToRegisterNumber(
             eRegisterKindGeneric, LLDB_REGNUM_GENERIC_FLAGS);
     uint64_t flags_value =
         GetRegisterContext().ReadRegisterAsUnsigned(flags_index, 0);
-    flags_value |= 0x100; // Set the trap flag on the CPU
+    NativeProcessProtocol &process = GetProcess();
+    const ArchSpec &arch = process.GetArchitecture();
+    switch (arch.GetMachine()) {
+    case llvm::Triple::x86:
+    case llvm::Triple::x86_64:
+      flags_value |= 0x100; // Set the trap flag on the CPU
+      break;
+    case llvm::Triple::aarch64:
+    case llvm::Triple::arm:
+    case llvm::Triple::thumb:
+      flags_value |= 0x200000; // The SS bit in PState
+      break;
+    default:
+      LLDB_LOG(log, "single stepping unsupported on this architecture");
+      break;
+    }
     GetRegisterContext().WriteRegisterFromUnsigned(flags_index, flags_value);
   }
 
