@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fenable-matrix -triple x86_64-apple-darwin %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s
+// RUN: %clang_cc1 -O0 -fenable-matrix -triple x86_64-apple-darwin %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK %s
+// RUN: %clang_cc1 -O1 -fenable-matrix -triple x86_64-apple-darwin %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,OPT %s
 
 typedef double dx5x5_t __attribute__((matrix_type(5, 5)));
 typedef float fx2x3_t __attribute__((matrix_type(2, 3)));
@@ -506,7 +507,7 @@ void multiply_matrix_matrix_double(dx5x5_t b, dx5x5_t c) {
   // CHECK-NEXT:    [[RES:%.*]] = call <25 x double> @llvm.matrix.multiply.v25f64.v25f64.v25f64(<25 x double> [[B]], <25 x double> [[C]], i32 5, i32 5, i32 5)
   // CHECK-NEXT:    [[A_ADDR:%.*]] = bitcast [25 x double]* %a to <25 x double>*
   // CHECK-NEXT:    store <25 x double> [[RES]], <25 x double>* [[A_ADDR]], align 8
-  // CHECK-NEXT:    ret void
+  // CHECK:         ret void
   //
 
   dx5x5_t a;
@@ -531,7 +532,7 @@ typedef int ix9x9_t __attribute__((matrix_type(9, 9)));
 // CHECK-NEXT:    [[RES:%.*]] = call <81 x i32> @llvm.matrix.multiply.v81i32.v27i32.v27i32(<27 x i32> [[B]], <27 x i32> [[C]], i32 9, i32 3, i32 9)
 // CHECK-NEXT:    [[A_ADDR:%.*]] = bitcast [81 x i32]* %a to <81 x i32>*
 // CHECK-NEXT:    store <81 x i32> [[RES]], <81 x i32>* [[A_ADDR]], align 4
-// CHECK-NEXT:    ret void
+// CHECK:         ret void
 //
 void multiply_matrix_matrix_int(ix9x3_t b, ix3x9_t c) {
   ix9x9_t a;
@@ -874,6 +875,8 @@ void insert_float_matrix_idx_i_u_float(fx2x3_t b, float e, int j, unsigned k) {
   // CHECK-NEXT:    [[K_EXT:%.*]] = zext i32 [[K]] to i64
   // CHECK-NEXT:    [[IDX1:%.*]] = mul i64 [[K_EXT]], 2
   // CHECK-NEXT:    [[IDX2:%.*]] = add i64 [[IDX1]], [[J_EXT]]
+  // OPT-NEXT:      [[CMP:%.*]] = icmp ult i64 [[IDX2]], 6
+  // OPT-NEXT:      call void @llvm.assume(i1 [[CMP]])
   // CHECK-NEXT:    [[MAT:%.*]] = load <6 x float>, <6 x float>* [[MAT_ADDR:%.*]], align 4
   // CHECK-NEXT:    [[MATINS:%.*]] = insertelement <6 x float> [[MAT]], float [[E]], i64 [[IDX2]]
   // CHECK-NEXT:    store <6 x float> [[MATINS]], <6 x float>* [[MAT_ADDR]], align 4
@@ -890,6 +893,8 @@ void insert_float_matrix_idx_s_ull_float(fx2x3_t b, float e, short j, unsigned l
   // CHECK-NEXT:    [[K:%.*]] = load i64, i64* %k.addr, align 8
   // CHECK-NEXT:    [[IDX1:%.*]] = mul i64 [[K]], 2
   // CHECK-NEXT:    [[IDX2:%.*]] = add i64 [[IDX1]], [[J_EXT]]
+  // OPT-NEXT:      [[CMP:%.*]] = icmp ult i64 [[IDX2]], 6
+  // OPT-NEXT:      call void @llvm.assume(i1 [[CMP]])
   // CHECK-NEXT:    [[MAT:%.*]] = load <6 x float>, <6 x float>* [[MAT_ADDR:%.*]], align 4
   // CHECK-NEXT:    [[MATINS:%.*]] = insertelement <6 x float> [[MAT]], float [[E]], i64 [[IDX2]]
   // CHECK-NEXT:    store <6 x float> [[MATINS]], <6 x float>* [[MAT_ADDR]], align 4
@@ -907,6 +912,8 @@ void insert_int_idx_expr(ix9x3_t a, int i) {
   // CHECK-NEXT:    [[I2_ADD:%.*]] = add nsw i32 4, [[I2]]
   // CHECK-NEXT:    [[ADD_EXT:%.*]] = sext i32 [[I2_ADD]] to i64
   // CHECK-NEXT:    [[IDX2:%.*]] = add i64 18, [[ADD_EXT]]
+  // OPT-NEXT:      [[CMP:%.*]] = icmp ult i64 [[IDX2]], 27
+  // OPT-NEXT:      call void @llvm.assume(i1 [[CMP]])
   // CHECK-NEXT:    [[MAT:%.*]] = load <27 x i32>, <27 x i32>* [[MAT_ADDR:%.*]], align 4
   // CHECK-NEXT:    [[MATINS:%.*]] = insertelement <27 x i32> [[MAT]], i32 [[I1]], i64 [[IDX2]]
   // CHECK-NEXT:    store <27 x i32> [[MATINS]], <27 x i32>* [[MAT_ADDR]], align 4
@@ -980,9 +987,11 @@ int extract_int(ix9x3_t c, unsigned long j) {
   // CHECK-LABEL: @extract_int(
   // CHECK:         [[J1:%.*]] = load i64, i64* %j.addr, align 8
   // CHECK-NEXT:    [[J2:%.*]] = load i64, i64* %j.addr, align 8
-  // CHECK-NEXT:    [[MAT:%.*]] = load <27 x i32>, <27 x i32>* {{.*}}, align 4
   // CHECK-NEXT:    [[IDX1:%.*]] = mul i64 [[J2]], 9
   // CHECK-NEXT:    [[IDX2:%.*]] = add i64 [[IDX1]], [[J1]]
+  // OPT-NEXT:      [[CMP:%.*]] = icmp ult i64 [[IDX2]], 27
+  // OPT-NEXT:      call void @llvm.assume(i1 [[CMP]])
+  // CHECK-NEXT:    [[MAT:%.*]] = load <27 x i32>, <27 x i32>* {{.*}}, align 4
   // CHECK-NEXT:    [[MATEXT:%.*]] = extractelement <27 x i32> [[MAT]], i64 [[IDX2]]
   // CHECK-NEXT:    ret i32 [[MATEXT]]
 
@@ -995,13 +1004,15 @@ double test_extract_matrix_pointer1(dx3x2_t **ptr, unsigned j) {
   // CHECK-LABEL: @test_extract_matrix_pointer1(
   // CHECK:         [[J:%.*]] = load i32, i32* %j.addr, align 4
   // CHECK-NEXT:    [[J_EXT:%.*]] = zext i32 [[J]] to i64
+  // CHECK-NEXT:    [[IDX:%.*]] = add i64 3, [[J_EXT]]
+  // OPT-NEXT:      [[CMP:%.*]] = icmp ult i64 [[IDX]], 6
+  // OPT-NEXT:      call void @llvm.assume(i1 [[CMP]])
   // CHECK-NEXT:    [[PTR:%.*]] = load [6 x double]**, [6 x double]*** %ptr.addr, align 8
   // CHECK-NEXT:    [[PTR_IDX:%.*]] = getelementptr inbounds [6 x double]*, [6 x double]** [[PTR]], i64 1
   // CHECK-NEXT:    [[PTR2:%.*]] = load [6 x double]*, [6 x double]** [[PTR_IDX]], align 8
   // CHECK-NEXT:    [[PTR2_IDX:%.*]] = getelementptr inbounds [6 x double], [6 x double]* [[PTR2]], i64 2
   // CHECK-NEXT:    [[MAT_ADDR:%.*]] = bitcast [6 x double]* [[PTR2_IDX]] to <6 x double>*
   // CHECK-NEXT:    [[MAT:%.*]] = load <6 x double>, <6 x double>* [[MAT_ADDR]], align 8
-  // CHECK-NEXT:    [[IDX:%.*]] = add i64 3, [[J_EXT]]
   // CHECK-NEXT:    [[MATEXT:%.*]] = extractelement <6 x double> [[MAT]], i64 [[IDX]]
   // CHECK-NEXT:    ret double [[MATEXT]]
 
@@ -1027,13 +1038,17 @@ void insert_extract(dx5x5_t a, fx3x3_t b, unsigned long j, short k) {
   // CHECK-LABEL: @insert_extract(
   // CHECK:         [[K:%.*]] = load i16, i16* %k.addr, align 2
   // CHECK-NEXT:    [[K_EXT:%.*]] = sext i16 [[K]] to i64
-  // CHECK-NEXT:    [[MAT:%.*]] = load <9 x float>, <9 x float>* [[MAT_ADDR:%.*]], align 4
   // CHECK-NEXT:    [[IDX1:%.*]] = mul i64 [[K_EXT]], 3
   // CHECK-NEXT:    [[IDX2:%.*]] = add i64 [[IDX1]], 0
-  // CHECK-NEXT:    [[MATEXT:%.*]] = extractelement <9 x float> [[MAT]], i64 [[IDX]]
+  // OPT-NEXT:      [[CMP:%.*]] = icmp ult i64 [[IDX2]], 9
+  // OPT-NEXT:      call void @llvm.assume(i1 [[CMP]])
+  // CHECK-NEXT:    [[MAT:%.*]] = load <9 x float>, <9 x float>* [[MAT_ADDR:%.*]], align 4
+  // CHECK-NEXT:    [[MATEXT:%.*]] = extractelement <9 x float> [[MAT]], i64 [[IDX2]]
   // CHECK-NEXT:    [[J:%.*]] = load i64, i64* %j.addr, align 8
   // CHECK-NEXT:    [[IDX3:%.*]] = mul i64 [[J]], 3
   // CHECK-NEXT:    [[IDX4:%.*]] = add i64 [[IDX3]], 2
+  // OPT-NEXT:      [[CMP:%.*]] = icmp ult i64 [[IDX4]], 9
+  // OPT-NEXT:      call void @llvm.assume(i1 [[CMP]])
   // CHECK-NEXT:    [[MAT2:%.*]] = load <9 x float>, <9 x float>* [[MAT_ADDR]], align 4
   // CHECK-NEXT:    [[MATINS:%.*]] = insertelement <9 x float> [[MAT2]], float [[MATEXT]], i64 [[IDX4]]
   // CHECK-NEXT:    store <9 x float> [[MATINS]], <9 x float>* [[MAT_ADDR]], align 4
@@ -1068,9 +1083,13 @@ void insert_compound_stmt_field(struct Foo *a, float f, unsigned i, unsigned j) 
   // CHECK-NEXT:    [[IDX1:%.*]] = mul i64 [[J_EXT]], 2
   // CHECK-NEXT:    [[IDX2:%.*]] = add i64 [[IDX1]], [[I_EXT]]
   // CHECK-NEXT:    [[MAT_PTR:%.*]] = bitcast [6 x float]* %mat to <6 x float>*
+  // OPT-NEXT:      [[CMP:%.*]] = icmp ult i64 [[IDX2]], 6
+  // OPT-NEXT:      call void @llvm.assume(i1 [[CMP]])
   // CHECK-NEXT:    [[MAT:%.*]] = load <6 x float>, <6 x float>* [[MAT_PTR]], align 4
   // CHECK-NEXT:    [[EXT:%.*]] = extractelement <6 x float> [[MAT]], i64 [[IDX2]]
   // CHECK-NEXT:    [[SUM:%.*]] = fadd float [[EXT]], {{.*}}
+  // OPT-NEXT:      [[CMP:%.*]] = icmp ult i64 [[IDX2]], 6
+  // OPT-NEXT:      call void @llvm.assume(i1 [[CMP]])
   // CHECK-NEXT:    [[MAT2:%.*]] = load <6 x float>, <6 x float>* [[MAT_PTR]], align 4
   // CHECK-NEXT:    [[INS:%.*]] = insertelement <6 x float> [[MAT2]], float [[SUM]], i64 [[IDX2]]
   // CHECK-NEXT:    store <6 x float> [[INS]], <6 x float>* [[MAT_PTR]], align 4
@@ -1085,23 +1104,29 @@ void matrix_as_idx(ix9x3_t a, int i, int j, dx5x5_t b) {
   // CHECK-NEXT:  [[I1_EXT:%.*]] = sext i32 [[I1]] to i64
   // CHECK-NEXT:  [[J1:%.*]] = load i32, i32* %j.addr, align 4
   // CHECK-NEXT:  [[J1_EXT:%.*]] = sext i32 [[J1]] to i64
-  // CHECK-NEXT:  [[A:%.*]] = load <27 x i32>, <27 x i32>* %0, align 4
   // CHECK-NEXT:  [[IDX1_1:%.*]] = mul i64 [[J1_EXT]], 9
   // CHECK-NEXT:  [[IDX1_2:%.*]] = add i64 [[IDX1_1]], [[I1_EXT]]
+  // OPT-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IDX1_2]], 27
+  // OPT-NEXT:    call void @llvm.assume(i1 [[CMP]])
+  // CHECK-NEXT:  [[A:%.*]] = load <27 x i32>, <27 x i32>* %0, align 4
   // CHECK-NEXT:  [[MI1:%.*]] = extractelement <27 x i32> [[A]], i64 [[IDX1_2]]
   // CHECK-NEXT:  [[MI1_EXT:%.*]] = sext i32 [[MI1]] to i64
   // CHECK-NEXT:  [[J2:%.*]] = load i32, i32* %j.addr, align 4
   // CHECK-NEXT:  [[J2_EXT:%.*]] = sext i32 [[J2]] to i64
   // CHECK-NEXT:  [[I2:%.*]] = load i32, i32* %i.addr, align 4
   // CHECK-NEXT:  [[I2_EXT:%.*]] = sext i32 [[I2]] to i64
-  // CHECK-NEXT:  [[A2:%.*]] = load <27 x i32>, <27 x i32>* {{.*}}, align 4
   // CHECK-NEXT:  [[IDX2_1:%.*]] = mul i64 [[I2_EXT]], 9
   // CHECK-NEXT:  [[IDX2_2:%.*]] = add i64 [[IDX2_1]], [[J2_EXT]]
+  // OPT-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IDX2_2]], 27
+  // OPT-NEXT:    call void @llvm.assume(i1 [[CMP]])
+  // CHECK-NEXT:  [[A2:%.*]] = load <27 x i32>, <27 x i32>* {{.*}}, align 4
   // CHECK-NEXT:  [[MI2:%.*]] = extractelement <27 x i32> [[A2]], i64 [[IDX2_2]]
   // CHECK-NEXT:  [[MI3:%.*]] = add nsw i32 [[MI2]], 2
   // CHECK-NEXT:  [[MI3_EXT:%.*]] = sext i32 [[MI3]] to i64
   // CHECK-NEXT:  [[IDX3_1:%.*]] = mul i64 [[MI3_EXT]], 5
   // CHECK-NEXT:  [[IDX3_2:%.*]] = add i64 [[IDX3_1]], [[MI1_EXT]]
+  // OPT-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IDX3_2]], 25
+  // OPT-NEXT:    call void @llvm.assume(i1 [[CMP]])
   // CHECK-NEXT:  [[B:%.*]] = load <25 x double>, <25 x double>* [[B_PTR:%.*]], align 8
   // CHECK-NEXT:  [[INS:%.*]] = insertelement <25 x double> [[B]], double 1.500000e+00, i64 [[IDX3_2]]
   // CHECK-NEXT:  store <25 x double> [[INS]], <25 x double>* [[B_PTR]], align 8
