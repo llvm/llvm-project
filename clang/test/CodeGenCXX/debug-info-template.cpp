@@ -245,3 +245,16 @@ void f1() {}
 template void f1<decltype(nullptr)>();
 // CHECK: !DISubprogram(name: "f1<std::nullptr_t>",
 } // namespace Nullptr_t
+
+namespace TemplateTemplateParamInlineNamespace {
+inline namespace inl {
+  template<typename>
+  struct t1 { };
+} // namespace inl
+template<template<typename> class> void f1() { }
+template void f1<t1>();
+// CHECK: !DISubprogram(name: "f1<TemplateTemplateParamInlineNamespace::inl::t1>",
+// CHECK-SAME: templateParams: ![[TEMP_TEMP_INL_ARGS:[0-9]*]],
+// CHECK: ![[TEMP_TEMP_INL_ARGS]] = !{![[TEMP_TEMP_INL_ARGS_T:[0-9]*]]}
+// CHECK: ![[TEMP_TEMP_INL_ARGS_T]] = !DITemplateValueParameter(tag: DW_TAG_GNU_template_template_param, value: !"TemplateTemplateParamInlineNamespace::inl::t1")
+} // namespace TemplateTemplateParamInlineNamespace
