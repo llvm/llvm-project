@@ -299,6 +299,21 @@ entry:
   ret <vscale x 6 x i16> %retval
 }
 
+; This tests promotion of the input operand to INSERT_SUBVECTOR.
+define <vscale x 8 x i16> @insert_nxv8i16_nxv2i16(<vscale x 8 x i16> %vec, <vscale x 2 x i16> %in) nounwind {
+; CHECK-LABEL: insert_nxv8i16_nxv2i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpklo z2.s, z0.h
+; CHECK-NEXT:    uunpklo z2.d, z2.s
+; CHECK-NEXT:    uzp1 z1.s, z2.s, z1.s
+; CHECK-NEXT:    uunpkhi z0.s, z0.h
+; CHECK-NEXT:    uzp1 z0.h, z1.h, z0.h
+; CHECK-NEXT:    ret
+  %r = call <vscale x 8 x i16> @llvm.experimental.vector.insert.nxv8i16.nxv2i16(<vscale x 8 x i16> %vec, <vscale x 2 x i16> %in, i64 2)
+  ret <vscale x 8 x i16> %r
+}
+
+
 ; Fixed length clamping
 
 define <vscale x 2 x i64> @insert_fixed_v2i64_nxv2i64(<vscale x 2 x i64> %vec, <2 x i64> %subvec) nounwind #0 {
@@ -362,3 +377,5 @@ declare <vscale x 16 x i64> @llvm.experimental.vector.insert.nxv8i64.nxv16i64(<v
 declare <vscale x 16 x i64> @llvm.experimental.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64>, <2 x i64>, i64)
 declare <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.nxv1i32(<vscale x 4 x i32>, <vscale x 1 x i32>, i64)
 declare <vscale x 6 x i16> @llvm.experimental.vector.insert.nxv6i16.nxv1i16(<vscale x 6 x i16>, <vscale x 1 x i16>, i64)
+
+declare <vscale x 8 x i16> @llvm.experimental.vector.insert.nxv8i16.nxv2i16(<vscale x 8 x i16>, <vscale x 2 x i16>, i64)
