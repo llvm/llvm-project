@@ -146,7 +146,7 @@ namespace Templates {
   auto fwd_decl(); // expected-note {{candidate template ignored: could not match 'auto ()' against 'int ()'}}
   int g = fwd_decl<char>();
 
-  auto (*p)() = f1; // expected-error {{incompatible initializer}}
+  auto (*p)() = f1; // expected-error {{variable 'p' with type 'auto (*)()' has incompatible initializer of type '<overloaded function type>'}}
   auto (*q)() = f1<int>; // ok
 
   typedef decltype(f2(1.2)) dbl; // cxx14_20-note {{previous}}

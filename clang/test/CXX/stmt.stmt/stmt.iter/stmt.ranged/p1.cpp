@@ -336,9 +336,9 @@ namespace p0962r1 {
   void use(NA::A a, NB::B b, NC::C c, ND::D d, NE::E e, NF::F f) {
     for (auto x : a) {}
     for (auto x : b) {}
-    for (auto x : c) {} // expected-error {{no viable 'end' function}}
-    for (auto x : d) {} // expected-error {{no viable 'begin' function}}
-    for (auto x : e) {} // expected-error {{no viable 'begin' function}}
-    for (auto x : f) {} // expected-error {{no viable 'end' function}}
+    for (auto x : c) {} // expected-error {{invalid range expression of type 'p0962r1::NC::C'; no viable 'end' function available}}
+    for (auto x : d) {} // expected-error {{invalid range expression of type 'p0962r1::ND::D'; no viable 'begin' function available}}
+    for (auto x : e) {} // expected-error {{invalid range expression of type 'p0962r1::NE::E'; no viable 'begin' function available}}
+    for (auto x : f) {} // expected-error {{invalid range expression of type 'p0962r1::NF::F'; no viable 'end' function available}}
   }
 }
