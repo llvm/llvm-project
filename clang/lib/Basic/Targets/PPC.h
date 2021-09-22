@@ -89,6 +89,7 @@ public:
     LongDoubleWidth = LongDoubleAlign = 128;
     LongDoubleFormat = &llvm::APFloat::PPCDoubleDouble();
     HasStrictFP = true;
+    HasIbm128 = true;
   }
 
   // Set the language option for altivec based on our value.
@@ -347,6 +348,7 @@ public:
                : "u9__ieee128";
   }
   const char *getFloat128Mangling() const override { return "u9__ieee128"; }
+  const char *getIbm128Mangling() const override { return "g"; }
 
   bool hasExtIntType() const override { return true; }
 

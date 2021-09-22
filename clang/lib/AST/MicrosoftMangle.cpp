@@ -2466,6 +2466,7 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
   case BuiltinType::SatUFract:
   case BuiltinType::SatULongFract:
   case BuiltinType::BFloat16:
+  case BuiltinType::Ibm128:
   case BuiltinType::Float128: {
     DiagnosticsEngine &Diags = Context.getDiags();
     unsigned DiagID = Diags.getCustomDiagID(
