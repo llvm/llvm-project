@@ -3708,7 +3708,7 @@ void RegisterCoalescer::buildVRegToDbgValueMap(MachineFunction &MF)
   // vreg => DbgValueLoc map.
   auto CloseNewDVRange = [this, &ToInsert](SlotIndex Slot) {
     for (auto *X : ToInsert) {
-      for (auto Op : X->debug_operands()) {
+      for (const auto &Op : X->debug_operands()) {
         if (Op.isReg() && Op.getReg().isVirtual())
           DbgVRegToValues[Op.getReg()].push_back({Slot, X});
       }
