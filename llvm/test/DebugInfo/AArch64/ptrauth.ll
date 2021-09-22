@@ -1,6 +1,8 @@
 ; RUN: llc %s -filetype=obj -mtriple arm64e-apple-darwin -o - \
 ; RUN:   | llvm-dwarfdump - | FileCheck %s
 
+; REQUIRES: rdar83203830
+
 ; CHECK: DW_AT_type	(0x{{0+}}[[TY:.*]] "*__ptrauth(4, 1, 0x04d2)")
 ; CHECK: 0x{{0+}}[[TY]]: DW_TAG_APPLE_ptrauth_type
 ; CHECK-NEXT: DW_AT_type {{.*}}"*"
