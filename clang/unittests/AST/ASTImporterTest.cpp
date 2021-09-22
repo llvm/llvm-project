@@ -6406,6 +6406,83 @@ TEST_P(ImportSourceLocations, OverwrittenFileBuffer) {
             ToSM.getBufferOrFake(ImportedID, SourceLocation()).getBuffer());
 }
 
+struct ImportAttributes : public ASTImporterOptionSpecificTestBase {
+  void checkAttrImportCommon(const Attr *From, const Attr *To,
+                             const Decl *ToD) {
+
+    // Verify that dump does not crash because invalid data.
+    ToD->dump(llvm::nulls());
+
+    EXPECT_EQ(From->getParsedKind(), To->getParsedKind());
+    EXPECT_EQ(From->getSyntax(), To->getSyntax());
+    if (From->getAttrName()) {
+      EXPECT_TRUE(To->getAttrName());
+      EXPECT_STREQ(From->getAttrName()->getNameStart(),
+                   To->getAttrName()->getNameStart());
+    } else {
+      EXPECT_FALSE(To->getAttrName());
+    }
+    if (From->getScopeName()) {
+      EXPECT_TRUE(To->getScopeName());
+      EXPECT_STREQ(From->getScopeName()->getNameStart(),
+                   To->getScopeName()->getNameStart());
+    } else {
+      EXPECT_FALSE(To->getScopeName());
+    }
+    EXPECT_EQ(From->getSpellingListIndex(), To->getSpellingListIndex());
+    EXPECT_STREQ(From->getSpelling(), To->getSpelling());
+    EXPECT_EQ(From->isInherited(), To->isInherited());
+    EXPECT_EQ(From->isImplicit(), To->isImplicit());
+    EXPECT_EQ(From->isPackExpansion(), To->isPackExpansion());
+    EXPECT_EQ(From->isLateParsed(), To->isLateParsed());
+  }
+
+  template <class DT, class AT>
+  void importAttr(const char *Code, AT *&FromAttr, AT *&ToAttr) {
+    static_assert(std::is_base_of<Attr, AT>::value, "AT should be an Attr");
+    static_assert(std::is_base_of<Decl, DT>::value, "DT should be a Decl");
+
+    Decl *FromTU = getTuDecl(Code, Lang_CXX11, "input.cc");
+    DT *FromD =
+        FirstDeclMatcher<DT>().match(FromTU, namedDecl(hasName("test")));
+    ASSERT_TRUE(FromD);
+
+    DT *ToD = Import(FromD, Lang_CXX11);
+    ASSERT_TRUE(ToD);
+
+    FromAttr = FromD->template getAttr<AT>();
+    ToAttr = ToD->template getAttr<AT>();
+    ASSERT_TRUE(FromAttr);
+    EXPECT_TRUE(ToAttr);
+
+    checkAttrImportCommon(FromAttr, ToAttr, ToD);
+  }
+
+  template <class T> void checkImported(const T *From, const T *To) {
+    EXPECT_TRUE(To);
+    EXPECT_NE(From, To);
+  }
+
+  template <class T>
+  void checkImportVariadicArg(const llvm::iterator_range<T **> &From,
+                              const llvm::iterator_range<T **> &To) {
+    for (auto FromI = From.begin(), ToI = To.begin(); FromI != From.end();
+         ++FromI, ++ToI) {
+      ASSERT_NE(ToI, To.end());
+      checkImported(*FromI, *ToI);
+    }
+  }
+};
+
+template <>
+void ImportAttributes::checkImported<Decl>(const Decl *From, const Decl *To) {
+  EXPECT_TRUE(To);
+  EXPECT_NE(From, To);
+  EXPECT_EQ(To->getTranslationUnitDecl(),
+            ToAST->getASTContext().getTranslationUnitDecl());
+}
+
+// FIXME: Use ImportAttributes for this test.
 TEST_P(ASTImporterOptionSpecificTestBase, ImportExprOfAlignmentAttr) {
   // Test if import of these packed and aligned attributes does not trigger an
   // error situation where source location from 'From' context is referenced in
@@ -6441,6 +6518,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportExprOfAlignmentAttr) {
   EXPECT_TRUE(ToA);
 }
 
+// FIXME: Use ImportAttributes for this test.
 TEST_P(ASTImporterOptionSpecificTestBase, ImportFormatAttr) {
   Decl *FromTU = getTuDecl(
       R"(
@@ -6466,6 +6544,15 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportFormatAttr) {
             ToAttr->getAttributeSpellingListIndex());
   EXPECT_EQ(FromAttr->getType()->getName(), ToAttr->getType()->getName());
 }
+
+TEST_P(ImportAttributes, ImportAssertCapability) {
+  AssertCapabilityAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>(
+      "void test(int A1, int A2) __attribute__((assert_capability(A1, A2)));",
+      FromAttr, ToAttr);
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
+}
+
 template <typename T>
 auto ExtendWithOptions(const T &Values, const std::vector<std::string> &Args) {
   auto Copy = Values;
@@ -6847,6 +6934,9 @@ INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportSourceLocations,
                          DefaultTestValuesForRunOptions);
 
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportWithExternalSource,
+                         DefaultTestValuesForRunOptions);
+
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportAttributes,
                          DefaultTestValuesForRunOptions);
 
 } // end namespace ast_matchers
