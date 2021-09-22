@@ -112,18 +112,19 @@ def _makeConfigTest(config):
       os.remove(tmp.name)
   return TestWrapper(suite, pathInSuite, config)
 
-@_memoizeExpensiveOperation(lambda c, s: (c.substitutions, c.environment, s))
-def sourceBuilds(config, source):
+@_memoizeExpensiveOperation(lambda c, s, f=[]: (c.substitutions, c.environment, s, f))
+def sourceBuilds(config, source, additionalFlags=[]):
   """
   Return whether the program in the given string builds successfully.
 
   This is done by compiling and linking a program that consists of the given
-  source with the %{cxx} substitution, and seeing whether that succeeds.
+  source with the %{cxx} substitution, and seeing whether that succeeds. If
+  any additional flags are passed, they are appended to the compiler invocation.
   """
   with _makeConfigTest(config) as test:
     with open(test.getSourcePath(), 'w') as sourceFile:
       sourceFile.write(source)
-    _, _, exitCode, _ = _executeScriptInternal(test, ['%{build}'])
+    _, _, exitCode, _ = _executeScriptInternal(test, ['%{{build}} {}'.format(' '.join(additionalFlags))])
     return exitCode == 0
 
 @_memoizeExpensiveOperation(lambda c, p, args=None: (c.substitutions, c.environment, p, args))
