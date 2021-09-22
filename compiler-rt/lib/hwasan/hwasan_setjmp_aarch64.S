@@ -80,24 +80,19 @@ __interceptor_sigsetjmp:
 ASM_SIZE(__interceptor_sigsetjmp)
 
 
-.macro ALIAS first second
-  .globl \second
+.macro WEAK_ALIAS first second
+  .weak \second
   .equ \second\(), \first
 .endm
 
 #if SANITIZER_ANDROID
-ALIAS __interceptor_sigsetjmp, sigsetjmp
-.weak sigsetjmp
-
-ALIAS __interceptor_setjmp_bionic, setjmp
-.weak setjmp
+WEAK_ALIAS __interceptor_sigsetjmp, sigsetjmp
+WEAK_ALIAS __interceptor_setjmp_bionic, setjmp
 #else
-ALIAS __interceptor_sigsetjmp, __sigsetjmp
-.weak __sigsetjmp
+WEAK_ALIAS __interceptor_sigsetjmp, __sigsetjmp
 #endif
 
-ALIAS __interceptor_setjmp, _setjmp
-.weak _setjmp
+WEAK_ALIAS __interceptor_setjmp, _setjmp
 #endif
 
 // We do not need executable stack.

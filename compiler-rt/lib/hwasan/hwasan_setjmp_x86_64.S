@@ -68,9 +68,8 @@ ASM_SIZE(__interceptor_sigsetjmp)
 
 
 .macro WEAK_ALIAS first second
-  .globl \second
-  .equ \second\(), \first
   .weak \second
+  .equ \second\(), \first
 .endm
 
 WEAK_ALIAS __interceptor_sigsetjmp, __sigsetjmp
