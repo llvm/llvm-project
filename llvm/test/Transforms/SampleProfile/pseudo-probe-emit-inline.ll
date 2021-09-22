@@ -1,9 +1,9 @@
 ; REQUIRES: x86_64-linux
 ; RUN: opt < %s -passes='pseudo-probe,cgscc(inline)' -function-sections -mtriple=x86_64-unknown-linux-gnu -S -o %t
 ; RUN: FileCheck %s < %t --check-prefix=CHECK-IL
-; RUN: llc -pseudo-probe-for-profiling -function-sections <%t -filetype=asm -o %t1
+; RUN: llc -function-sections <%t -filetype=asm -o %t1
 ; RUN: FileCheck %s < %t1 --check-prefix=CHECK-ASM
-; RUN: llc -pseudo-probe-for-profiling -function-sections <%t -filetype=obj -o %t2
+; RUN: llc -function-sections <%t -filetype=obj -o %t2
 ; RUN: llvm-objdump --section-headers  %t2 | FileCheck %s --check-prefix=CHECK-OBJ
 ; RUN: llvm-mc -filetype=asm <%t1 -o %t3
 ; RUN: FileCheck %s < %t3 --check-prefix=CHECK-ASM

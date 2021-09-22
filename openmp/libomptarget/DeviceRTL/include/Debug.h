@@ -29,4 +29,19 @@ void __assert_fail(const char *assertion, const char *file, unsigned line,
 #define PRINTF(fmt, ...) (void)fmt;
 #define PRINT(str) PRINTF("%s", str)
 
+///}
+
+/// Enter a debugging scope for performing function traces. Enabled with
+/// FunctionTracting set in the debug kind.
+#define FunctionTracingRAII()                                                  \
+  DebugEntryRAII Entry(__LINE__, __PRETTY_FUNCTION__);
+
+/// An RAII class for handling entries to debug locations. The current location
+/// and function will be printed on entry. Nested levels increase the
+/// indentation shown in the debugging output.
+struct DebugEntryRAII {
+  DebugEntryRAII(const unsigned Line, const char *Function);
+  ~DebugEntryRAII();
+};
+
 #endif

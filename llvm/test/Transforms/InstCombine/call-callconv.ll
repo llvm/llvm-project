@@ -2,6 +2,11 @@
 ; RUN: opt < %s -instcombine -S | FileCheck %s
 ; Verify that the non-default calling conv doesn't prevent the libcall simplification
 
+; Layout specifies type of pointer which determines "size_t"
+; which is used to identify libcalls such as "size_t strlen(char*)".
+
+target datalayout = "p:32:32"
+
 @.str = private unnamed_addr constant [4 x i8] c"abc\00", align 1
 
 define arm_aapcscc i32 @_abs(i32 %i) nounwind readnone {

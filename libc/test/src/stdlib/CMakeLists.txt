@@ -167,3 +167,14 @@ add_libc_unittest(
     libc.include.stdlib
     libc.src.stdlib.lldiv
 )
+
+add_libc_unittest(
+  bsearch_test
+  SUITE
+    libc_stdlib_unittests
+  SRCS
+    bsearch_test.cpp
+  DEPENDS
+    libc.include.stdlib
+    libc.src.stdlib.bsearch
+)
