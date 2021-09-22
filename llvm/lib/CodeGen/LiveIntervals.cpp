@@ -1571,15 +1571,14 @@ void LiveIntervals::repairOldRegInRange(const MachineBasicBlock::iterator Begin,
                                         LaneBitmask LaneMask) {
   LiveInterval::iterator LII = LR.find(EndIdx);
   SlotIndex lastUseIdx;
-  if (LII == LR.begin()) {
-    // This happens when the function is called for a subregister that only
-    // occurs _after_ the range that is to be repaired.
-    return;
-  }
-  if (LII != LR.end() && LII->start < EndIdx)
+  if (LII != LR.end() && LII->start < EndIdx) {
     lastUseIdx = LII->end;
-  else
+  } else if (LII == LR.begin()) {
+    // We may not have a liverange at all if this is a subregister untouched
+    // between \p Begin and \p End.
+  } else {
     --LII;
+  }
 
   for (MachineBasicBlock::iterator I = End; I != Begin;) {
     --I;
