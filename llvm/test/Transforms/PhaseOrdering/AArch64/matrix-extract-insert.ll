@@ -20,13 +20,14 @@ define void @matrix_extract_insert_scalar(i32 %i, i32 %k, i32 %j, [225 x double]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[TMP5]], 225
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP6]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast [225 x double]* [[B:%.*]] to <225 x double>*
-; CHECK-NEXT:    [[TMP8:%.*]] = load <225 x double>, <225 x double>* [[TMP7]], align 8
-; CHECK-NEXT:    [[MATRIXEXT4:%.*]] = extractelement <225 x double> [[TMP8]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds <225 x double>, <225 x double>* [[TMP7]], i64 0, i64 [[TMP5]]
+; CHECK-NEXT:    [[MATRIXEXT4:%.*]] = load double, double* [[TMP8]], align 8
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[MATRIXEXT]], [[MATRIXEXT4]]
-; CHECK-NEXT:    [[MATRIXEXT7:%.*]] = extractelement <225 x double> [[TMP8]], i64 [[TMP1]]
-; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[MATRIXEXT7]], [[MUL]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds <225 x double>, <225 x double>* [[TMP7]], i64 0, i64 [[TMP1]]
-; CHECK-NEXT:    store double [[SUB]], double* [[TMP9]], align 8
+; CHECK-NEXT:    [[MATRIXEXT7:%.*]] = load double, double* [[TMP9]], align 8
+; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[MATRIXEXT7]], [[MUL]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds <225 x double>, <225 x double>* [[TMP7]], i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    store double [[SUB]], double* [[TMP10]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
