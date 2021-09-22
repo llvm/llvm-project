@@ -20,5 +20,5 @@
 ; CHECK-NEXT:  !Attributes: 1
 
 ; truncated-pseudoprobe.perfbin is from the following compile commands:
-; llc -pseudo-probe-for-profiling truncated-pseudoprobe.ll -filetype=obj -o truncated-pseudoprobe.o
+; llc truncated-pseudoprobe.ll -filetype=obj -o truncated-pseudoprobe.o
 ; clang truncated-pseudoprobe.o -o truncated-pseudoprobe.perfbin
