@@ -54,6 +54,12 @@ enum DebugInfoKind {
   UnusedTypeInfo,
 };
 
+enum class DebugTemplateNamesKind {
+  Full,
+  Simple,
+  Mangled
+};
+
 } // end namespace codegenoptions
 } // end namespace clang
 
