@@ -1716,6 +1716,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::PointerAuth:
   case attr::AddressSpace:
   case attr::CmseNSCall:
+  case attr::BTFTag:
     llvm_unreachable("This attribute should have been handled already");
 
   case attr::NSReturnsRetained:
