@@ -16,6 +16,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #define NOGDI
+#include <direct.h>
 #include <windows.h>
 #include <io.h>
 #include <psapi.h>
