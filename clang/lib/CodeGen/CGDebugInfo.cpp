@@ -243,6 +243,9 @@ PrintingPolicy CGDebugInfo::getPrintingPolicy() const {
     PP.SplitTemplateClosers = true;
   }
 
+  PP.SuppressInlineNamespace = false;
+  PP.PrintCanonicalTypes = true;
+
   // Apply -fdebug-prefix-map.
   PP.Callbacks = &PrintCB;
   return PP;
@@ -4850,12 +4853,8 @@ llvm::DIGlobalVariableExpression *CGDebugInfo::CollectAnonRecordDecls(
 std::string CGDebugInfo::GetName(const Decl *D, bool Qualified) const {
   std::string Name;
   llvm::raw_string_ostream OS(Name);
-  if (const NamedDecl *ND = dyn_cast<NamedDecl>(D)) {
-    PrintingPolicy PP = getPrintingPolicy();
-    PP.PrintCanonicalTypes = true;
-    PP.SuppressInlineNamespace = false;
-    ND->getNameForDiagnostic(OS, PP, Qualified);
-  }
+  if (const NamedDecl *ND = dyn_cast<NamedDecl>(D))
+    ND->getNameForDiagnostic(OS, getPrintingPolicy(), Qualified);
   return Name;
 }
 
