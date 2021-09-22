@@ -382,39 +382,61 @@ class SubRegSet<int nf, int lmul> {
                                    [])));
 }
 
-class IndexSet<int index, int nf, int lmul> {
+// Collect the valid indexes into 'R' under NF and LMUL values from TUPLE_INDEX.
+// When NF = 2, the valid TUPLE_INDEX is 0 and 1.
+// For example, when LMUL = 4, the potential valid indexes is
+// [8, 12, 16, 20, 24, 28, 4]. However, not all these indexes are valid under
+// NF = 2. For example, 28 is not valid under LMUL = 4, NF = 2 and TUPLE_INDEX = 0.
+// The filter is
+//   (tuple_index + i) x lmul <= (tuple_index x lmul) + 32 - (nf x lmul)
+//
+// Use START = 0, LMUL = 4 and NF = 2 as the example,
+//   i x 4 <= 24
+// The class will return [8, 12, 16, 20, 24, 4].
+// Use START = 1, LMUL = 4 and NF = 2 as the example,
+//   (1 + i) x 4 <= 28
+// The class will return [12, 16, 20, 24, 28, 8].
+//
+class IndexSet<int tuple_index, int nf, int lmul, bit isV0 = false> {
   list<int> R =
     !foldl([]<int>,
-              [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
-               13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
-               23, 24, 25, 26, 27, 28, 29, 30, 31],
+              !if(isV0, [0],
+                !cond(
+                  !eq(lmul, 1):
+                  [8, 9, 10, 11, 12, 13, 14, 15,
+                   16, 17, 18, 19, 20, 21, 22, 23,
+                   24, 25, 26, 27, 28, 29, 30, 31,
+                   1, 2, 3, 4, 5, 6, 7],
+                  !eq(lmul, 2):
+                  [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 1, 2, 3],
+                  !eq(lmul, 4):
+                  [2, 3, 4, 5, 6, 7, 1])),
               L, i,
               !listconcat(L,
-                          !if(!and(
-                                !le(!mul(index, lmul), !mul(i, lmul)),
-                                !le(!mul(i, lmul),
-                                    !sub(!add(32, !mul(index, lmul)), !mul(nf, lmul)))
-                              ), [!mul(i, lmul)], [])));
+                          !if(!le(!mul(!add(i, tuple_index), lmul),
+                                  !sub(!add(32, !mul(tuple_index, lmul)), !mul(nf, lmul))),
+                              [!mul(!add(i, tuple_index), lmul)], [])));
 }
 
-class VRegList<list<dag> LIn, int start, int nf, int lmul, bit NoV0> {
+// This class returns a list of vector register collections.
+// For example, for NF = 2 and LMUL = 4,
+// it will return
+//   ([ V8M4, V12M4, V16M4, V20M4, V24M4, V4M4],
+//    [V12M4, V16M4, V20M4, V24M4, V28M4, V8M4])
+//
+class VRegList<list<dag> LIn, int start, int nf, int lmul, bit isV0> {
   list<dag> L =
     !if(!ge(start, nf),
         LIn,
         !listconcat(
           [!dag(add,
-                !foreach(i,
-                  !if(NoV0,
-                    !tail(IndexSet<start, nf, lmul>.R),
-                    [!head(IndexSet<start, nf, lmul>.R)]),
+                !foreach(i, IndexSet<start, nf, lmul, isV0>.R,
                   !cast<Register>("V" # i # !cond(!eq(lmul, 2): "M2",
                                                   !eq(lmul, 4): "M4",
                                                   true: ""))),
                 !listsplat("",
-                  !if(NoV0,
-                    !size(!tail(IndexSet<start, nf, lmul>.R)),
-                    !size([!head(IndexSet<start, nf, lmul>.R)]))))],
-          VRegList<LIn, !add(start, 1), nf, lmul, NoV0>.L));
+                  !size(IndexSet<start, nf, lmul, isV0>.R)))],
+          VRegList<LIn, !add(start, 1), nf, lmul, isV0>.L));
 }
 
 // Vector registers
@@ -464,10 +486,10 @@ foreach m = [1, 2, 4] in {
   foreach n = NFList<m>.L in {
     def "VN" # n # "M" # m # "NoV0": RegisterTuples<
                                        SubRegSet<n, m>.L,
-                                       VRegList<[], 0, n, m, 1>.L>;
+                                       VRegList<[], 0, n, m, false>.L>;
     def "VN" # n # "M" # m # "V0" : RegisterTuples<
                                        SubRegSet<n, m>.L,
-                                       VRegList<[], 0, n, m, 0>.L>;
+                                       VRegList<[], 0, n, m, true>.L>;
   }
 }
 
@@ -541,11 +563,12 @@ def VM : VReg<[vbool1_t, vbool2_t, vbool4_t, vbool8_t, vbool16_t,
 
 foreach m = LMULList.m in {
   foreach nf = NFList<m>.L in {
-    def "VRN" # nf # "M" # m: VReg<[untyped],
-                               (add !cast<RegisterTuples>("VN" # nf # "M" # m # "V0"), !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0")),
-                                    !mul(nf, m)>;
     def "VRN" # nf # "M" # m # "NoV0": VReg<[untyped],
                                (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0")),
+                                    !mul(nf, m)>;
+    def "VRN" # nf # "M" # m: VReg<[untyped],
+                               (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0"),
+                                    !cast<RegisterTuples>("VN" # nf # "M" # m # "V0")),
                                     !mul(nf, m)>;
   }
 }
