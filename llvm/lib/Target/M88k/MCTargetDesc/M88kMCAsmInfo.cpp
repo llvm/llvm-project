@@ -20,10 +20,10 @@ M88kMCAsmInfo::M88kMCAsmInfo(const Triple &TT) {
   UseDotAlignForAlignment = true;
   MinInstAlignment = 4;
 
-  CommentString = "#";
+  CommentString = "|"; // # as comment delimiter is only allowed at first column
   ZeroDirective = "\t.space\t";
   Data64bitsDirective = "\t.quad\t";
   UsesELFSectionDirectiveForBSS = true;
-  SupportsDebugInformation = true;
-  ExceptionsType = ExceptionHandling::DwarfCFI;
+  SupportsDebugInformation = false;
+  ExceptionsType = ExceptionHandling::SjLj;
 }

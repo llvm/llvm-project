@@ -3,6 +3,7 @@ add_llvm_component_library(LLVMM88kDesc
   M88kMCAsmBackend.cpp
   M88kMCAsmInfo.cpp
   M88kMCCodeEmitter.cpp
+  M88kMCExpr.cpp
   M88kMCObjectWriter.cpp
   M88kMCTargetDesc.cpp
   )

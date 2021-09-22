@@ -34,9 +34,9 @@ public:
   // Return an MCOperand for MO.
   MCOperand lowerOperand(const MachineOperand &MO) const;
 
-  // Return an MCExpr for symbolic operand MO with variant kind Kind.
-  const MCExpr *getExpr(const MachineOperand &MO,
-                        MCSymbolRefExpr::VariantKind Kind) const;
+private:
+  // Return an MCOperand for symbolic operand MO.
+  MCOperand lowerSymbolOperand(const MachineOperand &MO) const;
 };
 } // end namespace llvm
 

@@ -38,6 +38,12 @@ class M88kInstrInfo : public M88kGenInstrInfo {
 public:
   explicit M88kInstrInfo(M88kSubtarget &STI);
 
+  std::pair<unsigned, unsigned>
+  decomposeMachineOperandsTargetFlags(unsigned TF) const override;
+
+  ArrayRef<std::pair<unsigned, const char *>>
+  getSerializableDirectMachineOperandTargetFlags() const override;
+
   // Return the M88kRegisterInfo, which this class owns.
   const M88kRegisterInfo &getRegisterInfo() const { return RI; }
 };

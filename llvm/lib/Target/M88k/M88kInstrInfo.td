@@ -42,11 +42,9 @@ def m88k_bb0 : SDNode<"M88kISD::BB0", SDTIntBinOp>;
 def m88k_bb1 : SDNode<"M88kISD::BB0", SDTIntBinOp>;
 def m88k_bcond : SDNode<"M88kISD::BB0", SDTIntBinOp>;
 
-
 // Hi16 and Lo16 nodes are used to handle global addresses.
-// TODO Name very similar to LO16/HI16
-def Hi16 : SDNode<"M88kISD::Hi16", SDTIntUnaryOp>;
-def Lo16 : SDNode<"M88kISD::Lo16", SDTIntUnaryOp>;
+def m88k_hi : SDNode<"M88kISD::Hi16", SDTIntUnaryOp>;
+def m88k_lo : SDNode<"M88kISD::Lo16", SDTIntUnaryOp>;
 
 // ---------------------------------------------------------------------------//
 // Operands.
@@ -326,23 +324,37 @@ def CMPrr : F_IRC<0b011111, 0b0, 0b0,
                  [], //[(set GPROpnd:$rd, (OpNode GPROpnd:$rs1, GPROpnd:$rs2))],
                  NoItinerary>;
 
+/*
+Addressing modes:
+Register indirect with immediate index: ld rD, rS1, si16
+Register indirect with index:           ld rD, rS1, rS2
+Register indirect with scaled index:    ld rD, rS1, [rS2]
+*/
+def ADDRrr : ComplexPattern<i32, 2, "selectAddrRr", [], []>;
+def ADDRri : ComplexPattern<i32, 2, "selectAddrRi", [], []>;
+def ADDRrs : ComplexPattern<i32, 1, "selectAddrRs", [], []>;
+
+//def : Pat<(load GPR:$rd, (ADDRri GPR:$rs1, imm32zx16:$si16)),
+//          (LDriw GPR:$rd, GPR:$rs1, imm32zx16:$si16)>;
+
+
 // Multiclass for load and store instructions.
 multiclass LoadStore<bits<4> Func, string OpcStr, SDPatternOperator OpNode,
                  InstrItinClass itin = NoItinerary> {
   def riw  : F_LS<Func, 0b01,
                   (outs GPROpnd:$rd), (ins GPROpnd:$rs1, imm32zx16:$si16),
                   !strconcat(OpcStr, " $rd, $rs1, $si16"),
-                  [],
+                  [(set (i32 GPROpnd:$rd), (load (ADDRri GPROpnd:$rs1, imm32zx16:$si16)))],
                   itin>;
   def rib  : F_LS<Func, 0b11,
                   (outs GPROpnd:$rd), (ins GPROpnd:$rs1, imm32zx16:$si16),
                   !strconcat(OpcStr, ".b $rd, $rs1, $si16"),
-                  [],
+                  [(set (i32 GPROpnd:$rd), (zextloadi8 (ADDRri GPROpnd:$rs1, imm32zx16:$si16)))],
                   itin>;
   def rih  : F_LS<Func, 0b10,
                   (outs GPROpnd:$rd), (ins GPROpnd:$rs1, imm32zx16:$si16),
                   !strconcat(OpcStr, ".h $rd, $rs1, $si16"),
-                  [],
+                  [(set (i32 GPROpnd:$rd), (zextloadi16 (ADDRri GPROpnd:$rs1, imm32zx16:$si16)))],
                   itin>;
   def rid  : F_LS<Func, 0b00,
                   (outs GPROpnd:$rd), (ins GPROpnd:$rs1, imm32zx16:$si16),
@@ -359,9 +371,14 @@ class LoadUnsigned<bits<1> b, string OpcStr,
        itin>;
 
 defm LD : LoadStore<0b0001, "ld", load>;
-defm ST : LoadStore<0b0010, "st", store>;
+//defm ST : LoadStore<0b0010, "st", store>;
 def LDurih : LoadUnsigned<0b0, "ld.hu">;
 def LDurib : LoadUnsigned<0b1, "ld.bu">;
+
+// GlobalAddress, ExternalSymbol, Jumptable, ConstantPool
+def : Pat<(m88k_hi tglobaladdr:$dst), (ORriu R0, tglobaladdr:$dst)>;
+//def : Pat<(m88k_lo tglobaladdr:$dst), (OR_I_LO (i32 R0), tglobaladdr:$dst)>;
+
 
 let isTerminator = 1, isBarrier = 1 in {
   def JMP : F_JMP<0b11000, 0, (outs), (ins GPROpnd:$rs2),

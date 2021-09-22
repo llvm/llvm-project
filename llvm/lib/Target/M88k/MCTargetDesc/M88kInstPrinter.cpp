@@ -84,9 +84,13 @@ void M88kInstPrinter::printU10ImmWOOperand(const MCInst *MI, int OpNum,
 void M88kInstPrinter::printU16ImmOperand(const MCInst *MI, int OpNum,
                                          const MCSubtargetInfo &STI,
                                          raw_ostream &O) {
-  int64_t Value = MI->getOperand(OpNum).getImm();
-  // assert(isUInt<N>(Value) && "Invalid uimm argument");
-  O << Value;
+  const MCOperand &MO = MI->getOperand(OpNum);
+  if (MO.isImm()) {
+    O << MO.getImm();
+  } else {
+    assert(MO.isExpr() && "Expected expression");
+    MO.getExpr()->print(O, &MAI);
+  }
 }
 
 void M88kInstPrinter::printPCRelOperand(const MCInst *MI, uint64_t Address,

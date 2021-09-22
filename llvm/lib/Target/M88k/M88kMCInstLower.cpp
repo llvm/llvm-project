@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "M88kMCInstLower.h"
+#include "MCTargetDesc/M88kBaseInfo.h"
+#include "MCTargetDesc/M88kMCExpr.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -17,20 +19,28 @@
 
 using namespace llvm;
 
-// Return the VK_* enumeration for MachineOperand target flags Flags.
-static MCSymbolRefExpr::VariantKind getVariantKind(unsigned Flags) {
-  // TODO Implement
-  return MCSymbolRefExpr::VK_None;
-}
-
 M88kMCInstLower::M88kMCInstLower(MCContext &Ctx, AsmPrinter &Printer)
     : Ctx(Ctx), Printer(Printer) {}
 
-const MCExpr *
-M88kMCInstLower::getExpr(const MachineOperand &MO,
-                         MCSymbolRefExpr::VariantKind Kind) const {
+MCOperand M88kMCInstLower::lowerSymbolOperand(const MachineOperand &MO) const {
+  MCSymbolRefExpr::VariantKind Kind = MCSymbolRefExpr::VK_None;
+  M88kMCExpr::VariantKind TargetKind = M88kMCExpr::VK_None;
   const MCSymbol *Symbol;
   bool HasOffset = true;
+
+  switch (MO.getTargetFlags()) {
+  default:
+    llvm_unreachable("Invalid target flag!");
+  case M88kII::MO_NO_FLAG:
+    break;
+  case M88kII::MO_ABS_HI:
+    TargetKind = M88kMCExpr::VK_ABS_HI;
+    break;
+  case M88kII::MO_ABS_LO:
+    TargetKind = M88kMCExpr::VK_ABS_LO;
+    break;
+  }
+
   switch (MO.getType()) {
   case MachineOperand::MO_MachineBasicBlock:
     Symbol = MO.getMBB()->getSymbol();
@@ -62,12 +72,15 @@ M88kMCInstLower::getExpr(const MachineOperand &MO,
     llvm_unreachable("unknown operand type");
   }
   const MCExpr *Expr = MCSymbolRefExpr::create(Symbol, Kind, Ctx);
-  if (HasOffset)
+  if (HasOffset) {
     if (int64_t Offset = MO.getOffset()) {
       const MCExpr *OffsetExpr = MCConstantExpr::create(Offset, Ctx);
       Expr = MCBinaryExpr::createAdd(Expr, OffsetExpr, Ctx);
     }
-  return Expr;
+  }
+  if (TargetKind)
+    Expr = M88kMCExpr::create(TargetKind, Expr, Ctx);
+  return MCOperand::createExpr(Expr);
 }
 
 MCOperand M88kMCInstLower::lowerOperand(const MachineOperand &MO) const {
@@ -78,10 +91,16 @@ MCOperand M88kMCInstLower::lowerOperand(const MachineOperand &MO) const {
   case MachineOperand::MO_Immediate:
     return MCOperand::createImm(MO.getImm());
 
-  default: {
-    MCSymbolRefExpr::VariantKind Kind = getVariantKind(MO.getTargetFlags());
-    return MCOperand::createExpr(getExpr(MO, Kind));
-  }
+  case MachineOperand::MO_MachineBasicBlock:
+  case MachineOperand::MO_GlobalAddress:
+  case MachineOperand::MO_ExternalSymbol:
+  case MachineOperand::MO_MCSymbol:
+  case MachineOperand::MO_JumpTableIndex:
+  case MachineOperand::MO_ConstantPoolIndex:
+  case MachineOperand::MO_BlockAddress:
+    return lowerSymbolOperand(MO);
+  default:
+    report_fatal_error("Unexpected MachineOperand type.");
   }
 }
 

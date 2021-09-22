@@ -16,6 +16,7 @@
 //#include "M88kConstantPoolValue.h"
 //#include "M88kMachineFunctionInfo.h"
 #include "M88kTargetMachine.h"
+#include "MCTargetDesc/M88kBaseInfo.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -88,6 +89,8 @@ M88kTargetLowering::M88kTargetLowering(const TargetMachine &TM,
   // How we extend i1 boolean values.
   setBooleanContents(ZeroOrOneBooleanContent);
 
+  setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
+
   setMinFunctionAlignment(Align(4));
   setPrefFunctionAlignment(Align(4));
 
@@ -102,13 +105,12 @@ M88kTargetLowering::M88kTargetLowering(const TargetMachine &TM,
 
 SDValue M88kTargetLowering::LowerOperation(SDValue Op,
                                            SelectionDAG &DAG) const {
-  // TODO Implement for ops not covered by patterns in .td files.
-  /*
-    switch (Op.getOpcode())
-    {
-    case ISD::SHL:          return lowerShiftLeft(Op, DAG);
-    }
-  */
+  switch (Op.getOpcode()) {
+  case ISD::GlobalAddress:
+    return LowerGlobalAddress(Op, DAG);
+  case ISD::RETURNADDR:
+    return LowerRETURNADDR(Op, DAG);
+  }
   return SDValue();
 }
 
@@ -381,6 +383,8 @@ const char *M88kTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return #Opc
     OPCODE(M88kISD::RET_FLAG);
     OPCODE(M88kISD::CALL);
+    OPCODE(M88kISD::Hi16);
+    OPCODE(M88kISD::Lo16);
     OPCODE(M88kISD::CLR);
     OPCODE(M88kISD::SET);
     OPCODE(M88kISD::EXT);
@@ -393,4 +397,40 @@ const char *M88kTargetLowering::getTargetNodeName(unsigned Opcode) const {
   default:
     return nullptr;
   }
+}
+
+// TODO Do I need it?
+SDValue M88kTargetLowering::getTargetNode(GlobalAddressSDNode *N, EVT Ty,
+                                          SelectionDAG &DAG,
+                                          unsigned Flag) const {
+  return DAG.getTargetGlobalAddress(N->getGlobal(), SDLoc(N), Ty, 0, Flag);
+}
+
+SDValue M88kTargetLowering::LowerGlobalAddress(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  EVT Ty = Op.getValueType();
+  GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
+  //const GlobalValue *GV = N->getGlobal();
+
+  if (!isPositionIndependent()) {
+    SDLoc DL(N);
+    SDValue Hi = getTargetNode(N, Ty, DAG, M88kII::MO_ABS_HI);
+    SDValue Lo = getTargetNode(N, Ty, DAG, M88kII::MO_ABS_LO);
+    return DAG.getNode(ISD::OR, DL, Ty, DAG.getNode(M88kISD::Hi16, DL, Ty, Hi),
+                       DAG.getNode(M88kISD::Lo16, DL, Ty, Lo));
+  }
+  llvm_unreachable("Position-indepentend code not supported");
+  return SDValue();
+}
+
+SDValue M88kTargetLowering::LowerRETURNADDR(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  //MVT VT = Op.getSimpleValueType();
+  MFI.setReturnAddressIsTaken(true);
+
+  // Return R1, which contains the return address. Mark it an implicit live-in.
+  unsigned Reg = MF.addLiveIn(M88k::R1, getRegClassFor(MVT::i32));
+  return DAG.getCopyFromReg(DAG.getEntryNode(), SDLoc(Op), Reg, MVT::i32);
 }

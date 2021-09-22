@@ -12,6 +12,7 @@
 
 #include "M88kInstrInfo.h"
 #include "M88k.h"
+#include "MCTargetDesc/M88kBaseInfo.h"
 #include "MCTargetDesc/M88kMCTargetDesc.h"
 //#include "M88kInstrBuilder.h"
 #include "M88kSubtarget.h"
@@ -52,3 +53,19 @@ void M88kInstrInfo::anchor() {}
 
 M88kInstrInfo::M88kInstrInfo(M88kSubtarget &STI)
     : M88kGenInstrInfo(), RI(), STI(STI) {}
+
+std::pair<unsigned, unsigned>
+M88kInstrInfo::decomposeMachineOperandsTargetFlags(unsigned TF) const {
+  return std::make_pair(TF, 0u);
+}
+
+ArrayRef<std::pair<unsigned, const char*>>
+M88kInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
+ using namespace M88kII;
+
+ static const std::pair<unsigned, const char*> Flags[] = {
+    {MO_ABS_HI,       "m88k-abs-hi"},
+    {MO_ABS_LO,       "m88k-abs-lo"},
+  };
+  return makeArrayRef(Flags);
+}

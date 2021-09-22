@@ -10,7 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-//#include "MCTargetDesc/M88kMCFixups.h"
+#include "MCTargetDesc/M88kMCExpr.h"
+#include "MCTargetDesc/M88kMCFixups.h"
 #include "MCTargetDesc/M88kMCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -80,6 +81,21 @@ void M88kMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     OS << static_cast<uint8_t>((Bits >> I) & 0xff);
 }
 
+static M88k::FixupKind FixupKind(const MCExpr *Expr) {
+  if (const M88kMCExpr *McExpr = dyn_cast<M88kMCExpr>(Expr)) {
+    M88kMCExpr::VariantKind ExprKind = McExpr->getKind();
+    switch (ExprKind) {
+    case M88kMCExpr::VK_None:
+      return M88k::FK_88K_NONE;
+    case M88kMCExpr::VK_ABS_HI:
+      return M88k::FK_88K_HI;
+    case M88kMCExpr::VK_ABS_LO:
+      return M88k::FK_88K_LO;
+    }
+  }
+  return M88k::FixupKind(0);
+}
+
 unsigned
 M88kMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &MO,
                                      SmallVectorImpl<MCFixup> &Fixups,
@@ -88,7 +104,15 @@ M88kMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &MO,
     return MRI.getEncodingValue(MO.getReg());
   if (MO.isImm())
     return static_cast<uint64_t>(MO.getImm());
-  llvm_unreachable("Unexpected operand type!");
+
+  // MO must be an expression
+  assert(MO.isExpr() && "Expected MCExpr");
+  const MCExpr *Expr = MO.getExpr();
+
+  assert(isa<M88kMCExpr>(Expr) && "Expected M88kMCExpr");
+  // Push fixup (all info is contained within)
+  Fixups.push_back(MCFixup::create(0, Expr, MCFixupKind(FixupKind(Expr))));
+  return 0;
 }
 
 unsigned M88kMCCodeEmitter::getPC26Encoding(const MCInst &MI, unsigned OpNo,

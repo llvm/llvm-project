@@ -37,6 +37,12 @@ enum NodeType : unsigned {
   // There is an optional glue operand at the end.
   CALL,
 
+  // Get the High 16 bits from a 32-bit immediate.
+  Hi16,
+
+  // Get the Lower 16 bits from a 32-bit immediate.
+  Lo16,
+
   // Bit-field instructions.
   CLR,
   SET,
@@ -78,6 +84,13 @@ public:
 
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
+
+  SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
+
+private:
+  SDValue getTargetNode(GlobalAddressSDNode *N, EVT Ty, SelectionDAG &DAG,
+                        unsigned Flag) const;
 };
 
 } // end namespace llvm

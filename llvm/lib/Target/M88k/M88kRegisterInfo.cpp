@@ -39,6 +39,13 @@ M88kRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 BitVector M88kRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
 
+  // R0 is always reserved.
+  Reserved.set(M88k::R0);
+
+  // R28 and R29 are always reserved according to SYS-V ABI.
+  Reserved.set(M88k::R28);
+  Reserved.set(M88k::R29);
+
   // R31 is the stack pointer.
   Reserved.set(M88k::R31);
 
