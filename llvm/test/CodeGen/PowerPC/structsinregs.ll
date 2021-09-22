@@ -187,13 +187,23 @@ entry:
   ret i32 %add13
 
 ; CHECK-LABEL: callee2
-; CHECK-DAG: std 9, 96(1)
-; CHECK-DAG: std 8, 88(1)
-; CHECK-DAG: std 7, 80(1)
-; CHECK-DAG: stw 6, 76(1)
-; CHECK-DAG: std 5, 64(1)
-; CHECK-DAG: sth 4, 62(1)
-; CHECK-DAG: stb 3, 55(1)
+; CHECK:     stb 9, 103(1)
+; CHECK:     rldicl 10, 9, 56, 8
+; CHECK:     sth 10, 101(1)
+; CHECK:     rldicl 9, 9, 40, 24
+; CHECK:     stw 9, 97(1)
+; CHECK:     sth 8, 94(1)
+; CHECK:     rldicl 8, 8, 48, 16
+; CHECK:     stw 8, 90(1)
+; CHECK:     stb 7, 87(1)
+; CHECK:     rldicl 7, 7, 56, 8
+; CHECK:     stw 7, 83(1)
+; CHECK:     stb 5, 71(1)
+; CHECK:     rldicl 5, 5, 56, 8
+; CHECK:     sth 5, 69(1)
+; CHECK:     stw 6, 76(1)
+; CHECK:     sth 4, 62(1)
+; CHECK:     stb 3, 55(1)
 ; CHECK-DAG: lha {{[0-9]+}}, 62(1)
 ; CHECK-DAG: lha {{[0-9]+}}, 69(1)
 ; CHECK-DAG: lbz {{[0-9]+}}, 55(1)
