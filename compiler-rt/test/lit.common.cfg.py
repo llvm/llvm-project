@@ -363,6 +363,9 @@ sanitizer_can_use_cxxabi = getattr(config, 'sanitizer_can_use_cxxabi', True)
 if sanitizer_can_use_cxxabi:
   config.available_features.add('cxxabi')
 
+if not getattr(config, 'sanitizer_uses_static_cxxabi', False):
+  config.available_features.add('shared_cxxabi')
+
 if config.has_lld:
   config.available_features.add('lld-available')
 
