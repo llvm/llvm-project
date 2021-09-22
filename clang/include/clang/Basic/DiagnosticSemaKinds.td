@@ -6409,11 +6409,6 @@ def warn_gnu_null_ptr_arith : Warning<
 def warn_pointer_sub_null_ptr : Warning<
   "performing pointer subtraction with a null pointer %select{has|may have}0 undefined behavior">,
   InGroup<NullPointerSubtraction>, DefaultIgnore;
-def err_kernel_invalidates_sycl_unique_stable_name
-    : Error<"kernel instantiation changes the result of an evaluated "
-            "'__builtin_sycl_unique_stable_name'">;
-def note_sycl_unique_stable_name_evaluated_here
-    : Note<"'__builtin_sycl_unique_stable_name' evaluated here">;
 
 def warn_floatingpoint_eq : Warning<
   "comparing floating point with == or != is unsafe">,

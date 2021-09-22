@@ -1518,9 +1518,16 @@ void CXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
     // <lambda-sig> ::= <template-param-decl>* <parameter-type>+
     //     # Parameter types or 'v' for 'void'.
     if (const CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(TD)) {
-      if (Record->isLambda() && (Record->getLambdaManglingNumber() ||
-                                 Context.getDiscriminatorOverride()(
-                                     Context.getASTContext(), Record))) {
+      llvm::Optional<unsigned> DeviceNumber =
+          Context.getDiscriminatorOverride()(Context.getASTContext(), Record);
+
+      // If we have a device-number via the discriminator, use that to mangle
+      // the lambda, otherwise use the typical lambda-mangling-number. In either
+      // case, a '0' should be mangled as a normal unnamed class instead of as a
+      // lambda.
+      if (Record->isLambda() &&
+          ((DeviceNumber && *DeviceNumber > 0) ||
+           (!DeviceNumber && Record->getLambdaManglingNumber() > 0))) {
         assert(!AdditionalAbiTags &&
                "Lambda type cannot have additional abi tags");
         mangleLambda(Record);
@@ -1960,8 +1967,8 @@ void CXXNameMangler::mangleLambda(const CXXRecordDecl *Lambda) {
   // mangling number for this lambda.
   llvm::Optional<unsigned> DeviceNumber =
       Context.getDiscriminatorOverride()(Context.getASTContext(), Lambda);
-  unsigned Number = DeviceNumber.hasValue() ? *DeviceNumber
-                                            : Lambda->getLambdaManglingNumber();
+  unsigned Number =
+      DeviceNumber ? *DeviceNumber : Lambda->getLambdaManglingNumber();
 
   assert(Number > 0 && "Lambda should be mangled as an unnamed class");
   if (Number > 1)
