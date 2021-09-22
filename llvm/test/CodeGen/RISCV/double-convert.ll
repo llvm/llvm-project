@@ -632,3 +632,48 @@ define double @fcvt_d_wu_i16(i16 zeroext %a) nounwind {
   %1 = uitofp i16 %a to double
   ret double %1
 }
+
+; Make sure we select W version of addi on RV64.
+; FIXME: We should not have an addi and addiw on RV64.
+define signext i32 @fcvt_d_w_demanded_bits(i32 signext %0, double* %1) {
+; RV32IFD-LABEL: fcvt_d_w_demanded_bits:
+; RV32IFD:       # %bb.0:
+; RV32IFD-NEXT:    addi a0, a0, 1
+; RV32IFD-NEXT:    fcvt.d.w ft0, a0
+; RV32IFD-NEXT:    fsd ft0, 0(a1)
+; RV32IFD-NEXT:    ret
+;
+; RV64IFD-LABEL: fcvt_d_w_demanded_bits:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    addiw a2, a0, 1
+; RV64IFD-NEXT:    addi a0, a0, 1
+; RV64IFD-NEXT:    fcvt.d.w ft0, a0
+; RV64IFD-NEXT:    fsd ft0, 0(a1)
+; RV64IFD-NEXT:    mv a0, a2
+; RV64IFD-NEXT:    ret
+  %3 = add i32 %0, 1
+  %4 = sitofp i32 %3 to double
+  store double %4, double* %1, align 8
+  ret i32 %3
+}
+
+; Make sure we select W version of addi on RV64.
+define signext i32 @fcvt_d_wu_demanded_bits(i32 signext %0, double* %1) {
+; RV32IFD-LABEL: fcvt_d_wu_demanded_bits:
+; RV32IFD:       # %bb.0:
+; RV32IFD-NEXT:    addi a0, a0, 1
+; RV32IFD-NEXT:    fcvt.d.wu ft0, a0
+; RV32IFD-NEXT:    fsd ft0, 0(a1)
+; RV32IFD-NEXT:    ret
+;
+; RV64IFD-LABEL: fcvt_d_wu_demanded_bits:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    addiw a0, a0, 1
+; RV64IFD-NEXT:    fcvt.d.wu ft0, a0
+; RV64IFD-NEXT:    fsd ft0, 0(a1)
+; RV64IFD-NEXT:    ret
+  %3 = add i32 %0, 1
+  %4 = uitofp i32 %3 to double
+  store double %4, double* %1, align 8
+  ret i32 %3
+}
