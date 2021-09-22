@@ -269,4 +269,11 @@ void MetaMap::OnProcIdle(Processor *proc) {
   sync_alloc_.FlushCache(&proc->sync_cache);
 }
 
+MetaMap::MemoryStats MetaMap::GetMemoryStats() const {
+  MemoryStats stats;
+  stats.mem_block = block_alloc_.AllocatedMemory();
+  stats.sync_obj = sync_alloc_.AllocatedMemory();
+  return stats;
+}
+
 }  // namespace __tsan

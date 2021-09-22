@@ -119,9 +119,9 @@ define amdgpu_ps float @else3(i32 %z, float %v, i32 inreg %bound, i32 %x0) #0 {
   ; SI:   S_BRANCH %bb.4
   ; SI: bb.2.Flow:
   ; SI:   successors: %bb.3(0x40000000), %bb.5(0x40000000)
-  ; SI:   [[PHI2:%[0-9]+]]:vgpr_32 = PHI undef %34:vgpr_32, %bb.1, %10, %bb.4
-  ; SI:   [[PHI3:%[0-9]+]]:vgpr_32 = PHI undef %35:vgpr_32, %bb.1, %9, %bb.4
-  ; SI:   [[PHI4:%[0-9]+]]:vgpr_32 = PHI [[PHI1]], %bb.1, undef %38:vgpr_32, %bb.4
+  ; SI:   [[PHI2:%[0-9]+]]:vgpr_32 = PHI undef %32:vgpr_32, %bb.1, %10, %bb.4
+  ; SI:   [[PHI3:%[0-9]+]]:vgpr_32 = PHI undef %33:vgpr_32, %bb.1, %9, %bb.4
+  ; SI:   [[PHI4:%[0-9]+]]:vgpr_32 = PHI [[PHI1]], %bb.1, undef %35:vgpr_32, %bb.4
   ; SI:   [[SI_ELSE:%[0-9]+]]:sreg_32 = SI_ELSE killed [[SI_IF]], %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI:   S_BRANCH %bb.3
   ; SI: bb.3.if:
@@ -133,7 +133,6 @@ define amdgpu_ps float @else3(i32 %z, float %v, i32 inreg %bound, i32 %x0) #0 {
   ; SI:   successors: %bb.2(0x80000000)
   ; SI:   %9:vgpr_32 = nofpexcept V_MUL_F32_e32 [[COPY2]], [[PHI1]], implicit $mode, implicit $exec
   ; SI:   [[V_MUL_LO_U32_e64_:%[0-9]+]]:vgpr_32 = V_MUL_LO_U32_e64 killed [[PHI1]], 3, implicit $exec
-  ; SI:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY killed [[V_MUL_LO_U32_e64_]]
   ; SI:   S_BRANCH %bb.2
   ; SI: bb.5.if.end:
   ; SI:   successors: %bb.6(0x04000000), %bb.1(0x7c000000)
@@ -146,8 +145,8 @@ define amdgpu_ps float @else3(i32 %z, float %v, i32 inreg %bound, i32 %x0) #0 {
   ; SI:   S_CBRANCH_SCC1 %bb.1, implicit killed $scc
   ; SI:   S_BRANCH %bb.6
   ; SI: bb.6.for.end:
-  ; SI:   %33:vgpr_32 = nofpexcept V_ADD_F32_e32 killed [[PHI6]], killed [[PHI5]], implicit $mode, implicit $exec
-  ; SI:   $vgpr0 = COPY killed %33
+  ; SI:   %31:vgpr_32 = nofpexcept V_ADD_F32_e32 killed [[PHI6]], killed [[PHI5]], implicit $mode, implicit $exec
+  ; SI:   $vgpr0 = COPY killed %31
   ; SI:   SI_RETURN_TO_EPILOG killed $vgpr0
 entry:
 ;  %break = icmp sgt i32 %bound, 0
