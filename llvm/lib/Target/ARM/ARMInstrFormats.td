@@ -408,6 +408,7 @@ class InstTemplate<AddrMode am, int sz, IndexMode im,
   // in an IT block).
   bit thumbArithFlagSetting = 0;
 
+  bits<2> VecSize = 0;
   bit validForTailPredication = 0;
   bit retainsPreviousHalfElement = 0;
   bit horizontalReduction = 0;
@@ -428,6 +429,7 @@ class InstTemplate<AddrMode am, int sz, IndexMode im,
   let TSFlags{21}    = retainsPreviousHalfElement;
   let TSFlags{22}    = horizontalReduction;
   let TSFlags{23}    = doubleWidthResult;
+  let TSFlags{25-24} = VecSize;
 
   let Constraints = cstr;
   let Itinerary = itin;
