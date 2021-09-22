@@ -328,7 +328,7 @@ TEST(SanitizerCommon, InternalMmapWithOffset) {
 #endif
 
 TEST(SanitizerCommon, ReportFile) {
-  StaticSpinMutex report_file_mu;
+  SpinMutex report_file_mu;
   ReportFile report_file = {&report_file_mu, kStderrFd, "", "", 0};
   char tmpfile[128];
   temp_file_name(tmpfile, sizeof(tmpfile),
