@@ -21,6 +21,7 @@
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/Pass.h"
 #include "llvm/Target/TargetMachine.h"
+#include "Utils/AMDGPUBaseInfo.h"
 
 #define DEBUG_TYPE "amdgpu-promote-alloca"
 
@@ -176,6 +177,10 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F) {
   if (IsAMDGCN) {
     const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
     MaxVGPRs = ST.getMaxNumVGPRs(ST.getWavesPerEU(F).first);
+    // A non-entry function has only 32 caller preserved registers.
+    // Do not promote alloca which will force spilling.
+    if (!AMDGPU::isEntryFunctionCC(F.getCallingConv()))
+      MaxVGPRs = std::min(MaxVGPRs, 32u);
   } else {
     MaxVGPRs = 128;
   }
@@ -1107,6 +1112,10 @@ bool promoteAllocasToVector(Function &F, TargetMachine &TM) {
   if (TM.getTargetTriple().getArch() == Triple::amdgcn) {
     const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
     MaxVGPRs = ST.getMaxNumVGPRs(ST.getWavesPerEU(F).first);
+    // A non-entry function has only 32 caller preserved registers.
+    // Do not promote alloca which will force spilling.
+    if (!AMDGPU::isEntryFunctionCC(F.getCallingConv()))
+      MaxVGPRs = std::min(MaxVGPRs, 32u);
   } else {
     MaxVGPRs = 128;
   }
