@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/usr/bin/env bash
 
 # This script is intended as a FileCheck replacement to update the test
 # expectations in a -ast-dump test.
