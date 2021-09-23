@@ -901,13 +901,6 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
 #endif
 
-#if defined(__APPLE__)
-#  if !defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && \
-      defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)
-#    define __MAC_OS_X_VERSION_MIN_REQUIRED __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__
-#  endif
-#endif // defined(__APPLE__)
-
 #if defined(_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION) || \
     (!defined(__cpp_aligned_new) || __cpp_aligned_new < 201606)
 #  define _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
