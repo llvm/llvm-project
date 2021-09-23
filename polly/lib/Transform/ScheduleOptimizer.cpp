@@ -55,7 +55,6 @@
 #include "polly/Support/ISLOStream.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "isl/options.h"
@@ -669,9 +668,7 @@ static void walkScheduleTreeForStatistics(isl::schedule Schedule, int Version) {
 static bool runIslScheduleOptimizer(
     Scop &S,
     function_ref<const Dependences &(Dependences::AnalysisLevel)> GetDeps,
-    TargetTransformInfo *TTI, OptimizationRemarkEmitter *ORE,
-    isl::schedule &LastSchedule) {
-
+    TargetTransformInfo *TTI, isl::schedule &LastSchedule) {
   // Skip SCoPs in case they're already optimised by PPCGCodeGeneration
   if (S.isToBeSkipped())
     return false;
@@ -692,8 +689,8 @@ static bool runIslScheduleOptimizer(
 
   bool HasUserTransformation = false;
   if (PragmaBasedOpts) {
-    isl::schedule ManuallyTransformed = applyManualTransformations(
-        &S, Schedule, GetDeps(Dependences::AL_Statement), ORE);
+    isl::schedule ManuallyTransformed =
+        applyManualTransformations(&S, Schedule);
     if (ManuallyTransformed.is_null()) {
       LLVM_DEBUG(dbgs() << "Error during manual optimization\n");
       return false;
@@ -852,9 +849,7 @@ static bool runIslScheduleOptimizer(
     walkScheduleTreeForStatistics(Schedule, 2);
   }
 
-  // Skip profitability check if user transformation(s) have been applied.
-  if (!HasUserTransformation &&
-      !ScheduleTreeOptimizer::isProfitableSchedule(S, Schedule))
+  if (!ScheduleTreeOptimizer::isProfitableSchedule(S, Schedule))
     return false;
 
   auto ScopStats = S.getStatistics();
@@ -883,11 +878,9 @@ bool IslScheduleOptimizerWrapperPass::runOnScop(Scop &S) {
     return getAnalysis<DependenceInfo>().getDependences(
         Dependences::AL_Statement);
   };
-  OptimizationRemarkEmitter &ORE =
-      getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
   TargetTransformInfo *TTI =
       &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  return runIslScheduleOptimizer(S, getDependences, TTI, &ORE, LastSchedule);
+  return runIslScheduleOptimizer(S, getDependences, TTI, LastSchedule);
 }
 
 static void runScheduleOptimizerPrinter(raw_ostream &OS,
@@ -922,10 +915,8 @@ void IslScheduleOptimizerWrapperPass::getAnalysisUsage(
   ScopPass::getAnalysisUsage(AU);
   AU.addRequired<DependenceInfo>();
   AU.addRequired<TargetTransformInfoWrapperPass>();
-  AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
 
   AU.addPreserved<DependenceInfo>();
-  AU.addPreserved<OptimizationRemarkEmitterWrapperPass>();
 }
 
 } // namespace
@@ -939,7 +930,6 @@ INITIALIZE_PASS_BEGIN(IslScheduleOptimizerWrapperPass, "polly-opt-isl",
 INITIALIZE_PASS_DEPENDENCY(DependenceInfo);
 INITIALIZE_PASS_DEPENDENCY(ScopInfoRegionPass);
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass);
 INITIALIZE_PASS_END(IslScheduleOptimizerWrapperPass, "polly-opt-isl",
                     "Polly - Optimize schedule of SCoP", false, false)
 
@@ -951,10 +941,9 @@ runIslScheduleOptimizerUsingNPM(Scop &S, ScopAnalysisManager &SAM,
   auto GetDeps = [&Deps](Dependences::AnalysisLevel) -> const Dependences & {
     return Deps.getDependences(Dependences::AL_Statement);
   };
-  OptimizationRemarkEmitter ORE(&S.getFunction());
   TargetTransformInfo *TTI = &SAR.TTI;
   isl::schedule LastSchedule;
-  bool Modified = runIslScheduleOptimizer(S, GetDeps, TTI, &ORE, LastSchedule);
+  bool Modified = runIslScheduleOptimizer(S, GetDeps, TTI, LastSchedule);
   if (OS) {
     *OS << "Printing analysis 'Polly - Optimize schedule of SCoP' for region: '"
         << S.getName() << "' in function '" << S.getFunction().getName()

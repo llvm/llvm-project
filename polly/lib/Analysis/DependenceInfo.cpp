@@ -636,19 +636,6 @@ void Dependences::calculateDependences(Scop &S) {
   LLVM_DEBUG(dump());
 }
 
-bool Dependences::isValidSchedule(Scop &S, isl::schedule NewSched) const {
-  // TODO: Also check permutable/coincident flags as well.
-
-  StatementToIslMapTy NewSchedules;
-  for (auto NewMap : NewSched.get_map().get_map_list()) {
-    auto Stmt = reinterpret_cast<ScopStmt *>(
-        NewMap.get_tuple_id(isl::dim::in).get_user());
-    NewSchedules[Stmt] = NewMap;
-  }
-
-  return isValidSchedule(S, NewSchedules);
-}
-
 bool Dependences::isValidSchedule(
     Scop &S, const StatementToIslMapTy &NewSchedule) const {
   if (LegalityCheckDisabled)
