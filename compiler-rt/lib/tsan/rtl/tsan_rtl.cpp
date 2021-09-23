@@ -108,7 +108,6 @@ Context::Context()
     : initialized(),
       report_mtx(MutexTypeReport),
       nreported(),
-      nmissed_expected(),
       thread_registry(CreateThreadContext, kMaxTid, kThreadQuarantineSize,
                       kMaxTidReuse),
       racy_mtx(MutexTypeRacy),
@@ -462,12 +461,6 @@ int Finalize(ThreadState *thr) {
 #else
     Printf("Found %d data race(s)\n", ctx->nreported);
 #endif
-  }
-
-  if (ctx->nmissed_expected) {
-    failed = true;
-    Printf("ThreadSanitizer: missed %d expected races\n",
-        ctx->nmissed_expected);
   }
 
   if (common_flags()->print_suppressions)
