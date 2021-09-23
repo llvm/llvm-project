@@ -282,7 +282,7 @@ BoxProcType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
   return emitError() << "invalid type for boxproc" << eleTy << '\n';
 }
 
-static bool canBePointerOrHeapElementType(mlir::Type eleTy) {
+static bool cannotBePointerOrHeapElementType(mlir::Type eleTy) {
   return eleTy.isa<BoxType, BoxCharType, BoxProcType, ShapeType, ShapeShiftType,
                    SliceType, FieldType, LenType, HeapType, PointerType,
                    ReferenceType, TypeDescType>();
@@ -418,7 +418,7 @@ void fir::HeapType::print(mlir::DialectAsmPrinter &printer) const {
 mlir::LogicalResult
 fir::HeapType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                       mlir::Type eleTy) {
-  if (canBePointerOrHeapElementType(eleTy))
+  if (cannotBePointerOrHeapElementType(eleTy))
     return emitError() << "cannot build a heap pointer to type: " << eleTy
                        << '\n';
   return mlir::success();
@@ -469,7 +469,7 @@ void fir::PointerType::print(mlir::DialectAsmPrinter &printer) const {
 mlir::LogicalResult fir::PointerType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
     mlir::Type eleTy) {
-  if (canBePointerOrHeapElementType(eleTy))
+  if (cannotBePointerOrHeapElementType(eleTy))
     return emitError() << "cannot build a pointer to type: " << eleTy << '\n';
   return mlir::success();
 }
