@@ -1610,7 +1610,28 @@ public:
     return Assignor.assign(CoS, NewConstraint);
   }
 
+  /// Handle expressions like: a % b != 0.
+  template <typename SymT>
+  bool handleRemainderOp(const SymT *Sym, RangeSet Constraint) {
+    if (Sym->getOpcode() != BO_Rem)
+      return true;
+    const SymbolRef LHS = Sym->getLHS();
+    const llvm::APSInt &Zero =
+        Builder.getBasicValueFactory().getValue(0, Sym->getType());
+    // a % b != 0 implies that a != 0.
+    if (!Constraint.containsZero()) {
+      State = RCM.assumeSymNE(State, LHS, Zero, Zero);
+      if (!State)
+        return false;
+    }
+    return true;
+  }
+
   inline bool assignSymExprToConst(const SymExpr *Sym, Const Constraint);
+  inline bool assignSymIntExprToRangeSet(const SymIntExpr *Sym,
+                                         RangeSet Constraint) {
+    return handleRemainderOp(Sym, Constraint);
+  }
   inline bool assignSymSymExprToRangeSet(const SymSymExpr *Sym,
                                          RangeSet Constraint);
 
@@ -1688,9 +1709,7 @@ private:
     if (Constraint.getConcreteValue())
       return !Constraint.getConcreteValue()->isZero();
 
-    APSIntType T{Constraint.getMinValue()};
-    Const Zero = T.getZeroValue();
-    if (!Constraint.contains(Zero))
+    if (!Constraint.containsZero())
       return true;
 
     return llvm::None;
@@ -1734,6 +1753,9 @@ bool ConstraintAssignor::assignSymExprToConst(const SymExpr *Sym,
 
 bool ConstraintAssignor::assignSymSymExprToRangeSet(const SymSymExpr *Sym,
                                                     RangeSet Constraint) {
+  if (!handleRemainderOp(Sym, Constraint))
+    return false;
+
   Optional<bool> ConstraintAsBool = interpreteAsBool(Constraint);
 
   if (!ConstraintAsBool)

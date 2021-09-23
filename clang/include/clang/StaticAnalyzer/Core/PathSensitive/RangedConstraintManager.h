@@ -282,6 +282,11 @@ public:
   ///             where N = size(this)
   bool contains(llvm::APSInt Point) const { return containsImpl(Point); }
 
+  bool containsZero() const {
+    APSIntType T{getMinValue()};
+    return contains(T.getZeroValue());
+  }
+
   void dump(raw_ostream &OS) const;
   void dump() const;
 
