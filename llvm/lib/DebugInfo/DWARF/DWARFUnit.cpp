@@ -388,11 +388,39 @@ void DWARFUnit::extractDIEsToVector(
   DWARFDataExtractor DebugInfoData = getDebugInfoExtractor();
   // The end offset has been already checked by DWARFUnitHeader::extract.
   assert(DebugInfoData.isValidOffset(NextCUOffset - 1));
-  uint32_t Depth = 0;
+  std::vector<uint32_t> Parents;
+  std::vector<uint32_t> PrevSiblings;
   bool IsCUDie = true;
 
-  while (DIE.extractFast(*this, &DIEOffset, DebugInfoData, NextCUOffset,
-                         Depth)) {
+  assert(
+      ((AppendCUDie && Dies.empty()) || (!AppendCUDie && Dies.size() == 1)) &&
+      "Dies array is not empty");
+
+  // Fill Parents and Siblings stacks with initial value.
+  Parents.push_back(UINT32_MAX);
+  if (!AppendCUDie)
+    Parents.push_back(0);
+  PrevSiblings.push_back(0);
+
+  // Start to extract dies.
+  do {
+    assert(Parents.size() > 0 && "Empty parents stack");
+    assert((Parents.back() == UINT32_MAX || Parents.back() <= Dies.size()) &&
+           "Wrong parent index");
+
+    // Extract die. Stop if any error occured.
+    if (!DIE.extractFast(*this, &DIEOffset, DebugInfoData, NextCUOffset,
+                         Parents.back()))
+      break;
+
+    // If previous sibling is remembered then update it`s SiblingIdx field.
+    if (PrevSiblings.back() > 0) {
+      assert(PrevSiblings.back() < Dies.size() &&
+             "Previous sibling index is out of Dies boundaries");
+      Dies[PrevSiblings.back()].setSiblingIdx(Dies.size());
+    }
+
+    // Store die into the Dies vector.
     if (IsCUDie) {
       if (AppendCUDie)
         Dies.push_back(DIE);
@@ -402,26 +430,36 @@ void DWARFUnit::extractDIEsToVector(
       // around 14-20 so let's pre-reserve the needed memory for
       // our DIE entries accordingly.
       Dies.reserve(Dies.size() + getDebugInfoSize() / 14);
-      IsCUDie = false;
     } else {
+      // Remember last previous sibling.
+      PrevSiblings.back() = Dies.size();
+
       Dies.push_back(DIE);
     }
 
+    // Check for new children scope.
     if (const DWARFAbbreviationDeclaration *AbbrDecl =
             DIE.getAbbreviationDeclarationPtr()) {
-      // Normal DIE
-      if (AbbrDecl->hasChildren())
-        ++Depth;
-      else if (Depth == 0)
-        break; // This unit has a single DIE with no children.
+      if (AbbrDecl->hasChildren()) {
+        if (AppendCUDie || !IsCUDie) {
+          assert(Dies.size() > 0 && "Dies does not contain any die");
+          Parents.push_back(Dies.size() - 1);
+          PrevSiblings.push_back(0);
+        }
+      } else if (IsCUDie)
+        // Stop if we have single compile unit die w/o children.
+        break;
     } else {
-      // NULL DIE.
-      if (Depth > 0)
-        --Depth;
-      if (Depth == 0)
-        break;  // We are done with this compile unit!
+      // NULL DIE: finishes current children scope.
+      Parents.pop_back();
+      PrevSiblings.pop_back();
     }
-  }
+
+    if (IsCUDie)
+      IsCUDie = false;
+
+    // Stop when compile unit die is removed from the parents stack.
+  } while (Parents.size() > 1);
 }
 
 void DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
@@ -731,65 +769,65 @@ const DWARFUnitIndex &llvm::getDWARFUnitIndex(DWARFContext &Context,
 DWARFDie DWARFUnit::getParent(const DWARFDebugInfoEntry *Die) {
   if (!Die)
     return DWARFDie();
-  const uint32_t Depth = Die->getDepth();
-  // Unit DIEs always have a depth of zero and never have parents.
-  if (Depth == 0)
-    return DWARFDie();
-  // Depth of 1 always means parent is the compile/type unit.
-  if (Depth == 1)
-    return getUnitDIE();
-  // Look for previous DIE with a depth that is one less than the Die's depth.
-  const uint32_t ParentDepth = Depth - 1;
-  for (uint32_t I = getDIEIndex(Die) - 1; I > 0; --I) {
-    if (DieArray[I].getDepth() == ParentDepth)
-      return DWARFDie(this, &DieArray[I]);
+
+  if (Optional<uint32_t> ParentIdx = Die->getParentIdx()) {
+    assert(*ParentIdx < DieArray.size() &&
+           "ParentIdx is out of DieArray boundaries");
+    return DWARFDie(this, &DieArray[*ParentIdx]);
   }
+
   return DWARFDie();
 }
 
 DWARFDie DWARFUnit::getSibling(const DWARFDebugInfoEntry *Die) {
   if (!Die)
     return DWARFDie();
-  uint32_t Depth = Die->getDepth();
-  // Unit DIEs always have a depth of zero and never have siblings.
-  if (Depth == 0)
-    return DWARFDie();
-  // NULL DIEs don't have siblings.
-  if (Die->getAbbreviationDeclarationPtr() == nullptr)
-    return DWARFDie();
 
-  // Find the next DIE whose depth is the same as the Die's depth.
-  for (size_t I = getDIEIndex(Die) + 1, EndIdx = DieArray.size(); I < EndIdx;
-       ++I) {
-    if (DieArray[I].getDepth() == Depth)
-      return DWARFDie(this, &DieArray[I]);
+  if (Optional<uint32_t> SiblingIdx = Die->getSiblingIdx()) {
+    assert(*SiblingIdx < DieArray.size() &&
+           "SiblingIdx is out of DieArray boundaries");
+    return DWARFDie(this, &DieArray[*SiblingIdx]);
   }
+
   return DWARFDie();
 }
 
 DWARFDie DWARFUnit::getPreviousSibling(const DWARFDebugInfoEntry *Die) {
   if (!Die)
     return DWARFDie();
-  uint32_t Depth = Die->getDepth();
-  // Unit DIEs always have a depth of zero and never have siblings.
-  if (Depth == 0)
+
+  Optional<uint32_t> ParentIdx = Die->getParentIdx();
+  if (!ParentIdx)
+    // Die is a root die, there is no previous sibling.
     return DWARFDie();
 
-  // Find the previous DIE whose depth is the same as the Die's depth.
-  for (size_t I = getDIEIndex(Die); I > 0;) {
-    --I;
-    if (DieArray[I].getDepth() == Depth - 1)
-      return DWARFDie();
-    if (DieArray[I].getDepth() == Depth)
-      return DWARFDie(this, &DieArray[I]);
+  assert(*ParentIdx < DieArray.size() &&
+         "ParentIdx is out of DieArray boundaries");
+  assert(getDIEIndex(Die) > 0 && "Die is a root die");
+
+  uint32_t PrevDieIdx = getDIEIndex(Die) - 1;
+  if (PrevDieIdx == *ParentIdx)
+    // Immediately previous node is parent, there is no previous sibling.
+    return DWARFDie();
+
+  while (DieArray[PrevDieIdx].getParentIdx() != *ParentIdx) {
+    PrevDieIdx = *DieArray[PrevDieIdx].getParentIdx();
+
+    assert(PrevDieIdx < DieArray.size() &&
+           "PrevDieIdx is out of DieArray boundaries");
+    assert(PrevDieIdx >= *ParentIdx &&
+           "PrevDieIdx is not a child of parent of Die");
   }
-  return DWARFDie();
+
+  return DWARFDie(this, &DieArray[PrevDieIdx]);
 }
 
 DWARFDie DWARFUnit::getFirstChild(const DWARFDebugInfoEntry *Die) {
   if (!Die->hasChildren())
     return DWARFDie();
 
+  // TODO: Instead of checking here for invalid die we might reject
+  // invalid dies at parsing stage(DWARFUnit::extractDIEsToVector).
   // We do not want access out of bounds when parsing corrupted debug data.
   size_t I = getDIEIndex(Die) + 1;
   if (I >= DieArray.size())
@@ -801,14 +839,30 @@ DWARFDie DWARFUnit::getLastChild(const DWARFDebugInfoEntry *Die) {
   if (!Die->hasChildren())
     return DWARFDie();
 
-  uint32_t Depth = Die->getDepth();
-  for (size_t I = getDIEIndex(Die) + 1, EndIdx = DieArray.size(); I < EndIdx;
-       ++I) {
-    if (DieArray[I].getDepth() == Depth + 1 &&
-        DieArray[I].getTag() == dwarf::DW_TAG_null)
-      return DWARFDie(this, &DieArray[I]);
-    assert(DieArray[I].getDepth() > Depth && "Not processing children?");
+  if (Optional<uint32_t> SiblingIdx = Die->getSiblingIdx()) {
+    assert(*SiblingIdx < DieArray.size() &&
+           "SiblingIdx is out of DieArray boundaries");
+    assert(DieArray[*SiblingIdx - 1].getTag() == dwarf::DW_TAG_null &&
+           "Bad end of children marker");
+    return DWARFDie(this, &DieArray[*SiblingIdx - 1]);
   }
+
+  // If SiblingIdx is set for non-root dies we could be sure that DWARF is
+  // correct and "end of children marker" must be found. For root die we do not
+  // have such a guarantee(parsing root die might be stopped if "end of children
+  // marker" is missing, SiblingIdx is always zero for root die). That is why we
+  // do not use assertion for checking for "end of children marker" for root
+  // die.
+
+  // TODO: Instead of checking here for invalid die we might reject
+  // invalid dies at parsing stage(DWARFUnit::extractDIEsToVector).
+  if (getDIEIndex(Die) == 0 && DieArray.size() > 1 &&
+      DieArray.back().getTag() == dwarf::DW_TAG_null) {
+    // For the unit die we might take last item from DieArray.
+    assert(getDIEIndex(Die) == getDIEIndex(getUnitDIE()) && "Bad unit die");
+    return DWARFDie(this, &DieArray.back());
+  }
+
   return DWARFDie();
 }
 
