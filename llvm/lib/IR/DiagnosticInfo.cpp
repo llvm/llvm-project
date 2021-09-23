@@ -400,6 +400,34 @@ std::string DiagnosticInfoOptimizationBase::getMsg() const {
 void OptimizationRemarkAnalysisFPCommute::anchor() {}
 void OptimizationRemarkAnalysisAliasing::anchor() {}
 
+void llvm::diagnoseDontCall(const CallInst &CI) {
+  auto *F = CI.getCalledFunction();
+  if (!F)
+    return;
+
+  for (int i = 0; i != 2; ++i) {
+    auto AttrName = i == 0 ? "dontcall-error" : "dontcall-warn";
+    auto Sev = i == 0 ? DS_Error : DS_Warning;
+
+    if (F->hasFnAttribute(AttrName)) {
+      unsigned LocCookie = 0;
+      auto A = F->getFnAttribute(AttrName);
+      if (MDNode *MD = CI.getMetadata("srcloc"))
+        LocCookie =
+            mdconst::extract<ConstantInt>(MD->getOperand(0))->getZExtValue();
+      DiagnosticInfoDontCall D(F->getName(), A.getValueAsString(), Sev,
+                               LocCookie);
+      F->getContext().diagnose(D);
+    }
+  }
+}
+
 void DiagnosticInfoDontCall::print(DiagnosticPrinter &DP) const {
-  DP << "call to " << getFunctionName() << " marked \"dontcall\"";
+  DP << "call to " << getFunctionName() << " marked \"dontcall-";
+  if (getSeverity() == DiagnosticSeverity::DS_Error)
+    DP << "error\"";
+  else
+    DP << "warn\"";
+  if (!getNote().empty())
+    DP << ": " << getNote();
 }

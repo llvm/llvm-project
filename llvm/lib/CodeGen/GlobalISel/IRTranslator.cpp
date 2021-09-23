@@ -2344,14 +2344,7 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   if (CI.isInlineAsm())
     return translateInlineAsm(CI, MIRBuilder);
 
-  if (F && F->hasFnAttribute("dontcall")) {
-    unsigned LocCookie = 0;
-    if (MDNode *MD = CI.getMetadata("srcloc"))
-      LocCookie =
-          mdconst::extract<ConstantInt>(MD->getOperand(0))->getZExtValue();
-    DiagnosticInfoDontCall D(F->getName(), LocCookie);
-    F->getContext().diagnose(D);
-  }
+  diagnoseDontCall(CI);
 
   Intrinsic::ID ID = Intrinsic::not_intrinsic;
   if (F && F->isIntrinsic()) {

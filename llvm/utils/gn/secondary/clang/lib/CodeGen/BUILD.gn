@@ -13,6 +13,7 @@ static_library("CodeGen") {
     "//clang/lib/Lex",
     "//llvm/lib/Analysis",
     "//llvm/lib/Bitcode/Reader",
+    "//llvm/lib/Demangle",
     "//llvm/lib/IR",
     "//llvm/lib/IRReader",
     "//llvm/lib/LTO",
