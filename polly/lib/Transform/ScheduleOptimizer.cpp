@@ -787,20 +787,7 @@ static bool runIslScheduleOptimizer(
     LLVM_DEBUG(dbgs() << "Proximity := " << Proximity << ";\n");
     LLVM_DEBUG(dbgs() << "Validity := " << Validity << ";\n");
 
-    unsigned IslSerializeSCCs;
-
-    if (FusionStrategy == "max") {
-      IslSerializeSCCs = 0;
-    } else if (FusionStrategy == "min") {
-      IslSerializeSCCs = 1;
-    } else {
-      errs() << "warning: Unknown fusion strategy. Falling back to maximal "
-                "fusion.\n";
-      IslSerializeSCCs = 0;
-    }
-
     int IslMaximizeBands;
-
     if (MaximizeBandDepth == "yes") {
       IslMaximizeBands = 1;
     } else if (MaximizeBandDepth == "no") {
@@ -813,7 +800,6 @@ static bool runIslScheduleOptimizer(
     }
 
     int IslOuterCoincidence;
-
     if (OuterCoincidence == "yes") {
       IslOuterCoincidence = 1;
     } else if (OuterCoincidence == "no") {
@@ -827,7 +813,6 @@ static bool runIslScheduleOptimizer(
     isl_ctx *Ctx = S.getIslCtx().get();
 
     isl_options_set_schedule_outer_coincidence(Ctx, IslOuterCoincidence);
-    isl_options_set_schedule_serialize_sccs(Ctx, IslSerializeSCCs);
     isl_options_set_schedule_maximize_band_depth(Ctx, IslMaximizeBands);
     isl_options_set_schedule_max_constant_term(Ctx, MaxConstantTerm);
     isl_options_set_schedule_max_coefficient(Ctx, MaxCoefficient);
