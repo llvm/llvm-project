@@ -231,7 +231,9 @@ class F_SFU1<bits<4> func, bits<2> td, bits<2> t1, bits<2> t2,
                dag outs, dag ins, string asmstr, list<dag> pattern,
                InstrItinClass itin = NoItinerary>
    : F_SFU<0b001, outs, ins, asmstr, pattern, itin> {
-  let Inst{15} = 0b0; // r
+  bits<1>  regfile;
+
+  let Inst{15} = regfile;
   let Inst{14-11} = func;
   let Inst{10-9} = t1;
   let Inst{8-7} = t2;

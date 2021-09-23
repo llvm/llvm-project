@@ -448,6 +448,7 @@ multiclass FArith<bits<4> Func, string OpcStr, SDNode OpNode,
     defvar S1Opnd = !if(S1, GPRF64Opnd, GPRF32Opnd);
     defvar S2Prec = !if(S2, "d", "s");
     defvar S2Opnd = !if(S2, GPRF64Opnd, GPRF32Opnd);
+    let regfile = 0 in //!cast<M88kRegisterClass>(DOpnd).HWRegFile in
     def DPrec # S1Prec #S2Prec :
              F_SFU1<Func, D, S1, S2,
                     (outs DOpnd:$rd), (ins S1Opnd:$rs1, S2Opnd:$rs2),
