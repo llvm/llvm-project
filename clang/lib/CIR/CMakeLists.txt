@@ -29,4 +29,5 @@ add_clang_library(clangCIR
   MLIRSideEffectInterfaces
   MLIRTransforms
   MLIRSupport
+  MLIRMemRefDialect
   )
