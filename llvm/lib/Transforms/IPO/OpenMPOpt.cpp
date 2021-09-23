@@ -2830,7 +2830,11 @@ struct AAKernelInfo : public StateWrapper<KernelInfoState, AbstractAttribute> {
            std::string(" #PRs: ") +
            std::to_string(ReachedKnownParallelRegions.size()) +
            ", #Unknown PRs: " +
-           std::to_string(ReachedUnknownParallelRegions.size());
+           std::to_string(ReachedUnknownParallelRegions.size()) +
+           ", #Reaching Kernels: " +
+           (ReachingKernelEntries.isValidState()
+                ? std::to_string(ReachingKernelEntries.size())
+                : "<invalid>");
   }
 
   /// Create an abstract attribute biew for the position \p IRP.
