@@ -49,7 +49,6 @@ typedef struct _GPR {
 #reg, alt, sizeof(((GPR *)nullptr)->reg), GPR_OFFSET(reg), eEncodingUint,  \
         eFormatHex,                                                            \
         {kind1, kind2, kind3, kind4, lldb_##reg##_x86_64 }, nullptr, nullptr,  \
-         nullptr, 0                                                            \
   }
 
 typedef struct _FPReg {
@@ -80,7 +79,7 @@ typedef struct _FPReg {
         eEncodingUint, eFormatVectorOfUInt64,                                  \
         {dwarf_##reg##_x86_64, dwarf_##reg##_x86_64, LLDB_INVALID_REGNUM,      \
          LLDB_INVALID_REGNUM, lldb_##reg##_x86_64 },                           \
-         nullptr, nullptr, nullptr, 0                                          \
+         nullptr, nullptr,                                                     \
   }
 
 // clang-format off
