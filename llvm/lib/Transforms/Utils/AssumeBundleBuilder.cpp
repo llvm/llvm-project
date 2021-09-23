@@ -67,7 +67,8 @@ bool isUsefullToPreserve(Attribute::AttrKind Kind) {
 
 /// This function will try to transform the given knowledge into a more
 /// canonical one. the canonical knowledge maybe the given one.
-RetainedKnowledge canonicalizedKnowledge(RetainedKnowledge RK, DataLayout DL) {
+RetainedKnowledge canonicalizedKnowledge(RetainedKnowledge RK,
+                                         const DataLayout &DL) {
   switch (RK.AttrKind) {
   default:
     return RK;
