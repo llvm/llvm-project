@@ -411,8 +411,7 @@ public:
   /// This method returns a null pointer if the transformation cannot be
   /// performed, otherwise it returns the last new instruction.
   ///
-  virtual MachineInstr *convertToThreeAddress(MachineFunction::iterator &MFI,
-                                              MachineInstr &MI,
+  virtual MachineInstr *convertToThreeAddress(MachineInstr &MI,
                                               LiveVariables *LV) const {
     return nullptr;
   }
