@@ -26067,16 +26067,16 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       // Swap Src1 and Src2 in the node creation
       return DAG.getNode(IntrData->Opc0, dl, VT,Src2, Src1);
     }
-    case FMA_OP_MASKZ:
-    case FMA_OP_MASK: {
+    case CFMA_OP_MASKZ:
+    case CFMA_OP_MASK: {
       SDValue Src1 = Op.getOperand(1);
       SDValue Src2 = Op.getOperand(2);
       SDValue Src3 = Op.getOperand(3);
       SDValue Mask = Op.getOperand(4);
       MVT VT = Op.getSimpleValueType();
 
-      SDValue PassThru = Src1;
-      if (IntrData->Type == FMA_OP_MASKZ)
+      SDValue PassThru = Src3;
+      if (IntrData->Type == CFMA_OP_MASKZ)
         PassThru = getZeroVector(VT, Subtarget, DAG, dl);
 
       // We add rounding mode to the Node when
