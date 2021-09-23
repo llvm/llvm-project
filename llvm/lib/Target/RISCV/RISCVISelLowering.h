@@ -164,12 +164,13 @@ enum NodeType : unsigned {
   VFNCVT_ROD_VL,
   // These nodes match the semantics of the corresponding RVV vector reduction
   // instructions. They produce a vector result which is the reduction
-  // performed over the first vector operand plus the first element of the
-  // second vector operand. The first operand is an unconstrained vector type,
-  // and the result and second operand's types are expected to be the
-  // corresponding full-width LMUL=1 type for the first operand:
-  //   nxv8i8 = vecreduce_add nxv32i8, nxv8i8
-  //   nxv2i32 = vecreduce_add nxv8i32, nxv2i32
+  // performed over the second vector operand plus the first element of the
+  // third vector operand. The first operand is the pass-thru operand. The
+  // second operand is an unconstrained vector type, and the result, first, and
+  // third operand's types are expected to be the corresponding full-width
+  // LMUL=1 type for the second operand:
+  //   nxv8i8 = vecreduce_add nxv8i8, nxv32i8, nxv8i8
+  //   nxv2i32 = vecreduce_add nxv2i32, nxv8i32, nxv2i32
   // The different in types does introduce extra vsetvli instructions but
   // similarly it reduces the number of registers consumed per reduction.
   // Also has a mask and VL operand.
@@ -561,8 +562,10 @@ private:
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVPREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVectorMaskVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVectorMaskVecReduction(SDValue Op, SelectionDAG &DAG,
+                                      bool IsVP) const;
   SDValue lowerFPVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINSERT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;

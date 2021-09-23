@@ -306,7 +306,6 @@ struct Context {
 
   Mutex report_mtx;
   int nreported;
-  int nmissed_expected;
   atomic_uint64_t last_symbolize_time_ns;
 
   void *background_thread;

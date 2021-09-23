@@ -289,6 +289,12 @@ private:
     return DAG.getZeroExtendInReg(Op, DL, OldVT);
   }
 
+  // Promote the given operand V (vector or scalar) according to N's specific
+  // reduction kind. N must be an integer VECREDUCE_* or VP_REDUCE_*. Returns
+  // the nominal extension opcode (ISD::(ANY|ZERO|SIGN)_EXTEND) and the
+  // promoted value.
+  SDValue PromoteIntOpVectorReduction(SDNode *N, SDValue V);
+
   // Integer Result Promotion.
   void PromoteIntegerResult(SDNode *N, unsigned ResNo);
   SDValue PromoteIntRes_MERGE_VALUES(SDNode *N, unsigned ResNo);
@@ -353,6 +359,7 @@ private:
   SDValue PromoteIntRes_DIVFIX(SDNode *N);
   SDValue PromoteIntRes_FLT_ROUNDS(SDNode *N);
   SDValue PromoteIntRes_VECREDUCE(SDNode *N);
+  SDValue PromoteIntRes_VP_REDUCE(SDNode *N);
   SDValue PromoteIntRes_ABS(SDNode *N);
   SDValue PromoteIntRes_Rotate(SDNode *N);
   SDValue PromoteIntRes_FunnelShift(SDNode *N);
@@ -394,6 +401,7 @@ private:
   SDValue PromoteIntOp_FIX(SDNode *N);
   SDValue PromoteIntOp_FPOWI(SDNode *N);
   SDValue PromoteIntOp_VECREDUCE(SDNode *N);
+  SDValue PromoteIntOp_VP_REDUCE(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_SET_ROUNDING(SDNode *N);
 
   void PromoteSetCCOperands(SDValue &LHS,SDValue &RHS, ISD::CondCode Code);
