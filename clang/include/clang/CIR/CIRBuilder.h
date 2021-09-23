@@ -29,9 +29,7 @@ class FunctionDecl;
 
 namespace cir {
 class CIRBuildImpl;
-}
-
-namespace cir {
+class CIRGenTypes;
 
 class CIRContext {
 public:
@@ -44,6 +42,7 @@ private:
   std::unique_ptr<mlir::MLIRContext> mlirCtx;
   std::unique_ptr<CIRBuildImpl> builder;
   std::unique_ptr<llvm::ToolOutputFile> cirOut;
+
   clang::ASTContext &astCtx;
 };
 
