@@ -111,8 +111,7 @@ func @static_pad_tensor(%input_tensor: tensor<7x9xf32>,
 //       TILE1:     else
 //       TILE1:       %[[SLICE:.*]] = tensor.extract_slice %arg0[0, %{{.*}}] [7, %{{.*}}] [1, 1] : tensor<7x9xf32> to tensor<7x?xf32>
 //       TILE1:       %[[PAD:.*]] = linalg.pad_tensor %[[SLICE]] low[0, 0] high[7, %{{.*}}]
-//       TILE1:       %[[CAST:.*]] = tensor.cast %[[PAD]] : tensor<14x?xf32> to tensor<14x3xf32>
-//       TILE1:       scf.yield %[[CAST]] : tensor<14x3xf32>
+//       TILE1:       scf.yield %[[PAD]] : tensor<14x3xf32>
 //       TILE1:     %[[R3:.*]] = tensor.insert_slice %[[R2]] into %[[INNER_OUT]][0, %[[IV]]] [14, 3] [1, 1] : tensor<14x3xf32> into tensor<14x15xf32>
 //       TILE1:     scf.yield %[[R3]] : tensor<14x15xf32>
 //       TILE1:   return %[[RESULT]] : tensor<14x15xf32>

@@ -31,6 +31,34 @@ Operation *TensorDialect::materializeConstant(OpBuilder &builder,
 // CastOp
 //===----------------------------------------------------------------------===//
 
+/// Returns true if `target` is a ranked tensor type that preserves static
+/// information available in the `source` ranked tensor type.
+bool mlir::tensor::preservesStaticInformation(Type source, Type target) {
+  auto sourceType = source.dyn_cast<RankedTensorType>();
+  auto targetType = target.dyn_cast<RankedTensorType>();
+
+  // Requires RankedTensorType.
+  if (!sourceType || !targetType)
+    return false;
+
+  // Requires same elemental type.
+  if (sourceType.getElementType() != targetType.getElementType())
+    return false;
+
+  // Requires same rank.
+  if (sourceType.getRank() != targetType.getRank())
+    return false;
+
+  // If cast is towards more static sizes along any dimension, don't fold.
+  for (auto t : llvm::zip(sourceType.getShape(), targetType.getShape())) {
+    if (!ShapedType::isDynamic(std::get<0>(t)) &&
+        ShapedType::isDynamic(std::get<1>(t)))
+      return false;
+  }
+
+  return true;
+}
+
 /// Determines whether tensor::CastOp casts to a more dynamic version of the
 /// source tensor. This is useful to fold a tensor.cast into a consuming op and
 /// implement canonicalization patterns for ops in different dialects that may
@@ -57,30 +85,10 @@ bool mlir::tensor::canFoldIntoConsumerOp(CastOp castOp) {
   if (!castOp)
     return false;
 
-  RankedTensorType sourceType =
-      castOp.source().getType().dyn_cast<RankedTensorType>();
-  RankedTensorType resultType = castOp.getType().dyn_cast<RankedTensorType>();
-
-  // Requires RankedTensorType.
-  if (!sourceType || !resultType)
-    return false;
-
-  // Requires same elemental type.
-  if (sourceType.getElementType() != resultType.getElementType())
-    return false;
-
-  // Requires same rank.
-  if (sourceType.getRank() != resultType.getRank())
-    return false;
-
-  // If cast is towards more static sizes along any dimension, don't fold.
-  for (auto t : llvm::zip(sourceType.getShape(), resultType.getShape())) {
-    if (ShapedType::isDynamic(std::get<0>(t)) &&
-        !ShapedType::isDynamic(std::get<1>(t)))
-      return false;
-  }
-
-  return true;
+  // Can fold if the source of cast has at least as much static information as
+  // its results.
+  return preservesStaticInformation(castOp.getType(),
+                                    castOp.source().getType());
 }
 
 /// Performs folding of any operand of `op` if it comes from a tensor::CastOp
