@@ -543,4 +543,5 @@ TEST(raw_ostreamTest, writeToStdOut) {
   std::string CapturedStdOut = testing::internal::GetCapturedStdout();
   EXPECT_EQ(CapturedStdOut, "HelloWorld");
 }
-}
+
+} // namespace
