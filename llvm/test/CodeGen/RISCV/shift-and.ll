@@ -17,10 +17,8 @@ define i32 @test1(i32 %x) {
 ;
 ; RV64I-LABEL: test1:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srli a0, a0, 5
-; RV64I-NEXT:    lui a1, 32768
-; RV64I-NEXT:    addiw a1, a1, -8
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    srliw a0, a0, 8
+; RV64I-NEXT:    slli a0, a0, 3
 ; RV64I-NEXT:    ret
   %a = lshr i32 %x, 5
   %b = and i32 %a, 134217720
@@ -50,16 +48,14 @@ define i64 @test2(i64 %x) {
 define i32 @test3(i32 %x) {
 ; RV32I-LABEL: test3:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    srli a0, a0, 6
-; RV32I-NEXT:    lui a1, 16380
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    srli a0, a0, 20
+; RV32I-NEXT:    slli a0, a0, 14
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: test3:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srli a0, a0, 6
-; RV64I-NEXT:    lui a1, 16380
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    srliw a0, a0, 20
+; RV64I-NEXT:    slli a0, a0, 14
 ; RV64I-NEXT:    ret
   %a = lshr i32 %x, 6
   %b = and i32 %a, 67092480
@@ -79,9 +75,8 @@ define i64 @test4(i64 %x) {
 ;
 ; RV64I-LABEL: test4:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srli a0, a0, 6
-; RV64I-NEXT:    lui a1, 1048572
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    srli a0, a0, 20
+; RV64I-NEXT:    slli a0, a0, 14
 ; RV64I-NEXT:    ret
   %a = lshr i64 %x, 6
   %b = and i64 %a, 288230376151695360
