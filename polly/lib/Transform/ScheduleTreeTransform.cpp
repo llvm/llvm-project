@@ -397,10 +397,6 @@ static bool isBandWithSingleLoop(const isl::schedule_node &Node) {
 }
 #endif
 
-static bool isLeaf(const isl::schedule_node &Node) {
-  return isl_schedule_node_get_type(Node.get()) == isl_schedule_node_leaf;
-}
-
 /// Create an isl::id representing the output loop after a transformation.
 static isl::id createGeneratedLoopAttr(isl::ctx Ctx, MDNode *FollowupLoopMD) {
   // Don't need to id the followup.
@@ -731,47 +727,4 @@ isl::schedule_node polly::applyRegisterTiling(isl::schedule_node Node,
   auto Ctx = Node.ctx();
   return Node.as<isl::schedule_node_band>().set_ast_build_options(
       isl::union_set(Ctx, "{unroll[x]}"));
-}
-
-/// Find statements and sub-loops in (possibly nested) sequences.
-static void
-collectFussionableStmts(isl::schedule_node Node,
-                        SmallVectorImpl<isl::schedule_node> &ScheduleStmts) {
-  if (isBand(Node) || isLeaf(Node)) {
-    ScheduleStmts.push_back(Node);
-    return;
-  }
-
-  if (Node.has_children()) {
-    isl::schedule_node C = Node.first_child();
-    while (true) {
-      collectFussionableStmts(C, ScheduleStmts);
-      if (!C.has_next_sibling())
-        break;
-      C = C.next_sibling();
-    }
-  }
-}
-
-isl::schedule polly::applyMaxFission(isl::schedule_node BandToFission) {
-  isl::ctx Ctx = BandToFission.ctx();
-  BandToFission = removeMark(BandToFission);
-  isl::schedule_node BandBody = BandToFission.child(0);
-
-  SmallVector<isl::schedule_node> FissionableStmts;
-  collectFussionableStmts(BandBody, FissionableStmts);
-  size_t N = FissionableStmts.size();
-
-  // Collect the domain for each of the statements that will get their own loop.
-  isl::union_set_list DomList = isl::union_set_list(Ctx, N);
-  for (size_t i = 0; i < N; ++i) {
-    isl::schedule_node BodyPart = FissionableStmts[i];
-    DomList = DomList.add(BodyPart.get_domain());
-  }
-
-  // Apply the fission by copying the entire loop, but inserting a filter for
-  // the statement domains for each fissioned loop.
-  isl::schedule_node Fissioned = BandToFission.insert_sequence(DomList);
-
-  return Fissioned.get_schedule();
 }

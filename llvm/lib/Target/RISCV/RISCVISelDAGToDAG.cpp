@@ -674,6 +674,23 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       }
     }
 
+    // Turn (and (shl x, c2), c1) -> (slli (srli x, c3-c2), c3) if c1 is a
+    // shifted mask with no leading zeros and c3 trailing zeros.
+    if (LeftShift && isShiftedMask_64(C1)) {
+      uint64_t Leading = XLen - (64 - countLeadingZeros(C1));
+      uint64_t C3 = countTrailingZeros(C1);
+      if (Leading == 0 && C2 < C3 && OneUseOrZExtW && !ZExtOrANDI) {
+        SDNode *SRLI = CurDAG->getMachineNode(
+            RISCV::SRLI, DL, XLenVT, X,
+            CurDAG->getTargetConstant(C3 - C2, DL, XLenVT));
+        SDNode *SLLI =
+            CurDAG->getMachineNode(RISCV::SLLI, DL, XLenVT, SDValue(SRLI, 0),
+                                   CurDAG->getTargetConstant(C3, DL, XLenVT));
+        ReplaceNode(Node, SLLI);
+        return;
+      }
+    }
+
     break;
   }
   case ISD::INTRINSIC_WO_CHAIN: {

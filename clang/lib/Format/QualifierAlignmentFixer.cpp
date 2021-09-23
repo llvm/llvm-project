@@ -84,7 +84,7 @@ std::pair<tooling::Replacements, unsigned> QualifierAlignmentFixer::analyze(
       }
     }
   }
-  return {Fixes, 0};
+  return {Fixes, Penalty};
 }
 
 static void replaceToken(const SourceManager &SourceMgr,
