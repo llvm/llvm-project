@@ -98,14 +98,13 @@ int main(int, char**)
 #endif
 
     // Test support for http://wg21.link/P1951, default arguments for pair's constructor.
-    // Basically, this turns copies for brace initialization into moves. Note that libc++
-    // applies this in all standard modes.
-#if TEST_STD_VER > 20 || defined(_LIBCPP_VERSION)
+    // Basically, this turns copies for brace initialization into moves.
+#if TEST_STD_VER > 20
     {
         struct TrackInit {
             TrackInit() = default;
-            constexpr TrackInit(TrackInit const&) : wasCopyInit(true) { }
-            constexpr TrackInit(TrackInit&&) : wasMoveInit(true) { }
+            constexpr TrackInit(TrackInit const& other) : wasMoveInit(other.wasMoveInit), wasCopyInit(true) { }
+            constexpr TrackInit(TrackInit&& other) : wasMoveInit(true), wasCopyInit(other.wasCopyInit) { }
             bool wasMoveInit = false;
             bool wasCopyInit = false;
         };
@@ -138,7 +137,7 @@ int main(int, char**)
             }
         }
     }
-#endif
+#endif // TEST_STD_VER > 20
 
     return 0;
 }

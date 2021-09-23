@@ -168,18 +168,28 @@ struct _LIBCPP_TEMPLATE_VIS pair
                    is_nothrow_copy_constructible<second_type>::value)
         : first(__t1), second(__t2) {}
 
-    template<class _U1 = _T1, class _U2 = _T2, typename enable_if<
-             _CheckArgs::template __enable_explicit<_U1, _U2>()
-    >::type* = nullptr>
+    template <
+#if _LIBCPP_STD_VER > 20 // http://wg21.link/P1951
+        class _U1 = _T1, class _U2 = _T2,
+#else
+        class _U1, class _U2,
+#endif
+        typename enable_if<_CheckArgs::template __enable_explicit<_U1, _U2>()>::type* = nullptr
+    >
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
     explicit pair(_U1&& __u1, _U2&& __u2)
         _NOEXCEPT_((is_nothrow_constructible<first_type, _U1>::value &&
                     is_nothrow_constructible<second_type, _U2>::value))
         : first(_VSTD::forward<_U1>(__u1)), second(_VSTD::forward<_U2>(__u2)) {}
 
-    template<class _U1 = _T1, class _U2 = _T2, typename enable_if<
-            _CheckArgs::template __enable_implicit<_U1, _U2>()
-    >::type* = nullptr>
+    template <
+#if _LIBCPP_STD_VER > 20 // http://wg21.link/P1951
+        class _U1 = _T1, class _U2 = _T2,
+#else
+        class _U1, class _U2,
+#endif
+        typename enable_if<_CheckArgs::template __enable_implicit<_U1, _U2>()>::type* = nullptr
+    >
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
     pair(_U1&& __u1, _U2&& __u2)
         _NOEXCEPT_((is_nothrow_constructible<first_type, _U1>::value &&
