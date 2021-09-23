@@ -145,8 +145,9 @@ public:
   CIRBuildImpl &operator=(CIRBuildImpl &) = delete;
   ~CIRBuildImpl() = default;
 
-  using SymTableTy = llvm::ScopedHashTable<StringRef, mlir::Value>;
-  using SymTableScopeTy = ScopedHashTableScope<llvm::StringRef, mlir::Value>;
+  // FIXME: instead of mlir::Value, hold a RawAddress here.
+  using SymTableTy = llvm::ScopedHashTable<const Decl *, mlir::Value>;
+  using SymTableScopeTy = ScopedHashTableScope<const Decl *, mlir::Value>;
 
 private:
   /// A "module" matches a c/cpp source file: containing a list of functions.
@@ -182,7 +183,7 @@ private:
 
   /// Declare a variable in the current scope, return success if the variable
   /// wasn't declared yet.
-  mlir::LogicalResult declare(StringRef var, mlir::Value value,
+  mlir::LogicalResult declare(const Decl *var, mlir::Value value,
                               mlir::Location loc) {
     if (symbolTable.count(var))
       return mlir::failure();
@@ -300,10 +301,9 @@ public:
                "not implemented");
         assert(!VD->isEscapingByref() && "not implemented");
         assert(!VD->getType()->isReferenceType() && "not implemented");
-        assert(Builder.symbolTable.count(VD->getName()) &&
-               "should be already mapped");
+        assert(Builder.symbolTable.count(VD) && "should be already mapped");
 
-        mlir::Value V = Builder.symbolTable.lookup(VD->getName());
+        mlir::Value V = Builder.symbolTable.lookup(VD);
         assert(V && "Name lookup must succeed");
 
         LValue LV = LValue::makeAddr(RawAddress(V, CharUnits::fromQuantity(4)),
@@ -483,12 +483,12 @@ public:
          llvm::zip(FD->parameters(), entryBlock.getArguments())) {
       auto *paramVar = std::get<0>(nameValue);
       auto paramVal = std::get<1>(nameValue);
-      if (failed(declare(paramVar->getName(), paramVal,
+      if (failed(declare(paramVar, paramVal,
                          getLoc(paramVar->getSourceRange().getBegin()))))
         return nullptr;
       // Store params in local storage. FIXME: is this really needed
       // at this level of representation?
-      mlir::Value addr = symbolTable.lookup(paramVar->getName());
+      mlir::Value addr = symbolTable.lookup(paramVar);
       builder.create<mlir::memref::StoreOp>(loc, paramVal, addr);
     }
 
