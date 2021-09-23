@@ -225,6 +225,8 @@ TEST_P(SocketTest, DomainGetConnectURI) {
   EXPECT_TRUE(UriParser::Parse(uri, scheme, hostname, port, path));
   EXPECT_EQ(scheme, "unix-connect");
   EXPECT_EQ(path, domain_path);
+
+  EXPECT_EQ(socket_b_up->GetRemoteConnectionURI(), "");
 }
 #endif
 
