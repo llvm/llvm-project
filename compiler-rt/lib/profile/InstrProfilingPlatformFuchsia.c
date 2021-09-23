@@ -52,7 +52,7 @@ static inline void lprofWrite(const char *fmt, ...) {
   int ret = vsnprintf(s, sizeof(s), fmt, ap);
   va_end(ap);
 
-  __sanitizer_log_write(s, ret + 1);
+  __sanitizer_log_write(s, ret);
 }
 
 struct lprofVMOWriterCtx {
