@@ -454,7 +454,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
     return;
 
   char packet[128];
-  std::vector<RemoteRegisterInfo> registers;
+  uint32_t reg_offset = LLDB_INVALID_INDEX32;
   uint32_t reg_num = 0;
   for (StringExtractorGDBRemote::ResponseType response_type =
            StringExtractorGDBRemote::eResponse;
@@ -470,26 +470,53 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
       if (response_type == StringExtractorGDBRemote::eResponse) {
         llvm::StringRef name;
         llvm::StringRef value;
-        RemoteRegisterInfo reg_info;
+        ConstString reg_name;
+        ConstString alt_name;
+        ConstString set_name;
+        std::vector<uint32_t> value_regs;
+        std::vector<uint32_t> invalidate_regs;
+        std::vector<uint8_t> dwarf_opcode_bytes;
+        RegisterInfo reg_info = {
+            nullptr,       // Name
+            nullptr,       // Alt name
+            0,             // byte size
+            reg_offset,    // offset
+            eEncodingUint, // encoding
+            eFormatHex,    // format
+            {
+                LLDB_INVALID_REGNUM, // eh_frame reg num
+                LLDB_INVALID_REGNUM, // DWARF reg num
+                LLDB_INVALID_REGNUM, // generic reg num
+                reg_num,             // process plugin reg num
+                reg_num              // native register number
+            },
+            nullptr,
+            nullptr,
+            nullptr, // Dwarf expression opcode bytes pointer
+            0        // Dwarf expression opcode bytes length
+        };
 
         while (response.GetNameColonValue(name, value)) {
           if (name.equals("name")) {
-            reg_info.name.SetString(value);
+            reg_name.SetString(value);
           } else if (name.equals("alt-name")) {
-            reg_info.alt_name.SetString(value);
+            alt_name.SetString(value);
           } else if (name.equals("bitsize")) {
-            reg_info.byte_size =
-                StringConvert::ToUInt32(value.data(), 0, 0) / CHAR_BIT;
+            value.getAsInteger(0, reg_info.byte_size);
+            reg_info.byte_size /= CHAR_BIT;
           } else if (name.equals("offset")) {
-            reg_info.byte_offset =
-                StringConvert::ToUInt32(value.data(), LLDB_INVALID_INDEX32, 0);
+            if (value.getAsInteger(0, reg_offset))
+              reg_offset = UINT32_MAX;
           } else if (name.equals("encoding")) {
             const Encoding encoding = Args::StringToEncoding(value);
             if (encoding != eEncodingInvalid)
               reg_info.encoding = encoding;
           } else if (name.equals("format")) {
-            if (!OptionArgParser::ToFormat(value.str().c_str(), reg_info.format, nullptr)
+            Format format = eFormatInvalid;
+            if (OptionArgParser::ToFormat(value.str().c_str(), format, nullptr)
                     .Success())
+              reg_info.format = format;
+            else {
               reg_info.format =
                   llvm::StringSwitch<Format>(value)
                       .Case("binary", eFormatBinary)
@@ -506,36 +533,59 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
                       .Case("vector-uint64", eFormatVectorOfUInt64)
                       .Case("vector-uint128", eFormatVectorOfUInt128)
                       .Default(eFormatInvalid);
+            }
           } else if (name.equals("set")) {
-            reg_info.set_name.SetString(value);
+            set_name.SetString(value);
           } else if (name.equals("gcc") || name.equals("ehframe")) {
-            reg_info.regnum_ehframe =
-                StringConvert::ToUInt32(value.data(), LLDB_INVALID_REGNUM, 0);
+            if (value.getAsInteger(0, reg_info.kinds[eRegisterKindEHFrame]))
+              reg_info.kinds[eRegisterKindEHFrame] = LLDB_INVALID_REGNUM;
           } else if (name.equals("dwarf")) {
-            reg_info.regnum_dwarf =
-                StringConvert::ToUInt32(value.data(), LLDB_INVALID_REGNUM, 0);
+            if (value.getAsInteger(0, reg_info.kinds[eRegisterKindDWARF]))
+              reg_info.kinds[eRegisterKindDWARF] = LLDB_INVALID_REGNUM;
           } else if (name.equals("generic")) {
-            reg_info.regnum_generic =
-                StringConvert::ToUInt32(value.data(), LLDB_INVALID_REGNUM, 0);
+            reg_info.kinds[eRegisterKindGeneric] =
+                Args::StringToGenericRegister(value);
           } else if (name.equals("container-regs")) {
-            SplitCommaSeparatedRegisterNumberString(value, reg_info.value_regs, 16);
+            SplitCommaSeparatedRegisterNumberString(value, value_regs, 16);
           } else if (name.equals("invalidate-regs")) {
-            SplitCommaSeparatedRegisterNumberString(value, reg_info.invalidate_regs, 16);
+            SplitCommaSeparatedRegisterNumberString(value, invalidate_regs, 16);
           } else if (name.equals("dynamic_size_dwarf_expr_bytes")) {
             size_t dwarf_opcode_len = value.size() / 2;
             assert(dwarf_opcode_len > 0);
 
-            reg_info.dwarf_opcode_bytes.resize(dwarf_opcode_len);
+            dwarf_opcode_bytes.resize(dwarf_opcode_len);
+            reg_info.dynamic_size_dwarf_len = dwarf_opcode_len;
 
             StringExtractor opcode_extractor(value);
             uint32_t ret_val =
-                opcode_extractor.GetHexBytesAvail(reg_info.dwarf_opcode_bytes);
+                opcode_extractor.GetHexBytesAvail(dwarf_opcode_bytes);
             assert(dwarf_opcode_len == ret_val);
             UNUSED_IF_ASSERT_DISABLED(ret_val);
+            reg_info.dynamic_size_dwarf_expr_bytes = dwarf_opcode_bytes.data();
           }
         }
 
+        reg_info.byte_offset = reg_offset;
         assert(reg_info.byte_size != 0);
+        reg_offset = LLDB_INVALID_INDEX32;
+        if (!value_regs.empty()) {
+          value_regs.push_back(LLDB_INVALID_REGNUM);
+          reg_info.value_regs = value_regs.data();
+        }
+        if (!invalidate_regs.empty()) {
+          invalidate_regs.push_back(LLDB_INVALID_REGNUM);
+          reg_info.invalidate_regs = invalidate_regs.data();
+        }
+
+        reg_info.name = reg_name.AsCString();
+        reg_info.alt_name = alt_name.AsCString();
+        // We have to make a temporary ABI here, and not use the GetABI because
+        // this code gets called in DidAttach, when the target architecture
+        // (and consequently the ABI we'll get from the process) may be wrong.
+        if (ABISP abi_sp = ABI::FindPlugin(shared_from_this(), arch_to_use))
+          abi_sp->AugmentRegisterInfo(reg_info);
+
+        m_register_info_sp->AddRegister(reg_info, set_name);
       } else {
         break; // ensure exit before reg_num is incremented
       }
@@ -544,8 +594,8 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
     }
   }
 
-  if (!registers.empty()) {
-    AddRemoteRegisters(registers, GetTarget().GetArchitecture());
+  if (m_register_info_sp->GetNumRegisters() > 0) {
+    m_register_info_sp->Finalize(GetTarget().GetArchitecture());
     return;
   }
 
@@ -4334,24 +4384,53 @@ struct GdbServerTargetInfo {
 };
 
 bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
-                    std::vector<RemoteRegisterInfo> &registers) {
+                    GDBRemoteDynamicRegisterInfo &dyn_reg_info, ABISP abi_sp,
+                    uint32_t &reg_num_remote, uint32_t &reg_num_local) {
   if (!feature_node)
     return false;
 
+  uint32_t reg_offset = LLDB_INVALID_INDEX32;
   feature_node.ForEachChildElementWithName(
-      "reg", [&target_info, &registers](const XMLNode &reg_node) -> bool {
+      "reg", [&target_info, &dyn_reg_info, &reg_num_remote, &reg_num_local,
+              &reg_offset, &abi_sp](const XMLNode &reg_node) -> bool {
         std::string gdb_group;
         std::string gdb_type;
-        RemoteRegisterInfo reg_info;
+        ConstString reg_name;
+        ConstString alt_name;
+        ConstString set_name;
+        std::vector<uint32_t> value_regs;
+        std::vector<uint32_t> invalidate_regs;
+        std::vector<uint8_t> dwarf_opcode_bytes;
         bool encoding_set = false;
         bool format_set = false;
+        RegisterInfo reg_info = {
+            nullptr,       // Name
+            nullptr,       // Alt name
+            0,             // byte size
+            reg_offset,    // offset
+            eEncodingUint, // encoding
+            eFormatHex,    // format
+            {
+                LLDB_INVALID_REGNUM, // eh_frame reg num
+                LLDB_INVALID_REGNUM, // DWARF reg num
+                LLDB_INVALID_REGNUM, // generic reg num
+                reg_num_remote,      // process plugin reg num
+                reg_num_local        // native register number
+            },
+            nullptr,
+            nullptr,
+            nullptr, // Dwarf Expression opcode bytes pointer
+            0        // Dwarf Expression opcode bytes length
+        };
 
         reg_node.ForEachAttribute([&target_info, &gdb_group, &gdb_type,
-                                   &encoding_set, &format_set, &reg_info](
+                                   &reg_name, &alt_name, &set_name, &value_regs,
+                                   &invalidate_regs, &encoding_set, &format_set,
+                                   &reg_info, &reg_offset, &dwarf_opcode_bytes](
                                       const llvm::StringRef &name,
                                       const llvm::StringRef &value) -> bool {
           if (name == "name") {
-            reg_info.name.SetString(value);
+            reg_name.SetString(value);
           } else if (name == "bitsize") {
             reg_info.byte_size =
                 StringConvert::ToUInt32(value.data(), 0, 0) / CHAR_BIT;
@@ -4363,65 +4442,72 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
             const uint32_t regnum =
                 StringConvert::ToUInt32(value.data(), LLDB_INVALID_REGNUM, 0);
             if (regnum != LLDB_INVALID_REGNUM) {
-              reg_info.regnum_remote = regnum;
+              reg_info.kinds[eRegisterKindProcessPlugin] = regnum;
             }
           } else if (name == "offset") {
-            reg_info.byte_offset =
-                StringConvert::ToUInt32(value.data(), LLDB_INVALID_INDEX32, 0);
+            reg_offset = StringConvert::ToUInt32(value.data(), UINT32_MAX, 0);
           } else if (name == "altname") {
-            reg_info.alt_name.SetString(value);
+            alt_name.SetString(value);
           } else if (name == "encoding") {
             encoding_set = true;
             reg_info.encoding = Args::StringToEncoding(value, eEncodingUint);
           } else if (name == "format") {
             format_set = true;
-            if (!OptionArgParser::ToFormat(value.data(), reg_info.format,
-                                           nullptr)
-                     .Success())
-              reg_info.format =
-                  llvm::StringSwitch<lldb::Format>(value)
-                      .Case("vector-sint8", eFormatVectorOfSInt8)
-                      .Case("vector-uint8", eFormatVectorOfUInt8)
-                      .Case("vector-sint16", eFormatVectorOfSInt16)
-                      .Case("vector-uint16", eFormatVectorOfUInt16)
-                      .Case("vector-sint32", eFormatVectorOfSInt32)
-                      .Case("vector-uint32", eFormatVectorOfUInt32)
-                      .Case("vector-float32", eFormatVectorOfFloat32)
-                      .Case("vector-uint64", eFormatVectorOfUInt64)
-                      .Case("vector-uint128", eFormatVectorOfUInt128)
-                      .Default(eFormatInvalid);
+            Format format = eFormatInvalid;
+            if (OptionArgParser::ToFormat(value.data(), format, nullptr)
+                    .Success())
+              reg_info.format = format;
+            else if (value == "vector-sint8")
+              reg_info.format = eFormatVectorOfSInt8;
+            else if (value == "vector-uint8")
+              reg_info.format = eFormatVectorOfUInt8;
+            else if (value == "vector-sint16")
+              reg_info.format = eFormatVectorOfSInt16;
+            else if (value == "vector-uint16")
+              reg_info.format = eFormatVectorOfUInt16;
+            else if (value == "vector-sint32")
+              reg_info.format = eFormatVectorOfSInt32;
+            else if (value == "vector-uint32")
+              reg_info.format = eFormatVectorOfUInt32;
+            else if (value == "vector-float32")
+              reg_info.format = eFormatVectorOfFloat32;
+            else if (value == "vector-uint64")
+              reg_info.format = eFormatVectorOfUInt64;
+            else if (value == "vector-uint128")
+              reg_info.format = eFormatVectorOfUInt128;
           } else if (name == "group_id") {
             const uint32_t set_id =
                 StringConvert::ToUInt32(value.data(), UINT32_MAX, 0);
             RegisterSetMap::const_iterator pos =
                 target_info.reg_set_map.find(set_id);
             if (pos != target_info.reg_set_map.end())
-              reg_info.set_name = pos->second.name;
+              set_name = pos->second.name;
           } else if (name == "gcc_regnum" || name == "ehframe_regnum") {
-            reg_info.regnum_ehframe =
+            reg_info.kinds[eRegisterKindEHFrame] =
                 StringConvert::ToUInt32(value.data(), LLDB_INVALID_REGNUM, 0);
           } else if (name == "dwarf_regnum") {
-            reg_info.regnum_dwarf =
+            reg_info.kinds[eRegisterKindDWARF] =
                 StringConvert::ToUInt32(value.data(), LLDB_INVALID_REGNUM, 0);
           } else if (name == "generic") {
-            reg_info.regnum_generic = Args::StringToGenericRegister(value);
+            reg_info.kinds[eRegisterKindGeneric] =
+                Args::StringToGenericRegister(value);
           } else if (name == "value_regnums") {
-            SplitCommaSeparatedRegisterNumberString(value, reg_info.value_regs,
-                                                    0);
+            SplitCommaSeparatedRegisterNumberString(value, value_regs, 0);
           } else if (name == "invalidate_regnums") {
-            SplitCommaSeparatedRegisterNumberString(
-                value, reg_info.invalidate_regs, 0);
+            SplitCommaSeparatedRegisterNumberString(value, invalidate_regs, 0);
           } else if (name == "dynamic_size_dwarf_expr_bytes") {
             std::string opcode_string = value.str();
             size_t dwarf_opcode_len = opcode_string.length() / 2;
             assert(dwarf_opcode_len > 0);
 
-            reg_info.dwarf_opcode_bytes.resize(dwarf_opcode_len);
+            dwarf_opcode_bytes.resize(dwarf_opcode_len);
+            reg_info.dynamic_size_dwarf_len = dwarf_opcode_len;
             StringExtractor opcode_extractor(opcode_string);
             uint32_t ret_val =
-                opcode_extractor.GetHexBytesAvail(reg_info.dwarf_opcode_bytes);
+                opcode_extractor.GetHexBytesAvail(dwarf_opcode_bytes);
             assert(dwarf_opcode_len == ret_val);
             UNUSED_IF_ASSERT_DISABLED(ret_val);
+            reg_info.dynamic_size_dwarf_expr_bytes = dwarf_opcode_bytes.data();
           } else {
             printf("unhandled attribute %s = %s\n", name.data(), value.data());
           }
@@ -4447,18 +4533,36 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
         // Only update the register set name if we didn't get a "reg_set"
         // attribute. "set_name" will be empty if we didn't have a "reg_set"
         // attribute.
-        if (!reg_info.set_name) {
+        if (!set_name) {
           if (!gdb_group.empty()) {
-            reg_info.set_name.SetCString(gdb_group.c_str());
+            set_name.SetCString(gdb_group.c_str());
           } else {
             // If no register group name provided anywhere,
             // we'll create a 'general' register set
-            reg_info.set_name.SetCString("general");
+            set_name.SetCString("general");
           }
         }
 
+        reg_info.byte_offset = reg_offset;
         assert(reg_info.byte_size != 0);
-        registers.push_back(reg_info);
+        reg_offset = LLDB_INVALID_INDEX32;
+        if (!value_regs.empty()) {
+          value_regs.push_back(LLDB_INVALID_REGNUM);
+          reg_info.value_regs = value_regs.data();
+        }
+        if (!invalidate_regs.empty()) {
+          invalidate_regs.push_back(LLDB_INVALID_REGNUM);
+          reg_info.invalidate_regs = invalidate_regs.data();
+        }
+
+        reg_num_remote = reg_info.kinds[eRegisterKindProcessPlugin] + 1;
+        ++reg_num_local;
+        reg_info.name = reg_name.AsCString();
+        reg_info.alt_name = alt_name.AsCString();
+        if (abi_sp)
+          abi_sp->AugmentRegisterInfo(reg_info);
+        dyn_reg_info.AddRegister(reg_info, set_name);
+
         return true; // Keep iterating through all "reg" elements
       });
   return true;
@@ -4472,7 +4576,8 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
 // for nested register definition files.  It returns true if it was able
 // to fetch and parse an xml file.
 bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(
-    ArchSpec &arch_to_use, std::string xml_filename, std::vector<RemoteRegisterInfo> &registers) {
+    ArchSpec &arch_to_use, std::string xml_filename, uint32_t &reg_num_remote,
+    uint32_t &reg_num_local) {
   // request the target xml file
   std::string raw;
   lldb_private::Status lldberr;
@@ -4568,65 +4673,24 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(
     }
 
     if (arch_to_use.IsValid()) {
+      // Don't use Process::GetABI, this code gets called from DidAttach, and
+      // in that context we haven't set the Target's architecture yet, so the
+      // ABI is also potentially incorrect.
+      ABISP abi_to_use_sp = ABI::FindPlugin(shared_from_this(), arch_to_use);
       for (auto &feature_node : feature_nodes) {
-        ParseRegisters(feature_node, target_info,
-                       registers);
+        ParseRegisters(feature_node, target_info, *this->m_register_info_sp,
+                       abi_to_use_sp, reg_num_remote, reg_num_local);
       }
 
       for (const auto &include : target_info.includes) {
         GetGDBServerRegisterInfoXMLAndProcess(arch_to_use, include,
-                                              registers);
+                                              reg_num_remote, reg_num_local);
       }
     }
   } else {
     return false;
   }
   return true;
-}
-
-void ProcessGDBRemote::AddRemoteRegisters(
-    std::vector<RemoteRegisterInfo> &registers, const ArchSpec &arch_to_use) {
-  // Don't use Process::GetABI, this code gets called from DidAttach, and
-  // in that context we haven't set the Target's architecture yet, so the
-  // ABI is also potentially incorrect.
-  ABISP abi_sp = ABI::FindPlugin(shared_from_this(), arch_to_use);
-
-  uint32_t remote_regnum = 0;
-  for (auto it : llvm::enumerate(registers)) {
-    uint32_t local_regnum = it.index();
-    RemoteRegisterInfo &remote_reg_info = it.value();
-    // Use remote regnum if available, previous remote regnum + 1 when not.
-    if (remote_reg_info.regnum_remote != LLDB_INVALID_REGNUM)
-      remote_regnum = remote_reg_info.regnum_remote;
-
-    auto regs_with_sentinel = [](std::vector<uint32_t> &vec) -> uint32_t * {
-      if (!vec.empty()) {
-        vec.push_back(LLDB_INVALID_REGNUM);
-        return vec.data();
-      }
-      return nullptr;
-    };
-
-    struct RegisterInfo reg_info {
-      remote_reg_info.name.AsCString(), remote_reg_info.alt_name.AsCString(),
-          remote_reg_info.byte_size, remote_reg_info.byte_offset,
-          remote_reg_info.encoding, remote_reg_info.format,
-          {remote_reg_info.regnum_ehframe, remote_reg_info.regnum_dwarf,
-           remote_reg_info.regnum_generic, remote_regnum++, local_regnum},
-          regs_with_sentinel(remote_reg_info.value_regs),
-          regs_with_sentinel(remote_reg_info.invalidate_regs),
-          !remote_reg_info.dwarf_opcode_bytes.empty()
-              ? remote_reg_info.dwarf_opcode_bytes.data()
-              : nullptr,
-          remote_reg_info.dwarf_opcode_bytes.size(),
-    };
-
-    if (abi_sp)
-      abi_sp->AugmentRegisterInfo(reg_info);
-    m_register_info_sp->AddRegister(reg_info, remote_reg_info.set_name);
-  };
-
-  m_register_info_sp->Finalize(arch_to_use);
 }
 
 // query the target of gdb-remote for extended target information returns
@@ -4640,10 +4704,11 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
   if (!m_gdb_comm.GetQXferFeaturesReadSupported())
     return false;
 
-  std::vector<RemoteRegisterInfo> registers;
+  uint32_t reg_num_remote = 0;
+  uint32_t reg_num_local = 0;
   if (GetGDBServerRegisterInfoXMLAndProcess(arch_to_use, "target.xml",
-                                            registers))
-    AddRemoteRegisters(registers, arch_to_use);
+                                            reg_num_remote, reg_num_local))
+    this->m_register_info_sp->Finalize(arch_to_use);
 
   return m_register_info_sp->GetNumRegisters() > 0;
 }
