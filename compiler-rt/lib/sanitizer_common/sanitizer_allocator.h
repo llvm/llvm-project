@@ -23,6 +23,11 @@
 #include "sanitizer_procmaps.h"
 #include "sanitizer_type_traits.h"
 
+#if SANITIZER_AMDGPU
+#include <hsa.h>
+#include <hsa_ext_amd.h>
+#endif
+
 namespace __sanitizer {
 
 // Allows the tools to name their allocations appropriately.
