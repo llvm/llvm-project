@@ -341,22 +341,22 @@ def ADDRrs : ComplexPattern<i32, 1, "selectAddrRs", [], []>;
 // Multiclass for load and store instructions.
 multiclass LoadIndexImm<bits<4> Func, string OpcStr, SDPatternOperator OpNode,
                  InstrItinClass itin = NoItinerary> {
-  def riw  : F_LS<Func, 0b01,
+  def riw  : F_LS<Func, /*ty=*/ 0b01,
                   (outs GPROpnd:$rd), (ins GPROpnd:$rs1, imm32zx16:$si16),
                   !strconcat(OpcStr, " $rd, $rs1, $si16"),
                   [(set (i32 GPROpnd:$rd), (load (ADDRri GPROpnd:$rs1, imm32zx16:$si16)))],
                   itin>;
-  def rib  : F_LS<Func, 0b11,
+  def rib  : F_LS<Func, /*ty=*/ 0b11,
                   (outs GPROpnd:$rd), (ins GPROpnd:$rs1, imm32zx16:$si16),
                   !strconcat(OpcStr, ".b $rd, $rs1, $si16"),
                   [(set (i32 GPROpnd:$rd), (sextloadi8 (ADDRri GPROpnd:$rs1, imm32zx16:$si16)))],
                   itin>;
-  def rih  : F_LS<Func, 0b10,
+  def rih  : F_LS<Func, /*ty=*/ 0b10,
                   (outs GPROpnd:$rd), (ins GPROpnd:$rs1, imm32zx16:$si16),
                   !strconcat(OpcStr, ".h $rd, $rs1, $si16"),
                   [(set (i32 GPROpnd:$rd), (sextloadi16 (ADDRri GPROpnd:$rs1, imm32zx16:$si16)))],
                   itin>;
-  def rid  : F_LS<Func, 0b00,
+  def rid  : F_LS<Func, /*ty=*/ 0b00,
                   (outs GPROpnd:$rd), (ins GPROpnd:$rs1, imm32zx16:$si16),
                   !strconcat(OpcStr, ".d $rd, $rs1, $si16"),
                   [],
@@ -365,22 +365,22 @@ multiclass LoadIndexImm<bits<4> Func, string OpcStr, SDPatternOperator OpNode,
 
 multiclass StoreIndexImm<bits<4> Func, string OpcStr, SDPatternOperator OpNode,
                  InstrItinClass itin = NoItinerary> {
-  def riw  : F_LS<Func, 0b01,
+  def riw  : F_LS<Func, /*ty=*/ 0b01,
                   (outs), (ins GPROpnd:$rd, GPROpnd:$rs1, imm32zx16:$si16),
                   !strconcat(OpcStr, " $rd, $rs1, $si16"),
                   [(store (i32 GPROpnd:$rd), (ADDRri GPROpnd:$rs1, imm32zx16:$si16))],
                   itin>;
-  def rib  : F_LS<Func, 0b11,
+  def rib  : F_LS<Func, /*ty=*/ 0b11,
                   (outs), (ins GPROpnd:$rd, GPROpnd:$rs1, imm32zx16:$si16),
                   !strconcat(OpcStr, ".b $rd, $rs1, $si16"),
                   [(truncstorei8 (i32 GPROpnd:$rd), (ADDRri GPROpnd:$rs1, imm32zx16:$si16))],
                   itin>;
-  def rih  : F_LS<Func, 0b10,
+  def rih  : F_LS<Func, /*ty=*/ 0b10,
                   (outs), (ins GPROpnd:$rd, GPROpnd:$rs1, imm32zx16:$si16),
                   !strconcat(OpcStr, ".h $rd, $rs1, $si16"),
                   [(truncstorei16 (i32 GPROpnd:$rd), (ADDRri GPROpnd:$rs1, imm32zx16:$si16))],
                   itin>;
-  def rid  : F_LS<Func, 0b00,
+  def rid  : F_LS<Func, /*ty=*/ 0b00,
                   (outs), (ins GPROpnd:$rd, GPROpnd:$rs1, imm32zx16:$si16),
                   !strconcat(OpcStr, ".d $rd, $rs1, $si16"),
                   [],
@@ -394,10 +394,34 @@ class LoadUnsigned<bits<1> b, string OpcStr, PatFrag OpNode,
        [(set (i32 GPROpnd:$rd), (OpNode (ADDRri GPROpnd:$rs1, imm32zx16:$si16)))],
        itin>;
 
+multiclass LoadUnscaled<bits<4> Func, string OpcStr, SDPatternOperator OpNode,
+                 InstrItinClass itin = NoItinerary> {
+  let regfile = 0 in {
+    def rruw  : F_LSINDIRECT<Func, /*ty=*/ 0b01, /*scaled=*/ 0b0, /*user=*/ 0b0,
+                    (outs GPROpnd:$rd), (ins GPROpnd:$rs1, GPROpnd:$rs2),
+                    !strconcat(OpcStr, " $rd, $rs1, $rs2"),
+                    [(set (i32 GPROpnd:$rd), (load (ADDRrr GPROpnd:$rs1, GPROpnd:$rs2)))],
+                    itin>;
+    def rrub  : F_LSINDIRECT<Func, /*ty=*/ 0b11, /*scaled=*/ 0b0, /*user=*/ 0b0,
+                    (outs GPROpnd:$rd), (ins GPROpnd:$rs1, GPROpnd:$rs2),
+                    !strconcat(OpcStr, ".b $rd, $rs1, $rs2"),
+                    [(set (i32 GPROpnd:$rd), (sextloadi8 (ADDRrr GPROpnd:$rs1, GPROpnd:$rs2)))],
+                    itin>;
+    def rruh  : F_LSINDIRECT<Func, /*ty=*/ 0b10, /*scaled=*/ 0b0, /*user=*/ 0b0,
+                    (outs GPROpnd:$rd), (ins GPROpnd:$rs1, GPROpnd:$rs2),
+                    !strconcat(OpcStr, ".h $rd, $rs1, $rs2"),
+                    [(set (i32 GPROpnd:$rd), (sextloadi16 (ADDRrr GPROpnd:$rs1, GPROpnd:$rs2)))],
+                    itin>;
+  }
+}
+
 defm LD : LoadIndexImm<0b0001, "ld", load>;
 defm ST : StoreIndexImm<0b0010, "st", store>;
 def LDurih : LoadUnsigned<0b0, "ld.hu", zextloadi16>;
 def LDurib : LoadUnsigned<0b1, "ld.bu", zextloadi8>;
+
+defm LD : LoadUnscaled<0b0001, "ld", load>;
+
 
 // GlobalAddress, ExternalSymbol, Jumptable, ConstantPool
 def : Pat<(m88k_hi tglobaladdr:$dst), (ORriu R0, tglobaladdr:$dst)>;

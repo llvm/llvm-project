@@ -162,6 +162,31 @@ class F_LU<bits<1> b,
   let Inst{26}    = b;
 }
 
+// Format: Load/Store register indirect with scaled or unscaled index
+class F_LSINDIRECT<bits<4> func, bits<2> ty, bits<1> scaled, bits<1> user,
+                   dag outs, dag ins, string asmstr, list<dag> pattern,
+                   InstrItinClass itin = NoItinerary>
+   : InstM88k<outs, ins, asmstr, pattern, itin> {
+  bits<5>  rd;
+  bits<5>  rs1;
+  bits<5>  rs2;
+
+  bits<1>  regfile;
+  bits<1>  through;
+
+  let Inst{31-27} = 0b11110;
+  let Inst{26}    = regfile;
+  let Inst{25-21} = rd;
+  let Inst{20-16} = rs1;
+  let Inst{15-12} = func;
+  let Inst{11-10} = ty;
+  let Inst{9}     = scaled;
+  let Inst{8}     = user;
+  let Inst{7}     = !if(!eq(func, 0b0001), 0b0, through);
+  let Inst{6-5}   = 0b00;
+  let Inst{4-0}   = rs2;
+}
+
 
 // Category: Flow control.
 
