@@ -433,9 +433,8 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
                        [(br bb:$d26)]>;
 }
 
-//
+// Alias for no operation.
 def : InstAlias<"nop", (ORrr R0, R0, R0)>;
-
 
 // Multiclass for triadic register floating point instructions.
 multiclass FArith<bits<4> Func, string OpcStr, SDNode OpNode,
