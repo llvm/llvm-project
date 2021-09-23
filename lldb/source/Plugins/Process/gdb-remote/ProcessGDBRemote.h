@@ -44,6 +44,23 @@ class Loader;
 }
 namespace process_gdb_remote {
 
+struct RemoteRegisterInfo {
+  ConstString name;
+  ConstString alt_name;
+  ConstString set_name;
+  uint32_t byte_size = LLDB_INVALID_INDEX32;
+  uint32_t byte_offset = LLDB_INVALID_INDEX32;
+  lldb::Encoding encoding = lldb::eEncodingUint;
+  lldb::Format format = lldb::eFormatHex;
+  uint32_t regnum_dwarf = LLDB_INVALID_REGNUM;
+  uint32_t regnum_ehframe = LLDB_INVALID_REGNUM;
+  uint32_t regnum_generic = LLDB_INVALID_REGNUM;
+  uint32_t regnum_remote = LLDB_INVALID_REGNUM;
+  std::vector<uint32_t> value_regs;
+  std::vector<uint32_t> invalidate_regs;
+  std::vector<uint8_t> dwarf_opcode_bytes;
+};
+
 class ThreadGDBRemote;
 
 class ProcessGDBRemote : public Process,
@@ -394,11 +411,14 @@ protected:
 
   DynamicLoader *GetDynamicLoader() override;
 
-  bool GetGDBServerRegisterInfoXMLAndProcess(ArchSpec &arch_to_use,
-                                             std::string xml_filename,
-                                             uint32_t &cur_reg_remote,
-                                             uint32_t &cur_reg_local);
+  bool GetGDBServerRegisterInfoXMLAndProcess(
+    ArchSpec &arch_to_use, std::string xml_filename,
+    std::vector<RemoteRegisterInfo> &registers);
 
+  // Convert RemoteRegisterInfos into RegisterInfos and add to the dynamic
+  // register list.
+  void AddRemoteRegisters(std::vector<RemoteRegisterInfo> &registers,
+                          const ArchSpec &arch_to_use);
   // Query remote GDBServer for register information
   bool GetGDBServerRegisterInfo(ArchSpec &arch);
 
