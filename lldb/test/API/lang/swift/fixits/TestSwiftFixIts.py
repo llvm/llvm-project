@@ -65,9 +65,16 @@ class TestSwiftFixIts(TestBase):
         options = lldb.SBExpressionOptions()
         options.SetAutoApplyFixIts(False)
 
-        # First make sure the expression fails with no fixits:
+        # First make sure the expressions fail with no fixits:
         value = frame.EvaluateExpression(
             "var $tmp : Int = does_have.could_be!!", options)
+        self.assertTrue(value.GetError().Fail())
+        self.assertTrue(
+            value.GetError().GetError() != 0x1001,
+            'Failure was not "no return type"')
+
+        value = frame.EvaluateExpression(
+                "var $tmp2 = wrapper.wrapped", options)
         self.assertTrue(value.GetError().Fail())
         self.assertTrue(
             value.GetError().GetError() != 0x1001,
@@ -83,8 +90,13 @@ class TestSwiftFixIts(TestBase):
             value.GetError().GetError() == 0x1001,
             'This error is "no return type"')
 
-        # Check that the expression was correct:
+        # Check that the expressions were correct:
         tmp_value = frame.EvaluateExpression("$tmp == 100")
         self.assertTrue(tmp_value.GetError().Success())
         self.assertTrue(tmp_value.GetSummary() == 'true')
-
+        
+        value = frame.EvaluateExpression(
+                "var $tmp2 = wrapper.wrapped", options)
+        tmp_value = frame.EvaluateExpression("$tmp2 == 7")
+        self.assertTrue(tmp_value.GetError().Success())
+        self.assertTrue(tmp_value.GetSummary() == 'true')
