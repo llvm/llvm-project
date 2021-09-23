@@ -6416,6 +6416,9 @@ static SDValue transformAddImmMulImm(SDNode *N, SelectionDAG &DAG,
   if (C0 == -1 || C0 == 0 || C0 == 1 || (C1 / C0) == 0 || isInt<12>(C1) ||
       !isInt<12>(C1 % C0) || !isInt<12>(C1 / C0))
     return SDValue();
+  // If C0 * (C1 / C0) is a 12-bit integer, this transform will be reversed.
+  if (isInt<12>(C0 * (C1 / C0)))
+    return SDValue();
   // Build new nodes (add (mul (add x, c1/c0), c0), c1%c0).
   SDLoc DL(N);
   SDValue New0 = DAG.getNode(ISD::ADD, DL, VT, N0->getOperand(0),
