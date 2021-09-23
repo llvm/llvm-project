@@ -57,6 +57,28 @@ def testAttrEq():
     print("a1 == None:", a1 == None)
 
 
+# CHECK-LABEL: TEST: testAttrHash
+@run
+def testAttrHash():
+  with Context():
+    a1 = Attribute.parse('"attr1"')
+    a2 = Attribute.parse('"attr2"')
+    a3 = Attribute.parse('"attr1"')
+    # CHECK: hash(a1) == hash(a3): True
+    print("hash(a1) == hash(a3):", a1.__hash__() == a3.__hash__())
+    # In general, hashes don't have to be unique. In this case, however, the
+    # hash is just the underlying pointer so it will be.
+    # CHECK: hash(a1) == hash(a2): False
+    print("hash(a1) == hash(a2):", a1.__hash__() == a2.__hash__())
+
+    s = set()
+    s.add(a1)
+    s.add(a2)
+    s.add(a3)
+    # CHECK: len(s): 2
+    print("len(s): ", len(s))
+
+
 # CHECK-LABEL: TEST: testAttrCast
 @run
 def testAttrCast():
@@ -382,4 +404,3 @@ def testArrayAttr():
     except RuntimeError as e:
       # CHECK: Error: Invalid attribute when attempting to create an ArrayAttribute
       print("Error: ", e)
-
