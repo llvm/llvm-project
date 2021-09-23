@@ -14,7 +14,9 @@
 // constexpr auto size() const requires sized_range<const V>;
 
 #include <ranges>
+
 #include <cassert>
+#include <utility>
 
 #include "test_macros.h"
 #include "types.h"

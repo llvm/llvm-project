@@ -14,9 +14,10 @@
 // constexpr V base() && { return std::move(base_); }
 
 #include <ranges>
-#include <cassert>
 
-#include "test_macros.h"
+#include <cassert>
+#include <concepts>
+
 #include "types.h"
 
 constexpr bool test() {
@@ -26,40 +27,49 @@ constexpr bool test() {
   {
     // Test non-const.
     {
-      auto rev = std::ranges::reverse_view(BidirRange{buffer});
-      assert(rev.base().ptr_ == buffer);
-      assert(std::move(rev).base().ptr_ == buffer);
+      auto rev = std::ranges::reverse_view(BidirRange{buffer, buffer + 8});
 
-      ASSERT_SAME_TYPE(decltype(rev.base()), BidirRange);
-      ASSERT_SAME_TYPE(decltype(std::move(rev).base()), BidirRange);
+      std::same_as<BidirRange> auto base = rev.base();
+      assert(base.begin_ == buffer);
+      assert(base.end_ == buffer + 8);
+
+      std::same_as<BidirRange> auto moved = std::move(rev).base();
+      assert(moved.begin_ == buffer);
+      assert(moved.end_ == buffer + 8);
     }
     // Test const.
     {
-      const auto rev = std::ranges::reverse_view(BidirRange{buffer});
-      assert(rev.base().ptr_ == buffer);
-      assert(std::move(rev).base().ptr_ == buffer);
+      const auto rev = std::ranges::reverse_view(BidirRange{buffer, buffer + 8});
 
-      ASSERT_SAME_TYPE(decltype(rev.base()), BidirRange);
-      ASSERT_SAME_TYPE(decltype(std::move(rev).base()), BidirRange);
+      std::same_as<BidirRange> auto base = rev.base();
+      assert(base.begin_ == buffer);
+      assert(base.end_ == buffer + 8);
+
+      std::same_as<BidirRange> auto moved = std::move(rev).base();
+      assert(moved.begin_ == buffer);
+      assert(moved.end_ == buffer + 8);
     }
   }
   // Test non-common ranges.
   {
     // Test non-const (also move only).
     {
-      auto rev = std::ranges::reverse_view(BidirSentRange<MoveOnly>{buffer});
-      assert(std::move(rev).base().ptr_ == buffer);
-
-      ASSERT_SAME_TYPE(decltype(std::move(rev).base()), BidirSentRange<MoveOnly>);
+      auto rev = std::ranges::reverse_view(BidirSentRange<MoveOnly>{buffer, buffer + 8});
+      std::same_as<BidirSentRange<MoveOnly>> auto base = std::move(rev).base();
+      assert(base.begin_ == buffer);
+      assert(base.end_ == buffer + 8);
     }
     // Test const.
     {
-      const auto rev = std::ranges::reverse_view(BidirSentRange<Copyable>{buffer});
-      assert(rev.base().ptr_ == buffer);
-      assert(std::move(rev).base().ptr_ == buffer);
+      const auto rev = std::ranges::reverse_view(BidirSentRange<Copyable>{buffer, buffer + 8});
 
-      ASSERT_SAME_TYPE(decltype(rev.base()), BidirSentRange<Copyable>);
-      ASSERT_SAME_TYPE(decltype(std::move(rev).base()), BidirSentRange<Copyable>);
+      std::same_as<BidirSentRange<Copyable>> auto base = rev.base();
+      assert(base.begin_ == buffer);
+      assert(base.end_ == buffer + 8);
+
+      std::same_as<BidirSentRange<Copyable>> auto moved = std::move(rev).base();
+      assert(moved.begin_ == buffer);
+      assert(moved.end_ == buffer + 8);
     }
   }
 

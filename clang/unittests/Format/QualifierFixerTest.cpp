@@ -554,7 +554,7 @@ TEST_F(QualifierFixerTest, ConstVolatileQualifiersOrder) {
   Style.QualifierOrder = {"inline", "static", "const", "volatile", "type"};
 
   // The Default
-  EXPECT_EQ(Style.QualifierOrder.size(), 5);
+  EXPECT_EQ(Style.QualifierOrder.size(), (size_t)5);
 
   verifyFormat("const volatile int a;", "const volatile int a;", Style);
   verifyFormat("const volatile int a;", "volatile const int a;", Style);
@@ -603,7 +603,7 @@ TEST_F(QualifierFixerTest, InlineStatics) {
   FormatStyle Style = getLLVMStyle();
   Style.QualifierAlignment = FormatStyle::QAS_Left;
   Style.QualifierOrder = {"inline", "static", "const", "volatile", "type"};
-  EXPECT_EQ(Style.QualifierOrder.size(), 5);
+  EXPECT_EQ(Style.QualifierOrder.size(), (size_t)5);
 
   verifyFormat("inline static const volatile int a;",
                "const inline static volatile int a;", Style);
@@ -621,7 +621,7 @@ TEST_F(QualifierFixerTest, AmpEqual) {
   FormatStyle Style = getLLVMStyle();
   Style.QualifierAlignment = FormatStyle::QAS_Custom;
   Style.QualifierOrder = {"static", "type", "const"};
-  EXPECT_EQ(Style.QualifierOrder.size(), 3);
+  EXPECT_EQ(Style.QualifierOrder.size(), (size_t)3);
 
   verifyFormat("foo(std::string const & = std::string()) const",
                "foo(const std::string & = std::string()) const", Style);
@@ -634,7 +634,7 @@ TEST_F(QualifierFixerTest, MoveConstBeyondTypeSmall) {
   FormatStyle Style = getLLVMStyle();
   Style.QualifierAlignment = FormatStyle::QAS_Custom;
   Style.QualifierOrder = {"type", "const"};
-  EXPECT_EQ(Style.QualifierOrder.size(), 2);
+  EXPECT_EQ(Style.QualifierOrder.size(), (size_t)2);
 
   verifyFormat("int const a;", "const int a;", Style);
   verifyFormat("int const *a;", "const int*a;", Style);
@@ -648,7 +648,7 @@ TEST_F(QualifierFixerTest, MoveConstBeforeTypeSmall) {
   FormatStyle Style = getLLVMStyle();
   Style.QualifierAlignment = FormatStyle::QAS_Custom;
   Style.QualifierOrder = {"const", "type"};
-  EXPECT_EQ(Style.QualifierOrder.size(), 2);
+  EXPECT_EQ(Style.QualifierOrder.size(), (size_t)2);
 
   verifyFormat("const int a;", "int const a;", Style);
   verifyFormat("const int *a;", "int const *a;", Style);
@@ -670,7 +670,7 @@ TEST_F(QualifierFixerTest, MoveConstBeyondType) {
   FormatStyle Style = getLLVMStyle();
   Style.QualifierAlignment = FormatStyle::QAS_Custom;
   Style.QualifierOrder = {"static", "inline", "type", "const", "volatile"};
-  EXPECT_EQ(Style.QualifierOrder.size(), 5);
+  EXPECT_EQ(Style.QualifierOrder.size(), (size_t)5);
 
   verifyFormat("static inline int const volatile a;",
                "const inline static volatile int a;", Style);
@@ -698,8 +698,8 @@ TEST_F(QualifierFixerTest, PrepareLeftRightOrdering) {
   QualifierAlignmentFixer::PrepareLeftRightOrdering(Style.QualifierOrder, Left,
                                                     Right, ConfiguredTokens);
 
-  EXPECT_EQ(Left.size(), 2);
-  EXPECT_EQ(Right.size(), 2);
+  EXPECT_EQ(Left.size(), (size_t)2);
+  EXPECT_EQ(Right.size(), (size_t)2);
 
   std::vector<std::string> LeftResult = {"inline", "static"};
   std::vector<std::string> RightResult = {"const", "volatile"};
