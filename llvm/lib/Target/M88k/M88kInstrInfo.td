@@ -339,7 +339,7 @@ def ADDRrs : ComplexPattern<i32, 1, "selectAddrRs", [], []>;
 
 
 // Multiclass for load and store instructions.
-multiclass LoadStore<bits<4> Func, string OpcStr, SDPatternOperator OpNode,
+multiclass LoadIndexImm<bits<4> Func, string OpcStr, SDPatternOperator OpNode,
                  InstrItinClass itin = NoItinerary> {
   def riw  : F_LS<Func, 0b01,
                   (outs GPROpnd:$rd), (ins GPROpnd:$rs1, imm32zx16:$si16),
@@ -363,6 +363,30 @@ multiclass LoadStore<bits<4> Func, string OpcStr, SDPatternOperator OpNode,
                   itin>;
 }
 
+multiclass StoreIndexImm<bits<4> Func, string OpcStr, SDPatternOperator OpNode,
+                 InstrItinClass itin = NoItinerary> {
+  def riw  : F_LS<Func, 0b01,
+                  (outs), (ins GPROpnd:$rd, GPROpnd:$rs1, imm32zx16:$si16),
+                  !strconcat(OpcStr, " $rd, $rs1, $si16"),
+                  [(store (i32 GPROpnd:$rd), (ADDRri GPROpnd:$rs1, imm32zx16:$si16))],
+                  itin>;
+  def rib  : F_LS<Func, 0b11,
+                  (outs), (ins GPROpnd:$rd, GPROpnd:$rs1, imm32zx16:$si16),
+                  !strconcat(OpcStr, ".b $rd, $rs1, $si16"),
+                  [(truncstorei8 (i32 GPROpnd:$rd), (ADDRri GPROpnd:$rs1, imm32zx16:$si16))],
+                  itin>;
+  def rih  : F_LS<Func, 0b10,
+                  (outs), (ins GPROpnd:$rd, GPROpnd:$rs1, imm32zx16:$si16),
+                  !strconcat(OpcStr, ".h $rd, $rs1, $si16"),
+                  [(truncstorei16 (i32 GPROpnd:$rd), (ADDRri GPROpnd:$rs1, imm32zx16:$si16))],
+                  itin>;
+  def rid  : F_LS<Func, 0b00,
+                  (outs), (ins GPROpnd:$rd, GPROpnd:$rs1, imm32zx16:$si16),
+                  !strconcat(OpcStr, ".d $rd, $rs1, $si16"),
+                  [],
+                  itin>;
+}
+
 class LoadUnsigned<bits<1> b, string OpcStr, PatFrag OpNode,
                  InstrItinClass itin = NoItinerary> :
   F_LU<b, (outs GPROpnd:$rd), (ins GPROpnd:$rs1, imm32zx16:$si16),
@@ -370,8 +394,8 @@ class LoadUnsigned<bits<1> b, string OpcStr, PatFrag OpNode,
        [(set (i32 GPROpnd:$rd), (OpNode (ADDRri GPROpnd:$rs1, imm32zx16:$si16)))],
        itin>;
 
-defm LD : LoadStore<0b0001, "ld", load>;
-//defm ST : LoadStore<0b0010, "st", store>;
+defm LD : LoadIndexImm<0b0001, "ld", load>;
+defm ST : StoreIndexImm<0b0010, "st", store>;
 def LDurih : LoadUnsigned<0b0, "ld.hu", zextloadi16>;
 def LDurib : LoadUnsigned<0b1, "ld.bu", zextloadi8>;
 
