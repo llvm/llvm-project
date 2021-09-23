@@ -1519,6 +1519,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"sme-f64", "nosme-f64", "+sme-f64", "-sme-f64"},
       {"sme-i64", "nosme-i64", "+sme-i64", "-sme-i64"},
       {"hbc", "nohbc", "+hbc", "-hbc"},
+      {"mops", "nomops", "+mops", "-mops"},
   };
 
   for (unsigned i = 0; i < array_lengthof(ArchExt); i++) {

@@ -544,6 +544,7 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   HasMatmulFP32 = false;
   HasLSE = false;
   HasHBC = false;
+  HasMOPS = false;
 
   ArchKind = llvm::AArch64::ArchKind::INVALID;
 
