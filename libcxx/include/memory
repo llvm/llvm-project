@@ -653,6 +653,33 @@ template <class T> struct hash<shared_ptr<T> >;
 template <class T, class Alloc>
   inline constexpr bool uses_allocator_v = uses_allocator<T, Alloc>::value;
 
+// Uses-allocator construction
+template <class T, class Alloc, class... Args>
+  constexpr auto uses_allocator_construction_args(const Alloc& alloc,
+                                                  Args&&... args) noexcept;
+template <class T, class Alloc, class Tuple1, class Tuple2>
+  constexpr auto uses_allocator_construction_args(const Alloc& alloc, piecewise_construct_t,
+                                                  Tuple1&& x, Tuple2&& y)
+                                                  noexcept;
+template <class T, clsas Alloc>
+  constexpr auto uses_allocator_construction_args(const Alloc& alloc) noexcept;
+template <class T, class Alloc, class U, class V>
+  constexpr auto uses_allocator_construction_args(const Alloc& alloc,
+                                                  U&& u, V&& v) noexcept;
+template <class T, class Alloc, class U, class V>
+  constexpr auto uses_allocator_construction_args(const Alloc& alloc,
+                                                  const pair<U, V>& pr) noexcept;
+template <class T, class Alloc, class U, class V>
+  constexpr auto uses_allocator_construction_args(const Alloc& alloc,
+                                                  pair<U, V>&& pr) noexcept;
+
+template <class T, class Alloc, class... Args>
+  constexpr T make_obj_using_allocator(const Alloc& alloc, Args&&... args);
+
+template <class T, class Alloc, class... Args>
+  constexpr T* uninitialized_construct_using_allocator(T* p, const Alloc& alloc,
+                                                       Args&&... args);
+
 // Pointer safety
 enum class pointer_safety { relaxed, preferred, strict }; // since C++11
 void declare_reachable(void *p);                          // since C++11
@@ -684,6 +711,7 @@ void* align(size_t alignment, size_t size, void*& ptr, size_t& space);
 #include <__memory/uninitialized_algorithms.h>
 #include <__memory/unique_ptr.h>
 #include <__memory/uses_allocator.h>
+#include <__memory/uses_allocator_utils.h>
 #include <compare>
 #include <cstddef>
 #include <cstdint>
