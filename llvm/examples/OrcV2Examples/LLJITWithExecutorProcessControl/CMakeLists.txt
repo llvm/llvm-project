@@ -7,6 +7,6 @@ set(LLVM_LINK_COMPONENTS
   nativecodegen
   )
 
-add_llvm_example(LLJITWithTargetProcessControl
-  LLJITWithTargetProcessControl.cpp
+add_llvm_example(LLJITWithExecutorProcessControl
+  LLJITWithExecutorProcessControl.cpp
   )
