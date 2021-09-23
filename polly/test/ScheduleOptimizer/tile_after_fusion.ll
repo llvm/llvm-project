@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-opt-isl -polly-ast -polly-opt-fusion=max -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-opt-isl -polly-ast -polly-isl-arg=--no-schedule-serialize-sccs -analyze < %s | FileCheck %s
 ;
 ;
 ;    void tf(int C[256][256][256], int A0[256][256][256], int A1[256][256][256]) {

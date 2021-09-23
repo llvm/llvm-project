@@ -1710,6 +1710,10 @@ Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, LoopInfo &LI,
     : IslCtx(isl_ctx_alloc(), isl_ctx_free), SE(&ScalarEvolution), DT(&DT),
       R(R), name(None), HasSingleExitEdge(R.getExitingBlock()), DC(DC),
       ORE(ORE), Affinator(this, LI), ID(ID) {
+
+  // Options defaults that are different from ISL's.
+  isl_options_set_schedule_serialize_sccs(IslCtx.get(), true);
+
   SmallVector<char *, 8> IslArgv;
   IslArgv.reserve(1 + IslArgs.size());
 

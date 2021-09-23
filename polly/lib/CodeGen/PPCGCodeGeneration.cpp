@@ -3249,6 +3249,7 @@ public:
     PPCGGen->kernel_id = 0;
 
     // Set scheduling strategy to same strategy PPCG is using.
+    isl_options_set_schedule_serialize_sccs(PPCGGen->ctx, false);
     isl_options_set_schedule_outer_coincidence(PPCGGen->ctx, true);
     isl_options_set_schedule_maximize_band_depth(PPCGGen->ctx, true);
     isl_options_set_schedule_whole_component(PPCGGen->ctx, false);
