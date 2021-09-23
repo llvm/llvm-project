@@ -284,9 +284,13 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
   }
 
   const GlobalObject *Base = GV->getBaseObject();
-  if (!Base)
-    return make_error<StringError>("Unable to determine comdat of alias!",
-                                   inconvertibleErrorCode());
+  if (!Base) {
+    if (isa<GlobalIFunc>(GV))
+      Base = cast<GlobalIFunc>(GV)->getResolverFunction();
+    if (!Base)
+      return make_error<StringError>("Unable to determine comdat of alias!",
+                                     inconvertibleErrorCode());
+  }
   if (const Comdat *C = Base->getComdat()) {
     Expected<int> ComdatIndexOrErr = getComdatIndex(C, GV->getParent());
     if (!ComdatIndexOrErr)
