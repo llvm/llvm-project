@@ -1,19 +1,19 @@
-; RUN: llc -aarch64-sve-vector-bits-min=128  -asm-verbose=0 < %s | FileCheck %s -check-prefix=NO_SVE
-; RUN: llc -aarch64-sve-vector-bits-min=256  -asm-verbose=0 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_EQ_256
-; RUN: llc -aarch64-sve-vector-bits-min=384  -asm-verbose=0 < %s | FileCheck %s -check-prefixes=CHECK
-; RUN: llc -aarch64-sve-vector-bits-min=512  -asm-verbose=0 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512
-; RUN: llc -aarch64-sve-vector-bits-min=640  -asm-verbose=0 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512
-; RUN: llc -aarch64-sve-vector-bits-min=768  -asm-verbose=0 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512
-; RUN: llc -aarch64-sve-vector-bits-min=896  -asm-verbose=0 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512
-; RUN: llc -aarch64-sve-vector-bits-min=1024 -asm-verbose=0 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024
-; RUN: llc -aarch64-sve-vector-bits-min=1152 -asm-verbose=0 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024
-; RUN: llc -aarch64-sve-vector-bits-min=1280 -asm-verbose=0 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024
-; RUN: llc -aarch64-sve-vector-bits-min=1408 -asm-verbose=0 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024
-; RUN: llc -aarch64-sve-vector-bits-min=1536 -asm-verbose=0 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024
-; RUN: llc -aarch64-sve-vector-bits-min=1664 -asm-verbose=0 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024
-; RUN: llc -aarch64-sve-vector-bits-min=1792 -asm-verbose=0 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024
-; RUN: llc -aarch64-sve-vector-bits-min=1920 -asm-verbose=0 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024
-; RUN: llc -aarch64-sve-vector-bits-min=2048 -asm-verbose=0 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024,VBITS_GE_2048
+; RUN: llc -aarch64-sve-vector-bits-min=128  < %s | FileCheck %s -check-prefix=NO_SVE
+; RUN: llc -aarch64-sve-vector-bits-min=256  < %s | FileCheck %s -check-prefixes=CHECK,VBITS_EQ_256
+; RUN: llc -aarch64-sve-vector-bits-min=384  < %s | FileCheck %s -check-prefixes=CHECK
+; RUN: llc -aarch64-sve-vector-bits-min=512  < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512
+; RUN: llc -aarch64-sve-vector-bits-min=640  < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512
+; RUN: llc -aarch64-sve-vector-bits-min=768  < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512
+; RUN: llc -aarch64-sve-vector-bits-min=896  < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512
+; RUN: llc -aarch64-sve-vector-bits-min=1024 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024
+; RUN: llc -aarch64-sve-vector-bits-min=1152 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024
+; RUN: llc -aarch64-sve-vector-bits-min=1280 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024
+; RUN: llc -aarch64-sve-vector-bits-min=1408 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024
+; RUN: llc -aarch64-sve-vector-bits-min=1536 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024
+; RUN: llc -aarch64-sve-vector-bits-min=1664 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024
+; RUN: llc -aarch64-sve-vector-bits-min=1792 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024
+; RUN: llc -aarch64-sve-vector-bits-min=1920 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024
+; RUN: llc -aarch64-sve-vector-bits-min=2048 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024,VBITS_GE_2048
 
 target triple = "aarch64-unknown-linux-gnu"
 
@@ -22,33 +22,36 @@ target triple = "aarch64-unknown-linux-gnu"
 
 ; Don't use SVE for 64-bit vectors
 define <8 x i8> @shuffle_ext_byone_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v8i8
-; CHECK: ext v0.8b, v0.8b, v1.8b, #7
-; CHECK-NEXT: ret
+; CHECK-LABEL: shuffle_ext_byone_v8i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext v0.8b, v0.8b, v1.8b, #7
+; CHECK-NEXT:    ret
   %ret = shufflevector <8 x i8> %op1, <8 x i8> %op2, <8 x i32> <i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14>
   ret <8 x i8> %ret
 }
 
 ; Don't use SVE for 128-bit vectors
 define <16 x i8> @shuffle_ext_byone_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
-; CHECK-LABEL: shuffle_ext_byone_v16i8
-; CHECK: ext v0.16b, v0.16b, v1.16b, #15
-; CHECK-NEXT: ret
+; CHECK-LABEL: shuffle_ext_byone_v16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext v0.16b, v0.16b, v1.16b, #15
+; CHECK-NEXT:    ret
   %ret = shufflevector <16 x i8> %op1, <16 x i8> %op2, <16 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22,
                                                                    i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30>
   ret <16 x i8> %ret
 }
 
 define void @shuffle_ext_byone_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v32i8
-; CHECK: ptrue [[PG:p[0-9]+]].b, vl32
-; CHECK-NEXT: ld1b { [[OP1:z[0-9]+]].b }, [[PG]]/z, [x0]
-; CHECK-NEXT: ld1b { [[OP2:z[0-9]+]].b }, [[PG]]/z, [x1]
-; CHECK-NEXT: mov z[[ELEM:[0-9]+]].b, [[OP1]].b[31]
-; CHECK-NEXT: fmov [[TMP:w[0-9]+]], s[[ELEM]]
-; CHECK-NEXT: insr [[OP2]].b, [[TMP]]
-; CHECK-NEXT: st1b { [[OP2]].b }, [[PG]], [x0]
-; CHECK-NEXT: ret
+; CHECK-LABEL: shuffle_ext_byone_v32i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b, vl32
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x1]
+; CHECK-NEXT:    mov z0.b, z0.b[31]
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    insr z1.b, w8
+; CHECK-NEXT:    st1b { z1.b }, p0, [x0]
+; CHECK-NEXT:    ret
   %op1 = load <32 x i8>, <32 x i8>* %a
   %op2 = load <32 x i8>, <32 x i8>* %b
   %ret = shufflevector <32 x i8> %op1, <32 x i8> %op2, <32 x i32> <i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38,
@@ -60,31 +63,34 @@ define void @shuffle_ext_byone_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 }
 
 define void @shuffle_ext_byone_v64i8(<64 x i8>* %a, <64 x i8>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v64i8
-; VBITS_GE_512: ptrue [[PG:p[0-9]+]].b, vl64
-; VBITS_GE_512-NEXT: ld1b { [[OP1:z[0-9]+]].b }, [[PG]]/z, [x0]
-; VBITS_GE_512-NEXT: ld1b { [[OP2:z[0-9]+]].b }, [[PG]]/z, [x1]
-; VBITS_GE_512-NEXT: mov z[[ELEM:[0-9]+]].b, [[OP1]].b[63]
-; VBITS_GE_512-NEXT: fmov [[TMP:w[0-9]+]], s[[ELEM]]
-; VBITS_GE_512-NEXT: insr [[OP2]].b, [[TMP]]
-; VBITS_GE_512-NEXT: st1b { [[OP2]].b }, [[PG]], [x0]
-; VBITS_GE_512-NEXT: ret
-
 ; Ensure sensible type legalisation.
-; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].b, vl32
-; VBITS_EQ_256-DAG: mov w[[NUMELTS:[0-9]+]], #32
-; VBITS_EQ_256-DAG: ld1b { [[OP1_HI:z[0-9]+]].b }, [[PG]]/z, [x0, x[[NUMELTS]]]
-; VBITS_EQ_256-DAG: ld1b { [[OP2_LO:z[0-9]+]].b }, [[PG]]/z, [x1]
-; VBITS_EQ_256-DAG: ld1b { [[OP2_HI:z[0-9]+]].b }, [[PG]]/z, [x1, x[[NUMELTS]]]
-; VBITS_EQ_256-DAG: mov z[[ELEM1:[0-9]+]].b, [[OP1_HI]].b[31]
-; VBITS_EQ_256-DAG: fmov [[TMP1:w[0-9]+]], s[[ELEM1]]
-; VBITS_EQ_256-DAG: mov z[[ELEM2:[0-9]+]].b, [[OP2_LO]].b[31]
-; VBITS_EQ_256-DAG: insr [[OP2_LO]].b, [[TMP1]]
-; VBITS_EQ_256-DAG: fmov [[TMP2:w[0-9]+]], s[[ELEM2]]
-; VBITS_EQ_256-DAG: insr [[OP2_HI]].b, [[TMP2]]
-; VBITS_EQ_256-DAG: st1b { [[OP2_LO]].b }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1b { [[OP2_HI]].b }, [[PG]], [x0, x[[NUMELTS]]]
-; VBITS_EQ_256-NEXT: ret
+; VBITS_EQ_256-LABEL: shuffle_ext_byone_v64i8:
+; VBITS_EQ_256:       // %bb.0:
+; VBITS_EQ_256-NEXT:    ptrue p0.b, vl32
+; VBITS_EQ_256-NEXT:    mov w8, #32
+; VBITS_EQ_256-NEXT:    ld1b { z0.b }, p0/z, [x0, x8]
+; VBITS_EQ_256-NEXT:    ld1b { z1.b }, p0/z, [x1, x8]
+; VBITS_EQ_256-NEXT:    ld1b { z2.b }, p0/z, [x1]
+; VBITS_EQ_256-NEXT:    mov z0.b, z0.b[31]
+; VBITS_EQ_256-NEXT:    fmov w9, s0
+; VBITS_EQ_256-NEXT:    mov z3.b, z2.b[31]
+; VBITS_EQ_256-NEXT:    insr z2.b, w9
+; VBITS_EQ_256-NEXT:    fmov w9, s3
+; VBITS_EQ_256-NEXT:    insr z1.b, w9
+; VBITS_EQ_256-NEXT:    st1b { z1.b }, p0, [x0, x8]
+; VBITS_EQ_256-NEXT:    st1b { z2.b }, p0, [x0]
+; VBITS_EQ_256-NEXT:    ret
+;
+; VBITS_GE_512-LABEL: shuffle_ext_byone_v64i8:
+; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    ptrue p0.b, vl64
+; VBITS_GE_512-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1b { z1.b }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    mov z0.b, z0.b[63]
+; VBITS_GE_512-NEXT:    fmov w8, s0
+; VBITS_GE_512-NEXT:    insr z1.b, w8
+; VBITS_GE_512-NEXT:    st1b { z1.b }, p0, [x0]
+; VBITS_GE_512-NEXT:    ret
   %op1 = load <64 x i8>, <64 x i8>* %a
   %op2 = load <64 x i8>, <64 x i8>* %b
   %ret = shufflevector <64 x i8> %op1, <64 x i8> %op2, <64 x i32> <i32 63, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70,
@@ -100,16 +106,17 @@ define void @shuffle_ext_byone_v64i8(<64 x i8>* %a, <64 x i8>* %b) #0 {
 }
 
 define void @shuffle_ext_byone_v128i8(<128 x i8>* %a, <128 x i8>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v128i8
-; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].b, vl128
-; VBITS_GE_1024-NEXT: ld1b { [[OP1:z[0-9]+]].b }, [[PG]]/z, [x0]
-; VBITS_GE_1024-NEXT: ld1b { [[OP2:z[0-9]+]].b }, [[PG]]/z, [x1]
-; VBITS_GE_1024-NEXT: mov w[[TMP:[0-9]+]], #127
-; VBITS_GE_1024-NEXT: whilels [[WPG:p[0-9]+]].b, xzr, x[[TMP]]
-; VBITS_GE_1024-NEXT: lastb [[TMP2:w[0-9]+]], [[WPG]], [[OP1]].b
-; VBITS_GE_1024-NEXT: insr [[OP2]].b, [[TMP2]]
-; VBITS_GE_1024-NEXT: st1b { [[OP2]].b }, [[PG]], [x0]
-; VBITS_GE_1024-NEXT: ret
+; VBITS_GE_1024-LABEL: shuffle_ext_byone_v128i8:
+; VBITS_GE_1024:       // %bb.0:
+; VBITS_GE_1024-NEXT:    ptrue p0.b, vl128
+; VBITS_GE_1024-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; VBITS_GE_1024-NEXT:    ld1b { z1.b }, p0/z, [x1]
+; VBITS_GE_1024-NEXT:    mov w8, #127
+; VBITS_GE_1024-NEXT:    whilels p1.b, xzr, x8
+; VBITS_GE_1024-NEXT:    lastb w8, p1, z0.b
+; VBITS_GE_1024-NEXT:    insr z1.b, w8
+; VBITS_GE_1024-NEXT:    st1b { z1.b }, p0, [x0]
+; VBITS_GE_1024-NEXT:    ret
   %op1 = load <128 x i8>, <128 x i8>* %a
   %op2 = load <128 x i8>, <128 x i8>* %b
   %ret = shufflevector <128 x i8> %op1, <128 x i8> %op2, <128 x i32> <i32 127,  i32 128,  i32 129,  i32 130,  i32 131,  i32 132,  i32 133,  i32 134,
@@ -133,16 +140,17 @@ define void @shuffle_ext_byone_v128i8(<128 x i8>* %a, <128 x i8>* %b) #0 {
 }
 
 define void @shuffle_ext_byone_v256i8(<256 x i8>* %a, <256 x i8>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v256i8
-; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].b, vl256
-; VBITS_GE_2048-NEXT: ld1b { [[OP1:z[0-9]+]].b }, [[PG]]/z, [x0]
-; VBITS_GE_2048-NEXT: ld1b { [[OP2:z[0-9]+]].b }, [[PG]]/z, [x1]
-; VBITS_GE_2048-NEXT: mov w[[TMP:[0-9]+]], #255
-; VBITS_GE_2048-NEXT: whilels [[WPG:p[0-9]+]].b, xzr, x[[TMP]]
-; VBITS_GE_2048-NEXT: lastb [[TMP2:w[0-9]+]], [[WPG]], [[OP1]].b
-; VBITS_GE_2048-NEXT: insr [[OP2]].b, [[TMP2]]
-; VBITS_GE_2048-NEXT: st1b { [[OP2]].b }, [[PG]], [x0]
-; VBITS_GE_2048-NEXT: ret
+; VBITS_GE_2048-LABEL: shuffle_ext_byone_v256i8:
+; VBITS_GE_2048:       // %bb.0:
+; VBITS_GE_2048-NEXT:    ptrue p0.b, vl256
+; VBITS_GE_2048-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; VBITS_GE_2048-NEXT:    ld1b { z1.b }, p0/z, [x1]
+; VBITS_GE_2048-NEXT:    mov w8, #255
+; VBITS_GE_2048-NEXT:    whilels p1.b, xzr, x8
+; VBITS_GE_2048-NEXT:    lastb w8, p1, z0.b
+; VBITS_GE_2048-NEXT:    insr z1.b, w8
+; VBITS_GE_2048-NEXT:    st1b { z1.b }, p0, [x0]
+; VBITS_GE_2048-NEXT:    ret
   %op1 = load <256 x i8>, <256 x i8>* %a
   %op2 = load <256 x i8>, <256 x i8>* %b
   %ret = shufflevector <256 x i8> %op1, <256 x i8> %op2, <256 x i32> <i32 255,  i32 256,  i32 257,  i32 258,  i32 259,  i32 260,  i32 261,  i32 262,
@@ -183,32 +191,35 @@ define void @shuffle_ext_byone_v256i8(<256 x i8>* %a, <256 x i8>* %b) #0 {
 
 ; Don't use SVE for 64-bit vectors
 define <4 x i16> @shuffle_ext_byone_v4i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v4i16
-; CHECK: ext v0.8b, v0.8b, v1.8b, #6
-; CHECK-NEXT: ret
+; CHECK-LABEL: shuffle_ext_byone_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext v0.8b, v0.8b, v1.8b, #6
+; CHECK-NEXT:    ret
   %ret = shufflevector <4 x i16> %op1, <4 x i16> %op2, <4 x i32> <i32 3, i32 4, i32 5, i32 6>
   ret <4 x i16> %ret
 }
 
 ; Don't use SVE for 128-bit vectors
 define <8 x i16> @shuffle_ext_byone_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v8i16
-; CHECK: ext v0.16b, v0.16b, v1.16b, #14
-; CHECK-NEXT: ret
+; CHECK-LABEL: shuffle_ext_byone_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext v0.16b, v0.16b, v1.16b, #14
+; CHECK-NEXT:    ret
   %ret = shufflevector <8 x i16> %op1, <8 x i16> %op2, <8 x i32> <i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14>
   ret <8 x i16> %ret
 }
 
 define void @shuffle_ext_byone_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v16i16
-; CHECK: ptrue [[PG:p[0-9]+]].h, vl16
-; CHECK-NEXT: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
-; CHECK-NEXT: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
-; CHECK-NEXT: mov z[[ELEM:[0-9]+]].h, [[OP1]].h[15]
-; CHECK-NEXT: fmov [[TMP:w[0-9]+]], s[[ELEM]]
-; CHECK-NEXT: insr [[OP2]].h, [[TMP]]
-; CHECK-NEXT: st1h { [[OP2]].h }, [[PG]], [x0]
-; CHECK-NEXT: ret
+; CHECK-LABEL: shuffle_ext_byone_v16i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h, vl16
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; CHECK-NEXT:    mov z0.h, z0.h[15]
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    insr z1.h, w8
+; CHECK-NEXT:    st1h { z1.h }, p0, [x0]
+; CHECK-NEXT:    ret
   %op1 = load <16 x i16>, <16 x i16>* %a
   %op2 = load <16 x i16>, <16 x i16>* %b
   %ret = shufflevector <16 x i16> %op1, <16 x i16> %op2, <16 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22,
@@ -218,31 +229,34 @@ define void @shuffle_ext_byone_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 }
 
 define void @shuffle_ext_byone_v32i16(<32 x i16>* %a, <32 x i16>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v32i16
-; VBITS_GE_512: ptrue [[PG:p[0-9]+]].h, vl32
-; VBITS_GE_512-NEXT: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_GE_512-NEXT: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
-; VBITS_GE_512-NEXT: mov z[[ELEM:[0-9]+]].h, [[OP1]].h[31]
-; VBITS_GE_512-NEXT: fmov [[TMP:w[0-9]+]], s[[ELEM]]
-; VBITS_GE_512-NEXT: insr [[OP2]].h, [[TMP]]
-; VBITS_GE_512-NEXT: st1h { [[OP2]].h }, [[PG]], [x0]
-; VBITS_GE_512-NEXT: ret
-
 ; Ensure sensible type legalisation.
-; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].h, vl16
-; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #16
-; VBITS_EQ_256-DAG: ld1h { [[OP1_HI:z[0-9]+]].h }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #1]
-; VBITS_EQ_256-DAG: ld1h { [[OP2_LO:z[0-9]+]].h }, [[PG]]/z, [x1]
-; VBITS_EQ_256-DAG: ld1h { [[OP2_HI:z[0-9]+]].h }, [[PG]]/z, [x1, x[[NUMELTS]], lsl #1]
-; VBITS_EQ_256-DAG: mov z[[ELEM1:[0-9]+]].h, [[OP1_HI]].h[15]
-; VBITS_EQ_256-DAG: fmov [[TMP1:w[0-9]+]], s[[ELEM1]]
-; VBITS_EQ_256-DAG: mov z[[ELEM2:[0-9]+]].h, [[OP2_LO]].h[15]
-; VBITS_EQ_256-DAG: insr [[OP2_LO]].h, [[TMP1]]
-; VBITS_EQ_256-DAG: fmov [[TMP2:w[0-9]+]], s[[ELEM2]]
-; VBITS_EQ_256-DAG: insr [[OP2_HI]].h, [[TMP2]]
-; VBITS_EQ_256-DAG: st1h { [[OP2_LO]].h }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1h { [[OP2_HI]].h }, [[PG]], [x0, x[[NUMELTS]], lsl #1]
-; VBITS_EQ_256-NEXT: ret
+; VBITS_EQ_256-LABEL: shuffle_ext_byone_v32i16:
+; VBITS_EQ_256:       // %bb.0:
+; VBITS_EQ_256-NEXT:    mov x8, #16
+; VBITS_EQ_256-NEXT:    ptrue p0.h, vl16
+; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    ld1h { z1.h }, p0/z, [x1, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    ld1h { z2.h }, p0/z, [x1]
+; VBITS_EQ_256-NEXT:    mov z0.h, z0.h[15]
+; VBITS_EQ_256-NEXT:    fmov w9, s0
+; VBITS_EQ_256-NEXT:    mov z3.h, z2.h[15]
+; VBITS_EQ_256-NEXT:    insr z2.h, w9
+; VBITS_EQ_256-NEXT:    fmov w9, s3
+; VBITS_EQ_256-NEXT:    insr z1.h, w9
+; VBITS_EQ_256-NEXT:    st1h { z1.h }, p0, [x0, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    st1h { z2.h }, p0, [x0]
+; VBITS_EQ_256-NEXT:    ret
+;
+; VBITS_GE_512-LABEL: shuffle_ext_byone_v32i16:
+; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    ptrue p0.h, vl32
+; VBITS_GE_512-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    mov z0.h, z0.h[31]
+; VBITS_GE_512-NEXT:    fmov w8, s0
+; VBITS_GE_512-NEXT:    insr z1.h, w8
+; VBITS_GE_512-NEXT:    st1h { z1.h }, p0, [x0]
+; VBITS_GE_512-NEXT:    ret
   %op1 = load <32 x i16>, <32 x i16>* %a
   %op2 = load <32 x i16>, <32 x i16>* %b
   %ret = shufflevector <32 x i16> %op1, <32 x i16> %op2, <32 x i32> <i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38,
@@ -254,16 +268,17 @@ define void @shuffle_ext_byone_v32i16(<32 x i16>* %a, <32 x i16>* %b) #0 {
 }
 
 define void @shuffle_ext_byone_v64i16(<64 x i16>* %a, <64 x i16>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v64i16
-; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].h, vl64
-; VBITS_GE_1024-NEXT: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_GE_1024-NEXT: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
-; VBITS_GE_1024-NEXT: mov w[[TMP:[0-9]+]], #63
-; VBITS_GE_1024-NEXT: whilels [[WPG:p[0-9]+]].h, xzr, x[[TMP]]
-; VBITS_GE_1024-NEXT: lastb [[TMP2:w[0-9]+]], [[WPG]], [[OP1]].h
-; VBITS_GE_1024-NEXT: insr [[OP2]].h, [[TMP2]]
-; VBITS_GE_1024-NEXT: st1h { [[OP2]].h }, [[PG]], [x0]
-; VBITS_GE_1024-NEXT: ret
+; VBITS_GE_1024-LABEL: shuffle_ext_byone_v64i16:
+; VBITS_GE_1024:       // %bb.0:
+; VBITS_GE_1024-NEXT:    ptrue p0.h, vl64
+; VBITS_GE_1024-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; VBITS_GE_1024-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; VBITS_GE_1024-NEXT:    mov w8, #63
+; VBITS_GE_1024-NEXT:    whilels p1.h, xzr, x8
+; VBITS_GE_1024-NEXT:    lastb w8, p1, z0.h
+; VBITS_GE_1024-NEXT:    insr z1.h, w8
+; VBITS_GE_1024-NEXT:    st1h { z1.h }, p0, [x0]
+; VBITS_GE_1024-NEXT:    ret
   %op1 = load <64 x i16>, <64 x i16>* %a
   %op2 = load <64 x i16>, <64 x i16>* %b
   %ret = shufflevector <64 x i16> %op1, <64 x i16> %op2, <64 x i32> <i32 63, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70,
@@ -279,16 +294,17 @@ define void @shuffle_ext_byone_v64i16(<64 x i16>* %a, <64 x i16>* %b) #0 {
 }
 
 define void @shuffle_ext_byone_v128i16(<128 x i16>* %a, <128 x i16>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v128i16
-; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].h, vl128
-; VBITS_GE_2048-NEXT: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_GE_2048-NEXT: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
-; VBITS_GE_2048-NEXT: mov w[[TMP:[0-9]+]], #127
-; VBITS_GE_2048-NEXT: whilels [[WPG:p[0-9]+]].h, xzr, x[[TMP]]
-; VBITS_GE_2048-NEXT: lastb [[TMP2:w[0-9]+]], [[WPG]], [[OP1]].h
-; VBITS_GE_2048-NEXT: insr [[OP2]].h, [[TMP2]]
-; VBITS_GE_2048-NEXT: st1h { [[OP2]].h }, [[PG]], [x0]
-; VBITS_GE_2048-NEXT: ret
+; VBITS_GE_2048-LABEL: shuffle_ext_byone_v128i16:
+; VBITS_GE_2048:       // %bb.0:
+; VBITS_GE_2048-NEXT:    ptrue p0.h, vl128
+; VBITS_GE_2048-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; VBITS_GE_2048-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; VBITS_GE_2048-NEXT:    mov w8, #127
+; VBITS_GE_2048-NEXT:    whilels p1.h, xzr, x8
+; VBITS_GE_2048-NEXT:    lastb w8, p1, z0.h
+; VBITS_GE_2048-NEXT:    insr z1.h, w8
+; VBITS_GE_2048-NEXT:    st1h { z1.h }, p0, [x0]
+; VBITS_GE_2048-NEXT:    ret
   %op1 = load <128 x i16>, <128 x i16>* %a
   %op2 = load <128 x i16>, <128 x i16>* %b
   %ret = shufflevector <128 x i16> %op1, <128 x i16> %op2, <128 x i32> <i32 127,  i32 128,  i32 129,  i32 130,  i32 131,  i32 132,  i32 133,  i32 134,
@@ -313,32 +329,35 @@ define void @shuffle_ext_byone_v128i16(<128 x i16>* %a, <128 x i16>* %b) #0 {
 
 ; Don't use SVE for 64-bit vectors
 define <2 x i32> @shuffle_ext_byone_v2i32(<2 x i32> %op1, <2 x i32> %op2) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v2i32
-; CHECK: ext v0.8b, v0.8b, v1.8b, #4
-; CHECK-NEXT: ret
+; CHECK-LABEL: shuffle_ext_byone_v2i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext v0.8b, v0.8b, v1.8b, #4
+; CHECK-NEXT:    ret
   %ret = shufflevector <2 x i32> %op1, <2 x i32> %op2, <2 x i32> <i32 1, i32 2>
   ret <2 x i32> %ret
 }
 
 ; Don't use SVE for 128-bit vectors
 define <4 x i32> @shuffle_ext_byone_v4i32(<4 x i32> %op1, <4 x i32> %op2) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v4i32
-; CHECK: ext v0.16b, v0.16b, v1.16b, #12
-; CHECK-NEXT: ret
+; CHECK-LABEL: shuffle_ext_byone_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext v0.16b, v0.16b, v1.16b, #12
+; CHECK-NEXT:    ret
   %ret = shufflevector <4 x i32> %op1, <4 x i32> %op2, <4 x i32> <i32 3, i32 4, i32 5, i32 6>
   ret <4 x i32> %ret
 }
 
 define void @shuffle_ext_byone_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v8i32
-; CHECK: ptrue [[PG:p[0-9]+]].s, vl8
-; CHECK-NEXT: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
-; CHECK-NEXT: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
-; CHECK-NEXT: mov z[[ELEM:[0-9]+]].s, [[OP1]].s[7]
-; CHECK-NEXT: fmov [[TMP:w[0-9]+]], s[[ELEM]]
-; CHECK-NEXT: insr [[OP2]].s, [[TMP]]
-; CHECK-NEXT: st1w { [[OP2]].s }, [[PG]], [x0]
-; CHECK-NEXT: ret
+; CHECK-LABEL: shuffle_ext_byone_v8i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s, vl8
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; CHECK-NEXT:    mov z0.s, z0.s[7]
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    insr z1.s, w8
+; CHECK-NEXT:    st1w { z1.s }, p0, [x0]
+; CHECK-NEXT:    ret
   %op1 = load <8 x i32>, <8 x i32>* %a
   %op2 = load <8 x i32>, <8 x i32>* %b
   %ret = shufflevector <8 x i32> %op1, <8 x i32> %op2, <8 x i32> <i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14>
@@ -347,32 +366,34 @@ define void @shuffle_ext_byone_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
 }
 
 define void @shuffle_ext_byone_v16i32(<16 x i32>* %a, <16 x i32>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v16i32
-; VBITS_GE_512: ptrue [[PG:p[0-9]+]].s, vl16
-; VBITS_GE_512-NEXT: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_GE_512-NEXT: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
-; VBITS_GE_512-NEXT: mov z[[ELEM:[0-9]+]].s, [[OP1]].s[15]
-; VBITS_GE_512-NEXT: fmov [[TMP:w[0-9]+]], s[[ELEM]]
-; VBITS_GE_512-NEXT: insr [[OP2]].s, [[TMP]]
-; VBITS_GE_512-NEXT: st1w { [[OP2]].s }, [[PG]], [x0]
-; VBITS_GE_512-NEXT: ret
-
 ; Ensure sensible type legalisation.
-; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].s, vl8
-; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #8
-; VBITS_EQ_256-DAG: ld1w { [[OP1_HI:z[0-9]+]].s }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #2]
-; VBITS_EQ_256-DAG: ld1w { [[OP2_LO:z[0-9]+]].s }, [[PG]]/z, [x1]
-; VBITS_EQ_256-DAG: ld1w { [[OP2_HI:z[0-9]+]].s }, [[PG]]/z, [x1, x[[NUMELTS]], lsl #2]
-; VBITS_EQ_256-DAG: mov z[[ELEM1:[0-9]+]].s, [[OP1_HI]].s[7]
-; VBITS_EQ_256-DAG: fmov [[TMP1:w[0-9]+]], s[[ELEM1]]
-; VBITS_EQ_256-DAG: mov z[[ELEM2:[0-9]+]].s, [[OP2_LO]].s[7]
-; VBITS_EQ_256-DAG: insr [[OP2_LO]].s, [[TMP1]]
-; VBITS_EQ_256-DAG: fmov [[TMP2:w[0-9]+]], s[[ELEM2]]
-; VBITS_EQ_256-DAG: insr [[OP2_HI]].s, [[TMP2]]
-; VBITS_EQ_256-DAG: st1w { [[OP2_LO]].s }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1w { [[OP2_HI]].s }, [[PG]], [x0, x[[NUMELTS]], lsl #2]
-; VBITS_EQ_256-DAG: ret
-
+; VBITS_EQ_256-LABEL: shuffle_ext_byone_v16i32:
+; VBITS_EQ_256:       // %bb.0:
+; VBITS_EQ_256-NEXT:    mov x8, #8
+; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
+; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
+; VBITS_EQ_256-NEXT:    ld1w { z1.s }, p0/z, [x1, x8, lsl #2]
+; VBITS_EQ_256-NEXT:    ld1w { z2.s }, p0/z, [x1]
+; VBITS_EQ_256-NEXT:    mov z0.s, z0.s[7]
+; VBITS_EQ_256-NEXT:    fmov w9, s0
+; VBITS_EQ_256-NEXT:    mov z3.s, z2.s[7]
+; VBITS_EQ_256-NEXT:    insr z2.s, w9
+; VBITS_EQ_256-NEXT:    fmov w9, s3
+; VBITS_EQ_256-NEXT:    insr z1.s, w9
+; VBITS_EQ_256-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
+; VBITS_EQ_256-NEXT:    st1w { z2.s }, p0, [x0]
+; VBITS_EQ_256-NEXT:    ret
+;
+; VBITS_GE_512-LABEL: shuffle_ext_byone_v16i32:
+; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
+; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    mov z0.s, z0.s[15]
+; VBITS_GE_512-NEXT:    fmov w8, s0
+; VBITS_GE_512-NEXT:    insr z1.s, w8
+; VBITS_GE_512-NEXT:    st1w { z1.s }, p0, [x0]
+; VBITS_GE_512-NEXT:    ret
   %op1 = load <16 x i32>, <16 x i32>* %a
   %op2 = load <16 x i32>, <16 x i32>* %b
   %ret = shufflevector <16 x i32> %op1, <16 x i32> %op2, <16 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22,
@@ -382,16 +403,17 @@ define void @shuffle_ext_byone_v16i32(<16 x i32>* %a, <16 x i32>* %b) #0 {
 }
 
 define void @shuffle_ext_byone_v32i32(<32 x i32>* %a, <32 x i32>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v32i32
-; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].s, vl32
-; VBITS_GE_1024-NEXT: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_GE_1024-NEXT: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
-; VBITS_GE_1024-NEXT: mov w[[TMP:[0-9]+]], #31
-; VBITS_GE_1024-NEXT: whilels [[WPG:p[0-9]+]].s, xzr, x[[TMP]]
-; VBITS_GE_1024-NEXT: lastb [[TMP2:w[0-9]+]], [[WPG]], [[OP1]].s
-; VBITS_GE_1024-NEXT: insr [[OP2]].s, [[TMP2]]
-; VBITS_GE_1024-NEXT: st1w { [[OP2]].s }, [[PG]], [x0]
-; VBITS_GE_1024-NEXT: ret
+; VBITS_GE_1024-LABEL: shuffle_ext_byone_v32i32:
+; VBITS_GE_1024:       // %bb.0:
+; VBITS_GE_1024-NEXT:    ptrue p0.s, vl32
+; VBITS_GE_1024-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; VBITS_GE_1024-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; VBITS_GE_1024-NEXT:    mov w8, #31
+; VBITS_GE_1024-NEXT:    whilels p1.s, xzr, x8
+; VBITS_GE_1024-NEXT:    lastb w8, p1, z0.s
+; VBITS_GE_1024-NEXT:    insr z1.s, w8
+; VBITS_GE_1024-NEXT:    st1w { z1.s }, p0, [x0]
+; VBITS_GE_1024-NEXT:    ret
   %op1 = load <32 x i32>, <32 x i32>* %a
   %op2 = load <32 x i32>, <32 x i32>* %b
   %ret = shufflevector <32 x i32> %op1, <32 x i32> %op2, <32 x i32> <i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38,
@@ -403,16 +425,17 @@ define void @shuffle_ext_byone_v32i32(<32 x i32>* %a, <32 x i32>* %b) #0 {
 }
 
 define void @shuffle_ext_byone_v64i32(<64 x i32>* %a, <64 x i32>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v64i32
-; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].s, vl64
-; VBITS_GE_2048-NEXT: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_GE_2048-NEXT: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
-; VBITS_GE_2048-NEXT: mov w[[TMP:[0-9]+]], #63
-; VBITS_GE_2048-NEXT: whilels [[WPG:p[0-9]+]].s, xzr, x[[TMP]]
-; VBITS_GE_2048-NEXT: lastb [[TMP2:w[0-9]+]], [[WPG]], [[OP1]].s
-; VBITS_GE_2048-NEXT: insr [[OP2]].s, [[TMP2]]
-; VBITS_GE_2048-NEXT: st1w { [[OP2]].s }, [[PG]], [x0]
-; VBITS_GE_2048-NEXT: ret
+; VBITS_GE_2048-LABEL: shuffle_ext_byone_v64i32:
+; VBITS_GE_2048:       // %bb.0:
+; VBITS_GE_2048-NEXT:    ptrue p0.s, vl64
+; VBITS_GE_2048-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; VBITS_GE_2048-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; VBITS_GE_2048-NEXT:    mov w8, #63
+; VBITS_GE_2048-NEXT:    whilels p1.s, xzr, x8
+; VBITS_GE_2048-NEXT:    lastb w8, p1, z0.s
+; VBITS_GE_2048-NEXT:    insr z1.s, w8
+; VBITS_GE_2048-NEXT:    st1w { z1.s }, p0, [x0]
+; VBITS_GE_2048-NEXT:    ret
   %op1 = load <64 x i32>, <64 x i32>* %a
   %op2 = load <64 x i32>, <64 x i32>* %b
   %ret = shufflevector <64 x i32> %op1, <64 x i32> %op2, <64 x i32> <i32 63, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70,
@@ -429,23 +452,25 @@ define void @shuffle_ext_byone_v64i32(<64 x i32>* %a, <64 x i32>* %b) #0 {
 
 ; Don't use SVE for 128-bit vectors
 define <2 x i64> @shuffle_ext_byone_v2i64(<2 x i64> %op1, <2 x i64> %op2) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v2i64
-; CHECK: ext v0.16b, v0.16b, v1.16b, #8
-; CHECK-NEXT: ret
+; CHECK-LABEL: shuffle_ext_byone_v2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext v0.16b, v0.16b, v1.16b, #8
+; CHECK-NEXT:    ret
   %ret = shufflevector <2 x i64> %op1, <2 x i64> %op2, <2 x i32> <i32 1, i32 2>
   ret <2 x i64> %ret
 }
 
 define void @shuffle_ext_byone_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v4i64
-; CHECK: ptrue [[PG:p[0-9]+]].d, vl4
-; CHECK-NEXT: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
-; CHECK-NEXT: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
-; CHECK-NEXT: mov z[[ELEM:[0-9]+]].d, [[OP1]].d[3]
-; CHECK-NEXT: fmov [[TMP:x[0-9]+]], d[[ELEM]]
-; CHECK-NEXT: insr [[OP2]].d, [[TMP]]
-; CHECK-NEXT: st1d { [[OP2]].d }, [[PG]], [x0]
-; CHECK-NEXT: ret
+; CHECK-LABEL: shuffle_ext_byone_v4i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; CHECK-NEXT:    mov z0.d, z0.d[3]
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    insr z1.d, x8
+; CHECK-NEXT:    st1d { z1.d }, p0, [x0]
+; CHECK-NEXT:    ret
   %op1 = load <4 x i64>, <4 x i64>* %a
   %op2 = load <4 x i64>, <4 x i64>* %b
   %ret = shufflevector <4 x i64> %op1, <4 x i64> %op2, <4 x i32> <i32 3, i32 4, i32 5, i32 6>
@@ -454,31 +479,34 @@ define void @shuffle_ext_byone_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
 }
 
 define void @shuffle_ext_byone_v8i64(<8 x i64>* %a, <8 x i64>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v8i64
-; VBITS_GE_512: ptrue [[PG:p[0-9]+]].d, vl8
-; VBITS_GE_512-NEXT: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
-; VBITS_GE_512-NEXT: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
-; VBITS_GE_512-NEXT: mov z[[ELEM:[0-9]+]].d, [[OP1]].d[7]
-; VBITS_GE_512-NEXT: fmov [[TMP:x[0-9]+]], d[[ELEM]]
-; VBITS_GE_512-NEXT: insr [[OP2]].d, [[TMP]]
-; VBITS_GE_512-NEXT: st1d { [[OP2]].d }, [[PG]], [x0]
-; VBITS_GE_512-NEXT: ret
-
 ; Ensure sensible type legalisation.
-; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].d, vl4
-; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #4
-; VBITS_EQ_256-DAG: ld1d { [[OP1_HI:z[0-9]+]].d }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #3]
-; VBITS_EQ_256-DAG: ld1d { [[OP2_LO:z[0-9]+]].d }, [[PG]]/z, [x1]
-; VBITS_EQ_256-DAG: ld1d { [[OP2_HI:z[0-9]+]].d }, [[PG]]/z, [x1, x[[NUMELTS]], lsl #3]
-; VBITS_EQ_256-DAG: mov z[[ELEM1:[0-9]+]].d, [[OP1_HI]].d[3]
-; VBITS_EQ_256-DAG: fmov [[TMP1:x[0-9]+]], d[[ELEM1]]
-; VBITS_EQ_256-DAG: mov z[[ELEM2:[0-9]+]].d, [[OP2_LO]].d[3]
-; VBITS_EQ_256-DAG: insr [[OP2_LO]].d, [[TMP1]]
-; VBITS_EQ_256-DAG: fmov [[TMP2:x[0-9]+]], d[[ELEM2]]
-; VBITS_EQ_256-DAG: insr [[OP2_HI]].d, [[TMP2]]
-; VBITS_EQ_256-DAG: st1d { [[OP2_LO]].d }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1d { [[OP2_HI]].d }, [[PG]], [x0, x[[NUMELTS]], lsl #3]
-; VBITS_EQ_256-NEXT: ret
+; VBITS_EQ_256-LABEL: shuffle_ext_byone_v8i64:
+; VBITS_EQ_256:       // %bb.0:
+; VBITS_EQ_256-NEXT:    mov x8, #4
+; VBITS_EQ_256-NEXT:    ptrue p0.d, vl4
+; VBITS_EQ_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
+; VBITS_EQ_256-NEXT:    ld1d { z1.d }, p0/z, [x1, x8, lsl #3]
+; VBITS_EQ_256-NEXT:    ld1d { z2.d }, p0/z, [x1]
+; VBITS_EQ_256-NEXT:    mov z0.d, z0.d[3]
+; VBITS_EQ_256-NEXT:    fmov x9, d0
+; VBITS_EQ_256-NEXT:    mov z3.d, z2.d[3]
+; VBITS_EQ_256-NEXT:    insr z2.d, x9
+; VBITS_EQ_256-NEXT:    fmov x9, d3
+; VBITS_EQ_256-NEXT:    insr z1.d, x9
+; VBITS_EQ_256-NEXT:    st1d { z1.d }, p0, [x0, x8, lsl #3]
+; VBITS_EQ_256-NEXT:    st1d { z2.d }, p0, [x0]
+; VBITS_EQ_256-NEXT:    ret
+;
+; VBITS_GE_512-LABEL: shuffle_ext_byone_v8i64:
+; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
+; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    mov z0.d, z0.d[7]
+; VBITS_GE_512-NEXT:    fmov x8, d0
+; VBITS_GE_512-NEXT:    insr z1.d, x8
+; VBITS_GE_512-NEXT:    st1d { z1.d }, p0, [x0]
+; VBITS_GE_512-NEXT:    ret
   %op1 = load <8 x i64>, <8 x i64>* %a
   %op2 = load <8 x i64>, <8 x i64>* %b
   %ret = shufflevector <8 x i64> %op1, <8 x i64> %op2, <8 x i32> <i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14>
@@ -487,16 +515,17 @@ define void @shuffle_ext_byone_v8i64(<8 x i64>* %a, <8 x i64>* %b) #0 {
 }
 
 define void @shuffle_ext_byone_v16i64(<16 x i64>* %a, <16 x i64>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v16i64
-; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].d, vl16
-; VBITS_GE_1024-NEXT: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
-; VBITS_GE_1024-NEXT: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
-; VBITS_GE_1024-NEXT: mov w[[TMP:[0-9]+]], #15
-; VBITS_GE_1024-NEXT: whilels [[WPG:p[0-9]+]].d, xzr, x[[TMP]]
-; VBITS_GE_1024-NEXT: lastb [[TMP2:x[0-9]+]], [[WPG]], [[OP1]].d
-; VBITS_GE_1024-NEXT: insr [[OP2]].d, [[TMP2]]
-; VBITS_GE_1024-NEXT: st1d { [[OP2]].d }, [[PG]], [x0]
-; VBITS_GE_1024-NEXT: ret
+; VBITS_GE_1024-LABEL: shuffle_ext_byone_v16i64:
+; VBITS_GE_1024:       // %bb.0:
+; VBITS_GE_1024-NEXT:    ptrue p0.d, vl16
+; VBITS_GE_1024-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; VBITS_GE_1024-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; VBITS_GE_1024-NEXT:    mov w8, #15
+; VBITS_GE_1024-NEXT:    whilels p1.d, xzr, x8
+; VBITS_GE_1024-NEXT:    lastb x8, p1, z0.d
+; VBITS_GE_1024-NEXT:    insr z1.d, x8
+; VBITS_GE_1024-NEXT:    st1d { z1.d }, p0, [x0]
+; VBITS_GE_1024-NEXT:    ret
   %op1 = load <16 x i64>, <16 x i64>* %a
   %op2 = load <16 x i64>, <16 x i64>* %b
   %ret = shufflevector <16 x i64> %op1, <16 x i64> %op2, <16 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22,
@@ -506,16 +535,17 @@ define void @shuffle_ext_byone_v16i64(<16 x i64>* %a, <16 x i64>* %b) #0 {
 }
 
 define void @shuffle_ext_byone_v32i64(<32 x i64>* %a, <32 x i64>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v32i64
-; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].d, vl32
-; VBITS_GE_2048-NEXT: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
-; VBITS_GE_2048-NEXT: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
-; VBITS_GE_2048-NEXT: mov w[[TMP:[0-9]+]], #31
-; VBITS_GE_2048-NEXT: whilels [[WPG:p[0-9]+]].d, xzr, x[[TMP]]
-; VBITS_GE_2048-NEXT: lastb [[TMP2:x[0-9]+]], [[WPG]], [[OP1]].d
-; VBITS_GE_2048-NEXT: insr [[OP2]].d, [[TMP2]]
-; VBITS_GE_2048-NEXT: st1d { [[OP2]].d }, [[PG]], [x0]
-; VBITS_GE_2048-NEXT: ret
+; VBITS_GE_2048-LABEL: shuffle_ext_byone_v32i64:
+; VBITS_GE_2048:       // %bb.0:
+; VBITS_GE_2048-NEXT:    ptrue p0.d, vl32
+; VBITS_GE_2048-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; VBITS_GE_2048-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; VBITS_GE_2048-NEXT:    mov w8, #31
+; VBITS_GE_2048-NEXT:    whilels p1.d, xzr, x8
+; VBITS_GE_2048-NEXT:    lastb x8, p1, z0.d
+; VBITS_GE_2048-NEXT:    insr z1.d, x8
+; VBITS_GE_2048-NEXT:    st1d { z1.d }, p0, [x0]
+; VBITS_GE_2048-NEXT:    ret
   %op1 = load <32 x i64>, <32 x i64>* %a
   %op2 = load <32 x i64>, <32 x i64>* %b
   %ret = shufflevector <32 x i64> %op1, <32 x i64> %op2, <32 x i32> <i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38,
@@ -528,31 +558,34 @@ define void @shuffle_ext_byone_v32i64(<32 x i64>* %a, <32 x i64>* %b) #0 {
 
 ; Don't use SVE for 64-bit vectors
 define <4 x half> @shuffle_ext_byone_v4f16(<4 x half> %op1, <4 x half> %op2) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v4f16
-; CHECK: ext v0.8b, v0.8b, v1.8b, #6
-; CHECK-NEXT: ret
+; CHECK-LABEL: shuffle_ext_byone_v4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext v0.8b, v0.8b, v1.8b, #6
+; CHECK-NEXT:    ret
   %ret = shufflevector <4 x half> %op1, <4 x half> %op2, <4 x i32> <i32 3, i32 4, i32 5, i32 6>
   ret <4 x half> %ret
 }
 
 ; Don't use SVE for 128-bit vectors
 define <8 x half> @shuffle_ext_byone_v8f16(<8 x half> %op1, <8 x half> %op2) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v8f16
-; CHECK: ext v0.16b, v0.16b, v1.16b, #14
-; CHECK-NEXT: ret
+; CHECK-LABEL: shuffle_ext_byone_v8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext v0.16b, v0.16b, v1.16b, #14
+; CHECK-NEXT:    ret
   %ret = shufflevector <8 x half> %op1, <8 x half> %op2, <8 x i32> <i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14>
   ret <8 x half> %ret
 }
 
 define void @shuffle_ext_byone_v16f16(<16 x half>* %a, <16 x half>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v16f16
-; CHECK: ptrue [[PG:p[0-9]+]].h, vl16
-; CHECK-NEXT: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
-; CHECK-NEXT: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
-; CHECK-NEXT: mov z[[ELEM:[0-9]+]].h, [[OP1]].h[15]
-; CHECK-NEXT: insr [[OP2]].h, h[[ELEM]]
-; CHECK-NEXT: st1h { [[OP2]].h }, [[PG]], [x0]
-; CHECK-NEXT: ret
+; CHECK-LABEL: shuffle_ext_byone_v16f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h, vl16
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; CHECK-NEXT:    mov z0.h, z0.h[15]
+; CHECK-NEXT:    insr z1.h, h0
+; CHECK-NEXT:    st1h { z1.h }, p0, [x0]
+; CHECK-NEXT:    ret
   %op1 = load <16 x half>, <16 x half>* %a
   %op2 = load <16 x half>, <16 x half>* %b
   %ret = shufflevector <16 x half> %op1, <16 x half> %op2, <16 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22,
@@ -562,28 +595,31 @@ define void @shuffle_ext_byone_v16f16(<16 x half>* %a, <16 x half>* %b) #0 {
 }
 
 define void @shuffle_ext_byone_v32f16(<32 x half>* %a, <32 x half>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v32f16
-; VBITS_GE_512: ptrue [[PG:p[0-9]+]].h, vl32
-; VBITS_GE_512-NEXT: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_GE_512-NEXT: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
-; VBITS_GE_512-NEXT: mov z[[ELEM:[0-9]+]].h, [[OP1]].h[31]
-; VBITS_GE_512-NEXT: insr [[OP2]].h, h[[ELEM]]
-; VBITS_GE_512-NEXT: st1h { [[OP2]].h }, [[PG]], [x0]
-; VBITS_GE_512-NEXT: ret
-
 ; Ensure sensible type legalisation.
-; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].h, vl16
-; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #16
-; VBITS_EQ_256-DAG: ld1h { [[OP1_HI:z[0-9]+]].h }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #1]
-; VBITS_EQ_256-DAG: ld1h { [[OP2_LO:z[0-9]+]].h }, [[PG]]/z, [x1]
-; VBITS_EQ_256-DAG: ld1h { [[OP2_HI:z[0-9]+]].h }, [[PG]]/z, [x1, x[[NUMELTS]], lsl #1]
-; VBITS_EQ_256-DAG: mov z[[ELEM2:[0-9]+]].h, [[OP2_LO]].h[15]
-; VBITS_EQ_256-DAG: mov z[[ELEM1:[0-9]+]].h, [[OP1_HI]].h[15]
-; VBITS_EQ_256-DAG: insr [[OP2_LO]].h, h[[ELEM1]]
-; VBITS_EQ_256-DAG: insr [[OP2_HI]].h, h[[ELEM2]]
-; VBITS_EQ_256-DAG: st1h { [[OP2_LO]].h }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1h { [[OP2_HI]].h }, [[PG]], [x0, x[[NUMELTS]], lsl #1]
-; VBITS_EQ_256-NEXT: ret
+; VBITS_EQ_256-LABEL: shuffle_ext_byone_v32f16:
+; VBITS_EQ_256:       // %bb.0:
+; VBITS_EQ_256-NEXT:    mov x8, #16
+; VBITS_EQ_256-NEXT:    ptrue p0.h, vl16
+; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    ld1h { z1.h }, p0/z, [x1, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    ld1h { z2.h }, p0/z, [x1]
+; VBITS_EQ_256-NEXT:    mov z0.h, z0.h[15]
+; VBITS_EQ_256-NEXT:    mov z3.h, z2.h[15]
+; VBITS_EQ_256-NEXT:    insr z2.h, h0
+; VBITS_EQ_256-NEXT:    insr z1.h, h3
+; VBITS_EQ_256-NEXT:    st1h { z1.h }, p0, [x0, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    st1h { z2.h }, p0, [x0]
+; VBITS_EQ_256-NEXT:    ret
+;
+; VBITS_GE_512-LABEL: shuffle_ext_byone_v32f16:
+; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    ptrue p0.h, vl32
+; VBITS_GE_512-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    mov z0.h, z0.h[31]
+; VBITS_GE_512-NEXT:    insr z1.h, h0
+; VBITS_GE_512-NEXT:    st1h { z1.h }, p0, [x0]
+; VBITS_GE_512-NEXT:    ret
   %op1 = load <32 x half>, <32 x half>* %a
   %op2 = load <32 x half>, <32 x half>* %b
   %ret = shufflevector <32 x half> %op1, <32 x half> %op2, <32 x i32> <i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38,
@@ -595,16 +631,17 @@ define void @shuffle_ext_byone_v32f16(<32 x half>* %a, <32 x half>* %b) #0 {
 }
 
 define void @shuffle_ext_byone_v64f16(<64 x half>* %a, <64 x half>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v64f16
-; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].h, vl64
-; VBITS_GE_1024-NEXT: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_GE_1024-NEXT: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
-; VBITS_GE_1024-NEXT: mov w[[TMP:[0-9]+]], #63
-; VBITS_GE_1024-NEXT: whilels [[WPG:p[0-9]+]].h, xzr, x[[TMP]]
-; VBITS_GE_1024-NEXT: lastb [[TMP2:h[0-9]+]], [[WPG]], [[OP1]].h
-; VBITS_GE_1024-NEXT: insr [[OP2]].h, [[TMP2]]
-; VBITS_GE_1024-NEXT: st1h { [[OP2]].h }, [[PG]], [x0]
-; VBITS_GE_1024-NEXT: ret
+; VBITS_GE_1024-LABEL: shuffle_ext_byone_v64f16:
+; VBITS_GE_1024:       // %bb.0:
+; VBITS_GE_1024-NEXT:    ptrue p0.h, vl64
+; VBITS_GE_1024-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; VBITS_GE_1024-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; VBITS_GE_1024-NEXT:    mov w8, #63
+; VBITS_GE_1024-NEXT:    whilels p1.h, xzr, x8
+; VBITS_GE_1024-NEXT:    lastb h0, p1, z0.h
+; VBITS_GE_1024-NEXT:    insr z1.h, h0
+; VBITS_GE_1024-NEXT:    st1h { z1.h }, p0, [x0]
+; VBITS_GE_1024-NEXT:    ret
   %op1 = load <64 x half>, <64 x half>* %a
   %op2 = load <64 x half>, <64 x half>* %b
   %ret = shufflevector <64 x half> %op1, <64 x half> %op2, <64 x i32> <i32 63, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70,
@@ -620,16 +657,17 @@ define void @shuffle_ext_byone_v64f16(<64 x half>* %a, <64 x half>* %b) #0 {
 }
 
 define void @shuffle_ext_byone_v128f16(<128 x half>* %a, <128 x half>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v128f16
-; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].h, vl128
-; VBITS_GE_2048-NEXT: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_GE_2048-NEXT: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
-; VBITS_GE_2048-NEXT: mov w[[TMP:[0-9]+]], #127
-; VBITS_GE_2048-NEXT: whilels [[WPG:p[0-9]+]].h, xzr, x[[TMP]]
-; VBITS_GE_2048-NEXT: lastb [[TMP2:h[0-9]+]], [[WPG]], [[OP1]].h
-; VBITS_GE_2048-NEXT: insr [[OP2]].h, [[TMP2]]
-; VBITS_GE_2048-NEXT: st1h { [[OP2]].h }, [[PG]], [x0]
-; VBITS_GE_2048-NEXT: ret
+; VBITS_GE_2048-LABEL: shuffle_ext_byone_v128f16:
+; VBITS_GE_2048:       // %bb.0:
+; VBITS_GE_2048-NEXT:    ptrue p0.h, vl128
+; VBITS_GE_2048-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; VBITS_GE_2048-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; VBITS_GE_2048-NEXT:    mov w8, #127
+; VBITS_GE_2048-NEXT:    whilels p1.h, xzr, x8
+; VBITS_GE_2048-NEXT:    lastb h0, p1, z0.h
+; VBITS_GE_2048-NEXT:    insr z1.h, h0
+; VBITS_GE_2048-NEXT:    st1h { z1.h }, p0, [x0]
+; VBITS_GE_2048-NEXT:    ret
   %op1 = load <128 x half>, <128 x half>* %a
   %op2 = load <128 x half>, <128 x half>* %b
   %ret = shufflevector <128 x half> %op1, <128 x half> %op2, <128 x i32> <i32 127,  i32 128,  i32 129,  i32 130,  i32 131,  i32 132,  i32 133,  i32 134,
@@ -654,31 +692,34 @@ define void @shuffle_ext_byone_v128f16(<128 x half>* %a, <128 x half>* %b) #0 {
 
 ; Don't use SVE for 64-bit vectors
 define <2 x float> @shuffle_ext_byone_v2f32(<2 x float> %op1, <2 x float> %op2) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v2f32
-; CHECK: ext v0.8b, v0.8b, v1.8b, #4
-; CHECK-NEXT: ret
+; CHECK-LABEL: shuffle_ext_byone_v2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext v0.8b, v0.8b, v1.8b, #4
+; CHECK-NEXT:    ret
   %ret = shufflevector <2 x float> %op1, <2 x float> %op2, <2 x i32> <i32 1, i32 2>
   ret <2 x float> %ret
 }
 
 ; Don't use SVE for 128-bit vectors
 define <4 x float> @shuffle_ext_byone_v4f32(<4 x float> %op1, <4 x float> %op2) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v4f32
-; CHECK: ext v0.16b, v0.16b, v1.16b, #12
-; CHECK-NEXT: ret
+; CHECK-LABEL: shuffle_ext_byone_v4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext v0.16b, v0.16b, v1.16b, #12
+; CHECK-NEXT:    ret
   %ret = shufflevector <4 x float> %op1, <4 x float> %op2, <4 x i32> <i32 3, i32 4, i32 5, i32 6>
   ret <4 x float> %ret
 }
 
 define void @shuffle_ext_byone_v8f32(<8 x float>* %a, <8 x float>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v8f32
-; CHECK: ptrue [[PG:p[0-9]+]].s, vl8
-; CHECK-NEXT: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
-; CHECK-NEXT: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
-; CHECK-NEXT: mov z[[ELEM:[0-9]+]].s, [[OP1]].s[7]
-; CHECK-NEXT: insr [[OP2]].s, s[[ELEM]]
-; CHECK-NEXT: st1w { [[OP2]].s }, [[PG]], [x0]
-; CHECK-NEXT: ret
+; CHECK-LABEL: shuffle_ext_byone_v8f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s, vl8
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; CHECK-NEXT:    mov z0.s, z0.s[7]
+; CHECK-NEXT:    insr z1.s, s0
+; CHECK-NEXT:    st1w { z1.s }, p0, [x0]
+; CHECK-NEXT:    ret
   %op1 = load <8 x float>, <8 x float>* %a
   %op2 = load <8 x float>, <8 x float>* %b
   %ret = shufflevector <8 x float> %op1, <8 x float> %op2, <8 x i32> <i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14>
@@ -687,28 +728,31 @@ define void @shuffle_ext_byone_v8f32(<8 x float>* %a, <8 x float>* %b) #0 {
 }
 
 define void @shuffle_ext_byone_v16f32(<16 x float>* %a, <16 x float>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v16f32
-; VBITS_GE_512: ptrue [[PG:p[0-9]+]].s, vl16
-; VBITS_GE_512-NEXT: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_GE_512-NEXT: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
-; VBITS_GE_512-NEXT: mov z[[ELEM:[0-9]+]].s, [[OP1]].s[15]
-; VBITS_GE_512-NEXT: insr [[OP2]].s, s[[ELEM]]
-; VBITS_GE_512-NEXT: st1w { [[OP2]].s }, [[PG]], [x0]
-; VBITS_GE_512-NEXT: ret
-
 ; Ensure sensible type legalisation.
-; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].s, vl8
-; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #8
-; VBITS_EQ_256-DAG: ld1w { [[OP1_HI:z[0-9]+]].s }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #2]
-; VBITS_EQ_256-DAG: ld1w { [[OP2_LO:z[0-9]+]].s }, [[PG]]/z, [x1]
-; VBITS_EQ_256-DAG: ld1w { [[OP2_HI:z[0-9]+]].s }, [[PG]]/z, [x1, x[[NUMELTS]], lsl #2]
-; VBITS_EQ_256-DAG: mov z[[ELEM2:[0-9]+]].s, [[OP2_LO]].s[7]
-; VBITS_EQ_256-DAG: mov z[[ELEM1:[0-9]+]].s, [[OP1_HI]].s[7]
-; VBITS_EQ_256-DAG: insr [[OP2_LO]].s, s[[ELEM1]]
-; VBITS_EQ_256-DAG: insr [[OP2_HI]].s, s[[ELEM2]]
-; VBITS_EQ_256-DAG: st1w { [[OP2_LO]].s }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1w { [[OP2_HI]].s }, [[PG]], [x0, x[[NUMELTS]], lsl #2]
-; VBITS_EQ_256-NEXT: ret
+; VBITS_EQ_256-LABEL: shuffle_ext_byone_v16f32:
+; VBITS_EQ_256:       // %bb.0:
+; VBITS_EQ_256-NEXT:    mov x8, #8
+; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
+; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
+; VBITS_EQ_256-NEXT:    ld1w { z1.s }, p0/z, [x1, x8, lsl #2]
+; VBITS_EQ_256-NEXT:    ld1w { z2.s }, p0/z, [x1]
+; VBITS_EQ_256-NEXT:    mov z0.s, z0.s[7]
+; VBITS_EQ_256-NEXT:    mov z3.s, z2.s[7]
+; VBITS_EQ_256-NEXT:    insr z2.s, s0
+; VBITS_EQ_256-NEXT:    insr z1.s, s3
+; VBITS_EQ_256-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
+; VBITS_EQ_256-NEXT:    st1w { z2.s }, p0, [x0]
+; VBITS_EQ_256-NEXT:    ret
+;
+; VBITS_GE_512-LABEL: shuffle_ext_byone_v16f32:
+; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
+; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    mov z0.s, z0.s[15]
+; VBITS_GE_512-NEXT:    insr z1.s, s0
+; VBITS_GE_512-NEXT:    st1w { z1.s }, p0, [x0]
+; VBITS_GE_512-NEXT:    ret
   %op1 = load <16 x float>, <16 x float>* %a
   %op2 = load <16 x float>, <16 x float>* %b
   %ret = shufflevector <16 x float> %op1, <16 x float> %op2, <16 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22,
@@ -718,16 +762,17 @@ define void @shuffle_ext_byone_v16f32(<16 x float>* %a, <16 x float>* %b) #0 {
 }
 
 define void @shuffle_ext_byone_v32f32(<32 x float>* %a, <32 x float>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v32f32
-; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].s, vl32
-; VBITS_GE_1024-NEXT: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_GE_1024-NEXT: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
-; VBITS_GE_1024-NEXT: mov w[[TMP:[0-9]+]], #31
-; VBITS_GE_1024-NEXT: whilels [[WPG:p[0-9]+]].s, xzr, x[[TMP]]
-; VBITS_GE_1024-NEXT: lastb [[TMP2:s[0-9]+]], [[WPG]], [[OP1]].s
-; VBITS_GE_1024-NEXT: insr [[OP2]].s, [[TMP2]]
-; VBITS_GE_1024-NEXT: st1w { [[OP2]].s }, [[PG]], [x0]
-; VBITS_GE_1024-NEXT: ret
+; VBITS_GE_1024-LABEL: shuffle_ext_byone_v32f32:
+; VBITS_GE_1024:       // %bb.0:
+; VBITS_GE_1024-NEXT:    ptrue p0.s, vl32
+; VBITS_GE_1024-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; VBITS_GE_1024-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; VBITS_GE_1024-NEXT:    mov w8, #31
+; VBITS_GE_1024-NEXT:    whilels p1.s, xzr, x8
+; VBITS_GE_1024-NEXT:    lastb s0, p1, z0.s
+; VBITS_GE_1024-NEXT:    insr z1.s, s0
+; VBITS_GE_1024-NEXT:    st1w { z1.s }, p0, [x0]
+; VBITS_GE_1024-NEXT:    ret
   %op1 = load <32 x float>, <32 x float>* %a
   %op2 = load <32 x float>, <32 x float>* %b
   %ret = shufflevector <32 x float> %op1, <32 x float> %op2, <32 x i32> <i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38,
@@ -739,16 +784,17 @@ define void @shuffle_ext_byone_v32f32(<32 x float>* %a, <32 x float>* %b) #0 {
 }
 
 define void @shuffle_ext_byone_v64f32(<64 x float>* %a, <64 x float>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v64f32
-; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].s, vl64
-; VBITS_GE_2048-NEXT: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_GE_2048-NEXT: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
-; VBITS_GE_2048-NEXT: mov w[[TMP:[0-9]+]], #63
-; VBITS_GE_2048-NEXT: whilels [[WPG:p[0-9]+]].s, xzr, x[[TMP]]
-; VBITS_GE_2048-NEXT: lastb [[TMP2:s[0-9]+]], [[WPG]], [[OP1]].s
-; VBITS_GE_2048-NEXT: insr [[OP2]].s, [[TMP2]]
-; VBITS_GE_2048-NEXT: st1w { [[OP2]].s }, [[PG]], [x0]
-; VBITS_GE_2048-NEXT: ret
+; VBITS_GE_2048-LABEL: shuffle_ext_byone_v64f32:
+; VBITS_GE_2048:       // %bb.0:
+; VBITS_GE_2048-NEXT:    ptrue p0.s, vl64
+; VBITS_GE_2048-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; VBITS_GE_2048-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; VBITS_GE_2048-NEXT:    mov w8, #63
+; VBITS_GE_2048-NEXT:    whilels p1.s, xzr, x8
+; VBITS_GE_2048-NEXT:    lastb s0, p1, z0.s
+; VBITS_GE_2048-NEXT:    insr z1.s, s0
+; VBITS_GE_2048-NEXT:    st1w { z1.s }, p0, [x0]
+; VBITS_GE_2048-NEXT:    ret
   %op1 = load <64 x float>, <64 x float>* %a
   %op2 = load <64 x float>, <64 x float>* %b
   %ret = shufflevector <64 x float> %op1, <64 x float> %op2, <64 x i32> <i32 63, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70,
@@ -765,22 +811,24 @@ define void @shuffle_ext_byone_v64f32(<64 x float>* %a, <64 x float>* %b) #0 {
 
 ; Don't use SVE for 128-bit vectors
 define <2 x double> @shuffle_ext_byone_v2f64(<2 x double> %op1, <2 x double> %op2) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v2f64
-; CHECK: ext v0.16b, v0.16b, v1.16b, #8
-; CHECK-NEXT: ret
+; CHECK-LABEL: shuffle_ext_byone_v2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext v0.16b, v0.16b, v1.16b, #8
+; CHECK-NEXT:    ret
   %ret = shufflevector <2 x double> %op1, <2 x double> %op2, <2 x i32> <i32 1, i32 2>
   ret <2 x double> %ret
 }
 
 define void @shuffle_ext_byone_v4f64(<4 x double>* %a, <4 x double>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v4f64
-; CHECK: ptrue [[PG:p[0-9]+]].d, vl4
-; CHECK-NEXT: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
-; CHECK-NEXT: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
-; CHECK-NEXT: mov z[[ELEM:[0-9]+]].d, [[OP1]].d[3]
-; CHECK-NEXT: insr [[OP2]].d, d[[ELEM]]
-; CHECK-NEXT: st1d { [[OP2]].d }, [[PG]], [x0]
-; CHECK-NEXT: ret
+; CHECK-LABEL: shuffle_ext_byone_v4f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; CHECK-NEXT:    mov z0.d, z0.d[3]
+; CHECK-NEXT:    insr z1.d, d0
+; CHECK-NEXT:    st1d { z1.d }, p0, [x0]
+; CHECK-NEXT:    ret
   %op1 = load <4 x double>, <4 x double>* %a
   %op2 = load <4 x double>, <4 x double>* %b
   %ret = shufflevector <4 x double> %op1, <4 x double> %op2, <4 x i32> <i32 3, i32 4, i32 5, i32 6>
@@ -789,28 +837,31 @@ define void @shuffle_ext_byone_v4f64(<4 x double>* %a, <4 x double>* %b) #0 {
 }
 
 define void @shuffle_ext_byone_v8f64(<8 x double>* %a, <8 x double>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v8f64
-; VBITS_GE_512: ptrue [[PG:p[0-9]+]].d, vl8
-; VBITS_GE_512-NEXT: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
-; VBITS_GE_512-NEXT: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
-; VBITS_GE_512-NEXT: mov z[[ELEM:[0-9]+]].d, [[OP1]].d[7]
-; VBITS_GE_512-NEXT: insr [[OP2]].d, d[[ELEM]]
-; VBITS_GE_512-NEXT: st1d { [[OP2]].d }, [[PG]], [x0]
-; VBITS_GE_512-NEXT: ret
-
 ; Ensure sensible type legalisation.
-; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].d, vl4
-; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #4
-; VBITS_EQ_256-DAG: ld1d { [[OP1_HI:z[0-9]+]].d }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #3]
-; VBITS_EQ_256-DAG: ld1d { [[OP2_LO:z[0-9]+]].d }, [[PG]]/z, [x1]
-; VBITS_EQ_256-DAG: ld1d { [[OP2_HI:z[0-9]+]].d }, [[PG]]/z, [x1, x[[NUMELTS]], lsl #3]
-; VBITS_EQ_256-DAG: mov z[[ELEM2:[0-9]+]].d, [[OP2_LO]].d[3]
-; VBITS_EQ_256-DAG: mov z[[ELEM1:[0-9]+]].d, [[OP1_HI]].d[3]
-; VBITS_EQ_256-DAG: insr [[OP2_LO]].d, d[[ELEM1]]
-; VBITS_EQ_256-DAG: insr [[OP2_HI]].d, d[[ELEM2]]
-; VBITS_EQ_256-DAG: st1d { [[OP2_LO]].d }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1d { [[OP2_HI]].d }, [[PG]], [x0, x[[NUMELTS]], lsl #3]
-; VBITS_EQ_256-NEXT: ret
+; VBITS_EQ_256-LABEL: shuffle_ext_byone_v8f64:
+; VBITS_EQ_256:       // %bb.0:
+; VBITS_EQ_256-NEXT:    mov x8, #4
+; VBITS_EQ_256-NEXT:    ptrue p0.d, vl4
+; VBITS_EQ_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
+; VBITS_EQ_256-NEXT:    ld1d { z1.d }, p0/z, [x1, x8, lsl #3]
+; VBITS_EQ_256-NEXT:    ld1d { z2.d }, p0/z, [x1]
+; VBITS_EQ_256-NEXT:    mov z0.d, z0.d[3]
+; VBITS_EQ_256-NEXT:    mov z3.d, z2.d[3]
+; VBITS_EQ_256-NEXT:    insr z2.d, d0
+; VBITS_EQ_256-NEXT:    insr z1.d, d3
+; VBITS_EQ_256-NEXT:    st1d { z1.d }, p0, [x0, x8, lsl #3]
+; VBITS_EQ_256-NEXT:    st1d { z2.d }, p0, [x0]
+; VBITS_EQ_256-NEXT:    ret
+;
+; VBITS_GE_512-LABEL: shuffle_ext_byone_v8f64:
+; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
+; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    mov z0.d, z0.d[7]
+; VBITS_GE_512-NEXT:    insr z1.d, d0
+; VBITS_GE_512-NEXT:    st1d { z1.d }, p0, [x0]
+; VBITS_GE_512-NEXT:    ret
   %op1 = load <8 x double>, <8 x double>* %a
   %op2 = load <8 x double>, <8 x double>* %b
   %ret = shufflevector <8 x double> %op1, <8 x double> %op2, <8 x i32> <i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14>
@@ -819,16 +870,17 @@ define void @shuffle_ext_byone_v8f64(<8 x double>* %a, <8 x double>* %b) #0 {
 }
 
 define void @shuffle_ext_byone_v16f64(<16 x double>* %a, <16 x double>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v16f64
-; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].d, vl16
-; VBITS_GE_1024-NEXT: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
-; VBITS_GE_1024-NEXT: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
-; VBITS_GE_1024-NEXT: mov w[[TMP:[0-9]+]], #15
-; VBITS_GE_1024-NEXT: whilels [[WPG:p[0-9]+]].d, xzr, x[[TMP]]
-; VBITS_GE_1024-NEXT: lastb [[TMP2:d[0-9]+]], [[WPG]], [[OP1]].d
-; VBITS_GE_1024-NEXT: insr [[OP2]].d, [[TMP2]]
-; VBITS_GE_1024-NEXT: st1d { [[OP2]].d }, [[PG]], [x0]
-; VBITS_GE_1024-NEXT: ret
+; VBITS_GE_1024-LABEL: shuffle_ext_byone_v16f64:
+; VBITS_GE_1024:       // %bb.0:
+; VBITS_GE_1024-NEXT:    ptrue p0.d, vl16
+; VBITS_GE_1024-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; VBITS_GE_1024-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; VBITS_GE_1024-NEXT:    mov w8, #15
+; VBITS_GE_1024-NEXT:    whilels p1.d, xzr, x8
+; VBITS_GE_1024-NEXT:    lastb d0, p1, z0.d
+; VBITS_GE_1024-NEXT:    insr z1.d, d0
+; VBITS_GE_1024-NEXT:    st1d { z1.d }, p0, [x0]
+; VBITS_GE_1024-NEXT:    ret
   %op1 = load <16 x double>, <16 x double>* %a
   %op2 = load <16 x double>, <16 x double>* %b
   %ret = shufflevector <16 x double> %op1, <16 x double> %op2, <16 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22,
@@ -838,16 +890,17 @@ define void @shuffle_ext_byone_v16f64(<16 x double>* %a, <16 x double>* %b) #0 {
 }
 
 define void @shuffle_ext_byone_v32f64(<32 x double>* %a, <32 x double>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_v32f64
-; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].d, vl32
-; VBITS_GE_2048-NEXT: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
-; VBITS_GE_2048-NEXT: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
-; VBITS_GE_2048-NEXT: mov w[[TMP:[0-9]+]], #31
-; VBITS_GE_2048-NEXT: whilels [[WPG:p[0-9]+]].d, xzr, x[[TMP]]
-; VBITS_GE_2048-NEXT: lastb [[TMP2:d[0-9]+]], [[WPG]], [[OP1]].d
-; VBITS_GE_2048-NEXT: insr [[OP2]].d, [[TMP2]]
-; VBITS_GE_2048-NEXT: st1d { [[OP2]].d }, [[PG]], [x0]
-; VBITS_GE_2048-NEXT: ret
+; VBITS_GE_2048-LABEL: shuffle_ext_byone_v32f64:
+; VBITS_GE_2048:       // %bb.0:
+; VBITS_GE_2048-NEXT:    ptrue p0.d, vl32
+; VBITS_GE_2048-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; VBITS_GE_2048-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; VBITS_GE_2048-NEXT:    mov w8, #31
+; VBITS_GE_2048-NEXT:    whilels p1.d, xzr, x8
+; VBITS_GE_2048-NEXT:    lastb d0, p1, z0.d
+; VBITS_GE_2048-NEXT:    insr z1.d, d0
+; VBITS_GE_2048-NEXT:    st1d { z1.d }, p0, [x0]
+; VBITS_GE_2048-NEXT:    ret
   %op1 = load <32 x double>, <32 x double>* %a
   %op2 = load <32 x double>, <32 x double>* %b
   %ret = shufflevector <32 x double> %op1, <32 x double> %op2, <32 x i32> <i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38,
@@ -859,14 +912,15 @@ define void @shuffle_ext_byone_v32f64(<32 x double>* %a, <32 x double>* %b) #0 {
 }
 
 define void @shuffle_ext_byone_reverse(<4 x double>* %a, <4 x double>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_byone_reverse
-; CHECK: ptrue [[PG:p[0-9]+]].d, vl4
-; CHECK-NEXT: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
-; CHECK-NEXT: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
-; CHECK-NEXT: mov z[[ELEM:[0-9]+]].d, [[OP2]].d[3]
-; CHECK-NEXT: insr [[OP1]].d, d[[ELEM]]
-; CHECK-NEXT: st1d { [[OP1]].d }, [[PG]], [x0]
-; CHECK-NEXT: ret
+; CHECK-LABEL: shuffle_ext_byone_reverse:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; CHECK-NEXT:    mov z1.d, z1.d[3]
+; CHECK-NEXT:    insr z0.d, d1
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    ret
   %op1 = load <4 x double>, <4 x double>* %a
   %op2 = load <4 x double>, <4 x double>* %b
   %ret = shufflevector <4 x double> %op1, <4 x double> %op2, <4 x i32> <i32 7, i32 0, i32 1, i32 2>
@@ -875,21 +929,29 @@ define void @shuffle_ext_byone_reverse(<4 x double>* %a, <4 x double>* %b) #0 {
 }
 
 define void @shuffle_ext_invalid(<4 x double>* %a, <4 x double>* %b) #0 {
-; CHECK-LABEL: shuffle_ext_invalid
-; CHECK: ptrue [[PG:p[0-9]+]].d, vl4
-; CHECK-NEXT: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
-; CHECK-NEXT: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
-; CHECK-NEXT: mov x8, sp
-; CHECK-NEXT: mov z2.d, [[OP1]].d[3]
-; CHECK-NEXT: mov z3.d, [[OP2]].d[1]
-; CHECK-NEXT: mov z0.d, [[OP1]].d[2]
-; CHECK-NEXT: stp d1, d3, [sp, #16]
-; CHECK-NEXT: stp d0, d2, [sp]
-; CHECK-NEXT: ld1d { z0.d }, p0/z, [x8]
-; CHECK-NEXT: st1d { z0.d }, p0, [x0]
-; CHECK-NEXT: mov sp, x29
-; CHECK-NEXT: ldp x29, x30, [sp], #16
-; CHECK-NEXT: ret
+; CHECK-LABEL: shuffle_ext_invalid:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #48
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    mov z2.d, z0.d[3]
+; CHECK-NEXT:    mov z3.d, z1.d[1]
+; CHECK-NEXT:    mov z0.d, z0.d[2]
+; CHECK-NEXT:    stp d1, d3, [sp, #16]
+; CHECK-NEXT:    stp d0, d2, [sp]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
   %op1 = load <4 x double>, <4 x double>* %a
   %op2 = load <4 x double>, <4 x double>* %b
   %ret = shufflevector <4 x double> %op1, <4 x double> %op2, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
