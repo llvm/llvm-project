@@ -142,7 +142,9 @@ static int WriteBinaryIdForNote(ProfDataWriter *Writer,
 
 /*
  * Helper function that iterates through notes section and find build ids.
- * If writer is given, write binary ids into profiles.
+ * If writer is given, write binary ids into profiles. This also takes into
+ * account padding which may need to be added after the binary IDs to ensure
+ * 8-byte alignment.
  * If an error happens while writing, return -1.
  */
 static int WriteBinaryIds(ProfDataWriter *Writer, const ElfW(Nhdr) * Note,
@@ -160,7 +162,17 @@ static int WriteBinaryIds(ProfDataWriter *Writer, const ElfW(Nhdr) * Note,
     Note = (const ElfW(Nhdr) *)((const char *)(Note) + NoteOffset);
   }
 
-  return TotalBinaryIdsSize;
+  uint8_t BinaryIdsPadding =
+      __llvm_profile_get_num_padding_bytes(TotalBinaryIdsSize);
+  if (Writer) {
+    ProfDataIOVec BinaryIdIOVec[] = {
+        {NULL, sizeof(uint8_t), BinaryIdsPadding, 1}};
+    if (Writer->Write(Writer, BinaryIdIOVec,
+                      sizeof(BinaryIdIOVec) / sizeof(*BinaryIdIOVec)))
+      return -1;
+  }
+
+  return TotalBinaryIdsSize + BinaryIdsPadding;
 }
 
 /*
