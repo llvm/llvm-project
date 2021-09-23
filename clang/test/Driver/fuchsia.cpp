@@ -37,8 +37,8 @@
 // CHECK: "--push-state"
 // CHECK: "--as-needed"
 // CHECK: "-lc++"
-// CHECK: "-lm"
 // CHECK: "--pop-state"
+// CHECK: "-lm"
 // CHECK-X86_64: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}libclang_rt.builtins.a"
 // CHECK-AARCH64: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aarch64-unknown-fuchsia{{/|\\\\}}libclang_rt.builtins.a"
 // CHECK-RISCV64: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}riscv64-unknown-fuchsia{{/|\\\\}}libclang_rt.builtins.a"
@@ -55,12 +55,10 @@
 // RUN:     -fuse-ld=lld 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-STATIC
 // CHECK-STATIC: "--push-state"
-// CHECK-STATIC: "--as-needed"
 // CHECK-STATIC: "-Bstatic"
 // CHECK-STATIC: "-lc++"
-// CHECK-STATIC: "-Bdynamic"
-// CHECK-STATIC: "-lm"
 // CHECK-STATIC: "--pop-state"
+// CHECK-STATIC: "-lm"
 // CHECK-STATIC: "-lc"
 
 // RUN: %clangxx %s -### --target=x86_64-unknown-fuchsia -nostdlib++ -fuse-ld=lld 2>&1 \
