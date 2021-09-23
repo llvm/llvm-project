@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CIRGenTypes.h"
+
 #include "clang/CIR/CIRBuilder.h"
 #include "clang/CIR/CIRCodeGenFunction.h"
 
@@ -140,6 +142,7 @@ public:
   CIRBuildImpl(mlir::MLIRContext &context, clang::ASTContext &astctx)
       : builder(&context), astCtx(astctx) {
     theModule = mlir::ModuleOp::create(builder.getUnknownLoc());
+    genTypes = std::make_unique<CIRGenTypes>(astCtx, this->getBuilder());
   }
   CIRBuildImpl(CIRBuildImpl &) = delete;
   CIRBuildImpl &operator=(CIRBuildImpl &) = delete;
@@ -172,6 +175,9 @@ private:
   /// for FunctionDecls's.
   CIRCodeGenFunction *CurCCGF = nullptr;
 
+  /// Per-module type mapping from clang AST to CIR.
+  std::unique_ptr<CIRGenTypes> genTypes;
+
   /// Helper conversion from Clang source location to an MLIR location.
   mlir::Location getLoc(SourceLocation SLoc) {
     const SourceManager &SM = astCtx.getSourceManager();
@@ -183,12 +189,12 @@ private:
 
   /// Declare a variable in the current scope, return success if the variable
   /// wasn't declared yet.
-  mlir::LogicalResult declare(const Decl *var, mlir::Value value,
+  mlir::LogicalResult declare(const Decl *var, QualType T, mlir::Value value,
                               mlir::Location loc) {
     if (symbolTable.count(var))
       return mlir::failure();
 
-    mlir::MemRefType type = mlir::MemRefType::get({}, builder.getI32Type());
+    mlir::MemRefType type = mlir::MemRefType::get({}, getCIRType(T));
     auto alloc = builder.create<mlir::memref::AllocaOp>(loc, type);
     auto *parentBlock = alloc->getBlock();
     alloc->moveBefore(&parentBlock->front());
@@ -202,6 +208,7 @@ private:
 
 public:
   mlir::ModuleOp getModule() { return theModule; }
+  mlir::OpBuilder &getBuilder() { return builder; }
 
   class ScalarExprEmitter : public StmtVisitor<ScalarExprEmitter, mlir::Value> {
     LLVM_ATTRIBUTE_UNUSED CIRCodeGenFunction &CGF;
@@ -460,10 +467,10 @@ public:
     llvm::SmallVector<mlir::Type, 4> argTypes;
 
     for (auto *Param : FD->parameters())
-      argTypes.push_back(getType(Param->getType()));
+      argTypes.push_back(getCIRType(Param->getType()));
 
     CurCCGF->FnRetQualTy = FD->getReturnType();
-    CurCCGF->FnRetTy = getType(CurCCGF->FnRetQualTy);
+    CurCCGF->FnRetTy = getCIRType(CurCCGF->FnRetQualTy);
     auto funcType = builder.getFunctionType(argTypes, CurCCGF->FnRetTy);
     mlir::FuncOp function = mlir::FuncOp::create(loc, FD->getName(), funcType);
     if (!function)
@@ -483,7 +490,7 @@ public:
          llvm::zip(FD->parameters(), entryBlock.getArguments())) {
       auto *paramVar = std::get<0>(nameValue);
       auto paramVal = std::get<1>(nameValue);
-      if (failed(declare(paramVar, paramVal,
+      if (failed(declare(paramVar, paramVar->getType(), paramVal,
                          getLoc(paramVar->getSourceRange().getBegin()))))
         return nullptr;
       // Store params in local storage. FIXME: is this really needed
@@ -510,9 +517,8 @@ public:
     return function;
   }
 
-  mlir::Type getType(const QualType &type) {
-    // FIXME: actually map into the appropriated types.
-    return builder.getI32Type();
+  mlir::Type getCIRType(const QualType &type) {
+    return genTypes->ConvertType(type);
   }
 
   void verifyModule() {
