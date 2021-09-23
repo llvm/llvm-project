@@ -82,3 +82,44 @@ define i64 @test4(i64 %x) {
   %b = and i64 %a, 288230376151695360
   ret i64 %b
 }
+
+define i32 @test5(i32 %x) {
+; RV32I-LABEL: test5:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 6
+; RV32I-NEXT:    lui a1, 1048560
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: test5:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slliw a0, a0, 6
+; RV64I-NEXT:    lui a1, 1048560
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+  %a = shl i32 %x, 6
+  %b = and i32 %a, -65536
+  ret i32 %b
+}
+
+define i64 @test6(i64 %x) {
+; RV32I-LABEL: test6:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srli a2, a0, 26
+; RV32I-NEXT:    slli a1, a1, 6
+; RV32I-NEXT:    or a1, a1, a2
+; RV32I-NEXT:    slli a0, a0, 6
+; RV32I-NEXT:    lui a2, 1048560
+; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: test6:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 6
+; RV64I-NEXT:    lui a1, 1048560
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+  %a = shl i64 %x, 6
+  %b = and i64 %a, -65536
+  ret i64 %b
+}
