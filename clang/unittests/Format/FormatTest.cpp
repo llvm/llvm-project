@@ -18325,6 +18325,26 @@ TEST_F(FormatTest, ParsesConfiguration) {
   CHECK_PARSE("ContinuationIndentWidth: 11", ContinuationIndentWidth, 11u);
   CHECK_PARSE("CommentPragmas: '// abc$'", CommentPragmas, "// abc$");
 
+  Style.QualifierAlignment = FormatStyle::QAS_Right;
+  CHECK_PARSE("QualifierAlignment: Leave", QualifierAlignment,
+              FormatStyle::QAS_Leave);
+  CHECK_PARSE("QualifierAlignment: Right", QualifierAlignment,
+              FormatStyle::QAS_Right);
+  CHECK_PARSE("QualifierAlignment: Left", QualifierAlignment,
+              FormatStyle::QAS_Left);
+  CHECK_PARSE("QualifierAlignment: Custom", QualifierAlignment,
+              FormatStyle::QAS_Custom);
+
+  Style.QualifierOrder.clear();
+  CHECK_PARSE("QualifierOrder: [ const, volatile, type ]", QualifierOrder,
+              std::vector<std::string>({"const", "volatile", "type"}));
+  Style.QualifierOrder.clear();
+  CHECK_PARSE("QualifierOrder: [const, type]", QualifierOrder,
+              std::vector<std::string>({"const", "type"}));
+  Style.QualifierOrder.clear();
+  CHECK_PARSE("QualifierOrder: [volatile, type]", QualifierOrder,
+              std::vector<std::string>({"volatile", "type"}));
+
   Style.AlignConsecutiveAssignments = FormatStyle::ACS_Consecutive;
   CHECK_PARSE("AlignConsecutiveAssignments: None", AlignConsecutiveAssignments,
               FormatStyle::ACS_None);
@@ -18991,8 +19011,6 @@ TEST_F(FormatTest, ParsesConfigurationWithLanguages) {
 
   EXPECT_EQ(FormatStyle::LK_Cpp, Style.Language);
 }
-
-#undef CHECK_PARSE
 
 TEST_F(FormatTest, UsesLanguageForBasedOnStyle) {
   FormatStyle Style = {};
@@ -22294,6 +22312,7 @@ TEST_F(FormatTest, LimitlessStringsAndComments) {
       "}";
   EXPECT_EQ(Code, format(Code, Style));
 }
+
 } // namespace
 } // namespace format
 } // namespace clang

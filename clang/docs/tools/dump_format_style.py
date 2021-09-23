@@ -117,6 +117,14 @@ def clean_comment_line(line):
   endcode_match = re.match(r'^/// +\\endcode$', line)
   if endcode_match:
     return ''
+
+  match = re.match(r'^/// \\warning$', line)
+  if match:
+    return '\n.. warning:: \n\n'
+
+  endwarning_match = re.match(r'^/// +\\endwarning$', line)
+  if endwarning_match:
+    return ''
   return line[4:] + '\n'
 
 def read_options(header):

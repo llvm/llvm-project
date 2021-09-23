@@ -19,6 +19,7 @@
 #include "FormatInternal.h"
 #include "FormatTokenLexer.h"
 #include "NamespaceEndCommentsFixer.h"
+#include "QualifierAlignmentFixer.h"
 #include "SortJavaScriptImports.h"
 #include "TokenAnalyzer.h"
 #include "TokenAnnotator.h"
@@ -123,6 +124,16 @@ template <> struct ScalarEnumerationTraits<FormatStyle::ShortBlockStyle> {
     IO.enumCase(Value, "Always", FormatStyle::SBS_Always);
     IO.enumCase(Value, "true", FormatStyle::SBS_Always);
     IO.enumCase(Value, "Empty", FormatStyle::SBS_Empty);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<FormatStyle::QualifierAlignmentStyle> {
+  static void enumeration(IO &IO, FormatStyle::QualifierAlignmentStyle &Value) {
+    IO.enumCase(Value, "Leave", FormatStyle::QAS_Leave);
+    IO.enumCase(Value, "Left", FormatStyle::QAS_Left);
+    IO.enumCase(Value, "Right", FormatStyle::QAS_Right);
+    IO.enumCase(Value, "Custom", FormatStyle::QAS_Custom);
   }
 };
 
@@ -641,6 +652,17 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("BreakStringLiterals", Style.BreakStringLiterals);
     IO.mapOptional("ColumnLimit", Style.ColumnLimit);
     IO.mapOptional("CommentPragmas", Style.CommentPragmas);
+    IO.mapOptional("QualifierAlignment", Style.QualifierAlignment);
+
+    // Default Order for Left/Right based Qualifier alignment.
+    if (Style.QualifierAlignment == FormatStyle::QAS_Right) {
+      Style.QualifierOrder = {"type", "const", "volatile"};
+    } else if (Style.QualifierAlignment == FormatStyle::QAS_Left) {
+      Style.QualifierOrder = {"const", "volatile", "type"};
+    } else if (Style.QualifierAlignment == FormatStyle::QAS_Custom) {
+      IO.mapOptional("QualifierOrder", Style.QualifierOrder);
+    }
+
     IO.mapOptional("CompactNamespaces", Style.CompactNamespaces);
     IO.mapOptional("ConstructorInitializerIndentWidth",
                    Style.ConstructorInitializerIndentWidth);
@@ -905,6 +927,14 @@ std::string ParseErrorCategory::message(int EV) const {
     return "Unsuitable";
   case ParseError::BinPackTrailingCommaConflict:
     return "trailing comma insertion cannot be used with bin packing";
+  case ParseError::InvalidQualifierSpecified:
+    return "Invalid qualifier specified in QualifierOrder";
+  case ParseError::DuplicateQualifierSpecified:
+    return "Duplicate qualifier specified in QualfierOrder";
+  case ParseError::MissingQualifierType:
+    return "Missing type in QualfierOrder";
+  case ParseError::MissingQualifierOrder:
+    return "Missing QualfierOrder";
   }
   llvm_unreachable("unexpected parse error");
 }
@@ -1078,6 +1108,10 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.ConstructorInitializerIndentWidth = 4;
   LLVMStyle.ContinuationIndentWidth = 4;
   LLVMStyle.Cpp11BracedListStyle = true;
+
+  // Off by default Qualifier ordering
+  LLVMStyle.QualifierAlignment = FormatStyle::QAS_Leave;
+
   LLVMStyle.DeriveLineEnding = true;
   LLVMStyle.DerivePointerAlignment = false;
   LLVMStyle.EmptyLineAfterAccessModifier = FormatStyle::ELAAMS_Never;
@@ -1512,6 +1546,37 @@ bool getPredefinedStyle(StringRef Name, FormatStyle::LanguageKind Language,
   return true;
 }
 
+ParseError validateQualifierOrder(FormatStyle *Style) {
+  // If its empty then it means don't do anything.
+  if (Style->QualifierOrder.empty())
+    return ParseError::MissingQualifierOrder;
+
+  // Ensure the list contains only currently valid qualifiers.
+  for (const auto &Qualifier : Style->QualifierOrder) {
+    if (Qualifier == "type")
+      continue;
+    auto token =
+        LeftRightQualifierAlignmentFixer::getTokenFromQualifier(Qualifier);
+    if (token == tok::identifier)
+      return ParseError::InvalidQualifierSpecified;
+  }
+  // Ensure the list is unqiue (no duplicates).
+  std::set<std::string> UniqueQualifiers(Style->QualifierOrder.begin(),
+                                         Style->QualifierOrder.end());
+  if (Style->QualifierOrder.size() != UniqueQualifiers.size()) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "Duplicate Qualifiers " << Style->QualifierOrder.size()
+               << " vs " << UniqueQualifiers.size() << "\n");
+    return ParseError::DuplicateQualifierSpecified;
+  }
+
+  auto type = std::find(Style->QualifierOrder.begin(),
+                        Style->QualifierOrder.end(), "type");
+  if (type == Style->QualifierOrder.end())
+    return ParseError::MissingQualifierType;
+  return ParseError::Success;
+}
+
 std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
                                    FormatStyle *Style, bool AllowUnknownOptions,
                                    llvm::SourceMgr::DiagHandlerTy DiagHandler,
@@ -1573,6 +1638,8 @@ std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
     // See comment on FormatStyle::TSC_Wrapped.
     return make_error_code(ParseError::BinPackTrailingCommaConflict);
   }
+  if (Style->QualifierAlignment != FormatStyle::QAS_Leave)
+    return make_error_code(validateQualifierOrder(Style));
   return make_error_code(ParseError::Success);
 }
 
@@ -2893,6 +2960,15 @@ reformat(const FormatStyle &Style, StringRef Code,
       const Environment &)>
       AnalyzerPass;
   SmallVector<AnalyzerPass, 4> Passes;
+
+  if (Style.isCpp() && Style.QualifierAlignment != FormatStyle::QAS_Leave) {
+    Passes.emplace_back([&](const Environment &Env) {
+      return QualifierAlignmentFixer(Env, Expanded, Code, Ranges,
+                                     FirstStartColumn, NextStartColumn,
+                                     LastStartColumn, FileName)
+          .process();
+    });
+  }
 
   if (Style.Language == FormatStyle::LK_Cpp) {
     if (Style.FixNamespaceComments)
