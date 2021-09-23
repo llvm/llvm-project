@@ -665,9 +665,7 @@ void DynamicRegisterInfo::ConfigureOffsets() {
       if (reg.byte_offset == LLDB_INVALID_INDEX32) {
         uint32_t value_regnum = reg.value_regs[0];
         if (value_regnum != LLDB_INVALID_INDEX32)
-          reg.byte_offset =
-              GetRegisterInfoAtIndex(remote_to_local_regnum_map[value_regnum])
-                  ->byte_offset;
+          reg.byte_offset = GetRegisterInfoAtIndex(value_regnum)->byte_offset;
       }
     }
 
