@@ -13,14 +13,15 @@
 #include "test_iterators.h"
 
 struct BidirRange : std::ranges::view_base {
-  int *ptr_;
+  int *begin_;
+  int* end_;
 
-  constexpr BidirRange(int *ptr) : ptr_(ptr) {}
+  constexpr BidirRange(int* b, int* e) : begin_(b), end_(e) { }
 
-  constexpr bidirectional_iterator<int*> begin() { return bidirectional_iterator<int*>{ptr_}; }
-  constexpr bidirectional_iterator<const int*> begin() const { return bidirectional_iterator<const int*>{ptr_}; }
-  constexpr bidirectional_iterator<int*> end() { return bidirectional_iterator<int*>{ptr_ + 8}; }
-  constexpr bidirectional_iterator<const int*> end() const { return bidirectional_iterator<const int*>{ptr_ + 8}; }
+  constexpr bidirectional_iterator<int*> begin() { return bidirectional_iterator<int*>{begin_}; }
+  constexpr bidirectional_iterator<const int*> begin() const { return bidirectional_iterator<const int*>{begin_}; }
+  constexpr bidirectional_iterator<int*> end() { return bidirectional_iterator<int*>{end_}; }
+  constexpr bidirectional_iterator<const int*> end() const { return bidirectional_iterator<const int*>{end_}; }
 };
 
 enum CopyCategory { MoveOnly, Copyable };
@@ -29,18 +30,19 @@ struct BidirSentRange : std::ranges::view_base {
   using sent_t = sentinel_wrapper<bidirectional_iterator<int*>>;
   using sent_const_t = sentinel_wrapper<bidirectional_iterator<const int*>>;
 
-  int *ptr_;
+  int* begin_;
+  int* end_;
 
-  constexpr BidirSentRange(int *ptr) : ptr_(ptr) {}
+  constexpr BidirSentRange(int* b, int* e) : begin_(b), end_(e) { }
   constexpr BidirSentRange(const BidirSentRange &) requires (CC == Copyable) = default;
   constexpr BidirSentRange(BidirSentRange &&) requires (CC == MoveOnly) = default;
   constexpr BidirSentRange& operator=(const BidirSentRange &) requires (CC == Copyable) = default;
   constexpr BidirSentRange& operator=(BidirSentRange &&) requires (CC == MoveOnly) = default;
 
-  constexpr bidirectional_iterator<int*> begin() { return bidirectional_iterator<int*>{ptr_}; }
-  constexpr bidirectional_iterator<const int*> begin() const { return bidirectional_iterator<const int*>{ptr_}; }
-  constexpr sent_t end() { return sent_t{bidirectional_iterator<int*>{ptr_ + 8}}; }
-  constexpr sent_const_t end() const { return sent_const_t{bidirectional_iterator<const int*>{ptr_ + 8}}; }
+  constexpr bidirectional_iterator<int*> begin() { return bidirectional_iterator<int*>{begin_}; }
+  constexpr bidirectional_iterator<const int*> begin() const { return bidirectional_iterator<const int*>{begin_}; }
+  constexpr sent_t end() { return sent_t{bidirectional_iterator<int*>{end_}}; }
+  constexpr sent_const_t end() const { return sent_const_t{bidirectional_iterator<const int*>{end_}}; }
 };
 
 #endif // TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_REVERSE_TYPES_H

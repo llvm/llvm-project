@@ -14,7 +14,9 @@
 // constexpr auto end() const requires common_range<const V>;
 
 #include <ranges>
+
 #include <cassert>
+#include <utility>
 
 #include "test_macros.h"
 #include "types.h"
@@ -24,7 +26,7 @@ constexpr bool test() {
 
   // Common bidirectional range.
   {
-    auto rev = std::ranges::reverse_view(BidirRange{buffer});
+    auto rev = std::ranges::reverse_view(BidirRange{buffer, buffer + 8});
     assert(rev.end().base().base() == buffer);
     assert(std::move(rev).end().base().base() == buffer);
 
@@ -33,7 +35,7 @@ constexpr bool test() {
   }
   // Const common bidirectional range.
   {
-    const auto rev = std::ranges::reverse_view(BidirRange{buffer});
+    const auto rev = std::ranges::reverse_view(BidirRange{buffer, buffer + 8});
     assert(rev.end().base().base() == buffer);
     assert(std::move(rev).end().base().base() == buffer);
 
@@ -42,14 +44,14 @@ constexpr bool test() {
   }
   // Non-common, non-const (move only) bidirectional range.
   {
-    auto rev = std::ranges::reverse_view(BidirSentRange<MoveOnly>{buffer});
+    auto rev = std::ranges::reverse_view(BidirSentRange<MoveOnly>{buffer, buffer + 8});
     assert(std::move(rev).end().base().base() == buffer);
 
     ASSERT_SAME_TYPE(decltype(std::move(rev).end()), std::reverse_iterator<bidirectional_iterator<int*>>);
   }
   // Non-common, const bidirectional range.
   {
-    auto rev = std::ranges::reverse_view(BidirSentRange<Copyable>{buffer});
+    auto rev = std::ranges::reverse_view(BidirSentRange<Copyable>{buffer, buffer + 8});
     assert(rev.end().base().base() == buffer);
     assert(std::move(rev).end().base().base() == buffer);
 

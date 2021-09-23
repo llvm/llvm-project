@@ -50,28 +50,30 @@ struct CountedIter {
 };
 
 struct CountedView : std::ranges::view_base {
-  int *ptr_;
+  int* begin_;
+  int* end_;
 
-  CountedView(int *ptr) : ptr_(ptr) {}
+  CountedView(int* b, int* e) : begin_(b), end_(e) { }
 
-  auto begin() { return CountedIter(ptr_); }
-  auto begin() const { return CountedIter(ptr_); }
-  auto end() { return sentinel_wrapper<CountedIter>(CountedIter(ptr_ + 8)); }
-  auto end() const { return sentinel_wrapper<CountedIter>(CountedIter(ptr_ + 8)); }
+  auto begin() { return CountedIter(begin_); }
+  auto begin() const { return CountedIter(begin_); }
+  auto end() { return sentinel_wrapper<CountedIter>(CountedIter(end_)); }
+  auto end() const { return sentinel_wrapper<CountedIter>(CountedIter(end_)); }
 };
 
 struct RASentRange : std::ranges::view_base {
   using sent_t = sentinel_wrapper<random_access_iterator<int*>>;
   using sent_const_t = sentinel_wrapper<random_access_iterator<const int*>>;
 
-  int *ptr_;
+  int* begin_;
+  int* end_;
 
-  constexpr RASentRange(int *ptr) : ptr_(ptr) {}
+  constexpr RASentRange(int* b, int* e) : begin_(b), end_(e) { }
 
-  constexpr random_access_iterator<int*> begin() { return random_access_iterator<int*>{ptr_}; }
-  constexpr random_access_iterator<const int*> begin() const { return random_access_iterator<const int*>{ptr_}; }
-  constexpr sent_t end() { return sent_t{random_access_iterator<int*>{ptr_ + 8}}; }
-  constexpr sent_const_t end() const { return sent_const_t{random_access_iterator<const int*>{ptr_ + 8}}; }
+  constexpr random_access_iterator<int*> begin() { return random_access_iterator<int*>{begin_}; }
+  constexpr random_access_iterator<const int*> begin() const { return random_access_iterator<const int*>{begin_}; }
+  constexpr sent_t end() { return sent_t{random_access_iterator<int*>{end_}}; }
+  constexpr sent_const_t end() const { return sent_const_t{random_access_iterator<const int*>{end_}}; }
 };
 
 template<class T>
@@ -82,7 +84,7 @@ constexpr bool test() {
 
   // Common bidirectional range.
   {
-    auto rev = std::ranges::reverse_view(BidirRange{buffer});
+    auto rev = std::ranges::reverse_view(BidirRange{buffer, buffer + 8});
     assert(rev.begin().base().base() == buffer + 8);
     assert(std::move(rev).begin().base().base() == buffer + 8);
 
@@ -91,7 +93,7 @@ constexpr bool test() {
   }
   // Const common bidirectional range.
   {
-    const auto rev = std::ranges::reverse_view(BidirRange{buffer});
+    const auto rev = std::ranges::reverse_view(BidirRange{buffer, buffer + 8});
     assert(rev.begin().base().base() == buffer + 8);
     assert(std::move(rev).begin().base().base() == buffer + 8);
 
@@ -100,14 +102,14 @@ constexpr bool test() {
   }
   // Non-common, non-const (move only) bidirectional range.
   {
-    auto rev = std::ranges::reverse_view(BidirSentRange<MoveOnly>{buffer});
+    auto rev = std::ranges::reverse_view(BidirSentRange<MoveOnly>{buffer, buffer + 8});
     assert(std::move(rev).begin().base().base() == buffer + 8);
 
     ASSERT_SAME_TYPE(decltype(std::move(rev).begin()), std::reverse_iterator<bidirectional_iterator<int*>>);
   }
   // Non-common, non-const bidirectional range.
   {
-    auto rev = std::ranges::reverse_view(BidirSentRange<Copyable>{buffer});
+    auto rev = std::ranges::reverse_view(BidirSentRange<Copyable>{buffer, buffer + 8});
     assert(rev.begin().base().base() == buffer + 8);
     assert(std::move(rev).begin().base().base() == buffer + 8);
 
@@ -118,7 +120,7 @@ constexpr bool test() {
   // Note: const overload invalid for non-common ranges, though it would not be imposible
   // to implement for random access ranges.
   {
-    auto rev = std::ranges::reverse_view(RASentRange{buffer});
+    auto rev = std::ranges::reverse_view(RASentRange{buffer, buffer + 8});
     assert(rev.begin().base().base() == buffer + 8);
     assert(std::move(rev).begin().base().base() == buffer + 8);
 
@@ -140,7 +142,7 @@ int main(int, char**) {
   {
     // Make sure we cache begin.
     int buffer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-    CountedView view{buffer};
+    CountedView view{buffer, buffer + 8};
     std::ranges::reverse_view rev(view);
     assert(rev.begin().base().ptr_ == buffer + 8);
     assert(globalCount == 8);
