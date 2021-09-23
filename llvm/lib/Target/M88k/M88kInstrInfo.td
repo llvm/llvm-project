@@ -243,7 +243,7 @@ multiclass Bitfield<bits<6> Func, string OpcStr, SDNode OpNode, PatLeaf ImmOp,
                  InstrItinClass itin = NoItinerary> {
   def rr  : F_BR<Func,
                  (outs GPROpnd:$rd), (ins GPROpnd:$rs1, GPROpnd:$rs2),
-                 !strconcat(OpcStr, " $rd, $rs1, $rs2"),
+                 OpcStr,
                  [(set GPROpnd:$rd, (OpNode GPROpnd:$rs1, GPROpnd:$rs2))],
                  itin>;
   def rwo : F_BI<Func,
@@ -270,11 +270,10 @@ def : Pat<(srl GPR:$rs1, imm32zx5O:$o5), (EXTUrwo GPR:$rs1, imm32zx5O:$o5)>;
 def : Pat<(shl GPR:$rs1, imm32zx5O:$o5), (MAKrwo GPR:$rs1, imm32zx5O:$o5)>;
 def : Pat<(rotr GPR:$rs1, imm32zx5O:$o5), (ROTrwo GPR:$rs1, imm32zx5O:$o5)>;
 
-let rs1 = 0 in
 class FindBF<bits<6> Func, string OpcStr, SDNode OpNode,
             InstrItinClass itin = NoItinerary> :
-  F_BR<Func, (outs GPROpnd:$rd), (ins GPROpnd:$rs2),
-             !strconcat(OpcStr, " $rd, $rs2"),
+  F_BF<Func, (outs GPROpnd:$rd), (ins GPROpnd:$rs2),
+             OpcStr,
              [(set GPROpnd:$rd, (OpNode GPROpnd:$rs2))],
              itin>;
 

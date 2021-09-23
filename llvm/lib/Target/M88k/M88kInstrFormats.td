@@ -79,8 +79,19 @@ class F_B<bits<6> func, dag outs, dag ins, string asm, string operands, list<dag
 // Format: Bit-field with triadic register.
 class F_BR<bits<6> func, dag outs, dag ins, string asm, list<dag> pattern,
          InstrItinClass itin = NoItinerary>
-   : F_B<func, outs, ins, asm, "", pattern, itin> {
+   : F_B<func, outs, ins, asm, " $rd, $rs1, $rs2", pattern, itin> {
   bits<5> rs2;
+  let Inst{26}  = 0b1;
+  let Inst{9-5} = 0b00000;
+  let Inst{4-0} = rs2;
+}
+
+// Format: Bit-field with dual register.
+class F_BF<bits<6> func, dag outs, dag ins, string asm, list<dag> pattern,
+         InstrItinClass itin = NoItinerary>
+   : F_B<func, outs, ins, asm, " $rd, $rs2", pattern, itin> {
+  bits<5> rs2;
+  let rs1 = 0;
   let Inst{26}  = 0b1;
   let Inst{9-5} = 0b00000;
   let Inst{4-0} = rs2;
