@@ -216,19 +216,21 @@ void ProfileGenerator::findDisjointRanges(RangeSample &DisjointRanges,
   }
 }
 
-FunctionSamples &
-CSProfileGenerator::getFunctionProfileForContext(SampleContextFrames Context,
-                                                 bool WasLeafInlined) {
-  SampleContext FContext(Context);
-  auto Ret = ProfileMap.emplace(Context, FunctionSamples());
-  if (Ret.second) {
-    SampleContext FContext(Context, RawContext);
+FunctionSamples &CSProfileGenerator::getFunctionProfileForContext(
+    const SampleContextFrameVector &Context, bool WasLeafInlined) {
+  auto I = ProfileMap.find(SampleContext(Context));
+  if (I == ProfileMap.end()) {
+    // Save the new context for future references.
+    SampleContextFrames NewContext = *Contexts.insert(Context).first;
+    SampleContext FContext(NewContext, RawContext);
+    auto Ret = ProfileMap.emplace(FContext, FunctionSamples());
     if (WasLeafInlined)
       FContext.setAttribute(ContextWasInlined);
     FunctionSamples &FProfile = Ret.first->second;
     FProfile.setContext(FContext);
+    return Ret.first->second;
   }
-  return Ret.first->second;
+  return I->second;
 }
 
 void CSProfileGenerator::generateProfile() {
@@ -543,11 +545,8 @@ void PseudoProbeCSProfileGenerator::populateBodySamplesWithProbes(
         uint64_t CallerIndex = CallerLeafFrameLoc.Callsite.LineOffset;
         assert(CallerIndex &&
                "Inferred caller's location index shouldn't be zero!");
-        // Save the new context for future references.
-        SampleContextFrames CallerContext =
-            *Contexts.insert(CallerContextId).first;
         FunctionSamples &CallerProfile =
-            getFunctionProfileForContext(CallerContext);
+            getFunctionProfileForContext(CallerContextId);
         CallerProfile.setFunctionHash(InlinerDesc->FuncHash);
         CallerProfile.addBodySamples(CallerIndex, 0, Count);
         CallerProfile.addTotalSamples(Count);
@@ -610,13 +609,11 @@ FunctionSamples &PseudoProbeCSProfileGenerator::getFunctionProfileForLeafProbe(
   CSProfileGenerator::compressRecursionContext(NewContextStack);
   CSProfileGenerator::trimContext(NewContextStack);
   NewContextStack.push_back(LeafFrame);
-  // Save the new context for future references.
-  SampleContextFrames NewContext = *Contexts.insert(NewContextStack).first;
 
   const auto *FuncDesc = Binary->getFuncDescForGUID(LeafProbe->getGuid());
   bool WasLeafInlined = LeafProbe->getInlineTreeNode()->hasInlineSite();
   FunctionSamples &FunctionProile =
-      getFunctionProfileForContext(NewContext, WasLeafInlined);
+      getFunctionProfileForContext(NewContextStack, WasLeafInlined);
   FunctionProile.setFunctionHash(FuncDesc->FuncHash);
   return FunctionProile;
 }
