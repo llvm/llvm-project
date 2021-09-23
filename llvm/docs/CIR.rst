@@ -35,7 +35,8 @@ CIR builder to emit functions.
 
 TODO's
 ======
-
+- LValues
+  - Add proper alignment information
 - Other module related emission besides functions (and all currently
 end of translation defered stuff).
 - Some data structures used for LLVM codegen can be made more

@@ -17,6 +17,7 @@
 #include "mlir/Dialect/CIR/IR/CIRDialect.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -181,10 +182,20 @@ private:
 
   /// Declare a variable in the current scope, return success if the variable
   /// wasn't declared yet.
-  mlir::LogicalResult declare(StringRef var, mlir::Value value) {
+  mlir::LogicalResult declare(StringRef var, mlir::Value value,
+                              mlir::Location loc) {
     if (symbolTable.count(var))
       return mlir::failure();
-    symbolTable.insert(var, value);
+
+    mlir::MemRefType type = mlir::MemRefType::get({}, builder.getI32Type());
+    auto alloc = builder.create<mlir::memref::AllocaOp>(loc, type);
+    auto *parentBlock = alloc->getBlock();
+    alloc->moveBefore(&parentBlock->front());
+
+    // Insert into the symbol table, allocate some stack space in the
+    // function entry block.
+    symbolTable.insert(var, alloc);
+
     return mlir::success();
   }
 
@@ -319,17 +330,16 @@ public:
     /// Emits the address of the l-value, then loads and returns the result.
     mlir::Value buildLoadOfLValue(const Expr *E) {
       LValue LV = EmitLValue(E);
-      // mlir::Value V = EmitLoadOfLValue(LV, E->getExprLoc());
-
-      // EmitLValueAlignmentAssumption(E, V);
-      // return V;
-      return LV.getPointer();
+      auto load = Builder.builder.create<mlir::memref::LoadOp>(
+          Builder.getLoc(E->getExprLoc()), LV.getPointer());
+      // FIXME: add some akin to EmitLValueAlignmentAssumption(E, V);
+      return load;
     }
 
     // Handle l-values.
     mlir::Value VisitDeclRefExpr(DeclRefExpr *E) {
-      // FIXME: we could try to emit this as constant, similar to LLVM IR
-      // codegen.
+      // FIXME: we could try to emit this as constant first, see
+      // CGF.tryEmitAsConstant(E)
       return buildLoadOfLValue(E);
     }
 
@@ -463,18 +473,24 @@ public:
     // same argument list as the function itself.
     auto &entryBlock = *function.addEntryBlock();
 
-    // Declare all the function arguments in the symbol table.
-    for (const auto nameValue :
-         llvm::zip(FD->parameters(), entryBlock.getArguments())) {
-      if (failed(declare(std::get<0>(nameValue)->getName(),
-                         std::get<1>(nameValue))))
-        return nullptr;
-    }
-
     // Set the insertion point in the builder to the beginning of the
     // function body, it will be used throughout the codegen to create
     // operations in this function.
     builder.setInsertionPointToStart(&entryBlock);
+
+    // Declare all the function arguments in the symbol table.
+    for (const auto nameValue :
+         llvm::zip(FD->parameters(), entryBlock.getArguments())) {
+      auto *paramVar = std::get<0>(nameValue);
+      auto paramVal = std::get<1>(nameValue);
+      if (failed(declare(paramVar->getName(), paramVal,
+                         getLoc(paramVar->getSourceRange().getBegin()))))
+        return nullptr;
+      // Store params in local storage. FIXME: is this really needed
+      // at this level of representation?
+      mlir::Value addr = symbolTable.lookup(paramVar->getName());
+      builder.create<mlir::memref::StoreOp>(loc, paramVal, addr);
+    }
 
     // Emit the body of the function.
     if (mlir::failed(buildStmt(FD->getBody()))) {
@@ -526,6 +542,7 @@ void CIRContext::Init() {
   mlirCtx = std::make_unique<mlir::MLIRContext>();
   mlirCtx->getOrLoadDialect<mlir::func::FuncDialect>();
   mlirCtx->getOrLoadDialect<mlir::cir::CIRDialect>();
+  mlirCtx->getOrLoadDialect<mlir::memref::MemRefDialect>();
   builder = std::make_unique<CIRBuildImpl>(*mlirCtx.get(), astCtx);
 
   std::error_code EC;
