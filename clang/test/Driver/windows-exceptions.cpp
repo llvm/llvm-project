@@ -8,5 +8,5 @@
 MSVC-NOT: -exception-model=dwarf
 MSVC-NOT: -exception-model=seh
 MINGW-DWARF: -exception-model=dwarf
-MINGW-SEH: -munwind-tables
+MINGW-SEH: -funwind-tables=2
 MINGW-SEH: -exception-model=seh

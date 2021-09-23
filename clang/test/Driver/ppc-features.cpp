@@ -3,7 +3,7 @@
 // RUN: %clang -### -target powerpc-unknown-linux-gnu %s 2>&1 | FileCheck --check-prefixes=PPC32,PPC32BELNX %s
 // RUN: %clang -### -target powerpcle-unknown-freebsd13.0 %s 2>&1 | FileCheck --check-prefixes=PPC32,PPC32LEFBSD %s
 // RUN: %clang -### -target powerpc-unknown-freebsd13.0 %s 2>&1 | FileCheck --check-prefixes=PPC32,PPC32BEFBSD %s
-// PPC32:      "-munwind-tables"
+// PPC32:      "-funwind-tables=2"
 // PPC32-SAME: "-mfloat-abi" "hard"
 
 // PPC32LELNX-NEXT: "-m" "elf32lppclinux"
@@ -47,7 +47,7 @@
 /// Check default CC1 and linker options for ppc64.
 // RUN: %clang -### -target powerpc64le-unknown-linux-gnu %s 2>&1 | FileCheck --check-prefixes=PPC64,PPC64LE %s
 // RUN: %clang -### -target powerpc64-unknown-linux-gnu %s 2>&1 | FileCheck --check-prefixes=PPC64,PPC64BE %s
-// PPC64:      "-munwind-tables"
+// PPC64:      "-funwind-tables=2"
 // PPC64-SAME: "-mfloat-abi" "hard"
 
 // PPC64LE: "-m" "elf64lppc"
