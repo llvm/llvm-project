@@ -232,12 +232,6 @@ class ProfiledBinary {
   ///   3. Pseudo probe related sections, used by probe-based profile
   ///   generation.
   void load();
-  const SampleContextFrameVector &getFrameLocationStack(uint64_t Offset) const {
-    auto I = Offset2LocStackMap.find(Offset);
-    assert(I != Offset2LocStackMap.end() &&
-           "Can't find location for offset in the binary");
-    return I->second;
-  }
 
 public:
   ProfiledBinary(const StringRef Path)
@@ -310,11 +304,21 @@ public:
   }
 
   StringRef getFuncFromStartOffset(uint64_t Offset) {
-    return FuncStartAddrMap[Offset];
+    auto I = FuncStartAddrMap.find(Offset);
+    if (I == FuncStartAddrMap.end())
+      return StringRef();
+    return I->second;
   }
 
   uint32_t getFuncSizeForContext(SampleContext &Context) {
     return FuncSizeTracker.getFuncSizeForContext(Context);
+  }
+
+  const SampleContextFrameVector &getFrameLocationStack(uint64_t Offset) const {
+    auto I = Offset2LocStackMap.find(Offset);
+    assert(I != Offset2LocStackMap.end() &&
+           "Can't find location for offset in the binary");
+    return I->second;
   }
 
   Optional<SampleContextFrame> getInlineLeafFrameLoc(uint64_t Offset) {

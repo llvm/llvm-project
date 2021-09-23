@@ -93,14 +93,9 @@ int main(int argc, const char *argv[]) {
   if (SkipSymbolization)
     return EXIT_SUCCESS;
 
-  // TBD
-  if (Reader->getPerfScriptType() == PERF_LBR) {
-    WithColor::warning() << "Currently LBR only perf script is not supported!";
-    return EXIT_SUCCESS;
-  }
-
-  std::unique_ptr<ProfileGenerator> Generator = ProfileGenerator::create(
-      Binary.get(), Reader->getSampleCounters(), Reader->getPerfScriptType());
+  std::unique_ptr<ProfileGeneratorBase> Generator =
+      ProfileGeneratorBase::create(Binary.get(), Reader->getSampleCounters(),
+                                   Reader->getPerfScriptType());
   Generator->generateProfile();
   Generator->write();
 
