@@ -283,7 +283,7 @@ bool GlobalObject::canIncreaseAlignment() const {
 const GlobalObject *GlobalValue::getBaseObject() const {
   if (auto *GO = dyn_cast<GlobalObject>(this))
     return GO;
-  if (auto *GA = dyn_cast<GlobalIndirectSymbol>(this))
+  if (auto *GA = dyn_cast<GlobalAlias>(this))
     return GA->getBaseObject();
   return nullptr;
 }
@@ -464,11 +464,6 @@ findBaseObject(const Constant *C, DenseSet<const GlobalAlias *> &Aliases) {
   return nullptr;
 }
 
-const GlobalObject *GlobalIndirectSymbol::getBaseObject() const {
-  DenseSet<const GlobalAlias *> Aliases;
-  return findBaseObject(getOperand(0), Aliases);
-}
-
 //===----------------------------------------------------------------------===//
 // GlobalAlias Implementation
 //===----------------------------------------------------------------------===//
@@ -524,6 +519,11 @@ void GlobalAlias::setAliasee(Constant *Aliasee) {
   setIndirectSymbol(Aliasee);
 }
 
+const GlobalObject *GlobalAlias::getBaseObject() const {
+  DenseSet<const GlobalAlias *> Aliases;
+  return findBaseObject(getOperand(0), Aliases);
+}
+
 //===----------------------------------------------------------------------===//
 // GlobalIFunc Implementation
 //===----------------------------------------------------------------------===//
@@ -549,4 +549,9 @@ void GlobalIFunc::removeFromParent() {
 
 void GlobalIFunc::eraseFromParent() {
   getParent()->getIFuncList().erase(getIterator());
+}
+
+const Function *GlobalIFunc::getResolverFunction() const {
+  DenseSet<const GlobalAlias *> Aliases;
+  return cast<Function>(findBaseObject(getIndirectSymbol(), Aliases));
 }
