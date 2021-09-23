@@ -442,7 +442,7 @@ entry:
 ; 64bit mul
 define i64 @slm-costs_64_scalar_mul(i64 %a, i64 %b)  {
 ; CHECK-LABEL: 'slm-costs_64_scalar_mul'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res = mul nsw i64 %a, %b
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = mul nsw i64 %a, %b
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i64 %res
 ;
 entry:
