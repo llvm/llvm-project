@@ -89,19 +89,18 @@ struct UserArea {
 RegisterContextLinux_i386::RegisterContextLinux_i386(
     const ArchSpec &target_arch)
     : RegisterInfoInterface(target_arch) {
-  RegisterInfo orig_ax = {"orig_eax",
-                          nullptr,
-                          sizeof(((GPR *)nullptr)->orig_eax),
-                          (LLVM_EXTENSION offsetof(GPR, orig_eax)),
-                          eEncodingUint,
-                          eFormatHex,
-                          {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-                           LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-                           LLDB_INVALID_REGNUM},
-                          nullptr,
-                          nullptr,
-                          nullptr,
-                          0};
+  RegisterInfo orig_ax = {
+      "orig_eax",
+      nullptr,
+      sizeof(((GPR *)nullptr)->orig_eax),
+      (LLVM_EXTENSION offsetof(GPR, orig_eax)),
+      eEncodingUint,
+      eFormatHex,
+      {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+       LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+      nullptr,
+      nullptr,
+  };
   d_register_infos.push_back(orig_ax);
 }
 

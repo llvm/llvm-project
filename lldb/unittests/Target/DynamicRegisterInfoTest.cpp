@@ -37,7 +37,7 @@ protected:
           lldb::eFormatUnsigned,
           {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
            next_regnum, next_regnum},
-          nullptr, nullptr, nullptr, 0
+          nullptr, nullptr
     };
 
     if (!value_regs.empty()) {
@@ -140,7 +140,7 @@ TEST_F(DynamicRegisterInfoTest, add_supplementary_register) {
         lldb::eFormatUnsigned,
         {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, eax,
          eax},
-        value_regs, nullptr, nullptr, 0
+        value_regs, nullptr
   };
   info.AddSupplementaryRegister(eax_reg, group);
 
@@ -148,7 +148,7 @@ TEST_F(DynamicRegisterInfoTest, add_supplementary_register) {
     "ax", nullptr, 2, LLDB_INVALID_INDEX32, lldb::eEncodingUint,
         lldb::eFormatUnsigned,
         {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, ax, ax},
-        value_regs, nullptr, nullptr, 0
+        value_regs, nullptr
   };
   info.AddSupplementaryRegister(ax_reg, group);
 
@@ -156,7 +156,7 @@ TEST_F(DynamicRegisterInfoTest, add_supplementary_register) {
     "al", nullptr, 1, LLDB_INVALID_INDEX32, lldb::eEncodingUint,
         lldb::eFormatUnsigned,
         {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, al, al},
-        value_regs, nullptr, nullptr, 0
+        value_regs, nullptr
   };
   info.AddSupplementaryRegister(al_reg, group);
 
