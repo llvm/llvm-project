@@ -104,6 +104,7 @@ set(files
   __compare/common_comparison_category.h
   __compare/compare_three_way_result.h
   __compare/ordering.h
+  __compare/synth_three_way.h
   __compare/three_way_comparable.h
   __concepts/arithmetic.h
   __concepts/assignable.h
