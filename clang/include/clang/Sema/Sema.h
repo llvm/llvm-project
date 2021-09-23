@@ -4912,7 +4912,7 @@ public:
 
   /// DiagnoseUnusedExprResult - If the statement passed in is an expression
   /// whose result is unused, warn.
-  void DiagnoseUnusedExprResult(const Stmt *S);
+  void DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID);
   void DiagnoseUnusedNestedTypedefs(const RecordDecl *D);
   void DiagnoseUnusedDecl(const NamedDecl *ND);
 
@@ -5117,6 +5117,16 @@ public:
   /// Try to convert an expression \p E to type \p Ty. Returns the result of the
   /// conversion.
   ExprResult tryConvertExprToType(Expr *E, QualType Ty);
+
+  /// Conditionally issue a diagnostic based on the statement's reachability
+  /// analysis evaluation context.
+  ///
+  /// \param Statement If Statement is non-null, delay reporting the
+  /// diagnostic until the function body is parsed, and then do a basic
+  /// reachability analysis to determine if the statement is reachable.
+  /// If it is unreachable, the diagnostic will not be emitted.
+  bool DiagIfReachable(SourceLocation Loc, ArrayRef<const Stmt *> Stmts,
+                       const PartialDiagnostic &PD);
 
   /// Conditionally issue a diagnostic based on the current
   /// evaluation context.

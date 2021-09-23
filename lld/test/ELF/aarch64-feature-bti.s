@@ -1,5 +1,6 @@
 # REQUIRES: aarch64
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu --defsym CANONICAL_PLT=1 %s -o %tcanon.o
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu %p/Inputs/aarch64-bti1.s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu %p/Inputs/aarch64-func3.s -o %t2.o
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu %p/Inputs/aarch64-func3-bti.s -o %t3.o
@@ -65,24 +66,23 @@
 # BTISO-NEXT:    10360: bti     c
 # BTISO-NEXT:           stp     x16, x30, [sp, #-16]!
 # BTISO-NEXT:           adrp    x16, 0x30000
-# BTISO-NEXT:           ldr     x17, [x16, #1136]
-# BTISO-NEXT:           add     x16, x16, #1136
+# BTISO-NEXT:           ldr     x17, [x16, #1144]
+# BTISO-NEXT:           add     x16, x16, #1144
 # BTISO-NEXT:           br      x17
 # BTISO-NEXT:           nop
 # BTISO-NEXT:           nop
 # BTISO: 0000000000010380 <func3@plt>:
 # BTISO-NEXT:    10380: adrp    x16, 0x30000
-# BTISO-NEXT:           ldr     x17, [x16, #1144]
-# BTISO-NEXT:           add     x16, x16, #1144
+# BTISO-NEXT:           ldr     x17, [x16, #1152]
+# BTISO-NEXT:           add     x16, x16, #1152
 # BTISO-NEXT:           br      x17
 
 # SOGOTPLT2: Hex dump of section '.got.plt'
-# SOGOTPLT2-NEXT:  0x00030460 00000000 00000000 00000000 00000000
-# SOGOTPLT2-NEXT:  0x00030470 00000000 00000000 60030100 00000000
+# SOGOTPLT2-NEXT:  0x00030468 00000000 00000000 00000000 00000000
+# SOGOTPLT2-NEXT:  0x00030478 00000000 00000000 60030100 00000000
 
 ## Build an executable with all relocatable inputs having the BTI
-## .note.gnu.property. We expect a bti c in front of all PLT entries as the
-## address of a PLT entry can escape an executable.
+## .note.gnu.property.
 
 # RUN: ld.lld %t2.o --shared --soname=t2.so -o %t2.so
 
@@ -105,12 +105,26 @@
 # EXECBTI-NEXT:           nop
 # EXECBTI-NEXT:           nop
 # EXECBTI: 0000000000210370 <func2@plt>:
-# EXECBTI-NEXT:   210370: bti   c
-# EXECBTI-NEXT:           adrp  x16, 0x230000
+# EXECBTI-NEXT:   210370: adrp  x16, 0x230000
 # EXECBTI-NEXT:           ldr   x17, [x16, #1168]
 # EXECBTI-NEXT:           add   x16, x16, #1168
 # EXECBTI-NEXT:           br    x17
 # EXECBTI-NEXT:           nop
+# EXECBTI-NEXT:           nop
+
+## We expect a bti c in front of a canonical PLT entry because its address
+## can escape the executable.
+# RUN: ld.lld %tcanon.o %t.so %t2.so -o %t2.exe
+# RUN: llvm-readelf --dynamic-table -n %t2.exe | FileCheck --check-prefix=BTIPROP %s
+# RUN: llvm-objdump -d --mattr=+bti --no-show-raw-insn %t2.exe | FileCheck --check-prefix=EXECBTI2 %s
+# EXECBTI2: 0000000000210380 <func2@plt>:
+# EXECBTI2-NEXT:   210380: bti   c
+# EXECBTI2-NEXT:           adrp  x16, 0x230000
+# EXECBTI2-NEXT:           ldr   x17, [x16, #1184]
+# EXECBTI2-NEXT:           add   x16, x16, #1184
+# EXECBTI2-NEXT:           br    x17
+# EXECBTI2-NEXT:           nop
+
 
 ## We expect the same for PIE, as the address of an ifunc can escape
 # RUN: ld.lld --pie %t.o %t.so %t2.so -o %tpie.exe
@@ -133,11 +147,11 @@
 # PIE-NEXT:           nop
 # PIE-NEXT:           nop
 # PIE: 0000000000010370 <func2@plt>:
-# PIE-NEXT:    10370: bti    c
-# PIE-NEXT:           adrp   x16, 0x30000
+# PIE-NEXT:    10370: adrp   x16, 0x30000
 # PIE-NEXT:           ldr    x17, [x16, #1184]
 # PIE-NEXT:           add    x16, x16, #1184
 # PIE-NEXT:           br     x17
+# PIE-NEXT:           nop
 # PIE-NEXT:           nop
 
 ## Build and executable with not all relocatable inputs having the BTI
@@ -198,11 +212,11 @@
 # FORCE-NEXT:           nop
 # FORCE-NEXT:           nop
 # FORCE: 00000000002103a0 <func2@plt>:
-# FORCE-NEXT:   2103a0: bti     c
-# FORCE-NEXT:           adrp    x16, 0x230000
+# FORCE-NEXT:   2103a0: adrp    x16, 0x230000
 # FORCE-NEXT:           ldr     x17, [x16, #1200]
 # FORCE-NEXT:           add     x16, x16, #1200
 # FORCE-NEXT:           br      x17
+# FORCE-NEXT:           nop
 # FORCE-NEXT:           nop
 
 .section ".note.gnu.property", "a"
@@ -220,5 +234,10 @@
 .globl _start
 .type func1,%function
 func1:
+.ifdef CANONICAL_PLT
+  adrp x0, func2
+  add  x0, x0, :lo12:func2
+.else
   bl func2
+.endif
   ret

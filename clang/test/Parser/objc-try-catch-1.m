@@ -28,14 +28,13 @@ void * foo()
     }
     @catch (Frob* ex) {
       @throw 1,2; // expected-error {{@throw requires an Objective-C object type ('int' invalid)}} \
-				  // expected-warning {{expression result unused}}
+				  // expected-warning {{left operand of comma operator has no effect}}
     }
     @catch (float x) {  // expected-error {{@catch parameter is not a pointer to an interface type}}
       
     }
     @catch(...) {
-      @throw (4,3,proc()); // expected-warning {{expression result unused}} \
-						   // expected-warning {{expression result unused}}
+      @throw (4,3,proc()); // expected-warning 2{{left operand of comma operator has no effect}}
     }
   }
 

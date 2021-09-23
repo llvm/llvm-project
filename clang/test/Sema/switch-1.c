@@ -50,7 +50,7 @@ int f(int i) {
       return 0;
   }
   return (i, 65537) * 65537; // expected-warning {{overflow in expression; result is 131073 with type 'int'}} \
-			     // expected-warning {{expression result unused}}
+			     // expected-warning {{left operand of comma operator has no effect}}
 }
 
 // rdar://18405357

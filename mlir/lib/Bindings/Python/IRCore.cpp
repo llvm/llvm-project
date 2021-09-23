@@ -2364,6 +2364,7 @@ void mlir::python::populateIRCore(py::module &m) {
       .def("__eq__",
            [](PyAttribute &self, PyAttribute &other) { return self == other; })
       .def("__eq__", [](PyAttribute &self, py::object &other) { return false; })
+      .def("__hash__", [](PyAttribute &self) { return (size_t)self.get().ptr; })
       .def(
           "dump", [](PyAttribute &self) { mlirAttributeDump(self); },
           kDumpDocstring)
@@ -2457,6 +2458,7 @@ void mlir::python::populateIRCore(py::module &m) {
           "Context that owns the Type")
       .def("__eq__", [](PyType &self, PyType &other) { return self == other; })
       .def("__eq__", [](PyType &self, py::object &other) { return false; })
+      .def("__hash__", [](PyType &self) { return (size_t)self.get().ptr; })
       .def(
           "dump", [](PyType &self) { mlirTypeDump(self); }, kDumpDocstring)
       .def(

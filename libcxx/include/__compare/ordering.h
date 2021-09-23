@@ -231,6 +231,7 @@ private:
 inline constexpr weak_ordering weak_ordering::less(_OrdResult::__less);
 inline constexpr weak_ordering weak_ordering::equivalent(_EqResult::__equiv);
 inline constexpr weak_ordering weak_ordering::greater(_OrdResult::__greater);
+
 class strong_ordering {
   using _ValueT = signed char;
 

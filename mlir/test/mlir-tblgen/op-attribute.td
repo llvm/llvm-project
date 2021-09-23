@@ -278,6 +278,30 @@ def MixOperandsAndAttrs : NS_Op<"mix_operands_and_attrs", []> {
   let arguments = (ins F32Attr:$attr, F32:$operand, F32Attr:$otherAttr, F32:$otherArg);
 }
 
+def OpWithDefaultAndRegion : NS_Op<"default_with_region", []> {
+  let arguments = (ins
+          DefaultValuedAttr<BoolAttr, "true">:$dv_bool_attr
+  );
+  let regions = (region VariadicRegion<AnyRegion>:$region);
+}
+
+// We should not have a default attribute in this case.
+
+// DECL-LABEL: OpWithDefaultAndRegion declarations
+// DECL: static void build({{.*}}, bool dv_bool_attr, unsigned regionCount)
+
+def OpWithDefaultAndSuccessor : NS_Op<"default_with_succ", []> {
+  let arguments = (ins
+          DefaultValuedAttr<BoolAttr, "true">:$dv_bool_attr
+  );
+  let successors = (successor VariadicSuccessor<AnySuccessor>:$succ);
+}
+
+// We should not have a default attribute in this case.
+
+// DECL-LABEL: OpWithDefaultAndSuccessor declarations
+// DECL: static void build({{.*}}, bool dv_bool_attr, ::mlir::BlockRange succ)
+
 // DEF-LABEL: MixOperandsAndAttrs definitions
 // DEF-DAG: ::mlir::Value MixOperandsAndAttrs::operand()
 // DEF-DAG: ::mlir::Value MixOperandsAndAttrs::otherArg()

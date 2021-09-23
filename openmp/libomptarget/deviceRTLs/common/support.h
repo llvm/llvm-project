@@ -19,19 +19,18 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Execution Parameters
 ////////////////////////////////////////////////////////////////////////////////
-enum ExecutionMode {
-  Spmd = 0x00u,
-  Generic = 0x01u,
-  ModeMask = 0x01u,
+enum OMPTgtExecModeFlags : int8_t {
+  OMP_TGT_EXEC_MODE_GENERIC = 1 << 0,
+  OMP_TGT_EXEC_MODE_SPMD = 1 << 1
 };
 
-enum RuntimeMode {
-  RuntimeInitialized = 0x00u,
-  RuntimeUninitialized = 0x02u,
-  RuntimeMask = 0x02u,
+enum OMPTgtRuntimeModeFlags : int8_t {
+  OMP_TGT_RUNTIME_UNINITIALIZED = 0,
+  OMP_TGT_RUNTIME_INITIALIZED = 1 << 2
 };
 
-void setExecutionParameters(ExecutionMode EMode, RuntimeMode RMode);
+void setExecutionParameters(OMPTgtExecModeFlags EMode,
+                            OMPTgtRuntimeModeFlags RMode);
 bool isGenericMode();
 bool isRuntimeUninitialized();
 bool isRuntimeInitialized();
