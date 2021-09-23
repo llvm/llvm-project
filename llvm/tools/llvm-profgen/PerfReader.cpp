@@ -60,20 +60,33 @@ void VirtualUnwinder::unwindLinear(UnwindState &State, uint64_t Repeat) {
     // converted to a list of pseudo probes to report in ProfileGenerator.
     State.getParentFrame()->recordRangeCount(Target, End, Repeat);
   } else {
-    // Unwind linear execution part
-    uint64_t LeafAddr = State.CurrentLeafFrame->Address;
-    while (IP.Address >= Target) {
+    // Unwind linear execution part.
+    // Split and record the range by different inline context. For example:
+    // [0x01] ... main:1          # Target
+    // [0x02] ... main:2
+    // [0x03] ... main:3 @ foo:1
+    // [0x04] ... main:3 @ foo:2
+    // [0x05] ... main:3 @ foo:3
+    // [0x06] ... main:4
+    // [0x07] ... main:5          # End
+    // It will be recorded:
+    // [main:*]         : [0x06, 0x07], [0x01, 0x02]
+    // [main:3 @ foo:*] : [0x03, 0x05]
+    while (IP.Address > Target) {
       uint64_t PrevIP = IP.Address;
       IP.backward();
       // Break into segments for implicit call/return due to inlining
       bool SameInlinee = Binary->inlineContextEqual(PrevIP, IP.Address);
-      if (!SameInlinee || PrevIP == Target) {
-        State.switchToFrame(LeafAddr);
+      if (!SameInlinee) {
+        State.switchToFrame(PrevIP);
         State.CurrentLeafFrame->recordRangeCount(PrevIP, End, Repeat);
         End = IP.Address;
       }
-      LeafAddr = IP.Address;
     }
+    assert(IP.Address == Target && "The last one must be the target address.");
+    // Record the remaining range, [0x01, 0x02] in the example
+    State.switchToFrame(IP.Address);
+    State.CurrentLeafFrame->recordRangeCount(IP.Address, End, Repeat);
   }
 }
 
