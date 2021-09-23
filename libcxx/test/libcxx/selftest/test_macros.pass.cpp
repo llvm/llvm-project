@@ -30,28 +30,9 @@ void test_noexcept() TEST_NOEXCEPT
 {
 }
 
-void test_libcxx_macros()
-{
-//  ===== C++14 features =====
-
-//  defined(TEST_HAS_VARIABLE_TEMPLATES) != defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
-#ifdef TEST_HAS_VARIABLE_TEMPLATES
-# ifdef _LIBCPP_HAS_NO_VARIABLE_TEMPLATES
-#  error "TEST_VARIABLE_TEMPLATES mismatch (1)"
-# endif
-#else
-# ifndef _LIBCPP_HAS_NO_VARIABLE_TEMPLATES
-#  error "TEST_VARIABLE_TEMPLATES mismatch (2)"
-# endif
-#endif
-
-//  ===== C++17 features =====
-}
-
 int main(int, char**)
 {
     test_noexcept();
-    test_libcxx_macros();
 
-  return 0;
+    return 0;
 }
