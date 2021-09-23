@@ -8565,9 +8565,6 @@ def err_typecheck_choose_expr_requires_constant : Error<
   "'__builtin_choose_expr' requires a constant expression">;
 def warn_unused_expr : Warning<"expression result unused">,
   InGroup<UnusedValue>;
-def warn_unused_comma_left_operand : Warning<
-  "left operand of comma operator has no effect">,
-  InGroup<UnusedValue>;
 def warn_unused_voidptr : Warning<
   "expression result unused; should this cast be to 'void'?">,
   InGroup<UnusedValue>;
