@@ -57,7 +57,7 @@ void DefaultInlineAdvice::recordUnsuccessfulInliningImpl(
   ORE.emit([&]() {
     return OptimizationRemarkMissed(DEBUG_TYPE, "NotInlined", DLoc, Block)
            << "'" << NV("Callee", Callee) << "' is not inlined into '"
-           << "'" << NV("Caller", Caller)
+           << NV("Caller", Caller)
            << "': " << NV("Reason", Result.getFailureReason());
   });
 }

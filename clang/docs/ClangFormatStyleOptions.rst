@@ -3225,6 +3225,78 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+**QualifierAlignment** (``QualifierAlignmentStyle``)
+  Different ways to arrange const/volatile qualifiers.
+
+  .. warning:: 
+
+   ``QualifierAlignment`` COULD lead to incorrect code generation.
+
+  Possible values:
+
+  * ``QAS_Leave`` (in configuration: ``Leave``)
+    Don't change specifiers/qualifier to either Left or Right alignment
+    (default)
+
+    .. code-block:: c++
+
+       int const a;
+       const int *a;
+
+  * ``QAS_Left`` (in configuration: ``Left``)
+    Change specifiers/qualifiers to be Left aligned.
+
+    .. code-block:: c++
+
+       const int a;
+       const int *a;
+
+  * ``QAS_Right`` (in configuration: ``Right``)
+    Change specifiers/qualifiers to be Right aligned.
+
+    .. code-block:: c++
+
+       int const a;
+       int const *a;
+
+  * ``QAS_Custom`` (in configuration: ``Custom``)
+    Change specifiers/qualifiers to be aligned based on QualfierOrder.
+    With:
+
+    .. code-block:: yaml
+
+      QualifierOrder: ['inline', 'static' , '<type>', 'const']
+
+
+    .. code-block:: c++
+
+
+       int const a;
+       int const *a;
+
+
+
+**QualifierOrder** (``std::vector<std::string>``)
+  The Order in which the qualifiers appear.
+  Order is a an array can contain any of the following
+
+    * const
+    * inline
+    * static
+    * constexpr
+    * volatile
+    * restrict
+    * type
+
+  Note: it MUST contain 'type'.
+  Items to the left of type will be aligned in the order supplied.
+  Items to the right of type will be aligned  in the order supplied.
+
+
+  .. code-block:: yaml
+
+    QualifierOrder: ['inline', 'static', 'type', 'const', 'volatile' ]
+
 **RawStringFormats** (``std::vector<RawStringFormat>``)
   Defines hints for detecting supported languages code blocks in raw
   strings.

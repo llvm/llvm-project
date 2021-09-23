@@ -223,7 +223,7 @@ void FDSimpleRemoteEPCTransport::listenLoop() {
 
     if (MsgSize < FDMsgHeader::Size) {
       Err = joinErrors(std::move(Err),
-                       make_error<StringError>("Mesasge size too small",
+                       make_error<StringError>("Message size too small",
                                                inconvertibleErrorCode()));
       break;
     }
