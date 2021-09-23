@@ -601,16 +601,24 @@ public:
     auto *AT = D->getType()->getContainedAutoType();
     if (!AT)
       return true;
-    if (auto K = kindForType(AT->getDeducedType().getTypePtrOrNull(),
-                             H.getResolver())) {
-      auto &Tok = H.addToken(D->getTypeSpecStartLoc(), *K)
-                      .addModifier(HighlightingModifier::Deduced);
-      const Type *Deduced = AT->getDeducedType().getTypePtrOrNull();
-      if (auto Mod = scopeModifier(Deduced))
-        Tok.addModifier(*Mod);
-      if (isDefaultLibrary(Deduced))
-        Tok.addModifier(HighlightingModifier::DefaultLibrary);
-    }
+    auto K =
+        kindForType(AT->getDeducedType().getTypePtrOrNull(), H.getResolver());
+    if (!K)
+      return true;
+    SourceLocation StartLoc = D->getTypeSpecStartLoc();
+    // The AutoType may not have a corresponding token, e.g. in the case of
+    // init-captures. In this case, StartLoc overlaps with the location
+    // of the decl itself, and producing a token for the type here would result
+    // in both it and the token for the decl being dropped due to conflict.
+    if (StartLoc == D->getLocation())
+      return true;
+    auto &Tok =
+        H.addToken(StartLoc, *K).addModifier(HighlightingModifier::Deduced);
+    const Type *Deduced = AT->getDeducedType().getTypePtrOrNull();
+    if (auto Mod = scopeModifier(Deduced))
+      Tok.addModifier(*Mod);
+    if (isDefaultLibrary(Deduced))
+      Tok.addModifier(HighlightingModifier::DefaultLibrary);
     return true;
   }
 
