@@ -79,7 +79,7 @@ static WrapperFunctionResult addWrapper(const char *ArgData, size_t ArgSize) {
 
 static WrapperFunctionResult addMethodWrapper(const char *ArgData,
                                               size_t ArgSize) {
-  return WrapperFunction<int32_t(SPSExecutorAddress, int32_t)>::handle(
+  return WrapperFunction<int32_t(SPSExecutorAddr, int32_t)>::handle(
       ArgData, ArgSize, makeMethodWrapperHandler(&AddClass::addMethod));
 }
 
@@ -97,8 +97,8 @@ TEST(WrapperFunctionUtilsTest, WrapperFunctionCallAndHandleRet) {
 TEST(WrapperFunctionUtilsTest, WrapperFunctionMethodCallAndHandleRet) {
   int32_t Result;
   AddClass AddObj(1);
-  EXPECT_FALSE(!!WrapperFunction<int32_t(SPSExecutorAddress, int32_t)>::call(
-      addMethodWrapper, Result, ExecutorAddress::fromPtr(&AddObj), 2));
+  EXPECT_FALSE(!!WrapperFunction<int32_t(SPSExecutorAddr, int32_t)>::call(
+      addMethodWrapper, Result, ExecutorAddr::fromPtr(&AddObj), 2));
   EXPECT_EQ(Result, (int32_t)3);
 }
 

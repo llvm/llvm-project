@@ -85,7 +85,7 @@ FDSimpleRemoteEPCTransport::~FDSimpleRemoteEPCTransport() {
 
 Error FDSimpleRemoteEPCTransport::sendMessage(SimpleRemoteEPCOpcode OpC,
                                               uint64_t SeqNo,
-                                              ExecutorAddress TagAddr,
+                                              ExecutorAddr TagAddr,
                                               ArrayRef<char> ArgBytes) {
   char HeaderBuffer[FDMsgHeader::Size];
 
@@ -210,7 +210,7 @@ void FDSimpleRemoteEPCTransport::listenLoop() {
     uint64_t MsgSize;
     SimpleRemoteEPCOpcode OpC;
     uint64_t SeqNo;
-    ExecutorAddress TagAddr;
+    ExecutorAddr TagAddr;
 
     MsgSize =
         *((support::ulittle64_t *)(HeaderBuffer + FDMsgHeader::MsgSizeOffset));

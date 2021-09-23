@@ -27,18 +27,18 @@ namespace llvm {
 namespace orc {
 
 struct ELFPerObjectSectionsToRegister {
-  ExecutorAddressRange EHFrameSection;
-  ExecutorAddressRange ThreadDataSection;
+  ExecutorAddrRange EHFrameSection;
+  ExecutorAddrRange ThreadDataSection;
 };
 
 struct ELFNixJITDylibInitializers {
-  using SectionList = std::vector<ExecutorAddressRange>;
+  using SectionList = std::vector<ExecutorAddrRange>;
 
-  ELFNixJITDylibInitializers(std::string Name, ExecutorAddress DSOHandleAddress)
+  ELFNixJITDylibInitializers(std::string Name, ExecutorAddr DSOHandleAddress)
       : Name(std::move(Name)), DSOHandleAddress(std::move(DSOHandleAddress)) {}
 
   std::string Name;
-  ExecutorAddress DSOHandleAddress;
+  ExecutorAddr DSOHandleAddress;
 
   StringMap<SectionList> InitSections;
 };
@@ -179,7 +179,7 @@ private:
   using SendDeinitializerSequenceFn =
       unique_function<void(Expected<ELFNixJITDylibDeinitializerSequence>)>;
 
-  using SendSymbolAddressFn = unique_function<void(Expected<ExecutorAddress>)>;
+  using SendSymbolAddressFn = unique_function<void(Expected<ExecutorAddr>)>;
 
   static bool supportedTarget(const Triple &TT);
 
@@ -202,9 +202,9 @@ private:
                           StringRef JDName);
 
   void rt_getDeinitializers(SendDeinitializerSequenceFn SendResult,
-                            ExecutorAddress Handle);
+                            ExecutorAddr Handle);
 
-  void rt_lookupSymbol(SendSymbolAddressFn SendResult, ExecutorAddress Handle,
+  void rt_lookupSymbol(SendSymbolAddressFn SendResult, ExecutorAddr Handle,
                        StringRef SymbolName);
 
   // Records the addresses of runtime symbols used by the platform.
@@ -223,10 +223,10 @@ private:
   SymbolStringPtr DSOHandleSymbol;
   std::atomic<bool> RuntimeBootstrapped{false};
 
-  ExecutorAddress orc_rt_elfnix_platform_bootstrap;
-  ExecutorAddress orc_rt_elfnix_platform_shutdown;
-  ExecutorAddress orc_rt_elfnix_register_object_sections;
-  ExecutorAddress orc_rt_elfnix_create_pthread_key;
+  ExecutorAddr orc_rt_elfnix_platform_bootstrap;
+  ExecutorAddr orc_rt_elfnix_platform_shutdown;
+  ExecutorAddr orc_rt_elfnix_register_object_sections;
+  ExecutorAddr orc_rt_elfnix_create_pthread_key;
 
   DenseMap<JITDylib *, SymbolLookupSet> RegisteredInitSymbols;
 
@@ -243,7 +243,7 @@ private:
 namespace shared {
 
 using SPSELFPerObjectSectionsToRegister =
-    SPSTuple<SPSExecutorAddressRange, SPSExecutorAddressRange>;
+    SPSTuple<SPSExecutorAddrRange, SPSExecutorAddrRange>;
 
 template <>
 class SPSSerializationTraits<SPSELFPerObjectSectionsToRegister,
@@ -268,12 +268,11 @@ public:
   }
 };
 
-using SPSNamedExecutorAddressRangeSequenceMap =
-    SPSSequence<SPSTuple<SPSString, SPSExecutorAddressRangeSequence>>;
+using SPSNamedExecutorAddrRangeSequenceMap =
+    SPSSequence<SPSTuple<SPSString, SPSExecutorAddrRangeSequence>>;
 
 using SPSELFNixJITDylibInitializers =
-    SPSTuple<SPSString, SPSExecutorAddress,
-             SPSNamedExecutorAddressRangeSequenceMap>;
+    SPSTuple<SPSString, SPSExecutorAddr, SPSNamedExecutorAddrRangeSequenceMap>;
 
 using SPSELFNixJITDylibInitializerSequence =
     SPSSequence<SPSELFNixJITDylibInitializers>;

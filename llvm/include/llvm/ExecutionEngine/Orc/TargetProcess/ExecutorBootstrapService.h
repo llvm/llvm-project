@@ -26,7 +26,7 @@ public:
   virtual ~ExecutorBootstrapService();
 
   virtual void
-  addBootstrapSymbols(StringMap<ExecutorAddress> &BootstrapSymbols) = 0;
+  addBootstrapSymbols(StringMap<ExecutorAddr> &BootstrapSymbols) = 0;
   virtual Error shutdown() = 0;
 };
 

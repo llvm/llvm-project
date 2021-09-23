@@ -16,7 +16,7 @@ namespace orc {
 void lookupAndRecordAddrs(
     unique_function<void(Error)> OnRecorded, ExecutionSession &ES, LookupKind K,
     const JITDylibSearchOrder &SearchOrder,
-    std::vector<std::pair<SymbolStringPtr, ExecutorAddress *>> Pairs,
+    std::vector<std::pair<SymbolStringPtr, ExecutorAddr *>> Pairs,
     SymbolLookupFlags LookupFlags) {
 
   SymbolLookupSet Symbols;
@@ -41,7 +41,7 @@ void lookupAndRecordAddrs(
 
 Error lookupAndRecordAddrs(
     ExecutionSession &ES, LookupKind K, const JITDylibSearchOrder &SearchOrder,
-    std::vector<std::pair<SymbolStringPtr, ExecutorAddress *>> Pairs,
+    std::vector<std::pair<SymbolStringPtr, ExecutorAddr *>> Pairs,
     SymbolLookupFlags LookupFlags) {
 
   std::promise<MSVCPError> ResultP;
@@ -53,7 +53,7 @@ Error lookupAndRecordAddrs(
 
 Error lookupAndRecordAddrs(
     ExecutorProcessControl &EPC, tpctypes::DylibHandle H,
-    std::vector<std::pair<SymbolStringPtr, ExecutorAddress *>> Pairs,
+    std::vector<std::pair<SymbolStringPtr, ExecutorAddr *>> Pairs,
     SymbolLookupFlags LookupFlags) {
 
   SymbolLookupSet Symbols;

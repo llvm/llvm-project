@@ -72,8 +72,8 @@ inline std::string getWireProtectionFlagsStr(WireProtectionFlags WPF) {
 struct SupportFunctionCall {
   using FnTy = shared::detail::CWrapperFunctionResult(const char *ArgData,
                                                       size_t ArgSize);
-  ExecutorAddress Func;
-  ExecutorAddress ArgData;
+  ExecutorAddr Func;
+  ExecutorAddr ArgData;
   uint64_t ArgSize;
 
   Error run() {
@@ -96,7 +96,7 @@ struct AllocationActionsPair {
 
 struct SegFinalizeRequest {
   WireProtectionFlags Prot;
-  ExecutorAddress Addr;
+  ExecutorAddr Addr;
   uint64_t Size;
   ArrayRef<char> Content;
 };
@@ -150,10 +150,10 @@ namespace shared {
 class SPSMemoryProtectionFlags {};
 
 using SPSSupportFunctionCall =
-    SPSTuple<SPSExecutorAddress, SPSExecutorAddress, uint64_t>;
+    SPSTuple<SPSExecutorAddr, SPSExecutorAddr, uint64_t>;
 
 using SPSSegFinalizeRequest =
-    SPSTuple<SPSMemoryProtectionFlags, SPSExecutorAddress, uint64_t,
+    SPSTuple<SPSMemoryProtectionFlags, SPSExecutorAddr, uint64_t,
              SPSSequence<char>>;
 
 using SPSAllocationActionsPair =
@@ -163,15 +163,14 @@ using SPSFinalizeRequest = SPSTuple<SPSSequence<SPSSegFinalizeRequest>,
                                     SPSSequence<SPSAllocationActionsPair>>;
 
 template <typename T>
-using SPSMemoryAccessUIntWrite = SPSTuple<SPSExecutorAddress, T>;
+using SPSMemoryAccessUIntWrite = SPSTuple<SPSExecutorAddr, T>;
 
 using SPSMemoryAccessUInt8Write = SPSMemoryAccessUIntWrite<uint8_t>;
 using SPSMemoryAccessUInt16Write = SPSMemoryAccessUIntWrite<uint16_t>;
 using SPSMemoryAccessUInt32Write = SPSMemoryAccessUIntWrite<uint32_t>;
 using SPSMemoryAccessUInt64Write = SPSMemoryAccessUIntWrite<uint64_t>;
 
-using SPSMemoryAccessBufferWrite =
-    SPSTuple<SPSExecutorAddress, SPSSequence<char>>;
+using SPSMemoryAccessBufferWrite = SPSTuple<SPSExecutorAddr, SPSSequence<char>>;
 
 template <>
 class SPSSerializationTraits<SPSMemoryProtectionFlags,
@@ -283,17 +282,17 @@ class SPSSerializationTraits<SPSMemoryAccessUIntWrite<T>,
                              tpctypes::UIntWrite<T>> {
 public:
   static size_t size(const tpctypes::UIntWrite<T> &W) {
-    return SPSTuple<SPSExecutorAddress, T>::AsArgList::size(W.Address, W.Value);
+    return SPSTuple<SPSExecutorAddr, T>::AsArgList::size(W.Address, W.Value);
   }
 
   static bool serialize(SPSOutputBuffer &OB, const tpctypes::UIntWrite<T> &W) {
-    return SPSTuple<SPSExecutorAddress, T>::AsArgList::serialize(OB, W.Address,
-                                                                 W.Value);
+    return SPSTuple<SPSExecutorAddr, T>::AsArgList::serialize(OB, W.Address,
+                                                              W.Value);
   }
 
   static bool deserialize(SPSInputBuffer &IB, tpctypes::UIntWrite<T> &W) {
-    return SPSTuple<SPSExecutorAddress, T>::AsArgList::deserialize(
-        IB, W.Address, W.Value);
+    return SPSTuple<SPSExecutorAddr, T>::AsArgList::deserialize(IB, W.Address,
+                                                                W.Value);
   }
 };
 
@@ -302,18 +301,17 @@ class SPSSerializationTraits<SPSMemoryAccessBufferWrite,
                              tpctypes::BufferWrite> {
 public:
   static size_t size(const tpctypes::BufferWrite &W) {
-    return SPSTuple<SPSExecutorAddress, SPSSequence<char>>::AsArgList::size(
+    return SPSTuple<SPSExecutorAddr, SPSSequence<char>>::AsArgList::size(
         W.Address, W.Buffer);
   }
 
   static bool serialize(SPSOutputBuffer &OB, const tpctypes::BufferWrite &W) {
-    return SPSTuple<SPSExecutorAddress,
-                    SPSSequence<char>>::AsArgList ::serialize(OB, W.Address,
-                                                              W.Buffer);
+    return SPSTuple<SPSExecutorAddr, SPSSequence<char>>::AsArgList ::serialize(
+        OB, W.Address, W.Buffer);
   }
 
   static bool deserialize(SPSInputBuffer &IB, tpctypes::BufferWrite &W) {
-    return SPSTuple<SPSExecutorAddress,
+    return SPSTuple<SPSExecutorAddr,
                     SPSSequence<char>>::AsArgList ::deserialize(IB, W.Address,
                                                                 W.Buffer);
   }

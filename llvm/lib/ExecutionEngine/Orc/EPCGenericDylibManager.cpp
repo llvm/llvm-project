@@ -43,16 +43,16 @@ template <>
 class SPSSerializationTraits<SPSRemoteSymbolLookup,
                              ExecutorProcessControl::LookupRequest> {
   using MemberSerialization =
-      SPSArgList<SPSExecutorAddress, SPSRemoteSymbolLookupSet>;
+      SPSArgList<SPSExecutorAddr, SPSRemoteSymbolLookupSet>;
 
 public:
   static size_t size(const ExecutorProcessControl::LookupRequest &LR) {
-    return MemberSerialization::size(ExecutorAddress(LR.Handle), LR.Symbols);
+    return MemberSerialization::size(ExecutorAddr(LR.Handle), LR.Symbols);
   }
 
   static bool serialize(SPSOutputBuffer &OB,
                         const ExecutorProcessControl::LookupRequest &LR) {
-    return MemberSerialization::serialize(OB, ExecutorAddress(LR.Handle),
+    return MemberSerialization::serialize(OB, ExecutorAddr(LR.Handle),
                                           LR.Symbols);
   }
 };
@@ -81,11 +81,10 @@ Expected<tpctypes::DylibHandle> EPCGenericDylibManager::open(StringRef Path,
   return H;
 }
 
-Expected<std::vector<ExecutorAddress>>
+Expected<std::vector<ExecutorAddr>>
 EPCGenericDylibManager::lookup(tpctypes::DylibHandle H,
                                const SymbolLookupSet &Lookup) {
-  Expected<std::vector<ExecutorAddress>> Result(
-      (std::vector<ExecutorAddress>()));
+  Expected<std::vector<ExecutorAddr>> Result((std::vector<ExecutorAddr>()));
   if (auto Err =
           EPC.callSPSWrapper<rt::SPSSimpleExecutorDylibManagerLookupSignature>(
               SAs.Lookup.getValue(), Result, SAs.Instance, H, Lookup))
@@ -93,11 +92,10 @@ EPCGenericDylibManager::lookup(tpctypes::DylibHandle H,
   return Result;
 }
 
-Expected<std::vector<ExecutorAddress>>
+Expected<std::vector<ExecutorAddr>>
 EPCGenericDylibManager::lookup(tpctypes::DylibHandle H,
                                const RemoteSymbolLookupSet &Lookup) {
-  Expected<std::vector<ExecutorAddress>> Result(
-      (std::vector<ExecutorAddress>()));
+  Expected<std::vector<ExecutorAddr>> Result((std::vector<ExecutorAddr>()));
   if (auto Err =
           EPC.callSPSWrapper<rt::SPSSimpleExecutorDylibManagerLookupSignature>(
               SAs.Lookup.getValue(), Result, SAs.Instance, H, Lookup))

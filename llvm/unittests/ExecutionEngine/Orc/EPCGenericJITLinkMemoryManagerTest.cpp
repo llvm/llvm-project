@@ -28,14 +28,14 @@ namespace {
 
 class SimpleAllocator {
 public:
-  Expected<ExecutorAddress> reserve(uint64_t Size) {
+  Expected<ExecutorAddr> reserve(uint64_t Size) {
     std::error_code EC;
     auto MB = sys::Memory::allocateMappedMemory(
         Size, 0, sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC);
     if (EC)
       return errorCodeToError(EC);
     Blocks[MB.base()] = sys::OwningMemoryBlock(std::move(MB));
-    return ExecutorAddress::fromPtr(MB.base());
+    return ExecutorAddr::fromPtr(MB.base());
   }
 
   Error finalize(tpctypes::FinalizeRequest FR) {
@@ -54,7 +54,7 @@ public:
     return Error::success();
   }
 
-  Error deallocate(std::vector<ExecutorAddress> &Bases) {
+  Error deallocate(std::vector<ExecutorAddr> &Bases) {
     Error Err = Error::success();
     for (auto &Base : Bases) {
       auto I = Blocks.find(Base.toPtr<void *>());
@@ -109,10 +109,10 @@ TEST(EPCGenericJITLinkMemoryManagerTest, AllocFinalizeFree) {
   SimpleAllocator SA;
 
   EPCGenericJITLinkMemoryManager::SymbolAddrs SAs;
-  SAs.Allocator = ExecutorAddress::fromPtr(&SA);
-  SAs.Reserve = ExecutorAddress::fromPtr(&testReserve);
-  SAs.Finalize = ExecutorAddress::fromPtr(&testFinalize);
-  SAs.Deallocate = ExecutorAddress::fromPtr(&testDeallocate);
+  SAs.Allocator = ExecutorAddr::fromPtr(&SA);
+  SAs.Reserve = ExecutorAddr::fromPtr(&testReserve);
+  SAs.Finalize = ExecutorAddr::fromPtr(&testFinalize);
+  SAs.Deallocate = ExecutorAddr::fromPtr(&testDeallocate);
 
   auto MemMgr = std::make_unique<EPCGenericJITLinkMemoryManager>(*SelfEPC, SAs);
 
@@ -129,7 +129,7 @@ TEST(EPCGenericJITLinkMemoryManagerTest, AllocFinalizeFree) {
   auto Err = (*Alloc)->finalize();
   EXPECT_THAT_ERROR(std::move(Err), Succeeded());
 
-  ExecutorAddress TargetAddr((*Alloc)->getTargetMemory(sys::Memory::MF_READ));
+  ExecutorAddr TargetAddr((*Alloc)->getTargetMemory(sys::Memory::MF_READ));
 
   const char *TargetMem = TargetAddr.toPtr<const char *>();
   EXPECT_NE(TargetMem, WorkingMem.data());

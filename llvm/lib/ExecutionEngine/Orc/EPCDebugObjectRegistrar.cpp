@@ -43,8 +43,8 @@ createJITLoaderGDBRegistrar(ExecutionSession &ES) {
 }
 
 Error EPCDebugObjectRegistrar::registerDebugObject(sys::MemoryBlock TargetMem) {
-  return ES.callSPSWrapper<void(SPSExecutorAddress, uint64_t)>(
-      RegisterFn, ExecutorAddress::fromPtr(TargetMem.base()),
+  return ES.callSPSWrapper<void(SPSExecutorAddr, uint64_t)>(
+      RegisterFn, ExecutorAddr::fromPtr(TargetMem.base()),
       static_cast<uint64_t>(TargetMem.allocatedSize()));
 }
 

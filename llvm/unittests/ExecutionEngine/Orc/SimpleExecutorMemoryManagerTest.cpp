@@ -22,9 +22,8 @@ namespace {
 
 orc::shared::detail::CWrapperFunctionResult
 incrementWrapper(const char *ArgData, size_t ArgSize) {
-  return WrapperFunction<void(SPSExecutorAddress)>::handle(
-             ArgData, ArgSize,
-             [](ExecutorAddress A) { *A.toPtr<int *>() += 1; })
+  return WrapperFunction<void(SPSExecutorAddr)>::handle(
+             ArgData, ArgSize, [](ExecutorAddr A) { *A.toPtr<int *>() += 1; })
       .release();
 }
 
@@ -40,14 +39,13 @@ TEST(SimpleExecutorMemoryManagerTest, AllocFinalizeFree) {
   int FinalizeCounter = 0;
   auto FinalizeCounterAddrArgBuffer =
       orc::shared::detail::serializeViaSPSToWrapperFunctionResult<
-          SPSArgList<SPSExecutorAddress>>(
-          ExecutorAddress::fromPtr(&FinalizeCounter));
+          SPSArgList<SPSExecutorAddr>>(ExecutorAddr::fromPtr(&FinalizeCounter));
 
   int DeallocateCounter = 0;
   auto DeallocateCounterAddrArgBuffer =
       orc::shared::detail::serializeViaSPSToWrapperFunctionResult<
-          SPSArgList<SPSExecutorAddress>>(
-          ExecutorAddress::fromPtr(&DeallocateCounter));
+          SPSArgList<SPSExecutorAddr>>(
+          ExecutorAddr::fromPtr(&DeallocateCounter));
 
   tpctypes::FinalizeRequest FR;
   FR.Segments.push_back(
@@ -57,12 +55,12 @@ TEST(SimpleExecutorMemoryManagerTest, AllocFinalizeFree) {
                                    {HW.data(), HW.size() + 1}});
   FR.Actions.push_back(
       {/* Finalize: */
-       {ExecutorAddress::fromPtr(incrementWrapper),
-        ExecutorAddress::fromPtr(FinalizeCounterAddrArgBuffer.data()),
+       {ExecutorAddr::fromPtr(incrementWrapper),
+        ExecutorAddr::fromPtr(FinalizeCounterAddrArgBuffer.data()),
         FinalizeCounterAddrArgBuffer.size()},
        /*  Deallocate: */
-       {ExecutorAddress::fromPtr(incrementWrapper),
-        ExecutorAddress::fromPtr(DeallocateCounterAddrArgBuffer.data()),
+       {ExecutorAddr::fromPtr(incrementWrapper),
+        ExecutorAddr::fromPtr(DeallocateCounterAddrArgBuffer.data()),
         DeallocateCounterAddrArgBuffer.size()}});
 
   EXPECT_EQ(FinalizeCounter, 0);

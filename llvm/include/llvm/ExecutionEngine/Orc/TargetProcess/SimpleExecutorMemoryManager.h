@@ -33,12 +33,12 @@ class SimpleExecutorMemoryManager : public ExecutorBootstrapService {
 public:
   virtual ~SimpleExecutorMemoryManager();
 
-  Expected<ExecutorAddress> allocate(uint64_t Size);
+  Expected<ExecutorAddr> allocate(uint64_t Size);
   Error finalize(tpctypes::FinalizeRequest &FR);
-  Error deallocate(const std::vector<ExecutorAddress> &Bases);
+  Error deallocate(const std::vector<ExecutorAddr> &Bases);
 
   Error shutdown() override;
-  void addBootstrapSymbols(StringMap<ExecutorAddress> &M) override;
+  void addBootstrapSymbols(StringMap<ExecutorAddr> &M) override;
 
 private:
   struct Allocation {
