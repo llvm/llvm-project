@@ -61,6 +61,7 @@ class DominatorTree;
 class FenceInst;
 class Function;
 class InvokeInst;
+class LoopInfo;
 class PreservedAnalyses;
 class TargetLibraryInfo;
 class Value;
@@ -378,6 +379,50 @@ createModRefInfo(const FunctionModRefBehavior FMRB) {
   return ModRefInfo(FMRB & static_cast<int>(ModRefInfo::ModRef));
 }
 
+/// Virtual base class for providers of capture information.
+struct CaptureInfo {
+  virtual ~CaptureInfo() = 0;
+  virtual bool isNotCapturedBeforeOrAt(const Value *Object,
+                                       const Instruction *I) = 0;
+};
+
+/// Context-free CaptureInfo provider, which computes and caches whether an
+/// object is captured in the function at all, but does not distinguish whether
+/// it was captured before or after the context instruction.
+class SimpleCaptureInfo final : public CaptureInfo {
+  SmallDenseMap<const Value *, bool, 8> IsCapturedCache;
+
+public:
+  bool isNotCapturedBeforeOrAt(const Value *Object,
+                               const Instruction *I) override;
+};
+
+/// Context-sensitive CaptureInfo provider, which computes and caches the
+/// earliest common dominator closure of all captures. It provides a good
+/// approximation to a precise "captures before" analysis.
+class EarliestEscapeInfo final : public CaptureInfo {
+  DominatorTree &DT;
+  const LoopInfo &LI;
+
+  /// Map from identified local object to an instruction before which it does
+  /// not escape, or nullptr if it never escapes. The "earliest" instruction
+  /// may be a conservative approximation, e.g. the first instruction in the
+  /// function is always a legal choice.
+  DenseMap<const Value *, Instruction *> EarliestEscapes;
+
+  /// Reverse map from instruction to the objects it is the earliest escape for.
+  /// This is used for cache invalidation purposes.
+  DenseMap<Instruction *, TinyPtrVector<const Value *>> Inst2Obj;
+
+public:
+  EarliestEscapeInfo(DominatorTree &DT, const LoopInfo &LI) : DT(DT), LI(LI) {}
+
+  bool isNotCapturedBeforeOrAt(const Value *Object,
+                               const Instruction *I) override;
+
+  void removeInstruction(Instruction *I);
+};
+
 /// Reduced version of MemoryLocation that only stores a pointer and size.
 /// Used for caching AATags independent BasicAA results.
 struct AACacheLoc {
@@ -425,8 +470,7 @@ public:
   using AliasCacheT = SmallDenseMap<LocPair, CacheEntry, 8>;
   AliasCacheT AliasCache;
 
-  using IsCapturedCacheT = SmallDenseMap<const Value *, bool, 8>;
-  IsCapturedCacheT IsCapturedCache;
+  CaptureInfo *CI;
 
   /// Query depth used to distinguish recursive queries.
   unsigned Depth = 0;
@@ -439,16 +483,24 @@ public:
   /// assumption is disproven.
   SmallVector<AAQueryInfo::LocPair, 4> AssumptionBasedResults;
 
-  AAQueryInfo() : AliasCache(), IsCapturedCache() {}
+  AAQueryInfo(CaptureInfo *CI) : CI(CI) {}
 
   /// Create a new AAQueryInfo based on this one, but with the cache cleared.
   /// This is used for recursive queries across phis, where cache results may
   /// not be valid.
   AAQueryInfo withEmptyCache() {
-    AAQueryInfo NewAAQI;
+    AAQueryInfo NewAAQI(CI);
     NewAAQI.Depth = Depth;
     return NewAAQI;
   }
+};
+
+/// AAQueryInfo that uses SimpleCaptureInfo.
+class SimpleAAQueryInfo : public AAQueryInfo {
+  SimpleCaptureInfo CI;
+
+public:
+  SimpleAAQueryInfo() : AAQueryInfo(&CI) {}
 };
 
 class BatchAAResults;
@@ -770,7 +822,7 @@ public:
   /// helpers above.
   ModRefInfo getModRefInfo(const Instruction *I,
                            const Optional<MemoryLocation> &OptLoc) {
-    AAQueryInfo AAQIP;
+    SimpleAAQueryInfo AAQIP;
     return getModRefInfo(I, OptLoc, AAQIP);
   }
 
@@ -797,7 +849,7 @@ public:
   ModRefInfo callCapturesBefore(const Instruction *I,
                                 const MemoryLocation &MemLoc,
                                 DominatorTree *DT) {
-    AAQueryInfo AAQIP;
+    SimpleAAQueryInfo AAQIP;
     return callCapturesBefore(I, MemLoc, DT, AAQIP);
   }
 
@@ -896,9 +948,12 @@ private:
 class BatchAAResults {
   AAResults &AA;
   AAQueryInfo AAQI;
+  SimpleCaptureInfo SimpleCI;
 
 public:
-  BatchAAResults(AAResults &AAR) : AA(AAR), AAQI() {}
+  BatchAAResults(AAResults &AAR) : AA(AAR), AAQI(&SimpleCI) {}
+  BatchAAResults(AAResults &AAR, CaptureInfo *CI) : AA(AAR), AAQI(CI) {}
+
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB) {
     return AA.alias(LocA, LocB, AAQI);
   }
