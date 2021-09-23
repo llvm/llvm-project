@@ -363,17 +363,17 @@ multiclass LoadStore<bits<4> Func, string OpcStr, SDPatternOperator OpNode,
                   itin>;
 }
 
-class LoadUnsigned<bits<1> b, string OpcStr,
+class LoadUnsigned<bits<1> b, string OpcStr, PatFrag OpNode,
                  InstrItinClass itin = NoItinerary> :
   F_LU<b, (outs GPROpnd:$rd), (ins GPROpnd:$rs1, imm32zx16:$si16),
        !strconcat(OpcStr, " $rd, $rs1, $si16"),
-       [],
+       [(set (i32 GPROpnd:$rd), (OpNode (ADDRri GPROpnd:$rs1, imm32zx16:$si16)))],
        itin>;
 
 defm LD : LoadStore<0b0001, "ld", load>;
 //defm ST : LoadStore<0b0010, "st", store>;
-def LDurih : LoadUnsigned<0b0, "ld.hu">;
-def LDurib : LoadUnsigned<0b1, "ld.bu">;
+def LDurih : LoadUnsigned<0b0, "ld.hu", zextloadi16>;
+def LDurib : LoadUnsigned<0b1, "ld.bu", zextloadi8>;
 
 // GlobalAddress, ExternalSymbol, Jumptable, ConstantPool
 def : Pat<(m88k_hi tglobaladdr:$dst), (ORriu R0, tglobaladdr:$dst)>;

@@ -1,4 +1,4 @@
-; Test XOR instructions.
+; Test LD instructions.
 ;
 ; RUN: llc < %s -mtriple=m88k-openbsd -mcpu=mc88100 | FileCheck %s
 ; RUN: llc < %s -mtriple=m88k-openbsd -mcpu=mc88110 | FileCheck %s
@@ -16,8 +16,8 @@ define i32 @get_mem32() {
   ret i32 %res
 }
 
-define i32 @get_mem16() {
-; CHECK-LABEL: get_mem16:
+define i32 @get_mem16s() {
+; CHECK-LABEL: get_mem16s:
 ; CHECK: or.u %r2, %r0, %hi16(mem16)
 ; CHECK-NEXT: ld.h %r2, %r2, %lo16(mem16)
 ; CHECK-NEXT: jmp %r1
@@ -26,13 +26,33 @@ define i32 @get_mem16() {
   ret i32 %res
 }
 
-define i32 @get_mem8() {
-; CHECK-LABEL: get_mem8:
+define i32 @get_mem16u() {
+; CHECK-LABEL: get_mem16u:
+; CHECK: or.u %r2, %r0, %hi16(mem16)
+; CHECK-NEXT: ld.hu %r2, %r2, %lo16(mem16)
+; CHECK-NEXT: jmp %r1
+  %val = load i16, i16* @mem16, align 2
+  %res = zext i16 %val to i32
+  ret i32 %res
+}
+
+define i32 @get_mem8s() {
+; CHECK-LABEL: get_mem8s:
 ; CHECK: or.u %r2, %r0, %hi16(mem8)
 ; CHECK-NEXT: ld.b %r2, %r2, %lo16(mem8)
 ; CHECK-NEXT: jmp %r1
   %val = load i8, i8* @mem8, align 2
   %res = sext i8 %val to i32
+  ret i32 %res
+}
+
+define i32 @get_mem8u() {
+; CHECK-LABEL: get_mem8u:
+; CHECK: or.u %r2, %r0, %hi16(mem8)
+; CHECK-NEXT: ld.bu %r2, %r2, %lo16(mem8)
+; CHECK-NEXT: jmp %r1
+  %val = load i8, i8* @mem8, align 2
+  %res = zext i8 %val to i32
   ret i32 %res
 }
 
