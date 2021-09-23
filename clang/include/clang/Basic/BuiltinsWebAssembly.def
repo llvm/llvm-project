@@ -161,5 +161,11 @@ TARGET_BUILTIN(__builtin_wasm_narrow_u_i16x8_i32x4, "V8UsV4iV4i", "nc", "simd128
 TARGET_BUILTIN(__builtin_wasm_trunc_sat_zero_s_f64x2_i32x4, "V4iV2d", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_trunc_sat_zero_u_f64x2_i32x4, "V4UiV2d", "nc", "simd128")
 
+// Relaxed SIMD builtins (experimental)
+TARGET_BUILTIN(__builtin_wasm_fma_f32x4, "V4fV4fV4fV4f", "nc", "relaxed-simd")
+TARGET_BUILTIN(__builtin_wasm_fms_f32x4, "V4fV4fV4fV4f", "nc", "relaxed-simd")
+TARGET_BUILTIN(__builtin_wasm_fma_f64x2, "V2dV2dV2dV2d", "nc", "relaxed-simd")
+TARGET_BUILTIN(__builtin_wasm_fms_f64x2, "V2dV2dV2dV2d", "nc", "relaxed-simd")
+
 #undef BUILTIN
 #undef TARGET_BUILTIN
