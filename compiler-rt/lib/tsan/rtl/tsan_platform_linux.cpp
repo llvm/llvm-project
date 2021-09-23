@@ -89,15 +89,15 @@ static uptr longjmp_xor_key;
 uptr vmaSize;
 
 enum {
-  MemTotal  = 0,
-  MemShadow = 1,
-  MemMeta   = 2,
-  MemFile   = 3,
-  MemMmap   = 4,
-  MemTrace  = 5,
-  MemHeap   = 6,
-  MemOther  = 7,
-  MemCount  = 8,
+  MemTotal,
+  MemShadow,
+  MemMeta,
+  MemFile,
+  MemMmap,
+  MemTrace,
+  MemHeap,
+  MemOther,
+  MemCount,
 };
 
 void FillProfileCallback(uptr p, uptr rss, bool file,
