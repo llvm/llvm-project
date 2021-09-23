@@ -12,7 +12,7 @@ namespace inheriting_constructor {
 
   template<typename X, typename Y> struct T {
     template<typename A>
-    explicit((Y{}, true)) T(A &&a) {}
+    explicit(((void)Y{}, true)) T(A &&a) {}
   };
 
   template<typename X, typename Y> struct U : T<X, Y> {
@@ -28,7 +28,7 @@ namespace inheriting_constructor {
 U<S, char> a = foo('0');
 }
 
-//CHECK: explicit((char{} , true))
+//CHECK: explicit(((void)char{} , true))
 
 #endif
 

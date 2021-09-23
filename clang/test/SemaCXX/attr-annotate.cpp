@@ -42,7 +42,7 @@ namespace test0 {
 
   template<typename T>
   struct B {
-    [[clang::annotate("test", (T{}, 9))]] void t() {}
+    [[clang::annotate("test", ((void)T{}, 9))]] void t() {}
     // expected-error@-1 {{illegal initializer type 'void'}}
   };
   B<int> b;
@@ -73,7 +73,7 @@ struct B {
     [[clang::annotate("jui", b, cf)]] void t2() {}
     // expected-error@-1 {{'annotate' attribute requires parameter 1 to be a constant expression}}
     // expected-note@-2 {{is not allowed in a constant expression}}
-    [[clang::annotate("jui", (b, 0), cf)]] [[clang::annotate("jui", &b, cf, &foo::t2, str())]] void t3() {}
+    [[clang::annotate("jui", ((void)b, 0), cf)]] [[clang::annotate("jui", &b, cf, &foo::t2, str())]] void t3() {}
   };
 };
 

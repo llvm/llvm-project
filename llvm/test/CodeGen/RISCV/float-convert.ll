@@ -72,7 +72,6 @@ define i32 @fcvt_wu_s(float %a) nounwind {
 
 ; Test where the fptoui has multiple uses, one of which causes a sext to be
 ; inserted on RV64.
-; FIXME: We should not have an fcvt.wu.s and an fcvt.lu.s.
 define i32 @fcvt_wu_s_multiple_use(float %x, i32* %y) {
 ; RV32IF-LABEL: fcvt_wu_s_multiple_use:
 ; RV32IF:       # %bb.0:
@@ -518,4 +517,46 @@ define float @fcvt_s_wu_i16(i16 zeroext %a) nounwind {
 ; RV64IF-NEXT:    ret
   %1 = uitofp i16 %a to float
   ret float %1
+}
+
+; Make sure we select W version of addi on RV64.
+define signext i32 @fcvt_s_w_demanded_bits(i32 signext %0, float* %1) {
+; RV32IF-LABEL: fcvt_s_w_demanded_bits:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    addi a0, a0, 1
+; RV32IF-NEXT:    fcvt.s.w ft0, a0
+; RV32IF-NEXT:    fsw ft0, 0(a1)
+; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: fcvt_s_w_demanded_bits:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    addiw a0, a0, 1
+; RV64IF-NEXT:    fcvt.s.w ft0, a0
+; RV64IF-NEXT:    fsw ft0, 0(a1)
+; RV64IF-NEXT:    ret
+  %3 = add i32 %0, 1
+  %4 = sitofp i32 %3 to float
+  store float %4, float* %1, align 4
+  ret i32 %3
+}
+
+; Make sure we select W version of addi on RV64.
+define signext i32 @fcvt_s_wu_demanded_bits(i32 signext %0, float* %1) {
+; RV32IF-LABEL: fcvt_s_wu_demanded_bits:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    addi a0, a0, 1
+; RV32IF-NEXT:    fcvt.s.wu ft0, a0
+; RV32IF-NEXT:    fsw ft0, 0(a1)
+; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: fcvt_s_wu_demanded_bits:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    addiw a0, a0, 1
+; RV64IF-NEXT:    fcvt.s.wu ft0, a0
+; RV64IF-NEXT:    fsw ft0, 0(a1)
+; RV64IF-NEXT:    ret
+  %3 = add i32 %0, 1
+  %4 = uitofp i32 %3 to float
+  store float %4, float* %1, align 4
+  ret i32 %3
 }

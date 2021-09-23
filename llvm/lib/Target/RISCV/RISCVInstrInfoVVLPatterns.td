@@ -230,9 +230,9 @@ def SDT_RISCVVWMUL_VL : SDTypeProfile<1, 4, [SDTCisVec<0>,
 def riscv_vwmul_vl  : SDNode<"RISCVISD::VWMUL_VL",  SDT_RISCVVWMUL_VL, [SDNPCommutative]>;
 def riscv_vwmulu_vl : SDNode<"RISCVISD::VWMULU_VL", SDT_RISCVVWMUL_VL, [SDNPCommutative]>;
 
-def SDTRVVVecReduce : SDTypeProfile<1, 4, [
-  SDTCisVec<0>, SDTCisVec<1>, SDTCisSameAs<0, 2>, SDTCVecEltisVT<3, i1>,
-  SDTCisSameNumEltsAs<1, 3>, SDTCisVT<4, XLenVT>
+def SDTRVVVecReduce : SDTypeProfile<1, 5, [
+  SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisSameAs<0, 3>,
+  SDTCVecEltisVT<4, i1>, SDTCisSameNumEltsAs<2, 4>, SDTCisVT<5, XLenVT>
 ]>;
 
 def riscv_mul_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D),
@@ -583,14 +583,22 @@ multiclass VPatNConvertI2FPSDNode_V_VL<SDNode vop, string instruction_name> {
 multiclass VPatReductionVL<SDNode vop, string instruction_name, bit is_float> {
   foreach vti = !if(is_float, AllFloatVectors, AllIntegerVectors) in {
     defvar vti_m1 = !cast<VTypeInfo>(!if(is_float, "VF", "VI") # vti.SEW # "M1");
-    def: Pat<(vti_m1.Vector (vop (vti.Vector vti.RegClass:$rs1), VR:$rs2,
+    def: Pat<(vti_m1.Vector (vop (vti_m1.Vector VR:$merge), (vti.Vector vti.RegClass:$rs1), VR:$rs2,
                                  (vti.Mask true_mask),
                                  VLOpFrag)),
         (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX)
-            (vti_m1.Vector (IMPLICIT_DEF)),
+            (vti_m1.Vector VR:$merge),
             (vti.Vector vti.RegClass:$rs1),
             (vti_m1.Vector VR:$rs2),
             GPR:$vl, vti.Log2SEW)>;
+
+    def: Pat<(vti_m1.Vector (vop (vti_m1.Vector VR:$merge), (vti.Vector vti.RegClass:$rs1), VR:$rs2,
+                                 (vti.Mask V0), VLOpFrag)),
+        (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX#"_MASK")
+            (vti_m1.Vector VR:$merge),
+            (vti.Vector vti.RegClass:$rs1),
+            (vti_m1.Vector VR:$rs2),
+            (vti.Mask V0), GPR:$vl, vti.Log2SEW)>;
   }
 }
 
@@ -1265,6 +1273,10 @@ foreach mti = AllMasks in {
                                     VLOpFrag)),
             (!cast<Instruction>("PseudoVPOPC_M_" # mti.BX)
                  VR:$rs2, GPR:$vl, mti.Log2SEW)>;
+  def : Pat<(XLenVT (riscv_vpopc_vl (mti.Mask VR:$rs2), (mti.Mask V0),
+                                    VLOpFrag)),
+            (!cast<Instruction>("PseudoVPOPC_M_" # mti.BX # "_MASK")
+                 VR:$rs2, (mti.Mask V0), GPR:$vl, mti.Log2SEW)>;
 }
 
 } // Predicates = [HasStdExtV]

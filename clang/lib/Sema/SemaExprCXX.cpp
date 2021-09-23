@@ -8523,7 +8523,7 @@ ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
     if (FullExpr.isInvalid())
       return ExprError();
 
-    DiagnoseUnusedExprResult(FullExpr.get());
+    DiagnoseUnusedExprResult(FullExpr.get(), diag::warn_unused_expr);
   }
 
   FullExpr = CorrectDelayedTyposInExpr(FullExpr.get(), /*InitDecl=*/nullptr,

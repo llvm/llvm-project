@@ -3782,8 +3782,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   // '-mignore-xcoff-visibility' is implied. The generated command line will
   // contain both '-fvisibility default' and '-mignore-xcoff-visibility' and
   // subsequent calls to `CreateFromArgs`/`generateCC1CommandLine` will always
-  // produce the same arguments. 
- 
+  // produce the same arguments.
+
   if (T.isOSAIX() && (Args.hasArg(OPT_mignore_xcoff_visibility) ||
                       !Args.hasArg(OPT_fvisibility)))
     Opts.IgnoreXCOFFVisibility = 1;
