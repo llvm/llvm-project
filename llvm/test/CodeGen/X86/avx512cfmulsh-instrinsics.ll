@@ -35,7 +35,8 @@ define <4 x float> @test_nm_nr_int_x86_avx512fp16_mask_cfcmul_sh(<4 x float> %x0
 define <4 x float> @test_nm_nr_int_x86_avx512fp16_cfmadd_sh(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2) {
 ; CHECK-LABEL: test_nm_nr_int_x86_avx512fp16_cfmadd_sh:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vfmaddcsh %xmm2, %xmm1, %xmm0
+; CHECK-NEXT:    vfmaddcsh %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512fp16.mask.vfmadd.csh(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, i8 -1, i32 4)
   ret <4 x float> %res
@@ -44,7 +45,8 @@ define <4 x float> @test_nm_nr_int_x86_avx512fp16_cfmadd_sh(<4 x float> %x0, <4 
 define <4 x float> @test_nm_nr_int_x86_avx512fp16_cfcmadd_sh(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2) {
 ; CHECK-LABEL: test_nm_nr_int_x86_avx512fp16_cfcmadd_sh:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vfcmaddcsh %xmm2, %xmm1, %xmm0
+; CHECK-NEXT:    vfcmaddcsh %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512fp16.mask.vfcmadd.csh(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, i8 -1, i32 4)
   ret <4 x float> %res
@@ -75,7 +77,8 @@ define <4 x float> @test_nm_r_int_x86_avx512fp16_mask_cfcmul_sh(<4 x float> %x0,
 define <4 x float> @test_nm_r_int_x86_avx512fp16_mask_cfmadd_sh(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2) {
 ; CHECK-LABEL: test_nm_r_int_x86_avx512fp16_mask_cfmadd_sh:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vfmaddcsh {rd-sae}, %xmm2, %xmm1, %xmm0
+; CHECK-NEXT:    vfmaddcsh {rd-sae}, %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512fp16.mask.vfmadd.csh(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, i8 -1, i32 9)
   ret <4 x float> %res
@@ -84,7 +87,8 @@ define <4 x float> @test_nm_r_int_x86_avx512fp16_mask_cfmadd_sh(<4 x float> %x0,
 define <4 x float> @test_nm_r_int_x86_avx512fp16_mask_cfcmadd_sh(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2) {
 ; CHECK-LABEL: test_nm_r_int_x86_avx512fp16_mask_cfcmadd_sh:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vfcmaddcsh {rd-sae}, %xmm2, %xmm1, %xmm0
+; CHECK-NEXT:    vfcmaddcsh {rd-sae}, %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512fp16.mask.vfcmadd.csh(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, i8 -1, i32 9)
   ret <4 x float> %res
@@ -118,7 +122,8 @@ define <4 x float> @test_m_nr_int_x86_avx512fp16_mask_cfmadd_sh(<4 x float> %x0,
 ; CHECK-LABEL: test_m_nr_int_x86_avx512fp16_mask_cfmadd_sh:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmaddcsh %xmm2, %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    vfmaddcsh %xmm1, %xmm0, %xmm2 {%k1}
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512fp16.mask.vfmadd.csh(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, i8 %x3, i32 4)
   ret <4 x float> %res
@@ -128,7 +133,8 @@ define <4 x float> @test_m_nr_int_x86_avx512fp16_mask_cfcmadd_sh(<4 x float> %x0
 ; CHECK-LABEL: test_m_nr_int_x86_avx512fp16_mask_cfcmadd_sh:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfcmaddcsh %xmm2, %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    vfcmaddcsh %xmm1, %xmm0, %xmm2 {%k1}
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512fp16.mask.vfcmadd.csh(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, i8 %x3, i32 4)
   ret <4 x float> %res
@@ -162,7 +168,8 @@ define <4 x float> @test_int_x86_avx512fp16_mask_cfmadd_sh(<4 x float> %x0, <4 x
 ; CHECK-LABEL: test_int_x86_avx512fp16_mask_cfmadd_sh:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmaddcsh {rd-sae}, %xmm2, %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    vfmaddcsh {rd-sae}, %xmm1, %xmm0, %xmm2 {%k1}
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512fp16.mask.vfmadd.csh(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, i8 %x3, i32 9)
   ret <4 x float> %res
@@ -172,7 +179,8 @@ define <4 x float> @test_int_x86_avx512fp16_mask_cfcmadd_sh(<4 x float> %x0, <4 
 ; CHECK-LABEL: test_int_x86_avx512fp16_mask_cfcmadd_sh:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfcmaddcsh {rd-sae}, %xmm2, %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    vfcmaddcsh {rd-sae}, %xmm1, %xmm0, %xmm2 {%k1}
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512fp16.mask.vfcmadd.csh(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, i8 %x3, i32 9)
   ret <4 x float> %res
@@ -206,7 +214,8 @@ define <4 x float> @test_m_nr_int_x86_avx512fp16_maskz_cfmadd_sh(<4 x float> %x0
 ; CHECK-LABEL: test_m_nr_int_x86_avx512fp16_maskz_cfmadd_sh:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmaddcsh %xmm2, %xmm1, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vfmaddcsh %xmm1, %xmm0, %xmm2 {%k1} {z}
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512fp16.maskz.vfmadd.csh(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, i8 %x3, i32 4)
   ret <4 x float> %res
@@ -216,7 +225,8 @@ define <4 x float> @test_m_nr_int_x86_avx512fp16_maskz_cfcmadd_sh(<4 x float> %x
 ; CHECK-LABEL: test_m_nr_int_x86_avx512fp16_maskz_cfcmadd_sh:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfcmaddcsh %xmm2, %xmm1, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vfcmaddcsh %xmm1, %xmm0, %xmm2 {%k1} {z}
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512fp16.maskz.vfcmadd.csh(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, i8 %x3, i32 4)
   ret <4 x float> %res
@@ -250,7 +260,8 @@ define <4 x float> @test_int_x86_avx512fp16_maskz_cfmadd_sh(<4 x float> %x0, <4 
 ; CHECK-LABEL: test_int_x86_avx512fp16_maskz_cfmadd_sh:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmaddcsh {rd-sae}, %xmm2, %xmm1, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vfmaddcsh {rd-sae}, %xmm1, %xmm0, %xmm2 {%k1} {z}
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512fp16.maskz.vfmadd.csh(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, i8 %x3, i32 9)
   ret <4 x float> %res
@@ -260,7 +271,8 @@ define <4 x float> @test_int_x86_avx512fp16_maskz_cfcmadd_sh(<4 x float> %x0, <4
 ; CHECK-LABEL: test_int_x86_avx512fp16_maskz_cfcmadd_sh:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfcmaddcsh {rd-sae}, %xmm2, %xmm1, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vfcmaddcsh {rd-sae}, %xmm1, %xmm0, %xmm2 {%k1} {z}
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512fp16.maskz.vfcmadd.csh(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, i8 %x3, i32 9)
   ret <4 x float> %res

@@ -14,6 +14,17 @@ define <4 x float> @test_int_x86_avx512fp8_mask_cfmul_ph_bst(<4 x float> %x0, <4
   ret <4 x float> %res
 }
 
+define <4 x float> @test_int_x86_avx512fp8_mask_cfmul_ph_bst2(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, i8 %x3){
+; CHECK-LABEL: test_int_x86_avx512fp8_mask_cfmul_ph_bst2:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vfmulcph {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm2 {%k1}
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <4 x float> @llvm.x86.avx512fp16.mask.vfmul.cph.128(<4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, <4 x float> %x0, <4 x float> %x2, i8 %x3)
+  ret <4 x float> %res
+}
+
 define <4 x float> @test_int_x86_avx512fp8_mask_cfmul_ph_128(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, i8 %x3){
 ; CHECK-LABEL: test_int_x86_avx512fp8_mask_cfmul_ph_128:
 ; CHECK:       ## %bb.0:
@@ -121,6 +132,30 @@ define <16 x float> @test_int_x86_avx512fp16_cfmul_ph_512(<16 x float> %x0, <16 
 }
 
 declare <4 x float> @llvm.x86.avx512fp16.mask.vfcmul.cph.128(<4 x float>, <4 x float>, <4 x float>, i8)
+
+define <4 x float> @test_int_x86_avx512fp8_mask_cfcmul_ph_bst(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, i8 %x3){
+; CHECK-LABEL: test_int_x86_avx512fp8_mask_cfcmul_ph_bst:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vfcmulcph {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm2 {%k1}
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <4 x float> @llvm.x86.avx512fp16.mask.vfcmul.cph.128(<4 x float> %x0, <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, <4 x float> %x2, i8 %x3)
+  ret <4 x float> %res
+}
+
+; Check conjugate complex FMUL is not commutable.
+define <4 x float> @test_int_x86_avx512fp8_mask_cfcmul_ph_bst2(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, i8 %x3){
+; CHECK-LABEL: test_int_x86_avx512fp8_mask_cfcmul_ph_bst2:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; CHECK-NEXT:    vfcmulcph %xmm0, %xmm1, %xmm2 {%k1}
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <4 x float> @llvm.x86.avx512fp16.mask.vfcmul.cph.128(<4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, <4 x float> %x0, <4 x float> %x2, i8 %x3)
+  ret <4 x float> %res
+}
 
 define <4 x float> @test_int_x86_avx512fp8_mask_cfcmul_ph_128(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, i8 %x3){
 ; CHECK-LABEL: test_int_x86_avx512fp8_mask_cfcmul_ph_128:
