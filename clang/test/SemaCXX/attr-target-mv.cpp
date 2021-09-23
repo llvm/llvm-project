@@ -27,16 +27,25 @@ int __attribute__((target("default"))) foo2(void) { return 2; }
 
 static int __attribute__((target("sse4.2"))) bar(void) { return 0; }
 static int __attribute__((target("arch=sandybridge"))) bar(void);
-//expected-error@+1 {{multiversioned function declaration has a different storage class}}
+//expected-error@+1 {{multiversioned function declaration has a different linkage}}
 int __attribute__((target("arch=ivybridge"))) bar(void) {return 1;}
 static int __attribute__((target("default"))) bar(void) { return 2; }
 
 int __attribute__((target("sse4.2"))) bar2(void) { return 0; }
-//expected-error@+1 {{multiversioned function declaration has a different storage class}}
+//expected-error@+1 {{multiversioned function declaration has a different linkage}}
 static int __attribute__((target("arch=sandybridge"))) bar2(void);
 int __attribute__((target("arch=ivybridge"))) bar2(void) {return 1;}
 int __attribute__((target("default"))) bar2(void) { return 2; }
 
+
+// no diagnostic, since this doesn't change the linkage.
+int __attribute__((target("sse4.2"))) bar3(void) { return 0; }
+extern int __attribute__((target("arch=sandybridge"))) bar2(void);
+
+namespace {
+int __attribute__((target("sse4.2"))) bar4(void) { return 0; }
+static int __attribute__((target("arch=sandybridge"))) bar4(void);
+}
 
 inline int __attribute__((target("sse4.2"))) baz(void) { return 0; }
 inline int __attribute__((target("arch=sandybridge"))) baz(void);
@@ -102,7 +111,7 @@ struct S {
 extern "C" {
 int __attribute__((target("sse4.2"))) diff_mangle(void) { return 0; }
 }
-//expected-error@+1 {{multiversioned function declaration has a different linkage}}
+//expected-error@+1 {{multiversioned function declaration has a different language linkage}}
 int __attribute__((target("arch=sandybridge"))) diff_mangle(void) { return 0; }
 
 // expected-error@+1 {{multiversioned functions do not yet support deduced return types}}

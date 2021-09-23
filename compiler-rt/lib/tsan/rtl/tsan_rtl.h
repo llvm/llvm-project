@@ -558,6 +558,7 @@ struct Context {
   ClockAlloc clock_alloc;
 
   Flags flags;
+  fd_t memprof_fd;
 
   Mutex slot_mtx;
 };
@@ -984,6 +985,11 @@ void TraceMutexUnlock(ThreadState *thr, uptr addr);
 void TraceTime(ThreadState *thr);
 
 }  // namespace v3
+
+#if !SANITIZER_GO
+extern void (*on_initialize)(void);
+extern int (*on_finalize)(int);
+#endif
 
 }  // namespace __tsan
 

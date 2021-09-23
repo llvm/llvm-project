@@ -22,7 +22,10 @@ libomptarget_say("Building CUDA offloading plugin.")
 # Define the suffix for the runtime messaging dumps.
 add_definitions(-DTARGET_NAME=CUDA)
 
-include_directories(${LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIRS})
+include_directories(
+  ${LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIRS}
+  ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
+)
 
 set(LIBOMPTARGET_DLOPEN_LIBCUDA OFF)
 option(LIBOMPTARGET_FORCE_DLOPEN_LIBCUDA "Build with dlopened libcuda" ${LIBOMPTARGET_DLOPEN_LIBCUDA})

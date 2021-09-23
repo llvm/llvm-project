@@ -111,8 +111,9 @@ public:
   /// the given ordering and expects subsequent add() calls to honor
   /// that same ordering for the given indices. The result is a
   /// fully permuted coordinate scheme.
-  static SparseTensorCOO<V> *newSparseTensorCOO(uint64_t size, uint64_t *sizes,
-                                                uint64_t *perm,
+  static SparseTensorCOO<V> *newSparseTensorCOO(uint64_t size,
+                                                const uint64_t *sizes,
+                                                const uint64_t *perm,
                                                 uint64_t capacity = 0) {
     std::vector<uint64_t> permsz(size);
     for (uint64_t r = 0; r < size; r++)
@@ -182,8 +183,8 @@ public:
   /// Constructs a sparse tensor storage scheme from the given sparse
   /// tensor in coordinate scheme following the given per-rank dimension
   /// dense/sparse annotations.
-  SparseTensorStorage(SparseTensorCOO<V> *tensor, uint8_t *sparsity,
-                      uint64_t *perm)
+  SparseTensorStorage(SparseTensorCOO<V> *tensor, const uint8_t *sparsity,
+                      const uint64_t *perm)
       : sizes(tensor->getSizes()), rev(getRank()), pointers(getRank()),
         indices(getRank()) {
     // Store "reverse" permutation.
@@ -235,7 +236,7 @@ public:
 
   /// Returns this sparse tensor storage scheme as a new memory-resident
   /// sparse tensor in coordinate scheme with the given dimension order.
-  SparseTensorCOO<V> *toCOO(uint64_t *perm) {
+  SparseTensorCOO<V> *toCOO(const uint64_t *perm) {
     // Restore original order of the dimension sizes and allocate coordinate
     // scheme with desired new ordering specified in perm.
     uint64_t size = getRank();
@@ -258,8 +259,9 @@ public:
 
   /// Factory method. Expects a coordinate scheme that respects the same
   /// permutation as is desired for the new sparse storage scheme.
-  static SparseTensorStorage<P, I, V> *
-  newSparseTensor(SparseTensorCOO<V> *t, uint8_t *sparsity, uint64_t *perm) {
+  static SparseTensorStorage<P, I, V> *newSparseTensor(SparseTensorCOO<V> *t,
+                                                       const uint8_t *sparsity,
+                                                       const uint64_t *perm) {
     t->sort(); // sort lexicographically
     SparseTensorStorage<P, I, V> *n =
         new SparseTensorStorage<P, I, V>(t, sparsity, perm);
@@ -271,7 +273,7 @@ private:
   /// Initializes sparse tensor storage scheme from a memory-resident sparse
   /// tensor in coordinate scheme. This method prepares the pointers and indices
   /// arrays under the given per-rank dimension dense/sparse annotations.
-  void fromCOO(SparseTensorCOO<V> *tensor, uint8_t *sparsity, uint64_t lo,
+  void fromCOO(SparseTensorCOO<V> *tensor, const uint8_t *sparsity, uint64_t lo,
                uint64_t hi, uint64_t d) {
     const std::vector<Element<V>> &elements = tensor->getElements();
     // Once dimensions are exhausted, insert the numerical values.
@@ -428,8 +430,8 @@ static void readExtFROSTTHeader(FILE *file, char *name, uint64_t *idata) {
 /// sparse tensor in coordinate scheme.
 template <typename V>
 static SparseTensorCOO<V> *openSparseTensorCOO(char *filename, uint64_t size,
-                                               uint64_t *sizes,
-                                               uint64_t *perm) {
+                                               const uint64_t *sizes,
+                                               const uint64_t *perm) {
   // Open the file.
   FILE *file = fopen(filename, "r");
   if (!file) {
@@ -500,20 +502,10 @@ char *getTensorFilename(uint64_t id) {
 // with sparse tensors, which are only visible as opaque pointers externally.
 // These methods should be used exclusively by MLIR compiler-generated code.
 //
-// Because we cannot use C++ templates with C linkage, some macro magic is used
-// to generate implementations for all required type combinations that can be
-// called from MLIR compiler-generated code.
+// Some macro magic is used to generate implementations for all required type
+// combinations that can be called from MLIR compiler-generated code.
 //
 //===----------------------------------------------------------------------===//
-
-#define TEMPLATE(NAME, TYPE)                                                   \
-  struct NAME {                                                                \
-    const TYPE *base;                                                          \
-    const TYPE *data;                                                          \
-    uint64_t off;                                                              \
-    uint64_t sizes[1];                                                         \
-    uint64_t strides[1];                                                       \
-  }
 
 #define CASE(p, i, v, P, I, V)                                                 \
   if (ptrTp == (p) && indTp == (i) && valTp == (v)) {                          \
@@ -531,47 +523,44 @@ char *getTensorFilename(uint64_t id) {
                                                          perm);                \
   }
 
-#define IMPL1(RET, NAME, TYPE, LIB)                                            \
-  RET NAME(void *tensor) {                                                     \
+#define IMPL1(NAME, TYPE, LIB)                                                 \
+  void _mlir_ciface_##NAME(StridedMemRefType<TYPE, 1> *ref, void *tensor) {    \
     std::vector<TYPE> *v;                                                      \
     static_cast<SparseTensorStorageBase *>(tensor)->LIB(&v);                   \
-    return {v->data(), v->data(), 0, {v->size()}, {1}};                        \
+    ref->basePtr = ref->data = v->data();                                      \
+    ref->offset = 0;                                                           \
+    ref->sizes[0] = v->size();                                                 \
+    ref->strides[0] = 1;                                                       \
   }
 
-#define IMPL2(RET, NAME, TYPE, LIB)                                            \
-  RET NAME(void *tensor, uint64_t d) {                                         \
+#define IMPL2(NAME, TYPE, LIB)                                                 \
+  void _mlir_ciface_##NAME(StridedMemRefType<TYPE, 1> *ref, void *tensor,      \
+                           uint64_t d) {                                       \
     std::vector<TYPE> *v;                                                      \
     static_cast<SparseTensorStorageBase *>(tensor)->LIB(&v, d);                \
-    return {v->data(), v->data(), 0, {v->size()}, {1}};                        \
+    ref->basePtr = ref->data = v->data();                                      \
+    ref->offset = 0;                                                           \
+    ref->sizes[0] = v->size();                                                 \
+    ref->strides[0] = 1;                                                       \
   }
 
 #define IMPL3(NAME, TYPE)                                                      \
-  void *NAME(void *tensor, TYPE value, uint64_t *ibase, uint64_t *idata,       \
-             uint64_t ioff, uint64_t isize, uint64_t istride, uint64_t *pbase, \
-             uint64_t *pdata, uint64_t poff, uint64_t psize,                   \
-             uint64_t pstride) {                                               \
-    assert(istride == 1 && pstride == 1 && isize == psize);                    \
-    uint64_t *indx = idata + ioff;                                             \
+  void *_mlir_ciface_##NAME(void *tensor, TYPE value,                          \
+                            StridedMemRefType<uint64_t, 1> *iref,              \
+                            StridedMemRefType<uint64_t, 1> *pref) {            \
     if (!value)                                                                \
       return tensor;                                                           \
-    uint64_t *perm = pdata + poff;                                             \
+    assert(iref->strides[0] == 1 && pref->strides[0] == 1);                    \
+    assert(iref->sizes[0] == pref->sizes[0]);                                  \
+    const uint64_t *indx = iref->data + iref->offset;                          \
+    const uint64_t *perm = pref->data + pref->offset;                          \
+    uint64_t isize = iref->sizes[0];                                           \
     std::vector<uint64_t> indices(isize);                                      \
     for (uint64_t r = 0; r < isize; r++)                                       \
       indices[perm[r]] = indx[r];                                              \
     static_cast<SparseTensorCOO<TYPE> *>(tensor)->add(indices, value);         \
     return tensor;                                                             \
   }
-
-TEMPLATE(MemRef1DU64, uint64_t);
-TEMPLATE(MemRef1DU32, uint32_t);
-TEMPLATE(MemRef1DU16, uint16_t);
-TEMPLATE(MemRef1DU8, uint8_t);
-TEMPLATE(MemRef1DI64, int64_t);
-TEMPLATE(MemRef1DI32, int32_t);
-TEMPLATE(MemRef1DI16, int16_t);
-TEMPLATE(MemRef1DI8, int8_t);
-TEMPLATE(MemRef1DF64, double);
-TEMPLATE(MemRef1DF32, float);
 
 enum OverheadTypeEnum : uint64_t { kU64 = 1, kU32 = 2, kU16 = 3, kU8 = 4 };
 
@@ -591,19 +580,19 @@ enum PrimaryTypeEnum : uint64_t {
 ///  1 : ptr contains coordinate scheme to assign to new storage
 ///  2 : returns empty coordinate scheme to fill (call back 1 to setup)
 ///  3 : returns coordinate scheme from storage in ptr (call back 1 to convert)
-void *newSparseTensor(uint8_t *abase, uint8_t *adata, uint64_t aoff,
-                      uint64_t asize, uint64_t astride, uint64_t *sbase,
-                      uint64_t *sdata, uint64_t soff, uint64_t ssize,
-                      uint64_t sstride, uint64_t *pbase, uint64_t *pdata,
-                      uint64_t poff, uint64_t psize, uint64_t pstride,
-                      uint64_t ptrTp, uint64_t indTp, uint64_t valTp,
-                      uint32_t action, void *ptr) {
-  assert(astride == 1 && sstride == 1 && pstride == 1);
-  assert(asize == ssize && ssize == psize);
-  uint8_t *sparsity = adata + aoff;
-  uint64_t *sizes = sdata + soff;
-  uint64_t *perm = pdata + poff;
-  uint64_t size = asize;
+void *
+_mlir_ciface_newSparseTensor(StridedMemRefType<uint8_t, 1> *aref, // NOLINT
+                             StridedMemRefType<uint64_t, 1> *sref,
+                             StridedMemRefType<uint64_t, 1> *pref,
+                             uint64_t ptrTp, uint64_t indTp, uint64_t valTp,
+                             uint32_t action, void *ptr) {
+  assert(aref->strides[0] == 1 && sref->strides[0] == 1 &&
+         pref->strides[0] == 1);
+  assert(aref->sizes[0] == sref->sizes[0] && sref->sizes[0] == pref->sizes[0]);
+  const uint8_t *sparsity = aref->data + aref->offset;
+  const uint64_t *sizes = sref->data + sref->offset;
+  const uint64_t *perm = pref->data + pref->offset;
+  uint64_t size = aref->sizes[0];
 
   // Double matrices with all combinations of overhead storage.
   CASE(kU64, kU64, kF64, uint64_t, uint64_t, double);
@@ -662,22 +651,22 @@ void *newSparseTensor(uint8_t *abase, uint8_t *adata, uint64_t aoff,
 }
 
 /// Methods that provide direct access to pointers, indices, and values.
-IMPL2(MemRef1DU64, sparsePointers, uint64_t, getPointers)
-IMPL2(MemRef1DU64, sparsePointers64, uint64_t, getPointers)
-IMPL2(MemRef1DU32, sparsePointers32, uint32_t, getPointers)
-IMPL2(MemRef1DU16, sparsePointers16, uint16_t, getPointers)
-IMPL2(MemRef1DU8, sparsePointers8, uint8_t, getPointers)
-IMPL2(MemRef1DU64, sparseIndices, uint64_t, getIndices)
-IMPL2(MemRef1DU64, sparseIndices64, uint64_t, getIndices)
-IMPL2(MemRef1DU32, sparseIndices32, uint32_t, getIndices)
-IMPL2(MemRef1DU16, sparseIndices16, uint16_t, getIndices)
-IMPL2(MemRef1DU8, sparseIndices8, uint8_t, getIndices)
-IMPL1(MemRef1DF64, sparseValuesF64, double, getValues)
-IMPL1(MemRef1DF32, sparseValuesF32, float, getValues)
-IMPL1(MemRef1DI64, sparseValuesI64, int64_t, getValues)
-IMPL1(MemRef1DI32, sparseValuesI32, int32_t, getValues)
-IMPL1(MemRef1DI16, sparseValuesI16, int16_t, getValues)
-IMPL1(MemRef1DI8, sparseValuesI8, int8_t, getValues)
+IMPL2(sparsePointers, uint64_t, getPointers)
+IMPL2(sparsePointers64, uint64_t, getPointers)
+IMPL2(sparsePointers32, uint32_t, getPointers)
+IMPL2(sparsePointers16, uint16_t, getPointers)
+IMPL2(sparsePointers8, uint8_t, getPointers)
+IMPL2(sparseIndices, uint64_t, getIndices)
+IMPL2(sparseIndices64, uint64_t, getIndices)
+IMPL2(sparseIndices32, uint32_t, getIndices)
+IMPL2(sparseIndices16, uint16_t, getIndices)
+IMPL2(sparseIndices8, uint8_t, getIndices)
+IMPL1(sparseValuesF64, double, getValues)
+IMPL1(sparseValuesF32, float, getValues)
+IMPL1(sparseValuesI64, int64_t, getValues)
+IMPL1(sparseValuesI32, int32_t, getValues)
+IMPL1(sparseValuesI16, int16_t, getValues)
+IMPL1(sparseValuesI8, int8_t, getValues)
 
 /// Helper to add value to coordinate scheme, one per value type.
 IMPL3(addEltF64, double)

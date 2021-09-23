@@ -73,6 +73,26 @@ void test_pointer_to_function() {
 void test_pointer_to_function() {}
 #endif // _LIBCPP_VERSION
 
+template <typename T>
+void test(const T &t0)
+{
+    {
+      T t1 = t0;
+      std::shared_ptr<T> p0 = std::make_shared<T>(t0);
+      std::shared_ptr<T> p1 = std::make_shared<T>(t1);
+      assert(*p0 == t0);
+      assert(*p1 == t1);
+    }
+
+    {
+      const T t1 = t0;
+      std::shared_ptr<const T> p0 = std::make_shared<const T>(t0);
+      std::shared_ptr<const T> p1 = std::make_shared<const T>(t1);
+      assert(*p0 == t0);
+      assert(*p1 == t1);
+    }
+}
+
 int main(int, char**)
 {
     int nc = globalMemCounter.outstanding_new;
@@ -107,6 +127,10 @@ int main(int, char**)
     }
 #endif
     assert(A::count == 0);
+
+    test<bool>(true);
+    test<int>(3);
+    test<double>(5.0);
 
   return 0;
 }

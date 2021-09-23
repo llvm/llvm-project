@@ -2620,7 +2620,19 @@ bool X86InstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   case X86::VPMADD52LUQZ256rkz:
   case X86::VPMADD52LUQZr:
   case X86::VPMADD52LUQZrk:
-  case X86::VPMADD52LUQZrkz: {
+  case X86::VPMADD52LUQZrkz:
+  case X86::VFMADDCPHZr:
+  case X86::VFMADDCPHZrk:
+  case X86::VFMADDCPHZrkz:
+  case X86::VFMADDCPHZ128r:
+  case X86::VFMADDCPHZ128rk:
+  case X86::VFMADDCPHZ128rkz:
+  case X86::VFMADDCPHZ256r:
+  case X86::VFMADDCPHZ256rk:
+  case X86::VFMADDCPHZ256rkz:
+  case X86::VFMADDCSHZr:
+  case X86::VFMADDCSHZrk:
+  case X86::VFMADDCSHZrkz: {
     unsigned CommutableOpIdx1 = 2;
     unsigned CommutableOpIdx2 = 3;
     if (X86II::isKMasked(Desc.TSFlags)) {

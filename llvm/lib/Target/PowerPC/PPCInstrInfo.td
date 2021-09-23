@@ -1271,7 +1271,7 @@ multiclass XOForm_1r<bits<6> opcode, bits<9> xo, bit oe, dag OOL, dag IOL,
 
 // Multiclass for instructions which have a record overflow form as well
 // as a record form but no carry (i.e. mulld, mulldo, subf, subfo, etc.)
-multiclass XOForm_1rx<bits<6> opcode, bits<9> xo, bit oe, dag OOL, dag IOL,
+multiclass XOForm_1rx<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
                       string asmbase, string asmstr, InstrItinClass itin,
                       list<dag> pattern> {
   let BaseName = asmbase in {
@@ -3171,7 +3171,7 @@ def ADDEX : Z23Form_RTAB5_CY2<31, 170, (outs gprc:$rT),
 let PPC970_Unit = 1, hasSideEffects = 0 in {  // FXU Operations.
 // XO-Form instructions.  Arithmetic instructions that can set overflow bit
 let isCommutable = 1 in
-defm ADD4  : XOForm_1rx<31, 266, 0, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
+defm ADD4  : XOForm_1rx<31, 266, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
                         "add", "$rT, $rA, $rB", IIC_IntSimple,
                         [(set i32:$rT, (add i32:$rA, i32:$rB))]>;
 let isCodeGenOnly = 1 in
@@ -3205,11 +3205,11 @@ defm MULHW : XOForm_1r<31, 75, 0, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
 defm MULHWU : XOForm_1r<31, 11, 0, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
                        "mulhwu", "$rT, $rA, $rB", IIC_IntMulHWU,
                        [(set i32:$rT, (mulhu i32:$rA, i32:$rB))]>;
-defm MULLW : XOForm_1rx<31, 235, 0, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
+defm MULLW : XOForm_1rx<31, 235, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
                         "mullw", "$rT, $rA, $rB", IIC_IntMulHW,
                         [(set i32:$rT, (mul i32:$rA, i32:$rB))]>;
 } // isCommutable
-defm SUBF  : XOForm_1rx<31, 40, 0, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
+defm SUBF  : XOForm_1rx<31, 40, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
                         "subf", "$rT, $rA, $rB", IIC_IntGeneral,
                         [(set i32:$rT, (sub i32:$rB, i32:$rA))]>;
 defm SUBFC : XOForm_1rc<31, 8, 0, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),

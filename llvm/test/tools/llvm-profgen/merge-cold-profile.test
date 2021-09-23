@@ -1,17 +1,17 @@
 ; Used the data from recursion-compression.test, refer it for the unmerged output
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t1 --compress-recursion=-1 --profile-summary-cold-count=8
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t1 --compress-recursion=-1 --profile-summary-hot-count=8
 ; RUN: FileCheck %s --input-file %t1
 
 ; Test --csprof-trim-cold-context=0
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t2 --compress-recursion=-1 --profile-summary-cold-count=100 --csprof-trim-cold-context=0
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t2 --compress-recursion=-1 --profile-summary-hot-count=100 --csprof-trim-cold-context=0
 ; RUN: FileCheck %s --input-file %t2 --check-prefix=CHECK-KEEP-COLD
 
 ; Test --csprof-merge-cold-context=0
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t3 --compress-recursion=-1 --profile-summary-cold-count=10 --csprof-merge-cold-context=0
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t3 --compress-recursion=-1 --profile-summary-hot-count=10 --csprof-merge-cold-context=0
 ; RUN: FileCheck %s --input-file %t3 --check-prefix=CHECK-UNMERGED
 
 ; Test --csprof-frame-depth-for-cold-context
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t2 --compress-recursion=-1 --profile-summary-cold-count=100 --csprof-trim-cold-context=0 --csprof-max-cold-context-depth=2
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t2 --compress-recursion=-1 --profile-summary-hot-count=100 --csprof-trim-cold-context=0 --csprof-max-cold-context-depth=2
 ; RUN: FileCheck %s --input-file %t2 --check-prefix=CHECK-COLD-CONTEXT-LENGTH
 
 ; CHECK:     [fa]:14:4

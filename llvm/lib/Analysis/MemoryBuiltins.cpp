@@ -135,9 +135,8 @@ static const Function *getCalledFunction(const Value *V, bool LookThroughBitCast
   return nullptr;
 }
 
-/// Returns the allocation data for the given value if it's either a call to a
-/// known allocation function, or a call to a function with the allocsize
-/// attribute.
+/// Returns the allocation data for the given value if it's a call to a known
+/// allocation function.
 static Optional<AllocFnsTy>
 getAllocationDataForFunction(const Function *Callee, AllocType AllocTy,
                              const TargetLibraryInfo *TLI) {

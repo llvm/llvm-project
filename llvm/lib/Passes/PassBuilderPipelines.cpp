@@ -500,6 +500,11 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   // Delete small array after loop unroll.
   FPM.addPass(SROA());
 
+  // The matrix extension can introduce large vector operations early, which can
+  // benefit from running vector-combine early on.
+  if (EnableMatrix)
+    FPM.addPass(VectorCombinePass());
+
   // Eliminate redundancies.
   FPM.addPass(MergedLoadStoreMotionPass());
   if (RunNewGVN)

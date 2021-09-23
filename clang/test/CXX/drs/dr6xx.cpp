@@ -590,7 +590,7 @@ namespace dr652 { // dr652: yes
 namespace dr654 { // dr654: sup 1423
   void f() {
     if (nullptr) {} // expected-warning {{implicit conversion of nullptr constant to 'bool'}}
-    bool b = nullptr; // expected-error {{cannot initialize a variable of type 'bool' with an rvalue of type 'nullptr_t'}}
+    bool b = nullptr; // expected-error {{cannot initialize a variable of type 'bool' with an rvalue of type 'std::nullptr_t'}}
     if (nullptr == 0) {}
     if (nullptr != 0) {}
     if (nullptr <= 0) {} // expected-error {{invalid operands}}

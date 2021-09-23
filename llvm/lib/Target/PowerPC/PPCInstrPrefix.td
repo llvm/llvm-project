@@ -621,7 +621,7 @@ class 8LS_DForm_R_XTp5_SI34_MEM<bits<6> opcode, dag OOL, dag IOL, string asmstr,
   let Inst{48-63} = D_RA{15-0};    // D
 }
 
-multiclass 8LS_DForm_R_XTp5_SI34_MEM_p<bits<6> pref, bits<6> opcode, dag OOL,
+multiclass 8LS_DForm_R_XTp5_SI34_MEM_p<bits<6> opcode, dag OOL,
                                        dag IOL, dag PCRel_IOL,
                                        string asmstr, InstrItinClass itin> {
   def NAME : 8LS_DForm_R_XTp5_SI34_MEM<opcode, OOL, IOL,
@@ -1652,14 +1652,14 @@ let mayLoad = 0, mayStore = 1, Predicates = [PairedVectorMemops] in {
 
 let mayLoad = 1, mayStore = 0, Predicates = [PairedVectorMemops, PrefixInstrs] in {
   defm PLXVP :
-    8LS_DForm_R_XTp5_SI34_MEM_p<1, 58, (outs vsrprc:$XTp), (ins memri34:$D_RA),
+    8LS_DForm_R_XTp5_SI34_MEM_p<58, (outs vsrprc:$XTp), (ins memri34:$D_RA),
                                 (ins memri34_pcrel:$D_RA), "plxvp $XTp, $D_RA",
                                 IIC_LdStLFD>;
 }
 
 let mayLoad = 0, mayStore = 1, Predicates = [PairedVectorMemops, PrefixInstrs] in {
   defm PSTXVP :
-    8LS_DForm_R_XTp5_SI34_MEM_p<1, 62, (outs), (ins vsrprc:$XTp, memri34:$D_RA),
+    8LS_DForm_R_XTp5_SI34_MEM_p<62, (outs), (ins vsrprc:$XTp, memri34:$D_RA),
                                 (ins vsrprc:$XTp, memri34_pcrel:$D_RA),
                                 "pstxvp $XTp, $D_RA", IIC_LdStLFD>;
 }
@@ -2790,6 +2790,10 @@ let Predicates = [PrefixInstrs] in {
   def : Pat<(atomic_store_16 PDForm:$dst, i32:$RS), (PSTH $RS, memri34:$dst)>;
   def : Pat<(atomic_store_32 PDForm:$dst, i32:$RS), (PSTW $RS, memri34:$dst)>;
   def : Pat<(atomic_store_64 PDForm:$dst, i64:$RS), (PSTD $RS, memri34:$dst)>;
+
+  // Prefixed fpext to v2f64
+  def : Pat<(v4f32 (PPCldvsxlh PDForm:$src)),
+            (SUBREG_TO_REG (i64 1), (PLFD PDForm:$src), sub_64)>;
 }
 
 def InsertEltShift {

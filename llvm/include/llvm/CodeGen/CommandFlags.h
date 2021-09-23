@@ -48,7 +48,6 @@ Optional<CodeModel::Model> getExplicitCodeModel();
 
 llvm::ExceptionHandling getExceptionModel();
 
-CodeGenFileType getFileType();
 Optional<CodeGenFileType> getExplicitFileType();
 
 CodeGenFileType getFileType();
@@ -129,8 +128,6 @@ bool getEmitCallSiteInfo();
 bool getEnableMachineFunctionSplitter();
 
 bool getEnableDebugEntryValues();
-
-bool getPseudoProbeForProfiling();
 
 bool getValueTrackingVariableLocations();
 

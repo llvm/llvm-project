@@ -1572,6 +1572,12 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits) const {
     case RISCV::CTZW:
     case RISCV::CPOPW:
     case RISCV::SLLIUW:
+    case RISCV::FCVT_H_W:
+    case RISCV::FCVT_H_WU:
+    case RISCV::FCVT_S_W:
+    case RISCV::FCVT_S_WU:
+    case RISCV::FCVT_D_W:
+    case RISCV::FCVT_D_WU:
       if (Bits < 32)
         return false;
       break;

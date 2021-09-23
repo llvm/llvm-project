@@ -530,12 +530,11 @@ AAMDNodes AAMDNodes::merge(const AAMDNodes &Other) const {
   return Result;
 }
 
-AAMDNodes Instruction::getAAMetadata() const {
+AAMDNodes AAMDNodes::concat(const AAMDNodes &Other) const {
   AAMDNodes Result;
-  Result.TBAA = getMetadata(LLVMContext::MD_tbaa);
-  Result.TBAAStruct = getMetadata(LLVMContext::MD_tbaa_struct);
-  Result.Scope = getMetadata(LLVMContext::MD_alias_scope);
-  Result.NoAlias = getMetadata(LLVMContext::MD_noalias);
+  Result.TBAA = Result.TBAAStruct = nullptr;
+  Result.Scope = MDNode::getMostGenericAliasScope(Scope, Other.Scope);
+  Result.NoAlias = MDNode::intersect(NoAlias, Other.NoAlias);
   return Result;
 }
 

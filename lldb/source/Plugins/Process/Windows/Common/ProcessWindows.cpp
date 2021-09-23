@@ -436,8 +436,29 @@ void ProcessWindows::RefreshStateAfterStop() {
   case EXCEPTION_BREAKPOINT: {
     RegisterContextSP register_context = stop_thread->GetRegisterContext();
 
-    // The current EIP is AFTER the BP opcode, which is one byte.
-    uint64_t pc = register_context->GetPC() - 1;
+    int breakpoint_size = 1;
+    switch (GetTarget().GetArchitecture().GetMachine()) {
+    case llvm::Triple::aarch64:
+      breakpoint_size = 4;
+      break;
+
+    case llvm::Triple::arm:
+    case llvm::Triple::thumb:
+      breakpoint_size = 2;
+      break;
+
+    case llvm::Triple::x86:
+    case llvm::Triple::x86_64:
+      breakpoint_size = 1;
+      break;
+
+    default:
+      LLDB_LOG(log, "Unknown breakpoint size for architecture");
+      break;
+    }
+
+    // The current PC is AFTER the BP opcode, on all architectures.
+    uint64_t pc = register_context->GetPC() - breakpoint_size;
 
     BreakpointSiteSP site(GetBreakpointSiteList().FindByAddress(pc));
     if (site) {

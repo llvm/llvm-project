@@ -31,10 +31,12 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Vectorize.h"
 
+#define DEBUG_TYPE "vector-combine"
+#include "llvm/Transforms/Utils/InstructionWorklist.h"
+
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
-#define DEBUG_TYPE "vector-combine"
 STATISTIC(NumVecLoad, "Number of vector loads formed");
 STATISTIC(NumVecCmp, "Number of vector compares formed");
 STATISTIC(NumVecBO, "Number of vector binops formed");
@@ -73,6 +75,7 @@ private:
   const DominatorTree &DT;
   AAResults &AA;
   AssumptionCache &AC;
+  InstructionWorklist Worklist;
 
   bool vectorizeLoadInsert(Instruction &I);
   ExtractElementInst *getShuffleExtract(ExtractElementInst *Ext0,
@@ -92,13 +95,25 @@ private:
   bool foldExtractedCmps(Instruction &I);
   bool foldSingleElementStore(Instruction &I);
   bool scalarizeLoadExtract(Instruction &I);
+
+  void replaceValue(Value &Old, Value &New) {
+    Old.replaceAllUsesWith(&New);
+    New.takeName(&Old);
+    if (auto *NewI = dyn_cast<Instruction>(&New)) {
+      Worklist.pushUsersToWorkList(*NewI);
+      Worklist.pushValue(NewI);
+    }
+    Worklist.pushValue(&Old);
+  }
+
+  void eraseInstruction(Instruction &I) {
+    for (Value *Op : I.operands())
+      Worklist.pushValue(Op);
+    Worklist.remove(&I);
+    I.eraseFromParent();
+  }
 };
 } // namespace
-
-static void replaceValue(Value &Old, Value &New) {
-  Old.replaceAllUsesWith(&New);
-  New.takeName(&Old);
-}
 
 bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // Match insert into fixed vector of scalar value.
@@ -501,6 +516,8 @@ bool VectorCombine::foldExtractExtract(Instruction &I) {
   else
     foldExtExtBinop(Ext0, Ext1, I);
 
+  Worklist.push(Ext0);
+  Worklist.push(Ext1);
   return true;
 }
 
@@ -827,7 +844,8 @@ public:
 /// Idx. \p Idx must access a valid vector element.
 static ScalarizationResult canScalarizeAccess(FixedVectorType *VecTy,
                                               Value *Idx, Instruction *CtxI,
-                                              AssumptionCache &AC) {
+                                              AssumptionCache &AC,
+                                              const DominatorTree &DT) {
   if (auto *C = dyn_cast<ConstantInt>(Idx)) {
     if (C->getValue().ult(VecTy->getNumElements()))
       return ScalarizationResult::safe();
@@ -841,7 +859,7 @@ static ScalarizationResult canScalarizeAccess(FixedVectorType *VecTy,
   ConstantRange IdxRange(IntWidth, true);
 
   if (isGuaranteedNotToBePoison(Idx, &AC)) {
-    if (ValidIndices.contains(computeConstantRange(Idx, true, &AC, CtxI, 0)))
+    if (ValidIndices.contains(computeConstantRange(Idx, true, &AC, CtxI, &DT)))
       return ScalarizationResult::safe();
     return ScalarizationResult::unsafe();
   }
@@ -909,7 +927,7 @@ bool VectorCombine::foldSingleElementStore(Instruction &I) {
         SrcAddr != SI->getPointerOperand()->stripPointerCasts())
       return false;
 
-    auto ScalarizableIdx = canScalarizeAccess(VecTy, Idx, Load, AC);
+    auto ScalarizableIdx = canScalarizeAccess(VecTy, Idx, Load, AC, DT);
     if (ScalarizableIdx.isUnsafe() ||
         isMemModifiedBetween(Load->getIterator(), SI->getIterator(),
                              MemoryLocation::get(SI), AA))
@@ -927,8 +945,7 @@ bool VectorCombine::foldSingleElementStore(Instruction &I) {
         DL);
     NSI->setAlignment(ScalarOpAlignment);
     replaceValue(I, *NSI);
-    // Need erasing the store manually.
-    I.eraseFromParent();
+    eraseInstruction(I);
     return true;
   }
 
@@ -938,11 +955,10 @@ bool VectorCombine::foldSingleElementStore(Instruction &I) {
 /// Try to scalarize vector loads feeding extractelement instructions.
 bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
   Value *Ptr;
-  Value *Idx;
-  if (!match(&I, m_ExtractElt(m_Load(m_Value(Ptr)), m_Value(Idx))))
+  if (!match(&I, m_Load(m_Value(Ptr))))
     return false;
 
-  auto *LI = cast<LoadInst>(I.getOperand(0));
+  auto *LI = cast<LoadInst>(&I);
   const DataLayout &DL = I.getModule()->getDataLayout();
   if (LI->isVolatile() || !DL.typeSizeEqualsStoreSize(LI->getType()))
     return false;
@@ -987,7 +1003,7 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
     else if (LastCheckedInst->comesBefore(UI))
       LastCheckedInst = UI;
 
-    auto ScalarIdx = canScalarizeAccess(FixedVT, UI->getOperand(1), &I, AC);
+    auto ScalarIdx = canScalarizeAccess(FixedVT, UI->getOperand(1), &I, AC, DT);
     if (!ScalarIdx.isSafe()) {
       // TODO: Freeze index if it is safe to do so.
       return false;
@@ -1038,6 +1054,16 @@ bool VectorCombine::run() {
     return false;
 
   bool MadeChange = false;
+  auto FoldInst = [this, &MadeChange](Instruction &I) {
+    Builder.SetInsertPoint(&I);
+    MadeChange |= vectorizeLoadInsert(I);
+    MadeChange |= foldExtractExtract(I);
+    MadeChange |= foldBitcastShuf(I);
+    MadeChange |= scalarizeBinopOrCmp(I);
+    MadeChange |= foldExtractedCmps(I);
+    MadeChange |= scalarizeLoadExtract(I);
+    MadeChange |= foldSingleElementStore(I);
+  };
   for (BasicBlock &BB : F) {
     // Ignore unreachable basic blocks.
     if (!DT.isReachableFromEntry(&BB))
@@ -1046,21 +1072,22 @@ bool VectorCombine::run() {
     for (Instruction &I : make_early_inc_range(BB)) {
       if (isa<DbgInfoIntrinsic>(I))
         continue;
-      Builder.SetInsertPoint(&I);
-      MadeChange |= vectorizeLoadInsert(I);
-      MadeChange |= foldExtractExtract(I);
-      MadeChange |= foldBitcastShuf(I);
-      MadeChange |= scalarizeBinopOrCmp(I);
-      MadeChange |= foldExtractedCmps(I);
-      MadeChange |= scalarizeLoadExtract(I);
-      MadeChange |= foldSingleElementStore(I);
+      FoldInst(I);
     }
   }
 
-  // We're done with transforms, so remove dead instructions.
-  if (MadeChange)
-    for (BasicBlock &BB : F)
-      SimplifyInstructionsInBlock(&BB);
+  while (!Worklist.isEmpty()) {
+    Instruction *I = Worklist.removeOne();
+    if (!I)
+      continue;
+
+    if (isInstructionTriviallyDead(I)) {
+      eraseInstruction(*I);
+      continue;
+    }
+
+    FoldInst(*I);
+  }
 
   return MadeChange;
 }

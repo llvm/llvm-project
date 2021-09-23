@@ -152,7 +152,7 @@ void foo() {
 } // namespace test5
 #endif
 
-#if __cplusplus >= 201703L // C++11 or later
+#if __cplusplus >= 201703L // C++17 or later
 namespace test6 {
 auto b() {
   if constexpr (false)

@@ -4128,6 +4128,29 @@ static void renderDebugOptions(const ToolChain &TC, const Driver &D,
                                            options::OPT_gpubnames)
                             ? "-gpubnames"
                             : "-ggnu-pubnames");
+  const auto *SimpleTemplateNamesArg =
+      Args.getLastArg(options::OPT_gsimple_template_names, options::OPT_gno_simple_template_names,
+                      options::OPT_gsimple_template_names_EQ);
+  bool ForwardTemplateParams = DebuggerTuning == llvm::DebuggerKind::SCE;
+  if (SimpleTemplateNamesArg &&
+      checkDebugInfoOption(SimpleTemplateNamesArg, Args, D, TC)) {
+    const auto &Opt = SimpleTemplateNamesArg->getOption();
+    if (Opt.matches(options::OPT_gsimple_template_names)) {
+      ForwardTemplateParams = true;
+      CmdArgs.push_back("-gsimple-template-names=simple");
+    } else if (Opt.matches(options::OPT_gsimple_template_names_EQ)) {
+      ForwardTemplateParams = true;
+      StringRef Value = SimpleTemplateNamesArg->getValue();
+      if (Value == "simple") {
+        CmdArgs.push_back("-gsimple-template-names=simple");
+      } else if (Value == "mangled") {
+        CmdArgs.push_back("-gsimple-template-names=mangled");
+      } else {
+        D.Diag(diag::err_drv_unsupported_option_argument)
+            << Opt.getName() << SimpleTemplateNamesArg->getValue();
+      }
+    }
+  }
 
   if (Args.hasFlag(options::OPT_fdebug_ranges_base_address,
                    options::OPT_fno_debug_ranges_base_address, false)) {
@@ -4174,7 +4197,7 @@ static void renderDebugOptions(const ToolChain &TC, const Driver &D,
 
   // Decide how to render forward declarations of template instantiations.
   // SCE wants full descriptions, others just get them in the name.
-  if (DebuggerTuning == llvm::DebuggerKind::SCE)
+  if (ForwardTemplateParams)
     CmdArgs.push_back("-debug-forward-template-params");
 
   // Do we need to explicitly import anonymous namespaces into the parent

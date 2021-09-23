@@ -31,7 +31,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
-#include "llvm/Transforms/InstCombine/InstCombineWorklist.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include <cassert>
@@ -39,10 +38,11 @@
 #include <cstdint>
 #include <utility>
 
+#define DEBUG_TYPE "instcombine"
+#include "llvm/Transforms/Utils/InstructionWorklist.h"
+
 using namespace llvm;
 using namespace PatternMatch;
-
-#define DEBUG_TYPE "instcombine"
 
 /// The specific integer value is used in a context where it is known to be
 /// non-zero.  If this allows us to simplify the computation, do so and return
@@ -561,6 +561,16 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
           match(Op1, m_Intrinsic<Intrinsic::pow>(m_Specific(X), m_Value(Z)))) {
         auto *YZ = Builder.CreateFAddFMF(Y, Z, &I);
         auto *NewPow = Builder.CreateBinaryIntrinsic(Intrinsic::pow, X, YZ, &I);
+        return replaceInstUsesWith(I, NewPow);
+      }
+
+      // powi(x, y) * powi(x, z) -> powi(x, y + z)
+      if (match(Op0, m_Intrinsic<Intrinsic::powi>(m_Value(X), m_Value(Y))) &&
+          match(Op1, m_Intrinsic<Intrinsic::powi>(m_Specific(X), m_Value(Z))) &&
+          Y->getType() == Z->getType()) {
+        auto *YZ = Builder.CreateAdd(Y, Z);
+        auto *NewPow = Builder.CreateIntrinsic(
+            Intrinsic::powi, {X->getType(), YZ->getType()}, {X, YZ}, &I);
         return replaceInstUsesWith(I, NewPow);
       }
 

@@ -84,7 +84,13 @@ conformance.</p>
 <h2 id="c99">C99 implementation status</h2>
 
 <p>Clang implements a significant portion of the ISO 9899:1999 (C99) standard, but the status of individual proposals is still under investigation.</p>
-<p>Note, the list of C99 features comes from the C99 committee draft. A list of N-numbered documents for these features does not appear in either the standard or in any available editor's report, so this section does not track document numbers currently.</p>
+<p>Note, the list of C99 features comes from the C99 committee draft. Not all C99 documents are publicly available, so the documents referenced in this section may be inaccurate, unknown, or not linked.</p>
+<!-- http://www.open-std.org/jtc1/sc22/wg14/www/docs/n874.htm contains the
+     final editor's report of what's been added to C99, but it includes more
+     papers than are worth listing because it includes editorial and cleanup
+     proposals in addition to feature proposals. When a paper is not available,
+     I list the paper number from the editor's report, but do not hyperlink it.
+     When I can't map the feature back to a paper, I mark it as unknown. -->
 <p>You can use Clang in C99 mode with the <code>-std=c99</code> option.</p>
 
 <details>
@@ -93,237 +99,281 @@ conformance.</p>
 <table width="689" border="1" cellspacing="0">
  <tr>
     <th>Language Feature</th>
-<!--    <th>C99 Proposal</th> -->
+    <th>C99 Proposal</th>
     <th>Available in Clang?</th>
  </tr>
     <tr>
       <td>restricted character set support via digraphs and &lt;iso646.h&gt;</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td>Unknown</td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
       <td>more precise aliasing rules via effective type</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td>Unknown</td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
       <td>restricted pointers</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td>N448</td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
       <td>variable length arrays</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n683.htm">N683</a></td>
       <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>flexible array members</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td>Unknown</td>
       <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>static and type qualifiers in parameter array declarators</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td>Unknown</td>
       <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>more precise aliasing rules via effective type</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td>Unknown</td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
-    <tr>
-      <td>complex and imaginary support in &lt;complex.h&gt;</td>
-<!--      <td><a href="">NXXXX</a></td> -->
-      <td class="unknown" align="center">Unknown</td>
+    <tr id="complex">
+      <td rowspan="6">complex and imaginary support in &lt;complex.h&gt;</td>
     </tr>
+      <tr>
+        <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n620.ps">N620</a></td>
+        <td class="unknown" align="center">Unknown</td>
+      </tr>
+      <tr>
+        <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n638.ps">N638</a></td>
+        <td class="unknown" align="center">Unknown</td>
+      </tr>
+      <tr>
+        <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n657.ps">N657</a></td>
+        <td class="unknown" align="center">Unknown</td>
+      </tr>
+      <tr>
+        <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n694.ps">N694</a></td>
+        <td class="unknown" align="center">Unknown</td>
+      </tr>
+      <tr>
+        <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n809.ps">N809</a></td>
+        <td class="unknown" align="center">Unknown</td>
+      </tr>
     <tr>
       <td>type-generic math macros in &lt;tgmath.h&gt;</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n693.ps">N693</a></td>
       <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>the long long int type</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n601.ps">N601</a></td>
       <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>increase minimum translation limits</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td>N590</td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
       <td>additional floating-point characteristics in &lt;float.h&gt;</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td>Unknown</td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
-    <tr>
-      <td>remove implicit int</td>
-<!--      <td><a href="">NXXXX</a></td> -->
-      <td class="unknown" align="center">Unknown</td>
+    <tr id="implicit int">
+      <td rowspan="4">remove implicit int</td>
     </tr>
+      <tr>
+        <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n635.htm">N635</a></td>
+        <td class="full" align="center">Yes</td>
+      </tr>
+      <tr>
+        <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n692.htm">N692</a></td>
+        <td class="full" align="center">Yes</td>
+      </tr>
+      <tr>
+        <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n722.htm">N722</a></td>
+        <td class="full" align="center">Yes</td>
+      </tr>
     <tr>
       <td>reliable integer division</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n617.htm">N617</a></td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
       <td>universal character names (\u and \U)</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td>Unknown</td>
       <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>extended identifiers</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n717.htm">N717</a></td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
       <td>hexadecimal floating-point constants</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td>N308</td>
+      <!-- This is a total guess. N874 makes no mention of N308 being accepted,
+           but it does mention *use* of hexadecimal floating-point constants in
+           the Menlo Park minutes associated with N787. -->
       <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>compound literals</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n716.htm">N716</a></td>
       <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>designated initializers</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n494.pdf">N494</a></td>
       <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>// comments</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n644.htm">N644</a></td>
       <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>extended integer types and library functions in &lt;inttypes.h&gt; and &lt;stdint.h&gt;</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td>Unknown</td>
+      <!-- Seems to be related to http://www.open-std.org/jtc1/sc22/wg14/www/docs/n788.htm
+           but that does not have any content for stdint.h. The next paper I could find on
+           the topic was http://www.open-std.org/jtc1/sc22/wg14/www/docs/n851.htm but that
+           implies stdint.h was already added. -->
       <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>remove implicit function declaration</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n636.htm">N636</a></td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
       <td>preprocessor arithmetic done in intmax_t/uintmax_t</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n736.htm">N736</a></td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
       <td>mixed declarations and code</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n740.htm">N740</a></td>
       <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>new block scopes for selection and iteration statements</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td>Unknown</td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
       <td>integer constant type rules</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n629.htm">N629</a></td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
       <td>integer promotion rules</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n725.htm">N725</a></td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
       <td>macros with a variable number of arguments</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n707.htm">N707</a></td>
       <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>IEC 60559 support</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td>Unknown</td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
       <td>trailing comma allowed in enum declaration</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td>Unknown</td>
       <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>inline functions</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n741.htm">N741</a></td>
       <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>boolean type in &lt;stdbool.h&gt;</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n815.htm">N815</a></td>
       <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>idempotent type qualifiers</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td>N505</td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
       <td>empty macro arguments</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td>N570</td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
       <td>new structure type compatibility (tag compatibility)</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td>N522</td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
       <td>additional predefined macro names</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td>Unknown</td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
       <td>_Pragma preprocessing operator</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n634.ps">N634</a></td>
+      <!-- This may not be quite right as it proposes a `pragma` operator and
+           not a _Pragma operator. However, I didn't see further papers on the
+           renamed form, so I assume this was accepted with modification. -->
       <td class="full" align="center">Yes</td>
     </tr>
-    <tr>
-      <td>standard pragmas</td>
-<!--      <td><a href="">NXXXX</a></td> -->
-      <td class="unknown" align="center">Unknown</td>
+    <tr id="standard pragmas">
+      <td rowspan="3">standard pragmas</td>
     </tr>
+      <tr>
+        <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n631.htm">N631</a></td>
+        <td class="unknown" align="center">Unknown</td>
+      </tr>
+      <tr>
+        <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n696.ps">N696</a></td>
+        <td class="unknown" align="center">Unknown</td>
+      </tr>
     <tr>
       <td>__func__ predefined identifier</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n611.ps">N611</a></td>
       <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>va_copy macro</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n671.htm">N671</a></td>
       <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>LIA compatibility annex</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n792.htm">N792</a></td>
       <td class="none" align="center">No</td>
     </tr>
     <tr>
       <td>remove deprecation of aliased array parameters</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td>Unknown</td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
       <td>conversion of array to pointer not limited to lvalues</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td>Unknown</td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
       <td>relaxed constraints on aggregate and union initialization</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td>Unknown</td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
       <td>relaxed restrictions on portable header names</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n772.htm">N772</a></td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
       <td>return without an expression not permitted in function that returns a value</td>
-<!--      <td><a href="">NXXXX</a></td> -->
+      <td>Unknown</td>
       <td class="full" align="center">Yes</td>
     </tr>
 </table>
