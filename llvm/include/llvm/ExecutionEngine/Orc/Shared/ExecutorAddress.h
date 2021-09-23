@@ -47,7 +47,7 @@ public:
   }
 
   /// Cast this ExecutorAddress to a pointer of the given type.
-  /// Warning: This should only be esude when JITing in-process.
+  /// Warning: This should only be used when JITing in-process.
   template <typename T> T toPtr() const {
     static_assert(std::is_pointer<T>::value, "T must be a pointer type");
     uintptr_t IntPtr = static_cast<uintptr_t>(Addr);
