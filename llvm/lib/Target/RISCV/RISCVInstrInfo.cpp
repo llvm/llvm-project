@@ -1472,8 +1472,8 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   CASE_WIDEOP_CHANGE_OPCODE_COMMON(OP, M2)                                     \
   CASE_WIDEOP_CHANGE_OPCODE_COMMON(OP, M4)
 
-MachineInstr *RISCVInstrInfo::convertToThreeAddress(
-    MachineFunction::iterator &MBB, MachineInstr &MI, LiveVariables *LV) const {
+MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
+                                                    LiveVariables *LV) const {
   switch (MI.getOpcode()) {
   default:
     break;
@@ -1497,7 +1497,8 @@ MachineInstr *RISCVInstrInfo::convertToThreeAddress(
     }
     //clang-format on
 
-    MachineInstrBuilder MIB = BuildMI(*MBB, MI, MI.getDebugLoc(), get(NewOpc))
+    MachineBasicBlock &MBB = *MI.getParent();
+    MachineInstrBuilder MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
                                   .add(MI.getOperand(0))
                                   .add(MI.getOperand(1))
                                   .add(MI.getOperand(2))
