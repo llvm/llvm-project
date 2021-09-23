@@ -27,7 +27,9 @@
 
 #ifdef LLVM_HAVE_LIBXAR
 #include <fcntl.h>
+extern "C" {
 #include <xar/xar.h>
+}
 #endif
 
 using namespace llvm;
