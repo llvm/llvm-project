@@ -143,6 +143,7 @@ if(Python3_RPATH)
       "@loader_path/../../../../Developer/Library/Frameworks/"
       "@loader_path/../../../../Frameworks"
       "@loader_path/../../../"
+      "/Library/Developer/CommandLineTools/Library/Frameworks"
       "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/"
     )
 endif()
