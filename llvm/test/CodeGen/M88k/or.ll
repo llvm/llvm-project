@@ -32,7 +32,7 @@ define i32 @f3(i32 %a) {
 }
 
 ; Check immediate in high 16 bits, low 16 bits set.
-define i32 @func_f4(i32 %a) {
+define i32 @f4(i32 %a) {
 ; CHECK-LABEL: f4:
 ; CHECK: or.u %r2, %r2, 47806
 ; CHECK: jmp %r1
@@ -41,10 +41,10 @@ define i32 @func_f4(i32 %a) {
 }
 
 ; Check 32-bit immediate.
-define i32 @func_f5(i32 %a) {
+define i32 @f5(i32 %a) {
 ; CHECK-LABEL: f5:
-; CHECK: or.u %r0, %r2, 61680
-; CHECK: or %r2, %r0, 61680
+; CHECK: or.u %r2, %r2, 61680
+; CHECK: or %r2, %r2, 61680
 ; CHECK: jmp %r1
   %res = or i32 %a, 4042322160 ; = 0xF0F0F0F0
   ret i32 %res
