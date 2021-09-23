@@ -187,7 +187,7 @@ multiclass LogicImm<bits<2> FuncI, string OpcStr, SDNode OpNode,
                    (ins GPROpnd:$rs1, imm32lo16c:$imm16),
                    (ins GPROpnd:$rs1, imm32lo16:$imm16)
                  ),
-                 !strconcat(OpcStr, " $rd, $rs1, $imm16"),
+                 OpcStr,
                  !if(!eq(OpcStr, "and"),
                    [(set i32:$rd, (OpNode GPROpnd:$rs1, imm32lo16c:$imm16))],
                    [(set i32:$rd, (OpNode GPROpnd:$rs1, imm32lo16:$imm16))]
@@ -199,7 +199,7 @@ multiclass LogicImm<bits<2> FuncI, string OpcStr, SDNode OpNode,
                    (ins GPROpnd:$rs1, imm32hi16c:$imm16),
                    (ins GPROpnd:$rs1, imm32hi16:$imm16)
                  ),
-                 !strconcat(OpcStr, ".u $rd, $rs1, $imm16"),
+                 !strconcat(OpcStr, ".u"),
                  !if(!eq(OpcStr, "and"),
                    [(set i32:$rd, (OpNode GPROpnd:$rs1, imm32hi16c:$imm16))],
                    [(set i32:$rd, (OpNode GPROpnd:$rs1, imm32hi16:$imm16))]
@@ -214,12 +214,12 @@ multiclass Logic<bits<5> FuncR, bits<2> FuncI, string OpcStr, SDNode OpNode,
   let isCommutable = 1 in
     def rr  : F_LR<FuncR, 0b0,
                    (outs GPROpnd:$rd), (ins GPROpnd:$rs1, GPROpnd:$rs2),
-                   !strconcat(OpcStr, " $rd, $rs1, $rs2"),
+                   OpcStr,
                    [(set i32:$rd, (OpNode GPROpnd:$rs1, GPROpnd:$rs2))],
                    itin>;
   def rrc : F_LR<FuncR, 0b1,
                  (outs GPROpnd:$rd), (ins GPROpnd:$rs1, GPROpnd:$rs2),
-                 !strconcat(OpcStr, ".c $rd, $rs1, $rs2"),
+                 !strconcat(OpcStr, ".c"),
                  [(set i32:$rd, (OpNode GPROpnd:$rs1, (not GPROpnd:$rs2)))],
                  itin>;
 }
@@ -248,7 +248,7 @@ multiclass Bitfield<bits<6> Func, string OpcStr, SDNode OpNode, PatLeaf ImmOp,
                  itin>;
   def rwo : F_BI<Func,
                  (outs GPROpnd:$rd), (ins GPROpnd:$rs1, ImmOp:$w5o5),
-                 !strconcat(OpcStr, " $rd, $rs1, $w5o5"),
+                 OpcStr,
                  [(set GPROpnd:$rd, (OpNode GPROpnd:$rs1, ImmOp:$w5o5))],
                  itin>;
 }
@@ -289,27 +289,27 @@ multiclass Arith<bits<6> Func, string OpcStr, SDNode OpNode,
                  InstrItinClass itin = NoItinerary> {
   def rr  : F_IRC<Func, 0b0, 0b0,
                  (outs GPROpnd:$rd), (ins GPROpnd:$rs1, GPROpnd:$rs2),
-                 !strconcat(OpcStr, " $rd, $rs1, $rs2"),
+                 OpcStr,
                  [(set GPROpnd:$rd, (OpNode GPROpnd:$rs1, GPROpnd:$rs2))],
                  itin>;
   def rrci  : F_IRC<Func, 0b1, 0b0,
                  (outs GPROpnd:$rd), (ins GPROpnd:$rs1, GPROpnd:$rs2),
-                 !strconcat(OpcStr, ".ci $rd, $rs1, $rs2"),
+                 !strconcat(OpcStr, ".ci"),
                  [(set GPROpnd:$rd, (OpNode GPROpnd:$rs1, GPROpnd:$rs2))],
                  itin>;
   def rrco  : F_IRC<Func, 0b0, 0b1,
                  (outs GPROpnd:$rd), (ins GPROpnd:$rs1, GPROpnd:$rs2),
-                 !strconcat(OpcStr, ".co $rd, $rs1, $rs2"),
+                 !strconcat(OpcStr, ".co"),
                  [(set GPROpnd:$rd, (OpNode GPROpnd:$rs1, GPROpnd:$rs2))],
                  itin>;
   def rrcio : F_IRC<Func, 0b1, 0b1,
                  (outs GPROpnd:$rd), (ins GPROpnd:$rs1, GPROpnd:$rs2),
-                 !strconcat(OpcStr, ".cio $rd, $rs1, $rs2"),
+                 !strconcat(OpcStr, ".cio"),
                  [(set GPROpnd:$rd, (OpNode GPROpnd:$rs1, GPROpnd:$rs2))],
                  itin>;
   def ri  : F_II<Func,
                  (outs GPROpnd:$rd), (ins GPROpnd:$rs1, imm32zx16:$imm16),
-                 !strconcat(OpcStr, " $rd, $rs1, $imm16"),
+                 OpcStr,
                  [(set GPROpnd:$rd, (OpNode GPROpnd:$rs1, imm32zx16:$imm16))],
                  itin>;
 }
@@ -320,7 +320,7 @@ defm SUBU : Arith<0b011001, "subu", sub>;
 
 def CMPrr : F_IRC<0b011111, 0b0, 0b0,
                  (outs GPROpnd:$rd), (ins GPROpnd:$rs1, GPROpnd:$rs2),
-                 "cmp $rd, $rs1, $rs2",
+                 "cmp",
                  [], //[(set GPROpnd:$rd, (OpNode GPROpnd:$rs1, GPROpnd:$rs2))],
                  NoItinerary>;
 
@@ -343,22 +343,22 @@ multiclass LoadIndexImm<bits<4> Func, string OpcStr, SDPatternOperator OpNode,
                  InstrItinClass itin = NoItinerary> {
   def riw  : F_LS<Func, /*ty=*/ 0b01,
                   (outs GPROpnd:$rd), (ins GPROpnd:$rs1, imm32zx16:$si16),
-                  !strconcat(OpcStr, " $rd, $rs1, $si16"),
+                  OpcStr,
                   [(set (i32 GPROpnd:$rd), (load (ADDRri GPROpnd:$rs1, imm32zx16:$si16)))],
                   itin>;
   def rib  : F_LS<Func, /*ty=*/ 0b11,
                   (outs GPROpnd:$rd), (ins GPROpnd:$rs1, imm32zx16:$si16),
-                  !strconcat(OpcStr, ".b $rd, $rs1, $si16"),
+                  !strconcat(OpcStr, ".b"),
                   [(set (i32 GPROpnd:$rd), (sextloadi8 (ADDRri GPROpnd:$rs1, imm32zx16:$si16)))],
                   itin>;
   def rih  : F_LS<Func, /*ty=*/ 0b10,
                   (outs GPROpnd:$rd), (ins GPROpnd:$rs1, imm32zx16:$si16),
-                  !strconcat(OpcStr, ".h $rd, $rs1, $si16"),
+                  !strconcat(OpcStr, ".h"),
                   [(set (i32 GPROpnd:$rd), (sextloadi16 (ADDRri GPROpnd:$rs1, imm32zx16:$si16)))],
                   itin>;
   def rid  : F_LS<Func, /*ty=*/ 0b00,
                   (outs GPROpnd:$rd), (ins GPROpnd:$rs1, imm32zx16:$si16),
-                  !strconcat(OpcStr, ".d $rd, $rs1, $si16"),
+                  !strconcat(OpcStr, ".d"),
                   [],
                   itin>;
 }
@@ -367,22 +367,22 @@ multiclass StoreIndexImm<bits<4> Func, string OpcStr, SDPatternOperator OpNode,
                  InstrItinClass itin = NoItinerary> {
   def riw  : F_LS<Func, /*ty=*/ 0b01,
                   (outs), (ins GPROpnd:$rd, GPROpnd:$rs1, imm32zx16:$si16),
-                  !strconcat(OpcStr, " $rd, $rs1, $si16"),
+                  OpcStr,
                   [(store (i32 GPROpnd:$rd), (ADDRri GPROpnd:$rs1, imm32zx16:$si16))],
                   itin>;
   def rib  : F_LS<Func, /*ty=*/ 0b11,
                   (outs), (ins GPROpnd:$rd, GPROpnd:$rs1, imm32zx16:$si16),
-                  !strconcat(OpcStr, ".b $rd, $rs1, $si16"),
+                  !strconcat(OpcStr, ".b"),
                   [(truncstorei8 (i32 GPROpnd:$rd), (ADDRri GPROpnd:$rs1, imm32zx16:$si16))],
                   itin>;
   def rih  : F_LS<Func, /*ty=*/ 0b10,
                   (outs), (ins GPROpnd:$rd, GPROpnd:$rs1, imm32zx16:$si16),
-                  !strconcat(OpcStr, ".h $rd, $rs1, $si16"),
+                  !strconcat(OpcStr, ".h"),
                   [(truncstorei16 (i32 GPROpnd:$rd), (ADDRri GPROpnd:$rs1, imm32zx16:$si16))],
                   itin>;
   def rid  : F_LS<Func, /*ty=*/ 0b00,
                   (outs), (ins GPROpnd:$rd, GPROpnd:$rs1, imm32zx16:$si16),
-                  !strconcat(OpcStr, ".d $rd, $rs1, $si16"),
+                  !strconcat(OpcStr, ".d"),
                   [],
                   itin>;
 }
@@ -390,7 +390,7 @@ multiclass StoreIndexImm<bits<4> Func, string OpcStr, SDPatternOperator OpNode,
 class LoadUnsigned<bits<1> b, string OpcStr, PatFrag OpNode,
                  InstrItinClass itin = NoItinerary> :
   F_LU<b, (outs GPROpnd:$rd), (ins GPROpnd:$rs1, imm32zx16:$si16),
-       !strconcat(OpcStr, " $rd, $rs1, $si16"),
+       OpcStr,
        [(set (i32 GPROpnd:$rd), (OpNode (ADDRri GPROpnd:$rs1, imm32zx16:$si16)))],
        itin>;
 
@@ -430,18 +430,18 @@ def : Pat<(m88k_hi tglobaladdr:$dst), (ORriu R0, tglobaladdr:$dst)>;
 
 let isTerminator = 1, isBarrier = 1 in {
   def JMP : F_JMP<0b11000, 0, (outs), (ins GPROpnd:$rs2),
-                  "jmp $rs2", [(brind GPROpnd:$rs2)]>;
+                  "jmp", [(brind GPROpnd:$rs2)]>;
   let hasDelaySlot = 1 in
     def JMPn : F_JMP<0b11000, 1, (outs), (ins GPROpnd:$rs2),
-                     "jmp.n $rs2", [(brind GPROpnd:$rs2)]>;
+                     "jmp.n", [(brind GPROpnd:$rs2)]>;
 }
 
 let isCall = 1, isTerminator = 1, isBarrier = 1 in {
   def JSR : F_JMP<0b11001, 0, (outs), (ins GPROpnd:$rs2),
-                  "jsr $rs2", []>;
+                  "jsr", []>;
   let hasDelaySlot = 1 in
     def JSRn : F_JMP<0b11001, 1, (outs), (ins GPROpnd:$rs2),
-                     "jsr.n $rs2", []>;
+                     "jsr.n", []>;
 }
 
 let isReturn = 1, isTerminator = 1, isBarrier = 1, Uses = [R1] in {
@@ -449,11 +449,11 @@ let isReturn = 1, isTerminator = 1, isBarrier = 1, Uses = [R1] in {
 }
 
 let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
-  def BR : F_BRANCH<0b11000, 0, (outs), (ins brtarget26:$d26), "br $d26",
+  def BR : F_BRANCH<0b11000, 0, (outs), (ins brtarget26:$d26), "br",
                     [(br bb:$d26)]>;
 
   let hasDelaySlot = 1 in
-    def BRn : F_BRANCH<0b11000, 1, (outs), (ins brtarget26:$d26), "br.n $d26",
+    def BRn : F_BRANCH<0b11000, 1, (outs), (ins brtarget26:$d26), "br.n",
                        [(br bb:$d26)]>;
 }
 

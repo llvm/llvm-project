@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-class InstM88k<dag outs, dag ins, string asmstr, list<dag> pattern,
+class InstM88k<dag outs, dag ins, string asm, string operands, list<dag> pattern,
              InstrItinClass itin = NoItinerary>
    : Instruction {
   field bits<32> Inst;
@@ -18,7 +18,7 @@ class InstM88k<dag outs, dag ins, string asmstr, list<dag> pattern,
 
   dag OutOperandList = outs;
   dag InOperandList = ins;
-  let AsmString   = asmstr;
+  let AsmString   = !strconcat(asm, operands);
   let Pattern = pattern;
 
   let DecoderNamespace = "M88k";
@@ -27,7 +27,7 @@ class InstM88k<dag outs, dag ins, string asmstr, list<dag> pattern,
 }
 
 class Pseudo<dag outs, dag ins, list<dag> pattern>
-  : InstM88k<outs, ins, "", pattern> {
+  : InstM88k<outs, ins, "", "", pattern> {
   let isCodeGenOnly       = 1;
   let isPseudo            = 1;
   let hasNoSchedulingInfo = 1;
@@ -36,9 +36,9 @@ class Pseudo<dag outs, dag ins, list<dag> pattern>
 // The formats follow the categories specified in the User Manual.
 
 // Category: Logical.
-class F_L<dag outs, dag ins, string asmstr, list<dag> pattern,
+class F_L<dag outs, dag ins, string asm, string operands, list<dag> pattern,
           InstrItinClass itin = NoItinerary>
-   : InstM88k<outs, ins, asmstr, pattern, itin> {
+   : InstM88k<outs, ins, asm, operands, pattern, itin> {
   bits<5>  rd;
   bits<5>  rs1;
   let Inst{25-21} = rd;
@@ -46,9 +46,9 @@ class F_L<dag outs, dag ins, string asmstr, list<dag> pattern,
 }
 
 // Format: Logical with 16bit immediate.
-class F_LI<bits<2> func, bits<1> upper, dag outs, dag ins, string asmstr, list<dag> pattern,
+class F_LI<bits<2> func, bits<1> upper, dag outs, dag ins, string asm, list<dag> pattern,
          InstrItinClass itin = NoItinerary>
-   : F_L<outs, ins, asmstr, pattern, itin> {
+   : F_L<outs, ins, asm, " $rd, $rs1, $imm16", pattern, itin> {
   bits<16> imm16;
   let Inst{31-29} = 0b010;
   let Inst{28-27} = func;
@@ -57,9 +57,9 @@ class F_LI<bits<2> func, bits<1> upper, dag outs, dag ins, string asmstr, list<d
 }
 
 // Format: Logical with triadic register.
-class F_LR<bits<5> func, bits<1> comp, dag outs, dag ins, string asmstr, list<dag> pattern,
+class F_LR<bits<5> func, bits<1> comp, dag outs, dag ins, string asm, list<dag> pattern,
          InstrItinClass itin = NoItinerary>
-   : F_L<outs, ins, asmstr, pattern, itin> {
+   : F_L<outs, ins, asm, " $rd, $rs1, $rs2", pattern, itin> {
   bits<5>  rs2;
   let Inst{31-26} = 0b111101;
   let Inst{15-11} = func;
@@ -69,17 +69,17 @@ class F_LR<bits<5> func, bits<1> comp, dag outs, dag ins, string asmstr, list<da
 }
 
 // Category: Bit-fields.
-class F_B<bits<6> func, dag outs, dag ins, string asmstr, list<dag> pattern,
+class F_B<bits<6> func, dag outs, dag ins, string asm, string operands, list<dag> pattern,
          InstrItinClass itin = NoItinerary>
-   : F_L<outs, ins, asmstr, pattern, itin> {
+   : F_L<outs, ins, asm, operands, pattern, itin> {
   let Inst{31-27} = 0b11110;
   let Inst{15-10} = func;
 }
 
 // Format: Bit-field with triadic register.
-class F_BR<bits<6> func, dag outs, dag ins, string asmstr, list<dag> pattern,
+class F_BR<bits<6> func, dag outs, dag ins, string asm, list<dag> pattern,
          InstrItinClass itin = NoItinerary>
-   : F_B<func, outs, ins, asmstr, pattern, itin> {
+   : F_B<func, outs, ins, asm, "", pattern, itin> {
   bits<5> rs2;
   let Inst{26}  = 0b1;
   let Inst{9-5} = 0b00000;
@@ -87,18 +87,18 @@ class F_BR<bits<6> func, dag outs, dag ins, string asmstr, list<dag> pattern,
 }
 
 // Format: Bit-field with 10-bit immediate.
-class F_BI<bits<6> func, dag outs, dag ins, string asmstr, list<dag> pattern,
+class F_BI<bits<6> func, dag outs, dag ins, string asm, list<dag> pattern,
          InstrItinClass itin = NoItinerary>
-   : F_B<func, outs, ins, asmstr, pattern, itin> {
+   : F_B<func, outs, ins, asm, " $rd, $rs1, $w5o5", pattern, itin> {
   bits<10> w5o5;
   let Inst{26}  = 0b0;
   let Inst{9-0} = w5o5;
 }
 
 // Category: Integer.
-class F_I<dag outs, dag ins, string asmstr, list<dag> pattern,
+class F_I<dag outs, dag ins, string asm, string operands, list<dag> pattern,
           InstrItinClass itin = NoItinerary>
-   : InstM88k<outs, ins, asmstr, pattern, itin> {
+   : InstM88k<outs, ins, asm, operands, pattern, itin> {
   bits<5>  rd;
   bits<5>  rs1;
   let Inst{25-21} = rd;
@@ -106,9 +106,9 @@ class F_I<dag outs, dag ins, string asmstr, list<dag> pattern,
 }
 
 // Format: Integer with 16bit immediate.
-class F_II<bits<6> func, dag outs, dag ins, string asmstr, list<dag> pattern,
+class F_II<bits<6> func, dag outs, dag ins, string asm, list<dag> pattern,
            InstrItinClass itin = NoItinerary>
-   : F_I<outs, ins, asmstr, pattern, itin> {
+   : F_I<outs, ins, asm, " $rd, $rs1, $imm16", pattern, itin> {
   bits<16> imm16;
 
   let Inst{31-26} = func;
@@ -117,8 +117,8 @@ class F_II<bits<6> func, dag outs, dag ins, string asmstr, list<dag> pattern,
 
 // Format: Integer with triadic register and carry.
 class F_IRC<bits<6> func, bits<1> carryin, bits<1> carryout, dag outs, dag ins,
-            string asmstr, list<dag> pattern, InstrItinClass itin = NoItinerary>
-   : F_I<outs, ins, asmstr, pattern, itin> {
+            string asm, list<dag> pattern, InstrItinClass itin = NoItinerary>
+   : F_I<outs, ins, asm, " $rd, $rs1, $rs2", pattern, itin> {
   bits<5> rs2;
 
   let Inst{31-26} = 0b111101;
@@ -132,9 +132,9 @@ class F_IRC<bits<6> func, bits<1> carryin, bits<1> carryout, dag outs, dag ins,
 // Category: Load/Store/Exchange
 
 // Format: Load/Store with word index
-class F_LSINDEX<dag outs, dag ins, string asmstr, list<dag> pattern,
+class F_LSINDEX<dag outs, dag ins, string asm, list<dag> pattern,
                 InstrItinClass itin = NoItinerary>
-   : InstM88k<outs, ins, asmstr, pattern, itin> {
+   : InstM88k<outs, ins, asm, " $rd, $rs1, $si16", pattern, itin> {
   bits<5>  rd;
   bits<5>  rs1;
   bits<16> si16;
@@ -146,18 +146,18 @@ class F_LSINDEX<dag outs, dag ins, string asmstr, list<dag> pattern,
 
 // Format: Load/Store
 class F_LS<bits<4> func, bits<2> ty,
-               dag outs, dag ins, string asmstr, list<dag> pattern,
+               dag outs, dag ins, string asm, list<dag> pattern,
                InstrItinClass itin = NoItinerary>
-   : F_LSINDEX<outs, ins, asmstr, pattern, itin> {
+   : F_LSINDEX<outs, ins, asm, pattern, itin> {
   let Inst{31-28} = func;
   let Inst{27-26} = ty;
 }
 
 // Format: Load unsigned
 class F_LU<bits<1> b,
-               dag outs, dag ins, string asmstr, list<dag> pattern,
+               dag outs, dag ins, string asm, list<dag> pattern,
                InstrItinClass itin = NoItinerary>
-   : F_LSINDEX<outs, ins, asmstr, pattern, itin> {
+   : F_LSINDEX<outs, ins, asm, pattern, itin> {
   let Inst{31-27} = 0b00001;
   let Inst{26}    = b;
 }
@@ -166,7 +166,7 @@ class F_LU<bits<1> b,
 class F_LSINDIRECT<bits<4> func, bits<2> ty, bits<1> scaled, bits<1> user,
                    dag outs, dag ins, string asmstr, list<dag> pattern,
                    InstrItinClass itin = NoItinerary>
-   : InstM88k<outs, ins, asmstr, pattern, itin> {
+   : InstM88k<outs, ins, asmstr, "", pattern, itin> {
   bits<5>  rd;
   bits<5>  rs1;
   bits<5>  rs2;
@@ -192,9 +192,9 @@ class F_LSINDIRECT<bits<4> func, bits<2> ty, bits<1> scaled, bits<1> user,
 
 // Format: JMP/JSR
 class F_JMP<bits<5> func, bits<1> next,
-            dag outs, dag ins, string asmstr, list<dag> pattern,
+            dag outs, dag ins, string asm, list<dag> pattern,
             InstrItinClass itin = NoItinerary>
-   : InstM88k<outs, ins, asmstr, pattern, itin> {
+   : InstM88k<outs, ins, asm, " $rs2", pattern, itin> {
   bits<5> rs2;
 
   let Inst{31-26} = 0b111101;
@@ -207,9 +207,9 @@ class F_JMP<bits<5> func, bits<1> next,
 
 // Format: BR/BSR
 class F_BRANCH<bits<5> func, bits<1> next,
-               dag outs, dag ins, string asmstr, list<dag> pattern,
+               dag outs, dag ins, string asm, list<dag> pattern,
                InstrItinClass itin = NoItinerary>
-   : InstM88k<outs, ins, asmstr, pattern, itin> {
+   : InstM88k<outs, ins, asm, " $d26", pattern, itin> {
   bits<26> d26;
 
   let Inst{31-27} = func;
@@ -221,7 +221,7 @@ class F_BRANCH<bits<5> func, bits<1> next,
 class F_BCOND<bits<5> func, bits<1> next,
                dag outs, dag ins, string asmstr, list<dag> pattern,
                InstrItinClass itin = NoItinerary>
-   : InstM88k<outs, ins, asmstr, pattern, itin> {
+   : InstM88k<outs, ins, asmstr, "", pattern, itin> {
   bits<5>  m5;
   bits<5>  rs1;
   bits<16> d16;
@@ -237,9 +237,9 @@ class F_BCOND<bits<5> func, bits<1> next,
 
 // Format: Special function unit.
 class F_SFU<bits<3> sfuid,
-               dag outs, dag ins, string asmstr, list<dag> pattern,
+               dag outs, dag ins, string asm, string operands, list<dag> pattern,
                InstrItinClass itin = NoItinerary>
-   : InstM88k<outs, ins, asmstr, pattern, itin> {
+   : InstM88k<outs, ins, asm, operands, pattern, itin> {
   bits<5>  rd;
   bits<5>  rs1;
   bits<5>  rs2;
@@ -255,7 +255,7 @@ class F_SFU<bits<3> sfuid,
 class F_SFU1<bits<4> func, bits<2> td, bits<2> t1, bits<2> t2,
                dag outs, dag ins, string asmstr, list<dag> pattern,
                InstrItinClass itin = NoItinerary>
-   : F_SFU<0b001, outs, ins, asmstr, pattern, itin> {
+   : F_SFU<0b001, outs, ins, asmstr, " $rd, $rs1, $rs2", pattern, itin> {
   bits<1>  regfile;
 
   let Inst{15} = regfile;
