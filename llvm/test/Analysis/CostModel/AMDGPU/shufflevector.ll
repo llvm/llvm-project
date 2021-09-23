@@ -5,6 +5,7 @@
 ; RUN: opt < %s -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 -cost-kind=code-size -S | FileCheck -check-prefixes=GFX9-CS %s
 ; RUN: opt < %s -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=fiji -S | FileCheck -check-prefixes=VI %s
 ; RUN: opt < %s -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=fiji -cost-kind=code-size -S | FileCheck -check-prefixes=VI-CS %s
+; END.
 
 define amdgpu_kernel void @shufflevector_00_v2i16(<2 x i16> %vec0, <2 x i16> %vec1) {
 ; GFX10-LABEL: 'shufflevector_00_v2i16'
