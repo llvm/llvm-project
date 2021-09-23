@@ -1947,6 +1947,9 @@ TEST(FindReferences, IncludeOverrides) {
           void $overridedecl[[func]]() override;
         };
         void Derived::$overridedef[[func]]() {}
+        class Derived2 : public Base {
+          void $overridedef[[func]]() override {}
+        };
         void test(Derived* D) {
           D->func();  // No references to the overrides.
         })cpp";
