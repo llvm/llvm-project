@@ -1594,12 +1594,18 @@ example:
     ``disable_sanitizer_instrumentation`` disables all kinds of instrumentation,
     taking precedence over the ``sanitize_<name>`` attributes and other compiler
     flags.
-``"dontcall"``
-    This attribute denotes that a diagnostic should be emitted when a call of a
-    function with this attribute is not eliminated via optimization. Front ends
-    can provide optional ``srcloc`` metadata nodes on call sites of such
-    callees to attach information about where in the source language such a
-    call came from.
+``"dontcall-error"``
+    This attribute denotes that an error diagnostic should be emitted when a
+    call of a function with this attribute is not eliminated via optimization.
+    Front ends can provide optional ``srcloc`` metadata nodes on call sites of
+    such callees to attach information about where in the source language such a
+    call came from. A string value can be provided as a note.
+``"dontcall-warn"``
+    This attribute denotes that a warning diagnostic should be emitted when a
+    call of a function with this attribute is not eliminated via optimization.
+    Front ends can provide optional ``srcloc`` metadata nodes on call sites of
+    such callees to attach information about where in the source language such a
+    call came from. A string value can be provided as a note.
 ``"frame-pointer"``
     This attribute tells the code generator whether the function
     should keep the frame pointer. The code generator may emit the frame pointer
