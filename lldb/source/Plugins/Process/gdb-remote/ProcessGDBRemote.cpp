@@ -4591,35 +4591,13 @@ void ProcessGDBRemote::AddRemoteRegisters(
   // ABI is also potentially incorrect.
   ABISP abi_sp = ABI::FindPlugin(shared_from_this(), arch_to_use);
 
-  std::map<uint32_t, uint32_t> remote_to_local_map;
   uint32_t remote_regnum = 0;
-  for (auto it : llvm::enumerate(registers)) {
-    RemoteRegisterInfo &remote_reg_info = it.value();
-
-    // Assign successive remote regnums if missing.
-    if (remote_reg_info.regnum_remote == LLDB_INVALID_REGNUM)
-      remote_reg_info.regnum_remote = remote_regnum;
-
-    // Create a mapping from remote to local regnos.
-    remote_to_local_map[remote_reg_info.regnum_remote] = it.index();
-
-    remote_regnum = remote_reg_info.regnum_remote + 1;
-  }
-
   for (auto it : llvm::enumerate(registers)) {
     uint32_t local_regnum = it.index();
     RemoteRegisterInfo &remote_reg_info = it.value();
-
-    auto proc_to_lldb = [&remote_to_local_map](uint32_t process_regnum) {
-      auto lldb_regit = remote_to_local_map.find(process_regnum);
-      return lldb_regit != remote_to_local_map.end() ? lldb_regit->second
-                                                     : LLDB_INVALID_REGNUM;
-    };
-
-    llvm::transform(remote_reg_info.value_regs,
-                    remote_reg_info.value_regs.begin(), proc_to_lldb);
-    llvm::transform(remote_reg_info.invalidate_regs,
-                    remote_reg_info.invalidate_regs.begin(), proc_to_lldb);
+    // Use remote regnum if available, previous remote regnum + 1 when not.
+    if (remote_reg_info.regnum_remote != LLDB_INVALID_REGNUM)
+      remote_regnum = remote_reg_info.regnum_remote;
 
     auto regs_with_sentinel = [](std::vector<uint32_t> &vec) -> uint32_t * {
       if (!vec.empty()) {
@@ -4634,8 +4612,7 @@ void ProcessGDBRemote::AddRemoteRegisters(
           remote_reg_info.byte_size, remote_reg_info.byte_offset,
           remote_reg_info.encoding, remote_reg_info.format,
           {remote_reg_info.regnum_ehframe, remote_reg_info.regnum_dwarf,
-           remote_reg_info.regnum_generic, remote_reg_info.regnum_remote,
-           local_regnum},
+           remote_reg_info.regnum_generic, remote_regnum++, local_regnum},
           regs_with_sentinel(remote_reg_info.value_regs),
           regs_with_sentinel(remote_reg_info.invalidate_regs),
           !remote_reg_info.dwarf_opcode_bytes.empty()
