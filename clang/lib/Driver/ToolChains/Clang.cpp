@@ -13,6 +13,7 @@
 #include "Arch/CSKY.h"
 #include "Arch/LoongArch.h"
 #include "Arch/M68k.h"
+#include "Arch/M88k.h"
 #include "Arch/Mips.h"
 #include "Arch/PPC.h"
 #include "Arch/RISCV.h"
@@ -362,6 +363,9 @@ static void getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     break;
   case llvm::Triple::m68k:
     m68k::getM68kTargetFeatures(D, Triple, Args, Features);
+    break;
+  case llvm::Triple::m88k:
+    m88k::getM88kTargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::msp430:
     msp430::getMSP430TargetFeatures(D, Args, Features);

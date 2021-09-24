@@ -170,6 +170,8 @@ def m_hexagon_Features_HVX_Group : OptionGroup<"<hexagon features group>">,
                                    Group<m_Group>, DocName<"Hexagon">;
 def m_m68k_Features_Group: OptionGroup<"<m68k features group>">,
                            Group<m_Group>, DocName<"M68k">;
+def m_m88k_Features_Group: OptionGroup<"<m88k features group>">,
+                           Group<m_Group>, DocName<"M88k">;
 def m_mips_Features_Group : OptionGroup<"<mips features group>">,
                             Group<m_Group>, DocName<"MIPS">;
 def m_ppc_Features_Group : OptionGroup<"<ppc features group>">,
@@ -4524,6 +4526,11 @@ foreach i = {0-6} in
 foreach i = {0-7} in
   def ffixed_d#i : Flag<["-"], "ffixed-d"#i>, Group<m_m68k_Features_Group>,
     HelpText<"Reserve the d"#i#" register (M68k only)">;
+
+// M88k features flags
+def m88000 : Flag<["-"], "m88000">, Group<m_m88k_Features_Group>;
+def m88100 : Flag<["-"], "m88100">, Group<m_m88k_Features_Group>;
+def m88110 : Flag<["-"], "m88110">, Group<m_m88k_Features_Group>;
 
 // X86 feature flags
 def mx87 : Flag<["-"], "mx87">, Group<m_x86_Features_Group>;

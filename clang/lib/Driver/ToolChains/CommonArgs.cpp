@@ -10,6 +10,7 @@
 #include "Arch/AArch64.h"
 #include "Arch/ARM.h"
 #include "Arch/M68k.h"
+#include "Arch/M88k.h"
 #include "Arch/Mips.h"
 #include "Arch/PPC.h"
 #include "Arch/RISCV.h"
@@ -385,6 +386,9 @@ std::string tools::getCPUName(const Driver &D, const ArgList &Args,
 
   case llvm::Triple::m68k:
     return m68k::getM68kTargetCPU(Args);
+
+  case llvm::Triple::m88k:
+    return m88k::getM88kTargetCPU(Args);
 
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:

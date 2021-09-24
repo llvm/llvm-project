@@ -32,6 +32,7 @@ add_clang_library(clangDriver
   ToolChains/Arch/CSKY.cpp
   ToolChains/Arch/LoongArch.cpp
   ToolChains/Arch/M68k.cpp
+  ToolChains/Arch/M88k.cpp
   ToolChains/Arch/Mips.cpp
   ToolChains/Arch/PPC.cpp
   ToolChains/Arch/RISCV.cpp
