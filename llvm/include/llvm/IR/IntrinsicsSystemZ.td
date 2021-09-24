@@ -144,7 +144,7 @@ multiclass SystemZBinaryCCBHF {
   def fs : SystemZBinaryCC<llvm_v4i32_ty>;
 }
 
-multiclass SystemZCompareBHFG<string name> {
+multiclass SystemZCompareBHFG {
   def bs : SystemZBinaryCC<llvm_v16i8_ty>;
   def hs : SystemZBinaryCC<llvm_v8i16_ty>;
   def fs : SystemZBinaryCC<llvm_v4i32_ty>;
@@ -341,9 +341,9 @@ let TargetPrefix = "s390" in {
 
   def int_s390_vtm : SystemZBinaryConv<"vtm", llvm_i32_ty, llvm_v16i8_ty>;
 
-  defm int_s390_vceq : SystemZCompareBHFG<"vceq">;
-  defm int_s390_vch  : SystemZCompareBHFG<"vch">;
-  defm int_s390_vchl : SystemZCompareBHFG<"vchl">;
+  defm int_s390_vceq : SystemZCompareBHFG;
+  defm int_s390_vch  : SystemZCompareBHFG;
+  defm int_s390_vchl : SystemZCompareBHFG;
 
   defm int_s390_vfae  : SystemZTernaryIntBHF<"vfae">;
   defm int_s390_vfae  : SystemZTernaryIntCCBHF;
