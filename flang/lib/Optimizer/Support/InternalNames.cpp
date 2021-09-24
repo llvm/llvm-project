@@ -205,15 +205,6 @@ fir::NameUniquer::doVariable(llvm::ArrayRef<llvm::StringRef> modules,
   return result.append(toLower(name));
 }
 
-std::string
-fir::NameUniquer::doNamelistGroup(llvm::ArrayRef<llvm::StringRef> modules,
-                                  llvm::Optional<llvm::StringRef> host,
-                                  llvm::StringRef name) {
-  std::string result = prefix();
-  result.append(doModulesHost(modules, host)).append("G");
-  return result.append(toLower(name));
-}
-
 llvm::StringRef fir::NameUniquer::doProgramEntry() {
   if (mainEntryName.size())
     return mainEntryName;
@@ -287,10 +278,6 @@ fir::NameUniquer::deconstruct(llvm::StringRef uniq) {
           kinds.push_back(-readInt(uniq, i, i + 2, end));
         else
           kinds.push_back(readInt(uniq, i, i + 1, end));
-        break;
-      case 'G':
-        nk = NameKind::NAMELIST_GROUP;
-        name = readName(uniq, i, i + 1, end);
         break;
 
       default:

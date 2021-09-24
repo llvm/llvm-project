@@ -14,112 +14,43 @@
 // constexpr auto begin() const requires range<const V>;
 
 #include <ranges>
+
 #include <cassert>
+#include <concepts>
+#include <utility>
 
-#include "test_macros.h"
 #include "test_iterators.h"
-#include "test_range.h"
-
-struct ContiguousView : std::ranges::view_base {
-  int *ptr_;
-  constexpr ContiguousView(int* ptr) : ptr_(ptr) {}
-  constexpr ContiguousView(ContiguousView&&) = default;
-  constexpr ContiguousView& operator=(ContiguousView&&) = default;
-  friend constexpr int* begin(ContiguousView& view) { return view.ptr_; }
-  friend constexpr int* begin(ContiguousView const& view) { return view.ptr_; }
-  friend constexpr sentinel_wrapper<int*> end(ContiguousView& view) {
-    return sentinel_wrapper<int*>{view.ptr_ + 8};
-  }
-  friend constexpr sentinel_wrapper<int*> end(ContiguousView const& view) {
-    return sentinel_wrapper<int*>{view.ptr_ + 8};
-  }
-};
-
-struct CopyableView : std::ranges::view_base {
-  int *ptr_;
-  constexpr CopyableView(int* ptr) : ptr_(ptr) {}
-  friend constexpr int* begin(CopyableView& view) { return view.ptr_; }
-  friend constexpr int* begin(CopyableView const& view) { return view.ptr_; }
-  friend constexpr sentinel_wrapper<int*> end(CopyableView& view) {
-    return sentinel_wrapper<int*>{view.ptr_ + 8};
-  }
-  friend constexpr sentinel_wrapper<int*> end(CopyableView const& view) {
-    return sentinel_wrapper<int*>{view.ptr_ + 8};
-  }
-};
+#include "types.h"
 
 struct MutableView : std::ranges::view_base {
-  int *ptr_;
-  constexpr MutableView(int* ptr) : ptr_(ptr) {}
-  constexpr int* begin() { return ptr_; }
-  constexpr sentinel_wrapper<int*> end() { return sentinel_wrapper<int*>{ptr_ + 8}; }
+  int* begin();
+  sentinel_wrapper<int*> end();
 };
 
-using ForwardIter = forward_iterator<int*>;
-struct SizedForwardView : std::ranges::view_base {
-  int *ptr_;
-  constexpr SizedForwardView(int* ptr) : ptr_(ptr) {}
-  friend constexpr ForwardIter begin(SizedForwardView& view) { return ForwardIter(view.ptr_); }
-  friend constexpr ForwardIter begin(SizedForwardView const& view) { return ForwardIter(view.ptr_); }
-  friend constexpr sentinel_wrapper<ForwardIter> end(SizedForwardView& view) {
-    return sentinel_wrapper<ForwardIter>{ForwardIter(view.ptr_ + 8)};
-  }
-  friend constexpr sentinel_wrapper<ForwardIter> end(SizedForwardView const& view) {
-    return sentinel_wrapper<ForwardIter>{ForwardIter(view.ptr_ + 8)};
-  }
-};
-// Required to make SizedForwardView a sized view.
-constexpr auto operator-(sentinel_wrapper<ForwardIter> sent, ForwardIter iter) {
-  return sent.base().base() - iter.base();
-}
-constexpr auto operator-(ForwardIter iter, sentinel_wrapper<ForwardIter> sent) {
-  return iter.base() - sent.base().base();
-}
-
-using RandomAccessIter = random_access_iterator<int*>;
-struct SizedRandomAccessView : std::ranges::view_base {
-  int *ptr_;
-  constexpr SizedRandomAccessView(int* ptr) : ptr_(ptr) {}
-  friend constexpr RandomAccessIter begin(SizedRandomAccessView& view) { return RandomAccessIter(view.ptr_); }
-  friend constexpr RandomAccessIter begin(SizedRandomAccessView const& view) { return RandomAccessIter(view.ptr_); }
-  friend constexpr sentinel_wrapper<RandomAccessIter> end(SizedRandomAccessView& view) {
-    return sentinel_wrapper<RandomAccessIter>{RandomAccessIter(view.ptr_ + 8)};
-  }
-  friend constexpr sentinel_wrapper<RandomAccessIter> end(SizedRandomAccessView const& view) {
-    return sentinel_wrapper<RandomAccessIter>{RandomAccessIter(view.ptr_ + 8)};
-  }
-};
-// Required to make SizedRandomAccessView a sized view.
-constexpr auto operator-(sentinel_wrapper<RandomAccessIter> sent, RandomAccessIter iter) {
-  return sent.base().base() - iter.base();
-}
-constexpr auto operator-(RandomAccessIter iter, sentinel_wrapper<RandomAccessIter> sent) {
-  return iter.base() - sent.base().base();
-}
-
-template<class T>
-concept BeginEnabled = requires(const std::ranges::common_view<T>& comm) {
-  comm.begin();
-};
+template<class View>
+concept BeginEnabled = requires(View v) { v.begin(); };
 
 constexpr bool test() {
-  int buffer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+  int buf[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 
   {
-    static_assert( BeginEnabled<CopyableView>);
-    static_assert(!BeginEnabled<MutableView>);
+    static_assert( BeginEnabled<std::ranges::common_view<CopyableView> const&>);
+    static_assert( BeginEnabled<std::ranges::common_view<MutableView>&>);
+    static_assert(!BeginEnabled<std::ranges::common_view<MutableView> const&>);
   }
 
   {
-    std::ranges::common_view<SizedRandomAccessView> comm(SizedRandomAccessView{buffer});
-    assert(comm.begin() == begin(SizedRandomAccessView(buffer)));
-    ASSERT_SAME_TYPE(decltype(comm.begin()), RandomAccessIter);
+    SizedRandomAccessView view{buf, buf + 8};
+    std::ranges::common_view<SizedRandomAccessView> common(view);
+    std::same_as<RandomAccessIter> auto begin = common.begin();
+    assert(begin == std::ranges::begin(view));
   }
 
   {
-    const std::ranges::common_view<SizedRandomAccessView> comm(SizedRandomAccessView{buffer});
-    assert(comm.begin() == begin(SizedRandomAccessView(buffer)));
-    ASSERT_SAME_TYPE(decltype(comm.begin()), RandomAccessIter);
+    SizedRandomAccessView view{buf, buf + 8};
+    std::ranges::common_view<SizedRandomAccessView> const common(view);
+    std::same_as<RandomAccessIter> auto begin = common.begin();
+    assert(begin == std::ranges::begin(view));
   }
 
   return true;
@@ -130,30 +61,37 @@ int main(int, char**) {
   static_assert(test());
 
   // The non-constexpr tests:
-  int buffer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+  int buf[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 
   {
-    std::ranges::common_view<SizedForwardView> comm(SizedForwardView{buffer});
-    assert(comm.begin() == begin(SizedForwardView(buffer)));
-    ASSERT_SAME_TYPE(decltype(comm.begin()), std::common_iterator<ForwardIter, sentinel_wrapper<ForwardIter>>);
+    SizedForwardView view{buf, buf + 8};
+    std::ranges::common_view<SizedForwardView> common(view);
+    using CommonIter = std::common_iterator<ForwardIter, sentinel_wrapper<ForwardIter>>;
+    std::same_as<CommonIter> auto begin = common.begin();
+    assert(begin == std::ranges::begin(view));
+  }
+  {
+    SizedForwardView view{buf, buf + 8};
+    std::ranges::common_view<SizedForwardView> const common(view);
+    using CommonIter = std::common_iterator<ForwardIter, sentinel_wrapper<ForwardIter>>;
+    std::same_as<CommonIter> auto begin = common.begin();
+    assert(begin == std::ranges::begin(view));
   }
 
   {
-    std::ranges::common_view<ContiguousView> comm(ContiguousView{buffer});
-    assert(comm.begin() == begin(ContiguousView(buffer)));
-    ASSERT_SAME_TYPE(decltype(comm.begin()), std::common_iterator<int*, sentinel_wrapper<int*>>);
+    ContiguousView view{buf, buf + 8};
+    std::ranges::common_view<ContiguousView> common(std::move(view));
+    using CommonIter = std::common_iterator<int*, sentinel_wrapper<int*>>;
+    std::same_as<CommonIter> auto begin = common.begin();
+    assert(begin == std::ranges::begin(view));
   }
 
   {
-    const std::ranges::common_view<SizedForwardView> comm(SizedForwardView{buffer});
-    assert(comm.begin() == begin(SizedForwardView(buffer)));
-    ASSERT_SAME_TYPE(decltype(comm.begin()), std::common_iterator<ForwardIter, sentinel_wrapper<ForwardIter>>);
-  }
-
-  {
-    const std::ranges::common_view<CopyableView> comm(CopyableView{buffer});
-    assert(comm.begin() == begin(CopyableView(buffer)));
-    ASSERT_SAME_TYPE(decltype(comm.begin()), std::common_iterator<int*, sentinel_wrapper<int*>>);
+    CopyableView view{buf, buf + 8};
+    std::ranges::common_view<CopyableView> const common(view);
+    using CommonIter = std::common_iterator<int*, sentinel_wrapper<int*>>;
+    std::same_as<CommonIter> auto begin = common.begin();
+    assert(begin == std::ranges::begin(view));
   }
 
   return 0;
