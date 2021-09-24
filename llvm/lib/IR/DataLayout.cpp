@@ -903,9 +903,13 @@ int64_t DataLayout::getIndexedOffsetInType(Type *ElemTy,
 
 static void addElementIndex(SmallVectorImpl<APInt> &Indices, TypeSize ElemSize,
                             APInt &Offset) {
-  // Skip over scalable or zero size elements.
-  if (ElemSize.isScalable() || ElemSize == 0) {
-    Indices.push_back(APInt::getZero(Offset.getBitWidth()));
+  // Skip over scalable or zero size elements. Also skip element sizes larger
+  // than the positive index space, because the arithmetic below may not be
+  // correct in that case.
+  unsigned BitWidth = Offset.getBitWidth();
+  if (ElemSize.isScalable() || ElemSize == 0 ||
+      !isUIntN(BitWidth - 1, ElemSize)) {
+    Indices.push_back(APInt::getZero(BitWidth));
     return;
   }
 
