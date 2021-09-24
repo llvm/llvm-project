@@ -487,8 +487,8 @@ define i12 @trunc_sandwich_use1(i32 %x) {
 ; CHECK-LABEL: @trunc_sandwich_use1(
 ; CHECK-NEXT:    [[SH:%.*]] = lshr i32 [[X:%.*]], 28
 ; CHECK-NEXT:    call void @use(i32 [[SH]])
-; CHECK-NEXT:    [[TR:%.*]] = trunc i32 [[SH]] to i12
-; CHECK-NEXT:    [[R:%.*]] = lshr i12 [[TR]], 2
+; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr i32 [[X]], 30
+; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[SUM_SHIFT]] to i12
 ; CHECK-NEXT:    ret i12 [[R]]
 ;
   %sh = lshr i32 %x, 28
@@ -502,8 +502,8 @@ define <3 x i9> @trunc_sandwich_splat_vec_use1(<3 x i14> %x) {
 ; CHECK-LABEL: @trunc_sandwich_splat_vec_use1(
 ; CHECK-NEXT:    [[SH:%.*]] = lshr <3 x i14> [[X:%.*]], <i14 6, i14 6, i14 6>
 ; CHECK-NEXT:    call void @usevec(<3 x i14> [[SH]])
-; CHECK-NEXT:    [[TR:%.*]] = trunc <3 x i14> [[SH]] to <3 x i9>
-; CHECK-NEXT:    [[R:%.*]] = lshr <3 x i9> [[TR]], <i9 5, i9 5, i9 5>
+; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr <3 x i14> [[X]], <i14 11, i14 11, i14 11>
+; CHECK-NEXT:    [[R:%.*]] = trunc <3 x i14> [[SUM_SHIFT]] to <3 x i9>
 ; CHECK-NEXT:    ret <3 x i9> [[R]]
 ;
   %sh = lshr <3 x i14> %x, <i14 6, i14 6, i14 6>
@@ -517,8 +517,8 @@ define i12 @trunc_sandwich_min_shift1_use1(i32 %x) {
 ; CHECK-LABEL: @trunc_sandwich_min_shift1_use1(
 ; CHECK-NEXT:    [[SH:%.*]] = lshr i32 [[X:%.*]], 20
 ; CHECK-NEXT:    call void @use(i32 [[SH]])
-; CHECK-NEXT:    [[TR:%.*]] = trunc i32 [[SH]] to i12
-; CHECK-NEXT:    [[R:%.*]] = lshr i12 [[TR]], 1
+; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr i32 [[X]], 21
+; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[SUM_SHIFT]] to i12
 ; CHECK-NEXT:    ret i12 [[R]]
 ;
   %sh = lshr i32 %x, 20
@@ -527,6 +527,8 @@ define i12 @trunc_sandwich_min_shift1_use1(i32 %x) {
   %r = lshr i12 %tr, 1
   ret i12 %r
 }
+
+; negative test - trunc is bigger than first shift
 
 define i12 @trunc_sandwich_small_shift1_use1(i32 %x) {
 ; CHECK-LABEL: @trunc_sandwich_small_shift1_use1(
@@ -547,8 +549,8 @@ define i12 @trunc_sandwich_max_sum_shift_use1(i32 %x) {
 ; CHECK-LABEL: @trunc_sandwich_max_sum_shift_use1(
 ; CHECK-NEXT:    [[SH:%.*]] = lshr i32 [[X:%.*]], 20
 ; CHECK-NEXT:    call void @use(i32 [[SH]])
-; CHECK-NEXT:    [[TR:%.*]] = trunc i32 [[SH]] to i12
-; CHECK-NEXT:    [[R:%.*]] = lshr i12 [[TR]], 11
+; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr i32 [[X]], 31
+; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[SUM_SHIFT]] to i12
 ; CHECK-NEXT:    ret i12 [[R]]
 ;
   %sh = lshr i32 %x, 20
@@ -562,8 +564,8 @@ define i12 @trunc_sandwich_max_sum_shift2_use1(i32 %x) {
 ; CHECK-LABEL: @trunc_sandwich_max_sum_shift2_use1(
 ; CHECK-NEXT:    [[SH:%.*]] = lshr i32 [[X:%.*]], 30
 ; CHECK-NEXT:    call void @use(i32 [[SH]])
-; CHECK-NEXT:    [[TR:%.*]] = trunc i32 [[SH]] to i12
-; CHECK-NEXT:    [[R:%.*]] = lshr i12 [[TR]], 1
+; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr i32 [[X]], 31
+; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[SUM_SHIFT]] to i12
 ; CHECK-NEXT:    ret i12 [[R]]
 ;
   %sh = lshr i32 %x, 30
@@ -572,6 +574,8 @@ define i12 @trunc_sandwich_max_sum_shift2_use1(i32 %x) {
   %r = lshr i12 %tr, 1
   ret i12 %r
 }
+
+; negative test - but overshift is simplified to zero by another fold
 
 define i12 @trunc_sandwich_big_sum_shift1_use1(i32 %x) {
 ; CHECK-LABEL: @trunc_sandwich_big_sum_shift1_use1(
@@ -585,6 +589,8 @@ define i12 @trunc_sandwich_big_sum_shift1_use1(i32 %x) {
   %r = lshr i12 %tr, 11
   ret i12 %r
 }
+
+; negative test - but overshift is simplified to zero by another fold
 
 define i12 @trunc_sandwich_big_sum_shift2_use1(i32 %x) {
 ; CHECK-LABEL: @trunc_sandwich_big_sum_shift2_use1(
