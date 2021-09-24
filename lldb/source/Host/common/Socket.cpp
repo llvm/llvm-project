@@ -11,9 +11,11 @@
 #include "lldb/Host/Config.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/SocketAddress.h"
+#include "lldb/Host/StringConvert.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "lldb/Host/common/UDPSocket.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RegularExpression.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Errno.h"
@@ -170,17 +172,17 @@ Socket::TcpListen(llvm::StringRef host_and_port, bool child_processes_inherit,
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
   LLDB_LOG(log, "host_and_port = {0}", host_and_port);
 
+  Status error;
   std::string host_str;
   std::string port_str;
-  uint16_t port;
-  if (llvm::Error decode_error =
-          DecodeHostAndPort(host_and_port, host_str, port_str, port))
-    return decode_error;
+  int32_t port = INT32_MIN;
+  if (!DecodeHostAndPort(host_and_port, host_str, port_str, port, &error))
+    return error.ToError();
 
   std::unique_ptr<TCPSocket> listen_socket(
       new TCPSocket(true, child_processes_inherit));
 
-  Status error = listen_socket->Listen(host_and_port, backlog);
+  error = listen_socket->Listen(host_and_port, backlog);
   if (error.Fail())
     return error.ToError();
 
@@ -270,33 +272,47 @@ Status Socket::UnixAbstractAccept(llvm::StringRef name,
   return error;
 }
 
-llvm::Error Socket::DecodeHostAndPort(llvm::StringRef host_and_port,
-                                      std::string &host_str,
-                                      std::string &port_str, uint16_t &port) {
-  static llvm::Regex g_regex("([^:]+|\\[[0-9a-fA-F:]+.*\\]):([0-9]+)");
+bool Socket::DecodeHostAndPort(llvm::StringRef host_and_port,
+                               std::string &host_str, std::string &port_str,
+                               int32_t &port, Status *error_ptr) {
+  static RegularExpression g_regex(
+      llvm::StringRef("([^:]+|\\[[0-9a-fA-F:]+.*\\]):([0-9]+)"));
   llvm::SmallVector<llvm::StringRef, 3> matches;
-  if (g_regex.match(host_and_port, &matches)) {
+  if (g_regex.Execute(host_and_port, &matches)) {
     host_str = matches[1].str();
     port_str = matches[2].str();
     // IPv6 addresses are wrapped in [] when specified with ports
     if (host_str.front() == '[' && host_str.back() == ']')
       host_str = host_str.substr(1, host_str.size() - 2);
-    if (to_integer(matches[2], port, 10))
-      return llvm::Error::success();
-  } else {
-    // If this was unsuccessful, then check if it's simply a signed 32-bit
-    // integer, representing a port with an empty host.
-    host_str.clear();
-    port_str.clear();
-    if (to_integer(host_and_port, port, 10)) {
-      port_str = host_and_port.str();
-      return llvm::Error::success();
+    bool ok = false;
+    port = StringConvert::ToUInt32(port_str.c_str(), UINT32_MAX, 10, &ok);
+    if (ok && port <= UINT16_MAX) {
+      if (error_ptr)
+        error_ptr->Clear();
+      return true;
     }
+    // port is too large
+    if (error_ptr)
+      error_ptr->SetErrorStringWithFormat(
+          "invalid host:port specification: '%s'", host_and_port.str().c_str());
+    return false;
   }
 
-  return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                 "invalid host:port specification: '%s'",
-                                 host_and_port.str().c_str());
+  // If this was unsuccessful, then check if it's simply a signed 32-bit
+  // integer, representing a port with an empty host.
+  host_str.clear();
+  port_str.clear();
+  if (to_integer(host_and_port, port, 10) && port < UINT16_MAX) {
+    port_str = std::string(host_and_port);
+    if (error_ptr)
+      error_ptr->Clear();
+    return true;
+  }
+
+  if (error_ptr)
+    error_ptr->SetErrorStringWithFormat("invalid host:port specification: '%s'",
+                                        host_and_port.str().c_str());
+  return false;
 }
 
 IOObject::WaitableHandle Socket::GetWaitableHandle() {
