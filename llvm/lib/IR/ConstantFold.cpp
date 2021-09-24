@@ -2326,7 +2326,7 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
       if (isIndexInRangeOfArrayType(STy->getNumElements(), CI))
         // It's in range, skip to the next index.
         continue;
-      if (CI->getSExtValue() < 0) {
+      if (CI->isNegative()) {
         // It's out of range and negative, don't try to factor it.
         Unknown = true;
         continue;
@@ -2337,7 +2337,7 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
       for (unsigned I = 0, E = CV->getNumElements(); I != E; ++I) {
         auto *CI = cast<ConstantInt>(CV->getElementAsConstant(I));
         InRange &= isIndexInRangeOfArrayType(STy->getNumElements(), CI);
-        if (CI->getSExtValue() < 0) {
+        if (CI->isNegative()) {
           Unknown = true;
           break;
         }
