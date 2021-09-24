@@ -496,22 +496,6 @@
 // CHECK-GCC-VERSION1: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-GCC-VERSION1: "{{.*}}/Inputs/basic_linux_tree/usr/lib/gcc/i386-unknown-linux/10.2.0{{/|\\\\}}crtbegin.o"
 
-// RUN: %clangxx -x c++ %s -### 2>&1 \
-// RUN:     --target=x86_64-unknown-linux-gnu \
-// RUN:     -stdlib=libc++ \
-// RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXX-SHARED %s
-// CHECK-BASIC-LIBCXX-SHARED: "-lc++"
-// CHECK-BASIC-LIBCXX-SHARED-SAME: {{^}} "-lm"
-// RUN: %clangxx  -x c++ %s -### 2>&1 \
-// RUN:     --target=x86_64-unknown-linux-gnu \
-// RUN:     -stdlib=libc++ -static-libstdc++ \
-// RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXX-STATIC %s
-// CHECK-BASIC-LIBCXX-STATIC: "--push-state"
-// CHECK-BASIC-LIBCXX-STATIC-SAME: {{^}} "-Bstatic"
-// CHECK-BASIC-LIBCXX-STATIC-SAME: {{^}} "-lc++"
-// CHECK-BASIC-LIBCXX-STATIC-SAME: {{^}} "--pop-state"
-// CHECK-BASIC-LIBCXX-STATIC-SAME: {{^}} "-lm"
-
 // Test a simulated installation of libc++ on Linux, both through sysroot and
 // the installation path of Clang.
 // RUN: %clangxx -no-canonical-prefixes -x c++ %s -### -o %t.o 2>&1 \
