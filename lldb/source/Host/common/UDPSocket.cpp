@@ -63,10 +63,9 @@ UDPSocket::Connect(llvm::StringRef name, bool child_processes_inherit) {
   Status error;
   std::string host_str;
   std::string port_str;
-  uint16_t port;
-  if (llvm::Error decode_error =
-          DecodeHostAndPort(name, host_str, port_str, port))
-    return decode_error;
+  int32_t port = INT32_MIN;
+  if (!DecodeHostAndPort(name, host_str, port_str, port, &error))
+    return error.ToError();
 
   // At this point we have setup the receive port, now we need to setup the UDP
   // send socket

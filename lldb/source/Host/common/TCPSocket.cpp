@@ -156,10 +156,9 @@ Status TCPSocket::Connect(llvm::StringRef name) {
   Status error;
   std::string host_str;
   std::string port_str;
-  uint16_t port;
-  if (llvm::Error decode_error =
-          DecodeHostAndPort(name, host_str, port_str, port))
-    return Status(std::move(decode_error));
+  int32_t port = INT32_MIN;
+  if (!DecodeHostAndPort(name, host_str, port_str, port, &error))
+    return error;
 
   std::vector<SocketAddress> addresses = SocketAddress::GetAddressInfo(
       host_str.c_str(), nullptr, AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP);
@@ -193,10 +192,9 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
   Status error;
   std::string host_str;
   std::string port_str;
-  uint16_t port;
-  if (llvm::Error decode_error =
-          DecodeHostAndPort(name, host_str, port_str, port))
-    return Status(std::move(decode_error));
+  int32_t port = INT32_MIN;
+  if (!DecodeHostAndPort(name, host_str, port_str, port, &error))
+    return error;
 
   if (host_str == "*")
     host_str = "0.0.0.0";
