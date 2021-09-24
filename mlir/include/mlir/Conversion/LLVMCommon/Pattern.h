@@ -217,11 +217,11 @@ public:
   /// Converts the type of the result to an LLVM type, pass operands as is,
   /// preserve attributes.
   LogicalResult
-  matchAndRewrite(SourceOp op, ArrayRef<Value> operands,
+  matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     return LLVM::detail::oneToOneRewrite(op, TargetOp::getOperationName(),
-                                         operands, *this->getTypeConverter(),
-                                         rewriter);
+                                         adaptor.getOperands(),
+                                         *this->getTypeConverter(), rewriter);
   }
 };
 

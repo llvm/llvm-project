@@ -244,9 +244,8 @@ public:
   using OpConversionPattern<tensor::InsertSliceOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(tensor::InsertSliceOp op, ArrayRef<Value> operands,
+  matchAndRewrite(tensor::InsertSliceOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
-    tensor::InsertSliceOpAdaptor adaptor(operands, op->getAttrDictionary());
     Value sourceMemRef = adaptor.source();
     assert(sourceMemRef.getType().isa<MemRefType>());
 
@@ -273,12 +272,10 @@ public:
   using OpConversionPattern<vector::TransferReadOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(vector::TransferReadOp readOp, ArrayRef<Value> operands,
+  matchAndRewrite(vector::TransferReadOp readOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
     if (readOp.getShapedType().isa<MemRefType>())
       return failure();
-    vector::TransferReadOp::Adaptor adaptor(operands,
-                                            readOp->getAttrDictionary());
     rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
         readOp, readOp.getType(), adaptor.source(), adaptor.indices(),
         adaptor.permutation_map(), adaptor.padding(), adaptor.mask(),
@@ -293,12 +290,10 @@ public:
   using OpConversionPattern<vector::TransferWriteOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(vector::TransferWriteOp writeOp, ArrayRef<Value> operands,
+  matchAndRewrite(vector::TransferWriteOp writeOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
     if (writeOp.getShapedType().isa<MemRefType>())
       return failure();
-    vector::TransferWriteOp::Adaptor adaptor(operands,
-                                             writeOp->getAttrDictionary());
     rewriter.create<vector::TransferWriteOp>(
         writeOp.getLoc(), adaptor.vector(), adaptor.source(), adaptor.indices(),
         adaptor.permutation_map(),
