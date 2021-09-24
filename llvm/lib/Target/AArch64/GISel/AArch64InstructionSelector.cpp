@@ -4886,6 +4886,9 @@ bool AArch64InstructionSelector::selectUSMovFromExtend(
   const LLT DstTy = MRI.getType(DefReg);
   unsigned DstSize = DstTy.getSizeInBits();
 
+  if (DstSize != 32 && DstSize != 64)
+    return false;
+
   MachineInstr *Extract = getOpcodeDef(TargetOpcode::G_EXTRACT_VECTOR_ELT,
                                        MI.getOperand(1).getReg(), MRI);
   int64_t Lane;
