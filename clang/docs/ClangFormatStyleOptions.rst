@@ -125,7 +125,7 @@ enumeration member (with a prefix, e.g. ``LS_Auto``), and as a value usable in
 the configuration (without a prefix: ``Auto``).
 
 
-**BasedOnStyle** (``string``)
+**BasedOnStyle** (``String``)
   The style used for all options not specifically set in the configuration.
 
   This option is supported only in the :program:`clang-format` configuration
@@ -166,7 +166,7 @@ the configuration (without a prefix: ``Auto``).
 
 .. START_FORMAT_STYLE_OPTIONS
 
-**AccessModifierOffset** (``int``)
+**AccessModifierOffset** (``Integer``)
   The extra indent or outdent of access modifiers, e.g. ``public:``.
 
 **AlignAfterOpenBracket** (``BracketAlignmentStyle``)
@@ -619,7 +619,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**AlignTrailingComments** (``bool``)
+**AlignTrailingComments** (``Boolean``)
   If ``true``, aligns trailing comments.
 
   .. code-block:: c++
@@ -628,7 +628,7 @@ the configuration (without a prefix: ``Auto``).
     int a;     // My comment a      vs.     int a; // My comment a
     int b = 2; // comment  b                int b = 2; // comment about b
 
-**AllowAllArgumentsOnNextLine** (``bool``)
+**AllowAllArgumentsOnNextLine** (``Boolean``)
   If a function call or braced initializer list doesn't fit on a
   line, allow putting all arguments onto the next line, even if
   ``BinPackArguments`` is ``false``.
@@ -645,11 +645,11 @@ the configuration (without a prefix: ``Auto``).
                  c,
                  d);
 
-**AllowAllConstructorInitializersOnNextLine** (``bool``)
+**AllowAllConstructorInitializersOnNextLine** (``Boolean``)
   This option is **deprecated**. See ``NextLine`` of
   ``PackConstructorInitializers``.
 
-**AllowAllParametersOfDeclarationOnNextLine** (``bool``)
+**AllowAllParametersOfDeclarationOnNextLine** (``Boolean``)
   If the function declaration doesn't fit on a line,
   allow putting all parameters of a function declaration onto
   the next line even if ``BinPackParameters`` is ``false``.
@@ -704,7 +704,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**AllowShortCaseLabelsOnASingleLine** (``bool``)
+**AllowShortCaseLabelsOnASingleLine** (``Boolean``)
   If ``true``, short case labels will be contracted to a single line.
 
   .. code-block:: c++
@@ -718,7 +718,7 @@ the configuration (without a prefix: ``Auto``).
                                               return;
                                             }
 
-**AllowShortEnumsOnASingleLine** (``bool``)
+**AllowShortEnumsOnASingleLine** (``Boolean``)
   Allow short enums on a single line.
 
   .. code-block:: c++
@@ -909,7 +909,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**AllowShortLoopsOnASingleLine** (``bool``)
+**AllowShortLoopsOnASingleLine** (``Boolean``)
   If ``true``, ``while (true) continue;`` can be put on a single
   line.
 
@@ -1014,7 +1014,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**AlwaysBreakBeforeMultilineStrings** (``bool``)
+**AlwaysBreakBeforeMultilineStrings** (``Boolean``)
   If ``true``, always break before multiline string literals.
 
   This flag is mean to make cases where there are multiple multiline strings
@@ -1074,7 +1074,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**AttributeMacros** (``std::vector<std::string>``)
+**AttributeMacros** (``List of Strings``)
   A vector of strings that should be interpreted as attributes/qualifiers
   instead of identifiers. This can be useful for language extensions or
   static analyzer annotations.
@@ -1093,7 +1093,7 @@ the configuration (without a prefix: ``Auto``).
 
     AttributeMacros: ['__capability', '__output', '__ununsed']
 
-**BinPackArguments** (``bool``)
+**BinPackArguments** (``Boolean``)
   If ``false``, a function call's arguments will either be all on the
   same line or will have one line each.
 
@@ -1112,7 +1112,7 @@ the configuration (without a prefix: ``Auto``).
         aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);
     }
 
-**BinPackParameters** (``bool``)
+**BinPackParameters** (``Boolean``)
   If ``false``, a function declaration's or function definition's
   parameters will either all be on the same line or will have one line each.
 
@@ -1450,7 +1450,7 @@ the configuration (without a prefix: ``Auto``).
                            }
 
 
-**BreakAfterJavaFieldAnnotations** (``bool``)
+**BreakAfterJavaFieldAnnotations** (``Boolean``)
   Break after each annotation on a field in Java files.
 
   .. code-block:: java
@@ -1960,7 +1960,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**BreakBeforeConceptDeclarations** (``bool``)
+**BreakBeforeConceptDeclarations** (``Boolean``)
   If ``true``, concept will be placed on a new line.
 
   .. code-block:: c++
@@ -1972,7 +1972,7 @@ the configuration (without a prefix: ``Auto``).
     false:
      template<typename T> concept ...
 
-**BreakBeforeTernaryOperators** (``bool``)
+**BreakBeforeTernaryOperators** (``Boolean``)
   If ``true``, ternary operators will be placed after line breaks.
 
   .. code-block:: c++
@@ -2069,7 +2069,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**BreakStringLiterals** (``bool``)
+**BreakStringLiterals** (``Boolean``)
   Allow breaking string literals when formatting.
 
   .. code-block:: c++
@@ -2083,14 +2083,14 @@ the configuration (without a prefix: ``Auto``).
      const char* x =
        "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
 
-**ColumnLimit** (``unsigned``)
+**ColumnLimit** (``Unsigned``)
   The column limit.
 
   A column limit of ``0`` means that there is no column limit. In this case,
   clang-format will respect the input's line breaking decisions within
   statements unless they contradict other rules.
 
-**CommentPragmas** (``std::string``)
+**CommentPragmas** (``String``)
   A regular expression that describes comments with special meaning,
   which should not be split into lines or otherwise changed.
 
@@ -2100,7 +2100,7 @@ the configuration (without a prefix: ``Auto``).
      // Will leave the following line unaffected
      #include <vector> // FOOBAR pragma: keep
 
-**CompactNamespaces** (``bool``)
+**CompactNamespaces** (``Boolean``)
   If ``true``, consecutive namespace declarations will be on the same
   line. If ``false``, each namespace is declared on a new line.
 
@@ -2125,15 +2125,15 @@ the configuration (without a prefix: ``Auto``).
     namespace Extra {
     }}}
 
-**ConstructorInitializerAllOnOneLineOrOnePerLine** (``bool``)
+**ConstructorInitializerAllOnOneLineOrOnePerLine** (``Boolean``)
   This option is **deprecated**. See ``CurrentLine`` of
   ``PackConstructorInitializers``.
 
-**ConstructorInitializerIndentWidth** (``unsigned``)
+**ConstructorInitializerIndentWidth** (``Unsigned``)
   The number of characters to use for indentation of constructor
   initializer lists as well as inheritance lists.
 
-**ContinuationIndentWidth** (``unsigned``)
+**ContinuationIndentWidth** (``Unsigned``)
   Indent width for line continuations.
 
   .. code-block:: c++
@@ -2144,7 +2144,7 @@ the configuration (without a prefix: ``Auto``).
        longFunction( // Again a long comment
          arg);
 
-**Cpp11BracedListStyle** (``bool``)
+**Cpp11BracedListStyle** (``Boolean``)
   If ``true``, format braced lists as best suited for C++11 braced
   lists.
 
@@ -2167,18 +2167,18 @@ the configuration (without a prefix: ``Auto``).
      f(MyMap[{composite, key}]);            f(MyMap[{ composite, key }]);
      new int[3]{1, 2, 3};                   new int[3]{ 1, 2, 3 };
 
-**DeriveLineEnding** (``bool``)
+**DeriveLineEnding** (``Boolean``)
   Analyze the formatted file for the most used line ending (``\r\n``
   or ``\n``). ``UseCRLF`` is only used as a fallback if none can be derived.
 
-**DerivePointerAlignment** (``bool``)
+**DerivePointerAlignment** (``Boolean``)
   If ``true``, analyze the formatted file for the most common
   alignment of ``&`` and ``*``.
   Pointer and reference alignment styles are going to be updated according
   to the preferences found in the file.
   ``PointerAlignment`` is then used only as fallback.
 
-**DisableFormat** (``bool``)
+**DisableFormat** (``Boolean``)
   Disables formatting completely.
 
 **EmptyLineAfterAccessModifier** (``EmptyLineAfterAccessModifierStyle``)
@@ -2303,7 +2303,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**ExperimentalAutoDetectBinPacking** (``bool``)
+**ExperimentalAutoDetectBinPacking** (``Boolean``)
   If ``true``, clang-format detects whether function calls and
   definitions are formatted with one parameter per line.
 
@@ -2315,7 +2315,7 @@ the configuration (without a prefix: ``Auto``).
   NOTE: This is an experimental flag, that might go away or be renamed. Do
   not use this in config files, etc. Use at your own risk.
 
-**FixNamespaceComments** (``bool``)
+**FixNamespaceComments** (``Boolean``)
   If ``true``, clang-format adds missing namespace end comments for
   short namespaces and fixes invalid existing ones. Short ones are
   controlled by "ShortNamespaceLines".
@@ -2328,7 +2328,7 @@ the configuration (without a prefix: ``Auto``).
      bar();                                 bar();
      } // namespace a                       }
 
-**ForEachMacros** (``std::vector<std::string>``)
+**ForEachMacros** (``List of Strings``)
   A vector of macros that should be interpreted as foreach loops
   instead of as function calls.
 
@@ -2347,7 +2347,7 @@ the configuration (without a prefix: ``Auto``).
 
   For example: BOOST_FOREACH.
 
-**IfMacros** (``std::vector<std::string>``)
+**IfMacros** (``List of Strings``)
   A vector of macros that should be interpreted as conditionals
   instead of as function calls.
 
@@ -2409,7 +2409,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**IncludeCategories** (``std::vector<IncludeCategory>``)
+**IncludeCategories** (``List of IncludeCategories``)
   Regular expressions denoting the different ``#include`` categories
   used for ordering ``#includes``.
 
@@ -2457,7 +2457,7 @@ the configuration (without a prefix: ``Auto``).
         Priority:        1
         SortPriority:    0
 
-**IncludeIsMainRegex** (``std::string``)
+**IncludeIsMainRegex** (``String``)
   Specify a regular expression of suffixes that are allowed in the
   file-to-main-include mapping.
 
@@ -2470,7 +2470,7 @@ the configuration (without a prefix: ``Auto``).
   For example, if configured to "(_test)?$", then a header a.h would be seen
   as the "main" include in both a.cc and a_test.cc.
 
-**IncludeIsMainSourceRegex** (``std::string``)
+**IncludeIsMainSourceRegex** (``String``)
   Specify a regular expression for files being formatted
   that are allowed to be considered "main" in the
   file-to-main-include mapping.
@@ -2490,7 +2490,7 @@ the configuration (without a prefix: ``Auto``).
   ``ClassImpl.hpp`` would not have the main include file put on top
   before any other include.
 
-**IndentAccessModifiers** (``bool``)
+**IndentAccessModifiers** (``Boolean``)
   Specify whether access modifiers should have their own indentation level.
 
   When ``false``, access modifiers are indented (or outdented) relative to
@@ -2517,7 +2517,7 @@ the configuration (without a prefix: ``Auto``).
        return 1;                              return 1;
      }                                      }
 
-**IndentCaseBlocks** (``bool``)
+**IndentCaseBlocks** (``Boolean``)
   Indent case label blocks one level from the case label.
 
   When ``false``, the block following the case label uses the same
@@ -2540,7 +2540,7 @@ the configuration (without a prefix: ``Auto``).
                                               }
                                             }
 
-**IndentCaseLabels** (``bool``)
+**IndentCaseLabels** (``Boolean``)
   Indent case labels one level from the switch statement.
 
   When ``false``, use the same indentation level as for the switch
@@ -2605,7 +2605,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**IndentGotoLabels** (``bool``)
+**IndentGotoLabels** (``Boolean``)
   Indent goto labels.
 
   When ``false``, goto labels are flushed left.
@@ -2662,7 +2662,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**IndentRequires** (``bool``)
+**IndentRequires** (``Boolean``)
   Indent the requires clause in a template
 
   .. code-block:: c++
@@ -2681,7 +2681,7 @@ the configuration (without a prefix: ``Auto``).
        //....
      }
 
-**IndentWidth** (``unsigned``)
+**IndentWidth** (``Unsigned``)
   The number of columns to use for indentation.
 
   .. code-block:: c++
@@ -2695,7 +2695,7 @@ the configuration (without a prefix: ``Auto``).
         }
      }
 
-**IndentWrappedFunctionNames** (``bool``)
+**IndentWrappedFunctionNames** (``Boolean``)
   Indent if a function definition or declaration is wrapped after the
   type.
 
@@ -2741,7 +2741,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**JavaImportGroups** (``std::vector<std::string>``)
+**JavaImportGroups** (``List of Strings``)
   A vector of prefixes ordered by the desired groups for Java imports.
 
   One group's prefix can be a subset of another - the longest prefix is
@@ -2807,7 +2807,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**JavaScriptWrapImports** (``bool``)
+**JavaScriptWrapImports** (``Boolean``)
   Whether to wrap JavaScript import/export statements.
 
   .. code-block:: js
@@ -2822,7 +2822,7 @@ the configuration (without a prefix: ``Auto``).
      false:
      import {VeryLongImportsAreAnnoying, VeryLongImportsAreAnnoying, VeryLongImportsAreAnnoying,} from "some/module.js"
 
-**KeepEmptyLinesAtTheStartOfBlocks** (``bool``)
+**KeepEmptyLinesAtTheStartOfBlocks** (``Boolean``)
   If true, the empty line at the start of blocks is kept.
 
   .. code-block:: c++
@@ -2908,7 +2908,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**MacroBlockBegin** (``std::string``)
+**MacroBlockBegin** (``String``)
   A regular expression matching macros that start a block.
 
   .. code-block:: c++
@@ -2937,10 +2937,10 @@ the configuration (without a prefix: ``Auto``).
      bar();
      NS_TABLE_FOO_END
 
-**MacroBlockEnd** (``std::string``)
+**MacroBlockEnd** (``String``)
   A regular expression matching macros that end a block.
 
-**MaxEmptyLinesToKeep** (``unsigned``)
+**MaxEmptyLinesToKeep** (``Unsigned``)
   The maximum number of consecutive empty lines to keep.
 
   .. code-block:: c++
@@ -2997,7 +2997,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**NamespaceMacros** (``std::vector<std::string>``)
+**NamespaceMacros** (``List of Strings``)
   A vector of macros which are used to open namespace blocks.
 
   These are expected to be macros of the form:
@@ -3056,7 +3056,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**ObjCBlockIndentWidth** (``unsigned``)
+**ObjCBlockIndentWidth** (``Unsigned``)
   The number of characters to use for indentation of ObjC blocks.
 
   .. code-block:: objc
@@ -3067,7 +3067,7 @@ the configuration (without a prefix: ``Auto``).
          [self onOperationDone];
      }];
 
-**ObjCBreakBeforeNestedBlockParam** (``bool``)
+**ObjCBreakBeforeNestedBlockParam** (``Boolean``)
   Break parameters list into lines when there is nested block
   parameters in a function call.
 
@@ -3091,15 +3091,15 @@ the configuration (without a prefix: ``Auto``).
              }]
      }
 
-**ObjCSpaceAfterProperty** (``bool``)
+**ObjCSpaceAfterProperty** (``Boolean``)
   Add a space after ``@property`` in Objective-C, i.e. use
   ``@property (readonly)`` instead of ``@property(readonly)``.
 
-**ObjCSpaceBeforeProtocolList** (``bool``)
+**ObjCSpaceBeforeProtocolList** (``Boolean``)
   Add a space in front of an Objective-C protocol list, i.e. use
   ``Foo <Protocol>`` instead of ``Foo<Protocol>``.
 
-**PPIndentWidth** (``int``)
+**PPIndentWidth** (``Integer``)
   The number of columns to use for indentation of preprocessor statements.
   When set to -1 (default) ``IndentWidth`` is used also for preprocessor
   statements.
@@ -3168,32 +3168,32 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**PenaltyBreakAssignment** (``unsigned``)
+**PenaltyBreakAssignment** (``Unsigned``)
   The penalty for breaking around an assignment operator.
 
-**PenaltyBreakBeforeFirstCallParameter** (``unsigned``)
+**PenaltyBreakBeforeFirstCallParameter** (``Unsigned``)
   The penalty for breaking a function call after ``call(``.
 
-**PenaltyBreakComment** (``unsigned``)
+**PenaltyBreakComment** (``Unsigned``)
   The penalty for each line break introduced inside a comment.
 
-**PenaltyBreakFirstLessLess** (``unsigned``)
+**PenaltyBreakFirstLessLess** (``Unsigned``)
   The penalty for breaking before the first ``<<``.
 
-**PenaltyBreakString** (``unsigned``)
+**PenaltyBreakString** (``Unsigned``)
   The penalty for each line break introduced inside a string literal.
 
-**PenaltyBreakTemplateDeclaration** (``unsigned``)
+**PenaltyBreakTemplateDeclaration** (``Unsigned``)
   The penalty for breaking after template declaration.
 
-**PenaltyExcessCharacter** (``unsigned``)
+**PenaltyExcessCharacter** (``Unsigned``)
   The penalty for each character outside of the column limit.
 
-**PenaltyIndentedWhitespace** (``unsigned``)
+**PenaltyIndentedWhitespace** (``Unsigned``)
   Penalty for each character of whitespace indentation
   (counted relative to leading non-whitespace column).
 
-**PenaltyReturnTypeOnItsOwnLine** (``unsigned``)
+**PenaltyReturnTypeOnItsOwnLine** (``Unsigned``)
   Penalty for putting the return type of a function onto its own
   line.
 
@@ -3276,7 +3276,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**QualifierOrder** (``std::vector<std::string>``)
+**QualifierOrder** (``List of Strings``)
   The Order in which the qualifiers appear.
   Order is a an array can contain any of the following
 
@@ -3297,7 +3297,7 @@ the configuration (without a prefix: ``Auto``).
 
     QualifierOrder: ['inline', 'static', 'type', 'const', 'volatile' ]
 
-**RawStringFormats** (``std::vector<RawStringFormat>``)
+**RawStringFormats** (``List of RawStringFormats``)
   Defines hints for detecting supported languages code blocks in raw
   strings.
 
@@ -3367,7 +3367,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**ReflowComments** (``bool``)
+**ReflowComments** (``Boolean``)
   If ``true``, clang-format will attempt to re-flow comments.
 
   .. code-block:: c++
@@ -3382,7 +3382,7 @@ the configuration (without a prefix: ``Auto``).
      /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
       * information */
 
-**ShortNamespaceLines** (``unsigned``)
+**ShortNamespaceLines** (``Unsigned``)
   The maximal number of unwrapped lines that a short namespace spans.
   Defaults to 1.
 
@@ -3476,7 +3476,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**SortUsingDeclarations** (``bool``)
+**SortUsingDeclarations** (``Boolean``)
   If ``true``, clang-format will sort using declarations.
 
   The order of using declarations is defined as follows:
@@ -3493,7 +3493,7 @@ the configuration (without a prefix: ``Auto``).
      using std::cout;               vs.     using std::cin;
      using std::cin;                        using std::cout;
 
-**SpaceAfterCStyleCast** (``bool``)
+**SpaceAfterCStyleCast** (``Boolean``)
   If ``true``, a space is inserted after C style casts.
 
   .. code-block:: c++
@@ -3501,7 +3501,7 @@ the configuration (without a prefix: ``Auto``).
      true:                                  false:
      (int) i;                       vs.     (int)i;
 
-**SpaceAfterLogicalNot** (``bool``)
+**SpaceAfterLogicalNot** (``Boolean``)
   If ``true``, a space is inserted after the logical not operator (``!``).
 
   .. code-block:: c++
@@ -3509,7 +3509,7 @@ the configuration (without a prefix: ``Auto``).
      true:                                  false:
      ! someExpression();            vs.     !someExpression();
 
-**SpaceAfterTemplateKeyword** (``bool``)
+**SpaceAfterTemplateKeyword** (``Boolean``)
   If ``true``, a space will be inserted after the 'template' keyword.
 
   .. code-block:: c++
@@ -3557,7 +3557,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**SpaceBeforeAssignmentOperators** (``bool``)
+**SpaceBeforeAssignmentOperators** (``Boolean``)
   If ``false``, spaces will be removed before assignment operators.
 
   .. code-block:: c++
@@ -3566,7 +3566,7 @@ the configuration (without a prefix: ``Auto``).
      int a = 5;                     vs.     int a= 5;
      a += 42;                               a+= 42;
 
-**SpaceBeforeCaseColon** (``bool``)
+**SpaceBeforeCaseColon** (``Boolean``)
   If ``false``, spaces will be removed before case colon.
 
   .. code-block:: c++
@@ -3576,7 +3576,7 @@ the configuration (without a prefix: ``Auto``).
       case 1 : break;                         case 1: break;
     }                                       }
 
-**SpaceBeforeCpp11BracedList** (``bool``)
+**SpaceBeforeCpp11BracedList** (``Boolean``)
   If ``true``, a space will be inserted before a C++11 braced list
   used to initialize an object (after the preceding identifier or type).
 
@@ -3588,7 +3588,7 @@ the configuration (without a prefix: ``Auto``).
      vector<int> { 1, 2, 3 };               vector<int>{ 1, 2, 3 };
      new int[3] { 1, 2, 3 };                new int[3]{ 1, 2, 3 };
 
-**SpaceBeforeCtorInitializerColon** (``bool``)
+**SpaceBeforeCtorInitializerColon** (``Boolean``)
   If ``false``, spaces will be removed before constructor initializer
   colon.
 
@@ -3597,7 +3597,7 @@ the configuration (without a prefix: ``Auto``).
      true:                                  false:
      Foo::Foo() : a(a) {}                   Foo::Foo(): a(a) {}
 
-**SpaceBeforeInheritanceColon** (``bool``)
+**SpaceBeforeInheritanceColon** (``Boolean``)
   If ``false``, spaces will be removed before inheritance colon.
 
   .. code-block:: c++
@@ -3677,7 +3677,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**SpaceBeforeRangeBasedForLoopColon** (``bool``)
+**SpaceBeforeRangeBasedForLoopColon** (``Boolean``)
   If ``false``, spaces will be removed before range-based for loop
   colon.
 
@@ -3686,7 +3686,7 @@ the configuration (without a prefix: ``Auto``).
      true:                                  false:
      for (auto v : values) {}       vs.     for(auto v: values) {}
 
-**SpaceBeforeSquareBrackets** (``bool``)
+**SpaceBeforeSquareBrackets** (``Boolean``)
   If ``true``, spaces will be before  ``[``.
   Lambdas will not be affected. Only the first ``[`` will get a space added.
 
@@ -3696,7 +3696,7 @@ the configuration (without a prefix: ``Auto``).
      int a [5];                    vs.      int a[5];
      int a [5][5];                 vs.      int a[5][5];
 
-**SpaceInEmptyBlock** (``bool``)
+**SpaceInEmptyBlock** (``Boolean``)
   If ``true``, spaces will be inserted into ``{}``.
 
   .. code-block:: c++
@@ -3705,7 +3705,7 @@ the configuration (without a prefix: ``Auto``).
      void f() { }                   vs.   void f() {}
      while (true) { }                     while (true) {}
 
-**SpaceInEmptyParentheses** (``bool``)
+**SpaceInEmptyParentheses** (``Boolean``)
   If ``true``, spaces may be inserted into ``()``.
 
   .. code-block:: c++
@@ -3718,7 +3718,7 @@ the configuration (without a prefix: ``Auto``).
        }                                    }
      }                                    }
 
-**SpacesBeforeTrailingComments** (``unsigned``)
+**SpacesBeforeTrailingComments** (``Unsigned``)
   The number of spaces before trailing line comments
   (``//`` - comments).
 
@@ -3762,7 +3762,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**SpacesInCStyleCastParentheses** (``bool``)
+**SpacesInCStyleCastParentheses** (``Boolean``)
   If ``true``, spaces may be inserted into C style casts.
 
   .. code-block:: c++
@@ -3770,7 +3770,7 @@ the configuration (without a prefix: ``Auto``).
      true:                                  false:
      x = ( int32 )y                 vs.     x = (int32)y
 
-**SpacesInConditionalStatement** (``bool``)
+**SpacesInConditionalStatement** (``Boolean``)
   If ``true``, spaces will be inserted around if/for/switch/while
   conditions.
 
@@ -3780,7 +3780,7 @@ the configuration (without a prefix: ``Auto``).
      if ( a )  { ... }              vs.     if (a) { ... }
      while ( i < 5 )  { ... }               while (i < 5) { ... }
 
-**SpacesInContainerLiterals** (``bool``)
+**SpacesInContainerLiterals** (``Boolean``)
   If ``true``, spaces are inserted inside container literals (e.g.
   ObjC and Javascript array and dict literals).
 
@@ -3827,7 +3827,7 @@ the configuration (without a prefix: ``Auto``).
   * ``unsigned Maximum`` The maximum number of spaces at the start of the comment.
 
 
-**SpacesInParentheses** (``bool``)
+**SpacesInParentheses** (``Boolean``)
   If ``true``, spaces will be inserted after ``(`` and before ``)``.
 
   .. code-block:: c++
@@ -3835,7 +3835,7 @@ the configuration (without a prefix: ``Auto``).
      true:                                  false:
      t f( Deleted & ) & = delete;   vs.     t f(Deleted &) & = delete;
 
-**SpacesInSquareBrackets** (``bool``)
+**SpacesInSquareBrackets** (``Boolean``)
   If ``true``, spaces will be inserted after ``[`` and before ``]``.
   Lambdas without arguments or unspecified size array declarations will not
   be affected.
@@ -3881,7 +3881,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**StatementAttributeLikeMacros** (``std::vector<std::string>``)
+**StatementAttributeLikeMacros** (``List of Strings``)
   Macros which are ignored in front of a statement, as if they were an
   attribute. So that they are not parsed as identifier, for example for Qts
   emit.
@@ -3898,7 +3898,7 @@ the configuration (without a prefix: ``Auto``).
     unsigned char data = 'x';
     emit signal(data); // Now it's fine again.
 
-**StatementMacros** (``std::vector<std::string>``)
+**StatementMacros** (``List of Strings``)
   A vector of macros that should be interpreted as complete
   statements.
 
@@ -3908,10 +3908,10 @@ the configuration (without a prefix: ``Auto``).
 
   For example: Q_UNUSED
 
-**TabWidth** (``unsigned``)
+**TabWidth** (``Unsigned``)
   The number of columns used for tab stops.
 
-**TypenameMacros** (``std::vector<std::string>``)
+**TypenameMacros** (``List of Strings``)
   A vector of macros that should be interpreted as type declarations
   instead of as function calls.
 
@@ -3929,7 +3929,7 @@ the configuration (without a prefix: ``Auto``).
 
   For example: OpenSSL STACK_OF, BSD LIST_ENTRY.
 
-**UseCRLF** (``bool``)
+**UseCRLF** (``Boolean``)
   Use ``\r\n`` instead of ``\n`` for line breaks.
   Also used as fallback if ``DeriveLineEnding`` is true.
 
@@ -3958,7 +3958,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**WhitespaceSensitiveMacros** (``std::vector<std::string>``)
+**WhitespaceSensitiveMacros** (``List of Strings``)
   A vector of macros which are whitespace-sensitive and should not
   be touched.
 
