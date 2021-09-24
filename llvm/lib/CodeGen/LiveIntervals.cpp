@@ -1677,6 +1677,8 @@ LiveIntervals::repairIntervalsInRange(MachineBasicBlock *MBB,
 
   Indexes->repairIndexesInRange(MBB, Begin, End);
 
+  // Make sure a live interval exists for all register operands in the range.
+  SmallVector<Register> RegsToRepair(OrigRegs.begin(), OrigRegs.end());
   for (MachineBasicBlock::iterator I = End; I != Begin;) {
     --I;
     MachineInstr &MI = *I;
@@ -1685,14 +1687,25 @@ LiveIntervals::repairIntervalsInRange(MachineBasicBlock *MBB,
     for (MachineInstr::const_mop_iterator MOI = MI.operands_begin(),
                                           MOE = MI.operands_end();
          MOI != MOE; ++MOI) {
-      if (MOI->isReg() && Register::isVirtualRegister(MOI->getReg()) &&
-          !hasInterval(MOI->getReg())) {
-        createAndComputeVirtRegInterval(MOI->getReg());
+      if (MOI->isReg() && MOI->getReg().isVirtual()) {
+        Register Reg = MOI->getReg();
+        // If the new instructions refer to subregs but the old instructions did
+        // not, throw away any old live interval so it will be recomputed with
+        // subranges.
+        if (MOI->getSubReg() && hasInterval(Reg) &&
+            !getInterval(Reg).hasSubRanges() &&
+            MRI->shouldTrackSubRegLiveness(Reg))
+          removeInterval(Reg);
+        if (!hasInterval(Reg)) {
+          createAndComputeVirtRegInterval(Reg);
+          // Don't bother to repair a freshly calculated live interval.
+          erase_value(RegsToRepair, Reg);
+        }
       }
     }
   }
 
-  for (Register Reg : OrigRegs) {
+  for (Register Reg : RegsToRepair) {
     if (!Reg.isVirtual())
       continue;
 
