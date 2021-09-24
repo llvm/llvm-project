@@ -25,7 +25,7 @@ define void @t0_caller(i32* %a) {
 ; IS__TUNIT_OPM-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
 ; IS__TUNIT_OPM-NEXT:    store i32 42, i32* [[B]], align 32
 ; IS__TUNIT_OPM-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; IS__TUNIT_OPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t0_callback_broker(i32* noalias nocapture noundef align 1073741824 null, i32* noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t0_callback_callee to void (i32*, i32*, ...)*), i32* align 256 [[A]], i64 undef, i32** nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; IS__TUNIT_OPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t0_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t0_callback_callee to void (i32*, i32*, ...)*), i32* align 256 [[A]], i64 undef, i32** nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@t0_caller
@@ -37,7 +37,7 @@ define void @t0_caller(i32* %a) {
 ; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
 ; IS__TUNIT_NPM-NEXT:    store i32 42, i32* [[B]], align 32
 ; IS__TUNIT_NPM-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; IS__TUNIT_NPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t0_callback_broker(i32* noalias nocapture noundef align 1073741824 null, i32* noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t0_callback_callee to void (i32*, i32*, ...)*), i32* align 256 [[A]], i64 undef, i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; IS__TUNIT_NPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t0_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t0_callback_callee to void (i32*, i32*, ...)*), i32* align 256 [[A]], i64 undef, i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@t0_caller
@@ -49,7 +49,7 @@ define void @t0_caller(i32* %a) {
 ; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
 ; IS__CGSCC_OPM-NEXT:    store i32 42, i32* [[B]], align 32
 ; IS__CGSCC_OPM-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; IS__CGSCC_OPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t0_callback_broker(i32* noalias nocapture noundef align 1073741824 null, i32* noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t0_callback_callee to void (i32*, i32*, ...)*), i32* align 256 [[A]], i64 noundef 99, i32** nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; IS__CGSCC_OPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t0_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t0_callback_callee to void (i32*, i32*, ...)*), i32* align 256 [[A]], i64 noundef 99, i32** nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@t0_caller
@@ -61,7 +61,7 @@ define void @t0_caller(i32* %a) {
 ; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
 ; IS__CGSCC_NPM-NEXT:    store i32 42, i32* [[B]], align 32
 ; IS__CGSCC_NPM-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; IS__CGSCC_NPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t0_callback_broker(i32* noalias nocapture noundef align 1073741824 null, i32* noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t0_callback_callee to void (i32*, i32*, ...)*), i32* align 256 [[A]], i64 noundef 99, i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; IS__CGSCC_NPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t0_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t0_callback_callee to void (i32*, i32*, ...)*), i32* align 256 [[A]], i64 noundef 99, i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
 ; IS__CGSCC_NPM-NEXT:    ret void
 ;
 entry:
@@ -125,7 +125,7 @@ define void @t1_caller(i32* noalias %a) {
 ; IS__TUNIT_OPM-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
 ; IS__TUNIT_OPM-NEXT:    store i32 42, i32* [[B]], align 32
 ; IS__TUNIT_OPM-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; IS__TUNIT_OPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t1_callback_broker(i32* noalias nocapture noundef align 1073741824 null, i32* nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t1_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 undef, i32** nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; IS__TUNIT_OPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t1_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t1_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 undef, i32** nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@t1_caller
@@ -137,7 +137,7 @@ define void @t1_caller(i32* noalias %a) {
 ; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
 ; IS__TUNIT_NPM-NEXT:    store i32 42, i32* [[B]], align 32
 ; IS__TUNIT_NPM-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; IS__TUNIT_NPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t1_callback_broker(i32* noalias nocapture noundef align 1073741824 null, i32* noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t1_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 undef, i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; IS__TUNIT_NPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t1_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t1_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 undef, i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@t1_caller
@@ -149,7 +149,7 @@ define void @t1_caller(i32* noalias %a) {
 ; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
 ; IS__CGSCC_OPM-NEXT:    store i32 42, i32* [[B]], align 32
 ; IS__CGSCC_OPM-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; IS__CGSCC_OPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t1_callback_broker(i32* noalias nocapture noundef align 1073741824 null, i32* nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t1_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 noundef 99, i32** nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; IS__CGSCC_OPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t1_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t1_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 noundef 99, i32** nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@t1_caller
@@ -161,7 +161,7 @@ define void @t1_caller(i32* noalias %a) {
 ; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
 ; IS__CGSCC_NPM-NEXT:    store i32 42, i32* [[B]], align 32
 ; IS__CGSCC_NPM-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; IS__CGSCC_NPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t1_callback_broker(i32* noalias nocapture noundef align 1073741824 null, i32* noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t1_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 noundef 99, i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; IS__CGSCC_NPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t1_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t1_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 noundef 99, i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
 ; IS__CGSCC_NPM-NEXT:    ret void
 ;
 entry:
@@ -225,7 +225,7 @@ define void @t2_caller(i32* noalias %a) {
 ; IS__TUNIT_OPM-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
 ; IS__TUNIT_OPM-NEXT:    store i32 42, i32* [[B]], align 32
 ; IS__TUNIT_OPM-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; IS__TUNIT_OPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t2_callback_broker(i32* noalias nocapture noundef align 1073741824 null, i32* nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t2_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 undef, i32** nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; IS__TUNIT_OPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t2_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t2_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 undef, i32** nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@t2_caller
@@ -237,7 +237,7 @@ define void @t2_caller(i32* noalias %a) {
 ; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
 ; IS__TUNIT_NPM-NEXT:    store i32 42, i32* [[B]], align 32
 ; IS__TUNIT_NPM-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; IS__TUNIT_NPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t2_callback_broker(i32* noalias nocapture noundef align 1073741824 null, i32* noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t2_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 undef, i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; IS__TUNIT_NPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t2_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t2_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 undef, i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@t2_caller
@@ -249,7 +249,7 @@ define void @t2_caller(i32* noalias %a) {
 ; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
 ; IS__CGSCC_OPM-NEXT:    store i32 42, i32* [[B]], align 32
 ; IS__CGSCC_OPM-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; IS__CGSCC_OPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t2_callback_broker(i32* noalias nocapture noundef align 1073741824 null, i32* nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t2_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 noundef 99, i32** nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; IS__CGSCC_OPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t2_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t2_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 noundef 99, i32** nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@t2_caller
@@ -261,7 +261,7 @@ define void @t2_caller(i32* noalias %a) {
 ; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
 ; IS__CGSCC_NPM-NEXT:    store i32 42, i32* [[B]], align 32
 ; IS__CGSCC_NPM-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; IS__CGSCC_NPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t2_callback_broker(i32* noalias nocapture noundef align 1073741824 null, i32* noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t2_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 noundef 99, i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; IS__CGSCC_NPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t2_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t2_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 noundef 99, i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
 ; IS__CGSCC_NPM-NEXT:    ret void
 ;
 entry:
@@ -325,8 +325,8 @@ define void @t3_caller(i32* noalias %a) {
 ; IS__TUNIT_OPM-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
 ; IS__TUNIT_OPM-NEXT:    store i32 42, i32* [[B]], align 32
 ; IS__TUNIT_OPM-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; IS__TUNIT_OPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t3_callback_broker(i32* noalias nocapture noundef align 1073741824 null, i32* nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t3_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 undef, i32** nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
-; IS__TUNIT_OPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t3_callback_broker(i32* noalias nocapture noundef align 1073741824 null, i32* nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t3_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 undef, i32** nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; IS__TUNIT_OPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t3_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t3_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 undef, i32** nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; IS__TUNIT_OPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t3_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t3_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 undef, i32** nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@t3_caller
@@ -338,8 +338,8 @@ define void @t3_caller(i32* noalias %a) {
 ; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
 ; IS__TUNIT_NPM-NEXT:    store i32 42, i32* [[B]], align 32
 ; IS__TUNIT_NPM-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; IS__TUNIT_NPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t3_callback_broker(i32* noalias nocapture noundef align 1073741824 null, i32* noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t3_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 undef, i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
-; IS__TUNIT_NPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t3_callback_broker(i32* noalias nocapture noundef align 1073741824 null, i32* noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t3_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 undef, i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; IS__TUNIT_NPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t3_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t3_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 undef, i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; IS__TUNIT_NPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t3_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t3_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 undef, i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@t3_caller
@@ -351,8 +351,8 @@ define void @t3_caller(i32* noalias %a) {
 ; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
 ; IS__CGSCC_OPM-NEXT:    store i32 42, i32* [[B]], align 32
 ; IS__CGSCC_OPM-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; IS__CGSCC_OPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t3_callback_broker(i32* noalias nocapture noundef align 1073741824 null, i32* nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t3_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 noundef 99, i32** nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
-; IS__CGSCC_OPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t3_callback_broker(i32* noalias nocapture noundef align 1073741824 null, i32* nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t3_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 noundef 99, i32** nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; IS__CGSCC_OPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t3_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t3_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 noundef 99, i32** nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; IS__CGSCC_OPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t3_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t3_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 noundef 99, i32** nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@t3_caller
@@ -364,8 +364,8 @@ define void @t3_caller(i32* noalias %a) {
 ; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
 ; IS__CGSCC_NPM-NEXT:    store i32 42, i32* [[B]], align 32
 ; IS__CGSCC_NPM-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; IS__CGSCC_NPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t3_callback_broker(i32* noalias nocapture noundef align 1073741824 null, i32* noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t3_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 noundef 99, i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
-; IS__CGSCC_NPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t3_callback_broker(i32* noalias nocapture noundef align 1073741824 null, i32* noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t3_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 noundef 99, i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; IS__CGSCC_NPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t3_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t3_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 noundef 99, i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; IS__CGSCC_NPM-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t3_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t3_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 noundef 99, i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
 ; IS__CGSCC_NPM-NEXT:    ret void
 ;
 entry:
