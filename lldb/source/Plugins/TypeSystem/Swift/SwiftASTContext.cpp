@@ -38,6 +38,7 @@
 #include "swift/AST/Type.h"
 #include "swift/AST/Types.h"
 #include "swift/ASTSectionImporter/ASTSectionImporter.h"
+#include "swift/Basic/DiagnosticOptions.h"
 #include "swift/Basic/Dwarf.h"
 #include "swift/Basic/LangOptions.h"
 #include "swift/Basic/Located.h"
@@ -1531,6 +1532,20 @@ void SwiftASTContext::ApplyWorkingDir(
   clang_argument.append(joined_path.begin(), joined_path.end());
 }
 
+void SwiftASTContext::ApplyDiagnosticOptions() {
+  const auto &opts = GetCompilerInvocation().getDiagnosticOptions();
+  if (opts.PrintDiagnosticNames)
+    GetDiagnosticEngine().setPrintDiagnosticNames(true);
+
+  if (!opts.DiagnosticDocumentationPath.empty())
+    GetDiagnosticEngine().setDiagnosticDocumentationPath(
+        opts.DiagnosticDocumentationPath);
+
+  if (!opts.LocalizationCode.empty() && !opts.LocalizationPath.empty())
+    GetDiagnosticEngine().setLocalization(opts.LocalizationCode,
+                                          opts.LocalizationPath);
+}
+
 void SwiftASTContext::RemapClangImporterOptions(
     const PathMappingList &path_map) {
   auto &options = GetClangImporterOptions();
@@ -2300,6 +2315,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     compiler_invocation.parseArgs(extra_args_ref,
                                   swift_ast_sp->GetDiagnosticEngine());
   }
+
+  swift_ast_sp->ApplyDiagnosticOptions();
 
   // Apply source path remappings found in the target settings.
   swift_ast_sp->RemapClangImporterOptions(target.GetSourcePathMap());
