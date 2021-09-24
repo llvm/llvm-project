@@ -671,7 +671,8 @@ unsigned getNumExtraSGPRs(const MCSubtargetInfo *STI, bool VCCUsed,
     if (XNACKUsed)
       ExtraSGPRs = 4;
 
-    if (FlatScrUsed)
+    if (FlatScrUsed ||
+        STI->getFeatureBits().test(AMDGPU::FeatureArchitectedFlatScratch))
       ExtraSGPRs = 6;
   }
 
