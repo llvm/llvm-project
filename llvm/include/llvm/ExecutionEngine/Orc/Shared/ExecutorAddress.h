@@ -37,6 +37,8 @@ private:
 class ExecutorAddr {
 public:
   ExecutorAddr() = default;
+
+  /// Create an ExecutorAddr from the given value.
   explicit ExecutorAddr(uint64_t Addr) : Addr(Addr) {}
 
   /// Create an ExecutorAddr from the given pointer.
@@ -136,6 +138,19 @@ struct ExecutorAddrRange {
 
   bool empty() const { return Start == End; }
   ExecutorAddrDiff size() const { return End - Start; }
+
+  friend bool operator==(const ExecutorAddrRange &LHS,
+                         const ExecutorAddrRange &RHS) {
+    return LHS.Start == RHS.Start && LHS.End == RHS.End;
+  }
+  friend bool operator!=(const ExecutorAddrRange &LHS,
+                         const ExecutorAddrRange &RHS) {
+    return !(LHS == RHS);
+  }
+  bool contains(ExecutorAddr Addr) const { return Start <= Addr && Addr < End; }
+  bool overlaps(const ExecutorAddrRange &Other) {
+    return !(Other.End <= Start || End <= Other.Start);
+  }
 
   ExecutorAddr Start;
   ExecutorAddr End;
