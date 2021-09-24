@@ -135,6 +135,8 @@ struct ExecutorAddrRange {
   ExecutorAddrRange() = default;
   ExecutorAddrRange(ExecutorAddr Start, ExecutorAddr End)
       : Start(Start), End(End) {}
+  ExecutorAddrRange(ExecutorAddr Start, ExecutorAddrDiff Size)
+      : Start(Start), End(Start + Size) {}
 
   bool empty() const { return Start == End; }
   ExecutorAddrDiff size() const { return End - Start; }

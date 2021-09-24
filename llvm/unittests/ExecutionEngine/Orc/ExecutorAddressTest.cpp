@@ -58,6 +58,7 @@ TEST(ExecutorAddrTest, AddrRanges) {
   // R4:  ##    -- Overlaps R1 end
 
   EXPECT_EQ(R1, ExecutorAddrRange(A1, A2));
+  EXPECT_EQ(R1, ExecutorAddrRange(A1, ExecutorAddrDiff(1)));
   EXPECT_NE(R1, R2);
 
   EXPECT_TRUE(R1.contains(A1));
