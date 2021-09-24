@@ -143,66 +143,6 @@ namespace {
 
     const LoopInfo *LI;
   };
-
-  /// Find the 'earliest' instruction before which the pointer is known not to
-  /// be captured. Here an instruction A is considered earlier than instruction
-  /// B, if A dominates B. If 2 escapes do not dominate each other, the
-  /// terminator of the common dominator is chosen. If not all uses cannot be
-  /// analyzed, the earliest escape is set to the first instruction in the
-  /// function entry block.
-  // NOTE: Users have to make sure instructions compared against the earliest
-  // escape are not in a cycle.
-  struct EarliestCaptures : public CaptureTracker {
-
-    EarliestCaptures(bool ReturnCaptures, Function &F, const DominatorTree &DT)
-        : DT(DT), ReturnCaptures(ReturnCaptures), Captured(false), F(F) {}
-
-    void tooManyUses() override {
-      Captured = true;
-      EarliestCapture = &*F.getEntryBlock().begin();
-    }
-
-    bool captured(const Use *U) override {
-      Instruction *I = cast<Instruction>(U->getUser());
-      if (isa<ReturnInst>(I) && !ReturnCaptures)
-        return false;
-
-      if (!EarliestCapture) {
-        EarliestCapture = I;
-      } else if (EarliestCapture->getParent() == I->getParent()) {
-        if (I->comesBefore(EarliestCapture))
-          EarliestCapture = I;
-      } else {
-        BasicBlock *CurrentBB = I->getParent();
-        BasicBlock *EarliestBB = EarliestCapture->getParent();
-        if (DT.dominates(EarliestBB, CurrentBB)) {
-          // EarliestCapture already comes before the current use.
-        } else if (DT.dominates(CurrentBB, EarliestBB)) {
-          EarliestCapture = I;
-        } else {
-          // Otherwise find the nearest common dominator and use its terminator.
-          auto *NearestCommonDom =
-              DT.findNearestCommonDominator(CurrentBB, EarliestBB);
-          EarliestCapture = NearestCommonDom->getTerminator();
-        }
-      }
-      Captured = true;
-
-      // Return false to continue analysis; we need to see all potential
-      // captures.
-      return false;
-    }
-
-    Instruction *EarliestCapture = nullptr;
-
-    const DominatorTree &DT;
-
-    bool ReturnCaptures;
-
-    bool Captured;
-
-    Function &F;
-  };
 }
 
 /// PointerMayBeCaptured - Return true if this pointer value may be captured
@@ -264,22 +204,6 @@ bool llvm::PointerMayBeCapturedBefore(const Value *V, bool ReturnCaptures,
   else
     ++NumNotCapturedBefore;
   return CB.Captured;
-}
-
-Instruction *llvm::FindEarliestCapture(const Value *V, Function &F,
-                                       bool ReturnCaptures, bool StoreCaptures,
-                                       const DominatorTree &DT,
-                                       unsigned MaxUsesToExplore) {
-  assert(!isa<GlobalValue>(V) &&
-         "It doesn't make sense to ask whether a global is captured.");
-
-  EarliestCaptures CB(ReturnCaptures, F, DT);
-  PointerMayBeCaptured(V, &CB, MaxUsesToExplore);
-  if (CB.Captured)
-    ++NumCapturedBefore;
-  else
-    ++NumNotCapturedBefore;
-  return CB.EarliestCapture;
 }
 
 void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
