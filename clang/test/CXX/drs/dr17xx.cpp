@@ -129,7 +129,7 @@ namespace dr1778 { // dr1778: 9
 namespace dr1762 { // dr1762: 14
 #if __cplusplus >= 201103L
   float operator ""_E(const char *);
-  // expected-error@+2 {{invalid suffix on literal; c++11 requires a space between literal and identifier}}
+  // expected-error@+2 {{invalid suffix on literal; C++11 requires a space between literal and identifier}}
   // expected-warning@+1 {{user-defined literal suffixes not starting with '_' are reserved; no literal will invoke this operator}}
   float operator ""E(const char *);
 #endif
