@@ -57,5 +57,5 @@ CHECK: DW_TAG_compile_unit
 
 CHECK:          DW_AT_name      ("Container_ivars")
 CHECK-NEXT:     DW_AT_byte_size (0x01)
-CHECK-NEXT:     DW_AT_decl_file ("/tmp/union/container.cpp")
+CHECK-NEXT:     DW_AT_decl_file ("{{.*}}container.cpp")
 CHECK-NEXT:     DW_AT_decl_line (4)
