@@ -417,10 +417,21 @@ bool PerfReaderBase::extractLBRStack(TraceStream &TraceIt,
   // It's in FIFO order and seperated by whitespace.
   SmallVector<StringRef, 32> Records;
   TraceIt.getCurrentLine().split(Records, " ", -1, false);
+  auto WarnInvalidLBR = [](TraceStream &TraceIt) {
+    WithColor::warning() << "Invalid address in LBR record at line "
+                         << TraceIt.getLineNumber() << ": "
+                         << TraceIt.getCurrentLine() << "\n";
+  };
 
   // Skip the leading instruction pointer.
   size_t Index = 0;
+  uint64_t LeadingAddr;
   if (!Records.empty() && Records[0].find('/') == StringRef::npos) {
+    if (Records[0].getAsInteger(16, LeadingAddr)) {
+      WarnInvalidLBR(TraceIt);
+      TraceIt.advance();
+      return false;
+    }
     Index = 1;
   }
   // Now extract LBR samples - note that we do not reverse the
@@ -439,11 +450,9 @@ bool PerfReaderBase::extractLBRStack(TraceStream &TraceIt,
     uint64_t Dst;
 
     // Stop at broken LBR records.
-    if (Addresses[0].substr(2).getAsInteger(16, Src) ||
+    if (Addresses.size() < 2 || Addresses[0].substr(2).getAsInteger(16, Src) ||
         Addresses[1].substr(2).getAsInteger(16, Dst)) {
-      WithColor::warning() << "Invalid address in LBR record at line "
-                           << TraceIt.getLineNumber() << ": "
-                           << TraceIt.getCurrentLine() << "\n";
+      WarnInvalidLBR(TraceIt);
       break;
     }
 
