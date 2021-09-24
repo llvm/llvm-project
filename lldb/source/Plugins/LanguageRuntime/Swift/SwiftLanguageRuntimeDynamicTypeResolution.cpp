@@ -2086,7 +2086,10 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
 
   // Nothing to do if there are no type parameters.
   auto get_canonical = [&]() {
-    return ts.GetTypeFromMangledTypename(ConstString(mangleNode(canonical)));
+    auto mangling = mangleNode(canonical);
+    if (!mangling.isSuccess())
+      return CompilerType();
+    return ts.GetTypeFromMangledTypename(ConstString(mangling.result()));
   };
   if (substitutions.empty())
     return get_canonical();
@@ -2549,7 +2552,10 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ClangType(
     c->addChild(factory.createNode(Node::Kind::Identifier, dyn_name), factory);
     cty->addChild(c, factory);
 
-    remangled = mangleNode(global);
+    auto mangling = mangleNode(global);
+    if (!mangling.isSuccess())
+      return false;
+    remangled = mangling.result();
   }
 
   // Import the remangled dynamic name into the scratch context.
