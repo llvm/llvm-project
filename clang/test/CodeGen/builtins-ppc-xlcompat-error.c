@@ -96,6 +96,14 @@ long long testdivde(long long dividend, long long divisor) {
 unsigned long long testdivdeu(unsigned long long dividend, unsigned long long divisor) {
   return __divdeu(dividend, divisor); //expected-error {{this builtin is only available on 64-bit targets}}
 }
+
+int test_darn() {
+  return __darn(); //expected-error {{this builtin is only available on 64-bit targets}}
+}
+
+int test_darn_raw() {
+  return __darn_raw(); //expected-error {{this builtin is only available on 64-bit targets}}
+}
 #endif
 
 unsigned long test_mfspr(void) {
