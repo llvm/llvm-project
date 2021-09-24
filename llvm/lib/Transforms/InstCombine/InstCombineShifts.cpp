@@ -1042,12 +1042,12 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   Type *Ty = I.getType();
-  const APInt *ShAmtAPInt;
-  if (match(Op1, m_APInt(ShAmtAPInt))) {
-    unsigned ShAmt = ShAmtAPInt->getZExtValue();
+  const APInt *C;
+  if (match(Op1, m_APInt(C))) {
+    unsigned ShAmtC = C->getZExtValue();
     unsigned BitWidth = Ty->getScalarSizeInBits();
     auto *II = dyn_cast<IntrinsicInst>(Op0);
-    if (II && isPowerOf2_32(BitWidth) && Log2_32(BitWidth) == ShAmt &&
+    if (II && isPowerOf2_32(BitWidth) && Log2_32(BitWidth) == ShAmtC &&
         (II->getIntrinsicID() == Intrinsic::ctlz ||
          II->getIntrinsicID() == Intrinsic::cttz ||
          II->getIntrinsicID() == Intrinsic::ctpop)) {
@@ -1061,48 +1061,48 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
     }
 
     Value *X;
-    const APInt *ShOp1;
-    if (match(Op0, m_Shl(m_Value(X), m_APInt(ShOp1))) && ShOp1->ult(BitWidth)) {
-      if (ShOp1->ult(ShAmt)) {
-        unsigned ShlAmt = ShOp1->getZExtValue();
-        Constant *ShiftDiff = ConstantInt::get(Ty, ShAmt - ShlAmt);
+    const APInt *C1;
+    if (match(Op0, m_Shl(m_Value(X), m_APInt(C1))) && C1->ult(BitWidth)) {
+      if (C1->ult(ShAmtC)) {
+        unsigned ShlAmtC = C1->getZExtValue();
+        Constant *ShiftDiff = ConstantInt::get(Ty, ShAmtC - ShlAmtC);
         if (cast<BinaryOperator>(Op0)->hasNoUnsignedWrap()) {
-          // (X <<nuw C1) >>u C2 --> X >>u (C2 - C1)
+          // (X <<nuw C1) >>u C --> X >>u (C - C1)
           auto *NewLShr = BinaryOperator::CreateLShr(X, ShiftDiff);
           NewLShr->setIsExact(I.isExact());
           return NewLShr;
         }
-        // (X << C1) >>u C2  --> (X >>u (C2 - C1)) & (-1 >> C2)
+        // (X << C1) >>u C  --> (X >>u (C - C1)) & (-1 >> C)
         Value *NewLShr = Builder.CreateLShr(X, ShiftDiff, "", I.isExact());
-        APInt Mask(APInt::getLowBitsSet(BitWidth, BitWidth - ShAmt));
+        APInt Mask(APInt::getLowBitsSet(BitWidth, BitWidth - ShAmtC));
         return BinaryOperator::CreateAnd(NewLShr, ConstantInt::get(Ty, Mask));
       }
-      if (ShOp1->ugt(ShAmt)) {
-        unsigned ShlAmt = ShOp1->getZExtValue();
-        Constant *ShiftDiff = ConstantInt::get(Ty, ShlAmt - ShAmt);
+      if (C1->ugt(ShAmtC)) {
+        unsigned ShlAmtC = C1->getZExtValue();
+        Constant *ShiftDiff = ConstantInt::get(Ty, ShlAmtC - ShAmtC);
         if (cast<BinaryOperator>(Op0)->hasNoUnsignedWrap()) {
-          // (X <<nuw C1) >>u C2 --> X <<nuw (C1 - C2)
+          // (X <<nuw C1) >>u C --> X <<nuw (C1 - C)
           auto *NewShl = BinaryOperator::CreateShl(X, ShiftDiff);
           NewShl->setHasNoUnsignedWrap(true);
           return NewShl;
         }
-        // (X << C1) >>u C2  --> X << (C1 - C2) & (-1 >> C2)
+        // (X << C1) >>u C  --> X << (C1 - C) & (-1 >> C)
         Value *NewShl = Builder.CreateShl(X, ShiftDiff);
-        APInt Mask(APInt::getLowBitsSet(BitWidth, BitWidth - ShAmt));
+        APInt Mask(APInt::getLowBitsSet(BitWidth, BitWidth - ShAmtC));
         return BinaryOperator::CreateAnd(NewShl, ConstantInt::get(Ty, Mask));
       }
-      assert(*ShOp1 == ShAmt);
+      assert(*C1 == ShAmtC);
       // (X << C) >>u C --> X & (-1 >>u C)
-      APInt Mask(APInt::getLowBitsSet(BitWidth, BitWidth - ShAmt));
+      APInt Mask(APInt::getLowBitsSet(BitWidth, BitWidth - ShAmtC));
       return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, Mask));
     }
 
     if (match(Op0, m_OneUse(m_ZExt(m_Value(X)))) &&
         (!Ty->isIntegerTy() || shouldChangeType(Ty, X->getType()))) {
-      assert(ShAmt < X->getType()->getScalarSizeInBits() &&
+      assert(ShAmtC < X->getType()->getScalarSizeInBits() &&
              "Big shift not simplified to zero?");
       // lshr (zext iM X to iN), C --> zext (lshr X, C) to iN
-      Value *NewLShr = Builder.CreateLShr(X, ShAmt);
+      Value *NewLShr = Builder.CreateLShr(X, ShAmtC);
       return new ZExtInst(NewLShr, Ty);
     }
 
@@ -1110,7 +1110,7 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
         (!Ty->isIntegerTy() || shouldChangeType(Ty, X->getType()))) {
       // Are we moving the sign bit to the low bit and widening with high zeros?
       unsigned SrcTyBitWidth = X->getType()->getScalarSizeInBits();
-      if (ShAmt == BitWidth - 1) {
+      if (ShAmtC == BitWidth - 1) {
         // lshr (sext i1 X to iN), N-1 --> zext X to iN
         if (SrcTyBitWidth == 1)
           return new ZExtInst(X, Ty);
@@ -1123,16 +1123,16 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       }
 
       // lshr (sext iM X to iN), N-M --> zext (ashr X, min(N-M, M-1)) to iN
-      if (ShAmt == BitWidth - SrcTyBitWidth && Op0->hasOneUse()) {
+      if (ShAmtC == BitWidth - SrcTyBitWidth && Op0->hasOneUse()) {
         // The new shift amount can't be more than the narrow source type.
-        unsigned NewShAmt = std::min(ShAmt, SrcTyBitWidth - 1);
+        unsigned NewShAmt = std::min(ShAmtC, SrcTyBitWidth - 1);
         Value *AShr = Builder.CreateAShr(X, NewShAmt);
         return new ZExtInst(AShr, Ty);
       }
     }
 
     Value *Y;
-    if (ShAmt == BitWidth - 1) {
+    if (ShAmtC == BitWidth - 1) {
       // lshr i32 or(X,-X), 31 --> zext (X != 0)
       if (match(Op0, m_OneUse(m_c_Or(m_Neg(m_Value(X)), m_Deferred(X)))))
         return new ZExtInst(Builder.CreateIsNotNull(X), Ty);
@@ -1144,16 +1144,16 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       // Check if a number is negative and odd:
       // lshr i32 (srem X, 2), 31 --> and (X >> 31), X
       if (match(Op0, m_OneUse(m_SRem(m_Value(X), m_SpecificInt(2))))) {
-        Value *Signbit = Builder.CreateLShr(X, ShAmt);
+        Value *Signbit = Builder.CreateLShr(X, ShAmtC);
         return BinaryOperator::CreateAnd(Signbit, X);
       }
     }
 
-    if (match(Op0, m_LShr(m_Value(X), m_APInt(ShOp1)))) {
-      unsigned AmtSum = ShAmt + ShOp1->getZExtValue();
+    if (match(Op0, m_LShr(m_Value(X), m_APInt(C1)))) {
+      unsigned AmtSum = ShAmtC + C1->getZExtValue();
       // Oversized shifts are simplified to zero in InstSimplify.
       if (AmtSum < BitWidth)
-        // (X >>u C1) >>u C2 --> X >>u (C1 + C2)
+        // (X >>u C1) >>u C --> X >>u (C1 + C)
         return BinaryOperator::CreateLShr(X, ConstantInt::get(Ty, AmtSum));
     }
 
@@ -1163,13 +1163,13 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
     // TODO: Generalize to allow more than just half-width shifts?
     const APInt *MulC;
     if (match(Op0, m_NUWMul(m_Value(X), m_APInt(MulC))) &&
-        ShAmt * 2 == BitWidth && (*MulC - 1).isPowerOf2() &&
-        MulC->logBase2() == ShAmt)
+        ShAmtC * 2 == BitWidth && (*MulC - 1).isPowerOf2() &&
+        MulC->logBase2() == ShAmtC)
       return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, *MulC - 2));
 
     // If the shifted-out value is known-zero, then this is an exact shift.
     if (!I.isExact() &&
-        MaskedValueIsZero(Op0, APInt::getLowBitsSet(BitWidth, ShAmt), 0, &I)) {
+        MaskedValueIsZero(Op0, APInt::getLowBitsSet(BitWidth, ShAmtC), 0, &I)) {
       I.setIsExact();
       return &I;
     }
