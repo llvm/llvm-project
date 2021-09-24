@@ -87,7 +87,7 @@ static mlir::Value applyPad(Location loc, Value input, ArrayRef<int64_t> pad,
 
   return linalg::PadTensorOp::createPadScalarOp(
              RankedTensorType::get(paddedShape, inputETy), input, padValue,
-             lowIndices, highIndices, loc, rewriter)
+             lowIndices, highIndices, /*packing=*/false, loc, rewriter)
       .result();
 }
 
@@ -2350,7 +2350,8 @@ public:
     Value constant = rewriter.create<ConstantOp>(loc, constantAttr);
 
     auto newPadOp = linalg::PadTensorOp::createPadScalarOp(
-        padOp.getType(), input, constant, lowValues, highValues, loc, rewriter);
+        padOp.getType(), input, constant, lowValues, highValues,
+        /*packing=*/false, loc, rewriter);
 
     rewriter.replaceOp(padOp, newPadOp.getResult());
     return success();

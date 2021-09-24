@@ -147,6 +147,8 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
            dimension, i.e `low`.
     * high: A list contains the padding along the end of each
            dimension, i.e. `high`.
+    * packing: whether the padding operation is guaranteed to create a new
+           tensor suitable for packing, i.e. a copy.
 
     The result tensor dimensions are `low` + `dim` + `high` along that
     dimension. The number of elements of `low` and `high` must match
@@ -158,6 +160,11 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     of the source being accessed. There should be as many arguments as
     the rank of the `source` tensor. The value `yield`-ed by the
     region is used as the value of the view at the given position.
+
+    If `packing` is indicated, the padding is guaranteed to produce a new
+    tensor, e.g., to use for packing or promotion to faster memory. Such
+    operations are not optimized away even when the source type has the same
+    static shape.
 
     Example 1:
 
@@ -188,6 +195,17 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
         linalg.yield %pad_value : f32
       } : tensor<2x3xf32> to tensor<?x?xf32>
     ```
+
+    Example 4:
+
+    ```mlir
+      // Force a padded value to be always exist with `packing`.
+      %pad_value = ... : f32
+      %0 = linalg.pad_tensor %arg0 packing low[0, 0] high[0, 0] {
+      ^bb0(%arg1: index, %arg2: index):
+        linalg.yield %pad_value : f32
+      } : tensor<2x3xf32> to tensor<2x3xf32>
+    ```
   }];
 
   let arguments = (ins
@@ -195,7 +213,8 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     Variadic<Index>:$low,
     Variadic<Index>:$high,
     I64ArrayAttr:$static_low,
-    I64ArrayAttr:$static_high);
+    I64ArrayAttr:$static_high,
+    UnitAttr:$packing);
 
   let regions = (region SizedRegion<1>:$region);
 
@@ -204,6 +223,7 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
   // TODO: Remove custom<InferType> when AllTypesMatch supports opt. operands.
   let assemblyFormat = [{
     $source
+    (`packing` $packing^)?
     `low` `` custom<OperandsOrIntegersSizesList>($low, $static_low)
     `high` `` custom<OperandsOrIntegersSizesList>($high, $static_high)
     $region attr-dict `:` type($source) `to` type($result)
@@ -240,14 +260,16 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     // "high" padding (i.e. it adds trailing padding values until the desired
     // size is met).
     static linalg::PadTensorOp createPadHighOp(
-        Type type, Value source, Value pad, Location loc, OpBuilder & builder);
+        Type type, Value source, Value pad, bool packing, Location loc,
+        OpBuilder & builder);
 
     // Return a PadTensorOp that pads `source to `type` size with `pad` value.
     // I.e., a block will be created and the `pad` value will be yielded
     // directly. If the type passed is nullptr, it is inferred.
     static linalg::PadTensorOp createPadScalarOp(
         Type type, Value source, Value pad, ArrayRef<OpFoldResult> low,
-        ArrayRef<OpFoldResult> high, Location loc, OpBuilder & builder);
+        ArrayRef<OpFoldResult> high, bool packing, Location loc,
+        OpBuilder & builder);
 
     // Return the pad value if it is a constant. Return null value otherwise.
     Value getConstantPaddingValue();
@@ -291,14 +313,17 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     // Build a PadTensorOp with mixed static and dynamic entries.
     OpBuilder<(ins "Value":$source, "ArrayRef<int64_t>":$staticLow,
       "ArrayRef<int64_t>":$staticHigh, "ValueRange":$low, "ValueRange":$high,
+      CArg<"bool", "false">:$packing,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
     // Build a PadTensorOp with all dynamic entries.
     OpBuilder<(ins "Value":$source, "ValueRange":$low, "ValueRange":$high,
+      CArg<"bool", "false">:$packing,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
     // Build a PadTensorOp with mixed static and dynamic entries and custom
     // result type. If the type passed is nullptr, it is inferred.
     OpBuilder<(ins "Type":$resultType, "Value":$source,
       "ArrayRef<OpFoldResult>":$low, "ArrayRef<OpFoldResult>":$high,
+      CArg<"bool", "false">:$packing,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
   ];
 
