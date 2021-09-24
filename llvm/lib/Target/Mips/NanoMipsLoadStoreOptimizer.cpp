@@ -176,28 +176,30 @@ bool NMLoadStoreOpt::generateSaveOrRestore(MachineBasicBlock &MBB,
   InstrList LoadStoreList;
   MachineInstr *AdjustStack = nullptr;
   MachineInstr *Return = nullptr;
-  bool SequenceStarted = false;
 
   if (IsRestore) {
     // Iterate bacbwards over BB in case were looking to generate restore,
     // because those instructions are at the end of the BB.
     for (auto &MI : make_range(MBB.rbegin(), MBB.rend())) {
-      if (isReturn(MI)) {
+      // There's no need to look for return, if we already found addiu. In case
+      // return exists in this BB, it needs to be before addiu.
+      if (!Return && !AdjustStack && isReturn(MI)) {
         Return = &MI;
-        SequenceStarted = true;
         continue;
       }
-      if (isStackPointerAdjustment(MI, IsRestore)) {
-        assert(SequenceStarted && Return);
+
+      if (!AdjustStack && isStackPointerAdjustment(MI, IsRestore))
         AdjustStack = &MI;
+
+      // There's no need to look for loads, if we haven't found addiu.
+      if (!AdjustStack)
         continue;
-      }
+
       // Since we are looking for a contguous list, we should stop searching for
       // more loads once the end of the list has been reached. Both return and
       // stack adjustment should be found by now, since we're iterating from the
       // end.
       if (isCalleeSavedLoadStore(MI, IsRestore)) {
-        assert(SequenceStarted && Return && AdjustStack);
         LoadStoreList.emplace_back(&MI);
         continue;
       }
@@ -208,20 +210,21 @@ bool NMLoadStoreOpt::generateSaveOrRestore(MachineBasicBlock &MBB,
 
       // Sequence has been broken, no need to continue. We either reached the
       // end or found nothing.
-      if (SequenceStarted)
+      if (!LoadStoreList.empty())
         break;
     }
   } else {
     for (auto &MI : MBB) {
-      if (isStackPointerAdjustment(MI, IsRestore)) {
-        SequenceStarted = true;
+      if (!AdjustStack && isStackPointerAdjustment(MI, IsRestore))
         AdjustStack = &MI;
+
+      // There's no need to look for stores, if we haven't found addiu.
+      if (!AdjustStack)
         continue;
-      }
+
       // Since we are looking for a contguous list, we should stop searching for
       // more stores once the end of the list has been reached.
       if (isCalleeSavedLoadStore(MI, IsRestore)) {
-        assert(SequenceStarted && AdjustStack);
         LoadStoreList.emplace_back(&MI);
         continue;
       }
@@ -232,7 +235,7 @@ bool NMLoadStoreOpt::generateSaveOrRestore(MachineBasicBlock &MBB,
 
       // Sequence has been broken, no need to continue. We either reached the
       // end or found nothing.
-      if (SequenceStarted)
+      if (!LoadStoreList.empty())
         break;
     }
   }
