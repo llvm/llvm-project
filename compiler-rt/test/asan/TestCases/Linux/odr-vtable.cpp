@@ -1,6 +1,8 @@
 // Fails with debug checks: https://bugs.llvm.org/show_bug.cgi?id=46862
 // XFAIL: !compiler-rt-optimized && !riscv64
 
+// REQUIRES: shared_cxxabi
+
 /// Not using private alias or enabling ODR indicator can detect ODR issues.
 // RUN: %clangxx_asan -fno-rtti -DBUILD_SO1 -fPIC -shared -mllvm -asan-use-private-alias=0 %s -o %dynamiclib1
 // RUN: %clangxx_asan -fno-rtti -DBUILD_SO2 -fPIC -shared -mllvm -asan-use-private-alias=0 %s -o %dynamiclib2
