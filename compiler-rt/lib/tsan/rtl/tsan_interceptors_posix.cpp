@@ -153,7 +153,7 @@ const int SIG_SETMASK = 2;
 #endif
 
 #define COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED \
-  (cur_thread_init(), !cur_thread()->is_inited)
+  (!cur_thread_init()->is_inited)
 
 namespace __tsan {
 struct SignalDesc {
@@ -531,10 +531,7 @@ static void LongJmp(ThreadState *thr, uptr *env) {
 }
 
 // FIXME: put everything below into a common extern "C" block?
-extern "C" void __tsan_setjmp(uptr sp) {
-  cur_thread_init();
-  SetJmp(cur_thread(), sp);
-}
+extern "C" void __tsan_setjmp(uptr sp) { SetJmp(cur_thread_init(), sp); }
 
 #if SANITIZER_MAC
 TSAN_INTERCEPTOR(int, setjmp, void *env);
@@ -973,8 +970,7 @@ extern "C" void *__tsan_thread_start_func(void *arg) {
   void* (*callback)(void *arg) = p->callback;
   void *param = p->param;
   {
-    cur_thread_init();
-    ThreadState *thr = cur_thread();
+    ThreadState *thr = cur_thread_init();
     // Thread-local state is not initialized yet.
     ScopedIgnoreInterceptors ignore;
 #if !SANITIZER_MAC && !SANITIZER_NETBSD && !SANITIZER_FREEBSD
@@ -2061,8 +2057,7 @@ static bool is_sync_signal(ThreadSignalContext *sctx, int sig) {
 }
 
 void sighandler(int sig, __sanitizer_siginfo *info, void *ctx) {
-  cur_thread_init();
-  ThreadState *thr = cur_thread();
+  ThreadState *thr = cur_thread_init();
   ThreadSignalContext *sctx = SigCtx(thr);
   if (sig < 0 || sig >= kSigCount) {
     VPrintf(1, "ThreadSanitizer: ignoring signal %d\n", sig);

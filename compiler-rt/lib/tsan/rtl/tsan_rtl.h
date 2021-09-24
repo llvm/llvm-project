@@ -230,23 +230,24 @@ struct ThreadState {
 ThreadState *cur_thread();
 void set_cur_thread(ThreadState *thr);
 void cur_thread_finalize();
-inline void cur_thread_init() { }
-#else
+inline ThreadState *cur_thread_init() { return cur_thread(); }
+#  else
 __attribute__((tls_model("initial-exec")))
 extern THREADLOCAL char cur_thread_placeholder[];
 inline ThreadState *cur_thread() {
   return reinterpret_cast<ThreadState *>(cur_thread_placeholder)->current;
 }
-inline void cur_thread_init() {
+inline ThreadState *cur_thread_init() {
   ThreadState *thr = reinterpret_cast<ThreadState *>(cur_thread_placeholder);
   if (UNLIKELY(!thr->current))
     thr->current = thr;
+  return thr->current;
 }
 inline void set_cur_thread(ThreadState *thr) {
   reinterpret_cast<ThreadState *>(cur_thread_placeholder)->current = thr;
 }
 inline void cur_thread_finalize() { }
-#endif  // SANITIZER_MAC || SANITIZER_ANDROID
+#  endif  // SANITIZER_MAC || SANITIZER_ANDROID
 #endif  // SANITIZER_GO
 
 class ThreadContext final : public ThreadContextBase {
