@@ -2605,6 +2605,7 @@ as follows:
     options are
 
     * ``e``: ELF mangling: Private symbols get a ``.L`` prefix.
+    * ``l``: GOFF mangling: Private symbols get a ``@`` prefix.
     * ``m``: Mips mangling: Private symbols get a ``$`` prefix.
     * ``o``: Mach-O mangling: Private symbols get ``L`` prefix. Other
       symbols get a ``_`` prefix.

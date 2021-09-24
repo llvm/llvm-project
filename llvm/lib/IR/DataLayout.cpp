@@ -151,6 +151,8 @@ PointerAlignElem::operator==(const PointerAlignElem &rhs) const {
 //===----------------------------------------------------------------------===//
 
 const char *DataLayout::getManglingComponent(const Triple &T) {
+  if (T.isOSBinFormatGOFF())
+    return "-m:l";
   if (T.isOSBinFormatMachO())
     return "-m:o";
   if (T.isOSWindows() && T.isOSBinFormatCOFF())
@@ -499,6 +501,9 @@ Error DataLayout::parseSpecifier(StringRef Desc) {
         return reportError("Unknown mangling in datalayout string");
       case 'e':
         ManglingMode = MM_ELF;
+        break;
+      case 'l':
+        ManglingMode = MM_GOFF;
         break;
       case 'o':
         ManglingMode = MM_MachO;
