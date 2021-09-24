@@ -82,6 +82,8 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     : TargetLowering(TM), Subtarget(STI) {
   MVT PtrVT = MVT::getIntegerVT(8 * TM.getPointerSize(0));
 
+  auto *Regs = STI.getSpecialRegisters();
+
   // Set up the register classes.
   if (Subtarget.hasHighWord())
     addRegisterClass(MVT::i32, &SystemZ::GRX32BitRegClass);
@@ -115,7 +117,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   computeRegisterProperties(Subtarget.getRegisterInfo());
 
   // Set up special registers.
-  setStackPointerRegisterToSaveRestore(SystemZ::R15D);
+  setStackPointerRegisterToSaveRestore(Regs->getStackPointerRegister());
 
   // TODO: It may be better to default to latency-oriented scheduling, however
   // LLVM's current latency-oriented scheduler can't handle physreg definitions
@@ -4140,17 +4142,21 @@ SystemZTargetLowering::getTargetMMOFlags(const Instruction &I) const {
 SDValue SystemZTargetLowering::lowerSTACKSAVE(SDValue Op,
                                               SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
+  const SystemZSubtarget *Subtarget = &MF.getSubtarget<SystemZSubtarget>();
+  auto *Regs = Subtarget->getSpecialRegisters();
   MF.getInfo<SystemZMachineFunctionInfo>()->setManipulatesSP(true);
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     report_fatal_error("Variable-sized stack allocations are not supported "
                        "in GHC calling convention");
   return DAG.getCopyFromReg(Op.getOperand(0), SDLoc(Op),
-                            SystemZ::R15D, Op.getValueType());
+                            Regs->getStackPointerRegister(), Op.getValueType());
 }
 
 SDValue SystemZTargetLowering::lowerSTACKRESTORE(SDValue Op,
                                                  SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
+  const SystemZSubtarget *Subtarget = &MF.getSubtarget<SystemZSubtarget>();
+  auto *Regs = Subtarget->getSpecialRegisters();
   MF.getInfo<SystemZMachineFunctionInfo>()->setManipulatesSP(true);
   bool StoreBackchain = MF.getFunction().hasFnAttribute("backchain");
 
@@ -4164,12 +4170,13 @@ SDValue SystemZTargetLowering::lowerSTACKRESTORE(SDValue Op,
   SDLoc DL(Op);
 
   if (StoreBackchain) {
-    SDValue OldSP = DAG.getCopyFromReg(Chain, DL, SystemZ::R15D, MVT::i64);
+    SDValue OldSP = DAG.getCopyFromReg(
+        Chain, DL, Regs->getStackPointerRegister(), MVT::i64);
     Backchain = DAG.getLoad(MVT::i64, DL, Chain, getBackchainAddress(OldSP, DAG),
                             MachinePointerInfo());
   }
 
-  Chain = DAG.getCopyToReg(Chain, DL, SystemZ::R15D, NewSP);
+  Chain = DAG.getCopyToReg(Chain, DL, Regs->getStackPointerRegister(), NewSP);
 
   if (StoreBackchain)
     Chain = DAG.getStore(Chain, DL, Backchain, getBackchainAddress(NewSP, DAG),
