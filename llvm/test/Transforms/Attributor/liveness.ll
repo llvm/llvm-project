@@ -527,13 +527,13 @@ define void @ub(i32* %0) {
 ; IS__TUNIT_NPM: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@ub
 ; IS__TUNIT_NPM-SAME: (i32* nocapture nofree readnone [[TMP0:%.*]]) #[[ATTR8:[0-9]+]] {
-; IS__TUNIT_NPM-NEXT:    store i32 0, i32* undef, align 1073741824
+; IS__TUNIT_NPM-NEXT:    store i32 0, i32* undef, align 4294967296
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@ub
 ; IS__CGSCC____-SAME: (i32* nocapture nofree readnone [[TMP0:%.*]]) #[[ATTR10:[0-9]+]] {
-; IS__CGSCC____-NEXT:    store i32 0, i32* undef, align 1073741824
+; IS__CGSCC____-NEXT:    store i32 0, i32* undef, align 4294967296
 ; IS__CGSCC____-NEXT:    ret void
 ;
   %poison = sub nuw i32 0, 1           ; Results in a poison value.
