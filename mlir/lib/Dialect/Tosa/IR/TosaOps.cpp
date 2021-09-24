@@ -165,6 +165,12 @@ struct ConstantTransposeOptimization
 
   LogicalResult matchAndRewrite(tosa::TransposeOp op,
                                 PatternRewriter &rewriter) const override {
+    auto outputType = op.getType().cast<ShapedType>();
+    ArrayRef<int64_t> outputShape = outputType.getShape();
+    // TOSA supports quantized types.
+    if (!outputType.getElementType().isIntOrIndexOrFloat())
+      return failure();
+
     DenseElementsAttr inputValues;
     if (!matchPattern(op.input1(), m_Constant(&inputValues)))
       return failure();
@@ -183,9 +189,6 @@ struct ConstantTransposeOptimization
     auto inputType = op.input1().getType().cast<ShapedType>();
     ArrayRef<int64_t> inputShape = inputType.getShape();
     int64_t numElements = inputType.getNumElements();
-
-    auto outputType = op.getType().cast<ShapedType>();
-    ArrayRef<int64_t> outputShape = outputType.getShape();
 
     SmallVector<Attribute, 4> outputValues;
     outputValues.resize(numElements);
