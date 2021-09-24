@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # The lines that we're looking to symbolize look like this:
   #0 ./a.out(_foo+0x3e6) [0x55a52e64c696]
