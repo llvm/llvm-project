@@ -137,15 +137,25 @@ void ProfileGeneratorBase::findDisjointRanges(RangeSample &DisjointRanges,
   */
   struct BoundaryPoint {
     // Sum of sample counts beginning at this point
-    uint64_t BeginCount;
+    uint64_t BeginCount = UINT64_MAX;
     // Sum of sample counts ending at this point
-    uint64_t EndCount;
+    uint64_t EndCount = UINT64_MAX;
+    // Is the begin point of a zero range.
+    bool IsZeroRangeBegin = false;
+    // Is the end point of a zero range.
+    bool IsZeroRangeEnd = false;
 
-    BoundaryPoint() : BeginCount(0), EndCount(0){};
+    void addBeginCount(uint64_t Count) {
+      if (BeginCount == UINT64_MAX)
+        BeginCount = 0;
+      BeginCount += Count;
+    }
 
-    void addBeginCount(uint64_t Count) { BeginCount += Count; }
-
-    void addEndCount(uint64_t Count) { EndCount += Count; }
+    void addEndCount(uint64_t Count) {
+      if (EndCount == UINT64_MAX)
+        EndCount = 0;
+      EndCount += Count;
+    }
   };
 
   /*
@@ -174,41 +184,70 @@ void ProfileGeneratorBase::findDisjointRanges(RangeSample &DisjointRanges,
   [A, B-1]: 100
   [B, B]:   300
   [B+1, C]: 200.
+
+  Example for zero value range:
+
+    |<--- 100 --->|
+                       |<--- 200 --->|
+  |<---------------  0 ----------------->|
+  A  B            C    D             E   F
+
+  [A, B-1]  : 0
+  [B, C]    : 100
+  [C+1, D-1]: 0
+  [D, E]    : 200
+  [E+1, F]  : 0
   */
   std::map<uint64_t, BoundaryPoint> Boundaries;
 
   for (auto Item : Ranges) {
-    uint64_t Begin = Item.first.first;
-    uint64_t End = Item.first.second;
-    assert(Begin <= End && "Invalid instruction range");
+    assert(Item.first.first <= Item.first.second &&
+           "Invalid instruction range");
+    auto &BeginPoint = Boundaries[Item.first.first];
+    auto &EndPoint = Boundaries[Item.first.second];
     uint64_t Count = Item.second;
-    if (Boundaries.find(Begin) == Boundaries.end())
-      Boundaries[Begin] = BoundaryPoint();
-    Boundaries[Begin].addBeginCount(Count);
 
-    if (Boundaries.find(End) == Boundaries.end())
-      Boundaries[End] = BoundaryPoint();
-    Boundaries[End].addEndCount(Count);
+    BeginPoint.addBeginCount(Count);
+    EndPoint.addEndCount(Count);
+    if (Count == 0) {
+      BeginPoint.IsZeroRangeBegin = true;
+      EndPoint.IsZeroRangeEnd = true;
+    }
   }
 
+  // Use UINT64_MAX to indicate there is no existing range between BeginAddress
+  // and the next valid address
   uint64_t BeginAddress = UINT64_MAX;
+  int ZeroRangeDepth = 0;
   uint64_t Count = 0;
   for (auto Item : Boundaries) {
     uint64_t Address = Item.first;
     BoundaryPoint &Point = Item.second;
-    if (Point.BeginCount) {
+    if (Point.BeginCount != UINT64_MAX) {
       if (BeginAddress != UINT64_MAX)
         DisjointRanges[{BeginAddress, Address - 1}] = Count;
       Count += Point.BeginCount;
       BeginAddress = Address;
+      ZeroRangeDepth += Point.IsZeroRangeBegin;
     }
-    if (Point.EndCount) {
+    if (Point.EndCount != UINT64_MAX) {
       assert((BeginAddress != UINT64_MAX) &&
              "First boundary point cannot be 'end' point");
       DisjointRanges[{BeginAddress, Address}] = Count;
       assert(Count >= Point.EndCount && "Mismatched live ranges");
       Count -= Point.EndCount;
       BeginAddress = Address + 1;
+      ZeroRangeDepth -= Point.IsZeroRangeEnd;
+      // If the remaining count is zero and it's no longer in a zero range, this
+      // means we consume all the ranges before, thus mark BeginAddress as
+      // UINT64_MAX. e.g. supposing we have two non-overlapping ranges:
+      //  [<---- 10 ---->]
+      //                       [<---- 20 ---->]
+      //   A             B     C              D
+      // The BeginAddress(B+1) will reset to invalid(UINT64_MAX), so we won't
+      // have the [B+1, C-1] zero range.
+      if (Count == 0 && ZeroRangeDepth == 0)
+        BeginAddress = UINT64_MAX;
     }
   }
 }
@@ -223,7 +262,7 @@ void ProfileGeneratorBase::updateBodySamplesforFunctionProfile(
   ErrorOr<uint64_t> R = FunctionProfile.findSamplesAt(
       LeafLoc.Callsite.LineOffset, LeafLoc.Callsite.Discriminator);
   uint64_t PreviousCount = R ? R.get() : 0;
-  if (PreviousCount < Count) {
+  if (PreviousCount <= Count) {
     FunctionProfile.addBodySamples(LeafLoc.Callsite.LineOffset,
                                    LeafLoc.Callsite.Discriminator,
                                    Count - PreviousCount);
@@ -282,18 +321,41 @@ FunctionSamples &ProfileGenerator::getLeafProfileAndAddTotalSamples(
   return *FunctionProfile;
 }
 
+RangeSample
+ProfileGenerator::preprocessRangeCounter(const RangeSample &RangeCounter) {
+  RangeSample Ranges(RangeCounter.begin(), RangeCounter.end());
+  // For each range, we search for the range of the function it belongs to and
+  // initialize it with zero count, so it remains zero if doesn't hit any
+  // samples. This is to be consistent with compiler that interpret zero count
+  // as unexecuted(cold).
+  for (auto I : RangeCounter) {
+    uint64_t RangeBegin = I.first.first;
+    uint64_t RangeEnd = I.first.second;
+    // Find the function offset range the current range begin belongs to.
+    auto FuncRange = Binary->findFuncOffsetRange(RangeBegin);
+    if (FuncRange.second == 0)
+      WithColor::warning()
+          << "[" << format("%8" PRIx64, RangeBegin) << " - "
+          << format("%8" PRIx64, RangeEnd)
+          << "]: Invalid range or disassembling error in profiled binary.\n";
+    else if (RangeEnd > FuncRange.second)
+      WithColor::warning() << "[" << format("%8" PRIx64, RangeBegin) << " - "
+                           << format("%8" PRIx64, RangeEnd)
+                           << "]: Range is across different functions.\n";
+    else
+      Ranges[FuncRange] += 0;
+  }
+  RangeSample DisjointRanges;
+  findDisjointRanges(DisjointRanges, Ranges);
+  return DisjointRanges;
+}
+
 void ProfileGenerator::populateBodySamplesForAllFunctions(
     const RangeSample &RangeCounter) {
-  RangeSample Ranges;
-  findDisjointRanges(Ranges, RangeCounter);
-  for (auto Range : Ranges) {
+  for (auto Range : preprocessRangeCounter(RangeCounter)) {
     uint64_t RangeBegin = Binary->offsetToVirtualAddr(Range.first.first);
     uint64_t RangeEnd = Binary->offsetToVirtualAddr(Range.first.second);
     uint64_t Count = Range.second;
-    // Disjoint ranges have introduce zero-filled gap that
-    // doesn't belong to current context, filter them out.
-    if (Count == 0)
-      continue;
 
     InstructionPointer IP(Binary, RangeBegin, true);
     // Disjoint ranges may have range in the middle of two instr,
