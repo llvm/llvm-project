@@ -55,6 +55,8 @@ void f() {
   } unnamed_struct;
   f1<decltype(unnamed_struct)>();
   // CHECK: !DISubprogram(name: "f1<(unnamed struct at {{.*}}debug-info-simple-template-names.cpp:[[# @LINE - 3]]:3)>",
+  f1<void (decltype(unnamed_struct))>();
+  // CHECK: !DISubprogram(name: "f1<void ((unnamed struct at {{.*}}CodeGenCXX/debug-info-simple-template-names.cpp:[[# @LINE - 5]]:3))>",
   enum {} unnamed_enum;
   f1<decltype(unnamed_enum)>();
   // CHECK: !DISubprogram(name: "f1<(unnamed enum at {{.*}}debug-info-simple-template-names.cpp:[[# @LINE - 2]]:3)>",
