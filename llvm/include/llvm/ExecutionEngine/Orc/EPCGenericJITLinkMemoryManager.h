@@ -28,10 +28,10 @@ class EPCGenericJITLinkMemoryManager : public jitlink::JITLinkMemoryManager {
 public:
   /// Function addresses for memory access.
   struct SymbolAddrs {
-    ExecutorAddress Allocator;
-    ExecutorAddress Reserve;
-    ExecutorAddress Finalize;
-    ExecutorAddress Deallocate;
+    ExecutorAddr Allocator;
+    ExecutorAddr Reserve;
+    ExecutorAddr Finalize;
+    ExecutorAddr Deallocate;
   };
 
   /// Create an EPCGenericJITLinkMemoryManager instance from a given set of

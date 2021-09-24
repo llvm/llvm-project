@@ -20,13 +20,13 @@ class EPCGenericJITLinkMemoryManager::Alloc
 public:
   struct SegInfo {
     char *WorkingMem = nullptr;
-    ExecutorAddress TargetAddr;
+    ExecutorAddr TargetAddr;
     uint64_t ContentSize = 0;
     uint64_t ZeroFillSize = 0;
   };
   using SegInfoMap = DenseMap<unsigned, SegInfo>;
 
-  Alloc(EPCGenericJITLinkMemoryManager &Parent, ExecutorAddress TargetAddr,
+  Alloc(EPCGenericJITLinkMemoryManager &Parent, ExecutorAddr TargetAddr,
         std::unique_ptr<char[]> WorkingBuffer, SegInfoMap Segs)
       : Parent(Parent), TargetAddr(TargetAddr),
         WorkingBuffer(std::move(WorkingBuffer)), Segs(std::move(Segs)) {}
@@ -75,14 +75,14 @@ public:
     if (auto E2 = Parent.EPC.callSPSWrapper<
                   rt::SPSSimpleExecutorMemoryManagerDeallocateSignature>(
             Parent.SAs.Deallocate.getValue(), Err, Parent.SAs.Allocator,
-            ArrayRef<ExecutorAddress>(TargetAddr)))
+            ArrayRef<ExecutorAddr>(TargetAddr)))
       return E2;
     return Err;
   }
 
 private:
   EPCGenericJITLinkMemoryManager &Parent;
-  ExecutorAddress TargetAddr;
+  ExecutorAddr TargetAddr;
   std::unique_ptr<char[]> WorkingBuffer;
   SegInfoMap Segs;
 };
@@ -111,7 +111,7 @@ EPCGenericJITLinkMemoryManager::allocate(const jitlink::JITLinkDylib *JD,
   std::unique_ptr<char[]> WorkingBuffer;
   if (WorkingSize > 0)
     WorkingBuffer = std::make_unique<char[]>(WorkingSize);
-  Expected<ExecutorAddress> TargetAllocAddr((ExecutorAddress()));
+  Expected<ExecutorAddr> TargetAllocAddr((ExecutorAddr()));
   if (auto Err = EPC.callSPSWrapper<
                  rt::SPSSimpleExecutorMemoryManagerReserveSignature>(
           SAs.Reserve.getValue(), TargetAllocAddr, SAs.Allocator, AllocSize))

@@ -24,7 +24,7 @@ namespace {
 TEST_F(LookupAndRecordAddrsTest, AsyncRequiredSuccess) {
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}, {Bar, BarSym}})));
 
-  ExecutorAddress FooAddress, BarAddress;
+  ExecutorAddr FooAddress, BarAddress;
   std::promise<MSVCPError> ErrP;
 
   lookupAndRecordAddrs([&](Error Err) { ErrP.set_value(std::move(Err)); }, ES,
@@ -39,7 +39,7 @@ TEST_F(LookupAndRecordAddrsTest, AsyncRequiredSuccess) {
 }
 
 TEST_F(LookupAndRecordAddrsTest, AsyncRequiredFailure) {
-  ExecutorAddress FooAddress, BarAddress;
+  ExecutorAddr FooAddress, BarAddress;
   std::promise<MSVCPError> ErrP;
 
   lookupAndRecordAddrs([&](Error Err) { ErrP.set_value(std::move(Err)); }, ES,
@@ -54,7 +54,7 @@ TEST_F(LookupAndRecordAddrsTest, AsyncRequiredFailure) {
 TEST_F(LookupAndRecordAddrsTest, AsyncWeakReference) {
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
 
-  ExecutorAddress FooAddress, BarAddress;
+  ExecutorAddr FooAddress, BarAddress;
   std::promise<MSVCPError> ErrP;
 
   lookupAndRecordAddrs([&](Error Err) { ErrP.set_value(std::move(Err)); }, ES,
@@ -72,7 +72,7 @@ TEST_F(LookupAndRecordAddrsTest, AsyncWeakReference) {
 TEST_F(LookupAndRecordAddrsTest, BlockingRequiredSuccess) {
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}, {Bar, BarSym}})));
 
-  ExecutorAddress FooAddress, BarAddress;
+  ExecutorAddr FooAddress, BarAddress;
   auto Err =
       lookupAndRecordAddrs(ES, LookupKind::Static, makeJITDylibSearchOrder(&JD),
                            {{Foo, &FooAddress}, {Bar, &BarAddress}});
@@ -83,7 +83,7 @@ TEST_F(LookupAndRecordAddrsTest, BlockingRequiredSuccess) {
 }
 
 TEST_F(LookupAndRecordAddrsTest, BlockingRequiredFailure) {
-  ExecutorAddress FooAddress, BarAddress;
+  ExecutorAddr FooAddress, BarAddress;
   auto Err =
       lookupAndRecordAddrs(ES, LookupKind::Static, makeJITDylibSearchOrder(&JD),
                            {{Foo, &FooAddress}, {Bar, &BarAddress}});
@@ -94,7 +94,7 @@ TEST_F(LookupAndRecordAddrsTest, BlockingRequiredFailure) {
 TEST_F(LookupAndRecordAddrsTest, BlockingWeakReference) {
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
 
-  ExecutorAddress FooAddress, BarAddress;
+  ExecutorAddr FooAddress, BarAddress;
   auto Err =
       lookupAndRecordAddrs(ES, LookupKind::Static, makeJITDylibSearchOrder(&JD),
                            {{Foo, &FooAddress}, {Bar, &BarAddress}},

@@ -16,50 +16,6 @@
 
 namespace llvm {
 namespace orc {
-namespace shared {
-
-template <>
-class SPSSerializationTraits<SPSRemoteSymbolLookupSetElement,
-                             SymbolLookupSet::value_type> {
-public:
-  static size_t size(const SymbolLookupSet::value_type &V) {
-    return SPSArgList<SPSString, bool>::size(
-        *V.first, V.second == SymbolLookupFlags::RequiredSymbol);
-  }
-
-  static bool serialize(SPSOutputBuffer &OB,
-                        const SymbolLookupSet::value_type &V) {
-    return SPSArgList<SPSString, bool>::serialize(
-        OB, *V.first, V.second == SymbolLookupFlags::RequiredSymbol);
-  }
-};
-
-template <>
-class TrivialSPSSequenceSerialization<SPSRemoteSymbolLookupSetElement,
-                                      SymbolLookupSet> {
-public:
-  static constexpr bool available = true;
-};
-
-template <>
-class SPSSerializationTraits<SPSRemoteSymbolLookup,
-                             ExecutorProcessControl::LookupRequest> {
-  using MemberSerialization =
-      SPSArgList<SPSExecutorAddress, SPSRemoteSymbolLookupSet>;
-
-public:
-  static size_t size(const ExecutorProcessControl::LookupRequest &LR) {
-    return MemberSerialization::size(ExecutorAddress(LR.Handle), LR.Symbols);
-  }
-
-  static bool serialize(SPSOutputBuffer &OB,
-                        const ExecutorProcessControl::LookupRequest &LR) {
-    return MemberSerialization::serialize(OB, ExecutorAddress(LR.Handle),
-                                          LR.Symbols);
-  }
-};
-
-} // end namespace shared
 
 SimpleRemoteEPC::~SimpleRemoteEPC() {
   assert(Disconnected && "Destroyed without disconnection");
@@ -67,31 +23,30 @@ SimpleRemoteEPC::~SimpleRemoteEPC() {
 
 Expected<tpctypes::DylibHandle>
 SimpleRemoteEPC::loadDylib(const char *DylibPath) {
-  Expected<tpctypes::DylibHandle> H((tpctypes::DylibHandle()));
-  if (auto Err = callSPSWrapper<shared::SPSLoadDylibSignature>(
-          LoadDylibAddr.getValue(), H, JDI.JITDispatchContextAddress,
-          StringRef(DylibPath), (uint64_t)0))
-    return std::move(Err);
-  return H;
+  return DylibMgr->open(DylibPath, 0);
 }
 
 Expected<std::vector<tpctypes::LookupResult>>
 SimpleRemoteEPC::lookupSymbols(ArrayRef<LookupRequest> Request) {
-  Expected<std::vector<tpctypes::LookupResult>> R(
-      (std::vector<tpctypes::LookupResult>()));
+  std::vector<tpctypes::LookupResult> Result;
 
-  if (auto Err = callSPSWrapper<shared::SPSLookupSymbolsSignature>(
-          LookupSymbolsAddr.getValue(), R, JDI.JITDispatchContextAddress,
-          Request))
-    return std::move(Err);
-  return R;
+  for (auto &Element : Request) {
+    if (auto R = DylibMgr->lookup(Element.Handle, Element.Symbols)) {
+      Result.push_back({});
+      Result.back().reserve(R->size());
+      for (auto Addr : *R)
+        Result.back().push_back(Addr.getValue());
+    } else
+      return R.takeError();
+  }
+  return std::move(Result);
 }
 
 Expected<int32_t> SimpleRemoteEPC::runAsMain(JITTargetAddress MainFnAddr,
                                              ArrayRef<std::string> Args) {
   int64_t Result = 0;
   if (auto Err = callSPSWrapper<rt::SPSRunAsMainSignature>(
-          RunAsMainAddr.getValue(), Result, ExecutorAddress(MainFnAddr), Args))
+          RunAsMainAddr.getValue(), Result, ExecutorAddr(MainFnAddr), Args))
     return std::move(Err);
   return Result;
 }
@@ -108,7 +63,7 @@ void SimpleRemoteEPC::callWrapperAsync(SendResultFunction OnComplete,
   }
 
   if (auto Err = T->sendMessage(SimpleRemoteEPCOpcode::CallWrapper, SeqNo,
-                                ExecutorAddress(WrapperFnAddr), ArgBuffer)) {
+                                ExecutorAddr(WrapperFnAddr), ArgBuffer)) {
     getExecutionSession().reportError(std::move(Err));
   }
 }
@@ -121,7 +76,7 @@ Error SimpleRemoteEPC::disconnect() {
 
 Expected<SimpleRemoteEPCTransportClient::HandleMessageAction>
 SimpleRemoteEPC::handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
-                               ExecutorAddress TagAddr,
+                               ExecutorAddr TagAddr,
                                SimpleRemoteEPCArgBytesVector ArgBytes) {
   using UT = std::underlying_type_t<SimpleRemoteEPCOpcode>;
   if (static_cast<UT>(OpC) > static_cast<UT>(SimpleRemoteEPCOpcode::LastOpC))
@@ -188,7 +143,7 @@ SimpleRemoteEPC::createMemoryAccess() {
   return nullptr;
 }
 
-Error SimpleRemoteEPC::handleSetup(uint64_t SeqNo, ExecutorAddress TagAddr,
+Error SimpleRemoteEPC::handleSetup(uint64_t SeqNo, ExecutorAddr TagAddr,
                                    SimpleRemoteEPCArgBytesVector ArgBytes) {
   if (SeqNo != 0)
     return make_error<StringError>("Setup packet SeqNo not zero",
@@ -251,12 +206,16 @@ Error SimpleRemoteEPC::setup(std::unique_ptr<SimpleRemoteEPCTransport> T,
   BootstrapSymbols = std::move(EI.BootstrapSymbols);
 
   if (auto Err = getBootstrapSymbols(
-          {{JDI.JITDispatchContextAddress, ExecutorSessionObjectName},
-           {JDI.JITDispatchFunctionAddress, DispatchFnName},
-           {LoadDylibAddr, "__llvm_orc_load_dylib"},
-           {LookupSymbolsAddr, "__llvm_orc_lookup_symbols"},
+          {{JDI.JITDispatchContext, ExecutorSessionObjectName},
+           {JDI.JITDispatchFunction, DispatchFnName},
            {RunAsMainAddr, rt::RunAsMainWrapperName}}))
     return Err;
+
+  if (auto DM =
+          EPCGenericDylibManager::CreateWithDefaultBootstrapSymbols(*this))
+    DylibMgr = std::make_unique<EPCGenericDylibManager>(std::move(*DM));
+  else
+    return DM.takeError();
 
   if (auto MemMgr = createMemoryManager()) {
     OwnedMemMgr = std::move(*MemMgr);
@@ -273,7 +232,7 @@ Error SimpleRemoteEPC::setup(std::unique_ptr<SimpleRemoteEPCTransport> T,
   return Error::success();
 }
 
-Error SimpleRemoteEPC::handleResult(uint64_t SeqNo, ExecutorAddress TagAddr,
+Error SimpleRemoteEPC::handleResult(uint64_t SeqNo, ExecutorAddr TagAddr,
                                     SimpleRemoteEPCArgBytesVector ArgBytes) {
   SendResultFunction SendResult;
 
@@ -300,14 +259,14 @@ Error SimpleRemoteEPC::handleResult(uint64_t SeqNo, ExecutorAddress TagAddr,
 }
 
 void SimpleRemoteEPC::handleCallWrapper(
-    uint64_t RemoteSeqNo, ExecutorAddress TagAddr,
+    uint64_t RemoteSeqNo, ExecutorAddr TagAddr,
     SimpleRemoteEPCArgBytesVector ArgBytes) {
   assert(ES && "No ExecutionSession attached");
   ES->runJITDispatchHandler(
       [this, RemoteSeqNo](shared::WrapperFunctionResult WFR) {
         if (auto Err =
                 T->sendMessage(SimpleRemoteEPCOpcode::Result, RemoteSeqNo,
-                               ExecutorAddress(), {WFR.data(), WFR.size()}))
+                               ExecutorAddr(), {WFR.data(), WFR.size()}))
           getExecutionSession().reportError(std::move(Err));
       },
       TagAddr.getValue(), ArgBytes);

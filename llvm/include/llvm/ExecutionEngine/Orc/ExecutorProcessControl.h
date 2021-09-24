@@ -118,8 +118,8 @@ public:
   /// Contains the address of the dispatch function and context that the ORC
   /// runtime can use to call functions in the JIT.
   struct JITDispatchInfo {
-    ExecutorAddress JITDispatchFunctionAddress;
-    ExecutorAddress JITDispatchContextAddress;
+    ExecutorAddr JITDispatchFunction;
+    ExecutorAddr JITDispatchContext;
   };
 
   virtual ~ExecutorProcessControl();
@@ -159,15 +159,15 @@ public:
   }
 
   /// Returns the bootstrap symbol map.
-  const StringMap<ExecutorAddress> &getBootstrapSymbolsMap() const {
+  const StringMap<ExecutorAddr> &getBootstrapSymbolsMap() const {
     return BootstrapSymbols;
   }
 
-  /// For each (ExecutorAddress&, StringRef) pair, looks up the string in the
-  /// bootstrap symbols map and writes its address to the ExecutorAddress if
+  /// For each (ExecutorAddr&, StringRef) pair, looks up the string in the
+  /// bootstrap symbols map and writes its address to the ExecutorAddr if
   /// found. If any symbol is not found then the function returns an error.
   Error getBootstrapSymbols(
-      ArrayRef<std::pair<ExecutorAddress &, StringRef>> Pairs) const {
+      ArrayRef<std::pair<ExecutorAddr &, StringRef>> Pairs) const {
     for (auto &KV : Pairs) {
       auto I = BootstrapSymbols.find(KV.second);
       if (I == BootstrapSymbols.end())
@@ -275,7 +275,7 @@ protected:
   JITDispatchInfo JDI;
   MemoryAccess *MemAccess = nullptr;
   jitlink::JITLinkMemoryManager *MemMgr = nullptr;
-  StringMap<ExecutorAddress> BootstrapSymbols;
+  StringMap<ExecutorAddr> BootstrapSymbols;
 };
 
 /// A ExecutorProcessControl instance that asserts if any of its methods are

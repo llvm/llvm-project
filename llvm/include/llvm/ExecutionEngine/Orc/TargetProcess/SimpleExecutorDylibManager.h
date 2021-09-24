@@ -1,4 +1,4 @@
-//===---------------- SimpleExecutorMemoryManager.h -------------*- C++ -*-===//
+//===--------------- SimpleExecutorDylibManager.h ---------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,20 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// A simple allocator class suitable for basic remote-JIT use.
+// A simple dynamic library management class. Allows dynamic libraries to be
+// loaded and searched.
 //
 // FIXME: The functionality in this file should be moved to the ORC runtime.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_SIMPLEEXECUTORMEMORYMANAGER_H
-#define LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_SIMPLEEXECUTORMEMORYMANAGER_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_SIMPLEEXECUTORDYLIBMANAGER_H
+#define LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_SIMPLEEXECUTORDYLIBMANAGER_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorBootstrapService.h"
+#include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
 
 #include <mutex>
@@ -29,42 +32,33 @@ namespace orc {
 namespace rt_bootstrap {
 
 /// Simple page-based allocator.
-class SimpleExecutorMemoryManager : public ExecutorBootstrapService {
+class SimpleExecutorDylibManager : public ExecutorBootstrapService {
 public:
-  virtual ~SimpleExecutorMemoryManager();
+  virtual ~SimpleExecutorDylibManager();
 
-  Expected<ExecutorAddr> allocate(uint64_t Size);
-  Error finalize(tpctypes::FinalizeRequest &FR);
-  Error deallocate(const std::vector<ExecutorAddr> &Bases);
+  Expected<tpctypes::DylibHandle> open(const std::string &Path, uint64_t Mode);
+  Expected<std::vector<ExecutorAddr>> lookup(tpctypes::DylibHandle H,
+                                             const RemoteSymbolLookupSet &L);
 
   Error shutdown() override;
   void addBootstrapSymbols(StringMap<ExecutorAddr> &M) override;
 
 private:
-  struct Allocation {
-    size_t Size = 0;
-    std::vector<tpctypes::SupportFunctionCall> DeallocationActions;
-  };
-
-  using AllocationsMap = DenseMap<void *, Allocation>;
-
-  Error deallocateImpl(void *Base, Allocation &A);
+  using DylibsMap = DenseMap<uint64_t, sys::DynamicLibrary>;
 
   static llvm::orc::shared::detail::CWrapperFunctionResult
-  reserveWrapper(const char *ArgData, size_t ArgSize);
+  openWrapper(const char *ArgData, size_t ArgSize);
 
   static llvm::orc::shared::detail::CWrapperFunctionResult
-  finalizeWrapper(const char *ArgData, size_t ArgSize);
-
-  static llvm::orc::shared::detail::CWrapperFunctionResult
-  deallocateWrapper(const char *ArgData, size_t ArgSize);
+  lookupWrapper(const char *ArgData, size_t ArgSize);
 
   std::mutex M;
-  AllocationsMap Allocations;
+  uint64_t NextId = 0;
+  DylibsMap Dylibs;
 };
 
 } // end namespace rt_bootstrap
 } // end namespace orc
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_SIMPLEEXECUTORMEMORYMANAGER_H
+#endif // LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_SIMPLEEXECUTORDYLIBMANAGER_H

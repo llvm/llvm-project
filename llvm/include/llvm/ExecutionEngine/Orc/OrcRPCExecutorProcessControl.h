@@ -402,8 +402,8 @@ protected:
     if (auto EPI = EP.template callB<orcrpctpc::GetExecutorProcessInfo>()) {
       this->TargetTriple = Triple(EPI->Triple);
       this->PageSize = EPI->PageSize;
-      this->JDI = {ExecutorAddress(EPI->DispatchFuncAddr),
-                   ExecutorAddress(EPI->DispatchCtxAddr)};
+      this->JDI = {ExecutorAddr(EPI->DispatchFuncAddr),
+                   ExecutorAddr(EPI->DispatchCtxAddr)};
       return Error::success();
     } else
       return EPI.takeError();

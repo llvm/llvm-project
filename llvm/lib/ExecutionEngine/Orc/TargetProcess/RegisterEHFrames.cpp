@@ -170,14 +170,14 @@ static Error deregisterEHFrameWrapper(JITTargetAddress Addr, uint64_t Size) {
 
 extern "C" orc::shared::detail::CWrapperFunctionResult
 llvm_orc_registerEHFrameSectionWrapper(const char *Data, uint64_t Size) {
-  return WrapperFunction<SPSError(SPSExecutorAddress, uint64_t)>::handle(
+  return WrapperFunction<SPSError(SPSExecutorAddr, uint64_t)>::handle(
              Data, Size, registerEHFrameWrapper)
       .release();
 }
 
 extern "C" orc::shared::detail::CWrapperFunctionResult
 llvm_orc_deregisterEHFrameSectionWrapper(const char *Data, uint64_t Size) {
-  return WrapperFunction<SPSError(SPSExecutorAddress, uint64_t)>::handle(
+  return WrapperFunction<SPSError(SPSExecutorAddr, uint64_t)>::handle(
              Data, Size, deregisterEHFrameWrapper)
       .release();
 }
