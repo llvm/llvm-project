@@ -38,6 +38,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -897,6 +898,9 @@ struct DSEState {
   /// basic block.
   DenseMap<BasicBlock *, InstOverlapIntervalsTy> IOLs;
 
+  DenseMap<const Value *, Instruction *> EarliestEscapes;
+  DenseMap<Instruction *, TinyPtrVector<const Value *>> Inst2Obj;
+
   DSEState(Function &F, AliasAnalysis &AA, MemorySSA &MSSA, DominatorTree &DT,
            PostDominatorTree &PDT, const TargetLibraryInfo &TLI,
            const LoopInfo &LI)
@@ -1264,6 +1268,30 @@ struct DSEState {
                        DepWriteOffset) == OW_Complete;
   }
 
+  /// Returns true if \p Object is not captured before or by \p I.
+  bool notCapturedBeforeOrAt(const Value *Object, Instruction *I) {
+    if (!isIdentifiedFunctionLocal(Object))
+      return false;
+
+    auto Iter = EarliestEscapes.insert({Object, nullptr});
+    if (Iter.second) {
+      Instruction *EarliestCapture = FindEarliestCapture(
+          Object, F, /*ReturnCaptures=*/false, /*StoreCaptures=*/true, DT);
+      if (EarliestCapture) {
+        auto Ins = Inst2Obj.insert({EarliestCapture, {}});
+        Ins.first->second.push_back(Object);
+      }
+      Iter.first->second = EarliestCapture;
+    }
+
+    // No capturing instruction.
+    if (!Iter.first->second)
+      return true;
+
+    return I != Iter.first->second &&
+           !isPotentiallyReachable(Iter.first->second, I, nullptr, &DT, &LI);
+  }
+
   // Returns true if \p Use may read from \p DefLoc.
   bool isReadClobber(const MemoryLocation &DefLoc, Instruction *UseInst) {
     if (isNoopIntrinsic(UseInst))
@@ -1280,6 +1308,25 @@ struct DSEState {
     if (auto *CB = dyn_cast<CallBase>(UseInst))
       if (CB->onlyAccessesInaccessibleMemory())
         return false;
+
+    // BasicAA does not spend linear time to check whether local objects escape
+    // before potentially aliasing accesses. To improve DSE results, compute and
+    // cache escape info for local objects in certain circumstances.
+    if (auto *LI = dyn_cast<LoadInst>(UseInst)) {
+      // If the loads reads from a loaded underlying object accesses the load
+      // cannot alias DefLoc, if DefUO is a local object that has not escaped
+      // before the load.
+      auto *ReadUO = getUnderlyingObject(LI->getPointerOperand());
+      auto *DefUO = getUnderlyingObject(DefLoc.Ptr);
+      if (DefUO && ReadUO && isa<LoadInst>(ReadUO) &&
+          notCapturedBeforeOrAt(DefUO, UseInst)) {
+        assert(
+            !PointerMayBeCapturedBefore(DefLoc.Ptr, false, true, UseInst, &DT,
+                                        false, 0, &this->LI) &&
+            "cached analysis disagrees with fresh PointerMayBeCapturedBefore");
+        return false;
+      }
+    }
 
     // NOTE: For calls, the number of stores removed could be slightly improved
     // by using AA.callCapturesBefore(UseInst, DefLoc, &DT), but that showed to
@@ -1707,6 +1754,7 @@ struct DSEState {
         if (MemoryDef *MD = dyn_cast<MemoryDef>(MA)) {
           SkipStores.insert(MD);
         }
+
         Updater.removeMemoryAccess(MA);
       }
 
@@ -1721,6 +1769,14 @@ struct DSEState {
             NowDeadInsts.push_back(OpI);
         }
 
+      // Clear any cached escape info for objects associated with the
+      // removed instructions.
+      auto Iter = Inst2Obj.find(DeadInst);
+      if (Iter != Inst2Obj.end()) {
+        for (const Value *Obj : Iter->second)
+          EarliestEscapes.erase(Obj);
+        Inst2Obj.erase(DeadInst);
+      }
       DeadInst->eraseFromParent();
     }
   }
