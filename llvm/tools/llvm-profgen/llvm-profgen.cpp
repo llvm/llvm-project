@@ -95,7 +95,7 @@ int main(int argc, const char *argv[]) {
 
   std::unique_ptr<ProfileGeneratorBase> Generator =
       ProfileGeneratorBase::create(Binary.get(), Reader->getSampleCounters(),
-                                   Reader->getPerfScriptType());
+                                   Reader->profileIsCS());
   Generator->generateProfile();
   Generator->write();
 

@@ -77,15 +77,12 @@ int CSProfileGenerator::MaxContextDepth = -1;
 std::unique_ptr<ProfileGeneratorBase>
 ProfileGeneratorBase::create(ProfiledBinary *Binary,
                              const ContextSampleCounterMap &SampleCounters,
-                             enum PerfScriptType SampleType) {
+                             bool ProfileIsCS) {
   std::unique_ptr<ProfileGeneratorBase> Generator;
-  if (SampleType == PERF_LBR) {
-    // TODO: Support probe based profile generation
-    Generator.reset(new ProfileGenerator(Binary, SampleCounters));
-  } else if (SampleType == PERF_LBR_STACK) {
+  if (ProfileIsCS) {
     Generator.reset(new CSProfileGenerator(Binary, SampleCounters));
   } else {
-    llvm_unreachable("Unsupported perfscript!");
+    Generator.reset(new ProfileGenerator(Binary, SampleCounters));
   }
 
   return Generator;
