@@ -392,16 +392,16 @@ public:
   }
 
   mlir::LogicalResult buildReturnStmt(const ReturnStmt &S) {
-    // Emit the result value, even if unused, to evaluate the side effects.
-    const Expr *RV = S.getRetValue();
-    assert(!isa<ExprWithCleanups>(RV) && "unimplemented");
     assert(!(astCtx.getLangOpts().ElideConstructors && S.getNRVOCandidate() &&
              S.getNRVOCandidate()->isNRVOVariable()) &&
            "unimplemented");
     assert(!CurCCGF->FnRetQualTy->isReferenceType() && "unimplemented");
 
+    // Emit the result value, even if unused, to evaluate the side effects.
+    const Expr *RV = S.getRetValue();
     if (!RV) // Do nothing (return value is left uninitialized)
       return mlir::success();
+    assert(!isa<ExprWithCleanups>(RV) && "unimplemented");
 
     mlir::Value V = nullptr;
     switch (CIRCodeGenFunction::getEvaluationKind(RV->getType())) {
@@ -470,8 +470,10 @@ public:
       argTypes.push_back(getCIRType(Param->getType()));
 
     CurCCGF->FnRetQualTy = FD->getReturnType();
-    CurCCGF->FnRetTy = getCIRType(CurCCGF->FnRetQualTy);
-    auto funcType = builder.getFunctionType(argTypes, CurCCGF->FnRetTy);
+    auto funcType = builder.getFunctionType(
+        argTypes, CurCCGF->FnRetQualTy->isVoidType()
+                      ? mlir::TypeRange()
+                      : getCIRType(CurCCGF->FnRetQualTy));
     mlir::FuncOp function = mlir::FuncOp::create(loc, FD->getName(), funcType);
     if (!function)
       return nullptr;
