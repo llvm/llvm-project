@@ -1121,3 +1121,66 @@ entry:
   call void @llvm.lifetime.end.p0i8(i64 8, i8* %a.2.cast)
   ret i64 %lv.2
 }
+
+define i32 @test_not_captured_before_load_of_ptrtoint(i64 %in) {
+; CHECK-LABEL: @test_not_captured_before_load_of_ptrtoint(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 55, i32* [[A]], align 4
+; CHECK-NEXT:    [[IN_PTR:%.*]] = inttoptr i64 [[IN:%.*]] to i32*
+; CHECK-NEXT:    [[IN_PTR_LOAD:%.*]] = load i32, i32* [[IN_PTR]], align 4
+; CHECK-NEXT:    store i32 99, i32* [[A]], align 4
+; CHECK-NEXT:    call void @escape_and_clobber(i32* [[A]])
+; CHECK-NEXT:    ret i32 [[IN_PTR_LOAD]]
+;
+  %a = alloca i32, align 4
+  store i32 55, i32* %a
+  %in.ptr = inttoptr i64 %in to i32*
+  %in.ptr.load = load i32, i32* %in.ptr
+  store i32 99, i32* %a
+  call void @escape_and_clobber(i32* %a)
+  ret i32 %in.ptr.load
+}
+
+declare i32* @getptr()
+
+define i32 @test_not_captured_before_load_of_call() {
+; CHECK-LABEL: @test_not_captured_before_load_of_call(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 55, i32* [[A]], align 4
+; CHECK-NEXT:    [[IN_PTR:%.*]] = call i32* @getptr() #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    [[IN_PTR_LOAD:%.*]] = load i32, i32* [[IN_PTR]], align 4
+; CHECK-NEXT:    store i32 99, i32* [[A]], align 4
+; CHECK-NEXT:    call void @escape_and_clobber(i32* [[A]])
+; CHECK-NEXT:    ret i32 [[IN_PTR_LOAD]]
+;
+  %a = alloca i32, align 4
+  store i32 55, i32* %a
+  %in.ptr = call i32* @getptr() readnone
+  %in.ptr.load = load i32, i32* %in.ptr
+  store i32 99, i32* %a
+  call void @escape_and_clobber(i32* %a)
+  ret i32 %in.ptr.load
+}
+
+define i32 @test_not_captured_multiple_objects(i1 %c, i32** %in.ptr) {
+; CHECK-LABEL: @test_not_captured_multiple_objects(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[O:%.*]] = select i1 [[C:%.*]], i32* [[A]], i32* [[B]]
+; CHECK-NEXT:    store i32 55, i32* [[O]], align 4
+; CHECK-NEXT:    [[IN_LV_1:%.*]] = load i32*, i32** [[IN_PTR:%.*]], align 2
+; CHECK-NEXT:    [[IN_LV_2:%.*]] = load i32, i32* [[IN_LV_1]], align 2
+; CHECK-NEXT:    store i32 99, i32* [[O]], align 4
+; CHECK-NEXT:    call void @escape_and_clobber(i32* [[O]])
+; CHECK-NEXT:    ret i32 [[IN_LV_2]]
+;
+  %a = alloca i32, align 4
+  %b = alloca i32, align 4
+  %o = select i1 %c, i32* %a, i32* %b
+  store i32 55, i32* %o
+  %in.lv.1 = load i32* , i32** %in.ptr, align 2
+  %in.lv.2 = load i32 , i32* %in.lv.1, align 2
+  store i32 99, i32* %o
+  call void @escape_and_clobber(i32* %o)
+  ret i32 %in.lv.2
+}
