@@ -568,6 +568,9 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_sinh_finite);
     TLI.setUnavailable(LibFunc_sinhf_finite);
     TLI.setUnavailable(LibFunc_sinhl_finite);
+    TLI.setUnavailable(LibFunc_sqrt_finite);
+    TLI.setUnavailable(LibFunc_sqrtf_finite);
+    TLI.setUnavailable(LibFunc_sqrtl_finite);
   }
 
   if ((T.isOSLinux() && T.isGNUEnvironment()) ||
