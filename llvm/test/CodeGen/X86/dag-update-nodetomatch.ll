@@ -136,6 +136,8 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    movl (%r15), %eax
 ; CHECK-NEXT:    leal 8(,%rcx,8), %ecx
 ; CHECK-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    leaq 8(%r12), %rcx
+; CHECK-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    leaq 32(%r12), %rbx
 ; CHECK-NEXT:    shlq $3, %r13
 ; CHECK-NEXT:    xorl %esi, %esi
@@ -187,17 +189,16 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    jae .LBB1_7
 ; CHECK-NEXT:  # %bb.6: # %vector.memcheck
 ; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    leaq 8(%r12), %rax
-; CHECK-NEXT:    addq %rax, %r10
+; CHECK-NEXT:    addq {{[-0-9]+}}(%r{{[sb]}}p), %r10 # 8-byte Folded Reload
 ; CHECK-NEXT:    leaq (%r10,%r11,8), %rax
 ; CHECK-NEXT:    cmpq %rcx, %rax
 ; CHECK-NEXT:    ja .LBB1_14
 ; CHECK-NEXT:  .LBB1_7: # %vector.body.preheader
 ; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    leaq -4(%r8), %r10
-; CHECK-NEXT:    movq %r10, %rax
-; CHECK-NEXT:    shrq $2, %rax
-; CHECK-NEXT:    btl $2, %r10d
+; CHECK-NEXT:    leaq -4(%r8), %rax
+; CHECK-NEXT:    movq %rax, %r10
+; CHECK-NEXT:    shrq $2, %r10
+; CHECK-NEXT:    btl $2, %eax
 ; CHECK-NEXT:    jb .LBB1_8
 ; CHECK-NEXT:  # %bb.9: # %vector.body.prol.preheader
 ; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
@@ -206,12 +207,12 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    movdqu %xmm0, (%rdi,%r9,8)
 ; CHECK-NEXT:    movdqu %xmm0, 16(%rdi,%r9,8)
 ; CHECK-NEXT:    movl $4, %r11d
-; CHECK-NEXT:    testq %rax, %rax
+; CHECK-NEXT:    testq %r10, %r10
 ; CHECK-NEXT:    jne .LBB1_11
 ; CHECK-NEXT:    jmp .LBB1_13
 ; CHECK-NEXT:  .LBB1_8: # in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    xorl %r11d, %r11d
-; CHECK-NEXT:    testq %rax, %rax
+; CHECK-NEXT:    testq %r10, %r10
 ; CHECK-NEXT:    je .LBB1_13
 ; CHECK-NEXT:  .LBB1_11: # %vector.body.preheader.new
 ; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1

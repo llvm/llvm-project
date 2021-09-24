@@ -23,11 +23,11 @@ define i32 @foo(i32 %arg, i32 (i8*)* %arg3) nounwind {
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_5
 ; CHECK-NEXT:  # %bb.1: # %bb5
-; CHECK-NEXT:    movq %rsi, %r12
+; CHECK-NEXT:    movq %rsi, %r14
 ; CHECK-NEXT:    movslq %edi, %rbp
 ; CHECK-NEXT:    leaq (,%rbp,8), %rax
-; CHECK-NEXT:    leaq global(%rax,%rax,2), %r14
-; CHECK-NEXT:    leaq global+4(%rax,%rax,2), %r15
+; CHECK-NEXT:    leaq global(%rax,%rax,2), %r15
+; CHECK-NEXT:    leaq global+4(%rax,%rax,2), %r12
 ; CHECK-NEXT:    xorl %r13d, %r13d
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_2: # %bb8
@@ -35,10 +35,10 @@ define i32 @foo(i32 %arg, i32 (i8*)* %arg3) nounwind {
 ; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    movq %rax, %rbx
 ; CHECK-NEXT:    movq %rax, %rdi
-; CHECK-NEXT:    callq *%r12
-; CHECK-NEXT:    movq %r14, %rdi
-; CHECK-NEXT:    callq hoge@PLT
+; CHECK-NEXT:    callq *%r14
 ; CHECK-NEXT:    movq %r15, %rdi
+; CHECK-NEXT:    callq hoge@PLT
+; CHECK-NEXT:    movq %r12, %rdi
 ; CHECK-NEXT:    callq hoge@PLT
 ; CHECK-NEXT:    testb %r13b, %r13b
 ; CHECK-NEXT:    jne .LBB0_2

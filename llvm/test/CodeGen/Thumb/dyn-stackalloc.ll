@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=thumb-apple-darwin -disable-cgp-branch-opts -disable-post-ra -verify-machineinstrs | FileCheck %s -check-prefix=CHECK
-; RUN: llc < %s -mtriple=thumb-apple-darwin -disable-cgp-branch-opts -disable-post-ra -regalloc=basic -verify-machineinstrs | FileCheck %s -check-prefix=CHECK
+; RUN: llc < %s -mtriple=thumb-apple-darwin -disable-cgp-branch-opts -disable-post-ra -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=RA_GREEDY
+; RUN: llc < %s -mtriple=thumb-apple-darwin -disable-cgp-branch-opts -disable-post-ra -regalloc=basic -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=RA_BASIC
 
 	%struct.state = type { i32, %struct.info*, float**, i32, i32, i32, i32, i32, i32, i32, i32, i32, i64, i64, i64, i64, i64, i64, i8* }
 	%struct.info = type { i32, i32, i32, i32, i32, i32, i32, i8* }
@@ -45,7 +45,8 @@ define void @t2(%struct.comment* %vc, i8* %tag, i8* %contents) {
 ; CHECK: sub sp, #
 ; CHECK: mov r[[R0:[0-9]+]], sp
 ; CHECK: str r{{[0-9+]}}, [r[[R0]]
-; CHECK: str r{{[0-9+]}}, [r[[R0]]
+; RA_GREEDY: str r{{[0-9+]}}, [r[[R0]]
+; RA_BASIC: stm r[[R0]]!
 ; CHECK-NOT: ldr r0, [sp
 ; CHECK: mov r[[R1:[0-9]+]], sp
 ; CHECK: subs r[[R2:[0-9]+]], r[[R1]], r{{[0-9]+}}

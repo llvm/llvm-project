@@ -224,31 +224,31 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-NEXT:    mov r3, #0
 ; CHECK-NEXT:    bl __aeabi_uldivmod
 ; CHECK-NEXT:    add r0, r2, #27
-; CHECK-NEXT:    lsl r2, r7, #27
-; CHECK-NEXT:    and r12, r0, #63
 ; CHECK-NEXT:    lsl r6, r6, #27
+; CHECK-NEXT:    and r1, r0, #63
+; CHECK-NEXT:    lsl r2, r7, #27
 ; CHECK-NEXT:    orr r7, r6, r7, lsr #5
-; CHECK-NEXT:    rsb r3, r12, #32
-; CHECK-NEXT:    lsr r2, r2, r12
 ; CHECK-NEXT:    mov r6, #63
-; CHECK-NEXT:    orr r2, r2, r7, lsl r3
-; CHECK-NEXT:    subs r3, r12, #32
+; CHECK-NEXT:    rsb r3, r1, #32
+; CHECK-NEXT:    lsr r2, r2, r1
+; CHECK-NEXT:    subs r12, r1, #32
 ; CHECK-NEXT:    bic r6, r6, r0
+; CHECK-NEXT:    orr r2, r2, r7, lsl r3
 ; CHECK-NEXT:    lsl r5, r9, #1
-; CHECK-NEXT:    lsrpl r2, r7, r3
-; CHECK-NEXT:    subs r1, r6, #32
+; CHECK-NEXT:    lsrpl r2, r7, r12
 ; CHECK-NEXT:    lsl r0, r5, r6
-; CHECK-NEXT:    lsl r4, r8, #1
+; CHECK-NEXT:    subs r4, r6, #32
+; CHECK-NEXT:    lsl r3, r8, #1
 ; CHECK-NEXT:    movwpl r0, #0
-; CHECK-NEXT:    orr r4, r4, r9, lsr #31
+; CHECK-NEXT:    orr r3, r3, r9, lsr #31
 ; CHECK-NEXT:    orr r0, r0, r2
 ; CHECK-NEXT:    rsb r2, r6, #32
-; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    cmp r4, #0
+; CHECK-NEXT:    lsr r1, r7, r1
 ; CHECK-NEXT:    lsr r2, r5, r2
-; CHECK-NEXT:    orr r2, r2, r4, lsl r6
-; CHECK-NEXT:    lslpl r2, r5, r1
-; CHECK-NEXT:    lsr r1, r7, r12
-; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    orr r2, r2, r3, lsl r6
+; CHECK-NEXT:    lslpl r2, r5, r4
+; CHECK-NEXT:    cmp r12, #0
 ; CHECK-NEXT:    movwpl r1, #0
 ; CHECK-NEXT:    orr r1, r2, r1
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, r8, r9, r11, pc}

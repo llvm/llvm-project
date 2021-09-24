@@ -73,13 +73,13 @@ define i64 @rotl_i64(i64 %x, i64 %z) {
 ; SCALAR-NEXT:    push {r4, r5, r11, lr}
 ; SCALAR-NEXT:    rsb r3, r2, #0
 ; SCALAR-NEXT:    and r4, r2, #63
-; SCALAR-NEXT:    and r12, r3, #63
-; SCALAR-NEXT:    rsb r3, r12, #32
+; SCALAR-NEXT:    and lr, r3, #63
+; SCALAR-NEXT:    rsb r3, lr, #32
 ; SCALAR-NEXT:    lsl r2, r0, r4
-; SCALAR-NEXT:    lsr lr, r0, r12
-; SCALAR-NEXT:    orr r3, lr, r1, lsl r3
-; SCALAR-NEXT:    subs lr, r12, #32
-; SCALAR-NEXT:    lsrpl r3, r1, lr
+; SCALAR-NEXT:    lsr r12, r0, lr
+; SCALAR-NEXT:    orr r3, r12, r1, lsl r3
+; SCALAR-NEXT:    subs r12, lr, #32
+; SCALAR-NEXT:    lsrpl r3, r1, r12
 ; SCALAR-NEXT:    subs r5, r4, #32
 ; SCALAR-NEXT:    movwpl r2, #0
 ; SCALAR-NEXT:    cmp r5, #0
@@ -88,8 +88,8 @@ define i64 @rotl_i64(i64 %x, i64 %z) {
 ; SCALAR-NEXT:    lsr r3, r0, r3
 ; SCALAR-NEXT:    orr r3, r3, r1, lsl r4
 ; SCALAR-NEXT:    lslpl r3, r0, r5
-; SCALAR-NEXT:    lsr r0, r1, r12
-; SCALAR-NEXT:    cmp lr, #0
+; SCALAR-NEXT:    lsr r0, r1, lr
+; SCALAR-NEXT:    cmp r12, #0
 ; SCALAR-NEXT:    movwpl r0, #0
 ; SCALAR-NEXT:    orr r1, r3, r0
 ; SCALAR-NEXT:    mov r0, r2
@@ -245,15 +245,15 @@ define i64 @rotr_i64(i64 %x, i64 %z) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r4, r5, r11, lr}
 ; CHECK-NEXT:    push {r4, r5, r11, lr}
-; CHECK-NEXT:    and r12, r2, #63
+; CHECK-NEXT:    and lr, r2, #63
 ; CHECK-NEXT:    rsb r2, r2, #0
-; CHECK-NEXT:    rsb r3, r12, #32
+; CHECK-NEXT:    rsb r3, lr, #32
 ; CHECK-NEXT:    and r4, r2, #63
-; CHECK-NEXT:    lsr lr, r0, r12
-; CHECK-NEXT:    orr r3, lr, r1, lsl r3
-; CHECK-NEXT:    subs lr, r12, #32
+; CHECK-NEXT:    lsr r12, r0, lr
+; CHECK-NEXT:    orr r3, r12, r1, lsl r3
+; CHECK-NEXT:    subs r12, lr, #32
 ; CHECK-NEXT:    lsl r2, r0, r4
-; CHECK-NEXT:    lsrpl r3, r1, lr
+; CHECK-NEXT:    lsrpl r3, r1, r12
 ; CHECK-NEXT:    subs r5, r4, #32
 ; CHECK-NEXT:    movwpl r2, #0
 ; CHECK-NEXT:    cmp r5, #0
@@ -262,8 +262,8 @@ define i64 @rotr_i64(i64 %x, i64 %z) {
 ; CHECK-NEXT:    lsr r3, r0, r3
 ; CHECK-NEXT:    orr r3, r3, r1, lsl r4
 ; CHECK-NEXT:    lslpl r3, r0, r5
-; CHECK-NEXT:    lsr r0, r1, r12
-; CHECK-NEXT:    cmp lr, #0
+; CHECK-NEXT:    lsr r0, r1, lr
+; CHECK-NEXT:    cmp r12, #0
 ; CHECK-NEXT:    movwpl r0, #0
 ; CHECK-NEXT:    orr r1, r0, r3
 ; CHECK-NEXT:    mov r0, r2

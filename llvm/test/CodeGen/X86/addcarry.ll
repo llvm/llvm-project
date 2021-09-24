@@ -432,24 +432,24 @@ define i32 @add_U320_without_i128_add(%struct.U320* nocapture dereferenceable(40
 ; CHECK-NEXT:    adcq %rdx, 8(%rdi)
 ; CHECK-NEXT:    movq %rax, %rdx
 ; CHECK-NEXT:    adcq %rcx, %rdx
-; CHECK-NEXT:    movq 24(%rdi), %r14
-; CHECK-NEXT:    leaq (%r8,%r14), %r11
+; CHECK-NEXT:    movq 24(%rdi), %r11
+; CHECK-NEXT:    leaq (%r8,%r11), %r14
 ; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    cmpq %r10, %rdx
 ; CHECK-NEXT:    setb %bl
 ; CHECK-NEXT:    addq %rcx, %rax
-; CHECK-NEXT:    adcq %r11, %rbx
-; CHECK-NEXT:    movq 32(%rdi), %rcx
-; CHECK-NEXT:    leaq (%r9,%rcx), %r10
+; CHECK-NEXT:    adcq %r14, %rbx
+; CHECK-NEXT:    movq 32(%rdi), %r10
+; CHECK-NEXT:    leaq (%r9,%r10), %rcx
 ; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    cmpq %r11, %rbx
+; CHECK-NEXT:    cmpq %r14, %rbx
 ; CHECK-NEXT:    setb %sil
-; CHECK-NEXT:    addq %r14, %r8
-; CHECK-NEXT:    adcq %r10, %rsi
+; CHECK-NEXT:    addq %r11, %r8
+; CHECK-NEXT:    adcq %rcx, %rsi
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpq %r10, %rsi
+; CHECK-NEXT:    cmpq %rcx, %rsi
 ; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    addq %rcx, %r9
+; CHECK-NEXT:    addq %r10, %r9
 ; CHECK-NEXT:    movq %rdx, 16(%rdi)
 ; CHECK-NEXT:    movq %rbx, 24(%rdi)
 ; CHECK-NEXT:    movq %rsi, 32(%rdi)
