@@ -309,7 +309,7 @@ collectInstructionsInBetween(Instruction &StartInst, const Instruction &EndInst,
 
 bool llvm::isSafeToMoveBefore(Instruction &I, Instruction &InsertPoint,
                               DominatorTree &DT, const PostDominatorTree *PDT,
-                              DependenceInfo *DI) {
+                              DependenceInfo *DI, bool CheckForEntireBlock) {
   // Skip tests when we don't have PDT or DI
   if (!PDT || !DI)
     return false;
@@ -339,9 +339,17 @@ bool llvm::isSafeToMoveBefore(Instruction &I, Instruction &InsertPoint,
           return false;
   if (!DT.dominates(&I, &InsertPoint))
     for (const Value *Op : I.operands())
-      if (auto *OpInst = dyn_cast<Instruction>(Op))
-        if (&InsertPoint == OpInst || !DT.dominates(OpInst, &InsertPoint))
+      if (auto *OpInst = dyn_cast<Instruction>(Op)) {
+        if (&InsertPoint == OpInst)
           return false;
+        // If OpInst is an instruction that appears earlier in the same BB as
+        // I, then it is okay to move since OpInst will still be available.
+        if (CheckForEntireBlock && I.getParent() == OpInst->getParent() &&
+            DT.dominates(OpInst, &I))
+          continue;
+        if (!DT.dominates(OpInst, &InsertPoint))
+          return false;
+      }
 
   DT.updateDFSNumbers();
   const bool MoveForward = domTreeLevelBefore(&DT, &I, &InsertPoint);
@@ -393,7 +401,8 @@ bool llvm::isSafeToMoveBefore(BasicBlock &BB, Instruction &InsertPoint,
     if (BB.getTerminator() == &I)
       return true;
 
-    return isSafeToMoveBefore(I, InsertPoint, DT, PDT, DI);
+    return isSafeToMoveBefore(I, InsertPoint, DT, PDT, DI,
+                              /*CheckForEntireBlock=*/true);
   });
 }
 

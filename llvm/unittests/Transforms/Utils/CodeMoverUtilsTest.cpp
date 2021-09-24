@@ -601,6 +601,8 @@ TEST(CodeMoverUtils, IsSafeToMoveTest3) {
                    br label %for.latch
                  for.latch:
                    %cmp = icmp slt i64 %inc, %N
+                   %add = add i64 100, %N
+                   %add2 = add i64 %add, %N
                    br i1 %cmp, label %for.body, label %for.end
                  for.end:
                    ret void
@@ -611,10 +613,18 @@ TEST(CodeMoverUtils, IsSafeToMoveTest3) {
           DependenceInfo &DI) {
         Instruction *IncInst = getInstructionByName(F, "inc");
         Instruction *CmpInst = getInstructionByName(F, "cmp");
+        BasicBlock *BB0 = getBasicBlockByName(F, "for.body");
+        BasicBlock *BB1 = getBasicBlockByName(F, "for.latch");
 
         // Can move as the incoming block of %inc for %i (%for.latch) dominated
         // by %cmp.
         EXPECT_TRUE(isSafeToMoveBefore(*IncInst, *CmpInst, DT, &PDT, &DI));
+
+        // Can move as the operands of instructions in BB1 either dominate
+        // InsertPoint or appear before that instruction, e.g., %add appears
+        // before %add2 although %add does not dominate InsertPoint.
+        EXPECT_TRUE(
+            isSafeToMoveBefore(*BB1, *BB0->getTerminator(), DT, &PDT, &DI));
       });
 }
 
