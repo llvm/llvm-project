@@ -1854,15 +1854,6 @@ let Predicates = [PCRelativeMemops] in {
 }
 
 let Predicates = [PrefixInstrs] in {
-  def XXSPLTIW : 8RR_DForm_IMM32_XT6<32, 3, (outs vsrc:$XT),
-                                     (ins i32imm:$IMM32),
-                                     "xxspltiw $XT, $IMM32", IIC_VecGeneral,
-                                     []>;
-  def XXSPLTIDP : 8RR_DForm_IMM32_XT6<32, 2, (outs vsrc:$XT),
-                                      (ins i32imm:$IMM32),
-                                      "xxspltidp $XT, $IMM32", IIC_VecGeneral,
-                                      [(set v2f64:$XT,
-                                            (PPCxxspltidp i32:$IMM32))]>;
   def XXPERMX :
     8RR_XX4Form_IMM3_XTABC6<34, 0, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB,
                             vsrc:$XC, u3imm:$UIM),
@@ -1886,9 +1877,18 @@ let Predicates = [PrefixInstrs] in {
                        IIC_VecGeneral, []>;
 }
 
-// XXSPLI32DX needs extra flags to make sure the compiler does not attempt
+// XXSPLTIW/DP/32DX need extra flags to make sure the compiler does not attempt
 // to spill part of the instruction when the values are similar.
-let isReMaterializable = 1, isMoveImm = 1, Predicates = [PrefixInstrs] in {
+let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1, Predicates = [PrefixInstrs] in {
+  def XXSPLTIW : 8RR_DForm_IMM32_XT6<32, 3, (outs vsrc:$XT),
+                                     (ins i32imm:$IMM32),
+                                     "xxspltiw $XT, $IMM32", IIC_VecGeneral,
+                                     []>;
+  def XXSPLTIDP : 8RR_DForm_IMM32_XT6<32, 2, (outs vsrc:$XT),
+                                      (ins i32imm:$IMM32),
+                                      "xxspltidp $XT, $IMM32", IIC_VecGeneral,
+                                      [(set v2f64:$XT,
+                                            (PPCxxspltidp i32:$IMM32))]>;
   def XXSPLTI32DX :
       8RR_DForm_IMM32_XT6_IX<32, 0, (outs vsrc:$XT),
                              (ins vsrc:$XTi, u1imm:$IX, i32imm:$IMM32),

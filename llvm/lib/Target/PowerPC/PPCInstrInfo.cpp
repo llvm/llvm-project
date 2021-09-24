@@ -1109,6 +1109,8 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   case PPC::XXLXORdpz:
   case PPC::XXLEQVOnes:
   case PPC::XXSPLTI32DX:
+  case PPC::XXSPLTIW:
+  case PPC::XXSPLTIDP:
   case PPC::V_SET0B:
   case PPC::V_SET0H:
   case PPC::V_SET0:
