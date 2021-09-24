@@ -44,6 +44,23 @@ void forEachField(const RecordDecl &Record, const T &Fields, Func &&Fn) {
   }
 }
 
+template <typename T, typename Func>
+void forEachFieldWithFilter(const RecordDecl &Record, const T &Fields,
+                            bool &AnyMemberHasInitPerUnion, Func &&Fn) {
+  for (const FieldDecl *F : Fields) {
+    if (F->isAnonymousStructOrUnion()) {
+      if (const CXXRecordDecl *R = F->getType()->getAsCXXRecordDecl()) {
+        AnyMemberHasInitPerUnion = false;
+        forEachFieldWithFilter(*R, R->fields(), AnyMemberHasInitPerUnion, Fn);
+      }
+    } else {
+      Fn(F);
+    }
+    if (Record.isUnion() && AnyMemberHasInitPerUnion)
+      break;
+  }
+}
+
 void removeFieldsInitializedInBody(
     const Stmt &Stmt, ASTContext &Context,
     SmallPtrSetImpl<const FieldDecl *> &FieldDecls) {
@@ -461,8 +478,9 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
   // Collect all fields but only suggest a fix for the first member of unions,
   // as initializing more than one union member is an error.
   SmallPtrSet<const FieldDecl *, 16> FieldsToFix;
-  SmallPtrSet<const RecordDecl *, 4> UnionsSeen;
-  forEachField(ClassDecl, OrderedFields, [&](const FieldDecl *F) {
+  bool AnyMemberHasInitPerUnion = false;
+  forEachFieldWithFilter(ClassDecl, ClassDecl.fields(),
+                         AnyMemberHasInitPerUnion, [&](const FieldDecl *F) {
     if (!FieldsToInit.count(F))
       return;
     // Don't suggest fixes for enums because we don't know a good default.
@@ -471,8 +489,8 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
     if (F->getType()->isEnumeralType() ||
         (!getLangOpts().CPlusPlus20 && F->isBitField()))
       return;
-    if (!F->getParent()->isUnion() || UnionsSeen.insert(F->getParent()).second)
-      FieldsToFix.insert(F);
+    FieldsToFix.insert(F);
+    AnyMemberHasInitPerUnion = true;
   });
   if (FieldsToFix.empty())
     return;
