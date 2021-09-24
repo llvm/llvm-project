@@ -1500,9 +1500,8 @@ void CompilerInvocation::GenerateCodeGenArgs(
   if (TNK != codegenoptions::DebugTemplateNamesKind::Full) {
     if (TNK == codegenoptions::DebugTemplateNamesKind::Simple)
       GenerateArg(Args, OPT_gsimple_template_names_EQ, "simple", SA);
-    if (TNK == codegenoptions::DebugTemplateNamesKind::Mangled)
+    else if (TNK == codegenoptions::DebugTemplateNamesKind::Mangled)
       GenerateArg(Args, OPT_gsimple_template_names_EQ, "mangled", SA);
-
   }
   // ProfileInstrumentUsePath is marshalled automatically, no need to generate
   // it or PGOUseInstrumentor.
@@ -1783,6 +1782,10 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
                 ? llvm::DICompileUnit::DebugNameTableKind::Default
                 : llvm::DICompileUnit::DebugNameTableKind::None);
   if (const Arg *A = Args.getLastArg(OPT_gsimple_template_names_EQ)) {
+    StringRef Value = A->getValue();
+    if (Value != "simple" && Value != "mangled")
+      Diags.Report(diag::err_drv_unsupported_option_argument)
+          << A->getOption().getName() << A->getValue();
     Opts.setDebugSimpleTemplateNames(
         StringRef(A->getValue()) == "simple"
             ? codegenoptions::DebugTemplateNamesKind::Simple
