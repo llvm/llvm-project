@@ -51,6 +51,66 @@ body:             |
     S_NOP 0, implicit %2
     S_ENDPGM 0
 ...
+# The liverange of %0 covers a point of rematerialization, source value is
+# available.
+---
+name:            test_remat_s_mov_b32_vreg_src_long_lr
+tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg:  $sgpr32
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_s_mov_b32_vreg_src_long_lr
+    ; GCN: renamable $sgpr0 = IMPLICIT_DEF
+    ; GCN: renamable $sgpr1 = S_MOV_B32 renamable $sgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $sgpr1
+    ; GCN: renamable $sgpr1 = S_MOV_B32 renamable $sgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $sgpr1
+    ; GCN: renamable $sgpr1 = S_MOV_B32 renamable $sgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $sgpr1
+    ; GCN: S_NOP 0, implicit killed renamable $sgpr0
+    ; GCN: S_ENDPGM 0
+    %0:sreg_32 = IMPLICIT_DEF
+    %1:sreg_32 = S_MOV_B32 %0:sreg_32
+    %2:sreg_32 = S_MOV_B32 %0:sreg_32
+    %3:sreg_32 = S_MOV_B32 %0:sreg_32
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_NOP 0, implicit %3
+    S_NOP 0, implicit %0
+    S_ENDPGM 0
+...
+# The liverange of %0 does not cover a point of rematerialization, source value is
+# unavailable and we do not want to artificially extend the liverange.
+---
+name:            test_no_remat_s_mov_b32_vreg_src_short_lr
+tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg:  $sgpr32
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_no_remat_s_mov_b32_vreg_src_short_lr
+    ; GCN: renamable $sgpr0 = IMPLICIT_DEF
+    ; GCN: renamable $sgpr1 = S_MOV_B32 renamable $sgpr0
+    ; GCN: SI_SPILL_S32_SAVE killed renamable $sgpr1, %stack.1, implicit $exec, implicit $sgpr32 :: (store (s32) into %stack.1, addrspace 5)
+    ; GCN: renamable $sgpr1 = S_MOV_B32 renamable $sgpr0
+    ; GCN: SI_SPILL_S32_SAVE killed renamable $sgpr1, %stack.0, implicit $exec, implicit $sgpr32 :: (store (s32) into %stack.0, addrspace 5)
+    ; GCN: renamable $sgpr0 = S_MOV_B32 killed renamable $sgpr0
+    ; GCN: renamable $sgpr1 = SI_SPILL_S32_RESTORE %stack.1, implicit $exec, implicit $sgpr32 :: (load (s32) from %stack.1, addrspace 5)
+    ; GCN: S_NOP 0, implicit killed renamable $sgpr1
+    ; GCN: renamable $sgpr1 = SI_SPILL_S32_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s32) from %stack.0, addrspace 5)
+    ; GCN: S_NOP 0, implicit killed renamable $sgpr1
+    ; GCN: S_NOP 0, implicit killed renamable $sgpr0
+    ; GCN: S_ENDPGM 0
+    %0:sreg_32 = IMPLICIT_DEF
+    %1:sreg_32 = S_MOV_B32 %0:sreg_32
+    %2:sreg_32 = S_MOV_B32 %0:sreg_32
+    %3:sreg_32 = S_MOV_B32 %0:sreg_32
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_NOP 0, implicit %3
+    S_ENDPGM 0
+...
 ---
 name:            test_remat_s_mov_b64
 tracksRegLiveness: true
