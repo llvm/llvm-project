@@ -114,7 +114,7 @@
 "`2557 <https://wg21.link/LWG2557>`__","Logical operator traits are broken in the zero-argument case","Jacksonville","|Complete|",""
 "`2558 <https://wg21.link/LWG2558>`__","[fund.ts.v2] Logical operator traits are broken in the zero-argument case","Jacksonville","|Complete|",""
 "`2559 <https://wg21.link/LWG2559>`__","Error in LWG 2234's resolution","Jacksonville","|Complete|",""
-"`2560 <https://wg21.link/LWG2560>`__","``is_constructible``\  underspecified when applied to a function type","Jacksonville","Broken in 3.6; See r261653.",""
+"`2560 <https://wg21.link/LWG2560>`__","``is_constructible``\  underspecified when applied to a function type","Jacksonville","|Complete|",""
 "`2565 <https://wg21.link/LWG2565>`__","``std::function``\ 's move constructor should guarantee nothrow for ``reference_wrapper``\ s and function pointers","Jacksonville","|Complete|",""
 "`2566 <https://wg21.link/LWG2566>`__","Requirements on the first template parameter of container adaptors","Jacksonville","|Complete|",""
 "`2571 <https://wg21.link/LWG2571>`__","|sect|\ [map.modifiers]/2 imposes nonsensical requirement on ``insert(InputIterator, InputIterator)``\ ","Jacksonville","|Complete|",""

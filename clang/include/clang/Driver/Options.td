@@ -2970,10 +2970,9 @@ def gno_split_dwarf : Flag<["-"], "gno-split-dwarf">, Group<g_flags_Group>;
 def gsimple_template_names : Flag<["-"], "gsimple-template-names">, Group<g_flags_Group>;
 def gsimple_template_names_EQ
     : Joined<["-"], "gsimple-template-names=">,
-      Group<g_flags_Group>,
       HelpText<"Use simple template names in DWARF, or include the full "
                "template name with a modified prefix for validation">,
-      Values<"simple,mangled">, Flags<[CC1Option]>;
+      Values<"simple,mangled">, Flags<[CC1Option, NoDriverOption]>;
 def gno_simple_template_names : Flag<["-"], "gno-simple-template-names">,
                                 Group<g_flags_Group>;
 def ggnu_pubnames : Flag<["-"], "ggnu-pubnames">, Group<g_flags_Group>, Flags<[CC1Option]>;

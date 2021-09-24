@@ -37,7 +37,7 @@ public:
         f64Func(f64Func) {}
 
   LogicalResult
-  matchAndRewrite(SourceOp op, ArrayRef<Value> operands,
+  matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     using LLVM::LLVMFuncOp;
 
@@ -50,7 +50,7 @@ public:
                   "expected op with same operand and result types");
 
     SmallVector<Value, 1> castedOperands;
-    for (Value operand : operands)
+    for (Value operand : adaptor.getOperands())
       castedOperands.push_back(maybeCast(operand, rewriter));
 
     Type resultType = castedOperands.front().getType();
@@ -64,13 +64,14 @@ public:
     auto callOp = rewriter.create<LLVM::CallOp>(
         op->getLoc(), resultType, SymbolRefAttr::get(funcOp), castedOperands);
 
-    if (resultType == operands.front().getType()) {
+    if (resultType == adaptor.getOperands().front().getType()) {
       rewriter.replaceOp(op, {callOp.getResult(0)});
       return success();
     }
 
     Value truncated = rewriter.create<LLVM::FPTruncOp>(
-        op->getLoc(), operands.front().getType(), callOp.getResult(0));
+        op->getLoc(), adaptor.getOperands().front().getType(),
+        callOp.getResult(0));
     rewriter.replaceOp(op, {truncated});
     return success();
   }
@@ -85,11 +86,8 @@ private:
         operand.getLoc(), Float32Type::get(rewriter.getContext()), operand);
   }
 
-  Type getFunctionType(Type resultType, ArrayRef<Value> operands) const {
-    SmallVector<Type, 1> operandTypes;
-    for (Value operand : operands) {
-      operandTypes.push_back(operand.getType());
-    }
+  Type getFunctionType(Type resultType, ValueRange operands) const {
+    SmallVector<Type> operandTypes(operands.getTypes());
     return LLVM::LLVMFunctionType::get(resultType, operandTypes);
   }
 
