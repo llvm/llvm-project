@@ -13,9 +13,11 @@
 #ifndef MLIR_DIALECT_LINALG_PASSES_H_
 #define MLIR_DIALECT_LINALG_PASSES_H_
 
+#include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
+
 std::unique_ptr<OperationPass<FuncOp>> createConvertElementwiseToLinalgPass();
 
 std::unique_ptr<OperationPass<FuncOp>> createLinalgFoldUnitExtentDimsPass();
@@ -23,15 +25,10 @@ std::unique_ptr<OperationPass<FuncOp>> createLinalgFoldUnitExtentDimsPass();
 std::unique_ptr<Pass> createLinalgElementwiseOpFusionPass();
 std::unique_ptr<Pass> createFoldReshapeOpsByLinearizationPass();
 
-std::unique_ptr<OperationPass<FuncOp>>
-createLinalgTilingPass(ArrayRef<int64_t> tileSizes = {});
-
-std::unique_ptr<OperationPass<FuncOp>>
-createLinalgTilingToParallelLoopsPass(ArrayRef<int64_t> tileSizes = {});
-
-std::unique_ptr<OperationPass<FuncOp>>
-createLinalgTilingToTiledLoopPass(ArrayRef<int64_t> tileSizes = {},
-                                  ArrayRef<StringRef> distributionTypes = {});
+std::unique_ptr<OperationPass<FuncOp>> createLinalgTilingPass(
+    ArrayRef<int64_t> tileSizes = {},
+    linalg::LinalgTilingLoopType loopType = linalg::LinalgTilingLoopType::Loops,
+    ArrayRef<StringRef> distributionTypes = {});
 
 std::unique_ptr<OperationPass<FuncOp>>
 createLinalgPromotionPass(bool dynamicBuffers, bool useAlloca);

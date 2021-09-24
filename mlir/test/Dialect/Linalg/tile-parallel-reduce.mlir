@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -linalg-tile-to-parallel-loops="linalg-tile-sizes=2,4,8" -split-input-file | FileCheck %s
-// RUN: mlir-opt %s -linalg-tile-to-parallel-loops="linalg-tile-sizes=2" -split-input-file | FileCheck %s -check-prefix=TILE1
-// RUN: mlir-opt %s -linalg-tile-to-parallel-loops="linalg-tile-sizes=2,4" -split-input-file | FileCheck %s -check-prefix=TILE2
+// RUN: mlir-opt %s -linalg-tile="tile-sizes=2,4,8 loop-type=parallel" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -linalg-tile="tile-sizes=2 loop-type=parallel" -split-input-file | FileCheck %s -check-prefix=TILE1
+// RUN: mlir-opt %s -linalg-tile="tile-sizes=2,4 loop-type=parallel" -split-input-file | FileCheck %s -check-prefix=TILE2
 
 func @gemm(%arg0 : memref<?x?xf32>,
            %arg1 : memref<?x?xf32>,

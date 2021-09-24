@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=10,25" -split-input-file | FileCheck %s -check-prefix=TILE-10n25
-// RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=25,0" -split-input-file | FileCheck %s -check-prefix=TILE-25n0
-// RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=0,25" -split-input-file | FileCheck %s -check-prefix=TILE-0n25
+// RUN: mlir-opt %s -linalg-tile="tile-sizes=10,25" -split-input-file | FileCheck %s -check-prefix=TILE-10n25
+// RUN: mlir-opt %s -linalg-tile="tile-sizes=25,0" -split-input-file | FileCheck %s -check-prefix=TILE-25n0
+// RUN: mlir-opt %s -linalg-tile="tile-sizes=0,25" -split-input-file | FileCheck %s -check-prefix=TILE-0n25
 
 func @indexed_vector(%arg0: memref<50xindex>) {
   linalg.generic {indexing_maps = [affine_map<(i) -> (i)>],

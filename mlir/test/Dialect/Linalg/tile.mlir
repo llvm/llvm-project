@@ -1,7 +1,7 @@
-// RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=2" -mlir-disable-threading=true | FileCheck %s -check-prefix=TILE-2
-// RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=0,2" -mlir-disable-threading=true | FileCheck %s -check-prefix=TILE-02
-// RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=0,0,2" -mlir-disable-threading=true | FileCheck %s -check-prefix=TILE-002
-// RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=2,3,4" -mlir-disable-threading=true | FileCheck %s -check-prefix=TILE-234
+// RUN: mlir-opt %s -linalg-tile="tile-sizes=2" -mlir-disable-threading=true | FileCheck %s -check-prefix=TILE-2
+// RUN: mlir-opt %s -linalg-tile="tile-sizes=0,2" -mlir-disable-threading=true | FileCheck %s -check-prefix=TILE-02
+// RUN: mlir-opt %s -linalg-tile="tile-sizes=0,0,2" -mlir-disable-threading=true | FileCheck %s -check-prefix=TILE-002
+// RUN: mlir-opt %s -linalg-tile="tile-sizes=2,3,4" -mlir-disable-threading=true | FileCheck %s -check-prefix=TILE-234
 
 //   TILE-2-DAG: #[[$strided1D:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
 //  TILE-02-DAG: #[[$strided1D:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>

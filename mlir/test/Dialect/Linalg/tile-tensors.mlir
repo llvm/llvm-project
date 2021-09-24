@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=2,3,4" -split-input-file | FileCheck %s
-// RUN: mlir-opt %s -linalg-tile-to-tiled-loop="linalg-tile-sizes=2,3,4 linalg-distribution-types=block_x,block_y,none" -split-input-file | FileCheck %s -check-prefix=TLOOP
+// RUN: mlir-opt %s -linalg-tile="tile-sizes=2,3,4" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -linalg-tile="tile-sizes=2,3,4 loop-type=tiled_loop distribution-types=block_x,block_y,none" -split-input-file | FileCheck %s -check-prefix=TLOOP
 
 // CHECK-LABEL: func @matmul_tensors(
 // CHECK-SAME:    %[[TA:[0-9a-z]+]]: tensor<?x?xf32>
