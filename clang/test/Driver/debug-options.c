@@ -437,13 +437,9 @@
 // NODIRECTORY: "-fno-dwarf-directory-asm"
 
 // RUN: %clang -### -target x86_64 -c -g -gsimple-template-names %s 2>&1 | FileCheck --check-prefix=SIMPLE_TEMP_NAMES %s
-// RUN: %clang -### -target x86_64 -c -g -gsimple-template-names=simple %s 2>&1 | FileCheck --check-prefix=SIMPLE_TEMP_NAMES %s
 // SIMPLE_TEMP_NAMES: -gsimple-template-names=simple
 // SIMPLE_TEMP_NAMES: -debug-forward-template-params
-// RUN: %clang -### -target x86_64 -c -g -gsimple-template-names=mangled %s 2>&1 | FileCheck --check-prefix=MANGLED_TEMP_NAMES %s
-// MANGLED_TEMP_NAMES: -gsimple-template-names=mangled
-// MANGLED_TEMP_NAMES: -debug-forward-template-params
+// RUN: not %clang -### -target x86_64 -c -g -gsimple-template-names=mangled %s 2>&1 | FileCheck --check-prefix=MANGLED_TEMP_NAMES %s
+// MANGLED_TEMP_NAMES: error: unknown argument: '-gsimple-template-names=mangled'
 // RUN: %clang -### -target x86_64 -c -g %s 2>&1 | FileCheck --check-prefix=FULL_TEMP_NAMES --implicit-check-not=debug-forward-template-params %s
 // FULL_TEMP_NAMES-NOT: -gsimple-template-names
-// RUN: %clang -### -target x86_64 -c -g -gsimple-template-names=other %s 2>&1 | FileCheck --check-prefix=SIMPLE_TEMP_OTHER %s
-// SIMPLE_TEMP_OTHER: error: unsupported argument 'other' to option 'gsimple-template-names='
