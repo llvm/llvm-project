@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Script that checks that critical functions in TSan runtime have correct number
 # of push/pop/rsp instructions to verify that runtime is efficient enough.
