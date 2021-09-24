@@ -13,57 +13,26 @@
 // constexpr explicit common_view(V r);
 
 #include <ranges>
+
 #include <cassert>
+#include <utility>
 
 #include "test_iterators.h"
-#include "test_range.h"
-
-struct ContiguousView : std::ranges::view_base {
-  int *ptr_;
-  constexpr ContiguousView(int* ptr) : ptr_(ptr) {}
-  constexpr ContiguousView(ContiguousView&&) = default;
-  constexpr ContiguousView& operator=(ContiguousView&&) = default;
-  friend constexpr int* begin(ContiguousView& view) { return view.ptr_; }
-  friend constexpr int* begin(ContiguousView const& view) { return view.ptr_; }
-  friend constexpr sentinel_wrapper<int*> end(ContiguousView& view) {
-    return sentinel_wrapper<int*>{view.ptr_ + 8};
-  }
-  friend constexpr sentinel_wrapper<int*> end(ContiguousView const& view) {
-    return sentinel_wrapper<int*>{view.ptr_ + 8};
-  }
-};
-
-struct CopyableView : std::ranges::view_base {
-  int *ptr_;
-  constexpr CopyableView(int* ptr) : ptr_(ptr) {}
-  friend constexpr int* begin(CopyableView& view) { return view.ptr_; }
-  friend constexpr int* begin(CopyableView const& view) { return view.ptr_; }
-  friend constexpr sentinel_wrapper<int*> end(CopyableView& view) {
-    return sentinel_wrapper<int*>{view.ptr_ + 8};
-  }
-  friend constexpr sentinel_wrapper<int*> end(CopyableView const& view) {
-    return sentinel_wrapper<int*>{view.ptr_ + 8};
-  }
-};
+#include "types.h"
 
 constexpr bool test() {
-  int buffer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+  int buf[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 
   {
-    std::ranges::common_view<ContiguousView> common(ContiguousView{buffer});
-    assert(std::move(common).base().ptr_ == buffer);
+    ContiguousView view{buf, buf + 8};
+    std::ranges::common_view<ContiguousView> common(std::move(view));
+    assert(std::move(common).base().begin_ == buf);
   }
 
   {
-    ContiguousView v{buffer};
-    std::ranges::common_view<ContiguousView> common(std::move(v));
-    assert(std::move(common).base().ptr_ == buffer);
-  }
-
-  {
-    const CopyableView v{buffer};
-    const std::ranges::common_view<CopyableView> common(v);
-    assert(common.base().ptr_ == buffer);
+    CopyableView const view{buf, buf + 8};
+    std::ranges::common_view<CopyableView> const common(view);
+    assert(common.base().begin_ == buf);
   }
 
   return true;
@@ -73,9 +42,13 @@ int main(int, char**) {
   test();
   static_assert(test());
 
-  int buffer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-  const std::ranges::common_view<ContiguousView> common(ContiguousView{buffer});
-  assert(common.begin() == buffer);
+  // Can't compare common_iterator inside constexpr
+  {
+    int buf[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+    ContiguousView view{buf, buf + 8};
+    std::ranges::common_view<ContiguousView> const common(std::move(view));
+    assert(common.begin() == buf);
+  }
 
   return 0;
 }

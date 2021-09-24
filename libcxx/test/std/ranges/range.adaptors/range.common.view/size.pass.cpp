@@ -17,62 +17,28 @@
 #include <cassert>
 
 #include "test_iterators.h"
-#include "test_range.h"
+#include "types.h"
 
-struct CopyableView : std::ranges::view_base {
-  int *ptr_;
-  constexpr CopyableView(int* ptr) : ptr_(ptr) {}
-  friend constexpr int* begin(CopyableView& view) { return view.ptr_; }
-  friend constexpr int* begin(CopyableView const& view) { return view.ptr_; }
-  friend constexpr sentinel_wrapper<int*> end(CopyableView& view) {
-    return sentinel_wrapper<int*>{view.ptr_ + 8};
-  }
-  friend constexpr sentinel_wrapper<int*> end(CopyableView const& view) {
-    return sentinel_wrapper<int*>{view.ptr_ + 8};
-  }
-};
-
-using ForwardIter = forward_iterator<int*>;
-struct SizedForwardView : std::ranges::view_base {
-  int *ptr_;
-  constexpr SizedForwardView(int* ptr) : ptr_(ptr) {}
-  friend constexpr ForwardIter begin(SizedForwardView& view) { return ForwardIter(view.ptr_); }
-  friend constexpr ForwardIter begin(SizedForwardView const& view) { return ForwardIter(view.ptr_); }
-  friend constexpr sentinel_wrapper<ForwardIter> end(SizedForwardView& view) {
-    return sentinel_wrapper<ForwardIter>{ForwardIter(view.ptr_ + 8)};
-  }
-  friend constexpr sentinel_wrapper<ForwardIter> end(SizedForwardView const& view) {
-    return sentinel_wrapper<ForwardIter>{ForwardIter(view.ptr_ + 8)};
-  }
-};
-
-constexpr auto operator-(sentinel_wrapper<ForwardIter> sent, ForwardIter iter) {
-  return sent.base().base() - iter.base();
-}
-constexpr auto operator-(ForwardIter iter, sentinel_wrapper<ForwardIter> sent) {
-  return iter.base() - sent.base().base();
-}
-
-template<class T>
-concept SizeEnabled = requires(const std::ranges::common_view<T>& comm) {
-  comm.size();
-};
+template<class View>
+concept SizeEnabled = requires(View v) { v.size(); };
 
 constexpr bool test() {
-  int buffer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+  int buf[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 
   {
-    static_assert( SizeEnabled<SizedForwardView>);
-    static_assert(!SizeEnabled<CopyableView>);
+    static_assert( SizeEnabled<std::ranges::common_view<SizedForwardView> const&>);
+    static_assert(!SizeEnabled<std::ranges::common_view<CopyableView> const&>);
   }
 
   {
-    std::ranges::common_view<SizedForwardView> common(SizedForwardView{buffer});
+    SizedForwardView view{buf, buf + 8};
+    std::ranges::common_view<SizedForwardView> common(view);
     assert(common.size() == 8);
   }
 
   {
-    const std::ranges::common_view<SizedForwardView> common(SizedForwardView{buffer});
+    SizedForwardView view{buf, buf + 8};
+    std::ranges::common_view<SizedForwardView> const common(view);
     assert(common.size() == 8);
   }
 
