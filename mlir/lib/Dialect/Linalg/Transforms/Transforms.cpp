@@ -145,17 +145,15 @@ LinalgTilingOptions &mlir::linalg::LinalgTilingOptions::scalarizeDynamicDims() {
   return *this;
 }
 
-/// Try to compute a static bounding box for `operand`
-/// Return success if either:
-///   1. The operand is already statically shaped, `result` is left unchanged.
-///   2. The operand is (partially) dynamic, `result` is the result of a freshly
-///      created PadTensorOp.
-/// Return failure if the operand cannot be padded to a static shape.
+/// Try to compute a static bounding box for `operand`. The padding happens
+/// even if the operand already has static shape. `result` is the result of a
+/// freshly created PadTensorOp. Return failure if the operand cannot be padded
+/// to a static shape.
 static LogicalResult padOperandToSmallestStaticBoundingBox(
     PatternRewriter &rewriter, linalg::LinalgOp opToPad, OpOperand *opOperand,
     const PaddingValueComputationFunction &paddingFunc, Value &result) {
-  // Already static shape, no need to pad.
-  if (llvm::none_of(opToPad.getShape(opOperand), ShapedType::isDynamic))
+  // Can't pad scalars.
+  if (opToPad.getShape(opOperand).empty())
     return success();
   auto sliceOp = opOperand->get().getDefiningOp<tensor::ExtractSliceOp>();
   // Not a slice op, cannot construct a static bounding box.
@@ -179,7 +177,8 @@ static LogicalResult padOperandToSmallestStaticBoundingBox(
   auto staticTensorType = RankedTensorType::get(
       staticSizes, getElementTypeOrSelf(opOperand->get()));
   result = linalg::PadTensorOp::createPadHighOp(
-      staticTensorType, opOperand->get(), pad, opToPad->getLoc(), rewriter);
+      staticTensorType, opOperand->get(), pad, /*packing=*/true,
+      opToPad->getLoc(), rewriter);
   return success();
 }
 
@@ -189,12 +188,9 @@ linalg::rewriteAsPaddedOp(PatternRewriter &rewriter, LinalgOp opToPad,
                           LinalgOp &paddedOp) {
   Location loc = opToPad->getLoc();
 
-  // If the op is fully static, it does not need padding.
   // TODO: there are cases where we may still want to pad to larger sizes.
   assert(opToPad.hasTensorSemantics() &&
          "expected operation to have tensor semantics");
-  if (!opToPad.hasDynamicShape())
-    return success();
 
   OpBuilder::InsertionGuard g(rewriter);
   // Set IP after op because we also take the dims of the original output.
