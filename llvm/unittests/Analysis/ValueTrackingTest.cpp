@@ -1606,12 +1606,22 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsUnknownVScale) {
   CallInst *CI = Builder.CreateCall(TheFn, {}, {}, "");
 
   KnownBits Known = computeKnownBits(CI, M.getDataLayout(), /* Depth */ 0);
-  delete CI;
-
   // There is no parent function so we cannot look up the vscale_range
   // attribute to determine the number of bits.
   EXPECT_EQ(Known.One.getZExtValue(), 0u);
   EXPECT_EQ(Known.Zero.getZExtValue(), 0u);
+
+  BasicBlock *BB = BasicBlock::Create(Context);
+  BB->getInstList().push_back(CI);
+  Known = computeKnownBits(CI, M.getDataLayout(), /* Depth */ 0);
+  // There is no parent function so we cannot look up the vscale_range
+  // attribute to determine the number of bits.
+  EXPECT_EQ(Known.One.getZExtValue(), 0u);
+  EXPECT_EQ(Known.Zero.getZExtValue(), 0u);
+
+  CI->removeFromParent();
+  delete CI;
+  delete BB;
 }
 
 // 512 + [32, 64) doesn't produce overlapping bits.
