@@ -20,6 +20,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorBootstrapService.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleExecutorDylibManager.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
 
@@ -106,6 +107,8 @@ public:
 
     // If transport creation succeeds then start up services.
     Server->Services = std::move(S.services());
+    Server->Services.push_back(
+        std::make_unique<rt_bootstrap::SimpleExecutorDylibManager>());
     for (auto &Service : Server->Services)
       Service->addBootstrapSymbols(S.bootstrapSymbols());
 
@@ -140,18 +143,6 @@ private:
                      SimpleRemoteEPCArgBytesVector ArgBytes);
   void handleCallWrapper(uint64_t RemoteSeqNo, ExecutorAddress TagAddr,
                          SimpleRemoteEPCArgBytesVector ArgBytes);
-
-  static shared::detail::CWrapperFunctionResult
-  loadDylibWrapper(const char *ArgData, size_t ArgSize);
-
-  static shared::detail::CWrapperFunctionResult
-  lookupSymbolsWrapper(const char *ArgData, size_t ArgSize);
-
-  Expected<tpctypes::DylibHandle> loadDylib(const std::string &Path,
-                                            uint64_t Mode);
-
-  Expected<std::vector<std::vector<ExecutorAddress>>>
-  lookupSymbols(const std::vector<RemoteSymbolLookup> &L);
 
   shared::WrapperFunctionResult
   doJITDispatch(const void *FnTag, const char *ArgData, size_t ArgSize);
