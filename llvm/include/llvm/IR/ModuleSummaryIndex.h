@@ -700,6 +700,8 @@ public:
   /// Return the list of <CalleeValueInfo, CalleeInfo> pairs.
   ArrayRef<EdgeTy> calls() const { return CallGraphEdgeList; }
 
+  std::vector<EdgeTy> &mutableCalls() { return CallGraphEdgeList; }
+
   void addCall(EdgeTy E) { CallGraphEdgeList.push_back(E); }
 
   /// Returns the list of type identifiers used by this function in

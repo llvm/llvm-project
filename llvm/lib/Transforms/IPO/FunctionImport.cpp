@@ -188,23 +188,6 @@ selectCallee(const ModuleSummaryIndex &Index,
           return false;
         }
 
-        // For SamplePGO, in computeImportForFunction the OriginalId
-        // may have been used to locate the callee summary list (See
-        // comment there).
-        // The mapping from OriginalId to GUID may return a GUID
-        // that corresponds to a static variable. Filter it out here.
-        // This can happen when
-        // 1) There is a call to a library function which is not defined
-        // in the index.
-        // 2) There is a static variable with the  OriginalGUID identical
-        // to the GUID of the library function in 1);
-        // When this happens, the logic for SamplePGO kicks in and
-        // the static variable in 2) will be found, which needs to be
-        // filtered out.
-        if (GVSummary->getSummaryKind() == GlobalValueSummary::GlobalVarKind) {
-          Reason = FunctionImporter::ImportFailureReason::GlobalVar;
-          return false;
-        }
         if (GlobalValue::isInterposableLinkage(GVSummary->linkage())) {
           Reason = FunctionImporter::ImportFailureReason::InterposableLinkage;
           // There is no point in importing these, we can't inline them
@@ -264,21 +247,6 @@ using EdgeInfo =
     std::tuple<const GlobalValueSummary *, unsigned /* Threshold */>;
 
 } // anonymous namespace
-
-static ValueInfo
-updateValueInfoForIndirectCalls(const ModuleSummaryIndex &Index, ValueInfo VI) {
-  if (!VI.getSummaryList().empty())
-    return VI;
-  // For SamplePGO, the indirect call targets for local functions will
-  // have its original name annotated in profile. We try to find the
-  // corresponding PGOFuncName as the GUID.
-  // FIXME: Consider updating the edges in the graph after building
-  // it, rather than needing to perform this mapping on each walk.
-  auto GUID = Index.getGUIDFromOriginalID(VI.getGUID());
-  if (GUID == 0)
-    return ValueInfo();
-  return Index.getValueInfo(GUID);
-}
 
 static bool shouldImportGlobal(const ValueInfo &VI,
                                const GVSummaryMapTy &DefinedGVSummaries) {
@@ -400,10 +368,6 @@ static void computeImportForFunction(
                         << " reached.\n");
       continue;
     }
-
-    VI = updateValueInfoForIndirectCalls(Index, VI);
-    if (!VI)
-      continue;
 
     if (DefinedGVSummaries.count(VI.getGUID())) {
       // FIXME: Consider not skipping import if the module contains
@@ -840,16 +804,61 @@ void llvm::ComputeCrossModuleImportForModuleFromIndex(
 #endif
 }
 
-void llvm::computeDeadSymbols(
+// For SamplePGO, the indirect call targets for local functions will
+// have its original name annotated in profile. We try to find the
+// corresponding PGOFuncName as the GUID, and fix up the edges
+// accordingly.
+void updateValueInfoForIndirectCalls(ModuleSummaryIndex &Index,
+                                     FunctionSummary *FS) {
+  for (auto &EI : FS->mutableCalls()) {
+    if (!EI.first.getSummaryList().empty())
+      continue;
+    auto GUID = Index.getGUIDFromOriginalID(EI.first.getGUID());
+    if (GUID == 0)
+      continue;
+    // Update the edge to point directly to the correct GUID.
+    auto VI = Index.getValueInfo(GUID);
+    if (llvm::any_of(
+            VI.getSummaryList(),
+            [&](const std::unique_ptr<GlobalValueSummary> &SummaryPtr) {
+              // The mapping from OriginalId to GUID may return a GUID
+              // that corresponds to a static variable. Filter it out here.
+              // This can happen when
+              // 1) There is a call to a library function which is not defined
+              // in the index.
+              // 2) There is a static variable with the  OriginalGUID identical
+              // to the GUID of the library function in 1);
+              // When this happens the static variable in 2) will be found,
+              // which needs to be filtered out.
+              return SummaryPtr->getSummaryKind() ==
+                     GlobalValueSummary::GlobalVarKind;
+            }))
+      continue;
+    EI.first = VI;
+  }
+}
+
+void llvm::updateIndirectCalls(ModuleSummaryIndex &Index) {
+  for (const auto &Entry : Index) {
+    for (auto &S : Entry.second.SummaryList) {
+      if (auto *FS = dyn_cast<FunctionSummary>(S.get()))
+        updateValueInfoForIndirectCalls(Index, FS);
+    }
+  }
+}
+
+void llvm::computeDeadSymbolsAndUpdateIndirectCalls(
     ModuleSummaryIndex &Index,
     const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
     function_ref<PrevailingType(GlobalValue::GUID)> isPrevailing) {
   assert(!Index.withGlobalValueDeadStripping());
-  if (!ComputeDead)
+  if (!ComputeDead ||
+      // Don't do anything when nothing is live, this is friendly with tests.
+      GUIDPreservedSymbols.empty()) {
+    // Still need to update indirect calls.
+    updateIndirectCalls(Index);
     return;
-  if (GUIDPreservedSymbols.empty())
-    // Don't do anything when nothing is live, this is friendly with tests.
-    return;
+  }
   unsigned LiveSymbols = 0;
   SmallVector<ValueInfo, 128> Worklist;
   Worklist.reserve(GUIDPreservedSymbols.size() * 2);
@@ -864,13 +873,16 @@ void llvm::computeDeadSymbols(
   // Add values flagged in the index as live roots to the worklist.
   for (const auto &Entry : Index) {
     auto VI = Index.getValueInfo(Entry);
-    for (auto &S : Entry.second.SummaryList)
+    for (auto &S : Entry.second.SummaryList) {
+      if (auto *FS = dyn_cast<FunctionSummary>(S.get()))
+        updateValueInfoForIndirectCalls(Index, FS);
       if (S->isLive()) {
         LLVM_DEBUG(dbgs() << "Live root: " << VI << "\n");
         Worklist.push_back(VI);
         ++LiveSymbols;
         break;
       }
+    }
   }
 
   // Make value live and add it to the worklist if it was not live before.
@@ -883,9 +895,6 @@ void llvm::computeDeadSymbols(
     // binary, which increases the binary size unnecessarily. Note that
     // if this code changes, the importer needs to change so that edges
     // to functions marked dead are skipped.
-    VI = updateValueInfoForIndirectCalls(Index, VI);
-    if (!VI)
-      return;
 
     if (llvm::any_of(VI.getSummaryList(),
                      [](const std::unique_ptr<llvm::GlobalValueSummary> &S) {
@@ -959,7 +968,8 @@ void llvm::computeDeadSymbolsWithConstProp(
     const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
     function_ref<PrevailingType(GlobalValue::GUID)> isPrevailing,
     bool ImportEnabled) {
-  computeDeadSymbols(Index, GUIDPreservedSymbols, isPrevailing);
+  computeDeadSymbolsAndUpdateIndirectCalls(Index, GUIDPreservedSymbols,
+                                           isPrevailing);
   if (ImportEnabled)
     Index.propagateAttributes(GUIDPreservedSymbols);
 }

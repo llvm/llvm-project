@@ -4208,33 +4208,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     }
 
     auto GetValueId = [&](const ValueInfo &VI) -> Optional<unsigned> {
-      GlobalValue::GUID GUID = VI.getGUID();
-      Optional<unsigned> CallValueId = getValueId(GUID);
-      if (CallValueId)
-        return CallValueId;
-      // For SamplePGO, the indirect call targets for local functions will
-      // have its original name annotated in profile. We try to find the
-      // corresponding PGOFuncName as the GUID.
-      GUID = Index.getGUIDFromOriginalID(GUID);
-      if (!GUID)
-        return None;
-      CallValueId = getValueId(GUID);
-      if (!CallValueId)
-        return None;
-      // The mapping from OriginalId to GUID may return a GUID
-      // that corresponds to a static variable. Filter it out here.
-      // This can happen when
-      // 1) There is a call to a library function which does not have
-      // a CallValidId;
-      // 2) There is a static variable with the  OriginalGUID identical
-      // to the GUID of the library function in 1);
-      // When this happens, the logic for SamplePGO kicks in and
-      // the static variable in 2) will be found, which needs to be
-      // filtered out.
-      auto *GVSum = Index.getGlobalValueSummary(GUID, false);
-      if (GVSum && GVSum->getSummaryKind() == GlobalValueSummary::GlobalVarKind)
-        return None;
-      return CallValueId;
+      return getValueId(VI.getGUID());
     };
 
     auto *FS = cast<FunctionSummary>(S);
