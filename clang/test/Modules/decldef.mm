@@ -1,10 +1,12 @@
 // RUN: rm -rf %t
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fobjc-arc -I %S/Inputs -fmodules-cache-path=%t %s -verify -DUSE_1 -DUSE_2 -DUSE_3 -DUSE_4
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fobjc-arc -I %S/Inputs -fmodules-cache-path=%t %s -verify -DUSE_2 -DUSE_3 -DUSE_4
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fobjc-arc -I %S/Inputs -fmodules-cache-path=%t %s -verify -DUSE_3 -DUSE_4
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fobjc-arc -I %S/Inputs -fmodules-cache-path=%t %s -verify -DUSE_4
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fobjc-arc -I %S/Inputs -fmodules-cache-path=%t %s -verify -DUSE_1 -DUSE_2 -DUSE_3 -DUSE_4 -DUSE_5
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fobjc-arc -I %S/Inputs -fmodules-cache-path=%t %s -verify -DUSE_2 -DUSE_3 -DUSE_4 -DUSE_5
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fobjc-arc -I %S/Inputs -fmodules-cache-path=%t %s -verify -DUSE_3 -DUSE_4 -DUSE_5
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fobjc-arc -I %S/Inputs -fmodules-cache-path=%t %s -verify -DUSE_4 -DUSE_5
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fobjc-arc -I %S/Inputs -fmodules-cache-path=%t %s -verify -DUSE_5
 
 // expected-note@Inputs/def.h:5 0-1{{here}}
+// expected-note@Inputs/def.h:11 0-1{{here}}
 // expected-note@Inputs/def.h:16 0-1{{here}}
 // expected-note@Inputs/def-include.h:11 0-1{{here}}
 
@@ -51,11 +53,17 @@ void testB() {
 }
 
 void testDef() {
+#ifdef USE_4
   [def defMethod];
+  #ifndef USED
+  // expected-error@-2{{definition of 'Def' must be imported from module 'decldef.Def' before it is required}}
+  #define USED
+  #endif
+#endif
 }
 
 void testDef2() {
-#ifdef USE_4
+#ifdef USE_5
   def2->func();
   def3->func();
   #ifndef USED
