@@ -364,7 +364,7 @@ NOINLINE EXTERN void __kmpc_parallel_51(kmp_Ident *ident, kmp_int32 global_tid,
     void **GlobalArgs;
     __kmpc_begin_sharing_variables(&GlobalArgs, nargs);
     // TODO: faster memcpy?
-#pragma unroll
+    // Removed unroll pragma in preference of eventual use of memcpy
     for (int I = 0; I < nargs; I++)
       GlobalArgs[I] = args[I];
   }
