@@ -29,10 +29,10 @@ struct RegionOpConversion : public ConvertOpToLLVMPattern<OpType> {
   using ConvertOpToLLVMPattern<OpType>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(OpType curOp, ArrayRef<Value> operands,
+  matchAndRewrite(OpType curOp, typename OpType::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto newOp = rewriter.create<OpType>(curOp.getLoc(), TypeRange(), operands,
-                                         curOp->getAttrs());
+    auto newOp = rewriter.create<OpType>(
+        curOp.getLoc(), TypeRange(), adaptor.getOperands(), curOp->getAttrs());
     rewriter.inlineRegionBefore(curOp.region(), newOp.region(),
                                 newOp.region().end());
     if (failed(rewriter.convertRegionTypes(&newOp.region(),

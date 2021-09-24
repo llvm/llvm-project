@@ -25,7 +25,7 @@ public:
       test::TestTypeProducerOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(test::TestTypeProducerOp op, ArrayRef<Value> operands,
+  matchAndRewrite(test::TestTypeProducerOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<LLVM::NullOp>(op, getVoidPtrType());
     return success();

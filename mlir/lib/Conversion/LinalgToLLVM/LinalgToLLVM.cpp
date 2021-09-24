@@ -73,7 +73,7 @@ public:
   using ConvertOpToLLVMPattern<RangeOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(RangeOp rangeOp, ArrayRef<Value> operands,
+  matchAndRewrite(RangeOp rangeOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto rangeDescriptorTy = convertRangeType(
         rangeOp.getType().cast<RangeType>(), *getTypeConverter());
@@ -81,7 +81,6 @@ public:
     ImplicitLocOpBuilder b(rangeOp->getLoc(), rewriter);
 
     // Fill in an aggregate value of the descriptor.
-    RangeOpAdaptor adaptor(operands);
     Value desc = b.create<LLVM::UndefOp>(rangeDescriptorTy);
     desc = b.create<LLVM::InsertValueOp>(desc, adaptor.min(),
                                          rewriter.getI64ArrayAttr(0));
@@ -101,9 +100,9 @@ public:
   using ConvertOpToLLVMPattern<linalg::YieldOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(linalg::YieldOp op, ArrayRef<Value> operands,
+  matchAndRewrite(linalg::YieldOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(op, operands);
+    rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(op, adaptor.getOperands());
     return success();
   }
 };

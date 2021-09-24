@@ -41,7 +41,7 @@ public:
 
   // Convert the kernel arguments to an LLVM type, preserve the rest.
   LogicalResult
-  matchAndRewrite(Op op, ArrayRef<Value> operands,
+  matchAndRewrite(Op op, typename Op::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op->getLoc();
     MLIRContext *context = rewriter.getContext();
