@@ -20,6 +20,10 @@ cl::opt<bool> SkipSymbolization("skip-symbolization", cl::ReallyHidden,
                                 cl::desc("Dump the unsymbolized profile to the "
                                          "output file. It will show unwinder "
                                          "output for CS profile generation."));
+cl::opt<bool> UseOffset("use-offset", cl::ReallyHidden, cl::init(true),
+                        cl::ZeroOrMore,
+                        cl::desc("Work with `--skip-symbolization` to dump the "
+                                 "offset instead of virtual address."));
 
 extern cl::opt<bool> ShowDisassemblyOnly;
 extern cl::opt<bool> ShowSourceLocations;
@@ -328,20 +332,6 @@ void PerfReaderBase::updateBinaryAddress(const MMapEvent &Event) {
   }
 }
 
-// Use ordered map to make the output deterministic
-using OrderedCounterForPrint = std::map<std::string, RangeSample>;
-
-static void printSampleCounter(OrderedCounterForPrint &OrderedCounter,
-                               raw_fd_ostream &OS) {
-  for (auto Range : OrderedCounter) {
-    OS << Range.first << "\n";
-    for (auto I : Range.second) {
-      OS << "  (" << format("%" PRIx64, I.first.first) << ", "
-         << format("%" PRIx64, I.first.second) << "): " << I.second << "\n";
-    }
-  }
-}
-
 static std::string getContextKeyStr(ContextKey *K,
                                     const ProfiledBinary *Binary) {
   if (const auto *CtxKey = dyn_cast<StringBasedCtxKey>(K)) {
@@ -357,35 +347,6 @@ static std::string getContextKeyStr(ContextKey *K,
   } else {
     llvm_unreachable("unexpected key type");
   }
-}
-
-static void printRangeCounter(ContextSampleCounterMap &Counter,
-                              const ProfiledBinary *Binary,
-                              raw_fd_ostream &OS) {
-  OrderedCounterForPrint OrderedCounter;
-  for (auto &CI : Counter) {
-    OrderedCounter[getContextKeyStr(CI.first.getPtr(), Binary)] =
-        CI.second.RangeCounter;
-  }
-  printSampleCounter(OrderedCounter, OS);
-}
-
-static void printBranchCounter(ContextSampleCounterMap &Counter,
-                               const ProfiledBinary *Binary,
-                               raw_fd_ostream &OS) {
-  OrderedCounterForPrint OrderedCounter;
-  for (auto &CI : Counter) {
-    OrderedCounter[getContextKeyStr(CI.first.getPtr(), Binary)] =
-        CI.second.BranchCounter;
-  }
-  printSampleCounter(OrderedCounter, OS);
-}
-
-void HybridPerfReader::writeRawProfile(raw_fd_ostream &OS) {
-  OS << "Binary(" << Binary->getName().str() << ")'s Range Counter:\n";
-  printRangeCounter(SampleCounters, Binary, OS);
-  OS << "\nBinary(" << Binary->getName().str() << ")'s Branch Counter:\n";
-  printBranchCounter(SampleCounters, Binary, OS);
 }
 
 void HybridPerfReader::unwindSamples() {
@@ -406,7 +367,7 @@ void HybridPerfReader::unwindSamples() {
                          << format("%" PRIx64, Address) << "\n";
 
   if (SkipSymbolization)
-    PerfReaderBase::writeRawProfile(OutputFilename);
+    writeRawProfile(OutputFilename);
 }
 
 bool PerfReaderBase::extractLBRStack(TraceStream &TraceIt,
@@ -629,9 +590,13 @@ void PerfReaderBase::writeRawProfile(StringRef Filename) {
   writeRawProfile(OS);
 }
 
-void LBRPerfReader::writeRawProfile(raw_fd_ostream &OS) {
+// Use ordered map to make the output deterministic
+using OrderedCounterForPrint = std::map<std::string, SampleCounter *>;
+
+void PerfReaderBase::writeRawProfile(raw_fd_ostream &OS) {
   /*
      Format:
+     [context string]
      number of entries in RangeCounter
      from_1-to_1:count_1
      from_2-to_2:count_2
@@ -644,17 +609,37 @@ void LBRPerfReader::writeRawProfile(raw_fd_ostream &OS) {
      src_n->dst_n:count_n
   */
 
-  SampleCounter &Counter = SampleCounters.begin()->second;
-  OS << Counter.RangeCounter.size() << "\n";
-  for (auto I : Counter.RangeCounter) {
-    OS << Twine::utohexstr(I.first.first) << "-"
-       << Twine::utohexstr(I.first.second) << ":" << I.second << "\n";
+  OrderedCounterForPrint OrderedCounters;
+  for (auto &CI : SampleCounters) {
+    OrderedCounters[getContextKeyStr(CI.first.getPtr(), Binary)] = &CI.second;
   }
 
-  OS << Counter.BranchCounter.size() << "\n";
-  for (auto I : Counter.BranchCounter) {
-    OS << Twine::utohexstr(I.first.first) << "->"
-       << Twine::utohexstr(I.first.second) << ":" << I.second << "\n";
+  auto SCounterPrinter = [&](RangeSample Counter, StringRef Separator,
+                             uint32_t Indent) {
+    OS.indent(Indent);
+    OS << Counter.size() << "\n";
+    for (auto I : Counter) {
+      uint64_t Start = UseOffset ? I.first.first
+                                 : Binary->offsetToVirtualAddr(I.first.first);
+      uint64_t End = UseOffset ? I.first.second
+                               : Binary->offsetToVirtualAddr(I.first.second);
+      OS.indent(Indent);
+      OS << Twine::utohexstr(Start) << Separator << Twine::utohexstr(End) << ":"
+         << I.second << "\n";
+    }
+  };
+
+  for (auto &CI : OrderedCounters) {
+    uint32_t Indent = 0;
+    if (!CI.first.empty()) {
+      // Context string key
+      OS << "[" << CI.first << "]\n";
+      Indent = 2;
+    }
+
+    SampleCounter &Counter = *CI.second;
+    SCounterPrinter(Counter.RangeCounter, "-", Indent);
+    SCounterPrinter(Counter.BranchCounter, "->", Indent);
   }
 }
 
