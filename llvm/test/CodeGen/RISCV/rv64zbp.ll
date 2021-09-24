@@ -2752,13 +2752,12 @@ define i64 @bswap_i64(i64 %a) {
 ; RV64I-NEXT:    srli a4, a0, 56
 ; RV64I-NEXT:    or a2, a2, a4
 ; RV64I-NEXT:    or a1, a1, a2
-; RV64I-NEXT:    slli a2, a0, 8
-; RV64I-NEXT:    slli a4, a3, 32
+; RV64I-NEXT:    slli a2, a0, 24
+; RV64I-NEXT:    slli a4, a3, 40
 ; RV64I-NEXT:    and a2, a2, a4
-; RV64I-NEXT:    slli a4, a0, 24
-; RV64I-NEXT:    slli a5, a3, 40
-; RV64I-NEXT:    and a4, a4, a5
-; RV64I-NEXT:    or a2, a4, a2
+; RV64I-NEXT:    srliw a4, a0, 24
+; RV64I-NEXT:    slli a4, a4, 32
+; RV64I-NEXT:    or a2, a2, a4
 ; RV64I-NEXT:    slli a4, a0, 40
 ; RV64I-NEXT:    slli a3, a3, 48
 ; RV64I-NEXT:    and a3, a4, a3
@@ -2988,13 +2987,12 @@ define i64 @bitreverse_i64(i64 %a) nounwind {
 ; RV64I-NEXT:    srli a4, a0, 56
 ; RV64I-NEXT:    or a2, a2, a4
 ; RV64I-NEXT:    or a1, a1, a2
-; RV64I-NEXT:    slli a2, a0, 8
-; RV64I-NEXT:    slli a4, a3, 32
+; RV64I-NEXT:    slli a2, a0, 24
+; RV64I-NEXT:    slli a4, a3, 40
 ; RV64I-NEXT:    and a2, a2, a4
-; RV64I-NEXT:    slli a4, a0, 24
-; RV64I-NEXT:    slli a5, a3, 40
-; RV64I-NEXT:    and a4, a4, a5
-; RV64I-NEXT:    or a2, a4, a2
+; RV64I-NEXT:    srliw a4, a0, 24
+; RV64I-NEXT:    slli a4, a4, 32
+; RV64I-NEXT:    or a2, a2, a4
 ; RV64I-NEXT:    slli a4, a0, 40
 ; RV64I-NEXT:    slli a3, a3, 48
 ; RV64I-NEXT:    and a3, a4, a3
@@ -3182,31 +3180,30 @@ define i32 @bitreverse_bswap_i32(i32 %a) {
 define i64 @bitreverse_bswap_i64(i64 %a) {
 ; RV64I-LABEL: bitreverse_bswap_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srli a1, a0, 24
+; RV64I-NEXT:    srli a2, a0, 24
 ; RV64I-NEXT:    lui a6, 4080
-; RV64I-NEXT:    and a1, a1, a6
-; RV64I-NEXT:    srli a3, a0, 8
-; RV64I-NEXT:    addi a5, zero, 255
-; RV64I-NEXT:    slli a7, a5, 24
-; RV64I-NEXT:    and a3, a3, a7
-; RV64I-NEXT:    or a3, a3, a1
+; RV64I-NEXT:    and a3, a2, a6
+; RV64I-NEXT:    srli a4, a0, 8
+; RV64I-NEXT:    addi a1, zero, 255
+; RV64I-NEXT:    slli a7, a1, 24
+; RV64I-NEXT:    and a4, a4, a7
+; RV64I-NEXT:    or a3, a4, a3
 ; RV64I-NEXT:    srli a4, a0, 40
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -256
-; RV64I-NEXT:    and a4, a4, a1
+; RV64I-NEXT:    lui a5, 16
+; RV64I-NEXT:    addiw a5, a5, -256
+; RV64I-NEXT:    and a4, a4, a5
 ; RV64I-NEXT:    srli a2, a0, 56
 ; RV64I-NEXT:    or a2, a4, a2
 ; RV64I-NEXT:    or a2, a3, a2
-; RV64I-NEXT:    slli a4, a0, 8
-; RV64I-NEXT:    slli t0, a5, 32
-; RV64I-NEXT:    and a3, a4, t0
 ; RV64I-NEXT:    slli a4, a0, 24
-; RV64I-NEXT:    slli t1, a5, 40
-; RV64I-NEXT:    and a4, a4, t1
+; RV64I-NEXT:    slli t0, a1, 40
+; RV64I-NEXT:    and a4, a4, t0
+; RV64I-NEXT:    srliw a3, a0, 24
+; RV64I-NEXT:    slli a3, a3, 32
 ; RV64I-NEXT:    or a3, a4, a3
 ; RV64I-NEXT:    slli a4, a0, 40
-; RV64I-NEXT:    slli a5, a5, 48
-; RV64I-NEXT:    and a4, a4, a5
+; RV64I-NEXT:    slli a1, a1, 48
+; RV64I-NEXT:    and a4, a4, a1
 ; RV64I-NEXT:    slli a0, a0, 56
 ; RV64I-NEXT:    or a0, a0, a4
 ; RV64I-NEXT:    or a0, a0, a3
@@ -3251,26 +3248,26 @@ define i64 @bitreverse_bswap_i64(i64 %a) {
 ; RV64I-NEXT:    slli a0, a0, 1
 ; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    srli a2, a0, 40
-; RV64I-NEXT:    and a1, a2, a1
-; RV64I-NEXT:    srli a2, a0, 56
-; RV64I-NEXT:    or a1, a1, a2
-; RV64I-NEXT:    srli a2, a0, 24
-; RV64I-NEXT:    and a2, a2, a6
-; RV64I-NEXT:    srli a3, a0, 8
-; RV64I-NEXT:    and a3, a3, a7
+; RV64I-NEXT:    and a2, a2, a5
+; RV64I-NEXT:    srli a3, a0, 56
+; RV64I-NEXT:    or a2, a2, a3
+; RV64I-NEXT:    srli a3, a0, 24
+; RV64I-NEXT:    and a3, a3, a6
+; RV64I-NEXT:    srli a4, a0, 8
+; RV64I-NEXT:    and a4, a4, a7
+; RV64I-NEXT:    or a3, a4, a3
 ; RV64I-NEXT:    or a2, a3, a2
-; RV64I-NEXT:    or a1, a2, a1
-; RV64I-NEXT:    slli a2, a0, 8
-; RV64I-NEXT:    and a2, a2, t0
 ; RV64I-NEXT:    slli a3, a0, 24
-; RV64I-NEXT:    and a3, a3, t1
-; RV64I-NEXT:    or a2, a3, a2
-; RV64I-NEXT:    slli a3, a0, 40
-; RV64I-NEXT:    and a3, a3, a5
+; RV64I-NEXT:    and a3, a3, t0
+; RV64I-NEXT:    srliw a4, a0, 24
+; RV64I-NEXT:    slli a4, a4, 32
+; RV64I-NEXT:    or a3, a3, a4
+; RV64I-NEXT:    slli a4, a0, 40
+; RV64I-NEXT:    and a1, a4, a1
 ; RV64I-NEXT:    slli a0, a0, 56
+; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    or a0, a0, a3
 ; RV64I-NEXT:    or a0, a0, a2
-; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64B-LABEL: bitreverse_bswap_i64:
@@ -3637,13 +3634,12 @@ define i64 @shfl16(i64 %a, i64 %b) nounwind {
 ; RV64I-NEXT:    slli a1, a1, 16
 ; RV64I-NEXT:    addi a1, a1, -1
 ; RV64I-NEXT:    and a1, a0, a1
-; RV64I-NEXT:    slli a2, a0, 16
-; RV64I-NEXT:    lui a3, 65535
-; RV64I-NEXT:    slli a4, a3, 20
-; RV64I-NEXT:    and a2, a2, a4
+; RV64I-NEXT:    srliw a2, a0, 16
+; RV64I-NEXT:    slli a2, a2, 32
 ; RV64I-NEXT:    or a1, a2, a1
 ; RV64I-NEXT:    srli a0, a0, 16
-; RV64I-NEXT:    slli a2, a3, 4
+; RV64I-NEXT:    lui a2, 65535
+; RV64I-NEXT:    slli a2, a2, 4
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
