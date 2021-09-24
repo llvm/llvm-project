@@ -406,9 +406,9 @@ void QualifierAlignmentFixer::PrepareLeftRightOrdering(
   // Depending on the position of type in the order you need
   // To iterate forward or backward through the order list as qualifier
   // can push through each other.
-  auto type = std::find(Order.begin(), Order.end(), "type");
   // The Order list must define the position of "type" to signify
-  assert(type != Order.end() && "QualifierOrder must contain type");
+  assert(std::find(Order.begin(), Order.end(), "type") != Order.end() &&
+         "QualifierOrder must contain type");
   // Split the Order list by type and reverse the left side.
 
   bool left = true;
