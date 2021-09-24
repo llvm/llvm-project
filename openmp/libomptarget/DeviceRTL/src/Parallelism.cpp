@@ -93,6 +93,7 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
 
   uint32_t NumThreads = determineNumberOfThreads(num_threads);
   if (mapping::isSPMDMode()) {
+    synchronize::threads();
     {
       state::ValueRAII ParallelTeamSizeRAII(state::ParallelTeamSize, NumThreads,
                                             1u, TId == 0);

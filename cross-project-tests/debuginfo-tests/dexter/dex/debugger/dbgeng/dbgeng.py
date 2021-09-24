@@ -9,7 +9,7 @@ import sys
 import os
 import platform
 
-from dex.debugger.DebuggerBase import DebuggerBase
+from dex.debugger.DebuggerBase import DebuggerBase, watch_is_active
 from dex.dextIR import FrameIR, LocIR, StepIR, StopReason, ValueIR
 from dex.dextIR import ProgramState, StackFrame, SourceLocation
 from dex.utils.Exceptions import DebuggerException, LoadDebuggerException
@@ -133,8 +133,14 @@ class DbgEng(DebuggerBase):
                                                            column=0),
                                    watches={})
           for expr in map(
-              lambda watch, idx=i: self.evaluate_expression(watch, idx),
-              watches):
+              # Filter out watches that are not active in the current frame,
+              # and then evaluate all the active watches.
+              lambda watch_info, idx=i:
+                self.evaluate_expression(watch_info.expression, idx),
+              filter(
+                  lambda watch_info, idx=i, line_no=loc.lineno, path=loc.path:
+                    watch_is_active(watch_info, path, idx, line_no),
+                  watches)):
               state_frame.watches[expr.expression] = expr
           state_frames.append(state_frame)
 

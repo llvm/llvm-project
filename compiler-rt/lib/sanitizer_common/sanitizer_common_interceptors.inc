@@ -7543,6 +7543,14 @@ INTERCEPTOR(struct __sanitizer_ttyent *, getttynam, char *name) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ttyent, struct_ttyent_sz);
   return ttyent;
 }
+#define INIT_TTYENT \
+  COMMON_INTERCEPT_FUNCTION(getttyent); \
+  COMMON_INTERCEPT_FUNCTION(getttynam);
+#else
+#define INIT_TTYENT
+#endif
+
+#if SANITIZER_INTERCEPT_TTYENTPATH
 INTERCEPTOR(int, setttyentpath, char *path) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, setttyentpath, path);
@@ -7550,12 +7558,9 @@ INTERCEPTOR(int, setttyentpath, char *path) {
     COMMON_INTERCEPTOR_READ_RANGE(ctx, path, internal_strlen(path) + 1);
   return REAL(setttyentpath)(path);
 }
-#define INIT_TTYENT \
-  COMMON_INTERCEPT_FUNCTION(getttyent); \
-  COMMON_INTERCEPT_FUNCTION(getttynam); \
-  COMMON_INTERCEPT_FUNCTION(setttyentpath)
+#define INIT_TTYENTPATH COMMON_INTERCEPT_FUNCTION(setttyentpath);
 #else
-#define INIT_TTYENT
+#define INIT_TTYENTPATH
 #endif
 
 #if SANITIZER_INTERCEPT_PROTOENT

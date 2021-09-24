@@ -1,4 +1,4 @@
-#!/bin/bash -eu
+#!/usr/bin/env bash
 #
 # Run as: CLANG=bin/clang ZLIB_SRC=src/zlib \
 #             build_symbolizer.sh runtime_build/lib/clang/4.0.0/lib/linux/

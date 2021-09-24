@@ -27,11 +27,11 @@ class EPCGenericMemoryAccess : public ExecutorProcessControl::MemoryAccess {
 public:
   /// Function addresses for memory access.
   struct FuncAddrs {
-    ExecutorAddress WriteUInt8s;
-    ExecutorAddress WriteUInt16s;
-    ExecutorAddress WriteUInt32s;
-    ExecutorAddress WriteUInt64s;
-    ExecutorAddress WriteBuffers;
+    ExecutorAddr WriteUInt8s;
+    ExecutorAddr WriteUInt16s;
+    ExecutorAddr WriteUInt32s;
+    ExecutorAddr WriteUInt64s;
+    ExecutorAddr WriteBuffers;
   };
 
   /// Create an EPCGenericMemoryAccess instance from a given set of

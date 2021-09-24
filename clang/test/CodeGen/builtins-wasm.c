@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple wasm32-unknown-unknown -target-feature +simd128 -target-feature +nontrapping-fptoint -target-feature +exception-handling -target-feature +bulk-memory -target-feature +atomics -flax-vector-conversions=none -O3 -emit-llvm -o - %s | FileCheck %s -check-prefixes WEBASSEMBLY,WEBASSEMBLY32
-// RUN: %clang_cc1 -triple wasm64-unknown-unknown -target-feature +simd128 -target-feature +nontrapping-fptoint -target-feature +exception-handling -target-feature +bulk-memory -target-feature +atomics -flax-vector-conversions=none -O3 -emit-llvm -o - %s | FileCheck %s -check-prefixes WEBASSEMBLY,WEBASSEMBLY64
+// RUN: %clang_cc1 -triple wasm32-unknown-unknown -target-feature +simd128 -target-feature +relaxed-simd -target-feature +nontrapping-fptoint -target-feature +exception-handling -target-feature +bulk-memory -target-feature +atomics -flax-vector-conversions=none -O3 -emit-llvm -o - %s | FileCheck %s -check-prefixes WEBASSEMBLY,WEBASSEMBLY32
+// RUN: %clang_cc1 -triple wasm64-unknown-unknown -target-feature +simd128 -target-feature +relaxed-simd -target-feature +nontrapping-fptoint -target-feature +exception-handling -target-feature +bulk-memory -target-feature +atomics -flax-vector-conversions=none -O3 -emit-llvm -o - %s | FileCheck %s -check-prefixes WEBASSEMBLY,WEBASSEMBLY64
 // RUN: not %clang_cc1 -triple wasm64-unknown-unknown -target-feature +nontrapping-fptoint -target-feature +exception-handling -target-feature +bulk-memory -target-feature +atomics -flax-vector-conversions=none -O3 -emit-llvm -o - %s 2>&1 | FileCheck %s -check-prefixes MISSING-SIMD
 
 // SIMD convenience types
@@ -674,5 +674,33 @@ i8x16 shuffle(i8x16 x, i8x16 y) {
   // WEBASSEMBLY-SAME: i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
   // WEBASSEMBLY-SAME: i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14,
   // WEBASSEMBLY-SAME: i32 15
+  // WEBASSEMBLY-NEXT: ret
+}
+
+f32x4 fma_f32x4(f32x4 a, f32x4 b, f32x4 c) {
+  return __builtin_wasm_fma_f32x4(a, b, c);
+  // WEBASSEMBLY: call <4 x float> @llvm.wasm.fma.v4f32(
+  // WEBASSEMBLY-SAME: <4 x float> %a, <4 x float> %b, <4 x float> %c)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+f32x4 fms_f32x4(f32x4 a, f32x4 b, f32x4 c) {
+  return __builtin_wasm_fms_f32x4(a, b, c);
+  // WEBASSEMBLY: call <4 x float> @llvm.wasm.fms.v4f32(
+  // WEBASSEMBLY-SAME: <4 x float> %a, <4 x float> %b, <4 x float> %c)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+f64x2 fma_f64x2(f64x2 a, f64x2 b, f64x2 c) {
+  return __builtin_wasm_fma_f64x2(a, b, c);
+  // WEBASSEMBLY: call <2 x double> @llvm.wasm.fma.v2f64(
+  // WEBASSEMBLY-SAME: <2 x double> %a, <2 x double> %b, <2 x double> %c)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+f64x2 fms_f64x2(f64x2 a, f64x2 b, f64x2 c) {
+  return __builtin_wasm_fms_f64x2(a, b, c);
+  // WEBASSEMBLY: call <2 x double> @llvm.wasm.fms.v2f64(
+  // WEBASSEMBLY-SAME: <2 x double> %a, <2 x double> %b, <2 x double> %c)
   // WEBASSEMBLY-NEXT: ret
 }

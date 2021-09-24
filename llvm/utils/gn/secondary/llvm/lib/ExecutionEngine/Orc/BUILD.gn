@@ -22,6 +22,7 @@ static_library("Orc") {
     "EPCDebugObjectRegistrar.cpp",
     "EPCDynamicLibrarySearchGenerator.cpp",
     "EPCEHFrameRegistrar.cpp",
+    "EPCGenericDylibManager.cpp",
     "EPCGenericJITLinkMemoryManager.cpp",
     "EPCIndirectionUtils.cpp",
     "ExecutionUtils.cpp",

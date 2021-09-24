@@ -26,6 +26,10 @@ def HasSIMD128 :
     Predicate<"Subtarget->hasSIMD128()">,
     AssemblerPredicate<(all_of FeatureSIMD128), "simd128">;
 
+def HasRelaxedSIMD :
+    Predicate<"Subtarget->hasRelaxedSIMD()">,
+    AssemblerPredicate<(all_of FeatureRelaxedSIMD), "relaxed-simd">;
+
 def HasAtomics :
     Predicate<"Subtarget->hasAtomics()">,
     AssemblerPredicate<(all_of FeatureAtomics), "atomics">;

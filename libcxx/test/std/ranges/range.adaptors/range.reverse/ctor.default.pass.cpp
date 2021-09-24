@@ -15,7 +15,6 @@
 #include <ranges>
 #include <cassert>
 
-#include "test_macros.h"
 #include "types.h"
 
 enum CtorKind { DefaultCtor, PtrCtor };

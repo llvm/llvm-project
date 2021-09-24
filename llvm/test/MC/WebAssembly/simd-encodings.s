@@ -1,4 +1,4 @@
-# RUN: llvm-mc -no-type-check -show-encoding -triple=wasm32-unknown-unknown -mattr=+simd128 < %s | FileCheck %s
+# RUN: llvm-mc -no-type-check -show-encoding -triple=wasm32-unknown-unknown -mattr=+simd128,+relaxed-simd < %s | FileCheck %s
 
 main:
     .functype main () -> ()
@@ -778,5 +778,17 @@ main:
 
     # CHECK: f64x2.convert_low_i32x4_u # encoding: [0xfd,0xff,0x01]
     f64x2.convert_low_i32x4_u
+
+    # CHECK: f32x4.fma # encoding: [0xfd,0xaf,0x01]
+    f32x4.fma
+
+    # CHECK: f32x4.fms # encoding: [0xfd,0xb0,0x01]
+    f32x4.fms
+
+    # CHECK: f64x2.fma # encoding: [0xfd,0xcf,0x01]
+    f64x2.fma
+
+    # CHECK: f64x2.fms # encoding: [0xfd,0xd0,0x01]
+    f64x2.fms
 
     end_function

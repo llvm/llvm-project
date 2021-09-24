@@ -80,8 +80,16 @@ tensor::ExtractSliceOp makeComposedExtractSliceOp(
     ArrayRef<OpFoldResult> sizes, ArrayRef<OpFoldResult> strides);
 
 //===----------------------------------------------------------------------===//
-// Fusion utilities
+// Fusion / Tiling utilities
 //===----------------------------------------------------------------------===//
+
+/// The type of loops to be generated during tiling.
+enum class LinalgTilingLoopType {
+  Loops = 0,
+  AffineLoops = 1,
+  ParallelLoops = 2,
+  TiledLoops = 3,
+};
 
 /// Checks whether the specific `producer` is the last write to exactly the
 /// whole `consumedView`. This checks structural dominance, that the dependence

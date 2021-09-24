@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Record the addresses of a set of symbols into ExecutorAddress objects.
+// Record the addresses of a set of symbols into ExecutorAddr objects.
 //
 // This can be used to avoid repeated lookup (via ExecutionSession::lookup) of
 // the given symbols.
@@ -25,7 +25,7 @@
 namespace llvm {
 namespace orc {
 
-/// Record addresses of the given symbols in the given ExecutorAddresses.
+/// Record addresses of the given symbols in the given ExecutorAddrs.
 ///
 /// Useful for making permanent records of symbol addreses to call or
 /// access in the executor (e.g. runtime support functions in Platform
@@ -44,24 +44,24 @@ namespace orc {
 void lookupAndRecordAddrs(
     unique_function<void(Error)> OnRecorded, ExecutionSession &ES, LookupKind K,
     const JITDylibSearchOrder &SearchOrder,
-    std::vector<std::pair<SymbolStringPtr, ExecutorAddress *>> Pairs,
+    std::vector<std::pair<SymbolStringPtr, ExecutorAddr *>> Pairs,
     SymbolLookupFlags LookupFlags = SymbolLookupFlags::RequiredSymbol);
 
-/// Record addresses of the given symbols in the given ExecutorAddresses.
+/// Record addresses of the given symbols in the given ExecutorAddrs.
 ///
 /// Blocking version.
 Error lookupAndRecordAddrs(
     ExecutionSession &ES, LookupKind K, const JITDylibSearchOrder &SearchOrder,
-    std::vector<std::pair<SymbolStringPtr, ExecutorAddress *>> Pairs,
+    std::vector<std::pair<SymbolStringPtr, ExecutorAddr *>> Pairs,
     SymbolLookupFlags LookupFlags = SymbolLookupFlags::RequiredSymbol);
 
-/// Record addresses of given symbols in the given ExecutorAddresses.
+/// Record addresses of given symbols in the given ExecutorAddrs.
 ///
 /// ExecutorProcessControl lookup version. Lookups are always implicitly
 /// weak.
 Error lookupAndRecordAddrs(
     ExecutorProcessControl &EPC, tpctypes::DylibHandle H,
-    std::vector<std::pair<SymbolStringPtr, ExecutorAddress *>> Pairs,
+    std::vector<std::pair<SymbolStringPtr, ExecutorAddr *>> Pairs,
     SymbolLookupFlags LookupFlags = SymbolLookupFlags::RequiredSymbol);
 
 } // End namespace orc

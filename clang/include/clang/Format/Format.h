@@ -40,7 +40,11 @@ enum class ParseError {
   Success = 0,
   Error,
   Unsuitable,
-  BinPackTrailingCommaConflict
+  BinPackTrailingCommaConflict,
+  InvalidQualifierSpecified,
+  DuplicateQualifierSpecified,
+  MissingQualifierType,
+  MissingQualifierOrder
 };
 class ParseErrorCategory final : public std::error_category {
 public:
@@ -1819,6 +1823,67 @@ struct FormatStyle {
   /// \endcode
   std::string CommentPragmas;
 
+  /// Different const/volatile qualifier alignment styles.
+  enum QualifierAlignmentStyle {
+    /// Don't change specifiers/qualifier to either Left or Right alignment
+    /// (default)
+    /// \code
+    ///    int const a;
+    ///    const int *a;
+    /// \endcode
+    QAS_Leave,
+    /// Change specifiers/qualifiers to be Left aligned.
+    /// \code
+    ///    const int a;
+    ///    const int *a;
+    /// \endcode
+    QAS_Left,
+    /// Change specifiers/qualifiers to be Right aligned.
+    /// \code
+    ///    int const a;
+    ///    int const *a;
+    /// \endcode
+    QAS_Right,
+    /// Change specifiers/qualifiers to be aligned based on QualfierOrder.
+    /// With:
+    /// \code{.yaml}
+    ///   QualifierOrder: ['inline', 'static' , '<type>', 'const']
+    /// \endcode
+    ///
+    /// \code
+    ///
+    ///    int const a;
+    ///    int const *a;
+    /// \endcode
+    QAS_Custom
+  };
+
+  /// Different ways to arrange const/volatile qualifiers.
+  /// \warning
+  ///  ``QualifierAlignment`` COULD lead to incorrect code generation.
+  /// \endwarning
+  QualifierAlignmentStyle QualifierAlignment;
+
+  /// The Order in which the qualifiers appear.
+  /// Order is a an array can contain any of the following
+  ///
+  ///   * const
+  ///   * inline
+  ///   * static
+  ///   * constexpr
+  ///   * volatile
+  ///   * restrict
+  ///   * type
+  ///
+  /// Note: it MUST contain 'type'.
+  /// Items to the left of type will be aligned in the order supplied.
+  /// Items to the right of type will be aligned  in the order supplied.
+  ///
+  /// \code{.yaml}
+  ///   QualifierOrder: ['inline', 'static', 'type', 'const', 'volatile' ]
+  /// \endcode
+  std::vector<std::string> QualifierOrder;
+
   /// Different ways to break inheritance list.
   enum BreakInheritanceListStyle : unsigned char {
     /// Break inheritance list before the colon and after the commas.
@@ -3496,6 +3561,8 @@ struct FormatStyle {
            PenaltyBreakTemplateDeclaration ==
                R.PenaltyBreakTemplateDeclaration &&
            PointerAlignment == R.PointerAlignment &&
+           QualifierAlignment == R.QualifierAlignment &&
+           QualifierOrder == R.QualifierOrder &&
            RawStringFormats == R.RawStringFormats &&
            ReferenceAlignment == R.ReferenceAlignment &&
            ShortNamespaceLines == R.ShortNamespaceLines &&

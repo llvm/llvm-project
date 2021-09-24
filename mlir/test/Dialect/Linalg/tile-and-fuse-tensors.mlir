@@ -289,7 +289,6 @@ func @conv_tensors_dynamic(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?x?x?x
 //     CHECK:       else
 //     CHECK:         tensor.extract_slice
 //     CHECK:         linalg.pad_tensor
-//     CHECK:         tensor.cast
 //     CHECK:       tensor.extract_slice
 //     CHECK:       tensor.extract_slice
 //     CHECK:       linalg.generic

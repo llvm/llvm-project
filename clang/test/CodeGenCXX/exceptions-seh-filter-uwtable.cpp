@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 "-triple" "arm64-windows" "-munwind-tables" "-fms-compatibility" -emit-llvm -O1 -disable-llvm-passes %s -o - | FileCheck %s
+// RUN: %clang_cc1 "-triple" "arm64-windows" "-funwind-tables=2" "-fms-compatibility" -emit-llvm -O1 -disable-llvm-passes %s -o - | FileCheck %s
 // NOTE: we're passing "-O1 -disable-llvm-passes" to avoid adding optnone and noinline everywhere.
 
 # 0 "" 3

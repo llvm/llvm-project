@@ -11,7 +11,7 @@ declare <vscale x 1 x i64> @llvm.riscv.vle.mask.nxv1i64(
   <vscale x 1 x i64>,
   <vscale x 1 x i64>*,
   <vscale x 1 x i1>,
-  i64)
+  i64, i64)
 
 define <vscale x 1 x double> @test1(i64 %avl, <vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
 ; CHECK-LABEL: test1:
@@ -46,7 +46,7 @@ entry:
 define <vscale x 1 x i64> @test3(i64 %avl, <vscale x 1 x i64> %a, <vscale x 1 x i64>* %b, <vscale x 1 x i1> %c) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a0, a0, e64, m1, tu, mu
+; CHECK-NEXT:    vsetvli a0, a0, e64, m1, ta, mu
 ; CHECK-NEXT:    vle64.v v8, (a1), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -55,7 +55,7 @@ entry:
     <vscale x 1 x i64> %a,
     <vscale x 1 x i64>* %b,
     <vscale x 1 x i1> %c,
-    i64 %0)
+    i64 %0, i64 1)
 
   ret <vscale x 1 x i64> %1
 }
@@ -63,7 +63,7 @@ entry:
 define <vscale x 1 x i64> @test4(i64 %avl, <vscale x 1 x i64> %a, <vscale x 1 x i64>* %b, <vscale x 1 x i1> %c) nounwind {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a0, a0, e64, m1, tu, mu
+; CHECK-NEXT:    vsetvli a0, a0, e64, m1, ta, mu
 ; CHECK-NEXT:    vle64.v v8, (a1), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -72,7 +72,7 @@ entry:
     <vscale x 1 x i64> %a,
     <vscale x 1 x i64>* %b,
     <vscale x 1 x i1> %c,
-    i64 %avl)
+    i64 %avl, i64 1)
 
   ret <vscale x 1 x i64> %1
 }
