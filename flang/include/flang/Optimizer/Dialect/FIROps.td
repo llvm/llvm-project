@@ -2783,41 +2783,6 @@ class RealArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
 
 def fir_ModfOp : RealArithmeticOp<"modf">;
 
-def fir_CmpfOp : fir_Op<"cmpf",
-    [NoSideEffect, SameTypeOperands, SameOperandsAndResultShape]> {
-  let summary = "floating-point comparison operator";
-
-  let description = [{
-    Extends the standard floating-point comparison to handle the extended
-    floating-point types found in FIR.
-  }];
-
-  let arguments = (ins AnyRealLike:$lhs, AnyRealLike:$rhs);
-
-  let results = (outs AnyLogicalLike);
-
-  let builders = [OpBuilder<(ins "mlir::CmpFPredicate":$predicate,
-    "mlir::Value":$lhs, "mlir::Value":$rhs), [{
-      buildCmpFOp($_builder, $_state, predicate, lhs, rhs);
-  }]>];
-
-  let parser = [{ return parseCmpfOp(parser, result); }];
-
-  let printer = [{ printCmpfOp(p, *this); }];
-
-  let extraClassDeclaration = [{
-    static constexpr llvm::StringRef getPredicateAttrName() {
-      return "predicate";
-    }
-    static CmpFPredicate getPredicateByName(llvm::StringRef name);
-
-    CmpFPredicate getPredicate() {
-      return (CmpFPredicate)(*this)->getAttrOfType<mlir::IntegerAttr>(
-          getPredicateAttrName()).getInt();
-    }
-  }];
-}
-
 def fir_ConstcOp : fir_Op<"constc", [NoSideEffect]> {
   let summary = "create a complex constant";
 
@@ -2918,6 +2883,8 @@ def fir_CmpcOp : fir_Op<"cmpc",
       return (CmpFPredicate)(*this)->getAttrOfType<mlir::IntegerAttr>(
           getPredicateAttrName()).getInt();
     }
+
+    static CmpFPredicate getPredicateByName(llvm::StringRef name);
   }];
 }
 

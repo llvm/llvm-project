@@ -478,11 +478,10 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
           } else if (name.equals("alt-name")) {
             reg_info.alt_name.SetString(value);
           } else if (name.equals("bitsize")) {
-            reg_info.byte_size =
-                StringConvert::ToUInt32(value.data(), 0, 0) / CHAR_BIT;
+            if (!value.getAsInteger(0, reg_info.byte_size))
+              reg_info.byte_size /= CHAR_BIT;
           } else if (name.equals("offset")) {
-            reg_info.byte_offset =
-                StringConvert::ToUInt32(value.data(), LLDB_INVALID_INDEX32, 0);
+            value.getAsInteger(0, reg_info.byte_offset);
           } else if (name.equals("encoding")) {
             const Encoding encoding = Args::StringToEncoding(value);
             if (encoding != eEncodingInvalid)
@@ -509,14 +508,11 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
           } else if (name.equals("set")) {
             reg_info.set_name.SetString(value);
           } else if (name.equals("gcc") || name.equals("ehframe")) {
-            reg_info.regnum_ehframe =
-                StringConvert::ToUInt32(value.data(), LLDB_INVALID_REGNUM, 0);
+            value.getAsInteger(0, reg_info.regnum_ehframe);
           } else if (name.equals("dwarf")) {
-            reg_info.regnum_dwarf =
-                StringConvert::ToUInt32(value.data(), LLDB_INVALID_REGNUM, 0);
+            value.getAsInteger(0, reg_info.regnum_dwarf);
           } else if (name.equals("generic")) {
-            reg_info.regnum_generic =
-                StringConvert::ToUInt32(value.data(), LLDB_INVALID_REGNUM, 0);
+            value.getAsInteger(0, reg_info.regnum_generic);
           } else if (name.equals("container-regs")) {
             SplitCommaSeparatedRegisterNumberString(value, reg_info.value_regs, 16);
           } else if (name.equals("invalidate-regs")) {
@@ -536,6 +532,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
         }
 
         assert(reg_info.byte_size != 0);
+        registers.push_back(reg_info);
       } else {
         break; // ensure exit before reg_num is incremented
       }
@@ -545,7 +542,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
   }
 
   if (!registers.empty()) {
-    AddRemoteRegisters(registers, GetTarget().GetArchitecture());
+    AddRemoteRegisters(registers, arch_to_use);
     return;
   }
 

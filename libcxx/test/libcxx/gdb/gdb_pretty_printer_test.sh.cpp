@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: host-has-gdb
+// REQUIRES: host-has-gdb-with-python
 // UNSUPPORTED: libcpp-has-no-localization
 // UNSUPPORTED: c++03
 

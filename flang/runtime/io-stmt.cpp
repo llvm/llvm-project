@@ -521,6 +521,7 @@ std::optional<char32_t> IoStatementState::SkipSpaces(
       }
       HandleRelativePosition(1);
       if (remaining) {
+        GotChar();
         --*remaining;
       }
     } else {
@@ -556,6 +557,7 @@ std::optional<char32_t> IoStatementState::NextInField(
     if (auto next{GetCurrentChar()}) {
       --*remaining;
       HandleRelativePosition(1);
+      GotChar();
       return next;
     }
     const ConnectionState &connection{GetConnectionState()};
@@ -608,6 +610,25 @@ bool IoStatementState::Inquire(
 
 bool IoStatementState::Inquire(InquiryKeywordHash inquiry, std::int64_t &n) {
   return std::visit([&](auto &x) { return x.get().Inquire(inquiry, n); }, u_);
+}
+
+void IoStatementState::GotChar(int n) {
+  if (auto *formattedIn{
+          get_if<FormattedIoStatementState<Direction::Input>>()}) {
+    formattedIn->GotChar(n);
+  } else {
+    GetIoErrorHandler().Crash("IoStatementState::GotChar() called for "
+                              "statement that is not formatted input");
+  }
+}
+
+std::size_t
+FormattedIoStatementState<Direction::Input>::GetEditDescriptorChars() const {
+  return chars_;
+}
+
+void FormattedIoStatementState<Direction::Input>::GotChar(int n) {
+  chars_ += n;
 }
 
 bool ListDirectedStatementState<Direction::Output>::EmitLeadingSpaceOrAdvance(
@@ -1324,5 +1345,26 @@ bool InquireUnconnectedFileState::Inquire(
 InquireIOLengthState::InquireIOLengthState(
     const char *sourceFile, int sourceLine)
     : NoUnitIoStatementState{sourceFile, sourceLine, *this} {}
+
+bool InquireIOLengthState::Emit(
+    const char *, std::size_t n, std::size_t elementBytes) {
+  bytes_ += n * elementBytes;
+  return true;
+}
+
+bool InquireIOLengthState::Emit(const char *p, std::size_t n) {
+  bytes_ += sizeof *p * n;
+  return true;
+}
+
+bool InquireIOLengthState::Emit(const char16_t *p, std::size_t n) {
+  bytes_ += sizeof *p * n;
+  return true;
+}
+
+bool InquireIOLengthState::Emit(const char32_t *p, std::size_t n) {
+  bytes_ += sizeof *p * n;
+  return true;
+}
 
 } // namespace Fortran::runtime::io

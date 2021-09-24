@@ -577,11 +577,13 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (ToolChain.ShouldLinkCXXStdlib(Args)) {
       bool OnlyLibstdcxxStatic = Args.hasArg(options::OPT_static_libstdcxx) &&
                                  !Args.hasArg(options::OPT_static);
-      if (OnlyLibstdcxxStatic)
+      if (OnlyLibstdcxxStatic) {
+        CmdArgs.push_back("--push-state");
         CmdArgs.push_back("-Bstatic");
+      }
       ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
       if (OnlyLibstdcxxStatic)
-        CmdArgs.push_back("-Bdynamic");
+        CmdArgs.push_back("--pop-state");
     }
     CmdArgs.push_back("-lm");
   }
@@ -2713,6 +2715,7 @@ bool Generic_GCC::IsUnwindTablesDefault(const ArgList &Args) const {
   case llvm::Triple::ppcle:
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
+  case llvm::Triple::x86:
   case llvm::Triple::x86_64:
     return true;
   default:

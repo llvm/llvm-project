@@ -104,6 +104,10 @@ OPTIONS
 
      opt -load=plugin.so -help
 
+.. option:: -print-passes
+
+ Print all available passes and exit.
+
 EXIT STATUS
 -----------
 

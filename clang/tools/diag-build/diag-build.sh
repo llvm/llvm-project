@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # diag-build: a tool showing enabled warnings in a project.
 #
