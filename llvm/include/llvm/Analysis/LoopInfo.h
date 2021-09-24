@@ -950,7 +950,7 @@ public:
   ///
   /// Note that because loops form a forest of trees, preorder is equivalent to
   /// reverse postorder.
-  SmallVector<LoopT *, 4> getLoopsInPreorder();
+  SmallVector<LoopT *, 4> getLoopsInPreorder() const;
 
   /// Return all of the loops in the function in preorder across the loop
   /// nests, with siblings in *reverse* program order.
@@ -960,7 +960,7 @@ public:
   ///
   /// Also note that this is *not* a reverse preorder. Only the siblings are in
   /// reverse program order.
-  SmallVector<LoopT *, 4> getLoopsInReverseSiblingPreorder();
+  SmallVector<LoopT *, 4> getLoopsInReverseSiblingPreorder() const;
 
   /// Return the inner most loop that BB lives in. If a basic block is in no
   /// loop (for example the entry node), null is returned.
