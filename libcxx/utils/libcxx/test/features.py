@@ -171,7 +171,6 @@ def check_gdb(cfg):
   # Using the quit command here means that gdb itself exits, not just
   # the "python <...>" command.
   test_src = """\
-import gdb
 try:
   gdb.Breakpoint(\"main\").commands=\"foo\"
 except AttributeError:
