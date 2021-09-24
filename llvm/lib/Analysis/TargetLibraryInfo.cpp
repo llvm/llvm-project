@@ -157,15 +157,10 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
   // isn't true for a target those defaults should be overridden below.
   TLI.setIntSize(T.isArch16Bit() ? 16 : 32);
 
-  if (T.isAMDGPU())
-    TLI.disableAllFunctions();
-
-  // There are no library implementations of memcpy and memset for AMD gpus and
-  // these can be difficult to lower in the backend.
+  // There is really no runtime library on AMDGPU, apart from
+  // __kmpc_alloc/free_shared.
   if (T.isAMDGPU()) {
-    TLI.setUnavailable(LibFunc_memcpy);
-    TLI.setUnavailable(LibFunc_memset);
-    TLI.setUnavailable(LibFunc_memset_pattern16);
+    TLI.disableAllFunctions();
     TLI.setAvailable(llvm::LibFunc___kmpc_alloc_shared);
     TLI.setAvailable(llvm::LibFunc___kmpc_free_shared);
     return;
