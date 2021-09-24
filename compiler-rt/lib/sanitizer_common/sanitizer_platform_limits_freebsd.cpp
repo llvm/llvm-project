@@ -74,6 +74,7 @@
 #include <term.h>
 #include <termios.h>
 #include <time.h>
+#include <ttyent.h>
 #include <utime.h>
 #include <utmpx.h>
 #include <vis.h>
@@ -173,6 +174,8 @@ int glob_altdirfunc = GLOB_ALTDIRFUNC;
 const int wordexp_wrde_dooffs = WRDE_DOOFFS;
 
 unsigned path_max = PATH_MAX;
+
+int struct_ttyent_sz = sizeof(struct ttyent);
 
 // ioctl arguments
 unsigned struct_ifreq_sz = sizeof(struct ifreq);
