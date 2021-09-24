@@ -57,10 +57,8 @@ bool NMLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   for (MachineFunction::iterator MFI = Fn.begin(), E = Fn.end(); MFI != E;
        ++MFI) {
     MachineBasicBlock &MBB = *MFI;
-    if (MBB.isEntryBlock())
-      Modified |= generateSaveOrRestore(MBB, /*IsRestore=*/false);
-    if (MBB.isReturnBlock())
-      Modified |= generateSaveOrRestore(MBB, /*IsRestore=*/true);
+    Modified |= generateSaveOrRestore(MBB, /*IsRestore=*/false);
+    Modified |= generateSaveOrRestore(MBB, /*IsRestore=*/true);
   }
 
   return Modified;
