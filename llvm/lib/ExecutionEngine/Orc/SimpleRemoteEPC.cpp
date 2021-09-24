@@ -46,7 +46,7 @@ Expected<int32_t> SimpleRemoteEPC::runAsMain(JITTargetAddress MainFnAddr,
                                              ArrayRef<std::string> Args) {
   int64_t Result = 0;
   if (auto Err = callSPSWrapper<rt::SPSRunAsMainSignature>(
-          RunAsMainAddr.getValue(), Result, ExecutorAddress(MainFnAddr), Args))
+          RunAsMainAddr.getValue(), Result, ExecutorAddr(MainFnAddr), Args))
     return std::move(Err);
   return Result;
 }
@@ -63,7 +63,7 @@ void SimpleRemoteEPC::callWrapperAsync(SendResultFunction OnComplete,
   }
 
   if (auto Err = T->sendMessage(SimpleRemoteEPCOpcode::CallWrapper, SeqNo,
-                                ExecutorAddress(WrapperFnAddr), ArgBuffer)) {
+                                ExecutorAddr(WrapperFnAddr), ArgBuffer)) {
     getExecutionSession().reportError(std::move(Err));
   }
 }
@@ -76,7 +76,7 @@ Error SimpleRemoteEPC::disconnect() {
 
 Expected<SimpleRemoteEPCTransportClient::HandleMessageAction>
 SimpleRemoteEPC::handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
-                               ExecutorAddress TagAddr,
+                               ExecutorAddr TagAddr,
                                SimpleRemoteEPCArgBytesVector ArgBytes) {
   using UT = std::underlying_type_t<SimpleRemoteEPCOpcode>;
   if (static_cast<UT>(OpC) > static_cast<UT>(SimpleRemoteEPCOpcode::LastOpC))
@@ -143,7 +143,7 @@ SimpleRemoteEPC::createMemoryAccess() {
   return nullptr;
 }
 
-Error SimpleRemoteEPC::handleSetup(uint64_t SeqNo, ExecutorAddress TagAddr,
+Error SimpleRemoteEPC::handleSetup(uint64_t SeqNo, ExecutorAddr TagAddr,
                                    SimpleRemoteEPCArgBytesVector ArgBytes) {
   if (SeqNo != 0)
     return make_error<StringError>("Setup packet SeqNo not zero",
@@ -206,8 +206,8 @@ Error SimpleRemoteEPC::setup(std::unique_ptr<SimpleRemoteEPCTransport> T,
   BootstrapSymbols = std::move(EI.BootstrapSymbols);
 
   if (auto Err = getBootstrapSymbols(
-          {{JDI.JITDispatchContextAddress, ExecutorSessionObjectName},
-           {JDI.JITDispatchFunctionAddress, DispatchFnName},
+          {{JDI.JITDispatchContext, ExecutorSessionObjectName},
+           {JDI.JITDispatchFunction, DispatchFnName},
            {RunAsMainAddr, rt::RunAsMainWrapperName}}))
     return Err;
 
@@ -232,7 +232,7 @@ Error SimpleRemoteEPC::setup(std::unique_ptr<SimpleRemoteEPCTransport> T,
   return Error::success();
 }
 
-Error SimpleRemoteEPC::handleResult(uint64_t SeqNo, ExecutorAddress TagAddr,
+Error SimpleRemoteEPC::handleResult(uint64_t SeqNo, ExecutorAddr TagAddr,
                                     SimpleRemoteEPCArgBytesVector ArgBytes) {
   SendResultFunction SendResult;
 
@@ -259,14 +259,14 @@ Error SimpleRemoteEPC::handleResult(uint64_t SeqNo, ExecutorAddress TagAddr,
 }
 
 void SimpleRemoteEPC::handleCallWrapper(
-    uint64_t RemoteSeqNo, ExecutorAddress TagAddr,
+    uint64_t RemoteSeqNo, ExecutorAddr TagAddr,
     SimpleRemoteEPCArgBytesVector ArgBytes) {
   assert(ES && "No ExecutionSession attached");
   ES->runJITDispatchHandler(
       [this, RemoteSeqNo](shared::WrapperFunctionResult WFR) {
         if (auto Err =
                 T->sendMessage(SimpleRemoteEPCOpcode::Result, RemoteSeqNo,
-                               ExecutorAddress(), {WFR.data(), WFR.size()}))
+                               ExecutorAddr(), {WFR.data(), WFR.size()}))
           getExecutionSession().reportError(std::move(Err));
       },
       TagAddr.getValue(), ArgBytes);

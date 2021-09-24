@@ -64,7 +64,7 @@ public:
 
   public:
     SimpleRemoteEPCServer &server();
-    StringMap<ExecutorAddress> &bootstrapSymbols() { return BootstrapSymbols; }
+    StringMap<ExecutorAddr> &bootstrapSymbols() { return BootstrapSymbols; }
     std::vector<std::unique_ptr<ExecutorBootstrapService>> &services() {
       return Services;
     }
@@ -76,11 +76,11 @@ public:
   private:
     Setup(SimpleRemoteEPCServer &S) : S(S) {}
     SimpleRemoteEPCServer &S;
-    StringMap<ExecutorAddress> BootstrapSymbols;
+    StringMap<ExecutorAddr> BootstrapSymbols;
     std::vector<std::unique_ptr<ExecutorBootstrapService>> Services;
   };
 
-  static StringMap<ExecutorAddress> defaultBootstrapSymbols();
+  static StringMap<ExecutorAddr> defaultBootstrapSymbols();
 
   template <typename TransportT, typename... TransportTCtorArgTs>
   static Expected<std::unique_ptr<SimpleRemoteEPCServer>>
@@ -128,8 +128,7 @@ public:
   /// otherwise returns 'Continue'. If the server has moved to an error state,
   /// returns an error, which should be reported and treated as a 'Disconnect'.
   Expected<HandleMessageAction>
-  handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
-                ExecutorAddress TagAddr,
+  handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo, ExecutorAddr TagAddr,
                 SimpleRemoteEPCArgBytesVector ArgBytes) override;
 
   Error waitForDisconnect();
@@ -137,11 +136,11 @@ public:
   void handleDisconnect(Error Err) override;
 
 private:
-  Error sendSetupMessage(StringMap<ExecutorAddress> BootstrapSymbols);
+  Error sendSetupMessage(StringMap<ExecutorAddr> BootstrapSymbols);
 
-  Error handleResult(uint64_t SeqNo, ExecutorAddress TagAddr,
+  Error handleResult(uint64_t SeqNo, ExecutorAddr TagAddr,
                      SimpleRemoteEPCArgBytesVector ArgBytes);
-  void handleCallWrapper(uint64_t RemoteSeqNo, ExecutorAddress TagAddr,
+  void handleCallWrapper(uint64_t RemoteSeqNo, ExecutorAddr TagAddr,
                          SimpleRemoteEPCArgBytesVector ArgBytes);
 
   shared::WrapperFunctionResult

@@ -27,7 +27,7 @@ namespace llvm {
 namespace orc {
 namespace rt_bootstrap {
 
-void addTo(StringMap<ExecutorAddress> &M);
+void addTo(StringMap<ExecutorAddr> &M);
 
 } // namespace rt_bootstrap
 } // end namespace orc

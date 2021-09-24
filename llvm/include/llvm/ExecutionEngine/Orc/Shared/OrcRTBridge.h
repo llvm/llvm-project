@@ -40,23 +40,22 @@ extern const char *MemoryWriteBuffersWrapperName;
 extern const char *RunAsMainWrapperName;
 
 using SPSSimpleExecutorDylibManagerOpenSignature =
-    shared::SPSExpected<uint64_t>(shared::SPSExecutorAddress, shared::SPSString,
+    shared::SPSExpected<uint64_t>(shared::SPSExecutorAddr, shared::SPSString,
                                   uint64_t);
 
 using SPSSimpleExecutorDylibManagerLookupSignature =
-    shared::SPSExpected<shared::SPSSequence<shared::SPSExecutorAddress>>(
-        shared::SPSExecutorAddress, uint64_t, shared::SPSRemoteSymbolLookupSet);
+    shared::SPSExpected<shared::SPSSequence<shared::SPSExecutorAddr>>(
+        shared::SPSExecutorAddr, uint64_t, shared::SPSRemoteSymbolLookupSet);
 
 using SPSSimpleExecutorMemoryManagerReserveSignature =
-    shared::SPSExpected<shared::SPSExecutorAddress>(shared::SPSExecutorAddress,
-                                                    uint64_t);
+    shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
+                                                 uint64_t);
 using SPSSimpleExecutorMemoryManagerFinalizeSignature =
-    shared::SPSError(shared::SPSExecutorAddress, shared::SPSFinalizeRequest);
-using SPSSimpleExecutorMemoryManagerDeallocateSignature =
-    shared::SPSError(shared::SPSExecutorAddress,
-                     shared::SPSSequence<shared::SPSExecutorAddress>);
+    shared::SPSError(shared::SPSExecutorAddr, shared::SPSFinalizeRequest);
+using SPSSimpleExecutorMemoryManagerDeallocateSignature = shared::SPSError(
+    shared::SPSExecutorAddr, shared::SPSSequence<shared::SPSExecutorAddr>);
 
-using SPSRunAsMainSignature = int64_t(shared::SPSExecutorAddress,
+using SPSRunAsMainSignature = int64_t(shared::SPSExecutorAddr,
                                       shared::SPSSequence<shared::SPSString>);
 
 } // end namespace rt

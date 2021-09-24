@@ -39,10 +39,10 @@ SimpleExecutorDylibManager::open(const std::string &Path, uint64_t Mode) {
   return NextId++;
 }
 
-Expected<std::vector<ExecutorAddress>>
+Expected<std::vector<ExecutorAddr>>
 SimpleExecutorDylibManager::lookup(tpctypes::DylibHandle H,
                                    const RemoteSymbolLookupSet &L) {
-  std::vector<ExecutorAddress> Result;
+  std::vector<ExecutorAddr> Result;
 
   std::lock_guard<std::mutex> Lock(M);
   auto I = Dylibs.find(H);
@@ -58,7 +58,7 @@ SimpleExecutorDylibManager::lookup(tpctypes::DylibHandle H,
         return make_error<StringError>("Required address for empty symbol \"\"",
                                        inconvertibleErrorCode());
       else
-        Result.push_back(ExecutorAddress());
+        Result.push_back(ExecutorAddr());
     } else {
 
       const char *DemangledSymName = E.Name.c_str();
@@ -76,7 +76,7 @@ SimpleExecutorDylibManager::lookup(tpctypes::DylibHandle H,
                                            DemangledSymName,
                                        inconvertibleErrorCode());
 
-      Result.push_back(ExecutorAddress::fromPtr(Addr));
+      Result.push_back(ExecutorAddr::fromPtr(Addr));
     }
   }
 
@@ -96,13 +96,12 @@ Error SimpleExecutorDylibManager::shutdown() {
 }
 
 void SimpleExecutorDylibManager::addBootstrapSymbols(
-    StringMap<ExecutorAddress> &M) {
-  M[rt::SimpleExecutorDylibManagerInstanceName] =
-      ExecutorAddress::fromPtr(this);
+    StringMap<ExecutorAddr> &M) {
+  M[rt::SimpleExecutorDylibManagerInstanceName] = ExecutorAddr::fromPtr(this);
   M[rt::SimpleExecutorDylibManagerOpenWrapperName] =
-      ExecutorAddress::fromPtr(&openWrapper);
+      ExecutorAddr::fromPtr(&openWrapper);
   M[rt::SimpleExecutorDylibManagerLookupWrapperName] =
-      ExecutorAddress::fromPtr(&lookupWrapper);
+      ExecutorAddr::fromPtr(&lookupWrapper);
 }
 
 llvm::orc::shared::detail::CWrapperFunctionResult

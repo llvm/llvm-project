@@ -37,11 +37,11 @@ public:
   virtual ~SimpleExecutorDylibManager();
 
   Expected<tpctypes::DylibHandle> open(const std::string &Path, uint64_t Mode);
-  Expected<std::vector<ExecutorAddress>> lookup(tpctypes::DylibHandle H,
-                                                const RemoteSymbolLookupSet &L);
+  Expected<std::vector<ExecutorAddr>> lookup(tpctypes::DylibHandle H,
+                                             const RemoteSymbolLookupSet &L);
 
   Error shutdown() override;
-  void addBootstrapSymbols(StringMap<ExecutorAddress> &M) override;
+  void addBootstrapSymbols(StringMap<ExecutorAddr> &M) override;
 
 private:
   using DylibsMap = DenseMap<uint64_t, sys::DynamicLibrary>;

@@ -30,9 +30,9 @@ class EPCGenericDylibManager {
 public:
   /// Function addresses for memory access.
   struct SymbolAddrs {
-    ExecutorAddress Instance;
-    ExecutorAddress Open;
-    ExecutorAddress Lookup;
+    ExecutorAddr Instance;
+    ExecutorAddr Open;
+    ExecutorAddr Lookup;
   };
 
   /// Create an EPCGenericMemoryAccess instance from a given set of
@@ -49,11 +49,11 @@ public:
   Expected<tpctypes::DylibHandle> open(StringRef Path, uint64_t Mode);
 
   /// Looks up symbols within the given dylib.
-  Expected<std::vector<ExecutorAddress>> lookup(tpctypes::DylibHandle H,
-                                                const SymbolLookupSet &Lookup);
+  Expected<std::vector<ExecutorAddr>> lookup(tpctypes::DylibHandle H,
+                                             const SymbolLookupSet &Lookup);
 
   /// Looks up symbols within the given dylib.
-  Expected<std::vector<ExecutorAddress>>
+  Expected<std::vector<ExecutorAddr>>
   lookup(tpctypes::DylibHandle H, const RemoteSymbolLookupSet &Lookup);
 
 private:

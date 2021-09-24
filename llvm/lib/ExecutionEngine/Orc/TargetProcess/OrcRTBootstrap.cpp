@@ -49,29 +49,29 @@ static llvm::orc::shared::detail::CWrapperFunctionResult
 runAsMainWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<rt::SPSRunAsMainSignature>::handle(
              ArgData, ArgSize,
-             [](ExecutorAddress MainAddr,
+             [](ExecutorAddr MainAddr,
                 std::vector<std::string> Args) -> int64_t {
                return runAsMain(MainAddr.toPtr<int (*)(int, char *[])>(), Args);
              })
       .release();
 }
 
-void addTo(StringMap<ExecutorAddress> &M) {
-  M[rt::MemoryWriteUInt8sWrapperName] = ExecutorAddress::fromPtr(
+void addTo(StringMap<ExecutorAddr> &M) {
+  M[rt::MemoryWriteUInt8sWrapperName] = ExecutorAddr::fromPtr(
       &writeUIntsWrapper<tpctypes::UInt8Write,
                          shared::SPSMemoryAccessUInt8Write>);
-  M[rt::MemoryWriteUInt16sWrapperName] = ExecutorAddress::fromPtr(
+  M[rt::MemoryWriteUInt16sWrapperName] = ExecutorAddr::fromPtr(
       &writeUIntsWrapper<tpctypes::UInt16Write,
                          shared::SPSMemoryAccessUInt16Write>);
-  M[rt::MemoryWriteUInt32sWrapperName] = ExecutorAddress::fromPtr(
+  M[rt::MemoryWriteUInt32sWrapperName] = ExecutorAddr::fromPtr(
       &writeUIntsWrapper<tpctypes::UInt32Write,
                          shared::SPSMemoryAccessUInt32Write>);
-  M[rt::MemoryWriteUInt64sWrapperName] = ExecutorAddress::fromPtr(
+  M[rt::MemoryWriteUInt64sWrapperName] = ExecutorAddr::fromPtr(
       &writeUIntsWrapper<tpctypes::UInt64Write,
                          shared::SPSMemoryAccessUInt64Write>);
   M[rt::MemoryWriteBuffersWrapperName] =
-      ExecutorAddress::fromPtr(&writeBuffersWrapper);
-  M[rt::RunAsMainWrapperName] = ExecutorAddress::fromPtr(&runAsMainWrapper);
+      ExecutorAddr::fromPtr(&writeBuffersWrapper);
+  M[rt::RunAsMainWrapperName] = ExecutorAddr::fromPtr(&runAsMainWrapper);
 }
 
 } // end namespace rt_bootstrap

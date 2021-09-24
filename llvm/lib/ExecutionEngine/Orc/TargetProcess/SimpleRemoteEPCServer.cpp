@@ -51,15 +51,15 @@ void SimpleRemoteEPCServer::ThreadDispatcher::shutdown() {
 }
 #endif
 
-StringMap<ExecutorAddress> SimpleRemoteEPCServer::defaultBootstrapSymbols() {
-  StringMap<ExecutorAddress> DBS;
+StringMap<ExecutorAddr> SimpleRemoteEPCServer::defaultBootstrapSymbols() {
+  StringMap<ExecutorAddr> DBS;
   rt_bootstrap::addTo(DBS);
   return DBS;
 }
 
 Expected<SimpleRemoteEPCTransportClient::HandleMessageAction>
 SimpleRemoteEPCServer::handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
-                                     ExecutorAddress TagAddr,
+                                     ExecutorAddr TagAddr,
                                      SimpleRemoteEPCArgBytesVector ArgBytes) {
   using UT = std::underlying_type_t<SimpleRemoteEPCOpcode>;
   if (static_cast<UT>(OpC) > static_cast<UT>(SimpleRemoteEPCOpcode::LastOpC))
@@ -124,7 +124,7 @@ void SimpleRemoteEPCServer::handleDisconnect(Error Err) {
 }
 
 Error SimpleRemoteEPCServer::sendSetupMessage(
-    StringMap<ExecutorAddress> BootstrapSymbols) {
+    StringMap<ExecutorAddr> BootstrapSymbols) {
 
   using namespace SimpleRemoteEPCDefaultBootstrapSymbolNames;
 
@@ -141,10 +141,8 @@ Error SimpleRemoteEPCServer::sendSetupMessage(
          "Dispatch context name should not be set");
   assert(!EI.BootstrapSymbols.count(DispatchFnName) &&
          "Dispatch function name should not be set");
-  EI.BootstrapSymbols[ExecutorSessionObjectName] =
-      ExecutorAddress::fromPtr(this);
-  EI.BootstrapSymbols[DispatchFnName] =
-      ExecutorAddress::fromPtr(jitDispatchEntry);
+  EI.BootstrapSymbols[ExecutorSessionObjectName] = ExecutorAddr::fromPtr(this);
+  EI.BootstrapSymbols[DispatchFnName] = ExecutorAddr::fromPtr(jitDispatchEntry);
 
   using SPSSerialize =
       shared::SPSArgList<shared::SPSSimpleRemoteEPCExecutorInfo>;
@@ -155,12 +153,12 @@ Error SimpleRemoteEPCServer::sendSetupMessage(
     return make_error<StringError>("Could not send setup packet",
                                    inconvertibleErrorCode());
 
-  return T->sendMessage(SimpleRemoteEPCOpcode::Setup, 0, ExecutorAddress(),
+  return T->sendMessage(SimpleRemoteEPCOpcode::Setup, 0, ExecutorAddr(),
                         {SetupPacketBytes.data(), SetupPacketBytes.size()});
 }
 
 Error SimpleRemoteEPCServer::handleResult(
-    uint64_t SeqNo, ExecutorAddress TagAddr,
+    uint64_t SeqNo, ExecutorAddr TagAddr,
     SimpleRemoteEPCArgBytesVector ArgBytes) {
   std::promise<shared::WrapperFunctionResult> *P = nullptr;
   {
@@ -181,7 +179,7 @@ Error SimpleRemoteEPCServer::handleResult(
 }
 
 void SimpleRemoteEPCServer::handleCallWrapper(
-    uint64_t RemoteSeqNo, ExecutorAddress TagAddr,
+    uint64_t RemoteSeqNo, ExecutorAddr TagAddr,
     SimpleRemoteEPCArgBytesVector ArgBytes) {
   D->dispatch([this, RemoteSeqNo, TagAddr, ArgBytes = std::move(ArgBytes)]() {
     using WrapperFnTy =
@@ -190,7 +188,7 @@ void SimpleRemoteEPCServer::handleCallWrapper(
     shared::WrapperFunctionResult ResultBytes(
         Fn(ArgBytes.data(), ArgBytes.size()));
     if (auto Err = T->sendMessage(SimpleRemoteEPCOpcode::Result, RemoteSeqNo,
-                                  ExecutorAddress(),
+                                  ExecutorAddr(),
                                   {ResultBytes.data(), ResultBytes.size()}))
       ReportError(std::move(Err));
   });
@@ -215,7 +213,7 @@ SimpleRemoteEPCServer::doJITDispatch(const void *FnTag, const char *ArgData,
 
   if (auto Err =
           T->sendMessage(SimpleRemoteEPCOpcode::CallWrapper, SeqNo,
-                         ExecutorAddress::fromPtr(FnTag), {ArgData, ArgSize}))
+                         ExecutorAddr::fromPtr(FnTag), {ArgData, ArgSize}))
     ReportError(std::move(Err));
 
   return ResultF.get();
