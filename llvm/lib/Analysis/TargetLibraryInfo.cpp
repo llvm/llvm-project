@@ -414,6 +414,65 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_utimes);
   }
 
+  // Pick just one set of new/delete variants.
+  if (T.isOSMSVCRT()) {
+    // MSVC, doesn't have the Itanium new/delete.
+    TLI.setUnavailable(LibFunc_ZdaPv);
+    TLI.setUnavailable(LibFunc_ZdaPvRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_ZdaPvSt11align_val_t);
+    TLI.setUnavailable(LibFunc_ZdaPvSt11align_val_tRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_ZdaPvj);
+    TLI.setUnavailable(LibFunc_ZdaPvjSt11align_val_t);
+    TLI.setUnavailable(LibFunc_ZdaPvm);
+    TLI.setUnavailable(LibFunc_ZdaPvmSt11align_val_t);
+    TLI.setUnavailable(LibFunc_ZdlPv);
+    TLI.setUnavailable(LibFunc_ZdlPvRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_ZdlPvSt11align_val_t);
+    TLI.setUnavailable(LibFunc_ZdlPvSt11align_val_tRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_ZdlPvj);
+    TLI.setUnavailable(LibFunc_ZdlPvjSt11align_val_t);
+    TLI.setUnavailable(LibFunc_ZdlPvm);
+    TLI.setUnavailable(LibFunc_ZdlPvmSt11align_val_t);
+    TLI.setUnavailable(LibFunc_Znaj);
+    TLI.setUnavailable(LibFunc_ZnajRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_ZnajSt11align_val_t);
+    TLI.setUnavailable(LibFunc_ZnajSt11align_val_tRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_Znam);
+    TLI.setUnavailable(LibFunc_ZnamRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_ZnamSt11align_val_t);
+    TLI.setUnavailable(LibFunc_ZnamSt11align_val_tRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_Znwj);
+    TLI.setUnavailable(LibFunc_ZnwjRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_ZnwjSt11align_val_t);
+    TLI.setUnavailable(LibFunc_ZnwjSt11align_val_tRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_Znwm);
+    TLI.setUnavailable(LibFunc_ZnwmRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_ZnwmSt11align_val_t);
+    TLI.setUnavailable(LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t);
+  } else {
+    // Not MSVC, assume it's Itanium.
+    TLI.setUnavailable(LibFunc_msvc_new_int);
+    TLI.setUnavailable(LibFunc_msvc_new_int_nothrow);
+    TLI.setUnavailable(LibFunc_msvc_new_longlong);
+    TLI.setUnavailable(LibFunc_msvc_new_longlong_nothrow);
+    TLI.setUnavailable(LibFunc_msvc_delete_ptr32);
+    TLI.setUnavailable(LibFunc_msvc_delete_ptr32_nothrow);
+    TLI.setUnavailable(LibFunc_msvc_delete_ptr32_int);
+    TLI.setUnavailable(LibFunc_msvc_delete_ptr64);
+    TLI.setUnavailable(LibFunc_msvc_delete_ptr64_nothrow);
+    TLI.setUnavailable(LibFunc_msvc_delete_ptr64_longlong);
+    TLI.setUnavailable(LibFunc_msvc_new_array_int);
+    TLI.setUnavailable(LibFunc_msvc_new_array_int_nothrow);
+    TLI.setUnavailable(LibFunc_msvc_new_array_longlong);
+    TLI.setUnavailable(LibFunc_msvc_new_array_longlong_nothrow);
+    TLI.setUnavailable(LibFunc_msvc_delete_array_ptr32);
+    TLI.setUnavailable(LibFunc_msvc_delete_array_ptr32_nothrow);
+    TLI.setUnavailable(LibFunc_msvc_delete_array_ptr32_int);
+    TLI.setUnavailable(LibFunc_msvc_delete_array_ptr64);
+    TLI.setUnavailable(LibFunc_msvc_delete_array_ptr64_nothrow);
+    TLI.setUnavailable(LibFunc_msvc_delete_array_ptr64_longlong);
+  }
+
   switch (T.getOS()) {
   case Triple::MacOSX:
     // exp10 and exp10f are not available on OS X until 10.9 and iOS until 7.0
