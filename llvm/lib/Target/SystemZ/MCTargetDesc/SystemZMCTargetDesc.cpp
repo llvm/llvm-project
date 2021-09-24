@@ -151,7 +151,10 @@ unsigned SystemZMC::getFirstReg(unsigned Reg) {
 static MCAsmInfo *createSystemZMCAsmInfo(const MCRegisterInfo &MRI,
                                          const Triple &TT,
                                          const MCTargetOptions &Options) {
-  MCAsmInfo *MAI = new SystemZMCAsmInfo(TT);
+  if (TT.isOSzOS())
+    return new SystemZMCAsmInfoGOFF(TT);
+
+  MCAsmInfo *MAI = new SystemZMCAsmInfoELF(TT);
   MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(
       nullptr, MRI.getDwarfRegNum(SystemZ::R15D, true),
       SystemZMC::ELFCFAOffsetFromInitialSP);
