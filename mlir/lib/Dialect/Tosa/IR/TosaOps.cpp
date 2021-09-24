@@ -159,6 +159,71 @@ void ReshapeOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
   results.insert<ReshapeReshapeOptimization>(context);
 }
 
+struct ConstantTransposeOptimization
+    : public OpRewritePattern<tosa::TransposeOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::TransposeOp op,
+                                PatternRewriter &rewriter) const override {
+    DenseElementsAttr inputValues;
+    if (!matchPattern(op.input1(), m_Constant(&inputValues)))
+      return failure();
+    // Make sure the input is a constant that has a single user.
+    if (!llvm::hasSingleElement(op.input1().getDefiningOp()->getUsers()))
+      return failure();
+
+    DenseIntElementsAttr permAttr;
+    if (!matchPattern(op.perms(), m_Constant(&permAttr)))
+      return failure();
+    auto permValues = llvm::to_vector<6>(llvm::map_range(
+        // TOSA allows both 32- and 64-bit integer tensors here.
+        permAttr.getValues<APInt>(),
+        [](const APInt &val) { return val.getZExtValue(); }));
+
+    auto inputType = op.input1().getType().cast<ShapedType>();
+    ArrayRef<int64_t> inputShape = inputType.getShape();
+    int64_t numElements = inputType.getNumElements();
+
+    auto outputType = op.getType().cast<ShapedType>();
+    ArrayRef<int64_t> outputShape = outputType.getShape();
+
+    SmallVector<Attribute, 4> outputValues;
+    outputValues.resize(numElements);
+
+    // Transpose the input constant. Because we don't know its rank in advance,
+    // we need to loop over the range [0, element count) and delinearize the
+    // index.
+    for (int srcLinearIndex = 0; srcLinearIndex < numElements;
+         ++srcLinearIndex) {
+      SmallVector<uint64_t, 6> srcIndices(inputType.getRank(), 0);
+      int totalCount = srcLinearIndex;
+      for (int dim = inputType.getRank() - 1; dim >= 0; --dim) {
+        srcIndices[dim] = totalCount % inputShape[dim];
+        totalCount /= inputShape[dim];
+      }
+
+      SmallVector<uint64_t, 6> dstIndices(outputType.getRank(), 0);
+      for (int dim = outputType.getRank() - 1; dim >= 0; --dim)
+        dstIndices[dim] = srcIndices[permValues[dim]];
+
+      uint64_t dstLinearIndex = dstIndices.front();
+      for (int dim = 1; dim < outputType.getRank(); ++dim)
+        dstLinearIndex = dstLinearIndex * outputShape[dim] + dstIndices[dim];
+
+      outputValues[dstLinearIndex] = inputValues.getValue(srcIndices);
+    }
+
+    rewriter.replaceOpWithNewOp<tosa::ConstOp>(
+        op, outputType, DenseElementsAttr::get(outputType, outputValues));
+    return success();
+  }
+};
+
+void TransposeOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                              MLIRContext *context) {
+  results.insert<ConstantTransposeOptimization>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // Operator Folders.
 //===----------------------------------------------------------------------===//
@@ -225,15 +290,18 @@ OpFoldResult TransposeOp::fold(ArrayRef<Attribute> operands) {
   if (!operands[1])
     return {};
 
-  DenseIntElementsAttr perms = operands[1].cast<DenseIntElementsAttr>();
-
-  bool isRange = true;
-  for (auto it : llvm::enumerate(perms)) {
-    isRange = isRange &&
-              it.value().getSExtValue() == static_cast<int64_t>(it.index());
+  // Transposing splat values just means reshaping.
+  if (auto input = operands[0].dyn_cast_or_null<DenseElementsAttr>()) {
+    if (input.isSplat())
+      return input.reshape(getType().cast<ShapedType>());
   }
 
-  if (isRange && input1().getType() == getType())
+  auto perms = llvm::to_vector<6>(llvm::map_range(
+      operands[1].cast<DenseIntElementsAttr>().getValues<APInt>(),
+      [](const APInt &val) { return val.getSExtValue(); }));
+
+  if (llvm::equal(llvm::seq<int64_t>(0, perms.size()), perms) &&
+      input1().getType() == getType())
     return input1();
   return {};
 }
