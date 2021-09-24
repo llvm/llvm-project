@@ -745,6 +745,8 @@ public:
   const SectionBase *getSection() const { return SecToApplyRel; }
   void setSection(SectionBase *Sec) { SecToApplyRel = Sec; }
 
+  StringRef getNamePrefix() const;
+
   static bool classof(const SectionBase *S) {
     return S->OriginalType == ELF::SHT_REL || S->OriginalType == ELF::SHT_RELA;
   }

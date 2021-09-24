@@ -893,6 +893,17 @@ Error SymbolTableSection::accept(MutableSectionVisitor &Visitor) {
   return Visitor.visit(*this);
 }
 
+StringRef RelocationSectionBase::getNamePrefix() const {
+  switch (Type) {
+  case SHT_REL:
+    return ".rel";
+  case SHT_RELA:
+    return ".rela";
+  default:
+    llvm_unreachable("not a relocation section");
+  }
+}
+
 Error RelocationSection::removeSectionReferences(
     bool AllowBrokenLinks, function_ref<bool(const SectionBase *)> ToRemove) {
   if (ToRemove(Symbols)) {

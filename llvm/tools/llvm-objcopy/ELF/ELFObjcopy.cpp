@@ -618,27 +618,16 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
         // .rela.prefix.plt since GNU objcopy does so.
         const SectionBase *TargetSec = RelocSec->getSection();
         if (TargetSec && (TargetSec->Flags & SHF_ALLOC)) {
-          StringRef prefix;
-          switch (Sec.Type) {
-          case SHT_REL:
-            prefix = ".rel";
-            break;
-          case SHT_RELA:
-            prefix = ".rela";
-            break;
-          default:
-            llvm_unreachable("not a relocation section");
-          }
-
           // If the relocation section comes *after* the target section, we
           // don't add Config.AllocSectionsPrefix because we've already added
           // the prefix to TargetSec->Name. Otherwise, if the relocation
           // section comes *before* the target section, we add the prefix.
           if (PrefixedSections.count(TargetSec))
-            Sec.Name = (prefix + TargetSec->Name).str();
+            Sec.Name = (RelocSec->getNamePrefix() + TargetSec->Name).str();
           else
-            Sec.Name =
-                (prefix + Config.AllocSectionsPrefix + TargetSec->Name).str();
+            Sec.Name = (RelocSec->getNamePrefix() + Config.AllocSectionsPrefix +
+                        TargetSec->Name)
+                           .str();
         }
       }
     }
