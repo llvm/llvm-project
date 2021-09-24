@@ -104,9 +104,8 @@ public:
   using OpConversionPattern<InitTensorOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(InitTensorOp op, ArrayRef<Value> operands,
+  matchAndRewrite(InitTensorOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
-    linalg::InitTensorOpAdaptor adaptor(operands, op->getAttrDictionary());
     rewriter.replaceOpWithNewOp<memref::AllocOp>(
         op, getTypeConverter()->convertType(op.getType()).cast<MemRefType>(),
         adaptor.sizes());
@@ -126,9 +125,8 @@ public:
       memref::ExpandShapeOp, memref::CollapseShapeOp>;
 
   LogicalResult
-  matchAndRewrite(TensorReshapeOp op, ArrayRef<Value> operands,
+  matchAndRewrite(TensorReshapeOp op, Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
-    Adaptor adaptor(operands, op->getAttrDictionary());
     rewriter.replaceOpWithNewOp<ReshapeOp>(op,
                                            this->getTypeConverter()
                                                ->convertType(op.getType())
@@ -145,9 +143,8 @@ public:
   using OpConversionPattern<FillOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(FillOp op, ArrayRef<Value> operands,
+  matchAndRewrite(FillOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
-    linalg::FillOpAdaptor adaptor(operands, op->getAttrDictionary());
     if (!op.output().getType().isa<TensorType>())
       return rewriter.notifyMatchFailure(op,
                                          "operand must be of a tensor type");
@@ -208,9 +205,8 @@ public:
   using OpConversionPattern<tensor::ExtractSliceOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(tensor::ExtractSliceOp op, ArrayRef<Value> operands,
+  matchAndRewrite(tensor::ExtractSliceOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
-    tensor::ExtractSliceOpAdaptor adaptor(operands, op->getAttrDictionary());
     Value sourceMemref = adaptor.source();
     assert(sourceMemref.getType().isa<MemRefType>());
 

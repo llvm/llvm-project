@@ -156,7 +156,7 @@ public:
   using OpConversionPattern<spirv::FuncOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(spirv::FuncOp funcOp, ArrayRef<Value> operands,
+  matchAndRewrite(spirv::FuncOp funcOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -168,7 +168,7 @@ class LowerABIAttributesPass final
 } // namespace
 
 LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
-    spirv::FuncOp funcOp, ArrayRef<Value> operands,
+    spirv::FuncOp funcOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   if (!funcOp->getAttrOfType<spirv::EntryPointABIAttr>(
           spirv::getEntryPointABIAttrName())) {

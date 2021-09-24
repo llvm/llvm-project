@@ -27,9 +27,8 @@ class BufferizeIndexCastOp : public OpConversionPattern<IndexCastOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(IndexCastOp op, ArrayRef<Value> operands,
+  matchAndRewrite(IndexCastOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    IndexCastOp::Adaptor adaptor(operands);
     auto tensorType = op.getType().cast<RankedTensorType>();
     rewriter.replaceOpWithNewOp<IndexCastOp>(
         op, adaptor.in(),
@@ -42,12 +41,11 @@ class BufferizeSelectOp : public OpConversionPattern<SelectOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(SelectOp op, ArrayRef<Value> operands,
+  matchAndRewrite(SelectOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     if (!op.condition().getType().isa<IntegerType>())
       return rewriter.notifyMatchFailure(op, "requires scalar condition");
 
-    SelectOp::Adaptor adaptor(operands);
     rewriter.replaceOpWithNewOp<SelectOp>(
         op, adaptor.condition(), adaptor.true_value(), adaptor.false_value());
     return success();

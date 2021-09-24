@@ -541,13 +541,13 @@ public:
   using OpConversionPattern<FuncOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
+  matchAndRewrite(FuncOp funcOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
 } // namespace
 
 LogicalResult
-FuncOpConversion::matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
+FuncOpConversion::matchAndRewrite(FuncOp funcOp, OpAdaptor adaptor,
                                   ConversionPatternRewriter &rewriter) const {
   auto fnType = funcOp.getType();
   if (fnType.getNumResults() > 1)

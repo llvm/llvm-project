@@ -20,7 +20,7 @@ struct CallOpSignatureConversion : public OpConversionPattern<CallOp> {
 
   /// Hook for derived classes to implement combined matching and rewriting.
   LogicalResult
-  matchAndRewrite(CallOp callOp, ArrayRef<Value> operands,
+  matchAndRewrite(CallOp callOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Convert the original function results.
     SmallVector<Type, 1> convertedResults;
@@ -30,8 +30,8 @@ struct CallOpSignatureConversion : public OpConversionPattern<CallOp> {
 
     // Substitute with the new result types from the corresponding FuncType
     // conversion.
-    rewriter.replaceOpWithNewOp<CallOp>(callOp, callOp.callee(),
-                                        convertedResults, operands);
+    rewriter.replaceOpWithNewOp<CallOp>(
+        callOp, callOp.callee(), convertedResults, adaptor.getOperands());
     return success();
   }
 };
@@ -96,13 +96,12 @@ public:
   using OpConversionPattern<ReturnOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(ReturnOp op, ArrayRef<Value> operands,
+  matchAndRewrite(ReturnOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
     // For a return, all operands go to the results of the parent, so
     // rewrite them all.
-    Operation *operation = op.getOperation();
-    rewriter.updateRootInPlace(
-        op, [operands, operation]() { operation->setOperands(operands); });
+    rewriter.updateRootInPlace(op,
+                               [&] { op->setOperands(adaptor.getOperands()); });
     return success();
   }
 };

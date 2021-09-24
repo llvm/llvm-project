@@ -249,9 +249,9 @@ class SparseReturnConverter : public OpConversionPattern<ReturnOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(ReturnOp op, ArrayRef<Value> operands,
+  matchAndRewrite(ReturnOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<ReturnOp>(op, operands);
+    rewriter.replaceOpWithNewOp<ReturnOp>(op, adaptor.getOperands());
     return success();
   }
 };
@@ -262,7 +262,7 @@ class SparseTensorToDimSizeConverter
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(tensor::DimOp op, ArrayRef<Value> operands,
+  matchAndRewrite(tensor::DimOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type resType = op.getType();
     auto enc = getSparseTensorEncoding(op.source().getType());
@@ -278,7 +278,7 @@ public:
     // Generate the call.
     StringRef name = "sparseDimSize";
     SmallVector<Value, 2> params;
-    params.push_back(operands[0]);
+    params.push_back(adaptor.getOperands()[0]);
     params.push_back(
         rewriter.create<ConstantOp>(op.getLoc(), rewriter.getIndexAttr(idx)));
     rewriter.replaceOpWithNewOp<CallOp>(
@@ -291,14 +291,15 @@ public:
 class SparseTensorNewConverter : public OpConversionPattern<NewOp> {
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(NewOp op, ArrayRef<Value> operands,
+  matchAndRewrite(NewOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type resType = op.getType();
     auto enc = getSparseTensorEncoding(resType);
     if (!enc)
       return failure();
     Value perm;
-    rewriter.replaceOp(op, genNewCall(rewriter, op, enc, 0, perm, operands[0]));
+    rewriter.replaceOp(
+        op, genNewCall(rewriter, op, enc, 0, perm, adaptor.getOperands()[0]));
     return success();
   }
 };
@@ -307,7 +308,7 @@ class SparseTensorNewConverter : public OpConversionPattern<NewOp> {
 class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(ConvertOp op, ArrayRef<Value> operands,
+  matchAndRewrite(ConvertOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type resType = op.getType();
     auto encDst = getSparseTensorEncoding(resType);
@@ -320,7 +321,8 @@ class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
       // yield the fastest conversion but avoids the need for a full
       // O(N^2) conversion matrix.
       Value perm;
-      Value coo = genNewCall(rewriter, op, encDst, 3, perm, operands[0]);
+      Value coo =
+          genNewCall(rewriter, op, encDst, 3, perm, adaptor.getOperands()[0]);
       rewriter.replaceOp(op, genNewCall(rewriter, op, encDst, 1, perm, coo));
       return success();
     }
@@ -349,7 +351,7 @@ class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
         MemRefType::get({ShapedType::kDynamicSize}, rewriter.getIndexType());
     Value perm;
     Value ptr = genNewCall(rewriter, op, encDst, 2, perm);
-    Value tensor = operands[0];
+    Value tensor = adaptor.getOperands()[0];
     Value arg = rewriter.create<ConstantOp>(
         loc, rewriter.getIndexAttr(shape.getRank()));
     Value ind = rewriter.create<memref::AllocaOp>(loc, memTp, ValueRange{arg});
@@ -381,7 +383,7 @@ class SparseTensorToPointersConverter
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(ToPointersOp op, ArrayRef<Value> operands,
+  matchAndRewrite(ToPointersOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type resType = op.getType();
     Type eltType = resType.cast<ShapedType>().getElementType();
@@ -398,10 +400,11 @@ public:
       name = "sparsePointers8";
     else
       return failure();
-    rewriter.replaceOpWithNewOp<CallOp>(
-        op, resType,
-        getFunc(op, name, resType, operands, /*emitCInterface=*/true),
-        operands);
+    rewriter.replaceOpWithNewOp<CallOp>(op, resType,
+                                        getFunc(op, name, resType,
+                                                adaptor.getOperands(),
+                                                /*emitCInterface=*/true),
+                                        adaptor.getOperands());
     return success();
   }
 };
@@ -411,7 +414,7 @@ class SparseTensorToIndicesConverter : public OpConversionPattern<ToIndicesOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(ToIndicesOp op, ArrayRef<Value> operands,
+  matchAndRewrite(ToIndicesOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type resType = op.getType();
     Type eltType = resType.cast<ShapedType>().getElementType();
@@ -428,10 +431,11 @@ public:
       name = "sparseIndices8";
     else
       return failure();
-    rewriter.replaceOpWithNewOp<CallOp>(
-        op, resType,
-        getFunc(op, name, resType, operands, /*emitCInterface=*/true),
-        operands);
+    rewriter.replaceOpWithNewOp<CallOp>(op, resType,
+                                        getFunc(op, name, resType,
+                                                adaptor.getOperands(),
+                                                /*emitCInterface=*/true),
+                                        adaptor.getOperands());
     return success();
   }
 };
@@ -441,7 +445,7 @@ class SparseTensorToValuesConverter : public OpConversionPattern<ToValuesOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(ToValuesOp op, ArrayRef<Value> operands,
+  matchAndRewrite(ToValuesOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type resType = op.getType();
     Type eltType = resType.cast<ShapedType>().getElementType();
@@ -460,10 +464,11 @@ public:
       name = "sparseValuesI8";
     else
       return failure();
-    rewriter.replaceOpWithNewOp<CallOp>(
-        op, resType,
-        getFunc(op, name, resType, operands, /*emitCInterface=*/true),
-        operands);
+    rewriter.replaceOpWithNewOp<CallOp>(op, resType,
+                                        getFunc(op, name, resType,
+                                                adaptor.getOperands(),
+                                                /*emitCInterface=*/true),
+                                        adaptor.getOperands());
     return success();
   }
 };
@@ -474,12 +479,12 @@ public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
   // Simply fold the operator into the pointer to the sparse storage scheme.
-  matchAndRewrite(ToTensorOp op, ArrayRef<Value> operands,
+  matchAndRewrite(ToTensorOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Check that all arguments of the tensor reconstruction operators are calls
     // into the support library that query exactly the same opaque pointer.
     Value ptr;
-    for (Value op : operands) {
+    for (Value op : adaptor.getOperands()) {
       if (auto call = op.getDefiningOp<CallOp>()) {
         Value arg = call.getOperand(0);
         if (!arg.getType().isa<LLVM::LLVMPointerType>())

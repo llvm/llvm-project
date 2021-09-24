@@ -46,18 +46,18 @@ struct LowerToIntrinsic : public OpConversionPattern<OpTy> {
   }
 
   LogicalResult
-  matchAndRewrite(OpTy op, ArrayRef<Value> operands,
+  matchAndRewrite(OpTy op, typename OpTy::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type elementType = getSrcVectorElementType<OpTy>(op);
     unsigned bitwidth = elementType.getIntOrFloatBitWidth();
     if (bitwidth == 32)
       return LLVM::detail::oneToOneRewrite(op, Intr32OpTy::getOperationName(),
-                                           operands, getTypeConverter(),
-                                           rewriter);
+                                           adaptor.getOperands(),
+                                           getTypeConverter(), rewriter);
     if (bitwidth == 64)
       return LLVM::detail::oneToOneRewrite(op, Intr64OpTy::getOperationName(),
-                                           operands, getTypeConverter(),
-                                           rewriter);
+                                           adaptor.getOperands(),
+                                           getTypeConverter(), rewriter);
     return rewriter.notifyMatchFailure(
         op, "expected 'src' to be either f32 or f64");
   }
@@ -68,9 +68,8 @@ struct MaskCompressOpConversion
   using ConvertOpToLLVMPattern<MaskCompressOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(MaskCompressOp op, ArrayRef<Value> operands,
+  matchAndRewrite(MaskCompressOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    MaskCompressOp::Adaptor adaptor(operands);
     auto opType = adaptor.a().getType();
 
     Value src;
@@ -95,10 +94,8 @@ struct RsqrtOpConversion : public ConvertOpToLLVMPattern<RsqrtOp> {
   using ConvertOpToLLVMPattern<RsqrtOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(RsqrtOp op, ArrayRef<Value> operands,
+  matchAndRewrite(RsqrtOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    RsqrtOp::Adaptor adaptor(operands);
-
     auto opType = adaptor.a().getType();
     rewriter.replaceOpWithNewOp<RsqrtIntrOp>(op, opType, adaptor.a());
     return success();
@@ -109,9 +106,8 @@ struct DotOpConversion : public ConvertOpToLLVMPattern<DotOp> {
   using ConvertOpToLLVMPattern<DotOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(DotOp op, ArrayRef<Value> operands,
+  matchAndRewrite(DotOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    DotOp::Adaptor adaptor(operands);
     auto opType = adaptor.a().getType();
     Type llvmIntType = IntegerType::get(&getTypeConverter()->getContext(), 8);
     // Dot product of all elements, broadcasted to all elements.

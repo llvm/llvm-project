@@ -61,7 +61,7 @@ struct DecomposeCallGraphTypesForFuncArgs
       DecomposeCallGraphTypesOpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(FuncOp op, ArrayRef<Value> operands,
+  matchAndRewrite(FuncOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
     auto functionType = op.getType();
 
@@ -106,10 +106,10 @@ struct DecomposeCallGraphTypesForReturnOp
   using DecomposeCallGraphTypesOpConversionPattern::
       DecomposeCallGraphTypesOpConversionPattern;
   LogicalResult
-  matchAndRewrite(ReturnOp op, ArrayRef<Value> operands,
+  matchAndRewrite(ReturnOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
     SmallVector<Value, 2> newOperands;
-    for (Value operand : operands)
+    for (Value operand : adaptor.getOperands())
       decomposer.decomposeValue(rewriter, op.getLoc(), operand.getType(),
                                 operand, newOperands);
     rewriter.replaceOpWithNewOp<ReturnOp>(op, newOperands);
@@ -131,12 +131,12 @@ struct DecomposeCallGraphTypesForCallOp
       DecomposeCallGraphTypesOpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(CallOp op, ArrayRef<Value> operands,
+  matchAndRewrite(CallOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
 
     // Create the operands list of the new `CallOp`.
     SmallVector<Value, 2> newOperands;
-    for (Value operand : operands)
+    for (Value operand : adaptor.getOperands())
       decomposer.decomposeValue(rewriter, op.getLoc(), operand.getType(),
                                 operand, newOperands);
 

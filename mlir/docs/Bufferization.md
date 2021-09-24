@@ -139,10 +139,10 @@ class BufferizeCastOp : public OpConversionPattern<tensor::CastOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(tensor::CastOp op, ArrayRef<Value> operands,
+  matchAndRewrite(tensor::CastOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto resultType = getTypeConverter()->convertType(op.getType());
-    rewriter.replaceOpWithNewOp<MemRefCastOp>(op, resultType, operands[0]);
+    rewriter.replaceOpWithNewOp<MemRefCastOp>(op, resultType, adaptor.source());
     return success();
   }
 };

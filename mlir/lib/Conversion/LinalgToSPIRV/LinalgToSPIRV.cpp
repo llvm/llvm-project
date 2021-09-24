@@ -55,7 +55,7 @@ struct SingleWorkgroupReduction final
   matchAsPerformingReduction(linalg::GenericOp genericOp);
 
   LogicalResult
-  matchAndRewrite(linalg::GenericOp genericOp, ArrayRef<Value> operands,
+  matchAndRewrite(linalg::GenericOp genericOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -109,7 +109,7 @@ SingleWorkgroupReduction::matchAsPerformingReduction(
 }
 
 LogicalResult SingleWorkgroupReduction::matchAndRewrite(
-    linalg::GenericOp genericOp, ArrayRef<Value> operands,
+    linalg::GenericOp genericOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   Operation *op = genericOp.getOperation();
   auto originalInputType = op->getOperand(0).getType().cast<MemRefType>();
@@ -134,7 +134,8 @@ LogicalResult SingleWorkgroupReduction::matchAndRewrite(
   // TODO: Query the target environment to make sure the current
   // workload fits in a local workgroup.
 
-  Value convertedInput = operands[0], convertedOutput = operands[1];
+  Value convertedInput = adaptor.getOperands()[0];
+  Value convertedOutput = adaptor.getOperands()[1];
   Location loc = genericOp.getLoc();
 
   auto *typeConverter = getTypeConverter<SPIRVTypeConverter>();

@@ -84,7 +84,7 @@ public:
   using SCFToSPIRVPattern<scf::ForOp>::SCFToSPIRVPattern;
 
   LogicalResult
-  matchAndRewrite(scf::ForOp forOp, ArrayRef<Value> operands,
+  matchAndRewrite(scf::ForOp forOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -95,7 +95,7 @@ public:
   using SCFToSPIRVPattern<scf::IfOp>::SCFToSPIRVPattern;
 
   LogicalResult
-  matchAndRewrite(scf::IfOp ifOp, ArrayRef<Value> operands,
+  matchAndRewrite(scf::IfOp ifOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -104,7 +104,7 @@ public:
   using SCFToSPIRVPattern<scf::YieldOp>::SCFToSPIRVPattern;
 
   LogicalResult
-  matchAndRewrite(scf::YieldOp terminatorOp, ArrayRef<Value> operands,
+  matchAndRewrite(scf::YieldOp terminatorOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
 } // namespace
@@ -146,14 +146,13 @@ static void replaceSCFOutputValue(ScfOp scfOp, OpTy newOp,
 //===----------------------------------------------------------------------===//
 
 LogicalResult
-ForOpConversion::matchAndRewrite(scf::ForOp forOp, ArrayRef<Value> operands,
+ForOpConversion::matchAndRewrite(scf::ForOp forOp, OpAdaptor adaptor,
                                  ConversionPatternRewriter &rewriter) const {
   // scf::ForOp can be lowered to the structured control flow represented by
   // spirv::LoopOp by making the continue block of the spirv::LoopOp the loop
   // latch and the merge block the exit block. The resulting spirv::LoopOp has a
   // single back edge from the continue to header block, and a single exit from
   // header to merge.
-  scf::ForOpAdaptor forOperands(operands);
   auto loc = forOp.getLoc();
   auto loopOp = rewriter.create<spirv::LoopOp>(loc, spirv::LoopControl::None);
   loopOp.addEntryAndMergeBlock();
@@ -165,9 +164,8 @@ ForOpConversion::matchAndRewrite(scf::ForOp forOp, ArrayRef<Value> operands,
   loopOp.body().getBlocks().insert(std::next(loopOp.body().begin(), 1), header);
 
   // Create the new induction variable to use.
-  BlockArgument newIndVar =
-      header->addArgument(forOperands.lowerBound().getType());
-  for (Value arg : forOperands.initArgs())
+  BlockArgument newIndVar = header->addArgument(adaptor.lowerBound().getType());
+  for (Value arg : adaptor.initArgs())
     header->addArgument(arg.getType());
   Block *body = forOp.getBody();
 
@@ -187,8 +185,8 @@ ForOpConversion::matchAndRewrite(scf::ForOp forOp, ArrayRef<Value> operands,
   rewriter.inlineRegionBefore(forOp->getRegion(0), loopOp.body(),
                               std::next(loopOp.body().begin(), 2));
 
-  SmallVector<Value, 8> args(1, forOperands.lowerBound());
-  args.append(forOperands.initArgs().begin(), forOperands.initArgs().end());
+  SmallVector<Value, 8> args(1, adaptor.lowerBound());
+  args.append(adaptor.initArgs().begin(), adaptor.initArgs().end());
   // Branch into it from the entry.
   rewriter.setInsertionPointToEnd(&(loopOp.body().front()));
   rewriter.create<spirv::BranchOp>(loc, header, args);
@@ -197,7 +195,7 @@ ForOpConversion::matchAndRewrite(scf::ForOp forOp, ArrayRef<Value> operands,
   rewriter.setInsertionPointToEnd(header);
   auto *mergeBlock = loopOp.getMergeBlock();
   auto cmpOp = rewriter.create<spirv::SLessThanOp>(
-      loc, rewriter.getI1Type(), newIndVar, forOperands.upperBound());
+      loc, rewriter.getI1Type(), newIndVar, adaptor.upperBound());
 
   rewriter.create<spirv::BranchConditionalOp>(
       loc, cmpOp, body, ArrayRef<Value>(), mergeBlock, ArrayRef<Value>());
@@ -209,7 +207,7 @@ ForOpConversion::matchAndRewrite(scf::ForOp forOp, ArrayRef<Value> operands,
 
   // Add the step to the induction variable and branch to the header.
   Value updatedIndVar = rewriter.create<spirv::IAddOp>(
-      loc, newIndVar.getType(), newIndVar, forOperands.step());
+      loc, newIndVar.getType(), newIndVar, adaptor.step());
   rewriter.create<spirv::BranchOp>(loc, header, updatedIndVar);
 
   // Infer the return types from the init operands. Vector type may get
@@ -217,7 +215,7 @@ ForOpConversion::matchAndRewrite(scf::ForOp forOp, ArrayRef<Value> operands,
   // extra logic to figure out the right type we just infer it from the Init
   // operands.
   SmallVector<Type, 8> initTypes;
-  for (auto arg : forOperands.initArgs())
+  for (auto arg : adaptor.initArgs())
     initTypes.push_back(arg.getType());
   replaceSCFOutputValue(forOp, loopOp, rewriter, scfToSPIRVContext, initTypes);
   return success();
@@ -228,12 +226,11 @@ ForOpConversion::matchAndRewrite(scf::ForOp forOp, ArrayRef<Value> operands,
 //===----------------------------------------------------------------------===//
 
 LogicalResult
-IfOpConversion::matchAndRewrite(scf::IfOp ifOp, ArrayRef<Value> operands,
+IfOpConversion::matchAndRewrite(scf::IfOp ifOp, OpAdaptor adaptor,
                                 ConversionPatternRewriter &rewriter) const {
   // When lowering `scf::IfOp` we explicitly create a selection header block
   // before the control flow diverges and a merge block where control flow
   // subsequently converges.
-  scf::IfOpAdaptor ifOperands(operands);
   auto loc = ifOp.getLoc();
 
   // Create `spv.selection` operation, selection header block and merge block.
@@ -267,7 +264,7 @@ IfOpConversion::matchAndRewrite(scf::IfOp ifOp, ArrayRef<Value> operands,
 
   // Create a `spv.BranchConditional` operation for selection header block.
   rewriter.setInsertionPointToEnd(selectionHeaderBlock);
-  rewriter.create<spirv::BranchConditionalOp>(loc, ifOperands.condition(),
+  rewriter.create<spirv::BranchConditionalOp>(loc, adaptor.condition(),
                                               thenBlock, ArrayRef<Value>(),
                                               elseBlock, ArrayRef<Value>());
 
@@ -289,8 +286,10 @@ IfOpConversion::matchAndRewrite(scf::IfOp ifOp, ArrayRef<Value> operands,
 /// parent region. For loops we also need to update the branch looping back to
 /// the header with the loop carried values.
 LogicalResult TerminatorOpConversion::matchAndRewrite(
-    scf::YieldOp terminatorOp, ArrayRef<Value> operands,
+    scf::YieldOp terminatorOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
+  ValueRange operands = adaptor.getOperands();
+
   // If the region is return values, store each value into the associated
   // VariableOp created during lowering of the parent region.
   if (!operands.empty()) {

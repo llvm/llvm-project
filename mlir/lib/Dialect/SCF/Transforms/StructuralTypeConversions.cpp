@@ -21,7 +21,7 @@ class ConvertForOpTypes : public OpConversionPattern<ForOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(ForOp op, ArrayRef<Value> operands,
+  matchAndRewrite(ForOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     SmallVector<Type, 6> newResultTypes;
     for (auto type : op.getResultTypes()) {
@@ -63,7 +63,7 @@ public:
     }
     // Change the clone to use the updated operands. We could have cloned with
     // a BlockAndValueMapping, but this seems a bit more direct.
-    newOp->setOperands(operands);
+    newOp->setOperands(adaptor.getOperands());
     // Update the result types to the new converted types.
     for (auto t : llvm::zip(newOp.getResults(), newResultTypes))
       std::get<0>(t).setType(std::get<1>(t));
@@ -79,7 +79,7 @@ class ConvertIfOpTypes : public OpConversionPattern<IfOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(IfOp op, ArrayRef<Value> operands,
+  matchAndRewrite(IfOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // TODO: Generalize this to any type conversion, not just 1:1.
     //
@@ -108,7 +108,7 @@ public:
                                 newOp.elseRegion().end());
 
     // Update the operands and types.
-    newOp->setOperands(operands);
+    newOp->setOperands(adaptor.getOperands());
     for (auto t : llvm::zip(newOp.getResults(), newResultTypes))
       std::get<0>(t).setType(std::get<1>(t));
     rewriter.replaceOp(op, newOp.getResults());
@@ -125,9 +125,9 @@ class ConvertYieldOpTypes : public OpConversionPattern<scf::YieldOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(scf::YieldOp op, ArrayRef<Value> operands,
+  matchAndRewrite(scf::YieldOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<scf::YieldOp>(op, operands);
+    rewriter.replaceOpWithNewOp<scf::YieldOp>(op, adaptor.getOperands());
     return success();
   }
 };
@@ -139,7 +139,7 @@ public:
   using OpConversionPattern<WhileOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(WhileOp op, ArrayRef<Value> operands,
+  matchAndRewrite(WhileOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto *converter = getTypeConverter();
     assert(converter);
@@ -147,7 +147,6 @@ public:
     if (failed(converter->convertTypes(op.getResultTypes(), newResultTypes)))
       return failure();
 
-    WhileOp::Adaptor adaptor(operands);
     auto newOp = rewriter.create<WhileOp>(op.getLoc(), newResultTypes,
                                           adaptor.getOperands());
     for (auto i : {0u, 1u}) {
@@ -167,9 +166,10 @@ class ConvertConditionOpTypes : public OpConversionPattern<ConditionOp> {
 public:
   using OpConversionPattern<ConditionOp>::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(ConditionOp op, ArrayRef<Value> operands,
+  matchAndRewrite(ConditionOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.updateRootInPlace(op, [&]() { op->setOperands(operands); });
+    rewriter.updateRootInPlace(
+        op, [&]() { op->setOperands(adaptor.getOperands()); });
     return success();
   }
 };

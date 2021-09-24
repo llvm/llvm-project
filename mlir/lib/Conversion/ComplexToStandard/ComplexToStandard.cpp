@@ -26,16 +26,13 @@ struct AbsOpConversion : public OpConversionPattern<complex::AbsOp> {
   using OpConversionPattern<complex::AbsOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(complex::AbsOp op, ArrayRef<Value> operands,
+  matchAndRewrite(complex::AbsOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    complex::AbsOp::Adaptor transformed(operands);
     auto loc = op.getLoc();
     auto type = op.getType();
 
-    Value real =
-        rewriter.create<complex::ReOp>(loc, type, transformed.complex());
-    Value imag =
-        rewriter.create<complex::ImOp>(loc, type, transformed.complex());
+    Value real = rewriter.create<complex::ReOp>(loc, type, adaptor.complex());
+    Value imag = rewriter.create<complex::ImOp>(loc, type, adaptor.complex());
     Value realSqr = rewriter.create<MulFOp>(loc, real, real);
     Value imagSqr = rewriter.create<MulFOp>(loc, imag, imag);
     Value sqNorm = rewriter.create<AddFOp>(loc, realSqr, imagSqr);
@@ -53,23 +50,16 @@ struct ComparisonOpConversion : public OpConversionPattern<ComparisonOp> {
                          AndOp, OrOp>;
 
   LogicalResult
-  matchAndRewrite(ComparisonOp op, ArrayRef<Value> operands,
+  matchAndRewrite(ComparisonOp op, typename ComparisonOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    typename ComparisonOp::Adaptor transformed(operands);
     auto loc = op.getLoc();
-    auto type = transformed.lhs()
-                    .getType()
-                    .template cast<ComplexType>()
-                    .getElementType();
+    auto type =
+        adaptor.lhs().getType().template cast<ComplexType>().getElementType();
 
-    Value realLhs =
-        rewriter.create<complex::ReOp>(loc, type, transformed.lhs());
-    Value imagLhs =
-        rewriter.create<complex::ImOp>(loc, type, transformed.lhs());
-    Value realRhs =
-        rewriter.create<complex::ReOp>(loc, type, transformed.rhs());
-    Value imagRhs =
-        rewriter.create<complex::ImOp>(loc, type, transformed.rhs());
+    Value realLhs = rewriter.create<complex::ReOp>(loc, type, adaptor.lhs());
+    Value imagLhs = rewriter.create<complex::ImOp>(loc, type, adaptor.lhs());
+    Value realRhs = rewriter.create<complex::ReOp>(loc, type, adaptor.rhs());
+    Value imagRhs = rewriter.create<complex::ImOp>(loc, type, adaptor.rhs());
     Value realComparison = rewriter.create<CmpFOp>(loc, p, realLhs, realRhs);
     Value imagComparison = rewriter.create<CmpFOp>(loc, p, imagLhs, imagRhs);
 
@@ -87,19 +77,18 @@ struct BinaryComplexOpConversion : public OpConversionPattern<BinaryComplexOp> {
   using OpConversionPattern<BinaryComplexOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(BinaryComplexOp op, ArrayRef<Value> operands,
+  matchAndRewrite(BinaryComplexOp op, typename BinaryComplexOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    typename BinaryComplexOp::Adaptor transformed(operands);
-    auto type = transformed.lhs().getType().template cast<ComplexType>();
+    auto type = adaptor.lhs().getType().template cast<ComplexType>();
     auto elementType = type.getElementType().template cast<FloatType>();
     mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
 
-    Value realLhs = b.create<complex::ReOp>(elementType, transformed.lhs());
-    Value realRhs = b.create<complex::ReOp>(elementType, transformed.rhs());
+    Value realLhs = b.create<complex::ReOp>(elementType, adaptor.lhs());
+    Value realRhs = b.create<complex::ReOp>(elementType, adaptor.rhs());
     Value resultReal =
         b.create<BinaryStandardOp>(elementType, realLhs, realRhs);
-    Value imagLhs = b.create<complex::ImOp>(elementType, transformed.lhs());
-    Value imagRhs = b.create<complex::ImOp>(elementType, transformed.rhs());
+    Value imagLhs = b.create<complex::ImOp>(elementType, adaptor.lhs());
+    Value imagRhs = b.create<complex::ImOp>(elementType, adaptor.rhs());
     Value resultImag =
         b.create<BinaryStandardOp>(elementType, imagLhs, imagRhs);
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, resultReal,
@@ -112,21 +101,20 @@ struct DivOpConversion : public OpConversionPattern<complex::DivOp> {
   using OpConversionPattern<complex::DivOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(complex::DivOp op, ArrayRef<Value> operands,
+  matchAndRewrite(complex::DivOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    complex::DivOp::Adaptor transformed(operands);
     auto loc = op.getLoc();
-    auto type = transformed.lhs().getType().cast<ComplexType>();
+    auto type = adaptor.lhs().getType().cast<ComplexType>();
     auto elementType = type.getElementType().cast<FloatType>();
 
     Value lhsReal =
-        rewriter.create<complex::ReOp>(loc, elementType, transformed.lhs());
+        rewriter.create<complex::ReOp>(loc, elementType, adaptor.lhs());
     Value lhsImag =
-        rewriter.create<complex::ImOp>(loc, elementType, transformed.lhs());
+        rewriter.create<complex::ImOp>(loc, elementType, adaptor.lhs());
     Value rhsReal =
-        rewriter.create<complex::ReOp>(loc, elementType, transformed.rhs());
+        rewriter.create<complex::ReOp>(loc, elementType, adaptor.rhs());
     Value rhsImag =
-        rewriter.create<complex::ImOp>(loc, elementType, transformed.rhs());
+        rewriter.create<complex::ImOp>(loc, elementType, adaptor.rhs());
 
     // Smith's algorithm to divide complex numbers. It is just a bit smarter
     // way to compute the following formula:
@@ -321,17 +309,16 @@ struct ExpOpConversion : public OpConversionPattern<complex::ExpOp> {
   using OpConversionPattern<complex::ExpOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(complex::ExpOp op, ArrayRef<Value> operands,
+  matchAndRewrite(complex::ExpOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    complex::ExpOp::Adaptor transformed(operands);
     auto loc = op.getLoc();
-    auto type = transformed.complex().getType().cast<ComplexType>();
+    auto type = adaptor.complex().getType().cast<ComplexType>();
     auto elementType = type.getElementType().cast<FloatType>();
 
     Value real =
-        rewriter.create<complex::ReOp>(loc, elementType, transformed.complex());
+        rewriter.create<complex::ReOp>(loc, elementType, adaptor.complex());
     Value imag =
-        rewriter.create<complex::ImOp>(loc, elementType, transformed.complex());
+        rewriter.create<complex::ImOp>(loc, elementType, adaptor.complex());
     Value expReal = rewriter.create<math::ExpOp>(loc, real);
     Value cosImag = rewriter.create<math::CosOp>(loc, imag);
     Value resultReal = rewriter.create<MulFOp>(loc, expReal, cosImag);
@@ -348,17 +335,16 @@ struct LogOpConversion : public OpConversionPattern<complex::LogOp> {
   using OpConversionPattern<complex::LogOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(complex::LogOp op, ArrayRef<Value> operands,
+  matchAndRewrite(complex::LogOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    complex::LogOp::Adaptor transformed(operands);
-    auto type = transformed.complex().getType().cast<ComplexType>();
+    auto type = adaptor.complex().getType().cast<ComplexType>();
     auto elementType = type.getElementType().cast<FloatType>();
     mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
 
-    Value abs = b.create<complex::AbsOp>(elementType, transformed.complex());
+    Value abs = b.create<complex::AbsOp>(elementType, adaptor.complex());
     Value resultReal = b.create<math::LogOp>(elementType, abs);
-    Value real = b.create<complex::ReOp>(elementType, transformed.complex());
-    Value imag = b.create<complex::ImOp>(elementType, transformed.complex());
+    Value real = b.create<complex::ReOp>(elementType, adaptor.complex());
+    Value imag = b.create<complex::ImOp>(elementType, adaptor.complex());
     Value resultImag = b.create<math::Atan2Op>(elementType, imag, real);
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, resultReal,
                                                    resultImag);
@@ -370,15 +356,14 @@ struct Log1pOpConversion : public OpConversionPattern<complex::Log1pOp> {
   using OpConversionPattern<complex::Log1pOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(complex::Log1pOp op, ArrayRef<Value> operands,
+  matchAndRewrite(complex::Log1pOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    complex::Log1pOp::Adaptor transformed(operands);
-    auto type = transformed.complex().getType().cast<ComplexType>();
+    auto type = adaptor.complex().getType().cast<ComplexType>();
     auto elementType = type.getElementType().cast<FloatType>();
     mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
 
-    Value real = b.create<complex::ReOp>(elementType, transformed.complex());
-    Value imag = b.create<complex::ImOp>(elementType, transformed.complex());
+    Value real = b.create<complex::ReOp>(elementType, adaptor.complex());
+    Value imag = b.create<complex::ImOp>(elementType, adaptor.complex());
     Value one =
         b.create<ConstantOp>(elementType, b.getFloatAttr(elementType, 1));
     Value realPlusOne = b.create<AddFOp>(real, one);
@@ -392,20 +377,19 @@ struct MulOpConversion : public OpConversionPattern<complex::MulOp> {
   using OpConversionPattern<complex::MulOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(complex::MulOp op, ArrayRef<Value> operands,
+  matchAndRewrite(complex::MulOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    complex::MulOp::Adaptor transformed(operands);
     mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
-    auto type = transformed.lhs().getType().cast<ComplexType>();
+    auto type = adaptor.lhs().getType().cast<ComplexType>();
     auto elementType = type.getElementType().cast<FloatType>();
 
-    Value lhsReal = b.create<complex::ReOp>(elementType, transformed.lhs());
+    Value lhsReal = b.create<complex::ReOp>(elementType, adaptor.lhs());
     Value lhsRealAbs = b.create<AbsFOp>(lhsReal);
-    Value lhsImag = b.create<complex::ImOp>(elementType, transformed.lhs());
+    Value lhsImag = b.create<complex::ImOp>(elementType, adaptor.lhs());
     Value lhsImagAbs = b.create<AbsFOp>(lhsImag);
-    Value rhsReal = b.create<complex::ReOp>(elementType, transformed.rhs());
+    Value rhsReal = b.create<complex::ReOp>(elementType, adaptor.rhs());
     Value rhsRealAbs = b.create<AbsFOp>(rhsReal);
-    Value rhsImag = b.create<complex::ImOp>(elementType, transformed.rhs());
+    Value rhsImag = b.create<complex::ImOp>(elementType, adaptor.rhs());
     Value rhsImagAbs = b.create<AbsFOp>(rhsImag);
 
     Value lhsRealTimesRhsReal = b.create<MulFOp>(lhsReal, rhsReal);
@@ -530,17 +514,16 @@ struct NegOpConversion : public OpConversionPattern<complex::NegOp> {
   using OpConversionPattern<complex::NegOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(complex::NegOp op, ArrayRef<Value> operands,
+  matchAndRewrite(complex::NegOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    complex::NegOp::Adaptor transformed(operands);
     auto loc = op.getLoc();
-    auto type = transformed.complex().getType().cast<ComplexType>();
+    auto type = adaptor.complex().getType().cast<ComplexType>();
     auto elementType = type.getElementType().cast<FloatType>();
 
     Value real =
-        rewriter.create<complex::ReOp>(loc, elementType, transformed.complex());
+        rewriter.create<complex::ReOp>(loc, elementType, adaptor.complex());
     Value imag =
-        rewriter.create<complex::ImOp>(loc, elementType, transformed.complex());
+        rewriter.create<complex::ImOp>(loc, elementType, adaptor.complex());
     Value negReal = rewriter.create<NegFOp>(loc, real);
     Value negImag = rewriter.create<NegFOp>(loc, imag);
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, negReal, negImag);
@@ -552,25 +535,23 @@ struct SignOpConversion : public OpConversionPattern<complex::SignOp> {
   using OpConversionPattern<complex::SignOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(complex::SignOp op, ArrayRef<Value> operands,
+  matchAndRewrite(complex::SignOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    complex::SignOp::Adaptor transformed(operands);
-    auto type = transformed.complex().getType().cast<ComplexType>();
+    auto type = adaptor.complex().getType().cast<ComplexType>();
     auto elementType = type.getElementType().cast<FloatType>();
     mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
 
-    Value real = b.create<complex::ReOp>(elementType, transformed.complex());
-    Value imag = b.create<complex::ImOp>(elementType, transformed.complex());
+    Value real = b.create<complex::ReOp>(elementType, adaptor.complex());
+    Value imag = b.create<complex::ImOp>(elementType, adaptor.complex());
     Value zero = b.create<ConstantOp>(elementType, b.getZeroAttr(elementType));
     Value realIsZero = b.create<CmpFOp>(CmpFPredicate::OEQ, real, zero);
     Value imagIsZero = b.create<CmpFOp>(CmpFPredicate::OEQ, imag, zero);
     Value isZero = b.create<AndOp>(realIsZero, imagIsZero);
-    auto abs = b.create<complex::AbsOp>(elementType, transformed.complex());
+    auto abs = b.create<complex::AbsOp>(elementType, adaptor.complex());
     Value realSign = b.create<DivFOp>(real, abs);
     Value imagSign = b.create<DivFOp>(imag, abs);
     Value sign = b.create<complex::CreateOp>(type, realSign, imagSign);
-    rewriter.replaceOpWithNewOp<SelectOp>(op, isZero, transformed.complex(),
-                                          sign);
+    rewriter.replaceOpWithNewOp<SelectOp>(op, isZero, adaptor.complex(), sign);
     return success();
   }
 };
