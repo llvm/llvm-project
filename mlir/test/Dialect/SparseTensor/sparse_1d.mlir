@@ -43,6 +43,36 @@ func @add_d(%arga: tensor<32xf32, #DV>, %argb: f32, %argx: tensor<32xf32>) -> te
   return %0 : tensor<32xf32>
 }
 
+// CHECK-LABEL:   func @add_d_init(
+// CHECK-SAME:                     %[[VAL_0:.*]]: tensor<32xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
+// CHECK-SAME:                     %[[VAL_1:.*]]: f32) -> tensor<32xf32> {
+// CHECK:           %[[VAL_2:.*]] = constant 32 : index
+// CHECK:           %[[VAL_3:.*]] = constant 0.000000e+00 : f32
+// CHECK:           %[[VAL_4:.*]] = constant 0 : index
+// CHECK:           %[[VAL_5:.*]] = constant 1 : index
+// CHECK:           %[[VAL_6:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xf32>
+// CHECK:           %[[VAL_7:.*]] = memref.alloc() : memref<32xf32>
+// CHECK:           linalg.fill(%[[VAL_3]], %[[VAL_7]]) : f32, memref<32xf32>
+// CHECK:           scf.for %[[VAL_8:.*]] = %[[VAL_4]] to %[[VAL_2]] step %[[VAL_5]] {
+// CHECK:             %[[VAL_9:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_8]]] : memref<?xf32>
+// CHECK:             %[[VAL_10:.*]] = addf %[[VAL_9]], %[[VAL_1]] : f32
+// CHECK:             memref.store %[[VAL_10]], %[[VAL_7]]{{\[}}%[[VAL_8]]] : memref<32xf32>
+// CHECK:           }
+// CHECK:           %[[VAL_11:.*]] = memref.tensor_load %[[VAL_7]] : memref<32xf32>
+// CHECK:           return %[[VAL_11]] : tensor<32xf32>
+// CHECK:         }
+func @add_d_init(%arga: tensor<32xf32, #DV>, %argb: f32) -> tensor<32xf32> {
+  %u = linalg.init_tensor [32] : tensor<32xf32>
+  %0 = linalg.generic #trait1
+     ins(%arga: tensor<32xf32, #DV>)
+    outs(%u: tensor<32xf32>) {
+      ^bb(%a: f32, %x: f32):
+        %0 = addf %a, %argb : f32
+        linalg.yield %0 : f32
+  } -> tensor<32xf32>
+  return %0 : tensor<32xf32>
+}
+
 // CHECK-LABEL:   func @mul_d(
 // CHECK-SAME:                %[[VAL_0:.*]]: tensor<32xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
 // CHECK-SAME:                %[[VAL_1:.*]]: f32,
