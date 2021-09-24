@@ -67,17 +67,18 @@ public:
   void print(raw_ostream &os) const;
   void dump() const;
 
-  /// Return the complement of this set. Computing the complement of a set
-  /// containing divisions is not yet supported.
+  /// Return the complement of this set. All local variables in the set must
+  /// correspond to floor divisions.
   PresburgerSet complement() const;
 
   /// Return the set difference of this set and the given set, i.e.,
-  /// return `this \ set`. Subtracting when either set contains divisions is not
-  /// yet supported.
+  /// return `this \ set`. All local variables in `set` must correspond
+  /// to floor divisions, but local variables in `this` need not correspond to
+  /// divisions.
   PresburgerSet subtract(const PresburgerSet &set) const;
 
   /// Return true if this set is equal to the given set, and false otherwise.
-  /// Checking equality when either set contains divisions is not yet supported.
+  /// All local variables in both sets must correspond to floor divisions.
   bool isEqual(const PresburgerSet &set) const;
 
   /// Return a universe set of the specified type that contains all points.
