@@ -32,22 +32,21 @@ namespace __orc_rt {
 namespace macho {
 
 struct MachOPerObjectSectionsToRegister {
-  ExecutorAddressRange EHFrameSection;
-  ExecutorAddressRange ThreadDataSection;
+  ExecutorAddrRange EHFrameSection;
+  ExecutorAddrRange ThreadDataSection;
 };
 
 struct MachOJITDylibInitializers {
-  using SectionList = std::vector<ExecutorAddressRange>;
+  using SectionList = std::vector<ExecutorAddrRange>;
 
   MachOJITDylibInitializers() = default;
-  MachOJITDylibInitializers(std::string Name,
-                            ExecutorAddress MachOHeaderAddress)
+  MachOJITDylibInitializers(std::string Name, ExecutorAddr MachOHeaderAddress)
       : Name(std::move(Name)),
         MachOHeaderAddress(std::move(MachOHeaderAddress)) {}
 
   std::string Name;
-  ExecutorAddress MachOHeaderAddress;
-  ExecutorAddress ObjCImageInfoAddress;
+  ExecutorAddr MachOHeaderAddress;
+  ExecutorAddr ObjCImageInfoAddress;
 
   std::unordered_map<std::string, SectionList> InitSections;
 };
@@ -69,7 +68,7 @@ enum dlopen_mode : int {
 } // end namespace macho
 
 using SPSMachOPerObjectSectionsToRegister =
-    SPSTuple<SPSExecutorAddressRange, SPSExecutorAddressRange>;
+    SPSTuple<SPSExecutorAddrRange, SPSExecutorAddrRange>;
 
 template <>
 class SPSSerializationTraits<SPSMachOPerObjectSectionsToRegister,
@@ -94,12 +93,12 @@ public:
   }
 };
 
-using SPSNamedExecutorAddressRangeSequenceMap =
-    SPSSequence<SPSTuple<SPSString, SPSExecutorAddressRangeSequence>>;
+using SPSNamedExecutorAddrRangeSequenceMap =
+    SPSSequence<SPSTuple<SPSString, SPSExecutorAddrRangeSequence>>;
 
 using SPSMachOJITDylibInitializers =
-    SPSTuple<SPSString, SPSExecutorAddress, SPSExecutorAddress,
-             SPSNamedExecutorAddressRangeSequenceMap>;
+    SPSTuple<SPSString, SPSExecutorAddr, SPSExecutorAddr,
+             SPSNamedExecutorAddrRangeSequenceMap>;
 
 using SPSMachOJITDylibInitializerSequence =
     SPSSequence<SPSMachOJITDylibInitializers>;
