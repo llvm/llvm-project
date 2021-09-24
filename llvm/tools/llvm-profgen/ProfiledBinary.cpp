@@ -178,7 +178,7 @@ void ProfiledBinary::load() {
     FuncSizeTracker.trackInlineesOptimizedAway(ProbeDecoder);
 
   // Use function start and return address to infer prolog and epilog
-  ProEpilogTracker.inferPrologOffsets(FuncStartAddrMap);
+  ProEpilogTracker.inferPrologOffsets(FuncStartOffsetMap);
   ProEpilogTracker.inferEpilogOffsets(RetAddrs);
 
   // TODO: decode other sections.
@@ -397,7 +397,8 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
   if (ShowDisassembly)
     outs() << "\n";
 
-  FuncStartAddrMap[StartOffset] = Symbols[SI].Name.str();
+  FuncStartOffsetMap.emplace(StartOffset,
+                             std::make_pair(Symbols[SI].Name.str(), EndOffset));
   return true;
 }
 

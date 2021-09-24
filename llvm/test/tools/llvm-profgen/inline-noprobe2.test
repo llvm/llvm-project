@@ -47,12 +47,20 @@
 ;CHECK-NEXT:   2: 5
 ;CHECK-NEXT:   3: 5
 ;CHECK-NEXT: main:213:0
+;CHECK-NEXT:  0: 0
+;CHECK-NEXT:  3: 0
+;CHECK-NEXT:  4.1: 0
+;CHECK-NEXT:  4.3: 0
 ;CHECK-NEXT:  5.1: 10
 ;CHECK-NEXT:  5.3: 10
 ;CHECK-NEXT:  6: 10
 ;CHECK-NEXT:  6.1: 12
 ;CHECK-NEXT:  6.3: 10
+;CHECK-NEXT:  7: 0
 ;CHECK-NEXT:  8: 0 quick_sort:1
+;CHECK-NEXT:  9: 0
+;CHECK-NEXT:  11: 0
+;CHECK-NEXT:  14: 0
 
 ; original code:
 ; clang -O3 -g -fno-optimize-sibling-calls -fdebug-info-for-profiling qsort.c -o a.out
