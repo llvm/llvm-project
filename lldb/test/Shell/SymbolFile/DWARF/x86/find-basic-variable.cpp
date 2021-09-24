@@ -45,9 +45,9 @@ int foo;
 namespace bar {
 int context;
 long foo;
-// NAME-DAG: name = "foo", type = {{.*}} (long int), {{.*}} decl = find-basic-variable.cpp:[[@LINE-1]]
-// CONTEXT-DAG: name = "foo", type = {{.*}} (long int), {{.*}} decl = find-basic-variable.cpp:[[@LINE-2]]
-// REGEX-DAG: name = "foo", type = {{.*}} (long int), {{.*}} decl = find-basic-variable.cpp:[[@LINE-3]]
+// NAME-DAG: name = "foo", type = {{.*}} (long), {{.*}} decl = find-basic-variable.cpp:[[@LINE-1]]
+// CONTEXT-DAG: name = "foo", type = {{.*}} (long), {{.*}} decl = find-basic-variable.cpp:[[@LINE-2]]
+// REGEX-DAG: name = "foo", type = {{.*}} (long), {{.*}} decl = find-basic-variable.cpp:[[@LINE-3]]
 namespace baz {
 static short foo;
 // NAME-DAG: name = "foo", type = {{.*}} (short), {{.*}} decl = find-basic-variable.cpp:[[@LINE-1]]

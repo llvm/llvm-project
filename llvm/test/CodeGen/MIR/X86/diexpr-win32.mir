@@ -128,7 +128,7 @@
   !15 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "string", file: !1, line: 1, size: 96, elements: !16, identifier: ".?AUstring@@")
   !16 = !{!17, !19, !20}
   !17 = !DIDerivedType(tag: DW_TAG_member, name: "length", scope: !15, file: !1, line: 2, baseType: !18, size: 32)
-  !18 = !DIBasicType(name: "long int", size: 32, encoding: DW_ATE_signed)
+  !18 = !DIBasicType(name: "long", size: 32, encoding: DW_ATE_signed)
   !19 = !DIDerivedType(tag: DW_TAG_member, name: "size", scope: !15, file: !1, line: 3, baseType: !18, size: 32, offset: 32)
   !20 = !DIDerivedType(tag: DW_TAG_member, name: "data", scope: !15, file: !1, line: 4, baseType: !21, size: 32, offset: 64)
   !21 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !22, size: 32)

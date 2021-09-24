@@ -58,3 +58,8 @@ __uint128_t foo128 ()
 typedef unsigned long long uint64_t;
 typedef uint64_t uint64x2_t __attribute__((ext_vector_type(2)));
 uint64x2_t extvectbar[4];
+
+// CHECK-DAG: !DIBasicType(name: "long"
+// CHECK-DAG: !DIBasicType(name: "unsigned long long"
+void integral_types(long x, unsigned long long y) {
+}

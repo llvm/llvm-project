@@ -873,23 +873,7 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
     break;
   }
 
-  switch (BT->getKind()) {
-  case BuiltinType::Long:
-    BTName = "long int";
-    break;
-  case BuiltinType::LongLong:
-    BTName = "long long int";
-    break;
-  case BuiltinType::ULong:
-    BTName = "long unsigned int";
-    break;
-  case BuiltinType::ULongLong:
-    BTName = "long long unsigned int";
-    break;
-  default:
-    BTName = BT->getName(CGM.getLangOpts());
-    break;
-  }
+  BTName = BT->getName(CGM.getLangOpts());
   // Bit size and offset of the type.
   uint64_t Size = CGM.getContext().getTypeSize(BT);
   return DBuilder.createBasicType(BTName, Size, Encoding);
