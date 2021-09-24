@@ -125,6 +125,7 @@ private:
   bool verifyUnitHeader(const DWARFDataExtractor DebugInfoData,
                         uint64_t *Offset, unsigned UnitIndex, uint8_t &UnitType,
                         bool &isUnitDWARF64);
+  bool verifyName(const DWARFDie &Die);
 
   /// Verifies the header of a unit in a .debug_info or .debug_types section.
   ///
