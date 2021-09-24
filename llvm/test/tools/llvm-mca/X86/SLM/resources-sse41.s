@@ -180,8 +180,8 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  3      7     4.00    *                   pblendvb	%xmm0, (%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                        pblendw	$11, %xmm0, %xmm2
 # CHECK-NEXT:  1      4     1.00    *                   pblendw	$11, (%rax), %xmm2
-# CHECK-NEXT:  2      4     2.00                        pcmpeqq	%xmm0, %xmm2
-# CHECK-NEXT:  3      7     2.00    *                   pcmpeqq	(%rax), %xmm2
+# CHECK-NEXT:  2      4     4.00                        pcmpeqq	%xmm0, %xmm2
+# CHECK-NEXT:  3      7     4.00    *                   pcmpeqq	(%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                        pextrb	$1, %xmm0, %ecx
 # CHECK-NEXT:  2      4     2.00           *            pextrb	$1, %xmm0, (%rax)
 # CHECK-NEXT:  1      1     1.00                        pextrd	$1, %xmm0, %ecx
@@ -264,7 +264,7 @@ roundss     $1, (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT:  -      -      -     104.00 61.00   -      -     54.00
+# CHECK-NEXT:  -      -      -     108.00 65.00   -      -     54.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
@@ -293,8 +293,8 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  -      -      -     4.00    -      -      -     1.00   pblendvb	%xmm0, (%rax), %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     pblendw	$11, %xmm0, %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -     1.00   pblendw	$11, (%rax), %xmm2
-# CHECK-NEXT:  -      -      -     2.00   2.00    -      -      -     pcmpeqq	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -     2.00   2.00    -      -     1.00   pcmpeqq	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -     4.00   4.00    -      -      -     pcmpeqq	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     4.00   4.00    -      -     1.00   pcmpeqq	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     pextrb	$1, %xmm0, %ecx
 # CHECK-NEXT:  -      -      -     1.00    -      -      -     2.00   pextrb	$1, %xmm0, (%rax)
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     pextrd	$1, %xmm0, %ecx
