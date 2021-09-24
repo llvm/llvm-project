@@ -97,6 +97,7 @@ set(files
   nmmintrin.h
   opencl-c.h
   opencl-c-base.h
+  omp_libmextras.h
   offload_macros.h
   pkuintrin.h
   pmmintrin.h
