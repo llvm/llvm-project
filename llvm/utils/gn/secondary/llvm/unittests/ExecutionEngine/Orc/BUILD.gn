@@ -17,6 +17,7 @@ unittest("OrcJITTests") {
     "EPCGenericJITLinkMemoryManagerTest.cpp",
     "EPCGenericMemoryAccessTest.cpp",
     "ExecutionSessionWrapperFunctionCallsTest.cpp",
+    "ExecutorAddressTest.cpp",
     "IndirectionUtilsTest.cpp",
     "JITTargetMachineBuilderTest.cpp",
     "LazyCallThroughAndReexportsTest.cpp",
