@@ -62,3 +62,19 @@ define void @index_too_large() {
   store i101* %ptr2, i101** undef
   ret void
 }
+
+; OSS-Fuzz #39197
+; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=39197
+@0 = external dso_local unnamed_addr constant [16 x i8]
+define void @ossfuzz_39197() {
+; CHECK-LABEL: @ossfuzz_39197(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %B5 = or i72 0, 2361183241434822606847
+  %i = add nuw nsw i72 %B5, 0
+  %i1 = lshr i72 %i, 1
+  %i2 = getelementptr inbounds [4 x [4 x i8]], [4 x [4 x i8]]* bitcast ([16 x i8]* @0 to [4 x [4 x i8]]*), i72 0, i72 0, i72 %i1
+  ret void
+}
