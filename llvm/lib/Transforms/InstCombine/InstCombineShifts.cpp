@@ -1149,12 +1149,24 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       }
     }
 
+    // (X >>u C1) >>u C --> X >>u (C1 + C)
     if (match(Op0, m_LShr(m_Value(X), m_APInt(C1)))) {
-      unsigned AmtSum = ShAmtC + C1->getZExtValue();
       // Oversized shifts are simplified to zero in InstSimplify.
+      unsigned AmtSum = ShAmtC + C1->getZExtValue();
       if (AmtSum < BitWidth)
-        // (X >>u C1) >>u C --> X >>u (C1 + C)
         return BinaryOperator::CreateLShr(X, ConstantInt::get(Ty, AmtSum));
+    }
+
+    // If the first shift covers the number of bits truncated and the combined
+    // shift fits in the source width:
+    // (trunc (X >>u C1)) >>u C --> trunc (X >>u (C1 + C))
+    if (match(Op0, m_OneUse(m_Trunc(m_LShr(m_Value(X), m_APInt(C1)))))) {
+      unsigned SrcWidth = X->getType()->getScalarSizeInBits();
+      unsigned AmtSum = ShAmtC + C1->getZExtValue();
+      if (C1->uge(SrcWidth - BitWidth) && AmtSum < SrcWidth) {
+        Value *SumShift = Builder.CreateLShr(X, AmtSum, "sum.shift");
+        return new TruncInst(SumShift, Ty);
+      }
     }
 
     // Look for a "splat" mul pattern - it replicates bits across each half of
