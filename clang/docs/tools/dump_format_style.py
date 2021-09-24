@@ -1,22 +1,77 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # A tool to parse the FormatStyle struct from Format.h and update the
 # documentation in ../ClangFormatStyleOptions.rst automatically.
 # Run from the directory in which this file is located to update the docs.
 
-import collections
+import inspect
 import os
 import re
+from typing import Set
 
 CLANG_DIR = os.path.join(os.path.dirname(__file__), '../..')
 FORMAT_STYLE_FILE = os.path.join(CLANG_DIR, 'include/clang/Format/Format.h')
 INCLUDE_STYLE_FILE = os.path.join(CLANG_DIR, 'include/clang/Tooling/Inclusions/IncludeStyle.h')
 DOC_FILE = os.path.join(CLANG_DIR, 'docs/ClangFormatStyleOptions.rst')
 
+PLURALS_FILE = os.path.join(os.path.dirname(__file__), 'plurals.txt')
+
+plurals: Set[str] = set()
+with open(PLURALS_FILE, 'a+') as f:
+  f.seek(0)
+  plurals = set(f.read().splitlines())
 
 def substitute(text, tag, contents):
   replacement = '\n.. START_%s\n\n%s\n\n.. END_%s\n' % (tag, contents, tag)
   pattern = r'\n\.\. START_%s\n.*\n\.\. END_%s\n' % (tag, tag)
   return re.sub(pattern, '%s', text, flags=re.S) % replacement
+
+def register_plural(singular: str, plural: str):
+  if plural not in plurals:
+    if not hasattr(register_plural, "generated_new_plural"):
+      print('Plural generation: you can use '
+      f'`git checkout -- {os.path.relpath(PLURALS_FILE)}` '
+      'to reemit warnings or `git add` to include new plurals\n')
+    register_plural.generated_new_plural = True
+
+    plurals.add(plural)
+    with open(PLURALS_FILE, 'a') as f:
+      f.write(plural + '\n')
+    cf = inspect.currentframe()
+    lineno = ''
+    if cf and cf.f_back:
+      lineno = ':' + str(cf.f_back.f_lineno)
+    print(f'{__file__}{lineno} check if plural of {singular} is {plural}', file=os.sys.stderr)
+  return plural
+
+def pluralize(word: str):
+  lword = word.lower()
+  if len(lword) >= 2 and lword[-1] == 'y' and lword[-2] not in 'aeiou':
+    return register_plural(word, word[:-1] + 'ies')
+  elif lword.endswith(('s', 'sh', 'ch', 'x', 'z')):
+    return register_plural(word, word[:-1] + 'es')
+  elif lword.endswith('fe'):
+    return register_plural(word, word[:-2] + 'ves')
+  elif lword.endswith('f') and not lword.endswith('ff'):
+    return register_plural(word, word[:-1] + 'ves')
+  else:
+    return register_plural(word, word + 's')
+
+
+def to_yaml_type(typestr: str):
+  if typestr == 'bool':
+    return 'Boolean'
+  elif typestr == 'int':
+    return 'Integer'
+  elif typestr == 'unsigned':
+    return 'Unsigned'
+  elif typestr == 'std::string':
+    return 'String'
+
+  subtype, napplied = re.subn(r'^std::vector<(.*)>$', r'\1', typestr)
+  if napplied == 1:
+    return 'List of ' + pluralize(to_yaml_type(subtype))
+
+  return typestr
 
 def doxygen2rst(text):
   text = re.sub(r'<tt>\s*(.*?)\s*<\/tt>', r'``\1``', text)
@@ -40,7 +95,7 @@ class Option(object):
     self.nested_struct = None
 
   def __str__(self):
-    s = '**%s** (``%s``)\n%s' % (self.name, self.type,
+    s = '**%s** (``%s``)\n%s' % (self.name, to_yaml_type(self.type),
                                  doxygen2rst(indent(self.comment, 2)))
     if self.enum and self.enum.values:
       s += indent('\n\nPossible values:\n\n%s\n' % self.enum, 2)
@@ -85,7 +140,7 @@ class NestedEnum(object):
     self.type = enumtype
 
   def __str__(self):
-    s = '\n* ``%s %s``\n%s' % (self.type, self.name,
+    s = '\n* ``%s %s``\n%s' % (to_yaml_type(self.type), self.name,
                                  doxygen2rst(indent(self.comment, 2)))
     s += indent('\nPossible values:\n\n', 2)
     s += indent('\n'.join(map(str, self.values)),2)
@@ -129,7 +184,7 @@ def clean_comment_line(line):
 
 def read_options(header):
   class State(object):
-    BeforeStruct, Finished, InStruct, InNestedStruct, InNestedFieldComent, \
+    BeforeStruct, Finished, InStruct, InNestedStruct, InNestedFieldComment, \
     InFieldComment, InEnum, InEnumMemberComment = range(8)
   state = State.BeforeStruct
 
@@ -173,12 +228,12 @@ def read_options(header):
         raise Exception('Invalid format, expected comment, field or enum')
     elif state == State.InNestedStruct:
       if line.startswith('///'):
-        state = State.InNestedFieldComent
+        state = State.InNestedFieldComment
         comment = clean_comment_line(line)
       elif line == '};':
         state = State.InStruct
         nested_structs[nested_struct.name] = nested_struct
-    elif state == State.InNestedFieldComent:
+    elif state == State.InNestedFieldComment:
       if line.startswith('///'):
         comment += clean_comment_line(line)
       else:
