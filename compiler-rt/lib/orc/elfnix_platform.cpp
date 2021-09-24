@@ -37,7 +37,7 @@ extern "C" void __deregister_frame(const void *);
 namespace {
 
 Error validatePointerSectionExtent(const char *SectionName,
-                                   const ExecutorAddressRange &SE) {
+                                   const ExecutorAddrRange &SE) {
   if (SE.size().getValue() % sizeof(uintptr_t)) {
     std::ostringstream ErrMsg;
     ErrMsg << std::hex << "Size of " << SectionName << " 0x"
@@ -48,7 +48,7 @@ Error validatePointerSectionExtent(const char *SectionName,
   return Error::success();
 }
 
-Error runInitArray(const std::vector<ExecutorAddressRange> &InitArraySections,
+Error runInitArray(const std::vector<ExecutorAddrRange> &InitArraySections,
                    const ELFNixJITDylibInitializers &MOJDIs) {
 
   for (const auto &ModInits : InitArraySections) {
@@ -120,8 +120,8 @@ private:
 
   Error registerThreadDataSection(span<const char> ThreadDataSection);
 
-  Expected<ExecutorAddress> lookupSymbolInJITDylib(void *DSOHandle,
-                                                   string_view Symbol);
+  Expected<ExecutorAddr> lookupSymbolInJITDylib(void *DSOHandle,
+                                                string_view Symbol);
 
   Expected<ELFNixJITDylibInitializerSequence>
   getJITDylibInitializersByName(string_view Path);
@@ -131,7 +131,7 @@ private:
   static ELFNixPlatformRuntimeState *MOPS;
 
   using InitSectionHandler =
-      Error (*)(const std::vector<ExecutorAddressRange> &Sections,
+      Error (*)(const std::vector<ExecutorAddrRange> &Sections,
                 const ELFNixJITDylibInitializers &MOJDIs);
   const std::vector<std::pair<const char *, InitSectionHandler>> InitSections =
       {{".init_array", runInitArray}};
@@ -318,14 +318,15 @@ Error ELFNixPlatformRuntimeState::registerThreadDataSection(
   return Error::success();
 }
 
-Expected<ExecutorAddress>
+Expected<ExecutorAddr>
 ELFNixPlatformRuntimeState::lookupSymbolInJITDylib(void *DSOHandle,
                                                    string_view Sym) {
-  Expected<ExecutorAddress> Result((ExecutorAddress()));
-  if (auto Err = WrapperFunction<SPSExpected<SPSExecutorAddress>(
-          SPSExecutorAddress,
-          SPSString)>::call(&__orc_rt_elfnix_symbol_lookup_tag, Result,
-                            ExecutorAddress::fromPtr(DSOHandle), Sym))
+  Expected<ExecutorAddr> Result((ExecutorAddr()));
+  if (auto Err = WrapperFunction<SPSExpected<SPSExecutorAddr>(
+          SPSExecutorAddr, SPSString)>::call(&__orc_rt_elfnix_symbol_lookup_tag,
+                                             Result,
+                                             ExecutorAddr::fromPtr(DSOHandle),
+                                             Sym))
     return std::move(Err);
   return Result;
 }

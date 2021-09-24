@@ -89,7 +89,7 @@ void walkEHFrameSection(span<const char> EHFrameSection,
 }
 
 Error validatePointerSectionExtent(const char *SectionName,
-                                   const ExecutorAddressRange &SE) {
+                                   const ExecutorAddrRange &SE) {
   if (SE.size().getValue() % sizeof(uintptr_t)) {
     std::ostringstream ErrMsg;
     ErrMsg << std::hex << "Size of " << SectionName << " 0x"
@@ -101,7 +101,7 @@ Error validatePointerSectionExtent(const char *SectionName,
 }
 
 Error registerObjCSelectors(
-    const std::vector<ExecutorAddressRange> &ObjCSelRefsSections,
+    const std::vector<ExecutorAddrRange> &ObjCSelRefsSections,
     const MachOJITDylibInitializers &MOJDIs) {
 
   if (ORC_RT_UNLIKELY(!sel_registerName))
@@ -126,7 +126,7 @@ Error registerObjCSelectors(
 }
 
 Error registerObjCClasses(
-    const std::vector<ExecutorAddressRange> &ObjCClassListSections,
+    const std::vector<ExecutorAddrRange> &ObjCClassListSections,
     const MachOJITDylibInitializers &MOJDIs) {
 
   if (ObjCClassListSections.empty())
@@ -170,7 +170,7 @@ Error registerObjCClasses(
 }
 
 Error registerSwift5Protocols(
-    const std::vector<ExecutorAddressRange> &Swift5ProtocolSections,
+    const std::vector<ExecutorAddrRange> &Swift5ProtocolSections,
     const MachOJITDylibInitializers &MOJDIs) {
 
   if (ORC_RT_UNLIKELY(!Swift5ProtocolSections.empty() &&
@@ -186,7 +186,7 @@ Error registerSwift5Protocols(
 }
 
 Error registerSwift5ProtocolConformances(
-    const std::vector<ExecutorAddressRange> &Swift5ProtocolConformanceSections,
+    const std::vector<ExecutorAddrRange> &Swift5ProtocolConformanceSections,
     const MachOJITDylibInitializers &MOJDIs) {
 
   if (ORC_RT_UNLIKELY(!Swift5ProtocolConformanceSections.empty() &&
@@ -202,7 +202,7 @@ Error registerSwift5ProtocolConformances(
   return Error::success();
 }
 
-Error runModInits(const std::vector<ExecutorAddressRange> &ModInitsSections,
+Error runModInits(const std::vector<ExecutorAddrRange> &ModInitsSections,
                   const MachOJITDylibInitializers &MOJDIs) {
 
   for (const auto &ModInits : ModInitsSections) {
@@ -275,8 +275,8 @@ private:
 
   Error registerThreadDataSection(span<const char> ThreadDataSec);
 
-  Expected<ExecutorAddress> lookupSymbolInJITDylib(void *DSOHandle,
-                                                   string_view Symbol);
+  Expected<ExecutorAddr> lookupSymbolInJITDylib(void *DSOHandle,
+                                                string_view Symbol);
 
   Expected<MachOJITDylibInitializerSequence>
   getJITDylibInitializersByName(string_view Path);
@@ -286,7 +286,7 @@ private:
   static MachOPlatformRuntimeState *MOPS;
 
   using InitSectionHandler =
-      Error (*)(const std::vector<ExecutorAddressRange> &Sections,
+      Error (*)(const std::vector<ExecutorAddrRange> &Sections,
                 const MachOJITDylibInitializers &MOJDIs);
   const std::vector<std::pair<const char *, InitSectionHandler>> InitSections =
       {{"__DATA,__objc_selrefs", registerObjCSelectors},
@@ -479,14 +479,15 @@ Error MachOPlatformRuntimeState::registerThreadDataSection(
   return Error::success();
 }
 
-Expected<ExecutorAddress>
+Expected<ExecutorAddr>
 MachOPlatformRuntimeState::lookupSymbolInJITDylib(void *DSOHandle,
                                                   string_view Sym) {
-  Expected<ExecutorAddress> Result((ExecutorAddress()));
-  if (auto Err = WrapperFunction<SPSExpected<SPSExecutorAddress>(
-          SPSExecutorAddress,
-          SPSString)>::call(&__orc_rt_macho_symbol_lookup_tag, Result,
-                            ExecutorAddress::fromPtr(DSOHandle), Sym))
+  Expected<ExecutorAddr> Result((ExecutorAddr()));
+  if (auto Err = WrapperFunction<SPSExpected<SPSExecutorAddr>(
+          SPSExecutorAddr, SPSString)>::call(&__orc_rt_macho_symbol_lookup_tag,
+                                             Result,
+                                             ExecutorAddr::fromPtr(DSOHandle),
+                                             Sym))
     return std::move(Err);
   return Result;
 }

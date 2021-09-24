@@ -176,7 +176,7 @@ public:
 class SPSEmpty {};
 
 /// Represents an address in the executor.
-class SPSExecutorAddress {};
+class SPSExecutorAddr {};
 
 /// SPS tag type for tuples.
 ///
