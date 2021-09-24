@@ -226,10 +226,14 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     }
 
     // Infer the shape of the result tensor given the type of the source tensor
-    // and paddings.
-    static RankedTensorType inferResultType(RankedTensorType sourceType,
+    // and paddings. Known result dimensions that cannot necessarily be inferred
+    // from low/high padding sizes can be optionally specified. Those will be
+    // considered when computing the result type.
+    static RankedTensorType inferResultType(
+                                RankedTensorType sourceType,
                                 ArrayRef<int64_t> staticLow,
-                                ArrayRef<int64_t> staticHigh);
+                                ArrayRef<int64_t> staticHigh,
+                                ArrayRef<int64_t> resultShape = {});
 
     // Return a PadTensorOp that pads `source` to `type` size where the static
     // sizes are assumed to be greater than the dynamic sizes. The op performs

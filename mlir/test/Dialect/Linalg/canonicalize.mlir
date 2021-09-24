@@ -629,7 +629,8 @@ func @pad_tensor_same_static_shape(%arg0: tensor<5x6xf32>, %a: index)
 }
 
 // -----
-// CHECK-LABEL:   func @pad_tensor_after_cast_differnt_shape(
+
+// CHECK-LABEL:   func @pad_tensor_after_cast_different_shape(
 // CHECK-SAME:      %[[INPUT:.*]]: tensor<?x64x?x?xf32>) -> tensor<?x?x?x?xf32> {
 // CHECK:           %[[CST:.*]] = constant 0.000000e+00 : f32
 // CHECK:           %[[PADDED:.*]] = linalg.pad_tensor %[[INPUT]]
@@ -641,7 +642,7 @@ func @pad_tensor_same_static_shape(%arg0: tensor<5x6xf32>, %a: index)
 // CHECK-SAME:         tensor<?x64x?x?xf32> to tensor<?x?x?x?xf32>
 // CHECK:           return %[[DYNAMIC]] : tensor<?x?x?x?xf32>
 // CHECK:         }
-func @pad_tensor_after_cast_differnt_shape(%arg0: tensor<?x64x?x?xf32>)
+func @pad_tensor_after_cast_different_shape(%arg0: tensor<?x64x?x?xf32>)
     -> tensor<?x?x?x?xf32> {
   %cst = constant 0.000000e+00 : f32
   %dynamic = tensor.cast %arg0 : tensor<?x64x?x?xf32> to tensor<?x?x?x?xf32>
@@ -653,6 +654,7 @@ func @pad_tensor_after_cast_differnt_shape(%arg0: tensor<?x64x?x?xf32>)
 }
 
 // -----
+
 // CHECK-LABEL:   func @pad_tensor_after_cast_same_shape(
 // CHECK-SAME:      %[[INPUT:.*]]: tensor<?x64x?x?xf32>,
 // CHECK-SAME:      %[[PADDING:.*]]: index) -> tensor<?x?x?x?xf32> {
@@ -676,6 +678,24 @@ func @pad_tensor_after_cast_same_shape(%arg0: tensor<?x64x?x?xf32>, %padding : i
 }
 
 // -----
+
+// CHECK-LABEL: func @pad_tensor_of_cast(
+// CHECK-NOT:     tensor.cast
+// CHECK:         linalg.pad_tensor
+// CHECK:         tensor<8x?xf32> to tensor<8x32xf32>
+func @pad_tensor_of_cast(%t: tensor<8x?xf32>, %s: index) -> tensor<8x32xf32> {
+  %c0 = constant 0 : index
+  %cst = constant 0.000000e+00 : f32
+  %0 = tensor.cast %t : tensor<8x?xf32> to tensor<?x?xf32>
+  %1 = linalg.pad_tensor %0 low[%c0, %c0] high[%c0, %s]  {
+  ^bb0(%arg9: index, %arg10: index):  // no predecessors
+    linalg.yield %cst : f32
+  } : tensor<?x?xf32> to tensor<8x32xf32>
+  return %1 : tensor<8x32xf32>
+}
+
+// -----
+
 func @propogate_casts(%arg0 : tensor<?x?xf32>, %arg1 : f32, %arg2 : index,
     %arg3 : index) -> tensor<?x?xf32> {
   %c0 = constant 0 : index
