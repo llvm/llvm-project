@@ -114,12 +114,6 @@ Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
                                                   symbolName);
             return fir::NameUniquer::doVariable(modNames, optHost, symbolName);
           },
-          [&](const Fortran::semantics::NamelistDetails &) {
-            auto modNames = moduleNames(ultimateSymbol);
-            auto optHost = hostName(ultimateSymbol);
-            return fir::NameUniquer::doNamelistGroup(modNames, optHost,
-                                                     symbolName);
-          },
           [&](const Fortran::semantics::CommonBlockDetails &) {
             return fir::NameUniquer::doCommonBlock(symbolName);
           },
