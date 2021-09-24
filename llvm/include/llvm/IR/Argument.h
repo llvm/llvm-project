@@ -97,7 +97,7 @@ public:
   /// If this is a byval or inalloca argument, return its alignment.
   /// FIXME: Remove this function once transition to Align is over.
   /// Use getParamAlign() instead.
-  unsigned getParamAlignment() const;
+  uint64_t getParamAlignment() const;
 
   /// If this is a byval or inalloca argument, return its alignment.
   MaybeAlign getParamAlign() const;

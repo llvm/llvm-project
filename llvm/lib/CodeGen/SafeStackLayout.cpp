@@ -37,7 +37,7 @@ LLVM_DUMP_METHOD void StackLayout::print(raw_ostream &OS) {
   }
 }
 
-void StackLayout::addObject(const Value *V, unsigned Size, unsigned Alignment,
+void StackLayout::addObject(const Value *V, unsigned Size, uint64_t Alignment,
                             const StackLifetime::LiveRange &Range) {
   StackObjects.push_back({V, Size, Alignment, Range});
   ObjectAlignments[V] = Alignment;
@@ -45,7 +45,7 @@ void StackLayout::addObject(const Value *V, unsigned Size, unsigned Alignment,
 }
 
 static unsigned AdjustStackOffset(unsigned Offset, unsigned Size,
-                                  unsigned Alignment) {
+                                  uint64_t Alignment) {
   return alignTo(Offset + Size, Alignment) - Size;
 }
 
