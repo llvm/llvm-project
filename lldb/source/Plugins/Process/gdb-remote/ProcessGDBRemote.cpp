@@ -1999,6 +1999,7 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
   // Iterate through all of the thread dictionary key/value pairs from the
   // structured data dictionary
 
+  // FIXME: we're silently ignoring invalid data here
   thread_dict->ForEach([this, &tid, &expedited_register_map, &thread_name,
                         &signo, &reason, &description, &exc_type, &exc_data,
                         &thread_dispatch_qaddr, &queue_vars_valid,
@@ -2063,9 +2064,8 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
         registers_dict->ForEach(
             [&expedited_register_map](ConstString key,
                                       StructuredData::Object *object) -> bool {
-              const uint32_t reg =
-                  StringConvert::ToUInt32(key.GetCString(), UINT32_MAX, 10);
-              if (reg != UINT32_MAX)
+              uint32_t reg;
+              if (llvm::to_integer(key.AsCString(), reg))
                 expedited_register_map[reg] =
                     std::string(object->GetStringValue());
               return true; // Keep iterating through all array items
@@ -4343,6 +4343,7 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
         bool encoding_set = false;
         bool format_set = false;
 
+        // FIXME: we're silently ignoring invalid data here
         reg_node.ForEachAttribute([&target_info, &gdb_group, &gdb_type,
                                    &encoding_set, &format_set, &reg_info](
                                       const llvm::StringRef &name,
@@ -4350,21 +4351,16 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
           if (name == "name") {
             reg_info.name.SetString(value);
           } else if (name == "bitsize") {
-            reg_info.byte_size =
-                StringConvert::ToUInt32(value.data(), 0, 0) / CHAR_BIT;
+            if (llvm::to_integer(value, reg_info.byte_size))
+              reg_info.byte_size /= CHAR_BIT;
           } else if (name == "type") {
             gdb_type = value.str();
           } else if (name == "group") {
             gdb_group = value.str();
           } else if (name == "regnum") {
-            const uint32_t regnum =
-                StringConvert::ToUInt32(value.data(), LLDB_INVALID_REGNUM, 0);
-            if (regnum != LLDB_INVALID_REGNUM) {
-              reg_info.regnum_remote = regnum;
-            }
+            llvm::to_integer(value, reg_info.regnum_remote);
           } else if (name == "offset") {
-            reg_info.byte_offset =
-                StringConvert::ToUInt32(value.data(), LLDB_INVALID_INDEX32, 0);
+            llvm::to_integer(value, reg_info.byte_offset);
           } else if (name == "altname") {
             reg_info.alt_name.SetString(value);
           } else if (name == "encoding") {
@@ -4388,18 +4384,16 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
                       .Case("vector-uint128", eFormatVectorOfUInt128)
                       .Default(eFormatInvalid);
           } else if (name == "group_id") {
-            const uint32_t set_id =
-                StringConvert::ToUInt32(value.data(), UINT32_MAX, 0);
+            uint32_t set_id = UINT32_MAX;
+            llvm::to_integer(value, set_id);
             RegisterSetMap::const_iterator pos =
                 target_info.reg_set_map.find(set_id);
             if (pos != target_info.reg_set_map.end())
               reg_info.set_name = pos->second.name;
           } else if (name == "gcc_regnum" || name == "ehframe_regnum") {
-            reg_info.regnum_ehframe =
-                StringConvert::ToUInt32(value.data(), LLDB_INVALID_REGNUM, 0);
+            llvm::to_integer(value, reg_info.regnum_ehframe);
           } else if (name == "dwarf_regnum") {
-            reg_info.regnum_dwarf =
-                StringConvert::ToUInt32(value.data(), LLDB_INVALID_REGNUM, 0);
+            llvm::to_integer(value, reg_info.regnum_dwarf);
           } else if (name == "generic") {
             reg_info.regnum_generic = Args::StringToGenericRegister(value);
           } else if (name == "value_regnums") {
@@ -4510,9 +4504,9 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(
                 node.ForEachAttribute(
                     [&set_id, &set_info](const llvm::StringRef &name,
                                          const llvm::StringRef &value) -> bool {
+                      // FIXME: we're silently ignoring invalid data here
                       if (name == "id")
-                        set_id = StringConvert::ToUInt32(value.data(),
-                                                         UINT32_MAX, 0);
+                        llvm::to_integer(value, set_id);
                       if (name == "name")
                         set_info.name = ConstString(value);
                       return true; // Keep iterating through all attributes
@@ -4708,38 +4702,39 @@ llvm::Expected<LoadedModuleInfoList> ProcessGDBRemote::GetLoadedModuleList() {
 
     // main link map structure
     llvm::StringRef main_lm = root_element.GetAttributeValue("main-lm");
-    if (!main_lm.empty()) {
-      list.m_link_map =
-          StringConvert::ToUInt64(main_lm.data(), LLDB_INVALID_ADDRESS, 0);
-    }
+    // FIXME: we're silently ignoring invalid data here
+    if (!main_lm.empty())
+      llvm::to_integer(main_lm, list.m_link_map);
 
     root_element.ForEachChildElementWithName(
         "library", [log, &list](const XMLNode &library) -> bool {
 
           LoadedModuleInfoList::LoadedModuleInfo module;
 
+          // FIXME: we're silently ignoring invalid data here
           library.ForEachAttribute(
               [&module](const llvm::StringRef &name,
                         const llvm::StringRef &value) -> bool {
 
+                uint64_t uint_value = LLDB_INVALID_ADDRESS;
                 if (name == "name")
                   module.set_name(value.str());
                 else if (name == "lm") {
                   // the address of the link_map struct.
-                  module.set_link_map(StringConvert::ToUInt64(
-                      value.data(), LLDB_INVALID_ADDRESS, 0));
+                  llvm::to_integer(value, uint_value);
+                  module.set_link_map(uint_value);
                 } else if (name == "l_addr") {
                   // the displacement as read from the field 'l_addr' of the
                   // link_map struct.
-                  module.set_base(StringConvert::ToUInt64(
-                      value.data(), LLDB_INVALID_ADDRESS, 0));
+                  llvm::to_integer(value, uint_value);
+                  module.set_base(uint_value);
                   // base address is always a displacement, not an absolute
                   // value.
                   module.set_base_is_offset(true);
                 } else if (name == "l_ld") {
                   // the memory address of the libraries PT_DYNAMIC section.
-                  module.set_dynamic(StringConvert::ToUInt64(
-                      value.data(), LLDB_INVALID_ADDRESS, 0));
+                  llvm::to_integer(value, uint_value);
+                  module.set_dynamic(uint_value);
                 }
 
                 return true; // Keep iterating over all properties of "library"
@@ -4794,6 +4789,7 @@ llvm::Expected<LoadedModuleInfoList> ProcessGDBRemote::GetLoadedModuleList() {
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "Error finding library-list xml element");
 
+    // FIXME: we're silently ignoring invalid data here
     root_element.ForEachChildElementWithName(
         "library", [log, &list](const XMLNode &library) -> bool {
           LoadedModuleInfoList::LoadedModuleInfo module;
@@ -4807,8 +4803,9 @@ llvm::Expected<LoadedModuleInfoList> ProcessGDBRemote::GetLoadedModuleList() {
           const XMLNode &section =
               library.FindFirstChildElementWithName("section");
           llvm::StringRef address = section.GetAttributeValue("address");
-          module.set_base(
-              StringConvert::ToUInt64(address.data(), LLDB_INVALID_ADDRESS, 0));
+          uint64_t address_value = LLDB_INVALID_ADDRESS;
+          llvm::to_integer(address, address_value);
+          module.set_base(address_value);
           // These addresses are absolute values.
           module.set_base_is_offset(false);
 

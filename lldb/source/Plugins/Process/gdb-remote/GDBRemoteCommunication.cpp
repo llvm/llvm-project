@@ -22,7 +22,6 @@
 #include "lldb/Host/Pipe.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Host/Socket.h"
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
@@ -1173,7 +1172,9 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
             port_cstr, num_bytes, std::chrono::seconds{10}, num_bytes);
         if (error.Success() && (port != nullptr)) {
           assert(num_bytes > 0 && port_cstr[num_bytes - 1] == '\0');
-          uint16_t child_port = StringConvert::ToUInt32(port_cstr, 0);
+          uint16_t child_port = 0;
+          // FIXME: improve error handling
+          llvm::to_integer(port_cstr, child_port);
           if (*port == 0 || *port == child_port) {
             *port = child_port;
             LLDB_LOGF(log,

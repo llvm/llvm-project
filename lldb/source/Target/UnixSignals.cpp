@@ -12,7 +12,6 @@
 #include "Plugins/Process/Utility/MipsLinuxSignals.h"
 #include "Plugins/Process/Utility/NetBSDSignals.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Utility/ArchSpec.h"
 
 using namespace lldb_private;
@@ -156,9 +155,8 @@ int32_t UnixSignals::GetSignalNumberFromName(const char *name) const {
       return pos->first;
   }
 
-  const int32_t signo =
-      StringConvert::ToSInt32(name, LLDB_INVALID_SIGNAL_NUMBER, 0);
-  if (signo != LLDB_INVALID_SIGNAL_NUMBER)
+  int32_t signo;
+  if (llvm::to_integer(name, signo))
     return signo;
   return LLDB_INVALID_SIGNAL_NUMBER;
 }

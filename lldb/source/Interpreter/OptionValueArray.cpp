@@ -8,7 +8,6 @@
 
 #include "lldb/Interpreter/OptionValueArray.h"
 
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Stream.h"
 
@@ -167,13 +166,12 @@ Status OptionValueArray::SetArgs(const Args &args, VarSetOperationType op) {
   case eVarSetOperationInsertBefore:
   case eVarSetOperationInsertAfter:
     if (argc > 1) {
-      uint32_t idx =
-          StringConvert::ToUInt32(args.GetArgumentAtIndex(0), UINT32_MAX);
+      uint32_t idx;
       const uint32_t count = GetSize();
-      if (idx > count) {
+      if (!llvm::to_integer(args.GetArgumentAtIndex(0), idx) || idx > count) {
         error.SetErrorStringWithFormat(
-            "invalid insert array index %u, index must be 0 through %u", idx,
-            count);
+            "invalid insert array index %s, index must be 0 through %u",
+            args.GetArgumentAtIndex(0), count);
       } else {
         if (op == eVarSetOperationInsertAfter)
           ++idx;
@@ -207,9 +205,8 @@ Status OptionValueArray::SetArgs(const Args &args, VarSetOperationType op) {
       bool all_indexes_valid = true;
       size_t i;
       for (i = 0; i < argc; ++i) {
-        const size_t idx =
-            StringConvert::ToSInt32(args.GetArgumentAtIndex(i), INT32_MAX);
-        if (idx >= size) {
+        size_t idx;
+        if (!llvm::to_integer(args.GetArgumentAtIndex(i), idx) || idx >= size) {
           all_indexes_valid = false;
           break;
         } else
@@ -249,13 +246,12 @@ Status OptionValueArray::SetArgs(const Args &args, VarSetOperationType op) {
 
   case eVarSetOperationReplace:
     if (argc > 1) {
-      uint32_t idx =
-          StringConvert::ToUInt32(args.GetArgumentAtIndex(0), UINT32_MAX);
+      uint32_t idx;
       const uint32_t count = GetSize();
-      if (idx > count) {
+      if (!llvm::to_integer(args.GetArgumentAtIndex(0), idx) || idx > count) {
         error.SetErrorStringWithFormat(
-            "invalid replace array index %u, index must be 0 through %u", idx,
-            count);
+            "invalid replace array index %s, index must be 0 through %u",
+            args.GetArgumentAtIndex(0), count);
       } else {
         for (size_t i = 1; i < argc; ++i, ++idx) {
           lldb::OptionValueSP value_sp(CreateValueFromCStringForTypeMask(
