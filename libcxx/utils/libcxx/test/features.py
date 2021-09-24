@@ -10,6 +10,7 @@ from libcxx.test.dsl import *
 import re
 import shutil
 import sys
+import subprocess
 
 _isClang      = lambda cfg: '__clang__' in compilerMacros(cfg) and '__apple_build_version__' not in compilerMacros(cfg)
 _isAppleClang = lambda cfg: '__apple_build_version__' in compilerMacros(cfg)
@@ -159,10 +160,37 @@ DEFAULT_FEATURES += [
   Feature(name='buildhost=windows', when=lambda cfg: platform.system().lower().startswith('windows'))
 ]
 
-# Detect whether GDB is on the system, and if so add a substitution to access it.
+# Detect whether GDB is on the system, has Python scripting and supports
+# adding breakpoint commands. If so add a substitution to access it.
+def check_gdb(cfg):
+  gdb_path = shutil.which('gdb')
+  if gdb_path is None:
+    return False
+
+  # Check that we can set breakpoint commands, which was added in 8.3.
+  # Using the quit command here means that gdb itself exits, not just
+  # the "python <...>" command.
+  test_src = """\
+try:
+  gdb.Breakpoint(\"main\").commands=\"foo\"
+except AttributeError:
+  gdb.execute(\"quit 1\")
+gdb.execute(\"quit\")"""
+
+  try:
+    stdout = subprocess.check_output(
+              [gdb_path, "-ex", "python " + test_src, "--batch"],
+              stderr=subprocess.DEVNULL, universal_newlines=True)
+  except subprocess.CalledProcessError:
+    # We can't set breakpoint commands
+    return False
+
+  # Check we actually ran the Python
+  return not "Python scripting is not supported" in stdout
+
 DEFAULT_FEATURES += [
-  Feature(name='host-has-gdb',
-    when=lambda cfg: shutil.which('gdb') is not None,
+  Feature(name='host-has-gdb-with-python',
+    when=check_gdb,
     actions=[AddSubstitution('%{gdb}', lambda cfg: shutil.which('gdb'))]
   )
 ]

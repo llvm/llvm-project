@@ -3918,7 +3918,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::riscv_vslide1down_mask: {
     // We need to special case these when the scalar is larger than XLen.
     unsigned NumOps = Op.getNumOperands();
-    bool IsMasked = NumOps == 6;
+    bool IsMasked = NumOps == 7;
     unsigned OpOffset = IsMasked ? 1 : 0;
     SDValue Scalar = Op.getOperand(2 + OpOffset);
     if (Scalar.getValueType().bitsLE(XLenVT))
@@ -3943,7 +3943,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                    DAG.getConstant(1, DL, XLenVT));
 
     // Double the VL since we halved SEW.
-    SDValue VL = Op.getOperand(NumOps - 1);
+    SDValue VL = Op.getOperand(NumOps - (1 + OpOffset));
     SDValue I32VL =
         DAG.getNode(ISD::SHL, DL, XLenVT, VL, DAG.getConstant(1, DL, XLenVT));
 
@@ -3972,7 +3972,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return Vec;
 
     // Apply mask after the operation.
-    SDValue Mask = Op.getOperand(NumOps - 2);
+    SDValue Mask = Op.getOperand(NumOps - 3);
     SDValue MaskedOff = Op.getOperand(1);
     return DAG.getNode(RISCVISD::VSELECT_VL, DL, VT, Mask, Vec, MaskedOff, VL);
   }
@@ -4022,6 +4022,10 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     if (!IsUnmasked)
       Ops.push_back(Mask);
     Ops.push_back(VL);
+    if (!IsUnmasked) {
+      SDValue Policy = DAG.getTargetConstant(RISCVII::TAIL_AGNOSTIC, DL, XLenVT);
+      Ops.push_back(Policy);
+    }
 
     SDVTList VTs = DAG.getVTList({ContainerVT, MVT::Other});
     SDValue Result =
@@ -4857,7 +4861,8 @@ SDValue RISCVTargetLowering::lowerMaskedLoad(SDValue Op,
 
   SDVTList VTs = DAG.getVTList({ContainerVT, MVT::Other});
   SDValue IntID = DAG.getTargetConstant(Intrinsic::riscv_vle_mask, DL, XLenVT);
-  SDValue Ops[] = {Chain, IntID, PassThru, BasePtr, Mask, VL};
+  SDValue Policy = DAG.getTargetConstant(RISCVII::TAIL_AGNOSTIC, DL, XLenVT);
+  SDValue Ops[] = {Chain, IntID, PassThru, BasePtr, Mask, VL, Policy};
   SDValue Result =
       DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops, MemVT, MMO);
   Chain = Result.getValue(1);
@@ -5203,6 +5208,8 @@ SDValue RISCVTargetLowering::lowerMaskedGather(SDValue Op,
   if (!IsUnmasked)
     Ops.push_back(Mask);
   Ops.push_back(VL);
+  if (!IsUnmasked)
+    Ops.push_back(DAG.getTargetConstant(RISCVII::TAIL_AGNOSTIC, DL, XLenVT));
 
   SDVTList VTs = DAG.getVTList({ContainerVT, MVT::Other});
   SDValue Result =

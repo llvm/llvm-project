@@ -696,6 +696,39 @@ func @pad_tensor_of_cast(%t: tensor<8x?xf32>, %s: index) -> tensor<8x32xf32> {
 
 // -----
 
+// CHECK-LABEL: @cast_of_pad_more_static
+func @cast_of_pad_more_static(%arg0: tensor<?x?xf32>, %padding: index) -> tensor<32x32xf32> {
+  %cst = constant 0.000000e+00 : f32
+  // CHECK: %[[PAD:.*]] = linalg.pad_tensor
+  // CHECK: tensor<?x?xf32> to tensor<32x32xf32>
+  %padded = linalg.pad_tensor %arg0 low[%padding, %padding] high[0, 0] {
+  ^bb0(%arg1: index, %arg2: index):
+    linalg.yield %cst : f32
+  } : tensor<?x?xf32> to tensor<?x?xf32>
+  // CHECK-NOT: tensor.cast
+  %casted = tensor.cast %padded : tensor<?x?xf32> to tensor<32x32xf32>
+  // CHECK: return %[[PAD]]
+  return %casted : tensor<32x32xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @cast_of_pad_less_static
+func @cast_of_pad_less_static(%arg0: tensor<32x?x?xf32>, %padding: index) -> tensor<?x32x32xf32> {
+  %cst = constant 0.000000e+00 : f32
+  // CHECK: linalg.pad_tensor
+  %padded = linalg.pad_tensor %arg0 low[%padding, %padding, %padding] high[0, 0, 0] {
+  ^bb0(%arg1: index, %arg2: index, %arg3: index):
+    linalg.yield %cst : f32
+  } : tensor<32x?x?xf32> to tensor<32x?x?xf32>
+  // CHECK: %[[CAST:.*]] = tensor.cast
+  %casted = tensor.cast %padded : tensor<32x?x?xf32> to tensor<?x32x32xf32>
+  // CHECK: return %[[CAST]]
+  return %casted : tensor<?x32x32xf32>
+}
+
+// -----
+
 func @propogate_casts(%arg0 : tensor<?x?xf32>, %arg1 : f32, %arg2 : index,
     %arg3 : index) -> tensor<?x?xf32> {
   %c0 = constant 0 : index

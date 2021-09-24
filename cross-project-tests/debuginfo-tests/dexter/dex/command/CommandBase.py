@@ -10,7 +10,10 @@ which will then be executed by DExTer during debugging.
 """
 
 import abc
+from collections import namedtuple
 from typing import List
+
+StepExpectInfo = namedtuple('StepExpectInfo', 'expression, path, frame_idx, line_range')
 
 class CommandBase(object, metaclass=abc.ABCMeta):
     def __init__(self):

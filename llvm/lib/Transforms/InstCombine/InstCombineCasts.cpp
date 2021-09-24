@@ -988,7 +988,8 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
   }
 
   if (match(Src, m_VScale(DL))) {
-    if (Trunc.getFunction()->hasFnAttribute(Attribute::VScaleRange)) {
+    if (Trunc.getFunction() &&
+        Trunc.getFunction()->hasFnAttribute(Attribute::VScaleRange)) {
       unsigned MaxVScale = Trunc.getFunction()
                                ->getFnAttribute(Attribute::VScaleRange)
                                .getVScaleRangeArgs()
@@ -1359,7 +1360,8 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &CI) {
   }
 
   if (match(Src, m_VScale(DL))) {
-    if (CI.getFunction()->hasFnAttribute(Attribute::VScaleRange)) {
+    if (CI.getFunction() &&
+        CI.getFunction()->hasFnAttribute(Attribute::VScaleRange)) {
       unsigned MaxVScale = CI.getFunction()
                                ->getFnAttribute(Attribute::VScaleRange)
                                .getVScaleRangeArgs()
@@ -1629,7 +1631,8 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &CI) {
   }
 
   if (match(Src, m_VScale(DL))) {
-    if (CI.getFunction()->hasFnAttribute(Attribute::VScaleRange)) {
+    if (CI.getFunction() &&
+        CI.getFunction()->hasFnAttribute(Attribute::VScaleRange)) {
       unsigned MaxVScale = CI.getFunction()
                                ->getFnAttribute(Attribute::VScaleRange)
                                .getVScaleRangeArgs()

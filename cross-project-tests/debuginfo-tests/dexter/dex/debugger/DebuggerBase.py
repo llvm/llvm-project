@@ -13,11 +13,26 @@ import traceback
 import unittest
 
 from types import SimpleNamespace
+from dex.command.CommandBase import StepExpectInfo
 from dex.dextIR import DebuggerIR, FrameIR, LocIR, StepIR, ValueIR
 from dex.utils.Exceptions import DebuggerException
 from dex.utils.Exceptions import NotYetLoadedDebuggerException
 from dex.utils.ReturnCode import ReturnCode
 
+def watch_is_active(watch_info: StepExpectInfo, path, frame_idx, line_no):
+    _, watch_path, watch_frame_idx, watch_line_range = watch_info
+    # If this watch should only be active for a specific file...
+    if watch_path and os.path.isfile(watch_path):
+        # If the current path does not match the expected file, this watch is
+        # not active.
+        if not (path and os.path.isfile(path) and
+                os.path.samefile(path, watch_path)):
+            return False
+    if watch_frame_idx != frame_idx:
+        return False
+    if watch_line_range and line_no not in list(watch_line_range):
+        return False
+    return True
 
 class DebuggerBase(object, metaclass=abc.ABCMeta):
     def __init__(self, context):

@@ -338,7 +338,7 @@ them.
 
  Keep symbols of type `STT_FILE`, even if they would otherwise be stripped.
 
-.. option:: --keep-global-symbol <symbol>
+.. option:: --keep-global-symbol <symbol>, -G
 
  Make all symbols local in the output, except for symbols with the name
  ``<symbol>``. Can be specified multiple times to ignore multiple symbols.

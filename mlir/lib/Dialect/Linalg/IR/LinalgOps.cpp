@@ -1482,11 +1482,41 @@ struct FoldSourceTensorCast : public OpRewritePattern<PadTensorOp> {
     return success();
   }
 };
+
+// Fold CastOp using the result of PadTensorOp back into the latter if it adds
+// static information.
+struct FoldTargetTensorCast : public OpRewritePattern<PadTensorOp> {
+  using OpRewritePattern<PadTensorOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(PadTensorOp padTensorOp,
+                                PatternRewriter &rewriter) const override {
+    if (!padTensorOp.result().hasOneUse())
+      return failure();
+    auto tensorCastOp =
+        dyn_cast<tensor::CastOp>(*padTensorOp->getUsers().begin());
+    if (!tensorCastOp)
+      return failure();
+    if (!tensor::preservesStaticInformation(padTensorOp.result().getType(),
+                                            tensorCastOp.dest().getType()))
+      return failure();
+
+    auto replacementOp = rewriter.create<PadTensorOp>(
+        padTensorOp.getLoc(), tensorCastOp.dest().getType(),
+        padTensorOp.source(), padTensorOp.low(), padTensorOp.high(),
+        padTensorOp.static_low(), padTensorOp.static_high());
+    replacementOp.region().takeBody(padTensorOp.region());
+
+    rewriter.replaceOp(padTensorOp, replacementOp.result());
+    rewriter.replaceOp(tensorCastOp, replacementOp.result());
+    return success();
+  }
+};
 } // namespace
 
 void PadTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
   results.add<FoldStaticZeroPadding, FoldSourceTensorCast>(context);
+  results.add<FoldTargetTensorCast>(context);
 }
 
 /// Return the padding value of the PadTensorOp if it constant. In this context,
