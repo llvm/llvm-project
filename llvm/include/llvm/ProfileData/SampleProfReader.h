@@ -787,7 +787,7 @@ private:
   virtual std::error_code
   readCustomSection(const SecHdrTableEntry &Entry) override {
     // Update the data reader pointer to the end of the section.
-    Data += Entry.Size;
+    Data = End;
     return sampleprof_error::success;
   };
 
