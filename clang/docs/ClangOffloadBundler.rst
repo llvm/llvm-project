@@ -273,6 +273,8 @@ file will contain device binaries for a host and one or more targets. The
 output device specific archive is in a format compatible with GNU ar utility
 and contains a collection of device binaries for a specific target.
 
+.. code::
+
   Heterogeneous Device Archive, HDA = {F1.X, F2.X, ..., FN.Y}
   where, Fi = Bundle{Host-DeviceBinary, T1-DeviceBinary, T2-DeviceBinary, ...,
                      Tm-DeviceBinary},
