@@ -162,12 +162,6 @@ TEST(InternalNamesTest, doProgramEntry) {
   ASSERT_EQ(actual.str(), expectedMangledName);
 }
 
-TEST(InternalNamesTest, doNamelistGroup) {
-  llvm::StringRef actual = NameUniquer::doNamelistGroup({"mod1"}, {}, {"nlg"});
-  std::string expectedMangledName = "_QMmod1Gnlg";
-  ASSERT_EQ(actual, expectedMangledName);
-}
-
 TEST(InternalNamesTest, deconstructTest) {
   std::pair actual = NameUniquer::deconstruct("_QBhello");
   auto expectedNameKind = NameUniquer::NameKind::COMMON;
@@ -213,11 +207,6 @@ TEST(InternalNamesTest, complexdeconstructTest) {
   actual = NameUniquer::deconstruct("_QDTt");
   expectedNameKind = NameKind::DISPATCH_TABLE;
   expectedComponents = {{}, {}, "t", {}};
-  validateDeconstructedName(actual, expectedNameKind, expectedComponents);
-
-  actual = NameUniquer::deconstruct("_QFmstartGmpitop");
-  expectedNameKind = NameKind::NAMELIST_GROUP;
-  expectedComponents = {{}, {"mstart"}, "mpitop", {}};
   validateDeconstructedName(actual, expectedNameKind, expectedComponents);
 }
 
