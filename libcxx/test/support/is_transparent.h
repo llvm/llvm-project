@@ -89,6 +89,9 @@ template <typename T>
 struct StoredType;
 
 template <typename T>
+struct StoredType2;
+
+template <typename T>
 struct SearchedType;
 
 struct hash_impl {
@@ -99,6 +102,11 @@ struct hash_impl {
 
   template <typename T>
   constexpr std::size_t operator()(StoredType<T> const& t) const {
+    return static_cast<std::size_t>(t.get_value());
+  }
+
+  template <typename T>
+  constexpr std::size_t operator()(StoredType2<T> const& t) const {
     return static_cast<std::size_t>(t.get_value());
   }
 };
@@ -161,6 +169,67 @@ struct StoredType {
 private:
   T value_;
 };
+
+enum class StoredCtorType {
+  ST_None = 0,
+  ST_Move = 2,
+  ST_LSearched = 4,
+  ST_RSearched = 6
+};
+
+template <typename T>
+struct StoredType2 {
+  StoredType2(int value) : construction(StoredCtorType::ST_None), value_(value)
+  {
+    ++n_constructions;
+  }
+  StoredType2(const StoredType2&) = delete;
+  StoredType2(StoredType2&& other) : construction(StoredCtorType::ST_Move),
+                                     value_(std::move(other.value_))
+  {
+    ++n_constructions;
+  }
+
+  StoredType2(const SearchedType<T>& other) : construction(StoredCtorType::ST_LSearched),
+                                            value_(other.get_value())
+  {
+    ++n_constructions;
+  }
+
+  StoredType2(SearchedType<T>&& other) : construction(StoredCtorType::ST_RSearched),
+                                      value_(std::move(other.get_value()))
+  {
+    ++n_constructions;
+  }
+
+  friend bool operator==(StoredType2 const& lhs, StoredType2 const& rhs) {
+    return lhs.value_ == rhs.value_;
+  }
+
+  // If we're being passed a SearchedType<T> object, avoid the conversion
+  // to T. This allows testing that the transparent operations are correctly
+  // forwarding the SearchedType all the way to this comparison by checking
+  // that we didn't have a conversion when we search for a SearchedType<T>
+  // in a container full of StoredType2<T>.
+  friend bool operator==(StoredType2 const& lhs, SearchedType<T> const& rhs) {
+    return lhs.value_ == rhs.get_value();
+  }
+  friend bool operator==(SearchedType<T> const& lhs, StoredType2<T> const& rhs) {
+    return lhs.get_value() == rhs.value_;
+  }
+
+  T get_value() const { return value_; }
+
+  static void reset() { n_constructions = 0; }
+
+  StoredCtorType construction;
+  static int n_constructions;
+private:
+  T value_;
+};
+
+template <typename T>
+int StoredType2<T>::n_constructions = 0;
 
 #endif // TEST_STD_VER > 17
 
