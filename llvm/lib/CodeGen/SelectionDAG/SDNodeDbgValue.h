@@ -127,6 +127,65 @@ private:
   }
 };
 
+class SDDbgDefKill {
+  DILifetime *LifeTime;
+  unsigned Order;
+  bool Emitted = false;
+  DebugLoc DL;
+
+public:
+  typedef enum { DK_KIND_DEF = 0, DK_KIND_KILL } DKKindT;
+
+protected:
+  SDDbgDefKill(DILifetime *LT, unsigned O, DebugLoc DLoc, DKKindT K)
+      : LifeTime(LT), Order(O), DL(DLoc), Kind(K) {}
+  DKKindT Kind;
+
+public:
+  DKKindT getKind() const { return Kind; }
+  unsigned getOrder() const { return Order; }
+  DILifetime *getLifetime() { return LifeTime; }
+  DebugLoc getDebugLoc() { return DL; }
+  void setEmitted() { Emitted = true; }
+  bool isEmitted() { return Emitted; }
+};
+
+class SDDbgDef : public SDDbgDefKill {
+  const Value *Referrer;
+  // IROrder of the referrer Value
+  // it is used to further insert the DBG_DEF
+  // in the proper position
+  unsigned ReferrerOrder;
+  int FrameIndex = 0;
+  Register Reg;
+  const SDValue *SDVal;
+
+public:
+  SDDbgDef(DILifetime *LT, unsigned O, const Value *Ref, DebugLoc DLoc)
+      : SDDbgDefKill(LT, O, DLoc, DK_KIND_DEF), Referrer(Ref) {}
+  const Value *getReferrer() { return Referrer; }
+  unsigned getReferrerOrder() { return ReferrerOrder; }
+  void setReferrerOrder(unsigned O) { ReferrerOrder = O; }
+  void SaveFI(int FI) { FrameIndex = FI; }
+  void SaveReg(Register R) { Reg = R; }
+  int getFI() { return FrameIndex; }
+  Register getReg() { return Reg; }
+  void setSDValue(const SDValue *SDV) { SDVal = SDV; }
+  const SDValue *getSDValue() { return SDVal; }
+  static bool classof(const SDDbgDefKill *DK) {
+    return DK->getKind() == DK_KIND_DEF;
+  }
+};
+
+class SDDbgKill : public SDDbgDefKill {
+public:
+  SDDbgKill(DILifetime *LT, unsigned O, DebugLoc DLoc)
+      : SDDbgDefKill(LT, O, DLoc, DK_KIND_KILL) {}
+  static bool classof(const SDDbgDefKill *DK) {
+    return DK->getKind() == DK_KIND_KILL;
+  }
+};
+
 /// Holds the information from a dbg_value node through SDISel.
 /// We do not use SDValue here to avoid including its header.
 class SDDbgValue {

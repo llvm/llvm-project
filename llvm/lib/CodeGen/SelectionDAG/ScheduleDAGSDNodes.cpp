@@ -1049,6 +1049,62 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
 
       LastOrder = Order;
     }
+
+    std::stable_sort(DAG->DbgDefKillBegin(), DAG->DbgDefKillEnd(),
+                     [](const SDDbgDefKill *LHS, const SDDbgDefKill *RHS) {
+                       return LHS->getOrder() < RHS->getOrder();
+                     });
+
+    SDDbgInfo::DbgDefKillIterator DDKI = DAG->DbgDefKillBegin();
+    SDDbgInfo::DbgDefKillIterator DDKE = DAG->DbgDefKillEnd();
+    // Now emit the rest according to source order.
+    LastOrder = 0;
+    for (const auto &InstrOrder : Orders) {
+      unsigned Order = InstrOrder.first;
+      MachineInstr *MI = InstrOrder.second;
+      if (!MI)
+        continue;
+
+      // Insert all SDDbgDefKill's whose order(s) are before "Order".
+      for (; DDKI != DDKE && (*DDKI)->getOrder() >= LastOrder &&
+             (*DDKI)->getOrder() < Order;
+           ++DDKI) {
+
+        MachineInstr *DbgMI = Emitter.EmitDbgDefKill(*DDKI, VRBaseMap);
+        if (DbgMI) {
+          if (!LastOrder) {
+
+            // Insert to start of the BB (after PHIs).
+            BB->insert(BBBegin, DbgMI);
+          } else {
+            // Insert at the instruction, which may be in a different
+            // block, if the block was split by a custom inserter.
+            MachineBasicBlock::iterator Pos = MI;
+            MI->getParent()->insert(Pos, DbgMI);
+          }
+        }
+      }
+      if (DDKI == DDKE)
+        break;
+
+      LastOrder = Order;
+    }
+
+    // Add trailing DbgDefKill's before the terminator. FIXME: May want to add
+    // some of them before one or more conditional branches?
+    SmallVector<MachineInstr *, 8> DbgDKMIs;
+    for (; DDKI != DDKE; ++DDKI) {
+      if ((*DDKI)->isEmitted())
+        continue;
+      assert((*DDKI)->getOrder() >= LastOrder &&
+             "emitting DBG_VALUE out of order");
+      if (MachineInstr *DbgMI = Emitter.EmitDbgDefKill(*DDKI, VRBaseMap))
+        DbgDKMIs.push_back(DbgMI);
+    }
+
+    InsertBB = Emitter.getBlock();
+    Pos = InsertBB->getFirstTerminator();
+    InsertBB->insert(Pos, DbgDKMIs.begin(), DbgDKMIs.end());
   }
 
   InsertPos = Emitter.getInsertPos();

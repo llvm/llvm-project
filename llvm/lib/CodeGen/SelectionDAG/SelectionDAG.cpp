@@ -9419,6 +9419,17 @@ SDDbgLabel *SelectionDAG::getDbgLabel(DILabel *Label,
   return new (DbgInfo->getAlloc()) SDDbgLabel(Label, DL, O);
 }
 
+/// Creates a SDDbgDef node.
+SDDbgDef *SelectionDAG::getDbgDef(DILifetime *LT, unsigned O, const Value *Ref,
+                                  DebugLoc DLoc) {
+  return new (DbgInfo->getAlloc()) SDDbgDef(LT, O, Ref, DLoc);
+}
+
+/// Creates a SDDbgKill node.
+SDDbgKill *SelectionDAG::getDbgKill(DILifetime *LT, unsigned O, DebugLoc DLoc) {
+  return new (DbgInfo->getAlloc()) SDDbgKill(LT, O, DLoc);
+}
+
 namespace {
 
 /// RAUWUpdateListener - Helper for ReplaceAllUsesWith - When the node
@@ -9900,6 +9911,8 @@ void SelectionDAG::AddDbgValue(SDDbgValue *DB, bool isParameter) {
 }
 
 void SelectionDAG::AddDbgLabel(SDDbgLabel *DB) { DbgInfo->add(DB); }
+
+void SelectionDAG::AddDbgDefKill(SDDbgDefKill *DB) { DbgInfo->add(DB); }
 
 SDValue SelectionDAG::makeEquivalentMemoryOrdering(SDValue OldChain,
                                                    SDValue NewMemOpChain) {

@@ -1,6 +1,6 @@
-; RUN: llc -O0 -global-isel -stop-after=irtranslator < %s | FileCheck --check-prefixes=COMMON,AFTER-ISEL %s
-; RUN: llc -O0 -global-isel -stop-after=prologepilog < %s | FileCheck --check-prefixes=COMMON,AFTER-PEI %s
-; RUN: llc -O0 -global-isel -stop-after=livedebugvalues < %s | FileCheck --check-prefixes=COMMON,AFTER-LDV %s
+; RUN: llc -O0 -stop-after=finalize-isel < %s | FileCheck --check-prefixes=COMMON,AFTER-ISEL %s
+; RUN: llc -O0 -stop-after=prologepilog < %s | FileCheck --check-prefixes=COMMON,AFTER-PEI %s
+; RUN: llc -O0 -stop-after=livedebugvalues < %s | FileCheck --check-prefixes=COMMON,AFTER-LDV %s
 
 ; COMMON-DAG: ![[VAR_I:[0-9]+]] = !DILocalVariable(name: "I",
 ; COMMON-DAG: ![[VAR_R:[0-9]+]] = !DILocalVariable(name: "R",
@@ -21,9 +21,9 @@
 ; COMMON: {{^$}}
 
 ; AFTER-ISEL-NOT: DBG_
-; AFTER-ISEL: %0:_(s32) = COPY $vgpr0
+; AFTER-ISEL: %[[#ARG_0_COPY_VREG:]]:vgpr_32 = COPY $vgpr0
 ; AFTER-ISEL-NOT: DBG_
-; AFTER-ISEL: DBG_DEF ![[ENTRY_LIFETIME_VAR_I]], %0(s32)
+; AFTER-ISEL: DBG_DEF ![[ENTRY_LIFETIME_VAR_I]], %[[#ARG_0_COPY_VREG]]
 ; AFTER-ISEL-NOT: DBG_
 ; AFTER-ISEL: DBG_KILL ![[ENTRY_LIFETIME_VAR_I]]
 ; AFTER-ISEL-NOT: DBG_
