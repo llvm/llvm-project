@@ -5,28 +5,26 @@
 ; the jump threading threshold, as everything else are free instructions.
 define i32 @free_instructions(i1 %c, i32* %p) {
 ; CHECK-LABEL: @free_instructions(
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF2:%.*]], label [[ELSE2:%.*]]
-; CHECK:       if2:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
 ; CHECK-NEXT:    store i32 -1, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    store i32 -2, i32* [[P]], align 4
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
 ; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META0:![0-9]+]])
 ; CHECK-NEXT:    store i32 1, i32* [[P]], align 4, !noalias !0
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P]], i64 32) ]
-; CHECK-NEXT:    store i32 2, i32* [[P]], align 4
-; CHECK-NEXT:    [[P21:%.*]] = bitcast i32* [[P]] to i8*
-; CHECK-NEXT:    [[P32:%.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* [[P21]])
-; CHECK-NEXT:    [[P43:%.*]] = bitcast i8* [[P32]] to i32*
-; CHECK-NEXT:    store i32 3, i32* [[P43]], align 4, !invariant.group !3
-; CHECK-NEXT:    ret i32 0
-; CHECK:       else2:
-; CHECK-NEXT:    store i32 -2, i32* [[P]], align 4
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META4:![0-9]+]])
-; CHECK-NEXT:    store i32 1, i32* [[P]], align 4, !noalias !4
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P]], i64 32) ]
 ; CHECK-NEXT:    store i32 2, i32* [[P]], align 4
 ; CHECK-NEXT:    [[P2:%.*]] = bitcast i32* [[P]] to i8*
 ; CHECK-NEXT:    [[P3:%.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* [[P2]])
 ; CHECK-NEXT:    [[P4:%.*]] = bitcast i8* [[P3]] to i32*
 ; CHECK-NEXT:    store i32 3, i32* [[P4]], align 4, !invariant.group !3
+; CHECK-NEXT:    br i1 [[C]], label [[IF2:%.*]], label [[ELSE2:%.*]]
+; CHECK:       if2:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       else2:
 ; CHECK-NEXT:    ret i32 1
 ;
   br i1 %c, label %if, label %else
