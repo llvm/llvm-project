@@ -17,13 +17,14 @@ namespace doc {
 
 using Record = llvm::SmallVector<uint64_t, 1024>;
 
-llvm::Error decodeRecord(Record R, llvm::SmallVectorImpl<char> &Field,
+llvm::Error decodeRecord(const Record &R, llvm::SmallVectorImpl<char> &Field,
                          llvm::StringRef Blob) {
   Field.assign(Blob.begin(), Blob.end());
   return llvm::Error::success();
 }
 
-llvm::Error decodeRecord(Record R, SymbolID &Field, llvm::StringRef Blob) {
+llvm::Error decodeRecord(const Record &R, SymbolID &Field,
+                         llvm::StringRef Blob) {
   if (R[0] != BitCodeConstants::USRHashSize)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "incorrect USR size");
@@ -35,12 +36,12 @@ llvm::Error decodeRecord(Record R, SymbolID &Field, llvm::StringRef Blob) {
   return llvm::Error::success();
 }
 
-llvm::Error decodeRecord(Record R, bool &Field, llvm::StringRef Blob) {
+llvm::Error decodeRecord(const Record &R, bool &Field, llvm::StringRef Blob) {
   Field = R[0] != 0;
   return llvm::Error::success();
 }
 
-llvm::Error decodeRecord(Record R, int &Field, llvm::StringRef Blob) {
+llvm::Error decodeRecord(const Record &R, int &Field, llvm::StringRef Blob) {
   if (R[0] > INT_MAX)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "integer too large to parse");
@@ -48,7 +49,7 @@ llvm::Error decodeRecord(Record R, int &Field, llvm::StringRef Blob) {
   return llvm::Error::success();
 }
 
-llvm::Error decodeRecord(Record R, AccessSpecifier &Field,
+llvm::Error decodeRecord(const Record &R, AccessSpecifier &Field,
                          llvm::StringRef Blob) {
   switch (R[0]) {
   case AS_public:
@@ -63,7 +64,8 @@ llvm::Error decodeRecord(Record R, AccessSpecifier &Field,
   }
 }
 
-llvm::Error decodeRecord(Record R, TagTypeKind &Field, llvm::StringRef Blob) {
+llvm::Error decodeRecord(const Record &R, TagTypeKind &Field,
+                         llvm::StringRef Blob) {
   switch (R[0]) {
   case TTK_Struct:
   case TTK_Interface:
@@ -78,7 +80,7 @@ llvm::Error decodeRecord(Record R, TagTypeKind &Field, llvm::StringRef Blob) {
   }
 }
 
-llvm::Error decodeRecord(Record R, llvm::Optional<Location> &Field,
+llvm::Error decodeRecord(const Record &R, llvm::Optional<Location> &Field,
                          llvm::StringRef Blob) {
   if (R[0] > INT_MAX)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -87,7 +89,8 @@ llvm::Error decodeRecord(Record R, llvm::Optional<Location> &Field,
   return llvm::Error::success();
 }
 
-llvm::Error decodeRecord(Record R, InfoType &Field, llvm::StringRef Blob) {
+llvm::Error decodeRecord(const Record &R, InfoType &Field,
+                         llvm::StringRef Blob) {
   switch (auto IT = static_cast<InfoType>(R[0])) {
   case InfoType::IT_namespace:
   case InfoType::IT_record:
@@ -101,7 +104,8 @@ llvm::Error decodeRecord(Record R, InfoType &Field, llvm::StringRef Blob) {
                                  "invalid value for InfoType");
 }
 
-llvm::Error decodeRecord(Record R, FieldId &Field, llvm::StringRef Blob) {
+llvm::Error decodeRecord(const Record &R, FieldId &Field,
+                         llvm::StringRef Blob) {
   switch (auto F = static_cast<FieldId>(R[0])) {
   case FieldId::F_namespace:
   case FieldId::F_parent:
@@ -117,14 +121,15 @@ llvm::Error decodeRecord(Record R, FieldId &Field, llvm::StringRef Blob) {
                                  "invalid value for FieldId");
 }
 
-llvm::Error decodeRecord(Record R,
+llvm::Error decodeRecord(const Record &R,
                          llvm::SmallVectorImpl<llvm::SmallString<16>> &Field,
                          llvm::StringRef Blob) {
   Field.push_back(Blob);
   return llvm::Error::success();
 }
 
-llvm::Error decodeRecord(Record R, llvm::SmallVectorImpl<Location> &Field,
+llvm::Error decodeRecord(const Record &R,
+                         llvm::SmallVectorImpl<Location> &Field,
                          llvm::StringRef Blob) {
   if (R[0] > INT_MAX)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -133,7 +138,7 @@ llvm::Error decodeRecord(Record R, llvm::SmallVectorImpl<Location> &Field,
   return llvm::Error::success();
 }
 
-llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
                         const unsigned VersionNo) {
   if (ID == VERSION && R[0] == VersionNo)
     return llvm::Error::success();
@@ -141,7 +146,7 @@ llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
                                  "mismatched bitcode version number");
 }
 
-llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
                         NamespaceInfo *I) {
   switch (ID) {
   case NAMESPACE_USR:
@@ -156,7 +161,7 @@ llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
   }
 }
 
-llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
                         RecordInfo *I) {
   switch (ID) {
   case RECORD_USR:
@@ -179,7 +184,7 @@ llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
   }
 }
 
-llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
                         BaseRecordInfo *I) {
   switch (ID) {
   case BASE_RECORD_USR:
@@ -202,7 +207,7 @@ llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
   }
 }
 
-llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
                         EnumInfo *I) {
   switch (ID) {
   case ENUM_USR:
@@ -223,7 +228,7 @@ llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
   }
 }
 
-llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
                         FunctionInfo *I) {
   switch (ID) {
   case FUNCTION_USR:
@@ -244,12 +249,12 @@ llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
   }
 }
 
-llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
                         TypeInfo *I) {
   return llvm::Error::success();
 }
 
-llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
                         FieldTypeInfo *I) {
   switch (ID) {
   case FIELD_TYPE_NAME:
@@ -260,7 +265,7 @@ llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
   }
 }
 
-llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
                         MemberTypeInfo *I) {
   switch (ID) {
   case MEMBER_TYPE_NAME:
@@ -273,7 +278,7 @@ llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
   }
 }
 
-llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
                         CommentInfo *I) {
   switch (ID) {
   case COMMENT_KIND:
@@ -304,7 +309,7 @@ llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
   }
 }
 
-llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
                         Reference *I, FieldId &F) {
   switch (ID) {
   case REFERENCE_USR:
