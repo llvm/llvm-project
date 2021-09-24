@@ -1453,6 +1453,10 @@ TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
         SlotIndex endIdx =
             LIS->getInstructionIndex(*MI).getRegSlot(IsEarlyClobber);
         LI.addSegment(LiveInterval::Segment(LastCopyIdx, endIdx, VNI));
+        for (auto &S : LI.subranges()) {
+          VNI = S.getNextValue(LastCopyIdx, LIS->getVNInfoAllocator());
+          S.addSegment(LiveInterval::Segment(LastCopyIdx, endIdx, VNI));
+        }
       }
     }
 

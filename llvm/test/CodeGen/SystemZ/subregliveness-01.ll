@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -verify-machineinstrs -systemz-subreg-liveness < %s | FileCheck %s
+; RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -verify-machineinstrs -systemz-subreg-liveness -early-live-intervals < %s | FileCheck %s
 
 ; Check for successful compilation.
 ; CHECK: lgfrl %r0, g_399
