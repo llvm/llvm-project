@@ -744,14 +744,6 @@ TEST_F(SystemZAsmLexerTest, CheckPrintAcceptableSymbol) {
   EXPECT_EQ(false, MUPMAI->isValidUnquotedName(AsmStr));
 }
 
-TEST_F(SystemZAsmLexerTest, CheckPrintAcceptableSymbol2) {
-  MUPMAI->setAssemblerDialect(1);
-  std::string AsmStr = "ab13_$.@";
-  EXPECT_EQ(true, MUPMAI->isValidUnquotedName(AsmStr));
-  AsmStr += "#";
-  EXPECT_EQ(true, MUPMAI->isValidUnquotedName(AsmStr));
-}
-
 TEST_F(SystemZAsmLexerTest, CheckLabelCaseUpperCase2) {
   StringRef AsmStr = "label\nlabel";
 
