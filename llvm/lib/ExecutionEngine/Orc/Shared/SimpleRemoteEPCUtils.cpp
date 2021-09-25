@@ -197,7 +197,7 @@ void FDSimpleRemoteEPCTransport::listenLoop() {
     char HeaderBuffer[FDMsgHeader::Size];
     // Read the header buffer.
     {
-      bool IsEOF;
+      bool IsEOF = false;
       if (auto Err2 = readBytes(HeaderBuffer, FDMsgHeader::Size, &IsEOF)) {
         Err = joinErrors(std::move(Err), std::move(Err2));
         break;
