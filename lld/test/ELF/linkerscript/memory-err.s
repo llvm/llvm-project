@@ -35,6 +35,9 @@
 # RUN: not ld.lld -o /dev/null -T %t.script %t.o 2>&1 | FileCheck --check-prefix=ERR5 %s
 # ERR5: error: memory region 'ram' not declared
 
+# RUN: echo 'SECTIONS { .text : { *(.text) } AT> ram }' > %t.script
+# RUN: not ld.lld -o /dev/null -T %t.script %t.o 2>&1 | FileCheck --check-prefix=ERR5 %s
+
 ## Check region overflow.
 
 # RUN: echo 'MEMORY { ram (rwx) : ORIGIN = 0, LENGTH = 2K } \
