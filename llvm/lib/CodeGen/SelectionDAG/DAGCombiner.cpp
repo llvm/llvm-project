@@ -8521,22 +8521,20 @@ static SDValue combineShiftToMULH(SDNode *N, SelectionDAG &DAG,
   if ((!(IsSignExt || IsZeroExt)) || LeftOp.getOpcode() != RightOp.getOpcode())
     return SDValue();
 
-  EVT WideVT1 = LeftOp.getValueType();
-  EVT WideVT2 = RightOp.getValueType();
-  (void)WideVT2;
+  EVT WideVT = LeftOp.getValueType();
   // Proceed with the transformation if the wide types match.
-  assert((WideVT1 == WideVT2) &&
+  assert((WideVT == RightOp.getValueType()) &&
          "Cannot have a multiply node with two different operand types.");
 
   EVT NarrowVT = LeftOp.getOperand(0).getValueType();
   // Check that the two extend nodes are the same type.
-  if (NarrowVT !=  RightOp.getOperand(0).getValueType())
+  if (NarrowVT != RightOp.getOperand(0).getValueType())
     return SDValue();
 
   // Proceed with the transformation if the wide type is twice as large
   // as the narrow type.
   unsigned NarrowVTSize = NarrowVT.getScalarSizeInBits();
-  if (WideVT1.getScalarSizeInBits() != 2 * NarrowVTSize)
+  if (WideVT.getScalarSizeInBits() != 2 * NarrowVTSize)
     return SDValue();
 
   // Check the shift amount with the narrow type size.
@@ -8556,8 +8554,8 @@ static SDValue combineShiftToMULH(SDNode *N, SelectionDAG &DAG,
 
   SDValue Result = DAG.getNode(MulhOpcode, DL, NarrowVT, LeftOp.getOperand(0),
                                RightOp.getOperand(0));
-  return (N->getOpcode() == ISD::SRA ? DAG.getSExtOrTrunc(Result, DL, WideVT1)
-                                     : DAG.getZExtOrTrunc(Result, DL, WideVT1));
+  return (N->getOpcode() == ISD::SRA ? DAG.getSExtOrTrunc(Result, DL, WideVT)
+                                     : DAG.getZExtOrTrunc(Result, DL, WideVT));
 }
 
 SDValue DAGCombiner::visitSRA(SDNode *N) {
