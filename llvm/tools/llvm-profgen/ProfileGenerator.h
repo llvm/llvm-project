@@ -228,6 +228,9 @@ private:
   FunctionSamples &
   getFunctionProfileForContext(const SampleContextFrameVector &Context,
                                bool WasLeafInlined = false);
+  // For profiled only functions, on-demand compute their inline context
+  // function byte size which is used by the pre-inliner.
+  void computeSizeForProfiledFunctions();
   // Post processing for profiles before writing out, such as mermining
   // and trimming cold profiles, running preinliner on profiles.
   void postProcessProfiles();
