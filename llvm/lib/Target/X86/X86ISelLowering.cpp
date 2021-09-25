@@ -44266,7 +44266,7 @@ static SDValue combineMulToPMADDWD(SDNode *N, SelectionDAG &DAG,
       return Op;
     // Convert sext(vXi16) to zext(vXi16).
     // TODO: Handle sext from smaller types as well?
-    if (Op.getOpcode() == ISD::SIGN_EXTEND && VT.is128BitVector() &&
+    if (Op.getOpcode() == ISD::SIGN_EXTEND && VT.getSizeInBits() <= 128 &&
         N->isOnlyUserOf(Op.getNode())) {
       SDValue Src = Op.getOperand(0);
       if (Src.getScalarValueSizeInBits() == 16)
