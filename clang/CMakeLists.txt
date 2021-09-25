@@ -759,6 +759,7 @@ if (CLANG_ENABLE_BOOTSTRAP)
       add_dependencies(clang-bootstrap-deps llvm-objcopy llvm-strip)
       set(${CLANG_STAGE}_OBJCOPY -DCMAKE_OBJCOPY=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-objcopy)
       set(${CLANG_STAGE}_STRIP -DCMAKE_STRIP=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-strip)
+      set(${CLANG_STAGE}_READELF -DCMAKE_READELF=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-readelf)
     endif()
   endif()
 
