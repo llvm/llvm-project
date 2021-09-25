@@ -38,16 +38,6 @@ Error SimpleExecutorMemoryManager::finalize(tpctypes::FinalizeRequest &FR) {
   std::vector<tpctypes::SupportFunctionCall> DeallocationActions;
   size_t SuccessfulFinalizationActions = 0;
 
-  if (FR.Segments.empty()) {
-    // NOTE: Finalizing nothing is currently a no-op. Should it be an error?
-    if (FR.Actions.empty())
-      return Error::success();
-    else
-      return make_error<StringError>("Finalization actions attached to empty "
-                                     "finalization request",
-                                     inconvertibleErrorCode());
-  }
-
   for (auto &Seg : FR.Segments)
     Base = std::min(Base, Seg.Addr);
 

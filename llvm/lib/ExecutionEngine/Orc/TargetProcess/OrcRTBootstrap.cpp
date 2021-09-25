@@ -10,7 +10,6 @@
 
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
-#include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
 
 #define DEBUG_TYPE "orc"
@@ -72,11 +71,6 @@ void addTo(StringMap<ExecutorAddr> &M) {
                          shared::SPSMemoryAccessUInt64Write>);
   M[rt::MemoryWriteBuffersWrapperName] =
       ExecutorAddr::fromPtr(&writeBuffersWrapper);
-  M[rt::RegisterEHFrameSectionCustomDirectWrapperName] = ExecutorAddr::fromPtr(
-      &llvm_orc_registerEHFrameSectionCustomDirectWrapper);
-  M[rt::DeregisterEHFrameSectionCustomDirectWrapperName] =
-      ExecutorAddr::fromPtr(
-          &llvm_orc_deregisterEHFrameSectionCustomDirectWrapper);
   M[rt::RunAsMainWrapperName] = ExecutorAddr::fromPtr(&runAsMainWrapper);
 }
 
