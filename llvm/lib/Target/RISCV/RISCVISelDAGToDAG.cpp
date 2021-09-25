@@ -213,7 +213,7 @@ static SDValue createTuple(SelectionDAG &CurDAG, ArrayRef<SDValue> Regs,
 void RISCVDAGToDAGISel::addVectorLoadStoreOperands(
     SDNode *Node, unsigned Log2SEW, const SDLoc &DL, unsigned CurOp,
     bool IsMasked, bool IsStridedOrIndexed, SmallVectorImpl<SDValue> &Operands,
-    MVT *IndexVT) {
+    bool IsLoad, MVT *IndexVT) {
   SDValue Chain = Node->getOperand(0);
   SDValue Glue;
 
@@ -242,6 +242,14 @@ void RISCVDAGToDAGISel::addVectorLoadStoreOperands(
   SDValue SEWOp = CurDAG->getTargetConstant(Log2SEW, DL, XLenVT);
   Operands.push_back(SEWOp);
 
+  // Masked load has the tail policy argument.
+  if (IsMasked && IsLoad) {
+    // Policy must be a constant.
+    uint64_t Policy = Node->getConstantOperandVal(CurOp++);
+    SDValue PolicyOp = CurDAG->getTargetConstant(Policy, DL, XLenVT);
+    Operands.push_back(PolicyOp);
+  }
+
   Operands.push_back(Chain); // Chain.
   if (Glue)
     Operands.push_back(Glue);
@@ -266,7 +274,7 @@ void RISCVDAGToDAGISel::selectVLSEG(SDNode *Node, bool IsMasked,
   }
 
   addVectorLoadStoreOperands(Node, Log2SEW, DL, CurOp, IsMasked, IsStrided,
-                             Operands);
+                             Operands, /*IsLoad=*/true);
 
   const RISCV::VLSEGPseudo *P =
       RISCV::getVLSEGPseudo(NF, IsMasked, IsStrided, /*FF*/ false, Log2SEW,
@@ -307,7 +315,8 @@ void RISCVDAGToDAGISel::selectVLSEGFF(SDNode *Node, bool IsMasked) {
   }
 
   addVectorLoadStoreOperands(Node, Log2SEW, DL, CurOp, IsMasked,
-                             /*IsStridedOrIndexed*/ false, Operands);
+                             /*IsStridedOrIndexed*/ false, Operands,
+                             /*IsLoad=*/true);
 
   const RISCV::VLSEGPseudo *P =
       RISCV::getVLSEGPseudo(NF, IsMasked, /*Strided*/ false, /*FF*/ true,
@@ -352,7 +361,8 @@ void RISCVDAGToDAGISel::selectVLXSEG(SDNode *Node, bool IsMasked,
 
   MVT IndexVT;
   addVectorLoadStoreOperands(Node, Log2SEW, DL, CurOp, IsMasked,
-                             /*IsStridedOrIndexed*/ true, Operands, &IndexVT);
+                             /*IsStridedOrIndexed*/ true, Operands,
+                             /*IsLoad=*/true, &IndexVT);
 
   assert(VT.getVectorElementCount() == IndexVT.getVectorElementCount() &&
          "Element count mismatch");
@@ -429,7 +439,8 @@ void RISCVDAGToDAGISel::selectVSXSEG(SDNode *Node, bool IsMasked,
 
   MVT IndexVT;
   addVectorLoadStoreOperands(Node, Log2SEW, DL, CurOp, IsMasked,
-                             /*IsStridedOrIndexed*/ true, Operands, &IndexVT);
+                             /*IsStridedOrIndexed*/ true, Operands,
+                             /*IsLoad=*/false, &IndexVT);
 
   assert(VT.getVectorElementCount() == IndexVT.getVectorElementCount() &&
          "Element count mismatch");
@@ -685,6 +696,17 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
             CurDAG->getTargetConstant(C3 - C2, DL, XLenVT));
         SDNode *SLLI =
             CurDAG->getMachineNode(RISCV::SLLI, DL, XLenVT, SDValue(SRLI, 0),
+                                   CurDAG->getTargetConstant(C3, DL, XLenVT));
+        ReplaceNode(Node, SLLI);
+        return;
+      }
+      // If we have (32-C2) leading zeros, we can use SRLIW instead of SRLI.
+      if (C2 < C3 && Leading + C2 == 32 && OneUseOrZExtW && !ZExtOrANDI) {
+        SDNode *SRLIW = CurDAG->getMachineNode(
+            RISCV::SRLIW, DL, XLenVT, X,
+            CurDAG->getTargetConstant(C3 - C2, DL, XLenVT));
+        SDNode *SLLI =
+            CurDAG->getMachineNode(RISCV::SLLI, DL, XLenVT, SDValue(SRLIW, 0),
                                    CurDAG->getTargetConstant(C3, DL, XLenVT));
         ReplaceNode(Node, SLLI);
         return;
@@ -1071,7 +1093,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       MVT IndexVT;
       addVectorLoadStoreOperands(Node, Log2SEW, DL, CurOp, IsMasked,
                                  /*IsStridedOrIndexed*/ true, Operands,
-                                 &IndexVT);
+                                 /*IsLoad=*/true, &IndexVT);
 
       assert(VT.getVectorElementCount() == IndexVT.getVectorElementCount() &&
              "Element count mismatch");
@@ -1110,7 +1132,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         Operands.push_back(Node->getOperand(CurOp++));
 
       addVectorLoadStoreOperands(Node, Log2SEW, DL, CurOp, IsMasked, IsStrided,
-                                 Operands);
+                                 Operands, /*IsLoad=*/true);
 
       RISCVII::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
       const RISCV::VLEPseudo *P =
@@ -1138,7 +1160,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         Operands.push_back(Node->getOperand(CurOp++));
 
       addVectorLoadStoreOperands(Node, Log2SEW, DL, CurOp, IsMasked,
-                                 /*IsStridedOrIndexed*/ false, Operands);
+                                 /*IsStridedOrIndexed*/ false, Operands,
+                                 /*IsLoad=*/true);
 
       RISCVII::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
       const RISCV::VLEPseudo *P =
@@ -1260,7 +1283,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       MVT IndexVT;
       addVectorLoadStoreOperands(Node, Log2SEW, DL, CurOp, IsMasked,
                                  /*IsStridedOrIndexed*/ true, Operands,
-                                 &IndexVT);
+                                 /*IsLoad=*/false, &IndexVT);
 
       assert(VT.getVectorElementCount() == IndexVT.getVectorElementCount() &&
              "Element count mismatch");

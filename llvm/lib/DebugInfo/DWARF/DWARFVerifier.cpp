@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/DebugInfo/DWARF/DWARFVerifier.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
@@ -161,6 +162,26 @@ bool DWARFVerifier::verifyUnitHeader(const DWARFDataExtractor DebugInfoData,
   return Success;
 }
 
+bool DWARFVerifier::verifyName(const DWARFDie &Die) {
+  // FIXME Add some kind of record of which DIE names have already failed and
+  // don't bother checking a DIE that uses an already failed DIE.
+
+  std::string ReconstructedName;
+  raw_string_ostream OS(ReconstructedName);
+  std::string OriginalFullName;
+  Die.getFullName(OS, &OriginalFullName);
+  OS.flush();
+  if (!OriginalFullName.empty() && OriginalFullName != ReconstructedName) {
+    error() << "Simplified template DW_AT_name could not be reconstituted:\n"
+            << formatv("         original: {0}\n"
+                       "    reconstituted: {1}\n",
+                       OriginalFullName, ReconstructedName);
+    dump(Die) << '\n';
+    dump(Die.getDwarfUnit()->getUnitDIE()) << '\n';
+  }
+  return 0;
+}
+
 unsigned DWARFVerifier::verifyUnitContents(DWARFUnit &Unit,
                                            ReferenceMap &UnitLocalReferences,
                                            ReferenceMap &CrossUnitReferences) {
@@ -177,6 +198,8 @@ unsigned DWARFVerifier::verifyUnitContents(DWARFUnit &Unit,
       NumUnitErrors += verifyDebugInfoForm(Die, AttrValue, UnitLocalReferences,
                                            CrossUnitReferences);
     }
+
+    NumUnitErrors += verifyName(Die);
 
     if (Die.hasChildren()) {
       if (Die.getFirstChild().isValid() &&

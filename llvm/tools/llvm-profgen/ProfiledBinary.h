@@ -31,6 +31,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Transforms/IPO/SampleContextTracker.h"
 #include <list>
+#include <map>
 #include <set>
 #include <sstream>
 #include <string>
@@ -78,9 +79,9 @@ struct PrologEpilogTracker {
   PrologEpilogTracker(ProfiledBinary *Bin) : Binary(Bin){};
 
   // Take the two addresses from the start of function as prolog
-  void inferPrologOffsets(
-      std::unordered_map<uint64_t, std::string> &FuncStartAddrMap) {
-    for (auto I : FuncStartAddrMap) {
+  void inferPrologOffsets(std::map<uint64_t, std::pair<std::string, uint64_t>>
+                              &FuncStartOffsetMap) {
+    for (auto I : FuncStartOffsetMap) {
       PrologEpilogSet.insert(I.first);
       InstructionPointer IP(Binary, I.first);
       IP.advance();
@@ -138,6 +139,8 @@ private:
   ContextTrieNode RootContext;
 };
 
+using OffsetRange = std::pair<uint64_t, uint64_t>;
+
 class ProfiledBinary {
   // Absolute path of the binary.
   std::string Path;
@@ -161,8 +164,9 @@ class ProfiledBinary {
   // A list of text sections sorted by start RVA and size. Used to check
   // if a given RVA is a valid code address.
   std::set<std::pair<uint64_t, uint64_t>> TextSections;
-  // Function offset to name mapping.
-  std::unordered_map<uint64_t, std::string> FuncStartAddrMap;
+  // An ordered map of mapping function's start offset to its name and
+  // end offset.
+  std::map<uint64_t, std::pair<std::string, uint64_t>> FuncStartOffsetMap;
   // Offset to context location map. Used to expand the context.
   std::unordered_map<uint64_t, SampleContextFrameVector> Offset2LocStackMap;
   // An array of offsets of all instructions sorted in increasing order. The
@@ -232,12 +236,6 @@ class ProfiledBinary {
   ///   3. Pseudo probe related sections, used by probe-based profile
   ///   generation.
   void load();
-  const SampleContextFrameVector &getFrameLocationStack(uint64_t Offset) const {
-    auto I = Offset2LocStackMap.find(Offset);
-    assert(I != Offset2LocStackMap.end() &&
-           "Can't find location for offset in the binary");
-    return I->second;
-  }
 
 public:
   ProfiledBinary(const StringRef Path)
@@ -310,11 +308,29 @@ public:
   }
 
   StringRef getFuncFromStartOffset(uint64_t Offset) {
-    return FuncStartAddrMap[Offset];
+    auto I = FuncStartOffsetMap.find(Offset);
+    if (I == FuncStartOffsetMap.end())
+      return StringRef();
+    return I->second.first;
+  }
+
+  OffsetRange findFuncOffsetRange(uint64_t Offset) {
+    auto I = FuncStartOffsetMap.upper_bound(Offset);
+    if (I == FuncStartOffsetMap.begin())
+      return {0, 0};
+    I--;
+    return {I->first, I->second.second};
   }
 
   uint32_t getFuncSizeForContext(SampleContext &Context) {
     return FuncSizeTracker.getFuncSizeForContext(Context);
+  }
+
+  const SampleContextFrameVector &getFrameLocationStack(uint64_t Offset) const {
+    auto I = Offset2LocStackMap.find(Offset);
+    assert(I != Offset2LocStackMap.end() &&
+           "Can't find location for offset in the binary");
+    return I->second;
   }
 
   Optional<SampleContextFrame> getInlineLeafFrameLoc(uint64_t Offset) {

@@ -1753,15 +1753,6 @@ struct DSEState {
       if (MemoryAccess *MA = MSSA.getMemoryAccess(DeadInst)) {
         if (MemoryDef *MD = dyn_cast<MemoryDef>(MA)) {
           SkipStores.insert(MD);
-
-          // Clear any cached escape info for objects associated with the
-          // removed instructions.
-          auto Iter = Inst2Obj.find(DeadInst);
-          if (Iter != Inst2Obj.end()) {
-            for (const Value *Obj : Iter->second)
-              EarliestEscapes.erase(Obj);
-            Inst2Obj.erase(DeadInst);
-          }
         }
 
         Updater.removeMemoryAccess(MA);
@@ -1778,6 +1769,14 @@ struct DSEState {
             NowDeadInsts.push_back(OpI);
         }
 
+      // Clear any cached escape info for objects associated with the
+      // removed instructions.
+      auto Iter = Inst2Obj.find(DeadInst);
+      if (Iter != Inst2Obj.end()) {
+        for (const Value *Obj : Iter->second)
+          EarliestEscapes.erase(Obj);
+        Inst2Obj.erase(DeadInst);
+      }
       DeadInst->eraseFromParent();
     }
   }

@@ -2834,6 +2834,7 @@ protected:
   OptionGroupUInt64 m_slide_option;
 };
 
+#pragma mark CommandObjectTargetModulesList
 // List images with associated information
 #define LLDB_OPTIONS_target_modules_list
 #include "CommandOptions.inc"

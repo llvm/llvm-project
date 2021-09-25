@@ -58,9 +58,8 @@ class BufferizeTensorLoadOp : public OpConversionPattern<memref::TensorLoadOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(memref::TensorLoadOp op, ArrayRef<Value> operands,
+  matchAndRewrite(memref::TensorLoadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    memref::TensorLoadOp::Adaptor adaptor(operands);
     rewriter.replaceOp(op, adaptor.memref());
     return success();
   }
@@ -74,9 +73,8 @@ class BufferizeCastOp : public OpConversionPattern<memref::BufferCastOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(memref::BufferCastOp op, ArrayRef<Value> operands,
+  matchAndRewrite(memref::BufferCastOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    memref::BufferCastOp::Adaptor adaptor(operands);
     rewriter.replaceOp(op, adaptor.tensor());
     return success();
   }

@@ -80,12 +80,17 @@ static void testComplementAtPoints(PresburgerSet s,
 }
 
 /// Construct a FlatAffineConstraints from a set of inequality and
-/// equality constraints.
+/// equality constraints. `numIds` is the total number of ids, of which
+/// `numLocals` is the number of local ids.
 static FlatAffineConstraints
-makeFACFromConstraints(unsigned dims, ArrayRef<SmallVector<int64_t, 4>> ineqs,
-                       ArrayRef<SmallVector<int64_t, 4>> eqs) {
-  FlatAffineConstraints fac(ineqs.size(), eqs.size(), dims + 1, dims,
-                            /*numSymbols=*/0, /*numLocals=*/0);
+makeFACFromConstraints(unsigned numIds, ArrayRef<SmallVector<int64_t, 4>> ineqs,
+                       ArrayRef<SmallVector<int64_t, 4>> eqs,
+                       unsigned numLocals = 0) {
+  FlatAffineConstraints fac(/*numReservedInequalities=*/ineqs.size(),
+                            /*numReservedEqualities=*/eqs.size(),
+                            /*numReservedCols=*/numIds + 1,
+                            /*numDims=*/numIds - numLocals,
+                            /*numSymbols=*/0, numLocals);
   for (const SmallVector<int64_t, 4> &eq : eqs)
     fac.addEquality(eq);
   for (const SmallVector<int64_t, 4> &ineq : ineqs)
@@ -93,14 +98,22 @@ makeFACFromConstraints(unsigned dims, ArrayRef<SmallVector<int64_t, 4>> ineqs,
   return fac;
 }
 
+/// Construct a FlatAffineConstraints having `numDims` dimensions from the given
+/// set of inequality constraints. This is a convenience function to be used
+/// when the FAC to be constructed does not have any local ids and does not have
+/// equalties.
 static FlatAffineConstraints
-makeFACFromIneqs(unsigned dims, ArrayRef<SmallVector<int64_t, 4>> ineqs) {
-  return makeFACFromConstraints(dims, ineqs, {});
+makeFACFromIneqs(unsigned numDims, ArrayRef<SmallVector<int64_t, 4>> ineqs) {
+  return makeFACFromConstraints(numDims, ineqs, /*eqs=*/{});
 }
 
-static PresburgerSet makeSetFromFACs(unsigned dims,
+/// Construct a PresburgerSet having `numDims` dimensions and no symbols from
+/// the given list of FlatAffineConstraints. Each FAC in `facs` should also have
+/// `numDims` dimensions and no symbols, although it can have any number of
+/// local ids.
+static PresburgerSet makeSetFromFACs(unsigned numDims,
                                      ArrayRef<FlatAffineConstraints> facs) {
-  PresburgerSet set = PresburgerSet::getEmptySet(dims);
+  PresburgerSet set = PresburgerSet::getEmptySet(numDims);
   for (const FlatAffineConstraints &fac : facs)
     set.unionFACInPlace(fac);
   return set;
@@ -590,6 +603,39 @@ TEST(SetTest, isEqual) {
   EXPECT_FALSE(universeRect.isEqual(rect));
   EXPECT_FALSE(universeSquare.isEqual(square));
   EXPECT_FALSE(rect.complement().isEqual(square.complement()));
+}
+
+void expectEqual(PresburgerSet s, PresburgerSet t) {
+  EXPECT_TRUE(s.isEqual(t));
+}
+
+void expectEmpty(PresburgerSet s) { EXPECT_TRUE(s.isIntegerEmpty()); }
+
+TEST(SetTest, divisions) {
+  // Note: we currently need to add the equalities as inequalities to the FAC
+  // since detecting divisions based on equalities is not yet supported.
+
+  // evens = {x : exists q, x = 2q}.
+  PresburgerSet evens{
+      makeFACFromConstraints(2, {{1, -2, 0}, {-1, 2, 1}}, {{1, -2, 0}}, 1)};
+  // odds = {x : exists q, x = 2q + 1}.
+  PresburgerSet odds{
+      makeFACFromConstraints(2, {{1, -2, 0}, {-1, 2, 1}}, {{1, -2, -1}}, 1)};
+  // multiples6 = {x : exists q, x = 6q}.
+  PresburgerSet multiples3{
+      makeFACFromConstraints(2, {{1, -3, 0}, {-1, 3, 2}}, {{1, -3, 0}}, 1)};
+  // multiples6 = {x : exists q, x = 6q}.
+  PresburgerSet multiples6{
+      makeFACFromConstraints(2, {{1, -6, 0}, {-1, 6, 5}}, {{1, -6, 0}}, 1)};
+
+  // evens /\ odds = empty.
+  expectEmpty(PresburgerSet(evens).intersect(PresburgerSet(odds)));
+  // evens U odds = universe.
+  expectEqual(evens.unionSet(odds), PresburgerSet::getUniverse(1));
+  expectEqual(evens.complement(), odds);
+  expectEqual(odds.complement(), evens);
+  // even multiples of 3 = multiples of 6.
+  expectEqual(multiples3.intersect(evens), multiples6);
 }
 
 } // namespace mlir

@@ -788,11 +788,12 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
     }
 
     if ((IsSigned && match(Op0, m_NSWShl(m_Value(X), m_APInt(C1))) &&
-         *C1 != C1->getBitWidth() - 1) ||
-        (!IsSigned && match(Op0, m_NUWShl(m_Value(X), m_APInt(C1))))) {
+         C1->ult(C1->getBitWidth() - 1)) ||
+        (!IsSigned && match(Op0, m_NUWShl(m_Value(X), m_APInt(C1))) &&
+         C1->ult(C1->getBitWidth()))) {
       APInt Quotient(C1->getBitWidth(), /*val=*/0ULL, IsSigned);
       APInt C1Shifted = APInt::getOneBitSet(
-          C1->getBitWidth(), static_cast<unsigned>(C1->getLimitedValue()));
+          C1->getBitWidth(), static_cast<unsigned>(C1->getZExtValue()));
 
       // (X << C1) / C2 -> X / (C2 >> C1) if C2 is a multiple of 1 << C1.
       if (isMultiple(*C2, C1Shifted, Quotient, IsSigned)) {

@@ -53,6 +53,10 @@ SmallVector<Range, 8> getOrCreateRanges(OffsetSizeAndStrideOpInterface op,
 namespace mlir {
 namespace tensor {
 
+/// Returns true if `target` is a ranked tensor type that preserves static
+/// information available in the `source` ranked tensor type.
+bool preservesStaticInformation(Type source, Type target);
+
 /// Determines whether tensor::CastOp casts to a more dynamic version of the
 /// source tensor. This is useful to fold a tensor.cast into a consuming op and
 /// implement canonicalization patterns for ops in different dialects that may

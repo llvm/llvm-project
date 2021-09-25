@@ -92,7 +92,7 @@ print >> out_file, '''\
     <th>Available in Clang?</th>
   </tr>'''
 
-latest_release = 11
+latest_release = 13
 
 def availability(issue):
   status = status_map.get(issue, 'unknown')

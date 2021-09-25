@@ -37,9 +37,9 @@ public:
   using OpConversionPattern<StdOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(StdOp operation, ArrayRef<Value> operands,
+  matchAndRewrite(StdOp operation, typename StdOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    assert(operands.size() <= 2);
+    assert(adaptor.getOperands().size() <= 2);
     auto dstType = this->getTypeConverter()->convertType(operation.getType());
     if (!dstType)
       return failure();
@@ -48,7 +48,8 @@ public:
       return operation.emitError(
           "bitwidth emulation is not implemented yet on unsigned op");
     }
-    rewriter.template replaceOpWithNewOp<SPIRVOp>(operation, dstType, operands);
+    rewriter.template replaceOpWithNewOp<SPIRVOp>(operation, dstType,
+                                                  adaptor.getOperands());
     return success();
   }
 };
@@ -62,14 +63,15 @@ public:
   using OpConversionPattern<math::Log1pOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(math::Log1pOp operation, ArrayRef<Value> operands,
+  matchAndRewrite(math::Log1pOp operation, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    assert(operands.size() == 1);
+    assert(adaptor.getOperands().size() == 1);
     Location loc = operation.getLoc();
     auto type =
         this->getTypeConverter()->convertType(operation.operand().getType());
     auto one = spirv::ConstantOp::getOne(type, operation.getLoc(), rewriter);
-    auto onePlus = rewriter.create<spirv::FAddOp>(loc, one, operands[0]);
+    auto onePlus =
+        rewriter.create<spirv::FAddOp>(loc, one, adaptor.getOperands()[0]);
     rewriter.replaceOpWithNewOp<spirv::GLSLLogOp>(operation, type, onePlus);
     return success();
   }

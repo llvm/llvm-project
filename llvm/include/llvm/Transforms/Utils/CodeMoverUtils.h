@@ -40,7 +40,8 @@ bool isControlFlowEquivalent(const BasicBlock &BB0, const BasicBlock &BB1,
 bool isSafeToMoveBefore(Instruction &I, Instruction &InsertPoint,
                         DominatorTree &DT,
                         const PostDominatorTree *PDT = nullptr,
-                        DependenceInfo *DI = nullptr);
+                        DependenceInfo *DI = nullptr,
+                        bool CheckForEntireBlock = false);
 
 /// Return true if all instructions (except the terminator) in \p BB can be
 /// safely moved before \p InsertPoint.
