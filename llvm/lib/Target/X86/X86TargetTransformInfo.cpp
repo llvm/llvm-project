@@ -214,12 +214,24 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     unsigned Op2MinSize = BaseT::minRequiredElementSize(Args[1], Op2Signed);
     unsigned OpMinSize = std::max(Op1MinSize, Op2MinSize);
 
-    // If both are representable as i15 and at least one is zero-extended,
-    // then we can treat this as PMADDWD which has the same costs
-    // as a vXi16 multiply..
-    if (OpMinSize <= 15 && (!Op1Signed || !Op2Signed) && !ST->isPMADDWDSlow())
-      LT.second =
-          MVT::getVectorVT(MVT::i16, 2 * LT.second.getVectorNumElements());
+    // If both are representable as i15 and at least one is constant,
+    // zero-extended, or sign-extended from vXi16 then we can treat this as
+    // PMADDWD which has the same costs as a vXi16 multiply.
+    if (OpMinSize <= 15 && !ST->isPMADDWDSlow()) {
+      bool Op1Constant =
+          isa<ConstantDataVector>(Args[0]) || isa<ConstantVector>(Args[0]);
+      bool Op2Constant =
+          isa<ConstantDataVector>(Args[1]) || isa<ConstantVector>(Args[1]);
+      bool Op1Sext16 = isa<SExtInst>(Args[0]) && Op1MinSize == 15;
+      bool Op2Sext16 = isa<SExtInst>(Args[1]) && Op2MinSize == 15;
+
+      bool IsZeroExtended = !Op1Signed || !Op2Signed;
+      bool IsConstant = Op1Constant || Op2Constant;
+      bool IsSext16 = Op1Sext16 || Op2Sext16;
+      if (IsConstant || IsZeroExtended || IsSext16)
+        LT.second =
+            MVT::getVectorVT(MVT::i16, 2 * LT.second.getVectorNumElements());
+    }
   }
 
   if ((ISD == ISD::SDIV || ISD == ISD::SREM || ISD == ISD::UDIV ||
