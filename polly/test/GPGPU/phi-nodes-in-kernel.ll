@@ -52,9 +52,9 @@ target triple = "x86_64-unknown-linux-gnu"
 ; IR:       [[REGC:%.+]] =   bitcast i32* %{{[0-9]+}} to i8*
 ; IR-NEXT:  call void @polly_copyFromDeviceToHost(i8* %p_dev_array_MemRef_c, i8* [[REGC]], i64 196)
 
-; KERNEL-IR: define ptx_kernel void @FUNC_kernel_dynprog_SCOP_0_KERNEL_0(i8 addrspace(1)* %MemRef_c, i32 %0) #0 {
-; KERNEL-IR: %polly.access.MemRef_c = getelementptr i32, i32 addrspace(1)* %polly.access.cast.MemRef_c, i64 %10
-; KERNEL-IR-NEXT: store i32 %0, i32 addrspace(1)* %polly.access.MemRef_c, align 4
+; KERNEL-IR: define ptx_kernel void @FUNC_kernel_dynprog_SCOP_0_KERNEL_0(i8 addrspace(1)* %MemRef_c) #0 {
+; KERNEL-IR: %polly.access.MemRef_c = getelementptr i32, i32 addrspace(1)* %polly.access.cast.MemRef_c, i64 %9
+; KERNEL-IR-NEXT: store i32 422, i32 addrspace(1)* %polly.access.MemRef_c, align 4
 
 define void @kernel_dynprog([50 x i32]* %c) {
 entry:
@@ -75,7 +75,7 @@ for.cond15.for.cond12.loopexit_crit_edge:         ; preds = %for.body17
 for.body17:                                       ; preds = %for.body17, %for.cond1.preheader
   %indvars.iv71 = phi i64 [ 1, %for.cond1.preheader ], [ %indvars.iv.next72, %for.body17 ]
   %arrayidx69 = getelementptr inbounds [50 x i32], [50 x i32]* %c, i64 0, i64 %indvars.iv71
-  store i32 undef, i32* %arrayidx69, align 4
+  store i32 422, i32* %arrayidx69, align 4
   %indvars.iv.next72 = add nuw nsw i64 %indvars.iv71, 1
   %lftr.wideiv74 = trunc i64 %indvars.iv.next72 to i32
   %exitcond75 = icmp ne i32 %lftr.wideiv74, 50

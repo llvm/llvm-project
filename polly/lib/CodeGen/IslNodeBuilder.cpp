@@ -24,6 +24,7 @@
 #include "polly/Support/ISLTools.h"
 #include "polly/Support/SCEVValidator.h"
 #include "polly/Support/ScopHelper.h"
+#include "polly/Support/VirtualInstruction.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
@@ -205,40 +206,68 @@ int IslNodeBuilder::getNumberOfIterations(isl::ast_node_for For) {
     return NumberIterations + 1;
 }
 
-/// Extract the values and SCEVs needed to generate code for a block.
-static int findReferencesInBlock(struct SubtreeReferences &References,
-                                 const ScopStmt *Stmt, BasicBlock *BB) {
-  for (Instruction &Inst : *BB) {
-    // Include invariant loads
-    if (isa<LoadInst>(Inst))
-      if (Value *InvariantLoad = References.GlobalMap.lookup(&Inst))
-        References.Values.insert(InvariantLoad);
+static void findReferencesByUse(Value *SrcVal, ScopStmt *UserStmt,
+                                Loop *UserScope, const ValueMapT &GlobalMap,
+                                SetVector<Value *> &Values,
+                                SetVector<const SCEV *> &SCEVs) {
+  VirtualUse VUse = VirtualUse::create(UserStmt, UserScope, SrcVal, true);
+  switch (VUse.getKind()) {
+  case VirtualUse::Constant:
+    // When accelerator-offloading, GlobalValue is a host address whose content
+    // must still be transferred to the GPU.
+    if (isa<GlobalValue>(SrcVal))
+      Values.insert(SrcVal);
+    break;
 
-    for (Value *SrcVal : Inst.operands()) {
-      auto *Scope = References.LI.getLoopFor(BB);
-      if (canSynthesize(SrcVal, References.S, &References.SE, Scope)) {
-        References.SCEVs.insert(References.SE.getSCEVAtScope(SrcVal, Scope));
-        continue;
-      } else if (Value *NewVal = References.GlobalMap.lookup(SrcVal))
-        References.Values.insert(NewVal);
-    }
+  case VirtualUse::Synthesizable:
+    SCEVs.insert(VUse.getScevExpr());
+    return;
+
+  case VirtualUse::Block:
+  case VirtualUse::ReadOnly:
+  case VirtualUse::Hoisted:
+  case VirtualUse::Intra:
+  case VirtualUse::Inter:
+    break;
   }
-  return 0;
+
+  if (Value *NewVal = GlobalMap.lookup(SrcVal))
+    Values.insert(NewVal);
 }
 
-void polly::addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr,
+static void findReferencesInInst(Instruction *Inst, ScopStmt *UserStmt,
+                                 Loop *UserScope, const ValueMapT &GlobalMap,
+                                 SetVector<Value *> &Values,
+                                 SetVector<const SCEV *> &SCEVs) {
+  for (Use &U : Inst->operands())
+    findReferencesByUse(U.get(), UserStmt, UserScope, GlobalMap, Values, SCEVs);
+}
+
+static void findReferencesInStmt(ScopStmt *Stmt, SetVector<Value *> &Values,
+                                 ValueMapT &GlobalMap,
+                                 SetVector<const SCEV *> &SCEVs) {
+  LoopInfo *LI = Stmt->getParent()->getLI();
+
+  BasicBlock *BB = Stmt->getBasicBlock();
+  Loop *Scope = LI->getLoopFor(BB);
+  for (Instruction *Inst : Stmt->getInstructions())
+    findReferencesInInst(Inst, Stmt, Scope, GlobalMap, Values, SCEVs);
+
+  if (Stmt->isRegionStmt()) {
+    for (BasicBlock *BB : Stmt->getRegion()->blocks()) {
+      Loop *Scope = LI->getLoopFor(BB);
+      for (Instruction &Inst : *BB)
+        findReferencesInInst(&Inst, Stmt, Scope, GlobalMap, Values, SCEVs);
+    }
+  }
+}
+
+void polly::addReferencesFromStmt(ScopStmt *Stmt, void *UserPtr,
                                   bool CreateScalarRefs) {
   auto &References = *static_cast<struct SubtreeReferences *>(UserPtr);
 
-  if (Stmt->isBlockStmt())
-    findReferencesInBlock(References, Stmt, Stmt->getBasicBlock());
-  else if (Stmt->isRegionStmt()) {
-    for (BasicBlock *BB : Stmt->getRegion()->blocks())
-      findReferencesInBlock(References, Stmt, BB);
-  } else {
-    assert(Stmt->isCopyStmt());
-    // Copy Stmts have no instructions that we need to consider.
-  }
+  findReferencesInStmt(Stmt, References.Values, References.GlobalMap,
+                       References.SCEVs);
 
   for (auto &Access : *Stmt) {
     if (References.ParamSpace) {
@@ -276,8 +305,8 @@ void polly::addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr,
 static void addReferencesFromStmtSet(isl::set Set,
                                      struct SubtreeReferences *UserPtr) {
   isl::id Id = Set.get_tuple_id();
-  auto *Stmt = static_cast<const ScopStmt *>(Id.get_user());
-  return addReferencesFromStmt(Stmt, UserPtr);
+  auto *Stmt = static_cast<ScopStmt *>(Id.get_user());
+  addReferencesFromStmt(Stmt, UserPtr);
 }
 
 /// Extract the out-of-scop values and SCEVs referenced from a union set
