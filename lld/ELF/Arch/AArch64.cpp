@@ -62,7 +62,6 @@ AArch64::AArch64() {
   relativeRel = R_AARCH64_RELATIVE;
   iRelativeRel = R_AARCH64_IRELATIVE;
   gotRel = R_AARCH64_GLOB_DAT;
-  noneRel = R_AARCH64_NONE;
   pltRel = R_AARCH64_JUMP_SLOT;
   symbolicRel = R_AARCH64_ABS64;
   tlsDescRel = R_AARCH64_TLSDESC;
@@ -71,7 +70,6 @@ AArch64::AArch64() {
   pltEntrySize = 16;
   ipltEntrySize = 16;
   defaultMaxPageSize = 65536;
-  gotBaseSymInGotPlt = false;
 
   // Align to the 2 MiB page size (known as a superpage or huge page).
   // FreeBSD automatically promotes 2 MiB-aligned allocations.

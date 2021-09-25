@@ -40,7 +40,6 @@ public:
 AMDGPU::AMDGPU() {
   relativeRel = R_AMDGPU_RELATIVE64;
   gotRel = R_AMDGPU_ABS64;
-  noneRel = R_AMDGPU_NONE;
   symbolicRel = R_AMDGPU_ABS64;
 }
 
