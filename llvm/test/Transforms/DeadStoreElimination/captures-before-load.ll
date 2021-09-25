@@ -113,7 +113,6 @@ define i32 @test_captured_and_clobbered_before_load_same_bb_1(i32** %in.ptr) {
 define i32 @test_captured_before_load_same_bb_1_clobbered_later(i32** %in.ptr) {
 ; CHECK-LABEL: @test_captured_before_load_same_bb_1_clobbered_later(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 55, i32* [[A]], align 4
 ; CHECK-NEXT:    [[IN_LV_1:%.*]] = load i32*, i32** [[IN_PTR:%.*]], align 2
 ; CHECK-NEXT:    call void @escape_writeonly(i32* [[A]])
 ; CHECK-NEXT:    [[IN_LV_2:%.*]] = load i32, i32* [[IN_LV_1]], align 2
