@@ -169,6 +169,10 @@ class ProfiledBinary {
   std::map<uint64_t, std::pair<std::string, uint64_t>> FuncStartOffsetMap;
   // Offset to context location map. Used to expand the context.
   std::unordered_map<uint64_t, SampleContextFrameVector> Offset2LocStackMap;
+
+  // Offset to instruction size map. Also used for quick offset lookup.
+  std::unordered_map<uint64_t, uint64_t> Offset2InstSizeMap;
+
   // An array of offsets of all instructions sorted in increasing order. The
   // sorting is needed to fast advance to the next forward/backward instruction.
   std::vector<uint64_t> CodeAddrs;
@@ -269,7 +273,7 @@ public:
 
   bool addressIsCode(uint64_t Address) const {
     uint64_t Offset = virtualAddrToOffset(Address);
-    return Offset2LocStackMap.find(Offset) != Offset2LocStackMap.end();
+    return Offset2InstSizeMap.find(Offset) != Offset2InstSizeMap.end();
   }
   bool addressIsCall(uint64_t Address) const {
     uint64_t Offset = virtualAddrToOffset(Address);
@@ -326,11 +330,14 @@ public:
     return FuncSizeTracker.getFuncSizeForContext(Context);
   }
 
-  const SampleContextFrameVector &getFrameLocationStack(uint64_t Offset) const {
-    auto I = Offset2LocStackMap.find(Offset);
-    assert(I != Offset2LocStackMap.end() &&
-           "Can't find location for offset in the binary");
-    return I->second;
+  const SampleContextFrameVector &
+  getFrameLocationStack(uint64_t Offset, bool UseProbeDiscriminator = false) {
+    auto I = Offset2LocStackMap.emplace(Offset, SampleContextFrameVector());
+    if (I.second) {
+      InstructionPointer IP(this, Offset);
+      I.first->second = symbolize(IP, true, UseProbeDiscriminator);
+    }
+    return I.first->second;
   }
 
   Optional<SampleContextFrame> getInlineLeafFrameLoc(uint64_t Offset) {
@@ -341,14 +348,14 @@ public:
   }
 
   // Compare two addresses' inline context
-  bool inlineContextEqual(uint64_t Add1, uint64_t Add2) const;
+  bool inlineContextEqual(uint64_t Add1, uint64_t Add2);
 
   // Get the full context of the current stack with inline context filled in.
   // It will search the disassembling info stored in Offset2LocStackMap. This is
   // used as the key of function sample map
   SampleContextFrameVector
   getExpandedContext(const SmallVectorImpl<uint64_t> &Stack,
-                     bool &WasLeafInlined) const;
+                     bool &WasLeafInlined);
 
   const MCDecodedPseudoProbe *getCallProbeForAddr(uint64_t Address) const {
     return ProbeDecoder.getCallProbeForAddr(Address);
