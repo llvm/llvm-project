@@ -49,10 +49,11 @@ namespace {
 struct LoopFusion : public AffineLoopFusionBase<LoopFusion> {
   LoopFusion() = default;
   LoopFusion(unsigned fastMemorySpace, uint64_t localBufSizeThresholdBytes,
-             bool maximalFusion) {
+             bool maximalFusion, enum FusionMode affineFusionMode) {
     this->fastMemorySpace = fastMemorySpace;
     this->localBufSizeThreshold = localBufSizeThresholdBytes / 1024;
     this->maximalFusion = maximalFusion;
+    this->affineFusionMode = affineFusionMode;
   }
 
   void runOnFunction() override;
@@ -62,9 +63,10 @@ struct LoopFusion : public AffineLoopFusionBase<LoopFusion> {
 
 std::unique_ptr<OperationPass<FuncOp>>
 mlir::createLoopFusionPass(unsigned fastMemorySpace,
-                           uint64_t localBufSizeThreshold, bool maximalFusion) {
+                           uint64_t localBufSizeThreshold, bool maximalFusion,
+                           enum FusionMode affineFusionMode) {
   return std::make_unique<LoopFusion>(fastMemorySpace, localBufSizeThreshold,
-                                      maximalFusion);
+                                      maximalFusion, affineFusionMode);
 }
 
 namespace {
@@ -1391,13 +1393,25 @@ public:
       worklist.push_back(node.id);
     }
   }
+  /// Run only sibling fusion on the `mdg`.
+  void runSiblingFusionOnly() {
+    fuseSiblingNodes();
+    eraseUnusedMemRefAllocations();
+  }
+
+  /// Run only producer/consumer fusion on the `mdg`.
+  void runProducerConsumerFusionOnly() {
+    fuseProducerConsumerNodes(
+        /*maxSrcUserCount=*/std::numeric_limits<unsigned>::max());
+    eraseUnusedMemRefAllocations();
+  }
 
   // Run the GreedyFusion pass.
   // *) First pass through the nodes fuses single-use producer nodes into their
   //    unique consumer.
   // *) Second pass fuses sibling nodes which share no dependence edges.
   // *) Third pass fuses any remaining producer nodes into their users.
-  void run() {
+  void runGreedyFusion() {
     // TODO: Run this repeatedly until a fixed-point is reached.
     fuseProducerConsumerNodes(/*maxSrcUserCount=*/1);
     fuseSiblingNodes();
@@ -1971,5 +1985,11 @@ void LoopFusion::runOnFunction() {
   unsigned localBufSizeThresholdBytes = localBufSizeThreshold * 1024;
   GreedyFusion fusion(&g, localBufSizeThresholdBytes, fastMemorySpaceOpt,
                       maximalFusion, computeToleranceThreshold);
-  fusion.run();
+
+  if (affineFusionMode == FusionMode::ProducerConsumer)
+    fusion.runProducerConsumerFusionOnly();
+  else if (affineFusionMode == FusionMode::Sibling)
+    fusion.runSiblingFusionOnly();
+  else
+    fusion.runGreedyFusion();
 }
