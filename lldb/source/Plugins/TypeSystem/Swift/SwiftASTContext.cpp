@@ -104,7 +104,6 @@
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Host/XML.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -7335,8 +7334,8 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
       // a tuple element can be named, yet still be accessed by the
       // number.
       swift::TupleType *tuple_type = swift_can_type->castTo<swift::TupleType>();
-      uint32_t tuple_idx = StringConvert::ToUInt32(name, UINT32_MAX);
-      if (tuple_idx != UINT32_MAX) {
+      uint32_t tuple_idx = 0;
+      if (llvm::to_integer(name, tuple_idx)) {
         if (tuple_idx < tuple_type->getNumElements()) {
           child_indexes.push_back(tuple_idx);
           return child_indexes.size();
