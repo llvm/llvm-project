@@ -54,7 +54,6 @@ Hexagon::Hexagon() {
 
   // Hexagon Linux uses 64K pages by default.
   defaultMaxPageSize = 0x10000;
-  noneRel = R_HEX_NONE;
   tlsGotRel = R_HEX_TPREL_32;
   tlsModuleIndexRel = R_HEX_DTPMOD_32;
   tlsOffsetRel = R_HEX_DTPREL_32;

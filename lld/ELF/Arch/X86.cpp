@@ -52,7 +52,6 @@ public:
 X86::X86() {
   copyRel = R_386_COPY;
   gotRel = R_386_GLOB_DAT;
-  noneRel = R_386_NONE;
   pltRel = R_386_JUMP_SLOT;
   iRelativeRel = R_386_IRELATIVE;
   relativeRel = R_386_RELATIVE;

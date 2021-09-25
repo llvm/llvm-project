@@ -42,7 +42,6 @@ using namespace lld::elf;
 namespace {
 class AVR final : public TargetInfo {
 public:
-  AVR();
   uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
@@ -50,8 +49,6 @@ public:
                 uint64_t val) const override;
 };
 } // namespace
-
-AVR::AVR() { noneRel = R_AVR_NONE; }
 
 RelExpr AVR::getRelExpr(RelType type, const Symbol &s,
                         const uint8_t *loc) const {
