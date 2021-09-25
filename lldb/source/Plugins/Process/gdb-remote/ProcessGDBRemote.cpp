@@ -43,7 +43,6 @@
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Host/PseudoTerminal.h"
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/XML.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -381,20 +380,16 @@ bool ProcessGDBRemote::ParsePythonTargetDefinition(
 }
 
 static size_t SplitCommaSeparatedRegisterNumberString(
-    const llvm::StringRef &comma_separated_regiter_numbers,
+    const llvm::StringRef &comma_separated_register_numbers,
     std::vector<uint32_t> &regnums, int base) {
   regnums.clear();
-  std::pair<llvm::StringRef, llvm::StringRef> value_pair;
-  value_pair.second = comma_separated_regiter_numbers;
-  do {
-    value_pair = value_pair.second.split(',');
-    if (!value_pair.first.empty()) {
-      uint32_t reg = StringConvert::ToUInt32(value_pair.first.str().c_str(),
-                                             LLDB_INVALID_REGNUM, base);
-      if (reg != LLDB_INVALID_REGNUM)
-        regnums.push_back(reg);
-    }
-  } while (!value_pair.second.empty());
+  llvm::SmallVector<llvm::StringRef, 4> split_string;
+  comma_separated_register_numbers.split(split_string, ',');
+  for (llvm::StringRef x : split_string) {
+    uint32_t reg;
+    if (llvm::to_integer(x, reg, base))
+      regnums.push_back(reg);
+  }
   return regnums.size();
 }
 
@@ -1459,21 +1454,16 @@ size_t ProcessGDBRemote::UpdateThreadIDsFromStopReplyThreadsValue(
   return m_thread_ids.size();
 }
 
-size_t
-ProcessGDBRemote::UpdateThreadPCsFromStopReplyThreadsValue(std::string &value) {
+size_t ProcessGDBRemote::UpdateThreadPCsFromStopReplyThreadsValue(
+    llvm::StringRef value) {
   m_thread_pcs.clear();
-  size_t comma_pos;
-  lldb::addr_t pc;
-  while ((comma_pos = value.find(',')) != std::string::npos) {
-    value[comma_pos] = '\0';
-    pc = StringConvert::ToUInt64(value.c_str(), LLDB_INVALID_ADDRESS, 16);
-    if (pc != LLDB_INVALID_ADDRESS)
+  llvm::SmallVector<llvm::StringRef, 16> split_value;
+  value.split(split_value, ',');
+  for (llvm::StringRef x : split_value) {
+    lldb::addr_t pc;
+    if (llvm::to_integer(x, pc, 16))
       m_thread_pcs.push_back(pc);
-    value.erase(0, comma_pos + 1);
   }
-  pc = StringConvert::ToUInt64(value.c_str(), LLDB_INVALID_ADDRESS, 16);
-  if (pc != LLDB_INVALID_ADDRESS)
-    m_thread_pcs.push_back(pc);
   return m_thread_pcs.size();
 }
 

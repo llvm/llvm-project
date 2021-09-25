@@ -359,7 +359,7 @@ protected:
 
   bool CalculateThreadStopInfo(ThreadGDBRemote *thread);
 
-  size_t UpdateThreadPCsFromStopReplyThreadsValue(std::string &value);
+  size_t UpdateThreadPCsFromStopReplyThreadsValue(llvm::StringRef value);
 
   size_t UpdateThreadIDsFromStopReplyThreadsValue(llvm::StringRef value);
 

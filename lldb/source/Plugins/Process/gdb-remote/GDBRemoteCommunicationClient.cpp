@@ -16,7 +16,6 @@
 
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Host/XML.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/MemoryRegionInfo.h"
@@ -1660,22 +1659,15 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
           error_extractor.GetHexByteString(error_string);
           error.SetErrorString(error_string.c_str());
         } else if (name.equals("dirty-pages")) {
+          llvm::SmallVector<llvm::StringRef, 16> split_value;
           std::vector<addr_t> dirty_page_list;
-          std::string comma_sep_str = value.str();
-          size_t comma_pos;
-          addr_t page;
-          while ((comma_pos = comma_sep_str.find(',')) != std::string::npos) {
-            comma_sep_str[comma_pos] = '\0';
-            page = StringConvert::ToUInt64(comma_sep_str.c_str(),
-                                           LLDB_INVALID_ADDRESS, 16);
-            if (page != LLDB_INVALID_ADDRESS)
+          value.split(split_value, ',');
+          for (llvm::StringRef x : split_value) {
+            addr_t page;
+            x.consume_front("0x");
+            if (llvm::to_integer(x, page, 16))
               dirty_page_list.push_back(page);
-            comma_sep_str.erase(0, comma_pos + 1);
           }
-          page = StringConvert::ToUInt64(comma_sep_str.c_str(),
-                                         LLDB_INVALID_ADDRESS, 16);
-          if (page != LLDB_INVALID_ADDRESS)
-            dirty_page_list.push_back(page);
           region_info.SetDirtyPageList(dirty_page_list);
         }
       }
