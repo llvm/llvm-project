@@ -37,7 +37,6 @@ add_host_subdirectory(common
   common/PseudoTerminal.cpp
   common/SocketAddress.cpp
   common/Socket.cpp
-  common/StringConvert.cpp
   common/TCPSocket.cpp
   common/Terminal.cpp
   common/ThreadLauncher.cpp
