@@ -909,16 +909,17 @@ void DmaStartOp::build(OpBuilder &builder, OperationState &result,
     result.addOperands({stride, elementsPerStride});
 }
 
-void DmaStartOp::print(OpAsmPrinter &p) {
-  p << " " << getSrcMemRef() << '[' << getSrcIndices() << "], "
-    << getDstMemRef() << '[' << getDstIndices() << "], " << getNumElements()
-    << ", " << getTagMemRef() << '[' << getTagIndices() << ']';
-  if (isStrided())
-    p << ", " << getStride() << ", " << getNumElementsPerStride();
+static void print(OpAsmPrinter &p, DmaStartOp op) {
+  p << " " << op.getSrcMemRef() << '[' << op.getSrcIndices() << "], "
+    << op.getDstMemRef() << '[' << op.getDstIndices() << "], "
+    << op.getNumElements() << ", " << op.getTagMemRef() << '['
+    << op.getTagIndices() << ']';
+  if (op.isStrided())
+    p << ", " << op.getStride() << ", " << op.getNumElementsPerStride();
 
-  p.printOptionalAttrDict((*this)->getAttrs());
-  p << " : " << getSrcMemRef().getType() << ", " << getDstMemRef().getType()
-    << ", " << getTagMemRef().getType();
+  p.printOptionalAttrDict(op->getAttrs());
+  p << " : " << op.getSrcMemRef().getType() << ", "
+    << op.getDstMemRef().getType() << ", " << op.getTagMemRef().getType();
 }
 
 // Parse DmaStartOp.
@@ -929,7 +930,8 @@ void DmaStartOp::print(OpAsmPrinter &p) {
 //                       memref<1024 x f32, 2>,
 //                       memref<1 x i32>
 //
-ParseResult DmaStartOp::parse(OpAsmParser &parser, OperationState &result) {
+static ParseResult parseDmaStartOp(OpAsmParser &parser,
+                                   OperationState &result) {
   OpAsmParser::OperandType srcMemRefInfo;
   SmallVector<OpAsmParser::OperandType, 4> srcIndexInfos;
   OpAsmParser::OperandType dstMemRefInfo;
@@ -989,66 +991,67 @@ ParseResult DmaStartOp::parse(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
-LogicalResult DmaStartOp::verify() {
-  unsigned numOperands = getNumOperands();
+static LogicalResult verify(DmaStartOp op) {
+  unsigned numOperands = op.getNumOperands();
 
   // Mandatory non-variadic operands are: src memref, dst memref, tag memref and
   // the number of elements.
   if (numOperands < 4)
-    return emitOpError("expected at least 4 operands");
+    return op.emitOpError("expected at least 4 operands");
 
   // Check types of operands. The order of these calls is important: the later
   // calls rely on some type properties to compute the operand position.
   // 1. Source memref.
-  if (!getSrcMemRef().getType().isa<MemRefType>())
-    return emitOpError("expected source to be of memref type");
-  if (numOperands < getSrcMemRefRank() + 4)
-    return emitOpError() << "expected at least " << getSrcMemRefRank() + 4
-                         << " operands";
-  if (!getSrcIndices().empty() &&
-      !llvm::all_of(getSrcIndices().getTypes(),
+  if (!op.getSrcMemRef().getType().isa<MemRefType>())
+    return op.emitOpError("expected source to be of memref type");
+  if (numOperands < op.getSrcMemRefRank() + 4)
+    return op.emitOpError()
+           << "expected at least " << op.getSrcMemRefRank() + 4 << " operands";
+  if (!op.getSrcIndices().empty() &&
+      !llvm::all_of(op.getSrcIndices().getTypes(),
                     [](Type t) { return t.isIndex(); }))
-    return emitOpError("expected source indices to be of index type");
+    return op.emitOpError("expected source indices to be of index type");
 
   // 2. Destination memref.
-  if (!getDstMemRef().getType().isa<MemRefType>())
-    return emitOpError("expected destination to be of memref type");
-  unsigned numExpectedOperands = getSrcMemRefRank() + getDstMemRefRank() + 4;
+  if (!op.getDstMemRef().getType().isa<MemRefType>())
+    return op.emitOpError("expected destination to be of memref type");
+  unsigned numExpectedOperands =
+      op.getSrcMemRefRank() + op.getDstMemRefRank() + 4;
   if (numOperands < numExpectedOperands)
-    return emitOpError() << "expected at least " << numExpectedOperands
-                         << " operands";
-  if (!getDstIndices().empty() &&
-      !llvm::all_of(getDstIndices().getTypes(),
+    return op.emitOpError()
+           << "expected at least " << numExpectedOperands << " operands";
+  if (!op.getDstIndices().empty() &&
+      !llvm::all_of(op.getDstIndices().getTypes(),
                     [](Type t) { return t.isIndex(); }))
-    return emitOpError("expected destination indices to be of index type");
+    return op.emitOpError("expected destination indices to be of index type");
 
   // 3. Number of elements.
-  if (!getNumElements().getType().isIndex())
-    return emitOpError("expected num elements to be of index type");
+  if (!op.getNumElements().getType().isIndex())
+    return op.emitOpError("expected num elements to be of index type");
 
   // 4. Tag memref.
-  if (!getTagMemRef().getType().isa<MemRefType>())
-    return emitOpError("expected tag to be of memref type");
-  numExpectedOperands += getTagMemRefRank();
+  if (!op.getTagMemRef().getType().isa<MemRefType>())
+    return op.emitOpError("expected tag to be of memref type");
+  numExpectedOperands += op.getTagMemRefRank();
   if (numOperands < numExpectedOperands)
-    return emitOpError() << "expected at least " << numExpectedOperands
-                         << " operands";
-  if (!getTagIndices().empty() &&
-      !llvm::all_of(getTagIndices().getTypes(),
+    return op.emitOpError()
+           << "expected at least " << numExpectedOperands << " operands";
+  if (!op.getTagIndices().empty() &&
+      !llvm::all_of(op.getTagIndices().getTypes(),
                     [](Type t) { return t.isIndex(); }))
-    return emitOpError("expected tag indices to be of index type");
+    return op.emitOpError("expected tag indices to be of index type");
 
   // Optional stride-related operands must be either both present or both
   // absent.
   if (numOperands != numExpectedOperands &&
       numOperands != numExpectedOperands + 2)
-    return emitOpError("incorrect number of operands");
+    return op.emitOpError("incorrect number of operands");
 
   // 5. Strides.
-  if (isStrided()) {
-    if (!getStride().getType().isIndex() ||
-        !getNumElementsPerStride().getType().isIndex())
-      return emitOpError(
+  if (op.isStrided()) {
+    if (!op.getStride().getType().isIndex() ||
+        !op.getNumElementsPerStride().getType().isIndex())
+      return op.emitOpError(
           "expected stride and num elements per stride to be of type index");
   }
 
@@ -1065,74 +1068,20 @@ LogicalResult DmaStartOp::fold(ArrayRef<Attribute> cstOperands,
 // DmaWaitOp
 // ---------------------------------------------------------------------------
 
-void DmaWaitOp::build(OpBuilder &builder, OperationState &result,
-                      Value tagMemRef, ValueRange tagIndices,
-                      Value numElements) {
-  result.addOperands(tagMemRef);
-  result.addOperands(tagIndices);
-  result.addOperands(numElements);
-}
-
-void DmaWaitOp::print(OpAsmPrinter &p) {
-  p << " " << getTagMemRef() << '[' << getTagIndices() << "], "
-    << getNumElements();
-  p.printOptionalAttrDict((*this)->getAttrs());
-  p << " : " << getTagMemRef().getType();
-}
-
-// Parse DmaWaitOp.
-// Eg:
-//   dma_wait %tag[%index], %num_elements : memref<1 x i32, (d0) -> (d0), 4>
-//
-ParseResult DmaWaitOp::parse(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType tagMemrefInfo;
-  SmallVector<OpAsmParser::OperandType, 2> tagIndexInfos;
-  Type type;
-  auto indexType = parser.getBuilder().getIndexType();
-  OpAsmParser::OperandType numElementsInfo;
-
-  // Parse tag memref, its indices, and dma size.
-  if (parser.parseOperand(tagMemrefInfo) ||
-      parser.parseOperandList(tagIndexInfos, OpAsmParser::Delimiter::Square) ||
-      parser.parseComma() || parser.parseOperand(numElementsInfo) ||
-      parser.parseColonType(type) ||
-      parser.resolveOperand(tagMemrefInfo, type, result.operands) ||
-      parser.resolveOperands(tagIndexInfos, indexType, result.operands) ||
-      parser.resolveOperand(numElementsInfo, indexType, result.operands))
-    return failure();
-
-  return success();
-}
-
 LogicalResult DmaWaitOp::fold(ArrayRef<Attribute> cstOperands,
                               SmallVectorImpl<OpFoldResult> &results) {
   /// dma_wait(memrefcast) -> dma_wait
   return foldMemRefCast(*this);
 }
 
-LogicalResult DmaWaitOp::verify() {
-  // Mandatory non-variadic operands are tag and the number of elements.
-  if (getNumOperands() < 2)
-    return emitOpError() << "expected at least 2 operands";
-
-  // Check types of operands. The order of these calls is important: the later
-  // calls rely on some type properties to compute the operand position.
-  if (!getTagMemRef().getType().isa<MemRefType>())
-    return emitOpError() << "expected tag to be of memref type";
-
-  if (getNumOperands() != 2 + getTagMemRefRank())
-    return emitOpError() << "expected " << 2 + getTagMemRefRank()
-                         << " operands";
-
-  if (!getTagIndices().empty() &&
-      !llvm::all_of(getTagIndices().getTypes(),
-                    [](Type t) { return t.isIndex(); }))
-    return emitOpError() << "expected tag indices to be of index type";
-
-  if (!getNumElements().getType().isIndex())
-    return emitOpError()
-           << "expected the number of elements to be of index type";
-
+static LogicalResult verify(DmaWaitOp op) {
+  // Check that the number of tag indices matches the tagMemRef rank.
+  unsigned numTagIndices = op.tagIndices().size();
+  unsigned tagMemRefRank = op.getTagMemRefRank();
+  if (numTagIndices != tagMemRefRank)
+    return op.emitOpError() << "expected tagIndices to have the same number of "
+                               "elements as the tagMemRef rank, expected "
+                            << tagMemRefRank << ", but got " << numTagIndices;
   return success();
 }
 

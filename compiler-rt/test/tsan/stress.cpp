@@ -54,8 +54,12 @@ void *Thread(void *x) {
 
 int main() {
   ANNOTATE_BENIGN_RACE(stop);
-  if (pipe2(fds, O_NONBLOCK))
-    exit((perror("pipe2"), 1));
+  if (pipe(fds))
+    exit((perror("pipe"), 1));
+  if (fcntl(fds[0], F_SETFL, O_NONBLOCK))
+    exit((perror("fcntl"), 1));
+  if (fcntl(fds[1], F_SETFL, O_NONBLOCK))
+    exit((perror("fcntl"), 1));
   const int kActions = 9;
   const int kMultiplier = 4;
   pthread_t t[kActions * kMultiplier];

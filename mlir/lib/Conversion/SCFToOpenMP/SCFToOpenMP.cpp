@@ -13,6 +13,7 @@
 
 #include "mlir/Conversion/SCFToOpenMP/SCFToOpenMP.h"
 #include "../PassDetail.h"
+#include "mlir/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/SCF/SCF.h"
@@ -34,10 +35,21 @@ static bool matchSimpleReduction(Block &block) {
   if (block.empty() || llvm::hasSingleElement(block) ||
       std::next(block.begin(), 2) != block.end())
     return false;
-  return isa<OpTy...>(block.front()) &&
+
+  if (block.getNumArguments() != 2)
+    return false;
+
+  SmallVector<Operation *, 4> combinerOps;
+  Value reducedVal = matchReduction({block.getArguments()[1]},
+                                    /*redPos=*/0, combinerOps);
+
+  if (!reducedVal || !reducedVal.isa<BlockArgument>() ||
+      combinerOps.size() != 1)
+    return false;
+
+  return isa<OpTy...>(combinerOps[0]) &&
          isa<scf::ReduceReturnOp>(block.back()) &&
-         block.front().getOperands() == block.getArguments() &&
-         block.back().getOperand(0) == block.front().getResult(0);
+         block.front().getOperands() == block.getArguments();
 }
 
 /// Matches a block containing a select-based min/max reduction. The types of

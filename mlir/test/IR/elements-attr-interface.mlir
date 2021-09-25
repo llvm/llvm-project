@@ -19,3 +19,9 @@ std.constant dense<[10, 11, 12, 13, 14]> : tensor<5xi64>
 // expected-error@below {{Test iterating `APInt`: unable to iterate type}}
 // expected-error@below {{Test iterating `IntegerAttr`: unable to iterate type}}
 std.constant opaque<"_", "0xDEADBEEF"> : tensor<5xi64>
+
+// Check that we don't crash on empty element attributes.
+// expected-error@below {{Test iterating `uint64_t`: }}
+// expected-error@below {{Test iterating `APInt`: }}
+// expected-error@below {{Test iterating `IntegerAttr`: }}
+std.constant dense<> : tensor<0xi64>

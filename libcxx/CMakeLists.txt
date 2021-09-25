@@ -537,7 +537,7 @@ function(cxx_add_basic_build_flags target)
   # in the dylib. C++20 is needed to use char8_t.
   set_target_properties(${target} PROPERTIES
     CXX_STANDARD 20
-    CXX_STANDARD_REQUIRED NO
+    CXX_STANDARD_REQUIRED YES
     CXX_EXTENSIONS NO)
 
   # When building the dylib, don't warn for unavailable aligned allocation

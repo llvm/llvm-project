@@ -178,3 +178,14 @@ add_libc_unittest(
     libc.include.stdlib
     libc.src.stdlib.bsearch
 )
+
+add_libc_unittest(
+  qsort_test
+  SUITE
+    libc_stdlib_unittests
+  SRCS
+    qsort_test.cpp
+  DEPENDS
+    libc.include.stdlib
+    libc.src.stdlib.qsort
+)

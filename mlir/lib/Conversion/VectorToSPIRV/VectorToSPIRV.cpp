@@ -36,13 +36,12 @@ struct VectorBitcastConvert final
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(vector::BitCastOp bitcastOp, ArrayRef<Value> operands,
+  matchAndRewrite(vector::BitCastOp bitcastOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto dstType = getTypeConverter()->convertType(bitcastOp.getType());
     if (!dstType)
       return failure();
 
-    vector::BitCastOp::Adaptor adaptor(operands);
     if (dstType == adaptor.source().getType())
       rewriter.replaceOp(bitcastOp, adaptor.source());
     else
@@ -58,12 +57,11 @@ struct VectorBroadcastConvert final
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(vector::BroadcastOp broadcastOp, ArrayRef<Value> operands,
+  matchAndRewrite(vector::BroadcastOp broadcastOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     if (broadcastOp.source().getType().isa<VectorType>() ||
         !spirv::CompositeType::isValid(broadcastOp.getVectorType()))
       return failure();
-    vector::BroadcastOp::Adaptor adaptor(operands);
     SmallVector<Value, 4> source(broadcastOp.getVectorType().getNumElements(),
                                  adaptor.source());
     rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
@@ -77,7 +75,7 @@ struct VectorExtractOpConvert final
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(vector::ExtractOp extractOp, ArrayRef<Value> operands,
+  matchAndRewrite(vector::ExtractOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Only support extracting a scalar value now.
     VectorType resultVectorType = extractOp.getType().dyn_cast<VectorType>();
@@ -88,7 +86,6 @@ struct VectorExtractOpConvert final
     if (!dstType)
       return failure();
 
-    vector::ExtractOp::Adaptor adaptor(operands);
     if (adaptor.vector().getType().isa<spirv::ScalarType>()) {
       rewriter.replaceOp(extractOp, adaptor.vector());
       return success();
@@ -106,8 +103,7 @@ struct VectorExtractStridedSliceOpConvert final
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(vector::ExtractStridedSliceOp extractOp,
-                  ArrayRef<Value> operands,
+  matchAndRewrite(vector::ExtractStridedSliceOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto dstType = getTypeConverter()->convertType(extractOp.getType());
     if (!dstType)
@@ -120,7 +116,7 @@ struct VectorExtractStridedSliceOpConvert final
     if (stride != 1)
       return failure();
 
-    Value srcVector = operands.front();
+    Value srcVector = adaptor.getOperands().front();
 
     // Extract vector<1xT> case.
     if (dstType.isa<spirv::ScalarType>()) {
@@ -144,11 +140,10 @@ struct VectorFmaOpConvert final : public OpConversionPattern<vector::FMAOp> {
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(vector::FMAOp fmaOp, ArrayRef<Value> operands,
+  matchAndRewrite(vector::FMAOp fmaOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     if (!spirv::CompositeType::isValid(fmaOp.getVectorType()))
       return failure();
-    vector::FMAOp::Adaptor adaptor(operands);
     rewriter.replaceOpWithNewOp<spirv::GLSLFmaOp>(
         fmaOp, fmaOp.getType(), adaptor.lhs(), adaptor.rhs(), adaptor.acc());
     return success();
@@ -160,12 +155,11 @@ struct VectorInsertOpConvert final
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(vector::InsertOp insertOp, ArrayRef<Value> operands,
+  matchAndRewrite(vector::InsertOp insertOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     if (insertOp.getSourceType().isa<VectorType>() ||
         !spirv::CompositeType::isValid(insertOp.getDestVectorType()))
       return failure();
-    vector::InsertOp::Adaptor adaptor(operands);
     int32_t id = getFirstIntValue(insertOp.position());
     rewriter.replaceOpWithNewOp<spirv::CompositeInsertOp>(
         insertOp, adaptor.source(), adaptor.dest(), id);
@@ -178,12 +172,10 @@ struct VectorExtractElementOpConvert final
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(vector::ExtractElementOp extractElementOp,
-                  ArrayRef<Value> operands,
+  matchAndRewrite(vector::ExtractElementOp extractElementOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     if (!spirv::CompositeType::isValid(extractElementOp.getVectorType()))
       return failure();
-    vector::ExtractElementOp::Adaptor adaptor(operands);
     rewriter.replaceOpWithNewOp<spirv::VectorExtractDynamicOp>(
         extractElementOp, extractElementOp.getType(), adaptor.vector(),
         extractElementOp.position());
@@ -196,12 +188,10 @@ struct VectorInsertElementOpConvert final
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(vector::InsertElementOp insertElementOp,
-                  ArrayRef<Value> operands,
+  matchAndRewrite(vector::InsertElementOp insertElementOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     if (!spirv::CompositeType::isValid(insertElementOp.getDestVectorType()))
       return failure();
-    vector::InsertElementOp::Adaptor adaptor(operands);
     rewriter.replaceOpWithNewOp<spirv::VectorInsertDynamicOp>(
         insertElementOp, insertElementOp.getType(), insertElementOp.dest(),
         adaptor.source(), insertElementOp.position());
@@ -214,11 +204,10 @@ struct VectorInsertStridedSliceOpConvert final
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(vector::InsertStridedSliceOp insertOp,
-                  ArrayRef<Value> operands,
+  matchAndRewrite(vector::InsertStridedSliceOp insertOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Value srcVector = operands.front();
-    Value dstVector = operands.back();
+    Value srcVector = adaptor.getOperands().front();
+    Value dstVector = adaptor.getOperands().back();
 
     // Insert scalar values not supported yet.
     if (srcVector.getType().isa<spirv::ScalarType>() ||

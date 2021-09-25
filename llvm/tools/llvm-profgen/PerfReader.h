@@ -612,8 +612,8 @@ protected:
   // Post process the profile after trace aggregation, we will do simple range
   // overlap computation for AutoFDO, or unwind for CSSPGO(hybrid sample).
   virtual void generateRawProfile() = 0;
-  virtual void writeRawProfile(StringRef Filename);
-  virtual void writeRawProfile(raw_fd_ostream &OS) = 0;
+  void writeRawProfile(StringRef Filename);
+  void writeRawProfile(raw_fd_ostream &OS);
 
   ProfiledBinary *Binary = nullptr;
 
@@ -646,7 +646,6 @@ public:
 private:
   // Unwind the hybrid samples after aggregration
   void unwindSamples();
-  void writeRawProfile(raw_fd_ostream &OS) override;
 };
 
 /*
@@ -673,7 +672,6 @@ public:
 
 private:
   void computeCounterFromLBR(const PerfSample *Sample, uint64_t Repeat);
-  void writeRawProfile(raw_fd_ostream &OS) override;
 };
 
 } // end namespace sampleprof

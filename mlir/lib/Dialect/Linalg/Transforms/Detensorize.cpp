@@ -60,7 +60,7 @@ class DetensorizeGenericOp : public OpConversionPattern<GenericOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(GenericOp op, ArrayRef<Value> operands,
+  matchAndRewrite(GenericOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Block *originalBlock = op->getBlock();
 
@@ -78,7 +78,7 @@ public:
     rewriter.replaceOp(op, yieldOp->getOperands());
 
     // No need for these intermediate blocks, merge them into 1.
-    rewriter.mergeBlocks(opEntryBlock, originalBlock, operands);
+    rewriter.mergeBlocks(opEntryBlock, originalBlock, adaptor.getOperands());
     rewriter.mergeBlocks(newBlock, originalBlock, {});
 
     rewriter.eraseOp(&*Block::iterator(yieldOp));

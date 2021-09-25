@@ -20,7 +20,7 @@ public:
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(AssumingOp op, ArrayRef<Value> operands,
+  matchAndRewrite(AssumingOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
     SmallVector<Type, 2> newResultTypes;
     newResultTypes.reserve(op.getNumResults());
@@ -48,9 +48,9 @@ public:
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(AssumingYieldOp op, ArrayRef<Value> operands,
+  matchAndRewrite(AssumingYieldOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
-    rewriter.replaceOpWithNewOp<AssumingYieldOp>(op, operands);
+    rewriter.replaceOpWithNewOp<AssumingYieldOp>(op, adaptor.getOperands());
     return success();
   }
 };
