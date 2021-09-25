@@ -259,18 +259,22 @@ void ARMBlockPlacement::moveBasicBlock(MachineBasicBlock *BB,
     assert(From->isSuccessor(To) &&
            "'To' is expected to be a successor of 'From'");
     MachineInstr &Terminator = *(--From->terminators().end());
-    if (!Terminator.isUnconditionalBranch()) {
-      // The BB doesn't have an unconditional branch so it relied on
-      // fall-through. Fix by adding an unconditional branch to the moved BB.
-      MachineInstrBuilder MIB =
-          BuildMI(From, Terminator.getDebugLoc(), TII->get(ARM::t2B));
-      MIB.addMBB(To);
-      MIB.addImm(ARMCC::CondCodes::AL);
-      MIB.addReg(ARM::NoRegister);
-      LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Adding unconditional branch from "
-                        << From->getName() << " to " << To->getName() << ": "
-                        << *MIB.getInstr());
-    }
+    if (!TII->isPredicated(Terminator) &&
+        (isUncondBranchOpcode(Terminator.getOpcode()) ||
+         isIndirectBranchOpcode(Terminator.getOpcode()) ||
+         isJumpTableBranchOpcode(Terminator.getOpcode()) ||
+         Terminator.isReturn()))
+      return;
+    // The BB doesn't have an unconditional branch so it relied on
+    // fall-through. Fix by adding an unconditional branch to the moved BB.
+    MachineInstrBuilder MIB =
+        BuildMI(From, Terminator.getDebugLoc(), TII->get(ARM::t2B));
+    MIB.addMBB(To);
+    MIB.addImm(ARMCC::CondCodes::AL);
+    MIB.addReg(ARM::NoRegister);
+    LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Adding unconditional branch from "
+                      << From->getName() << " to " << To->getName() << ": "
+                      << *MIB.getInstr());
   };
 
   // Fix fall-through to the moved BB from the one that used to be before it.

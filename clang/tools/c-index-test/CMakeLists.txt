@@ -40,12 +40,7 @@ set_target_properties(c-index-test
 
 # If libxml2 is available, make it available for c-index-test.
 if (CLANG_HAVE_LIBXML)
-  if ((CMAKE_OSX_SYSROOT) AND (EXISTS ${CMAKE_OSX_SYSROOT}/${LIBXML2_INCLUDE_DIR}))
-    include_directories(SYSTEM ${CMAKE_OSX_SYSROOT}/${LIBXML2_INCLUDE_DIR})
-  else()
-    include_directories(SYSTEM ${LIBXML2_INCLUDE_DIR})
-  endif()
-  target_link_libraries(c-index-test PRIVATE ${LIBXML2_LIBRARIES})
+  target_link_libraries(c-index-test PRIVATE LibXml2::LibXml2)
 endif()
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
