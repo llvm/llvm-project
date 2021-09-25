@@ -1068,8 +1068,10 @@ public:
       auto *IE = dyn_cast<InsertElementInst>(U);
       if (!IE)
         return TTI::TCC_Basic; // FIXME
-      auto *CI = dyn_cast<ConstantInt>(IE->getOperand(2));
-      unsigned Idx = CI ? CI->getZExtValue() : -1;
+      unsigned Idx = -1;
+      if (auto *CI = dyn_cast<ConstantInt>(IE->getOperand(2)))
+        if (CI->getValue().getActiveBits() <= 32)
+          Idx = CI->getZExtValue();
       return TargetTTI->getVectorInstrCost(Opcode, Ty, Idx);
     }
     case Instruction::ShuffleVector: {
@@ -1132,17 +1134,15 @@ public:
                                        Shuffle->getShuffleMask(), 0, nullptr);
     }
     case Instruction::ExtractElement: {
-      unsigned Idx = -1;
       auto *EEI = dyn_cast<ExtractElementInst>(U);
       if (!EEI)
         return TTI::TCC_Basic; // FIXME
-
-      auto *CI = dyn_cast<ConstantInt>(EEI->getOperand(1));
-      if (CI)
-        Idx = CI->getZExtValue();
-
-      return TargetTTI->getVectorInstrCost(Opcode, U->getOperand(0)->getType(),
-                                           Idx);
+      unsigned Idx = -1;
+      if (auto *CI = dyn_cast<ConstantInt>(EEI->getOperand(1)))
+        if (CI->getValue().getActiveBits() <= 32)
+          Idx = CI->getZExtValue();
+      Type *DstTy = U->getOperand(0)->getType();
+      return TargetTTI->getVectorInstrCost(Opcode, DstTy, Idx);
     }
     }
     // By default, just classify everything as 'basic'.

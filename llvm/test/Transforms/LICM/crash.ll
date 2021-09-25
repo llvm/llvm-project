@@ -73,3 +73,15 @@ define void @test4() noreturn nounwind {
   store i32 undef, i32* @g_47, align 4
   br label %1
 }
+
+; OSS-Fuzz #29050
+; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=29050
+define <2 x i177> @ossfuzz_29050(<2 x i177> %X) {
+bb:
+  br label %BB
+BB:
+  %I3 = insertelement <2 x i177> undef, i177 95780971304118053647396689196894323976171195136475135, i177 95780971304118053647396689196894323976171195136475135
+  br i1 true, label %BB, label %BB1
+BB1:
+  ret <2 x i177> %I3
+}
