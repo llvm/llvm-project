@@ -379,6 +379,8 @@ protected:
   lldb::VariableSP ParseVariableDIE(const lldb_private::SymbolContext &sc,
                                     const DWARFDIE &die,
                                     const lldb::addr_t func_low_pc);
+  lldb::VariableSP ParseVariableDIECached(const lldb_private::SymbolContext &sc,
+                                          const DWARFDIE &die);
 
   void
   ParseAndAppendGlobalVariable(const lldb_private::SymbolContext &sc,
@@ -391,8 +393,15 @@ protected:
 
   size_t ParseVariablesInFunctionContextRecursive(
       const lldb_private::SymbolContext &sc, const DWARFDIE &die,
-      const lldb::addr_t func_low_pc,
-      lldb_private::VariableList &variable_list);
+      lldb::addr_t func_low_pc, DIEArray &accumulator);
+
+  size_t PopulateBlockVariableList(lldb_private::VariableList &variable_list,
+                                   const lldb_private::SymbolContext &sc,
+                                   llvm::ArrayRef<DIERef> variable_dies,
+                                   lldb::addr_t func_low_pc);
+
+  DIEArray MergeBlockAbstractParameters(const DWARFDIE &block_die,
+                                        DIEArray &&variable_dies);
 
   bool ClassOrStructIsVirtual(const DWARFDIE &die);
 
