@@ -670,6 +670,14 @@ bool RestoreStack(Tid tid, EventType type, Sid sid, Epoch epoch, uptr addr,
 
 }  // namespace v3
 
+bool RacyStacks::operator==(const RacyStacks &other) const {
+  if (hash[0] == other.hash[0] && hash[1] == other.hash[1])
+    return true;
+  if (hash[0] == other.hash[1] && hash[1] == other.hash[0])
+    return true;
+  return false;
+}
+
 static bool FindRacyStacks(const RacyStacks &hash) {
   for (uptr i = 0; i < ctx->racy_stacks.Size(); i++) {
     if (hash == ctx->racy_stacks[i]) {
