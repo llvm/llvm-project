@@ -806,5 +806,17 @@ TEST_F(QualifierFixerTest, UnsignedQualifier) {
                "Foo(unsigned const char *bytes)", Style);
 }
 
+TEST_F(QualifierFixerTest, NoOpQualifierReplacements) {
+
+  FormatStyle Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+  Style.QualifierOrder = {"static", "const", "type"};
+
+  ReplacementCount = 0;
+  EXPECT_EQ(ReplacementCount, 0);
+  verifyFormat("static const uint32 foo[] = {0, 31};", Style);
+  EXPECT_EQ(ReplacementCount, 0);
+}
+
 } // namespace format
 } // namespace clang
