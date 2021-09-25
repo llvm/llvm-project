@@ -127,12 +127,12 @@ entry:
 define <4 x i32> @slm-costs_8_v4_sext_mul(<4 x i8> %a)  {
 ; SLM-LABEL: 'slm-costs_8_v4_sext_mul'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sext = sext <4 x i8> %a to <4 x i32>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %res = mul nsw <4 x i32> %sext, <i32 127, i32 -128, i32 127, i32 -128>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = mul nsw <4 x i32> %sext, <i32 127, i32 -128, i32 127, i32 -128>
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
 ;
 ; GLM-LABEL: 'slm-costs_8_v4_sext_mul'
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sext = sext <4 x i8> %a to <4 x i32>
-; GLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = mul nsw <4 x i32> %sext, <i32 127, i32 -128, i32 127, i32 -128>
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res = mul nsw <4 x i32> %sext, <i32 127, i32 -128, i32 127, i32 -128>
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
 ;
 entry:
@@ -144,12 +144,12 @@ entry:
 define <4 x i32> @slm-costs_8_v4_sext_mul_fail(<4 x i8> %a)  {
 ; SLM-LABEL: 'slm-costs_8_v4_sext_mul_fail'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sext = sext <4 x i8> %a to <4 x i32>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %res = mul nsw <4 x i32> %sext, <i32 127, i32 -128, i32 128, i32 -128>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = mul nsw <4 x i32> %sext, <i32 127, i32 -128, i32 128, i32 -128>
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
 ;
 ; GLM-LABEL: 'slm-costs_8_v4_sext_mul_fail'
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sext = sext <4 x i8> %a to <4 x i32>
-; GLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = mul nsw <4 x i32> %sext, <i32 127, i32 -128, i32 128, i32 -128>
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res = mul nsw <4 x i32> %sext, <i32 127, i32 -128, i32 128, i32 -128>
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
 ;
 entry:
@@ -161,12 +161,12 @@ entry:
 define <4 x i32> @slm-costs_8_v4_sext_mul_fail_2(<4 x i8> %a)  {
 ; SLM-LABEL: 'slm-costs_8_v4_sext_mul_fail_2'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sext = sext <4 x i8> %a to <4 x i32>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %res = mul nsw <4 x i32> %sext, <i32 127, i32 -129, i32 127, i32 -128>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = mul nsw <4 x i32> %sext, <i32 127, i32 -129, i32 127, i32 -128>
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
 ;
 ; GLM-LABEL: 'slm-costs_8_v4_sext_mul_fail_2'
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sext = sext <4 x i8> %a to <4 x i32>
-; GLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = mul nsw <4 x i32> %sext, <i32 127, i32 -129, i32 127, i32 -128>
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res = mul nsw <4 x i32> %sext, <i32 127, i32 -129, i32 127, i32 -128>
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
 ;
 entry:
@@ -296,12 +296,12 @@ entry:
 define <4 x i32> @slm-costs_16_v4_sext_mul(<4 x i16> %a)  {
 ; SLM-LABEL: 'slm-costs_16_v4_sext_mul'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sext = sext <4 x i16> %a to <4 x i32>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %res = mul nsw <4 x i32> %sext, <i32 32767, i32 -32768, i32 32767, i32 -32768>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = mul nsw <4 x i32> %sext, <i32 32767, i32 -32768, i32 32767, i32 -32768>
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
 ;
 ; GLM-LABEL: 'slm-costs_16_v4_sext_mul'
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sext = sext <4 x i16> %a to <4 x i32>
-; GLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = mul nsw <4 x i32> %sext, <i32 32767, i32 -32768, i32 32767, i32 -32768>
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res = mul nsw <4 x i32> %sext, <i32 32767, i32 -32768, i32 32767, i32 -32768>
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
 ;
 entry:
