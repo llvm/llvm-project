@@ -135,20 +135,35 @@ inline ExecutorAddr operator+(const ExecutorAddrDiff &LHS,
 /// Represents an address range in the exceutor process.
 struct ExecutorAddrRange {
   ExecutorAddrRange() = default;
-  ExecutorAddrRange(ExecutorAddr StartAddress, ExecutorAddr EndAddress)
-      : StartAddress(StartAddress), EndAddress(EndAddress) {}
+  ExecutorAddrRange(ExecutorAddr Start, ExecutorAddr End)
+      : Start(Start), End(End) {}
+  ExecutorAddrRange(ExecutorAddr Start, ExecutorAddrDiff Size)
+      : Start(Start), End(Start + Size) {}
 
-  bool empty() const { return StartAddress == EndAddress; }
-  ExecutorAddrDiff size() const { return EndAddress - StartAddress; }
+  bool empty() const { return Start == End; }
+  ExecutorAddrDiff size() const { return End - Start; }
+
+  friend bool operator==(const ExecutorAddrRange &LHS,
+                         const ExecutorAddrRange &RHS) {
+    return LHS.Start == RHS.Start && LHS.End == RHS.End;
+  }
+  friend bool operator!=(const ExecutorAddrRange &LHS,
+                         const ExecutorAddrRange &RHS) {
+    return !(LHS == RHS);
+  }
+  bool contains(ExecutorAddr Addr) const { return Start <= Addr && Addr < End; }
+  bool overlaps(const ExecutorAddrRange &Other) {
+    return !(Other.End <= Start || End <= Other.Start);
+  }
 
   template <typename T> span<T> toSpan() const {
     assert(size().getValue() % sizeof(T) == 0 &&
            "AddressRange is not a multiple of sizeof(T)");
-    return span<T>(StartAddress.toPtr<T *>(), size().getValue() / sizeof(T));
+    return span<T>(Start.toPtr<T *>(), size().getValue() / sizeof(T));
   }
 
-  ExecutorAddr StartAddress;
-  ExecutorAddr EndAddress;
+  ExecutorAddr Start;
+  ExecutorAddr End;
 };
 
 /// SPS serializatior for ExecutorAddr.
@@ -178,18 +193,18 @@ template <>
 class SPSSerializationTraits<SPSExecutorAddrRange, ExecutorAddrRange> {
 public:
   static size_t size(const ExecutorAddrRange &Value) {
-    return SPSArgList<SPSExecutorAddr, SPSExecutorAddr>::size(
-        Value.StartAddress, Value.EndAddress);
+    return SPSArgList<SPSExecutorAddr, SPSExecutorAddr>::size(Value.Start,
+                                                              Value.End);
   }
 
   static bool serialize(SPSOutputBuffer &BOB, const ExecutorAddrRange &Value) {
     return SPSArgList<SPSExecutorAddr, SPSExecutorAddr>::serialize(
-        BOB, Value.StartAddress, Value.EndAddress);
+        BOB, Value.Start, Value.End);
   }
 
   static bool deserialize(SPSInputBuffer &BIB, ExecutorAddrRange &Value) {
     return SPSArgList<SPSExecutorAddr, SPSExecutorAddr>::deserialize(
-        BIB, Value.StartAddress, Value.EndAddress);
+        BIB, Value.Start, Value.End);
   }
 };
 

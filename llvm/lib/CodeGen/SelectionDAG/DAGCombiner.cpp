@@ -16767,9 +16767,12 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
       if (DAG.getDataLayout().isBigEndian())
         PtrOff = (BitWidth + 7 - NewBW) / 8 - PtrOff;
 
+      bool IsFast = false;
       Align NewAlign = commonAlignment(LD->getAlign(), PtrOff);
-      Type *NewVTTy = NewVT.getTypeForEVT(*DAG.getContext());
-      if (NewAlign < DAG.getDataLayout().getABITypeAlign(NewVTTy))
+      if (!TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), NewVT,
+                                  LD->getAddressSpace(), NewAlign,
+                                  LD->getMemOperand()->getFlags(), &IsFast) ||
+          !IsFast)
         return SDValue();
 
       SDValue NewPtr =
