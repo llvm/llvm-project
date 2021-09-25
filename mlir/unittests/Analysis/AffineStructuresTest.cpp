@@ -769,4 +769,30 @@ TEST(FlatAffineConstraintsTest, removeIdRange) {
   EXPECT_THAT(fac.getInequality(0), testing::ElementsAre(12, 20, 40));
 }
 
+TEST(FlatAffineConstraintsTest, simplifyLocalsTest) {
+  // (x) : (exists y: 2x + y = 1 and y = 2).
+  FlatAffineConstraints fac(1, 0, 1);
+  fac.addEquality({2, 1, -1});
+  fac.addEquality({0, 1, -2});
+
+  EXPECT_TRUE(fac.isEmpty());
+
+  // (x) : (exists y, z, w: 3x + y = 1 and 2y = z and 3y = w and z = w).
+  FlatAffineConstraints fac2(1, 0, 3);
+  fac2.addEquality({3, 1, 0, 0, -1});
+  fac2.addEquality({0, 2, -1, 0, 0});
+  fac2.addEquality({0, 3, 0, -1, 0});
+  fac2.addEquality({0, 0, 1, -1, 0});
+
+  EXPECT_TRUE(fac2.isEmpty());
+
+  // (x) : (exists y: x >= y + 1 and 2x + y = 0 and y >= -1).
+  FlatAffineConstraints fac3(1, 0, 1);
+  fac3.addInequality({1, -1, -1});
+  fac3.addInequality({0, 1, 1});
+  fac3.addEquality({2, 1, 0});
+
+  EXPECT_TRUE(fac3.isEmpty());
+}
+
 } // namespace mlir
