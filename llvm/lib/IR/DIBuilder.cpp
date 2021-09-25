@@ -254,7 +254,7 @@ DIEnumerator *DIBuilder::createEnumerator(StringRef Name, uint64_t Val,
                            Name);
 }
 
-DIEnumerator *DIBuilder::createEnumerator(StringRef Name, APSInt Value) {
+DIEnumerator *DIBuilder::createEnumerator(StringRef Name, const APSInt &Value) {
   assert(!Name.empty() && "Unable to create enumerator without name");
   return DIEnumerator::get(VMContext, APInt(Value), Value.isUnsigned(), Name);
 }
