@@ -1977,10 +1977,6 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int WarpSize,
   if (thread_limit > 0) {
     threadsPerGroup = thread_limit;
     DP("Setting threads per block to requested %d\n", thread_limit);
-    if (ExecutionMode == GENERIC) { // Add master warp for GENERIC
-      threadsPerGroup += WarpSize;
-      DP("Adding master wavefront: +%d threads\n", WarpSize);
-    }
     if (threadsPerGroup > RTLDeviceInfoTy::Max_WG_Size) { // limit to max
       threadsPerGroup = RTLDeviceInfoTy::Max_WG_Size;
       DP("Setting threads per block to maximum %d\n", threadsPerGroup);
@@ -1992,6 +1988,24 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int WarpSize,
     DP("Reduced threadsPerGroup to flat-attr-group-size limit %d\n",
        threadsPerGroup);
   }
+
+  if (ExecutionMode == GENERIC) {
+    // Add master thread in additional warp for GENERIC mode
+    // Only one additional thread is started, not an entire warp
+
+    // Do not exceed max number of threads: sacrifice last warp for
+    // the thread master
+    if (threadsPerGroup == RTLDeviceInfoTy::Max_WG_Size)
+      threadsPerGroup -= WarpSize -1;
+    else {
+      // Cap threadsPerGroup at WarpSize level as we need a master
+      if (threadsPerGroup < WarpSize) threadsPerGroup = WarpSize;
+      threadsPerGroup = WarpSize*(threadsPerGroup / WarpSize) +1;
+    }
+
+    DP("Adding master thread (+1)\n");
+  }
+
   if (print_kernel_trace & STARTUP_DETAILS)
     DP("threadsPerGroup: %d\n", threadsPerGroup);
   DP("Preparing %d threads\n", threadsPerGroup);
