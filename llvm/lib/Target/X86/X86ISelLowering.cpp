@@ -44264,6 +44264,10 @@ static SDValue combineMulToPMADDWD(SDNode *N, SelectionDAG &DAG,
     APInt Mask17 = APInt::getHighBitsSet(32, 17);
     if (DAG.MaskedValueIsZero(Op, Mask17))
       return Op;
+    // Mask off upper 16-bits of sign-extended constants.
+    if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode()))
+      return DAG.getNode(ISD::AND, SDLoc(N), VT, Op,
+                         DAG.getConstant(0xFFFF, SDLoc(N), VT));
     // Convert sext(vXi16) to zext(vXi16).
     // TODO: Handle sext from smaller types as well?
     if (Op.getOpcode() == ISD::SIGN_EXTEND && VT.getSizeInBits() <= 128 &&
