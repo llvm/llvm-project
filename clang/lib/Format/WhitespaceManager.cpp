@@ -1146,14 +1146,15 @@ WhitespaceManager::CellDescriptions WhitespaceManager::getCells(unsigned Start,
       } else if (C.Tok->is(tok::comma)) {
         if (!Cells.empty())
           Cells.back().EndIndex = i;
-        Cell++;
+        if (C.Tok->getNextNonComment()->isNot(tok::r_brace)) // dangling comma
+          ++Cell;
       }
     } else if (Depth == 1) {
       if (C.Tok == MatchingParen) {
         if (!Cells.empty())
           Cells.back().EndIndex = i;
         Cells.push_back(CellDescription{i, ++Cell, i + 1, false, nullptr});
-        CellCount = Cell + 1;
+        CellCount = C.Tok->Previous->isNot(tok::comma) ? Cell + 1 : Cell;
         // Go to the next non-comment and ensure there is a break in front
         const auto *NextNonComment = C.Tok->getNextNonComment();
         while (NextNonComment->is(tok::comma))
@@ -1190,6 +1191,17 @@ WhitespaceManager::CellDescriptions WhitespaceManager::getCells(unsigned Start,
         // So if we split a line previously and the tail line + this token is
         // less then the column limit we remove the split here and just put
         // the column start at a space past the comma
+        //
+        // FIXME This if branch covers the cases where the column is not
+        // the first column. This leads to weird pathologies like the formatting
+        // auto foo = Items{
+        //     Section{
+        //             0, bar(),
+        //     }
+        // };
+        // Well if it doesn't lead to that it's indicative that the line
+        // breaking should be revisited. Unfortunately alot of other options
+        // interact with this
         auto j = i - 1;
         if ((j - 1) > Start && Changes[j].Tok->is(tok::comma) &&
             Changes[j - 1].NewlinesBefore > 0) {
