@@ -190,17 +190,6 @@ void ThreadContext::OnStarted(void *arg) {
   new (thr)
       ThreadState(ctx, tid, unique_id, epoch0, reuse_count, args->stk_addr,
                   args->stk_size, args->tls_addr, args->tls_size);
-#if !SANITIZER_GO
-  thr->shadow_stack = &ThreadTrace(thr->tid)->shadow_stack[0];
-  thr->shadow_stack_pos = thr->shadow_stack;
-  thr->shadow_stack_end = thr->shadow_stack + kShadowStackSize;
-#else
-  // Setup dynamic shadow stack.
-  const int kInitStackSize = 8;
-  thr->shadow_stack = (uptr *)Alloc(kInitStackSize * sizeof(uptr));
-  thr->shadow_stack_pos = thr->shadow_stack;
-  thr->shadow_stack_end = thr->shadow_stack + kInitStackSize;
-#endif
   if (common_flags()->detect_deadlocks)
     thr->dd_lt = ctx->dd->CreateLogicalThread(unique_id);
   thr->fast_state.SetHistorySize(flags()->history_size);

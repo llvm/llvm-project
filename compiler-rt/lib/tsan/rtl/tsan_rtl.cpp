@@ -145,6 +145,16 @@ ThreadState::ThreadState(Context *ctx, Tid tid, int unique_id, u64 epoch,
       last_sleep_clock(tid)
 #endif
 {
+#if !SANITIZER_GO
+  shadow_stack_pos = shadow_stack;
+  shadow_stack_end = shadow_stack + kShadowStackSize;
+#else
+  // Setup dynamic shadow stack.
+  const int kInitStackSize = 8;
+  shadow_stack = (uptr *)Alloc(kInitStackSize * sizeof(uptr));
+  shadow_stack_pos = shadow_stack;
+  shadow_stack_end = shadow_stack + kInitStackSize;
+#endif
 }
 
 #if !SANITIZER_GO
