@@ -37,6 +37,12 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
 include(AddMLIR)
 
+# -BSymbolic is incompatible with TypeID
+if("${CMAKE_SHARED_LINKER_FLAGS}" MATCHES "-Bsymbolic[^-]")
+  message(FATAL_ERROR " MLIR does not support `-Bsymbolic` (see http://llvm.org/pr51420 ),"
+          " try `-Bsymbolic-functions` instead.")
+endif()
+
 # Forbid implicit function declaration: this may lead to subtle bugs and we
 # don't have a reason to support this.
 check_c_compiler_flag("-Werror=implicit-function-declaration" C_SUPPORTS_WERROR_IMPLICIT_FUNCTION_DECLARATION)
