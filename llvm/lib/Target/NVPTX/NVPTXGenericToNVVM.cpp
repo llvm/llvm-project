@@ -212,7 +212,7 @@ Value *GenericToNVVM::remapConstantVectorOrConstantAggregate(
   // If any of the elements has been  modified, construct the equivalent
   // vector or aggregate value with a set instructions and the converted
   // elements.
-  Value *NewValue = UndefValue::get(C->getType());
+  Value *NewValue = PoisonValue::get(C->getType());
   if (isa<ConstantVector>(C)) {
     for (unsigned i = 0; i < NumOperands; ++i) {
       Value *Idx = ConstantInt::get(Type::getInt32Ty(M->getContext()), i);
