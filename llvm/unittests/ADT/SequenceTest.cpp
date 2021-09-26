@@ -35,7 +35,7 @@ using IntegralTypes = testing::Types<uint8_t,   // 0
                                      >;
 
 template <class T> class StrongIntTest : public testing::Test {};
-TYPED_TEST_SUITE(StrongIntTest, IntegralTypes);
+TYPED_TEST_SUITE(StrongIntTest, IntegralTypes, );
 TYPED_TEST(StrongIntTest, Operations) {
   using T = TypeParam;
   auto Max = std::numeric_limits<T>::max();
