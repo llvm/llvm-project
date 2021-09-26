@@ -1940,6 +1940,8 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 
     { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i32,  2 },
 
+    { ISD::TRUNCATE,    MVT::v16i16, MVT::v16i32, 4 },
+    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v16i32, 4 },
     { ISD::TRUNCATE,    MVT::v16i8,  MVT::v8i16,  1 },
     { ISD::TRUNCATE,    MVT::v16i8,  MVT::v4i32,  1 },
     { ISD::TRUNCATE,    MVT::v16i8,  MVT::v2i64,  1 },
@@ -2015,6 +2017,8 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i64,  9 },
     { ISD::TRUNCATE,    MVT::v16i1,  MVT::v16i64, 11 },
 
+    { ISD::TRUNCATE,    MVT::v16i16, MVT::v16i32, 6 },
+    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v16i32, 6 },
     { ISD::TRUNCATE,    MVT::v16i8,  MVT::v16i16, 2 }, // and+extract+packuswb
     { ISD::TRUNCATE,    MVT::v16i8,  MVT::v8i32,  5 },
     { ISD::TRUNCATE,    MVT::v8i16,  MVT::v8i32,  5 },
