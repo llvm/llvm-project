@@ -20,6 +20,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -585,6 +586,8 @@ private:
   /// stop translating such blocks early.
   bool HasTailCall = false;
 
+  StackProtectorDescriptor SPDescriptor;
+
   /// Switch analysis and optimization.
   class GISelSwitchLowering : public SwitchCG::SwitchLowering {
   public:
@@ -613,8 +616,34 @@ private:
   // * Clear the different maps.
   void finalizeFunction();
 
-  // Handle emitting jump tables for each basic block.
-  void finalizeBasicBlock();
+  // Processing steps done per block. E.g. emitting jump tables, stack
+  // protectors etc. Returns true if no errors, false if there was a problem
+  // that caused an abort.
+  bool finalizeBasicBlock(const BasicBlock &BB, MachineBasicBlock &MBB);
+
+  /// Codegen a new tail for a stack protector check ParentMBB which has had its
+  /// tail spliced into a stack protector check success bb.
+  ///
+  /// For a high level explanation of how this fits into the stack protector
+  /// generation see the comment on the declaration of class
+  /// StackProtectorDescriptor.
+  ///
+  /// \return true if there were no problems.
+  bool emitSPDescriptorParent(StackProtectorDescriptor &SPD,
+                              MachineBasicBlock *ParentBB);
+
+  /// Codegen the failure basic block for a stack protector check.
+  ///
+  /// A failure stack protector machine basic block consists simply of a call to
+  /// __stack_chk_fail().
+  ///
+  /// For a high level explanation of how this fits into the stack protector
+  /// generation see the comment on the declaration of class
+  /// StackProtectorDescriptor.
+  ///
+  /// \return true if there were no problems.
+  bool emitSPDescriptorFailure(StackProtectorDescriptor &SPD,
+                               MachineBasicBlock *FailureBB);
 
   /// Get the VRegs that represent \p Val.
   /// Non-aggregate types have just one corresponding VReg and the list can be
