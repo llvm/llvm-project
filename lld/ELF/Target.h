@@ -111,9 +111,9 @@ public:
   // True if _GLOBAL_OFFSET_TABLE_ is relative to .got.plt, false if .got.
   bool gotBaseSymInGotPlt = false;
 
+  static constexpr RelType noneRel = 0;
   RelType copyRel;
   RelType gotRel;
-  RelType noneRel;
   RelType pltRel;
   RelType relativeRel;
   RelType iRelativeRel;

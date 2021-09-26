@@ -75,7 +75,6 @@ static uint32_t utype(uint32_t op, uint32_t rd, uint32_t imm) {
 
 RISCV::RISCV() {
   copyRel = R_RISCV_COPY;
-  noneRel = R_RISCV_NONE;
   pltRel = R_RISCV_JUMP_SLOT;
   relativeRel = R_RISCV_RELATIVE;
   iRelativeRel = R_RISCV_IRELATIVE;

@@ -52,7 +52,6 @@ ARM::ARM() {
   relativeRel = R_ARM_RELATIVE;
   iRelativeRel = R_ARM_IRELATIVE;
   gotRel = R_ARM_GLOB_DAT;
-  noneRel = R_ARM_NONE;
   pltRel = R_ARM_JUMP_SLOT;
   symbolicRel = R_ARM_ABS32;
   tlsGotRel = R_ARM_TLS_TPOFF32;

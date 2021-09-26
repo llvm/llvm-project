@@ -78,7 +78,6 @@ static const std::vector<std::vector<uint8_t>> nopInstructions = {
 X86_64::X86_64() {
   copyRel = R_X86_64_COPY;
   gotRel = R_X86_64_GLOB_DAT;
-  noneRel = R_X86_64_NONE;
   pltRel = R_X86_64_JUMP_SLOT;
   relativeRel = R_X86_64_RELATIVE;
   iRelativeRel = R_X86_64_IRELATIVE;
