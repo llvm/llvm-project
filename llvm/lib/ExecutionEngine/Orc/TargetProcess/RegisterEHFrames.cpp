@@ -158,6 +158,24 @@ Error deregisterEHFrameSection(const void *EHFrameSectionAddr,
 } // end namespace orc
 } // end namespace llvm
 
+extern "C" llvm::orc::shared::detail::CWrapperFunctionResult
+llvm_orc_registerEHFrameSectionCustomDirectWrapper(
+    const char *EHFrameSectionAddr, uint64_t Size) {
+  if (auto Err = registerEHFrameSection(EHFrameSectionAddr, Size))
+    return WrapperFunctionResult::createOutOfBandError(toString(std::move(Err)))
+        .release();
+  return llvm::orc::shared::detail::CWrapperFunctionResult();
+}
+
+extern "C" llvm::orc::shared::detail::CWrapperFunctionResult
+llvm_orc_deregisterEHFrameSectionCustomDirectWrapper(
+    const char *EHFrameSectionAddr, uint64_t Size) {
+  if (auto Err = deregisterEHFrameSection(EHFrameSectionAddr, Size))
+    return WrapperFunctionResult::createOutOfBandError(toString(std::move(Err)))
+        .release();
+  return llvm::orc::shared::detail::CWrapperFunctionResult();
+}
+
 static Error registerEHFrameWrapper(JITTargetAddress Addr, uint64_t Size) {
   return llvm::orc::registerEHFrameSection(
       jitTargetAddressToPointer<const void *>(Addr), Size);
