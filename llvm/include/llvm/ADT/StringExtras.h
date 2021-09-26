@@ -501,6 +501,62 @@ public:
   }
 };
 
+/// A forward iterator over partitions of string over a separator.
+class SplittingIterator
+    : public iterator_facade_base<SplittingIterator, std::forward_iterator_tag,
+                                  StringRef> {
+  StringRef Current;
+  StringRef Next;
+  StringRef Separator;
+
+public:
+  SplittingIterator(StringRef Str, StringRef Separator)
+      : Next(Str), Separator(Separator) {
+    ++*this;
+  }
+
+  bool operator==(const SplittingIterator &R) const {
+    return Current == R.Current && Next == R.Next && Separator == R.Separator;
+  }
+
+  const StringRef &operator*() const { return Current; }
+
+  StringRef &operator*() { return Current; }
+
+  SplittingIterator &operator++() {
+    std::pair<StringRef, StringRef> Res = Next.split(Separator);
+    Current = Res.first;
+    Next = Res.second;
+    return *this;
+  }
+};
+
+/// Split the specified string over a separator and return a range-compatible
+/// iterable over its partitions.  Used to permit conveniently iterating
+/// over separated strings like so:
+///
+/// \code
+///   for (StringRef x : llvm::Split("foo,bar,baz", ','))
+///     ...;
+/// \end
+///
+/// Note that the passed string must remain valid throuhgout lifetime
+/// of the iterators.
+class Split {
+  StringRef Str;
+  std::string SeparatorStr;
+
+public:
+  Split(StringRef NewStr, StringRef Separator)
+      : Str(NewStr), SeparatorStr(Separator) {}
+  Split(StringRef NewStr, char Separator)
+      : Str(NewStr), SeparatorStr(1, Separator) {}
+
+  SplittingIterator begin() { return SplittingIterator(Str, SeparatorStr); }
+
+  SplittingIterator end() { return SplittingIterator("", SeparatorStr); }
+};
+
 } // end namespace llvm
 
 #endif // LLVM_ADT_STRINGEXTRAS_H

@@ -383,9 +383,7 @@ static size_t SplitCommaSeparatedRegisterNumberString(
     const llvm::StringRef &comma_separated_register_numbers,
     std::vector<uint32_t> &regnums, int base) {
   regnums.clear();
-  llvm::SmallVector<llvm::StringRef, 4> split_string;
-  comma_separated_register_numbers.split(split_string, ',');
-  for (llvm::StringRef x : split_string) {
+  for (llvm::StringRef x : llvm::Split(comma_separated_register_numbers, ',')) {
     uint32_t reg;
     if (llvm::to_integer(x, reg, base))
       regnums.push_back(reg);
@@ -1457,9 +1455,7 @@ size_t ProcessGDBRemote::UpdateThreadIDsFromStopReplyThreadsValue(
 size_t ProcessGDBRemote::UpdateThreadPCsFromStopReplyThreadsValue(
     llvm::StringRef value) {
   m_thread_pcs.clear();
-  llvm::SmallVector<llvm::StringRef, 16> split_value;
-  value.split(split_value, ',');
-  for (llvm::StringRef x : split_value) {
+  for (llvm::StringRef x : llvm::Split(value, ',')) {
     lldb::addr_t pc;
     if (llvm::to_integer(x, pc, 16))
       m_thread_pcs.push_back(pc);
@@ -5111,9 +5107,7 @@ llvm::Expected<bool> ProcessGDBRemote::SaveCore(llvm::StringRef outfile) {
     std::string path;
 
     // process the response
-    llvm::SmallVector<llvm::StringRef, 1> reply_data;
-    response.GetStringRef().split(reply_data, ';');
-    for (auto x : reply_data) {
+    for (auto x : llvm::Split(response.GetStringRef(), ';')) {
       if (x.consume_front("core-path:"))
         StringExtractor(x).GetHexByteString(path);
     }
