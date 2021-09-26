@@ -535,11 +535,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
     else if (!GEPOp->isInBounds())
       Decomposed.InBounds = false;
 
-    // Don't attempt to analyze GEPs over unsized objects.
-    if (!GEPOp->getSourceElementType()->isSized()) {
-      Decomposed.Base = V;
-      return Decomposed;
-    }
+    assert(GEPOp->getSourceElementType()->isSized() && "GEP must be sized");
 
     // Don't attempt to analyze GEPs if index scale is not a compile-time
     // constant.
