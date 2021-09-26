@@ -91,6 +91,9 @@ private:
   SimpleRemoteEPC(std::shared_ptr<SymbolStringPool> SSP)
       : ExecutorProcessControl(std::move(SSP)) {}
 
+  Error sendMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
+                    ExecutorAddr TagAddr, ArrayRef<char> ArgBytes);
+
   Error handleSetup(uint64_t SeqNo, ExecutorAddr TagAddr,
                     SimpleRemoteEPCArgBytesVector ArgBytes);
   void prepareToReceiveSetupMessage(
