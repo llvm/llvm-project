@@ -1279,10 +1279,6 @@ struct DSEState {
       if (CB->onlyAccessesInaccessibleMemory())
         return false;
 
-    // NOTE: For calls, the number of stores removed could be slightly improved
-    // by using AA.callCapturesBefore(UseInst, DefLoc, &DT), but that showed to
-    // be expensive compared to the benefits in practice. For now, avoid more
-    // expensive analysis to limit compile-time.
     return isRefSet(BatchAA.getModRefInfo(UseInst, DefLoc));
   }
 
@@ -1793,7 +1789,7 @@ struct DSEState {
       // uncommon. If it turns out to be important, we can use
       // getUnderlyingObjects here instead.
       const Value *UO = getUnderlyingObject(DefLoc->Ptr);
-      if (!UO || !isInvisibleToCallerAfterRet(UO))
+      if (!isInvisibleToCallerAfterRet(UO))
         continue;
 
       if (isWriteAtEndOfFunction(Def)) {
@@ -1965,9 +1961,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
     unsigned PartialLimit = MemorySSAPartialStoreLimit;
     // Worklist of MemoryAccesses that may be killed by KillingDef.
     SetVector<MemoryAccess *> ToCheck;
-
-    if (KillingUndObj)
-      ToCheck.insert(KillingDef->getDefiningAccess());
+    ToCheck.insert(KillingDef->getDefiningAccess());
 
     bool Shortend = false;
     bool IsMemTerm = State.isMemTerminatorInst(KillingI);
