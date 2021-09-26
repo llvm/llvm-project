@@ -31,6 +31,7 @@
 # RUN: echo 'GROUP("%t2.a" "%t1.o")' > %t2.lds
 # RUN: ld.lld --fatal-warnings --warn-backrefs %t2.lds -o /dev/null
 # RUN: ld.lld --fatal-warnings --warn-backrefs '-(' %t2.a %t1.o '-)' -o /dev/null
+# RUN: ld.lld --fatal-warnings --warn-backrefs --start-group %t2.a %t1.o --end-group -o /dev/null
 
 ## A backward reference from %t1.o to %t2.a (added by %t3.lds).
 # RUN: echo 'GROUP("%t2.a")' > %t3.lds
