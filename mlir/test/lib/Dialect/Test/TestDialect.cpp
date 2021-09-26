@@ -210,8 +210,7 @@ public:
   TestReductionPatternInterface(Dialect *dialect)
       : DialectReductionPatternInterface(dialect) {}
 
-  virtual void
-  populateReductionPatterns(RewritePatternSet &patterns) const final {
+  void populateReductionPatterns(RewritePatternSet &patterns) const final {
     populateTestReductionPatterns(patterns);
   }
 };
