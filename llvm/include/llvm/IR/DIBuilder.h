@@ -181,7 +181,7 @@ namespace llvm {
                                      DIFile *File);
 
     /// Create a single enumerator value.
-    DIEnumerator *createEnumerator(StringRef Name, APSInt Value);
+    DIEnumerator *createEnumerator(StringRef Name, const APSInt &Value);
     DIEnumerator *createEnumerator(StringRef Name, uint64_t Val,
                                    bool IsUnsigned = false);
 
