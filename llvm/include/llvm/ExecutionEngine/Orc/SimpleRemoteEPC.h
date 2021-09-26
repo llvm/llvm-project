@@ -108,8 +108,11 @@ private:
 
   using PendingCallWrapperResultsMap = DenseMap<uint64_t, SendResultFunction>;
 
-  std::atomic_bool Disconnected{false};
   std::mutex SimpleRemoteEPCMutex;
+  std::condition_variable DisconnectCV;
+  bool Disconnected = false;
+  Error DisconnectErr = Error::success();
+
   std::unique_ptr<SimpleRemoteEPCTransport> T;
   std::unique_ptr<jitlink::JITLinkMemoryManager> OwnedMemMgr;
   std::unique_ptr<MemoryAccess> OwnedMemAccess;
