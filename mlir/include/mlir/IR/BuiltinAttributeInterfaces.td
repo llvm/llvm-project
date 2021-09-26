@@ -257,6 +257,11 @@ def ElementsAttrInterface : AttrInterface<"ElementsAttr"> {
     template <typename T>
     ::mlir::FailureOr<::mlir::detail::ElementsAttrIndexer> buildValueResult(
         /*isContiguous*/std::true_type) const {
+      if ($_attr.empty()) {
+        return ::mlir::detail::ElementsAttrIndexer::contiguous<T>(
+          /*isSplat=*/false, nullptr);
+      }
+
       auto valueIt = $_attr.value_begin_impl(OverloadToken<T>());
       return ::mlir::detail::ElementsAttrIndexer::contiguous(
         $_attr.isSplat(), &*valueIt);
