@@ -18,7 +18,10 @@ namespace llvm {
 namespace orc {
 
 SimpleRemoteEPC::~SimpleRemoteEPC() {
+#ifndef NDEBUG
+  std::lock_guard<std::mutex> Lock(SimpleRemoteEPCMutex);
   assert(Disconnected && "Destroyed without disconnection");
+#endif // NDEBUG
 }
 
 Expected<tpctypes::DylibHandle>
@@ -69,9 +72,10 @@ void SimpleRemoteEPC::callWrapperAsync(SendResultFunction OnComplete,
 }
 
 Error SimpleRemoteEPC::disconnect() {
-  Disconnected = true;
   T->disconnect();
-  return Error::success();
+  std::unique_lock<std::mutex> Lock(SimpleRemoteEPCMutex);
+  DisconnectCV.wait(Lock, [this] { return Disconnected; });
+  return std::move(DisconnectErr);
 }
 
 Expected<SimpleRemoteEPCTransportClient::HandleMessageAction>
@@ -114,13 +118,10 @@ void SimpleRemoteEPC::handleDisconnect(Error Err) {
     KV.second(
         shared::WrapperFunctionResult::createOutOfBandError("disconnecting"));
 
-  if (Err) {
-    // FIXME: Move ReportError to EPC.
-    if (ES)
-      ES->reportError(std::move(Err));
-    else
-      logAllUnhandledErrors(std::move(Err), errs(), "SimpleRemoteEPC: ");
-  }
+  std::lock_guard<std::mutex> Lock(SimpleRemoteEPCMutex);
+  DisconnectErr = joinErrors(std::move(DisconnectErr), std::move(Err));
+  Disconnected = true;
+  DisconnectCV.notify_all();
 }
 
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
