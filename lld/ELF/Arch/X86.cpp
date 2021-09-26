@@ -60,6 +60,7 @@ X86::X86() {
   tlsGotRel = R_386_TLS_TPOFF;
   tlsModuleIndexRel = R_386_TLS_DTPMOD32;
   tlsOffsetRel = R_386_TLS_DTPOFF32;
+  gotBaseSymInGotPlt = true;
   pltHeaderSize = 16;
   pltEntrySize = 16;
   ipltEntrySize = 16;

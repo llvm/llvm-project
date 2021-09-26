@@ -87,6 +87,7 @@ X86_64::X86_64() {
   tlsGotRel = R_X86_64_TPOFF64;
   tlsModuleIndexRel = R_X86_64_DTPMOD64;
   tlsOffsetRel = R_X86_64_DTPOFF64;
+  gotBaseSymInGotPlt = true;
   gotEntrySize = 8;
   pltHeaderSize = 16;
   pltEntrySize = 16;

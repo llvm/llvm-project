@@ -156,7 +156,6 @@ PPC::PPC() {
   relativeRel = R_PPC_RELATIVE;
   iRelativeRel = R_PPC_IRELATIVE;
   symbolicRel = R_PPC_ADDR32;
-  gotBaseSymInGotPlt = false;
   gotHeaderEntriesNum = 3;
   gotPltHeaderEntriesNum = 0;
   pltHeaderSize = 0;

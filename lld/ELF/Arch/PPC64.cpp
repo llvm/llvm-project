@@ -576,7 +576,6 @@ PPC64::PPC64() {
   pltHeaderSize = 60;
   pltEntrySize = 4;
   ipltEntrySize = 16; // PPC64PltCallStub::size
-  gotBaseSymInGotPlt = false;
   gotHeaderEntriesNum = 1;
   gotPltHeaderEntriesNum = 2;
   needsThunks = true;

@@ -58,7 +58,6 @@ ARM::ARM() {
   tlsGotRel = R_ARM_TLS_TPOFF32;
   tlsModuleIndexRel = R_ARM_TLS_DTPMOD32;
   tlsOffsetRel = R_ARM_TLS_DTPOFF32;
-  gotBaseSymInGotPlt = false;
   pltHeaderSize = 32;
   pltEntrySize = 16;
   ipltEntrySize = 16;

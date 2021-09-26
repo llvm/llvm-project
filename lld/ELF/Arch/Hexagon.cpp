@@ -44,6 +44,7 @@ Hexagon::Hexagon() {
   gotRel = R_HEX_GLOB_DAT;
   symbolicRel = R_HEX_32;
 
+  gotBaseSymInGotPlt = true;
   // The zero'th GOT entry is reserved for the address of _DYNAMIC.  The
   // next 3 are reserved for the dynamic loader.
   gotPltHeaderEntriesNum = 4;
