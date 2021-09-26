@@ -15,7 +15,6 @@
 #include "RNBDefs.h"
 #include "RNBSocket.h"
 #include "lldb/Host/Socket.h"
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "llvm/Testing/Support/Error.h"
 

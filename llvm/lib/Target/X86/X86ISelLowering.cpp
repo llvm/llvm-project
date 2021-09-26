@@ -44264,11 +44264,14 @@ static SDValue combineMulToPMADDWD(SDNode *N, SelectionDAG &DAG,
     APInt Mask17 = APInt::getHighBitsSet(32, 17);
     if (DAG.MaskedValueIsZero(Op, Mask17))
       return Op;
+    // Mask off upper 16-bits of sign-extended constants.
+    if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode()))
+      return DAG.getNode(ISD::AND, SDLoc(N), VT, Op,
+                         DAG.getConstant(0xFFFF, SDLoc(N), VT));
     // Convert sext(vXi16) to zext(vXi16).
-    // TODO: Enable pre-SSE41 once we can prefer MULHU/MULHS first.
     // TODO: Handle sext from smaller types as well?
-    if (Op.getOpcode() == ISD::SIGN_EXTEND && VT.is128BitVector() &&
-        Subtarget.hasSSE41() && N->isOnlyUserOf(Op.getNode())) {
+    if (Op.getOpcode() == ISD::SIGN_EXTEND && VT.getSizeInBits() <= 128 &&
+        N->isOnlyUserOf(Op.getNode())) {
       SDValue Src = Op.getOperand(0);
       if (Src.getScalarValueSizeInBits() == 16)
         return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), VT, Src);
@@ -44493,9 +44496,7 @@ static SDValue combineShiftToPMULH(SDNode *N, SelectionDAG &DAG,
            "SRL or SRA node is required here!");
   SDLoc DL(N);
 
-  // Only do this with SSE4.1. On earlier targets reduceVMULWidth will expand
-  // the multiply.
-  if (!Subtarget.hasSSE41())
+  if (!Subtarget.hasSSE2())
     return SDValue();
 
   // The operation feeding into the shift must be a multiply.

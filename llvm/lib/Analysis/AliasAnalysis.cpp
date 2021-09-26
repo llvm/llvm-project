@@ -119,7 +119,7 @@ bool AAResults::invalidate(Function &F, const PreservedAnalyses &PA,
 
 AliasResult AAResults::alias(const MemoryLocation &LocA,
                              const MemoryLocation &LocB) {
-  AAQueryInfo AAQIP;
+  SimpleAAQueryInfo AAQIP;
   return alias(LocA, LocB, AAQIP);
 }
 
@@ -162,7 +162,7 @@ AliasResult AAResults::alias(const MemoryLocation &LocA,
 
 bool AAResults::pointsToConstantMemory(const MemoryLocation &Loc,
                                        bool OrLocal) {
-  AAQueryInfo AAQIP;
+  SimpleAAQueryInfo AAQIP;
   return pointsToConstantMemory(Loc, AAQIP, OrLocal);
 }
 
@@ -190,7 +190,7 @@ ModRefInfo AAResults::getArgModRefInfo(const CallBase *Call, unsigned ArgIdx) {
 }
 
 ModRefInfo AAResults::getModRefInfo(Instruction *I, const CallBase *Call2) {
-  AAQueryInfo AAQIP;
+  SimpleAAQueryInfo AAQIP;
   return getModRefInfo(I, Call2, AAQIP);
 }
 
@@ -217,7 +217,7 @@ ModRefInfo AAResults::getModRefInfo(Instruction *I, const CallBase *Call2,
 
 ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
                                     const MemoryLocation &Loc) {
-  AAQueryInfo AAQIP;
+  SimpleAAQueryInfo AAQIP;
   return getModRefInfo(Call, Loc, AAQIP);
 }
 
@@ -284,7 +284,7 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
 
 ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
                                     const CallBase *Call2) {
-  AAQueryInfo AAQIP;
+  SimpleAAQueryInfo AAQIP;
   return getModRefInfo(Call1, Call2, AAQIP);
 }
 
@@ -474,7 +474,7 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, AliasResult AR) {
 
 ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
                                     const MemoryLocation &Loc) {
-  AAQueryInfo AAQIP;
+  SimpleAAQueryInfo AAQIP;
   return getModRefInfo(L, Loc, AAQIP);
 }
 ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
@@ -499,7 +499,7 @@ ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
 
 ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
                                     const MemoryLocation &Loc) {
-  AAQueryInfo AAQIP;
+  SimpleAAQueryInfo AAQIP;
   return getModRefInfo(S, Loc, AAQIP);
 }
 ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
@@ -531,7 +531,7 @@ ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
 }
 
 ModRefInfo AAResults::getModRefInfo(const FenceInst *S, const MemoryLocation &Loc) {
-  AAQueryInfo AAQIP;
+  SimpleAAQueryInfo AAQIP;
   return getModRefInfo(S, Loc, AAQIP);
 }
 
@@ -547,7 +547,7 @@ ModRefInfo AAResults::getModRefInfo(const FenceInst *S,
 
 ModRefInfo AAResults::getModRefInfo(const VAArgInst *V,
                                     const MemoryLocation &Loc) {
-  AAQueryInfo AAQIP;
+  SimpleAAQueryInfo AAQIP;
   return getModRefInfo(V, Loc, AAQIP);
 }
 
@@ -577,7 +577,7 @@ ModRefInfo AAResults::getModRefInfo(const VAArgInst *V,
 
 ModRefInfo AAResults::getModRefInfo(const CatchPadInst *CatchPad,
                                     const MemoryLocation &Loc) {
-  AAQueryInfo AAQIP;
+  SimpleAAQueryInfo AAQIP;
   return getModRefInfo(CatchPad, Loc, AAQIP);
 }
 
@@ -597,7 +597,7 @@ ModRefInfo AAResults::getModRefInfo(const CatchPadInst *CatchPad,
 
 ModRefInfo AAResults::getModRefInfo(const CatchReturnInst *CatchRet,
                                     const MemoryLocation &Loc) {
-  AAQueryInfo AAQIP;
+  SimpleAAQueryInfo AAQIP;
   return getModRefInfo(CatchRet, Loc, AAQIP);
 }
 
@@ -617,7 +617,7 @@ ModRefInfo AAResults::getModRefInfo(const CatchReturnInst *CatchRet,
 
 ModRefInfo AAResults::getModRefInfo(const AtomicCmpXchgInst *CX,
                                     const MemoryLocation &Loc) {
-  AAQueryInfo AAQIP;
+  SimpleAAQueryInfo AAQIP;
   return getModRefInfo(CX, Loc, AAQIP);
 }
 
@@ -645,7 +645,7 @@ ModRefInfo AAResults::getModRefInfo(const AtomicCmpXchgInst *CX,
 
 ModRefInfo AAResults::getModRefInfo(const AtomicRMWInst *RMW,
                                     const MemoryLocation &Loc) {
-  AAQueryInfo AAQIP;
+  SimpleAAQueryInfo AAQIP;
   return getModRefInfo(RMW, Loc, AAQIP);
 }
 

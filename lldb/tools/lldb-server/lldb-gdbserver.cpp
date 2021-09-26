@@ -26,7 +26,6 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Pipe.h"
 #include "lldb/Host/Socket.h"
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Status.h"
@@ -238,7 +237,8 @@ void ConnectToRemote(MainLoop &mainloop,
     if (colon_pos != std::string::npos) {
       connection_host = final_host_and_port.substr(0, colon_pos);
       connection_port = final_host_and_port.substr(colon_pos + 1);
-      connection_portno = StringConvert::ToUInt32(connection_port.c_str(), 0);
+      // FIXME: improve error handling
+      llvm::to_integer(connection_port, connection_portno);
     }
 
 
