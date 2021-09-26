@@ -1523,6 +1523,43 @@ def fir_BoxTypeDescOp : fir_SimpleOneResultOp<"box_tdesc", [NoSideEffect]> {
 // Array value operations
 //===----------------------------------------------------------------------===//
 
+// Array value operations are used to capture the semantics of
+// Fortran's array expressions in FIR. An abstract array expression is
+// evaluated in the following way.
+//
+//  1. Determination of the iteration space under which the assignment
+//     expression is to be evaluated. The iteration space may be implicit
+//     (from the shape of the result array) or explicit (defined by the user).
+//  2. If there are masking expressions, evaluate (and cache) the
+//     masking expression for the iteration space (from 1).
+//  3. The rhs of the assignment is evaluated for the iteration space. If
+//     masking expressions were present then the rhs is only evaluated where
+//     the mask was computed to be true. The entire rhs is completely evaluated
+//     before any results are stored to the lhs.
+//  4. Each of the result values computed in the previous step are merged back
+//     to the lhs array's storage.
+//
+// The model (in pseudo-code) is thus:
+//
+//   !- Load the arrays in the expression
+//   %10 = array_load A
+//   %11 = array_load B
+//   !- optional: compute mask values
+//   %masks = allocmem array<??xlogical>
+//   do_loop_nest %i = ... {
+//     %masks[i] = ...
+//   }
+//   !- Compute every element value "A = B ..."
+//   do_loop_nest %i = ... {
+//     if (%masks[i]) {
+//       array_fetch %11, ...       !- B(...)
+//       %20 = ...                  !- element-by-element computation
+//       array_update %10, %20, ... !- A(...) = ...
+//     }
+//   }
+//   !- Merge the new and old values into the memory for "A"
+//   array_merge_store <updated A> to <A's address>
+
 def fir_ArrayLoadOp : fir_Op<"array_load", [AttrSizedOperandSegments]> {
 
   let summary = "Load an array as a value.";
@@ -1555,13 +1592,14 @@ def fir_ArrayLoadOp : fir_Op<"array_load", [AttrSizedOperandSegments]> {
     Arg<AnyRefOrBox, "", [MemRead]>:$memref,
     Optional<AnyShapeOrShiftType>:$shape,
     Optional<fir_SliceType>:$slice,
-    Variadic<AnyIntegerType>:$lenParams
+    Variadic<AnyIntegerType>:$typeparams
   );
 
   let results = (outs fir_SequenceType);
 
   let assemblyFormat = [{
-    $memref (`(`$shape^`)`)? (`[`$slice^`]`)? (`typeparams` $lenParams^)? attr-dict `:` functional-type(operands, results)
+    $memref (`(`$shape^`)`)? (`[`$slice^`]`)? (`typeparams` $typeparams^)?
+        attr-dict `:` functional-type(operands, results)
   }];
 
   let verifier = [{ return ::verify(*this); }];
