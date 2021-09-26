@@ -392,19 +392,25 @@ format_to_n(_OutIt __out_it, iter_difference_t<_OutIt> __n, wstring_view __fmt,
 }
 #endif
 
+template <class _CharT>
+_LIBCPP_HIDE_FROM_ABI size_t __vformatted_size(basic_string_view<_CharT> __fmt, auto __args) {
+  __format::__formatted_size_buffer<_CharT> __buffer;
+  _VSTD::__format::__vformat_to(basic_format_parse_context{__fmt, __args.__size()},
+                                _VSTD::__format_context_create(__buffer.make_output_iterator(), __args));
+  return _VSTD::move(__buffer).result();
+}
+
 template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FORMAT size_t
-formatted_size(string_view __fmt, const _Args&... __args) {
-  // TODO FMT Improve PoC: using std::string is inefficient.
-  return _VSTD::vformat(__fmt, _VSTD::make_format_args(__args...)).size();
+_LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FORMAT size_t formatted_size(string_view __fmt,
+                                                                                              const _Args&... __args) {
+  return _VSTD::__vformatted_size(__fmt, basic_format_args{_VSTD::make_format_args(__args...)});
 }
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FORMAT size_t
-formatted_size(wstring_view __fmt, const _Args&... __args) {
-  // TODO FMT Improve PoC: using std::string is inefficient.
-  return _VSTD::vformat(__fmt, _VSTD::make_wformat_args(__args...)).size();
+_LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FORMAT size_t formatted_size(wstring_view __fmt,
+                                                                                              const _Args&... __args) {
+  return _VSTD::__vformatted_size(__fmt, basic_format_args{_VSTD::make_wformat_args(__args...)});
 }
 #endif
 
@@ -526,23 +532,28 @@ format_to_n(_OutIt __out_it, iter_difference_t<_OutIt> __n, locale __loc,
 }
 #endif
 
+template <class _CharT>
+_LIBCPP_HIDE_FROM_ABI size_t __vformatted_size(locale __loc, basic_string_view<_CharT> __fmt, auto __args) {
+  __format::__formatted_size_buffer<_CharT> __buffer;
+  _VSTD::__format::__vformat_to(
+      basic_format_parse_context{__fmt, __args.__size()},
+      _VSTD::__format_context_create(__buffer.make_output_iterator(), __args, _VSTD::move(__loc)));
+  return _VSTD::move(__buffer).result();
+}
+
 template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FORMAT size_t
-formatted_size(locale __loc, string_view __fmt, const _Args&... __args) {
-  // TODO FMT Improve PoC: using std::string is inefficient.
-  return _VSTD::vformat(_VSTD::move(__loc), __fmt,
-                        _VSTD::make_format_args(__args...))
-      .size();
+_LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FORMAT size_t formatted_size(locale __loc,
+                                                                                              string_view __fmt,
+                                                                                              const _Args&... __args) {
+  return _VSTD::__vformatted_size(_VSTD::move(__loc), __fmt, basic_format_args{_VSTD::make_format_args(__args...)});
 }
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FORMAT size_t
-formatted_size(locale __loc, wstring_view __fmt, const _Args&... __args) {
-  // TODO FMT Improve PoC: using std::string is inefficient.
-  return _VSTD::vformat(_VSTD::move(__loc), __fmt,
-                        _VSTD::make_wformat_args(__args...))
-      .size();
+_LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FORMAT size_t formatted_size(locale __loc,
+                                                                                              wstring_view __fmt,
+                                                                                              const _Args&... __args) {
+  return _VSTD::__vformatted_size(_VSTD::move(__loc), __fmt, basic_format_args{_VSTD::make_wformat_args(__args...)});
 }
 #endif
 

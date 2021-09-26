@@ -244,6 +244,29 @@ private:
   __output_buffer<_CharT> __output_;
   typename __writer_selector<_OutIt, _CharT>::type __writer_;
 };
+
+/// A buffer that counts the number of insertions.
+///
+/// Since \ref formatted_size only needs to know the size, the output itself is
+/// discarded.
+template <__formatter::__char_type _CharT>
+class _LIBCPP_TEMPLATE_VIS __formatted_size_buffer {
+public:
+  _LIBCPP_HIDE_FROM_ABI auto make_output_iterator() { return __output_.make_output_iterator(); }
+
+  _LIBCPP_HIDE_FROM_ABI void flush(const _CharT*, size_t __size) { __size_ += __size; }
+
+  _LIBCPP_HIDE_FROM_ABI size_t result() && {
+    __output_.flush();
+    return __size_;
+  }
+
+private:
+  __internal_storage<_CharT> __storage_;
+  __output_buffer<_CharT> __output_{__storage_.begin(), __storage_.capacity(), this};
+  size_t __size_{0};
+};
+
 } // namespace __format
 
 #endif //_LIBCPP_STD_VER > 17
