@@ -11,3 +11,5 @@ add_llvm_utility(lli-child-target
   DEPENDS
   intrinsics_gen
 )
+
+export_executable_symbols(lli-child-target)
