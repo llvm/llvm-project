@@ -44265,10 +44265,9 @@ static SDValue combineMulToPMADDWD(SDNode *N, SelectionDAG &DAG,
     if (DAG.MaskedValueIsZero(Op, Mask17))
       return Op;
     // Convert sext(vXi16) to zext(vXi16).
-    // TODO: Enable pre-SSE41 once we can prefer MULHU/MULHS first.
     // TODO: Handle sext from smaller types as well?
     if (Op.getOpcode() == ISD::SIGN_EXTEND && VT.is128BitVector() &&
-        Subtarget.hasSSE41() && N->isOnlyUserOf(Op.getNode())) {
+        N->isOnlyUserOf(Op.getNode())) {
       SDValue Src = Op.getOperand(0);
       if (Src.getScalarValueSizeInBits() == 16)
         return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), VT, Src);
