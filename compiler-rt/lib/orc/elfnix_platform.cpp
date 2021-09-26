@@ -41,7 +41,7 @@ Error validatePointerSectionExtent(const char *SectionName,
   if (SE.size().getValue() % sizeof(uintptr_t)) {
     std::ostringstream ErrMsg;
     ErrMsg << std::hex << "Size of " << SectionName << " 0x"
-           << SE.StartAddress.getValue() << " -- 0x" << SE.EndAddress.getValue()
+           << SE.Start.getValue() << " -- 0x" << SE.End.getValue()
            << " is not a pointer multiple";
     return make_error<StringError>(ErrMsg.str());
   }
@@ -166,10 +166,10 @@ void ELFNixPlatformRuntimeState::destroy() {
 
 Error ELFNixPlatformRuntimeState::registerObjectSections(
     ELFNixPerObjectSectionsToRegister POSR) {
-  if (POSR.EHFrameSection.StartAddress)
-    __register_frame(POSR.EHFrameSection.StartAddress.toPtr<const char *>());
+  if (POSR.EHFrameSection.Start)
+    __register_frame(POSR.EHFrameSection.Start.toPtr<const char *>());
 
-  if (POSR.ThreadDataSection.StartAddress) {
+  if (POSR.ThreadDataSection.Start) {
     if (auto Err = registerThreadDataSection(
             POSR.ThreadDataSection.toSpan<const char>()))
       return Err;
@@ -180,8 +180,8 @@ Error ELFNixPlatformRuntimeState::registerObjectSections(
 
 Error ELFNixPlatformRuntimeState::deregisterObjectSections(
     ELFNixPerObjectSectionsToRegister POSR) {
-  if (POSR.EHFrameSection.StartAddress)
-    __deregister_frame(POSR.EHFrameSection.StartAddress.toPtr<const char *>());
+  if (POSR.EHFrameSection.Start)
+    __deregister_frame(POSR.EHFrameSection.Start.toPtr<const char *>());
 
   return Error::success();
 }
