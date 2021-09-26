@@ -58,7 +58,7 @@ struct SubtreeReferences {
 ///                         SubtreeReferences structure.
 /// @param CreateScalarRefs Should the result include allocas of scalar
 ///                         references?
-void addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr,
+void addReferencesFromStmt(ScopStmt *Stmt, void *UserPtr,
                            bool CreateScalarRefs = true);
 
 class IslNodeBuilder {
