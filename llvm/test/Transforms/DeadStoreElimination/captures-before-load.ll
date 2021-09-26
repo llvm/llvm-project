@@ -154,7 +154,6 @@ define i32 @test_captured_before_load_same_bb_2(i32** %in.ptr) {
 define i32 @test_not_captured_before_load_same_bb_clobber(i32** %in.ptr) {
 ; CHECK-LABEL: @test_not_captured_before_load_same_bb_clobber(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 55, i32* [[A]], align 4
 ; CHECK-NEXT:    call void @clobber()
 ; CHECK-NEXT:    [[IN_LV_1:%.*]] = load i32*, i32** [[IN_PTR:%.*]], align 2
 ; CHECK-NEXT:    [[IN_LV_2:%.*]] = load i32, i32* [[IN_LV_1]], align 2
@@ -242,7 +241,6 @@ define i32 @test_only_captured_sibling_path_with_ret_to_load_other_blocks(i32** 
 ; CHECK-NEXT:    [[IN_LV_2:%.*]] = load i32, i32* [[IN_LV_1]], align 2
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    store i32 99, i32* [[A]], align 4
 ; CHECK-NEXT:    call void @clobber()
 ; CHECK-NEXT:    ret i32 [[IN_LV_2]]
 ;
@@ -1124,7 +1122,6 @@ entry:
 define i32 @test_not_captured_before_load_of_ptrtoint(i64 %in) {
 ; CHECK-LABEL: @test_not_captured_before_load_of_ptrtoint(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 55, i32* [[A]], align 4
 ; CHECK-NEXT:    [[IN_PTR:%.*]] = inttoptr i64 [[IN:%.*]] to i32*
 ; CHECK-NEXT:    [[IN_PTR_LOAD:%.*]] = load i32, i32* [[IN_PTR]], align 4
 ; CHECK-NEXT:    store i32 99, i32* [[A]], align 4
@@ -1145,7 +1142,6 @@ declare i32* @getptr()
 define i32 @test_not_captured_before_load_of_call() {
 ; CHECK-LABEL: @test_not_captured_before_load_of_call(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 55, i32* [[A]], align 4
 ; CHECK-NEXT:    [[IN_PTR:%.*]] = call i32* @getptr() #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    [[IN_PTR_LOAD:%.*]] = load i32, i32* [[IN_PTR]], align 4
 ; CHECK-NEXT:    store i32 99, i32* [[A]], align 4
@@ -1166,7 +1162,6 @@ define i32 @test_not_captured_multiple_objects(i1 %c, i32** %in.ptr) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[O:%.*]] = select i1 [[C:%.*]], i32* [[A]], i32* [[B]]
-; CHECK-NEXT:    store i32 55, i32* [[O]], align 4
 ; CHECK-NEXT:    [[IN_LV_1:%.*]] = load i32*, i32** [[IN_PTR:%.*]], align 2
 ; CHECK-NEXT:    [[IN_LV_2:%.*]] = load i32, i32* [[IN_LV_1]], align 2
 ; CHECK-NEXT:    store i32 99, i32* [[O]], align 4
