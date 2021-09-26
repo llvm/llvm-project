@@ -244,7 +244,8 @@ function(llvm_ExternalProject_Add name source_dir)
                       -DCMAKE_NM=${CMAKE_NM}
                       -DCMAKE_OBJCOPY=${CMAKE_OBJCOPY}
                       -DCMAKE_OBJDUMP=${CMAKE_OBJDUMP}
-                      -DCMAKE_STRIP=${CMAKE_STRIP})
+                      -DCMAKE_STRIP=${CMAKE_STRIP}
+                      -DCMAKE_READELF=${CMAKE_READELF})
     set(llvm_config_path ${LLVM_CONFIG_PATH})
 
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
