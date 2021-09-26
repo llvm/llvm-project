@@ -67,14 +67,12 @@ std::pair<tooling::Replacements, unsigned> QualifierAlignmentFixer::analyze(
                                     NextStartColumn, LastStartColumn);
   llvm::Optional<std::string> CurrentCode = None;
   tooling::Replacements Fixes;
-  unsigned Penalty = 0;
   for (size_t I = 0, E = Passes.size(); I < E; ++I) {
     std::pair<tooling::Replacements, unsigned> PassFixes = Passes[I](*Env);
     auto NewCode = applyAllReplacements(
         CurrentCode ? StringRef(*CurrentCode) : Code, PassFixes.first);
     if (NewCode) {
       Fixes = Fixes.merge(PassFixes.first);
-      Penalty += PassFixes.second;
       if (I + 1 < E) {
         CurrentCode = std::move(*NewCode);
         Env = std::make_unique<Environment>(
@@ -84,7 +82,21 @@ std::pair<tooling::Replacements, unsigned> QualifierAlignmentFixer::analyze(
       }
     }
   }
-  return {Fixes, Penalty};
+
+  // Don't make replacements that replace nothing.
+  tooling::Replacements NonNoOpFixes;
+
+  for (auto I = Fixes.begin(), E = Fixes.end(); I != E; ++I) {
+    StringRef OriginalCode = Code.substr(I->getOffset(), I->getLength());
+
+    if (!OriginalCode.equals(I->getReplacementText())) {
+      auto Err = NonNoOpFixes.add(*I);
+      if (Err)
+        llvm::errs() << "Error adding replacements : "
+                     << llvm::toString(std::move(Err)) << "\n";
+    }
+  }
+  return {NonNoOpFixes, 0};
 }
 
 static void replaceToken(const SourceManager &SourceMgr,
