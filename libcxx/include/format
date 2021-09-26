@@ -127,6 +127,7 @@ namespace std {
 #include <__config>
 #include <__debug>
 #include <__format/buffer.h>
+#include <__format/enable_insertable.h>
 #include <__format/format_arg.h>
 #include <__format/format_args.h>
 #include <__format/format_context.h>

@@ -187,6 +187,7 @@ template <class T, class Allocator, class Predicate>
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__debug>
+#include <__format/enable_insertable.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
@@ -2420,7 +2421,15 @@ inline _LIBCPP_INLINE_VISIBILITY typename list<_Tp, _Allocator>::size_type
 erase(list<_Tp, _Allocator>& __c, const _Up& __v) {
   return _VSTD::erase_if(__c, [&](auto& __elem) { return __elem == __v; });
 }
+
+template <>
+inline constexpr bool __format::__enable_insertable<std::list<char>> = true;
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+template <>
+inline constexpr bool __format::__enable_insertable<std::list<wchar_t>> = true;
 #endif
+
+#endif // _LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
 

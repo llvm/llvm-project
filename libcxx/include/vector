@@ -283,6 +283,7 @@ erase_if(vector<T, Allocator>& c, Predicate pred);    // C++20
 #include <__bit_reference>
 #include <__config>
 #include <__debug>
+#include <__format/enable_insertable.h>
 #include <__functional/hash.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/wrap_iter.h>
@@ -3304,7 +3305,15 @@ erase_if(vector<_Tp, _Allocator>& __c, _Predicate __pred) {
   __c.erase(_VSTD::remove_if(__c.begin(), __c.end(), __pred), __c.end());
   return __old_size - __c.size();
 }
+
+template <>
+inline constexpr bool __format::__enable_insertable<std::vector<char>> = true;
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+template <>
+inline constexpr bool __format::__enable_insertable<std::vector<wchar_t>> = true;
 #endif
+
+#endif // _LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
 

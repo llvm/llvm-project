@@ -528,6 +528,7 @@ module std [system] {
 
     module __format {
       module buffer                   { private header "__format/buffer.h" }
+      module enable_insertable        { private header "__format/enable_insertable.h" }
       module format_arg               { private header "__format/format_arg.h" }
       module format_args              { private header "__format/format_args.h" }
       module format_context {

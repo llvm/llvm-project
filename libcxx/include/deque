@@ -171,6 +171,7 @@ template <class T, class Allocator, class Predicate>
 #include <__algorithm/unwrap_iter.h>
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
+#include <__format/enable_insertable.h>
 #include <__iterator/iterator_traits.h>
 #include <__split_buffer>
 #include <__utility/forward.h>
@@ -3029,8 +3030,15 @@ erase_if(deque<_Tp, _Allocator>& __c, _Predicate __pred) {
   __c.erase(_VSTD::remove_if(__c.begin(), __c.end(), __pred), __c.end());
   return __old_size - __c.size();
 }
+
+template <>
+inline constexpr bool __format::__enable_insertable<std::deque<char>> = true;
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+template <>
+inline constexpr bool __format::__enable_insertable<std::deque<wchar_t>> = true;
 #endif
 
+#endif // _LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
 

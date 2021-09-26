@@ -525,6 +525,7 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++1
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__debug>
+#include <__format/enable_insertable.h>
 #include <__ios/fpos.h>
 #include <__iterator/wrap_iter.h>
 #include <__utility/auto_cast.h>
@@ -4471,6 +4472,16 @@ inline namespace literals
     }
   } // namespace string_literals
 } // namespace literals
+
+#if _LIBCPP_STD_VER > 17
+template <>
+inline constexpr bool __format::__enable_insertable<std::basic_string<char>> = true;
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+template <>
+inline constexpr bool __format::__enable_insertable<std::basic_string<wchar_t>> = true;
+#endif
+#endif
+
 #endif
 
 _LIBCPP_END_NAMESPACE_STD

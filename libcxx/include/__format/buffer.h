@@ -13,6 +13,7 @@
 #include <__algorithm/copy_n.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__config>
+#include <__format/enable_insertable.h>
 #include <__format/formatter.h> // for __char_type TODO FMT Move the concept?
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/concepts.h>
@@ -152,13 +153,58 @@ private:
   _OutIt __out_it_;
 };
 
+/// Concept to see whether a \a _Container is insertable.
+///
+/// The concept is used to validate whether multiple calls to a
+/// \ref back_insert_iterator can be replace by a call to \c _Container::insert.
+///
+/// \note a \a _Container needs to opt-in to the concept by specializing
+/// \ref __enable_insertable.
+template <class _Container>
+concept __insertable =
+    __enable_insertable<_Container> && __formatter::__char_type<typename _Container::value_type> &&
+    requires(_Container& __t, add_pointer_t<typename _Container::value_type> __first,
+             add_pointer_t<typename _Container::value_type> __last) { __t.insert(__t.end(), __first, __last); };
+
+/// Extract the container type of a \ref back_insert_iterator.
+template <class _It>
+struct _LIBCPP_TEMPLATE_VIS __back_insert_iterator_container {
+  using type = void;
+};
+
+template <__insertable _Container>
+struct _LIBCPP_TEMPLATE_VIS __back_insert_iterator_container<back_insert_iterator<_Container>> {
+  using type = _Container;
+};
+
+/// Write policy for inserting the buffer in a container.
+template <class _Container>
+class _LIBCPP_TEMPLATE_VIS __writer_container {
+public:
+  using _CharT = typename _Container::value_type;
+
+  _LIBCPP_HIDE_FROM_ABI explicit __writer_container(back_insert_iterator<_Container> __out_it)
+      : __container_{__out_it.__get_container()} {}
+
+  _LIBCPP_HIDE_FROM_ABI auto out() { return back_inserter(*__container_); }
+
+  _LIBCPP_HIDE_FROM_ABI void flush(_CharT* __ptr, size_t __size) {
+    __container_->insert(__container_->end(), __ptr, __ptr + __size);
+  }
+
+private:
+  _Container* __container_;
+};
+
 /// Selects the type of the writer used for the output iterator.
 template <class _OutIt, class _CharT>
 class _LIBCPP_TEMPLATE_VIS __writer_selector {
+  using _Container = typename __back_insert_iterator_container<_OutIt>::type;
+
 public:
-  using type = conditional_t<__enable_direct_output<_OutIt, _CharT>,
-                             __writer_direct<_OutIt, _CharT>,
-                             __writer_iterator<_OutIt, _CharT>>;
+  using type = conditional_t<!same_as<_Container, void>, __writer_container<_Container>,
+                             conditional_t<__enable_direct_output<_OutIt, _CharT>, __writer_direct<_OutIt, _CharT>,
+                                           __writer_iterator<_OutIt, _CharT>>>;
 };
 
 /// The generic formatting buffer.
