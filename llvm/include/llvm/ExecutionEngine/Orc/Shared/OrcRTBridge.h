@@ -37,6 +37,9 @@ extern const char *MemoryWriteUInt32sWrapperName;
 extern const char *MemoryWriteUInt64sWrapperName;
 extern const char *MemoryWriteBuffersWrapperName;
 
+extern const char *RegisterEHFrameSectionCustomDirectWrapperName;
+extern const char *DeregisterEHFrameSectionCustomDirectWrapperName;
+
 extern const char *RunAsMainWrapperName;
 
 using SPSSimpleExecutorDylibManagerOpenSignature =
