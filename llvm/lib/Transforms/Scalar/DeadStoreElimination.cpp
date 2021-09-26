@@ -1318,10 +1318,10 @@ struct DSEState {
       // before the load.
       auto *ReadUO = getUnderlyingObject(LI->getPointerOperand());
       auto *DefUO = getUnderlyingObject(DefLoc.Ptr);
-      if (DefUO && ReadUO && isa<LoadInst>(ReadUO) &&
-          notCapturedBeforeOrAt(DefUO, UseInst)) {
+      auto *ReadLI = dyn_cast<LoadInst>(ReadUO);
+      if (ReadLI && notCapturedBeforeOrAt(DefUO, ReadLI)) {
         assert(
-            !PointerMayBeCapturedBefore(DefLoc.Ptr, false, true, UseInst, &DT,
+            !PointerMayBeCapturedBefore(DefLoc.Ptr, false, true, ReadLI, &DT,
                                         false, 0, &this->LI) &&
             "cached analysis disagrees with fresh PointerMayBeCapturedBefore");
         return false;
