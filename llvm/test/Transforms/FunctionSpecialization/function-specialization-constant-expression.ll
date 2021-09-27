@@ -9,15 +9,37 @@
 %struct = type { i8, i16, i32, i64, i64}
 @Global = internal constant %struct {i8 0, i16 1, i32 2, i64 3, i64 4}
 
+define internal i64 @func2(i64 *%x) {
+; CHECK-LABEL: @func2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = ptrtoint i64* [[X:%.*]] to i64
+; CHECK-NEXT:    ret i64 [[VAL]]
+;
+entry:
+  %val = ptrtoint i64* %x to i64
+  ret i64 %val
+}
+
+define internal i64 @func(i64 *%x, i64 (i64*)* %binop) {
+; CHECK-LABEL: @func(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 [[BINOP:%.*]](i64* [[X:%.*]])
+; CHECK-NEXT:    ret i64 [[TMP0]]
+;
+entry:
+  %tmp0 = call i64 %binop(i64* %x)
+  ret i64 %tmp0
+}
+
 define internal i64 @zoo(i1 %flag) {
 ; CHECK-LABEL: @zoo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[FLAG:%.*]], label [[PLUS:%.*]], label [[MINUS:%.*]]
 ; CHECK:       plus:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @func2.1(i64* getelementptr inbounds ([[STRUCT:%.*]], %struct* @Global, i32 0, i32 3))
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @func2(i64* getelementptr inbounds ([[STRUCT:%.*]], %struct* @Global, i32 0, i32 3))
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
 ; CHECK:       minus:
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @func2.2(i64* getelementptr inbounds ([[STRUCT]], %struct* @Global, i32 0, i32 4))
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @func2(i64* getelementptr inbounds ([[STRUCT]], %struct* @Global, i32 0, i32 4))
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ [[TMP0]], [[PLUS]] ], [ [[TMP1]], [[MINUS]] ]
@@ -41,27 +63,6 @@ merge:
   ret i64 %tmp2
 }
 
-define internal i64 @func2(i64 *%x) {
-; CHECK-LABEL: @func2(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VAL:%.*]] = ptrtoint i64* [[X:%.*]] to i64
-; CHECK-NEXT:    ret i64 [[VAL]]
-;
-entry:
-  %val = ptrtoint i64* %x to i64
-  ret i64 %val
-}
-
-define internal i64 @func(i64 *%x, i64 (i64*)* %binop) {
-; CHECK-LABEL: @func(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 [[BINOP:%.*]](i64* [[X:%.*]])
-; CHECK-NEXT:    ret i64 [[TMP0]]
-;
-entry:
-  %tmp0 = call i64 %binop(i64* %x)
-  ret i64 %tmp0
-}
 
 define i64 @main() {
 ; CHECK-LABEL: @main(
@@ -75,13 +76,3 @@ define i64 @main() {
   %3 = add i64 %1, %2
   ret i64 %3
 }
-
-; CHECK-LABEL: define internal i64 @func2.1(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i64 ptrtoint (i64* getelementptr inbounds (%struct, %struct* @Global, i32 0, i32 3) to i64)
-; CHECK-NEXT:  }
-
-; CHECK-LABEL: define internal i64 @func2.2(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i64 ptrtoint (i64* getelementptr inbounds (%struct, %struct* @Global, i32 0, i32 4) to i64)
-; CHECK-NEXT:  }
