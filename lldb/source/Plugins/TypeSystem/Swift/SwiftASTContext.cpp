@@ -1658,17 +1658,6 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     return {};
   }
 
-  lldb::CompUnitSP main_compile_unit_sp = module.GetCompileUnitAtIndex(0);
-
-  if (lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES) &&
-      main_compile_unit_sp &&
-      !FileSystem::Instance().Exists(main_compile_unit_sp->GetPrimaryFile())) {
-    LOG_PRINTF(LIBLLDB_LOG_TYPES,
-               "Corresponding source not found for %s, loading module "
-               "is unlikely to succeed",
-               main_compile_unit_sp->GetPrimaryFile().GetCString());
-  }
-
   llvm::Triple triple = GetSwiftFriendlyTriple(arch.GetTriple());
   if (triple.getOS() == llvm::Triple::UnknownOS) {
     // cl_kernels are the only binaries that don't have an
