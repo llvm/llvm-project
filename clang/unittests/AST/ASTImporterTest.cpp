@@ -290,6 +290,25 @@ TEST_P(ImportExpr, ImportChooseExpr) {
              functionDecl(hasDescendant(chooseExpr())));
 }
 
+const internal::VariadicDynCastAllOfMatcher<Stmt, ShuffleVectorExpr>
+    shuffleVectorExpr;
+
+TEST_P(ImportExpr, ImportShuffleVectorExpr) {
+  MatchVerifier<Decl> Verifier;
+  constexpr auto Code = R"code(
+    typedef double vector4double __attribute__((__vector_size__(32)));
+    vector4double declToImport(vector4double a, vector4double b) {
+      return __builtin_shufflevector(a, b, 0, 1, 2, 3);
+    }
+  )code";
+  const auto Pattern = functionDecl(hasDescendant(shuffleVectorExpr(
+      allOf(has(declRefExpr(to(parmVarDecl(hasName("a"))))),
+            has(declRefExpr(to(parmVarDecl(hasName("b"))))),
+            has(integerLiteral(equals(0))), has(integerLiteral(equals(1))),
+            has(integerLiteral(equals(2))), has(integerLiteral(equals(3)))))));
+  testImport(Code, Lang_C99, "", Lang_C99, Verifier, Pattern);
+}
+
 TEST_P(ImportExpr, ImportGNUNullExpr) {
   MatchVerifier<Decl> Verifier;
   testImport("void declToImport() { (void)__null; }", Lang_CXX03, "",
