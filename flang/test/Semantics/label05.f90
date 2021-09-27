@@ -1,9 +1,12 @@
-
 ! RUN: not %flang_fc1 -fdebug-unparse-with-symbols %s 2>&1 | FileCheck %s
 ! CHECK: Label '50' was not found
-! CHECK: Label '55' is not in scope
+! CHECK: Label '55' is in a construct that prevents its use as a branch target here
 ! CHECK: Label '70' is not a branch target
 ! CHECK: Control flow use of '70'
+! CHECK: Label '80' is in a construct that prevents its use as a branch target here
+! CHECK: Label '90' is in a construct that prevents its use as a branch target here
+! CHECK: Label '91' is in a construct that prevents its use as a branch target here
+! CHECK: Label '92' is in a construct that prevents its use as a branch target here
 
 subroutine sub00(a,b,n,m)
   real a(n,m)
@@ -35,3 +38,23 @@ subroutine sub02(a,b,n,m)
   end if
 70 FORMAT (1x,i6)
 end subroutine sub02
+
+subroutine sub03(a,n)
+  real a(n)
+  forall (j=1:n)
+80  a(n) = j
+  end forall
+  go to 80
+end subroutine sub03
+
+subroutine sub04(a,n)
+  real a(n)
+  where (a > 0)
+90  a = 1
+  elsewhere (a < 0)
+91  a = 2
+  elsewhere
+92  a = 3
+  end where
+  if (n - 3) 90, 91, 92
+end subroutine sub04
