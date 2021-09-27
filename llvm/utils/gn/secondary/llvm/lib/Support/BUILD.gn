@@ -94,6 +94,8 @@ static_library("Support") {
     "LockFileManager.cpp",
     "LowLevelType.cpp",
     "MD5.cpp",
+    "MSP430AttributeParser.cpp",
+    "MSP430Attributes.cpp",
     "ManagedStatic.cpp",
     "MathExtras.cpp",
     "MemAlloc.cpp",
