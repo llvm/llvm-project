@@ -1607,17 +1607,9 @@ void LiveIntervals::repairOldRegInRange(const MachineBasicBlock::iterator Begin,
       if (MO.isDef()) {
         if (!isStartValid) {
           if (LII->end.isDead()) {
-            SlotIndex prevStart;
+            LII = LR.removeSegment(LII, true);
             if (LII != LR.begin())
-              prevStart = std::prev(LII)->start;
-
-            // FIXME: This could be more efficient if there was a
-            // removeSegment method that returned an iterator.
-            LR.removeSegment(*LII, true);
-            if (prevStart.isValid())
-              LII = LR.find(prevStart);
-            else
-              LII = LR.begin();
+              --LII;
           } else {
             LII->start = instrIdx.getRegSlot();
             LII->valno->def = instrIdx.getRegSlot();

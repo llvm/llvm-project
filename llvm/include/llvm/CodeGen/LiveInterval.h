@@ -521,11 +521,11 @@ namespace llvm {
       removeSegment(S.start, S.end, RemoveDeadValNo);
     }
 
-    /// Remove segment pointed to by iterator @p I from this range.  This does
-    /// not remove dead value numbers.
-    iterator removeSegment(iterator I) {
-      return segments.erase(I);
-    }
+    /// Remove segment pointed to by iterator @p I from this range.
+    iterator removeSegment(iterator I, bool RemoveDeadValNo = false);
+
+    /// Mark \p ValNo for deletion if no segments in this range use it.
+    void removeValNoIfDead(VNInfo *ValNo);
 
     /// Query Liveness at Idx.
     /// The sub-instruction slot of Idx doesn't matter, only the instruction
