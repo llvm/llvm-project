@@ -433,13 +433,16 @@ class SymbolsNotFound : public ErrorInfo<SymbolsNotFound> {
 public:
   static char ID;
 
-  SymbolsNotFound(SymbolNameSet Symbols);
-  SymbolsNotFound(SymbolNameVector Symbols);
+  SymbolsNotFound(std::shared_ptr<SymbolStringPool> SSP, SymbolNameSet Symbols);
+  SymbolsNotFound(std::shared_ptr<SymbolStringPool> SSP,
+                  SymbolNameVector Symbols);
   std::error_code convertToErrorCode() const override;
   void log(raw_ostream &OS) const override;
+  std::shared_ptr<SymbolStringPool> getSymbolStringPool() { return SSP; }
   const SymbolNameVector &getSymbols() const { return Symbols; }
 
 private:
+  std::shared_ptr<SymbolStringPool> SSP;
   SymbolNameVector Symbols;
 };
 
@@ -448,12 +451,15 @@ class SymbolsCouldNotBeRemoved : public ErrorInfo<SymbolsCouldNotBeRemoved> {
 public:
   static char ID;
 
-  SymbolsCouldNotBeRemoved(SymbolNameSet Symbols);
+  SymbolsCouldNotBeRemoved(std::shared_ptr<SymbolStringPool> SSP,
+                           SymbolNameSet Symbols);
   std::error_code convertToErrorCode() const override;
   void log(raw_ostream &OS) const override;
+  std::shared_ptr<SymbolStringPool> getSymbolStringPool() { return SSP; }
   const SymbolNameSet &getSymbols() const { return Symbols; }
 
 private:
+  std::shared_ptr<SymbolStringPool> SSP;
   SymbolNameSet Symbols;
 };
 
@@ -465,13 +471,17 @@ class MissingSymbolDefinitions : public ErrorInfo<MissingSymbolDefinitions> {
 public:
   static char ID;
 
-  MissingSymbolDefinitions(std::string ModuleName, SymbolNameVector Symbols)
-    : ModuleName(std::move(ModuleName)), Symbols(std::move(Symbols)) {}
+  MissingSymbolDefinitions(std::shared_ptr<SymbolStringPool> SSP,
+                           std::string ModuleName, SymbolNameVector Symbols)
+      : SSP(std::move(SSP)), ModuleName(std::move(ModuleName)),
+        Symbols(std::move(Symbols)) {}
   std::error_code convertToErrorCode() const override;
   void log(raw_ostream &OS) const override;
+  std::shared_ptr<SymbolStringPool> getSymbolStringPool() { return SSP; }
   const std::string &getModuleName() const { return ModuleName; }
   const SymbolNameVector &getSymbols() const { return Symbols; }
 private:
+  std::shared_ptr<SymbolStringPool> SSP;
   std::string ModuleName;
   SymbolNameVector Symbols;
 };
@@ -484,13 +494,17 @@ class UnexpectedSymbolDefinitions : public ErrorInfo<UnexpectedSymbolDefinitions
 public:
   static char ID;
 
-  UnexpectedSymbolDefinitions(std::string ModuleName, SymbolNameVector Symbols)
-    : ModuleName(std::move(ModuleName)), Symbols(std::move(Symbols)) {}
+  UnexpectedSymbolDefinitions(std::shared_ptr<SymbolStringPool> SSP,
+                              std::string ModuleName, SymbolNameVector Symbols)
+      : SSP(std::move(SSP)), ModuleName(std::move(ModuleName)),
+        Symbols(std::move(Symbols)) {}
   std::error_code convertToErrorCode() const override;
   void log(raw_ostream &OS) const override;
+  std::shared_ptr<SymbolStringPool> getSymbolStringPool() { return SSP; }
   const std::string &getModuleName() const { return ModuleName; }
   const SymbolNameVector &getSymbols() const { return Symbols; }
 private:
+  std::shared_ptr<SymbolStringPool> SSP;
   std::string ModuleName;
   SymbolNameVector Symbols;
 };
@@ -1309,6 +1323,11 @@ public:
   /// Get the ExecutorProcessControl object associated with this
   /// ExecutionSession.
   ExecutorProcessControl &getExecutorProcessControl() { return *EPC; }
+
+  /// Get the SymbolStringPool for this instance.
+  std::shared_ptr<SymbolStringPool> getSymbolStringPool() {
+    return EPC->getSymbolStringPool();
+  }
 
   /// Add a symbol name to the SymbolStringPool and return a pointer to it.
   SymbolStringPtr intern(StringRef SymName) { return EPC->intern(SymName); }
