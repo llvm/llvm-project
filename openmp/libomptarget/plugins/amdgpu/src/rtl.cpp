@@ -383,9 +383,7 @@ FindKernargPool(const std::vector<hsa_agent_t> &HSAAgents) {
     err = hsa_amd_agent_iterate_memory_pools(
         Agent, addKernArgPool, static_cast<void *>(&KernArgPools));
     if (err != HSA_STATUS_SUCCESS) {
-      DP("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
-         "Iterate all memory pools", get_error_string(err));
-      return {err, hsa_amd_memory_pool_t{}};
+      DP("addKernArgPool returned %s, continuing\n", get_error_string(err));
     }
   }
 
