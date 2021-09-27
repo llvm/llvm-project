@@ -360,8 +360,9 @@ std::unique_ptr<Arg> OptTable::parseOneArgGrouped(InputArgList &Args,
       continue;
 
     Option Opt(Start, this);
-    if (std::unique_ptr<Arg> A = Opt.accept(
-            Args, StringRef(Args.getArgString(Index), ArgSize), false, Index))
+    if (std::unique_ptr<Arg> A =
+            Opt.accept(Args, StringRef(Args.getArgString(Index), ArgSize),
+                       /*GroupedShortOption=*/false, Index))
       return A;
 
     // If Opt is a Flag of length 2 (e.g. "-a"), we know it is a prefix of
@@ -381,8 +382,8 @@ std::unique_ptr<Arg> OptTable::parseOneArgGrouped(InputArgList &Args,
       return std::make_unique<Arg>(getOption(UnknownOptionID), Str, Index++,
                                    CStr);
 
-    if (std::unique_ptr<Arg> A =
-            Opt.accept(Args, Str.substr(0, 2), true, Index)) {
+    if (std::unique_ptr<Arg> A = Opt.accept(
+            Args, Str.substr(0, 2), /*GroupedShortOption=*/true, Index)) {
       Args.replaceArgString(Index, Twine('-') + Str.substr(2));
       return A;
     }
@@ -442,8 +443,9 @@ std::unique_ptr<Arg> OptTable::ParseOneArg(const ArgList &Args, unsigned &Index,
       continue;
 
     // See if this option matches.
-    if (std::unique_ptr<Arg> A = Opt.accept(
-            Args, StringRef(Args.getArgString(Index), ArgSize), false, Index))
+    if (std::unique_ptr<Arg> A =
+            Opt.accept(Args, StringRef(Args.getArgString(Index), ArgSize),
+                       /*GroupedShortOption=*/false, Index))
       return A;
 
     // Otherwise, see if this argument was missing values.
