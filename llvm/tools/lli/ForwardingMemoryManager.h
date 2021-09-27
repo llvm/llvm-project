@@ -10,21 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLI_REMOTEJITUTILS_H
-#define LLVM_TOOLS_LLI_REMOTEJITUTILS_H
+#ifndef LLVM_TOOLS_LLI_FORWARDINGMEMORYMANAGER_H
+#define LLVM_TOOLS_LLI_FORWARDINGMEMORYMANAGER_H
 
-#include "llvm/ExecutionEngine/Orc/Shared/FDRawByteChannel.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericDylibManager.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
-#include <mutex>
-
-#if !defined(_MSC_VER) && !defined(__MINGW32__)
-#include <unistd.h>
-#else
-#include <io.h>
-#endif
-
-// launch the remote process (see lli.cpp) and return a channel to it.
-std::unique_ptr<llvm::orc::shared::FDRawByteChannel> launchRemote();
 
 namespace llvm {
 
@@ -70,9 +60,7 @@ public:
     MemMgr->registerEHFrames(Addr, LoadAddr, Size);
   }
 
-  void deregisterEHFrames() override {
-    MemMgr->deregisterEHFrames();
-  }
+  void deregisterEHFrames() override { MemMgr->deregisterEHFrames(); }
 
   bool finalizeMemory(std::string *ErrMsg = nullptr) override {
     return MemMgr->finalizeMemory(ErrMsg);
@@ -90,8 +78,7 @@ public:
     return Resolver->findSymbol(Name);
   }
 
-  JITSymbol
-  findSymbolInLogicalDylib(const std::string &Name) override {
+  JITSymbol findSymbolInLogicalDylib(const std::string &Name) override {
     return Resolver->findSymbolInLogicalDylib(Name);
   }
 
@@ -100,17 +87,31 @@ private:
   std::shared_ptr<LegacyJITSymbolResolver> Resolver;
 };
 
-template <typename RemoteT>
 class RemoteResolver : public LegacyJITSymbolResolver {
 public:
-
-  RemoteResolver(RemoteT &R) : R(R) {}
+  static Expected<std::unique_ptr<RemoteResolver>>
+  Create(orc::ExecutorProcessControl &EPC) {
+    auto DylibMgr =
+        orc::EPCGenericDylibManager::CreateWithDefaultBootstrapSymbols(EPC);
+    if (!DylibMgr)
+      return DylibMgr.takeError();
+    auto H = DylibMgr->open("", 0);
+    if (!H)
+      return H.takeError();
+    return std::unique_ptr<RemoteResolver>(
+        new RemoteResolver(std::move(*DylibMgr), std::move(*H)));
+  }
 
   JITSymbol findSymbol(const std::string &Name) override {
-    if (auto Addr = R.getSymbolAddress(Name))
-      return JITSymbol(*Addr, JITSymbolFlags::Exported);
-    else
-      return Addr.takeError();
+    orc::RemoteSymbolLookupSet R;
+    R.push_back({std::move(Name), false});
+    if (auto Addrs = DylibMgr.lookup(H, R)) {
+      if (Addrs->size() != 1)
+        return make_error<StringError>("Unexpected remote lookup result",
+                                       inconvertibleErrorCode());
+      return JITSymbol(Addrs->front().getValue(), JITSymbolFlags::Exported);
+    } else
+      return Addrs.takeError();
   }
 
   JITSymbol findSymbolInLogicalDylib(const std::string &Name) override {
@@ -118,8 +119,13 @@ public:
   }
 
 public:
-  RemoteT &R;
-};
-}
+  RemoteResolver(orc::EPCGenericDylibManager DylibMgr,
+                 orc::tpctypes::DylibHandle H)
+      : DylibMgr(std::move(DylibMgr)), H(std::move(H)) {}
 
-#endif
+  orc::EPCGenericDylibManager DylibMgr;
+  orc::tpctypes::DylibHandle H;
+};
+} // namespace llvm
+
+#endif // LLVM_TOOLS_LLI_FORWARDINGMEMORYMANAGER_H
