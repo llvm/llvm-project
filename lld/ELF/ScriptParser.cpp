@@ -1429,8 +1429,9 @@ Expr ScriptParser::readPrimary() {
     return [=] { return *val; };
 
   // Tok is a symbol name.
-  tok = unquote(tok);
-  if (!isValidSymbolName(tok))
+  if (tok.startswith("\""))
+    tok = unquote(tok);
+  else if (!isValidSymbolName(tok))
     setError("malformed number: " + tok);
   script->referencedSymbols.push_back(tok);
   return [=] { return script->getSymbolValue(tok, location); };
