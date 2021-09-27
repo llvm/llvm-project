@@ -18,6 +18,7 @@
 #include "ARMMachineFunctionInfo.h"
 #include "ARMSubtarget.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
+#include "MVETailPredUtils.h"
 #include "Thumb2InstrInfo.h"
 #include "Utils/ARMBaseInfo.h"
 #include "llvm/ADT/DenseMap.h"
@@ -340,12 +341,12 @@ LLVM_DUMP_METHOD void ARMConstantIslands::dumpBBs() {
 // Align blocks where the previous block does not fall through. This may add
 // extra NOP's but they will not be executed. It uses the PrefLoopAlignment as a
 // measure of how much to align, and only runs at CodeGenOpt::Aggressive.
-static bool AlignBlocks(MachineFunction *MF) {
+static bool AlignBlocks(MachineFunction *MF, const ARMSubtarget *STI) {
   if (MF->getTarget().getOptLevel() != CodeGenOpt::Aggressive ||
       MF->getFunction().hasOptSize())
     return false;
 
-  auto *TLI = MF->getSubtarget().getTargetLowering();
+  auto *TLI = STI->getTargetLowering();
   const Align Alignment = TLI->getPrefLoopAlignment();
   if (Alignment < 4)
     return false;
@@ -357,7 +358,25 @@ static bool AlignBlocks(MachineFunction *MF) {
       Changed = true;
       MBB.setAlignment(Alignment);
     }
+
     PrevCanFallthough = MBB.canFallThrough();
+
+    // For LOB's, the ARMLowOverheadLoops pass may remove the unconditional
+    // branch later in the pipeline.
+    if (STI->hasLOB()) {
+      for (const auto &MI : reverse(MBB.terminators())) {
+        if (MI.getOpcode() == ARM::t2B &&
+            MI.getOperand(0).getMBB() == MBB.getNextNode())
+          continue;
+        if (isLoopStart(MI) || MI.getOpcode() == ARM::t2LoopEnd ||
+            MI.getOpcode() == ARM::t2LoopEndDec) {
+          PrevCanFallthough = true;
+          break;
+        }
+        // Any other terminator - nothing to do
+        break;
+      }
+    }
   }
 
   return Changed;
@@ -406,7 +425,7 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   }
 
   // Align any non-fallthrough blocks
-  MadeChange |= AlignBlocks(MF);
+  MadeChange |= AlignBlocks(MF, STI);
 
   // Perform the initial placement of the constant pool entries.  To start with,
   // we put them all at the end of the function.

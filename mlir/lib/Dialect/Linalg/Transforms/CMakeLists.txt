@@ -11,6 +11,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   FusionOnTensors.cpp
   Generalization.cpp
   Hoisting.cpp
+  HoistPadding.cpp
   InlineScalarOperands.cpp
   Interchange.cpp
   Loops.cpp

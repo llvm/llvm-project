@@ -104,6 +104,8 @@ public:
     if (!T)
       return T.takeError();
     Server->T = std::move(*T);
+    if (auto Err = Server->T->start())
+      return std::move(Err);
 
     // If transport creation succeeds then start up services.
     Server->Services = std::move(S.services());
