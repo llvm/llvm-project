@@ -521,3 +521,79 @@ define i64 @extractelt_v3i64_idx(<3 x i64>* %x, i32 signext %idx) nounwind {
   %c = extractelement <3 x i64> %b, i32 %idx
   ret i64 %c
 }
+
+define void @store_extractelt_v16i8(<16 x i8>* %x, i8* %p) nounwind {
+; CHECK-LABEL: store_extractelt_v16i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vle8.v v25, (a0)
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, mu
+; CHECK-NEXT:    vslidedown.vi v25, v25, 7
+; CHECK-NEXT:    vse8.v v25, (a1)
+; CHECK-NEXT:    ret
+  %a = load <16 x i8>, <16 x i8>* %x
+  %b = extractelement <16 x i8> %a, i32 7
+  store i8 %b, i8* %p
+  ret void
+}
+
+define void @store_extractelt_v8i16(<8 x i16>* %x, i16* %p) nounwind {
+; CHECK-LABEL: store_extractelt_v8i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vle16.v v25, (a0)
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, mu
+; CHECK-NEXT:    vslidedown.vi v25, v25, 7
+; CHECK-NEXT:    vse16.v v25, (a1)
+; CHECK-NEXT:    ret
+  %a = load <8 x i16>, <8 x i16>* %x
+  %b = extractelement <8 x i16> %a, i32 7
+  store i16 %b, i16* %p
+  ret void
+}
+
+define void @store_extractelt_v4i32(<4 x i32>* %x, i32* %p) nounwind {
+; CHECK-LABEL: store_extractelt_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vle32.v v25, (a0)
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; CHECK-NEXT:    vslidedown.vi v25, v25, 2
+; CHECK-NEXT:    vse32.v v25, (a1)
+; CHECK-NEXT:    ret
+  %a = load <4 x i32>, <4 x i32>* %x
+  %b = extractelement <4 x i32> %a, i32 2
+  store i32 %b, i32* %p
+  ret void
+}
+
+; FIXME: Use vse64.v on RV32 to avoid two scalar extracts and two scalar stores.
+define void @store_extractelt_v4i64(<2 x i64>* %x, i64* %p) nounwind {
+; RV32-LABEL: store_extractelt_v4i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; RV32-NEXT:    vle64.v v25, (a0)
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV32-NEXT:    vslidedown.vi v25, v25, 1
+; RV32-NEXT:    addi a0, zero, 32
+; RV32-NEXT:    vsrl.vx v26, v25, a0
+; RV32-NEXT:    vmv.x.s a0, v26
+; RV32-NEXT:    vmv.x.s a2, v25
+; RV32-NEXT:    sw a2, 0(a1)
+; RV32-NEXT:    sw a0, 4(a1)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: store_extractelt_v4i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; RV64-NEXT:    vle64.v v25, (a0)
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV64-NEXT:    vslidedown.vi v25, v25, 1
+; RV64-NEXT:    vse64.v v25, (a1)
+; RV64-NEXT:    ret
+  %a = load <2 x i64>, <2 x i64>* %x
+  %b = extractelement <2 x i64> %a, i64 1
+  store i64 %b, i64* %p
+  ret void
+}
+
