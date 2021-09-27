@@ -727,9 +727,19 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
                                                    LibFunc F,
                                                    const DataLayout *DL) const {
   LLVMContext &Ctx = FTy.getContext();
+  // FIXME: There is really no guarantee that sizeof(size_t) is equal to
+  // sizeof(int*) for every target. So the assumption used here to derive the
+  // SizeTTy based on DataLayout and getIntPtrType isn't always valid.
   Type *SizeTTy = DL ? DL->getIntPtrType(Ctx, /*AddressSpace=*/0) : nullptr;
   auto IsSizeTTy = [SizeTTy](Type *Ty) {
-    return SizeTTy ? Ty == SizeTTy : Ty->isIntegerTy();
+    // FIXME: For uknown historical reasons(?) we use a relaxed condition saying
+    // that any integer type may size_t, for example if we got no
+    // DataLayout. This seems like a potentially error prone relaxation (or why
+    // should we only be more strict and checking the exact type when we have a
+    // DataLayout?).
+    if (!SizeTTy)
+      return Ty->isIntegerTy();
+    return Ty == SizeTTy;
   };
   unsigned NumParams = FTy.getNumParams();
 
