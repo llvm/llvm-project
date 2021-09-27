@@ -86,12 +86,12 @@ define void @test_varargs() {
   ; CHECK-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
   ; CHECK-NEXT:   [[C7:%[0-9]+]]:_(s64) = G_FCONSTANT double 2.000000e+00
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[C3]](s8)
+  ; CHECK-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[C4]](s16)
   ; CHECK-NEXT:   $w0 = COPY [[C]](s32)
   ; CHECK-NEXT:   $d0 = COPY [[C1]](s64)
   ; CHECK-NEXT:   $x1 = COPY [[C2]](s64)
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[C3]](s8)
   ; CHECK-NEXT:   $w2 = COPY [[ANYEXT]](s32)
-  ; CHECK-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[C4]](s16)
   ; CHECK-NEXT:   $w3 = COPY [[ANYEXT1]](s32)
   ; CHECK-NEXT:   $w4 = COPY [[C5]](s32)
   ; CHECK-NEXT:   $s1 = COPY [[C6]](s32)
@@ -114,6 +114,10 @@ define void @test_stack_ext_needed() {
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 42
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 8, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $sp
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; CHECK-NEXT:   G_STORE [[C]](s8), [[PTR_ADD]](p0) :: (store (s8) into stack)
   ; CHECK-NEXT:   $x0 = COPY [[DEF]](s64)
   ; CHECK-NEXT:   $x1 = COPY [[DEF]](s64)
   ; CHECK-NEXT:   $x2 = COPY [[DEF]](s64)
@@ -122,10 +126,6 @@ define void @test_stack_ext_needed() {
   ; CHECK-NEXT:   $x5 = COPY [[DEF]](s64)
   ; CHECK-NEXT:   $x6 = COPY [[DEF]](s64)
   ; CHECK-NEXT:   $x7 = COPY [[DEF]](s64)
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $sp
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
-  ; CHECK-NEXT:   G_STORE [[C]](s8), [[PTR_ADD]](p0) :: (store (s8) into stack)
   ; CHECK-NEXT:   BL @stack_ext_needed, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7
   ; CHECK-NEXT:   ADJCALLSTACKUP 8, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   RET_ReallyLR
@@ -162,9 +162,9 @@ define void @caller_s128(i128 *%ptr) {
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY]](p0) :: (load (s128) from %ir.ptr)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[LOAD]](s128)
+  ; CHECK-NEXT:   [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[LOAD]](s128)
   ; CHECK-NEXT:   $x0 = COPY [[UV]](s64)
   ; CHECK-NEXT:   $x1 = COPY [[UV1]](s64)
-  ; CHECK-NEXT:   [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[LOAD]](s128)
   ; CHECK-NEXT:   $x2 = COPY [[UV2]](s64)
   ; CHECK-NEXT:   $x3 = COPY [[UV3]](s64)
   ; CHECK-NEXT:   $x4 = COPY [[COPY]](p0)
@@ -195,16 +195,6 @@ define i32 @i8i16caller() nounwind readnone {
   ; CHECK-NEXT:   [[C10:%[0-9]+]]:_(s8) = G_CONSTANT i8 99
   ; CHECK-NEXT:   [[C11:%[0-9]+]]:_(s8) = G_CONSTANT i8 100
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 32, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   $x0 = COPY [[C]](s64)
-  ; CHECK-NEXT:   $x1 = COPY [[C1]](s64)
-  ; CHECK-NEXT:   $x2 = COPY [[C2]](s64)
-  ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[C3]](s8)
-  ; CHECK-NEXT:   $w3 = COPY [[SEXT]](s32)
-  ; CHECK-NEXT:   [[SEXT1:%[0-9]+]]:_(s32) = G_SEXT [[C4]](s16)
-  ; CHECK-NEXT:   $w4 = COPY [[SEXT1]](s32)
-  ; CHECK-NEXT:   $x5 = COPY [[C5]](s64)
-  ; CHECK-NEXT:   $x6 = COPY [[C6]](s64)
-  ; CHECK-NEXT:   $x7 = COPY [[C7]](s64)
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $sp
   ; CHECK-NEXT:   [[C12:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C12]](s64)
@@ -218,6 +208,16 @@ define i32 @i8i16caller() nounwind readnone {
   ; CHECK-NEXT:   [[C15:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
   ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C15]](s64)
   ; CHECK-NEXT:   G_STORE [[C11]](s8), [[PTR_ADD3]](p0) :: (store (s8) into stack + 24)
+  ; CHECK-NEXT:   $x0 = COPY [[C]](s64)
+  ; CHECK-NEXT:   $x1 = COPY [[C1]](s64)
+  ; CHECK-NEXT:   $x2 = COPY [[C2]](s64)
+  ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[C3]](s8)
+  ; CHECK-NEXT:   $w3 = COPY [[SEXT]](s32)
+  ; CHECK-NEXT:   [[SEXT1:%[0-9]+]]:_(s32) = G_SEXT [[C4]](s16)
+  ; CHECK-NEXT:   $w4 = COPY [[SEXT1]](s32)
+  ; CHECK-NEXT:   $x5 = COPY [[C5]](s64)
+  ; CHECK-NEXT:   $x6 = COPY [[C6]](s64)
+  ; CHECK-NEXT:   $x7 = COPY [[C7]](s64)
   ; CHECK-NEXT:   BL @i8i16callee, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $w3, implicit $w4, implicit $x5, implicit $x6, implicit $x7, implicit-def $x0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 32, 0, implicit-def $sp, implicit $sp

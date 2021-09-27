@@ -2869,8 +2869,8 @@ define amdgpu_kernel void @test_call_external_v33i32_func_v33i32_i32(<33 x i32> 
   ; GCN-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C3]](s32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
-  ; GCN-NEXT:   $vgpr0 = COPY [[FRAME_INDEX]](p5)
   ; GCN-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](p1)
+  ; GCN-NEXT:   $vgpr0 = COPY [[FRAME_INDEX]](p5)
   ; GCN-NEXT:   $vgpr1 = COPY [[UV]](s32)
   ; GCN-NEXT:   $vgpr2 = COPY [[UV1]](s32)
   ; GCN-NEXT:   $vgpr3 = COPY [[LOAD1]](s32)
