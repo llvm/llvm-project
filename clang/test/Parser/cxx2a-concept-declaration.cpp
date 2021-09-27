@@ -11,7 +11,7 @@ template<concept T> concept D1 = true;
 
 template<template<typename> concept T> concept D2 = true;
 // expected-error@-1{{expected identifier}}
-// expected-error@-2{{template template parameter requires 'class' after the parameter list}}
+// expected-error@-2{{template template parameter requires 'class' or 'typename' after the parameter list}}
 // expected-error@-3{{concept template parameter list must have at least one parameter; explicit specialization of concepts is not allowed}}
 
 struct S1 {

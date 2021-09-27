@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -verify %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
-// RUN: %clang_cc1 -fsyntax-only -verify -std=gnu++1z %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cpp14 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cpp14 %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cpp17 -std=gnu++1z %s
 
 
 
@@ -19,11 +19,14 @@ template <int +> struct x1; // expected-error {{expected ',' or '>' in template-
 template <int +, T> struct x2; // expected-error {{expected ',' or '>' in template-parameter-list}} \
                                 expected-error {{expected unqualified-id}}
 template<template<int+>> struct x3; // expected-error {{expected ',' or '>' in template-parameter-list}} \
-                                         expected-error {{template template parameter requires 'class' after the parameter list}}
+                                         cpp14-error {{template template parameter requires 'class' after the parameter list}} \
+                                         cpp17-error {{template template parameter requires 'class' or 'typename' after the parameter list}}
 template <template X> struct Err1; // expected-error {{expected '<' after 'template'}} \
 // expected-error{{extraneous}}
-template <template <typename> > struct Err2;       // expected-error {{template template parameter requires 'class' after the parameter list}}
-template <template <typename> Foo> struct Err3;    // expected-error {{template template parameter requires 'class' after the parameter list}}
+template <template <typename> > struct Err2;       // cpp14-error {{template template parameter requires 'class' after the parameter list}}
+// cpp17-error@-1{{template template parameter requires 'class' or 'typename' after the parameter list}}
+template <template <typename> Foo> struct Err3;    // cpp14-error {{template template parameter requires 'class' after the parameter list}}
+// cpp17-error@-1{{template template parameter requires 'class' or 'typename' after the parameter list}}
 
 template <template <typename> typename Foo> struct Cxx1z;
 #if __cplusplus <= 201402L
