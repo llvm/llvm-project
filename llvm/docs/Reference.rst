@@ -34,6 +34,7 @@ LLVM and API reference documentation.
    MIRLangRef
    OptBisect
    PDB/index
+   PointerAuth
    ScudoHardenedAllocator
    MemTagSanitizer
    Security
@@ -207,6 +208,10 @@ Additional Topics
 
 :doc:`Coroutines`
   LLVM support for coroutines.
+
+:doc:`PointerAuth`
+  A description of pointer authentication, its LLVM IR representation, and its
+  support in the backend.
 
 :doc:`YamlIO`
    A reference guide for using LLVM's YAML I/O library.
