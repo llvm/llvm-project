@@ -200,9 +200,9 @@ public:
   /// \return The parsed argument, or 0 if the argument is missing values
   /// (in which case Index still points at the conceptual next argument string
   /// to parse).
-  Arg *ParseOneArg(const ArgList &Args, unsigned &Index,
-                   unsigned FlagsToInclude = 0,
-                   unsigned FlagsToExclude = 0) const;
+  std::unique_ptr<Arg> ParseOneArg(const ArgList &Args, unsigned &Index,
+                                   unsigned FlagsToInclude = 0,
+                                   unsigned FlagsToExclude = 0) const;
 
   /// Parse an list of arguments into an InputArgList.
   ///
