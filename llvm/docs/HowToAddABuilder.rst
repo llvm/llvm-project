@@ -13,9 +13,9 @@ Buildmasters
 
 There are two buildmasters running.
 
-* The main buildmaster at `<http://lab.llvm.org:8011>`_. All builders attached
+* The main buildmaster at `<https://lab.llvm.org/buildbot>`_. All builders attached
   to this machine will notify commit authors every time they break the build.
-* The staging buildbot at `<http://lab.llvm.org:8014>`_. All builders attached
+* The staging buildbot at `<https://lab.llvm.org/staging>`_. All builders attached
   to this machine will be completely silent by default when the build is broken.
   Builders for experimental backends should generally be attached to this
   buildmaster.
