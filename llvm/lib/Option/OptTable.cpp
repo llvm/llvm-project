@@ -104,11 +104,11 @@ OptTable::OptTable(ArrayRef<Info> OptionInfos, bool IgnoreCase)
   for (unsigned i = 0, e = getNumOptions(); i != e; ++i) {
     unsigned Kind = getInfo(i + 1).Kind;
     if (Kind == Option::InputClass) {
-      assert(!TheInputOptionID && "Cannot have multiple input options!");
-      TheInputOptionID = getInfo(i + 1).ID;
+      assert(!InputOptionID && "Cannot have multiple input options!");
+      InputOptionID = getInfo(i + 1).ID;
     } else if (Kind == Option::UnknownClass) {
-      assert(!TheUnknownOptionID && "Cannot have multiple unknown options!");
-      TheUnknownOptionID = getInfo(i + 1).ID;
+      assert(!UnknownOptionID && "Cannot have multiple unknown options!");
+      UnknownOptionID = getInfo(i + 1).ID;
     } else if (Kind != Option::GroupClass) {
       FirstSearchableIndex = i;
       break;
@@ -344,8 +344,7 @@ std::unique_ptr<Arg> OptTable::parseOneArgGrouped(InputArgList &Args,
   const char *CStr = Args.getArgString(Index);
   StringRef Str(CStr);
   if (isInput(PrefixesUnion, Str))
-    return std::make_unique<Arg>(getOption(TheInputOptionID), Str, Index++,
-                                 CStr);
+    return std::make_unique<Arg>(getOption(InputOptionID), Str, Index++, CStr);
 
   const Info *End = OptionInfos.data() + OptionInfos.size();
   StringRef Name = Str.ltrim(PrefixChars);
@@ -379,7 +378,7 @@ std::unique_ptr<Arg> OptTable::parseOneArgGrouped(InputArgList &Args,
     Option Opt(Fallback, this);
     // Check that the last option isn't a flag wrongly given an argument.
     if (Str[2] == '=')
-      return std::make_unique<Arg>(getOption(TheUnknownOptionID), Str, Index++,
+      return std::make_unique<Arg>(getOption(UnknownOptionID), Str, Index++,
                                    CStr);
 
     if (std::unique_ptr<Arg> A =
@@ -394,12 +393,10 @@ std::unique_ptr<Arg> OptTable::parseOneArgGrouped(InputArgList &Args,
   if (Str[1] != '-') {
     CStr = Args.MakeArgString(Str.substr(0, 2));
     Args.replaceArgString(Index, Twine('-') + Str.substr(2));
-    return std::make_unique<Arg>(getOption(TheUnknownOptionID), CStr, Index,
-                                 CStr);
+    return std::make_unique<Arg>(getOption(UnknownOptionID), CStr, Index, CStr);
   }
 
-  return std::make_unique<Arg>(getOption(TheUnknownOptionID), Str, Index++,
-                               CStr);
+  return std::make_unique<Arg>(getOption(UnknownOptionID), Str, Index++, CStr);
 }
 
 std::unique_ptr<Arg> OptTable::ParseOneArg(const ArgList &Args, unsigned &Index,
@@ -411,8 +408,7 @@ std::unique_ptr<Arg> OptTable::ParseOneArg(const ArgList &Args, unsigned &Index,
   // Anything that doesn't start with PrefixesUnion is an input, as is '-'
   // itself.
   if (isInput(PrefixesUnion, Str))
-    return std::make_unique<Arg>(getOption(TheInputOptionID), Str, Index++,
-                                 Str);
+    return std::make_unique<Arg>(getOption(InputOptionID), Str, Index++, Str);
 
   const Info *Start = OptionInfos.data() + FirstSearchableIndex;
   const Info *End = OptionInfos.data() + OptionInfos.size();
@@ -458,11 +454,9 @@ std::unique_ptr<Arg> OptTable::ParseOneArg(const ArgList &Args, unsigned &Index,
   // If we failed to find an option and this arg started with /, then it's
   // probably an input path.
   if (Str[0] == '/')
-    return std::make_unique<Arg>(getOption(TheInputOptionID), Str, Index++,
-                                 Str);
+    return std::make_unique<Arg>(getOption(InputOptionID), Str, Index++, Str);
 
-  return std::make_unique<Arg>(getOption(TheUnknownOptionID), Str, Index++,
-                               Str);
+  return std::make_unique<Arg>(getOption(UnknownOptionID), Str, Index++, Str);
 }
 
 InputArgList OptTable::ParseArgs(ArrayRef<const char *> ArgArr,
