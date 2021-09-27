@@ -474,8 +474,7 @@ Error ELFNixPlatform::bootstrapELFNixRuntime(JITDylib &PlatformJD) {
     KV.second->setValue((*RuntimeSymbolAddrs)[Name].getAddress());
   }
 
-  if (auto Err = ES.callSPSWrapper<void()>(
-          orc_rt_elfnix_platform_bootstrap.getValue()))
+  if (auto Err = ES.callSPSWrapper<void()>(orc_rt_elfnix_platform_bootstrap))
     return Err;
 
   // FIXME: Ordering is fuzzy here. We're probably best off saying
@@ -543,7 +542,7 @@ Error ELFNixPlatform::registerPerObjectSections(
   Error ErrResult = Error::success();
   if (auto Err = ES.callSPSWrapper<shared::SPSError(
                      SPSELFPerObjectSectionsToRegister)>(
-          orc_rt_elfnix_register_object_sections.getValue(), ErrResult, POSR))
+          orc_rt_elfnix_register_object_sections, ErrResult, POSR))
     return Err;
   return ErrResult;
 }
@@ -557,7 +556,7 @@ Expected<uint64_t> ELFNixPlatform::createPThreadKey() {
 
   Expected<uint64_t> Result(0);
   if (auto Err = ES.callSPSWrapper<SPSExpected<uint64_t>(void)>(
-          orc_rt_elfnix_create_pthread_key.getValue(), Result))
+          orc_rt_elfnix_create_pthread_key, Result))
     return std::move(Err);
   return Result;
 }

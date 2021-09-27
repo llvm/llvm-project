@@ -67,14 +67,14 @@ public:
           else
             OnFinalize(std::move(FinalizeErr));
         },
-        Parent.SAs.Finalize.getValue(), Parent.SAs.Allocator, std::move(FR));
+        Parent.SAs.Finalize, Parent.SAs.Allocator, std::move(FR));
   }
 
   Error deallocate() override {
     Error Err = Error::success();
     if (auto E2 = Parent.EPC.callSPSWrapper<
                   rt::SPSSimpleExecutorMemoryManagerDeallocateSignature>(
-            Parent.SAs.Deallocate.getValue(), Err, Parent.SAs.Allocator,
+            Parent.SAs.Deallocate, Err, Parent.SAs.Allocator,
             ArrayRef<ExecutorAddr>(TargetAddr)))
       return E2;
     return Err;
@@ -114,7 +114,7 @@ EPCGenericJITLinkMemoryManager::allocate(const jitlink::JITLinkDylib *JD,
   Expected<ExecutorAddr> TargetAllocAddr((ExecutorAddr()));
   if (auto Err = EPC.callSPSWrapper<
                  rt::SPSSimpleExecutorMemoryManagerReserveSignature>(
-          SAs.Reserve.getValue(), TargetAllocAddr, SAs.Allocator, AllocSize))
+          SAs.Reserve, TargetAllocAddr, SAs.Allocator, AllocSize))
     return std::move(Err);
   if (!TargetAllocAddr)
     return TargetAllocAddr.takeError();

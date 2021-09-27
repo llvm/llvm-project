@@ -40,7 +40,7 @@ TEST(ExecutionSessionWrapperFunctionCalls, RunWrapperTemplate) {
 
   int32_t Result;
   EXPECT_THAT_ERROR(ES.callSPSWrapper<int32_t(int32_t, int32_t)>(
-                        pointerToJITTargetAddress(addWrapper), Result, 2, 3),
+                        ExecutorAddr::fromPtr(addWrapper), Result, 2, 3),
                     Succeeded());
   EXPECT_EQ(Result, 5);
 }
@@ -53,7 +53,7 @@ TEST(ExecutionSessionWrapperFunctionCalls, RunVoidWrapperAsyncTemplate) {
       [&](Error SerializationErr) {
         RP.set_value(std::move(SerializationErr));
       },
-      pointerToJITTargetAddress(voidWrapper));
+      ExecutorAddr::fromPtr(voidWrapper));
   Error Err = RP.get_future().get();
   EXPECT_THAT_ERROR(std::move(Err), Succeeded());
 }
@@ -68,7 +68,7 @@ TEST(ExecutionSessionWrapperFunctionCalls, RunNonVoidWrapperAsyncTemplate) {
           RP.set_value(std::move(SerializationErr));
         RP.set_value(std::move(R));
       },
-      pointerToJITTargetAddress(addWrapper), 2, 3);
+      ExecutorAddr::fromPtr(addWrapper), 2, 3);
   Expected<int32_t> Result = RP.get_future().get();
   EXPECT_THAT_EXPECTED(Result, HasValue(5));
 }

@@ -196,7 +196,7 @@ public:
   lookupSymbols(ArrayRef<LookupRequest> Request) = 0;
 
   /// Run function with a main-like signature.
-  virtual Expected<int32_t> runAsMain(JITTargetAddress MainFnAddr,
+  virtual Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                                       ArrayRef<std::string> Args) = 0;
 
   /// Run a wrapper function in the executor.
@@ -209,7 +209,7 @@ public:
   ///
   /// The given OnComplete function will be called to return the result.
   virtual void callWrapperAsync(SendResultFunction OnComplete,
-                                JITTargetAddress WrapperFnAddr,
+                                ExecutorAddr WrapperFnAddr,
                                 ArrayRef<char> ArgBuffer) = 0;
 
   /// Run a wrapper function in the executor. The wrapper function should be
@@ -218,7 +218,7 @@ public:
   /// \code{.cpp}
   ///   CWrapperFunctionResult fn(uint8_t *Data, uint64_t Size);
   /// \endcode{.cpp}
-  shared::WrapperFunctionResult callWrapper(JITTargetAddress WrapperFnAddr,
+  shared::WrapperFunctionResult callWrapper(ExecutorAddr WrapperFnAddr,
                                             ArrayRef<char> ArgBuffer) {
     std::promise<shared::WrapperFunctionResult> RP;
     auto RF = RP.get_future();
@@ -231,8 +231,7 @@ public:
   /// Run a wrapper function using SPS to serialize the arguments and
   /// deserialize the results.
   template <typename SPSSignature, typename SendResultT, typename... ArgTs>
-  void callSPSWrapperAsync(SendResultT &&SendResult,
-                           JITTargetAddress WrapperFnAddr,
+  void callSPSWrapperAsync(SendResultT &&SendResult, ExecutorAddr WrapperFnAddr,
                            const ArgTs &...Args) {
     shared::WrapperFunction<SPSSignature>::callAsync(
         [this,
@@ -250,7 +249,7 @@ public:
   /// If SPSSignature is a non-void function signature then the second argument
   /// (the first in the Args list) should be a reference to a return value.
   template <typename SPSSignature, typename... WrapperCallArgTs>
-  Error callSPSWrapper(JITTargetAddress WrapperFnAddr,
+  Error callSPSWrapper(ExecutorAddr WrapperFnAddr,
                        WrapperCallArgTs &&...WrapperCallArgs) {
     return shared::WrapperFunction<SPSSignature>::call(
         [this, WrapperFnAddr](const char *ArgData, size_t ArgSize) {
@@ -301,13 +300,13 @@ public:
     llvm_unreachable("Unsupported");
   }
 
-  Expected<int32_t> runAsMain(JITTargetAddress MainFnAddr,
+  Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                               ArrayRef<std::string> Args) override {
     llvm_unreachable("Unsupported");
   }
 
   void callWrapperAsync(SendResultFunction OnComplete,
-                        JITTargetAddress WrapperFnAddr,
+                        ExecutorAddr WrapperFnAddr,
                         ArrayRef<char> ArgBuffer) override {
     llvm_unreachable("Unsupported");
   }
@@ -338,11 +337,11 @@ public:
   Expected<std::vector<tpctypes::LookupResult>>
   lookupSymbols(ArrayRef<LookupRequest> Request) override;
 
-  Expected<int32_t> runAsMain(JITTargetAddress MainFnAddr,
+  Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                               ArrayRef<std::string> Args) override;
 
   void callWrapperAsync(SendResultFunction OnComplete,
-                        JITTargetAddress WrapperFnAddr,
+                        ExecutorAddr WrapperFnAddr,
                         ArrayRef<char> ArgBuffer) override;
 
   Error disconnect() override;
