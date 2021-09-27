@@ -685,6 +685,7 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
   unsigned TypeBits = Ty->getScalarSizeInBits();
   assert(!Op1C->uge(TypeBits) &&
          "Shift over the type width should have been removed already");
+  (void)TypeBits;
 
   if (Instruction *FoldedShift = foldBinOpIntoSelectOrPhi(I))
     return FoldedShift;
