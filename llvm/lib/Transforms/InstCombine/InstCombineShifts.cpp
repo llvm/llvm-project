@@ -963,17 +963,13 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
         break;
       }
       }
+    }
 
-      // If the operand is a subtract with a constant LHS, and the shift
-      // is the only use, we can pull it out of the shift.
-      // This folds (shl (sub C1, X), C) -> (sub (C1 << C), (shl X, C))
-      if (Op0BO->getOpcode() == Instruction::Sub &&
-          match(Op0BO->getOperand(0), m_APInt(C1))) {
-        Constant *NewLHS = ConstantInt::get(Ty, C1->shl(*C));
-        Value *NewShift = Builder.CreateShl(Op0BO->getOperand(1), Op1);
-        NewShift->takeName(Op0BO);
-        return BinaryOperator::CreateSub(NewLHS, NewShift);
-      }
+    // (C1 - X) << C --> (C1 << C) - (X << C)
+    if (match(Op0, m_OneUse(m_Sub(m_APInt(C1), m_Value(X))))) {
+      Constant *NewLHS = ConstantInt::get(Ty, C1->shl(*C));
+      Value *NewShift = Builder.CreateShl(X, Op1);
+      return BinaryOperator::CreateSub(NewLHS, NewShift);
     }
 
     // If the shifted-out value is known-zero, then this is a NUW shift.
