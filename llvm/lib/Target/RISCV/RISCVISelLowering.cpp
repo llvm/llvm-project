@@ -930,6 +930,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine(ISD::SRA);
     setTargetDAGCombine(ISD::SRL);
     setTargetDAGCombine(ISD::SHL);
+    setTargetDAGCombine(ISD::STORE);
   }
 }
 
@@ -7115,6 +7116,30 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (SDValue V = combineMUL_VLToVWMUL(N, Op1, Op0, DAG))
       return V;
     return SDValue();
+  }
+  case ISD::STORE: {
+    auto *Store = cast<StoreSDNode>(N);
+    SDValue Val = Store->getValue();
+    // Combine store of vmv.x.s to vse with VL of 1.
+    // FIXME: Support FP.
+    if (Val.getOpcode() == RISCVISD::VMV_X_S) {
+      SDValue Src = Val.getOperand(0);
+      EVT VecVT = Src.getValueType();
+      EVT MemVT = Store->getMemoryVT();
+      // The memory VT and the element type must match.
+      if (VecVT.getVectorElementType() == MemVT) {
+        SDLoc DL(N);
+        MVT MaskVT = MVT::getVectorVT(MVT::i1, VecVT.getVectorElementCount());
+        return DAG.getStoreVP(Store->getChain(), DL, Src, Store->getBasePtr(),
+                              DAG.getConstant(1, DL, MaskVT),
+                              DAG.getConstant(1, DL, Subtarget.getXLenVT()),
+                              Store->getPointerInfo(),
+                              Store->getOriginalAlign(),
+                              Store->getMemOperand()->getFlags());
+      }
+    }
+
+    break;
   }
   }
 

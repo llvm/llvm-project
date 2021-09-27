@@ -1352,7 +1352,8 @@ public:
   SDValue getStoreVP(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
                      SDValue Mask, SDValue EVL, MachinePointerInfo PtrInfo,
                      Align Alignment, MachineMemOperand::Flags MMOFlags,
-                     const AAMDNodes &AAInfo, bool IsCompressing = false);
+                     const AAMDNodes &AAInfo = AAMDNodes(),
+                     bool IsCompressing = false);
   SDValue getStoreVP(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
                      SDValue Mask, SDValue EVL, MachineMemOperand *MMO,
                      bool IsCompressing = false);
