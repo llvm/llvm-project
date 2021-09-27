@@ -3951,6 +3951,7 @@ Clang supports the pragma ``#pragma clang final``, which can be used to
 mark macros as final, meaning they cannot be undef'd or re-defined. For example:
 
 .. code-block:: c
+
    #define FINAL_MACRO 1
    #pragma clang final(FINAL_MACRO)
 
