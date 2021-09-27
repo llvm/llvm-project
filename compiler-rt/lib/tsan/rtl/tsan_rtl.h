@@ -159,10 +159,12 @@ struct ThreadState {
 #if !SANITIZER_GO
   IgnoreSet mop_ignore_set;
   IgnoreSet sync_ignore_set;
-#endif
-  // C/C++ uses fixed size shadow stack embed into Trace.
+  // C/C++ uses fixed size shadow stack.
+  uptr shadow_stack[kShadowStackSize];
+#else
   // Go uses malloc-allocated shadow stack with dynamic size.
   uptr *shadow_stack;
+#endif
   uptr *shadow_stack_end;
   uptr *shadow_stack_pos;
   RawShadow *racy_shadow_addr;

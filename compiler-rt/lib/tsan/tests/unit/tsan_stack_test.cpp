@@ -19,10 +19,6 @@ namespace __tsan {
 template <typename StackTraceTy>
 static void TestStackTrace(StackTraceTy *trace) {
   ThreadState thr(0, 0, 0, 0, 0, 0, 0, 0, 0);
-  uptr stack[128];
-  thr.shadow_stack = &stack[0];
-  thr.shadow_stack_pos = &stack[0];
-  thr.shadow_stack_end = &stack[128];
 
   ObtainCurrentStack(&thr, 0, trace);
   EXPECT_EQ(0U, trace->size);
@@ -48,13 +44,8 @@ static void TestStackTrace(StackTraceTy *trace) {
 template<typename StackTraceTy>
 static void TestTrim(StackTraceTy *trace) {
   ThreadState thr(0, 0, 0, 0, 0, 0, 0, 0, 0);
-  const uptr kShadowStackSize = 2 * kStackTraceMax;
-  uptr stack[kShadowStackSize];
-  thr.shadow_stack = &stack[0];
-  thr.shadow_stack_pos = &stack[0];
-  thr.shadow_stack_end = &stack[kShadowStackSize];
 
-  for (uptr i = 0; i < kShadowStackSize; ++i)
+  for (uptr i = 0; i < 2 * kStackTraceMax; ++i)
     *thr.shadow_stack_pos++ = 100 + i;
 
   ObtainCurrentStack(&thr, 0, trace);
