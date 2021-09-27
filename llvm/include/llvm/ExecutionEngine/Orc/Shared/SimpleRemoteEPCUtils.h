@@ -21,6 +21,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
 #include "llvm/Support/Error.h"
 
+#include <atomic>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -77,6 +78,13 @@ class SimpleRemoteEPCTransport {
 public:
   virtual ~SimpleRemoteEPCTransport();
 
+  /// Called during setup of the client to indicate that the client is ready
+  /// to receive messages.
+  ///
+  /// Transport objects should not access the client until this method is
+  /// called.
+  virtual Error start() = 0;
+
   /// Send a SimpleRemoteEPC message.
   ///
   /// This function may be called concurrently. Subclasses should implement
@@ -107,6 +115,8 @@ public:
 
   ~FDSimpleRemoteEPCTransport() override;
 
+  Error start() override;
+
   Error sendMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
                     ExecutorAddr TagAddr, ArrayRef<char> ArgBytes) override;
 
@@ -114,7 +124,8 @@ public:
 
 private:
   FDSimpleRemoteEPCTransport(SimpleRemoteEPCTransportClient &C, int InFD,
-                             int OutFD);
+                             int OutFD)
+      : C(C), InFD(InFD), OutFD(OutFD) {}
 
   Error readBytes(char *Dst, size_t Size, bool *IsEOF = nullptr);
   int writeBytes(const char *Src, size_t Size);
@@ -124,6 +135,7 @@ private:
   SimpleRemoteEPCTransportClient &C;
   std::thread ListenerThread;
   int InFD, OutFD;
+  std::atomic<bool> Disconnected{false};
 };
 
 struct RemoteSymbolLookupSetElement {
