@@ -26,10 +26,6 @@ using namespace llvm;
 
 typedef MCDisassembler::DecodeStatus DecodeStatus;
 
-namespace llvm {
-Target &getTheLanaiTarget();
-}
-
 static MCDisassembler *createLanaiDisassembler(const Target & /*T*/,
                                                const MCSubtargetInfo &STI,
                                                MCContext &Ctx) {
