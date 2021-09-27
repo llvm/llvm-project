@@ -83,7 +83,8 @@ private:
     return OptionInfos[id - 1];
   }
 
-  Arg *parseOneArgGrouped(InputArgList &Args, unsigned &Index) const;
+  std::unique_ptr<Arg> parseOneArgGrouped(InputArgList &Args,
+                                          unsigned &Index) const;
 
 protected:
   OptTable(ArrayRef<Info> OptionInfos, bool IgnoreCase = false);
