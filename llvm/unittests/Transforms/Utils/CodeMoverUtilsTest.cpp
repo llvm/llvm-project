@@ -638,12 +638,14 @@ TEST(CodeMoverUtils, IsSafeToMoveTest4) {
                  if.then.first:
                    %add = add i32 %op0, %op1
                    %user = add i32 %add, 1
+                   %add2 = add i32 %op0, 1
                    br label %if.end.first
                  if.end.first:
                    br i1 %cond, label %if.end.second, label %if.then.second
                  if.then.second:
                    %sub_op0 = add i32 %op0, 1
                    %sub = sub i32 %sub_op0, %op1
+                   %sub2 = sub i32 %op0, 1
                    br label %if.end.second
                  if.end.second:
                    ret void
@@ -653,7 +655,9 @@ TEST(CodeMoverUtils, IsSafeToMoveTest4) {
       [&](Function &F, DominatorTree &DT, PostDominatorTree &PDT,
           DependenceInfo &DI) {
         Instruction *AddInst = getInstructionByName(F, "add");
+        Instruction *AddInst2 = getInstructionByName(F, "add2");
         Instruction *SubInst = getInstructionByName(F, "sub");
+        Instruction *SubInst2 = getInstructionByName(F, "sub2");
 
         // Cannot move as %user uses %add and %sub doesn't dominates %user.
         EXPECT_FALSE(isSafeToMoveBefore(*AddInst, *SubInst, DT, &PDT, &DI));
@@ -661,6 +665,14 @@ TEST(CodeMoverUtils, IsSafeToMoveTest4) {
         // Cannot move as %sub_op0 is an operand of %sub and %add doesn't
         // dominates %sub_op0.
         EXPECT_FALSE(isSafeToMoveBefore(*SubInst, *AddInst, DT, &PDT, &DI));
+
+        // Can move as %add2 and %sub2 are control flow equivalent,
+        // although %add2 does not strictly dominate %sub2.
+        EXPECT_TRUE(isSafeToMoveBefore(*AddInst2, *SubInst2, DT, &PDT, &DI));
+
+        // Can move as %add2 and %sub2 are control flow equivalent,
+        // although %add2 does not strictly dominate %sub2.
+        EXPECT_TRUE(isSafeToMoveBefore(*SubInst2, *AddInst2, DT, &PDT, &DI));
       });
 }
 
