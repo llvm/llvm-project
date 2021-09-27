@@ -10,51 +10,59 @@
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
-// transform_view::<iterator>::operator{<,>,<=,>=}
+// transform_view::<iterator>::operator{<,>,<=,>=,==,!=,<=>}
 
 #include <ranges>
 #include <compare>
 
 #include "test_macros.h"
+#include "test_iterators.h"
 #include "../types.h"
 
 constexpr bool test() {
   {
-    std::ranges::transform_view<ContiguousView, PlusOne> transformView1;
-    auto iter1 = std::move(transformView1).begin();
-    std::ranges::transform_view<ContiguousView, PlusOne> transformView2;
-    auto iter2 = std::move(transformView2).begin();
-    assert(iter1 == iter2);
-    assert(iter1 + 1 != iter2);
-    assert(iter1 + 1 == iter2 + 1);
+    // Test a new-school iterator with operator<=>; the transform iterator should also have operator<=>.
+    using It = three_way_contiguous_iterator<int*>;
+    static_assert(std::three_way_comparable<It>);
+    using R = std::ranges::transform_view<std::ranges::subrange<It>, PlusOne>;
+    static_assert(std::three_way_comparable<std::ranges::iterator_t<R>>);
 
-    assert(iter1 < iter1 + 1);
-    assert(iter1 + 1 > iter1);
-    assert(iter1 <= iter1 + 1);
-    assert(iter1 <= iter2);
-    assert(iter1 + 1 >= iter2);
-    assert(iter1     >= iter2);
+    int a[] = {1,2,3};
+    std::same_as<R> auto r = std::ranges::subrange<It>(It(a), It(a+3)) | std::views::transform(PlusOne());
+    auto iter1 = r.begin();
+    auto iter2 = iter1 + 1;
+
+    assert(!(iter1 < iter1));  assert(iter1 < iter2);     assert(!(iter2 < iter1));
+    assert(iter1 <= iter1);    assert(iter1 <= iter2);    assert(!(iter2 <= iter1));
+    assert(!(iter1 > iter1));  assert(!(iter1 > iter2));  assert(iter2 > iter1);
+    assert(iter1 >= iter1);    assert(!(iter1 >= iter2)); assert(iter2 >= iter1);
+    assert(iter1 == iter1);    assert(!(iter1 == iter2)); assert(iter2 == iter2);
+    assert(!(iter1 != iter1)); assert(iter1 != iter2);    assert(!(iter2 != iter2));
+
+    assert((iter1 <=> iter2) == std::strong_ordering::less);
+    assert((iter1 <=> iter1) == std::strong_ordering::equal);
+    assert((iter2 <=> iter1) == std::strong_ordering::greater);
   }
 
-// TODO: when three_way_comparable is implemented and std::is_eq is implemented,
-// uncomment this.
-//   {
-//     std::ranges::transform_view<ThreeWayCompView, PlusOne> transformView1;
-//     auto iter1 = transformView1.begin();
-//     std::ranges::transform_view<ThreeWayCompView, PlusOne> transformView2;
-//     auto iter2 = transformView2.begin();
-//
-//     assert(std::is_eq(iter1   <=> iter2));
-//     assert(std::is_lteq(iter1 <=> iter2));
-//     ++iter2;
-//     assert(std::is_neq(iter1  <=> iter2));
-//     assert(std::is_lt(iter1   <=> iter2));
-//     assert(std::is_gt(iter2   <=> iter1));
-//     assert(std::is_gteq(iter2 <=> iter1));
-//
-//     static_assert( std::three_way_comparable<std::iterator_t<std::ranges::transform_view<ThreeWayCompView, PlusOne>>>);
-//     static_assert(!std::three_way_comparable<std::iterator_t<std::ranges::transform_view<ContiguousView, PlusOne>>>);
-//   }
+  {
+    // Test an old-school iterator with no operator<=>; the transform iterator shouldn't have operator<=> either.
+    using It = random_access_iterator<int*>;
+    static_assert(!std::three_way_comparable<It>);
+    using R = std::ranges::transform_view<std::ranges::subrange<It>, PlusOne>;
+    static_assert(!std::three_way_comparable<std::ranges::iterator_t<R>>);
+
+    int a[] = {1,2,3};
+    std::same_as<R> auto r = std::ranges::subrange<It>(It(a), It(a+3)) | std::views::transform(PlusOne());
+    auto iter1 = r.begin();
+    auto iter2 = iter1 + 1;
+
+    assert(!(iter1 < iter1));  assert(iter1 < iter2);     assert(!(iter2 < iter1));
+    assert(iter1 <= iter1);    assert(iter1 <= iter2);    assert(!(iter2 <= iter1));
+    assert(!(iter1 > iter1));  assert(!(iter1 > iter2));  assert(iter2 > iter1);
+    assert(iter1 >= iter1);    assert(!(iter1 >= iter2)); assert(iter2 >= iter1);
+    assert(iter1 == iter1);    assert(!(iter1 == iter2)); assert(iter2 == iter2);
+    assert(!(iter1 != iter1)); assert(iter1 != iter2);    assert(!(iter2 != iter2));
+  }
 
   return true;
 }

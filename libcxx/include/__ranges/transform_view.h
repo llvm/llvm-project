@@ -9,6 +9,13 @@
 #ifndef _LIBCPP___RANGES_TRANSFORM_VIEW_H
 #define _LIBCPP___RANGES_TRANSFORM_VIEW_H
 
+#include <__compare/three_way_comparable.h>
+#include <__concepts/constructible.h>
+#include <__concepts/convertible_to.h>
+#include <__concepts/copyable.h>
+#include <__concepts/derived_from.h>
+#include <__concepts/equality_comparable.h>
+#include <__concepts/invocable.h>
 #include <__config>
 #include <__functional/bind_back.h>
 #include <__functional/invoke.h>
@@ -27,7 +34,6 @@
 #include <__utility/forward.h>
 #include <__utility/in_place.h>
 #include <__utility/move.h>
-#include <concepts>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -297,13 +303,14 @@ public:
     return __x.__current_ >= __y.__current_;
   }
 
-// TODO: Fix this as soon as soon as three_way_comparable is implemented.
-//   _LIBCPP_HIDE_FROM_ABI
-//   friend constexpr auto operator<=>(const __iterator& __x, const __iterator& __y)
-//     requires random_access_range<_Base> && three_way_comparable<iterator_t<_Base>>
-//   {
-//     return __x.__current_ <=> __y.__current_;
-//   }
+#if !defined(_LIBCPP_HAS_NO_SPACESHIP_OPERATOR)
+  _LIBCPP_HIDE_FROM_ABI
+  friend constexpr auto operator<=>(const __iterator& __x, const __iterator& __y)
+    requires random_access_range<_Base> && three_way_comparable<iterator_t<_Base>>
+  {
+    return __x.__current_ <=> __y.__current_;
+  }
+#endif // !defined(_LIBCPP_HAS_NO_SPACESHIP_OPERATOR)
 
   _LIBCPP_HIDE_FROM_ABI
   friend constexpr __iterator operator+(__iterator __i, difference_type __n)

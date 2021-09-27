@@ -129,14 +129,6 @@ struct CountedView : std::ranges::view_base {
   constexpr CountedIter end() const { return CountedIter(ForwardIter(globalBuff + 8)); }
 };
 
-using ThreeWayCompIter = three_way_contiguous_iterator<int*>;
-struct ThreeWayCompView : std::ranges::view_base {
-  constexpr ThreeWayCompIter begin() { return ThreeWayCompIter(globalBuff); }
-  constexpr ThreeWayCompIter begin() const { return ThreeWayCompIter(globalBuff); }
-  constexpr ThreeWayCompIter end() { return ThreeWayCompIter(globalBuff + 8); }
-  constexpr ThreeWayCompIter end() const { return ThreeWayCompIter(globalBuff + 8); }
-};
-
 struct TimesTwo {
   constexpr int operator()(int x) const { return x * 2; }
 };
