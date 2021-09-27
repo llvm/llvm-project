@@ -169,7 +169,7 @@ static list<std::string>
 static alias FindAlias("f", desc("Alias for --find."), aliasopt(Find),
                        cl::NotHidden);
 static opt<bool> IgnoreCase("ignore-case",
-                            desc("Ignore case distinctions when searching."),
+                            desc("Ignore case distinctions when using --name."),
                             value_desc("i"), cat(DwarfDumpCategory));
 static alias IgnoreCaseAlias("i", desc("Alias for --ignore-case."),
                              aliasopt(IgnoreCase), cl::NotHidden);
@@ -192,11 +192,12 @@ static opt<std::string>
                    cl::value_desc("filename"), cat(DwarfDumpCategory));
 static alias OutputFilenameAlias("out-file", desc("Alias for -o."),
                                  aliasopt(OutputFilename));
-static opt<bool>
-    UseRegex("regex",
-             desc("Treat any <pattern> strings as regular expressions when "
-                  "searching instead of just as an exact string match."),
-             cat(DwarfDumpCategory));
+static opt<bool> UseRegex(
+    "regex",
+    desc("Treat any <pattern> strings as regular "
+         "expressions when searching with --name. If --ignore-case is also "
+         "specified, the regular expression becomes case-insensitive."),
+    cat(DwarfDumpCategory));
 static alias RegexAlias("x", desc("Alias for --regex"), aliasopt(UseRegex),
                         cl::NotHidden);
 static opt<bool>
