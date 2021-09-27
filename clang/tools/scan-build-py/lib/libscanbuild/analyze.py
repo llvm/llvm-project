@@ -39,7 +39,7 @@ from libscanbuild.shell import decode
 
 __all__ = ['scan_build', 'analyze_build', 'analyze_compiler_wrapper']
 
-scanbuild_dir = os.path.dirname(__import__('sys').argv[0])
+scanbuild_dir = os.path.dirname(os.path.realpath(__import__('sys').argv[0]))
 
 COMPILER_WRAPPER_CC = os.path.join(scanbuild_dir, '..', 'libexec', 'analyze-cc')
 COMPILER_WRAPPER_CXX = os.path.join(scanbuild_dir, '..', 'libexec', 'analyze-c++')
