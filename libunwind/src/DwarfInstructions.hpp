@@ -115,12 +115,13 @@ double DwarfInstructions<A, R>::getSavedFloatRegister(
     return addressSpace.getDouble(
         evaluateExpression((pint_t)savedReg.value, addressSpace,
                             registers, cfa));
-
+  case CFI_Parser<A>::kRegisterInRegister:
+    return registers.getFloatRegister((int)savedReg.value);
+  case CFI_Parser<A>::kRegisterUndefined:
+    return 0.0;
   case CFI_Parser<A>::kRegisterIsExpression:
   case CFI_Parser<A>::kRegisterUnused:
-  case CFI_Parser<A>::kRegisterUndefined:
   case CFI_Parser<A>::kRegisterOffsetFromCFA:
-  case CFI_Parser<A>::kRegisterInRegister:
     // FIX ME
     break;
   }
