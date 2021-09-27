@@ -67,9 +67,8 @@ public:
         // Treat as if included from the main file.
         IncludingFileEntry = SM.getFileEntryForID(MainFID);
       }
-      auto IncludingID = Out->getOrCreateID(IncludingFileEntry),
-           IncludedID = Out->getOrCreateID(File);
-      Out->IncludeChildren[IncludingID].push_back(IncludedID);
+      Out->recordInclude(IncludingFileEntry->getName(), File->getName(),
+                         File->tryGetRealPathName());
     }
   }
 
@@ -155,41 +154,38 @@ collectIncludeStructureCallback(const SourceManager &SM,
   return std::make_unique<RecordHeaders>(SM, Out);
 }
 
-llvm::Optional<IncludeStructure::HeaderID>
-IncludeStructure::getID(const FileEntry *Entry) const {
-  auto It = NameToIndex.find(Entry->getName());
-  if (It == NameToIndex.end())
-    return llvm::None;
-  return It->second;
+void IncludeStructure::recordInclude(llvm::StringRef IncludingName,
+                                     llvm::StringRef IncludedName,
+                                     llvm::StringRef IncludedRealName) {
+  auto Child = fileIndex(IncludedName);
+  if (!IncludedRealName.empty() && RealPathNames[Child].empty())
+    RealPathNames[Child] = std::string(IncludedRealName);
+  auto Parent = fileIndex(IncludingName);
+  IncludeChildren[Parent].push_back(Child);
 }
 
-IncludeStructure::HeaderID
-IncludeStructure::getOrCreateID(const FileEntry *Entry) {
-  auto R = NameToIndex.try_emplace(
-      Entry->getName(),
-      static_cast<IncludeStructure::HeaderID>(RealPathNames.size()));
+unsigned IncludeStructure::fileIndex(llvm::StringRef Name) {
+  auto R = NameToIndex.try_emplace(Name, RealPathNames.size());
   if (R.second)
     RealPathNames.emplace_back();
-  IncludeStructure::HeaderID Result = R.first->getValue();
-  std::string &RealPathName = RealPathNames[static_cast<unsigned>(Result)];
-  if (RealPathName.empty())
-    RealPathName = Entry->tryGetRealPathName().str();
-  return Result;
+  return R.first->getValue();
 }
 
-llvm::DenseMap<IncludeStructure::HeaderID, unsigned>
-IncludeStructure::includeDepth(HeaderID Root) const {
+llvm::StringMap<unsigned>
+IncludeStructure::includeDepth(llvm::StringRef Root) const {
   // Include depth 0 is the main file only.
-  llvm::DenseMap<HeaderID, unsigned> Result;
-  assert(static_cast<unsigned>(Root) < RealPathNames.size());
+  llvm::StringMap<unsigned> Result;
   Result[Root] = 0;
-  std::vector<IncludeStructure::HeaderID> CurrentLevel;
-  CurrentLevel.push_back(Root);
-  llvm::DenseSet<IncludeStructure::HeaderID> Seen;
-  Seen.insert(Root);
+  std::vector<unsigned> CurrentLevel;
+  llvm::DenseSet<unsigned> Seen;
+  auto It = NameToIndex.find(Root);
+  if (It != NameToIndex.end()) {
+    CurrentLevel.push_back(It->second);
+    Seen.insert(It->second);
+  }
 
   // Each round of BFS traversal finds the next depth level.
-  std::vector<IncludeStructure::HeaderID> PreviousLevel;
+  std::vector<unsigned> PreviousLevel;
   for (unsigned Level = 1; !CurrentLevel.empty(); ++Level) {
     PreviousLevel.clear();
     PreviousLevel.swap(CurrentLevel);
@@ -197,7 +193,10 @@ IncludeStructure::includeDepth(HeaderID Root) const {
       for (const auto &Child : IncludeChildren.lookup(Parent)) {
         if (Seen.insert(Child).second) {
           CurrentLevel.push_back(Child);
-          Result[Child] = Level;
+          const auto &Name = RealPathNames[Child];
+          // Can't include files if we don't have their real path.
+          if (!Name.empty())
+            Result[Name] = Level;
         }
       }
     }
