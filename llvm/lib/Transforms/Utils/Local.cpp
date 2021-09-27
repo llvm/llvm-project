@@ -2182,26 +2182,6 @@ void llvm::changeToCall(InvokeInst *II, DomTreeUpdater *DTU) {
     DTU->applyUpdates({{DominatorTree::Delete, BB, UnwindDestBB}});
 }
 
-void llvm::createUnreachableSwitchDefault(SwitchInst *Switch,
-                                          DomTreeUpdater *DTU) {
-  LLVM_DEBUG(dbgs() << "SimplifyCFG: switch default is dead.\n");
-  auto *BB = Switch->getParent();
-  auto *OrigDefaultBlock = Switch->getDefaultDest();
-  OrigDefaultBlock->removePredecessor(BB);
-  BasicBlock *NewDefaultBlock = BasicBlock::Create(
-      BB->getContext(), BB->getName() + ".unreachabledefault", BB->getParent(),
-      OrigDefaultBlock);
-  new UnreachableInst(Switch->getContext(), NewDefaultBlock);
-  Switch->setDefaultDest(&*NewDefaultBlock);
-  if (DTU) {
-    SmallVector<DominatorTree::UpdateType, 2> Updates;
-    Updates.push_back({DominatorTree::Insert, BB, &*NewDefaultBlock});
-    if (!is_contained(successors(BB), OrigDefaultBlock))
-      Updates.push_back({DominatorTree::Delete, BB, &*OrigDefaultBlock});
-    DTU->applyUpdates(Updates);
-  }
-}
-
 BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
                                                    BasicBlock *UnwindEdge,
                                                    DomTreeUpdater *DTU) {
