@@ -12,7 +12,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: LV: Found an estimated cost of 2 for VF 2 For instruction:   store i16 %v1, i16* %out1, align 2
 ; CHECK: LV: Found an estimated cost of 2 for VF 4 For instruction:   store i16 %v1, i16* %out1, align 2
 ; CHECK: LV: Found an estimated cost of 4 for VF 8 For instruction:   store i16 %v1, i16* %out1, align 2
-; CHECK: LV: Found an estimated cost of 114 for VF 16 For instruction:   store i16 %v1, i16* %out1, align 2
+; CHECK: LV: Found an estimated cost of 6 for VF 16 For instruction:   store i16 %v1, i16* %out1, align 2
 ; CHECK: LV: Found an estimated cost of 228 for VF 32 For instruction:   store i16 %v1, i16* %out1, align 2
 ; CHECK-NOT: LV: Found an estimated cost of {{[0-9]+}} for VF {{[0-9]+}} For instruction:   store i16 %v1, i16* %out1, align 2
 
