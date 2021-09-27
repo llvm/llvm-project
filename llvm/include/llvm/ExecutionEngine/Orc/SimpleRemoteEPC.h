@@ -37,21 +37,12 @@ public:
   Create(TransportTCtorArgTs &&...TransportTCtorArgs) {
     std::unique_ptr<SimpleRemoteEPC> SREPC(
         new SimpleRemoteEPC(std::make_shared<SymbolStringPool>()));
-
-    // Prepare for setup packet.
-    std::promise<MSVCPExpected<SimpleRemoteEPCExecutorInfo>> EIP;
-    auto EIF = EIP.get_future();
-    SREPC->prepareToReceiveSetupMessage(EIP);
     auto T = TransportT::Create(
         *SREPC, std::forward<TransportTCtorArgTs>(TransportTCtorArgs)...);
     if (!T)
       return T.takeError();
-    auto EI = EIF.get();
-    if (!EI) {
-      (*T)->disconnect();
-      return EI.takeError();
-    }
-    if (auto Err = SREPC->setup(std::move(*T), std::move(*EI)))
+    SREPC->T = std::move(*T);
+    if (auto Err = SREPC->setup())
       return joinErrors(std::move(Err), SREPC->disconnect());
     return std::move(SREPC);
   }
@@ -96,10 +87,7 @@ private:
 
   Error handleSetup(uint64_t SeqNo, ExecutorAddr TagAddr,
                     SimpleRemoteEPCArgBytesVector ArgBytes);
-  void prepareToReceiveSetupMessage(
-      std::promise<MSVCPExpected<SimpleRemoteEPCExecutorInfo>> &ExecInfoP);
-  Error setup(std::unique_ptr<SimpleRemoteEPCTransport> T,
-              SimpleRemoteEPCExecutorInfo EI);
+  Error setup();
 
   Error handleResult(uint64_t SeqNo, ExecutorAddr TagAddr,
                      SimpleRemoteEPCArgBytesVector ArgBytes);

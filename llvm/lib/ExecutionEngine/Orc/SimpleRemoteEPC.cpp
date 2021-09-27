@@ -238,12 +238,17 @@ Error SimpleRemoteEPC::handleSetup(uint64_t SeqNo, ExecutorAddr TagAddr,
   return Error::success();
 }
 
-void SimpleRemoteEPC::prepareToReceiveSetupMessage(
-    std::promise<MSVCPExpected<SimpleRemoteEPCExecutorInfo>> &ExecInfoP) {
+Error SimpleRemoteEPC::setup() {
+  using namespace SimpleRemoteEPCDefaultBootstrapSymbolNames;
+
+  std::promise<MSVCPExpected<SimpleRemoteEPCExecutorInfo>> EIP;
+  auto EIF = EIP.get_future();
+
+  // Prepare a handler for the setup packet.
   PendingCallWrapperResults[0] =
       [&](shared::WrapperFunctionResult SetupMsgBytes) {
         if (const char *ErrMsg = SetupMsgBytes.getOutOfBandError()) {
-          ExecInfoP.set_value(
+          EIP.set_value(
               make_error<StringError>(ErrMsg, inconvertibleErrorCode()));
           return;
         }
@@ -252,29 +257,35 @@ void SimpleRemoteEPC::prepareToReceiveSetupMessage(
         shared::SPSInputBuffer IB(SetupMsgBytes.data(), SetupMsgBytes.size());
         SimpleRemoteEPCExecutorInfo EI;
         if (SPSSerialize::deserialize(IB, EI))
-          ExecInfoP.set_value(EI);
+          EIP.set_value(EI);
         else
-          ExecInfoP.set_value(make_error<StringError>(
+          EIP.set_value(make_error<StringError>(
               "Could not deserialize setup message", inconvertibleErrorCode()));
       };
-}
 
-Error SimpleRemoteEPC::setup(std::unique_ptr<SimpleRemoteEPCTransport> T,
-                             SimpleRemoteEPCExecutorInfo EI) {
-  using namespace SimpleRemoteEPCDefaultBootstrapSymbolNames;
+  // Start the transport.
+  if (auto Err = T->start())
+    return Err;
+
+  // Wait for setup packet to arrive.
+  auto EI = EIF.get();
+  if (!EI) {
+    T->disconnect();
+    return EI.takeError();
+  }
+
   LLVM_DEBUG({
     dbgs() << "SimpleRemoteEPC received setup message:\n"
-           << "  Triple: " << EI.TargetTriple << "\n"
-           << "  Page size: " << EI.PageSize << "\n"
+           << "  Triple: " << EI->TargetTriple << "\n"
+           << "  Page size: " << EI->PageSize << "\n"
            << "  Bootstrap symbols:\n";
-    for (const auto &KV : EI.BootstrapSymbols)
+    for (const auto &KV : EI->BootstrapSymbols)
       dbgs() << "    " << KV.first() << ": "
              << formatv("{0:x16}", KV.second.getValue()) << "\n";
   });
-  this->T = std::move(T);
-  TargetTriple = Triple(EI.TargetTriple);
-  PageSize = EI.PageSize;
-  BootstrapSymbols = std::move(EI.BootstrapSymbols);
+  TargetTriple = Triple(EI->TargetTriple);
+  PageSize = EI->PageSize;
+  BootstrapSymbols = std::move(EI->BootstrapSymbols);
 
   if (auto Err = getBootstrapSymbols(
           {{JDI.JITDispatchContext, ExecutorSessionObjectName},
