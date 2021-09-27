@@ -118,11 +118,11 @@ LogicalResult AsyncRuntimeRefCountingOptPass::optimizeReferenceCounting(
         //
         //   %token = ... : !async.token
         //
-        //   async.runtime.add_ref %token {count = 1 : i32} : !async.token
+        //   async.runtime.add_ref %token {count = 1 : i64} : !async.token
         //   call @pass_token(%token: !async.token, ...)
         //
         //   async.await %token : !async.token
-        //   async.runtime.drop_ref %token {count = 1 : i32} : !async.token
+        //   async.runtime.drop_ref %token {count = 1 : i64} : !async.token
         //
         // In this example if we'll cancel a pair of reference counting
         // operations we might end up with a deallocated token when we'll

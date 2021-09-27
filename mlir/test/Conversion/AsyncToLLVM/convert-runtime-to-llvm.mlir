@@ -10,7 +10,7 @@ func @create_token() {
 // CHECK-LABEL: @create_value
 func @create_value() {
   // CHECK: %[[NULL:.*]] = llvm.mlir.null : !llvm.ptr<f32>
-  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : i64) : i64
   // CHECK: %[[OFFSET:.*]] = llvm.getelementptr %[[NULL]][%[[ONE]]]
   // CHECK: %[[SIZE:.*]] = llvm.ptrtoint %[[OFFSET]]
   // CHECK: %[[VALUE:.*]] = call @mlirAsyncRuntimeCreateValue(%[[SIZE]])

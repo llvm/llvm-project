@@ -2,13 +2,13 @@
 
 // CHECK-LABEL: reference_counting
 func @reference_counting(%arg0: !async.token) {
-  // CHECK: %[[C2:.*]] = constant 2 : i32
+  // CHECK: %[[C2:.*]] = constant 2 : i64
   // CHECK: call @mlirAsyncRuntimeAddRef(%arg0, %[[C2]])
-  async.runtime.add_ref %arg0 {count = 2 : i32} : !async.token
+  async.runtime.add_ref %arg0 {count = 2 : i64} : !async.token
 
-  // CHECK: %[[C1:.*]] = constant 1 : i32
+  // CHECK: %[[C1:.*]] = constant 1 : i64
   // CHECK: call @mlirAsyncRuntimeDropRef(%arg0, %[[C1]])
-  async.runtime.drop_ref %arg0 {count = 1 : i32} : !async.token
+  async.runtime.drop_ref %arg0 {count = 1 : i64} : !async.token
 
   return
 }

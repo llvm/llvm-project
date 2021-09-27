@@ -55,7 +55,7 @@ public:
            "all ref counted objects must be destroyed");
   }
 
-  int32_t getNumRefCountedObjects() {
+  int64_t getNumRefCountedObjects() {
     return numRefCountedObjects.load(std::memory_order_relaxed);
   }
 
@@ -73,7 +73,7 @@ private:
     numRefCountedObjects.fetch_sub(1, std::memory_order_relaxed);
   }
 
-  std::atomic<int32_t> numRefCountedObjects;
+  std::atomic<int64_t> numRefCountedObjects;
   llvm::ThreadPool threadPool;
 };
 
@@ -123,7 +123,7 @@ private:
 
 class RefCounted {
 public:
-  RefCounted(AsyncRuntime *runtime, int32_t refCount = 1)
+  RefCounted(AsyncRuntime *runtime, int64_t refCount = 1)
       : runtime(runtime), refCount(refCount) {
     runtime->addNumRefCountedObjects();
   }
@@ -136,10 +136,10 @@ public:
   RefCounted(const RefCounted &) = delete;
   RefCounted &operator=(const RefCounted &) = delete;
 
-  void addRef(int32_t count = 1) { refCount.fetch_add(count); }
+  void addRef(int64_t count = 1) { refCount.fetch_add(count); }
 
-  void dropRef(int32_t count = 1) {
-    int32_t previous = refCount.fetch_sub(count);
+  void dropRef(int64_t count = 1) {
+    int64_t previous = refCount.fetch_sub(count);
     assert(previous >= count && "reference count should not go below zero");
     if (previous == count)
       destroy();
@@ -150,7 +150,7 @@ protected:
 
 private:
   AsyncRuntime *runtime;
-  std::atomic<int32_t> refCount;
+  std::atomic<int64_t> refCount;
 };
 
 } // namespace
@@ -192,7 +192,7 @@ struct AsyncToken : public RefCounted {
 // underlying type, and a flag to signal if the value is ready or not.
 struct AsyncValue : public RefCounted {
   // AsyncValue similar to an AsyncToken created with a reference count of 2.
-  AsyncValue(AsyncRuntime *runtime, int32_t size)
+  AsyncValue(AsyncRuntime *runtime, int64_t size)
       : RefCounted(runtime, /*refCount=*/2), state(State::kUnavailable),
         storage(size) {}
 
@@ -225,13 +225,13 @@ struct AsyncGroup : public RefCounted {
 };
 
 // Adds references to reference counted runtime object.
-extern "C" void mlirAsyncRuntimeAddRef(RefCountedObjPtr ptr, int32_t count) {
+extern "C" void mlirAsyncRuntimeAddRef(RefCountedObjPtr ptr, int64_t count) {
   RefCounted *refCounted = static_cast<RefCounted *>(ptr);
   refCounted->addRef(count);
 }
 
 // Drops references from reference counted runtime object.
-extern "C" void mlirAsyncRuntimeDropRef(RefCountedObjPtr ptr, int32_t count) {
+extern "C" void mlirAsyncRuntimeDropRef(RefCountedObjPtr ptr, int64_t count) {
   RefCounted *refCounted = static_cast<RefCounted *>(ptr);
   refCounted->dropRef(count);
 }
@@ -243,7 +243,7 @@ extern "C" AsyncToken *mlirAsyncRuntimeCreateToken() {
 }
 
 // Creates a new `async.value` in not-ready state.
-extern "C" AsyncValue *mlirAsyncRuntimeCreateValue(int32_t size) {
+extern "C" AsyncValue *mlirAsyncRuntimeCreateValue(int64_t size) {
   AsyncValue *value = new AsyncValue(getDefaultAsyncRuntime(), size);
   return value;
 }
