@@ -134,6 +134,11 @@ shouldReplaceLiteralSuffix(const Expr &Literal,
       CharSourceRange::getTokenRange(*Range), SM, LO, &Invalid);
   assert(!Invalid && "Failed to retrieve the source text.");
 
+  // Make sure the first character is actually a digit, instead of
+  // something else, like a non-type template parameter.
+  if (!std::isdigit(static_cast<unsigned char>(LiteralSourceText.front())))
+    return llvm::None;
+
   size_t Skip = 0;
 
   // Do we need to ignore something before actually looking for the suffix?
