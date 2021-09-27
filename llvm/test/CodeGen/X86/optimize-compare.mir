@@ -212,8 +212,7 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY $edi
     ; CHECK-NEXT: CMP32rr [[COPY]], [[COPY1]], implicit-def $eflags
     ; CHECK-NEXT: $cl = SETCCr 2, implicit $eflags
-    ; CHECK-NEXT: CMP32rr [[COPY1]], [[COPY]], implicit-def $eflags
-    ; CHECK-NEXT: $bl = SETCCr 2, implicit $eflags
+    ; CHECK-NEXT: $bl = SETCCr 7, implicit $eflags
     %0:gr32 = COPY $esi
     %1:gr32 = COPY $edi
     CMP32rr %0, %1, implicit-def $eflags
@@ -231,7 +230,6 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
     ; CHECK-NEXT: CMP64ri8 [[COPY]], 15, implicit-def $eflags
     ; CHECK-NEXT: $cl = SETCCr 2, implicit $eflags
-    ; CHECK-NEXT: CMP64ri8 [[COPY]], 15, implicit-def $eflags
     ; CHECK-NEXT: $bl = SETCCr 2, implicit $eflags
     %0:gr64 = COPY $rsi
     %1:gr64 = COPY $rdi
@@ -249,7 +247,6 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:gr16 = COPY $ax
     ; CHECK-NEXT: TEST16rr [[COPY]], [[COPY]], implicit-def $eflags
     ; CHECK-NEXT: $cl = SETCCr 2, implicit $eflags
-    ; CHECK-NEXT: TEST16rr [[COPY]], [[COPY]], implicit-def $eflags
     ; CHECK-NEXT: $bl = SETCCr 2, implicit $eflags
     %0:gr16 = COPY $ax
     TEST16rr %0, %0, implicit-def $eflags
@@ -267,8 +264,7 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY $edi
     ; CHECK-NEXT: CMP32rr [[COPY]], [[COPY1]], implicit-def $eflags
     ; CHECK-NEXT: $cl = SETCCr 2, implicit $eflags
-    ; CHECK-NEXT: CMP32rr [[COPY1]], [[COPY]], implicit-def $eflags
-    ; CHECK-NEXT: $bl = SETCCr 2, implicit $eflags
+    ; CHECK-NEXT: $bl = SETCCr 7, implicit $eflags
     %0:gr32 = COPY $esi
     %1:gr32 = COPY $edi
     CMP32rr %0, %1, implicit-def $eflags
@@ -285,7 +281,6 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
     ; CHECK-NEXT: CMP32ri [[COPY]], -12345, implicit-def $eflags
     ; CHECK-NEXT: $cl = SETCCr 2, implicit $eflags
-    ; CHECK-NEXT: CMP32ri [[COPY]], -12345, implicit-def $eflags
     ; CHECK-NEXT: $bl = SETCCr 2, implicit $eflags
     %0:gr32 = COPY $esi
     CMP32ri %0, -12345, implicit-def $eflags
@@ -323,7 +318,6 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
     ; CHECK-NEXT: CMP32ri8 [[COPY]], 0, implicit-def $eflags
     ; CHECK-NEXT: $cl = SETCCr 2, implicit $eflags
-    ; CHECK-NEXT: TEST32rr [[COPY]], [[COPY]], implicit-def $eflags
     ; CHECK-NEXT: $bl = SETCCr 2, implicit $eflags
     %0:gr32 = COPY $esi
     CMP32ri8 %0, 0, implicit-def $eflags
@@ -340,7 +334,6 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
     ; CHECK-NEXT: TEST32rr [[COPY]], [[COPY]], implicit-def $eflags
     ; CHECK-NEXT: $cl = SETCCr 2, implicit $eflags
-    ; CHECK-NEXT: CMP32ri8 [[COPY]], 0, implicit-def $eflags
     ; CHECK-NEXT: $bl = SETCCr 2, implicit $eflags
     %0:gr32 = COPY $esi
     TEST32rr %0, %0, implicit-def $eflags
@@ -359,7 +352,6 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
     ; CHECK-NEXT: CMP64ri32 [[COPY]], @opt_redundant_flags_cmp_addr + 4, implicit-def $eflags
     ; CHECK-NEXT: $cl = SETCCr 7, implicit $eflags
-    ; CHECK-NEXT: CMP64ri32 [[COPY]], @opt_redundant_flags_cmp_addr + 4, implicit-def $eflags
     ; CHECK-NEXT: $cl = SETCCr 3, implicit $eflags
     %0:gr64 = COPY $rsi
     CMP64ri32 %0, @opt_redundant_flags_cmp_addr + 4, implicit-def $eflags

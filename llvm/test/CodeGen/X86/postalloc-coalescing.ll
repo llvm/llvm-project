@@ -15,7 +15,6 @@ define fastcc i32 @_Z18yy_get_next_bufferv() nounwind {
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  .LBB0_3: # %bb158
 ; CHECK-NEXT:    movb %al, 0
-; CHECK-NEXT:    cmpl $-1, %eax
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retl
 entry:
