@@ -1,21 +1,21 @@
-; RUN: llc -march=mips -relocation-model=static < %s \
+; RUN: llc -mtriple=mips -relocation-model=static < %s \
 ; RUN:   | FileCheck --check-prefixes=ALL,SYM32,O32,O32BE %s
-; RUN: llc -march=mipsel -relocation-model=static < %s \
+; RUN: llc -mtriple=mipsel -relocation-model=static < %s \
 ; RUN:   | FileCheck --check-prefixes=ALL,SYM32,O32,O32LE %s
 
-; RUN-TODO: llc -march=mips64 -relocation-model=static -target-abi o32 < %s \
+; RUN-TODO: llc -mtriple=mips64 -relocation-model=static -target-abi o32 < %s \
 ; RUN-TODO:   | FileCheck --check-prefixes=ALL,SYM32,O32 %s
-; RUN-TODO: llc -march=mips64el -relocation-model=static -target-abi o32 < %s \
+; RUN-TODO: llc -mtriple=mips64el -relocation-model=static -target-abi o32 < %s \
 ; RUN-TODO:   | FileCheck --check-prefixes=ALL,SYM32,O32 %s
 
-; RUN: llc -march=mips64 -relocation-model=static -target-abi n32 < %s \
+; RUN: llc -mtriple=mips64 -relocation-model=static -target-abi n32 < %s \
 ; RUN:   | FileCheck --check-prefixes=ALL,SYM32,N32,NEW,NEWBE %s
-; RUN: llc -march=mips64el -relocation-model=static -target-abi n32 < %s \
+; RUN: llc -mtriple=mips64el -relocation-model=static -target-abi n32 < %s \
 ; RUN:   | FileCheck --check-prefixes=ALL,SYM32,N32,NEW,NEWLE %s
 
-; RUN: llc -march=mips64 -relocation-model=static -target-abi n64 < %s \
+; RUN: llc -mtriple=mips64 -relocation-model=static -target-abi n64 < %s \
 ; RUN:   | FileCheck --check-prefixes=ALL,SYM64,N64,NEW,NEWBE %s
-; RUN: llc -march=mips64el -relocation-model=static -target-abi n64 < %s \
+; RUN: llc -mtriple=mips64el -relocation-model=static -target-abi n64 < %s \
 ; RUN:   | FileCheck --check-prefixes=ALL,SYM64,N64,NEW,NEWLE %s
 
 ; Test the effect of varargs on floating point types in the non-variable part

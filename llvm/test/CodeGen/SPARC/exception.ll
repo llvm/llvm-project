@@ -1,7 +1,7 @@
-; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -march=sparc   -relocation-model=static | FileCheck -check-prefix=V8ABS %s
-; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -march=sparc   -relocation-model=pic    | FileCheck -check-prefix=V8PIC %s
-; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -march=sparcv9 -relocation-model=static | FileCheck -check-prefix=V9ABS %s
-; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -march=sparcv9 -relocation-model=pic    | FileCheck -check-prefix=V9PIC %s
+; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=sparc   -relocation-model=static | FileCheck -check-prefix=V8ABS %s
+; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=sparc   -relocation-model=pic    | FileCheck -check-prefix=V8PIC %s
+; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=sparcv9 -relocation-model=static | FileCheck -check-prefix=V9ABS %s
+; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=sparcv9 -relocation-model=pic    | FileCheck -check-prefix=V9PIC %s
 
 
 %struct.__fundamental_type_info_pseudo = type { %struct.__type_info_pseudo }

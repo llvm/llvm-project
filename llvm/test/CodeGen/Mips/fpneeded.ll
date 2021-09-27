@@ -1,4 +1,4 @@
-; RUN: llc  -march=mipsel -mcpu=mips32 -relocation-model=static -O3 < %s -mips-os16  | FileCheck %s -check-prefix=32
+; RUN: llc  -mtriple=mipsel -mcpu=mips32 -relocation-model=static -O3 < %s -mips-os16  | FileCheck %s -check-prefix=32
 
 @x = global float 1.000000e+00, align 4
 @y = global float 2.000000e+00, align 4
