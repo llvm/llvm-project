@@ -359,9 +359,9 @@ Arg *OptTable::parseOneArgGrouped(InputArgList &Args, unsigned &Index) const {
       continue;
 
     Option Opt(Start, this);
-    if (Arg *A = Opt.accept(Args, StringRef(Args.getArgString(Index), ArgSize),
-                            false, Index))
-      return A;
+    if (std::unique_ptr<Arg> A = Opt.accept(
+            Args, StringRef(Args.getArgString(Index), ArgSize), false, Index))
+      return A.release();
 
     // If Opt is a Flag of length 2 (e.g. "-a"), we know it is a prefix of
     // the current argument (e.g. "-abc"). Match it as a fallback if no longer
@@ -379,9 +379,10 @@ Arg *OptTable::parseOneArgGrouped(InputArgList &Args, unsigned &Index) const {
     if (Str[2] == '=')
       return new Arg(getOption(TheUnknownOptionID), Str, Index++, CStr);
 
-    if (Arg *A = Opt.accept(Args, Str.substr(0, 2), true, Index)) {
+    if (std::unique_ptr<Arg> A =
+            Opt.accept(Args, Str.substr(0, 2), true, Index)) {
       Args.replaceArgString(Index, Twine('-') + Str.substr(2));
-      return A;
+      return A.release();
     }
   }
 
@@ -439,9 +440,9 @@ Arg *OptTable::ParseOneArg(const ArgList &Args, unsigned &Index,
       continue;
 
     // See if this option matches.
-    if (Arg *A = Opt.accept(Args, StringRef(Args.getArgString(Index), ArgSize),
-                            false, Index))
-      return A;
+    if (std::unique_ptr<Arg> A = Opt.accept(
+            Args, StringRef(Args.getArgString(Index), ArgSize), false, Index))
+      return A.release();
 
     // Otherwise, see if this argument was missing values.
     if (Prev != Index)
