@@ -198,8 +198,7 @@ define i8 @shl_trunc_bigger_lshr_use2(i32 %x) {
 ; CHECK-NEXT:    [[RT:%.*]] = lshr i32 [[X:%.*]], 5
 ; CHECK-NEXT:    [[TR:%.*]] = trunc i32 [[RT]] to i8
 ; CHECK-NEXT:    call void @use8(i8 [[TR]])
-; CHECK-NEXT:    [[LT1:%.*]] = shl nuw nsw i32 [[RT]], 3
-; CHECK-NEXT:    [[LT:%.*]] = trunc i32 [[LT1]] to i8
+; CHECK-NEXT:    [[LT:%.*]] = shl i8 [[TR]], 3
 ; CHECK-NEXT:    ret i8 [[LT]]
 ;
   %rt = lshr i32 %x, 5
@@ -214,8 +213,7 @@ define i8 @shl_trunc_smaller_lshr_use2(i32 %x) {
 ; CHECK-NEXT:    [[RT:%.*]] = lshr i32 [[X:%.*]], 3
 ; CHECK-NEXT:    [[TR:%.*]] = trunc i32 [[RT]] to i8
 ; CHECK-NEXT:    call void @use8(i8 [[TR]])
-; CHECK-NEXT:    [[LT1:%.*]] = shl i32 [[RT]], 5
-; CHECK-NEXT:    [[LT:%.*]] = trunc i32 [[LT1]] to i8
+; CHECK-NEXT:    [[LT:%.*]] = shl i8 [[TR]], 5
 ; CHECK-NEXT:    ret i8 [[LT]]
 ;
   %rt = lshr i32 %x, 3

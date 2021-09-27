@@ -860,7 +860,7 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
     // we have confidence that the shifts will get folded together.
     Instruction *TrOp;
     const APInt *TrShiftAmt;
-    if (match(Op0, m_Trunc(m_Instruction(TrOp))) &&
+    if (match(Op0, m_OneUse(m_Trunc(m_Instruction(TrOp)))) &&
         match(TrOp, m_OneUse(m_Shift(m_Value(), m_APInt(TrShiftAmt)))) &&
         TrShiftAmt->ult(TrOp->getType()->getScalarSizeInBits())) {
       Type *SrcTy = TrOp->getType();
