@@ -143,7 +143,7 @@ std::string DomainSocket::GetSocketName() const {
   llvm::StringRef name(saddr_un.sun_path + GetNameOffset(),
                        sock_addr_len - offsetof(struct sockaddr_un, sun_path) -
                            GetNameOffset());
-  name = name.drop_while([](char c) { return c == '\0'; });
+  name = name.rtrim('\0');
 
   return name.str();
 }
