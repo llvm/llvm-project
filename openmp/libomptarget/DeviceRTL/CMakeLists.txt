@@ -38,24 +38,43 @@ set(LIBOMPTARGET_NVPTX_BC_LINKER "" CACHE STRING
 
 if (NOT LIBOMPTARGET_NVPTX_CUDA_COMPILER STREQUAL "")
   set(cuda_compiler ${LIBOMPTARGET_NVPTX_CUDA_COMPILER})
+elseif (LLVM_TOOL_CLANG_BUILD AND NOT CMAKE_CROSSCOMPILING)
+  # Compile the deviceRTL with the clang that is built in the project.
+  set(cuda_compiler "$<TARGET_FILE:clang>")
 elseif(${CMAKE_C_COMPILER_ID} STREQUAL "Clang")
   set(cuda_compiler ${CMAKE_C_COMPILER})
 else()
-  libomptarget_say("Not building NVPTX deviceRTL: clang not found")
+  libomptarget_say("Not building deviceRTL: clang not found")
   return()
 endif()
 
 # Get compiler directory to try to locate a suitable linker.
 get_filename_component(compiler_dir ${cuda_compiler} DIRECTORY)
-set(llvm_link "${compiler_dir}/llvm-link")
-set(opt "${compiler_dir}/opt")
 
+set(bc_linker_candidate "${compiler_dir}/llvm-link")
 if (NOT LIBOMPTARGET_NVPTX_BC_LINKER STREQUAL "")
   set(bc_linker ${LIBOMPTARGET_NVPTX_BC_LINKER})
-elseif (EXISTS ${llvm_link})
-  set(bc_linker ${llvm_link})
+elseif (EXISTS "${bc_linker_candidate}" AND NOT IS_DIRECTORY "${bc_linker_candidate}")
+  # Try to use the linker consistent with the CUDA compiler unless explicitly
+  # set to a different linker.
+  set(bc_linker "${bc_linker_candidate}")
+elseif (NOT OPENMP_STANDALONE_BUILD AND NOT CMAKE_CROSSCOMPILING)
+  # Use the linker also built in the same project.
+  set(bc_linker "$<TARGET_FILE:llvm-link>")
 else()
-  libomptarget_say("Not building NVPTX deviceRTL: llvm-link not found")
+  libomptarget_say("Not building deviceRTL: llvm-link not found")
+  return()
+endif()
+
+set(opt_candidate "${compiler_dir}/opt")
+if (EXISTS "${opt_candidate}" AND NOT IS_DIRECTORY "${opt_candidate}")
+  # Try to use the opt consistent with the CUDA compiler.
+  set(opt "${opt_candidate}")
+elseif (NOT OPENMP_STANDALONE_BUILD AND NOT CMAKE_CROSSCOMPILING)
+  # Use opt that is also built in the same project.
+  set(opt "$<TARGET_FILE:opt>")
+else()
+  libomptarget_say("Not building deviceRTL: opt not found")
   return()
 endif()
 
@@ -118,7 +137,11 @@ endif()
 set(LIBOMPTARGET_DEVICE_DEBUG FALSE CACHE BOOL
   "Activate NVPTX device RTL debug messages.")
 
-libomptarget_say("Building CUDA LLVM bitcode offloading device RTL.")
+if ("${cuda_compiler}" STREQUAL "$<TARGET_FILE:clang>")
+  libomptarget_say("Building LLVM bitcode offloading device RTL using in-tree clang.")
+else ()
+  libomptarget_say("Building LLVM bitcode offloading device RTL using ${cuda_compiler}")
+endif ()
 
 set(src_files
   ${source_directory}/Configuration.cpp
@@ -182,6 +205,15 @@ foreach(sm ${nvptx_sm_list})
       COMMENT "Building LLVM bitcode ${outfile}"
       VERBATIM
     )
+    if("${cuda_compiler}" STREQUAL "$<TARGET_FILE:clang>")
+      # Add a file-level dependency to ensure that clang is up-to-date.
+      # By default, add_custom_command only builds clang if the
+      # executable is missing.
+      add_custom_command(OUTPUT ${outfile}
+        DEPENDS clang
+        APPEND
+      )
+    endif()
     set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${outfile})
 
     list(APPEND bc_files ${outfile})
@@ -196,6 +228,15 @@ foreach(sm ${nvptx_sm_list})
       DEPENDS ${bc_files}
       COMMENT "Linking LLVM bitcode ${bclib_name}"
   )
+  if("${bc_linker}" STREQUAL "$<TARGET_FILE:llvm-link>")
+    # Add a file-level dependency to ensure that llvm-link is up-to-date.
+    # By default, add_custom_command only builds llvm-link if the
+    # executable is missing.
+    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
+      DEPENDS llvm-link
+      APPEND
+    )
+  endif()
 
   add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}_opt
       COMMAND ${opt} ${link_opt_flags} ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
@@ -203,6 +244,15 @@ foreach(sm ${nvptx_sm_list})
       DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
       COMMENT "Optimizing LLVM bitcode ${bclib_name}"
   )
+  if("${opt}" STREQUAL "$<TARGET_FILE:opt>")
+    # Add a file-level dependency to ensure that opt is up-to-date.
+    # By default, add_custom_command only builds opt if the
+    # executable is missing.
+    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}_opt
+      DEPENDS opt
+      APPEND
+    )
+  endif()
   set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${bclib_name})
 
   set(bclib_target_name "omptarget-new-nvptx-sm_${sm}-bc")
