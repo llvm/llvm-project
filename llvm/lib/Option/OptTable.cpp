@@ -402,16 +402,17 @@ std::unique_ptr<Arg> OptTable::parseOneArgGrouped(InputArgList &Args,
                                CStr);
 }
 
-Arg *OptTable::ParseOneArg(const ArgList &Args, unsigned &Index,
-                           unsigned FlagsToInclude,
-                           unsigned FlagsToExclude) const {
+std::unique_ptr<Arg> OptTable::ParseOneArg(const ArgList &Args, unsigned &Index,
+                                           unsigned FlagsToInclude,
+                                           unsigned FlagsToExclude) const {
   unsigned Prev = Index;
   const char *Str = Args.getArgString(Index);
 
   // Anything that doesn't start with PrefixesUnion is an input, as is '-'
   // itself.
   if (isInput(PrefixesUnion, Str))
-    return new Arg(getOption(TheInputOptionID), Str, Index++, Str);
+    return std::make_unique<Arg>(getOption(TheInputOptionID), Str, Index++,
+                                 Str);
 
   const Info *Start = OptionInfos.data() + FirstSearchableIndex;
   const Info *End = OptionInfos.data() + OptionInfos.size();
@@ -447,7 +448,7 @@ Arg *OptTable::ParseOneArg(const ArgList &Args, unsigned &Index,
     // See if this option matches.
     if (std::unique_ptr<Arg> A = Opt.accept(
             Args, StringRef(Args.getArgString(Index), ArgSize), false, Index))
-      return A.release();
+      return A;
 
     // Otherwise, see if this argument was missing values.
     if (Prev != Index)
@@ -457,9 +458,11 @@ Arg *OptTable::ParseOneArg(const ArgList &Args, unsigned &Index,
   // If we failed to find an option and this arg started with /, then it's
   // probably an input path.
   if (Str[0] == '/')
-    return new Arg(getOption(TheInputOptionID), Str, Index++, Str);
+    return std::make_unique<Arg>(getOption(TheInputOptionID), Str, Index++,
+                                 Str);
 
-  return new Arg(getOption(TheUnknownOptionID), Str, Index++, Str);
+  return std::make_unique<Arg>(getOption(TheUnknownOptionID), Str, Index++,
+                               Str);
 }
 
 InputArgList OptTable::ParseArgs(ArrayRef<const char *> ArgArr,
@@ -487,8 +490,8 @@ InputArgList OptTable::ParseArgs(ArrayRef<const char *> ArgArr,
     }
 
     unsigned Prev = Index;
-    Arg *A = GroupedShortOptions
-                 ? parseOneArgGrouped(Args, Index).release()
+    std::unique_ptr<Arg> A = GroupedShortOptions
+                 ? parseOneArgGrouped(Args, Index)
                  : ParseOneArg(Args, Index, FlagsToInclude, FlagsToExclude);
     assert((Index > Prev || GroupedShortOptions) &&
            "Parser failed to consume argument.");
@@ -502,7 +505,7 @@ InputArgList OptTable::ParseArgs(ArrayRef<const char *> ArgArr,
       break;
     }
 
-    Args.append(A);
+    Args.append(A.release());
   }
 
   return Args;
