@@ -41,17 +41,17 @@ class DeviceAllocatorT {
 
   void Init(bool enable, uptr kMetadataSize) {
     internal_memset(this, 0, sizeof(*this));
-    enabled_ = enable && DeviceMemFuncs::Init();
-    if (!enabled_)
+    enabled_ = enable;
+    if (!enable)
       return;
     kMetadataSize_ = kMetadataSize;
-    page_size_ = DeviceMemFuncs::GetPageSize();
     chunks_ = reinterpret_cast<uptr *>(ptr_array_.Init());
+    CheckAndInitMemFuncs(false);
   }
 
   void *Allocate(AllocatorStats *stat, uptr size, uptr alignment,
                  DeviceAllocationInfo *da_info) {
-    if (!da_info || !enabled_)
+    if (!da_info || !CheckAndInitMemFuncs(false))
       return nullptr;
 
     // Allocate an extra page for Metadata
@@ -133,14 +133,14 @@ class DeviceAllocatorT {
   bool PointerIsMine(const void *p) { return GetBlockBegin(p) != nullptr; }
 
   void *GetBlockBegin(const void *ptr) {
-    if (!enabled_)
+    if (!CheckAndInitMemFuncs())
       return nullptr;
     SpinMutexLock l(&mutex_);
     return GetBlockBeginFastLocked(const_cast<void *>(ptr));
   }
 
   void *GetBlockBeginFastLocked(void *ptr) {
-    if (!enabled_)
+    if (!CheckAndInitMemFuncs())
       return nullptr;
 
     uptr ptr_ = reinterpret_cast<uptr>(ptr);
@@ -225,11 +225,31 @@ class DeviceAllocatorT {
   }
 
  private:
+  bool CheckAndInitMemFuncs(bool check_only = true) {
+    if (!enabled_ ||
+        check_only ||
+        mem_funcs_inited_ ||
+        mem_funcs_init_count_ >= 2) {
+      return mem_funcs_inited_;
+    }
+    mem_funcs_inited_ = DeviceMemFuncs::Init();
+    mem_funcs_init_count_++;
+    if (mem_funcs_inited_)
+      page_size_ = DeviceMemFuncs::GetPageSize();
+    return mem_funcs_inited_;
+  }
+
   uptr RoundUpMapSize(uptr size) {
     return RoundUpTo(size, page_size_) + page_size_;
   }
 
   bool enabled_;
+  bool mem_funcs_inited_;
+  // Maximum of mem_funcs_init_count_ is 2:
+  //   1. The initial init called from Init(...), it could fail if
+  //      libhsa-runtime64.so is dynamically loaded with dlopen()
+  //   2. A potential deferred init called by Allocate(...)
+  u32 mem_funcs_init_count_;
   uptr kMetadataSize_;
   uptr page_size_;
   uptr *chunks_;

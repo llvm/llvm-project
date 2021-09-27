@@ -611,9 +611,12 @@ DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(int, vfork)
 #endif
 
 #if SANITIZER_AMDGPU
+void ENSURE_HSA_INITED();
+
 INTERCEPTOR(hsa_status_t, hsa_amd_memory_pool_allocate,
   hsa_amd_memory_pool_t memory_pool, size_t size, uint32_t flags, void **ptr) {
   ENSURE_ASAN_INITED();
+  ENSURE_HSA_INITED();
   GET_STACK_TRACE_MALLOC;
   return asan_hsa_amd_memory_pool_allocate(memory_pool, size, flags, ptr,
     &stack);
@@ -621,6 +624,7 @@ INTERCEPTOR(hsa_status_t, hsa_amd_memory_pool_allocate,
 
 INTERCEPTOR(hsa_status_t, hsa_amd_memory_pool_free, void *ptr) {
   ENSURE_ASAN_INITED();
+  ENSURE_HSA_INITED();
   GET_STACK_TRACE_FREE;
   return asan_hsa_amd_memory_pool_free(ptr, &stack);
 }
@@ -628,6 +632,7 @@ INTERCEPTOR(hsa_status_t, hsa_amd_memory_pool_free, void *ptr) {
 INTERCEPTOR(hsa_status_t, hsa_amd_agents_allow_access, uint32_t num_agents,
   const hsa_agent_t *agents, const uint32_t *flags, const void *ptr) {
   ENSURE_ASAN_INITED();
+  ENSURE_HSA_INITED();
   GET_STACK_TRACE_FREE;
   return asan_hsa_amd_agents_allow_access(num_agents, agents, flags, ptr,
     &stack);
@@ -636,6 +641,7 @@ INTERCEPTOR(hsa_status_t, hsa_amd_agents_allow_access, uint32_t num_agents,
 INTERCEPTOR(hsa_status_t, hsa_memory_copy, void *dst, const void *src,
   size_t size) {
   ENSURE_ASAN_INITED();
+  ENSURE_HSA_INITED();
   if (flags()->replace_intrin) {
     if (dst != src) {
       CHECK_RANGES_OVERLAP("hsa_memory_copy", dst, size, src, size);
@@ -651,6 +657,7 @@ INTERCEPTOR(hsa_status_t, hsa_amd_memory_async_copy, void* dst,
   uint32_t num_dep_signals, const hsa_signal_t* dep_signals,
   hsa_signal_t completion_signal) {
   ENSURE_ASAN_INITED();
+  ENSURE_HSA_INITED();
   if (flags()->replace_intrin) {
     if (dst != src) {
       CHECK_RANGES_OVERLAP("hsa_amd_memory_async_copy", dst, size, src, size);
@@ -660,6 +667,19 @@ INTERCEPTOR(hsa_status_t, hsa_amd_memory_async_copy, void* dst,
   }
   return REAL(hsa_amd_memory_async_copy)(dst, dst_agent, src, src_agent, size,
     num_dep_signals, dep_signals, completion_signal);
+}
+
+void InitializeAmdgpuInterceptors() {
+  ASAN_INTERCEPT_FUNC(hsa_memory_copy);
+  ASAN_INTERCEPT_FUNC(hsa_amd_memory_pool_allocate);
+  ASAN_INTERCEPT_FUNC(hsa_amd_memory_pool_free);
+  ASAN_INTERCEPT_FUNC(hsa_amd_agents_allow_access);
+  ASAN_INTERCEPT_FUNC(hsa_amd_memory_async_copy);
+}
+
+void ENSURE_HSA_INITED() {
+  if (!REAL(hsa_memory_copy))
+    InitializeAmdgpuInterceptors();
 }
 #endif
 
@@ -754,11 +774,7 @@ void InitializeAsanInterceptors() {
 #endif
 
 #if SANITIZER_AMDGPU
-  ASAN_INTERCEPT_FUNC(hsa_memory_copy);
-  ASAN_INTERCEPT_FUNC(hsa_amd_memory_pool_allocate);
-  ASAN_INTERCEPT_FUNC(hsa_amd_memory_pool_free);
-  ASAN_INTERCEPT_FUNC(hsa_amd_agents_allow_access);
-  ASAN_INTERCEPT_FUNC(hsa_amd_memory_async_copy);
+  InitializeAmdgpuInterceptors();
 #endif
 
   InitializePlatformInterceptors();
