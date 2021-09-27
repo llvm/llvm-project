@@ -592,12 +592,8 @@ populate_InfoTables(hsa_executable_symbol_t symbol,
     // because the non-ROCr custom code object parsing is called before
     // iterating over the code object symbols using ROCr
     if (KernelInfoTable.find(kernelName) == KernelInfoTable.end()) {
-      if (HSA_STATUS_ERROR_INVALID_CODE_OBJECT != HSA_STATUS_SUCCESS) {
-        printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
-               "Finding the entry kernel info table",
-               get_error_string(HSA_STATUS_ERROR_INVALID_CODE_OBJECT));
-        exit(1);
-      }
+      DP("amdgpu internal consistency error\n");
+      return HSA_STATUS_ERROR;
     }
     // found, so assign and update
     info = KernelInfoTable[kernelName];
