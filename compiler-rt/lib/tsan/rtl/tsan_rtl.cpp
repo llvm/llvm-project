@@ -145,6 +145,7 @@ ThreadState::ThreadState(Context *ctx, Tid tid, int unique_id, u64 epoch,
       last_sleep_clock(tid)
 #endif
 {
+  CHECK_EQ(reinterpret_cast<uptr>(this) % SANITIZER_CACHE_LINE_SIZE, 0);
 #if !SANITIZER_GO
   shadow_stack_pos = shadow_stack;
   shadow_stack_end = shadow_stack + kShadowStackSize;

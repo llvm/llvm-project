@@ -223,7 +223,7 @@ struct ThreadState {
   explicit ThreadState(Context *ctx, Tid tid, int unique_id, u64 epoch,
                        unsigned reuse_count, uptr stk_addr, uptr stk_size,
                        uptr tls_addr, uptr tls_size);
-};
+} ALIGNED(SANITIZER_CACHE_LINE_SIZE);
 
 #if !SANITIZER_GO
 #if SANITIZER_MAC || SANITIZER_ANDROID
