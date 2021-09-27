@@ -189,43 +189,6 @@ HoistingAnalysis::HoistingAnalysis(PadTensorOp padTensorOp, int nLevels)
   valid = true;
 }
 
-/// Given a set of loops, assumed to be scf::ForOp, create a constraint set
-/// containing the inequalities `iv - lb >= 0` and `-iv + ub - 1 >= 0` for each
-/// loop. The order of the constraints follows:
-///
-///  ivs | lbs | ubs | eq/ineq
-///  ----+-----+-----+---------
-///   1    -1     0      >= 0
-///  ----+-----+-----+---------
-///  -1    0      1      >= 0
-///
-static FlatAffineValueConstraints
-initLoopIvsAndBounds(ArrayRef<scf::ForOp> loops) {
-  FlatAffineValueConstraints constraints;
-  // Append dims for all ivs, lbs, ubs: the order is important.
-  for (scf::ForOp op : loops)
-    constraints.appendDimId(op.getInductionVar());
-  for (scf::ForOp op : loops)
-    constraints.appendDimId(op.lowerBound());
-  for (scf::ForOp op : loops)
-    constraints.appendDimId(op.upperBound());
-  int numLoops = loops.size();
-  for (int ivIdx = 0, e = numLoops; ivIdx < e; ++ivIdx) {
-    // iv - lb >= 0
-    SmallVector<int64_t, 8> ineqLb(constraints.getNumCols(), 0);
-    ineqLb[ivIdx] = 1;
-    ineqLb[ivIdx + numLoops] = -1;
-    // -iv + ub >= 0
-    SmallVector<int64_t, 8> ineqUb(constraints.getNumCols(), 0);
-    ineqUb[ivIdx] = -1;
-    ineqUb[ivIdx + 2 * numLoops] = 1;
-    ineqUb[constraints.getNumCols() - 1] = -1;
-    constraints.addInequality(ineqLb);
-    constraints.addInequality(ineqUb);
-  }
-  return constraints;
-}
-
 static bool isDefinedOutsideOrConstant(scf::ForOp outer, Value v) {
   return outer.isDefinedOutsideOfLoop(v) || v.getDefiningOp<ConstantOp>();
 }
@@ -317,8 +280,16 @@ foldUpperBoundsIntoConstraintsSet(FlatAffineValueConstraints &constraints,
 // `backwardSlice`.
 FailureOr<SmallVector<Value>>
 HoistingAnalysis::getPackedTensorSizes(ImplicitLocOpBuilder &b) {
-  FlatAffineValueConstraints constraints =
-      initLoopIvsAndBounds(packingLoops.getArrayRef());
+  // Create the base affine constaints for the packedLoops.
+  auto constraints = FlatAffineValueConstraints::getHyperrectangular(
+      llvm::to_vector<8>(llvm::map_range(
+          packingLoops, [](scf::ForOp op) { return op.getInductionVar(); })),
+      llvm::to_vector<8>(llvm::map_range(
+          packingLoops, [](scf::ForOp op) { return op.lowerBound(); })),
+      llvm::to_vector<8>(llvm::map_range(
+          packingLoops, [](scf::ForOp op) { return op.upperBound(); })));
+
+  // Iteratively try to fold the upper bounds into the constraints set.
   if (failed(foldUpperBoundsIntoConstraintsSet(
           constraints, outermostEnclosingForOp, packingLoops.getArrayRef())))
     return failure();
