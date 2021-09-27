@@ -1654,9 +1654,9 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
 ///
 StringLiteralParser::
 StringLiteralParser(ArrayRef<Token> StringToks,
-                    Preprocessor &PP, bool Complain)
+                    Preprocessor &PP)
   : SM(PP.getSourceManager()), Features(PP.getLangOpts()),
-    Target(PP.getTargetInfo()), Diags(Complain ? &PP.getDiagnostics() :nullptr),
+    Target(PP.getTargetInfo()), Diags(&PP.getDiagnostics()),
     MaxTokenLength(0), SizeBound(0), CharByteWidth(0), Kind(tok::unknown),
     ResultPtr(ResultBuf.data()), hadError(false), Pascal(false) {
   init(StringToks);
