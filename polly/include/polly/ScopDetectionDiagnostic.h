@@ -73,7 +73,6 @@ enum class RejectReasonKind {
   InvalidTerminator,
   IrreducibleRegion,
   UnreachableInExit,
-  IndirectPredecessor,
   LastCFG,
 
   // Non-Affinity
@@ -260,32 +259,6 @@ public:
   ReportUnreachableInExit(BasicBlock *BB, DebugLoc DbgLoc)
       : ReportCFG(RejectReasonKind::UnreachableInExit), BB(BB), DbgLoc(DbgLoc) {
   }
-
-  /// @name LLVM-RTTI interface
-  //@{
-  static bool classof(const RejectReason *RR);
-  //@}
-
-  /// @name RejectReason interface
-  //@{
-  std::string getRemarkName() const override;
-  const Value *getRemarkBB() const override;
-  std::string getMessage() const override;
-  std::string getEndUserMessage() const override;
-  const DebugLoc &getDebugLoc() const override;
-  //@}
-};
-
-//===----------------------------------------------------------------------===//
-/// Captures regions with an IndirectBr predecessor.
-class ReportIndirectPredecessor : public ReportCFG {
-  Instruction *Inst;
-  DebugLoc DbgLoc;
-
-public:
-  ReportIndirectPredecessor(Instruction *Inst, DebugLoc DbgLoc)
-      : ReportCFG(RejectReasonKind::IndirectPredecessor), Inst(Inst),
-        DbgLoc(DbgLoc) {}
 
   /// @name LLVM-RTTI interface
   //@{

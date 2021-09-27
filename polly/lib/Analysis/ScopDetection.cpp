@@ -1757,13 +1757,6 @@ bool ScopDetection::isValidRegion(DetectionContext &Context) {
     return false;
   }
 
-  for (BasicBlock *Pred : predecessors(CurRegion.getEntry())) {
-    Instruction *PredTerm = Pred->getTerminator();
-    if (isa<IndirectBrInst>(PredTerm) || isa<CallBrInst>(PredTerm))
-      return invalid<ReportIndirectPredecessor>(
-          Context, /*Assert=*/true, PredTerm, PredTerm->getDebugLoc());
-  }
-
   // SCoP cannot contain the entry block of the function, because we need
   // to insert alloca instruction there when translate scalar to array.
   if (!PollyAllowFullFunction &&
