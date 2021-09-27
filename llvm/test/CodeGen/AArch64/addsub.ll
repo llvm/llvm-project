@@ -149,6 +149,94 @@ define void @sub_med() {
   ret void
 }
 
+define i64 @add_two_parts_imm_i64(i64 %a) {
+; CHECK-LABEL: add_two_parts_imm_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #42325
+; CHECK-NEXT:    movk w8, #170, lsl #16
+; CHECK-NEXT:    add x0, x0, x8
+; CHECK-NEXT:    ret
+  %b = add i64 %a, 11183445
+  ret i64 %b
+}
+
+define i32 @add_two_parts_imm_i32(i32 %a) {
+; CHECK-LABEL: add_two_parts_imm_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #42325
+; CHECK-NEXT:    movk w8, #170, lsl #16
+; CHECK-NEXT:    add w0, w0, w8
+; CHECK-NEXT:    ret
+  %b = add i32 %a, 11183445
+  ret i32 %b
+}
+
+define i64 @add_two_parts_imm_i64_neg(i64 %a) {
+; CHECK-LABEL: add_two_parts_imm_i64_neg:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #-42325
+; CHECK-NEXT:    movk x8, #65365, lsl #16
+; CHECK-NEXT:    add x0, x0, x8
+; CHECK-NEXT:    ret
+  %b = add i64 %a, -11183445
+  ret i64 %b
+}
+
+define i32 @add_two_parts_imm_i32_neg(i32 %a) {
+; CHECK-LABEL: add_two_parts_imm_i32_neg:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #23211
+; CHECK-NEXT:    movk w8, #65365, lsl #16
+; CHECK-NEXT:    add w0, w0, w8
+; CHECK-NEXT:    ret
+  %b = add i32 %a, -11183445
+  ret i32 %b
+}
+
+define i64 @sub_two_parts_imm_i64(i64 %a) {
+; CHECK-LABEL: sub_two_parts_imm_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #-42325
+; CHECK-NEXT:    movk x8, #65365, lsl #16
+; CHECK-NEXT:    add x0, x0, x8
+; CHECK-NEXT:    ret
+  %b = sub i64 %a, 11183445
+  ret i64 %b
+}
+
+define i32 @sub_two_parts_imm_i32(i32 %a) {
+; CHECK-LABEL: sub_two_parts_imm_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #23211
+; CHECK-NEXT:    movk w8, #65365, lsl #16
+; CHECK-NEXT:    add w0, w0, w8
+; CHECK-NEXT:    ret
+  %b = sub i32 %a, 11183445
+  ret i32 %b
+}
+
+define i64 @sub_two_parts_imm_i64_neg(i64 %a) {
+; CHECK-LABEL: sub_two_parts_imm_i64_neg:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #42325
+; CHECK-NEXT:    movk w8, #170, lsl #16
+; CHECK-NEXT:    add x0, x0, x8
+; CHECK-NEXT:    ret
+  %b = sub i64 %a, -11183445
+  ret i64 %b
+}
+
+define i32 @sub_two_parts_imm_i32_neg(i32 %a) {
+; CHECK-LABEL: sub_two_parts_imm_i32_neg:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #42325
+; CHECK-NEXT:    movk w8, #170, lsl #16
+; CHECK-NEXT:    add w0, w0, w8
+; CHECK-NEXT:    ret
+  %b = sub i32 %a, -11183445
+  ret i32 %b
+}
+
 define void @testing() {
 ; CHECK-LABEL: testing:
 ; CHECK:       // %bb.0:
@@ -156,7 +244,7 @@ define void @testing() {
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:var_i32]
 ; CHECK-NEXT:    ldr w9, [x8]
 ; CHECK-NEXT:    cmp w9, #4095
-; CHECK-NEXT:    b.ne .LBB5_6
+; CHECK-NEXT:    b.ne .LBB13_6
 ; CHECK-NEXT:  // %bb.1: // %test2
 ; CHECK-NEXT:    adrp x10, :got:var2_i32
 ; CHECK-NEXT:    ldr x10, [x10, :got_lo12:var2_i32]
@@ -164,26 +252,26 @@ define void @testing() {
 ; CHECK-NEXT:    str w11, [x8]
 ; CHECK-NEXT:    ldr w10, [x10]
 ; CHECK-NEXT:    cmp w10, #3567, lsl #12 // =14610432
-; CHECK-NEXT:    b.lo .LBB5_6
+; CHECK-NEXT:    b.lo .LBB13_6
 ; CHECK-NEXT:  // %bb.2: // %test3
 ; CHECK-NEXT:    add w11, w9, #2
 ; CHECK-NEXT:    cmp w9, #123
 ; CHECK-NEXT:    str w11, [x8]
-; CHECK-NEXT:    b.lt .LBB5_6
+; CHECK-NEXT:    b.lt .LBB13_6
 ; CHECK-NEXT:  // %bb.3: // %test4
 ; CHECK-NEXT:    add w11, w9, #3
 ; CHECK-NEXT:    cmp w10, #321
 ; CHECK-NEXT:    str w11, [x8]
-; CHECK-NEXT:    b.gt .LBB5_6
+; CHECK-NEXT:    b.gt .LBB13_6
 ; CHECK-NEXT:  // %bb.4: // %test5
 ; CHECK-NEXT:    add w11, w9, #4
 ; CHECK-NEXT:    cmn w10, #443
 ; CHECK-NEXT:    str w11, [x8]
-; CHECK-NEXT:    b.ge .LBB5_6
+; CHECK-NEXT:    b.ge .LBB13_6
 ; CHECK-NEXT:  // %bb.5: // %test6
 ; CHECK-NEXT:    add w9, w9, #5
 ; CHECK-NEXT:    str w9, [x8]
-; CHECK-NEXT:  .LBB5_6: // %common.ret
+; CHECK-NEXT:  .LBB13_6: // %common.ret
 ; CHECK-NEXT:    ret
   %val = load i32, i32* @var_i32
   %val2 = load i32, i32* @var2_i32
