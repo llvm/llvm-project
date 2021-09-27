@@ -14,6 +14,7 @@
 
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -82,6 +83,11 @@ STATISTIC(NumNoFree, "Number of functions marked as nofree");
 STATISTIC(NumWillReturn, "Number of functions marked as willreturn");
 STATISTIC(NumNoSync, "Number of functions marked as nosync");
 
+STATISTIC(NumThinLinkNoRecurse,
+          "Number of functions marked as norecurse during thinlink");
+STATISTIC(NumThinLinkNoUnwind,
+          "Number of functions marked as nounwind during thinlink");
+
 static cl::opt<bool> EnableNonnullArgPropagation(
     "enable-nonnull-arg-prop", cl::init(true), cl::Hidden,
     cl::desc("Try to propagate nonnull argument attributes from callsites to "
@@ -94,6 +100,10 @@ static cl::opt<bool> DisableNoUnwindInference(
 static cl::opt<bool> DisableNoFreeInference(
     "disable-nofree-inference", cl::Hidden,
     cl::desc("Stop inferring nofree attribute during function-attrs pass"));
+
+static cl::opt<bool> DisableThinLTOPropagation(
+    "disable-thinlto-funcattrs", cl::init(true), cl::Hidden,
+    cl::desc("Don't propagate function-attrs in thinLTO"));
 
 namespace {
 
@@ -319,6 +329,195 @@ static bool addReadAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter) {
   }
 
   return MadeChange;
+}
+
+// Compute definitive function attributes for a function taking into account
+// prevailing definitions and linkage types
+static FunctionSummary *calculatePrevailingSummary(
+    ValueInfo VI,
+    DenseMap<ValueInfo, FunctionSummary *> &CachedPrevailingSummary,
+    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+        IsPrevailing) {
+
+  if (CachedPrevailingSummary.count(VI))
+    return CachedPrevailingSummary[VI];
+
+  /// At this point, prevailing symbols have been resolved. The following leads
+  /// to returning a conservative result:
+  /// - Multiple instances with local linkage. Normally local linkage would be
+  ///   unique per module
+  ///   as the GUID includes the module path. We could have a guid alias if
+  ///   there wasn't any distinguishing path when each file was compiled, but
+  ///   that should be rare so we'll punt on those.
+
+  /// These next 2 cases should not happen and will assert:
+  /// - Multiple instances with external linkage. This should be caught in
+  ///   symbol resolution
+  /// - Non-existent FunctionSummary for Aliasee. This presents a hole in our
+  ///   knowledge meaning we have to go conservative.
+
+  /// Otherwise, we calculate attributes for a function as:
+  ///   1. If we have a local linkage, take its attributes. If there's somehow
+  ///      multiple, bail and go conservative.
+  ///   2. If we have an external/WeakODR/LinkOnceODR linkage check that it is
+  ///      prevailing, take its attributes.
+  ///   3. If we have a Weak/LinkOnce linkage the copies can have semantic
+  ///      differences. However, if the prevailing copy is known it will be used
+  ///      so take its attributes. If the prevailing copy is in a native file
+  ///      all IR copies will be dead and propagation will go conservative.
+  ///   4. AvailableExternally summaries without a prevailing copy are known to
+  ///      occur in a couple of circumstances:
+  ///      a. An internal function gets imported due to its caller getting
+  ///         imported, it becomes AvailableExternally but no prevailing
+  ///         definition exists. Because it has to get imported along with its
+  ///         caller the attributes will be captured by propagating on its
+  ///         caller.
+  ///      b. C++11 [temp.explicit]p10 can generate AvailableExternally
+  ///         definitions of explicitly instanced template declarations
+  ///         for inlining which are ultimately dropped from the TU. Since this
+  ///         is localized to the TU the attributes will have already made it to
+  ///         the callers.
+  ///      These are edge cases and already captured by their callers so we
+  ///      ignore these for now. If they become relevant to optimize in the
+  ///      future this can be revisited.
+  ///   5. Otherwise, go conservative.
+
+  CachedPrevailingSummary[VI] = nullptr;
+  FunctionSummary *Local = nullptr;
+  FunctionSummary *Prevailing = nullptr;
+
+  for (const auto &GVS : VI.getSummaryList()) {
+    if (!GVS->isLive())
+      continue;
+
+    FunctionSummary *FS = dyn_cast<FunctionSummary>(GVS->getBaseObject());
+    // Virtual and Unknown (e.g. indirect) calls require going conservative
+    if (!FS || FS->fflags().HasUnknownCall)
+      return nullptr;
+
+    const auto &Linkage = GVS->linkage();
+    if (GlobalValue::isLocalLinkage(Linkage)) {
+      if (Local) {
+        LLVM_DEBUG(
+            dbgs()
+            << "ThinLTO FunctionAttrs: Multiple Local Linkage, bailing on "
+               "function "
+            << VI.name() << " from " << FS->modulePath() << ". Previous module "
+            << Local->modulePath() << "\n");
+        return nullptr;
+      }
+      Local = FS;
+    } else if (GlobalValue::isExternalLinkage(Linkage)) {
+      assert(IsPrevailing(VI.getGUID(), GVS.get()));
+      Prevailing = FS;
+      break;
+    } else if (GlobalValue::isWeakODRLinkage(Linkage) ||
+               GlobalValue::isLinkOnceODRLinkage(Linkage) ||
+               GlobalValue::isWeakAnyLinkage(Linkage) ||
+               GlobalValue::isLinkOnceAnyLinkage(Linkage)) {
+      if (IsPrevailing(VI.getGUID(), GVS.get())) {
+        Prevailing = FS;
+        break;
+      }
+    } else if (GlobalValue::isAvailableExternallyLinkage(Linkage)) {
+      // TODO: Handle these cases if they become meaningful
+      continue;
+    }
+  }
+
+  if (Local) {
+    assert(!Prevailing);
+    CachedPrevailingSummary[VI] = Local;
+  } else if (Prevailing) {
+    assert(!Local);
+    CachedPrevailingSummary[VI] = Prevailing;
+  }
+
+  return CachedPrevailingSummary[VI];
+}
+
+bool llvm::thinLTOPropagateFunctionAttrs(
+    ModuleSummaryIndex &Index,
+    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+        IsPrevailing) {
+  // TODO: implement addNoAliasAttrs once
+  // there's more information about the return type in the summary
+  if (DisableThinLTOPropagation)
+    return false;
+
+  DenseMap<ValueInfo, FunctionSummary *> CachedPrevailingSummary;
+  bool Changed = false;
+
+  auto PropagateAttributes = [&](std::vector<ValueInfo> &SCCNodes) {
+    // Assume we can propagate unless we discover otherwise
+    FunctionSummary::FFlags InferredFlags;
+    InferredFlags.NoRecurse = (SCCNodes.size() == 1);
+    InferredFlags.NoUnwind = true;
+
+    for (auto &V : SCCNodes) {
+      FunctionSummary *CallerSummary =
+          calculatePrevailingSummary(V, CachedPrevailingSummary, IsPrevailing);
+
+      // Function summaries can fail to contain information such as declarations
+      if (!CallerSummary)
+        return;
+
+      if (CallerSummary->fflags().MayThrow)
+        InferredFlags.NoUnwind = false;
+
+      for (const auto &Callee : CallerSummary->calls()) {
+        FunctionSummary *CalleeSummary = calculatePrevailingSummary(
+            Callee.first, CachedPrevailingSummary, IsPrevailing);
+
+        if (!CalleeSummary)
+          return;
+
+        if (!CalleeSummary->fflags().NoRecurse)
+          InferredFlags.NoRecurse = false;
+
+        if (!CalleeSummary->fflags().NoUnwind)
+          InferredFlags.NoUnwind = false;
+
+        if (!InferredFlags.NoUnwind && !InferredFlags.NoRecurse)
+          break;
+      }
+    }
+
+    if (InferredFlags.NoUnwind || InferredFlags.NoRecurse) {
+      Changed = true;
+      for (auto &V : SCCNodes) {
+        if (InferredFlags.NoRecurse) {
+          LLVM_DEBUG(dbgs() << "ThinLTO FunctionAttrs: Propagated NoRecurse to "
+                            << V.name() << "\n");
+          ++NumThinLinkNoRecurse;
+        }
+
+        if (InferredFlags.NoUnwind) {
+          LLVM_DEBUG(dbgs() << "ThinLTO FunctionAttrs: Propagated NoUnwind to "
+                            << V.name() << "\n");
+          ++NumThinLinkNoUnwind;
+        }
+
+        for (auto &S : V.getSummaryList()) {
+          if (auto *FS = dyn_cast<FunctionSummary>(S.get())) {
+            if (InferredFlags.NoRecurse)
+              FS->setNoRecurse();
+
+            if (InferredFlags.NoUnwind)
+              FS->setNoUnwind();
+          }
+        }
+      }
+    }
+  };
+
+  // Call propagation functions on each SCC in the Index
+  for (scc_iterator<ModuleSummaryIndex *> I = scc_begin(&Index); !I.isAtEnd();
+       ++I) {
+    std::vector<ValueInfo> Nodes(*I);
+    PropagateAttributes(Nodes);
+  }
+  return Changed;
 }
 
 namespace {

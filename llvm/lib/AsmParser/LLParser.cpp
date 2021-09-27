@@ -8521,6 +8521,9 @@ bool LLParser::parseFlag(unsigned &Val) {
 ///        [',' 'returnDoesNotAlias' ':' Flag]? ')'
 ///        [',' 'noInline' ':' Flag]? ')'
 ///        [',' 'alwaysInline' ':' Flag]? ')'
+///        [',' 'noUnwind' ':' Flag]? ')'
+///        [',' 'mayThrow' ':' Flag]? ')'
+///        [',' 'hasUnknownCall' ':' Flag]? ')'
 
 bool LLParser::parseOptionalFFlags(FunctionSummary::FFlags &FFlags) {
   assert(Lex.getKind() == lltok::kw_funcFlags);
@@ -8568,6 +8571,24 @@ bool LLParser::parseOptionalFFlags(FunctionSummary::FFlags &FFlags) {
       if (parseToken(lltok::colon, "expected ':'") || parseFlag(Val))
         return true;
       FFlags.AlwaysInline = Val;
+      break;
+    case lltok::kw_noUnwind:
+      Lex.Lex();
+      if (parseToken(lltok::colon, "expected ':'") || parseFlag(Val))
+        return true;
+      FFlags.NoUnwind = Val;
+      break;
+    case lltok::kw_mayThrow:
+      Lex.Lex();
+      if (parseToken(lltok::colon, "expected ':'") || parseFlag(Val))
+        return true;
+      FFlags.MayThrow = Val;
+      break;
+    case lltok::kw_hasUnknownCall:
+      Lex.Lex();
+      if (parseToken(lltok::colon, "expected ':'") || parseFlag(Val))
+        return true;
+      FFlags.HasUnknownCall = Val;
       break;
     default:
       return error(Lex.getLoc(), "expected function flag type");

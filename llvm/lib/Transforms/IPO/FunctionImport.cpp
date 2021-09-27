@@ -1051,13 +1051,33 @@ bool llvm::convertToDeclaration(GlobalValue &GV) {
   return true;
 }
 
-void llvm::thinLTOResolvePrevailingInModule(
-    Module &TheModule, const GVSummaryMapTy &DefinedGlobals) {
-  auto updateLinkage = [&](GlobalValue &GV) {
+void llvm::thinLTOFinalizeInModule(Module &TheModule,
+                                   const GVSummaryMapTy &DefinedGlobals,
+                                   bool PropagateAttrs) {
+  auto FinalizeInModule = [&](GlobalValue &GV, bool Propagate = false) {
     // See if the global summary analysis computed a new resolved linkage.
     const auto &GS = DefinedGlobals.find(GV.getGUID());
     if (GS == DefinedGlobals.end())
       return;
+
+    if (Propagate)
+      if (FunctionSummary *FS = dyn_cast<FunctionSummary>(GS->second)) {
+        if (Function *F = dyn_cast<Function>(&GV)) {
+          // TODO: propagate ReadNone and ReadOnly.
+          if (FS->fflags().ReadNone && !F->doesNotAccessMemory())
+            F->setDoesNotAccessMemory();
+
+          if (FS->fflags().ReadOnly && !F->onlyReadsMemory())
+            F->setOnlyReadsMemory();
+
+          if (FS->fflags().NoRecurse && !F->doesNotRecurse())
+            F->setDoesNotRecurse();
+
+          if (FS->fflags().NoUnwind && !F->doesNotThrow())
+            F->setDoesNotThrow();
+        }
+      }
+
     auto NewLinkage = GS->second->linkage();
     if (GlobalValue::isLocalLinkage(GV.getLinkage()) ||
         // Don't internalize anything here, because the code below
@@ -1116,11 +1136,11 @@ void llvm::thinLTOResolvePrevailingInModule(
 
   // Process functions and global now
   for (auto &GV : TheModule)
-    updateLinkage(GV);
+    FinalizeInModule(GV, PropagateAttrs);
   for (auto &GV : TheModule.globals())
-    updateLinkage(GV);
+    FinalizeInModule(GV);
   for (auto &GV : TheModule.aliases())
-    updateLinkage(GV);
+    FinalizeInModule(GV);
 }
 
 /// Run internalization on \p TheModule based on symmary analysis.

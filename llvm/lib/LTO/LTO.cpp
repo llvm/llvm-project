@@ -1521,6 +1521,8 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
   thinLTOResolvePrevailingInIndex(Conf, ThinLTO.CombinedIndex, isPrevailing,
                                   recordNewLinkage, GUIDPreservedSymbols);
 
+  thinLTOPropagateFunctionAttrs(ThinLTO.CombinedIndex, isPrevailing);
+
   generateParamAccessSummary(ThinLTO.CombinedIndex);
 
   if (llvm::timeTraceProfilerEnabled())
