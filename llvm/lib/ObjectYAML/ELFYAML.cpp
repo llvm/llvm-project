@@ -655,6 +655,9 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
   case ELF::EM_RISCV:
     ECase(SHT_RISCV_ATTRIBUTES);
     break;
+  case ELF::EM_MSP430:
+    ECase(SHT_MSP430_ATTRIBUTES);
+    break;
   default:
     // Nothing to do.
     break;
