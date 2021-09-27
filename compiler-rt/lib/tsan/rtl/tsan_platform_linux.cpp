@@ -122,7 +122,7 @@ void FillProfileCallback(uptr p, uptr rss, bool file,
 void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime_ns) {
   uptr mem[MemCount];
   internal_memset(mem, 0, sizeof(mem));
-  GetMemoryProfile(FillProfileCallback, mem, 7);
+  GetMemoryProfile(FillProfileCallback, mem, MemCount);
   auto meta = ctx->metamap.GetMemoryStats();
   StackDepotStats *stacks = StackDepotGetStats();
   uptr nthread, nlive;
