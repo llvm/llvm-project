@@ -93,7 +93,7 @@ SelfExecutorProcessControl::lookupSymbols(ArrayRef<LookupRequest> Request) {
         // FIXME: Collect all failing symbols before erroring out.
         SymbolNameVector MissingSymbols;
         MissingSymbols.push_back(Sym);
-        return make_error<SymbolsNotFound>(std::move(MissingSymbols));
+        return make_error<SymbolsNotFound>(SSP, std::move(MissingSymbols));
       }
       R.back().push_back(pointerToJITTargetAddress(Addr));
     }

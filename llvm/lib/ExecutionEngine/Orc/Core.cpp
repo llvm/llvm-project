@@ -90,14 +90,17 @@ void FailedToMaterialize::log(raw_ostream &OS) const {
   OS << "Failed to materialize symbols: " << *Symbols;
 }
 
-SymbolsNotFound::SymbolsNotFound(SymbolNameSet Symbols) {
+SymbolsNotFound::SymbolsNotFound(std::shared_ptr<SymbolStringPool> SSP,
+                                 SymbolNameSet Symbols)
+    : SSP(std::move(SSP)) {
   for (auto &Sym : Symbols)
     this->Symbols.push_back(Sym);
   assert(!this->Symbols.empty() && "Can not fail to resolve an empty set");
 }
 
-SymbolsNotFound::SymbolsNotFound(SymbolNameVector Symbols)
-    : Symbols(std::move(Symbols)) {
+SymbolsNotFound::SymbolsNotFound(std::shared_ptr<SymbolStringPool> SSP,
+                                 SymbolNameVector Symbols)
+    : SSP(std::move(SSP)), Symbols(std::move(Symbols)) {
   assert(!this->Symbols.empty() && "Can not fail to resolve an empty set");
 }
 
@@ -109,8 +112,9 @@ void SymbolsNotFound::log(raw_ostream &OS) const {
   OS << "Symbols not found: " << Symbols;
 }
 
-SymbolsCouldNotBeRemoved::SymbolsCouldNotBeRemoved(SymbolNameSet Symbols)
-    : Symbols(std::move(Symbols)) {
+SymbolsCouldNotBeRemoved::SymbolsCouldNotBeRemoved(
+    std::shared_ptr<SymbolStringPool> SSP, SymbolNameSet Symbols)
+    : SSP(std::move(SSP)), Symbols(std::move(Symbols)) {
   assert(!this->Symbols.empty() && "Can not fail to resolve an empty set");
 }
 
@@ -1333,11 +1337,13 @@ Error JITDylib::remove(const SymbolNameSet &Names) {
 
     // If any of the symbols are not defined, return an error.
     if (!Missing.empty())
-      return make_error<SymbolsNotFound>(std::move(Missing));
+      return make_error<SymbolsNotFound>(ES.getSymbolStringPool(),
+                                         std::move(Missing));
 
     // If any of the symbols are currently materializing, return an error.
     if (!Materializing.empty())
-      return make_error<SymbolsCouldNotBeRemoved>(std::move(Materializing));
+      return make_error<SymbolsCouldNotBeRemoved>(ES.getSymbolStringPool(),
+                                                  std::move(Materializing));
 
     // Remove the symbols.
     for (auto &SymbolMaterializerItrPair : SymbolsToRemove) {
@@ -2234,7 +2240,8 @@ Error ExecutionSession::IL_updateCandidatesFor(
         // weakly referenced" specific error here to reduce confusion.
         if (SymI->second.getFlags().hasMaterializationSideEffectsOnly() &&
             SymLookupFlags != SymbolLookupFlags::WeaklyReferencedSymbol)
-          return make_error<SymbolsNotFound>(SymbolNameVector({Name}));
+          return make_error<SymbolsNotFound>(getSymbolStringPool(),
+                                             SymbolNameVector({Name}));
 
         // If we matched against this symbol but it is in the error state
         // then bail out and treat it as a failure to materialize.
@@ -2422,7 +2429,7 @@ void ExecutionSession::OL_applyQueryPhase1(
   } else {
     LLVM_DEBUG(dbgs() << "Phase 1 failed with unresolved symbols.\n");
     IPLS->fail(make_error<SymbolsNotFound>(
-        IPLS->DefGeneratorCandidates.getSymbolNames()));
+        getSymbolStringPool(), IPLS->DefGeneratorCandidates.getSymbolNames()));
   }
 }
 
@@ -2492,7 +2499,8 @@ void ExecutionSession::OL_completeLookup(
                 dbgs() << "error: "
                           "required, but symbol is has-side-effects-only\n";
               });
-              return make_error<SymbolsNotFound>(SymbolNameVector({Name}));
+              return make_error<SymbolsNotFound>(getSymbolStringPool(),
+                                                 SymbolNameVector({Name}));
             }
 
             // If we matched against this symbol but it is in the error state
@@ -2606,7 +2614,8 @@ void ExecutionSession::OL_completeLookup(
 
     if (!IPLS->LookupSet.empty()) {
       LLVM_DEBUG(dbgs() << "Failing due to unresolved symbols\n");
-      return make_error<SymbolsNotFound>(IPLS->LookupSet.getSymbolNames());
+      return make_error<SymbolsNotFound>(getSymbolStringPool(),
+                                         IPLS->LookupSet.getSymbolNames());
     }
 
     // Record whether the query completed.
@@ -2733,7 +2742,8 @@ void ExecutionSession::OL_completeLookupFlags(
 
     if (!IPLS->LookupSet.empty()) {
       LLVM_DEBUG(dbgs() << "Failing due to unresolved symbols\n");
-      return make_error<SymbolsNotFound>(IPLS->LookupSet.getSymbolNames());
+      return make_error<SymbolsNotFound>(getSymbolStringPool(),
+                                         IPLS->LookupSet.getSymbolNames());
     }
 
     LLVM_DEBUG(dbgs() << "Succeded, result = " << Result << "\n");
