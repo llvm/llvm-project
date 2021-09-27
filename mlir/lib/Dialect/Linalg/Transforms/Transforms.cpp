@@ -145,15 +145,20 @@ LinalgTilingOptions &mlir::linalg::LinalgTilingOptions::scalarizeDynamicDims() {
   return *this;
 }
 
-/// Try to compute a static bounding box for `operand`. The padding happens
-/// even if the operand already has static shape. `result` is the result of a
-/// freshly created PadTensorOp. Return failure if the operand cannot be padded
-/// to a static shape.
+/// Helper function that tries to pad `opOperand`. Exit early and return success
+/// for scalar operands or if `paddingFunc` returns failure. Otherwise, try to
+/// pad the operand even if it already has a static shape. Set `result` to the
+/// result of the created PadTensorOp or return failure if the operand cannot be
+/// padded to a static shape.
 static LogicalResult padOperandToSmallestStaticBoundingBox(
     PatternRewriter &rewriter, linalg::LinalgOp opToPad, OpOperand *opOperand,
     const PaddingValueComputationFunction &paddingFunc, Value &result) {
   // Can't pad scalars.
   if (opToPad.getShape(opOperand).empty())
+    return success();
+  // Can't pad if no padding value is known.
+  FailureOr<Value> paddingValue = paddingFunc(rewriter, *opOperand);
+  if (failed(paddingValue))
     return success();
   auto sliceOp = opOperand->get().getDefiningOp<tensor::ExtractSliceOp>();
   // Not a slice op, cannot construct a static bounding box.
@@ -173,12 +178,11 @@ static LogicalResult padOperandToSmallestStaticBoundingBox(
           opToPad, "No constant bounding box can be found for padding");
     staticSizes.push_back(indexAttr.getInt());
   }
-  Value pad = paddingFunc(rewriter, *opOperand);
   auto staticTensorType = RankedTensorType::get(
       staticSizes, getElementTypeOrSelf(opOperand->get()));
   result = linalg::PadTensorOp::createPadHighOp(
-      staticTensorType, opOperand->get(), pad, /*packing=*/true,
-      opToPad->getLoc(), rewriter);
+      staticTensorType, opOperand->get(), paddingValue.getValue(),
+      /*packing=*/true, opToPad->getLoc(), rewriter);
   return success();
 }
 
