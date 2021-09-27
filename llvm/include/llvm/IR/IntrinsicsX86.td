@@ -5754,7 +5754,7 @@ let TargetPrefix = "x86" in {
                   [ llvm_v8f32_ty, llvm_v8f32_ty, llvm_v8f32_ty, llvm_i8_ty ],
                   [ IntrNoMem ]>;
   def int_x86_avx512fp16_mask_vfcmadd_cph_512
-      : GCCBuiltin<"__builtin_ia32_vfcmaddcph512_mask">,
+      : GCCBuiltin<"__builtin_ia32_vfcmaddcph512_mask3">,
         Intrinsic<[ llvm_v16f32_ty ],
                   [ llvm_v16f32_ty, llvm_v16f32_ty, llvm_v16f32_ty, llvm_i16_ty,
                     llvm_i32_ty ],
@@ -5786,7 +5786,7 @@ let TargetPrefix = "x86" in {
                   [ llvm_v8f32_ty, llvm_v8f32_ty, llvm_v8f32_ty, llvm_i8_ty ],
                   [ IntrNoMem ]>;
   def int_x86_avx512fp16_mask_vfmadd_cph_512
-      : GCCBuiltin<"__builtin_ia32_vfmaddcph512_mask">,
+      : GCCBuiltin<"__builtin_ia32_vfmaddcph512_mask3">,
         Intrinsic<[ llvm_v16f32_ty ],
                   [ llvm_v16f32_ty, llvm_v16f32_ty, llvm_v16f32_ty, llvm_i16_ty,
                     llvm_i32_ty ],

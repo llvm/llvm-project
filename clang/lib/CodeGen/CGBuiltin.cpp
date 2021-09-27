@@ -12508,6 +12508,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
 
   SmallVector<Value*, 4> Ops;
   bool IsMaskFCmp = false;
+  bool IsConjFMA = false;
 
   // Find out if any arguments are required to be integer constant expressions.
   unsigned ICEArguments = 0;
@@ -15045,6 +15046,36 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
 
     Builder.SetInsertPoint(End);
     return Builder.CreateExtractValue(Call, 0);
+  }
+  case X86::BI__builtin_ia32_vfcmaddcph512_mask:
+    IsConjFMA = true;
+    LLVM_FALLTHROUGH;
+  case X86::BI__builtin_ia32_vfmaddcph512_mask: {
+    Intrinsic::ID IID = IsConjFMA
+                            ? Intrinsic::x86_avx512fp16_mask_vfcmadd_cph_512
+                            : Intrinsic::x86_avx512fp16_mask_vfmadd_cph_512;
+    Value *Call = Builder.CreateCall(CGM.getIntrinsic(IID), Ops);
+    return EmitX86Select(*this, Ops[3], Call, Ops[0]);
+  }
+  case X86::BI__builtin_ia32_vfcmaddcsh_round_mask:
+    IsConjFMA = true;
+    LLVM_FALLTHROUGH;
+  case X86::BI__builtin_ia32_vfmaddcsh_round_mask: {
+    Intrinsic::ID IID = IsConjFMA ? Intrinsic::x86_avx512fp16_mask_vfcmadd_csh
+                                  : Intrinsic::x86_avx512fp16_mask_vfmadd_csh;
+    Value *Call = Builder.CreateCall(CGM.getIntrinsic(IID), Ops);
+    Value *And = Builder.CreateAnd(Ops[3], llvm::ConstantInt::get(Int8Ty, 1));
+    return EmitX86Select(*this, And, Call, Ops[0]);
+  }
+  case X86::BI__builtin_ia32_vfcmaddcsh_round_mask3:
+    IsConjFMA = true;
+    LLVM_FALLTHROUGH;
+  case X86::BI__builtin_ia32_vfmaddcsh_round_mask3: {
+    Intrinsic::ID IID = IsConjFMA ? Intrinsic::x86_avx512fp16_mask_vfcmadd_csh
+                                  : Intrinsic::x86_avx512fp16_mask_vfmadd_csh;
+    Value *Call = Builder.CreateCall(CGM.getIntrinsic(IID), Ops);
+    static constexpr int Mask[] = {0, 5, 6, 7};
+    return Builder.CreateShuffleVector(Call, Ops[2], Mask);
   }
   }
 }
