@@ -902,41 +902,41 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
   Type *Ty = I.getType();
   unsigned BitWidth = Ty->getScalarSizeInBits();
 
-  const APInt *ShAmtAPInt;
-  if (match(Op1, m_APInt(ShAmtAPInt))) {
-    unsigned ShAmt = ShAmtAPInt->getZExtValue();
+  const APInt *C;
+  if (match(Op1, m_APInt(C))) {
+    unsigned ShAmtC = C->getZExtValue();
 
-    // shl (zext X), ShAmt --> zext (shl X, ShAmt)
+    // shl (zext X), C --> zext (shl X, C)
     // This is only valid if X would have zeros shifted out.
     Value *X;
     if (match(Op0, m_OneUse(m_ZExt(m_Value(X))))) {
       unsigned SrcWidth = X->getType()->getScalarSizeInBits();
-      if (ShAmt < SrcWidth &&
-          MaskedValueIsZero(X, APInt::getHighBitsSet(SrcWidth, ShAmt), 0, &I))
-        return new ZExtInst(Builder.CreateShl(X, ShAmt), Ty);
+      if (ShAmtC < SrcWidth &&
+          MaskedValueIsZero(X, APInt::getHighBitsSet(SrcWidth, ShAmtC), 0, &I))
+        return new ZExtInst(Builder.CreateShl(X, ShAmtC), Ty);
     }
 
     // (X >> C) << C --> X & (-1 << C)
     if (match(Op0, m_Shr(m_Value(X), m_Specific(Op1)))) {
-      APInt Mask(APInt::getHighBitsSet(BitWidth, BitWidth - ShAmt));
+      APInt Mask(APInt::getHighBitsSet(BitWidth, BitWidth - ShAmtC));
       return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, Mask));
     }
 
-    const APInt *ShOp1;
-    if (match(Op0, m_Exact(m_Shr(m_Value(X), m_APInt(ShOp1)))) &&
-        ShOp1->ult(BitWidth)) {
-      unsigned ShrAmt = ShOp1->getZExtValue();
-      if (ShrAmt < ShAmt) {
-        // If C1 < C2: (X >>?,exact C1) << C2 --> X << (C2 - C1)
-        Constant *ShiftDiff = ConstantInt::get(Ty, ShAmt - ShrAmt);
+    const APInt *C1;
+    if (match(Op0, m_Exact(m_Shr(m_Value(X), m_APInt(C1)))) &&
+        C1->ult(BitWidth)) {
+      unsigned ShrAmt = C1->getZExtValue();
+      if (ShrAmt < ShAmtC) {
+        // If C1 < C: (X >>?,exact C1) << C --> X << (C - C1)
+        Constant *ShiftDiff = ConstantInt::get(Ty, ShAmtC - ShrAmt);
         auto *NewShl = BinaryOperator::CreateShl(X, ShiftDiff);
         NewShl->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
         NewShl->setHasNoSignedWrap(I.hasNoSignedWrap());
         return NewShl;
       }
-      if (ShrAmt > ShAmt) {
-        // If C1 > C2: (X >>?exact C1) << C2 --> X >>?exact (C1 - C2)
-        Constant *ShiftDiff = ConstantInt::get(Ty, ShrAmt - ShAmt);
+      if (ShrAmt > ShAmtC) {
+        // If C1 > C: (X >>?exact C1) << C --> X >>?exact (C1 - C)
+        Constant *ShiftDiff = ConstantInt::get(Ty, ShrAmt - ShAmtC);
         auto *NewShr = BinaryOperator::Create(
             cast<BinaryOperator>(Op0)->getOpcode(), X, ShiftDiff);
         NewShr->setIsExact(true);
@@ -944,34 +944,34 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
       }
     }
 
-    if (match(Op0, m_OneUse(m_Shr(m_Value(X), m_APInt(ShOp1)))) &&
-        ShOp1->ult(BitWidth)) {
-      unsigned ShrAmt = ShOp1->getZExtValue();
-      if (ShrAmt < ShAmt) {
-        // If C1 < C2: (X >>? C1) << C2 --> X << (C2 - C1) & (-1 << C2)
-        Constant *ShiftDiff = ConstantInt::get(Ty, ShAmt - ShrAmt);
+    if (match(Op0, m_OneUse(m_Shr(m_Value(X), m_APInt(C1)))) &&
+        C1->ult(BitWidth)) {
+      unsigned ShrAmt = C1->getZExtValue();
+      if (ShrAmt < ShAmtC) {
+        // If C1 < C: (X >>? C1) << C --> (X << (C - C1)) & (-1 << C)
+        Constant *ShiftDiff = ConstantInt::get(Ty, ShAmtC - ShrAmt);
         auto *NewShl = BinaryOperator::CreateShl(X, ShiftDiff);
         NewShl->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
         NewShl->setHasNoSignedWrap(I.hasNoSignedWrap());
         Builder.Insert(NewShl);
-        APInt Mask(APInt::getHighBitsSet(BitWidth, BitWidth - ShAmt));
+        APInt Mask(APInt::getHighBitsSet(BitWidth, BitWidth - ShAmtC));
         return BinaryOperator::CreateAnd(NewShl, ConstantInt::get(Ty, Mask));
       }
-      if (ShrAmt > ShAmt) {
-        // If C1 > C2: (X >>? C1) << C2 --> X >>? (C1 - C2) & (-1 << C2)
-        Constant *ShiftDiff = ConstantInt::get(Ty, ShrAmt - ShAmt);
+      if (ShrAmt > ShAmtC) {
+        // If C1 > C: (X >>? C1) << C --> (X >>? (C1 - C)) & (-1 << C)
+        Constant *ShiftDiff = ConstantInt::get(Ty, ShrAmt - ShAmtC);
         auto *OldShr = cast<BinaryOperator>(Op0);
         auto *NewShr =
             BinaryOperator::Create(OldShr->getOpcode(), X, ShiftDiff);
         NewShr->setIsExact(OldShr->isExact());
         Builder.Insert(NewShr);
-        APInt Mask(APInt::getHighBitsSet(BitWidth, BitWidth - ShAmt));
+        APInt Mask(APInt::getHighBitsSet(BitWidth, BitWidth - ShAmtC));
         return BinaryOperator::CreateAnd(NewShr, ConstantInt::get(Ty, Mask));
       }
     }
 
-    if (match(Op0, m_Shl(m_Value(X), m_APInt(ShOp1))) && ShOp1->ult(BitWidth)) {
-      unsigned AmtSum = ShAmt + ShOp1->getZExtValue();
+    if (match(Op0, m_Shl(m_Value(X), m_APInt(C1))) && C1->ult(BitWidth)) {
+      unsigned AmtSum = ShAmtC + C1->getZExtValue();
       // Oversized shifts are simplified to zero in InstSimplify.
       if (AmtSum < BitWidth)
         // (X << C1) << C2 --> X << (C1 + C2)
@@ -980,13 +980,14 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
 
     // If the shifted-out value is known-zero, then this is a NUW shift.
     if (!I.hasNoUnsignedWrap() &&
-        MaskedValueIsZero(Op0, APInt::getHighBitsSet(BitWidth, ShAmt), 0, &I)) {
+        MaskedValueIsZero(Op0, APInt::getHighBitsSet(BitWidth, ShAmtC), 0,
+                          &I)) {
       I.setHasNoUnsignedWrap();
       return &I;
     }
 
     // If the shifted-out value is all signbits, then this is a NSW shift.
-    if (!I.hasNoSignedWrap() && ComputeNumSignBits(Op0, 0, &I) > ShAmt) {
+    if (!I.hasNoSignedWrap() && ComputeNumSignBits(Op0, 0, &I) > ShAmtC) {
       I.setHasNoSignedWrap();
       return &I;
     }
