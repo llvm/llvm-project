@@ -304,6 +304,21 @@ uint16_t create_header() {
   return header;
 }
 
+std::pair<hsa_status_t, bool>
+isValidMemoryPool(hsa_amd_memory_pool_t MemoryPool) {
+  bool AllocAllowed = false;
+  hsa_status_t Err = hsa_amd_memory_pool_get_info(
+      MemoryPool, HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED,
+      &AllocAllowed);
+  if (Err != HSA_STATUS_SUCCESS) {
+    DP("Alloc allowed in memory pool check failed: %s\n",
+       get_error_string(Err));
+    return {Err, false};
+  }
+
+  return {HSA_STATUS_SUCCESS, AllocAllowed};
+}
+
 hsa_status_t addKernArgPool(hsa_amd_memory_pool_t MemoryPool, void *Data) {
   std::vector<hsa_amd_memory_pool_t> *Result =
       static_cast<std::vector<hsa_amd_memory_pool_t> *>(Data);
@@ -345,21 +360,6 @@ hsa_status_t addKernArgPool(hsa_amd_memory_pool_t MemoryPool, void *Data) {
   }
 
   return HSA_STATUS_SUCCESS;
-}
-
-std::pair<hsa_status_t, bool>
-isValidMemoryPool(hsa_amd_memory_pool_t MemoryPool) {
-  bool AllocAllowed = false;
-  hsa_status_t Err = hsa_amd_memory_pool_get_info(
-      MemoryPool, HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED,
-      &AllocAllowed);
-  if (Err != HSA_STATUS_SUCCESS) {
-    DP("Alloc allowed in memory pool check failed: %s\n",
-       get_error_string(Err));
-    return {Err, false};
-  }
-
-  return {HSA_STATUS_SUCCESS, AllocAllowed};
 }
 
 template <typename AccumulatorFunc>
