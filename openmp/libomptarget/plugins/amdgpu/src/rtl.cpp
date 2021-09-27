@@ -449,6 +449,8 @@ class RTLDeviceInfoTy {
   };
 
 public:
+  bool ConstructionSucceeded = false;
+
   // load binary populates symbol tables and mutates various global state
   // run uses those symbol tables
   std::shared_timed_mutex load_run_lock;
@@ -817,6 +819,8 @@ public:
 
     // Default state.
     RequiresFlags = OMP_REQ_UNDEFINED;
+
+    ConstructionSucceeded = true;
   }
 
   ~RTLDeviceInfoTy() {
@@ -974,7 +978,15 @@ int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *image) {
   return elf_machine_id_is_amdgcn(image);
 }
 
-int __tgt_rtl_number_of_devices() { return DeviceInfo.NumberOfDevices; }
+int __tgt_rtl_number_of_devices() {
+  // If the construction failed, no methods are safe to call
+  if (DeviceInfo.ConstructionSucceeded) {
+    return DeviceInfo.NumberOfDevices;
+  } else {
+    DP("AMDGPU plugin construction failed. Zero devices available\n");
+    return 0;
+  }
+}
 
 int64_t __tgt_rtl_init_requires(int64_t RequiresFlags) {
   DP("Init requires flags to %ld\n", RequiresFlags);
