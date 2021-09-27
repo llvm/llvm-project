@@ -64,8 +64,8 @@ private:
   bool GroupedShortOptions = false;
   const char *EnvVar = nullptr;
 
-  unsigned TheInputOptionID = 0;
-  unsigned TheUnknownOptionID = 0;
+  unsigned InputOptionID = 0;
+  unsigned UnknownOptionID = 0;
 
   /// The index of the first option which can be parsed (i.e., is not a
   /// special option like 'input' or 'unknown', and is not an option group).
