@@ -725,20 +725,13 @@ bool TargetLibraryInfoImpl::getLibFunc(StringRef funcName, LibFunc &F) const {
 
 bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
                                                    LibFunc F,
-                                                   const DataLayout *DL) const {
+                                                   const DataLayout &DL) const {
   LLVMContext &Ctx = FTy.getContext();
   // FIXME: There is really no guarantee that sizeof(size_t) is equal to
   // sizeof(int*) for every target. So the assumption used here to derive the
   // SizeTTy based on DataLayout and getIntPtrType isn't always valid.
-  Type *SizeTTy = DL ? DL->getIntPtrType(Ctx, /*AddressSpace=*/0) : nullptr;
+  Type *SizeTTy = DL.getIntPtrType(Ctx, /*AddressSpace=*/0);
   auto IsSizeTTy = [SizeTTy](Type *Ty) {
-    // FIXME: For uknown historical reasons(?) we use a relaxed condition saying
-    // that any integer type may size_t, for example if we got no
-    // DataLayout. This seems like a potentially error prone relaxation (or why
-    // should we only be more strict and checking the exact type when we have a
-    // DataLayout?).
-    if (!SizeTTy)
-      return Ty->isIntegerTy();
     return Ty == SizeTTy;
   };
   unsigned NumParams = FTy.getNumParams();
@@ -1625,10 +1618,11 @@ bool TargetLibraryInfoImpl::getLibFunc(const Function &FDecl,
   // avoid string normalization and comparison.
   if (FDecl.isIntrinsic()) return false;
 
-  const DataLayout *DL =
-      FDecl.getParent() ? &FDecl.getParent()->getDataLayout() : nullptr;
+  const Module *M = FDecl.getParent();
+  assert(M && "Expecting FDecl to be connected to a Module.");
+
   return getLibFunc(FDecl.getName(), F) &&
-         isValidProtoForLibFunc(*FDecl.getFunctionType(), F, DL);
+         isValidProtoForLibFunc(*FDecl.getFunctionType(), F, M->getDataLayout());
 }
 
 void TargetLibraryInfoImpl::disableAllFunctions() {
