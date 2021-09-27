@@ -4425,7 +4425,7 @@ void FragileHazards::emitHazardsInNewBlocks() {
 
 static void addIfPresent(llvm::DenseSet<llvm::Value*> &S, Address V) {
   if (V.isValid())
-    if (llvm::Value *Ptr = V.getBasePointer())
+    if (llvm::Value *Ptr = V.getPointerIfNotSigned())
       S.insert(Ptr);
 }
 
