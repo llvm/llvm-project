@@ -661,7 +661,7 @@ static bool canShiftBinOpWithConstantRHS(BinaryOperator &Shift,
 
 Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
                                                    BinaryOperator &I) {
-  bool isLeftShift = I.getOpcode() == Instruction::Shl;
+  bool IsLeftShift = I.getOpcode() == Instruction::Shl;
 
   const APInt *Op1C;
   if (!match(Op1, m_APInt(Op1C)))
@@ -670,14 +670,14 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
   // See if we can propagate this shift into the input, this covers the trivial
   // cast of lshr(shl(x,c1),c2) as well as other more complex cases.
   if (I.getOpcode() != Instruction::AShr &&
-      canEvaluateShifted(Op0, Op1C->getZExtValue(), isLeftShift, *this, &I)) {
+      canEvaluateShifted(Op0, Op1C->getZExtValue(), IsLeftShift, *this, &I)) {
     LLVM_DEBUG(
         dbgs() << "ICE: GetShiftedValue propagating shift through expression"
                   " to eliminate shift:\n  IN: "
                << *Op0 << "\n  SH: " << I << "\n");
 
     return replaceInstUsesWith(
-        I, getShiftedValue(Op0, Op1C->getZExtValue(), isLeftShift, *this, DL));
+        I, getShiftedValue(Op0, Op1C->getZExtValue(), IsLeftShift, *this, DL));
   }
 
   // See if we can simplify any instructions used by the instruction whose sole
@@ -701,7 +701,7 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
   // xform in more cases, but it is unlikely to be profitable.
   Instruction *TrOp;
   const APInt *TrShiftAmt;
-  if (I.isLogicalShift() && match(Op0, m_Trunc(m_Instruction(TrOp))) &&
+  if (IsLeftShift && match(Op0, m_Trunc(m_Instruction(TrOp))) &&
       match(TrOp, m_OneUse(m_Shift(m_Value(), m_APInt(TrShiftAmt)))) &&
       TrShiftAmt->ult(TrOp->getType()->getScalarSizeInBits())) {
     Type *SrcTy = TrOp->getType();
@@ -743,7 +743,7 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
     case Instruction::Xor: {
       // These operators commute.
       // Turn (Y + (X >> C)) << C  ->  (X + (Y << C)) & (~0 << C)
-      if (isLeftShift && Op0BO->getOperand(1)->hasOneUse() &&
+      if (IsLeftShift && Op0BO->getOperand(1)->hasOneUse() &&
           match(Op0BO->getOperand(1), m_Shr(m_Value(V1), m_Specific(Op1)))) {
         Value *YS = // (Y << C)
             Builder.CreateShl(Op0BO->getOperand(0), Op1, Op0BO->getName());
@@ -758,7 +758,7 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
 
       // Turn (Y + ((X >> C) & CC)) << C  ->  ((X & (CC << C)) + (Y << C))
       Value *Op0BOOp1 = Op0BO->getOperand(1);
-      if (isLeftShift && Op0BOOp1->hasOneUse() &&
+      if (IsLeftShift && Op0BOOp1->hasOneUse() &&
           match(Op0BOOp1, m_And(m_OneUse(m_Shr(m_Value(V1), m_Specific(Op1))),
                                 m_APInt(CC)))) {
         Value *YS = // (Y << C)
@@ -774,7 +774,7 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
 
     case Instruction::Sub: {
       // Turn ((X >> C) + Y) << C  ->  (X + (Y << C)) & (~0 << C)
-      if (isLeftShift && Op0BO->getOperand(0)->hasOneUse() &&
+      if (IsLeftShift && Op0BO->getOperand(0)->hasOneUse() &&
           match(Op0BO->getOperand(0), m_Shr(m_Value(V1), m_Specific(Op1)))) {
         Value *YS = // (Y << C)
             Builder.CreateShl(Op0BO->getOperand(1), Op1, Op0BO->getName());
@@ -788,7 +788,7 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
       }
 
       // Turn (((X >> C)&CC) + Y) << C  ->  (X + (Y << C)) & (CC << C)
-      if (isLeftShift && Op0BO->getOperand(0)->hasOneUse() &&
+      if (IsLeftShift && Op0BO->getOperand(0)->hasOneUse() &&
           match(Op0BO->getOperand(0),
                 m_And(m_OneUse(m_Shr(m_Value(V1), m_Specific(Op1))),
                       m_APInt(CC)))) {
@@ -824,7 +824,7 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
     // If the operand is a subtract with a constant LHS, and the shift
     // is the only use, we can pull it out of the shift.
     // This folds (shl (sub C1, X), C2) -> (sub (C1 << C2), (shl X, C2))
-    if (isLeftShift && Op0BO->getOpcode() == Instruction::Sub &&
+    if (IsLeftShift && Op0BO->getOpcode() == Instruction::Sub &&
         match(Op0BO->getOperand(0), m_APInt(Op0C))) {
       Constant *NewRHS = ConstantExpr::get(
           I.getOpcode(), cast<Constant>(Op0BO->getOperand(0)), Op1);
@@ -1158,15 +1158,26 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
         return BinaryOperator::CreateLShr(X, ConstantInt::get(Ty, AmtSum));
     }
 
-    // If the first shift covers the number of bits truncated and the combined
-    // shift fits in the source width:
-    // (trunc (X >>u C1)) >>u C --> trunc (X >>u (C1 + C))
-    if (match(Op0, m_OneUse(m_Trunc(m_LShr(m_Value(X), m_APInt(C1)))))) {
+    Instruction *TruncSrc;
+    if (match(Op0, m_OneUse(m_Trunc(m_Instruction(TruncSrc)))) &&
+        match(TruncSrc, m_LShr(m_Value(X), m_APInt(C1)))) {
       unsigned SrcWidth = X->getType()->getScalarSizeInBits();
       unsigned AmtSum = ShAmtC + C1->getZExtValue();
-      if (C1->uge(SrcWidth - BitWidth) && AmtSum < SrcWidth) {
+
+      // If the combined shift fits in the source width:
+      // (trunc (X >>u C1)) >>u C --> and (trunc (X >>u (C1 + C)), MaskC
+      //
+      // If the first shift covers the number of bits truncated, then the
+      // mask instruction is eliminated (and so the use check is relaxed).
+      if (AmtSum < SrcWidth &&
+          (TruncSrc->hasOneUse() || C1->uge(SrcWidth - BitWidth))) {
         Value *SumShift = Builder.CreateLShr(X, AmtSum, "sum.shift");
-        return new TruncInst(SumShift, Ty);
+        Value *Trunc = Builder.CreateTrunc(SumShift, Ty, I.getName());
+
+        // If the first shift does not cover the number of bits truncated, then
+        // we require a mask to get rid of high bits in the result.
+        APInt MaskC = APInt::getAllOnes(BitWidth).lshr(ShAmtC);
+        return BinaryOperator::CreateAnd(Trunc, ConstantInt::get(Ty, MaskC));
       }
     }
 
