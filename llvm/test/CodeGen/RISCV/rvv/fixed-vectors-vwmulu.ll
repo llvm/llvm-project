@@ -649,3 +649,246 @@ define <16 x i64> @vwmulu_vx_v16i64(<16 x i32>* %x, i32 %y) {
   ret <16 x i64> %f
 }
 
+define <8 x i16> @vwmulu_vx_v8i16_i8(<8 x i8>* %x, i8* %y) {
+; CHECK-LABEL: vwmulu_vx_v8i16_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vle8.v v25, (a0)
+; CHECK-NEXT:    lbu a0, 0(a1)
+; CHECK-NEXT:    vwmulu.vx v8, v25, a0
+; CHECK-NEXT:    ret
+  %a = load <8 x i8>, <8 x i8>* %x
+  %b = load i8, i8* %y
+  %c = zext i8 %b to i16
+  %d = insertelement <8 x i16> undef, i16 %c, i32 0
+  %e = shufflevector <8 x i16> %d, <8 x i16> undef, <8 x i32> zeroinitializer
+  %f = zext <8 x i8> %a to <8 x i16>
+  %g = mul <8 x i16> %e, %f
+  ret <8 x i16> %g
+}
+
+define <8 x i16> @vwmulu_vx_v8i16_i16(<8 x i8>* %x, i16* %y) {
+; CHECK-LABEL: vwmulu_vx_v8i16_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vle8.v v25, (a0)
+; CHECK-NEXT:    lh a0, 0(a1)
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
+; CHECK-NEXT:    vzext.vf2 v26, v25
+; CHECK-NEXT:    vmul.vx v8, v26, a0
+; CHECK-NEXT:    ret
+  %a = load <8 x i8>, <8 x i8>* %x
+  %b = load i16, i16* %y
+  %d = insertelement <8 x i16> undef, i16 %b, i32 0
+  %e = shufflevector <8 x i16> %d, <8 x i16> undef, <8 x i32> zeroinitializer
+  %f = zext <8 x i8> %a to <8 x i16>
+  %g = mul <8 x i16> %e, %f
+  ret <8 x i16> %g
+}
+
+define <4 x i32> @vwmulu_vx_v4i32_i8(<4 x i16>* %x, i8* %y) {
+; CHECK-LABEL: vwmulu_vx_v4i32_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vle16.v v25, (a0)
+; CHECK-NEXT:    lbu a0, 0(a1)
+; CHECK-NEXT:    vwmulu.vx v8, v25, a0
+; CHECK-NEXT:    ret
+  %a = load <4 x i16>, <4 x i16>* %x
+  %b = load i8, i8* %y
+  %c = zext i8 %b to i32
+  %d = insertelement <4 x i32> undef, i32 %c, i32 0
+  %e = shufflevector <4 x i32> %d, <4 x i32> undef, <4 x i32> zeroinitializer
+  %f = zext <4 x i16> %a to <4 x i32>
+  %g = mul <4 x i32> %e, %f
+  ret <4 x i32> %g
+}
+
+define <4 x i32> @vwmulu_vx_v4i32_i16(<4 x i16>* %x, i16* %y) {
+; CHECK-LABEL: vwmulu_vx_v4i32_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vle16.v v25, (a0)
+; CHECK-NEXT:    lhu a0, 0(a1)
+; CHECK-NEXT:    vwmulu.vx v8, v25, a0
+; CHECK-NEXT:    ret
+  %a = load <4 x i16>, <4 x i16>* %x
+  %b = load i16, i16* %y
+  %c = zext i16 %b to i32
+  %d = insertelement <4 x i32> undef, i32 %c, i32 0
+  %e = shufflevector <4 x i32> %d, <4 x i32> undef, <4 x i32> zeroinitializer
+  %f = zext <4 x i16> %a to <4 x i32>
+  %g = mul <4 x i32> %e, %f
+  ret <4 x i32> %g
+}
+
+define <4 x i32> @vwmulu_vx_v4i32_i32(<4 x i16>* %x, i32* %y) {
+; CHECK-LABEL: vwmulu_vx_v4i32_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vle16.v v25, (a0)
+; CHECK-NEXT:    lw a0, 0(a1)
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vzext.vf2 v26, v25
+; CHECK-NEXT:    vmul.vx v8, v26, a0
+; CHECK-NEXT:    ret
+  %a = load <4 x i16>, <4 x i16>* %x
+  %b = load i32, i32* %y
+  %d = insertelement <4 x i32> undef, i32 %b, i32 0
+  %e = shufflevector <4 x i32> %d, <4 x i32> undef, <4 x i32> zeroinitializer
+  %f = zext <4 x i16> %a to <4 x i32>
+  %g = mul <4 x i32> %e, %f
+  ret <4 x i32> %g
+}
+
+define <2 x i64> @vwmulu_vx_v2i64_i8(<2 x i32>* %x, i8* %y) {
+; RV32-LABEL: vwmulu_vx_v2i64_i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; RV32-NEXT:    lb a1, 0(a1)
+; RV32-NEXT:    vle32.v v25, (a0)
+; RV32-NEXT:    srai a0, a1, 31
+; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw a0, 12(sp)
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v26, (a0), zero
+; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV32-NEXT:    vzext.vf2 v27, v25
+; RV32-NEXT:    vmul.vv v8, v26, v27
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vwmulu_vx_v2i64_i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; RV64-NEXT:    vle32.v v25, (a0)
+; RV64-NEXT:    lb a0, 0(a1)
+; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV64-NEXT:    vzext.vf2 v26, v25
+; RV64-NEXT:    vmul.vx v8, v26, a0
+; RV64-NEXT:    ret
+  %a = load <2 x i32>, <2 x i32>* %x
+  %b = load i8, i8* %y
+  %c = zext i8 %b to i64
+  %d = insertelement <2 x i64> undef, i64 %c, i64 0
+  %e = shufflevector <2 x i64> %d, <2 x i64> undef, <2 x i32> zeroinitializer
+  %f = zext <2 x i32> %a to <2 x i64>
+  %g = mul <2 x i64> %e, %f
+  ret <2 x i64> %g
+}
+
+define <2 x i64> @vwmulu_vx_v2i64_i16(<2 x i32>* %x, i16* %y) {
+; RV32-LABEL: vwmulu_vx_v2i64_i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; RV32-NEXT:    lh a1, 0(a1)
+; RV32-NEXT:    vle32.v v25, (a0)
+; RV32-NEXT:    srai a0, a1, 31
+; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw a0, 12(sp)
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v26, (a0), zero
+; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV32-NEXT:    vzext.vf2 v27, v25
+; RV32-NEXT:    vmul.vv v8, v26, v27
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vwmulu_vx_v2i64_i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; RV64-NEXT:    vle32.v v25, (a0)
+; RV64-NEXT:    lh a0, 0(a1)
+; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV64-NEXT:    vzext.vf2 v26, v25
+; RV64-NEXT:    vmul.vx v8, v26, a0
+; RV64-NEXT:    ret
+  %a = load <2 x i32>, <2 x i32>* %x
+  %b = load i16, i16* %y
+  %c = zext i16 %b to i64
+  %d = insertelement <2 x i64> undef, i64 %c, i64 0
+  %e = shufflevector <2 x i64> %d, <2 x i64> undef, <2 x i32> zeroinitializer
+  %f = zext <2 x i32> %a to <2 x i64>
+  %g = mul <2 x i64> %e, %f
+  ret <2 x i64> %g
+}
+
+define <2 x i64> @vwmulu_vx_v2i64_i32(<2 x i32>* %x, i32* %y) {
+; RV32-LABEL: vwmulu_vx_v2i64_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; RV32-NEXT:    lw a1, 0(a1)
+; RV32-NEXT:    vle32.v v25, (a0)
+; RV32-NEXT:    srai a0, a1, 31
+; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw a0, 12(sp)
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v26, (a0), zero
+; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV32-NEXT:    vzext.vf2 v27, v25
+; RV32-NEXT:    vmul.vv v8, v26, v27
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vwmulu_vx_v2i64_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; RV64-NEXT:    vle32.v v25, (a0)
+; RV64-NEXT:    lw a0, 0(a1)
+; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV64-NEXT:    vzext.vf2 v26, v25
+; RV64-NEXT:    vmul.vx v8, v26, a0
+; RV64-NEXT:    ret
+  %a = load <2 x i32>, <2 x i32>* %x
+  %b = load i32, i32* %y
+  %c = zext i32 %b to i64
+  %d = insertelement <2 x i64> undef, i64 %c, i64 0
+  %e = shufflevector <2 x i64> %d, <2 x i64> undef, <2 x i32> zeroinitializer
+  %f = zext <2 x i32> %a to <2 x i64>
+  %g = mul <2 x i64> %e, %f
+  ret <2 x i64> %g
+}
+
+define <2 x i64> @vwmulu_vx_v2i64_i64(<2 x i32>* %x, i64* %y) {
+; RV32-LABEL: vwmulu_vx_v2i64_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; RV32-NEXT:    lw a2, 4(a1)
+; RV32-NEXT:    lw a1, 0(a1)
+; RV32-NEXT:    vle32.v v25, (a0)
+; RV32-NEXT:    sw a2, 12(sp)
+; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v26, (a0), zero
+; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV32-NEXT:    vzext.vf2 v27, v25
+; RV32-NEXT:    vmul.vv v8, v26, v27
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vwmulu_vx_v2i64_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; RV64-NEXT:    vle32.v v25, (a0)
+; RV64-NEXT:    ld a0, 0(a1)
+; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV64-NEXT:    vzext.vf2 v26, v25
+; RV64-NEXT:    vmul.vx v8, v26, a0
+; RV64-NEXT:    ret
+  %a = load <2 x i32>, <2 x i32>* %x
+  %b = load i64, i64* %y
+  %d = insertelement <2 x i64> undef, i64 %b, i64 0
+  %e = shufflevector <2 x i64> %d, <2 x i64> undef, <2 x i32> zeroinitializer
+  %f = zext <2 x i32> %a to <2 x i64>
+  %g = mul <2 x i64> %e, %f
+  ret <2 x i64> %g
+}
+
