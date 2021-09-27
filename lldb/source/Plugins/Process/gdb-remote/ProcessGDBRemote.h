@@ -269,11 +269,10 @@ protected:
   GDBRemoteCommunicationClient m_gdb_comm;
   GDBRemoteCommunicationReplayServer m_gdb_replay_server;
   std::atomic<lldb::pid_t> m_debugserver_pid;
-  std::vector<StringExtractorGDBRemote> m_stop_packet_stack; // The stop packet
-                                                             // stack replaces
-                                                             // the last stop
-                                                             // packet variable
+
+  llvm::Optional<StringExtractorGDBRemote> m_last_stop_packet;
   std::recursive_mutex m_last_stop_packet_mutex;
+
   GDBRemoteDynamicRegisterInfoSP m_register_info_sp;
   Broadcaster m_async_broadcaster;
   lldb::ListenerSP m_async_listener_sp;
