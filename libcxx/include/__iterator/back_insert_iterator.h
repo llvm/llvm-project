@@ -55,6 +55,8 @@ public:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 back_insert_iterator& operator*()     {return *this;}
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 back_insert_iterator& operator++()    {return *this;}
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 back_insert_iterator  operator++(int) {return *this;}
+
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 _Container* __get_container() const { return container; }
 };
 
 template <class _Container>
