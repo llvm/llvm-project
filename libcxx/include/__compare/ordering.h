@@ -312,19 +312,6 @@ inline constexpr strong_ordering strong_ordering::equal(_OrdResult::__equiv);
 inline constexpr strong_ordering strong_ordering::equivalent(_OrdResult::__equiv);
 inline constexpr strong_ordering strong_ordering::greater(_OrdResult::__greater);
 
-// named comparison functions
-_LIBCPP_HIDE_FROM_ABI
-constexpr bool is_lt(partial_ordering __cmp) noexcept { return __cmp < 0; }
-
-_LIBCPP_HIDE_FROM_ABI
-constexpr bool is_lteq(partial_ordering __cmp) noexcept { return __cmp <= 0; }
-
-_LIBCPP_HIDE_FROM_ABI
-constexpr bool is_gt(partial_ordering __cmp) noexcept { return __cmp > 0; }
-
-_LIBCPP_HIDE_FROM_ABI
-constexpr bool is_gteq(partial_ordering __cmp) noexcept { return __cmp >= 0; }
-
 #endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_SPACESHIP_OPERATOR)
 
 _LIBCPP_END_NAMESPACE_STD
