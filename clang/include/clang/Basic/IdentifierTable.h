@@ -127,7 +127,10 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
   // True if this macro is unsafe in headers.
   unsigned IsRestrictExpansion : 1;
 
-  // 23 bits left in a 64-bit word.
+  // True if this macro is final.
+  unsigned IsFinal : 1;
+
+  // 22 bits left in a 64-bit word.
 
   // Managed by the language front-end.
   void *FETokenInfo = nullptr;
@@ -141,7 +144,7 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
         NeedsHandleIdentifier(false), IsFromAST(false), ChangedAfterLoad(false),
         FEChangedAfterLoad(false), RevertedTokenID(false), OutOfDate(false),
         IsModulesImport(false), IsMangledOpenMPVariantName(false),
-        IsDeprecatedMacro(false), IsRestrictExpansion(false) {}
+        IsDeprecatedMacro(false), IsRestrictExpansion(false), IsFinal(false) {}
 
 public:
   IdentifierInfo(const IdentifierInfo &) = delete;
@@ -189,10 +192,14 @@ public:
       NeedsHandleIdentifier = true;
       HadMacro = true;
     } else {
-      // Because calling the setters of these calls recomputes, just set them
-      // manually to avoid recomputing a bunch of times.
-      IsDeprecatedMacro = false;
-      IsRestrictExpansion = false;
+      // If this is a final macro, make the deprecation and header unsafe bits
+      // stick around after the undefinition so they apply to any redefinitions.
+      if (!IsFinal) {
+        // Because calling the setters of these calls recomputes, just set them
+        // manually to avoid recomputing a bunch of times.
+        IsDeprecatedMacro = false;
+        IsRestrictExpansion = false;
+      }
       RecomputeNeedsHandleIdentifier();
     }
   }
@@ -226,6 +233,10 @@ public:
     else
       RecomputeNeedsHandleIdentifier();
   }
+
+  bool isFinal() const { return IsFinal; }
+
+  void setIsFinal(bool Val) { IsFinal = Val; }
 
   /// If this is a source-language token (e.g. 'for'), this API
   /// can be used to cause the lexer to map identifiers to source-language

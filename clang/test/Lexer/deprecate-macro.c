@@ -6,10 +6,11 @@
 // expected-error@+1{{expected identifier}}
 #pragma clang deprecated(4
 
-// expected-error@+1{{no macro named foo}}
+// expected-error@+1{{no macro named 'foo'}}
 #pragma clang deprecated(foo)
 
 #define bar 1
+// expected-note@+1{{macro marked 'deprecated' here}} 
 #pragma clang deprecated(bar, "bar is deprecated use 1")
 
 // expected-warning@+1{{macro 'bar' has been marked as deprecated: bar is deprecated use 1}}
@@ -17,6 +18,14 @@
 #endif
 
 #define foo 1
+// expected-note@+8{{macro marked 'deprecated' here}} 
+// expected-note@+7{{macro marked 'deprecated' here}} 
+// expected-note@+6{{macro marked 'deprecated' here}} 
+// expected-note@+5{{macro marked 'deprecated' here}} 
+// expected-note@+4{{macro marked 'deprecated' here}} 
+// expected-note@+3{{macro marked 'deprecated' here}} 
+// expected-note@+2{{macro marked 'deprecated' here}} 
+// expected-note@+1{{macro marked 'deprecated' here}} 
 #pragma clang deprecated(foo)
 
 // expected-error@+1{{expected )}}
@@ -39,7 +48,7 @@
 #endif
 
 int main(int argc, char** argv) {
-  // expected-error@+1{{no macro named main}}
+// expected-error@+1{{no macro named 'main'}}
 #pragma clang deprecated(main)
 
   // expected-warning@+1{{macro 'foo' has been marked as deprecated}}
