@@ -1,17 +1,17 @@
-; RUN: llc < %s -march=mips -mcpu=mips32 -mips-ssection-threshold=8 -verify-machineinstrs \
+; RUN: llc < %s -mtriple=mips -mcpu=mips32 -mips-ssection-threshold=8 -verify-machineinstrs \
 ; RUN:     -relocation-model=static -mattr=+noabicalls -mgpopt \
 ; RUN:   | FileCheck %s --check-prefixes=BASIC,COMMON,ADDR32
-; RUN: llc < %s -march=mips -mcpu=mips32 -mips-ssection-threshold=8 -verify-machineinstrs \
+; RUN: llc < %s -mtriple=mips -mcpu=mips32 -mips-ssection-threshold=8 -verify-machineinstrs \
 ; RUN:     -relocation-model=static -mattr=+noabicalls -mgpopt -membedded-data \
 ; RUN:   | FileCheck %s --check-prefixes=EMBDATA,COMMON,ADDR32
 
-; RUN: llc < %s -march=mips64 -mcpu=mips4 -mips-ssection-threshold=8 -verify-machineinstrs \
+; RUN: llc < %s -mtriple=mips64 -mcpu=mips4 -mips-ssection-threshold=8 -verify-machineinstrs \
 ; RUN:     -relocation-model=static -mattr=+noabicalls -mgpopt -target-abi n64 \
 ; RUN:   | FileCheck %s --check-prefixes=BASIC,COMMON,N64
-; RUN: llc < %s -march=mips64 -mcpu=mips4 -mips-ssection-threshold=8 -verify-machineinstrs \
+; RUN: llc < %s -mtriple=mips64 -mcpu=mips4 -mips-ssection-threshold=8 -verify-machineinstrs \
 ; RUN:     -relocation-model=static -mattr=+noabicalls,+sym32 -mgpopt -target-abi n64 \
 ; RUN:   | FileCheck %s --check-prefixes=BASIC,COMMON,N64
-; RUN: llc < %s -march=mips64 -mcpu=mips4 -mips-ssection-threshold=8 -verify-machineinstrs \
+; RUN: llc < %s -mtriple=mips64 -mcpu=mips4 -mips-ssection-threshold=8 -verify-machineinstrs \
 ; RUN:     -relocation-model=static -mattr=+noabicalls -mgpopt -target-abi n32 \
 ; RUN:   | FileCheck %s --check-prefixes=BASIC,COMMON,ADDR32
 
