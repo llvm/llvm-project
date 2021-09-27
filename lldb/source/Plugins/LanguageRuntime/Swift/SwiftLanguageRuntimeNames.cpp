@@ -980,6 +980,16 @@ void SwiftLanguageRuntime::MethodName::Parse() {
     llvm::StringRef full(m_full.GetCString());
     bool was_operator = false;
 
+    if (full.find("+") != llvm::StringRef::npos ||
+        full.find("-") != llvm::StringRef::npos ||
+        full.find("[") != llvm::StringRef::npos) {
+      // Swift identifiers cannot contain +, -, or [. Objective-C expressions
+      // will frequently begin with one of these characters, so reject these
+      // defensively.
+      m_parse_error = true;
+      return;
+    }
+
     if (full.find("::") != llvm::StringRef::npos) {
       // :: is not an allowed operator in Swift (func ::(...) { fails to
       // compile)
