@@ -274,3 +274,35 @@ TEST(StringExtrasTest, toStringAPSInt) {
   EXPECT_EQ(toString(APSInt(APInt(8, 255), isUnsigned), 10), "-1");
   EXPECT_EQ(toString(APSInt(APInt(8, 255), isUnsigned), 16), "-1");
 }
+
+TEST(StringExtrasTest, splitStringRef) {
+  auto Spl = Split("foo<=>bar<=><=>baz", "<=>");
+  auto It = Spl.begin();
+  auto End = Spl.end();
+
+  ASSERT_NE(It, End);
+  EXPECT_EQ(*It, StringRef("foo"));
+  ASSERT_NE(++It, End);
+  EXPECT_EQ(*It, StringRef("bar"));
+  ASSERT_NE(++It, End);
+  EXPECT_EQ(*It, StringRef(""));
+  ASSERT_NE(++It, End);
+  EXPECT_EQ(*It, StringRef("baz"));
+  ASSERT_EQ(++It, End);
+}
+
+TEST(StringExtrasTest, splItChar) {
+  auto Spl = Split("foo,bar,,baz", ',');
+  auto It = Spl.begin();
+  auto End = Spl.end();
+
+  ASSERT_NE(It, End);
+  EXPECT_EQ(*It, StringRef("foo"));
+  ASSERT_NE(++It, End);
+  EXPECT_EQ(*It, StringRef("bar"));
+  ASSERT_NE(++It, End);
+  EXPECT_EQ(*It, StringRef(""));
+  ASSERT_NE(++It, End);
+  EXPECT_EQ(*It, StringRef("baz"));
+  ASSERT_EQ(++It, End);
+}
