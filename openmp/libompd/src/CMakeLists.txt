@@ -11,7 +11,7 @@
 project (libompd)
 cmake_minimum_required(VERSION 3.13.4)
 
-add_library (ompd SHARED TargetValue.cpp)
+add_library (ompd SHARED TargetValue.cpp omp-debug.cpp)
 
 add_dependencies(ompd omp) # ensure generated import library is created first
 
@@ -38,6 +38,9 @@ if(${LIBOMPD_LD_STD_FLAGS})
    endif()
 endif()
 
+#TODO: Required temporarily for lib to build as during patch submission.
+#when lld used, it expects every symbol to be defined, whereas a few function defined as a part of the next patch
+string(REPLACE "-Wl,-z,defs" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
 include_directories (
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${LIBOMP_INCLUDE_DIR}
