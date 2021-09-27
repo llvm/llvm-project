@@ -1042,7 +1042,7 @@ CCAssignFn *AMDGPUCallLowering::CCAssignFnForReturn(CallingConv::ID CC,
 /// In order to correctly lower the arguments we need to know the size of each
 /// argument.  Since Ins[x].VT gives us the size of the register that will
 /// hold the value, we need to look at Ins[x].ArgVT to see the 'real' type
-/// for the orignal function argument so that we can deduce the correct memory
+/// for the original function argument so that we can deduce the correct memory
 /// type to use for Ins[x].  In most cases the correct memory type will be
 /// Ins[x].ArgVT.  However, this will not always be the case.  If, for example,
 /// we have a kernel argument of type v8i8, this argument will be split into
@@ -1378,16 +1378,11 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
          "Do not know what to do with an non-zero offset");
 
     // TODO: We could emit code to handle the initialization somewhere.
-    if (!hasDefinedInitializer(GV)) {
-      unsigned Offset = MFI->allocateLDSGlobal(DL, *cast<GlobalVariable>(GV));
-      return DAG.getConstant(Offset, SDLoc(Op), Op.getValueType());
-    }
+    // We ignore the initializer for now and legalize it to allow selection.
+    // The initializer will anyway get errored out during assembly emission.
+    unsigned Offset = MFI->allocateLDSGlobal(DL, *cast<GlobalVariable>(GV));
+    return DAG.getConstant(Offset, SDLoc(Op), Op.getValueType());
   }
-
-  const Function &Fn = DAG.getMachineFunction().getFunction();
-  DiagnosticInfoUnsupported BadInit(
-      Fn, "unsupported initializer for address space", SDLoc(Op).getDebugLoc());
-  DAG.getContext()->diagnose(BadInit);
   return SDValue();
 }
 
@@ -2428,7 +2423,7 @@ SDValue AMDGPUTargetLowering::LowerCTLZ_CTTZ(SDValue Op, SelectionDAG &DAG) cons
 
 SDValue AMDGPUTargetLowering::LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG,
                                                bool Signed) const {
-  // The regular method coverting a 64-bit integer to float roughly consists of
+  // The regular method converting a 64-bit integer to float roughly consists of
   // 2 steps: normalization and rounding. In fact, after normalization, the
   // conversion from a 64-bit integer to a float is essentially the same as the
   // one from a 32-bit integer. The only difference is that it has more

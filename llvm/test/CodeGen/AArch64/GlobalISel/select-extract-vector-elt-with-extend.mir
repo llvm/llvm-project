@@ -301,3 +301,18 @@ body: |
     RET_ReallyLR implicit $w0
 
 ...
+---
+name:            skip_anyext_to_16
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    %5:fpr(<16 x s8>) = G_IMPLICIT_DEF
+    %12:gpr(s64) = G_CONSTANT i64 0
+    %4:fpr(s8) = G_EXTRACT_VECTOR_ELT %5(<16 x s8>), %12(s64)
+    %11:gpr(s8) = COPY %4(s8)
+    %8:gpr(s16) = G_ANYEXT %11(s8)
+    %ext:gpr(s32) = G_ANYEXT %8(s16)
+    $w0 = COPY %ext(s32)
+...

@@ -50,7 +50,6 @@ STATISTIC(NumFinished, "Number of splits finished");
 STATISTIC(NumSimple,   "Number of splits that were simple");
 STATISTIC(NumCopies,   "Number of copies inserted for splitting");
 STATISTIC(NumRemats,   "Number of rematerialized defs for splitting");
-STATISTIC(NumRepairs,  "Number of invalid live ranges repaired");
 
 //===----------------------------------------------------------------------===//
 //                     Last Insert Point Analysis
@@ -160,7 +159,6 @@ void SplitAnalysis::clear() {
   UseBlocks.clear();
   ThroughBlocks.clear();
   CurLI = nullptr;
-  DidRepairRange = false;
 }
 
 /// analyzeUses - Count instructions, basic blocks, and loops using CurLI.
@@ -188,20 +186,7 @@ void SplitAnalysis::analyzeUses() {
                  UseSlots.end());
 
   // Compute per-live block info.
-  if (!calcLiveBlockInfo()) {
-    // FIXME: calcLiveBlockInfo found inconsistencies in the live range.
-    // I am looking at you, RegisterCoalescer!
-    DidRepairRange = true;
-    ++NumRepairs;
-    LLVM_DEBUG(dbgs() << "*** Fixing inconsistent live interval! ***\n");
-    const_cast<LiveIntervals&>(LIS)
-      .shrinkToUses(const_cast<LiveInterval*>(CurLI));
-    UseBlocks.clear();
-    ThroughBlocks.clear();
-    bool fixed = calcLiveBlockInfo();
-    (void)fixed;
-    assert(fixed && "Couldn't fix broken live interval");
-  }
+  calcLiveBlockInfo();
 
   LLVM_DEBUG(dbgs() << "Analyze counted " << UseSlots.size() << " instrs in "
                     << UseBlocks.size() << " blocks, through "
@@ -210,11 +195,11 @@ void SplitAnalysis::analyzeUses() {
 
 /// calcLiveBlockInfo - Fill the LiveBlocks array with information about blocks
 /// where CurLI is live.
-bool SplitAnalysis::calcLiveBlockInfo() {
+void SplitAnalysis::calcLiveBlockInfo() {
   ThroughBlocks.resize(MF.getNumBlockIDs());
   NumThroughBlocks = NumGapBlocks = 0;
   if (CurLI->empty())
-    return true;
+    return;
 
   LiveInterval::const_iterator LVI = CurLI->begin();
   LiveInterval::const_iterator LVE = CurLI->end();
@@ -240,8 +225,7 @@ bool SplitAnalysis::calcLiveBlockInfo() {
       ThroughBlocks.set(BI.MBB->getNumber());
       // The range shouldn't end mid-block if there are no uses. This shouldn't
       // happen.
-      if (LVI->end < Stop)
-        return false;
+      assert(LVI->end >= Stop && "range ends mid block with no uses");
     } else {
       // This block has uses. Find the first and last uses in the block.
       BI.FirstInstr = *UseI;
@@ -312,7 +296,6 @@ bool SplitAnalysis::calcLiveBlockInfo() {
   }
 
   assert(getNumLiveBlocks() == countLiveBlocks(CurLI) && "Bad block count");
-  return true;
 }
 
 unsigned SplitAnalysis::countLiveBlocks(const LiveInterval *cli) const {

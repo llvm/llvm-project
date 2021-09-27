@@ -900,8 +900,7 @@ public:
     // UndefedInsts and then check that we in fact remove them.
     SmallSet<Instruction *, 16> UndefedInsts;
     for (auto *Inst : reverse(ToRemove)) {
-      for (auto I = Inst->use_begin(), E = Inst->use_end(); I != E;) {
-        Use &U = *I++;
+      for (Use &U : llvm::make_early_inc_range(Inst->uses())) {
         if (auto *Undefed = dyn_cast<Instruction>(U.getUser()))
           UndefedInsts.insert(Undefed);
         U.set(UndefValue::get(Inst->getType()));
@@ -2262,6 +2261,16 @@ PreservedAnalyses LowerMatrixIntrinsicsPass::run(Function &F,
     return PA;
   }
   return PreservedAnalyses::all();
+}
+
+void LowerMatrixIntrinsicsPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<LowerMatrixIntrinsicsPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << "<";
+  if (Minimal)
+    OS << "minimal";
+  OS << ">";
 }
 
 namespace {

@@ -42,17 +42,15 @@ define void @vector_reverse_f64(i64 %N, double* %a, double* %b) #0{
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds double, double* [[TMP6]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast double* [[TMP10]] to <vscale x 8 x double>*
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x double>, <vscale x 8 x double>* [[TMP11]], align 8, !alias.scope !0
-; CHECK-NEXT:    [[REVERSE:%.*]] = call <vscale x 8 x double> @llvm.experimental.vector.reverse.nxv8f64(<vscale x 8 x double> [[WIDE_LOAD]])
-; CHECK-NEXT:    [[TMP12:%.*]] = fadd <vscale x 8 x double> [[REVERSE]], shufflevector (<vscale x 8 x double> insertelement (<vscale x 8 x double> poison, double 1.000000e+00, i32 0), <vscale x 8 x double> poison, <vscale x 8 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds double, double* [[A]], i64 [[TMP5]]
-; CHECK-NEXT:    [[REVERSE6:%.*]] = call <vscale x 8 x double> @llvm.experimental.vector.reverse.nxv8f64(<vscale x 8 x double> [[TMP12]])
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds double, double* [[A]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP13:%.*]] = fadd <vscale x 8 x double> [[WIDE_LOAD]], shufflevector (<vscale x 8 x double> insertelement (<vscale x 8 x double> poison, double 1.000000e+00, i32 0), <vscale x 8 x double> poison, <vscale x 8 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[DOTNEG7:%.*]] = mul i32 [[TMP14]], -8
 ; CHECK-NEXT:    [[TMP15:%.*]] = or i32 [[DOTNEG7]], 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = sext i32 [[TMP15]] to i64
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds double, double* [[TMP13]], i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds double, double* [[TMP12]], i64 [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = bitcast double* [[TMP17]] to <vscale x 8 x double>*
-; CHECK-NEXT:    store <vscale x 8 x double> [[REVERSE6]], <vscale x 8 x double>* [[TMP18]], align 8, !alias.scope !3, !noalias !0
+; CHECK-NEXT:    store <vscale x 8 x double> [[TMP13]], <vscale x 8 x double>* [[TMP18]], align 8, !alias.scope !3, !noalias !0
 ; CHECK-NEXT:    [[TMP19:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP20:%.*]] = shl i64 [[TMP19]], 3
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP20]]
@@ -134,17 +132,15 @@ define void @vector_reverse_i64(i64 %N, i64* %a, i64* %b) #0 {
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, i64* [[TMP6]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i64* [[TMP10]] to <vscale x 8 x i64>*
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i64>, <vscale x 8 x i64>* [[TMP11]], align 8, !alias.scope !9
-; CHECK-NEXT:    [[REVERSE:%.*]] = call <vscale x 8 x i64> @llvm.experimental.vector.reverse.nxv8i64(<vscale x 8 x i64> [[WIDE_LOAD]])
-; CHECK-NEXT:    [[TMP12:%.*]] = add <vscale x 8 x i64> [[REVERSE]], shufflevector (<vscale x 8 x i64> insertelement (<vscale x 8 x i64> poison, i64 1, i32 0), <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 [[TMP5]]
-; CHECK-NEXT:    [[REVERSE6:%.*]] = call <vscale x 8 x i64> @llvm.experimental.vector.reverse.nxv8i64(<vscale x 8 x i64> [[TMP12]])
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP13:%.*]] = add <vscale x 8 x i64> [[WIDE_LOAD]], shufflevector (<vscale x 8 x i64> insertelement (<vscale x 8 x i64> poison, i64 1, i32 0), <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[DOTNEG7:%.*]] = mul i32 [[TMP14]], -8
 ; CHECK-NEXT:    [[TMP15:%.*]] = or i32 [[DOTNEG7]], 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = sext i32 [[TMP15]] to i64
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i64, i64* [[TMP13]], i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i64, i64* [[TMP12]], i64 [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i64* [[TMP17]] to <vscale x 8 x i64>*
-; CHECK-NEXT:    store <vscale x 8 x i64> [[REVERSE6]], <vscale x 8 x i64>* [[TMP18]], align 8, !alias.scope !12, !noalias !9
+; CHECK-NEXT:    store <vscale x 8 x i64> [[TMP13]], <vscale x 8 x i64>* [[TMP18]], align 8, !alias.scope !12, !noalias !9
 ; CHECK-NEXT:    [[TMP19:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP20:%.*]] = shl i64 [[TMP19]], 3
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP20]]

@@ -128,3 +128,64 @@ add_libc_unittest(
   DEPENDS
     libc.src.stdlib.llabs
 )
+
+add_libc_unittest(
+  div_test
+  SUITE
+    libc_stdlib_unittests
+  SRCS
+    div_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.include.stdlib
+    libc.src.stdlib.div
+)
+
+add_libc_unittest(
+  ldiv_test
+  SUITE
+    libc_stdlib_unittests
+  SRCS
+    ldiv_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.include.stdlib
+    libc.src.stdlib.ldiv
+)
+
+add_libc_unittest(
+  lldiv_test
+  SUITE
+    libc_stdlib_unittests
+  SRCS
+    lldiv_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.include.stdlib
+    libc.src.stdlib.lldiv
+)
+
+add_libc_unittest(
+  bsearch_test
+  SUITE
+    libc_stdlib_unittests
+  SRCS
+    bsearch_test.cpp
+  DEPENDS
+    libc.include.stdlib
+    libc.src.stdlib.bsearch
+)
+
+add_libc_unittest(
+  qsort_test
+  SUITE
+    libc_stdlib_unittests
+  SRCS
+    qsort_test.cpp
+  DEPENDS
+    libc.include.stdlib
+    libc.src.stdlib.qsort
+)

@@ -144,8 +144,17 @@ static cl::opt<bool> ClPreserveAlignment(
 // to the "native" (i.e. unsanitized) ABI.  Unless the ABI list contains
 // additional annotations for those functions, a call to one of those functions
 // will produce a warning message, as the labelling behaviour of the function is
-// unknown.  The other supported annotations are "functional" and "discard",
-// which are described below under DataFlowSanitizer::WrapperKind.
+// unknown. The other supported annotations for uninstrumented functions are
+// "functional" and "discard", which are described below under
+// DataFlowSanitizer::WrapperKind.
+// Functions will often be labelled with both "uninstrumented" and one of
+// "functional" or "discard". This will leave the function unchanged by this
+// pass, and create a wrapper function that will call the original.
+//
+// Instrumented functions can also be annotated as "force_zero_labels", which
+// will make all shadow and return values set zero labels.
+// Functions should never be labelled with both "force_zero_labels" and
+// "uninstrumented" or any of the unistrumented wrapper kinds.
 static cl::list<std::string> ClABIListFiles(
     "dfsan-abilist",
     cl::desc("File listing native ABI functions and how the pass treats them"),
@@ -469,6 +478,7 @@ class DataFlowSanitizer {
   getShadowOriginAddress(Value *Addr, Align InstAlignment, Instruction *Pos);
   bool isInstrumented(const Function *F);
   bool isInstrumented(const GlobalAlias *GA);
+  bool isForceZeroLabels(const Function *F);
   FunctionType *getArgsFunctionType(FunctionType *T);
   FunctionType *getTrampolineFunctionType(FunctionType *T);
   TransformedFunction getCustomFunctionType(FunctionType *T);
@@ -541,6 +551,7 @@ struct DFSanFunction {
   DominatorTree DT;
   DataFlowSanitizer::InstrumentedABI IA;
   bool IsNativeABI;
+  bool IsForceZeroLabels;
   AllocaInst *LabelReturnAlloca = nullptr;
   AllocaInst *OriginReturnAlloca = nullptr;
   DenseMap<Value *, Value *> ValShadowMap;
@@ -571,8 +582,10 @@ struct DFSanFunction {
   DenseMap<Value *, Value *> CachedCollapsedShadows;
   DenseMap<Value *, std::set<Value *>> ShadowElements;
 
-  DFSanFunction(DataFlowSanitizer &DFS, Function *F, bool IsNativeABI)
-      : DFS(DFS), F(F), IA(DFS.getInstrumentedABI()), IsNativeABI(IsNativeABI) {
+  DFSanFunction(DataFlowSanitizer &DFS, Function *F, bool IsNativeABI,
+                bool IsForceZeroLabels)
+      : DFS(DFS), F(F), IA(DFS.getInstrumentedABI()), IsNativeABI(IsNativeABI),
+        IsForceZeroLabels(IsForceZeroLabels) {
     DT.recalculate(*F);
   }
 
@@ -1107,6 +1120,10 @@ bool DataFlowSanitizer::isInstrumented(const GlobalAlias *GA) {
   return !ABIList.isIn(*GA, "uninstrumented");
 }
 
+bool DataFlowSanitizer::isForceZeroLabels(const Function *F) {
+  return ABIList.isIn(*F, "force_zero_labels");
+}
+
 DataFlowSanitizer::InstrumentedABI DataFlowSanitizer::getInstrumentedABI() {
   return ClArgsABI ? IA_Args : IA_TLS;
 }
@@ -1197,7 +1214,8 @@ Constant *DataFlowSanitizer::getOrBuildTrampolineFunction(FunctionType *FT,
 
     // F is called by a wrapped custom function with primitive shadows. So
     // its arguments and return value need conversion.
-    DFSanFunction DFSF(*this, F, /*IsNativeABI=*/true);
+    DFSanFunction DFSF(*this, F, /*IsNativeABI=*/true,
+                       /*ForceZeroLabels=*/false);
     Function::arg_iterator ValAI = F->arg_begin(), ShadowAI = AI;
     ++ValAI;
     for (unsigned N = FT->getNumParams(); N != 0; ++ValAI, ++ShadowAI, --N) {
@@ -1399,6 +1417,7 @@ bool DataFlowSanitizer::runImpl(Module &M) {
 
   std::vector<Function *> FnsToInstrument;
   SmallPtrSet<Function *, 2> FnsWithNativeABI;
+  SmallPtrSet<Function *, 2> FnsWithForceZeroLabel;
   for (Function &F : M)
     if (!F.isIntrinsic() && !DFSanRuntimeFunctions.contains(&F))
       FnsToInstrument.push_back(&F);
@@ -1446,6 +1465,9 @@ bool DataFlowSanitizer::runImpl(Module &M) {
                               FT->getReturnType()->isVoidTy());
 
     if (isInstrumented(&F)) {
+      if (isForceZeroLabels(&F))
+        FnsWithForceZeroLabel.insert(&F);
+
       // Instrumented functions get a '.dfsan' suffix.  This allows us to more
       // easily identify cases of mismatching ABIs. This naming scheme is
       // mangling-compatible (see Itanium ABI), using a vendor-specific suffix.
@@ -1541,7 +1563,8 @@ bool DataFlowSanitizer::runImpl(Module &M) {
 
     removeUnreachableBlocks(*F);
 
-    DFSanFunction DFSF(*this, F, FnsWithNativeABI.count(F));
+    DFSanFunction DFSF(*this, F, FnsWithNativeABI.count(F),
+                       FnsWithForceZeroLabel.count(F));
 
     // DFSanVisitor may create new basic blocks, which confuses df_iterator.
     // Build a copy of the list before iterating over it.
@@ -1704,6 +1727,8 @@ Value *DFSanFunction::getShadowForTLSArgument(Argument *A) {
 
 Value *DFSanFunction::getShadow(Value *V) {
   if (!isa<Argument>(V) && !isa<Instruction>(V))
+    return DFS.getZeroShadow(V);
+  if (IsForceZeroLabels)
     return DFS.getZeroShadow(V);
   Value *&Shadow = ValShadowMap[V];
   if (!Shadow) {

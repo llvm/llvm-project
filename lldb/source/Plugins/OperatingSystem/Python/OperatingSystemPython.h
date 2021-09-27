@@ -44,8 +44,6 @@ public:
   // lldb_private::PluginInterface Methods
   lldb_private::ConstString GetPluginName() override;
 
-  uint32_t GetPluginVersion() override;
-
   // lldb_private::OperatingSystem Methods
   bool UpdateThreadList(lldb_private::ThreadList &old_thread_list,
                         lldb_private::ThreadList &real_thread_list,

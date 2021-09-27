@@ -149,7 +149,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
   IRBuilder<> Builder(Ctx);
   Type *I32Ty = Type::getInt32Ty(Ctx);
   unsigned UniqID = 0;
-  // NB: This is important for this string size to be divizable by 4
+  // NB: This is important for this string size to be divisible by 4
   const char NonLiteralStr[4] = "???";
 
   for (auto CI : Printfs) {

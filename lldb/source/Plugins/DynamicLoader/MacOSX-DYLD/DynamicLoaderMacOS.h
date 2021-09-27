@@ -62,8 +62,6 @@ public:
   // PluginInterface protocol
   lldb_private::ConstString GetPluginName() override;
 
-  uint32_t GetPluginVersion() override;
-
 protected:
   void PutToLog(lldb_private::Log *log) const;
 

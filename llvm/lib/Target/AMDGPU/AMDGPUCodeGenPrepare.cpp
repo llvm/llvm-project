@@ -816,7 +816,7 @@ bool AMDGPUCodeGenPrepare::visitXor(BinaryOperator &I) {
   if (!RHS || !IntrinsicCall || RHS->getSExtValue() != -1)
     return visitBinaryOperator(I);
 
-  // Check if the Call is an intrinsic intruction to amdgcn_class intrinsic
+  // Check if the Call is an intrinsic instruction to amdgcn_class intrinsic
   // has only one use
   if (IntrinsicCall->getIntrinsicID() != Intrinsic::amdgcn_class ||
       !IntrinsicCall->hasOneUse())
@@ -1314,7 +1314,7 @@ bool AMDGPUCodeGenPrepare::visitLoadInst(LoadInst &I) {
       ConstantInt *Lower =
         mdconst::extract<ConstantInt>(Range->getOperand(0));
 
-      if (Lower->getValue().isNullValue()) {
+      if (Lower->isNullValue()) {
         WidenLoad->setMetadata(LLVMContext::MD_range, nullptr);
       } else {
         Metadata *LowAndHigh[] = {

@@ -100,7 +100,6 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
-#include "llvm/Transforms/InstCombine/InstCombineWorklist.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <algorithm>
 #include <cassert>
@@ -109,10 +108,11 @@
 #include <string>
 #include <utility>
 
+#define DEBUG_TYPE "instcombine"
+#include "llvm/Transforms/Utils/InstructionWorklist.h"
+
 using namespace llvm;
 using namespace llvm::PatternMatch;
-
-#define DEBUG_TYPE "instcombine"
 
 STATISTIC(NumWorklistIterations,
           "Number of instruction combining iterations performed");
@@ -1269,61 +1269,19 @@ Instruction *InstCombinerImpl::foldBinOpIntoSelectOrPhi(BinaryOperator &I) {
 /// specified offset. If so, fill them into NewIndices and return the resultant
 /// element type, otherwise return null.
 Type *
-InstCombinerImpl::FindElementAtOffset(PointerType *PtrTy, int64_t Offset,
+InstCombinerImpl::FindElementAtOffset(PointerType *PtrTy, int64_t IntOffset,
                                       SmallVectorImpl<Value *> &NewIndices) {
   Type *Ty = PtrTy->getElementType();
   if (!Ty->isSized())
     return nullptr;
 
-  // Start with the index over the outer type.  Note that the type size
-  // might be zero (even if the offset isn't zero) if the indexed type
-  // is something like [0 x {int, int}]
-  Type *IndexTy = DL.getIndexType(PtrTy);
-  int64_t FirstIdx = 0;
-  if (int64_t TySize = DL.getTypeAllocSize(Ty)) {
-    FirstIdx = Offset/TySize;
-    Offset -= FirstIdx*TySize;
+  APInt Offset(DL.getIndexTypeSizeInBits(PtrTy), IntOffset);
+  SmallVector<APInt> Indices = DL.getGEPIndicesForOffset(Ty, Offset);
+  if (!Offset.isZero())
+    return nullptr;
 
-    // Handle hosts where % returns negative instead of values [0..TySize).
-    if (Offset < 0) {
-      --FirstIdx;
-      Offset += TySize;
-      assert(Offset >= 0);
-    }
-    assert((uint64_t)Offset < (uint64_t)TySize && "Out of range offset");
-  }
-
-  NewIndices.push_back(ConstantInt::get(IndexTy, FirstIdx));
-
-  // Index into the types.  If we fail, set OrigBase to null.
-  while (Offset) {
-    // Indexing into tail padding between struct/array elements.
-    if (uint64_t(Offset * 8) >= DL.getTypeSizeInBits(Ty))
-      return nullptr;
-
-    if (StructType *STy = dyn_cast<StructType>(Ty)) {
-      const StructLayout *SL = DL.getStructLayout(STy);
-      assert(Offset < (int64_t)SL->getSizeInBytes() &&
-             "Offset must stay within the indexed type");
-
-      unsigned Elt = SL->getElementContainingOffset(Offset);
-      NewIndices.push_back(ConstantInt::get(Type::getInt32Ty(Ty->getContext()),
-                                            Elt));
-
-      Offset -= SL->getElementOffset(Elt);
-      Ty = STy->getElementType(Elt);
-    } else if (ArrayType *AT = dyn_cast<ArrayType>(Ty)) {
-      uint64_t EltSize = DL.getTypeAllocSize(AT->getElementType());
-      assert(EltSize && "Cannot index into a zero-sized array");
-      NewIndices.push_back(ConstantInt::get(IndexTy,Offset/EltSize));
-      Offset %= EltSize;
-      Ty = AT->getElementType();
-    } else {
-      // Otherwise, we can't index into the middle of this atomic type, bail.
-      return nullptr;
-    }
-  }
-
+  for (const APInt &Index : Indices)
+    NewIndices.push_back(Builder.getInt(Index));
   return Ty;
 }
 
@@ -1624,7 +1582,7 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
     Value *XY = Builder.CreateBinOp(Opcode, X, Y);
     if (auto *BO = dyn_cast<BinaryOperator>(XY))
       BO->copyIRFlags(&Inst);
-    return new ShuffleVectorInst(XY, UndefValue::get(XY->getType()), M);
+    return new ShuffleVectorInst(XY, M);
   };
 
   // If both arguments of the binary operation are shuffles that use the same
@@ -1897,7 +1855,8 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   Type *GEPType = GEP.getType();
   Type *GEPEltType = GEP.getSourceElementType();
   bool IsGEPSrcEleScalable = isa<ScalableVectorType>(GEPEltType);
-  if (Value *V = SimplifyGEPInst(GEPEltType, Ops, SQ.getWithInstruction(&GEP)))
+  if (Value *V = SimplifyGEPInst(GEPEltType, Ops, GEP.isInBounds(),
+                                 SQ.getWithInstruction(&GEP)))
     return replaceInstUsesWith(GEP, V);
 
   // For vector geps, use the generic demanded vector support.
@@ -2638,6 +2597,13 @@ static bool isAllocSiteRemovable(Instruction *AI,
           Users.emplace_back(I);
           continue;
         }
+
+        if (isReallocLikeFn(I, TLI, true)) {
+          Users.emplace_back(I);
+          Worklist.push_back(I);
+          continue;
+        }
+
         return false;
 
       case Instruction::Store: {
@@ -2825,9 +2791,7 @@ static Instruction *tryToMoveFreeBeforeNullTest(CallInst &FI,
 
   // At this point, we know that everything in FreeInstrBB can be moved
   // before TI.
-  for (BasicBlock::iterator It = FreeInstrBB->begin(), End = FreeInstrBB->end();
-       It != End;) {
-    Instruction &Instr = *It++;
+  for (Instruction &Instr : llvm::make_early_inc_range(*FreeInstrBB)) {
     if (&Instr == FreeInstrBBTerminator)
       break;
     Instr.moveBefore(TI);
@@ -2851,6 +2815,15 @@ Instruction *InstCombinerImpl::visitFree(CallInst &FI) {
   // when lots of inlining happens.
   if (isa<ConstantPointerNull>(Op))
     return eraseInstFromFunction(FI);
+
+  // If we had free(realloc(...)) with no intervening uses, then eliminate the
+  // realloc() entirely.
+  if (CallInst *CI = dyn_cast<CallInst>(Op)) {
+    if (CI->hasOneUse() && isReallocLikeFn(CI, &TLI, true)) {
+      return eraseInstFromFunction(
+          *replaceInstUsesWith(*CI, CI->getOperand(0)));
+    }
+  }
 
   // If we optimize for code size, try to move the call to free before the null
   // test so that simplify cfg can remove the empty block and dead code
@@ -3174,9 +3147,7 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
       Instruction *NL = Builder.CreateLoad(EV.getType(), GEP);
       // Whatever aliasing information we had for the orignal load must also
       // hold for the smaller load, so propagate the annotations.
-      AAMDNodes Nodes;
-      L->getAAMetadata(Nodes);
-      NL->setAAMetadata(Nodes);
+      NL->setAAMetadata(L->getAAMetadata());
       // Returning the load directly will cause the main loop to insert it in
       // the wrong spot, so use replaceInstUsesWith().
       return replaceInstUsesWith(EV, NL);
@@ -3659,7 +3630,7 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
 /// instruction past all of the instructions between it and the end of its
 /// block.
 static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
-  assert(I->getSingleUndroppableUse() && "Invariants didn't hold!");
+  assert(I->getUniqueUndroppableUser() && "Invariants didn't hold!");
   BasicBlock *SrcBlock = I->getParent();
 
   // Cannot move control-flow-involving, volatile loads, vaarg, etc.
@@ -3813,51 +3784,71 @@ bool InstCombinerImpl::run() {
 
     // See if we can trivially sink this instruction to its user if we can
     // prove that the successor is not executed more frequently than our block.
-    if (EnableCodeSinking)
-      if (Use *SingleUse = I->getSingleUndroppableUse()) {
-        BasicBlock *BB = I->getParent();
-        Instruction *UserInst = cast<Instruction>(SingleUse->getUser());
-        BasicBlock *UserParent;
+    // Return the UserBlock if successful.
+    auto getOptionalSinkBlockForInst =
+        [this](Instruction *I) -> Optional<BasicBlock *> {
+      if (!EnableCodeSinking)
+        return None;
+      auto *UserInst = cast_or_null<Instruction>(I->getUniqueUndroppableUser());
+      if (!UserInst)
+        return None;
 
-        // Get the block the use occurs in.
-        if (PHINode *PN = dyn_cast<PHINode>(UserInst))
-          UserParent = PN->getIncomingBlock(*SingleUse);
-        else
-          UserParent = UserInst->getParent();
+      BasicBlock *BB = I->getParent();
+      BasicBlock *UserParent = nullptr;
 
-        // Try sinking to another block. If that block is unreachable, then do
-        // not bother. SimplifyCFG should handle it.
-        if (UserParent != BB && DT.isReachableFromEntry(UserParent)) {
-          // See if the user is one of our successors that has only one
-          // predecessor, so that we don't have to split the critical edge.
-          bool ShouldSink = UserParent->getUniquePredecessor() == BB;
-          // Another option where we can sink is a block that ends with a
-          // terminator that does not pass control to other block (such as
-          // return or unreachable). In this case:
-          //   - I dominates the User (by SSA form);
-          //   - the User will be executed at most once.
-          // So sinking I down to User is always profitable or neutral.
-          if (!ShouldSink) {
-            auto *Term = UserParent->getTerminator();
-            ShouldSink = isa<ReturnInst>(Term) || isa<UnreachableInst>(Term);
-          }
-          if (ShouldSink) {
-            assert(DT.dominates(BB, UserParent) &&
-                   "Dominance relation broken?");
-            // Okay, the CFG is simple enough, try to sink this instruction.
-            if (TryToSinkInstruction(I, UserParent)) {
-              LLVM_DEBUG(dbgs() << "IC: Sink: " << *I << '\n');
-              MadeIRChange = true;
-              // We'll add uses of the sunk instruction below, but since sinking
-              // can expose opportunities for it's *operands* add them to the
-              // worklist
-              for (Use &U : I->operands())
-                if (Instruction *OpI = dyn_cast<Instruction>(U.get()))
-                  Worklist.push(OpI);
-            }
+      // Special handling for Phi nodes - get the block the use occurs in.
+      if (PHINode *PN = dyn_cast<PHINode>(UserInst)) {
+        for (unsigned i = 0; i < PN->getNumIncomingValues(); i++) {
+          if (PN->getIncomingValue(i) == I) {
+            // Bail out if we have uses in different blocks. We don't do any
+            // sophisticated analysis (i.e finding NearestCommonDominator of these
+            // use blocks).
+            if (UserParent && UserParent != PN->getIncomingBlock(i))
+              return None;
+            UserParent = PN->getIncomingBlock(i);
           }
         }
+        assert(UserParent && "expected to find user block!");
+      } else
+        UserParent = UserInst->getParent();
+
+      // Try sinking to another block. If that block is unreachable, then do
+      // not bother. SimplifyCFG should handle it.
+      if (UserParent == BB || !DT.isReachableFromEntry(UserParent))
+        return None;
+
+      auto *Term = UserParent->getTerminator();
+      // See if the user is one of our successors that has only one
+      // predecessor, so that we don't have to split the critical edge.
+      // Another option where we can sink is a block that ends with a
+      // terminator that does not pass control to other block (such as
+      // return or unreachable). In this case:
+      //   - I dominates the User (by SSA form);
+      //   - the User will be executed at most once.
+      // So sinking I down to User is always profitable or neutral.
+      if (UserParent->getUniquePredecessor() == BB ||
+          (isa<ReturnInst>(Term) || isa<UnreachableInst>(Term))) {
+        assert(DT.dominates(BB, UserParent) && "Dominance relation broken?");
+        return UserParent;
       }
+      return None;
+    };
+
+    auto OptBB = getOptionalSinkBlockForInst(I);
+    if (OptBB) {
+      auto *UserParent = *OptBB;
+      // Okay, the CFG is simple enough, try to sink this instruction.
+      if (TryToSinkInstruction(I, UserParent)) {
+        LLVM_DEBUG(dbgs() << "IC: Sink: " << *I << '\n');
+        MadeIRChange = true;
+        // We'll add uses of the sunk instruction below, but since
+        // sinking can expose opportunities for it's *operands* add
+        // them to the worklist
+        for (Use &U : I->operands())
+          if (Instruction *OpI = dyn_cast<Instruction>(U.get()))
+            Worklist.push(OpI);
+      }
+    }
 
     // Now that we have an instruction, try combining it to simplify it.
     Builder.SetInsertPoint(I);
@@ -3985,13 +3976,13 @@ public:
 /// whose condition is a known constant, we only visit the reachable successors.
 static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
                                           const TargetLibraryInfo *TLI,
-                                          InstCombineWorklist &ICWorklist) {
+                                          InstructionWorklist &ICWorklist) {
   bool MadeIRChange = false;
   SmallPtrSet<BasicBlock *, 32> Visited;
   SmallVector<BasicBlock*, 256> Worklist;
   Worklist.push_back(&F.front());
 
-  SmallVector<Instruction*, 128> InstrsForInstCombineWorklist;
+  SmallVector<Instruction *, 128> InstrsForInstructionWorklist;
   DenseMap<Constant *, Constant *> FoldedConstants;
   AliasScopeTracker SeenAliasScopes;
 
@@ -4002,25 +3993,23 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
     if (!Visited.insert(BB).second)
       continue;
 
-    for (BasicBlock::iterator BBI = BB->begin(), E = BB->end(); BBI != E; ) {
-      Instruction *Inst = &*BBI++;
-
+    for (Instruction &Inst : llvm::make_early_inc_range(*BB)) {
       // ConstantProp instruction if trivially constant.
-      if (!Inst->use_empty() &&
-          (Inst->getNumOperands() == 0 || isa<Constant>(Inst->getOperand(0))))
-        if (Constant *C = ConstantFoldInstruction(Inst, DL, TLI)) {
-          LLVM_DEBUG(dbgs() << "IC: ConstFold to: " << *C << " from: " << *Inst
+      if (!Inst.use_empty() &&
+          (Inst.getNumOperands() == 0 || isa<Constant>(Inst.getOperand(0))))
+        if (Constant *C = ConstantFoldInstruction(&Inst, DL, TLI)) {
+          LLVM_DEBUG(dbgs() << "IC: ConstFold to: " << *C << " from: " << Inst
                             << '\n');
-          Inst->replaceAllUsesWith(C);
+          Inst.replaceAllUsesWith(C);
           ++NumConstProp;
-          if (isInstructionTriviallyDead(Inst, TLI))
-            Inst->eraseFromParent();
+          if (isInstructionTriviallyDead(&Inst, TLI))
+            Inst.eraseFromParent();
           MadeIRChange = true;
           continue;
         }
 
       // See if we can constant fold its operands.
-      for (Use &U : Inst->operands()) {
+      for (Use &U : Inst.operands()) {
         if (!isa<ConstantVector>(U) && !isa<ConstantExpr>(U))
           continue;
 
@@ -4030,7 +4019,7 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
           FoldRes = ConstantFoldConstant(C, DL, TLI);
 
         if (FoldRes != C) {
-          LLVM_DEBUG(dbgs() << "IC: ConstFold operand of: " << *Inst
+          LLVM_DEBUG(dbgs() << "IC: ConstFold operand of: " << Inst
                             << "\n    Old = " << *C
                             << "\n    New = " << *FoldRes << '\n');
           U = FoldRes;
@@ -4041,9 +4030,9 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
       // Skip processing debug and pseudo intrinsics in InstCombine. Processing
       // these call instructions consumes non-trivial amount of time and
       // provides no value for the optimization.
-      if (!Inst->isDebugOrPseudoInst()) {
-        InstrsForInstCombineWorklist.push_back(Inst);
-        SeenAliasScopes.analyse(Inst);
+      if (!Inst.isDebugOrPseudoInst()) {
+        InstrsForInstructionWorklist.push_back(&Inst);
+        SeenAliasScopes.analyse(&Inst);
       }
     }
 
@@ -4088,8 +4077,8 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
   // of the function down.  This jives well with the way that it adds all uses
   // of instructions to the worklist after doing a transformation, thus avoiding
   // some N^2 behavior in pathological cases.
-  ICWorklist.reserve(InstrsForInstCombineWorklist.size());
-  for (Instruction *Inst : reverse(InstrsForInstCombineWorklist)) {
+  ICWorklist.reserve(InstrsForInstructionWorklist.size());
+  for (Instruction *Inst : reverse(InstrsForInstructionWorklist)) {
     // DCE instruction if trivially dead. As we iterate in reverse program
     // order here, we will clean up whole chains of dead instructions.
     if (isInstructionTriviallyDead(Inst, TLI) ||
@@ -4109,7 +4098,7 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
 }
 
 static bool combineInstructionsOverFunction(
-    Function &F, InstCombineWorklist &Worklist, AliasAnalysis *AA,
+    Function &F, InstructionWorklist &Worklist, AliasAnalysis *AA,
     AssumptionCache &AC, TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
     DominatorTree &DT, OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
     ProfileSummaryInfo *PSI, unsigned MaxIterations, LoopInfo *LI) {

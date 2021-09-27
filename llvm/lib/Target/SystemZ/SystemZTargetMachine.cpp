@@ -84,8 +84,9 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
   // 128-bit floats are aligned only to 64 bits.
   Ret += "-f128:64";
 
-  // When using the vector ABI, 128-bit vectors are also aligned to 64 bits.
-  if (VectorABI)
+  // When using the vector ABI on Linux, 128-bit vectors are also aligned to 64
+  // bits. On z/OS, vector types are always aligned to 64 bits.
+  if (VectorABI || TT.isOSzOS())
     Ret += "-v128:64";
 
   // We prefer 16 bits of aligned for all globals; see above.

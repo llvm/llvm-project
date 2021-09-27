@@ -131,6 +131,38 @@ entry:
   ret void
 }
 
+; OPT-LABEL: @alloca_9xi64_max256(
+; OPT-NOT: alloca
+; OPT: <9 x i64>
+; LIMIT32: alloca
+; LIMIT32-NOT: <9 x i64>
+define amdgpu_kernel void @alloca_9xi64_max256(i64 addrspace(1)* %out, i32 %index) #2 {
+entry:
+  %tmp = alloca [9 x i64], addrspace(5)
+  %x = getelementptr [9 x i64], [9 x i64] addrspace(5)* %tmp, i32 0, i32 0
+  store i64 0, i64 addrspace(5)* %x
+  %tmp1 = getelementptr [9 x i64], [9 x i64] addrspace(5)* %tmp, i32 0, i32 %index
+  %tmp2 = load i64, i64 addrspace(5)* %tmp1
+  store i64 %tmp2, i64 addrspace(1)* %out
+  ret void
+}
+
+; OPT-LABEL: @func_alloca_9xi64_max256(
+; OPT: alloca
+; OPT-NOT: <9 x i64>
+; LIMIT32: alloca
+; LIMIT32-NOT: <9 x i64>
+define void @func_alloca_9xi64_max256(i64 addrspace(1)* %out, i32 %index) #2 {
+entry:
+  %tmp = alloca [9 x i64], addrspace(5)
+  %x = getelementptr [9 x i64], [9 x i64] addrspace(5)* %tmp, i32 0, i32 0
+  store i64 0, i64 addrspace(5)* %x
+  %tmp1 = getelementptr [9 x i64], [9 x i64] addrspace(5)* %tmp, i32 0, i32 %index
+  %tmp2 = load i64, i64 addrspace(5)* %tmp1
+  store i64 %tmp2, i64 addrspace(1)* %out
+  ret void
+}
+
 attributes #0 = { "amdgpu-flat-work-group-size"="1,1024" }
 attributes #1 = { "amdgpu-flat-work-group-size"="1,512" }
 attributes #2 = { "amdgpu-flat-work-group-size"="1,256" }

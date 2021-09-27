@@ -18,16 +18,26 @@
 namespace _OMP {
 namespace config {
 
-enum DebugLevel : int32_t { Assertion };
+enum DebugKind : uint32_t {
+  Assertion = 1U << 0,
+  FunctionTracing = 1U << 1,
+};
 
 /// Return the number of devices in the system, same number as returned on the
 /// host by omp_get_num_devices.
 uint32_t getNumDevices();
 
-/// Return the user choosen debug level.
-int32_t getDebugLevel();
+/// Return the number of devices in the system, same number as returned on the
+/// host by omp_get_num_devices.
+uint32_t getDeviceNum();
 
-bool isDebugMode(DebugLevel Level);
+/// Return the user choosen debug level.
+uint32_t getDebugKind();
+
+/// Return the amount of dynamic shared memory that was allocated at launch.
+uint64_t getDynamicMemorySize();
+
+bool isDebugMode(DebugKind Level);
 
 } // namespace config
 } // namespace _OMP

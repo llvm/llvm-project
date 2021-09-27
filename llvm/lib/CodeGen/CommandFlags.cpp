@@ -65,6 +65,7 @@ CGOPT(DenormalMode::DenormalModeKind, DenormalFP32Math)
 CGOPT(bool, EnableHonorSignDependentRoundingFPMath)
 CGOPT(FloatABI::ABIType, FloatABIForCalls)
 CGOPT(FPOpFusion::FPOpFusionMode, FuseFPOps)
+CGOPT(SwiftAsyncFramePointerMode, SwiftAsyncFramePointer)
 CGOPT(bool, DontPlaceZerosInBSS)
 CGOPT(bool, EnableGuaranteedTailCallOpt)
 CGOPT(bool, DisableTailCalls)
@@ -89,7 +90,6 @@ CGOPT(bool, EnableAddrsig)
 CGOPT(bool, EmitCallSiteInfo)
 CGOPT(bool, EnableMachineFunctionSplitter)
 CGOPT(bool, EnableDebugEntryValues)
-CGOPT(bool, PseudoProbeForProfiling)
 CGOPT(bool, ValueTrackingVariableLocations)
 CGOPT(bool, ForceDwarfFrameSection)
 CGOPT(bool, XRayOmitFunctionIndex)
@@ -278,6 +278,18 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                      "Only fuse FP ops when the result won't be affected.")));
   CGBINDOPT(FuseFPOps);
 
+  static cl::opt<SwiftAsyncFramePointerMode> SwiftAsyncFramePointer(
+      "swift-async-fp",
+      cl::desc("Determine when the Swift async frame pointer should be set"),
+      cl::init(SwiftAsyncFramePointerMode::Always),
+      cl::values(clEnumValN(SwiftAsyncFramePointerMode::DeploymentBased, "auto",
+                            "Determine based on deployment target"),
+                 clEnumValN(SwiftAsyncFramePointerMode::Always, "always",
+                            "Always set the bit"),
+                 clEnumValN(SwiftAsyncFramePointerMode::Never, "never",
+                            "Never set the bit")));
+  CGBINDOPT(SwiftAsyncFramePointer);
+
   static cl::opt<bool> DontPlaceZerosInBSS(
       "nozero-initialized-in-bss",
       cl::desc("Don't place zero-initialized symbols into bss section"),
@@ -421,11 +433,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(EnableDebugEntryValues);
 
-  static cl::opt<bool> PseudoProbeForProfiling(
-      "pseudo-probe-for-profiling", cl::desc("Emit pseudo probes for AutoFDO"),
-      cl::init(false));
-  CGBINDOPT(PseudoProbeForProfiling);
-
   static cl::opt<bool> ValueTrackingVariableLocations(
       "experimental-debug-variable-locations",
       cl::desc("Use experimental new value-tracking variable locations"),
@@ -527,7 +534,6 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.EmitAddrsig = getEnableAddrsig();
   Options.EmitCallSiteInfo = getEmitCallSiteInfo();
   Options.EnableDebugEntryValues = getEnableDebugEntryValues();
-  Options.PseudoProbeForProfiling = getPseudoProbeForProfiling();
   Options.ValueTrackingVariableLocations = getValueTrackingVariableLocations();
   Options.ForceDwarfFrameSection = getForceDwarfFrameSection();
   Options.XRayOmitFunctionIndex = getXRayOmitFunctionIndex();
@@ -539,7 +545,7 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.ThreadModel = getThreadModel();
   Options.EABIVersion = getEABIVersion();
   Options.DebuggerTuning = getDebuggerTuningOpt();
-
+  Options.SwiftAsyncFramePointer = getSwiftAsyncFramePointer();
   return Options;
 }
 

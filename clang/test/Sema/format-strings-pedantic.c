@@ -15,6 +15,6 @@ int main() {
 #endif
 
 #ifdef __cplusplus
-  printf("%p", nullptr); // expected-warning {{format specifies type 'void *' but the argument has type 'nullptr_t'}}
+  printf("%p", nullptr); // expected-warning {{format specifies type 'void *' but the argument has type 'std::nullptr_t'}}
 #endif
 }

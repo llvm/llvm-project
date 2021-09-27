@@ -61,8 +61,6 @@ public:
   // PluginInterface protocol
   lldb_private::ConstString GetPluginName() override;
 
-  uint32_t GetPluginVersion() override;
-
 protected:
   llvm::MachO::fat_header m_header;
   std::vector<llvm::MachO::fat_arch> m_fat_archs;

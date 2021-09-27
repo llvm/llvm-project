@@ -3704,7 +3704,7 @@ tree in terms of conformance to :doc:`ClangFormat` as of: June 04, 2021 13:01:37
      - `3`
      - `0`
      - :good:`100%`
-   * - llvm/examples/OrcV2Examples/LLJITWithTargetProcessControl
+   * - llvm/examples/OrcV2Examples/LLJITWithExecutorProcessControl
      - `1`
      - `1`
      - `0`

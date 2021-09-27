@@ -3,6 +3,7 @@ static_library("Shared") {
   deps = [ "//llvm/lib/Support" ]
   sources = [
     "OrcError.cpp",
+    "OrcRTBridge.cpp",
     "RPCError.cpp",
     "SimpleRemoteEPCUtils.cpp",
   ]

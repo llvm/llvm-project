@@ -175,9 +175,8 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
         if (!Arg->getType()->isPtrOrPtrVectorTy())
           continue;
 
-        AAMDNodes AAInfo;
-        I->getAAMetadata(AAInfo);
-        MemoryLocation Loc = MemoryLocation::getBeforeOrAfter(Arg, AAInfo);
+        MemoryLocation Loc =
+            MemoryLocation::getBeforeOrAfter(Arg, I->getAAMetadata());
 
         // Skip accesses to local or constant memory as they don't impact the
         // externally visible mod/ref behavior.

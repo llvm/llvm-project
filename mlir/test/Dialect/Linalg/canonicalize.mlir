@@ -629,7 +629,24 @@ func @pad_tensor_same_static_shape(%arg0: tensor<5x6xf32>, %a: index)
 }
 
 // -----
-// CHECK-LABEL:   func @pad_tensor_after_cast_differnt_shape(
+
+// CHECK-LABEL: func @pad_tensor_packing_same_static_shape(
+//  CHECK-SAME:   %[[ARG0:.*]]: tensor<5x6xf32>
+//       CHECK:   %[[PAD:.*]] = linalg.pad_tensor
+//       CHECK:   return %[[PAD]]
+func @pad_tensor_packing_same_static_shape(%arg0: tensor<5x6xf32>, %a: index)
+    -> tensor<5x6xf32> {
+  %cst = constant 0.000000e+00 : f32
+  %0 = linalg.pad_tensor %arg0 packing low[%a, 0] high[0, %a] {
+        ^bb0(%arg1: index, %arg2: index):
+          linalg.yield %cst : f32
+  } : tensor<5x6xf32> to tensor<5x6xf32>
+  return %0 : tensor<5x6xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func @pad_tensor_after_cast_different_shape(
 // CHECK-SAME:      %[[INPUT:.*]]: tensor<?x64x?x?xf32>) -> tensor<?x?x?x?xf32> {
 // CHECK:           %[[CST:.*]] = constant 0.000000e+00 : f32
 // CHECK:           %[[PADDED:.*]] = linalg.pad_tensor %[[INPUT]]
@@ -641,7 +658,7 @@ func @pad_tensor_same_static_shape(%arg0: tensor<5x6xf32>, %a: index)
 // CHECK-SAME:         tensor<?x64x?x?xf32> to tensor<?x?x?x?xf32>
 // CHECK:           return %[[DYNAMIC]] : tensor<?x?x?x?xf32>
 // CHECK:         }
-func @pad_tensor_after_cast_differnt_shape(%arg0: tensor<?x64x?x?xf32>)
+func @pad_tensor_after_cast_different_shape(%arg0: tensor<?x64x?x?xf32>)
     -> tensor<?x?x?x?xf32> {
   %cst = constant 0.000000e+00 : f32
   %dynamic = tensor.cast %arg0 : tensor<?x64x?x?xf32> to tensor<?x?x?x?xf32>
@@ -653,6 +670,7 @@ func @pad_tensor_after_cast_differnt_shape(%arg0: tensor<?x64x?x?xf32>)
 }
 
 // -----
+
 // CHECK-LABEL:   func @pad_tensor_after_cast_same_shape(
 // CHECK-SAME:      %[[INPUT:.*]]: tensor<?x64x?x?xf32>,
 // CHECK-SAME:      %[[PADDING:.*]]: index) -> tensor<?x?x?x?xf32> {
@@ -676,6 +694,57 @@ func @pad_tensor_after_cast_same_shape(%arg0: tensor<?x64x?x?xf32>, %padding : i
 }
 
 // -----
+
+// CHECK-LABEL: func @pad_tensor_of_cast(
+// CHECK-NOT:     tensor.cast
+// CHECK:         linalg.pad_tensor
+// CHECK:         tensor<8x?xf32> to tensor<8x32xf32>
+func @pad_tensor_of_cast(%t: tensor<8x?xf32>, %s: index) -> tensor<8x32xf32> {
+  %c0 = constant 0 : index
+  %cst = constant 0.000000e+00 : f32
+  %0 = tensor.cast %t : tensor<8x?xf32> to tensor<?x?xf32>
+  %1 = linalg.pad_tensor %0 low[%c0, %c0] high[%c0, %s]  {
+  ^bb0(%arg9: index, %arg10: index):  // no predecessors
+    linalg.yield %cst : f32
+  } : tensor<?x?xf32> to tensor<8x32xf32>
+  return %1 : tensor<8x32xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @cast_of_pad_more_static
+func @cast_of_pad_more_static(%arg0: tensor<?x?xf32>, %padding: index) -> tensor<32x32xf32> {
+  %cst = constant 0.000000e+00 : f32
+  // CHECK: %[[PAD:.*]] = linalg.pad_tensor
+  // CHECK: tensor<?x?xf32> to tensor<32x32xf32>
+  %padded = linalg.pad_tensor %arg0 low[%padding, %padding] high[0, 0] {
+  ^bb0(%arg1: index, %arg2: index):
+    linalg.yield %cst : f32
+  } : tensor<?x?xf32> to tensor<?x?xf32>
+  // CHECK-NOT: tensor.cast
+  %casted = tensor.cast %padded : tensor<?x?xf32> to tensor<32x32xf32>
+  // CHECK: return %[[PAD]]
+  return %casted : tensor<32x32xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @cast_of_pad_less_static
+func @cast_of_pad_less_static(%arg0: tensor<32x?x?xf32>, %padding: index) -> tensor<?x32x32xf32> {
+  %cst = constant 0.000000e+00 : f32
+  // CHECK: linalg.pad_tensor
+  %padded = linalg.pad_tensor %arg0 low[%padding, %padding, %padding] high[0, 0, 0] {
+  ^bb0(%arg1: index, %arg2: index, %arg3: index):
+    linalg.yield %cst : f32
+  } : tensor<32x?x?xf32> to tensor<32x?x?xf32>
+  // CHECK: %[[CAST:.*]] = tensor.cast
+  %casted = tensor.cast %padded : tensor<32x?x?xf32> to tensor<?x32x32xf32>
+  // CHECK: return %[[CAST]]
+  return %casted : tensor<?x32x32xf32>
+}
+
+// -----
+
 func @propogate_casts(%arg0 : tensor<?x?xf32>, %arg1 : f32, %arg2 : index,
     %arg3 : index) -> tensor<?x?xf32> {
   %c0 = constant 0 : index
@@ -868,6 +937,22 @@ func @pad_static_zero_cast(%arg0: tensor<?x?x?xf32>, %pad_value: f32) -> tensor<
 
 // -----
 
+// CHECK-LABEL: func @pad_packing_static_zero(
+//  CHECK-SAME:                  %[[ARG0:.*]]: tensor<?x?x?xf32>
+//       CHECK:   %[[PAD:.*]] = linalg.pad_tensor
+//       CHECK:   return %[[PAD]]
+func @pad_packing_static_zero(%arg0: tensor<?x?x?xf32>, %pad_value: f32) -> tensor<2x3x4xf32> {
+  %c0 = constant 0 : index
+  %0 = linalg.pad_tensor %arg0 packing low[0, %c0, 0] high[0, 0, %c0] {
+    ^bb0(%arg1: index, %arg2: index, %arg3: index):
+      linalg.yield %pad_value : f32
+    } : tensor<?x?x?xf32> to tensor<2x3x4xf32>
+
+  return %0 : tensor<2x3x4xf32>
+}
+
+// -----
+
 func private @some_use(%i : index, %j : index)
 
 // CHECK-LABEL: func @init_canonicalize
@@ -1004,3 +1089,27 @@ func @dim_of_tiled_loop_result_no_canonicalize(%arg0: tensor<?x?xf32>, %arg1: te
   return %r2 : index
 }
 
+// -----
+
+// CHECK-LABEL: @depthwise_conv
+func @depthwise_conv(%arg0: tensor<?x?x?x?xf32>, %arg1: tensor<?x?x?x1xf32>, %arg2: tensor<?x?x?x?x1xf32>) -> tensor<?x?x?x?x1xf32> {
+  // CHECK-DAG: %[[KERNEL:.+]] = linalg.tensor_collapse_shape %arg1 {{\[\[}}0], [1], [2, 3]]
+  // CHECK-DAG: %[[INIT:.+]] = linalg.tensor_collapse_shape %arg2 {{\[\[}}0], [1], [2], [3, 4]]
+  // CHECK-DAG: %[[CONV:.+]] = linalg.depthwise_conv2D_nhw {dilations = dense<1> : tensor<2xi64>, strides = dense<2> : tensor<2xi64>} ins(%arg0, %[[KERNEL]] : tensor<?x?x?x?xf32>, tensor<?x?x?xf32>) outs(%[[INIT]] : tensor<?x?x?x?xf32>)
+  // CHECK: %[[OUT:.+]] = linalg.tensor_expand_shape %[[CONV]] {{\[\[}}0], [1], [2], [3, 4]]
+  %0 = linalg.depthwise_conv2D_nhwc {dilations = dense<1> : tensor<2xi64>, strides = dense<2> : tensor<2xi64>} ins(%arg0, %arg1 : tensor<?x?x?x?xf32>, tensor<?x?x?x1xf32>) outs(%arg2 : tensor<?x?x?x?x1xf32>) -> tensor<?x?x?x?x1xf32>
+  return %0 : tensor<?x?x?x?x1xf32>
+}
+
+
+// -----
+
+// CHECK-LABEL: @depthwise_conv_q
+func @depthwise_conv_q(%arg0: tensor<?x?x?x?xi8>, %arg1: tensor<?x?x?x1xi8>, %arg2: tensor<?x?x?x?x1xi32>, %arg3 : i32, %arg4 : i32) -> tensor<?x?x?x?x1xi32> {
+  // CHECK-DAG: %[[KERNEL:.+]] = linalg.tensor_collapse_shape %arg1 {{\[\[}}0], [1], [2, 3]]
+  // CHECK-DAG: %[[INIT:.+]] = linalg.tensor_collapse_shape %arg2 {{\[\[}}0], [1], [2], [3, 4]]
+  // CHECK-DAG: %[[CONV:.+]] = linalg.depthwise_conv2D_nhw_q {dilations = dense<1> : tensor<2xi64>, strides = dense<2> : tensor<2xi64>} ins(%arg0, %[[KERNEL]], %arg3, %arg4 : tensor<?x?x?x?xi8>, tensor<?x?x?xi8>, i32, i32) outs(%[[INIT]] : tensor<?x?x?x?xi32>)
+  // CHECK: %[[OUT:.+]] = linalg.tensor_expand_shape %[[CONV]] {{\[\[}}0], [1], [2], [3, 4]]
+  %0 = linalg.depthwise_conv2D_nhwc_q {dilations = dense<1> : tensor<2xi64>, strides = dense<2> : tensor<2xi64>} ins(%arg0, %arg1, %arg3, %arg4 : tensor<?x?x?x?xi8>, tensor<?x?x?x1xi8>, i32, i32) outs(%arg2 : tensor<?x?x?x?x1xi32>) -> tensor<?x?x?x?x1xi32>
+  return %0 : tensor<?x?x?x?x1xi32>
+}

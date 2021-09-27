@@ -471,6 +471,13 @@ Range halfOpenToRange(const SourceManager &SM, CharSourceRange R) {
   return {Begin, End};
 }
 
+void unionRanges(Range &A, Range B) {
+  if (B.start < A.start)
+    A.start = B.start;
+  if (A.end < B.end)
+    A.end = B.end;
+}
+
 std::pair<size_t, size_t> offsetToClangLineColumn(llvm::StringRef Code,
                                                   size_t Offset) {
   Offset = std::min(Code.size(), Offset);
@@ -945,9 +952,9 @@ llvm::Optional<SpelledWord> SpelledWord::touching(SourceLocation SpelledLoc,
   if (Invalid)
     return llvm::None;
   unsigned B = Offset, E = Offset;
-  while (B > 0 && isIdentifierBody(Code[B - 1]))
+  while (B > 0 && isAsciiIdentifierContinue(Code[B - 1]))
     --B;
-  while (E < Code.size() && isIdentifierBody(Code[E]))
+  while (E < Code.size() && isAsciiIdentifierContinue(Code[E]))
     ++E;
   if (B == E)
     return llvm::None;

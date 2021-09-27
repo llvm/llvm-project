@@ -15,7 +15,7 @@
 // CHECK-AARCH64: "-triple" "aarch64-unknown-fuchsia"
 // CHECK-RISCV64: "-triple" "riscv64-unknown-fuchsia"
 // CHECK: "--mrelax-relocations"
-// CHECK: "-munwind-tables"
+// CHECK: "-funwind-tables=2"
 // CHECK: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK: "-internal-externc-isystem" "[[SYSROOT]]{{/|\\\\}}include"

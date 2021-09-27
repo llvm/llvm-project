@@ -8208,8 +8208,9 @@ void ASTReader::ReadMethodPool(Selector Sel) {
     return;
 
   Sema &S = *getSema();
-  Sema::GlobalMethodPool::iterator Pos
-    = S.MethodPool.insert(std::make_pair(Sel, Sema::GlobalMethods())).first;
+  Sema::GlobalMethodPool::iterator Pos =
+      S.MethodPool.insert(std::make_pair(Sel, Sema::GlobalMethodPool::Lists()))
+          .first;
 
   Pos->second.first.setBits(Visitor.getInstanceBits());
   Pos->second.first.setHasMoreThanOneDecl(Visitor.instanceHasMoreThanOneDecl());

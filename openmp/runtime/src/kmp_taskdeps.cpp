@@ -9,6 +9,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Modifications Copyright (c) 2021 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
+//
+//===----------------------------------------------------------------------===//
 
 //#define KMP_SUPPORT_GRAPH_OUTPUT 1
 
@@ -18,6 +23,7 @@
 #include "kmp_taskdeps.h"
 #if OMPT_SUPPORT
 #include "ompt-specific.h"
+
 #endif
 
 // TODO: Improve memory allocation? keep a list of pre-allocated structures?
@@ -491,7 +497,8 @@ static bool __kmp_check_deps(kmp_int32 gtid, kmp_depnode_t *node,
   // Filter deps in dep_list
   // TODO: Different algorithm for large dep_list ( > 10 ? )
   for (i = 0; i < ndeps; i++) {
-    if (dep_list[i].base_addr != 0 && dep_list[i].base_addr != KMP_SIZE_T_MAX) {
+    if (dep_list[i].base_addr != 0 &&
+        dep_list[i].base_addr != (kmp_intptr_t)KMP_SIZE_T_MAX) {
       KMP_DEBUG_ASSERT(
           dep_list[i].flag == KMP_DEP_IN || dep_list[i].flag == KMP_DEP_OUT ||
           dep_list[i].flag == KMP_DEP_INOUT ||
@@ -514,7 +521,7 @@ static bool __kmp_check_deps(kmp_int32 gtid, kmp_depnode_t *node,
         }
       }
     } else if (dep_list[i].flag == KMP_DEP_ALL ||
-               dep_list[i].base_addr == KMP_SIZE_T_MAX) {
+               dep_list[i].base_addr == (kmp_intptr_t)KMP_SIZE_T_MAX) {
       // omp_all_memory dependence can be marked by compiler by either
       // (addr=0 && flag=0x80) (flag KMP_DEP_ALL), or (addr=-1).
       // omp_all_memory overrides all other dependences if any
@@ -561,6 +568,46 @@ static bool __kmp_check_deps(kmp_int32 gtid, kmp_depnode_t *node,
   // task...
   return npredecessors > 0 ? true : false;
 }
+
+/* AOCC begin */
+/*
+ * a wrapper function to __kmpc_omp_task_with_deps
+ */
+int __kmpc_omp_task_alloc_with_deps(ident_t *loc_ref, kmp_int32 gtid, kmp_task_t *new_task,
+                                    int ndeps, int nargs, ...) {
+  int *dependinfo = (int*)malloc(nargs*sizeof(int)); 
+  va_list valist;
+  va_start(valist, nargs);
+  for (int k = 0; k < nargs; k++) {
+    dependinfo[k] = va_arg(valist, int);
+  }
+  va_end(valist);
+  kmp_depend_info_t *deplist = (kmp_depend_info_t*)malloc(ndeps*sizeof(kmp_depend_info_t));
+
+  for (int i = 0, j = 0; i < ndeps && j < ndeps*3; i++, j+=3) {
+    kmp_depend_info_t depinfo;
+    depinfo.base_addr = dependinfo[j+2];
+    depinfo.len = dependinfo[j+1];
+    int deptype = dependinfo[j];
+    depinfo.flags.mtx = 1;
+    if (deptype == DI_DEP_TYPE_INOUT) {
+      depinfo.flags.in = 1;
+      depinfo.flags.out = 1;
+    } else if (deptype == DI_DEP_TYPE_IN) {
+      depinfo.flags.in = 1;
+    } else if (deptype == DI_DEP_TYPE_OUT) {
+      depinfo.flags.out = 1;
+    }
+    deplist[i] = depinfo;
+  }
+  free(dependinfo);  
+  __kmp_assert_valid_gtid(gtid);
+
+  int ret = __kmpc_omp_task_with_deps(loc_ref, gtid, new_task, ndeps, deplist, 0, deplist);
+  free(deplist);
+  return ret;
+}
+/* AOCC end */
 
 /*!
 @ingroup TASKING

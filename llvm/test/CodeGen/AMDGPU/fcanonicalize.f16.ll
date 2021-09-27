@@ -723,9 +723,9 @@ define <4 x half> @v_test_canonicalize_reg_reg_undef_undef_v4f16(half %val0, hal
 ; GFX9-NEXT: s_setpc_b64
 
 ; VI: s_waitcnt
-; VI-NEXT: v_max_f16_e32 v0, v0, v0
 ; VI-NEXT: v_max_f16_e32 v1, v1, v1
 ; VI-NEXT: v_max_f16_sdwa v2, v2, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-NEXT: v_max_f16_e32 v0, v0, v0
 ; VI-NEXT: v_or_b32_e32 v0, 0x7e000000, v0
 ; VI-NEXT: v_or_b32_e32 v1, v1, v2
 ; VI-NEXT: s_setpc_b64

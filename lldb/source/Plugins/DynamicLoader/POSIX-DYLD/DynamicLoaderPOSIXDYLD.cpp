@@ -52,8 +52,6 @@ const char *DynamicLoaderPOSIXDYLD::GetPluginDescriptionStatic() {
          "loads/unloads in POSIX processes.";
 }
 
-uint32_t DynamicLoaderPOSIXDYLD::GetPluginVersion() { return 1; }
-
 DynamicLoader *DynamicLoaderPOSIXDYLD::CreateInstance(Process *process,
                                                       bool force) {
   bool create = force;

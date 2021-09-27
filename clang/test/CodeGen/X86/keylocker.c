@@ -98,20 +98,8 @@ void test_loadiwkey(unsigned int ctl, __m128i intkey, __m128i enkey_lo, __m128i 
 // CHECK64-NEXT:    [[TMP13:%.*]] = getelementptr i8, i8* [[TMP5]], i32 32
 // CHECK64-NEXT:    [[TMP14:%.*]] = bitcast i8* [[TMP13]] to <2 x i64>*
 // CHECK64-NEXT:    store <2 x i64> [[TMP12]], <2 x i64>* [[TMP14]], align 1
-// CHECK64-NEXT:    [[TMP15:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP6]], 4
-// CHECK64-NEXT:    [[TMP16:%.*]] = getelementptr i8, i8* [[TMP5]], i32 48
-// CHECK64-NEXT:    [[TMP17:%.*]] = bitcast i8* [[TMP16]] to <2 x i64>*
-// CHECK64-NEXT:    store <2 x i64> [[TMP15]], <2 x i64>* [[TMP17]], align 1
-// CHECK64-NEXT:    [[TMP18:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP6]], 5
-// CHECK64-NEXT:    [[TMP19:%.*]] = getelementptr i8, i8* [[TMP5]], i32 64
-// CHECK64-NEXT:    [[TMP20:%.*]] = bitcast i8* [[TMP19]] to <2 x i64>*
-// CHECK64-NEXT:    store <2 x i64> [[TMP18]], <2 x i64>* [[TMP20]], align 1
-// CHECK64-NEXT:    [[TMP21:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP6]], 6
-// CHECK64-NEXT:    [[TMP22:%.*]] = getelementptr i8, i8* [[TMP5]], i32 80
-// CHECK64-NEXT:    [[TMP23:%.*]] = bitcast i8* [[TMP22]] to <2 x i64>*
-// CHECK64-NEXT:    store <2 x i64> [[TMP21]], <2 x i64>* [[TMP23]], align 1
-// CHECK64-NEXT:    [[TMP24:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP6]], 0
-// CHECK64-NEXT:    ret i32 [[TMP24]]
+// CHECK64-NEXT:    [[TMP15:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP6]], 0
+// CHECK64-NEXT:    ret i32 [[TMP15]]
 //
 // CHECK32-LABEL: @test_encodekey128_u32(
 // CHECK32-NEXT:  entry:
@@ -145,20 +133,8 @@ void test_loadiwkey(unsigned int ctl, __m128i intkey, __m128i enkey_lo, __m128i 
 // CHECK32-NEXT:    [[TMP13:%.*]] = getelementptr i8, i8* [[TMP5]], i32 32
 // CHECK32-NEXT:    [[TMP14:%.*]] = bitcast i8* [[TMP13]] to <2 x i64>*
 // CHECK32-NEXT:    store <2 x i64> [[TMP12]], <2 x i64>* [[TMP14]], align 1
-// CHECK32-NEXT:    [[TMP15:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP6]], 4
-// CHECK32-NEXT:    [[TMP16:%.*]] = getelementptr i8, i8* [[TMP5]], i32 48
-// CHECK32-NEXT:    [[TMP17:%.*]] = bitcast i8* [[TMP16]] to <2 x i64>*
-// CHECK32-NEXT:    store <2 x i64> [[TMP15]], <2 x i64>* [[TMP17]], align 1
-// CHECK32-NEXT:    [[TMP18:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP6]], 5
-// CHECK32-NEXT:    [[TMP19:%.*]] = getelementptr i8, i8* [[TMP5]], i32 64
-// CHECK32-NEXT:    [[TMP20:%.*]] = bitcast i8* [[TMP19]] to <2 x i64>*
-// CHECK32-NEXT:    store <2 x i64> [[TMP18]], <2 x i64>* [[TMP20]], align 1
-// CHECK32-NEXT:    [[TMP21:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP6]], 6
-// CHECK32-NEXT:    [[TMP22:%.*]] = getelementptr i8, i8* [[TMP5]], i32 80
-// CHECK32-NEXT:    [[TMP23:%.*]] = bitcast i8* [[TMP22]] to <2 x i64>*
-// CHECK32-NEXT:    store <2 x i64> [[TMP21]], <2 x i64>* [[TMP23]], align 1
-// CHECK32-NEXT:    [[TMP24:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP6]], 0
-// CHECK32-NEXT:    ret i32 [[TMP24]]
+// CHECK32-NEXT:    [[TMP15:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP6]], 0
+// CHECK32-NEXT:    ret i32 [[TMP15]]
 //
 unsigned int test_encodekey128_u32(unsigned int htype, __m128i key, void *h) {
   return _mm_encodekey128_u32(htype, key, h);
@@ -206,20 +182,8 @@ unsigned int test_encodekey128_u32(unsigned int htype, __m128i key, void *h) {
 // CHECK64-NEXT:    [[TMP18:%.*]] = getelementptr i8, i8* [[TMP7]], i32 48
 // CHECK64-NEXT:    [[TMP19:%.*]] = bitcast i8* [[TMP18]] to <2 x i64>*
 // CHECK64-NEXT:    store <2 x i64> [[TMP17]], <2 x i64>* [[TMP19]], align 1
-// CHECK64-NEXT:    [[TMP20:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 5
-// CHECK64-NEXT:    [[TMP21:%.*]] = getelementptr i8, i8* [[TMP7]], i32 64
-// CHECK64-NEXT:    [[TMP22:%.*]] = bitcast i8* [[TMP21]] to <2 x i64>*
-// CHECK64-NEXT:    store <2 x i64> [[TMP20]], <2 x i64>* [[TMP22]], align 1
-// CHECK64-NEXT:    [[TMP23:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 6
-// CHECK64-NEXT:    [[TMP24:%.*]] = getelementptr i8, i8* [[TMP7]], i32 80
-// CHECK64-NEXT:    [[TMP25:%.*]] = bitcast i8* [[TMP24]] to <2 x i64>*
-// CHECK64-NEXT:    store <2 x i64> [[TMP23]], <2 x i64>* [[TMP25]], align 1
-// CHECK64-NEXT:    [[TMP26:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 7
-// CHECK64-NEXT:    [[TMP27:%.*]] = getelementptr i8, i8* [[TMP7]], i32 96
-// CHECK64-NEXT:    [[TMP28:%.*]] = bitcast i8* [[TMP27]] to <2 x i64>*
-// CHECK64-NEXT:    store <2 x i64> [[TMP26]], <2 x i64>* [[TMP28]], align 1
-// CHECK64-NEXT:    [[TMP29:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 0
-// CHECK64-NEXT:    ret i32 [[TMP29]]
+// CHECK64-NEXT:    [[TMP20:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 0
+// CHECK64-NEXT:    ret i32 [[TMP20]]
 //
 // CHECK32-LABEL: @test_encodekey256_u32(
 // CHECK32-NEXT:  entry:
@@ -263,20 +227,8 @@ unsigned int test_encodekey128_u32(unsigned int htype, __m128i key, void *h) {
 // CHECK32-NEXT:    [[TMP18:%.*]] = getelementptr i8, i8* [[TMP7]], i32 48
 // CHECK32-NEXT:    [[TMP19:%.*]] = bitcast i8* [[TMP18]] to <2 x i64>*
 // CHECK32-NEXT:    store <2 x i64> [[TMP17]], <2 x i64>* [[TMP19]], align 1
-// CHECK32-NEXT:    [[TMP20:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 5
-// CHECK32-NEXT:    [[TMP21:%.*]] = getelementptr i8, i8* [[TMP7]], i32 64
-// CHECK32-NEXT:    [[TMP22:%.*]] = bitcast i8* [[TMP21]] to <2 x i64>*
-// CHECK32-NEXT:    store <2 x i64> [[TMP20]], <2 x i64>* [[TMP22]], align 1
-// CHECK32-NEXT:    [[TMP23:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 6
-// CHECK32-NEXT:    [[TMP24:%.*]] = getelementptr i8, i8* [[TMP7]], i32 80
-// CHECK32-NEXT:    [[TMP25:%.*]] = bitcast i8* [[TMP24]] to <2 x i64>*
-// CHECK32-NEXT:    store <2 x i64> [[TMP23]], <2 x i64>* [[TMP25]], align 1
-// CHECK32-NEXT:    [[TMP26:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 7
-// CHECK32-NEXT:    [[TMP27:%.*]] = getelementptr i8, i8* [[TMP7]], i32 96
-// CHECK32-NEXT:    [[TMP28:%.*]] = bitcast i8* [[TMP27]] to <2 x i64>*
-// CHECK32-NEXT:    store <2 x i64> [[TMP26]], <2 x i64>* [[TMP28]], align 1
-// CHECK32-NEXT:    [[TMP29:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 0
-// CHECK32-NEXT:    ret i32 [[TMP29]]
+// CHECK32-NEXT:    [[TMP20:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 0
+// CHECK32-NEXT:    ret i32 [[TMP20]]
 //
 unsigned int test_encodekey256_u32(unsigned int htype, __m128i key_lo, __m128i key_hi, void *h) {
   return _mm_encodekey256_u32(htype, key_lo, key_hi, h);

@@ -190,6 +190,7 @@ CODEGENOPT(NoZeroInitializedInBSS , 1, 0) ///< -fno-zero-initialized-in-bss.
 ENUM_CODEGENOPT(ObjCDispatchMethod, ObjCDispatchMethodKind, 2, Legacy)
 /// Replace certain message sends with calls to ObjC runtime entrypoints
 CODEGENOPT(ObjCConvertMessagesToRuntimeCalls , 1, 1)
+CODEGENOPT(ObjCAvoidHeapifyLocalBlocks, 1, 0)
 
 VALUE_CODEGENOPT(OptimizationLevel, 2, 0) ///< The -O[0-3] option specified.
 VALUE_CODEGENOPT(OptimizeSize, 2, 0) ///< If -Os (==1) or -Oz (==2) is specified.
@@ -276,7 +277,7 @@ VALUE_CODEGENOPT(TimeTraceGranularity, 32, 500) ///< Minimum time granularity (i
 CODEGENOPT(UnrollLoops       , 1, 0) ///< Control whether loops are unrolled.
 CODEGENOPT(RerollLoops       , 1, 0) ///< Control whether loops are rerolled.
 CODEGENOPT(NoUseJumpTables   , 1, 0) ///< Set when -fno-jump-tables is enabled.
-CODEGENOPT(UnwindTables      , 1, 0) ///< Emit unwind tables.
+VALUE_CODEGENOPT(UnwindTables, 2, 0) ///< Unwind tables (1) or asynchronous unwind tables (2)
 CODEGENOPT(VectorizeLoop     , 1, 0) ///< Run loop vectorizer.
 CODEGENOPT(VectorizeSLP      , 1, 0) ///< Run SLP vectorizer.
 CODEGENOPT(ProfileSampleAccurate, 1, 0) ///< Sample profile is accurate.
@@ -321,6 +322,12 @@ CODEGENOPT(DebugFwdTemplateParams, 1, 0) ///< Whether to emit complete
                                          ///< template parameter descriptions in
                                          ///< forward declarations (versus just
                                          ///< including them in the name).
+ENUM_CODEGENOPT(DebugSimpleTemplateNames, codegenoptions::DebugTemplateNamesKind, 2, codegenoptions::DebugTemplateNamesKind::Full) ///< Whether to emit template parameters
+                                           ///< in the textual names of template
+					   ///< specializations.
+					   ///< Implies DebugFwdTemplateNames to
+					   ///< allow decorated names to be
+					   ///< reconstructed when needed.
 CODEGENOPT(EmitLLVMUseLists, 1, 0) ///< Control whether to serialize use-lists.
 
 CODEGENOPT(WholeProgramVTables, 1, 0) ///< Whether to apply whole-program
@@ -440,6 +447,11 @@ CODEGENOPT(AAPCSBitfieldWidth, 1, 1)
 /// Floating point opcodes that support exception flag gathering quiet and
 /// propagate signaling NaN inputs per IEEE 754-2008 (AMDGPU Only)
 CODEGENOPT(EmitIEEENaNCompliantInsts, 1, 1)
+
+// Whether to emit Swift Async function extended frame information: auto,
+// never, always.
+ENUM_CODEGENOPT(SwiftAsyncFramePointer, SwiftAsyncFramePointerKind, 2,
+                SwiftAsyncFramePointerKind::Always)
 
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT

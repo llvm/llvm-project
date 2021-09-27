@@ -392,9 +392,4 @@
 #  endif
 #endif
 
-#if SANITIZER_AMDGPU
-#include <hsa.h>
-#include <hsa_ext_amd.h>
-#endif
-
 #endif // SANITIZER_PLATFORM_H

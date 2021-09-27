@@ -25,6 +25,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
@@ -243,6 +244,10 @@ PrintingPolicy CGDebugInfo::getPrintingPolicy() const {
     PP.SplitTemplateClosers = true;
   }
 
+  PP.SuppressInlineNamespace = false;
+  PP.PrintCanonicalTypes = true;
+  PP.UsePreferredNames = false;
+
   // Apply -fdebug-prefix-map.
   PP.Callbacks = &PrintCB;
   return PP;
@@ -385,7 +390,7 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
   } else {
     PresumedLoc PLoc = SM.getPresumedLoc(Loc);
     FileName = PLoc.getFilename();
-    
+
     if (FileName.empty()) {
       FileName = TheCU->getFile()->getFilename();
     } else {
@@ -915,34 +920,70 @@ llvm::DIType *CGDebugInfo::CreateType(const ComplexType *Ty) {
   return DBuilder.createBasicType("complex", Size, Encoding);
 }
 
+static void stripUnusedQualifiers(Qualifiers &Q) {
+  // Ignore these qualifiers for now.
+  Q.removeObjCGCAttr();
+  Q.removeAddressSpace();
+  Q.removeObjCLifetime();
+  Q.removeUnaligned();
+}
+
+static llvm::dwarf::Tag getNextQualifier(Qualifiers &Q) {
+  if (Q.hasConst()) {
+    Q.removeConst();
+    return llvm::dwarf::DW_TAG_const_type;
+  }
+  if (Q.hasVolatile()) {
+    Q.removeVolatile();
+    return llvm::dwarf::DW_TAG_volatile_type;
+  }
+  if (Q.hasRestrict()) {
+    Q.removeRestrict();
+    return llvm::dwarf::DW_TAG_restrict_type;
+  }
+  return (llvm::dwarf::Tag)0;
+}
+
 llvm::DIType *CGDebugInfo::CreateQualifiedType(QualType Ty,
                                                llvm::DIFile *Unit) {
   QualifierCollector Qc;
   const Type *T = Qc.strip(Ty);
 
-  // Ignore these qualifiers for now.
-  Qc.removeObjCGCAttr();
-  Qc.removeAddressSpace();
-  Qc.removeObjCLifetime();
+  stripUnusedQualifiers(Qc);
 
   // We will create one Derived type for one qualifier and recurse to handle any
   // additional ones.
-  llvm::dwarf::Tag Tag;
-  if (Qc.hasConst()) {
-    Tag = llvm::dwarf::DW_TAG_const_type;
-    Qc.removeConst();
-  } else if (Qc.hasVolatile()) {
-    Tag = llvm::dwarf::DW_TAG_volatile_type;
-    Qc.removeVolatile();
-  } else if (Qc.hasRestrict()) {
-    Tag = llvm::dwarf::DW_TAG_restrict_type;
-    Qc.removeRestrict();
-  } else {
+  llvm::dwarf::Tag Tag = getNextQualifier(Qc);
+  if (!Tag) {
     assert(Qc.empty() && "Unknown type qualifier for debug info");
     return getOrCreateType(QualType(T, 0), Unit);
   }
 
   auto *FromTy = getOrCreateType(Qc.apply(CGM.getContext(), T), Unit);
+
+  // No need to fill in the Name, Line, Size, Alignment, Offset in case of
+  // CVR derived types.
+  return DBuilder.createQualifiedType(Tag, FromTy);
+}
+
+llvm::DIType *CGDebugInfo::CreateQualifiedType(const FunctionProtoType *F,
+                                               llvm::DIFile *Unit) {
+  FunctionProtoType::ExtProtoInfo EPI = F->getExtProtoInfo();
+  Qualifiers &Q = EPI.TypeQuals;
+  stripUnusedQualifiers(Q);
+
+  // We will create one Derived type for one qualifier and recurse to handle any
+  // additional ones.
+  llvm::dwarf::Tag Tag = getNextQualifier(Q);
+  if (!Tag) {
+    assert(Q.empty() && "Unknown type qualifier for debug info");
+    return nullptr;
+  }
+
+  auto *FromTy =
+      getOrCreateType(CGM.getContext().getFunctionType(F->getReturnType(),
+                                                       F->getParamTypes(), EPI),
+                      Unit);
 
   // No need to fill in the Name, Line, Size, Alignment, Offset in case of
   // CVR derived types.
@@ -1302,18 +1343,37 @@ static unsigned getDwarfCC(CallingConv CC) {
   return 0;
 }
 
+static llvm::DINode::DIFlags getRefFlags(const FunctionProtoType *Func) {
+  llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
+  if (Func->getExtProtoInfo().RefQualifier == RQ_LValue)
+    Flags |= llvm::DINode::FlagLValueReference;
+  if (Func->getExtProtoInfo().RefQualifier == RQ_RValue)
+    Flags |= llvm::DINode::FlagRValueReference;
+  return Flags;
+}
+
 llvm::DIType *CGDebugInfo::CreateType(const FunctionType *Ty,
                                       llvm::DIFile *Unit) {
+  const auto *FPT = dyn_cast<FunctionProtoType>(Ty);
+  if (FPT) {
+    if (llvm::DIType *QTy = CreateQualifiedType(FPT, Unit))
+      return QTy;
+  }
+
+  // Create the type without any qualifiers
+
   SmallVector<llvm::Metadata *, 16> EltTys;
 
   // Add the result type at least.
   EltTys.push_back(getOrCreateType(Ty->getReturnType(), Unit));
 
+  llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
   // Set up remainder of arguments if there is a prototype.
   // otherwise emit it as a variadic function.
-  if (isa<FunctionNoProtoType>(Ty))
+  if (!FPT)
     EltTys.push_back(DBuilder.createUnspecifiedParameter());
-  else if (const auto *FPT = dyn_cast<FunctionProtoType>(Ty)) {
+  else {
+    Flags = getRefFlags(FPT);
     for (const QualType &ParamType : FPT->param_types())
       EltTys.push_back(getOrCreateType(ParamType, Unit));
     if (FPT->isVariadic())
@@ -1321,8 +1381,9 @@ llvm::DIType *CGDebugInfo::CreateType(const FunctionType *Ty,
   }
 
   llvm::DITypeRefArray EltTypeArray = DBuilder.getOrCreateTypeArray(EltTys);
-  return DBuilder.createSubroutineType(EltTypeArray, llvm::DINode::FlagZero,
-                                       getDwarfCC(Ty->getCallConv()));
+  llvm::DIType *F = DBuilder.createSubroutineType(
+      EltTypeArray, Flags, getDwarfCC(Ty->getCallConv()));
+  return F;
 }
 
 /// Convert an AccessSpecifier into the corresponding DINode flag.
@@ -1587,10 +1648,25 @@ llvm::DISubroutineType *
 CGDebugInfo::getOrCreateInstanceMethodType(QualType ThisPtr,
                                            const FunctionProtoType *Func,
                                            llvm::DIFile *Unit, bool decl) {
+  FunctionProtoType::ExtProtoInfo EPI = Func->getExtProtoInfo();
+  Qualifiers &Qc = EPI.TypeQuals;
+  Qc.removeConst();
+  Qc.removeVolatile();
+  Qc.removeRestrict();
+  Qc.removeUnaligned();
+  // Keep the removed qualifiers in sync with
+  // CreateQualifiedType(const FunctionPrototype*, DIFile *Unit)
+  // On a 'real' member function type, these qualifiers are carried on the type
+  // of the first parameter, not as separate DW_TAG_const_type (etc) decorator
+  // tags around them. (But, in the raw function types with qualifiers, they have
+  // to use wrapper types.)
+
   // Add "this" pointer.
-  llvm::DITypeRefArray Args(
-      cast<llvm::DISubroutineType>(getOrCreateType(QualType(Func, 0), Unit))
-          ->getTypeArray());
+  const auto *OriginalFunc = cast<llvm::DISubroutineType>(
+      getOrCreateType(CGM.getContext().getFunctionType(
+                          Func->getReturnType(), Func->getParamTypes(), EPI),
+                      Unit));
+  llvm::DITypeRefArray Args = OriginalFunc->getTypeArray();
   assert(Args.size() && "Invalid number of arguments!");
 
   SmallVector<llvm::Metadata *, 16> Elts;
@@ -1632,13 +1708,7 @@ CGDebugInfo::getOrCreateInstanceMethodType(QualType ThisPtr,
 
   llvm::DITypeRefArray EltTypeArray = DBuilder.getOrCreateTypeArray(Elts);
 
-  llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
-  if (Func->getExtProtoInfo().RefQualifier == RQ_LValue)
-    Flags |= llvm::DINode::FlagLValueReference;
-  if (Func->getExtProtoInfo().RefQualifier == RQ_RValue)
-    Flags |= llvm::DINode::FlagRValueReference;
-
-  return DBuilder.createSubroutineType(EltTypeArray, Flags,
+  return DBuilder.createSubroutineType(EltTypeArray, OriginalFunc->getFlags(),
                                        getDwarfCC(Func->getCallConv()));
 }
 
@@ -1998,11 +2068,15 @@ CGDebugInfo::CollectTemplateParams(Optional<TemplateArgs> OArgs,
       TemplateParams.push_back(DBuilder.createTemplateValueParameter(
           TheCU, Name, TTy, defaultParameter, V));
     } break;
-    case TemplateArgument::Template:
+    case TemplateArgument::Template: {
+      std::string QualName;
+      llvm::raw_string_ostream OS(QualName);
+      TA.getAsTemplate().getAsTemplateDecl()->printQualifiedName(
+          OS, getPrintingPolicy());
       TemplateParams.push_back(DBuilder.createTemplateTemplateParameter(
-          TheCU, Name, nullptr,
-          TA.getAsTemplate().getAsTemplateDecl()->getQualifiedNameAsString()));
+          TheCU, Name, nullptr, OS.str()));
       break;
+    }
     case TemplateArgument::Pack:
       TemplateParams.push_back(DBuilder.createTemplateParameterPack(
           TheCU, Name, nullptr,
@@ -4988,14 +5062,172 @@ CGDebugInfo::CollectAnonRecordDeclsForHeterogeneousDwarf(
   return GV;
 }
 
+namespace {
+struct ReconstitutableType : public RecursiveASTVisitor<ReconstitutableType> {
+  bool Reconstitutable = true;
+  bool VisitVectorType(VectorType *FT) {
+    Reconstitutable = false;
+    return false;
+  }
+  bool VisitAtomicType(AtomicType *FT) {
+    Reconstitutable = false;
+    return false;
+  }
+  bool TraverseEnumType(EnumType *ET) {
+    // Unnamed enums can't be reconstituted due to a lack of column info we
+    // produce in the DWARF, so we can't get Clang's full name back.
+    if (const auto *ED = dyn_cast<EnumDecl>(ET->getDecl())) {
+      if (!ED->getIdentifier()) {
+        Reconstitutable = false;
+        return false;
+      }
+    }
+    return true;
+  }
+  bool VisitFunctionProtoType(FunctionProtoType *FT) {
+    // noexcept is not encoded in DWARF, so the reversi
+    Reconstitutable &= !isNoexceptExceptionSpec(FT->getExceptionSpecType());
+    return Reconstitutable;
+  }
+  bool TraverseRecordType(RecordType *RT) {
+    // Unnamed classes/lambdas can't be reconstituted due to a lack of column
+    // info we produce in the DWARF, so we can't get Clang's full name back.
+    // But so long as it's not one of those, it doesn't matter if some sub-type
+    // of the record (a template parameter) can't be reconstituted - because the
+    // un-reconstitutable type itself will carry its own name.
+    const auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl());
+    if (!RD)
+      return true;
+    if (RD->isLambda() || !RD->getIdentifier()) {
+      Reconstitutable = false;
+      return false;
+    }
+    return true;
+  }
+};
+} // anonymous namespace
+
+// Test whether a type name could be rebuilt from emitted debug info.
+static bool IsReconstitutableType(QualType QT) {
+  ReconstitutableType T;
+  T.TraverseType(QT);
+  return T.Reconstitutable;
+}
+
 std::string CGDebugInfo::GetName(const Decl *D, bool Qualified) const {
   std::string Name;
   llvm::raw_string_ostream OS(Name);
-  if (const NamedDecl *ND = dyn_cast<NamedDecl>(D)) {
-    PrintingPolicy PP = getPrintingPolicy();
-    PP.PrintCanonicalTypes = true;
-    PP.SuppressInlineNamespace = false;
+  const NamedDecl *ND = dyn_cast<NamedDecl>(D);
+  if (!ND)
+    return Name;
+  codegenoptions::DebugTemplateNamesKind TemplateNamesKind =
+      CGM.getCodeGenOpts().getDebugSimpleTemplateNames();
+  Optional<TemplateArgs> Args;
+
+  bool IsOperatorOverload = false; // isa<CXXConversionDecl>(ND);
+  if (auto *RD = dyn_cast<CXXRecordDecl>(ND)) {
+    Args = GetTemplateArgs(RD);
+  } else if (auto *FD = dyn_cast<FunctionDecl>(ND)) {
+    Args = GetTemplateArgs(FD);
+    auto NameKind = ND->getDeclName().getNameKind();
+    IsOperatorOverload |=
+        NameKind == DeclarationName::CXXOperatorName ||
+        NameKind == DeclarationName::CXXConversionFunctionName;
+  } else if (auto *VD = dyn_cast<VarDecl>(ND)) {
+    Args = GetTemplateArgs(VD);
+  }
+  std::function<bool(ArrayRef<TemplateArgument>)> HasReconstitutableArgs =
+      [&](ArrayRef<TemplateArgument> Args) {
+        return llvm::all_of(Args, [&](const TemplateArgument &TA) {
+          switch (TA.getKind()) {
+          case TemplateArgument::Template:
+            // Easy to reconstitute - the value of the parameter in the debug
+            // info is the string name of the template. (so the template name
+            // itself won't benefit from any name rebuilding, but that's a
+            // representational limitation - maybe DWARF could be
+            // changed/improved to use some more structural representation)
+            return true;
+          case TemplateArgument::Declaration:
+            // Reference and pointer non-type template parameters point to
+            // variables, functions, etc and their value is, at best (for
+            // variables) represented as an address - not a reference to the
+            // DWARF describing the variable/function/etc. This makes it hard,
+            // possibly impossible to rebuild the original name - looking up the
+            // address in the executable file's symbol table would be needed.
+            return false;
+          case TemplateArgument::NullPtr:
+            // These could be rebuilt, but figured they're close enough to the
+            // declaration case, and not worth rebuilding.
+            return false;
+          case TemplateArgument::Pack:
+            // A pack is invalid if any of the elements of the pack are invalid.
+            return HasReconstitutableArgs(TA.getPackAsArray());
+          case TemplateArgument::Integral:
+            // Larger integers get encoded as DWARF blocks which are a bit
+            // harder to parse back into a large integer, etc - so punting on
+            // this for now. Re-parsing the integers back into APInt is probably
+            // feasible some day.
+            return TA.getAsIntegral().getBitWidth() <= 64;
+          case TemplateArgument::Type:
+            return IsReconstitutableType(TA.getAsType());
+          default:
+            llvm_unreachable("Other, unresolved, template arguments should "
+                             "not be seen here");
+          }
+        });
+      };
+  // A conversion operator presents complications/ambiguity if there's a
+  // conversion to class template that is itself a template, eg:
+  // template<typename T>
+  // operator ns::t1<T, int>();
+  // This should be named, eg: "operator ns::t1<float, int><float>"
+  // (ignoring clang bug that means this is currently "operator t1<float>")
+  // but if the arguments were stripped, the consumer couldn't differentiate
+  // whether the template argument list for the conversion type was the
+  // function's argument list (& no reconstitution was needed) or not.
+  // This could be handled if reconstitutable names had a separate attribute
+  // annotating them as such - this would remove the ambiguity.
+  //
+  // Alternatively the template argument list could be parsed enough to check
+  // whether there's one list or two, then compare that with the DWARF
+  // description of the return type and the template argument lists to determine
+  // how many lists there should be and if one is missing it could be assumed(?)
+  // to be the function's template argument list  & then be rebuilt.
+  //
+  // Other operator overloads that aren't conversion operators could be
+  // reconstituted but would require a bit more nuance about detecting the
+  // difference between these different operators during that rebuilding.
+  bool Reconstitutable =
+      Args && HasReconstitutableArgs(Args->Args) && !IsOperatorOverload;
+
+  PrintingPolicy PP = getPrintingPolicy();
+
+  if (TemplateNamesKind == codegenoptions::DebugTemplateNamesKind::Full ||
+      !Reconstitutable) {
     ND->getNameForDiagnostic(OS, PP, Qualified);
+  } else {
+    bool Mangled =
+        TemplateNamesKind == codegenoptions::DebugTemplateNamesKind::Mangled;
+    // check if it's a template
+    if (Mangled)
+      OS << "_STN";
+
+    OS << ND->getDeclName();
+    std::string EncodedOriginalName;
+    llvm::raw_string_ostream EncodedOriginalNameOS(EncodedOriginalName);
+    EncodedOriginalNameOS << ND->getDeclName();
+
+    if (Mangled) {
+      OS << "|";
+      printTemplateArgumentList(OS, Args->Args, PP);
+      printTemplateArgumentList(EncodedOriginalNameOS, Args->Args, PP);
+#ifndef NDEBUG
+      std::string CanonicalOriginalName;
+      llvm::raw_string_ostream OriginalOS(CanonicalOriginalName);
+      ND->getNameForDiagnostic(OriginalOS, PP, Qualified);
+      assert(EncodedOriginalNameOS.str() == OriginalOS.str());
+#endif
+    }
   }
   return Name;
 }

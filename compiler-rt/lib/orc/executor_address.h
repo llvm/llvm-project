@@ -37,19 +37,19 @@ private:
 };
 
 /// Represents an address in the executor process.
-class ExecutorAddress {
+class ExecutorAddr {
 public:
-  ExecutorAddress() = default;
-  explicit ExecutorAddress(uint64_t Addr) : Addr(Addr) {}
+  ExecutorAddr() = default;
+  explicit ExecutorAddr(uint64_t Addr) : Addr(Addr) {}
 
-  /// Create an ExecutorAddress from the given pointer.
+  /// Create an ExecutorAddr from the given pointer.
   /// Warning: This should only be used when JITing in-process.
-  template <typename T> static ExecutorAddress fromPtr(T *Value) {
-    return ExecutorAddress(
+  template <typename T> static ExecutorAddr fromPtr(T *Value) {
+    return ExecutorAddr(
         static_cast<uint64_t>(reinterpret_cast<uintptr_t>(Value)));
   }
 
-  /// Cast this ExecutorAddress to a pointer of the given type.
+  /// Cast this ExecutorAddr to a pointer of the given type.
   /// Warning: This should only be esude when JITing in-process.
   template <typename T> T toPtr() const {
     static_assert(std::is_pointer<T>::value, "T must be a pointer type");
@@ -65,53 +65,47 @@ public:
 
   explicit operator bool() const { return Addr != 0; }
 
-  friend bool operator==(const ExecutorAddress &LHS,
-                         const ExecutorAddress &RHS) {
+  friend bool operator==(const ExecutorAddr &LHS, const ExecutorAddr &RHS) {
     return LHS.Addr == RHS.Addr;
   }
 
-  friend bool operator!=(const ExecutorAddress &LHS,
-                         const ExecutorAddress &RHS) {
+  friend bool operator!=(const ExecutorAddr &LHS, const ExecutorAddr &RHS) {
     return LHS.Addr != RHS.Addr;
   }
 
-  friend bool operator<(const ExecutorAddress &LHS,
-                        const ExecutorAddress &RHS) {
+  friend bool operator<(const ExecutorAddr &LHS, const ExecutorAddr &RHS) {
     return LHS.Addr < RHS.Addr;
   }
 
-  friend bool operator<=(const ExecutorAddress &LHS,
-                         const ExecutorAddress &RHS) {
+  friend bool operator<=(const ExecutorAddr &LHS, const ExecutorAddr &RHS) {
     return LHS.Addr <= RHS.Addr;
   }
 
-  friend bool operator>(const ExecutorAddress &LHS,
-                        const ExecutorAddress &RHS) {
+  friend bool operator>(const ExecutorAddr &LHS, const ExecutorAddr &RHS) {
     return LHS.Addr > RHS.Addr;
   }
 
-  friend bool operator>=(const ExecutorAddress &LHS,
-                         const ExecutorAddress &RHS) {
+  friend bool operator>=(const ExecutorAddr &LHS, const ExecutorAddr &RHS) {
     return LHS.Addr >= RHS.Addr;
   }
 
-  ExecutorAddress &operator++() {
+  ExecutorAddr &operator++() {
     ++Addr;
     return *this;
   }
-  ExecutorAddress &operator--() {
+  ExecutorAddr &operator--() {
     --Addr;
     return *this;
   }
-  ExecutorAddress operator++(int) { return ExecutorAddress(Addr++); }
-  ExecutorAddress operator--(int) { return ExecutorAddress(Addr++); }
+  ExecutorAddr operator++(int) { return ExecutorAddr(Addr++); }
+  ExecutorAddr operator--(int) { return ExecutorAddr(Addr++); }
 
-  ExecutorAddress &operator+=(const ExecutorAddrDiff Delta) {
+  ExecutorAddr &operator+=(const ExecutorAddrDiff Delta) {
     Addr += Delta.getValue();
     return *this;
   }
 
-  ExecutorAddress &operator-=(const ExecutorAddrDiff Delta) {
+  ExecutorAddr &operator-=(const ExecutorAddrDiff Delta) {
     Addr -= Delta.getValue();
     return *this;
   }
@@ -121,87 +115,100 @@ private:
 };
 
 /// Subtracting two addresses yields an offset.
-inline ExecutorAddrDiff operator-(const ExecutorAddress &LHS,
-                                  const ExecutorAddress &RHS) {
+inline ExecutorAddrDiff operator-(const ExecutorAddr &LHS,
+                                  const ExecutorAddr &RHS) {
   return ExecutorAddrDiff(LHS.getValue() - RHS.getValue());
 }
 
 /// Adding an offset and an address yields an address.
-inline ExecutorAddress operator+(const ExecutorAddress &LHS,
-                                 const ExecutorAddrDiff &RHS) {
-  return ExecutorAddress(LHS.getValue() + RHS.getValue());
+inline ExecutorAddr operator+(const ExecutorAddr &LHS,
+                              const ExecutorAddrDiff &RHS) {
+  return ExecutorAddr(LHS.getValue() + RHS.getValue());
 }
 
 /// Adding an address and an offset yields an address.
-inline ExecutorAddress operator+(const ExecutorAddrDiff &LHS,
-                                 const ExecutorAddress &RHS) {
-  return ExecutorAddress(LHS.getValue() + RHS.getValue());
+inline ExecutorAddr operator+(const ExecutorAddrDiff &LHS,
+                              const ExecutorAddr &RHS) {
+  return ExecutorAddr(LHS.getValue() + RHS.getValue());
 }
 
 /// Represents an address range in the exceutor process.
-struct ExecutorAddressRange {
-  ExecutorAddressRange() = default;
-  ExecutorAddressRange(ExecutorAddress StartAddress, ExecutorAddress EndAddress)
-      : StartAddress(StartAddress), EndAddress(EndAddress) {}
+struct ExecutorAddrRange {
+  ExecutorAddrRange() = default;
+  ExecutorAddrRange(ExecutorAddr Start, ExecutorAddr End)
+      : Start(Start), End(End) {}
+  ExecutorAddrRange(ExecutorAddr Start, ExecutorAddrDiff Size)
+      : Start(Start), End(Start + Size) {}
 
-  bool empty() const { return StartAddress == EndAddress; }
-  ExecutorAddrDiff size() const { return EndAddress - StartAddress; }
+  bool empty() const { return Start == End; }
+  ExecutorAddrDiff size() const { return End - Start; }
+
+  friend bool operator==(const ExecutorAddrRange &LHS,
+                         const ExecutorAddrRange &RHS) {
+    return LHS.Start == RHS.Start && LHS.End == RHS.End;
+  }
+  friend bool operator!=(const ExecutorAddrRange &LHS,
+                         const ExecutorAddrRange &RHS) {
+    return !(LHS == RHS);
+  }
+  bool contains(ExecutorAddr Addr) const { return Start <= Addr && Addr < End; }
+  bool overlaps(const ExecutorAddrRange &Other) {
+    return !(Other.End <= Start || End <= Other.Start);
+  }
 
   template <typename T> span<T> toSpan() const {
     assert(size().getValue() % sizeof(T) == 0 &&
            "AddressRange is not a multiple of sizeof(T)");
-    return span<T>(StartAddress.toPtr<T *>(), size().getValue() / sizeof(T));
+    return span<T>(Start.toPtr<T *>(), size().getValue() / sizeof(T));
   }
 
-  ExecutorAddress StartAddress;
-  ExecutorAddress EndAddress;
+  ExecutorAddr Start;
+  ExecutorAddr End;
 };
 
-/// SPS serializatior for ExecutorAddress.
-template <> class SPSSerializationTraits<SPSExecutorAddress, ExecutorAddress> {
+/// SPS serializatior for ExecutorAddr.
+template <> class SPSSerializationTraits<SPSExecutorAddr, ExecutorAddr> {
 public:
-  static size_t size(const ExecutorAddress &EA) {
+  static size_t size(const ExecutorAddr &EA) {
     return SPSArgList<uint64_t>::size(EA.getValue());
   }
 
-  static bool serialize(SPSOutputBuffer &BOB, const ExecutorAddress &EA) {
+  static bool serialize(SPSOutputBuffer &BOB, const ExecutorAddr &EA) {
     return SPSArgList<uint64_t>::serialize(BOB, EA.getValue());
   }
 
-  static bool deserialize(SPSInputBuffer &BIB, ExecutorAddress &EA) {
+  static bool deserialize(SPSInputBuffer &BIB, ExecutorAddr &EA) {
     uint64_t Tmp;
     if (!SPSArgList<uint64_t>::deserialize(BIB, Tmp))
       return false;
-    EA = ExecutorAddress(Tmp);
+    EA = ExecutorAddr(Tmp);
     return true;
   }
 };
 
-using SPSExecutorAddressRange =
-    SPSTuple<SPSExecutorAddress, SPSExecutorAddress>;
+using SPSExecutorAddrRange = SPSTuple<SPSExecutorAddr, SPSExecutorAddr>;
 
 /// Serialization traits for address ranges.
 template <>
-class SPSSerializationTraits<SPSExecutorAddressRange, ExecutorAddressRange> {
+class SPSSerializationTraits<SPSExecutorAddrRange, ExecutorAddrRange> {
 public:
-  static size_t size(const ExecutorAddressRange &Value) {
-    return SPSArgList<SPSExecutorAddress, SPSExecutorAddress>::size(
-        Value.StartAddress, Value.EndAddress);
+  static size_t size(const ExecutorAddrRange &Value) {
+    return SPSArgList<SPSExecutorAddr, SPSExecutorAddr>::size(Value.Start,
+                                                              Value.End);
   }
 
-  static bool serialize(SPSOutputBuffer &BOB,
-                        const ExecutorAddressRange &Value) {
-    return SPSArgList<SPSExecutorAddress, SPSExecutorAddress>::serialize(
-        BOB, Value.StartAddress, Value.EndAddress);
+  static bool serialize(SPSOutputBuffer &BOB, const ExecutorAddrRange &Value) {
+    return SPSArgList<SPSExecutorAddr, SPSExecutorAddr>::serialize(
+        BOB, Value.Start, Value.End);
   }
 
-  static bool deserialize(SPSInputBuffer &BIB, ExecutorAddressRange &Value) {
-    return SPSArgList<SPSExecutorAddress, SPSExecutorAddress>::deserialize(
-        BIB, Value.StartAddress, Value.EndAddress);
+  static bool deserialize(SPSInputBuffer &BIB, ExecutorAddrRange &Value) {
+    return SPSArgList<SPSExecutorAddr, SPSExecutorAddr>::deserialize(
+        BIB, Value.Start, Value.End);
   }
 };
 
-using SPSExecutorAddressRangeSequence = SPSSequence<SPSExecutorAddressRange>;
+using SPSExecutorAddrRangeSequence = SPSSequence<SPSExecutorAddrRange>;
 
 } // End namespace __orc_rt
 

@@ -323,9 +323,8 @@ define i10 @test19(i10 %i) {
 
 define i32 @smear_set_bit(i32 %x) {
 ; CHECK-LABEL: @smear_set_bit(
-; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i8
-; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[T]], 7
-; CHECK-NEXT:    [[S:%.*]] = sext i8 [[A]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 24
+; CHECK-NEXT:    [[S:%.*]] = ashr i32 [[TMP1]], 31
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
   %t = trunc i32 %x to i8
@@ -334,12 +333,14 @@ define i32 @smear_set_bit(i32 %x) {
   ret i32 %s
 }
 
+; extra use of trunc is ok because we still shorten the use chain
+
 define <2 x i32> @smear_set_bit_vec_use1(<2 x i32> %x) {
 ; CHECK-LABEL: @smear_set_bit_vec_use1(
 ; CHECK-NEXT:    [[T:%.*]] = trunc <2 x i32> [[X:%.*]] to <2 x i5>
 ; CHECK-NEXT:    call void @use_vec(<2 x i5> [[T]])
-; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i5> [[T]], <i5 4, i5 4>
-; CHECK-NEXT:    [[S:%.*]] = sext <2 x i5> [[A]] to <2 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i32> [[X]], <i32 27, i32 27>
+; CHECK-NEXT:    [[S:%.*]] = ashr <2 x i32> [[TMP1]], <i32 31, i32 31>
 ; CHECK-NEXT:    ret <2 x i32> [[S]]
 ;
   %t = trunc <2 x i32> %x to <2 x i5>
@@ -348,6 +349,8 @@ define <2 x i32> @smear_set_bit_vec_use1(<2 x i32> %x) {
   %s = sext <2 x i5> %a to <2 x i32>
   ret <2 x i32> %s
 }
+
+; negative test - extra use
 
 define i32 @smear_set_bit_use2(i32 %x) {
 ; CHECK-LABEL: @smear_set_bit_use2(
@@ -364,6 +367,8 @@ define i32 @smear_set_bit_use2(i32 %x) {
   ret i32 %s
 }
 
+; negative test - must shift all the way across
+
 define i32 @smear_set_bit_wrong_shift_amount(i32 %x) {
 ; CHECK-LABEL: @smear_set_bit_wrong_shift_amount(
 ; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i8
@@ -376,6 +381,8 @@ define i32 @smear_set_bit_wrong_shift_amount(i32 %x) {
   %s = sext i8 %a to i32
   ret i32 %s
 }
+
+; TODO: this could be mask+compare+sext or shifts+trunc
 
 define i16 @smear_set_bit_different_dest_type(i32 %x) {
 ; CHECK-LABEL: @smear_set_bit_different_dest_type(

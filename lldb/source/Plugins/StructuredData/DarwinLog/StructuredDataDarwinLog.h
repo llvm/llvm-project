@@ -48,8 +48,6 @@ public:
 
   ConstString GetPluginName() override;
 
-  uint32_t GetPluginVersion() override;
-
   // StructuredDataPlugin API
 
   bool SupportsStructuredDataType(ConstString type_name) override;

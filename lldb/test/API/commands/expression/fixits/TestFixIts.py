@@ -82,6 +82,22 @@ class ExprCommandWithFixits(TestBase):
             error_string.find("my_pointer->second.a") != -1,
             "Fix was right")
 
+    def test_with_target_error_applies_fixit(self):
+        """ Check that applying a Fix-it which fails to execute correctly still 
+         prints that the Fix-it was applied. """
+        self.build()
+        (target, process, self.thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
+                                        'Stop here to evaluate expressions',
+                                         lldb.SBFileSpec("main.cpp"))
+        # Enable fix-its as they were intentionally disabled by TestBase.setUp.
+        self.runCmd("settings set target.auto-apply-fixits true")
+        ret_val = lldb.SBCommandReturnObject()
+        result = self.dbg.GetCommandInterpreter().HandleCommand("expression null_pointer.first", ret_val)
+        self.assertEqual(result, lldb.eReturnStatusFailed, ret_val.GetError())
+
+        self.assertIn("Fix-it applied, fixed expression was:", ret_val.GetError())
+        self.assertIn("null_pointer->first", ret_val.GetError())
+
     # The final function call runs into SIGILL on aarch64-linux.
     @expectedFailureAll(archs=["aarch64"], oslist=["freebsd", "linux"],
                         bugnumber="llvm.org/pr49407")

@@ -21,6 +21,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -3150,8 +3151,7 @@ static void updateLiveVariables(LiveVariables *LV, MachineInstr &MI,
   }
 }
 
-MachineInstr *SIInstrInfo::convertToThreeAddress(MachineFunction::iterator &MBB,
-                                                 MachineInstr &MI,
+MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                                                  LiveVariables *LV) const {
   unsigned Opc = MI.getOpcode();
   bool IsF16 = false;
@@ -3202,18 +3202,19 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineFunction::iterator &MBB,
   const MachineOperand *Clamp = getNamedOperand(MI, AMDGPU::OpName::clamp);
   const MachineOperand *Omod = getNamedOperand(MI, AMDGPU::OpName::omod);
   MachineInstrBuilder MIB;
+  MachineBasicBlock &MBB = *MI.getParent();
 
   if (!Src0Mods && !Src1Mods && !Clamp && !Omod && !IsF64 &&
       // If we have an SGPR input, we will violate the constant bus restriction.
       (ST.getConstantBusLimit(Opc) > 1 || !Src0->isReg() ||
-       !RI.isSGPRReg(MBB->getParent()->getRegInfo(), Src0->getReg()))) {
+       !RI.isSGPRReg(MBB.getParent()->getRegInfo(), Src0->getReg()))) {
     int64_t Imm;
     if (getFoldableImm(Src2, Imm)) {
       unsigned NewOpc =
           IsFMA ? (IsF16 ? AMDGPU::V_FMAAK_F16 : AMDGPU::V_FMAAK_F32)
                 : (IsF16 ? AMDGPU::V_MADAK_F16 : AMDGPU::V_MADAK_F32);
       if (pseudoToMCOpcode(NewOpc) != -1) {
-        MIB = BuildMI(*MBB, MI, MI.getDebugLoc(), get(NewOpc))
+        MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
                   .add(*Dst)
                   .add(*Src0)
                   .add(*Src1)
@@ -3227,7 +3228,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineFunction::iterator &MBB,
                           : (IsF16 ? AMDGPU::V_MADMK_F16 : AMDGPU::V_MADMK_F32);
     if (getFoldableImm(Src1, Imm)) {
       if (pseudoToMCOpcode(NewOpc) != -1) {
-        MIB = BuildMI(*MBB, MI, MI.getDebugLoc(), get(NewOpc))
+        MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
                   .add(*Dst)
                   .add(*Src0)
                   .addImm(Imm)
@@ -3241,7 +3242,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineFunction::iterator &MBB,
           isOperandLegal(
               MI, AMDGPU::getNamedOperandIdx(NewOpc, AMDGPU::OpName::src0),
               Src1)) {
-        MIB = BuildMI(*MBB, MI, MI.getDebugLoc(), get(NewOpc))
+        MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
                   .add(*Dst)
                   .add(*Src1)
                   .addImm(Imm)
@@ -3259,7 +3260,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineFunction::iterator &MBB,
   if (pseudoToMCOpcode(NewOpc) == -1)
     return nullptr;
 
-  MIB = BuildMI(*MBB, MI, MI.getDebugLoc(), get(NewOpc))
+  MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
             .add(*Dst)
             .addImm(Src0Mods ? Src0Mods->getImm() : 0)
             .add(*Src0)
@@ -7499,6 +7500,20 @@ SIInstrInfo::CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
 ScheduleHazardRecognizer *
 SIInstrInfo::CreateTargetPostRAHazardRecognizer(const MachineFunction &MF) const {
   return new GCNHazardRecognizer(MF);
+}
+
+// Called during:
+// - pre-RA scheduling and post-RA scheduling
+ScheduleHazardRecognizer *
+SIInstrInfo::CreateTargetMIHazardRecognizer(const InstrItineraryData *II,
+                                            const ScheduleDAGMI *DAG) const {
+  // Borrowed from Arm Target
+  // We would like to restrict this hazard recognizer to only
+  // post-RA scheduling; we can tell that we're post-RA because we don't
+  // track VRegLiveness.
+  if (!DAG->hasVRegLiveness())
+    return new GCNHazardRecognizer(DAG->MF);
+  return TargetInstrInfo::CreateTargetMIHazardRecognizer(II, DAG);
 }
 
 std::pair<unsigned, unsigned>

@@ -265,5 +265,3 @@ uint32_t SymbolFileSymtab::ResolveSymbolContext(const Address &so_addr,
 lldb_private::ConstString SymbolFileSymtab::GetPluginName() {
   return GetPluginNameStatic();
 }
-
-uint32_t SymbolFileSymtab::GetPluginVersion() { return 1; }

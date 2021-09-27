@@ -17,8 +17,8 @@ namespace pdb {
 
 namespace {
 
-Expected<std::string> readStreamData(BinaryStream &Stream, uint32_t Limit) {
-  uint32_t Offset = 0, DataLength = std::min(Limit, Stream.getLength());
+Expected<std::string> readStreamData(BinaryStream &Stream, uint64_t Limit) {
+  uint64_t Offset = 0, DataLength = std::min(Limit, Stream.getLength());
   std::string Result;
   Result.reserve(DataLength);
   while (Offset < DataLength) {

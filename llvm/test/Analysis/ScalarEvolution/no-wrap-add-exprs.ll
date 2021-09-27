@@ -284,3 +284,81 @@ define void @f3(i8* %x_addr, i8* %y_addr, i32* %tmp_addr) {
 
   ret void
 }
+
+
+; The next two tests demonstrate that (at the time of being written), SCEV
+; will incorrectly propagate flags from an add in one scope to an add in
+; another scope.  Note as well that the results are visit order dependent
+; and (as shown in the _b variant) the printer frequently makes the actual
+; bug very hard to see.
+define i1 @test2_a(i32 %a, i32 %b, i1 %will_overflow) {
+; CHECK-LABEL: 'test2_a'
+; CHECK-NEXT:  Classifying expressions for: @test2_a
+; CHECK-NEXT:    %iv = phi i32 [ %a, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {%a,+,%b}<nuw><nsw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, %b
+; CHECK-NEXT:    --> {(%a + %b)<nuw><nsw>,+,%b}<nuw><nsw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %trap = udiv i32 %a, %iv.next
+; CHECK-NEXT:    --> (%a /u {(%a + %b)<nuw><nsw>,+,%b}<nuw><nsw><%loop>) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %c = add i32 %a, %b
+; CHECK-NEXT:    --> (%a + %b)<nuw><nsw> U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @test2_a
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
+;
+entry:
+  br i1 %will_overflow, label %exit1, label %loop
+
+loop:
+  %iv = phi i32 [%a, %entry], [%iv.next, %loop]
+  %iv.next = add nuw nsw i32 %iv, %b
+  %trap = udiv i32 %a, %iv.next ;; Use to force poison -> UB
+  %ret2 = icmp ult i32 %iv.next, %a
+  ; Note: backedge is unreachable here
+  br i1 %ret2, label %loop, label %exit2
+
+exit2:
+  ret i1 false
+
+exit1:
+  %c = add i32 %a, %b
+  %ret1 = icmp ult i32 %c, %a
+  ret i1 false
+}
+
+define i1 @test2_b(i32 %a, i32 %b, i1 %will_overflow) {
+; CHECK-LABEL: 'test2_b'
+; CHECK-NEXT:  Classifying expressions for: @test2_b
+; CHECK-NEXT:    %c = add i32 %a, %b
+; CHECK-NEXT:    --> (%a + %b) U: full-set S: full-set
+; CHECK-NEXT:    %iv = phi i32 [ %a, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {%a,+,%b}<nuw><nsw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, %b
+; CHECK-NEXT:    --> {(%a + %b)<nuw><nsw>,+,%b}<nuw><nsw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %trap = udiv i32 %a, %iv.next
+; CHECK-NEXT:    --> (%a /u {(%a + %b)<nuw><nsw>,+,%b}<nuw><nsw><%loop>) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test2_b
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
+;
+entry:
+  br i1 %will_overflow, label %exit1, label %loop
+
+exit1:
+  %c = add i32 %a, %b
+  %ret1 = icmp ult i32 %c, %a
+  ret i1 false
+
+loop:
+  %iv = phi i32 [%a, %entry], [%iv.next, %loop]
+  %iv.next = add nuw nsw i32 %iv, %b
+  %trap = udiv i32 %a, %iv.next
+  %ret2 = icmp ult i32 %iv.next, %a
+  ; Note: backedge is unreachable here
+  br i1 %ret2, label %loop, label %exit2
+
+exit2:
+  ret i1 false
+}

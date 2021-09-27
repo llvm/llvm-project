@@ -158,7 +158,7 @@ public:
   friend bool operator<(const DbgValueLoc &, const DbgValueLoc &);
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const {
-    for (DbgValueLocEntry DV : ValueLocEntries)
+    for (const DbgValueLocEntry &DV : ValueLocEntries)
       DV.dump();
     if (Expression)
       Expression->dump();

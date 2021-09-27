@@ -11,7 +11,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -977,13 +976,11 @@ bool SymbolContextSpecifier::AddSpecification(const char *spec_string,
     m_type |= eFileSpecified;
     break;
   case eLineStartSpecified:
-    m_start_line = StringConvert::ToSInt32(spec_string, 0, 0, &return_value);
-    if (return_value)
+    if ((return_value = llvm::to_integer(spec_string, m_start_line)))
       m_type |= eLineStartSpecified;
     break;
   case eLineEndSpecified:
-    m_end_line = StringConvert::ToSInt32(spec_string, 0, 0, &return_value);
-    if (return_value)
+    if ((return_value = llvm::to_integer(spec_string, m_end_line)))
       m_type |= eLineEndSpecified;
     break;
   case eFunctionSpecified:

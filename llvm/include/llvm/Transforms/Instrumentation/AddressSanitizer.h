@@ -115,6 +115,8 @@ public:
   explicit AddressSanitizerPass(AddressSanitizerOptions Options)
       : Options(Options){};
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
   static bool isRequired() { return true; }
 
 private:
@@ -134,6 +136,8 @@ public:
       bool UseOdrIndicator = false,
       AsanDtorKind DestructorKind = AsanDtorKind::Global);
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
   static bool isRequired() { return true; }
 
 private:

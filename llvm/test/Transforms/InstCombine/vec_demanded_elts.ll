@@ -64,7 +64,7 @@ declare i32 @fgetc(i8*)
 
 define <4 x float> @dead_shuffle_elt(<4 x float> %x, <2 x float> %y) nounwind {
 ; CHECK-LABEL: @dead_shuffle_elt(
-; CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x float> [[Y:%.*]], <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x float> [[Y:%.*]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[SHUFFLE9_I:%.*]] = shufflevector <4 x float> [[SHUFFLE_I]], <4 x float> [[X:%.*]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    ret <4 x float> [[SHUFFLE9_I]]
 ;
@@ -502,7 +502,7 @@ define <3 x float> @shuf_frem_const_op1(<3 x float> %x) {
 define i32* @gep_vbase_w_s_idx(<2 x i32*> %base, i64 %index) {
 ; CHECK-LABEL: @gep_vbase_w_s_idx(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32*> [[BASE:%.*]], i32 1
-; CHECK-NEXT:    [[EE:%.*]] = getelementptr i32, i32* [[TMP1]], i64 %index
+; CHECK-NEXT:    [[EE:%.*]] = getelementptr i32, i32* [[TMP1]], i64 [[INDEX:%.*]]
 ; CHECK-NEXT:    ret i32* [[EE]]
 ;
   %gep = getelementptr i32, <2 x i32*> %base, i64 %index

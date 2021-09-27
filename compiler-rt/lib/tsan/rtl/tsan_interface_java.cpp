@@ -63,7 +63,7 @@ MBlock *JavaHeapBlock(uptr addr, uptr *start) {
 void __tsan_java_init(jptr heap_begin, jptr heap_size) {
   JAVA_FUNC_ENTER(__tsan_java_init);
   Initialize(thr);
-  DPrintf("#%d: java_init(%p, %p)\n", thr->tid, heap_begin, heap_size);
+  DPrintf("#%d: java_init(0x%zx, 0x%zx)\n", thr->tid, heap_begin, heap_size);
   DCHECK_EQ(jctx, 0);
   DCHECK_GT(heap_begin, 0);
   DCHECK_GT(heap_size, 0);
@@ -85,7 +85,7 @@ int  __tsan_java_fini() {
 
 void __tsan_java_alloc(jptr ptr, jptr size) {
   JAVA_FUNC_ENTER(__tsan_java_alloc);
-  DPrintf("#%d: java_alloc(%p, %p)\n", thr->tid, ptr, size);
+  DPrintf("#%d: java_alloc(0x%zx, 0x%zx)\n", thr->tid, ptr, size);
   DCHECK_NE(jctx, 0);
   DCHECK_NE(size, 0);
   DCHECK_EQ(ptr % kHeapAlignment, 0);
@@ -98,7 +98,7 @@ void __tsan_java_alloc(jptr ptr, jptr size) {
 
 void __tsan_java_free(jptr ptr, jptr size) {
   JAVA_FUNC_ENTER(__tsan_java_free);
-  DPrintf("#%d: java_free(%p, %p)\n", thr->tid, ptr, size);
+  DPrintf("#%d: java_free(0x%zx, 0x%zx)\n", thr->tid, ptr, size);
   DCHECK_NE(jctx, 0);
   DCHECK_NE(size, 0);
   DCHECK_EQ(ptr % kHeapAlignment, 0);
@@ -111,7 +111,7 @@ void __tsan_java_free(jptr ptr, jptr size) {
 
 void __tsan_java_move(jptr src, jptr dst, jptr size) {
   JAVA_FUNC_ENTER(__tsan_java_move);
-  DPrintf("#%d: java_move(%p, %p, %p)\n", thr->tid, src, dst, size);
+  DPrintf("#%d: java_move(0x%zx, 0x%zx, 0x%zx)\n", thr->tid, src, dst, size);
   DCHECK_NE(jctx, 0);
   DCHECK_NE(size, 0);
   DCHECK_EQ(src % kHeapAlignment, 0);
@@ -128,26 +128,17 @@ void __tsan_java_move(jptr src, jptr dst, jptr size) {
   // memory accesses and mutex operations (stop-the-world phase).
   ctx->metamap.MoveMemory(src, dst, size);
 
-  // Move shadow.
-  RawShadow *s = MemToShadow(src);
+  // Clear the destination shadow range.
+  // We used to move shadow from src to dst, but the trace format does not
+  // support that anymore as it contains addresses of accesses.
   RawShadow *d = MemToShadow(dst);
-  RawShadow *send = MemToShadow(src + size);
-  uptr inc = 1;
-  if (dst > src) {
-    s = MemToShadow(src + size) - 1;
-    d = MemToShadow(dst + size) - 1;
-    send = MemToShadow(src) - 1;
-    inc = -1;
-  }
-  for (; s != send; s += inc, d += inc) {
-    *d = *s;
-    *s = 0;
-  }
+  RawShadow *dend = MemToShadow(dst + size);
+  internal_memset(d, 0, (dend - d) * sizeof(*d));
 }
 
 jptr __tsan_java_find(jptr *from_ptr, jptr to) {
   JAVA_FUNC_ENTER(__tsan_java_find);
-  DPrintf("#%d: java_find(&%p, %p)\n", *from_ptr, to);
+  DPrintf("#%d: java_find(&0x%zx, 0x%zx)\n", thr->tid, *from_ptr, to);
   DCHECK_EQ((*from_ptr) % kHeapAlignment, 0);
   DCHECK_EQ(to % kHeapAlignment, 0);
   DCHECK_GE(*from_ptr, jctx->heap_begin);
@@ -170,7 +161,7 @@ void __tsan_java_finalize() {
 
 void __tsan_java_mutex_lock(jptr addr) {
   JAVA_FUNC_ENTER(__tsan_java_mutex_lock);
-  DPrintf("#%d: java_mutex_lock(%p)\n", thr->tid, addr);
+  DPrintf("#%d: java_mutex_lock(0x%zx)\n", thr->tid, addr);
   DCHECK_NE(jctx, 0);
   DCHECK_GE(addr, jctx->heap_begin);
   DCHECK_LT(addr, jctx->heap_begin + jctx->heap_size);
@@ -182,7 +173,7 @@ void __tsan_java_mutex_lock(jptr addr) {
 
 void __tsan_java_mutex_unlock(jptr addr) {
   JAVA_FUNC_ENTER(__tsan_java_mutex_unlock);
-  DPrintf("#%d: java_mutex_unlock(%p)\n", thr->tid, addr);
+  DPrintf("#%d: java_mutex_unlock(0x%zx)\n", thr->tid, addr);
   DCHECK_NE(jctx, 0);
   DCHECK_GE(addr, jctx->heap_begin);
   DCHECK_LT(addr, jctx->heap_begin + jctx->heap_size);
@@ -192,7 +183,7 @@ void __tsan_java_mutex_unlock(jptr addr) {
 
 void __tsan_java_mutex_read_lock(jptr addr) {
   JAVA_FUNC_ENTER(__tsan_java_mutex_read_lock);
-  DPrintf("#%d: java_mutex_read_lock(%p)\n", thr->tid, addr);
+  DPrintf("#%d: java_mutex_read_lock(0x%zx)\n", thr->tid, addr);
   DCHECK_NE(jctx, 0);
   DCHECK_GE(addr, jctx->heap_begin);
   DCHECK_LT(addr, jctx->heap_begin + jctx->heap_size);
@@ -204,7 +195,7 @@ void __tsan_java_mutex_read_lock(jptr addr) {
 
 void __tsan_java_mutex_read_unlock(jptr addr) {
   JAVA_FUNC_ENTER(__tsan_java_mutex_read_unlock);
-  DPrintf("#%d: java_mutex_read_unlock(%p)\n", thr->tid, addr);
+  DPrintf("#%d: java_mutex_read_unlock(0x%zx)\n", thr->tid, addr);
   DCHECK_NE(jctx, 0);
   DCHECK_GE(addr, jctx->heap_begin);
   DCHECK_LT(addr, jctx->heap_begin + jctx->heap_size);
@@ -214,7 +205,7 @@ void __tsan_java_mutex_read_unlock(jptr addr) {
 
 void __tsan_java_mutex_lock_rec(jptr addr, int rec) {
   JAVA_FUNC_ENTER(__tsan_java_mutex_lock_rec);
-  DPrintf("#%d: java_mutex_lock_rec(%p, %d)\n", thr->tid, addr, rec);
+  DPrintf("#%d: java_mutex_lock_rec(0x%zx, %d)\n", thr->tid, addr, rec);
   DCHECK_NE(jctx, 0);
   DCHECK_GE(addr, jctx->heap_begin);
   DCHECK_LT(addr, jctx->heap_begin + jctx->heap_size);
@@ -228,7 +219,7 @@ void __tsan_java_mutex_lock_rec(jptr addr, int rec) {
 
 int __tsan_java_mutex_unlock_rec(jptr addr) {
   JAVA_FUNC_ENTER(__tsan_java_mutex_unlock_rec);
-  DPrintf("#%d: java_mutex_unlock_rec(%p)\n", thr->tid, addr);
+  DPrintf("#%d: java_mutex_unlock_rec(0x%zx)\n", thr->tid, addr);
   DCHECK_NE(jctx, 0);
   DCHECK_GE(addr, jctx->heap_begin);
   DCHECK_LT(addr, jctx->heap_begin + jctx->heap_size);
@@ -238,7 +229,7 @@ int __tsan_java_mutex_unlock_rec(jptr addr) {
 
 void __tsan_java_acquire(jptr addr) {
   JAVA_FUNC_ENTER(__tsan_java_acquire);
-  DPrintf("#%d: java_acquire(%p)\n", thr->tid, addr);
+  DPrintf("#%d: java_acquire(0x%zx)\n", thr->tid, addr);
   DCHECK_NE(jctx, 0);
   DCHECK_GE(addr, jctx->heap_begin);
   DCHECK_LT(addr, jctx->heap_begin + jctx->heap_size);
@@ -248,7 +239,7 @@ void __tsan_java_acquire(jptr addr) {
 
 void __tsan_java_release(jptr addr) {
   JAVA_FUNC_ENTER(__tsan_java_release);
-  DPrintf("#%d: java_release(%p)\n", thr->tid, addr);
+  DPrintf("#%d: java_release(0x%zx)\n", thr->tid, addr);
   DCHECK_NE(jctx, 0);
   DCHECK_GE(addr, jctx->heap_begin);
   DCHECK_LT(addr, jctx->heap_begin + jctx->heap_size);
@@ -258,7 +249,7 @@ void __tsan_java_release(jptr addr) {
 
 void __tsan_java_release_store(jptr addr) {
   JAVA_FUNC_ENTER(__tsan_java_release);
-  DPrintf("#%d: java_release_store(%p)\n", thr->tid, addr);
+  DPrintf("#%d: java_release_store(0x%zx)\n", thr->tid, addr);
   DCHECK_NE(jctx, 0);
   DCHECK_GE(addr, jctx->heap_begin);
   DCHECK_LT(addr, jctx->heap_begin + jctx->heap_size);

@@ -17,6 +17,7 @@
 
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Symbol/Symbol.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
@@ -29,6 +30,182 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+/// Information about a pointer-authentication related instruction.
+struct PtrauthInstructionInfo {
+  bool IsAuthenticated;
+  bool IsLoad;
+  bool DoesBranch;
+};
+
+/// Get any pointer-authentication related information about the instruction
+/// at address \p at_addr.
+static llvm::Optional<PtrauthInstructionInfo>
+GetPtrauthInstructionInfo(Target &target, const ArchSpec &arch,
+                          const Address &at_addr) {
+  const char *plugin_name = nullptr;
+  const char *flavor = nullptr;
+  AddressRange range_bounds(at_addr, 4);
+  const bool prefer_file_cache = true;
+  DisassemblerSP disassembler_sp = Disassembler::DisassembleRange(
+      arch, plugin_name, flavor, target, range_bounds, prefer_file_cache);
+  if (!disassembler_sp)
+    return llvm::None;
+
+  InstructionList &insn_list = disassembler_sp->GetInstructionList();
+  InstructionSP insn = insn_list.GetInstructionAtIndex(0);
+  if (!insn)
+    return llvm::None;
+
+  return PtrauthInstructionInfo{insn->IsAuthenticated(), insn->IsLoad(),
+                                insn->DoesBranch()};
+}
+
+/// Describe the load address of \p addr using the format filename:line:col.
+static void DescribeAddressBriefly(Stream &strm, const Address &addr,
+                                   Target &target) {
+  strm.Printf("at address=0x%" PRIx64, addr.GetLoadAddress(&target));
+  StreamString s;
+  if (addr.GetDescription(s, target, eDescriptionLevelBrief))
+    strm.Printf(" %s", s.GetString().data());
+  strm.Printf(".\n");
+}
+
+bool StopInfoMachException::DeterminePtrauthFailure(ExecutionContext &exe_ctx) {
+  bool IsBreakpoint = m_value == 6; // EXC_BREAKPOINT
+  bool IsBadAccess = m_value == 1;  // EXC_BAD_ACCESS
+  if (!IsBreakpoint && !IsBadAccess)
+    return false;
+
+  // Check that we have a live process.
+  if (!exe_ctx.HasProcessScope() || !exe_ctx.HasThreadScope() ||
+      !exe_ctx.HasTargetScope())
+    return false;
+
+  Thread &thread = *exe_ctx.GetThreadPtr();
+  StackFrameSP current_frame = thread.GetStackFrameAtIndex(0);
+  if (!current_frame)
+    return false;
+
+  Target &target = *exe_ctx.GetTargetPtr();
+  Process &process = *exe_ctx.GetProcessPtr();
+  ABISP abi_sp = process.GetABI();
+  const ArchSpec &arch = target.GetArchitecture();
+  assert(abi_sp && "Missing ABI info");
+
+  // Check for a ptrauth-enabled target.
+  const bool ptrauth_enabled_target =
+      arch.GetCore() == ArchSpec::eCore_arm_arm64e;
+  if (!ptrauth_enabled_target)
+    return false;
+
+  // Set up a stream we can write a diagnostic into.
+  StreamString strm;
+  auto emit_ptrauth_prologue = [&](uint64_t at_address) {
+    strm.Printf("EXC_BAD_ACCESS (code=%" PRIu64 ", address=0x%" PRIx64 ")\n",
+                m_exc_code, at_address);
+    strm.Printf("Note: Possible pointer authentication failure detected.\n");
+  };
+
+  // Check if we have a "brk 0xc47x" trap, where the value that failed to
+  // authenticate is in x16.
+  Address current_address = current_frame->GetFrameCodeAddress();
+  if (IsBreakpoint) {
+    RegisterContext *reg_ctx = exe_ctx.GetRegisterContext();
+    if (!reg_ctx)
+      return false;
+
+    const RegisterInfo *X16Info = reg_ctx->GetRegisterInfoByName("x16");
+    RegisterValue X16Val;
+    if (!reg_ctx->ReadRegister(X16Info, X16Val))
+      return false;
+    uint64_t bad_address = X16Val.GetAsUInt64();
+
+    uint64_t fixed_bad_address = abi_sp->FixCodeAddress(bad_address);
+    Address brk_address;
+    if (!target.ResolveLoadAddress(fixed_bad_address, brk_address))
+      return false;
+
+    auto brk_ptrauth_info =
+        GetPtrauthInstructionInfo(target, arch, current_address);
+    if (brk_ptrauth_info && brk_ptrauth_info->IsAuthenticated) {
+      emit_ptrauth_prologue(bad_address);
+      strm.Printf("Found value that failed to authenticate ");
+      DescribeAddressBriefly(strm, brk_address, target);
+      m_description = std::string(strm.GetString());
+      return true;
+    }
+    return false;
+  }
+
+  assert(IsBadAccess && "Handle EXC_BAD_ACCESS only after this point");
+
+  // Check that we have the "bad address" from an EXC_BAD_ACCESS.
+  if (m_exc_data_count < 2)
+    return false;
+
+  // Ok, we know the Target is valid and that it describes a ptrauth-enabled
+  // device. Now, we need to determine whether this exception was caused by a
+  // ptrauth failure.
+
+  uint64_t bad_address = m_exc_subcode;
+  uint64_t fixed_bad_address = abi_sp->FixCodeAddress(bad_address);
+  uint64_t current_pc = current_address.GetLoadAddress(&target);
+
+  // Detect: LDRAA, LDRAB (Load Register, with pointer authentication).
+  //
+  // If an authenticated load results in an exception, the instruction at the
+  // current PC should be one of LDRAx.
+  if (bad_address != current_pc && fixed_bad_address != current_pc) {
+    auto ptrauth_info =
+        GetPtrauthInstructionInfo(target, arch, current_address);
+    if (ptrauth_info && ptrauth_info->IsAuthenticated && ptrauth_info->IsLoad) {
+      emit_ptrauth_prologue(bad_address);
+      strm.Printf("Found authenticated load instruction ");
+      DescribeAddressBriefly(strm, current_address, target);
+      m_description = std::string(strm.GetString());
+      return true;
+    }
+  }
+
+  // Detect: BLRAA, BLRAAZ, BLRAB, BLRABZ (Branch with Link to Register, with
+  // pointer authentication).
+  //
+  // TODO: Detect: BRAA, BRAAZ, BRAB, BRABZ (Branch to Register, with pointer
+  // authentication). At a minimum, this requires call site info support for
+  // indirect calls.
+  //
+  // If an authenticated call or tail call results in an exception, stripping
+  // the bad address should give the current PC, which points to the address
+  // we tried to branch to.
+  if (bad_address != current_pc && fixed_bad_address == current_pc) {
+    if (StackFrameSP parent_frame = thread.GetStackFrameAtIndex(1)) {
+      addr_t return_pc =
+          parent_frame->GetFrameCodeAddress().GetLoadAddress(&target);
+      Address blr_address;
+      if (!target.ResolveLoadAddress(return_pc - 4, blr_address))
+        return false;
+
+      auto blr_ptrauth_info =
+          GetPtrauthInstructionInfo(target, arch, blr_address);
+      if (blr_ptrauth_info && blr_ptrauth_info->IsAuthenticated &&
+          blr_ptrauth_info->DoesBranch) {
+        emit_ptrauth_prologue(bad_address);
+        strm.Printf("Found authenticated indirect branch ");
+        DescribeAddressBriefly(strm, blr_address, target);
+        m_description = std::string(strm.GetString());
+        return true;
+      }
+    }
+  }
+
+  // TODO: Detect: RETAA, RETAB (Return from subroutine, with pointer
+  // authentication).
+  //
+  // Is there a motivating, non-malicious code snippet that corrupts LR?
+
+  return false;
+}
 
 const char *StopInfoMachException::GetDescription() {
   if (!m_description.empty())
@@ -77,6 +254,11 @@ const char *StopInfoMachException::GetDescription() {
         code_desc = "EXC_ARM_DA_DEBUG";
         break;
       }
+      break;
+
+    case llvm::Triple::aarch64:
+      if (DeterminePtrauthFailure(exe_ctx))
+        return m_description.c_str();
       break;
 
     default:
@@ -188,6 +370,11 @@ const char *StopInfoMachException::GetDescription() {
         code_desc = "EXC_ARM_BREAKPOINT";
         break;
       }
+      break;
+
+    case llvm::Triple::aarch64:
+      if (DeterminePtrauthFailure(exe_ctx))
+        return m_description.c_str();
       break;
 
     default:

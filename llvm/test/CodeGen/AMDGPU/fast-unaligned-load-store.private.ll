@@ -237,8 +237,8 @@ define void @private_store_2xi16_align1(i16 addrspace(5)* %p, i16 addrspace(5)* 
 ; GFX7-ALIGNED:       ; %bb.0:
 ; GFX7-ALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-ALIGNED-NEXT:    v_mov_b32_e32 v3, 1
-; GFX7-ALIGNED-NEXT:    buffer_store_byte v3, v1, s[0:3], 0 offen
 ; GFX7-ALIGNED-NEXT:    v_add_i32_e32 v2, vcc, 2, v1
+; GFX7-ALIGNED-NEXT:    buffer_store_byte v3, v1, s[0:3], 0 offen
 ; GFX7-ALIGNED-NEXT:    v_add_i32_e32 v3, vcc, 1, v1
 ; GFX7-ALIGNED-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX7-ALIGNED-NEXT:    v_add_i32_e32 v1, vcc, 3, v1

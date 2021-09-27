@@ -1121,9 +1121,9 @@ TextAPIReader::get(MemoryBufferRef InputBuffer) {
   auto File = std::unique_ptr<InterfaceFile>(
       const_cast<InterfaceFile *>(Files.front()));
 
-  for (auto Iter = std::next(Files.begin()); Iter != Files.end(); ++Iter)
+  for (const InterfaceFile *FI : llvm::drop_begin(Files))
     File->addDocument(
-        std::shared_ptr<InterfaceFile>(const_cast<InterfaceFile *>(*Iter)));
+        std::shared_ptr<InterfaceFile>(const_cast<InterfaceFile *>(FI)));
 
   if (YAMLIn.error())
     return make_error<StringError>(Ctx.ErrorMessage, YAMLIn.error());

@@ -218,7 +218,7 @@ define <2 x i1> @test13_vector2(i64 %X, <2 x %S*> %P) nounwind {
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[X:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[DOTSPLATINSERT]], <i64 2, i64 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i64> [[TMP1]], <i64 -4, i64 poison>
-; CHECK-NEXT:    [[C:%.*]] = shufflevector <2 x i1> [[TMP2]], <2 x i1> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[C:%.*]] = shufflevector <2 x i1> [[TMP2]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %A = getelementptr inbounds %S, <2 x %S*> %P, <2 x i64> zeroinitializer, <2 x i32> <i32 1, i32 1>, i64 %X
@@ -233,7 +233,7 @@ define <2 x i1> @test13_vector3(i64 %X, <2 x %S*> %P) nounwind {
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[X:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[DOTSPLATINSERT]], <i64 2, i64 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i64> [[TMP1]], <i64 4, i64 poison>
-; CHECK-NEXT:    [[C:%.*]] = shufflevector <2 x i1> [[TMP2]], <2 x i1> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[C:%.*]] = shufflevector <2 x i1> [[TMP2]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %A = getelementptr inbounds %S, <2 x %S*> %P, <2 x i64> zeroinitializer, <2 x i32> <i32 1, i32 1>, i64 %X
@@ -794,7 +794,7 @@ define i32 @test35() nounwind {
 ; Don't treat signed offsets as unsigned.
 define i8* @test36() nounwind {
 ; CHECK-LABEL: @test36(
-; CHECK-NEXT:    ret i8* getelementptr ([11 x i8], [11 x i8]* @array, i64 0, i64 -1)
+; CHECK-NEXT:    ret i8* getelementptr ([11 x i8], [11 x i8]* @array, i64 -1, i64 10)
 ;
   ret i8* getelementptr ([11 x i8], [11 x i8]* @array, i32 0, i64 -1)
 }

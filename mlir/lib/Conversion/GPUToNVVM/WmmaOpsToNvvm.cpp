@@ -69,10 +69,10 @@ struct WmmaLoadOpToNVVMLowering
 
   LogicalResult
   matchAndRewrite(gpu::SubgroupMmaLoadMatrixOp subgroupMmaLoadMatrixOp,
-                  ArrayRef<Value> operands,
+                  OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Operation *op = subgroupMmaLoadMatrixOp.getOperation();
-    if (failed(areAllLLVMTypes(op, operands, rewriter)))
+    if (failed(areAllLLVMTypes(op, adaptor.getOperands(), rewriter)))
       return failure();
 
     unsigned indexTypeBitwidth =
@@ -88,7 +88,6 @@ struct WmmaLoadOpToNVVMLowering
 
     auto leadDimension = subgroupMmaLoadMatrixOp.leadDimensionAttr();
 
-    gpu::SubgroupMmaLoadMatrixOpAdaptor adaptor(operands);
     // MemRefDescriptor to extract alignedPtr and offset.
     MemRefDescriptor promotedSrcOp(adaptor.srcMemref());
 
@@ -177,10 +176,10 @@ struct WmmaStoreOpToNVVMLowering
 
   LogicalResult
   matchAndRewrite(gpu::SubgroupMmaStoreMatrixOp subgroupMmaStoreMatrixOp,
-                  ArrayRef<Value> operands,
+                  OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Operation *op = subgroupMmaStoreMatrixOp.getOperation();
-    if (failed(areAllLLVMTypes(op, operands, rewriter)))
+    if (failed(areAllLLVMTypes(op, adaptor.getOperands(), rewriter)))
       return failure();
 
     unsigned indexTypeBitwidth =
@@ -194,7 +193,6 @@ struct WmmaStoreOpToNVVMLowering
 
     Location loc = op->getLoc();
 
-    gpu::SubgroupMmaStoreMatrixOpAdaptor adaptor(operands);
     // MemRefDescriptor to extract alignedPtr and offset.
     MemRefDescriptor promotedDstOp(adaptor.dstMemref());
 
@@ -282,10 +280,10 @@ struct WmmaMmaOpToNVVMLowering
 
   LogicalResult
   matchAndRewrite(gpu::SubgroupMmaComputeOp subgroupMmaComputeOp,
-                  ArrayRef<Value> operands,
+                  OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Operation *op = subgroupMmaComputeOp.getOperation();
-    if (failed(areAllLLVMTypes(op, operands, rewriter)))
+    if (failed(areAllLLVMTypes(op, adaptor.getOperands(), rewriter)))
       return failure();
 
     Location loc = op->getLoc();
@@ -317,17 +315,16 @@ struct WmmaMmaOpToNVVMLowering
         subgroupMmaComputeOp.opC().getType().cast<gpu::MMAMatrixType>();
     ArrayRef<int64_t> cTypeShape = cType.getShape();
 
-    gpu::SubgroupMmaComputeOpAdaptor transformedOperands(operands);
-    unpackOp(transformedOperands.opA());
-    unpackOp(transformedOperands.opB());
-    unpackOp(transformedOperands.opC());
+    unpackOp(adaptor.opA());
+    unpackOp(adaptor.opB());
+    unpackOp(adaptor.opC());
 
     if (cType.getElementType().isF16()) {
       if (aTypeShape[0] == 16 && aTypeShape[1] == 16 && bTypeShape[0] == 16 &&
           bTypeShape[1] == 16 && cTypeShape[0] == 16 && cTypeShape[1] == 16) {
         // Create nvvm.wmma.mma op.
         rewriter.replaceOpWithNewOp<NVVM::WMMAMmaF16F16M16N16K16Op>(
-            op, transformedOperands.opC().getType(), unpackedOps);
+            op, adaptor.opC().getType(), unpackedOps);
 
         return success();
       }
@@ -338,7 +335,7 @@ struct WmmaMmaOpToNVVMLowering
           bTypeShape[1] == 16 && cTypeShape[0] == 16 && cTypeShape[1] == 16) {
         // Create nvvm.wmma.mma op.
         rewriter.replaceOpWithNewOp<NVVM::WMMAMmaF32F32M16N16K16Op>(
-            op, transformedOperands.opC().getType(), unpackedOps);
+            op, adaptor.opC().getType(), unpackedOps);
 
         return success();
       }
@@ -356,13 +353,13 @@ struct WmmaConstantOpToNVVMLowering
 
   LogicalResult
   matchAndRewrite(gpu::SubgroupMmaConstantMatrixOp subgroupMmaConstantOp,
-                  ArrayRef<Value> operands,
+                  OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (failed(areAllLLVMTypes(subgroupMmaConstantOp.getOperation(), operands,
-                               rewriter)))
+    if (failed(areAllLLVMTypes(subgroupMmaConstantOp.getOperation(),
+                               adaptor.getOperands(), rewriter)))
       return failure();
     Location loc = subgroupMmaConstantOp.getLoc();
-    Value cst = operands[0];
+    Value cst = adaptor.getOperands()[0];
     LLVM::LLVMStructType type = convertMMAToLLVMType(
         subgroupMmaConstantOp.getType().cast<gpu::MMAMatrixType>());
     // If the element type is a vector create a vector from the operand.

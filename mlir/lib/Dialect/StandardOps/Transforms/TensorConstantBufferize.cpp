@@ -46,7 +46,7 @@ memref::GlobalOp GlobalCreator::getGlobalFor(ConstantOp constantOp) {
   auto global = globalBuilder.create<memref::GlobalOp>(
       constantOp.getLoc(), (Twine("__constant_") + os.str()).str(),
       /*sym_visibility=*/globalBuilder.getStringAttr("private"),
-      /*type=*/typeConverter.convertType(type),
+      /*type=*/typeConverter.convertType(type).cast<MemRefType>(),
       /*initial_value=*/constantOp.getValue().cast<ElementsAttr>(),
       /*constant=*/true);
   symbolTable.insert(global);
@@ -66,7 +66,7 @@ public:
         globals(globals) {}
 
   LogicalResult
-  matchAndRewrite(ConstantOp op, ArrayRef<Value> operands,
+  matchAndRewrite(ConstantOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto type = op.getType().dyn_cast<RankedTensorType>();
     if (!type)

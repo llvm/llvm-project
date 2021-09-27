@@ -36,8 +36,8 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
   this->PageSize = PageSize;
   this->MemMgr = OwnedMemMgr.get();
   this->MemAccess = this;
-  this->JDI = {ExecutorAddress::fromPtr(jitDispatchViaWrapperFunctionManager),
-               ExecutorAddress::fromPtr(this)};
+  this->JDI = {ExecutorAddr::fromPtr(jitDispatchViaWrapperFunctionManager),
+               ExecutorAddr::fromPtr(this)};
   if (this->TargetTriple.isOSBinFormatMachO())
     GlobalManglingPrefix = '_';
 }

@@ -1003,41 +1003,43 @@ LLVMDIBuilderCreateImportedModuleFromNamespace(LLVMDIBuilderRef Builder,
                                                     Line));
 }
 
-LLVMMetadataRef
-LLVMDIBuilderCreateImportedModuleFromAlias(LLVMDIBuilderRef Builder,
-                                           LLVMMetadataRef Scope,
-                                           LLVMMetadataRef ImportedEntity,
-                                           LLVMMetadataRef File,
-                                           unsigned Line) {
+LLVMMetadataRef LLVMDIBuilderCreateImportedModuleFromAlias(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope,
+    LLVMMetadataRef ImportedEntity, LLVMMetadataRef File, unsigned Line,
+    LLVMMetadataRef *Elements, unsigned NumElements) {
+  auto Elts =
+      (NumElements > 0)
+          ? unwrap(Builder)->getOrCreateArray({unwrap(Elements), NumElements})
+          : nullptr;
   return wrap(unwrap(Builder)->createImportedModule(
-                  unwrapDI<DIScope>(Scope),
-                  unwrapDI<DIImportedEntity>(ImportedEntity),
-                  unwrapDI<DIFile>(File), Line));
+      unwrapDI<DIScope>(Scope), unwrapDI<DIImportedEntity>(ImportedEntity),
+      unwrapDI<DIFile>(File), Line, Elts));
 }
 
-LLVMMetadataRef
-LLVMDIBuilderCreateImportedModuleFromModule(LLVMDIBuilderRef Builder,
-                                            LLVMMetadataRef Scope,
-                                            LLVMMetadataRef M,
-                                            LLVMMetadataRef File,
-                                            unsigned Line) {
-  return wrap(unwrap(Builder)->createImportedModule(unwrapDI<DIScope>(Scope),
-                                                    unwrapDI<DIModule>(M),
-                                                    unwrapDI<DIFile>(File),
-                                                    Line));
+LLVMMetadataRef LLVMDIBuilderCreateImportedModuleFromModule(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, LLVMMetadataRef M,
+    LLVMMetadataRef File, unsigned Line, LLVMMetadataRef *Elements,
+    unsigned NumElements) {
+  auto Elts =
+      (NumElements > 0)
+          ? unwrap(Builder)->getOrCreateArray({unwrap(Elements), NumElements})
+          : nullptr;
+  return wrap(unwrap(Builder)->createImportedModule(
+      unwrapDI<DIScope>(Scope), unwrapDI<DIModule>(M), unwrapDI<DIFile>(File),
+      Line, Elts));
 }
 
-LLVMMetadataRef
-LLVMDIBuilderCreateImportedDeclaration(LLVMDIBuilderRef Builder,
-                                       LLVMMetadataRef Scope,
-                                       LLVMMetadataRef Decl,
-                                       LLVMMetadataRef File,
-                                       unsigned Line,
-                                       const char *Name, size_t NameLen) {
+LLVMMetadataRef LLVMDIBuilderCreateImportedDeclaration(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, LLVMMetadataRef Decl,
+    LLVMMetadataRef File, unsigned Line, const char *Name, size_t NameLen,
+    LLVMMetadataRef *Elements, unsigned NumElements) {
+  auto Elts =
+      (NumElements > 0)
+          ? unwrap(Builder)->getOrCreateArray({unwrap(Elements), NumElements})
+          : nullptr;
   return wrap(unwrap(Builder)->createImportedDeclaration(
-                  unwrapDI<DIScope>(Scope),
-                  unwrapDI<DINode>(Decl),
-                  unwrapDI<DIFile>(File), Line, {Name, NameLen}));
+      unwrapDI<DIScope>(Scope), unwrapDI<DINode>(Decl), unwrapDI<DIFile>(File),
+      Line, {Name, NameLen}, Elts));
 }
 
 LLVMMetadataRef

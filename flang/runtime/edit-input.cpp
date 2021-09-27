@@ -56,6 +56,7 @@ static bool ScanNumericPrefix(IoStatementState &io, const DataEdit &edit,
   if (next) {
     negative = *next == '-';
     if (negative || *next == '+') {
+      io.GotChar();
       io.SkipSpaces(remaining);
       next = io.NextInField(remaining);
     }
@@ -453,6 +454,7 @@ bool EditDefaultCharacterInput(
        next = io.NextInField(remaining)) {
     if (skip > 0) {
       --skip;
+      io.GotChar(-1);
     } else {
       *x++ = *next;
       --length;

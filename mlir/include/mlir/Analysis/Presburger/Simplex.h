@@ -152,15 +152,18 @@ public:
   void addInequality(ArrayRef<int64_t> coeffs);
 
   /// Returns the number of variables in the tableau.
-  unsigned numVariables() const;
+  unsigned getNumVariables() const;
 
   /// Returns the number of constraints in the tableau.
-  unsigned numConstraints() const;
+  unsigned getNumConstraints() const;
 
   /// Add an equality to the tableau. If coeffs is c_0, c_1, ... c_n, where n
   /// is the current number of variables, then the corresponding equality is
   /// c_n + c_0*x_0 + c_1*x_1 + ... + c_{n-1}*x_{n-1} == 0.
   void addEquality(ArrayRef<int64_t> coeffs);
+
+  /// Add new variables to the end of the list of variables.
+  void appendVariable(unsigned count = 1);
 
   /// Mark the tableau as being empty.
   void markEmpty();
@@ -301,8 +304,9 @@ private:
   /// and the denominator.
   void normalizeRow(unsigned row);
 
-  /// Swap the two rows in the tableau and associated data structures.
+  /// Swap the two rows/columns in the tableau and associated data structures.
   void swapRows(unsigned i, unsigned j);
+  void swapColumns(unsigned i, unsigned j);
 
   /// Restore the unknown to a non-negative sample value.
   ///
@@ -327,6 +331,7 @@ private:
   /// Enum to denote operations that need to be undone during rollback.
   enum class UndoLogEntry {
     RemoveLastConstraint,
+    RemoveLastVariable,
     UnmarkEmpty,
     UnmarkLastRedundant
   };

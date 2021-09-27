@@ -36,7 +36,8 @@ class PExpectTest(TestBase):
             args.extend(extra_args)
 
         env = dict(os.environ)
-        env["TERM"]="vt100"
+        env["TERM"] = "vt100"
+        env["HOME"] = self.getBuildDir()
 
         import pexpect
         self.child = pexpect.spawn(

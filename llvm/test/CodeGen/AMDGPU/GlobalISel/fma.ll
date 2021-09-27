@@ -259,8 +259,8 @@ define <2 x half> @v_fma_v2f16_fneg_lhs_rhs(<2 x half> %x, <2 x half> %y, <2 x h
 ; GFX6-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 16, v3
 ; GFX6-NEXT:    v_and_b32_e32 v2, v2, v6
-; GFX6-NEXT:    s_mov_b32 s4, 0x80008000
 ; GFX6-NEXT:    v_or_b32_e32 v1, v1, v2
+; GFX6-NEXT:    s_mov_b32 s4, 0x80008000
 ; GFX6-NEXT:    v_xor_b32_e32 v0, s4, v0
 ; GFX6-NEXT:    v_xor_b32_e32 v1, s4, v1
 ; GFX6-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
@@ -328,15 +328,15 @@ define <4 x half> @v_fma_v4f16(<4 x half> %x, <4 x half> %y, <4 x half> %z) {
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v5, v5
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v9, v9
 ; GFX6-NEXT:    v_fma_f32 v0, v0, v4, v8
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v4, v6
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v6, v7
-; GFX6-NEXT:    v_fma_f32 v1, v1, v5, v9
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v4, v6
+; GFX6-NEXT:    v_fma_f32 v1, v1, v5, v9
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v5, v10
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v6, v7
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v7, v11
-; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX6-NEXT:    v_fma_f32 v2, v2, v4, v5
+; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX6-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX6-NEXT:    v_fma_f32 v3, v3, v6, v7
 ; GFX6-NEXT:    v_cvt_f16_f32_e32 v2, v2
@@ -349,15 +349,15 @@ define <4 x half> @v_fma_v4f16(<4 x half> %x, <4 x half> %y, <4 x half> %z) {
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v8, 16, v2
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v10, 16, v4
-; GFX8-NEXT:    v_fma_f16 v0, v0, v2, v4
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v9, 16, v3
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v11, 16, v5
+; GFX8-NEXT:    v_fma_f16 v0, v0, v2, v4
 ; GFX8-NEXT:    v_fma_f16 v2, v6, v8, v10
 ; GFX8-NEXT:    v_mov_b32_e32 v4, 16
 ; GFX8-NEXT:    v_fma_f16 v1, v1, v3, v5
-; GFX8-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX8-NEXT:    v_fma_f16 v3, v7, v9, v11
+; GFX8-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX8-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-NEXT:    v_lshlrev_b32_sdwa v2, v4, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX8-NEXT:    v_or_b32_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
@@ -498,7 +498,7 @@ define float @v_fma_f32_fabs_lhs(float %x, float %y, float %z) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_fma_f32 v0, v1, |v0|, v2
+; GFX10-NEXT:    v_fma_f32 v0, |v0|, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %fabs.x = call float @llvm.fabs.f32(float %x)
   %fma = call float @llvm.fma.f32(float %fabs.x, float %y, float %z)
@@ -528,7 +528,7 @@ define float @v_fma_f32_fabs_rhs(float %x, float %y, float %z) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_fma_f32 v0, |v1|, v0, v2
+; GFX10-NEXT:    v_fma_f32 v0, v0, |v1|, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %fabs.y = call float @llvm.fabs.f32(float %y)
   %fma = call float @llvm.fma.f32(float %x, float %fabs.y, float %z)
@@ -558,7 +558,7 @@ define float @v_fma_f32_fabs_lhs_rhs(float %x, float %y, float %z) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_fma_f32 v0, |v1|, |v0|, v2
+; GFX10-NEXT:    v_fma_f32 v0, |v0|, |v1|, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %fabs.x = call float @llvm.fabs.f32(float %x)
   %fabs.y = call float @llvm.fabs.f32(float %y)
@@ -668,7 +668,7 @@ define float @v_fma_f32_fneg_lhs(float %x, float %y, float %z) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_fma_f32 v0, v1, -v0, v2
+; GFX10-NEXT:    v_fma_f32 v0, -v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.x = fneg float %x
   %fma = call float @llvm.fma.f32(float %neg.x, float %y, float %z)
@@ -698,7 +698,7 @@ define float @v_fma_f32_fneg_rhs(float %x, float %y, float %z) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_fma_f32 v0, -v1, v0, v2
+; GFX10-NEXT:    v_fma_f32 v0, v0, -v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.y = fneg float %y
   %fma = call float @llvm.fma.f32(float %x, float %neg.y, float %z)

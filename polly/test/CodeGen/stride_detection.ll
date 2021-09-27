@@ -10,13 +10,13 @@
 ;             Stmt_for_body_3(32 * c0 + 4 * c2 + c4, 32 * c1 + c3);
 
 ; CHECK: polly.stmt.for.body.3:                            ; preds = %polly.loop_header18
-; CHECK:   %_p_splat_one = load <1 x double>, <1 x double>* %_p_vec_p, align 8, !alias.scope !3, !noalias !5, !llvm.access.group !2
-; CHECK:   %_p_vec_full = load <4 x double>, <4 x double>* %vector_ptr, align 8, !alias.scope !6, !noalias !7, !llvm.access.group !2
+; CHECK:   %_p_splat_one = load <1 x double>, <1 x double>* %_p_vec_p, align 8, !alias.scope !3, !noalias !6, !llvm.access.group !2
+; CHECK:   %_p_vec_full = load <4 x double>, <4 x double>* %vector_ptr, align 8, !alias.scope !6, !noalias !3, !llvm.access.group !2
 ; CHECK:   extractelement <4 x double> %addp_vec, i32 0
 ; CHECK:   extractelement <4 x double> %addp_vec, i32 1
 ; CHECK:   extractelement <4 x double> %addp_vec, i32 2
 ; CHECK:   extractelement <4 x double> %addp_vec, i32 3
-; CHECK:   store <4 x double> %addp_vec, <4 x double>* {{.*}}, align 8, !alias.scope !6, !noalias !7, !llvm.access.group !2
+; CHECK:   store <4 x double> %addp_vec, <4 x double>* {{.*}}, align 8, !alias.scope !6, !noalias !3, !llvm.access.group !2
 
 define void @kernel_gemm(i32 %ni, i32 %nj, i32 %nk, [1024 x double]* %C, [1024 x double]* %A) #0 {
 entry:

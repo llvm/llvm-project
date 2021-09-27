@@ -154,8 +154,6 @@ multiclass VOP2Inst_e64<string opName,
 
 multiclass VOP2Inst_sdwa<string opName,
                          VOPProfile P,
-                         SDPatternOperator node = null_frag,
-                         string revOp = opName,
                          bit GFX9Renamed = 0> {
   let renamedInGFX9 = GFX9Renamed in {
     foreach _ = BoolToList<P.HasExtSDWA>.ret in
@@ -170,7 +168,7 @@ multiclass VOP2Inst<string opName,
                     bit GFX9Renamed = 0> :
     VOP2Inst_e32<opName, P, node, revOp, GFX9Renamed>,
     VOP2Inst_e64<opName, P, node, revOp, GFX9Renamed>,
-    VOP2Inst_sdwa<opName, P, node, revOp, GFX9Renamed> {
+    VOP2Inst_sdwa<opName, P, GFX9Renamed> {
   let renamedInGFX9 = GFX9Renamed in {
     foreach _ = BoolToList<P.HasExtDPP>.ret in
       def _dpp  : VOP2_DPP_Pseudo <opName, P>;
@@ -927,7 +925,7 @@ class VOP2_DPP16<bits<6> op, VOP2_DPP_Pseudo ps,
     SIMCInstr <ps.PseudoInstr, SIEncodingFamily.GFX10>;
 
 class VOP2_DPP8<bits<6> op, VOP2_Pseudo ps,
-                string opName = ps.OpName, VOPProfile p = ps.Pfl> :
+                VOPProfile p = ps.Pfl> :
     VOP_DPP8<ps.OpName, p> {
   let hasSideEffects = ps.hasSideEffects;
   let Defs = ps.Defs;
@@ -1123,14 +1121,14 @@ let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
   multiclass VOP2be_Real_dpp8_gfx10<bits<6> op, string opName, string asmName> {
     foreach _ = BoolToList<!cast<VOP2_Pseudo>(opName#"_e32").Pfl.HasExtDPP>.ret in
     def _dpp8_gfx10 :
-      VOP2_DPP8<op, !cast<VOP2_Pseudo>(opName#"_e32"), asmName> {
+      VOP2_DPP8<op, !cast<VOP2_Pseudo>(opName#"_e32")> {
         string AsmDPP8 = !cast<VOP2_Pseudo>(opName#"_e32").Pfl.AsmDPP8;
         let AsmString = asmName # !subst(", vcc", "", AsmDPP8);
         let DecoderNamespace = "DPP8";
       }
     foreach _ = BoolToList<!cast<VOP2_Pseudo>(opName#"_e32").Pfl.HasExtDPP>.ret in
     def _dpp8_w32_gfx10 :
-      VOP2_DPP8<op, !cast<VOP2_Pseudo>(opName#"_e32"), asmName> {
+      VOP2_DPP8<op, !cast<VOP2_Pseudo>(opName#"_e32")> {
         string AsmDPP8 = !cast<VOP2_Pseudo>(opName#"_e32").Pfl.AsmDPP8;
         let AsmString = asmName # !subst("vcc", "vcc_lo", AsmDPP8);
         let isAsmParserOnly = 1;
@@ -1138,7 +1136,7 @@ let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
       }
     foreach _ = BoolToList<!cast<VOP2_Pseudo>(opName#"_e32").Pfl.HasExtDPP>.ret in
     def _dpp8_w64_gfx10 :
-      VOP2_DPP8<op, !cast<VOP2_Pseudo>(opName#"_e32"), asmName> {
+      VOP2_DPP8<op, !cast<VOP2_Pseudo>(opName#"_e32")> {
         string AsmDPP8 = !cast<VOP2_Pseudo>(opName#"_e32").Pfl.AsmDPP8;
         let AsmString = asmName # AsmDPP8;
         let isAsmParserOnly = 1;

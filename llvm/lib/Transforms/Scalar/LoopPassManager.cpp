@@ -124,12 +124,6 @@ LoopPassManager::runWithLoopNestPasses(Loop &L, LoopAnalysisManager &AM,
     // notify the updater, otherwise U.ParentL might gets outdated and triggers
     // assertion failures in addSiblingLoops and addChildLoops.
     U.setParentLoop(L.getParentLoop());
-
-    // FIXME: Historically, the pass managers all called the LLVM context's
-    // yield function here. We don't have a generic way to acquire the
-    // context and it isn't yet clear what the right pattern is for yielding
-    // in the new pass manager so it is currently omitted.
-    // ...getContext().yield();
   }
   return PA;
 }
@@ -173,12 +167,6 @@ LoopPassManager::runWithoutLoopNestPasses(Loop &L, LoopAnalysisManager &AM,
     // notify the updater, otherwise U.ParentL might gets outdated and triggers
     // assertion failures in addSiblingLoops and addChildLoops.
     U.setParentLoop(L.getParentLoop());
-
-    // FIXME: Historically, the pass managers all called the LLVM context's
-    // yield function here. We don't have a generic way to acquire the
-    // context and it isn't yet clear what the right pattern is for yielding
-    // in the new pass manager so it is currently omitted.
-    // ...getContext().yield();
   }
   return PA;
 }

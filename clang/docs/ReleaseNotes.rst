@@ -56,7 +56,8 @@ Improvements to Clang's diagnostics
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
-- ...
+- Maximum _ExtInt size was decreased from 16,777,215 bits to 8,388,608 bits.
+  Motivation for this was discussed in PR51829.
 
 New Compiler Flags
 ------------------
@@ -187,6 +188,16 @@ clang-format
 
 - Option ``AllowShortEnumsOnASingleLine: false`` has been improved, it now
   correctly places the opening brace according to ``BraceWrapping.AfterEnum``.
+
+- Option ``QualifierAligment`` has been added in order to auto-arrange the
+  positioning of specifiers/qualifiers
+  `const` `volatile` `static` `inline` `constexpr` `restrict`
+  in variable and parameter declarations to be either ``Right`` aligned
+  or ``Left`` aligned or ``Custom`` using ``QualifierOrder``.
+
+- Option ``QualifierOrder`` has been added to allow the order
+  `const` `volatile` `static` `inline` `constexpr` `restrict`
+  to be controlled relative to the `type`.
 
 libclang
 --------

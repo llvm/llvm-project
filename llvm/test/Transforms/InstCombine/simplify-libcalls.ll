@@ -230,5 +230,17 @@ define i32 @fake_snprintf(i32 %buf, double %len, i32 * %str) {
   ret i32 %call
 }
 
+; Wrong return type for the real strlen.
+; https://llvm.org/PR50836
+
+define i4 @strlen(i8* %s) {
+; CHECK-LABEL: @strlen(
+; CHECK-NEXT:    [[R:%.*]] = call i4 @strlen(i8* [[S:%.*]])
+; CHECK-NEXT:    ret i4 0
+;
+  %r = call i4 @strlen(i8* %s)
+  ret i4 0
+}
+
 attributes #0 = { nobuiltin }
 attributes #1 = { builtin }

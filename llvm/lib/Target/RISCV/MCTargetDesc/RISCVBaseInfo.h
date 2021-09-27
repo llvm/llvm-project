@@ -103,6 +103,11 @@ enum VLMUL : uint8_t {
   LMUL_F2
 };
 
+enum {
+  TAIL_UNDISTURBED = 0,
+  TAIL_AGNOSTIC = 1,
+};
+
 // Helper functions to read TSFlags.
 /// \returns the format of the instruction.
 static inline unsigned getFormat(uint64_t TSFlags) {
@@ -168,8 +173,11 @@ enum {
 namespace RISCVOp {
 enum OperandType : unsigned {
   OPERAND_FIRST_RISCV_IMM = MCOI::OPERAND_FIRST_TARGET,
-  OPERAND_UIMM4 = OPERAND_FIRST_RISCV_IMM,
+  OPERAND_UIMM2 = OPERAND_FIRST_RISCV_IMM,
+  OPERAND_UIMM3,
+  OPERAND_UIMM4,
   OPERAND_UIMM5,
+  OPERAND_UIMM7,
   OPERAND_UIMM12,
   OPERAND_SIMM12,
   OPERAND_UIMM20,

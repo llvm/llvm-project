@@ -149,8 +149,6 @@ void ScriptedProcess::Terminate() {
 
 ConstString ScriptedProcess::GetPluginName() { return GetPluginNameStatic(); }
 
-uint32_t ScriptedProcess::GetPluginVersion() { return 1; }
-
 Status ScriptedProcess::DoLoadCore() {
   ProcessLaunchInfo launch_info = GetTarget().GetProcessLaunchInfo();
 

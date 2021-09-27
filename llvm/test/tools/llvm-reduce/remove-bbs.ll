@@ -1,7 +1,7 @@
 ; Test that llvm-reduce can remove uninteresting Basic Blocks, and remove them from instructions (i.e. SwitchInst, BranchInst and IndirectBrInst)
 ; Note: if an uninteresting BB is the default case for a switch, the instruction is removed altogether (since the default case cannot be replaced)
 ;
-; RUN: llvm-reduce --test %python --test-arg %p/Inputs/remove-bbs.py %s -o %t
+; RUN: llvm-reduce --delta-passes=basic-blocks --test %python --test-arg %p/Inputs/remove-bbs.py %s -o %t
 ; RUN: cat %t | FileCheck -implicit-check-not=uninteresting %s
 
 define void @main() {

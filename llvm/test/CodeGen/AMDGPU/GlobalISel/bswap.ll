@@ -92,8 +92,8 @@ define amdgpu_ps <2 x i32> @s_bswap_v2i32(<2 x i32> inreg %src) {
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    s_mov_b32 s0, 0x10203
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
-; GFX8-NEXT:    v_perm_b32 v1, 0, v1, s0
 ; GFX8-NEXT:    v_perm_b32 v0, 0, v0, s0
+; GFX8-NEXT:    v_perm_b32 v1, 0, v1, s0
 ; GFX8-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX8-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX8-NEXT:    ; return to shader part epilog
@@ -103,8 +103,8 @@ define amdgpu_ps <2 x i32> @s_bswap_v2i32(<2 x i32> inreg %src) {
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    s_mov_b32 s0, 0x10203
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    v_perm_b32 v1, 0, v1, s0
 ; GFX9-NEXT:    v_perm_b32 v0, 0, v0, s0
+; GFX9-NEXT:    v_perm_b32 v1, 0, v1, s0
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX9-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX9-NEXT:    ; return to shader part epilog
@@ -285,9 +285,9 @@ define amdgpu_ps <2 x i64> @s_bswap_v2i64(<2 x i64> inreg %src) {
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s2
 ; GFX8-NEXT:    v_perm_b32 v0, 0, v0, s1
+; GFX8-NEXT:    v_perm_b32 v1, 0, v1, s1
 ; GFX8-NEXT:    v_perm_b32 v2, 0, v2, s1
 ; GFX8-NEXT:    v_perm_b32 v3, 0, v3, s1
-; GFX8-NEXT:    v_perm_b32 v1, 0, v1, s1
 ; GFX8-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX8-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX8-NEXT:    v_readfirstlane_b32 s2, v2
@@ -302,9 +302,9 @@ define amdgpu_ps <2 x i64> @s_bswap_v2i64(<2 x i64> inreg %src) {
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s3
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s2
 ; GFX9-NEXT:    v_perm_b32 v0, 0, v0, s1
+; GFX9-NEXT:    v_perm_b32 v1, 0, v1, s1
 ; GFX9-NEXT:    v_perm_b32 v2, 0, v2, s1
 ; GFX9-NEXT:    v_perm_b32 v3, 0, v3, s1
-; GFX9-NEXT:    v_perm_b32 v1, 0, v1, s1
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX9-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX9-NEXT:    v_readfirstlane_b32 s2, v2

@@ -28,10 +28,17 @@
 using namespace mlir;
 using namespace mlir::sparse_tensor;
 
+//===----------------------------------------------------------------------===//
+// Declarations of data structures.
+//===----------------------------------------------------------------------===//
+
 namespace {
 
 // Iteration graph sorting.
 enum SortMask { kSparseOnly = 0x0, kIncludeDense = 0x1, kIncludeUndef = 0x2 };
+
+// Reduction kinds.
+enum Reduction { kSum, kProduct, kAnd, kOr, kXor };
 
 // Code generation.
 struct CodeGen {
@@ -68,6 +75,7 @@ struct CodeGen {
   // is most effective; we could generalize to more outer and while-loops.
   unsigned redExp;
   Value redVal;
+  Reduction redKind;
   // Current vector length and mask.
   unsigned curVecLength;
   Value curVecMask;
@@ -75,8 +83,12 @@ struct CodeGen {
 
 } // namespace
 
-// Helper method to apply dimension ordering permutation.
-static unsigned perm(SparseTensorEncodingAttr &enc, unsigned d) {
+//===----------------------------------------------------------------------===//
+// Sparse compiler analysis methods.
+//===----------------------------------------------------------------------===//
+
+/// Helper method to apply dimension ordering permutation.
+static unsigned perm(const SparseTensorEncodingAttr &enc, unsigned d) {
   if (enc) {
     auto order = enc.getDimOrdering();
     if (order) {
@@ -87,8 +99,8 @@ static unsigned perm(SparseTensorEncodingAttr &enc, unsigned d) {
   return d;
 }
 
-// Helper method to translate dim level type to internal representation.
-static Dim toDim(SparseTensorEncodingAttr &enc, unsigned d) {
+/// Helper method to translate dim level type to internal representation.
+static Dim toDim(const SparseTensorEncodingAttr &enc, unsigned d) {
   if (enc) {
     SparseTensorEncodingAttr::DimLevelType tp = enc.getDimLevelType()[d];
     if (tp == SparseTensorEncodingAttr::DimLevelType::Compressed)
@@ -99,21 +111,53 @@ static Dim toDim(SparseTensorEncodingAttr &enc, unsigned d) {
   return Dim::kDense;
 }
 
+/// Helper method to inspect affine expressions. Rejects cases where the
+/// same index is used in more than one dimension of a tensor. Also rejects
+/// affine expressions that are not a direct index for annotated tensors.
+/// TODO: accept more affine cases for sparse tensors
+static bool findAffine(Merger &merger, unsigned tensor, AffineExpr a, Dim dim,
+                       bool isDense) {
+  switch (a.getKind()) {
+  case AffineExprKind::DimId: {
+    unsigned idx = a.cast<AffineDimExpr>().getPosition();
+    if (!merger.isDim(tensor, idx, Dim::kUndef))
+      return false; // used more than once
+    merger.setDim(tensor, idx, dim);
+    return true;
+  }
+  case AffineExprKind::Add:
+  case AffineExprKind::Mul: {
+    if (!isDense)
+      return false;
+    auto binOp = a.cast<AffineBinaryOpExpr>();
+    return findAffine(merger, tensor, binOp.getLHS(), dim, isDense) &&
+           findAffine(merger, tensor, binOp.getRHS(), dim, isDense);
+  }
+  case AffineExprKind::Constant:
+    return isDense;
+  default:
+    return false;
+  }
+}
+
 /// Helper method to inspect sparse encodings in the tensor types.
 /// Fills the per-dimension sparsity information for all tensors.
+/// Returns true if the sparse annotations and affine subscript
+/// expressions of all tensors are admissable. Returns false if
+/// no annotations are found or inadmissable constructs occur.
 static bool findSparseAnnotations(Merger &merger, linalg::GenericOp op) {
   bool annotated = false;
   for (OpOperand *t : op.getInputAndOutputOperands()) {
     auto map = op.getTiedIndexingMap(t);
-    if (!map.isProjectedPermutation())
-      return false;
     auto enc = getSparseTensorEncoding(t->get().getType());
     if (enc)
       annotated = true;
     assert(map.getNumResults() == op.getRank(t));
     for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
-      unsigned idx = map.getDimPosition(perm(enc, d));
-      merger.setDim(t->getOperandNumber(), idx, toDim(enc, d));
+      unsigned tensor = t->getOperandNumber();
+      AffineExpr a = map.getResult(perm(enc, d));
+      if (!findAffine(merger, tensor, a, toDim(enc, d), !enc))
+        return false; // inadmissable affine expression
     }
   }
   return annotated;
@@ -135,6 +179,32 @@ static bool topSortDFS(unsigned i, std::vector<unsigned> &visit,
   visit[i] = 2;
   topSort.push_back(i);
   return true;
+}
+
+/// Helper method to add all constraints from the indices in one affine
+/// expression before all indices in the other affine expression. For
+/// example i0+i1 < i2+i3+1 yields i0<i2, i0<i3, i1<i2, and i1<i3.
+static void addAffineOrderings(std::vector<std::vector<bool>> &adjM,
+                               AffineExpr a, AffineExpr b, unsigned fidx) {
+  switch (a.getKind()) {
+  case AffineExprKind::DimId: {
+    unsigned idx = a.cast<AffineDimExpr>().getPosition();
+    if (b)
+      addAffineOrderings(adjM, b, AffineExpr(), idx);
+    else
+      adjM[fidx][idx] = true;
+    break;
+  }
+  case AffineExprKind::Add:
+  case AffineExprKind::Mul: {
+    auto binOp = a.cast<AffineBinaryOpExpr>();
+    addAffineOrderings(adjM, binOp.getLHS(), b, fidx);
+    addAffineOrderings(adjM, binOp.getRHS(), b, fidx);
+    break;
+  }
+  default:
+    break;
+  }
 }
 
 /// Computes a topologically sorted iteration graph for the linalg operation.
@@ -163,9 +233,9 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
     // example, the tensor expresion A_ijk forces the ordering i < j < k
     // on the loop indices if no explicit dimension ordering is given.
     for (unsigned d = 1, rank = map.getNumResults(); d < rank; d++) {
-      unsigned f = map.getDimPosition(perm(enc, d - 1));
-      unsigned t = map.getDimPosition(perm(enc, d));
-      adjM[f][t] = true;
+      AffineExpr f = map.getResult(perm(enc, d - 1));
+      AffineExpr t = map.getResult(perm(enc, d));
+      addAffineOrderings(adjM, f, t, 0);
     }
     // Push unrelated loops into sparse iteration space, so these
     // will be skipped more often.
@@ -201,7 +271,7 @@ static bool isAdmissableTensorExp(Merger &merger, linalg::GenericOp op,
   unsigned tensor = lhs->getOperandNumber();
   auto enc = getSparseTensorEncoding(lhs->get().getType());
   // An non-annotated output tensor is assumed dense, and becomes a random
-  // access n-dim memref. Admissable since inserstions cannot occur.
+  // access n-dim memref. Admissable since insertions cannot occur.
   if (!enc)
     return true;
   // An all-dense annotated "sparse" output tensor becomes a linearized random
@@ -223,6 +293,83 @@ static bool isAdmissableTensorExp(Merger &merger, linalg::GenericOp op,
   // Reject for now since this requires changes to the nonzero structure.
   // TODO: implement "workspaces" [Kjolstad2019]
   return false;
+}
+
+//===----------------------------------------------------------------------===//
+// Sparse compiler synthesis methods.
+//===----------------------------------------------------------------------===//
+
+/// Maps reduction kind to name encoding.
+static StringRef getReductionName(Reduction kind) {
+  switch (kind) {
+  case kSum:
+    return "add";
+  case kProduct:
+    return "mul";
+  case kAnd:
+    return "and";
+  case kOr:
+    return "or";
+  case kXor:
+    return "xor";
+  }
+  llvm_unreachable("unknown reduction kind");
+}
+
+/// Maps operation to reduction.
+static Reduction getReduction(Kind kind) {
+  switch (kind) {
+  case Kind::kAddF:
+  case Kind::kAddI:
+  case Kind::kSubF:
+  case Kind::kSubI:
+    return kSum;
+  case Kind::kMulF:
+  case Kind::kMulI:
+    return kProduct;
+  case Kind::kAndI:
+    return kAnd;
+  case Kind::kOrI:
+    return kOr;
+  case Kind::kXorI:
+    return kXor;
+  default:
+    llvm_unreachable("unexpected reduction operator");
+  }
+}
+
+/// Generates an initial value for a vector reductions, following the scheme
+/// given in Chapter 5 of "The Software Vectorization Handbook", where the
+/// initial scalar value is correctly embedded in the vector reduction value,
+/// and a straightforward horizontal reduction will complete the operation.
+static Value genReductionInit(PatternRewriter &rewriter, Location loc,
+                              Reduction kind, VectorType vtp, Value r) {
+  switch (kind) {
+  case kSum:
+  case kXor: {
+    // Initialize reduction vector to: | 0 | .. | 0 | r |
+    Attribute zero = rewriter.getZeroAttr(vtp);
+    Value vec = rewriter.create<ConstantOp>(loc, vtp, zero);
+    return rewriter.create<vector::InsertElementOp>(loc, r, vec, 0);
+  }
+  case kProduct: {
+    // Initialize reduction vector to: | 1 | .. | 1 | r |
+    Type etp = vtp.getElementType();
+    Attribute one;
+    if (etp.isa<FloatType>())
+      one = rewriter.getFloatAttr(etp, 1.0);
+    else
+      one = rewriter.getIntegerAttr(etp, 1);
+    Value vec =
+        rewriter.create<ConstantOp>(loc, vtp, DenseElementsAttr::get(vtp, one));
+    return rewriter.create<vector::InsertElementOp>(loc, r, vec, 0);
+  }
+  case kAnd:
+  case kOr:
+    // Initialize reduction vector to: | r | .. | r | r |
+    return rewriter.create<vector::BroadcastOp>(loc, vtp, r);
+  }
+  llvm_unreachable("unknown reduction kind");
 }
 
 /// Maps sparse integer option to actual integral storage type.
@@ -282,7 +429,10 @@ static bool genBuffers(Merger &merger, CodeGen &codegen,
     // Scan all dimensions of current tensor.
     args.clear();
     for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
-      unsigned idx = map.getDimPosition(perm(enc, d));
+      AffineExpr a = map.getResult(perm(enc, d));
+      if (a.getKind() != AffineExprKind::DimId)
+        continue; // compound
+      unsigned idx = a.cast<AffineDimExpr>().getPosition();
       // Handle sparse storage schemes.
       if (merger.isDim(tensor, idx, Dim::kSparse)) {
         auto dynShape = {ShapedType::kDynamicSize};
@@ -414,6 +564,61 @@ static Value genVectorInvariantValue(CodeGen &codegen,
   return rewriter.create<vector::BroadcastOp>(val.getLoc(), vtp, val);
 }
 
+/// Generates an affine expression.
+//
+// TODO: generalize for sparse tensor subscripts
+//
+static Value genAffine(CodeGen &codegen, PatternRewriter &rewriter,
+                       AffineExpr a, Location loc) {
+  switch (a.getKind()) {
+  case AffineExprKind::DimId: {
+    unsigned idx = a.cast<AffineDimExpr>().getPosition();
+    return codegen.loops[idx]; // universal dense index
+  }
+  case AffineExprKind::Add: {
+    auto binOp = a.cast<AffineBinaryOpExpr>();
+    return rewriter.create<AddIOp>(
+        loc, genAffine(codegen, rewriter, binOp.getLHS(), loc),
+        genAffine(codegen, rewriter, binOp.getRHS(), loc));
+  }
+  case AffineExprKind::Mul: {
+    auto binOp = a.cast<AffineBinaryOpExpr>();
+    return rewriter.create<MulIOp>(
+        loc, genAffine(codegen, rewriter, binOp.getLHS(), loc),
+        genAffine(codegen, rewriter, binOp.getRHS(), loc));
+  }
+  case AffineExprKind::Constant: {
+    int64_t c = a.cast<AffineConstantExpr>().getValue();
+    return rewriter.create<ConstantIndexOp>(loc, c);
+  }
+  default:
+    llvm_unreachable("unexpected affine subscript");
+  }
+}
+
+/// Generates subscript for load/store on a dense or sparse tensor.
+static Value genSubscript(CodeGen &codegen, PatternRewriter &rewriter,
+                          linalg::GenericOp op, OpOperand *t,
+                          SmallVector<Value, 4> &args) {
+  unsigned tensor = t->getOperandNumber();
+  auto map = op.getTiedIndexingMap(t);
+  auto enc = getSparseTensorEncoding(t->get().getType());
+  unsigned rank = map.getNumResults();
+  if (enc) {
+    // Note that currently, all sparse subscripts are simple.
+    // TODO: accept affine too?
+    unsigned idx = map.getDimPosition(perm(enc, rank - 1));
+    assert(codegen.pidxs[tensor][idx] != nullptr);
+    args.push_back(codegen.pidxs[tensor][idx]); // position index
+  } else {
+    for (unsigned d = 0; d < rank; d++) {
+      AffineExpr a = map.getResult(perm(enc, d));
+      args.push_back(genAffine(codegen, rewriter, a, op.getLoc()));
+    }
+  }
+  return codegen.buffers[tensor];
+}
+
 /// Generates a load on a dense or sparse tensor.
 static Value genTensorLoad(Merger &merger, CodeGen &codegen,
                            PatternRewriter &rewriter, linalg::GenericOp op,
@@ -428,62 +633,32 @@ static Value genTensorLoad(Merger &merger, CodeGen &codegen,
   // Actual load.
   SmallVector<Value, 4> args;
   OpOperand *t = op.getInputAndOutputOperands()[merger.exp(exp).tensor];
-  unsigned tensor = t->getOperandNumber();
-  auto map = op.getTiedIndexingMap(t);
-  auto enc = getSparseTensorEncoding(t->get().getType());
-  unsigned rank = map.getNumResults();
-  if (enc) {
-    unsigned idx = map.getDimPosition(perm(enc, rank - 1));
-    assert(codegen.pidxs[tensor][idx] != nullptr);
-    args.push_back(codegen.pidxs[tensor][idx]); // position index
-  } else {
-    for (unsigned d = 0; d < rank; d++) {
-      unsigned idx = map.getDimPosition(d);
-      args.push_back(codegen.loops[idx]); // universal dense index
-    }
-  }
-  Location loc = op.getLoc();
-  Value ptr = codegen.buffers[tensor];
+  Value ptr = genSubscript(codegen, rewriter, op, t, args);
   if (codegen.curVecLength > 1)
     return genVectorLoad(codegen, rewriter, ptr, args);
-  return rewriter.create<memref::LoadOp>(loc, ptr, args);
+  return rewriter.create<memref::LoadOp>(op.getLoc(), ptr, args);
 }
 
 /// Generates a store on a dense or sparse tensor.
 static void genTensorStore(Merger &merger, CodeGen &codegen,
                            PatternRewriter &rewriter, linalg::GenericOp op,
-                           OpOperand *t, Value rhs) {
-  Location loc = op.getLoc();
+                           Value rhs) {
   // Test if this is a scalarized reduction.
-  OpOperand *lhs = op.getOutputOperand(0);
-  if (lhs == t && codegen.redVal) {
+  if (codegen.redVal) {
     if (codegen.curVecLength > 1)
-      rhs = rewriter.create<SelectOp>(loc, codegen.curVecMask, rhs,
+      rhs = rewriter.create<SelectOp>(op.getLoc(), codegen.curVecMask, rhs,
                                       codegen.redVal);
     codegen.redVal = rhs;
     return;
   }
   // Actual store.
   SmallVector<Value, 4> args;
-  unsigned tensor = t->getOperandNumber();
-  auto map = op.getTiedIndexingMap(t);
-  auto enc = getSparseTensorEncoding(t->get().getType());
-  unsigned rank = map.getNumResults();
-  if (enc) {
-    unsigned idx = map.getDimPosition(perm(enc, rank - 1));
-    assert(codegen.pidxs[tensor][idx] != nullptr);
-    args.push_back(codegen.pidxs[tensor][idx]); // position index
-  } else {
-    for (unsigned d = 0; d < rank; d++) {
-      unsigned idx = map.getDimPosition(d);
-      args.push_back(codegen.loops[idx]); // universal dense index
-    }
-  }
-  Value ptr = codegen.buffers[tensor];
+  OpOperand *t = op.getOutputOperand(0);
+  Value ptr = genSubscript(codegen, rewriter, op, t, args);
   if (codegen.curVecLength > 1)
     genVectorStore(codegen, rewriter, rhs, ptr, args);
   else
-    rewriter.create<memref::StoreOp>(loc, rhs, ptr, args);
+    rewriter.create<memref::StoreOp>(op.getLoc(), rhs, ptr, args);
 }
 
 /// Generates a pointer/index load from the sparse storage scheme. Narrower
@@ -558,11 +733,15 @@ static Value genReductionStart(Merger &merger, CodeGen &codegen,
                                linalg::GenericOp op) {
   if (codegen.redVal)
     return codegen.redVal; // chained with previous for-loop
-  if (codegen.curVecLength > 1) {
-    // TODO: assumes + reductions for now
+  // Generate vector or scalar start of a reduction.
+  unsigned vl = codegen.curVecLength;
+  if (vl > 1) {
     VectorType vtp = vectorType(codegen, codegen.buffers[codegen.redExp]);
-    return rewriter.create<ConstantOp>(op.getLoc(), vtp,
-                                       rewriter.getZeroAttr(vtp));
+    assert(!merger.exp(codegen.redExp).val);
+    codegen.curVecLength = 1;
+    Value load = genTensorLoad(merger, codegen, rewriter, op, codegen.redExp);
+    codegen.curVecLength = vl;
+    return genReductionInit(rewriter, op.getLoc(), codegen.redKind, vtp, load);
   }
   return genTensorLoad(merger, codegen, rewriter, op, codegen.redExp);
 }
@@ -575,22 +754,14 @@ static void genReductionEnd(Merger &merger, CodeGen &codegen,
     return;
   assert(codegen.curVecLength == 1);
   codegen.redVal = merger.exp(codegen.redExp).val = Value(); // end chain
-  OpOperand *lhs = op.getOutputOperand(0);
+  // Generate vector or scalar end of a reduction.
   if (auto vtp = red.getType().dyn_cast<VectorType>()) {
-    // TODO: assumes + reductions for now
-    StringAttr kind = rewriter.getStringAttr("add");
-    Value ld = genTensorLoad(merger, codegen, rewriter, op, codegen.redExp);
-    // Integer reductions don't accept an accumulator.
-    if (vtp.getElementType().isa<IntegerType>()) {
-      red = rewriter.create<vector::ReductionOp>(op.getLoc(), ld.getType(),
-                                                 kind, red, ValueRange{});
-      red = rewriter.create<AddIOp>(op.getLoc(), red, ld);
-    } else {
-      red = rewriter.create<vector::ReductionOp>(op.getLoc(), ld.getType(),
-                                                 kind, red, ld);
-    }
+    StringRef name = getReductionName(codegen.redKind);
+    StringAttr kind = rewriter.getStringAttr(name);
+    red = rewriter.create<vector::ReductionOp>(
+        op.getLoc(), vtp.getElementType(), kind, red, ValueRange{});
   }
-  genTensorStore(merger, codegen, rewriter, op, lhs, red);
+  genTensorStore(merger, codegen, rewriter, op, red);
 }
 
 /// Recursively generates tensor expression.
@@ -616,10 +787,32 @@ static Value genExp(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
   return merger.buildExp(rewriter, loc, exp, v0, v1);
 }
 
+/// Determines if affine expression is invariant.
+static bool isInvariantAffine(const CodeGen &codegen, AffineExpr a,
+                              unsigned ldx, bool &atLevel) {
+  switch (a.getKind()) {
+  case AffineExprKind::DimId: {
+    unsigned idx = a.cast<AffineDimExpr>().getPosition();
+    if (idx == ldx)
+      atLevel = true;
+    return codegen.loops[idx] != nullptr; // no longer in play?
+  }
+  case AffineExprKind::Add:
+  case AffineExprKind::Mul: {
+    auto binOp = a.cast<AffineBinaryOpExpr>();
+    return isInvariantAffine(codegen, binOp.getLHS(), ldx, atLevel) &&
+           isInvariantAffine(codegen, binOp.getRHS(), ldx, atLevel);
+  }
+  default:
+    return true;
+  }
+}
+
 /// Hoists loop invariant tensor loads for which indices have been exhausted.
 static void genInvariants(Merger &merger, CodeGen &codegen,
                           PatternRewriter &rewriter, linalg::GenericOp op,
-                          unsigned exp, unsigned ldx, bool hoist) {
+                          unsigned exp, unsigned ldx, bool hoist,
+                          Kind last = Kind::kTensor) {
   if (exp == -1u)
     return;
   if (merger.exp(exp).kind == Kind::kTensor) {
@@ -629,16 +822,15 @@ static void genInvariants(Merger &merger, CodeGen &codegen,
     auto map = op.getTiedIndexingMap(t);
     auto enc = getSparseTensorEncoding(t->get().getType());
     for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
-      unsigned idx = map.getDimPosition(perm(enc, d));
-      if (!codegen.loops[idx])
+      AffineExpr a = map.getResult(perm(enc, d));
+      if (!isInvariantAffine(codegen, a, ldx, atLevel))
         return; // still in play
-      else if (idx == ldx)
-        atLevel = true;
     }
     // All exhausted at this level (atLevel denotes exactly at this level).
     OpOperand *lhs = op.getOutputOperand(0);
     if (lhs == t) {
       codegen.redExp = hoist ? exp : -1u;
+      codegen.redKind = getReduction(last);
     } else if (atLevel) {
       merger.exp(exp).val =
           hoist ? genTensorLoad(merger, codegen, rewriter, op, exp) : Value();
@@ -647,10 +839,11 @@ static void genInvariants(Merger &merger, CodeGen &codegen,
     // Traverse into the binary operations. Note that we only hoist
     // tensor loads, since subsequent MLIR/LLVM passes know how to
     // deal with all other kinds of derived loop invariants.
+    Kind last = merger.exp(exp).kind;
     unsigned e0 = merger.exp(exp).children.e0;
     unsigned e1 = merger.exp(exp).children.e1;
-    genInvariants(merger, codegen, rewriter, op, e0, ldx, hoist);
-    genInvariants(merger, codegen, rewriter, op, e1, ldx, hoist);
+    genInvariants(merger, codegen, rewriter, op, e0, ldx, hoist, last);
+    genInvariants(merger, codegen, rewriter, op, e1, ldx, hoist, last);
   }
 }
 
@@ -736,12 +929,16 @@ static bool isParallelFor(CodeGen &codegen, bool isOuter, bool isReduction,
 /// For now, we reject vectorization of such cases.
 /// TODO: implement strided load/stores on dense arrays
 static bool denseUnitStrides(Merger &merger, linalg::GenericOp op,
-                             unsigned idx) {
+                             unsigned ldx) {
   for (OpOperand *t : op.getInputAndOutputOperands()) {
     if (!getSparseTensorEncoding(t->get().getType())) {
       auto map = op.getTiedIndexingMap(t);
       for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
-        if (map.getDimPosition(d) == idx && d != rank - 1)
+        AffineExpr a = map.getResult(d);
+        if (a.getKind() != AffineExprKind::DimId)
+          return false; // very conservative
+        unsigned idx = a.cast<AffineDimExpr>().getPosition();
+        if (idx == ldx && d != rank - 1)
           return false;
       }
     }
@@ -1004,9 +1201,8 @@ static void genStmt(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
                     unsigned exp, unsigned at) {
   // At each leaf, assign remaining tensor (sub)expression to output tensor.
   if (at == topSort.size()) {
-    OpOperand *lhs = op.getOutputOperand(0);
     Value rhs = genExp(merger, codegen, rewriter, op, exp);
-    genTensorStore(merger, codegen, rewriter, op, lhs, rhs);
+    genTensorStore(merger, codegen, rewriter, op, rhs);
     return;
   }
   assert(codegen.curVecLength == 1);
@@ -1107,7 +1303,10 @@ static void genResult(Merger &merger, CodeGen &codegen,
     // (even though lowering should never need this eventually).
     SmallVector<Value, 4> args;
     for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
-      unsigned idx = map.getDimPosition(perm(enc, d));
+      AffineExpr a = map.getResult(perm(enc, d));
+      if (a.getKind() != AffineExprKind::DimId)
+        continue; // compound
+      unsigned idx = a.cast<AffineDimExpr>().getPosition();
       if (merger.isDim(tensor, idx, Dim::kSparse)) {
         args.push_back(codegen.pointers[tensor][idx]);
         args.push_back(codegen.indices[tensor][idx]);
@@ -1122,6 +1321,10 @@ static void genResult(Merger &merger, CodeGen &codegen,
   }
   rewriter.replaceOp(op, result);
 }
+
+//===----------------------------------------------------------------------===//
+// Sparse compiler rewriting methods.
+//===----------------------------------------------------------------------===//
 
 namespace {
 

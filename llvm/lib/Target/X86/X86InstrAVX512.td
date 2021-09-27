@@ -13501,130 +13501,130 @@ let Predicates = [HasFP16, HasVLX] in {
 }
 
 let Constraints = "@earlyclobber $dst, $src1 = $dst" in {
-  multiclass avx512_cfmop_rm<bits<8> opc, string OpcodeStr, SDNode OpNode, X86VectorVTInfo _> {
+  multiclass avx512_cfmaop_rm<bits<8> opc, string OpcodeStr, SDNode OpNode, X86VectorVTInfo _, bit IsCommutable> {
     defm r: AVX512_maskable_3src<opc, MRMSrcReg, _, (outs _.RC:$dst),
             (ins _.RC:$src2, _.RC:$src3),
             OpcodeStr, "$src3, $src2", "$src2, $src3",
-            (_.VT (OpNode _.RC:$src1, _.RC:$src2, _.RC:$src3))>, EVEX_4V;
+            (_.VT (OpNode _.RC:$src2, _.RC:$src3, _.RC:$src1)), IsCommutable>, EVEX_4V;
 
     defm m: AVX512_maskable_3src<opc, MRMSrcMem, _, (outs _.RC:$dst),
             (ins _.RC:$src2, _.MemOp:$src3),
             OpcodeStr, "$src3, $src2", "$src2, $src3",
-            (_.VT (OpNode _.RC:$src1, _.RC:$src2, (_.LdFrag addr:$src3)))>, EVEX_4V;
+            (_.VT (OpNode _.RC:$src2, (_.LdFrag addr:$src3), _.RC:$src1))>, EVEX_4V;
 
     defm mb: AVX512_maskable_3src<opc, MRMSrcMem, _, (outs _.RC:$dst),
             (ins _.RC:$src2, _.ScalarMemOp:$src3),
             OpcodeStr, !strconcat("${src3}", _.BroadcastStr,", $src2"), !strconcat("$src2, ${src3}", _.BroadcastStr),
-            (_.VT (OpNode _.RC:$src1, _.RC:$src2, (_.VT (_.BroadcastLdFrag addr:$src3))))>, EVEX_B, EVEX_4V;
+            (_.VT (OpNode _.RC:$src2, (_.VT (_.BroadcastLdFrag addr:$src3)), _.RC:$src1))>, EVEX_B, EVEX_4V;
   }
 } // Constraints = "@earlyclobber $dst, $src1 = $dst"
 
-multiclass avx512_cfmop_round<bits<8> opc, string OpcodeStr, SDNode OpNode,
+multiclass avx512_cfmaop_round<bits<8> opc, string OpcodeStr, SDNode OpNode,
                                  X86VectorVTInfo _> {
   let Constraints = "@earlyclobber $dst, $src1 = $dst" in
   defm rb: AVX512_maskable_3src<opc, MRMSrcReg, _, (outs _.RC:$dst),
           (ins _.RC:$src2, _.RC:$src3, AVX512RC:$rc),
           OpcodeStr, "$rc, $src3, $src2", "$src2, $src3, $rc",
-          (_.VT (OpNode _.RC:$src1, _.RC:$src2, _.RC:$src3, (i32 timm:$rc)))>,
+          (_.VT (OpNode _.RC:$src2, _.RC:$src3, _.RC:$src1, (i32 timm:$rc)))>,
           EVEX_4V, EVEX_B, EVEX_RC;
 }
 
 
-multiclass avx512_cfmaop_common<bits<8> opc, string OpcodeStr, SDNode OpNode, SDNode OpNodeRnd> {
+multiclass avx512_cfmaop_common<bits<8> opc, string OpcodeStr, SDNode OpNode, SDNode OpNodeRnd, bit IsCommutable> {
   let Predicates = [HasFP16] in {
-    defm Z    : avx512_cfmop_rm<opc, OpcodeStr, OpNode, v16f32_info>,
-                avx512_cfmop_round<opc, OpcodeStr, OpNodeRnd, v16f32_info>,
+    defm Z    : avx512_cfmaop_rm<opc, OpcodeStr, OpNode, v16f32_info, IsCommutable>,
+                avx512_cfmaop_round<opc, OpcodeStr, OpNodeRnd, v16f32_info>,
                       EVEX_V512, Sched<[WriteFMAZ]>;
   }
   let Predicates = [HasVLX, HasFP16] in {
-    defm Z256 : avx512_cfmop_rm<opc, OpcodeStr, OpNode, v8f32x_info>, EVEX_V256, Sched<[WriteFMAY]>;
-    defm Z128 : avx512_cfmop_rm<opc, OpcodeStr, OpNode, v4f32x_info>, EVEX_V128, Sched<[WriteFMAX]>;
+    defm Z256 : avx512_cfmaop_rm<opc, OpcodeStr, OpNode, v8f32x_info, IsCommutable>, EVEX_V256, Sched<[WriteFMAY]>;
+    defm Z128 : avx512_cfmaop_rm<opc, OpcodeStr, OpNode, v4f32x_info, IsCommutable>, EVEX_V128, Sched<[WriteFMAX]>;
   }
 }
 
 multiclass avx512_cfmulop_common<bits<8> opc, string OpcodeStr, SDNode OpNode,
-                                 SDNode MaskOpNode, SDNode OpNodeRnd,
-                                 X86SchedWriteWidths sched = SchedWriteFMA> {
+                                 SDNode MaskOpNode, SDNode OpNodeRnd, bit IsCommutable> {
   let Predicates = [HasFP16] in {
     defm Z    : avx512_fp_packed<opc, OpcodeStr, OpNode, MaskOpNode, v16f32_info,
-                                 sched.ZMM, 0, 0, "", "@earlyclobber $dst", 0>,
-                avx512_fp_round_packed<opc, OpcodeStr, OpNodeRnd, sched.ZMM, v16f32_info,
+                                 WriteFMAZ, IsCommutable, IsCommutable, "", "@earlyclobber $dst", 0>,
+                avx512_fp_round_packed<opc, OpcodeStr, OpNodeRnd, WriteFMAZ, v16f32_info,
                                        "", "@earlyclobber $dst">, EVEX_V512;
   }
   let Predicates = [HasVLX, HasFP16] in {
     defm Z256 : avx512_fp_packed<opc, OpcodeStr, OpNode, MaskOpNode, v8f32x_info,
-                                 sched.YMM, 0, 0, "", "@earlyclobber $dst", 0>, EVEX_V256;
+                                 WriteFMAY, IsCommutable, IsCommutable, "", "@earlyclobber $dst", 0>, EVEX_V256;
     defm Z128 : avx512_fp_packed<opc, OpcodeStr, OpNode, MaskOpNode, v4f32x_info,
-                                 sched.XMM, 0, 0, "", "@earlyclobber $dst", 0>, EVEX_V128;
+                                 WriteFMAX, IsCommutable, IsCommutable, "", "@earlyclobber $dst", 0>, EVEX_V128;
   }
 }
 
 
 let Uses = [MXCSR] in {
-  defm VFMADDCPH  : avx512_cfmaop_common<0x56, "vfmaddcph", x86vfmaddc, x86vfmaddcRnd>,
+  defm VFMADDCPH  : avx512_cfmaop_common<0x56, "vfmaddcph", x86vfmaddc, x86vfmaddcRnd, 1>,
                                     T_MAP6XS, EVEX_CD8<32, CD8VF>;
-  defm VFCMADDCPH : avx512_cfmaop_common<0x56, "vfcmaddcph", x86vfcmaddc, x86vfcmaddcRnd>,
+  defm VFCMADDCPH : avx512_cfmaop_common<0x56, "vfcmaddcph", x86vfcmaddc, x86vfcmaddcRnd, 0>,
                                     T_MAP6XD, EVEX_CD8<32, CD8VF>;
 
   defm VFMULCPH  : avx512_cfmulop_common<0xD6, "vfmulcph", x86vfmulc, x86vfmulc,
-                                         x86vfmulcRnd>, T_MAP6XS, EVEX_CD8<32, CD8VF>;
+                                         x86vfmulcRnd, 1>, T_MAP6XS, EVEX_CD8<32, CD8VF>;
   defm VFCMULCPH : avx512_cfmulop_common<0xD6, "vfcmulcph", x86vfcmulc,
-                                         x86vfcmulc, x86vfcmulcRnd>, T_MAP6XD, EVEX_CD8<32, CD8VF>;
+                                         x86vfcmulc, x86vfcmulcRnd, 0>, T_MAP6XD, EVEX_CD8<32, CD8VF>;
 }
 
 
-multiclass avx512_cfmop_sh_common<bits<8> opc, string OpcodeStr, SDNode OpNode, SDNode OpNodeRnd,
-                                  X86SchedWriteWidths sched = SchedWriteFMA> {
+multiclass avx512_cfmaop_sh_common<bits<8> opc, string OpcodeStr, SDNode OpNode, SDNode OpNodeRnd,
+                                   bit IsCommutable> {
   let Predicates = [HasFP16], Constraints = "@earlyclobber $dst, $src1 = $dst" in {
     defm r : AVX512_maskable_3src<opc, MRMSrcReg, v4f32x_info, (outs VR128X:$dst),
                         (ins VR128X:$src2, VR128X:$src3), OpcodeStr,
                         "$src3, $src2", "$src2, $src3",
-                        (v4f32 (OpNode VR128X:$src1, VR128X:$src2, VR128X:$src3))>,
-                        Sched<[sched.XMM]>;
+                        (v4f32 (OpNode VR128X:$src2, VR128X:$src3, VR128X:$src1)), IsCommutable>,
+                        Sched<[WriteFMAX]>;
     defm m : AVX512_maskable_3src<opc, MRMSrcMem, v4f32x_info, (outs VR128X:$dst),
                         (ins VR128X:$src2, ssmem:$src3), OpcodeStr,
                         "$src3, $src2", "$src2, $src3",
-                        (v4f32 (OpNode VR128X:$src1, VR128X:$src2, (sse_load_f32 addr:$src3)))>,
-                        Sched<[sched.XMM.Folded, sched.XMM.ReadAfterFold]>;
+                        (v4f32 (OpNode VR128X:$src2, (sse_load_f32 addr:$src3), VR128X:$src1))>,
+                        Sched<[WriteFMAX.Folded, WriteFMAX.ReadAfterFold]>;
     defm rb : AVX512_maskable_3src<opc,  MRMSrcReg, v4f32x_info, (outs VR128X:$dst),
                         (ins VR128X:$src2, VR128X:$src3, AVX512RC:$rc), OpcodeStr,
                         "$rc, $src3, $src2", "$src2, $src3, $rc",
-                        (v4f32 (OpNodeRnd VR128X:$src1, VR128X:$src2, VR128X:$src3, (i32 timm:$rc)))>,
-                        EVEX_B, EVEX_RC, Sched<[sched.XMM]>;
+                        (v4f32 (OpNodeRnd VR128X:$src2, VR128X:$src3, VR128X:$src1, (i32 timm:$rc)))>,
+                        EVEX_B, EVEX_RC, Sched<[WriteFMAX]>;
   }
 }
 
 multiclass avx512_cfmbinop_sh_common<bits<8> opc, string OpcodeStr, SDNode OpNode,
-                                     SDNode OpNodeRnd, X86SchedWriteWidths sched = SchedWriteFMA> {
+                                     SDNode OpNodeRnd, bit IsCommutable> {
   let Predicates = [HasFP16] in {
     defm rr : AVX512_maskable<opc, MRMSrcReg, f32x_info, (outs VR128X:$dst),
                         (ins VR128X:$src1, VR128X:$src2), OpcodeStr,
                         "$src2, $src1", "$src1, $src2",
                         (v4f32 (OpNode VR128X:$src1, VR128X:$src2)),
-                        0, 0, 0, X86selects, "@earlyclobber $dst">, Sched<[sched.XMM]>;
+                        IsCommutable, IsCommutable, IsCommutable,
+                        X86selects, "@earlyclobber $dst">, Sched<[WriteFMAX]>;
     defm rm : AVX512_maskable<opc, MRMSrcMem, f32x_info, (outs VR128X:$dst),
                         (ins VR128X:$src1, ssmem:$src2), OpcodeStr,
                         "$src2, $src1", "$src1, $src2",
                         (v4f32 (OpNode VR128X:$src1, (sse_load_f32 addr:$src2))),
                         0, 0, 0, X86selects, "@earlyclobber $dst">,
-                        Sched<[sched.XMM.Folded, sched.XMM.ReadAfterFold]>;
+                        Sched<[WriteFMAX.Folded, WriteFMAX.ReadAfterFold]>;
     defm rrb : AVX512_maskable<opc, MRMSrcReg, f32x_info, (outs VR128X:$dst),
                         (ins VR128X:$src1, VR128X:$src2, AVX512RC:$rc), OpcodeStr,
                         "$rc, $src2, $src1", "$src1, $src2, $rc",
                         (OpNodeRnd (v4f32 VR128X:$src1), (v4f32 VR128X:$src2), (i32 timm:$rc)),
                         0, 0, 0, X86selects, "@earlyclobber $dst">,
-                        EVEX_B, EVEX_RC, Sched<[sched.XMM]>;
+                        EVEX_B, EVEX_RC, Sched<[WriteFMAX]>;
   }
 }
 
 let Uses = [MXCSR] in {
-  defm VFMADDCSHZ  : avx512_cfmop_sh_common<0x57, "vfmaddcsh", x86vfmaddcSh, x86vfmaddcShRnd>,
+  defm VFMADDCSHZ  : avx512_cfmaop_sh_common<0x57, "vfmaddcsh", x86vfmaddcSh, x86vfmaddcShRnd, 1>,
                                     T_MAP6XS, EVEX_CD8<32, CD8VT1>, EVEX_V128, EVEX_4V;
-  defm VFCMADDCSHZ : avx512_cfmop_sh_common<0x57, "vfcmaddcsh", x86vfcmaddcSh, x86vfcmaddcShRnd>,
+  defm VFCMADDCSHZ : avx512_cfmaop_sh_common<0x57, "vfcmaddcsh", x86vfcmaddcSh, x86vfcmaddcShRnd, 0>,
                                     T_MAP6XD, EVEX_CD8<32, CD8VT1>, EVEX_V128, EVEX_4V;
 
-  defm VFMULCSHZ  : avx512_cfmbinop_sh_common<0xD7, "vfmulcsh", x86vfmulcSh, x86vfmulcShRnd>,
+  defm VFMULCSHZ  : avx512_cfmbinop_sh_common<0xD7, "vfmulcsh", x86vfmulcSh, x86vfmulcShRnd, 1>,
                                     T_MAP6XS, EVEX_CD8<32, CD8VT1>, EVEX_V128, VEX_LIG, EVEX_4V;
-  defm VFCMULCSHZ : avx512_cfmbinop_sh_common<0xD7, "vfcmulcsh", x86vfcmulcSh, x86vfcmulcShRnd>,
+  defm VFCMULCSHZ : avx512_cfmbinop_sh_common<0xD7, "vfcmulcsh", x86vfcmulcSh, x86vfcmulcShRnd, 0>,
                                     T_MAP6XD, EVEX_CD8<32, CD8VT1>, EVEX_V128, VEX_LIG, EVEX_4V;
 }

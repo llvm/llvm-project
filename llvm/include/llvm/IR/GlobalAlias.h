@@ -77,6 +77,12 @@ public:
     return getIndirectSymbol();
   }
 
+  const GlobalObject *getBaseObject() const;
+  GlobalObject *getBaseObject() {
+    return const_cast<GlobalObject *>(
+        static_cast<const GlobalAlias *>(this)->getBaseObject());
+  }
+
   static bool isValidLinkage(LinkageTypes L) {
     return isExternalLinkage(L) || isLocalLinkage(L) ||
       isWeakLinkage(L) || isLinkOnceLinkage(L);

@@ -210,9 +210,9 @@ auto null = &nullary;
 // FIXME: These currently don't work because clang-cl emits incorrect debug info
 // for std::nullptr_t.  We should fix these in clang-cl.
 auto rae = &unaryret<decltype(nullptr), 29>;
-// CHECK: (nullptr_t (*)()) rae = {{.*}}
+// CHECK: (std::nullptr_t (*)()) rae = {{.*}}
 auto aae = &unary<decltype(nullptr)>;
-// CHECK: (void (*)(nullptr_t)) aae = {{.*}}
+// CHECK: (void (*)(std::nullptr_t)) aae = {{.*}}
 
 int main(int argc, char **argv) {
   return 0;

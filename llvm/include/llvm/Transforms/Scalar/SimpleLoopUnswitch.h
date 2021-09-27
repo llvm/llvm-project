@@ -69,6 +69,9 @@ public:
 
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);
+
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
 /// Create the legacy pass object for the simple loop unswitcher.

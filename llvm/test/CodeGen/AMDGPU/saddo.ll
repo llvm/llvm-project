@@ -42,10 +42,10 @@ define amdgpu_kernel void @saddo_i64_zext(i64 addrspace(1)* %out, i64 %a, i64 %b
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s6
 ; VI-NEXT:    s_add_u32 s2, s6, s0
-; VI-NEXT:    s_addc_u32 s3, s7, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s7
-; VI-NEXT:    v_cmp_lt_i64_e32 vcc, s[2:3], v[1:2]
+; VI-NEXT:    s_addc_u32 s3, s7, s1
 ; VI-NEXT:    v_cmp_lt_i64_e64 s[8:9], s[0:1], 0
+; VI-NEXT:    v_cmp_lt_i64_e32 vcc, s[2:3], v[1:2]
 ; VI-NEXT:    v_mov_b32_e32 v3, s3
 ; VI-NEXT:    s_xor_b64 s[0:1], s[8:9], vcc
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[0:1]
@@ -66,8 +66,8 @@ define amdgpu_kernel void @saddo_i64_zext(i64 addrspace(1)* %out, i64 %a, i64 %b
 ; GFX9-NEXT:    s_add_u32 s0, s6, s2
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX9-NEXT:    s_addc_u32 s1, s7, s3
-; GFX9-NEXT:    v_cmp_lt_i64_e32 vcc, s[0:1], v[0:1]
 ; GFX9-NEXT:    v_cmp_lt_i64_e64 s[8:9], s[2:3], 0
+; GFX9-NEXT:    v_cmp_lt_i64_e32 vcc, s[0:1], v[0:1]
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    s_xor_b64 s[2:3], s[8:9], vcc
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[2:3]
@@ -116,8 +116,8 @@ define amdgpu_kernel void @s_saddo_i32(i32 addrspace(1)* %out, i1 addrspace(1)* 
 ; SI-NEXT:    s_cselect_b64 s[10:11], -1, 0
 ; SI-NEXT:    s_cmp_lt_i32 s12, s8
 ; SI-NEXT:    s_mov_b32 s1, s5
-; SI-NEXT:    v_mov_b32_e32 v0, s12
 ; SI-NEXT:    s_cselect_b64 s[8:9], -1, 0
+; SI-NEXT:    v_mov_b32_e32 v0, s12
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_xor_b64 s[0:1], s[10:11], s[8:9]
 ; SI-NEXT:    s_mov_b32 s4, s6
@@ -143,9 +143,9 @@ define amdgpu_kernel void @s_saddo_i32(i32 addrspace(1)* %out, i1 addrspace(1)* 
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    s_xor_b64 s[0:1], s[2:3], s[0:1]
-; VI-NEXT:    flat_store_dword v[0:1], v4
 ; VI-NEXT:    v_mov_b32_e32 v2, s6
 ; VI-NEXT:    v_mov_b32_e32 v3, s7
+; VI-NEXT:    flat_store_dword v[0:1], v4
 ; VI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; VI-NEXT:    flat_store_byte v[2:3], v0
 ; VI-NEXT:    s_endpgm
@@ -306,9 +306,9 @@ define amdgpu_kernel void @s_saddo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* 
 ; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], vcc
 ; SI-NEXT:    s_mov_b32 s0, s2
 ; SI-NEXT:    s_mov_b32 s1, s3
-; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[8:11], 0
 ; SI-NEXT:    s_mov_b32 s2, s10
 ; SI-NEXT:    s_mov_b32 s3, s11
+; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[8:11], 0
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; SI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
@@ -319,14 +319,14 @@ define amdgpu_kernel void @s_saddo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* 
 ; VI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    s_add_u32 s0, s4, s6
+; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    s_addc_u32 s1, s5, s7
 ; VI-NEXT:    v_mov_b32_e32 v5, s5
-; VI-NEXT:    v_cmp_lt_i64_e32 vcc, s[0:1], v[4:5]
 ; VI-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-NEXT:    v_mov_b32_e32 v3, s3
+; VI-NEXT:    v_cmp_lt_i64_e32 vcc, s[0:1], v[4:5]
 ; VI-NEXT:    v_cmp_lt_i64_e64 s[2:3], s[6:7], 0
 ; VI-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-NEXT:    v_mov_b32_e32 v4, s0
@@ -345,9 +345,9 @@ define amdgpu_kernel void @s_saddo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* 
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    s_addc_u32 s9, s5, s7
+; GFX9-NEXT:    v_cmp_lt_i64_e64 s[10:11], s[6:7], 0
 ; GFX9-NEXT:    v_cmp_lt_i64_e32 vcc, s[8:9], v[0:1]
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s8
-; GFX9-NEXT:    v_cmp_lt_i64_e64 s[10:11], s[6:7], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s9
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX9-NEXT:    s_xor_b64 s[0:1], s[10:11], vcc
@@ -508,9 +508,9 @@ define amdgpu_kernel void @v_saddo_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32>
 ; SI-NEXT:    v_add_i32_e32 v4, vcc, v0, v2
 ; SI-NEXT:    v_cmp_gt_i32_e64 s[0:1], 0, v3
 ; SI-NEXT:    v_cmp_lt_i32_e64 s[4:5], v5, v1
-; SI-NEXT:    s_xor_b64 s[0:1], s[0:1], s[4:5]
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v2
 ; SI-NEXT:    v_cmp_lt_i32_e64 s[2:3], v4, v0
+; SI-NEXT:    s_xor_b64 s[0:1], s[0:1], s[4:5]
 ; SI-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
 ; SI-NEXT:    s_xor_b64 s[0:1], vcc, s[2:3]
 ; SI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
@@ -537,9 +537,9 @@ define amdgpu_kernel void @v_saddo_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32>
 ; VI-NEXT:    v_add_u32_e32 v8, vcc, v0, v2
 ; VI-NEXT:    v_cmp_gt_i32_e64 s[0:1], 0, v3
 ; VI-NEXT:    v_cmp_lt_i32_e64 s[4:5], v9, v1
-; VI-NEXT:    s_xor_b64 s[0:1], s[0:1], s[4:5]
 ; VI-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v2
 ; VI-NEXT:    v_cmp_lt_i32_e64 s[2:3], v8, v0
+; VI-NEXT:    s_xor_b64 s[0:1], s[0:1], s[4:5]
 ; VI-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
 ; VI-NEXT:    s_xor_b64 s[0:1], vcc, s[2:3]
 ; VI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
@@ -558,8 +558,8 @@ define amdgpu_kernel void @v_saddo_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32>
 ; GFX9-NEXT:    v_add_u32_e32 v5, v1, v3
 ; GFX9-NEXT:    v_add_i32 v1, v1, v3 clamp
 ; GFX9-NEXT:    v_add_u32_e32 v4, v0, v2
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, v5, v1
 ; GFX9-NEXT:    v_add_i32 v0, v0, v2 clamp
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, v5, v1
 ; GFX9-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, v4, v0
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc

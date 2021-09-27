@@ -49,7 +49,8 @@ Section,Description,Dependencies,Assignee,Complete
 | `bidirectional_iterator <https://llvm.org/D100278>`_
 | `random_access_iterator <https://llvm.org/D101316>`_
 | `contiguous_iterator <https://llvm.org/D101396>`_",,Various,✅
-`[indirectcallable.indirectinvocable] <http://wg21.link/indirectcallable.indirectinvocable>`_,"| indirectly_unary_invocable
+`[indirectcallable.indirectinvocable] <http://wg21.link/indirectcallable.indirectinvocable>`_,"
+| `indirectly_unary_invocable <https://llvm.org/D101277>`_
 | `indirectly_regular_unary_invocable <https://llvm.org/D101277>`_
 | `indirectly_unary_predicate <https://llvm.org/D101277>`_
 | `indirectly_binary_predicate <https://llvm.org/D101277>`_

@@ -44,6 +44,9 @@ namespace detail {
 /// Verify that `op` conforms to ContractionOpInterface.
 LogicalResult verifyContractionInterface(Operation *op);
 
+/// Verify that `op` conforms to the ConvolutionOpInterface.
+LogicalResult verifyConvolutionInterface(Operation *op);
+
 /// Verify that `op` conforms to the invariants of StructuredOpInterface
 LogicalResult verifyStructuredOpInterface(Operation *op);
 

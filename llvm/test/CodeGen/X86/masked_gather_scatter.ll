@@ -4104,16 +4104,16 @@ define <16 x double> @test_gather_setcc_split(double* %base, <16 x i32> %ind, <1
 ; KNL_32-NEXT:    .cfi_def_cfa_register %ebp
 ; KNL_32-NEXT:    andl $-64, %esp
 ; KNL_32-NEXT:    subl $64, %esp
-; KNL_32-NEXT:    vmovapd 72(%ebp), %zmm3
+; KNL_32-NEXT:    vmovdqa64 %zmm1, %zmm3
+; KNL_32-NEXT:    vmovapd 72(%ebp), %zmm1
 ; KNL_32-NEXT:    movl 8(%ebp), %eax
-; KNL_32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
+; KNL_32-NEXT:    vextracti64x4 $1, %zmm3, %ymm4
 ; KNL_32-NEXT:    vptestnmd %zmm4, %zmm4, %k1
-; KNL_32-NEXT:    vptestnmd %zmm1, %zmm1, %k2
+; KNL_32-NEXT:    vptestnmd %zmm3, %zmm3, %k2
 ; KNL_32-NEXT:    vgatherdpd (%eax,%ymm0,8), %zmm2 {%k2}
 ; KNL_32-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
-; KNL_32-NEXT:    vgatherdpd (%eax,%ymm0,8), %zmm3 {%k1}
+; KNL_32-NEXT:    vgatherdpd (%eax,%ymm0,8), %zmm1 {%k1}
 ; KNL_32-NEXT:    vmovapd %zmm2, %zmm0
-; KNL_32-NEXT:    vmovapd %zmm3, %zmm1
 ; KNL_32-NEXT:    movl %ebp, %esp
 ; KNL_32-NEXT:    popl %ebp
 ; KNL_32-NEXT:    .cfi_def_cfa %esp, 4

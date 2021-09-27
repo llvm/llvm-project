@@ -117,17 +117,6 @@ raw_ostream &operator<<(raw_ostream &OS, class ValidatorResult &VR) {
   return OS;
 }
 
-bool polly::isConstCall(llvm::CallInst *Call) {
-  if (Call->mayReadOrWriteMemory())
-    return false;
-
-  for (auto &Operand : Call->arg_operands())
-    if (!isa<ConstantInt>(&Operand))
-      return false;
-
-  return true;
-}
-
 /// Check if a SCEV is valid in a SCoP.
 struct SCEVValidator
     : public SCEVVisitor<SCEVValidator, class ValidatorResult> {
@@ -353,18 +342,6 @@ public:
     return ValidatorResult(SCEVType::PARAM, S);
   }
 
-  ValidatorResult visitCallInstruction(Instruction *I, const SCEV *S) {
-    assert(I->getOpcode() == Instruction::Call && "Call instruction expected");
-
-    if (R->contains(I)) {
-      auto Call = cast<CallInst>(I);
-
-      if (!isConstCall(Call))
-        return ValidatorResult(SCEVType::INVALID, S);
-    }
-    return ValidatorResult(SCEVType::PARAM, S);
-  }
-
   ValidatorResult visitLoadInstruction(Instruction *I, const SCEV *S) {
     if (R->contains(I) && ILS) {
       ILS->insert(cast<LoadInst>(I));
@@ -454,8 +431,6 @@ public:
         return visitSDivInstruction(I, Expr);
       case Instruction::SRem:
         return visitSRemInstruction(I, Expr);
-      case Instruction::Call:
-        return visitCallInstruction(I, Expr);
       default:
         return visitGenericInst(I, Expr);
       }
@@ -468,34 +443,6 @@ public:
 
     return ValidatorResult(SCEVType::PARAM, Expr);
   }
-};
-
-class SCEVHasIVParams {
-  bool HasIVParams = false;
-
-public:
-  SCEVHasIVParams() {}
-
-  bool follow(const SCEV *S) {
-    const SCEVUnknown *Unknown = dyn_cast<SCEVUnknown>(S);
-    if (!Unknown)
-      return true;
-
-    CallInst *Call = dyn_cast<CallInst>(Unknown->getValue());
-
-    if (!Call)
-      return true;
-
-    if (isConstCall(Call)) {
-      HasIVParams = true;
-      return false;
-    }
-
-    return true;
-  }
-
-  bool isDone() { return HasIVParams; }
-  bool hasIVParams() { return HasIVParams; }
 };
 
 /// Check whether a SCEV refers to an SSA name defined inside a region.
@@ -514,11 +461,6 @@ public:
   bool follow(const SCEV *S) {
     if (auto Unknown = dyn_cast<SCEVUnknown>(S)) {
       Instruction *Inst = dyn_cast<Instruction>(Unknown->getValue());
-
-      CallInst *Call = dyn_cast<CallInst>(Unknown->getValue());
-
-      if (Call && isConstCall(Call))
-        return false;
 
       if (Inst) {
         // When we invariant load hoist a load, we first make sure that there
@@ -621,13 +563,6 @@ void findValues(const SCEV *Expr, ScalarEvolution &SE,
   SCEVFindValues FindValues(SE, Values);
   SCEVTraversal<SCEVFindValues> ST(FindValues);
   ST.visitAll(Expr);
-}
-
-bool hasIVParams(const SCEV *Expr) {
-  SCEVHasIVParams HasIVParams;
-  SCEVTraversal<SCEVHasIVParams> ST(HasIVParams);
-  ST.visitAll(Expr);
-  return HasIVParams.hasIVParams();
 }
 
 bool hasScalarDepsInsideRegion(const SCEV *Expr, const Region *R,

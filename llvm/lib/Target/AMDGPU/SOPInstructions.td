@@ -622,9 +622,8 @@ def S_BFM_B32 : SOP2_32 <"s_bfm_b32",
   [(set i32:$sdst, (UniformBinFrag<AMDGPUbfm> i32:$src0, i32:$src1))]>;
 def S_BFM_B64 : SOP2_64_32_32 <"s_bfm_b64">;
 
-// TODO: S_MUL_I32 require V_MUL_LO_I32 from VOP3 change
 def S_MUL_I32 : SOP2_32 <"s_mul_i32",
-  [(set i32:$sdst, (mul i32:$src0, i32:$src1))]> {
+  [(set i32:$sdst, (UniformBinFrag<mul> i32:$src0, i32:$src1))]> {
   let isCommutable = 1;
 }
 } // End isReMaterializable = 1
@@ -714,7 +713,7 @@ class SOPK_Pseudo <string opName, dag outs, dag ins,
   bits<1> has_sdst = 1;
 }
 
-class SOPK_Real<bits<5> op, SOPK_Pseudo ps> :
+class SOPK_Real<SOPK_Pseudo ps> :
   InstSI <ps.OutOperandList, ps.InOperandList,
           ps.Mnemonic # " " # ps.AsmOperands, []> {
   let SALU = 1;
@@ -740,7 +739,7 @@ class SOPK_Real<bits<5> op, SOPK_Pseudo ps> :
 }
 
 class SOPK_Real32<bits<5> op, SOPK_Pseudo ps> :
-  SOPK_Real <op, ps>,
+  SOPK_Real <ps>,
   Enc32 {
   let Inst{15-0}  = simm16;
   let Inst{22-16} = !if(ps.has_sdst, sdst, ?);
@@ -749,7 +748,7 @@ class SOPK_Real32<bits<5> op, SOPK_Pseudo ps> :
 }
 
 class SOPK_Real64<bits<5> op, SOPK_Pseudo ps> :
-  SOPK_Real<op, ps>,
+  SOPK_Real<ps>,
   Enc64 {
   let Inst{15-0}  = simm16;
   let Inst{22-16} = !if(ps.has_sdst, sdst, ?);
@@ -1108,7 +1107,7 @@ class SOPPRelaxTable <bit isRelaxed, string keyName, string gfxip> {
 }
 
 //spaces inserted in realname on instantiation of this record to allow s_endpgm to omit whitespace
-class SOPP_Real<bits<7> op, SOPP_Pseudo ps, string real_name = ps.Mnemonic> :
+class SOPP_Real<SOPP_Pseudo ps, string real_name = ps.Mnemonic> :
   InstSI <ps.OutOperandList, ps.InOperandList,
           real_name # ps.AsmOperands, []> {
   let SALU = 1;
@@ -1128,14 +1127,14 @@ class SOPP_Real<bits<7> op, SOPP_Pseudo ps, string real_name = ps.Mnemonic> :
   bits <16> simm16;
 }
 
-class SOPP_Real_32 <bits<7> op, SOPP_Pseudo ps, string real_name = ps.Mnemonic> : SOPP_Real<op, ps, real_name>,
+class SOPP_Real_32 <bits<7> op, SOPP_Pseudo ps, string real_name = ps.Mnemonic> : SOPP_Real<ps, real_name>,
 Enc32 {
   let Inst{15-0} = !if(ps.fixed_imm, ps.simm16, simm16);
   let Inst{22-16} = op;
   let Inst{31-23} = 0x17f;
 }
 
-class SOPP_Real_64 <bits<7> op, SOPP_Pseudo ps, string real_name = ps.Mnemonic> : SOPP_Real<op, ps, real_name>,
+class SOPP_Real_64 <bits<7> op, SOPP_Pseudo ps, string real_name = ps.Mnemonic> : SOPP_Real<ps, real_name>,
 Enc64 {
   // encoding
   let Inst{15-0} = !if(ps.fixed_imm, ps.simm16, simm16);

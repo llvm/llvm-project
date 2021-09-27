@@ -497,7 +497,6 @@ body:             |
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; MIPS32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; MIPS32: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
     ; MIPS32: $v0 = COPY [[LSHR]](s32)
     ; MIPS32: RetRA implicit $v0
@@ -667,7 +666,6 @@ body:             |
     ; MIPS32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
     ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
-    ; MIPS32: [[COPY3:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
     ; MIPS32: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[COPY2]], [[C]]
     ; MIPS32: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C]], [[COPY2]]
@@ -715,7 +713,6 @@ body:             |
     ; MIPS32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
     ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
-    ; MIPS32: [[COPY3:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
     ; MIPS32: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[COPY2]], [[C]]
     ; MIPS32: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C]], [[COPY2]]
@@ -765,7 +762,6 @@ body:             |
     ; MIPS32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
     ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
-    ; MIPS32: [[COPY3:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
     ; MIPS32: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[COPY2]], [[C]]
     ; MIPS32: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C]], [[COPY2]]

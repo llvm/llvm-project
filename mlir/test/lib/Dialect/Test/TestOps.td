@@ -20,6 +20,7 @@ include "mlir/Interfaces/CopyOpInterface.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Dialect/Linalg/IR/LinalgInterfaces.td"
 include "TestInterfaces.td"
 
 def Test_Dialect : Dialect {
@@ -647,6 +648,30 @@ def DefaultDialectOp : TEST_Op<"default_dialect", [OpAsmOpInterface]> {
   }];
   let assemblyFormat = "regions attr-dict-with-keyword";
 }
+
+// This operation requires its return type to have the trait 'TestTypeTrait'.
+def ResultTypeWithTraitOp : TEST_Op<"result_type_with_trait", []> {
+  let results = (outs AnyType);
+
+  let verifier = [{
+    if((*this)->getResultTypes()[0].hasTrait<TypeTrait::TestTypeTrait>())
+      return success();
+    return this->emitError("result type should have trait 'TestTypeTrait'");
+  }];
+}
+
+// This operation requires its "attr" attribute to have the
+// trait 'TestAttrTrait'.
+def AttrWithTraitOp : TEST_Op<"attr_with_trait", []> {
+  let arguments = (ins AnyAttr:$attr);
+
+  let verifier = [{
+    if (this->attr().hasTrait<AttributeTrait::TestAttrTrait>())
+      return success();
+    return this->emitError("'attr' attribute should have trait 'TestAttrTrait'");
+  }];
+}
+
 
 //===----------------------------------------------------------------------===//
 // Test Locations
@@ -1318,6 +1343,64 @@ def : Pat<(TestLocationSrcOp:$res1
             (location "fused", $res2, $res3))>;
 
 //===----------------------------------------------------------------------===//
+// Test Patterns (Type Builders)
+
+def SourceOp : TEST_Op<"source_op"> {
+  let arguments = (ins AnyInteger:$arg, AnyI32Attr:$tag);
+  let results = (outs AnyInteger);
+}
+
+// An op without return type deduction.
+def OpX : TEST_Op<"op_x"> {
+  let arguments = (ins AnyInteger:$input);
+  let results = (outs AnyInteger);
+}
+
+// Test that ops without built-in type deduction can be created in the
+// replacement DAG with an explicitly specified type.
+def : Pat<(SourceOp $val, ConstantAttr<I32Attr, "11">:$attr),
+          (OpX (OpX $val, (returnType "$_builder.getI32Type()")))>;
+// Test NativeCodeCall type builder can accept arguments.
+def SameTypeAs : NativeCodeCall<"$0.getType()">;
+
+def : Pat<(SourceOp $val, ConstantAttr<I32Attr, "22">:$attr),
+          (OpX (OpX $val, (returnType (SameTypeAs $val))))>;
+
+// Test multiple return types.
+def MakeI64Type : NativeCodeCall<"$_builder.getI64Type()">;
+def MakeI32Type : NativeCodeCall<"$_builder.getI32Type()">;
+
+def OneToTwo : TEST_Op<"one_to_two"> {
+  let arguments = (ins AnyInteger);
+  let results = (outs AnyInteger, AnyInteger);
+}
+
+def TwoToOne : TEST_Op<"two_to_one"> {
+  let arguments = (ins AnyInteger, AnyInteger);
+  let results = (outs AnyInteger);
+}
+
+def : Pat<(SourceOp $val, ConstantAttr<I32Attr, "33">:$attr),
+          (TwoToOne (OpX (OneToTwo:$res__0 $val, (returnType (MakeI64Type), (MakeI32Type))), (returnType (MakeI32Type))),
+                    (OpX $res__1, (returnType (MakeI64Type))))>;
+
+// Test copy value return type.
+def : Pat<(SourceOp $val, ConstantAttr<I32Attr, "44">:$attr),
+          (OpX (OpX $val, (returnType $val)))>;
+
+// Test create multiple return types with different methods.
+def : Pat<(SourceOp $val, ConstantAttr<I32Attr, "55">:$attr),
+          (TwoToOne (OneToTwo:$res__0 $val, (returnType $val, "$_builder.getI64Type()")), $res__1)>;
+
+//===----------------------------------------------------------------------===//
+// Test Patterns (Trailing Directives)
+
+// Test that we can specify both `location` and `returnType` directives.
+def : Pat<(SourceOp $val, ConstantAttr<I32Attr, "66">:$attr),
+          (TwoToOne (OpX $val, (returnType $val), (location "loc1")),
+                    (OpX $val, (location "loc2"), (returnType $val)))>;
+
+//===----------------------------------------------------------------------===//
 // Test Legalization
 //===----------------------------------------------------------------------===//
 
@@ -1333,9 +1416,12 @@ def ILLegalOpC : TEST_Op<"illegal_op_c">, Results<(outs I32)>;
 def ILLegalOpD : TEST_Op<"illegal_op_d">, Results<(outs I32)>;
 def ILLegalOpE : TEST_Op<"illegal_op_e">, Results<(outs I32)>;
 def ILLegalOpF : TEST_Op<"illegal_op_f">, Results<(outs I32)>;
+def ILLegalOpG : TEST_Op<"illegal_op_g">, Results<(outs I32)>;
 def LegalOpA : TEST_Op<"legal_op_a">,
   Arguments<(ins Test_LegalizerEnum:$status)>, Results<(outs I32)>;
 def LegalOpB : TEST_Op<"legal_op_b">, Results<(outs I32)>;
+def LegalOpC : TEST_Op<"legal_op_c">,
+  Arguments<(ins I32)>, Results<(outs I32)>;
 
 // Check that the conversion infrastructure can properly undo the creation of
 // operations where an operation was created before its parent, in this case,
@@ -2186,5 +2272,57 @@ def OpCrashShort : TEST_Op<"op_crash_short"> {
 }
 
 def : Pat<(OpCrashLong $_, $_, $_), (OpCrashShort)>;
+
+//===----------------------------------------------------------------------===//
+// Test LinalgConvolutionOpInterface.
+//===----------------------------------------------------------------------===//
+
+def TestLinalgConvOpNotLinalgOp : TEST_Op<"conv_op_not_linalg_op", [
+    LinalgConvolutionOpInterface]> {
+  let arguments = (ins
+    AnyType:$image, AnyType:$filter, AnyType:$output);
+  let results = (outs AnyRankedTensor:$result);
+}
+
+def TestLinalgConvOp :
+  TEST_Op<"linalg_conv_op", [AttrSizedOperandSegments,
+      LinalgStructuredInterface, LinalgConvolutionOpInterface]> {
+
+  let arguments = (ins Variadic<AnyType>:$inputs,
+    Variadic<AnyType>:$outputs);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = [{
+    attr-dict (`ins` `(` $inputs^ `:` type($inputs) `)`)?
+    `outs` `(` $outputs `:` type($outputs) `)`
+    $region (`->` type($results)^)?
+  }];
+
+  let extraClassDeclaration = [{
+    bool hasIndexSemantics() { return false; }
+
+    static void regionBuilder(mlir::ImplicitLocOpBuilder &b, mlir::Block &block) {
+      b.create<mlir::linalg::YieldOp>(block.getArguments().back());
+    }
+
+    static std::function<void(mlir::ImplicitLocOpBuilder &b, mlir::Block &block)>
+    getRegionBuilder() {
+      return &regionBuilder;
+    }
+
+    mlir::ArrayAttr iterator_types() {
+      return getOperation()->getAttrOfType<mlir::ArrayAttr>("iterator_types");
+    }
+
+    mlir::ArrayAttr indexing_maps() {
+      return getOperation()->getAttrOfType<mlir::ArrayAttr>("indexing_maps");
+    }
+
+    std::string getLibraryCallName() {
+      return "";
+    }
+  }];
+}
 
 #endif // TEST_OPS

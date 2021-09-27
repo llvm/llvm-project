@@ -176,6 +176,18 @@ Use *Value::getSingleUndroppableUse() {
   return Result;
 }
 
+User *Value::getUniqueUndroppableUser() {
+  User *Result = nullptr;
+  for (auto *U : users()) {
+    if (!U->isDroppable()) {
+      if (Result && Result != U)
+        return nullptr;
+      Result = U;
+    }
+  }
+  return Result;
+}
+
 bool Value::hasNUndroppableUses(unsigned int N) const {
   return hasNItems(user_begin(), user_end(), N, isUnDroppableUser);
 }
@@ -1013,8 +1025,7 @@ bool Value::isTransitiveUsedByMetadataOnly() const {
   llvm::SmallPtrSet<const User *, 32> Visited;
   WorkList.insert(WorkList.begin(), user_begin(), user_end());
   while (!WorkList.empty()) {
-    const User *U = WorkList.back();
-    WorkList.pop_back();
+    const User *U = WorkList.pop_back_val();
     Visited.insert(U);
     // If it is transitively used by a global value or a non-constant value,
     // it's obviously not only used by metadata.

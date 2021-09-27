@@ -40,7 +40,6 @@ std::unique_ptr<Architecture> ArchitectureArm::Create(const ArchSpec &arch) {
 }
 
 ConstString ArchitectureArm::GetPluginName() { return GetPluginNameStatic(); }
-uint32_t ArchitectureArm::GetPluginVersion() { return 1; }
 
 void ArchitectureArm::OverrideStopInfo(Thread &thread) const {
   // We need to check if we are stopped in Thumb mode in a IT instruction and

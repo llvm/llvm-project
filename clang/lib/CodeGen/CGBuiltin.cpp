@@ -14909,7 +14909,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
 
     Value *Call = Builder.CreateCall(CGM.getIntrinsic(IID), {Ops[0], Ops[1]});
 
-    for (int i = 0; i < 6; ++i) {
+    for (int i = 0; i < 3; ++i) {
       Value *Extract = Builder.CreateExtractValue(Call, i + 1);
       Value *Ptr = Builder.CreateConstGEP1_32(Int8Ty, Ops[2], i * 16);
       Ptr = Builder.CreateBitCast(
@@ -14925,7 +14925,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Value *Call =
         Builder.CreateCall(CGM.getIntrinsic(IID), {Ops[0], Ops[1], Ops[2]});
 
-    for (int i = 0; i < 7; ++i) {
+    for (int i = 0; i < 4; ++i) {
       Value *Extract = Builder.CreateExtractValue(Call, i + 1);
       Value *Ptr = Builder.CreateConstGEP1_32(Int8Ty, Ops[3], i * 16);
       Ptr = Builder.CreateBitCast(
@@ -18225,6 +18225,29 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     }
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_shuffle);
     return Builder.CreateCall(Callee, Ops);
+  }
+  case WebAssembly::BI__builtin_wasm_fma_f32x4:
+  case WebAssembly::BI__builtin_wasm_fms_f32x4:
+  case WebAssembly::BI__builtin_wasm_fma_f64x2:
+  case WebAssembly::BI__builtin_wasm_fms_f64x2: {
+    Value *A = EmitScalarExpr(E->getArg(0));
+    Value *B = EmitScalarExpr(E->getArg(1));
+    Value *C = EmitScalarExpr(E->getArg(2));
+    unsigned IntNo;
+    switch (BuiltinID) {
+    case WebAssembly::BI__builtin_wasm_fma_f32x4:
+    case WebAssembly::BI__builtin_wasm_fma_f64x2:
+      IntNo = Intrinsic::wasm_fma;
+      break;
+    case WebAssembly::BI__builtin_wasm_fms_f32x4:
+    case WebAssembly::BI__builtin_wasm_fms_f64x2:
+      IntNo = Intrinsic::wasm_fms;
+      break;
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    }
+    Function *Callee = CGM.getIntrinsic(IntNo, A->getType());
+    return Builder.CreateCall(Callee, {A, B, C});
   }
   default:
     return nullptr;

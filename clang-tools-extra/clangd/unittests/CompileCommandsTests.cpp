@@ -396,6 +396,13 @@ TEST(CommandMangler, StripsMultipleArch) {
       llvm::count_if(Args, [](llvm::StringRef Arg) { return Arg == "-arch"; }),
       1);
 }
+
+TEST(CommandMangler, EmptyArgs) {
+  const auto Mangler = CommandMangler::forTests();
+  std::vector<std::string> Args = {};
+  // Make sure we don't crash.
+  Mangler.adjust(Args, "foo.cc");
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

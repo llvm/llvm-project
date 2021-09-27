@@ -99,6 +99,8 @@ MATCHER_P(RangeIs, R, "") {
   return arg.beginOffset() == R.Begin && arg.endOffset() == R.End;
 }
 
+MATCHER_P(PragmaTrivia, P, "") { return arg.Trivia == P; }
+
 MATCHER(EqInc, "") {
   Inclusion Actual = testing::get<0>(arg);
   Inclusion Expected = testing::get<1>(arg);
@@ -460,77 +462,6 @@ TEST(ParsedASTTest, ReplayPreambleForTidyCheckers) {
         Code.substr(FileRange.Begin - 1, FileRange.End - FileRange.Begin + 2));
     EXPECT_EQ(SkippedFiles[I].kind(), tok::header_name);
   }
-
-  TU.AdditionalFiles["a.h"] = "";
-  TU.AdditionalFiles["b.h"] = "";
-  TU.AdditionalFiles["c.h"] = "";
-  // Make sure replay logic works with patched preambles.
-  llvm::StringLiteral Baseline = R"cpp(
-    #include "a.h"
-    #include "c.h")cpp";
-  MockFS FS;
-  TU.Code = Baseline.str();
-  auto Inputs = TU.inputs(FS);
-  auto BaselinePreamble = TU.preamble();
-  ASSERT_TRUE(BaselinePreamble);
-
-  // First make sure we don't crash on various modifications to the preamble.
-  llvm::StringLiteral Cases[] = {
-      // clang-format off
-      // New include in middle.
-      R"cpp(
-        #include "a.h"
-        #include "b.h"
-        #include "c.h")cpp",
-      // New include at top.
-      R"cpp(
-        #include "b.h"
-        #include "a.h"
-        #include "c.h")cpp",
-      // New include at bottom.
-      R"cpp(
-        #include "a.h"
-        #include "c.h"
-        #include "b.h")cpp",
-      // Same size with a missing include.
-      R"cpp(
-        #include "a.h"
-        #include "b.h")cpp",
-      // Smaller with no new includes.
-      R"cpp(
-        #include "a.h")cpp",
-      // Smaller with a new includes.
-      R"cpp(
-        #include "b.h")cpp",
-      // clang-format on
-  };
-  for (llvm::StringLiteral Case : Cases) {
-    TU.Code = Case.str();
-
-    IgnoreDiagnostics Diags;
-    auto CI = buildCompilerInvocation(TU.inputs(FS), Diags);
-    auto PatchedAST = ParsedAST::build(testPath(TU.Filename), TU.inputs(FS),
-                                       std::move(CI), {}, BaselinePreamble);
-    ASSERT_TRUE(PatchedAST);
-    EXPECT_FALSE(PatchedAST->getDiagnostics());
-  }
-
-  // Then ensure correctness by making sure includes were seen only once.
-  // Note that we first see the includes from the patch, as preamble includes
-  // are replayed after exiting the built-in file.
-  Includes.clear();
-  TU.Code = R"cpp(
-    #include "a.h"
-    #include "b.h")cpp";
-  IgnoreDiagnostics Diags;
-  auto CI = buildCompilerInvocation(TU.inputs(FS), Diags);
-  auto PatchedAST = ParsedAST::build(testPath(TU.Filename), TU.inputs(FS),
-                                     std::move(CI), {}, BaselinePreamble);
-  ASSERT_TRUE(PatchedAST);
-  EXPECT_FALSE(PatchedAST->getDiagnostics());
-  EXPECT_THAT(Includes,
-              ElementsAre(WithFileName(testPath("__preamble_patch__.h")),
-                          WithFileName("b.h"), WithFileName("a.h")));
 }
 
 TEST(ParsedASTTest, PatchesAdditionalIncludes) {
@@ -884,6 +815,27 @@ TEST(ParsedASTTest, HeaderGuardsImplIface) {
               ElementsAre(Diag("in included file: main file cannot be included "
                                "recursively when building a preamble")));
   EXPECT_FALSE(mainIsGuarded(AST));
+}
+
+TEST(ParsedASTTest, DiscoversPragmaMarks) {
+  TestTU TU;
+  TU.AdditionalFiles["Header.h"] = R"(
+    #pragma mark - Something API
+    int something();
+    #pragma mark Something else
+  )";
+  TU.Code = R"cpp(
+    #include "Header.h"
+    #pragma mark In Preamble
+    #pragma mark - Something Impl
+    int something() { return 1; }
+    #pragma mark End
+  )cpp";
+  auto AST = TU.build();
+
+  EXPECT_THAT(AST.getMarks(), ElementsAre(PragmaTrivia(" In Preamble"),
+                                          PragmaTrivia(" - Something Impl"),
+                                          PragmaTrivia(" End")));
 }
 
 } // namespace

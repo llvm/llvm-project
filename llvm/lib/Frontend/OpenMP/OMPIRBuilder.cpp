@@ -249,10 +249,8 @@ GlobalValue *OpenMPIRBuilder::createDebugKind(unsigned DebugKind) {
   IntegerType *I32Ty = Type::getInt32Ty(M.getContext());
   auto *GV = new GlobalVariable(
       M, I32Ty,
-      /* isConstant = */ true, GlobalValue::PrivateLinkage,
+      /* isConstant = */ true, GlobalValue::WeakODRLinkage,
       ConstantInt::get(I32Ty, DebugKind), "__omp_rtl_debug_kind");
-
-  llvm::appendToUsed(M, {GV});
 
   return GV;
 }
@@ -270,17 +268,17 @@ Value *OpenMPIRBuilder::getOrCreateIdent(Constant *SrcLocStr,
     Constant *IdentData[] = {
         I32Null, ConstantInt::get(Int32, uint32_t(LocFlags)),
         ConstantInt::get(Int32, Reserve2Flags), I32Null, SrcLocStr};
-    Constant *Initializer = ConstantStruct::get(
-        cast<StructType>(IdentPtr->getPointerElementType()), IdentData);
+    Constant *Initializer =
+        ConstantStruct::get(OpenMPIRBuilder::Ident, IdentData);
 
     // Look for existing encoding of the location + flags, not needed but
     // minimizes the difference to the existing solution while we transition.
     for (GlobalVariable &GV : M.getGlobalList())
-      if (GV.getType() == IdentPtr && GV.hasInitializer())
+      if (GV.getValueType() == OpenMPIRBuilder::Ident && GV.hasInitializer())
         if (GV.getInitializer() == Initializer)
           return Ident = &GV;
 
-    auto *GV = new GlobalVariable(M, IdentPtr->getPointerElementType(),
+    auto *GV = new GlobalVariable(M, OpenMPIRBuilder::Ident,
                                   /* isConstant = */ true,
                                   GlobalValue::PrivateLinkage, Initializer);
     GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
@@ -606,8 +604,8 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
 
   // Add some fake uses for OpenMP provided arguments.
   ToBeDeleted.push_back(Builder.CreateLoad(Int32, TIDAddr, "tid.addr.use"));
-  Instruction *ZeroAddrUse = Builder.CreateLoad(Int32, ZeroAddr,
-                                                "zero.addr.use");
+  Instruction *ZeroAddrUse =
+      Builder.CreateLoad(Int32, ZeroAddr, "zero.addr.use");
   ToBeDeleted.push_back(ZeroAddrUse);
 
   // ThenBB
@@ -2756,25 +2754,30 @@ CallInst *OpenMPIRBuilder::createCachedThreadPrivate(
 }
 
 OpenMPIRBuilder::InsertPointTy
-OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD, bool RequiresFullRuntime) {
+OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
+                                  bool RequiresFullRuntime) {
   if (!updateToLocation(Loc))
     return Loc.IP;
 
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc);
   Value *Ident = getOrCreateIdent(SrcLocStr);
-  ConstantInt *IsSPMDVal = ConstantInt::getBool(Int32->getContext(), IsSPMD);
+  ConstantInt *IsSPMDVal = ConstantInt::getSigned(
+      IntegerType::getInt8Ty(Int8->getContext()),
+      IsSPMD ? OMP_TGT_EXEC_MODE_SPMD : OMP_TGT_EXEC_MODE_GENERIC);
   ConstantInt *UseGenericStateMachine =
       ConstantInt::getBool(Int32->getContext(), !IsSPMD);
-  ConstantInt *RequiresFullRuntimeVal = ConstantInt::getBool(Int32->getContext(), RequiresFullRuntime);
+  ConstantInt *RequiresFullRuntimeVal =
+      ConstantInt::getBool(Int32->getContext(), RequiresFullRuntime);
 
   Function *Fn = getOrCreateRuntimeFunctionPtr(
       omp::RuntimeFunction::OMPRTL___kmpc_target_init);
 
-  CallInst *ThreadKind =
-      Builder.CreateCall(Fn, {Ident, IsSPMDVal, UseGenericStateMachine, RequiresFullRuntimeVal});
+  CallInst *ThreadKind = Builder.CreateCall(
+      Fn, {Ident, IsSPMDVal, UseGenericStateMachine, RequiresFullRuntimeVal});
 
   Value *ExecUserCode = Builder.CreateICmpEQ(
-      ThreadKind, ConstantInt::get(ThreadKind->getType(), -1), "exec_user_code");
+      ThreadKind, ConstantInt::get(ThreadKind->getType(), -1),
+      "exec_user_code");
 
   // ThreadKind = __kmpc_target_init(...)
   // if (ThreadKind == -1)
@@ -2804,14 +2807,18 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD, b
 }
 
 void OpenMPIRBuilder::createTargetDeinit(const LocationDescription &Loc,
-                                         bool IsSPMD, bool RequiresFullRuntime) {
+                                         bool IsSPMD,
+                                         bool RequiresFullRuntime) {
   if (!updateToLocation(Loc))
     return;
 
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc);
   Value *Ident = getOrCreateIdent(SrcLocStr);
-  ConstantInt *IsSPMDVal = ConstantInt::getBool(Int32->getContext(), IsSPMD);
-  ConstantInt *RequiresFullRuntimeVal = ConstantInt::getBool(Int32->getContext(), RequiresFullRuntime);
+  ConstantInt *IsSPMDVal = ConstantInt::getSigned(
+      IntegerType::getInt8Ty(Int8->getContext()),
+      IsSPMD ? OMP_TGT_EXEC_MODE_SPMD : OMP_TGT_EXEC_MODE_GENERIC);
+  ConstantInt *RequiresFullRuntimeVal =
+      ConstantInt::getBool(Int32->getContext(), RequiresFullRuntime);
 
   Function *Fn = getOrCreateRuntimeFunctionPtr(
       omp::RuntimeFunction::OMPRTL___kmpc_target_deinit);

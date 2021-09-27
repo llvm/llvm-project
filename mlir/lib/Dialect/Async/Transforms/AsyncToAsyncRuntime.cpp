@@ -337,10 +337,10 @@ public:
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(CreateGroupOp op, ArrayRef<Value> operands,
+  matchAndRewrite(CreateGroupOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<RuntimeCreateGroupOp>(
-        op, GroupType::get(op->getContext()), operands);
+        op, GroupType::get(op->getContext()), adaptor.getOperands());
     return success();
   }
 };
@@ -356,10 +356,10 @@ public:
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(AddToGroupOp op, ArrayRef<Value> operands,
+  matchAndRewrite(AddToGroupOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<RuntimeAddToGroupOp>(
-        op, rewriter.getIndexType(), operands);
+        op, rewriter.getIndexType(), adaptor.getOperands());
     return success();
   }
 };
@@ -382,7 +382,7 @@ public:
         outlinedFunctions(outlinedFunctions) {}
 
   LogicalResult
-  matchAndRewrite(AwaitType op, ArrayRef<Value> operands,
+  matchAndRewrite(AwaitType op, typename AwaitType::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // We can only await on one the `AwaitableType` (for `await` it can be
     // a `token` or a `value`, for `await_all` it must be a `group`).
@@ -395,7 +395,7 @@ public:
     const bool isInCoroutine = outlined != outlinedFunctions.end();
 
     Location loc = op->getLoc();
-    Value operand = AwaitAdaptor(operands).operand();
+    Value operand = adaptor.operand();
 
     Type i1 = rewriter.getI1Type();
 
@@ -520,7 +520,7 @@ public:
         outlinedFunctions(outlinedFunctions) {}
 
   LogicalResult
-  matchAndRewrite(async::YieldOp op, ArrayRef<Value> operands,
+  matchAndRewrite(async::YieldOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Check if yield operation is inside the async coroutine function.
     auto func = op->template getParentOfType<FuncOp>();
@@ -534,7 +534,7 @@ public:
 
     // Store yielded values into the async values storage and switch async
     // values state to available.
-    for (auto tuple : llvm::zip(operands, coro.returnValues)) {
+    for (auto tuple : llvm::zip(adaptor.getOperands(), coro.returnValues)) {
       Value yieldValue = std::get<0>(tuple);
       Value asyncValue = std::get<1>(tuple);
       rewriter.create<RuntimeStoreOp>(loc, yieldValue, asyncValue);
@@ -563,7 +563,7 @@ public:
         outlinedFunctions(outlinedFunctions) {}
 
   LogicalResult
-  matchAndRewrite(AssertOp op, ArrayRef<Value> operands,
+  matchAndRewrite(AssertOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Check if assert operation is inside the async coroutine function.
     auto func = op->template getParentOfType<FuncOp>();
@@ -577,7 +577,7 @@ public:
 
     Block *cont = rewriter.splitBlock(op->getBlock(), Block::iterator(op));
     rewriter.setInsertionPointToEnd(cont->getPrevNode());
-    rewriter.create<CondBranchOp>(loc, AssertOpAdaptor(operands).arg(),
+    rewriter.create<CondBranchOp>(loc, adaptor.arg(),
                                   /*trueDest=*/cont,
                                   /*trueArgs=*/ArrayRef<Value>(),
                                   /*falseDest=*/setupSetErrorBlock(coro),

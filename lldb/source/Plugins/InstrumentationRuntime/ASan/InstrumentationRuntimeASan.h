@@ -37,8 +37,6 @@ public:
 
   virtual lldb::InstrumentationRuntimeType GetType() { return GetTypeStatic(); }
 
-  uint32_t GetPluginVersion() override { return 1; }
-
 private:
   InstrumentationRuntimeASan(const lldb::ProcessSP &process_sp)
       : lldb_private::InstrumentationRuntime(process_sp) {}

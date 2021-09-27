@@ -678,7 +678,8 @@ public:
   }
 
   static void bind(pybind11::module &m) {
-    auto cls = ClassTy(m, DerivedTy::pyClassName, pybind11::buffer_protocol());
+    auto cls = ClassTy(m, DerivedTy::pyClassName, pybind11::buffer_protocol(),
+                       pybind11::module_local());
     cls.def(pybind11::init<PyAttribute &>(), pybind11::keep_alive<0, 1>());
     DerivedTy::bindDerived(cls);
   }
@@ -741,7 +742,7 @@ public:
   }
 
   static void bind(pybind11::module &m) {
-    auto cls = ClassTy(m, DerivedTy::pyClassName);
+    auto cls = ClassTy(m, DerivedTy::pyClassName, pybind11::module_local());
     cls.def(pybind11::init<PyType &>(), pybind11::keep_alive<0, 1>());
     cls.def_static("isinstance", [](PyType &otherType) -> bool {
       return DerivedTy::isaFunction(otherType);

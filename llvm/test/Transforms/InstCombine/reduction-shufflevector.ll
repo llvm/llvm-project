@@ -126,7 +126,7 @@ define float @reduce_fmul(float %a, <4 x float> %x) {
 
 define i32 @reduce_add_failed(<4 x i32> %x) {
 ; CHECK-LABEL: @reduce_add_failed(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 0>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 0>
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[SHUF]])
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -203,7 +203,7 @@ define i32 @reduce_smax_failed(<8 x i32> %x) {
 
 define i32 @reduce_smin_failed(<8 x i32> %x) {
 ; CHECK-LABEL: @reduce_smin_failed(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <8 x i32> [[X:%.*]], <8 x i32> undef, <4 x i32> <i32 0, i32 3, i32 1, i32 2>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <8 x i32> [[X:%.*]], <8 x i32> poison, <4 x i32> <i32 0, i32 3, i32 1, i32 2>
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> [[SHUF]])
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;

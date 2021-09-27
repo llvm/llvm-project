@@ -530,3 +530,56 @@ func @redundantTest(%arg0: i32) -> i32 {
   // CHECK: "test.op_m"(%arg0) {optional_attr = 314159265 : i32} : (i32) -> i32
   return %0 : i32
 }
+
+//===----------------------------------------------------------------------===//
+// Test that ops without type deduction can be created with type builders.
+//===----------------------------------------------------------------------===//
+
+func @explicitReturnTypeTest(%arg0 : i64) -> i8 {
+  %0 = "test.source_op"(%arg0) {tag = 11 : i32} : (i64) -> i8
+  // CHECK: "test.op_x"(%arg0) : (i64) -> i32
+  // CHECK: "test.op_x"(%0) : (i32) -> i8
+  return %0 : i8
+}
+
+func @returnTypeBuilderTest(%arg0 : i1) -> i8 {
+  %0 = "test.source_op"(%arg0) {tag = 22 : i32} : (i1) -> i8
+  // CHECK: "test.op_x"(%arg0) : (i1) -> i1
+  // CHECK: "test.op_x"(%0) : (i1) -> i8
+  return %0 : i8
+}
+
+func @multipleReturnTypeBuildTest(%arg0 : i1) -> i1 {
+  %0 = "test.source_op"(%arg0) {tag = 33 : i32} : (i1) -> i1
+  // CHECK: "test.one_to_two"(%arg0) : (i1) -> (i64, i32)
+  // CHECK: "test.op_x"(%0#0) : (i64) -> i32
+  // CHECK: "test.op_x"(%0#1) : (i32) -> i64
+  // CHECK: "test.two_to_one"(%1, %2) : (i32, i64) -> i1
+  return %0 : i1
+}
+
+func @copyValueType(%arg0 : i8) -> i32 {
+  %0 = "test.source_op"(%arg0) {tag = 44 : i32} : (i8) -> i32
+  // CHECK: "test.op_x"(%arg0) : (i8) -> i8
+  // CHECK: "test.op_x"(%0) : (i8) -> i32
+  return %0 : i32
+}
+
+func @multipleReturnTypeDifferent(%arg0 : i1) -> i64 {
+  %0 = "test.source_op"(%arg0) {tag = 55 : i32} : (i1) -> i64
+  // CHECK: "test.one_to_two"(%arg0) : (i1) -> (i1, i64)
+  // CHECK: "test.two_to_one"(%0#0, %0#1) : (i1, i64) -> i64
+  return %0 : i64
+}
+
+//===----------------------------------------------------------------------===//
+// Test that multiple trailing directives can be mixed in patterns.
+//===----------------------------------------------------------------------===//
+
+func @returnTypeAndLocation(%arg0 : i32) -> i1 {
+  %0 = "test.source_op"(%arg0) {tag = 66 : i32} : (i32) -> i1
+  // CHECK: "test.op_x"(%arg0) : (i32) -> i32 loc("loc1")
+  // CHECK: "test.op_x"(%arg0) : (i32) -> i32 loc("loc2")
+  // CHECK: "test.two_to_one"(%0, %1) : (i32, i32) -> i1
+  return %0 : i1
+}

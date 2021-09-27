@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO: ALL, ANY, COUNT, DOT_PRODUCT, FINDLOC, IALL, IANY, IPARITY,
-// NORM2, MAXLOC, MINLOC, PARITY, PRODUCT, SUM
+// TODO: DOT_PRODUCT, FINDLOC, NORM2, MAXLOC, MINLOC, PARITY
 
 #ifndef FORTRAN_EVALUATE_FOLD_REDUCTION_H_
 #define FORTRAN_EVALUATE_FOLD_REDUCTION_H_
@@ -15,6 +14,10 @@
 #include "fold-implementation.h"
 
 namespace Fortran::evaluate {
+
+// Folds & validates a DIM= actual argument.
+std::optional<ConstantSubscript> CheckDIM(
+    FoldingContext &, std::optional<ActualArgument> &, int rank);
 
 // Common preprocessing for reduction transformational intrinsic function
 // folding.  If the intrinsic can have DIM= &/or MASK= arguments, extract
@@ -35,18 +38,7 @@ static std::optional<Constant<T>> ProcessReductionArgs(FoldingContext &context,
     return std::nullopt;
   }
   if (dimIndex && arg.size() >= *dimIndex + 1 && arg[*dimIndex]) {
-    if (auto *dimConst{
-            Folder<SubscriptInteger>{context}.Folding(arg[*dimIndex])}) {
-      if (auto dimScalar{dimConst->GetScalarValue()}) {
-        dim.emplace(dimScalar->ToInt64());
-        if (*dim < 1 || *dim > folded->Rank()) {
-          context.messages().Say(
-              "DIM=%jd is not valid for an array of rank %d"_err_en_US,
-              static_cast<std::intmax_t>(*dim), folded->Rank());
-          dim.reset();
-        }
-      }
-    }
+    dim = CheckDIM(context, arg[*dimIndex], folded->Rank());
     if (!dim) {
       return std::nullopt;
     }
@@ -96,8 +88,8 @@ static std::optional<Constant<T>> ProcessReductionArgs(FoldingContext &context,
 
 // Generalized reduction to an array of one dimension fewer (w/ DIM=)
 // or to a scalar (w/o DIM=).
-template <typename T, typename ACCUMULATOR>
-static Constant<T> DoReduction(const Constant<T> &array,
+template <typename T, typename ACCUMULATOR, typename ARRAY>
+static Constant<T> DoReduction(const Constant<ARRAY> &array,
     std::optional<ConstantSubscript> &dim, const Scalar<T> &identity,
     ACCUMULATOR &accumulator) {
   ConstantSubscripts at{array.lbounds()};
@@ -154,7 +146,7 @@ static Expr<T> FoldMaxvalMinval(FoldingContext &context, FunctionRef<T> &&ref,
         element = array->At(at);
       }
     }};
-    return Expr<T>{DoReduction(*array, dim, identity, accumulator)};
+    return Expr<T>{DoReduction<T>(*array, dim, identity, accumulator)};
   }
   return Expr<T>{std::move(ref)};
 }
@@ -187,7 +179,7 @@ static Expr<T> FoldProduct(
       context.messages().Say(
           "PRODUCT() of %s data overflowed"_en_US, T::AsFortran());
     } else {
-      return Expr<T>{DoReduction(*array, dim, identity, accumulator)};
+      return Expr<T>{DoReduction<T>(*array, dim, identity, accumulator)};
     }
   }
   return Expr<T>{std::move(ref)};
@@ -226,7 +218,7 @@ static Expr<T> FoldSum(FoldingContext &context, FunctionRef<T> &&ref) {
       context.messages().Say(
           "SUM() of %s data overflowed"_en_US, T::AsFortran());
     } else {
-      return Expr<T>{DoReduction(*array, dim, identity, accumulator)};
+      return Expr<T>{DoReduction<T>(*array, dim, identity, accumulator)};
     }
   }
   return Expr<T>{std::move(ref)};

@@ -578,8 +578,6 @@ ConstString TypeSystemClang::GetPluginName() {
   return TypeSystemClang::GetPluginNameStatic();
 }
 
-uint32_t TypeSystemClang::GetPluginVersion() { return 1; }
-
 lldb::TypeSystemSP TypeSystemClang::CreateInstance(lldb::LanguageType language,
                                                    lldb_private::Module *module,
                                                    Target *target) {

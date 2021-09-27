@@ -120,9 +120,6 @@ static bool isEscapeSource(const Value *V) {
   if (isa<CallBase>(V))
     return true;
 
-  if (isa<Argument>(V))
-    return true;
-
   // The load case works because isNonEscapingLocalObject considers all
   // stores to be escapes (it passes true for the StoreCaptures argument
   // to PointerMayBeCaptured).
@@ -224,6 +221,51 @@ static bool isObjectSize(const Value *V, uint64_t Size, const DataLayout &DL,
                          const TargetLibraryInfo &TLI, bool NullIsValidLoc) {
   uint64_t ObjectSize = getObjectSize(V, DL, TLI, NullIsValidLoc);
   return ObjectSize != MemoryLocation::UnknownSize && ObjectSize == Size;
+}
+
+//===----------------------------------------------------------------------===//
+// CaptureInfo implementations
+//===----------------------------------------------------------------------===//
+
+CaptureInfo::~CaptureInfo() = default;
+
+bool SimpleCaptureInfo::isNotCapturedBeforeOrAt(const Value *Object,
+                                                const Instruction *I) {
+  return isNonEscapingLocalObject(Object, &IsCapturedCache);
+}
+
+bool EarliestEscapeInfo::isNotCapturedBeforeOrAt(const Value *Object,
+                                                 const Instruction *I) {
+  if (!isIdentifiedFunctionLocal(Object))
+    return false;
+
+  auto Iter = EarliestEscapes.insert({Object, nullptr});
+  if (Iter.second) {
+    Instruction *EarliestCapture = FindEarliestCapture(
+        Object, *const_cast<Function *>(I->getFunction()),
+        /*ReturnCaptures=*/false, /*StoreCaptures=*/true, DT);
+    if (EarliestCapture) {
+      auto Ins = Inst2Obj.insert({EarliestCapture, {}});
+      Ins.first->second.push_back(Object);
+    }
+    Iter.first->second = EarliestCapture;
+  }
+
+  // No capturing instruction.
+  if (!Iter.first->second)
+    return true;
+
+  return I != Iter.first->second &&
+         !isPotentiallyReachable(Iter.first->second, I, nullptr, &DT, &LI);
+}
+
+void EarliestEscapeInfo::removeInstruction(Instruction *I) {
+  auto Iter = Inst2Obj.find(I);
+  if (Iter != Inst2Obj.end()) {
+    for (const Value *Obj : Iter->second)
+      EarliestEscapes.erase(Obj);
+    Inst2Obj.erase(I);
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -493,11 +535,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
     else if (!GEPOp->isInBounds())
       Decomposed.InBounds = false;
 
-    // Don't attempt to analyze GEPs over unsized objects.
-    if (!GEPOp->getSourceElementType()->isSized()) {
-      Decomposed.Base = V;
-      return Decomposed;
-    }
+    assert(GEPOp->getSourceElementType()->isSized() && "GEP must be sized");
 
     // Don't attempt to analyze GEPs if index scale is not a compile-time
     // constant.
@@ -838,7 +876,7 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
   // then the call can not mod/ref the pointer unless the call takes the pointer
   // as an argument, and itself doesn't capture it.
   if (!isa<Constant>(Object) && Call != Object &&
-      isNonEscapingLocalObject(Object, &AAQI.IsCapturedCache)) {
+      AAQI.CI->isNotCapturedBeforeOrAt(Object, Call)) {
 
     // Optimistically assume that call doesn't touch Object and check this
     // assumption in the following loop.
@@ -1517,10 +1555,10 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     // location if that memory location doesn't escape. Or it may pass a
     // nocapture value to other functions as long as they don't capture it.
     if (isEscapeSource(O1) &&
-        isNonEscapingLocalObject(O2, &AAQI.IsCapturedCache))
+        AAQI.CI->isNotCapturedBeforeOrAt(O2, cast<Instruction>(O1)))
       return AliasResult::NoAlias;
     if (isEscapeSource(O2) &&
-        isNonEscapingLocalObject(O1, &AAQI.IsCapturedCache))
+        AAQI.CI->isNotCapturedBeforeOrAt(O1, cast<Instruction>(O2)))
       return AliasResult::NoAlias;
   }
 

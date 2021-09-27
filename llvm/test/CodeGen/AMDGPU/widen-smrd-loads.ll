@@ -148,8 +148,8 @@ define amdgpu_kernel void @widen_i17_constant_load(i17 addrspace(4)* %arg) {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0
-; VI-NEXT:    v_mov_b32_e32 v2, 2
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
+; VI-NEXT:    v_mov_b32_e32 v2, 2
 ; VI-NEXT:    v_mov_b32_e32 v3, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_load_dword s0, s[0:1], 0x0

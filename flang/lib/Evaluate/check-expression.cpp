@@ -460,9 +460,6 @@ public:
       : Base{*this}, scope_{s}, context_{context} {}
   using Base::operator();
 
-  Result operator()(const ProcedureDesignator &) const {
-    return "dummy procedure argument";
-  }
   Result operator()(const CoarrayRef &) const { return "coindexed reference"; }
 
   Result operator()(const semantics::Symbol &symbol) const {
@@ -541,6 +538,20 @@ public:
             "' not allowed for derived type components or type parameter"
             " values";
       }
+      if (auto procChars{
+              characteristics::Procedure::Characterize(x.proc(), context_)}) {
+        const auto iter{std::find_if(procChars->dummyArguments.begin(),
+            procChars->dummyArguments.end(),
+            [](const characteristics::DummyArgument &dummy) {
+              return std::holds_alternative<characteristics::DummyProcedure>(
+                  dummy.u);
+            })};
+        if (iter != procChars->dummyArguments.end()) {
+          return "reference to function '"s + ultimate.name().ToString() +
+              "' with dummy procedure argument '" + iter->name + '\'';
+        }
+      }
+      // References to internal functions are caught in expression semantics.
       // TODO: other checks for standard module procedures
     } else {
       const SpecificIntrinsic &intrin{DEREF(x.proc().GetSpecificIntrinsic())};

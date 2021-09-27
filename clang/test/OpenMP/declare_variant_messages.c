@@ -57,6 +57,12 @@ int bar(void);
 #pragma omp declare variant(foo) match(user = {condition(<expr>)}) // expected-error {{expected expression}} expected-error {{use of undeclared identifier 'expr'}} expected-error {{expected expression}} expected-note {{the ignored selector spans until here}}
 int score_and_cond_non_const();
 
+#pragma omp declare variant(foo) match(construct={teams,parallel,for,simd})
+#pragma omp declare variant(foo) match(construct={target teams}) // expected-error {{expected ')'}} expected-warning {{expected '}' after the context selectors for the context set "construct"; '}' assumed}} expected-note {{to match this '('}}
+#pragma omp declare variant(foo) match(construct={parallel for}) // expected-error {{expected ')'}} expected-warning {{expected '}' after the context selectors for the context set "construct"; '}' assumed}} expected-note {{to match this '('}}
+#pragma omp declare variant(foo) match(construct={for simd}) // expected-error {{expected ')'}} expected-warning {{expected '}' after the context selectors for the context set "construct"; '}' assumed}} expected-note {{to match this '('}}
+int construct(void);
+
 #pragma omp declare variant(foo) match(xxx={}) // expected-warning {{'xxx' is not a valid context set in a `declare variant`; set ignored}} expected-note {{context set options are: 'construct' 'device' 'implementation' 'user'}} expected-note {{the ignored set spans until here}}
 int a; // expected-error {{'#pragma omp declare variant' can only be applied to functions}}
 

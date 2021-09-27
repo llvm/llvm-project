@@ -345,6 +345,16 @@ void Simplex::swapRows(unsigned i, unsigned j) {
   unknownFromRow(j).pos = j;
 }
 
+void Simplex::swapColumns(unsigned i, unsigned j) {
+  assert(i < nCol && j < nCol && "Invalid columns provided!");
+  if (i == j)
+    return;
+  tableau.swapColumns(i, j);
+  std::swap(colUnknown[i], colUnknown[j]);
+  unknownFromColumn(i).pos = i;
+  unknownFromColumn(j).pos = j;
+}
+
 /// Mark this tableau empty and push an entry to the undo stack.
 void Simplex::markEmpty() {
   undoLog.push_back(UndoLogEntry::UnmarkEmpty);
@@ -381,8 +391,8 @@ void Simplex::addEquality(ArrayRef<int64_t> coeffs) {
   addInequality(negatedCoeffs);
 }
 
-unsigned Simplex::numVariables() const { return var.size(); }
-unsigned Simplex::numConstraints() const { return con.size(); }
+unsigned Simplex::getNumVariables() const { return var.size(); }
+unsigned Simplex::getNumConstraints() const { return con.size(); }
 
 /// Return a snapshot of the current state. This is just the current size of the
 /// undo log.
@@ -434,6 +444,26 @@ void Simplex::undo(UndoLogEntry entry) {
     nRow--;
     rowUnknown.pop_back();
     con.pop_back();
+  } else if (entry == UndoLogEntry::RemoveLastVariable) {
+    // Whenever we are rolling back the addition of a variable, it is guaranteed
+    // that the variable will be in column position.
+    //
+    // We can see this as follows: any constraint that depends on this variable
+    // was added after this variable was added, so the addition of such
+    // constraints should already have been rolled back by the time we get to
+    // rolling back the addition of the variable. Therefore, no constraint
+    // currently has a component along the variable, so the variable itself must
+    // be part of the basis.
+    assert(var.back().orientation == Orientation::Column &&
+           "Variable to be removed must be in column orientation!");
+
+    // Move this variable to the last column and remove the column from the
+    // tableau.
+    swapColumns(var.back().pos, nCol - 1);
+    tableau.resizeHorizontally(nCol - 1);
+    var.pop_back();
+    colUnknown.pop_back();
+    nCol--;
   } else if (entry == UndoLogEntry::UnmarkEmpty) {
     empty = false;
   } else if (entry == UndoLogEntry::UnmarkLastRedundant) {
@@ -452,9 +482,24 @@ void Simplex::rollback(unsigned snapshot) {
   }
 }
 
+void Simplex::appendVariable(unsigned count) {
+  if (count == 0)
+    return;
+  var.reserve(var.size() + count);
+  colUnknown.reserve(colUnknown.size() + count);
+  for (unsigned i = 0; i < count; ++i) {
+    nCol++;
+    var.emplace_back(Orientation::Column, /*restricted=*/false,
+                     /*pos=*/nCol - 1);
+    colUnknown.push_back(var.size() - 1);
+  }
+  tableau.resizeHorizontally(nCol);
+  undoLog.insert(undoLog.end(), count, UndoLogEntry::RemoveLastVariable);
+}
+
 /// Add all the constraints from the given FlatAffineConstraints.
 void Simplex::intersectFlatAffineConstraints(const FlatAffineConstraints &fac) {
-  assert(fac.getNumIds() == numVariables() &&
+  assert(fac.getNumIds() == getNumVariables() &&
          "FlatAffineConstraints must have same dimensionality as simplex");
   for (unsigned i = 0, e = fac.getNumInequalities(); i < e; ++i)
     addInequality(fac.getInequality(i));
@@ -611,8 +656,8 @@ bool Simplex::isUnbounded() {
 /// It has column layout:
 ///   denominator, constant, A's columns, B's columns.
 Simplex Simplex::makeProduct(const Simplex &a, const Simplex &b) {
-  unsigned numVar = a.numVariables() + b.numVariables();
-  unsigned numCon = a.numConstraints() + b.numConstraints();
+  unsigned numVar = a.getNumVariables() + b.getNumVariables();
+  unsigned numCon = a.getNumConstraints() + b.getNumConstraints();
   Simplex result(numVar);
 
   result.tableau.resizeVertically(numCon);
@@ -629,8 +674,8 @@ Simplex Simplex::makeProduct(const Simplex &a, const Simplex &b) {
   result.var = concat(a.var, b.var);
 
   auto indexFromBIndex = [&](int index) {
-    return index >= 0 ? a.numVariables() + index
-                      : ~(a.numConstraints() + ~index);
+    return index >= 0 ? a.getNumVariables() + index
+                      : ~(a.getNumConstraints() + ~index);
   };
 
   result.colUnknown.assign(2, nullIndex);
@@ -734,7 +779,7 @@ class GBRSimplex {
 public:
   GBRSimplex(const Simplex &originalSimplex)
       : simplex(Simplex::makeProduct(originalSimplex, originalSimplex)),
-        simplexConstraintOffset(simplex.numConstraints()) {}
+        simplexConstraintOffset(simplex.getNumConstraints()) {}
 
   /// Add an equality dotProduct(dir, x - y) == 0.
   /// First pushes a snapshot for the current simplex state to the stack so
@@ -826,7 +871,7 @@ private:
   ///       - dir_1 * y_1 - dir_2 * y_2 - ... - dir_n * y_n,
   /// where n is the dimension of the original polytope.
   SmallVector<int64_t, 8> getCoeffsForDirection(ArrayRef<int64_t> dir) {
-    assert(2 * dir.size() == simplex.numVariables() &&
+    assert(2 * dir.size() == simplex.getNumVariables() &&
            "Direction vector has wrong dimensionality");
     SmallVector<int64_t, 8> coeffs(dir.begin(), dir.end());
     coeffs.reserve(2 * dir.size());

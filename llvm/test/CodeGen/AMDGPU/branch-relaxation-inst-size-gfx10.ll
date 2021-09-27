@@ -6,6 +6,7 @@
 
 ; GCN-LABEL: {{^}}long_forward_branch_gfx10only:
 ; GFX9: s_cmp_eq_u32
+; GFX9: s_load_dwordx2
 ; GFX9-NEXT: s_cbranch_scc1
 
 ; GFX10: s_cmp_eq_u32

@@ -110,6 +110,17 @@ namespace llvm {
     DisableWithDiag // Disable the abort but emit a diagnostic on failure.
   };
 
+  /// Indicates when and how the Swift async frame pointer bit should be set.
+  enum class SwiftAsyncFramePointerMode {
+    /// Determine whether to set the bit statically or dynamically based
+    /// on the deployment target.
+    DeploymentBased,
+    /// Always set the bit.
+    Always,
+    /// Never set the bit.
+    Never,
+  };
+
   class TargetOptions {
   public:
     TargetOptions()
@@ -129,7 +140,7 @@ namespace llvm {
           EnableMachineFunctionSplitter(false), SupportsDefaultOutlining(false),
           EmitAddrsig(false), EmitCallSiteInfo(false),
           SupportsDebugEntryValues(false), EnableDebugEntryValues(false),
-          PseudoProbeForProfiling(false), ValueTrackingVariableLocations(false),
+          ValueTrackingVariableLocations(false),
           ForceDwarfFrameSection(false), XRayOmitFunctionIndex(false),
           DebugStrictDwarf(false),
           FPDenormalMode(DenormalMode::IEEE, DenormalMode::IEEE) {}
@@ -219,6 +230,11 @@ namespace llvm {
     /// selection fails to lower/select an instruction.
     GlobalISelAbortMode GlobalISelAbort = GlobalISelAbortMode::Enable;
 
+    /// Control when and how the Swift async frame pointer bit should
+    /// be set.
+    SwiftAsyncFramePointerMode SwiftAsyncFramePointer =
+        SwiftAsyncFramePointerMode::Always;
+
     /// UseInitArray - Use .init_array instead of .ctors for static
     /// constructors.
     unsigned UseInitArray : 1;
@@ -304,9 +320,6 @@ namespace llvm {
     /// NOTE: There are targets that still do not support the debug entry values
     /// production.
     bool ShouldEmitDebugEntryValues() const;
-
-    /// Emit pseudo probes into the binary for sample profiling
-    unsigned PseudoProbeForProfiling : 1;
 
     // When set to true, use experimental new debug variable location tracking,
     // which seeks to follow the values of variables rather than their location,

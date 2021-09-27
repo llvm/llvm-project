@@ -557,3 +557,15 @@ foreach m = LMULList.m in {
 def FFLAGS : RISCVReg<0, "fflags">;
 def FRM    : RISCVReg<0, "frm">;
 def FCSR   : RISCVReg<0, "fcsr">;
+
+// Any type register. Used for .insn directives when we don't know what the
+// register types could be.
+// NOTE: The alignment and size are bogus values. The Size needs to be non-zero
+// or tablegen will use "untyped" to determine the size which will assert.
+let isAllocatable = 0 in
+def AnyReg : RegisterClass<"RISCV", [untyped], 32,
+                           (add (sequence "X%u", 0, 31),
+                                (sequence "F%u_D", 0, 31),
+                                (sequence "V%u", 0, 31))> {
+  let Size = 32;
+}

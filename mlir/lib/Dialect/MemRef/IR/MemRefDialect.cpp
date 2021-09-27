@@ -34,9 +34,9 @@ struct MemRefInlinerInterface : public DialectInlinerInterface {
 } // end anonymous namespace
 
 void mlir::memref::MemRefDialect::initialize() {
-  addOperations<DmaStartOp, DmaWaitOp,
+  addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/MemRef/IR/MemRefOps.cpp.inc"
-                >();
+      >();
   addInterfaces<MemRefInlinerInterface>();
 }

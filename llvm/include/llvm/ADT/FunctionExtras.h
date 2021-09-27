@@ -64,11 +64,16 @@ template <typename CallableT, typename ThisT>
 using EnableUnlessSameType =
     std::enable_if_t<!std::is_same<remove_cvref_t<CallableT>, ThisT>::value>;
 template <typename CallableT, typename Ret, typename... Params>
-using EnableIfCallable =
-    std::enable_if_t<std::is_void<Ret>::value ||
-                     std::is_convertible<decltype(std::declval<CallableT>()(
-                                             std::declval<Params>()...)),
-                                         Ret>::value>;
+using EnableIfCallable = std::enable_if_t<llvm::disjunction<
+    std::is_void<Ret>,
+    std::is_same<decltype(std::declval<CallableT>()(std::declval<Params>()...)),
+                 Ret>,
+    std::is_same<const decltype(std::declval<CallableT>()(
+                     std::declval<Params>()...)),
+                 Ret>,
+    std::is_convertible<decltype(std::declval<CallableT>()(
+                            std::declval<Params>()...)),
+                        Ret>>::value>;
 
 template <typename ReturnT, typename... ParamTs> class UniqueFunctionBase {
 protected:

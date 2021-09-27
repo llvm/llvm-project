@@ -2041,7 +2041,7 @@ void InitListChecker::CheckStructUnionTypes(
   RecordDecl *structDecl = DeclType->castAs<RecordType>()->getDecl();
 
   // If the record is invalid, some of it's members are invalid. To avoid
-  // confusion, we forgo checking the intializer for the entire record.
+  // confusion, we forgo checking the initializer for the entire record.
   if (structDecl->isInvalidDecl()) {
     // Assume it was supposed to consume a single initializer.
     ++Index;
@@ -8252,7 +8252,7 @@ ExprResult InitializationSequence::Perform(Sema &S,
 
       // When this is an incomplete array type (such as when this is
       // initializing an array of unknown bounds from an init list), use THAT
-      // type instead so that we propogate the array bounds.
+      // type instead so that we propagate the array bounds.
       if (MTETy->isIncompleteArrayType() &&
           !CurInit.get()->getType()->isIncompleteArrayType() &&
           S.Context.hasSameType(

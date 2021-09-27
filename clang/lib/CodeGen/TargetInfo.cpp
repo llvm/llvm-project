@@ -392,6 +392,36 @@ static Address emitVoidPtrVAArg(CodeGenFunction &CGF, Address VAListAddr,
 
 }
 
+static Address complexTempStructure(CodeGenFunction &CGF, Address VAListAddr,
+                                    QualType Ty, CharUnits SlotSize,
+                                    CharUnits EltSize, const ComplexType *CTy) {
+  Address Addr =
+      emitVoidPtrDirectVAArg(CGF, VAListAddr, CGF.Int8Ty, SlotSize * 2,
+                             SlotSize, SlotSize, /*AllowHigher*/ true);
+
+  Address RealAddr = Addr;
+  Address ImagAddr = RealAddr;
+  if (CGF.CGM.getDataLayout().isBigEndian()) {
+    RealAddr =
+        CGF.Builder.CreateConstInBoundsByteGEP(RealAddr, SlotSize - EltSize);
+    ImagAddr = CGF.Builder.CreateConstInBoundsByteGEP(ImagAddr,
+                                                      2 * SlotSize - EltSize);
+  } else {
+    ImagAddr = CGF.Builder.CreateConstInBoundsByteGEP(RealAddr, SlotSize);
+  }
+
+  llvm::Type *EltTy = CGF.ConvertTypeForMem(CTy->getElementType());
+  RealAddr = CGF.Builder.CreateElementBitCast(RealAddr, EltTy);
+  ImagAddr = CGF.Builder.CreateElementBitCast(ImagAddr, EltTy);
+  llvm::Value *Real = CGF.Builder.CreateLoad(RealAddr, ".vareal");
+  llvm::Value *Imag = CGF.Builder.CreateLoad(ImagAddr, ".vaimag");
+
+  Address Temp = CGF.CreateMemTemp(Ty, "vacplx");
+  CGF.EmitStoreOfComplex({Real, Imag}, CGF.MakeAddrLValue(Temp, Ty),
+                         /*init*/ true);
+  return Temp;
+}
+
 static Address emitMergePHI(CodeGenFunction &CGF,
                             Address Addr1, llvm::BasicBlock *Block1,
                             Address Addr2, llvm::BasicBlock *Block2,
@@ -3377,52 +3407,18 @@ static bool BitsContainNoUserData(QualType Ty, unsigned StartBit,
   return false;
 }
 
-/// ContainsFloatAtOffset - Return true if the specified LLVM IR type has a
-/// float member at the specified offset.  For example, {int,{float}} has a
-/// float at offset 4.  It is conservatively correct for this routine to return
-/// false.
-static bool ContainsFloatAtOffset(llvm::Type *IRType, unsigned IROffset,
-                                  const llvm::DataLayout &TD) {
-  // Base case if we find a float.
-  if (IROffset == 0 && IRType->isFloatTy())
-    return true;
+/// getFPTypeAtOffset - Return a floating point type at the specified offset.
+static llvm::Type *getFPTypeAtOffset(llvm::Type *IRType, unsigned IROffset,
+                                     const llvm::DataLayout &TD) {
+  if (IROffset == 0 && IRType->isFloatingPointTy())
+    return IRType;
 
   // If this is a struct, recurse into the field at the specified offset.
   if (llvm::StructType *STy = dyn_cast<llvm::StructType>(IRType)) {
     const llvm::StructLayout *SL = TD.getStructLayout(STy);
     unsigned Elt = SL->getElementContainingOffset(IROffset);
     IROffset -= SL->getElementOffset(Elt);
-    return ContainsFloatAtOffset(STy->getElementType(Elt), IROffset, TD);
-  }
-
-  // If this is an array, recurse into the field at the specified offset.
-  if (llvm::ArrayType *ATy = dyn_cast<llvm::ArrayType>(IRType)) {
-    llvm::Type *EltTy = ATy->getElementType();
-    unsigned EltSize = TD.getTypeAllocSize(EltTy);
-    IROffset -= IROffset/EltSize*EltSize;
-    return ContainsFloatAtOffset(EltTy, IROffset, TD);
-  }
-
-  return false;
-}
-
-/// ContainsHalfAtOffset - Return true if the specified LLVM IR type has a
-/// half member at the specified offset.  For example, {int,{half}} has a
-/// half at offset 4.  It is conservatively correct for this routine to return
-/// false.
-/// FIXME: Merge with ContainsFloatAtOffset
-static bool ContainsHalfAtOffset(llvm::Type *IRType, unsigned IROffset,
-                                 const llvm::DataLayout &TD) {
-  // Base case if we find a float.
-  if (IROffset == 0 && IRType->isHalfTy())
-    return true;
-
-  // If this is a struct, recurse into the field at the specified offset.
-  if (llvm::StructType *STy = dyn_cast<llvm::StructType>(IRType)) {
-    const llvm::StructLayout *SL = TD.getStructLayout(STy);
-    unsigned Elt = SL->getElementContainingOffset(IROffset);
-    IROffset -= SL->getElementOffset(Elt);
-    return ContainsHalfAtOffset(STy->getElementType(Elt), IROffset, TD);
+    return getFPTypeAtOffset(STy->getElementType(Elt), IROffset, TD);
   }
 
   // If this is an array, recurse into the field at the specified offset.
@@ -3430,10 +3426,10 @@ static bool ContainsHalfAtOffset(llvm::Type *IRType, unsigned IROffset,
     llvm::Type *EltTy = ATy->getElementType();
     unsigned EltSize = TD.getTypeAllocSize(EltTy);
     IROffset -= IROffset / EltSize * EltSize;
-    return ContainsHalfAtOffset(EltTy, IROffset, TD);
+    return getFPTypeAtOffset(EltTy, IROffset, TD);
   }
 
-  return false;
+  return nullptr;
 }
 
 /// GetSSETypeAtOffset - Return a type that will be passed by the backend in the
@@ -3441,39 +3437,43 @@ static bool ContainsHalfAtOffset(llvm::Type *IRType, unsigned IROffset,
 llvm::Type *X86_64ABIInfo::
 GetSSETypeAtOffset(llvm::Type *IRType, unsigned IROffset,
                    QualType SourceTy, unsigned SourceOffset) const {
-  // If the high 32 bits are not used, we have three choices. Single half,
-  // single float or two halfs.
-  if (BitsContainNoUserData(SourceTy, SourceOffset * 8 + 32,
-                            SourceOffset * 8 + 64, getContext())) {
-    if (ContainsFloatAtOffset(IRType, IROffset, getDataLayout()))
-      return llvm::Type::getFloatTy(getVMContext());
-    if (ContainsHalfAtOffset(IRType, IROffset + 2, getDataLayout()))
-      return llvm::FixedVectorType::get(llvm::Type::getHalfTy(getVMContext()),
-                                        2);
+  const llvm::DataLayout &TD = getDataLayout();
+  unsigned SourceSize =
+      (unsigned)getContext().getTypeSize(SourceTy) / 8 - SourceOffset;
+  llvm::Type *T0 = getFPTypeAtOffset(IRType, IROffset, TD);
+  if (!T0 || T0->isDoubleTy())
+    return llvm::Type::getDoubleTy(getVMContext());
 
-    return llvm::Type::getHalfTy(getVMContext());
+  // Get the adjacent FP type.
+  llvm::Type *T1 = nullptr;
+  unsigned T0Size = TD.getTypeAllocSize(T0);
+  if (SourceSize > T0Size)
+      T1 = getFPTypeAtOffset(IRType, IROffset + T0Size, TD);
+  if (T1 == nullptr) {
+    // Check if IRType is a half + float. float type will be in IROffset+4 due
+    // to its alignment.
+    if (T0->isHalfTy() && SourceSize > 4)
+      T1 = getFPTypeAtOffset(IRType, IROffset + 4, TD);
+    // If we can't get a second FP type, return a simple half or float.
+    // avx512fp16-abi.c:pr51813_2 shows it works to return float for
+    // {float, i8} too.
+    if (T1 == nullptr)
+      return T0;
   }
 
-  // We want to pass as <2 x float> if the LLVM IR type contains a float at
-  // offset+0 and offset+4. Walk the LLVM IR type to find out if this is the
-  // case.
-  if (ContainsFloatAtOffset(IRType, IROffset, getDataLayout()) &&
-      ContainsFloatAtOffset(IRType, IROffset + 4, getDataLayout()))
-    return llvm::FixedVectorType::get(llvm::Type::getFloatTy(getVMContext()),
-                                      2);
+  if (T0->isFloatTy() && T1->isFloatTy())
+    return llvm::FixedVectorType::get(T0, 2);
 
-  // We want to pass as <4 x half> if the LLVM IR type contains a half at
-  // offset+0, +2, +4. Walk the LLVM IR type to find out if this is the case.
-  if (ContainsHalfAtOffset(IRType, IROffset, getDataLayout()) &&
-      ContainsHalfAtOffset(IRType, IROffset + 2, getDataLayout()) &&
-      ContainsHalfAtOffset(IRType, IROffset + 4, getDataLayout()))
-    return llvm::FixedVectorType::get(llvm::Type::getHalfTy(getVMContext()), 4);
+  if (T0->isHalfTy() && T1->isHalfTy()) {
+    llvm::Type *T2 = nullptr;
+    if (SourceSize > 4)
+      T2 = getFPTypeAtOffset(IRType, IROffset + 4, TD);
+    if (T2 == nullptr)
+      return llvm::FixedVectorType::get(T0, 2);
+    return llvm::FixedVectorType::get(T0, 4);
+  }
 
-  // We want to pass as <4 x half> if the LLVM IR type contains a mix of float
-  // and half.
-  // FIXME: Do we have a better representation for the mixed type?
-  if (ContainsFloatAtOffset(IRType, IROffset, getDataLayout()) ||
-      ContainsFloatAtOffset(IRType, IROffset + 4, getDataLayout()))
+  if (T0->isHalfTy() || T1->isHalfTy())
     return llvm::FixedVectorType::get(llvm::Type::getHalfTy(getVMContext()), 4);
 
   return llvm::Type::getDoubleTy(getVMContext());
@@ -4631,13 +4631,24 @@ CharUnits AIXABIInfo::getParamTypeAlignment(QualType Ty) const {
 
 Address AIXABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                               QualType Ty) const {
-  if (Ty->isAnyComplexType())
-    llvm::report_fatal_error("complex type is not supported on AIX yet");
 
   auto TypeInfo = getContext().getTypeInfoInChars(Ty);
   TypeInfo.Align = getParamTypeAlignment(Ty);
 
   CharUnits SlotSize = CharUnits::fromQuantity(PtrByteSize);
+
+  // If we have a complex type and the base type is smaller than the register
+  // size, the ABI calls for the real and imaginary parts to be right-adjusted
+  // in separate words in 32bit mode or doublewords in 64bit mode. However,
+  // Clang expects us to produce a pointer to a structure with the two parts
+  // packed tightly. So generate loads of the real and imaginary parts relative
+  // to the va_list pointer, and store them to a temporary structure. We do the
+  // same as the PPC64ABI here.
+  if (const ComplexType *CTy = Ty->getAs<ComplexType>()) {
+    CharUnits EltSize = TypeInfo.Width / 2;
+    if (EltSize < SlotSize)
+      return complexTempStructure(CGF, VAListAddr, Ty, SlotSize, EltSize, CTy);
+  }
 
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*Indirect*/ false, TypeInfo,
                           SlotSize, /*AllowHigher*/ true);
@@ -5406,33 +5417,8 @@ Address PPC64_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   // and store them to a temporary structure.
   if (const ComplexType *CTy = Ty->getAs<ComplexType>()) {
     CharUnits EltSize = TypeInfo.Width / 2;
-    if (EltSize < SlotSize) {
-      Address Addr = emitVoidPtrDirectVAArg(CGF, VAListAddr, CGF.Int8Ty,
-                                            SlotSize * 2, SlotSize,
-                                            SlotSize, /*AllowHigher*/ true);
-
-      Address RealAddr = Addr;
-      Address ImagAddr = RealAddr;
-      if (CGF.CGM.getDataLayout().isBigEndian()) {
-        RealAddr = CGF.Builder.CreateConstInBoundsByteGEP(RealAddr,
-                                                          SlotSize - EltSize);
-        ImagAddr = CGF.Builder.CreateConstInBoundsByteGEP(ImagAddr,
-                                                      2 * SlotSize - EltSize);
-      } else {
-        ImagAddr = CGF.Builder.CreateConstInBoundsByteGEP(RealAddr, SlotSize);
-      }
-
-      llvm::Type *EltTy = CGF.ConvertTypeForMem(CTy->getElementType());
-      RealAddr = CGF.Builder.CreateElementBitCast(RealAddr, EltTy);
-      ImagAddr = CGF.Builder.CreateElementBitCast(ImagAddr, EltTy);
-      llvm::Value *Real = CGF.Builder.CreateLoad(RealAddr, ".vareal");
-      llvm::Value *Imag = CGF.Builder.CreateLoad(ImagAddr, ".vaimag");
-
-      Address Temp = CGF.CreateMemTemp(Ty, "vacplx");
-      CGF.EmitStoreOfComplex({Real, Imag}, CGF.MakeAddrLValue(Temp, Ty),
-                             /*init*/ true);
-      return Temp;
-    }
+    if (EltSize < SlotSize)
+      return complexTempStructure(CGF, VAListAddr, Ty, SlotSize, EltSize, CTy);
   }
 
   // Otherwise, just use the general rule.

@@ -6,6 +6,7 @@ add_llvm_component_library(LLVMMC
   MCAsmInfoCOFF.cpp
   MCAsmInfoDarwin.cpp
   MCAsmInfoELF.cpp
+  MCAsmInfoGOFF.cpp
   MCAsmInfoWasm.cpp
   MCAsmInfoXCOFF.cpp
   MCAsmMacro.cpp

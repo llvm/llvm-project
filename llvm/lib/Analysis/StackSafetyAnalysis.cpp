@@ -230,7 +230,7 @@ struct StackSafetyInfo::InfoTy {
 struct StackSafetyGlobalInfo::InfoTy {
   GVToSSI Info;
   SmallPtrSet<const AllocaInst *, 8> SafeAllocas;
-  SmallPtrSet<const Instruction *, 8> SafeAccesses;
+  std::map<const Instruction *, bool> AccessIsUnsafe;
 };
 
 namespace {
@@ -406,6 +406,11 @@ void StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
         }
 
         const auto &CB = cast<CallBase>(*I);
+        if (CB.getReturnedArgOperand() == V) {
+          if (Visited.insert(I).second)
+            WorkList.push_back(cast<const Instruction>(I));
+        }
+
         if (!CB.isArgOperand(&UI)) {
           US.addRange(I, UnknownRange);
           break;
@@ -595,8 +600,7 @@ void StackSafetyDataFlowAnalysis<CalleeTy>::runDataFlow() {
   updateAllNodes();
 
   while (!WorkList.empty()) {
-    const CalleeTy *Callee = WorkList.back();
-    WorkList.pop_back();
+    const CalleeTy *Callee = WorkList.pop_back_val();
     updateOneNode(Callee);
   }
 }
@@ -816,7 +820,6 @@ const StackSafetyGlobalInfo::InfoTy &StackSafetyGlobalInfo::getInfo() const {
     Info.reset(new InfoTy{
         createGlobalStackSafetyInfo(std::move(Functions), Index), {}, {}});
 
-    std::map<const Instruction *, bool> AccessIsUnsafe;
     for (auto &FnKV : Info->Info) {
       for (auto &KV : FnKV.second.Allocas) {
         ++NumAllocaTotal;
@@ -827,13 +830,9 @@ const StackSafetyGlobalInfo::InfoTy &StackSafetyGlobalInfo::getInfo() const {
           ++NumAllocaStackSafe;
         }
         for (const auto &A : KV.second.Accesses)
-          AccessIsUnsafe[A.first] |= !AIRange.contains(A.second);
+          Info->AccessIsUnsafe[A.first] |= !AIRange.contains(A.second);
       }
     }
-
-    for (const auto &KV : AccessIsUnsafe)
-      if (!KV.second)
-        Info->SafeAccesses.insert(KV.first);
 
     if (StackSafetyPrint)
       print(errs());
@@ -904,9 +903,13 @@ bool StackSafetyGlobalInfo::isSafe(const AllocaInst &AI) const {
   return Info.SafeAllocas.count(&AI);
 }
 
-bool StackSafetyGlobalInfo::accessIsSafe(const Instruction &I) const {
+bool StackSafetyGlobalInfo::stackAccessIsSafe(const Instruction &I) const {
   const auto &Info = getInfo();
-  return Info.SafeAccesses.count(&I);
+  auto It = Info.AccessIsUnsafe.find(&I);
+  if (It == Info.AccessIsUnsafe.end()) {
+    return true;
+  }
+  return !It->second;
 }
 
 void StackSafetyGlobalInfo::print(raw_ostream &O) const {
@@ -920,7 +923,10 @@ void StackSafetyGlobalInfo::print(raw_ostream &O) const {
       O << "    safe accesses:"
         << "\n";
       for (const auto &I : instructions(F)) {
-        if (accessIsSafe(I)) {
+        const CallInst *Call = dyn_cast<CallInst>(&I);
+        if ((isa<StoreInst>(I) || isa<LoadInst>(I) || isa<MemIntrinsic>(I) ||
+             (Call && Call->hasByValArgument())) &&
+            stackAccessIsSafe(I)) {
           O << "     " << I << "\n";
         }
       }

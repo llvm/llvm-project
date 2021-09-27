@@ -47,12 +47,11 @@ define i64 @fshl_i64(i64 %x, i64 %y, i64 %z) nounwind {
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X32-SSE2-NEXT:    movb {{[0-9]+}}(%esp), %ch
 ; X32-SSE2-NEXT:    movb %ch, %cl
 ; X32-SSE2-NEXT:    notb %cl
-; X32-SSE2-NEXT:    shrdl $1, %eax, %esi
-; X32-SSE2-NEXT:    movl %eax, %ebx
+; X32-SSE2-NEXT:    shrdl $1, %ebx, %esi
 ; X32-SSE2-NEXT:    shrl %ebx
 ; X32-SSE2-NEXT:    shrdl %cl, %ebx, %esi
 ; X32-SSE2-NEXT:    shrl %cl, %ebx
@@ -94,26 +93,25 @@ define i128 @fshl_i128(i128 %x, i128 %y, i128 %z) nounwind {
 ; X32-SSE2-NEXT:    pushl %edi
 ; X32-SSE2-NEXT:    pushl %esi
 ; X32-SSE2-NEXT:    subl $64, %esp
-; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X32-SSE2-NEXT:    movl %edi, %esi
-; X32-SSE2-NEXT:    shldl $31, %ecx, %esi
-; X32-SSE2-NEXT:    notl %edx
-; X32-SSE2-NEXT:    andl $127, %edx
-; X32-SSE2-NEXT:    movl %edx, (%esp) # 4-byte Spill
+; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-SSE2-NEXT:    movl %esi, %edi
+; X32-SSE2-NEXT:    shldl $31, %ecx, %edi
+; X32-SSE2-NEXT:    notl %ebx
+; X32-SSE2-NEXT:    andl $127, %ebx
 ; X32-SSE2-NEXT:    movb $64, %cl
-; X32-SSE2-NEXT:    subb %dl, %cl
-; X32-SSE2-NEXT:    shrl %edi
-; X32-SSE2-NEXT:    movl %edi, %ebx
-; X32-SSE2-NEXT:    shldl %cl, %esi, %ebx
-; X32-SSE2-NEXT:    movl %esi, %ebp
-; X32-SSE2-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X32-SSE2-NEXT:    subb %bl, %cl
+; X32-SSE2-NEXT:    shrl %esi
+; X32-SSE2-NEXT:    movl %esi, (%esp) # 4-byte Spill
+; X32-SSE2-NEXT:    shldl %cl, %edi, %esi
+; X32-SSE2-NEXT:    movl %edi, %ebp
+; X32-SSE2-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-SSE2-NEXT:    shll %cl, %ebp
 ; X32-SSE2-NEXT:    xorl %eax, %eax
 ; X32-SSE2-NEXT:    testb $32, %cl
-; X32-SSE2-NEXT:    cmovnel %ebp, %ebx
-; X32-SSE2-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X32-SSE2-NEXT:    cmovnel %ebp, %esi
+; X32-SSE2-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-SSE2-NEXT:    cmovnel %eax, %ebp
 ; X32-SSE2-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -123,136 +121,138 @@ define i128 @fshl_i128(i128 %x, i128 %y, i128 %z) nounwind {
 ; X32-SSE2-NEXT:    movl %eax, %ecx
 ; X32-SSE2-NEXT:    shldl %cl, %ebp, %edx
 ; X32-SSE2-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-SSE2-NEXT:    movl (%esp), %ecx # 4-byte Reload
-; X32-SSE2-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X32-SSE2-NEXT:    movl %ebx, %ecx
 ; X32-SSE2-NEXT:    addb $-64, %cl
-; X32-SSE2-NEXT:    movl %esi, %edx
-; X32-SSE2-NEXT:    shrdl %cl, %edi, %edx
-; X32-SSE2-NEXT:    movl %edi, %esi
+; X32-SSE2-NEXT:    movl (%esp), %esi # 4-byte Reload
+; X32-SSE2-NEXT:    shrdl %cl, %esi, %edi
 ; X32-SSE2-NEXT:    shrl %cl, %esi
 ; X32-SSE2-NEXT:    testb $32, %cl
-; X32-SSE2-NEXT:    cmovnel %esi, %edx
-; X32-SSE2-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X32-SSE2-NEXT:    cmovnel %esi, %edi
+; X32-SSE2-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-SSE2-NEXT:    movl $0, %ecx
 ; X32-SSE2-NEXT:    cmovnel %ecx, %esi
 ; X32-SSE2-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X32-SSE2-NEXT:    movl %eax, %ecx
-; X32-SSE2-NEXT:    shldl %cl, %esi, %ebx
-; X32-SSE2-NEXT:    movl %esi, %edx
+; X32-SSE2-NEXT:    shldl %cl, %edi, %esi
+; X32-SSE2-NEXT:    movl %edi, %edx
 ; X32-SSE2-NEXT:    shll %cl, %edx
 ; X32-SSE2-NEXT:    shll %cl, %ebp
 ; X32-SSE2-NEXT:    testb $32, %al
+; X32-SSE2-NEXT:    movl %eax, %ecx
 ; X32-SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X32-SSE2-NEXT:    cmovnel %ebp, %ecx
-; X32-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-SSE2-NEXT:    cmovnel %edx, %ebx
-; X32-SSE2-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-SSE2-NEXT:    movl $0, %ecx
-; X32-SSE2-NEXT:    cmovnel %ecx, %ebp
+; X32-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X32-SSE2-NEXT:    cmovnel %ebp, %eax
+; X32-SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X32-SSE2-NEXT:    cmovnel %edx, %esi
+; X32-SSE2-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X32-SSE2-NEXT:    movl $0, %eax
+; X32-SSE2-NEXT:    cmovnel %eax, %ebp
 ; X32-SSE2-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-SSE2-NEXT:    cmovnel %ecx, %edx
-; X32-SSE2-NEXT:    xorl %ecx, %ecx
-; X32-SSE2-NEXT:    cmpl $64, %eax
-; X32-SSE2-NEXT:    cmovael %ecx, %edx
+; X32-SSE2-NEXT:    cmovnel %eax, %edx
+; X32-SSE2-NEXT:    xorl %eax, %eax
+; X32-SSE2-NEXT:    cmpl $64, %ecx
+; X32-SSE2-NEXT:    cmovael %eax, %edx
 ; X32-SSE2-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X32-SSE2-NEXT:    shldl $31, %eax, %ebx
-; X32-SSE2-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-SSE2-NEXT:    shrdl $1, %eax, %edx
-; X32-SSE2-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-SSE2-NEXT:    movl (%esp), %ecx # 4-byte Reload
-; X32-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X32-SSE2-NEXT:    shrdl %cl, %edi, %eax
-; X32-SSE2-NEXT:    shrl %cl, %edi
-; X32-SSE2-NEXT:    movl %edx, %ebp
-; X32-SSE2-NEXT:    shrdl %cl, %ebx, %ebp
-; X32-SSE2-NEXT:    movl %ebx, %edx
-; X32-SSE2-NEXT:    shrl %cl, %edx
-; X32-SSE2-NEXT:    testb $32, %cl
-; X32-SSE2-NEXT:    cmovnel %edx, %ebp
+; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X32-SSE2-NEXT:    shldl $31, %eax, %ebp
 ; X32-SSE2-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-SSE2-NEXT:    cmovnel %edi, %eax
-; X32-SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-SSE2-NEXT:    movl $0, %ebp
-; X32-SSE2-NEXT:    cmovnel %ebp, %edx
-; X32-SSE2-NEXT:    cmovnel %ebp, %edi
-; X32-SSE2-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-SSE2-NEXT:    shrdl $1, %eax, %esi
+; X32-SSE2-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X32-SSE2-NEXT:    movl %ebx, %ecx
+; X32-SSE2-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X32-SSE2-NEXT:    cmpl $64, %eax
+; X32-SSE2-NEXT:    movl (%esp), %edx # 4-byte Reload
+; X32-SSE2-NEXT:    shrdl %cl, %edx, %eax
+; X32-SSE2-NEXT:    shrl %cl, %edx
+; X32-SSE2-NEXT:    movl %esi, %ebx
+; X32-SSE2-NEXT:    shrdl %cl, %ebp, %ebx
+; X32-SSE2-NEXT:    movl %ebp, %esi
+; X32-SSE2-NEXT:    shrl %cl, %esi
+; X32-SSE2-NEXT:    testb $32, %cl
+; X32-SSE2-NEXT:    cmovnel %esi, %ebx
+; X32-SSE2-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X32-SSE2-NEXT:    movl %edx, %ecx
+; X32-SSE2-NEXT:    cmovnel %edx, %eax
+; X32-SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X32-SSE2-NEXT:    movl $0, %eax
+; X32-SSE2-NEXT:    cmovnel %eax, %esi
+; X32-SSE2-NEXT:    cmovnel %eax, %ecx
+; X32-SSE2-NEXT:    movl %ecx, (%esp) # 4-byte Spill
+; X32-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; X32-SSE2-NEXT:    cmpl $64, %ebx
 ; X32-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X32-SSE2-NEXT:    cmovael %ebp, %ecx
+; X32-SSE2-NEXT:    cmovael %eax, %ecx
 ; X32-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-SSE2-NEXT:    xorl %ebp, %ebp
 ; X32-SSE2-NEXT:    movb $64, %ch
-; X32-SSE2-NEXT:    subb %al, %ch
-; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X32-SSE2-NEXT:    subb %bl, %ch
+; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-SSE2-NEXT:    movb %ch, %cl
-; X32-SSE2-NEXT:    shrl %cl, %edi
-; X32-SSE2-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X32-SSE2-NEXT:    shrl %cl, %edx
+; X32-SSE2-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-SSE2-NEXT:    testb $32, %ch
-; X32-SSE2-NEXT:    cmovnel %ebp, %edi
-; X32-SSE2-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Folded Reload
-; X32-SSE2-NEXT:    movb %al, %cl
+; X32-SSE2-NEXT:    cmovnel %ebp, %edx
+; X32-SSE2-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
+; X32-SSE2-NEXT:    movb %bl, %cl
 ; X32-SSE2-NEXT:    addb $-64, %cl
-; X32-SSE2-NEXT:    movl %esi, %ebp
+; X32-SSE2-NEXT:    movl %edi, %ebp
 ; X32-SSE2-NEXT:    shll %cl, %ebp
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-SSE2-NEXT:    shldl %cl, %esi, %eax
+; X32-SSE2-NEXT:    shldl %cl, %edi, %eax
 ; X32-SSE2-NEXT:    testb $32, %cl
 ; X32-SSE2-NEXT:    cmovnel %ebp, %eax
-; X32-SSE2-NEXT:    cmpl $64, (%esp) # 4-byte Folded Reload
-; X32-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
-; X32-SSE2-NEXT:    movl $0, %esi
-; X32-SSE2-NEXT:    cmovael %esi, %ebx
-; X32-SSE2-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X32-SSE2-NEXT:    cmpl $64, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X32-SSE2-NEXT:    movl (%esp), %ebx # 4-byte Reload
+; X32-SSE2-NEXT:    movl $0, %edi
+; X32-SSE2-NEXT:    cmovael %edi, %ebx
+; X32-SSE2-NEXT:    movl %ebx, (%esp) # 4-byte Spill
 ; X32-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
 ; X32-SSE2-NEXT:    cmpl $64, %ebx
-; X32-SSE2-NEXT:    cmovbl %edi, %eax
+; X32-SSE2-NEXT:    cmovbl %edx, %eax
 ; X32-SSE2-NEXT:    testb $32, %cl
-; X32-SSE2-NEXT:    movl $0, %esi
-; X32-SSE2-NEXT:    cmovnel %esi, %ebp
-; X32-SSE2-NEXT:    cmpl $64, (%esp) # 4-byte Folded Reload
-; X32-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
-; X32-SSE2-NEXT:    cmovael %esi, %edi
-; X32-SSE2-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X32-SSE2-NEXT:    movl $0, %edi
+; X32-SSE2-NEXT:    cmovnel %edi, %ebp
+; X32-SSE2-NEXT:    cmpl $64, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X32-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; X32-SSE2-NEXT:    cmovael %edi, %edx
+; X32-SSE2-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-SSE2-NEXT:    movb %ch, %cl
+; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-SSE2-NEXT:    shrdl %cl, %edi, %esi
+; X32-SSE2-NEXT:    shrdl %cl, %edx, %edi
 ; X32-SSE2-NEXT:    testb $32, %ch
-; X32-SSE2-NEXT:    cmovnel {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
-; X32-SSE2-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
+; X32-SSE2-NEXT:    cmovnel {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Folded Reload
+; X32-SSE2-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Folded Reload
 ; X32-SSE2-NEXT:    cmpl $64, %ebx
-; X32-SSE2-NEXT:    cmovael %ebp, %esi
-; X32-SSE2-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
-; X32-SSE2-NEXT:    movl (%esp), %edi # 4-byte Reload
-; X32-SSE2-NEXT:    cmpl $64, %edi
-; X32-SSE2-NEXT:    cmovael {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
+; X32-SSE2-NEXT:    cmovael %ebp, %edi
+; X32-SSE2-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
+; X32-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; X32-SSE2-NEXT:    cmpl $64, %edx
+; X32-SSE2-NEXT:    cmovael {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
 ; X32-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X32-SSE2-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
-; X32-SSE2-NEXT:    cmpl $64, %edi
+; X32-SSE2-NEXT:    cmpl $64, %edx
 ; X32-SSE2-NEXT:    cmovael {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
-; X32-SSE2-NEXT:    testl %edi, %edi
-; X32-SSE2-NEXT:    cmovel {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
+; X32-SSE2-NEXT:    testl %edx, %edx
+; X32-SSE2-NEXT:    cmovel {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
 ; X32-SSE2-NEXT:    cmovel {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
 ; X32-SSE2-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
-; X32-SSE2-NEXT:    movl %ecx, %edi
-; X32-SSE2-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
+; X32-SSE2-NEXT:    movl %ecx, %edx
+; X32-SSE2-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
 ; X32-SSE2-NEXT:    testl %ebx, %ebx
 ; X32-SSE2-NEXT:    cmovel {{[0-9]+}}(%esp), %eax
-; X32-SSE2-NEXT:    cmovel {{[0-9]+}}(%esp), %esi
-; X32-SSE2-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
-; X32-SSE2-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
+; X32-SSE2-NEXT:    cmovel {{[0-9]+}}(%esp), %edi
+; X32-SSE2-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Folded Reload
+; X32-SSE2-NEXT:    orl (%esp), %eax # 4-byte Folded Reload
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-SSE2-NEXT:    movl %eax, 12(%ecx)
-; X32-SSE2-NEXT:    movl %esi, 8(%ecx)
-; X32-SSE2-NEXT:    movl %edx, 4(%ecx)
-; X32-SSE2-NEXT:    movl %edi, (%ecx)
+; X32-SSE2-NEXT:    movl %edi, 8(%ecx)
+; X32-SSE2-NEXT:    movl %esi, 4(%ecx)
+; X32-SSE2-NEXT:    movl %edx, (%ecx)
 ; X32-SSE2-NEXT:    movl %ecx, %eax
 ; X32-SSE2-NEXT:    addl $64, %esp
 ; X32-SSE2-NEXT:    popl %esi
@@ -485,26 +485,27 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) nounwind {
 ; X32-SSE2-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X32-SSE2-NEXT:    calll __umoddi3
 ; X32-SSE2-NEXT:    addl $16, %esp
-; X32-SSE2-NEXT:    addb $27, %al
 ; X32-SSE2-NEXT:    movl %eax, %edx
-; X32-SSE2-NEXT:    notb %dl
-; X32-SSE2-NEXT:    movl %edx, %ecx
+; X32-SSE2-NEXT:    addb $27, %dl
+; X32-SSE2-NEXT:    movl %edx, %eax
+; X32-SSE2-NEXT:    notb %al
+; X32-SSE2-NEXT:    movl %eax, %ecx
 ; X32-SSE2-NEXT:    shldl %cl, %edi, %esi
 ; X32-SSE2-NEXT:    shldl $27, %ebp, %ebx
 ; X32-SSE2-NEXT:    shll $27, %ebp
-; X32-SSE2-NEXT:    movl %eax, %ecx
+; X32-SSE2-NEXT:    movl %edx, %ecx
 ; X32-SSE2-NEXT:    shrdl %cl, %ebx, %ebp
 ; X32-SSE2-NEXT:    shrl %cl, %ebx
 ; X32-SSE2-NEXT:    xorl %ecx, %ecx
-; X32-SSE2-NEXT:    testb $32, %al
+; X32-SSE2-NEXT:    testb $32, %dl
 ; X32-SSE2-NEXT:    cmovnel %ebx, %ebp
 ; X32-SSE2-NEXT:    cmovnel %ecx, %ebx
-; X32-SSE2-NEXT:    xorl %eax, %eax
-; X32-SSE2-NEXT:    movl %edx, %ecx
+; X32-SSE2-NEXT:    xorl %edx, %edx
+; X32-SSE2-NEXT:    movl %eax, %ecx
 ; X32-SSE2-NEXT:    shll %cl, %edi
-; X32-SSE2-NEXT:    testb $32, %dl
+; X32-SSE2-NEXT:    testb $32, %al
 ; X32-SSE2-NEXT:    cmovnel %edi, %esi
-; X32-SSE2-NEXT:    cmovnel %eax, %edi
+; X32-SSE2-NEXT:    cmovnel %edx, %edi
 ; X32-SSE2-NEXT:    orl %ebp, %edi
 ; X32-SSE2-NEXT:    orl %ebx, %esi
 ; X32-SSE2-NEXT:    movl %edi, %eax
@@ -1155,21 +1156,21 @@ define void @PR45265(i32 %0, %struct.S* nocapture readonly %1) nounwind {
 ; X32-SSE2-NEXT:    pushl %edi
 ; X32-SSE2-NEXT:    pushl %esi
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-SSE2-NEXT:    leal (%eax,%eax,2), %edx
-; X32-SSE2-NEXT:    movzwl 8(%ecx,%edx,4), %esi
-; X32-SSE2-NEXT:    movsbl 10(%ecx,%edx,4), %edi
-; X32-SSE2-NEXT:    movl %edi, %ebx
-; X32-SSE2-NEXT:    shll $16, %ebx
-; X32-SSE2-NEXT:    orl %esi, %ebx
-; X32-SSE2-NEXT:    movl 4(%ecx,%edx,4), %ecx
-; X32-SSE2-NEXT:    shrdl $8, %ebx, %ecx
-; X32-SSE2-NEXT:    xorl %eax, %ecx
+; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-SSE2-NEXT:    leal (%eax,%eax,2), %edi
+; X32-SSE2-NEXT:    movzwl 8(%esi,%edi,4), %ebx
+; X32-SSE2-NEXT:    movsbl 10(%esi,%edi,4), %ecx
+; X32-SSE2-NEXT:    movl %ecx, %edx
+; X32-SSE2-NEXT:    shll $16, %edx
+; X32-SSE2-NEXT:    orl %ebx, %edx
+; X32-SSE2-NEXT:    movl 4(%esi,%edi,4), %esi
+; X32-SSE2-NEXT:    shrdl $8, %edx, %esi
+; X32-SSE2-NEXT:    xorl %eax, %esi
 ; X32-SSE2-NEXT:    sarl $31, %eax
-; X32-SSE2-NEXT:    sarl $31, %edi
-; X32-SSE2-NEXT:    shldl $24, %ebx, %edi
-; X32-SSE2-NEXT:    xorl %eax, %edi
-; X32-SSE2-NEXT:    orl %edi, %ecx
+; X32-SSE2-NEXT:    sarl $31, %ecx
+; X32-SSE2-NEXT:    shldl $24, %edx, %ecx
+; X32-SSE2-NEXT:    xorl %eax, %ecx
+; X32-SSE2-NEXT:    orl %ecx, %esi
 ; X32-SSE2-NEXT:    jne .LBB46_1
 ; X32-SSE2-NEXT:  # %bb.2:
 ; X32-SSE2-NEXT:    popl %esi

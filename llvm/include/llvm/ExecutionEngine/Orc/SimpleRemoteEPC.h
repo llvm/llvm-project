@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericDylibManager.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
@@ -76,8 +77,7 @@ public:
   Error disconnect() override;
 
   Expected<HandleMessageAction>
-  handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
-                ExecutorAddress TagAddr,
+  handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo, ExecutorAddr TagAddr,
                 SimpleRemoteEPCArgBytesVector ArgBytes) override;
 
   void handleDisconnect(Error Err) override;
@@ -91,16 +91,19 @@ private:
   SimpleRemoteEPC(std::shared_ptr<SymbolStringPool> SSP)
       : ExecutorProcessControl(std::move(SSP)) {}
 
-  Error handleSetup(uint64_t SeqNo, ExecutorAddress TagAddr,
+  Error sendMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
+                    ExecutorAddr TagAddr, ArrayRef<char> ArgBytes);
+
+  Error handleSetup(uint64_t SeqNo, ExecutorAddr TagAddr,
                     SimpleRemoteEPCArgBytesVector ArgBytes);
   void prepareToReceiveSetupMessage(
       std::promise<MSVCPExpected<SimpleRemoteEPCExecutorInfo>> &ExecInfoP);
   Error setup(std::unique_ptr<SimpleRemoteEPCTransport> T,
               SimpleRemoteEPCExecutorInfo EI);
 
-  Error handleResult(uint64_t SeqNo, ExecutorAddress TagAddr,
+  Error handleResult(uint64_t SeqNo, ExecutorAddr TagAddr,
                      SimpleRemoteEPCArgBytesVector ArgBytes);
-  void handleCallWrapper(uint64_t RemoteSeqNo, ExecutorAddress TagAddr,
+  void handleCallWrapper(uint64_t RemoteSeqNo, ExecutorAddr TagAddr,
                          SimpleRemoteEPCArgBytesVector ArgBytes);
 
   uint64_t getNextSeqNo() { return NextSeqNo++; }
@@ -108,15 +111,17 @@ private:
 
   using PendingCallWrapperResultsMap = DenseMap<uint64_t, SendResultFunction>;
 
-  std::atomic_bool Disconnected{false};
   std::mutex SimpleRemoteEPCMutex;
+  std::condition_variable DisconnectCV;
+  bool Disconnected = false;
+  Error DisconnectErr = Error::success();
+
   std::unique_ptr<SimpleRemoteEPCTransport> T;
   std::unique_ptr<jitlink::JITLinkMemoryManager> OwnedMemMgr;
   std::unique_ptr<MemoryAccess> OwnedMemAccess;
 
-  ExecutorAddress LoadDylibAddr;
-  ExecutorAddress LookupSymbolsAddr;
-  ExecutorAddress RunAsMainAddr;
+  std::unique_ptr<EPCGenericDylibManager> DylibMgr;
+  ExecutorAddr RunAsMainAddr;
 
   uint64_t NextSeqNo = 0;
   PendingCallWrapperResultsMap PendingCallWrapperResults;

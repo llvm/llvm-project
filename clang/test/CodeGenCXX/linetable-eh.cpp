@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -gno-column-info -triple x86_64-apple-macosx10.9.0 -munwind-tables -std=c++11 -fcxx-exceptions -fexceptions %s -o - | FileCheck -allow-deprecated-dag-overlap %s
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -gno-column-info -triple x86_64-apple-macosx10.9.0 -funwind-tables=2 -std=c++11 -fcxx-exceptions -fexceptions %s -o - | FileCheck -allow-deprecated-dag-overlap %s
 
 // Test that emitting a landing pad does not affect the line table
 // entries for the code that triggered it.

@@ -221,7 +221,7 @@ define amdgpu_kernel void @byref_infloop_metadata(i8* %scratch, %struct.ty addrs
 ; CHECK-LABEL: @byref_infloop_metadata(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[CAST_ALLOCA:%.*]] = bitcast [[STRUCT_TY:%.*]] addrspace(4)* [[ARG:%.*]] to i8 addrspace(4)*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p4i8.i32(i8* noundef nonnull align 4 dereferenceable(16) [[SCRATCH:%.*]], i8 addrspace(4)* noundef align 4 dereferenceable(16) [[CAST_ALLOCA]], i32 16, i1 false), !noalias !1
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p4i8.i32(i8* noundef nonnull align 4 dereferenceable(16) [[SCRATCH:%.*]], i8 addrspace(4)* noundef align 4 dereferenceable(16) [[CAST_ALLOCA]], i32 16, i1 false), !noalias !0
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -229,7 +229,7 @@ bb:
   %cast.arg = bitcast %struct.ty addrspace(4)* %arg to i8 addrspace(4)*
   %cast.alloca = bitcast [4 x i32] addrspace(5)* %alloca to i8 addrspace(5)*
   call void @llvm.memcpy.p5i8.p4i8.i32(i8 addrspace(5)* align 4 %cast.alloca, i8 addrspace(4)* align 4 %cast.arg, i32 16, i1 false), !noalias !0
-  call void @llvm.memcpy.p0i8.p5i8.i32(i8* align 4 %scratch, i8 addrspace(5)* align 4 %cast.alloca, i32 16, i1 false), !noalias !1
+  call void @llvm.memcpy.p0i8.p5i8.i32(i8* align 4 %scratch, i8 addrspace(5)* align 4 %cast.alloca, i32 16, i1 false), !noalias !0
   ret void
 }
 
@@ -282,5 +282,6 @@ declare i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #1
 attributes #0 = { argmemonly nounwind willreturn }
 attributes #1 = { nounwind readnone speculatable }
 
-!0 = !{!0}
-!1 = !{!1}
+!0 = !{!1}
+!1 = !{!1, !2}
+!2 = !{!2}

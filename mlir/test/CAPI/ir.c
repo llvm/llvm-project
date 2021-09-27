@@ -1087,19 +1087,19 @@ int printBuiltinAttributes(MlirContext ctx) {
   // CHECK: 1.000000e+00 : f32
   // CHECK: 1.000000e+00 : f64
 
-  int64_t indices[] = {4, 7};
-  int64_t two = 2;
+  int64_t indices[] = {0, 1};
+  int64_t one = 1;
   MlirAttribute indicesAttr = mlirDenseElementsAttrInt64Get(
-      mlirRankedTensorTypeGet(1, &two, mlirIntegerTypeGet(ctx, 64), encoding),
+      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 64), encoding),
       2, indices);
   MlirAttribute valuesAttr = mlirDenseElementsAttrFloatGet(
-      mlirRankedTensorTypeGet(1, &two, mlirF32TypeGet(ctx), encoding), 2,
+      mlirRankedTensorTypeGet(1, &one, mlirF32TypeGet(ctx), encoding), 1,
       floats);
   MlirAttribute sparseAttr = mlirSparseElementsAttribute(
       mlirRankedTensorTypeGet(2, shape, mlirF32TypeGet(ctx), encoding),
       indicesAttr, valuesAttr);
   mlirAttributeDump(sparseAttr);
-  // CHECK: sparse<[4, 7], [0.000000e+00, 1.000000e+00]> : tensor<1x2xf32>
+  // CHECK: sparse<{{\[}}[0, 1]], 0.000000e+00> : tensor<1x2xf32>
 
   return 0;
 }
@@ -1708,6 +1708,10 @@ void testDiagnostics() {
   MlirLocation nameLoc =
       mlirLocationNameGet(ctx, mlirStringRefCreateFromCString("named"), null);
   mlirEmitError(nameLoc, "test diagnostics");
+  MlirLocation locs[2] = {nameLoc, callSiteLoc};
+  MlirAttribute nullAttr = {0};
+  MlirLocation fusedLoc = mlirLocationFusedGet(ctx, 2, locs, nullAttr);
+  mlirEmitError(fusedLoc, "test diagnostics");
   mlirContextDetachDiagnosticHandler(ctx, id);
   mlirEmitError(unknownLoc, "more test diagnostics");
   // CHECK-LABEL: @test_diagnostics
@@ -1727,6 +1731,9 @@ void testDiagnostics() {
   // CHECK:   test diagnostics
   // CHECK:   loc("named")
   // CHECK: >> end of diagnostic (userData: 42)
+  // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   test diagnostics
+  // CHECK:   loc(fused["named", callsite("other-file.c":2:3 at "file.c":1:2)])
   // CHECK: deleting user data (userData: 42)
   // CHECK-NOT: processing diagnostic
   // CHECK:     more test diagnostics

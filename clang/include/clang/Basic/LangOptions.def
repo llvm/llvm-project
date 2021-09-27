@@ -425,7 +425,7 @@ LANGOPT(RelativeCXXABIVTables, 1, 0,
 
 LANGOPT(ArmSveVectorBits, 32, 0, "SVE vector size in bits")
 
-ENUM_LANGOPT(ExtendIntArgs, ExtendArgsKind, 1, ExtendArgsKind::ExtendTo32, 
+ENUM_LANGOPT(ExtendIntArgs, ExtendArgsKind, 1, ExtendArgsKind::ExtendTo32,
              "Controls how scalar integer arguments are extended in calls "
              "to unprototyped and varargs functions")
 

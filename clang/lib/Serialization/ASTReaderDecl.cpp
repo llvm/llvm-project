@@ -1764,7 +1764,7 @@ void ASTDeclReader::ReadCXXDefinitionData(
   Data.HasODRHash = true;
 
   if (Record.readInt()) {
-    Reader.DefinitionSource[D] = 
+    Reader.DefinitionSource[D] =
         Loc.F->Kind == ModuleKind::MK_MainFile ||
         Reader.getContext().getLangOpts().BuildingPCHWithObjectFile;
   }

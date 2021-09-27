@@ -204,4 +204,4 @@
 
 // RUN: %clang -target ppc64-unknown-freebsd13.0 -### -S %s 2>&1 | \
 // RUN: FileCheck -check-prefix=PPC64-MUNWIND %s
-// PPC64-MUNWIND: -munwind-table
+// PPC64-MUNWIND: "-funwind-tables=2"

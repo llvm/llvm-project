@@ -29,11 +29,16 @@ entry:
 
 ; Function Attrs: norecurse nounwind readonly willreturn
 define dso_local fp128 @ld_unalign16___float128___float128(i8* nocapture readonly %ptr) {
-; CHECK-LABEL: ld_unalign16___float128___float128:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li r4, 1
-; CHECK-NEXT:    lxvx v2, r3, r4
-; CHECK-NEXT:    blr
+; CHECK-P10-LABEL: ld_unalign16___float128___float128:
+; CHECK-P10:       # %bb.0: # %entry
+; CHECK-P10-NEXT:    plxv v2, 1(r3), 0
+; CHECK-P10-NEXT:    blr
+;
+; CHECK-PREP10-LABEL: ld_unalign16___float128___float128:
+; CHECK-PREP10:       # %bb.0: # %entry
+; CHECK-PREP10-NEXT:    li r4, 1
+; CHECK-PREP10-NEXT:    lxvx v2, r3, r4
+; CHECK-PREP10-NEXT:    blr
 entry:
   %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 1
   %0 = bitcast i8* %add.ptr to fp128*
@@ -43,11 +48,16 @@ entry:
 
 ; Function Attrs: norecurse nounwind readonly willreturn
 define dso_local fp128 @ld_align16___float128___float128(i8* nocapture readonly %ptr) {
-; CHECK-LABEL: ld_align16___float128___float128:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li r4, 8
-; CHECK-NEXT:    lxvx v2, r3, r4
-; CHECK-NEXT:    blr
+; CHECK-P10-LABEL: ld_align16___float128___float128:
+; CHECK-P10:       # %bb.0: # %entry
+; CHECK-P10-NEXT:    plxv v2, 8(r3), 0
+; CHECK-P10-NEXT:    blr
+;
+; CHECK-PREP10-LABEL: ld_align16___float128___float128:
+; CHECK-PREP10:       # %bb.0: # %entry
+; CHECK-PREP10-NEXT:    li r4, 8
+; CHECK-PREP10-NEXT:    lxvx v2, r3, r4
+; CHECK-PREP10-NEXT:    blr
 entry:
   %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
   %0 = bitcast i8* %add.ptr to fp128*
@@ -59,8 +69,7 @@ entry:
 define dso_local fp128 @ld_unalign32___float128___float128(i8* nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_unalign32___float128___float128:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    pli r4, 99999
-; CHECK-P10-NEXT:    lxvx v2, r3, r4
+; CHECK-P10-NEXT:    plxv v2, 99999(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: ld_unalign32___float128___float128:
@@ -80,8 +89,7 @@ entry:
 define dso_local fp128 @ld_align32___float128___float128(i8* nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align32___float128___float128:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    pli r4, 99999000
-; CHECK-P10-NEXT:    lxvx v2, r3, r4
+; CHECK-P10-NEXT:    plxv v2, 99999000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: ld_align32___float128___float128:
@@ -205,12 +213,18 @@ entry:
 
 ; Function Attrs: norecurse nounwind readonly willreturn
 define dso_local fp128 @ld_disjoint_unalign16___float128___float128(i64 %ptr) {
-; CHECK-LABEL: ld_disjoint_unalign16___float128___float128:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    rldicr r3, r3, 0, 51
-; CHECK-NEXT:    li r4, 6
-; CHECK-NEXT:    lxvx v2, r3, r4
-; CHECK-NEXT:    blr
+; CHECK-P10-LABEL: ld_disjoint_unalign16___float128___float128:
+; CHECK-P10:       # %bb.0: # %entry
+; CHECK-P10-NEXT:    rldicr r3, r3, 0, 51
+; CHECK-P10-NEXT:    plxv v2, 6(r3), 0
+; CHECK-P10-NEXT:    blr
+;
+; CHECK-PREP10-LABEL: ld_disjoint_unalign16___float128___float128:
+; CHECK-PREP10:       # %bb.0: # %entry
+; CHECK-PREP10-NEXT:    rldicr r3, r3, 0, 51
+; CHECK-PREP10-NEXT:    li r4, 6
+; CHECK-PREP10-NEXT:    lxvx v2, r3, r4
+; CHECK-PREP10-NEXT:    blr
 entry:
   %and = and i64 %ptr, -4096
   %or = or i64 %and, 6
@@ -221,12 +235,18 @@ entry:
 
 ; Function Attrs: norecurse nounwind readonly willreturn
 define dso_local fp128 @ld_disjoint_align16___float128___float128(i64 %ptr) {
-; CHECK-LABEL: ld_disjoint_align16___float128___float128:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    rldicr r3, r3, 0, 51
-; CHECK-NEXT:    li r4, 24
-; CHECK-NEXT:    lxvx v2, r3, r4
-; CHECK-NEXT:    blr
+; CHECK-P10-LABEL: ld_disjoint_align16___float128___float128:
+; CHECK-P10:       # %bb.0: # %entry
+; CHECK-P10-NEXT:    rldicr r3, r3, 0, 51
+; CHECK-P10-NEXT:    plxv v2, 24(r3), 0
+; CHECK-P10-NEXT:    blr
+;
+; CHECK-PREP10-LABEL: ld_disjoint_align16___float128___float128:
+; CHECK-PREP10:       # %bb.0: # %entry
+; CHECK-PREP10-NEXT:    rldicr r3, r3, 0, 51
+; CHECK-PREP10-NEXT:    li r4, 24
+; CHECK-PREP10-NEXT:    lxvx v2, r3, r4
+; CHECK-PREP10-NEXT:    blr
 entry:
   %and = and i64 %ptr, -4096
   %or = or i64 %and, 24
@@ -255,8 +275,7 @@ define dso_local fp128 @ld_disjoint_unalign32___float128___float128(i64 %ptr) {
 ; CHECK-P10-LABEL: ld_disjoint_unalign32___float128___float128:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    rldicr r3, r3, 0, 43
-; CHECK-P10-NEXT:    pli r4, 99999
-; CHECK-P10-NEXT:    lxvx v2, r3, r4
+; CHECK-P10-NEXT:    plxv v2, 99999(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: ld_disjoint_unalign32___float128___float128:
@@ -280,8 +299,7 @@ define dso_local fp128 @ld_disjoint_align32___float128___float128(i64 %ptr) {
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    lis r4, -15264
 ; CHECK-P10-NEXT:    and r3, r3, r4
-; CHECK-P10-NEXT:    pli r4, 999990000
-; CHECK-P10-NEXT:    lxvx v2, r3, r4
+; CHECK-P10-NEXT:    plxv v2, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: ld_disjoint_align32___float128___float128:
@@ -500,11 +518,16 @@ entry:
 
 ; Function Attrs: nofree norecurse nounwind willreturn writeonly
 define dso_local void @st_unalign16___float128___float128(i8* nocapture %ptr, fp128 %str) {
-; CHECK-LABEL: st_unalign16___float128___float128:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li r4, 1
-; CHECK-NEXT:    stxvx v2, r3, r4
-; CHECK-NEXT:    blr
+; CHECK-P10-LABEL: st_unalign16___float128___float128:
+; CHECK-P10:       # %bb.0: # %entry
+; CHECK-P10-NEXT:    pstxv v2, 1(r3), 0
+; CHECK-P10-NEXT:    blr
+;
+; CHECK-PREP10-LABEL: st_unalign16___float128___float128:
+; CHECK-PREP10:       # %bb.0: # %entry
+; CHECK-PREP10-NEXT:    li r4, 1
+; CHECK-PREP10-NEXT:    stxvx v2, r3, r4
+; CHECK-PREP10-NEXT:    blr
 entry:
   %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 1
   %0 = bitcast i8* %add.ptr to fp128*
@@ -514,11 +537,16 @@ entry:
 
 ; Function Attrs: nofree norecurse nounwind willreturn writeonly
 define dso_local void @st_align16___float128___float128(i8* nocapture %ptr, fp128 %str) {
-; CHECK-LABEL: st_align16___float128___float128:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li r4, 8
-; CHECK-NEXT:    stxvx v2, r3, r4
-; CHECK-NEXT:    blr
+; CHECK-P10-LABEL: st_align16___float128___float128:
+; CHECK-P10:       # %bb.0: # %entry
+; CHECK-P10-NEXT:    pstxv v2, 8(r3), 0
+; CHECK-P10-NEXT:    blr
+;
+; CHECK-PREP10-LABEL: st_align16___float128___float128:
+; CHECK-PREP10:       # %bb.0: # %entry
+; CHECK-PREP10-NEXT:    li r4, 8
+; CHECK-PREP10-NEXT:    stxvx v2, r3, r4
+; CHECK-PREP10-NEXT:    blr
 entry:
   %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
   %0 = bitcast i8* %add.ptr to fp128*
@@ -530,8 +558,7 @@ entry:
 define dso_local void @st_unalign32___float128___float128(i8* nocapture %ptr, fp128 %str) {
 ; CHECK-P10-LABEL: st_unalign32___float128___float128:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    pli r4, 99999
-; CHECK-P10-NEXT:    stxvx v2, r3, r4
+; CHECK-P10-NEXT:    pstxv v2, 99999(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: st_unalign32___float128___float128:
@@ -551,8 +578,7 @@ entry:
 define dso_local void @st_align32___float128___float128(i8* nocapture %ptr, fp128 %str) {
 ; CHECK-P10-LABEL: st_align32___float128___float128:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    pli r4, 99999000
-; CHECK-P10-NEXT:    stxvx v2, r3, r4
+; CHECK-P10-NEXT:    pstxv v2, 99999000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: st_align32___float128___float128:
@@ -676,12 +702,18 @@ entry:
 
 ; Function Attrs: nofree norecurse nounwind willreturn writeonly
 define dso_local void @st_disjoint_unalign16___float128___float128(i64 %ptr, fp128 %str) {
-; CHECK-LABEL: st_disjoint_unalign16___float128___float128:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    rldicr r3, r3, 0, 51
-; CHECK-NEXT:    li r4, 6
-; CHECK-NEXT:    stxvx v2, r3, r4
-; CHECK-NEXT:    blr
+; CHECK-P10-LABEL: st_disjoint_unalign16___float128___float128:
+; CHECK-P10:       # %bb.0: # %entry
+; CHECK-P10-NEXT:    rldicr r3, r3, 0, 51
+; CHECK-P10-NEXT:    pstxv v2, 6(r3), 0
+; CHECK-P10-NEXT:    blr
+;
+; CHECK-PREP10-LABEL: st_disjoint_unalign16___float128___float128:
+; CHECK-PREP10:       # %bb.0: # %entry
+; CHECK-PREP10-NEXT:    rldicr r3, r3, 0, 51
+; CHECK-PREP10-NEXT:    li r4, 6
+; CHECK-PREP10-NEXT:    stxvx v2, r3, r4
+; CHECK-PREP10-NEXT:    blr
 entry:
   %and = and i64 %ptr, -4096
   %or = or i64 %and, 6
@@ -692,12 +724,18 @@ entry:
 
 ; Function Attrs: nofree norecurse nounwind willreturn writeonly
 define dso_local void @st_disjoint_align16___float128___float128(i64 %ptr, fp128 %str) {
-; CHECK-LABEL: st_disjoint_align16___float128___float128:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    rldicr r3, r3, 0, 51
-; CHECK-NEXT:    li r4, 24
-; CHECK-NEXT:    stxvx v2, r3, r4
-; CHECK-NEXT:    blr
+; CHECK-P10-LABEL: st_disjoint_align16___float128___float128:
+; CHECK-P10:       # %bb.0: # %entry
+; CHECK-P10-NEXT:    rldicr r3, r3, 0, 51
+; CHECK-P10-NEXT:    pstxv v2, 24(r3), 0
+; CHECK-P10-NEXT:    blr
+;
+; CHECK-PREP10-LABEL: st_disjoint_align16___float128___float128:
+; CHECK-PREP10:       # %bb.0: # %entry
+; CHECK-PREP10-NEXT:    rldicr r3, r3, 0, 51
+; CHECK-PREP10-NEXT:    li r4, 24
+; CHECK-PREP10-NEXT:    stxvx v2, r3, r4
+; CHECK-PREP10-NEXT:    blr
 entry:
   %and = and i64 %ptr, -4096
   %or = or i64 %and, 24
@@ -726,8 +764,7 @@ define dso_local void @st_disjoint_unalign32___float128___float128(i64 %ptr, fp1
 ; CHECK-P10-LABEL: st_disjoint_unalign32___float128___float128:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    rldicr r3, r3, 0, 43
-; CHECK-P10-NEXT:    pli r4, 99999
-; CHECK-P10-NEXT:    stxvx v2, r3, r4
+; CHECK-P10-NEXT:    pstxv v2, 99999(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: st_disjoint_unalign32___float128___float128:
@@ -751,8 +788,7 @@ define dso_local void @st_disjoint_align32___float128___float128(i64 %ptr, fp128
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    lis r4, -15264
 ; CHECK-P10-NEXT:    and r3, r3, r4
-; CHECK-P10-NEXT:    pli r4, 999990000
-; CHECK-P10-NEXT:    stxvx v2, r3, r4
+; CHECK-P10-NEXT:    pstxv v2, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: st_disjoint_align32___float128___float128:
@@ -1001,12 +1037,11 @@ define dso_local void @testGlob128PtrPlus3() {
 ; CHECK-P10-BE-LABEL: testGlob128PtrPlus3:
 ; CHECK-P10-BE:       # %bb.0: # %entry
 ; CHECK-P10-BE-NEXT:    addis r3, r2, GlobLd128@toc@ha
-; CHECK-P10-BE-NEXT:    li r4, 3
 ; CHECK-P10-BE-NEXT:    addi r3, r3, GlobLd128@toc@l
-; CHECK-P10-BE-NEXT:    lxvx vs0, r3, r4
+; CHECK-P10-BE-NEXT:    plxv vs0, 3(r3), 0
 ; CHECK-P10-BE-NEXT:    addis r3, r2, GlobSt128@toc@ha
 ; CHECK-P10-BE-NEXT:    addi r3, r3, GlobSt128@toc@l
-; CHECK-P10-BE-NEXT:    stxvx vs0, r3, r4
+; CHECK-P10-BE-NEXT:    pstxv vs0, 3(r3), 0
 ; CHECK-P10-BE-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: testGlob128PtrPlus3:
@@ -1036,12 +1071,11 @@ define dso_local void @testGlob128PtrPlus4() {
 ; CHECK-P10-BE-LABEL: testGlob128PtrPlus4:
 ; CHECK-P10-BE:       # %bb.0: # %entry
 ; CHECK-P10-BE-NEXT:    addis r3, r2, GlobLd128@toc@ha
-; CHECK-P10-BE-NEXT:    li r4, 4
 ; CHECK-P10-BE-NEXT:    addi r3, r3, GlobLd128@toc@l
-; CHECK-P10-BE-NEXT:    lxvx vs0, r3, r4
+; CHECK-P10-BE-NEXT:    plxv vs0, 4(r3), 0
 ; CHECK-P10-BE-NEXT:    addis r3, r2, GlobSt128@toc@ha
 ; CHECK-P10-BE-NEXT:    addi r3, r3, GlobSt128@toc@l
-; CHECK-P10-BE-NEXT:    stxvx vs0, r3, r4
+; CHECK-P10-BE-NEXT:    pstxv vs0, 4(r3), 0
 ; CHECK-P10-BE-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: testGlob128PtrPlus4:

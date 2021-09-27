@@ -464,7 +464,7 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
         Failure.FixStatus = ShouldFixStatus::ConflictsWithKeyword;
       else if (Ident->hasMacroDefinition())
         Failure.FixStatus = ShouldFixStatus::ConflictsWithMacroDefinition;
-    } else if (!isValidIdentifier(Info.Fixup)) {
+    } else if (!isValidAsciiIdentifier(Info.Fixup)) {
       Failure.FixStatus = ShouldFixStatus::FixInvalidIdentifier;
     }
 

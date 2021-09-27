@@ -142,6 +142,8 @@ hsa_status_t hsa_queue_create(hsa_agent_t agent, uint32_t size,
                               void *data, uint32_t private_segment_size,
                               uint32_t group_segment_size, hsa_queue_t **queue);
 
+hsa_status_t hsa_queue_destroy(hsa_queue_t *queue);
+
 uint64_t hsa_queue_load_read_index_scacquire(const hsa_queue_t *queue);
 
 uint64_t hsa_queue_add_write_index_relaxed(const hsa_queue_t *queue,

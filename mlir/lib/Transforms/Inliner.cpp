@@ -22,7 +22,6 @@
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Parallel.h"
 
 #define DEBUG_TYPE "inlining"
 
@@ -774,9 +773,9 @@ mlir::createInlinerPass(llvm::StringMap<OpPassManager> opPipelines) {
   return std::make_unique<InlinerPass>(defaultInlinerOptPipeline,
                                        std::move(opPipelines));
 }
-std::unique_ptr<Pass>
-createInlinerPass(llvm::StringMap<OpPassManager> opPipelines,
-                  std::function<void(OpPassManager &)> defaultPipelineBuilder) {
+std::unique_ptr<Pass> mlir::createInlinerPass(
+    llvm::StringMap<OpPassManager> opPipelines,
+    std::function<void(OpPassManager &)> defaultPipelineBuilder) {
   return std::make_unique<InlinerPass>(std::move(defaultPipelineBuilder),
                                        std::move(opPipelines));
 }

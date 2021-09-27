@@ -997,5 +997,3 @@ const char *SystemRuntimeMacOSX::GetPluginDescriptionStatic() {
 lldb_private::ConstString SystemRuntimeMacOSX::GetPluginName() {
   return GetPluginNameStatic();
 }
-
-uint32_t SystemRuntimeMacOSX::GetPluginVersion() { return 1; }

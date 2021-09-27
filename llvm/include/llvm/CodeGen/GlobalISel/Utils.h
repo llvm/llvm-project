@@ -14,6 +14,8 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_UTILS_H
 #define LLVM_CODEGEN_GLOBALISEL_UTILS_H
 
+#include "GISelWorkList.h"
+#include "LostDebugLocObserver.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/Register.h"
@@ -162,13 +164,12 @@ void reportGISelWarning(MachineFunction &MF, const TargetPassConfig &TPC,
                         MachineOptimizationRemarkMissed &R);
 
 /// If \p VReg is defined by a G_CONSTANT, return the corresponding value.
-Optional<APInt> getConstantVRegVal(Register VReg,
-                                   const MachineRegisterInfo &MRI);
+Optional<APInt> getIConstantVRegVal(Register VReg,
+                                    const MachineRegisterInfo &MRI);
 
-/// If \p VReg is defined by a G_CONSTANT fits in int64_t
-/// returns it.
-Optional<int64_t> getConstantVRegSExtVal(Register VReg,
-                                         const MachineRegisterInfo &MRI);
+/// If \p VReg is defined by a G_CONSTANT fits in int64_t returns it.
+Optional<int64_t> getIConstantVRegSExtVal(Register VReg,
+                                          const MachineRegisterInfo &MRI);
 
 /// Simple struct used to hold a constant integer value and a virtual
 /// register.
@@ -176,22 +177,32 @@ struct ValueAndVReg {
   APInt Value;
   Register VReg;
 };
-/// If \p VReg is defined by a statically evaluable chain of
-/// instructions rooted on a G_F/CONSTANT (\p LookThroughInstrs == true)
-/// and that constant fits in int64_t, returns its value as well as the
-/// virtual register defined by this G_F/CONSTANT.
-/// When \p LookThroughInstrs == false this function behaves like
-/// getConstantVRegVal.
-/// When \p HandleFConstants == false the function bails on G_FCONSTANTs.
-/// When \p LookThroughAnyExt == true the function treats G_ANYEXT same as
-/// G_SEXT.
+
+/// If \p VReg is defined by a statically evaluable chain of instructions rooted
+/// on a G_CONSTANT returns its APInt value and def register.
 Optional<ValueAndVReg>
-getConstantVRegValWithLookThrough(Register VReg, const MachineRegisterInfo &MRI,
-                                  bool LookThroughInstrs = true,
-                                  bool HandleFConstants = true,
-                                  bool LookThroughAnyExt = false);
-const ConstantInt *getConstantIntVRegVal(Register VReg,
-                                         const MachineRegisterInfo &MRI);
+getIConstantVRegValWithLookThrough(Register VReg,
+                                   const MachineRegisterInfo &MRI,
+                                   bool LookThroughInstrs = true);
+
+/// If \p VReg is defined by a statically evaluable chain of instructions rooted
+/// on a G_CONSTANT or G_FCONSTANT returns its value as APInt and def register.
+Optional<ValueAndVReg> getAnyConstantVRegValWithLookThrough(
+    Register VReg, const MachineRegisterInfo &MRI,
+    bool LookThroughInstrs = true, bool LookThroughAnyExt = false);
+
+struct FPValueAndVReg {
+  APFloat Value;
+  Register VReg;
+};
+
+/// If \p VReg is defined by a statically evaluable chain of instructions rooted
+/// on a G_FCONSTANT returns its APFloat value and def register.
+Optional<FPValueAndVReg>
+getFConstantVRegValWithLookThrough(Register VReg,
+                                   const MachineRegisterInfo &MRI,
+                                   bool LookThroughInstrs = true);
+
 const ConstantFP* getConstantFPVRegVal(Register VReg,
                                        const MachineRegisterInfo &MRI);
 
@@ -346,15 +357,23 @@ Optional<int> getSplatIndex(MachineInstr &MI);
 Optional<int64_t> getBuildVectorConstantSplat(const MachineInstr &MI,
                                               const MachineRegisterInfo &MRI);
 
+/// Returns a floating point scalar constant of a build vector splat if it
+/// exists. When \p AllowUndef == true some elements can be undef but not all.
+Optional<FPValueAndVReg> getFConstantSplat(Register VReg,
+                                           const MachineRegisterInfo &MRI,
+                                           bool AllowUndef = true);
+
 /// Return true if the specified instruction is a G_BUILD_VECTOR or
 /// G_BUILD_VECTOR_TRUNC where all of the elements are 0 or undef.
 bool isBuildVectorAllZeros(const MachineInstr &MI,
-                           const MachineRegisterInfo &MRI);
+                           const MachineRegisterInfo &MRI,
+                           bool AllowUndef = false);
 
 /// Return true if the specified instruction is a G_BUILD_VECTOR or
 /// G_BUILD_VECTOR_TRUNC where all of the elements are ~0 or undef.
 bool isBuildVectorAllOnes(const MachineInstr &MI,
-                          const MachineRegisterInfo &MRI);
+                          const MachineRegisterInfo &MRI,
+                          bool AllowUndef = false);
 
 /// \returns a value when \p MI is a vector splat. The splat can be either a
 /// Register or a constant.
@@ -397,6 +416,15 @@ int64_t getICmpTrueVal(const TargetLowering &TLI, bool IsVector, bool IsFP);
 /// Returns true if the given block should be optimized for size.
 bool shouldOptForSize(const MachineBasicBlock &MBB, ProfileSummaryInfo *PSI,
                       BlockFrequencyInfo *BFI);
+
+using SmallInstListTy = GISelWorkList<4>;
+void saveUsesAndErase(MachineInstr &MI, MachineRegisterInfo &MRI,
+                      LostDebugLocObserver *LocObserver,
+                      SmallInstListTy &DeadInstChain);
+void eraseInstrs(ArrayRef<MachineInstr *> DeadInstrs, MachineRegisterInfo &MRI,
+                 LostDebugLocObserver *LocObserver = nullptr);
+void eraseInstr(MachineInstr &MI, MachineRegisterInfo &MRI,
+                LostDebugLocObserver *LocObserver = nullptr);
 
 } // End namespace llvm.
 #endif

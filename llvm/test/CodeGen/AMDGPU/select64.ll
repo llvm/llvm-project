@@ -224,8 +224,8 @@ define amdgpu_kernel void @v_select_i64_split_imm(i64 addrspace(1)* %out, i32 %c
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_cmp_gt_u32 s2, 5
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
+; SI-NEXT:    s_cmp_gt_u32 s2, 5
 ; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s1
@@ -261,9 +261,9 @@ define amdgpu_kernel void @v_select_i64_split_imm(i64 addrspace(1)* %out, i32 %c
 ; GFX90A-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x34
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NEXT:    s_cmp_gt_u32 s6, 5
 ; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX90A-NEXT:    s_mov_b32 s4, 0
+; GFX90A-NEXT:    s_cmp_gt_u32 s6, 5
 ; GFX90A-NEXT:    s_mov_b32 s5, 63
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[4:5]

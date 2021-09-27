@@ -279,7 +279,7 @@ static void computeFunctionSummary(
     }
 
     for (const Instruction &I : BB) {
-      if (isa<DbgInfoIntrinsic>(I))
+      if (I.isDebugOrPseudoInst())
         continue;
       ++NumInsts;
       // Regular LTO module doesn't participate in ThinLTO import,

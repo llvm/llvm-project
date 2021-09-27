@@ -10,7 +10,6 @@
 
 #include "lldb/Core/StreamFile.h"
 #include "lldb/DataFormatters/FormatManager.h"
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/RegularExpression.h"
@@ -142,11 +141,10 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
           std::string reg_name_str = matches[1].str();
           std::string msbit_str = matches[2].str();
           std::string lsbit_str = matches[3].str();
-          const uint32_t msbit =
-              StringConvert::ToUInt32(msbit_str.c_str(), UINT32_MAX);
-          const uint32_t lsbit =
-              StringConvert::ToUInt32(lsbit_str.c_str(), UINT32_MAX);
-          if (msbit != UINT32_MAX && lsbit != UINT32_MAX) {
+          uint32_t msbit;
+          uint32_t lsbit;
+          if (llvm::to_integer(msbit_str, msbit) &&
+              llvm::to_integer(lsbit_str, lsbit)) {
             if (msbit > lsbit) {
               const uint32_t msbyte = msbit / 8;
               const uint32_t lsbyte = lsbit / 8;
@@ -395,23 +393,25 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
   return m_regs.size();
 }
 
-void DynamicRegisterInfo::AddRegister(RegisterInfo &reg_info,
-                                      ConstString &reg_name,
-                                      ConstString &reg_alt_name,
+void DynamicRegisterInfo::AddRegister(RegisterInfo reg_info,
                                       ConstString &set_name) {
   assert(!m_finalized);
   const uint32_t reg_num = m_regs.size();
-  reg_info.name = reg_name.AsCString();
   assert(reg_info.name);
-  reg_info.alt_name = reg_alt_name.AsCString(nullptr);
   uint32_t i;
   if (reg_info.value_regs) {
     for (i = 0; reg_info.value_regs[i] != LLDB_INVALID_REGNUM; ++i)
       m_value_regs_map[reg_num].push_back(reg_info.value_regs[i]);
+
+    // invalidate until Finalize() is called
+    reg_info.value_regs = nullptr;
   }
   if (reg_info.invalidate_regs) {
     for (i = 0; reg_info.invalidate_regs[i] != LLDB_INVALID_REGNUM; ++i)
       m_invalidate_regs_map[reg_num].push_back(reg_info.invalidate_regs[i]);
+
+    // invalidate until Finalize() is called
+    reg_info.invalidate_regs = nullptr;
   }
   if (reg_info.dynamic_size_dwarf_expr_bytes) {
     for (i = 0; i < reg_info.dynamic_size_dwarf_len; ++i)
@@ -663,9 +663,7 @@ void DynamicRegisterInfo::ConfigureOffsets() {
       if (reg.byte_offset == LLDB_INVALID_INDEX32) {
         uint32_t value_regnum = reg.value_regs[0];
         if (value_regnum != LLDB_INVALID_INDEX32)
-          reg.byte_offset =
-              GetRegisterInfoAtIndex(remote_to_local_regnum_map[value_regnum])
-                  ->byte_offset;
+          reg.byte_offset = GetRegisterInfoAtIndex(value_regnum)->byte_offset;
       }
     }
 

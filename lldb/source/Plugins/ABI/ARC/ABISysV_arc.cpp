@@ -613,5 +613,3 @@ ConstString ABISysV_arc::GetPluginNameStatic() {
 ConstString ABISysV_arc::GetPluginName() {
   return GetPluginNameStatic();
 }
-
-uint32_t ABISysV_arc::GetPluginVersion() { return 1; }

@@ -109,8 +109,6 @@ public:
   // PluginInterface protocol
   ConstString GetPluginName() override;
 
-  uint32_t GetPluginVersion() override;
-
   ObjCRuntimeVersions GetRuntimeVersion() const override {
     return ObjCRuntimeVersions::eAppleObjC_V1;
   }

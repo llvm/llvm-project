@@ -959,7 +959,7 @@ defm IMAGE_ATOMIC_OR            : MIMG_Atomic <mimgopc<0x19>, "image_atomic_or">
 defm IMAGE_ATOMIC_XOR           : MIMG_Atomic <mimgopc<0x1a>, "image_atomic_xor">;
 defm IMAGE_ATOMIC_INC           : MIMG_Atomic <mimgopc<0x1b>, "image_atomic_inc">;
 defm IMAGE_ATOMIC_DEC           : MIMG_Atomic <mimgopc<0x1c>, "image_atomic_dec">;
-defm IMAGE_ATOMIC_FCMPSWAP      : MIMG_Atomic <mimgopc<0x1d, MIMG.NOP>, "image_atomic_fcmpswap", 0, 1>;
+defm IMAGE_ATOMIC_FCMPSWAP      : MIMG_Atomic <mimgopc<0x1d, MIMG.NOP>, "image_atomic_fcmpswap", 1, 1>;
 defm IMAGE_ATOMIC_FMIN          : MIMG_Atomic <mimgopc<0x1e, MIMG.NOP>, "image_atomic_fmin", 0, 1>;
 defm IMAGE_ATOMIC_FMAX          : MIMG_Atomic <mimgopc<0x1f, MIMG.NOP>, "image_atomic_fmax", 0, 1>;
 

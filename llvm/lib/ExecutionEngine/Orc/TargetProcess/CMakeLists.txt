@@ -1,6 +1,9 @@
 add_llvm_component_library(LLVMOrcTargetProcess
   JITLoaderGDB.cpp
+  OrcRTBootstrap.cpp
   RegisterEHFrames.cpp
+  SimpleExecutorDylibManager.cpp
+  SimpleExecutorMemoryManager.cpp
   SimpleRemoteEPCServer.cpp
   TargetExecutionUtils.cpp
 

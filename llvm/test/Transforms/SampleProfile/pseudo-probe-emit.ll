@@ -1,10 +1,10 @@
 ; REQUIRES: x86_64-linux
 ; RUN: opt < %s -passes=pseudo-probe -function-sections -S -o %t
 ; RUN: FileCheck %s < %t --check-prefix=CHECK-IL
-; RUN: llc %t -pseudo-probe-for-profiling -stop-after=pseudo-probe-inserter -o - | FileCheck %s --check-prefix=CHECK-MIR
-; RUN: llc %t -pseudo-probe-for-profiling -function-sections -filetype=asm -o %t1
+; RUN: llc %t -stop-after=pseudo-probe-inserter -o - | FileCheck %s --check-prefix=CHECK-MIR
+; RUN: llc %t -function-sections -filetype=asm -o %t1
 ; RUN: FileCheck %s < %t1 --check-prefix=CHECK-ASM
-; RUN: llc %t -pseudo-probe-for-profiling -function-sections -filetype=obj -o %t2
+; RUN: llc %t -function-sections -filetype=obj -o %t2
 ; RUN: llvm-objdump --section-headers  %t2 | FileCheck %s --check-prefix=CHECK-OBJ
 ; RUN: llvm-mc %t1 -filetype=obj -o %t3
 ; RUN: llvm-objdump --section-headers  %t3 | FileCheck %s --check-prefix=CHECK-OBJ
@@ -63,6 +63,9 @@ entry:
   call void @bar(i32 1)
   ret void
 }
+
+; CHECK-IL: Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn
+; CHECK-IL-NEXT: declare void @llvm.pseudoprobe(i64, i64, i32, i64)
 
 ; CHECK-IL: ![[#FOO:]] = distinct !DISubprogram(name: "foo"
 ; CHECK-IL: ![[#FAKELINE]] = !DILocation(line: 0, scope: ![[#FOO]])

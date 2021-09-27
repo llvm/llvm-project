@@ -835,5 +835,3 @@ ConstString ABIMacOSX_arm64::GetPluginNameStatic() {
   static ConstString g_plugin_name("ABIMacOSX_arm64");
   return g_plugin_name;
 }
-
-uint32_t ABIMacOSX_arm64::GetPluginVersion() { return 1; }

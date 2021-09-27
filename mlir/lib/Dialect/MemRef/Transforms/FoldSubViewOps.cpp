@@ -49,18 +49,13 @@ resolveSourceIndices(Location loc, PatternRewriter &rewriter,
   SmallVector<Value> useIndices;
   // Check if this is rank-reducing case. Then for every unit-dim size add a
   // zero to the indices.
-  ArrayRef<int64_t> resultShape = subViewOp.getType().getShape();
   unsigned resultDim = 0;
-  for (auto size : llvm::enumerate(mixedSizes)) {
-    auto attr = size.value().dyn_cast<Attribute>();
-    // Check if this dimension has been dropped, i.e. the size is 1, but the
-    // associated dimension is not 1.
-    if (attr && attr.cast<IntegerAttr>().getInt() == 1 &&
-        (resultDim >= resultShape.size() || resultShape[resultDim] != 1))
+  llvm::SmallDenseSet<unsigned> unusedDims = subViewOp.getDroppedDims();
+  for (auto dim : llvm::seq<unsigned>(0, subViewOp.getSourceType().getRank())) {
+    if (unusedDims.count(dim))
       useIndices.push_back(rewriter.create<ConstantIndexOp>(loc, 0));
-    else if (resultDim < resultShape.size()) {
+    else
       useIndices.push_back(indices[resultDim++]);
-    }
   }
   if (useIndices.size() != mixedOffsets.size())
     return failure();
@@ -102,6 +97,25 @@ static Value getMemRefOperand(memref::StoreOp op) { return op.memref(); }
 
 static Value getMemRefOperand(vector::TransferWriteOp op) {
   return op.source();
+}
+
+/// Given the permutation map of the original
+/// `vector.transfer_read`/`vector.transfer_write` operations compute the
+/// permutation map to use after the subview is folded with it.
+static AffineMap getPermutationMap(MLIRContext *context,
+                                   memref::SubViewOp subViewOp,
+                                   AffineMap currPermutationMap) {
+  llvm::SmallDenseSet<unsigned> unusedDims = subViewOp.getDroppedDims();
+  SmallVector<AffineExpr> exprs;
+  unsigned resultIdx = 0;
+  int64_t sourceRank = subViewOp.getSourceType().getRank();
+  for (auto dim : llvm::seq<int64_t>(0, sourceRank)) {
+    if (unusedDims.count(dim))
+      continue;
+    exprs.push_back(getAffineDimExpr(resultIdx++, context));
+  }
+  auto resultDimToSourceDimMap = AffineMap::get(sourceRank, 0, exprs, context);
+  return currPermutationMap.compose(resultDimToSourceDimMap);
 }
 
 //===----------------------------------------------------------------------===//
@@ -153,7 +167,9 @@ void LoadOpOfSubViewFolder<vector::TransferReadOp>::replaceOp(
     ArrayRef<Value> sourceIndices, PatternRewriter &rewriter) const {
   rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
       loadOp, loadOp.getVectorType(), subViewOp.source(), sourceIndices,
-      loadOp.permutation_map(), loadOp.padding(), loadOp.in_boundsAttr());
+      getPermutationMap(rewriter.getContext(), subViewOp,
+                        loadOp.permutation_map()),
+      loadOp.padding(), loadOp.in_boundsAttr());
 }
 
 template <>
@@ -170,7 +186,9 @@ void StoreOpOfSubViewFolder<vector::TransferWriteOp>::replaceOp(
     ArrayRef<Value> sourceIndices, PatternRewriter &rewriter) const {
   rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
       transferWriteOp, transferWriteOp.vector(), subViewOp.source(),
-      sourceIndices, transferWriteOp.permutation_map(),
+      sourceIndices,
+      getPermutationMap(rewriter.getContext(), subViewOp,
+                        transferWriteOp.permutation_map()),
       transferWriteOp.in_boundsAttr());
 }
 } // namespace

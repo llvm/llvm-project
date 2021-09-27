@@ -35,17 +35,17 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Transforms/InstCombine/InstCombineWorklist.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
 #include <utility>
 
+#define DEBUG_TYPE "instcombine"
+#include "llvm/Transforms/Utils/InstructionWorklist.h"
+
 using namespace llvm;
 using namespace PatternMatch;
-
-#define DEBUG_TYPE "instcombine"
 
 STATISTIC(NumAggregateReconstructionsSimplified,
           "Number of aggregate reconstructions turned into reuse of the "
@@ -659,8 +659,7 @@ static void replaceExtractElements(InsertElementInst *InsElt,
   if (InsElt->hasOneUse() && isa<InsertElementInst>(InsElt->user_back()))
     return;
 
-  auto *WideVec =
-      new ShuffleVectorInst(ExtVecOp, PoisonValue::get(ExtVecType), ExtendMask);
+  auto *WideVec = new ShuffleVectorInst(ExtVecOp, ExtendMask);
 
   // Insert the new shuffle after the vector operand of the extract is defined
   // (as long as it's not a PHI) or at the start of the basic block of the
@@ -1187,7 +1186,7 @@ static Instruction *foldInsSequenceIntoSplat(InsertElementInst &InsElt) {
     if (!ElementPresent[i])
       Mask[i] = -1;
 
-  return new ShuffleVectorInst(FirstIE, PoisonVec, Mask);
+  return new ShuffleVectorInst(FirstIE, Mask);
 }
 
 /// Try to fold an insert element into an existing splat shuffle by changing
@@ -1216,15 +1215,15 @@ static Instruction *foldInsEltIntoSplat(InsertElementInst &InsElt) {
 
   // Replace the shuffle mask element at the index of this insert with a zero.
   // For example:
-  // inselt (shuf (inselt undef, X, 0), undef, <0,undef,0,undef>), X, 1
-  //   --> shuf (inselt undef, X, 0), undef, <0,0,0,undef>
+  // inselt (shuf (inselt undef, X, 0), _, <0,undef,0,undef>), X, 1
+  //   --> shuf (inselt undef, X, 0), poison, <0,0,0,undef>
   unsigned NumMaskElts =
       cast<FixedVectorType>(Shuf->getType())->getNumElements();
   SmallVector<int, 16> NewMask(NumMaskElts);
   for (unsigned i = 0; i != NumMaskElts; ++i)
     NewMask[i] = i == IdxC ? 0 : Shuf->getMaskValue(i);
 
-  return new ShuffleVectorInst(Op0, UndefValue::get(Op0->getType()), NewMask);
+  return new ShuffleVectorInst(Op0, NewMask);
 }
 
 /// Try to fold an extract+insert element into an existing identity shuffle by
@@ -1356,6 +1355,10 @@ static Instruction *foldConstantInsEltIntoShuffle(InsertElementInst &InsElt) {
         NewShufElts[I] = ShufConstVec->getAggregateElement(I);
         NewMaskElts[I] = Mask[I];
       }
+
+      // Bail if we failed to find an element.
+      if (!NewShufElts[I])
+        return nullptr;
     }
 
     // Create new operands for a shuffle that includes the constant of the
@@ -1405,6 +1408,41 @@ static Instruction *foldConstantInsEltIntoShuffle(InsertElementInst &InsElt) {
                                  ConstantVector::get(Values), Mask);
   }
   return nullptr;
+}
+
+/// If both the base vector and the inserted element are extended from the same
+/// type, do the insert element in the narrow source type followed by extend.
+/// TODO: This can be extended to include other cast opcodes, but particularly
+///       if we create a wider insertelement, make sure codegen is not harmed.
+static Instruction *narrowInsElt(InsertElementInst &InsElt,
+                                 InstCombiner::BuilderTy &Builder) {
+  // We are creating a vector extend. If the original vector extend has another
+  // use, that would mean we end up with 2 vector extends, so avoid that.
+  // TODO: We could ease the use-clause to "if at least one op has one use"
+  //       (assuming that the source types match - see next TODO comment).
+  Value *Vec = InsElt.getOperand(0);
+  if (!Vec->hasOneUse())
+    return nullptr;
+
+  Value *Scalar = InsElt.getOperand(1);
+  Value *X, *Y;
+  CastInst::CastOps CastOpcode;
+  if (match(Vec, m_FPExt(m_Value(X))) && match(Scalar, m_FPExt(m_Value(Y))))
+    CastOpcode = Instruction::FPExt;
+  else if (match(Vec, m_SExt(m_Value(X))) && match(Scalar, m_SExt(m_Value(Y))))
+    CastOpcode = Instruction::SExt;
+  else if (match(Vec, m_ZExt(m_Value(X))) && match(Scalar, m_ZExt(m_Value(Y))))
+    CastOpcode = Instruction::ZExt;
+  else
+    return nullptr;
+
+  // TODO: We can allow mismatched types by creating an intermediate cast.
+  if (X->getType()->getScalarType() != Y->getType())
+    return nullptr;
+
+  // inselt (ext X), (ext Y), Index --> ext (inselt X, Y, Index)
+  Value *NewInsElt = Builder.CreateInsertElement(X, Y, InsElt.getOperand(2));
+  return CastInst::Create(CastOpcode, NewInsElt, InsElt.getType());
 }
 
 Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
@@ -1525,6 +1563,9 @@ Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
 
   if (Instruction *IdentityShuf = foldInsEltIntoIdentityShuffle(IE))
     return IdentityShuf;
+
+  if (Instruction *Ext = narrowInsElt(IE, Builder))
+    return Ext;
 
   return nullptr;
 }
@@ -1932,8 +1973,8 @@ static Instruction *canonicalizeInsertSplat(ShuffleVectorInst &Shuf,
 
   // Splat from element 0. Any mask element that is undefined remains undefined.
   // For example:
-  // shuf (inselt undef, X, 2), undef, <2,2,undef>
-  //   --> shuf (inselt undef, X, 0), undef, <0,0,undef>
+  // shuf (inselt undef, X, 2), _, <2,2,undef>
+  //   --> shuf (inselt undef, X, 0), poison, <0,0,undef>
   unsigned NumMaskElts =
       cast<FixedVectorType>(Shuf.getType())->getNumElements();
   SmallVector<int, 16> NewMask(NumMaskElts, 0);
@@ -1941,7 +1982,7 @@ static Instruction *canonicalizeInsertSplat(ShuffleVectorInst &Shuf,
     if (Mask[i] == UndefMaskElem)
       NewMask[i] = Mask[i];
 
-  return new ShuffleVectorInst(NewIns, UndefVec, NewMask);
+  return new ShuffleVectorInst(NewIns, NewMask);
 }
 
 /// Try to fold shuffles that are the equivalent of a vector select.
@@ -2430,7 +2471,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
       else
         Elts.push_back(Mask[i] % LHSWidth);
     }
-    return new ShuffleVectorInst(LHS, UndefValue::get(RHS->getType()), Elts);
+    return new ShuffleVectorInst(LHS, Elts);
   }
 
   // shuffle undef, x, mask --> shuffle x, undef, mask'

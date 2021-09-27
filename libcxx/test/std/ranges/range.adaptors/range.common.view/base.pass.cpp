@@ -14,51 +14,25 @@
 // constexpr V base() &&;
 
 #include <ranges>
+
 #include <cassert>
+#include <utility>
 
 #include "test_macros.h"
-#include "test_iterators.h"
-#include "test_range.h"
-
-struct ContiguousView : std::ranges::view_base {
-  int *ptr_;
-  constexpr ContiguousView(int* ptr) : ptr_(ptr) {}
-  constexpr ContiguousView(ContiguousView&&) = default;
-  constexpr ContiguousView& operator=(ContiguousView&&) = default;
-  friend constexpr int* begin(ContiguousView& view) { return view.ptr_; }
-  friend constexpr int* begin(ContiguousView const& view) { return view.ptr_; }
-  friend constexpr sentinel_wrapper<int*> end(ContiguousView& view) {
-    return sentinel_wrapper<int*>{view.ptr_ + 8};
-  }
-  friend constexpr sentinel_wrapper<int*> end(ContiguousView const& view) {
-    return sentinel_wrapper<int*>{view.ptr_ + 8};
-  }
-};
-
-struct CopyableView : std::ranges::view_base {
-  int *ptr_;
-  constexpr CopyableView(int* ptr) : ptr_(ptr) {}
-  friend constexpr int* begin(CopyableView& view) { return view.ptr_; }
-  friend constexpr int* begin(CopyableView const& view) { return view.ptr_; }
-  friend constexpr sentinel_wrapper<int*> end(CopyableView& view) {
-    return sentinel_wrapper<int*>{view.ptr_ + 8};
-  }
-  friend constexpr sentinel_wrapper<int*> end(CopyableView const& view) {
-    return sentinel_wrapper<int*>{view.ptr_ + 8};
-  }
-};
+#include "types.h"
 
 constexpr bool hasLValueQualifiedBase(auto&& view) {
-    return requires { view.base(); };
+  return requires { view.base(); };
 }
 
 constexpr bool test() {
-  int buffer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+  int buf[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 
   {
-    std::ranges::common_view<CopyableView> common(CopyableView{buffer});
-    assert(common.base().ptr_ == buffer);
-    assert(std::move(common).base().ptr_ == buffer);
+    CopyableView view{buf, buf + 8};
+    std::ranges::common_view<CopyableView> common(view);
+    assert(common.base().begin_ == buf);
+    assert(std::move(common).base().begin_ == buf);
 
     ASSERT_SAME_TYPE(decltype(common.base()), CopyableView);
     ASSERT_SAME_TYPE(decltype(std::move(common).base()), CopyableView);
@@ -66,17 +40,19 @@ constexpr bool test() {
   }
 
   {
-    std::ranges::common_view<ContiguousView> common(ContiguousView{buffer});
-    assert(std::move(common).base().ptr_ == buffer);
+    ContiguousView view{buf, buf + 8};
+    std::ranges::common_view<ContiguousView> common(std::move(view));
+    assert(std::move(common).base().begin_ == buf);
 
     ASSERT_SAME_TYPE(decltype(std::move(common).base()), ContiguousView);
     static_assert(!hasLValueQualifiedBase(common));
   }
 
   {
-    const std::ranges::common_view<CopyableView> common(CopyableView{buffer});
-    assert(common.base().ptr_ == buffer);
-    assert(std::move(common).base().ptr_ == buffer);
+    CopyableView view{buf, buf + 8};
+    const std::ranges::common_view<CopyableView> common(view);
+    assert(common.base().begin_ == buf);
+    assert(std::move(common).base().begin_ == buf);
 
     ASSERT_SAME_TYPE(decltype(common.base()), CopyableView);
     ASSERT_SAME_TYPE(decltype(std::move(common).base()), CopyableView);

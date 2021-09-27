@@ -102,8 +102,8 @@ ConvOpQuantizationAttr
 mlir::tosa::buildConvOpQuantizationAttr(OpBuilder &builder, Value input,
                                         Value weight) {
 
-  auto inputType = input.getType().dyn_cast<RankedTensorType>();
-  auto weightType = weight.getType().dyn_cast<RankedTensorType>();
+  auto inputType = input.getType().dyn_cast<ShapedType>();
+  auto weightType = weight.getType().dyn_cast<ShapedType>();
 
   if (!inputType || !weightType)
     return nullptr;
@@ -151,8 +151,8 @@ MatMulOpQuantizationAttr
 mlir::tosa::buildMatMulOpQuantizationAttr(OpBuilder &builder, Value a,
                                           Value b) {
 
-  auto aType = a.getType().dyn_cast<RankedTensorType>();
-  auto bType = b.getType().dyn_cast<RankedTensorType>();
+  auto aType = a.getType().dyn_cast<ShapedType>();
+  auto bType = b.getType().dyn_cast<ShapedType>();
 
   if (!aType || !bType)
     return nullptr;
@@ -187,8 +187,8 @@ UnaryOpQuantizationAttr
 mlir::tosa::buildUnaryOpQuantizationAttr(OpBuilder &builder, Value input,
                                          Type outputRawType) {
 
-  auto inputType = input.getType().dyn_cast<RankedTensorType>();
-  auto outputType = outputRawType.dyn_cast<RankedTensorType>();
+  auto inputType = input.getType().dyn_cast<ShapedType>();
+  auto outputType = outputRawType.dyn_cast<ShapedType>();
 
   if (!inputType || !outputType)
     return nullptr;
@@ -220,7 +220,7 @@ mlir::tosa::buildUnaryOpQuantizationAttr(OpBuilder &builder, Value input,
 PadOpQuantizationAttr mlir::tosa::buildPadOpQuantizationAttr(OpBuilder &builder,
                                                              Value input) {
 
-  auto inputType = input.getType().dyn_cast<RankedTensorType>();
+  auto inputType = input.getType().dyn_cast<ShapedType>();
 
   if (!inputType)
     return nullptr;
@@ -245,8 +245,8 @@ PadOpQuantizationAttr mlir::tosa::buildPadOpQuantizationAttr(OpBuilder &builder,
 Type mlir::tosa::buildConvOpResultTypeInfo(OpBuilder &builder, Type outputType,
                                            Value input, Value weight) {
 
-  auto inputType = input.getType().dyn_cast<RankedTensorType>();
-  auto weightType = weight.getType().dyn_cast<RankedTensorType>();
+  auto inputType = input.getType().dyn_cast<ShapedType>();
+  auto weightType = weight.getType().dyn_cast<ShapedType>();
 
   assert(inputType && weightType &&
          "Could not extract input or weight tensors from Conv op");
@@ -260,18 +260,16 @@ Type mlir::tosa::buildConvOpResultTypeInfo(OpBuilder &builder, Type outputType,
   unsigned inputBits = inputQType.getStorageTypeIntegralWidth();
   unsigned weightBits = weightQType.getStorageTypeIntegralWidth();
 
-  auto outputShapedType = outputType.dyn_cast<RankedTensorType>();
+  auto outputShapedType = outputType.dyn_cast<ShapedType>();
   assert(outputShapedType &&
          "Could not extract output shape type from Conv op");
-
-  auto outputShape = outputShapedType.getShape();
 
   IntegerType accElementType;
   if (inputBits == 16 && weightBits == 8)
     accElementType = builder.getIntegerType(48);
   else
     accElementType = builder.getI32Type();
-  auto accType = RankedTensorType::get(outputShape, accElementType);
+  auto accType = outputShapedType.clone(accElementType);
   return accType;
 }
 

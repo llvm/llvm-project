@@ -16,6 +16,7 @@
 #include "private.h"
 #include "rtl.h"
 
+#include <stdarg.h>
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
@@ -68,6 +69,49 @@ EXTERN void __tgt_target_data_begin(int64_t device_id, int32_t arg_num,
                                     void **args_base, void **args,
                                     int64_t *arg_sizes, int64_t *arg_types) {
   TIMESCOPE();
+  __tgt_target_data_begin_mapper(nullptr, device_id, arg_num, args_base, args,
+                                 arg_sizes, arg_types, nullptr, nullptr);
+}
+
+EXTERN void __tgt_target_data_begin_with_deps(int64_t device_id, int32_t arg_num,
+                                              void **args_base, void **args,
+                                              int64_t *arg_sizes, int64_t *arg_types,
+                                              int32_t depNum, int nargs, ...) {
+  TIMESCOPE();
+  int *dependinfo;
+  if (depNum > 0) {
+    dependinfo = (int*)malloc(nargs*sizeof(int));
+    va_list valist;
+    va_start(valist, nargs);
+    for (int k = 0; k < nargs; k++) {
+      dependinfo[k] = va_arg(valist, int);
+    }
+    va_end(valist);
+
+    kmp_depend_info_t *deplist = (kmp_depend_info_t*)malloc(depNum*sizeof(kmp_depend_info_t));
+
+    for (int i = 0, j = 0; i < depNum && j < depNum*3; i++, j+=3) {
+      kmp_depend_info_t depinfo;
+      depinfo.base_addr = dependinfo[j+2];
+      depinfo.len = dependinfo[j+1];
+      int deptype = dependinfo[j];
+      depinfo.flags.mtx = 1;
+      if (deptype == DI_DEP_TYPE_INOUT) {
+        depinfo.flags.in = 1;
+        depinfo.flags.out = 1;
+      } else if (deptype == DI_DEP_TYPE_IN) {
+        depinfo.flags.in = 1;
+      } else if (deptype == DI_DEP_TYPE_OUT) {
+        depinfo.flags.out = 1;
+      }
+      deplist[i] = depinfo;
+    }
+    free(dependinfo);
+
+    __kmpc_omp_wait_deps(NULL, __kmpc_global_thread_num(NULL), depNum, deplist, 0, deplist);
+    free(deplist);
+  }
+
   __tgt_target_data_begin_mapper(nullptr, device_id, arg_num, args_base, args,
                                  arg_sizes, arg_types, nullptr, nullptr);
 }
@@ -142,6 +186,49 @@ EXTERN void __tgt_target_data_end(int64_t device_id, int32_t arg_num,
                                arg_sizes, arg_types, nullptr, nullptr);
 }
 
+EXTERN void __tgt_target_data_end_with_deps(int64_t device_id, int32_t arg_num,
+                                            void **args_base, void **args,
+                                            int64_t *arg_sizes, int64_t *arg_types,
+                                           int32_t depNum, int nargs, ...) {
+  TIMESCOPE();
+  int *dependinfo;
+  if (depNum > 0) {
+    dependinfo = (int*)malloc(nargs*sizeof(int));
+    va_list valist;
+    va_start(valist, nargs);
+    for (int k = 0; k < nargs; k++) {
+      dependinfo[k] = va_arg(valist, int);
+    }
+    va_end(valist);
+
+    kmp_depend_info_t *deplist = (kmp_depend_info_t*)malloc(depNum*sizeof(kmp_depend_info_t));
+
+    for (int i = 0, j = 0; i < depNum && j < depNum*3; i++, j+=3) {
+      kmp_depend_info_t depinfo;
+      depinfo.base_addr = dependinfo[j+2];
+      depinfo.len = dependinfo[j+1];
+      int deptype = dependinfo[j];
+      depinfo.flags.mtx = 1;
+      if (deptype == DI_DEP_TYPE_INOUT) {
+        depinfo.flags.in = 1;
+        depinfo.flags.out = 1;
+      } else if (deptype == DI_DEP_TYPE_IN) {
+        depinfo.flags.in = 1;
+      } else if (deptype == DI_DEP_TYPE_OUT) {
+        depinfo.flags.out = 1;
+      }
+      deplist[i] = depinfo;
+    }
+    free(dependinfo);
+
+    __kmpc_omp_wait_deps(NULL, __kmpc_global_thread_num(NULL), depNum, deplist, 0, deplist);
+    free(deplist);
+  }
+
+  __tgt_target_data_end_mapper(nullptr, device_id, arg_num, args_base, args,
+                               arg_sizes, arg_types, nullptr, nullptr);
+}
+
 EXTERN void __tgt_target_data_end_nowait(int64_t device_id, int32_t arg_num,
                                          void **args_base, void **args,
                                          int64_t *arg_sizes, int64_t *arg_types,
@@ -208,6 +295,48 @@ EXTERN void __tgt_target_data_update(int64_t device_id, int32_t arg_num,
                                   arg_sizes, arg_types, nullptr, nullptr);
 }
 
+EXTERN void __tgt_target_data_update_with_deps(
+    int64_t device_id, int32_t arg_num, void **args_base, void **args,
+    int64_t *arg_sizes, int64_t *arg_types, int32_t depNum, int nargs, ...) {
+  TIMESCOPE();
+  int *dependinfo;
+  if (depNum > 0) {
+    dependinfo = (int*)malloc(nargs*sizeof(int));
+    va_list valist;
+    va_start(valist, nargs);
+    for (int k = 0; k < nargs; k++) {
+      dependinfo[k] = va_arg(valist, int);
+    }
+    va_end(valist);
+ 
+    kmp_depend_info_t *deplist = (kmp_depend_info_t*)malloc(depNum*sizeof(kmp_depend_info_t));
+
+    for (int i = 0, j = 0; i < depNum && j < depNum*3; i++, j+=3) {
+      kmp_depend_info_t depinfo;
+      depinfo.base_addr = dependinfo[j+2];
+      depinfo.len = dependinfo[j+1];
+      int deptype = dependinfo[j];
+      depinfo.flags.mtx = 1;
+      if (deptype == DI_DEP_TYPE_INOUT) {
+        depinfo.flags.in = 1;
+        depinfo.flags.out = 1;
+      } else if (deptype == DI_DEP_TYPE_IN) {
+        depinfo.flags.in = 1;
+      } else if (deptype == DI_DEP_TYPE_OUT) {
+        depinfo.flags.out = 1;
+      }
+      deplist[i] = depinfo;
+    }
+    free(dependinfo);
+
+    __kmpc_omp_wait_deps(NULL, __kmpc_global_thread_num(NULL), depNum, deplist, 0, deplist);
+    free(deplist);
+  }
+  return __tgt_target_data_update_mapper(nullptr, device_id, arg_num, args_base, args,
+                                         arg_sizes, arg_types, nullptr, nullptr);
+}
+
+
 EXTERN void __tgt_target_data_update_nowait(
     int64_t device_id, int32_t arg_num, void **args_base, void **args,
     int64_t *arg_sizes, int64_t *arg_types, int32_t depNum, void *depList,
@@ -262,6 +391,49 @@ EXTERN int __tgt_target(int64_t device_id, void *host_ptr, int32_t arg_num,
   return __tgt_target_mapper(nullptr, device_id, host_ptr, arg_num, args_base,
                              args, arg_sizes, arg_types, nullptr, nullptr);
 }
+
+EXTERN int __tgt_target_with_deps(int64_t device_id, void *host_ptr, int32_t arg_num,
+                                  void **args_base, void **args, int64_t *arg_sizes,
+                                  int64_t *arg_types, int32_t depNum, int nargs, ...) {
+  TIMESCOPE();
+  int *dependinfo;
+  if (depNum > 0) {
+    dependinfo = (int*)malloc(nargs*sizeof(int));
+    va_list valist;
+    va_start(valist, nargs);
+    for (int k = 0; k < nargs; k++) {
+      dependinfo[k] = va_arg(valist, int);
+    }
+    va_end(valist);
+
+    kmp_depend_info_t *deplist = (kmp_depend_info_t*)malloc(depNum*sizeof(kmp_depend_info_t));
+    
+    for (int i = 0, j = 0; i < depNum && j < depNum*3; i++, j+=3) {
+      kmp_depend_info_t depinfo;
+      depinfo.base_addr = dependinfo[j+2];
+      depinfo.len = dependinfo[j+1];
+      int deptype = dependinfo[j];
+      depinfo.flags.mtx = 1;
+      if (deptype == DI_DEP_TYPE_INOUT) {
+        depinfo.flags.in = 1;
+        depinfo.flags.out = 1;
+      } else if (deptype == DI_DEP_TYPE_IN) {
+        depinfo.flags.in = 1;
+      } else if (deptype == DI_DEP_TYPE_OUT) {
+        depinfo.flags.out = 1;
+      }
+      deplist[i] = depinfo;
+    }
+    free(dependinfo);
+
+    __kmpc_omp_task_with_deps(NULL, __kmpc_global_thread_num(NULL), host_ptr, depNum, deplist, 0, deplist);
+  }
+   
+  return __tgt_target_mapper(nullptr, device_id, host_ptr, arg_num, args_base,
+                               args, arg_sizes, arg_types, nullptr, nullptr);
+}
+   
+  
 
 EXTERN int __tgt_target_nowait(int64_t device_id, void *host_ptr,
                                int32_t arg_num, void **args_base, void **args,

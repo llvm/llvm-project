@@ -282,9 +282,8 @@ define amdgpu_kernel void @atomic_umax_shl_base_lds_0(i32 addrspace(1)* %out, i3
 
 ; GCN-LABEL: {{^}}shl_add_ptr_combine_2use_lds:
 ; GCN: v_lshlrev_b32_e32 [[SCALE0:v[0-9]+]], 3, v0
-; GCN: ds_write_b32 [[SCALE0]], v{{[0-9]+}} offset:32
-
 ; GCN: v_lshlrev_b32_e32 [[SCALE1:v[0-9]+]], 4, v0
+; GCN: ds_write_b32 [[SCALE0]], v{{[0-9]+}} offset:32
 ; GCN: ds_write_b32 [[SCALE1]], v{{[0-9]+}} offset:64
 define void @shl_add_ptr_combine_2use_lds(i32 %idx) #0 {
   %idx.add = add nuw i32 %idx, 4
@@ -333,9 +332,8 @@ define void @shl_add_ptr_combine_2use_both_max_lds_offset(i32 %idx) #0 {
 
 ; GCN-LABEL: {{^}}shl_add_ptr_combine_2use_private:
 ; GCN: v_lshlrev_b32_e32 [[SCALE0:v[0-9]+]], 2, v0
-; GCN: buffer_store_dword v{{[0-9]+}}, [[SCALE0]], s[0:3], 0 offen offset:16
-
 ; GCN: v_lshlrev_b32_e32 [[SCALE1:v[0-9]+]], 3, v0
+; GCN: buffer_store_dword v{{[0-9]+}}, [[SCALE0]], s[0:3], 0 offen offset:16
 ; GCN: buffer_store_dword v{{[0-9]+}}, [[SCALE1]], s[0:3], 0 offen offset:32
 define void @shl_add_ptr_combine_2use_private(i16 zeroext %idx.arg) #0 {
   %idx = zext i16 %idx.arg to i32
@@ -388,10 +386,9 @@ define void @shl_add_ptr_combine_2use_both_max_private_offset(i16 zeroext %idx.a
 ; GCN-LABEL: {{^}}shl_or_ptr_combine_2use_lds:
 ; GCN: v_lshlrev_b32_e32 [[SCALE0:v[0-9]+]], 3, v0
 ; GCN: v_or_b32_e32 [[SCALE1:v[0-9]+]], 32, [[SCALE0]]
+; GCN: v_lshlrev_b32_e32 [[SCALE2:v[0-9]+]], 4, v0
 ; GCN: ds_write_b32 [[SCALE1]], v{{[0-9]+}}
-
-; GCN: v_lshlrev_b32_e32 [[SCALE1:v[0-9]+]], 4, v0
-; GCN: ds_write_b32 [[SCALE1]], v{{[0-9]+}} offset:64
+; GCN: ds_write_b32 [[SCALE2]], v{{[0-9]+}} offset:64
 define void @shl_or_ptr_combine_2use_lds(i32 %idx) #0 {
   %idx.add = or i32 %idx, 4
   %shl0 = shl i32 %idx.add, 3

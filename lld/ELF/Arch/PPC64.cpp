@@ -568,7 +568,6 @@ static uint64_t readPrefixedInstruction(const uint8_t *loc) {
 PPC64::PPC64() {
   copyRel = R_PPC64_COPY;
   gotRel = R_PPC64_GLOB_DAT;
-  noneRel = R_PPC64_NONE;
   pltRel = R_PPC64_JMP_SLOT;
   relativeRel = R_PPC64_RELATIVE;
   iRelativeRel = R_PPC64_IRELATIVE;
@@ -576,7 +575,6 @@ PPC64::PPC64() {
   pltHeaderSize = 60;
   pltEntrySize = 4;
   ipltEntrySize = 16; // PPC64PltCallStub::size
-  gotBaseSymInGotPlt = false;
   gotHeaderEntriesNum = 1;
   gotPltHeaderEntriesNum = 2;
   needsThunks = true;

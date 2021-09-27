@@ -232,13 +232,17 @@ void SendThreadStoppedEvent() {
       // set it as the focus thread if below if needed.
       lldb::tid_t first_tid_with_reason = LLDB_INVALID_THREAD_ID;
       uint32_t num_threads_with_reason = 0;
+      bool focus_thread_exists = false;
       for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
         lldb::SBThread thread = process.GetThreadAtIndex(thread_idx);
         const lldb::tid_t tid = thread.GetThreadID();
         const bool has_reason = ThreadHasStopReason(thread);
         // If the focus thread doesn't have a stop reason, clear the thread ID
-        if (tid == g_vsc.focus_tid && !has_reason)
-          g_vsc.focus_tid = LLDB_INVALID_THREAD_ID;
+        if (tid == g_vsc.focus_tid) {
+          focus_thread_exists = true;
+          if (!has_reason)
+            g_vsc.focus_tid = LLDB_INVALID_THREAD_ID;
+        }
         if (has_reason) {
           ++num_threads_with_reason;
           if (first_tid_with_reason == LLDB_INVALID_THREAD_ID)
@@ -246,10 +250,10 @@ void SendThreadStoppedEvent() {
         }
       }
 
-      // We will have cleared g_vsc.focus_tid if he focus thread doesn't
-      // have a stop reason, so if it was cleared, or wasn't set, then set the
-      // focus thread to the first thread with a stop reason.
-      if (g_vsc.focus_tid == LLDB_INVALID_THREAD_ID)
+      // We will have cleared g_vsc.focus_tid if he focus thread doesn't have
+      // a stop reason, so if it was cleared, or wasn't set, or doesn't exist,
+      // then set the focus thread to the first thread with a stop reason.
+      if (!focus_thread_exists || g_vsc.focus_tid == LLDB_INVALID_THREAD_ID)
         g_vsc.focus_tid = first_tid_with_reason;
 
       // If no threads stopped with a reason, then report the first one so

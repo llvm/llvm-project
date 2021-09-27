@@ -768,8 +768,13 @@ void ChildIo::EndIoStatement() {
 
 bool ChildIo::CheckFormattingAndDirection(Terminator &terminator,
     const char *what, bool unformatted, Direction direction) {
-  bool parentIsUnformatted{!parent_.get_if<FormattedIoStatementState>()};
   bool parentIsInput{!parent_.get_if<IoDirectionState<Direction::Output>>()};
+  bool parentIsFormatted{parentIsInput
+          ? parent_.get_if<FormattedIoStatementState<Direction::Input>>() !=
+              nullptr
+          : parent_.get_if<FormattedIoStatementState<Direction::Output>>() !=
+              nullptr};
+  bool parentIsUnformatted{!parentIsFormatted};
   if (unformatted != parentIsUnformatted) {
     terminator.Crash("Child %s attempted on %s parent I/O unit", what,
         parentIsUnformatted ? "unformatted" : "formatted");

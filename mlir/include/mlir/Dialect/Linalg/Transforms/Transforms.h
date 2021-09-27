@@ -435,19 +435,6 @@ private:
   Optional<Identifier> replacement;
 };
 
-///
-/// Linalg tiling patterns.
-///
-/// Apply the `tileLinalgOp` transformation as a pattern.
-/// `filter` controls LinalgTransformMarker matching and update when specified.
-/// See `tileLinalgOp` for more details.
-enum class LinalgTilingLoopType {
-  Loops = 0,
-  AffineLoops = 1,
-  ParallelLoops = 2,
-  TiledLoops = 3,
-};
-
 using TileSizeComputationFunction =
     std::function<SmallVector<Value, 4>(OpBuilder &, Operation *)>;
 
@@ -478,6 +465,10 @@ struct LinalgTilingOptions {
   /// function that computes tile sizes at the point they are needed. Allows
   /// proper interaction with folding.
   LinalgTilingOptions &setTileSizes(ArrayRef<int64_t> ts);
+
+  /// Tile all dynamic dimensions by 1. I.e., scalarize those dimensions.
+  /// Note: `scalarizeDynamicDims` and `setTileSizes` cannot be used together.
+  LinalgTilingOptions &scalarizeDynamicDims();
 
   /// The interchange vector to reorder the tiled loops.
   SmallVector<unsigned, 4> interchangeVector = {};
@@ -522,6 +513,15 @@ struct LinalgTilingOptions {
   LinalgTilingOptions &
   setPaddingValueComputationFunction(PaddingValueComputationFunction fun) {
     paddingValueComputationFunction = std::move(fun);
+    return *this;
+  }
+
+  /// Peel the specified loops.
+  SmallVector<int64_t> peeledLoops;
+
+  LinalgTilingOptions &setPeeledLoops(ArrayRef<int64_t> loops) {
+    peeledLoops.clear();
+    peeledLoops.append(loops.begin(), loops.end());
     return *this;
   }
 };

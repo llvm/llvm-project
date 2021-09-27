@@ -6759,7 +6759,7 @@ public:
                   SmallVectorImpl<unsigned char> &Output) const {
     for (CharUnits I = Offset, E = Offset + Width; I != E; ++I) {
       // If a byte of an integer is uninitialized, then the whole integer is
-      // uninitalized.
+      // uninitialized.
       if (!Bytes[I.getQuantity()])
         return false;
       Output.push_back(*Bytes[I.getQuantity()]);
@@ -9933,10 +9933,19 @@ bool RecordExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E,
     return false;
 
   // Avoid materializing a temporary for an elidable copy/move constructor.
-  if (E->isElidable() && !ZeroInit)
-    if (const MaterializeTemporaryExpr *ME
-          = dyn_cast<MaterializeTemporaryExpr>(E->getArg(0)))
+  if (E->isElidable() && !ZeroInit) {
+    // FIXME: This only handles the simplest case, where the source object
+    //        is passed directly as the first argument to the constructor.
+    //        This should also handle stepping though implicit casts and
+    //        and conversion sequences which involve two steps, with a
+    //        conversion operator followed by a converting constructor.
+    const Expr *SrcObj = E->getArg(0);
+    assert(SrcObj->isTemporaryObject(Info.Ctx, FD->getParent()));
+    assert(Info.Ctx.hasSameUnqualifiedType(E->getType(), SrcObj->getType()));
+    if (const MaterializeTemporaryExpr *ME =
+            dyn_cast<MaterializeTemporaryExpr>(SrcObj))
       return Visit(ME->getSubExpr());
+  }
 
   if (ZeroInit && !ZeroInitialization(E, T))
     return false;

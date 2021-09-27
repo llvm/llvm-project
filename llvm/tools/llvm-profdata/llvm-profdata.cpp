@@ -2304,7 +2304,7 @@ static void dumpHotFunctionList(const std::vector<std::string> &ColumnTitle,
                                 uint64_t HotFuncCount, uint64_t TotalFuncCount,
                                 uint64_t HotProfCount, uint64_t TotalProfCount,
                                 const std::string &HotFuncMetric,
-                                raw_fd_ostream &OS) {
+                                uint32_t TopNFunctions, raw_fd_ostream &OS) {
   assert(ColumnOffset.size() == ColumnTitle.size() &&
          "ColumnOffset and ColumnTitle should have the same size");
   assert(ColumnTitle.size() >= 4 &&
@@ -2333,7 +2333,10 @@ static void dumpHotFunctionList(const std::vector<std::string> &ColumnTitle,
   }
   FOS << "\n";
 
-  for (const HotFuncInfo &R : PrintValues) {
+  uint32_t Count = 0;
+  for (const auto &R : PrintValues) {
+    if (TopNFunctions && (Count++ == TopNFunctions))
+      break;
     FOS.PadToColumn(ColumnOffset[0]);
     FOS << R.TotalCount << " (" << format("%.2f%%", R.TotalCountPercent) << ")";
     FOS.PadToColumn(ColumnOffset[1]);
@@ -2346,7 +2349,8 @@ static void dumpHotFunctionList(const std::vector<std::string> &ColumnTitle,
 }
 
 static int showHotFunctionList(const sampleprof::SampleProfileMap &Profiles,
-                               ProfileSummary &PS, raw_fd_ostream &OS) {
+                               ProfileSummary &PS, uint32_t TopN,
+                               raw_fd_ostream &OS) {
   using namespace sampleprof;
 
   const uint32_t HotFuncCutoff = 990000;
@@ -2401,13 +2405,14 @@ static int showHotFunctionList(const sampleprof::SampleProfileMap &Profiles,
   }
   dumpHotFunctionList(ColumnTitle, ColumnOffset, PrintValues, HotFuncCount,
                       Profiles.size(), HotFuncSample, ProfileTotalSample,
-                      Metric, OS);
+                      Metric, TopN, OS);
 
   return 0;
 }
 
 static int showSampleProfile(const std::string &Filename, bool ShowCounts,
-                             bool ShowAllFunctions, bool ShowDetailedSummary,
+                             uint32_t TopN, bool ShowAllFunctions,
+                             bool ShowDetailedSummary,
                              const std::string &ShowFunction,
                              bool ShowProfileSymbolList,
                              bool ShowSectionInfoOnly, bool ShowHotFuncList,
@@ -2446,8 +2451,8 @@ static int showSampleProfile(const std::string &Filename, bool ShowCounts,
     PS.printDetailedSummary(OS);
   }
 
-  if (ShowHotFuncList)
-    showHotFunctionList(Reader->getProfiles(), Reader->getSummary(), OS);
+  if (ShowHotFuncList || TopN)
+    showHotFunctionList(Reader->getProfiles(), Reader->getSummary(), TopN, OS);
 
   return 0;
 }
@@ -2538,10 +2543,10 @@ static int show_main(int argc, const char *argv[]) {
         ShowAllFunctions, ShowCS, ValueCutoff, OnlyListBelow, ShowFunction,
         TextFormat, ShowBinaryIds, OS);
   else
-    return showSampleProfile(Filename, ShowCounts, ShowAllFunctions,
-                             ShowDetailedSummary, ShowFunction,
-                             ShowProfileSymbolList, ShowSectionInfoOnly,
-                             ShowHotFuncList, OS);
+    return showSampleProfile(Filename, ShowCounts, TopNFunctions,
+                             ShowAllFunctions, ShowDetailedSummary,
+                             ShowFunction, ShowProfileSymbolList,
+                             ShowSectionInfoOnly, ShowHotFuncList, OS);
 }
 
 int main(int argc, const char *argv[]) {

@@ -36,10 +36,8 @@ entry:
 define dso_local i128 @ld_unalign16___int128___int128(i8* nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_unalign16___int128___int128:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    li r4, 1
-; CHECK-P10-NEXT:    ldx r5, r3, r4
-; CHECK-P10-NEXT:    li r4, 9
-; CHECK-P10-NEXT:    ldx r4, r3, r4
+; CHECK-P10-NEXT:    pld r5, 1(r3), 0
+; CHECK-P10-NEXT:    pld r4, 9(r3), 0
 ; CHECK-P10-NEXT:    mr r3, r5
 ; CHECK-P10-NEXT:    blr
 ;
@@ -258,10 +256,8 @@ define dso_local i128 @ld_disjoint_unalign16___int128___int128(i64 %ptr) {
 ; CHECK-P10-LABEL: ld_disjoint_unalign16___int128___int128:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    rldicr r4, r3, 0, 51
-; CHECK-P10-NEXT:    li r3, 6
-; CHECK-P10-NEXT:    li r5, 14
-; CHECK-P10-NEXT:    ldx r3, r4, r3
-; CHECK-P10-NEXT:    ldx r4, r4, r5
+; CHECK-P10-NEXT:    pld r3, 6(r4), 0
+; CHECK-P10-NEXT:    pld r4, 14(r4), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: ld_disjoint_unalign16___int128___int128:
@@ -326,10 +322,8 @@ define dso_local i128 @ld_disjoint_unalign32___int128___int128(i64 %ptr) {
 ; CHECK-P10-LABEL: ld_disjoint_unalign32___int128___int128:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    rldicr r4, r3, 0, 43
-; CHECK-P10-NEXT:    pli r3, 99999
-; CHECK-P10-NEXT:    pli r5, 100007
-; CHECK-P10-NEXT:    ldx r3, r4, r3
-; CHECK-P10-NEXT:    ldx r4, r4, r5
+; CHECK-P10-NEXT:    pld r3, 99999(r4), 0
+; CHECK-P10-NEXT:    pld r4, 100007(r4), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: ld_disjoint_unalign32___int128___int128:
@@ -364,11 +358,9 @@ define dso_local i128 @ld_disjoint_align32___int128___int128(i64 %ptr) {
 ; CHECK-P10-LABEL: ld_disjoint_align32___int128___int128:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    lis r4, -15264
-; CHECK-P10-NEXT:    pli r5, 999990008
 ; CHECK-P10-NEXT:    and r4, r3, r4
-; CHECK-P10-NEXT:    pli r3, 999990000
-; CHECK-P10-NEXT:    ldx r3, r4, r3
-; CHECK-P10-NEXT:    ldx r4, r4, r5
+; CHECK-P10-NEXT:    pld r3, 999990000(r4), 0
+; CHECK-P10-NEXT:    pld r4, 999990008(r4), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: ld_disjoint_align32___int128___int128:
@@ -682,10 +674,8 @@ entry:
 define dso_local void @st_unalign16__int128___int128(i8* nocapture %ptr, i128 %str) {
 ; CHECK-P10-LABEL: st_unalign16__int128___int128:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    li r6, 9
-; CHECK-P10-NEXT:    stdx r5, r3, r6
-; CHECK-P10-NEXT:    li r5, 1
-; CHECK-P10-NEXT:    stdx r4, r3, r5
+; CHECK-P10-NEXT:    pstd r5, 9(r3), 0
+; CHECK-P10-NEXT:    pstd r4, 1(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: st_unalign16__int128___int128:
@@ -891,10 +881,8 @@ define dso_local void @st_disjoint_unalign16__int128___int128(i64 %ptr, i128 %st
 ; CHECK-P10-LABEL: st_disjoint_unalign16__int128___int128:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    rldicr r3, r3, 0, 51
-; CHECK-P10-NEXT:    li r6, 14
-; CHECK-P10-NEXT:    stdx r5, r3, r6
-; CHECK-P10-NEXT:    li r5, 6
-; CHECK-P10-NEXT:    stdx r4, r3, r5
+; CHECK-P10-NEXT:    pstd r5, 14(r3), 0
+; CHECK-P10-NEXT:    pstd r4, 6(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: st_disjoint_unalign16__int128___int128:
@@ -959,10 +947,8 @@ define dso_local void @st_disjoint_unalign32__int128___int128(i64 %ptr, i128 %st
 ; CHECK-P10-LABEL: st_disjoint_unalign32__int128___int128:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    rldicr r3, r3, 0, 43
-; CHECK-P10-NEXT:    pli r6, 100007
-; CHECK-P10-NEXT:    stdx r5, r3, r6
-; CHECK-P10-NEXT:    pli r5, 99999
-; CHECK-P10-NEXT:    stdx r4, r3, r5
+; CHECK-P10-NEXT:    pstd r5, 100007(r3), 0
+; CHECK-P10-NEXT:    pstd r4, 99999(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: st_disjoint_unalign32__int128___int128:
@@ -998,10 +984,8 @@ define dso_local void @st_disjoint_align32__int128___int128(i64 %ptr, i128 %str)
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    lis r6, -15264
 ; CHECK-P10-NEXT:    and r3, r3, r6
-; CHECK-P10-NEXT:    pli r6, 999990008
-; CHECK-P10-NEXT:    stdx r5, r3, r6
-; CHECK-P10-NEXT:    pli r5, 999990000
-; CHECK-P10-NEXT:    stdx r4, r3, r5
+; CHECK-P10-NEXT:    pstd r5, 999990008(r3), 0
+; CHECK-P10-NEXT:    pstd r4, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: st_disjoint_align32__int128___int128:

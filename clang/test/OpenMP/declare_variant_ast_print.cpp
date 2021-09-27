@@ -17,7 +17,9 @@ T foofoo() { return T(); }
 // CHECK-NEXT: return int();
 // CHECK-NEXT: }
 
-// CHECK:      #pragma omp declare variant(foofoo<int>) match(implementation={vendor(score(5): ibm)}, device={kind(fpga)})
+// CHECK:      #pragma omp declare variant(foofoo<int>) match(construct={target})
+// CHECK-NEXT: #pragma omp declare variant(foofoo<int>) match(construct={simd})
+// CHECK-NEXT: #pragma omp declare variant(foofoo<int>) match(implementation={vendor(score(5): ibm)}, device={kind(fpga)})
 // CHECK-NEXT: #pragma omp declare variant(foofoo<int>) match(implementation={vendor(unknown)})
 // CHECK-NEXT: #pragma omp declare variant(foofoo<int>) match(implementation={vendor(score(0): llvm)}, device={kind(cpu)})
 // CHECK-NEXT: int bar();
@@ -26,6 +28,8 @@ T foofoo() { return T(); }
 #pragma omp declare variant(foofoo <int>) match(implementation = {vendor(score(0): "llvm"), xxx}, device = {kind(cpu)})
 #pragma omp declare variant(foofoo <int>) match(implementation = {vendor("unknown")})
 #pragma omp declare variant(foofoo <int>) match(implementation = {vendor(score(5): ibm)}, device = {kind(fpga)})
+#pragma omp declare variant(foofoo <int>) match(construct = {simd})
+#pragma omp declare variant(foofoo <int>) match(construct = {target})
 int bar();
 
 // CHECK:      #pragma omp declare variant(foofoo<T>) match(implementation={vendor(score(C + 5): ibm)}, device={kind(cpu, host)})

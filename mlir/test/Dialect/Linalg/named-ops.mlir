@@ -543,3 +543,37 @@ func @pooling_ndhwc_min(%input: memref<1x4x4x4x1xf32>, %fake: memref<3x3x3xf32>,
     outs(%output: memref<1x2x2x2x1xf32>)
   return
 }
+
+// -----
+
+#map0 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 * 2, d2 * 2 + d5, d6)>
+#map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d4, d5, d6, d3)>
+#map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
+func @conv_interface_wrong_input_indexing_map(
+    %arg0 : tensor<?x?x?x?xf32>, %arg2 : tensor<?x?x?x?xf32>, %arg1 : tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
+  // expected-error @+1 {{unexpected input index map for convolutions}}
+  %0 = "linalg.conv_2d_nhwc_hwcf"(%arg0, %arg1, %arg2) ( {
+    ^bb0(%arg3: f32, %arg4: f32, %arg5 : f32):  // no predecessors
+      %1 = "std.mulf"(%arg3, %arg4) : (f32, f32) -> f32
+      %2 = "std.addf"(%arg5, %1) : (f32, f32) -> f32
+      "linalg.yield"(%2) : (f32) -> ()
+    }) {dilations = dense<1> : tensor<2xi64>, linalg.memoized_indexing_maps = [#map0, #map1, #map2], operand_segment_sizes = dense<[2, 1]> : vector<2xi32>, strides = dense<2> : tensor<2xi64>} : (tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
+  return %0 : tensor<?x?x?x?xf32>
+}
+
+// -----
+
+#map0 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d4, d2 + d5, d6)>
+#map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d4, d5, d6, d3, d5 + 1)>
+#map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
+func @conv_interface_wrong_num_operands(
+    %arg0 : tensor<?x?x?x?xf32>, %arg1 : tensor<?x?x?x?x?xf32>, %arg2 : tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
+  // expected-error @+1 {{expected output/filter indexing maps to be projected permutations}}
+  %0 = "linalg.conv_2d_nhwc_hwcf"(%arg0, %arg1, %arg2) ( {
+    ^bb0(%arg3: f32, %arg4: f32, %arg5 : f32):  // no predecessors
+      %1 = "std.mulf"(%arg3, %arg4) : (f32, f32) -> f32
+      %2 = "std.addf"(%arg5, %1) : (f32, f32) -> f32
+      "linalg.yield"(%2) : (f32) -> ()
+    }) {dilations = dense<1> : tensor<2xi64>, linalg.memoized_indexing_maps = [#map0, #map1, #map2], operand_segment_sizes = dense<[2, 1]> : vector<2xi32>, strides = dense<1> : tensor<2xi64>} : (tensor<?x?x?x?xf32>, tensor<?x?x?x?x?xf32>, tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
+  return %0 : tensor<?x?x?x?xf32>
+}

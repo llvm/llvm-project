@@ -414,7 +414,7 @@ define <2 x i64> @zext_less_casting_with_wideop(<2 x i64> %x, <2 x i64> %y) {
 define <4 x float> @sitofp_shuf(<4 x i32> %x) {
 ; CHECK-LABEL: @sitofp_shuf(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sitofp <4 x i32> [[X:%.*]] to <4 x float>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> undef, <4 x i32> <i32 1, i32 2, i32 3, i32 undef>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 undef>
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %s = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 undef>
@@ -425,7 +425,7 @@ define <4 x float> @sitofp_shuf(<4 x i32> %x) {
 define <3 x half> @uitofp_shuf(<3 x i16> %x) {
 ; CHECK-LABEL: @uitofp_shuf(
 ; CHECK-NEXT:    [[TMP1:%.*]] = uitofp <3 x i16> [[X:%.*]] to <3 x half>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <3 x half> [[TMP1]], <3 x half> undef, <3 x i32> <i32 2, i32 undef, i32 0>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <3 x half> [[TMP1]], <3 x half> poison, <3 x i32> <i32 2, i32 undef, i32 0>
 ; CHECK-NEXT:    ret <3 x half> [[R]]
 ;
   %s = shufflevector <3 x i16> %x, <3 x i16> poison, <3 x i32> <i32 2, i32 undef, i32 0>
@@ -436,7 +436,7 @@ define <3 x half> @uitofp_shuf(<3 x i16> %x) {
 define <4 x i64> @fptosi_shuf(<4 x double> %x) {
 ; CHECK-LABEL: @fptosi_shuf(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptosi <4 x double> [[X:%.*]] to <4 x i64>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> undef, <4 x i32> <i32 undef, i32 2, i32 3, i32 undef>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> poison, <4 x i32> <i32 undef, i32 2, i32 3, i32 undef>
 ; CHECK-NEXT:    ret <4 x i64> [[R]]
 ;
   %s = shufflevector <4 x double> %x, <4 x double> poison, <4 x i32> <i32 undef, i32 2, i32 3, i32 undef>
@@ -447,7 +447,7 @@ define <4 x i64> @fptosi_shuf(<4 x double> %x) {
 define <2 x i32> @fptoui_shuf(<2 x float> %x) {
 ; CHECK-LABEL: @fptoui_shuf(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptoui <2 x float> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> undef, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %s = shufflevector <2 x float> %x, <2 x float> poison, <2 x i32> <i32 1, i32 1>

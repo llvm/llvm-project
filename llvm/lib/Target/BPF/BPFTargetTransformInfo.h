@@ -56,12 +56,11 @@ public:
   }
 
   InstructionCost getArithmeticInstrCost(
-    unsigned Opcode, Type *Ty,
-    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-    TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
-    TTI::OperandValueKind Opd2Info = TTI::OK_AnyValue,
-    TTI::OperandValueProperties Opd1PropInfo = TTI::OP_None,
-    TTI::OperandValueProperties Opd2PropInfo = TTI::OP_None,
+      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
+      TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
+      TTI::OperandValueKind Opd2Info = TTI::OK_AnyValue,
+      TTI::OperandValueProperties Opd1PropInfo = TTI::OP_None,
+      TTI::OperandValueProperties Opd2PropInfo = TTI::OP_None,
     ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
     const Instruction *CxtI = nullptr) {
       int ISD = TLI->InstructionOpcodeToISD(Opcode);

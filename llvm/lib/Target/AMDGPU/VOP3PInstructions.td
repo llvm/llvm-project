@@ -50,8 +50,7 @@ multiclass VOP3PInst<string OpName, VOPProfile P,
 
 // Non-packed instructions that use the VOP3P encoding.
 // VOP3 neg/abs and VOP3P opsel/opsel_hi modifiers are allowed.
-multiclass VOP3_VOP3PInst<string OpName, VOP3P_Mix_Profile P,
-                          SDPatternOperator node = null_frag> {
+multiclass VOP3_VOP3PInst<string OpName, VOP3P_Mix_Profile P> {
   def NAME : VOP3P_Pseudo<OpName, P> {
     let Constraints = !if(P.UseTiedOutput, "$vdst = $vdst_in", "");
     let DisableEncoding = !if(P.UseTiedOutput, "$vdst_in", "");
@@ -113,7 +112,6 @@ def : VOP3PSatPat<ssubsat, V_PK_SUB_I16>;
 } // End SubtargetPredicate = HasVOP3PInsts
 
 multiclass MadFmaMixPats<SDPatternOperator fma_like,
-                         Instruction mix_inst,
                          Instruction mixlo_inst,
                          Instruction mixhi_inst> {
   def : GCNPat <
@@ -192,7 +190,7 @@ defm V_MAD_MIXHI_F16 : VOP3_VOP3PInst<"v_mad_mixhi_f16", VOP3P_Mix_Profile<VOP_F
 } // End FPDPRounding = 1
 }
 
-defm : MadFmaMixPats<fmad, V_MAD_MIX_F32, V_MAD_MIXLO_F16, V_MAD_MIXHI_F16>;
+defm : MadFmaMixPats<fmad, V_MAD_MIXLO_F16, V_MAD_MIXHI_F16>;
 } // End SubtargetPredicate = HasMadMixInsts
 
 
@@ -211,7 +209,7 @@ defm V_FMA_MIXHI_F16 : VOP3_VOP3PInst<"v_fma_mixhi_f16", VOP3P_Mix_Profile<VOP_F
 } // End FPDPRounding = 1
 }
 
-defm : MadFmaMixPats<fma, V_FMA_MIX_F32, V_FMA_MIXLO_F16, V_FMA_MIXHI_F16>;
+defm : MadFmaMixPats<fma, V_FMA_MIXLO_F16, V_FMA_MIXHI_F16>;
 }
 
 // Defines patterns that extract signed 4bit from each Idx[0].

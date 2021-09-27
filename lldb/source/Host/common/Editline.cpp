@@ -205,7 +205,7 @@ private:
   // Use static GetHistory() function to get a EditlineHistorySP to one of
   // these objects
   EditlineHistory(const std::string &prefix, uint32_t size, bool unique_entries)
-      : m_history(nullptr), m_event(), m_prefix(prefix), m_path() {
+      : m_prefix(prefix) {
     m_history = history_winit();
     history_w(m_history, &m_event, H_SETSIZE, size);
     if (unique_entries)
@@ -298,11 +298,15 @@ public:
   }
 
 protected:
-  HistoryW *m_history; // The history object
-  HistEventW m_event;  // The history event needed to contain all history events
-  std::string m_prefix; // The prefix name (usually the editline program name)
-                        // to use when loading/saving history
-  std::string m_path;   // Path to the history file
+  /// The history object.
+  HistoryW *m_history = nullptr;
+  /// The history event needed to contain all history events.
+  HistEventW m_event;
+  /// The prefix name (usually the editline program name) to use when
+  /// loading/saving history.
+  std::string m_prefix;
+  /// Path to the history file.
+  std::string m_path;
 };
 }
 }

@@ -38,10 +38,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-extern char &MIRCanonicalizerID;
-} // namespace llvm
-
 #define DEBUG_TYPE "mir-canonicalizer"
 
 static cl::opt<unsigned>

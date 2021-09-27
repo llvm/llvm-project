@@ -1094,11 +1094,9 @@ PreservedAnalyses DeadArgumentEliminationPass::run(Module &M,
   // fused with the next loop, because deleting a function invalidates
   // information computed while surveying other functions.
   LLVM_DEBUG(dbgs() << "DeadArgumentEliminationPass - Deleting dead varargs\n");
-  for (Module::iterator I = M.begin(), E = M.end(); I != E; ) {
-    Function &F = *I++;
+  for (Function &F : llvm::make_early_inc_range(M))
     if (F.getFunctionType()->isVarArg())
       Changed |= DeleteDeadVarargs(F);
-  }
 
   // Second phase:loop through the module, determining which arguments are live.
   // We assume all arguments are dead unless proven otherwise (allowing us to
@@ -1109,13 +1107,10 @@ PreservedAnalyses DeadArgumentEliminationPass::run(Module &M,
     SurveyFunction(F);
 
   // Now, remove all dead arguments and return values from each function in
-  // turn.
-  for (Module::iterator I = M.begin(), E = M.end(); I != E; ) {
-    // Increment now, because the function will probably get removed (ie.
-    // replaced by a new one).
-    Function *F = &*I++;
-    Changed |= RemoveDeadStuffFromFunction(F);
-  }
+  // turn.  We use make_early_inc_range here because functions will probably get
+  // removed (i.e. replaced by new ones).
+  for (Function &F : llvm::make_early_inc_range(M))
+    Changed |= RemoveDeadStuffFromFunction(&F);
 
   // Finally, look for any unused parameters in functions with non-local
   // linkage and replace the passed in parameters with undef.

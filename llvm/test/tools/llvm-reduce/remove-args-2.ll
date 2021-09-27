@@ -1,7 +1,7 @@
 ; Test that llvm-reduce can remove uninteresting function arguments from function definitions as well as their calls.
 ; This test checks that functions with different argument types are handled correctly
 ;
-; RUN: llvm-reduce --test FileCheck --test-arg --check-prefixes=CHECK-ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+; RUN: llvm-reduce --delta-passes=arguments --test FileCheck --test-arg --check-prefixes=CHECK-ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: FileCheck --check-prefixes=CHECK-ALL,CHECK-FINAL %s --input-file %t
 
 %struct.foo = type { %struct.foo*, i32, i32, i8* }

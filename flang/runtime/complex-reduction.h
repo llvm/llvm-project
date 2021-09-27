@@ -20,7 +20,7 @@
 
 struct CppDescriptor; /* dummy type name for Fortran::runtime::Descriptor */
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !(defined(__clang_major__) && __clang_major__ >= 12)
 typedef _Fcomplex float_Complex_t;
 typedef _Dcomplex double_Complex_t;
 typedef _Lcomplex long_double_Complex_t;

@@ -47,20 +47,21 @@ body:             |
 
     ; CHECK-LABEL: name: masked_load_nxv8i64
     ; CHECK: liveins: $x10, $v0
-    ; CHECK: [[COPY:%[0-9]+]]:vr = COPY $v0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK: $v0 = COPY [[COPY]]
-    ; CHECK: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
-    ; CHECK: [[COPY2:%[0-9]+]]:vrm8nov0 = COPY [[DEF]]
-    ; CHECK: [[PseudoVLE64_V_M8_MASK:%[0-9]+]]:vrm8nov0 = PseudoVLE64_V_M8_MASK [[COPY2]], [[COPY1]], $v0, -1, 6 :: (load (s512) from %ir.a, align 8)
-    ; CHECK: $v8m8 = COPY [[PseudoVLE64_V_M8_MASK]]
-    ; CHECK: PseudoRET implicit $v8m8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-NEXT: $v0 = COPY [[COPY]]
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vrm8nov0 = COPY [[DEF]]
+    ; CHECK-NEXT: [[PseudoVLE64_V_M8_MASK:%[0-9]+]]:vrm8nov0 = PseudoVLE64_V_M8_MASK [[COPY2]], [[COPY1]], $v0, -1, 6, 1 :: (load (s512) from %ir.a, align 8)
+    ; CHECK-NEXT: $v8m8 = COPY [[PseudoVLE64_V_M8_MASK]]
+    ; CHECK-NEXT: PseudoRET implicit $v8m8
     %1:vr = COPY $v0
     %0:gpr = COPY $x10
     $v0 = COPY %1
     %3:vrm8 = IMPLICIT_DEF
     %4:vrm8nov0 = COPY %3
-    %2:vrm8nov0 = PseudoVLE64_V_M8_MASK %4, %0, $v0, -1, 6 :: (load (s512) from %ir.a, align 8)
+    %2:vrm8nov0 = PseudoVLE64_V_M8_MASK %4, %0, $v0, -1, 6, 1 :: (load (s512) from %ir.a, align 8)
     $v8m8 = COPY %2
     PseudoRET implicit $v8m8
 

@@ -151,12 +151,10 @@ void elf::writePPC32GlinkSection(uint8_t *buf, size_t numEntries) {
 PPC::PPC() {
   copyRel = R_PPC_COPY;
   gotRel = R_PPC_GLOB_DAT;
-  noneRel = R_PPC_NONE;
   pltRel = R_PPC_JMP_SLOT;
   relativeRel = R_PPC_RELATIVE;
   iRelativeRel = R_PPC_IRELATIVE;
   symbolicRel = R_PPC_ADDR32;
-  gotBaseSymInGotPlt = false;
   gotHeaderEntriesNum = 3;
   gotPltHeaderEntriesNum = 0;
   pltHeaderSize = 0;

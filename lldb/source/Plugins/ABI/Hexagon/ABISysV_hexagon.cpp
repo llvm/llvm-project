@@ -1288,8 +1288,6 @@ lldb_private::ConstString ABISysV_hexagon::GetPluginName() {
   return GetPluginNameStatic();
 }
 
-uint32_t ABISysV_hexagon::GetPluginVersion() { return 1; }
-
 // get value object specialized to work with llvm IR types
 lldb::ValueObjectSP
 ABISysV_hexagon::GetReturnValueObjectImpl(lldb_private::Thread &thread,

@@ -1,5 +1,5 @@
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+simd128 | FileCheck %s --check-prefixes=CHECK,SLOW
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+simd128 -fast-isel | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+simd128,+relaxed-simd | FileCheck %s --check-prefixes=CHECK,SLOW
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+simd128,+relaxed-simd -fast-isel | FileCheck %s
 
 ; Test that SIMD128 intrinsics lower as expected. These intrinsics are
 ; only expected to lower successfully if the simd128 attribute is
@@ -600,6 +600,30 @@ define <4 x float> @nearest_v4f32(<4 x float> %a) {
   ret <4 x float> %v
 }
 
+; CHECK-LABEL: fma_v4f32:
+; CHECK-NEXT: .functype fma_v4f32 (v128, v128, v128) -> (v128){{$}}
+; CHECK-NEXT: f32x4.fma $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+declare <4 x float> @llvm.wasm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>)
+define <4 x float> @fma_v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
+  %v = call <4 x float> @llvm.wasm.fma.v4f32(
+    <4 x float> %a, <4 x float> %b, <4 x float> %c
+  )
+  ret <4 x float> %v
+}
+
+; CHECK-LABEL: fms_v4f32:
+; CHECK-NEXT: .functype fms_v4f32 (v128, v128, v128) -> (v128){{$}}
+; CHECK-NEXT: f32x4.fms $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+declare <4 x float> @llvm.wasm.fms.v4f32(<4 x float>, <4 x float>, <4 x float>)
+define <4 x float> @fms_v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
+  %v = call <4 x float> @llvm.wasm.fms.v4f32(
+    <4 x float> %a, <4 x float> %b, <4 x float> %c
+  )
+  ret <4 x float> %v
+}
+
 ; ==============================================================================
 ; 2 x f64
 ; ==============================================================================
@@ -672,5 +696,29 @@ define <2 x double> @trunc_v2f64(<2 x double> %a) {
 declare <2 x double> @llvm.nearbyint.v2f64(<2 x double>)
 define <2 x double> @nearest_v2f64(<2 x double> %a) {
   %v = call <2 x double> @llvm.nearbyint.v2f64(<2 x double> %a)
+  ret <2 x double> %v
+}
+
+; CHECK-LABEL: fma_v2f64:
+; CHECK-NEXT: .functype fma_v2f64 (v128, v128, v128) -> (v128){{$}}
+; CHECK-NEXT: f64x2.fma $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+declare <2 x double> @llvm.wasm.fma.v2f64(<2 x double>, <2 x double>, <2 x double>)
+define <2 x double> @fma_v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
+  %v = call <2 x double> @llvm.wasm.fma.v2f64(
+    <2 x double> %a, <2 x double> %b, <2 x double> %c
+  )
+  ret <2 x double> %v
+}
+
+; CHECK-LABEL: fms_v2f64:
+; CHECK-NEXT: .functype fms_v2f64 (v128, v128, v128) -> (v128){{$}}
+; CHECK-NEXT: f64x2.fms $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+declare <2 x double> @llvm.wasm.fms.v2f64(<2 x double>, <2 x double>, <2 x double>)
+define <2 x double> @fms_v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
+  %v = call <2 x double> @llvm.wasm.fms.v2f64(
+    <2 x double> %a, <2 x double> %b, <2 x double> %c
+  )
   ret <2 x double> %v
 }

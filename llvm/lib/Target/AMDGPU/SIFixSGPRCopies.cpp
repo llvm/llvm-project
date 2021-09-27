@@ -601,9 +601,22 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
                         SCCCopy)
                     .addImm(-1)
                     .addImm(0);
-            BuildMI(*MI.getParent(), std::next(I), I->getDebugLoc(),
-                    TII->get(AMDGPU::COPY), DstReg)
-                .addReg(SCCCopy);
+            I = BuildMI(*MI.getParent(), std::next(I), I->getDebugLoc(),
+                        TII->get(AMDGPU::COPY), DstReg)
+                    .addReg(SCCCopy);
+            MI.eraseFromParent();
+            continue;
+          } else if (DstReg == AMDGPU::SCC) {
+            unsigned Opcode =
+                ST.isWave64() ? AMDGPU::S_AND_B64 : AMDGPU::S_AND_B32;
+            Register Exec = ST.isWave64() ? AMDGPU::EXEC : AMDGPU::EXEC_LO;
+            Register Tmp = MRI->createVirtualRegister(TRI->getBoolRC());
+            I = BuildMI(*MI.getParent(),
+                        std::next(MachineBasicBlock::iterator(MI)),
+                        MI.getDebugLoc(), TII->get(Opcode))
+                    .addReg(Tmp, getDefRegState(true))
+                    .addReg(SrcReg)
+                    .addReg(Exec);
             MI.eraseFromParent();
             continue;
           }

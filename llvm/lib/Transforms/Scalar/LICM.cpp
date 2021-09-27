@@ -883,8 +883,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
     if (!LoopNestMode && inSubLoop(BB, CurLoop, LI))
       continue;
 
-    for (BasicBlock::iterator II = BB->begin(), E = BB->end(); II != E;) {
-      Instruction &I = *II++;
+    for (Instruction &I : llvm::make_early_inc_range(*BB)) {
       // Try constant folding this instruction.  If all the operands are
       // constants, it is technically hoistable, but it would be better to
       // just fold it.
@@ -2154,9 +2153,9 @@ bool llvm::promoteLoopAccessesToScalars(
       // Merge the AA tags.
       if (LoopUses.empty()) {
         // On the first load/store, just take its AA tags.
-        UI->getAAMetadata(AATags);
+        AATags = UI->getAAMetadata();
       } else if (AATags) {
-        UI->getAAMetadata(AATags, /* Merge = */ true);
+        AATags = AATags.merge(UI->getAAMetadata());
       }
 
       LoopUses.push_back(UI);

@@ -310,6 +310,8 @@ private:
   /// Vector of previously encountered target directives
   SmallVector<SourceLocation, 2> TargetLocations;
   SourceLocation AtomicLocation;
+  /// Vector of declare variant construct traits.
+  SmallVector<llvm::omp::TraitProperty, 8> ConstructTraits;
 
 public:
   explicit DSAStackTy(Sema &S) : SemaRef(S) {}
@@ -724,6 +726,22 @@ public:
                      .ImplicitBehavior != OMPC_DEFAULTMAP_MODIFIER_unknown;
     return getTopOfStack().DefaultmapMap[VariableCategory].ImplicitBehavior !=
            OMPC_DEFAULTMAP_MODIFIER_unknown;
+  }
+
+  ArrayRef<llvm::omp::TraitProperty> getConstructTraits() {
+    return ConstructTraits;
+  }
+  void handleConstructTrait(ArrayRef<llvm::omp::TraitProperty> Traits,
+                            bool ScopeEntry) {
+    if (ScopeEntry)
+      ConstructTraits.append(Traits.begin(), Traits.end());
+    else
+      for (llvm::omp::TraitProperty Trait : llvm::reverse(Traits)) {
+        llvm::omp::TraitProperty Top = ConstructTraits.pop_back_val();
+        assert(Top == Trait && "Something left a trait on the stack!");
+        (void)Trait;
+        (void)Top;
+      }
   }
 
   DefaultDataSharingAttributes getDefaultDSA(unsigned Level) const {
@@ -3872,6 +3890,23 @@ public:
 };
 } // namespace
 
+static void handleDeclareVariantConstructTrait(DSAStackTy *Stack,
+                                               OpenMPDirectiveKind DKind,
+                                               bool ScopeEntry) {
+  SmallVector<llvm::omp::TraitProperty, 8> Traits;
+  if (isOpenMPTargetExecutionDirective(DKind))
+    Traits.emplace_back(llvm::omp::TraitProperty::construct_target_target);
+  if (isOpenMPTeamsDirective(DKind))
+    Traits.emplace_back(llvm::omp::TraitProperty::construct_teams_teams);
+  if (isOpenMPParallelDirective(DKind))
+    Traits.emplace_back(llvm::omp::TraitProperty::construct_parallel_parallel);
+  if (isOpenMPWorksharingDirective(DKind))
+    Traits.emplace_back(llvm::omp::TraitProperty::construct_for_for);
+  if (isOpenMPSimdDirective(DKind))
+    Traits.emplace_back(llvm::omp::TraitProperty::construct_simd_simd);
+  Stack->handleConstructTrait(Traits, ScopeEntry);
+}
+
 void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   switch (DKind) {
   case OMPD_parallel:
@@ -4280,12 +4315,14 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   case OMPD_declare_variant:
   case OMPD_begin_declare_variant:
   case OMPD_end_declare_variant:
+  case OMPD_metadirective:
     llvm_unreachable("OpenMP Directive is not allowed");
   case OMPD_unknown:
   default:
     llvm_unreachable("Unknown OpenMP directive");
   }
   DSAStack->setContext(CurContext);
+  handleDeclareVariantConstructTrait(DSAStack, DKind, /* ScopeEntry */ true);
 }
 
 int Sema::getNumberOfConstructScopes(unsigned Level) const {
@@ -4461,6 +4498,8 @@ static bool checkOrderedOrderSpecified(Sema &S,
 
 StmtResult Sema::ActOnOpenMPRegionEnd(StmtResult S,
                                       ArrayRef<OMPClause *> Clauses) {
+  handleDeclareVariantConstructTrait(DSAStack, DSAStack->getCurrentDirective(),
+                                     /* ScopeEntry */ false);
   if (DSAStack->getCurrentDirective() == OMPD_atomic ||
       DSAStack->getCurrentDirective() == OMPD_critical ||
       DSAStack->getCurrentDirective() == OMPD_section ||
@@ -5697,7 +5736,7 @@ processImplicitMapsWithDefaultMappers(Sema &S, DSAStackTy *Stack,
           SubExprs.push_back(BaseExpr);
           continue;
         }
-        // Check for the "default" mapper for data memebers.
+        // Check for the "default" mapper for data members.
         bool FirstIter = true;
         for (FieldDecl *FD : RD->fields()) {
           if (!FD)
@@ -6326,6 +6365,7 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
       case OMPC_atomic_default_mem_order:
       case OMPC_device_type:
       case OMPC_match:
+      case OMPC_when:
       default:
         llvm_unreachable("Unexpected clause");
       }
@@ -6659,7 +6699,7 @@ void Sema::ActOnFinishedFunctionDefinitionInOpenMPAssumeScope(Decl *D) {
     FD = cast<FunctionDecl>(D);
   assert(FD && "Expected a function declaration!");
 
-  // If we are intantiating templates we do *not* apply scoped assumptions but
+  // If we are instantiating templates we do *not* apply scoped assumptions but
   // only global ones. We apply scoped assumption to the template definition
   // though.
   if (!inTemplateInstantiation()) {
@@ -6805,7 +6845,7 @@ ExprResult Sema::ActOnOpenMPCall(ExprResult Call, Scope *Scope,
         << ISATrait;
   };
   TargetOMPContext OMPCtx(Context, std::move(DiagUnknownTrait),
-                          getCurFunctionDecl());
+                          getCurFunctionDecl(), DSAStack->getConstructTraits());
 
   QualType CalleeFnType = CalleeFnDecl->getType();
 
@@ -13263,6 +13303,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
   case OMPC_exclusive:
   case OMPC_uses_allocators:
   case OMPC_affinity:
+  case OMPC_when:
   default:
     llvm_unreachable("Clause is not allowed.");
   }
@@ -13419,6 +13460,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_atomic:
     case OMPD_teams_distribute:
     case OMPD_requires:
+    case OMPD_metadirective:
       llvm_unreachable("Unexpected OpenMP directive with if-clause");
     case OMPD_unknown:
     default:
@@ -13501,6 +13543,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_teams_distribute:
     case OMPD_teams_distribute_simd:
     case OMPD_requires:
+    case OMPD_metadirective:
       llvm_unreachable("Unexpected OpenMP directive with num_threads-clause");
     case OMPD_unknown:
     default:
@@ -13581,6 +13624,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_atomic:
     case OMPD_distribute_simd:
     case OMPD_requires:
+    case OMPD_metadirective:
       llvm_unreachable("Unexpected OpenMP directive with num_teams-clause");
     case OMPD_unknown:
     default:
@@ -13661,6 +13705,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_atomic:
     case OMPD_distribute_simd:
     case OMPD_requires:
+    case OMPD_metadirective:
       llvm_unreachable("Unexpected OpenMP directive with thread_limit-clause");
     case OMPD_unknown:
     default:
@@ -13741,6 +13786,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_distribute_simd:
     case OMPD_target_teams:
     case OMPD_requires:
+    case OMPD_metadirective:
       llvm_unreachable("Unexpected OpenMP directive with schedule clause");
     case OMPD_unknown:
     default:
@@ -13821,6 +13867,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_atomic:
     case OMPD_target_teams:
     case OMPD_requires:
+    case OMPD_metadirective:
       llvm_unreachable("Unexpected OpenMP directive with dist_schedule clause");
     case OMPD_unknown:
     default:
@@ -13903,6 +13950,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_atomic:
     case OMPD_distribute_simd:
     case OMPD_requires:
+    case OMPD_metadirective:
       llvm_unreachable("Unexpected OpenMP directive with device-clause");
     case OMPD_unknown:
     default:
@@ -13985,6 +14033,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_atomic:
     case OMPD_distribute_simd:
     case OMPD_requires:
+    case OMPD_metadirective:
       llvm_unreachable("Unexpected OpenMP directive with grainsize-clause");
     case OMPD_unknown:
     default:
@@ -14003,6 +14052,15 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     break;
   case OMPC_filter:
     // Do not capture filter-clause expressions.
+    break;
+  case OMPC_when:
+    if (DKind == OMPD_metadirective) {
+      CaptureRegion = OMPD_metadirective;
+    } else if (DKind == OMPD_unknown) {
+      llvm_unreachable("Unknown OpenMP directive");
+    } else {
+      llvm_unreachable("Unexpected OpenMP directive with when clause");
+    }
     break;
   case OMPC_firstprivate:
   case OMPC_lastprivate:
@@ -14531,6 +14589,7 @@ OMPClause *Sema::ActOnOpenMPSimpleClause(
   case OMPC_exclusive:
   case OMPC_uses_allocators:
   case OMPC_affinity:
+  case OMPC_when:
   default:
     llvm_unreachable("Clause is not allowed.");
   }
@@ -14823,6 +14882,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_exclusive:
   case OMPC_uses_allocators:
   case OMPC_affinity:
+  case OMPC_when:
   default:
     llvm_unreachable("Clause is not allowed.");
   }
@@ -15072,6 +15132,7 @@ OMPClause *Sema::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_exclusive:
   case OMPC_uses_allocators:
   case OMPC_affinity:
+  case OMPC_when:
   default:
     llvm_unreachable("Clause is not allowed.");
   }
@@ -15614,6 +15675,7 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
   case OMPC_nocontext:
   case OMPC_detach:
   case OMPC_uses_allocators:
+  case OMPC_when:
   default:
     llvm_unreachable("Clause is not allowed.");
   }

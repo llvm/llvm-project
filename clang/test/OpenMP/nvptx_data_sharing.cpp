@@ -393,7 +393,7 @@ void test_ds(){
 // CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x i8*], align 8
 // CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [2 x i8*], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1:[0-9]+]], i1 false, i1 true, i1 true)
+// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1:[0-9]+]], i8 1, i1 true, i1 true)
 // CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK:       user_code.entry:
@@ -420,7 +420,7 @@ void test_ds(){
 // CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32*, i32*)* @__omp_outlined__1 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8** [[TMP9]], i64 2)
 // CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[B]], i64 4)
 // CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[A]], i64 4)
-// CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
+// CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK-NEXT:    ret void
 // CHECK:       worker.exit:
 // CHECK-NEXT:    ret void

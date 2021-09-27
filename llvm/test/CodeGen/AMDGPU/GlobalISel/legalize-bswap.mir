@@ -215,13 +215,11 @@ body: |
     ; GFX8: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[C2]], [[C1]](s32)
     ; GFX8: [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[SHL1]]
     ; GFX8: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
-    ; GFX8: [[DEF:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
     ; GFX8: [[BSWAP:%[0-9]+]]:_(<2 x s16>) = G_BSWAP [[BITCAST]]
     ; GFX8: [[BSWAP1:%[0-9]+]]:_(<2 x s16>) = G_BSWAP [[BITCAST1]]
     ; GFX8: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[BSWAP]](<2 x s16>)
     ; GFX8: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C1]](s32)
     ; GFX8: [[BITCAST3:%[0-9]+]]:_(s32) = G_BITCAST [[BSWAP1]](<2 x s16>)
-    ; GFX8: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST3]], [[C1]](s32)
     ; GFX8: $vgpr0 = COPY [[BITCAST2]](s32)
     ; GFX8: $vgpr1 = COPY [[LSHR]](s32)
     ; GFX8: $vgpr2 = COPY [[BITCAST3]](s32)
