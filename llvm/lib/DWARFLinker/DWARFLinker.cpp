@@ -549,6 +549,7 @@ static void updateChildIncompleteness(const DWARFDie &Die, CompileUnit &CU,
   switch (Die.getTag()) {
   case dwarf::DW_TAG_structure_type:
   case dwarf::DW_TAG_class_type:
+  case dwarf::DW_TAG_union_type:
     break;
   default:
     return;

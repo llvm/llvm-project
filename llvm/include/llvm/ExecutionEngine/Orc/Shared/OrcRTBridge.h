@@ -15,11 +15,16 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 
 namespace llvm {
 namespace orc {
 namespace rt {
+
+extern const char *SimpleExecutorDylibManagerInstanceName;
+extern const char *SimpleExecutorDylibManagerOpenWrapperName;
+extern const char *SimpleExecutorDylibManagerLookupWrapperName;
 
 extern const char *SimpleExecutorMemoryManagerInstanceName;
 extern const char *SimpleExecutorMemoryManagerReserveWrapperName;
@@ -31,18 +36,29 @@ extern const char *MemoryWriteUInt16sWrapperName;
 extern const char *MemoryWriteUInt32sWrapperName;
 extern const char *MemoryWriteUInt64sWrapperName;
 extern const char *MemoryWriteBuffersWrapperName;
+
+extern const char *RegisterEHFrameSectionCustomDirectWrapperName;
+extern const char *DeregisterEHFrameSectionCustomDirectWrapperName;
+
 extern const char *RunAsMainWrapperName;
 
-using SPSSimpleExecutorMemoryManagerReserveSignature =
-    shared::SPSExpected<shared::SPSExecutorAddress>(shared::SPSExecutorAddress,
-                                                    uint64_t);
-using SPSSimpleExecutorMemoryManagerFinalizeSignature =
-    shared::SPSError(shared::SPSExecutorAddress, shared::SPSFinalizeRequest);
-using SPSSimpleExecutorMemoryManagerDeallocateSignature =
-    shared::SPSError(shared::SPSExecutorAddress,
-                     shared::SPSSequence<shared::SPSExecutorAddress>);
+using SPSSimpleExecutorDylibManagerOpenSignature =
+    shared::SPSExpected<uint64_t>(shared::SPSExecutorAddr, shared::SPSString,
+                                  uint64_t);
 
-using SPSRunAsMainSignature = int64_t(shared::SPSExecutorAddress,
+using SPSSimpleExecutorDylibManagerLookupSignature =
+    shared::SPSExpected<shared::SPSSequence<shared::SPSExecutorAddr>>(
+        shared::SPSExecutorAddr, uint64_t, shared::SPSRemoteSymbolLookupSet);
+
+using SPSSimpleExecutorMemoryManagerReserveSignature =
+    shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
+                                                 uint64_t);
+using SPSSimpleExecutorMemoryManagerFinalizeSignature =
+    shared::SPSError(shared::SPSExecutorAddr, shared::SPSFinalizeRequest);
+using SPSSimpleExecutorMemoryManagerDeallocateSignature = shared::SPSError(
+    shared::SPSExecutorAddr, shared::SPSSequence<shared::SPSExecutorAddr>);
+
+using SPSRunAsMainSignature = int64_t(shared::SPSExecutorAddr,
                                       shared::SPSSequence<shared::SPSString>);
 
 } // end namespace rt

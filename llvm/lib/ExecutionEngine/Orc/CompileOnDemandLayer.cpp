@@ -184,6 +184,8 @@ void CompileOnDemandLayer::emit(
 
 CompileOnDemandLayer::PerDylibResources &
 CompileOnDemandLayer::getPerDylibResources(JITDylib &TargetD) {
+  std::lock_guard<std::mutex> Lock(CODLayerMutex);
+
   auto I = DylibResources.find(&TargetD);
   if (I == DylibResources.end()) {
     auto &ImplD =

@@ -84,6 +84,7 @@ set(UNITTEST_SOURCES
   c_api_test.cpp
   endian_test.cpp
   error_test.cpp
+  executor_address_test.cpp
   extensible_rtti_test.cpp
   orc_unit_test_main.cpp
   stl_extras_test.cpp

@@ -12,6 +12,12 @@ namespace llvm {
 namespace orc {
 namespace rt {
 
+const char *SimpleExecutorDylibManagerInstanceName =
+    "__llvm_orc_SimpleExecutorDylibManager_Instance";
+const char *SimpleExecutorDylibManagerOpenWrapperName =
+    "__llvm_orc_SimpleExecutorDylibManager_open_wrapper";
+const char *SimpleExecutorDylibManagerLookupWrapperName =
+    "__llvm_orc_SimpleExecutorDylibManager_lookup_wrapper";
 const char *SimpleExecutorMemoryManagerInstanceName =
     "__llvm_orc_SimpleExecutorMemoryManager_Instance";
 const char *SimpleExecutorMemoryManagerReserveWrapperName =
@@ -30,6 +36,10 @@ const char *MemoryWriteUInt64sWrapperName =
     "__llvm_orc_bootstrap_mem_write_uint64s_wrapper";
 const char *MemoryWriteBuffersWrapperName =
     "__llvm_orc_bootstrap_mem_write_buffers_wrapper";
+const char *RegisterEHFrameSectionCustomDirectWrapperName =
+    "__llvm_orc_bootstrap_register_ehframe_section_custom_direct_wrapper";
+const char *DeregisterEHFrameSectionCustomDirectWrapperName =
+    "__llvm_orc_bootstrap_deregister_ehframe_section_custom_direct_wrapper";
 const char *RunAsMainWrapperName = "__llvm_orc_bootstrap_run_as_main_wrapper";
 
 } // end namespace rt

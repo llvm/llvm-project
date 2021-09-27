@@ -855,6 +855,7 @@ bool canSkipDef(MemoryDef *D, bool DefVisibleToCaller,
 struct DSEState {
   Function &F;
   AliasAnalysis &AA;
+  EarliestEscapeInfo EI;
 
   /// The single BatchAA instance that is used to cache AA queries. It will
   /// not be invalidated over the whole run. This is safe, because:
@@ -897,30 +898,29 @@ struct DSEState {
   /// basic block.
   DenseMap<BasicBlock *, InstOverlapIntervalsTy> IOLs;
 
+  // Class contains self-reference, make sure it's not copied/moved.
+  DSEState(const DSEState &) = delete;
+  DSEState &operator=(const DSEState &) = delete;
+
   DSEState(Function &F, AliasAnalysis &AA, MemorySSA &MSSA, DominatorTree &DT,
            PostDominatorTree &PDT, const TargetLibraryInfo &TLI,
            const LoopInfo &LI)
-      : F(F), AA(AA), BatchAA(AA), MSSA(MSSA), DT(DT), PDT(PDT), TLI(TLI),
-        DL(F.getParent()->getDataLayout()), LI(LI) {}
-
-  static DSEState get(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
-                      DominatorTree &DT, PostDominatorTree &PDT,
-                      const TargetLibraryInfo &TLI, const LoopInfo &LI) {
-    DSEState State(F, AA, MSSA, DT, PDT, TLI, LI);
+      : F(F), AA(AA), EI(DT, LI), BatchAA(AA, &EI), MSSA(MSSA), DT(DT),
+        PDT(PDT), TLI(TLI), DL(F.getParent()->getDataLayout()), LI(LI) {
     // Collect blocks with throwing instructions not modeled in MemorySSA and
     // alloc-like objects.
     unsigned PO = 0;
     for (BasicBlock *BB : post_order(&F)) {
-      State.PostOrderNumbers[BB] = PO++;
+      PostOrderNumbers[BB] = PO++;
       for (Instruction &I : *BB) {
         MemoryAccess *MA = MSSA.getMemoryAccess(&I);
         if (I.mayThrow() && !MA)
-          State.ThrowingBlocks.insert(I.getParent());
+          ThrowingBlocks.insert(I.getParent());
 
         auto *MD = dyn_cast_or_null<MemoryDef>(MA);
-        if (MD && State.MemDefs.size() < MemorySSADefsPerBlockLimit &&
-            (State.getLocForWriteEx(&I) || State.isMemTerminatorInst(&I)))
-          State.MemDefs.push_back(MD);
+        if (MD && MemDefs.size() < MemorySSADefsPerBlockLimit &&
+            (getLocForWriteEx(&I) || isMemTerminatorInst(&I)))
+          MemDefs.push_back(MD);
       }
     }
 
@@ -930,14 +930,12 @@ struct DSEState {
       if (AI.hasPassPointeeByValueCopyAttr()) {
         // For byval, the caller doesn't know the address of the allocation.
         if (AI.hasByValAttr())
-          State.InvisibleToCallerBeforeRet.insert({&AI, true});
-        State.InvisibleToCallerAfterRet.insert({&AI, true});
+          InvisibleToCallerBeforeRet.insert({&AI, true});
+        InvisibleToCallerAfterRet.insert({&AI, true});
       }
 
     // Collect whether there is any irreducible control flow in the function.
-    State.ContainsIrreducibleLoops = mayContainIrreducibleControl(F, &LI);
-
-    return State;
+    ContainsIrreducibleLoops = mayContainIrreducibleControl(F, &LI);
   }
 
   /// Return 'OW_Complete' if a store to the 'KillingLoc' location (by \p
@@ -1281,10 +1279,6 @@ struct DSEState {
       if (CB->onlyAccessesInaccessibleMemory())
         return false;
 
-    // NOTE: For calls, the number of stores removed could be slightly improved
-    // by using AA.callCapturesBefore(UseInst, DefLoc, &DT), but that showed to
-    // be expensive compared to the benefits in practice. For now, avoid more
-    // expensive analysis to limit compile-time.
     return isRefSet(BatchAA.getModRefInfo(UseInst, DefLoc));
   }
 
@@ -1707,6 +1701,7 @@ struct DSEState {
         if (MemoryDef *MD = dyn_cast<MemoryDef>(MA)) {
           SkipStores.insert(MD);
         }
+
         Updater.removeMemoryAccess(MA);
       }
 
@@ -1721,6 +1716,7 @@ struct DSEState {
             NowDeadInsts.push_back(OpI);
         }
 
+      EI.removeInstruction(DeadInst);
       DeadInst->eraseFromParent();
     }
   }
@@ -1793,7 +1789,7 @@ struct DSEState {
       // uncommon. If it turns out to be important, we can use
       // getUnderlyingObjects here instead.
       const Value *UO = getUnderlyingObject(DefLoc->Ptr);
-      if (!UO || !isInvisibleToCallerAfterRet(UO))
+      if (!isInvisibleToCallerAfterRet(UO))
         continue;
 
       if (isWriteAtEndOfFunction(Def)) {
@@ -1932,7 +1928,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
                                 const LoopInfo &LI) {
   bool MadeChange = false;
 
-  DSEState State = DSEState::get(F, AA, MSSA, DT, PDT, TLI, LI);
+  DSEState State(F, AA, MSSA, DT, PDT, TLI, LI);
   // For each store:
   for (unsigned I = 0; I < State.MemDefs.size(); I++) {
     MemoryDef *KillingDef = State.MemDefs[I];
@@ -1965,9 +1961,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
     unsigned PartialLimit = MemorySSAPartialStoreLimit;
     // Worklist of MemoryAccesses that may be killed by KillingDef.
     SetVector<MemoryAccess *> ToCheck;
-
-    if (KillingUndObj)
-      ToCheck.insert(KillingDef->getDefiningAccess());
+    ToCheck.insert(KillingDef->getDefiningAccess());
 
     bool Shortend = false;
     bool IsMemTerm = State.isMemTerminatorInst(KillingI);

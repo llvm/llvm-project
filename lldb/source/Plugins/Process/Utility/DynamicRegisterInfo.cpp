@@ -10,7 +10,6 @@
 
 #include "lldb/Core/StreamFile.h"
 #include "lldb/DataFormatters/FormatManager.h"
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/RegularExpression.h"
@@ -142,11 +141,10 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
           std::string reg_name_str = matches[1].str();
           std::string msbit_str = matches[2].str();
           std::string lsbit_str = matches[3].str();
-          const uint32_t msbit =
-              StringConvert::ToUInt32(msbit_str.c_str(), UINT32_MAX);
-          const uint32_t lsbit =
-              StringConvert::ToUInt32(lsbit_str.c_str(), UINT32_MAX);
-          if (msbit != UINT32_MAX && lsbit != UINT32_MAX) {
+          uint32_t msbit;
+          uint32_t lsbit;
+          if (llvm::to_integer(msbit_str, msbit) &&
+              llvm::to_integer(lsbit_str, lsbit)) {
             if (msbit > lsbit) {
               const uint32_t msbyte = msbit / 8;
               const uint32_t lsbyte = lsbit / 8;
@@ -665,9 +663,7 @@ void DynamicRegisterInfo::ConfigureOffsets() {
       if (reg.byte_offset == LLDB_INVALID_INDEX32) {
         uint32_t value_regnum = reg.value_regs[0];
         if (value_regnum != LLDB_INVALID_INDEX32)
-          reg.byte_offset =
-              GetRegisterInfoAtIndex(remote_to_local_regnum_map[value_regnum])
-                  ->byte_offset;
+          reg.byte_offset = GetRegisterInfoAtIndex(value_regnum)->byte_offset;
       }
     }
 

@@ -37,18 +37,18 @@ extern "C" void __deregister_frame(const void *);
 namespace {
 
 Error validatePointerSectionExtent(const char *SectionName,
-                                   const ExecutorAddressRange &SE) {
+                                   const ExecutorAddrRange &SE) {
   if (SE.size().getValue() % sizeof(uintptr_t)) {
     std::ostringstream ErrMsg;
     ErrMsg << std::hex << "Size of " << SectionName << " 0x"
-           << SE.StartAddress.getValue() << " -- 0x" << SE.EndAddress.getValue()
+           << SE.Start.getValue() << " -- 0x" << SE.End.getValue()
            << " is not a pointer multiple";
     return make_error<StringError>(ErrMsg.str());
   }
   return Error::success();
 }
 
-Error runInitArray(const std::vector<ExecutorAddressRange> &InitArraySections,
+Error runInitArray(const std::vector<ExecutorAddrRange> &InitArraySections,
                    const ELFNixJITDylibInitializers &MOJDIs) {
 
   for (const auto &ModInits : InitArraySections) {
@@ -120,8 +120,8 @@ private:
 
   Error registerThreadDataSection(span<const char> ThreadDataSection);
 
-  Expected<ExecutorAddress> lookupSymbolInJITDylib(void *DSOHandle,
-                                                   string_view Symbol);
+  Expected<ExecutorAddr> lookupSymbolInJITDylib(void *DSOHandle,
+                                                string_view Symbol);
 
   Expected<ELFNixJITDylibInitializerSequence>
   getJITDylibInitializersByName(string_view Path);
@@ -131,7 +131,7 @@ private:
   static ELFNixPlatformRuntimeState *MOPS;
 
   using InitSectionHandler =
-      Error (*)(const std::vector<ExecutorAddressRange> &Sections,
+      Error (*)(const std::vector<ExecutorAddrRange> &Sections,
                 const ELFNixJITDylibInitializers &MOJDIs);
   const std::vector<std::pair<const char *, InitSectionHandler>> InitSections =
       {{".init_array", runInitArray}};
@@ -166,10 +166,10 @@ void ELFNixPlatformRuntimeState::destroy() {
 
 Error ELFNixPlatformRuntimeState::registerObjectSections(
     ELFNixPerObjectSectionsToRegister POSR) {
-  if (POSR.EHFrameSection.StartAddress)
-    __register_frame(POSR.EHFrameSection.StartAddress.toPtr<const char *>());
+  if (POSR.EHFrameSection.Start)
+    __register_frame(POSR.EHFrameSection.Start.toPtr<const char *>());
 
-  if (POSR.ThreadDataSection.StartAddress) {
+  if (POSR.ThreadDataSection.Start) {
     if (auto Err = registerThreadDataSection(
             POSR.ThreadDataSection.toSpan<const char>()))
       return Err;
@@ -180,8 +180,8 @@ Error ELFNixPlatformRuntimeState::registerObjectSections(
 
 Error ELFNixPlatformRuntimeState::deregisterObjectSections(
     ELFNixPerObjectSectionsToRegister POSR) {
-  if (POSR.EHFrameSection.StartAddress)
-    __deregister_frame(POSR.EHFrameSection.StartAddress.toPtr<const char *>());
+  if (POSR.EHFrameSection.Start)
+    __deregister_frame(POSR.EHFrameSection.Start.toPtr<const char *>());
 
   return Error::success();
 }
@@ -318,14 +318,15 @@ Error ELFNixPlatformRuntimeState::registerThreadDataSection(
   return Error::success();
 }
 
-Expected<ExecutorAddress>
+Expected<ExecutorAddr>
 ELFNixPlatformRuntimeState::lookupSymbolInJITDylib(void *DSOHandle,
                                                    string_view Sym) {
-  Expected<ExecutorAddress> Result((ExecutorAddress()));
-  if (auto Err = WrapperFunction<SPSExpected<SPSExecutorAddress>(
-          SPSExecutorAddress,
-          SPSString)>::call(&__orc_rt_elfnix_symbol_lookup_tag, Result,
-                            ExecutorAddress::fromPtr(DSOHandle), Sym))
+  Expected<ExecutorAddr> Result((ExecutorAddr()));
+  if (auto Err = WrapperFunction<SPSExpected<SPSExecutorAddr>(
+          SPSExecutorAddr, SPSString)>::call(&__orc_rt_elfnix_symbol_lookup_tag,
+                                             Result,
+                                             ExecutorAddr::fromPtr(DSOHandle),
+                                             Sym))
     return std::move(Err);
   return Result;
 }

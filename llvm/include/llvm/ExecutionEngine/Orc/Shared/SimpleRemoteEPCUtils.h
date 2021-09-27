@@ -21,6 +21,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
 #include "llvm/Support/Error.h"
 
+#include <atomic>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -44,7 +45,7 @@ enum class SimpleRemoteEPCOpcode : uint8_t {
 struct SimpleRemoteEPCExecutorInfo {
   std::string TargetTriple;
   uint64_t PageSize;
-  StringMap<ExecutorAddress> BootstrapSymbols;
+  StringMap<ExecutorAddr> BootstrapSymbols;
 };
 
 using SimpleRemoteEPCArgBytesVector = SmallVector<char, 128>;
@@ -61,8 +62,7 @@ public:
   /// client will not accept any further messages, and 'ContinueSession'
   /// otherwise.
   virtual Expected<HandleMessageAction>
-  handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
-                ExecutorAddress TagAddr,
+  handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo, ExecutorAddr TagAddr,
                 SimpleRemoteEPCArgBytesVector ArgBytes) = 0;
 
   /// Handle a disconnection from the underlying transport. No further messages
@@ -78,13 +78,19 @@ class SimpleRemoteEPCTransport {
 public:
   virtual ~SimpleRemoteEPCTransport();
 
+  /// Called during setup of the client to indicate that the client is ready
+  /// to receive messages.
+  ///
+  /// Transport objects should not access the client until this method is
+  /// called.
+  virtual Error start() = 0;
+
   /// Send a SimpleRemoteEPC message.
   ///
   /// This function may be called concurrently. Subclasses should implement
   /// locking if required for the underlying transport.
   virtual Error sendMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
-                            ExecutorAddress TagAddr,
-                            ArrayRef<char> ArgBytes) = 0;
+                            ExecutorAddr TagAddr, ArrayRef<char> ArgBytes) = 0;
 
   /// Trigger disconnection from the transport. The implementation should
   /// respond by calling handleDisconnect on the client once disconnection
@@ -109,14 +115,17 @@ public:
 
   ~FDSimpleRemoteEPCTransport() override;
 
+  Error start() override;
+
   Error sendMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
-                    ExecutorAddress TagAddr, ArrayRef<char> ArgBytes) override;
+                    ExecutorAddr TagAddr, ArrayRef<char> ArgBytes) override;
 
   void disconnect() override;
 
 private:
   FDSimpleRemoteEPCTransport(SimpleRemoteEPCTransportClient &C, int InFD,
-                             int OutFD);
+                             int OutFD)
+      : C(C), InFD(InFD), OutFD(OutFD) {}
 
   Error readBytes(char *Dst, size_t Size, bool *IsEOF = nullptr);
   int writeBytes(const char *Src, size_t Size);
@@ -126,6 +135,7 @@ private:
   SimpleRemoteEPCTransportClient &C;
   std::thread ListenerThread;
   int InFD, OutFD;
+  std::atomic<bool> Disconnected{false};
 };
 
 struct RemoteSymbolLookupSetElement {
@@ -151,7 +161,7 @@ using SPSRemoteSymbolLookup = SPSTuple<uint64_t, SPSRemoteSymbolLookupSet>;
 /// Tuple containing target triple, page size, and bootstrap symbols.
 using SPSSimpleRemoteEPCExecutorInfo =
     SPSTuple<SPSString, uint64_t,
-             SPSSequence<SPSTuple<SPSString, SPSExecutorAddress>>>;
+             SPSSequence<SPSTuple<SPSString, SPSExecutorAddr>>>;
 
 template <>
 class SPSSerializationTraits<SPSRemoteSymbolLookupSetElement,
@@ -211,12 +221,12 @@ public:
   }
 };
 
-using SPSLoadDylibSignature =
-    SPSExpected<SPSExecutorAddress>(SPSExecutorAddress, SPSString, uint64_t);
+using SPSLoadDylibSignature = SPSExpected<SPSExecutorAddr>(SPSExecutorAddr,
+                                                           SPSString, uint64_t);
 
 using SPSLookupSymbolsSignature =
-    SPSExpected<SPSSequence<SPSSequence<SPSExecutorAddress>>>(
-        SPSExecutorAddress, SPSSequence<SPSRemoteSymbolLookup>);
+    SPSExpected<SPSSequence<SPSSequence<SPSExecutorAddr>>>(
+        SPSExecutorAddr, SPSSequence<SPSRemoteSymbolLookup>);
 
 } // end namespace shared
 } // end namespace orc

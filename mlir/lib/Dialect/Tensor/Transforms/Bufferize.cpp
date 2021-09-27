@@ -26,10 +26,11 @@ class BufferizeCastOp : public OpConversionPattern<tensor::CastOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(tensor::CastOp op, ArrayRef<Value> operands,
+  matchAndRewrite(tensor::CastOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto resultType = getTypeConverter()->convertType(op.getType());
-    rewriter.replaceOpWithNewOp<memref::CastOp>(op, resultType, operands[0]);
+    rewriter.replaceOpWithNewOp<memref::CastOp>(op, resultType,
+                                                adaptor.getOperands()[0]);
     return success();
   }
 };
@@ -40,9 +41,8 @@ class BufferizeDimOp : public OpConversionPattern<tensor::DimOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(tensor::DimOp op, ArrayRef<Value> operands,
+  matchAndRewrite(tensor::DimOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    tensor::DimOp::Adaptor adaptor(operands);
     rewriter.replaceOpWithNewOp<memref::DimOp>(op, adaptor.source(),
                                                adaptor.index());
     return success();
@@ -55,9 +55,8 @@ class BufferizeExtractOp : public OpConversionPattern<tensor::ExtractOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(tensor::ExtractOp op, ArrayRef<Value> operands,
+  matchAndRewrite(tensor::ExtractOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    tensor::ExtractOp::Adaptor adaptor(operands);
     rewriter.replaceOpWithNewOp<memref::LoadOp>(op, adaptor.tensor(),
                                                 adaptor.indices());
     return success();
@@ -71,7 +70,7 @@ class BufferizeFromElementsOp
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(tensor::FromElementsOp op, ArrayRef<Value> operands,
+  matchAndRewrite(tensor::FromElementsOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     int numberOfElements = op.elements().size();
     auto resultType = MemRefType::get(
@@ -95,16 +94,15 @@ public:
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(tensor::GenerateOp op, ArrayRef<Value> operands,
+  matchAndRewrite(tensor::GenerateOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
     // Allocate memory.
     Location loc = op.getLoc();
-    tensor::GenerateOp::Adaptor transformed(operands);
     RankedTensorType tensorType = op.getType().cast<RankedTensorType>();
     MemRefType memrefType =
         MemRefType::get(tensorType.getShape(), tensorType.getElementType());
-    Value result = rewriter.create<memref::AllocOp>(
-        loc, memrefType, transformed.dynamicExtents());
+    Value result = rewriter.create<memref::AllocOp>(loc, memrefType,
+                                                    adaptor.dynamicExtents());
 
     // Collect loop bounds.
     int64_t rank = tensorType.getRank();
@@ -117,7 +115,7 @@ public:
     for (int i = 0; i < rank; i++) {
       Value upperBound =
           tensorType.isDynamicDim(i)
-              ? transformed.dynamicExtents()[nextDynamicIndex++]
+              ? adaptor.dynamicExtents()[nextDynamicIndex++]
               : rewriter.create<ConstantIndexOp>(loc, memrefType.getDimSize(i));
       upperBounds.push_back(upperBound);
     }

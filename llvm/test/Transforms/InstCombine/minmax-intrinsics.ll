@@ -1869,14 +1869,16 @@ define void @cmyk_commute11(i8 %r, i8 %g, i8 %b) {
 
 define i8 @smax_offset(i8 %x) {
 ; CHECK-LABEL: @smax_offset(
-; CHECK-NEXT:    [[A:%.*]] = add nsw i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[A]], i8 -124)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 -127)
+; CHECK-NEXT:    [[M:%.*]] = add nsw i8 [[TMP1]], 3
 ; CHECK-NEXT:    ret i8 [[M]]
 ;
   %a = add nsw i8 %x, 3
   %m = call i8 @llvm.smax.i8(i8 %a, i8 -124)
   ret i8 %m
 }
+
+; This is handled by InstSimplify; testing here to confirm assert.
 
 define i8 @smax_offset_limit(i8 %x) {
 ; CHECK-LABEL: @smax_offset_limit(
@@ -1888,6 +1890,8 @@ define i8 @smax_offset_limit(i8 %x) {
   ret i8 %m
 }
 
+; This is handled by InstSimplify; testing here to confirm assert.
+
 define i8 @smax_offset_overflow(i8 %x) {
 ; CHECK-LABEL: @smax_offset_overflow(
 ; CHECK-NEXT:    [[A:%.*]] = add nsw i8 [[X:%.*]], 3
@@ -1897,6 +1901,8 @@ define i8 @smax_offset_overflow(i8 %x) {
   %m = call i8 @llvm.smax.i8(i8 %a, i8 -126)
   ret i8 %m
 }
+
+; negative test - require nsw
 
 define i8 @smax_offset_may_wrap(i8 %x) {
 ; CHECK-LABEL: @smax_offset_may_wrap(
@@ -1908,6 +1914,8 @@ define i8 @smax_offset_may_wrap(i8 %x) {
   %m = call i8 @llvm.smax.i8(i8 %a, i8 -124)
   ret i8 %m
 }
+
+; negative test
 
 define i8 @smax_offset_uses(i8 %x) {
 ; CHECK-LABEL: @smax_offset_uses(
@@ -1924,14 +1932,16 @@ define i8 @smax_offset_uses(i8 %x) {
 
 define <3 x i8> @smin_offset(<3 x i8> %x) {
 ; CHECK-LABEL: @smin_offset(
-; CHECK-NEXT:    [[A:%.*]] = add nuw nsw <3 x i8> [[X:%.*]], <i8 124, i8 124, i8 124>
-; CHECK-NEXT:    [[M:%.*]] = call <3 x i8> @llvm.smin.v3i8(<3 x i8> [[A]], <3 x i8> <i8 -3, i8 -3, i8 -3>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i8> @llvm.smin.v3i8(<3 x i8> [[X:%.*]], <3 x i8> <i8 -127, i8 -127, i8 -127>)
+; CHECK-NEXT:    [[M:%.*]] = or <3 x i8> [[TMP1]], <i8 124, i8 124, i8 124>
 ; CHECK-NEXT:    ret <3 x i8> [[M]]
 ;
   %a = add nsw nuw <3 x i8> %x, <i8 124, i8 124, i8 124>
   %m = call <3 x i8> @llvm.smin.v3i8(<3 x i8> %a, <3 x i8> <i8 -3, i8 -3, i8 -3>)
   ret <3 x i8> %m
 }
+
+; This is handled by InstSimplify; testing here to confirm assert.
 
 define i8 @smin_offset_limit(i8 %x) {
 ; CHECK-LABEL: @smin_offset_limit(
@@ -1942,6 +1952,8 @@ define i8 @smin_offset_limit(i8 %x) {
   ret i8 %m
 }
 
+; This is handled by InstSimplify; testing here to confirm assert.
+
 define i8 @smin_offset_overflow(i8 %x) {
 ; CHECK-LABEL: @smin_offset_overflow(
 ; CHECK-NEXT:    ret i8 -3
@@ -1950,6 +1962,8 @@ define i8 @smin_offset_overflow(i8 %x) {
   %m = call i8 @llvm.smin.i8(i8 %a, i8 -3)
   ret i8 %m
 }
+
+; negative test - require nsw
 
 define i8 @smin_offset_may_wrap(i8 %x) {
 ; CHECK-LABEL: @smin_offset_may_wrap(
@@ -1961,6 +1975,8 @@ define i8 @smin_offset_may_wrap(i8 %x) {
   %m = call i8 @llvm.smin.i8(i8 %a, i8 -3)
   ret i8 %m
 }
+
+; negative test
 
 define i8 @smin_offset_uses(i8 %x) {
 ; CHECK-LABEL: @smin_offset_uses(
@@ -1975,16 +1991,20 @@ define i8 @smin_offset_uses(i8 %x) {
   ret i8 %m
 }
 
+; Note: 'nsw' must not propagate here.
+
 define <3 x i8> @umax_offset(<3 x i8> %x) {
 ; CHECK-LABEL: @umax_offset(
-; CHECK-NEXT:    [[A:%.*]] = add nuw nsw <3 x i8> [[X:%.*]], <i8 127, i8 127, i8 127>
-; CHECK-NEXT:    [[M:%.*]] = call <3 x i8> @llvm.umax.v3i8(<3 x i8> [[A]], <3 x i8> <i8 -126, i8 -126, i8 -126>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i8> @llvm.umax.v3i8(<3 x i8> [[X:%.*]], <3 x i8> <i8 3, i8 3, i8 3>)
+; CHECK-NEXT:    [[M:%.*]] = add nuw <3 x i8> [[TMP1]], <i8 127, i8 127, i8 127>
 ; CHECK-NEXT:    ret <3 x i8> [[M]]
 ;
   %a = add nsw nuw <3 x i8> %x, <i8 127, i8 127, i8 127>
   %m = call <3 x i8> @llvm.umax.v3i8(<3 x i8> %a, <3 x i8> <i8 130, i8 130, i8 130>)
   ret <3 x i8> %m
 }
+
+; This is handled by InstSimplify; testing here to confirm assert.
 
 define i8 @umax_offset_limit(i8 %x) {
 ; CHECK-LABEL: @umax_offset_limit(
@@ -1996,6 +2016,8 @@ define i8 @umax_offset_limit(i8 %x) {
   ret i8 %m
 }
 
+; This is handled by InstSimplify; testing here to confirm assert.
+
 define i8 @umax_offset_overflow(i8 %x) {
 ; CHECK-LABEL: @umax_offset_overflow(
 ; CHECK-NEXT:    [[A:%.*]] = add nuw i8 [[X:%.*]], 3
@@ -2005,6 +2027,8 @@ define i8 @umax_offset_overflow(i8 %x) {
   %m = call i8 @llvm.umax.i8(i8 %a, i8 2)
   ret i8 %m
 }
+
+; negative test - require nuw
 
 define i8 @umax_offset_may_wrap(i8 %x) {
 ; CHECK-LABEL: @umax_offset_may_wrap(
@@ -2016,6 +2040,8 @@ define i8 @umax_offset_may_wrap(i8 %x) {
   %m = call i8 @llvm.umax.i8(i8 %a, i8 4)
   ret i8 %m
 }
+
+; negative test
 
 define i8 @umax_offset_uses(i8 %x) {
 ; CHECK-LABEL: @umax_offset_uses(
@@ -2032,14 +2058,16 @@ define i8 @umax_offset_uses(i8 %x) {
 
 define i8 @umin_offset(i8 %x) {
 ; CHECK-LABEL: @umin_offset(
-; CHECK-NEXT:    [[A:%.*]] = add nuw i8 [[X:%.*]], -5
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[A]], i8 -4)
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[M:%.*]] = select i1 [[DOTNOT]], i8 -5, i8 -4
 ; CHECK-NEXT:    ret i8 [[M]]
 ;
   %a = add nuw i8 %x, 251
   %m = call i8 @llvm.umin.i8(i8 %a, i8 252)
   ret i8 %m
 }
+
+; This is handled by InstSimplify; testing here to confirm assert.
 
 define i8 @umin_offset_limit(i8 %x) {
 ; CHECK-LABEL: @umin_offset_limit(
@@ -2050,6 +2078,8 @@ define i8 @umin_offset_limit(i8 %x) {
   ret i8 %m
 }
 
+; This is handled by InstSimplify; testing here to confirm assert.
+
 define i8 @umin_offset_overflow(i8 %x) {
 ; CHECK-LABEL: @umin_offset_overflow(
 ; CHECK-NEXT:    ret i8 -4
@@ -2058,6 +2088,8 @@ define i8 @umin_offset_overflow(i8 %x) {
   %m = call i8 @llvm.umin.i8(i8 %a, i8 252)
   ret i8 %m
 }
+
+; negative test - require nuw
 
 define i8 @umin_offset_may_wrap(i8 %x) {
 ; CHECK-LABEL: @umin_offset_may_wrap(
@@ -2069,6 +2101,8 @@ define i8 @umin_offset_may_wrap(i8 %x) {
   %m = call i8 @llvm.umin.i8(i8 %a, i8 252)
   ret i8 %m
 }
+
+; negative test
 
 define i8 @umin_offset_uses(i8 %x) {
 ; CHECK-LABEL: @umin_offset_uses(
@@ -2082,6 +2116,8 @@ define i8 @umin_offset_uses(i8 %x) {
   %m = call i8 @llvm.umin.i8(i8 %a, i8 252)
   ret i8 %m
 }
+
+; TODO: This could transform, but undef element must not propagate to the new add.
 
 define <3 x i8> @umax_vector_splat_undef(<3 x i8> %x) {
 ; CHECK-LABEL: @umax_vector_splat_undef(

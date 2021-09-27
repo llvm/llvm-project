@@ -44,6 +44,7 @@ Hexagon::Hexagon() {
   gotRel = R_HEX_GLOB_DAT;
   symbolicRel = R_HEX_32;
 
+  gotBaseSymInGotPlt = true;
   // The zero'th GOT entry is reserved for the address of _DYNAMIC.  The
   // next 3 are reserved for the dynamic loader.
   gotPltHeaderEntriesNum = 4;
@@ -53,7 +54,6 @@ Hexagon::Hexagon() {
 
   // Hexagon Linux uses 64K pages by default.
   defaultMaxPageSize = 0x10000;
-  noneRel = R_HEX_NONE;
   tlsGotRel = R_HEX_TPREL_32;
   tlsModuleIndexRel = R_HEX_DTPMOD_32;
   tlsOffsetRel = R_HEX_DTPREL_32;

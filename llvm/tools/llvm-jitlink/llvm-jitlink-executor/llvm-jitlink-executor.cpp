@@ -16,6 +16,7 @@
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleExecutorMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleRemoteEPCServer.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
@@ -43,10 +44,18 @@ LLVM_ATTRIBUTE_USED void linkComponents() {
 }
 
 void printErrorAndExit(Twine ErrMsg) {
+#ifndef NDEBUG
+  const char *DebugOption = "[debug] ";
+#else
+  const char *DebugOption = "";
+#endif
+
   errs() << "error: " << ErrMsg.str() << "\n\n"
          << "Usage:\n"
-         << "  llvm-jitlink-executor filedescs=<infd>,<outfd> [args...]\n"
-         << "  llvm-jitlink-executor listen=<host>:<port> [args...]\n";
+         << "  llvm-jitlink-executor " << DebugOption
+         << "filedescs=<infd>,<outfd> [args...]\n"
+         << "  llvm-jitlink-executor " << DebugOption
+         << "listen=<host>:<port> [args...]\n";
   exit(1);
 }
 
@@ -107,15 +116,24 @@ int main(int argc, char *argv[]) {
 
   ExitOnErr.setBanner(std::string(argv[0]) + ": ");
 
+  unsigned FirstProgramArg = 1;
   int InFD = 0;
   int OutFD = 0;
 
   if (argc < 2)
     printErrorAndExit("insufficient arguments");
   else {
-    StringRef Arg1 = argv[1];
+
+    StringRef ConnectArg = argv[FirstProgramArg++];
+#ifndef NDEBUG
+    if (ConnectArg == "debug") {
+      DebugFlag = true;
+      ConnectArg = argv[FirstProgramArg++];
+    }
+#endif
+
     StringRef SpecifierType, Specifier;
-    std::tie(SpecifierType, Specifier) = Arg1.split('=');
+    std::tie(SpecifierType, Specifier) = ConnectArg.split('=');
     if (SpecifierType == "filedescs") {
       StringRef FD1Str, FD2Str;
       std::tie(FD1Str, FD2Str) = Specifier.split(',');

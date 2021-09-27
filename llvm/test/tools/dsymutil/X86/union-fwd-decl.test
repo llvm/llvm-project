@@ -1,0 +1,61 @@
+Test binaries created with the following commands:
+
+$ cat container.cpp
+#include "container.h"
+#include <stdlib.h>
+
+struct Container_ivars {
+  // real definition here
+};
+
+ContainerPtr allocateContainer() {
+  Container *c = (Container *)malloc(sizeof(Container));
+  c->ivars = (Container_ivars *)malloc(sizeof(Container_ivars));
+  return c;
+}
+
+extern void doSomething(ContainerPtr);
+
+int main() {
+  ContainerPtr c = allocateContainer();
+  doSomething(c);
+  return 0;
+}
+
+$ cat container.h
+struct Container_ivars;
+
+struct Container {
+  union {
+    struct Container_ivars *ivars;
+  };
+};
+
+typedef Container *ContainerPtr;
+
+$ cat use.cpp
+#include "container.h"
+
+void doSomething(ContainerPtr c) {}
+
+
+$ clang++ -O0 -g container.cpp -c -o container.o
+$ clang++ -O0 -g use.cpp -c -o use.o
+$ clang++ use.o container.o -o a.out
+
+Note that the link order in the last command matters for this test.
+
+RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/union/a.out -o %t.dSYM
+RUN: llvm-dwarfdump %t.dSYM | FileCheck %s
+
+CHECK: DW_TAG_compile_unit
+
+CHECK:          DW_AT_name      ("Container_ivars")
+CHECK-NEXT:     DW_AT_declaration       (true)
+
+CHECK: DW_TAG_compile_unit
+
+CHECK:          DW_AT_name      ("Container_ivars")
+CHECK-NEXT:     DW_AT_byte_size (0x01)
+CHECK-NEXT:     DW_AT_decl_file ("{{.*}}container.cpp")
+CHECK-NEXT:     DW_AT_decl_line (4)

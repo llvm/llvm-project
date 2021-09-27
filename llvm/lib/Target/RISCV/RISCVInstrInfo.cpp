@@ -919,11 +919,20 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         switch (OpType) {
         default:
           llvm_unreachable("Unexpected operand type");
+        case RISCVOp::OPERAND_UIMM2:
+          Ok = isUInt<2>(Imm);
+          break;
+        case RISCVOp::OPERAND_UIMM3:
+          Ok = isUInt<3>(Imm);
+          break;
         case RISCVOp::OPERAND_UIMM4:
           Ok = isUInt<4>(Imm);
           break;
         case RISCVOp::OPERAND_UIMM5:
           Ok = isUInt<5>(Imm);
+          break;
+        case RISCVOp::OPERAND_UIMM7:
+          Ok = isUInt<7>(Imm);
           break;
         case RISCVOp::OPERAND_UIMM12:
           Ok = isUInt<12>(Imm);
@@ -1472,8 +1481,8 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   CASE_WIDEOP_CHANGE_OPCODE_COMMON(OP, M2)                                     \
   CASE_WIDEOP_CHANGE_OPCODE_COMMON(OP, M4)
 
-MachineInstr *RISCVInstrInfo::convertToThreeAddress(
-    MachineFunction::iterator &MBB, MachineInstr &MI, LiveVariables *LV) const {
+MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
+                                                    LiveVariables *LV) const {
   switch (MI.getOpcode()) {
   default:
     break;
@@ -1497,7 +1506,8 @@ MachineInstr *RISCVInstrInfo::convertToThreeAddress(
     }
     //clang-format on
 
-    MachineInstrBuilder MIB = BuildMI(*MBB, MI, MI.getDebugLoc(), get(NewOpc))
+    MachineBasicBlock &MBB = *MI.getParent();
+    MachineInstrBuilder MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
                                   .add(MI.getOperand(0))
                                   .add(MI.getOperand(1))
                                   .add(MI.getOperand(2))

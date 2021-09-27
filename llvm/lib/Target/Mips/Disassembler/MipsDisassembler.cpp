@@ -455,14 +455,6 @@ static DecodeStatus DecodeDAHIDATI(MCInst &MI, InsnType insn, uint64_t Address,
                                    const void *Decoder);
 
 template <typename InsnType>
-static DecodeStatus DecodeDAHIDATIMMR6(MCInst &MI, InsnType insn,
-                                       uint64_t Address, const void *Decoder);
-
-template <typename InsnType>
-static DecodeStatus DecodeDAHIDATI(MCInst &MI, InsnType insn, uint64_t Address,
-                                   const void *Decoder);
-
-template <typename InsnType>
 static DecodeStatus
 DecodeAddiGroupBranch(MCInst &MI, InsnType insn, uint64_t Address,
                       const void *Decoder);

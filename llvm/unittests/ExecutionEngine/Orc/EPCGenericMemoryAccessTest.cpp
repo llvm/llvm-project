@@ -46,15 +46,15 @@ TEST(EPCGenericMemoryAccessTest, MemWrites) {
   auto SelfEPC = cantFail(SelfExecutorProcessControl::Create());
 
   EPCGenericMemoryAccess::FuncAddrs FAs;
-  FAs.WriteUInt8s = ExecutorAddress::fromPtr(
+  FAs.WriteUInt8s = ExecutorAddr::fromPtr(
       &testWriteUInts<tpctypes::UInt8Write, SPSMemoryAccessUInt8Write>);
-  FAs.WriteUInt16s = ExecutorAddress::fromPtr(
+  FAs.WriteUInt16s = ExecutorAddr::fromPtr(
       &testWriteUInts<tpctypes::UInt16Write, SPSMemoryAccessUInt16Write>);
-  FAs.WriteUInt32s = ExecutorAddress::fromPtr(
+  FAs.WriteUInt32s = ExecutorAddr::fromPtr(
       &testWriteUInts<tpctypes::UInt32Write, SPSMemoryAccessUInt32Write>);
-  FAs.WriteUInt64s = ExecutorAddress::fromPtr(
+  FAs.WriteUInt64s = ExecutorAddr::fromPtr(
       &testWriteUInts<tpctypes::UInt64Write, SPSMemoryAccessUInt64Write>);
-  FAs.WriteBuffers = ExecutorAddress::fromPtr(&testWriteBuffers);
+  FAs.WriteBuffers = ExecutorAddr::fromPtr(&testWriteBuffers);
 
   auto MemAccess = std::make_unique<EPCGenericMemoryAccess>(*SelfEPC, FAs);
 

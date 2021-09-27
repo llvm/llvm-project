@@ -90,7 +90,7 @@ function(llvm_ExternalProject_Add name source_dir)
         list(APPEND ARG_TOOLCHAIN_TOOLS llvm-lib)
       else()
         # TODO: These tools don't fully support Mach-O format yet.
-        list(APPEND ARG_TOOLCHAIN_TOOLS llvm-objcopy llvm-strip)
+        list(APPEND ARG_TOOLCHAIN_TOOLS llvm-objcopy llvm-strip llvm-readelf)
       endif()
     endif()
   endif()
@@ -204,6 +204,9 @@ function(llvm_ExternalProject_Add name source_dir)
     if(llvm-strip IN_LIST TOOLCHAIN_TOOLS AND NOT ARG_STRIP_TOOL)
       list(APPEND compiler_args -DCMAKE_STRIP=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-strip${CMAKE_EXECUTABLE_SUFFIX})
     endif()
+    if(llvm-readelf IN_LIST TOOLCHAIN_TOOLS)
+      list(APPEND compiler_args -DCMAKE_READELF=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-readelf${CMAKE_EXECUTABLE_SUFFIX})
+    endif()
     list(APPEND ARG_DEPENDS ${TOOLCHAIN_TOOLS})
   endif()
 
@@ -241,7 +244,8 @@ function(llvm_ExternalProject_Add name source_dir)
                       -DCMAKE_NM=${CMAKE_NM}
                       -DCMAKE_OBJCOPY=${CMAKE_OBJCOPY}
                       -DCMAKE_OBJDUMP=${CMAKE_OBJDUMP}
-                      -DCMAKE_STRIP=${CMAKE_STRIP})
+                      -DCMAKE_STRIP=${CMAKE_STRIP}
+                      -DCMAKE_READELF=${CMAKE_READELF})
     set(llvm_config_path ${LLVM_CONFIG_PATH})
 
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")

@@ -590,11 +590,7 @@ bool TwoAddressInstructionPass::isProfitableToConv3Addr(Register RegA,
 bool TwoAddressInstructionPass::convertInstTo3Addr(
     MachineBasicBlock::iterator &mi, MachineBasicBlock::iterator &nmi,
     Register RegA, Register RegB, unsigned Dist) {
-  // FIXME: Why does convertToThreeAddress() need an iterator reference?
-  MachineFunction::iterator MFI = MBB->getIterator();
-  MachineInstr *NewMI = TII->convertToThreeAddress(MFI, *mi, LV);
-  assert(MBB->getIterator() == MFI &&
-         "convertToThreeAddress changed iterator reference");
+  MachineInstr *NewMI = TII->convertToThreeAddress(*mi, LV);
   if (!NewMI)
     return false;
 
@@ -1287,6 +1283,8 @@ tryInstructionTransform(MachineBasicBlock::iterator &mi,
               if (MO.isReg())
                 OrigRegs.push_back(MO.getReg());
             }
+
+            LIS->RemoveMachineInstrFromMaps(MI);
           }
 
           MI.eraseFromParent();
@@ -1721,6 +1719,9 @@ eliminateRegSequence(MachineBasicBlock::iterator &MBBI) {
     for (int j = MI.getNumOperands() - 1, ee = 0; j > ee; --j)
       MI.RemoveOperand(j);
   } else {
+    if (LIS)
+      LIS->RemoveMachineInstrFromMaps(MI);
+
     LLVM_DEBUG(dbgs() << "Eliminated: " << MI);
     MI.eraseFromParent();
   }

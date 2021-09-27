@@ -218,8 +218,8 @@ define void @trunc256() "min-legal-vector-width"="256" {
 ; VEC256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %A = trunc <8 x i64> undef to <8 x i32>
 ; VEC256-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %B = trunc <8 x i64> undef to <8 x i16>
 ; VEC256-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %C = trunc <8 x i64> undef to <8 x i8>
-; VEC256-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %D = trunc <16 x i32> undef to <16 x i16>
-; VEC256-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %E = trunc <16 x i32> undef to <16 x i8>
+; VEC256-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %D = trunc <16 x i32> undef to <16 x i16>
+; VEC256-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %E = trunc <16 x i32> undef to <16 x i8>
 ; VEC256-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %F = trunc <32 x i16> undef to <32 x i8>
 ; VEC256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;

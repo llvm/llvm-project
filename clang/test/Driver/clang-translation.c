@@ -1,15 +1,18 @@
-// RUN: %clang -target i386-unknown-unknown -### -S -O0 -Os %s -o %t.s -fverbose-asm -funwind-tables -fvisibility=hidden 2>&1 | FileCheck -check-prefix=I386 %s
+// RUN: %clang -target i386-unknown-unknown -### -S -O0 -Os %s -o %t.s -fverbose-asm -fvisibility=hidden 2>&1 | FileCheck -check-prefix=I386 %s
 // I386: "-triple" "i386-unknown-unknown"
 // I386: "-S"
 // I386: "-disable-free"
 // I386: "-mrelocation-model" "static"
 // I386: "-mframe-pointer=all"
-// I386: "-munwind-tables"
+// I386: "-funwind-tables=2"
 // I386: "-Os"
 // I386: "-fvisibility"
 // I386: "hidden"
 // I386: "-o"
 // I386: clang-translation
+
+// RUN: %clang -target i386-unknown-unknown -### -S %s -fasynchronous-unwind-tables -fno-unwind-tables 2>&1 | FileCheck --check-prefix=UNWIND-TABLES %s
+// UNWIND-TABLES: "-funwind-tables=2"
 
 // RUN: %clang -target i386-apple-darwin9 -### -S %s -o %t.s 2>&1 | \
 // RUN: FileCheck -check-prefix=YONAH %s
@@ -75,7 +78,7 @@
 
 // RUN: %clang -target arm64-apple-ios10 -### -S %s -arch arm64 2>&1 | \
 // RUN: FileCheck -check-prefix=ARM64-APPLE %s
-// ARM64-APPLE: -munwind-table
+// ARM64-APPLE: -funwind-tables=2
 
 // RUN: %clang -target arm64-apple-ios10 -### -ffreestanding -S %s -arch arm64 2>&1 | \
 // RUN: FileCheck -check-prefix=ARM64-FREESTANDING-APPLE %s
@@ -83,7 +86,7 @@
 // RUN: %clang -target arm64-apple-ios10 -### -fno-unwind-tables -ffreestanding -S %s -arch arm64 2>&1 | \
 // RUN: FileCheck -check-prefix=ARM64-FREESTANDING-APPLE %s
 //
-// ARM64-FREESTANDING-APPLE-NOT: -munwind-table
+// ARM64-FREESTANDING-APPLE-NOT: -funwind-tables
 
 // RUN: %clang -target arm64-apple-ios10 -### -funwind-tables -S %s -arch arm64 2>&1 | \
 // RUN: FileCheck -check-prefix=ARM64-EXPLICIT-UWTABLE-APPLE %s
@@ -91,15 +94,15 @@
 // RUN: %clang -target arm64-apple-ios10 -### -ffreestanding -funwind-tables -S %s -arch arm64 2>&1 | \
 // RUN: FileCheck -check-prefix=ARM64-EXPLICIT-UWTABLE-APPLE %s
 //
-// ARM64-EXPLICIT-UWTABLE-APPLE: -munwind-table
+// ARM64-EXPLICIT-UWTABLE-APPLE: -funwind-tables
 
 // RUN: %clang -target arm64-apple-ios10 -fno-exceptions -### -S %s -arch arm64 2>&1 | \
 // RUN: FileCheck -check-prefix=ARM64-APPLE-EXCEP %s
-// ARM64-APPLE-EXCEP-NOT: -munwind-table
+// ARM64-APPLE-EXCEP-NOT: -funwind-tables
 
 // RUN: %clang -target armv7k-apple-watchos4.0 -### -S %s -arch armv7k 2>&1 | \
 // RUN: FileCheck -check-prefix=ARMV7K-APPLE %s
-// ARMV7K-APPLE: -munwind-table
+// ARMV7K-APPLE: -funwind-tables
 
 // RUN: %clang -target arm-linux -### -S %s -march=armv5e 2>&1 | \
 // RUN: FileCheck -check-prefix=ARMV5E %s
@@ -299,7 +302,7 @@
 // AMD64: "-cc1"
 // AMD64: "-triple"
 // AMD64: "amd64-unknown-openbsd5.2"
-// AMD64: "-munwind-tables"
+// AMD64: "-funwind-tables=2"
 
 // RUN: %clang -target amd64--mingw32 -### -S %s 2>&1 | \
 // RUN: FileCheck -check-prefix=AMD64-MINGW %s
@@ -307,7 +310,7 @@
 // AMD64-MINGW: "-cc1"
 // AMD64-MINGW: "-triple"
 // AMD64-MINGW: "amd64-unknown-windows-gnu"
-// AMD64-MINGW: "-munwind-tables"
+// AMD64-MINGW: "-funwind-tables=2"
 
 // RUN: %clang -target i686-linux-android -### -S %s 2>&1 \
 // RUN:        --sysroot=%S/Inputs/basic_android_tree/sysroot \

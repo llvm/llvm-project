@@ -1,5 +1,5 @@
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --skip-symbolization --profile-summary-cold-count=0
-| FileCheck %s --input-file %t --check-prefix=CHECK-UNWINDER
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-UNWINDER
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --profile-summary-cold-count=0
 ; RUN: FileCheck %s --input-file %t
 
@@ -11,19 +11,19 @@
 ; CHECK:[main:1 @ foo:3.1 @ bar]:84:0
 ; CHECK: 1: 14
 
-; CHECK-UNWINDER: Binary(inline-cs-noprobe.perfbin)'s Range Counter:
-; CHECK-UNWINDER: main:1 @ foo
-; CHECK-UNWINDER:   (670, 6ad): 1
-; CHECK-UNWINDER:   (67e, 69b): 1
-; CHECK-UNWINDER:   (67e, 6ad): 13
-; CHECK-UNWINDER:   (6bd, 6c8): 14
-; CHECK-UNWINDER: main:1 @ foo:3.1 @ bar
-; CHECK-UNWINDER:   (6af, 6bb): 14
-
-; CHECK-UNWINDER: Binary(inline-cs-noprobe.perfbin)'s Branch Counter:
-; CHECK-UNWINDER: main:1 @ foo
-; CHECK-UNWINDER:   (69b, 670): 1
-; CHECK-UNWINDER:   (6c8, 67e): 15
+; CHECK-UNWINDER: [main:1 @ foo]
+; CHECK-UNWINDER:   4
+; CHECK-UNWINDER:   670-6ad:1
+; CHECK-UNWINDER:   67e-69b:1
+; CHECK-UNWINDER:   67e-6ad:13
+; CHECK-UNWINDER:   6bd-6c8:14
+; CHECK-UNWINDER:   2
+; CHECK-UNWINDER:   69b->670:1
+; CHECK-UNWINDER:   6c8->67e:15
+; CHECK-UNWINDER: [main:1 @ foo:3.1 @ bar]
+; CHECK-UNWINDER:   1
+; CHECK-UNWINDER:   6af-6bb:14
+; CHECK-UNWINDER:   0
 
 ; original code:
 ; clang -O3 -g test.c -o a.out

@@ -1,4 +1,4 @@
-//===- SparsificationPass.cpp - Pass for autogen spares tensor code -------===//
+//===- SparseTensorPasses.cpp - Pass for autogen sparse tensor code -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -114,7 +114,8 @@ struct SparseTensorConversionPass
     });
     // The following operations and dialects may be introduced by the
     // rewriting rules, and are therefore marked as legal.
-    target.addLegalOp<ConstantOp, tensor::CastOp, tensor::ExtractOp>();
+    target.addLegalOp<ConstantOp, tensor::CastOp, tensor::ExtractOp, CmpFOp,
+                      CmpIOp>();
     target.addLegalDialect<scf::SCFDialect, LLVM::LLVMDialect,
                            memref::MemRefDialect>();
     // Populate with rules and apply rewriting rules.

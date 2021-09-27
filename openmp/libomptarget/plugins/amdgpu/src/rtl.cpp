@@ -451,6 +451,17 @@ class RTLDeviceInfoTy {
   HSALifetime HSA; // First field => constructed first and destructed last
   std::vector<std::list<FuncOrGblEntryTy>> FuncGblEntries;
 
+  struct QueueDeleter {
+    void operator()(hsa_queue_t *Q) {
+      if (Q) {
+        hsa_status_t Err = hsa_queue_destroy(Q);
+        if (Err != HSA_STATUS_SUCCESS) {
+          DP("Error destroying hsa queue: %s\n", get_error_string(Err));
+        }
+      }
+    }
+  };
+
 public:
   // load binary populates symbol tables and mutates various global state
   // run uses those symbol tables
@@ -460,7 +471,8 @@ public:
 
   // GPU devices
   std::vector<hsa_agent_t> HSAAgents;
-  std::vector<hsa_queue_t *> HSAQueues; // one per gpu
+  std::vector<std::unique_ptr<hsa_queue_t, QueueDeleter>>
+      HSAQueues; // one per gpu
 
   // CPUs
   std::vector<hsa_agent_t> CPUAgents;
@@ -774,10 +786,6 @@ public:
     }
 
     for (int i = 0; i < NumberOfDevices; i++) {
-      HSAQueues[i] = nullptr;
-    }
-
-    for (int i = 0; i < NumberOfDevices; i++) {
       uint32_t queue_size = 0;
       {
         hsa_status_t err = hsa_agent_get_info(
@@ -792,12 +800,16 @@ public:
         }
       }
 
-      hsa_status_t rc = hsa_queue_create(
-          HSAAgents[i], queue_size, HSA_QUEUE_TYPE_MULTI, callbackQueue, NULL,
-          UINT32_MAX, UINT32_MAX, &HSAQueues[i]);
-      if (rc != HSA_STATUS_SUCCESS) {
-        DP("Failed to create HSA queue %d\n", i);
-        return;
+      {
+        hsa_queue_t *Q = nullptr;
+        hsa_status_t rc =
+            hsa_queue_create(HSAAgents[i], queue_size, HSA_QUEUE_TYPE_MULTI,
+                             callbackQueue, NULL, UINT32_MAX, UINT32_MAX, &Q);
+        if (rc != HSA_STATUS_SUCCESS) {
+          DP("Failed to create HSA queue %d\n", i);
+          return;
+        }
+        HSAQueues[i].reset(Q);
       }
 
       deviceStateStore[i] = {nullptr, 0};
@@ -2149,7 +2161,7 @@ int32_t __tgt_rtl_run_target_team_region_locked(
 
   // Run on the device.
   {
-    hsa_queue_t *queue = DeviceInfo.HSAQueues[device_id];
+    hsa_queue_t *queue = DeviceInfo.HSAQueues[device_id].get();
     if (!queue) {
       return OFFLOAD_FAIL;
     }

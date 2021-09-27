@@ -1,4 +1,4 @@
-//===------- ResourceManager.cpp - Abstract executor resource mgmt --------===//
+//===- SimpleExecuorMemoryManagare.cpp - Simple executor-side memory mgmt -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,7 +21,7 @@ SimpleExecutorMemoryManager::~SimpleExecutorMemoryManager() {
   assert(Allocations.empty() && "shutdown not called?");
 }
 
-Expected<ExecutorAddress> SimpleExecutorMemoryManager::allocate(uint64_t Size) {
+Expected<ExecutorAddr> SimpleExecutorMemoryManager::allocate(uint64_t Size) {
   std::error_code EC;
   auto MB = sys::Memory::allocateMappedMemory(
       Size, 0, sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC);
@@ -30,13 +30,23 @@ Expected<ExecutorAddress> SimpleExecutorMemoryManager::allocate(uint64_t Size) {
   std::lock_guard<std::mutex> Lock(M);
   assert(!Allocations.count(MB.base()) && "Duplicate allocation addr");
   Allocations[MB.base()].Size = Size;
-  return ExecutorAddress::fromPtr(MB.base());
+  return ExecutorAddr::fromPtr(MB.base());
 }
 
 Error SimpleExecutorMemoryManager::finalize(tpctypes::FinalizeRequest &FR) {
-  ExecutorAddress Base(~0ULL);
+  ExecutorAddr Base(~0ULL);
   std::vector<tpctypes::SupportFunctionCall> DeallocationActions;
   size_t SuccessfulFinalizationActions = 0;
+
+  if (FR.Segments.empty()) {
+    // NOTE: Finalizing nothing is currently a no-op. Should it be an error?
+    if (FR.Actions.empty())
+      return Error::success();
+    else
+      return make_error<StringError>("Finalization actions attached to empty "
+                                     "finalization request",
+                                     inconvertibleErrorCode());
+  }
 
   for (auto &Seg : FR.Segments)
     Base = std::min(Base, Seg.Addr);
@@ -58,7 +68,7 @@ Error SimpleExecutorMemoryManager::finalize(tpctypes::FinalizeRequest &FR) {
     AllocSize = I->second.Size;
     I->second.DeallocationActions = std::move(DeallocationActions);
   }
-  ExecutorAddress AllocEnd = Base + ExecutorAddrDiff(AllocSize);
+  ExecutorAddr AllocEnd = Base + ExecutorAddrDiff(AllocSize);
 
   // Bail-out function: this will run deallocation actions corresponding to any
   // completed finalization actions, then deallocate memory.
@@ -106,7 +116,7 @@ Error SimpleExecutorMemoryManager::finalize(tpctypes::FinalizeRequest &FR) {
                   "exceeds segment size ({2:x} bytes)",
                   Seg.Addr.getValue(), Seg.Content.size(), Seg.Size),
           inconvertibleErrorCode()));
-    ExecutorAddress SegEnd = Seg.Addr + ExecutorAddrDiff(Seg.Size);
+    ExecutorAddr SegEnd = Seg.Addr + ExecutorAddrDiff(Seg.Size);
     if (LLVM_UNLIKELY(Seg.Addr < Base || SegEnd > AllocEnd))
       return BailOut(make_error<StringError>(
           formatv("Segment {0:x} -- {1:x} crosses boundary of "
@@ -138,7 +148,7 @@ Error SimpleExecutorMemoryManager::finalize(tpctypes::FinalizeRequest &FR) {
 }
 
 Error SimpleExecutorMemoryManager::deallocate(
-    const std::vector<ExecutorAddress> &Bases) {
+    const std::vector<ExecutorAddr> &Bases) {
   std::vector<std::pair<void *, Allocation>> AllocPairs;
   AllocPairs.reserve(Bases.size());
 
@@ -187,15 +197,14 @@ Error SimpleExecutorMemoryManager::shutdown() {
 }
 
 void SimpleExecutorMemoryManager::addBootstrapSymbols(
-    StringMap<ExecutorAddress> &M) {
-  M[rt::SimpleExecutorMemoryManagerInstanceName] =
-      ExecutorAddress::fromPtr(this);
+    StringMap<ExecutorAddr> &M) {
+  M[rt::SimpleExecutorMemoryManagerInstanceName] = ExecutorAddr::fromPtr(this);
   M[rt::SimpleExecutorMemoryManagerReserveWrapperName] =
-      ExecutorAddress::fromPtr(&reserveWrapper);
+      ExecutorAddr::fromPtr(&reserveWrapper);
   M[rt::SimpleExecutorMemoryManagerFinalizeWrapperName] =
-      ExecutorAddress::fromPtr(&finalizeWrapper);
+      ExecutorAddr::fromPtr(&finalizeWrapper);
   M[rt::SimpleExecutorMemoryManagerDeallocateWrapperName] =
-      ExecutorAddress::fromPtr(&deallocateWrapper);
+      ExecutorAddr::fromPtr(&deallocateWrapper);
 }
 
 Error SimpleExecutorMemoryManager::deallocateImpl(void *Base, Allocation &A) {
