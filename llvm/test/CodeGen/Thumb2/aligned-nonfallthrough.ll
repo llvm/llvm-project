@@ -14,7 +14,6 @@ define i32 @loop(i32* nocapture readonly %x) {
 ; CHECK-NEXT:    ldr r2, [r0], #4
 ; CHECK-NEXT:    add r1, r2
 ; CHECK-NEXT:    le lr, .LBB0_1
-; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    pop {r7, pc}
@@ -54,7 +53,6 @@ define i64 @loopif(i32* nocapture readonly %x, i32 %y, i32 %n) {
 ; CHECK-NEXT:    ldr r2, [r12], #4
 ; CHECK-NEXT:    smlal r0, r3, r2, r1
 ; CHECK-NEXT:    le lr, .LBB1_2
-; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    mov r1, r3
 ; CHECK-NEXT:    pop {r7, pc}
