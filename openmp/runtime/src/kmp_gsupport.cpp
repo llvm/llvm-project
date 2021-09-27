@@ -1234,7 +1234,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASK)(void (*func)(void *), void *data,
 
   // The low-order bit is the "untied" flag
   if (!(gomp_flags & KMP_GOMP_TASK_UNTIED_FLAG)) {
-    input_flags->tiedness = 1;
+    input_flags->tiedness = TASK_TIED;
   }
   // The second low-order bit is the "final" flag
   if (gomp_flags & KMP_GOMP_TASK_FINAL_FLAG) {
@@ -1766,7 +1766,7 @@ void __GOMP_taskloop(void (*func)(void *), void *data,
   KMP_ASSERT(arg_align > 0);
   // The low-order bit is the "untied" flag
   if (!(gomp_flags & 1)) {
-    input_flags->tiedness = 1;
+    input_flags->tiedness = TASK_TIED;
   }
   // The second low-order bit is the "final" flag
   if (gomp_flags & 2) {
