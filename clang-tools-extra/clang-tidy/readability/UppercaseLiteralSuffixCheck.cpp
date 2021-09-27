@@ -13,6 +13,7 @@
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
+#include <cctype>
 
 using namespace clang::ast_matchers;
 
