@@ -70,7 +70,7 @@ std::int32_t RTNAME(ArgumentValue)(
 
     std::int64_t toCopy{
         std::min(argLen, static_cast<std::int64_t>(value->ElementBytes()))};
-    std::strncpy(value->OffsetElement(), executionEnvironment.argv[n], toCopy);
+    std::memcpy(value->OffsetElement(), executionEnvironment.argv[n], toCopy);
 
     if (argLen > toCopy) {
       return ToErrmsg(errmsg, StatValueTooShort);

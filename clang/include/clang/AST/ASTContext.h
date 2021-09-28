@@ -3239,31 +3239,10 @@ public:
 
   StringRef getCUIDHash() const;
 
-  void AddSYCLKernelNamingDecl(const CXXRecordDecl *RD);
-  bool IsSYCLKernelNamingDecl(const NamedDecl *RD) const;
-  unsigned GetSYCLKernelNamingIndex(const NamedDecl *RD);
-  /// A SourceLocation to store whether we have evaluated a kernel name already,
-  /// and where it happened.  If so, we need to diagnose an illegal use of the
-  /// builtin.
-  llvm::MapVector<const SYCLUniqueStableNameExpr *, std::string>
-      SYCLUniqueStableNameEvaluatedValues;
-
 private:
   /// All OMPTraitInfo objects live in this collection, one per
   /// `pragma omp [begin] declare variant` directive.
   SmallVector<std::unique_ptr<OMPTraitInfo>, 4> OMPTraitInfoVector;
-
-  /// A list of the (right now just lambda decls) declarations required to
-  /// name all the SYCL kernels in the translation unit, so that we can get the
-  /// correct kernel name, as well as implement
-  /// __builtin_sycl_unique_stable_name.
-  llvm::DenseMap<const DeclContext *,
-                 llvm::SmallPtrSet<const CXXRecordDecl *, 4>>
-      SYCLKernelNamingTypes;
-  std::unique_ptr<ItaniumMangleContext> SYCLKernelFilterContext;
-  void FilterSYCLKernelNamingDecls(
-      const CXXRecordDecl *RD,
-      llvm::SmallVectorImpl<const CXXRecordDecl *> &Decls);
 };
 
 /// Insertion operator for diagnostics.
