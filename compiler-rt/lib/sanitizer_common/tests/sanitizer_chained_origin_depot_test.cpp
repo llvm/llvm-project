@@ -68,21 +68,21 @@ TEST(SanitizerCommon, ChainedOriginDepotDifferent) {
 }
 
 TEST(SanitizerCommon, ChainedOriginDepotStats) {
-  StackDepotStats stats0 = *chainedOriginDepot.GetStats();
+  StackDepotStats stats0 = chainedOriginDepot.GetStats();
 
   u32 new_id;
   EXPECT_TRUE(chainedOriginDepot.Put(33, 34, &new_id));
-  StackDepotStats stats1 = *chainedOriginDepot.GetStats();
+  StackDepotStats stats1 = chainedOriginDepot.GetStats();
   EXPECT_EQ(stats1.n_uniq_ids, stats0.n_uniq_ids + 1);
   EXPECT_GT(stats1.allocated, stats0.allocated);
 
   EXPECT_FALSE(chainedOriginDepot.Put(33, 34, &new_id));
-  StackDepotStats stats2 = *chainedOriginDepot.GetStats();
+  StackDepotStats stats2 = chainedOriginDepot.GetStats();
   EXPECT_EQ(stats2.n_uniq_ids, stats1.n_uniq_ids);
   EXPECT_EQ(stats2.allocated, stats1.allocated);
 
   EXPECT_TRUE(chainedOriginDepot.Put(35, 36, &new_id));
-  StackDepotStats stats3 = *chainedOriginDepot.GetStats();
+  StackDepotStats stats3 = chainedOriginDepot.GetStats();
   EXPECT_EQ(stats3.n_uniq_ids, stats2.n_uniq_ids + 1);
   EXPECT_GT(stats3.allocated, stats2.allocated);
 }

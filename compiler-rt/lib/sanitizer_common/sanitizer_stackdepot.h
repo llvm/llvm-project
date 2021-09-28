@@ -33,7 +33,7 @@ struct StackDepotHandle {
 
 const int kStackDepotMaxUseCount = 1U << (SANITIZER_ANDROID ? 16 : 20);
 
-StackDepotStats *StackDepotGetStats();
+StackDepotStats StackDepotGetStats();
 u32 StackDepotPut(StackTrace stack);
 StackDepotHandle StackDepotPut_WithHandle(StackTrace stack);
 // Retrieves a stored stack trace by the id.

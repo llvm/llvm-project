@@ -85,7 +85,9 @@ ChainedOriginDepot::ChainedOriginDepotNode::get_handle() {
 
 ChainedOriginDepot::ChainedOriginDepot() {}
 
-StackDepotStats *ChainedOriginDepot::GetStats() { return depot.GetStats(); }
+StackDepotStats ChainedOriginDepot::GetStats() const {
+  return depot.GetStats();
+}
 
 bool ChainedOriginDepot::Put(u32 here_id, u32 prev_id, u32 *new_id) {
   ChainedOriginDepotDesc desc = {here_id, prev_id};

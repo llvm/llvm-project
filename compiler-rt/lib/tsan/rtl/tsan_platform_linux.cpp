@@ -124,13 +124,13 @@ void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime_ns) {
   internal_memset(mem, 0, sizeof(mem));
   GetMemoryProfile(FillProfileCallback, mem, MemCount);
   auto meta = ctx->metamap.GetMemoryStats();
-  StackDepotStats *stacks = StackDepotGetStats();
+  StackDepotStats stacks = StackDepotGetStats();
   uptr nthread, nlive;
   ctx->thread_registry.GetNumberOfThreads(&nthread, &nlive);
   uptr internal_stats[AllocatorStatCount];
   internal_allocator()->GetStats(internal_stats);
   // All these are allocated from the common mmap region.
-  mem[MemMmap] -= meta.mem_block + meta.sync_obj + stacks->allocated +
+  mem[MemMmap] -= meta.mem_block + meta.sync_obj + stacks.allocated +
                   internal_stats[AllocatorStatMapped];
   if (s64(mem[MemMmap]) < 0)
     mem[MemMmap] = 0;
@@ -143,8 +143,8 @@ void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime_ns) {
       mem[MemShadow] >> 20, mem[MemMeta] >> 20, mem[MemFile] >> 20,
       mem[MemMmap] >> 20, mem[MemTrace] >> 20, mem[MemHeap] >> 20,
       mem[MemOther] >> 20, internal_stats[AllocatorStatMapped] >> 20,
-      meta.mem_block >> 20, meta.sync_obj >> 20, stacks->allocated >> 20,
-      stacks->n_uniq_ids, nlive, nthread);
+      meta.mem_block >> 20, meta.sync_obj >> 20, stacks.allocated >> 20,
+      stacks.n_uniq_ids, nlive, nthread);
 }
 
 #  if SANITIZER_LINUX

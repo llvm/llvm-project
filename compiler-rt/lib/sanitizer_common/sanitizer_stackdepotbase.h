@@ -32,7 +32,7 @@ class StackDepotBase {
   // Retrieves a stored stack trace by the id.
   args_type Get(u32 id);
 
-  StackDepotStats *GetStats() { return &stats; }
+  StackDepotStats GetStats() const { return stats; }
 
   void LockAll();
   void UnlockAll();
