@@ -165,7 +165,8 @@ TEST_F(HeadersTest, CollectRewrittenAndResolved) {
                   AllOf(Written("\"sub/bar.h\""), Resolved(BarHeader))));
   EXPECT_THAT(Includes.includeDepth(getID(MainFile, Includes)),
               UnorderedElementsAre(Distance(getID(MainFile, Includes), 0u),
-                                   Distance(getID(BarHeader, Includes), 1u)));
+                                   Distance(getID(BarHeader, Includes), 1u)))
+      << Includes.dump();
 }
 
 TEST_F(HeadersTest, OnlyCollectInclusionsInMain) {
@@ -179,17 +180,19 @@ TEST_F(HeadersTest, OnlyCollectInclusionsInMain) {
 #include "bar.h"
 )cpp";
   auto Includes = collectIncludes();
-  EXPECT_THAT(Includes.MainFileIncludes,
-              UnorderedElementsAre(
-                  AllOf(Written("\"bar.h\""), Resolved(BarHeader))));
+  EXPECT_THAT(
+      Includes.MainFileIncludes,
+      UnorderedElementsAre(AllOf(Written("\"bar.h\""), Resolved(BarHeader))));
   EXPECT_THAT(Includes.includeDepth(getID(MainFile, Includes)),
               UnorderedElementsAre(Distance(getID(MainFile, Includes), 0u),
                                    Distance(getID(BarHeader, Includes), 1u),
-                                   Distance(getID(BazHeader, Includes), 2u)));
+                                   Distance(getID(BazHeader, Includes), 2u)))
+      << Includes.dump();
   // includeDepth() also works for non-main files.
   EXPECT_THAT(Includes.includeDepth(getID(BarHeader, Includes)),
               UnorderedElementsAre(Distance(getID(BarHeader, Includes), 0u),
-                                   Distance(getID(BazHeader, Includes), 1u)));
+                                   Distance(getID(BazHeader, Includes), 1u)))
+      << Includes.dump();
 }
 
 TEST_F(HeadersTest, PreambleIncludesPresentOnce) {
@@ -240,7 +243,7 @@ TEST_F(HeadersTest, IncludedFilesGraph) {
                    {getID(BarHeader, Includes), getID(FooHeader, Includes)}},
                   {getID(FooHeader, Includes),
                    {getID(BarHeader, Includes), getID(BazHeader, Includes)}}};
-  EXPECT_EQ(Includes.IncludeChildren, Expected);
+  EXPECT_EQ(Includes.IncludeChildren, Expected) << Includes.dump();
 }
 
 TEST_F(HeadersTest, IncludeDirective) {
