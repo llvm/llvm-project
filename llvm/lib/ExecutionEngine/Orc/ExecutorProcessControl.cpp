@@ -93,7 +93,7 @@ SelfExecutorProcessControl::lookupSymbols(ArrayRef<LookupRequest> Request) {
         // FIXME: Collect all failing symbols before erroring out.
         SymbolNameVector MissingSymbols;
         MissingSymbols.push_back(Sym);
-        return make_error<SymbolsNotFound>(std::move(MissingSymbols));
+        return make_error<SymbolsNotFound>(SSP, std::move(MissingSymbols));
       }
       R.back().push_back(pointerToJITTargetAddress(Addr));
     }
@@ -103,18 +103,18 @@ SelfExecutorProcessControl::lookupSymbols(ArrayRef<LookupRequest> Request) {
 }
 
 Expected<int32_t>
-SelfExecutorProcessControl::runAsMain(JITTargetAddress MainFnAddr,
+SelfExecutorProcessControl::runAsMain(ExecutorAddr MainFnAddr,
                                       ArrayRef<std::string> Args) {
   using MainTy = int (*)(int, char *[]);
-  return orc::runAsMain(jitTargetAddressToFunction<MainTy>(MainFnAddr), Args);
+  return orc::runAsMain(MainFnAddr.toPtr<MainTy>(), Args);
 }
 
-void SelfExecutorProcessControl::callWrapperAsync(
-    SendResultFunction SendResult, JITTargetAddress WrapperFnAddr,
-    ArrayRef<char> ArgBuffer) {
+void SelfExecutorProcessControl::callWrapperAsync(SendResultFunction SendResult,
+                                                  ExecutorAddr WrapperFnAddr,
+                                                  ArrayRef<char> ArgBuffer) {
   using WrapperFnTy =
       shared::detail::CWrapperFunctionResult (*)(const char *Data, size_t Size);
-  auto *WrapperFn = jitTargetAddressToFunction<WrapperFnTy>(WrapperFnAddr);
+  auto *WrapperFn = WrapperFnAddr.toPtr<WrapperFnTy>();
   SendResult(WrapperFn(ArgBuffer.data(), ArgBuffer.size()));
 }
 

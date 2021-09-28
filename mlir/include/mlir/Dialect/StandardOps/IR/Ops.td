@@ -1248,6 +1248,152 @@ def IndexCastOp : ArithmeticCastOp<"index_cast"> {
 }
 
 //===----------------------------------------------------------------------===//
+// MaxFOp
+//===----------------------------------------------------------------------===//
+
+def MaxFOp : FloatBinaryOp<"maxf"> {
+  let summary = "floating-point maximum operation";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `maxf` ssa-use `,` ssa-use `:` type
+    ```
+
+    Returns the maximum of the two arguments, treating -0.0 as less than +0.0.
+    If one of the arguments is NaN, then the result is also NaN.
+
+    Example:
+
+    ```mlir
+    // Scalar floating-point maximum.
+    %a = maxf %b, %c : f64
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MaxSIOp
+//===----------------------------------------------------------------------===//
+
+def MaxSIOp : IntBinaryOp<"maxsi"> {
+  let summary = "signed integer maximum operation";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `maxsi` ssa-use `,` ssa-use `:` type
+    ```
+
+    Returns the larger of %a and %b comparing the values as signed integers.
+
+    Example:
+
+    ```mlir
+    // Scalar signed integer maximum.
+    %a = maxsi %b, %c : i64
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MaxUIOp
+//===----------------------------------------------------------------------===//
+
+def MaxUIOp : IntBinaryOp<"maxui"> {
+  let summary = "unsigned integer maximum operation";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `maxui` ssa-use `,` ssa-use `:` type
+    ```
+
+    Returns the larger of %a and %b comparing the values as unsigned integers.
+
+    Example:
+
+    ```mlir
+    // Scalar unsigned integer maximum.
+    %a = maxui %b, %c : i64
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MinFOp
+//===----------------------------------------------------------------------===//
+
+def MinFOp : FloatBinaryOp<"minf"> {
+  let summary = "floating-point minimum operation";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `minf` ssa-use `,` ssa-use `:` type
+    ```
+
+    Returns the minimum of the two arguments, treating -0.0 as less than +0.0.
+    If one of the arguments is NaN, then the result is also NaN.
+
+    Example:
+
+    ```mlir
+    // Scalar floating-point minimum.
+    %a = minf %b, %c : f64
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MinSIOp
+//===----------------------------------------------------------------------===//
+
+def MinSIOp : IntBinaryOp<"minsi"> {
+  let summary = "signed integer minimum operation";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `minsi` ssa-use `,` ssa-use `:` type
+    ```
+
+    Returns the smaller of %a and %b comparing the values as signed integers.
+
+    Example:
+
+    ```mlir
+    // Scalar signed integer minimum.
+    %a = minsi %b, %c : i64
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MinUIOp
+//===----------------------------------------------------------------------===//
+
+def MinUIOp : IntBinaryOp<"minui"> {
+  let summary = "unsigned integer minimum operation";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `minui` ssa-use `,` ssa-use `:` type
+    ```
+
+    Returns the smaller of %a and %b comparing the values as unsigned integers.
+
+    Example:
+
+    ```mlir
+    // Scalar unsigned integer minimum.
+    %a = minui %b, %c : i64
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // MulFOp
 //===----------------------------------------------------------------------===//
 
