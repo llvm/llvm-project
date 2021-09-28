@@ -437,7 +437,12 @@ public:
       uint64_t SlabRemainingSize = SlabRemaining.allocatedSize();
 
       if (SegmentSize > SlabRemainingSize)
-        return make_error<StringError>("Slab allocator out of memory",
+        return make_error<StringError>("Slab allocator out of memory: "
+                                       "request for " +
+                                       formatv("{0:x}", SegmentSize) +
+                                       " bytes exceeds remaining capacity of " +
+                                       formatv("{0:x}", SlabRemainingSize) +
+                                       " bytes",
                                        inconvertibleErrorCode());
 
       sys::MemoryBlock SegMem(SlabBase, SegmentSize);
