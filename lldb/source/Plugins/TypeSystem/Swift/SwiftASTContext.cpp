@@ -2015,7 +2015,6 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     pool.wait();
   }
 
-  Status module_error;
   for (size_t mi = 0; mi != num_images; ++mi) {
     ModuleSP module_sp = target.GetImages().GetModuleAtIndex(mi);
 
@@ -2033,46 +2032,60 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
 
     auto *module_swift_ast =
         llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
-    if (!module_swift_ast || module_swift_ast->HasFatalErrors() ||
-        !module_swift_ast->GetClangImporter()) {
-      // Make sure we warn about this module load failure, the one
-      // that comes from loading types often gets swallowed up and not
-      // seen, this is the only reliable point where we can show this.
-      // But only do it once per UUID so we don't overwhelm the user
-      // with warnings.
-      UUID module_uuid(module_sp->GetUUID());
-      bool unique_message =
-          target.RegisterSwiftContextMessageKey(module_uuid.GetAsString());
-      if (unique_message) {
-        std::string buf;
-        {
-          llvm::raw_string_ostream ss(buf);
-          module_sp->GetDescription(ss, eDescriptionLevelBrief);
-          if (module_swift_ast && module_swift_ast->HasFatalErrors())
-            ss << ": "
-               << module_swift_ast->GetFatalErrors().AsCString("unknown error");
-        }
-        target.GetDebugger().GetErrorStreamSP()->Printf(
-            "Error while loading Swift module:\n%s\n"
-            "Debug info from this module will be unavailable in the "
-            "debugger.\n\n",
-            buf.c_str());
-      }
-
+    if (module_swift_ast && !module_swift_ast->HasFatalErrors() &&
+        module_swift_ast->GetClangImporter())
       continue;
+    // Make sure we warn about this module load failure, the one
+    // that comes from loading types often gets swallowed up and not
+    // seen, this is the only reliable point where we can show this.
+    // But only do it once per UUID so we don't overwhelm the user
+    // with warnings.
+    UUID module_uuid(module_sp->GetUUID());
+    bool unique_message =
+        target.RegisterSwiftContextMessageKey(module_uuid.GetAsString());
+    if (!unique_message)
+      continue;
+    std::string buf;
+    {
+      llvm::raw_string_ostream ss(buf);
+      module_sp->GetDescription(ss, eDescriptionLevelBrief);
+      if (module_swift_ast && module_swift_ast->HasFatalErrors())
+        ss << ": "
+           << module_swift_ast->GetFatalErrors().AsCString("unknown error");
     }
+    target.GetDebugger().GetErrorStreamSP()->Printf(
+        "Error while loading Swift module:\n%s\n"
+        "Debug info from this module will be unavailable in the debugger.\n\n",
+        buf.c_str());
+  }
 
-    if (!handled_sdk_path) {
-      StringRef platform_sdk_path = module_swift_ast->GetPlatformSDKPath();
+  if (!handled_sdk_path) {
+    for (size_t mi = 0; mi != num_images; ++mi) {
+      ModuleSP module_sp = target.GetImages().GetModuleAtIndex(mi);
+      if (!HasSwiftModules(*module_sp))
+        continue;
 
-      if (!platform_sdk_path.empty()) {
-        handled_sdk_path = true;
-        swift_ast_sp->SetPlatformSDKPath(platform_sdk_path);
+      auto type_system_or_err =
+          module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
+      if (!type_system_or_err) {
+        llvm::consumeError(type_system_or_err.takeError());
+        continue;
       }
-    }
 
-    if (handled_sdk_path)
+      auto *module_swift_ast =
+          llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
+      if (!module_swift_ast || module_swift_ast->HasFatalErrors() ||
+          !module_swift_ast->GetClangImporter())
+        continue;
+
+      StringRef platform_sdk_path = module_swift_ast->GetPlatformSDKPath();
+      if (platform_sdk_path.empty())
+        continue;
+
+      handled_sdk_path = true;
+      swift_ast_sp->SetPlatformSDKPath(platform_sdk_path);
       break;
+    }
   }
 
   // First, prime the compiler with the options from the main executable:
