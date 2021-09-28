@@ -352,6 +352,55 @@ def fir_LoadOp : fir_OneResultOp<"load"> {
   }];
 }
 
+def fir_SaveResultOp : fir_Op<"save_result", [AttrSizedOperandSegments]> {
+  let summary = [{
+    save an array, box, or record function result SSA-value to a memory location
+  }];
+
+  let description = [{
+    Save the result of a function returning an array, box, or record type value
+    into a memory location given the shape and length parameters of the result.
+
+    Function results of type fir.box, fir.array, or fir.rec are abstract values
+    that require a storage to be manipulated on the caller side. This operation
+    allows associating such abstract result to a storage. In later lowering of
+    the function interfaces, this storage might be used to pass the result in
+    memory.
+
+    For arrays, result, it is required to provide the shape of the result. For
+    character arrays and derived types with length parameters, the length
+    parameter values must be provided.
+
+    The fir.save_result associated to a function call must immediately follow
+    the call and be in the same block.
+
+    ```mlir
+      %buffer = fir.alloca fir.array<?xf32>, %c100
+      %shape = fir.shape %c100
+      %array_result = fir.call @foo() : () -> fir.array<?xf32>
+      fir.save_result %array_result to %buffer(%shape)
+      %coor = fir.array_coor %buffer%(%shape), %c5
+      %fifth_element = fir.load %coor : f32
+    ```
+
+    The above fir.save_result allows saving a fir.array function result into
+    a buffer to later access its 5th element.
+
+  }];
+
+  let arguments = (ins ArrayOrBoxOrRecord:$value,
+                   Arg<AnyReferenceLike, "", [MemWrite]>:$memref,
+                   Optional<AnyShapeType>:$shape,
+                   Variadic<AnyIntegerType>:$typeparams);
+
+  let assemblyFormat = [{
+    $value `to` $memref (`(` $shape^ `)`)? (`typeparams` $typeparams^)?
+    attr-dict `:` type(operands)
+  }];
+
+  let verifier = [{ return ::verify(*this); }];
+}
+
 def fir_StoreOp : fir_Op<"store", []> {
   let summary = "store an SSA-value to a memory location";
 

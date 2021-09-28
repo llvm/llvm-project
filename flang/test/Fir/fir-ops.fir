@@ -671,3 +671,14 @@ func @test_rebox(%arg0: !fir.box<!fir.array<?xf32>>) {
   fir.call @bar_rebox_test(%4) : (!fir.box<!fir.array<?x?xf32>>) -> ()
   return
 }
+
+// CHECK-LABEL: @test_save_result(
+func @test_save_result(%buffer: !fir.ref<!fir.array<?x!fir.char<1,?>>>) {
+  %c100 = constant 100 : index
+  %c50 = constant 50 : index
+  %shape = fir.shape %c100 : (index) -> !fir.shape<1>
+  %res = fir.call @array_func() : () -> !fir.array<?x!fir.char<1,?>>
+  // CHECK: fir.save_result %{{.*}} to %{{.*}}(%{{.*}}) typeparams %{{.*}} : !fir.array<?x!fir.char<1,?>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index
+  fir.save_result %res to %buffer(%shape) typeparams %c50 : !fir.array<?x!fir.char<1,?>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index
+  return
+}
