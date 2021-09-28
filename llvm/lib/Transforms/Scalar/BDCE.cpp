@@ -93,7 +93,7 @@ static void clearAssumptionsOfUsers(Instruction *I, DemandedBits &DB) {
 static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
   SmallVector<Instruction*, 128> Worklist;
   bool Changed = false;
-  for (Instruction &I : llvm::reverse(instructions(F))) {
+  for (Instruction &I : instructions(F)) {
     // If the instruction has side effects and no non-dbg uses,
     // skip it. This way we avoid computing known bits on an instruction
     // that will not help us.
@@ -108,6 +108,7 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
          wouldInstructionBeTriviallyDead(&I))) {
       salvageDebugInfo(I);
       Worklist.push_back(&I);
+      I.dropAllReferences();
       Changed = true;
       continue;
     }
@@ -153,9 +154,6 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
       Changed = true;
     }
   }
-
-  for (Instruction *&I : Worklist)
-    I->dropAllReferences();
 
   for (Instruction *&I : Worklist) {
     ++NumRemoved;
