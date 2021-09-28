@@ -817,6 +817,8 @@ CUSTOM_BUILTIN(mma_lxvp, vsx_lxvp, "W256SLiW256C*", false)
 CUSTOM_BUILTIN(mma_stxvp, vsx_stxvp, "vW256SLiW256C*", false)
 CUSTOM_BUILTIN(mma_assemble_pair, vsx_assemble_pair, "vW256*VV", false)
 CUSTOM_BUILTIN(mma_disassemble_pair, vsx_disassemble_pair, "vv*W256*", false)
+CUSTOM_BUILTIN(vsx_build_pair, vsx_assemble_pair,  "vW256*VV", false)
+CUSTOM_BUILTIN(mma_build_acc, mma_assemble_acc, "vW512*VVVV", false)
 
 // UNALIASED_CUSTOM_BUILTIN macro is used for built-ins that have
 // the same name as that of the intrinsic they generate, i.e. the
