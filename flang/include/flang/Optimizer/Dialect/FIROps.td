@@ -2214,18 +2214,35 @@ def fir_InsertOnRangeOp : fir_OneResultOp<"insert_on_range", [NoSideEffect]> {
   let summary = "insert sub-value into a range on an existing sequence";
 
   let description = [{
-    Insert a constant value into an entity with an array type. Returns a
-    new ssa value where the range of offsets from the original array have been
-    replaced with the constant. The result is an array type entity.
+    Insert copies of a value into an entity with an array type.
+    Returns a new ssa value with the same type as the original entity.
+    The values are inserted at a contiguous range of indices in Fortran
+    row-to-column element order as specified by lower and upper bound
+    coordinates.
+
+    ```mlir
+      %a = fir.undefined !fir.array<10x10xf32>
+      %c = constant 3.0 : f32
+      %1 = fir.insert_on_range %a, %c, [0 : index, 7 : index, 0 : index, 2 : index] : (!fir.array<10x10xf32>, f32) -> !fir.array<10x10xf32>
+    ```
+
+    The first 28 elements of %1, with coordinates from (0,0) to (7,2), have
+    the value 3.0.
   }];
 
-  let arguments = (ins fir_SequenceType:$seq, AnyType:$val,
-                       Variadic<Index>:$coor);
+  let arguments = (ins fir_SequenceType:$seq, AnyType:$val, ArrayAttr:$coor);
   let results = (outs fir_SequenceType);
 
   let assemblyFormat = [{
-    operands attr-dict `:` functional-type(operands, results)
+    $seq `,` $val `,` $coor attr-dict `:` functional-type(operands, results)
   }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$rty, "mlir::Value":$adt, "mlir::Value":$val,
+      "llvm::ArrayRef<mlir::Value>":$vcoor)>
+  ];
+
+  let verifier = [{ return ::verify(*this); }];
 }
 
 def fir_LenParamIndexOp : fir_OneResultOp<"len_param_index", [NoSideEffect]> {
