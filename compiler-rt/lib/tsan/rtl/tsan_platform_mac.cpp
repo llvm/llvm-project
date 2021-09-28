@@ -283,13 +283,17 @@ uptr ExtractLongJmpSp(uptr *env) {
 }
 
 #if !SANITIZER_GO
+extern "C" void __tsan_tls_initialization() {}
+
 void ImitateTlsWrite(ThreadState *thr, uptr tls_addr, uptr tls_size) {
   // The pointer to the ThreadState object is stored in the shadow memory
   // of the tls.
   uptr tls_end = tls_addr + tls_size;
   uptr thread_identity = (uptr)pthread_self();
+  const uptr pc = StackTrace::GetNextInstructionPc(
+      reinterpret_cast<uptr>(__tsan_tls_initialization));
   if (thread_identity == main_thread_identity) {
-    MemoryRangeImitateWrite(thr, /*pc=*/2, tls_addr, tls_size);
+    MemoryRangeImitateWrite(thr, pc, tls_addr, tls_size);
   } else {
     uptr thr_state_start = thread_identity;
     uptr thr_state_end = thr_state_start + sizeof(uptr);
@@ -297,10 +301,8 @@ void ImitateTlsWrite(ThreadState *thr, uptr tls_addr, uptr tls_size) {
     CHECK_LE(thr_state_start, tls_addr + tls_size);
     CHECK_GE(thr_state_end, tls_addr);
     CHECK_LE(thr_state_end, tls_addr + tls_size);
-    MemoryRangeImitateWrite(thr, /*pc=*/2, tls_addr,
-                            thr_state_start - tls_addr);
-    MemoryRangeImitateWrite(thr, /*pc=*/2, thr_state_end,
-                            tls_end - thr_state_end);
+    MemoryRangeImitateWrite(thr, pc, tls_addr, thr_state_start - tls_addr);
+    MemoryRangeImitateWrite(thr, pc, thr_state_end, tls_end - thr_state_end);
   }
 }
 #endif
