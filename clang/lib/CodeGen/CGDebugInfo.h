@@ -429,6 +429,9 @@ public:
   /// location will be reused.
   void EmitLocation(CGBuilderTy &Builder, SourceLocation Loc);
 
+  QualType getFunctionType(const FunctionDecl *FD, QualType RetTy,
+                           const SmallVectorImpl<const VarDecl *> &Args);
+
   /// Emit a call to llvm.dbg.function.start to indicate
   /// start of a new function.
   /// \param Loc       The location of the function header.
