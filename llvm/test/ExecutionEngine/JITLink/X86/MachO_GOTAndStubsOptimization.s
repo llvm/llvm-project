@@ -1,10 +1,10 @@
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: llvm-mc -triple=x86_64-apple-macos10.9 -filetype=obj \
-# RUN:   -o %t/helper.o %S/Inputs/MachO_GOTAndStubsOptimizationHelper.s
+# RUN:     -o %t/helper.o %S/Inputs/MachO_GOTAndStubsOptimizationHelper.s
 # RUN: llvm-mc -triple=x86_64-apple-macos10.9 -filetype=obj \
-# RUN:   -o %t/testcase.o %s
-# RUN: llvm-jitlink -noexec -slab-allocate 64Kb -entry=bypass_stub -check %s \
-# RUN:   %t/testcase.o %t/helper.o
+# RUN:     -o %t/testcase.o %s
+# RUN: llvm-jitlink -noexec -slab-allocate 64Kb -slab-page-size 4096 \
+# RUN:     -entry=bypass_stub -check %s %t/testcase.o %t/helper.o
 #
 # Test that references to in-range GOT and stub targets can be bypassed.
 # The helper file contains a function that uses the GOT for _x, and this file
