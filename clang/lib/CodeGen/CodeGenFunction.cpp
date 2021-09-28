@@ -1301,6 +1301,11 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
   FunctionArgList Args;
   QualType ResTy = BuildFunctionArgList(GD, Args);
 
+  // Give a different name to inline builtin to avoid conflict with actual
+  // builtins.
+  if (FD->isInlineBuiltinDeclaration() && Fn)
+    Fn->setName(Fn->getName() + ".inline");
+
   // Check if we should generate debug info for this function.
   if (FD->hasAttr<NoDebugAttr>()) {
     // Clear non-distinct debug info that was possibly attached to the function

@@ -15,6 +15,6 @@ Example:
   };
 
   struct Derived : Base {
-    virtual funk();
+    virtual void funk();
     // warning: 'Derived::funk' has a similar name and the same signature as virtual method 'Base::func'; did you mean to override it?
   };
