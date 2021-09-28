@@ -658,6 +658,70 @@ mlir::ParseResult fir::GlobalOp::verifyValidLinkage(StringRef linkage) {
   return mlir::success(llvm::is_contained(validNames, linkage));
 }
 
+template <bool AllowFields>
+static void appendAsAttribute(llvm::SmallVectorImpl<mlir::Attribute> &attrs,
+                              mlir::Value val) {
+  if (auto *op = val.getDefiningOp()) {
+    if (auto cop = mlir::dyn_cast<mlir::ConstantOp>(op)) {
+      // append the integer constant value
+      if (auto iattr = cop.getValue().dyn_cast<mlir::IntegerAttr>()) {
+        attrs.push_back(iattr);
+        return;
+      }
+    } else if (auto fld = mlir::dyn_cast<fir::FieldIndexOp>(op)) {
+      if constexpr (AllowFields) {
+        // append the field name and the record type
+        attrs.push_back(fld.field_idAttr());
+        attrs.push_back(fld.on_typeAttr());
+        return;
+      }
+    }
+  }
+  llvm::report_fatal_error("cannot build Op with these arguments");
+}
+
+template <bool AllowFields = true>
+static mlir::ArrayAttr collectAsAttributes(mlir::MLIRContext *ctxt,
+                                           OperationState &result,
+                                           llvm::ArrayRef<mlir::Value> inds) {
+  llvm::SmallVector<mlir::Attribute> attrs;
+  for (auto v : inds)
+    appendAsAttribute<AllowFields>(attrs, v);
+  assert(!attrs.empty());
+  return mlir::ArrayAttr::get(ctxt, attrs);
+}
+
+//===----------------------------------------------------------------------===//
+// InsertOnRangeOp
+//===----------------------------------------------------------------------===//
+
+void fir::InsertOnRangeOp::build(mlir::OpBuilder &builder,
+                                 OperationState &result, mlir::Type resTy,
+                                 mlir::Value aggVal, mlir::Value eleVal,
+                                 llvm::ArrayRef<mlir::Value> inds) {
+  auto aa = collectAsAttributes<false>(builder.getContext(), result, inds);
+  build(builder, result, resTy, aggVal, eleVal, aa);
+}
+
+/// Range bounds must be nonnegative, and the range must not be empty.
+static mlir::LogicalResult verify(fir::InsertOnRangeOp op) {
+  if (op.coor().size() < 2 || op.coor().size() % 2 != 0)
+    return op.emitOpError("has uneven number of values in ranges");
+  bool rangeIsKnownToBeNonempty = false;
+  for (auto i = op.coor().end(), b = op.coor().begin(); i != b;) {
+    int64_t ub = (*--i).cast<IntegerAttr>().getInt();
+    int64_t lb = (*--i).cast<IntegerAttr>().getInt();
+    if (lb < 0 || ub < 0)
+      return op.emitOpError("negative range bound");
+    if (rangeIsKnownToBeNonempty)
+      continue;
+    if (lb > ub)
+      return op.emitOpError("empty range");
+    rangeIsKnownToBeNonempty = lb < ub;
+  }
+  return mlir::success();
+}
+
 //===----------------------------------------------------------------------===//
 // InsertValueOp
 //===----------------------------------------------------------------------===//
