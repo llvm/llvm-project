@@ -90,9 +90,7 @@ typedef StackDepotBase<StackDepotNode, 1, StackDepotNode::kTabSizeLog>
     StackDepot;
 static StackDepot theDepot;
 
-StackDepotStats *StackDepotGetStats() {
-  return theDepot.GetStats();
-}
+StackDepotStats *StackDepotGetStats() { return theDepot.GetStats(); }
 
 u32 StackDepotPut(StackTrace stack) {
   StackDepotHandle h = theDepot.Put(stack);
