@@ -571,3 +571,13 @@ void DAGTypeLegalizer::SplitRes_FREEZE(SDNode *N, SDValue &Lo, SDValue &Hi) {
   Lo = DAG.getNode(ISD::FREEZE, dl, L.getValueType(), L);
   Hi = DAG.getNode(ISD::FREEZE, dl, H.getValueType(), H);
 }
+
+void DAGTypeLegalizer::SplitRes_ARITH_FENCE(SDNode *N, SDValue &Lo,
+                                            SDValue &Hi) {
+  SDValue L, H;
+  SDLoc DL(N);
+  GetSplitOp(N->getOperand(0), L, H);
+
+  Lo = DAG.getNode(ISD::ARITH_FENCE, DL, L.getValueType(), L);
+  Hi = DAG.getNode(ISD::ARITH_FENCE, DL, H.getValueType(), H);
+}

@@ -47795,7 +47795,7 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
   // FIXME: How do we handle when fast math flags of FADD are different from
   // CFMUL's?
   SDValue CFmul =
-      DAG.getNode(NewOp, SDLoc(N), CVT, FAddOp1, MulOp0, MulOp1, N->getFlags());
+      DAG.getNode(NewOp, SDLoc(N), CVT, MulOp0, MulOp1, FAddOp1, N->getFlags());
   return DAG.getBitcast(VT, CFmul);
 }
 

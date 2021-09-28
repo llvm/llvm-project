@@ -370,6 +370,7 @@ void TestVPLambda() {
     return *vpp; // expected-error {{invalid use of PPC MMA type}}
   };
   auto f3 = [](vector unsigned char vc) { __vector_pair vp; __builtin_vsx_assemble_pair(&vp, vc, vc); return vp; }; // expected-error {{invalid use of PPC MMA type}}
+  auto f4 = [](vector unsigned char vc) { __vector_pair vp; __builtin_vsx_build_pair(&vp, vc, vc); return vp; }; // expected-error {{invalid use of PPC MMA type}}
 }
 
 // cast

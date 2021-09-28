@@ -352,6 +352,55 @@ def fir_LoadOp : fir_OneResultOp<"load"> {
   }];
 }
 
+def fir_SaveResultOp : fir_Op<"save_result", [AttrSizedOperandSegments]> {
+  let summary = [{
+    save an array, box, or record function result SSA-value to a memory location
+  }];
+
+  let description = [{
+    Save the result of a function returning an array, box, or record type value
+    into a memory location given the shape and length parameters of the result.
+
+    Function results of type fir.box, fir.array, or fir.rec are abstract values
+    that require a storage to be manipulated on the caller side. This operation
+    allows associating such abstract result to a storage. In later lowering of
+    the function interfaces, this storage might be used to pass the result in
+    memory.
+
+    For arrays, result, it is required to provide the shape of the result. For
+    character arrays and derived types with length parameters, the length
+    parameter values must be provided.
+
+    The fir.save_result associated to a function call must immediately follow
+    the call and be in the same block.
+
+    ```mlir
+      %buffer = fir.alloca fir.array<?xf32>, %c100
+      %shape = fir.shape %c100
+      %array_result = fir.call @foo() : () -> fir.array<?xf32>
+      fir.save_result %array_result to %buffer(%shape)
+      %coor = fir.array_coor %buffer%(%shape), %c5
+      %fifth_element = fir.load %coor : f32
+    ```
+
+    The above fir.save_result allows saving a fir.array function result into
+    a buffer to later access its 5th element.
+
+  }];
+
+  let arguments = (ins ArrayOrBoxOrRecord:$value,
+                   Arg<AnyReferenceLike, "", [MemWrite]>:$memref,
+                   Optional<AnyShapeType>:$shape,
+                   Variadic<AnyIntegerType>:$typeparams);
+
+  let assemblyFormat = [{
+    $value `to` $memref (`(` $shape^ `)`)? (`typeparams` $typeparams^)?
+    attr-dict `:` type(operands)
+  }];
+
+  let verifier = [{ return ::verify(*this); }];
+}
+
 def fir_StoreOp : fir_Op<"store", []> {
   let summary = "store an SSA-value to a memory location";
 
@@ -2214,18 +2263,35 @@ def fir_InsertOnRangeOp : fir_OneResultOp<"insert_on_range", [NoSideEffect]> {
   let summary = "insert sub-value into a range on an existing sequence";
 
   let description = [{
-    Insert a constant value into an entity with an array type. Returns a
-    new ssa value where the range of offsets from the original array have been
-    replaced with the constant. The result is an array type entity.
+    Insert copies of a value into an entity with an array type.
+    Returns a new ssa value with the same type as the original entity.
+    The values are inserted at a contiguous range of indices in Fortran
+    row-to-column element order as specified by lower and upper bound
+    coordinates.
+
+    ```mlir
+      %a = fir.undefined !fir.array<10x10xf32>
+      %c = constant 3.0 : f32
+      %1 = fir.insert_on_range %a, %c, [0 : index, 7 : index, 0 : index, 2 : index] : (!fir.array<10x10xf32>, f32) -> !fir.array<10x10xf32>
+    ```
+
+    The first 28 elements of %1, with coordinates from (0,0) to (7,2), have
+    the value 3.0.
   }];
 
-  let arguments = (ins fir_SequenceType:$seq, AnyType:$val,
-                       Variadic<Index>:$coor);
+  let arguments = (ins fir_SequenceType:$seq, AnyType:$val, ArrayAttr:$coor);
   let results = (outs fir_SequenceType);
 
   let assemblyFormat = [{
-    operands attr-dict `:` functional-type(operands, results)
+    $seq `,` $val `,` $coor attr-dict `:` functional-type(operands, results)
   }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$rty, "mlir::Value":$adt, "mlir::Value":$val,
+      "llvm::ArrayRef<mlir::Value>":$vcoor)>
+  ];
+
+  let verifier = [{ return ::verify(*this); }];
 }
 
 def fir_LenParamIndexOp : fir_OneResultOp<"len_param_index", [NoSideEffect]> {
