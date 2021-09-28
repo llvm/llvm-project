@@ -85,6 +85,7 @@ void initializeAArch64SLSHardeningPass(PassRegistry&);
 void initializeAArch64SpeculationHardeningPass(PassRegistry&);
 void initializeAArch64LoadStoreOptPass(PassRegistry&);
 void initializeAArch64LowerHomogeneousPrologEpilogPass(PassRegistry &);
+void initializeAArch64MIPeepholeOptPass(PassRegistry &);
 void initializeAArch64SIMDInstrOptPass(PassRegistry&);
 void initializeAArch64O0PreLegalizerCombinerPass(PassRegistry &);
 void initializeAArch64PreLegalizerCombinerPass(PassRegistry&);
