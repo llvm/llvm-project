@@ -456,12 +456,14 @@ static void InitializeLongjmpXorKey() {
 extern "C" void __tsan_tls_initialization() {}
 
 void ImitateTlsWrite(ThreadState *thr, uptr tls_addr, uptr tls_size) {
+  // Check that the thr object is in tls;
   const uptr thr_beg = (uptr)thr;
   const uptr thr_end = (uptr)thr + sizeof(*thr);
-  // ThreadState is normally allocated in TLS and is large,
-  // so we skip it. But unit tests allocate ThreadState outside of TLS.
-  if (thr_beg < tls_addr || thr_end >= tls_addr + tls_size)
-    return;
+  CHECK_GE(thr_beg, tls_addr);
+  CHECK_LE(thr_beg, tls_addr + tls_size);
+  CHECK_GE(thr_end, tls_addr);
+  CHECK_LE(thr_end, tls_addr + tls_size);
+  // Since the thr object is huge, skip it.
   const uptr pc = StackTrace::GetNextInstructionPc(
       reinterpret_cast<uptr>(__tsan_tls_initialization));
   MemoryRangeImitateWrite(thr, pc, tls_addr, thr_beg - tls_addr);

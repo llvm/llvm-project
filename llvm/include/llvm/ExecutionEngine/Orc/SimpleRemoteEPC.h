@@ -58,11 +58,11 @@ public:
   Expected<std::vector<tpctypes::LookupResult>>
   lookupSymbols(ArrayRef<LookupRequest> Request) override;
 
-  Expected<int32_t> runAsMain(JITTargetAddress MainFnAddr,
+  Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                               ArrayRef<std::string> Args) override;
 
   void callWrapperAsync(SendResultFunction OnComplete,
-                        JITTargetAddress WrapperFnAddr,
+                        ExecutorAddr WrapperFnAddr,
                         ArrayRef<char> ArgBuffer) override;
 
   Error disconnect() override;

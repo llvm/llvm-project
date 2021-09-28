@@ -49,6 +49,8 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/MSP430AttributeParser.h"
+#include "llvm/Support/MSP430Attributes.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MipsABIFlags.h"
 #include "llvm/Support/RISCVAttributeParser.h"
@@ -2574,6 +2576,11 @@ template <class ELFT> void ELFDumper<ELFT>::printArchSpecificInfo() {
     else
       reportUniqueWarning("attribute printing not implemented for big-endian "
                           "RISC-V objects");
+    break;
+  case EM_MSP430:
+    printAttributes(ELF::SHT_MSP430_ATTRIBUTES,
+                    std::make_unique<MSP430AttributeParser>(&W),
+                    support::little);
     break;
   case EM_MIPS: {
     printMipsABIFlags();

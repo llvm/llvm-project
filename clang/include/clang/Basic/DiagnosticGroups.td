@@ -648,6 +648,7 @@ def KeywordAsMacro : DiagGroup<"keyword-macro">;
 def ReservedIdAsMacro : DiagGroup<"reserved-macro-identifier">;
 def ReservedIdAsMacroAlias : DiagGroup<"reserved-id-macro", [ReservedIdAsMacro]>;
 def RestrictExpansionMacro : DiagGroup<"restrict-expansion">;
+def FinalMacro : DiagGroup<"final-macro">;
 
 // Just silence warnings about -Wstrict-aliasing for now.
 def : DiagGroup<"strict-aliasing=0">;
@@ -1322,4 +1323,5 @@ def PedanticMacros : DiagGroup<"pedantic-macros",
                     [DeprecatedPragma,
                      MacroRedefined,
                      BuiltinMacroRedefined,
-                     RestrictExpansionMacro]>;
+                     RestrictExpansionMacro,
+                     FinalMacro]>;

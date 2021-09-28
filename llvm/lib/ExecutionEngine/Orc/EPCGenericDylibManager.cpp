@@ -76,7 +76,7 @@ Expected<tpctypes::DylibHandle> EPCGenericDylibManager::open(StringRef Path,
   Expected<tpctypes::DylibHandle> H(0);
   if (auto Err =
           EPC.callSPSWrapper<rt::SPSSimpleExecutorDylibManagerOpenSignature>(
-              SAs.Open.getValue(), H, SAs.Instance, Path, Mode))
+              SAs.Open, H, SAs.Instance, Path, Mode))
     return std::move(Err);
   return H;
 }
@@ -87,7 +87,7 @@ EPCGenericDylibManager::lookup(tpctypes::DylibHandle H,
   Expected<std::vector<ExecutorAddr>> Result((std::vector<ExecutorAddr>()));
   if (auto Err =
           EPC.callSPSWrapper<rt::SPSSimpleExecutorDylibManagerLookupSignature>(
-              SAs.Lookup.getValue(), Result, SAs.Instance, H, Lookup))
+              SAs.Lookup, Result, SAs.Instance, H, Lookup))
     return std::move(Err);
   return Result;
 }
@@ -98,7 +98,7 @@ EPCGenericDylibManager::lookup(tpctypes::DylibHandle H,
   Expected<std::vector<ExecutorAddr>> Result((std::vector<ExecutorAddr>()));
   if (auto Err =
           EPC.callSPSWrapper<rt::SPSSimpleExecutorDylibManagerLookupSignature>(
-              SAs.Lookup.getValue(), Result, SAs.Instance, H, Lookup))
+              SAs.Lookup, Result, SAs.Instance, H, Lookup))
     return std::move(Err);
   return Result;
 }
