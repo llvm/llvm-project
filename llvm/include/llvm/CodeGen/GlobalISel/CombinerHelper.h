@@ -609,6 +609,11 @@ public:
   ///       and rename: s/bool tryEmit/void emit/
   bool tryEmitMemcpyInline(MachineInstr &MI);
 
+  /// Match:
+  ///   (G_UMULO x, 2) -> (G_UADDO x, x)
+  ///   (G_SMULO x, 2) -> (G_SADDO x, x)
+  bool matchMulOBy2(MachineInstr &MI, BuildFnTy &MatchInfo);
+
 private:
   /// Given a non-indexed load or store instruction \p MI, find an offset that
   /// can be usefully and legally folded into it as a post-indexing operation.
