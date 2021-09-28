@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/command.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/main.h"
@@ -53,14 +54,21 @@ protected:
     CheckDescriptorEqStr(value.get(), expected);
   }
 
-  void CheckMissingArgumentValue(int n) const {
+  void CheckMissingArgumentValue(int n, const char *errStr = nullptr) const {
     OwningPtr<Descriptor> value{CreateEmptyCharDescriptor()};
     ASSERT_NE(value, nullptr);
 
-    EXPECT_GT(RTNAME(ArgumentValue)(n, value.get(), nullptr), 0);
+    OwningPtr<Descriptor> err{errStr ? CreateEmptyCharDescriptor() : nullptr};
+
+    EXPECT_GT(RTNAME(ArgumentValue)(n, value.get(), err.get()), 0);
 
     std::string spaces(value->ElementBytes(), ' ');
     CheckDescriptorEqStr(value.get(), spaces);
+
+    if (errStr) {
+      std::string paddedErrStr(GetPaddedStr(errStr, err->ElementBytes()));
+      CheckDescriptorEqStr(err.get(), paddedErrStr);
+    }
   }
 };
 
@@ -128,7 +136,6 @@ TEST_F(SeveralArguments, ArgumentLength) {
 TEST_F(SeveralArguments, ArgumentValue) {
   CheckArgumentValue(0, severalArgsArgv[0]);
   CheckArgumentValue(1, severalArgsArgv[1]);
-  CheckMissingArgumentValue(2);
   CheckArgumentValue(3, severalArgsArgv[3]);
   CheckArgumentValue(4, severalArgsArgv[4]);
 }
@@ -140,12 +147,31 @@ TEST_F(SeveralArguments, NoArgumentValue) {
   EXPECT_GT(RTNAME(ArgumentValue)(-1, nullptr, nullptr), 0);
 }
 
-TEST_F(SeveralArguments, ArgumentValueErrors) {
-  CheckMissingArgumentValue(-1);
+TEST_F(SeveralArguments, MissingArguments) {
+  CheckMissingArgumentValue(-1, "Invalid argument number");
+  CheckMissingArgumentValue(2, "Missing argument");
+  CheckMissingArgumentValue(5, "Invalid argument number");
   CheckMissingArgumentValue(5);
+}
 
+TEST_F(SeveralArguments, ValueTooShort) {
   OwningPtr<Descriptor> tooShort{CreateEmptyCharDescriptor<15>()};
   ASSERT_NE(tooShort, nullptr);
   EXPECT_EQ(RTNAME(ArgumentValue)(1, tooShort.get(), nullptr), -1);
   CheckDescriptorEqStr(tooShort.get(), severalArgsArgv[1]);
+
+  OwningPtr<Descriptor> errMsg{CreateEmptyCharDescriptor()};
+  ASSERT_NE(errMsg, nullptr);
+
+  EXPECT_EQ(RTNAME(ArgumentValue)(1, tooShort.get(), errMsg.get()), -1);
+
+  std::string expectedErrMsg{
+      GetPaddedStr("Value too short", errMsg->ElementBytes())};
+  CheckDescriptorEqStr(errMsg.get(), expectedErrMsg);
+}
+
+TEST_F(SeveralArguments, ErrMsgTooShort) {
+  OwningPtr<Descriptor> errMsg{CreateEmptyCharDescriptor<3>()};
+  EXPECT_GT(RTNAME(ArgumentValue)(-1, nullptr, errMsg.get()), 0);
+  CheckDescriptorEqStr(errMsg.get(), "Inv");
 }
