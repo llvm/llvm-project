@@ -1496,7 +1496,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   if (!m_exe_scope)
     return false;
 
-  // Parse the expression an import all nececssary swift modules.
+  // Parse the expression and import all nececssary swift modules.
   auto parsed_expr =
       ParseAndImport(m_swift_ast_context->get(), m_expr, variable_map,
                      buffer_id, diagnostic_manager, *this, m_stack_frame_wp,
