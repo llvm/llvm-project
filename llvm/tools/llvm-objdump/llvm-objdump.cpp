@@ -1774,7 +1774,9 @@ void objdump::printDynamicRelocations(const ObjectFile *Obj) {
     return;
 
   const auto *Elf = dyn_cast<ELFObjectFileBase>(Obj);
-  if (!Elf || Elf->getEType() != ELF::ET_DYN) {
+  if (!Elf || !any_of(Elf->sections(), [](const ELFSectionRef Sec) {
+        return Sec.getType() == ELF::SHT_DYNAMIC;
+      })) {
     reportError(Obj->getFileName(), "not a dynamic object");
     return;
   }
@@ -1783,7 +1785,12 @@ void objdump::printDynamicRelocations(const ObjectFile *Obj) {
   if (DynRelSec.empty())
     return;
 
-  outs() << "DYNAMIC RELOCATION RECORDS\n";
+  outs() << "\nDYNAMIC RELOCATION RECORDS\n";
+  const uint32_t OffsetPadding = (Obj->getBytesInAddress() > 4 ? 16 : 8);
+  const uint32_t TypePadding = 24;
+  outs() << left_justify("OFFSET", OffsetPadding) << ' '
+         << left_justify("TYPE", TypePadding) << " VALUE\n";
+
   StringRef Fmt = Obj->getBytesInAddress() > 4 ? "%016" PRIx64 : "%08" PRIx64;
   for (const SectionRef &Section : DynRelSec)
     for (const RelocationRef &Reloc : Section.relocations()) {
@@ -1793,8 +1800,8 @@ void objdump::printDynamicRelocations(const ObjectFile *Obj) {
       Reloc.getTypeName(RelocName);
       if (Error E = getRelocationValueString(Reloc, ValueStr))
         reportError(std::move(E), Obj->getFileName());
-      outs() << format(Fmt.data(), Address) << " " << RelocName << " "
-             << ValueStr << "\n";
+      outs() << format(Fmt.data(), Address) << ' '
+             << left_justify(RelocName, TypePadding) << ' ' << ValueStr << '\n';
     }
 }
 
