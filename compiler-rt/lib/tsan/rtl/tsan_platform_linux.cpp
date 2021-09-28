@@ -122,7 +122,7 @@ void FillProfileCallback(uptr p, uptr rss, bool file,
 void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime_ns) {
   uptr mem[MemCount];
   internal_memset(mem, 0, sizeof(mem));
-  GetMemoryProfile(FillProfileCallback, mem, 7);
+  GetMemoryProfile(FillProfileCallback, mem, MemCount);
   auto meta = ctx->metamap.GetMemoryStats();
   StackDepotStats *stacks = StackDepotGetStats();
   uptr nthread, nlive;
@@ -453,18 +453,19 @@ static void InitializeLongjmpXorKey() {
 }
 #endif
 
+extern "C" void __tsan_tls_initialization() {}
+
 void ImitateTlsWrite(ThreadState *thr, uptr tls_addr, uptr tls_size) {
-  // Check that the thr object is in tls;
   const uptr thr_beg = (uptr)thr;
   const uptr thr_end = (uptr)thr + sizeof(*thr);
-  CHECK_GE(thr_beg, tls_addr);
-  CHECK_LE(thr_beg, tls_addr + tls_size);
-  CHECK_GE(thr_end, tls_addr);
-  CHECK_LE(thr_end, tls_addr + tls_size);
-  // Since the thr object is huge, skip it.
-  MemoryRangeImitateWrite(thr, /*pc=*/2, tls_addr, thr_beg - tls_addr);
-  MemoryRangeImitateWrite(thr, /*pc=*/2, thr_end,
-                          tls_addr + tls_size - thr_end);
+  // ThreadState is normally allocated in TLS and is large,
+  // so we skip it. But unit tests allocate ThreadState outside of TLS.
+  if (thr_beg < tls_addr || thr_end >= tls_addr + tls_size)
+    return;
+  const uptr pc = StackTrace::GetNextInstructionPc(
+      reinterpret_cast<uptr>(__tsan_tls_initialization));
+  MemoryRangeImitateWrite(thr, pc, tls_addr, thr_beg - tls_addr);
+  MemoryRangeImitateWrite(thr, pc, thr_end, tls_addr + tls_size - thr_end);
 }
 
 // Note: this function runs with async signals enabled,

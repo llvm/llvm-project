@@ -304,8 +304,7 @@ uint16_t create_header() {
   return header;
 }
 
-std::pair<hsa_status_t, bool>
-isValidMemoryPool(hsa_amd_memory_pool_t MemoryPool) {
+hsa_status_t isValidMemoryPool(hsa_amd_memory_pool_t MemoryPool) {
   bool AllocAllowed = false;
   hsa_status_t Err = hsa_amd_memory_pool_get_info(
       MemoryPool, HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED,
@@ -313,28 +312,27 @@ isValidMemoryPool(hsa_amd_memory_pool_t MemoryPool) {
   if (Err != HSA_STATUS_SUCCESS) {
     DP("Alloc allowed in memory pool check failed: %s\n",
        get_error_string(Err));
-    return {Err, false};
+    return Err;
   }
 
-  return {HSA_STATUS_SUCCESS, AllocAllowed};
+  size_t Size = 0;
+  Err = hsa_amd_memory_pool_get_info(MemoryPool, HSA_AMD_MEMORY_POOL_INFO_SIZE,
+                                     &Size);
+  if (Err != HSA_STATUS_SUCCESS) {
+    DP("Get memory pool size failed: %s\n", get_error_string(Err));
+    return Err;
+  }
+
+  return (AllocAllowed && Size > 0) ? HSA_STATUS_SUCCESS : HSA_STATUS_ERROR;
 }
 
 hsa_status_t addKernArgPool(hsa_amd_memory_pool_t MemoryPool, void *Data) {
   std::vector<hsa_amd_memory_pool_t> *Result =
       static_cast<std::vector<hsa_amd_memory_pool_t> *>(Data);
-  bool AllocAllowed = false;
-  hsa_status_t err = hsa_amd_memory_pool_get_info(
-      MemoryPool, HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED,
-      &AllocAllowed);
-  if (err != HSA_STATUS_SUCCESS) {
-    DP("Alloc allowed in memory pool check failed: %s\n",
-       get_error_string(err));
-    return err;
-  }
 
-  if (!AllocAllowed) {
-    // nothing needs to be done here.
-    return HSA_STATUS_SUCCESS;
+  hsa_status_t err;
+  if ((err = isValidMemoryPool(MemoryPool)) != HSA_STATUS_SUCCESS) {
+    return err;
   }
 
   uint32_t GlobalFlags = 0;
@@ -345,17 +343,8 @@ hsa_status_t addKernArgPool(hsa_amd_memory_pool_t MemoryPool, void *Data) {
     return err;
   }
 
-  size_t size = 0;
-  err = hsa_amd_memory_pool_get_info(MemoryPool, HSA_AMD_MEMORY_POOL_INFO_SIZE,
-                                     &size);
-  if (err != HSA_STATUS_SUCCESS) {
-    DP("Get memory pool size failed: %s\n", get_error_string(err));
-    return err;
-  }
-
   if ((GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED) &&
-      (GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT) &&
-      size > 0) {
+      (GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT)) {
     Result->push_back(MemoryPool);
   }
 
@@ -369,12 +358,9 @@ hsa_status_t collectMemoryPools(const std::vector<hsa_agent_t> &Agents,
     hsa_status_t Err = hsa::amd_agent_iterate_memory_pools(
         Agents[DeviceId], [&](hsa_amd_memory_pool_t MemoryPool) {
           hsa_status_t Err;
-          bool Valid = false;
-          std::tie(Err, Valid) = isValidMemoryPool(MemoryPool);
-          if (Err != HSA_STATUS_SUCCESS) {
-            return Err;
-          }
-          if (Valid)
+          if ((Err = isValidMemoryPool(MemoryPool)) != HSA_STATUS_SUCCESS) {
+            DP("Skipping memory pool: %s\n", get_error_string(Err));
+          } else
             Func(MemoryPool, DeviceId);
           return HSA_STATUS_SUCCESS;
         });
