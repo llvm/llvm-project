@@ -143,8 +143,15 @@ public:
   std::vector<Inclusion> MainFileIncludes;
 
   std::string dump() {
-    return "RealPathNames: " +
-           llvm::join(RealPathNames.begin(), RealPathNames.end(), ", ");
+    std::string Result =
+        "RealPathNames: " +
+        llvm::join(RealPathNames.begin(), RealPathNames.end(), ", ");
+    Result += "; NameToIndex: ";
+    for (const auto &NameIndex : NameToIndex) {
+      Result += NameIndex.first().str() + ' ' +
+                std::to_string(static_cast<unsigned>(NameIndex.second)) + ", ";
+    }
+    return Result;
   }
 
 private:
