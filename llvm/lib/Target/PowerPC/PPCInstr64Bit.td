@@ -1302,9 +1302,12 @@ def LDtocBA: PPCEmitTimePseudo<(outs g8rc:$rD), (ins tocentry:$disp, g8rc:$reg),
 def LDX  : XForm_1_memOp<31,  21, (outs g8rc:$rD), (ins memrr:$src),
                         "ldx $rD, $src", IIC_LdStLD,
                         [(set i64:$rD, (load XForm:$src))]>, isPPC64;
+
+let Predicates = [IsISA2_06] in {
 def LDBRX : XForm_1_memOp<31,  532, (outs g8rc:$rD), (ins memrr:$src),
                           "ldbrx $rD, $src", IIC_LdStLoad,
                           [(set i64:$rD, (PPClbrx ForceXForm:$src, i64))]>, isPPC64;
+}
 
 let mayLoad = 1, hasSideEffects = 0, isCodeGenOnly = 1 in {
 def LHBRX8 : XForm_1_memOp<31, 790, (outs g8rc:$rD), (ins memrr:$src),
@@ -1538,10 +1541,13 @@ def STDX  : XForm_8_memOp<31, 149, (outs), (ins g8rc:$rS, memrr:$dst),
                           "stdx $rS, $dst", IIC_LdStSTD,
                           [(store i64:$rS, XForm:$dst)]>, isPPC64,
                           PPC970_DGroup_Cracked;
+
+let Predicates = [IsISA2_06] in {
 def STDBRX: XForm_8_memOp<31, 660, (outs), (ins g8rc:$rS, memrr:$dst),
                           "stdbrx $rS, $dst", IIC_LdStStore,
                           [(PPCstbrx i64:$rS, ForceXForm:$dst, i64)]>, isPPC64,
                           PPC970_DGroup_Cracked;
+}
 
 let mayStore = 1, hasNoSchedulingInfo = 1 in {
 // Normal 16-byte stores.

@@ -73,6 +73,8 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasROPProtect = true;
     } else if (Feature == "+privileged") {
       HasPrivileged = true;
+    } else if (Feature == "+isa-v206-instructions") {
+      IsISA2_06 = true;
     } else if (Feature == "+isa-v207-instructions") {
       IsISA2_07 = true;
     } else if (Feature == "+isa-v30-instructions") {
@@ -526,6 +528,13 @@ bool PPCTargetInfo::initFeatureMap(
                         .Case("e500", true)
                         .Default(false);
 
+  Features["isa-v206-instructions"] = llvm::StringSwitch<bool>(CPU)
+                                          .Case("ppc64le", true)
+                                          .Case("pwr9", true)
+                                          .Case("pwr8", true)
+                                          .Case("pwr7", true)
+                                          .Default(false);
+
   Features["isa-v207-instructions"] = llvm::StringSwitch<bool>(CPU)
                                           .Case("ppc64le", true)
                                           .Case("pwr9", true)
@@ -622,6 +631,7 @@ bool PPCTargetInfo::hasFeature(StringRef Feature) const {
       .Case("mma", HasMMA)
       .Case("rop-protect", HasROPProtect)
       .Case("privileged", HasPrivileged)
+      .Case("isa-v206-instructions", IsISA2_06)
       .Case("isa-v207-instructions", IsISA2_07)
       .Case("isa-v30-instructions", IsISA3_0)
       .Case("isa-v31-instructions", IsISA3_1)
