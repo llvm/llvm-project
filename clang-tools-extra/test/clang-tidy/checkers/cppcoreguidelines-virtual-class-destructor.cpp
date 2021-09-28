@@ -202,3 +202,73 @@ struct NonOverridingDerivedStruct : ProtectedNonVirtualBaseStruct {
   void m();
 };
 // inherits virtual method
+
+namespace Bugzilla_51912 {
+// Fixes https://bugs.llvm.org/show_bug.cgi?id=51912
+
+// Forward declarations
+// CHECK-MESSAGES-NOT: :[[@LINE+1]]:8: warning: destructor of 'ForwardDeclaredStruct' is public and non-virtual [cppcoreguidelines-virtual-class-destructor]
+struct ForwardDeclaredStruct;
+
+struct ForwardDeclaredStruct : PublicVirtualBaseStruct {
+};
+
+// Normal Template
+// CHECK-MESSAGES-NOT: :[[@LINE+2]]:8: warning: destructor of 'TemplatedDerived' is public and non-virtual [cppcoreguidelines-virtual-class-destructor]
+template <typename T>
+struct TemplatedDerived : PublicVirtualBaseStruct {
+};
+
+TemplatedDerived<int> InstantiationWithInt;
+
+// Derived from template, base has virtual dtor
+// CHECK-MESSAGES-NOT: :[[@LINE+2]]:8: warning: destructor of 'DerivedFromTemplateVirtualBaseStruct' is public and non-virtual [cppcoreguidelines-virtual-class-destructor]
+template <typename T>
+struct DerivedFromTemplateVirtualBaseStruct : T {
+  virtual void foo();
+};
+
+DerivedFromTemplateVirtualBaseStruct<PublicVirtualBaseStruct> InstantiationWithPublicVirtualBaseStruct;
+
+// Derived from template, base has *not* virtual dtor
+// CHECK-MESSAGES: :[[@LINE+8]]:8: warning: destructor of 'DerivedFromTemplateNonVirtualBaseStruct' is public and non-virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+7]]:8: note: make it public and virtual
+// CHECK-MESSAGES: :[[@LINE+6]]:8: warning: destructor of 'DerivedFromTemplateNonVirtualBaseStruct<PublicNonVirtualBaseStruct>' is public and non-virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-FIXES: struct DerivedFromTemplateNonVirtualBaseStruct : T {
+// CHECK-FIXES-NEXT: virtual ~DerivedFromTemplateNonVirtualBaseStruct() = default;
+// CHECK-FIXES-NEXT: virtual void foo();
+// CHECK-FIXES-NEXT: };
+template <typename T>
+struct DerivedFromTemplateNonVirtualBaseStruct : T {
+  virtual void foo();
+};
+
+DerivedFromTemplateNonVirtualBaseStruct<PublicNonVirtualBaseStruct> InstantiationWithPublicNonVirtualBaseStruct;
+
+// Derived from template, base has virtual dtor, to be used in a typedef
+// CHECK-MESSAGES-NOT: :[[@LINE+2]]:8: warning: destructor of 'DerivedFromTemplateVirtualBaseStruct2' is public and non-virtual [cppcoreguidelines-virtual-class-destructor]
+template <typename T>
+struct DerivedFromTemplateVirtualBaseStruct2 : T {
+  virtual void foo();
+};
+
+using DerivedFromTemplateVirtualBaseStruct2Typedef = DerivedFromTemplateVirtualBaseStruct2<PublicVirtualBaseStruct>;
+DerivedFromTemplateVirtualBaseStruct2Typedef InstantiationWithPublicVirtualBaseStruct2;
+
+// Derived from template, base has *not* virtual dtor, to be used in a typedef
+// CHECK-MESSAGES: :[[@LINE+8]]:8: warning: destructor of 'DerivedFromTemplateNonVirtualBaseStruct2' is public and non-virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+7]]:8: note: make it public and virtual
+// CHECK-MESSAGES: :[[@LINE+6]]:8: warning: destructor of 'DerivedFromTemplateNonVirtualBaseStruct2<PublicNonVirtualBaseStruct>' is public and non-virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-FIXES: struct DerivedFromTemplateNonVirtualBaseStruct2 : T {
+// CHECK-FIXES-NEXT: virtual ~DerivedFromTemplateNonVirtualBaseStruct2() = default;
+// CHECK-FIXES-NEXT: virtual void foo();
+// CHECK-FIXES-NEXT: };
+template <typename T>
+struct DerivedFromTemplateNonVirtualBaseStruct2 : T {
+  virtual void foo();
+};
+
+using DerivedFromTemplateNonVirtualBaseStruct2Typedef = DerivedFromTemplateNonVirtualBaseStruct2<PublicNonVirtualBaseStruct>;
+DerivedFromTemplateNonVirtualBaseStruct2Typedef InstantiationWithPublicNonVirtualBaseStruct2;
+
+} // namespace Bugzilla_51912
