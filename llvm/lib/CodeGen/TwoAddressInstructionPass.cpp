@@ -629,6 +629,8 @@ bool TwoAddressInstructionPass::convertInstTo3Addr(
       if (MO.isReg())
         OrigRegs.push_back(MO.getReg());
     }
+
+    LIS->RemoveMachineInstrFromMaps(*mi);
   }
 
   MBB->erase(mi); // Nuke the old inst.
