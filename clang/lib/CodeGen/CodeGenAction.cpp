@@ -27,7 +27,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
-#include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
@@ -761,18 +760,30 @@ void BackendConsumer::OptimizationFailureHandler(
 }
 
 void BackendConsumer::DontCallDiagHandler(const DiagnosticInfoDontCall &D) {
-  SourceLocation LocCookie =
-      SourceLocation::getFromRawEncoding(D.getLocCookie());
+  if (const Decl *DE = Gen->GetDeclForMangledName(D.getFunctionName()))
+    if (const auto *FD = dyn_cast<FunctionDecl>(DE)) {
+      assert(FD->hasAttr<ErrorAttr>() &&
+             "expected error or warning function attribute");
 
-  // FIXME: we can't yet diagnose indirect calls. When/if we can, we
-  // should instead assert that LocCookie.isValid().
-  if (!LocCookie.isValid())
-    return;
+      if (const auto *EA = FD->getAttr<ErrorAttr>()) {
+        assert((EA->isError() || EA->isWarning()) &&
+               "ErrorAttr neither error or warning");
 
-  Diags.Report(LocCookie, D.getSeverity() == DiagnosticSeverity::DS_Error
-                              ? diag::err_fe_backend_error_attr
-                              : diag::warn_fe_backend_warning_attr)
-      << llvm::demangle(D.getFunctionName().str()) << D.getNote();
+        SourceLocation LocCookie =
+            SourceLocation::getFromRawEncoding(D.getLocCookie());
+
+        // FIXME: we can't yet diagnose indirect calls. When/if we can, we
+        // should instead assert that LocCookie.isValid().
+        if (!LocCookie.isValid())
+          return;
+
+        Diags.Report(LocCookie, EA->isError()
+                                    ? diag::err_fe_backend_error_attr
+                                    : diag::warn_fe_backend_warning_attr)
+            << FD << EA->getUserDiagnostic();
+      }
+    }
+  // TODO: assert if DE or FD were nullptr?
 }
 
 /// This function is invoked when the backend needs
