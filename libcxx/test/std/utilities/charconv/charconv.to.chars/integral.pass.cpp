@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
-// UNSUPPORTED: !libc++ && c++11
-// UNSUPPORTED: !libc++ && c++14
+// UNSUPPORTED: !stdlib=libc++ && c++11
+// UNSUPPORTED: !stdlib=libc++ && c++14
 
 // to_chars requires functions in the dylib that were introduced in Mac OS 10.15.
 //

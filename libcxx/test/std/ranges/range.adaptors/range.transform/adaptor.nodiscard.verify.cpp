@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
-// REQUIRES: libc++
+// REQUIRES: stdlib=libc++
 
 // Test the libc++ extension that std::views::transform is marked as [[nodiscard]] to avoid
 // the potential for user mistakenly thinking they're calling an algorithm.
