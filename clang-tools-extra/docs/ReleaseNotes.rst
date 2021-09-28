@@ -67,8 +67,7 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
-- Added support for `NOLINTBEGIN` ... `NOLINTEND` comments to suppress
-  Clang-Tidy warnings over multiple lines.
+The improvements are...
 
 New checks
 ^^^^^^^^^^
