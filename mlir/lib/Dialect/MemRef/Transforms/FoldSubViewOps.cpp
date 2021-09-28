@@ -107,12 +107,11 @@ static AffineMap getPermutationMap(MLIRContext *context,
                                    AffineMap currPermutationMap) {
   llvm::SmallDenseSet<unsigned> unusedDims = subViewOp.getDroppedDims();
   SmallVector<AffineExpr> exprs;
-  unsigned resultIdx = 0;
   int64_t sourceRank = subViewOp.getSourceType().getRank();
   for (auto dim : llvm::seq<int64_t>(0, sourceRank)) {
     if (unusedDims.count(dim))
       continue;
-    exprs.push_back(getAffineDimExpr(resultIdx++, context));
+    exprs.push_back(getAffineDimExpr(dim, context));
   }
   auto resultDimToSourceDimMap = AffineMap::get(sourceRank, 0, exprs, context);
   return currPermutationMap.compose(resultDimToSourceDimMap);
