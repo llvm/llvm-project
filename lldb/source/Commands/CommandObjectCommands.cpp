@@ -77,7 +77,7 @@ protected:
   public:
     CommandOptions()
         : Options(), m_stop_on_error(true), m_silent_run(false),
-          m_stop_on_continue(true) {}
+          m_stop_on_continue(true), m_cmd_relative_to_command_file(false) {}
 
     ~CommandOptions() override = default;
 
@@ -95,6 +95,10 @@ protected:
         error = m_stop_on_continue.SetValueFromString(option_arg);
         break;
 
+      case 'C':
+        m_cmd_relative_to_command_file = true;
+        break;
+
       case 's':
         error = m_silent_run.SetValueFromString(option_arg);
         break;
@@ -110,6 +114,7 @@ protected:
       m_stop_on_error.Clear();
       m_silent_run.Clear();
       m_stop_on_continue.Clear();
+      m_cmd_relative_to_command_file.Clear();
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -121,6 +126,7 @@ protected:
     OptionValueBoolean m_stop_on_error;
     OptionValueBoolean m_silent_run;
     OptionValueBoolean m_stop_on_continue;
+    OptionValueBoolean m_cmd_relative_to_command_file;
   };
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
@@ -131,7 +137,29 @@ protected:
       return false;
     }
 
+    FileSpec source_dir = {};
+    if (m_options.m_cmd_relative_to_command_file) {
+      source_dir = GetDebugger().GetCommandInterpreter().GetCurrentSourceDir();
+      if (!source_dir) {
+        result.AppendError("command source -C can only be specified "
+                           "from a command file");
+        result.SetStatus(eReturnStatusFailed);
+        return false;
+      }
+    }
+
     FileSpec cmd_file(command[0].ref());
+    if (source_dir) {
+      // Prepend the source_dir to the cmd_file path:
+      if (!cmd_file.IsRelative()) {
+        result.AppendError("command source -C can only be used "
+                           "with a relative path.");
+        result.SetStatus(eReturnStatusFailed);
+        return false;
+      }
+      cmd_file.MakeAbsolute(source_dir);
+    }
+
     FileSystem::Instance().Resolve(cmd_file);
 
     CommandInterpreterRunOptions options;
