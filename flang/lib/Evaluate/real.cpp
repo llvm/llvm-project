@@ -280,15 +280,34 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::SQRT(Rounding rounding) const {
     // SQRT(+Inf) == +Inf
     result.value = Infinity(false);
   } else {
-    // Slow but reliable bit-at-a-time method.  Start with a clear significand
-    // and half the unbiased exponent, and then try to set significand bits
-    // in descending order of magnitude without exceeding the exact result.
     int expo{UnbiasedExponent()};
-    if (IsSubnormal()) {
-      expo -= GetFraction().LEADZ();
+    if (expo < -1 || expo > 1) {
+      // Reduce the range to [0.5 .. 4.0) by dividing by an integral power
+      // of four to avoid trouble with very large and very small values
+      // (esp. truncation of subnormals).
+      // SQRT(2**(2a) * x) = SQRT(2**(2a)) * SQRT(x) = 2**a * SQRT(x)
+      Real scaled;
+      int adjust{expo / 2};
+      scaled.Normalize(false, expo - 2 * adjust + exponentBias, GetFraction());
+      result = scaled.SQRT(rounding);
+      result.value.Normalize(false,
+          result.value.UnbiasedExponent() + adjust + exponentBias,
+          result.value.GetFraction());
+      return result;
     }
+    // Compute the square root of the reduced value with the slow but
+    // reliable bit-at-a-time method.  Start with a clear significand and
+    // half of the unbiased exponent, and then try to set significand bits
+    // in descending order of magnitude without exceeding the exact result.
     expo = expo / 2 + exponentBias;
     result.value.Normalize(false, expo, Fraction::MASKL(1));
+    Real initialSq{result.value.Multiply(result.value).value};
+    if (Compare(initialSq) == Relation::Less) {
+      // Initial estimate is too large; this can happen for values just
+      // under 1.0.
+      --expo;
+      result.value.Normalize(false, expo, Fraction::MASKL(1));
+    }
     for (int bit{significandBits - 1}; bit >= 0; --bit) {
       Word word{result.value.word_};
       result.value.word_ = word.IBSET(bit);
@@ -299,10 +318,10 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::SQRT(Rounding rounding) const {
         result.value.word_ = word;
       }
     }
-    // The computed square root, when squared, has a square that's not greater
-    // than the original argument.  Check this square against the square of the
-    // next Real value, and return that one if its square is closer in magnitude
-    // to the original argument.
+    // The computed square root has a square that's not greater than the
+    // original argument.  Check this square against the square of the next
+    // larger Real and return that one if its square is closer in magnitude to
+    // the original argument.
     Real resultSq{result.value.Multiply(result.value).value};
     Real diff{Subtract(resultSq).value.ABS()};
     if (diff.IsZero()) {
