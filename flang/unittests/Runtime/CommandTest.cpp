@@ -13,20 +13,61 @@
 
 using namespace Fortran::runtime;
 
-TEST(ArgumentCount, ZeroArguments) {
-  const char *argv[]{"aProgram"};
-  RTNAME(ProgramStart)(1, argv, {});
-  EXPECT_EQ(0, RTNAME(ArgumentCount)());
+class CommandFixture : public ::testing::Test {
+protected:
+  CommandFixture(int argc, const char *argv[]) {
+    RTNAME(ProgramStart)(argc, argv, {});
+  }
+};
+
+static const char *commandOnlyArgv[]{"aProgram"};
+class ZeroArguments : public CommandFixture {
+protected:
+  ZeroArguments() : CommandFixture(1, commandOnlyArgv) {}
+};
+
+TEST_F(ZeroArguments, ArgumentCount) { EXPECT_EQ(0, RTNAME(ArgumentCount)()); }
+
+TEST_F(ZeroArguments, ArgumentLength) {
+  EXPECT_EQ(0, RTNAME(ArgumentLength)(-1));
+  EXPECT_EQ(8, RTNAME(ArgumentLength)(0));
+  EXPECT_EQ(0, RTNAME(ArgumentLength)(1));
 }
 
-TEST(ArgumentCount, OneArgument) {
-  const char *argv[]{"aProgram", "anArgument"};
-  RTNAME(ProgramStart)(2, argv, {});
-  EXPECT_EQ(1, RTNAME(ArgumentCount)());
+static const char *oneArgArgv[]{"aProgram", "anArgumentOfLength20"};
+class OneArgument : public CommandFixture {
+protected:
+  OneArgument() : CommandFixture(2, oneArgArgv) {}
+};
+
+TEST_F(OneArgument, ArgumentCount) { EXPECT_EQ(1, RTNAME(ArgumentCount)()); }
+
+TEST_F(OneArgument, ArgumentLength) {
+  EXPECT_EQ(0, RTNAME(ArgumentLength)(-1));
+  EXPECT_EQ(8, RTNAME(ArgumentLength)(0));
+  EXPECT_EQ(20, RTNAME(ArgumentLength)(1));
+  EXPECT_EQ(0, RTNAME(ArgumentLength)(2));
 }
 
-TEST(ArgumentCount, SeveralArguments) {
-  const char *argv[]{"aProgram", "arg1", "arg2", "arg3", "arg4"};
-  RTNAME(ProgramStart)(5, argv, {});
+static const char *severalArgsArgv[]{
+    "aProgram", "16-char-long-arg", "", "-22-character-long-arg", "o"};
+class SeveralArguments : public CommandFixture {
+protected:
+  SeveralArguments()
+      : CommandFixture(sizeof(severalArgsArgv) / sizeof(*severalArgsArgv),
+            severalArgsArgv) {}
+};
+
+TEST_F(SeveralArguments, ArgumentCount) {
   EXPECT_EQ(4, RTNAME(ArgumentCount)());
+}
+
+TEST_F(SeveralArguments, ArgumentLength) {
+  EXPECT_EQ(0, RTNAME(ArgumentLength)(-1));
+  EXPECT_EQ(8, RTNAME(ArgumentLength)(0));
+  EXPECT_EQ(16, RTNAME(ArgumentLength)(1));
+  EXPECT_EQ(0, RTNAME(ArgumentLength)(2));
+  EXPECT_EQ(22, RTNAME(ArgumentLength)(3));
+  EXPECT_EQ(1, RTNAME(ArgumentLength)(4));
+  EXPECT_EQ(0, RTNAME(ArgumentLength)(5));
 }
