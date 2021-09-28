@@ -519,7 +519,7 @@ TEST(ParsedASTTest, PatchesAdditionalIncludes) {
   auto AuxFE = FM.getFile(testPath("sub/aux.h"));
   ASSERT_TRUE(AuxFE);
   auto AuxID = Includes.getID(*AuxFE);
-  EXPECT_THAT(Includes.IncludeChildren[*MainID], Contains(AuxID));
+  EXPECT_THAT(Includes.IncludeChildren[*MainID], Contains(*AuxID));
 }
 
 TEST(ParsedASTTest, PatchesDeletedIncludes) {
