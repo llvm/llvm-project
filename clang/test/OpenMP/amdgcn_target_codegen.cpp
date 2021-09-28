@@ -13,7 +13,6 @@ int test_amdgcn_target_tid_threads() {
 
   int arr[N];
 
-// CHECK: call i32 @__kmpc_target_init(%struct.ident_t* addrspacecast (%struct.ident_t addrspace(1)* @1 to %struct.ident_t*), i8 1, i1 true, i1 true)
 #pragma omp target
   for (int i = 0; i < N; i++) {
     arr[i] = 1;
@@ -26,7 +25,6 @@ int test_amdgcn_target_tid_threads_simd() {
 
   int arr[N];
 
-// CHECK: call i32 @__kmpc_target_init(%struct.ident_t* addrspacecast (%struct.ident_t addrspace(1)* @1 to %struct.ident_t*), i8 2, i1 false, i1 false)
 #pragma omp target simd
   for (int i = 0; i < N; i++) {
     arr[i] = 1;
@@ -44,7 +42,7 @@ int test_amdgcn_target_tid_threads_simd() {
 // CHECK-NEXT:    [[I_ASCAST:%.*]] = addrspacecast i32 addrspace(5)* [[I]] to i32*
 // CHECK-NEXT:    store [1000 x i32]* [[ARR]], [1000 x i32]** [[ARR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[ARR_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* addrspacecast ([[STRUCT_IDENT_T:%.*]] addrspace(1)* @[[GLOB1:[0-9]+]] to %struct.ident_t*), i1 false, i1 true, i1 true)
+// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* addrspacecast ([[STRUCT_IDENT_T:%.*]] addrspace(1)* @[[GLOB1:[0-9]+]] to %struct.ident_t*), i8 1, i1 true, i1 true)
 // CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK:       user_code.entry:
@@ -68,7 +66,7 @@ int test_amdgcn_target_tid_threads_simd() {
 // CHECK:       worker.exit:
 // CHECK-NEXT:    ret void
 // CHECK:       for.end:
-// CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* addrspacecast ([[STRUCT_IDENT_T]] addrspace(1)* @[[GLOB1]] to %struct.ident_t*), i1 false, i1 true)
+// CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* addrspacecast ([[STRUCT_IDENT_T]] addrspace(1)* @[[GLOB1]] to %struct.ident_t*), i8 1, i1 true)
 // CHECK-NEXT:    ret void
 //
 //
@@ -85,7 +83,7 @@ int test_amdgcn_target_tid_threads_simd() {
 // CHECK-NEXT:    [[I_ASCAST:%.*]] = addrspacecast i32 addrspace(5)* [[I]] to i32*
 // CHECK-NEXT:    store [1000 x i32]* [[ARR]], [1000 x i32]** [[ARR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[ARR_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* addrspacecast ([[STRUCT_IDENT_T:%.*]] addrspace(1)* @[[GLOB1]] to %struct.ident_t*), i1 true, i1 false, i1 false)
+// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* addrspacecast ([[STRUCT_IDENT_T:%.*]] addrspace(1)* @[[GLOB1]] to %struct.ident_t*), i8 2, i1 false, i1 false)
 // CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK:       user_code.entry:
@@ -116,6 +114,6 @@ int test_amdgcn_target_tid_threads_simd() {
 // CHECK-NEXT:    ret void
 // CHECK:       omp.inner.for.end:
 // CHECK-NEXT:    store i32 1000, i32* [[I_ASCAST]], align 4
-// CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* addrspacecast ([[STRUCT_IDENT_T]] addrspace(1)* @[[GLOB1]] to %struct.ident_t*), i1 true, i1 false)
+// CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* addrspacecast ([[STRUCT_IDENT_T]] addrspace(1)* @[[GLOB1]] to %struct.ident_t*), i8 2, i1 false)
 // CHECK-NEXT:    ret void
 //
