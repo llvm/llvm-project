@@ -1482,8 +1482,7 @@ public:
   ///
   /// The given OnComplete function will be called to return the result.
   void callWrapperAsync(ExecutorProcessControl::SendResultFunction OnComplete,
-                        JITTargetAddress WrapperFnAddr,
-                        ArrayRef<char> ArgBuffer) {
+                        ExecutorAddr WrapperFnAddr, ArrayRef<char> ArgBuffer) {
     EPC->callWrapperAsync(std::move(OnComplete), WrapperFnAddr, ArgBuffer);
   }
 
@@ -1493,7 +1492,7 @@ public:
   /// \code{.cpp}
   ///   CWrapperFunctionResult fn(uint8_t *Data, uint64_t Size);
   /// \endcode{.cpp}
-  shared::WrapperFunctionResult callWrapper(JITTargetAddress WrapperFnAddr,
+  shared::WrapperFunctionResult callWrapper(ExecutorAddr WrapperFnAddr,
                                             ArrayRef<char> ArgBuffer) {
     return EPC->callWrapper(WrapperFnAddr, ArgBuffer);
   }
@@ -1501,8 +1500,7 @@ public:
   /// Run a wrapper function using SPS to serialize the arguments and
   /// deserialize the results.
   template <typename SPSSignature, typename SendResultT, typename... ArgTs>
-  void callSPSWrapperAsync(SendResultT &&SendResult,
-                           JITTargetAddress WrapperFnAddr,
+  void callSPSWrapperAsync(SendResultT &&SendResult, ExecutorAddr WrapperFnAddr,
                            const ArgTs &...Args) {
     EPC->callSPSWrapperAsync<SPSSignature, SendResultT, ArgTs...>(
         std::forward<SendResultT>(SendResult), WrapperFnAddr, Args...);
@@ -1514,7 +1512,7 @@ public:
   /// If SPSSignature is a non-void function signature then the second argument
   /// (the first in the Args list) should be a reference to a return value.
   template <typename SPSSignature, typename... WrapperCallArgTs>
-  Error callSPSWrapper(JITTargetAddress WrapperFnAddr,
+  Error callSPSWrapper(ExecutorAddr WrapperFnAddr,
                        WrapperCallArgTs &&...WrapperCallArgs) {
     return EPC->callSPSWrapper<SPSSignature, WrapperCallArgTs...>(
         WrapperFnAddr, std::forward<WrapperCallArgTs>(WrapperCallArgs)...);

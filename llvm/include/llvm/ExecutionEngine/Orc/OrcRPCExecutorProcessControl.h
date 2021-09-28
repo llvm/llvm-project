@@ -337,7 +337,7 @@ public:
     return EP.template callB<orcrpctpc::LookupSymbols>(RR);
   }
 
-  Expected<int32_t> runAsMain(JITTargetAddress MainFnAddr,
+  Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                               ArrayRef<std::string> Args) override {
     DEBUG_WITH_TYPE("orc", {
       dbgs() << "Running as main: " << formatv("{0:x16}", MainFnAddr)
@@ -358,7 +358,7 @@ public:
   }
 
   void callWrapperAsync(SendResultFunction OnComplete,
-                        JITTargetAddress WrapperFnAddr,
+                        ExecutorAddr WrapperFnAddr,
                         ArrayRef<char> ArgBuffer) override {
     DEBUG_WITH_TYPE("orc", {
       dbgs() << "Running as wrapper function "
@@ -412,7 +412,7 @@ protected:
 private:
   Error runWrapperInJIT(
       std::function<Error(Expected<shared::WrapperFunctionResult>)> SendResult,
-      JITTargetAddress FunctionTag, std::vector<uint8_t> ArgBuffer) {
+      ExecutorAddr FunctionTag, std::vector<uint8_t> ArgBuffer) {
 
     getExecutionSession().runJITDispatchHandler(
         [this, SendResult = std::move(SendResult)](

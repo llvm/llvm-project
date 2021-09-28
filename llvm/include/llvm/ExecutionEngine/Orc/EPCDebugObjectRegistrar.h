@@ -40,14 +40,14 @@ public:
 /// executor process.
 class EPCDebugObjectRegistrar : public DebugObjectRegistrar {
 public:
-  EPCDebugObjectRegistrar(ExecutionSession &ES, JITTargetAddress RegisterFn)
+  EPCDebugObjectRegistrar(ExecutionSession &ES, ExecutorAddr RegisterFn)
       : ES(ES), RegisterFn(RegisterFn) {}
 
   Error registerDebugObject(sys::MemoryBlock TargetMem) override;
 
 private:
   ExecutionSession &ES;
-  JITTargetAddress RegisterFn;
+  ExecutorAddr RegisterFn;
 };
 
 /// Create a ExecutorProcessControl-based DebugObjectRegistrar that emits debug

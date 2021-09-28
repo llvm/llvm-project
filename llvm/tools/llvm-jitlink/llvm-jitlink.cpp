@@ -1336,8 +1336,7 @@ static Expected<JITEvaluatedSymbol> getOrcRuntimeEntryPoint(Session &S) {
   return S.ES.lookup(S.JDSearchOrder, RuntimeEntryPoint);
 }
 
-static Expected<int> runWithRuntime(Session &S,
-                                    JITTargetAddress EntryPointAddress) {
+static Expected<int> runWithRuntime(Session &S, ExecutorAddr EntryPointAddr) {
   StringRef DemangledEntryPoint = EntryPointName;
   const auto &TT = S.ES.getExecutorProcessControl().getTargetTriple();
   if (TT.getObjectFormat() == Triple::MachO &&
@@ -1347,16 +1346,15 @@ static Expected<int> runWithRuntime(Session &S,
       int64_t(SPSString, SPSString, SPSSequence<SPSString>);
   int64_t Result;
   if (auto Err = S.ES.callSPSWrapper<SPSRunProgramSig>(
-          EntryPointAddress, Result, S.MainJD->getName(), DemangledEntryPoint,
+          EntryPointAddr, Result, S.MainJD->getName(), DemangledEntryPoint,
           static_cast<std::vector<std::string> &>(InputArgv)))
     return std::move(Err);
   return Result;
 }
 
 static Expected<int> runWithoutRuntime(Session &S,
-                                       JITTargetAddress EntryPointAddress) {
-  return S.ES.getExecutorProcessControl().runAsMain(EntryPointAddress,
-                                                    InputArgv);
+                                       ExecutorAddr EntryPointAddr) {
+  return S.ES.getExecutorProcessControl().runAsMain(EntryPointAddr, InputArgv);
 }
 
 namespace {
@@ -1426,9 +1424,11 @@ int main(int argc, char *argv[]) {
     LLVM_DEBUG(dbgs() << "Running \"" << EntryPointName << "\"...\n");
     TimeRegion TR(Timers ? &Timers->RunTimer : nullptr);
     if (!OrcRuntime.empty())
-      Result = ExitOnErr(runWithRuntime(*S, EntryPoint.getAddress()));
+      Result =
+          ExitOnErr(runWithRuntime(*S, ExecutorAddr(EntryPoint.getAddress())));
     else
-      Result = ExitOnErr(runWithoutRuntime(*S, EntryPoint.getAddress()));
+      Result = ExitOnErr(
+          runWithoutRuntime(*S, ExecutorAddr(EntryPoint.getAddress())));
   }
 
   // Destroy the session.
