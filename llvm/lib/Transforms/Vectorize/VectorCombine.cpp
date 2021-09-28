@@ -822,6 +822,12 @@ public:
   /// freeze.
   bool isSafeWithFreeze() const { return Status == StatusTy::SafeWithFreeze; }
 
+  /// Reset the state of Unsafe and clear ToFreze if set.
+  void discard() {
+    ToFreeze = nullptr;
+    Status = StatusTy::Unsafe;
+  }
+
   /// Freeze the ToFreeze and update the use in \p User to use it.
   void freeze(IRBuilder<> &Builder, Instruction &UserI) {
     assert(isSafeWithFreeze() &&
@@ -1006,6 +1012,7 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
     auto ScalarIdx = canScalarizeAccess(FixedVT, UI->getOperand(1), &I, AC, DT);
     if (!ScalarIdx.isSafe()) {
       // TODO: Freeze index if it is safe to do so.
+      ScalarIdx.discard();
       return false;
     }
 
