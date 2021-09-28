@@ -265,6 +265,8 @@ static void computeFunctionSummary(
 
   bool HasInlineAsmMaybeReferencingInternal = false;
   bool HasIndirBranchToBlockAddress = false;
+  bool HasUnknownCall = false;
+  bool MayThrow = false;
   for (const BasicBlock &BB : F) {
     // We don't allow inlining of function with indirect branch to blockaddress.
     // If the blockaddress escapes the function, e.g., via a global variable,
@@ -282,6 +284,7 @@ static void computeFunctionSummary(
       if (I.isDebugOrPseudoInst())
         continue;
       ++NumInsts;
+
       // Regular LTO module doesn't participate in ThinLTO import,
       // so no reference from it can be read/writeonly, since this
       // would require importing variable as local copy
@@ -313,8 +316,11 @@ static void computeFunctionSummary(
       }
       findRefEdges(Index, &I, RefEdges, Visited);
       const auto *CB = dyn_cast<CallBase>(&I);
-      if (!CB)
+      if (!CB) {
+        if (I.mayThrow())
+          MayThrow = true;
         continue;
+      }
 
       const auto *CI = dyn_cast<CallInst>(&I);
       // Since we don't know exactly which local values are referenced in inline
@@ -370,6 +376,7 @@ static void computeFunctionSummary(
           ValueInfo.updateRelBlockFreq(BBFreq, EntryFreq);
         }
       } else {
+        HasUnknownCall = true;
         // Skip inline assembly calls.
         if (CI && CI->isInlineAsm())
           continue;
@@ -480,7 +487,8 @@ static void computeFunctionSummary(
       // FIXME: refactor this to use the same code that inliner is using.
       // Don't try to import functions with noinline attribute.
       F.getAttributes().hasFnAttr(Attribute::NoInline),
-      F.hasFnAttribute(Attribute::AlwaysInline)};
+      F.hasFnAttribute(Attribute::AlwaysInline),
+      F.hasFnAttribute(Attribute::NoUnwind), MayThrow, HasUnknownCall};
   std::vector<FunctionSummary::ParamAccess> ParamAccesses;
   if (auto *SSI = GetSSICallback(F))
     ParamAccesses = SSI->getParamAccesses(Index);
@@ -726,7 +734,10 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                         F->hasFnAttribute(Attribute::NoRecurse),
                         F->returnDoesNotAlias(),
                         /* NoInline = */ false,
-                        F->hasFnAttribute(Attribute::AlwaysInline)},
+                        F->hasFnAttribute(Attribute::AlwaysInline),
+                        F->hasFnAttribute(Attribute::NoUnwind),
+                        /* MayThrow */ true,
+                        /* HasUnknownCall */ true},
                     /*EntryCount=*/0, ArrayRef<ValueInfo>{},
                     ArrayRef<FunctionSummary::EdgeTy>{},
                     ArrayRef<GlobalValue::GUID>{},

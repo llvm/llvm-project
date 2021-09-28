@@ -266,9 +266,14 @@ protected:
     // functions have linkage.
     LLVM::Linkage linkage = LLVM::Linkage::External;
     if (funcOp->hasAttr("llvm.linkage")) {
-      linkage = funcOp->getAttr("llvm.linkage")
-                    .cast<mlir::LLVM::LinkageAttr>()
-                    .getLinkage();
+      auto attr =
+          funcOp->getAttr("llvm.linkage").dyn_cast<mlir::LLVM::LinkageAttr>();
+      if (!attr) {
+        funcOp->emitError()
+            << "Contains llvm.linkage attribute not of type LLVM::LinkageAttr";
+        return nullptr;
+      }
+      linkage = attr.getLinkage();
     }
     auto newFuncOp = rewriter.create<LLVM::LLVMFuncOp>(
         funcOp.getLoc(), funcOp.getName(), llvmType, linkage,

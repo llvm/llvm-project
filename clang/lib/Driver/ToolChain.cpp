@@ -1079,7 +1079,7 @@ void ToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
 void ToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
                                   ArgStringList &CC1Args) const {}
 
-llvm::SmallVector<std::string, 12>
+llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 ToolChain::getHIPDeviceLibs(const ArgList &DriverArgs) const {
   return {};
 }

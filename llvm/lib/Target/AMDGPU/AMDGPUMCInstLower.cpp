@@ -268,6 +268,12 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
       return;
     }
 
+    if (MI->isMetaInstruction()) {
+      if (isVerbose())
+        OutStreamer->emitRawComment(" meta instruction");
+      return;
+    }
+
     MCInst TmpInst;
     MCInstLowering.lower(MI, TmpInst);
     EmitToStreamer(*OutStreamer, TmpInst);

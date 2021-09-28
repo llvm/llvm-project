@@ -320,8 +320,7 @@ uint16_t create_header() {
   return header;
 }
 
-std::pair<hsa_status_t, bool>
-isValidMemoryPool(hsa_amd_memory_pool_t MemoryPool) {
+hsa_status_t isValidMemoryPool(hsa_amd_memory_pool_t MemoryPool) {
   bool AllocAllowed = false;
   hsa_status_t Err = hsa_amd_memory_pool_get_info(
       MemoryPool, HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED,
@@ -329,27 +328,30 @@ isValidMemoryPool(hsa_amd_memory_pool_t MemoryPool) {
   if (Err != HSA_STATUS_SUCCESS) {
     DP("Alloc allowed in memory pool check failed: %s\n",
        get_error_string(Err));
-    return {Err, false};
+    return Err;
   }
 
-  return {HSA_STATUS_SUCCESS, AllocAllowed};
+  size_t Size = 0;
+  Err = hsa_amd_memory_pool_get_info(MemoryPool, HSA_AMD_MEMORY_POOL_INFO_SIZE,
+                                     &Size);
+  if (Err != HSA_STATUS_SUCCESS) {
+    DP("Get memory pool size failed: %s\n", get_error_string(Err));
+    return Err;
+  }
+
+  return (AllocAllowed && Size > 0) ? HSA_STATUS_SUCCESS : HSA_STATUS_ERROR;
 }
 
 hsa_status_t addMemoryPool(hsa_amd_memory_pool_t MemoryPool, void *Data) {
   std::vector<hsa_amd_memory_pool_t> *Result =
       static_cast<std::vector<hsa_amd_memory_pool_t> *>(Data);
-  bool IsValid = false;
-  hsa_status_t Err;
-  std::tie(Err, IsValid) = isValidMemoryPool(MemoryPool);
-  if (Err != HSA_STATUS_SUCCESS) {
-    DP("isValidMemoryPool failed: %s\n", get_error_string(Err));
-    return Err;
+
+  hsa_status_t err;
+  if ((err = isValidMemoryPool(MemoryPool)) != HSA_STATUS_SUCCESS) {
+    return err;
   }
 
-  if (IsValid) {
-    Result->push_back(MemoryPool);
-  }
-
+  Result->push_back(MemoryPool);
   return HSA_STATUS_SUCCESS;
 }
 
@@ -405,6 +407,8 @@ class RTLDeviceInfoTy {
   };
 
 public:
+  bool ConstructionSucceeded = false;
+
   // load binary populates symbol tables and mutates various global state
   // run uses those symbol tables
   std::shared_timed_mutex load_run_lock;
@@ -592,20 +596,13 @@ public:
     for (int DeviceId = 0; DeviceId < Agents.size(); DeviceId++) {
       hsa_status_t Err = hsa::amd_agent_iterate_memory_pools(
           Agents[DeviceId], [&](hsa_amd_memory_pool_t MemoryPool) {
-            bool AllocAllowed = false;
-            hsa_status_t ErrGetInfo;
-            std::tie(ErrGetInfo, AllocAllowed) =
-                core::isValidMemoryPool(MemoryPool);
-            if (ErrGetInfo != HSA_STATUS_SUCCESS) {
+            hsa_status_t ValidStatus = core::isValidMemoryPool(MemoryPool);
+            if (ValidStatus != HSA_STATUS_SUCCESS) {
               DP("Alloc allowed in memory pool check failed: %s\n",
-                 get_error_string(ErrGetInfo));
-              return ErrGetInfo;
+                 get_error_string(ValidStatus));
+              return HSA_STATUS_SUCCESS;
             }
-            if (AllocAllowed) {
-              return addDeviceMemoryPool(MemoryPool, DeviceId);
-            }
-
-            return HSA_STATUS_SUCCESS;
+            return addDeviceMemoryPool(MemoryPool, DeviceId);
           });
 
       if (Err != HSA_STATUS_SUCCESS) {
@@ -646,16 +643,7 @@ public:
         return Err;
       }
 
-      size_t Size = 0;
-      Err = hsa_amd_memory_pool_get_info(MemoryPool,
-                                         HSA_AMD_MEMORY_POOL_INFO_SIZE, &Size);
-      if (Err != HSA_STATUS_SUCCESS) {
-        DP("Get memory pool size failed: %s\n", get_error_string(Err));
-        return Err;
-      }
-
-      if ((GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED) &&
-          Size > 0) {
+      if (GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED) {
         if (GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT) {
           KernArgPool = MemoryPool;
           KernArgPoolSet = true;
@@ -878,6 +866,7 @@ public:
 
     for (int I = 0; I < NumberOfDevices; ++I)
       DeviceAllocators.emplace_back(I);
+    ConstructionSucceeded = true;
   }
 
   ~RTLDeviceInfoTy() {
@@ -1028,7 +1017,15 @@ int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *image) {
   return elf_machine_id_is_amdgcn(image);
 }
 
-int __tgt_rtl_number_of_devices() { return DeviceInfo.NumberOfDevices; }
+int __tgt_rtl_number_of_devices() {
+  // If the construction failed, no methods are safe to call
+  if (DeviceInfo.ConstructionSucceeded) {
+    return DeviceInfo.NumberOfDevices;
+  } else {
+    DP("AMDGPU plugin construction failed. Zero devices available\n");
+    return 0;
+  }
+}
 
 int64_t __tgt_rtl_init_requires(int64_t RequiresFlags) {
   DP("Init requires flags to %ld\n", RequiresFlags);

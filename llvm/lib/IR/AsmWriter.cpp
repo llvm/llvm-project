@@ -3203,19 +3203,9 @@ static const char *getVisibilityName(GlobalValue::VisibilityTypes Vis) {
 
 void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
   Out << ", insts: " << FS->instCount();
+  if (FS->fflags().anyFlagSet())
+    Out << ", " << FS->fflags();
 
-  FunctionSummary::FFlags FFlags = FS->fflags();
-  if (FFlags.ReadNone | FFlags.ReadOnly | FFlags.NoRecurse |
-      FFlags.ReturnDoesNotAlias | FFlags.NoInline | FFlags.AlwaysInline) {
-    Out << ", funcFlags: (";
-    Out << "readNone: " << FFlags.ReadNone;
-    Out << ", readOnly: " << FFlags.ReadOnly;
-    Out << ", noRecurse: " << FFlags.NoRecurse;
-    Out << ", returnDoesNotAlias: " << FFlags.ReturnDoesNotAlias;
-    Out << ", noInline: " << FFlags.NoInline;
-    Out << ", alwaysInline: " << FFlags.AlwaysInline;
-    Out << ")";
-  }
   if (!FS->calls().empty()) {
     Out << ", calls: (";
     FieldSeparator IFS;

@@ -1927,7 +1927,7 @@ let Predicates = [IsISA3_1] in {
                                 [(set v16i8:$VRT,
                                       (int_ppc_altivec_vsldbi v16i8:$VRA,
                                                               v16i8:$VRB,
-                                                              i32:$SH))]>;
+                                                              timm:$SH))]>;
   def VSRDBI : VNForm_VTAB5_SD3<22, 1, (outs vrrc:$VRT),
                                 (ins vrrc:$VRA, vrrc:$VRB, u3imm:$SH),
                                 "vsrdbi $VRT, $VRA, $VRB, $SH",
@@ -1935,7 +1935,7 @@ let Predicates = [IsISA3_1] in {
                                 [(set v16i8:$VRT,
                                       (int_ppc_altivec_vsrdbi v16i8:$VRA,
                                                               v16i8:$VRB, 
-                                                              i32:$SH))]>;
+                                                              timm:$SH))]>;
   defm VSTRIBR : VXForm_VTB5_RCr<13, 1, (outs vrrc:$vT), (ins vrrc:$vB),
                                  "vstribr", "$vT, $vB", IIC_VecGeneral,
 				 [(set v16i8:$vT,

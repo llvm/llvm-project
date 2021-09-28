@@ -51,10 +51,10 @@ using CoroResume = void (*)(void *); // coroutine resume function
 using RefCountedObjPtr = void *;
 
 // Adds references to reference counted runtime object.
-extern "C" void mlirAsyncRuntimeAddRef(RefCountedObjPtr, int32_t);
+extern "C" void mlirAsyncRuntimeAddRef(RefCountedObjPtr, int64_t);
 
 // Drops references from reference counted runtime object.
-extern "C" void mlirAsyncRuntimeDropRef(RefCountedObjPtr, int32_t);
+extern "C" void mlirAsyncRuntimeDropRef(RefCountedObjPtr, int64_t);
 
 // Create a new `async.token` in not-ready state.
 extern "C" AsyncToken *mlirAsyncRuntimeCreateToken();
@@ -63,7 +63,7 @@ extern "C" AsyncToken *mlirAsyncRuntimeCreateToken();
 // number of bytes that will be allocated for the async value storage. Storage
 // is owned by the `async.value` and deallocated when the async value is
 // destructed (reference count drops to zero).
-extern "C" AsyncValue *mlirAsyncRuntimeCreateValue(int32_t);
+extern "C" AsyncValue *mlirAsyncRuntimeCreateValue(int64_t);
 
 // Create a new `async.group` in empty state.
 extern "C" AsyncGroup *mlirAsyncRuntimeCreateGroup(int64_t size);

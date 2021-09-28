@@ -64,8 +64,8 @@ private:
   bool GroupedShortOptions = false;
   const char *EnvVar = nullptr;
 
-  unsigned TheInputOptionID = 0;
-  unsigned TheUnknownOptionID = 0;
+  unsigned InputOptionID = 0;
+  unsigned UnknownOptionID = 0;
 
   /// The index of the first option which can be parsed (i.e., is not a
   /// special option like 'input' or 'unknown', and is not an option group).
@@ -83,7 +83,8 @@ private:
     return OptionInfos[id - 1];
   }
 
-  Arg *parseOneArgGrouped(InputArgList &Args, unsigned &Index) const;
+  std::unique_ptr<Arg> parseOneArgGrouped(InputArgList &Args,
+                                          unsigned &Index) const;
 
 protected:
   OptTable(ArrayRef<Info> OptionInfos, bool IgnoreCase = false);
@@ -199,9 +200,9 @@ public:
   /// \return The parsed argument, or 0 if the argument is missing values
   /// (in which case Index still points at the conceptual next argument string
   /// to parse).
-  Arg *ParseOneArg(const ArgList &Args, unsigned &Index,
-                   unsigned FlagsToInclude = 0,
-                   unsigned FlagsToExclude = 0) const;
+  std::unique_ptr<Arg> ParseOneArg(const ArgList &Args, unsigned &Index,
+                                   unsigned FlagsToInclude = 0,
+                                   unsigned FlagsToExclude = 0) const;
 
   /// Parse an list of arguments into an InputArgList.
   ///

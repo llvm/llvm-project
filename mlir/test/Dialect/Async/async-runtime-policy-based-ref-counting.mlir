@@ -23,7 +23,7 @@ func @group_await(%arg0: !async.group) {
 // CHECK:         %[[TOKEN:.*]]: !async.token
 func @add_token_to_group(%arg0: !async.group, %arg1: !async.token) {
   // CHECK: async.runtime.add_to_group %[[TOKEN]], %[[GROUP]]
-  // CHECK: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i32}
+  // CHECK: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i64}
   async.runtime.add_to_group %arg1, %arg0 : !async.token
   return
 }
@@ -32,7 +32,7 @@ func @add_token_to_group(%arg0: !async.group, %arg1: !async.token) {
 // CHECK:         %[[VALUE:.*]]: !async.value<f32>
 func @value_load(%arg0: !async.value<f32>) {
   // CHECK: async.runtime.load %[[VALUE]]
-  // CHECK: async.runtime.drop_ref %[[VALUE]] {count = 1 : i32}
+  // CHECK: async.runtime.drop_ref %[[VALUE]] {count = 1 : i64}
   %0 = async.runtime.load %arg0 : !async.value<f32>
   return
 }
@@ -41,7 +41,7 @@ func @value_load(%arg0: !async.value<f32>) {
 // CHECK:         %[[TOKEN:.*]]: !async.token
 func @error_check(%arg0: !async.token) {
   // CHECK: async.runtime.is_error %[[TOKEN]]
-  // CHECK: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i32}
+  // CHECK: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i64}
   %0 = async.runtime.is_error %arg0 : !async.token
   return
 }

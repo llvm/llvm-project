@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 -relocation-model=static | FileCheck %s --check-prefix CHK
+; RUN: llc < %s -mtriple=nvptx -mcpu=sm_20 -relocation-model=static | FileCheck %s --check-prefix CHK
 
 %MyStruct = type { i32, i32, float }
 @Gbl = internal addrspace(3) global [1024 x %MyStruct] zeroinitializer

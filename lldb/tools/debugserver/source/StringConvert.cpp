@@ -8,42 +8,9 @@
 
 #include <cstdlib>
 
-#include "lldb/Host/StringConvert.h"
+#include "StringConvert.h"
 
-namespace lldb_private {
 namespace StringConvert {
-
-int32_t ToSInt32(const char *s, int32_t fail_value, int base,
-                 bool *success_ptr) {
-  if (s && s[0]) {
-    char *end = nullptr;
-    const long sval = ::strtol(s, &end, base);
-    if (*end == '\0') {
-      if (success_ptr)
-        *success_ptr = ((sval <= INT32_MAX) && (sval >= INT32_MIN));
-      return (int32_t)sval; // All characters were used, return the result
-    }
-  }
-  if (success_ptr)
-    *success_ptr = false;
-  return fail_value;
-}
-
-uint32_t ToUInt32(const char *s, uint32_t fail_value, int base,
-                  bool *success_ptr) {
-  if (s && s[0]) {
-    char *end = nullptr;
-    const unsigned long uval = ::strtoul(s, &end, base);
-    if (*end == '\0') {
-      if (success_ptr)
-        *success_ptr = (uval <= UINT32_MAX);
-      return (uint32_t)uval; // All characters were used, return the result
-    }
-  }
-  if (success_ptr)
-    *success_ptr = false;
-  return fail_value;
-}
 
 int64_t ToSInt64(const char *s, int64_t fail_value, int base,
                  bool *success_ptr) {
@@ -91,5 +58,5 @@ double ToDouble(const char *s, double fail_value, bool *success_ptr) {
     *success_ptr = false;
   return fail_value;
 }
-}
-}
+
+} // namespace StringConvert

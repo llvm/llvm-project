@@ -114,8 +114,8 @@ struct SparseTensorConversionPass
     });
     // The following operations and dialects may be introduced by the
     // rewriting rules, and are therefore marked as legal.
-    target.addLegalOp<ConstantOp, tensor::CastOp, tensor::ExtractOp, CmpFOp,
-                      CmpIOp>();
+    target.addLegalOp<ConstantOp, IndexCastOp, tensor::CastOp,
+                      tensor::ExtractOp, CmpFOp, CmpIOp>();
     target.addLegalDialect<scf::SCFDialect, LLVM::LLVMDialect,
                            memref::MemRefDialect>();
     // Populate with rules and apply rewriting rules.
