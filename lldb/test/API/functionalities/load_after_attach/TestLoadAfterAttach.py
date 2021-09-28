@@ -39,13 +39,6 @@ class TestCase(TestBase):
         stopped_threads = lldbutil.continue_to_breakpoint(self.process(), breakpoint1)
         self.assertEqual(len(stopped_threads), 1)
 
-        # Check that image list does not contain liblib_b before dlopen.
-        self.match(
-                "image list",
-                patterns = [lib_name],
-                matching = False,
-                msg = lib_name + " should not have been in image list")
-
         # Change a variable to escape the loop
         self.runCmd("expression main_thread_continue = 1")
 
