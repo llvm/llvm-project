@@ -340,15 +340,16 @@ public:
   Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                               ArrayRef<std::string> Args) override {
     DEBUG_WITH_TYPE("orc", {
-      dbgs() << "Running as main: " << formatv("{0:x16}", MainFnAddr)
+      dbgs() << "Running as main: " << formatv("{0:x16}", MainFnAddr.getValue())
              << ", args = [";
       for (unsigned I = 0; I != Args.size(); ++I)
         dbgs() << (I ? "," : "") << " \"" << Args[I] << "\"";
       dbgs() << "]\n";
     });
-    auto Result = EP.template callB<orcrpctpc::RunMain>(MainFnAddr, Args);
+    auto Result =
+        EP.template callB<orcrpctpc::RunMain>(MainFnAddr.getValue(), Args);
     DEBUG_WITH_TYPE("orc", {
-      dbgs() << "  call to " << formatv("{0:x16}", MainFnAddr);
+      dbgs() << "  call to " << formatv("{0:x16}", MainFnAddr.getValue());
       if (Result)
         dbgs() << " returned result " << *Result << "\n";
       else
@@ -362,11 +363,11 @@ public:
                         ArrayRef<char> ArgBuffer) override {
     DEBUG_WITH_TYPE("orc", {
       dbgs() << "Running as wrapper function "
-             << formatv("{0:x16}", WrapperFnAddr) << " with "
+             << formatv("{0:x16}", WrapperFnAddr.getValue()) << " with "
              << formatv("{0:x16}", ArgBuffer.size()) << " argument buffer\n";
     });
     auto Result = EP.template callB<orcrpctpc::RunWrapper>(
-        WrapperFnAddr,
+        WrapperFnAddr.getValue(),
         ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(ArgBuffer.data()),
                           ArgBuffer.size()));
 
@@ -412,7 +413,7 @@ protected:
 private:
   Error runWrapperInJIT(
       std::function<Error(Expected<shared::WrapperFunctionResult>)> SendResult,
-      ExecutorAddr FunctionTag, std::vector<uint8_t> ArgBuffer) {
+      JITTargetAddress FunctionTag, std::vector<uint8_t> ArgBuffer) {
 
     getExecutionSession().runJITDispatchHandler(
         [this, SendResult = std::move(SendResult)](

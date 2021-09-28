@@ -61,6 +61,7 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
 #endif
     llvm_unreachable("Do not know how to soften the result of this operator!");
 
+    case ISD::ARITH_FENCE: R = SoftenFloatRes_ARITH_FENCE(N); break;
     case ISD::MERGE_VALUES:R = SoftenFloatRes_MERGE_VALUES(N, ResNo); break;
     case ISD::BITCAST:     R = SoftenFloatRes_BITCAST(N); break;
     case ISD::BUILD_PAIR:  R = SoftenFloatRes_BUILD_PAIR(N); break;
@@ -204,6 +205,13 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FREEZE(SDNode *N) {
   EVT Ty = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   return DAG.getNode(ISD::FREEZE, SDLoc(N), Ty,
                      GetSoftenedFloat(N->getOperand(0)));
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_ARITH_FENCE(SDNode *N) {
+  EVT Ty = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  SDValue NewFence = DAG.getNode(ISD::ARITH_FENCE, SDLoc(N), Ty,
+                                 GetSoftenedFloat(N->getOperand(0)));
+  return NewFence;
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_MERGE_VALUES(SDNode *N,
