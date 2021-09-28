@@ -4,7 +4,7 @@
 
 declare void @llvm.experimental.guard(i1, ...)
 
-; CHECK: Running pass: RequireAnalysisPass<llvm::BranchProbabilityAnalysis
+; CHECK: Running pass: RequireAnalysisPass<{{.*}}BranchProbabilityAnalysis
 ; CHECK-NEXT: Running analysis: BranchProbabilityAnalysis on unsigned_loop_0_to_n_ult_check
 ; CHECK-NEXT: Running analysis: PostDominatorTreeAnalysis on unsigned_loop_0_to_n_ult_check
 ; CHECK-NEXT: ---- Branch Probability Info : unsigned_loop_0_to_n_ult_check ----
