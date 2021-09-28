@@ -141,8 +141,8 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
           std::string reg_name_str = matches[1].str();
           std::string msbit_str = matches[2].str();
           std::string lsbit_str = matches[3].str();
-          uint32_t msbit;
-          uint32_t lsbit;
+          uint32_t msbit = 0;
+          uint32_t lsbit = 0;
           if (llvm::to_integer(msbit_str, msbit) &&
               llvm::to_integer(lsbit_str, lsbit)) {
             if (msbit > lsbit) {

@@ -69,18 +69,18 @@ FDSimpleRemoteEPCTransport::Create(SimpleRemoteEPCTransportClient &C, int InFD,
 #endif
 }
 
-FDSimpleRemoteEPCTransport::FDSimpleRemoteEPCTransport(
-    SimpleRemoteEPCTransportClient &C, int InFD, int OutFD)
-    : C(C), InFD(InFD), OutFD(OutFD) {
-#if LLVM_ENABLE_THREADS
-  ListenerThread = std::thread([this]() { listenLoop(); });
-#endif
-}
-
 FDSimpleRemoteEPCTransport::~FDSimpleRemoteEPCTransport() {
 #if LLVM_ENABLE_THREADS
   ListenerThread.join();
 #endif
+}
+
+Error FDSimpleRemoteEPCTransport::start() {
+#if LLVM_ENABLE_THREADS
+  ListenerThread = std::thread([this]() { listenLoop(); });
+  return Error::success();
+#endif
+  llvm_unreachable("Should not be called with LLVM_ENABLE_THREADS=Off");
 }
 
 Error FDSimpleRemoteEPCTransport::sendMessage(SimpleRemoteEPCOpcode OpC,
@@ -98,7 +98,7 @@ Error FDSimpleRemoteEPCTransport::sendMessage(SimpleRemoteEPCOpcode OpC,
       TagAddr.getValue();
 
   std::lock_guard<std::mutex> Lock(M);
-  if (OutFD == -1)
+  if (Disconnected)
     return make_error<StringError>("FD-transport disconnected",
                                    inconvertibleErrorCode());
   if (int ErrNo = writeBytes(HeaderBuffer, FDMsgHeader::Size))
@@ -109,28 +109,21 @@ Error FDSimpleRemoteEPCTransport::sendMessage(SimpleRemoteEPCOpcode OpC,
 }
 
 void FDSimpleRemoteEPCTransport::disconnect() {
-  int CloseInFD = -1, CloseOutFD = -1;
-  {
-    std::lock_guard<std::mutex> Lock(M);
-    std::swap(InFD, CloseInFD);
-    std::swap(OutFD, CloseOutFD);
-  }
+  if (Disconnected)
+    return; // Return if already disconnected.
 
-  // If CloseOutFD == CloseInFD then set CloseOutFD to -1 up-front so that we
-  // don't double-close.
-  if (CloseOutFD == CloseInFD)
-    CloseOutFD = -1;
+  Disconnected = true;
+  bool CloseOutFD = InFD != OutFD;
 
   // Close InFD.
-  if (CloseInFD != -1)
-    while (close(CloseInFD) == -1) {
-      if (errno == EBADF)
-        break;
-    }
+  while (close(InFD) == -1) {
+    if (errno == EBADF)
+      break;
+  }
 
   // Close OutFD.
-  if (CloseOutFD != -1) {
-    while (close(CloseOutFD) == -1) {
+  if (CloseOutFD) {
+    while (close(OutFD) == -1) {
       if (errno == EBADF)
         break;
     }
@@ -160,7 +153,7 @@ Error FDSimpleRemoteEPCTransport::readBytes(char *Dst, size_t Size,
         continue;
       else {
         std::lock_guard<std::mutex> Lock(M);
-        if (InFD == -1 && IsEOF) { // Disconnected locally. Pretend this is EOF.
+        if (Disconnected && IsEOF) { // disconnect called,  pretend this is EOF.
           *IsEOF = true;
           return Error::success();
         }
