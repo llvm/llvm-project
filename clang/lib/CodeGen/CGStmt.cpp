@@ -26,6 +26,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/Assumptions.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Intrinsics.h"
@@ -2207,6 +2208,20 @@ static void UpdateAsmCallInst(llvm::CallBase &Result, bool HasSideEffect,
       Result.addFnAttr(llvm::Attribute::ReadNone);
     else if (ReadOnly)
       Result.addFnAttr(llvm::Attribute::ReadOnly);
+  }
+
+  // Attach OpenMP assumption attributes from the caller, if they exist.
+  if (CGF.CGM.getLangOpts().OpenMP) {
+    SmallVector<StringRef, 4> Attrs;
+
+    for (const AssumptionAttr *AA :
+         CGF.CurFuncDecl->specific_attrs<AssumptionAttr>())
+      AA->getAssumption().split(Attrs, ",");
+
+    if (!Attrs.empty())
+      Result.addFnAttr(
+          llvm::Attribute::get(CGF.getLLVMContext(), llvm::AssumptionAttrKey,
+                               llvm::join(Attrs.begin(), Attrs.end(), ",")));
   }
 
   // Slap the source location of the inline asm into a !srcloc metadata on the
