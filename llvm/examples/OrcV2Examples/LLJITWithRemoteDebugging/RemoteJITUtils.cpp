@@ -141,7 +141,7 @@ JITLinkExecutor::loadDylib(StringRef RemotePath) {
 
 Expected<int> JITLinkExecutor::runAsMain(JITEvaluatedSymbol MainSym,
                                          ArrayRef<std::string> Args) {
-  return EPC->runAsMain(MainSym.getAddress(), Args);
+  return EPC->runAsMain(ExecutorAddr(MainSym.getAddress()), Args);
 }
 
 Error JITLinkExecutor::disconnect() { return EPC->disconnect(); }
