@@ -31,7 +31,7 @@
 
 // RUN:   mlir-opt %s -async-parallel-for="async-dispatch=false                \
 // RUN:                                    num-workers=20                      \
-// RUN:                                    target-block-size=1"                \
+// RUN:                                    min-task-size=1"                \
 // RUN:               -async-to-async-runtime                                  \
 // RUN:               -async-runtime-ref-counting                              \
 // RUN:               -async-runtime-ref-counting-opt                          \
