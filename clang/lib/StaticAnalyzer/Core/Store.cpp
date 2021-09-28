@@ -442,6 +442,19 @@ SVal StoreManager::getLValueIvar(const ObjCIvarDecl *decl, SVal base) {
 
 SVal StoreManager::getLValueElement(QualType elementType, NonLoc Offset,
                                     SVal Base) {
+
+  // Special case, if index is 0, return the same type as if
+  // this was not an array dereference.
+  if (Offset.isZeroConstant()) {
+    QualType BT = Base.getType(this->Ctx);
+    if (!BT.isNull() && !elementType.isNull()) {
+      QualType PointeeTy = BT->getPointeeType();
+      if (!PointeeTy.isNull() &&
+          PointeeTy.getCanonicalType() == elementType.getCanonicalType())
+        return Base;
+    }
+  }
+
   // If the base is an unknown or undefined value, just return it back.
   // FIXME: For absolute pointer addresses, we just return that value back as
   //  well, although in reality we should return the offset added to that
