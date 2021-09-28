@@ -66,8 +66,10 @@ void getPerfectlyNestedLoops(SmallVectorImpl<AffineForOp> &nestedLoops,
 void getPerfectlyNestedLoops(SmallVectorImpl<scf::ForOp> &nestedLoops,
                              scf::ForOp root);
 
-/// Unrolls and jams this loop by the specified factor. Returns success if the
-/// loop is successfully unroll-jammed.
+/// Unrolls and jams this loop by the specified factor. `forOp` can be a loop
+/// with iteration arguments performing supported reductions and its inner loops
+/// can have iteration arguments. Returns success if the loop is successfully
+/// unroll-jammed.
 LogicalResult loopUnrollJamByFactor(AffineForOp forOp,
                                     uint64_t unrollJamFactor);
 
