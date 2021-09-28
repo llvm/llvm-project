@@ -590,15 +590,13 @@ bool TwoAddressInstructionPass::isProfitableToConv3Addr(Register RegA,
 bool TwoAddressInstructionPass::convertInstTo3Addr(
     MachineBasicBlock::iterator &mi, MachineBasicBlock::iterator &nmi,
     Register RegA, Register RegB, unsigned Dist) {
+  MachineInstrSpan MIS(mi, MBB);
   MachineInstr *NewMI = TII->convertToThreeAddress(*mi, LV);
   if (!NewMI)
     return false;
 
   LLVM_DEBUG(dbgs() << "2addr: CONVERTING 2-ADDR: " << *mi);
   LLVM_DEBUG(dbgs() << "2addr:         TO 3-ADDR: " << *NewMI);
-
-  if (LIS)
-    LIS->ReplaceMachineInstrInMaps(*mi, *NewMI);
 
   // If the old instruction is debug value tracked, an update is required.
   if (auto OldInstrNum = mi->peekDebugInstrNum()) {
@@ -618,7 +616,25 @@ bool TwoAddressInstructionPass::convertInstTo3Addr(
                                    std::make_pair(NewInstrNum, NewIdx));
   }
 
+  // If convertToThreeAddress created a single new instruction, assume it has
+  // exactly the same effect on liveness as the old instruction. This is much
+  // more efficient than calling repairIntervalsInRange.
+  bool SingleInst = std::next(MIS.begin(), 2) == MIS.end();
+  if (LIS && SingleInst)
+    LIS->ReplaceMachineInstrInMaps(*mi, *NewMI);
+
+  SmallVector<Register> OrigRegs;
+  if (LIS && !SingleInst) {
+    for (const MachineOperand &MO : mi->operands()) {
+      if (MO.isReg())
+        OrigRegs.push_back(MO.getReg());
+    }
+  }
+
   MBB->erase(mi); // Nuke the old inst.
+
+  if (LIS && !SingleInst)
+    LIS->repairIntervalsInRange(MBB, MIS.begin(), MIS.end(), OrigRegs);
 
   DistanceMap.insert(std::make_pair(NewMI, Dist));
   mi = NewMI;
