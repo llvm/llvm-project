@@ -34,7 +34,7 @@
 // CHECK-NOT: {{"[^"]*lld(\.exe){0,1}".* ".*hip.bc"}}
 // CHECK: {{"[^"]*clang[^"]*".* "-triple" "x86_64-unknown-linux-gnu".* "-fsanitize=address"}}
 
-// NORDC: {{"[^"]*clang[^"]*".* "-emit-obj".* "-fcuda-is-device".* "-fsanitize=address".*}} "-o" "[[OUT:[^"]*.o]]"
+// NORDC: {{"[^"]*clang[^"]*".* "-emit-obj".* "-fcuda-is-device".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-mlink-builtin-bitcode" ".*hip.bc".* "-fsanitize=address".*}} "-o" "[[OUT:[^"]*.o]]"
 // NORDC: {{"[^"]*lld(\.exe){0,1}".*}} "[[OUT]]" {{".*asanrtl.bc" ".*hip.bc"}}
 // NORDC: {{"[^"]*clang[^"]*".* "-triple" "x86_64-unknown-linux-gnu".* "-fsanitize=address"}}
 

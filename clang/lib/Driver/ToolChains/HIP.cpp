@@ -88,8 +88,8 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
 
   if (Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
                    false))
-    llvm::for_each(TC.getHIPDeviceLibs(Args), [&](StringRef BCFile) {
-      LldArgs.push_back(Args.MakeArgString(BCFile));
+    llvm::for_each(TC.getHIPDeviceLibs(Args), [&](auto BCFile) {
+      LldArgs.push_back(Args.MakeArgString(BCFile.Path));
     });
 
   const char *Lld = Args.MakeArgString(getToolChain().GetProgramPath("lld"));
@@ -276,9 +276,10 @@ void HIPToolChain::addClangTargetOptions(
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
 
-  llvm::for_each(getHIPDeviceLibs(DriverArgs), [&](StringRef BCFile) {
-    CC1Args.push_back("-mlink-builtin-bitcode");
-    CC1Args.push_back(DriverArgs.MakeArgString(BCFile));
+  llvm::for_each(getHIPDeviceLibs(DriverArgs), [&](auto BCFile) {
+    CC1Args.push_back(BCFile.ShouldInternalize ? "-mlink-builtin-bitcode"
+                                               : "-mlink-bitcode-file");
+    CC1Args.push_back(DriverArgs.MakeArgString(BCFile.Path));
   });
 }
 
@@ -359,9 +360,9 @@ VersionTuple HIPToolChain::computeMSVCVersion(const Driver *D,
   return HostTC.computeMSVCVersion(D, Args);
 }
 
-llvm::SmallVector<std::string, 12>
+llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 HIPToolChain::getHIPDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
-  llvm::SmallVector<std::string, 12> BCLibs;
+  llvm::SmallVector<BitCodeLibraryInfo, 12> BCLibs;
   if (DriverArgs.hasArg(options::OPT_nogpulib))
     return {};
   ArgStringList LibraryPaths;
@@ -382,7 +383,7 @@ HIPToolChain::getHIPDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
         llvm::sys::path::append(Path, BCName);
         FullName = Path;
         if (llvm::sys::fs::exists(FullName)) {
-          BCLibs.push_back(FullName.str());
+          BCLibs.push_back(FullName);
           return;
         }
       }
@@ -409,14 +410,15 @@ HIPToolChain::getHIPDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
         getDriver().Diag(DiagID);
         return {};
       } else
-        BCLibs.push_back(AsanRTL.str());
+        BCLibs.push_back({AsanRTL.str(), /*ShouldInternalize=*/false});
     }
 
     // Add the HIP specific bitcode library.
-    BCLibs.push_back(RocmInstallation.getHIPPath().str());
+    BCLibs.push_back(RocmInstallation.getHIPPath());
 
     // Add common device libraries like ocml etc.
-    BCLibs.append(getCommonDeviceLibNames(DriverArgs, GpuArch.str()));
+    for (auto N : getCommonDeviceLibNames(DriverArgs, GpuArch.str()))
+      BCLibs.push_back(StringRef(N));
 
     // Add instrument lib.
     auto InstLib =
@@ -424,7 +426,7 @@ HIPToolChain::getHIPDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
     if (InstLib.empty())
       return BCLibs;
     if (llvm::sys::fs::exists(InstLib))
-      BCLibs.push_back(InstLib.str());
+      BCLibs.push_back(InstLib);
     else
       getDriver().Diag(diag::err_drv_no_such_file) << InstLib;
   }
