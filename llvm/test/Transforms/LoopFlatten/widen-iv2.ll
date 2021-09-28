@@ -37,7 +37,7 @@ define dso_local i32 @fn1() local_unnamed_addr #0 {
 ; CHECK-NEXT:    br label [[FOR_BODY3_US:%.*]]
 ; CHECK:       for.body3.us:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], [[FOR_BODY3_US]] ], [ 0, [[FOR_COND1_PREHEADER_US]] ]
-; CHECK-NEXT:    [[J_014_US:%.*]] = phi i32 [ 0, [[FOR_COND1_PREHEADER_US]] ]
+; CHECK-NEXT:    [[J_014_US:%.*]] = phi i32 [ 0, [[FOR_COND1_PREHEADER_US]] ], [ [[INC_US:%.*]], [[FOR_BODY3_US]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nsw i64 [[INDVAR]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = sext i32 [[J_014_US]] to i64
 ; CHECK-NEXT:    [[TMP9:%.*]] = add nsw i64 [[TMP8]], [[TMP5]]
@@ -46,7 +46,7 @@ define dso_local i32 @fn1() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, i32* [[TMP4]], i64 [[TMP7]]
 ; CHECK-NEXT:    store i32 32, i32* [[ARRAYIDX_US]], align 4
 ; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[INDVAR]], 1
-; CHECK-NEXT:    [[INC_US:%.*]] = add nuw nsw i32 [[J_014_US]], 1
+; CHECK-NEXT:    [[INC_US]] = add nuw nsw i32 [[J_014_US]], 1
 ; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp slt i64 [[INDVAR_NEXT]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY3_US]], label [[FOR_COND1_FOR_INC4_CRIT_EDGE_US]]
 ; CHECK:       for.cond1.for.inc4_crit_edge.us:
