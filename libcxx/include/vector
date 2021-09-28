@@ -1406,7 +1406,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 vector<_Tp, _Allocator>&
 vector<_Tp, _Allocator>::operator=(const vector& __x)
 {
-    if (this != &__x)
+    if (this != _VSTD::addressof(__x))
     {
         __base::__copy_assign_alloc(__x);
         assign(__x.__begin_, __x.__end_);
@@ -2859,7 +2859,7 @@ template <class _Allocator>
 vector<bool, _Allocator>&
 vector<bool, _Allocator>::operator=(const vector& __v)
 {
-    if (this != &__v)
+    if (this != _VSTD::addressof(__v))
     {
         __copy_assign_alloc(__v);
         if (__v.__size_)

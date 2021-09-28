@@ -1056,7 +1056,7 @@ public:
 #ifndef _LIBCPP_CXX03_LANG
         __table_ = __u.__table_;
 #else
-        if (this != &__u) {
+        if (this != _VSTD::addressof(__u)) {
             __table_.clear();
             __table_.hash_function() = __u.__table_.hash_function();
             __table_.key_eq() = __u.__table_.key_eq();
@@ -1988,7 +1988,7 @@ public:
 #ifndef _LIBCPP_CXX03_LANG
         __table_ = __u.__table_;
 #else
-        if (this != &__u) {
+        if (this != _VSTD::addressof(__u)) {
             __table_.clear();
             __table_.hash_function() = __u.__table_.hash_function();
             __table_.key_eq() = __u.__table_.key_eq();

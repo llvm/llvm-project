@@ -3048,7 +3048,7 @@ template <class _Tp>
 valarray<_Tp>&
 valarray<_Tp>::operator=(const valarray& __v)
 {
-    if (this != &__v)
+    if (this != _VSTD::addressof(__v))
         return __assign_range(__v.__begin_, __v.__end_);
     return *this;
 }
