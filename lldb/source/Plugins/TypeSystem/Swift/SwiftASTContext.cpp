@@ -2137,7 +2137,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       llvm::Triple exe_triple = get_executable_triple();
       if (exe_triple.getOS() == llvm::Triple::IOS &&
           exe_triple.getEnvironment() == llvm::Triple::MacABI) {
-        LOG_PRINTF(LIBLLDB_LOG_TYPES, "Adjusting triple a macCatalyst.");
+        LOG_PRINTF(LIBLLDB_LOG_TYPES, "Adjusting triple to macCatalyst.");
         computed_triple.setOSAndEnvironmentName(
             exe_triple.getOSAndEnvironmentName());
       }
