@@ -86,3 +86,27 @@ func @bitcast(%arg : f32) -> i32 {
   %res = bitcast %arg : f32 to i32
   return %res : i32
 }
+
+// CHECK-LABEL: func @maximum
+func @maximum(%v1: vector<4xf32>, %v2: vector<4xf32>,
+               %f1: f32, %f2: f32,
+               %i1: i32, %i2: i32) {
+  %max_vector = maxf(%v1, %v2)
+    : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+  %max_float = maxf(%f1, %f2) : (f32, f32) -> f32
+  %max_signed = maxsi(%i1, %i2) : (i32, i32) -> i32
+  %max_unsigned = maxui(%i1, %i2) : (i32, i32) -> i32
+  return
+}
+
+// CHECK-LABEL: func @minimum
+func @minimum(%v1: vector<4xf32>, %v2: vector<4xf32>,
+               %f1: f32, %f2: f32,
+               %i1: i32, %i2: i32) {
+  %min_vector = minf(%v1, %v2)
+    : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+  %min_float = minf(%f1, %f2) : (f32, f32) -> f32
+  %min_signed = minsi(%i1, %i2) : (i32, i32) -> i32
+  %min_unsigned = minui(%i1, %i2) : (i32, i32) -> i32
+  return
+}
