@@ -59,6 +59,7 @@ ASM_FUNCTION_M68K_RE = re.compile(
 
 ASM_FUNCTION_MIPS_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@"?(?P=func)"?\n[^:]*?' # f: (name of func)
+    r'(?:\s*\.?Ltmp[^:\n]*:\n)?[^:]*?'        # optional .Ltmp<N> for EH
     r'(?:^[ \t]+\.(frame|f?mask|set).*?\n)+'  # Mips+LLVM standard asm prologue
     r'(?P<body>.*?)\n'                        # (body of the function)
     # Mips+LLVM standard asm epilogue
