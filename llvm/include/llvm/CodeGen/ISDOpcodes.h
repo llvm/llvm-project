@@ -1267,6 +1267,12 @@ NodeType getVecReduceBaseOpcode(unsigned VecReduceOpcode);
 /// Whether this is a vector-predicated Opcode.
 bool isVPOpcode(unsigned Opcode);
 
+/// Whether this is a vector-predicated binary operation opcode.
+bool isVPBinaryOp(unsigned Opcode);
+
+/// Whether this is a vector-predicated reduction opcode.
+bool isVPReduction(unsigned Opcode);
+
 /// The operand position of the vector mask.
 Optional<unsigned> getVPMaskIdx(unsigned Opcode);
 

@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel -mcpu=mips32r2 -mattr=+micromips \
+; RUN: llc -mtriple=mipsel -mcpu=mips32r2 -mattr=+micromips \
 ; RUN:   -relocation-model=static -O2 < %s | FileCheck %s
 
 @main.L = internal unnamed_addr constant [3 x i8*] [i8* blockaddress(@main, %L1), i8* blockaddress(@main, %L2), i8* null], align 4

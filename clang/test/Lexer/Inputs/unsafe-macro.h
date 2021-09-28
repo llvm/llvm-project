@@ -4,7 +4,7 @@
 // expected-error@+1{{expected identifier}}
 #pragma clang restrict_expansion(4
 
-// expected-error@+1{{no macro named foo}}
+// expected-error@+1{{no macro named 'foo'}}
 #pragma clang restrict_expansion(foo)
 
 

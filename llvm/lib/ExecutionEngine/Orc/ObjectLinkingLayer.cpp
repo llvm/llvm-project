@@ -279,8 +279,9 @@ public:
 
       // If there were missing symbols then report the error.
       if (!MissingSymbols.empty())
-        return make_error<MissingSymbolDefinitions>(G.getName(),
-                                                    std::move(MissingSymbols));
+        return make_error<MissingSymbolDefinitions>(
+            Layer.getExecutionSession().getSymbolStringPool(), G.getName(),
+            std::move(MissingSymbols));
 
       // If there are more definitions than expected, add them to the
       // ExtraSymbols vector.
@@ -293,8 +294,9 @@ public:
 
       // If there were extra definitions then report the error.
       if (!ExtraSymbols.empty())
-        return make_error<UnexpectedSymbolDefinitions>(G.getName(),
-                                                       std::move(ExtraSymbols));
+        return make_error<UnexpectedSymbolDefinitions>(
+            Layer.getExecutionSession().getSymbolStringPool(), G.getName(),
+            std::move(ExtraSymbols));
     }
 
     if (auto Err = MR->notifyResolved(InternedResult))

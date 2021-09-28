@@ -396,3 +396,367 @@ side.exit:
 exit:
   ret i32 1
 }
+
+; Same as test_01, but non-negativity of %b is known without context.
+; FIXME: We can remove 2nd check in loop.
+define i32 @test_05(i32 %a, i32* %bp) {
+; CHECK-LABEL: @test_05(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[BP:%.*]], align 4, !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    br label [[OUTER:%.*]]
+; CHECK:       outer:
+; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
+; CHECK-NEXT:    br label [[INNER:%.*]]
+; CHECK:       inner:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp slt i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
+; CHECK:       inner.1:
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ult i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK:       inner.backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[INNER_LOOP_COND]], label [[INNER]], label [[OUTER_BACKEDGE]]
+; CHECK:       outer.backedge:
+; CHECK-NEXT:    [[IV_NEXT_LCSSA]] = phi i32 [ [[IV_NEXT]], [[INNER_BACKEDGE]] ]
+; CHECK-NEXT:    [[OUTER_LOOP_COND:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[OUTER_LOOP_COND]], label [[OUTER]], label [[EXIT:%.*]]
+; CHECK:       side.exit:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 1
+;
+entry:
+  %b = load i32, i32* %bp, !range !0
+  br label %outer
+
+outer:
+  %outer.iv = phi i32 [0, %entry], [%iv.next, %outer.backedge]
+  br label %inner
+
+
+inner:
+  %iv = phi i32 [%outer.iv, %outer], [%iv.next, %inner.backedge]
+  %signed_cond = icmp slt i32 %iv, %b
+  br i1 %signed_cond, label %inner.1, label %side.exit
+
+inner.1:
+  %unsigned_cond = icmp ult i32 %iv, %b
+  br i1 %unsigned_cond, label %inner.backedge, label %side.exit
+
+inner.backedge:
+  %iv.next = add nuw nsw i32 %iv, 1
+  %inner.loop.cond = call i1 @cond()
+  br i1 %inner.loop.cond, label %inner, label %outer.backedge
+
+outer.backedge:
+  %outer.loop.cond = call i1 @cond()
+  br i1 %outer.loop.cond, label %outer, label %exit
+
+side.exit:
+  ret i32 0
+
+exit:
+  ret i32 1
+}
+
+
+; Same as test_01a, but non-negativity of %b is known without context.
+; FIXME: We can remove 2nd check in loop.
+define i32 @test_05a(i32 %a, i32* %bp) {
+; CHECK-LABEL: @test_05a(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[BP:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    br label [[OUTER:%.*]]
+; CHECK:       outer:
+; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
+; CHECK-NEXT:    br label [[INNER:%.*]]
+; CHECK:       inner:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp ult i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
+; CHECK:       inner.1:
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp slt i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK:       inner.backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[INNER_LOOP_COND]], label [[INNER]], label [[OUTER_BACKEDGE]]
+; CHECK:       outer.backedge:
+; CHECK-NEXT:    [[IV_NEXT_LCSSA]] = phi i32 [ [[IV_NEXT]], [[INNER_BACKEDGE]] ]
+; CHECK-NEXT:    [[OUTER_LOOP_COND:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[OUTER_LOOP_COND]], label [[OUTER]], label [[EXIT:%.*]]
+; CHECK:       side.exit:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 1
+;
+entry:
+  %b = load i32, i32* %bp, !range !0
+  br label %outer
+
+outer:
+  %outer.iv = phi i32 [0, %entry], [%iv.next, %outer.backedge]
+  br label %inner
+
+
+inner:
+  %iv = phi i32 [%outer.iv, %outer], [%iv.next, %inner.backedge]
+  %signed_cond = icmp ult i32 %iv, %b
+  br i1 %signed_cond, label %inner.1, label %side.exit
+
+inner.1:
+  %unsigned_cond = icmp slt i32 %iv, %b
+  br i1 %unsigned_cond, label %inner.backedge, label %side.exit
+
+inner.backedge:
+  %iv.next = add nuw nsw i32 %iv, 1
+  %inner.loop.cond = call i1 @cond()
+  br i1 %inner.loop.cond, label %inner, label %outer.backedge
+
+outer.backedge:
+  %outer.loop.cond = call i1 @cond()
+  br i1 %outer.loop.cond, label %outer, label %exit
+
+side.exit:
+  ret i32 0
+
+exit:
+  ret i32 1
+}
+
+; Same as test_02, but non-negativity of %b is known without context.
+; FIXME: We can remove 2nd check in loop.
+define i32 @test_06(i32 %a, i32* %bp) {
+; CHECK-LABEL: @test_06(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[BP:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    br label [[OUTER:%.*]]
+; CHECK:       outer:
+; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[OUTER_MERGE:%.*]], [[OUTER_BACKEDGE:%.*]] ]
+; CHECK-NEXT:    br label [[INNER:%.*]]
+; CHECK:       inner:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp slt i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
+; CHECK:       inner.1:
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ult i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK:       inner.backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[INNER_LOOP_COND]], label [[INNER]], label [[OUTER_BACKEDGE]]
+; CHECK:       outer.backedge:
+; CHECK-NEXT:    [[OUTER_MERGE]] = phi i32 [ [[IV_NEXT]], [[INNER_BACKEDGE]] ]
+; CHECK-NEXT:    [[OUTER_LOOP_COND:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[OUTER_LOOP_COND]], label [[OUTER]], label [[EXIT:%.*]]
+; CHECK:       side.exit:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 1
+;
+entry:
+  %b = load i32, i32* %bp, !range !0
+  br label %outer
+
+outer:
+  %outer.iv = phi i32 [0, %entry], [%outer.merge, %outer.backedge]
+  br label %inner
+
+
+inner:
+  %iv = phi i32 [%outer.iv, %outer], [%iv.next, %inner.backedge]
+  %signed_cond = icmp slt i32 %iv, %b
+  br i1 %signed_cond, label %inner.1, label %side.exit
+
+inner.1:
+  %unsigned_cond = icmp ult i32 %iv, %b
+  br i1 %unsigned_cond, label %inner.backedge, label %side.exit
+
+inner.backedge:
+  %iv.next = add nuw nsw i32 %iv, 1
+  %inner.loop.cond = call i1 @cond()
+  br i1 %inner.loop.cond, label %inner, label %outer.backedge
+
+outer.backedge:
+  %outer.merge = phi i32 [%iv.next, %inner.backedge]
+  %outer.loop.cond = call i1 @cond()
+  br i1 %outer.loop.cond, label %outer, label %exit
+
+side.exit:
+  ret i32 0
+
+exit:
+  ret i32 1
+}
+
+; Same as test_03, but non-negativity of %b is known without context.
+; FIXME: We can remove 2nd check in loop.
+define i32 @test_07(i32 %a, i32* %bp) {
+; CHECK-LABEL: @test_07(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[BP:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    br label [[OUTER:%.*]]
+; CHECK:       outer:
+; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[OUTER_MERGE:%.*]], [[OUTER_BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[OUTER_COND_1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[OUTER_COND_1]], label [[INNER_PREHEADER:%.*]], label [[NO_INNER:%.*]]
+; CHECK:       inner.preheader:
+; CHECK-NEXT:    br label [[INNER:%.*]]
+; CHECK:       no_inner:
+; CHECK-NEXT:    [[OUTER_COND_2:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br label [[OUTER_BACKEDGE]]
+; CHECK:       inner:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ], [ [[OUTER_IV]], [[INNER_PREHEADER]] ]
+; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp slt i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
+; CHECK:       inner.1:
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ult i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK:       inner.backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[INNER_LOOP_COND]], label [[INNER]], label [[OUTER_BACKEDGE_LOOPEXIT:%.*]]
+; CHECK:       outer.backedge.loopexit:
+; CHECK-NEXT:    [[IV_NEXT_LCSSA:%.*]] = phi i32 [ [[IV_NEXT]], [[INNER_BACKEDGE]] ]
+; CHECK-NEXT:    br label [[OUTER_BACKEDGE]]
+; CHECK:       outer.backedge:
+; CHECK-NEXT:    [[OUTER_MERGE]] = phi i32 [ [[OUTER_IV]], [[NO_INNER]] ], [ [[IV_NEXT_LCSSA]], [[OUTER_BACKEDGE_LOOPEXIT]] ]
+; CHECK-NEXT:    [[OUTER_LOOP_COND:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[OUTER_LOOP_COND]], label [[OUTER]], label [[EXIT:%.*]]
+; CHECK:       side.exit:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 1
+;
+entry:
+  %b = load i32, i32* %bp, !range !0
+  br label %outer
+
+outer:
+  %outer.iv = phi i32 [0, %entry], [%outer.merge, %outer.backedge]
+  %outer_cond_1 = call i1 @cond()
+  br i1 %outer_cond_1, label %inner, label %no_inner
+
+no_inner:
+  %outer_cond_2 = call i1 @cond()
+  br label %outer.backedge
+
+inner:
+  %iv = phi i32 [%outer.iv, %outer], [%iv.next, %inner.backedge]
+  %signed_cond = icmp slt i32 %iv, %b
+  br i1 %signed_cond, label %inner.1, label %side.exit
+
+inner.1:
+  %unsigned_cond = icmp ult i32 %iv, %b
+  br i1 %unsigned_cond, label %inner.backedge, label %side.exit
+
+inner.backedge:
+  %iv.next = add nuw nsw i32 %iv, 1
+  %inner.loop.cond = call i1 @cond()
+  br i1 %inner.loop.cond, label %inner, label %outer.backedge
+
+outer.backedge:
+  %outer.merge = phi i32 [%outer.iv, %no_inner], [%iv.next, %inner.backedge]
+  %outer.loop.cond = call i1 @cond()
+  br i1 %outer.loop.cond, label %outer, label %exit
+
+side.exit:
+  ret i32 0
+
+exit:
+  ret i32 1
+}
+
+; Same as test_04, but non-negativity of %b is known without context.
+; FIXME: We can remove 2nd check in loop.
+define i32 @test_08(i32 %a, i32* %bp) {
+; CHECK-LABEL: @test_08(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[BP:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    br label [[OUTER:%.*]]
+; CHECK:       outer:
+; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[OUTER_MERGE:%.*]], [[OUTER_BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[OUTER_COND_1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[OUTER_COND_1]], label [[INNER_PREHEADER:%.*]], label [[NO_INNER:%.*]]
+; CHECK:       inner.preheader:
+; CHECK-NEXT:    br label [[INNER:%.*]]
+; CHECK:       no_inner:
+; CHECK-NEXT:    [[OUTER_COND_2:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[OUTER_COND_2]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[A:%.*]], i32 [[OUTER_IV]])
+; CHECK-NEXT:    br label [[OUTER_BACKEDGE]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br label [[OUTER_BACKEDGE]]
+; CHECK:       inner:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ], [ [[OUTER_IV]], [[INNER_PREHEADER]] ]
+; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp slt i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
+; CHECK:       inner.1:
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ult i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK:       inner.backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[INNER_LOOP_COND]], label [[INNER]], label [[OUTER_BACKEDGE_LOOPEXIT:%.*]]
+; CHECK:       outer.backedge.loopexit:
+; CHECK-NEXT:    [[IV_NEXT_LCSSA:%.*]] = phi i32 [ [[IV_NEXT]], [[INNER_BACKEDGE]] ]
+; CHECK-NEXT:    br label [[OUTER_BACKEDGE]]
+; CHECK:       outer.backedge:
+; CHECK-NEXT:    [[OUTER_MERGE]] = phi i32 [ [[SMAX]], [[IF_TRUE]] ], [ [[OUTER_IV]], [[IF_FALSE]] ], [ [[IV_NEXT_LCSSA]], [[OUTER_BACKEDGE_LOOPEXIT]] ]
+; CHECK-NEXT:    [[OUTER_LOOP_COND:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[OUTER_LOOP_COND]], label [[OUTER]], label [[EXIT:%.*]]
+; CHECK:       side.exit:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 1
+;
+entry:
+  %b = load i32, i32* %bp, !range !0
+  br label %outer
+
+outer:
+  %outer.iv = phi i32 [0, %entry], [%outer.merge, %outer.backedge]
+  %outer_cond_1 = call i1 @cond()
+  br i1 %outer_cond_1, label %inner, label %no_inner
+
+no_inner:
+  %outer_cond_2 = call i1 @cond()
+  br i1 %outer_cond_2, label %if.true, label %if.false
+
+if.true:
+  %smax = call i32 @llvm.smax.i32(i32 %a, i32 %outer.iv)
+  br label %outer.backedge
+
+if.false:
+  br label %outer.backedge
+
+inner:
+  %iv = phi i32 [%outer.iv, %outer], [%iv.next, %inner.backedge]
+  %signed_cond = icmp slt i32 %iv, %b
+  br i1 %signed_cond, label %inner.1, label %side.exit
+
+inner.1:
+  %unsigned_cond = icmp ult i32 %iv, %b
+  br i1 %unsigned_cond, label %inner.backedge, label %side.exit
+
+inner.backedge:
+  %iv.next = add nuw nsw i32 %iv, 1
+  %inner.loop.cond = call i1 @cond()
+  br i1 %inner.loop.cond, label %inner, label %outer.backedge
+
+outer.backedge:
+  %outer.merge = phi i32 [%smax, %if.true], [%outer.iv, %if.false], [%iv.next, %inner.backedge]
+  %outer.loop.cond = call i1 @cond()
+  br i1 %outer.loop.cond, label %outer, label %exit
+
+side.exit:
+  ret i32 0
+
+exit:
+  ret i32 1
+}
+
+!0 = !{i32 0, i32 2147483647}

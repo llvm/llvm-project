@@ -592,6 +592,20 @@ public:
   FlatAffineValueConstraints(ArrayRef<const AffineValueMap *> avmRef,
                              IntegerSet set);
 
+  // Construct a hyperrectangular constraint set from ValueRanges that represent
+  // induction variables, lower and upper bounds. `ivs`, `lbs` and `ubs` are
+  // expected to match one to one. The order of variables and constraints is:
+  //
+  // ivs | lbs | ubs | eq/ineq
+  // ----+-----+-----+---------
+  //   1   -1     0      >= 0
+  // ----+-----+-----+---------
+  //  -1    0     1      >= 0
+  //
+  // All dimensions as set as DimId.
+  static FlatAffineValueConstraints
+  getHyperrectangular(ValueRange ivs, ValueRange lbs, ValueRange ubs);
+
   /// Return the kind of this FlatAffineConstraints.
   Kind getKind() const override { return Kind::FlatAffineValueConstraints; }
 

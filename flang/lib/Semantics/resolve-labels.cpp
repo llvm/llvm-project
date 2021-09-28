@@ -60,7 +60,7 @@ constexpr Legality IsLegalDoTerm(const parser::Statement<A> &) {
       std::is_same_v<A, parser::EndWhereStmt>) {
     // Executable construct end statements are also supported as
     // an extension but they need special care because the associated
-    // construct create there own scope.
+    // construct create their own scope.
     return Legality::formerly;
   } else {
     return Legality::never;
@@ -224,10 +224,10 @@ public:
         parser::BlockStmt, parser::ChangeTeamStmt, parser::CriticalStmt,
         parser::IfThenStmt, parser::NonLabelDoStmt, parser::SelectCaseStmt,
         parser::SelectRankStmt, parser::SelectTypeStmt>;
-    using LabeledConstructEndStmts =
-        std::tuple<parser::EndAssociateStmt, parser::EndBlockStmt,
-            parser::EndChangeTeamStmt, parser::EndCriticalStmt,
-            parser::EndDoStmt, parser::EndIfStmt, parser::EndSelectStmt>;
+    using LabeledConstructEndStmts = std::tuple<parser::EndAssociateStmt,
+        parser::EndBlockStmt, parser::EndChangeTeamStmt,
+        parser::EndCriticalStmt, parser::EndDoStmt, parser::EndForallStmt,
+        parser::EndIfStmt, parser::EndSelectStmt, parser::EndWhereStmt>;
     using LabeledProgramUnitEndStmts =
         std::tuple<parser::EndFunctionStmt, parser::EndMpSubprogramStmt,
             parser::EndProgramStmt, parser::EndSubroutineStmt>;
@@ -294,10 +294,10 @@ public:
     return SwitchToNewScope();
   }
   bool Pre(const parser::WhereConstruct &whereConstruct) {
-    return PushConstructNameWithoutBlock(whereConstruct);
+    return PushConstructName(whereConstruct);
   }
   bool Pre(const parser::ForallConstruct &forallConstruct) {
-    return PushConstructNameWithoutBlock(forallConstruct);
+    return PushConstructName(forallConstruct);
   }
 
   void Post(const parser::AssociateConstruct &associateConstruct) {
@@ -327,12 +327,11 @@ public:
   void Post(const parser::SelectTypeConstruct &selectTypeConstruct) {
     PopConstructName(selectTypeConstruct);
   }
-
   void Post(const parser::WhereConstruct &whereConstruct) {
-    PopConstructNameWithoutBlock(whereConstruct);
+    PopConstructName(whereConstruct);
   }
   void Post(const parser::ForallConstruct &forallConstruct) {
-    PopConstructNameWithoutBlock(forallConstruct);
+    PopConstructName(forallConstruct);
   }
 
   // Checks for missing or mismatching names on various constructs (e.g., IF)
@@ -569,18 +568,6 @@ private:
       constructNames_.emplace_back(optionalName->ToString());
     }
     return PushSubscope();
-  }
-  template <typename A> bool PushConstructNameWithoutBlock(const A &a) {
-    const auto &optionalName{std::get<0>(std::get<0>(a.t).statement.t)};
-    if (optionalName) {
-      constructNames_.emplace_back(optionalName->ToString());
-    }
-    return true;
-  }
-
-  template <typename A> void PopConstructNameWithoutBlock(const A &a) {
-    CheckName(a);
-    PopConstructNameIfPresent(a);
   }
   template <typename A> void PopConstructNameIfPresent(const A &a) {
     const auto &optionalName{std::get<0>(std::get<0>(a.t).statement.t)};
@@ -962,12 +949,15 @@ void CheckScopeConstraints(const SourceStmtList &stmts,
     } else if (!InInclusiveScope(scopes, scope, target.proxyForScope)) {
       // Clause 11.1.2.1 prohibits transfer of control to the interior of a
       // block from outside the block, but this does not apply to formats.
+      // C1038 and C1034 forbid statements in FORALL and WHERE constructs
+      // (resp.) from being branch targets.
       if (target.labeledStmtClassificationSet.test(
               TargetStatementEnum::Format)) {
         continue;
       }
-      context.Say(
-          position, "Label '%u' is not in scope"_en_US, SayLabel(label));
+      context.Say(position,
+          "Label '%u' is in a construct that prevents its use as a branch target here"_en_US,
+          SayLabel(label));
     }
   }
 }

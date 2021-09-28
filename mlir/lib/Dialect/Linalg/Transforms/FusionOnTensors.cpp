@@ -245,10 +245,15 @@ LogicalResult TileLoopNest::tileRootOp(OpBuilder &b,
                       .setLoopType(LinalgTilingLoopType::Loops);
   Optional<TiledLinalgOp> tiledRootOp = tileLinalgOp(b, rootOp, tilingOptions);
 
-  // Replace all uses of the root operation.
+  // Exit if tiling the root operation fails.
   if (!tiledRootOp.hasValue())
     return failure();
-  rootOp->replaceAllUsesWith(tiledRootOp->tensorResults);
+
+  // Replace all uses of the root operation if it has been tiled before. All
+  // uses of the original untiled root operation are updated by the calling pass
+  // or pattern.
+  if (!isEmpty())
+    rootOp->replaceAllUsesWith(tiledRootOp->tensorResults);
 
   // Update the root operation and append the loops and tile loop dimensions.
   rootOp = tiledRootOp->op;
@@ -321,6 +326,11 @@ FailureOr<LinalgOp> TileLoopNest::fuseProducer(OpBuilder &b,
   // Replace the `sliceOp` uses except for the `clonedOp` output uses.
   sliceOp.getResult().replaceAllUsesExcept(newResult, clonedOp);
   return clonedOp;
+}
+
+ValueRange TileLoopNest::getRootOpReplacementResults() {
+  assert(!isEmpty() && "expect tile loop nest to be non-empty");
+  return loopOps.front()->getOpResults();
 }
 
 //===----------------------------------------------------------------------===//
@@ -433,9 +443,13 @@ struct LinalgTileAndFuseTensorOps
           "expect the tile interchange permutes the root loops");
 
     // Tile `rootOp` and fuse its producers.
-    if (failed(tileConsumerAndFuseProducers(b, rootOp, rootTileSizes,
-                                            rootInterchange)))
+    FailureOr<TileLoopNest> tileLoopNest =
+        tileConsumerAndFuseProducers(b, rootOp, rootTileSizes, rootInterchange);
+    if (failed(tileLoopNest))
       return notifyFailure("tileConsumerAndFuseProducers failed unexpectedly");
+
+    // Replace all uses of the tiled loop operation.
+    rootOp->replaceAllUsesWith(tileLoopNest->getRootOpReplacementResults());
   }
 };
 } // namespace

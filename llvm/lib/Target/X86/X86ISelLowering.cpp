@@ -1951,6 +1951,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SETCC,                MVT::f16, Custom);
     setOperationAction(ISD::STRICT_FSETCC,        MVT::f16, Custom);
     setOperationAction(ISD::STRICT_FSETCCS,       MVT::f16, Custom);
+    setOperationAction(ISD::FROUND,               MVT::f16, Custom);
+    setOperationAction(ISD::STRICT_FROUND,        MVT::f16, Custom);
+    setOperationAction(ISD::FROUNDEVEN,           MVT::f16, Legal);
+    setOperationAction(ISD::STRICT_FROUNDEVEN,    MVT::f16, Legal);
     setOperationAction(ISD::FP_ROUND,             MVT::f16, Custom);
     setOperationAction(ISD::STRICT_FP_ROUND,      MVT::f16, Custom);
     setOperationAction(ISD::STRICT_FP_EXTEND,     MVT::f32, Legal);
@@ -22496,6 +22500,10 @@ SDValue X86TargetLowering::lowerFaddFsub(SDValue Op, SelectionDAG &DAG) const {
 /// compiling with trapping math, we can emulate this with
 /// floor(X + copysign(nextafter(0.5, 0.0), X)).
 static SDValue LowerFROUND(SDValue Op, SelectionDAG &DAG) {
+  if (Op.getOpcode() == ISD::STRICT_FROUND &&
+      Op.getSimpleValueType() == MVT::f16)
+    report_fatal_error("For now cannot emit strict round(fp16) at backend for "
+                       "lacking library support.");
   SDValue N0 = Op.getOperand(0);
   SDLoc dl(Op);
   MVT VT = Op.getSimpleValueType();
@@ -31064,6 +31072,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::STORE:              return LowerStore(Op, Subtarget, DAG);
   case ISD::FADD:
   case ISD::FSUB:               return lowerFaddFsub(Op, DAG);
+  case ISD::STRICT_FROUND:
   case ISD::FROUND:             return LowerFROUND(Op, DAG);
   case ISD::FABS:
   case ISD::FNEG:               return LowerFABSorFNEG(Op, DAG);
@@ -45005,32 +45014,9 @@ static SDValue combineVectorHADDSUB(SDNode *N, SelectionDAG &DAG,
          "Unexpected horizontal add/sub opcode");
 
   if (!shouldUseHorizontalOp(true, DAG, Subtarget)) {
-    // For slow-hop targets, if we have a hop with a single op, see if we already
-    // have another user that we can reuse and shuffle the result.
     MVT VT = N->getSimpleValueType(0);
     SDValue LHS = N->getOperand(0);
     SDValue RHS = N->getOperand(1);
-    if (VT.is128BitVector() && LHS == RHS) {
-      for (SDNode *User : LHS->uses()) {
-        if (User != N && User->getOpcode() == N->getOpcode()) {
-          MVT ShufVT = VT.isFloatingPoint() ? MVT::v4f32 : MVT::v4i32;
-          if (User->getOperand(0) == LHS && !User->getOperand(1).isUndef()) {
-            return DAG.getBitcast(
-                VT,
-                DAG.getVectorShuffle(ShufVT, SDLoc(N),
-                                     DAG.getBitcast(ShufVT, SDValue(User, 0)),
-                                     DAG.getUNDEF(ShufVT), {0, 1, 0, 1}));
-          }
-          if (User->getOperand(1) == LHS && !User->getOperand(0).isUndef()) {
-            return DAG.getBitcast(
-                VT,
-                DAG.getVectorShuffle(ShufVT, SDLoc(N),
-                                     DAG.getBitcast(ShufVT, SDValue(User, 0)),
-                                     DAG.getUNDEF(ShufVT), {2, 3, 2, 3}));
-          }
-        }
-      }
-    }
 
     // HOP(HOP'(X,X),HOP'(Y,Y)) -> HOP(PERMUTE(HOP'(X,Y)),PERMUTE(HOP'(X,Y)).
     if (LHS != RHS && LHS.getOpcode() == N->getOpcode() &&
@@ -47809,7 +47795,7 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
   // FIXME: How do we handle when fast math flags of FADD are different from
   // CFMUL's?
   SDValue CFmul =
-      DAG.getNode(NewOp, SDLoc(N), CVT, FAddOp1, MulOp0, MulOp1, N->getFlags());
+      DAG.getNode(NewOp, SDLoc(N), CVT, MulOp0, MulOp1, FAddOp1, N->getFlags());
   return DAG.getBitcast(VT, CFmul);
 }
 

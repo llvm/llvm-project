@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel -mattr=mips16 -relocation-model=static < %s | FileCheck %s -check-prefix=16
+; RUN: llc -mtriple=mipsel -mattr=mips16 -relocation-model=static < %s | FileCheck %s -check-prefix=16
 
 @i = global i32 6, align 4
 @j = global i32 12, align 4

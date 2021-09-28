@@ -149,7 +149,7 @@ OPTIONS
 
             Display the version of the tool.
 
-.. option:: --debug-abbrev, --debug-addr, --debug-aranges, --debug-cu-index, --debug-frame[=<offset>], --debug-gnu-pubnames, --debug-gnu-pubtypes, --debug-info [=<offset>], --debug-line [=<offset>], --debug-line-str, --debug-loc [=<offset>], --debug-loclists [=<offset>], --debug-macro, --debug-names, --debug-pubnames, --debug-pubtypes, --debug-ranges, --debug-rnglists, --debug-str, --debug-str-offsets, --debug-tu-index, --debug-types [=<offset>], --eh-frame [=<offset>], --gdb-index, --apple-names, --apple-types, --apple-namespaces, --apple-objc
+.. option:: --debug-abbrev, --debug-addr, --debug-aranges, --debug-cu-index, --debug-frame [=<offset>], --debug-gnu-pubnames, --debug-gnu-pubtypes, --debug-info [=<offset>], --debug-line [=<offset>], --debug-line-str, --debug-loc [=<offset>], --debug-loclists [=<offset>], --debug-macro, --debug-names, --debug-pubnames, --debug-pubtypes, --debug-ranges, --debug-rnglists, --debug-str, --debug-str-offsets, --debug-tu-index, --debug-types [=<offset>], --eh-frame [=<offset>], --gdb-index, --apple-names, --apple-types, --apple-namespaces, --apple-objc
 
             Dump the specified DWARF section by name. Only the
             `.debug_info` section is shown by default. Some entries
@@ -158,6 +158,10 @@ OPTIONS
             respective section. When an offset is provided, only the
             entry at that offset will be dumped, else the entire
             section will be dumped.
+
+            The :option:`--debug-macro` option prints both the .debug_macro and the .debug_macinfo sections.
+
+            The :option:`--debug-frame` and :option:`--eh-frame` options are aliases, in cases where both sections are present one command outputs both.
 
 .. option:: @<FILE>
 
@@ -168,7 +172,7 @@ OPTIONS
 FORMAT OF STATISTICS OUTPUT
 ---------------------------
 
-The ::option:`--statistics` option generates single-line JSON output
+The :option:`--statistics` option generates single-line JSON output
 representing quality metrics of the processed debug info. These metrics are
 useful to compare changes between two compilers, particularly for judging
 the effect that a change to the compiler has on the debug info quality.

@@ -189,6 +189,48 @@ FlatAffineValueConstraints::FlatAffineValueConstraints(IntegerSet set)
   values.resize(numIds, None);
 }
 
+// Construct a hyperrectangular constraint set from ValueRanges that represent
+// induction variables, lower and upper bounds. `ivs`, `lbs` and `ubs` are
+// expected to match one to one. The order of variables and constraints is:
+//
+// ivs | lbs | ubs | eq/ineq
+// ----+-----+-----+---------
+//   1   -1     0      >= 0
+// ----+-----+-----+---------
+//  -1    0     1      >= 0
+//
+// All dimensions as set as DimId.
+FlatAffineValueConstraints
+FlatAffineValueConstraints::getHyperrectangular(ValueRange ivs, ValueRange lbs,
+                                                ValueRange ubs) {
+  FlatAffineValueConstraints res;
+  unsigned nIvs = ivs.size();
+  assert(nIvs == lbs.size() && "expected as many lower bounds as ivs");
+  assert(nIvs == ubs.size() && "expected as many upper bounds as ivs");
+
+  if (nIvs == 0)
+    return res;
+
+  res.appendDimId(ivs);
+  unsigned lbsStart = res.appendDimId(lbs);
+  unsigned ubsStart = res.appendDimId(ubs);
+
+  MLIRContext *ctx = ivs.front().getContext();
+  for (int ivIdx = 0, e = nIvs; ivIdx < e; ++ivIdx) {
+    // iv - lb >= 0
+    AffineMap lb = AffineMap::get(/*dimCount=*/3 * nIvs, /*symbolCount=*/0,
+                                  getAffineDimExpr(lbsStart + ivIdx, ctx));
+    if (failed(res.addBound(BoundType::LB, ivIdx, lb)))
+      llvm_unreachable("Unexpected FlatAffineValueConstraints creation error");
+    // -iv + ub >= 0
+    AffineMap ub = AffineMap::get(/*dimCount=*/3 * nIvs, /*symbolCount=*/0,
+                                  getAffineDimExpr(ubsStart + ivIdx, ctx));
+    if (failed(res.addBound(BoundType::UB, ivIdx, ub)))
+      llvm_unreachable("Unexpected FlatAffineValueConstraints creation error");
+  }
+  return res;
+}
+
 void FlatAffineConstraints::reset(unsigned numReservedInequalities,
                                   unsigned numReservedEqualities,
                                   unsigned newNumReservedCols,

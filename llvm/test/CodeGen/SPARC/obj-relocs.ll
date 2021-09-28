@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=sparcv9 -filetype=obj --relocation-model=static | llvm-readobj -r - | FileCheck %s --check-prefix=CHECK-ABS
-; RUN: llc < %s -march=sparcv9 -filetype=obj --relocation-model=pic    | llvm-readobj -r - | FileCheck %s --check-prefix=CHECK-PIC
+; RUN: llc < %s -mtriple=sparcv9 -filetype=obj --relocation-model=static | llvm-readobj -r - | FileCheck %s --check-prefix=CHECK-ABS
+; RUN: llc < %s -mtriple=sparcv9 -filetype=obj --relocation-model=pic    | llvm-readobj -r - | FileCheck %s --check-prefix=CHECK-PIC
 
 ;CHECK-ABS:      Relocations [
 ;CHECK-ABS:         0x{{[0-9,A-F]+}} R_SPARC_H44 AGlobalVar 0x0

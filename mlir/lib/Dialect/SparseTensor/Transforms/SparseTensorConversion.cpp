@@ -195,16 +195,39 @@ static Value genIsNonzero(ConversionPatternRewriter &rewriter, Location loc,
   llvm_unreachable("Unknown element type");
 }
 
+/// Generates the code to read the value from tensor[ivs], and conditionally
+/// stores the indices ivs to the memory in ind. The generated code looks like
+/// the following and the insertion point after this routine is inside the
+/// if-then branch behind the assignment to ind. This is to ensure that the
+/// addEltX call generated after is inside the if-then branch.
+///    if (tensor[ivs]!=0) {
+///      ind = ivs
+static Value genIndexAndValueForDense(ConversionPatternRewriter &rewriter,
+                                      Operation *op, Type eltType, Value tensor,
+                                      Value ind, ValueRange ivs) {
+  Location loc = op->getLoc();
+  Value val = rewriter.create<tensor::ExtractOp>(loc, tensor, ivs);
+  Value cond = genIsNonzero(rewriter, loc, eltType, val);
+  scf::IfOp ifOp = rewriter.create<scf::IfOp>(loc, cond, /*else*/ false);
+  rewriter.setInsertionPointToStart(&ifOp.thenRegion().front());
+  unsigned i = 0;
+  for (auto iv : ivs) {
+    Value idx = rewriter.create<ConstantOp>(loc, rewriter.getIndexAttr(i++));
+    rewriter.create<memref::StoreOp>(loc, iv, ind, idx);
+  }
+  return val;
+}
+
 /// Generates a call that adds one element to a coordinate scheme.
 /// In particular, this generates code like the following:
 ///   val = a[i1,..,ik];
 ///   if val != 0
 ///     t->add(val, [i1,..,ik], [p1,..,pk]);
 static void genAddEltCall(ConversionPatternRewriter &rewriter, Operation *op,
-                          Value ptr, Value tensor, Value ind, Value perm,
-                          ValueRange ivs) {
+                          Type eltType, Value ptr, Value val, Value ind,
+                          Value perm) {
+  Location loc = op->getLoc();
   StringRef name;
-  Type eltType = tensor.getType().cast<ShapedType>().getElementType();
   if (eltType.isF64())
     name = "addEltF64";
   else if (eltType.isF32())
@@ -219,16 +242,6 @@ static void genAddEltCall(ConversionPatternRewriter &rewriter, Operation *op,
     name = "addEltI8";
   else
     llvm_unreachable("Unknown element type");
-  Location loc = op->getLoc();
-  Value val = rewriter.create<tensor::ExtractOp>(loc, tensor, ivs);
-  Value cond = genIsNonzero(rewriter, loc, eltType, val);
-  scf::IfOp ifOp = rewriter.create<scf::IfOp>(loc, cond, /*else*/ false);
-  rewriter.setInsertionPointToStart(&ifOp.thenRegion().front());
-  unsigned i = 0;
-  for (auto iv : ivs) {
-    Value idx = rewriter.create<ConstantOp>(loc, rewriter.getIndexAttr(i++));
-    rewriter.create<memref::StoreOp>(loc, iv, ind, idx);
-  }
   SmallVector<Value, 8> params;
   params.push_back(ptr);
   params.push_back(val);
@@ -238,6 +251,41 @@ static void genAddEltCall(ConversionPatternRewriter &rewriter, Operation *op,
   rewriter.create<CallOp>(
       loc, pTp, getFunc(op, name, pTp, params, /*emitCInterface=*/true),
       params);
+}
+
+/// If the tensor is a sparse constant, generates and returns the pair of
+/// the constants for the indices and the values.
+static Optional<std::pair<Value, Value>>
+genSplitSparseConstant(ConversionPatternRewriter &rewriter, ConvertOp op,
+                       Value tensor) {
+  if (auto constOp = tensor.getDefiningOp<ConstantOp>()) {
+    if (auto attr = constOp.value().dyn_cast<SparseElementsAttr>()) {
+      Location loc = op->getLoc();
+      DenseElementsAttr indicesAttr = attr.getIndices();
+      Value indices = rewriter.create<ConstantOp>(loc, indicesAttr);
+      DenseElementsAttr valuesAttr = attr.getValues();
+      Value values = rewriter.create<ConstantOp>(loc, valuesAttr);
+      return std::make_pair(indices, values);
+    }
+  }
+  return {};
+}
+
+/// Generates the code to copy the index at indices[ivs] to ind, and return
+/// the value at value[ivs].
+static Value genIndexAndValueForSparse(ConversionPatternRewriter &rewriter,
+                                       Operation *op, Value indices,
+                                       Value values, Value ind, ValueRange ivs,
+                                       unsigned rank) {
+  Location loc = op->getLoc();
+  for (unsigned i = 0; i < rank; i++) {
+    Value idx = rewriter.create<ConstantOp>(loc, rewriter.getIndexAttr(i));
+    Value val = rewriter.create<tensor::ExtractOp>(loc, indices,
+                                                   ValueRange{ivs[0], idx});
+    val = rewriter.create<IndexCastOp>(loc, val, rewriter.getIndexType());
+    rewriter.create<memref::StoreOp>(loc, val, ind, idx);
+  }
+  return rewriter.create<tensor::ExtractOp>(loc, values, ivs[0]);
 }
 
 //===----------------------------------------------------------------------===//
@@ -330,15 +378,26 @@ class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
       // TODO: sparse => dense
       return failure();
     }
-    // This is a dense => sparse conversion, which is handled as follows:
+    // This is a dense => sparse conversion or a sparse constant in COO =>
+    // sparse conversion, which is handled as follows:
     //   t = newSparseCOO()
+    //   ...code to fill the COO tensor t...
+    //   s = newSparseTensor(t)
+    //
+    // To fill the COO tensor from a dense tensor:
     //   for i1 in dim1
     //    ..
     //     for ik in dimk
     //       val = a[i1,..,ik]
     //       if val != 0
     //         t->add(val, [i1,..,ik], [p1,..,pk])
-    //   s = newSparseTensor(t)
+    //
+    // To fill the COO tensor from a sparse constant in COO format:
+    //   for i in range(NNZ)
+    //     val = values[i]
+    //     [i1,..,ik] = indices[i]
+    //     t->add(val, [i1,..,ik], [p1,..,pk])
+    //
     // Note that the dense tensor traversal code is actually implemented
     // using MLIR IR to avoid having to expose too much low-level
     // memref traversal details to the runtime support library.
@@ -351,7 +410,6 @@ class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
         MemRefType::get({ShapedType::kDynamicSize}, rewriter.getIndexType());
     Value perm;
     Value ptr = genNewCall(rewriter, op, encDst, 2, perm);
-    Value tensor = adaptor.getOperands()[0];
     Value arg = rewriter.create<ConstantOp>(
         loc, rewriter.getIndexAttr(shape.getRank()));
     Value ind = rewriter.create<memref::AllocaOp>(loc, memTp, ValueRange{arg});
@@ -360,16 +418,38 @@ class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
     SmallVector<Value> st;
     Value zero = rewriter.create<ConstantOp>(loc, rewriter.getIndexAttr(0));
     Value one = rewriter.create<ConstantOp>(loc, rewriter.getIndexAttr(1));
-    for (unsigned i = 0, rank = shape.getRank(); i < rank; i++) {
+    Value tensor = adaptor.getOperands()[0];
+    auto indicesValues = genSplitSparseConstant(rewriter, op, tensor);
+    bool isCOOConstant = indicesValues.hasValue();
+    Value indices;
+    Value values;
+    if (isCOOConstant) {
+      indices = indicesValues->first;
+      values = indicesValues->second;
       lo.push_back(zero);
-      hi.push_back(linalg::createOrFoldDimOp(rewriter, loc, tensor, i));
+      hi.push_back(linalg::createOrFoldDimOp(rewriter, loc, values, 0));
       st.push_back(one);
+    } else {
+      for (unsigned i = 0, rank = shape.getRank(); i < rank; i++) {
+        lo.push_back(zero);
+        hi.push_back(linalg::createOrFoldDimOp(rewriter, loc, tensor, i));
+        st.push_back(one);
+      }
     }
+    Type eltType = shape.getElementType();
+    unsigned rank = shape.getRank();
     scf::buildLoopNest(rewriter, op.getLoc(), lo, hi, st, {},
                        [&](OpBuilder &builder, Location loc, ValueRange ivs,
                            ValueRange args) -> scf::ValueVector {
-                         genAddEltCall(rewriter, op, ptr, tensor, ind, perm,
-                                       ivs);
+                         Value val;
+                         if (isCOOConstant)
+                           val = genIndexAndValueForSparse(
+                               rewriter, op, indices, values, ind, ivs, rank);
+                         else
+                           val = genIndexAndValueForDense(rewriter, op, eltType,
+                                                          tensor, ind, ivs);
+                         genAddEltCall(rewriter, op, eltType, ptr, val, ind,
+                                       perm);
                          return {};
                        });
     rewriter.replaceOp(op, genNewCall(rewriter, op, encDst, 1, perm, ptr));
