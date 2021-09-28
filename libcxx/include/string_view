@@ -255,10 +255,10 @@ public:
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
     basic_string_view() _NOEXCEPT : __data (nullptr), __size(0) {}
 
-    _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_INLINE_VISIBILITY
     basic_string_view(const basic_string_view&) _NOEXCEPT = default;
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_INLINE_VISIBILITY
     basic_string_view& operator=(const basic_string_view&) _NOEXCEPT = default;
 
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
@@ -618,28 +618,28 @@ public:
     }
 
 #if _LIBCPP_STD_VER > 17
-    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
-    bool starts_with(basic_string_view __s) const _NOEXCEPT
+    constexpr _LIBCPP_INLINE_VISIBILITY
+    bool starts_with(basic_string_view __s) const noexcept
     { return size() >= __s.size() && compare(0, __s.size(), __s) == 0; }
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
-    bool starts_with(value_type __c) const _NOEXCEPT
+    constexpr _LIBCPP_INLINE_VISIBILITY
+    bool starts_with(value_type __c) const noexcept
     { return !empty() && _Traits::eq(front(), __c); }
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
-    bool starts_with(const value_type* __s) const _NOEXCEPT
+    constexpr _LIBCPP_INLINE_VISIBILITY
+    bool starts_with(const value_type* __s) const noexcept
     { return starts_with(basic_string_view(__s)); }
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
-    bool ends_with(basic_string_view __s) const _NOEXCEPT
+    constexpr _LIBCPP_INLINE_VISIBILITY
+    bool ends_with(basic_string_view __s) const noexcept
     { return size() >= __s.size() && compare(size() - __s.size(), npos, __s) == 0; }
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
-    bool ends_with(value_type __c) const _NOEXCEPT
+    constexpr _LIBCPP_INLINE_VISIBILITY
+    bool ends_with(value_type __c) const noexcept
     { return !empty() && _Traits::eq(back(), __c); }
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
-    bool ends_with(const value_type* __s) const _NOEXCEPT
+    constexpr _LIBCPP_INLINE_VISIBILITY
+    bool ends_with(const value_type* __s) const noexcept
     { return ends_with(basic_string_view(__s)); }
 #endif
 

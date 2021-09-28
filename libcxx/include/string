@@ -1406,28 +1406,28 @@ public:
     int compare(size_type __pos1, size_type __n1, const value_type* __s, size_type __n2) const;
 
 #if _LIBCPP_STD_VER > 17
-    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
-    bool starts_with(__self_view __sv) const _NOEXCEPT
+    constexpr _LIBCPP_INLINE_VISIBILITY
+    bool starts_with(__self_view __sv) const noexcept
     { return __self_view(data(), size()).starts_with(__sv); }
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
-    bool starts_with(value_type __c) const _NOEXCEPT
+    constexpr _LIBCPP_INLINE_VISIBILITY
+    bool starts_with(value_type __c) const noexcept
     { return !empty() && _Traits::eq(front(), __c); }
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
-    bool starts_with(const value_type* __s) const _NOEXCEPT
+    constexpr _LIBCPP_INLINE_VISIBILITY
+    bool starts_with(const value_type* __s) const noexcept
     { return starts_with(__self_view(__s)); }
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
-    bool ends_with(__self_view __sv) const _NOEXCEPT
+    constexpr _LIBCPP_INLINE_VISIBILITY
+    bool ends_with(__self_view __sv) const noexcept
     { return __self_view(data(), size()).ends_with( __sv); }
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
-    bool ends_with(value_type __c) const _NOEXCEPT
+    constexpr _LIBCPP_INLINE_VISIBILITY
+    bool ends_with(value_type __c) const noexcept
     { return !empty() && _Traits::eq(back(), __c); }
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
-    bool ends_with(const value_type* __s) const _NOEXCEPT
+    constexpr _LIBCPP_INLINE_VISIBILITY
+    bool ends_with(const value_type* __s) const noexcept
     { return ends_with(__self_view(__s)); }
 #endif
 
