@@ -1244,7 +1244,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
         }
 
         // Check if the PHI operand is not dependent on the PHI itself.
-        APInt Offset(DL.getIndexTypeSizeInBits(AssociatedValue.getType()), 0);
+        APInt Offset(DL.getIndexTypeSizeInBits(CurPtr->getType()), 0);
         if (&AssociatedValue == CurPtr->stripAndAccumulateConstantOffsets(
                                     DL, Offset, /* AllowNonInbounds */ true)) {
           if (Offset != PtrOI.Offset) {
