@@ -878,8 +878,7 @@ TEST_F(IRBuilderTest, InsertExtractElement) {
   auto VecTy = FixedVectorType::get(Builder.getInt64Ty(), 4);
   auto Elt1 = Builder.getInt64(-1);
   auto Elt2 = Builder.getInt64(-2);
-  Value *Vec = UndefValue::get(VecTy);
-  Vec = Builder.CreateInsertElement(Vec, Elt1, Builder.getInt8(1));
+  Value *Vec = Builder.CreateInsertElement(VecTy, Elt1, Builder.getInt8(1));
   Vec = Builder.CreateInsertElement(Vec, Elt2, 2);
   auto X1 = Builder.CreateExtractElement(Vec, 1);
   auto X2 = Builder.CreateExtractElement(Vec, Builder.getInt32(2));
