@@ -97,9 +97,17 @@ struct FlattenInfo {
   // Holds the old/narrow induction phis, i.e. the Phis before IV widening has
   // been applied. This bookkeeping is used so we can skip some checks on these
   // phi nodes.
-  SmallPtrSet<PHINode *, 2> OldInductionPHIs;
+  PHINode *NarrowInnerInductionPHI = nullptr;
+  PHINode *NarrowOuterInductionPHI = nullptr;
 
   FlattenInfo(Loop *OL, Loop *IL) : OuterLoop(OL), InnerLoop(IL) {};
+
+  bool isNarrowInductionPhi(PHINode *Phi) {
+    // This can't be the narrow phi if we haven't widened the IV first.
+    if (!Widened)
+      return false;
+    return NarrowInnerInductionPHI == Phi || NarrowOuterInductionPHI == Phi;
+  }
 };
 
 static bool
@@ -268,7 +276,7 @@ static bool checkPHIs(FlattenInfo &FI, const TargetTransformInfo *TTI) {
     // them specially when doing the transformation.
     if (&InnerPHI == FI.InnerInductionPHI)
       continue;
-    if (FI.Widened && FI.OldInductionPHIs.count(&InnerPHI))
+    if (FI.isNarrowInductionPhi(&InnerPHI))
       continue;
 
     // Each inner loop PHI node must have two incoming values/blocks - one
@@ -315,7 +323,7 @@ static bool checkPHIs(FlattenInfo &FI, const TargetTransformInfo *TTI) {
   }
 
   for (PHINode &OuterPHI : FI.OuterLoop->getHeader()->phis()) {
-    if (FI.Widened && FI.OldInductionPHIs.count(&OuterPHI))
+    if (FI.isNarrowInductionPhi(&OuterPHI))
       continue;
     if (!SafeOuterPHIs.count(&OuterPHI)) {
       LLVM_DEBUG(dbgs() << "found unsafe PHI in outer loop: "; OuterPHI.dump());
@@ -708,10 +716,11 @@ static bool CanWidenIV(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   bool Deleted;
   if (!CreateWideIV({FI.InnerInductionPHI, MaxLegalType, false }, Deleted))
     return false;
-  // If the inner Phi node cannot be trivially deleted, we need to at least
-  // bring it in a consistent state.
+  // Add the narrow phi to list, so that it will be adjusted later when the
+  // the transformation is performed.
   if (!Deleted)
-    FI.InnerInductionPHI->removeIncomingValue(FI.InnerLoop->getLoopLatch());
+    FI.InnerPHIsToTransform.insert(FI.InnerInductionPHI);
+
   if (!CreateWideIV({FI.OuterInductionPHI, MaxLegalType, false }, Deleted))
     return false;
 
@@ -719,8 +728,8 @@ static bool CanWidenIV(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   FI.Widened = true;
 
   // Save the old/narrow induction phis, which we need to ignore in CheckPHIs.
-  FI.OldInductionPHIs.insert(FI.InnerInductionPHI);
-  FI.OldInductionPHIs.insert(FI.OuterInductionPHI);
+  FI.NarrowInnerInductionPHI = FI.InnerInductionPHI;
+  FI.NarrowOuterInductionPHI = FI.OuterInductionPHI;
 
   // After widening, rediscover all the loop components.
   return CanFlattenLoopPair(FI, DT, LI, SE, AC, TTI);

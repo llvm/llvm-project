@@ -7681,7 +7681,8 @@ bool SLPVectorizerPass::tryToVectorizePair(Value *A, Value *B, BoUpSLP &R) {
   return tryToVectorizeList(VL, R);
 }
 
-bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R) {
+bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
+                                           bool LimitForRegisterSize) {
   if (VL.size() < 2)
     return false;
 
@@ -7753,7 +7754,8 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R) {
       if (!isPowerOf2_32(OpsWidth))
         continue;
 
-      if ((VF > MinVF && OpsWidth <= VF / 2) || (VF == MinVF && OpsWidth < 2))
+      if ((LimitForRegisterSize && OpsWidth < MaxVF) ||
+          (VF > MinVF && OpsWidth <= VF / 2) || (VF == MinVF && OpsWidth < 2))
         break;
 
       ArrayRef<Value *> Ops = VL.slice(I, OpsWidth);
@@ -9106,21 +9108,49 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       // So allow tryToVectorizeList to reorder them if it is beneficial. This
       // is done when there are exactly two elements since tryToVectorizeList
       // asserts that there are only two values when AllowReorder is true.
-      if (NumElts > 1 && tryToVectorizeList(makeArrayRef(IncIt, NumElts), R)) {
+      // The vectorization is a 3-state attempt:
+      // 1. Try to vectorize PHIs with the same/alternate opcodes with the size
+      // of maximal register at first.
+      // 2. Try to vectorize remaining PHIs with the same type, if possible.
+      // This may result in the better vectorization results rather than if we
+      // try just to vectorize PHIs with the same/alternate opcodes.
+      // 3. Final attempt to try to vectorize all PHIs with the same/alternate
+      // ops only, this may result in some extra final vectorization.
+      if (NumElts > 1 && tryToVectorizeList(makeArrayRef(IncIt, NumElts), R,
+                                            /*LimitForRegisterSize=*/true)) {
         // Success start over because instructions might have been changed.
         HaveVectorizedPhiNodes = true;
         Changed = true;
-      } else if (NumElts < 4 &&
+      } else if (NumElts * R.getVectorElementSize(*IncIt) <
+                     R.getMaxVecRegSize() &&
                  (Candidates.empty() ||
                   Candidates.front()->getType() == (*IncIt)->getType())) {
         Candidates.append(IncIt, std::next(IncIt, NumElts));
       }
       // Final attempt to vectorize phis with the same types.
-      if (SameTypeIt == E || (*SameTypeIt)->getType() != (*IncIt)->getType()) {
-        if (Candidates.size() > 1 && tryToVectorizeList(Candidates, R)) {
+      if (Candidates.size() > 1 &&
+          (SameTypeIt == E ||
+           (*SameTypeIt)->getType() != (*IncIt)->getType())) {
+        if (tryToVectorizeList(Candidates, R)) {
           // Success start over because instructions might have been changed.
           HaveVectorizedPhiNodes = true;
           Changed = true;
+        } else {
+          // Try to vectorize using small vectors.
+          for (SmallVector<Value *, 4>::iterator It = Candidates.begin(),
+                                                 End = Candidates.end();
+               It != End;) {
+            SmallVector<Value *, 4>::iterator SameTypeIt = It;
+            while (SameTypeIt != End && AreCompatiblePHIs(*SameTypeIt, *It))
+              ++SameTypeIt;
+            unsigned NumElts = (SameTypeIt - It);
+            if (NumElts > 1 &&
+                tryToVectorizeList(makeArrayRef(It, NumElts), R)) {
+              HaveVectorizedPhiNodes = true;
+              Changed = true;
+            }
+            It = SameTypeIt;
+          }
         }
         Candidates.clear();
       }

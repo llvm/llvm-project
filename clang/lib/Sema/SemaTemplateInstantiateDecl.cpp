@@ -556,26 +556,6 @@ static void instantiateDependentAMDGPUWavesPerEUAttr(
 static void instantiateDependentSYCLKernelAttr(
     Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
     const SYCLKernelAttr &Attr, Decl *New) {
-  // Functions cannot be partially specialized, so if we are being instantiated,
-  // we are obviously a complete specialization. Since this attribute is only
-  // valid on function template declarations, we know that this is a full
-  // instantiation of a kernel.
-  S.AddSYCLKernelLambda(cast<FunctionDecl>(New));
-
-  // Evaluate whether this would change any of the already evaluated
-  // __builtin_sycl_unique_stable_name values.
-  for (auto &Itr : S.Context.SYCLUniqueStableNameEvaluatedValues) {
-    const std::string &CurName = Itr.first->ComputeName(S.Context);
-    if (Itr.second != CurName) {
-      S.Diag(New->getLocation(),
-             diag::err_kernel_invalidates_sycl_unique_stable_name);
-      S.Diag(Itr.first->getLocation(),
-             diag::note_sycl_unique_stable_name_evaluated_here);
-      // Update this so future diagnostics work correctly.
-      Itr.second = CurName;
-    }
-  }
-
   New->addAttr(Attr.clone(S.getASTContext()));
 }
 
