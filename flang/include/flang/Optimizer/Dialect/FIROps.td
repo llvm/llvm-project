@@ -1061,7 +1061,7 @@ def fir_EmboxOp : fir_Op<"embox", [NoSideEffect, AttrSizedOperandSegments]> {
         - shape: emboxing an array may require shape information (an array's
           lower bounds and extents may not be known until runtime),
         - slice: an array section can be described with a slice triple,
-        - lenParams: for emboxing a derived type with LEN type parameters,
+        - typeparams: for emboxing a derived type with LEN type parameters,
         - accessMap: unused/experimental.
   }];
 
@@ -1069,7 +1069,7 @@ def fir_EmboxOp : fir_Op<"embox", [NoSideEffect, AttrSizedOperandSegments]> {
     AnyReferenceLike:$memref,
     Optional<AnyShapeType>:$shape,
     Optional<fir_SliceType>:$slice,
-    Variadic<AnyIntegerType>:$lenParams,
+    Variadic<AnyIntegerType>:$typeparams,
     OptionalAttr<AffineMapAttr>:$accessMap
   );
 
@@ -1085,7 +1085,7 @@ def fir_EmboxOp : fir_Op<"embox", [NoSideEffect, AttrSizedOperandSegments]> {
   ];
 
   let assemblyFormat = [{
-    $memref (`(` $shape^ `)`)? (`[` $slice^ `]`)? (`typeparams` $lenParams^)?
+    $memref (`(` $shape^ `)`)? (`[` $slice^ `]`)? (`typeparams` $typeparams^)?
       (`map` $accessMap^)? attr-dict `:` functional-type(operands, results)
   }];
 
@@ -1094,8 +1094,8 @@ def fir_EmboxOp : fir_Op<"embox", [NoSideEffect, AttrSizedOperandSegments]> {
   let extraClassDeclaration = [{
     mlir::Value getShape() { return shape(); }
     mlir::Value getSlice() { return slice(); }
-    bool hasLenParams() { return !lenParams().empty(); }
-    unsigned numLenParams() { return lenParams().size(); }
+    bool hasLenParams() { return !typeparams().empty(); }
+    unsigned numLenParams() { return typeparams().size(); }
   }];
 }
 
