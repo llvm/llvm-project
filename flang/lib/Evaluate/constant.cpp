@@ -14,15 +14,6 @@
 
 namespace Fortran::evaluate {
 
-std::size_t TotalElementCount(const ConstantSubscripts &shape) {
-  std::size_t size{1};
-  for (auto dim : shape) {
-    CHECK(dim >= 0);
-    size *= dim;
-  }
-  return size;
-}
-
 ConstantBounds::ConstantBounds(const ConstantSubscripts &shape)
     : shape_(shape), lbounds_(shape_.size(), 1) {}
 
@@ -34,6 +25,12 @@ ConstantBounds::~ConstantBounds() = default;
 void ConstantBounds::set_lbounds(ConstantSubscripts &&lb) {
   CHECK(lb.size() == shape_.size());
   lbounds_ = std::move(lb);
+}
+
+void ConstantBounds::SetLowerBoundsToOne() {
+  for (auto &n : lbounds_) {
+    n = 1;
+  }
 }
 
 Constant<SubscriptInteger> ConstantBounds::SHAPE() const {
@@ -53,6 +50,10 @@ ConstantSubscript ConstantBounds::SubscriptsToOffset(
     stride *= extent;
   }
   return offset;
+}
+
+std::size_t TotalElementCount(const ConstantSubscripts &shape) {
+  return static_cast<std::size_t>(GetSize(shape));
 }
 
 bool ConstantBounds::IncrementSubscripts(

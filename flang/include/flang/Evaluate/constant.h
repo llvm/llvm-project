@@ -65,6 +65,7 @@ public:
   const ConstantSubscripts &shape() const { return shape_; }
   const ConstantSubscripts &lbounds() const { return lbounds_; }
   void set_lbounds(ConstantSubscripts &&);
+  void SetLowerBoundsToOne();
   int Rank() const { return GetRank(shape_); }
   Constant<SubscriptInteger> SHAPE() const;
 
@@ -140,8 +141,8 @@ public:
     }
   }
 
-  // Apply subscripts.  An empty subscript list is allowed for
-  // a scalar constant.
+  // Apply subscripts.  Excess subscripts are ignored, including the
+  // case of a scalar.
   Element At(const ConstantSubscripts &) const;
 
   Constant Reshape(ConstantSubscripts &&) const;
