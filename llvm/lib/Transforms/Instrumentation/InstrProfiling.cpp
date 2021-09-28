@@ -862,6 +862,15 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   GlobalValue::LinkageTypes Linkage = NamePtr->getLinkage();
   GlobalValue::VisibilityTypes Visibility = NamePtr->getVisibility();
 
+  // Due to the limitation of binder as of 2021/09/28, the duplicate weak
+  // symbols in the same csect won't be discarded. When there are duplicate weak
+  // symbols, we can NOT guarantee that the relocations get resolved to the
+  // intended weak symbol, so we can not ensure the correctness of the relative
+  // CounterPtr, so we have to use private linkage for counter and data symbols.
+  if (TT.isOSBinFormatXCOFF()) {
+    Linkage = GlobalValue::PrivateLinkage;
+    Visibility = GlobalValue::DefaultVisibility;
+  }
   // Move the name variable to the right section. Place them in a COMDAT group
   // if the associated function is a COMDAT. This will make sure that only one
   // copy of counters of the COMDAT function will be emitted after linking. Keep
