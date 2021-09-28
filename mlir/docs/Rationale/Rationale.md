@@ -344,33 +344,6 @@ possible to store the predicate as string attribute, it would have rendered
 impossible to implement switching logic based on the comparison kind and made
 attribute validity checks (one out of ten possible kinds) more complex.
 
-### 'select' operation to implement min/max
-
-Although `min` and `max` operations are likely to occur as a result of
-transforming affine loops in ML functions, we did not make them first-class
-operations. Instead, we provide the `select` operation that can be combined with
-`cmpi` to implement the minimum and maximum computation. Although they now
-require two operations, they are likely to be emitted automatically during the
-transformation inside MLIR. On the other hand, there are multiple benefits of
-introducing `select`: standalone min/max would concern themselves with the
-signedness of the comparison, already taken into account by `cmpi`; `select` can
-support floats transparently if used after a float-comparison operation; the
-lower-level targets provide `select`-like instructions making the translation
-trivial.
-
-This operation could have been implemented with additional control flow: `%r =
-select %cond, %t, %f` is equivalent to
-
-```mlir
-^bb0:
-  cond_br %cond, ^bb1(%t), ^bb1(%f)
-^bb1(%r):
-```
-
-However, this control flow granularity is not available in the ML functions
-where min/max, and thus `select`, are likely to appear. In addition, simpler
-control flow may be beneficial for optimization in general.
-
 ### Regions
 
 #### Attributes of type 'Block'
