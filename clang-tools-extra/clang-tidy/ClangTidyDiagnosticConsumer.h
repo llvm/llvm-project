@@ -99,6 +99,8 @@ public:
   DiagnosticBuilder diag(StringRef CheckName, StringRef Message,
                          DiagnosticIDs::Level Level = DiagnosticIDs::Warning);
 
+  DiagnosticBuilder diag(const ClangTidyError &Error);
+
   /// Report any errors to do with reading the configuration using this method.
   DiagnosticBuilder
   configurationDiag(StringRef Message,
@@ -165,7 +167,7 @@ public:
   }
 
   /// Returns build directory of the current translation unit.
-  const std::string &getCurrentBuildDirectory() {
+  const std::string &getCurrentBuildDirectory() const {
     return CurrentBuildDirectory;
   }
 
@@ -217,14 +219,23 @@ private:
 /// This is exposed so that other tools that present clang-tidy diagnostics
 /// (such as clangd) can respect the same suppression rules as clang-tidy.
 /// This does not handle suppression of notes following a suppressed diagnostic;
-/// that is left to the caller is it requires maintaining state in between calls
+/// that is left to the caller as it requires maintaining state in between calls
 /// to this function.
 /// If `AllowIO` is false, the function does not attempt to read source files
 /// from disk which are not already mapped into memory; such files are treated
 /// as not containing a suppression comment.
+/// If suppression is not possible due to improper use of "NOLINT" comments -
+/// for example, the use of a "NOLINTBEGIN" comment that is not followed by a
+/// "NOLINTEND" comment - a diagnostic regarding the improper use is returned
+/// via the output argument `SuppressionErrors`.
 bool shouldSuppressDiagnostic(DiagnosticsEngine::Level DiagLevel,
                               const Diagnostic &Info, ClangTidyContext &Context,
                               bool AllowIO = true);
+
+bool shouldSuppressDiagnostic(
+    DiagnosticsEngine::Level DiagLevel, const Diagnostic &Info,
+    ClangTidyContext &Context,
+    SmallVectorImpl<ClangTidyError> &SuppressionErrors, bool AllowIO = true);
 
 /// Gets the Fix attached to \p Diagnostic.
 /// If there isn't a Fix attached to the diagnostic and \p AnyFix is true, Check
