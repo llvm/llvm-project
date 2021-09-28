@@ -609,17 +609,23 @@ namespace {
 
 // Second the table of options, sorted by name for fast binary lookup.
 static const WarningOption OptionTable[] = {
-#define GET_DIAG_TABLE
+#define DIAG_ENTRY(GroupName, FlagNameOffset, Members, SubGroups)              \
+  {FlagNameOffset, Members, SubGroups},
 #include "clang/Basic/DiagnosticGroups.inc"
-#undef GET_DIAG_TABLE
+#undef DIAG_ENTRY
 };
+
+StringRef DiagnosticIDs::getWarningOptionForGroup(diag::Group Group) {
+  return OptionTable[static_cast<int>(Group)].getName();
+}
 
 /// getWarningOptionForDiag - Return the lowest-level warning option that
 /// enables the specified diagnostic.  If there is no -Wfoo flag that controls
 /// the diagnostic, this returns null.
 StringRef DiagnosticIDs::getWarningOptionForDiag(unsigned DiagID) {
   if (const StaticDiagInfoRec *Info = GetDiagInfo(DiagID))
-    return OptionTable[Info->getOptionGroupIndex()].getName();
+    return getWarningOptionForGroup(
+        static_cast<diag::Group>(Info->getOptionGroupIndex()));
   return StringRef();
 }
 

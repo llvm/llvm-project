@@ -55,6 +55,7 @@ static_library("Basic") {
   sources = [
     "Attributes.cpp",
     "Builtins.cpp",
+    "CLWarnings.cpp",
     "CharInfo.cpp",
     "CodeGenOptions.cpp",
     "Cuda.cpp",
