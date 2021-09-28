@@ -1,49 +1,51 @@
+// NOLINTNEXTLINE
 class A { A(int i); };
+
+class B { B(int i); };
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: single-argument constructors must be marked explicit
 
 // NOLINTNEXTLINE
-class B { B(int i); };
+class C { C(int i); };
 
 // NOLINTNEXTLINE(for-some-other-check)
-class C { C(int i); };
+class D { D(int i); };
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: single-argument constructors must be marked explicit
 
 // NOLINTNEXTLINE(*)
-class C1 { C1(int i); };
+class D1 { D1(int i); };
 
 // NOLINTNEXTLINE(not-closed-bracket-is-treated-as-skip-all
-class C2 { C2(int i); };
+class D2 { D2(int i); };
 
 // NOLINTNEXTLINE(google-explicit-constructor)
-class C3 { C3(int i); };
+class D3 { D3(int i); };
 
 // NOLINTNEXTLINE(some-check, google-explicit-constructor)
-class C4 { C4(int i); };
+class D4 { D4(int i); };
 
 // NOLINTNEXTLINE without-brackets-skip-all, another-check
-class C5 { C5(int i); };
-
+class D5 { D5(int i); };
 
 // NOLINTNEXTLINE
 
-class D { D(int i); };
+class E { E(int i); };
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: single-argument constructors must be marked explicit
 
 // NOLINTNEXTLINE
 //
-class E { E(int i); };
+class F { F(int i); };
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: single-argument constructors must be marked explicit
 
 #define MACRO(X) class X { X(int i); };
-MACRO(F)
+MACRO(G)
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: single-argument constructors must be marked explicit
 // NOLINTNEXTLINE
-MACRO(G)
+MACRO(H)
 
-#define MACRO_NOARG class H { H(int i); };
+#define MACRO_NOARG class I { I(int i); };
 // NOLINTNEXTLINE
 MACRO_NOARG
 
-// CHECK-MESSAGES: Suppressed 8 warnings (8 NOLINT)
+// CHECK-MESSAGES: Suppressed 9 warnings (9 NOLINT)
 
 // RUN: %check_clang_tidy %s google-explicit-constructor %t --
