@@ -186,7 +186,7 @@ define i8 @lshr_and_add(i8 %a, i8 %y)  {
 ; CHECK-NEXT:    [[X:%.*]] = srem i8 [[A:%.*]], 42
 ; CHECK-NEXT:    [[B1:%.*]] = shl i8 [[X]], 3
 ; CHECK-NEXT:    [[Y_MASK:%.*]] = and i8 [[Y:%.*]], 96
-; CHECK-NEXT:    [[L:%.*]] = add i8 [[B1]], [[Y_MASK]]
+; CHECK-NEXT:    [[L:%.*]] = add i8 [[Y_MASK]], [[B1]]
 ; CHECK-NEXT:    ret i8 [[L]]
 ;
   %x = srem i8 %a, 42 ; thwart complexity-based canonicalization
@@ -267,7 +267,7 @@ define <2 x i8> @lshr_and_and_commute_splat(<2 x i8> %a, <2 x i8> %y)  {
 ; CHECK-NEXT:    [[X:%.*]] = srem <2 x i8> [[A:%.*]], <i8 42, i8 42>
 ; CHECK-NEXT:    [[B1:%.*]] = shl <2 x i8> [[X]], <i8 2, i8 2>
 ; CHECK-NEXT:    [[Y_MASK:%.*]] = and <2 x i8> [[Y:%.*]], <i8 52, i8 52>
-; CHECK-NEXT:    [[L:%.*]] = and <2 x i8> [[B1]], [[Y_MASK]]
+; CHECK-NEXT:    [[L:%.*]] = and <2 x i8> [[Y_MASK]], [[B1]]
 ; CHECK-NEXT:    ret <2 x i8> [[L]]
 ;
   %x = srem <2 x i8> %a, <i8 42, i8 42> ; thwart complexity-based canonicalization
@@ -283,7 +283,7 @@ define i8 @lshr_and_or(i8 %a, i8 %y)  {
 ; CHECK-NEXT:    [[X:%.*]] = srem i8 [[A:%.*]], 42
 ; CHECK-NEXT:    [[B1:%.*]] = shl i8 [[X]], 2
 ; CHECK-NEXT:    [[Y_MASK:%.*]] = and i8 [[Y:%.*]], 52
-; CHECK-NEXT:    [[L:%.*]] = or i8 [[B1]], [[Y_MASK]]
+; CHECK-NEXT:    [[L:%.*]] = or i8 [[Y_MASK]], [[B1]]
 ; CHECK-NEXT:    ret i8 [[L]]
 ;
   %x = srem i8 %a, 42 ; thwart complexity-based canonicalization
@@ -331,7 +331,7 @@ define <2 x i8> @lshr_and_xor_commute_splat(<2 x i8> %a, <2 x i8> %y)  {
 ; CHECK-NEXT:    [[X:%.*]] = srem <2 x i8> [[A:%.*]], <i8 42, i8 42>
 ; CHECK-NEXT:    [[B1:%.*]] = shl <2 x i8> [[X]], <i8 2, i8 2>
 ; CHECK-NEXT:    [[Y_MASK:%.*]] = and <2 x i8> [[Y:%.*]], <i8 52, i8 52>
-; CHECK-NEXT:    [[L:%.*]] = xor <2 x i8> [[B1]], [[Y_MASK]]
+; CHECK-NEXT:    [[L:%.*]] = xor <2 x i8> [[Y_MASK]], [[B1]]
 ; CHECK-NEXT:    ret <2 x i8> [[L]]
 ;
   %x = srem <2 x i8> %a, <i8 42, i8 42> ; thwart complexity-based canonicalization
