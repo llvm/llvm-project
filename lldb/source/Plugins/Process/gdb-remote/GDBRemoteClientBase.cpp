@@ -249,32 +249,6 @@ GDBRemoteClientBase::SendPacketAndWaitForResponseNoLock(
   return packet_result;
 }
 
-bool GDBRemoteClientBase::SendvContPacket(
-    llvm::StringRef payload, std::chrono::seconds interrupt_timeout,
-    StringExtractorGDBRemote &response) {
-  Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
-  LLDB_LOGF(log, "GDBRemoteCommunicationClient::%s ()", __FUNCTION__);
-
-  // we want to lock down packet sending while we continue
-  Lock lock(*this, interrupt_timeout);
-
-  LLDB_LOGF(log,
-            "GDBRemoteCommunicationClient::%s () sending vCont packet: %.*s",
-            __FUNCTION__, int(payload.size()), payload.data());
-
-  if (SendPacketNoLock(payload) != PacketResult::Success)
-    return false;
-
-  OnRunPacketSent(true);
-
-  // wait for the response to the vCont
-  if (ReadPacket(response, llvm::None, false) == PacketResult::Success) {
-    if (response.IsOKResponse())
-      return true;
-  }
-
-  return false;
-}
 bool GDBRemoteClientBase::ShouldStop(const UnixSignals &signals,
                                      StringExtractorGDBRemote &response) {
   std::lock_guard<std::mutex> lock(m_mutex);
