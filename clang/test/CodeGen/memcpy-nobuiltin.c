@@ -4,8 +4,7 @@
 //
 // CHECK-WITH-DECL-NOT: @llvm.memcpy
 // CHECK-NO-DECL: @llvm.memcpy
-// CHECK-SELF-REF-DECL-LABEL: define dso_local i8* @memcpy.inline
-// CHECK-SELF-REF-DECL:       @memcpy(
+// CHECK-SELF-REF-DECL: @llvm.memcpy
 //
 #include <memcpy-nobuiltin.inc>
 void test(void *dest, void const *from, size_t n) {

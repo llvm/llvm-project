@@ -3169,11 +3169,6 @@ bool CodeGenModule::shouldEmitFunction(GlobalDecl GD) {
     }
   }
 
-  // Inline builtins declaration must be emitted. They often are fortified
-  // functions.
-  if (F->isInlineBuiltinDeclaration())
-    return true;
-
   // PR9614. Avoid cases where the source code is lying to us. An available
   // externally function should have an equivalent function somewhere else,
   // but a function that calls itself through asm label/`__builtin_` trickery is
