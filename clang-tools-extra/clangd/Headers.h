@@ -20,6 +20,7 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Tooling/Inclusions/HeaderIncludes.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
@@ -140,6 +141,11 @@ public:
   llvm::DenseMap<HeaderID, SmallVector<HeaderID>> IncludeChildren;
 
   std::vector<Inclusion> MainFileIncludes;
+
+  std::string dump() {
+    return "RealPathNames: " +
+           llvm::join(RealPathNames.begin(), RealPathNames.end(), ", ");
+  }
 
 private:
   std::vector<std::string> RealPathNames; // In HeaderID order.
