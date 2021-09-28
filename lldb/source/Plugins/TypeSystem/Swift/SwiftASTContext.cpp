@@ -2250,14 +2250,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
         if (!HasSwiftModules(*module_sp))
           return;
 
-        SymbolFile *sym_file = module_sp->GetSymbolFile();
-        if (!sym_file)
-          return;
-
-        Status sym_file_error;
-
         auto type_system_or_err =
-            sym_file->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
+            module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
         if (!type_system_or_err) {
           llvm::consumeError(type_system_or_err.takeError());
           return;
