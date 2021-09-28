@@ -44,7 +44,7 @@ static LogicalResult dropRefIfNoUses(Value value, unsigned count = 1) {
   else
     b.setInsertionPointToStart(value.getParentBlock());
 
-  b.create<RuntimeDropRefOp>(value.getLoc(), value, b.getI32IntegerAttr(1));
+  b.create<RuntimeDropRefOp>(value.getLoc(), value, b.getI64IntegerAttr(1));
   return success();
 }
 
@@ -304,7 +304,7 @@ LogicalResult AsyncRuntimeRefCountingPass::addDropRefAfterLastUse(Value value) {
 
     // Add a drop_ref immediately after the last user.
     builder.setInsertionPointAfter(lastUser);
-    builder.create<RuntimeDropRefOp>(loc, value, builder.getI32IntegerAttr(1));
+    builder.create<RuntimeDropRefOp>(loc, value, builder.getI64IntegerAttr(1));
   }
 
   return success();
@@ -322,7 +322,7 @@ AsyncRuntimeRefCountingPass::addAddRefBeforeFunctionCall(Value value) {
     // Add a reference before the function call to pass the value at `+1`
     // reference to the function entry block.
     builder.setInsertionPoint(user);
-    builder.create<RuntimeAddRefOp>(loc, value, builder.getI32IntegerAttr(1));
+    builder.create<RuntimeAddRefOp>(loc, value, builder.getI64IntegerAttr(1));
   }
 
   return success();
@@ -411,7 +411,7 @@ AsyncRuntimeRefCountingPass::addDropRefInDivergentLivenessSuccessor(
 
       OpBuilder builder = OpBuilder::atBlockBegin(refCountingBlock);
       builder.create<RuntimeDropRefOp>(value.getLoc(), value,
-                                       builder.getI32IntegerAttr(1));
+                                       builder.getI64IntegerAttr(1));
 
       // No need to update the terminator operation.
       if (successor == refCountingBlock)
@@ -502,13 +502,13 @@ AsyncRuntimePolicyBasedRefCountingPass::addRefCounting(Value value) {
       // Create `add_ref` operation before the operand owner.
       if (cnt > 0) {
         b.setInsertionPoint(operand.getOwner());
-        b.create<RuntimeAddRefOp>(loc, value, b.getI32IntegerAttr(cnt));
+        b.create<RuntimeAddRefOp>(loc, value, b.getI64IntegerAttr(cnt));
       }
 
       // Create `drop_ref` operation after the operand owner.
       if (cnt < 0) {
         b.setInsertionPointAfter(operand.getOwner());
-        b.create<RuntimeDropRefOp>(loc, value, b.getI32IntegerAttr(-cnt));
+        b.create<RuntimeDropRefOp>(loc, value, b.getI64IntegerAttr(-cnt));
       }
     }
   }

@@ -193,7 +193,10 @@ if (NOT DEFINED LLVM_LINKER_DETECTED)
       OUTPUT_VARIABLE stdout
       ERROR_VARIABLE stderr
       )
-    if("${stdout}" MATCHES "GNU gold")
+    if("${stdout}" MATCHES "^mold")
+      set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
+      message(STATUS "Linker detection: mold")
+    elseif("${stdout}" MATCHES "GNU gold")
       set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
       set(LLVM_LINKER_IS_GOLD YES CACHE INTERNAL "")
       message(STATUS "Linker detection: GNU Gold")

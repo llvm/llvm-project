@@ -199,8 +199,10 @@ public:
 
   /// Fuse the producer of `rootOpOperand` into the tile loop nest. Returns the
   /// fused producer of fails if fusion is not possible.
-  // TODO: add replace uses callback to support passes and patterns.
   FailureOr<LinalgOp> fuseProducer(OpBuilder &b, OpOperand *rootOpOperand);
+
+  /// Returns the replacement results for the original untiled root operation.
+  ValueRange getRootOpReplacementResults();
 
   /// Returns the tiled root operation.
   LinalgOp getRootOp() { return rootOp; }

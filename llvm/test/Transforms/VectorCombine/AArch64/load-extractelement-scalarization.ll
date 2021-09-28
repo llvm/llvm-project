@@ -678,3 +678,37 @@ define i32 @load_multiple_extracts_with_variable_indices_large_vector_all_valid_
   ret i32 %res
 }
 
+; Test case from PR51992.
+; TODO: could handle by inserting freeze.
+define i8 @load_extract_safe_with_freeze(<8 x i8> %in, <16 x i8>* %src) {
+; CHECK-LABEL: @load_extract_safe_with_freeze(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[EXT_IDX:%.*]] = extractelement <8 x i8> [[IN:%.*]], i32 0
+; CHECK-NEXT:    [[EXT_IDX_I32:%.*]] = zext i8 [[EXT_IDX]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[EXT_IDX]], 99
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[LOAD:%.*]] = load <16 x i8>, <16 x i8>* [[SRC:%.*]], align 16
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[EXT_IDX_I32]], 15
+; CHECK-NEXT:    [[EXT:%.*]] = extractelement <16 x i8> [[LOAD]], i32 [[AND]]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[EXT]], [[THEN]] ]
+; CHECK-NEXT:    ret i8 0
+;
+entry:
+  %ext.idx = extractelement <8 x i8> %in, i32 0
+  %ext.idx.i32 = zext i8 %ext.idx to i32
+  %cmp = icmp ult i8 %ext.idx, 99
+  br i1 %cmp, label %then, label %exit
+
+then:
+  %load = load <16 x i8>, <16 x i8>* %src, align 16
+  %and = and i32 %ext.idx.i32, 15
+  %ext = extractelement <16 x i8> %load, i32 %and
+  br label %exit
+
+exit:
+  %p = phi i8 [ 0, %entry ], [ %ext, %then ]
+  ret i8 0
+}

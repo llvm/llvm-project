@@ -163,9 +163,6 @@ let Definition = "target" in {
   def DisplayRecognizedArguments: Property<"display-recognized-arguments", "Boolean">,
     DefaultFalse,
     Desc<"Show recognized arguments in variable listings by default.">;
-  def NonStopModeEnabled: Property<"non-stop-mode", "Boolean">,
-    DefaultFalse,
-    Desc<"Disable lock-step debugging, instead control threads independently.">;
   def RequireHardwareBreakpoints: Property<"require-hardware-breakpoint", "Boolean">,
     DefaultFalse,
     Desc<"Require all breakpoints to be hardware breakpoints.">;

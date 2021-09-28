@@ -4017,9 +4017,7 @@ cc_binary(
     srcs = glob([
         "tools/lli/ChildTarget/*.cpp",
         "tools/lli/ChildTarget/*.h",
-    ]) + [
-        "tools/lli/RemoteJITUtils.h",
-    ],
+    ]),
     copts = llvm_copts,
     # The tests load code into this binary that expect to see symbols
     # from libstdc++ such as __cxa_begin_catch and _ZTIi. The latter

@@ -179,10 +179,10 @@
 // LIBDEVICE50-SAME: libdevice.compute_50.10.bc
 // PTX42-SAME: "-target-feature" "+ptx42"
 // PTX60-SAME: "-target-feature" "+ptx60"
-// CUDAINC-SAME: "-internal-isystem" "{{.*}}/Inputs/CUDA{{[_0-9]+}}/usr/local/cuda/include"
-// NOCUDAINC-NOT: "-internal-isystem" "{{.*}}/cuda/include"
 // CUDAINC-SAME: "-include" "__clang_cuda_runtime_wrapper.h"
 // NOCUDAINC-NOT: "-include" "__clang_cuda_runtime_wrapper.h"
+// CUDAINC-SAME: "-internal-isystem" "{{.*}}/Inputs/CUDA{{[_0-9]+}}/usr/local/cuda/include"
+// NOCUDAINC-NOT: "-internal-isystem" "{{.*}}/cuda/include"
 // -internal-externc-isystem flags must come *after* the cuda include flags,
 // because we must search the cuda include directory first.
 // CUDAINC-SAME: "-internal-externc-isystem"

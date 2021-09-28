@@ -4,8 +4,7 @@
 define dso_local <32 x half> @test1(<32 x half> %acc.coerce, <32 x half> %lhs.coerce, <32 x half> %rhs.coerce) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vfmaddcph %zmm1, %zmm0, %zmm2
-; CHECK-NEXT:    vmovaps %zmm2, %zmm0
+; CHECK-NEXT:    vfmaddcph %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
 entry:
   %0 = bitcast <32 x half> %lhs.coerce to <16 x float>
@@ -19,8 +18,7 @@ entry:
 define dso_local <16 x half> @test2(<16 x half> %acc.coerce, <16 x half> %lhs.coerce, <16 x half> %rhs.coerce) {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vfmaddcph %ymm1, %ymm0, %ymm2
-; CHECK-NEXT:    vmovaps %ymm2, %ymm0
+; CHECK-NEXT:    vfmaddcph %ymm2, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %0 = bitcast <16 x half> %lhs.coerce to <8 x float>
@@ -34,8 +32,7 @@ entry:
 define dso_local <8 x half> @test3(<8 x half> %acc.coerce, <8 x half> %lhs.coerce, <8 x half> %rhs.coerce) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vfmaddcph %xmm1, %xmm0, %xmm2
-; CHECK-NEXT:    vmovaps %xmm2, %xmm0
+; CHECK-NEXT:    vfmaddcph %xmm2, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 entry:
   %0 = bitcast <8 x half> %lhs.coerce to <4 x float>
@@ -50,8 +47,7 @@ entry:
 define dso_local <8 x half> @test4(<8 x half> %acc.coerce, <8 x half> %lhs.coerce, <8 x half> %rhs.coerce) {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vfmaddcph %xmm1, %xmm0, %xmm2
-; CHECK-NEXT:    vmovaps %xmm2, %xmm0
+; CHECK-NEXT:    vfmaddcph %xmm2, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 entry:
   %0 = bitcast <8 x half> %lhs.coerce to <4 x float>

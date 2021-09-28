@@ -583,6 +583,7 @@ namespace clang {
     ExpectedStmt VisitSourceLocExpr(SourceLocExpr *E);
     ExpectedStmt VisitVAArgExpr(VAArgExpr *E);
     ExpectedStmt VisitChooseExpr(ChooseExpr *E);
+    ExpectedStmt VisitShuffleVectorExpr(ShuffleVectorExpr *E);
     ExpectedStmt VisitGNUNullExpr(GNUNullExpr *E);
     ExpectedStmt VisitGenericSelectionExpr(GenericSelectionExpr *E);
     ExpectedStmt VisitPredefinedExpr(PredefinedExpr *E);
@@ -6728,6 +6729,24 @@ ExpectedStmt ASTNodeImporter::VisitChooseExpr(ChooseExpr *E) {
   return new (Importer.getToContext())
       ChooseExpr(ToBuiltinLoc, ToCond, ToLHS, ToRHS, ToType, VK, OK,
                  ToRParenLoc, CondIsTrue);
+}
+
+ExpectedStmt ASTNodeImporter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
+  Error Err = Error::success();
+  auto ToRParenLoc = importChecked(Err, E->getRParenLoc());
+  auto ToBeginLoc = importChecked(Err, E->getBeginLoc());
+  auto ToType = importChecked(Err, E->getType());
+  const unsigned NumSubExprs = E->getNumSubExprs();
+
+  llvm::SmallVector<Expr *, 8> ToSubExprs;
+  llvm::ArrayRef<Expr *> FromSubExprs(E->getSubExprs(), NumSubExprs);
+  ToSubExprs.resize(NumSubExprs);
+
+  if ((Err = ImportContainerChecked(FromSubExprs, ToSubExprs)))
+    return std::move(Err);
+
+  return new (Importer.getToContext()) ShuffleVectorExpr(
+      Importer.getToContext(), ToSubExprs, ToType, ToBeginLoc, ToRParenLoc);
 }
 
 ExpectedStmt ASTNodeImporter::VisitGNUNullExpr(GNUNullExpr *E) {

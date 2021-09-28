@@ -36,7 +36,7 @@ public:
 
     Function *InitOrFiniKernel = Function::createWithDefaultAttr(
         FunctionType::get(Type::getVoidTy(M.getContext()), false),
-        GlobalValue::InternalLinkage, 0, InitOrFiniKernelName, &M);
+        GlobalValue::ExternalLinkage, 0, InitOrFiniKernelName, &M);
     BasicBlock *InitOrFiniKernelBB =
         BasicBlock::Create(M.getContext(), "", InitOrFiniKernel);
     ReturnInst::Create(M.getContext(), InitOrFiniKernelBB);

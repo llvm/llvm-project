@@ -28,6 +28,7 @@ TEST(LoadsTest, FindAvailableLoadedValueSameBasePtrConstantOffsetsNullAA) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C,
                                       R"IR(
+target datalayout = "p:64:64:64:32"
 %class = type <{ i32, i32 }>
 
 define i32 @f() {

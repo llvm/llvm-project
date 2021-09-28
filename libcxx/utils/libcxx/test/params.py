@@ -94,7 +94,7 @@ DEFAULT_PARAMETERS = [
   Parameter(name='stdlib', choices=['libc++', 'libstdc++', 'msvc'], type=str, default='libc++',
             help="The C++ Standard Library implementation being tested.",
             actions=lambda stdlib: [
-              AddFeature(stdlib)
+              AddFeature('stdlib={}'.format(stdlib))
             ]),
 
   Parameter(name='enable_warnings', choices=[True, False], type=bool, default=True,

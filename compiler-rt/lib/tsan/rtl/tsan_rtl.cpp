@@ -43,9 +43,10 @@ int (*on_finalize)(int);
 
 #if !SANITIZER_GO && !SANITIZER_MAC
 __attribute__((tls_model("initial-exec")))
-THREADLOCAL char cur_thread_placeholder[sizeof(ThreadState)] ALIGNED(64);
+THREADLOCAL char cur_thread_placeholder[sizeof(ThreadState)] ALIGNED(
+    SANITIZER_CACHE_LINE_SIZE);
 #endif
-static char ctx_placeholder[sizeof(Context)] ALIGNED(64);
+static char ctx_placeholder[sizeof(Context)] ALIGNED(SANITIZER_CACHE_LINE_SIZE);
 Context *ctx;
 
 // Can be overriden by a front-end.
@@ -145,6 +146,17 @@ ThreadState::ThreadState(Context *ctx, Tid tid, int unique_id, u64 epoch,
       last_sleep_clock(tid)
 #endif
 {
+  CHECK_EQ(reinterpret_cast<uptr>(this) % SANITIZER_CACHE_LINE_SIZE, 0);
+#if !SANITIZER_GO
+  shadow_stack_pos = shadow_stack;
+  shadow_stack_end = shadow_stack + kShadowStackSize;
+#else
+  // Setup dynamic shadow stack.
+  const int kInitStackSize = 8;
+  shadow_stack = (uptr *)Alloc(kInitStackSize * sizeof(uptr));
+  shadow_stack_pos = shadow_stack;
+  shadow_stack_end = shadow_stack + kInitStackSize;
+#endif
 }
 
 #if !SANITIZER_GO

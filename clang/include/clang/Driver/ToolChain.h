@@ -113,6 +113,13 @@ public:
     RM_Disabled,
   };
 
+  struct BitCodeLibraryInfo {
+    std::string Path;
+    bool ShouldInternalize;
+    BitCodeLibraryInfo(StringRef Path, bool ShouldInternalize = true)
+        : Path(Path), ShouldInternalize(ShouldInternalize) {}
+  };
+
   enum FileType { FT_Object, FT_Static, FT_Shared };
 
 private:
@@ -681,7 +688,7 @@ public:
                                           const llvm::opt::ArgList &Args) const;
 
   /// Get paths of HIP device libraries.
-  virtual llvm::SmallVector<std::string, 12>
+  virtual llvm::SmallVector<BitCodeLibraryInfo, 12>
   getHIPDeviceLibs(const llvm::opt::ArgList &Args) const;
 
   /// Return sanitizers which are available in this toolchain.

@@ -138,6 +138,8 @@ void ThreadContext::OnCreated(void *arg) {
   creation_stack_id = CurrentStackId(args->thr, args->pc);
 }
 
+extern "C" void __tsan_stack_initialization() {}
+
 struct OnStartedArgs {
   ThreadState *thr;
   uptr stk_addr;
@@ -156,13 +158,6 @@ void ThreadStart(ThreadState *thr, Tid tid, tid_t os_id,
   if (thread_type != ThreadType::Fiber)
     GetThreadStackAndTls(tid == kMainTid, &stk_addr, &stk_size, &tls_addr,
                          &tls_size);
-
-  if (tid != kMainTid) {
-    if (stk_addr && stk_size)
-      MemoryRangeImitateWrite(thr, /*pc=*/ 1, stk_addr, stk_size);
-
-    if (tls_addr && tls_size) ImitateTlsWrite(thr, tls_addr, tls_size);
-  }
 #endif
 
   ThreadRegistry *tr = &ctx->thread_registry;
@@ -178,6 +173,22 @@ void ThreadStart(ThreadState *thr, Tid tid, tid_t os_id,
     ThreadIgnoreSyncBegin(thr, 0);
   }
 #endif
+
+#if !SANITIZER_GO
+  // Don't imitate stack/TLS writes for the main thread,
+  // because its initialization is synchronized with all
+  // subsequent threads anyway.
+  if (tid != kMainTid) {
+    if (stk_addr && stk_size) {
+      const uptr pc = StackTrace::GetNextInstructionPc(
+          reinterpret_cast<uptr>(__tsan_stack_initialization));
+      MemoryRangeImitateWrite(thr, pc, stk_addr, stk_size);
+    }
+
+    if (tls_addr && tls_size)
+      ImitateTlsWrite(thr, tls_addr, tls_size);
+  }
+#endif
 }
 
 void ThreadContext::OnStarted(void *arg) {
@@ -190,17 +201,6 @@ void ThreadContext::OnStarted(void *arg) {
   new (thr)
       ThreadState(ctx, tid, unique_id, epoch0, reuse_count, args->stk_addr,
                   args->stk_size, args->tls_addr, args->tls_size);
-#if !SANITIZER_GO
-  thr->shadow_stack = &ThreadTrace(thr->tid)->shadow_stack[0];
-  thr->shadow_stack_pos = thr->shadow_stack;
-  thr->shadow_stack_end = thr->shadow_stack + kShadowStackSize;
-#else
-  // Setup dynamic shadow stack.
-  const int kInitStackSize = 8;
-  thr->shadow_stack = (uptr *)Alloc(kInitStackSize * sizeof(uptr));
-  thr->shadow_stack_pos = thr->shadow_stack;
-  thr->shadow_stack_end = thr->shadow_stack + kInitStackSize;
-#endif
   if (common_flags()->detect_deadlocks)
     thr->dd_lt = ctx->dd->CreateLogicalThread(unique_id);
   thr->fast_state.SetHistorySize(flags()->history_size);

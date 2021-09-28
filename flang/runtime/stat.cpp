@@ -50,6 +50,13 @@ const char *StatErrorString(int stat) {
   case StatUnlockedFailedImage:
     return "Failed image unlocked";
 
+  case StatInvalidArgumentNumber:
+    return "Invalid argument number";
+  case StatMissingArgument:
+    return "Missing argument";
+  case StatValueTooShort:
+    return "Value too short";
+
   default:
     return nullptr;
   }

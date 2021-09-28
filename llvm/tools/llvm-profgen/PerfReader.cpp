@@ -24,6 +24,11 @@ cl::opt<bool> UseOffset("use-offset", cl::ReallyHidden, cl::init(true),
                         cl::ZeroOrMore,
                         cl::desc("Work with `--skip-symbolization` to dump the "
                                  "offset instead of virtual address."));
+cl::opt<bool>
+    IgnoreStackSamples("ignore-stack-samples", cl::ReallyHidden,
+                       cl::init(false), cl::ZeroOrMore,
+                       cl::desc("Ignore call stack samples for hybrid samples "
+                                "and produce context-insensitive profile."));
 
 extern cl::opt<bool> ShowDisassemblyOnly;
 extern cl::opt<bool> ShowSourceLocations;
@@ -365,9 +370,6 @@ void HybridPerfReader::unwindSamples() {
     WithColor::warning() << "Profile context truncated due to missing probe "
                          << "for call instruction at "
                          << format("%" PRIx64, Address) << "\n";
-
-  if (SkipSymbolization)
-    writeRawProfile(OutputFilename);
 }
 
 bool PerfReaderBase::extractLBRStack(TraceStream &TraceIt,
@@ -675,14 +677,18 @@ void LBRPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
 }
 
 void LBRPerfReader::generateRawProfile() {
-  assert(SampleCounters.size() == 1 && "Must have one entry of sample counter");
+  // There is no context for LBR only sample, so initialize one entry with
+  // fake "empty" context key.
+  assert(SampleCounters.empty() &&
+         "Sample counter map should be empty before raw profile generation");
+  std::shared_ptr<StringBasedCtxKey> Key =
+      std::make_shared<StringBasedCtxKey>();
+  Key->genHashCode();
+  SampleCounters.emplace(Hashable<ContextKey>(Key), SampleCounter());
   for (const auto &Item : AggregatedSamples) {
     const PerfSample *Sample = Item.first.getPtr();
     computeCounterFromLBR(Sample, Item.second);
   }
-
-  if (SkipSymbolization)
-    PerfReaderBase::writeRawProfile(OutputFilename);
 }
 
 uint64_t PerfReaderBase::parseAggregatedCount(TraceStream &TraceIt) {
@@ -774,7 +780,13 @@ PerfReaderBase::extractPerfType(cl::list<std::string> &PerfTraceFilenames) {
   return PerfType;
 }
 
-void HybridPerfReader::generateRawProfile() { unwindSamples(); }
+void HybridPerfReader::generateRawProfile() {
+  ProfileIsCS = !IgnoreStackSamples;
+  if (ProfileIsCS)
+    unwindSamples();
+  else
+    LBRPerfReader::generateRawProfile();
+}
 
 void PerfReaderBase::warnTruncatedStack() {
   for (auto Address : InvalidReturnAddresses) {
@@ -793,6 +805,9 @@ void PerfReaderBase::parsePerfTraces(
 
   warnTruncatedStack();
   generateRawProfile();
+
+  if (SkipSymbolization)
+    writeRawProfile(OutputFilename);
 }
 
 } // end namespace sampleprof

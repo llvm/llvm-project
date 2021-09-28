@@ -2521,12 +2521,9 @@ it in an instantiation which changes its value.
 In order to produce the unique name, the current implementation of the bultin
 uses Itanium mangling even if the host compilation uses a different name
 mangling scheme at runtime. The mangler marks all the lambdas required to name
-the SYCL kernel and emits a stable local ordering of the respective lambdas,
-starting from ``10000``. The initial value of ``10000`` serves as an obvious
-differentiator from ordinary lambda mangling numbers but does not serve any
-other purpose and may change in the future. The resulting pattern is
-demanglable. When non-lambda types are passed to the builtin, the mangler emits
-their usual pattern without any special treatment.
+the SYCL kernel and emits a stable local ordering of the respective lambdas.
+The resulting pattern is demanglable.  When non-lambda types are passed to the
+builtin, the mangler emits their usual pattern without any special treatment.
 
 **Syntax**:
 
@@ -3943,6 +3940,25 @@ will expansion of the macro within the main source file. For example:
    #endif
 
 This warning is controlled by ``-Wpedantic-macros``.
+
+Final Macros
+============
+
+Clang supports the pragma ``#pragma clang final``, which can be used to
+mark macros as final, meaning they cannot be undef'd or re-defined. For example:
+
+.. code-block:: c
+
+   #define FINAL_MACRO 1
+   #pragma clang final(FINAL_MACRO)
+
+   #define FINAL_MACRO // warning: FINAL_MACRO is marked final and should not be redefined
+   #undef FINAL_MACRO  // warning: FINAL_MACRO is marked final and should not be undefined
+
+This is useful for enforcing system-provided macros that should not be altered
+in user headers or code. This is controlled by ``-Wpedantic-macros``. Final 
+macros will always warn on redefinition, including situations with identical
+bodies and in system headers.
 
 Extended Integer Types
 ======================

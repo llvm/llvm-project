@@ -9,6 +9,7 @@ add_llvm_component_library(LLVMOrcJIT
   EPCEHFrameRegistrar.cpp
   EPCGenericDylibManager.cpp
   EPCGenericJITLinkMemoryManager.cpp
+  EPCGenericRTDyldMemoryManager.cpp
   EPCIndirectionUtils.cpp
   ExecutionUtils.cpp
   IndirectionUtils.cpp
