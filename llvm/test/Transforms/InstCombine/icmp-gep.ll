@@ -52,14 +52,62 @@ define i1 @eq_base_inbounds_commute(i64 %y) {
   ret i1 %r
 }
 
-define i1 @sgt_base(i8* %x, i64 %y) {
-; CHECK-LABEL: @sgt_base(
+define i1 @slt_base(i8* %x, i64 %y) {
+; CHECK-LABEL: @slt_base(
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, i8* [[X:%.*]], i64 [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8* [[G]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8* [[G]], [[X]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %g = getelementptr i8, i8* %x, i64 %y
-  %r = icmp sgt i8* %g, %x
+  %r = icmp slt i8* %g, %x
+  ret i1 %r
+}
+
+define i1 @sgt_base_commute(i64 %y) {
+; CHECK-LABEL: @sgt_base_commute(
+; CHECK-NEXT:    [[X:%.*]] = call i8* @getptr()
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, i8* [[X]], i64 [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8* [[X]], [[G]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = call i8* @getptr() ; thwart complexity-based canonicalization
+  %g = getelementptr i8, i8* %x, i64 %y
+  %r = icmp sgt i8* %x, %g
+  ret i1 %r
+}
+
+define i1 @slt_base_inbounds(i8* %x, i64 %y) {
+; CHECK-LABEL: @slt_base_inbounds(
+; CHECK-NEXT:    [[G:%.*]] = getelementptr inbounds i8, i8* [[X:%.*]], i64 [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8* [[G]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %g = getelementptr inbounds i8, i8* %x, i64 %y
+  %r = icmp slt i8* %g, %x
+  ret i1 %r
+}
+
+define i1 @sgt_base_inbounds_commute(i64 %y) {
+; CHECK-LABEL: @sgt_base_inbounds_commute(
+; CHECK-NEXT:    [[X:%.*]] = call i8* @getptr()
+; CHECK-NEXT:    [[G:%.*]] = getelementptr inbounds i8, i8* [[X]], i64 [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8* [[X]], [[G]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = call i8* @getptr() ; thwart complexity-based canonicalization
+  %g = getelementptr inbounds i8, i8* %x, i64 %y
+  %r = icmp sgt i8* %x, %g
+  ret i1 %r
+}
+
+define i1 @ult_base(i8* %x, i64 %y) {
+; CHECK-LABEL: @ult_base(
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, i8* [[X:%.*]], i64 [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8* [[G]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %g = getelementptr i8, i8* %x, i64 %y
+  %r = icmp ult i8* %g, %x
   ret i1 %r
 }
 
@@ -86,16 +134,15 @@ define i1 @ult_base_inbounds(i8* %x, i64 %y) {
   ret i1 %r
 }
 
-define i1 @slt_base_inbounds_commute(i64 %y) {
-; CHECK-LABEL: @slt_base_inbounds_commute(
+define i1 @ugt_base_inbounds_commute(i64 %y) {
+; CHECK-LABEL: @ugt_base_inbounds_commute(
 ; CHECK-NEXT:    [[X:%.*]] = call i8* @getptr()
-; CHECK-NEXT:    [[G:%.*]] = getelementptr inbounds i8, i8* [[X]], i64 [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i8* [[X]], [[G]]
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i64 [[Y:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = call i8* @getptr() ; thwart complexity-based canonicalization
   %g = getelementptr inbounds i8, i8* %x, i64 %y
-  %r = icmp slt i8* %x, %g
+  %r = icmp ugt i8* %x, %g
   ret i1 %r
 }
 
