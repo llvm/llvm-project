@@ -1,6 +1,6 @@
 ! Check the flang-omp-report plugin for omp-declarative-directive.f90
 
-! REQUIRES: plugins
+! REQUIRES: plugins, examples, shell
 
 ! RUN: %flang_fc1 -load %llvmshlibdir/flangOmpReport.so -plugin flang-omp-report -fopenmp %s -o - | FileCheck %s
 
