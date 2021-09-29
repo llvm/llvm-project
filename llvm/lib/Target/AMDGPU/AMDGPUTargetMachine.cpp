@@ -517,7 +517,9 @@ StringRef AMDGPUTargetMachine::getFeatureString(const Function &F) const {
 /// Predicate for Internalize pass.
 static bool mustPreserveGV(const GlobalValue &GV) {
   if (const Function *F = dyn_cast<Function>(&GV))
-    return F->isDeclaration() || AMDGPU::isEntryFunctionCC(F->getCallingConv());
+    return F->isDeclaration() || F->getName().startswith("__asan_") ||
+           F->getName().startswith("__sanitizer_") ||
+           AMDGPU::isEntryFunctionCC(F->getCallingConv());
 
   GV.removeDeadConstantUsers();
   return !GV.use_empty();
