@@ -5452,7 +5452,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
       if (auto Group = diagGroupFromCLWarningID(WarningNumber)) {
         CmdArgs.push_back(Args.MakeArgString(
-            Twine("-Wno-") + DiagnosticIDs::getWarningOptionForGroup(*Group)));
+            "-Wno-" + DiagnosticIDs::getWarningOptionForGroup(*Group)));
         continue;
       }
     }
