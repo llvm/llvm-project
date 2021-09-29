@@ -231,6 +231,17 @@ private:
   StringMap<SectionParserFunction> CustomSectionParserFunctions;
 };
 
+/// A pass to split up __LD,__compact_unwind sections.
+class CompactUnwindSplitter {
+public:
+  CompactUnwindSplitter(StringRef CompactUnwindSectionName)
+      : CompactUnwindSectionName(CompactUnwindSectionName) {}
+  Error operator()(LinkGraph &G);
+
+private:
+  StringRef CompactUnwindSectionName;
+};
+
 } // end namespace jitlink
 } // end namespace llvm
 

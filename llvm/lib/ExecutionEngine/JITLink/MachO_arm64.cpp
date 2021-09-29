@@ -683,6 +683,10 @@ void link_MachO_arm64(std::unique_ptr<LinkGraph> G,
     else
       Config.PrePrunePasses.push_back(markAllSymbolsLive);
 
+    // Add compact unwind splitter pass.
+    Config.PrePrunePasses.push_back(
+        CompactUnwindSplitter("__LD,__compact_unwind"));
+
     // Add an in-place GOT/Stubs pass.
     Config.PostPrunePasses.push_back(
         PerGraphGOTAndPLTStubsBuilder_MachO_arm64::asPass);
