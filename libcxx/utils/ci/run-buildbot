@@ -442,7 +442,7 @@ new-standalone)
           -DCMAKE_BUILD_TYPE=RelWithDebInfo \
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
           -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
-          -DLIBCXX_TEST_CONFIG="${MONOREPO_ROOT}/libcxx/test/configs/libcxx-trunk-shared.cfg.in"
+          -DLIBCXX_TEST_CONFIG="${MONOREPO_ROOT}/libcxx/test/configs/llvm-libc++-shared.cfg.in"
 
     check-cxx-cxxabi
 ;;
