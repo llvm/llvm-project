@@ -455,6 +455,75 @@ static unsigned getMaxPointerSize(const DataLayout &DL) {
   return MaxPointerSize;
 }
 
+namespace {
+// A linear transformation of a Value; this class represents ZExt(SExt(V,
+// SExtBits), ZExtBits) * Scale + Offset.
+struct VariableGEPIndex {
+  // An opaque Value - we can't decompose this further.
+  const Value *V;
+
+  // We need to track what extensions we've done as we consider the same Value
+  // with different extensions as different variables in a GEP's linear
+  // expression;
+  // e.g.: if V == -1, then sext(x) != zext(x).
+  unsigned ZExtBits;
+  unsigned SExtBits;
+
+  APInt Scale;
+
+  // Context instruction to use when querying information about this index.
+  const Instruction *CxtI;
+
+  /// True if all operations in this expression are NSW.
+  bool IsNSW;
+
+  void dump() const {
+    print(dbgs());
+    dbgs() << "\n";
+  }
+  void print(raw_ostream &OS) const {
+    OS << "(V=" << V->getName()
+       << ", zextbits=" << ZExtBits
+       << ", sextbits=" << SExtBits
+       << ", scale=" << Scale << ")";
+  }
+};
+}
+
+// Represents the internal structure of a GEP, decomposed into a base pointer,
+// constant offsets, and variable scaled indices.
+struct BasicAAResult::DecomposedGEP {
+  // Base pointer of the GEP
+  const Value *Base;
+  // Total constant offset from base.
+  APInt Offset;
+  // Scaled variable (non-constant) indices.
+  SmallVector<VariableGEPIndex, 4> VarIndices;
+  // Is GEP index scale compile-time constant.
+  bool HasCompileTimeConstantScale;
+  // Are all operations inbounds GEPs or non-indexing operations?
+  // (None iff expression doesn't involve any geps)
+  Optional<bool> InBounds;
+
+  void dump() const {
+    print(dbgs());
+    dbgs() << "\n";
+  }
+  void print(raw_ostream &OS) const {
+    OS << "(DecomposedGEP Base=" << Base->getName()
+       << ", Offset=" << Offset
+       << ", VarIndices=[";
+    for (size_t i = 0; i < VarIndices.size(); i++) {
+      if (i != 0)
+        OS << ", ";
+      VarIndices[i].print(OS);
+    }
+    OS << "], HasCompileTimeConstantScale=" << HasCompileTimeConstantScale
+       << ")";
+  }
+};
+
+
 /// If V is a symbolic pointer expression, decompose it into a base pointer
 /// with a constant offset and a number of scaled symbolic offsets.
 ///
