@@ -32,6 +32,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FileSystem/UniqueID.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -655,6 +656,9 @@ public:
   Status getStatus(const Twine &RequestedName) const {
     return Status::copyWithNewName(Stat, RequestedName);
   }
+
+  UniqueID getUniqueID() const { return Stat.getUniqueID(); }
+
   InMemoryNode *getChild(StringRef Name) {
     auto I = Entries.find(Name);
     if (I != Entries.end())
@@ -698,10 +702,28 @@ Status getNodeStatus(const InMemoryNode *Node, const Twine &RequestedName) {
 } // namespace
 } // namespace detail
 
+// The UniqueID of in-memory files is derived from path and content.
+// This avoids difficulties in creating exactly equivalent in-memory FSes,
+// as often needed in multithreaded programs.
+static sys::fs::UniqueID getUniqueID(hash_code Hash) {
+  return sys::fs::UniqueID(std::numeric_limits<uint64_t>::max(),
+                           uint64_t(size_t(Hash)));
+}
+static sys::fs::UniqueID getFileID(sys::fs::UniqueID Parent,
+                                   llvm::StringRef Name,
+                                   llvm::StringRef Contents) {
+  return getUniqueID(llvm::hash_combine(Parent.getFile(), Name, Contents));
+}
+static sys::fs::UniqueID getDirectoryID(sys::fs::UniqueID Parent,
+                                        llvm::StringRef Name) {
+  return getUniqueID(llvm::hash_combine(Parent.getFile(), Name));
+}
+
 InMemoryFileSystem::InMemoryFileSystem(bool UseNormalizedPaths)
     : Root(new detail::InMemoryDirectory(
-          Status("", getNextVirtualUniqueID(), llvm::sys::TimePoint<>(), 0, 0,
-                 0, llvm::sys::fs::file_type::directory_file,
+          Status("", getDirectoryID(llvm::sys::fs::UniqueID(), ""),
+                 llvm::sys::TimePoint<>(), 0, 0, 0,
+                 llvm::sys::fs::file_type::directory_file,
                  llvm::sys::fs::perms::all_all))),
       UseNormalizedPaths(UseNormalizedPaths) {}
 
@@ -754,10 +776,14 @@ bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
           Child.reset(new detail::InMemoryHardLink(P.str(), *HardLinkTarget));
         else {
           // Create a new file or directory.
-          Status Stat(P.str(), getNextVirtualUniqueID(),
-                      llvm::sys::toTimePoint(ModificationTime), ResolvedUser,
-                      ResolvedGroup, Buffer->getBufferSize(), ResolvedType,
-                      ResolvedPerms);
+          Status Stat(
+              P.str(),
+              (ResolvedType == sys::fs::file_type::directory_file)
+                  ? getDirectoryID(Dir->getUniqueID(), Name)
+                  : getFileID(Dir->getUniqueID(), Name, Buffer->getBuffer()),
+              llvm::sys::toTimePoint(ModificationTime), ResolvedUser,
+              ResolvedGroup, Buffer->getBufferSize(), ResolvedType,
+              ResolvedPerms);
           if (ResolvedType == sys::fs::file_type::directory_file) {
             Child.reset(new detail::InMemoryDirectory(std::move(Stat)));
           } else {
@@ -772,9 +798,9 @@ bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
       // Create a new directory. Use the path up to here.
       Status Stat(
           StringRef(Path.str().begin(), Name.end() - Path.str().begin()),
-          getNextVirtualUniqueID(), llvm::sys::toTimePoint(ModificationTime),
-          ResolvedUser, ResolvedGroup, 0, sys::fs::file_type::directory_file,
-          NewDirectoryPerms);
+          getDirectoryID(Dir->getUniqueID(), Name),
+          llvm::sys::toTimePoint(ModificationTime), ResolvedUser, ResolvedGroup,
+          0, sys::fs::file_type::directory_file, NewDirectoryPerms);
       Dir = cast<detail::InMemoryDirectory>(Dir->addChild(
           Name, std::make_unique<detail::InMemoryDirectory>(std::move(Stat))));
       continue;
