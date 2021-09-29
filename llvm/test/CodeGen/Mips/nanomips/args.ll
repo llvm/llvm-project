@@ -38,8 +38,7 @@ define void @unaligned2(i32 %a, i32 %b) {
 ; CHECK: sw ${{[ats][0-9]}}, 8($sp)
 ; CHECK: li ${{[ats][0-9]}}, 5
 ; CHECK: sw ${{[ats][0-9]}}, 0($sp)
-; CHECK: li $a5, 0
-; CHECK: sw ${{[ats][0-9]}}, 12($sp)
+; CHECK: sw $zero, 12($sp)
 ; CHECK: li $a2, 1
 ; CHECK: li $a4, 2
 ; CHECK: li $a6, 3

@@ -39,3 +39,7 @@ class PseudoInstNM<dag outs, dag ins, list<dag> pattern> :
   let isCodeGenOnly = 1;
   let isPseudo = 1;
 }
+
+class NMPat<dag pattern, dag result> : Pat<pattern, result>, PredicateControl,
+                                       ISA_NANOMIPS;
+
