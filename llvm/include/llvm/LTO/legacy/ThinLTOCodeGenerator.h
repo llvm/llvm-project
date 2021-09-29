@@ -229,9 +229,6 @@ public:
   /// Enable or disable the new pass manager.
   void setUseNewPM(unsigned Enabled) { UseNewPM = Enabled; }
 
-  /// Enable or disable debug output for the new pass manager.
-  void setDebugPassManager(unsigned Enabled) { DebugPassManager = Enabled; }
-
   /// Disable CodeGen, only run the stages till codegen and stop. The output
   /// will be bitcode.
   void disableCodeGen(bool Disable) { DisableCodeGen = Disable; }
@@ -351,10 +348,6 @@ private:
   /// Flag to indicate whether the new pass manager should be used for IR
   /// optimizations.
   bool UseNewPM = LLVM_ENABLE_NEW_PASS_MANAGER;
-
-  /// Flag to indicate whether debug output should be enabled for the new pass
-  /// manager.
-  bool DebugPassManager = false;
 };
 }
 #endif
