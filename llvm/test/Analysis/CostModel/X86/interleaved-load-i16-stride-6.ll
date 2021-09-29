@@ -9,7 +9,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK: LV: Checking a loop in "test"
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %v0 = load i16, i16* %in0, align 2
-; CHECK: LV: Found an estimated cost of 31 for VF 2 For instruction:   %v0 = load i16, i16* %in0, align 2
+; CHECK: LV: Found an estimated cost of 16 for VF 2 For instruction:   %v0 = load i16, i16* %in0, align 2
 ; CHECK: LV: Found an estimated cost of 58 for VF 4 For instruction:   %v0 = load i16, i16* %in0, align 2
 ; CHECK: LV: Found an estimated cost of 123 for VF 8 For instruction:   %v0 = load i16, i16* %in0, align 2
 ; CHECK: LV: Found an estimated cost of 342 for VF 16 For instruction:   %v0 = load i16, i16* %in0, align 2
