@@ -574,12 +574,12 @@ public:
   };
 
   void updateBinaryAddress(const MMapEvent &Event);
-  PerfScriptType getPerfScriptType() const { return PerfType; }
   // Entry of the reader to parse multiple perf traces
   void parsePerfTraces(cl::list<std::string> &PerfTraceFilenames);
   const ContextSampleCounterMap &getSampleCounters() const {
     return SampleCounters;
   }
+  bool profileIsCS() { return ProfileIsCS; }
 
 protected:
   static PerfScriptType
@@ -623,29 +623,8 @@ protected:
   PerfScriptType PerfType = PERF_UNKNOWN;
   // Keep track of all invalid return addresses
   std::set<uint64_t> InvalidReturnAddresses;
-};
 
-/*
-  Hybrid perf script includes a group of hybrid samples(LBRs + call stack),
-  which is used to generate CS profile. An example of hybrid sample:
-    4005dc    # call stack leaf
-    400634
-    400684    # call stack root
-    0x4005c8/0x4005dc/P/-/-/0   0x40062f/0x4005b0/P/-/-/0 ...
-          ... 0x4005c8/0x4005dc/P/-/-/0    # LBR Entries
-*/
-class HybridPerfReader : public PerfReaderBase {
-public:
-  HybridPerfReader(ProfiledBinary *Binary) : PerfReaderBase(Binary) {
-    PerfType = PERF_LBR_STACK;
-  };
-  // Parse the hybrid sample including the call and LBR line
-  void parseSample(TraceStream &TraceIt, uint64_t Count) override;
-  void generateRawProfile() override;
-
-private:
-  // Unwind the hybrid samples after aggregration
-  void unwindSamples();
+  bool ProfileIsCS = false;
 };
 
 /*
@@ -657,21 +636,37 @@ private:
 class LBRPerfReader : public PerfReaderBase {
 public:
   LBRPerfReader(ProfiledBinary *Binary) : PerfReaderBase(Binary) {
-    // There is no context for LBR only sample, so initialize one entry with
-    // fake "empty" context key.
-    std::shared_ptr<StringBasedCtxKey> Key =
-        std::make_shared<StringBasedCtxKey>();
-    Key->genHashCode();
-    SampleCounters.emplace(Hashable<ContextKey>(Key), SampleCounter());
     PerfType = PERF_LBR;
   };
-
   // Parse the LBR only sample.
+  virtual void parseSample(TraceStream &TraceIt, uint64_t Count) override;
+  virtual void generateRawProfile() override;
+
+private:
+  void computeCounterFromLBR(const PerfSample *Sample, uint64_t Repeat);
+};
+
+/*
+  Hybrid perf script includes a group of hybrid samples(LBRs + call stack),
+  which is used to generate CS profile. An example of hybrid sample:
+    4005dc    # call stack leaf
+    400634
+    400684    # call stack root
+    0x4005c8/0x4005dc/P/-/-/0   0x40062f/0x4005b0/P/-/-/0 ...
+          ... 0x4005c8/0x4005dc/P/-/-/0    # LBR Entries
+*/
+class HybridPerfReader : public LBRPerfReader {
+public:
+  HybridPerfReader(ProfiledBinary *Binary) : LBRPerfReader(Binary) {
+    PerfType = PERF_LBR_STACK;
+  };
+  // Parse the hybrid sample including the call and LBR line
   void parseSample(TraceStream &TraceIt, uint64_t Count) override;
   void generateRawProfile() override;
 
 private:
-  void computeCounterFromLBR(const PerfSample *Sample, uint64_t Repeat);
+  // Unwind the hybrid samples after aggregration
+  void unwindSamples();
 };
 
 } // end namespace sampleprof

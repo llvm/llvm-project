@@ -34,7 +34,7 @@ public:
   virtual ~ProfileGeneratorBase() = default;
   static std::unique_ptr<ProfileGeneratorBase>
   create(ProfiledBinary *Binary, const ContextSampleCounterMap &SampleCounters,
-         enum PerfScriptType SampleType);
+         bool ProfileIsCS);
   virtual void generateProfile() = 0;
   void write();
 
