@@ -109,6 +109,19 @@ define i1 @add_ugecmp_i16_i8(i16 %x) nounwind {
   ret i1 %tmp1
 }
 
+define i1 @add_ugecmp_i32_i16_i8(i16 %xx) nounwind {
+; CHECK-LABEL: add_ugecmp_i32_i16_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and w8, w0, #0xffff
+; CHECK-NEXT:    cmp w8, w8, sxtb
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+  %x = zext i16 %xx to i32
+  %tmp0 = add i32 %x, -128 ; ~0U << (8-1)
+  %tmp1 = icmp uge i32 %tmp0, -256 ; ~0U << 8
+  ret i1 %tmp1
+}
+
 define i1 @add_ugecmp_i32_i16(i32 %x) nounwind {
 ; CHECK-LABEL: add_ugecmp_i32_i16:
 ; CHECK:       // %bb.0:
