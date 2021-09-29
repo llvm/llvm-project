@@ -1925,6 +1925,140 @@ static lldb::ModuleSP GetUnitTestModule(lldb_private::ModuleList &modules) {
   return ModuleSP();
 }
 
+/// Scan a newly added lldb::Module fdor Swift modules and report any errors in
+/// its module SwiftASTContext to Target.
+static void
+ProcessModule(ModuleSP &&module_sp, std::string m_description,
+              bool use_all_compiler_flags, Target &target,
+              std::vector<std::string> &module_search_paths,
+              std::vector<std::pair<std::string, bool>> &framework_search_paths,
+              std::vector<std::string> &extra_clang_args) {
+  const FileSpec &module_file = module_sp->GetFileSpec();
+  std::string module_path = module_file.GetPath();
+
+  // Add the containing framework to the framework search path.
+  // Don't do that if this is the executable module, since it
+  // might be buried in some framework that we don't care about.
+  if (use_all_compiler_flags &&
+      target.GetExecutableModulePointer() != module_sp.get()) {
+    size_t framework_offset = module_path.rfind(".framework/");
+
+    if (framework_offset != std::string::npos) {
+      // Sometimes the version of the framework that got loaded has been
+      // stripped and in that case, adding it to the framework search
+      // path will just short-cut a clang search that might otherwise
+      // find the needed headers. So don't add these paths.
+      std::string framework_path = module_path.substr(0, framework_offset);
+      framework_path.append(".framework");
+      FileSpec path_spec(framework_path);
+      FileSystem::Instance().Resolve(path_spec);
+      FileSpec headers_spec = path_spec.CopyByAppendingPathComponent("Headers");
+      bool add_it = false;
+      if (FileSystem::Instance().Exists(headers_spec))
+        add_it = true;
+      if (!add_it) {
+        FileSpec module_spec =
+            path_spec.CopyByAppendingPathComponent("Modules");
+        if (FileSystem::Instance().Exists(module_spec))
+          add_it = true;
+      }
+
+      if (!add_it) {
+        LOG_PRINTF(LIBLLDB_LOG_TYPES,
+                   "ProcessModule(\"%s\") rejecting framework path \"%s\" "
+                   "as it has no \"Headers\" or \"Modules\" subdirectories.",
+                   module_file.GetFilename().AsCString(""),
+                   framework_path.c_str());
+      }
+
+      if (add_it) {
+        while (framework_offset && (module_path[framework_offset] != '/'))
+          framework_offset--;
+
+        if (module_path[framework_offset] == '/') {
+          // framework_offset now points to the '/';
+
+          std::string parent_path = module_path.substr(0, framework_offset);
+
+          // Never add framework paths pointing into the
+          // system. These modules must be imported from the
+          // SDK instead.
+          if (!StringRef(parent_path).startswith("/System/Library") &&
+              !IsDeviceSupport(parent_path.c_str())) {
+            LOG_PRINTF(LIBLLDB_LOG_TYPES,
+                       "ProcessModule(\"%s\") adding framework path \"%s\".",
+                       module_file.GetFilename().AsCString(""),
+                       framework_path.c_str());
+            framework_search_paths.push_back(
+                {std::move(parent_path), /*system*/ false});
+          }
+        }
+      }
+    }
+  }
+
+  // Skip images without a serialized Swift AST.
+  if (!HasSwiftModules(*module_sp))
+    return;
+
+  auto type_system_or_err =
+      module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
+  if (!type_system_or_err) {
+    llvm::consumeError(type_system_or_err.takeError());
+    return;
+  }
+
+  SwiftASTContext *ast_context =
+      llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
+
+  if (!ast_context || ast_context->HasFatalErrors() ||
+      !ast_context->GetClangImporter()) {
+    // Make sure we warn about this module load failure, the one
+    // that comes from loading types often gets swallowed up and not
+    // seen, this is the only reliable point where we can show this.
+    // But only do it once per UUID so we don't overwhelm the user
+    // with warnings.
+    UUID module_uuid(module_sp->GetUUID());
+    bool unique_message =
+        target.RegisterSwiftContextMessageKey(module_uuid.GetAsString());
+    if (!unique_message)
+      return;
+    std::string buf;
+    {
+      llvm::raw_string_ostream ss(buf);
+      module_sp->GetDescription(ss, eDescriptionLevelBrief);
+      if (ast_context && ast_context->HasFatalErrors())
+        ss << ": " << ast_context->GetFatalErrors().AsCString("unknown error");
+    }
+    target.GetDebugger().GetErrorStreamSP()->Printf(
+        "Error while loading Swift module:\n%s\n"
+        "Debug info from this module will be unavailable in the "
+        "debugger.\n\n",
+        buf.c_str());
+    return;
+  }
+
+  if (ast_context->HasErrors())
+    return;
+  if (use_all_compiler_flags ||
+      target.GetExecutableModulePointer() == module_sp.get()) {
+
+    const auto &opts = ast_context->GetSearchPathOptions();
+    module_search_paths.insert(module_search_paths.end(),
+                               opts.ImportSearchPaths.begin(),
+                               opts.ImportSearchPaths.end());
+    for (const auto &fwsp : opts.FrameworkSearchPaths)
+      framework_search_paths.push_back({fwsp.Path, fwsp.IsSystem});
+    for (const std::string &arg : ast_context->GetClangArguments()) {
+      extra_clang_args.push_back(arg);
+      if (lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET))
+        LOG_PRINTF(LIBLLDB_LOG_TYPES,
+                   "ProcessModule(\"%s\") adding Clang argument \"%s\".",
+                   module_file.GetFilename().AsCString(""), arg.c_str());
+    }
+  }
+}
+
 lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                                                    Target &target,
                                                    const char *extra_options) {
@@ -2114,144 +2248,12 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   const bool use_all_compiler_flags =
       !got_serialized_options || target.GetUseAllCompilerFlags();
 
-  std::function<void(ModuleSP &&)> process_one_module =
-      [&](ModuleSP &&module_sp) {
-        const FileSpec &module_file = module_sp->GetFileSpec();
-
-        std::string module_path = module_file.GetPath();
-
-        // Add the containing framework to the framework search path.
-        // Don't do that if this is the executable module, since it
-        // might be buried in some framework that we don't care about.
-        if (use_all_compiler_flags &&
-            target.GetExecutableModulePointer() != module_sp.get()) {
-          size_t framework_offset = module_path.rfind(".framework/");
-
-          if (framework_offset != std::string::npos) {
-            // Sometimes the version of the framework that got loaded has been
-            // stripped and in that case, adding it to the framework search
-            // path will just short-cut a clang search that might otherwise
-            // find the needed headers. So don't add these paths.
-            std::string framework_path =
-                module_path.substr(0, framework_offset);
-            framework_path.append(".framework");
-            FileSpec path_spec(framework_path);
-            FileSystem::Instance().Resolve(path_spec);
-            FileSpec headers_spec =
-                path_spec.CopyByAppendingPathComponent("Headers");
-            bool add_it = false;
-            if (FileSystem::Instance().Exists(headers_spec))
-              add_it = true;
-            if (!add_it) {
-              FileSpec module_spec =
-                  path_spec.CopyByAppendingPathComponent("Modules");
-              if (FileSystem::Instance().Exists(module_spec))
-                add_it = true;
-            }
-
-            if (!add_it) {
-              LOG_PRINTF(
-                  LIBLLDB_LOG_TYPES,
-                  "process_one_module(\"%s\") rejecting framework path \"%s\" "
-                  "as it has no \"Headers\" or \"Modules\" subdirectories.",
-                  module_file.GetFilename().AsCString(""),
-                  framework_path.c_str());
-            }
-
-            if (add_it) {
-              while (framework_offset && (module_path[framework_offset] != '/'))
-                framework_offset--;
-
-              if (module_path[framework_offset] == '/') {
-                // framework_offset now points to the '/';
-
-                std::string parent_path =
-                    module_path.substr(0, framework_offset);
-
-                // Never add framework paths pointing into the
-                // system. These modules must be imported from the
-                // SDK instead.
-                if (!StringRef(parent_path).startswith("/System/Library") &&
-                    !IsDeviceSupport(parent_path.c_str())) {
-                  LOG_PRINTF(LIBLLDB_LOG_TYPES,
-                             "process_one_module(\"%s\") adding framework path "
-                             "\"%s\".",
-                             module_file.GetFilename().AsCString(""),
-                             framework_path.c_str());
-                  framework_search_paths.push_back(
-                      {std::move(parent_path), /*system*/ false});
-                }
-              }
-            }
-          }
-        }
-
-        // Skip images without a serialized Swift AST.
-        if (!HasSwiftModules(*module_sp))
-          return;
-
-        auto type_system_or_err =
-            module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
-        if (!type_system_or_err) {
-          llvm::consumeError(type_system_or_err.takeError());
-          return;
-        }
-
-        SwiftASTContext *ast_context =
-            llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
-
-        if (!ast_context || ast_context->HasFatalErrors() ||
-            !ast_context->GetClangImporter()) {
-          // Make sure we warn about this module load failure, the one
-          // that comes from loading types often gets swallowed up and not
-          // seen, this is the only reliable point where we can show this.
-          // But only do it once per UUID so we don't overwhelm the user
-          // with warnings.
-          UUID module_uuid(module_sp->GetUUID());
-          bool unique_message =
-              target.RegisterSwiftContextMessageKey(module_uuid.GetAsString());
-          if (!unique_message)
-            return;
-          std::string buf;
-          {
-            llvm::raw_string_ostream ss(buf);
-            module_sp->GetDescription(ss, eDescriptionLevelBrief);
-            if (ast_context && ast_context->HasFatalErrors())
-              ss << ": "
-                 << ast_context->GetFatalErrors().AsCString("unknown error");
-          }
-          target.GetDebugger().GetErrorStreamSP()->Printf(
-              "Error while loading Swift module:\n%s\n"
-              "Debug info from this module will be unavailable in the "
-              "debugger.\n\n",
-              buf.c_str());
-          return;
-        }
-
-        if (!ast_context->HasErrors()) {
-          if (use_all_compiler_flags ||
-              target.GetExecutableModulePointer() == module_sp.get()) {
-
-            const auto &opts = ast_context->GetSearchPathOptions();
-            module_search_paths.insert(module_search_paths.end(),
-                                       opts.ImportSearchPaths.begin(),
-                                       opts.ImportSearchPaths.end());
-            for (const auto &fwsp : opts.FrameworkSearchPaths)
-              framework_search_paths.push_back({fwsp.Path, fwsp.IsSystem});
-            if (lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET))
-              for (const std::string &arg : ast_context->GetClangArguments()) {
-                LOG_PRINTF(
-                    LIBLLDB_LOG_TYPES,
-                    "process_one_module(\"%s\") adding Clang argument \"%s\".",
-                    module_file.GetFilename().AsCString(""), arg.c_str());
-              }
-            swift_ast_sp->AddExtraClangArgs(ast_context->GetClangArguments());
-          }
-        }
-      };
-
   for (size_t mi = 0; mi != num_images; ++mi) {
-    process_one_module(target.GetImages().GetModuleAtIndex(mi));
+    std::vector<std::string> extra_clang_args;
+    ProcessModule(target.GetImages().GetModuleAtIndex(mi), m_description,
+                  use_all_compiler_flags, target, module_search_paths,
+                  framework_search_paths, extra_clang_args);
+    swift_ast_sp->AddExtraClangArgs(extra_clang_args);
   }
 
   FileSpecList target_module_paths = target.GetSwiftModuleSearchPaths();
