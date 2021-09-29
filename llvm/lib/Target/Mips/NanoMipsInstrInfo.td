@@ -506,6 +506,27 @@ def LWGP_NM : LoadMemoryNM<"lw", GPR32NMOpnd, mem>, InstSize32;
 
 }
 
+// Store zero peephole optimizations.
+multiclass StoreZero<Instruction GenericOp, Instruction NMOpU12,
+                     Instruction NMOpS9, Instruction NMOpIdx> {
+  def : Pat<(GenericOp (i32 0), addruimm12:$addr),
+            (NMOpU12 ZERO_NM, addruimm12:$addr)>, ISA_NANOMIPS;
+  def : Pat<(GenericOp (i32 0), addrsimm9:$addr),
+            (NMOpS9 ZERO_NM, addrsimm9:$addr)>, ISA_NANOMIPS;
+  def : Pat<(GenericOp (i32 0), addrindexed:$addr),
+            (NMOpIdx ZERO_NM, addrindexed:$addr)>, ISA_NANOMIPS;
+  def : Pat<(GenericOp (i32 0), GPR32NM:$rs),
+            (NMOpU12 ZERO_NM, GPR32NM:$rs, 0)>, ISA_NANOMIPS;
+}
+defm : StoreZero<store, SW_NM, SWs9_NM, SWX_NM>;
+defm : StoreZero<truncstorei16, SH_NM, SHs9_NM, SHX_NM>;
+defm : StoreZero<truncstorei8, SB_NM, SBs9_NM, SBX_NM>;
+
+def : Pat<(store (i32 0), addrindexedlsl2:$rs),
+          (SWXS_NM ZERO_NM, addrindexedlsl2:$rs)>, ISA_NANOMIPS;
+def : Pat<(truncstorei16 (i32 0), addrindexedlsl1:$rs),
+          (SHXS_NM ZERO_NM, addrindexedlsl1:$rs)>, ISA_NANOMIPS;
+
 // Catching out-of-range immediate loads/stores.
 def : Pat<(i32 (extloadi8 GPR32NM:$rs)),
           (LBU_NM GPR32NM:$rs, 0)>, ISA_NANOMIPS;
@@ -553,6 +574,16 @@ def : Pat<(i32 (NMUnalignedLH GPR32NM:$rs, GPR32NM:$src)),
           (UALH_NM GPR32NM:$rs, 0, GPR32NM:$src)>, ISA_NANOMIPS;
 def : Pat<(NMUnalignedSH GPR32NM:$rt, GPR32NM:$rs),
           (UASH_NM GPR32NM:$rt, GPR32NM:$rs, 0)>, ISA_NANOMIPS;
+
+// Unaligned: Store zero peephole optimization.
+def : Pat<(NMUnalignedSW (i32 0), addrsimm9:$addr),
+          (UASW_NM ZERO_NM, addrsimm9:$addr)>, ISA_NANOMIPS;
+def : Pat<(NMUnalignedSH (i32 0), addrsimm9:$addr),
+          (UASH_NM ZERO_NM, addrsimm9:$addr)>, ISA_NANOMIPS;
+def : Pat<(NMUnalignedSW (i32 0), GPR32NM:$rs),
+          (UASW_NM ZERO_NM, GPR32NM:$rs, 0)>, ISA_NANOMIPS;
+def : Pat<(NMUnalignedSH (i32 0), GPR32NM:$rs),
+          (UASH_NM ZERO_NM, GPR32NM:$rs, 0)>, ISA_NANOMIPS;
 
 // GP-relative load.
 def : MipsPat<(i32 (load (add GP_NM, (MipsGPRel tglobaladdr:$in)))),
