@@ -1282,8 +1282,7 @@ AliasResult BasicAAResult::aliasGEP(
       }
     }
 
-    if (constantOffsetHeuristic(DecompGEP1.VarIndices, V1Size, V2Size,
-                                DecompGEP1.Offset, &AC, DT))
+    if (constantOffsetHeuristic(DecompGEP1, V1Size, V2Size, &AC, DT))
       return AliasResult::NoAlias;
   }
 
@@ -1772,17 +1771,16 @@ void BasicAAResult::GetIndexDifference(
 }
 
 bool BasicAAResult::constantOffsetHeuristic(
-    const SmallVectorImpl<VariableGEPIndex> &VarIndices,
-    LocationSize MaybeV1Size, LocationSize MaybeV2Size, const APInt &BaseOffset,
-    AssumptionCache *AC, DominatorTree *DT) {
-  if (VarIndices.size() != 2 || !MaybeV1Size.hasValue() ||
+    const DecomposedGEP &GEP, LocationSize MaybeV1Size,
+    LocationSize MaybeV2Size, AssumptionCache *AC, DominatorTree *DT) {
+  if (GEP.VarIndices.size() != 2 || !MaybeV1Size.hasValue() ||
       !MaybeV2Size.hasValue())
     return false;
 
   const uint64_t V1Size = MaybeV1Size.getValue();
   const uint64_t V2Size = MaybeV2Size.getValue();
 
-  const VariableGEPIndex &Var0 = VarIndices[0], &Var1 = VarIndices[1];
+  const VariableGEPIndex &Var0 = GEP.VarIndices[0], &Var1 = GEP.VarIndices[1];
 
   if (Var0.ZExtBits != Var1.ZExtBits || Var0.SExtBits != Var1.SExtBits ||
       Var0.Scale != -Var1.Scale || Var0.V->getType() != Var1.V->getType())
@@ -1817,8 +1815,8 @@ bool BasicAAResult::constantOffsetHeuristic(
   // arithmetic (i.e. for some values of GEP1 and V2 GEP1 < V2, and for other
   // values GEP1 > V2). We'll therefore only declare NoAlias if both V1Size and
   // V2Size can fit in the MinDiffBytes gap.
-  return MinDiffBytes.uge(V1Size + BaseOffset.abs()) &&
-         MinDiffBytes.uge(V2Size + BaseOffset.abs());
+  return MinDiffBytes.uge(V1Size + GEP.Offset.abs()) &&
+         MinDiffBytes.uge(V2Size + GEP.Offset.abs());
 }
 
 //===----------------------------------------------------------------------===//
