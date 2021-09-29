@@ -62,7 +62,6 @@ tools = [
     'mlir-capi-ir-test',
     'mlir-capi-pass-test',
     'mlir-cpu-runner',
-    'mlir-linalg-ods-gen',
     'mlir-linalg-ods-yaml-gen',
     'mlir-reduce',
 ]

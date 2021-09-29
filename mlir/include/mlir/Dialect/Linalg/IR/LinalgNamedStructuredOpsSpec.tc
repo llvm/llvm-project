@@ -1,7 +1,0 @@
-ods_def<MatmulI8I8I32Op>
-implements_interface<LinalgContractionOpInterface> :
-def matmul_i8_i8_i32(A: i8(M, K), B: i8(K, N)) -> (C: i32(M, N)) {
-  // TODO: ideally something closer to
-  //   C(m, n) += cast<i32>(A(m, k)) * cast<i32>(B(k, n))
-  C(m, n) = AddIOp<k>(C(m, n), MulIOp(SignExtendIOp32(A(m, k)), SignExtendIOp32(B(k, n))));
-}

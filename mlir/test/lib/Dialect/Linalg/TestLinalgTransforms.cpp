@@ -609,7 +609,6 @@ static void applyTilePattern(FuncOp funcOp, std::string loopType,
     linalgTilingOptions.setPaddingValueComputationFunction(paddingFunc);
   }
   tilingPattern.add<linalg::LinalgTilingPattern<linalg::MatmulOp>,
-                    linalg::LinalgTilingPattern<linalg::MatmulI8I8I32Op>,
                     linalg::LinalgTilingPattern<linalg::GenericOp>>(
       context, linalgTilingOptions,
       linalg::LinalgTransformationFilter(Identifier::get("tile", context)));

@@ -26,14 +26,14 @@ func @matmul_tensors(
 //      CHECK:         : tensor<?x?xi8> to tensor<4x3xi8>
 //      CHECK:       %[[pC:.*]] = linalg.pad_tensor %[[sTC]] packing low[%[[C0]], %[[C0]]] high[%{{.*}}, %{{.*}}]
 //      CHECK:         : tensor<?x?xi32> to tensor<2x3xi32>
-//      CHECK:       %[[pD:.*]] = linalg.matmul_i8_i8_i32 ins(%[[pA]], %[[pB]] : tensor<2x4xi8>, tensor<4x3xi8>)
+//      CHECK:       %[[pD:.*]] = linalg.matmul ins(%[[pA]], %[[pB]] : tensor<2x4xi8>, tensor<4x3xi8>)
 // CHECK-SAME:                                           outs(%[[pC]] : tensor<2x3xi32>)  -> tensor<2x3xi32>
 //      CHECK:       %[[sTD:.*]] = tensor.extract_slice %[[pD]][0, 0] [%{{.*}}, %{{.*}}] [1, 1] : tensor<2x3xi32> to tensor<?x?xi32>
 //      CHECK:       %[[TD:.*]] = tensor.insert_slice %[[sTD]] into %[[TC2]][{{.*}}]  : tensor<?x?xi32> into tensor<?x?xi32>
 //      CHECK:       scf.yield %[[TD]] : tensor<?x?xi32>
 //      CHECK:     scf.yield %[[TD2]] : tensor<?x?xi32>
 //      CHECK:   scf.yield %[[TD1]] : tensor<?x?xi32>
-  %0 = linalg.matmul_i8_i8_i32 {__internal_linalg_transform__ = "tile"}
+  %0 = linalg.matmul {__internal_linalg_transform__ = "tile"}
       ins(%arg0, %arg1: tensor<?x?xi8>, tensor<?x?xi8>)
      outs(%arg2: tensor<?x?xi32>)
     -> tensor<?x?xi32>
@@ -82,19 +82,19 @@ func @generic_scalar_and_tensor(
 // CHECK-1DIM-TILE:    %[[TB:[0-9a-z]+]]: tensor<?x?xi8>
 // CHECK-1DIM-TILE:    %[[TC:[0-9a-z]+]]: tensor<?x?xi32>) -> tensor<?x?xi32> {
 // CHECK-1DIM-TILE-NOT: scf.for
-// CHECK-1DIM-TILE: linalg.matmul_i8_i8_i32 ins(%[[TA]], %[[TB]] : tensor<?x?xi8>, tensor<?x?xi8>) outs(%[[TC]] : tensor<?x?xi32>) -> tensor<?x?xi32>
+// CHECK-1DIM-TILE: linalg.matmul ins(%[[TA]], %[[TB]] : tensor<?x?xi8>, tensor<?x?xi8>) outs(%[[TC]] : tensor<?x?xi32>) -> tensor<?x?xi32>
 
 func @matmul_partially_padded_tensors(
   %arg0: tensor<?x8xi8>, %arg1: tensor<8x?xi8>, %arg2: tensor<?x?xi32>)
     -> tensor<?x?xi32> {
-  %0 = linalg.matmul_i8_i8_i32 {__internal_linalg_transform__ = "tile"}
+  %0 = linalg.matmul {__internal_linalg_transform__ = "tile"}
       ins(%arg0, %arg1: tensor<?x8xi8>, tensor<8x?xi8>)
      outs(%arg2: tensor<?x?xi32>)
     -> tensor<?x?xi32>
   return %0 : tensor<?x?xi32>
 }
 // CHECK-LABEL: func @matmul_partially_padded_tensors(
-// CHECK: linalg.matmul_i8_i8_i32 ins({{.*}}, {{.*}} : tensor<2x4xi8>, tensor<4x3xi8>) outs({{.*}} : tensor<2x3xi32>) -> tensor<2x3xi32>
+// CHECK: linalg.matmul ins({{.*}}, {{.*}} : tensor<2x4xi8>, tensor<4x3xi8>) outs({{.*}} : tensor<2x3xi32>) -> tensor<2x3xi32>
 
 
 // Check only the the input operands are padded.
@@ -112,7 +112,7 @@ func @matmul_partially_padded_tensors(
 //      CHECK-1DIM-TILE:                   : tensor<?x8xi8> to tensor<2x8xi8>
 //      CHECK-1DIM-TILE:                %[[pB:.*]] = linalg.pad_tensor %[[sTB]] packing low[%[[C0]], %[[C0]]] high[%{{.*}}, %{{.*}}]
 //      CHECK-1DIM-TILE:                   : tensor<8x?xi8> to tensor<8x3xi8>
-//      CHECK-1DIM-TILE:                %[[pD:.*]] = linalg.matmul_i8_i8_i32 ins(%[[pA]], %[[pB]] : tensor<2x8xi8>, tensor<8x3xi8>)
+//      CHECK-1DIM-TILE:                %[[pD:.*]] = linalg.matmul ins(%[[pA]], %[[pB]] : tensor<2x8xi8>, tensor<8x3xi8>)
 //      CHECK-1DIM-TILE:                                           outs(%[[sTC]] : tensor<?x?xi32>)  -> tensor<?x?xi32>
 
 // Check that the tile-and-pad transformation actually introduces the padding
