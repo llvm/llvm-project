@@ -3864,6 +3864,7 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     switch (RF) {
     // All the functions we know are compatible with SPMD mode.
     case OMPRTL___kmpc_is_spmd_exec_mode:
+    case OMPRTL___kmpc_distribute_static_fini:
     case OMPRTL___kmpc_for_static_fini:
     case OMPRTL___kmpc_global_thread_num:
     case OMPRTL___kmpc_get_hardware_num_threads_in_block:
@@ -3874,6 +3875,10 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     case OMPRTL___kmpc_end_master:
     case OMPRTL___kmpc_barrier:
       break;
+    case OMPRTL___kmpc_distribute_static_init_4:
+    case OMPRTL___kmpc_distribute_static_init_4u:
+    case OMPRTL___kmpc_distribute_static_init_8:
+    case OMPRTL___kmpc_distribute_static_init_8u:
     case OMPRTL___kmpc_for_static_init_4:
     case OMPRTL___kmpc_for_static_init_4u:
     case OMPRTL___kmpc_for_static_init_8:
