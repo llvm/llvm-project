@@ -252,9 +252,8 @@ define i32 @n6_extrause2(i64 %x, i32 %nbits) {
 define i32 @PR51351(i64 %x, i32 %nbits) {
 ; CHECK-LABEL: @PR51351(
 ; CHECK-NEXT:    [[T3:%.*]] = add i32 [[NBITS:%.*]], -33
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X:%.*]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP1]], [[T3]]
-; CHECK-NEXT:    [[T6:%.*]] = and i32 [[TMP2]], 2147483647
+; CHECK-NEXT:    [[T5:%.*]] = trunc i64 [[X:%.*]] to i32
+; CHECK-NEXT:    [[T6:%.*]] = shl i32 [[T5]], [[T3]]
 ; CHECK-NEXT:    ret i32 [[T6]]
 ;
   %t0 = zext i32 %nbits to i64
