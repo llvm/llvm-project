@@ -462,6 +462,40 @@ define <vscale x 16 x i1> @extract_nxv16i1_nxv32i1_16(<vscale x 32 x i1> %x) {
   ret <vscale x 16 x i1> %c
 }
 
+;
+; Extract f16 vector that needs widening from one that needs widening.
+;
+define <vscale x 6 x half> @extract_nxv6f16_nxv12f16_0(<vscale x 12 x half> %in) {
+; CHECK-LABEL: extract_nxv6f16_nxv12f16_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v8m4
+; CHECK-NEXT:    ret
+  %res = call <vscale x 6 x half> @llvm.experimental.vector.extract.nxv6f16.nxv12f16(<vscale x 12 x half> %in, i64 0)
+  ret <vscale x 6 x half> %res
+}
+
+define <vscale x 6 x half> @extract_nxv6f16_nxv12f16_6(<vscale x 12 x half> %in) {
+; CHECK-LABEL: extract_nxv6f16_nxv12f16_6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    srli a0, a0, 2
+; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, mu
+; CHECK-NEXT:    vslidedown.vx v25, v10, a0
+; CHECK-NEXT:    vslidedown.vx v26, v9, a0
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, mu
+; CHECK-NEXT:    vslideup.vi v27, v25, 0
+; CHECK-NEXT:    add a1, a0, a0
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, tu, mu
+; CHECK-NEXT:    vslideup.vx v27, v25, a0
+; CHECK-NEXT:    vslideup.vx v26, v10, a0
+; CHECK-NEXT:    vmv2r.v v8, v26
+; CHECK-NEXT:    ret
+  %res = call <vscale x 6 x half> @llvm.experimental.vector.extract.nxv6f16.nxv12f16(<vscale x 12 x half> %in, i64 6)
+  ret <vscale x 6 x half> %res
+}
+
+declare <vscale x 6 x half> @llvm.experimental.vector.extract.nxv6f16.nxv12f16(<vscale x 12 x half>, i64)
+
 declare <vscale x 1 x i8> @llvm.experimental.vector.extract.nxv1i8.nxv4i8(<vscale x 4 x i8> %vec, i64 %idx)
 declare <vscale x 1 x i8> @llvm.experimental.vector.extract.nxv1i8.nxv8i8(<vscale x 8 x i8> %vec, i64 %idx)
 
