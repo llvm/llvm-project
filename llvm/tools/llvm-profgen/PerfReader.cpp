@@ -275,15 +275,18 @@ bool VirtualUnwinder::unwind(const PerfSample *Sample, uint64_t Repeat) {
   return true;
 }
 
-std::unique_ptr<PerfReaderBase>
-PerfReaderBase::create(ProfiledBinary *Binary,
-                       cl::list<std::string> &PerfTraceFilenames) {
-  PerfScriptType PerfType = extractPerfType(PerfTraceFilenames);
+std::unique_ptr<PerfReaderBase> PerfReaderBase::create(ProfiledBinary *Binary,
+                                                       StringRef PerfInputFile,
+                                                       bool IsPerfData) {
+  // TODO: for perf data input, we need to convert them into perf script first.
+  if (IsPerfData)
+    exitWithError("Perf data input not supported yet.");
+  PerfScriptType PerfType = checkPerfScriptType(PerfInputFile);
   std::unique_ptr<PerfReaderBase> PerfReader;
   if (PerfType == PERF_LBR_STACK) {
-    PerfReader.reset(new HybridPerfReader(Binary));
+    PerfReader.reset(new HybridPerfReader(Binary, PerfInputFile));
   } else if (PerfType == PERF_LBR) {
-    PerfReader.reset(new LBRPerfReader(Binary));
+    PerfReader.reset(new LBRPerfReader(Binary, PerfInputFile));
   } else {
     exitWithError("Unsupported perfscript!");
   }
@@ -369,7 +372,7 @@ void HybridPerfReader::unwindSamples() {
   for (auto Address : AllUntrackedCallsites)
     WithColor::warning() << "Profile context truncated due to missing probe "
                          << "for call instruction at "
-                         << format("%" PRIx64, Address) << "\n";
+                         << format("0x%" PRIx64, Address) << "\n";
 }
 
 bool PerfReaderBase::extractLBRStack(TraceStream &TraceIt,
@@ -426,9 +429,20 @@ bool PerfReaderBase::extractLBRStack(TraceStream &TraceIt,
     bool IsOutgoing = SrcIsInternal && !DstIsInternal;
     bool IsArtificial = false;
 
-    // Ignore branches outside the current binary.
-    if (IsExternal)
-      continue;
+    // Ignore branches outside the current binary. Ignore all remaining branches
+    // if there's no incoming branch before the external branch in reverse
+    // order.
+    if (IsExternal) {
+      if (PrevTrDst)
+        continue;
+      else if (!LBRStack.empty()) {
+        WithColor::warning()
+            << "Invalid transfer to external code in LBR record at line "
+            << TraceIt.getLineNumber() << ": " << TraceIt.getCurrentLine()
+            << "\n";
+        break;
+      }
+    }
 
     if (IsOutgoing) {
       if (!PrevTrDst) {
@@ -540,8 +554,12 @@ bool PerfReaderBase::extractCallstack(TraceStream &TraceIt,
 
 void PerfReaderBase::warnIfMissingMMap() {
   if (!Binary->getMissingMMapWarned() && !Binary->getIsLoadedByMMap()) {
-    WithColor::warning() << "No relevant mmap event is matched, will use "
-                            "preferred address as the base loading address!\n";
+    WithColor::warning() << "No relevant mmap event is matched for "
+                         << Binary->getName()
+                         << ", will use preferred address ("
+                         << format("0x%" PRIx64,
+                                   Binary->getPreferredBaseAddress())
+                         << ") as the base loading address!\n";
     // Avoid redundant warning, only warn at the first unmatched sample.
     Binary->setMissingMMapWarned(true);
   }
@@ -759,25 +777,66 @@ void PerfReaderBase::parseEventOrSample(TraceStream &TraceIt) {
     parseSample(TraceIt);
 }
 
-void PerfReaderBase::parseAndAggregateTrace(StringRef Filename) {
+void PerfReaderBase::parseAndAggregateTrace() {
   // Trace line iterator
-  TraceStream TraceIt(Filename);
+  TraceStream TraceIt(PerfTraceFile);
   while (!TraceIt.isAtEoF())
     parseEventOrSample(TraceIt);
 }
 
-PerfScriptType
-PerfReaderBase::extractPerfType(cl::list<std::string> &PerfTraceFilenames) {
-  PerfScriptType PerfType = PERF_UNKNOWN;
-  for (auto FileName : PerfTraceFilenames) {
-    PerfScriptType Type = checkPerfScriptType(FileName);
-    if (Type == PERF_INVALID)
-      exitWithError("Invalid perf script input!");
-    if (PerfType != PERF_UNKNOWN && PerfType != Type)
-      exitWithError("Inconsistent sample among different perf scripts");
-    PerfType = Type;
+// A LBR sample is like:
+// 40062f 0x5c6313f/0x5c63170/P/-/-/0  0x5c630e7/0x5c63130/P/-/-/0 ...
+// A heuristic for fast detection by checking whether a
+// leading "  0x" and the '/' exist.
+bool PerfReaderBase::isLBRSample(StringRef Line) {
+  // Skip the leading instruction pointer
+  SmallVector<StringRef, 32> Records;
+  Line.trim().split(Records, " ", 2, false);
+  if (Records.size() < 2)
+    return false;
+  if (Records[1].startswith("0x") && Records[1].find('/') != StringRef::npos)
+    return true;
+  return false;
+}
+
+// The raw hybird sample is like
+// e.g.
+// 	          4005dc    # call stack leaf
+//	          400634
+//	          400684    # call stack root
+// 0x4005c8/0x4005dc/P/-/-/0   0x40062f/0x4005b0/P/-/-/0 ...
+//          ... 0x4005c8/0x4005dc/P/-/-/0    # LBR Entries
+// Determine the perfscript contains hybrid samples(call stack + LBRs) by
+// checking whether there is a non-empty call stack immediately followed by
+// a LBR sample
+PerfScriptType PerfReaderBase::checkPerfScriptType(StringRef FileName) {
+  TraceStream TraceIt(FileName);
+  uint64_t FrameAddr = 0;
+  while (!TraceIt.isAtEoF()) {
+    // Skip the aggregated count
+    if (!TraceIt.getCurrentLine().getAsInteger(10, FrameAddr))
+      TraceIt.advance();
+
+    // Detect sample with call stack
+    int32_t Count = 0;
+    while (!TraceIt.isAtEoF() &&
+           !TraceIt.getCurrentLine().ltrim().getAsInteger(16, FrameAddr)) {
+      Count++;
+      TraceIt.advance();
+    }
+    if (!TraceIt.isAtEoF()) {
+      if (isLBRSample(TraceIt.getCurrentLine())) {
+        if (Count > 0)
+          return PERF_LBR_STACK;
+        else
+          return PERF_LBR;
+      }
+      TraceIt.advance();
+    }
   }
-  return PerfType;
+
+  exitWithError("Invalid perf script input!");
+  return PERF_INVALID;
 }
 
 void HybridPerfReader::generateRawProfile() {
@@ -797,12 +856,11 @@ void PerfReaderBase::warnTruncatedStack() {
   }
 }
 
-void PerfReaderBase::parsePerfTraces(
-    cl::list<std::string> &PerfTraceFilenames) {
+void PerfReaderBase::parsePerfTraces() {
   // Parse perf traces and do aggregation.
-  for (auto Filename : PerfTraceFilenames)
-    parseAndAggregateTrace(Filename);
+  parseAndAggregateTrace();
 
+  // Generate unsymbolized profile.
   warnTruncatedStack();
   generateRawProfile();
 
