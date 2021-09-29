@@ -41,6 +41,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <stdlib.h>
+#include <string.h>
 #undef __CUDACC__
 
 // Preserve common macros that will be changed below by us or by CUDA
@@ -205,11 +206,6 @@ inline __host__ double __signbitd(double x) {
 #endif
 
 #if CUDA_VERSION >= 9000
-// CUDA-9.2 needs host-side memcpy for some host functions in
-// device_functions.hpp
-#if CUDA_VERSION >= 9020
-#include <string.h>
-#endif
 #include "crt/math_functions.hpp"
 #else
 #include "math_functions.hpp"
