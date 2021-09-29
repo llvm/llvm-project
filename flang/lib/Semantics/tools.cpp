@@ -519,38 +519,6 @@ const EquivalenceSet *FindEquivalenceSet(const Symbol &symbol) {
   return nullptr;
 }
 
-bool IsExtensibleType(const DerivedTypeSpec *derived) {
-  return derived && !IsIsoCType(derived) &&
-      !derived->typeSymbol().attrs().test(Attr::BIND_C) &&
-      !derived->typeSymbol().get<DerivedTypeDetails>().sequence();
-}
-
-bool IsBuiltinDerivedType(const DerivedTypeSpec *derived, const char *name) {
-  if (!derived) {
-    return false;
-  } else {
-    const auto &symbol{derived->typeSymbol()};
-    return symbol.owner().IsModule() &&
-        (symbol.owner().GetName().value() == "__fortran_builtins" ||
-            symbol.owner().GetName().value() == "__fortran_type_info") &&
-        symbol.name() == "__builtin_"s + name;
-  }
-}
-
-bool IsIsoCType(const DerivedTypeSpec *derived) {
-  return IsBuiltinDerivedType(derived, "c_ptr") ||
-      IsBuiltinDerivedType(derived, "c_funptr");
-}
-
-bool IsTeamType(const DerivedTypeSpec *derived) {
-  return IsBuiltinDerivedType(derived, "team_type");
-}
-
-bool IsEventTypeOrLockType(const DerivedTypeSpec *derivedTypeSpec) {
-  return IsBuiltinDerivedType(derivedTypeSpec, "event_type") ||
-      IsBuiltinDerivedType(derivedTypeSpec, "lock_type");
-}
-
 bool IsOrContainsEventOrLockComponent(const Symbol &original) {
   const Symbol &symbol{ResolveAssociations(original)};
   if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
