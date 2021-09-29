@@ -625,6 +625,30 @@ Symbol *SymbolTable::addUndefinedTable(StringRef name,
   return s;
 }
 
+Symbol *SymbolTable::addUndefinedTag(StringRef name,
+                                     Optional<StringRef> importName,
+                                     Optional<StringRef> importModule,
+                                     uint32_t flags, InputFile *file,
+                                     const WasmSignature *sig) {
+  LLVM_DEBUG(dbgs() << "addUndefinedTag: " << name << "\n");
+  assert(flags & WASM_SYMBOL_UNDEFINED);
+
+  Symbol *s;
+  bool wasInserted;
+  std::tie(s, wasInserted) = insert(name, file);
+  if (s->traced)
+    printTraceSymbolUndefined(name, file);
+
+  if (wasInserted)
+    replaceSymbol<UndefinedTag>(s, name, importName, importModule, flags, file,
+                                sig);
+  else if (auto *lazy = dyn_cast<LazySymbol>(s))
+    lazy->fetch();
+  else if (s->isDefined())
+    checkTagType(s, file, sig);
+  return s;
+}
+
 TableSymbol *SymbolTable::createUndefinedIndirectFunctionTable(StringRef name) {
   WasmLimits limits{0, 0, 0}; // Set by the writer.
   WasmTableType *type = make<WasmTableType>();

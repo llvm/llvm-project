@@ -23,12 +23,19 @@ void WasmException::endModule() {
   // the symbols has already been created, i.e., we have at least one 'throw' or
   // 'catch' instruction with the symbol in the module, and emit the symbol only
   // if so.
-  for (const char *SymName : {"__cpp_exception", "__c_longjmp"}) {
-    SmallString<60> NameStr;
-    Mangler::getNameWithPrefix(NameStr, SymName, Asm->getDataLayout());
-    if (Asm->OutContext.lookupSymbol(NameStr)) {
-      MCSymbol *ExceptionSym = Asm->GetExternalSymbolSymbol(SymName);
-      Asm->OutStreamer->emitLabel(ExceptionSym);
+  //
+  // But in dynamic linking, it is in general not possible to come up with a
+  // module instantiating order in which tag-defining modules are loaded before
+  // the importing modules. So we make them undefined symbols here, define tags
+  // in the JS side, and feed them to each importing module.
+  if (!Asm->isPositionIndependent()) {
+    for (const char *SymName : {"__cpp_exception", "__c_longjmp"}) {
+      SmallString<60> NameStr;
+      Mangler::getNameWithPrefix(NameStr, SymName, Asm->getDataLayout());
+      if (Asm->OutContext.lookupSymbol(NameStr)) {
+        MCSymbol *ExceptionSym = Asm->GetExternalSymbolSymbol(SymName);
+        Asm->OutStreamer->emitLabel(ExceptionSym);
+      }
     }
   }
 }

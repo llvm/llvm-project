@@ -1124,6 +1124,9 @@ Error WasmObjectFile::parseImportSection(ReadContext &Ctx) {
     }
     case wasm::WASM_EXTERNAL_TAG:
       NumImportedTags++;
+      if (readUint8(Ctx) != 0) // Reserved 'attribute' field
+        return make_error<GenericBinaryError>("invalid attribute",
+                                              object_error::parse_failed);
       Im.SigIndex = readVaruint32(Ctx);
       if (Im.SigIndex >= NumTypes)
         return make_error<GenericBinaryError>("invalid tag type",
@@ -1203,8 +1206,7 @@ Error WasmObjectFile::parseTagSection(ReadContext &Ctx) {
   Tags.reserve(Count);
   uint32_t NumTypes = Signatures.size();
   while (Count--) {
-    char Attr = readUint8(Ctx); // Reserved 'attribute' field
-    if (Attr != 0)
+    if (readUint8(Ctx) != 0) // Reserved 'attribute' field
       return make_error<GenericBinaryError>("invalid attribute",
                                             object_error::parse_failed);
     uint32_t Type = readVaruint32(Ctx);

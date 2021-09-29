@@ -170,10 +170,14 @@ void ImportSection::addImport(Symbol *sym) {
       g->setGlobalIndex(entry.first->second);
     }
   } else if (auto *t = dyn_cast<TagSymbol>(sym)) {
-    // NB: There's currently only one possible kind of tag, and no
-    // `UndefinedTag`, so we don't bother de-duplicating tag imports.
-    importedSymbols.emplace_back(sym);
-    t->setTagIndex(numImportedTags++);
+    ImportKey<WasmSignature> key(*(t->getSignature()), module, name);
+    auto entry = importedTags.try_emplace(key, numImportedTags);
+    if (entry.second) {
+      importedSymbols.emplace_back(sym);
+      t->setTagIndex(numImportedTags++);
+    } else {
+      t->setTagIndex(entry.first->second);
+    }
   } else {
     assert(TableSymbol::classof(sym));
     auto *table = cast<TableSymbol>(sym);

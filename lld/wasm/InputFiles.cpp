@@ -663,6 +663,14 @@ Symbol *ObjFile::createUndefined(const WasmSymbol &sym, bool isCalledDirectly) {
     return symtab->addUndefinedTable(name, sym.Info.ImportName,
                                      sym.Info.ImportModule, flags, this,
                                      sym.TableType);
+  case WASM_SYMBOL_TYPE_TAG:
+    if (sym.isBindingLocal())
+      return make<UndefinedTag>(name, sym.Info.ImportName,
+                                sym.Info.ImportModule, flags, this,
+                                sym.Signature);
+    return symtab->addUndefinedTag(name, sym.Info.ImportName,
+                                   sym.Info.ImportModule, flags, this,
+                                   sym.Signature);
   case WASM_SYMBOL_TYPE_SECTION:
     llvm_unreachable("section symbols cannot be undefined");
   }
