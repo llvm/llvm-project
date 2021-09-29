@@ -537,12 +537,12 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
   auto *ResI = Res.begin();
   auto *ResE = Res.end();
   (void)ResE;
+  const Triple TT(RegularLTO.CombinedModule->getTargetTriple());
   for (const InputFile::Symbol &Sym : Syms) {
     assert(ResI != ResE);
     SymbolResolution Res = *ResI++;
 
     StringRef Name = Sym.getName();
-    Triple TT(RegularLTO.CombinedModule->getTargetTriple());
     // Strip the __imp_ prefix from COFF dllimport symbols (similar to the
     // way they are handled by lld), otherwise we can end up with two
     // global resolutions (one with and one for a copy of the symbol without).

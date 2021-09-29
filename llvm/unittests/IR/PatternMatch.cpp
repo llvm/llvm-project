@@ -940,8 +940,7 @@ TEST_F(PatternMatchTest, VectorOps) {
   VecElemIdxs.push_back(ConstantInt::get(i32, 2));
   auto *IdxVec = ConstantVector::get(VecElemIdxs);
 
-  Value *UndefVec = UndefValue::get(VecTy);
-  Value *VI1 = IRB.CreateInsertElement(UndefVec, IRB.getInt8(1), (uint64_t)0);
+  Value *VI1 = IRB.CreateInsertElement(VecTy, IRB.getInt8(1), (uint64_t)0);
   Value *VI2 = IRB.CreateInsertElement(VI1, Val2, Val);
   Value *VI3 = IRB.CreateInsertElement(VI1, Val2, (uint64_t)1);
   Value *VI4 = IRB.CreateInsertElement(VI1, IRB.getInt8(2), Val);

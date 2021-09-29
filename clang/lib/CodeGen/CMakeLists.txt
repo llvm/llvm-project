@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   Core
   Coroutines
   Coverage
+  Demangle
   Extensions
   FrontendOpenMP
   IPO

@@ -34,7 +34,7 @@ public:
   virtual ~ProfileGeneratorBase() = default;
   static std::unique_ptr<ProfileGeneratorBase>
   create(ProfiledBinary *Binary, const ContextSampleCounterMap &SampleCounters,
-         enum PerfScriptType SampleType);
+         bool ProfileIsCS);
   virtual void generateProfile() = 0;
   void write();
 
@@ -228,6 +228,9 @@ private:
   FunctionSamples &
   getFunctionProfileForContext(const SampleContextFrameVector &Context,
                                bool WasLeafInlined = false);
+  // For profiled only functions, on-demand compute their inline context
+  // function byte size which is used by the pre-inliner.
+  void computeSizeForProfiledFunctions();
   // Post processing for profiles before writing out, such as mermining
   // and trimming cold profiles, running preinliner on profiles.
   void postProcessProfiles();

@@ -5908,13 +5908,12 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   if (Instruction *Res = foldICmpInstWithConstantNotInt(I))
     return Res;
 
-  // If we can optimize a 'icmp GEP, P' or 'icmp P, GEP', do so now.
-  if (GEPOperator *GEP = dyn_cast<GEPOperator>(Op0))
+  // Try to optimize 'icmp GEP, P' or 'icmp P, GEP'.
+  if (auto *GEP = dyn_cast<GEPOperator>(Op0))
     if (Instruction *NI = foldGEPICmp(GEP, Op1, I.getPredicate(), I))
       return NI;
-  if (GEPOperator *GEP = dyn_cast<GEPOperator>(Op1))
-    if (Instruction *NI = foldGEPICmp(GEP, Op0,
-                           ICmpInst::getSwappedPredicate(I.getPredicate()), I))
+  if (auto *GEP = dyn_cast<GEPOperator>(Op1))
+    if (Instruction *NI = foldGEPICmp(GEP, Op0, I.getSwappedPredicate(), I))
       return NI;
 
   // Try to optimize equality comparisons against alloca-based pointers.

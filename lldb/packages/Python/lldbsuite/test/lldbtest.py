@@ -360,7 +360,7 @@ class _BaseProcess(object):
         """Returns process PID if has been launched already."""
 
     @abc.abstractmethod
-    def launch(self, executable, args):
+    def launch(self, executable, args, extra_env):
         """Launches new process with given executable and args."""
 
     @abc.abstractmethod
@@ -379,13 +379,19 @@ class _LocalProcess(_BaseProcess):
     def pid(self):
         return self._proc.pid
 
-    def launch(self, executable, args):
+    def launch(self, executable, args, extra_env):
+        env=None
+        if extra_env:
+            env = dict(os.environ)
+            env.update([kv.split("=", 1) for kv in extra_env])
+
         self._proc = Popen(
             [executable] + args,
             stdout=open(
                 os.devnull) if not self._trace_on else None,
             stdin=PIPE,
-            preexec_fn=lldbplatformutil.enable_attach)
+            preexec_fn=lldbplatformutil.enable_attach,
+            env=env)
 
     def terminate(self):
         if self._proc.poll() is None:
@@ -424,7 +430,7 @@ class _RemoteProcess(_BaseProcess):
     def pid(self):
         return self._pid
 
-    def launch(self, executable, args):
+    def launch(self, executable, args, extra_env):
         if self._install_remote:
             src_path = executable
             dst_path = lldbutil.join_remote_paths(
@@ -449,6 +455,9 @@ class _RemoteProcess(_BaseProcess):
         # Redirect stdout and stderr to /dev/null
         launch_info.AddSuppressFileAction(1, False, True)
         launch_info.AddSuppressFileAction(2, False, True)
+
+        if extra_env:
+            launch_info.SetEnvironmentEntries(extra_env, True)
 
         err = lldb.remote_platform.Launch(launch_info)
         if err.Fail():
@@ -952,13 +961,13 @@ class Base(unittest2.TestCase):
             del p
         del self.subprocesses[:]
 
-    def spawnSubprocess(self, executable, args=[], install_remote=True):
+    def spawnSubprocess(self, executable, args=[], extra_env=None, install_remote=True):
         """ Creates a subprocess.Popen object with the specified executable and arguments,
             saves it in self.subprocesses, and returns the object.
         """
         proc = _RemoteProcess(
             install_remote) if lldb.remote_platform else _LocalProcess(self.TraceOn())
-        proc.launch(executable, args)
+        proc.launch(executable, args, extra_env=extra_env)
         self.subprocesses.append(proc)
         return proc
 

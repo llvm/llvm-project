@@ -2,6 +2,8 @@
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-UNWINDER
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --profile-summary-cold-count=0
 ; RUN: FileCheck %s --input-file %t
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --profile-summary-cold-count=0 --ignore-stack-samples
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-STRIP-CTX
 
 ; CHECK:[main:1 @ foo]:309:0
 ; CHECK: 2.1: 14
@@ -10,6 +12,18 @@
 ; CHECK: 3.2: 1
 ; CHECK:[main:1 @ foo:3.1 @ bar]:84:0
 ; CHECK: 1: 14
+
+; CHECK-STRIP-CTX: main:379:0
+; CHECK-STRIP-CTX:  0: 0
+; CHECK-STRIP-CTX:  2: 0
+; CHECK-STRIP-CTX:  1: foo:379
+; CHECK-STRIP-CTX:   2.1: 14
+; CHECK-STRIP-CTX:   3: 15
+; CHECK-STRIP-CTX:   3.2: 1
+; CHECK-STRIP-CTX:   4: 0
+; CHECK-STRIP-CTX:   7: 0
+; CHECK-STRIP-CTX:   3.1: bar:84
+; CHECK-STRIP-CTX:    1: 14
 
 ; CHECK-UNWINDER: [main:1 @ foo]
 ; CHECK-UNWINDER:   4
