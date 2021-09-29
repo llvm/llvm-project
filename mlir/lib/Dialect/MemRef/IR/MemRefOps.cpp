@@ -190,6 +190,15 @@ struct SimplifyDeadAlloc : public OpRewritePattern<T> {
 };
 } // end anonymous namespace.
 
+Optional<Operation *> AllocOp::buildDealloc(OpBuilder &builder, Value alloc) {
+  return builder.create<memref::DeallocOp>(alloc.getLoc(), alloc)
+      .getOperation();
+}
+
+Optional<Value> AllocOp::buildClone(OpBuilder &builder, Value alloc) {
+  return builder.create<memref::CloneOp>(alloc.getLoc(), alloc).getResult();
+}
+
 void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                           MLIRContext *context) {
   results.add<SimplifyAllocConst<AllocOp>, SimplifyDeadAlloc<AllocOp>>(context);
@@ -636,6 +645,15 @@ void CloneOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
 
 OpFoldResult CloneOp::fold(ArrayRef<Attribute> operands) {
   return succeeded(foldMemRefCast(*this)) ? getResult() : Value();
+}
+
+Optional<Operation *> CloneOp::buildDealloc(OpBuilder &builder, Value alloc) {
+  return builder.create<memref::DeallocOp>(alloc.getLoc(), alloc)
+      .getOperation();
+}
+
+Optional<Value> CloneOp::buildClone(OpBuilder &builder, Value alloc) {
+  return builder.create<memref::CloneOp>(alloc.getLoc(), alloc).getResult();
 }
 
 //===----------------------------------------------------------------------===//
