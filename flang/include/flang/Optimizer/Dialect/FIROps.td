@@ -2649,36 +2649,27 @@ def fir_CallOp : fir_Op<"call", [CallOpInterface]> {
 
   let builders = [
     OpBuilder<(ins "mlir::FuncOp":$callee,
-        CArg<"mlir::ValueRange", "{}">:$operands),
-    [{
-      $_state.addOperands(operands);
-      $_state.addAttribute(calleeAttrName($_state.name),
-                           SymbolRefAttr::get(callee));
-      $_state.addTypes(callee.getType().getResults());
-    }]>,
+        CArg<"mlir::ValueRange", "{}">:$operands)>,
     OpBuilder<(ins "mlir::SymbolRefAttr":$callee,
         "llvm::ArrayRef<mlir::Type>":$results,
-        CArg<"mlir::ValueRange", "{}">:$operands),
-    [{
-      $_state.addOperands(operands);
-      $_state.addAttribute(calleeAttrName($_state.name), callee);
-      $_state.addTypes(results);
-    }]>,
+        CArg<"mlir::ValueRange", "{}">:$operands)>,
     OpBuilder<(ins "llvm::StringRef":$callee,
         "llvm::ArrayRef<mlir::Type>":$results,
         CArg<"mlir::ValueRange", "{}">:$operands),
     [{
       build($_builder, $_state,
-            SymbolRefAttr::get($_builder.getContext(), callee), results,
-            operands);
+          SymbolRefAttr::get($_builder.getContext(), callee), results,
+          operands);
     }]>];
 
   let extraClassDeclaration = [{
+    static constexpr StringRef getCalleeAttrName() { return "callee"; }
+
     mlir::FunctionType getFunctionType();
 
     /// Get the argument operands to the called function.
     operand_range getArgOperands() {
-      if (calleeAttr())
+      if ((*this)->getAttrOfType<SymbolRefAttr>(getCalleeAttrName()))
         return {arg_operand_begin(), arg_operand_end()};
       return {arg_operand_begin() + 1, arg_operand_end()};
     }
@@ -2688,7 +2679,8 @@ def fir_CallOp : fir_Op<"call", [CallOpInterface]> {
 
     /// Return the callee of this operation.
     CallInterfaceCallable getCallableForCallee() {
-      if (auto calling = calleeAttr())
+      if (auto calling =
+          (*this)->getAttrOfType<SymbolRefAttr>(getCalleeAttrName()))
         return calling;
       return getOperand(0);
     }
