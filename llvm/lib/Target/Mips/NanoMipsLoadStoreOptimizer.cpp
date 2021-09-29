@@ -156,7 +156,8 @@ bool NMLoadStoreOpt::isValidSaveRestore16Offset(int64_t Offset) {
 
 // Generates save or restore instruction.
 //
-// addiu $sp, $sp, -16  ->  save 16, $s1-$s4 // sw $s0, 12($sp)      ->
+// addiu $sp, $sp, -16  ->  save 16, $s1-$s4
+// sw $s0, 12($sp)      ->
 // sw $s1, 8($sp)       ->
 // sw $s2, 4($sp)       ->
 // sw $s3, 0($sp)       ->
@@ -305,13 +306,15 @@ bool NMLoadStoreOpt::generateSaveOrRestore(MachineBasicBlock &MBB,
       LoadStoreList.clear();
     }
 
-    // We cannot generate restore.jrc if NewStackOffset is set. This is because
-    // we first need to emit restore and after an additional addiu.
+    // If NewStackOffset is set, restore.jrc cannot be generated with Offset,
+    // because it needs to be the last instruction in the basic block. If
+    // possible, it will be generated with NewStackOffset.
     unsigned Opcode = IsRestore
                           ? ((Return && !NewStackOffset) ? Mips::RESTOREJRC_NM
                                                          : Mips::RESTORE_NM)
                           : Mips::SAVE_NM;
-    auto InsertBefore = std::next(MBBIter(AdjustStack));
+    auto InsertBefore =
+        std::next(MBBIter((Return && !NewStackOffset) ? Return : AdjustStack));
     auto DL = Return ? Return->getDebugLoc() : AdjustStack->getDebugLoc();
     auto MII = BuildMI(MBB, InsertBefore, DL, TII->get(Opcode));
     MII.addImm(StackOffset);
@@ -336,6 +339,9 @@ bool NMLoadStoreOpt::generateSaveOrRestore(MachineBasicBlock &MBB,
       // make sure the offset fits. Otherwise, we fall back to addiu (32-bit).
       if (isValidSaveRestore16Offset(NewStackOffset)) {
         if (Return) {
+          // In case return is also consumed, we should put restore.jrc after
+          // return, to make sure it is very last instruction.
+          InsertBefore = std::next(MBBIter(Return));
           BuildMI(MBB, InsertBefore, DL, TII->get(Mips::RESTOREJRC_NM))
               .addImm(NewStackOffset);
           MBB.erase(Return);
