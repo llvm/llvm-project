@@ -43,6 +43,7 @@ class ChainedOriginDepot {
   };
 
   struct ChainedOriginDepotNode {
+    using hash_type = u32;
     ChainedOriginDepotNode *link;
     u32 id;
     u32 here_id;
@@ -50,15 +51,15 @@ class ChainedOriginDepot {
 
     typedef ChainedOriginDepotDesc args_type;
 
-    bool eq(u32 hash, const args_type &args) const;
+    bool eq(hash_type hash, const args_type &args) const;
 
     static uptr storage_size(const args_type &args);
 
-    static u32 hash(const args_type &args);
+    static hash_type hash(const args_type &args);
 
     static bool is_valid(const args_type &args);
 
-    void store(const args_type &args, u32 other_hash);
+    void store(const args_type &args, hash_type other_hash);
 
     args_type load() const;
 
