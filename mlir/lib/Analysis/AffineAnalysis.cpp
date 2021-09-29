@@ -69,6 +69,20 @@ static Value getSupportedReduction(AffineForOp forOp, unsigned pos,
   return reducedVal;
 }
 
+/// Populate `supportedReductions` with descriptors of the supported reductions.
+void mlir::getSupportedReductions(
+    AffineForOp forOp, SmallVectorImpl<LoopReduction> &supportedReductions) {
+  unsigned numIterArgs = forOp.getNumIterOperands();
+  if (numIterArgs == 0)
+    return;
+  supportedReductions.reserve(numIterArgs);
+  for (unsigned i = 0; i < numIterArgs; ++i) {
+    AtomicRMWKind kind;
+    if (Value value = getSupportedReduction(forOp, i, kind))
+      supportedReductions.emplace_back(LoopReduction{kind, i, value});
+  }
+}
+
 /// Returns true if `forOp' is a parallel loop. If `parallelReductions` is
 /// provided, populates it with descriptors of the parallelizable reductions and
 /// treats them as not preventing parallelization.
@@ -83,13 +97,7 @@ bool mlir::isLoopParallel(AffineForOp forOp,
 
   // Find supported reductions of requested.
   if (parallelReductions) {
-    parallelReductions->reserve(forOp.getNumIterOperands());
-    for (unsigned i = 0; i < numIterArgs; ++i) {
-      AtomicRMWKind kind;
-      if (Value value = getSupportedReduction(forOp, i, kind))
-        parallelReductions->emplace_back(LoopReduction{kind, i, value});
-    }
-
+    getSupportedReductions(forOp, *parallelReductions);
     // Return later to allow for identifying all parallel reductions even if the
     // loop is not parallel.
     if (parallelReductions->size() != numIterArgs)
