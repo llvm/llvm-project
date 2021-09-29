@@ -24,6 +24,7 @@ add_entrypoint_object(
 add_header_library(
   threads_utils
   HDRS
+    CndVar.h
     Futex.h
     Mutex.h
     Thread.h

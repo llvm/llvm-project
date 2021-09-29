@@ -44,7 +44,7 @@ std::string describeValue(std::string Value) { return std::string(Value); }
 
 // When the value is __uint128_t, also show its hexadecimal digits.
 // Using template to force exact match, prevent ambiguous promotion.
-template <> std::string describeValue<__uint128_t>(__uint128_t Value) {
+std::string describeValue128(__uint128_t Value) {
   std::string S(sizeof(__uint128_t) * 2, '0');
 
   for (auto I = S.rbegin(), End = S.rend(); I != End; ++I, Value >>= 4) {
@@ -53,6 +53,13 @@ template <> std::string describeValue<__uint128_t>(__uint128_t Value) {
   }
 
   return "0x" + S;
+}
+
+template <> std::string describeValue<__int128_t>(__int128_t Value) {
+  return describeValue128(Value);
+}
+template <> std::string describeValue<__uint128_t>(__uint128_t Value) {
+  return describeValue128(Value);
 }
 
 template <typename ValType>
@@ -208,6 +215,11 @@ template bool Test::test<long long, 0>(TestCondition Cond, long long LHS,
                                        long long RHS, const char *LHSStr,
                                        const char *RHSStr, const char *File,
                                        unsigned long Line);
+
+template bool Test::test<__int128_t, 0>(TestCondition Cond, __int128_t LHS,
+                                        __int128_t RHS, const char *LHSStr,
+                                        const char *RHSStr, const char *File,
+                                        unsigned long Line);
 
 template bool Test::test<unsigned char, 0>(TestCondition Cond,
                                            unsigned char LHS, unsigned char RHS,

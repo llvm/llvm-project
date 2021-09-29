@@ -40,6 +40,10 @@ struct LoopReduction {
   Value value;
 };
 
+/// Populate `supportedReductions` with descriptors of the supported reductions.
+void getSupportedReductions(
+    AffineForOp forOp, SmallVectorImpl<LoopReduction> &supportedReductions);
+
 /// Returns true if `forOp' is a parallel loop. If `parallelReductions` is
 /// provided, populates it with descriptors of the parallelizable reductions and
 /// treats them as not preventing parallelization.

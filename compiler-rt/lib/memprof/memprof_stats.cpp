@@ -115,9 +115,9 @@ static void PrintAccumulatedStats() {
   // Use lock to keep reports from mixing up.
   Lock lock(&print_lock);
   stats.Print();
-  StackDepotStats *stack_depot_stats = StackDepotGetStats();
+  StackDepotStats stack_depot_stats = StackDepotGetStats();
   Printf("Stats: StackDepot: %zd ids; %zdM allocated\n",
-         stack_depot_stats->n_uniq_ids, stack_depot_stats->allocated >> 20);
+         stack_depot_stats.n_uniq_ids, stack_depot_stats.allocated >> 20);
   PrintInternalAllocatorStats();
 }
 

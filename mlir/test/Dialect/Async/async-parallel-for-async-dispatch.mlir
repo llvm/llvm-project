@@ -12,13 +12,13 @@ func @loop_1d(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<?xf32>) {
 
   // CHECK:      scf.if %[[IS_NOOP]] {
   // CHECK-NEXT: } else {
-  // CHECK:        %[[GROUP:.*]] = async.create_group
-  // CHECK:        scf.if {{.*}} {
+    // CHECK:        scf.if {{.*}} {
   // CHECK:          call @parallel_compute_fn(%[[C0]]
   // CHECK:        } else {
+  // CHECK:          %[[GROUP:.*]] = async.create_group
   // CHECK:          call @async_dispatch_fn
+  // CHECK:          async.await_all %[[GROUP]]
   // CHECK:        }
-  // CHECK:        async.await_all %[[GROUP]]
   // CHECK:      }
   scf.parallel (%i) = (%arg0) to (%arg1) step (%arg2) {
     %one = constant 1.0 : f32

@@ -345,34 +345,6 @@ define i8 @test24(i8 %X) {
   ret i8 %Q
 }
 
-define i32 @test25(i32 %i.2, i32 %AA) {
-; CHECK-LABEL: @test25(
-; CHECK-NEXT:    [[I_3:%.*]] = and i32 [[I_2:%.*]], -131072
-; CHECK-NEXT:    [[X2:%.*]] = add i32 [[I_3]], [[AA:%.*]]
-; CHECK-NEXT:    [[I_6:%.*]] = and i32 [[X2]], -131072
-; CHECK-NEXT:    ret i32 [[I_6]]
-;
-  %x = lshr i32 %AA, 17
-  %i.3 = lshr i32 %i.2, 17
-  %i.5 = add i32 %i.3, %x
-  %i.6 = shl i32 %i.5, 17
-  ret i32 %i.6
-}
-
-define <2 x i32> @test25_vector(<2 x i32> %i.2, <2 x i32> %AA) {
-; CHECK-LABEL: @test25_vector(
-; CHECK-NEXT:    [[I_3:%.*]] = and <2 x i32> [[I_2:%.*]], <i32 -131072, i32 -131072>
-; CHECK-NEXT:    [[X2:%.*]] = add <2 x i32> [[I_3]], [[AA:%.*]]
-; CHECK-NEXT:    [[I_6:%.*]] = and <2 x i32> [[X2]], <i32 -131072, i32 -131072>
-; CHECK-NEXT:    ret <2 x i32> [[I_6]]
-;
-  %x = lshr <2 x i32> %AA, <i32 17, i32 17>
-  %i.3 = lshr <2 x i32> %i.2, <i32 17, i32 17>
-  %i.5 = add <2 x i32> %i.3, %x
-  %i.6 = shl <2 x i32> %i.5, <i32 17, i32 17>
-  ret <2 x i32> %i.6
-}
-
 ;; handle casts between shifts.
 define i32 @test26(i32 %A) {
 ; CHECK-LABEL: @test26(
