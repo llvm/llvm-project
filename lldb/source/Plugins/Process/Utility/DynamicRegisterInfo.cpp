@@ -12,6 +12,7 @@
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/StringExtractor.h"
 #include "lldb/Utility/StructuredData.h"
@@ -56,9 +57,144 @@ void DynamicRegisterInfo::MoveFrom(DynamicRegisterInfo &&info) {
   info.Clear();
 }
 
+llvm::Expected<uint32_t> DynamicRegisterInfo::ByteOffsetFromSlice(
+    uint32_t index, llvm::StringRef slice_str, lldb::ByteOrder byte_order) {
+  // Slices use the following format:
+  //  REGNAME[MSBIT:LSBIT]
+  // REGNAME - name of the register to grab a slice of
+  // MSBIT - the most significant bit at which the current register value
+  // starts at
+  // LSBIT - the least significant bit at which the current register value
+  // ends at
+  static llvm::Regex g_bitfield_regex(
+      "([A-Za-z_][A-Za-z0-9_]*)\\[([0-9]+):([0-9]+)\\]");
+  llvm::SmallVector<llvm::StringRef, 4> matches;
+  if (!g_bitfield_regex.match(slice_str, &matches))
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "failed to match against register bitfield regex (slice: %s)",
+        slice_str.str().c_str());
+
+  llvm::StringRef reg_name_str = matches[1];
+  llvm::StringRef msbit_str = matches[2];
+  llvm::StringRef lsbit_str = matches[3];
+  uint32_t msbit;
+  uint32_t lsbit;
+  if (!llvm::to_integer(msbit_str, msbit) ||
+      !llvm::to_integer(lsbit_str, lsbit))
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(), "msbit (%s) or lsbit (%s) are invalid",
+        msbit_str.str().c_str(), lsbit_str.str().c_str());
+
+  if (msbit <= lsbit)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "msbit (%u) must be greater than lsbit (%u)",
+                                   msbit, lsbit);
+
+  const uint32_t msbyte = msbit / 8;
+  const uint32_t lsbyte = lsbit / 8;
+
+  const RegisterInfo *containing_reg_info = GetRegisterInfo(reg_name_str);
+  if (!containing_reg_info)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "invalid concrete register \"%s\"",
+                                   reg_name_str.str().c_str());
+
+  const uint32_t max_bit = containing_reg_info->byte_size * 8;
+
+  if (msbit > max_bit)
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "msbit (%u) must be less than the bitsize of the register \"%s\" (%u)",
+        msbit, reg_name_str.str().c_str(), max_bit);
+  if (lsbit > max_bit)
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "lsbit (%u) must be less than the bitsize of the register \"%s\" (%u)",
+        lsbit, reg_name_str.str().c_str(), max_bit);
+
+  m_invalidate_regs_map[containing_reg_info->kinds[eRegisterKindLLDB]]
+      .push_back(index);
+  m_value_regs_map[index].push_back(
+      containing_reg_info->kinds[eRegisterKindLLDB]);
+  m_invalidate_regs_map[index].push_back(
+      containing_reg_info->kinds[eRegisterKindLLDB]);
+
+  if (byte_order == eByteOrderLittle)
+    return containing_reg_info->byte_offset + lsbyte;
+  if (byte_order == eByteOrderBig)
+    return containing_reg_info->byte_offset + msbyte;
+  llvm_unreachable("Invalid byte order");
+}
+
+llvm::Expected<uint32_t> DynamicRegisterInfo::ByteOffsetFromComposite(
+    uint32_t index, StructuredData::Array &composite_reg_list,
+    lldb::ByteOrder byte_order) {
+  const size_t num_composite_regs = composite_reg_list.GetSize();
+  if (num_composite_regs == 0)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "\"composite\" list is empty");
+
+  uint32_t composite_offset = UINT32_MAX;
+  for (uint32_t composite_idx = 0; composite_idx < num_composite_regs;
+       ++composite_idx) {
+    ConstString composite_reg_name;
+    if (!composite_reg_list.GetItemAtIndexAsString(composite_idx,
+                                                   composite_reg_name, nullptr))
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          "\"composite\" list value is not a Python string at index %d",
+          composite_idx);
+
+    const RegisterInfo *composite_reg_info =
+        GetRegisterInfo(composite_reg_name.GetStringRef());
+    if (!composite_reg_info)
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          "failed to find composite register by name: \"%s\"",
+          composite_reg_name.GetCString());
+
+    composite_offset =
+        std::min(composite_offset, composite_reg_info->byte_offset);
+    m_value_regs_map[index].push_back(
+        composite_reg_info->kinds[eRegisterKindLLDB]);
+    m_invalidate_regs_map[composite_reg_info->kinds[eRegisterKindLLDB]]
+        .push_back(index);
+    m_invalidate_regs_map[index].push_back(
+        composite_reg_info->kinds[eRegisterKindLLDB]);
+  }
+
+  return composite_offset;
+}
+
+llvm::Expected<uint32_t> DynamicRegisterInfo::ByteOffsetFromRegInfoDict(
+    uint32_t index, StructuredData::Dictionary &reg_info_dict,
+    lldb::ByteOrder byte_order) {
+  uint32_t byte_offset;
+  if (reg_info_dict.GetValueForKeyAsInteger("offset", byte_offset))
+    return byte_offset;
+
+  // No offset for this register, see if the register has a value
+  // expression which indicates this register is part of another register.
+  // Value expressions are things like "rax[31:0]" which state that the
+  // current register's value is in a concrete register "rax" in bits 31:0.
+  // If there is a value expression we can calculate the offset
+  llvm::StringRef slice_str;
+  if (reg_info_dict.GetValueForKeyAsString("slice", slice_str, nullptr))
+    return ByteOffsetFromSlice(index, slice_str, byte_order);
+
+  StructuredData::Array *composite_reg_list;
+  if (reg_info_dict.GetValueForKeyAsArray("composite", composite_reg_list))
+    return ByteOffsetFromComposite(index, *composite_reg_list, byte_order);
+
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "insufficient data to calculate byte offset");
+}
+
 size_t
 DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
                                      const ArchSpec &arch) {
+  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT);
   assert(!m_finalized);
   StructuredData::Array *sets = nullptr;
   if (dict.GetValueForKeyAsArray("sets", sets)) {
@@ -79,6 +215,8 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
   StructuredData::Array *regs = nullptr;
   if (!dict.GetValueForKeyAsArray("registers", regs))
     return 0;
+
+  const ByteOrder byte_order = arch.GetByteOrder();
 
   const uint32_t num_regs = regs->GetSize();
   //        typedef std::map<std::string, std::vector<std::string> >
@@ -113,147 +251,16 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
     reg_info_dict->GetValueForKeyAsString("alt-name", alt_name_val, nullptr);
     reg_info.alt_name = alt_name_val.GetCString();
 
-    reg_info_dict->GetValueForKeyAsInteger("offset", reg_info.byte_offset,
-                                           UINT32_MAX);
-
-    const ByteOrder byte_order = arch.GetByteOrder();
-
-    if (reg_info.byte_offset == UINT32_MAX) {
-      // No offset for this register, see if the register has a value
-      // expression which indicates this register is part of another register.
-      // Value expressions are things like "rax[31:0]" which state that the
-      // current register's value is in a concrete register "rax" in bits 31:0.
-      // If there is a value expression we can calculate the offset
-      bool success = false;
-      llvm::StringRef slice_str;
-      if (reg_info_dict->GetValueForKeyAsString("slice", slice_str, nullptr)) {
-        // Slices use the following format:
-        //  REGNAME[MSBIT:LSBIT]
-        // REGNAME - name of the register to grab a slice of
-        // MSBIT - the most significant bit at which the current register value
-        // starts at
-        // LSBIT - the least significant bit at which the current register value
-        // ends at
-        static RegularExpression g_bitfield_regex(
-            llvm::StringRef("([A-Za-z_][A-Za-z0-9_]*)\\[([0-9]+):([0-9]+)\\]"));
-        llvm::SmallVector<llvm::StringRef, 4> matches;
-        if (g_bitfield_regex.Execute(slice_str, &matches)) {
-          std::string reg_name_str = matches[1].str();
-          std::string msbit_str = matches[2].str();
-          std::string lsbit_str = matches[3].str();
-          uint32_t msbit = 0;
-          uint32_t lsbit = 0;
-          if (llvm::to_integer(msbit_str, msbit) &&
-              llvm::to_integer(lsbit_str, lsbit)) {
-            if (msbit > lsbit) {
-              const uint32_t msbyte = msbit / 8;
-              const uint32_t lsbyte = lsbit / 8;
-
-              const RegisterInfo *containing_reg_info =
-                  GetRegisterInfo(reg_name_str);
-              if (containing_reg_info) {
-                const uint32_t max_bit = containing_reg_info->byte_size * 8;
-                if (msbit < max_bit && lsbit < max_bit) {
-                  m_invalidate_regs_map[containing_reg_info
-                                            ->kinds[eRegisterKindLLDB]]
-                      .push_back(i);
-                  m_value_regs_map[i].push_back(
-                      containing_reg_info->kinds[eRegisterKindLLDB]);
-                  m_invalidate_regs_map[i].push_back(
-                      containing_reg_info->kinds[eRegisterKindLLDB]);
-
-                  if (byte_order == eByteOrderLittle) {
-                    success = true;
-                    reg_info.byte_offset =
-                        containing_reg_info->byte_offset + lsbyte;
-                  } else if (byte_order == eByteOrderBig) {
-                    success = true;
-                    reg_info.byte_offset =
-                        containing_reg_info->byte_offset + msbyte;
-                  } else {
-                    llvm_unreachable("Invalid byte order");
-                  }
-                } else {
-                  if (msbit > max_bit)
-                    printf("error: msbit (%u) must be less than the bitsize "
-                           "of the register (%u)\n",
-                           msbit, max_bit);
-                  else
-                    printf("error: lsbit (%u) must be less than the bitsize "
-                           "of the register (%u)\n",
-                           lsbit, max_bit);
-                }
-              } else {
-                printf("error: invalid concrete register \"%s\"\n",
-                       reg_name_str.c_str());
-              }
-            } else {
-              printf("error: msbit (%u) must be greater than lsbit (%u)\n",
-                     msbit, lsbit);
-            }
-          } else {
-            printf("error: msbit (%u) and lsbit (%u) must be valid\n", msbit,
-                   lsbit);
-          }
-        } else {
-          // TODO: print error invalid slice string that doesn't follow the
-          // format
-          printf("error: failed to match against register bitfield regex\n");
-        }
-      } else {
-        StructuredData::Array *composite_reg_list = nullptr;
-        if (reg_info_dict->GetValueForKeyAsArray("composite",
-                                                 composite_reg_list)) {
-          const size_t num_composite_regs = composite_reg_list->GetSize();
-          if (num_composite_regs > 0) {
-            uint32_t composite_offset = UINT32_MAX;
-            for (uint32_t composite_idx = 0; composite_idx < num_composite_regs;
-                 ++composite_idx) {
-              ConstString composite_reg_name;
-              if (composite_reg_list->GetItemAtIndexAsString(
-                      composite_idx, composite_reg_name, nullptr)) {
-                const RegisterInfo *composite_reg_info =
-                    GetRegisterInfo(composite_reg_name.GetStringRef());
-                if (composite_reg_info) {
-                  composite_offset = std::min(composite_offset,
-                                              composite_reg_info->byte_offset);
-                  m_value_regs_map[i].push_back(
-                      composite_reg_info->kinds[eRegisterKindLLDB]);
-                  m_invalidate_regs_map[composite_reg_info
-                                            ->kinds[eRegisterKindLLDB]]
-                      .push_back(i);
-                  m_invalidate_regs_map[i].push_back(
-                      composite_reg_info->kinds[eRegisterKindLLDB]);
-                } else {
-                  // TODO: print error invalid slice string that doesn't follow
-                  // the format
-                  printf("error: failed to find composite register by name: "
-                         "\"%s\"\n",
-                         composite_reg_name.GetCString());
-                }
-              } else {
-                printf(
-                    "error: 'composite' list value wasn't a python string\n");
-              }
-            }
-            if (composite_offset != UINT32_MAX) {
-              reg_info.byte_offset = composite_offset;
-              success = m_value_regs_map.find(i) != m_value_regs_map.end();
-            } else {
-              printf("error: 'composite' registers must specify at least one "
-                     "real register\n");
-            }
-          } else {
-            printf("error: 'composite' list was empty\n");
-          }
-        }
-      }
-
-      if (!success) {
-        Clear();
-        reg_info_dict->DumpToStdout();
-        return 0;
-      }
+    llvm::Expected<uint32_t> byte_offset =
+        ByteOffsetFromRegInfoDict(i, *reg_info_dict, byte_order);
+    if (byte_offset)
+      reg_info.byte_offset = byte_offset.get();
+    else {
+      LLDB_LOG_ERROR(log, byte_offset.takeError(),
+                     "error while parsing register {1}: {0}", reg_info.name);
+      Clear();
+      reg_info_dict->DumpToStdout();
+      return 0;
     }
 
     int64_t bitsize = 0;

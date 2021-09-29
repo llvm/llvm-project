@@ -547,6 +547,7 @@ std::string SYCLUniqueStableNameExpr::ComputeName(ASTContext &Context,
                            const NamedDecl *ND) -> llvm::Optional<unsigned> {
     if (const auto *RD = dyn_cast<CXXRecordDecl>(ND))
       return RD->getDeviceLambdaManglingNumber();
+    return llvm::None;
   };
 
   std::unique_ptr<MangleContext> Ctx{ItaniumMangleContext::create(
