@@ -172,8 +172,8 @@ Value *InstCombinerImpl::reassociateShiftAmtsOfTwoSameDirectionShifts(
 // There are many variants to this pattern:
 //   a)  (x & ((1 << MaskShAmt) - 1)) << ShiftShAmt
 //   b)  (x & (~(-1 << MaskShAmt))) << ShiftShAmt
-//   c)  (x & (-1 >> MaskShAmt)) << ShiftShAmt
-//   d)  (x & ((-1 << MaskShAmt) >> MaskShAmt)) << ShiftShAmt
+//   c)  (x & (-1 l>> MaskShAmt)) << ShiftShAmt
+//   d)  (x & ((-1 << MaskShAmt) l>> MaskShAmt)) << ShiftShAmt
 //   e)  ((x << MaskShAmt) l>> MaskShAmt) << ShiftShAmt
 //   f)  ((x << MaskShAmt) a>> MaskShAmt) << ShiftShAmt
 // All these patterns can be simplified to just:
@@ -213,11 +213,11 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
   auto MaskA = m_Add(m_Shl(m_One(), m_Value(MaskShAmt)), m_AllOnes());
   // (~(-1 << maskNbits))
   auto MaskB = m_Xor(m_Shl(m_AllOnes(), m_Value(MaskShAmt)), m_AllOnes());
-  // (-1 >> MaskShAmt)
-  auto MaskC = m_Shr(m_AllOnes(), m_Value(MaskShAmt));
-  // ((-1 << MaskShAmt) >> MaskShAmt)
+  // (-1 l>> MaskShAmt)
+  auto MaskC = m_LShr(m_AllOnes(), m_Value(MaskShAmt));
+  // ((-1 << MaskShAmt) l>> MaskShAmt)
   auto MaskD =
-      m_Shr(m_Shl(m_AllOnes(), m_Value(MaskShAmt)), m_Deferred(MaskShAmt));
+      m_LShr(m_Shl(m_AllOnes(), m_Value(MaskShAmt)), m_Deferred(MaskShAmt));
 
   Value *X;
   Constant *NewMask;
