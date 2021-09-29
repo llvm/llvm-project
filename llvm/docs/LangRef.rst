@@ -19541,6 +19541,64 @@ Examples:
       %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %3, i32 4, <4 x i1> %active.lane.mask, <4 x i32> undef)
 
 
+.. _int_experimental_vp_splice:
+
+'``llvm.experimental.vp.splice``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <2 x double> @llvm.experimental.vp.splice.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %imm, <2 x i1> %mask, i32 %evl1, i32 %evl2)
+      declare <vscale x 4 x i32> @llvm.experimental.vp.splice.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %imm, <2 x i1> %mask i32 %evl1, i32 %evl2)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.vp.splice.*``' intrinsic is the vector length
+predicated version of the '``llvm.experimental.vector.splice.*``' intrinsic.
+
+Arguments:
+""""""""""
+
+The result and the first two arguments ``vec1`` and ``vec2`` are vectors with
+the same type.  The third argument ``imm`` is an immediate signed integer that
+indicates the offset index.  The fourth argument ``mask`` is a vector mask and
+has the same number of elements as the result.  The last two arguments ``evl1``
+and ``evl2`` are unsigned integers indicating the explicit vector lengths of
+``vec1`` and ``vec2`` respectively.  ``imm``, ``evl1`` and ``evl2`` should
+respect the following constraints: ``-evl1 <= imm < evl1``, ``0 <= evl1 <= VL``
+and ``0 <= evl2 <= VL``, where ``VL`` is the runtime vector factor. If these
+constraints are not satisfied the intrinsic has undefined behaviour.
+
+Semantics:
+""""""""""
+
+Effectively, this intrinsic concatenates ``vec1[0..evl1-1]`` and
+``vec2[0..evl2-1]`` and creates the result vector by selecting the elements in a
+window of size ``evl2``, starting at index ``imm`` (for a positive immediate) of
+the concatenated vector. Elements in the result vector beyond ``evl2`` are
+``undef``.  If ``imm`` is negative the starting index is ``evl1 + imm``.  The result
+vector of active vector length ``evl2`` contains ``evl1 - imm`` (``-imm`` for
+negative ``imm``) elements from indices ``[imm..evl1 - 1]``
+(``[evl1 + imm..evl1 -1]`` for negative ``imm``) of ``vec1`` followed by the
+first ``evl2 - (evl1 - imm)`` (``evl2 + imm`` for negative ``imm``) elements of
+``vec2``. If ``evl1 - imm`` (``-imm``) >= ``evl2``, only the first ``evl2``
+elements are considered and the remaining are ``undef``.  The lanes in the result
+vector disabled by ``mask`` are ``undef``.
+
+Examples:
+"""""""""
+
+.. code-block:: text
+
+ llvm.experimental.vp.splice(<A,B,C,D>, <E,F,G,H>, 1, 2, 3)  ==> <B, E, F, undef> ; index
+ llvm.experimental.vp.splice(<A,B,C,D>, <E,F,G,H>, -2, 3, 2) ==> <B, C, undef, undef> ; trailing elements
+
+
 .. _int_mload_mstore:
 
 Masked Vector Load and Store Intrinsics

@@ -1580,6 +1580,15 @@ def int_get_active_lane_mask:
             [llvm_anyint_ty, LLVMMatchType<1>],
             [IntrNoMem, IntrNoSync, IntrWillReturn]>;
 
+def int_experimental_vp_splice:
+  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+            [LLVMMatchType<0>,
+             LLVMMatchType<0>,
+             llvm_i32_ty,
+             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+             llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
 //===-------------------------- Masked Intrinsics -------------------------===//
 //
 def int_masked_load:
