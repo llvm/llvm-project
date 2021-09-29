@@ -288,9 +288,7 @@ define i32 @poison6(i32 %x) {
 
 define i32 @all_ones_left_right(i32 %x) {
 ; CHECK-LABEL: @all_ones_left_right(
-; CHECK-NEXT:    [[LEFT:%.*]] = shl i32 -1, [[X:%.*]]
-; CHECK-NEXT:    [[RIGHT:%.*]] = ashr i32 [[LEFT]], [[X]]
-; CHECK-NEXT:    ret i32 [[RIGHT]]
+; CHECK-NEXT:    ret i32 -1
 ;
   %left = shl i32 -1, %x
   %right = ashr i32 %left, %x
@@ -299,25 +297,25 @@ define i32 @all_ones_left_right(i32 %x) {
 
 define <2 x i7> @all_ones_left_right_splat(<2 x i7> %x) {
 ; CHECK-LABEL: @all_ones_left_right_splat(
-; CHECK-NEXT:    [[LEFT:%.*]] = shl <2 x i7> <i7 -1, i7 -1>, [[X:%.*]]
-; CHECK-NEXT:    [[RIGHT:%.*]] = ashr <2 x i7> [[LEFT]], [[X]]
-; CHECK-NEXT:    ret <2 x i7> [[RIGHT]]
+; CHECK-NEXT:    ret <2 x i7> <i7 -1, i7 -1>
 ;
   %left = shl <2 x i7> <i7 -1, i7 -1>, %x
   %right = ashr <2 x i7> %left, %x
   ret <2 x i7> %right
 }
 
+; Poison could propagate, but undef must not.
+
 define <3 x i7> @all_ones_left_right_splat_poison_undef_elt(<3 x i7> %x) {
 ; CHECK-LABEL: @all_ones_left_right_splat_poison_undef_elt(
-; CHECK-NEXT:    [[LEFT:%.*]] = shl <3 x i7> <i7 poison, i7 -1, i7 undef>, [[X:%.*]]
-; CHECK-NEXT:    [[RIGHT:%.*]] = ashr <3 x i7> [[LEFT]], [[X]]
-; CHECK-NEXT:    ret <3 x i7> [[RIGHT]]
+; CHECK-NEXT:    ret <3 x i7> <i7 -1, i7 -1, i7 -1>
 ;
   %left = shl <3 x i7> <i7 poison, i7 -1, i7 undef>, %x
   %right = ashr <3 x i7> %left, %x
   ret <3 x i7> %right
 }
+
+; negative test - must have -1
 
 define i32 @almost_all_ones_left_right(i32 %x) {
 ; CHECK-LABEL: @almost_all_ones_left_right(
@@ -329,6 +327,8 @@ define i32 @almost_all_ones_left_right(i32 %x) {
   %right = ashr i32 %left, %x
   ret i32 %right
 }
+
+; negative test - must have same shift amount
 
 define i32 @all_ones_left_right_not_same_shift(i32 %x, i32 %y) {
 ; CHECK-LABEL: @all_ones_left_right_not_same_shift(
