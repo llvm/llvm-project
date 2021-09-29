@@ -12,7 +12,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: LV: Found an estimated cost of 13 for VF 2 For instruction:   store i16 %v5, i16* %out5, align 2
 ; CHECK: LV: Found an estimated cost of 17 for VF 4 For instruction:   store i16 %v5, i16* %out5, align 2
 ; CHECK: LV: Found an estimated cost of 24 for VF 8 For instruction:   store i16 %v5, i16* %out5, align 2
-; CHECK: LV: Found an estimated cost of 342 for VF 16 For instruction:   store i16 %v5, i16* %out5, align 2
+; CHECK: LV: Found an estimated cost of 64 for VF 16 For instruction:   store i16 %v5, i16* %out5, align 2
 ; CHECK-NOT: LV: Found an estimated cost of {{[0-9]+}} for VF {{[0-9]+}} For instruction:   store i16 %v5, i16* %out5, align 2
 
 define void @test() {
