@@ -890,78 +890,61 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
       return new TruncInst(And, Ty);
     }
 
-    BinaryOperator *Op0BO;
-    if (match(Op0, m_OneUse(m_BinOp(Op0BO)))) {
-      // Turn ((X >> C) + Y) << C  ->  (X + (Y << C)) & (~0 << C)
-      Value *V1;
-      const APInt *CC;
-      switch (Op0BO->getOpcode()) {
+    // If we have an opposite shift by the same amount, we may be able to
+    // reorder binops and shifts to eliminate math/logic.
+    auto isSuitableBinOpcode = [](Instruction::BinaryOps BinOpcode) {
+      switch (BinOpcode) {
       default:
-        break;
+        return false;
       case Instruction::Add:
       case Instruction::And:
       case Instruction::Or:
-      case Instruction::Xor: {
-        // These operators commute.
-        // Turn (Y + (X >> C)) << C  ->  (X + (Y << C)) & (~0 << C)
-        if (Op0BO->getOperand(1)->hasOneUse() &&
-            match(Op0BO->getOperand(1), m_Shr(m_Value(V1), m_Specific(Op1)))) {
-          Value *YS = // (Y << C)
-              Builder.CreateShl(Op0BO->getOperand(0), Op1, Op0BO->getName());
-          // (X + (Y << C))
-          Value *X = Builder.CreateBinOp(Op0BO->getOpcode(), YS, V1,
-                                         Op0BO->getOperand(1)->getName());
-          unsigned Op1Val = C->getLimitedValue(BitWidth);
-          APInt Bits = APInt::getHighBitsSet(BitWidth, BitWidth - Op1Val);
-          Constant *Mask = ConstantInt::get(Ty, Bits);
-          return BinaryOperator::CreateAnd(X, Mask);
-        }
+      case Instruction::Xor:
+      case Instruction::Sub:
+        // NOTE: Sub is not commutable and the tranforms below may not be valid
+        //       when the shift-right is operand 1 (RHS) of the sub.
+        return true;
+      }
+    };
+    BinaryOperator *Op0BO;
+    if (match(Op0, m_OneUse(m_BinOp(Op0BO))) &&
+        isSuitableBinOpcode(Op0BO->getOpcode())) {
+      // Commute so shift-right is on LHS of the binop.
+      // (Y bop (X >> C)) << C         ->  ((X >> C) bop Y) << C
+      // (Y bop ((X >> C) & CC)) << C  ->  (((X >> C) & CC) bop Y) << C
+      Value *Shr = Op0BO->getOperand(0);
+      Value *Y = Op0BO->getOperand(1);
+      Value *X;
+      const APInt *CC;
+      if (Op0BO->isCommutative() && Y->hasOneUse() &&
+          (match(Y, m_Shr(m_Value(), m_Specific(Op1))) ||
+           match(Y, m_And(m_OneUse(m_Shr(m_Value(), m_Specific(Op1))),
+                          m_APInt(CC)))))
+        std::swap(Shr, Y);
 
-        // Turn (Y + ((X >> C) & CC)) << C  ->  ((X & (CC << C)) + (Y << C))
-        Value *Op0BOOp1 = Op0BO->getOperand(1);
-        if (Op0BOOp1->hasOneUse() &&
-            match(Op0BOOp1, m_And(m_OneUse(m_Shr(m_Value(V1), m_Specific(Op1))),
-                                  m_APInt(CC)))) {
-          Value *YS = // (Y << C)
-              Builder.CreateShl(Op0BO->getOperand(0), Op1, Op0BO->getName());
-          // X & (CC << C)
-          Value *XM = Builder.CreateAnd(V1, ConstantInt::get(Ty, CC->shl(*C)),
-                                        V1->getName() + ".mask");
-          return BinaryOperator::Create(Op0BO->getOpcode(), YS, XM);
-        }
-        LLVM_FALLTHROUGH;
+      // ((X >> C) bop Y) << C  ->  (X bop (Y << C)) & (~0 << C)
+      if (match(Shr, m_OneUse(m_Shr(m_Value(X), m_Specific(Op1))))) {
+        // Y << C
+        Value *YS = Builder.CreateShl(Y, Op1, Op0BO->getName());
+        // (X bop (Y << C))
+        Value *B =
+            Builder.CreateBinOp(Op0BO->getOpcode(), X, YS, Shr->getName());
+        unsigned Op1Val = C->getLimitedValue(BitWidth);
+        APInt Bits = APInt::getHighBitsSet(BitWidth, BitWidth - Op1Val);
+        Constant *Mask = ConstantInt::get(Ty, Bits);
+        return BinaryOperator::CreateAnd(B, Mask);
       }
 
-      case Instruction::Sub: {
-        // Turn ((X >> C) + Y) << C  ->  (X + (Y << C)) & (~0 << C)
-        if (Op0BO->getOperand(0)->hasOneUse() &&
-            match(Op0BO->getOperand(0), m_Shr(m_Value(V1), m_Specific(Op1)))) {
-          Value *YS = // (Y << C)
-              Builder.CreateShl(Op0BO->getOperand(1), Op1, Op0BO->getName());
-          // (X + (Y << C))
-          Value *X = Builder.CreateBinOp(Op0BO->getOpcode(), V1, YS,
-                                         Op0BO->getOperand(0)->getName());
-          unsigned Op1Val = C->getLimitedValue(BitWidth);
-          APInt Bits = APInt::getHighBitsSet(BitWidth, BitWidth - Op1Val);
-          Constant *Mask = ConstantInt::get(Ty, Bits);
-          return BinaryOperator::CreateAnd(X, Mask);
-        }
-
-        // Turn (((X >> C)&CC) + Y) << C  ->  (X + (Y << C)) & (CC << C)
-        if (Op0BO->getOperand(0)->hasOneUse() &&
-            match(Op0BO->getOperand(0),
-                  m_And(m_OneUse(m_Shr(m_Value(V1), m_Specific(Op1))),
-                        m_APInt(CC)))) {
-          Value *YS = // (Y << C)
-              Builder.CreateShl(Op0BO->getOperand(1), Op1, Op0BO->getName());
-          // X & (CC << C)
-          Value *XM = Builder.CreateAnd(V1, ConstantInt::get(Ty, CC->shl(*C)),
-                                        V1->getName() + ".mask");
-          return BinaryOperator::Create(Op0BO->getOpcode(), XM, YS);
-        }
-
-        break;
-      }
+      // (((X >> C) & CC) bop Y) << C  ->  (X & (CC << C)) bop (Y << C)
+      if (match(Shr,
+                m_OneUse(m_And(m_OneUse(m_Shr(m_Value(X), m_Specific(Op1))),
+                               m_APInt(CC))))) {
+        // Y << C
+        Value *YS = Builder.CreateShl(Y, Op1, Op0BO->getName());
+        // X & (CC << C)
+        Value *M = Builder.CreateAnd(X, ConstantInt::get(Ty, CC->shl(*C)),
+                                     X->getName() + ".mask");
+        return BinaryOperator::Create(Op0BO->getOpcode(), M, YS);
       }
     }
 
