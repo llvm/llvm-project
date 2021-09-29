@@ -62,9 +62,6 @@ MCTargetStreamer *createAArch64AsmTargetStreamer(MCStreamer &S,
                                                  MCInstPrinter *InstPrint,
                                                  bool isVerboseAsm);
 
-MCTargetStreamer *createAArch64ObjectTargetStreamer(MCStreamer &S,
-                                                    const MCSubtargetInfo &STI);
-
 namespace AArch64_MC {
 void initLLVMToCVRegMapping(MCRegisterInfo *MRI);
 }
