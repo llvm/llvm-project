@@ -1561,6 +1561,9 @@ namespace llvm {
     SDValue LowerFLT_ROUNDS_(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerWin64_FP_TO_INT128(SDValue Op, SelectionDAG &DAG,
+                                    SDValue &Chain) const;
+    SDValue LowerWin64_INT128_TO_FP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGC_TRANSITION(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFaddFsub(SDValue Op, SelectionDAG &DAG) const;
