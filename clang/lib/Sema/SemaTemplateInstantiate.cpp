@@ -161,10 +161,9 @@ Sema::getTemplateInstantiationArgs(NamedDecl *D,
         if (isGenericLambdaCallOperatorOrStaticInvokerSpecialization(Function))
           break;
 
-      } else if (FunctionTemplateDecl *FunTmpl
-                                   = Function->getDescribedFunctionTemplate()) {
-        // Add the "injected" template arguments.
-        Result.addOuterTemplateArguments(FunTmpl->getInjectedTemplateArgs());
+      } else if (Function->getDescribedFunctionTemplate()) {
+        assert(Result.getNumSubstitutedLevels() == 0 &&
+               "Outer template not instantiated?");
       }
 
       // If this is a friend declaration and it declares an entity at
@@ -180,11 +179,8 @@ Sema::getTemplateInstantiationArgs(NamedDecl *D,
       }
     } else if (CXXRecordDecl *Rec = dyn_cast<CXXRecordDecl>(Ctx)) {
       if (ClassTemplateDecl *ClassTemplate = Rec->getDescribedClassTemplate()) {
-        QualType T = ClassTemplate->getInjectedClassNameSpecialization();
-        const TemplateSpecializationType *TST =
-            cast<TemplateSpecializationType>(Context.getCanonicalType(T));
-        Result.addOuterTemplateArguments(
-            llvm::makeArrayRef(TST->getArgs(), TST->getNumArgs()));
+        assert(Result.getNumSubstitutedLevels() == 0 &&
+               "Outer template not instantiated?");
         if (ClassTemplate->isMemberSpecialization())
           break;
       }
