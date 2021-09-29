@@ -355,7 +355,6 @@ private:
     PyEval_InitThreads();
   }
 
-  TerminalState m_stdin_tty_state;
   PyGILState_STATE m_gil_state = PyGILState_UNLOCKED;
   bool m_was_already_initialized = false;
 };

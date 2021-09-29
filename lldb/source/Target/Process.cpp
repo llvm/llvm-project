@@ -4351,9 +4351,8 @@ public:
 
     SetIsDone(false);
     const int read_fd = m_read_file.GetDescriptor();
-    TerminalState terminal_state;
-    terminal_state.Save(read_fd, false);
     Terminal terminal(read_fd);
+    TerminalState terminal_state(terminal, false);
     terminal.SetCanonical(false);
     terminal.SetEcho(false);
 // FD_ZERO, FD_SET are not supported on windows
@@ -4399,7 +4398,6 @@ public:
     }
     m_is_running = false;
 #endif
-    terminal_state.Restore();
   }
 
   void Cancel() override {
