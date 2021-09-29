@@ -20,10 +20,10 @@ target triple = "x86_64-unknown-linux-gnu"
 ;
 ; AVX1: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %v3, i16* %out3, align 2
 ; AVX1: LV: Found an estimated cost of 17 for VF 2 For instruction:   store i16 %v3, i16* %out3, align 2
-; AVX1: LV: Found an estimated cost of 49 for VF 4 For instruction:   store i16 %v3, i16* %out3, align 2
-; AVX1: LV: Found an estimated cost of 98 for VF 8 For instruction:   store i16 %v3, i16* %out3, align 2
-; AVX1: LV: Found an estimated cost of 228 for VF 16 For instruction:   store i16 %v3, i16* %out3, align 2
-; AVX1: LV: Found an estimated cost of 456 for VF 32 For instruction:   store i16 %v3, i16* %out3, align 2
+; AVX1: LV: Found an estimated cost of 35 for VF 4 For instruction:   store i16 %v3, i16* %out3, align 2
+; AVX1: LV: Found an estimated cost of 70 for VF 8 For instruction:   store i16 %v3, i16* %out3, align 2
+; AVX1: LV: Found an estimated cost of 172 for VF 16 For instruction:   store i16 %v3, i16* %out3, align 2
+; AVX1: LV: Found an estimated cost of 344 for VF 32 For instruction:   store i16 %v3, i16* %out3, align 2
 ;
 ; AVX2: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %v3, i16* %out3, align 2
 ; AVX2: LV: Found an estimated cost of 3 for VF 2 For instruction:   store i16 %v3, i16* %out3, align 2
