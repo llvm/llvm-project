@@ -149,7 +149,6 @@ define zeroext i1 @test8_6(i8 zeroext %x)  align 2 {
 ; CHECK-LABEL: test8_6:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    sub w8, w0, #58
-; CHECK-NEXT:    and w8, w8, #0xff
 ; CHECK-NEXT:    cmp w8, #154
 ; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
@@ -293,8 +292,8 @@ define zeroext i1 @test16_6(i16 zeroext %x)  align 2 {
 ; CHECK-NEXT:    mov w8, #-32194
 ; CHECK-NEXT:    add w8, w0, w8
 ; CHECK-NEXT:    mov w9, #24320
-; CHECK-NEXT:    cmp w9, w8, uxth
-; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    cmp w8, w9
+; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
 entry:
   %0 = add i16 %x, -32194

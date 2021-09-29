@@ -52,16 +52,17 @@ define i32 @test_return(i32* %p, i32 %oldval, i32 %newval) {
 define i1 @test_return_bool(i8* %value, i8 %oldValue, i8 %newValue) {
 ; CHECK-LABEL: test_return_bool:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    and w8, w1, #0xff
 ; CHECK-NEXT:    ; kill: def $w2 killed $w2 def $x2
 ; CHECK-NEXT:  LBB1_1: ; %cmpxchg.start
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldaxrb w8, [x0]
-; CHECK-NEXT:    cmp w8, w1, uxtb
+; CHECK-NEXT:    ldaxrb w9, [x0]
+; CHECK-NEXT:    cmp w9, w8
 ; CHECK-NEXT:    b.ne LBB1_4
 ; CHECK-NEXT:  ; %bb.2: ; %cmpxchg.trystore
 ; CHECK-NEXT:    ; in Loop: Header=BB1_1 Depth=1
-; CHECK-NEXT:    stlxrb w8, w2, [x0]
-; CHECK-NEXT:    cbnz w8, LBB1_1
+; CHECK-NEXT:    stlxrb w9, w2, [x0]
+; CHECK-NEXT:    cbnz w9, LBB1_1
 ; CHECK-NEXT:  ; %bb.3:
 ; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    eor w0, w8, #0x1
