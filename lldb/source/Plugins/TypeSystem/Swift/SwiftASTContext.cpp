@@ -168,14 +168,19 @@ std::recursive_mutex g_log_mutex;
 
 /// Similar to LLDB_LOG, but with richer contextual information.
 #define LOG_PRINTF(CHANNEL, FMT, ...)                                          \
+  LOG_PRINTF_IMPL(CHANNEL, false, FMT, ##__VA_ARGS__)
+#define LOG_VERBOSE_PRINTF(CHANNEL, FMT, ...)                                  \
+  LOG_PRINTF_IMPL(CHANNEL, true, FMT, ##__VA_ARGS__)
+#define LOG_PRINTF_IMPL(CHANNEL, VERBOSE, FMT, ...)                            \
   do {                                                                         \
-    if (Log *log = lldb_private::GetLogIfAllCategoriesSet(CHANNEL)) {          \
-      std::lock_guard<std::recursive_mutex> locker(g_log_mutex);               \
-      /* The format string is optimized for code size, not speed. */           \
-      log->Printf("%s::%s%s" FMT, m_description.c_str(),                       \
-                  IsLambda(__FUNCTION__) ? "" : __FUNCTION__,                  \
-                  (FMT && FMT[0] == '(') ? "" : "() -- ", ##__VA_ARGS__);      \
-    }                                                                          \
+    if (Log *log = lldb_private::GetLogIfAllCategoriesSet(CHANNEL))            \
+      if (!(VERBOSE) || log->GetVerbose()) {                                   \
+        std::lock_guard<std::recursive_mutex> locker(g_log_mutex);             \
+        /* The format string is optimized for code size, not speed. */         \
+        log->Printf("%s::%s%s" FMT, m_description.c_str(),                     \
+                    IsLambda(__FUNCTION__) ? "" : __FUNCTION__,                \
+                    (FMT && FMT[0] == '(') ? "" : "() -- ", ##__VA_ARGS__);    \
+      }                                                                        \
   } while (0)
 
 using namespace lldb;
@@ -2051,10 +2056,9 @@ ProcessModule(ModuleSP &&module_sp, std::string m_description,
       framework_search_paths.push_back({fwsp.Path, fwsp.IsSystem});
     for (const std::string &arg : ast_context->GetClangArguments()) {
       extra_clang_args.push_back(arg);
-      if (lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET))
-        LOG_PRINTF(LIBLLDB_LOG_TYPES,
-                   "ProcessModule(\"%s\") adding Clang argument \"%s\".",
-                   module_file.GetFilename().AsCString(""), arg.c_str());
+      LOG_VERBOSE_PRINTF(LIBLLDB_LOG_TYPES,
+                         "ProcessModule(\"%s\") adding Clang argument \"%s\".",
+                         module_file.GetFilename().AsCString(""), arg.c_str());
     }
   }
 }
