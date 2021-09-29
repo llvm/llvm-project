@@ -1,6 +1,6 @@
 ! Check flang-omp-report --femit-yaml for omp-device-constructs.f90
 
-! REQUIRES: plugins
+! REQUIRES: plugins, examples, shell
 
 !RUN: %flang_fc1 -load %llvmshlibdir/flangOmpReport.so -plugin flang-omp-report -fopenmp %s -o - | FileCheck %s
 
