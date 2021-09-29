@@ -1518,8 +1518,8 @@ def VPRTYBQ : VX_VT5_EO5_VB5<1538, 10, "vprtybq", [(set v1i128:$vD,
                             (int_ppc_altivec_vprtybq v1i128:$vB))]>;
 
 // Vector (Bit) Permute (Right-indexed)
-def VBPERMD : VXForm_1<1484, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                       "vbpermd $vD, $vA, $vB", IIC_VecFP, []>;
+def VBPERMD : VX1_Int_Ty3<1484, "vbpermd", int_ppc_altivec_vbpermd,
+                          v2i64, v2i64, v16i8>;
 def VPERMR : VAForm_1a<59, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB, vrrc:$vC),
                        "vpermr $vD, $vA, $vB, $vC", IIC_VecFP, []>;
 
