@@ -534,6 +534,10 @@ void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
     Config.PrePrunePasses.push_back(createEHFrameSplitterPass_MachO_x86_64());
     Config.PrePrunePasses.push_back(createEHFrameEdgeFixerPass_MachO_x86_64());
 
+    // Add compact unwind splitter pass.
+    Config.PrePrunePasses.push_back(
+        CompactUnwindSplitter("__LD,__compact_unwind"));
+
     // Add a mark-live pass.
     if (auto MarkLive = Ctx->getMarkLivePass(G->getTargetTriple()))
       Config.PrePrunePasses.push_back(std::move(MarkLive));
