@@ -1,4 +1,5 @@
-// RUN: %clangxx_tsan -O1 %s -o %t && %env_tsan_opts="flush_memory_ms=1 flush_symbolizer_ms=1 memory_limit_mb=1" %deflake %t | FileCheck %s
+// RUN: %clangxx_tsan -O1 %s -o %t
+// RUN: %env_tsan_opts="flush_memory_ms=1 flush_symbolizer_ms=1 memory_limit_mb=1" %deflake %run %t | FileCheck %s
 #include "test.h"
 
 long X, Y;
