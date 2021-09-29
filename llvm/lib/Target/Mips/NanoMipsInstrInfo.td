@@ -319,42 +319,37 @@ let hasPostISelHook = 1, isCall = 1, isCTI = 1, Defs = [RA_NM] in {
 def imm32_NM : IntImmLeaf<i32, [{
     return (uint32_t)Imm.getZExtValue() == (uint64_t)Imm.getZExtValue();
 }]>;
-def : MipsPat<(i32 imm32_NM:$imm), (Li_NM imm:$imm)>, ISA_NANOMIPS;
+def : NMPat<(i32 imm32_NM:$imm), (Li_NM imm:$imm)>;
 
-def : MipsPat<(MipsJmpLink (i32 texternalsym:$dst)),
-              (BALC_NM texternalsym:$dst)>, ISA_NANOMIPS;
+def : NMPat<(MipsJmpLink (i32 texternalsym:$dst)), (BALC_NM texternalsym:$dst)>;
 
-def : MipsPat<(MipsFullAddr tglobaladdr:$in),
-              (Li_NM tglobaladdr:$in)>, ISA_NANOMIPS;
-def : MipsPat<(MipsFullAddr tglobaltlsaddr:$in),
-              (Li_NM tglobaltlsaddr:$in)>, ISA_NANOMIPS;
-def : MipsPat<(MipsFullAddr tblockaddress:$in),
-              (Li_NM tblockaddress:$in)>, ISA_NANOMIPS;
-def : MipsPat<(MipsFullAddr tjumptable:$in),
-              (Li_NM tjumptable:$in)>, ISA_NANOMIPS;
+def : NMPat<(MipsFullAddr tglobaladdr:$in), (Li_NM tglobaladdr:$in)>;
+def : NMPat<(MipsFullAddr tglobaltlsaddr:$in), (Li_NM tglobaltlsaddr:$in)>;
+def : NMPat<(MipsFullAddr tblockaddress:$in), (Li_NM tblockaddress:$in)>;
+def : NMPat<(MipsFullAddr tjumptable:$in), (Li_NM tjumptable:$in)>;
 
-def : MipsPat<(not (or GPR32NM:$rs, GPR32NM:$rt)),
-              (NOR_NM GPR32NM:$rs, GPR32NM:$rt)>, ISA_NANOMIPS;
+def : NMPat<(not (or GPR32NM:$rs, GPR32NM:$rt)),
+            (NOR_NM GPR32NM:$rs, GPR32NM:$rt)>;
 
-def : MipsPat<(trap), (TEQ_NM ZERO_NM, ZERO_NM, 0)>, ISA_NANOMIPS;
+def : NMPat<(trap), (TEQ_NM ZERO_NM, ZERO_NM, 0)>;
 
 // SetCC patterns.
-def : MipsPat<(seteq GPR32NM:$lhs, GPR32NM:$rhs),
-              (SLTIU_NM (XOR_NM GPR32NM:$lhs, GPR32NM:$rhs), 1)>;
-def : MipsPat<(setne GPR32NM:$lhs, GPR32NM:$rhs),
-              (SLTU_NM ZERO_NM, (XOR_NM GPR32NM:$lhs, GPR32NM:$rhs))>;
-def : MipsPat<(setle GPR32NM:$lhs, GPR32NM:$rhs),
-              (XORI_NM (SLT_NM GPR32NM:$rhs, GPR32NM:$lhs), 1)>;
-def : MipsPat<(setule GPR32NM:$lhs, GPR32NM:$rhs),
-              (XORI_NM (SLTU_NM GPR32NM:$rhs, GPR32NM:$lhs), 1)>;
-def : MipsPat<(setgt GPR32NM:$lhs, GPR32NM:$rhs),
-              (SLT_NM GPR32NM:$rhs, GPR32NM:$lhs)>;
-def : MipsPat<(setugt GPR32NM:$lhs, GPR32NM:$rhs),
-              (SLTU_NM GPR32NM:$rhs, GPR32NM:$lhs)>;
-def : MipsPat<(setge GPR32NM:$lhs, GPR32NM:$rhs),
-              (XORI_NM (SLT_NM GPR32NM:$lhs, GPR32NM:$rhs), 1)>;
-def : MipsPat<(setuge GPR32NM:$lhs, GPR32NM:$rhs),
-              (XORI_NM (SLTU_NM GPR32NM:$lhs, GPR32NM:$rhs), 1)>;
+def : NMPat<(seteq GPR32NM:$lhs, GPR32NM:$rhs),
+            (SLTIU_NM (XOR_NM GPR32NM:$lhs, GPR32NM:$rhs), 1)>;
+def : NMPat<(setne GPR32NM:$lhs, GPR32NM:$rhs),
+            (SLTU_NM ZERO_NM, (XOR_NM GPR32NM:$lhs, GPR32NM:$rhs))>;
+def : NMPat<(setle GPR32NM:$lhs, GPR32NM:$rhs),
+            (XORI_NM (SLT_NM GPR32NM:$rhs, GPR32NM:$lhs), 1)>;
+def : NMPat<(setule GPR32NM:$lhs, GPR32NM:$rhs),
+            (XORI_NM (SLTU_NM GPR32NM:$rhs, GPR32NM:$lhs), 1)>;
+def : NMPat<(setgt GPR32NM:$lhs, GPR32NM:$rhs),
+            (SLT_NM GPR32NM:$rhs, GPR32NM:$lhs)>;
+def : NMPat<(setugt GPR32NM:$lhs, GPR32NM:$rhs),
+            (SLTU_NM GPR32NM:$rhs, GPR32NM:$lhs)>;
+def : NMPat<(setge GPR32NM:$lhs, GPR32NM:$rhs),
+            (XORI_NM (SLT_NM GPR32NM:$lhs, GPR32NM:$rhs), 1)>;
+def : NMPat<(setuge GPR32NM:$lhs, GPR32NM:$rhs),
+            (XORI_NM (SLTU_NM GPR32NM:$lhs, GPR32NM:$rhs), 1)>;
 
 //===----------------------------------------------------------------------===//
 //
@@ -436,20 +431,19 @@ def BC_NM       : JumpFJ<jmptarget, "bc", br, bb, "b">, IsBranch, ISA_NANOMIPS;
 
 }
 
-
 // Reversed branch conditions:
-def : Pat<(brcond (i32 (setugt GPR32NM:$lhs, GPR32NM:$rhs)), bb:$dst),
-          (BLTUC_NM GPR32NM:$rhs, GPR32NM:$lhs, bb:$dst)>, ISA_NANOMIPS;
-def : Pat<(brcond (i32 (setgt GPR32NM:$lhs, GPR32NM:$rhs)), bb:$dst),
-          (BLTC_NM GPR32NM:$rhs, GPR32NM:$lhs, bb:$dst)>, ISA_NANOMIPS;
-def : Pat<(brcond (i32 (setule GPR32NM:$lhs, GPR32NM:$rhs)), bb:$dst),
-          (BGEUC_NM GPR32NM:$rhs, GPR32NM:$lhs, bb:$dst)>, ISA_NANOMIPS;
-def : Pat<(brcond (i32 (setle GPR32NM:$lhs, GPR32NM:$rhs)), bb:$dst),
-          (BGEC_NM GPR32NM:$rhs, GPR32NM:$lhs, bb:$dst)>, ISA_NANOMIPS;
+def : NMPat<(brcond (i32 (setugt GPR32NM:$lhs, GPR32NM:$rhs)), bb:$dst),
+            (BLTUC_NM GPR32NM:$rhs, GPR32NM:$lhs, bb:$dst)>;
+def : NMPat<(brcond (i32 (setgt GPR32NM:$lhs, GPR32NM:$rhs)), bb:$dst),
+            (BLTC_NM GPR32NM:$rhs, GPR32NM:$lhs, bb:$dst)>;
+def : NMPat<(brcond (i32 (setule GPR32NM:$lhs, GPR32NM:$rhs)), bb:$dst),
+            (BGEUC_NM GPR32NM:$rhs, GPR32NM:$lhs, bb:$dst)>;
+def : NMPat<(brcond (i32 (setle GPR32NM:$lhs, GPR32NM:$rhs)), bb:$dst),
+            (BGEC_NM GPR32NM:$rhs, GPR32NM:$lhs, bb:$dst)>;
 
 // Branch on integer value
-def : Pat<(brcond (i32 GPR32NM:$lhs), bb:$dst),
-          (BNEC_NM GPR32NM:$lhs, ZERO_NM, bb:$dst)>, ISA_NANOMIPS;
+def : NMPat<(brcond (i32 GPR32NM:$lhs), bb:$dst),
+            (BNEC_NM GPR32NM:$lhs, ZERO_NM, bb:$dst)>;
 
 
 //===----------------------------------------------------------------------===//
@@ -528,84 +522,65 @@ def : NMPat<(truncstorei16 (i32 0), addrindexedlsl1:$rs),
             (SHXS_NM ZERO_NM, addrindexedlsl1:$rs)>;
 
 // Catching out-of-range immediate loads/stores.
-def : Pat<(i32 (extloadi8 GPR32NM:$rs)),
-          (LBU_NM GPR32NM:$rs, 0)>, ISA_NANOMIPS;
-def : Pat<(i32 (zextloadi8 GPR32NM:$rs)),
-          (LBU_NM GPR32NM:$rs, 0)>, ISA_NANOMIPS;
-def : Pat<(i32 (sextloadi8 GPR32NM:$rs)),
-          (LB_NM GPR32NM:$rs, 0)>, ISA_NANOMIPS;
-def : Pat<(truncstorei8 GPR32NM:$rt, GPR32NM:$rs),
-          (SB_NM GPR32NM:$rt, GPR32NM:$rs, 0)>, ISA_NANOMIPS;
-def : Pat<(i32 (extloadi16 GPR32NM:$rs)),
-          (LHU_NM GPR32NM:$rs, 0)>, ISA_NANOMIPS;
-def : Pat<(i32 (zextloadi16 GPR32NM:$rs)),
-          (LHU_NM GPR32NM:$rs, 0)>, ISA_NANOMIPS;
-def : Pat<(i32 (sextloadi16 GPR32NM:$rs)),
-          (LH_NM GPR32NM:$rs, 0)>, ISA_NANOMIPS;
-def : Pat<(truncstorei16 GPR32NM:$rt, GPR32NM:$rs),
-          (SH_NM GPR32NM:$rt, GPR32NM:$rs, 0)>, ISA_NANOMIPS;
-def : Pat<(i32 (load GPR32NM:$rs)),
-          (LW_NM GPR32NM:$rs, 0)>, ISA_NANOMIPS;
-def : Pat<(store GPR32NM:$rt, GPR32NM:$rs),
-          (SW_NM GPR32NM:$rt, GPR32NM:$rs, 0)>, ISA_NANOMIPS;
+def : NMPat<(i32 (extloadi8 GPR32NM:$rs)), (LBU_NM GPR32NM:$rs, 0)>;
+def : NMPat<(i32 (zextloadi8 GPR32NM:$rs)), (LBU_NM GPR32NM:$rs, 0)>;
+def : NMPat<(i32 (sextloadi8 GPR32NM:$rs)), (LB_NM GPR32NM:$rs, 0)>;
+def : NMPat<(i32 (extloadi16 GPR32NM:$rs)), (LHU_NM GPR32NM:$rs, 0)>;
+def : NMPat<(i32 (zextloadi16 GPR32NM:$rs)), (LHU_NM GPR32NM:$rs, 0)>;
+def : NMPat<(i32 (sextloadi16 GPR32NM:$rs)), (LH_NM GPR32NM:$rs, 0)>;
+def : NMPat<(i32 (load GPR32NM:$rs)), (LW_NM GPR32NM:$rs, 0)>;
+def : NMPat<(truncstorei8 GPR32NM:$rt, GPR32NM:$rs),
+            (SB_NM GPR32NM:$rt, GPR32NM:$rs, 0)>;
+def : NMPat<(truncstorei16 GPR32NM:$rt, GPR32NM:$rs),
+            (SH_NM GPR32NM:$rt, GPR32NM:$rs, 0)>;
+def : NMPat<(store GPR32NM:$rt, GPR32NM:$rs),
+            (SW_NM GPR32NM:$rt, GPR32NM:$rs, 0)>;
 
 // Any-extending loads
-def : Pat<(i32 (extloadi8 addruimm12:$addr)),
-          (LBU_NM addruimm12:$addr)>, ISA_NANOMIPS;
-def : Pat<(i32 (extloadi8 addrsimm9:$addr)),
-          (LBUs9_NM addrsimm9:$addr)>, ISA_NANOMIPS;
-def : Pat<(i32 (extloadi8 addrindexed:$addr)),
-          (LBUX_NM addrindexed:$addr)>, ISA_NANOMIPS;
-def : Pat<(i32 (extloadi16 addruimm12:$addr)),
-          (LHU_NM addruimm12:$addr)>, ISA_NANOMIPS;
-def : Pat<(i32 (extloadi16 addrsimm9:$addr)),
-          (LHUs9_NM addrsimm9:$addr)>, ISA_NANOMIPS;
-def : Pat<(i32 (extloadi16 addrindexedlsl1:$addr)),
-          (LHUXS_NM addrindexedlsl1:$addr)>, ISA_NANOMIPS;
-def : Pat<(i32 (extloadi16 addrindexed:$addr)),
-          (LHUX_NM addrindexed:$addr)>, ISA_NANOMIPS;
+def : NMPat<(i32 (extloadi8 addruimm12:$addr)), (LBU_NM addruimm12:$addr)>;
+def : NMPat<(i32 (extloadi8 addrsimm9:$addr)), (LBUs9_NM addrsimm9:$addr)>;
+def : NMPat<(i32 (extloadi8 addrindexed:$addr)), (LBUX_NM addrindexed:$addr)>;
+def : NMPat<(i32 (extloadi16 addruimm12:$addr)), (LHU_NM addruimm12:$addr)>;
+def : NMPat<(i32 (extloadi16 addrsimm9:$addr)), (LHUs9_NM addrsimm9:$addr)>;
+def : NMPat<(i32 (extloadi16 addrindexedlsl1:$addr)),
+            (LHUXS_NM addrindexedlsl1:$addr)>;
+def : NMPat<(i32 (extloadi16 addrindexed:$addr)), (LHUX_NM addrindexed:$addr)>;
 
 // Catching out-of-range immediate unaligned loads/stores.
-def : Pat<(i32 (NMUnalignedLW GPR32NM:$rs, GPR32NM:$src)),
-          (UALW_NM GPR32NM:$rs, 0, GPR32NM:$src)>, ISA_NANOMIPS;
-def : Pat<(NMUnalignedSW GPR32NM:$rt, GPR32NM:$rs),
-          (UASW_NM GPR32NM:$rt, GPR32NM:$rs, 0)>, ISA_NANOMIPS;
-def : Pat<(i32 (NMUnalignedLH GPR32NM:$rs, GPR32NM:$src)),
-          (UALH_NM GPR32NM:$rs, 0, GPR32NM:$src)>, ISA_NANOMIPS;
-def : Pat<(NMUnalignedSH GPR32NM:$rt, GPR32NM:$rs),
-          (UASH_NM GPR32NM:$rt, GPR32NM:$rs, 0)>, ISA_NANOMIPS;
+def : NMPat<(i32 (NMUnalignedLW GPR32NM:$rs, GPR32NM:$src)),
+            (UALW_NM GPR32NM:$rs, 0, GPR32NM:$src)>;
+def : NMPat<(NMUnalignedSW GPR32NM:$rt, GPR32NM:$rs),
+            (UASW_NM GPR32NM:$rt, GPR32NM:$rs, 0)>;
+def : NMPat<(i32 (NMUnalignedLH GPR32NM:$rs, GPR32NM:$src)),
+            (UALH_NM GPR32NM:$rs, 0, GPR32NM:$src)>;
+def : NMPat<(NMUnalignedSH GPR32NM:$rt, GPR32NM:$rs),
+            (UASH_NM GPR32NM:$rt, GPR32NM:$rs, 0)>;
 
 // Unaligned: Store zero peephole optimization.
-def : Pat<(NMUnalignedSW (i32 0), addrsimm9:$addr),
-          (UASW_NM ZERO_NM, addrsimm9:$addr)>, ISA_NANOMIPS;
-def : Pat<(NMUnalignedSH (i32 0), addrsimm9:$addr),
-          (UASH_NM ZERO_NM, addrsimm9:$addr)>, ISA_NANOMIPS;
-def : Pat<(NMUnalignedSW (i32 0), GPR32NM:$rs),
-          (UASW_NM ZERO_NM, GPR32NM:$rs, 0)>, ISA_NANOMIPS;
-def : Pat<(NMUnalignedSH (i32 0), GPR32NM:$rs),
-          (UASH_NM ZERO_NM, GPR32NM:$rs, 0)>, ISA_NANOMIPS;
+def : NMPat<(NMUnalignedSW (i32 0), addrsimm9:$addr),
+            (UASW_NM ZERO_NM, addrsimm9:$addr)>;
+def : NMPat<(NMUnalignedSH (i32 0), addrsimm9:$addr),
+            (UASH_NM ZERO_NM, addrsimm9:$addr)>;
+def : NMPat<(NMUnalignedSW (i32 0), GPR32NM:$rs),
+            (UASW_NM ZERO_NM, GPR32NM:$rs, 0)>;
+def : NMPat<(NMUnalignedSH (i32 0), GPR32NM:$rs),
+            (UASH_NM ZERO_NM, GPR32NM:$rs, 0)>;
 
 // GP-relative load.
-def : MipsPat<(i32 (load (add GP_NM, (MipsGPRel tglobaladdr:$in)))),
-              (LWGP_NM GP_NM, tglobaladdr:$in)>, ISA_NANOMIPS;
-def : MipsPat<(add GP_NM, (MipsGPRel tglobaladdr:$in)),
-              (ADDiu_NM GP_NM, tglobaladdr:$in)>, ISA_NANOMIPS;
-
+def : NMPat<(i32 (load (add GP_NM, (MipsGPRel tglobaladdr:$in)))),
+            (LWGP_NM GP_NM, tglobaladdr:$in)>;
+def : NMPat<(add GP_NM, (MipsGPRel tglobaladdr:$in)),
+            (ADDiu_NM GP_NM, tglobaladdr:$in)>;
 
 // Atomic load patterns.
-def : MipsPat<(atomic_load_8 addr:$a), (LB_NM addr:$a)>, ISA_NANOMIPS;
-def : MipsPat<(atomic_load_16 addr:$a), (LH_NM addr:$a)>, ISA_NANOMIPS;
-def : MipsPat<(atomic_load_32 addr:$a), (LW_NM addr:$a)>, ISA_NANOMIPS;
+def : NMPat<(atomic_load_8 addr:$a), (LB_NM addr:$a)>;
+def : NMPat<(atomic_load_16 addr:$a), (LH_NM addr:$a)>;
+def : NMPat<(atomic_load_32 addr:$a), (LW_NM addr:$a)>;
 
 // Atomic store patterns.
-def : MipsPat<(atomic_store_8 addr:$a, GPR32:$v), (SB_NM GPR32:$v, addr:$a)>,
-  ISA_NANOMIPS;
-def : MipsPat<(atomic_store_16 addr:$a, GPR32:$v), (SH_NM GPR32:$v, addr:$a)>,
-  ISA_NANOMIPS;
-def : MipsPat<(atomic_store_32 addr:$a, GPR32:$v), (SW_NM GPR32:$v, addr:$a)>,
-  ISA_NANOMIPS;
-
-
+def : NMPat<(atomic_store_8 addr:$a, GPR32:$v), (SB_NM GPR32:$v, addr:$a)>;
+def : NMPat<(atomic_store_16 addr:$a, GPR32:$v), (SH_NM GPR32:$v, addr:$a)>;
+def : NMPat<(atomic_store_32 addr:$a, GPR32:$v), (SW_NM GPR32:$v, addr:$a)>;
 
 // Conditional Moves
 def MOVZ_NM : InstNM<(outs GPR32NMOpnd:$rd),
@@ -624,39 +599,39 @@ def MOVN_NM : InstNM<(outs GPR32NMOpnd:$rd),
 
 multiclass MovzPats2NM<RegisterClass CRC, RegisterClass DRC,
                      Instruction MOVZInst, Instruction XORiOp> {
-  def : MipsPat<
-            (select (i32 (seteq CRC:$lhs, imm32ZExt12:$uimm12_nm)), DRC:$T, DRC:$F),
-            (MOVZInst DRC:$T, (XORiOp CRC:$lhs, imm32ZExt12:$uimm12_nm), DRC:$F)>;
+  def : NMPat<(select (i32 (seteq CRC:$lhs, imm32ZExt12:$uimm12_nm)), DRC:$T,
+                      DRC:$F),
+              (MOVZInst DRC:$T, (XORiOp CRC:$lhs, imm32ZExt12:$uimm12_nm),
+                        DRC:$F)>;
 }
 
 multiclass MovzPats0NM<RegisterClass CRC, RegisterClass DRC,
                        Instruction MOVZInst, Instruction SLTOp,
                        Instruction SLTuOp, Instruction SLTiOp,
                        Instruction SLTiuOp> {
-  def : MipsPat<(select (i32 (setge CRC:$lhs, CRC:$rhs)), DRC:$T, DRC:$F),
-                (MOVZInst DRC:$T, (SLTOp CRC:$lhs, CRC:$rhs), DRC:$F)>;
-  def : MipsPat<(select (i32 (setuge CRC:$lhs, CRC:$rhs)), DRC:$T, DRC:$F),
-                (MOVZInst DRC:$T, (SLTuOp CRC:$lhs, CRC:$rhs), DRC:$F)>;
-  def : MipsPat<(select (i32 (setge CRC:$lhs, imm32ZExt12:$rhs)), DRC:$T, DRC:$F),
-                (MOVZInst DRC:$T, (SLTiOp CRC:$lhs, imm32ZExt12:$rhs), DRC:$F)>;
-  def : MipsPat<(select (i32 (setuge CRC:$lh, imm32ZExt12:$rh)), DRC:$T, DRC:$F),
-                (MOVZInst DRC:$T, (SLTiuOp CRC:$lh, imm32ZExt12:$rh), DRC:$F)>;
-  def : MipsPat<(select (i32 (setle CRC:$lhs, CRC:$rhs)), DRC:$T, DRC:$F),
-                (MOVZInst DRC:$T, (SLTOp CRC:$rhs, CRC:$lhs), DRC:$F)>;
-  def : MipsPat<(select (i32 (setule CRC:$lhs, CRC:$rhs)), DRC:$T, DRC:$F),
-                (MOVZInst DRC:$T, (SLTuOp CRC:$rhs, CRC:$lhs), DRC:$F)>;
-  def : MipsPat<(select (i32 (setgt CRC:$lhs, immZExt12Plus1:$rhs)),
-                        DRC:$T, DRC:$F),
-                (MOVZInst DRC:$T, (SLTiOp CRC:$lhs, (Plus1 imm:$rhs)), DRC:$F)>;
-  def : MipsPat<(select (i32 (setugt CRC:$lhs, immZExt12Plus1:$rhs)),
-                        DRC:$T, DRC:$F),
-                (MOVZInst DRC:$T, (SLTiuOp CRC:$lhs, (Plus1 imm:$rhs)),
-                          DRC:$F)>;
+  def : NMPat<(select (i32 (setge CRC:$lhs, CRC:$rhs)), DRC:$T, DRC:$F),
+              (MOVZInst DRC:$T, (SLTOp CRC:$lhs, CRC:$rhs), DRC:$F)>;
+  def : NMPat<(select (i32 (setuge CRC:$lhs, CRC:$rhs)), DRC:$T, DRC:$F),
+              (MOVZInst DRC:$T, (SLTuOp CRC:$lhs, CRC:$rhs), DRC:$F)>;
+  def : NMPat<(select (i32 (setge CRC:$lhs, imm32ZExt12:$rhs)), DRC:$T, DRC:$F),
+              (MOVZInst DRC:$T, (SLTiOp CRC:$lhs, imm32ZExt12:$rhs), DRC:$F)>;
+  def : NMPat<(select (i32 (setuge CRC:$lh, imm32ZExt12:$rh)), DRC:$T, DRC:$F),
+              (MOVZInst DRC:$T, (SLTiuOp CRC:$lh, imm32ZExt12:$rh), DRC:$F)>;
+  def : NMPat<(select (i32 (setle CRC:$lhs, CRC:$rhs)), DRC:$T, DRC:$F),
+              (MOVZInst DRC:$T, (SLTOp CRC:$rhs, CRC:$lhs), DRC:$F)>;
+  def : NMPat<(select (i32 (setule CRC:$lhs, CRC:$rhs)), DRC:$T, DRC:$F),
+              (MOVZInst DRC:$T, (SLTuOp CRC:$rhs, CRC:$lhs), DRC:$F)>;
+  def : NMPat<(select (i32 (setgt CRC:$lhs, immZExt12Plus1:$rhs)),
+                      DRC:$T, DRC:$F),
+              (MOVZInst DRC:$T, (SLTiOp CRC:$lhs, (Plus1 imm:$rhs)), DRC:$F)>;
+  def : NMPat<(select (i32 (setugt CRC:$lhs, immZExt12Plus1:$rhs)),
+                      DRC:$T, DRC:$F),
+              (MOVZInst DRC:$T, (SLTiuOp CRC:$lhs, (Plus1 imm:$rhs)), DRC:$F)>;
 }
 
 // Use MIPS conditional instruction definitions
 defm : MovzPats0NM<GPR32NM, GPR32NM, MOVZ_NM, SLT_NM, SLTU_NM, SLTI_NM,
-                   SLTIU_NM>, ISA_NANOMIPS;
+                   SLTIU_NM>;
 defm : MovzPats1<GPR32NM, GPR32NM, MOVZ_NM, XOR_NM>, ISA_NANOMIPS;
-defm : MovzPats2NM<GPR32NM, GPR32NM, MOVZ_NM, XORI_NM>, ISA_NANOMIPS;
+defm : MovzPats2NM<GPR32NM, GPR32NM, MOVZ_NM, XORI_NM>;
 defm : MovnPats<GPR32NM, GPR32NM, MOVN_NM, XOR_NM>, ISA_NANOMIPS;
