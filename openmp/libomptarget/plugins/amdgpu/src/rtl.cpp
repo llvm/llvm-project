@@ -24,8 +24,7 @@
 #include <unordered_map>
 #include <vector>
 
-// Header from IMPL interface
-#include "impl_interop_hsa.h"
+#include "interop_hsa.h"
 #include "rt.h"
 
 #include "get_elf_mach_gfx_name.h"
@@ -86,16 +85,6 @@ int print_kernel_trace;
 #endif
 
 #include "elf_common.h"
-
-namespace core {
-hsa_status_t RegisterModuleFromMemory(
-    std::map<std::string, atl_kernel_info_t> &KernelInfo,
-    std::map<std::string, atl_symbol_info_t> &SymbolInfoTable, void *, size_t,
-    hsa_agent_t agent,
-    hsa_status_t (*on_deserialized_data)(void *data, size_t size,
-                                         void *cb_state),
-    void *cb_state, std::vector<hsa_executable_t> &HSAExecutables);
-}
 
 namespace hsa {
 template <typename C> hsa_status_t iterate_agents(C cb) {
@@ -1263,11 +1252,11 @@ const Elf64_Sym *elf_lookup(Elf *elf, char *base, Elf64_Shdr *section_hash,
   return nullptr;
 }
 
-typedef struct symbol_info {
+struct symbol_info {
   void *addr = nullptr;
   uint32_t size = UINT32_MAX;
   uint32_t sh_type = SHT_NULL;
-} symbol_info;
+};
 
 int get_symbol_info_without_loading(Elf *elf, char *base, const char *symname,
                                     symbol_info *res) {
@@ -1890,6 +1879,7 @@ void *__tgt_rtl_data_alloc(int device_id, int64_t size, void *, int32_t kind) {
   hsa_status_t err = hsa_amd_memory_pool_allocate(MemoryPool, size, 0, &ptr);
   DP("Tgt alloc data %ld bytes, (tgt:%016llx).\n", size,
      (long long unsigned)(Elf64_Addr)ptr);
+  ptr = (err == HSA_STATUS_SUCCESS) ? ptr : NULL;
   return ptr;
 }
 

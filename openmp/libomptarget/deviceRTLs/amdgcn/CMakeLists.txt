@@ -98,6 +98,11 @@ else()
   set(HIPINC ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../hip-on-vdi/include)
 endif()
 
+
+libomptarget_say("ROCDL_INC_OCKL = ${ROCDL_INC_OCKL}")
+libomptarget_say("ROCDL_INC_OCML = ${ROCDL_INC_OCML}")
+libomptarget_say("ROCDL_INC_IRIF = ${ROCDL_INC_IRIF}")
+
 project(omptarget-amdgcn)
 
 add_custom_target(omptarget-amdgcn ALL)
@@ -194,7 +199,7 @@ macro(add_ocl_bc_library dir)
 
   add_custom_command(
     OUTPUT linkout.ocl.${mcpu}.bc
-    COMMAND ${LLVM_INSTALL_PREFIX}/bin/llvm-link ${cl_bc_files} -o linkout.ocl.${mcpu}.bc
+    COMMAND ${LINK_TOOL} ${cl_bc_files} -o linkout.ocl.${mcpu}.bc
     DEPENDS ${cl_bc_files}
     )
   list(APPEND bc_files linkout.ocl.${mcpu}.bc)
