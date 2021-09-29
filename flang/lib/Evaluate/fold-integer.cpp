@@ -195,42 +195,58 @@ static Expr<T> FoldCount(FoldingContext &context, FunctionRef<T> &&ref) {
   return Expr<T>{std::move(ref)};
 }
 
-// FINDLOC()
-class FindlocHelper {
+// FINDLOC(), MAXLOC(), & MINLOC()
+enum class WhichLocation { Findloc, Maxloc, Minloc };
+template <WhichLocation WHICH> class LocationHelper {
 public:
-  FindlocHelper(
+  LocationHelper(
       DynamicType &&type, ActualArguments &arg, FoldingContext &context)
       : type_{type}, arg_{arg}, context_{context} {}
   using Result = std::optional<Constant<SubscriptInteger>>;
-  using Types = AllIntrinsicTypes;
+  using Types = std::conditional_t<WHICH == WhichLocation::Findloc,
+      AllIntrinsicTypes, RelationalTypes>;
 
   template <typename T> Result Test() const {
     if (T::category != type_.category() || T::kind != type_.kind()) {
       return std::nullopt;
     }
-    CHECK(arg_.size() == 6);
+    CHECK(arg_.size() == (WHICH == WhichLocation::Findloc ? 6 : 5));
     Folder<T> folder{context_};
     Constant<T> *array{folder.Folding(arg_[0])};
-    Constant<T> *value{folder.Folding(arg_[1])};
-    if (!array || !value) {
+    if (!array) {
       return std::nullopt;
+    }
+    std::optional<Constant<T>> value;
+    if constexpr (WHICH == WhichLocation::Findloc) {
+      if (const Constant<T> *p{folder.Folding(arg_[1])}) {
+        value.emplace(*p);
+      } else {
+        return std::nullopt;
+      }
     }
     std::optional<int> dim;
     Constant<LogicalResult> *mask{
-        GetReductionMASK(arg_[3], array->shape(), context_)};
-    if ((!mask && arg_[3]) ||
-        !CheckReductionDIM(dim, context_, arg_, 2, array->Rank())) {
+        GetReductionMASK(arg_[maskArg], array->shape(), context_)};
+    if ((!mask && arg_[maskArg]) ||
+        !CheckReductionDIM(dim, context_, arg_, dimArg, array->Rank())) {
       return std::nullopt;
     }
     bool back{false};
-    if (arg_[5]) {
-      const auto *backConst{Folder<LogicalResult>{context_}.Folding(arg_[5])};
+    if (arg_[backArg]) {
+      const auto *backConst{
+          Folder<LogicalResult>{context_}.Folding(arg_[backArg])};
       if (backConst) {
         back = backConst->GetScalarValue().value().IsTrue();
       } else {
         return std::nullopt;
       }
     }
+    const RelationalOperator relation{WHICH == WhichLocation::Findloc
+            ? RelationalOperator::EQ
+            : WHICH == WhichLocation::Maxloc
+            ? (back ? RelationalOperator::GE : RelationalOperator::GT)
+            : back ? RelationalOperator::LE
+                   : RelationalOperator::LT};
     // Use lower bounds of 1 exclusively.
     array->SetLowerBoundsToOne();
     ConstantSubscripts at{array->lbounds()}, maskAt, resultIndices, resultShape;
@@ -252,10 +268,11 @@ public:
       ConstantSubscript n{GetSize(resultShape)};
       for (ConstantSubscript j{0}; j < n; ++j) {
         ConstantSubscript hit{array->lbounds()[zbDim] - 1};
+        value.reset();
         for (ConstantSubscript k{0}; k < dimLength;
              ++k, ++at[zbDim], mask && ++maskAt[zbDim]) {
           if ((!mask || mask->At(maskAt).IsTrue()) &&
-              IsHit(array->At(at), *value)) {
+              IsHit(array->At(at), value, relation)) {
             hit = at[zbDim];
             if (!back) {
               break;
@@ -279,7 +296,7 @@ public:
       for (ConstantSubscript j{0}; j < n; ++j, array->IncrementSubscripts(at),
            mask && mask->IncrementSubscripts(maskAt)) {
         if ((!mask || mask->At(maskAt).IsTrue()) &&
-            IsHit(array->At(at), *value)) {
+            IsHit(array->At(at), value, relation)) {
           resultIndices = at;
           if (!back) {
             break;
@@ -297,43 +314,57 @@ public:
 
 private:
   template <typename T>
-  bool IsHit(typename Constant<T>::Element element, Constant<T> value) const {
+  bool IsHit(typename Constant<T>::Element element,
+      std::optional<Constant<T>> &value,
+      [[maybe_unused]] RelationalOperator relation) const {
     std::optional<Expr<LogicalResult>> cmp;
-    if constexpr (T::category == TypeCategory::Logical) {
-      // array(at) .EQV. value?
-      cmp.emplace(
-          ConvertToType<LogicalResult>(Expr<T>{LogicalOperation<T::kind>{
-              LogicalOperator::Eqv, Expr<T>{Constant<T>{std::move(element)}},
-              Expr<T>{std::move(value)}}}));
-    } else { // array(at) .EQ. value?
-      cmp.emplace(PackageRelation(RelationalOperator::EQ,
-          Expr<T>{Constant<T>{std::move(element)}}, Expr<T>{std::move(value)}));
+    if (value) {
+      if constexpr (T::category == TypeCategory::Logical) {
+        // array(at) .EQV. value?
+        static_assert(WHICH == WhichLocation::Findloc);
+        cmp.emplace(
+            ConvertToType<LogicalResult>(Expr<T>{LogicalOperation<T::kind>{
+                LogicalOperator::Eqv, Expr<T>{Constant<T>{std::move(element)}},
+                Expr<T>{Constant<T>{*value}}}}));
+      } else { // compare array(at) to value
+        cmp.emplace(
+            PackageRelation(relation, Expr<T>{Constant<T>{std::move(element)}},
+                Expr<T>{Constant<T>{*value}}));
+      }
+      Expr<LogicalResult> folded{Fold(context_, std::move(*cmp))};
+      return GetScalarConstantValue<LogicalResult>(folded).value().IsTrue();
+    } else { // first unmasked element seen for MAXLOC/MINLOC
+      value.emplace(std::move(element));
+      return true;
     }
-    Expr<LogicalResult> folded{Fold(context_, std::move(*cmp))};
-    return GetScalarConstantValue<LogicalResult>(folded).value().IsTrue();
   }
+
+  static constexpr int dimArg{WHICH == WhichLocation::Findloc ? 2 : 1};
+  static constexpr int maskArg{dimArg + 1};
+  static constexpr int backArg{maskArg + 2};
 
   DynamicType type_;
   ActualArguments &arg_;
   FoldingContext &context_;
 };
 
-static std::optional<Constant<SubscriptInteger>> FoldFindlocCall(
+template <WhichLocation which>
+static std::optional<Constant<SubscriptInteger>> FoldLocationCall(
     ActualArguments &arg, FoldingContext &context) {
-  CHECK(arg.size() == 6);
   if (arg[0]) {
     if (auto type{arg[0]->GetType()}) {
-      return common::SearchTypes(FindlocHelper{std::move(*type), arg, context});
+      return common::SearchTypes(
+          LocationHelper<which>{std::move(*type), arg, context});
     }
   }
   return std::nullopt;
 }
 
-template <typename T>
-static Expr<T> FoldFindloc(FoldingContext &context, FunctionRef<T> &&ref) {
+template <WhichLocation which, typename T>
+static Expr<T> FoldLocation(FoldingContext &context, FunctionRef<T> &&ref) {
   static_assert(T::category == TypeCategory::Integer);
   if (std::optional<Constant<SubscriptInteger>> found{
-          FoldFindlocCall(ref.arguments(), context)}) {
+          FoldLocationCall<which>(ref.arguments(), context)}) {
     return Expr<T>{Fold(
         context, ConvertToType<T>(Expr<SubscriptInteger>{std::move(*found)}))};
   } else {
@@ -451,7 +482,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
       DIE("exponent argument must be real");
     }
   } else if (name == "findloc") {
-    return FoldFindloc<T>(context, std::move(funcRef));
+    return FoldLocation<WhichLocation::Findloc, T>(context, std::move(funcRef));
   } else if (name == "huge") {
     return Expr<T>{Scalar<T>::HUGE()};
   } else if (name == "iachar" || name == "ichar") {
@@ -661,6 +692,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           },
           sx->u);
     }
+  } else if (name == "maxloc") {
+    return FoldLocation<WhichLocation::Maxloc, T>(context, std::move(funcRef));
   } else if (name == "maxval") {
     return FoldMaxvalMinval<T>(context, std::move(funcRef),
         RelationalOperator::GT, T::Scalar::Least());
@@ -669,6 +702,10 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   } else if (name == "merge_bits") {
     return FoldElementalIntrinsic<T, T, T, T>(
         context, std::move(funcRef), &Scalar<T>::MERGE_BITS);
+  } else if (name == "min") {
+    return FoldMINorMAX(context, std::move(funcRef), Ordering::Less);
+  } else if (name == "min0" || name == "min1") {
+    return RewriteSpecificMINorMAX(context, std::move(funcRef));
   } else if (name == "minexponent") {
     if (auto *sx{UnwrapExpr<Expr<SomeReal>>(args[0])}) {
       return std::visit(
@@ -678,10 +715,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           },
           sx->u);
     }
-  } else if (name == "min") {
-    return FoldMINorMAX(context, std::move(funcRef), Ordering::Less);
-  } else if (name == "min0" || name == "min1") {
-    return RewriteSpecificMINorMAX(context, std::move(funcRef));
+  } else if (name == "minloc") {
+    return FoldLocation<WhichLocation::Minloc, T>(context, std::move(funcRef));
   } else if (name == "minval") {
     return FoldMaxvalMinval<T>(
         context, std::move(funcRef), RelationalOperator::LT, T::Scalar::HUGE());
@@ -853,8 +888,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   } else if (name == "ubound") {
     return UBOUND(context, std::move(funcRef));
   }
-  // TODO: dot_product, ibits, image_status, ishftc,
-  // matmul, maxloc, minloc, sign, transfer
+  // TODO: dot_product, ibits, ishftc, matmul, sign, transfer
   return Expr<T>{std::move(funcRef)};
 }
 

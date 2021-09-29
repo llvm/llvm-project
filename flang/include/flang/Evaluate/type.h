@@ -335,8 +335,10 @@ using LogicalTypes = CategoryTypes<TypeCategory::Logical>;
 
 using FloatingTypes = common::CombineTuples<RealTypes, ComplexTypes>;
 using NumericTypes = common::CombineTuples<IntegerTypes, FloatingTypes>;
-using RelationalTypes = common::CombineTuples<NumericTypes, CharacterTypes>;
-using AllIntrinsicTypes = common::CombineTuples<RelationalTypes, LogicalTypes>;
+using RelationalTypes =
+    common::CombineTuples<IntegerTypes, RealTypes, CharacterTypes>;
+using AllIntrinsicTypes =
+    common::CombineTuples<NumericTypes, CharacterTypes, LogicalTypes>;
 using LengthlessIntrinsicTypes =
     common::CombineTuples<NumericTypes, LogicalTypes>;
 

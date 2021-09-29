@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO: DOT_PRODUCT, NORM2, MAXLOC, MINLOC, PARITY
+// TODO: DOT_PRODUCT, NORM2, PARITY
 
 #ifndef FORTRAN_EVALUATE_FOLD_REDUCTION_H_
 #define FORTRAN_EVALUATE_FOLD_REDUCTION_H_
