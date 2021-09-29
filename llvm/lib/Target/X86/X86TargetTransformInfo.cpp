@@ -5064,6 +5064,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX2(
   //
   static const CostTblEntry AVX2InterleavedLoadTbl[] = {
       {2, MVT::v2i8, 2},  // (load 4i8 and) deinterleave into 2 x 2i8
+      {2, MVT::v4i8, 2},  // (load 8i8 and) deinterleave into 2 x 4i8
 
       {2, MVT::v2i16, 2}, // (load 4i16 and) deinterleave into 2 x 2i16
       {2, MVT::v4i16, 2}, // (load 8i16 and) deinterleave into 2 x 4i16
@@ -5103,6 +5104,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX2(
 
   static const CostTblEntry AVX2InterleavedStoreTbl[] = {
       {2, MVT::v2i8, 1}, // interleave 2 x 2i8 into 4i8 (and store)
+      {2, MVT::v4i8, 1}, // interleave 2 x 4i8 into 8i8 (and store)
 
       {2, MVT::v2i16, 1}, // interleave 2 x 2i16 into 4i16 (and store)
       {2, MVT::v4i16, 1}, // interleave 2 x 4i16 into 8i16 (and store)
