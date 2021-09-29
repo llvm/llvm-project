@@ -2,6 +2,11 @@
 
 @SERIALIZED_LIT_PARAMS@
 
+#
+# This testing configuration handles running the test suite against LLVM's libc++
+# using a shared library.
+#
+
 LIBCXX_ROOT = "@LIBCXX_SOURCE_DIR@"
 INSTALL_ROOT = "@CMAKE_BINARY_DIR@"
 COMPILER = "@CMAKE_CXX_COMPILER@"
@@ -22,7 +27,7 @@ import libcxx.test.newconfig
 import libcxx.test.params
 
 # Configure basic properties of the test suite
-config.name = 'libcxx-trunk-static'
+config.name = 'llvm-libc++-shared'
 config.test_source_root = os.path.join(LIBCXX_ROOT, 'test')
 config.test_format = libcxx.test.format.CxxStandardLibraryTest()
 config.recursiveExpansionLimit = 10
@@ -41,7 +46,7 @@ config.substitutions.append(('%{compile_flags}',
         os.path.join(LIBCXX_ROOT, 'test', 'support'))
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib++ -L {} -lc++ -lc++abi -pthread'.format(
+    '-nostdlib++ -L {0} -lc++ -Wl,-rpath,{0} -pthread'.format(
         os.path.join(INSTALL_ROOT, LIBRARY_DIR))
 ))
 config.substitutions.append(('%{exec}',
