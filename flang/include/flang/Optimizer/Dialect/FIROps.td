@@ -2777,56 +2777,25 @@ def fir_StringLitOp : fir_Op<"string_lit", [NoSideEffect]> {
 
   let results = (outs fir_CharacterType);
 
-  let parser = [{
-    auto &builder = parser.getBuilder();
-    mlir::Attribute val;
-    mlir::NamedAttrList attrs;
-    llvm::SMLoc trailingTypeLoc;
-    if (parser.parseAttribute(val, "fake", attrs))
-      return mlir::failure();
-    if (auto v = val.dyn_cast<mlir::StringAttr>())
-      result.attributes.push_back(builder.getNamedAttr(value(), v));
-    else if (auto v = val.dyn_cast<mlir::ArrayAttr>())
-      result.attributes.push_back(builder.getNamedAttr(xlist(), v));
-    else
-      return parser.emitError(parser.getCurrentLocation(),
-                              "found an invalid constant");
-    mlir::IntegerAttr sz;
-    mlir::Type type;
-    if (parser.parseLParen() ||
-        parser.parseAttribute(sz, size(), result.attributes) ||
-        parser.parseRParen() ||
-        parser.getCurrentLocation(&trailingTypeLoc) ||
-        parser.parseColonType(type))
-      return mlir::failure();
-    auto charTy = type.dyn_cast<fir::CharacterType>();
-    if (!charTy)
-      return parser.emitError(trailingTypeLoc,
-                              "must have character type");
-    type = fir::CharacterType::get(builder.getContext(), charTy.getFKind(),
-                                   sz.getInt());
-    if (!type || parser.addTypesToList(type, result.types))
-      return mlir::failure();
-    return mlir::success();
-  }];
+  let parser = "return parseStringLitOp(parser, result);";
 
-  let printer = [{
-    p << ' ' << getValue() << '(';
-    p << getSize().cast<mlir::IntegerAttr>().getValue() << ") : ";
-    p.printType(getType());
-  }];
+  let printer = "::print(p, *this);";
 
-  let verifier = [{
-    if (getSize().cast<mlir::IntegerAttr>().getValue().isNegative())
-      return emitOpError("size must be non-negative");
-    if (auto xl = (*this)->getAttr(xlist())) {
-      auto xList = xl.cast<mlir::ArrayAttr>();
-      for (auto a : xList)
-        if (!a.isa<mlir::IntegerAttr>())
-	    return emitOpError("values in list must be integers");
-    }
-    return mlir::success();
-  }];
+  let builders = [
+    OpBuilder<(ins "fir::CharacterType":$inType,
+      "llvm::StringRef":$value,
+      CArg<"llvm::Optional<int64_t>", "{}">:$len)>,
+    OpBuilder<(ins "fir::CharacterType":$inType,
+      "llvm::ArrayRef<char>":$xlist,
+      CArg<"llvm::Optional<int64_t>", "{}">:$len)>,
+    OpBuilder<(ins "fir::CharacterType":$inType,
+      "llvm::ArrayRef<char16_t>":$xlist,
+      CArg<"llvm::Optional<int64_t>", "{}">:$len)>,
+    OpBuilder<(ins "fir::CharacterType":$inType,
+      "llvm::ArrayRef<char32_t>":$xlist,
+      CArg<"llvm::Optional<int64_t>", "{}">:$len)>];
+
+  let verifier = "return ::verify(*this);";
 
   let extraClassDeclaration = [{
     static constexpr const char *size() { return "size"; }
