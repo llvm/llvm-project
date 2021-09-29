@@ -1537,7 +1537,7 @@ static void emitDiagTable(std::map<std::string, GroupInfo> &DiagsInGroup,
       OS << "0";
     }
 
-    OS << " )\n";
+    OS << ")\n";
   }
   OS << "#endif // DIAG_ENTRY\n\n";
 }
