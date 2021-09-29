@@ -1849,16 +1849,17 @@ def fir_ArrayCoorOp : fir_Op<"array_coor",
     Optional<AnyShapeOrShiftType>:$shape,
     Optional<fir_SliceType>:$slice,
     Variadic<AnyCoordinateType>:$indices,
-    Variadic<AnyIntegerType>:$lenParams
+    Variadic<AnyIntegerType>:$typeparams
   );
 
   let results = (outs fir_ReferenceType);
 
   let assemblyFormat = [{
-    $memref (`(`$shape^`)`)? (`[`$slice^`]`)? $indices (`typeparams` $lenParams^)? attr-dict `:` functional-type(operands, results)
+    $memref (`(`$shape^`)`)? (`[`$slice^`]`)? $indices (`typeparams`
+      $typeparams^)? attr-dict `:` functional-type(operands, results)
   }];
 
-  let verifier = [{ return ::verify(*this); }];
+  let verifier = "return ::verify(*this);";
 }
 
 def fir_CoordinateOp : fir_Op<"coordinate_of", [NoSideEffect]> {
