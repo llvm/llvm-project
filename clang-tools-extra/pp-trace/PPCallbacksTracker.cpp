@@ -78,6 +78,12 @@ static const char *const PragmaMessageKindStrings[] = {
   "PMK_Message", "PMK_Warning", "PMK_Error"
 };
 
+// PragmaWarningSpecifier strings.
+static const char *const PragmaWarningSpecifierStrings[] = {
+    "PWS_Default", "PWS_Disable", "PWS_Error",  "PWS_Once",   "PWS_Suppress",
+    "PWS_Level1",  "PWS_Level2",  "PWS_Level3", "PWS_Level4",
+};
+
 // ConditionValueKind strings.
 static const char *const ConditionValueKindStrings[] = {
   "CVK_NotEvaluated", "CVK_False", "CVK_True"
@@ -267,11 +273,11 @@ void PPCallbacksTracker::PragmaOpenCLExtension(SourceLocation NameLoc,
 
 // Callback invoked when a #pragma warning directive is read.
 void PPCallbacksTracker::PragmaWarning(SourceLocation Loc,
-                                       llvm::StringRef WarningSpec,
+                                       PragmaWarningSpecifier WarningSpec,
                                        llvm::ArrayRef<int> Ids) {
   beginCallback("PragmaWarning");
   appendArgument("Loc", Loc);
-  appendArgument("WarningSpec", WarningSpec);
+  appendArgument("WarningSpec", WarningSpec, PragmaWarningSpecifierStrings);
 
   std::string Str;
   llvm::raw_string_ostream SS(Str);

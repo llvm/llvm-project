@@ -86,15 +86,15 @@
 // CHECK-NEXT:   Introducer: PIK_HashPragma
 // CHECK-NEXT: - Callback: PragmaWarning
 // CHECK-NEXT:   Loc: "{{.*}}{{[/\\]}}pp-trace-pragma-ms.cpp:17:9"
-// CHECK-NEXT:   WarningSpec: disable
+// CHECK-NEXT:   WarningSpec: PWS_Disable
 // CHECK-NEXT:   Ids: [1, 2, 3]
 // CHECK-NEXT: - Callback: PragmaWarning
 // CHECK-NEXT:   Loc: "{{.*}}{{[/\\]}}pp-trace-pragma-ms.cpp:17:9"
-// CHECK-NEXT:   WarningSpec: error
+// CHECK-NEXT:   WarningSpec: PWS_Error
 // CHECK-NEXT:   Ids: [4, 5, 6]
 // CHECK-NEXT: - Callback: PragmaWarning
 // CHECK-NEXT:   Loc: "{{.*}}{{[/\\]}}pp-trace-pragma-ms.cpp:17:9"
-// CHECK-NEXT:   WarningSpec: suppress
+// CHECK-NEXT:   WarningSpec: PWS_Suppress
 // CHECK-NEXT:   Ids: [7, 8, 9]
 // CHECK-NEXT: - Callback: EndOfMainFile
 // CHECK-NEXT: ...

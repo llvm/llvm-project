@@ -1175,7 +1175,7 @@ void TargetPassConfig::addMachinePasses() {
   // Run post-ra passes.
   addPostRegAlloc();
 
-  addPass(&RemoveRedundantDebugValuesID, false);
+  addPass(&RemoveRedundantDebugValuesID);
 
   addPass(&FixupStatepointCallerSavedID);
 

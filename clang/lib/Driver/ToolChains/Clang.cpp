@@ -795,11 +795,6 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
   }
 
   if (TC.getTriple().isOSAIX()) {
-    if (PGOGenerateArg)
-      if (!D.isUsingLTO(false /*IsDeviceOffloadAction */) ||
-          D.getLTOMode() != LTOK_Full)
-        D.Diag(clang::diag::err_drv_argument_only_allowed_with)
-            << PGOGenerateArg->getSpelling() << "-flto";
     if (ProfileGenerateArg)
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << ProfileGenerateArg->getSpelling() << TC.getTriple().str();
