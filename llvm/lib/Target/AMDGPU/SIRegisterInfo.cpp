@@ -2166,14 +2166,6 @@ bool SIRegisterInfo::isSGPRReg(const MachineRegisterInfo &MRI,
   return isSGPRClass(RC);
 }
 
-bool SIRegisterInfo::hasVGPRs(const TargetRegisterClass *RC) const {
-  return RC->TSFlags & SIRCFlags::HasVGPR;
-}
-
-bool SIRegisterInfo::hasAGPRs(const TargetRegisterClass *RC) const {
-  return RC->TSFlags & SIRCFlags::HasAGPR;
-}
-
 const TargetRegisterClass *
 SIRegisterInfo::getEquivalentVGPRClass(const TargetRegisterClass *SRC) const {
   unsigned Size = getRegSizeInBits(*SRC);
