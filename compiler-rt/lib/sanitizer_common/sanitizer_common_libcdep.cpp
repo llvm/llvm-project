@@ -52,8 +52,7 @@ void *BackgroundThread(void *arg) {
       if (stack_depot_stats) {
         if (prev_reported_stack_depot_size * 11 / 10 <
             stack_depot_stats->allocated) {
-          Printf("%s: StackDepot: %zd ids; %zdM allocated\n",
-                 SanitizerToolName,
+          Printf("%s: StackDepot: %zd ids; %zdM allocated\n", SanitizerToolName,
                  stack_depot_stats->n_uniq_ids,
                  stack_depot_stats->allocated >> 20);
           prev_reported_stack_depot_size = stack_depot_stats->allocated;
