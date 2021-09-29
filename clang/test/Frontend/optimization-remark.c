@@ -13,8 +13,8 @@
 //
 // Check that we can override -Rpass= with -Rno-pass.
 // RUN: %clang_cc1 %s -Rpass=inline -fno-experimental-new-pass-manager -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=CHECK-REMARKS
-// RUN: %clang_cc1 %s -Rpass=inline -Rno-pass -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=CHECK-NO-REMARKS
-// RUN: %clang_cc1 %s -Rpass=inline -Rno-everything -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=CHECK-NO-REMARKS
+// RUN: %clang_cc1 %s -Rpass=inline -fexperimental-new-pass-manager -Rno-pass -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=CHECK-NO-REMARKS
+// RUN: %clang_cc1 %s -Rpass=inline -fexperimental-new-pass-manager -Rno-everything -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=CHECK-NO-REMARKS
 // RUN: %clang_cc1 %s -Rpass=inline -fno-experimental-new-pass-manager -Rno-everything -Reverything -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=CHECK-REMARKS
 //
 // The inliner for the new PM does not seem to be enabled at O0, but we still
