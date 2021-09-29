@@ -25,14 +25,11 @@ define i64 @constant_fold_ptrtoint_gep_nonzero() {
 ; LLPARSER-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_nonzero() {
 ; LLPARSER-NEXT:    ret i64 ptrtoint (i32 addrspace(1)* getelementptr (i32, i32 addrspace(1)* null, i64 1234) to i64)
 ;
-; INTEGRAL-INSTSIMPLIFY-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_nonzero() {
-; INTEGRAL-INSTSIMPLIFY-NEXT:    ret i64 ptrtoint (i32 addrspace(1)* getelementptr (i32, i32 addrspace(1)* null, i64 1234) to i64)
+; INSTSIMPLIFY-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_nonzero() {
+; INSTSIMPLIFY-NEXT:    ret i64 ptrtoint (i32 addrspace(1)* getelementptr (i32, i32 addrspace(1)* null, i64 1234) to i64)
 ;
-; INTEGRAL-INSTCOMBINE-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_nonzero() {
-; INTEGRAL-INSTCOMBINE-NEXT:    ret i64 4936
-;
-; NONINTEGRAL-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_nonzero() {
-; NONINTEGRAL-NEXT:    ret i64 ptrtoint (i32 addrspace(1)* getelementptr (i32, i32 addrspace(1)* null, i64 1234) to i64)
+; INSTCOMBINE-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_nonzero() {
+; INSTCOMBINE-NEXT:    ret i64 4936
 ;
   ret i64 ptrtoint (i32 addrspace(1)* getelementptr (i32, i32 addrspace(1)* null, i64 1234) to i64)
 }
@@ -51,14 +48,11 @@ define i64 @constant_fold_ptrtoint_gep_nonzero_inbounds() {
 ; LLPARSER-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_nonzero_inbounds() {
 ; LLPARSER-NEXT:    ret i64 ptrtoint (i32 addrspace(1)* getelementptr inbounds (i32, i32 addrspace(1)* null, i64 1234) to i64)
 ;
-; INTEGRAL-INSTSIMPLIFY-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_nonzero_inbounds() {
-; INTEGRAL-INSTSIMPLIFY-NEXT:    ret i64 ptrtoint (i32 addrspace(1)* getelementptr inbounds (i32, i32 addrspace(1)* null, i64 1234) to i64)
+; INSTSIMPLIFY-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_nonzero_inbounds() {
+; INSTSIMPLIFY-NEXT:    ret i64 ptrtoint (i32 addrspace(1)* getelementptr inbounds (i32, i32 addrspace(1)* null, i64 1234) to i64)
 ;
-; INTEGRAL-INSTCOMBINE-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_nonzero_inbounds() {
-; INTEGRAL-INSTCOMBINE-NEXT:    ret i64 4936
-;
-; NONINTEGRAL-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_nonzero_inbounds() {
-; NONINTEGRAL-NEXT:    ret i64 ptrtoint (i32 addrspace(1)* getelementptr inbounds (i32, i32 addrspace(1)* null, i64 1234) to i64)
+; INSTCOMBINE-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_nonzero_inbounds() {
+; INSTCOMBINE-NEXT:    ret i64 4936
 ;
   ret i64 ptrtoint (i32 addrspace(1)* getelementptr inbounds (i32, i32 addrspace(1)* null, i64 1234) to i64)
 }
@@ -80,50 +74,35 @@ define void @constant_fold_ptrtoint_of_gep_of_nullgep() {
 ; LLPARSER-NEXT:    call void @use_i64(i64 0)
 ; LLPARSER-NEXT:    ret void
 ;
-; INTEGRAL-INSTSIMPLIFY-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_of_gep_of_nullgep() {
-; INTEGRAL-INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; INTEGRAL-INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; INTEGRAL-INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; INTEGRAL-INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; INTEGRAL-INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; INTEGRAL-INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; INTEGRAL-INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; INTEGRAL-INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; INTEGRAL-INSTSIMPLIFY-NEXT:    call void @use_i64(i64 0)
-; INTEGRAL-INSTSIMPLIFY-NEXT:    call void @use_i64(i64 0)
-; INTEGRAL-INSTSIMPLIFY-NEXT:    call void @use_i64(i64 0)
-; INTEGRAL-INSTSIMPLIFY-NEXT:    call void @use_i64(i64 0)
-; INTEGRAL-INSTSIMPLIFY-NEXT:    ret void
+; INSTSIMPLIFY-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_of_gep_of_nullgep() {
+; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 1234) to i64))
+; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 1234) to i64))
+; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 1234) to i64))
+; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 1234) to i64))
+; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 1234) to i64))
+; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 1234) to i64))
+; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 1234) to i64))
+; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 1234) to i64))
+; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 0)
+; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 0)
+; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 0)
+; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 0)
+; INSTSIMPLIFY-NEXT:    ret void
 ;
-; INTEGRAL-INSTCOMBINE-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_of_gep_of_nullgep() {
-; INTEGRAL-INSTCOMBINE-NEXT:    call void @use_i64(i64 1234)
-; INTEGRAL-INSTCOMBINE-NEXT:    call void @use_i64(i64 1234)
-; INTEGRAL-INSTCOMBINE-NEXT:    call void @use_i64(i64 1234)
-; INTEGRAL-INSTCOMBINE-NEXT:    call void @use_i64(i64 1234)
-; INTEGRAL-INSTCOMBINE-NEXT:    call void @use_i64(i64 1234)
-; INTEGRAL-INSTCOMBINE-NEXT:    call void @use_i64(i64 1234)
-; INTEGRAL-INSTCOMBINE-NEXT:    call void @use_i64(i64 1234)
-; INTEGRAL-INSTCOMBINE-NEXT:    call void @use_i64(i64 1234)
-; INTEGRAL-INSTCOMBINE-NEXT:    call void @use_i64(i64 0)
-; INTEGRAL-INSTCOMBINE-NEXT:    call void @use_i64(i64 0)
-; INTEGRAL-INSTCOMBINE-NEXT:    call void @use_i64(i64 0)
-; INTEGRAL-INSTCOMBINE-NEXT:    call void @use_i64(i64 0)
-; INTEGRAL-INSTCOMBINE-NEXT:    ret void
-;
-; NONINTEGRAL-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_of_gep_of_nullgep() {
-; NONINTEGRAL-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; NONINTEGRAL-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; NONINTEGRAL-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; NONINTEGRAL-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; NONINTEGRAL-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; NONINTEGRAL-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; NONINTEGRAL-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; NONINTEGRAL-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; NONINTEGRAL-NEXT:    call void @use_i64(i64 0)
-; NONINTEGRAL-NEXT:    call void @use_i64(i64 0)
-; NONINTEGRAL-NEXT:    call void @use_i64(i64 0)
-; NONINTEGRAL-NEXT:    call void @use_i64(i64 0)
-; NONINTEGRAL-NEXT:    ret void
+; INSTCOMBINE-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_of_gep_of_nullgep() {
+; INSTCOMBINE-NEXT:    call void @use_i64(i64 1234)
+; INSTCOMBINE-NEXT:    call void @use_i64(i64 1234)
+; INSTCOMBINE-NEXT:    call void @use_i64(i64 1234)
+; INSTCOMBINE-NEXT:    call void @use_i64(i64 1234)
+; INSTCOMBINE-NEXT:    call void @use_i64(i64 1234)
+; INSTCOMBINE-NEXT:    call void @use_i64(i64 1234)
+; INSTCOMBINE-NEXT:    call void @use_i64(i64 1234)
+; INSTCOMBINE-NEXT:    call void @use_i64(i64 1234)
+; INSTCOMBINE-NEXT:    call void @use_i64(i64 0)
+; INSTCOMBINE-NEXT:    call void @use_i64(i64 0)
+; INSTCOMBINE-NEXT:    call void @use_i64(i64 0)
+; INSTCOMBINE-NEXT:    call void @use_i64(i64 0)
+; INSTCOMBINE-NEXT:    ret void
 ;
   call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 0), i64 1234) to i64))
   call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 0), i64 1234) to i64))
@@ -182,11 +161,8 @@ define i64 @fold_ptrtoint_nullgep_nonzero() {
 ; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
 ; LLPARSER-NEXT:    ret i64 [[RET]]
 ;
-; INTEGRAL-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_nonzero() {
-; INTEGRAL-NEXT:    ret i64 1234
-;
-; NONINTEGRAL-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_nonzero() {
-; NONINTEGRAL-NEXT:    ret i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 1234) to i64)
+; CHECK-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_nonzero() {
+; CHECK-NEXT:    ret i64 1234
 ;
   %offset = add i64 1234, 0
   %ptr = getelementptr i8, i8 addrspace(1)* null, i64 %offset
@@ -203,11 +179,8 @@ define i64 @fold_ptrtoint_nullgep_nonzero_inbounds() {
 ; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
 ; LLPARSER-NEXT:    ret i64 [[RET]]
 ;
-; INTEGRAL-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_nonzero_inbounds() {
-; INTEGRAL-NEXT:    ret i64 1234
-;
-; NONINTEGRAL-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_nonzero_inbounds() {
-; NONINTEGRAL-NEXT:    ret i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 1234) to i64)
+; CHECK-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_nonzero_inbounds() {
+; CHECK-NEXT:    ret i64 1234
 ;
   %offset = add i64 1234, 0
   %ptr = getelementptr inbounds i8, i8 addrspace(1)* null, i64 %offset
@@ -280,33 +253,19 @@ define i64 @fold_ptrtoint_nullgep_variable_known_nonzero_inbounds_multiple_indic
 ; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
 ; LLPARSER-NEXT:    ret i64 [[RET]]
 ;
-; INTEGRAL-INSTSIMPLIFY-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_known_nonzero_inbounds_multiple_indices
-; INTEGRAL-INSTSIMPLIFY-SAME: (i64 [[VAL:%.*]]) {
-; INTEGRAL-INSTSIMPLIFY-NEXT:    [[NON_ZERO_OFFSET:%.*]] = or i64 [[VAL]], 1
-; INTEGRAL-INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr inbounds [2 x i8], [2 x i8] addrspace(1)* null, i64 [[NON_ZERO_OFFSET]], i32 1
-; INTEGRAL-INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
-; INTEGRAL-INSTSIMPLIFY-NEXT:    ret i64 [[RET]]
+; INSTSIMPLIFY-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_known_nonzero_inbounds_multiple_indices
+; INSTSIMPLIFY-SAME: (i64 [[VAL:%.*]]) {
+; INSTSIMPLIFY-NEXT:    [[NON_ZERO_OFFSET:%.*]] = or i64 [[VAL]], 1
+; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr inbounds [2 x i8], [2 x i8] addrspace(1)* null, i64 [[NON_ZERO_OFFSET]], i32 1
+; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
+; INSTSIMPLIFY-NEXT:    ret i64 [[RET]]
 ;
-; INTEGRAL-INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_known_nonzero_inbounds_multiple_indices
-; INTEGRAL-INSTCOMBINE-SAME: (i64 [[VAL:%.*]]) {
-; INTEGRAL-INSTCOMBINE-NEXT:    [[NON_ZERO_OFFSET:%.*]] = or i64 [[VAL]], 1
-; INTEGRAL-INSTCOMBINE-NEXT:    [[PTR:%.*]] = getelementptr inbounds [2 x i8], [2 x i8] addrspace(1)* null, i64 [[NON_ZERO_OFFSET]], i64 1
-; INTEGRAL-INSTCOMBINE-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
-; INTEGRAL-INSTCOMBINE-NEXT:    ret i64 [[RET]]
-;
-; NONINTEGRAL-INSTSIMPLIFY-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_known_nonzero_inbounds_multiple_indices
-; NONINTEGRAL-INSTSIMPLIFY-SAME: (i64 [[VAL:%.*]]) {
-; NONINTEGRAL-INSTSIMPLIFY-NEXT:    [[NON_ZERO_OFFSET:%.*]] = or i64 [[VAL]], 1
-; NONINTEGRAL-INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr inbounds [2 x i8], [2 x i8] addrspace(1)* null, i64 [[NON_ZERO_OFFSET]], i32 1
-; NONINTEGRAL-INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
-; NONINTEGRAL-INSTSIMPLIFY-NEXT:    ret i64 [[RET]]
-;
-; NONINTEGRAL-INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_known_nonzero_inbounds_multiple_indices
-; NONINTEGRAL-INSTCOMBINE-SAME: (i64 [[VAL:%.*]]) {
-; NONINTEGRAL-INSTCOMBINE-NEXT:    [[NON_ZERO_OFFSET:%.*]] = or i64 [[VAL]], 1
-; NONINTEGRAL-INSTCOMBINE-NEXT:    [[PTR:%.*]] = getelementptr inbounds [2 x i8], [2 x i8] addrspace(1)* null, i64 [[NON_ZERO_OFFSET]], i64 1
-; NONINTEGRAL-INSTCOMBINE-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
-; NONINTEGRAL-INSTCOMBINE-NEXT:    ret i64 [[RET]]
+; INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_known_nonzero_inbounds_multiple_indices
+; INSTCOMBINE-SAME: (i64 [[VAL:%.*]]) {
+; INSTCOMBINE-NEXT:    [[NON_ZERO_OFFSET:%.*]] = or i64 [[VAL]], 1
+; INSTCOMBINE-NEXT:    [[PTR:%.*]] = getelementptr inbounds [2 x i8], [2 x i8] addrspace(1)* null, i64 [[NON_ZERO_OFFSET]], i64 1
+; INSTCOMBINE-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
+; INSTCOMBINE-NEXT:    ret i64 [[RET]]
 ;
   %non_zero_offset = or i64 %val, 1
   %ptr = getelementptr inbounds [2 x i8], [2 x i8] addrspace(1)* null, i64 %non_zero_offset, i32 1
@@ -336,31 +295,18 @@ define i32 @fold_ptrtoint_nullgep_variable_trunc(i64 %val) {
 ; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i32
 ; LLPARSER-NEXT:    ret i32 [[RET]]
 ;
-; INTEGRAL-INSTSIMPLIFY-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_trunc
-; INTEGRAL-INSTSIMPLIFY-SAME: (i64 [[VAL:%.*]]) {
-; INTEGRAL-INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr i8, i8 addrspace(1)* null, i64 [[VAL]]
-; INTEGRAL-INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i32
-; INTEGRAL-INSTSIMPLIFY-NEXT:    ret i32 [[RET]]
+; INSTSIMPLIFY-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_trunc
+; INSTSIMPLIFY-SAME: (i64 [[VAL:%.*]]) {
+; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr i8, i8 addrspace(1)* null, i64 [[VAL]]
+; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i32
+; INSTSIMPLIFY-NEXT:    ret i32 [[RET]]
 ;
-; INTEGRAL-INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_trunc
-; INTEGRAL-INSTCOMBINE-SAME: (i64 [[VAL:%.*]]) {
-; INTEGRAL-INSTCOMBINE-NEXT:    [[PTR:%.*]] = getelementptr i8, i8 addrspace(1)* null, i64 [[VAL]]
-; INTEGRAL-INSTCOMBINE-NEXT:    [[TMP1:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
-; INTEGRAL-INSTCOMBINE-NEXT:    [[RET:%.*]] = trunc i64 [[TMP1]] to i32
-; INTEGRAL-INSTCOMBINE-NEXT:    ret i32 [[RET]]
-;
-; NONINTEGRAL-INSTSIMPLIFY-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_trunc
-; NONINTEGRAL-INSTSIMPLIFY-SAME: (i64 [[VAL:%.*]]) {
-; NONINTEGRAL-INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr i8, i8 addrspace(1)* null, i64 [[VAL]]
-; NONINTEGRAL-INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i32
-; NONINTEGRAL-INSTSIMPLIFY-NEXT:    ret i32 [[RET]]
-;
-; NONINTEGRAL-INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_trunc
-; NONINTEGRAL-INSTCOMBINE-SAME: (i64 [[VAL:%.*]]) {
-; NONINTEGRAL-INSTCOMBINE-NEXT:    [[PTR:%.*]] = getelementptr i8, i8 addrspace(1)* null, i64 [[VAL]]
-; NONINTEGRAL-INSTCOMBINE-NEXT:    [[TMP1:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
-; NONINTEGRAL-INSTCOMBINE-NEXT:    [[RET:%.*]] = trunc i64 [[TMP1]] to i32
-; NONINTEGRAL-INSTCOMBINE-NEXT:    ret i32 [[RET]]
+; INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_trunc
+; INSTCOMBINE-SAME: (i64 [[VAL:%.*]]) {
+; INSTCOMBINE-NEXT:    [[PTR:%.*]] = getelementptr i8, i8 addrspace(1)* null, i64 [[VAL]]
+; INSTCOMBINE-NEXT:    [[TMP1:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
+; INSTCOMBINE-NEXT:    [[RET:%.*]] = trunc i64 [[TMP1]] to i32
+; INSTCOMBINE-NEXT:    ret i32 [[RET]]
 ;
   %ptr = getelementptr i8, i8 addrspace(1)* null, i64 %val
   %ret = ptrtoint i8 addrspace(1)* %ptr to i32
@@ -378,14 +324,8 @@ define i64 @fold_ptrtoint_zero_nullgep_of_nonzero_inbounds_nullgep() {
 ; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR2]] to i64
 ; LLPARSER-NEXT:    ret i64 [[RET]]
 ;
-; INTEGRAL-LABEL: define {{[^@]+}}@fold_ptrtoint_zero_nullgep_of_nonzero_inbounds_nullgep() {
-; INTEGRAL-NEXT:    ret i64 1234
-;
-; NONINTEGRAL-INSTSIMPLIFY-LABEL: define {{[^@]+}}@fold_ptrtoint_zero_nullgep_of_nonzero_inbounds_nullgep() {
-; NONINTEGRAL-INSTSIMPLIFY-NEXT:    ret i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 1234) to i64)
-;
-; NONINTEGRAL-INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_zero_nullgep_of_nonzero_inbounds_nullgep() {
-; NONINTEGRAL-INSTCOMBINE-NEXT:    ret i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 1234) to i64)
+; CHECK-LABEL: define {{[^@]+}}@fold_ptrtoint_zero_nullgep_of_nonzero_inbounds_nullgep() {
+; CHECK-NEXT:    ret i64 1234
 ;
   %nonzero_offset = add i64 1234, 0
   %zero_offset = sub i64 %nonzero_offset, 1234
@@ -404,11 +344,8 @@ define i64 @fold_ptrtoint_nonzero_inbounds_nullgep_of_zero_noninbounds_nullgep()
 ; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR2]] to i64
 ; LLPARSER-NEXT:    ret i64 [[RET]]
 ;
-; INTEGRAL-LABEL: define {{[^@]+}}@fold_ptrtoint_nonzero_inbounds_nullgep_of_zero_noninbounds_nullgep() {
-; INTEGRAL-NEXT:    ret i64 1234
-;
-; NONINTEGRAL-LABEL: define {{[^@]+}}@fold_ptrtoint_nonzero_inbounds_nullgep_of_zero_noninbounds_nullgep() {
-; NONINTEGRAL-NEXT:    ret i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 1234) to i64)
+; CHECK-LABEL: define {{[^@]+}}@fold_ptrtoint_nonzero_inbounds_nullgep_of_zero_noninbounds_nullgep() {
+; CHECK-NEXT:    ret i64 1234
 ;
   %nonzero_offset = add i64 1234, 0
   %zero_offset = sub i64 %nonzero_offset, 1234
@@ -459,11 +396,8 @@ define i64 @fold_ptrtoint_inbounds_nullgep_of_nonzero_inbounds_nullgep() {
 ; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR2]] to i64
 ; LLPARSER-NEXT:    ret i64 [[RET]]
 ;
-; INTEGRAL-LABEL: define {{[^@]+}}@fold_ptrtoint_inbounds_nullgep_of_nonzero_inbounds_nullgep() {
-; INTEGRAL-NEXT:    ret i64 1234
-;
-; NONINTEGRAL-LABEL: define {{[^@]+}}@fold_ptrtoint_inbounds_nullgep_of_nonzero_inbounds_nullgep() {
-; NONINTEGRAL-NEXT:    ret i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 1234) to i64)
+; CHECK-LABEL: define {{[^@]+}}@fold_ptrtoint_inbounds_nullgep_of_nonzero_inbounds_nullgep() {
+; CHECK-NEXT:    ret i64 1234
 ;
   %nonzero_offset = add i64 1234, 0
   %zero_offset = sub i64 %nonzero_offset, 1234
