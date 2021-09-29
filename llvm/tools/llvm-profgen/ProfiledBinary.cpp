@@ -184,8 +184,7 @@ void ProfiledBinary::load() {
   // TODO: decode other sections.
 }
 
-bool ProfiledBinary::inlineContextEqual(uint64_t Address1,
-                                        uint64_t Address2) const {
+bool ProfiledBinary::inlineContextEqual(uint64_t Address1, uint64_t Address2) {
   uint64_t Offset1 = virtualAddrToOffset(Address1);
   uint64_t Offset2 = virtualAddrToOffset(Address2);
   const SampleContextFrameVector &Context1 = getFrameLocationStack(Offset1);
@@ -202,7 +201,7 @@ bool ProfiledBinary::inlineContextEqual(uint64_t Address1,
 
 SampleContextFrameVector
 ProfiledBinary::getExpandedContext(const SmallVectorImpl<uint64_t> &Stack,
-                                   bool &WasLeafInlined) const {
+                                   bool &WasLeafInlined) {
   SampleContextFrameVector ContextVec;
   // Process from frame root to leaf
   for (auto Address : Stack) {
@@ -358,7 +357,7 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
       // We don't need symbolized info for probe-based profile, just use an
       // empty stack as an entry to indicate a valid binary offset
       SampleContextFrameVector SymbolizedCallStack;
-      if (!UsePseudoProbes || TrackFuncContextSize) {
+      if (TrackFuncContextSize) {
         InstructionPointer IP(this, Offset);
         // TODO: reallocation of Offset2LocStackMap will lead to dangling
         // strings We need ProfiledBinary to owned these string.
@@ -369,9 +368,9 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
         if (TrackFuncContextSize && !SymbolizedCallStack.empty())
           FuncSizeTracker.addInstructionForContext(Offset2LocStackMap[Offset],
                                                    Size);
-      } else {
-        Offset2LocStackMap[Offset] = SampleContextFrameVector();
       }
+      // Record instruction size.
+      Offset2InstSizeMap[Offset] = Size;
 
       // Populate address maps.
       CodeAddrs.push_back(Offset);

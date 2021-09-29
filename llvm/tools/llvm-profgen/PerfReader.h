@@ -388,8 +388,8 @@ using ContextSampleCounterMap =
 
 struct FrameStack {
   SmallVector<uint64_t, 16> Stack;
-  const ProfiledBinary *Binary;
-  FrameStack(const ProfiledBinary *B) : Binary(B) {}
+  ProfiledBinary *Binary;
+  FrameStack(ProfiledBinary *B) : Binary(B) {}
   bool pushFrame(UnwindState::ProfiledFrame *Cur) {
     Stack.push_back(Cur->Address);
     return true;
@@ -404,8 +404,8 @@ struct FrameStack {
 
 struct ProbeStack {
   SmallVector<const MCDecodedPseudoProbe *, 16> Stack;
-  const ProfiledBinary *Binary;
-  ProbeStack(const ProfiledBinary *B) : Binary(B) {}
+  ProfiledBinary *Binary;
+  ProbeStack(ProfiledBinary *B) : Binary(B) {}
   bool pushFrame(UnwindState::ProfiledFrame *Cur) {
     const MCDecodedPseudoProbe *CallProbe =
         Binary->getCallProbeForAddr(Cur->Address);
@@ -458,7 +458,7 @@ range as sample counter for further CS profile generation.
 */
 class VirtualUnwinder {
 public:
-  VirtualUnwinder(ContextSampleCounterMap *Counter, const ProfiledBinary *B)
+  VirtualUnwinder(ContextSampleCounterMap *Counter, ProfiledBinary *B)
       : CtxCounterMap(Counter), Binary(B) {}
   bool unwind(const PerfSample *Sample, uint64_t Repeat);
   std::set<uint64_t> &getUntrackedCallsites() { return UntrackedCallsites; }
@@ -495,7 +495,7 @@ private:
 
   ContextSampleCounterMap *CtxCounterMap;
   // Profiled binary that current frame address belongs to
-  const ProfiledBinary *Binary;
+  ProfiledBinary *Binary;
   // Keep track of all untracked callsites
   std::set<uint64_t> UntrackedCallsites;
 };
