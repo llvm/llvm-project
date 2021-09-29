@@ -5,17 +5,16 @@ define void @phi_feeding_phi_args(i8 %a, i8 %b) {
 ; CHECK-LABEL: phi_feeding_phi_args:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    and w8, w0, #0xff
-; CHECK-NEXT:    cmp w8, w1, uxtb
-; CHECK-NEXT:    csel w8, w0, w1, hi
+; CHECK-NEXT:    and w9, w1, #0xff
+; CHECK-NEXT:    cmp w8, w9
+; CHECK-NEXT:    csel w8, w8, w9, hi
 ; CHECK-NEXT:  .LBB0_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    and w9, w8, #0xff
-; CHECK-NEXT:    sub w10, w8, #2
-; CHECK-NEXT:    lsl w8, w8, #1
-; CHECK-NEXT:    cmp w9, #254
-; CHECK-NEXT:    csel w8, w10, w8, lo
-; CHECK-NEXT:    mvn w9, w8
-; CHECK-NEXT:    tst w9, #0xff
+; CHECK-NEXT:    sub w9, w8, #2
+; CHECK-NEXT:    lsl w10, w8, #1
+; CHECK-NEXT:    cmp w8, #254
+; CHECK-NEXT:    csel w8, w9, w10, lo
+; CHECK-NEXT:    cmp w8, #255
 ; CHECK-NEXT:    b.ne .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
@@ -59,13 +58,11 @@ define void @phi_feeding_phi_zeroext_args(i8 zeroext %a, i8 zeroext %b) {
 ; CHECK-NEXT:    csel w8, w0, w1, hi
 ; CHECK-NEXT:  .LBB1_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    and w9, w8, #0xff
-; CHECK-NEXT:    sub w10, w8, #2
-; CHECK-NEXT:    lsl w8, w8, #1
-; CHECK-NEXT:    cmp w9, #254
-; CHECK-NEXT:    csel w8, w10, w8, lo
-; CHECK-NEXT:    mvn w9, w8
-; CHECK-NEXT:    tst w9, #0xff
+; CHECK-NEXT:    sub w9, w8, #2
+; CHECK-NEXT:    lsl w10, w8, #1
+; CHECK-NEXT:    cmp w8, #254
+; CHECK-NEXT:    csel w8, w9, w10, lo
+; CHECK-NEXT:    cmp w8, #255
 ; CHECK-NEXT:    b.ne .LBB1_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
@@ -109,12 +106,10 @@ define void @phi_i16() {
 ; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:  .LBB2_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    and w10, w8, #0xffff
-; CHECK-NEXT:    cmp w10, #128
+; CHECK-NEXT:    cmp w8, #128
 ; CHECK-NEXT:    cinc w10, w9, lo
 ; CHECK-NEXT:    add w8, w8, w10
-; CHECK-NEXT:    and w10, w8, #0xffff
-; CHECK-NEXT:    cmp w10, #253
+; CHECK-NEXT:    cmp w8, #253
 ; CHECK-NEXT:    b.lo .LBB2_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
@@ -150,12 +145,10 @@ define i8 @ret_i8() {
 ; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:  .LBB3_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    sxtb w9, w0
-; CHECK-NEXT:    cmp w9, #0
-; CHECK-NEXT:    cinc w9, w8, ge
+; CHECK-NEXT:    cmp w0, #128
+; CHECK-NEXT:    cinc w9, w8, lo
 ; CHECK-NEXT:    add w0, w0, w9
-; CHECK-NEXT:    and w9, w0, #0xff
-; CHECK-NEXT:    cmp w9, #252
+; CHECK-NEXT:    cmp w0, #252
 ; CHECK-NEXT:    b.hi .LBB3_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
@@ -191,12 +184,10 @@ define i16 @phi_multiple_undefs(i16 zeroext %arg) {
 ; CHECK-NEXT:    // implicit-def: $w9
 ; CHECK-NEXT:  .LBB4_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    and w10, w9, #0xffff
-; CHECK-NEXT:    cmp w10, #128
+; CHECK-NEXT:    cmp w9, #128
 ; CHECK-NEXT:    cinc w10, w8, lo
 ; CHECK-NEXT:    add w9, w9, w10
-; CHECK-NEXT:    and w10, w9, #0xffff
-; CHECK-NEXT:    cmp w10, #253
+; CHECK-NEXT:    cmp w9, #253
 ; CHECK-NEXT:    b.lo .LBB4_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
@@ -231,8 +222,8 @@ define i16 @promote_arg_return(i16 zeroext %arg1, i16 zeroext %arg2, i8* %res) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w0, lsl #1
 ; CHECK-NEXT:    add w8, w8, #45
-; CHECK-NEXT:    cmp w1, w8, uxth
-; CHECK-NEXT:    cset w8, hi
+; CHECK-NEXT:    cmp w8, w1
+; CHECK-NEXT:    cset w8, lo
 ; CHECK-NEXT:    strb w8, [x2]
 ; CHECK-NEXT:    ret
   %add = add nuw i16 %arg1, 15
@@ -246,27 +237,25 @@ define i16 @promote_arg_return(i16 zeroext %arg1, i16 zeroext %arg2, i8* %res) {
 define i16 @signext_bitcast_phi_select(i16 signext %start, i16* %in) {
 ; CHECK-LABEL: signext_bitcast_phi_select:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and w8, w0, #0xffff
 ; CHECK-NEXT:    mov w9, #-1
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    cmp w9, w0, sxth
+; CHECK-NEXT:    cmp w9, w8, sxth
 ; CHECK-NEXT:    b.lt .LBB6_3
 ; CHECK-NEXT:  .LBB6_1: // %if.then
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    sxth x8, w0
-; CHECK-NEXT:    ldrh w8, [x1, x8, lsl #1]
-; CHECK-NEXT:    cmp w8, w0, uxth
+; CHECK-NEXT:    ldrh w0, [x1, w8, sxtw #1]
+; CHECK-NEXT:    cmp w0, w8
 ; CHECK-NEXT:    b.eq .LBB6_4
 ; CHECK-NEXT:  // %bb.2: // %if.else
 ; CHECK-NEXT:    // in Loop: Header=BB6_1 Depth=1
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    and w8, w8, #0x8000
-; CHECK-NEXT:    add w0, w0, w8, lsr #15
-; CHECK-NEXT:    cmp w9, w0, sxth
+; CHECK-NEXT:    lsr w10, w8, #15
+; CHECK-NEXT:    eor w10, w10, #0x1
+; CHECK-NEXT:    add w8, w10, w8
+; CHECK-NEXT:    cmp w9, w8, sxth
 ; CHECK-NEXT:    b.ge .LBB6_1
 ; CHECK-NEXT:  .LBB6_3:
-; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:  .LBB6_4: // %exit
-; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
 entry:
   %const = bitcast i16 -1 to i16

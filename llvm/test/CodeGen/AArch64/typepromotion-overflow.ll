@@ -148,7 +148,6 @@ define i32 @safe_add_underflow_neg(i8 zeroext %a) {
 ; CHECK-LABEL: safe_add_underflow_neg:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub w8, w0, #2
-; CHECK-NEXT:    and w8, w8, #0xff
 ; CHECK-NEXT:    mov w9, #16
 ; CHECK-NEXT:    cmp w8, #251
 ; CHECK-NEXT:    mov w8, #8
@@ -207,7 +206,6 @@ define i32 @safe_sub_underflow_neg(i8 zeroext %a) {
 ; CHECK-LABEL: safe_sub_underflow_neg:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub w8, w0, #4
-; CHECK-NEXT:    and w8, w8, #0xff
 ; CHECK-NEXT:    mov w9, #16
 ; CHECK-NEXT:    cmp w8, #250
 ; CHECK-NEXT:    mov w8, #8
@@ -284,12 +282,12 @@ define i8 @convert_add_order(i8 zeroext %arg) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    orr w8, w0, #0x1
 ; CHECK-NEXT:    sub w10, w8, #40
-; CHECK-NEXT:    and w10, w10, #0xff
 ; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:    cmp w10, #20
 ; CHECK-NEXT:    cinc w9, w9, hs
 ; CHECK-NEXT:    cmp w8, #50
-; CHECK-NEXT:    csinv w8, w9, wzr, lo
+; CHECK-NEXT:    mov w8, #255
+; CHECK-NEXT:    csel w8, w9, w8, lo
 ; CHECK-NEXT:    and w0, w8, w0
 ; CHECK-NEXT:    ret
   %shl = or i8 %arg, 1
@@ -308,9 +306,8 @@ define i8 @underflow_if_sub(i32 %arg, i8 zeroext %arg1) {
 ; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cset w8, gt
 ; CHECK-NEXT:    and w8, w8, w0
-; CHECK-NEXT:    sub w8, w8, #11
-; CHECK-NEXT:    and w9, w8, #0xff
-; CHECK-NEXT:    cmp w9, w1
+; CHECK-NEXT:    add w8, w8, #245
+; CHECK-NEXT:    cmp w8, w1
 ; CHECK-NEXT:    mov w9, #100
 ; CHECK-NEXT:    csel w0, w8, w9, lo
 ; CHECK-NEXT:    ret
@@ -330,9 +327,8 @@ define i8 @underflow_if_sub_signext(i32 %arg, i8 signext %arg1) {
 ; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cset w8, gt
 ; CHECK-NEXT:    and w8, w8, w0
-; CHECK-NEXT:    sub w8, w8, #11
-; CHECK-NEXT:    and w9, w8, #0xff
-; CHECK-NEXT:    cmp w9, w1, uxtb
+; CHECK-NEXT:    add w8, w8, #245
+; CHECK-NEXT:    cmp w8, w1, uxtb
 ; CHECK-NEXT:    mov w9, #100
 ; CHECK-NEXT:    csel w0, w8, w9, lo
 ; CHECK-NEXT:    ret

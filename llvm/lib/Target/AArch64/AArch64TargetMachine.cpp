@@ -473,6 +473,7 @@ public:
 
   void addIRPasses()  override;
   bool addPreISel() override;
+  void addCodeGenPrepare() override;
   bool addInstSelector() override;
   bool addIRTranslator() override;
   void addPreLegalizeMachineIR() override;
@@ -597,6 +598,12 @@ bool AArch64PassConfig::addPreISel() {
   }
 
   return false;
+}
+
+void AArch64PassConfig::addCodeGenPrepare() {
+  if (getOptLevel() != CodeGenOpt::None)
+    addPass(createTypePromotionPass());
+  TargetPassConfig::addCodeGenPrepare();
 }
 
 bool AArch64PassConfig::addInstSelector() {

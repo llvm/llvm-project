@@ -77,8 +77,7 @@ define i32 @test_signext_b_ult_slt(i8* nocapture readonly %ptr, i8 signext %arg)
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldrb w8, [x0]
 ; CHECK-NEXT:    mov w9, #57
-; CHECK-NEXT:    add w10, w8, w1
-; CHECK-NEXT:    and w10, w10, #0xff
+; CHECK-NEXT:    add w10, w8, w1, uxtb
 ; CHECK-NEXT:    cmp w10, #127
 ; CHECK-NEXT:    ccmp w8, #0, #0, ne
 ; CHECK-NEXT:    mov w8, #42
