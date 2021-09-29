@@ -175,7 +175,7 @@ class ProfiledBinary {
 
   // An array of offsets of all instructions sorted in increasing order. The
   // sorting is needed to fast advance to the next forward/backward instruction.
-  std::vector<uint64_t> CodeAddrs;
+  std::vector<uint64_t> CodeAddrOffsets;
   // A set of call instruction offsets. Used by virtual unwinding.
   std::unordered_set<uint64_t> CallAddrs;
   // A set of return instruction offsets. Used by virtual unwinding.
@@ -231,7 +231,6 @@ class ProfiledBinary {
   SampleContextFrameVector symbolize(const InstructionPointer &IP,
                                      bool UseCanonicalFnName = false,
                                      bool UseProbeDiscriminator = false);
-
   /// Decode the interesting parts of the binary and build internal data
   /// structures. On high level, the parts of interest are:
   ///   1. Text sections, including the main code section and the PLT
@@ -289,18 +288,21 @@ public:
   }
 
   uint64_t getAddressforIndex(uint64_t Index) const {
-    return offsetToVirtualAddr(CodeAddrs[Index]);
+    return offsetToVirtualAddr(CodeAddrOffsets[Index]);
   }
 
   bool usePseudoProbes() const { return UsePseudoProbes; }
-  // Get the index in CodeAddrs for the address
+  // Get the index in CodeAddrOffsets for the address
   // As we might get an address which is not the code
   // here it would round to the next valid code address by
   // using lower bound operation
+  uint32_t getIndexForOffset(uint64_t Offset) const {
+    auto Low = llvm::lower_bound(CodeAddrOffsets, Offset);
+    return Low - CodeAddrOffsets.begin();
+  }
   uint32_t getIndexForAddr(uint64_t Address) const {
     uint64_t Offset = virtualAddrToOffset(Address);
-    auto Low = llvm::lower_bound(CodeAddrs, Offset);
-    return Low - CodeAddrs.begin();
+    return getIndexForOffset(Offset);
   }
 
   uint64_t getCallAddrFromFrameAddr(uint64_t FrameAddr) const {
@@ -356,6 +358,10 @@ public:
   SampleContextFrameVector
   getExpandedContext(const SmallVectorImpl<uint64_t> &Stack,
                      bool &WasLeafInlined);
+  // Go through instructions among the given range and record its size for the
+  // inline context.
+  void computeInlinedContextSizeForRange(uint64_t StartOffset,
+                                         uint64_t EndOffset);
 
   const MCDecodedPseudoProbe *getCallProbeForAddr(uint64_t Address) const {
     return ProbeDecoder.getCallProbeForAddr(Address);
@@ -383,6 +389,8 @@ public:
   getInlinerDescForProbe(const MCDecodedPseudoProbe *Probe) {
     return ProbeDecoder.getInlinerDescForProbe(Probe);
   }
+
+  bool getTrackFuncContextSize() { return TrackFuncContextSize; }
 
   bool getIsLoadedByMMap() { return IsLoadedByMMap; }
 
