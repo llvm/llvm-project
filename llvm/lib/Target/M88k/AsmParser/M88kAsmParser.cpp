@@ -8,6 +8,7 @@
 
 #include "MCTargetDesc/M88kInstPrinter.h"
 #include "MCTargetDesc/M88kMCTargetDesc.h"
+#include "MCTargetDesc/M88kTargetStreamer.h"
 #include "TargetInfo/M88kTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -189,6 +190,13 @@ class M88kAsmParser : public MCTargetAsmParser {
 #define GET_ASSEMBLER_HEADER
 #include "M88kGenAsmMatcher.inc"
 
+  M88kTargetStreamer &getTargetStreamer() {
+    assert(getParser().getStreamer().getTargetStreamer() &&
+           "m88k - asm parser does not have a target streamer");
+    MCTargetStreamer &TS = *getParser().getStreamer().getTargetStreamer();
+    return static_cast<M88kTargetStreamer &>(TS);
+  }
+
   bool ParseDirective(AsmToken DirectiveID) override;
 
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
@@ -241,7 +249,19 @@ private:
 #define GET_MNEMONIC_SPELL_CHECKER
 #include "M88kGenAsmMatcher.inc"
 
-bool M88kAsmParser::ParseDirective(AsmToken DirectiveID) { return true; }
+bool M88kAsmParser::ParseDirective(AsmToken DirectiveID) {
+  StringRef IDVal = DirectiveID.getIdentifier();
+
+  if (IDVal == ".requires_88110") {
+    MCSubtargetInfo &STI = copySTI();
+    STI.setDefaultFeatures(/*CPU*/ "m88110", /*TuneCPU*/ "m88110", "");
+    setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
+    getTargetStreamer().emitDirectiveRequires881100();
+    return false;
+  }
+
+  return true;
+}
 
 bool M88kAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                      SMLoc NameLoc, OperandVector &Operands) {
@@ -305,7 +325,7 @@ bool M88kAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
     Operands.push_back(M88kOperand::createImm(Expr, StartLoc, EndLoc));
     return false;
   }
-llvm::dbgs() << "parseOperand failed (" << Mnemonic << ")\n";
+  llvm::dbgs() << "parseOperand failed (" << Mnemonic << ")\n";
   // Failure
   return true;
 }

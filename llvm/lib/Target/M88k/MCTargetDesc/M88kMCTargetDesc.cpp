@@ -9,6 +9,7 @@
 #include "M88kMCTargetDesc.h"
 #include "M88kInstPrinter.h"
 #include "M88kMCAsmInfo.h"
+#include "M88kTargetStreamer.h"
 #include "TargetInfo/M88kTargetInfo.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -60,6 +61,29 @@ static MCInstPrinter *createM88kMCInstPrinter(const Triple &T,
   return new M88kInstPrinter(MAI, MII, MRI);
 }
 
+static MCTargetStreamer *createM88kAsmTargetStreamer(MCStreamer &S,
+                                                     formatted_raw_ostream &OS,
+                                                     MCInstPrinter *InstPrint,
+                                                     bool isVerboseAsm) {
+  return new M88kTargetAsmStreamer(S, OS);
+}
+
+static MCTargetStreamer *
+createM88kObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
+  return new M88kTargetELFStreamer(S, STI);
+}
+
+/*
+static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
+                                    std::unique_ptr<MCAsmBackend> &&MAB,
+                                    std::unique_ptr<MCObjectWriter> &&OW,
+                                    std::unique_ptr<MCCodeEmitter> &&Emitter,
+                                    bool RelaxAll) {
+  return createAMDGPUELFStreamer(T, Context, std::move(MAB), std::move(OW),
+                                 std::move(Emitter), RelaxAll);
+}
+*/
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM88kTargetMC() {
   // Register the MCAsmInfo.
   TargetRegistry::RegisterMCAsmInfo(getTheM88kTarget(), createM88kMCAsmInfo);
@@ -84,4 +108,12 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM88kTargetMC() {
   // Register the MCInstPrinter.
   TargetRegistry::RegisterMCInstPrinter(getTheM88kTarget(),
                                         createM88kMCInstPrinter);
+
+  // Register the AsmTargetStreamer.
+  TargetRegistry::RegisterAsmTargetStreamer(getTheM88kTarget(),
+                                            createM88kAsmTargetStreamer);
+
+  // Register the ObjectTargetStreamer.
+  TargetRegistry::RegisterObjectTargetStreamer(getTheM88kTarget(),
+                                               createM88kObjectTargetStreamer);
 }

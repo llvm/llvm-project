@@ -6,4 +6,5 @@ add_llvm_component_library(LLVMM88kDesc
   M88kMCExpr.cpp
   M88kMCObjectWriter.cpp
   M88kMCTargetDesc.cpp
+  M88kTargetStreamer.cpp
   )
