@@ -15681,6 +15681,18 @@ void PPCTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       Known.Zero = ~1U;  // All bits but the low one are known to be zero.
       break;
     }
+    break;
+  }
+  case ISD::INTRINSIC_W_CHAIN: {
+    switch (cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue()) {
+    default:
+      break;
+    case Intrinsic::ppc_load2r:
+      // Top bits are cleared for load2r (which is the same as lhbrx).
+      Known.Zero = 0xFFFF0000;
+      break;
+    }
+    break;
   }
   }
 }

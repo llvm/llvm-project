@@ -121,7 +121,7 @@ BUILTIN(__builtin_ppc_rlwnm, "UiUiIUiIUi", "")
 BUILTIN(__builtin_ppc_rlwimi, "UiUiUiIUiIUi", "")
 BUILTIN(__builtin_ppc_rldimi, "ULLiULLiULLiIUiIULLi", "")
 // load
-BUILTIN(__builtin_ppc_load2r, "UiUs*", "")
+BUILTIN(__builtin_ppc_load2r, "UsUs*", "")
 BUILTIN(__builtin_ppc_load4r, "UiUi*", "")
 BUILTIN(__builtin_ppc_load8r, "ULLiULLi*", "")
 // store
