@@ -353,6 +353,13 @@ main() {
 
   local -r wd=$(cd "$(dirname "$0")/.." && pwd)
 
+  # uuidgen is common but not installed by default on some distros
+  if ! command -v uuidgen &> /dev/null
+  then
+    echo "uuidgen is required for generating unparsed file names."
+    exit 1
+  fi
+
   # STEP 1: Unparse
   # Base-name for the unparsed files. These are just temporary files that are
   # first generated and then deleted by this script.
