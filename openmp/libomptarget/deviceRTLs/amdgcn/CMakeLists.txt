@@ -81,7 +81,7 @@ else()
   return()
 endif()
 
-if(${AOMP_STANDALONE_BUILD} STREQUAL "0")
+if("${AOMP_STANDALONE_BUILD}" STREQUAL "0")
   message("------------- NON STANDALONE BUILD ---------------")
   set(ROCDL_INC_OCKL ${DEVICELIBS_ROOT}/ockl/inc)
   set(ROCDL_INC_OCML ${DEVICELIBS_ROOT}/ocml/inc)
