@@ -397,6 +397,7 @@ BUILTIN(__builtin_altivec_vcmpgtfp_p, "iiV4fV4f", "")
 
 BUILTIN(__builtin_altivec_vgbbd, "V16UcV16Uc", "")
 BUILTIN(__builtin_altivec_vbpermq, "V2ULLiV16UcV16Uc", "")
+BUILTIN(__builtin_altivec_vbpermd, "V2ULLiV2ULLiV16Uc", "")
 
 // P8 Crypto built-ins.
 BUILTIN(__builtin_altivec_crypto_vsbox, "V2ULLiV2ULLi", "")
