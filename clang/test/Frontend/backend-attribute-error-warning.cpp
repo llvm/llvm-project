@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -verify=expected,enabled -emit-codegen-only %s
-// RUN: %clang_cc1 -verify -emit-codegen-only -Wno-attribute-warning %s
+// REQUIRES: x86-registered-target
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -verify=expected,enabled -emit-codegen-only %s
+// RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -emit-codegen-only -Wno-attribute-warning %s
 
 __attribute__((error("oh no foo"))) void foo(void);
 
