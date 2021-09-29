@@ -677,13 +677,7 @@ endif()
 set(LLVM_TARGET_TRIPLE_ENV CACHE STRING "The name of environment variable to override default target. Disabled by blank.")
 mark_as_advanced(LLVM_TARGET_TRIPLE_ENV)
 
-# Per target dir not yet supported on Arm 32 bit due to arm vs armhf handling
-if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^arm")
-  set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default ON)
-else()
-  set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default OFF)
-endif()
-set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR ${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default} CACHE BOOL
+set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR OFF CACHE BOOL
   "Enable per-target runtimes directory")
 
 set(LLVM_PROFDATA_FILE "" CACHE FILEPATH
