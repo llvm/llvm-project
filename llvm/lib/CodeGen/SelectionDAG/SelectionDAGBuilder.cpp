@@ -3146,7 +3146,7 @@ void SelectionDAGBuilder::visitShift(const User &I, unsigned Opcode) {
     // count type has enough bits to represent any shift value, truncate
     // it now. This is a common case and it exposes the truncate to
     // optimization early.
-    else if (ShiftSize >= Log2_32_Ceil(Op2.getValueSizeInBits()))
+    else if (ShiftSize >= Log2_32_Ceil(Op1.getValueSizeInBits()))
       Op2 = DAG.getNode(ISD::TRUNCATE, DL, ShiftTy, Op2);
     // Otherwise we'll need to temporarily settle for some other convenient
     // type.  Type legalization will make adjustments once the shiftee is split.
@@ -8036,14 +8036,7 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
   }
 
   if (Function *F = I.getCalledFunction()) {
-    if (F->hasFnAttribute("dontcall")) {
-      unsigned LocCookie = 0;
-      if (MDNode *MD = I.getMetadata("srcloc"))
-        LocCookie =
-            mdconst::extract<ConstantInt>(MD->getOperand(0))->getZExtValue();
-      DiagnosticInfoDontCall D(F->getName(), LocCookie);
-      DAG.getContext()->diagnose(D);
-    }
+    diagnoseDontCall(I);
 
     if (F->isDeclaration()) {
       // Is this an LLVM intrinsic or a target-specific intrinsic?

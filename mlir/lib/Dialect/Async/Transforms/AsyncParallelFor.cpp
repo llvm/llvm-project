@@ -92,10 +92,10 @@ struct AsyncParallelForPass
   AsyncParallelForPass() = default;
 
   AsyncParallelForPass(bool asyncDispatch, int32_t numWorkerThreads,
-                       int32_t targetBlockSize) {
+                       int32_t minTaskSize) {
     this->asyncDispatch = asyncDispatch;
     this->numWorkerThreads = numWorkerThreads;
-    this->targetBlockSize = targetBlockSize;
+    this->minTaskSize = minTaskSize;
   }
 
   void runOnOperation() override;
@@ -104,9 +104,9 @@ struct AsyncParallelForPass
 struct AsyncParallelForRewrite : public OpRewritePattern<scf::ParallelOp> {
 public:
   AsyncParallelForRewrite(MLIRContext *ctx, bool asyncDispatch,
-                          int32_t numWorkerThreads, int32_t targetBlockSize)
+                          int32_t numWorkerThreads, int32_t minTaskSize)
       : OpRewritePattern(ctx), asyncDispatch(asyncDispatch),
-        numWorkerThreads(numWorkerThreads), targetBlockSize(targetBlockSize) {}
+        numWorkerThreads(numWorkerThreads), minTaskSize(minTaskSize) {}
 
   LogicalResult matchAndRewrite(scf::ParallelOp op,
                                 PatternRewriter &rewriter) const override;
@@ -114,7 +114,7 @@ public:
 private:
   bool asyncDispatch;
   int32_t numWorkerThreads;
-  int32_t targetBlockSize;
+  int32_t minTaskSize;
 };
 
 struct ParallelComputeFunctionType {
@@ -508,12 +508,6 @@ static void doAsyncDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
   Value c0 = b.create<ConstantIndexOp>(0);
   Value c1 = b.create<ConstantIndexOp>(1);
 
-  // Create an async.group to wait on all async tokens from the concurrent
-  // execution of multiple parallel compute function. First block will be
-  // executed synchronously in the caller thread.
-  Value groupSize = b.create<SubIOp>(blockCount, c1);
-  Value group = b.create<CreateGroupOp>(GroupType::get(ctx), groupSize);
-
   // Appends operands shared by async dispatch and parallel compute functions to
   // the given operands vector.
   auto appendBlockComputeOperands = [&](SmallVector<Value> &operands) {
@@ -543,6 +537,12 @@ static void doAsyncDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
   };
 
   auto asyncDispatch = [&](OpBuilder &nestedBuilder, Location loc) {
+    // Create an async.group to wait on all async tokens from the concurrent
+    // execution of multiple parallel compute function. First block will be
+    // executed synchronously in the caller thread.
+    Value groupSize = b.create<SubIOp>(blockCount, c1);
+    Value group = b.create<CreateGroupOp>(GroupType::get(ctx), groupSize);
+
     ImplicitLocOpBuilder nb(loc, nestedBuilder);
 
     // Launch async dispatch function for [0, blockCount) range.
@@ -551,20 +551,21 @@ static void doAsyncDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
 
     nb.create<CallOp>(asyncDispatchFunction.sym_name(),
                       asyncDispatchFunction.getCallableResults(), operands);
+
+    // Wait for the completion of all parallel compute operations.
+    b.create<AwaitAllOp>(group);
+
     nb.create<scf::YieldOp>();
   };
 
   // Dispatch either single block compute function, or launch async dispatch.
   b.create<scf::IfOp>(TypeRange(), isSingleBlock, syncDispatch, asyncDispatch);
-
-  // Wait for the completion of all parallel compute operations.
-  b.create<AwaitAllOp>(group);
 }
 
 // Dispatch parallel compute functions by submitting all async compute tasks
 // from a simple for loop in the caller thread.
 static void
-doSequantialDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
+doSequentialDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
                      ParallelComputeFunction &parallelComputeFunction,
                      scf::ParallelOp op, Value blockSize, Value blockCount,
                      const SmallVector<Value> &tripCounts) {
@@ -684,15 +685,15 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
         std::max(1, static_cast<int>(numWorkerThreads * overshardingFactor)));
 
     // Target block size from the pass parameters.
-    Value targetComputeBlock = b.create<ConstantIndexOp>(targetBlockSize);
+    Value minTaskSizeCst = b.create<ConstantIndexOp>(minTaskSize);
 
     // Compute parallel block size from the parallel problem size:
     //   blockSize = min(tripCount,
     //                   max(ceil_div(tripCount, maxComputeBlocks),
-    //                       targetComputeBlock))
+    //                       ceil_div(minTaskSize, bodySize)))
     Value bs0 = b.create<SignedCeilDivIOp>(tripCount, maxComputeBlocks);
-    Value bs1 = b.create<CmpIOp>(CmpIPredicate::sge, bs0, targetComputeBlock);
-    Value bs2 = b.create<SelectOp>(bs1, bs0, targetComputeBlock);
+    Value bs1 = b.create<CmpIOp>(CmpIPredicate::sge, bs0, minTaskSizeCst);
+    Value bs2 = b.create<SelectOp>(bs1, bs0, minTaskSizeCst);
     Value bs3 = b.create<CmpIOp>(CmpIPredicate::sle, tripCount, bs2);
     Value blockSize0 = b.create<SelectOp>(bs3, tripCount, bs2);
     Value blockCount0 = b.create<SignedCeilDivIOp>(tripCount, blockSize0);
@@ -712,7 +713,7 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
       doAsyncDispatch(b, rewriter, parallelComputeFunction, op, blockSize,
                       blockCount, tripCounts);
     } else {
-      doSequantialDispatch(b, rewriter, parallelComputeFunction, op, blockSize,
+      doSequentialDispatch(b, rewriter, parallelComputeFunction, op, blockSize,
                            blockCount, tripCounts);
     }
 
@@ -733,7 +734,7 @@ void AsyncParallelForPass::runOnOperation() {
 
   RewritePatternSet patterns(ctx);
   patterns.add<AsyncParallelForRewrite>(ctx, asyncDispatch, numWorkerThreads,
-                                        targetBlockSize);
+                                        minTaskSize);
 
   if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
     signalPassFailure();
@@ -743,9 +744,9 @@ std::unique_ptr<Pass> mlir::createAsyncParallelForPass() {
   return std::make_unique<AsyncParallelForPass>();
 }
 
-std::unique_ptr<Pass>
-mlir::createAsyncParallelForPass(bool asyncDispatch, int32_t numWorkerThreads,
-                                 int32_t targetBlockSize) {
+std::unique_ptr<Pass> mlir::createAsyncParallelForPass(bool asyncDispatch,
+                                                       int32_t numWorkerThreads,
+                                                       int32_t minTaskSize) {
   return std::make_unique<AsyncParallelForPass>(asyncDispatch, numWorkerThreads,
-                                                targetBlockSize);
+                                                minTaskSize);
 }

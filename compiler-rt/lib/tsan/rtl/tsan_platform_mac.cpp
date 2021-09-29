@@ -159,7 +159,7 @@ void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime_ns) {
   RegionMemUsage(LoAppMemBeg(), LoAppMemEnd(), &app_res, &app_dirty);
 #endif
 
-  StackDepotStats *stacks = StackDepotGetStats();
+  StackDepotStats stacks = StackDepotGetStats();
   uptr nthread, nlive;
   ctx->thread_registry.GetNumberOfThreads(&nthread, &nlive);
   internal_snprintf(
@@ -187,7 +187,7 @@ void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime_ns) {
 #  else  // !SANITIZER_GO
       LoAppMemBeg(), LoAppMemEnd(), app_res / 1024, app_dirty / 1024,
 #  endif
-      stacks->n_uniq_ids, stacks->allocated / 1024, nthread, nlive);
+      stacks.n_uniq_ids, stacks.allocated / 1024, nthread, nlive);
 }
 
 #  if !SANITIZER_GO

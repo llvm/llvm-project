@@ -90,7 +90,7 @@ typedef StackDepotBase<StackDepotNode, 1, StackDepotNode::kTabSizeLog>
     StackDepot;
 static StackDepot theDepot;
 
-StackDepotStats *StackDepotGetStats() { return theDepot.GetStats(); }
+StackDepotStats StackDepotGetStats() { return theDepot.GetStats(); }
 
 u32 StackDepotPut(StackTrace stack) {
   StackDepotHandle h = theDepot.Put(stack);
@@ -126,7 +126,7 @@ bool StackDepotReverseMap::IdDescPair::IdComparator(
 }
 
 StackDepotReverseMap::StackDepotReverseMap() {
-  map_.reserve(StackDepotGetStats()->n_uniq_ids + 100);
+  map_.reserve(StackDepotGetStats().n_uniq_ids + 100);
   for (int idx = 0; idx < StackDepot::kTabSize; idx++) {
     atomic_uintptr_t *p = &theDepot.tab[idx];
     uptr v = atomic_load(p, memory_order_consume);

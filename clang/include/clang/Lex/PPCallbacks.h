@@ -252,9 +252,20 @@ public:
   }
 
   /// Callback invoked when a \#pragma warning directive is read.
-  virtual void PragmaWarning(SourceLocation Loc, StringRef WarningSpec,
-                             ArrayRef<int> Ids) {
-  }
+  enum PragmaWarningSpecifier {
+    PWS_Default,
+    PWS_Disable,
+    PWS_Error,
+    PWS_Once,
+    PWS_Suppress,
+    PWS_Level1,
+    PWS_Level2,
+    PWS_Level3,
+    PWS_Level4,
+  };
+  virtual void PragmaWarning(SourceLocation Loc,
+                             PragmaWarningSpecifier WarningSpec,
+                             ArrayRef<int> Ids) {}
 
   /// Callback invoked when a \#pragma warning(push) directive is read.
   virtual void PragmaWarningPush(SourceLocation Loc, int Level) {
@@ -540,7 +551,7 @@ public:
     Second->PragmaOpenCLExtension(NameLoc, Name, StateLoc, State);
   }
 
-  void PragmaWarning(SourceLocation Loc, StringRef WarningSpec,
+  void PragmaWarning(SourceLocation Loc, PragmaWarningSpecifier WarningSpec,
                      ArrayRef<int> Ids) override {
     First->PragmaWarning(Loc, WarningSpec, Ids);
     Second->PragmaWarning(Loc, WarningSpec, Ids);
