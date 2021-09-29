@@ -134,6 +134,17 @@ def testBlockArgumentList():
     for arg in entry_block.arguments:
       print(f"Argument {arg.arg_number}, type {arg.type}")
 
+    # Check that slicing works for block argument lists.
+    # CHECK: Argument 1, type i16
+    # CHECK: Argument 2, type i24
+    for arg in entry_block.arguments[1:]:
+      print(f"Argument {arg.arg_number}, type {arg.type}")
+
+    # Check that we can concatenate slices of argument lists.
+    # CHECK: Length: 4
+    print("Length: ",
+          len(entry_block.arguments[:2] + entry_block.arguments[1:]))
+
 
 run(testBlockArgumentList)
 
@@ -598,22 +609,24 @@ def testCreateWithInvalidAttributes():
   ctx = Context()
   with Location.unknown(ctx):
     try:
-      Operation.create("builtin.module", attributes={None:StringAttr.get("name")})
+      Operation.create(
+          "builtin.module", attributes={None: StringAttr.get("name")})
     except Exception as e:
       # CHECK: Invalid attribute key (not a string) when attempting to create the operation "builtin.module"
       print(e)
     try:
-      Operation.create("builtin.module", attributes={42:StringAttr.get("name")})
+      Operation.create(
+          "builtin.module", attributes={42: StringAttr.get("name")})
     except Exception as e:
       # CHECK: Invalid attribute key (not a string) when attempting to create the operation "builtin.module"
       print(e)
     try:
-      Operation.create("builtin.module", attributes={"some_key":ctx})
+      Operation.create("builtin.module", attributes={"some_key": ctx})
     except Exception as e:
       # CHECK: Invalid attribute value for the key "some_key" when attempting to create the operation "builtin.module"
       print(e)
     try:
-      Operation.create("builtin.module", attributes={"some_key":None})
+      Operation.create("builtin.module", attributes={"some_key": None})
     except Exception as e:
       # CHECK: Found an invalid (`None`?) attribute value for the key "some_key" when attempting to create the operation "builtin.module"
       print(e)

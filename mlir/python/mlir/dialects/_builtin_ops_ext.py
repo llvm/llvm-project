@@ -11,6 +11,8 @@ try:
 except ImportError as e:
   raise RuntimeError("Error loading imports from extension module") from e
 
+ARGUMENT_ATTRIBUTE_NAME = "arg_attrs"
+RESULT_ATTRIBUTE_NAME = "res_attrs"
 
 class ModuleOp:
   """Specialization for the module op class."""
@@ -99,6 +101,26 @@ class FuncOp:
       raise IndexError('The function already has an entry block!')
     self.body.blocks.append(*self.type.inputs)
     return self.body.blocks[0]
+
+  @property
+  def arg_attrs(self):
+    return self.attributes[ARGUMENT_ATTRIBUTE_NAME]
+
+  @arg_attrs.setter
+  def arg_attrs(self, attribute: ArrayAttr):
+    self.attributes[ARGUMENT_ATTRIBUTE_NAME] = attribute
+
+  @property
+  def arguments(self):
+    return self.entry_block.arguments
+
+  @property
+  def result_attrs(self):
+    return self.attributes[RESULT_ATTRIBUTE_NAME]
+
+  @result_attrs.setter
+  def result_attrs(self, attribute: ArrayAttr):
+    self.attributes[RESULT_ATTRIBUTE_NAME] = attribute
 
   @classmethod
   def from_py_func(FuncOp,
