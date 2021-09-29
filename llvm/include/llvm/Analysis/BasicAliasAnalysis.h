@@ -202,8 +202,8 @@ private:
 
   bool isValueEqualInPotentialCycles(const Value *V1, const Value *V2);
 
-  void GetIndexDifference(SmallVectorImpl<VariableGEPIndex> &Dest,
-                          const SmallVectorImpl<VariableGEPIndex> &Src);
+  void subtractDecomposedGEPs(DecomposedGEP &DestGEP,
+                              const DecomposedGEP &SrcGEP);
 
   AliasResult aliasGEP(const GEPOperator *V1, LocationSize V1Size,
                        const Value *V2, LocationSize V2Size,
