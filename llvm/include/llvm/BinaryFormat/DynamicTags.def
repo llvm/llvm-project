@@ -31,6 +31,11 @@
 #define PPC64_DYNAMIC_TAG_DEFINED
 #endif
 
+#ifndef RISCV_DYNAMIC_TAG
+#define RISCV_DYNAMIC_TAG(name, value) DYNAMIC_TAG(name, value)
+#define RISCV_DYNAMIC_TAG_DEFINED
+#endif
+
 #ifndef DYNAMIC_TAG_MARKER
 #define DYNAMIC_TAG_MARKER(name, value) DYNAMIC_TAG(name, value)
 #define DYNAMIC_TAG_MARKER_DEFINED
@@ -213,6 +218,9 @@ PPC_DYNAMIC_TAG(PPC_OPT, 0x70000001) // Has TLS optimization.
 PPC64_DYNAMIC_TAG(PPC64_GLINK, 0x70000000) // Address of 32 bytes before the
                                            // first glink lazy resolver stub.
 
+// RISC-V specific dynamic array tags.
+RISCV_DYNAMIC_TAG(RISCV_VARIANT_CC, 0x70000001)
+
 // Sun machine-independent extensions.
 DYNAMIC_TAG(AUXILIARY, 0x7FFFFFFD) // Shared object to load before self
 DYNAMIC_TAG(USED, 0x7FFFFFFE)      // Same as DT_NEEDED
@@ -242,4 +250,8 @@ DYNAMIC_TAG(FILTER, 0x7FFFFFFF)    // Shared object to get values from
 #ifdef PPC64_DYNAMIC_TAG_DEFINED
 #undef PPC64_DYNAMIC_TAG
 #undef PPC64_DYNAMIC_TAG_DEFINED
+#endif
+#ifdef RISCV_DYNAMIC_TAG_DEFINED
+#undef RISCV_DYNAMIC_TAG
+#undef RISCV_DYNAMIC_TAG_DEFINED
 #endif
