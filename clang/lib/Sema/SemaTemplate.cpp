@@ -2267,22 +2267,8 @@ private:
           TTP->isParameterPack(), TTP->hasTypeConstraint(),
           TTP->isExpandedParameterPack() ?
           llvm::Optional<unsigned>(TTP->getNumExpansionParameters()) : None);
-      if (const auto *TC = TTP->getTypeConstraint()) {
-        TemplateArgumentListInfo TransformedArgs;
-        const auto *ArgsAsWritten = TC->getTemplateArgsAsWritten();
-        if (!ArgsAsWritten ||
-            SemaRef.Subst(ArgsAsWritten->getTemplateArgs(),
-                          ArgsAsWritten->NumTemplateArgs, TransformedArgs,
-                          Args))
-          SemaRef.AttachTypeConstraint(
-              TC->getNestedNameSpecifierLoc(), TC->getConceptNameInfo(),
-              TC->getNamedConcept(), ArgsAsWritten ? &TransformedArgs : nullptr,
-              NewTTP,
-              NewTTP->isParameterPack()
-                 ? cast<CXXFoldExpr>(TC->getImmediatelyDeclaredConstraint())
-                     ->getEllipsisLoc()
-                 : SourceLocation());
-      }
+      if (const auto *TC = TTP->getTypeConstraint())
+        SemaRef.SubstTypeConstraint(NewTTP, TC, Args);
       if (TTP->hasDefaultArgument()) {
         TypeSourceInfo *InstantiatedDefaultArg =
             SemaRef.SubstType(TTP->getDefaultArgumentInfo(), Args,

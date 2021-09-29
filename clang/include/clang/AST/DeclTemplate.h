@@ -729,6 +729,10 @@ public:
   /// Returns the number of explicit template arguments that were given.
   unsigned getNumTemplateArgs() const { return NumArgs; }
 
+  llvm::ArrayRef<TemplateArgumentLoc> arguments() const {
+    return llvm::makeArrayRef(getTemplateArgs(), getNumTemplateArgs());
+  }
+
   /// Returns the nth template argument.
   const TemplateArgumentLoc &getTemplateArg(unsigned I) const {
     assert(I < getNumTemplateArgs() && "template arg index out of range");
