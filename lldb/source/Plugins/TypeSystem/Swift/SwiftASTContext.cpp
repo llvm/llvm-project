@@ -1933,7 +1933,7 @@ static lldb::ModuleSP GetUnitTestModule(lldb_private::ModuleList &modules) {
 /// Scan a newly added lldb::Module fdor Swift modules and report any errors in
 /// its module SwiftASTContext to Target.
 static void
-ProcessModule(ModuleSP &&module_sp, std::string m_description,
+ProcessModule(ModuleSP module_sp, std::string m_description,
               bool use_all_compiler_flags, Target &target,
               std::vector<std::string> &module_search_paths,
               std::vector<std::pair<std::string, bool>> &framework_search_paths,
@@ -4998,6 +4998,37 @@ void SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
 
 void SwiftASTContext::ModulesDidLoad(ModuleList &module_list) {
   ClearModuleDependentCaches();
+
+  // Scan the new modules for Swift contents and try to import it if
+  // safe, otherwise poison this context.
+  TargetSP target_sp = GetTarget().lock();
+  if (!target_sp)
+    return;
+
+  bool use_all_compiler_flags = target_sp->GetUseAllCompilerFlags();
+  unsigned num_images = module_list.GetSize();
+  for (size_t mi = 0; mi != num_images; ++mi) {
+    std::vector<std::string> module_search_paths;
+    std::vector<std::pair<std::string, bool>> framework_search_paths;
+    std::vector<std::string> extra_clang_args;
+    lldb::ModuleSP module_sp = module_list.GetModuleAtIndex(mi);
+    ProcessModule(module_sp, m_description, use_all_compiler_flags, *target_sp,
+                  module_search_paths, framework_search_paths,
+                  extra_clang_args);
+    // If the use-all-compiler-flags setting is enabled, the expression
+    // context is supposed to merge all search paths form all dylibs.
+    if (use_all_compiler_flags && !extra_clang_args.empty()) {
+      // We cannot reconfigure ClangImporter after its creation.
+      // Instead poison the SwiftASTContext so it gets recreated.
+      m_fatal_errors.SetErrorStringWithFormat(
+          "New Swift image added: %s",
+          module_sp->GetFileSpec().GetPath().c_str());
+    }
+
+    // Scan the dylib for .swiftast sections.
+    std::vector<std::string> module_names;
+    RegisterSectionModules(*module_sp, module_names);
+  }
 }
 
 void SwiftASTContext::ClearModuleDependentCaches() {
