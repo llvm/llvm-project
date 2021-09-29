@@ -397,6 +397,11 @@ bool isBuildVectorAllOnes(const MachineInstr &MI,
 Optional<RegOrConstant> getVectorSplat(const MachineInstr &MI,
                                        const MachineRegisterInfo &MRI);
 
+/// Determines if \p MI defines a constant integer or a build vector of
+/// constant integers. Treats undef values as constants.
+bool isConstantOrConstantVector(MachineInstr &MI,
+                                const MachineRegisterInfo &MRI);
+
 /// Determines if \p MI defines a constant integer or a splat vector of
 /// constant integers.
 /// \returns the scalar constant or None.

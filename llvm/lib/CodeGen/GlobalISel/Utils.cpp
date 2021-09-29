@@ -1016,6 +1016,23 @@ Optional<RegOrConstant> llvm::getVectorSplat(const MachineInstr &MI,
   return RegOrConstant(Reg);
 }
 
+bool llvm::isConstantOrConstantVector(MachineInstr &MI,
+                                      const MachineRegisterInfo &MRI) {
+  Register Def = MI.getOperand(0).getReg();
+  if (auto C = getIConstantVRegValWithLookThrough(Def, MRI))
+    return true;
+  GBuildVector *BV = dyn_cast<GBuildVector>(&MI);
+  if (!BV)
+    return false;
+  for (unsigned SrcIdx = 0; SrcIdx < BV->getNumSources(); ++SrcIdx) {
+    if (getIConstantVRegValWithLookThrough(BV->getSourceReg(SrcIdx), MRI) ||
+        getOpcodeDef<GImplicitDef>(BV->getSourceReg(SrcIdx), MRI))
+      continue;
+    return false;
+  }
+  return true;
+}
+
 Optional<APInt>
 llvm::isConstantOrConstantSplatVector(MachineInstr &MI,
                                       const MachineRegisterInfo &MRI) {

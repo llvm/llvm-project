@@ -602,6 +602,14 @@ public:
   /// feeding a G_AND instruction \p MI.
   bool matchNarrowBinopFeedingAnd(MachineInstr &MI, BuildFnTy &MatchInfo);
 
+  /// Given an G_UDIV \p MI expressing a divide by constant, return an
+  /// expression that implements it by multiplying by a magic number.
+  /// Ref: "Hacker's Delight" or "The PowerPC Compiler Writer's Guide".
+  MachineInstr *buildUDivUsingMul(MachineInstr &MI);
+  /// Combine G_UDIV by constant into a multiply by magic constant.
+  bool matchUDivByConst(MachineInstr &MI);
+  void applyUDivByConst(MachineInstr &MI);
+
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.
   bool tryCombine(MachineInstr &MI);

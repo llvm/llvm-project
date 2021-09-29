@@ -694,6 +694,15 @@ def bitfield_extract_from_shr : GICombineRule<
 def form_bitfield_extract : GICombineGroup<[bitfield_extract_from_sext_inreg,
                                             bitfield_extract_from_and,
                                             bitfield_extract_from_shr]>;
+
+def udiv_by_const : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_UDIV):$root,
+   [{ return Helper.matchUDivByConst(*${root}); }]),
+  (apply [{ Helper.applyUDivByConst(*${root}); }])>;
+
+def intdiv_combines : GICombineGroup<[udiv_by_const]>;
+
 def reassoc_ptradd : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
   (match (wip_match_opcode G_PTR_ADD):$root,
@@ -761,7 +770,8 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
     shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
     truncstore_merge, div_rem_to_divrem, funnel_shift_combines,
-    form_bitfield_extract, constant_fold, fabs_fneg_fold]>;
+    form_bitfield_extract, constant_fold, fabs_fneg_fold,
+    intdiv_combines]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and
