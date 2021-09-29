@@ -1,13 +1,13 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -triple powerpc64-unknown-unknown -O1 -disable-llvm-passes \
+// RUN: %clang_cc1 -triple powerpc64-unknown-linux-gnu -O1 -disable-llvm-passes \
 // RUN:    -emit-llvm %s -o -  -target-cpu pwr7 | FileCheck %s --check-prefix=64BIT
-// RUN: %clang_cc1 -triple powerpc64le-unknown-unknown -O1 -disable-llvm-passes \
+// RUN: %clang_cc1 -triple powerpc64le-unknown-linux-gnu -O1 -disable-llvm-passes \
 // RUN:   -emit-llvm %s -o -  -target-cpu pwr8 | FileCheck %s --check-prefix=64BIT
 // RUN: %clang_cc1 -triple powerpc64-unknown-aix -O1 -disable-llvm-passes \
 // RUN:    -emit-llvm %s -o -  -target-cpu pwr7 | FileCheck %s --check-prefix=64BIT
-// RUN: %clang_cc1 -triple powerpc-unknown-unknown -O1 -disable-llvm-passes \
+// RUN: %clang_cc1 -triple powerpc-unknown-linux-gnu -O1 -disable-llvm-passes \
 // RUN:    -emit-llvm %s -o -  -target-cpu pwr7 | FileCheck %s --check-prefix=32BIT
-// RUN: %clang_cc1 -triple powerpcle-unknown-unknown -O1 -disable-llvm-passes \
+// RUN: %clang_cc1 -triple powerpcle-unknown-linux-gnu -O1 -disable-llvm-passes \
 // RUN:   -emit-llvm %s -o -  -target-cpu pwr8 | FileCheck %s --check-prefix=32BIT
 // RUN: %clang_cc1 -triple powerpc-unknown-aix -O1 -disable-llvm-passes \
 // RUN:    -emit-llvm %s -o -  -target-cpu pwr7 | FileCheck %s --check-prefix=32BIT

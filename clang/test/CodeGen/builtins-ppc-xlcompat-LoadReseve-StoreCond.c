@@ -3,9 +3,9 @@
 // RUN:  -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -O2 -target-cpu pwr8 -triple=powerpc64-unknown-aix \
 // RUN:  -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -O2 -target-cpu pwr8 -triple=powerpc64le-unknown-unknown \
+// RUN: %clang_cc1 -O2 -target-cpu pwr8 -triple=powerpc64le-unknown-linux-gnu \
 // RUN:  -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -O2 -target-cpu pwr8 -triple=powerpc64-unknown-unknown \
+// RUN: %clang_cc1 -O2 -target-cpu pwr8 -triple=powerpc64-unknown-linux-gnu \
 // RUN:  -emit-llvm %s -o - | FileCheck %s
 // RAUN: not %clang_cc1 -O2 -target-cpu pwr7 -triple=powerpc-unknown-aix \
 // RAUN:  -emit-llvm %s -o - 2>&1 | FileCheck %s \
