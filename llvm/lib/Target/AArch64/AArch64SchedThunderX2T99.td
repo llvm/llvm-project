@@ -1250,7 +1250,12 @@ def : InstRW<[THX2T99Write_5Cyc_F01], (instrs FMOVXDHighr, FMOVDXHighr)>;
 // ASIMD shift by register, basic, Q-form
 // ASIMD shift by register, complex, D-form
 // ASIMD shift by register, complex, Q-form
-def : WriteRes<WriteV, [THX2T99F01]> {
+def : WriteRes<WriteVd, [THX2T99F01]> {
+  let Latency = 7;
+  let NumMicroOps = 4;
+  let ResourceCycles = [4];
+}
+def : WriteRes<WriteVq, [THX2T99F01]> {
   let Latency = 7;
   let NumMicroOps = 4;
   let ResourceCycles = [4];

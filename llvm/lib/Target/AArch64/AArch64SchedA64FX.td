@@ -1627,7 +1627,11 @@ def : InstRW<[A64FXWrite_FMOV_VG14], (instrs FMOVDXHighr)>;
 // ASIMD shift by register, basic, Q-form
 // ASIMD shift by register, complex, D-form
 // ASIMD shift by register, complex, Q-form
-def : WriteRes<WriteV, [A64FXGI03]> {
+def : WriteRes<WriteVd, [A64FXGI03]> {
+  let Latency = 4;
+  let ResourceCycles = [1];
+}
+def : WriteRes<WriteVq, [A64FXGI03]> {
   let Latency = 4;
   let ResourceCycles = [1];
 }

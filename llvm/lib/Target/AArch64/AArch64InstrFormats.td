@@ -5319,7 +5319,7 @@ class BaseSIMDThreeSameVector<bit Q, bit U, bits<3> size, bits<5> opcode,
   : I<(outs regtype:$Rd), (ins regtype:$Rn, regtype:$Rm), asm,
       "{\t$Rd" # kind # ", $Rn" # kind # ", $Rm" # kind #
       "|" # kind # "\t$Rd, $Rn, $Rm|}", "", pattern>,
-    Sched<[WriteV]> {
+    Sched<[!if(Q, WriteVq, WriteVd)]> {
   bits<5> Rd;
   bits<5> Rn;
   bits<5> Rm;
@@ -5342,7 +5342,7 @@ class BaseSIMDThreeSameVectorTied<bit Q, bit U, bits<3> size, bits<5> opcode,
   : I<(outs regtype:$dst), (ins regtype:$Rd, regtype:$Rn, regtype:$Rm), asm,
       "{\t$Rd" # kind # ", $Rn" # kind # ", $Rm" # kind #
       "|" # kind # "\t$Rd, $Rn, $Rm}", "$Rd = $dst", pattern>,
-    Sched<[WriteV]> {
+    Sched<[!if(Q, WriteVq, WriteVd)]> {
   bits<5> Rd;
   bits<5> Rn;
   bits<5> Rm;
@@ -5361,7 +5361,7 @@ class BaseSIMDThreeSameVectorTied<bit Q, bit U, bits<3> size, bits<5> opcode,
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in
 class BaseSIMDThreeSameVectorPseudo<RegisterOperand regtype, list<dag> pattern>
   : Pseudo<(outs regtype:$dst), (ins regtype:$Rd, regtype:$Rn, regtype:$Rm), pattern>,
-    Sched<[WriteV]>;
+    Sched<[!if(!eq(regtype, V128), WriteVq, WriteVd)]>;
 
 multiclass SIMDLogicalThreeVectorPseudo<SDPatternOperator OpNode> {
   def v8i8  : BaseSIMDThreeSameVectorPseudo<V64,
@@ -5714,7 +5714,7 @@ class BaseSIMDTwoSameVector<bit Q, bit U, bits<2> size, bits<5> opcode,
   : I<(outs regtype:$Rd), (ins regtype:$Rn), asm,
       "{\t$Rd" # dstkind # ", $Rn" # srckind #
       "|" # dstkind # "\t$Rd, $Rn}", "", pattern>,
-    Sched<[WriteV]> {
+    Sched<[!if(Q, WriteVq, WriteVd)]> {
   bits<5> Rd;
   bits<5> Rn;
   let Inst{31}    = 0;
@@ -5739,7 +5739,7 @@ class BaseSIMDTwoSameVectorTied<bit Q, bit U, bits<2> size, bits<5> opcode,
   : I<(outs regtype:$dst), (ins regtype:$Rd, regtype:$Rn), asm,
       "{\t$Rd" # dstkind # ", $Rn" # srckind #
       "|" # dstkind # "\t$Rd, $Rn}", "$Rd = $dst", pattern>,
-    Sched<[WriteV]> {
+    Sched<[!if(Q, WriteVq, WriteVd)]> {
   bits<5> Rd;
   bits<5> Rn;
   let Inst{31}    = 0;
@@ -5785,7 +5785,7 @@ class BaseSIMDVectorLShiftLongBySize<bit Q, bits<2> size,
   : I<(outs V128:$Rd), (ins regtype:$Rn), asm,
       "{\t$Rd" # dstkind # ", $Rn" # srckind # ", #" # amount #
       "|" # dstkind # "\t$Rd, $Rn, #" #  amount # "}", "", []>,
-    Sched<[WriteV]> {
+    Sched<[WriteVq]> {
   bits<5> Rd;
   bits<5> Rn;
   let Inst{31}    = 0;
@@ -6050,7 +6050,7 @@ class BaseSIMDMixedTwoVector<bit Q, bit U, bits<2> size, bits<5> opcode,
   : I<(outs outreg:$Rd), (ins inreg:$Rn), asm,
       "{\t$Rd" # outkind # ", $Rn" # inkind #
       "|" # outkind # "\t$Rd, $Rn}", "", pattern>,
-    Sched<[WriteV]> {
+    Sched<[WriteVq]> {
   bits<5> Rd;
   bits<5> Rn;
   let Inst{31}    = 0;
@@ -6073,7 +6073,7 @@ class BaseSIMDMixedTwoVectorTied<bit Q, bit U, bits<2> size, bits<5> opcode,
   : I<(outs outreg:$dst), (ins outreg:$Rd, inreg:$Rn), asm,
       "{\t$Rd" # outkind # ", $Rn" # inkind #
       "|" # outkind # "\t$Rd, $Rn}", "$Rd = $dst", pattern>,
-    Sched<[WriteV]> {
+    Sched<[WriteVq]> {
   bits<5> Rd;
   bits<5> Rn;
   let Inst{31}    = 0;
@@ -6125,7 +6125,7 @@ class BaseSIMDCmpTwoVector<bit Q, bit U, bits<2> size, bits<2> size2,
       "{\t$Rd" # kind # ", $Rn" # kind # ", #" # zero #
       "|" # kind # "\t$Rd, $Rn, #" # zero # "}", "",
       [(set (dty regtype:$Rd), (OpNode (sty regtype:$Rn)))]>,
-    Sched<[WriteV]> {
+    Sched<[!if(Q, WriteVq, WriteVd)]> {
   bits<5> Rd;
   bits<5> Rn;
   let Inst{31}    = 0;
@@ -6223,7 +6223,7 @@ class BaseSIMDFPCvtTwoVector<bit Q, bit U, bits<2> size, bits<5> opcode,
                              list<dag> pattern>
   : I<(outs outtype:$Rd), (ins intype:$Rn), asm,
       !strconcat("\t$Rd", VdTy, ", $Rn", VnTy), "", pattern>,
-    Sched<[WriteV]> {
+    Sched<[WriteVq]> {
   bits<5> Rd;
   bits<5> Rn;
   let Inst{31}    = 0;
@@ -6245,7 +6245,7 @@ class BaseSIMDFPCvtTwoVectorTied<bit Q, bit U, bits<2> size, bits<5> opcode,
                              list<dag> pattern>
   : I<(outs outtype:$dst), (ins outtype:$Rd, intype:$Rn), asm,
       !strconcat("\t$Rd", VdTy, ", $Rn", VnTy), "$Rd = $dst", pattern>,
-    Sched<[WriteV]> {
+    Sched<[WriteVq]> {
   bits<5> Rd;
   bits<5> Rn;
   let Inst{31}    = 0;
@@ -6308,7 +6308,7 @@ class BaseSIMDDifferentThreeVector<bit U, bits<3> size, bits<4> opcode,
   : I<(outs outtype:$Rd), (ins intype1:$Rn, intype2:$Rm), asm,
       "{\t$Rd" # outkind # ", $Rn" # inkind1 # ", $Rm" # inkind2 #
       "|" # outkind # "\t$Rd, $Rn, $Rm}", "", pattern>,
-    Sched<[WriteV]> {
+    Sched<[WriteVq]> {
   bits<5> Rd;
   bits<5> Rn;
   bits<5> Rm;
@@ -6334,7 +6334,7 @@ class BaseSIMDDifferentThreeVectorTied<bit U, bits<3> size, bits<4> opcode,
   : I<(outs outtype:$dst), (ins outtype:$Rd, intype1:$Rn, intype2:$Rm), asm,
       "{\t$Rd" # outkind # ", $Rn" # inkind1 # ", $Rm" # inkind2 #
       "|" # outkind # "\t$Rd, $Rn, $Rm}", "$Rd = $dst", pattern>,
-    Sched<[WriteV]> {
+    Sched<[WriteVq]> {
   bits<5> Rd;
   bits<5> Rn;
   bits<5> Rm;
@@ -6674,7 +6674,7 @@ class BaseSIMDBitwiseExtract<bit size, RegisterOperand regtype, ValueType vty,
       "|" # kind # "\t$Rd, $Rn, $Rm, $imm}", "",
       [(set (vty regtype:$Rd),
             (AArch64ext regtype:$Rn, regtype:$Rm, (i32 imm:$imm)))]>,
-    Sched<[WriteV]> {
+    Sched<[!if(size, WriteVq, WriteVd)]> {
   bits<5> Rd;
   bits<5> Rn;
   bits<5> Rm;
@@ -6708,7 +6708,7 @@ class BaseSIMDZipVector<bits<3> size, bits<3> opc, RegisterOperand regtype,
       "{\t$Rd" # kind # ", $Rn" # kind # ", $Rm" # kind #
       "|" # kind # "\t$Rd, $Rn, $Rm}", "",
       [(set (valty regtype:$Rd), (OpNode regtype:$Rn, regtype:$Rm))]>,
-    Sched<[WriteV]> {
+    Sched<[!if(!eq(regtype, V128), WriteVq, WriteVd)]> {
   bits<5> Rd;
   bits<5> Rn;
   bits<5> Rm;
@@ -6764,7 +6764,7 @@ class BaseSIMDThreeScalar<bit U, bits<3> size, bits<5> opcode,
                         list<dag> pattern>
   : I<(outs regtype:$Rd), (ins regtype:$Rn, regtype:$Rm), asm,
       "\t$Rd, $Rn, $Rm", "", pattern>,
-    Sched<[WriteV]> {
+    Sched<[WriteVd]> {
   bits<5> Rd;
   bits<5> Rn;
   bits<5> Rm;
@@ -6784,7 +6784,7 @@ class BaseSIMDThreeScalarTied<bit U, bits<2> size, bit R, bits<5> opcode,
                         dag oops, dag iops, string asm,
             list<dag> pattern>
   : I<oops, iops, asm, "\t$Rd, $Rn, $Rm", "$Rd = $dst", pattern>,
-    Sched<[WriteV]> {
+    Sched<[WriteVd]> {
   bits<5> Rd;
   bits<5> Rn;
   bits<5> Rm;
@@ -6877,7 +6877,7 @@ class BaseSIMDThreeScalarMixed<bit U, bits<2> size, bits<5> opcode,
               dag oops, dag iops, string asm, string cstr, list<dag> pat>
   : I<oops, iops, asm,
       "\t$Rd, $Rn, $Rm", cstr, pat>,
-    Sched<[WriteV]> {
+    Sched<[WriteVd]> {
   bits<5> Rd;
   bits<5> Rn;
   bits<5> Rm;
@@ -6930,7 +6930,7 @@ class BaseSIMDTwoScalar<bit U, bits<2> size, bits<2> size2, bits<5> opcode,
                         string asm, list<dag> pat>
   : I<(outs regtype:$Rd), (ins regtype2:$Rn), asm,
       "\t$Rd, $Rn", "", pat>,
-    Sched<[WriteV]> {
+    Sched<[WriteVd]> {
   bits<5> Rd;
   bits<5> Rn;
   let Inst{31-30} = 0b01;
@@ -6952,7 +6952,7 @@ class BaseSIMDTwoScalarTied<bit U, bits<2> size, bits<5> opcode,
                         string asm, list<dag> pat>
   : I<(outs regtype:$dst), (ins regtype:$Rd, regtype2:$Rn), asm,
       "\t$Rd, $Rn", "$Rd = $dst", pat>,
-    Sched<[WriteV]> {
+    Sched<[WriteVd]> {
   bits<5> Rd;
   bits<5> Rn;
   let Inst{31-30} = 0b01;
@@ -6972,7 +6972,7 @@ class BaseSIMDCmpTwoScalar<bit U, bits<2> size, bits<2> size2, bits<5> opcode,
                         RegisterClass regtype, string asm, string zero>
   : I<(outs regtype:$Rd), (ins regtype:$Rn), asm,
       "\t$Rd, $Rn, #" # zero, "", []>,
-    Sched<[WriteV]> {
+    Sched<[WriteVd]> {
   bits<5> Rd;
   bits<5> Rn;
   let Inst{31-30} = 0b01;
@@ -6991,7 +6991,7 @@ class BaseSIMDCmpTwoScalar<bit U, bits<2> size, bits<2> size2, bits<5> opcode,
 class SIMDInexactCvtTwoScalar<bits<5> opcode, string asm>
   : I<(outs FPR32:$Rd), (ins FPR64:$Rn), asm, "\t$Rd, $Rn", "",
      [(set (f32 FPR32:$Rd), (int_aarch64_sisd_fcvtxn (f64 FPR64:$Rn)))]>,
-    Sched<[WriteV]> {
+    Sched<[WriteVd]> {
   bits<5> Rd;
   bits<5> Rn;
   let Inst{31-17} = 0b011111100110000;
@@ -7113,7 +7113,7 @@ class BaseSIMDPairwiseScalar<bit U, bits<2> size, bits<5> opcode,
                         string asm, string kind>
   : I<(outs regtype:$Rd), (ins vectype:$Rn), asm,
       "{\t$Rd, $Rn" # kind # "|" # kind # "\t$Rd, $Rn}", "", []>,
-    Sched<[WriteV]> {
+    Sched<[WriteVd]> {
   bits<5> Rd;
   bits<5> Rn;
   let Inst{31-30} = 0b01;
@@ -7153,7 +7153,7 @@ class BaseSIMDAcrossLanes<bit Q, bit U, bits<2> size, bits<5> opcode,
                           string asm, string kind, list<dag> pattern>
   : I<(outs regtype:$Rd), (ins vectype:$Rn), asm,
       "{\t$Rd, $Rn" # kind # "|" # kind # "\t$Rd, $Rn}", "", pattern>,
-    Sched<[WriteV]> {
+    Sched<[!if(Q, WriteVq, WriteVd)]> {
   bits<5> Rd;
   bits<5> Rn;
   let Inst{31}    = 0;
@@ -7219,7 +7219,7 @@ multiclass SIMDFPAcrossLanes<bits<5> opcode, bit sz1, string asm,
 class BaseSIMDInsDup<bit Q, bit op, dag outs, dag ins, string asm,
                      string operands, string constraints, list<dag> pattern>
   : I<outs, ins, asm, operands, constraints, pattern>,
-    Sched<[WriteV]> {
+    Sched<[!if(Q, WriteVq, WriteVd)]> {
   bits<5> Rd;
   bits<5> Rn;
   let Inst{31} = 0;
@@ -7531,7 +7531,7 @@ class BaseSIMDTableLookup<bit Q, bits<2> len, bit op, RegisterOperand vectype,
                           RegisterOperand listtype, string asm, string kind>
   : I<(outs vectype:$Vd), (ins listtype:$Vn, vectype:$Vm), asm,
        "\t$Vd" # kind # ", $Vn, $Vm" # kind, "", []>,
-    Sched<[WriteV]> {
+    Sched<[!if(Q, WriteVq, WriteVd)]> {
   bits<5> Vd;
   bits<5> Vn;
   bits<5> Vm;
@@ -7552,7 +7552,7 @@ class BaseSIMDTableLookupTied<bit Q, bits<2> len, bit op, RegisterOperand vectyp
                           RegisterOperand listtype, string asm, string kind>
   : I<(outs vectype:$dst), (ins vectype:$Vd, listtype:$Vn, vectype:$Vm), asm,
        "\t$Vd" # kind # ", $Vn, $Vm" # kind, "$Vd = $dst", []>,
-    Sched<[WriteV]> {
+    Sched<[!if(Q, WriteVq, WriteVd)]> {
   bits<5> Vd;
   bits<5> Vn;
   bits<5> Vm;
@@ -7671,7 +7671,7 @@ class BaseSIMDScalarCPY<RegisterClass regtype, RegisterOperand vectype,
   : I<(outs regtype:$dst), (ins vectype:$src, idxtype:$idx), asm,
        "{\t$dst, $src" # kind # "$idx" #
        "|\t$dst, $src$idx}", "", []>,
-    Sched<[WriteV]> {
+    Sched<[WriteVd]> {
   bits<5> dst;
   bits<5> src;
   let Inst{31-21} = 0b01011110000;
@@ -7736,7 +7736,7 @@ class BaseSIMDModifiedImm<bit Q, bit op, bit op2, dag oops, dag iops,
                           string asm, string op_string,
                           string cstr, list<dag> pattern>
   : I<oops, iops, asm, op_string, cstr, pattern>,
-    Sched<[WriteV]> {
+    Sched<[!if(Q, WriteVq, WriteVd)]> {
   bits<5> Rd;
   bits<8> imm8;
   let Inst{31}    = 0;
@@ -7906,7 +7906,7 @@ class BaseSIMDIndexed<bit Q, bit U, bit Scalar, bits<2> size, bits<4> opc,
       asm,
       "{\t$Rd" # dst_kind # ", $Rn" # lhs_kind # ", $Rm" # rhs_kind # "$idx" #
       "|" # apple_kind # "\t$Rd, $Rn, $Rm$idx}", "", pattern>,
-    Sched<[WriteV]> {
+    Sched<[WriteVd]> {
   bits<5> Rd;
   bits<5> Rn;
   bits<5> Rm;
@@ -7936,7 +7936,7 @@ class BaseSIMDIndexedTied<bit Q, bit U, bit Scalar, bits<2> size, bits<4> opc,
       (ins dst_reg:$Rd, lhs_reg:$Rn, rhs_reg:$Rm, vec_idx:$idx), asm,
       "{\t$Rd" # dst_kind # ", $Rn" # lhs_kind # ", $Rm" # rhs_kind # "$idx" #
       "|" # apple_kind # "\t$Rd, $Rn, $Rm$idx}", "$Rd = $dst", pattern>,
-    Sched<[WriteV]> {
+    Sched<[WriteVd]> {
   bits<5> Rd;
   bits<5> Rn;
   bits<5> Rm;
@@ -8029,7 +8029,7 @@ class SIMDBF16MLALIndex<bit Q, string asm, SDPatternOperator OpNode>
                                (v8bf16
                                   (AArch64duplane16 (v8bf16 V128_lo:$Rm),
                                       VectorIndexH:$idx)))))]>,
-    Sched<[WriteV]> {
+    Sched<[WriteVq]> {
   bits<5> Rd;
   bits<5> Rn;
   bits<4> Rm;
@@ -8950,7 +8950,7 @@ class BaseSIMDScalarShift<bit U, bits<5> opc, bits<7> fixed_imm,
                      Operand immtype, string asm, list<dag> pattern>
   : I<(outs regtype1:$Rd), (ins regtype2:$Rn, immtype:$imm),
       asm, "\t$Rd, $Rn, $imm", "", pattern>,
-    Sched<[WriteV]> {
+    Sched<[WriteVd]> {
   bits<5> Rd;
   bits<5> Rn;
   bits<7> imm;
@@ -8970,7 +8970,7 @@ class BaseSIMDScalarShiftTied<bit U, bits<5> opc, bits<7> fixed_imm,
                      Operand immtype, string asm, list<dag> pattern>
   : I<(outs regtype1:$dst), (ins regtype1:$Rd, regtype2:$Rn, immtype:$imm),
       asm, "\t$Rd, $Rn, $imm", "$Rd = $dst", pattern>,
-    Sched<[WriteV]> {
+    Sched<[WriteVd]> {
   bits<5> Rd;
   bits<5> Rn;
   bits<7> imm;
@@ -9134,7 +9134,7 @@ class BaseSIMDVectorShift<bit Q, bit U, bits<5> opc, bits<7> fixed_imm,
   : I<(outs dst_reg:$Rd), (ins src_reg:$Rn, immtype:$imm),
       asm, "{\t$Rd" # dst_kind # ", $Rn" # src_kind # ", $imm" #
            "|" # dst_kind # "\t$Rd, $Rn, $imm}", "", pattern>,
-    Sched<[WriteV]> {
+    Sched<[!if(Q, WriteVq, WriteVd)]> {
   bits<5> Rd;
   bits<5> Rn;
   let Inst{31}    = 0;
@@ -9157,7 +9157,7 @@ class BaseSIMDVectorShiftTied<bit Q, bit U, bits<5> opc, bits<7> fixed_imm,
   : I<(outs vectype1:$dst), (ins vectype1:$Rd, vectype2:$Rn, immtype:$imm),
       asm, "{\t$Rd" # dst_kind # ", $Rn" # src_kind # ", $imm" #
            "|" # dst_kind # "\t$Rd, $Rn, $imm}", "$Rd = $dst", pattern>,
-    Sched<[WriteV]> {
+    Sched<[!if(Q, WriteVq, WriteVd)]> {
   bits<5> Rd;
   bits<5> Rn;
   let Inst{31}    = 0;
@@ -10704,7 +10704,7 @@ class BaseSIMDThreeSameVectorComplex<bit Q, bit U, bits<2> size, bits<3> opcode,
   : I<(outs regtype:$Rd), (ins regtype:$Rn, regtype:$Rm, rottype:$rot), asm,
       "{\t$Rd" # kind # ", $Rn" # kind # ", $Rm" # kind # ", $rot"
       "|" # kind # "\t$Rd, $Rn, $Rm, $rot}", "", pattern>,
-    Sched<[WriteV]> {
+    Sched<[!if(Q, WriteVq, WriteVd)]> {
   bits<5> Rd;
   bits<5> Rn;
   bits<5> Rm;
@@ -10778,7 +10778,7 @@ class BaseSIMDThreeSameVectorTiedComplex<bit Q, bit U, bits<2> size,
       (ins regtype:$Rd, regtype:$Rn, regtype:$Rm, rottype:$rot), asm,
       "{\t$Rd" # kind # ", $Rn" # kind # ", $Rm" # kind # ", $rot"
       "|" # kind # "\t$Rd, $Rn, $Rm, $rot}", "$Rd = $dst", pattern>,
-    Sched<[WriteV]> {
+    Sched<[!if(Q, WriteVq, WriteVd)]> {
   bits<5> Rd;
   bits<5> Rn;
   bits<5> Rm;
@@ -10854,7 +10854,7 @@ class BaseSIMDIndexedTiedComplex<bit Q, bit U, bit Scalar, bits<2> size,
       "{\t$Rd" # dst_kind # ", $Rn" # lhs_kind # ", $Rm" # rhs_kind #
       "$idx, $rot" # "|" # apple_kind #
       "\t$Rd, $Rn, $Rm$idx, $rot}", "$Rd = $dst", pattern>,
-    Sched<[WriteV]> {
+    Sched<[!if(Q, WriteVq, WriteVd)]> {
   bits<5> Rd;
   bits<5> Rn;
   bits<5> Rm;
@@ -10919,7 +10919,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in
 class AESBase<bits<4> opc, string asm, dag outs, dag ins, string cstr,
               list<dag> pat>
   : I<outs, ins, asm, "{\t$Rd.16b, $Rn.16b|.16b\t$Rd, $Rn}", cstr, pat>,
-    Sched<[WriteV]>{
+    Sched<[WriteVq]>{
   bits<5> Rd;
   bits<5> Rn;
   let Inst{31-16} = 0b0100111000101000;
@@ -10945,7 +10945,7 @@ class SHA3OpTiedInst<bits<3> opc, string asm, string dst_lhs_kind,
   : I<oops, iops, asm,
       "{\t$Rd" # dst_lhs_kind # ", $Rn" # dst_lhs_kind # ", $Rm.4s" #
       "|.4s\t$Rd, $Rn, $Rm}", "$Rd = $dst", pat>,
-    Sched<[WriteV]>{
+    Sched<[WriteVq]>{
   bits<5> Rd;
   bits<5> Rn;
   bits<5> Rm;
@@ -10985,7 +10985,7 @@ class SHA2OpInst<bits<4> opc, string asm, string kind,
                  list<dag> pat>
   : I<oops, iops, asm, "{\t$Rd" # kind # ", $Rn" # kind #
                        "|" # kind # "\t$Rd, $Rn}", cstr, pat>,
-    Sched<[WriteV]>{
+    Sched<[WriteVq]>{
   bits<5> Rd;
   bits<5> Rn;
   let Inst{31-16} = 0b0101111000101000;
@@ -11008,7 +11008,7 @@ class SHAInstSS<bits<4> opc, string asm, Intrinsic OpNode>
 // Armv8.2-A Crypto extensions
 class BaseCryptoV82<dag oops, dag iops, string asm, string asmops, string cst,
                     list<dag> pattern>
-  : I <oops, iops, asm, asmops, cst, pattern>, Sched<[WriteV]> {
+  : I <oops, iops, asm, asmops, cst, pattern>, Sched<[WriteVq]> {
   bits<5> Vd;
   bits<5> Vn;
   let Inst{31-25} = 0b1100111;
