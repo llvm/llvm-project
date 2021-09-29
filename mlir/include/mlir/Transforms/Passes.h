@@ -25,6 +25,10 @@ namespace mlir {
 class AffineForOp;
 class GreedyRewriteConfig;
 
+/// Fusion mode to attempt. The default mode `Greedy` does both
+/// producer-consumer and sibling fusion.
+enum FusionMode { Greedy, ProducerConsumer, Sibling };
+
 //===----------------------------------------------------------------------===//
 // Passes
 //===----------------------------------------------------------------------===//
@@ -72,13 +76,14 @@ createCanonicalizerPass(const GreedyRewriteConfig &config);
 /// Creates a pass to perform common sub expression elimination.
 std::unique_ptr<Pass> createCSEPass();
 
-/// Creates a loop fusion pass which fuses loops. Buffers of size less than or
-/// equal to `localBufSizeThreshold` are promoted to memory space
-/// `fastMemorySpace'.
+/// Creates a loop fusion pass which fuses loops according to type of fusion
+/// specified in `fusionMode`. Buffers of size less than or equal to
+/// `localBufSizeThreshold` are promoted to memory space `fastMemorySpace`.
 std::unique_ptr<OperationPass<FuncOp>>
 createLoopFusionPass(unsigned fastMemorySpace = 0,
                      uint64_t localBufSizeThreshold = 0,
-                     bool maximalFusion = false);
+                     bool maximalFusion = false,
+                     enum FusionMode fusionMode = FusionMode::Greedy);
 
 /// Creates a loop invariant code motion pass that hoists loop invariant
 /// instructions out of the loop.

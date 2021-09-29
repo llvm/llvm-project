@@ -13,6 +13,7 @@
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
+#include <cctype>
 
 using namespace clang::ast_matchers;
 
@@ -133,6 +134,11 @@ shouldReplaceLiteralSuffix(const Expr &Literal,
   const StringRef LiteralSourceText = Lexer::getSourceText(
       CharSourceRange::getTokenRange(*Range), SM, LO, &Invalid);
   assert(!Invalid && "Failed to retrieve the source text.");
+
+  // Make sure the first character is actually a digit, instead of
+  // something else, like a non-type template parameter.
+  if (!std::isdigit(static_cast<unsigned char>(LiteralSourceText.front())))
+    return llvm::None;
 
   size_t Skip = 0;
 

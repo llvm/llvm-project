@@ -8627,10 +8627,10 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_i32_inreg(i32) #0 {
 ; GFX10-SCRATCH-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s30, 16
 ; GFX10-SCRATCH-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-SCRATCH-NEXT:    s_clause 0x2
 ; GFX10-SCRATCH-NEXT:    s_load_dword s2, s[0:1], 0x0
-; GFX10-SCRATCH-NEXT:    ; kill: killed $sgpr0_sgpr1
-; GFX10-SCRATCH-NEXT:    ; kill: killed $sgpr0_sgpr1
-; GFX10-SCRATCH-NEXT:    s_clause 0x1
+; GFX10-SCRATCH-NEXT:    ; meta instruction
+; GFX10-SCRATCH-NEXT:    ; meta instruction
 ; GFX10-SCRATCH-NEXT:    s_load_dwordx16 s[36:51], s[0:1], 0x40
 ; GFX10-SCRATCH-NEXT:    s_load_dwordx16 s[4:19], s[0:1], 0x0
 ; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s31, 17

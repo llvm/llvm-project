@@ -1,62 +1,62 @@
 ; Check that [sl]dc1 are normally emitted. MIPS32r2 should have [sl]dxc1 too.
-; RUN: llc -march=mipsel -mcpu=mips32 -relocation-model=pic < %s | \
+; RUN: llc -mtriple=mipsel -mcpu=mips32 -relocation-model=pic < %s | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,32R1-LDC1
-; RUN: llc -march=mipsel -mcpu=mips32r2 -relocation-model=pic < %s | \
+; RUN: llc -mtriple=mipsel -mcpu=mips32r2 -relocation-model=pic < %s | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,32R2-LDXC1
-; RUN: llc -march=mipsel -mcpu=mips32r6 -relocation-model=pic < %s | \
+; RUN: llc -mtriple=mipsel -mcpu=mips32r6 -relocation-model=pic < %s | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,32R6-LDC1
-; RUN: llc -march=mipsel -mcpu=mips32r3 -mattr=+micromips \
+; RUN: llc -mtriple=mipsel -mcpu=mips32r3 -mattr=+micromips \
 ; RUN:   -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MM
-; RUN: llc -march=mipsel -mcpu=mips32r6 -mattr=+micromips \
+; RUN: llc -mtriple=mipsel -mcpu=mips32r6 -mattr=+micromips \
 ; RUN:   -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MM
 
 ; Check that -mno-ldc1-sdc1 disables [sl]dc1
-; RUN: llc -march=mipsel -relocation-model=pic -mno-ldc1-sdc1 \
+; RUN: llc -mtriple=mipsel -relocation-model=pic -mno-ldc1-sdc1 \
 ; RUN:   -mcpu=mips32   < %s | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,32R1,32R1-LE,32R1-LE-PIC
-; RUN: llc -march=mipsel -relocation-model=pic -mno-ldc1-sdc1 \
+; RUN: llc -mtriple=mipsel -relocation-model=pic -mno-ldc1-sdc1 \
 ; RUN:   -mcpu=mips32r2 < %s | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,32R2,32R2-LE,32R2-LE-PIC
-; RUN: llc -march=mipsel -relocation-model=pic -mno-ldc1-sdc1 \
+; RUN: llc -mtriple=mipsel -relocation-model=pic -mno-ldc1-sdc1 \
 ; RUN:   -mcpu=mips32r6 < %s | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,32R6,32R6-LE,32R6-LE-PIC
-; RUN: llc -march=mipsel -relocation-model=pic -mno-ldc1-sdc1 -mcpu=mips32r3 \
+; RUN: llc -mtriple=mipsel -relocation-model=pic -mno-ldc1-sdc1 -mcpu=mips32r3 \
 ; RUN:   -mattr=+micromips < %s | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,MM-MNO-PIC,MM-MNO-LE-PIC
-; RUN: llc -march=mipsel -relocation-model=pic -mno-ldc1-sdc1 -mcpu=mips32r6 \
+; RUN: llc -mtriple=mipsel -relocation-model=pic -mno-ldc1-sdc1 -mcpu=mips32r6 \
 ; RUN:   -mattr=+micromips < %s | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,MM-MNO-PIC,MM-MNO-LE-PIC
 
 ; Check again for big-endian
-; RUN: llc -march=mips -relocation-model=pic -mno-ldc1-sdc1 \
+; RUN: llc -mtriple=mips -relocation-model=pic -mno-ldc1-sdc1 \
 ; RUN:   -mcpu=mips32   < %s | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,32R1,32R1-BE,32R1-BE-PIC
-; RUN: llc -march=mips -relocation-model=pic -mno-ldc1-sdc1 \
+; RUN: llc -mtriple=mips -relocation-model=pic -mno-ldc1-sdc1 \
 ; RUN:   -mcpu=mips32r2 < %s | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,32R2,32R2-BE,32R2-BE-PIC
-; RUN: llc -march=mips -relocation-model=pic -mno-ldc1-sdc1 \
+; RUN: llc -mtriple=mips -relocation-model=pic -mno-ldc1-sdc1 \
 ; RUN:   -mcpu=mips32r6 < %s | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,32R6,32R6-BE,32R6-BE-PIC
-; RUN: llc -march=mips -relocation-model=pic -mno-ldc1-sdc1 -mcpu=mips32r3 \
+; RUN: llc -mtriple=mips -relocation-model=pic -mno-ldc1-sdc1 -mcpu=mips32r3 \
 ; RUN:   -mattr=+micromips < %s | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,MM-MNO-PIC,MM-MNO-BE-PIC
-; RUN: llc -march=mips -relocation-model=pic -mno-ldc1-sdc1 -mcpu=mips32r6 \
+; RUN: llc -mtriple=mips -relocation-model=pic -mno-ldc1-sdc1 -mcpu=mips32r6 \
 ; RUN:   -mattr=+micromips < %s | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,MM-MNO-PIC,MM-MNO-BE-PIC
 
 ; Check again for the static relocation model
-; RUN: llc -march=mipsel -relocation-model=static -mno-ldc1-sdc1 \
+; RUN: llc -mtriple=mipsel -relocation-model=static -mno-ldc1-sdc1 \
 ; RUN:   -mcpu=mips32   < %s | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,32R1,32R1-LE,32R1-LE-STATIC
-; RUN: llc -march=mipsel -relocation-model=static -mno-ldc1-sdc1 \
+; RUN: llc -mtriple=mipsel -relocation-model=static -mno-ldc1-sdc1 \
 ; RUN:   -mcpu=mips32r2 < %s | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,32R2,32R2-LE,32R2-LE-STATIC
-; RUN: llc -march=mipsel -relocation-model=static -mno-ldc1-sdc1 \
+; RUN: llc -mtriple=mipsel -relocation-model=static -mno-ldc1-sdc1 \
 ; RUN:   -mcpu=mips32r6 < %s | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,32R6,32R6-LE,32R6-LE-STATIC
-; RUN: llc -march=mipsel -relocation-model=static -mcpu=mips32r3 \
+; RUN: llc -mtriple=mipsel -relocation-model=static -mcpu=mips32r3 \
 ; RUN:   -mattr=+micromips < %s | FileCheck %s -check-prefixes=ALL,MM-STATIC-PIC
-; RUN: llc -march=mipsel -relocation-model=static -mcpu=mips32r6 \
+; RUN: llc -mtriple=mipsel -relocation-model=static -mcpu=mips32r6 \
 ; RUN:   -mattr=+micromips < %s | FileCheck %s -check-prefixes=ALL,MM-STATIC-PIC
 
 @g0 = common global double 0.000000e+00, align 8

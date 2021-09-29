@@ -770,6 +770,9 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(returnDoesNotAlias);
   KEYWORD(noInline);
   KEYWORD(alwaysInline);
+  KEYWORD(noUnwind);
+  KEYWORD(mayThrow);
+  KEYWORD(hasUnknownCall);
   KEYWORD(calls);
   KEYWORD(callee);
   KEYWORD(params);

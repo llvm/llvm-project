@@ -179,19 +179,19 @@ template <class _Tp, class _ElementType>
 struct __is_span_compatible_container<_Tp, _ElementType,
         void_t<
         // is not a specialization of span
-            typename enable_if<!__is_span<_Tp>::value, nullptr_t>::type,
+            enable_if_t<!__is_span<_Tp>::value, nullptr_t>,
         // is not a specialization of array
-            typename enable_if<!__is_std_array<_Tp>::value, nullptr_t>::type,
+            enable_if_t<!__is_std_array<_Tp>::value, nullptr_t>,
         // is_array_v<Container> is false,
-            typename enable_if<!is_array_v<_Tp>, nullptr_t>::type,
+            enable_if_t<!is_array_v<_Tp>, nullptr_t>,
         // data(cont) and size(cont) are well formed
             decltype(data(declval<_Tp>())),
             decltype(size(declval<_Tp>())),
         // remove_pointer_t<decltype(data(cont))>(*)[] is convertible to ElementType(*)[]
-            typename enable_if<
+            enable_if_t<
                 is_convertible_v<remove_pointer_t<decltype(data(declval<_Tp &>()))>(*)[],
                                  _ElementType(*)[]>,
-                nullptr_t>::type
+                nullptr_t>
         >>
     : public true_type {};
 

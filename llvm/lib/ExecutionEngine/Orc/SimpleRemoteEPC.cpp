@@ -45,17 +45,17 @@ SimpleRemoteEPC::lookupSymbols(ArrayRef<LookupRequest> Request) {
   return std::move(Result);
 }
 
-Expected<int32_t> SimpleRemoteEPC::runAsMain(JITTargetAddress MainFnAddr,
+Expected<int32_t> SimpleRemoteEPC::runAsMain(ExecutorAddr MainFnAddr,
                                              ArrayRef<std::string> Args) {
   int64_t Result = 0;
   if (auto Err = callSPSWrapper<rt::SPSRunAsMainSignature>(
-          RunAsMainAddr.getValue(), Result, ExecutorAddr(MainFnAddr), Args))
+          RunAsMainAddr, Result, ExecutorAddr(MainFnAddr), Args))
     return std::move(Err);
   return Result;
 }
 
 void SimpleRemoteEPC::callWrapperAsync(SendResultFunction OnComplete,
-                                       JITTargetAddress WrapperFnAddr,
+                                       ExecutorAddr WrapperFnAddr,
                                        ArrayRef<char> ArgBuffer) {
   uint64_t SeqNo;
   {
@@ -66,7 +66,7 @@ void SimpleRemoteEPC::callWrapperAsync(SendResultFunction OnComplete,
   }
 
   if (auto Err = sendMessage(SimpleRemoteEPCOpcode::CallWrapper, SeqNo,
-                             ExecutorAddr(WrapperFnAddr), ArgBuffer)) {
+                             WrapperFnAddr, ArgBuffer)) {
     getExecutionSession().reportError(std::move(Err));
   }
 }

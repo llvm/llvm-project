@@ -433,6 +433,34 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
 
   assert(MFI->isEntryFunction());
 
+  // Debug location must be unknown since the first debug location is used to
+  // determine the end of the prologue.
+  DebugLoc DL;
+  MachineBasicBlock::iterator I = MBB.begin();
+
+  // FIXME: Switch to using MF.needsFrameMoves() later
+  const bool needsFrameMoves = true;
+
+  if (needsFrameMoves) {
+    // On entry the SP/FP are not set up, so we need to define the CFA in terms
+    // of a literal location expression.
+    static const char CFAEncodedInst[] = {
+        dwarf::DW_CFA_def_cfa_expression,
+        3, // length
+        static_cast<char>(dwarf::DW_OP_lit0),
+        static_cast<char>(
+            dwarf::DW_OP_lit6), // DW_ASPACE_AMDGPU_private_wave FIXME:
+                                // should be defined elsewhere
+        static_cast<char>(dwarf::DW_OP_LLVM_form_aspace_address)};
+    buildCFI(MBB, I, DL,
+             MCCFIInstruction::createEscape(
+                 nullptr, StringRef(CFAEncodedInst, sizeof(CFAEncodedInst))));
+    // Unwinding halts when the return address (PC) is undefined.
+    buildCFI(MBB, I, DL,
+             MCCFIInstruction::createUndefined(
+                 nullptr, MCRI->getDwarfRegNum(AMDGPU::PC_REG, false)));
+  }
+
   Register PreloadedScratchWaveOffsetReg = MFI->getPreloadedReg(
       AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_WAVE_BYTE_OFFSET);
   // FIXME: Hack to not crash in situations which emitted an error.
@@ -470,34 +498,6 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
       MRI.addLiveIn(PreloadedScratchRsrcReg);
       MBB.addLiveIn(PreloadedScratchRsrcReg);
     }
-  }
-
-  // Debug location must be unknown since the first debug location is used to
-  // determine the end of the prologue.
-  DebugLoc DL;
-  MachineBasicBlock::iterator I = MBB.begin();
-
-  // FIXME: Switch to using MF.needsFrameMoves() later
-  const bool needsFrameMoves = true;
-
-  if (needsFrameMoves) {
-    // On entry the SP/FP are not set up, so we need to define the CFA in terms
-    // of a literal location expression.
-    static const char CFAEncodedInst[] = {
-        dwarf::DW_CFA_def_cfa_expression,
-        3, // length
-        static_cast<char>(dwarf::DW_OP_lit0),
-        static_cast<char>(
-            dwarf::DW_OP_lit6), // DW_ASPACE_AMDGPU_private_wave FIXME:
-                                // should be defined elsewhere
-        static_cast<char>(dwarf::DW_OP_LLVM_form_aspace_address)};
-    buildCFI(MBB, I, DL,
-             MCCFIInstruction::createEscape(
-                 nullptr, StringRef(CFAEncodedInst, sizeof(CFAEncodedInst))));
-    // Unwinding halts when the return address (PC) is undefined.
-    buildCFI(MBB, I, DL,
-             MCCFIInstruction::createUndefined(
-                 nullptr, MCRI->getDwarfRegNum(AMDGPU::PC_REG, false)));
   }
 
   // We found the SRSRC first because it needs four registers and has an

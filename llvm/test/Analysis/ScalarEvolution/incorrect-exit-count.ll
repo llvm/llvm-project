@@ -53,7 +53,7 @@ define dso_local i32 @f() {
 ; CHECK-NEXT:    %dec.3 = add nsw i32 %storemerge1921.3, -1
 ; CHECK-NEXT:    --> {2,+,-1}<nsw><%inner.loop> U: [2,3) S: [2,3) Exits: <<Unknown>> LoopDispositions: { %inner.loop: Computable, %outer.loop: Variant }
 ; CHECK-NEXT:    %storemerge1921.lcssa25.3 = phi i32 [ %storemerge1921.3, %for.end.3 ]
-; CHECK-NEXT:    --> %storemerge1921.lcssa25.3 U: [3,4) S: [3,4) Exits: <<Unknown>> LoopDispositions: { %outer.loop: Variant, %for.cond6: Invariant, %inner.loop: Invariant }
+; CHECK-NEXT:    --> {3,+,-1}<nuw><nsw><%inner.loop> U: [3,4) S: [3,4) Exits: <<Unknown>> LoopDispositions: { %outer.loop: Variant, %for.cond6: Variant, %inner.loop: Computable }
 ; CHECK-NEXT:    %dec16 = add nsw i32 %storemerge23, -1
 ; CHECK-NEXT:    --> {2,+,-1}<nsw><%outer.loop> U: [0,3) S: [0,3) Exits: <<Unknown>> LoopDispositions: { %outer.loop: Computable, %for.cond6: Invariant, %inner.loop: Invariant }
 ; CHECK-NEXT:  Determining loop execution counts for: @f
