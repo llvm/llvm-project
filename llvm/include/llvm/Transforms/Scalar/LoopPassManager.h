@@ -109,7 +109,10 @@ public:
         detail::PassModel<Loop, PassT, PreservedAnalyses, LoopAnalysisManager,
                           LoopStandardAnalysisResults &, LPMUpdater &>;
     IsLoopNestPass.push_back(false);
-    LoopPasses.emplace_back(new LoopPassModelT(std::forward<PassT>(Pass)));
+    // Do not use make_unique or emplace_back, they cause too many template
+    // instantiations, causing terrible compile times.
+    LoopPasses.push_back(std::unique_ptr<LoopPassConceptT>(
+        new LoopPassModelT(std::forward<PassT>(Pass))));
   }
 
   template <typename PassT>
@@ -120,8 +123,8 @@ public:
                           LoopAnalysisManager, LoopStandardAnalysisResults &,
                           LPMUpdater &>;
     IsLoopNestPass.push_back(true);
-    LoopNestPasses.emplace_back(
-        new LoopNestPassModelT(std::forward<PassT>(Pass)));
+    LoopNestPasses.push_back(std::unique_ptr<LoopNestPassConceptT>(
+        new LoopNestPassModelT(std::forward<PassT>(Pass))));
   }
 
   // Specializations of `addPass` for `RepeatedPass`. These are necessary since
@@ -135,7 +138,8 @@ public:
                           LoopAnalysisManager, LoopStandardAnalysisResults &,
                           LPMUpdater &>;
     IsLoopNestPass.push_back(false);
-    LoopPasses.emplace_back(new RepeatedLoopPassModelT(std::move(Pass)));
+    LoopPasses.push_back(std::unique_ptr<LoopPassConceptT>(
+        new RepeatedLoopPassModelT(std::move(Pass))));
   }
 
   template <typename PassT>
@@ -146,8 +150,8 @@ public:
                           LoopAnalysisManager, LoopStandardAnalysisResults &,
                           LPMUpdater &>;
     IsLoopNestPass.push_back(true);
-    LoopNestPasses.emplace_back(
-        new RepeatedLoopNestPassModelT(std::move(Pass)));
+    LoopNestPasses.push_back(std::unique_ptr<LoopNestPassConceptT>(
+        new RepeatedLoopNestPassModelT(std::move(Pass))));
   }
 
   bool isEmpty() const { return LoopPasses.empty() && LoopNestPasses.empty(); }
