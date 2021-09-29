@@ -392,8 +392,7 @@ Error WasmObjectFile::parseDylink0Section(ReadContext &Ctx) {
       break;
     }
     default:
-      return make_error<GenericBinaryError>("unknown dylink.0 sub-section",
-                                            object_error::parse_failed);
+      LLVM_DEBUG(dbgs() << "unknown dylink.0 sub-section: " << Type << "\n");
       Ctx.Ptr += Size;
       break;
     }
