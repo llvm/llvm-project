@@ -86,7 +86,11 @@ set(LIBUNWIND_TEST_LINKER_FLAGS "" CACHE STRING
 set(LIBUNWIND_TEST_COMPILER_FLAGS "" CACHE STRING
     "Additional compiler flags for test programs.")
 set(LIBUNWIND_TEST_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/test/lit.site.cfg.in" CACHE STRING
-    "The Lit testing configuration to use when running the tests.")
+  "The path to the Lit testing configuration to use when running the tests.
+   If a relative path is provided, it is assumed to be relative to '<monorepo>/libcxx/test/configs'.")
+if (NOT IS_ABSOLUTE "${LIBUNWIND_TEST_CONFIG}")
+  set(LIBUNWIND_TEST_CONFIG "${LIBUNWIND_LIBCXX_PATH}/test/configs/${LIBUNWIND_TEST_CONFIG}")
+endif()
 set(LIBUNWIND_TEST_PARAMS "" CACHE STRING
     "A list of parameters to run the Lit test suite with.")
 

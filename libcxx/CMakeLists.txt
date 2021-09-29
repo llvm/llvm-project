@@ -132,8 +132,12 @@ option(LIBCXX_ENABLE_INCOMPLETE_FEATURES
     are new library features under development. These features don't guarantee
     ABI stability nor the quality of completed library features. Vendors
     shipping the library may want to disable this option." ON)
-set(LIBCXX_TEST_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/test/configs/legacy.cfg.in" CACHE STRING
-    "The Lit testing configuration to use when running the tests.")
+set(LIBCXX_TEST_CONFIG "legacy.cfg.in" CACHE STRING
+    "The path to the Lit testing configuration to use when running the tests.
+     If a relative path is provided, it is assumed to be relative to '<monorepo>/libcxx/test/configs'.")
+if (NOT IS_ABSOLUTE "${LIBCXX_TEST_CONFIG}")
+  set(LIBCXX_TEST_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/test/configs/${LIBCXX_TEST_CONFIG}")
+endif()
 set(LIBCXX_TEST_PARAMS "" CACHE STRING
     "A list of parameters to run the Lit test suite with.")
 
