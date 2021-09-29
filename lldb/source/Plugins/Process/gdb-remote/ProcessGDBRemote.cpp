@@ -251,8 +251,7 @@ bool ProcessGDBRemote::CanDebug(lldb::TargetSP target_sp,
 ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
                                    ListenerSP listener_sp)
     : Process(target_sp, listener_sp),
-      m_debugserver_pid(LLDB_INVALID_PROCESS_ID), m_last_stop_packet_mutex(),
-      m_register_info_sp(nullptr),
+      m_debugserver_pid(LLDB_INVALID_PROCESS_ID), m_register_info_sp(nullptr),
       m_async_broadcaster(nullptr, "lldb.process.gdb-remote.async-broadcaster"),
       m_async_listener_sp(
           Listener::MakeListener("lldb.process.gdb-remote.async-listener")),
@@ -1462,37 +1461,30 @@ bool ProcessGDBRemote::UpdateThreadIDList() {
     // See if we can get the thread IDs from the current stop reply packets
     // that might contain a "threads" key/value pair
 
-    // Lock the thread stack while we access it
-    // Mutex::Locker stop_stack_lock(m_last_stop_packet_mutex);
-    std::unique_lock<std::recursive_mutex> stop_stack_lock(
-        m_last_stop_packet_mutex, std::defer_lock);
-    if (stop_stack_lock.try_lock()) {
-      if (m_last_stop_packet) {
-        // Get the thread stop info
-        StringExtractorGDBRemote &stop_info = *m_last_stop_packet;
-        const std::string &stop_info_str =
-            std::string(stop_info.GetStringRef());
+    if (m_last_stop_packet) {
+      // Get the thread stop info
+      StringExtractorGDBRemote &stop_info = *m_last_stop_packet;
+      const std::string &stop_info_str = std::string(stop_info.GetStringRef());
 
-        m_thread_pcs.clear();
-        const size_t thread_pcs_pos = stop_info_str.find(";thread-pcs:");
-        if (thread_pcs_pos != std::string::npos) {
-          const size_t start = thread_pcs_pos + strlen(";thread-pcs:");
-          const size_t end = stop_info_str.find(';', start);
-          if (end != std::string::npos) {
-            std::string value = stop_info_str.substr(start, end - start);
-            UpdateThreadPCsFromStopReplyThreadsValue(value);
-          }
+      m_thread_pcs.clear();
+      const size_t thread_pcs_pos = stop_info_str.find(";thread-pcs:");
+      if (thread_pcs_pos != std::string::npos) {
+        const size_t start = thread_pcs_pos + strlen(";thread-pcs:");
+        const size_t end = stop_info_str.find(';', start);
+        if (end != std::string::npos) {
+          std::string value = stop_info_str.substr(start, end - start);
+          UpdateThreadPCsFromStopReplyThreadsValue(value);
         }
+      }
 
-        const size_t threads_pos = stop_info_str.find(";threads:");
-        if (threads_pos != std::string::npos) {
-          const size_t start = threads_pos + strlen(";threads:");
-          const size_t end = stop_info_str.find(';', start);
-          if (end != std::string::npos) {
-            std::string value = stop_info_str.substr(start, end - start);
-            if (UpdateThreadIDsFromStopReplyThreadsValue(value))
-              return true;
-          }
+      const size_t threads_pos = stop_info_str.find(";threads:");
+      if (threads_pos != std::string::npos) {
+        const size_t start = threads_pos + strlen(";threads:");
+        const size_t end = stop_info_str.find(';', start);
+        if (end != std::string::npos) {
+          std::string value = stop_info_str.substr(start, end - start);
+          if (UpdateThreadIDsFromStopReplyThreadsValue(value))
+            return true;
         }
       }
     }
@@ -2317,14 +2309,9 @@ void ProcessGDBRemote::RefreshStateAfterStop() {
   // date before we do that or we might overwrite what was computed here.
   UpdateThreadListIfNeeded();
 
-  // Scope for the lock
-  {
-    // Lock the thread stack while we access it
-    std::lock_guard<std::recursive_mutex> guard(m_last_stop_packet_mutex);
-    if (m_last_stop_packet)
-      SetThreadStopInfo(*m_last_stop_packet);
-    m_last_stop_packet.reset();
-  }
+  if (m_last_stop_packet)
+    SetThreadStopInfo(*m_last_stop_packet);
+  m_last_stop_packet.reset();
 
   // If we have queried for a default thread id
   if (m_initial_tid != LLDB_INVALID_THREAD_ID) {
@@ -2571,13 +2558,7 @@ void ProcessGDBRemote::SetLastStopPacket(
     m_gdb_comm.ResetDiscoverableSettings(did_exec);
   }
 
-  // Scope the lock
-  {
-    // Lock the thread stack while we access it
-    std::lock_guard<std::recursive_mutex> guard(m_last_stop_packet_mutex);
-
-    m_last_stop_packet = response;
-  }
+  m_last_stop_packet = response;
 }
 
 void ProcessGDBRemote::SetUnixSignals(const UnixSignalsSP &signals_sp) {
