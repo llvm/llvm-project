@@ -1,9 +1,9 @@
 // REQUIRES: powerpc-registered-target
 // RUN: %clang_cc1 -target-feature +altivec -target-feature +vsx \
-// RUN:   -triple powerpc64-unknown-unknown -emit-llvm %s -o - \
+// RUN:   -triple powerpc64-unknown-linux-gnu -emit-llvm %s -o - \
 // RUN:   -D__XL_COMPAT_ALTIVEC__ -target-cpu pwr7 | FileCheck %s
 // RUN: %clang_cc1 -target-feature +altivec -target-feature +vsx \
-// RUN:   -triple powerpc64le-unknown-unknown -emit-llvm %s -o - \
+// RUN:   -triple powerpc64le-unknown-linux-gnu -emit-llvm %s -o - \
 // RUN:   -D__XL_COMPAT_ALTIVEC__ -target-cpu pwr8 | FileCheck %s
 #include <altivec.h>
 vector double vd = { 3.4e22, 1.8e-3 };

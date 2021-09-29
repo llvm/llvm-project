@@ -1,7 +1,7 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -triple powerpc64-unknown-unknown -fsyntax-only \
+// RUN: %clang_cc1 -triple powerpc64-unknown-linux-gnu -fsyntax-only \
 // RUN:   -target-cpu pwr8 -Wall -Werror -verify %s
-// RUN: %clang_cc1 -triple powerpc64le-unknown-unknown -fsyntax-only \
+// RUN: %clang_cc1 -triple powerpc64le-unknown-linux-gnu -fsyntax-only \
 // RUN:   -target-cpu pwr8 -Wall -Werror -verify %s
 // RUN: %clang_cc1 -triple powerpc64-unknown-aix -fsyntax-only \
 // RUN:   -target-cpu pwr8 -Wall -Werror -verify %s
