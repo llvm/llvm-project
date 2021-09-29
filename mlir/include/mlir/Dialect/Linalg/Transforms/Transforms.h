@@ -9,6 +9,7 @@
 #ifndef DIALECT_LINALG_TRANSFORMS_TRANSFORMS_H_
 #define DIALECT_LINALG_TRANSFORMS_TRANSFORMS_H_
 
+#include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/Utils.h"
@@ -593,6 +594,35 @@ struct LinalgTilingPattern : public LinalgBaseTilingPattern {
   }
 };
 
+struct LinalgGenericTilingPattern : public LinalgBaseTilingPattern {
+  /// Entry point to match any LinalgOp OpInterface.
+  /// MatchAnyOpTag-based constructor with a mandatory `filter`.
+  LinalgGenericTilingPattern(
+      MLIRContext *context, LinalgTransformationFilter filter,
+      LinalgTilingOptions options = LinalgTilingOptions(),
+      PatternBenefit benefit = 1)
+      : LinalgBaseTilingPattern(context, options, filter, benefit) {}
+  /// Entry point to match a specific Linalg op.
+  LinalgGenericTilingPattern(
+      StringRef opName, MLIRContext *context, LinalgTilingOptions options,
+      LinalgTransformationFilter filter = LinalgTransformationFilter(),
+      PatternBenefit benefit = 1)
+      : LinalgBaseTilingPattern(opName, context, options, filter, benefit) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    TiledLinalgOp tiledLinalgOp;
+    if (failed(LinalgBaseTilingPattern::matchAndRewriteBase(op, rewriter,
+                                                            tiledLinalgOp)))
+      return failure();
+    if (tiledLinalgOp.tensorResults.empty())
+      rewriter.eraseOp(op);
+    else
+      rewriter.replaceOp(op, tiledLinalgOp.tensorResults);
+    return success();
+  }
+};
+
 struct LinalgFusionOptions {
   /// List of operands indices to use for fusion.
   llvm::SmallSet<unsigned, 1> indicesToFuse = {};
@@ -678,6 +708,13 @@ private:
 /// `filter` controls LinalgTransformMarker matching and update when specified.
 /// See `promoteSubViews` for more details.
 struct LinalgBasePromotionPattern : public RewritePattern {
+  /// Entry point to match any LinalgOp OpInterface.
+  /// MatchAnyOpTag-based constructor with a mandatory `filter`.
+  LinalgBasePromotionPattern(
+      MLIRContext *context, LinalgTransformationFilter filter,
+      LinalgPromotionOptions options = LinalgPromotionOptions(),
+      PatternBenefit benefit = 1);
+  /// Entry point to match a specific Linalg op.
   LinalgBasePromotionPattern(
       StringRef opName, MLIRContext *context, LinalgPromotionOptions options,
       LinalgTransformationFilter filter = LinalgTransformationFilter(),
@@ -755,6 +792,39 @@ struct LinalgVectorizationPattern : public LinalgBaseVectorizationPattern {
       LinalgTransformationFilter filter = LinalgTransformationFilter(),
       PatternBenefit benefit = 1)
       : LinalgBaseVectorizationPattern(opName, context, filter, benefit) {}
+};
+
+/// Options to control the application of late transformations.
+struct LateCodegenStrategyOptions {
+  /// Hoisting transformations are always deemed beneficial and must disabled
+  /// explicitly.
+  bool enableLICM = true;
+  bool enableHoistRedundantVectorTransfers = true;
+  bool enableHoistRedundantVectorTransfersOnTensor = true;
+  /// Vector lowering operations may result in surprising behavior when
+  /// composing multiple codegen strategies and must be enabled explicitly.
+  bool enableVectorTransferPartialRewrite = false;
+  bool enableVectorContractLowering = false;
+  bool enableVectorToSCFConversion = false;
+};
+
+/// Options to control the application of enabling transformations.
+/// Hoisting transformations are always deemed beneficial and must be disabled
+/// explicitly.
+struct LinalgEnablingOptions {
+  bool enableLICM = true;
+  bool enableHoistRedundantVectorTransfers = true;
+  bool enableHoistRedundantVectorTransfersOnTensor = true;
+};
+
+/// Vector lowering options control how ops are lowered down to 1-D and scf.for
+/// form.
+struct LinalgVectorLoweringOptions {
+  bool enableVectorTransferPartialRewrite = false;
+  bool enableVectorContractLowering = false;
+  bool enableVectorToSCFConversion = false;
+  vector::VectorTransformsOptions vectorTransformOptions;
+  VectorTransferToSCFOptions vectorTransferToSCFOptions;
 };
 
 /// Trait to check if T provides a `getOperationName` method.
@@ -929,8 +999,8 @@ protected:
 /// scattering magic constants throughout the code base, the patterns must be
 /// added with this function. `baseBenefit` can be used to offset the benefit
 /// of all PadTensorOp vectorization patterns by a certain value.
-void populatePadTensorOpVectorizationPatterns(
-    RewritePatternSet &patterns, PatternBenefit baseBenefit = 1);
+void populatePadTensorOpVectorizationPatterns(RewritePatternSet &patterns,
+                                              PatternBenefit baseBenefit = 1);
 
 /// Match and rewrite for the pattern:
 /// ```

@@ -489,6 +489,12 @@ LogicalResult mlir::linalg::GenericOpInterchangePattern::matchAndRewrite(
 }
 
 mlir::linalg::LinalgBasePromotionPattern::LinalgBasePromotionPattern(
+    MLIRContext *context, LinalgTransformationFilter filter,
+    LinalgPromotionOptions options, PatternBenefit benefit)
+    : RewritePattern(MatchAnyOpTypeTag(), benefit, context), filter(filter),
+      options(options) {}
+
+mlir::linalg::LinalgBasePromotionPattern::LinalgBasePromotionPattern(
     StringRef opName, MLIRContext *context, LinalgPromotionOptions options,
     LinalgTransformationFilter filter, PatternBenefit benefit)
     : RewritePattern(opName, benefit, context, {}), filter(filter),

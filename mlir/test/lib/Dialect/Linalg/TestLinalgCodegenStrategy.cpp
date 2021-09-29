@@ -52,7 +52,6 @@ struct TestLinalgCodegenStrategy
 
   void runOnFunction() override;
 
-  template <typename OpType>
   void runStrategy(LinalgTilingOptions tilingOptions,
                    LinalgTilingOptions registerTilingOptions,
                    vector::VectorContractLowering vectorContractLowering,
@@ -127,26 +126,23 @@ struct TestLinalgCodegenStrategy
       llvm::cl::init("")};
 };
 
-template <>
-void TestLinalgCodegenStrategy::runStrategy<LinalgOp>(
+void TestLinalgCodegenStrategy::runStrategy(
     LinalgTilingOptions tilingOptions,
     LinalgTilingOptions registerTilingOptions,
     vector::VectorContractLowering vectorContractLowering,
     vector::VectorTransferSplit vectorTransferSplit) {
   assert(!anchorOpName.empty());
   CodegenStrategy strategy;
-  strategy.tileIf<LinalgOp>(!tileSizes.empty(), anchorOpName, tilingOptions)
-      .promoteIf<LinalgOp>(promote, anchorOpName,
-                           LinalgPromotionOptions()
-                               .setAlignment(16)
-                               .setUseFullTileBuffersByDefault(promoteFullTile))
-      .tileIf<LinalgOp>(!registerTileSizes.empty(), anchorOpName,
-                        registerTilingOptions)
-      .promoteIf<LinalgOp>(
-          registerPromote, anchorOpName,
-          LinalgPromotionOptions()
-              .setAlignment(16)
-              .setUseFullTileBuffersByDefault(registerPromoteFullTile))
+  strategy.tileIf(!tileSizes.empty(), anchorOpName, tilingOptions)
+      .promoteIf(promote, anchorOpName,
+                 LinalgPromotionOptions()
+                     .setAlignment(16)
+                     .setUseFullTileBuffersByDefault(promoteFullTile))
+      .tileIf(!registerTileSizes.empty(), anchorOpName, registerTilingOptions)
+      .promoteIf(registerPromote, anchorOpName,
+                 LinalgPromotionOptions()
+                     .setAlignment(16)
+                     .setUseFullTileBuffersByDefault(registerPromoteFullTile))
       .vectorizeIf(vectorize, anchorOpName)
       .setEnableVectorTransferPartialRewrite(true)
       .setEnableVectorContractLowering(true)
@@ -157,39 +153,7 @@ void TestLinalgCodegenStrategy::runStrategy<LinalgOp>(
               .setVectorTransferSplit(vectorTransferSplit))
       .setVectorTransferToSCFOptions(
           VectorTransferToSCFOptions().setUnroll(unrollVectorTransfers));
-  strategy.transform(getFunction());
-}
-
-template <typename OpType>
-void TestLinalgCodegenStrategy::runStrategy(
-    LinalgTilingOptions tilingOptions,
-    LinalgTilingOptions registerTilingOptions,
-    vector::VectorContractLowering vectorContractLowering,
-    vector::VectorTransferSplit vectorTransferSplit) {
-  CodegenStrategy strategy;
-  strategy.tileIf<OpType>(!tileSizes.empty(), tilingOptions)
-      .template promoteIf<OpType>(
-          promote, LinalgPromotionOptions()
-                       .setAlignment(16)
-                       .setUseFullTileBuffersByDefault(promoteFullTile))
-      .template tileIf<OpType>(!registerTileSizes.empty(),
-                               registerTilingOptions)
-      .template promoteIf<OpType>(
-          registerPromote,
-          LinalgPromotionOptions()
-              .setAlignment(16)
-              .setUseFullTileBuffersByDefault(registerPromoteFullTile))
-      .template vectorizeIf<OpType>(vectorize)
-      .setEnableVectorTransferPartialRewrite(true)
-      .setEnableVectorContractLowering(true)
-      .setEnableVectorToSCFConversion(true)
-      .setVectorTransformsOptions(
-          vector::VectorTransformsOptions()
-              .setVectorTransformsOptions(vectorContractLowering)
-              .setVectorTransferSplit(vectorTransferSplit))
-      .setVectorTransferToSCFOptions(
-          VectorTransferToSCFOptions().setUnroll(unrollVectorTransfers));
-  strategy.transform(getFunction());
+  (void)strategy.transform(getFunction());
 }
 } // end anonymous namespace
 
@@ -224,14 +188,8 @@ void TestLinalgCodegenStrategy::runOnFunction() {
           .Case("vector-transfers", vector::VectorTransferSplit::VectorTransfer)
           .Default(vector::VectorTransferSplit::None);
 
-  // If no anchorOpNameis specified, just test that strategy applies properly to
-  // linalg::MatmulOp.
-  if (anchorOpName.empty())
-    runStrategy<linalg::MatmulOp>(tilingOptions, registerTilingOptions,
-                                  vectorContractLowering, vectorTransferSplit);
-  else
-    runStrategy<LinalgOp>(tilingOptions, registerTilingOptions,
-                          vectorContractLowering, vectorTransferSplit);
+  runStrategy(tilingOptions, registerTilingOptions, vectorContractLowering,
+              vectorTransferSplit);
 }
 
 namespace mlir {
