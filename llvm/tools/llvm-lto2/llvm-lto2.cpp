@@ -147,6 +147,10 @@ static cl::opt<bool>
              cl::desc("Run LTO passes using the new pass manager"),
              cl::init(LLVM_ENABLE_NEW_PASS_MANAGER), cl::Hidden);
 
+static cl::opt<bool>
+    DebugPassManager("debug-pass-manager", cl::init(false), cl::Hidden,
+                     cl::desc("Print pass management debugging information"));
+
 static cl::opt<std::string>
     StatsFile("stats-file", cl::desc("Filename to write statistics to"));
 
@@ -166,10 +170,6 @@ static void check(Error E, std::string Msg) {
     errs() << "llvm-lto2: " << Msg << ": " << EIB.message().c_str() << '\n';
   });
   exit(1);
-}
-
-namespace llvm {
-extern cl::opt<bool> DebugPassManager;
 }
 
 template <typename T> static T check(Expected<T> E, std::string Msg) {
