@@ -1,5 +1,4 @@
 ; RUN: llc -mtriple=mips64-unknown-linux < %s | FileCheck %s
-; FIXME: doesn't generate any CHECK lines
 
 define i32 @main() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*){
   %1 = invoke i32 @foo() to label %good unwind label %bad
