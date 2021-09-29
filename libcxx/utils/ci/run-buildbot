@@ -430,6 +430,22 @@ unified-standalone)
 
     check-cxx-cxxabi
 ;;
+new-standalone)
+
+    clean
+
+    echo "--- Generating CMake"
+    ${CMAKE} \
+          -S "${MONOREPO_ROOT}/runtimes" \
+          -B "${BUILD_DIR}" \
+          -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
+          -DLIBCXX_TEST_CONFIG="${MONOREPO_ROOT}/libcxx/test/configs/libcxx-trunk-shared.cfg.in"
+
+    check-cxx-cxxabi
+;;
 runtimes-build)
     clean
 
