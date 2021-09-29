@@ -298,6 +298,22 @@ static mlir::ParseResult parseCallOp(mlir::OpAsmParser &parser,
   return mlir::success();
 }
 
+void fir::CallOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
+                        mlir::FuncOp callee, mlir::ValueRange operands) {
+  result.addOperands(operands);
+  result.addAttribute(getCalleeAttrName(), SymbolRefAttr::get(callee));
+  result.addTypes(callee.getType().getResults());
+}
+
+void fir::CallOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
+                        mlir::SymbolRefAttr callee,
+                        llvm::ArrayRef<mlir::Type> results,
+                        mlir::ValueRange operands) {
+  result.addOperands(operands);
+  result.addAttribute(getCalleeAttrName(), callee);
+  result.addTypes(results);
+}
+
 //===----------------------------------------------------------------------===//
 // CmpOp
 //===----------------------------------------------------------------------===//
