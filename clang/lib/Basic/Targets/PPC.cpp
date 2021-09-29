@@ -243,6 +243,8 @@ static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__compare_exp_gt", "__builtin_ppc_compare_exp_gt");
   Builder.defineMacro("__compare_exp_eq", "__builtin_ppc_compare_exp_eq");
   Builder.defineMacro("__test_data_class", "__builtin_ppc_test_data_class");
+  Builder.defineMacro("__swdiv", "__builtin_ppc_swdiv");
+  Builder.defineMacro("__swdivs", "__builtin_ppc_swdivs");
 }
 
 /// PPCTargetInfo::getTargetDefines - Return a set of the PowerPC-specific

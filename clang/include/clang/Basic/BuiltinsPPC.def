@@ -101,6 +101,8 @@ BUILTIN(__builtin_ppc_compare_exp_lt, "idd", "")
 BUILTIN(__builtin_ppc_compare_exp_gt, "idd", "")
 BUILTIN(__builtin_ppc_compare_exp_eq, "idd", "")
 BUILTIN(__builtin_ppc_test_data_class, "idIi", "t")
+BUILTIN(__builtin_ppc_swdiv, "ddd", "")
+BUILTIN(__builtin_ppc_swdivs, "fff", "")
 // Compare
 BUILTIN(__builtin_ppc_cmpeqb, "LLiLLiLLi", "")
 BUILTIN(__builtin_ppc_cmprb, "iCIiii", "")
