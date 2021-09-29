@@ -259,6 +259,11 @@ static cl::opt<bool> UseNewPM(
     "use-new-pm", cl::desc("Run LTO passes using the new pass manager"),
     cl::init(LLVM_ENABLE_NEW_PASS_MANAGER), cl::Hidden, cl::cat(LTOCategory));
 
+static cl::opt<bool>
+    DebugPassManager("debug-pass-manager", cl::init(false), cl::Hidden,
+                     cl::desc("Print pass management debugging information"),
+                     cl::cat(LTOCategory));
+
 namespace {
 
 struct ModuleInfo {
@@ -599,6 +604,7 @@ public:
     ThinGenerator.setCacheMaxSizeBytes(ThinLTOCacheMaxSizeBytes);
     ThinGenerator.setFreestanding(EnableFreestanding);
     ThinGenerator.setUseNewPM(UseNewPM);
+    ThinGenerator.setDebugPassManager(DebugPassManager);
 
     // Add all the exported symbols to the table of symbols to preserve.
     for (unsigned i = 0; i < ExportedSymbols.size(); ++i)
