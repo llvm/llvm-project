@@ -1,4 +1,3 @@
-; RUN: opt < %s -adce -S | FileCheck %s
 ; RUN: opt < %s -passes=adce -S | FileCheck %s
 
 ; Verify that a call to instrument a constant is deleted.

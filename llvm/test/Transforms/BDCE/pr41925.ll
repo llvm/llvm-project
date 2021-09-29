@@ -1,5 +1,5 @@
 ; Check for setting dbg.value undef which depends on instruction which is going to be dead
-; RUN: opt -bdce %s -S | FileCheck %s
+; RUN: opt -passes=bdce %s -S | FileCheck %s
 
 ; Generated from this
 ; char a, b;
