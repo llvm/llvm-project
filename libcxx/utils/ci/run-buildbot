@@ -362,7 +362,7 @@ generic-no-unicode)
 x86_64-apple-system)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
-                   -DLIBCXX_TEST_CONFIG="${MONOREPO_ROOT}/libcxx/test/configs/llvm-libc++-shared.cfg.in"
+                   -DLIBCXX_TEST_CONFIG="${MONOREPO_ROOT}/libcxx/test/configs/apple-libc++-shared.cfg.in"
     check-cxx-cxxabi
 ;;
 x86_64-apple-system-noexceptions)
@@ -370,7 +370,7 @@ x86_64-apple-system-noexceptions)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
                    -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
                    -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF \
-                   -DLIBCXX_TEST_CONFIG="${MONOREPO_ROOT}/libcxx/test/configs/llvm-libc++-shared.cfg.in"
+                   -DLIBCXX_TEST_CONFIG="${MONOREPO_ROOT}/libcxx/test/configs/apple-libc++-shared.cfg.in"
     check-cxx-cxxabi
 ;;
 x86_64-apple-system-backdeployment-*)
