@@ -19,6 +19,13 @@ namespace clang {
 #undef GET_CATEGORY_TABLE
       DiagCat_NUM_CATEGORIES
     };
+
+    enum class Group {
+#define DIAG_ENTRY(GroupName, FlagNameOffset, Members, SubGroups) GroupName,
+#include "clang/Basic/DiagnosticGroups.inc"
+#undef CATEGORY
+#undef DIAG_ENTRY
+    };
   }  // end namespace diag
 }  // end namespace clang
 

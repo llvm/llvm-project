@@ -25,6 +25,8 @@ namespace clang {
 
   // Import the diagnostic enums themselves.
   namespace diag {
+    enum class Group;
+
     // Size of each of the diagnostic categories.
     enum {
       DIAG_SIZE_COMMON        =  300,
@@ -224,6 +226,10 @@ public:
   ///
   static bool isBuiltinExtensionDiag(unsigned DiagID, bool &EnabledByDefault);
 
+  /// Given a group ID, returns the flag that toggles the group.
+  /// For example, for Group::DeprecatedDeclarations, returns
+  /// "deprecated-declarations".
+  static StringRef getWarningOptionForGroup(diag::Group);
 
   /// Return the lowest-level warning option that enables the specified
   /// diagnostic.
