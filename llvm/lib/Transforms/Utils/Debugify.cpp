@@ -457,14 +457,14 @@ static bool checkInstructions(const DebugInstMap &DILocsBefore,
 }
 
 // This checks the preservation of original debug variable intrinsics.
-static bool checkVars(const DebugVarMap &DIFunctionsBefore,
-                      const DebugVarMap &DIFunctionsAfter,
+static bool checkVars(const DebugVarMap &DIVarsBefore,
+                      const DebugVarMap &DIVarsAfter,
                       StringRef NameOfWrappedPass, StringRef FileNameFromCU,
                       bool ShouldWriteIntoJSON, llvm::json::Array &Bugs) {
   bool Preserved = true;
-  for (const auto &V : DIFunctionsBefore) {
-    auto VarIt = DIFunctionsAfter.find(V.first);
-    if (VarIt == DIFunctionsAfter.end())
+  for (const auto &V : DIVarsBefore) {
+    auto VarIt = DIVarsAfter.find(V.first);
+    if (VarIt == DIVarsAfter.end())
       continue;
 
     unsigned NumOfDbgValsAfter = VarIt->second;
