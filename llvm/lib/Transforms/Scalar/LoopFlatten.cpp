@@ -748,12 +748,30 @@ static bool FlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
     return false;
 
   // Check if we can widen the induction variables to avoid overflow checks.
-  if (CanWidenIV(FI, DT, LI, SE, AC, TTI))
+  bool CanFlatten = CanWidenIV(FI, DT, LI, SE, AC, TTI);
+
+  // It can happen that after widening of the IV, flattening may not be
+  // possible/happening, e.g. when it is deemed unprofitable. So bail here if
+  // that is the case.
+  // TODO: IV widening without performing the actual flattening transformation
+  // is not ideal. While this codegen change should not matter much, it is an
+  // unnecessary change which is better to avoid. It's unlikely this happens
+  // often, because if it's unprofitibale after widening, it should be
+  // unprofitabe before widening as checked in the first round of checks. But
+  // 'RepeatedInstructionThreshold' is set to only 2, which can probably be
+  // relaxed. Because this is making a code change (the IV widening, but not
+  // the flattening), we return true here.
+  if (FI.Widened && !CanFlatten)
+    return true;
+
+  // If we have widened and can perform the transformation, do that here.
+  if (CanFlatten)
     return DoFlattenLoopPair(FI, DT, LI, SE, AC, TTI);
 
-  // Check if the new iteration variable might overflow. In this case, we
-  // need to version the loop, and select the original version at runtime if
-  // the iteration space is too large.
+  // Otherwise, if we haven't widened the IV, check if the new iteration
+  // variable might overflow. In this case, we need to version the loop, and
+  // select the original version at runtime if the iteration space is too
+  // large.
   // TODO: We currently don't version the loop.
   OverflowResult OR = checkOverflow(FI, DT, AC);
   if (OR == OverflowResult::AlwaysOverflowsHigh ||
