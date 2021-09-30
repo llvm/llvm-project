@@ -611,37 +611,6 @@ def ORCB : RVInstI<0b101, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1),
 } // Predicates = [HasStdExtZbbOrZbp]
 
 //===----------------------------------------------------------------------===//
-// Future compressed instructions
-//===----------------------------------------------------------------------===//
-
-// The presence of these instructions in the B extension is purely experimental
-// and they should be moved to the C extension as soon as they are ratified.
-
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVBInstC<bits<2> funct2, string opcodestr>
-    : RVInst16<(outs GPRC:$rs_wb), (ins GPRC:$rs), opcodestr, "$rs", [],
-               InstFormatCR> {
-  bits<3> rs;
-  let Constraints = "$rs = $rs_wb";
-
-  let Inst{15-12} = 0b0110;
-  let Inst{11-10} = funct2;
-  let Inst{9-7} = rs;
-  let Inst{6-0} = 0b0000001;
-}
-
-// The namespace RVBC exists to avoid encoding conflicts with the compressed
-// instructions c.addi16sp and c.lui already implemented in the C extension.
-
-let DecoderNamespace = "RVBC", Predicates = [HasStdExtZbproposedc, HasStdExtC] in {
-def C_NOT : RVBInstC<0b00, "c.not">, Sched<[]>;
-def C_NEG : RVBInstC<0b01, "c.neg">, Sched<[]>;
-} // DecoderNamespace = "RVBC", Predicates = [HasStdExtZbproposedc, HasStdExtC]
-
-let DecoderNamespace = "RVBC", Predicates = [HasStdExtZbproposedc, HasStdExtZba, HasStdExtC, IsRV64] in
-def C_ZEXTW : RVBInstC<0b10, "c.zext.w">, Sched<[]>;
-
-//===----------------------------------------------------------------------===//
 // Pseudo Instructions
 //===----------------------------------------------------------------------===//
 
@@ -794,21 +763,6 @@ def : InstAlias<"binv $rd, $rs1, $shamt",
 def : InstAlias<"bext $rd, $rs1, $shamt",
                 (BEXTI GPR:$rd, GPR:$rs1, uimmlog2xlen:$shamt), 0>;
 } // Predicates = [HasStdExtZbs]
-
-//===----------------------------------------------------------------------===//
-// Compressed Instruction patterns
-//===----------------------------------------------------------------------===//
-let Predicates = [HasStdExtZbproposedc, HasStdExtC] in {
-def : CompressPat<(XORI GPRC:$rs1, GPRC:$rs1, -1),
-                  (C_NOT GPRC:$rs1)>;
-def : CompressPat<(SUB GPRC:$rs1, X0, GPRC:$rs1),
-                  (C_NEG GPRC:$rs1)>;
-} // Predicates = [HasStdExtZbproposedc, HasStdExtC]
-
-let Predicates = [HasStdExtZbproposedc, HasStdExtZba, HasStdExtC, IsRV64] in {
-def : CompressPat<(ADDUW GPRC:$rs1, GPRC:$rs1, X0),
-                  (C_ZEXTW GPRC:$rs1)>;
-} // Predicates = [HasStdExtZbproposedc, HasStdExtC, IsRV64]
 
 //===----------------------------------------------------------------------===//
 // Codegen patterns
