@@ -389,10 +389,21 @@ private:
   static void computeAdjustment(SymbolRef &Sym, llvm::APSInt &Adjustment);
 };
 
-/// Try to simplify a given symbolic expression's associated value based on the
-/// constraints in State. This is needed because the Environment bindings are
-/// not getting updated when a new constraint is added to the State.
+/// Try to simplify a given symbolic expression based on the constraints in
+/// State. This is needed because the Environment bindings are not getting
+/// updated when a new constraint is added to the State. If the symbol is
+/// simplified to a non-symbol (e.g. to a constant) then the original symbol
+/// is returned. We use this function in the family of assumeSymNE/EQ/LT/../GE
+/// functions where we can work only with symbols. Use the other function
+/// (simplifyToSVal) if you are interested in a simplification that may yield
+/// a concrete constant value.
 SymbolRef simplify(ProgramStateRef State, SymbolRef Sym);
+
+/// Try to simplify a given symbolic expression's associated `SVal` based on the
+/// constraints in State. This is very similar to `simplify`, but this function
+/// always returns the simplified SVal. The simplified SVal might be a single
+/// constant (i.e. `ConcreteInt`).
+SVal simplifyToSVal(ProgramStateRef State, SymbolRef Sym);
 
 } // namespace ento
 } // namespace clang

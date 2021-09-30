@@ -2106,7 +2106,20 @@ EquivalenceClass::simplify(SValBuilder &SVB, RangeSet::Factory &F,
                            ProgramStateRef State, EquivalenceClass Class) {
   SymbolSet ClassMembers = Class.getClassMembers(State);
   for (const SymbolRef &MemberSym : ClassMembers) {
-    SymbolRef SimplifiedMemberSym = ento::simplify(State, MemberSym);
+
+    const SVal SimplifiedMemberVal = simplifyToSVal(State, MemberSym);
+    const SymbolRef SimplifiedMemberSym = SimplifiedMemberVal.getAsSymbol();
+
+    // The symbol is collapsed to a constant, check if the current State is
+    // still feasible.
+    if (const auto CI = SimplifiedMemberVal.getAs<nonloc::ConcreteInt>()) {
+      const llvm::APSInt &SV = CI->getValue();
+      const RangeSet *ClassConstraint = getConstraint(State, Class);
+      // We have found a contradiction.
+      if (ClassConstraint && !ClassConstraint->contains(SV))
+        return nullptr;
+    }
+
     if (SimplifiedMemberSym && MemberSym != SimplifiedMemberSym) {
       // The simplified symbol should be the member of the original Class,
       // however, it might be in another existing class at the moment. We
