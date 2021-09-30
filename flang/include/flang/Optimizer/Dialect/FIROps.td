@@ -1920,12 +1920,17 @@ def fir_ExtractValueOp : fir_OneResultOp<"extract_value", [NoSideEffect]> {
 
   let arguments = (ins
     AnyCompositeLike:$adt,
-    Variadic<AnyComponentType>:$coor
+    ArrayAttr:$coor
   );
 
   let assemblyFormat = [{
     $adt `,` $coor attr-dict `:` functional-type(operands, results)
   }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$rty, "mlir::Value":$adt,
+      "llvm::ArrayRef<mlir::Value>":$vcoor)>
+  ];
 }
 
 def fir_FieldIndexOp : fir_OneResultOp<"field_index", [NoSideEffect]> {
@@ -2235,13 +2240,17 @@ def fir_InsertValueOp : fir_OneResultOp<"insert_value", [NoSideEffect]> {
     ```
   }];
 
-  let arguments = (ins AnyCompositeLike:$adt, AnyType:$val,
-                       Variadic<AnyComponentType>:$coor);
+  let arguments = (ins AnyCompositeLike:$adt, AnyType:$val, ArrayAttr:$coor);
   let results = (outs AnyCompositeLike);
 
   let assemblyFormat = [{
-    operands attr-dict `:` functional-type(operands, results)
+    $adt `,` $val `,` $coor attr-dict `:` functional-type(operands, results)
   }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$rty, "mlir::Value":$adt, "mlir::Value":$val,
+      "llvm::ArrayRef<mlir::Value>":$vcoor)>
+  ];
 
   let hasCanonicalizer = 1;
 }
