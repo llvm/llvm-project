@@ -517,7 +517,7 @@ TEST(ParsedASTTest, PatchesAdditionalIncludes) {
   ASSERT_TRUE(MainFE);
   auto MainID = Includes.getID(*MainFE);
   auto AuxFE = FM.getFile(testPath("sub/aux.h"));
-  ASSERT_TRUE(AuxFE);
+  ASSERT_TRUE(AuxFE) << Includes.dump();
   auto AuxID = Includes.getID(*AuxFE);
   EXPECT_THAT(Includes.IncludeChildren[*MainID], Contains(*AuxID));
 }
