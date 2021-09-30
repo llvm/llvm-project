@@ -821,8 +821,8 @@ def produce_version_synopsis():
 
 
 def produce_version_header():
-  template="""// -*- C++ -*-
-//===--------------------------- version ----------------------------------===//
+  template="""
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -853,7 +853,7 @@ def produce_version_header():
 // clang-format on
 
 #endif // _LIBCPP_VERSIONH
-"""
+"""[1:]
 
   version_str = template.format(
       synopsis=produce_version_synopsis().strip(),
