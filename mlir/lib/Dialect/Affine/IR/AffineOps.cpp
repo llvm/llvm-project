@@ -3165,8 +3165,8 @@ static void deduplicateAndResolveOperands(
         uniqueOperands.push_back(operand);
       replacements.push_back(
           kind == AffineExprKind::DimId
-              ? getAffineDimExpr(pos, parser.getContext())
-              : getAffineSymbolExpr(pos, parser.getContext()));
+              ? getAffineDimExpr(pos, parser.getBuilder().getContext())
+              : getAffineSymbolExpr(pos, parser.getBuilder().getContext()));
     }
   }
 }
@@ -3276,7 +3276,7 @@ static ParseResult parseAffineMapWithMinMax(OpAsmParser &parser,
 
   Builder &builder = parser.getBuilder();
   auto flatMap = AffineMap::get(totalNumDims, totalNumSyms, flatExprs,
-                                parser.getContext());
+                                parser.getBuilder().getContext());
   flatMap = flatMap.replaceDimsAndSymbols(
       dimRplacements, symRepacements, dimOperands.size(), symOperands.size());
 

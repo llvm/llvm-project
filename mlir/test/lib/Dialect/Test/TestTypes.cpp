@@ -88,7 +88,7 @@ static llvm::hash_code test::hash_value(const FieldInfo &fi) { // NOLINT
 // CompoundAType
 //===----------------------------------------------------------------------===//
 
-Type CompoundAType::parse(DialectAsmParser &parser) {
+Type CompoundAType::parse(MLIRContext *ctxt, DialectAsmParser &parser) {
   int widthOfSomething;
   Type oneType;
   SmallVector<int, 4> arrayOfInts;
@@ -107,7 +107,7 @@ Type CompoundAType::parse(DialectAsmParser &parser) {
   if (parser.parseRSquare() || parser.parseGreater())
     return Type();
 
-  return get(parser.getContext(), widthOfSomething, oneType, arrayOfInts);
+  return get(ctxt, widthOfSomething, oneType, arrayOfInts);
 }
 void CompoundAType::print(DialectAsmPrinter &printer) const {
   printer << "cmpnd_a<" << getWidthOfSomething() << ", " << getOneType()
@@ -143,11 +143,11 @@ void TestType::printTypeC(Location loc) const {
 // TestTypeWithLayout
 //===----------------------------------------------------------------------===//
 
-Type TestTypeWithLayoutType::parse(DialectAsmParser &parser) {
+Type TestTypeWithLayoutType::parse(MLIRContext *ctx, DialectAsmParser &parser) {
   unsigned val;
   if (parser.parseLess() || parser.parseInteger(val) || parser.parseGreater())
     return Type();
-  return TestTypeWithLayoutType::get(parser.getContext(), val);
+  return TestTypeWithLayoutType::get(ctx, val);
 }
 
 void TestTypeWithLayoutType::print(DialectAsmPrinter &printer) const {
@@ -236,14 +236,15 @@ void TestDialect::registerTypes() {
   SimpleAType::attachInterface<PtrElementModel>(*getContext());
 }
 
-static Type parseTestType(DialectAsmParser &parser, SetVector<Type> &stack) {
+static Type parseTestType(MLIRContext *ctxt, DialectAsmParser &parser,
+                          SetVector<Type> &stack) {
   StringRef typeTag;
   if (failed(parser.parseKeyword(&typeTag)))
     return Type();
 
   {
     Type genType;
-    auto parseResult = generatedTypeParser(parser, typeTag, genType);
+    auto parseResult = generatedTypeParser(ctxt, parser, typeTag, genType);
     if (parseResult.hasValue())
       return genType;
   }
@@ -256,7 +257,7 @@ static Type parseTestType(DialectAsmParser &parser, SetVector<Type> &stack) {
   StringRef name;
   if (parser.parseLess() || parser.parseKeyword(&name))
     return Type();
-  auto rec = TestRecursiveType::get(parser.getContext(), name);
+  auto rec = TestRecursiveType::get(parser.getBuilder().getContext(), name);
 
   // If this type already has been parsed above in the stack, expect just the
   // name.
@@ -270,7 +271,7 @@ static Type parseTestType(DialectAsmParser &parser, SetVector<Type> &stack) {
   if (failed(parser.parseComma()))
     return Type();
   stack.insert(rec);
-  Type subtype = parseTestType(parser, stack);
+  Type subtype = parseTestType(ctxt, parser, stack);
   stack.pop_back();
   if (!subtype || failed(parser.parseGreater()) || failed(rec.setBody(subtype)))
     return Type();
@@ -280,7 +281,7 @@ static Type parseTestType(DialectAsmParser &parser, SetVector<Type> &stack) {
 
 Type TestDialect::parseType(DialectAsmParser &parser) const {
   SetVector<Type> stack;
-  return parseTestType(parser, stack);
+  return parseTestType(getContext(), parser, stack);
 }
 
 static void printTestType(Type type, DialectAsmPrinter &printer,

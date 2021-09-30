@@ -283,7 +283,7 @@ DataLayoutSpecAttr DataLayoutSpecAttr::parse(DialectAsmParser &parser) {
 
   // Empty spec.
   if (succeeded(parser.parseOptionalGreater()))
-    return get(parser.getContext(), {});
+    return get(parser.getBuilder().getContext(), {});
 
   SmallVector<DataLayoutEntryInterface> entries;
   do {
@@ -295,7 +295,7 @@ DataLayoutSpecAttr DataLayoutSpecAttr::parse(DialectAsmParser &parser) {
   if (failed(parser.parseGreater()))
     return {};
   return getChecked([&] { return parser.emitError(parser.getNameLoc()); },
-                    parser.getContext(), entries);
+                    parser.getBuilder().getContext(), entries);
 }
 
 void DataLayoutSpecAttr::print(DialectAsmPrinter &os) const {
