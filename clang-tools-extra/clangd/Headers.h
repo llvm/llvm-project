@@ -141,8 +141,16 @@ public:
 
   std::vector<Inclusion> MainFileIncludes;
 
+  std::string dump() {
+    return "RealPathNames: " +
+           llvm::join(RealPathNames.begin(), RealPathNames.end(), ", ") +
+           "\nFileEntryIDs: " +
+           llvm::join(FileEntryIDs.begin(), FileEntryIDs.end(), ", ") + '\n';
+  }
+
 private:
   std::vector<std::string> RealPathNames; // In HeaderID order.
+  std::vector<unsigned> FileEntryIDs;     // In HeaderID order.
   // HeaderID maps the FileEntry::Name to the internal representation.
   // Identifying files in a way that persists from preamble build to subsequent
   // builds is surprisingly hard. FileID is unavailable in

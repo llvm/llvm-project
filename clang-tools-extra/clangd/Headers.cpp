@@ -168,8 +168,10 @@ IncludeStructure::getOrCreateID(const FileEntry *Entry) {
   auto R = NameToIndex.try_emplace(
       Entry->getName(),
       static_cast<IncludeStructure::HeaderID>(RealPathNames.size()));
-  if (R.second)
+  if (R.second) {
     RealPathNames.emplace_back();
+    FileEntryIDs.push_back(Entry->getUID());
+  }
   IncludeStructure::HeaderID Result = R.first->getValue();
   std::string &RealPathName = RealPathNames[static_cast<unsigned>(Result)];
   if (RealPathName.empty())
