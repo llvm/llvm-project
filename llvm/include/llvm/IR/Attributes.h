@@ -851,9 +851,32 @@ public:
 
   unsigned getNumAttrSets() const;
 
-  /// Use these to iterate over the valid attribute indices.
-  unsigned index_begin() const { return AttributeList::FunctionIndex; }
-  unsigned index_end() const { return getNumAttrSets() - 1; }
+  // Implementation of indexes(). Produces iterators that wrap an index. Mostly
+  // to hide the awkwardness of unsigned wrapping when iterating over valid
+  // indexes.
+  struct index_iterator {
+    unsigned NumAttrSets;
+    index_iterator(int NumAttrSets) : NumAttrSets(NumAttrSets) {}
+    struct int_wrapper {
+      int_wrapper(unsigned i) : i(i) {}
+      unsigned i;
+      unsigned operator*() { return i; }
+      bool operator!=(const int_wrapper &Other) { return i != Other.i; }
+      int_wrapper &operator++() {
+        // This is expected to undergo unsigned wrapping since FunctionIndex is
+        // ~0 and that's where we start.
+        ++i;
+        return *this;
+      }
+    };
+
+    int_wrapper begin() { return int_wrapper(AttributeList::FunctionIndex); }
+
+    int_wrapper end() { return int_wrapper(NumAttrSets - 1); }
+  };
+
+  /// Use this to iterate over the valid attribute indexes.
+  index_iterator indexes() const { return index_iterator(getNumAttrSets()); }
 
   /// operator==/!= - Provide equality predicates.
   bool operator==(const AttributeList &RHS) const { return pImpl == RHS.pImpl; }

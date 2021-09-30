@@ -84,8 +84,7 @@ public:
                           AttrPtrVecVecTy &AttributeSetsToPreserve) {
     assert(AttributeSetsToPreserve.empty() && "Should not be sharing vectors.");
     AttributeSetsToPreserve.reserve(AL.getNumAttrSets());
-    for (unsigned SetIdx = AL.index_begin(), SetEndIdx = AL.index_end();
-         SetIdx != SetEndIdx; ++SetIdx) {
+    for (unsigned SetIdx : AL.indexes()) {
       AttrPtrIdxVecVecTy AttributesToPreserve;
       AttributesToPreserve.first = SetIdx;
       visitAttributeSet(AL.getAttributes(AttributesToPreserve.first),

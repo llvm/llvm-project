@@ -110,7 +110,7 @@ int FunctionComparator::cmpAttrs(const AttributeList L,
   if (int Res = cmpNumbers(L.getNumAttrSets(), R.getNumAttrSets()))
     return Res;
 
-  for (unsigned i = L.index_begin(), e = L.index_end(); i != e; ++i) {
+  for (unsigned i : L.indexes()) {
     AttributeSet LAS = L.getAttributes(i);
     AttributeSet RAS = R.getAttributes(i);
     AttributeSet::iterator LI = LAS.begin(), LE = LAS.end();
