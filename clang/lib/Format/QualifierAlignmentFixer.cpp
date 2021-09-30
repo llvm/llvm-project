@@ -361,7 +361,7 @@ FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
 
 tok::TokenKind LeftRightQualifierAlignmentFixer::getTokenFromQualifier(
     const std::string &Qualifier) {
-  // don't let 'type' be an indentifier steal typeof token
+  // Don't let 'type' be an identifier, but steal typeof token.
   return llvm::StringSwitch<tok::TokenKind>(Qualifier)
       .Case("type", tok::kw_typeof)
       .Case("const", tok::kw_const)
