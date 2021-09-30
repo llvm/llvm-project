@@ -8,6 +8,7 @@
 #include "PerfReader.h"
 #include "ProfileGenerator.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Process.h"
 
 #define DEBUG_TYPE "perf-reader"
 
@@ -30,6 +31,7 @@ cl::opt<bool>
                        cl::desc("Ignore call stack samples for hybrid samples "
                                 "and produce context-insensitive profile."));
 
+extern cl::opt<std::string> PerfTraceFilename;
 extern cl::opt<bool> ShowDisassemblyOnly;
 extern cl::opt<bool> ShowSourceLocations;
 extern cl::opt<std::string> OutputFilename;
@@ -278,9 +280,15 @@ bool VirtualUnwinder::unwind(const PerfSample *Sample, uint64_t Repeat) {
 std::unique_ptr<PerfReaderBase> PerfReaderBase::create(ProfiledBinary *Binary,
                                                        StringRef PerfInputFile,
                                                        bool IsPerfData) {
-  // TODO: for perf data input, we need to convert them into perf script first.
-  if (IsPerfData)
-    exitWithError("Perf data input not supported yet.");
+  // For perf data input, we need to convert them into perf script first.
+  if (IsPerfData) {
+    std::string ConvertedPerfScript =
+        convertPerfDataToTrace(Binary, PerfInputFile);
+    // Let commoand opt own the string for converted perf trace file name
+    PerfTraceFilename = ConvertedPerfScript;
+    PerfInputFile = PerfTraceFilename;
+  }
+
   PerfScriptType PerfType = checkPerfScriptType(PerfInputFile);
   std::unique_ptr<PerfReaderBase> PerfReader;
   if (PerfType == PERF_LBR_STACK) {
@@ -292,6 +300,47 @@ std::unique_ptr<PerfReaderBase> PerfReaderBase::create(ProfiledBinary *Binary,
   }
 
   return PerfReader;
+}
+
+std::string PerfReaderBase::convertPerfDataToTrace(ProfiledBinary *Binary,
+                                                   StringRef PerfData) {
+  // Run perf script to retrieve PIDs matching binary we're interested in.
+  auto PerfExecutable = sys::Process::FindInEnvPath("PATH", "perf");
+  if (!PerfExecutable) {
+    exitWithError("Perf not found.");
+  }
+  std::string PerfPath = *PerfExecutable;
+  std::string PerfTraceFile = PerfData.str() + ".script.tmp";
+  StringRef ScriptMMapArgs[] = {PerfPath, "script",   "--show-mmap-events",
+                                "-F",     "comm,pid", "-i",
+                                PerfData};
+  Optional<StringRef> Redirects[] = {llvm::None,                // Stdin
+                                     StringRef(PerfTraceFile),  // Stdout
+                                     StringRef(PerfTraceFile)}; // Stderr
+  sys::ExecuteAndWait(PerfPath, ScriptMMapArgs, llvm::None, Redirects);
+
+  // Collect the PIDs
+  TraceStream TraceIt(PerfTraceFile);
+  std::string PIDs;
+  while (!TraceIt.isAtEoF()) {
+    MMapEvent MMap;
+    if (isMMap2Event(TraceIt.getCurrentLine()) &&
+        extractMMap2EventForBinary(Binary, TraceIt.getCurrentLine(), MMap)) {
+      if (!PIDs.empty()) {
+        PIDs.append(",");
+      }
+      PIDs.append(utostr(MMap.PID));
+    }
+    TraceIt.advance();
+  }
+
+  // Run perf script again to retrieve events for PIDs collected above
+  StringRef ScriptSampleArgs[] = {PerfPath, "script",     "--show-mmap-events",
+                                  "-F",     "ip,brstack", "--pid",
+                                  PIDs,     "-i",         PerfData};
+  sys::ExecuteAndWait(PerfPath, ScriptSampleArgs, llvm::None, Redirects);
+
+  return PerfTraceFile;
 }
 
 void PerfReaderBase::updateBinaryAddress(const MMapEvent &Event) {
@@ -514,7 +563,7 @@ bool PerfReaderBase::extractCallstack(TraceStream &TraceIt,
     }
     TraceIt.advance();
     // Currently intermixed frame from different binaries is not supported.
-    // Ignore bottom frames not from binary of interest.
+    // Ignore caller frames not from binary of interest.
     if (!Binary->addressIsCode(FrameAddr))
       break;
 
@@ -724,7 +773,9 @@ void PerfReaderBase::parseSample(TraceStream &TraceIt) {
   parseSample(TraceIt, Count);
 }
 
-void PerfReaderBase::parseMMap2Event(TraceStream &TraceIt) {
+bool PerfReaderBase::extractMMap2EventForBinary(ProfiledBinary *Binary,
+                                                StringRef Line,
+                                                MMapEvent &MMap) {
   // Parse a line like:
   //  PERF_RECORD_MMAP2 2113428/2113428: [0x7fd4efb57000(0x204000) @ 0
   //  08:04 19532229 3585508847]: r-xp /usr/lib64/libdl-2.17.so
@@ -749,29 +800,34 @@ void PerfReaderBase::parseMMap2Event(TraceStream &TraceIt) {
 
   Regex RegMmap2(Pattern);
   SmallVector<StringRef, 6> Fields;
-  bool R = RegMmap2.match(TraceIt.getCurrentLine(), &Fields);
+  bool R = RegMmap2.match(Line, &Fields);
   if (!R) {
-    std::string ErrorMsg = "Cannot parse mmap event: Line" +
-                           Twine(TraceIt.getLineNumber()).str() + ": " +
-                           TraceIt.getCurrentLine().str() + " \n";
+    std::string ErrorMsg = "Cannot parse mmap event: " + Line.str() + " \n";
     exitWithError(ErrorMsg);
   }
-  MMapEvent Event;
-  Fields[PID].getAsInteger(10, Event.PID);
-  Fields[MMAPPED_ADDRESS].getAsInteger(0, Event.Address);
-  Fields[MMAPPED_SIZE].getAsInteger(0, Event.Size);
-  Fields[PAGE_OFFSET].getAsInteger(0, Event.Offset);
-  Event.BinaryPath = Fields[BINARY_PATH];
-  updateBinaryAddress(Event);
+  Fields[PID].getAsInteger(10, MMap.PID);
+  Fields[MMAPPED_ADDRESS].getAsInteger(0, MMap.Address);
+  Fields[MMAPPED_SIZE].getAsInteger(0, MMap.Size);
+  Fields[PAGE_OFFSET].getAsInteger(0, MMap.Offset);
+  MMap.BinaryPath = Fields[BINARY_PATH];
   if (ShowMmapEvents) {
-    outs() << "Mmap: Binary " << Event.BinaryPath << " loaded at "
-           << format("0x%" PRIx64 ":", Event.Address) << " \n";
+    outs() << "Mmap: Binary " << MMap.BinaryPath << " loaded at "
+           << format("0x%" PRIx64 ":", MMap.Address) << " \n";
   }
+
+  StringRef BinaryName = llvm::sys::path::filename(MMap.BinaryPath);
+  return Binary->getName() == BinaryName;
+}
+
+void PerfReaderBase::parseMMap2Event(TraceStream &TraceIt) {
+  MMapEvent MMap;
+  if (extractMMap2EventForBinary(Binary, TraceIt.getCurrentLine(), MMap))
+    updateBinaryAddress(MMap);
   TraceIt.advance();
 }
 
 void PerfReaderBase::parseEventOrSample(TraceStream &TraceIt) {
-  if (TraceIt.getCurrentLine().startswith("PERF_RECORD_MMAP2"))
+  if (isMMap2Event(TraceIt.getCurrentLine()))
     parseMMap2Event(TraceIt);
   else
     parseSample(TraceIt);
@@ -797,6 +853,19 @@ bool PerfReaderBase::isLBRSample(StringRef Line) {
   if (Records[1].startswith("0x") && Records[1].find('/') != StringRef::npos)
     return true;
   return false;
+}
+
+bool PerfReaderBase::isMMap2Event(StringRef Line) {
+  // Short cut to avoid string find is possible.
+  if (Line.empty() || Line.size() < 50)
+    return false;
+
+  if (std::isdigit(Line[0]))
+    return false;
+
+  // PERF_RECORD_MMAP2 does not appear at the beginning of the line
+  // for ` perf script  --show-mmap-events  -i ...`
+  return Line.find("PERF_RECORD_MMAP2") != StringRef::npos;
 }
 
 // The raw hybird sample is like
